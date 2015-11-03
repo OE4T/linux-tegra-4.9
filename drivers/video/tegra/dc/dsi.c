@@ -3454,7 +3454,7 @@ fail:
 	return ERR_PTR(err);
 }
 
-static struct dsi_status *tegra_dsi_prepare_host_transmission(
+struct dsi_status *tegra_dsi_prepare_host_transmission(
 				struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
 				u8 lp_op)
@@ -3516,8 +3516,9 @@ static struct dsi_status *tegra_dsi_prepare_host_transmission(
 fail:
 	return ERR_PTR(err);
 }
+EXPORT_SYMBOL(tegra_dsi_prepare_host_transmission);
 
-static int tegra_dsi_restore_state(struct tegra_dc *dc,
+int tegra_dsi_restore_state(struct tegra_dc *dc,
 				struct tegra_dc_dsi_data *dsi,
 				struct dsi_status *init_status)
 {
@@ -3550,6 +3551,7 @@ fail:
 	kfree(init_status);
 	return err;
 }
+EXPORT_SYMBOL(tegra_dsi_restore_state);
 
 static int tegra_dsi_host_trigger(struct tegra_dc_dsi_data *dsi, u8 link_id)
 {
@@ -3606,7 +3608,8 @@ static int _tegra_dsi_controller_write_data(struct tegra_dc_dsi_data *dsi,
 	/* always use hw for ecc */
 	val = (virtual_channel | data_id) << 0 |
 			data_len << 8;
-	tegra_dsi_controller_writel(dsi, val, DSI_WR_DATA, link_id);
+	if (!dsi->info.skip_dsi_pkt_header)
+		tegra_dsi_controller_writel(dsi, val, DSI_WR_DATA, link_id);
 
 	/* if pdata != NULL, pkt type is long pkt */
 	if (pdata != NULL) {
@@ -3683,6 +3686,18 @@ static void tegra_dc_dsi_idle_work(struct work_struct *work)
 	if (dsi->dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_LP_MODE)
 		tegra_dsi_host_suspend(dsi->dc);
 }
+static void tegra_dc_dsi_config_video_host_fifo_for_cmd(
+	struct tegra_dc_dsi_data *dsi, bool enable)
+{
+	int val;
+
+	val = tegra_dsi_readl(dsi, DSI_HOST_DSI_CONTROL);
+	if (enable)
+		val |= DSI_HOST_DSI_CONTROL_PKT_WR_FIFO_SEL(VIDEO_HOST);
+	else
+		val &= ~DSI_HOST_DSI_CONTROL_PKT_WR_FIFO_SEL(VIDEO_HOST);
+	tegra_dsi_writel(dsi, val, DSI_HOST_DSI_CONTROL);
+}
 
 static int tegra_dsi_write_data_nosync(struct tegra_dc *dc,
 			struct tegra_dc_dsi_data *dsi,
@@ -3699,11 +3714,19 @@ static int tegra_dsi_write_data_nosync(struct tegra_dc *dc,
 		goto fail;
 	}
 
+	/* If specified, use video host for sending the cmd */
+	if (dsi->info.use_video_host_fifo_for_cmd)
+		tegra_dc_dsi_config_video_host_fifo_for_cmd(dsi, true);
+
 	err = _tegra_dsi_write_data(dsi, cmd);
 	if (err < 0)
 		dev_err(&dc->ndev->dev, "Failed DSI write\n");
 
 	mdelay(delay_ms);
+
+	/* Revert to host fifo if video fifo was used for sending the cmd */
+	if (dsi->info.use_video_host_fifo_for_cmd)
+		tegra_dc_dsi_config_video_host_fifo_for_cmd(dsi, false);
 
 	err = tegra_dsi_restore_state(dc, dsi, init_status);
 	if (err < 0)
@@ -4720,6 +4743,7 @@ static void __tegra_dc_dsi_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_DEBUG_FS
 	tegra_dc_dsi_debug_create(dsi);
+	tegra_dsi_csi_test_init(dsi);
 #endif
 
 	if (dsi->info.dsi2lvds_bridge_enable)

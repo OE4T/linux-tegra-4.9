@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.h
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -493,6 +493,7 @@ struct sanity_status {
 
 #ifdef CONFIG_DEBUG_FS
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi);
+void tegra_dsi_csi_test_init(struct tegra_dc_dsi_data *dsi);
 #endif
 void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi);
 void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi);
@@ -527,6 +528,11 @@ int tegra_dsi_send_panel_cmd(struct tegra_dc *dc,
 					u32 n_cmd);
 
 void tegra_dsi_init_clock_param(struct tegra_dc *dc);
+
+struct dsi_status *tegra_dsi_prepare_host_transmission(
+	struct tegra_dc *dc, struct tegra_dc_dsi_data *dsi, u8 lp_op);
+int tegra_dsi_restore_state(struct tegra_dc *dc, struct tegra_dc_dsi_data *dsi,
+	struct dsi_status *init_status);
 
 static inline void *tegra_dsi_get_outdata(struct tegra_dc_dsi_data *dsi)
 {

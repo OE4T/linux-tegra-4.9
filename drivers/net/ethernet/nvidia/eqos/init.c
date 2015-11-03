@@ -138,31 +138,32 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 	}
 }
 
-void get_dt_u32(struct device_node *pnode, char *pdt_prop, u32 *pval,
+void get_dt_u32(struct eqos_prv_data *pdata, char *pdt_prop, u32 *pval,
 		u32 val_def, u32 val_max)
 {
+	struct device_node *pnode = pdata->pdev->dev.of_node;
 	int ret = 0;
 
 	ret = of_property_read_u32(pnode, pdt_prop, pval);
 
 	if (ret < 0)
-		printk(KERN_ALERT "%s(): \"%s\" read failed %d. Using default\n",
+		dev_err(&pdata->pdev->dev,
+			"%s(): \"%s\" read failed %d. Using default\n",
 			__func__, pdt_prop, ret);
 
 	if (*pval > val_max) {
-		printk(KERN_ALERT
+		dev_err(&pdata->pdev->dev,
 			"%s(): %d is invalid value for \"%s\".  Using default.\n",
 			__func__, *pval, pdt_prop);
 		*pval = val_def;
 	}
-	printk(KERN_ALERT "%s(): \"%s\"=%d\n", __func__,
-			pdt_prop, *pval);
 }
 
 
-void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
+void get_dt_u32_array(struct eqos_prv_data *pdata, char *pdt_prop, u32 *pval,
 			u32 val_def, u32 val_max, u32 num_entries)
 {
+	struct device_node *pnode = pdata->pdev->dev.of_node;
 	int i, ret = 0;
 
 	ret = of_property_read_u32_array(pnode, pdt_prop, pval, num_entries);
@@ -178,9 +179,10 @@ void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
 			int j;
 
 			if (pval[i] > val_max) {
-				printk(KERN_ALERT "%d is invalid value for"
-				" queue_prio[%d], using default %d\n",
-				pval[i], i, i + val_def);
+				dev_err(&pdata->pdev->dev,
+					"%d is invalid value for"
+					" queue_prio[%d], using default %d\n",
+					pval[i], i, i + val_def);
 				pval[i] = val_def + i;
 			}
 			/* q_prio need to be exclusive for each queue */
@@ -189,22 +191,22 @@ void get_dt_u32_array(struct device_node *pnode, char *pdt_prop, u32 *pval,
 					continue;
 				/* use default if two priorities are same */
 				if (pval[i] == pval[j]) {
-					printk(KERN_ALERT "queue_prio %d same"
-					" for q%d and q%d, using default\n",
-					pval[i], i, j);
+					dev_err(&pdata->pdev->dev,
+						"queue_prio %d same"
+						" for q%d and q%d, using default\n",
+						pval[i], i, j);
 					pval[i] = val_def + i;
 					pval[j] = val_def + j;
 				}
 			}
 		} else if (pval[i] > val_max) {
-			printk(KERN_ALERT "%d is invalid value for \"%s[%d]\"."
+			dev_err(&pdata->pdev->dev,
+				"%d is invalid value for \"%s[%d]\"."
 				"  Using default.\n",
 				pval[i], pdt_prop, i);
 			pval[i] = val_def;
 		}
 	}
-	printk(KERN_ALERT "%s(): \"%s\" = 0x%x 0x%x 0x%x 0x%x\n", __func__,
-		pdt_prop, pval[0], pval[1], pval[2], pval[3]);
 }
 
 static void eqos_clock_deinit(struct eqos_prv_data *pdata)
@@ -303,7 +305,7 @@ static int eqos_clock_init(struct eqos_prv_data *pdata)
 	if (ret < 0)
 		goto tx_en_fail;
 
-	dev_info(&pdev->dev, "axi_cbb/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
+	DBGPR("%s(): axi_cbb/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
 		clk_get_rate(pdata->axi_cbb_clk),
 		clk_get_rate(pdata->axi_clk), clk_get_rate(pdata->rx_clk),
 		clk_get_rate(pdata->ptp_ref_clk), clk_get_rate(pdata->tx_clk));
@@ -783,7 +785,10 @@ int eqos_probe(struct platform_device *pdev)
 	}
 
 	eqos_get_all_hw_features(pdata);
+
+#ifdef YDEBUG
 	eqos_print_all_hw_features(pdata);
+#endif
 
 	ret = desc_if->alloc_queue_struct(pdata);
 	if (ret < 0) {
@@ -811,23 +816,23 @@ int eqos_probe(struct platform_device *pdev)
 
 	pdata->ptp_cfg.use_tagged_ptp = of_property_read_bool(node,
 			"nvidia,use_tagged_ptp");
-	get_dt_u32(node, "nvidia,ptp_dma_ch",
+	get_dt_u32(pdata, "nvidia,ptp_dma_ch",
 		&(pdata->ptp_cfg.ptp_dma_ch_id),
 		PTP_DMA_CH_DEFAULT, PTP_DMA_CH_MAX);
 
 	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
-	get_dt_u32(node, "nvidia,intr_mode", &pdt_cfg->intr_mode,
+	get_dt_u32(pdata, "nvidia,intr_mode", &pdt_cfg->intr_mode,
 			INTR_MODE_DEFAULT, MODE_MAX);
-	get_dt_u32(node, "nvidia,pause_frames", &pdt_cfg->pause_frames,
+	get_dt_u32(pdata, "nvidia,pause_frames", &pdt_cfg->pause_frames,
 			PAUSE_FRAMES_DEFAULT, PAUSE_FRAMES_MAX);
-	get_dt_u32_array(node, "nvidia,chan_mode", pdt_cfg->chan_mode,
+	get_dt_u32_array(pdata, "nvidia,chan_mode", pdt_cfg->chan_mode,
 			CHAN_MODE_DEFAULT, CHAN_MODE_MAX, 4);
-	get_dt_u32_array(node, "nvidia,chan_napi_quota",
+	get_dt_u32_array(pdata, "nvidia,chan_napi_quota",
 			pdt_cfg->chan_napi_quota,
 			CHAN_NAPI_QUOTA_DEFAULT, CHAN_NAPI_QUOTA_MAX, 4);
-	get_dt_u32_array(node, "nvidia,rxq_enable_ctrl", pdt_cfg->rxq_ctrl,
+	get_dt_u32_array(pdata, "nvidia,rxq_enable_ctrl", pdt_cfg->rxq_ctrl,
 			RXQ_CTRL_DEFAULT, RXQ_CTRL_MAX, 4);
-	get_dt_u32_array(node, "nvidia,queue_prio", pdt_cfg->q_prio,
+	get_dt_u32_array(pdata, "nvidia,queue_prio", pdt_cfg->q_prio,
 			QUEUE_PRIO_DEFAULT, QUEUE_PRIO_MAX, 4);
 
 	for (i = 0; i < MAX_CHANS; i++) {
@@ -856,9 +861,9 @@ int eqos_probe(struct platform_device *pdev)
 	if (pdata->csr_clock_speed <= 0) {
 		dev_err(&pdev->dev, "fail to read axi_cbb_clk rate\n");
 	} else {
-		dev_info(&pdev->dev, "setting MAC_1US_TIC to %d MHz\n",
+		DBGPR("setting MAC_1US_TIC to %d MHz\n",
 			pdata->csr_clock_speed);
-		MAC_1US_TIC_WR(pdata->csr_clock_speed - 1);
+			MAC_1US_TIC_WR(pdata->csr_clock_speed - 1);
 	}
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
@@ -876,7 +881,6 @@ int eqos_probe(struct platform_device *pdev)
 		ndev->dev_addr[4] = mac_addr[4];
 		ndev->dev_addr[5] = mac_addr[5];
 	}
-#ifndef EQOS_CONFIG_PGTEST
 	/* enabling and registration of irq with magic wakeup */
 	if (1 == pdata->hw_feat.mgk_sel) {
 		device_set_wakeup_capable(&pdev->dev, 1);
@@ -905,29 +909,24 @@ int eqos_probe(struct platform_device *pdev)
 		ndev->hw_features |= NETIF_F_SG;
 		ndev->hw_features |= NETIF_F_IP_CSUM;
 		ndev->hw_features |= NETIF_F_IPV6_CSUM;
-		printk(KERN_ALERT "Supports TSO, SG and TX COE\n");
 	}
 	else if (pdata->hw_feat.tx_coe_sel) {
 		ndev->hw_features = NETIF_F_IP_CSUM ;
 		ndev->hw_features |= NETIF_F_IPV6_CSUM;
-		printk(KERN_ALERT "Supports TX COE\n");
 	}
 
 	if (pdata->hw_feat.rx_coe_sel) {
 		ndev->hw_features |= NETIF_F_RXCSUM;
 		ndev->hw_features |= NETIF_F_LRO;
-		printk(KERN_ALERT "Supports RX COE and LRO\n");
 	}
 #ifdef EQOS_ENABLE_VLAN_TAG
 	ndev->vlan_features |= ndev->hw_features;
 	ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_RX;
 	if (pdata->hw_feat.sa_vlan_ins) {
 		ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_TX;
-		printk(KERN_ALERT "VLAN Feature enabled\n");
 	}
 	if (pdata->hw_feat.vlan_hash_en) {
 		ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_FILTER;
-		printk(KERN_ALERT "VLAN HASH Filtering enabled\n");
 	}
 #endif /* end of EQOS_ENABLE_VLAN_TAG */
 	ndev->features |= ndev->hw_features;
@@ -939,29 +938,12 @@ int eqos_probe(struct platform_device *pdev)
 	eqos_ptp_init(pdata);
 #endif	/* end of EQOS_CONFIG_PTP */
 
-#endif /* end of EQOS_CONFIG_PGTEST */
-
 	spin_lock_init(&pdata->lock);
 	spin_lock_init(&pdata->tx_lock);
 	spin_lock_init(&pdata->pmt_lock);
 
 	for (i = 0; i < MAX_CHANS; i++)
 		spin_lock_init(&pdata->chinfo[i].chan_lock);
-
-#ifdef EQOS_CONFIG_PGTEST
-	ret = eqos_alloc_pg(pdata);
-	if (ret < 0) {
-		printk(KERN_ALERT "ERROR:Unable to allocate PG memory\n");
-		goto err_out_pg_failed;
-	}
-	printk(KERN_ALERT "\n");
-	printk(KERN_ALERT "/*******************************************\n");
-	printk(KERN_ALERT "*\n");
-	printk(KERN_ALERT "* PACKET GENERATOR MODULE ENABLED IN DRIVER\n");
-	printk(KERN_ALERT "*\n");
-	printk(KERN_ALERT "*******************************************/\n");
-	printk(KERN_ALERT "\n");
-#endif /* end of EQOS_CONFIG_PGTEST */
 
 	ret = register_netdev(ndev);
 	if (ret) {
@@ -977,7 +959,7 @@ int eqos_probe(struct platform_device *pdev)
 		printk(KERN_ALERT "carrier off till LINK is up\n");
 	}
 	else
-		printk(KERN_ALERT "Net device registration sucessful\n");
+		DBGPR("Net device registration sucessful\n");
 
 	ret = request_irq(power_irq, EQOS_ISR_SW_EQOS_POWER,
 		IRQF_SHARED, DEV_NAME, pdata);
@@ -1005,12 +987,7 @@ int eqos_probe(struct platform_device *pdev)
 	unregister_netdev(ndev);
  err_out_netdev_failed:
 
-#ifdef EQOS_CONFIG_PGTEST
-	eqos_free_pg(pdata);
- err_out_pg_failed:
-#endif
 
-#ifndef EQOS_CONFIG_PGTEST
 #ifdef EQOS_CONFIG_PTP
 	eqos_ptp_remove(pdata);
 #endif	/* end of EQOS_CONFIG_PTP */
@@ -1020,7 +997,6 @@ int eqos_probe(struct platform_device *pdev)
 		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 		netif_napi_del(&rx_queue->napi);
 	}
-#endif
 	if (1 == pdata->hw_feat.sma_sel)
 		eqos_mdio_unregister(ndev);
 
@@ -1097,11 +1073,6 @@ int eqos_remove(struct platform_device *pdev)
 
 	unregister_netdev(ndev);
 
-#ifdef EQOS_CONFIG_PGTEST
-	eqos_free_pg(pdata);
-#endif /* end of EQOS_CONFIG_PGTEST */
-
-#ifndef EQOS_CONFIG_PGTEST
 #ifdef EQOS_CONFIG_PTP
 	eqos_ptp_remove(pdata);
 #endif	/* end of EQOS_CONFIG_PTP */
@@ -1111,7 +1082,6 @@ int eqos_remove(struct platform_device *pdev)
 		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 		netif_napi_del(&rx_queue->napi);
 	}
-#endif
 
 	if (1 == pdata->hw_feat.sma_sel)
 		eqos_mdio_unregister(ndev);
@@ -1339,10 +1309,10 @@ static int eqos_init_module(void)
 
 	ret = platform_driver_register(&eqos_driver);
 	if (ret < 0) {
-		printk(KERN_ALERT "eqos:driver registration failed");
+		DBGPR("eqos:driver registration failed\n");
 		return ret;
 	}
-	printk(KERN_ALERT "eqos:driver registration sucessful");
+	DBGPR("eqos:driver registration sucessful\n");
 
 #ifdef EQOS_CONFIG_DEBUGFS
 	create_debug_files();

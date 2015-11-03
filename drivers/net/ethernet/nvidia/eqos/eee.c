@@ -369,11 +369,9 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 
 	/* HW supports the EEE feature */
 	if (pdata->hw_feat.eee_sel) {
-#ifndef EQOS_CUSTOMIZED_EEE_TEST
 		/* check if the PHY supports EEE */
 		if (eqos_phy_init_eee(pdata->phydev, 1))
 			goto phy_eee_failed;
-#endif /* EQOS_CUSTOMIZED_EEE_TEST */
 
 		if (!pdata->eee_active) {
 			pdata->eee_active = 1;
@@ -413,9 +411,7 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 
 	DBGPR_EEE("<--eqos_eee_init\n");
 
-#ifndef EQOS_CUSTOMIZED_EEE_TEST
  phy_eee_failed:
-#endif
 
 	return ret;
 }

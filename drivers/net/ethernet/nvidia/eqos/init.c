@@ -841,9 +841,8 @@ int eqos_probe(struct platform_device *pdev)
 		pchinfo->poll_interval = 1000;
 		pchinfo->int_mask = VIRT_INTR_CH_CRTL_RX_WR_MASK;
 
-		/* enable tx interrupts for ptp chan */
-		if (i == pdata->ptp_cfg.ptp_dma_ch_id)
-			pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
+		/* enable tx interrupts for all chan */
+		pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
 	}
 
 	if (pdata->dt_cfg.intr_mode == MODE_COMMON_IRQ) {

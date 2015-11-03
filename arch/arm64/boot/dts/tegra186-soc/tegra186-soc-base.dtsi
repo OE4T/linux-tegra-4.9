@@ -154,11 +154,11 @@
 			      <&{/xudc@3550000}		TEGRA_SWGROUP_XUSB_DEV>,
 			      <&{/sound}		TEGRA_SWGROUP_APE>,
 			      <&{/sound_ref}		TEGRA_SWGROUP_APE>,
+			      <&{/ahci-sata@3507000}	TEGRA_SWGROUP_SATA2>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>;
 
 			      /*
 			      <&{/gp10b}		TEGRA_SWGROUP_GPUB>,
-			      <&{/ahci-sata@3507000}	TEGRA_SWGROUP_SATA2>,
 			      <&{/bpmp}			TEGRA_SWGROUP_BPMP>,
 			      <&{/sound}		TEGRA_SWGROUP_APE>,
 			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,

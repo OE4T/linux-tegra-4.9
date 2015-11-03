@@ -33,6 +33,9 @@
 #include <linux/pm_runtime.h>
 #include <mach/tegra_asoc_pdata.h>
 
+#ifdef CONFIG_NVS_IQS2X3
+#include <linux/nvs_iqs2x3.h>
+#endif
 #include <sound/core.h>
 #include <sound/jack.h>
 #include <sound/pcm.h>
@@ -516,6 +519,10 @@ static int tegra_t210ref_event_int_spk(struct snd_soc_dapm_widget *w,
 				sysedp_set_state(machine->sysedpc, 0);
 		}
 	}
+#ifdef CONFIG_NVS_IQS2X3
+	/* Notify SAR about speaker enable/disable */
+	sar_external_status(!!SND_SOC_DAPM_EVENT_ON(event));
+#endif
 
 	if (!(machine->gpio_requested & GPIO_SPKR_EN))
 		return 0;

@@ -358,11 +358,6 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 		GET_TX_DESC_DMA_ADDR(qinx, i) =
 		    (desc_dma + sizeof(struct s_tx_normal_desc) * i);
 		GET_TX_BUF_PTR(qinx, i) = &buffer[i];
-#ifdef EQOS_CONFIG_PGTEST
-		if (eqos_alloc_tx_buf_pg(pdata, GET_TX_BUF_PTR(qinx, i),
-			GFP_KERNEL))
-			break;
-#endif /* end of EQOS_CONFIG_PGTEST */
 	}
 
 	desc_data->cur_tx = 0;
@@ -372,11 +367,7 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 	desc_data->packet_count = 0;
 	desc_data->free_desc_cnt = TX_DESC_CNT;
 
-#ifdef EQOS_CONFIG_PGTEST
-	hw_if->tx_desc_init_pg(pdata, qinx);
-#else
 	hw_if->tx_desc_init(pdata, qinx);
-#endif
 	desc_data->cur_tx = 0;
 
 	DBGPR("<--eqos_wrapper_tx_descriptor_init_single_q\n");
@@ -418,14 +409,10 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 		GET_RX_DESC_DMA_ADDR(qinx, i) =
 		    (desc_dma + sizeof(struct s_rx_normal_desc) * i);
 		GET_RX_BUF_PTR(qinx, i) = &buffer[i];
-#ifdef EQOS_CONFIG_PGTEST
-		if (eqos_alloc_rx_buf_pg(pdata, GET_RX_BUF_PTR(qinx, i), GFP_KERNEL))
-			break;
-#else
+
 		/* allocate skb & assign to each desc */
 		if (pdata->alloc_rx_buf(pdata, GET_RX_BUF_PTR(qinx, i), GFP_KERNEL))
 			break;
-#endif /* end of EQOS_CONFIG_PGTEST */
 
 		wmb();
 	}
@@ -436,11 +423,7 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 	desc_data->skb_realloc_threshold = MIN_RX_DESC_CNT;
 	desc_data->pkt_received = 0;
 
-#ifdef EQOS_CONFIG_PGTEST
-	hw_if->rx_desc_init_pg(pdata, qinx);
-#else
 	hw_if->rx_desc_init(pdata, qinx);
-#endif
 	desc_data->cur_rx = 0;
 
 	DBGPR("<--eqos_wrapper_rx_descriptor_init_single_q\n");
@@ -534,11 +517,6 @@ static void eqos_tx_free_mem(struct eqos_prv_data *pdata)
 	/* free TX descriptor */
 	eqos_tx_desc_free_mem(pdata, EQOS_TX_QUEUE_CNT);
 
-#ifdef EQOS_CONFIG_PGTEST
-	/* free TX skb's */
-	eqos_tx_skb_free_mem(pdata, EQOS_TX_QUEUE_CNT);
-#endif /* end of EQOS_CONFIG_PGTEST */
-
 	/* free TX buffer */
 	eqos_tx_buf_free_mem(pdata, EQOS_TX_QUEUE_CNT);
 
@@ -600,37 +578,6 @@ static void eqos_tx_skb_free_mem(struct eqos_prv_data *pdata,
 }
 
 
-#ifdef EQOS_CONFIG_PGTEST
-/*!
- * \details This function is used to release Rx socket buffer.
- *
- * \param[in] pdata – pointer to private device structure.
- * \param[in] buffer – pointer to rx wrapper buffer structure.
- *
- * \return void
- */
-static void eqos_unmap_rx_skb_pg(struct eqos_prv_data *pdata,
-				     struct eqos_rx_buffer *buffer)
-{
-	//DBGPR("-->eqos_unmap_rx_skb_pg\n");
-
-	/* unmap the first buffer */
-	if (buffer->dma) {
-		dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-			ALIGN_SIZE(EQOS_PG_FRAME_SIZE),
-			DMA_FROM_DEVICE);
-		buffer->dma = 0;
-	}
-
-	if (buffer->skb) {
-		dev_kfree_skb_any(buffer->skb);
-		buffer->skb = NULL;
-	}
-
-	//DBGPR("<--eqos_unmap_rx_skb_pg\n");
-}
-#endif
-
 /*!
  * \details This function is invoked by other function to free
  * the rx socket buffers.
@@ -643,25 +590,12 @@ static void eqos_unmap_rx_skb_pg(struct eqos_prv_data *pdata,
 static void eqos_rx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 							UINT qinx)
 {
-	struct eqos_rx_wrapper_descriptor *desc_data =
-	    GET_RX_WRAPPER_DESC(qinx);
 	UINT i;
 
 	DBGPR("-->eqos_rx_skb_free_mem_single_q: qinx = %u\n", qinx);
 
-	for (i = 0; i < RX_DESC_CNT; i++) {
-#ifdef EQOS_CONFIG_PGTEST
-		eqos_unmap_rx_skb_pg(pdata, GET_RX_BUF_PTR(qinx, i));
-#else
+	for (i = 0; i < RX_DESC_CNT; i++)
 		eqos_unmap_rx_skb(pdata, GET_RX_BUF_PTR(qinx, i));
-#endif
-	}
-
-	/* there are also some cached data from a chained rx */
-	if (desc_data->skb_top)
-		dev_kfree_skb_any(desc_data->skb_top);
-
-	desc_data->skb_top = NULL;
 
 	DBGPR("<--eqos_rx_skb_free_mem_single_q\n");
 }
@@ -840,7 +774,6 @@ static int eqos_handle_tso(struct net_device *dev,
 }
 
 /* returns 0 on success and -ve on failure */
-#ifndef EQOS_DMA_32BIT
 static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
                                 struct eqos_tx_buffer *buffer,
                                 struct sk_buff *skb,
@@ -866,126 +799,11 @@ static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
 	}
 	buffer->len = size;
 	buffer->buf1_mapped_as_page = Y_FALSE;
-	buffer->dma2 = 0;
-	buffer->len2 = 0;
 
 	DBGPR("<--eqos_map_non_page_buffs_64");
 	return 0;
 }
-#else
-static int eqos_map_non_page_buffs(struct eqos_prv_data *pdata,
-				struct eqos_tx_buffer *buffer,
-				struct eqos_tx_buffer *prev_buffer,
-				struct sk_buff *skb,
-				unsigned int offset,
-				unsigned int size)
-{
-	DBGPR("-->eqos_map_non_page_buffs\n");
 
-	if (size > EQOS_MAX_DATA_PER_TX_BUF) {
-		if (prev_buffer && !prev_buffer->dma2) {
-			/* fill the first buffer pointer in prev_buffer->dma2 */
-			prev_buffer->dma2 = dma_map_single((&pdata->pdev->dev),
-							(skb->data + offset),
-				ALIGN_SIZE(EQOS_MAX_DATA_PER_TX_BUF),
-							DMA_TO_DEVICE);
-
-			if (dma_mapping_error((&pdata->pdev->dev), prev_buffer->dma2)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return - ENOMEM;
-			}
-			prev_buffer->len2 = EQOS_MAX_DATA_PER_TX_BUF;
-			prev_buffer->buf2_mapped_as_page = Y_FALSE;
-
-			/* fill the second buffer pointer in buffer->dma */
-			buffer->dma = dma_map_single((&pdata->pdev->dev),
-						(skb->data + offset + EQOS_MAX_DATA_PER_TX_BUF),
-						ALIGN_SIZE(size -
-					  EQOS_MAX_DATA_PER_TX_BUF),
-						DMA_TO_DEVICE);
-
-			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return - ENOMEM;
-			}
-			buffer->len = (size - EQOS_MAX_DATA_PER_TX_BUF);
-			buffer->buf1_mapped_as_page = Y_FALSE;
-			buffer->dma2 = 0;
-			buffer->len2 = 0;
-		} else {
-			/* fill the first buffer pointer in buffer->dma */
-			buffer->dma = dma_map_single((&pdata->pdev->dev),
-					(skb->data + offset),
-					ALIGN_SIZE(
-					  EQOS_MAX_DATA_PER_TX_BUF),
-					DMA_TO_DEVICE);
-
-			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return - ENOMEM;
-			}
-			buffer->len = EQOS_MAX_DATA_PER_TX_BUF;
-			buffer->buf1_mapped_as_page = Y_FALSE;
-
-			/* fill the second buffer pointer in buffer->dma2 */
-			buffer->dma2 = dma_map_single((&pdata->pdev->dev),
-					(skb->data + offset + EQOS_MAX_DATA_PER_TX_BUF),
-					ALIGN_SIZE(size -
-					  EQOS_MAX_DATA_PER_TX_BUF),
-					DMA_TO_DEVICE);
-
-			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma2)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return - ENOMEM;
-			}
-			buffer->len2 = (size - EQOS_MAX_DATA_PER_TX_BUF);
-			buffer->buf2_mapped_as_page = Y_FALSE;
-		}
-	} else {
-		if (prev_buffer && !prev_buffer->dma2) {
-			/* fill the first buffer pointer in prev_buffer->dma2 */
-			prev_buffer->dma2 = dma_map_single((&pdata->pdev->dev),
-						(skb->data + offset),
-						ALIGN_SIZE(size),
-						DMA_TO_DEVICE);
-
-			if (dma_mapping_error((&pdata->pdev->dev), prev_buffer->dma2)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return - ENOMEM;
-			}
-			prev_buffer->len2 = size;
-			prev_buffer->buf2_mapped_as_page = Y_FALSE;
-
-			/* indicate current buffer struct is not used */
-			buffer->dma = 0;
-			buffer->len = 0;
-			buffer->dma2 = 0;
-			buffer->len2 = 0;
-		} else {
-			/* fill the first buffer pointer in buffer->dma */
-			buffer->dma = dma_map_single((&pdata->pdev->dev),
-						skb->data + offset,
-						ALIGN_SIZE(size),
-						DMA_TO_DEVICE);
-
-			if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return - ENOMEM;
-			}
-			buffer->len = size;
-			buffer->buf1_mapped_as_page = Y_FALSE;
-			buffer->dma2 = 0;
-			buffer->len2 = 0;
-		}
-	}
-
-	DBGPR("<--eqos_map_non_page_buffs\n");
-
-	return 0;
-}
-#endif
-
-#ifndef EQOS_DMA_32BIT
 static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 			struct eqos_tx_buffer *buffer,
 			struct skb_frag_struct *frag,
@@ -1008,134 +826,10 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 	}
 	buffer->len = size;
 	buffer->buf1_mapped_as_page = Y_TRUE;
-	buffer->dma2 = 0;
 
 	DBGPR("<--eqos_map_page_buffs_64\n");
 	return 0;
 }
-#else
-/* returns 0 on success and -ve on failure */
-static int eqos_map_page_buffs(struct eqos_prv_data *pdata,
-			struct eqos_tx_buffer *buffer,
-			struct eqos_tx_buffer *prev_buffer,
-			struct skb_frag_struct *frag,
-			unsigned int offset,
-			unsigned int size)
-{
-	DBGPR("-->eqos_map_page_buffs\n");
-
-	if (size > EQOS_MAX_DATA_PER_TX_BUF) {
-		if (!prev_buffer->dma2) {
-			DBGPR("prev_buffer->dma2 is empty\n");
-			/* fill the first buffer pointer in pre_buffer->dma2 */
-			prev_buffer->dma2 =
-				dma_map_page((&pdata->pdev->dev),
-						frag->page.p,
-						(frag->page_offset + offset),
-						ALIGN_SIZE(
-					  EQOS_MAX_DATA_PER_TX_BUF),
-						DMA_TO_DEVICE);
-			if (dma_mapping_error((&pdata->pdev->dev),
-						prev_buffer->dma2)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return -ENOMEM;
-			}
-			prev_buffer->len2 = EQOS_MAX_DATA_PER_TX_BUF;
-			prev_buffer->buf2_mapped_as_page = Y_TRUE;
-
-			/* fill the second buffer pointer in buffer->dma */
-			buffer->dma = dma_map_page((&pdata->pdev->dev),
-						frag->page.p,
-						(frag->page_offset + offset + EQOS_MAX_DATA_PER_TX_BUF),
-						ALIGN_SIZE(size -
-					  EQOS_MAX_DATA_PER_TX_BUF),
-						DMA_TO_DEVICE);
-			if (dma_mapping_error((&pdata->pdev->dev),
-						buffer->dma)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return -ENOMEM;
-			}
-			buffer->len = (size - EQOS_MAX_DATA_PER_TX_BUF);
-			buffer->buf1_mapped_as_page = Y_TRUE;
-			buffer->dma2 = 0;
-			buffer->len2 = 0;
-		} else {
-			/* fill the first buffer pointer in buffer->dma */
-			buffer->dma = dma_map_page((&pdata->pdev->dev),
-						frag->page.p,
-						(frag->page_offset + offset),
-						ALIGN_SIZE(
-					  EQOS_MAX_DATA_PER_TX_BUF),
-						DMA_TO_DEVICE);
-			if (dma_mapping_error((&pdata->pdev->dev),
-						buffer->dma)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return -ENOMEM;
-			}
-			buffer->len = EQOS_MAX_DATA_PER_TX_BUF;
-			buffer->buf1_mapped_as_page = Y_TRUE;
-
-			/* fill the second buffer pointer in buffer->dma2 */
-			buffer->dma2 = dma_map_page((&pdata->pdev->dev),
-						frag->page.p,
-						(frag->page_offset + offset + EQOS_MAX_DATA_PER_TX_BUF),
-						ALIGN_SIZE(size -
-					  EQOS_MAX_DATA_PER_TX_BUF),
-						DMA_TO_DEVICE);
-			if (dma_mapping_error((&pdata->pdev->dev),
-						buffer->dma2)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return -ENOMEM;
-			}
-			buffer->len2 = (size - EQOS_MAX_DATA_PER_TX_BUF);
-			buffer->buf2_mapped_as_page = Y_TRUE;
-		}
-	} else {
-		if (!prev_buffer->dma2) {
-			DBGPR("prev_buffer->dma2 is empty\n");
-			/* fill the first buffer pointer in pre_buffer->dma2 */
-			prev_buffer->dma2 = dma_map_page((&pdata->pdev->dev),
-						frag->page.p,
-						frag->page_offset,
-						ALIGN_SIZE(size),
-						DMA_TO_DEVICE);
-			if (dma_mapping_error((&pdata->pdev->dev),
-						prev_buffer->dma2)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return -ENOMEM;
-			}
-			prev_buffer->len2 = size;
-			prev_buffer->buf2_mapped_as_page = Y_TRUE;
-
-			/* indicate current buffer struct is not used */
-			buffer->dma = 0;
-			buffer->len = 0;
-			buffer->dma2 = 0;
-			buffer->len2 = 0;
-		} else {
-			/* fill the first buffer pointer in buffer->dma */
-			buffer->dma = dma_map_page((&pdata->pdev->dev),
-						frag->page.p,
-						frag->page_offset,
-						ALIGN_SIZE(size),
-						DMA_TO_DEVICE);
-			if (dma_mapping_error((&pdata->pdev->dev),
-						buffer->dma)) {
-				printk(KERN_ALERT "failed to do the dma map\n");
-				return -ENOMEM;
-			}
-			buffer->len = size;
-			buffer->buf1_mapped_as_page = Y_TRUE;
-			buffer->dma2 = 0;
-			buffer->len2 = 0;
-		}
-	}
-
-	DBGPR("<--eqos_map_page_buffs\n");
-
-	return 0;
-}
-#endif
 
 
 /*!
@@ -1192,15 +886,6 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 		INCR_TX_DESC_INDEX(index, 1);
 		buffer = GET_TX_BUF_PTR(qinx, index);
 	}
-#ifdef EQOS_ENABLE_DVLAN
-	if (pdata->via_reg_or_desc) {
-		DBGPR("Skipped preparing index %d "\
-			"(Double VLAN Context descriptor)\n\n", index);
-		INCR_TX_DESC_INDEX(index, 1);
-		buffer = GET_TX_BUF_PTR(qinx, index);
-	}
-#endif /* End of EQOS_ENABLE_DVLAN */
-
 	if (vartso_enable) {
 		hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
 		len = hdr_len;
@@ -1214,14 +899,8 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 		size = min(len, EQOS_MAX_DATA_PER_TXD);
 
 		buffer = GET_TX_BUF_PTR(qinx, index);
-#if defined(EQOS_DMA_32BIT)
-		ret = eqos_map_non_page_buffs(pdata, buffer,
-						prev_buffer,
-						skb, offset, size);
-#else
 		ret = eqos_map_non_page_buffs_64(pdata, buffer,
 						skb, offset, size);
-#endif
 		if (ret < 0)
 			goto err_out_dma_map_fail;
 
@@ -1239,14 +918,8 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 			size = min(len, EQOS_MAX_DATA_PER_TXD);
 
 			buffer = GET_TX_BUF_PTR(qinx, index);
-#if defined(EQOS_DMA_32BIT)
-			ret = eqos_map_non_page_buffs(pdata, buffer,
-						prev_buffer,
-						skb, offset, size);
-#else
 			ret = eqos_map_non_page_buffs_64(pdata, buffer,
 						skb, offset, size);
-#endif
 			if (ret < 0)
 				goto err_out_dma_map_fail;
 
@@ -1270,14 +943,8 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 			size = min(len, EQOS_MAX_DATA_PER_TXD);
 
 			buffer = GET_TX_BUF_PTR(qinx, index);
-#if defined(EQOS_DMA_32BIT)
-			ret = eqos_map_page_buffs(pdata, buffer,
-							prev_buffer, frag,
-							offset, size);
-#else
 			ret = eqos_map_page_buffs_64(pdata, buffer,
 							frag, offset, size);
-#endif
 			if (ret < 0)
 				goto err_out_dma_map_fail;
 
@@ -1332,10 +999,6 @@ static void eqos_unmap_tx_skb(struct eqos_prv_data *pdata,
 {
 	DBGPR("-->eqos_unmap_tx_skb\n");
 
-#ifdef EQOS_CONFIG_PGTEST
-	buffer->len = EQOS_PG_FRAME_SIZE;
-#endif
-
 	if (buffer->dma) {
 		if (buffer->buf1_mapped_as_page == Y_TRUE)
 			dma_unmap_page((&pdata->pdev->dev), buffer->dma,
@@ -1349,20 +1012,6 @@ static void eqos_unmap_tx_skb(struct eqos_prv_data *pdata,
 		buffer->dma = 0;
 		buffer->len = 0;
 	}
-
-	if (buffer->dma2) {
-		if (buffer->buf2_mapped_as_page == Y_TRUE)
-			dma_unmap_page((&pdata->pdev->dev), buffer->dma2,
-					ALIGN_SIZE(buffer->len2),
-					DMA_TO_DEVICE);
-		else
-			dma_unmap_single((&pdata->pdev->dev), buffer->dma2,
-				ALIGN_SIZE(buffer->len2), DMA_TO_DEVICE);
-
-		buffer->dma2 = 0;
-		buffer->len2 = 0;
-	}
-
 
 	if (buffer->skb != NULL) {
 		dev_kfree_skb_any(buffer->skb);
@@ -1389,12 +1038,7 @@ static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 
 	/* unmap the first buffer */
 	if (buffer->dma) {
-		if (pdata->rx_split_hdr) {
-			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-					 ALIGN_SIZE(2*buffer->rx_hdr_size),
-					 DMA_FROM_DEVICE);
-		}
-		else if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
+		if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
 			dma_unmap_page(&pdata->pdev->dev, buffer->dma,
 				       PAGE_SIZE, DMA_FROM_DEVICE);
 		} else {
@@ -1405,24 +1049,11 @@ static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 		buffer->dma = 0;
 	}
 
-	/* unmap the second buffer */
-	if (buffer->dma2) {
-		dma_unmap_page(&pdata->pdev->dev, buffer->dma2,
-				PAGE_SIZE, DMA_FROM_DEVICE);
-		buffer->dma2 = 0;
-	}
-
 	/* page1 will be present only if JUMBO is enabled */
 	if (buffer->page) {
 		put_page(buffer->page);
 		buffer->page = NULL;
 	}
-	/* page2 will be present if JUMBO/SPLIT HDR is enabled */
-	if (buffer->page2) {
-		put_page(buffer->page2);
-		buffer->page2 = NULL;
-	}
-
 	if (buffer->skb) {
 		dev_kfree_skb_any(buffer->skb);
 		buffer->skb = NULL;

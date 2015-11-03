@@ -1416,11 +1416,6 @@
 	data = ptr; \
 } while(0)
 
-#define TX_PKT_FEATURES_TCP_HDR_LEN_WR(ptr, data) do { \
-	ptr = data; \
-} while(0)
-
-
 #define TX_PKT_FEATURES_PKT_TYPE_RD(ptr, data) do { \
 	data = ptr; \
 } while(0)

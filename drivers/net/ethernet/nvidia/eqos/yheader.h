@@ -90,15 +90,12 @@
 #include <linux/ioport.h>
 #include <linux/phy.h>
 #include <linux/mdio.h>
-#if defined(CONFIG_ARCH_DMA_ADDR_T_64BIT)
+
 #define L32(data) ((data)&0xFFFFFFFF)
 #define H32(data) (((data)&0xFFFFFFFF00000000)>>32)
-#else
-#define EQOS_DMA_32BIT
-#endif
+
 #if defined(CONFIG_VLAN_8021Q) || defined(CONFIG_VLAN_8021Q_MODULE)
 #define EQOS_ENABLE_VLAN_TAG
-//#define ENABLE_VLAN_FILTER
 #include <linux/if_vlan.h>
 #endif
 #include <linux/if_vlan.h>
@@ -116,10 +113,6 @@
 
 #include <asm-generic/errno.h>
 
-#ifdef CONFIG_PGTEST_OBJ
-#define EQOS_CONFIG_PGTEST
-#endif
-
 #ifdef CONFIG_PTPSUPPORT_OBJ
 #define EQOS_CONFIG_PTP
 #endif
@@ -128,19 +121,6 @@
 #define EQOS_CONFIG_DEBUGFS
 #endif
 
-#ifdef EQOS_CONFIG_PGTEST
-
-#define EQOS_DA_SA 12
-#define EQOS_TYPE 2
-#define EQOS_VLAN_TAG 4
-#define EQOS_ETH_HDR_AVB (EQOS_DA_SA + \
-		EQOS_TYPE + \
-		EQOS_VLAN_TAG)
-
-#define EQOS_PG_FRAME_SIZE (pdata->dev->mtu + EQOS_ETH_HDR_AVB)
-#define EQOS_AVTYPE 0x22f0
-
-#endif /* end of EQOS_CONFIG_PGTEST */
 
 /* Enable PBLX8 setting */
 #define PBLX8
@@ -172,12 +152,9 @@
 //#define EQOS_ENABLE_RX_PKT_DUMP
 
 //#define ENABLE_CHANNEL_DATA_CHECK
-#define ENABLE_VLAN_TAG_INSERTION
 
 /* Uncomment below macro definitions for testing corresponding IP features in driver */
 #define EQOS_QUEUE_SELECT_ALGO
-//#define EQOS_CERTIFICATION_PKTBURSTCNT
-//#define EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
 #define EQOS_TXPOLLING_MODE_ENABLE
 
 //#ifdef EQOS_CONFIG_PTP
@@ -187,13 +164,10 @@
 /* Enable this to have support for only 1588 V2 VLAN un-TAGGED ptp packets */
 //#define DWC_1588_VLAN_UNTAGGED
 
-/* Uncomment below macro to enable Double VLAN support. */
-//#define EQOS_ENABLE_DVLAN
 
 /* Uncomment below macro to test EEE feature Tx path with
  * no EEE supported PHY card
  * */
-//#define EQOS_CUSTOMIZED_EEE_TEST
 //#define EQOS_ENABLE_EEE
 
 /* Uncomment below enable tx buffer alignment test code */
@@ -203,27 +177,15 @@
 #undef EQOS_TXPOLLING_MODE_ENABLE
 #endif
 
-
-#ifdef EQOS_CONFIG_PGTEST
-#undef EQOS_TXPOLLING_MODE_ENABLE
-#endif
-
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT_HALFDUPLEX
-#define EQOS_CERTIFICATION_PKTBURSTCNT
-#endif
-
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
-#undef EQOS_TXPOLLING_MODE_ENABLE
-#endif
-
 /* NOTE: Uncomment below line for function trace log messages in KERNEL LOG */
-//#define YDEBUG
-//#define YDEBUG_PG
-//#define YDEBUG_MDIO
-//#define YDEBUG_PTP
-//#define YDEBUG_FILTER
-//#define YDEBUG_EEE
-//#define YDEBUG_DMSG
+/* #define YDEBUG */
+/* #define YDEBUG_PG */
+/* #define YDEBUG_MDIO */
+/* #define YDEBUG_PTP */
+/* #define YDEBUG_FILTER */
+/* #define YDEBUG_EEE */
+/* #define YDEBUG_DMSG */
+/* #define YDEBUG_ETHTOOL_ */
 
 #define Y_TRUE 1
 #define Y_FALSE 0
@@ -279,13 +241,6 @@
 #define MAX_PACKET_SIZE 1514
 #endif
 */
-
-/* RX header size for split header */
-#define EQOS_HDR_SIZE_64B   64   /* 64 bytes */
-#define EQOS_HDR_SIZE_128B  128  /* 128 bytes */
-#define EQOS_HDR_SIZE_256B  256  /* 256 bytes */
-#define EQOS_HDR_SIZE_512B  512  /* 512 bytes */
-#define EQOS_HDR_SIZE_1024B 1024 /* 1024 bytes */
 
 #define EQOS_MAX_HDR_SIZE EQOS_HDR_SIZE_256B
 
@@ -395,11 +350,7 @@
 
 //#define EQOS_MAX_DATA_PER_TX_BUF (1 << 13)     /* 8 KB Maximum data per buffer pointer(in Bytes) */
 #define EQOS_MAX_DATA_PER_TX_BUF (1 << 12)	/* for testing purpose: 4 KB Maximum data per buffer pointer(in Bytes) */
-#if defined(EQOS_DMA_32BIT)
-#define EQOS_MAX_DATA_PER_TXD (EQOS_MAX_DATA_PER_TX_BUF * 2)	/* Maxmimum data per descriptor(in Bytes) */
-#else
 #define EQOS_MAX_DATA_PER_TXD (EQOS_MAX_DATA_PER_TX_BUF)
-#endif
 
 #define EQOS_MAX_SUPPORTED_MTU 1500
 #define EQOS_MAX_GPSL 9000 /* Default maximum Gaint Packet Size Limit */
@@ -467,7 +418,7 @@
 #define GET_TX_TOT_LEN(buffer, start_index, packet_count, total_len) do {\
   int i, pkt_idx = (start_index);\
   for(i = 0; i < (packet_count); i++) {\
-    (total_len) += ((buffer)[pkt_idx].len + (buffer)[pkt_idx].len2);\
+	(total_len) += ((buffer)[pkt_idx].len);\
     pkt_idx = INCR_TX_LOCAL_INDEX(pkt_idx, 1);\
   } \
 } while (0)
@@ -861,10 +812,6 @@ struct hw_if_struct {
 	INT(*disable_mmc_interrupts)(VOID);
 	INT(*config_mmc_counters)(VOID);
 
-	/* for handling split header */
-	INT(*config_split_header_mode)(UINT qinx, USHORT sph_en);
-	INT(*config_header_size)(USHORT header_size);
-
 	/* for handling DCB and AVB */
 	INT(*set_dcb_algorithm)(UCHAR dcb_algorithm);
 	INT(*set_dcb_queue_weight)(UINT qinx, UINT q_weight);
@@ -878,18 +825,6 @@ struct hw_if_struct {
 	INT(*config_low_credit)(UINT qinx, UINT lo_credit);
 	INT(*config_slot_num_check)(UINT qinx, UCHAR slot_check);
 	INT(*config_advance_slot_num_check)(UINT qinx, UCHAR adv_slot_check);
-#ifdef EQOS_CONFIG_PGTEST
-	void(*tx_desc_init_pg)(struct eqos_prv_data *, UINT qinx);
-	void(*rx_desc_init_pg)(struct eqos_prv_data *, UINT qinx);
-	INT(*set_ch_arb_weights)(UINT qinx, UCHAR weight);
-	INT(*config_slot_interrupt)(UINT qinx, UCHAR config);
-	INT(*set_slot_count)(UINT qinx, UCHAR slot_count);
-	INT(*set_tx_rx_prio_policy)(UCHAR prio_policy);
-	INT(*set_tx_rx_prio)(UCHAR prio);
-	INT(*set_tx_rx_prio_ratio)(UCHAR prio_ratio);
-	INT(*set_dma_tx_arb_algorithm)(UCHAR arb_algo);
-	INT(*prepare_dev_pktgen)(struct eqos_prv_data *);
-#endif /* end of EQOS_CONFIG_PGTEST */
 
 	/* for hw time stamping */
 	INT(*config_hw_time_stamping)(UINT);
@@ -958,10 +893,6 @@ struct hw_if_struct {
 	INT(*config_mac_loopback_mode)(UINT);
 
 	/* for MAC Double VLAN Processing config */
-	INT(*config_tx_outer_vlan)(UINT op_type, UINT outer_vlt);
-	INT(*config_tx_inner_vlan)(UINT op_type, UINT inner_vlt);
-	INT(*config_svlan)(UINT);
-	VOID(*config_dvlan)(bool enb_dis);
 	VOID(*config_rx_outer_vlan_stripping)(u32);
 	VOID(*config_rx_inner_vlan_stripping)(u32);
 
@@ -981,14 +912,6 @@ struct eqos_tx_buffer {
 	struct sk_buff *skb;	/* virtual address of skb */
 	unsigned short len;	/* length of first skb */
 	unsigned char buf1_mapped_as_page;
-
-	dma_addr_t dma2; /* dam address of second skb */
-	unsigned short len2; /* length of second skb */
-	unsigned char buf2_mapped_as_page;
-
-#ifdef EQOS_CONFIG_PGTEST
-	unsigned char slot_number;
-#endif
 };
 
 struct eqos_tx_wrapper_descriptor {
@@ -1048,12 +971,6 @@ struct eqos_rx_buffer {
 				set to 0 */
 	unsigned int inte;	/* set to non-zero if INTE is set for
 				corresponding desc */
-
-	dma_addr_t dma2;	/* dma address of second skb */
-	struct page *page2;	/* page address of second buffer */
-	unsigned short len2;	/* length of received packet-second buffer */
-
-	unsigned short rx_hdr_size; /* header buff size in case of split header */
 };
 
 struct eqos_rx_wrapper_descriptor {
@@ -1084,9 +1001,6 @@ struct eqos_rx_wrapper_descriptor {
 	UINT rx_threshold_val;	/* contain bit vlaue for RX threshold */
 	UINT rsf_on;		/* set to 1 if RSF is enabled else set to 0 */
 	UINT rx_pbl;
-
-	struct sk_buff *skb_top;	/* points to first skb in the chain
-					in case of jumbo pkts */
 
 	/* for rx vlan stripping */
 	u32 rx_inner_vlan_strip;
@@ -1318,7 +1232,6 @@ struct eqos_extra_stats {
 	unsigned long tx_timestamp_captured_n;
 	unsigned long rx_timestamp_captured_n;
 	unsigned long tx_tso_pkt_n;
-	unsigned long rx_split_hdr_pkt_n;
 
 	/* Tx/Rx frames per channels/queues */
 	unsigned long q_tx_pkt_n[8];
@@ -1498,7 +1411,6 @@ struct eqos_prv_data {
 	UINT axi_worl;
 	UINT axi_rorl;
 
-	/* for handling jumbo frames and split header feature on rx path */
 	int (*clean_rx) (struct eqos_prv_data *pdata, int quota, UINT qinx);
 	int (*alloc_rx_buf) (struct eqos_prv_data *pdata,
 			     struct eqos_rx_buffer *buffer, gfp_t gfp);
@@ -1511,17 +1423,6 @@ struct eqos_prv_data {
 
 	struct eqos_mmc_counters mmc;
 	struct eqos_extra_stats xstats;
-
-#ifdef EQOS_CONFIG_PGTEST
-	struct eqos_pg_struct *pg;
-	struct timer_list pg_timer;
-	INT prepare_pg_packet;
-	INT run_test;
-	INT max_counter;
-#endif /* end of EQOS_CONFIG_PGTEST */
-
-	/* rx split header mode */
-	unsigned char rx_split_hdr;
 
 	/* for MAC loopback */
 	unsigned int mac_loopback_mode;
@@ -1593,15 +1494,13 @@ struct eqos_prv_data {
 
 
 	/* this variable will hold vlan table value if vlan hash filtering
-	 * is enabled else hold vlan id that is programmed in HW. Same is
-	 * used to configure back into HW when device is reset during
-	 * jumbo/split-header features.
-	 * */
+	 * is enabled else hold vlan id that is programmed in HW.
+	 */
 	UINT vlan_ht_or_id;
 
 	/* Used when LRO is enabled,
 	 * set to 1 if skb has TCP payload else set to 0
-	 * */
+	 */
 	int tcp_pkt;
 
 	u32 csr_clock_speed;
@@ -1674,20 +1573,6 @@ void eqos_handle_eee_interrupt(struct eqos_prv_data *pdata);
 void eqos_disable_eee_mode(struct eqos_prv_data *pdata);
 void eqos_enable_eee_mode(struct eqos_prv_data *pdata);
 
-#ifdef EQOS_CONFIG_PGTEST
-irqreturn_t eqos_pg_isr(int irq, void *device_id);
-void eqos_default_confs(struct eqos_prv_data *pdata);
-int eqos_handle_pg_ioctl(struct eqos_prv_data *pdata, void *ptr);
-int eqos_alloc_pg(struct eqos_prv_data *pdata);
-void eqos_free_pg(struct eqos_prv_data *pdata);
-int eqos_alloc_rx_buf_pg(struct eqos_prv_data *pdata,
-				struct eqos_rx_buffer *buffer,
-				gfp_t gfp);
-int eqos_alloc_tx_buf_pg(struct eqos_prv_data *pdata,
-				struct eqos_tx_buffer *buffer,
-				gfp_t gfp);
-#endif /* end of EQOS_CONFIG_PGTEST */
-
 int eqos_handle_mem_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
 int eqos_handle_csr_iso_ioctl(struct eqos_prv_data *pdata, void *ptr);
 int eqos_handle_phy_loopback(struct eqos_prv_data *pdata, void *ptr);
@@ -1740,6 +1625,12 @@ void eqos_fbe_work(struct work_struct *work);
 #define DBGPR_DMSG(x...) printk(KERN_ALERT x)
 #else
 #define DBGPR_DMSG(x...) do {} while (0)
+#endif
+
+#ifdef YDEBUG_ETHTOOL_
+#define DBGPR_ETHTOOL(x...) printk(KERN_ALERT x)
+#else
+#define DBGPR_ETHTOOL(x...) do {} while (0)
 #endif
 
 #endif

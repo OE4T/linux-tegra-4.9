@@ -643,12 +643,7 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 	pdata->hw_feat.gmii_sel = ((mac_hfr0 >> 1) & MAC_HFR0_GMIISEL_MASK);
 	pdata->hw_feat.hd_sel = ((mac_hfr0 >> 2) & MAC_HFR0_HDSEL_MASK);
 	pdata->hw_feat.pcs_sel = ((mac_hfr0 >> 3) & MAC_HFR0_PCSSEL_MASK);
-#ifdef ENABLE_VLAN_FILTER
-	pdata->hw_feat.vlan_hash_en =
-	    ((mac_hfr0 >> 4) & MAC_HFR0_VLANHASEL_MASK);
-#else
 	pdata->hw_feat.vlan_hash_en = 0;
-#endif
 	pdata->hw_feat.sma_sel = ((mac_hfr0 >> 5) & MAC_HFR0_SMASEL_MASK);
 	pdata->hw_feat.rwk_sel = ((mac_hfr0 >> 6) & MAC_HFR0_RWKSEL_MASK);
 	pdata->hw_feat.mgk_sel = ((mac_hfr0 >> 7) & MAC_HFR0_MGKSEL_MASK);
@@ -1010,156 +1005,12 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	DBGPR("<--eqos_print_all_hw_features\n");
 }
 
-/*!
- * \brief allcation of Rx skb's for split header feature.
- *
- * \details This function is invoked by other api's for
- * allocating the Rx skb's if split header feature is enabled.
- *
- * \param[in] pdata – pointer to private data structure.
- * \param[in] buffer – pointer to wrapper receive buffer data structure.
- * \param[in] gfp – the type of memory allocation.
- *
- * \return int
- *
- * \retval 0 on success and -ve number on failure.
- */
-
-static int eqos_alloc_split_hdr_rx_buf(
-		struct eqos_prv_data *pdata,
-		struct eqos_rx_buffer *buffer,
-		gfp_t gfp)
-{
-	struct sk_buff *skb = buffer->skb;
-
-	DBGPR("-->eqos_alloc_split_hdr_rx_buf\n");
-
-	if (skb) {
-		skb_trim(skb, 0);
-		goto check_page;
-	}
-
-	buffer->rx_hdr_size = EQOS_MAX_HDR_SIZE;
-	/* allocate twice the maximum header size */
-	skb = __netdev_alloc_skb_ip_align(pdata->dev,
-			(2*buffer->rx_hdr_size),
-			gfp);
-	if (skb == NULL) {
-		printk(KERN_ALERT "Failed to allocate skb\n");
-		return -ENOMEM;
-	}
-	buffer->skb = skb;
-	DBGPR("Maximum header buffer size allocated = %d\n",
-		buffer->rx_hdr_size);
- check_page:
-	if (!buffer->dma)
-		buffer->dma = dma_map_single(&pdata->pdev->dev,
-					buffer->skb->data,
-					ALIGN_SIZE(2*buffer->rx_hdr_size),
-					DMA_FROM_DEVICE);
-	buffer->len = buffer->rx_hdr_size;
-
-	/* allocate a new page if necessary */
-	if (buffer->page2 == NULL) {
-		buffer->page2 = alloc_page(gfp);
-		if (unlikely(!buffer->page2)) {
-			printk(KERN_ALERT
-			"Failed to allocate page for second buffer\n");
-			return -ENOMEM;
-		}
-	}
-	if (!buffer->dma2)
-		buffer->dma2 = dma_map_page(&pdata->pdev->dev,
-				    buffer->page2, 0,
-				    PAGE_SIZE, DMA_FROM_DEVICE);
-	buffer->len2 = PAGE_SIZE;
-	buffer->mapped_as_page = Y_TRUE;
-
-	DBGPR("<--eqos_alloc_split_hdr_rx_buf\n");
-
-	return 0;
-}
-
-/*!
- * \brief allcation of Rx skb's for jumbo frame.
- *
- * \details This function is invoked by other api's for
- * allocating the Rx skb's if jumbo frame is enabled.
- *
- * \param[in] pdata – pointer to private data structure.
- * \param[in] buffer – pointer to wrapper receive buffer data structure.
- * \param[in] gfp – the type of memory allocation.
- *
- * \return int
- *
- * \retval 0 on success and -ve number on failure.
- */
-
-static int eqos_alloc_jumbo_rx_buf(struct eqos_prv_data *pdata,
-					  struct eqos_rx_buffer *buffer,
-					  gfp_t gfp)
-{
-	struct sk_buff *skb = buffer->skb;
-	unsigned int bufsz = (256 - 16);	/* for skb_reserve */
-
-	DBGPR("-->eqos_alloc_jumbo_rx_buf\n");
-
-	if (skb) {
-		skb_trim(skb, 0);
-		goto check_page;
-	}
-
-	skb = __netdev_alloc_skb_ip_align(pdata->dev, bufsz, gfp);
-	if (skb == NULL) {
-		printk(KERN_ALERT "Failed to allocate skb\n");
-		return -ENOMEM;
-	}
-	buffer->skb = skb;
- check_page:
-	/* allocate a new page if necessary */
-	if (buffer->page == NULL) {
-		buffer->page = alloc_page(gfp);
-		if (unlikely(!buffer->page)) {
-			printk(KERN_ALERT "Failed to allocate page\n");
-			return -ENOMEM;
-		}
-	}
-	if (!buffer->dma)
-		buffer->dma = dma_map_page(&pdata->pdev->dev,
-					   buffer->page, 0,
-					   PAGE_SIZE, DMA_FROM_DEVICE);
-	buffer->len = PAGE_SIZE;
-#ifdef EQOS_DMA_32BIT
-	if (buffer->page2 == NULL) {
-		buffer->page2 = alloc_page(gfp);
-		if (unlikely(!buffer->page2)) {
-			printk(KERN_ALERT
-			       "Failed to allocate page for second buffer\n");
-			return -ENOMEM;
-		}
-	}
-	if (!buffer->dma2)
-		buffer->dma2 = dma_map_page(&pdata->pdev->dev,
-					    buffer->page2, 0,
-					    PAGE_SIZE, DMA_FROM_DEVICE);
-	buffer->len2 = PAGE_SIZE;
-#else
-	buffer->len2 = 0;
-#endif
-
-	buffer->mapped_as_page = Y_TRUE;
-
-	DBGPR("<--eqos_alloc_jumbo_rx_buf\n");
-
-	return 0;
-}
 
 /*!
  * \brief allcation of Rx skb's for default rx mode.
  *
  * \details This function is invoked by other api's for
- * allocating the Rx skb's with default Rx mode ie non-jumbo
- * and non-split header mode.
+ * allocating the Rx skb's with default Rx mode.
  *
  * \param[in] pdata – pointer to private data structure.
  * \param[in] buffer – pointer to wrapper receive buffer data structure.
@@ -1211,7 +1062,7 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
  *
  * \details This function will initialize the receive function pointers
  * which are used for allocating skb's and receiving the packets based
- * Rx mode - default/jumbo/split header.
+ * Rx mode - default.
  *
  * \param[in] pdata – pointer to private data structure.
  *
@@ -1222,18 +1073,9 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 {
 	DBGPR("-->eqos_configure_rx_fun_ptr\n");
 
-	if (pdata->rx_split_hdr) {
-		pdata->clean_rx = eqos_clean_split_hdr_rx_irq;
-		pdata->alloc_rx_buf = eqos_alloc_split_hdr_rx_buf;
-	}
-	else if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
-		pdata->clean_rx = eqos_clean_jumbo_rx_irq;
-		pdata->alloc_rx_buf = eqos_alloc_jumbo_rx_buf;
-	} else {
-		pdata->rx_buffer_len = EQOS_ETH_FRAME_LEN;
-		pdata->clean_rx = eqos_clean_rx_irq;
-		pdata->alloc_rx_buf = eqos_alloc_rx_buf;
-	}
+	pdata->rx_buffer_len = EQOS_ETH_FRAME_LEN;
+	pdata->clean_rx = eqos_clean_rx_irq;
+	pdata->alloc_rx_buf = eqos_alloc_rx_buf;
 
 	DBGPR("<--eqos_configure_rx_fun_ptr\n");
 }
@@ -1304,11 +1146,7 @@ static void eqos_default_tx_confs_single_q(
 	desc_data->osf_on = EQOS_OSF_ENABLE;
 	desc_data->tx_pbl = EQOS_PBL_16;
 	desc_data->tx_vlan_tag_via_reg = Y_FALSE;
-#ifdef ENABLE_VLAN_TAG_INSERTION
 	desc_data->tx_vlan_tag_ctrl = EQOS_TX_VLAN_TAG_INSERT;
-#else
-	desc_data->tx_vlan_tag_ctrl = EQOS_TX_VLAN_TAG_NONE;
-#endif
 	desc_data->vlan_tag_present = 0;
 	desc_data->context_setup = 0;
 	desc_data->default_mss = 0;
@@ -1412,15 +1250,9 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 	pdata->irq_number = pdata->dev->irq;
 
 	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ) {
-#ifdef EQOS_CONFIG_PGTEST
-		ret = request_irq(pdata->irq_number,
-				eqos_pg_isr,
-				IRQF_SHARED, DEV_NAME, pdata);
-#else
 		ret = request_irq(pdata->irq_number,
 				eqos_isr,
 				IRQF_SHARED, DEV_NAME, pdata);
-#endif /* end of DWC_ETH_QOS_CONFIG_PGTEST */
 
 		if (ret != 0) {
 			dev_err(&pdata->pdev->dev,
@@ -1895,12 +1727,6 @@ static void eqos_set_rx_mode(struct net_device *dev)
 
 	spin_lock_irqsave(&pdata->lock, flags);
 
-#ifdef EQOS_CONFIG_PGTEST
-	DBGPR("PG Test running, no parameters will be changed\n");
-	spin_unlock_irqrestore(&pdata->lock, flags);
-	return;
-#endif
-
 	if (dev->flags & IFF_PROMISC) {
 		DBGPR_FILTER("PROMISCUOUS MODE (Accept all packets irrespective of DA)\n");
 		pr_mode = 1;
@@ -2027,12 +1853,6 @@ UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
 		pdata->xstats.tx_vlan_pkt_n++;
 	}
 #endif
-#ifdef EQOS_ENABLE_DVLAN
-	if (pdata->via_reg_or_desc == EQOS_VIA_DESC) {
-		/* we need one context descriptor to carry vlan tag info */
-		count++;
-	}
-#endif /* End of EQOS_ENABLE_DVLAN */
 
 	return count;
 }
@@ -2078,11 +1898,6 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
 	else
 		spin_lock_irqsave(&pdata->tx_lock, flags);
-
-#ifdef EQOS_CONFIG_PGTEST
-	retval = NETDEV_TX_BUSY;
-	goto tx_netdev_return;
-#endif
 
 	if (skb->len <= 0) {
 		dev_kfree_skb_any(skb);
@@ -2154,11 +1969,6 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	if (varvlan_pkt == 0x1)
 		count++;
 #endif
-#ifdef EQOS_ENABLE_DVLAN
-	if (pdata->via_reg_or_desc == EQOS_VIA_DESC) {
-		count++;
-	}
-#endif /* End of EQOS_ENABLE_DVLAN */
 
 	desc_data->free_desc_cnt -= count;
 	desc_data->tx_pkt_queued += count;
@@ -2442,9 +2252,7 @@ static void eqos_tx_interrupt(struct net_device *dev,
 	struct eqos_tx_buffer *buffer = NULL;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct desc_if_struct *desc_if = &(pdata->desc_if);
-#ifndef EQOS_CERTIFICATION_PKTBURSTCNT
 	int err_incremented;
-#endif
 	unsigned int tstamp_taken = 0;
 	unsigned long flags;
 
@@ -2471,7 +2279,6 @@ static void eqos_tx_interrupt(struct net_device *dev,
 			     0, qinx);
 #endif
 
-#ifndef EQOS_CERTIFICATION_PKTBURSTCNT
 		/* update the tx error if any by looking at last segment
 		 * for NORMAL descriptors
 		 * */
@@ -2529,24 +2336,7 @@ static void eqos_tx_interrupt(struct net_device *dev,
 			pdata->xstats.tx_pkt_n++;
 			dev->stats.tx_packets++;
 		}
-#else
-		if ((hw_if->get_tx_desc_ls(txptr)) && !(hw_if->get_tx_desc_ctxt(txptr))) {
-			/* check whether skb support hw tstamp */
-			if ((pdata->hw_feat.tsstssel) &&
-				(skb_shinfo(buffer->skb)->tx_flags & SKBTX_IN_PROGRESS)) {
-				tstamp_taken = eqos_get_tx_hwtstamp(pdata,
-					txptr, buffer->skb);
-				if (tstamp_taken) {
-					dump_tx_desc(pdata, desc_data->dirty_tx, desc_data->dirty_tx,
-							0, qinx);
-					DBGPR_PTP("passed tx timestamp to stack[qinx = %d, dirty_tx = %d]\n",
-						qinx, desc_data->dirty_tx);
-				}
-			}
-		}
-#endif
 		dev->stats.tx_bytes += buffer->len;
-		dev->stats.tx_bytes += buffer->len2;
 		desc_if->unmap_tx_skb(pdata, buffer);
 
 		/* reset the descriptor so that driver/host can reuse it */
@@ -2561,10 +2351,6 @@ static void eqos_tx_interrupt(struct net_device *dev,
 		desc_data->queue_stopped = 0;
 		netif_wake_subqueue(dev, qinx);
 	}
-#ifdef EQOS_CERTIFICATION_PKTBURSTCNT
-	/* DMA has finished Transmitting data to MAC Tx-Fifo */
-	MAC_MCR_TE_WR(1);
-#endif
 
 	if ((pdata->eee_enabled) && (!pdata->tx_path_in_lpi_mode) &&
 		(!pdata->use_lpi_tx_automate)) {
@@ -2634,32 +2420,6 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 	}
 }
 
-static void eqos_consume_page(struct eqos_rx_buffer *buffer,
-				     struct sk_buff *skb,
-				     u16 length, u16 buf2_used)
-{
-	buffer->page = NULL;
-	if (buf2_used)
-		buffer->page2 = NULL;
-	skb->len += length;
-	skb->data_len += length;
-	skb->truesize += length;
-}
-
-static void eqos_consume_page_split_hdr(
-				struct eqos_rx_buffer *buffer,
-				struct sk_buff *skb,
-				u16 length,
-				USHORT page2_used)
-{
-	if (page2_used)
-		buffer->page2 = NULL;
-
-	skb->len += length;
-	skb->data_len += length;
-	skb->truesize += length;
-}
-
 /* Receive Checksum Offload configuration */
 static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
 		struct sk_buff *skb,
@@ -2719,601 +2479,13 @@ static int eqos_check_for_tcp_payload(struct s_rx_normal_desc *rxdesc)
 		return ret;
 }
 
-/*!
-* \brief API to pass the Rx packets to stack if split header
-* feature is enabled.
-*
-* \details This function is invoked by main NAPI function if RX
-* split header feature is enabled. This function checks the device
-* descriptor for the packets and passes it to stack if any packtes
-* are received by device.
-*
-* \param[in] pdata - pointer to private data structure.
-* \param[in] quota - maximum no. of packets that we are allowed to pass
-* to into the kernel.
-* \param[in] qinx - DMA channel/queue no. to be checked for packet.
-*
-* \return integer
-*
-* \retval number of packets received.
-*/
-
-static int eqos_clean_split_hdr_rx_irq(
-			struct eqos_prv_data *pdata,
-			int quota,
-			UINT qinx)
-{
-	struct eqos_rx_wrapper_descriptor *desc_data =
-	    GET_RX_WRAPPER_DESC(qinx);
-	struct net_device *dev = pdata->dev;
-	struct desc_if_struct *desc_if = &pdata->desc_if;
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct sk_buff *skb = NULL;
-	int received = 0;
-	struct eqos_rx_buffer *buffer = NULL;
-	struct s_rx_normal_desc *rx_normal_desc = NULL;
-	u16 pkt_len;
-	unsigned short hdr_len = 0;
-	unsigned short payload_len = 0;
-	unsigned char intermediate_desc_cnt = 0;
-	unsigned char buf2_used = 0;
-	int ret;
-
-#ifdef HWA_NV_1618922
-	UINT err_bits = 0x1200000;
-#endif
-	DBGPR("-->eqos_clean_split_hdr_rx_irq: qinx = %u, quota = %d\n",
-		qinx, quota);
-
-	while (received < quota) {
-		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
-		rx_normal_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
-
-		/* check for data availability */
-		if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_OWN)) {
-#ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
-#endif
-			/* assign it to new skb */
-			skb = buffer->skb;
-			buffer->skb = NULL;
-
-			/* first buffer pointer */
-			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-				       ALIGN_SIZE(2*buffer->rx_hdr_size),
-				       DMA_FROM_DEVICE);
-			buffer->dma = 0;
-
-			/* second buffer pointer */
-			dma_unmap_page(&pdata->pdev->dev, buffer->dma2,
-				       PAGE_SIZE, DMA_FROM_DEVICE);
-			buffer->dma2 = 0;
-
-			/* get the packet length */
-			pkt_len =
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
-
-			/* FIRST desc and Receive Status rdes2 Valid ? */
-			if ((rx_normal_desc->rdes3 & EQOS_RDESC3_FD) &&
-				(rx_normal_desc->rdes3 & EQOS_RDESC3_RS2V)) {
-				/* get header length */
-				hdr_len = (rx_normal_desc->rdes2 & EQOS_RDESC2_HL);
-				DBGPR("Device has %s HEADER SPLIT: hdr_len = %d\n",
-						(hdr_len ? "done" : "not done"), hdr_len);
-				if (hdr_len)
-					pdata->xstats.rx_split_hdr_pkt_n++;
-			}
-
-			/* check for bad packet,
-			 * error is valid only for last descriptor(OWN + LD bit set).
-			 * */
-#ifdef HWA_NV_1618922
-			if ((rx_normal_desc->rdes3 & err_bits) &&
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-#else
-			if ((rx_normal_desc->rdes3 & EQOS_RDESC3_ES) &&
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-#endif
-				DBGPR("Error in rcved pkt, failed to pass it to upper layer\n");
-				dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
-				dev->stats.rx_errors++;
-				eqos_update_rx_errors(dev,
-					rx_normal_desc->rdes3);
-
-				/* recycle both page/buff and skb */
-				buffer->skb = skb;
-				if (desc_data->skb_top)
-					dev_kfree_skb_any(desc_data->skb_top);
-
-				desc_data->skb_top = NULL;
-				goto next_desc;
-			}
-
-			if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-				intermediate_desc_cnt++;
-				buf2_used = 1;
-				/* this descriptor is only the beginning/middle */
-				if (rx_normal_desc->rdes3 & EQOS_RDESC3_FD) {
-					/* this is the beginning of a chain */
-
-					/* here skb/skb_top may contain
-					 * if (device done split header)
-					 *	only header
-					 * else
-					 *	header/(header + payload)
-					 * */
-					desc_data->skb_top = skb;
-					/* page2 always contain only payload */
-					if (hdr_len) {
-						/* add header len to first skb->len */
-						skb_put(skb, hdr_len);
-						payload_len = pdata->rx_buffer_len;
-						skb_fill_page_desc(skb, 0,
-							buffer->page2, 0,
-							payload_len);
-					} else {
-						/* add header len to first skb->len */
-						skb_put(skb, buffer->rx_hdr_size);
-						/* No split header, hence
-						 * pkt_len = (payload + hdr_len)
-						 * */
-						payload_len = (pkt_len - buffer->rx_hdr_size);
-						skb_fill_page_desc(skb, 0,
-							buffer->page2, 0,
-							payload_len);
-					}
-				} else {
-					/* this is the middle of a chain */
-					payload_len = pdata->rx_buffer_len;
-					skb_fill_page_desc(desc_data->skb_top,
-						skb_shinfo(desc_data->skb_top)->nr_frags,
-						buffer->page2, 0,
-						payload_len);
-
-					/* re-use this skb, as consumed only the page */
-					buffer->skb = skb;
-				}
-				eqos_consume_page_split_hdr(buffer,
-							 desc_data->skb_top,
-							 payload_len, buf2_used);
-				goto next_desc;
-			} else {
-				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_FD)) {
-					buf2_used = 1;
-					/* end of the chain */
-					if (hdr_len) {
-						payload_len = (pkt_len -
-							(pdata->rx_buffer_len * intermediate_desc_cnt) -
-							hdr_len);
-					} else {
-						payload_len = (pkt_len -
-							(pdata->rx_buffer_len * intermediate_desc_cnt) -
-							buffer->rx_hdr_size);
-					}
-
-					skb_fill_page_desc(desc_data->skb_top,
-						skb_shinfo(desc_data->skb_top)->nr_frags,
-						buffer->page2, 0,
-						payload_len);
-
-					/* re-use this skb, as consumed only the page */
-					buffer->skb = skb;
-					skb = desc_data->skb_top;
-					desc_data->skb_top = NULL;
-					eqos_consume_page_split_hdr(buffer, skb,
-								 payload_len, buf2_used);
-				} else {
-					/* no chain, got both FD + LD together */
-					if (hdr_len) {
-						buf2_used = 1;
-						/* add header len to first skb->len */
-						skb_put(skb, hdr_len);
-
-						payload_len = pkt_len - hdr_len;
-						skb_fill_page_desc(skb, 0,
-							buffer->page2, 0,
-							payload_len);
-					} else {
-						/* No split header, hence
-						 * payload_len = (payload + hdr_len)
-						 * */
-						if (pkt_len > buffer->rx_hdr_size) {
-							buf2_used = 1;
-							/* add header len to first skb->len */
-							skb_put(skb, buffer->rx_hdr_size);
-
-							payload_len = (pkt_len - buffer->rx_hdr_size);
-							skb_fill_page_desc(skb, 0,
-								buffer->page2, 0,
-								payload_len);
-						} else {
-							buf2_used = 0;
-							/* add header len to first skb->len */
-							skb_put(skb, pkt_len);
-							payload_len = 0; /* no data in page2 */
-						}
-					}
-					eqos_consume_page_split_hdr(buffer,
-							skb, payload_len,
-							buf2_used);
-				}
-				/* reset for next new packet/frame */
-				intermediate_desc_cnt = 0;
-				hdr_len = 0;
-			}
-
-			eqos_config_rx_csum(pdata, skb, rx_normal_desc);
-
-#ifdef EQOS_ENABLE_VLAN_TAG
-			eqos_get_rx_vlan(pdata, skb, rx_normal_desc);
-#endif
-
-#ifdef YDEBUG_FILTER
-			eqos_check_rx_filter_status(rx_normal_desc);
-#endif
-
-			if ((pdata->hw_feat.tsstssel) && (pdata->hwts_rx_en)) {
-				/* get rx tstamp if available */
-				if (hw_if->rx_tstamp_available(rx_normal_desc)) {
-					ret = eqos_get_rx_hwtstamp(pdata,
-							skb, desc_data, qinx);
-					if (ret == 0) {
-						/* device has not yet updated the CONTEXT desc to hold the
-						 * time stamp, hence delay the packet reception
-						 * */
-						buffer->skb = skb;
-						buffer->dma =
-						  dma_map_single(
-						      &pdata->pdev->dev,
-						      skb->data,
-						      ALIGN_SIZE(
-							pdata->rx_buffer_len),
-						      DMA_FROM_DEVICE);
-						if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
-							printk(KERN_ALERT "failed to do the RX dma map\n");
-
-						goto rx_tstmp_failed;
-					}
-				}
-			}
-
-			if (!(dev->features & NETIF_F_GRO) &&
-						(dev->features & NETIF_F_LRO)) {
-					pdata->tcp_pkt =
-							eqos_check_for_tcp_payload(rx_normal_desc);
-			}
-
-			dev->last_rx = jiffies;
-			/* update the statistics */
-			dev->stats.rx_packets++;
-			dev->stats.rx_bytes += skb->len;
-			eqos_receive_skb(pdata, dev, skb, qinx);
-			received++;
- next_desc:
-			desc_data->dirty_rx++;
-			if (desc_data->dirty_rx >= desc_data->skb_realloc_threshold)
-				desc_if->realloc_skb(pdata, qinx);
-
-			INCR_RX_DESC_INDEX(desc_data->cur_rx, 1);
-			buf2_used = 0;
-		} else {
-			/* no more data to read */
-			break;
-		}
-	}
-
-rx_tstmp_failed:
-
-	if (desc_data->dirty_rx)
-		desc_if->realloc_skb(pdata, qinx);
-
-	DBGPR("<--eqos_clean_split_hdr_rx_irq: received = %d\n",
-		received);
-
-	return received;
-}
-
-
-/*!
-* \brief API to pass the Rx packets to stack if jumbo frame
-* is enabled.
-*
-* \details This function is invoked by main NAPI function if Rx
-* jumbe frame is enabled. This function checks the device descriptor
-* for the packets and passes it to stack if any packtes are received
-* by device.
-*
-* \param[in] pdata - pointer to private data structure.
-* \param[in] quota - maximum no. of packets that we are allowed to pass
-* to into the kernel.
-* \param[in] qinx - DMA channel/queue no. to be checked for packet.
-*
-* \return integer
-*
-* \retval number of packets received.
-*/
-
-static int eqos_clean_jumbo_rx_irq(struct eqos_prv_data *pdata,
-					  int quota,
-					  UINT qinx)
-{
-	struct eqos_rx_wrapper_descriptor *desc_data =
-	    GET_RX_WRAPPER_DESC(qinx);
-	struct net_device *dev = pdata->dev;
-	struct desc_if_struct *desc_if = &pdata->desc_if;
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	struct sk_buff *skb = NULL;
-	int received = 0;
-	struct eqos_rx_buffer *buffer = NULL;
-	struct s_rx_normal_desc *rx_normal_desc = NULL;
-	u16 pkt_len;
-	UCHAR intermediate_desc_cnt = 0;
-	unsigned int buf2_used = 0;
-	int ret;
-#ifdef HWA_NV_1618922
-	UINT err_bits = 0x1200000;
-#endif
-	DBGPR("-->eqos_clean_jumbo_rx_irq: qinx = %u, quota = %d\n",
-		qinx, quota);
-
-	while (received < quota) {
-		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
-		rx_normal_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
-
-		/* check for data availability */
-		if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_OWN)) {
-#ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
-#endif
-			/* assign it to new skb */
-			skb = buffer->skb;
-			buffer->skb = NULL;
-
-			/* first buffer pointer */
-			dma_unmap_page(&pdata->pdev->dev, buffer->dma,
-				       PAGE_SIZE, DMA_FROM_DEVICE);
-			buffer->dma = 0;
-
-#ifdef EQOS_DMA_32BIT
-			/* second buffer pointer */
-			dma_unmap_page(&pdata->pdev->dev, buffer->dma2,
-				       PAGE_SIZE, DMA_FROM_DEVICE);
-			buffer->dma2 = 0;
-#endif
-			/* get the packet length */
-			pkt_len =
-				(rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
-
-			/* check for bad packet,
-			 * error is valid only for last descriptor (OWN + LD bit set).
-			 * */
-#ifdef HWA_NV_1618922
-			if ((rx_normal_desc->rdes3 & err_bits) &&
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-#else
-			if ((rx_normal_desc->rdes3 & EQOS_RDESC3_ES) &&
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-#endif
-				DBGPR("Error in rcved pkt, failed to pass it to upper layer\n");
-				dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
-				dev->stats.rx_errors++;
-				eqos_update_rx_errors(dev,
-					rx_normal_desc->rdes3);
-
-				/* recycle both page and skb */
-				buffer->skb = skb;
-				if (desc_data->skb_top)
-					dev_kfree_skb_any(desc_data->skb_top);
-
-				desc_data->skb_top = NULL;
-				goto next_desc;
-			}
-
-			if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-				intermediate_desc_cnt++;
-				buf2_used = 1;
-				/* this descriptor is only the beginning/middle */
-				if (rx_normal_desc->rdes3 & EQOS_RDESC3_FD) {
-					/* this is the beginning of a chain */
-					desc_data->skb_top = skb;
-					skb_fill_page_desc(skb, 0,
-						buffer->page, 0,
-						pdata->rx_buffer_len);
-
-#ifdef EQOS_DMA_32BIT
-					DBGPR("RX: pkt in second buffer pointer\n");
-					skb_fill_page_desc(
-						desc_data->skb_top,
-						skb_shinfo(desc_data->skb_top)->nr_frags,
-						buffer->page2, 0,
-						pdata->rx_buffer_len);
-#endif
-				} else {
-					/* this is the middle of a chain */
-					skb_fill_page_desc(desc_data->skb_top,
-						skb_shinfo(desc_data->skb_top)->nr_frags,
-						buffer->page, 0,
-						pdata->rx_buffer_len);
-
-#ifdef EQOS_DMA_32BIT
-					DBGPR("RX: pkt in second buffer pointer\n");
-					skb_fill_page_desc(desc_data->skb_top,
-						skb_shinfo(desc_data->skb_top)->nr_frags,
-						buffer->page2, 0,
-						pdata->rx_buffer_len);
-#endif
-					/* re-use this skb, as consumed only the page */
-					buffer->skb = skb;
-				}
-				eqos_consume_page(buffer,
-							 desc_data->skb_top,
-							 (pdata->rx_buffer_len * 2),
-							 buf2_used);
-				goto next_desc;
-			} else {
-				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_FD)) {
-					/* end of the chain */
-					pkt_len =
-						(pkt_len - (pdata->rx_buffer_len * intermediate_desc_cnt));
-					if (pkt_len > pdata->rx_buffer_len) {
-						skb_fill_page_desc(desc_data->skb_top,
-							skb_shinfo(desc_data->skb_top)->nr_frags,
-							buffer->page, 0,
-							pdata->rx_buffer_len);
-
-#ifdef EQOS_DMA_32BIT
-						DBGPR("RX: pkt in second buffer pointer\n");
-						skb_fill_page_desc(desc_data->skb_top,
-							skb_shinfo(desc_data->skb_top)->nr_frags,
-							buffer->page2, 0,
-							(pkt_len - pdata->rx_buffer_len));
-						buf2_used = 1;
-#endif
-					} else {
-						skb_fill_page_desc(desc_data->skb_top,
-							skb_shinfo(desc_data->skb_top)->nr_frags,
-							buffer->page, 0,
-							pkt_len);
-						buf2_used = 0;
-					}
-					/* re-use this skb, as consumed only the page */
-					buffer->skb = skb;
-					skb = desc_data->skb_top;
-					desc_data->skb_top = NULL;
-					eqos_consume_page(buffer, skb,
-								 pkt_len,
-								 buf2_used);
-				} else {
-					/* no chain, got both FD + LD together */
-
-					/* code added for copybreak, this should improve
-					 * performance for small pkts with large amount
-					 * of reassembly being done in the stack
-					 * */
-					if ((pkt_len <= EQOS_COPYBREAK_DEFAULT)
-					    && (skb_tailroom(skb) >= pkt_len)) {
-						u8 *vaddr;
-						vaddr =
-						    kmap_atomic(buffer->page);
-						memcpy(skb_tail_pointer(skb),
-						       vaddr, pkt_len);
-						kunmap_atomic(vaddr);
-						/* re-use the page, so don't erase buffer->page/page2 */
-						skb_put(skb, pkt_len);
-					} else {
-						if (pkt_len > pdata->rx_buffer_len) {
-							skb_fill_page_desc(skb,
-								0, buffer->page,
-								0,
-								pdata->rx_buffer_len);
-
-#ifdef EQOS_DMA_32BIT
-							DBGPR ("RX: pkt in second buffer pointer\n");
-							skb_fill_page_desc(skb,
-								skb_shinfo(skb)->nr_frags, buffer->page2,
-								0,
-								(pkt_len - pdata->rx_buffer_len));
-							buf2_used = 1;
-#endif
-						} else {
-							skb_fill_page_desc(skb,
-								0, buffer->page,
-								0,
-								pkt_len);
-							buf2_used = 0;
-						}
-						eqos_consume_page(buffer,
-								skb,
-								pkt_len,
-								buf2_used);
-					}
-				}
-				intermediate_desc_cnt = 0;
-			}
-
-			eqos_config_rx_csum(pdata, skb, rx_normal_desc);
-
-#ifdef EQOS_ENABLE_VLAN_TAG
-			eqos_get_rx_vlan(pdata, skb, rx_normal_desc);
-#endif
-
-#ifdef YDEBUG_FILTER
-			eqos_check_rx_filter_status(rx_normal_desc);
-#endif
-
-			if ((pdata->hw_feat.tsstssel) && (pdata->hwts_rx_en)) {
-				/* get rx tstamp if available */
-				if (hw_if->rx_tstamp_available(rx_normal_desc)) {
-					ret = eqos_get_rx_hwtstamp(pdata,
-							skb, desc_data, qinx);
-					if (ret == 0) {
-						/* device has not yet updated the CONTEXT desc to hold the
-						 * time stamp, hence delay the packet reception
-						 * */
-						buffer->skb = skb;
-						buffer->dma =
-						  dma_map_single(
-						      &pdata->pdev->dev,
-						      skb->data,
-						      ALIGN_SIZE(
-							pdata->rx_buffer_len),
-						      DMA_FROM_DEVICE);
-						if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
-							printk(KERN_ALERT "failed to do the RX dma map\n");
-
-						goto rx_tstmp_failed;
-					}
-				}
-			}
-
-			if (!(dev->features & NETIF_F_GRO) &&
-						(dev->features & NETIF_F_LRO)) {
-					pdata->tcp_pkt =
-							eqos_check_for_tcp_payload(rx_normal_desc);
-			}
-
-			dev->last_rx = jiffies;
-			/* update the statistics */
-			dev->stats.rx_packets++;
-			dev->stats.rx_bytes += skb->len;
-
-			/* eth type trans needs skb->data to point to something */
-			if (!pskb_may_pull(skb, ETH_HLEN)) {
-				printk(KERN_ALERT "pskb_may_pull failed\n");
-				dev_kfree_skb_any(skb);
-				goto next_desc;
-			}
-
-			eqos_receive_skb(pdata, dev, skb, qinx);
-			received++;
- next_desc:
-			desc_data->dirty_rx++;
-			if (desc_data->dirty_rx >= desc_data->skb_realloc_threshold)
-				desc_if->realloc_skb(pdata, qinx);
-
-			INCR_RX_DESC_INDEX(desc_data->cur_rx, 1);
-		} else {
-			/* no more data to read */
-			break;
-		}
-	}
-
-rx_tstmp_failed:
-
-	if (desc_data->dirty_rx)
-		desc_if->realloc_skb(pdata, qinx);
-
-	DBGPR("<--eqos_clean_jumbo_rx_irq: received = %d\n", received);
-
-	return received;
-}
 
 /*!
 * \brief API to pass the Rx packets to stack if default mode
 * is enabled.
 *
 * \details This function is invoked by main NAPI function in default
-* Rx mode(non jumbo and non split header). This function checks the
+* Rx mode. This function checks the
 * device descriptor for the packets and passes it to stack if any packtes
 * are received by device.
 *
@@ -3381,8 +2553,9 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 #endif
 
 			/* check for bad/oversized packet,
-			 * error is valid only for last descriptor (OWN + LD bit set).
-			 * */
+			 * error is valid only for last descriptor
+			 * (OWN + LD bit set).
+			 */
 #ifdef HWA_NV_1618922
 			if (!(rx_normal_desc->rdes3 & err_bits) &&
 			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
@@ -3395,21 +2568,21 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				/* code added for copybreak, this should improve
 				 * performance for small pkts with large amount
 				 * of reassembly being done in the stack
-				 * */
+				 */
 				if (pkt_len < EQOS_COPYBREAK_DEFAULT) {
 					struct sk_buff *new_skb =
 					    netdev_alloc_skb_ip_align(dev,
 								      pkt_len);
 					if (new_skb) {
-						skb_copy_to_linear_data_offset(new_skb,
-							-NET_IP_ALIGN,
-							(skb->data - NET_IP_ALIGN),
-							(pkt_len + NET_IP_ALIGN));
+						skb_copy_to_linear_data_offset(
+						new_skb, -NET_IP_ALIGN,
+						(skb->data - NET_IP_ALIGN),
+						(pkt_len + NET_IP_ALIGN));
 						/* recycle actual desc skb */
 						buffer->skb = skb;
 						skb = new_skb;
 					} else {
-						/* just continue with the old skb */
+						/* just continue the old skb */
 					}
 				}
 				skb_put(skb, pkt_len);
@@ -3425,37 +2598,38 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				eqos_check_rx_filter_status(rx_normal_desc);
 #endif
 
-				if ((pdata->hw_feat.tsstssel) && (pdata->hwts_rx_en)) {
+				if (pdata->hw_feat.tsstssel &&
+					pdata->hwts_rx_en &&
+					hw_if->rx_tstamp_available(
+						rx_normal_desc)) {
 					/* get rx tstamp if available */
-					if (hw_if->rx_tstamp_available(rx_normal_desc)) {
-						ret = eqos_get_rx_hwtstamp(pdata,
-								skb, desc_data, qinx);
-						if (ret == 0) {
-							/* device has not yet updated the CONTEXT desc to hold the
-							 * time stamp, hence delay the packet reception
-							 * */
-							buffer->skb = skb;
-							buffer->dma =
-							  dma_map_single(
-							      &pdata->pdev->dev,
-							      skb->data,
-							      ALIGN_SIZE(
-							pdata->rx_buffer_len),
-							      DMA_FROM_DEVICE);
+					ret = eqos_get_rx_hwtstamp(pdata, skb,
+						desc_data, qinx);
+					if (ret == 0) {
+						/* device has not yet updated
+						 * the CONTEXT desc to hold the
+						 * time stamp, hence delay the
+						 * packet reception
+						 */
+						buffer->skb = skb;
+						buffer->dma = dma_map_single(
+						&pdata->pdev->dev, skb->data,
+						ALIGN_SIZE(pdata->rx_buffer_len)
+						, DMA_FROM_DEVICE);
 
-							if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
-								printk(KERN_ALERT "failed to do the RX dma map\n");
-
+						if (dma_mapping_error(
+						&pdata->pdev->dev, buffer->dma))
+							printk(KERN_ALERT
+						"failed to do the RX dma map\n");
 							goto rx_tstmp_failed;
-						}
 					}
 				}
 
-
 				if (!(dev->features & NETIF_F_GRO) &&
 						(dev->features & NETIF_F_LRO)) {
-						pdata->tcp_pkt =
-								eqos_check_for_tcp_payload(rx_normal_desc);
+					pdata->tcp_pkt =
+					eqos_check_for_tcp_payload(
+						rx_normal_desc);
 				}
 
 				dev->last_rx = jiffies;
@@ -3465,9 +2639,11 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				eqos_receive_skb(pdata, dev, skb, qinx);
 				received++;
 			} else {
-				dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
+				dump_rx_desc(qinx, rx_normal_desc,
+					desc_data->cur_rx);
 				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD))
-					DBGPR("Received oversized pkt, spanned across multiple desc\n");
+					DBGPR("Received oversized pkt,"
+					"spanned across multiple desc\n");
 
 				/* recycle skb */
 				buffer->skb = skb;
@@ -3545,11 +2721,8 @@ int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 	eqos_tx_interrupt(pdata->dev, pdata, qinx);
 	rx_queue->lro_flush_needed = 0;
 
-#ifdef RX_OLD_CODE
-	received = eqos_poll(pdata, budget, qinx);
-#else
 	received = pdata->clean_rx(pdata, budget, qinx);
-#endif
+
 	pdata->xstats.rx_pkt_n += received;
 	pdata->xstats.q_rx_pkt_n[qinx] += received;
 
@@ -3837,102 +3010,6 @@ static int eqos_set_features(struct net_device *dev, netdev_features_t features)
 	return 0;
 }
 
-
-/*!
- * \brief User defined parameter setting API
- *
- * \details This function is invoked by kernel to adjusts the requested
- * feature flags according to device-specific constraints, and returns the
- * resulting flags. This API must not modify the device state.
- *
- * \param[in] dev – pointer to net device structure.
- * \param[in] features – device supported features.
- *
- * \return u32
- *
- * \retval modified flag
- */
-
-static netdev_features_t eqos_fix_features(struct net_device *dev, netdev_features_t features)
-{
-#ifdef EQOS_ENABLE_VLAN_TAG
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-#endif
-	DBGPR("-->eqos_fix_features: %#llx\n", features);
-
-#ifdef EQOS_ENABLE_VLAN_TAG
-	if (pdata->rx_split_hdr) {
-		/* The VLAN tag stripping must be set for the split function.
-		 * For instance, the DMA separates the header and payload of
-		 * an untagged packet only. Hence, when a tagged packet is
-		 * received, the QOS must be programmed such that the VLAN
-		 * tags are deleted/stripped from the received packets.
-		 * */
-		features |= NETIF_F_HW_VLAN_CTAG_RX;
-	}
-#endif /* end of EQOS_ENABLE_VLAN_TAG */
-
-	DBGPR("<--eqos_fix_features: %#llx\n", features);
-
-	return features;
-}
-
-
-/*!
- * \details This function is invoked by ioctl function when user issues
- * an ioctl command to enable/disable receive split header mode.
- *
- * \param[in] dev – pointer to net device structure.
- * \param[in] flags – flag to indicate whether RX split to be
- *                  enabled/disabled.
- *
- * \return integer
- *
- * \retval zero on success and -ve number on failure.
- */
-static int eqos_config_rx_split_hdr_mode(struct net_device *dev,
-		unsigned int flags)
-{
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	unsigned int qinx;
-	int ret = 0;
-
-	DBGPR("-->eqos_config_rx_split_hdr_mode\n");
-
-	if (flags && pdata->rx_split_hdr) {
-		printk(KERN_ALERT
-			"Rx Split header mode is already enabled\n");
-		return -EINVAL;
-	}
-
-	if (!flags && !pdata->rx_split_hdr) {
-		printk(KERN_ALERT
-			"Rx Split header mode is already disabled\n");
-		return -EINVAL;
-	}
-
-	eqos_stop_dev(pdata);
-
-	/* If split header mode is disabled(ie flags == 0)
-	 * then RX will be in default/jumbo mode based on MTU
-	 * */
-	pdata->rx_split_hdr = !!flags;
-
-	eqos_start_dev(pdata);
-
-	hw_if->config_header_size(EQOS_MAX_HDR_SIZE);
-	/* enable/disable split header for all RX DMA channel */
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
-		hw_if->config_split_header_mode(qinx, pdata->rx_split_hdr);
-
-	printk(KERN_ALERT "Succesfully %s Rx Split header mode\n",
-		(flags ? "enabled" : "disabled"));
-
-	DBGPR("<--eqos_config_rx_split_hdr_mode\n");
-
-	return ret;
-}
 
 
 /*!
@@ -4382,174 +3459,6 @@ static int eqos_config_mac_loopback_mode(struct net_device *dev,
 	return ret;
 }
 
-#ifdef EQOS_ENABLE_DVLAN
-static INT config_tx_dvlan_processing_via_reg(struct eqos_prv_data *pdata,
-						UINT flags)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-
-	printk(KERN_ALERT "--> config_tx_dvlan_processing_via_reg()\n");
-
-	if (pdata->in_out & EQOS_DVLAN_OUTER)
-		hw_if->config_tx_outer_vlan(pdata->op_type,
-					pdata->outer_vlan_tag);
-
-	if (pdata->in_out & EQOS_DVLAN_INNER)
-		hw_if->config_tx_inner_vlan(pdata->op_type,
-					pdata->inner_vlan_tag);
-
-	if (flags == EQOS_DVLAN_DISABLE)
-		hw_if->config_mac_for_vlan_pkt(); /* restore default configurations */
-	else
-		hw_if->config_dvlan(1);
-
-	printk(KERN_ALERT "<-- config_tx_dvlan_processing_via_reg()\n");
-
-	return Y_SUCCESS;
-}
-
-static int config_tx_dvlan_processing_via_desc(struct eqos_prv_data *pdata,
-						UINT flags)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-
-	printk(KERN_ALERT "-->config_tx_dvlan_processing_via_desc\n");
-
-	if (flags == EQOS_DVLAN_DISABLE) {
-		hw_if->config_mac_for_vlan_pkt(); /* restore default configurations */
-		pdata->via_reg_or_desc = 0;
-	} else {
-		hw_if->config_dvlan(1);
-	}
-
-	if (pdata->in_out & EQOS_DVLAN_INNER)
-			MAC_IVLANTIRR_VLTI_WR(1);
-
-	if (pdata->in_out & EQOS_DVLAN_OUTER)
-			MAC_VLANTIRR_VLTI_WR(1);
-
-	printk(KERN_ALERT "<--config_tx_dvlan_processing_via_desc\n");
-
-	return Y_SUCCESS;
-}
-
-/*!
- * \details This function is invoked by ioctl function when user issues
- * an ioctl command to configure mac double vlan processing feature.
- *
- * \param[in] pdata - pointer to private data structure.
- * \param[in] flags – Each bit in this variable carry some information related
- *		      double vlan processing.
- *
- * \return integer
- *
- * \retval zero on success and -ve number on failure.
- */
-static int eqos_config_tx_dvlan_processing(
-		struct eqos_prv_data *pdata,
-		struct ifr_data_struct *req)
-{
-	struct eqos_config_dvlan l_config_doubule_vlan,
-					  *u_config_doubule_vlan = req->ptr;
-	int ret = 0;
-
-	DBGPR("-->eqos_config_tx_dvlan_processing\n");
-
-	if(copy_from_user(&l_config_doubule_vlan, u_config_doubule_vlan,
-				sizeof(struct eqos_config_dvlan))) {
-		printk(KERN_ALERT "Failed to fetch Double vlan Struct info from user\n");
-		return EQOS_CONFIG_FAIL;
-	}
-
-	pdata->inner_vlan_tag = l_config_doubule_vlan.inner_vlan_tag;
-	pdata->outer_vlan_tag = l_config_doubule_vlan.outer_vlan_tag;
-	pdata->op_type = l_config_doubule_vlan.op_type;
-	pdata->in_out = l_config_doubule_vlan.in_out;
-	pdata->via_reg_or_desc = l_config_doubule_vlan.via_reg_or_desc;
-
-	if (pdata->via_reg_or_desc == EQOS_VIA_REG)
-		ret = config_tx_dvlan_processing_via_reg(pdata, req->flags);
-	else
-		ret = config_tx_dvlan_processing_via_desc(pdata, req->flags);
-
-	DBGPR("<--eqos_config_tx_dvlan_processing\n");
-
-	return ret;
-}
-
-/*!
- * \details This function is invoked by ioctl function when user issues
- * an ioctl command to configure mac double vlan processing feature.
- *
- * \param[in] pdata - pointer to private data structure.
- * \param[in] flags – Each bit in this variable carry some information related
- *		      double vlan processing.
- *
- * \return integer
- *
- * \retval zero on success and -ve number on failure.
- */
-static int eqos_config_rx_dvlan_processing(
-		struct eqos_prv_data *pdata, unsigned int flags)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	int ret = 0;
-
-	DBGPR("-->eqos_config_rx_dvlan_processing\n");
-
-	hw_if->config_dvlan(1);
-	if (flags == EQOS_DVLAN_NONE) {
-		hw_if->config_dvlan(0);
-		hw_if->config_rx_outer_vlan_stripping(EQOS_RX_NO_VLAN_STRIP);
-		hw_if->config_rx_inner_vlan_stripping(EQOS_RX_NO_VLAN_STRIP);
-	} else if (flags == EQOS_DVLAN_INNER) {
-		hw_if->config_rx_outer_vlan_stripping(EQOS_RX_NO_VLAN_STRIP);
-		hw_if->config_rx_inner_vlan_stripping(EQOS_RX_VLAN_STRIP_ALWAYS);
-	} else if (flags == EQOS_DVLAN_OUTER) {
-		hw_if->config_rx_outer_vlan_stripping(EQOS_RX_VLAN_STRIP_ALWAYS);
-		hw_if->config_rx_inner_vlan_stripping(EQOS_RX_NO_VLAN_STRIP);
-	} else if (flags == EQOS_DVLAN_BOTH) {
-		hw_if->config_rx_outer_vlan_stripping(EQOS_RX_VLAN_STRIP_ALWAYS);
-		hw_if->config_rx_inner_vlan_stripping(EQOS_RX_VLAN_STRIP_ALWAYS);
-	} else {
-		printk(KERN_ALERT "ERROR : double VLAN Rx configuration - Invalid argument");
-		ret = EQOS_CONFIG_FAIL;
-	}
-
-	DBGPR("<--eqos_config_rx_dvlan_processing\n");
-
-	return ret;
-}
-
-/*!
- * \details This function is invoked by ioctl function when user issues
- * an ioctl command to configure mac double vlan (svlan) processing feature.
- *
- * \param[in] pdata - pointer to private data structure.
- * \param[in] flags – Each bit in this variable carry some information related
- *		      double vlan processing.
- *
- * \return integer
- *
- * \retval zero on success and -ve number on failure.
- */
-static int eqos_config_svlan(struct eqos_prv_data *pdata,
-					unsigned int flags)
-{
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	int ret = 0;
-
-	DBGPR("-->eqos_config_svlan\n");
-
-	ret = hw_if->config_svlan(flags);
-	if (ret == Y_FAILURE)
-		ret = EQOS_CONFIG_FAIL;
-
-	DBGPR("<--eqos_config_svlan\n");
-
-	return ret;
-}
-#endif /* end of EQOS_ENABLE_DVLAN */
 
 static VOID eqos_config_timer_registers(
 				struct eqos_prv_data *pdata)
@@ -4674,13 +3583,6 @@ static int eqos_config_ptpoffload(
 
 	return Y_SUCCESS;
 }
-
-
-
-
-
-
-
 
 
 /*!
@@ -4863,32 +3765,6 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		eqos_config_tx_pbl(pdata, tx_desc_data->tx_pbl, qinx);
 		break;
 
-#ifdef EQOS_ENABLE_DVLAN
-	case EQOS_DVLAN_TX_PROCESSING_CMD:
-		if (pdata->hw_feat.sa_vlan_ins) {
-			ret = eqos_config_tx_dvlan_processing(pdata, req);
-		} else {
-			printk(KERN_ALERT "No HW support for Single/Double VLAN\n");
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
-	case EQOS_DVLAN_RX_PROCESSING_CMD:
-		if (pdata->hw_feat.sa_vlan_ins) {
-			ret = eqos_config_rx_dvlan_processing(pdata, req->flags);
-		} else {
-			printk(KERN_ALERT "No HW support for Single/Double VLAN\n");
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
-	case EQOS_SVLAN_CMD:
-		if (pdata->hw_feat.sa_vlan_ins) {
-			ret = eqos_config_svlan(pdata, req->flags);
-		} else {
-			printk(KERN_ALERT "No HW support for Single/Double VLAN\n");
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
-#endif /* end of EQOS_ENABLE_DVLAN */
 	case EQOS_PTPOFFLOADING_CMD:
 		if (pdata->hw_feat.tsstssel) {
 			ret = eqos_config_ptpoffload(pdata,
@@ -5031,17 +3907,6 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		eqos_program_avb_algorithm(pdata, req);
 		break;
 
-	case EQOS_RX_SPLIT_HDR_CMD:
-		if (pdata->hw_feat.sph_en) {
-			ret = eqos_config_rx_split_hdr_mode(dev, req->flags);
-			if (ret == 0)
-				ret = EQOS_CONFIG_SUCCESS;
-			else
-				ret = EQOS_CONFIG_FAIL;
-		} else {
-			ret = EQOS_NO_HW_SUPPORT;
-		}
-		break;
 	case EQOS_L3_L4_FILTER_CMD:
 		if (pdata->hw_feat.l3l4_filter_num > 0) {
 			ret = eqos_config_l3_l4_filtering(dev, req->flags);
@@ -5099,11 +3964,6 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 	case EQOS_PFC_CMD:
 		ret = eqos_config_pfc(dev, req->flags);
 		break;
-#ifdef EQOS_CONFIG_PGTEST
-	case EQOS_PG_TEST:
-		ret = eqos_handle_pg_ioctl(pdata, (void *)req);
-		break;
-#endif /* end of EQOS_CONFIG_PGTEST */
 	case EQOS_PHY_LOOPBACK:
 		ret = eqos_handle_phy_loopback(pdata, (void *)req);
 		break;
@@ -5392,12 +4252,10 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 
 	DBGPR("-->eqos_ioctl\n");
 
-#ifndef EQOS_CONFIG_PGTEST
 	if ((!netif_running(dev)) || (!pdata->phydev)) {
 		DBGPR("<--eqos_ioctl - error\n");
 		return -EINVAL;
 	}
-#endif
 
 	spin_lock(&pdata->lock);
 	switch (cmd) {
@@ -5466,10 +4324,6 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 	DBGPR("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
 
-#ifdef EQOS_CONFIG_PGTEST
-	printk(KERN_ALERT "jumbo frames not supported with PG test\n");
-	return -EOPNOTSUPP;
-#endif
 	if (dev->mtu == new_mtu) {
 		printk(KERN_ALERT "%s: is already configured to %d mtu\n",
 		       dev->name, new_mtu);
@@ -7153,7 +6007,6 @@ static const struct net_device_ops eqos_netdev_ops = {
 	.ndo_poll_controller = eqos_poll_controller,
 #endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 	.ndo_set_features = eqos_set_features,
-	.ndo_fix_features = eqos_fix_features,
 	.ndo_do_ioctl = eqos_ioctl,
 	.ndo_change_mtu = eqos_change_mtu,
 #ifdef EQOS_QUEUE_SELECT_ALGO

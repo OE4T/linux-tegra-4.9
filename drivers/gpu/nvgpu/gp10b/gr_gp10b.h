@@ -33,6 +33,8 @@ enum {
 #define NVC0C0_SET_SHADER_EXCEPTIONS		0x1528
 
 void gp10b_init_gr(struct gpu_ops *ops);
+int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
+			struct mem_desc *mem);
 
 struct gr_t18x {
 	struct {

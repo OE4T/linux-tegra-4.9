@@ -84,9 +84,9 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		gk20a_dbg_info("gfxp context attrib cb size=%d",
 			attrib_cb_size);
 
-		err = gk20a_gmmu_alloc_map(vm,
-				g->gr.t18x.ctx_vars.preempt_image_size,
-				&gr_ctx->t18x.preempt_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					g->gr.t18x.ctx_vars.preempt_image_size,
+					&gr_ctx->t18x.preempt_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;
@@ -95,8 +95,9 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAIN] = desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAIN] = desc->size;
 
-		err = gk20a_gmmu_alloc_map(vm, spill_size,
-				&gr_ctx->t18x.spill_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					spill_size,
+					&gr_ctx->t18x.spill_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;
@@ -105,8 +106,9 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		p->gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_SPILL] = desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_SPILL] = desc->size;
 
-		err = gk20a_gmmu_alloc_map(vm, pagepool_size,
-					   &gr_ctx->t18x.pagepool_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					pagepool_size,
+					&gr_ctx->t18x.pagepool_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;
@@ -116,8 +118,9 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_PAGEPOOL] = desc->size;
 
-		err = gk20a_gmmu_alloc_map(vm, attrib_cb_size,
-					   &gr_ctx->t18x.betacb_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					attrib_cb_size,
+					&gr_ctx->t18x.betacb_ctxsw_buffer);
 		if (err) {
 			err = -ENOMEM;
 			goto fail;

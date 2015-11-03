@@ -1894,6 +1894,9 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	DBGPR("-->eqos_start_xmit: skb->len = %d, qinx = %u\n",
 		skb->len, qinx);
 
+	if (desc_data->tx_pkt_queued > (TX_DESC_CNT >> 2))
+		eqos_tx_interrupt(pdata->dev, pdata, qinx);
+
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
 		spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
 	else

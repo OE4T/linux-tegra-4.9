@@ -3307,7 +3307,9 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	TX_NORMAL_DESC_TDES3_LD_WR(tx_normal_desc->tdes3, 0x1);
 
 	/* set Interrupt on Completion for last descriptor */
-	TX_NORMAL_DESC_TDES2_IC_WR(tx_normal_desc->tdes2, 0x1);
+	if ((qinx == pdata->ptp_cfg.ptp_dma_ch_id) ||
+		!(tx_desc_data->tx_pkt_queued % (TX_DESC_CNT >> 3)))
+		TX_NORMAL_DESC_TDES2_IC_WR(tx_normal_desc->tdes2, 0x1);
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
 	tx_normal_desc = GET_TX_DESC_PTR(qinx, start_index);

@@ -223,7 +223,11 @@ static unsigned int tegra_ahci_qc_issue(struct ata_queued_cmd *qc)
 						T_SATA0_CFG_LINK_0);
 
 		tegra->host_naking_war_applied = true;
+	} else if (qc->tf.command == ATA_CMD_SET_FEATURES) {
+		WARN_ON(qc->tf.feature ==  SATA_FPDMA_OFFSET);
+		return AC_ERR_INVALID;
 	}
+
 	return ahci_ops.qc_issue(qc);
 }
 

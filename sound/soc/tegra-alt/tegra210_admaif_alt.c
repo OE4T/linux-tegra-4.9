@@ -470,7 +470,7 @@ static struct snd_soc_dai_ops tegra210_admaif_dai_ops = {
 static int tegra210_admaif_get_channels(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct tegra210_admaif *admaif = snd_soc_codec_get_drvdata(codec);
@@ -484,7 +484,7 @@ static int tegra210_admaif_put_channels(struct snd_kcontrol *kcontrol,
 {
 	struct soc_mixer_control *mc =
 		(struct soc_mixer_control *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_admaif *admaif = snd_soc_codec_get_drvdata(codec);
 	int value = ucontrol->value.integer.value[0];
 
@@ -728,6 +728,7 @@ static struct snd_kcontrol_new tegra210_admaif_controls[] = {
 	TEGRA210_ADMAIF_CHANNEL_CTRL(8),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(9),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(10),
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	TEGRA210_ADMAIF_CHANNEL_CTRL(11),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(12),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(13),
@@ -738,6 +739,7 @@ static struct snd_kcontrol_new tegra210_admaif_controls[] = {
 	TEGRA210_ADMAIF_CHANNEL_CTRL(18),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(19),
 	TEGRA210_ADMAIF_CHANNEL_CTRL(20)
+#endif
 };
 
 static int tegra210_admaif_codec_probe(struct snd_soc_codec *codec)

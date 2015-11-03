@@ -509,7 +509,7 @@ static int tegra210_amx_put_byte_map(struct snd_kcontrol *kcontrol,
 static int tegra210_amx_get_output_channels(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
 
 	ucontrol->value.integer.value[0] = amx->output_channels;
@@ -519,7 +519,7 @@ static int tegra210_amx_get_output_channels(struct snd_kcontrol *kcontrol,
 static int tegra210_amx_put_output_channels(struct snd_kcontrol *kcontrol,
 					 struct snd_ctl_elem_value *ucontrol)
 {
-	struct snd_soc_codec *codec = snd_kcontrol_chip(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
 	int value = ucontrol->value.integer.value[0];
 

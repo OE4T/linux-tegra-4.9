@@ -150,6 +150,14 @@
 #define T_AHCI_PORT_PXSSTS_IPM_MASK			(0xF00)
 #define T_AHCI_PORT_PXSSTS_IPM_SHIFT			(8)
 
+#define T_AHCI_PORT_PXCMD				0x118
+#define T_AHCI_PORT_PXCMD_ICC_MASK			(0xFF << 28)
+#define T_AHCI_PORT_PXCMD_ICC_ACTIVE			(0x1 << 28)
+#define T_AHCI_PORT_PXCMD_ICC_PARTIAL			(0x2 << 28)
+#define T_AHCI_PORT_PXCMD_ICC_SLUMBER			(0x6 << 28)
+#define T_AHCI_PORT_PXCMD_ICC_DEVSLEEP			(0x8 << 28)
+#define T_AHCI_PORT_PXCMD_ICC_TIMEOUT			10
+
 #define TEGRA_SATA_CORE_CLOCK_FREQ_HZ			(102*1000*1000)
 #define TEGRA_SATA_OOB_CLOCK_FREQ_HZ			(204*1000*1000)
 
@@ -301,6 +309,18 @@ static inline u32 tegra_ahci_bar5_readl(struct ahci_host_priv *hpriv,
 
 	rval = readl(tegra->base_list[TEGRA_SATA_AHCI] + offset);
 	return rval;
+}
+
+static inline void tegra_ahci_bar5_update(struct ahci_host_priv *hpriv, u32 val,
+					u32 mask, u32 offset)
+{
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	u32 rval = 0;
+
+	rval = readl(tegra->base_list[TEGRA_SATA_AHCI] + offset);
+	rval = (rval & ~mask) | (val & mask);
+	writel(rval, tegra->base_list[TEGRA_SATA_AHCI] + offset);
+	rval = readl(tegra->base_list[TEGRA_SATA_AHCI] + offset);
 }
 
 static inline void tegra_ahci_sata_update(struct ahci_host_priv *hpriv, u32 val,

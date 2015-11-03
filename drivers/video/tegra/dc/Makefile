@@ -27,6 +27,7 @@ obj-$(CONFIG_TEGRA_NVSD) += nvsd.o
 endif
 obj-y += dsi.o
 obj-$(CONFIG_DEBUG_FS) += dsi_debug.o
+obj-$(CONFIG_DEBUG_FS) += tegra_dsi_csi_test.o
 obj-y += dc_sysfs.o
 obj-y += dc_config.o
 obj-y += sor.o

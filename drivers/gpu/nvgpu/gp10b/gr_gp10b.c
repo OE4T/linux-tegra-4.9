@@ -18,6 +18,7 @@
 #include <linux/tegra-fuse.h>
 
 #include "gk20a/gr_gk20a.h"
+#include "gk20a/semaphore_gk20a.h"
 
 #include "gm20b/gr_gm20b.h" /* for MAXWELL classes */
 #include "gp10b/gr_gp10b.h"
@@ -492,6 +493,36 @@ static int gr_gp10b_init_ctx_state(struct gk20a *g)
 	return 0;
 }
 
+int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
+			struct mem_desc *mem)
+{
+	int err;
+
+	gk20a_dbg_fn("");
+
+	err = gk20a_gmmu_alloc_attr(vm->mm->g, 0, size, mem);
+	if (err)
+		return err;
+
+	mem->gpu_va = gk20a_gmmu_map(vm,
+				&mem->sgt,
+				size,
+				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+				gk20a_mem_flag_none,
+				false);
+
+	if (!mem->gpu_va) {
+		err = -ENOMEM;
+		goto fail_free;
+	}
+
+	return 0;
+
+fail_free:
+	gk20a_gmmu_free(vm->mm->g, mem);
+	return err;
+}
+
 static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **gr_ctx, struct vm_gk20a *vm,
 			  u32 class,
@@ -530,32 +561,36 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
 		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
 				attrib_cb_size);
-		err = gk20a_gmmu_alloc_map(vm, g->gr.t18x.ctx_vars.preempt_image_size,
-				&(*gr_ctx)->t18x.preempt_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					g->gr.t18x.ctx_vars.preempt_image_size,
+					&(*gr_ctx)->t18x.preempt_ctxsw_buffer);
 		if (err) {
 			gk20a_err(dev_from_gk20a(vm->mm->g),
 				  "cannot allocate preempt buffer");
 			goto fail_free_gk20a_ctx;
 		}
 
-		err = gk20a_gmmu_alloc_map(vm, spill_size,
-				&(*gr_ctx)->t18x.spill_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					spill_size,
+					&(*gr_ctx)->t18x.spill_ctxsw_buffer);
 		if (err) {
 			gk20a_err(dev_from_gk20a(vm->mm->g),
 				  "cannot allocate spill buffer");
 			goto fail_free_preempt;
 		}
 
-		err = gk20a_gmmu_alloc_map(vm, attrib_cb_size,
-					   &(*gr_ctx)->t18x.betacb_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					attrib_cb_size,
+					&(*gr_ctx)->t18x.betacb_ctxsw_buffer);
 		if (err) {
 			gk20a_err(dev_from_gk20a(vm->mm->g),
 				  "cannot allocate beta buffer");
 			goto fail_free_spill;
 		}
 
-		err = gk20a_gmmu_alloc_map(vm, pagepool_size,
-					   &(*gr_ctx)->t18x.pagepool_ctxsw_buffer);
+		err = gr_gp10b_alloc_buffer(vm,
+					pagepool_size,
+					&(*gr_ctx)->t18x.pagepool_ctxsw_buffer);
 		if (err) {
 			gk20a_err(dev_from_gk20a(vm->mm->g),
 				  "cannot allocate page pool");

@@ -148,17 +148,15 @@ static int tegra186_csi_mipical_platform_probe(struct platform_device *pdev)
 			goto err_mipi_cal_rst;
 		}
 
-		reset_control_deassert(rst);
-
-		rst = of_reset_control_get(np, "mipi_cal");
-		if (IS_ERR_OR_NULL(rst)) {
+		ret = reset_control_deassert(rst);
+		if (ret) {
 			dev_err(&pdev->dev,
-				"mipi_cal: reset get control failed\n");
+				"mipi_cal: fail to deassert reset\n");
 			ret = PTR_ERR(rst);
-			goto err_mipi_cal_rst;
+			goto err_mipi_cal_deassert_rst;
 		}
 
-		reset_control_deassert(rst);
+		reset_control_put(rst);
 	}
 
 	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG0_0, 1);
@@ -167,6 +165,8 @@ static int tegra186_csi_mipical_platform_probe(struct platform_device *pdev)
 
 	return 0;
 
+err_mipi_cal_deassert_rst:
+	reset_control_put(rst);
 err_mipi_cal_rst:
 	clk_disable_unprepare(csi_mipical->clk_uart_fs_mipical);
 err_clk_enable_uart_fs_mipi_cal:

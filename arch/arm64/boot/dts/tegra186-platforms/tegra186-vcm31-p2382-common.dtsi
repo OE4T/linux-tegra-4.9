@@ -16,6 +16,7 @@
 
 #include <dt-bindings/types.h>
 #include <dt-bindings/gpio/tmpm32x-gpio.h>
+#include <dt-bindings/input/atmel_mxt_ts.h>
 /dts-v1/;
 
 /memreserve/ 0x80000000 0x00010000;
@@ -118,6 +119,17 @@
 			};
 			tmpm32xi2c_default_pwr_on: pwr_on_default {
 			};
+		};
+
+		touch-controller@4b {
+			compatible = "atmel,maxtouch";
+			reg = <0x4b>;
+			interrupt-parent = <&tegra_gpio>;
+			interrupts = <TEGRA_GPIO(X, 3) 0x0>;
+			atmel,irq_flags = <IRQ_TYPE_LEVEL_LOW>;
+			atmel,reset-gpio = <&tegra_gpio TEGRA_GPIO(X, 2) GPIO_ACTIVE_HIGH>;
+			atmel,suspend-mode = <MXT_SUSPEND_REGULATOR>;
+			status = "okay";
 		};
 	};
 

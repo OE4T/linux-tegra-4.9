@@ -850,7 +850,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 err_suspend:
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra186_arad_runtime_suspend(&pdev->dev);
-err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err:
 	return ret;

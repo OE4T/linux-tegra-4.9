@@ -977,7 +977,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 err_suspend:
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra186_asrc_runtime_suspend(&pdev->dev);
-err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err:
 	return ret;
@@ -985,9 +984,6 @@ err:
 
 static int tegra186_asrc_platform_remove(struct platform_device *pdev)
 {
-	struct tegra186_asrc *asrc =
-		dev_get_drvdata(&pdev->dev);
-
 	snd_soc_unregister_codec(&pdev->dev);
 
 	pm_runtime_disable(&pdev->dev);

@@ -2337,4 +2337,8 @@
 		compatible = "nvidia,tegra186-AXIP2P-bridge";
 		reg = <0x0 0x02190000 0x0 0x1000>;
 	};
+
+	tegra-serr {
+		compatible = "nvidia,tegra186";
+	};
 };

@@ -47,7 +47,6 @@ static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 
 static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e);
-static void recycle_priv_cmdbuf(struct channel_gk20a *c);
 
 static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c);
 static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c);
@@ -1179,9 +1178,6 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 
 	q->size = q->mem.size / sizeof (u32);
 
-	INIT_LIST_HEAD(&q->head);
-	INIT_LIST_HEAD(&q->free);
-
 	return 0;
 
 clean_up:
@@ -1193,27 +1189,11 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 {
 	struct vm_gk20a *ch_vm = c->vm;
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	struct priv_cmd_entry *e;
-	struct list_head *pos, *tmp, *head;
 
 	if (q->size == 0)
 		return;
 
 	gk20a_gmmu_unmap_free(ch_vm, &q->mem);
-
-	/* free used list */
-	head = &q->head;
-	list_for_each_safe(pos, tmp, head) {
-		e = container_of(pos, struct priv_cmd_entry, list);
-		free_priv_cmdbuf(c, e);
-	}
-
-	/* free free list */
-	head = &q->free;
-	list_for_each_safe(pos, tmp, head) {
-		e = container_of(pos, struct priv_cmd_entry, list);
-		kfree(e);
-	}
 
 	memset(q, 0, sizeof(struct priv_cmd_queue));
 }
@@ -1226,7 +1206,6 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	struct priv_cmd_entry *e;
 	u32 free_count;
 	u32 size = orig_size;
-	bool no_retry = false;
 
 	gk20a_dbg_fn("size %d", orig_size);
 
@@ -1240,17 +1219,10 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	gk20a_dbg_info("ch %d: priv cmd queue get:put %d:%d",
 			c->hw_chid, q->get, q->put);
 
-TRY_AGAIN:
 	free_count = (q->size - (q->put - q->get) - 1) % q->size;
 
-	if (size > free_count) {
-		if (!no_retry) {
-			recycle_priv_cmdbuf(c);
-			no_retry = true;
-			goto TRY_AGAIN;
-		} else
-			return -EAGAIN;
-	}
+	if (size > free_count)
+		return -EAGAIN;
 
 	e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
 	if (!e) {
@@ -1280,9 +1252,6 @@ TRY_AGAIN:
 	/* we already handled q->put + size > q->size so BUG_ON this */
 	BUG_ON(q->put > q->size);
 
-	/* add new entry to head since we free from head */
-	list_add(&e->list, &q->head);
-
 	*entry = e;
 
 	gk20a_dbg_fn("done");
@@ -1295,64 +1264,8 @@ TRY_AGAIN:
 static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e)
 {
-	if (!e)
-		return;
-
-	list_del(&e->list);
-
 	kfree(e);
 }
-
-/* free entries if they're no longer being used */
-static void recycle_priv_cmdbuf(struct channel_gk20a *c)
-{
-	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	struct priv_cmd_entry *e, *tmp;
-	struct list_head *head = &q->head;
-	bool wrap_around, found = false;
-
-	gk20a_dbg_fn("");
-
-	/* Find the most recent free entry. Free it and everything before it */
-	list_for_each_entry(e, head, list) {
-
-		gk20a_dbg_info("ch %d: cmd entry get:put:wrap %d:%d:%d "
-			"curr get:put:wrap %d:%d:%d",
-			c->hw_chid, e->gp_get, e->gp_put, e->gp_wrap,
-			c->gpfifo.get, c->gpfifo.put, c->gpfifo.wrap);
-
-		wrap_around = (c->gpfifo.wrap != e->gp_wrap);
-		if (e->gp_get < e->gp_put) {
-			if (c->gpfifo.get >= e->gp_put ||
-			    wrap_around) {
-				found = true;
-				break;
-			} else
-				e->gp_get = c->gpfifo.get;
-		} else if (e->gp_get > e->gp_put) {
-			if (wrap_around &&
-			    c->gpfifo.get >= e->gp_put) {
-				found = true;
-				break;
-			} else
-				e->gp_get = c->gpfifo.get;
-		}
-	}
-
-	if (found)
-		q->get = (e->ptr - (u32 *)q->mem.cpu_va) + e->size;
-	else {
-		gk20a_dbg_info("no free entry recycled");
-		return;
-	}
-
-	list_for_each_entry_safe_continue(e, tmp, head, list) {
-		free_priv_cmdbuf(c, e);
-	}
-
-	gk20a_dbg_fn("done");
-}
-
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		struct nvgpu_alloc_gpfifo_args *args)
@@ -1724,9 +1637,31 @@ fail_unlock:
 	gk20a_channel_put(ch);
 }
 
+static int gk20a_free_priv_cmdbuf(struct channel_gk20a *c,
+					struct priv_cmd_entry *e)
+{
+	struct priv_cmd_queue *q = &c->priv_cmd_q;
+	u32 cmd_entry_start;
+	struct device *d = dev_from_gk20a(c->g);
+
+	if (!e)
+		return 0;
+
+	cmd_entry_start = (u32)(e->ptr - (u32 *)q->mem.cpu_va);
+	if ((q->get != cmd_entry_start) && cmd_entry_start != 0)
+		gk20a_err(d, "requests out-of-order, ch=%d\n", c->hw_chid);
+
+	q->get = (e->ptr - (u32 *)q->mem.cpu_va) + e->size;
+	free_priv_cmdbuf(c, e);
+
+	return 0;
+}
+
 static int gk20a_channel_add_job(struct channel_gk20a *c,
 				 struct gk20a_fence *pre_fence,
 				 struct gk20a_fence *post_fence,
+				 struct priv_cmd_entry *wait_cmd,
+				 struct priv_cmd_entry *incr_cmd,
 				 bool skip_buffer_refcounting)
 {
 	struct vm_gk20a *vm = c->vm;
@@ -1761,6 +1696,8 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 		job->mapped_buffers = mapped_buffers;
 		job->pre_fence = gk20a_fence_get(pre_fence);
 		job->post_fence = gk20a_fence_get(post_fence);
+		job->wait_cmd = wait_cmd;
+		job->incr_cmd = incr_cmd;
 
 		gk20a_channel_timeout_start(c, job);
 
@@ -1807,6 +1744,11 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 		 * them to the pool). */
 		gk20a_fence_put(job->pre_fence);
 		gk20a_fence_put(job->post_fence);
+
+		/* Free the private command buffers (wait_cmd first and
+		 * then incr_cmd i.e. order of allocation) */
+		gk20a_free_priv_cmdbuf(c, job->wait_cmd);
+		gk20a_free_priv_cmdbuf(c, job->incr_cmd);
 
 		/* job is done. release its vm reference (taken in add_job) */
 		gk20a_vm_put(vm);
@@ -2114,6 +2056,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	/* TODO! Check for errors... */
 	gk20a_channel_add_job(c, pre_fence, post_fence,
+				wait_cmd, incr_cmd,
 				skip_buffer_refcounting);
 
 	c->cmds_pending = true;

@@ -62,6 +62,8 @@ struct channel_gk20a_job {
 	int num_mapped_buffers;
 	struct gk20a_fence *pre_fence;
 	struct gk20a_fence *post_fence;
+	struct priv_cmd_entry *wait_cmd;
+	struct priv_cmd_entry *incr_cmd;
 	struct list_head list;
 };
 

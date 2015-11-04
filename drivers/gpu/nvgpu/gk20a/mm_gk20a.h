@@ -160,8 +160,6 @@ struct priv_cmd_queue {
 	u32 size;	/* num of entries in words */
 	u32 put;	/* put for priv cmd queue */
 	u32 get;	/* get for priv cmd queue */
-	struct list_head free;	/* list of pre-allocated free entries */
-	struct list_head head;	/* list of used entries */
 };
 
 struct priv_cmd_entry {

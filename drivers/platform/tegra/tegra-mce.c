@@ -304,6 +304,7 @@ int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error)
 {
 	struct mce_regs regs;
 	regs.args[0] = cmd.data;
+	regs.args[1] = 0;
 	send_smc(MCE_SMC_ENUM_READ_MCA, &regs);
 	*data = regs.args[1];
 	*error = (u32)regs.args[2];

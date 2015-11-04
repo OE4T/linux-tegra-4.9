@@ -17,9 +17,11 @@
 #include <linux/cpu_pm.h>
 #include <linux/cpu.h>
 #include <linux/module.h>
+#include <linux/of.h>
 #include <linux/of_platform.h>
+#include <linux/of_device.h>
+#include <linux/platform_device.h>
 #include <linux/platform/tegra/denver_mca.h>
-#include <linux/platform/tegra/ari_mca.h>
 
 /* Denver MCA */
 
@@ -77,76 +79,18 @@ static void tegra18_unregister_denver_mca_banks(void)
 		unregister_denver_mca_bank(&denver_mca_banks[i]);
 }
 
-/* ARI MCA */
-
-static struct ari_mca_bank ari_mca_banks[] = {
-	{.name = "SYS:DPMU",	.bank = 0},
-	{.name = "ROC:IOB",	.bank = 1},
-	{.name = "ROC:MCB",	.bank = 2},
-	{.name = "ROC:CCE",	.bank = 3},
-	{.name = "ROC:CQX",	.bank = 4},
-	{.name = "ROC:CTU",	.bank = 5},
-	{}
-};
-
-static void tegra18_register_ari_mca_banks(void)
-{
-	int i;
-
-	for (i = 0; ari_mca_banks[i].name; i++)
-		register_ari_mca_bank(&ari_mca_banks[i]);
-}
-
-static void tegra18_unregister_ari_mca_banks(void)
-{
-	int i;
-
-	for (i = 0; ari_mca_banks[i].name; i++)
-		unregister_ari_mca_bank(&ari_mca_banks[i]);
-}
-
-static int tegra18_serr_probe(struct platform_device *pdev)
-{
-	tegra18_register_denver_mca_banks();
-	tegra18_register_ari_mca_banks();
-	return 0;
-}
-
-static int tegra18_serr_remove(struct platform_device *pdev)
-{
-	tegra18_unregister_denver_mca_banks();
-	tegra18_unregister_ari_mca_banks();
-	return 0;
-}
-
-static struct of_device_id tegra18_serr_match[] = {
-	{.compatible = "nvidia,tegra186"},
-	{},
-};
-
-MODULE_DEVICE_TABLE(of, tegra18_serr_match);
-
-static struct platform_driver platform_driver = {
-	.probe		= tegra18_serr_probe,
-	.remove		= tegra18_serr_remove,
-	.driver = {
-		.owner	= THIS_MODULE,
-		.name	= "tegra18-serr",
-		.of_match_table = of_match_ptr(tegra18_serr_match),
-	},
-};
-
 static int __init tegra18_serr_init(void)
 {
-	return platform_driver_register(&platform_driver);
+	tegra18_register_denver_mca_banks();
+	return 0;
 }
 module_init(tegra18_serr_init);
 
 static void __exit tegra18_serr_exit(void)
 {
-	platform_driver_unregister(&platform_driver);
+	tegra18_unregister_denver_mca_banks();
 }
 module_exit(tegra18_serr_exit);
 
 MODULE_LICENSE("GPL v2");
-MODULE_DESCRIPTION("Tegra T8x SError handler");
+MODULE_DESCRIPTION("Tegra T18x SError handler");

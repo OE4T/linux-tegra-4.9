@@ -318,15 +318,6 @@
 		status = "okay";
 	};
 
-	generic-system-config {
-		reg = <0x0 0x02130000 0x0 0x10000>;
-		status = "okay";
-		spi-dma {
-			/*AONRMU_BR_ERROR_CONFIG_0 */
-			nvidia,reg-update = <0 0x000000f4 0x00000004 0x00000000>;
-		};
-	};
-
 	cluster_clk_priv@e090000 {
 		status = "okay";
 	};

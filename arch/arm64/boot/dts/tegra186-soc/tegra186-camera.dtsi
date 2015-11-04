@@ -122,4 +122,16 @@
 		       };
 		};
 	};
+
+	rtcpu-echo {
+		compatible = "nvidia,tegra186-sysfs-mbox";
+		status = "disabled";
+		mboxes = <&tegra_sce 0>;
+	};
+
+	sce-mods {
+		compatible = "nvidia,tegra186-sysfs-mbox";
+		status = "disabled";
+		mboxes = <&tegra_sce 5>;
+	};
 };

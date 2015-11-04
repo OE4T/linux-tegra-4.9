@@ -51,7 +51,7 @@
 			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
                         nvidia,ddc-i2c-bus = <&dp_aux_ch0_i2c>;
-			//nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(?, ?) 0>;
+			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) 1>;
 
 			hdmi-display {
 				status = "okay";
@@ -90,7 +90,7 @@
 			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			nvidia,ddc-i2c-bus = <&dp_aux_ch1_i2c>;
-			//nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(?, ?) 0>;
+			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
 
 			hdmi-display {
 				status = "okay";

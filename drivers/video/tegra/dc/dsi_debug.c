@@ -530,11 +530,148 @@ static const struct file_operations crc_fops = {
 	.release = single_release,
 };
 
+static int show_dsc_status(void *data, u64 *value)
+{
+	struct tegra_dc_dsi_data *dsi = (struct tegra_dc_dsi_data *)data;
+	struct tegra_dc *dc = dsi->dc;
+
+	if (dc) {
+		if (dc->out->type != TEGRA_DC_OUT_DSI) {
+			pr_err("Invalid DC out type %d\n", dc->out->type);
+			return 0;
+		}
+		*value = dc->out->dsc_en;
+	}
+	return 0;
+}
+
+static int set_dsc_en_dis(void *data, u64 value)
+{
+	struct tegra_dc_dsi_data *dsi = (struct tegra_dc_dsi_data *)data;
+	struct tegra_dc *dc = dsi->dc;
+
+	value = !!value;
+	if (dc) {
+		if (dc->out->type != TEGRA_DC_OUT_DSI) {
+			pr_err("Invalid DC out type %d\n", dc->out->type);
+		} else {
+			dc->out->dsc_en = value;
+			dev_info(&dc->ndev->dev, "%s Link compression\n",
+				(value ? "Enabling" : "Disabling"));
+		}
+	}
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(dsi_dsc_control_override_fops,
+	show_dsc_status, set_dsc_en_dis, "%llu\n");
+
+static int show_dsc_comp_rate(void *data, u64 *value)
+{
+	struct tegra_dc_dsi_data *dsi = (struct tegra_dc_dsi_data *)data;
+	struct tegra_dc *dc = dsi->dc;
+
+	if (dc) {
+		if (dc->out->type != TEGRA_DC_OUT_DSI) {
+			pr_err("Invalid DC out type %d\n", dc->out->type);
+			return 0;
+		}
+		*value = dc->out->dsc_bpp;
+	}
+	return 0;
+}
+
+static int set_dsc_comp_rate(void *data, u64 value)
+{
+	struct tegra_dc_dsi_data *dsi = (struct tegra_dc_dsi_data *)data;
+	struct tegra_dc *dc = dsi->dc;
+
+	/* Only 8,12 and 16 bpp compression rates are supported */
+	switch(value) {
+	case DSC_COMP_RATE_8_BPP:
+	case DSC_COMP_RATE_12_BPP:
+	case DSC_COMP_RATE_16_BPP:
+		break;
+	default:
+		dev_err(&dc->ndev->dev, "Invalid compression rate\n");
+		return 0;
+	}
+
+	if (dc) {
+		if (dc->out->type != TEGRA_DC_OUT_DSI) {
+			pr_err("Invalid DC out type %d\n", dc->out->type);
+		} else {
+			dc->out->dsc_bpp = value;
+			dev_info(&dc->ndev->dev, "%lld bpp comp rate set\n",
+				value);
+		}
+	}
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(dsi_dsc_comp_rate_override_fops,
+	show_dsc_comp_rate, set_dsc_comp_rate, "%llu\n");
+
+static int show_dsc_num_comp_pkts(void *data, u64 *value)
+{
+	struct tegra_dc_dsi_data *dsi = (struct tegra_dc_dsi_data *)data;
+	struct tegra_dc *dc = dsi->dc;
+
+	if (dc) {
+		if (dc->out->type != TEGRA_DC_OUT_DSI) {
+			pr_err("Invalid DC out type %d\n", dc->out->type);
+			return 0;
+		}
+		*value = dc->out->num_of_slices;
+	}
+	return 0;
+}
+
+static int set_dsc_num_comp_pkts(void *data, u64 value)
+{
+	struct tegra_dc_dsi_data *dsi = (struct tegra_dc_dsi_data *)data;
+	struct tegra_dc *dc = dsi->dc;
+
+	/*
+	 * Only 1,2 and 4 num of compressed packets per row are supported
+	 * by T210 DSI controller. T18x DSI controller additionally supports
+	 * 3 compressed packets per row.
+	 */
+	switch(value) {
+	case DSC_ONE_COMP_PKTS_PER_ROW:
+	case DSC_TWO_COMP_PKTS_PER_ROW:
+	case DSC_FOUR_COMP_PKTS_PER_ROW:
+		break;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	case DSC_THREE_COMP_PKTS_PER_ROW:
+		break;
+#endif
+	default:
+		dev_err(&dc->ndev->dev, "Invalid num of comp pkts per row\n");
+		return 0;
+	}
+
+	if (dc) {
+		if (dc->out->type != TEGRA_DC_OUT_DSI) {
+			pr_err("Invalid DC out type %d\n", dc->out->type);
+		} else {
+			dc->out->num_of_slices = value;
+			dev_info(&dc->ndev->dev, "num comp pkts set to %lld\n",
+				value);
+		}
+	}
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(dsi_dsc_num_comp_pkts_override_fops,
+	show_dsc_num_comp_pkts, set_dsc_num_comp_pkts, "%llu\n");
+
 static struct dentry *dsidir;
 
 void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 {
 	struct dentry *retval;
+	struct dentry *dscdir;
 
 	dsidir = debugfs_create_dir("tegra_dsi", NULL);
 	if (!dsidir)
@@ -567,6 +704,26 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 				&crc_fops);
 	if (!retval)
 		goto free_out;
+
+	dscdir = debugfs_create_dir("link_compression", dsidir);
+	if (!dscdir)
+		goto free_out;
+
+	retval = debugfs_create_file("dsc_enable", S_IRUGO | S_IWUSR, dscdir,
+			(void *)dsi, &dsi_dsc_control_override_fops);
+	if (!retval)
+		goto free_out;
+
+	retval = debugfs_create_file("comp_rate", S_IRUGO | S_IWUSR, dscdir,
+			(void *)dsi, &dsi_dsc_comp_rate_override_fops);
+	if (!retval)
+		goto free_out;
+
+	retval = debugfs_create_file("num_comp_pkts", S_IRUGO | S_IWUSR, dscdir,
+			(void *)dsi, &dsi_dsc_num_comp_pkts_override_fops);
+	if (!retval)
+		goto free_out;
+
 	return;
 free_out:
 	debugfs_remove_recursive(dsidir);

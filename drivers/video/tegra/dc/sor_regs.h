@@ -96,6 +96,8 @@
 #define NV_SOR_STATE1_ASY_OWNER_HEAD0				(1)
 #define NV_SOR_STATE1_ASY_OWNER_HEAD1				(2)
 #define NV_SOR_STATE1_ASY_OWNER_HEAD2				(3)
+#define NV_SOR_HEADNUM(i)					(i+1)
+
 
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 #define NV_HEAD_STATE0(i)					(0x151 + i)
@@ -863,6 +865,7 @@
 #define NV_SOR_DP_SPARE(i)					(0x60 + (i))
 #define NV_SOR_DP_SPARE_REG_SHIFT				(3)
 #define NV_SOR_DP_SPARE_REG_DEFAULT_MASK			(0x1fffffff << 3)
+#define NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_MASK			(1 << 3)
 #define NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE		(1 << 3)
 #define NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_DISABLE		(0 << 3)
 #define NV_SOR_DP_SPARE_SOR_CLK_SEL_SHIFT			(2)

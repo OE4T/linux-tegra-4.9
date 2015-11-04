@@ -221,27 +221,27 @@ static bool tegra_dc_null_mode_filter(const struct tegra_dc *dc,
 /* setup pixel clock for the current mode, return mode's adjusted pclk. */
 static long tegra_dc_null_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
-	static char *plld = "pll_d_out0";
-	static char *plld2 = "pll_d2";
-	const char *clock_name = ((dc->out &&
-		dc->out->parent_clk) ? dc->out->parent_clk :
-		(dc->ndev->id == 0 ? plld : plld2));
-	struct clk *parent_clk = clk_get_sys(NULL, clock_name);
+	static char *pllds[] =
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		{"pll_d", "plld2", "plld3"};
+#else
+		{"pll_d_out0", "pll_d2"};
+#endif
+	const char *clk_name = pllds[dc->ndev->id];
+	struct clk *parent_clk =
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		tegra_disp_clk_get(&dc->ndev->dev, clk_name);
+#else
+		clk_get_sys(NULL, clk_name);
+#endif
 	struct clk *base_clk;
 	long rate;
 
 	if ((clk == NULL) || (parent_clk == NULL) || tegra_platform_is_linsim())
 		return 0;
 
-	if (dc->ndev->id == 0)
-		clock_name = plld;
-	else
-		clock_name = plld2;
-
-	parent_clk = clk_get_sys(NULL, clock_name);
-
 	if (dc->out != NULL)
-		dc->out->parent_clk = clock_name;
+		dc->out->parent_clk = clk_name;
 	else
 		return 0;
 
@@ -354,8 +354,8 @@ int tegra_dc_init_null_or(struct tegra_dc *dc)
 	dc_out->postsuspend = NULL;
 	dc_out->hotplug_gpio = -1;
 	dc_out->postpoweron = NULL;
-	dc_out->parent_clk =
-		(dc->ndev->id == 0) ? "pll_d_out0" : "pll_d2";
+	dc_out->parent_clk = NULL;
+
 	return 0;
 }
 

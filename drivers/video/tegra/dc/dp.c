@@ -79,6 +79,7 @@ static struct tegra_hpd_ops hpd_ops;
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
 					bool enable);
+__maybe_unused
 static void tegra_dp_hpd_config(struct tegra_dc_dp_data *dp);
 
 static inline u32 tegra_dpaux_readl(struct tegra_dc_dp_data *dp, u32 reg)
@@ -2065,7 +2066,7 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	/* check for dpaux clock reset control */
 	if (tegra_bpmp_running()) {
 		dp->dpaux_rst =
-			of_reset_control_get(np,
+			of_reset_control_get(np_dp,
 				(dp_num) ? "dpaux1" : "dpaux");
 		if (IS_ERR_OR_NULL(dp->dpaux_rst)) {
 			dev_err(&dc->ndev->dev,
@@ -2481,14 +2482,26 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_sor_port_enable(sor, true);
 	tegra_sor_config_xbar(dp->sor);
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* switch to macro feedback clock */
+	clk_set_parent(sor->src_switch_clk, sor->brick_clk);
+
+	tegra_sor_write_field(sor, NV_SOR_CLK_CNTRL,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_MASK,
+		NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_DPCLK);
+	tegra_dc_sor_set_link_bandwidth(sor, dp->link_cfg.link_bw ? :
+			NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G1_62);
+#else
 	tegra_dp_clk_enable(dp);
 	tegra_sor_config_dp_clk(dp->sor);
 	tegra_dc_setup_clk(dc, dc->clk);
+#endif
 
 	/* Host is ready. Start link training. */
 	dp->enabled = true;
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* BRINGUP HACK: DISABLE HDA */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (tegra_dc_is_ext_dp_panel(dc))
 		tegra_hda_set_data(dp, SINK_DP);
 #endif
@@ -2591,6 +2604,11 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 				"dp: failed to enter panel power save mode\n");
 	}
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* switch back to SOR safe clock */
+	clk_set_parent(dp->sor->src_switch_clk, dp->sor->safe_clk);
+#endif
+
 	tegra_dc_sor_detach(dp->sor);
 	tegra_dc_sor_disable(dp->sor, false);
 
@@ -2598,7 +2616,8 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dc_io_end(dc);
 
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	/* BRINGUP HACK: DISABLE HDA */
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (tegra_dc_is_ext_dp_panel(dc))
 		tegra_hda_reset_data();
 #endif
@@ -2621,20 +2640,53 @@ static long tegra_dc_dp_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	struct clk *dc_parent_clk;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	struct tegra_dc_sor_data *sor = dp->sor;
+#endif
 
 	if (!tegra_platform_is_silicon())
 		return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 
 	if (clk == dc->clk) {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		dc_parent_clk = tegra_disp_clk_get(&dc->ndev->dev,
+					dc->out->parent_clk);
+		if (IS_ERR_OR_NULL(dc_parent_clk)) {
+			dev_err(&dc->ndev->dev, "dp: failed to get clock %s\n",
+					dc->out->parent_clk);
+			return -EINVAL;
+		}
+#else
 		dc_parent_clk = clk_get_sys(NULL,
 				dc->out->parent_clk ? : "pll_d_out0");
+#endif
 		clk_set_parent(dc->clk, dc_parent_clk);
 	}
 
+	/* set pll_d2 to pclk rate */
 	tegra_sor_setup_clk(dp->sor, clk, false);
 
 	/* fixed pll_dp@270MHz */
 	clk_set_rate(dp->parent_clk, 270000000);
+
+	/* BRINGUP HACK: NEED TO CLEAN UP CLK PROGRAMMING SEQUENCE */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* enable pll_dp */
+	tegra_dp_clk_enable(dp);
+
+	/* enable SOR safe clock */
+	tegra_sor_safe_clk_enable(sor);
+	/* switch sor_pad_clk to use SOR safe clock for now */
+	clk_set_parent(sor->src_switch_clk, sor->safe_clk);
+
+	/* set parent of SOR brick clock to pll_dp */
+	clk_set_parent(sor->brick_clk, dp->parent_clk);
+
+	/* enable sor_pad_clk */
+	tegra_disp_clk_prepare_enable(sor->src_switch_clk);
+	/* enable SOR brick clock */
+	tegra_disp_clk_prepare_enable(sor->brick_clk);
+#endif
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }

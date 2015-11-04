@@ -1217,6 +1217,12 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 			OF_DC_LOG("dsi pixel format 18BIT_NP\n");
 		else if (temp == TEGRA_DSI_PIXEL_FORMAT_24BIT_P)
 			OF_DC_LOG("dsi pixel format 24BIT_P\n");
+		else if (temp == TEGRA_DSI_PIXEL_FORMAT_8BIT_DSC)
+			OF_DC_LOG("dsi pixel format 8BIT_DSC\n");
+		else if (temp == TEGRA_DSI_PIXEL_FORMAT_12BIT_DSC)
+			OF_DC_LOG("dsi pixel format 12BIT_DSC\n");
+		else if (temp == TEGRA_DSI_PIXEL_FORMAT_16BIT_DSC)
+			OF_DC_LOG("dsi pixel format 16BIT_DSC\n");
 		else {
 			pr_err("invalid dsi pixel format\n");
 			goto parse_dsi_settings_fail;
@@ -1618,6 +1624,27 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 					 dsi->boardinfo.display_boardid,
 					 dsi->boardinfo.display_boardversion);
 	}
+
+	if (of_property_read_bool(np_dsi_panel,
+			"nvidia,enable-link-compression"))
+		pdata->default_out->dsc_en = true;
+
+	if (of_property_read_bool(np_dsi_panel,
+			"nvidia,enable-block-pred"))
+		pdata->default_out->en_block_pred = true;
+
+	if (!of_property_read_u32(np_dsi_panel,
+			"nvidia,slice-height", &temp))
+		pdata->default_out->slice_height = (u32)temp;
+
+	if (!of_property_read_u32(np_dsi_panel,
+			"nvidia,num-of-slices", &temp))
+		pdata->default_out->num_of_slices = (u8)temp;
+
+	if (!of_property_read_u32(np_dsi_panel,
+			"nvidia,comp-rate", &temp))
+		pdata->default_out->dsc_bpp = (u8)temp;
+
 	return np_dsi_panel;
 
 parse_dsi_settings_fail:
@@ -1909,7 +1936,12 @@ static int dc_dp_out_hotplug_init(struct device *dev)
 	 * Required for level translator logic.
 	 */
 	if (!of_dp_hdmi_5v0) {
+		/* BRINGUP HACK: DEVM_REGULATOR_GET IS FAILING... */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		of_dp_hdmi_5v0 = regulator_get(dev, "vdd_hdmi_5v0");
+#else
 		of_dp_hdmi_5v0 = devm_regulator_get(dev, "vdd_hdmi_5v0");
+#endif
 		if (IS_ERR(of_dp_hdmi_5v0)) {
 			err = PTR_ERR(of_dp_hdmi_5v0);
 			dev_warn(dev,
@@ -2439,8 +2471,7 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DSI ||
 		   pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP ||
-		   (pdata->default_out->type == TEGRA_DC_OUT_DP  &&
-			tegra_platform_is_linsim()) ||
+		   pdata->default_out->type == TEGRA_DC_OUT_DP ||
 		   pdata->default_out->type == TEGRA_DC_OUT_LVDS) {
 		/* pdata->default_out->type == TEGRA_DC_OUT_DSI or
 		 * pdata->default_out->type == TEGRA_DC_OUT_LVDS

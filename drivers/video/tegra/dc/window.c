@@ -269,6 +269,9 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 	int ret = 0;
 	struct tegra_dc *dc = windows[0]->dc;
 
+	if (dc == NULL)
+		return -EFAULT;
+
 	if (n < 1 || n > DC_N_WINDOWS)
 		return -EINVAL;
 
@@ -1075,6 +1078,9 @@ int tegra_dc_update_windows(struct tegra_dc_win *windows[], int n,
 
 	dc = windows[0]->dc;
 	trace_update_windows(dc);
+
+	if (dc == NULL)
+		return -EINVAL;
 
 	/* check that window arguments are valid */
 	for (i = 0; i < n; i++) {

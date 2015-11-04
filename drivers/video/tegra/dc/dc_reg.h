@@ -236,7 +236,122 @@
 #define  LUT2_READ_EN			(1 << 0)
 
 #define DC_COM_DSC_TOP_CTL			0x33e
+#define DSC_VALID_TIMEOUT_COUNT(x)	(((x) & 0xffff) << 4)
+#define DSC_AUTO_RESET			(1U << 3)
 #define  DSC_SLCG_OVERRIDE		(1U << 2)
+#define DSC_ENABLE			(1U << 1)
+#define DSC_SOFT_RESET			0x1
+
+#define DC_COM_DSC_DELAY			0x33f
+#define DSC_VALID_WRAP_OUTPUT_DELAY(x)	(((x) & 0xffff) << 16)
+#define DSC_VALID_OUTPUT_DELAY(x)	((x) & 0xffff)
+#define DSC_ENC_FIFO_SIZE		0x17f
+#define DSC_START_PIXEL_POS		18
+
+#define DSC_COM_DSC_COMMON_CTRL			0x340
+#define DSC_VALID_CHUNK_SIZE(x)		(((x) & 0xffff) << 16)
+#define DSC_BLOCK_PRED_ENABLE		BIT(10)
+#define DSC_VALID_BITS_PER_PIXEL(x)	((x) & 0x3ff)
+
+#define DSC_COM_DSC_SLICE_INFO			0x341
+#define DSC_VALID_SLICE_HEIGHT(x)	(((x) & 0xffff) << 16)
+#define DSC_VALID_SLICE_WIDTH(x)	((x) & 0xffff)
+
+#define DSC_COM_DSC_RC_RELAY_INFO		0x342
+#define DSC_VALID_INITIAL_DEC_DELAY(x)		(((x) & 0xffff) << 16)
+#define DSC_VALID_INITIAL_XMIT_DELAY(x)		((x) & 0x3ff)
+
+#define DC_COM_DSC_RC_SCALE_INFO		0x343
+#define DSC_VALID_SCALE_DECR_INTERVAL(x)	(((x) & 0xffff) << 6)
+#define DSC_VALID_INITIAL_SCALE_VALUE(x)	((x) & 0x3f)
+
+#define DC_COM_DSC_RC_SCALE_INFO_2		0x344
+#define DSC_VALID_SCALE_INCR_INTERVAL(x)	((x) & 0xffff)
+
+#define DC_COM_DSC_RC_BPGOFF_INFO		0x345
+#define DSC_VALID_SLICE_BPG_OFFSET(x)	(((x) & 0xffff) << 16)
+#define DSC_VALID_NFL_BPG_OFFSET(x)	((x) & 0xffff)
+
+#define DC_COM_DSC_RC_OFFSET_INFO		0x346
+#define DSC_DEF_8BPP_INITIAL_OFFSET		6144
+#define DSC_DEF_12BPP_INITIAL_OFFSET		2048
+#define DSC_VALID_FINAL_OFFSET(x)	(((x) & 0xffff) << 16)
+#define DSC_VALID_INITIAL_OFFSET(x) 	((x) & 0xffff)
+
+#define DC_COM_DSC_RC_FLATNESS_INFO		0x347
+#define DSC_DEF_8BPP_FIRST_LINE_BPG_OFFS	12
+#define DSC_DEF_12BPP_FIRST_LINE_BPG_OFFS	15
+#define DSC_VALID_FIRST_LINE_BPG_OFFS(x)	(((x) & 0x1f) << 10)
+#define DSC_VALID_FLATNESS_MAX_QP(x)		(((x) & 0x1f) << 5)
+#define DSC_VALID_FLATNESS_MIN_QP(x)		((x) & 0x1f)
+
+#define DC_COM_DSC_RC_PARAM_SET			0x348
+#define DSC_VALID_RC_TGT_OFFSET_LO(x)		(((x) & 0xf) << 18)
+#define DSC_VALID_RC_TGT_OFFSET_HI(x)		(((x) & 0xf) << 14)
+#define DSC_VALID_RC_QUANT_INCR_LIMIT1(x)	(((x) & 0x1f) << 9)
+#define DSC_VALID_RC_QUANT_INCR_LIMIT0(x)	(((x) & 0x1f) << 4)
+#define DSC_VALID_RC_EDGE_FACTOR(x)		((x) & 0xf)
+
+#define SET_DSC_RC_BUF_THRESH(thresh, shift)	\
+	(((thresh) & 0xff) << shift)		\
+
+#define DSC_VALID_RC_BUF_THRESH_3(x)	(((x) & 0xff) << 24)
+#define DSC_VALID_RC_BUF_THRESH_2(x)	(((x) & 0xff) << 16)
+#define DSC_VALID_RC_BUF_THRESH_1(x)	(((x) & 0xff) << 8)
+#define DSC_VALID_RC_BUF_THRESH_0(x)	((x) & 0xff)
+
+#define DC_COM_DSC_RC_BUF_THRESH_0		0x349
+#define DSC_VALID_RC_MODEL_SIZE(x)	((x) & 0xffff)
+#define DSC_DEF_RC_MODEL_SIZE			8192
+
+#define DC_COM_DSC_RC_BUF_THRESH_1		0x34a
+
+#define DC_COM_DSC_RC_BUF_THRESH_2		0x34b
+
+#define DC_COM_DSC_RC_BUF_THRESH_3		0x34c
+
+#define SET_RC_RANGE_MIN_QP(x)		((x) & 0x1f)
+#define SET_RC_RANGE_MAX_QP(x)		(((x) & 0x1f) << 5)
+#define SET_RC_RANGE_BPG_OFFSET(x)	(((x) & 0x3f) << 10)
+
+#define DSC_VALID_RC_RANGE_PARAM_HI(x)	(((x) & 0xffff) << 16)
+#define DSC_VALID_RC_RANGE_PARAM_LO(x)	((x) & 0xffff)
+
+#define DC_COM_DSC_RC_RANGE_CFG_0		0x34d
+
+#define DC_COM_DSC_RC_RANGE_CFG_1		0x34e
+
+#define DC_COM_DSC_RC_RANGE_CFG_2		0x34f
+
+#define DC_COM_DSC_RC_RANGE_CFG_3		0x350
+
+#define DC_COM_DSC_RC_RANGE_CFG_4		0x351
+
+#define DC_COM_DSC_RC_RANGE_CFG_5		0x352
+
+#define DC_COM_DSC_RC_RANGE_CFG_6		0x353
+
+#define DC_COM_DSC_RC_RANGE_CFG_7		0x354
+
+#define DC_COM_DSC_UNIT_SET			0x355
+#define DSC_FLATNESS_FIX_EN			BIT(7)
+#define DSC_CHECK_FLATNESS2			BIT(6)
+#define DSC_LINEBUF_DEPTH_8_BIT			BIT(2)
+#define DSC_VALID_SLICE_NUM_MINUS1_IN_LINE(x)	((x) & 0x3)
+
+#define DC_COM_DSC_CRC_CONTROL			0x356
+#define DSC_CRC_ALWAYS				BIT(1)
+#define DSC_CRC_ENABLE				BIT(0)
+
+#define DC_COM_DSC_CRC_CHECKSUM			0x357
+
+#define DC_COM_DSC_STATUS			0x358
+#define DSC_VALID_STATUS_SLICEID(x)	(((x) >> 16) & 0x3)
+#define DSC_VALID_STATUS_HINDEX(x)	((x) & 0xffff)
+
+#define DC_COM_DSC_STATUS_2			0x359
+#define DSC_STATUS_BUSY			BIT(16)
+#define DSC_VALID_STATUS_VINDEX(x)	((x) & 0xffff)
 
 #define DC_DISP_DISP_SIGNAL_OPTIONS0		0x400
 #define  H_PULSE_0_ENABLE		(1 << 8)
@@ -463,6 +578,13 @@
 #define  SET_CONTROL_CURSOR_FORMAT_MASK		(0xFF << 1)
 #define  SET_CONTROL_CURSOR_DE_GAMMA(x)		(((x) & 0x3) << 27)
 #define  SET_CONTROL_CURSOR_DE_GAMMA_MASK	(0x3 << 27)
+
+#define DC_DISP_DISPLAY_SPARE0	0x4f7
+#define DC_DISP_SPARE0_VALID_OVERFLOW_THRES(x)	(((x) & 0x3ff) << 4)
+#define DC_DISP_DEF_OVERFLOW_THRES	0x354
+#define DC_DISP_SPARE0_RC_SOLUTION_MODE(x)	((x) << 2)
+#define DC_SPARE0_RC_SOLUTION_2	0x1
+#define DC_SPARE0_RC_SOLUTION_3	0x2
 
 #define DC_WIN_COLOR_PALETTE(x)			(0x500 + (x))
 

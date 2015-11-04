@@ -404,6 +404,22 @@ enum {
 #define DSI_GANGED_MODE_SIZE_VALID_LOW_WIDTH(x)		(((x) & 0x1fff) << 16)
 #define DSI_GANGED_MODE_SIZE_VALID_HIGH_WIDTH(x)	(((x) & 0x1fff) << 0)
 
+/* Supported compression rates */
+#define DSC_COMP_RATE_8_BPP	8
+#define DSC_COMP_RATE_12_BPP	12
+#define DSC_COMP_RATE_16_BPP	16
+
+/* Supported number of compressed packets per row */
+#define DSC_ONE_COMP_PKTS_PER_ROW	1
+#define DSC_TWO_COMP_PKTS_PER_ROW	2
+#define DSC_THREE_COMP_PKTS_PER_ROW	3
+#define DSC_FOUR_COMP_PKTS_PER_ROW	4
+
+#define DSI_DSC_CONTROL 0x61
+#define DSI_DSC_CONROL_VALID_NUM_COMPRESS_PKTS_PER_ROW(x)	(((x) & 0x3) << 16)
+#define DSI_DSC_CONTROL_VALID_COMPRESS_RATE(x)	(((x) & 0x3FF) << 2)
+#define DSI_DSC_CONTROL_COMPRESS_MODE_EN	0x1
+
 #define DSI_PADCTL_GLOBAL_CNTRLS 0x02
 #define DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSID_LINK(x)    (((x) & 0x1) << 2)
 #define DSI_PADCTL_GLOBAL_CNTRLS_ENABLE_DSIB_LINK(x)    (((x) & 0x1) << 1)

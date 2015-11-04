@@ -61,6 +61,11 @@
 		dc->out->type == TEGRA_DC_OUT_DP) : 0)
 #endif
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+int tegra_nvdisp_powergate_partition(int pg_id);
+int tegra_nvdisp_unpowergate_partition(int pg_id);
+#endif
+
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
 {
 	int ret = 0;
@@ -95,9 +100,9 @@ static inline unsigned long tegra_dc_is_accessible(struct tegra_dc *dc)
 	if (likely(tegra_platform_is_silicon())) {
 		BUG_ON(!nvhost_module_powered_ext(dc->ndev));
 		if (WARN(!tegra_dc_is_clk_enabled(dc->clk),
-			"DC is clock-gated.\n")/* ||
+			"DC is clock-gated.\n") ||
 			WARN(!tegra_powergate_is_powered(
-			dc->powergate_id), "DC is power-gated.\n")*/)
+			dc->powergate_id), "DC is power-gated.\n"))
 			return 1;
 	}
 #endif
@@ -129,9 +134,11 @@ static inline void tegra_dc_writel(struct tegra_dc *dc, unsigned long val,
 
 static inline void tegra_dc_power_on(struct tegra_dc *dc)
 {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	tegra_dc_writel(dc, PW0_ENABLE | PW1_ENABLE | PW2_ENABLE | PW3_ENABLE |
 					PW4_ENABLE | PM0_ENABLE | PM1_ENABLE,
 					DC_CMD_DISPLAY_POWER_CONTROL);
+#endif
 }
 
 static inline void _tegra_dc_write_table(struct tegra_dc *dc, const u32 *table,
@@ -455,13 +462,21 @@ static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	tegra_nvdisp_powergate_partition(dc->powergate_id);
+#else
 	tegra_powergate_partition(dc->powergate_id);
+#endif
 }
 
 static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 {
 	int ret;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	ret = tegra_nvdisp_unpowergate_partition(dc->powergate_id);
+#else
 	ret = tegra_unpowergate_partition(dc->powergate_id);
+#endif
 	if (ret < 0)
 		dev_err(&dc->ndev->dev, "%s: could not unpowergate %d\n",
 							__func__, ret);
@@ -470,10 +485,10 @@ static inline void tegra_dc_unpowergate_locked(struct tegra_dc *dc)
 static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 {
 #if defined(CONFIG_TEGRA_NVDISPLAY)
-	return true;
-#else
-	return tegra_powergate_is_powered(dc->powergate_id);
+	if (tegra_platform_is_linsim())
+		return true;
 #endif
+	return tegra_powergate_is_powered(dc->powergate_id);
 }
 
 static inline void tegra_dc_set_edid(struct tegra_dc *dc,
@@ -577,6 +592,10 @@ unsigned long tegra_dc_poll_register(struct tegra_dc *dc,
 u32 reg, u32 mask, u32 exp_val, u32 poll_interval_us,
 u32 timeout_ms);
 void tegra_dc_enable_general_act(struct tegra_dc *dc);
+
+/* defined in dc.c, used in dsi.c */
+void tegra_dc_dsc_init(struct tegra_dc *dc);
+void tegra_dc_en_dis_dsc(struct tegra_dc *dc, bool enable);
 
 /* defined in dc.c, used by ext/dev.c */
 extern int no_vsync;

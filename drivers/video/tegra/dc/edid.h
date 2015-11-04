@@ -30,6 +30,32 @@
 #define TEGRA_DC_Y420_MASK	(TEGRA_DC_Y420_30 | \
 				TEGRA_DC_Y420_36 | TEGRA_DC_Y420_48)
 
+#define TEGRA_DC_Y422_30	8	/* YCbCr 4:2:2 deep color 30bpp */
+#define TEGRA_DC_Y422_36	16	/* YCbCr 4:2:2 deep color 36bpp */
+#define TEGRA_DC_Y422_48	32	/* YCbCr 4:2:2 deep color 48bpp */
+#define TEGRA_DC_Y422_MASK	(TEGRA_DC_Y422_30 | \
+				TEGRA_DC_Y422_36 | TEGRA_DC_Y422_48)
+
+#define TEGRA_DC_Y444_30	64	/* YCbCr 4:4:4 deep color 30bpp */
+#define TEGRA_DC_Y444_36	128	/* YCbCr 4:4:4 deep color 36bpp */
+#define TEGRA_DC_Y444_48	256	/* YCbCr 4:4:4 deep color 48bpp */
+#define TEGRA_DC_Y444_MASK	(TEGRA_DC_Y444_30 | \
+				TEGRA_DC_Y444_36 | TEGRA_DC_Y444_48)
+
+#define TEGRA_DC_RGB_30	512		/* RGB 4:4:4 deep color 30bpp */
+#define TEGRA_DC_RGB_36	1024	/* RGB 4:4:4 deep color 36bpp */
+#define TEGRA_DC_RGB_48	2048	/* RGB 4:4:4 deep color 48bpp */
+#define TEGRA_DC_RGB_MASK	(TEGRA_DC_RGB_30 | \
+				TEGRA_DC_RGB_36 | TEGRA_DC_RGB_48)
+
+#define TEGRA_DC_MASK	(TEGRA_DC_Y420_MASK | \
+				TEGRA_DC_Y422_MASK | TEGRA_DC_Y444_MASK | \
+				TEGRA_DC_RGB_MASK)
+
+#define FB_CAP_Y422	4096	/* YCbCr 4:2:2 support */
+#define FB_CAP_Y444	8192	/* YCbCr 4:4:4 support */
+
+
 #define TEGRA_EDID_MAX_RETRY 5
 #define TEGRA_EDID_MIN_RETRY_DELAY_US 200
 #define TEGRA_EDID_MAX_RETRY_DELAY_US (TEGRA_EDID_MIN_RETRY_DELAY_US + 200)
@@ -140,6 +166,8 @@ u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid);
 bool tegra_edid_is_scdc_present(struct tegra_edid *edid);
 bool tegra_edid_is_420db_present(struct tegra_edid *edid);
 bool tegra_edid_is_hfvsdb_present(struct tegra_edid *edid);
+bool tegra_edid_support_yuv422(struct tegra_edid *edid);
+bool tegra_edid_support_yuv444(struct tegra_edid *edid);
 u16 tegra_edid_get_ex_colorimetry(struct tegra_edid *edid);
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);
 

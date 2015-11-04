@@ -82,6 +82,18 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 
+	/* BRINGUP HACK: DIRECTLY ENABLE SOR SAFE CLK
+	 *
+	 * Calling tegra_clk_cfg_ex() currently results in a kernel panic.
+	 * HDMI hacks around tegra_hdmi_config_clk(), which is the only HDMI
+	 * codepath where tegra_clk_cfg_ex() is called. HDMI also doesn't use
+	 * tegra_sor_config_safe_clk at all.
+	 */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	tegra_sor_safe_clk_enable(sor);
+	return;
+#endif
+
 	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
 		return;
 
@@ -1023,6 +1035,11 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 	if (tegra_platform_is_linsim())
 		return;
 
+	/* BRINGUP HACK: DISABLE DPD SEQUENCE FOR NOW */
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	return;
+#endif
+
 	if (up) {
 		writel(APBDEV_PMC_DPD_SAMPLE_ON_ENABLE,
 			pmc_base + APBDEV_PMC_DPD_SAMPLE);
@@ -1074,11 +1091,11 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0), 0x0080A001);
 	tegra_sor_writel(sor, NV_SOR_LANE_SEQ_CTL, 0x80000000);
-	tegra_sor_writel(sor, NV_SOR_PLL3, 0x00002000);
 	tegra_sor_writel(sor, NV_SOR_PLL2, 0x00020000);
 	tegra_sor_writel(sor, NV_SOR_PLL0, 0x00000000);
 
 	tegra_sor_writel(sor, NV_SOR_CSTM, 0x02005000);
+
 
 #else
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
@@ -1288,7 +1305,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	struct tegra_dc *dc = sor->dc;
 	const struct tegra_dc_mode *dc_mode = &dc->mode;
 	int head_num = dc->ctrl_num;
-	u32 reg_val = NV_SOR_STATE1_ASY_OWNER_HEAD0 << head_num;
+	u32 reg_val = NV_SOR_HEADNUM(head_num);
 	u32 vtotal, htotal;
 	u32 vsync_end, hsync_end;
 	u32 vblank_end, hblank_end;
@@ -1296,11 +1313,7 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	int out_type = dc->out->type;
 
 	if (out_type == TEGRA_DC_OUT_HDMI)
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_SINGLE_TMDS_A;
-#else /* TESTING PURPOSE ONLY */
-		reg_val |= NV_SOR_STATE1_ASY_PROTOCOL_CUSTOM;
-#endif
 	else if ((out_type == TEGRA_DC_OUT_DP) ||
 		(out_type == TEGRA_DC_OUT_NVSR_DP) ||
 		(out_type == TEGRA_DC_OUT_FAKE_DP))
@@ -2036,14 +2049,9 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 	if (tegra_platform_is_linsim())
 		return;
 
+	/* Reset SOR */
+	tegra_sor_reset(sor);
 	tegra_sor_clk_disable(sor);
-	/* Reset SOR clk */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (sor->rst)
-		reset_control_assert(sor->rst);
-#else
-	tegra_periph_reset_assert(sor->sor_clk);
-#endif
 }
 
 void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
@@ -2061,9 +2069,15 @@ void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum), reg_val);
 
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
-				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE,
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_MASK,
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_DISABLE);
+#else
+		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_MASK,
 				NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_ENABLE);
+#endif
 }
 
 void tegra_dc_sor_read_link_config(struct tegra_dc_sor_data *sor, u8 *link_bw,
@@ -2162,7 +2176,7 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 	/* T210 boards need to swap lanes 0 and 2 */
 	case 4:
 		val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO |
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 			NV_SOR_DP_PADCTL_PD_TXD_0_NO);
 #else
 			NV_SOR_DP_PADCTL_PD_TXD_2_NO);
@@ -2171,7 +2185,7 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 	case 2:
 		val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
 	case 1:
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		val |= NV_SOR_DP_PADCTL_PD_TXD_2_NO;
 #else
 		val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;
@@ -2200,7 +2214,6 @@ void tegra_dc_sor_modeset_notifier(struct tegra_dc_sor_data *sor, bool is_lvds)
 {
 	if (!sor->clk_type)
 		tegra_sor_config_safe_clk(sor);
-
 	tegra_sor_clk_enable(sor);
 
 	tegra_dc_sor_config_panel(sor, is_lvds);

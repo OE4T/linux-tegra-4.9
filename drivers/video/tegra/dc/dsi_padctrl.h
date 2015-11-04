@@ -26,3 +26,5 @@ struct tegra_dsi_padctrl {
 struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc);
 /* Defined in dsi_padctrl.c and used in dsi.c */
 void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc);
+/* Defined in dsi_padctrl.c and used in dsi.c */
+void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl);

@@ -53,27 +53,26 @@
 #include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
-#define TMDS_NODE	"/host1x/sor1"
-
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra186-sor-pd", },
 	{ .compatible = "nvidia,tegra210-sor-pd", },
 	{ .compatible = "nvidia,tegra132-sor-pd", },
 	{},
 };
+#endif
 
-__attribute__((unused)) static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
+static ssize_t hdmi_ddc_power_toggle(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count);
 
-__attribute__((unused)) static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
+static ssize_t hdmi_ddc_power_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf);
 
-/*@@
 static struct kobj_attribute hdmi_ddc_power_config =
 	__ATTR(config, 0640, hdmi_ddc_power_show, hdmi_ddc_power_toggle);
 
 static struct kobject *hdmi_ddc;
-*/
+
 
 struct tmds_prod_pair {
 	int clk;
@@ -162,6 +161,8 @@ static inline void tegra_hdmi_reset(struct tegra_hdmi *hdmi)
 
 static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 {
+	int sor_num = tegra_dc_which_sor(hdmi->dc);
+
 	mutex_lock(&hdmi->ddc_refcount_lock);
 	if (hdmi->ddc_refcount++)
 		goto fail;
@@ -170,7 +171,7 @@ static inline void _tegra_hdmi_ddc_enable(struct tegra_hdmi *hdmi)
 	 * hdmi uses i2c lane muxed on dpaux1 pad.
 	 * Enable dpaux1 pads and configure the mux.
 	 */
-	tegra_dpaux_config_pad_mode(hdmi->dc, TEGRA_DPAUX_INSTANCE_1,
+	tegra_dpaux_config_pad_mode(hdmi->dc, sor_num,
 					TEGRA_DPAUX_PAD_MODE_I2C);
 
 fail:
@@ -179,6 +180,8 @@ fail:
 
 static inline void _tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
 {
+	int sor_num = tegra_dc_which_sor(hdmi->dc);
+
 	mutex_lock(&hdmi->ddc_refcount_lock);
 
 	if (WARN_ONCE(hdmi->ddc_refcount <= 0, "ddc refcount imbalance"))
@@ -190,7 +193,7 @@ static inline void _tegra_hdmi_ddc_disable(struct tegra_hdmi *hdmi)
 	 * hdmi uses i2c lane muxed on dpaux1 pad.
 	 * Disable dpaux1 pads.
 	 */
-	tegra_dpaux_pad_power(hdmi->dc, TEGRA_DPAUX_INSTANCE_1, false);
+	tegra_dpaux_pad_power(hdmi->dc, sor_num, false);
 	tegra_hdmi_put(hdmi->dc);
 
 fail:
@@ -218,13 +221,6 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, int edid_src)
 		.type = "tegra_hdmi2.0",
 		.addr = 0x50,
 	};
-
-	/* TEMPORARILY DISABLING DDC FOR INITIAL
-	 * BRINGUP HACK - WILL ENABLE AND TEST LATER
-	 */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	return 0;
-#endif
 
 	if (edid_src == 0)
 		hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
@@ -277,13 +273,6 @@ static int tegra_hdmi_scdc_init(struct tegra_hdmi *hdmi)
 		.type = "tegra_hdmi_scdc",
 		.addr = 0x54,
 	};
-
-	/* TEMPORARILY DISABLING SCDC FOR INITIAL
-	 * BRINGUP HACK - WILL ENABLE AND TEST LATER
-	 */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	return 0;
-#endif
 
 	i2c_adap = i2c_get_adapter(dc->out->ddc_bus);
 	if (!i2c_adap) {
@@ -408,21 +397,35 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	return true;
 }
 
-__attribute__((unused)) static void tegra_hdmi_ddc_power_toggle(int value)
+static void tegra_hdmi_ddc_power_toggle(int value)
 {
-	int partition_id;
-	if (dc_hdmi == NULL)
-		return;
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 
-	partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
+	int partition_id = tegra_pd_get_powergate_id(tegra_sor_pd);
 	if (partition_id < 0)
+		return;
+#endif
+
+	if (dc_hdmi == NULL)
 		return;
 
 	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		tegra_powergate_partition(partition_id);
+#else
+		/* No specific powerdomain for SORs */
+		tegra_dc_powergate_locked(dc_hdmi->dc);
+#endif
+
+
 	} else if (value == 1) {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		tegra_unpowergate_partition(partition_id);
+#else
+		/* No specific powerdomain for SORs */
+		tegra_dc_unpowergate_locked(dc_hdmi->dc);
+#endif
 		_tegra_hdmi_ddc_enable(dc_hdmi);
 	}
 
@@ -514,17 +517,7 @@ static void tegra_hdmi_edid_config(struct tegra_hdmi *hdmi)
 
 	dc->out->h_size = CM_TO_MM(hdmi->mon_spec.max_x);
 	dc->out->v_size = CM_TO_MM(hdmi->mon_spec.max_y);
-/* BRINGUP HACK - HDMI has issue in bringup, as
- * astro not showing any valid signals.
- * Disabling HDMI till the issue is sorted out
- */
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	hdmi->dvi = !tegra_hdmi_is_connected(hdmi);
-#else
-	pr_info("HDMI DVI enabled %d\n", hdmi->dvi);
-	if (hdmi->dvi)
-		hdmi->dvi = 0;
-#endif
 
 #undef CM_TO_MM
 }
@@ -555,9 +548,8 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	dc->connected = is_asserted;
 	tegra_dc_ext_process_hotplug(dc->ndev->id, is_asserted);
 
-#if 0//@@ def CONFIG_SWITCH
 	switch_set_state(&hdmi->hpd_switch, is_asserted ? 1 : 0);
-#endif
+
 }
 
 static int tegra_hdmi_vrr_authentication(struct tegra_hdmi *hdmi)
@@ -649,9 +641,7 @@ static int tegra_hdmi_disable(struct tegra_hdmi *hdmi)
 	if (!hdmi->enabled) {
 		dc->connected = false;
 		tegra_dc_ext_process_hotplug(dc->ndev->id, false);
-#if 0//@@ def CONFIG_SWITCH
 		switch_set_state(&hdmi->hpd_switch, 0);
-#endif
 		return 0;
 	}
 
@@ -807,13 +797,6 @@ static int tegra_hdmi_hpd_init(struct tegra_hdmi *hdmi)
 	int hotplug_irq;
 	int err;
 
-	/* TEMPORARILY DISABLING HPD FOR INITIAL
-	 * BRINGUP HACK - WILL ENABLE AND TEST LATER
-	 */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	return 0;
-#endif
-
 	if (!gpio_is_valid(hotplug_gpio)) {
 		dev_err(&dc->ndev->dev, "hdmi: invalid hotplug gpio\n");
 		return -EINVAL;
@@ -868,7 +851,9 @@ static int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi)
 
 static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 {
-	struct device_node *np_prod = of_find_node_by_path(TMDS_NODE);
+	int sor_num = tegra_dc_which_sor(hdmi->dc);
+	struct device_node *np_prod = of_find_node_by_path(
+			sor_num ? SOR1_NODE : SOR_NODE);
 
 	if (!np_prod) {
 		dev_warn(&hdmi->dc->ndev->dev,
@@ -948,6 +933,16 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301500);
 		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
 					0x33333333);
+	} else {
+		pr_info("Running on 2160p\n");
+		tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(0),
+					0x333F3F3F);
+		tegra_sor_writel(sor, NV_SOR_PR(0), 0x00070707);
+		tegra_sor_writel(sor, NV_SOR_PLL0, 0x05050300);
+		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301300);
+		tegra_sor_writel(sor, NV_SOR_PLL3, 0x3C000440);
+		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
+					0x333F3F3F);
 	}
 	return 0;
 #endif
@@ -963,13 +958,99 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	return 0;
 }
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+static struct resource *hdmi_dpaux_res[2];
+static void __iomem *hdmi_dpaux_base[2];
+
+static int tegra_hdmi_dpaux_init(struct tegra_dc *dc)
+{
+	struct resource *base_res;
+	struct resource of_dpaux_res;
+	int err = 0;
+	struct reset_control *dpaux_rst;
+
+	int sor_num = tegra_dc_which_sor(dc);
+	struct device_node *np_dpaux =
+		sor_num ? of_find_node_by_path(DPAUX1_NODE)
+		: of_find_node_by_path(DPAUX_NODE);
+
+	if (np_dpaux && (of_device_is_available(np_dpaux))) {
+		of_address_to_resource(np_dpaux, 0, &of_dpaux_res);
+		hdmi_dpaux_res[sor_num] = &of_dpaux_res;
+	} else {
+		dev_err(&dc->ndev->dev, "dp: no dpaux node found\n");
+		err = -EFAULT;
+		return err;
+	}
+
+	if (!hdmi_dpaux_res[sor_num]) {
+		dev_err(&dc->ndev->dev, "dp: no mem resources for dpaux\n");
+		err = -EFAULT;
+		goto err_free_dpaux;
+	}
+
+	base_res = devm_request_mem_region(&dc->ndev->dev,
+		hdmi_dpaux_res[sor_num]->start,
+		resource_size(hdmi_dpaux_res[sor_num]),
+		dc->ndev->name);
+	if (!base_res) {
+		dev_err(&dc->ndev->dev, "dp: request_mem_region failed\n");
+		err = -EFAULT;
+		goto err_free_dpaux;
+	}
+
+	hdmi_dpaux_base[sor_num] = devm_ioremap(&dc->ndev->dev,
+			hdmi_dpaux_res[sor_num]->start,
+			resource_size(hdmi_dpaux_res[sor_num]));
+	if (!hdmi_dpaux_base[sor_num]) {
+		dev_err(&dc->ndev->dev, "dp: registers can't be mapped\n");
+		err = -EFAULT;
+		goto err_release_resource_reg;
+	}
+
+	/* check for dpaux clock reset control */
+	if (tegra_bpmp_running()) {
+		dpaux_rst =
+			of_reset_control_get(np_dpaux,
+				(sor_num) ? "dpaux1" : "dpaux");
+		if (IS_ERR_OR_NULL(dpaux_rst)) {
+			dev_err(&dc->ndev->dev,
+				"Unable to get dpaux%u reset control\n",
+				sor_num);
+			err = PTR_ERR(dpaux_rst);
+			goto dpaux_fail;
+		}
+		reset_control_deassert(dpaux_rst);
+	}
+
+	tegra_set_dpaux_addr(hdmi_dpaux_base[sor_num], sor_num);
+	of_node_put(np_dpaux);
+	return 0;
+
+dpaux_fail:
+	devm_iounmap(&dc->ndev->dev, hdmi_dpaux_base[sor_num]);
+
+err_release_resource_reg:
+	devm_release_mem_region(&dc->ndev->dev,
+		hdmi_dpaux_res[sor_num]->start,
+		resource_size(hdmi_dpaux_res[sor_num]));
+
+err_free_dpaux:
+	of_node_put(np_dpaux);
+
+	return err;
+}
+#endif
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi;
 	int err;
 	struct device_node *np = dc->ndev->dev.of_node;
+	int sor_num = tegra_dc_which_sor(dc);
 #ifdef CONFIG_OF
-	struct device_node *np_hdmi = of_find_node_by_path(HDMI_NODE);
+	struct device_node *np_hdmi = of_find_node_by_path(
+			sor_num ? SOR1_NODE : SOR_NODE);
 #else
 	struct device_node *np_hdmi = NULL;
 #endif
@@ -981,6 +1062,14 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		of_node_put(np_hdmi);
 		return -ENOMEM;
 	}
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	err = tegra_hdmi_dpaux_init(dc);
+	if (err) {
+		of_node_put(np_hdmi);
+		return err;
+	}
+#endif
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);
 	if (IS_ERR_OR_NULL(hdmi->sor)) {
@@ -1070,13 +1159,13 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);
 	}
 
-#if 0//@@ def CONFIG_SWITCH
 	hdmi->hpd_switch.name = "hdmi";
 	err = switch_dev_register(&hdmi->hpd_switch);
 	if (err)
 		dev_err(&dc->ndev->dev,
 			"hdmi: failed to register hpd switch %d\n", err);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	hdmi->audio_switch.name = "hdmi_audio";
 	err = switch_dev_register(&hdmi->audio_switch);
 	if (err)
@@ -1084,7 +1173,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			"hdmi: failed to register audio switch %d\n", err);
 #endif
 
-/*@@
 	hdmi_ddc = kobject_create_and_add("hdmi_ddc_power_toggle", kernel_kobj);
 	if (!hdmi_ddc) {
 		pr_warn("kobject create_and_add hdmi_ddc_power_toggle failed\n");
@@ -1095,11 +1183,18 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		pr_warn("sysfs create file hdmi_ddc_power_toggle failed\n");
 		return 0;
 	}
-*/
 
 	of_node_put(np_hdmi);
 	return 0;
 fail:
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	devm_iounmap(&dc->ndev->dev, hdmi_dpaux_base[sor_num]);
+
+	devm_release_mem_region(&dc->ndev->dev,
+		hdmi_dpaux_res[sor_num]->start,
+		resource_size(hdmi_dpaux_res[sor_num]));
+#endif
+
 	devm_kfree(&dc->ndev->dev, hdmi);
 	of_node_put(np_hdmi);
 	return err;
@@ -1117,8 +1212,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	devm_kfree(&dc->ndev->dev, hdmi);
 	tegra_prod_release(&hdmi->prod_list);
 
-#if 0//@@ def CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->hpd_switch);
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
 }
@@ -1154,11 +1249,7 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 	max_ac = (hblank - rekey - 18) / 32;
 
 	val = 0;
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	val |= hdmi->dvi ? 0x0 : NV_SOR_HDMI_CTRL_ENABLE;
-#else
-	pr_info("HDMI DVI is set %d running in DVI MODE\n", hdmi->dvi);
-#endif
 	/* The register wants "-2" of the required rekey val */
 	val |= NV_SOR_HDMI_CTRL_REKEY(rekey - 2);
 	val |= NV_SOR_HDMI_CTRL_MAX_AC_PACKET(max_ac);
@@ -1722,8 +1813,10 @@ static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 
 	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
 		return 30;
-
-	return 24;
+	else if (!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36))
+		return 36;
+	else
+		return 24;
 }
 
 static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
@@ -1733,7 +1826,7 @@ static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
 	switch (tegra_hdmi_get_bpp(hdmi)) {
 	case 0: /* fall through */
 	case 24:
-		gcp_cd = TEGRA_HDMI_BPP_UNKNOWN;
+		gcp_cd = TEGRA_HDMI_BPP_24;
 		break;
 	case 30:
 		gcp_cd = TEGRA_HDMI_BPP_30;
@@ -1760,11 +1853,10 @@ static u32 tegra_hdmi_gcp_packing_phase(struct tegra_hdmi *hdmi)
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return 0;
 
-	/* 10P4 for yuv420 10bpc */
-	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+	if (!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36))
+		return 2;
+	else
 		return 0;
-
-	 return 0;
 }
 
 static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
@@ -1774,10 +1866,11 @@ static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return false;
 
-	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+	if ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) ||
+			(!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36)))
 		return true;
-
-	return false;
+	else
+		return false;
 }
 
 /* general control packet */
@@ -1839,6 +1932,23 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
+#else
+	/* Divide rate to half if rate higher than 340Mhz */
+	if (dc->mode.pclk > 340000000) {
+		int val = 0;
+		long rate = clk_get_rate(sor->sor_clk);
+		rate = rate >> 1;
+		pr_info("Modified sor_clk %ld\n", rate);
+
+		/* Set Rate to SOR_CLK*/
+		clk_set_rate(sor->sor_clk, rate);
+
+		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4 |
+			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
+		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
+		usleep_range(250, 300); /* sor brick pll stabilization delay */
+	}
+
 #endif
 	tegra_dc_sor_attach(sor);
 
@@ -1886,10 +1996,8 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	/* BRINGUP HACK - Disabling HDA */
 	tegra_hda_set_data(hdmi, SINK_HDMI);
-#if 0//@@ def CONFIG_SWITCH
 	if (!hdmi->dvi)
 		switch_set_state(&hdmi->audio_switch, 1);
-#endif
 #endif
 }
 
@@ -2029,6 +2137,7 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	clk_set_parent(sor->sor_clk, parent_clk);
 	/* Set Rate to SOR_CLK*/
 	clk_set_rate(sor->sor_clk, rate);
+
 	/* Enable SOR_CLK*/
 	tegra_sor_clk_enable(sor);
 	pr_info("rate get on sor_clk %ld\n", clk_get_rate(sor->sor_clk));
@@ -2124,7 +2233,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 
 	hdmi->enabled = false;
 
-#if 0//@@ def CONFIG_SWITCH
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	switch_set_state(&hdmi->audio_switch, 0);
 #endif
 
@@ -2134,7 +2243,10 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	clk_set_parent(sor->src_switch_clk, sor->safe_clk);
 #endif
 	tegra_hdmi_controller_disable(hdmi);
+
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_hda_reset_data();
+#endif
 	return;
 }
 
@@ -2146,10 +2258,6 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	if (tegra_platform_is_linsim())
 		return true;
 
-	/* BRINGUP HACK DISABLE HDMI DETECT NOW*/
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	return true;
-#endif
 	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL)
 		delay = 0;
 

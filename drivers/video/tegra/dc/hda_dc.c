@@ -30,6 +30,7 @@
 #include "hdmi2.0.h"
 #include "dp.h"
 #include "hda_dc.h"
+#include <linux/reset.h>
 
 #define to_hdmi(DATA)	((struct tegra_hdmi *)DATA)
 #define to_dp(DATA)	((struct tegra_dc_dp_data *)DATA)
@@ -345,46 +346,105 @@ int tegra_hdmi_audio_null_sample_inject(bool on)
 }
 EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 
-static void tegra_dc_hda_get_clocks(void)
+static void tegra_dc_hda_get_clocks(struct tegra_dc *dc)
 {
-	if (!hda)
-		return;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	int sor_num = tegra_dc_which_sor(dc);
+	struct device_node *np_sor =
+		sor_num ? of_find_node_by_path(SOR1_NODE) :
+		of_find_node_by_path(SOR_NODE);
+#endif
 
-	hda->hda_clk = clk_get_sys("tegra30-hda", "hda");
-	if (IS_ERR_OR_NULL(hda->hda_clk)) {
-		dev_err(&hda->dc->ndev->dev, "hda: can't get hda clock\n");
+#if defined(CONFIG_COMMON_CLK)
+	hda->hda_rst = of_reset_control_get(np_sor, "hda_rst");
+	if (IS_ERR_OR_NULL(hda->hda_rst)) {
+		dev_err(&dc->ndev->dev, "hda: can't get hda rst\n");
 		goto err_get_clk;
 	}
 
-	hda->hda2codec_clk = clk_get_sys("tegra30-hda", "hda2codec_2x");
+	hda->hda2codec_rst = of_reset_control_get(np_sor, "hda2codec_2x_rst");
+	if (IS_ERR_OR_NULL(hda->hda2codec_rst)) {
+		dev_err(&dc->ndev->dev, "hda: can't get hda2codec rst\n");
+		goto err_get_clk;
+	}
+
+	hda->hda2hdmi_rst = of_reset_control_get(np_sor, "hda2hdmi_rst");
+	if (IS_ERR_OR_NULL(hda->hda2hdmi_rst)) {
+		dev_err(&dc->ndev->dev, "hda: can't get hda2hdmi rst\n");
+		goto err_get_clk;
+	}
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	hda->hda_clk = tegra_disp_of_clk_get_by_name(np_sor, "hda");
+	if (IS_ERR_OR_NULL(hda->hda_clk)) {
+		dev_err(&dc->ndev->dev, "hda: can't get hda clock\n");
+		goto err_get_clk;
+	}
+	hda->hda2codec_clk = tegra_disp_of_clk_get_by_name(np_sor,
+							"hda2codec_2x");
 	if (IS_ERR_OR_NULL(hda->hda2codec_clk)) {
-		dev_err(&hda->dc->ndev->dev,
+		dev_err(&dc->ndev->dev,
 			"hda: can't get hda2codec clock\n");
 		goto err_get_clk;
 	}
-
-	hda->hda2hdmi_clk = clk_get_sys("tegra30-hda", "hda2hdmi");
+	hda->hda2hdmi_clk = tegra_disp_of_clk_get_by_name(np_sor, "hda2hdmi");
 	if (IS_ERR_OR_NULL(hda->hda2hdmi_clk)) {
-		dev_err(&hda->dc->ndev->dev, "hda: can't get hda2hdmi clock\n");
+		dev_err(&dc->ndev->dev, "hda: can't get hda2hdmi clock\n");
 		goto err_get_clk;
 	}
+#else
+	hda->hda_clk = clk_get_sys("tegra30-hda", "hda");
+	if (IS_ERR_OR_NULL(hda->hda_clk)) {
+		dev_err(&dc->ndev->dev, "hda: can't get hda clock\n");
+		goto err_get_clk;
+	}
+	hda->hda2codec_clk = clk_get_sys("tegra30-hda", "hda2codec_2x");
+	if (IS_ERR_OR_NULL(hda->hda2codec_clk)) {
+		dev_err(&dc->ndev->dev,
+			"hda: can't get hda2codec clock\n");
+		goto err_get_clk;
+	}
+	hda->hda2hdmi_clk = clk_get_sys("tegra30-hda", "hda2hdmi");
+	if (IS_ERR_OR_NULL(hda->hda2hdmi_clk)) {
+		dev_err(&dc->ndev->dev, "hda: can't get hda2hdmi clock\n");
+		goto err_get_clk;
+	}
+#endif
 
 	if (hda->sink == SINK_DP) {
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		hda->pll_p_clk = tegra_disp_of_clk_get_by_name(np_sor,
+						"pllp_out0");
+		if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
+			dev_err(&dc->ndev->dev,
+				"hda: can't get pllp_out0 clock\n");
+			goto err_get_clk;
+		}
+
+		hda->maud_clk = tegra_disp_of_clk_get_by_name(np_sor, "maud");
+		if (IS_ERR_OR_NULL(hda->maud_clk)) {
+			dev_err(&hda->dc->ndev->dev,
+				"hda: can't get maud clock\n");
+			goto err_get_clk;
+		}
+#else
 		hda->pll_p_clk = tegra_get_clock_by_name("pll_p");
 		if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
 			dev_err(&hda->dc->ndev->dev,
 				"hda: can't get pll_p clock\n");
 			goto err_get_clk;
 		}
-
 		hda->maud_clk = tegra_get_clock_by_name("maud");
 		if (IS_ERR_OR_NULL(hda->maud_clk)) {
 			dev_err(&hda->dc->ndev->dev,
 				"hda: can't get maud clock\n");
 			goto err_get_clk;
 		}
+#endif
 		clk_set_parent(hda->maud_clk, hda->pll_p_clk);
 	}
+	return;
 
 err_get_clk:
 	if (!IS_ERR_OR_NULL(hda->hda_clk))
@@ -401,7 +461,7 @@ err_get_clk:
 	}
 }
 
-static void tegra_dc_hda_put_clocks(void)
+static void tegra_dc_hda_put_clocks(struct tegra_dc *dc)
 {
 	if (!hda)
 		return;
@@ -412,7 +472,6 @@ static void tegra_dc_hda_put_clocks(void)
 		clk_put(hda->hda2codec_clk);
 	if (!IS_ERR_OR_NULL(hda->hda2hdmi_clk))
 		clk_put(hda->hda2hdmi_clk);
-
 	if (hda->sink == SINK_DP) {
 		if (!IS_ERR_OR_NULL(hda->pll_p_clk))
 			clk_put(hda->pll_p_clk);
@@ -426,6 +485,11 @@ static void tegra_dc_hda_enable_clocks(void)
 	if (!hda)
 		return;
 
+#if defined(CONFIG_COMMON_CLK)
+	reset_control_reset(hda->hda_rst);
+	reset_control_reset(hda->hda2codec_rst);
+	reset_control_reset(hda->hda2hdmi_rst);
+#endif
 	clk_prepare_enable(hda->hda_clk);
 	clk_prepare_enable(hda->hda2codec_clk);
 	clk_prepare_enable(hda->hda2hdmi_clk);
@@ -449,9 +513,12 @@ static void tegra_dc_hda_disable_clocks(void)
 	clk_disable_unprepare(hda->hda_clk);
 }
 
-void tegra_hda_set_data(void *data, int sink)
+void tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink)
 {
 	hda = kzalloc(sizeof(struct tegra_dc_hda_data), GFP_KERNEL);
+	if (!hda)
+		return;
+
 	hda->client_data = data;
 	hda->sink = sink;
 
@@ -474,14 +541,14 @@ void tegra_hda_set_data(void *data, int sink)
 	}
 
 	hda->null_sample_inject = false;
-	tegra_dc_hda_get_clocks();
+	tegra_dc_hda_get_clocks(dc);
 	tegra_dc_hda_enable_clocks();
 }
 
-void tegra_hda_reset_data(void)
+void tegra_hda_reset_data(struct tegra_dc *dc)
 {
 	tegra_dc_hda_disable_clocks();
-	tegra_dc_hda_put_clocks();
+	tegra_dc_hda_put_clocks(dc);
 
 	kfree(hda);
 	if (hda)

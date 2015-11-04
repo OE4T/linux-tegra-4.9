@@ -2619,10 +2619,9 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	/* Host is ready. Start link training. */
 	dp->enabled = true;
 
-	/* BRINGUP HACK: DISABLE HDA */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (tegra_dc_is_ext_dp_panel(dc))
-		tegra_hda_set_data(dp, SINK_DP);
+		tegra_hda_set_data(dc, dp, SINK_DP);
 #endif
 
 	if (likely(dc->out->type != TEGRA_DC_OUT_FAKE_DP) &&
@@ -2735,10 +2734,9 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 
 	tegra_dc_io_end(dc);
 
-	/* BRINGUP HACK: DISABLE HDA */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (tegra_dc_is_ext_dp_panel(dc))
-		tegra_hda_reset_data();
+		tegra_hda_reset_data(dc);
 #endif
 }
 

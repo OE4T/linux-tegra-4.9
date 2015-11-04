@@ -1105,7 +1105,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		dev_err(&dc->ndev->dev,
 			"hdmi: failed to register hpd switch %d\n", err);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_SWITCH
 	hdmi->audio_switch.name = "hdmi_audio";
 	err = switch_dev_register(&hdmi->audio_switch);
 	if (err)
@@ -1153,7 +1153,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	tegra_prod_release(&hdmi->prod_list);
 
 	switch_dev_unregister(&hdmi->hpd_switch);
-#ifndef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_SWITCH
 	switch_dev_unregister(&hdmi->audio_switch);
 #endif
 }
@@ -2006,9 +2006,9 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	tegra_hdmi_controller_enable(hdmi);
 
 	hdmi->enabled = true;
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	/* BRINGUP HACK - Disabling HDA */
-	tegra_hda_set_data(hdmi, SINK_HDMI);
+
+	tegra_hda_set_data(dc, hdmi, SINK_HDMI);
+#ifdef CONFIG_SWITCH
 	if (!hdmi->dvi)
 		switch_set_state(&hdmi->audio_switch, 1);
 #endif
@@ -2285,7 +2285,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 
 	hdmi->enabled = false;
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_SWITCH
 	switch_set_state(&hdmi->audio_switch, 0);
 #endif
 
@@ -2293,9 +2293,8 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 
 	tegra_hdmi_controller_disable(hdmi);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	tegra_hda_reset_data();
-#endif
+	tegra_hda_reset_data(dc);
+
 	return;
 }
 

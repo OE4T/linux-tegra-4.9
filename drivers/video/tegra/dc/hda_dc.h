@@ -36,11 +36,16 @@ struct tegra_dc_hda_data {
 	struct clk *hda_clk;
 	struct clk *hda2codec_clk;
 	struct clk *hda2hdmi_clk;
+#if defined(CONFIG_COMMON_CLK)
+	struct reset_control *hda_rst;
+	struct reset_control *hda2codec_rst;
+	struct reset_control *hda2hdmi_rst;
+#endif
 	struct clk *maud_clk;
 	void *client_data;
 };
 
-void tegra_hda_set_data(void *data, int sink);
-void tegra_hda_reset_data(void);
+void tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink);
+void tegra_hda_reset_data(struct tegra_dc *dc);
 
 #endif

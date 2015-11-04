@@ -248,9 +248,13 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			if (of_device_is_available(np_primary))
 				np_panel = of_get_child_by_name(np_primary,
 					"dp-display");
-			if (!of_device_is_available(np_panel))
+			if (!of_device_is_available(np_panel)) {
 				np_panel = of_get_child_by_name(np_primary,
 					"panel-s-edp-uhdtv-15-6");
+				if (of_device_is_available(np_panel) && dc_out)
+					tegra_panel_register_ops(dc_out,
+					&edp_s_uhdtv_15_6_ops);
+			}
 		}
 	} else {/* for linsim or no display panel case */
 		/*  use fake dp or fake dsi */

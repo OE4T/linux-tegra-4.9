@@ -50,7 +50,12 @@ static int shield_edp_regulator_get(struct device *dev)
 	if (reg_requested)
 		return 0;
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	vdd_ds_1v8 = regulator_get(dev, "dvdd_lcd");
+#else /* !CONFIG_TEGRA_NVDISPLAY */
 	vdd_ds_1v8 = regulator_get(dev, "vdd_ds_1v8");
+#endif /* CONFIG_TEGRA_NVDISPLAY */
+
 	if (IS_ERR(vdd_ds_1v8)) {
 		pr_err("vdd_ds_1v8 regulator get failed\n");
 		err = PTR_ERR(vdd_ds_1v8);
@@ -94,6 +99,9 @@ static int shield_edp_regulator_get(struct device *dev)
 		en_panel_rst = panel_of.panel_gpio[TEGRA_GPIO_RESET];
 	}
 
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	avdd_io_edp = NULL;
+#else /* !CONFIG_TEGRA_NVDISPLAY */
 	avdd_io_edp = regulator_get(dev, "avdd_io_edp");
 	if (IS_ERR(avdd_io_edp)) {
 		pr_err("avdd_io_edp regulator get failed\n");
@@ -101,6 +109,7 @@ static int shield_edp_regulator_get(struct device *dev)
 		avdd_io_edp = NULL;
 		goto fail;
 	}
+#endif /* CONFIG_TEGRA_NVDISPLAY */
 
 	reg_requested = true;
 	return 0;

@@ -168,7 +168,7 @@
 /* Uncomment below macro to test EEE feature Tx path with
  * no EEE supported PHY card
  * */
-//#define EQOS_ENABLE_EEE
+#define EQOS_ENABLE_EEE
 
 /* Uncomment below enable tx buffer alignment test code */
 /* #define DO_TX_ALIGN_TEST */

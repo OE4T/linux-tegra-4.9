@@ -19,6 +19,19 @@
 
 extern struct mutex tegra_nvdisp_lock;
 
+/* common struct for power domain */
+#define NVDISP_PD_COUNT 3
+#define NVDISP_PD_INDEX 0
+#define NVDISPB_PD_INDEX 1
+#define NVDISPC_PD_INDEX 2
+struct nvdisp_pd_info {
+	bool head_inuse;
+	/*Update valid_windows whenever the winmask changes dynamically*/
+	unsigned long valid_windows;
+	unsigned long windows_inuse;
+	int powergate_id;
+	int ref_cnt;
+};
 
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);

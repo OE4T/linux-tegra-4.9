@@ -961,32 +961,37 @@ int eqos_probe(struct platform_device *pdev)
 	} else
 		DBGPR("Net device registration sucessful\n");
 
-	ret = request_irq(power_irq, EQOS_ISR_SW_EQOS_POWER,
-		IRQF_SHARED, DEV_NAME, pdata);
+	if (tegra_platform_is_unit_fpga()) {
+		ret = request_irq(power_irq, EQOS_ISR_SW_EQOS_POWER,
+			IRQF_SHARED, DEV_NAME, pdata);
 
-	if (ret != 0) {
-		pr_err("Unable to register PMT IRQ %d\n", power_irq);
-		ret = -EBUSY;
-		goto err_out_pmt_irq_failed;
+		if (ret != 0) {
+			pr_err("Unable to register PMT IRQ %d\n", power_irq);
+			ret = -EBUSY;
+			goto err_out_pmt_irq_failed;
+		}
 	}
 
 	pdata->fbe_wq = alloc_workqueue("FBE WQ\n", WQ_HIGHPRI|WQ_UNBOUND, 0);
 	if (!pdata->fbe_wq) {
 		dev_err(&pdev->dev, "Work Queue Allocation Failed\n");
-		goto err_out_pmt_irq_failed;
+		goto err_out_fbe_wq_failed;
 	}
 	INIT_WORK(&pdata->fbe_work, eqos_fbe_work);
 
 	return 0;
 
- err_out_pmt_irq_failed:
-	if (pdata->power_irq != 0) {
+ err_out_fbe_wq_failed:
+	if ((tegra_platform_is_unit_fpga()) &&
+		(pdata->power_irq != 0)) {
 		free_irq(pdata->power_irq, pdata);
 		pdata->power_irq = 0;
 	}
-	unregister_netdev(ndev);
- err_out_netdev_failed:
 
+ err_out_pmt_irq_failed:
+	unregister_netdev(ndev);
+
+ err_out_netdev_failed:
 
 #ifdef EQOS_CONFIG_PTP
 	eqos_ptp_remove(pdata);
@@ -1066,7 +1071,8 @@ int eqos_remove(struct platform_device *pdev)
 	/* free tx skb's */
 	desc_if->tx_skb_free_mem(pdata, EQOS_TX_QUEUE_CNT);
 
-	if (pdata->power_irq != 0) {
+	if ((tegra_platform_is_unit_fpga()) &&
+	    (pdata->power_irq != 0)) {
 		free_irq(pdata->power_irq, pdata);
 		pdata->power_irq = 0;
 	}

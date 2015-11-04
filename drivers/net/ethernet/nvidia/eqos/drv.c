@@ -436,7 +436,7 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 		if (GET_VALUE
 		    (mac_isr, MAC_ISR_RGSMIIS_LPOS, MAC_ISR_RGSMIIS_HPOS) & 1) {
 			MAC_PCS_RD(mac_pcs);
-			pr_err("RGMII/SMII interrupt: MAC_PCS = %#lx\n",
+			pr_info("RGMII/SMII interrupt: MAC_PCS = %#lx\n",
 			       mac_pcs);
 #ifdef HWA_NV_1637630
 

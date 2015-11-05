@@ -66,7 +66,8 @@ static void isc_dev_dump(
    offset - address in the device's register space to start with.
 */
 int isc_dev_raw_rd(
-	struct isc_dev_info *info, unsigned int offset, u8 *val, size_t size)
+	struct isc_dev_info *info, unsigned int offset,
+	unsigned int offset_len, u8 *val, size_t size)
 {
 	int ret = -ENODEV;
 	u8 data[2];
@@ -80,14 +81,20 @@ int isc_dev_raw_rd(
 		return ret;
 	}
 
-	if (info->reg_len == 2) {
+	/* when user read device from debugfs, the offset_len will be 0.
+	 * And the offset_len should come from device info
+	 */
+	if (!offset_len)
+		offset_len = info->reg_len;
+
+	if (offset_len == 2) {
 		data[0] = (u8)((offset >> 8) & 0xff);
 		data[1] = (u8)(offset & 0xff);
-	} else if (info->reg_len == 1)
+	} else if (offset_len == 1)
 		data[0] = (u8)(offset & 0xff);
 
 	i2cmsg[0].addr = info->i2c_client->addr;
-	i2cmsg[0].len = info->reg_len;
+	i2cmsg[0].len = offset_len;
 	i2cmsg[0].buf = (__u8 *)data;
 	i2cmsg[0].flags = I2C_M_NOSTART;
 
@@ -179,7 +186,8 @@ static int isc_dev_raw_rw(struct isc_dev_info *info)
 		ret = isc_dev_raw_wr(info, -1, buf, pkg->size);
 	} else {
 		/* read from device */
-		ret = isc_dev_raw_rd(info, pkg->offset, buf, pkg->size);
+		ret = isc_dev_raw_rd(info, pkg->offset,
+				pkg->offset_len, buf, pkg->size);
 		if (!ret && copy_to_user(
 			(void __user *)u_ptr, buf, pkg->size)) {
 			dev_err(info->dev, "%s copy_to_user err line %d\n",
@@ -204,6 +212,7 @@ static int isc_dev_get_pkg(
 			return -EFAULT;
 		}
 		info->rw_pkg.offset = pkg32.offset;
+		info->rw_pkg.offset_len = pkg32.offset_len;
 		info->rw_pkg.size = pkg32.size;
 		info->rw_pkg.flags = pkg32.flags;
 		info->rw_pkg.buffer = (unsigned long)pkg32.buffer;

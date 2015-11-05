@@ -29,7 +29,8 @@ struct isc_dev_info {
 	u8 power_is_on;
 };
 
-int isc_dev_raw_rd(struct isc_dev_info *, unsigned int, u8 *, size_t);
+int isc_dev_raw_rd(struct isc_dev_info *, unsigned int,
+	unsigned int, u8 *, size_t);
 int isc_dev_raw_wr(struct isc_dev_info *, unsigned int, u8 *, size_t);
 
 int isc_dev_debugfs_init(struct isc_dev_info *isc_dev);

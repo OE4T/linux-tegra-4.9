@@ -172,7 +172,7 @@ static int i2c_val_get(void *data, u64 *val)
 	struct isc_dev_info *isc_dev = data;
 	u8 temp = 0;
 
-	if (isc_dev_raw_rd(isc_dev, isc_dev->reg_off, &temp, 1)) {
+	if (isc_dev_raw_rd(isc_dev, 0, isc_dev->reg_off, &temp, 1)) {
 		dev_err(isc_dev->dev, "ERR:%s failed\n", __func__);
 		return -EIO;
 	}

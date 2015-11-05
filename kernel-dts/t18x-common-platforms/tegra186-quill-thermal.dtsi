@@ -142,5 +142,21 @@
 				};
 			};
 		};
+
+		BCPU-therm {
+			status = "okay";
+		};
+
+		MCPU-therm {
+			status = "okay";
+		};
+
+		GPU-therm {
+			status = "okay";
+		};
+
+		PLL-therm {
+			status = "okay";
+		};
 	};
 };

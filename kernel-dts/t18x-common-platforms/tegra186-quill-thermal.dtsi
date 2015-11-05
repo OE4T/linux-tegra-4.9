@@ -93,5 +93,53 @@
 				};
 			};
 		};
+
+		BCPU-therm {
+			status = "okay";
+			trips {
+				trip_critical {
+					temperature = <108000>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+		};
+
+		MCPU-therm {
+			status = "okay";
+			trips {
+				trip_critical {
+					temperature = <108000>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+		};
+
+		GPU-therm {
+			status = "okay";
+			trips {
+				trip_critical {
+					temperature = <108000>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+		};
+
+		PLL-therm {
+			status = "okay";
+			trips {
+				trip_critical {
+					temperature = <108000>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+		};
 	};
 };

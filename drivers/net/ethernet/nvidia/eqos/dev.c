@@ -64,18 +64,16 @@ extern ULONG eqos_base_addr;
 static INT config_mac_loopback_mode(UINT enb_dis)
 {
 
-  MAC_MCR_LM_WR(enb_dis);
+	MAC_MCR_LM_WR(enb_dis);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
 
 /* enable/disable PFC(Priority Based Flow Control) */
 static void config_pfc(int enb_dis)
 {
 	MAC_RFCR_PFCE_WR(enb_dis);
 }
-
 
 /*!
 * \brief This sequence is used to enable/disable ARP offload
@@ -88,13 +86,10 @@ static void config_pfc(int enb_dis)
 static int config_arp_offload(int enb_dis)
 {
 
-  MAC_MCR_ARPEN_WR(enb_dis);
+	MAC_MCR_ARPEN_WR(enb_dis);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update the IP addr into MAC ARP Add reg,
@@ -108,13 +103,11 @@ static int config_arp_offload(int enb_dis)
 static int update_arp_offload_ip_addr(UCHAR addr[])
 {
 
-  MAC_ARPA_WR((addr[3] | (addr[2] << 8) | (addr[1] << 16) | addr[0] << 24));
+	MAC_ARPA_WR((addr[3] | (addr[2] << 8) | (addr[1] << 16) | addr[0] <<
+		     24));
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to get the status of LPI/EEE mode
@@ -125,15 +118,12 @@ static int update_arp_offload_ip_addr(UCHAR addr[])
 
 static u32 get_lpi_status(void)
 {
-  u32 varmac_lps;
+	u32 varmac_lps;
 
-  MAC_LPS_RD(varmac_lps);
+	MAC_LPS_RD(varmac_lps);
 
-  return varmac_lps;
+	return varmac_lps;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to enable EEE mode
@@ -145,14 +135,11 @@ static u32 get_lpi_status(void)
 static int set_eee_mode(void)
 {
 
-  DBGPR_EEE("set_eee_mode\n");
-  MAC_LPS_LPIEN_WR(0x1);
+	DBGPR_EEE("set_eee_mode\n");
+	MAC_LPS_LPIEN_WR(0x1);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to disable EEE mode
@@ -164,14 +151,11 @@ static int set_eee_mode(void)
 static int reset_eee_mode(void)
 {
 
-  MAC_LPS_LPITXA_WR(0);
-  MAC_LPS_LPIEN_WR(0);
+	MAC_LPS_LPITXA_WR(0);
+	MAC_LPS_LPIEN_WR(0);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to set PLS bit
@@ -184,18 +168,14 @@ static int reset_eee_mode(void)
 static int set_eee_pls(int phy_link)
 {
 
-  if (phy_link == 1) {
-    MAC_LPS_PLS_WR(0x1);
-  }
-  else {
-    MAC_LPS_PLS_WR(0);
-  }
+	if (phy_link == 1) {
+		MAC_LPS_PLS_WR(0x1);
+	} else {
+		MAC_LPS_PLS_WR(0);
+	}
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to set EEE timer values
@@ -206,22 +186,18 @@ static int set_eee_pls(int phy_link)
 * \retval -1 Failure
 */
 
-static int set_eee_timer(int lpi_lst,
-                         int lpi_twt)
+static int set_eee_timer(int lpi_lst, int lpi_twt)
 {
 
-  /* mim time(us) for which the MAC waits after it stops transmitting */
-  /* the LPI pattern to the PHY and before it resumes the normal transmission. */
-  MAC_LPC_TWT_WR(lpi_twt);
-  /* mim time(ms) for which the link status from the PHY should be Up before */
-  /* the LPI pattern can be transmitted to the PHY. */
-  MAC_LPC_TLPIEX_WR(lpi_lst);
+	/* mim time(us) for which the MAC waits after it stops transmitting */
+	/* the LPI pattern to the PHY and before it resumes the normal transmission. */
+	MAC_LPC_TWT_WR(lpi_twt);
+	/* mim time(ms) for which the link status from the PHY should be Up before */
+	/* the LPI pattern can be transmitted to the PHY. */
+	MAC_LPC_TLPIEX_WR(lpi_lst);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 static int set_lpi_tx_automate(void)
 {
@@ -229,9 +205,6 @@ static int set_lpi_tx_automate(void)
 
 	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to enable/disable Auto-Negotiation
@@ -244,14 +217,11 @@ static int set_lpi_tx_automate(void)
 static int control_an(bool enable, bool restart)
 {
 
-  MAC_ANC_ANE_WR(enable);
-  MAC_ANC_RAN_WR(restart);
+	MAC_ANC_ANE_WR(enable);
+	MAC_ANC_RAN_WR(restart);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to get Auto-Negotiation advertisment
@@ -263,15 +233,12 @@ static int control_an(bool enable, bool restart)
 
 static int get_an_adv_pause_param(void)
 {
-  unsigned long varmac_aad;
+	unsigned long varmac_aad;
 
-  MAC_AAD_RD(varmac_aad);
+	MAC_AAD_RD(varmac_aad);
 
-  return GET_VALUE(varmac_aad, MAC_AAD_PSE_LPOS, MAC_AAD_PSE_HPOS);
+	return GET_VALUE(varmac_aad, MAC_AAD_PSE_LPOS, MAC_AAD_PSE_HPOS);
 }
-
-
-
 
 /*!
 * \brief This sequence is used to get Auto-Negotiation advertisment
@@ -284,19 +251,15 @@ static int get_an_adv_pause_param(void)
 
 static int get_an_adv_duplex_param(void)
 {
-  unsigned long varmac_aad;
+	unsigned long varmac_aad;
 
-  MAC_AAD_RD(varmac_aad);
-  if (GET_VALUE(varmac_aad, MAC_AAD_FD_LPOS, MAC_AAD_FD_HPOS) == 1) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
+	MAC_AAD_RD(varmac_aad);
+	if (GET_VALUE(varmac_aad, MAC_AAD_FD_LPOS, MAC_AAD_FD_HPOS) == 1) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
-
-
-
 
 /*!
 * \brief This sequence is used to get Link partner Auto-Negotiation
@@ -308,15 +271,12 @@ static int get_an_adv_duplex_param(void)
 
 static int get_lp_an_adv_pause_param(void)
 {
-  unsigned long varmac_alpa;
+	unsigned long varmac_alpa;
 
-  MAC_ALPA_RD(varmac_alpa);
+	MAC_ALPA_RD(varmac_alpa);
 
-  return GET_VALUE(varmac_alpa, MAC_ALPA_PSE_LPOS, MAC_ALPA_PSE_HPOS);
+	return GET_VALUE(varmac_alpa, MAC_ALPA_PSE_LPOS, MAC_ALPA_PSE_HPOS);
 }
-
-
-
 
 /*!
 * \brief This sequence is used to get Link partner Auto-Negotiation
@@ -329,17 +289,15 @@ static int get_lp_an_adv_pause_param(void)
 
 static int get_lp_an_adv_duplex_param(void)
 {
-  unsigned long varmac_alpa;
+	unsigned long varmac_alpa;
 
-  MAC_ALPA_RD(varmac_alpa);
-  if (GET_VALUE(varmac_alpa, MAC_ALPA_FD_LPOS, MAC_ALPA_FD_HPOS) == 1) {
-    return 1;
-  }
-  else {
-    return 0;
-  }
+	MAC_ALPA_RD(varmac_alpa);
+	if (GET_VALUE(varmac_alpa, MAC_ALPA_FD_LPOS, MAC_ALPA_FD_HPOS) == 1) {
+		return 1;
+	} else {
+		return 0;
+	}
 }
-
 
 static UINT get_vlan_tag_comparison(void)
 {
@@ -361,32 +319,29 @@ static UINT get_vlan_tag_comparison(void)
 */
 
 static INT config_vlan_filtering(INT filter_enb_dis,
-                                 INT perfect_hash_filtering,
+				 INT perfect_hash_filtering,
 				 INT perfect_inverse_match)
 {
-  MAC_MPFR_VTFE_WR(filter_enb_dis);
-  MAC_VLANTR_VTIM_WR(perfect_inverse_match);
-  MAC_VLANTR_VTHM_WR(perfect_hash_filtering);
-  /* To enable only HASH filtering then VL/VID
-   * should be > zero. Hence we are writting 1 into VL.
-   * It also means that MAC will always receive VLAN pkt with
-   * VID = 1 if inverse march is not set.
-   * */
-  if (perfect_hash_filtering)
-    MAC_VLANTR_VL_WR(0x1);
+	MAC_MPFR_VTFE_WR(filter_enb_dis);
+	MAC_VLANTR_VTIM_WR(perfect_inverse_match);
+	MAC_VLANTR_VTHM_WR(perfect_hash_filtering);
+	/* To enable only HASH filtering then VL/VID
+	 * should be > zero. Hence we are writting 1 into VL.
+	 * It also means that MAC will always receive VLAN pkt with
+	 * VID = 1 if inverse march is not set.
+	 * */
+	if (perfect_hash_filtering)
+		MAC_VLANTR_VL_WR(0x1);
 
-  /* By default enable MAC to calculate vlan hash on
-   * only 12-bits of received VLAN tag (ie only on
-   * VLAN id and ignore priority and other fields)
-   * */
-  if (perfect_hash_filtering)
-	  MAC_VLANTR_ETV_WR(0x1);
+	/* By default enable MAC to calculate vlan hash on
+	 * only 12-bits of received VLAN tag (ie only on
+	 * VLAN id and ignore priority and other fields)
+	 * */
+	if (perfect_hash_filtering)
+		MAC_VLANTR_ETV_WR(0x1);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update the VLAN ID for perfect filtering
@@ -399,13 +354,10 @@ static INT config_vlan_filtering(INT filter_enb_dis,
 static INT update_vlan_id(USHORT vid)
 {
 
-  MAC_VLANTR_VL_WR(vid);
+	MAC_VLANTR_VL_WR(vid);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update the VLAN Hash Table reg with new VLAN ID
@@ -418,13 +370,10 @@ static INT update_vlan_id(USHORT vid)
 static INT update_vlan_hash_table_reg(USHORT data)
 {
 
-  MAC_VLANHTR_VLHT_WR(data);
+	MAC_VLANHTR_VLHT_WR(data);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to get the content of VLAN Hash Table reg
@@ -435,15 +384,13 @@ static INT update_vlan_hash_table_reg(USHORT data)
 
 static INT get_vlan_hash_table_reg(void)
 {
-  ULONG mac_vlanhtr;
+	ULONG mac_vlanhtr;
 
-  MAC_VLANHTR_RD(mac_vlanhtr);
+	MAC_VLANHTR_RD(mac_vlanhtr);
 
-  return GET_VALUE(mac_vlanhtr, MAC_VLANHTR_VLHT_LPOS, MAC_VLANHTR_VLHT_HPOS);
+	return GET_VALUE(mac_vlanhtr, MAC_VLANHTR_VLHT_LPOS,
+			 MAC_VLANHTR_VLHT_HPOS);
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update Destination Port Number for
@@ -455,17 +402,13 @@ static INT get_vlan_hash_table_reg(void)
 * \retval -1 Failure
 */
 
-static INT update_l4_da_port_no(INT filter_no,
-                                USHORT port_no)
+static INT update_l4_da_port_no(INT filter_no, USHORT port_no)
 {
 
-  MAC_L4AR_L4DP0_WR(filter_no, port_no);
+	MAC_L4AR_L4DP0_WR(filter_no, port_no);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update Source Port Number for
@@ -477,17 +420,13 @@ static INT update_l4_da_port_no(INT filter_no,
 * \retval -1 Failure
 */
 
-static INT update_l4_sa_port_no(INT filter_no,
-                                USHORT port_no)
+static INT update_l4_sa_port_no(INT filter_no, USHORT port_no)
 {
 
-  MAC_L4AR_L4SP0_WR(filter_no, port_no);
+	MAC_L4AR_L4SP0_WR(filter_no, port_no);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to configure L4(TCP/UDP) filters for
@@ -502,44 +441,37 @@ static INT update_l4_sa_port_no(INT filter_no,
 */
 
 static INT config_l4_filters(INT filter_no,
-		                         INT enb_dis,
-                             INT tcp_udp_match,
-                             INT src_dst_port_match,
-                             INT perfect_inverse_match)
+			     INT enb_dis,
+			     INT tcp_udp_match,
+			     INT src_dst_port_match, INT perfect_inverse_match)
 {
 
-  MAC_L3L4CR_L4PEN0_WR(filter_no, tcp_udp_match);
+	MAC_L3L4CR_L4PEN0_WR(filter_no, tcp_udp_match);
 
-  if (src_dst_port_match == 0) {
-	if (enb_dis == 1) {
-		/* Enable L4 filters for SOURCE Port No matching */
-		MAC_L3L4CR_L4SPM0_WR(filter_no, 0x1);
-		MAC_L3L4CR_L4SPIM0_WR(filter_no, perfect_inverse_match);
-    }
-    else {
-		/* Disable L4 filters for SOURCE Port No matching */
-		MAC_L3L4CR_L4SPM0_WR(filter_no, 0x0);
-		MAC_L3L4CR_L4SPIM0_WR(filter_no, 0x0);
+	if (src_dst_port_match == 0) {
+		if (enb_dis == 1) {
+			/* Enable L4 filters for SOURCE Port No matching */
+			MAC_L3L4CR_L4SPM0_WR(filter_no, 0x1);
+			MAC_L3L4CR_L4SPIM0_WR(filter_no, perfect_inverse_match);
+		} else {
+			/* Disable L4 filters for SOURCE Port No matching */
+			MAC_L3L4CR_L4SPM0_WR(filter_no, 0x0);
+			MAC_L3L4CR_L4SPIM0_WR(filter_no, 0x0);
+		}
+	} else {
+		if (enb_dis == 1) {
+			/* Enable L4 filters for DESTINATION port No matching */
+			MAC_L3L4CR_L4DPM0_WR(filter_no, 0x1);
+			MAC_L3L4CR_L4DPIM0_WR(filter_no, perfect_inverse_match);
+		} else {
+			/* Disable L4 filters for DESTINATION port No matching */
+			MAC_L3L4CR_L4DPM0_WR(filter_no, 0x0);
+			MAC_L3L4CR_L4DPIM0_WR(filter_no, 0x0);
+		}
 	}
-  }
-  else {
-	if (enb_dis == 1) {
-		/* Enable L4 filters for DESTINATION port No matching */
-		MAC_L3L4CR_L4DPM0_WR(filter_no, 0x1);
-		MAC_L3L4CR_L4DPIM0_WR(filter_no, perfect_inverse_match);
-	}
-	else {
-		/* Disable L4 filters for DESTINATION port No matching */
-		MAC_L3L4CR_L4DPM0_WR(filter_no, 0x0);
-		MAC_L3L4CR_L4DPIM0_WR(filter_no, 0x0);
-	}
-  }
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update IPv6 source/destination Address for L3 layer filtering
@@ -550,23 +482,19 @@ static INT config_l4_filters(INT filter_no,
 * \retval -1 Failure
 */
 
-static INT update_ip6_addr(INT filter_no,
-                           USHORT addr[])
+static INT update_ip6_addr(INT filter_no, USHORT addr[])
 {
-  /* update Bits[31:0] of 128-bit IP addr */
-  MAC_L3A0R_WR(filter_no, (addr[7] | (addr[6] << 16)));
-  /* update Bits[63:32] of 128-bit IP addr */
-  MAC_L3A1R_WR(filter_no, (addr[5] | (addr[4] << 16)));
-  /* update Bits[95:64] of 128-bit IP addr */
-  MAC_L3A2R_WR(filter_no, (addr[3] | (addr[2] << 16)));
-  /* update Bits[127:96] of 128-bit IP addr */
-  MAC_L3A3R_WR(filter_no, (addr[1] | (addr[0] << 16)));
+	/* update Bits[31:0] of 128-bit IP addr */
+	MAC_L3A0R_WR(filter_no, (addr[7] | (addr[6] << 16)));
+	/* update Bits[63:32] of 128-bit IP addr */
+	MAC_L3A1R_WR(filter_no, (addr[5] | (addr[4] << 16)));
+	/* update Bits[95:64] of 128-bit IP addr */
+	MAC_L3A2R_WR(filter_no, (addr[3] | (addr[2] << 16)));
+	/* update Bits[127:96] of 128-bit IP addr */
+	MAC_L3A3R_WR(filter_no, (addr[1] | (addr[0] << 16)));
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update IPv4 destination Address for L3 layer filtering
@@ -577,16 +505,14 @@ static INT update_ip6_addr(INT filter_no,
 * \retval -1 Failure
 */
 
-static INT update_ip4_addr1(INT filter_no,
-                            UCHAR addr[])
+static INT update_ip4_addr1(INT filter_no, UCHAR addr[])
 {
-  MAC_L3A1R_WR(filter_no, (addr[3] | (addr[2] << 8) | (addr[1] << 16) | (addr[0] << 24)));
+	MAC_L3A1R_WR(filter_no,
+		     (addr[3] | (addr[2] << 8) | (addr[1] << 16) |
+		      (addr[0] << 24)));
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update IPv4 source Address for L3 layer filtering
@@ -597,16 +523,14 @@ static INT update_ip4_addr1(INT filter_no,
 * \retval -1 Failure
 */
 
-static INT update_ip4_addr0(INT filter_no,
-                            UCHAR addr[])
+static INT update_ip4_addr0(INT filter_no, UCHAR addr[])
 {
-  MAC_L3A0R_WR(filter_no, (addr[3] | (addr[2] << 8) | (addr[1] << 16) | (addr[0] << 24)));
+	MAC_L3A0R_WR(filter_no,
+		     (addr[3] | (addr[2] << 8) | (addr[1] << 16) |
+		      (addr[0] << 24)));
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to configure L3(IPv4/IPv6) filters
@@ -621,10 +545,9 @@ static INT update_ip4_addr0(INT filter_no,
 */
 
 static INT config_l3_filters(INT filter_no,
-		                         INT enb_dis,
-                             INT ipv4_ipv6_match,
-                             INT src_dst_addr_match,
-                             INT perfect_inverse_match)
+			     INT enb_dis,
+			     INT ipv4_ipv6_match,
+			     INT src_dst_addr_match, INT perfect_inverse_match)
 {
 	MAC_L3L4CR_L3PEN0_WR(filter_no, ipv4_ipv6_match);
 
@@ -634,19 +557,19 @@ static INT config_l3_filters(INT filter_no,
 			if (src_dst_addr_match == 0) {
 				/* Enable L3 filters for IPv6 SOURCE addr matching */
 				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x1);
-				MAC_L3L4CR_L3SAIM0_WR(filter_no, perfect_inverse_match);
+				MAC_L3L4CR_L3SAIM0_WR(filter_no,
+						      perfect_inverse_match);
 				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x0);
 				MAC_L3L4CR_L3DAIM0_WR(filter_no, 0x0);
-			}
-			else {
+			} else {
 				/* Enable L3 filters for IPv6 DESTINATION addr matching */
 				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x0);
 				MAC_L3L4CR_L3SAIM0_WR(filter_no, 0x0);
 				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x1);
-				MAC_L3L4CR_L3DAIM0_WR(filter_no, perfect_inverse_match);
+				MAC_L3L4CR_L3DAIM0_WR(filter_no,
+						      perfect_inverse_match);
 			}
-		}
-		else {
+		} else {
 			/* Disable L3 filters for IPv6 SOURCE/DESTINATION addr matching */
 			MAC_L3L4CR_L3PEN0_WR(filter_no, 0x0);
 			MAC_L3L4CR_L3SAM0_WR(filter_no, 0x0);
@@ -654,27 +577,25 @@ static INT config_l3_filters(INT filter_no,
 			MAC_L3L4CR_L3DAM0_WR(filter_no, 0x0);
 			MAC_L3L4CR_L3DAIM0_WR(filter_no, 0x0);
 		}
-	}
-	else {
+	} else {
 		if (src_dst_addr_match == 0) {
 			if (enb_dis == 1) {
 				/* Enable L3 filters for IPv4 SOURCE addr matching */
 				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x1);
-				MAC_L3L4CR_L3SAIM0_WR(filter_no, perfect_inverse_match);
-			}
-			else {
+				MAC_L3L4CR_L3SAIM0_WR(filter_no,
+						      perfect_inverse_match);
+			} else {
 				/* Disable L3 filters for IPv4 SOURCE addr matching */
 				MAC_L3L4CR_L3SAM0_WR(filter_no, 0x0);
 				MAC_L3L4CR_L3SAIM0_WR(filter_no, 0x0);
 			}
-		}
-		else {
+		} else {
 			if (enb_dis == 1) {
 				/* Enable L3 filters for IPv4 DESTINATION addr matching */
 				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x1);
-				MAC_L3L4CR_L3DAIM0_WR(filter_no, perfect_inverse_match);
-			}
-			else {
+				MAC_L3L4CR_L3DAIM0_WR(filter_no,
+						      perfect_inverse_match);
+			} else {
 				/* Disable L3 filters for IPv4 DESTINATION addr matching */
 				MAC_L3L4CR_L3DAM0_WR(filter_no, 0x0);
 				MAC_L3L4CR_L3DAIM0_WR(filter_no, 0x0);
@@ -682,10 +603,8 @@ static INT config_l3_filters(INT filter_no,
 		}
 	}
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
 
 /*!
 * \brief This sequence is used to configure MAC in differnet pkt processing
@@ -701,27 +620,24 @@ static INT config_l3_filters(INT filter_no,
 */
 
 static INT config_mac_pkt_filter_reg(UCHAR pr_mode,
-                                     UCHAR huc_mode,
-                                     UCHAR hmc_mode,
-                                     UCHAR pm_mode,
-                                     UCHAR hpf_mode)
+				     UCHAR huc_mode,
+				     UCHAR hmc_mode,
+				     UCHAR pm_mode, UCHAR hpf_mode)
 {
-  ULONG mac_mpfr;
+	ULONG mac_mpfr;
 
-  /* configure device in differnet modes */
-  /* promiscuous, hash unicast, hash multicast, */
-  /* all multicast and perfect/hash filtering mode. */
-  MAC_MPFR_RD(mac_mpfr);
-  mac_mpfr = mac_mpfr & (ULONG)(0x803103e8);
-  mac_mpfr = mac_mpfr | ((pr_mode) << 0) | ((huc_mode) << 1) | ((hmc_mode) << 2) |
-                ((pm_mode) << 4) | ((hpf_mode) << 10);
-  MAC_MPFR_WR(mac_mpfr);
+	/* configure device in differnet modes */
+	/* promiscuous, hash unicast, hash multicast, */
+	/* all multicast and perfect/hash filtering mode. */
+	MAC_MPFR_RD(mac_mpfr);
+	mac_mpfr = mac_mpfr & (ULONG) (0x803103e8);
+	mac_mpfr =
+	    mac_mpfr | ((pr_mode) << 0) | ((huc_mode) << 1) | ((hmc_mode) << 2)
+	    | ((pm_mode) << 4) | ((hpf_mode) << 10);
+	MAC_MPFR_WR(mac_mpfr);
 
-
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
 
 /*!
 * \brief This sequence is used to enable/disable L3 and L4 filtering
@@ -734,13 +650,10 @@ static INT config_mac_pkt_filter_reg(UCHAR pr_mode,
 static INT config_l3_l4_filter_enable(INT filter_enb_dis)
 {
 
-  MAC_MPFR_IPFE_WR(filter_enb_dis);
+	MAC_MPFR_IPFE_WR(filter_enb_dis);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to select perfect/inverse matching for L2 DA
@@ -753,13 +666,10 @@ static INT config_l3_l4_filter_enable(INT filter_enb_dis)
 static INT config_l2_da_perfect_inverse_match(INT perfect_inverse_match)
 {
 
-  MAC_MPFR_DAIF_WR(perfect_inverse_match);
+	MAC_MPFR_DAIF_WR(perfect_inverse_match);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update the MAC address in last 96 MAC
@@ -771,19 +681,17 @@ static INT config_l2_da_perfect_inverse_match(INT perfect_inverse_match)
 * \retval -1 Failure
 */
 
-static INT update_mac_addr32_127_low_high_reg(INT idx,
-                                              UCHAR addr[])
+static INT update_mac_addr32_127_low_high_reg(INT idx, UCHAR addr[])
 {
 
-  MAC_MA32_127LR_WR(idx, (addr[0] | (addr[1] << 8) | (addr[2] << 16) | (addr[3] << 24)));
-  MAC_MA32_127HR_ADDRHI_WR(idx, (addr[4] | (addr[5] << 8)));
-  MAC_MA32_127HR_AE_WR(idx, 0x1);
+	MAC_MA32_127LR_WR(idx,
+			  (addr[0] | (addr[1] << 8) | (addr[2] << 16) |
+			   (addr[3] << 24)));
+	MAC_MA32_127HR_ADDRHI_WR(idx, (addr[4] | (addr[5] << 8)));
+	MAC_MA32_127HR_AE_WR(idx, 0x1);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to update the MAC address in first 31 MAC
@@ -795,19 +703,17 @@ static INT update_mac_addr32_127_low_high_reg(INT idx,
 * \retval -1 Failure
 */
 
-static INT update_mac_addr1_31_low_high_reg(INT idx,
-                                            UCHAR addr[])
+static INT update_mac_addr1_31_low_high_reg(INT idx, UCHAR addr[])
 {
 
-  MAC_MA1_31LR_WR(idx, (addr[0] | (addr[1] << 8) | (addr[2] << 16) | (addr[3] << 24)));
-  MAC_MA1_31HR_ADDRHI_WR(idx, (addr[4] | (addr[5] << 8)));
-  MAC_MA1_31HR_AE_WR(idx, 0x1);
+	MAC_MA1_31LR_WR(idx,
+			(addr[0] | (addr[1] << 8) | (addr[2] << 16) |
+			 (addr[3] << 24)));
+	MAC_MA1_31HR_ADDRHI_WR(idx, (addr[4] | (addr[5] << 8)));
+	MAC_MA1_31HR_AE_WR(idx, 0x1);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to configure hash table register for
@@ -819,17 +725,13 @@ static INT update_mac_addr1_31_low_high_reg(INT idx,
 * \retval -1 Failure
 */
 
-static INT update_hash_table_reg(INT idx,
-                                 UINT data)
+static INT update_hash_table_reg(INT idx, UINT data)
 {
 
-  MAC_HTR_WR(idx, data);
+	MAC_HTR_WR(idx, data);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used check whether Tx drop status in the
@@ -842,15 +744,12 @@ static INT update_hash_table_reg(INT idx,
 
 static INT drop_tx_status_enabled(void)
 {
-  ULONG mtl_omr;
+	ULONG mtl_omr;
 
-  MTL_OMR_RD(mtl_omr);
+	MTL_OMR_RD(mtl_omr);
 
-  return GET_VALUE(mtl_omr, MTL_OMR_DTXSTS_LPOS, MTL_OMR_DTXSTS_HPOS);
+	return GET_VALUE(mtl_omr, MTL_OMR_DTXSTS_LPOS, MTL_OMR_DTXSTS_HPOS);
 }
-
-
-
 
 /*!
 * \brief This sequence is used configure MAC SSIR
@@ -862,32 +761,31 @@ static INT drop_tx_status_enabled(void)
 
 static INT config_sub_second_increment(ULONG ptp_clock)
 {
-  ULONG val;
-  ULONG mac_tcr;
+	ULONG val;
+	ULONG mac_tcr;
 
-  MAC_TCR_RD(mac_tcr);
+	MAC_TCR_RD(mac_tcr);
 
-  /* convert the PTP_CLOCK to nano second */
-  /*  formula is : ((1/ptp_clock) * 1000000000) */
+	/* convert the PTP_CLOCK to nano second */
+	/*  formula is : ((1/ptp_clock) * 1000000000) */
 	/*  where, ptp_clock = 50MHz if FINE correction */
 	/*  and ptp_clock = EQOS_SYSCLOCK if COARSE correction */
-  if (GET_VALUE(mac_tcr, MAC_TCR_TSCFUPDT_LPOS, MAC_TCR_TSCFUPDT_HPOS) == 1) {
-	val = ((1 * 1000000000ull) / 62500000);
-  }
-  else {
-	val = ((1 * 1000000000ull) / ptp_clock);
-  }
+	if (GET_VALUE(mac_tcr, MAC_TCR_TSCFUPDT_LPOS, MAC_TCR_TSCFUPDT_HPOS) ==
+	    1) {
+		val = ((1 * 1000000000ull) / 62500000);
+	} else {
+		val = ((1 * 1000000000ull) / ptp_clock);
+	}
 
-  /* 0.465ns accurecy */
-  if (GET_VALUE(mac_tcr, MAC_TCR_TSCTRLSSR_LPOS, MAC_TCR_TSCTRLSSR_HPOS) == 0) {
-    val = (val * 1000) / 465;
-  }
-  MAC_SSIR_SSINC_WR(val);
+	/* 0.465ns accurecy */
+	if (GET_VALUE(mac_tcr, MAC_TCR_TSCTRLSSR_LPOS, MAC_TCR_TSCTRLSSR_HPOS)
+	    == 0) {
+		val = (val * 1000) / 465;
+	}
+	MAC_SSIR_SSINC_WR(val);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
 
 /*!
 * \brief This sequence is used get 64-bit system time in nano sec
@@ -897,23 +795,18 @@ static INT config_sub_second_increment(ULONG ptp_clock)
 
 static ULONG_LONG get_systime(void)
 {
-  ULONG_LONG ns;
-  ULONG varmac_stnsr;
-  ULONG varmac_stsr;
+	ULONG_LONG ns;
+	ULONG varmac_stnsr;
+	ULONG varmac_stsr;
 
-  MAC_STNSR_RD(varmac_stnsr);
-  ns = GET_VALUE(varmac_stnsr, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
-  /* convert sec/high time value to nanosecond */
-  MAC_STSR_RD(varmac_stsr);
-  ns = ns + (varmac_stsr * 1000000000ull);
+	MAC_STNSR_RD(varmac_stnsr);
+	ns = GET_VALUE(varmac_stnsr, MAC_STNSR_TSSS_LPOS, MAC_STNSR_TSSS_HPOS);
+	/* convert sec/high time value to nanosecond */
+	MAC_STSR_RD(varmac_stsr);
+	ns = ns + (varmac_stsr * 1000000000ull);
 
-  return ns;
+	return ns;
 }
-
-
-
-
-
 
 /*!
 * \brief This sequence is used to adjust/update the system time
@@ -925,78 +818,76 @@ static ULONG_LONG get_systime(void)
 */
 
 static INT adjust_systime(UINT sec,
-						UINT nsec,
-			  			INT add_sub,
-						bool one_nsec_accuracy)
+			  UINT nsec, INT add_sub, bool one_nsec_accuracy)
 {
-  ULONG retry_cnt = 100000;
-  ULONG vy_count;
-  volatile ULONG mac_tcr;
+	ULONG retry_cnt = 100000;
+	ULONG vy_count;
+	volatile ULONG mac_tcr;
 
-  /* wait for previous(if any) time adjust/update to complete. */
+	/* wait for previous(if any) time adjust/update to complete. */
 
-  /*Poll*/
-  vy_count = 0;
-  while(1){
-    if(vy_count > retry_cnt) {
-      return -Y_FAILURE;
-    }
+	/*Poll */
+	vy_count = 0;
+	while (1) {
+		if (vy_count > retry_cnt) {
+			return -Y_FAILURE;
+		}
 
-    MAC_TCR_RD(mac_tcr);
-    if (GET_VALUE(mac_tcr, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS) == 0) {
-      break;
-    }
-    vy_count++;
+		MAC_TCR_RD(mac_tcr);
+		if (GET_VALUE(mac_tcr, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS)
+		    == 0) {
+			break;
+		}
+		vy_count++;
 		mdelay(1);
-  }
+	}
 
-  if (add_sub) {
-    /* If the new sec value needs to be subtracted with
-     * the system time, then MAC_STSUR reg should be
-     * programmed with (2^32 – <new_sec_value>)
-     * */
-    sec = (0x100000000ull - sec);
+	if (add_sub) {
+		/* If the new sec value needs to be subtracted with
+		 * the system time, then MAC_STSUR reg should be
+		 * programmed with (2^32 – <new_sec_value>)
+		 * */
+		sec = (0x100000000ull - sec);
 
-    /* If the new nsec value need to be subtracted with
-     * the system time, then MAC_STNSUR.TSSS field should be
-     * programmed with,
-     * (10^9 - <new_nsec_value>) if MAC_TCR.TSCTRLSSR is set or
-     * (2^31 - <new_nsec_value> if MAC_TCR.TSCTRLSSR is reset)
-     * */
-  	if (one_nsec_accuracy)
-      nsec = (0x3B9ACA00 - nsec);
-   	else
-      nsec = (0x80000000 - nsec);
-  }
+		/* If the new nsec value need to be subtracted with
+		 * the system time, then MAC_STNSUR.TSSS field should be
+		 * programmed with,
+		 * (10^9 - <new_nsec_value>) if MAC_TCR.TSCTRLSSR is set or
+		 * (2^31 - <new_nsec_value> if MAC_TCR.TSCTRLSSR is reset)
+		 * */
+		if (one_nsec_accuracy)
+			nsec = (0x3B9ACA00 - nsec);
+		else
+			nsec = (0x80000000 - nsec);
+	}
 
-  MAC_STSUR_WR(sec);
-  MAC_STNSUR_TSSS_WR(nsec);
-  MAC_STNSUR_ADDSUB_WR(add_sub);
+	MAC_STSUR_WR(sec);
+	MAC_STNSUR_TSSS_WR(nsec);
+	MAC_STNSUR_ADDSUB_WR(add_sub);
 
-  /* issue command to initialize system time with the value */
-  /* specified in MAC_STSUR and MAC_STNSUR. */
-  MAC_TCR_TSUPDT_WR(0x1);
-  /* wait for present time initialize to complete. */
+	/* issue command to initialize system time with the value */
+	/* specified in MAC_STSUR and MAC_STNSUR. */
+	MAC_TCR_TSUPDT_WR(0x1);
+	/* wait for present time initialize to complete. */
 
-  /*Poll*/
-  vy_count = 0;
-  while(1){
-    if(vy_count > retry_cnt) {
-      return -Y_FAILURE;
-    }
+	/*Poll */
+	vy_count = 0;
+	while (1) {
+		if (vy_count > retry_cnt) {
+			return -Y_FAILURE;
+		}
 
-    MAC_TCR_RD(mac_tcr);
-    if (GET_VALUE(mac_tcr, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS) == 0) {
-      break;
-    }
-    vy_count++;
+		MAC_TCR_RD(mac_tcr);
+		if (GET_VALUE(mac_tcr, MAC_TCR_TSUPDT_LPOS, MAC_TCR_TSUPDT_HPOS)
+		    == 0) {
+			break;
+		}
+		vy_count++;
 		mdelay(1);
-  }
+	}
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
 
 /*!
 * \brief This sequence is used to adjust the ptp operating frequency.
@@ -1007,51 +898,52 @@ static INT adjust_systime(UINT sec,
 
 static INT config_addend(UINT data)
 {
-  ULONG retry_cnt = 100000;
-  ULONG vy_count;
-  volatile ULONG mac_tcr;
+	ULONG retry_cnt = 100000;
+	ULONG vy_count;
+	volatile ULONG mac_tcr;
 
-  /* wait for previous(if any) added update to complete. */
+	/* wait for previous(if any) added update to complete. */
 
-  /*Poll*/
-  vy_count = 0;
-  while(1){
-    if(vy_count > retry_cnt) {
-      return -Y_FAILURE;
-    }
+	/*Poll */
+	vy_count = 0;
+	while (1) {
+		if (vy_count > retry_cnt) {
+			return -Y_FAILURE;
+		}
 
-    MAC_TCR_RD(mac_tcr);
-    if (GET_VALUE(mac_tcr, MAC_TCR_TSADDREG_LPOS, MAC_TCR_TSADDREG_HPOS) == 0) {
-      break;
-    }
-    vy_count++;
-    mdelay(1);
-  }
+		MAC_TCR_RD(mac_tcr);
+		if (GET_VALUE
+		    (mac_tcr, MAC_TCR_TSADDREG_LPOS,
+		     MAC_TCR_TSADDREG_HPOS) == 0) {
+			break;
+		}
+		vy_count++;
+		mdelay(1);
+	}
 
-  MAC_TAR_WR(data);
-  /* issue command to update the added value */
-  MAC_TCR_TSADDREG_WR(0x1);
-  /* wait for present added update to complete. */
+	MAC_TAR_WR(data);
+	/* issue command to update the added value */
+	MAC_TCR_TSADDREG_WR(0x1);
+	/* wait for present added update to complete. */
 
-  /*Poll*/
-  vy_count = 0;
-  while(1){
-    if(vy_count > retry_cnt) {
-      return -Y_FAILURE;
-    }
-    MAC_TCR_RD(mac_tcr);
-    if (GET_VALUE(mac_tcr, MAC_TCR_TSADDREG_LPOS, MAC_TCR_TSADDREG_HPOS) == 0) {
-      break;
-    }
-    vy_count++;
-    mdelay(1);
-  }
+	/*Poll */
+	vy_count = 0;
+	while (1) {
+		if (vy_count > retry_cnt) {
+			return -Y_FAILURE;
+		}
+		MAC_TCR_RD(mac_tcr);
+		if (GET_VALUE
+		    (mac_tcr, MAC_TCR_TSADDREG_LPOS,
+		     MAC_TCR_TSADDREG_HPOS) == 0) {
+			break;
+		}
+		vy_count++;
+		mdelay(1);
+	}
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to initialize the system time
@@ -1062,57 +954,54 @@ static INT config_addend(UINT data)
 * \retval -1 Failure
 */
 
-static INT init_systime(UINT sec,
-                        UINT nsec)
+static INT init_systime(UINT sec, UINT nsec)
 {
-  ULONG retry_cnt = 100000;
-  ULONG vy_count;
-  volatile ULONG mac_tcr;
+	ULONG retry_cnt = 100000;
+	ULONG vy_count;
+	volatile ULONG mac_tcr;
 
-  /* wait for previous(if any) time initialize to complete. */
+	/* wait for previous(if any) time initialize to complete. */
 
-  /*Poll*/
-  vy_count = 0;
-  while(1){
-    if(vy_count > retry_cnt) {
-      return -Y_FAILURE;
-    }
+	/*Poll */
+	vy_count = 0;
+	while (1) {
+		if (vy_count > retry_cnt) {
+			return -Y_FAILURE;
+		}
 
-    MAC_TCR_RD(mac_tcr);
-    if (GET_VALUE(mac_tcr, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS) == 0) {
-      break;
-    }
-    vy_count++;
-    mdelay(1);
-  }
-  MAC_STSUR_WR(sec);
-  MAC_STNSUR_WR(nsec);
-  /* issue command to initialize system time with the value */
-  /* specified in MAC_STSUR and MAC_STNSUR. */
-  MAC_TCR_TSINIT_WR(0x1);
-  /* wait for present time initialize to complete. */
+		MAC_TCR_RD(mac_tcr);
+		if (GET_VALUE(mac_tcr, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS)
+		    == 0) {
+			break;
+		}
+		vy_count++;
+		mdelay(1);
+	}
+	MAC_STSUR_WR(sec);
+	MAC_STNSUR_WR(nsec);
+	/* issue command to initialize system time with the value */
+	/* specified in MAC_STSUR and MAC_STNSUR. */
+	MAC_TCR_TSINIT_WR(0x1);
+	/* wait for present time initialize to complete. */
 
-  /*Poll*/
-  vy_count = 0;
-  while(1){
-    if(vy_count > retry_cnt) {
-      return -Y_FAILURE;
-    }
+	/*Poll */
+	vy_count = 0;
+	while (1) {
+		if (vy_count > retry_cnt) {
+			return -Y_FAILURE;
+		}
 
-    MAC_TCR_RD(mac_tcr);
-    if (GET_VALUE(mac_tcr, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS) == 0) {
-      break;
-    }
-    vy_count++;
-    mdelay(1);
-  }
+		MAC_TCR_RD(mac_tcr);
+		if (GET_VALUE(mac_tcr, MAC_TCR_TSINIT_LPOS, MAC_TCR_TSINIT_HPOS)
+		    == 0) {
+			break;
+		}
+		vy_count++;
+		mdelay(1);
+	}
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
-
 
 /*!
 * \brief This sequence is used to enable HW time stamping
@@ -1126,14 +1015,10 @@ static INT init_systime(UINT sec,
 static INT config_hw_time_stamping(UINT config_val)
 {
 
-  MAC_TCR_WR(config_val);
+	MAC_TCR_WR(config_val);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
-
 
 /*!
 * \brief This sequence is used get the 64-bit of the timestamp
@@ -1146,19 +1031,15 @@ static INT config_hw_time_stamping(UINT config_val)
 
 static ULONG_LONG get_rx_tstamp(t_rx_context_desc *rxdesc)
 {
-  ULONG_LONG ns;
-  ULONG rdes1;
+	ULONG_LONG ns;
+	ULONG rdes1;
 
-  RX_CONTEXT_DESC_RDES0_RD(rxdesc->rdes0, ns);
-  RX_CONTEXT_DESC_RDES1_RD(rxdesc->rdes1, rdes1);
-  ns = ns + (rdes1 * 1000000000ull);
+	RX_CONTEXT_DESC_RDES0_RD(rxdesc->rdes0, ns);
+	RX_CONTEXT_DESC_RDES1_RD(rxdesc->rdes1, rdes1);
+	ns = ns + (rdes1 * 1000000000ull);
 
-  return ns;
+	return ns;
 }
-
-
-
-
 
 /*!
 * \brief This sequence is used to check whether the captured timestamp
@@ -1174,34 +1055,29 @@ static ULONG_LONG get_rx_tstamp(t_rx_context_desc *rxdesc)
 
 static UINT get_rx_tstamp_status(t_rx_context_desc *rxdesc)
 {
-  UINT own;
-  UINT ctxt;
-  UINT rdes0;
-  UINT rdes1;
+	UINT own;
+	UINT ctxt;
+	UINT rdes0;
+	UINT rdes1;
 
-  /* check for own bit and CTXT bit */
-  RX_CONTEXT_DESC_RDES3_OWN_RD(rxdesc->rdes3, own);
-  RX_CONTEXT_DESC_RDES3_CTXT_RD(rxdesc->rdes3, ctxt);
-  if ((own == 0) && (ctxt == 0x1)) {
-    RX_CONTEXT_DESC_RDES0_RD(rxdesc->rdes0, rdes0);
-    RX_CONTEXT_DESC_RDES1_RD(rxdesc->rdes1, rdes1);
-    if ((rdes0 == 0xffffffff) && (rdes1 == 0xffffffff)) {
-      /* time stamp is corrupted */
-      return 2;
-    }
-    else {
-      /* time stamp is valid */
-      return 1;
-    }
-  }
-  else {
-    /* no CONTEX desc to hold time stamp value */
-    return 0;
-  }
+	/* check for own bit and CTXT bit */
+	RX_CONTEXT_DESC_RDES3_OWN_RD(rxdesc->rdes3, own);
+	RX_CONTEXT_DESC_RDES3_CTXT_RD(rxdesc->rdes3, ctxt);
+	if ((own == 0) && (ctxt == 0x1)) {
+		RX_CONTEXT_DESC_RDES0_RD(rxdesc->rdes0, rdes0);
+		RX_CONTEXT_DESC_RDES1_RD(rxdesc->rdes1, rdes1);
+		if ((rdes0 == 0xffffffff) && (rdes1 == 0xffffffff)) {
+			/* time stamp is corrupted */
+			return 2;
+		} else {
+			/* time stamp is valid */
+			return 1;
+		}
+	} else {
+		/* no CONTEX desc to hold time stamp value */
+		return 0;
+	}
 }
-
-
-
 
 /*!
 * \brief This sequence is used to check whether the timestamp value
@@ -1215,21 +1091,17 @@ static UINT get_rx_tstamp_status(t_rx_context_desc *rxdesc)
 
 static UINT rx_tstamp_available(t_rx_normal_desc *rxdesc)
 {
-  UINT rs1v;
-  UINT tsa;
+	UINT rs1v;
+	UINT tsa;
 
-  RX_NORMAL_DESC_RDES3_RS1V_RD(rxdesc->rdes3, rs1v);
-  if (rs1v == 1) {
-    RX_NORMAL_DESC_RDES1_TSA_RD(rxdesc->rdes1, tsa);
-    return tsa;
-  }
-  else {
-    return 0;
-  }
+	RX_NORMAL_DESC_RDES3_RS1V_RD(rxdesc->rdes3, rs1v);
+	if (rs1v == 1) {
+		RX_NORMAL_DESC_RDES1_TSA_RD(rxdesc->rdes1, tsa);
+		return tsa;
+	} else {
+		return 0;
+	}
 }
-
-
-
 
 /*!
 * \brief This sequence is used get the least 64-bit of the timestamp
@@ -1240,20 +1112,15 @@ static UINT rx_tstamp_available(t_rx_normal_desc *rxdesc)
 
 static ULONG_LONG get_tx_tstamp_via_reg(void)
 {
-  ULONG_LONG ns;
-  ULONG varmac_ttn;
+	ULONG_LONG ns;
+	ULONG varmac_ttn;
 
-  MAC_TTSN_TXTSSTSLO_RD(ns);
-  MAC_TTN_TXTSSTSHI_RD(varmac_ttn);
-  ns = ns + (varmac_ttn * 1000000000ull);
+	MAC_TTSN_TXTSSTSLO_RD(ns);
+	MAC_TTN_TXTSSTSHI_RD(varmac_ttn);
+	ns = ns + (varmac_ttn * 1000000000ull);
 
-  return ns;
+	return ns;
 }
-
-
-
-
-
 
 /*!
 * \brief This sequence is used to check whether a timestamp has been
@@ -1266,32 +1133,29 @@ static ULONG_LONG get_tx_tstamp_via_reg(void)
 
 static UINT get_tx_tstamp_status_via_reg(void)
 {
-  ULONG mac_tcr;
-  ULONG mac_ttsn;
+	ULONG mac_tcr;
+	ULONG mac_ttsn;
 
-  /* device is configured to overwrite the timesatmp of */
-  /* eariler packet if driver has not yet read it. */
-  MAC_TCR_RD(mac_tcr);
-  if (GET_VALUE(mac_tcr, MAC_TCR_TXTSSTSM_LPOS, MAC_TCR_TXTSSTSM_HPOS) == 1) {
-    /* nothing to do */
-  }
-  else {
-    /* timesatmp of the current pkt is ignored or not captured */
-    MAC_TTSN_RD(mac_ttsn);
-    if (GET_VALUE(mac_ttsn, MAC_TTSN_TXTSSTSMIS_LPOS, MAC_TTSN_TXTSSTSMIS_HPOS) == 1) {
-      return 0;
-    }
-    else {
-      return 1;
-    }
-  }
+	/* device is configured to overwrite the timesatmp of */
+	/* eariler packet if driver has not yet read it. */
+	MAC_TCR_RD(mac_tcr);
+	if (GET_VALUE(mac_tcr, MAC_TCR_TXTSSTSM_LPOS, MAC_TCR_TXTSSTSM_HPOS) ==
+	    1) {
+		/* nothing to do */
+	} else {
+		/* timesatmp of the current pkt is ignored or not captured */
+		MAC_TTSN_RD(mac_ttsn);
+		if (GET_VALUE
+		    (mac_ttsn, MAC_TTSN_TXTSSTSMIS_LPOS,
+		     MAC_TTSN_TXTSSTSMIS_HPOS) == 1) {
+			return 0;
+		} else {
+			return 1;
+		}
+	}
 
-  return 0;
+	return 0;
 }
-
-
-
-
 
 /*!
 * \brief This sequence is used get the 64-bit of the timestamp captured
@@ -1303,18 +1167,15 @@ static UINT get_tx_tstamp_status_via_reg(void)
 
 static ULONG_LONG get_tx_tstamp(t_tx_normal_desc *txdesc)
 {
-  ULONG_LONG ns;
-  ULONG vartdes1;
+	ULONG_LONG ns;
+	ULONG vartdes1;
 
-  TX_NORMAL_DESC_TDES0_RD(txdesc->tdes0, ns);
-  TX_NORMAL_DESC_TDES1_RD(txdesc->tdes1, vartdes1);
-  ns = ns + (vartdes1 * 1000000000ull);
+	TX_NORMAL_DESC_TDES0_RD(txdesc->tdes0, ns);
+	TX_NORMAL_DESC_TDES1_RD(txdesc->tdes1, vartdes1);
+	ns = ns + (vartdes1 * 1000000000ull);
 
-  return ns;
+	return ns;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to check whether a timestamp has been
@@ -1328,13 +1189,12 @@ static ULONG_LONG get_tx_tstamp(t_tx_normal_desc *txdesc)
 
 static UINT get_tx_tstamp_status(t_tx_normal_desc *txdesc)
 {
-  UINT tdes3;
+	UINT tdes3;
 
-  TX_NORMAL_DESC_TDES3_RD(txdesc->tdes3, tdes3);
+	TX_NORMAL_DESC_TDES3_RD(txdesc->tdes3, tdes3);
 
-  return (tdes3 & 0x20000);
+	return tdes3 & 0x20000;
 }
-
 
 /*!
 * \brief This sequence is used to set tx queue operating mode for Queue[0 - 7]
@@ -1345,17 +1205,13 @@ static UINT get_tx_tstamp_status(t_tx_normal_desc *txdesc)
 * \retval -1 Failure
 */
 
-static INT set_tx_queue_operating_mode(UINT qinx,
-                                       UINT q_mode)
+static INT set_tx_queue_operating_mode(UINT qinx, UINT q_mode)
 {
 
-  MTL_QTOMR_TXQEN_WR(qinx, q_mode);
+	MTL_QTOMR_TXQEN_WR(qinx, q_mode);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to select Tx Scheduling Algorithm for AVB feature for Queue[1 - 7]
@@ -1368,9 +1224,9 @@ static INT set_tx_queue_operating_mode(UINT qinx,
 static INT set_avb_algorithm(UINT qinx, UCHAR avb_algo)
 {
 
-  MTL_QECR_AVALG_WR(qinx, avb_algo);
+	MTL_QECR_AVALG_WR(qinx, avb_algo);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
 
 /*!
@@ -1384,12 +1240,10 @@ static INT set_avb_algorithm(UINT qinx, UCHAR avb_algo)
 static INT config_credit_control(UINT qinx, UINT cc)
 {
 
-  MTL_QECR_CC_WR(qinx, cc);
+	MTL_QECR_CC_WR(qinx, cc);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
 
 /*!
 * \brief This sequence is used to configure send slope credit value
@@ -1401,17 +1255,13 @@ static INT config_credit_control(UINT qinx, UINT cc)
 * \retval -1 Failure
 */
 
-static INT config_send_slope(UINT qinx,
-                          UINT send_slope)
+static INT config_send_slope(UINT qinx, UINT send_slope)
 {
 
-  MTL_QSSCR_SSC_WR(qinx, send_slope);
+	MTL_QSSCR_SSC_WR(qinx, send_slope);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to configure idle slope credit value
@@ -1423,17 +1273,13 @@ static INT config_send_slope(UINT qinx,
 * \retval -1 Failure
 */
 
-static INT config_idle_slope(UINT qinx,
-                          UINT idle_slope)
+static INT config_idle_slope(UINT qinx, UINT idle_slope)
 {
 
-  MTL_QW_ISCQW_WR(qinx, idle_slope);
+	MTL_QW_ISCQW_WR(qinx, idle_slope);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to configure low credit value
@@ -1445,15 +1291,13 @@ static INT config_idle_slope(UINT qinx,
 * \retval -1 Failure
 */
 
-static INT config_low_credit(UINT qinx,
-			UINT low_credit)
+static INT config_low_credit(UINT qinx, UINT low_credit)
 {
 
-  MTL_QLCR_LC_WR(qinx, low_credit);
+	MTL_QLCR_LC_WR(qinx, low_credit);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
 
 /*!
 * \brief This sequence is used to enable/disable slot number check When set,
@@ -1473,13 +1317,10 @@ static INT config_low_credit(UINT qinx,
 static INT config_slot_num_check(UINT qinx, UCHAR slot_check)
 {
 
-  DMA_SFCSR_ESC_WR(qinx, slot_check);
+	DMA_SFCSR_ESC_WR(qinx, slot_check);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to enable/disable advance slot check When set,
@@ -1498,13 +1339,10 @@ static INT config_slot_num_check(UINT qinx, UCHAR slot_check)
 static INT config_advance_slot_num_check(UINT qinx, UCHAR adv_slot_check)
 {
 
-  DMA_SFCSR_ASC_WR(qinx, adv_slot_check);
+	DMA_SFCSR_ASC_WR(qinx, adv_slot_check);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to configure high credit value required
@@ -1516,13 +1354,12 @@ static INT config_advance_slot_num_check(UINT qinx, UCHAR adv_slot_check)
 * \retval -1 Failure
 */
 
-static INT config_high_credit(UINT qinx,
-                           UINT hi_credit)
+static INT config_high_credit(UINT qinx, UINT hi_credit)
 {
 
-  MTL_QHCR_HC_WR(qinx, hi_credit);
+	MTL_QHCR_HC_WR(qinx, hi_credit);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
 
 /*!
@@ -1534,17 +1371,13 @@ static INT config_high_credit(UINT qinx,
 * \retval -1 Failure
 */
 
-static INT set_dcb_queue_weight(UINT qinx,
-                                UINT q_weight)
+static INT set_dcb_queue_weight(UINT qinx, UINT q_weight)
 {
 
-  MTL_QW_ISCQW_WR(qinx, q_weight);
+	MTL_QW_ISCQW_WR(qinx, q_weight);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to select Tx Scheduling Algorithm for DCB feature
@@ -1557,9 +1390,9 @@ static INT set_dcb_queue_weight(UINT qinx,
 static INT set_dcb_algorithm(UCHAR dcb_algo)
 {
 
-  MTL_OMR_SCHALG_WR(dcb_algo);
+	MTL_OMR_SCHALG_WR(dcb_algo);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
 
 /*!
@@ -1573,16 +1406,13 @@ static INT set_dcb_algorithm(UCHAR dcb_algo)
 UCHAR get_tx_queue_count(void)
 {
 	UCHAR count;
-  ULONG mac_hfr2;
+	ULONG mac_hfr2;
 
-  MAC_HFR2_RD(mac_hfr2);
-  count = GET_VALUE(mac_hfr2, MAC_HFR2_TXQCNT_LPOS, MAC_HFR2_TXQCNT_HPOS);
+	MAC_HFR2_RD(mac_hfr2);
+	count = GET_VALUE(mac_hfr2, MAC_HFR2_TXQCNT_LPOS, MAC_HFR2_TXQCNT_HPOS);
 
-  return (count + 1);
+	return count + 1;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to get Rx queue count
@@ -1595,16 +1425,13 @@ UCHAR get_tx_queue_count(void)
 UCHAR get_rx_queue_count(void)
 {
 	UCHAR count;
-  ULONG mac_hfr2;
+	ULONG mac_hfr2;
 
-  MAC_HFR2_RD(mac_hfr2);
-  count = GET_VALUE(mac_hfr2, MAC_HFR2_RXQCNT_LPOS, MAC_HFR2_RXQCNT_HPOS);
+	MAC_HFR2_RD(mac_hfr2);
+	count = GET_VALUE(mac_hfr2, MAC_HFR2_RXQCNT_LPOS, MAC_HFR2_RXQCNT_HPOS);
 
-  return (count + 1);
+	return count + 1;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to disables all Tx/Rx MMC interrupts
@@ -1616,16 +1443,13 @@ UCHAR get_rx_queue_count(void)
 static INT disable_mmc_interrupts(void)
 {
 
-  /* disable all TX interrupts */
-  MMC_INTR_MASK_TX_WR(0xffffffff);
-  /* disable all RX interrupts */
-  MMC_INTR_MASK_RX_WR(0xffffffff);
-  MMC_IPC_INTR_MASK_RX_WR(0xffffffff); /* Disable MMC Rx Interrupts for IPC */
-  return Y_SUCCESS;
+	/* disable all TX interrupts */
+	MMC_INTR_MASK_TX_WR(0xffffffff);
+	/* disable all RX interrupts */
+	MMC_INTR_MASK_RX_WR(0xffffffff);
+	MMC_IPC_INTR_MASK_RX_WR(0xffffffff);	/* Disable MMC Rx Interrupts for IPC */
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to configure MMC counters
@@ -1636,23 +1460,20 @@ static INT disable_mmc_interrupts(void)
 
 static INT config_mmc_counters(void)
 {
-  ULONG mmc_cntrl;
+	ULONG mmc_cntrl;
 
-  /* set COUNTER RESET */
-  /* set RESET ON READ */
-  /* set COUNTER PRESET */
-  /* set FULL_HALF PRESET */
-  MMC_CNTRL_RD(mmc_cntrl);
-  mmc_cntrl = mmc_cntrl & (ULONG)(0x10a);
-  mmc_cntrl = mmc_cntrl | ((0x1) << 0) | ((0x1) << 2) | ((0x1) << 4) |
-                ((0x1) << 5);
-  MMC_CNTRL_WR(mmc_cntrl);
+	/* set COUNTER RESET */
+	/* set RESET ON READ */
+	/* set COUNTER PRESET */
+	/* set FULL_HALF PRESET */
+	MMC_CNTRL_RD(mmc_cntrl);
+	mmc_cntrl = mmc_cntrl & (ULONG) (0x10a);
+	mmc_cntrl = mmc_cntrl | ((0x1) << 0) | ((0x1) << 2) | ((0x1) << 4) |
+	    ((0x1) << 5);
+	MMC_CNTRL_WR(mmc_cntrl);
 
-
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
 
 /*!
 * \brief This sequence is used to disable given DMA channel rx interrupts
@@ -1662,8 +1483,7 @@ static INT config_mmc_counters(void)
 * \retval -1 Failure
 */
 
-static INT disable_rx_interrupt(
-	UINT qinx, struct eqos_prv_data *pdata)
+static INT disable_rx_interrupt(UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
@@ -1679,11 +1499,8 @@ static INT disable_rx_interrupt(
 		DMA_IER_WR(qinx, reg);
 	}
 
-  	return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
-
 
 /*!
 * \brief This sequence is used to enable given DMA channel rx interrupts
@@ -1693,8 +1510,7 @@ static INT disable_rx_interrupt(
 * \retval -1 Failure
 */
 
-static INT enable_rx_interrupt(
-	UINT qinx, struct eqos_prv_data *pdata)
+static INT enable_rx_interrupt(UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
@@ -1709,9 +1525,8 @@ static INT enable_rx_interrupt(
 		DMA_IER_WR(qinx, reg);
 	}
 
-  	return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
 
 /*!
 * \brief This sequence is used to disable given DMA channel tx/rx interrupts
@@ -1721,8 +1536,7 @@ static INT enable_rx_interrupt(
 * \retval -1 Failure
 */
 
-static INT disable_chan_interrupts(
-	UINT qinx, struct eqos_prv_data *pdata)
+static INT disable_chan_interrupts(UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
@@ -1741,8 +1555,7 @@ static INT disable_chan_interrupts(
 * \retval -1 Failure
 */
 
-static INT enable_chan_interrupts(
-	UINT qinx, struct eqos_prv_data *pdata)
+static INT enable_chan_interrupts(UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
@@ -1762,14 +1575,14 @@ static VOID configure_mac_addr1_reg(UCHAR *mac_addr)
 {
 	MAC_MA1HR_WR(((mac_addr[5] << 8) | (mac_addr[4])));
 	MAC_MA1LR_WR(((mac_addr[3] << 24) | (mac_addr[2] << 16) |
-			(mac_addr[1] << 8) | (mac_addr[0])));
+		      (mac_addr[1] << 8) | (mac_addr[0])));
 }
 
 static VOID configure_mac_addr0_reg(UCHAR *mac_addr)
 {
 	MAC_MA0HR_WR(((mac_addr[5] << 8) | (mac_addr[4])));
 	MAC_MA0LR_WR(((mac_addr[3] << 24) | (mac_addr[2] << 16) |
-			(mac_addr[1] << 8) | (mac_addr[0])));
+		      (mac_addr[1] << 8) | (mac_addr[0])));
 }
 
 static VOID config_rx_outer_vlan_stripping(u32 cmd)
@@ -1785,7 +1598,7 @@ static VOID config_rx_inner_vlan_stripping(u32 cmd)
 static VOID config_ptpoffload_engine(UINT pto_cr, UINT mc_uc)
 {
 	MAC_PTO_CR_WR(pto_cr);
-    MAC_TCR_TSENMACADDR_WR(mc_uc);
+	MAC_TCR_TSENMACADDR_WR(mc_uc);
 }
 
 static VOID config_ptp_channel(UINT ptp_ch_id, UINT addr_index)
@@ -1813,7 +1626,8 @@ static VOID config_ptp_channel(UINT ptp_ch_id, UINT addr_index)
 	DBGPR_FILTER("<--config_ptp_channel\n");
 }
 
-static VOID configure_reg_vlan_control(struct eqos_tx_wrapper_descriptor *desc_data)
+static VOID configure_reg_vlan_control(struct eqos_tx_wrapper_descriptor
+				       *desc_data)
 {
 	USHORT vlan_id = desc_data->vlan_tag_id;
 	UINT vlan_control = desc_data->tx_vlan_tag_ctrl;
@@ -1922,7 +1736,6 @@ static INT config_rx_pbl_val(UINT qinx, UINT rx_pbl)
 	return Y_SUCCESS;
 }
 
-
 /*!
 * \return Success or Failure
 * \retval  0 Success
@@ -1936,7 +1749,6 @@ static INT config_axi_rorl_val(UINT axi_rorl)
 	return Y_SUCCESS;
 }
 
-
 /*!
 * \return Success or Failure
 * \retval  0 Success
@@ -1949,7 +1761,6 @@ static INT config_axi_worl_val(UINT axi_worl)
 
 	return Y_SUCCESS;
 }
-
 
 /*!
 * \return Success or Failure
@@ -1968,7 +1779,6 @@ static INT config_axi_pbl_val(UINT axi_pbl)
 
 	return Y_SUCCESS;
 }
-
 
 /*!
 * \return Success or Failure
@@ -2004,13 +1814,7 @@ static INT config_osf_mode(UINT qinx, UINT val)
 
 static INT config_rsf_mode(UINT qinx, UINT val)
 {
-	//if (qinx == 0) {
-		//MTL_Q0ROMR_RSF_WR(val);
-	//}
-	//else {
-		MTL_QROMR_RSF_WR(qinx, val);
-	//}
-
+	MTL_QROMR_RSF_WR(qinx, val);
 	return Y_SUCCESS;
 }
 
@@ -2215,23 +2019,23 @@ static uint get_dma_state(uint qinx, bool is_rx)
 
 	if (qinx <= 2) {
 		lpos = (is_rx ? DMA_DSR0_RPS0_LPOS : DMA_DSR0_TPS0_LPOS)
-				+ (qinx * 8);
+		    + (qinx * 8);
 		hpos = (is_rx ? DMA_DSR0_RPS0_HPOS : DMA_DSR0_TPS0_HPOS)
-				+ (qinx * 8);
+		    + (qinx * 8);
 		DMA_DSR0_RD(dma_dsr0);
 		val = GET_VALUE(dma_dsr0, lpos, hpos);
 	} else if (qinx <= 6) {
 		lpos = (is_rx ? DMA_DSR1_RPS3_LPOS : DMA_DSR1_TPS3_LPOS)
-				+ ((qinx-3) * 8);
+		    + ((qinx - 3) * 8);
 		hpos = (is_rx ? DMA_DSR1_RPS3_HPOS : DMA_DSR1_TPS3_HPOS)
-				+ ((qinx-3) * 8);
+		    + ((qinx - 3) * 8);
 		DMA_DSR1_RD(dma_dsr1);
 		val = GET_VALUE(dma_dsr1, lpos, hpos);
 	} else {
 		lpos = (is_rx ? DMA_DSR2_RPS7_LPOS : DMA_DSR2_TPS7_LPOS)
-				+ ((qinx-3) * 8);
+		    + ((qinx - 3) * 8);
 		hpos = (is_rx ? DMA_DSR2_RPS7_HPOS : DMA_DSR2_TPS7_HPOS)
-				+ ((qinx-3) * 8);
+		    + ((qinx - 3) * 8);
 		DMA_DSR2_RD(dma_dsr2);
 		val = GET_VALUE(dma_dsr2, lpos, hpos);
 	}
@@ -2252,7 +2056,7 @@ static void wait_for_dma_to_go_idle(uint qinx, bool is_rx)
 		/* wait if dma status is not suspended yet */
 		if ((is_rx &&
 		     ((val == DMA_RX_STATE_IDLE) ||
-		     (val == DMA_RX_STATE_SUSPENDED))) ||
+		      (val == DMA_RX_STATE_SUSPENDED))) ||
 		    (!is_rx && (val == DMA_TX_STATE_SUSPENDED)))
 			wait_for_idle = false;
 		else {
@@ -2262,8 +2066,7 @@ static void wait_for_dma_to_go_idle(uint qinx, bool is_rx)
 	} while (wait_for_idle && time_is_after_jiffies(timeout));
 
 	if (wait_for_idle)
-		printk(KERN_ALERT "%s%dDMA is not suspended\n",
-			is_rx ? "Rx" : "Tx", qinx);
+		pr_err("%s%dDMA is not suspended\n", is_rx ? "Rx" : "Tx", qinx);
 }
 
 /*!
@@ -2284,7 +2087,6 @@ static INT stop_dma_rx(UINT qinx)
 	return Y_SUCCESS;
 }
 
-
 /*!
 * \param[in] qinx
 * \return Success or Failure
@@ -2295,9 +2097,9 @@ static INT stop_dma_rx(UINT qinx)
 static INT start_dma_rx(UINT qinx)
 {
 
-  DMA_RCR_ST_WR(qinx, 0x1);
+	DMA_RCR_ST_WR(qinx, 0x1);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
 
 /*!
@@ -2309,8 +2111,7 @@ static INT start_dma_rx(UINT qinx)
 
 static INT stop_dma_tx(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_tx_wrapper_descriptor *ptxdwr =
-		GET_TX_WRAPPER_DESC(qinx);
+	struct eqos_tx_wrapper_descriptor *ptxdwr = GET_TX_WRAPPER_DESC(qinx);
 
 	int start_idx = ptxdwr->dirty_tx;
 	int end_idx = ptxdwr->cur_tx;
@@ -2357,7 +2158,7 @@ static INT stop_dma_tx(struct eqos_prv_data *pdata, UINT qinx)
 		TX_NORMAL_DESC_TDES3_OWN_WR(ptxd->tdes3, 0);
 		idx = INCR_TX_LOCAL_INDEX(idx, 1);
 	}
-done:
+ done:
 
 	/* wait for dma to get idle or suspended */
 	wait_for_dma_to_go_idle(qinx, false);
@@ -2378,9 +2179,9 @@ done:
 static INT start_dma_tx(UINT qinx)
 {
 
-  DMA_TCR_ST_WR(qinx, 0x1);
+	DMA_TCR_ST_WR(qinx, 0x1);
 
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
 
 /*!
@@ -2433,7 +2234,6 @@ static INT start_mac_tx_rx(void)
 	return Y_SUCCESS;
 }
 
-
 /*!
 * \brief This sequence is used to enable DMA interrupts
 * \return Success or Failure
@@ -2441,8 +2241,7 @@ static INT start_mac_tx_rx(void)
 * \retval -1 Failure
 */
 
-static INT enable_dma_interrupts(UINT qinx,
-			struct eqos_prv_data *pdata)
+static INT enable_dma_interrupts(UINT qinx, struct eqos_prv_data *pdata)
 {
 	UINT tmp;
 	ULONG dma_sr;
@@ -2460,15 +2259,15 @@ static INT enable_dma_interrupts(UINT qinx,
 	/* FBE - Fatal Bus Error Enable */
 	DMA_IER_RD(qinx, dma_ier);
 	dma_ier = dma_ier & (ULONG) (0x2e00);
-#ifdef EQOS_VER_4_0    
+#ifdef EQOS_VER_4_0
 	dma_ier = dma_ier |
 	    ((0x1) << 6) | ((0x1) << 7) | ((0x1) << 15) |
 	    ((0x1) << 16) | ((0x1) << 12);
 #else
 	dma_ier = dma_ier |
-	    ((0x1) << 6) | ((0x1) << 7) |  ((0x1) << 14) |
+	    ((0x1) << 6) | ((0x1) << 7) | ((0x1) << 14) |
 	    ((0x1) << 15) | ((0x1) << 12);
-#endif 
+#endif
 
 #ifdef EQOS_TXPOLLING_MODE_ENABLE
 	/* Disable TIE and TBUE */
@@ -2492,7 +2291,6 @@ static INT enable_dma_interrupts(UINT qinx,
 		dma_ier &= ~((0x1) << 0) | ((0x1) << 2);
 		dma_ier &= ~((0x1) << 6) | ((0x1) << 7);
 	}
-
 #endif
 	if (pdata->dt_cfg.chan_mode[qinx] == CHAN_MODE_POLLING) {
 		dma_ier &= ~((0x1) << 0) | ((0x1) << 2);
@@ -2518,8 +2316,9 @@ static INT set_tx_clk_speed(struct eqos_prv_data *pdata, INT speed)
 		struct platform_device *pdev = pdata->pdev;
 		int ret;
 		ret = clk_set_rate(pdata->tx_clk,
-			(speed == SPEED_10) ? 2500 * 1000 :
-			(speed == SPEED_100) ? 25000 * 1000 : 125000 * 1000);
+				   (speed == SPEED_10) ? 2500 * 1000 :
+				   (speed ==
+				    SPEED_100) ? 25000 * 1000 : 125000 * 1000);
 		if (ret) {
 			dev_err(&pdev->dev, "failed to set tx_clk to %sMHz\n",
 				(speed == SPEED_10) ? "2.5" :
@@ -2708,7 +2507,8 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data)
 			mdelay(1);
 		}
 		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		if (GET_VALUE
+		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
@@ -2741,7 +2541,8 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data)
 			mdelay(1);
 		}
 		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		if (GET_VALUE
+		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
@@ -2778,7 +2579,8 @@ static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
 			mdelay(1);
 		}
 		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		if (GET_VALUE
+		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
@@ -2809,7 +2611,8 @@ static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
 			mdelay(1);
 		}
 		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
+		if (GET_VALUE
+		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
 			break;
 		}
 	}
@@ -2961,7 +2764,6 @@ static INT enable_rx_csum(void)
 	return Y_SUCCESS;
 }
 
-
 /*!
 * \brief This sequence is used to reinitialize the TX descriptor fields,
 * so that device can reuse the descriptors
@@ -2971,11 +2773,9 @@ static INT enable_rx_csum(void)
 * \retval -1 Failure
 */
 
-static INT tx_descriptor_reset(UINT idx, struct eqos_prv_data *pdata,
-				UINT qinx)
+static INT tx_descriptor_reset(UINT idx, struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct s_tx_normal_desc *tx_normal_desc =
-		GET_TX_DESC_PTR(qinx, idx);
+	struct s_tx_normal_desc *tx_normal_desc = GET_TX_DESC_PTR(qinx, idx);
 
 	DBGPR("-->tx_descriptor_reset\n");
 
@@ -3002,8 +2802,7 @@ static INT tx_descriptor_reset(UINT idx, struct eqos_prv_data *pdata,
 
 static void rx_descriptor_reset(UINT idx,
 				struct eqos_prv_data *pdata,
-				unsigned int inte,
-				UINT qinx)
+				unsigned int inte, UINT qinx)
 {
 	struct eqos_rx_buffer *buffer = GET_RX_BUF_PTR(qinx, idx);
 	struct s_rx_normal_desc *rx_normal_desc = GET_RX_DESC_PTR(qinx, idx);
@@ -3020,13 +2819,13 @@ static void rx_descriptor_reset(UINT idx,
 		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
 		/* set control bits - OWN, INTE, BUF1V and BUF2V */
 		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
-					   (0x83000000 | inte));
+					(0x83000000 | inte));
 	} else {
 		/* set buffer 2 address pointer to zero */
 		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
 		/* set control bits - OWN, INTE and BUF1V */
 		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
-					   (0x81000000 | inte));
+					(0x81000000 | inte));
 	}
 
 	DBGPR("<--rx_descriptor_reset\n");
@@ -3056,9 +2855,11 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	for (i = 0; i < RX_DESC_CNT; i++) {
 		memset(rx_normal_desc, 0, sizeof(struct s_rx_normal_desc));
 		/* update buffer 1 address pointer */
-		RX_NORMAL_DESC_RDES0_WR(rx_normal_desc->rdes0, (L32(buffer->dma)));
+		RX_NORMAL_DESC_RDES0_WR(rx_normal_desc->rdes0,
+					(L32(buffer->dma)));
 		/* set to zero  */
-		RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1, (H32(buffer->dma)));
+		RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1,
+					(H32(buffer->dma)));
 
 		/* set buffer 2 address pointer to zero */
 		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
@@ -3072,17 +2873,16 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 			if ((i % rx_desc_data->rx_coal_frames) != 0) {
 				UINT rdes3 = 0;
 				RX_NORMAL_DESC_RDES3_RD(rx_normal_desc->rdes3,
-					rdes3);
+							rdes3);
 				/* reset INTE */
 				RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
-						(rdes3 & ~(1 << 30)));
+							(rdes3 & ~(1 << 30)));
 				buffer->inte = 0;
 			}
 		}
 
 		INCR_RX_DESC_INDEX(rx_desc_data->cur_rx, 1);
-		rx_normal_desc =
-			GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
+		rx_normal_desc = GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
 		buffer = GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
 	}
 	/* update the total no of Rx descriptors count */
@@ -3101,13 +2901,12 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 * \param[in] pdata
 */
 
-static void tx_descriptor_init(struct eqos_prv_data *pdata,
-				UINT qinx)
+static void tx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 {
 	struct eqos_tx_wrapper_descriptor *tx_desc_data =
-		GET_TX_WRAPPER_DESC(qinx);
+	    GET_TX_WRAPPER_DESC(qinx);
 	struct s_tx_normal_desc *tx_normal_desc =
-		GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+	    GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
 	INT i;
 	INT start_index = tx_desc_data->cur_tx;
 
@@ -3136,7 +2935,6 @@ static void tx_descriptor_init(struct eqos_prv_data *pdata,
 	DBGPR("<--tx_descriptor_init\n");
 }
 
-
 /*!
 * \brief This sequence is used to prepare tx descriptor for
 * packet transmission and issue the poll demand command to TxDMA
@@ -3144,8 +2942,7 @@ static void tx_descriptor_init(struct eqos_prv_data *pdata,
 * \param[in] pdata
 */
 
-static void pre_transmit(struct eqos_prv_data *pdata,
-				UINT qinx)
+static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 {
 	struct eqos_tx_wrapper_descriptor *tx_desc_data =
 	    GET_TX_WRAPPER_DESC(qinx);
@@ -3174,13 +2971,13 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	DBGPR("-->pre_transmit: qinx = %u\n", qinx);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD(
-		tx_pkt_features->pkt_attributes, varvlan_pkt);
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD(tx_pkt_features->
+						   pkt_attributes, varvlan_pkt);
 	if (varvlan_pkt == 0x1) {
 		/* put vlan tag in contex descriptor and set other control
 		 * bits accordingly */
 		TX_PKT_FEATURES_VLAN_TAG_VT_RD(tx_pkt_features->vlan_tag,
-						   varvt);
+					       varvt);
 		TX_CONTEXT_DESC_TDES3_VT_WR(TX_CONTEXT_DESC->tdes3, varvt);
 		TX_CONTEXT_DESC_TDES3_VLTV_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->tdes3, 0x1);
@@ -3189,16 +2986,17 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 		original_start_index = tx_desc_data->cur_tx;
 		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
 		start_index = tx_desc_data->cur_tx;
-		tx_normal_desc =
-			GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+		tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
 		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
-#endif	/* EQOS_ENABLE_VLAN_TAG */
+#endif				/* EQOS_ENABLE_VLAN_TAG */
 
 	/* prepare CONTEXT descriptor for TSO */
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(
-		tx_pkt_features->pkt_attributes, vartso_enable);
-	if (vartso_enable && (tx_pkt_features->mss != tx_desc_data->default_mss)) {
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(tx_pkt_features->
+						     pkt_attributes,
+						     vartso_enable);
+	if (vartso_enable
+	    && (tx_pkt_features->mss != tx_desc_data->default_mss)) {
 		/* get MSS and update */
 		TX_PKT_FEATURES_MSS_MSS_RD(tx_pkt_features->mss, varmss);
 		TX_CONTEXT_DESC_TDES2_MSS_WR(TX_CONTEXT_DESC->tdes2, varmss);
@@ -3221,19 +3019,24 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	}
 
 	/* update the first buffer pointer and length */
-	TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, (buffer->dma)&0xFFFFFFFF);
-	TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
+	TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0,
+				(buffer->dma) & 0xFFFFFFFF);
+	TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1,
+				(((buffer->
+				   dma) & 0xFFFFFFFF00000000) >> 32) &
+				0xFFFFFFFF);
 	TX_NORMAL_DESC_TDES2_HL_B1L_WR(tx_normal_desc->tdes2, buffer->len);
 
 	if (vartso_enable) {
 		/* update TCP payload length (only for the descriptor with FD set) */
-		TX_PKT_FEATURES_PAY_LEN_RD(tx_pkt_features->pay_len, varpay_len);
+		TX_PKT_FEATURES_PAY_LEN_RD(tx_pkt_features->pay_len,
+					   varpay_len);
 		/* tdes3[17:0] will be TCP payload length */
 		tx_normal_desc->tdes3 |= varpay_len;
 	} else {
 		/* update total length of packet */
 		GET_TX_TOT_LEN(GET_TX_BUF_PTR(qinx, 0), tx_desc_data->cur_tx,
-				GET_CURRENT_XFER_DESC_CNT(qinx), total_len);
+			       GET_CURRENT_XFER_DESC_CNT(qinx), total_len);
 		TX_NORMAL_DESC_TDES3_FL_WR(tx_normal_desc->tdes3, total_len);
 	}
 
@@ -3241,12 +3044,12 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	/* Insert a VLAN tag with a tag value programmed in MAC Reg 24 or
 	 * CONTEXT descriptor
 	 * */
-	if (tx_desc_data->vlan_tag_present && Y_FALSE == tx_desc_data->tx_vlan_tag_via_reg) {
+	if (tx_desc_data->vlan_tag_present
+	    && Y_FALSE == tx_desc_data->tx_vlan_tag_via_reg) {
 		TX_NORMAL_DESC_TDES2_VTIR_WR(tx_normal_desc->tdes2,
-						 tx_desc_data->tx_vlan_tag_ctrl);
+					     tx_desc_data->tx_vlan_tag_ctrl);
 	}
-#endif	/* EQOS_ENABLE_VLAN_TAG */
-
+#endif				/* EQOS_ENABLE_VLAN_TAG */
 
 	/* Mark it as First Descriptor */
 	TX_NORMAL_DESC_TDES3_FD_WR(tx_normal_desc->tdes3, 0x1);
@@ -3256,27 +3059,32 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 	/* Mark it as NORMAL descriptor */
 	TX_NORMAL_DESC_TDES3_CTXT_WR(tx_normal_desc->tdes3, 0);
 	/* Enable HW CSUM */
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_ENABLE_RD(tx_pkt_features->pkt_attributes,
-		varcsum_enable);
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_ENABLE_RD(tx_pkt_features->
+						      pkt_attributes,
+						      varcsum_enable);
 	if (varcsum_enable == 0x1) {
 		TX_NORMAL_DESC_TDES3_CIC_WR(tx_normal_desc->tdes3, 0x3);
 	}
 	/* configure SA Insertion Control */
 	TX_NORMAL_DESC_TDES3_SAIC_WR(tx_normal_desc->tdes3,
-					 pdata->tx_sa_ctrl_via_desc);
+				     pdata->tx_sa_ctrl_via_desc);
 	if (vartso_enable) {
 		/* set TSE bit */
 		TX_NORMAL_DESC_TDES3_TSE_WR(tx_normal_desc->tdes3, 0x1);
 
 		/* update tcp data offset or tcp hdr len */
-		TX_PKT_FEATURES_TCP_HDR_LEN_RD(tx_pkt_features->tcp_hdr_len, vartcp_hdr_len);
+		TX_PKT_FEATURES_TCP_HDR_LEN_RD(tx_pkt_features->tcp_hdr_len,
+					       vartcp_hdr_len);
 		/* convert to bit value */
-		vartcp_hdr_len = vartcp_hdr_len/4;
-		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(tx_normal_desc->tdes3, vartcp_hdr_len);
+		vartcp_hdr_len = vartcp_hdr_len / 4;
+		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(tx_normal_desc->tdes3,
+							  vartcp_hdr_len);
 	}
 
 	/* enable timestamping */
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_PTP_ENABLE_RD(tx_pkt_features->pkt_attributes, varptp_enable);
+	TX_PKT_FEATURES_PKT_ATTRIBUTES_PTP_ENABLE_RD(tx_pkt_features->
+						     pkt_attributes,
+						     varptp_enable);
 	if (varptp_enable) {
 		TX_NORMAL_DESC_TDES2_TTSE_WR(tx_normal_desc->tdes2, 0x1);
 	}
@@ -3287,9 +3095,14 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 
 	for (i = 1; i < GET_CURRENT_XFER_DESC_CNT(qinx); i++) {
 		/* update the first buffer pointer and length */
-		TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, (buffer->dma)&0xFFFFFFFF);
-		TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, (((buffer->dma)&0xFFFFFFFF00000000)>>32)&0xFFFFFFFF);
-		TX_NORMAL_DESC_TDES2_HL_B1L_WR(tx_normal_desc->tdes2, buffer->len);
+		TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0,
+					(buffer->dma) & 0xFFFFFFFF);
+		TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1,
+					(((buffer->
+					   dma) & 0xFFFFFFFF00000000) >> 32) &
+					0xFFFFFFFF);
+		TX_NORMAL_DESC_TDES2_HL_B1L_WR(tx_normal_desc->tdes2,
+					       buffer->len);
 
 		/* set own bit */
 		TX_NORMAL_DESC_TDES3_OWN_WR(tx_normal_desc->tdes3, 0x1);
@@ -3301,14 +3114,13 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
 	}
 	/* Mark it as LAST descriptor */
-	last_index =
-		GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 0);
+	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 0);
 	tx_normal_desc = GET_TX_DESC_PTR(qinx, last_index);
 	TX_NORMAL_DESC_TDES3_LD_WR(tx_normal_desc->tdes3, 0x1);
 
 	/* set Interrupt on Completion for last descriptor */
 	if ((qinx == pdata->ptp_cfg.ptp_dma_ch_id) ||
-		!(tx_desc_data->tx_pkt_queued % (TX_DESC_CNT >> 3)))
+	    !(tx_desc_data->tx_pkt_queued % (TX_DESC_CNT >> 3)))
 		TX_NORMAL_DESC_TDES2_IC_WR(tx_normal_desc->tdes2, 0x1);
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
@@ -3317,21 +3129,20 @@ static void pre_transmit(struct eqos_prv_data *pdata,
 
 #ifdef EQOS_ENABLE_TX_DESC_DUMP
 	dump_tx_desc(pdata, original_start_index, (tx_desc_data->cur_tx - 1),
-			1, qinx);
+		     1, qinx);
 #endif
 
 	/* issue a poll command to Tx DMA by writing address
 	 * of next immediate free descriptor */
 	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 1);
-	DMA_TDTP_TPDR_WR(qinx,
-			GET_TX_DESC_DMA_ADDR(qinx, last_index));
+	DMA_TDTP_TPDR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, last_index));
 
 	if (pdata->eee_enabled) {
 		/* restart EEE timer */
 		mod_timer(&pdata->eee_ctrl_timer,
-			EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
+			  EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
 	}
-  
+
 	DBGPR("<--pre_transmit\n");
 }
 
@@ -3378,55 +3189,70 @@ static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 		RX_NORMAL_DESC_RDES3_LD_RD(rx_normal_desc->rdes3, ld);
 		if ((es == 0) && (ld == 1)) {
 			/* get the packet length */
-			RX_NORMAL_DESC_RDES3_FL_RD(rx_normal_desc->rdes3, buffer->len);
-			RX_NORMAL_DESC_RDES3_RS1V_RD(rx_normal_desc->rdes3, rs1v);
+			RX_NORMAL_DESC_RDES3_FL_RD(rx_normal_desc->rdes3,
+						   buffer->len);
+			RX_NORMAL_DESC_RDES3_RS1V_RD(rx_normal_desc->rdes3,
+						     rs1v);
 			if (rs1v == 0x1) {
 				/* check whether device has done csum correctly or not */
-				RX_NORMAL_DESC_RDES1_IPPE_RD(rx_normal_desc->rdes1, ippe);
-				RX_NORMAL_DESC_RDES1_IPCB_RD(rx_normal_desc->rdes1, ipcb);
-				RX_NORMAL_DESC_RDES1_IPHE_RD(rx_normal_desc->rdes1, iphe);
+				RX_NORMAL_DESC_RDES1_IPPE_RD(rx_normal_desc->
+							     rdes1, ippe);
+				RX_NORMAL_DESC_RDES1_IPCB_RD(rx_normal_desc->
+							     rdes1, ipcb);
+				RX_NORMAL_DESC_RDES1_IPHE_RD(rx_normal_desc->
+							     rdes1, iphe);
 				if ((ippe == 0) && (ipcb == 0) && (iphe == 0)) {
 					/* IPC Checksum done */
-					RX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_DONE_WR(
-						rx_pkt_features->pkt_attributes, 0x1);
+					RX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_DONE_WR
+					    (rx_pkt_features->pkt_attributes,
+					     0x1);
 				}
 			}
 #ifdef EQOS_ENABLE_VLAN_TAG
 			RX_NORMAL_DESC_RDES3_RS0V_RD(rx_normal_desc->rdes3,
-							 rs0v);
+						     rs0v);
 			if (rs0v == 0x1) {
 				/*  device received frame with VLAN Tag or double VLAN Tag ? */
-				RX_NORMAL_DESC_RDES3_LT_RD(rx_normal_desc->rdes3, lt);
+				RX_NORMAL_DESC_RDES3_LT_RD(rx_normal_desc->
+							   rdes3, lt);
 				if ((lt == 0x4) || (lt == 0x5)) {
-					RX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR(
-						rx_pkt_features->pkt_attributes, 0x1);
+					RX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
+					    (rx_pkt_features->pkt_attributes,
+					     0x1);
 					/* get the VLAN Tag */
-					RX_NORMAL_DESC_RDES0_RD(rx_normal_desc->rdes0, rdes0);
-					RX_PKT_FEATURES_VLAN_TAG_VT_WR(rx_pkt_features->vlan_tag,
-						(rdes0 & 0xffff));
+					RX_NORMAL_DESC_RDES0_RD(rx_normal_desc->
+								rdes0, rdes0);
+					RX_PKT_FEATURES_VLAN_TAG_VT_WR
+					    (rx_pkt_features->vlan_tag,
+					     (rdes0 & 0xffff));
 				}
 			}
 #endif
 		} else {
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, rx_normal_desc, rx_desc_data->cur_rx);
+			dump_rx_desc(qinx, rx_normal_desc,
+				     rx_desc_data->cur_rx);
 #endif
 			/* not a good packet, hence check for appropriate errors. */
 			RX_NORMAL_DESC_RDES3_OE_RD(rx_normal_desc->rdes3, oe);
 			if (oe == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR(rx_error_counters->rx_errors, 1);
+				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR
+				    (rx_error_counters->rx_errors, 1);
 			}
 			RX_NORMAL_DESC_RDES3_CE_RD(rx_normal_desc->rdes3, ce);
 			if (ce == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_CRC_ERROR_WR(rx_error_counters->rx_errors, 1);
+				RX_ERROR_COUNTERS_RX_ERRORS_CRC_ERROR_WR
+				    (rx_error_counters->rx_errors, 1);
 			}
 			RX_NORMAL_DESC_RDES3_RE_RD(rx_normal_desc->rdes3, re);
 			if (re == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_FRAME_ERROR_WR(rx_error_counters->rx_errors, 1);
+				RX_ERROR_COUNTERS_RX_ERRORS_FRAME_ERROR_WR
+				    (rx_error_counters->rx_errors, 1);
 			}
 			RX_NORMAL_DESC_RDES3_LD_RD(rx_normal_desc->rdes3, ld);
 			if (re == 0) {
-				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR(rx_error_counters->rx_errors, 1);
+				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR
+				    (rx_error_counters->rx_errors, 1);
 			}
 		}
 	}
@@ -3508,8 +3334,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 	 */
 	PAD_AUTO_CAL_CFG_RD(hwreg);
 	hwreg |=
-		((PAD_AUTO_CAL_CFG_START_MASK) |
-			(PAD_AUTO_CAL_CFG_ENABLE_MASK));
+	    ((PAD_AUTO_CAL_CFG_START_MASK) | (PAD_AUTO_CAL_CFG_ENABLE_MASK));
 
 	PAD_AUTO_CAL_CFG_WR(hwreg);
 
@@ -3548,7 +3373,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 	}
 	ret = 0;
 
-calibration_failed:
+ calibration_failed:
 	/* 6. Disable field PAD_E_INPUT_OR_E_PWRD in
 	 * reg ETHER_QOS_SDMEMCOMPPADCTRL_0 to save power.
 	 */
@@ -3625,9 +3450,8 @@ static INT eqos_yexit(void)
 	vy_count = 0;
 	while (1) {
 		if (vy_count > retry_cnt) {
-			printk(
-				"%s():%d: Timed out polling on DMA_BMR_SWR\n",
-				__func__, __LINE__);
+			printk("%s():%d: Timed out polling on DMA_BMR_SWR\n",
+			       __func__, __LINE__);
 			return -Y_FAILURE;
 		} else {
 			vy_count++;
@@ -3651,7 +3475,6 @@ static INT eqos_yexit(void)
 	return Y_SUCCESS;
 }
 
-
 /*!
 * \details This API will calculate burst size given
 *           queue FIFO size.
@@ -3663,7 +3486,7 @@ static INT eqos_yexit(void)
 */
 static UINT calculate_dma_pbl(ULONG p_fifo)
 {
-	UINT pbl=0;
+	UINT pbl = 0;
 
 	/* given fifo size, need to ensure burst is never larger than half
 	 * fifo size.
@@ -3693,7 +3516,8 @@ static UINT calculate_dma_pbl(ULONG p_fifo)
 		pbl = 1;
 		break;
 	default:
-		printk(KERN_ALERT "%s(): Invalid Fifo Size specified (0x%.8x)\n", __func__, (UINT)p_fifo);
+		pr_err("%s(): Invalid Fifo Size specified (0x%.8x)\n", __func__,
+		       (UINT) p_fifo);
 		break;
 	}
 
@@ -3712,7 +3536,7 @@ static UINT calculate_dma_pbl(ULONG p_fifo)
 static UINT calculate_per_queue_fifo(ULONG fifo_size, UCHAR queue_count)
 {
 	ULONG q_fifo_size = 0;	/* calculated fifo size per queue */
-	ULONG p_fifo = EQOS_256; /* per queue fifo size programmable value */
+	ULONG p_fifo = EQOS_256;	/* per queue fifo size programmable value */
 
 	/* calculate Tx/Rx fifo share per queue */
 	switch (fifo_size) {
@@ -3754,7 +3578,7 @@ static UINT calculate_per_queue_fifo(ULONG fifo_size, UCHAR queue_count)
 		break;
 	}
 
-	q_fifo_size = q_fifo_size/queue_count;
+	q_fifo_size = q_fifo_size / queue_count;
 
 	if (q_fifo_size >= FIFO_SIZE_KB(32)) {
 		p_fifo = EQOS_32K;
@@ -3802,11 +3626,10 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 		}
 		MTL_QTOMR_RD(qinx, mtl_qtomr);
 		if (GET_VALUE(mtl_qtomr, MTL_QTOMR_FTQ_LPOS, MTL_QTOMR_FTQ_HPOS)
-				== 0) {
+		    == 0) {
 			break;
 		}
 	}
-
 
 	/*Enable Store and Forward mode for TX */
 	MTL_QTOMR_TSF_WR(qinx, 0x1);
@@ -3825,8 +3648,12 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	}
 	MTL_QROMR_RSF_WR(qinx, i);
 
-	p_rx_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, EQOS_RX_QUEUE_CNT);
-	p_tx_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, EQOS_TX_QUEUE_CNT);
+	p_rx_fifo =
+	    calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size,
+				     EQOS_RX_QUEUE_CNT);
+	p_tx_fifo =
+	    calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size,
+				     EQOS_TX_QUEUE_CNT);
 
 	/* Transmit/Receive queue fifo size programmed */
 	MTL_QROMR_RQS_WR(qinx, p_rx_fifo);
@@ -3836,10 +3663,9 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	 * each channel gets 8KB or more fifo */
 	if (p_rx_fifo >= EQOS_4K) {
 		/* Enable Rx FLOW CTRL in MTL and MAC
-			 Programming is valid only if Rx fifo size is greater than
-			 or equal to 8k */
-		if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) ==
-			EQOS_FLOW_CTRL_TX) {
+		   Programming is valid only if Rx fifo size is greater than
+		   or equal to 8k */
+		if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) == EQOS_FLOW_CTRL_TX) {
 
 			MTL_QROMR_EHFC_WR(qinx, 0x1);
 
@@ -3850,16 +3676,13 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 				 * */
 				MTL_QROMR_RFD_WR(qinx, 0x2);
 				MTL_QROMR_RFA_WR(qinx, 0x1);
-			}
-			else if (p_rx_fifo == EQOS_8K) {
+			} else if (p_rx_fifo == EQOS_8K) {
 				MTL_QROMR_RFD_WR(qinx, 0x4);
 				MTL_QROMR_RFA_WR(qinx, 0x2);
-			}
-			else if (p_rx_fifo == EQOS_16K) {
+			} else if (p_rx_fifo == EQOS_16K) {
 				MTL_QROMR_RFD_WR(qinx, 0x5);
 				MTL_QROMR_RFA_WR(qinx, 0x2);
-			}
-			else if (p_rx_fifo == EQOS_32K) {
+			} else if (p_rx_fifo == EQOS_32K) {
 				MTL_QROMR_RFD_WR(qinx, 0x7);
 				MTL_QROMR_RFA_WR(qinx, 0x2);
 			}
@@ -3873,22 +3696,18 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 				/* This violates the above formula because of FIFO size limit
 				 * therefore overflow may occur inspite of this
 				 * */
-				MTL_QROMR_RFD_WR(qinx, 0x3); //Full - 3K
-				MTL_QROMR_RFA_WR(qinx, 0x1); //Full - 1.5K
+				MTL_QROMR_RFD_WR(qinx, 0x3);	/* Full-3K */
+				MTL_QROMR_RFA_WR(qinx, 0x1);	/* Full-1.5K */
+			} else if (p_rx_fifo == EQOS_8K) {
+				MTL_QROMR_RFD_WR(qinx, 0x6);	/* Full-4K */
+				MTL_QROMR_RFA_WR(qinx, 0xA);	/* Full-6K */
+			} else if (p_rx_fifo == EQOS_16K) {
+				MTL_QROMR_RFD_WR(qinx, 0x6);	/* Full-4K */
+				MTL_QROMR_RFA_WR(qinx, 0x12);	/* Full-10K */
+			} else if (p_rx_fifo == EQOS_32K) {
+				MTL_QROMR_RFD_WR(qinx, 0x6);	/* Full-4K */
+				MTL_QROMR_RFA_WR(qinx, 0x1E);	/* Full-16K */
 			}
-			else if (p_rx_fifo == EQOS_8K) {
-				MTL_QROMR_RFD_WR(qinx, 0x6); //Full - 4K
-				MTL_QROMR_RFA_WR(qinx, 0xA); //Full - 6K
-			}
-			else if (p_rx_fifo == EQOS_16K) {
-				MTL_QROMR_RFD_WR(qinx, 0x6); //Full - 4K
-				MTL_QROMR_RFA_WR(qinx, 0x12); //Full - 10K
-			}
-			else if (p_rx_fifo == EQOS_32K) {
-				MTL_QROMR_RFD_WR(qinx, 0x6); //Full - 4K
-				MTL_QROMR_RFA_WR(qinx, 0x1E); //Full - 16K
-			}
-
 #endif
 		}
 	}
@@ -3898,12 +3717,10 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	return Y_SUCCESS;
 }
 
-
-static INT configure_dma_channel(UINT qinx,
-			struct eqos_prv_data *pdata)
+static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 {
 	struct eqos_rx_wrapper_descriptor *rx_desc_data =
-		GET_RX_WRAPPER_DESC(qinx);
+	    GET_RX_WRAPPER_DESC(qinx);
 	ULONG p_fifo, pbl;
 
 	DBGPR("-->configure_dma_channel\n");
@@ -3929,8 +3746,7 @@ static INT configure_dma_channel(UINT qinx,
 	/* program RX watchdog timer */
 	if (rx_desc_data->use_riwt) {
 		DMA_RIWTR_RWT_WR(qinx, rx_desc_data->rx_riwt);
-	}
-	else {
+	} else {
 		DMA_RIWTR_RWT_WR(qinx, 0);
 	}
 
@@ -3938,11 +3754,15 @@ static INT configure_dma_channel(UINT qinx,
 	/* set PBLX8 */
 	DMA_CR_PBLX8_WR(qinx, 0x1);
 
-	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size, EQOS_TX_QUEUE_CNT);
+	p_fifo =
+	    calculate_per_queue_fifo(pdata->hw_feat.tx_fifo_size,
+				     EQOS_TX_QUEUE_CNT);
 	pbl = calculate_dma_pbl(p_fifo);
 	DMA_TCR_PBL_WR(qinx, pbl);
 
-	p_fifo = calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size, EQOS_RX_QUEUE_CNT);
+	p_fifo =
+	    calculate_per_queue_fifo(pdata->hw_feat.rx_fifo_size,
+				     EQOS_RX_QUEUE_CNT);
 	DMA_RCR_PBL_WR(qinx, min(RXPBL, MAX_RXPBL));
 
 	/* To get Best Performance */
@@ -3969,9 +3789,6 @@ static INT configure_dma_channel(UINT qinx,
 	return Y_SUCCESS;
 }
 
-
-
-
 /*!
 * \brief This sequence is used to enable MAC interrupts
 * \return Success or Failure
@@ -3981,25 +3798,22 @@ static INT configure_dma_channel(UINT qinx,
 
 static int enable_mac_interrupts(void)
 {
-  unsigned long varmac_imr;
+	unsigned long varmac_imr;
 
-  /* Enable following interrupts */
-  /* RGSMIIIM - RGMII/SMII interrupt Enable */
-  /* PCSLCHGIM -  PCS Link Status Interrupt Enable */
-  /* PCSANCIM - PCS AN Completion Interrupt Enable */
-  /* PMTIM - PMT Interrupt Enable */
-  /* LPIIM - LPI Interrupt Enable */
-  MAC_IMR_RD(varmac_imr);
-  varmac_imr = varmac_imr & (unsigned long)(0x1008);
-  varmac_imr = varmac_imr | ((0x1) << 0) | ((0x1) << 1) | ((0x1) << 2) |
-                ((0x1) << 4) | ((0x1) << 5);
-  MAC_IMR_WR(varmac_imr);
+	/* Enable following interrupts */
+	/* RGSMIIIM - RGMII/SMII interrupt Enable */
+	/* PCSLCHGIM -  PCS Link Status Interrupt Enable */
+	/* PCSANCIM - PCS AN Completion Interrupt Enable */
+	/* PMTIM - PMT Interrupt Enable */
+	/* LPIIM - LPI Interrupt Enable */
+	MAC_IMR_RD(varmac_imr);
+	varmac_imr = varmac_imr & (unsigned long)(0x1008);
+	varmac_imr = varmac_imr | ((0x1) << 0) | ((0x1) << 1) | ((0x1) << 2) |
+	    ((0x1) << 4) | ((0x1) << 5);
+	MAC_IMR_WR(varmac_imr);
 
-
-  return Y_SUCCESS;
+	return Y_SUCCESS;
 }
-
-
 
 static INT configure_mac(struct eqos_prv_data *pdata)
 {
@@ -4019,7 +3833,7 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 		MAC_QTFCR_PT_WR(qinx, 0xffff);
 		/* Assign priority for RX flow control */
 		/* Assign priority for TX flow control */
-		switch(qinx) {
+		switch (qinx) {
 		case 0:
 			MAC_TQPM0R_PSTQ0_WR(0);
 			MAC_RQC2R_PSRQ0_WR(0x1 << pdt_cfg->q_prio[qinx]);
@@ -4039,8 +3853,8 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 		}
 
 		if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_ENABLED) {
-			if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) 
-				== EQOS_FLOW_CTRL_TX)
+			if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX)
+			    == EQOS_FLOW_CTRL_TX)
 				enable_tx_flow_ctrl(qinx);
 			else
 				disable_tx_flow_ctrl(qinx);
@@ -4078,11 +3892,11 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 
 	/* update the MAC address */
 	MAC_MA0HR_WR(((pdata->dev->dev_addr[5] << 8) |
-			(pdata->dev->dev_addr[4])));
+		      (pdata->dev->dev_addr[4])));
 	MAC_MA0LR_WR(((pdata->dev->dev_addr[3] << 24) |
-			(pdata->dev->dev_addr[2] << 16) |
-			(pdata->dev->dev_addr[1] << 8) |
-			(pdata->dev->dev_addr[0])));
+		      (pdata->dev->dev_addr[2] << 16) |
+		      (pdata->dev->dev_addr[1] << 8) |
+		      (pdata->dev->dev_addr[0])));
 
 	/*Enable MAC Transmit process */
 	/*Enable MAC Receive process */
@@ -4095,13 +3909,13 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 	MAC_MCR_WR(mac_mcr);
 
 	if (pdata->hw_feat.rx_coe_sel &&
-	     ((pdata->dev_state & NETIF_F_RXCSUM) == NETIF_F_RXCSUM))
+	    ((pdata->dev_state & NETIF_F_RXCSUM) == NETIF_F_RXCSUM))
 		MAC_MCR_IPC_WR(0x1);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	configure_mac_for_vlan_pkt();
 	if (pdata->hw_feat.vlan_hash_en)
-			config_vlan_filtering(1, 1, 0);
+		config_vlan_filtering(1, 1, 0);
 #endif
 
 	if (pdata->hw_feat.mmc_sel) {
@@ -4139,7 +3953,7 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		configure_mtl_queue(qinx, pdata);
 	}
-	//Mapping MTL Rx queue and DMA Rx channel.
+	/* Mapping MTL Rx queue and DMA Rx channel */
 	MTL_RQDCM0R_WR(0x3020100);
 	MTL_RQDCM1R_WR(0x7060504);
 
@@ -4147,13 +3961,13 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	for (j = 0; j < MAX_CHANS; j++) {
 
 		if ((pdata->dt_cfg.chan_mode[j] == CHAN_MODE_NAPI) ||
-			(pdata->dt_cfg.chan_mode[j] == CHAN_MODE_INTR)) {
+		    (pdata->dt_cfg.chan_mode[j] == CHAN_MODE_INTR)) {
 			VIRT_INTR_CH_STAT_WR(j, i);
 			VIRT_INTR_CH_CRTL_WR(j, VIRT_INTR_CH_CRTL_RX_WR_MASK);
 			if (pdata->ptp_cfg.ptp_dma_ch_id == j) {
 				VIRT_INTR_CH_CRTL_WR(j,
-				(VIRT_INTR_CH_CRTL_RX_WR_MASK |
-				VIRT_INTR_CH_CRTL_TX_WR_MASK));
+					(VIRT_INTR_CH_CRTL_RX_WR_MASK |
+					VIRT_INTR_CH_CRTL_TX_WR_MASK));
 			}
 		} else {
 			/* ensure wrapper ints are disabled */
@@ -4260,10 +4074,8 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->enable_vlan_desc_control = configure_desc_vlan_control;
 
 	/* for rx vlan stripping */
-	hw_if->config_rx_outer_vlan_stripping =
-	    config_rx_outer_vlan_stripping;
-	hw_if->config_rx_inner_vlan_stripping =
-	    config_rx_inner_vlan_stripping;
+	hw_if->config_rx_outer_vlan_stripping = config_rx_outer_vlan_stripping;
+	hw_if->config_rx_inner_vlan_stripping = config_rx_inner_vlan_stripping;
 
 	/* for sa(source address) insert/replace */
 	hw_if->configure_mac_addr0_reg = configure_mac_addr0_reg;
@@ -4339,9 +4151,12 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->drop_tx_status_enabled = drop_tx_status_enabled;
 
 	/* for l3 and l4 layer filtering */
-	hw_if->config_l2_da_perfect_inverse_match = config_l2_da_perfect_inverse_match;
-	hw_if->update_mac_addr32_127_low_high_reg = update_mac_addr32_127_low_high_reg;
-	hw_if->update_mac_addr1_31_low_high_reg = update_mac_addr1_31_low_high_reg;
+	hw_if->config_l2_da_perfect_inverse_match =
+	    config_l2_da_perfect_inverse_match;
+	hw_if->update_mac_addr32_127_low_high_reg =
+	    update_mac_addr32_127_low_high_reg;
+	hw_if->update_mac_addr1_31_low_high_reg =
+	    update_mac_addr1_31_low_high_reg;
 	hw_if->update_hash_table_reg = update_hash_table_reg;
 	hw_if->config_mac_pkt_filter_reg = config_mac_pkt_filter_reg;
 	hw_if->config_l3_l4_filter_enable = config_l3_l4_filter_enable;
@@ -4359,9 +4174,9 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->update_vlan_id = update_vlan_id;
 	hw_if->config_vlan_filtering = config_vlan_filtering;
 #ifdef EQOS_ENABLE_VLAN_TAG
- 	hw_if->config_mac_for_vlan_pkt = configure_mac_for_vlan_pkt;
+	hw_if->config_mac_for_vlan_pkt = configure_mac_for_vlan_pkt;
 #endif
-  hw_if->get_vlan_tag_comparison = get_vlan_tag_comparison;
+	hw_if->get_vlan_tag_comparison = get_vlan_tag_comparison;
 
 	/* for differnet PHY interconnect */
 	hw_if->control_an = control_an;
@@ -4388,15 +4203,14 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	/* for PFC */
 	hw_if->config_pfc = config_pfc;
 
-
-    /* for MAC Double VLAN Processing config */
+	/* for MAC Double VLAN Processing config */
 	hw_if->config_rx_outer_vlan_stripping = config_rx_outer_vlan_stripping;
 	hw_if->config_rx_inner_vlan_stripping = config_rx_inner_vlan_stripping;
 
 	/* for PTP Offloading */
 	hw_if->config_ptpoffload_engine = config_ptpoffload_engine;
 
-	/*for PTP channel routingi*/
+	/*for PTP channel routingi */
 	hw_if->config_ptp_channel = config_ptp_channel;
 
 	DBGPR("<--eqos_init_function_ptrs_dev\n");

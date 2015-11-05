@@ -27,7 +27,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * ========================================================================= */
+ * =========================================================================
+ */
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -163,6 +164,7 @@ static const struct eqos_stats eqos_gstrings_stats[] = {
 	EQOS_EXTRA_STAT(link_disconnect_count),
 	EQOS_EXTRA_STAT(link_connect_count),
 };
+
 #define EQOS_EXTRA_STAT_LEN ARRAY_SIZE(eqos_gstrings_stats)
 
 /* HW MAC Management counters (if supported) */
@@ -268,43 +270,36 @@ static const struct eqos_stats eqos_mmc[] = {
 	EQOS_MMC_STAT(mmc_rx_icmp_gd_octets),
 	EQOS_MMC_STAT(mmc_rx_icmp_err_octets),
 };
+
 #define EQOS_MMC_STATS_LEN ARRAY_SIZE(eqos_mmc)
 
 static int eqos_get_ts_info(struct net_device *net,
-                                 struct ethtool_ts_info *info)
+			    struct ethtool_ts_info *info)
 {
-        info->so_timestamping =
-                SOF_TIMESTAMPING_TX_SOFTWARE |
-                SOF_TIMESTAMPING_RX_SOFTWARE |
-                SOF_TIMESTAMPING_SOFTWARE |
-                SOF_TIMESTAMPING_TX_HARDWARE |
-                SOF_TIMESTAMPING_RX_HARDWARE |
-                SOF_TIMESTAMPING_RAW_HARDWARE;
-        info->phc_index = 0;
+	info->so_timestamping =
+	    SOF_TIMESTAMPING_TX_SOFTWARE |
+	    SOF_TIMESTAMPING_RX_SOFTWARE |
+	    SOF_TIMESTAMPING_SOFTWARE |
+	    SOF_TIMESTAMPING_TX_HARDWARE |
+	    SOF_TIMESTAMPING_RX_HARDWARE | SOF_TIMESTAMPING_RAW_HARDWARE;
+	info->phc_index = 0;
 
-        info->tx_types =
-                (1 << HWTSTAMP_TX_OFF) |
-                (1 << HWTSTAMP_TX_ON);
+	info->tx_types = (1 << HWTSTAMP_TX_OFF) | (1 << HWTSTAMP_TX_ON);
 
-        info->rx_filters = 1 << HWTSTAMP_FILTER_NONE;
-        info->rx_filters |=
-                (1 << HWTSTAMP_FILTER_PTP_V1_L4_SYNC) |
-                (1 << HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ) |
-                (1 << HWTSTAMP_FILTER_PTP_V2_L2_SYNC) |
-                (1 << HWTSTAMP_FILTER_PTP_V2_L4_SYNC) |
-                (1 << HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ) |
-                (1 << HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ) |
-                (1 << HWTSTAMP_FILTER_PTP_V2_EVENT);
+	info->rx_filters = 1 << HWTSTAMP_FILTER_NONE;
+	info->rx_filters |=
+	    (1 << HWTSTAMP_FILTER_PTP_V1_L4_SYNC) |
+	    (1 << HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ) |
+	    (1 << HWTSTAMP_FILTER_PTP_V2_L2_SYNC) |
+	    (1 << HWTSTAMP_FILTER_PTP_V2_L4_SYNC) |
+	    (1 << HWTSTAMP_FILTER_PTP_V2_L2_DELAY_REQ) |
+	    (1 << HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ) |
+	    (1 << HWTSTAMP_FILTER_PTP_V2_EVENT);
 
-        return 0;
+	return 0;
 }
 
 static const struct ethtool_ops eqos_ethtool_ops = {
-	//.get_tso = eqos_get_tso,
-	//.set_tso = eqos_set_tso,
-	//.get_sg = ethtool_op_get_sg,
-	//.set_sg = ethtool_op_set_sg,
-	//.get_flags = ethtool_op_get_flags,
 	.get_link = ethtool_op_get_link,
 	.get_pauseparam = eqos_get_pauseparam,
 	.set_pauseparam = eqos_set_pauseparam,
@@ -325,7 +320,6 @@ struct ethtool_ops *eqos_get_ethtool_ops(void)
 	return (struct ethtool_ops *)&eqos_ethtool_ops;
 }
 
-
 /*!
  * \details This function is invoked by kernel when user request to get the
  * pause parameters through standard ethtool command.
@@ -337,7 +331,7 @@ struct ethtool_ops *eqos_get_ethtool_ops(void)
  */
 
 static void eqos_get_pauseparam(struct net_device *dev,
-				       struct ethtool_pauseparam *pause)
+				struct ethtool_pauseparam *pause)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -363,12 +357,10 @@ static void eqos_get_pauseparam(struct net_device *dev,
 			return;
 	}
 
-	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) ==
-	    EQOS_FLOW_CTRL_RX)
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) == EQOS_FLOW_CTRL_RX)
 		pause->rx_pause = 1;
 
-	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) ==
-	    EQOS_FLOW_CTRL_TX)
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) == EQOS_FLOW_CTRL_TX)
 		pause->tx_pause = 1;
 
 	DBGPR("<--eqos_get_pauseparam\n");
@@ -387,7 +379,7 @@ static void eqos_get_pauseparam(struct net_device *dev,
  */
 
 static int eqos_set_pauseparam(struct net_device *dev,
-				      struct ethtool_pauseparam *pause)
+			       struct ethtool_pauseparam *pause)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -396,7 +388,7 @@ static int eqos_set_pauseparam(struct net_device *dev,
 	unsigned int data;
 	int ret = 0;
 
-	DBGPR("-->eqos_set_pauseparam: "\
+	DBGPR("-->eqos_set_pauseparam: "
 	      "autoneg = %d tx_pause = %d rx_pause = %d\n",
 	      pause->autoneg, pause->tx_pause, pause->rx_pause);
 
@@ -407,7 +399,7 @@ static int eqos_set_pauseparam(struct net_device *dev,
 			return -EINVAL;
 	} else {
 		if (!(phydev->supported & SUPPORTED_Pause) ||
-			!(phydev->supported & SUPPORTED_Asym_Pause))
+		    !(phydev->supported & SUPPORTED_Asym_Pause))
 			return -EINVAL;
 	}
 
@@ -445,17 +437,15 @@ void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata)
 
 	DBGPR("-->eqos_configure_flow_ctrl\n");
 
-	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) ==
-	    EQOS_FLOW_CTRL_RX) {
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_RX) == EQOS_FLOW_CTRL_RX)
 		hw_if->enable_rx_flow_ctrl();
-	} else {
+	else
 		hw_if->disable_rx_flow_ctrl();
-	}
 
 	/* As ethtool does not provide queue level configuration
-	   Tx flow control is disabled/enabled for all transmit queues */
-	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) ==
-	    EQOS_FLOW_CTRL_TX) {
+	 * Tx flow control is disabled/enabled for all transmit queues
+	 */
+	if ((pdata->flow_ctrl & EQOS_FLOW_CTRL_TX) == EQOS_FLOW_CTRL_TX) {
 		for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++)
 			hw_if->enable_tx_flow_ctrl(qinx);
 	} else {
@@ -483,8 +473,7 @@ void eqos_configure_flow_ctrl(struct eqos_prv_data *pdata)
  */
 #define SPEED_UNKNOWN -1
 #define DUPLEX_UNKNOWN 0xff
-static int eqos_getsettings(struct net_device *dev,
-				   struct ethtool_cmd *cmd)
+static int eqos_getsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -519,18 +508,18 @@ static int eqos_getsettings(struct net_device *dev,
 
 		if (duplex) {
 			cmd->supported |= (SUPPORTED_1000baseT_Full |
-				SUPPORTED_100baseT_Full |
-				SUPPORTED_10baseT_Full);
+					   SUPPORTED_100baseT_Full |
+					   SUPPORTED_10baseT_Full);
 			cmd->advertising |= (ADVERTISED_1000baseT_Full |
-				ADVERTISED_100baseT_Full |
-				ADVERTISED_10baseT_Full);
+					     ADVERTISED_100baseT_Full |
+					     ADVERTISED_10baseT_Full);
 		} else {
 			cmd->supported |= (SUPPORTED_1000baseT_Half |
-				SUPPORTED_100baseT_Half |
-				SUPPORTED_10baseT_Half);
+					   SUPPORTED_100baseT_Half |
+					   SUPPORTED_10baseT_Half);
 			cmd->advertising |= (ADVERTISED_1000baseT_Half |
-				ADVERTISED_100baseT_Half |
-				ADVERTISED_10baseT_Half);
+					     ADVERTISED_100baseT_Half |
+					     ADVERTISED_10baseT_Half);
 		}
 
 		/* link partner features */
@@ -542,12 +531,12 @@ static int eqos_getsettings(struct net_device *dev,
 
 		if (lp_duplex)
 			cmd->lp_advertising |= (ADVERTISED_1000baseT_Full |
-				ADVERTISED_100baseT_Full |
-				ADVERTISED_10baseT_Full);
+						ADVERTISED_100baseT_Full |
+						ADVERTISED_10baseT_Full);
 		else
 			cmd->lp_advertising |= (ADVERTISED_1000baseT_Half |
-				ADVERTISED_100baseT_Half |
-				ADVERTISED_10baseT_Half);
+						ADVERTISED_100baseT_Half |
+						ADVERTISED_10baseT_Half);
 
 		cmd->port = PORT_OTHER;
 	} else {
@@ -558,7 +547,8 @@ static int eqos_getsettings(struct net_device *dev,
 
 		if (!netif_running(dev)) {
 			DBGPR_ETHTOOL("%s: interface is disabled: we cannot "
-			"track link speed / duplex settings\n", dev->name);
+				      "track link speed / duplex settings\n",
+				      dev->name);
 			return -EBUSY;
 		}
 
@@ -588,14 +578,11 @@ static int eqos_getsettings(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 
-static int eqos_setsettings(struct net_device *dev,
-				   struct ethtool_cmd *cmd)
+static int eqos_setsettings(struct net_device *dev, struct ethtool_cmd *cmd)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned int speed;
-	//unsigned int pause, duplex, speed;
-	//unsigned int lp_pause, lp_duplex;
 	int ret = 0;
 
 	DBGPR_ETHTOOL("-->eqos_setsettings\n");
@@ -605,7 +592,7 @@ static int eqos_setsettings(struct net_device *dev,
 
 		/* verify the settings we care about */
 		if ((cmd->autoneg != AUTONEG_ENABLE) &&
-			(cmd->autoneg != AUTONEG_DISABLE))
+		    (cmd->autoneg != AUTONEG_DISABLE))
 			return -EINVAL;
 /*
 		if ((cmd->autoneg == AUTONEG_ENABLE) &&
@@ -646,8 +633,7 @@ static int eqos_setsettings(struct net_device *dev,
  * \return void
  */
 
-static void eqos_get_wol(struct net_device *dev,
-				struct ethtool_wolinfo *wol)
+static void eqos_get_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 
@@ -681,8 +667,7 @@ static void eqos_get_wol(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 
-static int eqos_set_wol(struct net_device *dev,
-			       struct ethtool_wolinfo *wol)
+static int eqos_set_wol(struct net_device *dev, struct ethtool_wolinfo *wol)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	u32 support = WAKE_MAGIC | WAKE_UCAST;
@@ -692,7 +677,8 @@ static int eqos_set_wol(struct net_device *dev,
 
 	/* By default almost all GMAC devices support the WoL via
 	 * magic frame but we can disable it if the HW capability
-	 * register shows no support for pmt_magic_frame. */
+	 * register shows no support for pmt_magic_frame
+	 */
 	if (!pdata->hw_feat.mgk_sel)
 		wol->wolopts &= ~WAKE_MAGIC;
 	if (!pdata->hw_feat.rwk_sel)
@@ -735,9 +721,10 @@ u32 eqos_usec2riwt(u32 usec, struct eqos_prv_data *pdata)
 	 * clock cycles,
 	 * ie, (16ns x 256) => 4.096us (rounding off to 4us)
 	 * So formula with above values is,
-	 * ret = usec/4 */
+	 * ret = usec/4
+	 */
 
-	ret = (usec * (EQOS_SYSCLOCK/1000000))/256;
+	ret = (usec * (EQOS_SYSCLOCK / 1000000)) / 256;
 
 	DBGPR("<--eqos_usec2riwt\n");
 
@@ -751,7 +738,7 @@ static u32 eqos_riwt2usec(u32 riwt, struct eqos_prv_data *pdata)
 	DBGPR("-->eqos_riwt2usec\n");
 
 	/* using formula from 'eqos_usec2riwt' */
-	ret = (riwt * 256)/(EQOS_SYSCLOCK/1000000);
+	ret = (riwt * 256) / (EQOS_SYSCLOCK / 1000000);
 
 	DBGPR("<--eqos_riwt2usec\n");
 
@@ -773,7 +760,7 @@ static u32 eqos_riwt2usec(u32 riwt, struct eqos_prv_data *pdata)
  */
 
 static int eqos_get_coalesce(struct net_device *dev,
-				    struct ethtool_coalesce *ec)
+			     struct ethtool_coalesce *ec)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct eqos_rx_wrapper_descriptor *rx_desc_data =
@@ -783,8 +770,7 @@ static int eqos_get_coalesce(struct net_device *dev,
 
 	memset(ec, 0, sizeof(struct ethtool_coalesce));
 
-	ec->rx_coalesce_usecs =
-	    eqos_riwt2usec(rx_desc_data->rx_riwt, pdata);
+	ec->rx_coalesce_usecs = eqos_riwt2usec(rx_desc_data->rx_riwt, pdata);
 	ec->rx_max_coalesced_frames = rx_desc_data->rx_coal_frames;
 
 	DBGPR("<--eqos_get_coalesce\n");
@@ -807,7 +793,7 @@ static int eqos_get_coalesce(struct net_device *dev,
  */
 
 static int eqos_set_coalesce(struct net_device *dev,
-				    struct ethtool_coalesce *ec)
+			     struct ethtool_coalesce *ec)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct eqos_rx_wrapper_descriptor *rx_desc_data =
@@ -834,39 +820,38 @@ static int eqos_set_coalesce(struct net_device *dev,
 
 	/* both rx_coalesce_usecs and rx_max_coalesced_frames should
 	 * be > 0 in order for coalescing to be active.
-	 * */
+	 */
 	if ((ec->rx_coalesce_usecs <= 3) || (ec->rx_max_coalesced_frames <= 1))
 		local_use_riwt = 0;
 	else
 		local_use_riwt = 1;
 
 	DBGPR_ETHTOOL("RX COALESCING is %s\n",
-	       (local_use_riwt ? "ENABLED" : "DISABLED"));
+		      (local_use_riwt ? "ENABLED" : "DISABLED"));
 
 	rx_riwt = eqos_usec2riwt(ec->rx_coalesce_usecs, pdata);
 
 	/* Check the bounds of values for RX */
 	if (rx_riwt > EQOS_MAX_DMA_RIWT) {
-		rx_usec = eqos_riwt2usec(EQOS_MAX_DMA_RIWT,
-		    pdata);
-		DBGPR_ETHTOOL("RX Coalesing is limited to %d usecs\n",
-		       rx_usec);
+		rx_usec = eqos_riwt2usec(EQOS_MAX_DMA_RIWT, pdata);
+		DBGPR_ETHTOOL("RX Coalesing is limited to %d usecs\n", rx_usec);
 		return -EINVAL;
 	}
 	if (ec->rx_max_coalesced_frames > RX_DESC_CNT) {
 		DBGPR_ETHTOOL("RX Coalesing is limited to %d frames\n",
-		       EQOS_RX_MAX_FRAMES);
+			      EQOS_RX_MAX_FRAMES);
 		return -EINVAL;
 	}
 	if (rx_desc_data->rx_coal_frames != ec->rx_max_coalesced_frames
 	    && netif_running(dev)) {
-		DBGPR_ETHTOOL(
-		 "Coalesce frame parameter can be changed only if interface is down\n");
+		DBGPR_ETHTOOL("Coalesce frame parameter can be changed"
+			" only if interface is down\n");
 		return -EINVAL;
 	}
 	/* The selected parameters are applied to all the
 	 * receive queues equally, so all the queue configurations
-	 * are in sync */
+	 * are in sync
+	 */
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		rx_desc_data = GET_RX_WRAPPER_DESC(qinx);
 		rx_desc_data->use_riwt = local_use_riwt;
@@ -880,7 +865,6 @@ static int eqos_set_coalesce(struct net_device *dev,
 	return 0;
 }
 
-
 /*!
  * \details This function is invoked by kernel when user
  * requests to get the extended statistics about the device.
@@ -893,7 +877,7 @@ static int eqos_set_coalesce(struct net_device *dev,
  */
 
 static void eqos_get_ethtool_stats(struct net_device *dev,
-	struct ethtool_stats *dummy, u64 *data)
+				   struct ethtool_stats *dummy, u64 *data)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int i, j = 0;
@@ -904,24 +888,21 @@ static void eqos_get_ethtool_stats(struct net_device *dev,
 		eqos_mmc_read(&pdata->mmc);
 
 		for (i = 0; i < EQOS_MMC_STATS_LEN; i++) {
-			char *p = (char *)pdata +
-					eqos_mmc[i].stat_offset;
+			char *p = (char *)pdata + eqos_mmc[i].stat_offset;
 
 			data[j++] = (eqos_mmc[i].sizeof_stat ==
-				sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
+				     sizeof(u64)) ? (*(u64 *) p) : (*(u32 *) p);
 		}
 	}
 
 	for (i = 0; i < EQOS_EXTRA_STAT_LEN; i++) {
-		char *p = (char *)pdata +
-				eqos_gstrings_stats[i].stat_offset;
+		char *p = (char *)pdata + eqos_gstrings_stats[i].stat_offset;
 		data[j++] = (eqos_gstrings_stats[i].sizeof_stat ==
-				sizeof(u64)) ? (*(u64 *)p) : (*(u32 *)p);
+			     sizeof(u64)) ? (*(u64 *) p) : (*(u32 *) p);
 	}
 
 	DBGPR("<--eqos_get_ethtool_stats\n");
 }
-
 
 /*!
  * \details This function returns a set of strings that describe
@@ -941,19 +922,19 @@ static void eqos_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 
 	DBGPR("-->eqos_get_strings\n");
 
-	switch(stringset) {
+	switch (stringset) {
 	case ETH_SS_STATS:
 		if (pdata->hw_feat.mmc_sel) {
 			for (i = 0; i < EQOS_MMC_STATS_LEN; i++) {
 				memcpy(p, eqos_mmc[i].stat_string,
-					ETH_GSTRING_LEN);
+				       ETH_GSTRING_LEN);
 				p += ETH_GSTRING_LEN;
 			}
 		}
 
 		for (i = 0; i < EQOS_EXTRA_STAT_LEN; i++) {
 			memcpy(p, eqos_gstrings_stats[i].stat_string,
-				ETH_GSTRING_LEN);
+			       ETH_GSTRING_LEN);
 			p += ETH_GSTRING_LEN;
 		}
 		break;
@@ -963,7 +944,6 @@ static void eqos_get_strings(struct net_device *dev, u32 stringset, u8 *data)
 
 	DBGPR("<--eqos_get_strings\n");
 }
-
 
 /*!
  * \details This function gets number of strings that @get_strings
@@ -984,7 +964,7 @@ static int eqos_get_sset_count(struct net_device *dev, int sset)
 
 	DBGPR("-->eqos_get_sset_count\n");
 
-	switch(sset) {
+	switch (sset) {
 	case ETH_SS_STATS:
 		if (pdata->hw_feat.mmc_sel)
 			len = EQOS_MMC_STATS_LEN;
@@ -998,7 +978,6 @@ static int eqos_get_sset_count(struct net_device *dev, int sset)
 
 	return len;
 }
-
 
 /*!
  * \details This function is invoked by kernel when user
@@ -1019,7 +998,7 @@ static int eqos_set_tso(struct net_device *dev, u32 data)
 	DBGPR("-->eqos_set_tso\n");
 
 	if (pdata->hw_feat.tso_en == 0)
-			return -EOPNOTSUPP;
+		return -EOPNOTSUPP;
 
 	if (data)
 		dev->features |= NETIF_F_TSO;
@@ -1030,7 +1009,6 @@ static int eqos_set_tso(struct net_device *dev, u32 data)
 
 	return 0;
 }
-
 
 /*!
  * \details This function is invoked by kernel when user
@@ -1050,7 +1028,7 @@ static u32 eqos_get_tso(struct net_device *dev)
 	DBGPR("-->eqos_get_tso\n");
 
 	if (pdata->hw_feat.tso_en == 0)
-			return 0;
+		return 0;
 
 	DBGPR("<--eqos_get_tso\n");
 

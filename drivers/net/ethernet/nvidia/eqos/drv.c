@@ -57,8 +57,7 @@ extern ULONG eqos_base_addr;
 static INT eqos_status;
 static void eqos_poll_timer(unsigned long data);
 static void eqos_all_chans_timer(unsigned long data);
-static int handle_txrx_completions(struct eqos_prv_data *pdata,
-					int qinx);
+static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx);
 
 static void eqos_stop_dev(struct eqos_prv_data *pdata);
 static void eqos_start_dev(struct eqos_prv_data *pdata);
@@ -81,9 +80,10 @@ static int q_op_mode[EQOS_MAX_TX_QUEUE_CNT] = {
 	2,
 	2
 };
+
 module_param_array(q_op_mode, int, NULL, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(q_op_mode,
-	"MTL queue operation mode [0-DISABLED, 1-AVB, 2-DCB, 3-GENERIC]");
+		 "MTL queue operation mode [0-DISABLED, 1-AVB, 2-DCB, 3-GENERIC]");
 
 void eqos_stop_all_ch_tx_dma(struct eqos_prv_data *pdata)
 {
@@ -101,18 +101,16 @@ void eqos_stop_all_ch_tx_dma(struct eqos_prv_data *pdata)
 static int is_ptp_addr(char *addr)
 {
 	if ((addr[0] == PTP1_MAC0) &&
-		(addr[1] == PTP1_MAC1) &&
-		(addr[2] == PTP1_MAC2) &&
-		(addr[3] == PTP1_MAC3) &&
-		(addr[4] == PTP1_MAC4) &&
-		(addr[5] == PTP1_MAC5))
+	    (addr[1] == PTP1_MAC1) &&
+	    (addr[2] == PTP1_MAC2) &&
+	    (addr[3] == PTP1_MAC3) &&
+	    (addr[4] == PTP1_MAC4) && (addr[5] == PTP1_MAC5))
 		return 1;
 	else if ((addr[0] == PTP2_MAC0) &&
-		(addr[1] == PTP2_MAC1) &&
-		(addr[2] == PTP2_MAC2) &&
-		(addr[3] == PTP2_MAC3) &&
-		(addr[4] == PTP2_MAC4) &&
-		(addr[5] == PTP2_MAC5))
+		 (addr[1] == PTP2_MAC1) &&
+		 (addr[2] == PTP2_MAC2) &&
+		 (addr[3] == PTP2_MAC3) &&
+		 (addr[4] == PTP2_MAC4) && (addr[5] == PTP2_MAC5))
 		return 1;
 	else
 		return 0;
@@ -122,18 +120,22 @@ static int is_ptp_addr(char *addr)
   Check if Channel 1 is AV and has data 0xbb or 0xcc
   Check if Channel 2 is AV and has data 0xdd*/
 #ifdef ENABLE_CHANNEL_DATA_CHECK
-static void check_channel_data(struct sk_buff *skb, unsigned int qinx, int is_rx)
+static void check_channel_data(struct sk_buff *skb, unsigned int qinx,
+	int is_rx)
 {
-	if (((qinx == 0) && ((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF788) &&
-				((*(((char *)skb->data) + 80) & 0xFF) != 0xee)) ||
-	   ((qinx == 1) && ((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF022) &&
-			(((*(((char *)skb->data) + 80) & 0xFF) != 0xbb) &&
-			 ((*(((char *)skb->data) + 80) & 0xFF) != 0xcc))) ||
-	   ((qinx == 2) && ((*(((short *)skb->data) + 6) & 0xFFFF) == 0xF022) &&
-			((*(((char *)skb->data) + 80) & 0xFF) != 0xdd))) {
+	if (((qinx == 0) &&
+		((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF788) &&
+		((*(((char *)skb->data) + 80) & 0xFF) != 0xee)) ||
+	   ((qinx == 1) &&
+		((*(((short *)skb->data) + 6)  & 0xFFFF) == 0xF022) &&
+		(((*(((char *)skb->data) + 80) & 0xFF) != 0xbb) &&
+		((*(((char *)skb->data) + 80) & 0xFF) != 0xcc))) ||
+	   ((qinx == 2) &&
+		((*(((short *)skb->data) + 6) & 0xFFFF) == 0xF022) &&
+		((*(((char *)skb->data) + 80) & 0xFF) != 0xdd))) {
 			while (1)
-				printk(KERN_ALERT "Incorrect %s data 0x%x in Q %d\n",
-						((is_rx) ? "RX" : "TX"),*(((char *)skb->data) + 80), qinx);
+		printk(KERN_ALERT "Incorrect %s data 0x%x in Q %d\n",
+		((is_rx) ? "RX" : "TX"), *(((char *)skb->data) + 80), qinx);
 	}
 }
 #endif
@@ -145,7 +147,7 @@ static void eqos_stop_all_ch_rx_dma(struct eqos_prv_data *pdata)
 
 	DBGPR("-->eqos_stop_all_ch_rx_dma\n");
 
-	for(qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
+	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
 		hw_if->stop_dma_rx(qinx);
 
 	DBGPR("<--eqos_stop_all_ch_rx_dma\n");
@@ -158,7 +160,7 @@ static void eqos_start_all_ch_tx_dma(struct eqos_prv_data *pdata)
 
 	DBGPR("-->eqos_start_all_ch_tx_dma\n");
 
-	for(i = 0; i < EQOS_TX_QUEUE_CNT; i++)
+	for (i = 0; i < EQOS_TX_QUEUE_CNT; i++)
 		hw_if->start_dma_tx(i);
 
 	DBGPR("<--eqos_start_all_ch_tx_dma\n");
@@ -171,7 +173,7 @@ static void eqos_start_all_ch_rx_dma(struct eqos_prv_data *pdata)
 
 	DBGPR("-->eqos_start_all_ch_rx_dma\n");
 
-	for(i = 0; i < EQOS_RX_QUEUE_CNT; i++)
+	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++)
 		hw_if->start_dma_rx(i);
 
 	DBGPR("<--eqos_start_all_ch_rx_dma\n");
@@ -207,9 +209,7 @@ static void eqos_all_ch_napi_disable(struct eqos_prv_data *pdata)
 	DBGPR("<--eqos_napi_disable\n");
 }
 
-
-void eqos_disable_all_ch_rx_interrpt(
-			struct eqos_prv_data *pdata)
+void eqos_disable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT qinx;
@@ -222,8 +222,7 @@ void eqos_disable_all_ch_rx_interrpt(
 	DBGPR("<--eqos_disable_all_ch_rx_interrpt\n");
 }
 
-void eqos_enable_all_ch_rx_interrpt(
-			struct eqos_prv_data *pdata)
+void eqos_enable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT qinx;
@@ -235,7 +234,6 @@ void eqos_enable_all_ch_rx_interrpt(
 
 	DBGPR("<--eqos_enable_all_ch_rx_interrpt\n");
 }
-
 
 /* pnapi_sched is only needed for intr_mode=COMMON_IRQ.  In COMMON_IRQ,
  * there is one napi handler to process all queues.  So we need to ensure
@@ -253,8 +251,7 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 
 	DMA_IER_RD(qinx, dma_ier);
 
-	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr,
-		dma_ier);
+	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr, dma_ier);
 
 	/*on ufpga, update of DMA_IER is really slow, such that interrupt
 	 * would happen, but read of IER returns old value.  This would
@@ -308,14 +305,13 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 	DBGPR("<--%s()\n", __func__);
 }
 
-
 /* pnapi_sched is only needed for intr_mode=COMMON_IRQ.  In COMMON_IRQ,
  * there is one napi handler to process all queues.  So we need to ensure
  * we only schedule napi once.
  * For MULTI_IRQ, each IRQ has own napi handler.
  */
 void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
-			int qinx, int *pnapi_sched)
+			     int qinx, int *pnapi_sched)
 {
 	ULONG dma_sr;
 	ULONG dma_ier;
@@ -335,11 +331,10 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 	VIRT_INTR_CH_STAT_RD(qinx, ch_stat_reg);
 	VIRT_INTR_CH_CRTL_RD(qinx, ch_crtl_reg);
 
-	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr,
-		dma_ier);
+	DBGPR("DMA_SR[%d] = %#lx, DMA_IER= %#lx\n", qinx, dma_sr, dma_ier);
 
 	DBGPR("VIRT_INTR_CH_STAT[%d] = %#lx, VIRT_INTR_CH_CRTL= %#lx\n",
-		qinx, ch_stat_reg, ch_crtl_reg);
+	      qinx, ch_stat_reg, ch_crtl_reg);
 
 	/*on ufpga, update of DMA_IER is really slow, such that interrupt
 	 * would happen, but read of IER returns old value.  This would
@@ -377,8 +372,8 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 				hw_if->disable_chan_interrupts(qinx, pdata);
 				__napi_schedule(&rx_queue->napi);
 			} else {
-				printk(KERN_ALERT
-				"driver bug! Rx interrupt while in poll\n");
+				pr_err
+				    ("driver bug! Rx interrupt while in poll\n");
 				hw_if->disable_chan_interrupts(qinx, pdata);
 			}
 			break;
@@ -386,7 +381,8 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 			handle_txrx_completions(pdata, qinx);
 			break;
 		default:
-			printk(KERN_ALERT "driver bug! rx interrupt when chan mode is polling\n");
+			pr_err
+			    ("driver bug! rx interrupt when chan mode is polling\n");
 		}
 	} else {
 		*pnapi_sched = 1;
@@ -394,7 +390,7 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 			eqos_disable_all_ch_rx_interrpt(pdata);
 			__napi_schedule(&rx_queue->napi);
 		} else {
-			printk(KERN_ALERT "driver bug! Rx interrupt while in poll\n");
+			pr_err("driver bug! Rx interrupt while in poll\n");
 			eqos_disable_all_ch_rx_interrpt(pdata);
 		}
 	}
@@ -402,8 +398,7 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 	DBGPR("<--%s()\n", __func__);
 }
 
-void handle_mac_intrs(struct eqos_prv_data *pdata,
-			ULONG dma_isr)
+void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 {
 	ULONG mac_imr;
 	ULONG mac_pmtcsr;
@@ -427,7 +422,8 @@ void handle_mac_intrs(struct eqos_prv_data *pdata,
 		 * these features on silicon and can be used to wake up Tegra.
 		 * Still let the below code be here in case we ever get this interrupt.
 		 */
-		if (GET_VALUE(mac_isr, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS) & 1) {
+		if (GET_VALUE(mac_isr, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS) &
+		    1) {
 			pdata->xstats.pmt_irq_n++;
 			eqos_status = S_MAC_ISR_PMTIS;
 			MAC_PMTCSR_RD(mac_pmtcsr);
@@ -437,40 +433,43 @@ void handle_mac_intrs(struct eqos_prv_data *pdata,
 		}
 
 		/* RGMII/SMII interrupt */
-		if (GET_VALUE(mac_isr, MAC_ISR_RGSMIIS_LPOS, MAC_ISR_RGSMIIS_HPOS) & 1) {
+		if (GET_VALUE
+		    (mac_isr, MAC_ISR_RGSMIIS_LPOS, MAC_ISR_RGSMIIS_HPOS) & 1) {
 			MAC_PCS_RD(mac_pcs);
-			printk(KERN_ALERT "RGMII/SMII interrupt: MAC_PCS = %#lx\n", mac_pcs);
+			pr_err("RGMII/SMII interrupt: MAC_PCS = %#lx\n",
+			       mac_pcs);
 #ifdef HWA_NV_1637630
 
 #else
 			/* Comment out this block of code(1637630)
-	 		 * as it was preventing 10mb to work.
+			 * as it was preventing 10mb to work.
 			 */
 			if ((mac_pcs & 0x80000) == 0x80000) {
 				pdata->pcs_link = 1;
 				netif_carrier_on(dev);
 				if ((mac_pcs & 0x10000) == 0x10000) {
 					pdata->pcs_duplex = 1;
-					hw_if->set_full_duplex(); //TODO: may not be required
+					hw_if->set_full_duplex();
 				} else {
 					pdata->pcs_duplex = 0;
-					hw_if->set_half_duplex(); //TODO: may not be required
+					hw_if->set_half_duplex();
 				}
 
 				if ((mac_pcs & 0x60000) == 0x0) {
 					pdata->pcs_speed = SPEED_10;
-					hw_if->set_mii_speed_10(); //TODO: may not be required
+					hw_if->set_mii_speed_10();
 				} else if ((mac_pcs & 0x60000) == 0x20000) {
 					pdata->pcs_speed = SPEED_100;
-					hw_if->set_mii_speed_100(); //TODO: may not be required
+					hw_if->set_mii_speed_100();
 				} else if ((mac_pcs & 0x60000) == 0x30000) {
 					pdata->pcs_speed = SPEED_1000;
-					hw_if->set_gmii_speed(); //TODO: may not be required
+					hw_if->set_gmii_speed();
 				}
-				printk(KERN_ALERT "Link is UP:%dMbps & %s duplex\n",
-					pdata->pcs_speed, pdata->pcs_duplex ? "Full" : "Half");
+				pr_err("Link is UP:%dMbps & %s duplex\n",
+				       pdata->pcs_speed,
+				       pdata->pcs_duplex ? "Full" : "Half");
 			} else {
-				printk(KERN_ALERT "Link is Down\n");
+				pr_err("Link is Down\n");
 				pdata->pcs_link = 0;
 				netif_carrier_off(dev);
 			}
@@ -478,23 +477,28 @@ void handle_mac_intrs(struct eqos_prv_data *pdata,
 		}
 
 		/* PCS Link Status interrupt */
-		if (GET_VALUE(mac_isr, MAC_ISR_PCSLCHGIS_LPOS, MAC_ISR_PCSLCHGIS_HPOS) & 1) {
-			printk(KERN_ALERT "PCS Link Status interrupt\n");
+		if (GET_VALUE
+		    (mac_isr, MAC_ISR_PCSLCHGIS_LPOS,
+		     MAC_ISR_PCSLCHGIS_HPOS) & 1) {
+			pr_err("PCS Link Status interrupt\n");
 			MAC_ANS_RD(mac_ans);
-			if (GET_VALUE(mac_ans, MAC_ANS_LS_LPOS, MAC_ANS_LS_HPOS) & 1) {
-				printk(KERN_ALERT "Link: Up\n");
+			if (GET_VALUE(mac_ans, MAC_ANS_LS_LPOS, MAC_ANS_LS_HPOS)
+			    & 1) {
+				pr_err("Link: Up\n");
 				netif_carrier_on(dev);
 				pdata->pcs_link = 1;
 			} else {
-				printk(KERN_ALERT "Link: Down\n");
+				pr_err("Link: Down\n");
 				netif_carrier_off(dev);
 				pdata->pcs_link = 0;
 			}
 		}
 
 		/* PCS Auto-Negotiation Complete interrupt */
-		if (GET_VALUE(mac_isr, MAC_ISR_PCSANCIS_LPOS, MAC_ISR_PCSANCIS_HPOS) & 1) {
-			printk(KERN_ALERT "PCS Auto-Negotiation Complete interrupt\n");
+		if (GET_VALUE
+		    (mac_isr, MAC_ISR_PCSANCIS_LPOS,
+		     MAC_ISR_PCSANCIS_HPOS) & 1) {
+			pr_err("PCS Auto-Negotiation Complete interrupt\n");
 			MAC_ANS_RD(mac_ans);
 		}
 
@@ -520,8 +524,7 @@ void handle_mac_intrs(struct eqos_prv_data *pdata,
 irqreturn_t eqos_isr(int irq, void *device_id)
 {
 	ULONG dma_isr;
-	struct eqos_prv_data *pdata =
-	    (struct eqos_prv_data *)device_id;
+	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
 	UINT qinx;
 	int napi_sched = 0;
 
@@ -531,7 +534,6 @@ irqreturn_t eqos_isr(int irq, void *device_id)
 	if (dma_isr == 0x0)
 		return IRQ_NONE;
 
-
 	DBGPR("DMA_ISR = %#lx\n", dma_isr);
 
 	/* Handle DMA interrupts */
@@ -539,10 +541,9 @@ irqreturn_t eqos_isr(int irq, void *device_id)
 	if (pdata->dt_cfg.intr_mode != MODE_ALL_POLLING)
 #endif
 		if (dma_isr & 0xf)
-			for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT;
-					qinx++) {
+			for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 				handle_ti_ri_chan_intrs(pdata, qinx,
-					&napi_sched);
+							&napi_sched);
 				handle_non_ti_ri_chan_intrs(pdata, qinx);
 			}
 
@@ -554,7 +555,6 @@ irqreturn_t eqos_isr(int irq, void *device_id)
 
 }
 
-
 /*!
 * Only used when multi irq is enabled
 */
@@ -562,8 +562,7 @@ irqreturn_t eqos_isr(int irq, void *device_id)
 irqreturn_t eqos_common_isr(int irq, void *device_id)
 {
 	ULONG dma_isr;
-	struct eqos_prv_data *pdata =
-	    (struct eqos_prv_data *)device_id;
+	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
 	UINT qinx;
 
 	DBGPR("-->%s()\n", __func__);
@@ -586,14 +585,12 @@ irqreturn_t eqos_common_isr(int irq, void *device_id)
 
 }
 
-
 /* Only used when multi irq is enabled.
  * Will only handle tx/rx for one channel.
  */
 irqreturn_t eqos_ch_isr(int irq, void *device_id)
 {
-	struct eqos_prv_data *pdata =
-	    (struct eqos_prv_data *)device_id;
+	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
 	uint i;
 	UINT qinx;
 	int napi_sched = 0;
@@ -650,21 +647,17 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 	pdata->hw_feat.mmc_sel = ((mac_hfr0 >> 8) & MAC_HFR0_MMCSEL_MASK);
 	pdata->hw_feat.arp_offld_en =
 	    ((mac_hfr0 >> 9) & MAC_HFR0_ARPOFFLDEN_MASK);
-	pdata->hw_feat.ts_sel =
-	    ((mac_hfr0 >> 12) & MAC_HFR0_TSSSEL_MASK);
+	pdata->hw_feat.ts_sel = ((mac_hfr0 >> 12) & MAC_HFR0_TSSSEL_MASK);
 	pdata->hw_feat.eee_sel = ((mac_hfr0 >> 13) & MAC_HFR0_EEESEL_MASK);
-	pdata->hw_feat.tx_coe_sel =
-	    ((mac_hfr0 >> 14) & MAC_HFR0_TXCOESEL_MASK);
-	pdata->hw_feat.rx_coe_sel =
-	    ((mac_hfr0 >> 16) & MAC_HFR0_RXCOE_MASK);
+	pdata->hw_feat.tx_coe_sel = ((mac_hfr0 >> 14) & MAC_HFR0_TXCOESEL_MASK);
+	pdata->hw_feat.rx_coe_sel = ((mac_hfr0 >> 16) & MAC_HFR0_RXCOE_MASK);
 	pdata->hw_feat.mac_addr16_sel =
 	    ((mac_hfr0 >> 18) & MAC_HFR0_ADDMACADRSEL_MASK);
 	pdata->hw_feat.mac_addr32_sel =
 	    ((mac_hfr0 >> 23) & MAC_HFR0_MACADR32SEL_MASK);
 	pdata->hw_feat.mac_addr64_sel =
 	    ((mac_hfr0 >> 24) & MAC_HFR0_MACADR64SEL_MASK);
-	pdata->hw_feat.tsstssel =
-	    ((mac_hfr0 >> 25) & MAC_HFR0_TSINTSEL_MASK);
+	pdata->hw_feat.tsstssel = ((mac_hfr0 >> 25) & MAC_HFR0_TSINTSEL_MASK);
 	pdata->hw_feat.sa_vlan_ins =
 	    ((mac_hfr0 >> 27) & MAC_HFR0_SAVLANINS_MASK);
 	pdata->hw_feat.act_phy_sel =
@@ -672,10 +665,8 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 
 	pdata->hw_feat.rx_fifo_size =
 	    ((mac_hfr1 >> 0) & MAC_HFR1_RXFIFOSIZE_MASK);
-	    //8;
 	pdata->hw_feat.tx_fifo_size =
 	    ((mac_hfr1 >> 6) & MAC_HFR1_TXFIFOSIZE_MASK);
-	    //8;
 	pdata->hw_feat.adv_ts_hword =
 	    ((mac_hfr1 >> 13) & MAC_HFR1_ADVTHWORD_MASK);
 	pdata->hw_feat.dcb_en = ((mac_hfr1 >> 16) & MAC_HFR1_DCBEN_MASK);
@@ -684,8 +675,7 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 	pdata->hw_feat.dma_debug_gen =
 	    ((mac_hfr1 >> 19) & MAC_HFR1_DMADEBUGEN_MASK);
 	pdata->hw_feat.av_sel = ((mac_hfr1 >> 20) & MAC_HFR1_AVSEL_MASK);
-	pdata->hw_feat.lp_mode_en =
-	    ((mac_hfr1 >> 23) & MAC_HFR1_LPMODEEN_MASK);
+	pdata->hw_feat.lp_mode_en = ((mac_hfr1 >> 23) & MAC_HFR1_LPMODEEN_MASK);
 #ifdef ENABLE_PERFECT_L2_FILTER
 	pdata->hw_feat.hash_tbl_sz = 0;
 #else
@@ -697,10 +687,8 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 
 	pdata->hw_feat.rx_q_cnt = ((mac_hfr2 >> 0) & MAC_HFR2_RXQCNT_MASK);
 	pdata->hw_feat.tx_q_cnt = ((mac_hfr2 >> 6) & MAC_HFR2_TXQCNT_MASK);
-	pdata->hw_feat.rx_ch_cnt =
-	    ((mac_hfr2 >> 12) & MAC_HFR2_RXCHCNT_MASK);
-	pdata->hw_feat.tx_ch_cnt =
-	    ((mac_hfr2 >> 18) & MAC_HFR2_TXCHCNT_MASK);
+	pdata->hw_feat.rx_ch_cnt = ((mac_hfr2 >> 12) & MAC_HFR2_RXCHCNT_MASK);
+	pdata->hw_feat.tx_ch_cnt = ((mac_hfr2 >> 18) & MAC_HFR2_TXCHCNT_MASK);
 	pdata->hw_feat.pps_out_num =
 	    ((mac_hfr2 >> 24) & MAC_HFR2_PPSOUTNUM_MASK);
 	pdata->hw_feat.aux_snap_num =
@@ -708,7 +696,6 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 
 	DBGPR("<--eqos_get_all_hw_features\n");
 }
-
 
 /*!
 * \brief API to print all hw features.
@@ -726,44 +713,44 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 
 	DBGPR("-->eqos_print_all_hw_features\n");
 
-	printk(KERN_ALERT "\n");
-	printk(KERN_ALERT "=====================================================/\n");
-	printk(KERN_ALERT "\n");
-	printk(KERN_ALERT "10/100 Mbps Support                         : %s\n",
-		pdata->hw_feat.mii_sel ? "YES" : "NO");
-	printk(KERN_ALERT "1000 Mbps Support                           : %s\n",
-		pdata->hw_feat.gmii_sel ? "YES" : "NO");
-	printk(KERN_ALERT "Half-duplex Support                         : %s\n",
-		pdata->hw_feat.hd_sel ? "YES" : "NO");
-	printk(KERN_ALERT "PCS Registers(TBI/SGMII/RTBI PHY interface) : %s\n",
-		pdata->hw_feat.pcs_sel ? "YES" : "NO");
-	printk(KERN_ALERT "VLAN Hash Filter Selected                   : %s\n",
-		pdata->hw_feat.vlan_hash_en ? "YES" : "NO");
+	pr_err("\n");
+	pr_err("=====================================================/\n");
+	pr_err("\n");
+	pr_err("10/100 Mbps Support                         : %s\n",
+	       pdata->hw_feat.mii_sel ? "YES" : "NO");
+	pr_err("1000 Mbps Support                           : %s\n",
+	       pdata->hw_feat.gmii_sel ? "YES" : "NO");
+	pr_err("Half-duplex Support                         : %s\n",
+	       pdata->hw_feat.hd_sel ? "YES" : "NO");
+	pr_err("PCS Registers(TBI/SGMII/RTBI PHY interface) : %s\n",
+	       pdata->hw_feat.pcs_sel ? "YES" : "NO");
+	pr_err("VLAN Hash Filter Selected                   : %s\n",
+	       pdata->hw_feat.vlan_hash_en ? "YES" : "NO");
 	pdata->vlan_hash_filtering = pdata->hw_feat.vlan_hash_en;
-	printk(KERN_ALERT "SMA (MDIO) Interface                        : %s\n",
-		pdata->hw_feat.sma_sel ? "YES" : "NO");
-	printk(KERN_ALERT "PMT Remote Wake-up Packet Enable            : %s\n",
-		pdata->hw_feat.rwk_sel ? "YES" : "NO");
-	printk(KERN_ALERT "PMT Magic Packet Enable                     : %s\n",
-		pdata->hw_feat.mgk_sel ? "YES" : "NO");
-	printk(KERN_ALERT "RMON/MMC Module Enable                      : %s\n",
-		pdata->hw_feat.mmc_sel ? "YES" : "NO");
-	printk(KERN_ALERT "ARP Offload Enabled                         : %s\n",
-		pdata->hw_feat.arp_offld_en ? "YES" : "NO");
-	printk(KERN_ALERT "IEEE 1588-2008 Timestamp Enabled            : %s\n",
-		pdata->hw_feat.ts_sel ? "YES" : "NO");
-	printk(KERN_ALERT "Energy Efficient Ethernet Enabled           : %s\n",
-		pdata->hw_feat.eee_sel ? "YES" : "NO");
-	printk(KERN_ALERT "Transmit Checksum Offload Enabled           : %s\n",
-		pdata->hw_feat.tx_coe_sel ? "YES" : "NO");
-	printk(KERN_ALERT "Receive Checksum Offload Enabled            : %s\n",
-		pdata->hw_feat.rx_coe_sel ? "YES" : "NO");
-	printk(KERN_ALERT "MAC Addresses 16–31 Selected                : %s\n",
-		pdata->hw_feat.mac_addr16_sel ? "YES" : "NO");
-	printk(KERN_ALERT "MAC Addresses 32–63 Selected                : %s\n",
-		pdata->hw_feat.mac_addr32_sel ? "YES" : "NO");
-	printk(KERN_ALERT "MAC Addresses 64–127 Selected               : %s\n",
-		pdata->hw_feat.mac_addr64_sel ? "YES" : "NO");
+	pr_err("SMA (MDIO) Interface                        : %s\n",
+	       pdata->hw_feat.sma_sel ? "YES" : "NO");
+	pr_err("PMT Remote Wake-up Packet Enable            : %s\n",
+	       pdata->hw_feat.rwk_sel ? "YES" : "NO");
+	pr_err("PMT Magic Packet Enable                     : %s\n",
+	       pdata->hw_feat.mgk_sel ? "YES" : "NO");
+	pr_err("RMON/MMC Module Enable                      : %s\n",
+	       pdata->hw_feat.mmc_sel ? "YES" : "NO");
+	pr_err("ARP Offload Enabled                         : %s\n",
+	       pdata->hw_feat.arp_offld_en ? "YES" : "NO");
+	pr_err("IEEE 1588-2008 Timestamp Enabled            : %s\n",
+	       pdata->hw_feat.ts_sel ? "YES" : "NO");
+	pr_err("Energy Efficient Ethernet Enabled           : %s\n",
+	       pdata->hw_feat.eee_sel ? "YES" : "NO");
+	pr_err("Transmit Checksum Offload Enabled           : %s\n",
+	       pdata->hw_feat.tx_coe_sel ? "YES" : "NO");
+	pr_err("Receive Checksum Offload Enabled            : %s\n",
+	       pdata->hw_feat.rx_coe_sel ? "YES" : "NO");
+	pr_err("MAC Addresses 16–31 Selected                : %s\n",
+	       pdata->hw_feat.mac_addr16_sel ? "YES" : "NO");
+	pr_err("MAC Addresses 32–63 Selected                : %s\n",
+	       pdata->hw_feat.mac_addr32_sel ? "YES" : "NO");
+	pr_err("MAC Addresses 64–127 Selected               : %s\n",
+	       pdata->hw_feat.mac_addr64_sel ? "YES" : "NO");
 
 	if (pdata->hw_feat.mac_addr64_sel)
 		pdata->max_addr_reg_cnt = 128;
@@ -774,7 +761,7 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	else
 		pdata->max_addr_reg_cnt = 1;
 
-	switch(pdata->hw_feat.tsstssel) {
+	switch (pdata->hw_feat.tsstssel) {
 	case 0:
 		str = "RESERVED";
 		break;
@@ -788,10 +775,9 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 		str = "BOTH";
 		break;
 	}
-	printk(KERN_ALERT "Timestamp System Time Source                : %s\n",
-		str);
-	printk(KERN_ALERT "Source Address or VLAN Insertion Enable     : %s\n",
-		pdata->hw_feat.sa_vlan_ins ? "YES" : "NO");
+	pr_err("Timestamp System Time Source                : %s\n", str);
+	pr_err("Source Address or VLAN Insertion Enable     : %s\n",
+	       pdata->hw_feat.sa_vlan_ins ? "YES" : "NO");
 
 	switch (pdata->hw_feat.act_phy_sel) {
 	case 0:
@@ -821,10 +807,9 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	default:
 		str = "RESERVED";
 	}
-	printk(KERN_ALERT "Active PHY Selected                         : %s\n",
-		str);
+	pr_err("Active PHY Selected                         : %s\n", str);
 
-	switch(pdata->hw_feat.rx_fifo_size) {
+	switch (pdata->hw_feat.rx_fifo_size) {
 	case 0:
 		str = "128 bytes";
 		break;
@@ -864,10 +849,9 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	default:
 		str = "RESERVED";
 	}
-	printk(KERN_ALERT "MTL Receive FIFO Size                       : %s\n",
-		str);
+	pr_err("MTL Receive FIFO Size                       : %s\n", str);
 
-	switch(pdata->hw_feat.tx_fifo_size) {
+	switch (pdata->hw_feat.tx_fifo_size) {
 	case 0:
 		str = "128 bytes";
 		break;
@@ -907,24 +891,23 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	default:
 		str = "RESERVED";
 	}
-	printk(KERN_ALERT "MTL Transmit FIFO Size                       : %s\n",
-		str);
-	printk(KERN_ALERT "IEEE 1588 High Word Register Enable          : %s\n",
-		pdata->hw_feat.adv_ts_hword ? "YES" : "NO");
-	printk(KERN_ALERT "DCB Feature Enable                           : %s\n",
-		pdata->hw_feat.dcb_en ? "YES" : "NO");
-	printk(KERN_ALERT "Split Header Feature Enable                  : %s\n",
-		pdata->hw_feat.sph_en ? "YES" : "NO");
-	printk(KERN_ALERT "TCP Segmentation Offload Enable              : %s\n",
-		pdata->hw_feat.tso_en ? "YES" : "NO");
-	printk(KERN_ALERT "DMA Debug Registers Enabled                  : %s\n",
-		pdata->hw_feat.dma_debug_gen ? "YES" : "NO");
-	printk(KERN_ALERT "AV Feature Enabled                           : %s\n",
-		pdata->hw_feat.av_sel ? "YES" : "NO");
-	printk(KERN_ALERT "Low Power Mode Enabled                       : %s\n",
-		pdata->hw_feat.lp_mode_en ? "YES" : "NO");
+	pr_err("MTL Transmit FIFO Size                       : %s\n", str);
+	pr_err("IEEE 1588 High Word Register Enable          : %s\n",
+	       pdata->hw_feat.adv_ts_hword ? "YES" : "NO");
+	pr_err("DCB Feature Enable                           : %s\n",
+	       pdata->hw_feat.dcb_en ? "YES" : "NO");
+	pr_err("Split Header Feature Enable                  : %s\n",
+	       pdata->hw_feat.sph_en ? "YES" : "NO");
+	pr_err("TCP Segmentation Offload Enable              : %s\n",
+	       pdata->hw_feat.tso_en ? "YES" : "NO");
+	pr_err("DMA Debug Registers Enabled                  : %s\n",
+	       pdata->hw_feat.dma_debug_gen ? "YES" : "NO");
+	pr_err("AV Feature Enabled                           : %s\n",
+	       pdata->hw_feat.av_sel ? "YES" : "NO");
+	pr_err("Low Power Mode Enabled                       : %s\n",
+	       pdata->hw_feat.lp_mode_en ? "YES" : "NO");
 
-	switch(pdata->hw_feat.hash_tbl_sz) {
+	switch (pdata->hw_feat.hash_tbl_sz) {
 	case 0:
 		str = "No hash table selected";
 		pdata->max_hash_table_size = 0;
@@ -942,20 +925,20 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 		pdata->max_hash_table_size = 256;
 		break;
 	}
-	printk(KERN_ALERT "Hash Table Size                              : %s\n",
-		str);
-	printk(KERN_ALERT "Total number of L3 or L4 Filters             : %d L3/L4 Filter\n",
-		pdata->hw_feat.l3l4_filter_num);
-	printk(KERN_ALERT "Number of MTL Receive Queues                 : %d\n",
-		(pdata->hw_feat.rx_q_cnt + 1));
-	printk(KERN_ALERT "Number of MTL Transmit Queues                : %d\n",
-		(pdata->hw_feat.tx_q_cnt + 1));
-	printk(KERN_ALERT "Number of DMA Receive Channels               : %d\n",
-		(pdata->hw_feat.rx_ch_cnt + 1));
-	printk(KERN_ALERT "Number of DMA Transmit Channels              : %d\n",
-		(pdata->hw_feat.tx_ch_cnt + 1));
+	pr_err("Hash Table Size                              : %s\n", str);
+	pr_err
+	    ("Total number of L3 or L4 Filters             : %d L3/L4 Filter\n",
+	     pdata->hw_feat.l3l4_filter_num);
+	pr_err("Number of MTL Receive Queues                 : %d\n",
+	       (pdata->hw_feat.rx_q_cnt + 1));
+	pr_err("Number of MTL Transmit Queues                : %d\n",
+	       (pdata->hw_feat.tx_q_cnt + 1));
+	pr_err("Number of DMA Receive Channels               : %d\n",
+	       (pdata->hw_feat.rx_ch_cnt + 1));
+	pr_err("Number of DMA Transmit Channels              : %d\n",
+	       (pdata->hw_feat.tx_ch_cnt + 1));
 
-	switch(pdata->hw_feat.pps_out_num) {
+	switch (pdata->hw_feat.pps_out_num) {
 	case 0:
 		str = "No PPS output";
 		break;
@@ -974,10 +957,9 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	default:
 		str = "RESERVED";
 	}
-	printk(KERN_ALERT "Number of PPS Outputs                        : %s\n",
-		str);
+	pr_err("Number of PPS Outputs                        : %s\n", str);
 
-	switch(pdata->hw_feat.aux_snap_num) {
+	switch (pdata->hw_feat.aux_snap_num) {
 	case 0:
 		str = "No auxillary input";
 		break;
@@ -996,15 +978,13 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	default:
 		str = "RESERVED";
 	}
-	printk(KERN_ALERT "Number of Auxiliary Snapshot Inputs          : %s",
-		str);
+	pr_err("Number of Auxiliary Snapshot Inputs          : %s", str);
 
-	printk(KERN_ALERT "\n");
-	printk(KERN_ALERT "=====================================================/\n");
+	pr_err("\n");
+	pr_err("=====================================================/\n");
 
 	DBGPR("<--eqos_print_all_hw_features\n");
 }
-
 
 /*!
  * \brief allcation of Rx skb's for default rx mode.
@@ -1022,8 +1002,7 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
  */
 
 static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
-				    struct eqos_rx_buffer *buffer,
-				    gfp_t gfp)
+			     struct eqos_rx_buffer *buffer, gfp_t gfp)
 {
 	struct sk_buff *skb = buffer->skb;
 
@@ -1034,9 +1013,10 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 		goto map_skb;
 	}
 
-	skb = __netdev_alloc_skb_ip_align(pdata->dev, pdata->rx_buffer_len, gfp);
+	skb =
+	    __netdev_alloc_skb_ip_align(pdata->dev, pdata->rx_buffer_len, gfp);
 	if (skb == NULL) {
-		printk(KERN_ALERT "Failed to allocate skb\n");
+		pr_err("Failed to allocate skb\n");
 		return -ENOMEM;
 	}
 	buffer->skb = skb;
@@ -1047,7 +1027,7 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 				     DMA_FROM_DEVICE);
 
 	if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
-		printk(KERN_ALERT "failed to do the RX dma map\n");
+		pr_err("failed to do the RX dma map\n");
 
 	buffer->mapped_as_page = Y_FALSE;
 
@@ -1055,7 +1035,6 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 
 	return 0;
 }
-
 
 /*!
  * \brief api to configure Rx function pointer after reset.
@@ -1079,7 +1058,6 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 
 	DBGPR("<--eqos_configure_rx_fun_ptr\n");
 }
-
 
 /*!
  * \brief api to initialize default values.
@@ -1116,7 +1094,6 @@ static void eqos_default_common_confs(struct eqos_prv_data *pdata)
 	DBGPR("<--eqos_default_common_confs\n");
 }
 
-
 /*!
  * \brief api to initialize Tx parameters.
  *
@@ -1129,13 +1106,12 @@ static void eqos_default_common_confs(struct eqos_prv_data *pdata)
  * \return void
  */
 
-static void eqos_default_tx_confs_single_q(
-		struct eqos_prv_data *pdata,
-		UINT qinx)
+static void eqos_default_tx_confs_single_q(struct eqos_prv_data *pdata,
+					   UINT qinx)
 {
 	struct eqos_tx_queue *queue_data = GET_TX_QUEUE_PTR(qinx);
 	struct eqos_tx_wrapper_descriptor *desc_data =
-		GET_TX_WRAPPER_DESC(qinx);
+	    GET_TX_WRAPPER_DESC(qinx);
 
 	DBGPR("-->eqos_default_tx_confs_single_q\n");
 
@@ -1154,7 +1130,6 @@ static void eqos_default_tx_confs_single_q(
 	DBGPR("<--eqos_default_tx_confs_single_q\n");
 }
 
-
 /*!
  * \brief api to initialize Rx parameters.
  *
@@ -1167,12 +1142,11 @@ static void eqos_default_tx_confs_single_q(
  * \return void
  */
 
-static void eqos_default_rx_confs_single_q(
-		struct eqos_prv_data *pdata,
-		UINT qinx)
+static void eqos_default_rx_confs_single_q(struct eqos_prv_data *pdata,
+					   UINT qinx)
 {
 	struct eqos_rx_wrapper_descriptor *desc_data =
-		GET_RX_WRAPPER_DESC(qinx);
+	    GET_RX_WRAPPER_DESC(qinx);
 
 	DBGPR("-->eqos_default_rx_confs_single_q\n");
 
@@ -1210,7 +1184,6 @@ static void eqos_default_rx_confs(struct eqos_prv_data *pdata)
 
 	DBGPR("<--eqos_default_rx_confs\n");
 }
-
 
 void free_txrx_irqs(struct eqos_prv_data *pdata)
 {
@@ -1251,8 +1224,7 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 
 	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ) {
 		ret = request_irq(pdata->irq_number,
-				eqos_isr,
-				IRQF_SHARED, DEV_NAME, pdata);
+				  eqos_isr, IRQF_SHARED, DEV_NAME, pdata);
 
 		if (ret != 0) {
 			dev_err(&pdata->pdev->dev,
@@ -1264,38 +1236,35 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 	}
 
 	ret = request_irq(pdata->common_irq,
-			eqos_common_isr, IRQF_SHARED, DEV_NAME, pdata);
+			  eqos_common_isr, IRQF_SHARED, DEV_NAME, pdata);
 	if (ret != Y_SUCCESS) {
-		printk(KERN_ALERT "Unable to register  %d\n",
-			pdata->common_irq);
+		pr_err("Unable to register  %d\n", pdata->common_irq);
 		ret = -EBUSY;
 		goto err_common_irq;
 	}
 	for (i = 0; i < MAX_CHANS; i++) {
 		if ((pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING) ||
-			(pdata->dt_cfg.chan_mode[i] == CHAN_MODE_NONE))
+		    (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_NONE))
 			continue;
 
 		ret = request_irq(pdata->rx_irqs[i],
-				eqos_ch_isr, 0, DEV_NAME, pdata);
+				  eqos_ch_isr, 0, DEV_NAME, pdata);
 		if (ret != 0) {
-			printk(KERN_ALERT "Unable to register  %d\n",
-				pdata->rx_irqs[i]);
+			pr_err("Unable to register  %d\n", pdata->rx_irqs[i]);
 			ret = -EBUSY;
 			goto err_chan_irq;
 		}
 		ret = request_irq(pdata->tx_irqs[i],
 				  eqos_ch_isr, 0, DEV_NAME, pdata);
 		if (ret != 0) {
-			printk(KERN_ALERT "Unable to register  %d\n",
-			       pdata->tx_irqs[i]);
+			pr_err("Unable to register  %d\n", pdata->tx_irqs[i]);
 			ret = -EBUSY;
 			goto err_chan_irq;
 		}
 		pchinfo = &pdata->chinfo[i];
 
 		irq_set_affinity_hint(pdata->rx_irqs[i],
-					cpumask_of(pchinfo->cpu));
+				      cpumask_of(pchinfo->cpu));
 		pdata->rx_irq_alloc_mask |= (1 << i);
 
 		irq_set_affinity_hint(pdata->tx_irqs[i],
@@ -1315,7 +1284,6 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 	return ret;
 }
 
-
 void init_txrx_poll_timers(struct eqos_prv_data *pdata)
 {
 	uint i;
@@ -1328,8 +1296,7 @@ void init_txrx_poll_timers(struct eqos_prv_data *pdata)
 		init_timer(&pdata->all_chans_timer);
 		pdata->all_chans_timer.function = eqos_all_chans_timer;
 		pdata->all_chans_timer.data = (unsigned long)pdata;
-		pdata->all_chans_timer.expires =
-			jiffies + msecs_to_jiffies(1000);  /* 1 s */
+		pdata->all_chans_timer.expires = jiffies + msecs_to_jiffies(1000);	/* 1 s */
 		add_timer(&pdata->all_chans_timer);
 	}
 #endif
@@ -1342,10 +1309,9 @@ void init_txrx_poll_timers(struct eqos_prv_data *pdata)
 		if (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING) {
 			init_timer(&pchinfo->poll_timer);
 			pchinfo->poll_timer.function = eqos_poll_timer;
-			pchinfo->poll_timer.data = (unsigned long) pchinfo;
+			pchinfo->poll_timer.data = (unsigned long)pchinfo;
 			pchinfo->poll_timer.expires =
-				jiffies +
-				msecs_to_jiffies(pchinfo->poll_interval);
+			    jiffies + msecs_to_jiffies(pchinfo->poll_interval);
 			add_timer(&pchinfo->poll_timer);
 		}
 	}
@@ -1375,7 +1341,6 @@ void start_txrx_poll_timers(struct eqos_prv_data *pdata)
 	DBGPR("<--%s()\n", __func__);
 }
 
-
 void stop_txrx_poll_timers(struct eqos_prv_data *pdata)
 {
 	uint i;
@@ -1397,7 +1362,6 @@ void stop_txrx_poll_timers(struct eqos_prv_data *pdata)
 	}
 	DBGPR("<--%s()\n", __func__);
 }
-
 
 /*!
 * \brief API to open a deivce for data transmission & reception.
@@ -1442,10 +1406,10 @@ static int eqos_open(struct net_device *dev)
 	DBGPR("<--%s()\n", __func__);
 	return Y_SUCCESS;
 
-err_out_desc_buf_alloc_failed:
+ err_out_desc_buf_alloc_failed:
 	free_txrx_irqs(pdata);
 
-err_irq_0:
+ err_irq_0:
 	DBGPR("<--%s()\n", __func__);
 	return ret;
 }
@@ -1479,7 +1443,6 @@ static int eqos_close(struct net_device *dev)
 	return Y_SUCCESS;
 }
 
-
 /*!
 * \brief API to configure the multicast address in device.
 *
@@ -1503,67 +1466,77 @@ static int eqos_prepare_mc_list(struct net_device *dev)
 	DBGPR_FILTER("-->eqos_prepare_mc_list\n");
 
 	if (pdata->l2_filtering_mode) {
-		DBGPR_FILTER("select HASH FILTERING for mc addresses: mc_count = %d\n",
-				netdev_mc_count(dev));
+		DBGPR_FILTER
+		    ("select HASH FILTERING for mc addresses: mc_count = %d\n",
+		     netdev_mc_count(dev));
 		ret = 1;
 		memset(mc_filter, 0, sizeof(mc_filter));
 
 		if (pdata->max_hash_table_size == 64) {
 			netdev_for_each_mc_addr(ha, dev) {
-				DBGPR_FILTER("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",i++,
-						ha->addr[0], ha->addr[1], ha->addr[2],
-						ha->addr[3], ha->addr[4], ha->addr[5]);
+				DBGPR_FILTER
+				    ("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+				     i++, ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 				/* The upper 6 bits of the calculated CRC are used to
 				 * index the content of the Hash Table Reg 0 and 1.
 				 * */
 				crc32_val =
-					(bitrev32(~crc32_le(~0, ha->addr, 6)) >> 26);
+				    (bitrev32(~crc32_le(~0, ha->addr, 6)) >>
+				     26);
 				/* The most significant bit determines the register
 				 * to use (Hash Table Reg X, X = 0 and 1) while the
 				 * other 5(0x1F) bits determines the bit within the
 				 * selected register
 				 * */
-				mc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
+				mc_filter[crc32_val >> 5] |=
+				    (1 << (crc32_val & 0x1F));
 			}
 		} else if (pdata->max_hash_table_size == 128) {
 			netdev_for_each_mc_addr(ha, dev) {
-				DBGPR_FILTER("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",i++,
-						ha->addr[0], ha->addr[1], ha->addr[2],
-						ha->addr[3], ha->addr[4], ha->addr[5]);
+				DBGPR_FILTER
+				    ("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+				     i++, ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 				/* The upper 7 bits of the calculated CRC are used to
 				 * index the content of the Hash Table Reg 0,1,2 and 3.
 				 * */
 				crc32_val =
-					(bitrev32(~crc32_le(~0, ha->addr, 6)) >> 25);
+				    (bitrev32(~crc32_le(~0, ha->addr, 6)) >>
+				     25);
 
-				printk(KERN_ALERT "crc_le = %#x, crc_be = %#x\n",
-						bitrev32(~crc32_le(~0, ha->addr, 6)),
-						bitrev32(~crc32_be(~0, ha->addr, 6)));
+				pr_err("crc_le = %#x, crc_be = %#x\n",
+				       bitrev32(~crc32_le(~0, ha->addr, 6)),
+				       bitrev32(~crc32_be(~0, ha->addr, 6)));
 
 				/* The most significant 2 bits determines the register
 				 * to use (Hash Table Reg X, X = 0,1,2 and 3) while the
 				 * other 5(0x1F) bits determines the bit within the
 				 * selected register
 				 * */
-				mc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
+				mc_filter[crc32_val >> 5] |=
+				    (1 << (crc32_val & 0x1F));
 			}
 		} else if (pdata->max_hash_table_size == 256) {
 			netdev_for_each_mc_addr(ha, dev) {
-				DBGPR_FILTER("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",i++,
-						ha->addr[0], ha->addr[1], ha->addr[2],
-						ha->addr[3], ha->addr[4], ha->addr[5]);
+				DBGPR_FILTER
+				    ("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+				     i++, ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 				/* The upper 8 bits of the calculated CRC are used to
 				 * index the content of the Hash Table Reg 0,1,2,3,4,
 				 * 5,6, and 7.
 				 * */
 				crc32_val =
-					(bitrev32(~crc32_le(~0, ha->addr, 6)) >> 24);
+				    (bitrev32(~crc32_le(~0, ha->addr, 6)) >>
+				     24);
 				/* The most significant 3 bits determines the register
 				 * to use (Hash Table Reg X, X = 0,1,2,3,4,5,6 and 7) while
 				 * the other 5(0x1F) bits determines the bit within the
 				 * selected register
 				 * */
-				mc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
+				mc_filter[crc32_val >> 5] |=
+				    (1 << (crc32_val & 0x1F));
 			}
 		}
 
@@ -1571,25 +1544,28 @@ static int eqos_prepare_mc_list(struct net_device *dev)
 			hw_if->update_hash_table_reg(i, mc_filter[i]);
 
 	} else {
-		DBGPR_FILTER("select PERFECT FILTERING for mc addresses, mc_count = %d, max_addr_reg_cnt = %d\n",
-				netdev_mc_count(dev), pdata->max_addr_reg_cnt);
+		DBGPR_FILTER
+		    ("select PERFECT FILTERING for mc addresses, mc_count = %d, max_addr_reg_cnt = %d\n",
+		     netdev_mc_count(dev), pdata->max_addr_reg_cnt);
 
 		netdev_for_each_mc_addr(ha, dev) {
 			DBGPR_FILTER("mc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
-					i,
-					ha->addr[0], ha->addr[1], ha->addr[2],
-					ha->addr[3], ha->addr[4], ha->addr[5]);
+				     i,
+				     ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 			if (i < 32)
 				hw_if->update_mac_addr1_31_low_high_reg(i,
-					ha->addr);
+									ha->
+									addr);
 			else
 				hw_if->update_mac_addr32_127_low_high_reg(i,
-					ha->addr);
+									  ha->
+									  addr);
 
 			if ((pdata->ptp_cfg.use_tagged_ptp) &&
-					(is_ptp_addr(ha->addr)))
-				hw_if->config_ptp_channel(
-					pdata->ptp_cfg.ptp_dma_ch_id, i);
+			    (is_ptp_addr(ha->addr)))
+				hw_if->config_ptp_channel(pdata->ptp_cfg.
+							  ptp_dma_ch_id, i);
 
 			i++;
 		}
@@ -1623,57 +1599,68 @@ static int eqos_prepare_uc_list(struct net_device *dev)
 	DBGPR_FILTER("-->eqos_prepare_uc_list\n");
 
 	if (pdata->l2_filtering_mode) {
-		DBGPR_FILTER("select HASH FILTERING for uc addresses: uc_count = %d\n",
-				netdev_uc_count(dev));
+		DBGPR_FILTER
+		    ("select HASH FILTERING for uc addresses: uc_count = %d\n",
+		     netdev_uc_count(dev));
 		ret = 1;
 		memset(uc_filter, 0, sizeof(uc_filter));
 
 		if (pdata->max_hash_table_size == 64) {
 			netdev_for_each_uc_addr(ha, dev) {
-				DBGPR_FILTER("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",i++,
-						ha->addr[0], ha->addr[1], ha->addr[2],
-						ha->addr[3], ha->addr[4], ha->addr[5]);
+				DBGPR_FILTER
+				    ("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+				     i++, ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 				crc32_val =
-					(bitrev32(~crc32_le(~0, ha->addr, 6)) >> 26);
-				uc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
+				    (bitrev32(~crc32_le(~0, ha->addr, 6)) >>
+				     26);
+				uc_filter[crc32_val >> 5] |=
+				    (1 << (crc32_val & 0x1F));
 			}
 		} else if (pdata->max_hash_table_size == 128) {
 			netdev_for_each_uc_addr(ha, dev) {
-				DBGPR_FILTER("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",i++,
-						ha->addr[0], ha->addr[1], ha->addr[2],
-						ha->addr[3], ha->addr[4], ha->addr[5]);
+				DBGPR_FILTER
+				    ("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+				     i++, ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 				crc32_val =
-					(bitrev32(~crc32_le(~0, ha->addr, 6)) >> 25);
-				uc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
+				    (bitrev32(~crc32_le(~0, ha->addr, 6)) >>
+				     25);
+				uc_filter[crc32_val >> 5] |=
+				    (1 << (crc32_val & 0x1F));
 			}
 		} else if (pdata->max_hash_table_size == 256) {
 			netdev_for_each_uc_addr(ha, dev) {
-				DBGPR_FILTER("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",i++,
-						ha->addr[0], ha->addr[1], ha->addr[2],
-						ha->addr[3], ha->addr[4], ha->addr[5]);
+				DBGPR_FILTER
+				    ("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+				     i++, ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 				crc32_val =
-					(bitrev32(~crc32_le(~0, ha->addr, 6)) >> 24);
-				uc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
+				    (bitrev32(~crc32_le(~0, ha->addr, 6)) >>
+				     24);
+				uc_filter[crc32_val >> 5] |=
+				    (1 << (crc32_val & 0x1F));
 			}
 		}
 
 		/* configure hash value of real/default interface also */
-		DBGPR_FILTER("real/default dev_addr = %#x:%#x:%#x:%#x:%#x:%#x\n",
-				dev->dev_addr[0], dev->dev_addr[1], dev->dev_addr[2],
-				dev->dev_addr[3], dev->dev_addr[4], dev->dev_addr[5]);
+		DBGPR_FILTER
+		    ("real/default dev_addr = %#x:%#x:%#x:%#x:%#x:%#x\n",
+		     dev->dev_addr[0], dev->dev_addr[1], dev->dev_addr[2],
+		     dev->dev_addr[3], dev->dev_addr[4], dev->dev_addr[5]);
 
 		if (pdata->max_hash_table_size == 64) {
 			crc32_val =
-				(bitrev32(~crc32_le(~0, dev->dev_addr, 6)) >> 26);
+			    (bitrev32(~crc32_le(~0, dev->dev_addr, 6)) >> 26);
 			uc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
 		} else if (pdata->max_hash_table_size == 128) {
 			crc32_val =
-				(bitrev32(~crc32_le(~0, dev->dev_addr, 6)) >> 25);
+			    (bitrev32(~crc32_le(~0, dev->dev_addr, 6)) >> 25);
 			uc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
 
 		} else if (pdata->max_hash_table_size == 256) {
 			crc32_val =
-				(bitrev32(~crc32_le(~0, dev->dev_addr, 6)) >> 24);
+			    (bitrev32(~crc32_le(~0, dev->dev_addr, 6)) >> 24);
 			uc_filter[crc32_val >> 5] |= (1 << (crc32_val & 0x1F));
 		}
 
@@ -1681,17 +1668,22 @@ static int eqos_prepare_uc_list(struct net_device *dev)
 			hw_if->update_hash_table_reg(i, uc_filter[i]);
 
 	} else {
-		DBGPR_FILTER("select PERFECT FILTERING for uc addresses: uc_count = %d\n",
-				netdev_uc_count(dev));
+		DBGPR_FILTER
+		    ("select PERFECT FILTERING for uc addresses: uc_count = %d\n",
+		     netdev_uc_count(dev));
 
 		netdev_for_each_uc_addr(ha, dev) {
-			DBGPR_FILTER("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n", i,
-					ha->addr[0], ha->addr[1], ha->addr[2],
-					ha->addr[3], ha->addr[4], ha->addr[5]);
+			DBGPR_FILTER("uc addr[%d] = %#x:%#x:%#x:%#x:%#x:%#x\n",
+				     i, ha->addr[0], ha->addr[1], ha->addr[2],
+				     ha->addr[3], ha->addr[4], ha->addr[5]);
 			if (i < 32)
-				hw_if->update_mac_addr1_31_low_high_reg(i, ha->addr);
+				hw_if->update_mac_addr1_31_low_high_reg(i,
+									ha->
+									addr);
 			else
-				hw_if->update_mac_addr32_127_low_high_reg(i, ha->addr);
+				hw_if->update_mac_addr32_127_low_high_reg(i,
+									  ha->
+									  addr);
 			i++;
 		}
 	}
@@ -1728,13 +1720,14 @@ static void eqos_set_rx_mode(struct net_device *dev)
 	spin_lock_irqsave(&pdata->lock, flags);
 
 	if (dev->flags & IFF_PROMISC) {
-		DBGPR_FILTER("PROMISCUOUS MODE (Accept all packets irrespective of DA)\n");
+		DBGPR_FILTER
+		    ("PROMISCUOUS MODE (Accept all packets irrespective of DA)\n");
 		pr_mode = 1;
 #ifdef ENABLE_PERFECT_L2_FILTER
 	} else if ((dev->flags & IFF_ALLMULTI)) {
 #else
 	} else if ((dev->flags & IFF_ALLMULTI) ||
-			(netdev_mc_count(dev) > (pdata->max_hash_table_size))) {
+		   (netdev_mc_count(dev) > (pdata->max_hash_table_size))) {
 #endif
 		DBGPR_FILTER("pass all multicast pkt\n");
 		pm_mode = 1;
@@ -1745,7 +1738,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 	} else if (!netdev_mc_empty(dev)) {
 		DBGPR_FILTER("pass list of multicast pkt\n");
 		if ((netdev_mc_count(dev) > (pdata->max_addr_reg_cnt - 1)) &&
-			(!pdata->max_hash_table_size)) {
+		    (!pdata->max_hash_table_size)) {
 			/* switch to PROMISCUOUS mode */
 			pr_mode = 1;
 		} else {
@@ -1763,7 +1756,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 
 	/* Handle multiple unicast addresses */
 	if ((netdev_uc_count(dev) > (pdata->max_addr_reg_cnt - 1)) &&
-			(!pdata->max_hash_table_size)) {
+	    (!pdata->max_hash_table_size)) {
 		/* switch to PROMISCUOUS mode */
 		pr_mode = 1;
 	} else if (!netdev_uc_empty(dev)) {
@@ -1779,7 +1772,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 	}
 
 	hw_if->config_mac_pkt_filter_reg(pr_mode, huc_mode,
-		hmc_mode, pm_mode, hpf_mode);
+					 hmc_mode, pm_mode, hpf_mode);
 
 	spin_unlock_irqrestore(&pdata->lock, flags);
 
@@ -1802,7 +1795,7 @@ static void eqos_set_rx_mode(struct net_device *dev)
 */
 
 UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
-		struct sk_buff *skb, UINT qinx)
+			     struct sk_buff *skb, UINT qinx)
 {
 	UINT count = 0, size = 0;
 	INT length = 0;
@@ -1835,17 +1828,18 @@ UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
 		vlan_tag |= (skb->priority << 13);
 		desc_data->vlan_tag_present = 1;
 		if (vlan_tag != desc_data->vlan_tag_id ||
-				desc_data->context_setup == 1) {
+		    desc_data->context_setup == 1) {
 			desc_data->vlan_tag_id = vlan_tag;
 			if (Y_TRUE == desc_data->tx_vlan_tag_via_reg) {
-				printk(KERN_ALERT "VLAN control info update via register\n\n");
+				pr_err
+				    ("VLAN control info update via register\n\n");
 				hw_if->enable_vlan_reg_control(desc_data);
 			} else {
 				hw_if->enable_vlan_desc_control(pdata);
 				TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
 				    (tx_pkt_features->pkt_attributes, 1);
 				TX_PKT_FEATURES_VLAN_TAG_VT_WR
-					(tx_pkt_features->vlan_tag, vlan_tag);
+				    (tx_pkt_features->vlan_tag, vlan_tag);
 				/* we need one context descriptor to carry vlan tag info */
 				count++;
 			}
@@ -1856,7 +1850,6 @@ UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
 
 	return count;
 }
-
 
 /*!
 * \brief API to transmit the packets
@@ -1891,8 +1884,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 #endif
 	int tso;
 
-	DBGPR("-->eqos_start_xmit: skb->len = %d, qinx = %u\n",
-		skb->len, qinx);
+	DBGPR("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
 
 	if (desc_data->tx_pkt_queued > (TX_DESC_CNT >> 2))
 		eqos_tx_interrupt(pdata->dev, pdata, qinx);
@@ -1904,13 +1896,12 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	if (skb->len <= 0) {
 		dev_kfree_skb_any(skb);
-		printk(KERN_ERR "%s : Empty skb received from stack\n",
-			dev->name);
+		pr_err("%s : Empty skb received from stack\n", dev->name);
 		goto tx_netdev_return;
 	}
 
 	if ((pdata->eee_enabled) && (pdata->tx_path_in_lpi_mode) &&
-		(!pdata->use_lpi_tx_automate))
+	    (!pdata->use_lpi_tx_automate))
 		eqos_disable_eee_mode(pdata);
 
 	memset(&pdata->tx_pkt_features, 0, sizeof(pdata->tx_pkt_features));
@@ -1921,35 +1912,39 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		desc_data->queue_stopped = 1;
 		netif_stop_subqueue(dev, qinx);
 		DBGPR("stopped TX queue(%d) since there are no sufficient "
-			"descriptor available for the current transfer\n",
-			qinx);
+		      "descriptor available for the current transfer\n", qinx);
 		retval = NETDEV_TX_BUSY;
 		goto tx_netdev_return;
 	}
 
 	/* check for hw tstamping */
 	if (pdata->hw_feat.tsstssel && pdata->hwts_tx_en) {
-		if(skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
+		if (skb_shinfo(skb)->tx_flags & SKBTX_HW_TSTAMP) {
 			/* declare that device is doing timestamping */
 			skb_shinfo(skb)->tx_flags |= SKBTX_IN_PROGRESS;
-			TX_PKT_FEATURES_PKT_ATTRIBUTES_PTP_ENABLE_WR(tx_pkt_features->pkt_attributes, 1);
-			DBGPR_PTP("Got PTP pkt to transmit [qinx = %d, cur_tx = %d]\n",
-				qinx, desc_data->cur_tx);
+			TX_PKT_FEATURES_PKT_ATTRIBUTES_PTP_ENABLE_WR
+			    (tx_pkt_features->pkt_attributes, 1);
+			DBGPR_PTP
+			    ("Got PTP pkt to transmit [qinx = %d, cur_tx = %d]\n",
+			     qinx, desc_data->cur_tx);
 		}
 	}
 
 	tso = desc_if->handle_tso(dev, skb);
 	if (tso < 0) {
-		printk(KERN_ALERT "Unable to handle TSO\n");
+		pr_err("Unable to handle TSO\n");
 		dev_kfree_skb_any(skb);
 		retval = NETDEV_TX_OK;
 		goto tx_netdev_return;
 	}
 	if (tso) {
 		pdata->xstats.tx_tso_pkt_n++;
-		TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_WR(tx_pkt_features->pkt_attributes, 1);
+		TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_WR(tx_pkt_features->
+							     pkt_attributes, 1);
 	} else if (skb->ip_summed == CHECKSUM_PARTIAL) {
-		TX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_ENABLE_WR(tx_pkt_features->pkt_attributes, 1);
+		TX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_ENABLE_WR(tx_pkt_features->
+							      pkt_attributes,
+							      1);
 	}
 
 	count = desc_if->map_tx_skb(dev, skb);
@@ -1968,7 +1963,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD
-		(tx_pkt_features->pkt_attributes, varvlan_pkt);
+	    (tx_pkt_features->pkt_attributes, varvlan_pkt);
 	if (varvlan_pkt == 0x1)
 		count++;
 #endif
@@ -1992,10 +1987,10 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	/* configure required descriptor fields for transmission */
 	hw_if->pre_xmit(pdata, qinx);
 
-tx_netdev_return:
+ tx_netdev_return:
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
 		spin_unlock_irqrestore(&pdata->chinfo[qinx].chan_tx_lock,
-					flags);
+				       flags);
 	else
 		spin_unlock_irqrestore(&pdata->tx_lock, flags);
 
@@ -2005,7 +2000,7 @@ tx_netdev_return:
 }
 
 static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
-	unsigned int qinx)
+				      unsigned int qinx)
 {
 	u32 ptp_status = 0;
 	u32 pkt_type = 0;
@@ -2024,8 +2019,10 @@ static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
 	ptp_status = rxdesc->rdes1;
 	tstamp_dropped = ((ptp_status & 0x8000) ? "YES" : "NO");
 	tstamp_available = ((ptp_status & 0x4000) ? "YES" : "NO");
-	ptp_version = ((ptp_status & 0x2000) ? "v2 (1588-2008)" : "v1 (1588-2002)");
-	ptp_pkt_type = ((ptp_status & 0x1000) ? "ptp over Eth" : "ptp over IPv4/6");
+	ptp_version =
+	    ((ptp_status & 0x2000) ? "v2 (1588-2008)" : "v1 (1588-2002)");
+	ptp_pkt_type =
+	    ((ptp_status & 0x1000) ? "ptp over Eth" : "ptp over IPv4/6");
 
 	pkt_type = ((ptp_status & 0xF00) > 8);
 	switch (pkt_type) {
@@ -2074,17 +2071,16 @@ static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
 	}
 
 	DBGPR_PTP("Rx timestamp detail for queue %d\n"
-			"tstamp dropped    = %s\n"
-			"tstamp available  = %s\n"
-			"PTP version       = %s\n"
-			"PTP Pkt Type      = %s\n"
-			"PTP Msg Type      = %s\n",
-			qinx, tstamp_dropped, tstamp_available,
-			ptp_version, ptp_pkt_type, ptp_msg_type);
+		  "tstamp dropped    = %s\n"
+		  "tstamp available  = %s\n"
+		  "PTP version       = %s\n"
+		  "PTP Pkt Type      = %s\n"
+		  "PTP Msg Type      = %s\n",
+		  qinx, tstamp_dropped, tstamp_available,
+		  ptp_version, ptp_pkt_type, ptp_msg_type);
 
 	DBGPR_PTP("<--eqos_print_rx_tstamp_info\n");
 }
-
 
 /*!
 * \brief API to get rx time stamp value.
@@ -2104,14 +2100,13 @@ static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
 * \retval 2 if time stamp is corrupted
 */
 
-static unsigned char eqos_get_rx_hwtstamp(
-	struct eqos_prv_data *pdata,
-	struct sk_buff *skb,
-	struct eqos_rx_wrapper_descriptor *desc_data,
-	unsigned int qinx)
+static unsigned char eqos_get_rx_hwtstamp(struct eqos_prv_data *pdata,
+					  struct sk_buff *skb,
+					  struct eqos_rx_wrapper_descriptor
+					  *desc_data, unsigned int qinx)
 {
 	struct s_rx_normal_desc *rx_normal_desc =
-		GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+	    GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
 	struct s_rx_context_desc *rx_context_desc = NULL;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct skb_shared_hwtstamps *shhwtstamp = NULL;
@@ -2126,11 +2121,11 @@ static unsigned char eqos_get_rx_hwtstamp(
 	INCR_RX_DESC_INDEX(desc_data->cur_rx, 1);
 	rx_context_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
 
-	DBGPR_PTP("\nRX_CONTEX_DESC[%d %4p %d RECEIVED FROM DEVICE]"\
-			" = %#x:%#x:%#x:%#x",
-			qinx, rx_context_desc, desc_data->cur_rx, rx_context_desc->rdes0,
-			rx_context_desc->rdes1,
-			rx_context_desc->rdes2, rx_context_desc->rdes3);
+	DBGPR_PTP("\nRX_CONTEX_DESC[%d %4p %d RECEIVED FROM DEVICE]"
+		  " = %#x:%#x:%#x:%#x",
+		  qinx, rx_context_desc, desc_data->cur_rx,
+		  rx_context_desc->rdes0, rx_context_desc->rdes1,
+		  rx_context_desc->rdes2, rx_context_desc->rdes3);
 
 	/* check rx tsatmp */
 	for (retry = 0; retry < 10; retry++) {
@@ -2139,20 +2134,23 @@ static unsigned char eqos_get_rx_hwtstamp(
 			/* time stamp is valid */
 			break;
 		} else if (ret == 0) {
-			printk(KERN_ALERT "Device has not yet updated the context "
-				"desc to hold Rx time stamp(retry = %d)\n", retry);
+			pr_err("Device has not yet updated the context "
+			       "desc to hold Rx time stamp(retry = %d)\n",
+			       retry);
 		} else {
-			printk(KERN_ALERT "Error: Rx time stamp is corrupted(retry = %d)\n", retry);
+			pr_err
+			    ("Error: Rx time stamp is corrupted(retry = %d)\n",
+			     retry);
 			return 2;
 		}
 	}
 
 	if (retry == 10) {
-			printk(KERN_ALERT "Device has not yet updated the context "
-				"desc to hold Rx time stamp(retry = %d)\n", retry);
-			desc_data->dirty_rx--;
-			DECR_RX_DESC_INDEX(desc_data->cur_rx);
-			return 0;
+		pr_err("Device has not yet updated the context "
+		       "desc to hold Rx time stamp(retry = %d)\n", retry);
+		desc_data->dirty_rx--;
+		DECR_RX_DESC_INDEX(desc_data->cur_rx);
+		return 0;
 	}
 
 	pdata->xstats.rx_timestamp_captured_n++;
@@ -2167,7 +2165,6 @@ static unsigned char eqos_get_rx_hwtstamp(
 
 	return 1;
 }
-
 
 /*!
 * \brief API to get tx time stamp value.
@@ -2185,10 +2182,9 @@ static unsigned char eqos_get_rx_hwtstamp(
 * \retval 0 if time stamp in not taken/valid
 */
 
-static unsigned int eqos_get_tx_hwtstamp(
-	struct eqos_prv_data *pdata,
-	struct s_tx_normal_desc *txdesc,
-	struct sk_buff *skb)
+static unsigned int eqos_get_tx_hwtstamp(struct eqos_prv_data *pdata,
+					 struct s_tx_normal_desc *txdesc,
+					 struct sk_buff *skb)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct skb_shared_hwtstamps shhwtstamp;
@@ -2199,7 +2195,8 @@ static unsigned int eqos_get_tx_hwtstamp(
 	if (hw_if->drop_tx_status_enabled() == 0) {
 		/* check tx tstamp status */
 		if (!hw_if->get_tx_tstamp_status(txdesc)) {
-			printk(KERN_ALERT "tx timestamp is not captured for this packet\n");
+			pr_err
+			    ("tx timestamp is not captured for this packet\n");
 			return 0;
 		}
 
@@ -2211,7 +2208,8 @@ static unsigned int eqos_get_tx_hwtstamp(
 
 		/* check tx tstamp status */
 		if (!hw_if->get_tx_tstamp_status_via_reg()) {
-			printk(KERN_ALERT "tx timestamp is not captured for this packet\n");
+			pr_err
+			    ("tx timestamp is not captured for this packet\n");
 			return 0;
 		}
 
@@ -2230,7 +2228,6 @@ static unsigned int eqos_get_tx_hwtstamp(
 	return 1;
 }
 
-
 /*!
 * \brief API to update the tx status.
 *
@@ -2246,8 +2243,7 @@ static unsigned int eqos_get_tx_hwtstamp(
 */
 
 static void eqos_tx_interrupt(struct net_device *dev,
-				     struct eqos_prv_data *pdata,
-				     UINT qinx)
+			      struct eqos_prv_data *pdata, UINT qinx)
 {
 	struct eqos_tx_wrapper_descriptor *desc_data =
 	    GET_TX_WRAPPER_DESC(qinx);
@@ -2260,8 +2256,8 @@ static void eqos_tx_interrupt(struct net_device *dev,
 	unsigned long flags;
 
 	DBGPR("-->eqos_tx_interrupt: desc_data->tx_pkt_queued = %d"
-		" dirty_tx = %d, qinx = %u\n",
-		desc_data->tx_pkt_queued, desc_data->dirty_tx, qinx);
+	      " dirty_tx = %d, qinx = %u\n",
+	      desc_data->tx_pkt_queued, desc_data->dirty_tx, qinx);
 
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
 		spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
@@ -2285,17 +2281,19 @@ static void eqos_tx_interrupt(struct net_device *dev,
 		/* update the tx error if any by looking at last segment
 		 * for NORMAL descriptors
 		 * */
-		if ((hw_if->get_tx_desc_ls(txptr)) && !(hw_if->get_tx_desc_ctxt(txptr))) {
+		if ((hw_if->get_tx_desc_ls(txptr))
+		    && !(hw_if->get_tx_desc_ctxt(txptr))) {
 			/* check whether skb support hw tstamp */
 			if ((pdata->hw_feat.tsstssel) &&
-				(skb_shinfo(buffer->skb)->tx_flags & SKBTX_IN_PROGRESS)) {
-				tstamp_taken = eqos_get_tx_hwtstamp(pdata,
-					txptr, buffer->skb);
+			    (skb_shinfo(buffer->skb)->
+			     tx_flags & SKBTX_IN_PROGRESS)) {
+				tstamp_taken =
+				    eqos_get_tx_hwtstamp(pdata, txptr,
+							 buffer->skb);
 				if (tstamp_taken) {
-					//dump_tx_desc(pdata, desc_data->dirty_tx, desc_data->dirty_tx,
-					//		0, qinx);
-					DBGPR_PTP("passed tx timestamp to stack[qinx = %d, dirty_tx = %d]\n",
-						qinx, desc_data->dirty_tx);
+					DBGPR_PTP
+					    ("passed tx timestamp to stack[qinx = %d, dirty_tx = %d]\n",
+					     qinx, desc_data->dirty_tx);
 				}
 			}
 
@@ -2311,7 +2309,9 @@ static void eqos_tx_interrupt(struct net_device *dev,
 					err_incremented = 1;
 					dev->stats.tx_aborted_errors++;
 					if (hw_if->tx_handle_aborted_error)
-						hw_if->tx_handle_aborted_error(txptr);
+						hw_if->
+						    tx_handle_aborted_error
+						    (txptr);
 				}
 			}
 			if (hw_if->tx_carrier_lost_error) {
@@ -2325,7 +2325,9 @@ static void eqos_tx_interrupt(struct net_device *dev,
 					err_incremented = 1;
 					dev->stats.tx_fifo_errors++;
 					if (hw_if->tx_update_fifo_threshold)
-						hw_if->tx_update_fifo_threshold(txptr);
+						hw_if->
+						    tx_update_fifo_threshold
+						    (txptr);
 				}
 			}
 			if (hw_if->tx_get_collision_count)
@@ -2356,14 +2358,15 @@ static void eqos_tx_interrupt(struct net_device *dev,
 	}
 
 	if ((pdata->eee_enabled) && (!pdata->tx_path_in_lpi_mode) &&
-		(!pdata->use_lpi_tx_automate)) {
+	    (!pdata->use_lpi_tx_automate)) {
 		eqos_enable_eee_mode(pdata);
 		mod_timer(&pdata->eee_ctrl_timer,
-			EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
+			  EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
 	}
 
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		spin_unlock_irqrestore(&pdata->chinfo[qinx].chan_tx_lock, flags);
+		spin_unlock_irqrestore(&pdata->chinfo[qinx].chan_tx_lock,
+				       flags);
 	else
 		spin_unlock_irqrestore(&pdata->tx_lock, flags);
 
@@ -2380,31 +2383,31 @@ static void eqos_check_rx_filter_status(struct s_rx_normal_desc *rx_normal_desc)
 	/* Receive Status rdes2 Valid ? */
 	if ((rdes3 & 0x8000000) == 0x8000000) {
 		if ((rdes2 & 0x400) == 0x400)
-			printk(KERN_ALERT "ARP pkt received\n");
+			pr_err("ARP pkt received\n");
 		if ((rdes2 & 0x800) == 0x800)
-			printk(KERN_ALERT "ARP reply not generated\n");
+			pr_err("ARP reply not generated\n");
 		if ((rdes2 & 0x8000) == 0x8000)
-			printk(KERN_ALERT "VLAN pkt passed VLAN filter\n");
+			pr_err("VLAN pkt passed VLAN filter\n");
 		if ((rdes2 & 0x10000) == 0x10000)
-			printk(KERN_ALERT "SA Address filter fail\n");
+			pr_err("SA Address filter fail\n");
 		if ((rdes2 & 0x20000) == 0x20000)
-			printk(KERN_ALERT "DA Addess filter fail\n");
+			pr_err("DA Addess filter fail\n");
 		if ((rdes2 & 0x40000) == 0x40000)
-			printk(KERN_ALERT "pkt passed the HASH filter in MAC and HASH value = %#x\n",
-					(rdes2 >> 19) & 0xff);
+			pr_err
+			    ("pkt passed the HASH filter in MAC and HASH value = %#x\n",
+			     (rdes2 >> 19) & 0xff);
 		if ((rdes2 & 0x8000000) == 0x8000000)
-			printk(KERN_ALERT "L3 filter(%d) Match\n", ((rdes2 >> 29) & 0x7));
+			pr_err("L3 filter(%d) Match\n", ((rdes2 >> 29) & 0x7));
 		if ((rdes2 & 0x10000000) == 0x10000000)
-			printk(KERN_ALERT "L4 filter(%d) Match\n", ((rdes2 >> 29) & 0x7));
+			pr_err("L4 filter(%d) Match\n", ((rdes2 >> 29) & 0x7));
 	}
 }
-#endif /* YDEBUG_FILTER */
-
+#endif				/* YDEBUG_FILTER */
 
 /* pass skb to upper layer */
 static void eqos_receive_skb(struct eqos_prv_data *pdata,
-				    struct net_device *dev, struct sk_buff *skb,
-				    UINT qinx)
+			     struct net_device *dev, struct sk_buff *skb,
+			     UINT qinx)
 {
 	struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(qinx);
 
@@ -2415,7 +2418,7 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 	if (dev->features & NETIF_F_GRO) {
 		napi_gro_receive(&rx_queue->napi, skb);
 	} else if ((dev->features & NETIF_F_LRO) &&
-		(skb->ip_summed == CHECKSUM_UNNECESSARY)) {
+		   (skb->ip_summed == CHECKSUM_UNNECESSARY)) {
 		lro_receive_skb(&rx_queue->lro_mgr, skb, (void *)pdata);
 		rx_queue->lro_flush_needed = 1;
 	} else {
@@ -2425,8 +2428,8 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 
 /* Receive Checksum Offload configuration */
 static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
-		struct sk_buff *skb,
-		struct s_rx_normal_desc *rx_normal_desc)
+				       struct sk_buff *skb,
+				       struct s_rx_normal_desc *rx_normal_desc)
 {
 	UINT rdes1;
 
@@ -2444,21 +2447,25 @@ static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
 }
 
 static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
-			struct sk_buff *skb,
-			struct s_rx_normal_desc *rx_normal_desc)
+				    struct sk_buff *skb,
+				    struct s_rx_normal_desc *rx_normal_desc)
 {
 	USHORT vlan_tag = 0;
 
-	if ((pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX) == NETIF_F_HW_VLAN_CTAG_RX) {
+	if ((pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX) ==
+	    NETIF_F_HW_VLAN_CTAG_RX) {
 		/* Receive Status rdes0 Valid ? */
 		if ((rx_normal_desc->rdes3 & EQOS_RDESC3_RS0V)) {
 			/* device received frame with VLAN Tag or
 			 * double VLAN Tag ? */
-			if (((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) == 0x40000)
-				|| ((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) == 0x50000)) {
+			if (((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) ==
+			     0x40000)
+			    || ((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) ==
+				0x50000)) {
 				vlan_tag = rx_normal_desc->rdes0 & 0xffff;
 				/* insert VLAN tag into skb */
-				__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q), vlan_tag);
+				__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q),
+						       vlan_tag);
 				pdata->xstats.rx_vlan_pkt_n++;
 			}
 		}
@@ -2470,18 +2477,17 @@ static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
  * */
 static int eqos_check_for_tcp_payload(struct s_rx_normal_desc *rxdesc)
 {
-		u32 pt_type = 0;
-		int ret = 0;
+	u32 pt_type = 0;
+	int ret = 0;
 
-		if (rxdesc->rdes3 & EQOS_RDESC3_RS1V) {
-				pt_type = rxdesc->rdes1 & EQOS_RDESC1_PT;
-				if (pt_type == EQOS_RDESC1_PT_TCP)
-						ret = 1;
-		}
+	if (rxdesc->rdes3 & EQOS_RDESC3_RS1V) {
+		pt_type = rxdesc->rdes1 & EQOS_RDESC1_PT;
+		if (pt_type == EQOS_RDESC1_PT_TCP)
+			ret = 1;
+	}
 
-		return ret;
+	return ret;
 }
-
 
 /*!
 * \brief API to pass the Rx packets to stack if default mode
@@ -2502,9 +2508,7 @@ static int eqos_check_for_tcp_payload(struct s_rx_normal_desc *rxdesc)
 * \retval number of packets received.
 */
 
-static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
-				    int quota,
-				    UINT qinx)
+static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 {
 	struct eqos_rx_wrapper_descriptor *desc_data =
 	    GET_RX_WRAPPER_DESC(qinx);
@@ -2520,8 +2524,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 
 	int ret;
 
-	DBGPR("-->eqos_clean_rx_irq: qinx = %u, quota = %d\n",
-		qinx, quota);
+	DBGPR("-->eqos_clean_rx_irq: qinx = %u, quota = %d\n", qinx, quota);
 
 	while (received < quota) {
 		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
@@ -2537,21 +2540,19 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 			buffer->skb = NULL;
 
 			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
-					 ALIGN_SIZE(
-					   pdata->rx_buffer_len),
+					 ALIGN_SIZE(pdata->rx_buffer_len),
 					 DMA_FROM_DEVICE);
 			buffer->dma = 0;
 
 			/* get the packet length */
-			pkt_len =
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
+			pkt_len = (rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
 
 #ifdef EQOS_ENABLE_RX_PKT_DUMP
 			print_pkt(skb, pkt_len, 0, (desc_data->cur_rx));
 #endif
 
 #ifdef ENABLE_CHANNEL_DATA_CHECK
-	check_channel_data(skb, qinx, 1);
+			check_channel_data(skb, qinx, 1);
 #endif
 
 			/* check for bad/oversized packet,
@@ -2563,7 +2564,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 
 			if (!(rx_normal_desc->rdes3 & err_bits) &&
 			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
-				/* pkt_len = pkt_len - 4; */ /* CRC stripping */
+				/* pkt_len = pkt_len - 4; *//* CRC stripping */
 
 				/* code added for copybreak, this should improve
 				 * performance for small pkts with large amount
@@ -2574,10 +2575,10 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 					    netdev_alloc_skb_ip_align(dev,
 								      pkt_len);
 					if (new_skb) {
-						skb_copy_to_linear_data_offset(
-						new_skb, -NET_IP_ALIGN,
-						(skb->data - NET_IP_ALIGN),
-						(pkt_len + NET_IP_ALIGN));
+						skb_copy_to_linear_data_offset
+						    (new_skb, -NET_IP_ALIGN,
+						     (skb->data - NET_IP_ALIGN),
+						     (pkt_len + NET_IP_ALIGN));
 						/* recycle actual desc skb */
 						buffer->skb = skb;
 						skb = new_skb;
@@ -2587,8 +2588,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				}
 				skb_put(skb, pkt_len);
 
-				eqos_config_rx_csum(pdata, skb,
-							rx_normal_desc);
+				eqos_config_rx_csum(pdata, skb, rx_normal_desc);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 				eqos_get_rx_vlan(pdata, skb, rx_normal_desc);
@@ -2599,12 +2599,13 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 #endif
 
 				if (pdata->hw_feat.tsstssel &&
-					pdata->hwts_rx_en &&
-					hw_if->rx_tstamp_available(
-						rx_normal_desc)) {
+				    pdata->hwts_rx_en &&
+				    hw_if->
+				    rx_tstamp_available(rx_normal_desc)) {
 					/* get rx tstamp if available */
 					ret = eqos_get_rx_hwtstamp(pdata, skb,
-						desc_data, qinx);
+								   desc_data,
+								   qinx);
 					if (ret == 0) {
 						/* device has not yet updated
 						 * the CONTEXT desc to hold the
@@ -2612,24 +2613,30 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 						 * packet reception
 						 */
 						buffer->skb = skb;
-						buffer->dma = dma_map_single(
-						&pdata->pdev->dev, skb->data,
-						ALIGN_SIZE(pdata->rx_buffer_len)
-						, DMA_FROM_DEVICE);
+						buffer->dma =
+						    dma_map_single(&pdata->
+								   pdev->dev,
+								   skb->data,
+								   ALIGN_SIZE
+								   (pdata->
+								    rx_buffer_len)
+								   ,
+								   DMA_FROM_DEVICE);
 
-						if (dma_mapping_error(
-						&pdata->pdev->dev, buffer->dma))
-							printk(KERN_ALERT
-						"failed to do the RX dma map\n");
-							goto rx_tstmp_failed;
+						if (dma_mapping_error
+						    (&pdata->pdev->dev,
+						     buffer->dma))
+							pr_err
+							    ("failed to do the RX dma map\n");
+						goto rx_tstmp_failed;
 					}
 				}
 
 				if (!(dev->features & NETIF_F_GRO) &&
-						(dev->features & NETIF_F_LRO)) {
+				    (dev->features & NETIF_F_LRO)) {
 					pdata->tcp_pkt =
-					eqos_check_for_tcp_payload(
-						rx_normal_desc);
+					    eqos_check_for_tcp_payload
+					    (rx_normal_desc);
 				}
 
 				dev->last_rx = jiffies;
@@ -2640,20 +2647,21 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 				received++;
 			} else {
 				dump_rx_desc(qinx, rx_normal_desc,
-					desc_data->cur_rx);
+					     desc_data->cur_rx);
 				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD))
 					DBGPR("Received oversized pkt,"
-					"spanned across multiple desc\n");
+					      "spanned across multiple desc\n");
 
 				/* recycle skb */
 				buffer->skb = skb;
 				dev->stats.rx_errors++;
 				eqos_update_rx_errors(dev,
-					rx_normal_desc->rdes3);
+						      rx_normal_desc->rdes3);
 			}
 
 			desc_data->dirty_rx++;
-			if (desc_data->dirty_rx >= desc_data->skb_realloc_threshold)
+			if (desc_data->dirty_rx >=
+			    desc_data->skb_realloc_threshold)
 				desc_if->realloc_skb(pdata, qinx);
 
 			INCR_RX_DESC_INDEX(desc_data->cur_rx, 1);
@@ -2663,13 +2671,12 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
 		}
 	}
 
-rx_tstmp_failed:
+ rx_tstmp_failed:
 
 	if (desc_data->dirty_rx)
 		desc_if->realloc_skb(pdata, qinx);
 
-	DBGPR("<--eqos_clean_rx_irq: received = %d, qinx=%d\n",
-		received, qinx);
+	DBGPR("<--eqos_clean_rx_irq: received = %d, qinx=%d\n", received, qinx);
 
 	return received;
 }
@@ -2686,8 +2693,7 @@ rx_tstmp_failed:
 * \return void.
 */
 
-void eqos_update_rx_errors(struct net_device *dev,
-				 unsigned int rx_status)
+void eqos_update_rx_errors(struct net_device *dev, unsigned int rx_status)
 {
 	DBGPR("-->eqos_update_rx_errors\n");
 
@@ -2705,7 +2711,6 @@ void eqos_update_rx_errors(struct net_device *dev,
 
 	DBGPR("<--eqos_update_rx_errors\n");
 }
-
 
 int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 {
@@ -2734,10 +2739,9 @@ int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 	return received;
 }
 
-
 static void do_txrx_post_processing(struct eqos_prv_data *pdata,
-				struct napi_struct *napi,
-				int received,  int budget)
+				    struct napi_struct *napi,
+				    int received, int budget)
 {
 	struct eqos_rx_queue *rx_queue;
 	int qinx = 0;
@@ -2751,8 +2755,7 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 	if (received < budget) {
 		if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
 			rx_queue =
-				container_of(napi,
-					struct eqos_rx_queue, napi);
+			    container_of(napi, struct eqos_rx_queue, napi);
 			qinx = rx_queue->chan_num;
 			hw_if = &(pdata->hw_if);
 		}
@@ -2783,7 +2786,6 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 	DBGPR("<--%s():\n", __func__);
 }
 
-
 /*!
 * \brief API to pass the received packets to stack
 *
@@ -2802,7 +2804,7 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 int eqos_poll_mq(struct napi_struct *napi, int budget)
 {
 	struct eqos_rx_queue *rx_queue =
-		container_of(napi, struct eqos_rx_queue, napi);
+	    container_of(napi, struct eqos_rx_queue, napi);
 	struct eqos_prv_data *pdata = rx_queue->pdata;
 	int qinx = 0;
 	int received = 0;
@@ -2815,7 +2817,7 @@ int eqos_poll_mq(struct napi_struct *napi, int budget)
 	}
 
 	do_txrx_post_processing(pdata, napi, received,
-		pdata->napi_quota_all_chans);
+				pdata->napi_quota_all_chans);
 
 	DBGPR("<--eqos_poll_mq\n");
 
@@ -2838,7 +2840,6 @@ void eqos_poll_mq_all_chans(struct eqos_prv_data *pdata)
 	DBGPR("<--%s():\n", __func__);
 }
 
-
 /* Used only when multi-irq is enablded.  Used in two cases
  * 1) when one or more channels are configured for TYPE_POLL.
  * 2) Napi handler will call this function for TYPE_NAPI.
@@ -2850,8 +2851,8 @@ void eqos_poll_chan_mq_nv(struct chan_data *pchinfo)
 {
 
 	struct eqos_prv_data *pdata =
-			container_of((pchinfo - pchinfo->chan_num),
-			struct eqos_prv_data, chinfo[0]);
+	    container_of((pchinfo - pchinfo->chan_num),
+			 struct eqos_prv_data, chinfo[0]);
 
 	int qinx = pchinfo->chan_num;
 
@@ -2870,12 +2871,11 @@ void eqos_poll_chan_mq_nv(struct chan_data *pchinfo)
 int eqos_poll_mq_napi(struct napi_struct *napi, int budget)
 {
 	struct eqos_rx_queue *rx_queue =
-		container_of(napi, struct eqos_rx_queue, napi);
+	    container_of(napi, struct eqos_rx_queue, napi);
 	struct eqos_prv_data *pdata = rx_queue->pdata;
 
 	int qinx = rx_queue->chan_num;
 	int received = 0;
-
 
 	DBGPR("-->%s(): budget = %d\n", __func__, budget);
 
@@ -2883,13 +2883,12 @@ int eqos_poll_mq_napi(struct napi_struct *napi, int budget)
 	received = handle_txrx_completions(pdata, qinx);
 
 	do_txrx_post_processing(pdata, napi, received,
-			pdata->dt_cfg.chan_napi_quota[qinx]);
+				pdata->dt_cfg.chan_napi_quota[qinx]);
 
 	DBGPR("<--%s()\n", __func__);
 
 	return received;
 }
-
 
 /*!
 * \brief API to return the device/interface status.
@@ -2937,7 +2936,7 @@ static void eqos_poll_controller(struct net_device *dev)
 	DBGPR("<--eqos_poll_controller\n");
 }
 
-#endif	/*end of CONFIG_NET_POLL_CONTROLLER */
+#endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 
 /*!
  * \brief User defined parameter setting API
@@ -2971,12 +2970,12 @@ static int eqos_set_features(struct net_device *dev, netdev_features_t features)
 		    && !dev_rxcsum_enable) {
 			hw_if->enable_rx_csum();
 			pdata->dev_state |= NETIF_F_RXCSUM;
-			printk(KERN_ALERT "State change - rxcsum enable\n");
+			pr_err("State change - rxcsum enable\n");
 		} else if (((features & NETIF_F_RXCSUM) == 0)
 			   && dev_rxcsum_enable) {
 			hw_if->disable_rx_csum();
 			pdata->dev_state &= ~NETIF_F_RXCSUM;
-			printk(KERN_ALERT "State change - rxcsum disable\n");
+			pr_err("State change - rxcsum disable\n");
 		}
 	}
 #ifdef EQOS_ENABLE_VLAN_TAG
@@ -2984,33 +2983,32 @@ static int eqos_set_features(struct net_device *dev, netdev_features_t features)
 	if (((features & NETIF_F_HW_VLAN_CTAG_RX) == NETIF_F_HW_VLAN_CTAG_RX)
 	    && !dev_rxvlan_enable) {
 		pdata->dev_state |= NETIF_F_HW_VLAN_CTAG_RX;
-		hw_if->config_rx_outer_vlan_stripping(EQOS_RX_VLAN_STRIP_ALWAYS);
-		printk(KERN_ALERT "State change - rxvlan enable\n");
+		hw_if->
+		    config_rx_outer_vlan_stripping(EQOS_RX_VLAN_STRIP_ALWAYS);
+		pr_err("State change - rxvlan enable\n");
 	} else if (((features & NETIF_F_HW_VLAN_CTAG_RX) == 0) &&
-			dev_rxvlan_enable) {
+		   dev_rxvlan_enable) {
 		pdata->dev_state &= ~NETIF_F_HW_VLAN_CTAG_RX;
 		hw_if->config_rx_outer_vlan_stripping(EQOS_RX_NO_VLAN_STRIP);
-		printk(KERN_ALERT "State change - rxvlan disable\n");
+		pr_err("State change - rxvlan disable\n");
 	}
 
 	dev_txvlan_enable = !!(pdata->dev_state & NETIF_F_HW_VLAN_CTAG_TX);
 	if (((features & NETIF_F_HW_VLAN_CTAG_TX) == NETIF_F_HW_VLAN_CTAG_TX)
 	    && !dev_txvlan_enable) {
 		pdata->dev_state |= NETIF_F_HW_VLAN_CTAG_TX;
-		printk(KERN_ALERT "State change - txvlan enable\n");
+		pr_err("State change - txvlan enable\n");
 	} else if (((features & NETIF_F_HW_VLAN_CTAG_TX) == 0) &&
-			dev_txvlan_enable) {
+		   dev_txvlan_enable) {
 		pdata->dev_state &= ~NETIF_F_HW_VLAN_CTAG_TX;
-		printk(KERN_ALERT "State change - txvlan disable\n");
+		pr_err("State change - txvlan disable\n");
 	}
-#endif	/* EQOS_ENABLE_VLAN_TAG */
+#endif				/* EQOS_ENABLE_VLAN_TAG */
 
 	DBGPR("<--eqos_set_features\n");
 
 	return 0;
 }
-
-
 
 /*!
  * \details This function is invoked by ioctl function when user issues
@@ -3025,7 +3023,7 @@ static int eqos_set_features(struct net_device *dev, netdev_features_t features)
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_config_l3_l4_filtering(struct net_device *dev,
-		unsigned int flags)
+				       unsigned int flags)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -3034,14 +3032,12 @@ static int eqos_config_l3_l4_filtering(struct net_device *dev,
 	DBGPR_FILTER("-->eqos_config_l3_l4_filtering\n");
 
 	if (flags && pdata->l3_l4_filter) {
-		printk(KERN_ALERT
-			"L3/L4 filtering is already enabled\n");
+		pr_err("L3/L4 filtering is already enabled\n");
 		return -EINVAL;
 	}
 
 	if (!flags && !pdata->l3_l4_filter) {
-		printk(KERN_ALERT
-			"L3/L4 filtering is already disabled\n");
+		pr_err("L3/L4 filtering is already disabled\n");
 		return -EINVAL;
 	}
 
@@ -3049,13 +3045,12 @@ static int eqos_config_l3_l4_filtering(struct net_device *dev,
 	hw_if->config_l3_l4_filter_enable(pdata->l3_l4_filter);
 
 	DBGPR_FILTER("Succesfully %s L3/L4 filtering\n",
-		(flags ? "ENABLED" : "DISABLED"));
+		     (flags ? "ENABLED" : "DISABLED"));
 
 	DBGPR_FILTER("<--eqos_config_l3_l4_filtering\n");
 
 	return ret;
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when user issues an
@@ -3073,12 +3068,12 @@ static int eqos_config_l3_l4_filtering(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_config_ip4_filters(struct net_device *dev,
-		struct ifr_data_struct *req)
+				   struct ifr_data_struct *req)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct eqos_l3_l4_filter *u_l3_filter =
-		(struct eqos_l3_l4_filter *)req->ptr;
+	    (struct eqos_l3_l4_filter *)req->ptr;
 	struct eqos_l3_l4_filter l_l3_filter;
 	int ret = 0;
 
@@ -3088,12 +3083,12 @@ static int eqos_config_ip4_filters(struct net_device *dev,
 		return EQOS_NO_HW_SUPPORT;
 
 	if (copy_from_user(&l_l3_filter, u_l3_filter,
-		sizeof(struct eqos_l3_l4_filter)))
+			   sizeof(struct eqos_l3_l4_filter)))
 		return -EFAULT;
 
 	if ((l_l3_filter.filter_no + 1) > pdata->hw_feat.l3l4_filter_num) {
-		printk(KERN_ALERT "%d filter is not supported in the HW\n",
-			l_l3_filter.filter_no);
+		pr_err("%d filter is not supported in the HW\n",
+		       l_l3_filter.filter_no);
 		return EQOS_NO_HW_SUPPORT;
 	}
 
@@ -3104,28 +3099,28 @@ static int eqos_config_ip4_filters(struct net_device *dev,
 
 	/* configure the L3 filters */
 	hw_if->config_l3_filters(l_l3_filter.filter_no,
-			l_l3_filter.filter_enb_dis, 0,
-			l_l3_filter.src_dst_addr_match,
-			l_l3_filter.perfect_inverse_match);
+				 l_l3_filter.filter_enb_dis, 0,
+				 l_l3_filter.src_dst_addr_match,
+				 l_l3_filter.perfect_inverse_match);
 
 	if (!l_l3_filter.src_dst_addr_match)
 		hw_if->update_ip4_addr0(l_l3_filter.filter_no,
-				l_l3_filter.ip4_addr);
+					l_l3_filter.ip4_addr);
 	else
 		hw_if->update_ip4_addr1(l_l3_filter.filter_no,
-				l_l3_filter.ip4_addr);
+					l_l3_filter.ip4_addr);
 
-	DBGPR_FILTER("Successfully %s IPv4 %s %s addressing filtering on %d filter\n",
-		(l_l3_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
-		(l_l3_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"),
-		(l_l3_filter.src_dst_addr_match ? "DESTINATION" : "SOURCE"),
-		l_l3_filter.filter_no);
+	DBGPR_FILTER
+	    ("Successfully %s IPv4 %s %s addressing filtering on %d filter\n",
+	     (l_l3_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
+	     (l_l3_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"),
+	     (l_l3_filter.src_dst_addr_match ? "DESTINATION" : "SOURCE"),
+	     l_l3_filter.filter_no);
 
 	DBGPR_FILTER("<--eqos_config_ip4_filters\n");
 
 	return ret;
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when user issues an
@@ -3143,12 +3138,12 @@ static int eqos_config_ip4_filters(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_config_ip6_filters(struct net_device *dev,
-		struct ifr_data_struct *req)
+				   struct ifr_data_struct *req)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct eqos_l3_l4_filter *u_l3_filter =
-		(struct eqos_l3_l4_filter *)req->ptr;
+	    (struct eqos_l3_l4_filter *)req->ptr;
 	struct eqos_l3_l4_filter l_l3_filter;
 	int ret = 0;
 
@@ -3158,12 +3153,12 @@ static int eqos_config_ip6_filters(struct net_device *dev,
 		return EQOS_NO_HW_SUPPORT;
 
 	if (copy_from_user(&l_l3_filter, u_l3_filter,
-		sizeof(struct eqos_l3_l4_filter)))
+			   sizeof(struct eqos_l3_l4_filter)))
 		return -EFAULT;
 
 	if ((l_l3_filter.filter_no + 1) > pdata->hw_feat.l3l4_filter_num) {
-		printk(KERN_ALERT "%d filter is not supported in the HW\n",
-			l_l3_filter.filter_no);
+		pr_err("%d filter is not supported in the HW\n",
+		       l_l3_filter.filter_no);
 		return EQOS_NO_HW_SUPPORT;
 	}
 
@@ -3174,18 +3169,18 @@ static int eqos_config_ip6_filters(struct net_device *dev,
 
 	/* configure the L3 filters */
 	hw_if->config_l3_filters(l_l3_filter.filter_no,
-			l_l3_filter.filter_enb_dis, 1,
-			l_l3_filter.src_dst_addr_match,
-			l_l3_filter.perfect_inverse_match);
+				 l_l3_filter.filter_enb_dis, 1,
+				 l_l3_filter.src_dst_addr_match,
+				 l_l3_filter.perfect_inverse_match);
 
-	hw_if->update_ip6_addr(l_l3_filter.filter_no,
-			l_l3_filter.ip6_addr);
+	hw_if->update_ip6_addr(l_l3_filter.filter_no, l_l3_filter.ip6_addr);
 
-	DBGPR_FILTER("Successfully %s IPv6 %s %s addressing filtering on %d filter\n",
-		(l_l3_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
-		(l_l3_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"),
-		(l_l3_filter.src_dst_addr_match ? "DESTINATION" : "SOURCE"),
-		l_l3_filter.filter_no);
+	DBGPR_FILTER
+	    ("Successfully %s IPv6 %s %s addressing filtering on %d filter\n",
+	     (l_l3_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
+	     (l_l3_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"),
+	     (l_l3_filter.src_dst_addr_match ? "DESTINATION" : "SOURCE"),
+	     l_l3_filter.filter_no);
 
 	DBGPR_FILTER("<--eqos_config_ip6_filters\n");
 
@@ -3210,13 +3205,12 @@ static int eqos_config_ip6_filters(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_config_tcp_udp_filters(struct net_device *dev,
-		struct ifr_data_struct *req,
-		int tcp_udp)
+				       struct ifr_data_struct *req, int tcp_udp)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct eqos_l3_l4_filter *u_l4_filter =
-		(struct eqos_l3_l4_filter *)req->ptr;
+	    (struct eqos_l3_l4_filter *)req->ptr;
 	struct eqos_l3_l4_filter l_l4_filter;
 	int ret = 0;
 
@@ -3226,12 +3220,12 @@ static int eqos_config_tcp_udp_filters(struct net_device *dev,
 		return EQOS_NO_HW_SUPPORT;
 
 	if (copy_from_user(&l_l4_filter, u_l4_filter,
-		sizeof(struct eqos_l3_l4_filter)))
+			   sizeof(struct eqos_l3_l4_filter)))
 		return -EFAULT;
 
 	if ((l_l4_filter.filter_no + 1) > pdata->hw_feat.l3l4_filter_num) {
-		printk(KERN_ALERT "%d filter is not supported in the HW\n",
-			l_l4_filter.filter_no);
+		pr_err("%d filter is not supported in the HW\n",
+		       l_l4_filter.filter_no);
 		return EQOS_NO_HW_SUPPORT;
 	}
 
@@ -3242,30 +3236,30 @@ static int eqos_config_tcp_udp_filters(struct net_device *dev,
 
 	/* configure the L4 filters */
 	hw_if->config_l4_filters(l_l4_filter.filter_no,
-			l_l4_filter.filter_enb_dis,
-			tcp_udp,
-			l_l4_filter.src_dst_addr_match,
-			l_l4_filter.perfect_inverse_match);
+				 l_l4_filter.filter_enb_dis,
+				 tcp_udp,
+				 l_l4_filter.src_dst_addr_match,
+				 l_l4_filter.perfect_inverse_match);
 
 	if (l_l4_filter.src_dst_addr_match)
 		hw_if->update_l4_da_port_no(l_l4_filter.filter_no,
-				l_l4_filter.port_no);
+					    l_l4_filter.port_no);
 	else
 		hw_if->update_l4_sa_port_no(l_l4_filter.filter_no,
-				l_l4_filter.port_no);
+					    l_l4_filter.port_no);
 
-	DBGPR_FILTER("Successfully %s %s %s %s Port number filtering on %d filter\n",
-		(l_l4_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
-		(tcp_udp ? "UDP" : "TCP"),
-		(l_l4_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"),
-		(l_l4_filter.src_dst_addr_match ? "DESTINATION" : "SOURCE"),
-		l_l4_filter.filter_no);
+	DBGPR_FILTER
+	    ("Successfully %s %s %s %s Port number filtering on %d filter\n",
+	     (l_l4_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
+	     (tcp_udp ? "UDP" : "TCP"),
+	     (l_l4_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"),
+	     (l_l4_filter.src_dst_addr_match ? "DESTINATION" : "SOURCE"),
+	     l_l4_filter.filter_no);
 
 	DBGPR_FILTER("<--eqos_config_tcp_udp_filters\n");
 
 	return ret;
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when user issues an
@@ -3281,43 +3275,42 @@ static int eqos_config_tcp_udp_filters(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_config_vlan_filter(struct net_device *dev,
-		struct ifr_data_struct *req)
+				   struct ifr_data_struct *req)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct eqos_vlan_filter *u_vlan_filter =
-		(struct eqos_vlan_filter *)req->ptr;
+	    (struct eqos_vlan_filter *)req->ptr;
 	struct eqos_vlan_filter l_vlan_filter;
 	int ret = 0;
 
 	DBGPR_FILTER("-->eqos_config_vlan_filter\n");
 
 	if (copy_from_user(&l_vlan_filter, u_vlan_filter,
-		sizeof(struct eqos_vlan_filter)))
+			   sizeof(struct eqos_vlan_filter)))
 		return -EFAULT;
 
-	if ((l_vlan_filter.perfect_hash) &&
-		(pdata->hw_feat.vlan_hash_en == 0)) {
-		printk(KERN_ALERT "VLAN HASH filtering is not supported\n");
+	if ((l_vlan_filter.perfect_hash) && (pdata->hw_feat.vlan_hash_en == 0)) {
+		pr_err("VLAN HASH filtering is not supported\n");
 		return EQOS_NO_HW_SUPPORT;
 	}
 
 	/* configure the vlan filter */
 	hw_if->config_vlan_filtering(l_vlan_filter.filter_enb_dis,
-					l_vlan_filter.perfect_hash,
-					l_vlan_filter.perfect_inverse_match);
+				     l_vlan_filter.perfect_hash,
+				     l_vlan_filter.perfect_inverse_match);
 	pdata->vlan_hash_filtering = l_vlan_filter.perfect_hash;
 
 	DBGPR_FILTER("Successfully %s VLAN %s filtering and %s matching\n",
-		(l_vlan_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
-		(l_vlan_filter.perfect_hash ? "HASH" : "PERFECT"),
-		(l_vlan_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"));
+		     (l_vlan_filter.filter_enb_dis ? "ENABLED" : "DISABLED"),
+		     (l_vlan_filter.perfect_hash ? "HASH" : "PERFECT"),
+		     (l_vlan_filter.
+		      perfect_inverse_match ? "INVERSE" : "PERFECT"));
 
 	DBGPR_FILTER("<--eqos_config_vlan_filter\n");
 
 	return ret;
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when user issues an
@@ -3331,22 +3324,22 @@ static int eqos_config_vlan_filter(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_config_arp_offload(struct net_device *dev,
-		struct ifr_data_struct *req)
+				   struct ifr_data_struct *req)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct eqos_arp_offload *u_arp_offload =
-		(struct eqos_arp_offload *)req->ptr;
+	    (struct eqos_arp_offload *)req->ptr;
 	struct eqos_arp_offload l_arp_offload;
 	int ret = 0;
 
-	printk(KERN_ALERT "-->eqos_config_arp_offload\n");
+	pr_err("-->eqos_config_arp_offload\n");
 
 	if (pdata->hw_feat.arp_offld_en == 0)
 		return EQOS_NO_HW_SUPPORT;
 
 	if (copy_from_user(&l_arp_offload, u_arp_offload,
-		sizeof(struct eqos_arp_offload)))
+			   sizeof(struct eqos_arp_offload)))
 		return -EFAULT;
 
 	/* configure the L3 filters */
@@ -3354,14 +3347,13 @@ static int eqos_config_arp_offload(struct net_device *dev,
 	hw_if->update_arp_offload_ip_addr(l_arp_offload.ip_addr);
 	pdata->arp_offload = req->flags;
 
-	printk(KERN_ALERT "Successfully %s arp Offload\n",
-		(req->flags ? "ENABLED" : "DISABLED"));
+	pr_err("Successfully %s arp Offload\n",
+	       (req->flags ? "ENABLED" : "DISABLED"));
 
-	printk(KERN_ALERT "<--eqos_config_arp_offload\n");
+	pr_err("<--eqos_config_arp_offload\n");
 
 	return ret;
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when user issues an
@@ -3378,20 +3370,20 @@ static int eqos_config_arp_offload(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_confing_l2_da_filter(struct net_device *dev,
-		struct ifr_data_struct *req)
+				     struct ifr_data_struct *req)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct eqos_l2_da_filter *u_l2_da_filter =
-	  (struct eqos_l2_da_filter *)req->ptr;
+	    (struct eqos_l2_da_filter *)req->ptr;
 	struct eqos_l2_da_filter l_l2_da_filter;
 	int ret = 0;
 
 	DBGPR_FILTER("-->eqos_confing_l2_da_filter\n");
 
 	if (copy_from_user(&l_l2_da_filter, u_l2_da_filter,
-	      sizeof(struct eqos_l2_da_filter)))
-		return - EFAULT;
+			   sizeof(struct eqos_l2_da_filter)))
+		return -EFAULT;
 
 	if (l_l2_da_filter.perfect_hash) {
 		if (pdata->hw_feat.hash_tbl_sz > 0)
@@ -3406,11 +3398,13 @@ static int eqos_confing_l2_da_filter(struct net_device *dev,
 	}
 
 	/* configure L2 DA perfect/inverse_matching */
-	hw_if->config_l2_da_perfect_inverse_match(l_l2_da_filter.perfect_inverse_match);
+	hw_if->config_l2_da_perfect_inverse_match(l_l2_da_filter.
+						  perfect_inverse_match);
 
-	DBGPR_FILTER("Successfully selected L2 %s filtering and %s DA matching\n",
-		(l_l2_da_filter.perfect_hash ? "HASH" : "PERFECT"),
-		(l_l2_da_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"));
+	DBGPR_FILTER
+	    ("Successfully selected L2 %s filtering and %s DA matching\n",
+	     (l_l2_da_filter.perfect_hash ? "HASH" : "PERFECT"),
+	     (l_l2_da_filter.perfect_inverse_match ? "INVERSE" : "PERFECT"));
 
 	DBGPR_FILTER("<--eqos_confing_l2_da_filter\n");
 
@@ -3430,7 +3424,7 @@ static int eqos_confing_l2_da_filter(struct net_device *dev,
  * \retval zero on success and -ve number on failure.
  */
 static int eqos_config_mac_loopback_mode(struct net_device *dev,
-		unsigned int flags)
+					 unsigned int flags)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -3439,62 +3433,58 @@ static int eqos_config_mac_loopback_mode(struct net_device *dev,
 	DBGPR("-->eqos_config_mac_loopback_mode\n");
 
 	if (flags && pdata->mac_loopback_mode) {
-		printk(KERN_ALERT
-			"MAC loopback mode is already enabled\n");
+		pr_err("MAC loopback mode is already enabled\n");
 		return -EINVAL;
 	}
 	if (!flags && !pdata->mac_loopback_mode) {
-		printk(KERN_ALERT
-			"MAC loopback mode is already disabled\n");
+		pr_err("MAC loopback mode is already disabled\n");
 		return -EINVAL;
 	}
 	pdata->mac_loopback_mode = !!flags;
 	hw_if->config_mac_loopback_mode(flags);
 
-	printk(KERN_ALERT "Succesfully %s MAC loopback mode\n",
-		(flags ? "enabled" : "disabled"));
+	pr_err("Succesfully %s MAC loopback mode\n",
+	       (flags ? "enabled" : "disabled"));
 
 	DBGPR("<--eqos_config_mac_loopback_mode\n");
 
 	return ret;
 }
 
-
-static VOID eqos_config_timer_registers(
-				struct eqos_prv_data *pdata)
+static VOID eqos_config_timer_registers(struct eqos_prv_data *pdata)
 {
-		struct timespec now;
-		struct hw_if_struct *hw_if = &(pdata->hw_if);
-		u64 temp;
+	struct timespec now;
+	struct hw_if_struct *hw_if = &(pdata->hw_if);
+	u64 temp;
 
-		DBGPR("-->eqos_config_timer_registers\n");
+	DBGPR("-->eqos_config_timer_registers\n");
 
-		/* program Sub Second Increment Reg */
-		hw_if->config_sub_second_increment(EQOS_SYSCLOCK);
+	/* program Sub Second Increment Reg */
+	hw_if->config_sub_second_increment(EQOS_SYSCLOCK);
 
-		/* formula is :
-		 * addend = 2^32/freq_div_ratio;
-		 *
-		 * where, freq_div_ratio = EQOS_SYSCLOCK/50MHz
-		 *
-		 * hence, addend = ((2^32) * 50MHz)/EQOS_SYSCLOCK;
-		 *
-		 * NOTE: EQOS_SYSCLOCK should be >= 50MHz to
-		 *       achive 20ns accuracy.
-		 *
-		 * 2^x * y == (y << x), hence
-		 * 2^32 * 6250000 ==> (6250000 << 32)
-		 * */
-		temp = (u64)(62500000ULL << 32);
-		pdata->default_addend = div_u64(temp, 125000000);
+	/* formula is :
+	 * addend = 2^32/freq_div_ratio;
+	 *
+	 * where, freq_div_ratio = EQOS_SYSCLOCK/50MHz
+	 *
+	 * hence, addend = ((2^32) * 50MHz)/EQOS_SYSCLOCK;
+	 *
+	 * NOTE: EQOS_SYSCLOCK should be >= 50MHz to
+	 *       achive 20ns accuracy.
+	 *
+	 * 2^x * y == (y << x), hence
+	 * 2^32 * 6250000 ==> (6250000 << 32)
+	 * */
+	temp = (u64) (62500000ULL << 32);
+	pdata->default_addend = div_u64(temp, 125000000);
 
-		hw_if->config_addend(pdata->default_addend);
+	hw_if->config_addend(pdata->default_addend);
 
-		/* initialize system time */
-		getnstimeofday(&now);
-		hw_if->init_systime(now.tv_sec, now.tv_nsec);
+	/* initialize system time */
+	getnstimeofday(&now);
+	hw_if->init_systime(now.tv_sec, now.tv_nsec);
 
-		DBGPR("-->eqos_config_timer_registers\n");
+	DBGPR("-->eqos_config_timer_registers\n");
 }
 
 /*!
@@ -3509,27 +3499,25 @@ static VOID eqos_config_timer_registers(
  *
  * \retval zero on success and -ve number on failure.
  */
-static int eqos_config_ptpoffload(
-		struct eqos_prv_data *pdata,
-		struct eqos_config_ptpoffloading *u_conf_ptp)
+static int eqos_config_ptpoffload(struct eqos_prv_data *pdata,
+				  struct eqos_config_ptpoffloading *u_conf_ptp)
 {
 	UINT pto_cntrl;
 	UINT mac_tcr;
 	struct eqos_config_ptpoffloading l_conf_ptp;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
-
-	if(copy_from_user(&l_conf_ptp, u_conf_ptp,
-				sizeof(struct eqos_config_ptpoffloading))) {
-		printk(KERN_ALERT "Failed to fetch Double vlan Struct info from user\n");
+	if (copy_from_user(&l_conf_ptp, u_conf_ptp,
+			   sizeof(struct eqos_config_ptpoffloading))) {
+		pr_err("Failed to fetch Double vlan Struct info from user\n");
 		return EQOS_CONFIG_FAIL;
 	}
 
-	printk(KERN_ALERT"-->eqos_config_ptpoffload - %d\n",l_conf_ptp.mode);
+	pr_err("-->eqos_config_ptpoffload - %d\n", l_conf_ptp.mode);
 
-	pto_cntrl = MAC_PTOCR_PTOEN; /* enable ptp offloading */
+	pto_cntrl = MAC_PTOCR_PTOEN;	/* enable ptp offloading */
 	mac_tcr = MAC_TCR_TSENA | MAC_TCR_TSIPENA | MAC_TCR_TSVER2ENA
-			| MAC_TCR_TSCFUPDT | MAC_TCR_TSCTRLSSR;
+	    | MAC_TCR_TSCFUPDT | MAC_TCR_TSCTRLSSR;
 	if (l_conf_ptp.mode == EQOS_PTP_ORDINARY_SLAVE) {
 
 		mac_tcr |= MAC_TCR_TSEVENTENA;
@@ -3540,8 +3528,7 @@ static int eqos_config_ptpoffload(
 		pto_cntrl |= MAC_PTOCR_APDREQEN;
 		mac_tcr |= MAC_TCR_TSEVENTENA;
 		mac_tcr |= MAC_TCR_SNAPTYPSEL_1;
-		pdata->ptp_offloading_mode =
-			EQOS_PTP_TRASPARENT_SLAVE;
+		pdata->ptp_offloading_mode = EQOS_PTP_TRASPARENT_SLAVE;
 
 	} else if (l_conf_ptp.mode == EQOS_PTP_ORDINARY_MASTER) {
 
@@ -3550,21 +3537,19 @@ static int eqos_config_ptpoffload(
 		mac_tcr |= MAC_TCR_TSMASTERENA;
 		pdata->ptp_offloading_mode = EQOS_PTP_ORDINARY_MASTER;
 
-	} else if(l_conf_ptp.mode == EQOS_PTP_TRASPARENT_MASTER) {
+	} else if (l_conf_ptp.mode == EQOS_PTP_TRASPARENT_MASTER) {
 
 		pto_cntrl |= MAC_PTOCR_ASYNCEN | MAC_PTOCR_APDREQEN;
 		mac_tcr |= MAC_TCR_SNAPTYPSEL_1;
 		mac_tcr |= MAC_TCR_TSEVENTENA;
 		mac_tcr |= MAC_TCR_TSMASTERENA;
-		pdata->ptp_offloading_mode =
-			EQOS_PTP_TRASPARENT_MASTER;
+		pdata->ptp_offloading_mode = EQOS_PTP_TRASPARENT_MASTER;
 
 	} else if (l_conf_ptp.mode == EQOS_PTP_PEER_TO_PEER_TRANSPARENT) {
 
 		pto_cntrl |= MAC_PTOCR_APDREQEN;
 		mac_tcr |= MAC_TCR_SNAPTYPSEL_3;
-		pdata->ptp_offloading_mode =
-			EQOS_PTP_PEER_TO_PEER_TRANSPARENT;
+		pdata->ptp_offloading_mode = EQOS_PTP_PEER_TO_PEER_TRANSPARENT;
 	}
 
 	pdata->ptp_offload = 1;
@@ -3579,11 +3564,10 @@ static int eqos_config_ptpoffload(
 	eqos_config_timer_registers(pdata);
 	hw_if->config_ptpoffload_engine(pto_cntrl, l_conf_ptp.mc_uc);
 
-	printk(KERN_ALERT"<--eqos_config_ptpoffload\n");
+	pr_err("<--eqos_config_ptpoffload\n");
 
 	return Y_SUCCESS;
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when user issues
@@ -3596,8 +3580,7 @@ static int eqos_config_ptpoffload(
  *
  * \retval zero on success and -ve number on failure.
  */
-static int eqos_config_pfc(struct net_device *dev,
-		unsigned int flags)
+static int eqos_config_pfc(struct net_device *dev, unsigned int flags)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -3606,14 +3589,14 @@ static int eqos_config_pfc(struct net_device *dev,
 	DBGPR("-->eqos_config_pfc\n");
 
 	if (!pdata->hw_feat.dcb_en) {
-		printk(KERN_ALERT "PFC is not supported\n");
+		pr_err("PFC is not supported\n");
 		return EQOS_NO_HW_SUPPORT;
 	}
 
 	hw_if->config_pfc(flags);
 
-	printk(KERN_ALERT "Succesfully %s PFC(Priority Based Flow Control)\n",
-		(flags ? "enabled" : "disabled"));
+	pr_err("Succesfully %s PFC(Priority Based Flow Control)\n",
+	       (flags ? "enabled" : "disabled"));
 
 	DBGPR("<--eqos_config_pfc\n");
 
@@ -3639,7 +3622,7 @@ static int eqos_config_pfc(struct net_device *dev,
  */
 
 static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
-					struct ifr_data_struct *req)
+				 struct ifr_data_struct *req)
 {
 	unsigned int qinx = req->qinx;
 	struct eqos_tx_wrapper_descriptor *tx_desc_data =
@@ -3653,9 +3636,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 	DBGPR("-->eqos_handle_prv_ioctl\n");
 
 	if (qinx > EQOS_QUEUE_CNT) {
-		printk(KERN_ALERT "Queue number %d is invalid\n" \
-				"Hardware has only %d Tx/Rx Queues\n",
-				qinx, EQOS_QUEUE_CNT);
+		pr_err("Queue number %d is invalid\n"
+		       "Hardware has only %d Tx/Rx Queues\n",
+		       qinx, EQOS_QUEUE_CNT);
 		ret = EQOS_NO_HW_SUPPORT;
 		return ret;
 	}
@@ -3676,8 +3659,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 	case EQOS_POWERDOWN_MAGIC_CMD:
 		if (pdata->hw_feat.mgk_sel) {
 			ret =
-			  eqos_powerdown(dev,
-			    EQOS_MAGIC_WAKEUP, EQOS_IOCTL_CONTEXT);
+			    eqos_powerdown(dev,
+					   EQOS_MAGIC_WAKEUP,
+					   EQOS_IOCTL_CONTEXT);
 			if (ret == 0)
 				ret = EQOS_CONFIG_SUCCESS;
 			else
@@ -3714,44 +3698,44 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 	case EQOS_RX_THRESHOLD_CMD:
 		rx_desc_data->rx_threshold_val = req->flags;
 		hw_if->config_rx_threshold(qinx,
-					rx_desc_data->rx_threshold_val);
-		printk(KERN_ALERT "Configured Rx threshold with %d\n",
+					   rx_desc_data->rx_threshold_val);
+		pr_err("Configured Rx threshold with %d\n",
 		       rx_desc_data->rx_threshold_val);
 		break;
 
 	case EQOS_TX_THRESHOLD_CMD:
 		tx_desc_data->tx_threshold_val = req->flags;
 		hw_if->config_tx_threshold(qinx,
-					tx_desc_data->tx_threshold_val);
-		printk(KERN_ALERT "Configured Tx threshold with %d\n",
+					   tx_desc_data->tx_threshold_val);
+		pr_err("Configured Tx threshold with %d\n",
 		       tx_desc_data->tx_threshold_val);
 		break;
 
 	case EQOS_RSF_CMD:
 		rx_desc_data->rsf_on = req->flags;
 		hw_if->config_rsf_mode(qinx, rx_desc_data->rsf_on);
-		printk(KERN_ALERT "Receive store and forward mode %s\n",
+		pr_err("Receive store and forward mode %s\n",
 		       (rx_desc_data->rsf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_TSF_CMD:
 		tx_desc_data->tsf_on = req->flags;
 		hw_if->config_tsf_mode(qinx, tx_desc_data->tsf_on);
-		printk(KERN_ALERT "Transmit store and forward mode %s\n",
+		pr_err("Transmit store and forward mode %s\n",
 		       (tx_desc_data->tsf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_OSF_CMD:
 		tx_desc_data->osf_on = req->flags;
 		hw_if->config_osf_mode(qinx, tx_desc_data->osf_on);
-		printk(KERN_ALERT "Transmit DMA OSF mode is %s\n",
+		pr_err("Transmit DMA OSF mode is %s\n",
 		       (tx_desc_data->osf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_INCR_INCRX_CMD:
 		pdata->incr_incrx = req->flags;
 		hw_if->config_incr_incrx_mode(pdata->incr_incrx);
-		printk(KERN_ALERT "%s mode is enabled\n",
+		pr_err("%s mode is enabled\n",
 		       (pdata->incr_incrx) ? "INCRX" : "INCR");
 		break;
 
@@ -3767,10 +3751,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_PTPOFFLOADING_CMD:
 		if (pdata->hw_feat.tsstssel) {
-			ret = eqos_config_ptpoffload(pdata,
-					req->ptr);
+			ret = eqos_config_ptpoffload(pdata, req->ptr);
 		} else {
-			printk(KERN_ALERT "No HW support for PTP\n");
+			pr_err("No HW support for PTP\n");
 			ret = EQOS_NO_HW_SUPPORT;
 		}
 		break;
@@ -3788,12 +3771,12 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 			}
 			hw_if->configure_mac_addr0_reg(pdata->mac_addr);
 			hw_if->configure_sa_via_reg(pdata->tx_sa_ctrl_via_reg);
-			printk(KERN_ALERT
-			       "SA will use MAC0 with descriptor for configuration %d\n",
-			       pdata->tx_sa_ctrl_via_desc);
+			pr_err
+			    ("SA will use MAC0 with descriptor for configuration %d\n",
+			     pdata->tx_sa_ctrl_via_desc);
 		} else {
-			printk(KERN_ALERT
-			       "Device doesn't supports SA Insertion/Replacement\n");
+			pr_err
+			    ("Device doesn't supports SA Insertion/Replacement\n");
 			ret = EQOS_NO_HW_SUPPORT;
 		}
 		break;
@@ -3811,12 +3794,12 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 			}
 			hw_if->configure_mac_addr1_reg(pdata->mac_addr);
 			hw_if->configure_sa_via_reg(pdata->tx_sa_ctrl_via_reg);
-			printk(KERN_ALERT
-			       "SA will use MAC1 with descriptor for configuration %d\n",
-			       pdata->tx_sa_ctrl_via_desc);
+			pr_err
+			    ("SA will use MAC1 with descriptor for configuration %d\n",
+			     pdata->tx_sa_ctrl_via_desc);
 		} else {
-			printk(KERN_ALERT
-			       "Device doesn't supports SA Insertion/Replacement\n");
+			pr_err
+			    ("Device doesn't supports SA Insertion/Replacement\n");
 			ret = EQOS_NO_HW_SUPPORT;
 		}
 		break;
@@ -3834,12 +3817,12 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 			}
 			hw_if->configure_mac_addr0_reg(pdata->mac_addr);
 			hw_if->configure_sa_via_reg(pdata->tx_sa_ctrl_via_reg);
-			printk(KERN_ALERT
-			       "SA will use MAC0 with register for configuration %d\n",
-			       pdata->tx_sa_ctrl_via_desc);
+			pr_err
+			    ("SA will use MAC0 with register for configuration %d\n",
+			     pdata->tx_sa_ctrl_via_desc);
 		} else {
-			printk(KERN_ALERT
-			       "Device doesn't supports SA Insertion/Replacement\n");
+			pr_err
+			    ("Device doesn't supports SA Insertion/Replacement\n");
 			ret = EQOS_NO_HW_SUPPORT;
 		}
 		break;
@@ -3857,12 +3840,12 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 			}
 			hw_if->configure_mac_addr1_reg(pdata->mac_addr);
 			hw_if->configure_sa_via_reg(pdata->tx_sa_ctrl_via_reg);
-			printk(KERN_ALERT
-			       "SA will use MAC1 with register for configuration %d\n",
-			       pdata->tx_sa_ctrl_via_desc);
+			pr_err
+			    ("SA will use MAC1 with register for configuration %d\n",
+			     pdata->tx_sa_ctrl_via_desc);
 		} else {
-			printk(KERN_ALERT
-			       "Device doesn't supports SA Insertion/Replacement\n");
+			pr_err
+			    ("Device doesn't supports SA Insertion/Replacement\n");
 			ret = EQOS_NO_HW_SUPPORT;
 		}
 		break;
@@ -3871,18 +3854,15 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		if (pdata->hw_feat.sa_vlan_ins) {
 			tx_desc_data->context_setup = req->context_setup;
 			if (tx_desc_data->context_setup == 1) {
-				printk(KERN_ALERT "Context descriptor will be transmitted"\
-						" with every normal descriptor on %d DMA Channel\n",
-						qinx);
+				pr_err("Context descriptor will be transmitted"
+				       " with every normal descriptor on %d DMA Channel\n",
+				       qinx);
+			} else {
+				pr_err("Context descriptor will be setup"
+				       " only if VLAN id changes %d\n", qinx);
 			}
-			else {
-				printk(KERN_ALERT "Context descriptor will be setup"\
-						" only if VLAN id changes %d\n", qinx);
-			}
-		}
-		else {
-			printk(KERN_ALERT
-			       "Device doesn't support VLAN operations\n");
+		} else {
+			pr_err("Device doesn't support VLAN operations\n");
 			ret = EQOS_NO_HW_SUPPORT;
 		}
 		break;
@@ -3942,17 +3922,17 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 	case EQOS_AXI_PBL_CMD:
 		pdata->axi_pbl = req->flags;
 		hw_if->config_axi_pbl_val(pdata->axi_pbl);
-		printk(KERN_ALERT "AXI PBL value: %d\n", pdata->axi_pbl);
+		pr_err("AXI PBL value: %d\n", pdata->axi_pbl);
 		break;
 	case EQOS_AXI_WORL_CMD:
 		pdata->axi_worl = req->flags;
 		hw_if->config_axi_worl_val(pdata->axi_worl);
-		printk(KERN_ALERT "AXI WORL value: %d\n", pdata->axi_worl);
+		pr_err("AXI WORL value: %d\n", pdata->axi_worl);
 		break;
 	case EQOS_AXI_RORL_CMD:
 		pdata->axi_rorl = req->flags;
 		hw_if->config_axi_rorl_val(pdata->axi_rorl);
-		printk(KERN_ALERT "AXI RORL value: %d\n", pdata->axi_rorl);
+		pr_err("AXI RORL value: %d\n", pdata->axi_rorl);
 		break;
 	case EQOS_MAC_LOOPBACK_MODE_CMD:
 		ret = eqos_config_mac_loopback_mode(dev, req->flags);
@@ -3975,14 +3955,13 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		break;
 	default:
 		ret = -EOPNOTSUPP;
-		printk(KERN_ALERT "Unsupported command call\n");
+		pr_err("Unsupported command call\n");
 	}
 
 	DBGPR("<--eqos_handle_prv_ioctl\n");
 
 	return ret;
 }
-
 
 /*!
  * \brief control hw timestamping.
@@ -4000,7 +3979,7 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
  */
 
 static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
-	struct ifreq *ifr)
+				      struct ifreq *ifr)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct hwtstamp_config config;
@@ -4020,16 +3999,16 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 	DBGPR_PTP("-->eqos_handle_hwtstamp_ioctl\n");
 
 	if (!pdata->hw_feat.tsstssel) {
-		printk(KERN_ALERT "No hw timestamping is available in this core\n");
+		pr_err("No hw timestamping is available in this core\n");
 		return -EOPNOTSUPP;
 	}
 
 	if (copy_from_user(&config, ifr->ifr_data,
-		sizeof(struct hwtstamp_config)))
+			   sizeof(struct hwtstamp_config)))
 		return -EFAULT;
 
 	DBGPR_PTP("config.flags = %#x, tx_type = %#x, rx_filter = %#x\n",
-		config.flags, config.tx_type, config.rx_filter);
+		  config.flags, config.tx_type, config.rx_filter);
 
 	/* reserved for future extensions */
 	if (config.flags)
@@ -4047,12 +4026,12 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 	}
 
 	switch (config.rx_filter) {
-	/* time stamp no incoming packet at all */
+		/* time stamp no incoming packet at all */
 	case HWTSTAMP_FILTER_NONE:
 		config.rx_filter = HWTSTAMP_FILTER_NONE;
 		break;
 
-	/* PTP v1, UDP, any kind of event packet */
+		/* PTP v1, UDP, any kind of event packet */
 	case HWTSTAMP_FILTER_PTP_V1_L4_EVENT:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V1_L4_EVENT;
 		/* take time stamp for all event messages */
@@ -4062,7 +4041,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		ptp_over_ipv6_udp = MAC_TCR_TSIPV6ENA;
 		break;
 
-	/* PTP v1, UDP, Sync packet */
+		/* PTP v1, UDP, Sync packet */
 	case HWTSTAMP_FILTER_PTP_V1_L4_SYNC:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V1_L4_SYNC;
 		/* take time stamp for SYNC messages only */
@@ -4072,7 +4051,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		ptp_over_ipv6_udp = MAC_TCR_TSIPV6ENA;
 		break;
 
-	/* PTP v1, UDP, Delay_req packet */
+		/* PTP v1, UDP, Delay_req packet */
 	case HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V1_L4_DELAY_REQ;
 		/* take time stamp for Delay_Req messages only */
@@ -4083,7 +4062,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		ptp_over_ipv6_udp = MAC_TCR_TSIPV6ENA;
 		break;
 
-	/* PTP v2, UDP, any kind of event packet */
+		/* PTP v2, UDP, any kind of event packet */
 	case HWTSTAMP_FILTER_PTP_V2_L4_EVENT:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L4_EVENT;
 		ptp_v2 = MAC_TCR_TSVER2ENA;
@@ -4094,7 +4073,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		ptp_over_ipv6_udp = MAC_TCR_TSIPV6ENA;
 		break;
 
-	/* PTP v2, UDP, Sync packet */
+		/* PTP v2, UDP, Sync packet */
 	case HWTSTAMP_FILTER_PTP_V2_L4_SYNC:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L4_SYNC;
 		ptp_v2 = MAC_TCR_TSVER2ENA;
@@ -4105,7 +4084,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		ptp_over_ipv6_udp = MAC_TCR_TSIPV6ENA;
 		break;
 
-	/* PTP v2, UDP, Delay_req packet */
+		/* PTP v2, UDP, Delay_req packet */
 	case HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_L4_DELAY_REQ;
 		ptp_v2 = MAC_TCR_TSVER2ENA;
@@ -4117,7 +4096,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		ptp_over_ipv6_udp = MAC_TCR_TSIPV6ENA;
 		break;
 
-	/* PTP v2/802.AS1, any layer, any kind of event packet */
+		/* PTP v2/802.AS1, any layer, any kind of event packet */
 	case HWTSTAMP_FILTER_PTP_V2_EVENT:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_EVENT;
 		ptp_v2 = MAC_TCR_TSVER2ENA;
@@ -4133,7 +4112,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 #endif
 		break;
 
-	/* PTP v2/802.AS1, any layer, Sync packet */
+		/* PTP v2/802.AS1, any layer, Sync packet */
 	case HWTSTAMP_FILTER_PTP_V2_SYNC:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_SYNC;
 		ptp_v2 = MAC_TCR_TSVER2ENA;
@@ -4146,7 +4125,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		av_8021asm_en = MAC_TCR_AV8021ASMEN;
 		break;
 
-	/* PTP v2/802.AS1, any layer, Delay_req packet */
+		/* PTP v2/802.AS1, any layer, Delay_req packet */
 	case HWTSTAMP_FILTER_PTP_V2_DELAY_REQ:
 		config.rx_filter = HWTSTAMP_FILTER_PTP_V2_DELAY_REQ;
 		ptp_v2 = MAC_TCR_TSVER2ENA;
@@ -4160,7 +4139,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		av_8021asm_en = MAC_TCR_AV8021ASMEN;
 		break;
 
-	/* time stamp any incoming packet */
+		/* time stamp any incoming packet */
 	case HWTSTAMP_FILTER_ALL:
 		config.rx_filter = HWTSTAMP_FILTER_ALL;
 		tstamp_all = MAC_TCR_TSENALL;
@@ -4169,16 +4148,18 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 	default:
 		return -ERANGE;
 	}
-	pdata->hwts_rx_en = ((config.rx_filter == HWTSTAMP_FILTER_NONE) ? 0 : 1);
+	pdata->hwts_rx_en =
+	    ((config.rx_filter == HWTSTAMP_FILTER_NONE) ? 0 : 1);
 
 	if (!pdata->hwts_tx_en && !pdata->hwts_rx_en) {
 		/* disable hw time stamping */
 		hw_if->config_hw_time_stamping(mac_tcr);
 	} else {
-		mac_tcr = (MAC_TCR_TSENA | MAC_TCR_TSCFUPDT | MAC_TCR_TSCTRLSSR |
-				tstamp_all | ptp_v2 | ptp_over_ethernet | ptp_over_ipv6_udp |
-				ptp_over_ipv4_udp | ts_event_en | ts_master_en |
-				snap_type_sel | av_8021asm_en);
+		mac_tcr =
+		    (MAC_TCR_TSENA | MAC_TCR_TSCFUPDT | MAC_TCR_TSCTRLSSR |
+		     tstamp_all | ptp_v2 | ptp_over_ethernet | ptp_over_ipv6_udp
+		     | ptp_over_ipv4_udp | ts_event_en | ts_master_en |
+		     snap_type_sel | av_8021asm_en);
 
 		if (!pdata->one_nsec_accuracy)
 			mac_tcr &= ~MAC_TCR_TSCTRLSSR;
@@ -4201,7 +4182,7 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 		 * 2^x * y == (y << x), hence
 		 * 2^32 * 6250000 ==> (6250000 << 32)
 		 * */
-		temp = (u64)(62500000ULL << 32);
+		temp = (u64) (62500000ULL << 32);
 		pdata->default_addend = div_u64(temp, 125000000);
 
 		hw_if->config_addend(pdata->default_addend);
@@ -4212,14 +4193,13 @@ static int eqos_handle_hwtstamp_ioctl(struct eqos_prv_data *pdata,
 	}
 
 	DBGPR_PTP("config.flags = %#x, tx_type = %#x, rx_filter = %#x\n",
-		config.flags, config.tx_type, config.rx_filter);
+		  config.flags, config.tx_type, config.rx_filter);
 
 	DBGPR_PTP("<--eqos_handle_hwtstamp_ioctl\n");
 
 	return (copy_to_user(ifr->ifr_data, &config,
-		sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
+			     sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
 }
-
 
 /*!
  * \brief Driver IOCTL routine
@@ -4261,23 +4241,23 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 	switch (cmd) {
 	case SIOCGMIIPHY:
 		data->phy_id = pdata->phyaddr;
-		printk(KERN_ALERT "PHY ID: SIOCGMIIPHY\n");
+		pr_err("PHY ID: SIOCGMIIPHY\n");
 		break;
 
 	case SIOCGMIIREG:
 		ret =
 		    eqos_mdio_read_direct(pdata, pdata->phyaddr,
-				(data->reg_num & 0x1F), &reg_val);
+					  (data->reg_num & 0x1F), &reg_val);
 		if (ret)
 			ret = -EIO;
 
 		data->val_out = reg_val;
-		printk(KERN_ALERT "PHY ID: SIOCGMIIREG reg:%#x reg_val:%#x\n",
+		pr_err("PHY ID: SIOCGMIIREG reg:%#x reg_val:%#x\n",
 		       (data->reg_num & 0x1F), reg_val);
 		break;
 
 	case SIOCSMIIREG:
-		printk(KERN_ALERT "PHY ID: SIOCSMIIPHY\n");
+		pr_err("PHY ID: SIOCSMIIPHY\n");
 		break;
 
 	case EQOS_PRV_IOCTL:
@@ -4291,7 +4271,7 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 
 	default:
 		ret = -EOPNOTSUPP;
-		printk(KERN_ALERT "Unsupported IOCTL call\n");
+		pr_err("Unsupported IOCTL call\n");
 	}
 	spin_unlock(&pdata->lock);
 
@@ -4325,7 +4305,7 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 	DBGPR("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
 
 	if (dev->mtu == new_mtu) {
-		printk(KERN_ALERT "%s: is already configured to %d mtu\n",
+		pr_err("%s: is already configured to %d mtu\n",
 		       dev->name, new_mtu);
 		return 0;
 	}
@@ -4333,28 +4313,26 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 	/* Supported frame sizes */
 	if ((new_mtu < EQOS_MIN_SUPPORTED_MTU) ||
 	    (max_frame > EQOS_MAX_SUPPORTED_MTU)) {
-		printk(KERN_ALERT
-		       "%s: invalid MTU, min %d and max %d MTU are supported\n",
+		pr_err("%s: invalid MTU, min %d and max %d MTU are supported\n",
 		       dev->name, EQOS_MIN_SUPPORTED_MTU,
 		       EQOS_MAX_SUPPORTED_MTU);
 		return -EINVAL;
 	}
 
-	printk(KERN_ALERT "changing MTU from %d to %d\n", dev->mtu, new_mtu);
+	pr_err("changing MTU from %d to %d\n", dev->mtu, new_mtu);
 
 	eqos_stop_dev(pdata);
 
 	if (max_frame <= 2048)
 		pdata->rx_buffer_len = 2048;
 	else
-		pdata->rx_buffer_len = PAGE_SIZE; /* in case of JUMBO frame,
-						max buffer allocated is
-						PAGE_SIZE */
+		pdata->rx_buffer_len = PAGE_SIZE;	/* in case of JUMBO frame,
+							   max buffer allocated is
+							   PAGE_SIZE */
 
 	if ((max_frame == ETH_FRAME_LEN + ETH_FCS_LEN) ||
 	    (max_frame == ETH_FRAME_LEN + ETH_FCS_LEN + VLAN_HLEN))
-		pdata->rx_buffer_len =
-		    EQOS_ETH_FRAME_LEN;
+		pdata->rx_buffer_len = EQOS_ETH_FRAME_LEN;
 
 	dev->mtu = new_mtu;
 
@@ -4367,10 +4345,10 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 #ifdef EQOS_QUEUE_SELECT_ALGO
 u16 eqos_select_queue(struct net_device *dev,
-		struct sk_buff *skb, void *accel_priv,
-		select_queue_fallback_t fallback)
+		      struct sk_buff *skb, void *accel_priv,
+		      select_queue_fallback_t fallback)
 {
-	static u16 txqueue_select = 0;
+	static u16 txqueue_select;
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	UINT i;
@@ -4384,33 +4362,34 @@ u16 eqos_select_queue(struct net_device *dev,
 		}
 	}
 
-	DBGPR("<--eqos_select_queue txqueue-select:%d\n",
-		txqueue_select);
+	DBGPR("<--eqos_select_queue txqueue-select:%d\n", txqueue_select);
 
 	return txqueue_select;
 }
 #endif
 
-unsigned int crc32_snps_le(unsigned int initval, unsigned char *data, unsigned int size)
+unsigned int crc32_snps_le(unsigned int initval, unsigned char *data,
+			   unsigned int size)
 {
 	unsigned int crc = initval;
 	unsigned int poly = 0x04c11db7;
 	unsigned int temp = 0;
 	unsigned char my_data = 0;
 	int bit_count;
-	for(bit_count = 0; bit_count < size; bit_count++) {
-		if((bit_count % 8) == 0) my_data = data[bit_count/8];
-		DBGPR_FILTER("%s my_data = %x crc=%x\n", __func__, my_data,crc);
-		temp = ((crc >> 31) ^  my_data) &  0x1;
+	for (bit_count = 0; bit_count < size; bit_count++) {
+		if ((bit_count % 8) == 0)
+			my_data = data[bit_count / 8];
+		DBGPR_FILTER("%s my_data = %x crc=%x\n", __func__, my_data,
+			     crc);
+		temp = ((crc >> 31) ^ my_data) & 0x1;
 		crc <<= 1;
-		if(temp != 0) crc ^= poly;
-		my_data >>=1;
+		if (temp != 0)
+			crc ^= poly;
+		my_data >>= 1;
 	}
-		DBGPR_FILTER("%s my_data = %x crc=%x\n", __func__, my_data,crc);
+	DBGPR_FILTER("%s my_data = %x crc=%x\n", __func__, my_data, crc);
 	return ~crc;
 }
-
-
 
 /*!
 * \brief API to delete vid to HW filter.
@@ -4433,11 +4412,11 @@ static int eqos_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid)
 	int crc32_val = 0;
 	unsigned int enb_12bit_vhash;
 
-	printk(KERN_ALERT "-->eqos_vlan_rx_kill_vid: vid = %d\n",
-		vid);
+	pr_err("-->eqos_vlan_rx_kill_vid: vid = %d\n", vid);
 
 	if (pdata->vlan_hash_filtering) {
-		crc32_val = (bitrev32(~crc32_le(~0, (unsigned char *)&vid, 2)) >> 28);
+		crc32_val =
+		    (bitrev32(~crc32_le(~0, (unsigned char *)&vid, 2)) >> 28);
 
 		enb_12bit_vhash = hw_if->get_vlan_tag_comparison();
 		if (enb_12bit_vhash) {
@@ -4458,12 +4437,11 @@ static int eqos_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid)
 		pdata->vlan_ht_or_id = 1;
 	}
 
-	printk(KERN_ALERT "<--eqos_vlan_rx_kill_vid\n");
+	pr_err("<--eqos_vlan_rx_kill_vid\n");
 
-	//FIXME: Check if any errors need to be returned in case of a failure.
+	/* FIXME: Check if any errors need to be returned in case of failure */
 	return 0;
 }
-
 
 static int eqos_set_mac_address(struct net_device *dev, void *p)
 {
@@ -4494,14 +4472,14 @@ static int eqos_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid)
 	int crc32_val = 0;
 	unsigned int enb_12bit_vhash;
 
-	printk(KERN_ALERT "-->eqos_vlan_rx_add_vid: vid = %d\n",
-		vid);
+	pr_err("-->eqos_vlan_rx_add_vid: vid = %d\n", vid);
 
 	if (pdata->vlan_hash_filtering) {
 		/* The upper 4 bits of the calculated CRC are used to
 		 * index the content of the VLAN Hash Table Reg.
 		 * */
-		crc32_val = (bitrev32(~crc32_le(~0, (unsigned char *)&vid, 2)) >> 28);
+		crc32_val =
+		    (bitrev32(~crc32_le(~0, (unsigned char *)&vid, 2)) >> 28);
 
 		/* These 4(0xF) bits determines the bit within the
 		 * VLAN Hash Table Reg 0
@@ -4523,9 +4501,9 @@ static int eqos_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid)
 		pdata->vlan_ht_or_id = vid;
 	}
 
-	printk(KERN_ALERT "<--eqos_vlan_rx_add_vid\n");
+	pr_err("<--eqos_vlan_rx_add_vid\n");
 
-	//FIXME: Check if any errors need to be returned in case of a failure.
+	/* FIXME: Check if any errors need to be returned in case of failure */
 	return 0;
 }
 
@@ -4551,8 +4529,7 @@ static int eqos_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid)
  * \retval zero on success and -ve number on failure.
  */
 
-INT eqos_powerdown(struct net_device *dev, UINT wakeup_type,
-		UINT caller)
+INT eqos_powerdown(struct net_device *dev, UINT wakeup_type, UINT caller)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -4562,9 +4539,9 @@ INT eqos_powerdown(struct net_device *dev, UINT wakeup_type,
 
 	if (!dev || !netif_running(dev) ||
 	    (caller == EQOS_IOCTL_CONTEXT && pdata->power_down)) {
-		printk(KERN_ALERT
-		       "Device is already powered down and will powerup for %s\n",
-		       EQOS_POWER_DOWN_TYPE(pdata));
+		pr_err
+		    ("Device is already powered down and will powerup for %s\n",
+		     EQOS_POWER_DOWN_TYPE(pdata));
 		DBGPR("<--eqos_powerdown\n");
 		return -EINVAL;
 	}
@@ -4632,8 +4609,7 @@ INT eqos_powerup(struct net_device *dev, UINT caller)
 
 	if (!dev || !netif_running(dev) ||
 	    (caller == EQOS_IOCTL_CONTEXT && !pdata->power_down)) {
-		printk(KERN_ALERT "Device is already powered up\n");
-		DBGPR(KERN_ALERT "<--eqos_powerup\n");
+		pr_err("Device is already powered up\n");
 		return -EINVAL;
 	}
 
@@ -4690,24 +4666,23 @@ INT eqos_powerup(struct net_device *dev, UINT caller)
  */
 
 INT eqos_configure_remotewakeup(struct net_device *dev,
-				       struct ifr_data_struct *req)
+				struct ifr_data_struct *req)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
 	if (!dev || !netif_running(dev) || !pdata->hw_feat.rwk_sel
 	    || pdata->power_down) {
-		printk(KERN_ALERT
-		       "Device is already powered down and will powerup for %s\n",
-		       EQOS_POWER_DOWN_TYPE(pdata));
+		pr_err
+		    ("Device is already powered down and will powerup for %s\n",
+		     EQOS_POWER_DOWN_TYPE(pdata));
 		return -EINVAL;
 	}
 
 	hw_if->configure_rwk_filter(req->rwk_filter_values,
 				    req->rwk_filter_length);
 
-	eqos_powerdown(dev, EQOS_REMOTE_WAKEUP,
-			EQOS_IOCTL_CONTEXT);
+	eqos_powerdown(dev, EQOS_REMOTE_WAKEUP, EQOS_IOCTL_CONTEXT);
 
 	return 0;
 }
@@ -4726,8 +4701,7 @@ INT eqos_configure_remotewakeup(struct net_device *dev,
  */
 
 static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
-				      UINT rx_pbl,
-				      UINT qinx)
+			       UINT rx_pbl, UINT qinx)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT pblx8_val = 0;
@@ -4754,18 +4728,18 @@ static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
 	}
 
 	switch (pblx8_val) {
-		case 0:
-			printk(KERN_ALERT "Tx PBL[%d] value: %d\n",
-					qinx, hw_if->get_tx_pbl_val(qinx));
-			printk(KERN_ALERT "Rx PBL[%d] value: %d\n",
-					qinx, hw_if->get_rx_pbl_val(qinx));
-			break;
-		case 1:
-			printk(KERN_ALERT "Tx PBL[%d] value: %d\n",
-					qinx, (hw_if->get_tx_pbl_val(qinx) * 8));
-			printk(KERN_ALERT "Rx PBL[%d] value: %d\n",
-					qinx, (hw_if->get_rx_pbl_val(qinx) * 8));
-			break;
+	case 0:
+		pr_err("Tx PBL[%d] value: %d\n",
+		       qinx, hw_if->get_tx_pbl_val(qinx));
+		pr_err("Rx PBL[%d] value: %d\n",
+		       qinx, hw_if->get_rx_pbl_val(qinx));
+		break;
+	case 1:
+		pr_err("Tx PBL[%d] value: %d\n",
+		       qinx, (hw_if->get_tx_pbl_val(qinx) * 8));
+		pr_err("Rx PBL[%d] value: %d\n",
+		       qinx, (hw_if->get_rx_pbl_val(qinx) * 8));
+		break;
 	}
 
 	DBGPR("<--eqos_config_rx_pbl\n");
@@ -4785,8 +4759,7 @@ static void eqos_config_rx_pbl(struct eqos_prv_data *pdata,
  */
 
 static void eqos_config_tx_pbl(struct eqos_prv_data *pdata,
-				      UINT tx_pbl,
-				      UINT qinx)
+			       UINT tx_pbl, UINT qinx)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	UINT pblx8_val = 0;
@@ -4813,23 +4786,22 @@ static void eqos_config_tx_pbl(struct eqos_prv_data *pdata,
 	}
 
 	switch (pblx8_val) {
-		case 0:
-			printk(KERN_ALERT "Tx PBL[%d] value: %d\n",
-					qinx, hw_if->get_tx_pbl_val(qinx));
-			printk(KERN_ALERT "Rx PBL[%d] value: %d\n",
-					qinx, hw_if->get_rx_pbl_val(qinx));
-			break;
-		case 1:
-			printk(KERN_ALERT "Tx PBL[%d] value: %d\n",
-					qinx, (hw_if->get_tx_pbl_val(qinx) * 8));
-			printk(KERN_ALERT "Rx PBL[%d] value: %d\n",
-					qinx, (hw_if->get_rx_pbl_val(qinx) * 8));
-			break;
+	case 0:
+		pr_err("Tx PBL[%d] value: %d\n",
+		       qinx, hw_if->get_tx_pbl_val(qinx));
+		pr_err("Rx PBL[%d] value: %d\n",
+		       qinx, hw_if->get_rx_pbl_val(qinx));
+		break;
+	case 1:
+		pr_err("Tx PBL[%d] value: %d\n",
+		       qinx, (hw_if->get_tx_pbl_val(qinx) * 8));
+		pr_err("Rx PBL[%d] value: %d\n",
+		       qinx, (hw_if->get_rx_pbl_val(qinx) * 8));
+		break;
 	}
 
 	DBGPR("<--eqos_config_tx_pbl\n");
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when the user issues an
@@ -4844,20 +4816,20 @@ static void eqos_config_tx_pbl(struct eqos_prv_data *pdata,
  */
 
 static void eqos_program_dcb_algorithm(struct eqos_prv_data *pdata,
-		struct ifr_data_struct *req)
+				       struct ifr_data_struct *req)
 {
 	struct eqos_dcb_algorithm l_dcb_struct, *u_dcb_struct =
-		(struct eqos_dcb_algorithm *)req->ptr;
+	    (struct eqos_dcb_algorithm *)req->ptr;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 
 	DBGPR("-->eqos_program_dcb_algorithm\n");
 
-	if(copy_from_user(&l_dcb_struct, u_dcb_struct,
-				sizeof(struct eqos_dcb_algorithm)))
-		printk(KERN_ALERT "Failed to fetch DCB Struct info from user\n");
+	if (copy_from_user(&l_dcb_struct, u_dcb_struct,
+			   sizeof(struct eqos_dcb_algorithm)))
+		pr_err("Failed to fetch DCB Struct info from user\n");
 
 	hw_if->set_tx_queue_operating_mode(l_dcb_struct.qinx,
-		(UINT)l_dcb_struct.op_mode);
+					   (UINT) l_dcb_struct.op_mode);
 	hw_if->set_dcb_algorithm(l_dcb_struct.algorithm);
 	hw_if->set_dcb_queue_weight(l_dcb_struct.qinx, l_dcb_struct.weight);
 
@@ -4865,7 +4837,6 @@ static void eqos_program_dcb_algorithm(struct eqos_prv_data *pdata,
 
 	return;
 }
-
 
 /*!
  * \details This function is invoked by ioctl function when the user issues an
@@ -4881,20 +4852,20 @@ static void eqos_program_dcb_algorithm(struct eqos_prv_data *pdata,
  */
 
 static void eqos_program_avb_algorithm(struct eqos_prv_data *pdata,
-		struct ifr_data_struct *req)
+				       struct ifr_data_struct *req)
 {
 	struct eqos_avb_algorithm l_avb_struct, *u_avb_struct =
-		(struct eqos_avb_algorithm *)req->ptr;
+	    (struct eqos_avb_algorithm *)req->ptr;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 
 	DBGPR("-->eqos_program_avb_algorithm\n");
 
-	if(copy_from_user(&l_avb_struct, u_avb_struct,
-				sizeof(struct eqos_avb_algorithm)))
-		printk(KERN_ALERT "Failed to fetch AVB Struct info from user\n");
+	if (copy_from_user(&l_avb_struct, u_avb_struct,
+			   sizeof(struct eqos_avb_algorithm)))
+		pr_err("Failed to fetch AVB Struct info from user\n");
 
 	hw_if->set_tx_queue_operating_mode(l_avb_struct.qinx,
-		(UINT)l_avb_struct.op_mode);
+					   (UINT) l_avb_struct.op_mode);
 	hw_if->set_avb_algorithm(l_avb_struct.qinx, l_avb_struct.algorithm);
 	hw_if->config_credit_control(l_avb_struct.qinx, l_avb_struct.cc);
 	hw_if->config_send_slope(l_avb_struct.qinx, l_avb_struct.send_slope);
@@ -5685,13 +5656,13 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 
 		TX_NORMAL_DESC_TDES3_CTXT_RD(desc->tdes3, ctxt);
 
-		printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
+		pr_err("\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
 		       (ctxt == 1) ? "TX_CONTXT_DESC" : "tx_normal_desc",
 		       qinx, desc, first_desc_idx,
 		       ((flag == 1) ? "QUEUED FOR TRANSMISSION" :
-			((flag == 0) ? "FREED/FETCHED BY DEVICE" : "DEBUG DESC DUMP")),
-			desc->tdes0, desc->tdes1,
-			desc->tdes2, desc->tdes3);
+			((flag ==
+			  0) ? "FREED/FETCHED BY DEVICE" : "DEBUG DESC DUMP")),
+		       desc->tdes0, desc->tdes1, desc->tdes2, desc->tdes3);
 	} else {
 		int lp_cnt;
 		if (first_desc_idx > last_desc_idx)
@@ -5704,10 +5675,12 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 
 			TX_NORMAL_DESC_TDES3_CTXT_RD(desc->tdes3, ctxt);
 
-			printk(KERN_ALERT "\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
-			       (ctxt == 1) ? "TX_CONTXT_DESC" : "tx_normal_desc",
-			       qinx, desc, i,
-			       ((flag == 1) ? "QUEUED FOR TRANSMISSION" :
+			pr_err("\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
+			       (ctxt ==
+				1) ? "TX_CONTXT_DESC" : "tx_normal_desc", qinx,
+			       desc, i,
+			       ((flag ==
+				 1) ? "QUEUED FOR TRANSMISSION" :
 				"FREED/FETCHED BY DEVICE"), desc->tdes0,
 			       desc->tdes1, desc->tdes2, desc->tdes3);
 			INCR_TX_DESC_INDEX(i, 1);
@@ -5728,10 +5701,10 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 
 void dump_rx_desc(UINT qinx, struct s_rx_normal_desc *desc, int desc_idx)
 {
-	printk(KERN_ALERT "\nrx_normal_desc[%02d %4p %03d RECEIVED FROM DEVICE]"\
-		" = %#x:%#x:%#x:%#x",
-		qinx, desc, desc_idx, desc->rdes0, desc->rdes1,
-		desc->rdes2, desc->rdes3);
+	pr_err("\nrx_normal_desc[%02d %4p %03d RECEIVED FROM DEVICE]"
+	       " = %#x:%#x:%#x:%#x",
+	       qinx, desc, desc_idx, desc->rdes0, desc->rdes1,
+	       desc->rdes2, desc->rdes3);
 }
 
 /*!
@@ -5754,31 +5727,30 @@ void print_pkt(struct sk_buff *skb, int len, bool tx_rx, int desc_idx)
 	int i, j = 0;
 	unsigned char *buf = skb->data;
 
-	printk(KERN_ALERT
-	       "\n\n/***********************************************************/\n");
+	pr_err
+	    ("\n\n/***********************************************************/\n");
 
-	printk(KERN_ALERT "%s pkt of %d Bytes [DESC index = %d]\n\n",
+	pr_err("%s pkt of %d Bytes [DESC index = %d]\n\n",
 	       (tx_rx ? "TX" : "RX"), len, desc_idx);
-	printk(KERN_ALERT "Dst MAC addr(6 bytes)\n");
+	pr_err("Dst MAC addr(6 bytes)\n");
 	for (i = 0; i < 6; i++)
 		printk("%#.2x%s", buf[i], (((i == 5) ? "" : ":")));
-	printk(KERN_ALERT "\nSrc MAC addr(6 bytes)\n");
+	pr_err("\nSrc MAC addr(6 bytes)\n");
 	for (i = 6; i <= 11; i++)
 		printk("%#.2x%s", buf[i], (((i == 11) ? "" : ":")));
 	i = (buf[12] << 8 | buf[13]);
-	printk(KERN_ALERT "\nType/Length(2 bytes)\n%#x", i);
+	pr_err("\nType/Length(2 bytes)\n%#x", i);
 
-	printk(KERN_ALERT "\nPay Load : %d bytes\n", (len - 14));
+	pr_err("\nPay Load : %d bytes\n", (len - 14));
 	for (i = 14, j = 1; i < len; i++, j++) {
 		printk("%#.2x%s", buf[i], (((i == (len - 1)) ? "" : ":")));
 		if ((j % 16) == 0)
-			printk(KERN_ALERT "");
+			pr_err("");
 	}
 
-	printk(KERN_ALERT
-	       "/*************************************************************/\n\n");
+	pr_err
+	    ("/*************************************************************/\n\n");
 }
-
 
 /*!
  * \details This function is invoked by probe function. This function will
@@ -5803,12 +5775,11 @@ void eqos_init_rx_coalesce(struct eqos_prv_data *pdata)
 		rx_desc_data->use_riwt = 1;
 		rx_desc_data->rx_coal_frames = EQOS_RX_MAX_FRAMES;
 		rx_desc_data->rx_riwt =
-			eqos_usec2riwt(EQOS_OPTIMAL_DMA_RIWT_USEC, pdata);
+		    eqos_usec2riwt(EQOS_OPTIMAL_DMA_RIWT_USEC, pdata);
 	}
 
 	DBGPR("<--eqos_init_rx_coalesce\n");
 }
-
 
 /*!
  * \details This function is invoked by open() function. This function will
@@ -5826,16 +5797,15 @@ static void eqos_mmc_setup(struct eqos_prv_data *pdata)
 	if (pdata->hw_feat.mmc_sel) {
 		memset(&pdata->mmc, 0, sizeof(struct eqos_mmc_counters));
 	} else
-		printk(KERN_ALERT "No MMC/RMON module available in the HW\n");
+		pr_err("No MMC/RMON module available in the HW\n");
 
 	DBGPR("<--eqos_mmc_setup\n");
 }
 
 inline unsigned int eqos_reg_read(volatile ULONG *ptr)
 {
-		return ioread32((void *)ptr);
+	return ioread32((void *)ptr);
 }
-
 
 /*!
  * \details This function is invoked by ethtool function when user wants to
@@ -5860,18 +5830,28 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 	/* MMC TX counter registers */
 	mmc->mmc_tx_octetcount_gb += eqos_reg_read(MMC_TXOCTETCOUNT_GB_OFFSET);
 	mmc->mmc_tx_framecount_gb += eqos_reg_read(MMC_TXPACKETCOUNT_GB_OFFSET);
-	mmc->mmc_tx_broadcastframe_g += eqos_reg_read(MMC_TXBROADCASTPACKETS_G_OFFSET);
-	mmc->mmc_tx_multicastframe_g += eqos_reg_read(MMC_TXMULTICASTPACKETS_G_OFFSET);
+	mmc->mmc_tx_broadcastframe_g +=
+	    eqos_reg_read(MMC_TXBROADCASTPACKETS_G_OFFSET);
+	mmc->mmc_tx_multicastframe_g +=
+	    eqos_reg_read(MMC_TXMULTICASTPACKETS_G_OFFSET);
 	mmc->mmc_tx_64_octets_gb += eqos_reg_read(MMC_TX64OCTETS_GB_OFFSET);
-	mmc->mmc_tx_65_to_127_octets_gb += eqos_reg_read(MMC_TX65TO127OCTETS_GB_OFFSET);
-	mmc->mmc_tx_128_to_255_octets_gb += eqos_reg_read(MMC_TX128TO255OCTETS_GB_OFFSET);
-	mmc->mmc_tx_256_to_511_octets_gb += eqos_reg_read(MMC_TX256TO511OCTETS_GB_OFFSET);
-	mmc->mmc_tx_512_to_1023_octets_gb += eqos_reg_read(MMC_TX512TO1023OCTETS_GB_OFFSET);
-	mmc->mmc_tx_1024_to_max_octets_gb += eqos_reg_read(MMC_TX1024TOMAXOCTETS_GB_OFFSET);
+	mmc->mmc_tx_65_to_127_octets_gb +=
+	    eqos_reg_read(MMC_TX65TO127OCTETS_GB_OFFSET);
+	mmc->mmc_tx_128_to_255_octets_gb +=
+	    eqos_reg_read(MMC_TX128TO255OCTETS_GB_OFFSET);
+	mmc->mmc_tx_256_to_511_octets_gb +=
+	    eqos_reg_read(MMC_TX256TO511OCTETS_GB_OFFSET);
+	mmc->mmc_tx_512_to_1023_octets_gb +=
+	    eqos_reg_read(MMC_TX512TO1023OCTETS_GB_OFFSET);
+	mmc->mmc_tx_1024_to_max_octets_gb +=
+	    eqos_reg_read(MMC_TX1024TOMAXOCTETS_GB_OFFSET);
 	mmc->mmc_tx_unicast_gb += eqos_reg_read(MMC_TXUNICASTPACKETS_GB_OFFSET);
-	mmc->mmc_tx_multicast_gb += eqos_reg_read(MMC_TXMULTICASTPACKETS_GB_OFFSET);
-	mmc->mmc_tx_broadcast_gb += eqos_reg_read(MMC_TXBROADCASTPACKETS_GB_OFFSET);
-	mmc->mmc_tx_underflow_error += eqos_reg_read(MMC_TXUNDERFLOWERROR_OFFSET);
+	mmc->mmc_tx_multicast_gb +=
+	    eqos_reg_read(MMC_TXMULTICASTPACKETS_GB_OFFSET);
+	mmc->mmc_tx_broadcast_gb +=
+	    eqos_reg_read(MMC_TXBROADCASTPACKETS_GB_OFFSET);
+	mmc->mmc_tx_underflow_error +=
+	    eqos_reg_read(MMC_TXUNDERFLOWERROR_OFFSET);
 	mmc->mmc_tx_singlecol_g += eqos_reg_read(MMC_TXSINGLECOL_G_OFFSET);
 	mmc->mmc_tx_multicol_g += eqos_reg_read(MMC_TXMULTICOL_G_OFFSET);
 	mmc->mmc_tx_deferred += eqos_reg_read(MMC_TXDEFERRED_OFFSET);
@@ -5889,8 +5869,10 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 	mmc->mmc_rx_framecount_gb += eqos_reg_read(MMC_RXPACKETCOUNT_GB_OFFSET);
 	mmc->mmc_rx_octetcount_gb += eqos_reg_read(MMC_RXOCTETCOUNT_GB_OFFSET);
 	mmc->mmc_rx_octetcount_g += eqos_reg_read(MMC_RXOCTETCOUNT_G_OFFSET);
-	mmc->mmc_rx_broadcastframe_g += eqos_reg_read(MMC_RXBROADCASTPACKETS_G_OFFSET);
-	mmc->mmc_rx_multicastframe_g += eqos_reg_read(MMC_RXMULTICASTPACKETS_G_OFFSET);
+	mmc->mmc_rx_broadcastframe_g +=
+	    eqos_reg_read(MMC_RXBROADCASTPACKETS_G_OFFSET);
+	mmc->mmc_rx_multicastframe_g +=
+	    eqos_reg_read(MMC_RXMULTICASTPACKETS_G_OFFSET);
 	mmc->mmc_rx_crc_errror += eqos_reg_read(MMC_RXCRCERROR_OFFSET);
 	mmc->mmc_rx_align_error += eqos_reg_read(MMC_RXALIGNMENTERROR_OFFSET);
 	mmc->mmc_rx_run_error += eqos_reg_read(MMC_RXRUNTERROR_OFFSET);
@@ -5898,17 +5880,24 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 	mmc->mmc_rx_undersize_g += eqos_reg_read(MMC_RXUNDERSIZE_G_OFFSET);
 	mmc->mmc_rx_oversize_g += eqos_reg_read(MMC_RXOVERSIZE_G_OFFSET);
 	mmc->mmc_rx_64_octets_gb += eqos_reg_read(MMC_RX64OCTETS_GB_OFFSET);
-	mmc->mmc_rx_65_to_127_octets_gb += eqos_reg_read(MMC_RX65TO127OCTETS_GB_OFFSET);
-	mmc->mmc_rx_128_to_255_octets_gb += eqos_reg_read(MMC_RX128TO255OCTETS_GB_OFFSET);
-	mmc->mmc_rx_256_to_511_octets_gb += eqos_reg_read(MMC_RX256TO511OCTETS_GB_OFFSET);
-	mmc->mmc_rx_512_to_1023_octets_gb += eqos_reg_read(MMC_RX512TO1023OCTETS_GB_OFFSET);
-	mmc->mmc_rx_1024_to_max_octets_gb += eqos_reg_read(MMC_RX1024TOMAXOCTETS_GB_OFFSET);
+	mmc->mmc_rx_65_to_127_octets_gb +=
+	    eqos_reg_read(MMC_RX65TO127OCTETS_GB_OFFSET);
+	mmc->mmc_rx_128_to_255_octets_gb +=
+	    eqos_reg_read(MMC_RX128TO255OCTETS_GB_OFFSET);
+	mmc->mmc_rx_256_to_511_octets_gb +=
+	    eqos_reg_read(MMC_RX256TO511OCTETS_GB_OFFSET);
+	mmc->mmc_rx_512_to_1023_octets_gb +=
+	    eqos_reg_read(MMC_RX512TO1023OCTETS_GB_OFFSET);
+	mmc->mmc_rx_1024_to_max_octets_gb +=
+	    eqos_reg_read(MMC_RX1024TOMAXOCTETS_GB_OFFSET);
 	mmc->mmc_rx_unicast_g += eqos_reg_read(MMC_RXUNICASTPACKETS_G_OFFSET);
 	mmc->mmc_rx_length_error += eqos_reg_read(MMC_RXLENGTHERROR_OFFSET);
-	mmc->mmc_rx_outofrangetype += eqos_reg_read(MMC_RXOUTOFRANGETYPE_OFFSET);
+	mmc->mmc_rx_outofrangetype +=
+	    eqos_reg_read(MMC_RXOUTOFRANGETYPE_OFFSET);
 	mmc->mmc_rx_pause_frames += eqos_reg_read(MMC_RXPAUSEPACKETS_OFFSET);
 	mmc->mmc_rx_fifo_overflow += eqos_reg_read(MMC_RXFIFOOVERFLOW_OFFSET);
-	mmc->mmc_rx_vlan_frames_gb += eqos_reg_read(MMC_RXVLANPACKETS_GB_OFFSET);
+	mmc->mmc_rx_vlan_frames_gb +=
+	    eqos_reg_read(MMC_RXVLANPACKETS_GB_OFFSET);
 	mmc->mmc_rx_watchdog_error += eqos_reg_read(MMC_RXWATCHDOGERROR_OFFSET);
 	mmc->mmc_rx_receive_error += eqos_reg_read(MMC_RXRCVERROR_OFFSET);
 	mmc->mmc_rx_ctrl_frames_g += eqos_reg_read(MMC_RXCTRLPACKETS_G_OFFSET);
@@ -5938,28 +5927,39 @@ void eqos_mmc_read(struct eqos_mmc_counters *mmc)
 	mmc->mmc_rx_icmp_err += eqos_reg_read(MMC_RXICMP_ERR_PKTS_OFFSET);
 
 	/* IPv4 */
-	mmc->mmc_rx_ipv4_gd_octets += eqos_reg_read(MMC_RXIPV4_GD_OCTETS_OFFSET);
-	mmc->mmc_rx_ipv4_hderr_octets += eqos_reg_read(MMC_RXIPV4_HDRERR_OCTETS_OFFSET);
-	mmc->mmc_rx_ipv4_nopay_octets += eqos_reg_read(MMC_RXIPV4_NOPAY_OCTETS_OFFSET);
-	mmc->mmc_rx_ipv4_frag_octets += eqos_reg_read(MMC_RXIPV4_FRAG_OCTETS_OFFSET);
-	mmc->mmc_rx_ipv4_udsbl_octets += eqos_reg_read(MMC_RXIPV4_UDSBL_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv4_gd_octets +=
+	    eqos_reg_read(MMC_RXIPV4_GD_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv4_hderr_octets +=
+	    eqos_reg_read(MMC_RXIPV4_HDRERR_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv4_nopay_octets +=
+	    eqos_reg_read(MMC_RXIPV4_NOPAY_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv4_frag_octets +=
+	    eqos_reg_read(MMC_RXIPV4_FRAG_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv4_udsbl_octets +=
+	    eqos_reg_read(MMC_RXIPV4_UDSBL_OCTETS_OFFSET);
 
 	/* IPV6 */
-	mmc->mmc_rx_ipv6_gd_octets += eqos_reg_read(MMC_RXIPV6_GD_OCTETS_OFFSET);
-	mmc->mmc_rx_ipv6_hderr_octets += eqos_reg_read(MMC_RXIPV6_HDRERR_OCTETS_OFFSET);
-	mmc->mmc_rx_ipv6_nopay_octets += eqos_reg_read(MMC_RXIPV6_NOPAY_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv6_gd_octets +=
+	    eqos_reg_read(MMC_RXIPV6_GD_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv6_hderr_octets +=
+	    eqos_reg_read(MMC_RXIPV6_HDRERR_OCTETS_OFFSET);
+	mmc->mmc_rx_ipv6_nopay_octets +=
+	    eqos_reg_read(MMC_RXIPV6_NOPAY_OCTETS_OFFSET);
 
 	/* Protocols */
 	mmc->mmc_rx_udp_gd_octets += eqos_reg_read(MMC_RXUDP_GD_OCTETS_OFFSET);
-	mmc->mmc_rx_udp_err_octets += eqos_reg_read(MMC_RXUDP_ERR_OCTETS_OFFSET);
+	mmc->mmc_rx_udp_err_octets +=
+	    eqos_reg_read(MMC_RXUDP_ERR_OCTETS_OFFSET);
 	mmc->mmc_rx_tcp_gd_octets += eqos_reg_read(MMC_RXTCP_GD_OCTETS_OFFSET);
-	mmc->mmc_rx_tcp_err_octets += eqos_reg_read(MMC_RXTCP_ERR_OCTETS_OFFSET);
-	mmc->mmc_rx_icmp_gd_octets += eqos_reg_read(MMC_RXICMP_GD_OCTETS_OFFSET);
-	mmc->mmc_rx_icmp_err_octets += eqos_reg_read(MMC_RXICMP_ERR_OCTETS_OFFSET);
+	mmc->mmc_rx_tcp_err_octets +=
+	    eqos_reg_read(MMC_RXTCP_ERR_OCTETS_OFFSET);
+	mmc->mmc_rx_icmp_gd_octets +=
+	    eqos_reg_read(MMC_RXICMP_GD_OCTETS_OFFSET);
+	mmc->mmc_rx_icmp_err_octets +=
+	    eqos_reg_read(MMC_RXICMP_ERR_OCTETS_OFFSET);
 
 	DBGPR("<--eqos_mmc_read\n");
 }
-
 
 phy_interface_t eqos_get_phy_interface(struct eqos_prv_data *pdata)
 {
@@ -5985,10 +5985,8 @@ phy_interface_t eqos_get_phy_interface(struct eqos_prv_data *pdata)
 	} else if (pdata->hw_feat.act_phy_sel == EQOS_SMII) {
 		ret = PHY_INTERFACE_MODE_SMII;
 	} else if (pdata->hw_feat.act_phy_sel == EQOS_REV_MII) {
-		//what to return ?
 	} else {
-		printk(KERN_ALERT "Missing interface support between"\
-		    "PHY and MAC\n\n");
+		pr_err("Missing interface support between" "PHY and MAC\n\n");
 		ret = PHY_INTERFACE_MODE_NA;
 	}
 
@@ -6022,13 +6020,12 @@ struct net_device_ops *eqos_get_netdev_ops(void)
 	return (struct net_device_ops *)&eqos_netdev_ops;
 }
 
-
 /* Wrapper timer handler.  Only used when configured for multi irq and at least
  * one channel is being polled.
  */
 static void eqos_poll_timer(unsigned long data)
 {
-	struct chan_data *pchinfo = (struct chan_data *) data;
+	struct chan_data *pchinfo = (struct chan_data *)data;
 
 	DBGPR("-->%s(): chan=%d\n", __func__, pchinfo->chan_num);
 
@@ -6038,26 +6035,23 @@ static void eqos_poll_timer(unsigned long data)
 	DBGPR("<--%s():\n", __func__);
 }
 
-
 /* Wrapper timer handler.  Only used when configured for single irq
  * and all chans are being polled
  */
 static void eqos_all_chans_timer(unsigned long data)
 {
-	struct eqos_prv_data *pdata =
-		(struct eqos_prv_data *)data;
+	struct eqos_prv_data *pdata = (struct eqos_prv_data *)data;
 
 	eqos_poll_mq_all_chans(pdata);
 
-	pdata->all_chans_timer.expires = jiffies +
-					msecs_to_jiffies(1000);  /* 1s */
+	pdata->all_chans_timer.expires = jiffies + msecs_to_jiffies(1000);	/* 1s */
 	add_timer(&pdata->all_chans_timer);
 }
 
 static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &pdata->hw_if;
-	int	i;
+	int i;
 
 	DBGPR("-->%s()\n", __func__);
 
@@ -6175,7 +6169,6 @@ static void eqos_start_dev(struct eqos_prv_data *pdata)
 		phy_start(pdata->phydev);
 		phy_start_machine(pdata->phydev);
 	}
-
 #ifdef EQOS_ENABLE_EEE
 	pdata->eee_enabled = eqos_eee_init(pdata);
 #else
@@ -6191,7 +6184,7 @@ static void eqos_start_dev(struct eqos_prv_data *pdata)
 void eqos_fbe_work(struct work_struct *work)
 {
 	struct eqos_prv_data *pdata =
-			container_of(work, struct eqos_prv_data, fbe_work);
+	    container_of(work, struct eqos_prv_data, fbe_work);
 	int i;
 	u32 dma_sr_reg;
 

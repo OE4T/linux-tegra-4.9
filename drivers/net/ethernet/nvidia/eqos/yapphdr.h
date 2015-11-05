@@ -27,7 +27,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * ========================================================================= */
+ * =========================================================================
+ */
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -77,14 +78,6 @@
 #define EQOS_DVLAN_TX_PROCESSING_CMD		13
 #define EQOS_DVLAN_RX_PROCESSING_CMD		14
 #define EQOS_SVLAN_CMD				15
-
-
-//Manju: Remove the below defines
-/* RX/TX VLAN */
-//#define EQOS_RX_OUTER_VLAN_STRIPPING_CMD	13
-//#define EQOS_RX_INNER_VLAN_STRIPPING_CMD	14
-//#define EQOS_TX_VLAN_DESC_CMD	15
-//#define EQOS_TX_VLAN_REG_CMD	16
 
 /* SA on TX */
 #define EQOS_SA0_DESC_CMD	17
@@ -219,7 +212,6 @@
 /* Replace the VLAN tag into pkt to be transmitted */
 #define EQOS_TX_VLAN_TAG_REPLACE	0x3
 
-
 /* L3/L4 filter operations */
 #define EQOS_L3_L4_FILTER_DISABLE 0x0
 #define EQOS_L3_L4_FILTER_ENABLE 0x1
@@ -235,21 +227,32 @@
 #define EQOS_MAC0REG 0
 #define EQOS_MAC1REG 1
 
-#define EQOS_SA0_NONE		((EQOS_MAC0REG << 2) | 0) /* Do not include the SA */
-#define EQOS_SA0_DESC_INSERT	((EQOS_MAC0REG << 2) | 1) /* Include/Insert the SA with value given in MAC Addr 0 Reg */
-#define EQOS_SA0_DESC_REPLACE	((EQOS_MAC0REG << 2) | 2) /* Replace the SA with the value given in MAC Addr 0 Reg */
-#define EQOS_SA0_REG_INSERT	((EQOS_MAC0REG << 2) | 2) /* Include/Insert the SA with value given in MAC Addr 0 Reg */
-#define EQOS_SA0_REG_REPLACE	((EQOS_MAC0REG << 2) | 3) /* Replace the SA with the value given in MAC Addr 0 Reg */
+/* Do not include the SA */
+#define EQOS_SA0_NONE		((EQOS_MAC0REG << 2) | 0)
+/* Include/Insert the SA with value given in MAC Addr 0 Reg */
+#define EQOS_SA0_DESC_INSERT	((EQOS_MAC0REG << 2) | 1)
+/* Replace the SA with the value given in MAC Addr 0 Reg */
+#define EQOS_SA0_DESC_REPLACE	((EQOS_MAC0REG << 2) | 2)
+/* Include/Insert the SA with value given in MAC Addr 0 Reg */
+#define EQOS_SA0_REG_INSERT	((EQOS_MAC0REG << 2) | 2)
+/* Replace the SA with the value given in MAC Addr 0 Reg */
+#define EQOS_SA0_REG_REPLACE	((EQOS_MAC0REG << 2) | 3)
 
-#define EQOS_SA1_NONE		((EQOS_MAC1REG << 2) | 0) /* Do not include the SA */
-#define EQOS_SA1_DESC_INSERT	((EQOS_MAC1REG << 2) | 1) /* Include/Insert the SA with value given in MAC Addr 1 Reg */
-#define EQOS_SA1_DESC_REPLACE	((EQOS_MAC1REG << 2) | 2) /* Replace the SA with the value given in MAC Addr 1 Reg */
-#define EQOS_SA1_REG_INSERT	((EQOS_MAC1REG << 2) | 2) /* Include/Insert the SA with value given in MAC Addr 1 Reg */
-#define EQOS_SA1_REG_REPLACE	((EQOS_MAC1REG << 2) | 3) /* Replace the SA with the value given in MAC Addr 1 Reg */
+/* Do not include the SA */
+#define EQOS_SA1_NONE		((EQOS_MAC1REG << 2) | 0)
+/* Include/Insert the SA with value given in MAC Addr 1 Reg */
+#define EQOS_SA1_DESC_INSERT	((EQOS_MAC1REG << 2) | 1)
+/* Replace the SA with the value given in MAC Addr 1 Reg */
+#define EQOS_SA1_DESC_REPLACE	((EQOS_MAC1REG << 2) | 2)
+/* Include/Insert the SA with value given in MAC Addr 1 Reg */
+#define EQOS_SA1_REG_INSERT	((EQOS_MAC1REG << 2) | 2)
+/* Replace the SA with the value given in MAC Addr 1 Reg */
+#define EQOS_SA1_REG_REPLACE	((EQOS_MAC1REG << 2) | 3)
 
-#define EQOS_MAX_WFQ_WEIGHT	0X7FFF /* value for bandwidth calculation */
+/* value for bandwidth calculation */
+#define EQOS_MAX_WFQ_WEIGHT	0X7FFF
 
-#define EQOS_MAX_INT_FRAME_SIZE (1024* 64)
+#define EQOS_MAX_INT_FRAME_SIZE (1024 * 64)
 
 typedef enum {
 	EQOS_DMA_TX_FP = 0,
@@ -278,10 +281,10 @@ typedef enum {
 
 /* common data structure between driver and application for
  * sharing info through ioctl
- * */
+ */
 struct ifr_data_struct {
 	unsigned int flags;
-	unsigned int qinx; /* dma channel no to be configured */
+	unsigned int qinx;	/* dma channel no to be configured */
 	unsigned int cmd;
 	unsigned int context_setup;
 	unsigned int connected_speed;
@@ -311,7 +314,7 @@ struct eqos_avb_algorithm {
 };
 
 struct eqos_l3_l4_filter {
-	/* 0, 1,2,3,4,5,6 or 7*/
+	/* 0, 1,2,3,4,5,6 or 7 */
 	int filter_no;
 	/* 0 - disable and 1 - enable */
 	int filter_enb_dis;
@@ -368,33 +371,32 @@ struct eqos_config_dvlan {
 	int inner_vlan_tag;
 	int outer_vlan_tag;
 	/* op_type will be
- 	 * 0/1/2/3 for none/delet/insert/replace respectively
- 	 * */
+	 * 0/1/2/3 for none/delet/insert/replace respectively
+	 */
 	int op_type;
 	/* in_out will be
- 	 * 1/2/3 for outer/inner/both respectively.
- 	 * */
+	 * 1/2/3 for outer/inner/both respectively.
+	 */
 	int in_out;
 	/* 0 for via registers and 1 for via descriptor */
 	int via_reg_or_desc;
 };
 
-
 /* for PTP offloading configuration */
-#define EQOS_PTP_OFFLOADING_DISABLE 		0
-#define EQOS_PTP_OFFLOADING_ENABLE	 		1
+#define EQOS_PTP_OFFLOADING_DISABLE		0
+#define EQOS_PTP_OFFLOADING_ENABLE		1
 
-#define EQOS_PTP_ORDINARY_SLAVE	 		1
-#define EQOS_PTP_ORDINARY_MASTER	 		2
-#define EQOS_PTP_TRASPARENT_SLAVE	 		3
-#define EQOS_PTP_TRASPARENT_MASTER	 		4
+#define EQOS_PTP_ORDINARY_SLAVE			1
+#define EQOS_PTP_ORDINARY_MASTER		2
+#define EQOS_PTP_TRASPARENT_SLAVE		3
+#define EQOS_PTP_TRASPARENT_MASTER		4
 #define EQOS_PTP_PEER_TO_PEER_TRANSPARENT	5
 
 struct eqos_config_ptpoffloading {
 	int en_dis;
 	int mode;
 	int domain_num;
-    int mc_uc; 
+	int mc_uc;
 };
 
 #endif

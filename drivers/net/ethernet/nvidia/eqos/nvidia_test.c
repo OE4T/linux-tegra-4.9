@@ -27,7 +27,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * ========================================================================= */
+ * =========================================================================
+ */
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -51,20 +52,21 @@
 
 int eqos_handle_mem_iso_ioctl(struct eqos_prv_data *pdata, void *ptr)
 {
-		printk(KERN_ALERT "==== mem iso ioctl called ====\n");
+		pr_err("==== mem iso ioctl called ====\n");
 		return 0;
 }
 
 int eqos_handle_csr_iso_ioctl(struct eqos_prv_data *pdata, void *ptr)
 {
-		printk(KERN_ALERT "==== csr iso ioctl called ====\n");
+		pr_err("==== csr iso ioctl called ====\n");
 		return 0;
 }
 
 int eqos_handle_phy_loopback(struct eqos_prv_data *pdata, void *ptr)
 {
-		printk(KERN_ALERT "==== handle phy loopback called ====\n");
+		pr_err("==== handle phy loopback called ====\n");
 		eqos_mdio_write_direct(pdata, pdata->phyaddr, MII_BMCR, 0x2100);
-		eqos_mdio_write_direct(pdata, pdata->phyaddr, EQOS_AUX_CTL, 0x8400);
+		eqos_mdio_write_direct(pdata, pdata->phyaddr, EQOS_AUX_CTL,
+			0x8400);
 		return 0;
 }

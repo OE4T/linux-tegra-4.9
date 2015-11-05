@@ -382,7 +382,7 @@ int tegra_pm_irq_set_wake(int wake, int enable)
 	return wke_irq_set_wake(wake, enable);
 }
 
-int pm_irq_init(void)
+int __init pm_irq_init(void)
 {
 	tegra_wakeup_table_init();
 	/* Hook into GIC ops */

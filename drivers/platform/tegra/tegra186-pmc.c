@@ -90,6 +90,8 @@
 #define PMC_UFSHC_PWR_CNTRL_0		0xF4
 
 #define PMC_FUSE_CTRL			0x100
+#define PMC_FUSE_CTRL_ENABLE_REDIRECTION	(1 << 0)
+#define PMC_FUSE_CTRL_DISABLE_REDIRECTION	(1 << 1)
 #define PMC_FUSE_CTRL_PS18_LATCH_SET	(1 << 8)
 #define PMC_FUSE_CTRL_PS18_LATCH_CLEAR	(1 << 9)
 
@@ -360,6 +362,28 @@ void tegra_pmc_fuse_control_ps18_latch_clear(void)
 	mdelay(1);
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_control_ps18_latch_clear);
+
+void tegra_pmc_fuse_disable_mirroring(void)
+{
+	u32 val;
+
+	val = tegra186_pmc_readl(PMC_FUSE_CTRL);
+	if (val & PMC_FUSE_CTRL_ENABLE_REDIRECTION)
+		tegra186_pmc_writel(PMC_FUSE_CTRL_DISABLE_REDIRECTION,
+				PMC_FUSE_CTRL);
+}
+EXPORT_SYMBOL(tegra_pmc_fuse_disable_mirroring);
+
+void tegra_pmc_fuse_enable_mirroring(void)
+{
+	u32 val;
+
+	val = tegra186_pmc_readl(PMC_FUSE_CTRL);
+	if (!(val & PMC_FUSE_CTRL_ENABLE_REDIRECTION))
+		tegra186_pmc_writel(PMC_FUSE_CTRL_ENABLE_REDIRECTION,
+				PMC_FUSE_CTRL);
+}
+EXPORT_SYMBOL(tegra_pmc_fuse_enable_mirroring);
 
 bool tegra_pmc_is_halt_in_fiq(void)
 {

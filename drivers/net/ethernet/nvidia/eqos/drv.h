@@ -27,7 +27,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * ========================================================================= */
+ * =========================================================================
+ */
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -62,7 +63,8 @@ static struct net_device_stats *eqos_get_stats(struct net_device *);
 static void eqos_poll_controller(struct net_device *);
 #endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 
-static int eqos_set_features(struct net_device *dev, netdev_features_t features);
+static int eqos_set_features(struct net_device *dev,
+	netdev_features_t features);
 
 INT eqos_configure_remotewakeup(struct net_device *,
 				       struct ifr_data_struct *);

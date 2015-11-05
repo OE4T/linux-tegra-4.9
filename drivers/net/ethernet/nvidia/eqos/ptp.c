@@ -27,7 +27,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * ========================================================================= */
+ * =========================================================================
+ */
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -44,7 +45,6 @@
  * @brief: Driver functions.
  */
 #include "yheader.h"
-
 
 /*!
  * \brief API to adjust the frequency of hardware clock.
@@ -63,7 +63,7 @@
 static int eqos_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 {
 	struct eqos_prv_data *pdata =
-		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
+	    container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned long flags;
 	u64 adj;
@@ -83,7 +83,7 @@ static int eqos_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 	/*
 	 * div_u64 will divided the "adj" by "1000000000ULL"
 	 * and return the quotient.
-	 * */
+	 */
 	diff = div_u64(adj, 1000000000ULL);
 	addend = neg_adj ? (addend - diff) : (addend + diff);
 
@@ -97,7 +97,6 @@ static int eqos_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 
 	return 0;
 }
-
 
 /*!
  * \brief API to adjust the hardware time.
@@ -116,7 +115,7 @@ static int eqos_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 {
 	struct eqos_prv_data *pdata =
-		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
+	    container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned long flags;
 	u32 sec, nsec;
@@ -127,7 +126,7 @@ static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 
 	if (delta < 0) {
 		neg_adj = 1;
-		delta =-delta;
+		delta = -delta;
 	}
 
 	quotient = div_u64_rem(delta, 1000000000ULL, &reminder);
@@ -145,7 +144,6 @@ static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 	return 0;
 }
 
-
 /*!
  * \brief API to get the current time.
  *
@@ -160,11 +158,10 @@ static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
  * \retval 0 on success and -ve number on failure.
  */
 
-static int eqos_get_time(struct ptp_clock_info *ptp,
-	struct timespec *ts)
+static int eqos_get_time(struct ptp_clock_info *ptp, struct timespec *ts)
 {
 	struct eqos_prv_data *pdata =
-		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
+	    container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	u64 ns;
 	u32 reminder;
@@ -181,12 +178,11 @@ static int eqos_get_time(struct ptp_clock_info *ptp,
 	ts->tv_sec = div_u64_rem(ns, 1000000000ULL, &reminder);
 	ts->tv_nsec = reminder;
 
-	DBGPR_PTP("<--eqos_get_time: ts->tv_sec = %ld,"
-		"ts->tv_nsec = %ld\n", ts->tv_sec, ts->tv_nsec);
+	DBGPR_PTP("<--eqos_get_time: ts->tv_sec = %ld, ts->tv_nsec = %ld\n",
+		ts->tv_sec, ts->tv_nsec);
 
 	return 0;
 }
-
 
 /*!
  * \brief API to set the current time.
@@ -202,16 +198,15 @@ static int eqos_get_time(struct ptp_clock_info *ptp,
  * \retval 0 on success and -ve number on failure.
  */
 
-static int eqos_set_time(struct ptp_clock_info *ptp,
-	const struct timespec *ts)
+static int eqos_set_time(struct ptp_clock_info *ptp, const struct timespec *ts)
 {
 	struct eqos_prv_data *pdata =
-		container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
+	    container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned long flags;
 
-	DBGPR_PTP("-->eqos_set_time: ts->tv_sec = %ld,"
-		"ts->tv_nsec = %ld\n", ts->tv_sec, ts->tv_nsec);
+	DBGPR_PTP("-->eqos_set_time: ts->tv_sec = %ld, ts->tv_nsec = %ld\n",
+		ts->tv_sec, ts->tv_nsec);
 
 	spin_lock_irqsave(&pdata->ptp_lock, flags);
 
@@ -223,7 +218,6 @@ static int eqos_set_time(struct ptp_clock_info *ptp,
 
 	return 0;
 }
-
 
 /*!
  * \brief API to enable/disable an ancillary feature.
@@ -241,22 +235,20 @@ static int eqos_set_time(struct ptp_clock_info *ptp,
  */
 
 static int eqos_enable(struct ptp_clock_info *ptp,
-	struct ptp_clock_request *rq, int on)
+		       struct ptp_clock_request *rq, int on)
 {
 	return -EOPNOTSUPP;
 }
 
-/*
- * structure describing a PTP hardware clock.
- */
+/* structure describing a PTP hardware clock */
 static struct ptp_clock_info eqos_ptp_clock_ops = {
 	.owner = THIS_MODULE,
 	.name = "eqos_clk",
-	.max_adj = EQOS_SYSCLOCK, /* the max possible frequency adjustment,
-				in parts per billion */
-	.n_alarm = 0,	/* the number of programmable alarms */
-	.n_ext_ts = 0,	/* the number of externel time stamp channels */
-	.n_per_out = 0, /* the number of programmable periodic signals */
+	.max_adj = EQOS_SYSCLOCK,
+	/* the max possible frequency adjustment in parts per billion */
+	.n_alarm = 0,		/* the number of programmable alarms */
+	.n_ext_ts = 0,		/* the number of externel time stamp channels */
+	.n_per_out = 0,	/* the number of programmable periodic signals */
 	.pps = 0,	/* indicates whether the clk supports a PPS callback */
 	.adjfreq = eqos_adjust_freq,
 	.adjtime = eqos_adjust_time,
@@ -264,7 +256,6 @@ static struct ptp_clock_info eqos_ptp_clock_ops = {
 	.settime = eqos_set_time,
 	.enable = eqos_enable,
 };
-
 
 /*!
  * \brief API to register ptp clock driver.
@@ -288,8 +279,8 @@ int eqos_ptp_init(struct eqos_prv_data *pdata)
 	if (!pdata->hw_feat.tsstssel) {
 		ret = -1;
 		pdata->ptp_clock = NULL;
-		printk(KERN_ALERT "No PTP supports in HW\n"
-			"Aborting PTP clock driver registration\n");
+		pr_err("No PTP supports in HW\n"
+		       "Aborting PTP clock driver registration\n");
 		goto no_hw_ptp;
 	}
 
@@ -297,20 +288,20 @@ int eqos_ptp_init(struct eqos_prv_data *pdata)
 
 	pdata->ptp_clock_ops = eqos_ptp_clock_ops;
 
-	pdata->ptp_clock = ptp_clock_register(&pdata->ptp_clock_ops, &pdata->pdev->dev);
+	pdata->ptp_clock =
+	    ptp_clock_register(&pdata->ptp_clock_ops, &pdata->pdev->dev);
 	if (IS_ERR(pdata->ptp_clock)) {
 		pdata->ptp_clock = NULL;
-		printk(KERN_ALERT "ptp_clock_register() failed\n");
+		pr_err("ptp_clock_register() failed\n");
 	}
 
 	DBGPR_PTP("<--eqos_ptp_init\n");
 
 	return ret;
 
-no_hw_ptp:
+ no_hw_ptp:
 	return ret;
 }
-
 
 /*!
  * \brief API to unregister ptp clock driver.
@@ -329,9 +320,8 @@ void eqos_ptp_remove(struct eqos_prv_data *pdata)
 
 	if (pdata->ptp_clock) {
 		ptp_clock_unregister(pdata->ptp_clock);
-		printk(KERN_ALERT "Removed PTP HW clock successfully\n");
+		pr_err("Removed PTP HW clock successfully\n");
 	}
 
 	DBGPR_PTP("<--eqos_ptp_remove\n");
 }
-

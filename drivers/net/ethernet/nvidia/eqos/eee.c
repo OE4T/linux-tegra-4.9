@@ -27,7 +27,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * ========================================================================= */
+ * =========================================================================
+ */
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -199,14 +200,14 @@ static void eqos_phy_write_mmd_indirect(struct mii_bus *bus,
 
 #define MDIO_EEE_100TX		0x0002	/* EEE is supported for 100BASE-TX */
 #define MDIO_EEE_1000T		0x0004	/* EEE is supported for 1000BASE-T */
-#define MDIO_EEE_10GT			0x0008	/* EEE is supported for 10GBASE-T */
+#define MDIO_EEE_10GT		0x0008	/* EEE is supported for 10GBASE-T */
 #define MDIO_EEE_1000KX		0x0010	/* EEE is supported for 1000BASE-KX */
 #define MDIO_EEE_10GKX4		0x0020	/* EEE is supported for 10GBASE-KX4 */
 #define MDIO_EEE_10GKR		0x0040	/* EEE is supported for 10GBASE KR */
 
  /* A small helper function that translates MMD EEE Capability (3.20) bits
  * to ethtool supported settings.
- * */
+ */
 static u32 eqos_mmd_eee_cap_to_ethtool_sup_t(u16 eee_cap)
 {
 	u32 supported = 0;
@@ -230,7 +231,7 @@ static u32 eqos_mmd_eee_cap_to_ethtool_sup_t(u16 eee_cap)
  /* A small helper function that translates the MMD EEE Advertisment (7.60)
   * and MMD EEE Link Partner Ability (7.61) bits to ethtool advertisement
   * settings.
-  * */
+  */
 static inline u32 eqos_mmd_eee_adv_to_ethtool_adv_t(u16 eee_adv)
 {
 	u32 adv = 0;
@@ -283,8 +284,7 @@ static int eqos_phy_init_eee(struct phy_device *phydev,
 	    (phydev->interface == PHY_INTERFACE_MODE_SGMII) ||
 	    (phydev->interface == PHY_INTERFACE_MODE_RGMII))) {
 		int eee_lp, eee_cap, eee_adv;
-		//u32 cap,lp , adv;
-		int status;//, idx;
+		int status;
 
 		/* Read phy status to properly get the right settings */
 		status = phy_read_status(phydev);
@@ -303,7 +303,7 @@ static int eqos_phy_init_eee(struct phy_device *phydev,
 */
 		/* check whether link Partner support EEE or not */
 		eee_lp = eqos_phy_read_mmd_indirect(phydev->bus,
-				CL45_AN_EEE_LPABLE_REG, MDIO_MMD_AN, phydev->addr);
+			CL45_AN_EEE_LPABLE_REG, MDIO_MMD_AN, phydev->addr);
 		if (eee_lp < 0)
 			return eee_lp;
 
@@ -340,7 +340,7 @@ static int eqos_phy_init_eee(struct phy_device *phydev,
 
 	DBGPR_EEE("<--eqos_phy_init_eee\n");
 
-//eee_exit:
+/* eee_exit: */
 	return ret;
 }
 
@@ -387,10 +387,10 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 			if (pdata->use_lpi_tx_automate)
 				hw_if->set_lpi_tx_automate();
 		} else {
-			/* When EEE has been already initialized we have to modify
-			 * the PLS bit in MAC_LPI_Control_Status reg according to
-			 * PHY link status.
-			 * */
+			/* When EEE has been already initialized we have to
+			 * modify the PLS bit in MAC_LPI_Control_Status reg
+			 * according to PHY link status.
+			 */
 			hw_if->set_eee_pls(pdata->phydev->link);
 		}
 
@@ -434,7 +434,7 @@ void eqos_handle_eee_interrupt(struct eqos_prv_data *pdata)
 		pdata->tx_path_in_lpi_mode = 1;
 		pdata->xstats.tx_path_in_lpi_mode_irq_n++;
 		DBGPR_EEE("MAC Transmitter has entered the LPI state\n");
-	}	
+	}
 
 	if (lpi_status & MAC_LPS_TLPIEX) {
 		pdata->tx_path_in_lpi_mode = 0;

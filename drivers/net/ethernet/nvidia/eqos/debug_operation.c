@@ -860,13 +860,13 @@ void eqos_get_pdata(struct eqos_prv_data *prv_pdata)
 /*!
 * \brief API extract the reg name from the buffer.
 *
-* \details This function extracts the register name from the command line 
+* \details This function extracts the register name from the command line
 * argument passed to the file belonging to type debugfs.
-* 
+*
 * @param[in]  regname: An empty char pointer.
 * @param[in]  buffer: It contains command line input reg name & value.
-* @param[in]  buffer_size: buffer size. 
-* 
+* @param[in]  buffer_size: buffer size.
+*
 * \return  void
 */
 
@@ -896,13 +896,13 @@ void get_reg_name(char *regname, char *buffer, unsigned long buffer_size)
 /*!
 * \brief API extract the reg value from the buffer.
 *
-* \details This function extracts the value to be written into the register 
+* \details This function extracts the value to be written into the register
 * from the command line argument passed to the debug file.
-* 
+*
 * @param[in]  value: An empty char pointer.
 * @param[in]  buffer: It contains command line input reg name & value.
-* @param[in]  buffer_size: buffer size. 
-* 
+* @param[in]  buffer_size: buffer size.
+*
 * \return  void
 */
 
@@ -933,23 +933,23 @@ void get_reg_value(char *value, char *buffer, unsigned long buffer_size)
 	return;
 }
 
-/*! 
-*  \brief  API to write the reg value to specified register. 
+/*!
+*  \brief  API to write the reg value to specified register.
 *
-* \details This function extracts the value to be written into the register 
+* \details This function extracts the value to be written into the register
 * from the command line argument passed to the file belonging to the debugfs.
 *
 * @param[in]  file: debug file pointer.
 * @param[in]  buf: It contains command line input reg name & value.
-* @param[in]  count: contains buffer size. 
-* @param[in]  ppos: offset value. 
+* @param[in]  count: contains buffer size.
+* @param[in]  ppos: offset value.
 *
-* \retval  0 on Success. 
+* \retval  0 on Success.
 * \retval  error number on Failure.
 */
 
-static ssize_t eqos_write(struct file *file, const char __user * buf,
-				 size_t count, loff_t * ppos)
+static ssize_t eqos_write(struct file *file, const char __user *buf,
+				 size_t count, loff_t *ppos)
 {
 	int ret = 0;
 	char reg_name[50];
@@ -1587,21 +1587,21 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MAC_PCS")) {
 			MAC_PCS_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_TES")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_TES : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_AE")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_AE : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_ALPA")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_ALPA : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_AAD")) {
 			MAC_AAD_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_ANS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_ANS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_ANC")) {
@@ -1610,15 +1610,15 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 			MAC_LPC_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_LPS")) {
 			MAC_LPS_WR(integer_value);
-		} else if(!strcmp(reg_name,"MAC_LMIR")){
+		} else if (!strcmp(reg_name, "MAC_LMIR")) {
 			MAC_LMIR_WR(integer_value);
-		} else if(!strcmp(reg_name,"MAC_SPI2R")){
+		} else if (!strcmp(reg_name, "MAC_SPI2R")) {
 			MAC_SPI2R_WR(integer_value);
-		} else if(!strcmp(reg_name,"MAC_SPI1R")){
+		} else if (!strcmp(reg_name, "MAC_SPI1R")) {
 			MAC_SPI1R_WR(integer_value);
-		} else if(!strcmp(reg_name,"MAC_SPI0R")){
+		} else if (!strcmp(reg_name, "MAC_SPI0R")) {
 			MAC_SPI0R_WR(integer_value);
-		} else if(!strcmp(reg_name,"MAC_PTO_CR")){
+		} else if (!strcmp(reg_name, "MAC_PTO_CR")) {
 			MAC_PTO_CR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_PPS_WIDTH3")) {
 			MAC_PPS_WIDTH3_WR(integer_value);
@@ -1659,25 +1659,25 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MAC_TIAC")) {
 			MAC_TIAC_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_ATS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_ATS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_ATN")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_ATN : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_AC")) {
 			MAC_AC_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_TTN")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_TTN : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_TTSN")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_TTSN : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_TSR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_TSR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_STHWR")) {
@@ -1689,11 +1689,11 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MAC_STSUR")) {
 			MAC_STSUR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_STNSR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_STNSR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_STSR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_STSR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_SSIR")) {
@@ -1705,7 +1705,7 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MAC_RWPFFR")) {
 			MAC_RWPFFR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_RTSR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_RTSR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_IER")) {
@@ -1725,31 +1725,31 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MTL_QRCR1")) {
 			MTL_QRCR1_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_QRDR7")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QRDR7 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR6")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QRDR6 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR5")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QRDR5 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR4")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QRDR4 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR3")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QRDR3 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QRDR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QRDR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QOCR7")) {
@@ -1837,31 +1837,31 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MTL_QW1")) {
 			MTL_QW1_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_QESR7")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QESR7 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR6")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QESR6 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR5")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QESR5 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR4")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QESR4 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR3")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QESR3 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QESR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QESR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QECR7")) {
@@ -1879,31 +1879,31 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MTL_QECR1")) {
 			MTL_QECR1_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_QTDR7")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QTDR7 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR6")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QTDR6 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR5")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QTDR5 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR4")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QTDR4 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR3")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QTDR3 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QTDR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_QTDR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QUCR7")) {
@@ -1937,327 +1937,327 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MAC_PMTCSR")) {
 			MAC_PMTCSR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MMC_RXICMP_ERR_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXICMP_ERR_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXICMP_GD_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXICMP_GD_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_ERR_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXTCP_ERR_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_GD_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXTCP_GD_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_ERR_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXUDP_ERR_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_GD_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXUDP_GD_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_NOPAY_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV6_NOPAY_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_HDRERR_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV6_HDRERR_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_GD_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV6_GD_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_UDSBL_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_UDSBL_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_FRAG_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_FRAG_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_NOPAY_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_NOPAY_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_HDRERR_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_HDRERR_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_GD_OCTETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_GD_OCTETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXICMP_ERR_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXICMP_ERR_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXICMP_GD_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXICMP_GD_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_ERR_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXTCP_ERR_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_GD_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXTCP_GD_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_ERR_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXUDP_ERR_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_GD_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXUDP_GD_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_NOPAY_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV6_NOPAY_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_HDRERR_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV6_HDRERR_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_GD_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV6_GD_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_UBSBL_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_UBSBL_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_FRAG_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_FRAG_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_NOPAY_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_NOPAY_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_HDRERR_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_HDRERR_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_GD_PKTS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXIPV4_GD_PKTS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXCTRLPACKETS_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXCTRLPACKETS_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXRCVERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXRCVERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXWATCHDOGERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXWATCHDOGERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXVLANPACKETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXVLANPACKETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXFIFOOVERFLOW")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXFIFOOVERFLOW : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXPAUSEPACKETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXPAUSEPACKETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOUTOFRANGETYPE")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXOUTOFRANGETYPE : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXLENGTHERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXLENGTHERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUNICASTPACKETS_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXUNICASTPACKETS_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX1024TOMAXOCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RX1024TOMAXOCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX512TO1023OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RX512TO1023OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX256TO511OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RX256TO511OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX128TO255OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RX128TO255OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX65TO127OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RX65TO127OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX64OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RX64OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOVERSIZE_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXOVERSIZE_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUNDERSIZE_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXUNDERSIZE_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXJABBERERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXJABBERERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXRUNTERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXRUNTERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXALIGNMENTERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXALIGNMENTERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXCRCERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXCRCERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXMULTICASTPACKETS_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXMULTICASTPACKETS_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXBROADCASTPACKETS_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXBROADCASTPACKETS_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOCTETCOUNT_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXOCTETCOUNT_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOCTETCOUNT_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXOCTETCOUNT_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXPACKETCOUNT_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_RXPACKETCOUNT_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXOVERSIZE_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXOVERSIZE_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXVLANPACKETS_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXVLANPACKETS_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXPAUSEPACKETS")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXPAUSEPACKETS : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXEXCESSDEF")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXEXCESSDEF : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXPACKETSCOUNT_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXPACKETSCOUNT_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXOCTETCOUNT_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXOCTETCOUNT_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXCARRIERERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXCARRIERERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXEXESSCOL")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXEXESSCOL : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXLATECOL")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXLATECOL : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXDEFERRED")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXDEFERRED : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXMULTICOL_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXMULTICOL_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXSINGLECOL_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXSINGLECOL_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXUNDERFLOWERROR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXUNDERFLOWERROR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXBROADCASTPACKETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXBROADCASTPACKETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXMULTICASTPACKETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXMULTICASTPACKETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXUNICASTPACKETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXUNICASTPACKETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX1024TOMAXOCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TX1024TOMAXOCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX512TO1023OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TX512TO1023OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX256TO511OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TX256TO511OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX128TO255OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TX128TO255OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX65TO127OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TX65TO127OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX64OCTETS_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TX64OCTETS_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXMULTICASTPACKETS_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXMULTICASTPACKETS_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXBROADCASTPACKETS_G")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXBROADCASTPACKETS_G : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXPACKETCOUNT_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXPACKETCOUNT_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXOCTETCOUNT_GB")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_TXOCTETCOUNT_GB : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_IPC_INTR_RX")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MMC_IPC_INTR_RX : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_IPC_INTR_MASK_RX")) {
@@ -2287,23 +2287,23 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MAC_GMIIAR")) {
 			MAC_GMIIAR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_HFR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_HFR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_HFR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_HFR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_HFR0")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_HFR0 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_MDR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_MDR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_VR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_VR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_HTR7")) {
@@ -2453,11 +2453,11 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MAC_IMR")) {
 			MAC_IMR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_ISR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MAC_ISR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_ISR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_ISR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_SR7")) {
@@ -2477,159 +2477,159 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "DMA_SR0")) {
 			DMA_SR_WR(0, integer_value);
 		} else if (!strcmp(reg_name, "DMA_ISR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_ISR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_DSR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_DSR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_DSR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_DSR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_DSR0")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_DSR0 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0RDR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_Q0RDR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0ESR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_Q0ESR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0TDR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_Q0TDR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR7")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR7 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR6")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR6 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR5")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR5 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR4")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR4 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR3")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR3 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR0")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRBAR0 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR7")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR7 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR6")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR6 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR5")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR5 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR4")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR4 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR3")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR3 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR0")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTBAR0 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR7")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR7 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR6")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR6 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR5")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR5 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR4")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR4 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR3")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR3 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR0")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHRDR0 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR7")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR7 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR6")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR6 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR5")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR5 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR4")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR4 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR3")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR3 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR2")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR2 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR1")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR1 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR0")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation DMA_CHTDR0 : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_SFCSR7")) {
@@ -2663,7 +2663,7 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MTL_Q0RCR")) {
 			MTL_Q0RCR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_Q0OCR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_Q0OCR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0ROMR")) {
@@ -2681,7 +2681,7 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 		} else if (!strcmp(reg_name, "MTL_RQDCM0R")) {
 			MTL_RQDCM0R_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_FDDR")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MTL_FDDR : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_FDACS")) {
@@ -2798,15 +2798,15 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 						      MII_BMCR,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_BMSR_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MII_BMSR_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_PHYSID1_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MII_PHYSID1_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_PHYSID2_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MII_PHYSID2_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_ADVERTISE_REG")) {
@@ -2815,11 +2815,11 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 						      MII_ADVERTISE,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_LPA_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MII_LPA_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_EXPANSION_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MII_EXPANSION_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "AUTO_NEGO_NP_REG")) {
@@ -2828,7 +2828,7 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 						      EQOS_AUTO_NEGO_NP,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_ESTATUS_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MII_ESTATUS_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_CTRL1000_REG")) {
@@ -2837,7 +2837,7 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 						      MII_CTRL1000,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_STAT1000_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation MII_STAT1000_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "PHY_CTL_REG")) {
@@ -2846,14 +2846,14 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 						      EQOS_PHY_CTL,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "PHY_STS_REG")) {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation PHY_STS_REG : ReadOnly Register");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "feature_drop_tx_pktburstcnt")) {
 			feature_drop_tx_pktburstcnt_val = (int)integer_value;
 			if (feature_drop_tx_pktburstcnt_val == 0) {
 				feature_drop_tx_pktburstcnt_val++;
-				printk(KERN_ALERT
+				pr_err(
 				       "Drop Tx frame count should be a positive non-zero number only\n");
 			}
 			pdata->drop_tx_pktburstcnt =
@@ -2864,7 +2864,7 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 			    && ((qinx_val < 0)
 				|| (qinx_val > (EQOS_QUEUE_CNT - 1)))) {
 				qinx_val = 0;
-				printk(KERN_ALERT "Invalid queue number\n");
+				pr_err("Invalid queue number\n");
 				ret = -EFAULT;
 			}
 		} else if (!strcmp(reg_name, "reg_offset")) {
@@ -2892,11 +2892,11 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 			do_transmit_alignment_test(pdata);
 		} else if (!strcmp(reg_name, "BCM_REGS")) {
 
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation BCM_REGS : ReadOnly Register");
 			ret = -EFAULT;
 		} else {
-			printk(KERN_ALERT
+			pr_err(
 			       "Could not complete Write Operation to Register. Register not found.\n");
 			ret = -EFAULT;
 		}
@@ -2907,19 +2907,19 @@ static ssize_t eqos_write(struct file *file, const char __user * buf,
 	return ret;
 }
 
-static ssize_t registers_write(struct file *file, const char __user * buf,
-			       size_t count, loff_t * ppos)
+static ssize_t registers_write(struct file *file, const char __user *buf,
+			       size_t count, loff_t *ppos)
 {
 	DBGPR("--> registers_write\n");
-	printk(KERN_INFO
+	pr_info(
 	       "Specify the correct file name for write operation: write error\n");
 	DBGPR("<-- registers_write\n");
 
 	return -1;
 }
 
-static ssize_t registers_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t registers_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	char *debug_buf = NULL;
@@ -3239,7 +3239,7 @@ static ssize_t registers_read(struct file *file, char __user * userbuf,
 	MAC_ANC_RD(mac_anc_val);
 	MAC_LPC_RD(mac_lpc_val);
 	MAC_LPS_RD(mac_lps_val);
-   	MAC_SPI2R_RD(mac_lmir_val);
+	MAC_SPI2R_RD(mac_lmir_val);
 	MAC_SPI2R_RD(MAC_SPI2r_val);
 	MAC_SPI1R_RD(MAC_SPI1r_val);
 	MAC_SPI0R_RD(MAC_SPI0r_val);
@@ -4018,7 +4018,7 @@ static ssize_t registers_read(struct file *file, char __user * userbuf,
 		"MAC_ANC                    :%#x\n"
 		"MAC_LPC                    :%#x\n"
 		"MAC_LPS                    :%#x\n"
-        "MAC_LMIR                   :%#x\n"
+		"MAC_LMIR                   :%#x\n"
 		"MAC_SPI2R                  :%#x\n"
 		"MAC_SPI1R                  :%#x\n"
 		"MAC_SPI0R                  :%#x\n"
@@ -4779,7 +4779,7 @@ static ssize_t registers_read(struct file *file, char __user * userbuf,
 		mac_anc_val,
 		mac_lpc_val,
 		mac_lps_val,
-       	mac_lmir_val,
+		mac_lmir_val,
 		MAC_SPI2r_val,
 		MAC_SPI1r_val,
 		MAC_SPI0r_val,
@@ -5239,19 +5239,19 @@ static const struct file_operations registers_fops = {
 	.write = registers_write,
 };
 
-static ssize_t descriptor_write(struct file *file, const char __user * buf,
-				size_t count, loff_t * ppos)
+static ssize_t descriptor_write(struct file *file, const char __user *buf,
+				size_t count, loff_t *ppos)
 {
 	DBGPR("--> registers_write\n");
-	printk(KERN_INFO
+	pr_info(
 	       "write operation not supported for descrptors: write error\n");
 	DBGPR("<-- registers_write\n");
 
 	return -1;
 }
 
-static ssize_t MAC_MA32_127LR127_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR127_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(127, MAC_MA32_127LR127_val);
@@ -5268,8 +5268,8 @@ static const struct file_operations MAC_MA32_127LR127_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR126_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR126_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(126, MAC_MA32_127LR126_val);
@@ -5286,8 +5286,8 @@ static const struct file_operations MAC_MA32_127LR126_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR125_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR125_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(125, MAC_MA32_127LR125_val);
@@ -5304,8 +5304,8 @@ static const struct file_operations MAC_MA32_127LR125_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR124_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR124_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(124, MAC_MA32_127LR124_val);
@@ -5322,8 +5322,8 @@ static const struct file_operations MAC_MA32_127LR124_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR123_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR123_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(123, MAC_MA32_127LR123_val);
@@ -5340,8 +5340,8 @@ static const struct file_operations MAC_MA32_127LR123_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR122_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR122_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(122, MAC_MA32_127LR122_val);
@@ -5358,8 +5358,8 @@ static const struct file_operations MAC_MA32_127LR122_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR121_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR121_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(121, MAC_MA32_127LR121_val);
@@ -5376,8 +5376,8 @@ static const struct file_operations MAC_MA32_127LR121_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR120_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR120_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(120, MAC_MA32_127LR120_val);
@@ -5394,8 +5394,8 @@ static const struct file_operations MAC_MA32_127LR120_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR119_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR119_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(119, MAC_MA32_127LR119_val);
@@ -5412,8 +5412,8 @@ static const struct file_operations MAC_MA32_127LR119_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR118_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR118_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(118, MAC_MA32_127LR118_val);
@@ -5430,8 +5430,8 @@ static const struct file_operations MAC_MA32_127LR118_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR117_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR117_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(117, MAC_MA32_127LR117_val);
@@ -5448,8 +5448,8 @@ static const struct file_operations MAC_MA32_127LR117_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR116_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR116_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(116, MAC_MA32_127LR116_val);
@@ -5466,8 +5466,8 @@ static const struct file_operations MAC_MA32_127LR116_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR115_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR115_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(115, MAC_MA32_127LR115_val);
@@ -5484,8 +5484,8 @@ static const struct file_operations MAC_MA32_127LR115_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR114_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR114_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(114, MAC_MA32_127LR114_val);
@@ -5502,8 +5502,8 @@ static const struct file_operations MAC_MA32_127LR114_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR113_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR113_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(113, MAC_MA32_127LR113_val);
@@ -5520,8 +5520,8 @@ static const struct file_operations MAC_MA32_127LR113_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR112_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR112_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(112, MAC_MA32_127LR112_val);
@@ -5538,8 +5538,8 @@ static const struct file_operations MAC_MA32_127LR112_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR111_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR111_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(111, MAC_MA32_127LR111_val);
@@ -5556,8 +5556,8 @@ static const struct file_operations MAC_MA32_127LR111_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR110_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR110_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(110, MAC_MA32_127LR110_val);
@@ -5574,8 +5574,8 @@ static const struct file_operations MAC_MA32_127LR110_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR109_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR109_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(109, MAC_MA32_127LR109_val);
@@ -5592,8 +5592,8 @@ static const struct file_operations MAC_MA32_127LR109_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR108_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR108_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(108, MAC_MA32_127LR108_val);
@@ -5610,8 +5610,8 @@ static const struct file_operations MAC_MA32_127LR108_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR107_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR107_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(107, MAC_MA32_127LR107_val);
@@ -5628,8 +5628,8 @@ static const struct file_operations MAC_MA32_127LR107_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR106_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR106_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(106, MAC_MA32_127LR106_val);
@@ -5646,8 +5646,8 @@ static const struct file_operations MAC_MA32_127LR106_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR105_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR105_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(105, MAC_MA32_127LR105_val);
@@ -5664,8 +5664,8 @@ static const struct file_operations MAC_MA32_127LR105_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR104_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR104_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(104, MAC_MA32_127LR104_val);
@@ -5682,8 +5682,8 @@ static const struct file_operations MAC_MA32_127LR104_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR103_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR103_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(103, MAC_MA32_127LR103_val);
@@ -5700,8 +5700,8 @@ static const struct file_operations MAC_MA32_127LR103_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR102_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR102_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(102, MAC_MA32_127LR102_val);
@@ -5718,8 +5718,8 @@ static const struct file_operations MAC_MA32_127LR102_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR101_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR101_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(101, MAC_MA32_127LR101_val);
@@ -5736,8 +5736,8 @@ static const struct file_operations MAC_MA32_127LR101_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR100_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR100_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(100, MAC_MA32_127LR100_val);
@@ -5754,8 +5754,8 @@ static const struct file_operations MAC_MA32_127LR100_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR99_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR99_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(99, MAC_MA32_127LR99_val);
@@ -5772,8 +5772,8 @@ static const struct file_operations MAC_MA32_127LR99_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR98_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR98_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(98, MAC_MA32_127LR98_val);
@@ -5790,8 +5790,8 @@ static const struct file_operations MAC_MA32_127LR98_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR97_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR97_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(97, MAC_MA32_127LR97_val);
@@ -5808,8 +5808,8 @@ static const struct file_operations MAC_MA32_127LR97_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR96_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR96_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(96, MAC_MA32_127LR96_val);
@@ -5826,8 +5826,8 @@ static const struct file_operations MAC_MA32_127LR96_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR95_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR95_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(95, MAC_MA32_127LR95_val);
@@ -5844,8 +5844,8 @@ static const struct file_operations MAC_MA32_127LR95_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR94_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR94_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(94, MAC_MA32_127LR94_val);
@@ -5862,8 +5862,8 @@ static const struct file_operations MAC_MA32_127LR94_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR93_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR93_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(93, MAC_MA32_127LR93_val);
@@ -5880,8 +5880,8 @@ static const struct file_operations MAC_MA32_127LR93_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR92_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR92_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(92, MAC_MA32_127LR92_val);
@@ -5898,8 +5898,8 @@ static const struct file_operations MAC_MA32_127LR92_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR91_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR91_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(91, MAC_MA32_127LR91_val);
@@ -5916,8 +5916,8 @@ static const struct file_operations MAC_MA32_127LR91_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR90_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR90_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(90, MAC_MA32_127LR90_val);
@@ -5934,8 +5934,8 @@ static const struct file_operations MAC_MA32_127LR90_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR89_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR89_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(89, MAC_MA32_127LR89_val);
@@ -5952,8 +5952,8 @@ static const struct file_operations MAC_MA32_127LR89_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR88_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR88_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(88, MAC_MA32_127LR88_val);
@@ -5970,8 +5970,8 @@ static const struct file_operations MAC_MA32_127LR88_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR87_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR87_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(87, MAC_MA32_127LR87_val);
@@ -5988,8 +5988,8 @@ static const struct file_operations MAC_MA32_127LR87_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR86_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR86_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(86, MAC_MA32_127LR86_val);
@@ -6006,8 +6006,8 @@ static const struct file_operations MAC_MA32_127LR86_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR85_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR85_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(85, MAC_MA32_127LR85_val);
@@ -6024,8 +6024,8 @@ static const struct file_operations MAC_MA32_127LR85_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR84_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR84_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(84, MAC_MA32_127LR84_val);
@@ -6042,8 +6042,8 @@ static const struct file_operations MAC_MA32_127LR84_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR83_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR83_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(83, MAC_MA32_127LR83_val);
@@ -6060,8 +6060,8 @@ static const struct file_operations MAC_MA32_127LR83_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR82_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR82_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(82, MAC_MA32_127LR82_val);
@@ -6078,8 +6078,8 @@ static const struct file_operations MAC_MA32_127LR82_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR81_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR81_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(81, MAC_MA32_127LR81_val);
@@ -6096,8 +6096,8 @@ static const struct file_operations MAC_MA32_127LR81_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR80_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR80_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(80, MAC_MA32_127LR80_val);
@@ -6114,8 +6114,8 @@ static const struct file_operations MAC_MA32_127LR80_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR79_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR79_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(79, MAC_MA32_127LR79_val);
@@ -6132,8 +6132,8 @@ static const struct file_operations MAC_MA32_127LR79_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR78_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR78_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(78, MAC_MA32_127LR78_val);
@@ -6150,8 +6150,8 @@ static const struct file_operations MAC_MA32_127LR78_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR77_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR77_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(77, MAC_MA32_127LR77_val);
@@ -6168,8 +6168,8 @@ static const struct file_operations MAC_MA32_127LR77_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR76_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR76_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(76, MAC_MA32_127LR76_val);
@@ -6186,8 +6186,8 @@ static const struct file_operations MAC_MA32_127LR76_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR75_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR75_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(75, MAC_MA32_127LR75_val);
@@ -6204,8 +6204,8 @@ static const struct file_operations MAC_MA32_127LR75_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR74_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR74_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(74, MAC_MA32_127LR74_val);
@@ -6222,8 +6222,8 @@ static const struct file_operations MAC_MA32_127LR74_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR73_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR73_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(73, MAC_MA32_127LR73_val);
@@ -6240,8 +6240,8 @@ static const struct file_operations MAC_MA32_127LR73_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR72_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR72_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(72, MAC_MA32_127LR72_val);
@@ -6258,8 +6258,8 @@ static const struct file_operations MAC_MA32_127LR72_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR71_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR71_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(71, MAC_MA32_127LR71_val);
@@ -6276,8 +6276,8 @@ static const struct file_operations MAC_MA32_127LR71_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR70_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR70_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(70, MAC_MA32_127LR70_val);
@@ -6294,8 +6294,8 @@ static const struct file_operations MAC_MA32_127LR70_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR69_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR69_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(69, MAC_MA32_127LR69_val);
@@ -6312,8 +6312,8 @@ static const struct file_operations MAC_MA32_127LR69_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR68_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR68_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(68, MAC_MA32_127LR68_val);
@@ -6330,8 +6330,8 @@ static const struct file_operations MAC_MA32_127LR68_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR67_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR67_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(67, MAC_MA32_127LR67_val);
@@ -6348,8 +6348,8 @@ static const struct file_operations MAC_MA32_127LR67_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR66_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR66_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(66, MAC_MA32_127LR66_val);
@@ -6366,8 +6366,8 @@ static const struct file_operations MAC_MA32_127LR66_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR65_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR65_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(65, MAC_MA32_127LR65_val);
@@ -6384,8 +6384,8 @@ static const struct file_operations MAC_MA32_127LR65_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR64_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR64_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(64, MAC_MA32_127LR64_val);
@@ -6402,8 +6402,8 @@ static const struct file_operations MAC_MA32_127LR64_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR63_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR63_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(63, MAC_MA32_127LR63_val);
@@ -6420,8 +6420,8 @@ static const struct file_operations MAC_MA32_127LR63_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR62_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR62_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(62, MAC_MA32_127LR62_val);
@@ -6438,8 +6438,8 @@ static const struct file_operations MAC_MA32_127LR62_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR61_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR61_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(61, MAC_MA32_127LR61_val);
@@ -6456,8 +6456,8 @@ static const struct file_operations MAC_MA32_127LR61_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR60_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR60_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(60, MAC_MA32_127LR60_val);
@@ -6474,8 +6474,8 @@ static const struct file_operations MAC_MA32_127LR60_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR59_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR59_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(59, MAC_MA32_127LR59_val);
@@ -6492,8 +6492,8 @@ static const struct file_operations MAC_MA32_127LR59_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR58_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR58_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(58, MAC_MA32_127LR58_val);
@@ -6510,8 +6510,8 @@ static const struct file_operations MAC_MA32_127LR58_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR57_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR57_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(57, MAC_MA32_127LR57_val);
@@ -6528,8 +6528,8 @@ static const struct file_operations MAC_MA32_127LR57_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR56_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR56_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(56, MAC_MA32_127LR56_val);
@@ -6546,8 +6546,8 @@ static const struct file_operations MAC_MA32_127LR56_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR55_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR55_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(55, MAC_MA32_127LR55_val);
@@ -6564,8 +6564,8 @@ static const struct file_operations MAC_MA32_127LR55_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR54_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR54_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(54, MAC_MA32_127LR54_val);
@@ -6582,8 +6582,8 @@ static const struct file_operations MAC_MA32_127LR54_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR53_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR53_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(53, MAC_MA32_127LR53_val);
@@ -6600,8 +6600,8 @@ static const struct file_operations MAC_MA32_127LR53_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR52_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR52_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(52, MAC_MA32_127LR52_val);
@@ -6618,8 +6618,8 @@ static const struct file_operations MAC_MA32_127LR52_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR51_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR51_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(51, MAC_MA32_127LR51_val);
@@ -6636,8 +6636,8 @@ static const struct file_operations MAC_MA32_127LR51_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR50_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR50_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(50, MAC_MA32_127LR50_val);
@@ -6654,8 +6654,8 @@ static const struct file_operations MAC_MA32_127LR50_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR49_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR49_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(49, MAC_MA32_127LR49_val);
@@ -6672,8 +6672,8 @@ static const struct file_operations MAC_MA32_127LR49_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR48_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR48_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(48, MAC_MA32_127LR48_val);
@@ -6690,8 +6690,8 @@ static const struct file_operations MAC_MA32_127LR48_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR47_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR47_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(47, MAC_MA32_127LR47_val);
@@ -6708,8 +6708,8 @@ static const struct file_operations MAC_MA32_127LR47_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR46_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR46_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(46, MAC_MA32_127LR46_val);
@@ -6726,8 +6726,8 @@ static const struct file_operations MAC_MA32_127LR46_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR45_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR45_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(45, MAC_MA32_127LR45_val);
@@ -6744,8 +6744,8 @@ static const struct file_operations MAC_MA32_127LR45_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR44_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR44_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(44, MAC_MA32_127LR44_val);
@@ -6762,8 +6762,8 @@ static const struct file_operations MAC_MA32_127LR44_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR43_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR43_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(43, MAC_MA32_127LR43_val);
@@ -6780,8 +6780,8 @@ static const struct file_operations MAC_MA32_127LR43_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR42_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR42_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(42, MAC_MA32_127LR42_val);
@@ -6798,8 +6798,8 @@ static const struct file_operations MAC_MA32_127LR42_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR41_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR41_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(41, MAC_MA32_127LR41_val);
@@ -6816,8 +6816,8 @@ static const struct file_operations MAC_MA32_127LR41_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR40_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR40_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(40, MAC_MA32_127LR40_val);
@@ -6834,8 +6834,8 @@ static const struct file_operations MAC_MA32_127LR40_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR39_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR39_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(39, MAC_MA32_127LR39_val);
@@ -6852,8 +6852,8 @@ static const struct file_operations MAC_MA32_127LR39_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR38_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR38_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(38, MAC_MA32_127LR38_val);
@@ -6870,8 +6870,8 @@ static const struct file_operations MAC_MA32_127LR38_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR37_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR37_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(37, MAC_MA32_127LR37_val);
@@ -6888,8 +6888,8 @@ static const struct file_operations MAC_MA32_127LR37_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR36_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR36_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(36, MAC_MA32_127LR36_val);
@@ -6906,8 +6906,8 @@ static const struct file_operations MAC_MA32_127LR36_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR35_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR35_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(35, MAC_MA32_127LR35_val);
@@ -6924,8 +6924,8 @@ static const struct file_operations MAC_MA32_127LR35_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR34_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR34_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(34, MAC_MA32_127LR34_val);
@@ -6942,8 +6942,8 @@ static const struct file_operations MAC_MA32_127LR34_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR33_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR33_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(33, MAC_MA32_127LR33_val);
@@ -6960,8 +6960,8 @@ static const struct file_operations MAC_MA32_127LR33_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127LR32_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127LR32_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127LR_RD(32, MAC_MA32_127LR32_val);
@@ -6978,8 +6978,8 @@ static const struct file_operations MAC_MA32_127LR32_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR127_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR127_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(127, MAC_MA32_127HR127_val);
@@ -6996,8 +6996,8 @@ static const struct file_operations MAC_MA32_127HR127_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR126_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR126_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(126, MAC_MA32_127HR126_val);
@@ -7014,8 +7014,8 @@ static const struct file_operations MAC_MA32_127HR126_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR125_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR125_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(125, MAC_MA32_127HR125_val);
@@ -7032,8 +7032,8 @@ static const struct file_operations MAC_MA32_127HR125_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR124_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR124_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(124, MAC_MA32_127HR124_val);
@@ -7050,8 +7050,8 @@ static const struct file_operations MAC_MA32_127HR124_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR123_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR123_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(123, MAC_MA32_127HR123_val);
@@ -7068,8 +7068,8 @@ static const struct file_operations MAC_MA32_127HR123_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR122_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR122_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(122, MAC_MA32_127HR122_val);
@@ -7086,8 +7086,8 @@ static const struct file_operations MAC_MA32_127HR122_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR121_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR121_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(121, MAC_MA32_127HR121_val);
@@ -7104,8 +7104,8 @@ static const struct file_operations MAC_MA32_127HR121_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR120_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR120_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(120, MAC_MA32_127HR120_val);
@@ -7122,8 +7122,8 @@ static const struct file_operations MAC_MA32_127HR120_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR119_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR119_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(119, MAC_MA32_127HR119_val);
@@ -7140,8 +7140,8 @@ static const struct file_operations MAC_MA32_127HR119_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR118_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR118_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(118, MAC_MA32_127HR118_val);
@@ -7158,8 +7158,8 @@ static const struct file_operations MAC_MA32_127HR118_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR117_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR117_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(117, MAC_MA32_127HR117_val);
@@ -7176,8 +7176,8 @@ static const struct file_operations MAC_MA32_127HR117_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR116_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR116_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(116, MAC_MA32_127HR116_val);
@@ -7194,8 +7194,8 @@ static const struct file_operations MAC_MA32_127HR116_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR115_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR115_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(115, MAC_MA32_127HR115_val);
@@ -7212,8 +7212,8 @@ static const struct file_operations MAC_MA32_127HR115_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR114_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR114_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(114, MAC_MA32_127HR114_val);
@@ -7230,8 +7230,8 @@ static const struct file_operations MAC_MA32_127HR114_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR113_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR113_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(113, MAC_MA32_127HR113_val);
@@ -7248,8 +7248,8 @@ static const struct file_operations MAC_MA32_127HR113_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR112_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR112_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(112, MAC_MA32_127HR112_val);
@@ -7266,8 +7266,8 @@ static const struct file_operations MAC_MA32_127HR112_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR111_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR111_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(111, MAC_MA32_127HR111_val);
@@ -7284,8 +7284,8 @@ static const struct file_operations MAC_MA32_127HR111_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR110_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR110_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(110, MAC_MA32_127HR110_val);
@@ -7302,8 +7302,8 @@ static const struct file_operations MAC_MA32_127HR110_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR109_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR109_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(109, MAC_MA32_127HR109_val);
@@ -7320,8 +7320,8 @@ static const struct file_operations MAC_MA32_127HR109_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR108_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR108_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(108, MAC_MA32_127HR108_val);
@@ -7338,8 +7338,8 @@ static const struct file_operations MAC_MA32_127HR108_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR107_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR107_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(107, MAC_MA32_127HR107_val);
@@ -7356,8 +7356,8 @@ static const struct file_operations MAC_MA32_127HR107_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR106_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR106_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(106, MAC_MA32_127HR106_val);
@@ -7374,8 +7374,8 @@ static const struct file_operations MAC_MA32_127HR106_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR105_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR105_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(105, MAC_MA32_127HR105_val);
@@ -7392,8 +7392,8 @@ static const struct file_operations MAC_MA32_127HR105_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR104_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR104_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(104, MAC_MA32_127HR104_val);
@@ -7410,8 +7410,8 @@ static const struct file_operations MAC_MA32_127HR104_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR103_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR103_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(103, MAC_MA32_127HR103_val);
@@ -7428,8 +7428,8 @@ static const struct file_operations MAC_MA32_127HR103_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR102_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR102_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(102, MAC_MA32_127HR102_val);
@@ -7446,8 +7446,8 @@ static const struct file_operations MAC_MA32_127HR102_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR101_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR101_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(101, MAC_MA32_127HR101_val);
@@ -7464,8 +7464,8 @@ static const struct file_operations MAC_MA32_127HR101_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR100_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR100_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(100, MAC_MA32_127HR100_val);
@@ -7482,8 +7482,8 @@ static const struct file_operations MAC_MA32_127HR100_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR99_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR99_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(99, MAC_MA32_127HR99_val);
@@ -7500,8 +7500,8 @@ static const struct file_operations MAC_MA32_127HR99_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR98_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR98_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(98, MAC_MA32_127HR98_val);
@@ -7518,8 +7518,8 @@ static const struct file_operations MAC_MA32_127HR98_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR97_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR97_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(97, MAC_MA32_127HR97_val);
@@ -7536,8 +7536,8 @@ static const struct file_operations MAC_MA32_127HR97_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR96_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR96_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(96, MAC_MA32_127HR96_val);
@@ -7554,8 +7554,8 @@ static const struct file_operations MAC_MA32_127HR96_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR95_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR95_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(95, MAC_MA32_127HR95_val);
@@ -7572,8 +7572,8 @@ static const struct file_operations MAC_MA32_127HR95_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR94_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR94_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(94, MAC_MA32_127HR94_val);
@@ -7590,8 +7590,8 @@ static const struct file_operations MAC_MA32_127HR94_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR93_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR93_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(93, MAC_MA32_127HR93_val);
@@ -7608,8 +7608,8 @@ static const struct file_operations MAC_MA32_127HR93_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR92_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR92_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(92, MAC_MA32_127HR92_val);
@@ -7626,8 +7626,8 @@ static const struct file_operations MAC_MA32_127HR92_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR91_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR91_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(91, MAC_MA32_127HR91_val);
@@ -7644,8 +7644,8 @@ static const struct file_operations MAC_MA32_127HR91_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR90_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR90_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(90, MAC_MA32_127HR90_val);
@@ -7662,8 +7662,8 @@ static const struct file_operations MAC_MA32_127HR90_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR89_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR89_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(89, MAC_MA32_127HR89_val);
@@ -7680,8 +7680,8 @@ static const struct file_operations MAC_MA32_127HR89_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR88_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR88_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(88, MAC_MA32_127HR88_val);
@@ -7698,8 +7698,8 @@ static const struct file_operations MAC_MA32_127HR88_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR87_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR87_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(87, MAC_MA32_127HR87_val);
@@ -7716,8 +7716,8 @@ static const struct file_operations MAC_MA32_127HR87_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR86_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR86_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(86, MAC_MA32_127HR86_val);
@@ -7734,8 +7734,8 @@ static const struct file_operations MAC_MA32_127HR86_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR85_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR85_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(85, MAC_MA32_127HR85_val);
@@ -7752,8 +7752,8 @@ static const struct file_operations MAC_MA32_127HR85_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR84_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR84_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(84, MAC_MA32_127HR84_val);
@@ -7770,8 +7770,8 @@ static const struct file_operations MAC_MA32_127HR84_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR83_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR83_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(83, MAC_MA32_127HR83_val);
@@ -7788,8 +7788,8 @@ static const struct file_operations MAC_MA32_127HR83_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR82_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR82_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(82, MAC_MA32_127HR82_val);
@@ -7806,8 +7806,8 @@ static const struct file_operations MAC_MA32_127HR82_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR81_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR81_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(81, MAC_MA32_127HR81_val);
@@ -7824,8 +7824,8 @@ static const struct file_operations MAC_MA32_127HR81_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR80_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR80_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(80, MAC_MA32_127HR80_val);
@@ -7842,8 +7842,8 @@ static const struct file_operations MAC_MA32_127HR80_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR79_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR79_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(79, MAC_MA32_127HR79_val);
@@ -7860,8 +7860,8 @@ static const struct file_operations MAC_MA32_127HR79_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR78_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR78_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(78, MAC_MA32_127HR78_val);
@@ -7878,8 +7878,8 @@ static const struct file_operations MAC_MA32_127HR78_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR77_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR77_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(77, MAC_MA32_127HR77_val);
@@ -7896,8 +7896,8 @@ static const struct file_operations MAC_MA32_127HR77_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR76_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR76_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(76, MAC_MA32_127HR76_val);
@@ -7914,8 +7914,8 @@ static const struct file_operations MAC_MA32_127HR76_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR75_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR75_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(75, MAC_MA32_127HR75_val);
@@ -7932,8 +7932,8 @@ static const struct file_operations MAC_MA32_127HR75_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR74_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR74_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(74, MAC_MA32_127HR74_val);
@@ -7950,8 +7950,8 @@ static const struct file_operations MAC_MA32_127HR74_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR73_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR73_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(73, MAC_MA32_127HR73_val);
@@ -7968,8 +7968,8 @@ static const struct file_operations MAC_MA32_127HR73_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR72_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR72_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(72, MAC_MA32_127HR72_val);
@@ -7986,8 +7986,8 @@ static const struct file_operations MAC_MA32_127HR72_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR71_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR71_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(71, MAC_MA32_127HR71_val);
@@ -8004,8 +8004,8 @@ static const struct file_operations MAC_MA32_127HR71_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR70_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR70_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(70, MAC_MA32_127HR70_val);
@@ -8022,8 +8022,8 @@ static const struct file_operations MAC_MA32_127HR70_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR69_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR69_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(69, MAC_MA32_127HR69_val);
@@ -8040,8 +8040,8 @@ static const struct file_operations MAC_MA32_127HR69_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR68_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR68_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(68, MAC_MA32_127HR68_val);
@@ -8058,8 +8058,8 @@ static const struct file_operations MAC_MA32_127HR68_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR67_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR67_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(67, MAC_MA32_127HR67_val);
@@ -8076,8 +8076,8 @@ static const struct file_operations MAC_MA32_127HR67_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR66_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR66_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(66, MAC_MA32_127HR66_val);
@@ -8094,8 +8094,8 @@ static const struct file_operations MAC_MA32_127HR66_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR65_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR65_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(65, MAC_MA32_127HR65_val);
@@ -8112,8 +8112,8 @@ static const struct file_operations MAC_MA32_127HR65_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR64_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR64_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(64, MAC_MA32_127HR64_val);
@@ -8130,8 +8130,8 @@ static const struct file_operations MAC_MA32_127HR64_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR63_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR63_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(63, MAC_MA32_127HR63_val);
@@ -8148,8 +8148,8 @@ static const struct file_operations MAC_MA32_127HR63_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR62_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR62_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(62, MAC_MA32_127HR62_val);
@@ -8166,8 +8166,8 @@ static const struct file_operations MAC_MA32_127HR62_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR61_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR61_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(61, MAC_MA32_127HR61_val);
@@ -8184,8 +8184,8 @@ static const struct file_operations MAC_MA32_127HR61_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR60_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR60_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(60, MAC_MA32_127HR60_val);
@@ -8202,8 +8202,8 @@ static const struct file_operations MAC_MA32_127HR60_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR59_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR59_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(59, MAC_MA32_127HR59_val);
@@ -8220,8 +8220,8 @@ static const struct file_operations MAC_MA32_127HR59_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR58_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR58_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(58, MAC_MA32_127HR58_val);
@@ -8238,8 +8238,8 @@ static const struct file_operations MAC_MA32_127HR58_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR57_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR57_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(57, MAC_MA32_127HR57_val);
@@ -8256,8 +8256,8 @@ static const struct file_operations MAC_MA32_127HR57_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR56_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR56_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(56, MAC_MA32_127HR56_val);
@@ -8274,8 +8274,8 @@ static const struct file_operations MAC_MA32_127HR56_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR55_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR55_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(55, MAC_MA32_127HR55_val);
@@ -8292,8 +8292,8 @@ static const struct file_operations MAC_MA32_127HR55_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR54_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR54_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(54, MAC_MA32_127HR54_val);
@@ -8310,8 +8310,8 @@ static const struct file_operations MAC_MA32_127HR54_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR53_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR53_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(53, MAC_MA32_127HR53_val);
@@ -8328,8 +8328,8 @@ static const struct file_operations MAC_MA32_127HR53_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR52_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR52_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(52, MAC_MA32_127HR52_val);
@@ -8346,8 +8346,8 @@ static const struct file_operations MAC_MA32_127HR52_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR51_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR51_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(51, MAC_MA32_127HR51_val);
@@ -8364,8 +8364,8 @@ static const struct file_operations MAC_MA32_127HR51_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR50_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR50_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(50, MAC_MA32_127HR50_val);
@@ -8382,8 +8382,8 @@ static const struct file_operations MAC_MA32_127HR50_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR49_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR49_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(49, MAC_MA32_127HR49_val);
@@ -8400,8 +8400,8 @@ static const struct file_operations MAC_MA32_127HR49_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR48_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR48_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(48, MAC_MA32_127HR48_val);
@@ -8418,8 +8418,8 @@ static const struct file_operations MAC_MA32_127HR48_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR47_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR47_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(47, MAC_MA32_127HR47_val);
@@ -8436,8 +8436,8 @@ static const struct file_operations MAC_MA32_127HR47_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR46_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR46_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(46, MAC_MA32_127HR46_val);
@@ -8454,8 +8454,8 @@ static const struct file_operations MAC_MA32_127HR46_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR45_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR45_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(45, MAC_MA32_127HR45_val);
@@ -8472,8 +8472,8 @@ static const struct file_operations MAC_MA32_127HR45_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR44_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR44_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(44, MAC_MA32_127HR44_val);
@@ -8490,8 +8490,8 @@ static const struct file_operations MAC_MA32_127HR44_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR43_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR43_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(43, MAC_MA32_127HR43_val);
@@ -8508,8 +8508,8 @@ static const struct file_operations MAC_MA32_127HR43_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR42_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR42_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(42, MAC_MA32_127HR42_val);
@@ -8526,8 +8526,8 @@ static const struct file_operations MAC_MA32_127HR42_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR41_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR41_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(41, MAC_MA32_127HR41_val);
@@ -8544,8 +8544,8 @@ static const struct file_operations MAC_MA32_127HR41_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR40_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR40_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(40, MAC_MA32_127HR40_val);
@@ -8562,8 +8562,8 @@ static const struct file_operations MAC_MA32_127HR40_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR39_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR39_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(39, MAC_MA32_127HR39_val);
@@ -8580,8 +8580,8 @@ static const struct file_operations MAC_MA32_127HR39_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR38_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR38_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(38, MAC_MA32_127HR38_val);
@@ -8598,8 +8598,8 @@ static const struct file_operations MAC_MA32_127HR38_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR37_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR37_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(37, MAC_MA32_127HR37_val);
@@ -8616,8 +8616,8 @@ static const struct file_operations MAC_MA32_127HR37_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR36_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR36_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(36, MAC_MA32_127HR36_val);
@@ -8634,8 +8634,8 @@ static const struct file_operations MAC_MA32_127HR36_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR35_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR35_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(35, MAC_MA32_127HR35_val);
@@ -8652,8 +8652,8 @@ static const struct file_operations MAC_MA32_127HR35_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR34_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR34_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(34, MAC_MA32_127HR34_val);
@@ -8670,8 +8670,8 @@ static const struct file_operations MAC_MA32_127HR34_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR33_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR33_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(33, MAC_MA32_127HR33_val);
@@ -8688,8 +8688,8 @@ static const struct file_operations MAC_MA32_127HR33_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA32_127HR32_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MAC_MA32_127HR32_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA32_127HR_RD(32, MAC_MA32_127HR32_val);
@@ -8706,8 +8706,8 @@ static const struct file_operations MAC_MA32_127HR32_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR31_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR31_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(31, MAC_MA1_31LR31_val);
@@ -8724,8 +8724,8 @@ static const struct file_operations MAC_MA1_31LR31_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR30_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR30_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(30, MAC_MA1_31LR30_val);
@@ -8742,8 +8742,8 @@ static const struct file_operations MAC_MA1_31LR30_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR29_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR29_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(29, MAC_MA1_31LR29_val);
@@ -8760,8 +8760,8 @@ static const struct file_operations MAC_MA1_31LR29_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR28_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR28_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(28, MAC_MA1_31LR28_val);
@@ -8778,8 +8778,8 @@ static const struct file_operations MAC_MA1_31LR28_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR27_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR27_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(27, MAC_MA1_31LR27_val);
@@ -8796,8 +8796,8 @@ static const struct file_operations MAC_MA1_31LR27_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR26_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR26_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(26, MAC_MA1_31LR26_val);
@@ -8814,8 +8814,8 @@ static const struct file_operations MAC_MA1_31LR26_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR25_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR25_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(25, MAC_MA1_31LR25_val);
@@ -8832,8 +8832,8 @@ static const struct file_operations MAC_MA1_31LR25_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR24_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR24_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(24, MAC_MA1_31LR24_val);
@@ -8850,8 +8850,8 @@ static const struct file_operations MAC_MA1_31LR24_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR23_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR23_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(23, MAC_MA1_31LR23_val);
@@ -8868,8 +8868,8 @@ static const struct file_operations MAC_MA1_31LR23_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR22_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR22_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(22, MAC_MA1_31LR22_val);
@@ -8886,8 +8886,8 @@ static const struct file_operations MAC_MA1_31LR22_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR21_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR21_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(21, MAC_MA1_31LR21_val);
@@ -8904,8 +8904,8 @@ static const struct file_operations MAC_MA1_31LR21_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR20_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR20_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(20, MAC_MA1_31LR20_val);
@@ -8922,8 +8922,8 @@ static const struct file_operations MAC_MA1_31LR20_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR19_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR19_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(19, MAC_MA1_31LR19_val);
@@ -8940,8 +8940,8 @@ static const struct file_operations MAC_MA1_31LR19_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR18_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR18_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(18, MAC_MA1_31LR18_val);
@@ -8958,8 +8958,8 @@ static const struct file_operations MAC_MA1_31LR18_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR17_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR17_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(17, MAC_MA1_31LR17_val);
@@ -8976,8 +8976,8 @@ static const struct file_operations MAC_MA1_31LR17_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR16_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR16_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(16, MAC_MA1_31LR16_val);
@@ -8994,8 +8994,8 @@ static const struct file_operations MAC_MA1_31LR16_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR15_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR15_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(15, MAC_MA1_31LR15_val);
@@ -9012,8 +9012,8 @@ static const struct file_operations MAC_MA1_31LR15_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR14_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR14_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(14, MAC_MA1_31LR14_val);
@@ -9030,8 +9030,8 @@ static const struct file_operations MAC_MA1_31LR14_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR13_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR13_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(13, MAC_MA1_31LR13_val);
@@ -9048,8 +9048,8 @@ static const struct file_operations MAC_MA1_31LR13_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR12_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR12_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(12, MAC_MA1_31LR12_val);
@@ -9066,8 +9066,8 @@ static const struct file_operations MAC_MA1_31LR12_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR11_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR11_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(11, MAC_MA1_31LR11_val);
@@ -9084,8 +9084,8 @@ static const struct file_operations MAC_MA1_31LR11_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR10_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR10_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(10, MAC_MA1_31LR10_val);
@@ -9102,8 +9102,8 @@ static const struct file_operations MAC_MA1_31LR10_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR9_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR9_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(9, MAC_MA1_31LR9_val);
@@ -9120,8 +9120,8 @@ static const struct file_operations MAC_MA1_31LR9_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR8_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR8_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(8, MAC_MA1_31LR8_val);
@@ -9138,8 +9138,8 @@ static const struct file_operations MAC_MA1_31LR8_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR7_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR7_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(7, MAC_MA1_31LR7_val);
@@ -9156,8 +9156,8 @@ static const struct file_operations MAC_MA1_31LR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR6_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR6_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(6, MAC_MA1_31LR6_val);
@@ -9174,8 +9174,8 @@ static const struct file_operations MAC_MA1_31LR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR5_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR5_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(5, MAC_MA1_31LR5_val);
@@ -9192,8 +9192,8 @@ static const struct file_operations MAC_MA1_31LR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR4_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR4_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(4, MAC_MA1_31LR4_val);
@@ -9210,8 +9210,8 @@ static const struct file_operations MAC_MA1_31LR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR3_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR3_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(3, MAC_MA1_31LR3_val);
@@ -9228,8 +9228,8 @@ static const struct file_operations MAC_MA1_31LR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR2_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR2_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(2, MAC_MA1_31LR2_val);
@@ -9246,8 +9246,8 @@ static const struct file_operations MAC_MA1_31LR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31LR1_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31LR1_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31LR_RD(1, MAC_MA1_31LR1_val);
@@ -9264,8 +9264,8 @@ static const struct file_operations MAC_MA1_31LR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR31_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR31_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(31, MAC_MA1_31HR31_val);
@@ -9282,8 +9282,8 @@ static const struct file_operations MAC_MA1_31HR31_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR30_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR30_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(30, MAC_MA1_31HR30_val);
@@ -9300,8 +9300,8 @@ static const struct file_operations MAC_MA1_31HR30_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR29_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR29_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(29, MAC_MA1_31HR29_val);
@@ -9318,8 +9318,8 @@ static const struct file_operations MAC_MA1_31HR29_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR28_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR28_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(28, MAC_MA1_31HR28_val);
@@ -9336,8 +9336,8 @@ static const struct file_operations MAC_MA1_31HR28_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR27_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR27_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(27, MAC_MA1_31HR27_val);
@@ -9354,8 +9354,8 @@ static const struct file_operations MAC_MA1_31HR27_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR26_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR26_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(26, MAC_MA1_31HR26_val);
@@ -9372,8 +9372,8 @@ static const struct file_operations MAC_MA1_31HR26_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR25_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR25_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(25, MAC_MA1_31HR25_val);
@@ -9390,8 +9390,8 @@ static const struct file_operations MAC_MA1_31HR25_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR24_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR24_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(24, MAC_MA1_31HR24_val);
@@ -9408,8 +9408,8 @@ static const struct file_operations MAC_MA1_31HR24_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR23_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR23_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(23, MAC_MA1_31HR23_val);
@@ -9426,8 +9426,8 @@ static const struct file_operations MAC_MA1_31HR23_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR22_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR22_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(22, MAC_MA1_31HR22_val);
@@ -9444,8 +9444,8 @@ static const struct file_operations MAC_MA1_31HR22_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR21_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR21_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(21, MAC_MA1_31HR21_val);
@@ -9462,8 +9462,8 @@ static const struct file_operations MAC_MA1_31HR21_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR20_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR20_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(20, MAC_MA1_31HR20_val);
@@ -9480,8 +9480,8 @@ static const struct file_operations MAC_MA1_31HR20_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR19_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR19_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(19, MAC_MA1_31HR19_val);
@@ -9498,8 +9498,8 @@ static const struct file_operations MAC_MA1_31HR19_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR18_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR18_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(18, MAC_MA1_31HR18_val);
@@ -9516,8 +9516,8 @@ static const struct file_operations MAC_MA1_31HR18_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR17_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR17_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(17, MAC_MA1_31HR17_val);
@@ -9534,8 +9534,8 @@ static const struct file_operations MAC_MA1_31HR17_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR16_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR16_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(16, MAC_MA1_31HR16_val);
@@ -9552,8 +9552,8 @@ static const struct file_operations MAC_MA1_31HR16_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR15_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR15_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(15, MAC_MA1_31HR15_val);
@@ -9570,8 +9570,8 @@ static const struct file_operations MAC_MA1_31HR15_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR14_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR14_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(14, MAC_MA1_31HR14_val);
@@ -9588,8 +9588,8 @@ static const struct file_operations MAC_MA1_31HR14_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR13_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR13_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(13, MAC_MA1_31HR13_val);
@@ -9606,8 +9606,8 @@ static const struct file_operations MAC_MA1_31HR13_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR12_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR12_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(12, MAC_MA1_31HR12_val);
@@ -9624,8 +9624,8 @@ static const struct file_operations MAC_MA1_31HR12_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR11_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR11_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(11, MAC_MA1_31HR11_val);
@@ -9642,8 +9642,8 @@ static const struct file_operations MAC_MA1_31HR11_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR10_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR10_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(10, MAC_MA1_31HR10_val);
@@ -9660,8 +9660,8 @@ static const struct file_operations MAC_MA1_31HR10_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR9_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR9_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(9, MAC_MA1_31HR9_val);
@@ -9678,8 +9678,8 @@ static const struct file_operations MAC_MA1_31HR9_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR8_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR8_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(8, MAC_MA1_31HR8_val);
@@ -9696,8 +9696,8 @@ static const struct file_operations MAC_MA1_31HR8_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR7_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR7_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(7, MAC_MA1_31HR7_val);
@@ -9714,8 +9714,8 @@ static const struct file_operations MAC_MA1_31HR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR6_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR6_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(6, MAC_MA1_31HR6_val);
@@ -9732,8 +9732,8 @@ static const struct file_operations MAC_MA1_31HR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR5_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR5_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(5, MAC_MA1_31HR5_val);
@@ -9750,8 +9750,8 @@ static const struct file_operations MAC_MA1_31HR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR4_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR4_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(4, MAC_MA1_31HR4_val);
@@ -9768,8 +9768,8 @@ static const struct file_operations MAC_MA1_31HR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR3_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR3_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(3, MAC_MA1_31HR3_val);
@@ -9786,8 +9786,8 @@ static const struct file_operations MAC_MA1_31HR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR2_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR2_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(2, MAC_MA1_31HR2_val);
@@ -9804,8 +9804,8 @@ static const struct file_operations MAC_MA1_31HR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1_31HR1_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_MA1_31HR1_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1_31HR_RD(1, MAC_MA1_31HR1_val);
@@ -9822,8 +9822,8 @@ static const struct file_operations MAC_MA1_31HR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_arpa_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_arpa_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_ARPA_RD(mac_arpa_val);
@@ -9839,8 +9839,8 @@ static const struct file_operations mac_arpa_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R7_RD(MAC_L3A3R7_val);
@@ -9857,8 +9857,8 @@ static const struct file_operations MAC_L3A3R7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R6_RD(MAC_L3A3R6_val);
@@ -9875,8 +9875,8 @@ static const struct file_operations MAC_L3A3R6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R5_RD(MAC_L3A3R5_val);
@@ -9893,8 +9893,8 @@ static const struct file_operations MAC_L3A3R5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R4_RD(MAC_L3A3R4_val);
@@ -9911,8 +9911,8 @@ static const struct file_operations MAC_L3A3R4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R3_RD(MAC_L3A3R3_val);
@@ -9929,8 +9929,8 @@ static const struct file_operations MAC_L3A3R3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R2_RD(MAC_L3A3R2_val);
@@ -9947,8 +9947,8 @@ static const struct file_operations MAC_L3A3R2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R1_RD(MAC_L3A3R1_val);
@@ -9965,8 +9965,8 @@ static const struct file_operations MAC_L3A3R1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A3R0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A3R0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A3R0_RD(MAC_L3A3R0_val);
@@ -9983,8 +9983,8 @@ static const struct file_operations MAC_L3A3R0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R7_RD(MAC_L3A2R7_val);
@@ -10001,8 +10001,8 @@ static const struct file_operations MAC_L3A2R7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R6_RD(MAC_L3A2R6_val);
@@ -10019,8 +10019,8 @@ static const struct file_operations MAC_L3A2R6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R5_RD(MAC_L3A2R5_val);
@@ -10037,8 +10037,8 @@ static const struct file_operations MAC_L3A2R5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R4_RD(MAC_L3A2R4_val);
@@ -10055,8 +10055,8 @@ static const struct file_operations MAC_L3A2R4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R3_RD(MAC_L3A2R3_val);
@@ -10073,8 +10073,8 @@ static const struct file_operations MAC_L3A2R3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R2_RD(MAC_L3A2R2_val);
@@ -10091,8 +10091,8 @@ static const struct file_operations MAC_L3A2R2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R1_RD(MAC_L3A2R1_val);
@@ -10109,8 +10109,8 @@ static const struct file_operations MAC_L3A2R1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A2R0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A2R0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A2R0_RD(MAC_L3A2R0_val);
@@ -10127,8 +10127,8 @@ static const struct file_operations MAC_L3A2R0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R7_RD(MAC_L3A1R7_val);
@@ -10145,8 +10145,8 @@ static const struct file_operations MAC_L3A1R7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R6_RD(MAC_L3A1R6_val);
@@ -10163,8 +10163,8 @@ static const struct file_operations MAC_L3A1R6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R5_RD(MAC_L3A1R5_val);
@@ -10181,8 +10181,8 @@ static const struct file_operations MAC_L3A1R5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R4_RD(MAC_L3A1R4_val);
@@ -10199,8 +10199,8 @@ static const struct file_operations MAC_L3A1R4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R3_RD(MAC_L3A1R3_val);
@@ -10217,8 +10217,8 @@ static const struct file_operations MAC_L3A1R3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R2_RD(MAC_L3A1R2_val);
@@ -10235,8 +10235,8 @@ static const struct file_operations MAC_L3A1R2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R1_RD(MAC_L3A1R1_val);
@@ -10253,8 +10253,8 @@ static const struct file_operations MAC_L3A1R1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A1R0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A1R0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A1R0_RD(MAC_L3A1R0_val);
@@ -10271,8 +10271,8 @@ static const struct file_operations MAC_L3A1R0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R7_RD(MAC_L3A0R7_val);
@@ -10289,8 +10289,8 @@ static const struct file_operations MAC_L3A0R7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R6_RD(MAC_L3A0R6_val);
@@ -10307,8 +10307,8 @@ static const struct file_operations MAC_L3A0R6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R5_RD(MAC_L3A0R5_val);
@@ -10325,8 +10325,8 @@ static const struct file_operations MAC_L3A0R5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R4_RD(MAC_L3A0R4_val);
@@ -10343,8 +10343,8 @@ static const struct file_operations MAC_L3A0R4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R3_RD(MAC_L3A0R3_val);
@@ -10361,8 +10361,8 @@ static const struct file_operations MAC_L3A0R3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R2_RD(MAC_L3A0R2_val);
@@ -10379,8 +10379,8 @@ static const struct file_operations MAC_L3A0R2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R1_RD(MAC_L3A0R1_val);
@@ -10397,8 +10397,8 @@ static const struct file_operations MAC_L3A0R1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3A0R0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_L3A0R0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3A0R0_RD(MAC_L3A0R0_val);
@@ -10415,8 +10415,8 @@ static const struct file_operations MAC_L3A0R0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR7_RD(MAC_L4AR7_val);
@@ -10432,8 +10432,8 @@ static const struct file_operations MAC_L4AR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR6_RD(MAC_L4AR6_val);
@@ -10449,8 +10449,8 @@ static const struct file_operations MAC_L4AR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR5_RD(MAC_L4AR5_val);
@@ -10466,8 +10466,8 @@ static const struct file_operations MAC_L4AR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR4_RD(MAC_L4AR4_val);
@@ -10483,8 +10483,8 @@ static const struct file_operations MAC_L4AR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR3_RD(MAC_L4AR3_val);
@@ -10500,8 +10500,8 @@ static const struct file_operations MAC_L4AR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR2_RD(MAC_L4AR2_val);
@@ -10517,8 +10517,8 @@ static const struct file_operations MAC_L4AR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR1_RD(MAC_L4AR1_val);
@@ -10534,8 +10534,8 @@ static const struct file_operations MAC_L4AR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L4AR0_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_L4AR0_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L4AR0_RD(MAC_L4AR0_val);
@@ -10551,8 +10551,8 @@ static const struct file_operations MAC_L4AR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR7_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR7_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR7_RD(MAC_L3L4CR7_val);
@@ -10569,8 +10569,8 @@ static const struct file_operations MAC_L3L4CR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR6_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR6_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR6_RD(MAC_L3L4CR6_val);
@@ -10587,8 +10587,8 @@ static const struct file_operations MAC_L3L4CR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR5_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR5_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR5_RD(MAC_L3L4CR5_val);
@@ -10605,8 +10605,8 @@ static const struct file_operations MAC_L3L4CR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR4_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR4_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR4_RD(MAC_L3L4CR4_val);
@@ -10623,8 +10623,8 @@ static const struct file_operations MAC_L3L4CR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR3_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR3_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR3_RD(MAC_L3L4CR3_val);
@@ -10641,8 +10641,8 @@ static const struct file_operations MAC_L3L4CR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR2_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR2_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR2_RD(MAC_L3L4CR2_val);
@@ -10659,8 +10659,8 @@ static const struct file_operations MAC_L3L4CR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR1_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR1_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR1_RD(MAC_L3L4CR1_val);
@@ -10677,8 +10677,8 @@ static const struct file_operations MAC_L3L4CR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_L3L4CR0_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MAC_L3L4CR0_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_L3L4CR0_RD(MAC_L3L4CR0_val);
@@ -10695,8 +10695,8 @@ static const struct file_operations MAC_L3L4CR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_gpios_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t mac_gpios_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_GPIOS_RD(mac_gpios_val);
@@ -10713,8 +10713,8 @@ static const struct file_operations mac_gpios_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_pcs_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_pcs_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PCS_RD(mac_pcs_val);
@@ -10730,8 +10730,8 @@ static const struct file_operations mac_pcs_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_tes_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_tes_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TES_RD(mac_tes_val);
@@ -10747,8 +10747,8 @@ static const struct file_operations mac_tes_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ae_read(struct file *file, char __user * userbuf,
-			   size_t count, loff_t * ppos)
+static ssize_t mac_ae_read(struct file *file, char __user *userbuf,
+			   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_AE_RD(mac_ae_val);
@@ -10764,8 +10764,8 @@ static const struct file_operations mac_ae_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_alpa_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_alpa_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_ALPA_RD(mac_alpa_val);
@@ -10781,8 +10781,8 @@ static const struct file_operations mac_alpa_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_aad_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_aad_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_AAD_RD(mac_aad_val);
@@ -10798,8 +10798,8 @@ static const struct file_operations mac_aad_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ans_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_ans_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_ANS_RD(mac_ans_val);
@@ -10815,8 +10815,8 @@ static const struct file_operations mac_ans_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_anc_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_anc_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_ANC_RD(mac_anc_val);
@@ -10832,8 +10832,8 @@ static const struct file_operations mac_anc_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_lpc_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_lpc_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_LPC_RD(mac_lpc_val);
@@ -10849,8 +10849,8 @@ static const struct file_operations mac_lpc_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_lps_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_lps_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_LPS_RD(mac_lps_val);
@@ -10944,8 +10944,8 @@ static const struct file_operations mac_pto_cr_fops = {
 
 
 
-static ssize_t MAC_PPS_WIDTH3_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_WIDTH3_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_WIDTH3_RD(MAC_PPS_WIDTH3_val);
@@ -10962,8 +10962,8 @@ static const struct file_operations MAC_PPS_WIDTH3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_WIDTH2_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_WIDTH2_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_WIDTH2_RD(MAC_PPS_WIDTH2_val);
@@ -10980,8 +10980,8 @@ static const struct file_operations MAC_PPS_WIDTH2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_WIDTH1_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_WIDTH1_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_WIDTH1_RD(MAC_PPS_WIDTH1_val);
@@ -10998,8 +10998,8 @@ static const struct file_operations MAC_PPS_WIDTH1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_WIDTH0_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_WIDTH0_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_WIDTH0_RD(MAC_PPS_WIDTH0_val);
@@ -11016,8 +11016,8 @@ static const struct file_operations MAC_PPS_WIDTH0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_INTVAL3_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_INTVAL3_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_INTVAL3_RD(MAC_PPS_INTVAL3_val);
@@ -11034,8 +11034,8 @@ static const struct file_operations MAC_PPS_INTVAL3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_INTVAL2_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_INTVAL2_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_INTVAL2_RD(MAC_PPS_INTVAL2_val);
@@ -11052,8 +11052,8 @@ static const struct file_operations MAC_PPS_INTVAL2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_INTVAL1_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_INTVAL1_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_INTVAL1_RD(MAC_PPS_INTVAL1_val);
@@ -11070,8 +11070,8 @@ static const struct file_operations MAC_PPS_INTVAL1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_INTVAL0_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_INTVAL0_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_INTVAL0_RD(MAC_PPS_INTVAL0_val);
@@ -11088,8 +11088,8 @@ static const struct file_operations MAC_PPS_INTVAL0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTNS3_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTNS3_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTNS3_RD(MAC_PPS_TTNS3_val);
@@ -11106,8 +11106,8 @@ static const struct file_operations MAC_PPS_TTNS3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTNS2_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTNS2_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTNS2_RD(MAC_PPS_TTNS2_val);
@@ -11124,8 +11124,8 @@ static const struct file_operations MAC_PPS_TTNS2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTNS1_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTNS1_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTNS1_RD(MAC_PPS_TTNS1_val);
@@ -11142,8 +11142,8 @@ static const struct file_operations MAC_PPS_TTNS1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTNS0_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTNS0_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTNS0_RD(MAC_PPS_TTNS0_val);
@@ -11160,8 +11160,8 @@ static const struct file_operations MAC_PPS_TTNS0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTS3_read(struct file *file, char __user * userbuf,
-				 size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTS3_read(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTS3_RD(MAC_PPS_TTS3_val);
@@ -11178,8 +11178,8 @@ static const struct file_operations MAC_PPS_TTS3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTS2_read(struct file *file, char __user * userbuf,
-				 size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTS2_read(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTS2_RD(MAC_PPS_TTS2_val);
@@ -11196,8 +11196,8 @@ static const struct file_operations MAC_PPS_TTS2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTS1_read(struct file *file, char __user * userbuf,
-				 size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTS1_read(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTS1_RD(MAC_PPS_TTS1_val);
@@ -11214,8 +11214,8 @@ static const struct file_operations MAC_PPS_TTS1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_PPS_TTS0_read(struct file *file, char __user * userbuf,
-				 size_t count, loff_t * ppos)
+static ssize_t MAC_PPS_TTS0_read(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPS_TTS0_RD(MAC_PPS_TTS0_val);
@@ -11232,8 +11232,8 @@ static const struct file_operations MAC_PPS_TTS0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ppsc_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_ppsc_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PPSC_RD(mac_ppsc_val);
@@ -11249,8 +11249,8 @@ static const struct file_operations mac_ppsc_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_teac_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_teac_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TEAC_RD(mac_teac_val);
@@ -11266,8 +11266,8 @@ static const struct file_operations mac_teac_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_tiac_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_tiac_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TIAC_RD(mac_tiac_val);
@@ -11283,8 +11283,8 @@ static const struct file_operations mac_tiac_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ats_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_ats_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_ATS_RD(mac_ats_val);
@@ -11300,8 +11300,8 @@ static const struct file_operations mac_ats_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_atn_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_atn_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_ATN_RD(mac_atn_val);
@@ -11317,8 +11317,8 @@ static const struct file_operations mac_atn_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ac_read(struct file *file, char __user * userbuf,
-			   size_t count, loff_t * ppos)
+static ssize_t mac_ac_read(struct file *file, char __user *userbuf,
+			   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_AC_RD(mac_ac_val);
@@ -11334,8 +11334,8 @@ static const struct file_operations mac_ac_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ttn_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_ttn_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TTN_RD(mac_ttn_val);
@@ -11351,8 +11351,8 @@ static const struct file_operations mac_ttn_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ttsn_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_ttsn_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TTSN_RD(mac_ttsn_val);
@@ -11368,8 +11368,8 @@ static const struct file_operations mac_ttsn_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_tsr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_tsr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TSR_RD(mac_tsr_val);
@@ -11385,8 +11385,8 @@ static const struct file_operations mac_tsr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_sthwr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t mac_sthwr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_STHWR_RD(mac_sthwr_val);
@@ -11403,8 +11403,8 @@ static const struct file_operations mac_sthwr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_tar_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_tar_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TAR_RD(mac_tar_val);
@@ -11420,8 +11420,8 @@ static const struct file_operations mac_tar_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_stnsur_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t mac_stnsur_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_STNSUR_RD(mac_stnsur_val);
@@ -11438,8 +11438,8 @@ static const struct file_operations mac_stnsur_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_stsur_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t mac_stsur_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_STSUR_RD(mac_stsur_val);
@@ -11456,8 +11456,8 @@ static const struct file_operations mac_stsur_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_stnsr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t mac_stnsr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_STNSR_RD(mac_stnsr_val);
@@ -11474,8 +11474,8 @@ static const struct file_operations mac_stnsr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_stsr_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_stsr_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_STSR_RD(mac_stsr_val);
@@ -11491,8 +11491,8 @@ static const struct file_operations mac_stsr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ssir_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_ssir_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_SSIR_RD(mac_ssir_val);
@@ -11508,8 +11508,8 @@ static const struct file_operations mac_ssir_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_tcr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_tcr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TCR_RD(mac_tcr_val);
@@ -11525,8 +11525,8 @@ static const struct file_operations mac_tcr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mtl_dsr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mtl_dsr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_DSR_RD(mtl_dsr_val);
@@ -11542,8 +11542,8 @@ static const struct file_operations mtl_dsr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_rwpffr_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t mac_rwpffr_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_RWPFFR_RD(mac_rwpffr_val);
@@ -11560,8 +11560,8 @@ static const struct file_operations mac_rwpffr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_rtsr_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_rtsr_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_RTSR_RD(mac_rtsr_val);
@@ -11577,8 +11577,8 @@ static const struct file_operations mac_rtsr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mtl_ier_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mtl_ier_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_IER_RD(mtl_ier_val);
@@ -11594,8 +11594,8 @@ static const struct file_operations mtl_ier_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRCR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRCR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRCR7_RD(MTL_QRCR7_val);
@@ -11612,8 +11612,8 @@ static const struct file_operations MTL_QRCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRCR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRCR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRCR6_RD(MTL_QRCR6_val);
@@ -11630,8 +11630,8 @@ static const struct file_operations MTL_QRCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRCR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRCR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRCR5_RD(MTL_QRCR5_val);
@@ -11648,8 +11648,8 @@ static const struct file_operations MTL_QRCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRCR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRCR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRCR4_RD(MTL_QRCR4_val);
@@ -11666,8 +11666,8 @@ static const struct file_operations MTL_QRCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRCR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRCR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRCR3_RD(MTL_QRCR3_val);
@@ -11684,8 +11684,8 @@ static const struct file_operations MTL_QRCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRCR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRCR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRCR2_RD(MTL_QRCR2_val);
@@ -11702,8 +11702,8 @@ static const struct file_operations MTL_QRCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRCR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRCR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRCR1_RD(MTL_QRCR1_val);
@@ -11720,8 +11720,8 @@ static const struct file_operations MTL_QRCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRDR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRDR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRDR7_RD(MTL_QRDR7_val);
@@ -11738,8 +11738,8 @@ static const struct file_operations MTL_QRDR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRDR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRDR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRDR6_RD(MTL_QRDR6_val);
@@ -11756,8 +11756,8 @@ static const struct file_operations MTL_QRDR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRDR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRDR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRDR5_RD(MTL_QRDR5_val);
@@ -11774,8 +11774,8 @@ static const struct file_operations MTL_QRDR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRDR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRDR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRDR4_RD(MTL_QRDR4_val);
@@ -11792,8 +11792,8 @@ static const struct file_operations MTL_QRDR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRDR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRDR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRDR3_RD(MTL_QRDR3_val);
@@ -11810,8 +11810,8 @@ static const struct file_operations MTL_QRDR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRDR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRDR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRDR2_RD(MTL_QRDR2_val);
@@ -11828,8 +11828,8 @@ static const struct file_operations MTL_QRDR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QRDR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QRDR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QRDR1_RD(MTL_QRDR1_val);
@@ -11846,8 +11846,8 @@ static const struct file_operations MTL_QRDR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QOCR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QOCR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QOCR7_RD(MTL_QOCR7_val);
@@ -11864,8 +11864,8 @@ static const struct file_operations MTL_QOCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QOCR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QOCR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QOCR6_RD(MTL_QOCR6_val);
@@ -11882,8 +11882,8 @@ static const struct file_operations MTL_QOCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QOCR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QOCR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QOCR5_RD(MTL_QOCR5_val);
@@ -11900,8 +11900,8 @@ static const struct file_operations MTL_QOCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QOCR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QOCR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QOCR4_RD(MTL_QOCR4_val);
@@ -11918,8 +11918,8 @@ static const struct file_operations MTL_QOCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QOCR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QOCR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QOCR3_RD(MTL_QOCR3_val);
@@ -11936,8 +11936,8 @@ static const struct file_operations MTL_QOCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QOCR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QOCR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QOCR2_RD(MTL_QOCR2_val);
@@ -11954,8 +11954,8 @@ static const struct file_operations MTL_QOCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QOCR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QOCR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QOCR1_RD(MTL_QOCR1_val);
@@ -11972,8 +11972,8 @@ static const struct file_operations MTL_QOCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QROMR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QROMR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QROMR_RD(7, MTL_QROMR7_val);
@@ -11990,8 +11990,8 @@ static const struct file_operations MTL_QROMR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QROMR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QROMR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QROMR_RD(6, MTL_QROMR6_val);
@@ -12008,8 +12008,8 @@ static const struct file_operations MTL_QROMR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QROMR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QROMR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QROMR_RD(5, MTL_QROMR5_val);
@@ -12026,8 +12026,8 @@ static const struct file_operations MTL_QROMR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QROMR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QROMR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QROMR_RD(4, MTL_QROMR4_val);
@@ -12044,8 +12044,8 @@ static const struct file_operations MTL_QROMR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QROMR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QROMR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QROMR_RD(3, MTL_QROMR3_val);
@@ -12062,8 +12062,8 @@ static const struct file_operations MTL_QROMR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QROMR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QROMR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QROMR_RD(2, MTL_QROMR2_val);
@@ -12080,8 +12080,8 @@ static const struct file_operations MTL_QROMR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QROMR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QROMR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QROMR_RD(1, MTL_QROMR1_val);
@@ -12098,8 +12098,8 @@ static const struct file_operations MTL_QROMR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QLCR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QLCR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QLCR7_RD(MTL_QLCR7_val);
@@ -12116,8 +12116,8 @@ static const struct file_operations MTL_QLCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QLCR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QLCR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QLCR6_RD(MTL_QLCR6_val);
@@ -12134,8 +12134,8 @@ static const struct file_operations MTL_QLCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QLCR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QLCR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QLCR5_RD(MTL_QLCR5_val);
@@ -12152,8 +12152,8 @@ static const struct file_operations MTL_QLCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QLCR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QLCR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QLCR4_RD(MTL_QLCR4_val);
@@ -12170,8 +12170,8 @@ static const struct file_operations MTL_QLCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QLCR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QLCR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QLCR3_RD(MTL_QLCR3_val);
@@ -12188,8 +12188,8 @@ static const struct file_operations MTL_QLCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QLCR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QLCR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QLCR2_RD(MTL_QLCR2_val);
@@ -12206,8 +12206,8 @@ static const struct file_operations MTL_QLCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QLCR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QLCR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QLCR1_RD(MTL_QLCR1_val);
@@ -12224,8 +12224,8 @@ static const struct file_operations MTL_QLCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QHCR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QHCR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QHCR7_RD(MTL_QHCR7_val);
@@ -12242,8 +12242,8 @@ static const struct file_operations MTL_QHCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QHCR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QHCR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QHCR6_RD(MTL_QHCR6_val);
@@ -12260,8 +12260,8 @@ static const struct file_operations MTL_QHCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QHCR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QHCR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QHCR5_RD(MTL_QHCR5_val);
@@ -12278,8 +12278,8 @@ static const struct file_operations MTL_QHCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QHCR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QHCR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QHCR4_RD(MTL_QHCR4_val);
@@ -12296,8 +12296,8 @@ static const struct file_operations MTL_QHCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QHCR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QHCR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QHCR3_RD(MTL_QHCR3_val);
@@ -12314,8 +12314,8 @@ static const struct file_operations MTL_QHCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QHCR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QHCR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QHCR2_RD(MTL_QHCR2_val);
@@ -12332,8 +12332,8 @@ static const struct file_operations MTL_QHCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QHCR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QHCR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QHCR1_RD(MTL_QHCR1_val);
@@ -12350,8 +12350,8 @@ static const struct file_operations MTL_QHCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QSSCR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QSSCR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QSSCR7_RD(MTL_QSSCR7_val);
@@ -12368,8 +12368,8 @@ static const struct file_operations MTL_QSSCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QSSCR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QSSCR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QSSCR6_RD(MTL_QSSCR6_val);
@@ -12386,8 +12386,8 @@ static const struct file_operations MTL_QSSCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QSSCR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QSSCR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QSSCR5_RD(MTL_QSSCR5_val);
@@ -12404,8 +12404,8 @@ static const struct file_operations MTL_QSSCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QSSCR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QSSCR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QSSCR4_RD(MTL_QSSCR4_val);
@@ -12422,8 +12422,8 @@ static const struct file_operations MTL_QSSCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QSSCR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QSSCR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QSSCR3_RD(MTL_QSSCR3_val);
@@ -12440,8 +12440,8 @@ static const struct file_operations MTL_QSSCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QSSCR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QSSCR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QSSCR2_RD(MTL_QSSCR2_val);
@@ -12458,8 +12458,8 @@ static const struct file_operations MTL_QSSCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QSSCR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QSSCR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QSSCR1_RD(MTL_QSSCR1_val);
@@ -12476,8 +12476,8 @@ static const struct file_operations MTL_QSSCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QW7_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t MTL_QW7_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QW7_RD(MTL_QW7_val);
@@ -12493,8 +12493,8 @@ static const struct file_operations MTL_QW7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QW6_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t MTL_QW6_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QW6_RD(MTL_QW6_val);
@@ -12510,8 +12510,8 @@ static const struct file_operations MTL_QW6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QW5_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t MTL_QW5_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QW5_RD(MTL_QW5_val);
@@ -12527,8 +12527,8 @@ static const struct file_operations MTL_QW5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QW4_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t MTL_QW4_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QW4_RD(MTL_QW4_val);
@@ -12544,8 +12544,8 @@ static const struct file_operations MTL_QW4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QW3_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t MTL_QW3_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QW3_RD(MTL_QW3_val);
@@ -12561,8 +12561,8 @@ static const struct file_operations MTL_QW3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QW2_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t MTL_QW2_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QW2_RD(MTL_QW2_val);
@@ -12578,8 +12578,8 @@ static const struct file_operations MTL_QW2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QW1_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t MTL_QW1_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QW1_RD(MTL_QW1_val);
@@ -12595,8 +12595,8 @@ static const struct file_operations MTL_QW1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QESR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QESR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QESR7_RD(MTL_QESR7_val);
@@ -12613,8 +12613,8 @@ static const struct file_operations MTL_QESR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QESR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QESR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QESR6_RD(MTL_QESR6_val);
@@ -12631,8 +12631,8 @@ static const struct file_operations MTL_QESR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QESR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QESR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QESR5_RD(MTL_QESR5_val);
@@ -12649,8 +12649,8 @@ static const struct file_operations MTL_QESR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QESR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QESR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QESR4_RD(MTL_QESR4_val);
@@ -12667,8 +12667,8 @@ static const struct file_operations MTL_QESR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QESR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QESR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QESR3_RD(MTL_QESR3_val);
@@ -12685,8 +12685,8 @@ static const struct file_operations MTL_QESR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QESR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QESR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QESR2_RD(MTL_QESR2_val);
@@ -12703,8 +12703,8 @@ static const struct file_operations MTL_QESR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QESR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QESR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QESR1_RD(MTL_QESR1_val);
@@ -12721,8 +12721,8 @@ static const struct file_operations MTL_QESR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QECR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QECR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QECR7_RD(MTL_QECR7_val);
@@ -12739,8 +12739,8 @@ static const struct file_operations MTL_QECR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QECR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QECR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QECR6_RD(MTL_QECR6_val);
@@ -12757,8 +12757,8 @@ static const struct file_operations MTL_QECR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QECR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QECR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QECR5_RD(MTL_QECR5_val);
@@ -12775,8 +12775,8 @@ static const struct file_operations MTL_QECR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QECR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QECR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QECR4_RD(MTL_QECR4_val);
@@ -12793,8 +12793,8 @@ static const struct file_operations MTL_QECR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QECR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QECR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QECR3_RD(MTL_QECR3_val);
@@ -12811,8 +12811,8 @@ static const struct file_operations MTL_QECR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QECR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QECR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QECR2_RD(MTL_QECR2_val);
@@ -12829,8 +12829,8 @@ static const struct file_operations MTL_QECR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QECR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QECR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QECR1_RD(MTL_QECR1_val);
@@ -12847,8 +12847,8 @@ static const struct file_operations MTL_QECR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTDR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QTDR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTDR7_RD(MTL_QTDR7_val);
@@ -12865,8 +12865,8 @@ static const struct file_operations MTL_QTDR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTDR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QTDR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTDR6_RD(MTL_QTDR6_val);
@@ -12883,8 +12883,8 @@ static const struct file_operations MTL_QTDR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTDR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QTDR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTDR5_RD(MTL_QTDR5_val);
@@ -12901,8 +12901,8 @@ static const struct file_operations MTL_QTDR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTDR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QTDR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTDR4_RD(MTL_QTDR4_val);
@@ -12919,8 +12919,8 @@ static const struct file_operations MTL_QTDR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTDR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QTDR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTDR3_RD(MTL_QTDR3_val);
@@ -12937,8 +12937,8 @@ static const struct file_operations MTL_QTDR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTDR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QTDR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTDR2_RD(MTL_QTDR2_val);
@@ -12955,8 +12955,8 @@ static const struct file_operations MTL_QTDR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTDR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QTDR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTDR1_RD(MTL_QTDR1_val);
@@ -12973,8 +12973,8 @@ static const struct file_operations MTL_QTDR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QUCR7_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QUCR7_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QUCR7_RD(MTL_QUCR7_val);
@@ -12991,8 +12991,8 @@ static const struct file_operations MTL_QUCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QUCR6_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QUCR6_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QUCR6_RD(MTL_QUCR6_val);
@@ -13009,8 +13009,8 @@ static const struct file_operations MTL_QUCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QUCR5_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QUCR5_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QUCR5_RD(MTL_QUCR5_val);
@@ -13027,8 +13027,8 @@ static const struct file_operations MTL_QUCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QUCR4_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QUCR4_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QUCR4_RD(MTL_QUCR4_val);
@@ -13045,8 +13045,8 @@ static const struct file_operations MTL_QUCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QUCR3_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QUCR3_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QUCR3_RD(MTL_QUCR3_val);
@@ -13063,8 +13063,8 @@ static const struct file_operations MTL_QUCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QUCR2_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QUCR2_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QUCR2_RD(MTL_QUCR2_val);
@@ -13081,8 +13081,8 @@ static const struct file_operations MTL_QUCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QUCR1_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_QUCR1_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QUCR1_RD(MTL_QUCR1_val);
@@ -13099,8 +13099,8 @@ static const struct file_operations MTL_QUCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTOMR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QTOMR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTOMR7_RD(MTL_QTOMR7_val);
@@ -13117,8 +13117,8 @@ static const struct file_operations MTL_QTOMR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTOMR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QTOMR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTOMR6_RD(MTL_QTOMR6_val);
@@ -13135,8 +13135,8 @@ static const struct file_operations MTL_QTOMR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTOMR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QTOMR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTOMR5_RD(MTL_QTOMR5_val);
@@ -13153,8 +13153,8 @@ static const struct file_operations MTL_QTOMR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTOMR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QTOMR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTOMR4_RD(MTL_QTOMR4_val);
@@ -13171,8 +13171,8 @@ static const struct file_operations MTL_QTOMR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTOMR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QTOMR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTOMR3_RD(MTL_QTOMR3_val);
@@ -13189,8 +13189,8 @@ static const struct file_operations MTL_QTOMR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTOMR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QTOMR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTOMR2_RD(MTL_QTOMR2_val);
@@ -13207,8 +13207,8 @@ static const struct file_operations MTL_QTOMR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_QTOMR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_QTOMR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_QTOMR1_RD(MTL_QTOMR1_val);
@@ -13225,8 +13225,8 @@ static const struct file_operations MTL_QTOMR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_pmtcsr_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t mac_pmtcsr_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_PMTCSR_RD(mac_pmtcsr_val);
@@ -13244,13 +13244,13 @@ static const struct file_operations mac_pmtcsr_fops = {
 };
 
 static ssize_t mmc_rxicmp_err_octets_read(struct file *file,
-					  char __user * userbuf, size_t count,
-					  loff_t * ppos)
+					  char __user *userbuf, size_t count,
+					  loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13269,13 +13269,13 @@ static const struct file_operations mmc_rxicmp_err_octets_fops = {
 };
 
 static ssize_t mmc_rxicmp_gd_octets_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13294,13 +13294,13 @@ static const struct file_operations mmc_rxicmp_gd_octets_fops = {
 };
 
 static ssize_t mmc_rxtcp_err_octets_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13319,13 +13319,13 @@ static const struct file_operations mmc_rxtcp_err_octets_fops = {
 };
 
 static ssize_t mmc_rxtcp_gd_octets_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13344,13 +13344,13 @@ static const struct file_operations mmc_rxtcp_gd_octets_fops = {
 };
 
 static ssize_t mmc_rxudp_err_octets_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13369,13 +13369,13 @@ static const struct file_operations mmc_rxudp_err_octets_fops = {
 };
 
 static ssize_t mmc_rxudp_gd_octets_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13394,13 +13394,13 @@ static const struct file_operations mmc_rxudp_gd_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV6_nopay_octets_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13419,13 +13419,13 @@ static const struct file_operations MMC_RXIPV6_nopay_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV6_hdrerr_octets_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13444,13 +13444,13 @@ static const struct file_operations MMC_RXIPV6_hdrerr_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV6_gd_octets_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13469,13 +13469,13 @@ static const struct file_operations MMC_RXIPV6_gd_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV4_udsbl_octets_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13494,13 +13494,13 @@ static const struct file_operations MMC_RXIPV4_udsbl_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV4_frag_octets_read(struct file *file,
-					   char __user * userbuf, size_t count,
-					   loff_t * ppos)
+					   char __user *userbuf, size_t count,
+					   loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13519,13 +13519,13 @@ static const struct file_operations MMC_RXIPV4_frag_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV4_nopay_octets_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13544,13 +13544,13 @@ static const struct file_operations MMC_RXIPV4_nopay_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV4_hdrerr_octets_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13569,13 +13569,13 @@ static const struct file_operations MMC_RXIPV4_hdrerr_octets_fops = {
 };
 
 static ssize_t MMC_RXIPV4_gd_octets_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13594,13 +13594,13 @@ static const struct file_operations MMC_RXIPV4_gd_octets_fops = {
 };
 
 static ssize_t mmc_rxicmp_err_pkts_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13618,13 +13618,13 @@ static const struct file_operations mmc_rxicmp_err_pkts_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxicmp_gd_pkts_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_rxicmp_gd_pkts_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13642,13 +13642,13 @@ static const struct file_operations mmc_rxicmp_gd_pkts_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxtcp_err_pkts_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_rxtcp_err_pkts_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13666,13 +13666,13 @@ static const struct file_operations mmc_rxtcp_err_pkts_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxtcp_gd_pkts_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mmc_rxtcp_gd_pkts_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13690,13 +13690,13 @@ static const struct file_operations mmc_rxtcp_gd_pkts_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxudp_err_pkts_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_rxudp_err_pkts_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13714,13 +13714,13 @@ static const struct file_operations mmc_rxudp_err_pkts_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxudp_gd_pkts_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mmc_rxudp_gd_pkts_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13739,13 +13739,13 @@ static const struct file_operations mmc_rxudp_gd_pkts_fops = {
 };
 
 static ssize_t MMC_RXIPV6_nopay_pkts_read(struct file *file,
-					  char __user * userbuf, size_t count,
-					  loff_t * ppos)
+					  char __user *userbuf, size_t count,
+					  loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13764,13 +13764,13 @@ static const struct file_operations MMC_RXIPV6_nopay_pkts_fops = {
 };
 
 static ssize_t MMC_RXIPV6_hdrerr_pkts_read(struct file *file,
-					   char __user * userbuf, size_t count,
-					   loff_t * ppos)
+					   char __user *userbuf, size_t count,
+					   loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13788,13 +13788,13 @@ static const struct file_operations MMC_RXIPV6_hdrerr_pkts_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MMC_RXIPV6_gd_pkts_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t MMC_RXIPV6_gd_pkts_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13813,13 +13813,13 @@ static const struct file_operations MMC_RXIPV6_gd_pkts_fops = {
 };
 
 static ssize_t MMC_RXIPV4_ubsbl_pkts_read(struct file *file,
-					  char __user * userbuf, size_t count,
-					  loff_t * ppos)
+					  char __user *userbuf, size_t count,
+					  loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13838,13 +13838,13 @@ static const struct file_operations MMC_RXIPV4_ubsbl_pkts_fops = {
 };
 
 static ssize_t MMC_RXIPV4_frag_pkts_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13863,13 +13863,13 @@ static const struct file_operations MMC_RXIPV4_frag_pkts_fops = {
 };
 
 static ssize_t MMC_RXIPV4_nopay_pkts_read(struct file *file,
-					  char __user * userbuf, size_t count,
-					  loff_t * ppos)
+					  char __user *userbuf, size_t count,
+					  loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13888,13 +13888,13 @@ static const struct file_operations MMC_RXIPV4_nopay_pkts_fops = {
 };
 
 static ssize_t MMC_RXIPV4_hdrerr_pkts_read(struct file *file,
-					   char __user * userbuf, size_t count,
-					   loff_t * ppos)
+					   char __user *userbuf, size_t count,
+					   loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13912,13 +13912,13 @@ static const struct file_operations MMC_RXIPV4_hdrerr_pkts_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MMC_RXIPV4_gd_pkts_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t MMC_RXIPV4_gd_pkts_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13937,13 +13937,13 @@ static const struct file_operations MMC_RXIPV4_gd_pkts_fops = {
 };
 
 static ssize_t mmc_rxctrlpackets_g_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13961,13 +13961,13 @@ static const struct file_operations mmc_rxctrlpackets_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxrcverror_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t mmc_rxrcverror_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -13986,13 +13986,13 @@ static const struct file_operations mmc_rxrcverror_fops = {
 };
 
 static ssize_t mmc_rxwatchdogerror_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14011,13 +14011,13 @@ static const struct file_operations mmc_rxwatchdogerror_fops = {
 };
 
 static ssize_t mmc_rxvlanpackets_gb_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14035,13 +14035,13 @@ static const struct file_operations mmc_rxvlanpackets_gb_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxfifooverflow_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_rxfifooverflow_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14059,13 +14059,13 @@ static const struct file_operations mmc_rxfifooverflow_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxpausepackets_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_rxpausepackets_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14084,13 +14084,13 @@ static const struct file_operations mmc_rxpausepackets_fops = {
 };
 
 static ssize_t mmc_rxoutofrangetype_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14108,13 +14108,13 @@ static const struct file_operations mmc_rxoutofrangetype_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxlengtherror_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mmc_rxlengtherror_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14133,13 +14133,13 @@ static const struct file_operations mmc_rxlengtherror_fops = {
 };
 
 static ssize_t mmc_rxunicastpackets_g_read(struct file *file,
-					   char __user * userbuf, size_t count,
-					   loff_t * ppos)
+					   char __user *userbuf, size_t count,
+					   loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14158,13 +14158,13 @@ static const struct file_operations mmc_rxunicastpackets_g_fops = {
 };
 
 static ssize_t MMC_RX1024tomaxoctets_gb_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14183,13 +14183,13 @@ static const struct file_operations MMC_RX1024tomaxoctets_gb_fops = {
 };
 
 static ssize_t MMC_RX512TO1023octets_gb_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14208,13 +14208,13 @@ static const struct file_operations MMC_RX512TO1023octets_gb_fops = {
 };
 
 static ssize_t MMC_RX256TO511octets_gb_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14233,13 +14233,13 @@ static const struct file_operations MMC_RX256TO511octets_gb_fops = {
 };
 
 static ssize_t MMC_RX128TO255octets_gb_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14258,13 +14258,13 @@ static const struct file_operations MMC_RX128TO255octets_gb_fops = {
 };
 
 static ssize_t MMC_RX65TO127octets_gb_read(struct file *file,
-					   char __user * userbuf, size_t count,
-					   loff_t * ppos)
+					   char __user *userbuf, size_t count,
+					   loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14282,13 +14282,13 @@ static const struct file_operations MMC_RX65TO127octets_gb_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MMC_RX64octets_gb_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MMC_RX64octets_gb_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14306,13 +14306,13 @@ static const struct file_operations MMC_RX64octets_gb_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxoversize_g_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t mmc_rxoversize_g_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14330,13 +14330,13 @@ static const struct file_operations mmc_rxoversize_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxundersize_g_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mmc_rxundersize_g_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14354,13 +14354,13 @@ static const struct file_operations mmc_rxundersize_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxjabbererror_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mmc_rxjabbererror_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14378,13 +14378,13 @@ static const struct file_operations mmc_rxjabbererror_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxrunterror_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t mmc_rxrunterror_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14403,13 +14403,13 @@ static const struct file_operations mmc_rxrunterror_fops = {
 };
 
 static ssize_t mmc_rxalignmenterror_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14427,13 +14427,13 @@ static const struct file_operations mmc_rxalignmenterror_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxcrcerror_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t mmc_rxcrcerror_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14452,13 +14452,13 @@ static const struct file_operations mmc_rxcrcerror_fops = {
 };
 
 static ssize_t mmc_rxmulticastpackets_g_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14477,13 +14477,13 @@ static const struct file_operations mmc_rxmulticastpackets_g_fops = {
 };
 
 static ssize_t mmc_rxbroadcastpackets_g_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14501,13 +14501,13 @@ static const struct file_operations mmc_rxbroadcastpackets_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_rxoctetcount_g_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_rxoctetcount_g_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14526,13 +14526,13 @@ static const struct file_operations mmc_rxoctetcount_g_fops = {
 };
 
 static ssize_t mmc_rxoctetcount_gb_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14551,13 +14551,13 @@ static const struct file_operations mmc_rxoctetcount_gb_fops = {
 };
 
 static ssize_t mmc_rxpacketcount_gb_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14575,13 +14575,13 @@ static const struct file_operations mmc_rxpacketcount_gb_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txoversize_g_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t mmc_txoversize_g_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14600,13 +14600,13 @@ static const struct file_operations mmc_txoversize_g_fops = {
 };
 
 static ssize_t mmc_txvlanpackets_g_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14624,13 +14624,13 @@ static const struct file_operations mmc_txvlanpackets_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txpausepackets_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_txpausepackets_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14648,13 +14648,13 @@ static const struct file_operations mmc_txpausepackets_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txexcessdef_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t mmc_txexcessdef_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14673,13 +14673,13 @@ static const struct file_operations mmc_txexcessdef_fops = {
 };
 
 static ssize_t mmc_txpacketscount_g_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14697,13 +14697,13 @@ static const struct file_operations mmc_txpacketscount_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txoctetcount_g_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_txoctetcount_g_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14721,13 +14721,13 @@ static const struct file_operations mmc_txoctetcount_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txcarriererror_read(struct file *file, char __user * userbuf,
-				       size_t count, loff_t * ppos)
+static ssize_t mmc_txcarriererror_read(struct file *file, char __user *userbuf,
+				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14745,13 +14745,13 @@ static const struct file_operations mmc_txcarriererror_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txexesscol_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t mmc_txexesscol_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14769,13 +14769,13 @@ static const struct file_operations mmc_txexesscol_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txlatecol_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t mmc_txlatecol_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14793,13 +14793,13 @@ static const struct file_operations mmc_txlatecol_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txdeferred_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t mmc_txdeferred_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14817,13 +14817,13 @@ static const struct file_operations mmc_txdeferred_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txmulticol_g_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t mmc_txmulticol_g_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14841,13 +14841,13 @@ static const struct file_operations mmc_txmulticol_g_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_txsinglecol_g_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mmc_txsinglecol_g_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14866,13 +14866,13 @@ static const struct file_operations mmc_txsinglecol_g_fops = {
 };
 
 static ssize_t mmc_txunderflowerror_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14891,13 +14891,13 @@ static const struct file_operations mmc_txunderflowerror_fops = {
 };
 
 static ssize_t mmc_txbroadcastpackets_gb_read(struct file *file,
-					      char __user * userbuf,
-					      size_t count, loff_t * ppos)
+					      char __user *userbuf,
+					      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14916,13 +14916,13 @@ static const struct file_operations mmc_txbroadcastpackets_gb_fops = {
 };
 
 static ssize_t mmc_txmulticastpackets_gb_read(struct file *file,
-					      char __user * userbuf,
-					      size_t count, loff_t * ppos)
+					      char __user *userbuf,
+					      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14941,13 +14941,13 @@ static const struct file_operations mmc_txmulticastpackets_gb_fops = {
 };
 
 static ssize_t mmc_txunicastpackets_gb_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14966,13 +14966,13 @@ static const struct file_operations mmc_txunicastpackets_gb_fops = {
 };
 
 static ssize_t MMC_TX1024tomaxoctets_gb_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -14991,13 +14991,13 @@ static const struct file_operations MMC_TX1024tomaxoctets_gb_fops = {
 };
 
 static ssize_t MMC_TX512TO1023octets_gb_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15016,13 +15016,13 @@ static const struct file_operations MMC_TX512TO1023octets_gb_fops = {
 };
 
 static ssize_t MMC_TX256TO511octets_gb_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15041,13 +15041,13 @@ static const struct file_operations MMC_TX256TO511octets_gb_fops = {
 };
 
 static ssize_t MMC_TX128TO255octets_gb_read(struct file *file,
-					    char __user * userbuf, size_t count,
-					    loff_t * ppos)
+					    char __user *userbuf, size_t count,
+					    loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15066,13 +15066,13 @@ static const struct file_operations MMC_TX128TO255octets_gb_fops = {
 };
 
 static ssize_t MMC_TX65TO127octets_gb_read(struct file *file,
-					   char __user * userbuf, size_t count,
-					   loff_t * ppos)
+					   char __user *userbuf, size_t count,
+					   loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15090,13 +15090,13 @@ static const struct file_operations MMC_TX65TO127octets_gb_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MMC_TX64octets_gb_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t MMC_TX64octets_gb_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15115,13 +15115,13 @@ static const struct file_operations MMC_TX64octets_gb_fops = {
 };
 
 static ssize_t mmc_txmulticastpackets_g_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15140,13 +15140,13 @@ static const struct file_operations mmc_txmulticastpackets_g_fops = {
 };
 
 static ssize_t mmc_txbroadcastpackets_g_read(struct file *file,
-					     char __user * userbuf,
-					     size_t count, loff_t * ppos)
+					     char __user *userbuf,
+					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15165,13 +15165,13 @@ static const struct file_operations mmc_txbroadcastpackets_g_fops = {
 };
 
 static ssize_t mmc_txpacketcount_gb_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15190,13 +15190,13 @@ static const struct file_operations mmc_txpacketcount_gb_fops = {
 };
 
 static ssize_t mmc_txoctetcount_gb_read(struct file *file,
-					char __user * userbuf, size_t count,
-					loff_t * ppos)
+					char __user *userbuf, size_t count,
+					loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15214,13 +15214,13 @@ static const struct file_operations mmc_txoctetcount_gb_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_ipc_intr_rx_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t mmc_ipc_intr_rx_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15239,13 +15239,13 @@ static const struct file_operations mmc_ipc_intr_rx_fops = {
 };
 
 static ssize_t mmc_ipc_intr_mask_rx_read(struct file *file,
-					 char __user * userbuf, size_t count,
-					 loff_t * ppos)
+					 char __user *userbuf, size_t count,
+					 loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15263,13 +15263,13 @@ static const struct file_operations mmc_ipc_intr_mask_rx_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_intr_mask_tx_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t mmc_intr_mask_tx_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15287,13 +15287,13 @@ static const struct file_operations mmc_intr_mask_tx_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_intr_mask_rx_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t mmc_intr_mask_rx_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15311,13 +15311,13 @@ static const struct file_operations mmc_intr_mask_rx_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_intr_tx_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t mmc_intr_tx_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15335,13 +15335,13 @@ static const struct file_operations mmc_intr_tx_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_intr_rx_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t mmc_intr_rx_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15359,13 +15359,13 @@ static const struct file_operations mmc_intr_rx_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mmc_cntrl_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t mmc_cntrl_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 
 	if (!pdata->hw_feat.mmc_sel) {
-		printk(KERN_ALERT
+		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
 		return -EINVAL;
 	}
@@ -15383,8 +15383,8 @@ static const struct file_operations mmc_cntrl_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1lr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_MA1lr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1LR_RD(MAC_MA1lr_val);
@@ -15401,8 +15401,8 @@ static const struct file_operations MAC_MA1lr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA1hr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_MA1hr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA1HR_RD(MAC_MA1hr_val);
@@ -15419,8 +15419,8 @@ static const struct file_operations MAC_MA1hr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA0lr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_MA0lr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA0LR_RD(MAC_MA0lr_val);
@@ -15437,8 +15437,8 @@ static const struct file_operations MAC_MA0lr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_MA0hr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_MA0hr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MA0HR_RD(MAC_MA0hr_val);
@@ -15454,8 +15454,8 @@ static const struct file_operations MAC_MA0hr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_gpior_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t mac_gpior_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_GPIOR_RD(mac_gpior_val);
@@ -15471,8 +15471,8 @@ static const struct file_operations mac_gpior_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_gmiidr_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t mac_gmiidr_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_GMIIDR_RD(mac_gmiidr_val);
@@ -15488,8 +15488,8 @@ static const struct file_operations mac_gmiidr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_gmiiar_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t mac_gmiiar_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_GMIIAR_RD(mac_gmiiar_val);
@@ -15505,8 +15505,8 @@ static const struct file_operations mac_gmiiar_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HFR2_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HFR2_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HFR2_RD(MAC_HFR2_val);
@@ -15522,8 +15522,8 @@ static const struct file_operations MAC_HFR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HFR1_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HFR1_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HFR1_RD(MAC_HFR1_val);
@@ -15539,8 +15539,8 @@ static const struct file_operations MAC_HFR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HFR0_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HFR0_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HFR0_RD(MAC_HFR0_val);
@@ -15556,8 +15556,8 @@ static const struct file_operations MAC_HFR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_mdr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_mdr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MDR_RD(mac_mdr_val);
@@ -15573,8 +15573,8 @@ static const struct file_operations mac_mdr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_vr_read(struct file *file, char __user * userbuf,
-			   size_t count, loff_t * ppos)
+static ssize_t mac_vr_read(struct file *file, char __user *userbuf,
+			   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_VR_RD(mac_vr_val);
@@ -15590,8 +15590,8 @@ static const struct file_operations mac_vr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR7_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR7_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR7_RD(MAC_HTR7_val);
@@ -15607,8 +15607,8 @@ static const struct file_operations MAC_HTR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR6_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR6_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR6_RD(MAC_HTR6_val);
@@ -15624,8 +15624,8 @@ static const struct file_operations MAC_HTR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR5_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR5_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR5_RD(MAC_HTR5_val);
@@ -15641,8 +15641,8 @@ static const struct file_operations MAC_HTR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR4_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR4_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR4_RD(MAC_HTR4_val);
@@ -15658,8 +15658,8 @@ static const struct file_operations MAC_HTR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR3_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR3_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR3_RD(MAC_HTR3_val);
@@ -15675,8 +15675,8 @@ static const struct file_operations MAC_HTR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR2_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR2_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR2_RD(MAC_HTR2_val);
@@ -15692,8 +15692,8 @@ static const struct file_operations MAC_HTR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR1_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR1_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR1_RD(MAC_HTR1_val);
@@ -15709,8 +15709,8 @@ static const struct file_operations MAC_HTR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_HTR0_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MAC_HTR0_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_HTR0_RD(MAC_HTR0_val);
@@ -15726,8 +15726,8 @@ static const struct file_operations MAC_HTR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR7_RD(DMA_RIWTR7_val);
@@ -15743,8 +15743,8 @@ static const struct file_operations DMA_RIWTR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR6_RD(DMA_RIWTR6_val);
@@ -15760,8 +15760,8 @@ static const struct file_operations DMA_RIWTR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR5_RD(DMA_RIWTR5_val);
@@ -15777,8 +15777,8 @@ static const struct file_operations DMA_RIWTR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR4_RD(DMA_RIWTR4_val);
@@ -15794,8 +15794,8 @@ static const struct file_operations DMA_RIWTR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR3_RD(DMA_RIWTR3_val);
@@ -15811,8 +15811,8 @@ static const struct file_operations DMA_RIWTR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR2_RD(DMA_RIWTR2_val);
@@ -15828,8 +15828,8 @@ static const struct file_operations DMA_RIWTR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR1_RD(DMA_RIWTR1_val);
@@ -15845,8 +15845,8 @@ static const struct file_operations DMA_RIWTR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RIWTR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RIWTR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RIWTR0_RD(DMA_RIWTR0_val);
@@ -15862,8 +15862,8 @@ static const struct file_operations DMA_RIWTR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR7_RD(DMA_RDRLR7_val);
@@ -15879,8 +15879,8 @@ static const struct file_operations DMA_RDRLR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR6_RD(DMA_RDRLR6_val);
@@ -15896,8 +15896,8 @@ static const struct file_operations DMA_RDRLR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR5_RD(DMA_RDRLR5_val);
@@ -15913,8 +15913,8 @@ static const struct file_operations DMA_RDRLR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR4_RD(DMA_RDRLR4_val);
@@ -15930,8 +15930,8 @@ static const struct file_operations DMA_RDRLR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR3_RD(DMA_RDRLR3_val);
@@ -15947,8 +15947,8 @@ static const struct file_operations DMA_RDRLR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR2_RD(DMA_RDRLR2_val);
@@ -15964,8 +15964,8 @@ static const struct file_operations DMA_RDRLR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR1_RD(DMA_RDRLR1_val);
@@ -15981,8 +15981,8 @@ static const struct file_operations DMA_RDRLR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDRLR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDRLR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDRLR0_RD(DMA_RDRLR0_val);
@@ -15998,8 +15998,8 @@ static const struct file_operations DMA_RDRLR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR7_RD(DMA_TDRLR7_val);
@@ -16015,8 +16015,8 @@ static const struct file_operations DMA_TDRLR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR6_RD(DMA_TDRLR6_val);
@@ -16032,8 +16032,8 @@ static const struct file_operations DMA_TDRLR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR5_RD(DMA_TDRLR5_val);
@@ -16049,8 +16049,8 @@ static const struct file_operations DMA_TDRLR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR4_RD(DMA_TDRLR4_val);
@@ -16066,8 +16066,8 @@ static const struct file_operations DMA_TDRLR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR3_RD(DMA_TDRLR3_val);
@@ -16083,8 +16083,8 @@ static const struct file_operations DMA_TDRLR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR2_RD(DMA_TDRLR2_val);
@@ -16100,8 +16100,8 @@ static const struct file_operations DMA_TDRLR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR1_RD(DMA_TDRLR1_val);
@@ -16117,8 +16117,8 @@ static const struct file_operations DMA_TDRLR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDRLR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDRLR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDRLR0_RD(DMA_TDRLR0_val);
@@ -16134,8 +16134,8 @@ static const struct file_operations DMA_TDRLR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR7_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR7_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR7_RD(DMA_RDTP_RPDR7_val);
@@ -16151,8 +16151,8 @@ static const struct file_operations DMA_RDTP_RPDR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR6_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR6_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR6_RD(DMA_RDTP_RPDR6_val);
@@ -16168,8 +16168,8 @@ static const struct file_operations DMA_RDTP_RPDR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR5_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR5_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR5_RD(DMA_RDTP_RPDR5_val);
@@ -16185,8 +16185,8 @@ static const struct file_operations DMA_RDTP_RPDR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR4_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR4_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR4_RD(DMA_RDTP_RPDR4_val);
@@ -16202,8 +16202,8 @@ static const struct file_operations DMA_RDTP_RPDR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR3_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR3_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR3_RD(DMA_RDTP_RPDR3_val);
@@ -16219,8 +16219,8 @@ static const struct file_operations DMA_RDTP_RPDR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR2_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR2_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR2_RD(DMA_RDTP_RPDR2_val);
@@ -16236,8 +16236,8 @@ static const struct file_operations DMA_RDTP_RPDR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR1_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR1_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR1_RD(DMA_RDTP_RPDR1_val);
@@ -16253,8 +16253,8 @@ static const struct file_operations DMA_RDTP_RPDR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDTP_RPDR0_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_RDTP_RPDR0_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDTP_RPDR0_RD(DMA_RDTP_RPDR0_val);
@@ -16270,8 +16270,8 @@ static const struct file_operations DMA_RDTP_RPDR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR7_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR7_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR7_RD(DMA_TDTP_TPDR7_val);
@@ -16287,8 +16287,8 @@ static const struct file_operations DMA_TDTP_TPDR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR6_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR6_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR6_RD(DMA_TDTP_TPDR6_val);
@@ -16304,8 +16304,8 @@ static const struct file_operations DMA_TDTP_TPDR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR5_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR5_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR5_RD(DMA_TDTP_TPDR5_val);
@@ -16321,8 +16321,8 @@ static const struct file_operations DMA_TDTP_TPDR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR4_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR4_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR4_RD(DMA_TDTP_TPDR4_val);
@@ -16338,8 +16338,8 @@ static const struct file_operations DMA_TDTP_TPDR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR3_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR3_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR3_RD(DMA_TDTP_TPDR3_val);
@@ -16355,8 +16355,8 @@ static const struct file_operations DMA_TDTP_TPDR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR2_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR2_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR2_RD(DMA_TDTP_TPDR2_val);
@@ -16372,8 +16372,8 @@ static const struct file_operations DMA_TDTP_TPDR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR1_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR1_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR1_RD(DMA_TDTP_TPDR1_val);
@@ -16389,8 +16389,8 @@ static const struct file_operations DMA_TDTP_TPDR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDTP_TPDR0_read(struct file *file, char __user * userbuf,
-				   size_t count, loff_t * ppos)
+static ssize_t DMA_TDTP_TPDR0_read(struct file *file, char __user *userbuf,
+				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDTP_TPDR0_RD(DMA_TDTP_TPDR0_val);
@@ -16406,8 +16406,8 @@ static const struct file_operations DMA_TDTP_TPDR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR7_RD(DMA_RDLAR7_val);
@@ -16423,8 +16423,8 @@ static const struct file_operations DMA_RDLAR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR6_RD(DMA_RDLAR6_val);
@@ -16440,8 +16440,8 @@ static const struct file_operations DMA_RDLAR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR5_RD(DMA_RDLAR5_val);
@@ -16457,8 +16457,8 @@ static const struct file_operations DMA_RDLAR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR4_RD(DMA_RDLAR4_val);
@@ -16474,8 +16474,8 @@ static const struct file_operations DMA_RDLAR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR3_RD(DMA_RDLAR3_val);
@@ -16491,8 +16491,8 @@ static const struct file_operations DMA_RDLAR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR2_RD(DMA_RDLAR2_val);
@@ -16508,8 +16508,8 @@ static const struct file_operations DMA_RDLAR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR1_RD(DMA_RDLAR1_val);
@@ -16525,8 +16525,8 @@ static const struct file_operations DMA_RDLAR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RDLAR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_RDLAR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RDLAR0_RD(DMA_RDLAR0_val);
@@ -16542,8 +16542,8 @@ static const struct file_operations DMA_RDLAR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR7_RD(DMA_TDLAR7_val);
@@ -16559,8 +16559,8 @@ static const struct file_operations DMA_TDLAR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR6_RD(DMA_TDLAR6_val);
@@ -16576,8 +16576,8 @@ static const struct file_operations DMA_TDLAR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR5_RD(DMA_TDLAR5_val);
@@ -16593,8 +16593,8 @@ static const struct file_operations DMA_TDLAR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR4_RD(DMA_TDLAR4_val);
@@ -16610,8 +16610,8 @@ static const struct file_operations DMA_TDLAR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR3_RD(DMA_TDLAR3_val);
@@ -16627,8 +16627,8 @@ static const struct file_operations DMA_TDLAR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR2_RD(DMA_TDLAR2_val);
@@ -16644,8 +16644,8 @@ static const struct file_operations DMA_TDLAR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR1_RD(DMA_TDLAR1_val);
@@ -16661,8 +16661,8 @@ static const struct file_operations DMA_TDLAR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TDLAR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_TDLAR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TDLAR0_RD(DMA_TDLAR0_val);
@@ -16678,8 +16678,8 @@ static const struct file_operations DMA_TDLAR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER7_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER7_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(7, DMA_IER7_val);
@@ -16695,8 +16695,8 @@ static const struct file_operations DMA_IER7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER6_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER6_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(6, DMA_IER6_val);
@@ -16712,8 +16712,8 @@ static const struct file_operations DMA_IER6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER5_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER5_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(5, DMA_IER5_val);
@@ -16729,8 +16729,8 @@ static const struct file_operations DMA_IER5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER4_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER4_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(4, DMA_IER4_val);
@@ -16746,8 +16746,8 @@ static const struct file_operations DMA_IER4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER3_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER3_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(3, DMA_IER3_val);
@@ -16763,8 +16763,8 @@ static const struct file_operations DMA_IER3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER2_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER2_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(2, DMA_IER2_val);
@@ -16780,8 +16780,8 @@ static const struct file_operations DMA_IER2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER1_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER1_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(1, DMA_IER1_val);
@@ -16797,8 +16797,8 @@ static const struct file_operations DMA_IER1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_IER0_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_IER0_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_IER_RD(0, DMA_IER0_val);
@@ -16814,8 +16814,8 @@ static const struct file_operations DMA_IER0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_imr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_imr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_IMR_RD(mac_imr_val);
@@ -16831,8 +16831,8 @@ static const struct file_operations mac_imr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_isr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_isr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_ISR_RD(mac_isr_val);
@@ -16848,8 +16848,8 @@ static const struct file_operations mac_isr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mtl_isr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mtl_isr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_ISR_RD(mtl_isr_val);
@@ -16865,8 +16865,8 @@ static const struct file_operations mtl_isr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR7_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR7_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(7, DMA_SR7_val);
@@ -16882,8 +16882,8 @@ static const struct file_operations DMA_SR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR6_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR6_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(6, DMA_SR6_val);
@@ -16899,8 +16899,8 @@ static const struct file_operations DMA_SR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR5_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR5_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(5, DMA_SR5_val);
@@ -16916,8 +16916,8 @@ static const struct file_operations DMA_SR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR4_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR4_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(4, DMA_SR4_val);
@@ -16933,8 +16933,8 @@ static const struct file_operations DMA_SR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR3_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR3_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(3, DMA_SR3_val);
@@ -16950,8 +16950,8 @@ static const struct file_operations DMA_SR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR2_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR2_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(2, DMA_SR2_val);
@@ -16967,8 +16967,8 @@ static const struct file_operations DMA_SR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR1_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR1_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(1, DMA_SR1_val);
@@ -16984,8 +16984,8 @@ static const struct file_operations DMA_SR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SR0_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_SR0_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SR_RD(0, DMA_SR0_val);
@@ -17001,8 +17001,8 @@ static const struct file_operations DMA_SR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t dma_isr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t dma_isr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_ISR_RD(dma_isr_val);
@@ -17018,8 +17018,8 @@ static const struct file_operations dma_isr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_DSR2_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_DSR2_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_DSR2_RD(DMA_DSR2_val);
@@ -17035,8 +17035,8 @@ static const struct file_operations DMA_DSR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_DSR1_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_DSR1_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_DSR1_RD(DMA_DSR1_val);
@@ -17052,8 +17052,8 @@ static const struct file_operations DMA_DSR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_DSR0_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_DSR0_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_DSR0_RD(DMA_DSR0_val);
@@ -17069,8 +17069,8 @@ static const struct file_operations DMA_DSR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0rdr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_Q0rdr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0RDR_RD(MTL_Q0rdr_val);
@@ -17086,8 +17086,8 @@ static const struct file_operations MTL_Q0rdr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0esr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_Q0esr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0ESR_RD(MTL_Q0esr_val);
@@ -17103,8 +17103,8 @@ static const struct file_operations MTL_Q0esr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0tdr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_Q0tdr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0TDR_RD(MTL_Q0tdr_val);
@@ -17120,8 +17120,8 @@ static const struct file_operations MTL_Q0tdr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR7_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR7_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR7_RD(DMA_CHRBAR7_val);
@@ -17137,8 +17137,8 @@ static const struct file_operations DMA_CHRBAR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR6_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR6_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR6_RD(DMA_CHRBAR6_val);
@@ -17154,8 +17154,8 @@ static const struct file_operations DMA_CHRBAR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR5_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR5_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR5_RD(DMA_CHRBAR5_val);
@@ -17171,8 +17171,8 @@ static const struct file_operations DMA_CHRBAR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR4_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR4_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR4_RD(DMA_CHRBAR4_val);
@@ -17188,8 +17188,8 @@ static const struct file_operations DMA_CHRBAR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR3_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR3_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR3_RD(DMA_CHRBAR3_val);
@@ -17205,8 +17205,8 @@ static const struct file_operations DMA_CHRBAR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR2_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR2_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR2_RD(DMA_CHRBAR2_val);
@@ -17222,8 +17222,8 @@ static const struct file_operations DMA_CHRBAR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR1_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR1_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR1_RD(DMA_CHRBAR1_val);
@@ -17239,8 +17239,8 @@ static const struct file_operations DMA_CHRBAR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRBAR0_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHRBAR0_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRBAR0_RD(DMA_CHRBAR0_val);
@@ -17256,8 +17256,8 @@ static const struct file_operations DMA_CHRBAR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR7_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR7_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR7_RD(DMA_CHTBAR7_val);
@@ -17273,8 +17273,8 @@ static const struct file_operations DMA_CHTBAR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR6_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR6_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR6_RD(DMA_CHTBAR6_val);
@@ -17290,8 +17290,8 @@ static const struct file_operations DMA_CHTBAR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR5_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR5_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR5_RD(DMA_CHTBAR5_val);
@@ -17307,8 +17307,8 @@ static const struct file_operations DMA_CHTBAR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR4_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR4_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR4_RD(DMA_CHTBAR4_val);
@@ -17324,8 +17324,8 @@ static const struct file_operations DMA_CHTBAR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR3_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR3_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR3_RD(DMA_CHTBAR3_val);
@@ -17341,8 +17341,8 @@ static const struct file_operations DMA_CHTBAR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR2_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR2_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR2_RD(DMA_CHTBAR2_val);
@@ -17358,8 +17358,8 @@ static const struct file_operations DMA_CHTBAR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR1_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR1_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR1_RD(DMA_CHTBAR1_val);
@@ -17375,8 +17375,8 @@ static const struct file_operations DMA_CHTBAR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTBAR0_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_CHTBAR0_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTBAR0_RD(DMA_CHTBAR0_val);
@@ -17392,8 +17392,8 @@ static const struct file_operations DMA_CHTBAR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR7_RD(DMA_CHRDR7_val);
@@ -17409,8 +17409,8 @@ static const struct file_operations DMA_CHRDR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR6_RD(DMA_CHRDR6_val);
@@ -17426,8 +17426,8 @@ static const struct file_operations DMA_CHRDR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR5_RD(DMA_CHRDR5_val);
@@ -17443,8 +17443,8 @@ static const struct file_operations DMA_CHRDR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR4_RD(DMA_CHRDR4_val);
@@ -17460,8 +17460,8 @@ static const struct file_operations DMA_CHRDR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR3_RD(DMA_CHRDR3_val);
@@ -17477,8 +17477,8 @@ static const struct file_operations DMA_CHRDR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR2_RD(DMA_CHRDR2_val);
@@ -17494,8 +17494,8 @@ static const struct file_operations DMA_CHRDR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR1_RD(DMA_CHRDR1_val);
@@ -17511,8 +17511,8 @@ static const struct file_operations DMA_CHRDR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHRDR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHRDR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHRDR0_RD(DMA_CHRDR0_val);
@@ -17528,8 +17528,8 @@ static const struct file_operations DMA_CHRDR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR7_RD(DMA_CHTDR7_val);
@@ -17545,8 +17545,8 @@ static const struct file_operations DMA_CHTDR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR6_RD(DMA_CHTDR6_val);
@@ -17562,8 +17562,8 @@ static const struct file_operations DMA_CHTDR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR5_RD(DMA_CHTDR5_val);
@@ -17579,8 +17579,8 @@ static const struct file_operations DMA_CHTDR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR4_RD(DMA_CHTDR4_val);
@@ -17596,8 +17596,8 @@ static const struct file_operations DMA_CHTDR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR3_RD(DMA_CHTDR3_val);
@@ -17613,8 +17613,8 @@ static const struct file_operations DMA_CHTDR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR2_RD(DMA_CHTDR2_val);
@@ -17630,8 +17630,8 @@ static const struct file_operations DMA_CHTDR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR1_RD(DMA_CHTDR1_val);
@@ -17647,8 +17647,8 @@ static const struct file_operations DMA_CHTDR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CHTDR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_CHTDR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CHTDR0_RD(DMA_CHTDR0_val);
@@ -17664,8 +17664,8 @@ static const struct file_operations DMA_CHTDR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR7_RD(DMA_SFCSR7_val);
@@ -17681,8 +17681,8 @@ static const struct file_operations DMA_SFCSR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR6_RD(DMA_SFCSR6_val);
@@ -17698,8 +17698,8 @@ static const struct file_operations DMA_SFCSR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR5_RD(DMA_SFCSR5_val);
@@ -17715,8 +17715,8 @@ static const struct file_operations DMA_SFCSR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR4_RD(DMA_SFCSR4_val);
@@ -17732,8 +17732,8 @@ static const struct file_operations DMA_SFCSR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR3_RD(DMA_SFCSR3_val);
@@ -17749,8 +17749,8 @@ static const struct file_operations DMA_SFCSR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR2_RD(DMA_SFCSR2_val);
@@ -17766,8 +17766,8 @@ static const struct file_operations DMA_SFCSR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR1_RD(DMA_SFCSR1_val);
@@ -17783,8 +17783,8 @@ static const struct file_operations DMA_SFCSR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_SFCSR0_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t DMA_SFCSR0_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SFCSR0_RD(DMA_SFCSR0_val);
@@ -17800,8 +17800,8 @@ static const struct file_operations DMA_SFCSR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_ivlantirr_read(struct file *file, char __user * userbuf,
-				  size_t count, loff_t * ppos)
+static ssize_t mac_ivlantirr_read(struct file *file, char __user *userbuf,
+				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_IVLANTIRR_RD(mac_ivlantirr_val);
@@ -17818,8 +17818,8 @@ static const struct file_operations mac_ivlantirr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_vlantirr_read(struct file *file, char __user * userbuf,
-				 size_t count, loff_t * ppos)
+static ssize_t mac_vlantirr_read(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_VLANTIRR_RD(mac_vlantirr_val);
@@ -17836,8 +17836,8 @@ static const struct file_operations mac_vlantirr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_vlanhtr_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t mac_vlanhtr_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_VLANHTR_RD(mac_vlanhtr_val);
@@ -17854,8 +17854,8 @@ static const struct file_operations mac_vlanhtr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_vlantr_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t mac_vlantr_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_VLANTR_RD(mac_vlantr_val);
@@ -17872,8 +17872,8 @@ static const struct file_operations mac_vlantr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t dma_sbus_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t dma_sbus_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_SBUS_RD(dma_sbus_val);
@@ -17889,8 +17889,8 @@ static const struct file_operations dma_sbus_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t dma_bmr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t dma_bmr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_BMR_RD(dma_bmr_val);
@@ -17906,8 +17906,8 @@ static const struct file_operations dma_bmr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0rcr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_Q0rcr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0RCR_RD(MTL_Q0rcr_val);
@@ -17923,8 +17923,8 @@ static const struct file_operations MTL_Q0rcr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0ocr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_Q0ocr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0OCR_RD(MTL_Q0ocr_val);
@@ -17940,8 +17940,8 @@ static const struct file_operations MTL_Q0ocr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0romr_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_Q0romr_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0ROMR_RD(MTL_Q0romr_val);
@@ -17957,8 +17957,8 @@ static const struct file_operations MTL_Q0romr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0qr_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t MTL_Q0qr_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0QR_RD(MTL_Q0qr_val);
@@ -17974,8 +17974,8 @@ static const struct file_operations MTL_Q0qr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0ecr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_Q0ecr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0ECR_RD(MTL_Q0ecr_val);
@@ -17991,8 +17991,8 @@ static const struct file_operations MTL_Q0ecr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0ucr_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MTL_Q0ucr_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0UCR_RD(MTL_Q0ucr_val);
@@ -18008,8 +18008,8 @@ static const struct file_operations MTL_Q0ucr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_Q0tomr_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MTL_Q0tomr_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_Q0TOMR_RD(MTL_Q0tomr_val);
@@ -18025,8 +18025,8 @@ static const struct file_operations MTL_Q0tomr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_RQDCM1r_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MTL_RQDCM1r_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_RQDCM1R_RD(MTL_RQDCM1r_val);
@@ -18042,8 +18042,8 @@ static const struct file_operations MTL_RQDCM1r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MTL_RQDCM0r_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t MTL_RQDCM0r_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_RQDCM0R_RD(MTL_RQDCM0r_val);
@@ -18059,8 +18059,8 @@ static const struct file_operations MTL_RQDCM0r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mtl_fddr_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mtl_fddr_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_FDDR_RD(mtl_fddr_val);
@@ -18076,8 +18076,8 @@ static const struct file_operations mtl_fddr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mtl_fdacs_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t mtl_fdacs_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_FDACS_RD(mtl_fdacs_val);
@@ -18093,8 +18093,8 @@ static const struct file_operations mtl_fdacs_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mtl_omr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mtl_omr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MTL_OMR_RD(mtl_omr_val);
@@ -18110,8 +18110,8 @@ static const struct file_operations mtl_omr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_RQC3r_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_RQC3r_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_RQC3R_RD(MAC_RQC3r_val);
@@ -18127,8 +18127,8 @@ static const struct file_operations MAC_RQC3r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_RQC2r_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_RQC2r_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_RQC2R_RD(MAC_RQC2r_val);
@@ -18144,8 +18144,8 @@ static const struct file_operations MAC_RQC2r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_RQC1r_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_RQC1r_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_RQC1R_RD(MAC_RQC1r_val);
@@ -18161,8 +18161,8 @@ static const struct file_operations MAC_RQC1r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_RQC0r_read(struct file *file, char __user * userbuf,
-			      size_t count, loff_t * ppos)
+static ssize_t MAC_RQC0r_read(struct file *file, char __user *userbuf,
+			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_RQC0R_RD(MAC_RQC0r_val);
@@ -18178,8 +18178,8 @@ static const struct file_operations MAC_RQC0r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_TQPM1r_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_TQPM1r_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TQPM1R_RD(MAC_TQPM1r_val);
@@ -18195,8 +18195,8 @@ static const struct file_operations MAC_TQPM1r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_TQPM0r_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_TQPM0r_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_TQPM0R_RD(MAC_TQPM0r_val);
@@ -18212,8 +18212,8 @@ static const struct file_operations MAC_TQPM0r_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_rfcr_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_rfcr_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_RFCR_RD(mac_rfcr_val);
@@ -18229,8 +18229,8 @@ static const struct file_operations mac_rfcr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_QTFCR7_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_QTFCR7_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_QTFCR7_RD(MAC_QTFCR7_val);
@@ -18246,8 +18246,8 @@ static const struct file_operations MAC_QTFCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_QTFCR6_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_QTFCR6_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_QTFCR6_RD(MAC_QTFCR6_val);
@@ -18263,8 +18263,8 @@ static const struct file_operations MAC_QTFCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_QTFCR5_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_QTFCR5_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_QTFCR5_RD(MAC_QTFCR5_val);
@@ -18280,8 +18280,8 @@ static const struct file_operations MAC_QTFCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_QTFCR4_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_QTFCR4_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_QTFCR4_RD(MAC_QTFCR4_val);
@@ -18297,8 +18297,8 @@ static const struct file_operations MAC_QTFCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_QTFCR3_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_QTFCR3_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_QTFCR3_RD(MAC_QTFCR3_val);
@@ -18314,8 +18314,8 @@ static const struct file_operations MAC_QTFCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_QTFCR2_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_QTFCR2_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_QTFCR2_RD(MAC_QTFCR2_val);
@@ -18331,8 +18331,8 @@ static const struct file_operations MAC_QTFCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_QTFCR1_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_QTFCR1_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_QTFCR1_RD(MAC_QTFCR1_val);
@@ -18348,8 +18348,8 @@ static const struct file_operations MAC_QTFCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MAC_Q0tfcr_read(struct file *file, char __user * userbuf,
-			       size_t count, loff_t * ppos)
+static ssize_t MAC_Q0tfcr_read(struct file *file, char __user *userbuf,
+			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_Q0TFCR_RD(MAC_Q0tfcr_val);
@@ -18365,8 +18365,8 @@ static const struct file_operations MAC_Q0tfcr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR7_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR7_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR7_RD(DMA_AXI4CR7_val);
@@ -18382,8 +18382,8 @@ static const struct file_operations DMA_AXI4CR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR6_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR6_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR6_RD(DMA_AXI4CR6_val);
@@ -18399,8 +18399,8 @@ static const struct file_operations DMA_AXI4CR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR5_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR5_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR5_RD(DMA_AXI4CR5_val);
@@ -18416,8 +18416,8 @@ static const struct file_operations DMA_AXI4CR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR4_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR4_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR4_RD(DMA_AXI4CR4_val);
@@ -18433,8 +18433,8 @@ static const struct file_operations DMA_AXI4CR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR3_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR3_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR3_RD(DMA_AXI4CR3_val);
@@ -18450,8 +18450,8 @@ static const struct file_operations DMA_AXI4CR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR2_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR2_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR2_RD(DMA_AXI4CR2_val);
@@ -18467,8 +18467,8 @@ static const struct file_operations DMA_AXI4CR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR1_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR1_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR1_RD(DMA_AXI4CR1_val);
@@ -18484,8 +18484,8 @@ static const struct file_operations DMA_AXI4CR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_AXI4CR0_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t DMA_AXI4CR0_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_AXI4CR0_RD(DMA_AXI4CR0_val);
@@ -18501,8 +18501,8 @@ static const struct file_operations DMA_AXI4CR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR7_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR7_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR7_RD(DMA_RCR7_val);
@@ -18518,8 +18518,8 @@ static const struct file_operations DMA_RCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR6_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR6_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR6_RD(DMA_RCR6_val);
@@ -18535,8 +18535,8 @@ static const struct file_operations DMA_RCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR5_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR5_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR5_RD(DMA_RCR5_val);
@@ -18552,8 +18552,8 @@ static const struct file_operations DMA_RCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR4_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR4_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR4_RD(DMA_RCR4_val);
@@ -18569,8 +18569,8 @@ static const struct file_operations DMA_RCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR3_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR3_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR3_RD(DMA_RCR3_val);
@@ -18586,8 +18586,8 @@ static const struct file_operations DMA_RCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR2_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR2_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR2_RD(DMA_RCR2_val);
@@ -18603,8 +18603,8 @@ static const struct file_operations DMA_RCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR1_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR1_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR1_RD(DMA_RCR1_val);
@@ -18620,8 +18620,8 @@ static const struct file_operations DMA_RCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_RCR0_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_RCR0_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_RCR0_RD(DMA_RCR0_val);
@@ -18637,8 +18637,8 @@ static const struct file_operations DMA_RCR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR7_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR7_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR7_RD(DMA_TCR7_val);
@@ -18654,8 +18654,8 @@ static const struct file_operations DMA_TCR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR6_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR6_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR6_RD(DMA_TCR6_val);
@@ -18671,8 +18671,8 @@ static const struct file_operations DMA_TCR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR5_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR5_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR5_RD(DMA_TCR5_val);
@@ -18688,8 +18688,8 @@ static const struct file_operations DMA_TCR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR4_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR4_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR4_RD(DMA_TCR4_val);
@@ -18705,8 +18705,8 @@ static const struct file_operations DMA_TCR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR3_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR3_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR3_RD(DMA_TCR3_val);
@@ -18722,8 +18722,8 @@ static const struct file_operations DMA_TCR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR2_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR2_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR2_RD(DMA_TCR2_val);
@@ -18739,8 +18739,8 @@ static const struct file_operations DMA_TCR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR1_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR1_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR1_RD(DMA_TCR1_val);
@@ -18756,8 +18756,8 @@ static const struct file_operations DMA_TCR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_TCR0_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t DMA_TCR0_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_TCR0_RD(DMA_TCR0_val);
@@ -18773,8 +18773,8 @@ static const struct file_operations DMA_TCR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR7_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR7_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR7_RD(DMA_CR7_val);
@@ -18790,8 +18790,8 @@ static const struct file_operations DMA_CR7_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR6_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR6_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR6_RD(DMA_CR6_val);
@@ -18807,8 +18807,8 @@ static const struct file_operations DMA_CR6_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR5_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR5_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR5_RD(DMA_CR5_val);
@@ -18824,8 +18824,8 @@ static const struct file_operations DMA_CR5_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR4_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR4_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR4_RD(DMA_CR4_val);
@@ -18841,8 +18841,8 @@ static const struct file_operations DMA_CR4_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR3_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR3_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR3_RD(DMA_CR3_val);
@@ -18858,8 +18858,8 @@ static const struct file_operations DMA_CR3_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR2_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR2_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR2_RD(DMA_CR2_val);
@@ -18875,8 +18875,8 @@ static const struct file_operations DMA_CR2_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR1_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR1_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR1_RD(DMA_CR1_val);
@@ -18892,8 +18892,8 @@ static const struct file_operations DMA_CR1_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t DMA_CR0_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t DMA_CR0_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	DMA_CR0_RD(DMA_CR0_val);
@@ -18909,8 +18909,8 @@ static const struct file_operations DMA_CR0_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_wtr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_wtr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_WTR_RD(mac_wtr_val);
@@ -18926,8 +18926,8 @@ static const struct file_operations mac_wtr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_mpfr_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_mpfr_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MPFR_RD(mac_mpfr_val);
@@ -18943,8 +18943,8 @@ static const struct file_operations mac_mpfr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_mecr_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t mac_mecr_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MECR_RD(mac_mecr_val);
@@ -18960,8 +18960,8 @@ static const struct file_operations mac_mecr_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mac_mcr_read(struct file *file, char __user * userbuf,
-			    size_t count, loff_t * ppos)
+static ssize_t mac_mcr_read(struct file *file, char __user *userbuf,
+			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	MAC_MCR_RD(mac_mcr_val);
@@ -18978,8 +18978,8 @@ static const struct file_operations mac_mcr_fops = {
 };
 
 /* For MII/GMII registers */
-static ssize_t mii_bmcr_reg_read(struct file *file, char __user * userbuf,
-				 size_t count, loff_t * ppos)
+static ssize_t mii_bmcr_reg_read(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_BMCR,
@@ -18998,8 +18998,8 @@ static const struct file_operations mii_bmcr_reg_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mii_bmsr_reg_read(struct file *file, char __user * userbuf,
-				 size_t count, loff_t * ppos)
+static ssize_t mii_bmsr_reg_read(struct file *file, char __user *userbuf,
+				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_BMSR,
@@ -19017,8 +19017,8 @@ static const struct file_operations mii_bmsr_reg_fops = {
 	.read = mii_bmsr_reg_read,
 };
 
-static ssize_t MII_PHYSID1_reg_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t MII_PHYSID1_reg_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID1,
@@ -19036,8 +19036,8 @@ static const struct file_operations MII_PHYSID1_reg_fops = {
 	.read = MII_PHYSID1_reg_read,
 };
 
-static ssize_t MII_PHYSID2_reg_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t MII_PHYSID2_reg_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID2,
@@ -19055,8 +19055,8 @@ static const struct file_operations MII_PHYSID2_reg_fops = {
 	.read = MII_PHYSID2_reg_read,
 };
 
-static ssize_t mii_advertise_reg_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mii_advertise_reg_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_ADVERTISE,
@@ -19075,8 +19075,8 @@ static const struct file_operations mii_advertise_reg_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mii_lpa_reg_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t mii_lpa_reg_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_LPA,
@@ -19094,8 +19094,8 @@ static const struct file_operations mii_lpa_reg_fops = {
 	.read = mii_lpa_reg_read,
 };
 
-static ssize_t mii_expansion_reg_read(struct file *file, char __user * userbuf,
-				      size_t count, loff_t * ppos)
+static ssize_t mii_expansion_reg_read(struct file *file, char __user *userbuf,
+				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_EXPANSION,
@@ -19113,8 +19113,8 @@ static const struct file_operations mii_expansion_reg_fops = {
 	.read = mii_expansion_reg_read,
 };
 
-static ssize_t auto_nego_np_reg_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t auto_nego_np_reg_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr,
@@ -19134,8 +19134,8 @@ static const struct file_operations auto_nego_np_reg_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t mii_estatus_reg_read(struct file *file, char __user * userbuf,
-				    size_t count, loff_t * ppos)
+static ssize_t mii_estatus_reg_read(struct file *file, char __user *userbuf,
+				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_ESTATUS,
@@ -19153,8 +19153,8 @@ static const struct file_operations mii_estatus_reg_fops = {
 	.read = mii_estatus_reg_read,
 };
 
-static ssize_t MII_CTRL1000_reg_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MII_CTRL1000_reg_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_CTRL1000,
@@ -19173,8 +19173,8 @@ static const struct file_operations MII_CTRL1000_reg_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t MII_STAT1000_reg_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t MII_STAT1000_reg_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_STAT1000,
@@ -19192,8 +19192,8 @@ static const struct file_operations MII_STAT1000_reg_fops = {
 	.read = MII_STAT1000_reg_read,
 };
 
-static ssize_t phy_ctl_reg_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t phy_ctl_reg_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, EQOS_PHY_CTL,
@@ -19212,8 +19212,8 @@ static const struct file_operations phy_ctl_reg_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t phy_sts_reg_read(struct file *file, char __user * userbuf,
-				size_t count, loff_t * ppos)
+static ssize_t phy_sts_reg_read(struct file *file, char __user *userbuf,
+				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, EQOS_PHY_STS,
@@ -19232,8 +19232,8 @@ static const struct file_operations phy_sts_reg_fops = {
 };
 
 static ssize_t feature_drop_tx_pktburstcnt_read(struct file *file,
-						char __user * userbuf,
-						size_t count, loff_t * ppos)
+						char __user *userbuf,
+						size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	sprintf(debugfs_buf, "feature_drop_tx_pktburstcnt             :%#x\n",
@@ -19250,7 +19250,7 @@ static const struct file_operations feature_drop_tx_pktburstcnt_fops = {
 };
 
 static ssize_t qinx_read(struct file *file,
-			 char __user * userbuf, size_t count, loff_t * ppos)
+			 char __user *userbuf, size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	sprintf(debugfs_buf, "qinx             :%#x\n", qinx_val);
@@ -19266,7 +19266,7 @@ static const struct file_operations qinx_fops = {
 };
 
 static ssize_t reg_offset_read(struct file *file,
-			 char __user * userbuf, size_t count, loff_t * ppos)
+			 char __user *userbuf, size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	sprintf(debugfs_buf, "reg_offset             :%#x\n", reg_offset_val);
@@ -19281,8 +19281,8 @@ static const struct file_operations reg_offset_fops = {
 	.write = eqos_write,
 };
 
-static ssize_t gen_reg_read(struct file *file, char __user * userbuf,
-			     size_t count, loff_t * ppos)
+static ssize_t gen_reg_read(struct file *file, char __user *userbuf,
+			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	unsigned int data_val;
@@ -19337,8 +19337,8 @@ static const struct file_operations do_tx_align_tst_fops = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19388,8 +19388,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops0 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read1(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19439,8 +19439,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops1 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read2(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19490,8 +19490,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops2 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read3(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19541,8 +19541,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops3 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read4(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19592,8 +19592,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops4 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read5(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19643,8 +19643,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops5 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read6(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19694,8 +19694,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops6 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read7(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19745,8 +19745,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops7 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read8(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19796,8 +19796,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops8 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read9(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19847,8 +19847,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops9 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read10(struct file *file,
-						char __user * userbuf,
-						size_t count, loff_t * ppos)
+						char __user *userbuf,
+						size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19898,8 +19898,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops10 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read11(struct file *file,
-						char __user * userbuf,
-						size_t count, loff_t * ppos)
+						char __user *userbuf,
+						size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -19949,8 +19949,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops11 = {
 };
 
 static ssize_t RX_NORMAL_DESC_descriptor_read12(struct file *file,
-						char __user * userbuf,
-						size_t count, loff_t * ppos)
+						char __user *userbuf,
+						size_t count, loff_t *ppos)
 {
 	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20000,8 +20000,8 @@ static const struct file_operations RX_NORMAL_DESC_desc_fops12 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read0(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20051,8 +20051,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops0 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read1(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20102,8 +20102,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops1 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read2(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20153,8 +20153,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops2 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read3(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20204,8 +20204,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops3 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read4(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20255,8 +20255,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops4 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read5(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20306,8 +20306,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops5 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read6(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20357,8 +20357,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops6 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read7(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20408,8 +20408,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops7 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read8(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20459,8 +20459,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops8 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read9(struct file *file,
-					       char __user * userbuf,
-					       size_t count, loff_t * ppos)
+					       char __user *userbuf,
+					       size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20510,8 +20510,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops9 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read10(struct file *file,
-						char __user * userbuf,
-						size_t count, loff_t * ppos)
+						char __user *userbuf,
+						size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20561,8 +20561,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops10 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read11(struct file *file,
-						char __user * userbuf,
-						size_t count, loff_t * ppos)
+						char __user *userbuf,
+						size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20612,8 +20612,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops11 = {
 };
 
 static ssize_t TX_NORMAL_DESC_descriptor_read12(struct file *file,
-						char __user * userbuf,
-						size_t count, loff_t * ppos)
+						char __user *userbuf,
+						size_t count, loff_t *ppos)
 {
 	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
@@ -20663,8 +20663,8 @@ static const struct file_operations TX_NORMAL_DESC_desc_fops12 = {
 };
 
 static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
-					  char __user * userbuf, size_t count,
-					  loff_t * ppos)
+					  char __user *userbuf, size_t count,
+					  loff_t *ppos)
 {
 	struct eqos_tx_wrapper_descriptor *desc_data =
 	    GET_TX_WRAPPER_DESC(qinx_val);
@@ -20824,8 +20824,8 @@ static const struct file_operations TX_NORMAL_DESC_status_fops = {
 };
 
 static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
-					  char __user * userbuf, size_t count,
-					  loff_t * ppos)
+					  char __user *userbuf, size_t count,
+					  loff_t *ppos)
 {
 	struct eqos_rx_wrapper_descriptor *desc_data =
 	    GET_RX_WRAPPER_DESC(qinx_val);
@@ -20869,7 +20869,7 @@ static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
 	if (tail_idx == head_idx) {
 		dev_desc_cnt = 0;
 		drv_desc_cnt = RX_DESC_CNT;
-		printk(KERN_ALERT "\nhead:[%d]%#llx tail:[%d]%#llx cur-rx:%d\n",
+		pr_err("\nhead:[%d]%#llx tail:[%d]%#llx cur-rx:%d\n",
 		       head_idx, dma_chrdr, tail_idx,
 		       dma_rdtp_rpdr, cur_rx);
 	} else if (head_idx > tail_idx) {	/* tail ptr is above head ptr */
@@ -20945,8 +20945,8 @@ static void bcm_regs_clause45_write(int dev, int reg, unsigned int data)
 		data);
 }
 
-static ssize_t bcm_regs_read(struct file *file, char __user * userbuf,
-				     size_t count, loff_t * ppos)
+static ssize_t bcm_regs_read(struct file *file, char __user *userbuf,
+				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
 	char *debug_buf = NULL;
@@ -21062,7 +21062,7 @@ static ssize_t bcm_regs_read(struct file *file, char __user * userbuf,
 		"EEE advertisement(C45, Dev7, 0x3C)  : %#x\n"
 		"EEE resolution (C45, Dev7, 0x803E)  : %#x\n"
 		"LPI Mode Counter(C45, Dev7, 0x803F) : %#x\n",
-	        mii_bmcr_reg_val,
+		mii_bmcr_reg_val,
 		mii_bmsr_reg_val,
 		MII_PHYSID1_reg_val,
 		MII_PHYSID2_reg_val,
@@ -21101,15 +21101,15 @@ static const struct file_operations bcm_regs_fops = {
 	.read = bcm_regs_read,
 };
 
-/*! 
-*  \brief  API to create debugfs files 
+/*!
+*  \brief  API to create debugfs files
 *
 * \details This function will creates debug files required for debugging.
 * All debug files are created inside a directory named as 2490000.eqos
 * (debugfs directory /sys/kernel/debug/2490000.eqos directory).
 * Note: Before doing any read or write operation, debugfs has to be mounted on system.
 *
-* \retval  0 on Success. 
+* \retval  0 on Success.
 * \retval  error number on Failure.
 */
 
@@ -21917,7 +21917,7 @@ int create_debug_files()
 
 	dir = debugfs_create_dir("2490000.eqos", NULL);
 	if (dir == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating directory: eqos_debug\n");
 		return -ENODEV;
 	}
@@ -21926,7 +21926,7 @@ int create_debug_files()
 	    debugfs_create_file("registers", 744, dir, &registers_val,
 				&registers_fops);
 	if (registers == NULL) {
-		printk(KERN_INFO "error creating file: registers\n");
+		pr_info("error creating file: registers\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -21936,7 +21936,7 @@ int create_debug_files()
 				&MAC_MA32_127LR127_val,
 				&MAC_MA32_127LR127_fops);
 	if (MAC_MA32_127LR127 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR127\n");
+		pr_info("error creating file: MAC_MA32_127LR127\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -21946,7 +21946,7 @@ int create_debug_files()
 				&MAC_MA32_127LR126_val,
 				&MAC_MA32_127LR126_fops);
 	if (MAC_MA32_127LR126 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR126\n");
+		pr_info("error creating file: MAC_MA32_127LR126\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -21956,7 +21956,7 @@ int create_debug_files()
 				&MAC_MA32_127LR125_val,
 				&MAC_MA32_127LR125_fops);
 	if (MAC_MA32_127LR125 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR125\n");
+		pr_info("error creating file: MAC_MA32_127LR125\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -21966,7 +21966,7 @@ int create_debug_files()
 				&MAC_MA32_127LR124_val,
 				&MAC_MA32_127LR124_fops);
 	if (MAC_MA32_127LR124 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR124\n");
+		pr_info("error creating file: MAC_MA32_127LR124\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -21976,7 +21976,7 @@ int create_debug_files()
 				&MAC_MA32_127LR123_val,
 				&MAC_MA32_127LR123_fops);
 	if (MAC_MA32_127LR123 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR123\n");
+		pr_info("error creating file: MAC_MA32_127LR123\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -21986,7 +21986,7 @@ int create_debug_files()
 				&MAC_MA32_127LR122_val,
 				&MAC_MA32_127LR122_fops);
 	if (MAC_MA32_127LR122 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR122\n");
+		pr_info("error creating file: MAC_MA32_127LR122\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -21996,7 +21996,7 @@ int create_debug_files()
 				&MAC_MA32_127LR121_val,
 				&MAC_MA32_127LR121_fops);
 	if (MAC_MA32_127LR121 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR121\n");
+		pr_info("error creating file: MAC_MA32_127LR121\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22006,7 +22006,7 @@ int create_debug_files()
 				&MAC_MA32_127LR120_val,
 				&MAC_MA32_127LR120_fops);
 	if (MAC_MA32_127LR120 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR120\n");
+		pr_info("error creating file: MAC_MA32_127LR120\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22016,7 +22016,7 @@ int create_debug_files()
 				&MAC_MA32_127LR119_val,
 				&MAC_MA32_127LR119_fops);
 	if (MAC_MA32_127LR119 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR119\n");
+		pr_info("error creating file: MAC_MA32_127LR119\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22026,7 +22026,7 @@ int create_debug_files()
 				&MAC_MA32_127LR118_val,
 				&MAC_MA32_127LR118_fops);
 	if (MAC_MA32_127LR118 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR118\n");
+		pr_info("error creating file: MAC_MA32_127LR118\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22036,7 +22036,7 @@ int create_debug_files()
 				&MAC_MA32_127LR117_val,
 				&MAC_MA32_127LR117_fops);
 	if (MAC_MA32_127LR117 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR117\n");
+		pr_info("error creating file: MAC_MA32_127LR117\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22046,7 +22046,7 @@ int create_debug_files()
 				&MAC_MA32_127LR116_val,
 				&MAC_MA32_127LR116_fops);
 	if (MAC_MA32_127LR116 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR116\n");
+		pr_info("error creating file: MAC_MA32_127LR116\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22056,7 +22056,7 @@ int create_debug_files()
 				&MAC_MA32_127LR115_val,
 				&MAC_MA32_127LR115_fops);
 	if (MAC_MA32_127LR115 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR115\n");
+		pr_info("error creating file: MAC_MA32_127LR115\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22066,7 +22066,7 @@ int create_debug_files()
 				&MAC_MA32_127LR114_val,
 				&MAC_MA32_127LR114_fops);
 	if (MAC_MA32_127LR114 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR114\n");
+		pr_info("error creating file: MAC_MA32_127LR114\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22076,7 +22076,7 @@ int create_debug_files()
 				&MAC_MA32_127LR113_val,
 				&MAC_MA32_127LR113_fops);
 	if (MAC_MA32_127LR113 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR113\n");
+		pr_info("error creating file: MAC_MA32_127LR113\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22086,7 +22086,7 @@ int create_debug_files()
 				&MAC_MA32_127LR112_val,
 				&MAC_MA32_127LR112_fops);
 	if (MAC_MA32_127LR112 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR112\n");
+		pr_info("error creating file: MAC_MA32_127LR112\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22096,7 +22096,7 @@ int create_debug_files()
 				&MAC_MA32_127LR111_val,
 				&MAC_MA32_127LR111_fops);
 	if (MAC_MA32_127LR111 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR111\n");
+		pr_info("error creating file: MAC_MA32_127LR111\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22106,7 +22106,7 @@ int create_debug_files()
 				&MAC_MA32_127LR110_val,
 				&MAC_MA32_127LR110_fops);
 	if (MAC_MA32_127LR110 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR110\n");
+		pr_info("error creating file: MAC_MA32_127LR110\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22116,7 +22116,7 @@ int create_debug_files()
 				&MAC_MA32_127LR109_val,
 				&MAC_MA32_127LR109_fops);
 	if (MAC_MA32_127LR109 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR109\n");
+		pr_info("error creating file: MAC_MA32_127LR109\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22126,7 +22126,7 @@ int create_debug_files()
 				&MAC_MA32_127LR108_val,
 				&MAC_MA32_127LR108_fops);
 	if (MAC_MA32_127LR108 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR108\n");
+		pr_info("error creating file: MAC_MA32_127LR108\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22136,7 +22136,7 @@ int create_debug_files()
 				&MAC_MA32_127LR107_val,
 				&MAC_MA32_127LR107_fops);
 	if (MAC_MA32_127LR107 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR107\n");
+		pr_info("error creating file: MAC_MA32_127LR107\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22146,7 +22146,7 @@ int create_debug_files()
 				&MAC_MA32_127LR106_val,
 				&MAC_MA32_127LR106_fops);
 	if (MAC_MA32_127LR106 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR106\n");
+		pr_info("error creating file: MAC_MA32_127LR106\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22156,7 +22156,7 @@ int create_debug_files()
 				&MAC_MA32_127LR105_val,
 				&MAC_MA32_127LR105_fops);
 	if (MAC_MA32_127LR105 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR105\n");
+		pr_info("error creating file: MAC_MA32_127LR105\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22166,7 +22166,7 @@ int create_debug_files()
 				&MAC_MA32_127LR104_val,
 				&MAC_MA32_127LR104_fops);
 	if (MAC_MA32_127LR104 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR104\n");
+		pr_info("error creating file: MAC_MA32_127LR104\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22176,7 +22176,7 @@ int create_debug_files()
 				&MAC_MA32_127LR103_val,
 				&MAC_MA32_127LR103_fops);
 	if (MAC_MA32_127LR103 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR103\n");
+		pr_info("error creating file: MAC_MA32_127LR103\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22186,7 +22186,7 @@ int create_debug_files()
 				&MAC_MA32_127LR102_val,
 				&MAC_MA32_127LR102_fops);
 	if (MAC_MA32_127LR102 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR102\n");
+		pr_info("error creating file: MAC_MA32_127LR102\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22196,7 +22196,7 @@ int create_debug_files()
 				&MAC_MA32_127LR101_val,
 				&MAC_MA32_127LR101_fops);
 	if (MAC_MA32_127LR101 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR101\n");
+		pr_info("error creating file: MAC_MA32_127LR101\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22206,7 +22206,7 @@ int create_debug_files()
 				&MAC_MA32_127LR100_val,
 				&MAC_MA32_127LR100_fops);
 	if (MAC_MA32_127LR100 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR100\n");
+		pr_info("error creating file: MAC_MA32_127LR100\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22215,7 +22215,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR99", 744, dir,
 				&MAC_MA32_127LR99_val, &MAC_MA32_127LR99_fops);
 	if (MAC_MA32_127LR99 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR99\n");
+		pr_info("error creating file: MAC_MA32_127LR99\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22224,7 +22224,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR98", 744, dir,
 				&MAC_MA32_127LR98_val, &MAC_MA32_127LR98_fops);
 	if (MAC_MA32_127LR98 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR98\n");
+		pr_info("error creating file: MAC_MA32_127LR98\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22233,7 +22233,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR97", 744, dir,
 				&MAC_MA32_127LR97_val, &MAC_MA32_127LR97_fops);
 	if (MAC_MA32_127LR97 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR97\n");
+		pr_info("error creating file: MAC_MA32_127LR97\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22242,7 +22242,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR96", 744, dir,
 				&MAC_MA32_127LR96_val, &MAC_MA32_127LR96_fops);
 	if (MAC_MA32_127LR96 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR96\n");
+		pr_info("error creating file: MAC_MA32_127LR96\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22251,7 +22251,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR95", 744, dir,
 				&MAC_MA32_127LR95_val, &MAC_MA32_127LR95_fops);
 	if (MAC_MA32_127LR95 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR95\n");
+		pr_info("error creating file: MAC_MA32_127LR95\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22260,7 +22260,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR94", 744, dir,
 				&MAC_MA32_127LR94_val, &MAC_MA32_127LR94_fops);
 	if (MAC_MA32_127LR94 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR94\n");
+		pr_info("error creating file: MAC_MA32_127LR94\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22269,7 +22269,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR93", 744, dir,
 				&MAC_MA32_127LR93_val, &MAC_MA32_127LR93_fops);
 	if (MAC_MA32_127LR93 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR93\n");
+		pr_info("error creating file: MAC_MA32_127LR93\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22278,7 +22278,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR92", 744, dir,
 				&MAC_MA32_127LR92_val, &MAC_MA32_127LR92_fops);
 	if (MAC_MA32_127LR92 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR92\n");
+		pr_info("error creating file: MAC_MA32_127LR92\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22287,7 +22287,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR91", 744, dir,
 				&MAC_MA32_127LR91_val, &MAC_MA32_127LR91_fops);
 	if (MAC_MA32_127LR91 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR91\n");
+		pr_info("error creating file: MAC_MA32_127LR91\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22296,7 +22296,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR90", 744, dir,
 				&MAC_MA32_127LR90_val, &MAC_MA32_127LR90_fops);
 	if (MAC_MA32_127LR90 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR90\n");
+		pr_info("error creating file: MAC_MA32_127LR90\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22305,7 +22305,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR89", 744, dir,
 				&MAC_MA32_127LR89_val, &MAC_MA32_127LR89_fops);
 	if (MAC_MA32_127LR89 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR89\n");
+		pr_info("error creating file: MAC_MA32_127LR89\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22314,7 +22314,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR88", 744, dir,
 				&MAC_MA32_127LR88_val, &MAC_MA32_127LR88_fops);
 	if (MAC_MA32_127LR88 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR88\n");
+		pr_info("error creating file: MAC_MA32_127LR88\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22323,7 +22323,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR87", 744, dir,
 				&MAC_MA32_127LR87_val, &MAC_MA32_127LR87_fops);
 	if (MAC_MA32_127LR87 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR87\n");
+		pr_info("error creating file: MAC_MA32_127LR87\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22332,7 +22332,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR86", 744, dir,
 				&MAC_MA32_127LR86_val, &MAC_MA32_127LR86_fops);
 	if (MAC_MA32_127LR86 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR86\n");
+		pr_info("error creating file: MAC_MA32_127LR86\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22341,7 +22341,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR85", 744, dir,
 				&MAC_MA32_127LR85_val, &MAC_MA32_127LR85_fops);
 	if (MAC_MA32_127LR85 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR85\n");
+		pr_info("error creating file: MAC_MA32_127LR85\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22350,7 +22350,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR84", 744, dir,
 				&MAC_MA32_127LR84_val, &MAC_MA32_127LR84_fops);
 	if (MAC_MA32_127LR84 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR84\n");
+		pr_info("error creating file: MAC_MA32_127LR84\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22359,7 +22359,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR83", 744, dir,
 				&MAC_MA32_127LR83_val, &MAC_MA32_127LR83_fops);
 	if (MAC_MA32_127LR83 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR83\n");
+		pr_info("error creating file: MAC_MA32_127LR83\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22368,7 +22368,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR82", 744, dir,
 				&MAC_MA32_127LR82_val, &MAC_MA32_127LR82_fops);
 	if (MAC_MA32_127LR82 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR82\n");
+		pr_info("error creating file: MAC_MA32_127LR82\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22377,7 +22377,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR81", 744, dir,
 				&MAC_MA32_127LR81_val, &MAC_MA32_127LR81_fops);
 	if (MAC_MA32_127LR81 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR81\n");
+		pr_info("error creating file: MAC_MA32_127LR81\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22386,7 +22386,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR80", 744, dir,
 				&MAC_MA32_127LR80_val, &MAC_MA32_127LR80_fops);
 	if (MAC_MA32_127LR80 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR80\n");
+		pr_info("error creating file: MAC_MA32_127LR80\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22395,7 +22395,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR79", 744, dir,
 				&MAC_MA32_127LR79_val, &MAC_MA32_127LR79_fops);
 	if (MAC_MA32_127LR79 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR79\n");
+		pr_info("error creating file: MAC_MA32_127LR79\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22404,7 +22404,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR78", 744, dir,
 				&MAC_MA32_127LR78_val, &MAC_MA32_127LR78_fops);
 	if (MAC_MA32_127LR78 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR78\n");
+		pr_info("error creating file: MAC_MA32_127LR78\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22413,7 +22413,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR77", 744, dir,
 				&MAC_MA32_127LR77_val, &MAC_MA32_127LR77_fops);
 	if (MAC_MA32_127LR77 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR77\n");
+		pr_info("error creating file: MAC_MA32_127LR77\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22422,7 +22422,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR76", 744, dir,
 				&MAC_MA32_127LR76_val, &MAC_MA32_127LR76_fops);
 	if (MAC_MA32_127LR76 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR76\n");
+		pr_info("error creating file: MAC_MA32_127LR76\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22431,7 +22431,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR75", 744, dir,
 				&MAC_MA32_127LR75_val, &MAC_MA32_127LR75_fops);
 	if (MAC_MA32_127LR75 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR75\n");
+		pr_info("error creating file: MAC_MA32_127LR75\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22440,7 +22440,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR74", 744, dir,
 				&MAC_MA32_127LR74_val, &MAC_MA32_127LR74_fops);
 	if (MAC_MA32_127LR74 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR74\n");
+		pr_info("error creating file: MAC_MA32_127LR74\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22449,7 +22449,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR73", 744, dir,
 				&MAC_MA32_127LR73_val, &MAC_MA32_127LR73_fops);
 	if (MAC_MA32_127LR73 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR73\n");
+		pr_info("error creating file: MAC_MA32_127LR73\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22458,7 +22458,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR72", 744, dir,
 				&MAC_MA32_127LR72_val, &MAC_MA32_127LR72_fops);
 	if (MAC_MA32_127LR72 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR72\n");
+		pr_info("error creating file: MAC_MA32_127LR72\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22467,7 +22467,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR71", 744, dir,
 				&MAC_MA32_127LR71_val, &MAC_MA32_127LR71_fops);
 	if (MAC_MA32_127LR71 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR71\n");
+		pr_info("error creating file: MAC_MA32_127LR71\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22476,7 +22476,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR70", 744, dir,
 				&MAC_MA32_127LR70_val, &MAC_MA32_127LR70_fops);
 	if (MAC_MA32_127LR70 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR70\n");
+		pr_info("error creating file: MAC_MA32_127LR70\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22485,7 +22485,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR69", 744, dir,
 				&MAC_MA32_127LR69_val, &MAC_MA32_127LR69_fops);
 	if (MAC_MA32_127LR69 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR69\n");
+		pr_info("error creating file: MAC_MA32_127LR69\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22494,7 +22494,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR68", 744, dir,
 				&MAC_MA32_127LR68_val, &MAC_MA32_127LR68_fops);
 	if (MAC_MA32_127LR68 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR68\n");
+		pr_info("error creating file: MAC_MA32_127LR68\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22503,7 +22503,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR67", 744, dir,
 				&MAC_MA32_127LR67_val, &MAC_MA32_127LR67_fops);
 	if (MAC_MA32_127LR67 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR67\n");
+		pr_info("error creating file: MAC_MA32_127LR67\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22512,7 +22512,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR66", 744, dir,
 				&MAC_MA32_127LR66_val, &MAC_MA32_127LR66_fops);
 	if (MAC_MA32_127LR66 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR66\n");
+		pr_info("error creating file: MAC_MA32_127LR66\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22521,7 +22521,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR65", 744, dir,
 				&MAC_MA32_127LR65_val, &MAC_MA32_127LR65_fops);
 	if (MAC_MA32_127LR65 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR65\n");
+		pr_info("error creating file: MAC_MA32_127LR65\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22530,7 +22530,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR64", 744, dir,
 				&MAC_MA32_127LR64_val, &MAC_MA32_127LR64_fops);
 	if (MAC_MA32_127LR64 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR64\n");
+		pr_info("error creating file: MAC_MA32_127LR64\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22539,7 +22539,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR63", 744, dir,
 				&MAC_MA32_127LR63_val, &MAC_MA32_127LR63_fops);
 	if (MAC_MA32_127LR63 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR63\n");
+		pr_info("error creating file: MAC_MA32_127LR63\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22548,7 +22548,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR62", 744, dir,
 				&MAC_MA32_127LR62_val, &MAC_MA32_127LR62_fops);
 	if (MAC_MA32_127LR62 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR62\n");
+		pr_info("error creating file: MAC_MA32_127LR62\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22557,7 +22557,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR61", 744, dir,
 				&MAC_MA32_127LR61_val, &MAC_MA32_127LR61_fops);
 	if (MAC_MA32_127LR61 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR61\n");
+		pr_info("error creating file: MAC_MA32_127LR61\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22566,7 +22566,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR60", 744, dir,
 				&MAC_MA32_127LR60_val, &MAC_MA32_127LR60_fops);
 	if (MAC_MA32_127LR60 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR60\n");
+		pr_info("error creating file: MAC_MA32_127LR60\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22575,7 +22575,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR59", 744, dir,
 				&MAC_MA32_127LR59_val, &MAC_MA32_127LR59_fops);
 	if (MAC_MA32_127LR59 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR59\n");
+		pr_info("error creating file: MAC_MA32_127LR59\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22584,7 +22584,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR58", 744, dir,
 				&MAC_MA32_127LR58_val, &MAC_MA32_127LR58_fops);
 	if (MAC_MA32_127LR58 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR58\n");
+		pr_info("error creating file: MAC_MA32_127LR58\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22593,7 +22593,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR57", 744, dir,
 				&MAC_MA32_127LR57_val, &MAC_MA32_127LR57_fops);
 	if (MAC_MA32_127LR57 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR57\n");
+		pr_info("error creating file: MAC_MA32_127LR57\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22602,7 +22602,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR56", 744, dir,
 				&MAC_MA32_127LR56_val, &MAC_MA32_127LR56_fops);
 	if (MAC_MA32_127LR56 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR56\n");
+		pr_info("error creating file: MAC_MA32_127LR56\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22611,7 +22611,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR55", 744, dir,
 				&MAC_MA32_127LR55_val, &MAC_MA32_127LR55_fops);
 	if (MAC_MA32_127LR55 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR55\n");
+		pr_info("error creating file: MAC_MA32_127LR55\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22620,7 +22620,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR54", 744, dir,
 				&MAC_MA32_127LR54_val, &MAC_MA32_127LR54_fops);
 	if (MAC_MA32_127LR54 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR54\n");
+		pr_info("error creating file: MAC_MA32_127LR54\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22629,7 +22629,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR53", 744, dir,
 				&MAC_MA32_127LR53_val, &MAC_MA32_127LR53_fops);
 	if (MAC_MA32_127LR53 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR53\n");
+		pr_info("error creating file: MAC_MA32_127LR53\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22638,7 +22638,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR52", 744, dir,
 				&MAC_MA32_127LR52_val, &MAC_MA32_127LR52_fops);
 	if (MAC_MA32_127LR52 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR52\n");
+		pr_info("error creating file: MAC_MA32_127LR52\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22647,7 +22647,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR51", 744, dir,
 				&MAC_MA32_127LR51_val, &MAC_MA32_127LR51_fops);
 	if (MAC_MA32_127LR51 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR51\n");
+		pr_info("error creating file: MAC_MA32_127LR51\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22656,7 +22656,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR50", 744, dir,
 				&MAC_MA32_127LR50_val, &MAC_MA32_127LR50_fops);
 	if (MAC_MA32_127LR50 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR50\n");
+		pr_info("error creating file: MAC_MA32_127LR50\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22665,7 +22665,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR49", 744, dir,
 				&MAC_MA32_127LR49_val, &MAC_MA32_127LR49_fops);
 	if (MAC_MA32_127LR49 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR49\n");
+		pr_info("error creating file: MAC_MA32_127LR49\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22674,7 +22674,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR48", 744, dir,
 				&MAC_MA32_127LR48_val, &MAC_MA32_127LR48_fops);
 	if (MAC_MA32_127LR48 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR48\n");
+		pr_info("error creating file: MAC_MA32_127LR48\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22683,7 +22683,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR47", 744, dir,
 				&MAC_MA32_127LR47_val, &MAC_MA32_127LR47_fops);
 	if (MAC_MA32_127LR47 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR47\n");
+		pr_info("error creating file: MAC_MA32_127LR47\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22692,7 +22692,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR46", 744, dir,
 				&MAC_MA32_127LR46_val, &MAC_MA32_127LR46_fops);
 	if (MAC_MA32_127LR46 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR46\n");
+		pr_info("error creating file: MAC_MA32_127LR46\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22701,7 +22701,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR45", 744, dir,
 				&MAC_MA32_127LR45_val, &MAC_MA32_127LR45_fops);
 	if (MAC_MA32_127LR45 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR45\n");
+		pr_info("error creating file: MAC_MA32_127LR45\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22710,7 +22710,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR44", 744, dir,
 				&MAC_MA32_127LR44_val, &MAC_MA32_127LR44_fops);
 	if (MAC_MA32_127LR44 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR44\n");
+		pr_info("error creating file: MAC_MA32_127LR44\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22719,7 +22719,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR43", 744, dir,
 				&MAC_MA32_127LR43_val, &MAC_MA32_127LR43_fops);
 	if (MAC_MA32_127LR43 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR43\n");
+		pr_info("error creating file: MAC_MA32_127LR43\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22728,7 +22728,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR42", 744, dir,
 				&MAC_MA32_127LR42_val, &MAC_MA32_127LR42_fops);
 	if (MAC_MA32_127LR42 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR42\n");
+		pr_info("error creating file: MAC_MA32_127LR42\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22737,7 +22737,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR41", 744, dir,
 				&MAC_MA32_127LR41_val, &MAC_MA32_127LR41_fops);
 	if (MAC_MA32_127LR41 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR41\n");
+		pr_info("error creating file: MAC_MA32_127LR41\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22746,7 +22746,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR40", 744, dir,
 				&MAC_MA32_127LR40_val, &MAC_MA32_127LR40_fops);
 	if (MAC_MA32_127LR40 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR40\n");
+		pr_info("error creating file: MAC_MA32_127LR40\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22755,7 +22755,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR39", 744, dir,
 				&MAC_MA32_127LR39_val, &MAC_MA32_127LR39_fops);
 	if (MAC_MA32_127LR39 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR39\n");
+		pr_info("error creating file: MAC_MA32_127LR39\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22764,7 +22764,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR38", 744, dir,
 				&MAC_MA32_127LR38_val, &MAC_MA32_127LR38_fops);
 	if (MAC_MA32_127LR38 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR38\n");
+		pr_info("error creating file: MAC_MA32_127LR38\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22773,7 +22773,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR37", 744, dir,
 				&MAC_MA32_127LR37_val, &MAC_MA32_127LR37_fops);
 	if (MAC_MA32_127LR37 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR37\n");
+		pr_info("error creating file: MAC_MA32_127LR37\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22782,7 +22782,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR36", 744, dir,
 				&MAC_MA32_127LR36_val, &MAC_MA32_127LR36_fops);
 	if (MAC_MA32_127LR36 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR36\n");
+		pr_info("error creating file: MAC_MA32_127LR36\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22791,7 +22791,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR35", 744, dir,
 				&MAC_MA32_127LR35_val, &MAC_MA32_127LR35_fops);
 	if (MAC_MA32_127LR35 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR35\n");
+		pr_info("error creating file: MAC_MA32_127LR35\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22800,7 +22800,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR34", 744, dir,
 				&MAC_MA32_127LR34_val, &MAC_MA32_127LR34_fops);
 	if (MAC_MA32_127LR34 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR34\n");
+		pr_info("error creating file: MAC_MA32_127LR34\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22809,7 +22809,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR33", 744, dir,
 				&MAC_MA32_127LR33_val, &MAC_MA32_127LR33_fops);
 	if (MAC_MA32_127LR33 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR33\n");
+		pr_info("error creating file: MAC_MA32_127LR33\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22818,7 +22818,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127LR32", 744, dir,
 				&MAC_MA32_127LR32_val, &MAC_MA32_127LR32_fops);
 	if (MAC_MA32_127LR32 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127LR32\n");
+		pr_info("error creating file: MAC_MA32_127LR32\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22828,7 +22828,7 @@ int create_debug_files()
 				&MAC_MA32_127HR127_val,
 				&MAC_MA32_127HR127_fops);
 	if (MAC_MA32_127HR127 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR127\n");
+		pr_info("error creating file: MAC_MA32_127HR127\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22838,7 +22838,7 @@ int create_debug_files()
 				&MAC_MA32_127HR126_val,
 				&MAC_MA32_127HR126_fops);
 	if (MAC_MA32_127HR126 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR126\n");
+		pr_info("error creating file: MAC_MA32_127HR126\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22848,7 +22848,7 @@ int create_debug_files()
 				&MAC_MA32_127HR125_val,
 				&MAC_MA32_127HR125_fops);
 	if (MAC_MA32_127HR125 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR125\n");
+		pr_info("error creating file: MAC_MA32_127HR125\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22858,7 +22858,7 @@ int create_debug_files()
 				&MAC_MA32_127HR124_val,
 				&MAC_MA32_127HR124_fops);
 	if (MAC_MA32_127HR124 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR124\n");
+		pr_info("error creating file: MAC_MA32_127HR124\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22868,7 +22868,7 @@ int create_debug_files()
 				&MAC_MA32_127HR123_val,
 				&MAC_MA32_127HR123_fops);
 	if (MAC_MA32_127HR123 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR123\n");
+		pr_info("error creating file: MAC_MA32_127HR123\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22878,7 +22878,7 @@ int create_debug_files()
 				&MAC_MA32_127HR122_val,
 				&MAC_MA32_127HR122_fops);
 	if (MAC_MA32_127HR122 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR122\n");
+		pr_info("error creating file: MAC_MA32_127HR122\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22888,7 +22888,7 @@ int create_debug_files()
 				&MAC_MA32_127HR121_val,
 				&MAC_MA32_127HR121_fops);
 	if (MAC_MA32_127HR121 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR121\n");
+		pr_info("error creating file: MAC_MA32_127HR121\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22898,7 +22898,7 @@ int create_debug_files()
 				&MAC_MA32_127HR120_val,
 				&MAC_MA32_127HR120_fops);
 	if (MAC_MA32_127HR120 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR120\n");
+		pr_info("error creating file: MAC_MA32_127HR120\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22908,7 +22908,7 @@ int create_debug_files()
 				&MAC_MA32_127HR119_val,
 				&MAC_MA32_127HR119_fops);
 	if (MAC_MA32_127HR119 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR119\n");
+		pr_info("error creating file: MAC_MA32_127HR119\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22918,7 +22918,7 @@ int create_debug_files()
 				&MAC_MA32_127HR118_val,
 				&MAC_MA32_127HR118_fops);
 	if (MAC_MA32_127HR118 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR118\n");
+		pr_info("error creating file: MAC_MA32_127HR118\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22928,7 +22928,7 @@ int create_debug_files()
 				&MAC_MA32_127HR117_val,
 				&MAC_MA32_127HR117_fops);
 	if (MAC_MA32_127HR117 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR117\n");
+		pr_info("error creating file: MAC_MA32_127HR117\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22938,7 +22938,7 @@ int create_debug_files()
 				&MAC_MA32_127HR116_val,
 				&MAC_MA32_127HR116_fops);
 	if (MAC_MA32_127HR116 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR116\n");
+		pr_info("error creating file: MAC_MA32_127HR116\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22948,7 +22948,7 @@ int create_debug_files()
 				&MAC_MA32_127HR115_val,
 				&MAC_MA32_127HR115_fops);
 	if (MAC_MA32_127HR115 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR115\n");
+		pr_info("error creating file: MAC_MA32_127HR115\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22958,7 +22958,7 @@ int create_debug_files()
 				&MAC_MA32_127HR114_val,
 				&MAC_MA32_127HR114_fops);
 	if (MAC_MA32_127HR114 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR114\n");
+		pr_info("error creating file: MAC_MA32_127HR114\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22968,7 +22968,7 @@ int create_debug_files()
 				&MAC_MA32_127HR113_val,
 				&MAC_MA32_127HR113_fops);
 	if (MAC_MA32_127HR113 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR113\n");
+		pr_info("error creating file: MAC_MA32_127HR113\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22978,7 +22978,7 @@ int create_debug_files()
 				&MAC_MA32_127HR112_val,
 				&MAC_MA32_127HR112_fops);
 	if (MAC_MA32_127HR112 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR112\n");
+		pr_info("error creating file: MAC_MA32_127HR112\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22988,7 +22988,7 @@ int create_debug_files()
 				&MAC_MA32_127HR111_val,
 				&MAC_MA32_127HR111_fops);
 	if (MAC_MA32_127HR111 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR111\n");
+		pr_info("error creating file: MAC_MA32_127HR111\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -22998,7 +22998,7 @@ int create_debug_files()
 				&MAC_MA32_127HR110_val,
 				&MAC_MA32_127HR110_fops);
 	if (MAC_MA32_127HR110 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR110\n");
+		pr_info("error creating file: MAC_MA32_127HR110\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23008,7 +23008,7 @@ int create_debug_files()
 				&MAC_MA32_127HR109_val,
 				&MAC_MA32_127HR109_fops);
 	if (MAC_MA32_127HR109 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR109\n");
+		pr_info("error creating file: MAC_MA32_127HR109\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23018,7 +23018,7 @@ int create_debug_files()
 				&MAC_MA32_127HR108_val,
 				&MAC_MA32_127HR108_fops);
 	if (MAC_MA32_127HR108 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR108\n");
+		pr_info("error creating file: MAC_MA32_127HR108\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23028,7 +23028,7 @@ int create_debug_files()
 				&MAC_MA32_127HR107_val,
 				&MAC_MA32_127HR107_fops);
 	if (MAC_MA32_127HR107 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR107\n");
+		pr_info("error creating file: MAC_MA32_127HR107\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23038,7 +23038,7 @@ int create_debug_files()
 				&MAC_MA32_127HR106_val,
 				&MAC_MA32_127HR106_fops);
 	if (MAC_MA32_127HR106 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR106\n");
+		pr_info("error creating file: MAC_MA32_127HR106\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23048,7 +23048,7 @@ int create_debug_files()
 				&MAC_MA32_127HR105_val,
 				&MAC_MA32_127HR105_fops);
 	if (MAC_MA32_127HR105 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR105\n");
+		pr_info("error creating file: MAC_MA32_127HR105\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23058,7 +23058,7 @@ int create_debug_files()
 				&MAC_MA32_127HR104_val,
 				&MAC_MA32_127HR104_fops);
 	if (MAC_MA32_127HR104 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR104\n");
+		pr_info("error creating file: MAC_MA32_127HR104\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23068,7 +23068,7 @@ int create_debug_files()
 				&MAC_MA32_127HR103_val,
 				&MAC_MA32_127HR103_fops);
 	if (MAC_MA32_127HR103 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR103\n");
+		pr_info("error creating file: MAC_MA32_127HR103\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23078,7 +23078,7 @@ int create_debug_files()
 				&MAC_MA32_127HR102_val,
 				&MAC_MA32_127HR102_fops);
 	if (MAC_MA32_127HR102 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR102\n");
+		pr_info("error creating file: MAC_MA32_127HR102\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23088,7 +23088,7 @@ int create_debug_files()
 				&MAC_MA32_127HR101_val,
 				&MAC_MA32_127HR101_fops);
 	if (MAC_MA32_127HR101 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR101\n");
+		pr_info("error creating file: MAC_MA32_127HR101\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23098,7 +23098,7 @@ int create_debug_files()
 				&MAC_MA32_127HR100_val,
 				&MAC_MA32_127HR100_fops);
 	if (MAC_MA32_127HR100 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR100\n");
+		pr_info("error creating file: MAC_MA32_127HR100\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23107,7 +23107,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR99", 744, dir,
 				&MAC_MA32_127HR99_val, &MAC_MA32_127HR99_fops);
 	if (MAC_MA32_127HR99 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR99\n");
+		pr_info("error creating file: MAC_MA32_127HR99\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23116,7 +23116,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR98", 744, dir,
 				&MAC_MA32_127HR98_val, &MAC_MA32_127HR98_fops);
 	if (MAC_MA32_127HR98 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR98\n");
+		pr_info("error creating file: MAC_MA32_127HR98\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23125,7 +23125,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR97", 744, dir,
 				&MAC_MA32_127HR97_val, &MAC_MA32_127HR97_fops);
 	if (MAC_MA32_127HR97 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR97\n");
+		pr_info("error creating file: MAC_MA32_127HR97\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23134,7 +23134,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR96", 744, dir,
 				&MAC_MA32_127HR96_val, &MAC_MA32_127HR96_fops);
 	if (MAC_MA32_127HR96 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR96\n");
+		pr_info("error creating file: MAC_MA32_127HR96\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23143,7 +23143,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR95", 744, dir,
 				&MAC_MA32_127HR95_val, &MAC_MA32_127HR95_fops);
 	if (MAC_MA32_127HR95 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR95\n");
+		pr_info("error creating file: MAC_MA32_127HR95\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23152,7 +23152,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR94", 744, dir,
 				&MAC_MA32_127HR94_val, &MAC_MA32_127HR94_fops);
 	if (MAC_MA32_127HR94 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR94\n");
+		pr_info("error creating file: MAC_MA32_127HR94\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23161,7 +23161,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR93", 744, dir,
 				&MAC_MA32_127HR93_val, &MAC_MA32_127HR93_fops);
 	if (MAC_MA32_127HR93 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR93\n");
+		pr_info("error creating file: MAC_MA32_127HR93\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23170,7 +23170,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR92", 744, dir,
 				&MAC_MA32_127HR92_val, &MAC_MA32_127HR92_fops);
 	if (MAC_MA32_127HR92 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR92\n");
+		pr_info("error creating file: MAC_MA32_127HR92\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23179,7 +23179,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR91", 744, dir,
 				&MAC_MA32_127HR91_val, &MAC_MA32_127HR91_fops);
 	if (MAC_MA32_127HR91 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR91\n");
+		pr_info("error creating file: MAC_MA32_127HR91\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23188,7 +23188,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR90", 744, dir,
 				&MAC_MA32_127HR90_val, &MAC_MA32_127HR90_fops);
 	if (MAC_MA32_127HR90 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR90\n");
+		pr_info("error creating file: MAC_MA32_127HR90\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23197,7 +23197,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR89", 744, dir,
 				&MAC_MA32_127HR89_val, &MAC_MA32_127HR89_fops);
 	if (MAC_MA32_127HR89 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR89\n");
+		pr_info("error creating file: MAC_MA32_127HR89\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23206,7 +23206,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR88", 744, dir,
 				&MAC_MA32_127HR88_val, &MAC_MA32_127HR88_fops);
 	if (MAC_MA32_127HR88 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR88\n");
+		pr_info("error creating file: MAC_MA32_127HR88\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23215,7 +23215,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR87", 744, dir,
 				&MAC_MA32_127HR87_val, &MAC_MA32_127HR87_fops);
 	if (MAC_MA32_127HR87 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR87\n");
+		pr_info("error creating file: MAC_MA32_127HR87\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23224,7 +23224,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR86", 744, dir,
 				&MAC_MA32_127HR86_val, &MAC_MA32_127HR86_fops);
 	if (MAC_MA32_127HR86 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR86\n");
+		pr_info("error creating file: MAC_MA32_127HR86\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23233,7 +23233,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR85", 744, dir,
 				&MAC_MA32_127HR85_val, &MAC_MA32_127HR85_fops);
 	if (MAC_MA32_127HR85 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR85\n");
+		pr_info("error creating file: MAC_MA32_127HR85\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23242,7 +23242,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR84", 744, dir,
 				&MAC_MA32_127HR84_val, &MAC_MA32_127HR84_fops);
 	if (MAC_MA32_127HR84 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR84\n");
+		pr_info("error creating file: MAC_MA32_127HR84\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23251,7 +23251,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR83", 744, dir,
 				&MAC_MA32_127HR83_val, &MAC_MA32_127HR83_fops);
 	if (MAC_MA32_127HR83 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR83\n");
+		pr_info("error creating file: MAC_MA32_127HR83\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23260,7 +23260,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR82", 744, dir,
 				&MAC_MA32_127HR82_val, &MAC_MA32_127HR82_fops);
 	if (MAC_MA32_127HR82 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR82\n");
+		pr_info("error creating file: MAC_MA32_127HR82\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23269,7 +23269,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR81", 744, dir,
 				&MAC_MA32_127HR81_val, &MAC_MA32_127HR81_fops);
 	if (MAC_MA32_127HR81 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR81\n");
+		pr_info("error creating file: MAC_MA32_127HR81\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23278,7 +23278,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR80", 744, dir,
 				&MAC_MA32_127HR80_val, &MAC_MA32_127HR80_fops);
 	if (MAC_MA32_127HR80 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR80\n");
+		pr_info("error creating file: MAC_MA32_127HR80\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23287,7 +23287,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR79", 744, dir,
 				&MAC_MA32_127HR79_val, &MAC_MA32_127HR79_fops);
 	if (MAC_MA32_127HR79 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR79\n");
+		pr_info("error creating file: MAC_MA32_127HR79\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23296,7 +23296,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR78", 744, dir,
 				&MAC_MA32_127HR78_val, &MAC_MA32_127HR78_fops);
 	if (MAC_MA32_127HR78 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR78\n");
+		pr_info("error creating file: MAC_MA32_127HR78\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23305,7 +23305,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR77", 744, dir,
 				&MAC_MA32_127HR77_val, &MAC_MA32_127HR77_fops);
 	if (MAC_MA32_127HR77 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR77\n");
+		pr_info("error creating file: MAC_MA32_127HR77\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23314,7 +23314,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR76", 744, dir,
 				&MAC_MA32_127HR76_val, &MAC_MA32_127HR76_fops);
 	if (MAC_MA32_127HR76 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR76\n");
+		pr_info("error creating file: MAC_MA32_127HR76\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23323,7 +23323,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR75", 744, dir,
 				&MAC_MA32_127HR75_val, &MAC_MA32_127HR75_fops);
 	if (MAC_MA32_127HR75 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR75\n");
+		pr_info("error creating file: MAC_MA32_127HR75\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23332,7 +23332,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR74", 744, dir,
 				&MAC_MA32_127HR74_val, &MAC_MA32_127HR74_fops);
 	if (MAC_MA32_127HR74 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR74\n");
+		pr_info("error creating file: MAC_MA32_127HR74\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23341,7 +23341,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR73", 744, dir,
 				&MAC_MA32_127HR73_val, &MAC_MA32_127HR73_fops);
 	if (MAC_MA32_127HR73 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR73\n");
+		pr_info("error creating file: MAC_MA32_127HR73\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23350,7 +23350,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR72", 744, dir,
 				&MAC_MA32_127HR72_val, &MAC_MA32_127HR72_fops);
 	if (MAC_MA32_127HR72 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR72\n");
+		pr_info("error creating file: MAC_MA32_127HR72\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23359,7 +23359,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR71", 744, dir,
 				&MAC_MA32_127HR71_val, &MAC_MA32_127HR71_fops);
 	if (MAC_MA32_127HR71 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR71\n");
+		pr_info("error creating file: MAC_MA32_127HR71\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23368,7 +23368,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR70", 744, dir,
 				&MAC_MA32_127HR70_val, &MAC_MA32_127HR70_fops);
 	if (MAC_MA32_127HR70 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR70\n");
+		pr_info("error creating file: MAC_MA32_127HR70\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23377,7 +23377,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR69", 744, dir,
 				&MAC_MA32_127HR69_val, &MAC_MA32_127HR69_fops);
 	if (MAC_MA32_127HR69 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR69\n");
+		pr_info("error creating file: MAC_MA32_127HR69\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23386,7 +23386,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR68", 744, dir,
 				&MAC_MA32_127HR68_val, &MAC_MA32_127HR68_fops);
 	if (MAC_MA32_127HR68 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR68\n");
+		pr_info("error creating file: MAC_MA32_127HR68\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23395,7 +23395,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR67", 744, dir,
 				&MAC_MA32_127HR67_val, &MAC_MA32_127HR67_fops);
 	if (MAC_MA32_127HR67 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR67\n");
+		pr_info("error creating file: MAC_MA32_127HR67\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23404,7 +23404,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR66", 744, dir,
 				&MAC_MA32_127HR66_val, &MAC_MA32_127HR66_fops);
 	if (MAC_MA32_127HR66 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR66\n");
+		pr_info("error creating file: MAC_MA32_127HR66\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23413,7 +23413,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR65", 744, dir,
 				&MAC_MA32_127HR65_val, &MAC_MA32_127HR65_fops);
 	if (MAC_MA32_127HR65 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR65\n");
+		pr_info("error creating file: MAC_MA32_127HR65\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23422,7 +23422,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR64", 744, dir,
 				&MAC_MA32_127HR64_val, &MAC_MA32_127HR64_fops);
 	if (MAC_MA32_127HR64 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR64\n");
+		pr_info("error creating file: MAC_MA32_127HR64\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23431,7 +23431,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR63", 744, dir,
 				&MAC_MA32_127HR63_val, &MAC_MA32_127HR63_fops);
 	if (MAC_MA32_127HR63 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR63\n");
+		pr_info("error creating file: MAC_MA32_127HR63\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23440,7 +23440,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR62", 744, dir,
 				&MAC_MA32_127HR62_val, &MAC_MA32_127HR62_fops);
 	if (MAC_MA32_127HR62 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR62\n");
+		pr_info("error creating file: MAC_MA32_127HR62\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23449,7 +23449,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR61", 744, dir,
 				&MAC_MA32_127HR61_val, &MAC_MA32_127HR61_fops);
 	if (MAC_MA32_127HR61 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR61\n");
+		pr_info("error creating file: MAC_MA32_127HR61\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23458,7 +23458,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR60", 744, dir,
 				&MAC_MA32_127HR60_val, &MAC_MA32_127HR60_fops);
 	if (MAC_MA32_127HR60 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR60\n");
+		pr_info("error creating file: MAC_MA32_127HR60\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23467,7 +23467,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR59", 744, dir,
 				&MAC_MA32_127HR59_val, &MAC_MA32_127HR59_fops);
 	if (MAC_MA32_127HR59 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR59\n");
+		pr_info("error creating file: MAC_MA32_127HR59\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23476,7 +23476,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR58", 744, dir,
 				&MAC_MA32_127HR58_val, &MAC_MA32_127HR58_fops);
 	if (MAC_MA32_127HR58 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR58\n");
+		pr_info("error creating file: MAC_MA32_127HR58\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23485,7 +23485,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR57", 744, dir,
 				&MAC_MA32_127HR57_val, &MAC_MA32_127HR57_fops);
 	if (MAC_MA32_127HR57 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR57\n");
+		pr_info("error creating file: MAC_MA32_127HR57\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23494,7 +23494,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR56", 744, dir,
 				&MAC_MA32_127HR56_val, &MAC_MA32_127HR56_fops);
 	if (MAC_MA32_127HR56 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR56\n");
+		pr_info("error creating file: MAC_MA32_127HR56\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23503,7 +23503,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR55", 744, dir,
 				&MAC_MA32_127HR55_val, &MAC_MA32_127HR55_fops);
 	if (MAC_MA32_127HR55 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR55\n");
+		pr_info("error creating file: MAC_MA32_127HR55\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23512,7 +23512,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR54", 744, dir,
 				&MAC_MA32_127HR54_val, &MAC_MA32_127HR54_fops);
 	if (MAC_MA32_127HR54 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR54\n");
+		pr_info("error creating file: MAC_MA32_127HR54\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23521,7 +23521,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR53", 744, dir,
 				&MAC_MA32_127HR53_val, &MAC_MA32_127HR53_fops);
 	if (MAC_MA32_127HR53 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR53\n");
+		pr_info("error creating file: MAC_MA32_127HR53\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23530,7 +23530,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR52", 744, dir,
 				&MAC_MA32_127HR52_val, &MAC_MA32_127HR52_fops);
 	if (MAC_MA32_127HR52 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR52\n");
+		pr_info("error creating file: MAC_MA32_127HR52\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23539,7 +23539,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR51", 744, dir,
 				&MAC_MA32_127HR51_val, &MAC_MA32_127HR51_fops);
 	if (MAC_MA32_127HR51 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR51\n");
+		pr_info("error creating file: MAC_MA32_127HR51\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23548,7 +23548,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR50", 744, dir,
 				&MAC_MA32_127HR50_val, &MAC_MA32_127HR50_fops);
 	if (MAC_MA32_127HR50 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR50\n");
+		pr_info("error creating file: MAC_MA32_127HR50\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23557,7 +23557,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR49", 744, dir,
 				&MAC_MA32_127HR49_val, &MAC_MA32_127HR49_fops);
 	if (MAC_MA32_127HR49 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR49\n");
+		pr_info("error creating file: MAC_MA32_127HR49\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23566,7 +23566,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR48", 744, dir,
 				&MAC_MA32_127HR48_val, &MAC_MA32_127HR48_fops);
 	if (MAC_MA32_127HR48 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR48\n");
+		pr_info("error creating file: MAC_MA32_127HR48\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23575,7 +23575,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR47", 744, dir,
 				&MAC_MA32_127HR47_val, &MAC_MA32_127HR47_fops);
 	if (MAC_MA32_127HR47 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR47\n");
+		pr_info("error creating file: MAC_MA32_127HR47\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23584,7 +23584,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR46", 744, dir,
 				&MAC_MA32_127HR46_val, &MAC_MA32_127HR46_fops);
 	if (MAC_MA32_127HR46 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR46\n");
+		pr_info("error creating file: MAC_MA32_127HR46\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23593,7 +23593,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR45", 744, dir,
 				&MAC_MA32_127HR45_val, &MAC_MA32_127HR45_fops);
 	if (MAC_MA32_127HR45 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR45\n");
+		pr_info("error creating file: MAC_MA32_127HR45\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23602,7 +23602,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR44", 744, dir,
 				&MAC_MA32_127HR44_val, &MAC_MA32_127HR44_fops);
 	if (MAC_MA32_127HR44 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR44\n");
+		pr_info("error creating file: MAC_MA32_127HR44\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23611,7 +23611,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR43", 744, dir,
 				&MAC_MA32_127HR43_val, &MAC_MA32_127HR43_fops);
 	if (MAC_MA32_127HR43 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR43\n");
+		pr_info("error creating file: MAC_MA32_127HR43\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23620,7 +23620,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR42", 744, dir,
 				&MAC_MA32_127HR42_val, &MAC_MA32_127HR42_fops);
 	if (MAC_MA32_127HR42 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR42\n");
+		pr_info("error creating file: MAC_MA32_127HR42\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23629,7 +23629,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR41", 744, dir,
 				&MAC_MA32_127HR41_val, &MAC_MA32_127HR41_fops);
 	if (MAC_MA32_127HR41 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR41\n");
+		pr_info("error creating file: MAC_MA32_127HR41\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23638,7 +23638,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR40", 744, dir,
 				&MAC_MA32_127HR40_val, &MAC_MA32_127HR40_fops);
 	if (MAC_MA32_127HR40 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR40\n");
+		pr_info("error creating file: MAC_MA32_127HR40\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23647,7 +23647,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR39", 744, dir,
 				&MAC_MA32_127HR39_val, &MAC_MA32_127HR39_fops);
 	if (MAC_MA32_127HR39 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR39\n");
+		pr_info("error creating file: MAC_MA32_127HR39\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23656,7 +23656,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR38", 744, dir,
 				&MAC_MA32_127HR38_val, &MAC_MA32_127HR38_fops);
 	if (MAC_MA32_127HR38 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR38\n");
+		pr_info("error creating file: MAC_MA32_127HR38\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23665,7 +23665,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR37", 744, dir,
 				&MAC_MA32_127HR37_val, &MAC_MA32_127HR37_fops);
 	if (MAC_MA32_127HR37 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR37\n");
+		pr_info("error creating file: MAC_MA32_127HR37\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23674,7 +23674,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR36", 744, dir,
 				&MAC_MA32_127HR36_val, &MAC_MA32_127HR36_fops);
 	if (MAC_MA32_127HR36 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR36\n");
+		pr_info("error creating file: MAC_MA32_127HR36\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23683,7 +23683,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR35", 744, dir,
 				&MAC_MA32_127HR35_val, &MAC_MA32_127HR35_fops);
 	if (MAC_MA32_127HR35 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR35\n");
+		pr_info("error creating file: MAC_MA32_127HR35\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23692,7 +23692,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR34", 744, dir,
 				&MAC_MA32_127HR34_val, &MAC_MA32_127HR34_fops);
 	if (MAC_MA32_127HR34 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR34\n");
+		pr_info("error creating file: MAC_MA32_127HR34\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23701,7 +23701,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR33", 744, dir,
 				&MAC_MA32_127HR33_val, &MAC_MA32_127HR33_fops);
 	if (MAC_MA32_127HR33 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR33\n");
+		pr_info("error creating file: MAC_MA32_127HR33\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23710,7 +23710,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA32_127HR32", 744, dir,
 				&MAC_MA32_127HR32_val, &MAC_MA32_127HR32_fops);
 	if (MAC_MA32_127HR32 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA32_127HR32\n");
+		pr_info("error creating file: MAC_MA32_127HR32\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23719,7 +23719,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR31", 744, dir, &MAC_MA1_31LR31_val,
 				&MAC_MA1_31LR31_fops);
 	if (MAC_MA1_31LR31 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR31\n");
+		pr_info("error creating file: MAC_MA1_31LR31\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23728,7 +23728,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR30", 744, dir, &MAC_MA1_31LR30_val,
 				&MAC_MA1_31LR30_fops);
 	if (MAC_MA1_31LR30 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR30\n");
+		pr_info("error creating file: MAC_MA1_31LR30\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23737,7 +23737,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR29", 744, dir, &MAC_MA1_31LR29_val,
 				&MAC_MA1_31LR29_fops);
 	if (MAC_MA1_31LR29 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR29\n");
+		pr_info("error creating file: MAC_MA1_31LR29\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23746,7 +23746,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR28", 744, dir, &MAC_MA1_31LR28_val,
 				&MAC_MA1_31LR28_fops);
 	if (MAC_MA1_31LR28 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR28\n");
+		pr_info("error creating file: MAC_MA1_31LR28\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23755,7 +23755,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR27", 744, dir, &MAC_MA1_31LR27_val,
 				&MAC_MA1_31LR27_fops);
 	if (MAC_MA1_31LR27 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR27\n");
+		pr_info("error creating file: MAC_MA1_31LR27\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23764,7 +23764,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR26", 744, dir, &MAC_MA1_31LR26_val,
 				&MAC_MA1_31LR26_fops);
 	if (MAC_MA1_31LR26 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR26\n");
+		pr_info("error creating file: MAC_MA1_31LR26\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23773,7 +23773,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR25", 744, dir, &MAC_MA1_31LR25_val,
 				&MAC_MA1_31LR25_fops);
 	if (MAC_MA1_31LR25 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR25\n");
+		pr_info("error creating file: MAC_MA1_31LR25\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23782,7 +23782,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR24", 744, dir, &MAC_MA1_31LR24_val,
 				&MAC_MA1_31LR24_fops);
 	if (MAC_MA1_31LR24 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR24\n");
+		pr_info("error creating file: MAC_MA1_31LR24\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23791,7 +23791,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR23", 744, dir, &MAC_MA1_31LR23_val,
 				&MAC_MA1_31LR23_fops);
 	if (MAC_MA1_31LR23 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR23\n");
+		pr_info("error creating file: MAC_MA1_31LR23\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23800,7 +23800,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR22", 744, dir, &MAC_MA1_31LR22_val,
 				&MAC_MA1_31LR22_fops);
 	if (MAC_MA1_31LR22 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR22\n");
+		pr_info("error creating file: MAC_MA1_31LR22\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23809,7 +23809,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR21", 744, dir, &MAC_MA1_31LR21_val,
 				&MAC_MA1_31LR21_fops);
 	if (MAC_MA1_31LR21 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR21\n");
+		pr_info("error creating file: MAC_MA1_31LR21\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23818,7 +23818,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR20", 744, dir, &MAC_MA1_31LR20_val,
 				&MAC_MA1_31LR20_fops);
 	if (MAC_MA1_31LR20 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR20\n");
+		pr_info("error creating file: MAC_MA1_31LR20\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23827,7 +23827,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR19", 744, dir, &MAC_MA1_31LR19_val,
 				&MAC_MA1_31LR19_fops);
 	if (MAC_MA1_31LR19 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR19\n");
+		pr_info("error creating file: MAC_MA1_31LR19\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23836,7 +23836,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR18", 744, dir, &MAC_MA1_31LR18_val,
 				&MAC_MA1_31LR18_fops);
 	if (MAC_MA1_31LR18 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR18\n");
+		pr_info("error creating file: MAC_MA1_31LR18\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23845,7 +23845,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR17", 744, dir, &MAC_MA1_31LR17_val,
 				&MAC_MA1_31LR17_fops);
 	if (MAC_MA1_31LR17 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR17\n");
+		pr_info("error creating file: MAC_MA1_31LR17\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23854,7 +23854,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR16", 744, dir, &MAC_MA1_31LR16_val,
 				&MAC_MA1_31LR16_fops);
 	if (MAC_MA1_31LR16 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR16\n");
+		pr_info("error creating file: MAC_MA1_31LR16\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23863,7 +23863,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR15", 744, dir, &MAC_MA1_31LR15_val,
 				&MAC_MA1_31LR15_fops);
 	if (MAC_MA1_31LR15 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR15\n");
+		pr_info("error creating file: MAC_MA1_31LR15\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23872,7 +23872,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR14", 744, dir, &MAC_MA1_31LR14_val,
 				&MAC_MA1_31LR14_fops);
 	if (MAC_MA1_31LR14 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR14\n");
+		pr_info("error creating file: MAC_MA1_31LR14\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23881,7 +23881,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR13", 744, dir, &MAC_MA1_31LR13_val,
 				&MAC_MA1_31LR13_fops);
 	if (MAC_MA1_31LR13 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR13\n");
+		pr_info("error creating file: MAC_MA1_31LR13\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23890,7 +23890,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR12", 744, dir, &MAC_MA1_31LR12_val,
 				&MAC_MA1_31LR12_fops);
 	if (MAC_MA1_31LR12 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR12\n");
+		pr_info("error creating file: MAC_MA1_31LR12\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23899,7 +23899,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR11", 744, dir, &MAC_MA1_31LR11_val,
 				&MAC_MA1_31LR11_fops);
 	if (MAC_MA1_31LR11 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR11\n");
+		pr_info("error creating file: MAC_MA1_31LR11\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23908,7 +23908,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR10", 744, dir, &MAC_MA1_31LR10_val,
 				&MAC_MA1_31LR10_fops);
 	if (MAC_MA1_31LR10 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR10\n");
+		pr_info("error creating file: MAC_MA1_31LR10\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23917,7 +23917,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR9", 744, dir, &MAC_MA1_31LR9_val,
 				&MAC_MA1_31LR9_fops);
 	if (MAC_MA1_31LR9 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR9\n");
+		pr_info("error creating file: MAC_MA1_31LR9\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23926,7 +23926,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR8", 744, dir, &MAC_MA1_31LR8_val,
 				&MAC_MA1_31LR8_fops);
 	if (MAC_MA1_31LR8 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR8\n");
+		pr_info("error creating file: MAC_MA1_31LR8\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23935,7 +23935,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR7", 744, dir, &MAC_MA1_31LR7_val,
 				&MAC_MA1_31LR7_fops);
 	if (MAC_MA1_31LR7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR7\n");
+		pr_info("error creating file: MAC_MA1_31LR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23944,7 +23944,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR6", 744, dir, &MAC_MA1_31LR6_val,
 				&MAC_MA1_31LR6_fops);
 	if (MAC_MA1_31LR6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR6\n");
+		pr_info("error creating file: MAC_MA1_31LR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23953,7 +23953,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR5", 744, dir, &MAC_MA1_31LR5_val,
 				&MAC_MA1_31LR5_fops);
 	if (MAC_MA1_31LR5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR5\n");
+		pr_info("error creating file: MAC_MA1_31LR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23962,7 +23962,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR4", 744, dir, &MAC_MA1_31LR4_val,
 				&MAC_MA1_31LR4_fops);
 	if (MAC_MA1_31LR4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR4\n");
+		pr_info("error creating file: MAC_MA1_31LR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23971,7 +23971,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR3", 744, dir, &MAC_MA1_31LR3_val,
 				&MAC_MA1_31LR3_fops);
 	if (MAC_MA1_31LR3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR3\n");
+		pr_info("error creating file: MAC_MA1_31LR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23980,7 +23980,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR2", 744, dir, &MAC_MA1_31LR2_val,
 				&MAC_MA1_31LR2_fops);
 	if (MAC_MA1_31LR2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR2\n");
+		pr_info("error creating file: MAC_MA1_31LR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23989,7 +23989,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31LR1", 744, dir, &MAC_MA1_31LR1_val,
 				&MAC_MA1_31LR1_fops);
 	if (MAC_MA1_31LR1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31LR1\n");
+		pr_info("error creating file: MAC_MA1_31LR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -23998,7 +23998,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR31", 744, dir, &MAC_MA1_31HR31_val,
 				&MAC_MA1_31HR31_fops);
 	if (MAC_MA1_31HR31 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR31\n");
+		pr_info("error creating file: MAC_MA1_31HR31\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24007,7 +24007,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR30", 744, dir, &MAC_MA1_31HR30_val,
 				&MAC_MA1_31HR30_fops);
 	if (MAC_MA1_31HR30 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR30\n");
+		pr_info("error creating file: MAC_MA1_31HR30\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24016,7 +24016,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR29", 744, dir, &MAC_MA1_31HR29_val,
 				&MAC_MA1_31HR29_fops);
 	if (MAC_MA1_31HR29 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR29\n");
+		pr_info("error creating file: MAC_MA1_31HR29\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24025,7 +24025,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR28", 744, dir, &MAC_MA1_31HR28_val,
 				&MAC_MA1_31HR28_fops);
 	if (MAC_MA1_31HR28 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR28\n");
+		pr_info("error creating file: MAC_MA1_31HR28\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24034,7 +24034,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR27", 744, dir, &MAC_MA1_31HR27_val,
 				&MAC_MA1_31HR27_fops);
 	if (MAC_MA1_31HR27 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR27\n");
+		pr_info("error creating file: MAC_MA1_31HR27\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24043,7 +24043,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR26", 744, dir, &MAC_MA1_31HR26_val,
 				&MAC_MA1_31HR26_fops);
 	if (MAC_MA1_31HR26 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR26\n");
+		pr_info("error creating file: MAC_MA1_31HR26\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24052,7 +24052,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR25", 744, dir, &MAC_MA1_31HR25_val,
 				&MAC_MA1_31HR25_fops);
 	if (MAC_MA1_31HR25 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR25\n");
+		pr_info("error creating file: MAC_MA1_31HR25\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24061,7 +24061,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR24", 744, dir, &MAC_MA1_31HR24_val,
 				&MAC_MA1_31HR24_fops);
 	if (MAC_MA1_31HR24 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR24\n");
+		pr_info("error creating file: MAC_MA1_31HR24\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24070,7 +24070,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR23", 744, dir, &MAC_MA1_31HR23_val,
 				&MAC_MA1_31HR23_fops);
 	if (MAC_MA1_31HR23 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR23\n");
+		pr_info("error creating file: MAC_MA1_31HR23\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24079,7 +24079,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR22", 744, dir, &MAC_MA1_31HR22_val,
 				&MAC_MA1_31HR22_fops);
 	if (MAC_MA1_31HR22 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR22\n");
+		pr_info("error creating file: MAC_MA1_31HR22\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24088,7 +24088,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR21", 744, dir, &MAC_MA1_31HR21_val,
 				&MAC_MA1_31HR21_fops);
 	if (MAC_MA1_31HR21 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR21\n");
+		pr_info("error creating file: MAC_MA1_31HR21\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24097,7 +24097,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR20", 744, dir, &MAC_MA1_31HR20_val,
 				&MAC_MA1_31HR20_fops);
 	if (MAC_MA1_31HR20 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR20\n");
+		pr_info("error creating file: MAC_MA1_31HR20\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24106,7 +24106,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR19", 744, dir, &MAC_MA1_31HR19_val,
 				&MAC_MA1_31HR19_fops);
 	if (MAC_MA1_31HR19 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR19\n");
+		pr_info("error creating file: MAC_MA1_31HR19\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24115,7 +24115,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR18", 744, dir, &MAC_MA1_31HR18_val,
 				&MAC_MA1_31HR18_fops);
 	if (MAC_MA1_31HR18 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR18\n");
+		pr_info("error creating file: MAC_MA1_31HR18\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24124,7 +24124,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR17", 744, dir, &MAC_MA1_31HR17_val,
 				&MAC_MA1_31HR17_fops);
 	if (MAC_MA1_31HR17 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR17\n");
+		pr_info("error creating file: MAC_MA1_31HR17\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24133,7 +24133,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR16", 744, dir, &MAC_MA1_31HR16_val,
 				&MAC_MA1_31HR16_fops);
 	if (MAC_MA1_31HR16 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR16\n");
+		pr_info("error creating file: MAC_MA1_31HR16\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24142,7 +24142,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR15", 744, dir, &MAC_MA1_31HR15_val,
 				&MAC_MA1_31HR15_fops);
 	if (MAC_MA1_31HR15 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR15\n");
+		pr_info("error creating file: MAC_MA1_31HR15\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24151,7 +24151,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR14", 744, dir, &MAC_MA1_31HR14_val,
 				&MAC_MA1_31HR14_fops);
 	if (MAC_MA1_31HR14 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR14\n");
+		pr_info("error creating file: MAC_MA1_31HR14\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24160,7 +24160,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR13", 744, dir, &MAC_MA1_31HR13_val,
 				&MAC_MA1_31HR13_fops);
 	if (MAC_MA1_31HR13 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR13\n");
+		pr_info("error creating file: MAC_MA1_31HR13\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24169,7 +24169,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR12", 744, dir, &MAC_MA1_31HR12_val,
 				&MAC_MA1_31HR12_fops);
 	if (MAC_MA1_31HR12 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR12\n");
+		pr_info("error creating file: MAC_MA1_31HR12\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24178,7 +24178,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR11", 744, dir, &MAC_MA1_31HR11_val,
 				&MAC_MA1_31HR11_fops);
 	if (MAC_MA1_31HR11 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR11\n");
+		pr_info("error creating file: MAC_MA1_31HR11\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24187,7 +24187,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR10", 744, dir, &MAC_MA1_31HR10_val,
 				&MAC_MA1_31HR10_fops);
 	if (MAC_MA1_31HR10 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR10\n");
+		pr_info("error creating file: MAC_MA1_31HR10\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24196,7 +24196,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR9", 744, dir, &MAC_MA1_31HR9_val,
 				&MAC_MA1_31HR9_fops);
 	if (MAC_MA1_31HR9 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR9\n");
+		pr_info("error creating file: MAC_MA1_31HR9\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24205,7 +24205,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR8", 744, dir, &MAC_MA1_31HR8_val,
 				&MAC_MA1_31HR8_fops);
 	if (MAC_MA1_31HR8 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR8\n");
+		pr_info("error creating file: MAC_MA1_31HR8\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24214,7 +24214,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR7", 744, dir, &MAC_MA1_31HR7_val,
 				&MAC_MA1_31HR7_fops);
 	if (MAC_MA1_31HR7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR7\n");
+		pr_info("error creating file: MAC_MA1_31HR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24223,7 +24223,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR6", 744, dir, &MAC_MA1_31HR6_val,
 				&MAC_MA1_31HR6_fops);
 	if (MAC_MA1_31HR6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR6\n");
+		pr_info("error creating file: MAC_MA1_31HR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24232,7 +24232,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR5", 744, dir, &MAC_MA1_31HR5_val,
 				&MAC_MA1_31HR5_fops);
 	if (MAC_MA1_31HR5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR5\n");
+		pr_info("error creating file: MAC_MA1_31HR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24241,7 +24241,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR4", 744, dir, &MAC_MA1_31HR4_val,
 				&MAC_MA1_31HR4_fops);
 	if (MAC_MA1_31HR4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR4\n");
+		pr_info("error creating file: MAC_MA1_31HR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24250,7 +24250,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR3", 744, dir, &MAC_MA1_31HR3_val,
 				&MAC_MA1_31HR3_fops);
 	if (MAC_MA1_31HR3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR3\n");
+		pr_info("error creating file: MAC_MA1_31HR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24259,7 +24259,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR2", 744, dir, &MAC_MA1_31HR2_val,
 				&MAC_MA1_31HR2_fops);
 	if (MAC_MA1_31HR2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR2\n");
+		pr_info("error creating file: MAC_MA1_31HR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24268,7 +24268,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1_31HR1", 744, dir, &MAC_MA1_31HR1_val,
 				&MAC_MA1_31HR1_fops);
 	if (MAC_MA1_31HR1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1_31HR1\n");
+		pr_info("error creating file: MAC_MA1_31HR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24277,7 +24277,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_ARPA", 744, dir, &mac_arpa_val,
 				&mac_arpa_fops);
 	if (MAC_ARPA == NULL) {
-		printk(KERN_INFO "error creating file: MAC_ARPA\n");
+		pr_info("error creating file: MAC_ARPA\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24286,7 +24286,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R7", 744, dir, &MAC_L3A3R7_val,
 				&MAC_L3A3R7_fops);
 	if (MAC_L3A3R7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R7\n");
+		pr_info("error creating file: MAC_L3A3R7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24295,7 +24295,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R6", 744, dir, &MAC_L3A3R6_val,
 				&MAC_L3A3R6_fops);
 	if (MAC_L3A3R6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R6\n");
+		pr_info("error creating file: MAC_L3A3R6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24304,7 +24304,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R5", 744, dir, &MAC_L3A3R5_val,
 				&MAC_L3A3R5_fops);
 	if (MAC_L3A3R5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R5\n");
+		pr_info("error creating file: MAC_L3A3R5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24313,7 +24313,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R4", 744, dir, &MAC_L3A3R4_val,
 				&MAC_L3A3R4_fops);
 	if (MAC_L3A3R4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R4\n");
+		pr_info("error creating file: MAC_L3A3R4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24322,7 +24322,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R3", 744, dir, &MAC_L3A3R3_val,
 				&MAC_L3A3R3_fops);
 	if (MAC_L3A3R3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R3\n");
+		pr_info("error creating file: MAC_L3A3R3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24331,7 +24331,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R2", 744, dir, &MAC_L3A3R2_val,
 				&MAC_L3A3R2_fops);
 	if (MAC_L3A3R2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R2\n");
+		pr_info("error creating file: MAC_L3A3R2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24340,7 +24340,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R1", 744, dir, &MAC_L3A3R1_val,
 				&MAC_L3A3R1_fops);
 	if (MAC_L3A3R1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R1\n");
+		pr_info("error creating file: MAC_L3A3R1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24349,7 +24349,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A3R0", 744, dir, &MAC_L3A3R0_val,
 				&MAC_L3A3R0_fops);
 	if (MAC_L3A3R0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A3R0\n");
+		pr_info("error creating file: MAC_L3A3R0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24358,7 +24358,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R7", 744, dir, &MAC_L3A2R7_val,
 				&MAC_L3A2R7_fops);
 	if (MAC_L3A2R7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R7\n");
+		pr_info("error creating file: MAC_L3A2R7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24367,7 +24367,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R6", 744, dir, &MAC_L3A2R6_val,
 				&MAC_L3A2R6_fops);
 	if (MAC_L3A2R6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R6\n");
+		pr_info("error creating file: MAC_L3A2R6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24376,7 +24376,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R5", 744, dir, &MAC_L3A2R5_val,
 				&MAC_L3A2R5_fops);
 	if (MAC_L3A2R5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R5\n");
+		pr_info("error creating file: MAC_L3A2R5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24385,7 +24385,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R4", 744, dir, &MAC_L3A2R4_val,
 				&MAC_L3A2R4_fops);
 	if (MAC_L3A2R4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R4\n");
+		pr_info("error creating file: MAC_L3A2R4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24394,7 +24394,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R3", 744, dir, &MAC_L3A2R3_val,
 				&MAC_L3A2R3_fops);
 	if (MAC_L3A2R3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R3\n");
+		pr_info("error creating file: MAC_L3A2R3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24403,7 +24403,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R2", 744, dir, &MAC_L3A2R2_val,
 				&MAC_L3A2R2_fops);
 	if (MAC_L3A2R2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R2\n");
+		pr_info("error creating file: MAC_L3A2R2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24412,7 +24412,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R1", 744, dir, &MAC_L3A2R1_val,
 				&MAC_L3A2R1_fops);
 	if (MAC_L3A2R1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R1\n");
+		pr_info("error creating file: MAC_L3A2R1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24421,7 +24421,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A2R0", 744, dir, &MAC_L3A2R0_val,
 				&MAC_L3A2R0_fops);
 	if (MAC_L3A2R0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A2R0\n");
+		pr_info("error creating file: MAC_L3A2R0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24430,7 +24430,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R7", 744, dir, &MAC_L3A1R7_val,
 				&MAC_L3A1R7_fops);
 	if (MAC_L3A1R7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R7\n");
+		pr_info("error creating file: MAC_L3A1R7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24439,7 +24439,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R6", 744, dir, &MAC_L3A1R6_val,
 				&MAC_L3A1R6_fops);
 	if (MAC_L3A1R6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R6\n");
+		pr_info("error creating file: MAC_L3A1R6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24448,7 +24448,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R5", 744, dir, &MAC_L3A1R5_val,
 				&MAC_L3A1R5_fops);
 	if (MAC_L3A1R5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R5\n");
+		pr_info("error creating file: MAC_L3A1R5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24457,7 +24457,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R4", 744, dir, &MAC_L3A1R4_val,
 				&MAC_L3A1R4_fops);
 	if (MAC_L3A1R4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R4\n");
+		pr_info("error creating file: MAC_L3A1R4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24466,7 +24466,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R3", 744, dir, &MAC_L3A1R3_val,
 				&MAC_L3A1R3_fops);
 	if (MAC_L3A1R3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R3\n");
+		pr_info("error creating file: MAC_L3A1R3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24475,7 +24475,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R2", 744, dir, &MAC_L3A1R2_val,
 				&MAC_L3A1R2_fops);
 	if (MAC_L3A1R2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R2\n");
+		pr_info("error creating file: MAC_L3A1R2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24484,7 +24484,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R1", 744, dir, &MAC_L3A1R1_val,
 				&MAC_L3A1R1_fops);
 	if (MAC_L3A1R1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R1\n");
+		pr_info("error creating file: MAC_L3A1R1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24493,7 +24493,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A1R0", 744, dir, &MAC_L3A1R0_val,
 				&MAC_L3A1R0_fops);
 	if (MAC_L3A1R0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A1R0\n");
+		pr_info("error creating file: MAC_L3A1R0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24502,7 +24502,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R7", 744, dir, &MAC_L3A0R7_val,
 				&MAC_L3A0R7_fops);
 	if (MAC_L3A0R7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R7\n");
+		pr_info("error creating file: MAC_L3A0R7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24511,7 +24511,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R6", 744, dir, &MAC_L3A0R6_val,
 				&MAC_L3A0R6_fops);
 	if (MAC_L3A0R6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R6\n");
+		pr_info("error creating file: MAC_L3A0R6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24520,7 +24520,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R5", 744, dir, &MAC_L3A0R5_val,
 				&MAC_L3A0R5_fops);
 	if (MAC_L3A0R5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R5\n");
+		pr_info("error creating file: MAC_L3A0R5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24529,7 +24529,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R4", 744, dir, &MAC_L3A0R4_val,
 				&MAC_L3A0R4_fops);
 	if (MAC_L3A0R4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R4\n");
+		pr_info("error creating file: MAC_L3A0R4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24538,7 +24538,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R3", 744, dir, &MAC_L3A0R3_val,
 				&MAC_L3A0R3_fops);
 	if (MAC_L3A0R3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R3\n");
+		pr_info("error creating file: MAC_L3A0R3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24547,7 +24547,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R2", 744, dir, &MAC_L3A0R2_val,
 				&MAC_L3A0R2_fops);
 	if (MAC_L3A0R2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R2\n");
+		pr_info("error creating file: MAC_L3A0R2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24556,7 +24556,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R1", 744, dir, &MAC_L3A0R1_val,
 				&MAC_L3A0R1_fops);
 	if (MAC_L3A0R1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R1\n");
+		pr_info("error creating file: MAC_L3A0R1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24565,7 +24565,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3A0R0", 744, dir, &MAC_L3A0R0_val,
 				&MAC_L3A0R0_fops);
 	if (MAC_L3A0R0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3A0R0\n");
+		pr_info("error creating file: MAC_L3A0R0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24574,7 +24574,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR7", 744, dir, &MAC_L4AR7_val,
 				&MAC_L4AR7_fops);
 	if (MAC_L4AR7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR7\n");
+		pr_info("error creating file: MAC_L4AR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24583,7 +24583,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR6", 744, dir, &MAC_L4AR6_val,
 				&MAC_L4AR6_fops);
 	if (MAC_L4AR6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR6\n");
+		pr_info("error creating file: MAC_L4AR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24592,7 +24592,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR5", 744, dir, &MAC_L4AR5_val,
 				&MAC_L4AR5_fops);
 	if (MAC_L4AR5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR5\n");
+		pr_info("error creating file: MAC_L4AR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24601,7 +24601,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR4", 744, dir, &MAC_L4AR4_val,
 				&MAC_L4AR4_fops);
 	if (MAC_L4AR4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR4\n");
+		pr_info("error creating file: MAC_L4AR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24610,7 +24610,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR3", 744, dir, &MAC_L4AR3_val,
 				&MAC_L4AR3_fops);
 	if (MAC_L4AR3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR3\n");
+		pr_info("error creating file: MAC_L4AR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24619,7 +24619,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR2", 744, dir, &MAC_L4AR2_val,
 				&MAC_L4AR2_fops);
 	if (MAC_L4AR2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR2\n");
+		pr_info("error creating file: MAC_L4AR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24628,7 +24628,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR1", 744, dir, &MAC_L4AR1_val,
 				&MAC_L4AR1_fops);
 	if (MAC_L4AR1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR1\n");
+		pr_info("error creating file: MAC_L4AR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24637,7 +24637,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L4AR0", 744, dir, &MAC_L4AR0_val,
 				&MAC_L4AR0_fops);
 	if (MAC_L4AR0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L4AR0\n");
+		pr_info("error creating file: MAC_L4AR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24646,7 +24646,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR7", 744, dir, &MAC_L3L4CR7_val,
 				&MAC_L3L4CR7_fops);
 	if (MAC_L3L4CR7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR7\n");
+		pr_info("error creating file: MAC_L3L4CR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24655,7 +24655,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR6", 744, dir, &MAC_L3L4CR6_val,
 				&MAC_L3L4CR6_fops);
 	if (MAC_L3L4CR6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR6\n");
+		pr_info("error creating file: MAC_L3L4CR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24664,7 +24664,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR5", 744, dir, &MAC_L3L4CR5_val,
 				&MAC_L3L4CR5_fops);
 	if (MAC_L3L4CR5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR5\n");
+		pr_info("error creating file: MAC_L3L4CR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24673,7 +24673,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR4", 744, dir, &MAC_L3L4CR4_val,
 				&MAC_L3L4CR4_fops);
 	if (MAC_L3L4CR4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR4\n");
+		pr_info("error creating file: MAC_L3L4CR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24682,7 +24682,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR3", 744, dir, &MAC_L3L4CR3_val,
 				&MAC_L3L4CR3_fops);
 	if (MAC_L3L4CR3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR3\n");
+		pr_info("error creating file: MAC_L3L4CR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24691,7 +24691,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR2", 744, dir, &MAC_L3L4CR2_val,
 				&MAC_L3L4CR2_fops);
 	if (MAC_L3L4CR2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR2\n");
+		pr_info("error creating file: MAC_L3L4CR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24700,7 +24700,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR1", 744, dir, &MAC_L3L4CR1_val,
 				&MAC_L3L4CR1_fops);
 	if (MAC_L3L4CR1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR1\n");
+		pr_info("error creating file: MAC_L3L4CR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24709,7 +24709,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_L3L4CR0", 744, dir, &MAC_L3L4CR0_val,
 				&MAC_L3L4CR0_fops);
 	if (MAC_L3L4CR0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_L3L4CR0\n");
+		pr_info("error creating file: MAC_L3L4CR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24718,7 +24718,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_GPIOS", 744, dir, &mac_gpios_val,
 				&mac_gpios_fops);
 	if (MAC_GPIOS == NULL) {
-		printk(KERN_INFO "error creating file: MAC_GPIOS\n");
+		pr_info("error creating file: MAC_GPIOS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24727,7 +24727,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PCS", 744, dir, &mac_pcs_val,
 				&mac_pcs_fops);
 	if (MAC_PCS == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PCS\n");
+		pr_info("error creating file: MAC_PCS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24736,7 +24736,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TES", 744, dir, &mac_tes_val,
 				&mac_tes_fops);
 	if (MAC_TES == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TES\n");
+		pr_info("error creating file: MAC_TES\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24744,7 +24744,7 @@ int create_debug_files()
 	MAC_AE =
 	    debugfs_create_file("MAC_AE", 744, dir, &mac_ae_val, &mac_ae_fops);
 	if (MAC_AE == NULL) {
-		printk(KERN_INFO "error creating file: MAC_AE\n");
+		pr_info("error creating file: MAC_AE\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24753,7 +24753,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_ALPA", 744, dir, &mac_alpa_val,
 				&mac_alpa_fops);
 	if (MAC_ALPA == NULL) {
-		printk(KERN_INFO "error creating file: MAC_ALPA\n");
+		pr_info("error creating file: MAC_ALPA\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24762,7 +24762,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_AAD", 744, dir, &mac_aad_val,
 				&mac_aad_fops);
 	if (MAC_AAD == NULL) {
-		printk(KERN_INFO "error creating file: MAC_AAD\n");
+		pr_info("error creating file: MAC_AAD\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24771,7 +24771,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_ANS", 744, dir, &mac_ans_val,
 				&mac_ans_fops);
 	if (MAC_ANS == NULL) {
-		printk(KERN_INFO "error creating file: MAC_ANS\n");
+		pr_info("error creating file: MAC_ANS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24780,7 +24780,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_ANC", 744, dir, &mac_anc_val,
 				&mac_anc_fops);
 	if (MAC_ANC == NULL) {
-		printk(KERN_INFO "error creating file: MAC_ANC\n");
+		pr_info("error creating file: MAC_ANC\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24789,7 +24789,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_LPC", 744, dir, &mac_lpc_val,
 				&mac_lpc_fops);
 	if (MAC_LPC == NULL) {
-		printk(KERN_INFO "error creating file: MAC_LPC\n");
+		pr_info("error creating file: MAC_LPC\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24798,42 +24798,42 @@ int create_debug_files()
 	    debugfs_create_file("MAC_LPS", 744, dir, &mac_lps_val,
 				&mac_lps_fops);
 	if (MAC_LPS == NULL) {
-		printk(KERN_INFO "error creating file: MAC_LPS\n");
+		pr_info("error creating file: MAC_LPS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
 	MAC_LMIR = debugfs_create_file("MAC_LMIR", 744, dir, &mac_lmir_val, &mac_lmir_fops);
-	if(MAC_LMIR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_LMIR\n");
+	if (MAC_LMIR == NULL) {
+		pr_info("error creating file: MAC_LMIR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
 	MAC_SPI2R = debugfs_create_file("MAC_SPI2R", 744, dir, &MAC_SPI2r_val, &MAC_SPI2r_fops);
-	if(MAC_SPI2R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_SPI2R\n");
+	if (MAC_SPI2R == NULL) {
+		pr_info("error creating file: MAC_SPI2R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
 	MAC_SPI1R = debugfs_create_file("MAC_SPI1R", 744, dir, &MAC_SPI1r_val, &MAC_SPI1r_fops);
-	if(MAC_SPI1R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_SPI1R\n");
+	if (MAC_SPI1R == NULL) {
+		pr_info("error creating file: MAC_SPI1R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
 	MAC_SPI0R = debugfs_create_file("MAC_SPI0R", 744, dir, &MAC_SPI0r_val, &MAC_SPI0r_fops);
-	if(MAC_SPI0R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_SPI0R\n");
+	if (MAC_SPI0R == NULL) {
+		pr_info("error creating file: MAC_SPI0R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
 	MAC_PTO_CR = debugfs_create_file("MAC_PTO_CR", 744, dir, &mac_pto_cr_val, &mac_pto_cr_fops);
-	if(MAC_PTO_CR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PTO_CR\n");
+	if (MAC_PTO_CR == NULL) {
+		pr_info("error creating file: MAC_PTO_CR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24845,7 +24845,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_WIDTH3", 744, dir, &MAC_PPS_WIDTH3_val,
 				&MAC_PPS_WIDTH3_fops);
 	if (MAC_PPS_WIDTH3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_WIDTH3\n");
+		pr_info("error creating file: MAC_PPS_WIDTH3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24854,7 +24854,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_WIDTH2", 744, dir, &MAC_PPS_WIDTH2_val,
 				&MAC_PPS_WIDTH2_fops);
 	if (MAC_PPS_WIDTH2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_WIDTH2\n");
+		pr_info("error creating file: MAC_PPS_WIDTH2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24863,7 +24863,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_WIDTH1", 744, dir, &MAC_PPS_WIDTH1_val,
 				&MAC_PPS_WIDTH1_fops);
 	if (MAC_PPS_WIDTH1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_WIDTH1\n");
+		pr_info("error creating file: MAC_PPS_WIDTH1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24872,7 +24872,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_WIDTH0", 744, dir, &MAC_PPS_WIDTH0_val,
 				&MAC_PPS_WIDTH0_fops);
 	if (MAC_PPS_WIDTH0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_WIDTH0\n");
+		pr_info("error creating file: MAC_PPS_WIDTH0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24881,7 +24881,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_INTVAL3", 744, dir,
 				&MAC_PPS_INTVAL3_val, &MAC_PPS_INTVAL3_fops);
 	if (MAC_PPS_INTVAL3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_INTVAL3\n");
+		pr_info("error creating file: MAC_PPS_INTVAL3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24890,7 +24890,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_INTVAL2", 744, dir,
 				&MAC_PPS_INTVAL2_val, &MAC_PPS_INTVAL2_fops);
 	if (MAC_PPS_INTVAL2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_INTVAL2\n");
+		pr_info("error creating file: MAC_PPS_INTVAL2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24899,7 +24899,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_INTVAL1", 744, dir,
 				&MAC_PPS_INTVAL1_val, &MAC_PPS_INTVAL1_fops);
 	if (MAC_PPS_INTVAL1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_INTVAL1\n");
+		pr_info("error creating file: MAC_PPS_INTVAL1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24908,7 +24908,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_INTVAL0", 744, dir,
 				&MAC_PPS_INTVAL0_val, &MAC_PPS_INTVAL0_fops);
 	if (MAC_PPS_INTVAL0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_INTVAL0\n");
+		pr_info("error creating file: MAC_PPS_INTVAL0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24917,7 +24917,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTNS3", 744, dir, &MAC_PPS_TTNS3_val,
 				&MAC_PPS_TTNS3_fops);
 	if (MAC_PPS_TTNS3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTNS3\n");
+		pr_info("error creating file: MAC_PPS_TTNS3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24926,7 +24926,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTNS2", 744, dir, &MAC_PPS_TTNS2_val,
 				&MAC_PPS_TTNS2_fops);
 	if (MAC_PPS_TTNS2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTNS2\n");
+		pr_info("error creating file: MAC_PPS_TTNS2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24935,7 +24935,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTNS1", 744, dir, &MAC_PPS_TTNS1_val,
 				&MAC_PPS_TTNS1_fops);
 	if (MAC_PPS_TTNS1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTNS1\n");
+		pr_info("error creating file: MAC_PPS_TTNS1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24944,7 +24944,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTNS0", 744, dir, &MAC_PPS_TTNS0_val,
 				&MAC_PPS_TTNS0_fops);
 	if (MAC_PPS_TTNS0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTNS0\n");
+		pr_info("error creating file: MAC_PPS_TTNS0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24953,7 +24953,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTS3", 744, dir, &MAC_PPS_TTS3_val,
 				&MAC_PPS_TTS3_fops);
 	if (MAC_PPS_TTS3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTS3\n");
+		pr_info("error creating file: MAC_PPS_TTS3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24962,7 +24962,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTS2", 744, dir, &MAC_PPS_TTS2_val,
 				&MAC_PPS_TTS2_fops);
 	if (MAC_PPS_TTS2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTS2\n");
+		pr_info("error creating file: MAC_PPS_TTS2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24971,7 +24971,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTS1", 744, dir, &MAC_PPS_TTS1_val,
 				&MAC_PPS_TTS1_fops);
 	if (MAC_PPS_TTS1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTS1\n");
+		pr_info("error creating file: MAC_PPS_TTS1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24980,7 +24980,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPS_TTS0", 744, dir, &MAC_PPS_TTS0_val,
 				&MAC_PPS_TTS0_fops);
 	if (MAC_PPS_TTS0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPS_TTS0\n");
+		pr_info("error creating file: MAC_PPS_TTS0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24989,7 +24989,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PPSC", 744, dir, &mac_ppsc_val,
 				&mac_ppsc_fops);
 	if (MAC_PPSC == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PPSC\n");
+		pr_info("error creating file: MAC_PPSC\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -24998,7 +24998,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TEAC", 744, dir, &mac_teac_val,
 				&mac_teac_fops);
 	if (MAC_TEAC == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TEAC\n");
+		pr_info("error creating file: MAC_TEAC\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25007,7 +25007,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TIAC", 744, dir, &mac_tiac_val,
 				&mac_tiac_fops);
 	if (MAC_TIAC == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TIAC\n");
+		pr_info("error creating file: MAC_TIAC\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25016,7 +25016,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_ATS", 744, dir, &mac_ats_val,
 				&mac_ats_fops);
 	if (MAC_ATS == NULL) {
-		printk(KERN_INFO "error creating file: MAC_ATS\n");
+		pr_info("error creating file: MAC_ATS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25025,7 +25025,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_ATN", 744, dir, &mac_atn_val,
 				&mac_atn_fops);
 	if (MAC_ATN == NULL) {
-		printk(KERN_INFO "error creating file: MAC_ATN\n");
+		pr_info("error creating file: MAC_ATN\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25033,7 +25033,7 @@ int create_debug_files()
 	MAC_AC =
 	    debugfs_create_file("MAC_AC", 744, dir, &mac_ac_val, &mac_ac_fops);
 	if (MAC_AC == NULL) {
-		printk(KERN_INFO "error creating file: MAC_AC\n");
+		pr_info("error creating file: MAC_AC\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25042,7 +25042,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TTN", 744, dir, &mac_ttn_val,
 				&mac_ttn_fops);
 	if (MAC_TTN == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TTN\n");
+		pr_info("error creating file: MAC_TTN\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25051,7 +25051,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TTSN", 744, dir, &mac_ttsn_val,
 				&mac_ttsn_fops);
 	if (MAC_TTSN == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TTSN\n");
+		pr_info("error creating file: MAC_TTSN\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25060,7 +25060,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TSR", 744, dir, &mac_tsr_val,
 				&mac_tsr_fops);
 	if (MAC_TSR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TSR\n");
+		pr_info("error creating file: MAC_TSR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25069,7 +25069,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_STHWR", 744, dir, &mac_sthwr_val,
 				&mac_sthwr_fops);
 	if (MAC_STHWR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_STHWR\n");
+		pr_info("error creating file: MAC_STHWR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25078,7 +25078,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TAR", 744, dir, &mac_tar_val,
 				&mac_tar_fops);
 	if (MAC_TAR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TAR\n");
+		pr_info("error creating file: MAC_TAR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25087,7 +25087,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_STNSUR", 744, dir, &mac_stnsur_val,
 				&mac_stnsur_fops);
 	if (MAC_STNSUR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_STNSUR\n");
+		pr_info("error creating file: MAC_STNSUR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25096,7 +25096,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_STSUR", 744, dir, &mac_stsur_val,
 				&mac_stsur_fops);
 	if (MAC_STSUR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_STSUR\n");
+		pr_info("error creating file: MAC_STSUR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25105,7 +25105,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_STNSR", 744, dir, &mac_stnsr_val,
 				&mac_stnsr_fops);
 	if (MAC_STNSR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_STNSR\n");
+		pr_info("error creating file: MAC_STNSR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25114,7 +25114,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_STSR", 744, dir, &mac_stsr_val,
 				&mac_stsr_fops);
 	if (MAC_STSR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_STSR\n");
+		pr_info("error creating file: MAC_STSR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25123,7 +25123,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_SSIR", 744, dir, &mac_ssir_val,
 				&mac_ssir_fops);
 	if (MAC_SSIR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_SSIR\n");
+		pr_info("error creating file: MAC_SSIR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25132,7 +25132,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TCR", 744, dir, &mac_tcr_val,
 				&mac_tcr_fops);
 	if (MAC_TCR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TCR\n");
+		pr_info("error creating file: MAC_TCR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25141,7 +25141,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_DSR", 744, dir, &mtl_dsr_val,
 				&mtl_dsr_fops);
 	if (MTL_DSR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_DSR\n");
+		pr_info("error creating file: MTL_DSR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25150,7 +25150,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_RWPFFR", 744, dir, &mac_rwpffr_val,
 				&mac_rwpffr_fops);
 	if (MAC_RWPFFR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_RWPFFR\n");
+		pr_info("error creating file: MAC_RWPFFR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25159,7 +25159,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_RTSR", 744, dir, &mac_rtsr_val,
 				&mac_rtsr_fops);
 	if (MAC_RTSR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_RTSR\n");
+		pr_info("error creating file: MAC_RTSR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25168,7 +25168,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_IER", 744, dir, &mtl_ier_val,
 				&mtl_ier_fops);
 	if (MTL_IER == NULL) {
-		printk(KERN_INFO "error creating file: MTL_IER\n");
+		pr_info("error creating file: MTL_IER\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25177,7 +25177,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRCR7", 744, dir, &MTL_QRCR7_val,
 				&MTL_QRCR7_fops);
 	if (MTL_QRCR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRCR7\n");
+		pr_info("error creating file: MTL_QRCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25186,7 +25186,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRCR6", 744, dir, &MTL_QRCR6_val,
 				&MTL_QRCR6_fops);
 	if (MTL_QRCR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRCR6\n");
+		pr_info("error creating file: MTL_QRCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25195,7 +25195,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRCR5", 744, dir, &MTL_QRCR5_val,
 				&MTL_QRCR5_fops);
 	if (MTL_QRCR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRCR5\n");
+		pr_info("error creating file: MTL_QRCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25204,7 +25204,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRCR4", 744, dir, &MTL_QRCR4_val,
 				&MTL_QRCR4_fops);
 	if (MTL_QRCR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRCR4\n");
+		pr_info("error creating file: MTL_QRCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25213,7 +25213,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRCR3", 744, dir, &MTL_QRCR3_val,
 				&MTL_QRCR3_fops);
 	if (MTL_QRCR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRCR3\n");
+		pr_info("error creating file: MTL_QRCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25222,7 +25222,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRCR2", 744, dir, &MTL_QRCR2_val,
 				&MTL_QRCR2_fops);
 	if (MTL_QRCR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRCR2\n");
+		pr_info("error creating file: MTL_QRCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25231,7 +25231,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRCR1", 744, dir, &MTL_QRCR1_val,
 				&MTL_QRCR1_fops);
 	if (MTL_QRCR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRCR1\n");
+		pr_info("error creating file: MTL_QRCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25240,7 +25240,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRDR7", 744, dir, &MTL_QRDR7_val,
 				&MTL_QRDR7_fops);
 	if (MTL_QRDR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRDR7\n");
+		pr_info("error creating file: MTL_QRDR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25249,7 +25249,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRDR6", 744, dir, &MTL_QRDR6_val,
 				&MTL_QRDR6_fops);
 	if (MTL_QRDR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRDR6\n");
+		pr_info("error creating file: MTL_QRDR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25258,7 +25258,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRDR5", 744, dir, &MTL_QRDR5_val,
 				&MTL_QRDR5_fops);
 	if (MTL_QRDR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRDR5\n");
+		pr_info("error creating file: MTL_QRDR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25267,7 +25267,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRDR4", 744, dir, &MTL_QRDR4_val,
 				&MTL_QRDR4_fops);
 	if (MTL_QRDR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRDR4\n");
+		pr_info("error creating file: MTL_QRDR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25276,7 +25276,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRDR3", 744, dir, &MTL_QRDR3_val,
 				&MTL_QRDR3_fops);
 	if (MTL_QRDR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRDR3\n");
+		pr_info("error creating file: MTL_QRDR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25285,7 +25285,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRDR2", 744, dir, &MTL_QRDR2_val,
 				&MTL_QRDR2_fops);
 	if (MTL_QRDR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRDR2\n");
+		pr_info("error creating file: MTL_QRDR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25294,7 +25294,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QRDR1", 744, dir, &MTL_QRDR1_val,
 				&MTL_QRDR1_fops);
 	if (MTL_QRDR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QRDR1\n");
+		pr_info("error creating file: MTL_QRDR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25303,7 +25303,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QOCR7", 744, dir, &MTL_QOCR7_val,
 				&MTL_QOCR7_fops);
 	if (MTL_QOCR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QOCR7\n");
+		pr_info("error creating file: MTL_QOCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25312,7 +25312,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QOCR6", 744, dir, &MTL_QOCR6_val,
 				&MTL_QOCR6_fops);
 	if (MTL_QOCR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QOCR6\n");
+		pr_info("error creating file: MTL_QOCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25321,7 +25321,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QOCR5", 744, dir, &MTL_QOCR5_val,
 				&MTL_QOCR5_fops);
 	if (MTL_QOCR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QOCR5\n");
+		pr_info("error creating file: MTL_QOCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25330,7 +25330,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QOCR4", 744, dir, &MTL_QOCR4_val,
 				&MTL_QOCR4_fops);
 	if (MTL_QOCR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QOCR4\n");
+		pr_info("error creating file: MTL_QOCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25339,7 +25339,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QOCR3", 744, dir, &MTL_QOCR3_val,
 				&MTL_QOCR3_fops);
 	if (MTL_QOCR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QOCR3\n");
+		pr_info("error creating file: MTL_QOCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25348,7 +25348,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QOCR2", 744, dir, &MTL_QOCR2_val,
 				&MTL_QOCR2_fops);
 	if (MTL_QOCR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QOCR2\n");
+		pr_info("error creating file: MTL_QOCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25357,7 +25357,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QOCR1", 744, dir, &MTL_QOCR1_val,
 				&MTL_QOCR1_fops);
 	if (MTL_QOCR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QOCR1\n");
+		pr_info("error creating file: MTL_QOCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25366,7 +25366,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QROMR7", 744, dir, &MTL_QROMR7_val,
 				&MTL_QROMR7_fops);
 	if (MTL_QROMR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QROMR7\n");
+		pr_info("error creating file: MTL_QROMR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25375,7 +25375,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QROMR6", 744, dir, &MTL_QROMR6_val,
 				&MTL_QROMR6_fops);
 	if (MTL_QROMR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QROMR6\n");
+		pr_info("error creating file: MTL_QROMR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25384,7 +25384,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QROMR5", 744, dir, &MTL_QROMR5_val,
 				&MTL_QROMR5_fops);
 	if (MTL_QROMR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QROMR5\n");
+		pr_info("error creating file: MTL_QROMR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25393,7 +25393,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QROMR4", 744, dir, &MTL_QROMR4_val,
 				&MTL_QROMR4_fops);
 	if (MTL_QROMR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QROMR4\n");
+		pr_info("error creating file: MTL_QROMR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25402,7 +25402,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QROMR3", 744, dir, &MTL_QROMR3_val,
 				&MTL_QROMR3_fops);
 	if (MTL_QROMR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QROMR3\n");
+		pr_info("error creating file: MTL_QROMR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25411,7 +25411,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QROMR2", 744, dir, &MTL_QROMR2_val,
 				&MTL_QROMR2_fops);
 	if (MTL_QROMR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QROMR2\n");
+		pr_info("error creating file: MTL_QROMR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25420,7 +25420,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QROMR1", 744, dir, &MTL_QROMR1_val,
 				&MTL_QROMR1_fops);
 	if (MTL_QROMR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QROMR1\n");
+		pr_info("error creating file: MTL_QROMR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25429,7 +25429,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QLCR7", 744, dir, &MTL_QLCR7_val,
 				&MTL_QLCR7_fops);
 	if (MTL_QLCR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QLCR7\n");
+		pr_info("error creating file: MTL_QLCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25438,7 +25438,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QLCR6", 744, dir, &MTL_QLCR6_val,
 				&MTL_QLCR6_fops);
 	if (MTL_QLCR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QLCR6\n");
+		pr_info("error creating file: MTL_QLCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25447,7 +25447,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QLCR5", 744, dir, &MTL_QLCR5_val,
 				&MTL_QLCR5_fops);
 	if (MTL_QLCR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QLCR5\n");
+		pr_info("error creating file: MTL_QLCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25456,7 +25456,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QLCR4", 744, dir, &MTL_QLCR4_val,
 				&MTL_QLCR4_fops);
 	if (MTL_QLCR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QLCR4\n");
+		pr_info("error creating file: MTL_QLCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25465,7 +25465,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QLCR3", 744, dir, &MTL_QLCR3_val,
 				&MTL_QLCR3_fops);
 	if (MTL_QLCR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QLCR3\n");
+		pr_info("error creating file: MTL_QLCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25474,7 +25474,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QLCR2", 744, dir, &MTL_QLCR2_val,
 				&MTL_QLCR2_fops);
 	if (MTL_QLCR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QLCR2\n");
+		pr_info("error creating file: MTL_QLCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25483,7 +25483,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QLCR1", 744, dir, &MTL_QLCR1_val,
 				&MTL_QLCR1_fops);
 	if (MTL_QLCR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QLCR1\n");
+		pr_info("error creating file: MTL_QLCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25492,7 +25492,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QHCR7", 744, dir, &MTL_QHCR7_val,
 				&MTL_QHCR7_fops);
 	if (MTL_QHCR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QHCR7\n");
+		pr_info("error creating file: MTL_QHCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25501,7 +25501,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QHCR6", 744, dir, &MTL_QHCR6_val,
 				&MTL_QHCR6_fops);
 	if (MTL_QHCR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QHCR6\n");
+		pr_info("error creating file: MTL_QHCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25510,7 +25510,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QHCR5", 744, dir, &MTL_QHCR5_val,
 				&MTL_QHCR5_fops);
 	if (MTL_QHCR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QHCR5\n");
+		pr_info("error creating file: MTL_QHCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25519,7 +25519,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QHCR4", 744, dir, &MTL_QHCR4_val,
 				&MTL_QHCR4_fops);
 	if (MTL_QHCR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QHCR4\n");
+		pr_info("error creating file: MTL_QHCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25528,7 +25528,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QHCR3", 744, dir, &MTL_QHCR3_val,
 				&MTL_QHCR3_fops);
 	if (MTL_QHCR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QHCR3\n");
+		pr_info("error creating file: MTL_QHCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25537,7 +25537,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QHCR2", 744, dir, &MTL_QHCR2_val,
 				&MTL_QHCR2_fops);
 	if (MTL_QHCR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QHCR2\n");
+		pr_info("error creating file: MTL_QHCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25546,7 +25546,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QHCR1", 744, dir, &MTL_QHCR1_val,
 				&MTL_QHCR1_fops);
 	if (MTL_QHCR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QHCR1\n");
+		pr_info("error creating file: MTL_QHCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25555,7 +25555,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QSSCR7", 744, dir, &MTL_QSSCR7_val,
 				&MTL_QSSCR7_fops);
 	if (MTL_QSSCR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QSSCR7\n");
+		pr_info("error creating file: MTL_QSSCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25564,7 +25564,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QSSCR6", 744, dir, &MTL_QSSCR6_val,
 				&MTL_QSSCR6_fops);
 	if (MTL_QSSCR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QSSCR6\n");
+		pr_info("error creating file: MTL_QSSCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25573,7 +25573,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QSSCR5", 744, dir, &MTL_QSSCR5_val,
 				&MTL_QSSCR5_fops);
 	if (MTL_QSSCR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QSSCR5\n");
+		pr_info("error creating file: MTL_QSSCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25582,7 +25582,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QSSCR4", 744, dir, &MTL_QSSCR4_val,
 				&MTL_QSSCR4_fops);
 	if (MTL_QSSCR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QSSCR4\n");
+		pr_info("error creating file: MTL_QSSCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25591,7 +25591,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QSSCR3", 744, dir, &MTL_QSSCR3_val,
 				&MTL_QSSCR3_fops);
 	if (MTL_QSSCR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QSSCR3\n");
+		pr_info("error creating file: MTL_QSSCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25600,7 +25600,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QSSCR2", 744, dir, &MTL_QSSCR2_val,
 				&MTL_QSSCR2_fops);
 	if (MTL_QSSCR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QSSCR2\n");
+		pr_info("error creating file: MTL_QSSCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25609,7 +25609,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QSSCR1", 744, dir, &MTL_QSSCR1_val,
 				&MTL_QSSCR1_fops);
 	if (MTL_QSSCR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QSSCR1\n");
+		pr_info("error creating file: MTL_QSSCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25618,7 +25618,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QW7", 744, dir, &MTL_QW7_val,
 				&MTL_QW7_fops);
 	if (MTL_QW7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QW7\n");
+		pr_info("error creating file: MTL_QW7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25627,7 +25627,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QW6", 744, dir, &MTL_QW6_val,
 				&MTL_QW6_fops);
 	if (MTL_QW6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QW6\n");
+		pr_info("error creating file: MTL_QW6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25636,7 +25636,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QW5", 744, dir, &MTL_QW5_val,
 				&MTL_QW5_fops);
 	if (MTL_QW5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QW5\n");
+		pr_info("error creating file: MTL_QW5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25645,7 +25645,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QW4", 744, dir, &MTL_QW4_val,
 				&MTL_QW4_fops);
 	if (MTL_QW4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QW4\n");
+		pr_info("error creating file: MTL_QW4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25654,7 +25654,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QW3", 744, dir, &MTL_QW3_val,
 				&MTL_QW3_fops);
 	if (MTL_QW3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QW3\n");
+		pr_info("error creating file: MTL_QW3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25663,7 +25663,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QW2", 744, dir, &MTL_QW2_val,
 				&MTL_QW2_fops);
 	if (MTL_QW2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QW2\n");
+		pr_info("error creating file: MTL_QW2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25672,7 +25672,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QW1", 744, dir, &MTL_QW1_val,
 				&MTL_QW1_fops);
 	if (MTL_QW1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QW1\n");
+		pr_info("error creating file: MTL_QW1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25681,7 +25681,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QESR7", 744, dir, &MTL_QESR7_val,
 				&MTL_QESR7_fops);
 	if (MTL_QESR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QESR7\n");
+		pr_info("error creating file: MTL_QESR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25690,7 +25690,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QESR6", 744, dir, &MTL_QESR6_val,
 				&MTL_QESR6_fops);
 	if (MTL_QESR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QESR6\n");
+		pr_info("error creating file: MTL_QESR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25699,7 +25699,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QESR5", 744, dir, &MTL_QESR5_val,
 				&MTL_QESR5_fops);
 	if (MTL_QESR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QESR5\n");
+		pr_info("error creating file: MTL_QESR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25708,7 +25708,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QESR4", 744, dir, &MTL_QESR4_val,
 				&MTL_QESR4_fops);
 	if (MTL_QESR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QESR4\n");
+		pr_info("error creating file: MTL_QESR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25717,7 +25717,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QESR3", 744, dir, &MTL_QESR3_val,
 				&MTL_QESR3_fops);
 	if (MTL_QESR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QESR3\n");
+		pr_info("error creating file: MTL_QESR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25726,7 +25726,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QESR2", 744, dir, &MTL_QESR2_val,
 				&MTL_QESR2_fops);
 	if (MTL_QESR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QESR2\n");
+		pr_info("error creating file: MTL_QESR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25735,7 +25735,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QESR1", 744, dir, &MTL_QESR1_val,
 				&MTL_QESR1_fops);
 	if (MTL_QESR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QESR1\n");
+		pr_info("error creating file: MTL_QESR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25744,7 +25744,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QECR7", 744, dir, &MTL_QECR7_val,
 				&MTL_QECR7_fops);
 	if (MTL_QECR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QECR7\n");
+		pr_info("error creating file: MTL_QECR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25753,7 +25753,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QECR6", 744, dir, &MTL_QECR6_val,
 				&MTL_QECR6_fops);
 	if (MTL_QECR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QECR6\n");
+		pr_info("error creating file: MTL_QECR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25762,7 +25762,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QECR5", 744, dir, &MTL_QECR5_val,
 				&MTL_QECR5_fops);
 	if (MTL_QECR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QECR5\n");
+		pr_info("error creating file: MTL_QECR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25771,7 +25771,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QECR4", 744, dir, &MTL_QECR4_val,
 				&MTL_QECR4_fops);
 	if (MTL_QECR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QECR4\n");
+		pr_info("error creating file: MTL_QECR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25780,7 +25780,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QECR3", 744, dir, &MTL_QECR3_val,
 				&MTL_QECR3_fops);
 	if (MTL_QECR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QECR3\n");
+		pr_info("error creating file: MTL_QECR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25789,7 +25789,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QECR2", 744, dir, &MTL_QECR2_val,
 				&MTL_QECR2_fops);
 	if (MTL_QECR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QECR2\n");
+		pr_info("error creating file: MTL_QECR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25798,7 +25798,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QECR1", 744, dir, &MTL_QECR1_val,
 				&MTL_QECR1_fops);
 	if (MTL_QECR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QECR1\n");
+		pr_info("error creating file: MTL_QECR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25807,7 +25807,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTDR7", 744, dir, &MTL_QTDR7_val,
 				&MTL_QTDR7_fops);
 	if (MTL_QTDR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTDR7\n");
+		pr_info("error creating file: MTL_QTDR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25816,7 +25816,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTDR6", 744, dir, &MTL_QTDR6_val,
 				&MTL_QTDR6_fops);
 	if (MTL_QTDR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTDR6\n");
+		pr_info("error creating file: MTL_QTDR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25825,7 +25825,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTDR5", 744, dir, &MTL_QTDR5_val,
 				&MTL_QTDR5_fops);
 	if (MTL_QTDR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTDR5\n");
+		pr_info("error creating file: MTL_QTDR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25834,7 +25834,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTDR4", 744, dir, &MTL_QTDR4_val,
 				&MTL_QTDR4_fops);
 	if (MTL_QTDR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTDR4\n");
+		pr_info("error creating file: MTL_QTDR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25843,7 +25843,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTDR3", 744, dir, &MTL_QTDR3_val,
 				&MTL_QTDR3_fops);
 	if (MTL_QTDR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTDR3\n");
+		pr_info("error creating file: MTL_QTDR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25852,7 +25852,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTDR2", 744, dir, &MTL_QTDR2_val,
 				&MTL_QTDR2_fops);
 	if (MTL_QTDR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTDR2\n");
+		pr_info("error creating file: MTL_QTDR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25861,7 +25861,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTDR1", 744, dir, &MTL_QTDR1_val,
 				&MTL_QTDR1_fops);
 	if (MTL_QTDR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTDR1\n");
+		pr_info("error creating file: MTL_QTDR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25870,7 +25870,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QUCR7", 744, dir, &MTL_QUCR7_val,
 				&MTL_QUCR7_fops);
 	if (MTL_QUCR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QUCR7\n");
+		pr_info("error creating file: MTL_QUCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25879,7 +25879,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QUCR6", 744, dir, &MTL_QUCR6_val,
 				&MTL_QUCR6_fops);
 	if (MTL_QUCR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QUCR6\n");
+		pr_info("error creating file: MTL_QUCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25888,7 +25888,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QUCR5", 744, dir, &MTL_QUCR5_val,
 				&MTL_QUCR5_fops);
 	if (MTL_QUCR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QUCR5\n");
+		pr_info("error creating file: MTL_QUCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25897,7 +25897,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QUCR4", 744, dir, &MTL_QUCR4_val,
 				&MTL_QUCR4_fops);
 	if (MTL_QUCR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QUCR4\n");
+		pr_info("error creating file: MTL_QUCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25906,7 +25906,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QUCR3", 744, dir, &MTL_QUCR3_val,
 				&MTL_QUCR3_fops);
 	if (MTL_QUCR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QUCR3\n");
+		pr_info("error creating file: MTL_QUCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25915,7 +25915,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QUCR2", 744, dir, &MTL_QUCR2_val,
 				&MTL_QUCR2_fops);
 	if (MTL_QUCR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QUCR2\n");
+		pr_info("error creating file: MTL_QUCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25924,7 +25924,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QUCR1", 744, dir, &MTL_QUCR1_val,
 				&MTL_QUCR1_fops);
 	if (MTL_QUCR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QUCR1\n");
+		pr_info("error creating file: MTL_QUCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25933,7 +25933,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTOMR7", 744, dir, &MTL_QTOMR7_val,
 				&MTL_QTOMR7_fops);
 	if (MTL_QTOMR7 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTOMR7\n");
+		pr_info("error creating file: MTL_QTOMR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25942,7 +25942,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTOMR6", 744, dir, &MTL_QTOMR6_val,
 				&MTL_QTOMR6_fops);
 	if (MTL_QTOMR6 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTOMR6\n");
+		pr_info("error creating file: MTL_QTOMR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25951,7 +25951,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTOMR5", 744, dir, &MTL_QTOMR5_val,
 				&MTL_QTOMR5_fops);
 	if (MTL_QTOMR5 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTOMR5\n");
+		pr_info("error creating file: MTL_QTOMR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25960,7 +25960,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTOMR4", 744, dir, &MTL_QTOMR4_val,
 				&MTL_QTOMR4_fops);
 	if (MTL_QTOMR4 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTOMR4\n");
+		pr_info("error creating file: MTL_QTOMR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25969,7 +25969,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTOMR3", 744, dir, &MTL_QTOMR3_val,
 				&MTL_QTOMR3_fops);
 	if (MTL_QTOMR3 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTOMR3\n");
+		pr_info("error creating file: MTL_QTOMR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25978,7 +25978,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTOMR2", 744, dir, &MTL_QTOMR2_val,
 				&MTL_QTOMR2_fops);
 	if (MTL_QTOMR2 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTOMR2\n");
+		pr_info("error creating file: MTL_QTOMR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25987,7 +25987,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_QTOMR1", 744, dir, &MTL_QTOMR1_val,
 				&MTL_QTOMR1_fops);
 	if (MTL_QTOMR1 == NULL) {
-		printk(KERN_INFO "error creating file: MTL_QTOMR1\n");
+		pr_info("error creating file: MTL_QTOMR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -25996,7 +25996,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_PMTCSR", 744, dir, &mac_pmtcsr_val,
 				&mac_pmtcsr_fops);
 	if (MAC_PMTCSR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_PMTCSR\n");
+		pr_info("error creating file: MAC_PMTCSR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26006,7 +26006,7 @@ int create_debug_files()
 				&mmc_rxicmp_err_octets_val,
 				&mmc_rxicmp_err_octets_fops);
 	if (MMC_RXICMP_ERR_OCTETS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXICMP_ERR_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26017,7 +26017,7 @@ int create_debug_files()
 				&mmc_rxicmp_gd_octets_val,
 				&mmc_rxicmp_gd_octets_fops);
 	if (MMC_RXICMP_GD_OCTETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXICMP_GD_OCTETS\n");
+		pr_info("error creating file: MMC_RXICMP_GD_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26027,7 +26027,7 @@ int create_debug_files()
 				&mmc_rxtcp_err_octets_val,
 				&mmc_rxtcp_err_octets_fops);
 	if (MMC_RXTCP_ERR_OCTETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXTCP_ERR_OCTETS\n");
+		pr_info("error creating file: MMC_RXTCP_ERR_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26037,7 +26037,7 @@ int create_debug_files()
 				&mmc_rxtcp_gd_octets_val,
 				&mmc_rxtcp_gd_octets_fops);
 	if (MMC_RXTCP_GD_OCTETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXTCP_GD_OCTETS\n");
+		pr_info("error creating file: MMC_RXTCP_GD_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26047,7 +26047,7 @@ int create_debug_files()
 				&mmc_rxudp_err_octets_val,
 				&mmc_rxudp_err_octets_fops);
 	if (MMC_RXUDP_ERR_OCTETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXUDP_ERR_OCTETS\n");
+		pr_info("error creating file: MMC_RXUDP_ERR_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26057,7 +26057,7 @@ int create_debug_files()
 				&mmc_rxudp_gd_octets_val,
 				&mmc_rxudp_gd_octets_fops);
 	if (MMC_RXUDP_GD_OCTETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXUDP_GD_OCTETS\n");
+		pr_info("error creating file: MMC_RXUDP_GD_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26067,7 +26067,7 @@ int create_debug_files()
 				&MMC_RXIPV6_nopay_octets_val,
 				&MMC_RXIPV6_nopay_octets_fops);
 	if (MMC_RXIPV6_NOPAY_OCTETS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV6_NOPAY_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26078,7 +26078,7 @@ int create_debug_files()
 				&MMC_RXIPV6_hdrerr_octets_val,
 				&MMC_RXIPV6_hdrerr_octets_fops);
 	if (MMC_RXIPV6_HDRERR_OCTETS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV6_HDRERR_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26089,7 +26089,7 @@ int create_debug_files()
 				&MMC_RXIPV6_gd_octets_val,
 				&MMC_RXIPV6_gd_octets_fops);
 	if (MMC_RXIPV6_GD_OCTETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXIPV6_GD_OCTETS\n");
+		pr_info("error creating file: MMC_RXIPV6_GD_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26099,7 +26099,7 @@ int create_debug_files()
 				&MMC_RXIPV4_udsbl_octets_val,
 				&MMC_RXIPV4_udsbl_octets_fops);
 	if (MMC_RXIPV4_UDSBL_OCTETS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV4_UDSBL_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26110,7 +26110,7 @@ int create_debug_files()
 				&MMC_RXIPV4_frag_octets_val,
 				&MMC_RXIPV4_frag_octets_fops);
 	if (MMC_RXIPV4_FRAG_OCTETS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV4_FRAG_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26121,7 +26121,7 @@ int create_debug_files()
 				&MMC_RXIPV4_nopay_octets_val,
 				&MMC_RXIPV4_nopay_octets_fops);
 	if (MMC_RXIPV4_NOPAY_OCTETS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV4_NOPAY_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26132,7 +26132,7 @@ int create_debug_files()
 				&MMC_RXIPV4_hdrerr_octets_val,
 				&MMC_RXIPV4_hdrerr_octets_fops);
 	if (MMC_RXIPV4_HDRERR_OCTETS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV4_HDRERR_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26143,7 +26143,7 @@ int create_debug_files()
 				&MMC_RXIPV4_gd_octets_val,
 				&MMC_RXIPV4_gd_octets_fops);
 	if (MMC_RXIPV4_GD_OCTETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXIPV4_GD_OCTETS\n");
+		pr_info("error creating file: MMC_RXIPV4_GD_OCTETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26153,7 +26153,7 @@ int create_debug_files()
 				&mmc_rxicmp_err_pkts_val,
 				&mmc_rxicmp_err_pkts_fops);
 	if (MMC_RXICMP_ERR_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXICMP_ERR_PKTS\n");
+		pr_info("error creating file: MMC_RXICMP_ERR_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26163,7 +26163,7 @@ int create_debug_files()
 				&mmc_rxicmp_gd_pkts_val,
 				&mmc_rxicmp_gd_pkts_fops);
 	if (MMC_RXICMP_GD_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXICMP_GD_PKTS\n");
+		pr_info("error creating file: MMC_RXICMP_GD_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26173,7 +26173,7 @@ int create_debug_files()
 				&mmc_rxtcp_err_pkts_val,
 				&mmc_rxtcp_err_pkts_fops);
 	if (MMC_RXTCP_ERR_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXTCP_ERR_PKTS\n");
+		pr_info("error creating file: MMC_RXTCP_ERR_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26183,7 +26183,7 @@ int create_debug_files()
 				&mmc_rxtcp_gd_pkts_val,
 				&mmc_rxtcp_gd_pkts_fops);
 	if (MMC_RXTCP_GD_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXTCP_GD_PKTS\n");
+		pr_info("error creating file: MMC_RXTCP_GD_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26193,7 +26193,7 @@ int create_debug_files()
 				&mmc_rxudp_err_pkts_val,
 				&mmc_rxudp_err_pkts_fops);
 	if (MMC_RXUDP_ERR_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXUDP_ERR_PKTS\n");
+		pr_info("error creating file: MMC_RXUDP_ERR_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26203,7 +26203,7 @@ int create_debug_files()
 				&mmc_rxudp_gd_pkts_val,
 				&mmc_rxudp_gd_pkts_fops);
 	if (MMC_RXUDP_GD_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXUDP_GD_PKTS\n");
+		pr_info("error creating file: MMC_RXUDP_GD_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26213,7 +26213,7 @@ int create_debug_files()
 				&MMC_RXIPV6_nopay_pkts_val,
 				&MMC_RXIPV6_nopay_pkts_fops);
 	if (MMC_RXIPV6_NOPAY_PKTS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV6_NOPAY_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26224,7 +26224,7 @@ int create_debug_files()
 				&MMC_RXIPV6_hdrerr_pkts_val,
 				&MMC_RXIPV6_hdrerr_pkts_fops);
 	if (MMC_RXIPV6_HDRERR_PKTS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV6_HDRERR_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26235,7 +26235,7 @@ int create_debug_files()
 				&MMC_RXIPV6_gd_pkts_val,
 				&MMC_RXIPV6_gd_pkts_fops);
 	if (MMC_RXIPV6_GD_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXIPV6_GD_PKTS\n");
+		pr_info("error creating file: MMC_RXIPV6_GD_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26245,7 +26245,7 @@ int create_debug_files()
 				&MMC_RXIPV4_ubsbl_pkts_val,
 				&MMC_RXIPV4_ubsbl_pkts_fops);
 	if (MMC_RXIPV4_UBSBL_PKTS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV4_UBSBL_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26256,7 +26256,7 @@ int create_debug_files()
 				&MMC_RXIPV4_frag_pkts_val,
 				&MMC_RXIPV4_frag_pkts_fops);
 	if (MMC_RXIPV4_FRAG_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXIPV4_FRAG_PKTS\n");
+		pr_info("error creating file: MMC_RXIPV4_FRAG_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26266,7 +26266,7 @@ int create_debug_files()
 				&MMC_RXIPV4_nopay_pkts_val,
 				&MMC_RXIPV4_nopay_pkts_fops);
 	if (MMC_RXIPV4_NOPAY_PKTS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV4_NOPAY_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26277,7 +26277,7 @@ int create_debug_files()
 				&MMC_RXIPV4_hdrerr_pkts_val,
 				&MMC_RXIPV4_hdrerr_pkts_fops);
 	if (MMC_RXIPV4_HDRERR_PKTS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXIPV4_HDRERR_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26288,7 +26288,7 @@ int create_debug_files()
 				&MMC_RXIPV4_gd_pkts_val,
 				&MMC_RXIPV4_gd_pkts_fops);
 	if (MMC_RXIPV4_GD_PKTS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXIPV4_GD_PKTS\n");
+		pr_info("error creating file: MMC_RXIPV4_GD_PKTS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26298,7 +26298,7 @@ int create_debug_files()
 				&mmc_rxctrlpackets_g_val,
 				&mmc_rxctrlpackets_g_fops);
 	if (MMC_RXCTRLPACKETS_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXCTRLPACKETS_G\n");
+		pr_info("error creating file: MMC_RXCTRLPACKETS_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26307,7 +26307,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_RXRCVERROR", 744, dir, &mmc_rxrcverror_val,
 				&mmc_rxrcverror_fops);
 	if (MMC_RXRCVERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXRCVERROR\n");
+		pr_info("error creating file: MMC_RXRCVERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26317,7 +26317,7 @@ int create_debug_files()
 				&mmc_rxwatchdogerror_val,
 				&mmc_rxwatchdogerror_fops);
 	if (MMC_RXWATCHDOGERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXWATCHDOGERROR\n");
+		pr_info("error creating file: MMC_RXWATCHDOGERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26327,7 +26327,7 @@ int create_debug_files()
 				&mmc_rxvlanpackets_gb_val,
 				&mmc_rxvlanpackets_gb_fops);
 	if (MMC_RXVLANPACKETS_GB == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXVLANPACKETS_GB\n");
+		pr_info("error creating file: MMC_RXVLANPACKETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26337,7 +26337,7 @@ int create_debug_files()
 				&mmc_rxfifooverflow_val,
 				&mmc_rxfifooverflow_fops);
 	if (MMC_RXFIFOOVERFLOW == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXFIFOOVERFLOW\n");
+		pr_info("error creating file: MMC_RXFIFOOVERFLOW\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26347,7 +26347,7 @@ int create_debug_files()
 				&mmc_rxpausepackets_val,
 				&mmc_rxpausepackets_fops);
 	if (MMC_RXPAUSEPACKETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXPAUSEPACKETS\n");
+		pr_info("error creating file: MMC_RXPAUSEPACKETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26357,7 +26357,7 @@ int create_debug_files()
 				&mmc_rxoutofrangetype_val,
 				&mmc_rxoutofrangetype_fops);
 	if (MMC_RXOUTOFRANGETYPE == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXOUTOFRANGETYPE\n");
+		pr_info("error creating file: MMC_RXOUTOFRANGETYPE\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26367,7 +26367,7 @@ int create_debug_files()
 				&mmc_rxlengtherror_val,
 				&mmc_rxlengtherror_fops);
 	if (MMC_RXLENGTHERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXLENGTHERROR\n");
+		pr_info("error creating file: MMC_RXLENGTHERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26377,7 +26377,7 @@ int create_debug_files()
 				&mmc_rxunicastpackets_g_val,
 				&mmc_rxunicastpackets_g_fops);
 	if (MMC_RXUNICASTPACKETS_G == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXUNICASTPACKETS_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26388,7 +26388,7 @@ int create_debug_files()
 				&MMC_RX1024tomaxoctets_gb_val,
 				&MMC_RX1024tomaxoctets_gb_fops);
 	if (MMC_RX1024TOMAXOCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RX1024TOMAXOCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26399,7 +26399,7 @@ int create_debug_files()
 				&MMC_RX512TO1023octets_gb_val,
 				&MMC_RX512TO1023octets_gb_fops);
 	if (MMC_RX512TO1023OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RX512TO1023OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26410,7 +26410,7 @@ int create_debug_files()
 				&MMC_RX256TO511octets_gb_val,
 				&MMC_RX256TO511octets_gb_fops);
 	if (MMC_RX256TO511OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RX256TO511OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26421,7 +26421,7 @@ int create_debug_files()
 				&MMC_RX128TO255octets_gb_val,
 				&MMC_RX128TO255octets_gb_fops);
 	if (MMC_RX128TO255OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RX128TO255OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26432,7 +26432,7 @@ int create_debug_files()
 				&MMC_RX65TO127octets_gb_val,
 				&MMC_RX65TO127octets_gb_fops);
 	if (MMC_RX65TO127OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RX65TO127OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26443,7 +26443,7 @@ int create_debug_files()
 				&MMC_RX64octets_gb_val,
 				&MMC_RX64octets_gb_fops);
 	if (MMC_RX64OCTETS_GB == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RX64OCTETS_GB\n");
+		pr_info("error creating file: MMC_RX64OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26452,7 +26452,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_RXOVERSIZE_G", 744, dir,
 				&mmc_rxoversize_g_val, &mmc_rxoversize_g_fops);
 	if (MMC_RXOVERSIZE_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXOVERSIZE_G\n");
+		pr_info("error creating file: MMC_RXOVERSIZE_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26462,7 +26462,7 @@ int create_debug_files()
 				&mmc_rxundersize_g_val,
 				&mmc_rxundersize_g_fops);
 	if (MMC_RXUNDERSIZE_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXUNDERSIZE_G\n");
+		pr_info("error creating file: MMC_RXUNDERSIZE_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26472,7 +26472,7 @@ int create_debug_files()
 				&mmc_rxjabbererror_val,
 				&mmc_rxjabbererror_fops);
 	if (MMC_RXJABBERERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXJABBERERROR\n");
+		pr_info("error creating file: MMC_RXJABBERERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26481,7 +26481,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_RXRUNTERROR", 744, dir,
 				&mmc_rxrunterror_val, &mmc_rxrunterror_fops);
 	if (MMC_RXRUNTERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXRUNTERROR\n");
+		pr_info("error creating file: MMC_RXRUNTERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26491,7 +26491,7 @@ int create_debug_files()
 				&mmc_rxalignmenterror_val,
 				&mmc_rxalignmenterror_fops);
 	if (MMC_RXALIGNMENTERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXALIGNMENTERROR\n");
+		pr_info("error creating file: MMC_RXALIGNMENTERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26500,7 +26500,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_RXCRCERROR", 744, dir, &mmc_rxcrcerror_val,
 				&mmc_rxcrcerror_fops);
 	if (MMC_RXCRCERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXCRCERROR\n");
+		pr_info("error creating file: MMC_RXCRCERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26510,7 +26510,7 @@ int create_debug_files()
 				&mmc_rxmulticastpackets_g_val,
 				&mmc_rxmulticastpackets_g_fops);
 	if (MMC_RXMULTICASTPACKETS_G == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXMULTICASTPACKETS_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26521,7 +26521,7 @@ int create_debug_files()
 				&mmc_rxbroadcastpackets_g_val,
 				&mmc_rxbroadcastpackets_g_fops);
 	if (MMC_RXBROADCASTPACKETS_G == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_RXBROADCASTPACKETS_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26532,7 +26532,7 @@ int create_debug_files()
 				&mmc_rxoctetcount_g_val,
 				&mmc_rxoctetcount_g_fops);
 	if (MMC_RXOCTETCOUNT_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXOCTETCOUNT_G\n");
+		pr_info("error creating file: MMC_RXOCTETCOUNT_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26542,7 +26542,7 @@ int create_debug_files()
 				&mmc_rxoctetcount_gb_val,
 				&mmc_rxoctetcount_gb_fops);
 	if (MMC_RXOCTETCOUNT_GB == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXOCTETCOUNT_GB\n");
+		pr_info("error creating file: MMC_RXOCTETCOUNT_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26552,7 +26552,7 @@ int create_debug_files()
 				&mmc_rxpacketcount_gb_val,
 				&mmc_rxpacketcount_gb_fops);
 	if (MMC_RXPACKETCOUNT_GB == NULL) {
-		printk(KERN_INFO "error creating file: MMC_RXPACKETCOUNT_GB\n");
+		pr_info("error creating file: MMC_RXPACKETCOUNT_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26561,7 +26561,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_TXOVERSIZE_G", 744, dir,
 				&mmc_txoversize_g_val, &mmc_txoversize_g_fops);
 	if (MMC_TXOVERSIZE_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXOVERSIZE_G\n");
+		pr_info("error creating file: MMC_TXOVERSIZE_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26571,7 +26571,7 @@ int create_debug_files()
 				&mmc_txvlanpackets_g_val,
 				&mmc_txvlanpackets_g_fops);
 	if (MMC_TXVLANPACKETS_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXVLANPACKETS_G\n");
+		pr_info("error creating file: MMC_TXVLANPACKETS_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26581,7 +26581,7 @@ int create_debug_files()
 				&mmc_txpausepackets_val,
 				&mmc_txpausepackets_fops);
 	if (MMC_TXPAUSEPACKETS == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXPAUSEPACKETS\n");
+		pr_info("error creating file: MMC_TXPAUSEPACKETS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26590,7 +26590,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_TXEXCESSDEF", 744, dir,
 				&mmc_txexcessdef_val, &mmc_txexcessdef_fops);
 	if (MMC_TXEXCESSDEF == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXEXCESSDEF\n");
+		pr_info("error creating file: MMC_TXEXCESSDEF\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26600,7 +26600,7 @@ int create_debug_files()
 				&mmc_txpacketscount_g_val,
 				&mmc_txpacketscount_g_fops);
 	if (MMC_TXPACKETSCOUNT_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXPACKETSCOUNT_G\n");
+		pr_info("error creating file: MMC_TXPACKETSCOUNT_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26610,7 +26610,7 @@ int create_debug_files()
 				&mmc_txoctetcount_g_val,
 				&mmc_txoctetcount_g_fops);
 	if (MMC_TXOCTETCOUNT_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXOCTETCOUNT_G\n");
+		pr_info("error creating file: MMC_TXOCTETCOUNT_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26620,7 +26620,7 @@ int create_debug_files()
 				&mmc_txcarriererror_val,
 				&mmc_txcarriererror_fops);
 	if (MMC_TXCARRIERERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXCARRIERERROR\n");
+		pr_info("error creating file: MMC_TXCARRIERERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26629,7 +26629,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_TXEXESSCOL", 744, dir, &mmc_txexesscol_val,
 				&mmc_txexesscol_fops);
 	if (MMC_TXEXESSCOL == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXEXESSCOL\n");
+		pr_info("error creating file: MMC_TXEXESSCOL\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26638,7 +26638,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_TXLATECOL", 744, dir, &mmc_txlatecol_val,
 				&mmc_txlatecol_fops);
 	if (MMC_TXLATECOL == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXLATECOL\n");
+		pr_info("error creating file: MMC_TXLATECOL\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26647,7 +26647,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_TXDEFERRED", 744, dir, &mmc_txdeferred_val,
 				&mmc_txdeferred_fops);
 	if (MMC_TXDEFERRED == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXDEFERRED\n");
+		pr_info("error creating file: MMC_TXDEFERRED\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26656,7 +26656,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_TXMULTICOL_G", 744, dir,
 				&mmc_txmulticol_g_val, &mmc_txmulticol_g_fops);
 	if (MMC_TXMULTICOL_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXMULTICOL_G\n");
+		pr_info("error creating file: MMC_TXMULTICOL_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26666,7 +26666,7 @@ int create_debug_files()
 				&mmc_txsinglecol_g_val,
 				&mmc_txsinglecol_g_fops);
 	if (MMC_TXSINGLECOL_G == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXSINGLECOL_G\n");
+		pr_info("error creating file: MMC_TXSINGLECOL_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26676,7 +26676,7 @@ int create_debug_files()
 				&mmc_txunderflowerror_val,
 				&mmc_txunderflowerror_fops);
 	if (MMC_TXUNDERFLOWERROR == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXUNDERFLOWERROR\n");
+		pr_info("error creating file: MMC_TXUNDERFLOWERROR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26686,7 +26686,7 @@ int create_debug_files()
 				&mmc_txbroadcastpackets_gb_val,
 				&mmc_txbroadcastpackets_gb_fops);
 	if (MMC_TXBROADCASTPACKETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TXBROADCASTPACKETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26697,7 +26697,7 @@ int create_debug_files()
 				&mmc_txmulticastpackets_gb_val,
 				&mmc_txmulticastpackets_gb_fops);
 	if (MMC_TXMULTICASTPACKETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TXMULTICASTPACKETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26708,7 +26708,7 @@ int create_debug_files()
 				&mmc_txunicastpackets_gb_val,
 				&mmc_txunicastpackets_gb_fops);
 	if (MMC_TXUNICASTPACKETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TXUNICASTPACKETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26719,7 +26719,7 @@ int create_debug_files()
 				&MMC_TX1024tomaxoctets_gb_val,
 				&MMC_TX1024tomaxoctets_gb_fops);
 	if (MMC_TX1024TOMAXOCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TX1024TOMAXOCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26730,7 +26730,7 @@ int create_debug_files()
 				&MMC_TX512TO1023octets_gb_val,
 				&MMC_TX512TO1023octets_gb_fops);
 	if (MMC_TX512TO1023OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TX512TO1023OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26741,7 +26741,7 @@ int create_debug_files()
 				&MMC_TX256TO511octets_gb_val,
 				&MMC_TX256TO511octets_gb_fops);
 	if (MMC_TX256TO511OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TX256TO511OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26752,7 +26752,7 @@ int create_debug_files()
 				&MMC_TX128TO255octets_gb_val,
 				&MMC_TX128TO255octets_gb_fops);
 	if (MMC_TX128TO255OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TX128TO255OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26763,7 +26763,7 @@ int create_debug_files()
 				&MMC_TX65TO127octets_gb_val,
 				&MMC_TX65TO127octets_gb_fops);
 	if (MMC_TX65TO127OCTETS_GB == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TX65TO127OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26774,7 +26774,7 @@ int create_debug_files()
 				&MMC_TX64octets_gb_val,
 				&MMC_TX64octets_gb_fops);
 	if (MMC_TX64OCTETS_GB == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TX64OCTETS_GB\n");
+		pr_info("error creating file: MMC_TX64OCTETS_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26784,7 +26784,7 @@ int create_debug_files()
 				&mmc_txmulticastpackets_g_val,
 				&mmc_txmulticastpackets_g_fops);
 	if (MMC_TXMULTICASTPACKETS_G == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TXMULTICASTPACKETS_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26795,7 +26795,7 @@ int create_debug_files()
 				&mmc_txbroadcastpackets_g_val,
 				&mmc_txbroadcastpackets_g_fops);
 	if (MMC_TXBROADCASTPACKETS_G == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: MMC_TXBROADCASTPACKETS_G\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -26806,7 +26806,7 @@ int create_debug_files()
 				&mmc_txpacketcount_gb_val,
 				&mmc_txpacketcount_gb_fops);
 	if (MMC_TXPACKETCOUNT_GB == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXPACKETCOUNT_GB\n");
+		pr_info("error creating file: MMC_TXPACKETCOUNT_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26816,7 +26816,7 @@ int create_debug_files()
 				&mmc_txoctetcount_gb_val,
 				&mmc_txoctetcount_gb_fops);
 	if (MMC_TXOCTETCOUNT_GB == NULL) {
-		printk(KERN_INFO "error creating file: MMC_TXOCTETCOUNT_GB\n");
+		pr_info("error creating file: MMC_TXOCTETCOUNT_GB\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26825,7 +26825,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_IPC_INTR_RX", 744, dir,
 				&mmc_ipc_intr_rx_val, &mmc_ipc_intr_rx_fops);
 	if (MMC_IPC_INTR_RX == NULL) {
-		printk(KERN_INFO "error creating file: MMC_IPC_INTR_RX\n");
+		pr_info("error creating file: MMC_IPC_INTR_RX\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26835,7 +26835,7 @@ int create_debug_files()
 				&mmc_ipc_intr_mask_rx_val,
 				&mmc_ipc_intr_mask_rx_fops);
 	if (MMC_IPC_INTR_MASK_RX == NULL) {
-		printk(KERN_INFO "error creating file: MMC_IPC_INTR_MASK_RX\n");
+		pr_info("error creating file: MMC_IPC_INTR_MASK_RX\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26844,7 +26844,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_INTR_MASK_TX", 744, dir,
 				&mmc_intr_mask_tx_val, &mmc_intr_mask_tx_fops);
 	if (MMC_INTR_MASK_TX == NULL) {
-		printk(KERN_INFO "error creating file: MMC_INTR_MASK_TX\n");
+		pr_info("error creating file: MMC_INTR_MASK_TX\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26853,7 +26853,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_INTR_MASK_RX", 744, dir,
 				&mmc_intr_mask_rx_val, &mmc_intr_mask_rx_fops);
 	if (MMC_INTR_MASK_RX == NULL) {
-		printk(KERN_INFO "error creating file: MMC_INTR_MASK_RX\n");
+		pr_info("error creating file: MMC_INTR_MASK_RX\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26862,7 +26862,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_INTR_TX", 744, dir, &mmc_intr_tx_val,
 				&mmc_intr_tx_fops);
 	if (MMC_INTR_TX == NULL) {
-		printk(KERN_INFO "error creating file: MMC_INTR_TX\n");
+		pr_info("error creating file: MMC_INTR_TX\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26871,7 +26871,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_INTR_RX", 744, dir, &mmc_intr_rx_val,
 				&mmc_intr_rx_fops);
 	if (MMC_INTR_RX == NULL) {
-		printk(KERN_INFO "error creating file: MMC_INTR_RX\n");
+		pr_info("error creating file: MMC_INTR_RX\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26880,7 +26880,7 @@ int create_debug_files()
 	    debugfs_create_file("MMC_CNTRL", 744, dir, &mmc_cntrl_val,
 				&mmc_cntrl_fops);
 	if (MMC_CNTRL == NULL) {
-		printk(KERN_INFO "error creating file: MMC_CNTRL\n");
+		pr_info("error creating file: MMC_CNTRL\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26889,7 +26889,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1LR", 744, dir, &MAC_MA1lr_val,
 				&MAC_MA1lr_fops);
 	if (MAC_MA1LR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1LR\n");
+		pr_info("error creating file: MAC_MA1LR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26898,7 +26898,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA1HR", 744, dir, &MAC_MA1hr_val,
 				&MAC_MA1hr_fops);
 	if (MAC_MA1HR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA1HR\n");
+		pr_info("error creating file: MAC_MA1HR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26907,7 +26907,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA0LR", 744, dir, &MAC_MA0lr_val,
 				&MAC_MA0lr_fops);
 	if (MAC_MA0LR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA0LR\n");
+		pr_info("error creating file: MAC_MA0LR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26916,7 +26916,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MA0HR", 744, dir, &MAC_MA0hr_val,
 				&MAC_MA0hr_fops);
 	if (MAC_MA0HR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MA0HR\n");
+		pr_info("error creating file: MAC_MA0HR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26925,7 +26925,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_GPIOR", 744, dir, &mac_gpior_val,
 				&mac_gpior_fops);
 	if (MAC_GPIOR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_GPIOR\n");
+		pr_info("error creating file: MAC_GPIOR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26934,7 +26934,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_GMIIDR", 744, dir, &mac_gmiidr_val,
 				&mac_gmiidr_fops);
 	if (MAC_GMIIDR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_GMIIDR\n");
+		pr_info("error creating file: MAC_GMIIDR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26943,7 +26943,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_GMIIAR", 744, dir, &mac_gmiiar_val,
 				&mac_gmiiar_fops);
 	if (MAC_GMIIAR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_GMIIAR\n");
+		pr_info("error creating file: MAC_GMIIAR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26952,7 +26952,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HFR2", 744, dir, &MAC_HFR2_val,
 				&MAC_HFR2_fops);
 	if (MAC_HFR2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HFR2\n");
+		pr_info("error creating file: MAC_HFR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26961,7 +26961,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HFR1", 744, dir, &MAC_HFR1_val,
 				&MAC_HFR1_fops);
 	if (MAC_HFR1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HFR1\n");
+		pr_info("error creating file: MAC_HFR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26970,7 +26970,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HFR0", 744, dir, &MAC_HFR0_val,
 				&MAC_HFR0_fops);
 	if (MAC_HFR0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HFR0\n");
+		pr_info("error creating file: MAC_HFR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26979,7 +26979,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MDR", 744, dir, &mac_mdr_val,
 				&mac_mdr_fops);
 	if (MAC_MDR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MDR\n");
+		pr_info("error creating file: MAC_MDR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26987,7 +26987,7 @@ int create_debug_files()
 	MAC_VR =
 	    debugfs_create_file("MAC_VR", 744, dir, &mac_vr_val, &mac_vr_fops);
 	if (MAC_VR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_VR\n");
+		pr_info("error creating file: MAC_VR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -26996,7 +26996,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR7", 744, dir, &MAC_HTR7_val,
 				&MAC_HTR7_fops);
 	if (MAC_HTR7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR7\n");
+		pr_info("error creating file: MAC_HTR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27005,7 +27005,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR6", 744, dir, &MAC_HTR6_val,
 				&MAC_HTR6_fops);
 	if (MAC_HTR6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR6\n");
+		pr_info("error creating file: MAC_HTR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27014,7 +27014,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR5", 744, dir, &MAC_HTR5_val,
 				&MAC_HTR5_fops);
 	if (MAC_HTR5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR5\n");
+		pr_info("error creating file: MAC_HTR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27023,7 +27023,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR4", 744, dir, &MAC_HTR4_val,
 				&MAC_HTR4_fops);
 	if (MAC_HTR4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR4\n");
+		pr_info("error creating file: MAC_HTR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27032,7 +27032,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR3", 744, dir, &MAC_HTR3_val,
 				&MAC_HTR3_fops);
 	if (MAC_HTR3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR3\n");
+		pr_info("error creating file: MAC_HTR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27041,7 +27041,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR2", 744, dir, &MAC_HTR2_val,
 				&MAC_HTR2_fops);
 	if (MAC_HTR2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR2\n");
+		pr_info("error creating file: MAC_HTR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27050,7 +27050,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR1", 744, dir, &MAC_HTR1_val,
 				&MAC_HTR1_fops);
 	if (MAC_HTR1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR1\n");
+		pr_info("error creating file: MAC_HTR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27059,7 +27059,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_HTR0", 744, dir, &MAC_HTR0_val,
 				&MAC_HTR0_fops);
 	if (MAC_HTR0 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_HTR0\n");
+		pr_info("error creating file: MAC_HTR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27068,7 +27068,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR7", 744, dir, &DMA_RIWTR7_val,
 				&DMA_RIWTR7_fops);
 	if (DMA_RIWTR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR7\n");
+		pr_info("error creating file: DMA_RIWTR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27077,7 +27077,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR6", 744, dir, &DMA_RIWTR6_val,
 				&DMA_RIWTR6_fops);
 	if (DMA_RIWTR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR6\n");
+		pr_info("error creating file: DMA_RIWTR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27086,7 +27086,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR5", 744, dir, &DMA_RIWTR5_val,
 				&DMA_RIWTR5_fops);
 	if (DMA_RIWTR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR5\n");
+		pr_info("error creating file: DMA_RIWTR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27095,7 +27095,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR4", 744, dir, &DMA_RIWTR4_val,
 				&DMA_RIWTR4_fops);
 	if (DMA_RIWTR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR4\n");
+		pr_info("error creating file: DMA_RIWTR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27104,7 +27104,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR3", 744, dir, &DMA_RIWTR3_val,
 				&DMA_RIWTR3_fops);
 	if (DMA_RIWTR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR3\n");
+		pr_info("error creating file: DMA_RIWTR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27113,7 +27113,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR2", 744, dir, &DMA_RIWTR2_val,
 				&DMA_RIWTR2_fops);
 	if (DMA_RIWTR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR2\n");
+		pr_info("error creating file: DMA_RIWTR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27122,7 +27122,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR1", 744, dir, &DMA_RIWTR1_val,
 				&DMA_RIWTR1_fops);
 	if (DMA_RIWTR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR1\n");
+		pr_info("error creating file: DMA_RIWTR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27131,7 +27131,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RIWTR0", 744, dir, &DMA_RIWTR0_val,
 				&DMA_RIWTR0_fops);
 	if (DMA_RIWTR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RIWTR0\n");
+		pr_info("error creating file: DMA_RIWTR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27140,7 +27140,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR7", 744, dir, &DMA_RDRLR7_val,
 				&DMA_RDRLR7_fops);
 	if (DMA_RDRLR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR7\n");
+		pr_info("error creating file: DMA_RDRLR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27149,7 +27149,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR6", 744, dir, &DMA_RDRLR6_val,
 				&DMA_RDRLR6_fops);
 	if (DMA_RDRLR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR6\n");
+		pr_info("error creating file: DMA_RDRLR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27158,7 +27158,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR5", 744, dir, &DMA_RDRLR5_val,
 				&DMA_RDRLR5_fops);
 	if (DMA_RDRLR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR5\n");
+		pr_info("error creating file: DMA_RDRLR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27167,7 +27167,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR4", 744, dir, &DMA_RDRLR4_val,
 				&DMA_RDRLR4_fops);
 	if (DMA_RDRLR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR4\n");
+		pr_info("error creating file: DMA_RDRLR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27176,7 +27176,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR3", 744, dir, &DMA_RDRLR3_val,
 				&DMA_RDRLR3_fops);
 	if (DMA_RDRLR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR3\n");
+		pr_info("error creating file: DMA_RDRLR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27185,7 +27185,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR2", 744, dir, &DMA_RDRLR2_val,
 				&DMA_RDRLR2_fops);
 	if (DMA_RDRLR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR2\n");
+		pr_info("error creating file: DMA_RDRLR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27194,7 +27194,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR1", 744, dir, &DMA_RDRLR1_val,
 				&DMA_RDRLR1_fops);
 	if (DMA_RDRLR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR1\n");
+		pr_info("error creating file: DMA_RDRLR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27203,7 +27203,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDRLR0", 744, dir, &DMA_RDRLR0_val,
 				&DMA_RDRLR0_fops);
 	if (DMA_RDRLR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDRLR0\n");
+		pr_info("error creating file: DMA_RDRLR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27212,7 +27212,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR7", 744, dir, &DMA_TDRLR7_val,
 				&DMA_TDRLR7_fops);
 	if (DMA_TDRLR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR7\n");
+		pr_info("error creating file: DMA_TDRLR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27221,7 +27221,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR6", 744, dir, &DMA_TDRLR6_val,
 				&DMA_TDRLR6_fops);
 	if (DMA_TDRLR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR6\n");
+		pr_info("error creating file: DMA_TDRLR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27230,7 +27230,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR5", 744, dir, &DMA_TDRLR5_val,
 				&DMA_TDRLR5_fops);
 	if (DMA_TDRLR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR5\n");
+		pr_info("error creating file: DMA_TDRLR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27239,7 +27239,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR4", 744, dir, &DMA_TDRLR4_val,
 				&DMA_TDRLR4_fops);
 	if (DMA_TDRLR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR4\n");
+		pr_info("error creating file: DMA_TDRLR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27248,7 +27248,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR3", 744, dir, &DMA_TDRLR3_val,
 				&DMA_TDRLR3_fops);
 	if (DMA_TDRLR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR3\n");
+		pr_info("error creating file: DMA_TDRLR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27257,7 +27257,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR2", 744, dir, &DMA_TDRLR2_val,
 				&DMA_TDRLR2_fops);
 	if (DMA_TDRLR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR2\n");
+		pr_info("error creating file: DMA_TDRLR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27266,7 +27266,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR1", 744, dir, &DMA_TDRLR1_val,
 				&DMA_TDRLR1_fops);
 	if (DMA_TDRLR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR1\n");
+		pr_info("error creating file: DMA_TDRLR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27275,7 +27275,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDRLR0", 744, dir, &DMA_TDRLR0_val,
 				&DMA_TDRLR0_fops);
 	if (DMA_TDRLR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDRLR0\n");
+		pr_info("error creating file: DMA_TDRLR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27284,7 +27284,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR7", 744, dir, &DMA_RDTP_RPDR7_val,
 				&DMA_RDTP_RPDR7_fops);
 	if (DMA_RDTP_RPDR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR7\n");
+		pr_info("error creating file: DMA_RDTP_RPDR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27293,7 +27293,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR6", 744, dir, &DMA_RDTP_RPDR6_val,
 				&DMA_RDTP_RPDR6_fops);
 	if (DMA_RDTP_RPDR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR6\n");
+		pr_info("error creating file: DMA_RDTP_RPDR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27302,7 +27302,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR5", 744, dir, &DMA_RDTP_RPDR5_val,
 				&DMA_RDTP_RPDR5_fops);
 	if (DMA_RDTP_RPDR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR5\n");
+		pr_info("error creating file: DMA_RDTP_RPDR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27311,7 +27311,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR4", 744, dir, &DMA_RDTP_RPDR4_val,
 				&DMA_RDTP_RPDR4_fops);
 	if (DMA_RDTP_RPDR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR4\n");
+		pr_info("error creating file: DMA_RDTP_RPDR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27320,7 +27320,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR3", 744, dir, &DMA_RDTP_RPDR3_val,
 				&DMA_RDTP_RPDR3_fops);
 	if (DMA_RDTP_RPDR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR3\n");
+		pr_info("error creating file: DMA_RDTP_RPDR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27329,7 +27329,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR2", 744, dir, &DMA_RDTP_RPDR2_val,
 				&DMA_RDTP_RPDR2_fops);
 	if (DMA_RDTP_RPDR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR2\n");
+		pr_info("error creating file: DMA_RDTP_RPDR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27338,7 +27338,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR1", 744, dir, &DMA_RDTP_RPDR1_val,
 				&DMA_RDTP_RPDR1_fops);
 	if (DMA_RDTP_RPDR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR1\n");
+		pr_info("error creating file: DMA_RDTP_RPDR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27347,7 +27347,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDTP_RPDR0", 744, dir, &DMA_RDTP_RPDR0_val,
 				&DMA_RDTP_RPDR0_fops);
 	if (DMA_RDTP_RPDR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDTP_RPDR0\n");
+		pr_info("error creating file: DMA_RDTP_RPDR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27356,7 +27356,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR7", 744, dir, &DMA_TDTP_TPDR7_val,
 				&DMA_TDTP_TPDR7_fops);
 	if (DMA_TDTP_TPDR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR7\n");
+		pr_info("error creating file: DMA_TDTP_TPDR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27365,7 +27365,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR6", 744, dir, &DMA_TDTP_TPDR6_val,
 				&DMA_TDTP_TPDR6_fops);
 	if (DMA_TDTP_TPDR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR6\n");
+		pr_info("error creating file: DMA_TDTP_TPDR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27374,7 +27374,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR5", 744, dir, &DMA_TDTP_TPDR5_val,
 				&DMA_TDTP_TPDR5_fops);
 	if (DMA_TDTP_TPDR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR5\n");
+		pr_info("error creating file: DMA_TDTP_TPDR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27383,7 +27383,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR4", 744, dir, &DMA_TDTP_TPDR4_val,
 				&DMA_TDTP_TPDR4_fops);
 	if (DMA_TDTP_TPDR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR4\n");
+		pr_info("error creating file: DMA_TDTP_TPDR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27392,7 +27392,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR3", 744, dir, &DMA_TDTP_TPDR3_val,
 				&DMA_TDTP_TPDR3_fops);
 	if (DMA_TDTP_TPDR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR3\n");
+		pr_info("error creating file: DMA_TDTP_TPDR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27401,7 +27401,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR2", 744, dir, &DMA_TDTP_TPDR2_val,
 				&DMA_TDTP_TPDR2_fops);
 	if (DMA_TDTP_TPDR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR2\n");
+		pr_info("error creating file: DMA_TDTP_TPDR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27410,7 +27410,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR1", 744, dir, &DMA_TDTP_TPDR1_val,
 				&DMA_TDTP_TPDR1_fops);
 	if (DMA_TDTP_TPDR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR1\n");
+		pr_info("error creating file: DMA_TDTP_TPDR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27419,7 +27419,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDTP_TPDR0", 744, dir, &DMA_TDTP_TPDR0_val,
 				&DMA_TDTP_TPDR0_fops);
 	if (DMA_TDTP_TPDR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDTP_TPDR0\n");
+		pr_info("error creating file: DMA_TDTP_TPDR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27428,7 +27428,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR7", 744, dir, &DMA_RDLAR7_val,
 				&DMA_RDLAR7_fops);
 	if (DMA_RDLAR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR7\n");
+		pr_info("error creating file: DMA_RDLAR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27437,7 +27437,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR6", 744, dir, &DMA_RDLAR6_val,
 				&DMA_RDLAR6_fops);
 	if (DMA_RDLAR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR6\n");
+		pr_info("error creating file: DMA_RDLAR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27446,7 +27446,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR5", 744, dir, &DMA_RDLAR5_val,
 				&DMA_RDLAR5_fops);
 	if (DMA_RDLAR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR5\n");
+		pr_info("error creating file: DMA_RDLAR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27455,7 +27455,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR4", 744, dir, &DMA_RDLAR4_val,
 				&DMA_RDLAR4_fops);
 	if (DMA_RDLAR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR4\n");
+		pr_info("error creating file: DMA_RDLAR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27464,7 +27464,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR3", 744, dir, &DMA_RDLAR3_val,
 				&DMA_RDLAR3_fops);
 	if (DMA_RDLAR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR3\n");
+		pr_info("error creating file: DMA_RDLAR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27473,7 +27473,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR2", 744, dir, &DMA_RDLAR2_val,
 				&DMA_RDLAR2_fops);
 	if (DMA_RDLAR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR2\n");
+		pr_info("error creating file: DMA_RDLAR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27482,7 +27482,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR1", 744, dir, &DMA_RDLAR1_val,
 				&DMA_RDLAR1_fops);
 	if (DMA_RDLAR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR1\n");
+		pr_info("error creating file: DMA_RDLAR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27491,7 +27491,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RDLAR0", 744, dir, &DMA_RDLAR0_val,
 				&DMA_RDLAR0_fops);
 	if (DMA_RDLAR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RDLAR0\n");
+		pr_info("error creating file: DMA_RDLAR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27500,7 +27500,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR7", 744, dir, &DMA_TDLAR7_val,
 				&DMA_TDLAR7_fops);
 	if (DMA_TDLAR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR7\n");
+		pr_info("error creating file: DMA_TDLAR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27509,7 +27509,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR6", 744, dir, &DMA_TDLAR6_val,
 				&DMA_TDLAR6_fops);
 	if (DMA_TDLAR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR6\n");
+		pr_info("error creating file: DMA_TDLAR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27518,7 +27518,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR5", 744, dir, &DMA_TDLAR5_val,
 				&DMA_TDLAR5_fops);
 	if (DMA_TDLAR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR5\n");
+		pr_info("error creating file: DMA_TDLAR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27527,7 +27527,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR4", 744, dir, &DMA_TDLAR4_val,
 				&DMA_TDLAR4_fops);
 	if (DMA_TDLAR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR4\n");
+		pr_info("error creating file: DMA_TDLAR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27536,7 +27536,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR3", 744, dir, &DMA_TDLAR3_val,
 				&DMA_TDLAR3_fops);
 	if (DMA_TDLAR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR3\n");
+		pr_info("error creating file: DMA_TDLAR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27545,7 +27545,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR2", 744, dir, &DMA_TDLAR2_val,
 				&DMA_TDLAR2_fops);
 	if (DMA_TDLAR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR2\n");
+		pr_info("error creating file: DMA_TDLAR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27554,7 +27554,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR1", 744, dir, &DMA_TDLAR1_val,
 				&DMA_TDLAR1_fops);
 	if (DMA_TDLAR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR1\n");
+		pr_info("error creating file: DMA_TDLAR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27563,7 +27563,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TDLAR0", 744, dir, &DMA_TDLAR0_val,
 				&DMA_TDLAR0_fops);
 	if (DMA_TDLAR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TDLAR0\n");
+		pr_info("error creating file: DMA_TDLAR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27572,7 +27572,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER7", 744, dir, &DMA_IER7_val,
 				&DMA_IER7_fops);
 	if (DMA_IER7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER7\n");
+		pr_info("error creating file: DMA_IER7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27581,7 +27581,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER6", 744, dir, &DMA_IER6_val,
 				&DMA_IER6_fops);
 	if (DMA_IER6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER6\n");
+		pr_info("error creating file: DMA_IER6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27590,7 +27590,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER5", 744, dir, &DMA_IER5_val,
 				&DMA_IER5_fops);
 	if (DMA_IER5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER5\n");
+		pr_info("error creating file: DMA_IER5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27599,7 +27599,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER4", 744, dir, &DMA_IER4_val,
 				&DMA_IER4_fops);
 	if (DMA_IER4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER4\n");
+		pr_info("error creating file: DMA_IER4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27608,7 +27608,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER3", 744, dir, &DMA_IER3_val,
 				&DMA_IER3_fops);
 	if (DMA_IER3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER3\n");
+		pr_info("error creating file: DMA_IER3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27617,7 +27617,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER2", 744, dir, &DMA_IER2_val,
 				&DMA_IER2_fops);
 	if (DMA_IER2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER2\n");
+		pr_info("error creating file: DMA_IER2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27626,7 +27626,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER1", 744, dir, &DMA_IER1_val,
 				&DMA_IER1_fops);
 	if (DMA_IER1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER1\n");
+		pr_info("error creating file: DMA_IER1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27635,7 +27635,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_IER0", 744, dir, &DMA_IER0_val,
 				&DMA_IER0_fops);
 	if (DMA_IER0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_IER0\n");
+		pr_info("error creating file: DMA_IER0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27644,7 +27644,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_IMR", 744, dir, &mac_imr_val,
 				&mac_imr_fops);
 	if (MAC_IMR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_IMR\n");
+		pr_info("error creating file: MAC_IMR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27653,7 +27653,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_ISR", 744, dir, &mac_isr_val,
 				&mac_isr_fops);
 	if (MAC_ISR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_ISR\n");
+		pr_info("error creating file: MAC_ISR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27662,7 +27662,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_ISR", 744, dir, &mtl_isr_val,
 				&mtl_isr_fops);
 	if (MTL_ISR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_ISR\n");
+		pr_info("error creating file: MTL_ISR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27671,7 +27671,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR7", 744, dir, &DMA_SR7_val,
 				&DMA_SR7_fops);
 	if (DMA_SR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR7\n");
+		pr_info("error creating file: DMA_SR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27680,7 +27680,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR6", 744, dir, &DMA_SR6_val,
 				&DMA_SR6_fops);
 	if (DMA_SR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR6\n");
+		pr_info("error creating file: DMA_SR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27689,7 +27689,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR5", 744, dir, &DMA_SR5_val,
 				&DMA_SR5_fops);
 	if (DMA_SR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR5\n");
+		pr_info("error creating file: DMA_SR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27698,7 +27698,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR4", 744, dir, &DMA_SR4_val,
 				&DMA_SR4_fops);
 	if (DMA_SR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR4\n");
+		pr_info("error creating file: DMA_SR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27707,7 +27707,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR3", 744, dir, &DMA_SR3_val,
 				&DMA_SR3_fops);
 	if (DMA_SR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR3\n");
+		pr_info("error creating file: DMA_SR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27716,7 +27716,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR2", 744, dir, &DMA_SR2_val,
 				&DMA_SR2_fops);
 	if (DMA_SR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR2\n");
+		pr_info("error creating file: DMA_SR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27725,7 +27725,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR1", 744, dir, &DMA_SR1_val,
 				&DMA_SR1_fops);
 	if (DMA_SR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR1\n");
+		pr_info("error creating file: DMA_SR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27734,7 +27734,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SR0", 744, dir, &DMA_SR0_val,
 				&DMA_SR0_fops);
 	if (DMA_SR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SR0\n");
+		pr_info("error creating file: DMA_SR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27743,7 +27743,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_ISR", 744, dir, &dma_isr_val,
 				&dma_isr_fops);
 	if (DMA_ISR == NULL) {
-		printk(KERN_INFO "error creating file: DMA_ISR\n");
+		pr_info("error creating file: DMA_ISR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27752,7 +27752,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_DSR2", 744, dir, &DMA_DSR2_val,
 				&DMA_DSR2_fops);
 	if (DMA_DSR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_DSR2\n");
+		pr_info("error creating file: DMA_DSR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27761,7 +27761,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_DSR1", 744, dir, &DMA_DSR1_val,
 				&DMA_DSR1_fops);
 	if (DMA_DSR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_DSR1\n");
+		pr_info("error creating file: DMA_DSR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27770,7 +27770,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_DSR0", 744, dir, &DMA_DSR0_val,
 				&DMA_DSR0_fops);
 	if (DMA_DSR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_DSR0\n");
+		pr_info("error creating file: DMA_DSR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27779,7 +27779,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0RDR", 744, dir, &MTL_Q0rdr_val,
 				&MTL_Q0rdr_fops);
 	if (MTL_Q0RDR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0RDR\n");
+		pr_info("error creating file: MTL_Q0RDR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27788,7 +27788,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0ESR", 744, dir, &MTL_Q0esr_val,
 				&MTL_Q0esr_fops);
 	if (MTL_Q0ESR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0ESR\n");
+		pr_info("error creating file: MTL_Q0ESR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27797,7 +27797,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0TDR", 744, dir, &MTL_Q0tdr_val,
 				&MTL_Q0tdr_fops);
 	if (MTL_Q0TDR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0TDR\n");
+		pr_info("error creating file: MTL_Q0TDR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27806,7 +27806,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR7", 744, dir, &DMA_CHRBAR7_val,
 				&DMA_CHRBAR7_fops);
 	if (DMA_CHRBAR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR7\n");
+		pr_info("error creating file: DMA_CHRBAR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27815,7 +27815,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR6", 744, dir, &DMA_CHRBAR6_val,
 				&DMA_CHRBAR6_fops);
 	if (DMA_CHRBAR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR6\n");
+		pr_info("error creating file: DMA_CHRBAR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27824,7 +27824,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR5", 744, dir, &DMA_CHRBAR5_val,
 				&DMA_CHRBAR5_fops);
 	if (DMA_CHRBAR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR5\n");
+		pr_info("error creating file: DMA_CHRBAR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27833,7 +27833,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR4", 744, dir, &DMA_CHRBAR4_val,
 				&DMA_CHRBAR4_fops);
 	if (DMA_CHRBAR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR4\n");
+		pr_info("error creating file: DMA_CHRBAR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27842,7 +27842,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR3", 744, dir, &DMA_CHRBAR3_val,
 				&DMA_CHRBAR3_fops);
 	if (DMA_CHRBAR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR3\n");
+		pr_info("error creating file: DMA_CHRBAR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27851,7 +27851,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR2", 744, dir, &DMA_CHRBAR2_val,
 				&DMA_CHRBAR2_fops);
 	if (DMA_CHRBAR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR2\n");
+		pr_info("error creating file: DMA_CHRBAR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27860,7 +27860,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR1", 744, dir, &DMA_CHRBAR1_val,
 				&DMA_CHRBAR1_fops);
 	if (DMA_CHRBAR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR1\n");
+		pr_info("error creating file: DMA_CHRBAR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27869,7 +27869,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRBAR0", 744, dir, &DMA_CHRBAR0_val,
 				&DMA_CHRBAR0_fops);
 	if (DMA_CHRBAR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRBAR0\n");
+		pr_info("error creating file: DMA_CHRBAR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27878,7 +27878,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR7", 744, dir, &DMA_CHTBAR7_val,
 				&DMA_CHTBAR7_fops);
 	if (DMA_CHTBAR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR7\n");
+		pr_info("error creating file: DMA_CHTBAR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27887,7 +27887,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR6", 744, dir, &DMA_CHTBAR6_val,
 				&DMA_CHTBAR6_fops);
 	if (DMA_CHTBAR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR6\n");
+		pr_info("error creating file: DMA_CHTBAR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27896,7 +27896,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR5", 744, dir, &DMA_CHTBAR5_val,
 				&DMA_CHTBAR5_fops);
 	if (DMA_CHTBAR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR5\n");
+		pr_info("error creating file: DMA_CHTBAR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27905,7 +27905,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR4", 744, dir, &DMA_CHTBAR4_val,
 				&DMA_CHTBAR4_fops);
 	if (DMA_CHTBAR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR4\n");
+		pr_info("error creating file: DMA_CHTBAR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27914,7 +27914,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR3", 744, dir, &DMA_CHTBAR3_val,
 				&DMA_CHTBAR3_fops);
 	if (DMA_CHTBAR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR3\n");
+		pr_info("error creating file: DMA_CHTBAR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27923,7 +27923,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR2", 744, dir, &DMA_CHTBAR2_val,
 				&DMA_CHTBAR2_fops);
 	if (DMA_CHTBAR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR2\n");
+		pr_info("error creating file: DMA_CHTBAR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27932,7 +27932,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR1", 744, dir, &DMA_CHTBAR1_val,
 				&DMA_CHTBAR1_fops);
 	if (DMA_CHTBAR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR1\n");
+		pr_info("error creating file: DMA_CHTBAR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27941,7 +27941,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTBAR0", 744, dir, &DMA_CHTBAR0_val,
 				&DMA_CHTBAR0_fops);
 	if (DMA_CHTBAR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTBAR0\n");
+		pr_info("error creating file: DMA_CHTBAR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27950,7 +27950,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR7", 744, dir, &DMA_CHRDR7_val,
 				&DMA_CHRDR7_fops);
 	if (DMA_CHRDR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR7\n");
+		pr_info("error creating file: DMA_CHRDR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27959,7 +27959,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR6", 744, dir, &DMA_CHRDR6_val,
 				&DMA_CHRDR6_fops);
 	if (DMA_CHRDR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR6\n");
+		pr_info("error creating file: DMA_CHRDR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27968,7 +27968,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR5", 744, dir, &DMA_CHRDR5_val,
 				&DMA_CHRDR5_fops);
 	if (DMA_CHRDR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR5\n");
+		pr_info("error creating file: DMA_CHRDR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27977,7 +27977,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR4", 744, dir, &DMA_CHRDR4_val,
 				&DMA_CHRDR4_fops);
 	if (DMA_CHRDR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR4\n");
+		pr_info("error creating file: DMA_CHRDR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27986,7 +27986,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR3", 744, dir, &DMA_CHRDR3_val,
 				&DMA_CHRDR3_fops);
 	if (DMA_CHRDR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR3\n");
+		pr_info("error creating file: DMA_CHRDR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -27995,7 +27995,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR2", 744, dir, &DMA_CHRDR2_val,
 				&DMA_CHRDR2_fops);
 	if (DMA_CHRDR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR2\n");
+		pr_info("error creating file: DMA_CHRDR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28004,7 +28004,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR1", 744, dir, &DMA_CHRDR1_val,
 				&DMA_CHRDR1_fops);
 	if (DMA_CHRDR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR1\n");
+		pr_info("error creating file: DMA_CHRDR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28013,7 +28013,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHRDR0", 744, dir, &DMA_CHRDR0_val,
 				&DMA_CHRDR0_fops);
 	if (DMA_CHRDR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHRDR0\n");
+		pr_info("error creating file: DMA_CHRDR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28022,7 +28022,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR7", 744, dir, &DMA_CHTDR7_val,
 				&DMA_CHTDR7_fops);
 	if (DMA_CHTDR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR7\n");
+		pr_info("error creating file: DMA_CHTDR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28031,7 +28031,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR6", 744, dir, &DMA_CHTDR6_val,
 				&DMA_CHTDR6_fops);
 	if (DMA_CHTDR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR6\n");
+		pr_info("error creating file: DMA_CHTDR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28040,7 +28040,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR5", 744, dir, &DMA_CHTDR5_val,
 				&DMA_CHTDR5_fops);
 	if (DMA_CHTDR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR5\n");
+		pr_info("error creating file: DMA_CHTDR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28049,7 +28049,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR4", 744, dir, &DMA_CHTDR4_val,
 				&DMA_CHTDR4_fops);
 	if (DMA_CHTDR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR4\n");
+		pr_info("error creating file: DMA_CHTDR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28058,7 +28058,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR3", 744, dir, &DMA_CHTDR3_val,
 				&DMA_CHTDR3_fops);
 	if (DMA_CHTDR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR3\n");
+		pr_info("error creating file: DMA_CHTDR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28067,7 +28067,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR2", 744, dir, &DMA_CHTDR2_val,
 				&DMA_CHTDR2_fops);
 	if (DMA_CHTDR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR2\n");
+		pr_info("error creating file: DMA_CHTDR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28076,7 +28076,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR1", 744, dir, &DMA_CHTDR1_val,
 				&DMA_CHTDR1_fops);
 	if (DMA_CHTDR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR1\n");
+		pr_info("error creating file: DMA_CHTDR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28085,7 +28085,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CHTDR0", 744, dir, &DMA_CHTDR0_val,
 				&DMA_CHTDR0_fops);
 	if (DMA_CHTDR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CHTDR0\n");
+		pr_info("error creating file: DMA_CHTDR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28094,7 +28094,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR7", 744, dir, &DMA_SFCSR7_val,
 				&DMA_SFCSR7_fops);
 	if (DMA_SFCSR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR7\n");
+		pr_info("error creating file: DMA_SFCSR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28103,7 +28103,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR6", 744, dir, &DMA_SFCSR6_val,
 				&DMA_SFCSR6_fops);
 	if (DMA_SFCSR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR6\n");
+		pr_info("error creating file: DMA_SFCSR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28112,7 +28112,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR5", 744, dir, &DMA_SFCSR5_val,
 				&DMA_SFCSR5_fops);
 	if (DMA_SFCSR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR5\n");
+		pr_info("error creating file: DMA_SFCSR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28121,7 +28121,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR4", 744, dir, &DMA_SFCSR4_val,
 				&DMA_SFCSR4_fops);
 	if (DMA_SFCSR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR4\n");
+		pr_info("error creating file: DMA_SFCSR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28130,7 +28130,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR3", 744, dir, &DMA_SFCSR3_val,
 				&DMA_SFCSR3_fops);
 	if (DMA_SFCSR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR3\n");
+		pr_info("error creating file: DMA_SFCSR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28139,7 +28139,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR2", 744, dir, &DMA_SFCSR2_val,
 				&DMA_SFCSR2_fops);
 	if (DMA_SFCSR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR2\n");
+		pr_info("error creating file: DMA_SFCSR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28148,7 +28148,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR1", 744, dir, &DMA_SFCSR1_val,
 				&DMA_SFCSR1_fops);
 	if (DMA_SFCSR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR1\n");
+		pr_info("error creating file: DMA_SFCSR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28157,7 +28157,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SFCSR0", 744, dir, &DMA_SFCSR0_val,
 				&DMA_SFCSR0_fops);
 	if (DMA_SFCSR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SFCSR0\n");
+		pr_info("error creating file: DMA_SFCSR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28166,7 +28166,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_IVLANTIRR", 744, dir, &mac_ivlantirr_val,
 				&mac_ivlantirr_fops);
 	if (MAC_IVLANTIRR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_IVLANTIRR\n");
+		pr_info("error creating file: MAC_IVLANTIRR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28175,7 +28175,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_VLANTIRR", 744, dir, &mac_vlantirr_val,
 				&mac_vlantirr_fops);
 	if (MAC_VLANTIRR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_VLANTIRR\n");
+		pr_info("error creating file: MAC_VLANTIRR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28184,7 +28184,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_VLANHTR", 744, dir, &mac_vlanhtr_val,
 				&mac_vlanhtr_fops);
 	if (MAC_VLANHTR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_VLANHTR\n");
+		pr_info("error creating file: MAC_VLANHTR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28193,7 +28193,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_VLANTR", 744, dir, &mac_vlantr_val,
 				&mac_vlantr_fops);
 	if (MAC_VLANTR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_VLANTR\n");
+		pr_info("error creating file: MAC_VLANTR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28202,7 +28202,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_SBUS", 744, dir, &dma_sbus_val,
 				&dma_sbus_fops);
 	if (DMA_SBUS == NULL) {
-		printk(KERN_INFO "error creating file: DMA_SBUS\n");
+		pr_info("error creating file: DMA_SBUS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28211,7 +28211,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_BMR", 744, dir, &dma_bmr_val,
 				&dma_bmr_fops);
 	if (DMA_BMR == NULL) {
-		printk(KERN_INFO "error creating file: DMA_BMR\n");
+		pr_info("error creating file: DMA_BMR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28220,7 +28220,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0RCR", 744, dir, &MTL_Q0rcr_val,
 				&MTL_Q0rcr_fops);
 	if (MTL_Q0RCR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0RCR\n");
+		pr_info("error creating file: MTL_Q0RCR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28229,7 +28229,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0OCR", 744, dir, &MTL_Q0ocr_val,
 				&MTL_Q0ocr_fops);
 	if (MTL_Q0OCR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0OCR\n");
+		pr_info("error creating file: MTL_Q0OCR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28238,7 +28238,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0ROMR", 744, dir, &MTL_Q0romr_val,
 				&MTL_Q0romr_fops);
 	if (MTL_Q0ROMR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0ROMR\n");
+		pr_info("error creating file: MTL_Q0ROMR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28247,7 +28247,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0QR", 744, dir, &MTL_Q0qr_val,
 				&MTL_Q0qr_fops);
 	if (MTL_Q0QR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0QR\n");
+		pr_info("error creating file: MTL_Q0QR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28256,7 +28256,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0ECR", 744, dir, &MTL_Q0ecr_val,
 				&MTL_Q0ecr_fops);
 	if (MTL_Q0ECR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0ECR\n");
+		pr_info("error creating file: MTL_Q0ECR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28265,7 +28265,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0UCR", 744, dir, &MTL_Q0ucr_val,
 				&MTL_Q0ucr_fops);
 	if (MTL_Q0UCR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0UCR\n");
+		pr_info("error creating file: MTL_Q0UCR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28274,7 +28274,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_Q0TOMR", 744, dir, &MTL_Q0tomr_val,
 				&MTL_Q0tomr_fops);
 	if (MTL_Q0TOMR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_Q0TOMR\n");
+		pr_info("error creating file: MTL_Q0TOMR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28283,7 +28283,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_RQDCM1R", 744, dir, &MTL_RQDCM1r_val,
 				&MTL_RQDCM1r_fops);
 	if (MTL_RQDCM1R == NULL) {
-		printk(KERN_INFO "error creating file: MTL_RQDCM1R\n");
+		pr_info("error creating file: MTL_RQDCM1R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28292,7 +28292,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_RQDCM0R", 744, dir, &MTL_RQDCM0r_val,
 				&MTL_RQDCM0r_fops);
 	if (MTL_RQDCM0R == NULL) {
-		printk(KERN_INFO "error creating file: MTL_RQDCM0R\n");
+		pr_info("error creating file: MTL_RQDCM0R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28301,7 +28301,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_FDDR", 744, dir, &mtl_fddr_val,
 				&mtl_fddr_fops);
 	if (MTL_FDDR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_FDDR\n");
+		pr_info("error creating file: MTL_FDDR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28310,7 +28310,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_FDACS", 744, dir, &mtl_fdacs_val,
 				&mtl_fdacs_fops);
 	if (MTL_FDACS == NULL) {
-		printk(KERN_INFO "error creating file: MTL_FDACS\n");
+		pr_info("error creating file: MTL_FDACS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28319,7 +28319,7 @@ int create_debug_files()
 	    debugfs_create_file("MTL_OMR", 744, dir, &mtl_omr_val,
 				&mtl_omr_fops);
 	if (MTL_OMR == NULL) {
-		printk(KERN_INFO "error creating file: MTL_OMR\n");
+		pr_info("error creating file: MTL_OMR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28328,7 +28328,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_RQC3R", 744, dir, &MAC_RQC3r_val,
 				&MAC_RQC3r_fops);
 	if (MAC_RQC3R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_RQC3R\n");
+		pr_info("error creating file: MAC_RQC3R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28337,7 +28337,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_RQC2R", 744, dir, &MAC_RQC2r_val,
 				&MAC_RQC2r_fops);
 	if (MAC_RQC2R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_RQC2R\n");
+		pr_info("error creating file: MAC_RQC2R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28346,7 +28346,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_RQC1R", 744, dir, &MAC_RQC1r_val,
 				&MAC_RQC1r_fops);
 	if (MAC_RQC1R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_RQC1R\n");
+		pr_info("error creating file: MAC_RQC1R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28355,7 +28355,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_RQC0R", 744, dir, &MAC_RQC0r_val,
 				&MAC_RQC0r_fops);
 	if (MAC_RQC0R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_RQC0R\n");
+		pr_info("error creating file: MAC_RQC0R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28364,7 +28364,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TQPM1R", 744, dir, &MAC_TQPM1r_val,
 				&MAC_TQPM1r_fops);
 	if (MAC_TQPM1R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TQPM1R\n");
+		pr_info("error creating file: MAC_TQPM1R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28373,7 +28373,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_TQPM0R", 744, dir, &MAC_TQPM0r_val,
 				&MAC_TQPM0r_fops);
 	if (MAC_TQPM0R == NULL) {
-		printk(KERN_INFO "error creating file: MAC_TQPM0R\n");
+		pr_info("error creating file: MAC_TQPM0R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28382,7 +28382,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_RFCR", 744, dir, &mac_rfcr_val,
 				&mac_rfcr_fops);
 	if (MAC_RFCR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_RFCR\n");
+		pr_info("error creating file: MAC_RFCR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28391,7 +28391,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_QTFCR7", 744, dir, &MAC_QTFCR7_val,
 				&MAC_QTFCR7_fops);
 	if (MAC_QTFCR7 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_QTFCR7\n");
+		pr_info("error creating file: MAC_QTFCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28400,7 +28400,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_QTFCR6", 744, dir, &MAC_QTFCR6_val,
 				&MAC_QTFCR6_fops);
 	if (MAC_QTFCR6 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_QTFCR6\n");
+		pr_info("error creating file: MAC_QTFCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28409,7 +28409,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_QTFCR5", 744, dir, &MAC_QTFCR5_val,
 				&MAC_QTFCR5_fops);
 	if (MAC_QTFCR5 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_QTFCR5\n");
+		pr_info("error creating file: MAC_QTFCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28418,7 +28418,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_QTFCR4", 744, dir, &MAC_QTFCR4_val,
 				&MAC_QTFCR4_fops);
 	if (MAC_QTFCR4 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_QTFCR4\n");
+		pr_info("error creating file: MAC_QTFCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28427,7 +28427,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_QTFCR3", 744, dir, &MAC_QTFCR3_val,
 				&MAC_QTFCR3_fops);
 	if (MAC_QTFCR3 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_QTFCR3\n");
+		pr_info("error creating file: MAC_QTFCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28436,7 +28436,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_QTFCR2", 744, dir, &MAC_QTFCR2_val,
 				&MAC_QTFCR2_fops);
 	if (MAC_QTFCR2 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_QTFCR2\n");
+		pr_info("error creating file: MAC_QTFCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28445,7 +28445,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_QTFCR1", 744, dir, &MAC_QTFCR1_val,
 				&MAC_QTFCR1_fops);
 	if (MAC_QTFCR1 == NULL) {
-		printk(KERN_INFO "error creating file: MAC_QTFCR1\n");
+		pr_info("error creating file: MAC_QTFCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28454,7 +28454,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_Q0TFCR", 744, dir, &MAC_Q0tfcr_val,
 				&MAC_Q0tfcr_fops);
 	if (MAC_Q0TFCR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_Q0TFCR\n");
+		pr_info("error creating file: MAC_Q0TFCR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28463,7 +28463,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR7", 744, dir, &DMA_AXI4CR7_val,
 				&DMA_AXI4CR7_fops);
 	if (DMA_AXI4CR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR7\n");
+		pr_info("error creating file: DMA_AXI4CR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28472,7 +28472,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR6", 744, dir, &DMA_AXI4CR6_val,
 				&DMA_AXI4CR6_fops);
 	if (DMA_AXI4CR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR6\n");
+		pr_info("error creating file: DMA_AXI4CR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28481,7 +28481,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR5", 744, dir, &DMA_AXI4CR5_val,
 				&DMA_AXI4CR5_fops);
 	if (DMA_AXI4CR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR5\n");
+		pr_info("error creating file: DMA_AXI4CR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28490,7 +28490,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR4", 744, dir, &DMA_AXI4CR4_val,
 				&DMA_AXI4CR4_fops);
 	if (DMA_AXI4CR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR4\n");
+		pr_info("error creating file: DMA_AXI4CR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28499,7 +28499,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR3", 744, dir, &DMA_AXI4CR3_val,
 				&DMA_AXI4CR3_fops);
 	if (DMA_AXI4CR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR3\n");
+		pr_info("error creating file: DMA_AXI4CR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28508,7 +28508,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR2", 744, dir, &DMA_AXI4CR2_val,
 				&DMA_AXI4CR2_fops);
 	if (DMA_AXI4CR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR2\n");
+		pr_info("error creating file: DMA_AXI4CR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28517,7 +28517,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR1", 744, dir, &DMA_AXI4CR1_val,
 				&DMA_AXI4CR1_fops);
 	if (DMA_AXI4CR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR1\n");
+		pr_info("error creating file: DMA_AXI4CR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28526,7 +28526,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_AXI4CR0", 744, dir, &DMA_AXI4CR0_val,
 				&DMA_AXI4CR0_fops);
 	if (DMA_AXI4CR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_AXI4CR0\n");
+		pr_info("error creating file: DMA_AXI4CR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28535,7 +28535,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR7", 744, dir, &DMA_RCR7_val,
 				&DMA_RCR7_fops);
 	if (DMA_RCR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR7\n");
+		pr_info("error creating file: DMA_RCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28544,7 +28544,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR6", 744, dir, &DMA_RCR6_val,
 				&DMA_RCR6_fops);
 	if (DMA_RCR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR6\n");
+		pr_info("error creating file: DMA_RCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28553,7 +28553,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR5", 744, dir, &DMA_RCR5_val,
 				&DMA_RCR5_fops);
 	if (DMA_RCR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR5\n");
+		pr_info("error creating file: DMA_RCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28562,7 +28562,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR4", 744, dir, &DMA_RCR4_val,
 				&DMA_RCR4_fops);
 	if (DMA_RCR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR4\n");
+		pr_info("error creating file: DMA_RCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28571,7 +28571,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR3", 744, dir, &DMA_RCR3_val,
 				&DMA_RCR3_fops);
 	if (DMA_RCR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR3\n");
+		pr_info("error creating file: DMA_RCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28580,7 +28580,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR2", 744, dir, &DMA_RCR2_val,
 				&DMA_RCR2_fops);
 	if (DMA_RCR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR2\n");
+		pr_info("error creating file: DMA_RCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28589,7 +28589,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR1", 744, dir, &DMA_RCR1_val,
 				&DMA_RCR1_fops);
 	if (DMA_RCR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR1\n");
+		pr_info("error creating file: DMA_RCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28598,7 +28598,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_RCR0", 744, dir, &DMA_RCR0_val,
 				&DMA_RCR0_fops);
 	if (DMA_RCR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_RCR0\n");
+		pr_info("error creating file: DMA_RCR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28607,7 +28607,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR7", 744, dir, &DMA_TCR7_val,
 				&DMA_TCR7_fops);
 	if (DMA_TCR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR7\n");
+		pr_info("error creating file: DMA_TCR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28616,7 +28616,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR6", 744, dir, &DMA_TCR6_val,
 				&DMA_TCR6_fops);
 	if (DMA_TCR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR6\n");
+		pr_info("error creating file: DMA_TCR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28625,7 +28625,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR5", 744, dir, &DMA_TCR5_val,
 				&DMA_TCR5_fops);
 	if (DMA_TCR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR5\n");
+		pr_info("error creating file: DMA_TCR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28634,7 +28634,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR4", 744, dir, &DMA_TCR4_val,
 				&DMA_TCR4_fops);
 	if (DMA_TCR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR4\n");
+		pr_info("error creating file: DMA_TCR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28643,7 +28643,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR3", 744, dir, &DMA_TCR3_val,
 				&DMA_TCR3_fops);
 	if (DMA_TCR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR3\n");
+		pr_info("error creating file: DMA_TCR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28652,7 +28652,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR2", 744, dir, &DMA_TCR2_val,
 				&DMA_TCR2_fops);
 	if (DMA_TCR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR2\n");
+		pr_info("error creating file: DMA_TCR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28661,7 +28661,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR1", 744, dir, &DMA_TCR1_val,
 				&DMA_TCR1_fops);
 	if (DMA_TCR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR1\n");
+		pr_info("error creating file: DMA_TCR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28670,7 +28670,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_TCR0", 744, dir, &DMA_TCR0_val,
 				&DMA_TCR0_fops);
 	if (DMA_TCR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_TCR0\n");
+		pr_info("error creating file: DMA_TCR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28679,7 +28679,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR7", 744, dir, &DMA_CR7_val,
 				&DMA_CR7_fops);
 	if (DMA_CR7 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR7\n");
+		pr_info("error creating file: DMA_CR7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28688,7 +28688,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR6", 744, dir, &DMA_CR6_val,
 				&DMA_CR6_fops);
 	if (DMA_CR6 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR6\n");
+		pr_info("error creating file: DMA_CR6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28697,7 +28697,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR5", 744, dir, &DMA_CR5_val,
 				&DMA_CR5_fops);
 	if (DMA_CR5 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR5\n");
+		pr_info("error creating file: DMA_CR5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28706,7 +28706,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR4", 744, dir, &DMA_CR4_val,
 				&DMA_CR4_fops);
 	if (DMA_CR4 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR4\n");
+		pr_info("error creating file: DMA_CR4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28715,7 +28715,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR3", 744, dir, &DMA_CR3_val,
 				&DMA_CR3_fops);
 	if (DMA_CR3 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR3\n");
+		pr_info("error creating file: DMA_CR3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28724,7 +28724,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR2", 744, dir, &DMA_CR2_val,
 				&DMA_CR2_fops);
 	if (DMA_CR2 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR2\n");
+		pr_info("error creating file: DMA_CR2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28733,7 +28733,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR1", 744, dir, &DMA_CR1_val,
 				&DMA_CR1_fops);
 	if (DMA_CR1 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR1\n");
+		pr_info("error creating file: DMA_CR1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28742,7 +28742,7 @@ int create_debug_files()
 	    debugfs_create_file("DMA_CR0", 744, dir, &DMA_CR0_val,
 				&DMA_CR0_fops);
 	if (DMA_CR0 == NULL) {
-		printk(KERN_INFO "error creating file: DMA_CR0\n");
+		pr_info("error creating file: DMA_CR0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28751,7 +28751,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_WTR", 744, dir, &mac_wtr_val,
 				&mac_wtr_fops);
 	if (MAC_WTR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_WTR\n");
+		pr_info("error creating file: MAC_WTR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28760,7 +28760,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MPFR", 744, dir, &mac_mpfr_val,
 				&mac_mpfr_fops);
 	if (MAC_MPFR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MPFR\n");
+		pr_info("error creating file: MAC_MPFR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28769,7 +28769,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MECR", 744, dir, &mac_mecr_val,
 				&mac_mecr_fops);
 	if (MAC_MECR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MECR\n");
+		pr_info("error creating file: MAC_MECR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28778,7 +28778,7 @@ int create_debug_files()
 	    debugfs_create_file("MAC_MCR", 744, dir, &mac_mcr_val,
 				&mac_mcr_fops);
 	if (MAC_MCR == NULL) {
-		printk(KERN_INFO "error creating file: MAC_MCR\n");
+		pr_info("error creating file: MAC_MCR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28787,7 +28787,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_BMCR_REG", 744, dir, &mii_bmcr_reg_val,
 				&mii_bmcr_reg_fops);
 	if (MII_BMCR_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_BMCR_REG\n");
+		pr_info("error creating file: MII_BMCR_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28796,7 +28796,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_BMSR_REG", 744, dir, &mii_bmsr_reg_val,
 				&mii_bmsr_reg_fops);
 	if (MII_BMSR_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_BMSR_REG\n");
+		pr_info("error creating file: MII_BMSR_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28805,7 +28805,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_PHYSID1_REG", 744, dir,
 				&MII_PHYSID1_reg_val, &MII_PHYSID1_reg_fops);
 	if (MII_PHYSID1_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_PHYSID1_REG\n");
+		pr_info("error creating file: MII_PHYSID1_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28814,7 +28814,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_PHYSID2_REG", 744, dir,
 				&MII_PHYSID2_reg_val, &MII_PHYSID2_reg_fops);
 	if (MII_PHYSID2_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_PHYSID2_REG\n");
+		pr_info("error creating file: MII_PHYSID2_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28824,7 +28824,7 @@ int create_debug_files()
 				&mii_advertise_reg_val,
 				&mii_advertise_reg_fops);
 	if (MII_ADVERTISE_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_ADVERTISE_REG\n");
+		pr_info("error creating file: MII_ADVERTISE_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28833,7 +28833,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_LPA_REG", 744, dir, &mii_lpa_reg_val,
 				&mii_lpa_reg_fops);
 	if (MII_LPA_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_LPA_REG\n");
+		pr_info("error creating file: MII_LPA_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28843,7 +28843,7 @@ int create_debug_files()
 				&mii_expansion_reg_val,
 				&mii_expansion_reg_fops);
 	if (MII_EXPANSION_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_EXPANSION_REG\n");
+		pr_info("error creating file: MII_EXPANSION_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28852,7 +28852,7 @@ int create_debug_files()
 	    debugfs_create_file("AUTO_NEGO_NP_REG", 744, dir,
 				&auto_nego_np_reg_val, &auto_nego_np_reg_fops);
 	if (AUTO_NEGO_NP_REG == NULL) {
-		printk(KERN_INFO "error creating file: AUTO_NEGO_NP_REG\n");
+		pr_info("error creating file: AUTO_NEGO_NP_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28861,7 +28861,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_ESTATUS_REG", 744, dir,
 				&mii_estatus_reg_val, &mii_estatus_reg_fops);
 	if (MII_ESTATUS_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_ESTATUS_REG\n");
+		pr_info("error creating file: MII_ESTATUS_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28870,7 +28870,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_CTRL1000_REG", 744, dir,
 				&MII_CTRL1000_reg_val, &MII_CTRL1000_reg_fops);
 	if (MII_CTRL1000_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_CTRL1000_REG\n");
+		pr_info("error creating file: MII_CTRL1000_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28879,7 +28879,7 @@ int create_debug_files()
 	    debugfs_create_file("MII_STAT1000_REG", 744, dir,
 				&MII_STAT1000_reg_val, &MII_STAT1000_reg_fops);
 	if (MII_STAT1000_REG == NULL) {
-		printk(KERN_INFO "error creating file: MII_STAT1000_REG\n");
+		pr_info("error creating file: MII_STAT1000_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28888,7 +28888,7 @@ int create_debug_files()
 	    debugfs_create_file("PHY_CTL_REG", 744, dir, &phy_ctl_reg_val,
 				&phy_ctl_reg_fops);
 	if (PHY_CTL_REG == NULL) {
-		printk(KERN_INFO "error creating file: PHY_CTL_REG\n");
+		pr_info("error creating file: PHY_CTL_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28897,7 +28897,7 @@ int create_debug_files()
 	    debugfs_create_file("PHY_STS_REG", 744, dir, &phy_sts_reg_val,
 				&phy_sts_reg_fops);
 	if (PHY_STS_REG == NULL) {
-		printk(KERN_INFO "error creating file: PHY_STS_REG\n");
+		pr_info("error creating file: PHY_STS_REG\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28907,7 +28907,7 @@ int create_debug_files()
 				&feature_drop_tx_pktburstcnt_val,
 				&feature_drop_tx_pktburstcnt_fops);
 	if (feature_drop_tx_pktburstcnt == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error creating file: feature_drop_tx_pktburstcnt\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -28915,14 +28915,14 @@ int create_debug_files()
 
 	qinx = debugfs_create_file("qinx", 744, dir, &qinx_val, &qinx_fops);
 	if (qinx == NULL) {
-		printk(KERN_INFO "error creating file: qinx\n");
+		pr_info("error creating file: qinx\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
 	reg_offset = debugfs_create_file("reg_offset", 744, dir, &reg_offset_val, &reg_offset_fops);
 	if (reg_offset == NULL) {
-		printk(KERN_INFO "error creating file: reg_offset\n");
+		pr_info("error creating file: reg_offset\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28931,7 +28931,7 @@ int create_debug_files()
 	    debugfs_create_file("gen_reg", 744, dir, &gen_reg_val,
 				&gen_reg_fops);
 	if (gen_reg == NULL) {
-		printk(KERN_INFO "error creating file: gen_reg\n");
+		pr_info("error creating file: gen_reg\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28939,7 +28939,7 @@ int create_debug_files()
 	do_tx_align_tst = debugfs_create_file("do_tx_align_tst", 744, dir,
 		&do_tx_align_tst_val, &do_tx_align_tst_fops);
 	if (do_tx_align_tst == NULL) {
-		printk(KERN_INFO "error creating file: do_tx_align_tst\n");
+		pr_info("error creating file: do_tx_align_tst\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -28948,7 +28948,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor0", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops0);
 	if (RX_NORMAL_DESC_desc0 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -28958,7 +28958,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor1", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops1);
 	if (RX_NORMAL_DESC_desc1 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -28968,7 +28968,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor2", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops2);
 	if (RX_NORMAL_DESC_desc2 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -28978,7 +28978,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor3", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops3);
 	if (RX_NORMAL_DESC_desc3 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -28988,7 +28988,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor4", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops4);
 	if (RX_NORMAL_DESC_desc4 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -28998,7 +28998,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor5", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops5);
 	if (RX_NORMAL_DESC_desc5 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29008,7 +29008,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor6", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops6);
 	if (RX_NORMAL_DESC_desc6 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29018,7 +29018,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor7", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops7);
 	if (RX_NORMAL_DESC_desc7 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29028,7 +29028,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor8", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops8);
 	if (RX_NORMAL_DESC_desc8 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor8\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29038,7 +29038,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor9", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops9);
 	if (RX_NORMAL_DESC_desc9 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor9\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29048,7 +29048,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor10", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops10);
 	if (RX_NORMAL_DESC_desc10 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor10\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29058,7 +29058,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor11", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops11);
 	if (RX_NORMAL_DESC_desc11 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor11\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29068,7 +29068,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_descriptor12", 744, dir, NULL,
 				&RX_NORMAL_DESC_desc_fops12);
 	if (RX_NORMAL_DESC_desc12 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_descriptor12\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29078,7 +29078,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor0", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops0);
 	if (TX_NORMAL_DESC_desc0 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor0\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29088,7 +29088,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor1", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops1);
 	if (TX_NORMAL_DESC_desc1 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor1\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29098,7 +29098,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor2", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops2);
 	if (TX_NORMAL_DESC_desc2 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor2\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29108,7 +29108,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor3", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops3);
 	if (TX_NORMAL_DESC_desc3 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor3\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29118,7 +29118,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor4", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops4);
 	if (TX_NORMAL_DESC_desc4 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor4\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29128,7 +29128,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor5", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops5);
 	if (TX_NORMAL_DESC_desc5 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor5\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29138,7 +29138,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor6", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops6);
 	if (TX_NORMAL_DESC_desc6 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor6\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29148,7 +29148,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor7", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops7);
 	if (TX_NORMAL_DESC_desc7 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor7\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29158,7 +29158,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor8", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops8);
 	if (TX_NORMAL_DESC_desc8 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor8\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29168,7 +29168,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor9", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops9);
 	if (TX_NORMAL_DESC_desc9 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor9\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29178,7 +29178,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor10", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops10);
 	if (TX_NORMAL_DESC_desc10 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor10\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29188,7 +29188,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor11", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops11);
 	if (TX_NORMAL_DESC_desc11 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor11\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29198,7 +29198,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_descriptor12", 744, dir, NULL,
 				&TX_NORMAL_DESC_desc_fops12);
 	if (TX_NORMAL_DESC_desc12 == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_descriptor12\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29208,7 +29208,7 @@ int create_debug_files()
 	    debugfs_create_file("TX_NORMAL_DESC_STATUS", 744, dir, NULL,
 				&TX_NORMAL_DESC_status_fops);
 	if (TX_NORMAL_DESC_STATUS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: TX_NORMAL_DESC_STATUS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29218,7 +29218,7 @@ int create_debug_files()
 	    debugfs_create_file("RX_NORMAL_DESC_STATUS", 744, dir, NULL,
 				&RX_NORMAL_DESC_status_fops);
 	if (RX_NORMAL_DESC_STATUS == NULL) {
-		printk(KERN_INFO
+		pr_info(
 		       "error while creating file: RX_NORMAL_DESC_STATUS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
@@ -29227,7 +29227,7 @@ int create_debug_files()
 	    debugfs_create_file("BCM_REGS", 744, dir,
 				&bcm_regs_val, &bcm_regs_fops);
 	if (BCM_REGS == NULL) {
-		printk(KERN_INFO "error creating file: BCM_REGS\n");
+		pr_info("error creating file: BCM_REGS\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
@@ -29242,14 +29242,14 @@ int create_debug_files()
 	return ret;
 }
 
-/*! 
-* \brief  API to remove debugfs files 
+/*!
+* \brief  API to remove debugfs files
 *
-* \details This function will removes all debug files created inside 
-* /sys/kernel/debug/2490000.eqos directory and also the directory 
+* \details This function will removes all debug files created inside
+* /sys/kernel/debug/2490000.eqos directory and also the directory
 * 2490000.eqos.
 *
-* \retval  0 on Success. 
+* \retval  0 on Success.
 * \retval  error number on Failure.
 */
 
@@ -29285,7 +29285,7 @@ static void do_transmit_alignment_test(struct eqos_prv_data *pdata)
 	uint pkt_size = 0x40;
 
 	DBGPR("-->%s()\n", __func__);
-	printk(KERN_ALERT "-->%s(): ptxd=%4p\n", __func__, ptxd);
+	pr_err("-->%s(): ptxd=%4p\n", __func__, ptxd);
 
 	for (i = 0; i < 2048; i++)
 		pdata->ptst_buf[i] = i;
@@ -29315,7 +29315,7 @@ static void do_transmit_alignment_test(struct eqos_prv_data *pdata)
 	}
 	pdst = (u32 *)(ptxd + 2);
 	for (i = 0; i < 64; i++) {
-		printk(KERN_ALERT
+		pr_err(
 		"%s():[%d] Dw0=0x%.8x, Dw1=0x%.8x, Dw2=0x%.8x, Dw3=0x%.8x\n",
 			__func__, i, pdst[0], pdst[1], pdst[2], pdst[3]);
 

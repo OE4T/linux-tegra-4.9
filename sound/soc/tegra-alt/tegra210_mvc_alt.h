@@ -1,7 +1,7 @@
 /*
  * tegra210_mvc_alt.h - Definitions for Tegra210 MVC driver
  *
- * Copyright (c) 2014 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -79,6 +79,14 @@
 #define TEGRA210_MVC_PER_CHAN_CTRL_EN_MASK		(1 << TEGRA210_MVC_PER_CHAN_CTRL_EN_SHIFT)
 #define TEGRA210_MVC_PER_CHAN_CTRL_EN			(1 << TEGRA210_MVC_PER_CHAN_CTRL_EN_SHIFT)
 
+#define TEGRA210_MVC_CURVE_TYPE_SHIFT			1
+#define TEGRA210_MVC_CURVE_TYPE_MASK \
+	(1 << TEGRA210_MVC_CURVE_TYPE_SHIFT)
+#define TEGRA210_MVC_CURVE_TYPE_POLY \
+	(0 << TEGRA210_MVC_CURVE_TYPE_SHIFT)
+#define TEGRA210_MVC_CURVE_TYPE_LINEAR \
+	(1 << TEGRA210_MVC_CURVE_TYPE_SHIFT)
+
 #define TEGRA210_MVC_VOLUME_SWITCH_SHIFT		2
 #define TEGRA210_MVC_VOLUME_SWITCH_MASK		(1 << TEGRA210_MVC_VOLUME_SWITCH_SHIFT)
 #define TEGRA210_MVC_VOLUME_SWITCH_TRIGGER		(1 << TEGRA210_MVC_VOLUME_SWITCH_SHIFT)
@@ -91,7 +99,8 @@
 #define TEGRA210_MVC_DURATION_SWITCH_MASK		(1 << TEGRA210_MVC_DURATION_SWITCH_SHIFT)
 #define TEGRA210_MVC_DURATION_SWITCH_TRIGGER	(1 << TEGRA210_MVC_DURATION_SWITCH_SHIFT)
 
-#define TEGRA210_MVC_INIT_VOL_DEFAULT		0x01000000
+#define TEGRA210_MVC_INIT_VOL_DEFAULT_POLY		0x01000000
+#define TEGRA210_MVC_INIT_VOL_DEFAULT_LINEAR	0x00000000
 
 /* Fields in TEGRA210_MVC ram ctrl */
 #define TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL_READ_BUSY_SHIFT			31
@@ -116,6 +125,11 @@
 #define TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL_RAM_ADDR_SHIFT			0
 #define TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL_RAM_ADDR_MASK			(0x1ff << TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL_RAM_ADDR_SHIFT)
 
+enum {
+	CURVE_POLY,
+	CURVE_LINEAR,
+};
+
 struct tegra210_mvc_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,
@@ -126,6 +140,10 @@ struct tegra210_mvc {
 	struct regmap *regmap;
 	int poly_coeff[9];
 	int poly_n1, poly_n2, duration, duration_inv;
+	int volume;
+	unsigned int curve_type;
+	unsigned int cif_channels;
+	unsigned int audio_bits;
 	const struct tegra210_mvc_soc_data *soc_data;
 };
 

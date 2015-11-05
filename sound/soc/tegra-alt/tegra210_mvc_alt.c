@@ -30,6 +30,7 @@
 #include <sound/soc.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/of_device.h>
+#include <linux/delay.h>
 
 #include "tegra210_xbar_alt.h"
 #include "tegra210_mvc_alt.h"
@@ -78,6 +79,10 @@ static int tegra210_mvc_runtime_resume(struct device *dev)
 	regcache_cache_only(mvc->regmap, false);
 	regcache_sync(mvc->regmap);
 
+	regmap_update_bits(mvc->regmap, TEGRA210_MVC_CTRL,
+		TEGRA210_MVC_CURVE_TYPE_MASK,
+		mvc->curve_type << TEGRA210_MVC_CURVE_TYPE_SHIFT);
+
 	return 0;
 }
 
@@ -100,7 +105,8 @@ static int tegra210_mvc_write_ram(struct tegra210_mvc *mvc,
 	/* check if busy */
 	do {
 		regmap_read(mvc->regmap,
-				TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL, &value);
+			TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL,
+			&value);
 		wait--;
 		if (!wait)
 			return -EINVAL;
@@ -124,6 +130,32 @@ static int tegra210_mvc_write_ram(struct tegra210_mvc *mvc,
 static int tegra210_mvc_get_vol(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
+	unsigned int reg = mc->reg;
+
+	pm_runtime_get_sync(codec->dev);
+	if (reg == TEGRA210_MVC_TARGET_VOL) {
+		s32 val;
+
+		regmap_read(mvc->regmap, reg, &val);
+		if (mvc->curve_type == CURVE_POLY)
+			val >>= 24;
+		else {
+			val >>= 8;
+			val += 120;
+		}
+		ucontrol->value.integer.value[0] = val;
+	} else {
+		u32 val;
+
+		regmap_read(mvc->regmap, reg, &val);
+		ucontrol->value.integer.value[0] =
+			((val & TEGRA210_MVC_MUTE_MASK) != 0);
+	}
+	pm_runtime_put(codec->dev);
 	return 0;
 }
 
@@ -135,7 +167,9 @@ static int tegra210_mvc_put_vol(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
 	unsigned int reg = mc->reg;
-	unsigned int ret, value, wait = 0xffff;
+	unsigned int value, wait = 0xffff;
+	int ret = 0;
+	s32 val;
 
 	pm_runtime_get_sync(codec->dev);
 	/* check if VOLUME_SWITCH is triggered*/
@@ -143,24 +177,158 @@ static int tegra210_mvc_put_vol(struct snd_kcontrol *kcontrol,
 		regmap_read(mvc->regmap,
 				TEGRA210_MVC_SWITCH, &value);
 		wait--;
-		if (!wait)
-			return -EINVAL;
+		if (!wait) {
+			ret = -EINVAL;
+			goto end;
+		}
 	} while (value & TEGRA210_MVC_VOLUME_SWITCH_MASK);
 
 	if (reg == TEGRA210_MVC_TARGET_VOL) {
-		ret = regmap_write(mvc->regmap, TEGRA210_MVC_TARGET_VOL,
-				ucontrol->value.integer.value[0]*(1<<24));
+		if (mvc->curve_type == CURVE_POLY) {
+			val = ucontrol->value.integer.value[0];
+			if (val > 100)
+				val = 100;
+			mvc->volume = val * (1<<24);
+		} else {
+			val = ucontrol->value.integer.value[0] - 120;
+			val <<= 8;
+			mvc->volume = val;
+		}
+		ret = regmap_write(mvc->regmap, reg, mvc->volume);
 	} else {
-		ret = regmap_update_bits(mvc->regmap, TEGRA210_MVC_CTRL,
-				TEGRA210_MVC_MUTE_MASK, (ucontrol->value.integer.value[0] ?
-					TEGRA210_MVC_MUTE_EN : 0));
+		ret = regmap_update_bits(mvc->regmap, reg,
+				TEGRA210_MVC_MUTE_MASK,
+				(ucontrol->value.integer.value[0] ?
+				TEGRA210_MVC_MUTE_EN : 0));
 	}
 	ret |= regmap_update_bits(mvc->regmap, TEGRA210_MVC_SWITCH,
 			TEGRA210_MVC_VOLUME_SWITCH_MASK,
 			TEGRA210_MVC_VOLUME_SWITCH_TRIGGER);
+
+end:
 	pm_runtime_put(codec->dev);
 
 	return ret;
+}
+
+static int tegra210_mvc_get_curve_type(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
+	unsigned int reg = TEGRA210_MVC_CTRL;
+	u32 val;
+
+	pm_runtime_get_sync(codec->dev);
+	regmap_read(mvc->regmap, reg, &val);
+	ucontrol->value.integer.value[0] =
+		(val & TEGRA210_MVC_CURVE_TYPE_MASK) >>
+		TEGRA210_MVC_CURVE_TYPE_SHIFT;
+	pm_runtime_put(codec->dev);
+
+	return 0;
+}
+
+static int tegra210_mvc_put_curve_type(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
+	unsigned int reg = TEGRA210_MVC_CTRL;
+	unsigned int dcnt = 10;
+	int ret = 0;
+	u32 value;
+
+	/* if no change in curve type, do nothing */
+	if (mvc->curve_type == ucontrol->value.integer.value[0])
+		return ret;
+
+	pm_runtime_get_sync(codec->dev);
+
+	/* change curve type */
+	ret |= regmap_update_bits(mvc->regmap, reg,
+			TEGRA210_MVC_CURVE_TYPE_MASK,
+			ucontrol->value.integer.value[0] <<
+			TEGRA210_MVC_CURVE_TYPE_SHIFT);
+	mvc->curve_type = ucontrol->value.integer.value[0];
+
+	/* issue soft reset */
+	regmap_write(mvc->regmap, TEGRA210_MVC_SOFT_RESET, 1);
+	/* wait for soft reset bit to clear */
+	do {
+		udelay(10);
+		ret = regmap_read(mvc->regmap, TEGRA210_MVC_SOFT_RESET, &value);
+		dcnt--;
+		if (dcnt < 0) {
+			ret = -EINVAL;
+			goto end;
+		}
+	} while (value);
+
+	/* change volume to default init for new curve type */
+	if (ucontrol->value.integer.value[0] == CURVE_POLY)
+		mvc->volume = TEGRA210_MVC_INIT_VOL_DEFAULT_POLY;
+	else
+		mvc->volume = TEGRA210_MVC_INIT_VOL_DEFAULT_LINEAR;
+
+end:
+	pm_runtime_put(codec->dev);
+
+	return ret;
+}
+
+static int tegra210_mvc_get_audio_bits(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = (mvc->audio_bits + 1) * 4;
+
+	return 0;
+}
+
+static int tegra210_mvc_put_audio_bits(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
+	unsigned int val;
+
+	val = ucontrol->value.integer.value[0];
+	if ((val >= 8) && (val <= 32) && (val%4 == 0))
+		mvc->audio_bits = val/4 - 1;
+	else
+		return -EINVAL;
+
+	return 0;
+}
+
+static int tegra210_mvc_get_channels(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
+
+	ucontrol->value.integer.value[0] = mvc->cif_channels;
+
+	return 0;
+}
+
+static int tegra210_mvc_put_channels(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
+	unsigned int val;
+
+	val = ucontrol->value.integer.value[0];
+	if ((val > 0) && (val << 16))
+		mvc->cif_channels = val;
+	else
+		return -EINVAL;
+
+	return 0;
 }
 
 static int tegra210_mvc_set_audio_cif(struct tegra210_mvc *mvc,
@@ -173,7 +341,10 @@ static int tegra210_mvc_set_audio_cif(struct tegra210_mvc *mvc,
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	channels = params_channels(params);
-	if (channels < 2)
+	if (mvc->cif_channels > 0)
+		channels = mvc->cif_channels;
+
+	if (channels > 8)
 		return -EINVAL;
 
 	switch (params_format(params)) {
@@ -186,6 +357,9 @@ static int tegra210_mvc_set_audio_cif(struct tegra210_mvc *mvc,
 	default:
 		return -EINVAL;
 	}
+
+	if (mvc->audio_bits > 0)
+		audio_bits = mvc->audio_bits;
 
 	cif_conf.audio_channels = channels;
 	cif_conf.client_channels = channels;
@@ -226,7 +400,16 @@ static int tegra210_mvc_hw_params(struct snd_pcm_substream *substream,
 
 	/* init the default volume=1 for MVC */
 	regmap_write(mvc->regmap, TEGRA210_MVC_INIT_VOL,
-		TEGRA210_MVC_INIT_VOL_DEFAULT);
+		(mvc->curve_type == CURVE_POLY) ?
+		TEGRA210_MVC_INIT_VOL_DEFAULT_POLY :
+		TEGRA210_MVC_INIT_VOL_DEFAULT_LINEAR);
+
+	regmap_write(mvc->regmap, TEGRA210_MVC_TARGET_VOL, mvc->volume);
+	/* trigger volume switch */
+	ret |= regmap_update_bits(mvc->regmap, TEGRA210_MVC_SWITCH,
+			TEGRA210_MVC_VOLUME_SWITCH_MASK,
+			TEGRA210_MVC_VOLUME_SWITCH_TRIGGER);
+
 
 	/* program the poly coefficients */
 	for (i = 0; i < 9; i++)
@@ -257,11 +440,30 @@ static struct snd_soc_dai_ops tegra210_mvc_dai_ops = {
 	.hw_params	= tegra210_mvc_hw_params,
 };
 
+static const unsigned int tegra210_mvc_curve_type_values[] = {
+	CURVE_POLY,
+	CURVE_LINEAR,
+};
+
+static const char * const tegra210_mvc_curve_type_text[] = {
+	"Poly",
+	"Linear",
+};
+
+static const struct soc_enum tegra210_mvc_curve_type_ctrl =
+	SOC_ENUM_SINGLE_EXT(2, tegra210_mvc_curve_type_text);
+
 static const struct snd_kcontrol_new tegra210_mvc_vol_ctrl[] = {
-	SOC_SINGLE_EXT("Vol", TEGRA210_MVC_TARGET_VOL, 0, 100, 0,
+	SOC_SINGLE_EXT("Vol", TEGRA210_MVC_TARGET_VOL, 0, 160, 0,
 		tegra210_mvc_get_vol, tegra210_mvc_put_vol),
 	SOC_SINGLE_EXT("Mute", TEGRA210_MVC_CTRL, 0, 1, 0,
 		tegra210_mvc_get_vol, tegra210_mvc_put_vol),
+	SOC_ENUM_EXT("Curve Type", tegra210_mvc_curve_type_ctrl,
+		tegra210_mvc_get_curve_type, tegra210_mvc_put_curve_type),
+	SOC_SINGLE_EXT("Bits", 0, 0, 32, 0,
+		tegra210_mvc_get_audio_bits, tegra210_mvc_put_audio_bits),
+	SOC_SINGLE_EXT("Channels", 0, 0, 16, 0,
+		tegra210_mvc_get_channels, tegra210_mvc_put_channels),
 };
 
 static struct snd_soc_dai_driver tegra210_mvc_dais[] = {
@@ -381,6 +583,7 @@ static bool tegra210_mvc_volatile_reg(struct device *dev, unsigned int reg)
 	case TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_CTRL:
 	case TEGRA210_MVC_AHUBRAMCTL_CONFIG_RAM_DATA:
 	case TEGRA210_MVC_PEAK_VALUE:
+	case TEGRA210_MVC_CTRL:
 		return true;
 	default:
 		return false;
@@ -449,6 +652,8 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 	mvc->poly_coeff[6] = 12048422;
 	mvc->poly_coeff[7] = 5527252;
 	mvc->poly_coeff[8] = -785042;
+	mvc->curve_type = CURVE_LINEAR;
+	mvc->volume = TEGRA210_MVC_INIT_VOL_DEFAULT_POLY;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	if (!mem) {

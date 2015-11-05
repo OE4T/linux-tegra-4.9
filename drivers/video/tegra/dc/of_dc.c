@@ -2518,6 +2518,9 @@ struct tegra_dc_platform_data
 	vrr_np = of_get_child_by_name(np_target_disp, "vrr-settings");
 	if (!vrr_np || (pdata->default_out->n_modes < 2)) {
 		pr_info("%s: could not find vrr-settings node\n", __func__);
+	} else if (pdata->default_out->type != TEGRA_DC_OUT_DSI) {
+		dev_err(&ndev->dev,
+			"vrr-settings specified for a non-DSI head, disregarded\n");
 	} else {
 		dma_addr_t dma_addr;
 		struct tegra_vrr *vrr;
@@ -2547,15 +2550,23 @@ struct tegra_dc_platform_data
 
 	if (!of_property_read_u32(np_target_disp,
 				"nvidia,hdmi-vrr-caps", &temp)) {
-		struct tegra_vrr *vrr;
+		if (pdata->default_out->type != TEGRA_DC_OUT_HDMI) {
+			dev_err(&ndev->dev,
+				"nvidia,hdmi-vrr-caps specified for a non-HDMI head, disregarded\n");
+		} else {
+			struct tegra_vrr *vrr;
 
-		pdata->default_out->vrr = devm_kzalloc(&ndev->dev,
-				sizeof(struct tegra_vrr), GFP_KERNEL);
-		if (!pdata->default_out->vrr)
-			goto fail_parse;
-		vrr = pdata->default_out->vrr;
-		vrr->capability = (unsigned) temp;
-		OF_DC_LOG("vrr->capability %d\n", vrr->capability);
+			pdata->default_out->vrr = devm_kzalloc(&ndev->dev,
+					sizeof(struct tegra_vrr), GFP_KERNEL);
+			if (!pdata->default_out->vrr) {
+				dev_err(&ndev->dev, "not enough memory\n");
+				goto fail_parse;
+			}
+			vrr = pdata->default_out->vrr;
+			vrr->capability = 0;
+			OF_DC_LOG("Vrr available, init vrr->capability to %d\n",
+				vrr->capability);
+		}
 	} else
 		pr_info("%s: nvidia,hdmi-vrr-caps not present\n", __func__);
 

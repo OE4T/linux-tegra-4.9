@@ -559,12 +559,12 @@ static int tegra_hdmi_vrr_authentication(struct tegra_hdmi *hdmi)
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
 	/*
-	 * vrr panel authentication, the estimated time delay is about 200ms
-	 * will be replaced with actual authentication code with subsequent
-	 * change.
+	 * TODO: vrr panel authentication, the estimated time delay is
+	 * about 200ms will be replaced with actual authentication code
+	 * with subsequent change.
 	 */
 	mdelay(200);
-	vrr->authenticated = 1;
+	vrr->authenticated = 0;
 
 	return err;
 }

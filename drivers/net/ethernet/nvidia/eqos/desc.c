@@ -142,7 +142,7 @@ static int eqos_alloc_queue_struct(struct eqos_prv_data *pdata)
 		kzalloc(sizeof(struct eqos_tx_queue) * pdata->tx_queue_cnt,
 		GFP_KERNEL);
 	if (pdata->tx_queue == NULL) {
-		printk(KERN_ALERT "ERROR: Unable to allocate Tx queue structure\n");
+		pr_err("ERROR: Unable to allocate Tx queue structure\n");
 		ret = -ENOMEM;
 		goto err_out_tx_q_alloc_failed;
 	}
@@ -151,7 +151,7 @@ static int eqos_alloc_queue_struct(struct eqos_prv_data *pdata)
 		kzalloc(sizeof(struct eqos_rx_queue) * pdata->rx_queue_cnt,
 		GFP_KERNEL);
 	if (pdata->rx_queue == NULL) {
-		printk(KERN_ALERT "ERROR: Unable to allocate Rx queue structure\n");
+		pr_err("ERROR: Unable to allocate Rx queue structure\n");
 		ret = -ENOMEM;
 		goto err_out_rx_q_alloc_failed;
 	}
@@ -446,7 +446,7 @@ static void eqos_wrapper_tx_descriptor_init(struct eqos_prv_data
 static void eqos_wrapper_rx_descriptor_init(struct eqos_prv_data
 						   *pdata)
 {
-	struct eqos_rx_queue * rx_queue = NULL;
+	struct eqos_rx_queue *rx_queue = NULL;
 	UINT qinx;
 
 	DBGPR("-->eqos_wrapper_rx_descriptor_init\n");
@@ -775,18 +775,16 @@ static int eqos_handle_tso(struct net_device *dev,
 
 /* returns 0 on success and -ve on failure */
 static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
-                                struct eqos_tx_buffer *buffer,
-                                struct sk_buff *skb,
-                                unsigned int offset,
-                                unsigned int size)
+	struct eqos_tx_buffer *buffer, struct sk_buff *skb,
+	unsigned int offset, unsigned int size)
 {
 	DBGPR("-->eqos_map_non_page_buffs_64");
 
 	if (size > EQOS_MAX_DATA_PER_TX_BUF) {
-		printk(KERN_ALERT "failed to allocate buffer(size = %d) with %d size\n",
+		pr_err("failed to allocate buffer(size = %d) with %d size\n",
 				EQOS_MAX_DATA_PER_TX_BUF,
 				size);
-		return - ENOMEM;
+		return -ENOMEM;
 	}
 
 	buffer->dma = dma_map_single((&pdata->pdev->dev),
@@ -794,8 +792,8 @@ static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
 			ALIGN_SIZE(size), DMA_TO_DEVICE);
 
 	if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
-		printk(KERN_ALERT "failed to do the dma map\n");
-		return - ENOMEM;
+		pr_err("failed to do the dma map\n");
+		return -ENOMEM;
 	}
 	buffer->len = size;
 	buffer->buf1_mapped_as_page = Y_FALSE;
@@ -821,7 +819,7 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 				ALIGN_SIZE(size), DMA_TO_DEVICE);
 	if (dma_mapping_error((&pdata->pdev->dev),
 				buffer->dma)) {
-		printk(KERN_ALERT "failed to do the dma map\n");
+		pr_err("failed to do the dma map\n");
 		return -ENOMEM;
 	}
 	buffer->len = size;
@@ -958,7 +956,7 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 		}
 	}
 	/* If current descriptor is not inuse, then adjust pointer to
-	 * last used one. 
+	 * last used one.
 	 */
 	if (buffer->dma == 0) {
 		buffer = prev_buffer;
@@ -971,7 +969,7 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 	return count;
 
  err_out_dma_map_fail:
-	printk(KERN_ALERT "Tx DMA map failed\n");
+	pr_err("Tx DMA map failed\n");
 
 	for (; count > 0; count--) {
 		DECR_TX_DESC_INDEX(index);
@@ -1091,7 +1089,7 @@ static void eqos_re_alloc_skb(struct eqos_prv_data *pdata,
 		buffer = GET_RX_BUF_PTR(qinx, desc_data->skb_realloc_idx);
 		/* allocate skb & assign to each desc */
 		if (pdata->alloc_rx_buf(pdata, buffer, GFP_ATOMIC)) {
-			printk(KERN_ALERT "Failed to re allocate skb\n");
+			pr_err("Failed to re allocate skb\n");
 			pdata->xstats.q_re_alloc_rx_buf_failed[qinx]++;
 			break;
 		}

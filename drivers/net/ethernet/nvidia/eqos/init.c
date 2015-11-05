@@ -27,7 +27,8 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
  * DAMAGE.
- * ========================================================================= */
+ * =========================================================================
+ */
 /*
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -106,11 +107,13 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 
 		mac_isr = (mac_isr & mac_imr);
 
-		/* RemoteWake and MagicPacket events will be received by PHY supporting
-		 * these features on silicon and can be used to wake up Tegra.
-		 * Still let the below code be there in case we ever get this interrupt.
+		/* RemoteWake and MagicPacket events will be received by PHY
+		 * supporting these features on silicon and can be used to wake
+		 * up Tegra. Still let the below code be there in case we ever
+		 * get this interrupt.
 		 */
-		if (GET_VALUE(mac_isr, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS) & 1) {
+		if (GET_VALUE(mac_isr, MAC_ISR_PMTIS_LPOS, MAC_ISR_PMTIS_HPOS)
+			& 1) {
 			pdata->xstats.pmt_irq_n++;
 			MAC_PMTCSR_RD(mac_pmtcsr);
 			pr_info("power_isr: PMTCSR : %#lx\n", mac_pmtcsr);
@@ -119,17 +122,19 @@ irqreturn_t EQOS_ISR_SW_EQOS_POWER(int irq, void *device_id)
 		}
 
 		/* RxLPI exit EEE interrupts */
-		if (GET_VALUE(mac_isr, MAC_ISR_LPI_LPOS, MAC_ISR_LPI_HPOS) & 1) {
+		if (GET_VALUE(mac_isr, MAC_ISR_LPI_LPOS, MAC_ISR_LPI_HPOS)
+			& 1) {
 			pr_info("power_isr: LPI intr received\n");
 			eqos_handle_eee_interrupt(pdata);
 #ifdef HWA_NV_1650337
-		/* FIXME: remove this once root cause of HWA_NV_1650337 is known */
+		/* FIXME: remove once root cause of HWA_NV_1650337 is known */
 		} else {
-			/* We have seen power_intr flood without LPIIS set in MAC_ISR
-			 * and need to still read MAC_LPI_CONTROL_STS register to
-			 * get rid of interrupt storm issue.
+			/* We have seen power_intr flood without LPIIS set in
+			 * MAC_ISR and need to still read MAC_LPI_CONTROL_STS
+			 * register to get rid of interrupt storm issue.
 			 */
-			pr_info("power_isr: LPIIS not set in MAC_ISR but still reading MAC_LPI_CONTROL_STS\n");
+			pr_info("power_isr: LPIIS not set in MAC_ISR but still"
+				" reading MAC_LPI_CONTROL_STS\n");
 			eqos_handle_eee_interrupt(pdata);
 #endif
 		}
@@ -169,7 +174,7 @@ void get_dt_u32_array(struct eqos_prv_data *pdata, char *pdt_prop, u32 *pval,
 	ret = of_property_read_u32_array(pnode, pdt_prop, pval, num_entries);
 
 	if (ret < 0) {
-		printk(KERN_ALERT "%s(): \"%s\" read failed %d. Using default\n",
+		pr_err("%s(): \"%s\" read failed %d. Using default\n",
 			__func__, pdt_prop, ret);
 		for (i = 0; i < num_entries; i++)
 			pval[i] = val_def;
@@ -559,7 +564,7 @@ static int eqos_get_mac_address_dtb(const char *node_name,
 	return ret;
 
 err_out:
-	printk(KERN_ALERT "%s: bad mac address at %s/%s: %s.\n",
+	pr_err("%s: bad mac address at %s/%s: %s.\n",
 		__func__, node_name, property_name,
 		(mac_str) ? mac_str : "null");
 
@@ -611,7 +616,7 @@ int eqos_probe(struct platform_device *pdev)
 	DBGPR("-->%s()\n", __func__);
 
 	match = of_match_device(eqos_of_match, &pdev->dev);
-	if(!match)
+	if (!match)
 		return -EINVAL;
 
 	/* get base addr */
@@ -663,12 +668,12 @@ int eqos_probe(struct platform_device *pdev)
 		DBGPR("rx_irq[%d]=%d, tx_irq[%d]=%d\n",
 			j, rx_irqs[j], j, tx_irqs[j]);
 
-	DBGPR("==========================================================\n");
-	DBGPR("Sizeof rx context desc is %lu\n", sizeof(struct s_rx_context_desc));
-	DBGPR("Sizeof tx context desc is %lu\n", sizeof(struct s_tx_context_desc));
-	DBGPR("Sizeof rx normal desc is %lu\n", sizeof(struct s_rx_normal_desc));
-	DBGPR("Sizeof tx normal desc is %lu\n\n", sizeof(struct s_tx_normal_desc));
-	DBGPR("==========================================================\n");
+	DBGPR("============================================================\n");
+	DBGPR("Sizeof rx context desc %lu\n", sizeof(struct s_rx_context_desc));
+	DBGPR("Sizeof tx context desc %lu\n", sizeof(struct s_tx_context_desc));
+	DBGPR("Sizeof rx normal desc %lu\n", sizeof(struct s_rx_normal_desc));
+	DBGPR("Sizeof tx normal desc %lu\n\n", sizeof(struct s_tx_normal_desc));
+	DBGPR("============================================================\n");
 
 	/* remap base address */
 	eqos_base_addr = (ULONG) devm_ioremap_nocache(&pdev->dev,
@@ -684,7 +689,7 @@ int eqos_probe(struct platform_device *pdev)
 	ndev = alloc_etherdev_mqs(sizeof(struct eqos_prv_data),
 				MAX_CHANS, MAX_CHANS);
 	if (ndev == NULL) {
-		printk(KERN_ALERT "%s:Unable to alloc new net device\n",
+		pr_err("%s:Unable to alloc new net device\n",
 		    DEV_NAME);
 		ret = -ENOMEM;
 		goto err_out_dev_failed;
@@ -792,7 +797,7 @@ int eqos_probe(struct platform_device *pdev)
 
 	ret = desc_if->alloc_queue_struct(pdata);
 	if (ret < 0) {
-		printk(KERN_ALERT "ERROR: Unable to alloc Tx/Rx queue\n");
+		pr_err("ERROR: Unable to alloc Tx/Rx queue\n");
 		goto err_out_q_alloc_failed;
 	}
 
@@ -803,12 +808,12 @@ int eqos_probe(struct platform_device *pdev)
 	if (1 == pdata->hw_feat.sma_sel) {
 		ret = eqos_mdio_register(ndev);
 		if (ret < 0) {
-			printk(KERN_ALERT "MDIO bus (id %d) registration failed\n",
+			pr_err("MDIO bus (id %d) registration failed\n",
 			       pdata->bus_id);
 			goto err_out_mdio_reg;
 		}
 	} else {
-		printk(KERN_ALERT "%s: MDIO is not present\n\n", DEV_NAME);
+		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
 	if (pdata->phydev)
@@ -867,9 +872,9 @@ int eqos_probe(struct platform_device *pdev)
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
 	if (ret < 0) {
-		printk(KERN_ALERT "ether-mac read from DT failed %d\n", ret);
+		pr_err("ether-mac read from DT failed %d\n", ret);
 	} else {
-		printk(KERN_ALERT "Setting local MAC: %x %x %x %x %x %x\n",
+		pr_err("Setting local MAC: %x %x %x %x %x %x\n",
 			mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
 			mac_addr[4], mac_addr[5]);
 		/* Set up MAC address */
@@ -908,9 +913,8 @@ int eqos_probe(struct platform_device *pdev)
 		ndev->hw_features |= NETIF_F_SG;
 		ndev->hw_features |= NETIF_F_IP_CSUM;
 		ndev->hw_features |= NETIF_F_IPV6_CSUM;
-	}
-	else if (pdata->hw_feat.tx_coe_sel) {
-		ndev->hw_features = NETIF_F_IP_CSUM ;
+	} else if (pdata->hw_feat.tx_coe_sel) {
+		ndev->hw_features = NETIF_F_IP_CSUM;
 		ndev->hw_features |= NETIF_F_IPV6_CSUM;
 	}
 
@@ -921,12 +925,10 @@ int eqos_probe(struct platform_device *pdev)
 #ifdef EQOS_ENABLE_VLAN_TAG
 	ndev->vlan_features |= ndev->hw_features;
 	ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_RX;
-	if (pdata->hw_feat.sa_vlan_ins) {
+	if (pdata->hw_feat.sa_vlan_ins)
 		ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_TX;
-	}
-	if (pdata->hw_feat.vlan_hash_en) {
+	if (pdata->hw_feat.vlan_hash_en)
 		ndev->hw_features |= NETIF_F_HW_VLAN_CTAG_FILTER;
-	}
 #endif /* end of EQOS_ENABLE_VLAN_TAG */
 	ndev->features |= ndev->hw_features;
 	pdata->dev_state |= ndev->features;
@@ -946,7 +948,7 @@ int eqos_probe(struct platform_device *pdev)
 
 	ret = register_netdev(ndev);
 	if (ret) {
-		printk(KERN_ALERT "%s: Net device registration failed\n",
+		pr_err("%s: Net device registration failed\n",
 		    DEV_NAME);
 		goto err_out_netdev_failed;
 	}
@@ -955,16 +957,15 @@ int eqos_probe(struct platform_device *pdev)
 
 	if (pdata->hw_feat.pcs_sel) {
 		netif_carrier_off(ndev);
-		printk(KERN_ALERT "carrier off till LINK is up\n");
-	}
-	else
+		pr_err("carrier off till LINK is up\n");
+	} else
 		DBGPR("Net device registration sucessful\n");
 
 	ret = request_irq(power_irq, EQOS_ISR_SW_EQOS_POWER,
 		IRQF_SHARED, DEV_NAME, pdata);
 
 	if (ret != 0) {
-		printk(KERN_ALERT "Unable to register PMT IRQ %d\n", power_irq);
+		pr_err("Unable to register PMT IRQ %d\n", power_irq);
 		ret = -EBUSY;
 		goto err_out_pmt_irq_failed;
 	}
@@ -1130,9 +1131,9 @@ static struct platform_driver eqos_driver = {
 
 static void eqos_shutdown(struct platform_device *pdev)
 {
-	printk(KERN_ALERT "-->eqos_shutdown\n");
-	printk(KERN_ALERT "Handle the shutdown\n");
-	printk(KERN_ALERT ">--eqos_shutdown\n");
+	pr_err("-->eqos_shutdown\n");
+	pr_err("Handle the shutdown\n");
+	pr_err(">--eqos_shutdown\n");
 
 	return;
 }
@@ -1140,18 +1141,18 @@ static void eqos_shutdown(struct platform_device *pdev)
 #if 0
 static INT eqos_suspend_late(struct platform_device *pdev, pm_message_t state)
 {
-	printk(KERN_ALERT "-->eqos_suspend_late\n");
-	printk(KERN_ALERT "Handle the suspend_late\n");
-	printk(KERN_ALERT "<--eqos_suspend_late\n");
+	pr_err("-->eqos_suspend_late\n");
+	pr_err("Handle the suspend_late\n");
+	pr_err("<--eqos_suspend_late\n");
 
 	return 0;
 }
 
 static INT eqos_resume_early(struct platform_device *pdev)
 {
-	printk(KERN_ALERT "-->eqos_resume_early\n");
-	printk(KERN_ALERT "Handle the resume_early\n");
-	printk(KERN_ALERT "<--eqos_resume_early\n");
+	pr_err("-->eqos_resume_early\n");
+	pr_err("Handle the resume_early\n");
+	pr_err("<--eqos_resume_early\n");
 
 	return 0;
 }
@@ -1203,11 +1204,13 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 
 		/* filter 0, 1 independently enabled and would apply for
 		 * unicast packet only filter 3, 2 combined as,
-		 * "Filter-3 pattern AND NOT Filter-2 pattern" */
+		 * "Filter-3 pattern AND NOT Filter-2 pattern"
+		 */
 		0x03050101,
 
 		/* filter 3, 2, 1 and 0 offset is 50, 58, 66, 74 bytes
-		 * from start */
+		 * from start
+		 */
 		0x4a423a32,
 
 		/* pattern for filter 1 and 0, "0x55", "11", repeated 8 times */

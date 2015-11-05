@@ -23,35 +23,35 @@
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&{/bpmp/bpmpthermal} THERMAL_ZONE_CPU>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		MCPU-therm {
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&{/bpmp/bpmpthermal} THERMAL_ZONE_AUX>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		GPU-therm {
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&{/bpmp/bpmpthermal} THERMAL_ZONE_GPU>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		PLL-therm {
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&{/bpmp/bpmpthermal} THERMAL_ZONE_PLLX>;
-			status = "okay";
+			status = "disabled";
 		};
 
 		AO-therm {
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
 			thermal-sensors = <&{/bpmp/bpmpthermal} THERMAL_ZONE_AO>;
-			status = "okay";
+			status = "disabled";
 		};
 	};
 };

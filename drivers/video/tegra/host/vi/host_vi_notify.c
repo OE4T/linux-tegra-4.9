@@ -28,7 +28,7 @@
 #include <linux/poll.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
-#include <linux/tegra-soc.h> /* is_fpga() */
+#include <linux/tegra-soc.h>
 
 #include "dev.h"
 #include "t186/t186.h"
@@ -560,8 +560,10 @@ static int vi_notify_dev_open(struct inode *inode, struct file *file,
 	INIT_KFIFO(priv->fifo);
 
 	if ((file->f_flags & O_ACCMODE) != O_WRONLY) {
-		if (tegra_platform_is_fpga())
+		if (tegra_platform_is_unit_fpga()) {
+			kfree(priv);
 			return -ENODEV;
+		}
 
 		mutex_lock(&dev->lock);
 		if (rcu_access_pointer(dev->priv) != NULL) {

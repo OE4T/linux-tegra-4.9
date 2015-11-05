@@ -76,6 +76,9 @@
 #define ODM_RESERVED_DEVSEL_START_OFFSET	0x2
 #define ODM_RESERVED_START_BIT			2
 
+#define BOOT_SECURITY_INFO_START_OFFSET		0x0
+#define BOOT_SECURITY_INFO_START_BIT		16
+
 #define FUSE_VENDOR_CODE		0x200
 #define FUSE_VENDOR_CODE_MASK		0xf
 #define FUSE_FAB_CODE			0x204
@@ -185,6 +188,7 @@ static const u32 h5syndrome_table[] = {
 static DEVICE_ATTR(public_key, 0440, tegra_fuse_show, tegra_fuse_store);
 static DEVICE_ATTR(pkc_disable, 0440, tegra_fuse_show, tegra_fuse_store);
 static DEVICE_ATTR(odm_lock, 0440, tegra_fuse_show, tegra_fuse_store);
+static DEVICE_ATTR(boot_sec_info, 0440, tegra_fuse_show, tegra_fuse_store);
 
 static int tegra_fuse_add_sysfs_variables(struct platform_device *pdev,
 					bool odm_security_mode)
@@ -193,9 +197,11 @@ static int tegra_fuse_add_sysfs_variables(struct platform_device *pdev,
 	if (odm_security_mode) {
 		dev_attr_public_key.attr.mode =  0440;
 		dev_attr_pkc_disable.attr.mode = 0440;
+		dev_attr_boot_sec_info.attr.mode = 0440;
 	} else {
 		dev_attr_public_key.attr.mode =  0640;
 		dev_attr_pkc_disable.attr.mode = 0640;
+		dev_attr_boot_sec_info.attr.mode = 0640;
 	}
 	CHK_ERR(&pdev->dev, sysfs_create_file(&pdev->dev.kobj,
 				&dev_attr_public_key.attr));
@@ -203,7 +209,8 @@ static int tegra_fuse_add_sysfs_variables(struct platform_device *pdev,
 				&dev_attr_pkc_disable.attr));
 	CHK_ERR(&pdev->dev, sysfs_create_file(&pdev->dev.kobj,
 				&dev_attr_odm_lock.attr));
-
+	CHK_ERR(&pdev->dev, sysfs_create_file(&pdev->dev.kobj,
+				&dev_attr_boot_sec_info.attr));
 	return 0;
 }
 
@@ -212,6 +219,7 @@ static int tegra_fuse_rm_sysfs_variables(struct platform_device *pdev)
 	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_public_key.attr);
 	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_pkc_disable.attr);
 	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_odm_lock.attr);
+	sysfs_remove_file(&pdev->dev.kobj, &dev_attr_boot_sec_info.attr);
 
 	return 0;
 }

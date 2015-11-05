@@ -90,6 +90,7 @@
 					temperature = <108000>;
 					type = "critical";
 					hysteresis = <0>;
+					writable;
 				};
 			};
 		};

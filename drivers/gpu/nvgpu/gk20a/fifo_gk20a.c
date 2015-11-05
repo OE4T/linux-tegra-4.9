@@ -977,10 +977,11 @@ static bool gk20a_fifo_handle_mmu_fault(
 				      f.engine_subid_desc,
 				      f.client_desc,
 				      f.fault_type_desc);
-		gk20a_err(dev_from_gk20a(g), "mmu fault on engine %d, "
+		gk20a_err(dev_from_gk20a(g), "%s mmu fault on engine %d, "
 			   "engine subid %d (%s), client %d (%s), "
 			   "addr 0x%08x:0x%08x, type %d (%s), info 0x%08x,"
 			   "inst_ptr 0x%llx\n",
+			   fake_fault ? "fake" : "",
 			   engine_id,
 			   f.engine_subid_v, f.engine_subid_desc,
 			   f.client_v, f.client_desc,

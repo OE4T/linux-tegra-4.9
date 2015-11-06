@@ -36,7 +36,7 @@
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #include "tsec/tsec.h"
-#include "vi/vi.h"
+#include "vi.h"
 #include "isp/isp.h"
 #include "isp/isp_isr_v1.h"
 
@@ -127,7 +127,7 @@ struct nvhost_device_data t21_ispb_info = {
 };
 #endif
 
-#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 struct nvhost_device_data t21_vi_info = {
 	.modulemutexes		= {NVMODMUTEX_VI_0},
 	.devfs_name		= "vi",

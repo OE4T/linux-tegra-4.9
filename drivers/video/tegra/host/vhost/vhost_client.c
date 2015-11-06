@@ -45,7 +45,7 @@ static struct of_device_id tegra_client_of_match[] = {
 	{ .compatible = "nvidia,tegra210-vhost-vic",
 		.data = (struct nvhost_device_data *)&t21_vic_info },
 #endif
-#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 	{ .compatible = "nvidia,tegra124-vhost-vi",
 		.data = (struct nvhost_device_data *)&t124_vi_info },
 	{ .compatible = "nvidia,tegra210-vhost-vi",

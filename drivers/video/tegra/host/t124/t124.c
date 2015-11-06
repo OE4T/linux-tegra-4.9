@@ -33,7 +33,7 @@
 #include "syncpt_t124.h"
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
-#include "vi/vi.h"
+#include "vi.h"
 #include "isp/isp.h"
 #include "isp/isp_isr_v1.h"
 #include "scale_emc.h"
@@ -197,7 +197,7 @@ static struct platform_device tegra_isp01b_device = {
 
 #endif
 
-#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 
 static struct resource vi_resources[] = {
 	{
@@ -423,7 +423,7 @@ static struct platform_device *t124_devices[] = {
 	&tegra_isp01_device,
 	&tegra_isp01b_device,
 #endif
-#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 	&tegra_vi01_device,
 #endif
 	&tegra_msenc03_device,

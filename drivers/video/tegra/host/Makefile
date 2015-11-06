@@ -25,7 +25,6 @@ obj-$(CONFIG_TEGRA_GRHOST) += host1x/
 obj-$(CONFIG_TEGRA_GRHOST) += tsec/
 obj-$(CONFIG_TEGRA_GRHOST) += nvdec/
 obj-$(CONFIG_TEGRA_GRHOST) += isp/
-obj-$(CONFIG_TEGRA_GRHOST) += vi/
 obj-$(CONFIG_TEGRA_GRHOST) += t124/
 obj-$(CONFIG_TEGRA_GRHOST) += flcn/
 obj-$(CONFIG_TEGRA_GRHOST) += t210/

@@ -2737,7 +2737,7 @@ static void pmu_setup_hw_enable_elpg(struct gk20a *g)
 
 	pmu->zbc_ready = true;
 	/* Save zbc table after PMU is initialized. */
-	gr_gk20a_pmu_save_zbc(g, 0xf);
+	gk20a_pmu_save_zbc(g, 0xf);
 
 	if (g->elpg_enabled) {
 		/* Init reg with prod values*/

@@ -182,6 +182,8 @@
 #define FB_CAP_DC_MASK		(FB_CAP_DC_Y420_MASK | FB_CAP_DC_Y422_MASK | \
 				FB_CAP_DC_Y444_MASK | FB_CAP_DC_RGB_MASK)
 
+#define FB_CAP_Y422	8192	/* YCbCr 4:2:2 support */
+#define FB_CAP_Y444	16384	/* YCbCr 4:4:4 support */
 
 #define FB_COL_XVYCC601		0x1
 #define FB_COL_XVYCC709		0x2

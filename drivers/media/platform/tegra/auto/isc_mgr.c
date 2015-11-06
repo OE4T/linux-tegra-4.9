@@ -236,6 +236,47 @@ static int isc_mgr_write_pid(struct file *file, const void __user *arg)
 	return 0;
 }
 
+static int isc_mgr_get_pwr_info(struct isc_mgr_priv *isc_mgr,
+				void __user *arg)
+{
+	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
+	struct isc_mgr_pwr_info pinfo;
+	int err;
+
+	if (copy_from_user(&pinfo, arg, sizeof(pinfo))) {
+		dev_err(isc_mgr->dev,
+			"%s: failed to copy from user\n", __func__);
+		return -EFAULT;
+	}
+
+	if (!pd->num_pwr_gpios) {
+		dev_err(isc_mgr->dev,
+			"%s: no power gpios\n", __func__);
+		pinfo.pwr_status = -1;
+		err = -ENODEV;
+		goto pwr_info_end;
+	}
+
+	if (pinfo.pwr_gpio >= pd->num_pwr_gpios) {
+		dev_err(isc_mgr->dev,
+			"%s: invalid power gpio provided\n", __func__);
+		pinfo.pwr_status = -1;
+		err = -EINVAL;
+		goto pwr_info_end;
+	}
+
+	pinfo.pwr_status  = gpio_get_value(pd->pwr_gpios[pinfo.pwr_gpio]);
+	err = 0;
+
+pwr_info_end:
+	if (copy_to_user(arg, &pinfo, sizeof(pinfo))) {
+		dev_err(isc_mgr->dev,
+			"%s: failed to copy to user\n", __func__);
+		return -EFAULT;
+	}
+	return err;
+}
+
 int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 {
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
@@ -391,6 +432,9 @@ static long isc_mgr_ioctl(
 			dev_err(isc_mgr->dev, "%s unrecognized signal: %lx\n",
 				__func__, arg);
 		}
+		break;
+	case ISC_MGR_IOCTL_PWR_INFO:
+		err = isc_mgr_get_pwr_info(isc_mgr, (void __user *)arg);
 		break;
 	default:
 		dev_err(isc_mgr->dev, "%s unsupported ioctl: %x\n",

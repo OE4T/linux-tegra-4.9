@@ -44,7 +44,9 @@ struct system_pmic_ops {
 	void (*power_off)(void *pmic_data);
 };
 
-struct system_pmic_dev *system_pmic_register(struct device *dev,
+extern void (*soc_specific_power_off)(void);
+
+extern struct system_pmic_dev *system_pmic_register(struct device *dev,
 	struct system_pmic_ops *ops, struct system_pmic_config *config,
 	void *drv_data);
 

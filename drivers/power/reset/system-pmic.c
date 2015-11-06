@@ -40,6 +40,9 @@ struct system_pmic_dev {
 
 static struct system_pmic_dev *system_pmic_dev;
 
+void (*soc_specific_power_off)(void);
+EXPORT_SYMBOL(soc_specific_power_off);
+
 static void system_pmic_power_reset(void)
 {
 	system_pmic_dev->ops->power_reset(system_pmic_dev->pmic_drv_data);
@@ -62,6 +65,12 @@ static void system_pmic_power_off(void)
 			system_pmic_dev->power_on_data[i]);
 	}
 	system_pmic_dev->ops->power_off(system_pmic_dev->pmic_drv_data);
+	if (soc_specific_power_off) {
+		dev_err(system_pmic_dev->pmic_dev,
+			"SoC specific power off sequence\n");
+		soc_specific_power_off();
+	}
+
 	dev_err(system_pmic_dev->pmic_dev,
 		"System PMIC is not able to power off system\n");
 	while (1);

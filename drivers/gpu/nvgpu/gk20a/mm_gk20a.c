@@ -3460,6 +3460,47 @@ hw_was_off:
 	pm_runtime_put_noidle(&g->dev->dev);
 }
 
+void gk20a_mm_cbc_clean(struct gk20a *g)
+{
+	struct mm_gk20a *mm = &g->mm;
+	u32 data;
+	s32 retry = 200;
+
+	gk20a_dbg_fn("");
+
+	gk20a_busy_noresume(g->dev);
+	if (!g->power_on)
+		goto hw_was_off;
+
+	mutex_lock(&mm->l2_op_lock);
+
+	/* Flush all dirty lines from the CBC to L2 */
+	gk20a_writel(g, flush_l2_clean_comptags_r(),
+		flush_l2_clean_comptags_pending_busy_f());
+
+	do {
+		data = gk20a_readl(g, flush_l2_clean_comptags_r());
+
+		if (flush_l2_clean_comptags_outstanding_v(data) ==
+			flush_l2_clean_comptags_outstanding_true_v() ||
+		    flush_l2_clean_comptags_pending_v(data) ==
+			flush_l2_clean_comptags_pending_busy_v()) {
+				gk20a_dbg_info("l2_clean_comptags 0x%x", data);
+				retry--;
+				udelay(5);
+		} else
+			break;
+	} while (retry >= 0 || !tegra_platform_is_silicon());
+
+	if (tegra_platform_is_silicon() && retry < 0)
+		gk20a_warn(dev_from_gk20a(g),
+			"l2_clean_comptags too many retries");
+
+	mutex_unlock(&mm->l2_op_lock);
+
+hw_was_off:
+	pm_runtime_put_noidle(&g->dev->dev);
+}
 
 int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 			 struct dma_buf **dmabuf,
@@ -3555,7 +3596,8 @@ int gk20a_mm_suspend(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 
-	g->ops.ltc.elpg_flush(g);
+	g->ops.mm.cbc_clean(g);
+	g->ops.mm.l2_flush(g, false);
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -3591,6 +3633,7 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.fb_flush = gk20a_mm_fb_flush;
 	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
 	gops->mm.l2_flush = gk20a_mm_l2_flush;
+	gops->mm.cbc_clean = gk20a_mm_cbc_clean;
 	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
 	gops->mm.get_iova_addr = gk20a_mm_iova_addr;
 	gops->mm.get_physical_addr_bits = gk20a_mm_get_physical_addr_bits;

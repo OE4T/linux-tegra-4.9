@@ -120,6 +120,7 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.fb_flush = gk20a_mm_fb_flush;
 	gops->mm.l2_invalidate = gk20a_mm_l2_invalidate;
 	gops->mm.l2_flush = gk20a_mm_l2_flush;
+	gops->mm.cbc_clean = gk20a_mm_cbc_clean;
 	gops->mm.tlb_invalidate = gk20a_mm_tlb_invalidate;
 	gops->mm.set_big_page_size = gm20b_mm_set_big_page_size;
 	gops->mm.get_big_page_sizes = gm20b_mm_get_big_page_sizes;

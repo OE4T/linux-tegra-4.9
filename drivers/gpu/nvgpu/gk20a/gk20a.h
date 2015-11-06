@@ -376,6 +376,7 @@ struct gpu_ops {
 		int (*fb_flush)(struct gk20a *g);
 		void (*l2_invalidate)(struct gk20a *g);
 		void (*l2_flush)(struct gk20a *g, bool invalidate);
+		void (*cbc_clean)(struct gk20a *g);
 		void (*tlb_invalidate)(struct vm_gk20a *vm);
 		void (*set_big_page_size)(struct gk20a *g,
 					  void *inst_ptr, int size);

@@ -275,7 +275,7 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev)
 	int i = 0;
 	int ret;
 	int admaif_ch_num = 0;
-	unsigned int admaif_ch_list[MAX_ADMAIF_IDS];
+	unsigned int admaif_ch_list[MAX_ADMAIF_IDS] = {0};
 	int adma_count = 0;
 
 
@@ -329,13 +329,21 @@ int tegra210_virt_admaif_register_component(struct platform_device *pdev)
 	for (i = 0; i < MAX_ADMAIF_IDS; i++) {
 		if ((i + 1) != admaif_ch_list[adma_count])
 			continue;
-
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+		admaif->playback_dma_data[i].addr = TEGRA186_ADMAIF_BASE +
+				TEGRA186_ADMAIF_XBAR_TX_FIFO_WRITE +
+				(i * TEGRA186_ADMAIF_CHANNEL_REG_STRIDE);
+		admaif->capture_dma_data[i].addr = TEGRA186_ADMAIF_BASE +
+				TEGRA186_ADMAIF_XBAR_RX_FIFO_READ +
+				(i * TEGRA186_ADMAIF_CHANNEL_REG_STRIDE);
+#else
 		admaif->playback_dma_data[i].addr = TEGRA210_ADMAIF_BASE +
 				TEGRA210_ADMAIF_XBAR_TX_FIFO_WRITE +
 				(i * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
 		admaif->capture_dma_data[i].addr = TEGRA210_ADMAIF_BASE +
 				TEGRA210_ADMAIF_XBAR_RX_FIFO_READ +
 				(i * TEGRA210_ADMAIF_CHANNEL_REG_STRIDE);
+#endif
 
 		admaif->playback_dma_data[i].wrap = 4;
 		admaif->playback_dma_data[i].width = 32;

@@ -34,6 +34,9 @@
 #define CODEC_DAI_NAME		"dit-hifi"
 #define MAX_APBIF_IDS		10
 #define PLATFORM_NAME LINK_CPU_NAME
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#define CODEC_NAME_T186		"0.spdif-dit.0"
+#endif
 
 static struct snd_soc_pcm_stream default_params = {
 	.rate_min = 48000,
@@ -184,6 +187,13 @@ static int tegra_virt_t210ref_pcm_driver_probe(struct platform_device *pdev)
 	unsigned int admaif_ch_list[MAX_ADMAIF_IDS];
 
 	card->dev = &pdev->dev;
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	for (i = 0; i < card->num_links; i++) {
+		strcpy((char *)card->dai_link[i].codec_name, CODEC_NAME_T186);
+		strcpy((char *)card->dai_link[i].cpu_name, DRV_NAME_T186);
+	}
+#endif
 
 	if (tegra210_virt_admaif_register_component(pdev)) {
 		dev_err(&pdev->dev, "Failed register admaif component\n");

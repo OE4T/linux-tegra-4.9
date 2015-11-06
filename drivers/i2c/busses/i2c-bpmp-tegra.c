@@ -190,27 +190,49 @@ static int deserialize_i2c(char *buf, size_t bufsize,
 	return 0;
 }
 
+/**
+ * struct tegra_i2c_dev	- per device i2c context
+ * @adapter: core i2c layer adapter information
+ */
+struct tegra_bpmp_i2c_dev {
+	struct i2c_adapter adapter;
+	u32 bpmp_adapter_id;
+};
+
 
 static int tegra_bpmp_i2c(struct mrq_i2c_data_in *in,
-			  struct mrq_i2c_data_out *out)
+			  struct mrq_i2c_data_out *out,
+			  struct tegra_bpmp_i2c_dev *i2c_dev)
 {
+	unsigned long flags;
+	int ret;
+
 	if (irqs_disabled())
 		return tegra_bpmp_send_receive_atomic(MRQ_I2C,
 				in, sizeof(*in), out, sizeof(*out));
+
+	if (i2c_dev->adapter.atomic_xfer_only) {
+		local_irq_save(flags);
+		ret = tegra_bpmp_send_receive_atomic(MRQ_I2C,
+				in, sizeof(*in), out, sizeof(*out));
+		local_irq_restore(flags);
+		return ret;
+	}
 
 	return tegra_bpmp_send_receive(MRQ_I2C,
 			      in, sizeof(*in), out, sizeof(*out));
 }
 
 static int tegra_bpmp_i2c_req(u32 adapter, struct mrq_i2c_data_in *in,
-		int data_in_size, struct mrq_i2c_data_out *out)
+		int data_in_size, struct mrq_i2c_data_out *out,
+		struct tegra_bpmp_i2c_dev *i2c_dev)
 {
 	int r;
 
 	in->req = MRQ_I2C_DATA_IN_REQ_I2C_REQ;
 	in->data.i2c_req.adapter = adapter;
 	in->data.i2c_req.data_in_size = data_in_size;
-	r = tegra_bpmp_i2c(in, out);
+	r = tegra_bpmp_i2c(in, out, i2c_dev);
 	if (r) {
 		WARN_ON(r > 0);
 		return r;
@@ -222,14 +244,6 @@ static int tegra_bpmp_i2c_req(u32 adapter, struct mrq_i2c_data_in *in,
 struct tegra_bpmp_i2c_chipdata {
 };
 
-/**
- * struct tegra_i2c_dev	- per device i2c context
- * @adapter: core i2c layer adapter information
- */
-struct tegra_bpmp_i2c_dev {
-	struct i2c_adapter adapter;
-	u32 bpmp_adapter_id;
-};
 
 static int tegra_bpmp_i2c_init(struct tegra_bpmp_i2c_dev *i2c_dev)
 {
@@ -303,7 +317,8 @@ static int tegra_bpmp_i2c_xfer(struct i2c_adapter *adap, struct i2c_msg msgs[],
 		return size;
 	}
 
-	ret = tegra_bpmp_i2c_req(i2c_dev->bpmp_adapter_id, &in, size, &out);
+	ret = tegra_bpmp_i2c_req(i2c_dev->bpmp_adapter_id, &in, size, &out,
+			i2c_dev);
 	if (ret < 0) {
 		dev_err(&i2c_dev->adapter.dev, "tegra_bpmp_i2c_req ret %d\n",
 			ret);

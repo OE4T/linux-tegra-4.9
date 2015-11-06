@@ -68,21 +68,11 @@ static int native_iomem_init(void)
 
 static int native_handshake(void)
 {
-	/* HSP_SHRD_SEM_1_STA is not modelled in all unit FPGAs*/
-	if (tegra_platform_is_unit_fpga())
+	if (tegra_platform_is_linsim())
 		return -ENODEV;
 
-	/* FIXME: short-term WAR */
-	if (!tegra_hsp_db_can_ring(HSP_DB_BPMP) &&
-			!__raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA)) {
-		pr_err("bpmp db not enabled\n");
-		return -ENODEV;
-	}
-
-	/* FIXME: remove HSP_SHRD_SEM_0_STA */
 	pr_info("bpmp: waiting for handshake\n");
-	while (!__raw_readl(bpmp_base + HSP_SHRD_SEM_0_STA) ||
-			!tegra_hsp_db_can_ring(HSP_DB_BPMP))
+	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
 		;
 
 	pr_info("bpmp: handshake completed\n");

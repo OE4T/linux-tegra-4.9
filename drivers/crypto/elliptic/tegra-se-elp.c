@@ -1206,7 +1206,7 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 		dev_err(se_dev->dev,
 		"\nInvalid ISTAT 0x%x after cmd %d execution\n", stat, cmd);
 		dev_err(se_dev->dev, "\nRNG1 Command Failure: %s\n",
-				rng1_cmd[cmd]);
+		((cmd == RNG1_CMD_ZEROIZE) ? rng1_cmd[9] : rng1_cmd[cmd]));
 		return -EINVAL;
 	}
 
@@ -1222,7 +1222,7 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 		"\nRNG1 interrupt is not set (0x%x) after cmd %d execution\n",
 			val, cmd);
 		dev_err(se_dev->dev, "\nRNG1 Command Failure: %s\n",
-				rng1_cmd[cmd]);
+		((cmd == RNG1_CMD_ZEROIZE) ? rng1_cmd[9] : rng1_cmd[cmd]));
 		return -EINVAL;
 	}
 
@@ -1233,7 +1233,7 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 		"\nRNG1 interrupt could not be cleared (0x%x) after cmd %d execution\n",
 			val, cmd);
 		dev_err(se_dev->dev, "\nRNG1 Command Failure: %s\n",
-				rng1_cmd[cmd]);
+		((cmd == RNG1_CMD_ZEROIZE) ? rng1_cmd[9] : rng1_cmd[cmd]));
 		return -EINVAL;
 	}
 	return ret;
@@ -1242,25 +1242,22 @@ static int tegra_se_execute_rng1_ctrl_cmd(unsigned int cmd)
 static u32 *tegra_se_check_rng1_result(struct tegra_se_elp_rng_request *req)
 {
 	u32 i, val;
-	int err = 0;
 	u32 *rand;
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 
-	rand = devm_kzalloc(se_dev->dev, sizeof(rand) * 4, GFP_KERNEL);
+	rand = devm_kzalloc(se_dev->dev, sizeof(*rand) * 4, GFP_KERNEL);
 
 	for (i = 0; i < 4; i++) {
 		val = se_elp_readl(se_dev, RNG1,
 			TEGRA_SE_ELP_RNG_RAND0_OFFSET + i*4);
 		if (!val) {
 			devm_kfree(se_dev->dev, rand);
+			dev_err(se_dev->dev, "\nNo random data from RAND\n");
 			return NULL;
 		} else {
 			rand[i] = val;
 		}
 	}
-
-	if (err)
-		dev_err(se_dev->dev, "\nNo rdata read data from RAND\n");
 
 	return rand;
 }
@@ -1298,7 +1295,7 @@ static int tegra_se_elp_rng_do(struct tegra_se_elp_dev *se_dev,
 {
 	u32 *rdata;
 	u32 *rand_num = devm_kzalloc(se_dev->dev,
-			(sizeof(rand_num) * (RAND_256/4)), GFP_KERNEL);
+			(sizeof(*rand_num) * (RAND_256/4)), GFP_KERNEL);
 	int i, j, k, ret = 0;
 	bool adv_state = false;
 
@@ -1473,7 +1470,7 @@ static int tegra_se_elp_rng_do(struct tegra_se_elp_dev *se_dev,
 		if (ret)
 			goto ret;
 		rdata = tegra_se_check_rng1_result(req);
-		if (ret) {
+		if (!rdata) {
 			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 3\n");
 			goto ret;
 		}

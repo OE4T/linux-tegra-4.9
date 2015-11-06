@@ -141,6 +141,9 @@
 #define FUSE_OVERRIDE_MSB16_SHIFT	16
 #define FUSE_TOT_WORDS				192
 
+extern void tegra_pmc_fuse_disable_mirroring(void);
+extern void tegra_pmc_fuse_enable_mirroring(void);
+
 static const u32 UINT_BITS = 32;
 static const u32 LOG2_UINT_BITS = 5;
 static const u32 INSIDE_UINT_OFFSET_MASK = 0x1F;

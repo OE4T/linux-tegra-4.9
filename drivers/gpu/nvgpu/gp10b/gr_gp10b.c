@@ -210,14 +210,18 @@ static int gr_gp10b_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 	gr->zbc_col_tbl[index].format = color_val->format;
 	gr->zbc_col_tbl[index].ref_cnt++;
 
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_r_r(index), color_val->color_ds[0]);
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_g_r(index), color_val->color_ds[1]);
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_b_r(index), color_val->color_ds[2]);
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_color_a_r(index), color_val->color_ds[3]);
+	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_r_r(index),
+			   color_val->color_ds[0]);
+	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_g_r(index),
+			   color_val->color_ds[1]);
+	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_b_r(index),
+			   color_val->color_ds[2]);
+	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_color_a_r(index),
+			   color_val->color_ds[3]);
 	zbc_c = gk20a_readl(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + (index & ~3));
 	zbc_c &= ~(0x7f << ((index % 4) * 7));
 	zbc_c |= color_val->format << ((index % 4) * 7);
-	gk20a_writel(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + (index & ~3), zbc_c);
+	gk20a_writel_check(g, gr_gpcs_swdx_dss_zbc_c_01_to_04_format_r() + (index & ~3), zbc_c);
 
 	return 0;
 }

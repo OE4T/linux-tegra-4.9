@@ -184,6 +184,7 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 	int ret, lane_id;
 
 	ret = pm_runtime_get_sync(dev->parent);
+
 	if (ret < 0) {
 		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
@@ -191,6 +192,17 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 
 	regcache_cache_only(asrc->regmap, false);
 	regcache_sync(asrc->regmap);
+
+	/* Set global starting address of the buffer in ARAM */
+	regmap_write(asrc->regmap,
+		TEGRA186_ASRC_GLOBAL_SCRATCH_ADDR,
+		ASRC_ARAM_START_ADDR);
+
+	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_MASK,
+		0x01);
+	/* set global enable */
+	regmap_write(asrc->regmap,
+		TEGRA186_ASRC_GLOBAL_ENB, TEGRA186_ASRC_GLOBAL_EN);
 
 	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_CLEAR,
 		0x01);
@@ -940,21 +952,15 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 #endif
 
 	pm_runtime_enable(&pdev->dev);
-	tegra186_asrc_runtime_resume(&pdev->dev);
+	if (!pm_runtime_enabled(&pdev->dev)) {
+		ret = tegra186_asrc_runtime_resume(&pdev->dev);
+		if (ret)
+			goto err_pm_disable;
+	}
 
 	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_CONFIG,
 		TEGRA186_ASRC_GLOBAL_CONFIG_FRAC_32BIT_PRECISION);
 
-	/* Set global starting address of the buffer in ARAM */
-	regmap_write(asrc->regmap,
-		TEGRA186_ASRC_GLOBAL_SCRATCH_ADDR,
-		ASRC_ARAM_START_ADDR);
-
-	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_MASK,
-		0x01);
-	/* set global enable */
-	regmap_write(asrc->regmap,
-		TEGRA186_ASRC_GLOBAL_ENB, TEGRA186_ASRC_GLOBAL_EN);
 	/* initialize default output srate */
 	for (i = 0; i < 6; i++) {
 		asrc->lane[i].int_part = 1;
@@ -977,6 +983,7 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 err_suspend:
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra186_asrc_runtime_suspend(&pdev->dev);
+err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 err:
 	return ret;

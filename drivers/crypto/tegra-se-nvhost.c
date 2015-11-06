@@ -2794,7 +2794,11 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	/* Make sure engine is powered ON with clk enabled */
-	nvhost_module_busy(pdev);
+	err = nvhost_module_busy(pdev);
+	if (err) {
+		dev_err(se_dev->dev, "nvhost_module_busy failed for se_dev\n");
+		goto host_clk_fail;
+	}
 
 	/* RNG register only exists in se0/se1 */
 	if (se_num == 0) {
@@ -2812,7 +2816,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		err = -EINVAL;
 		dev_err(se_dev->dev, "Cannot get syncpt_id for SE%d\n",
 				se_num + 1);
-		goto syncpt_fail;
+		goto host_clk_fail;
 	}
 
 	se_dev->src_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
@@ -2824,7 +2828,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
-syncpt_fail:
+host_clk_fail:
 	for (i = 0; i < ARRAY_SIZE(reg_aes_alg); i++)
 		crypto_unregister_alg(&aes_algs[reg_aes_alg[i]]);
 

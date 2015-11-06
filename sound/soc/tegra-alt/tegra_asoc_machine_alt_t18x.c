@@ -1348,15 +1348,6 @@ static struct snd_soc_dai_link
 		.codec_name = "2900800.ahub",
 		.params = &default_link_params,
 	},
-	[TEGRA186_DAI_LINK_ARAD1_TX1] = {
-		.name = "ARAD1 TX",
-		.stream_name = "ARAD1 TX",
-		.cpu_dai_name = "ARAD OUT",
-		.codec_dai_name = "ARAD1",
-		.cpu_name = "tegra186-arad",
-		.codec_name = "2900800.ahub",
-		.params = &default_link_params,
-	},
 };
 
 static struct snd_soc_codec_conf
@@ -1518,7 +1509,7 @@ EXPORT_SYMBOL_GPL(tegra_machine_get_dai_link_t18x);
 int tegra_machine_append_dai_link_t18x(struct snd_soc_dai_link *link,
 		unsigned int link_size)
 {
-	unsigned int size1 = TEGRA186_XBAR_DAI_LINKS;
+	unsigned int size1 = tegra_machine_get_num_dai_links();
 	unsigned int size2 = link_size;
 	struct snd_soc_dai_link *tegra_asoc_machine_links =
 		tegra_machine_get_machine_links();

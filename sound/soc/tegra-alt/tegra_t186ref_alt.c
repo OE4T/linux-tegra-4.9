@@ -199,6 +199,19 @@ static const struct snd_soc_pcm_stream tegra_t186ref_arad_link_params = {
 	.channels_max = 2,
 };
 
+static struct snd_soc_dai_link
+	tegra186_arad_dai_links[1] = {
+	[0] = {
+		.name = "ARAD1 TX",
+		.stream_name = "ARAD1 TX",
+		.cpu_dai_name = "ARAD OUT",
+		.codec_dai_name = "ARAD1",
+		.cpu_name = "tegra186-arad",
+		.codec_name = "2900800.ahub",
+		.params = &tegra_t186ref_arad_link_params,
+	},
+};
+
 static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 					struct snd_pcm_hw_params *params)
 {
@@ -697,9 +710,6 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	tegra_machine_set_dai_params(TEGRA186_DAI_LINK_ASRC1_RX7,
 				(struct snd_soc_pcm_stream *)
 				&tegra_t186ref_arad_link_params);
-	tegra_machine_set_dai_params(TEGRA186_DAI_LINK_ARAD1_TX1,
-				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_arad_link_params);
 
 	/* set ADMAIF dai_ops */
 	for (i = TEGRA186_DAI_LINK_ADMAIF1;
@@ -726,6 +736,10 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	card->num_links =
 		tegra_machine_append_dai_link_t18x(tegra_t186ref_codec_links,
 			2 * machine->num_codec_links);
+	card->num_links =
+		tegra_machine_append_dai_link_t18x(tegra186_arad_dai_links,
+			1);
+
 	tegra_machine_dai_links = tegra_machine_get_dai_link_t18x();
 	card->dai_link = tegra_machine_dai_links;
 

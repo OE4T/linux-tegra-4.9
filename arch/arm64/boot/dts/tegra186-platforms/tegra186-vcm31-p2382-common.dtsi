@@ -332,6 +332,12 @@
 		dma-channels = <10>;
 	};
 
+	ahub {
+		arad@290e400 {
+			status = "okay";
+		};
+	};
+
 	sound_ref {
 		status = "okay";
 		compatible = "nvidia,tegra-audio-t186ref-p2382";

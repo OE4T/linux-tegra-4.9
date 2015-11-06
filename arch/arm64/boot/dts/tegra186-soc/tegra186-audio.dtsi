@@ -155,10 +155,6 @@
 			status = "okay";
 		};
 
-		arad@290e400 {
-			status = "okay";
-		};
-
 		ope@2908000 {
 			status = "okay";
 

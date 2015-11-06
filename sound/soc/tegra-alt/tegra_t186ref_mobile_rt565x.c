@@ -197,10 +197,6 @@ static const struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
 };
 
-static const struct snd_soc_pcm_stream tegra_t186ref_arad_link_params[] = {
-	PARAMS(SNDRV_PCM_FMTBIT_S24_LE, 2),
-};
-
 static int tegra_t186ref_set_params(struct snd_soc_pcm_stream *dai_params,
 					struct snd_soc_dai *cpu_dai,
 					struct snd_soc_pcm_runtime *rtd,
@@ -837,14 +833,6 @@ static void dai_link_setup(struct platform_device *pdev, int dummy)
 			(struct snd_soc_pcm_stream *)
 				&tegra_t186ref_asrc_link_params[i]);
 	}
-
-	/* The packet from ARAD to ASRC for the ratio update is 24 bit */
-	tegra_machine_set_dai_params(TEGRA186_DAI_LINK_ASRC1_RX7,
-				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_arad_link_params);
-	tegra_machine_set_dai_params(TEGRA186_DAI_LINK_ARAD1_TX1,
-				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_arad_link_params);
 
 	/* append t186ref specific dai_links */
 	card->num_links =

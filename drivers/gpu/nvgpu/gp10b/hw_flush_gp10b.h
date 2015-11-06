@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -111,6 +111,46 @@ static inline u32 flush_l2_flush_dirty_outstanding_false_f(void)
 	return 0x0;
 }
 static inline u32 flush_l2_flush_dirty_outstanding_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 flush_clean_comptags_r(void)
+{
+	return 0x0007000c;
+}
+static inline u32 flush_clean_comptags_pending_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 flush_clean_comptags_pending_empty_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 flush_clean_comptags_pending_empty_f(void)
+{
+	return 0x0;
+}
+static inline u32 flush_clean_comptags_pending_busy_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 flush_clean_comptags_pending_busy_f(void)
+{
+	return 0x1;
+}
+static inline u32 flush_clean_comptags_outstanding_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 flush_clean_comptags_outstanding_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 flush_clean_comptags_outstanding_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 flush_clean_comptags_outstanding_true_v(void)
 {
 	return 0x00000001;
 }

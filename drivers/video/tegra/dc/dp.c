@@ -411,6 +411,7 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		return ret;
 
 	mutex_lock(&dp->dpaux_lock);
+	tegra_dc_io_start(dp->dc);
 	do {
 		cur_size = *size - finished;
 		if (cur_size > DP_AUX_MAX_BYTES)
@@ -426,6 +427,7 @@ int tegra_dc_dpaux_write(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		if (ret)
 			break;
 	} while (*size > finished);
+	tegra_dc_io_end(dp->dc);
 	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;
@@ -566,6 +568,7 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		return  ret;
 
 	mutex_lock(&dp->dpaux_lock);
+	tegra_dc_io_start(dp->dc);
 	do {
 		cur_size = *size - finished;
 		if (cur_size > DP_AUX_MAX_BYTES)
@@ -583,6 +586,7 @@ int tegra_dc_dpaux_read(struct tegra_dc_dp_data *dp, u32 cmd, u32 addr,
 		finished += cur_size;
 
 	} while (*size > finished);
+	tegra_dc_io_end(dp->dc);
 	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;
@@ -632,7 +636,7 @@ static int tegra_dc_dp_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 		return ret;
 
 	mutex_lock(&dp->dpaux_lock);
-
+	tegra_dc_io_start(dp->dc);
 	do {
 		cur_size = *size - finished;
 
@@ -654,6 +658,7 @@ static int tegra_dc_dp_i2c_read(struct tegra_dc_dp_data *dp, u32 i2c_addr,
 			DPAUX_DP_AUXCTL_CMD_I2CRD,
 			i2c_addr, data, &cur_size, aux_stat);
 
+	tegra_dc_io_end(dp->dc);
 	mutex_unlock(&dp->dpaux_lock);
 
 	*size = finished;
@@ -672,8 +677,10 @@ int tegra_dc_dp_dpcd_read(struct tegra_dc_dp_data *dp, u32 cmd,
 		return ret;
 
 	mutex_lock(&dp->dpaux_lock);
+	tegra_dc_io_start(dp->dc);
 	ret = tegra_dc_dpaux_read_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXRD,
 		cmd, data_ptr, &size, &status);
+	tegra_dc_io_end(dp->dc);
 	mutex_unlock(&dp->dpaux_lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,
@@ -750,8 +757,10 @@ int tegra_dc_dp_dpcd_write(struct tegra_dc_dp_data *dp, u32 cmd,
 		return 0;
 
 	mutex_lock(&dp->dpaux_lock);
+	tegra_dc_io_start(dp->dc);
 	ret = tegra_dc_dpaux_write_chunk_locked(dp, DPAUX_DP_AUXCTL_CMD_AUXWR,
 		cmd, &data, &size, &status);
+	tegra_dc_io_end(dp->dc);
 	mutex_unlock(&dp->dpaux_lock);
 	if (ret)
 		dev_err(&dp->dc->ndev->dev,

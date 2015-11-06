@@ -83,6 +83,9 @@ static int show_channels(struct platform_device *pdev, void *data,
 			continue;
 		}
 
+		nvhost_debug_output(o, "\nchannel %d - %s\n\n", ch->chid,
+				    pdev->name);
+
 		if (fifo)
 			nvhost_get_chip_ops()->debug.show_channel_fifo(
 				m, ch, o, ch->chid);

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <trace/events/nvhost.h>
 #include <linux/platform_device.h>
 #include <linux/list.h>
 #include <linux/slab.h>
@@ -102,6 +103,8 @@ int nvhost_vm_init(struct platform_device *pdev)
 
 int nvhost_vm_init_device(struct platform_device *pdev)
 {
+	trace_nvhost_vm_init_device(pdev->name);
+
 	if (!vm_op().init_device)
 		return 0;
 
@@ -110,10 +113,15 @@ int nvhost_vm_init_device(struct platform_device *pdev)
 
 int nvhost_vm_get_id(struct nvhost_vm *vm)
 {
+	int id;
+
 	if (!vm_op().get_id)
 		return -ENOSYS;
 
-	return vm_op().get_id(vm);
+	id = vm_op().get_id(vm);
+	trace_nvhost_vm_get_id(vm, id);
+
+	return id;
 }
 
 int nvhost_vm_map_static(struct platform_device *pdev,
@@ -132,6 +140,8 @@ static void nvhost_vm_deinit(struct kref *kref)
 	struct nvhost_vm *vm = container_of(kref, struct nvhost_vm, kref);
 	struct nvhost_master *host = nvhost_get_host(vm->pdev);
 
+	trace_nvhost_vm_deinit(vm);
+
 	/* remove this vm from the vms list */
 	mutex_lock(&host->vm_mutex);
 	list_del(&vm->vm_list);
@@ -146,11 +156,13 @@ static void nvhost_vm_deinit(struct kref *kref)
 
 void nvhost_vm_put(struct nvhost_vm *vm)
 {
+	trace_nvhost_vm_put(vm);
 	kref_put(&vm->kref, nvhost_vm_deinit);
 }
 
 void nvhost_vm_get(struct nvhost_vm *vm)
 {
+	trace_nvhost_vm_get(vm);
 	kref_get(&vm->kref);
 }
 
@@ -162,6 +174,8 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 	struct nvhost_vm *vm;
 	int err;
 
+	trace_nvhost_vm_allocate(pdev->name, identifier);
+
 	mutex_lock(&host->vm_mutex);
 
 	if (identifier) {
@@ -171,6 +185,10 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 				if (!kref_get_unless_zero(&vm->kref))
 					continue;
 				mutex_unlock(&host->vm_mutex);
+
+				trace_nvhost_vm_allocate_reuse(pdev->name,
+					identifier, vm, vm->pdev->name);
+
 				return vm;
 			}
 		}
@@ -198,6 +216,9 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 
 	/* release the vm mutex */
 	mutex_unlock(&host->vm_mutex);
+
+	trace_nvhost_vm_allocate_done(pdev->name, identifier, vm,
+				      vm->pdev->name);
 
 	return vm;
 

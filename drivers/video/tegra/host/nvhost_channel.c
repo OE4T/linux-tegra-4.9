@@ -217,6 +217,9 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 			/* yes, client can continue using it */
 			*channel = ch;
 			mutex_unlock(&host->chlist_mutex);
+			trace_nvhost_channel_remap(pdata->pdev->name, ch->chid,
+						 pdata->num_mapped_chs,
+						 identifier);
 			return 0;
 		}
 	}
@@ -248,7 +251,8 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 
 	/* Handle logging */
 	trace_nvhost_channel_map(pdata->pdev->name, ch->chid,
-				 pdata->num_mapped_chs);
+				 pdata->num_mapped_chs,
+				 identifier);
 	dev_dbg(&ch->dev->dev, "channel %d mapped\n", ch->chid);
 
 	mutex_unlock(&host->chlist_mutex);

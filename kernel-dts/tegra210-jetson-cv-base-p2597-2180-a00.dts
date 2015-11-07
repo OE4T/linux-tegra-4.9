@@ -950,20 +950,6 @@
 		};
 	};
 
-	camera-pcl {
-		profiles {
-			ov5693-pcl@2_0036 {
-				use_of_node = "yes";
-				dev_name = "ov5693";
-				num = <1>;
-				vana-supply = <&en_vdd_cam_hv_2v8>;
-				vif-supply = <&en_vdd_cam>;
-				cam2-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
-				reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
-			};
-		};
-	};
-
 	serial@70006300 {
 		dma-names = "tx";
 	};

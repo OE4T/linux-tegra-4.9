@@ -43,11 +43,11 @@
 
 			fps {
 				fps@0 {
-					maxim,fps-time-period = <5120>;
+					maxim,fps-time-period = <1280>;
 				};
 
 				fps@1 {
-					maxim,fps-time-period = <5120>;
+					maxim,fps-time-period = <1280>;
 				};
 			};
 

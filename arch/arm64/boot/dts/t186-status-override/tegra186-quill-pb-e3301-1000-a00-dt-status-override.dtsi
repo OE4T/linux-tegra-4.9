@@ -40,10 +40,6 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15210000 {
-			status = "disabled";
-		};
-
 		dsi {
 			panel-s-wuxga-8-0 {
 				smartdimmer {
@@ -63,19 +59,6 @@
 					status = "disabled";
 				};
 			};
-		};
-
-		sor1 {
-			hdmi-display {
-				status = "okay";
-			};
-		};
-
-		dpaux@155c0000 {
-			status = "disabled";
-		};
-		dpaux@15040000 {
-			status = "disabled";
 		};
 	};
 

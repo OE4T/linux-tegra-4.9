@@ -84,5 +84,22 @@
 			#extcon-cells = <1>;
 		};
 	};
+
+	host1x {
+		sor1 {
+                        hdmi-display {
+                                disp-default-out {
+                                        nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+		};
+		sor {
+                        hdmi-display {
+                                disp-default-out {
+                                        nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+		};
+	};
 };
 

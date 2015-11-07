@@ -243,9 +243,12 @@
 			reg = <0x1>;
 			extcon-gpio,name = "VBUS";
 			/*
-			 * Array of gstate,cstate pairs. Each pair shows how to
-			 * map GPIO signal values into cable values as defined
-			 * by the consumer in question.  Here:
+			 * Array of gstate(input), cstate(output) pairs. Each
+			 * pair shows how to map GPIO signal values into cable
+			 * states as defined by the consumer in question.
+			 * Here:
+			 *
+			 * gstate[x].bit0 -> ID signal input
 			 *
 			 * cstate[x].bit0 -> VBUS cable
 			 * cstate[x].bit1 -> nID cable
@@ -253,12 +256,9 @@
 			 * Since we don't support VBUS sensing, in gadget mode
 			 * (cstate[x].bit1 == 0), set cstate[x].bit0 to 1.
 			 */
-			extcon-gpio,cable-states = <0x3 0x1
-						0x0 0x2
-						0x1 0x2
-						0x2 0x1>;
-			/* C.00 is an unused GPIO in our reference platform */
-			gpios = <&tegra_gpio TEGRA_GPIO(C, 0) 0 &spmic 0 0>;
+			extcon-gpio,cable-states = <0x1 0x1
+						0x0 0x2>;
+			gpios = <&spmic 0 0>;
 			extcon-gpio,out-cable-names = "USB", "USB-Host";
 			#extcon-cells = <1>;
 		};

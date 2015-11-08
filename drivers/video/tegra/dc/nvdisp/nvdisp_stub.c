@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis_stub.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,6 +23,7 @@
 #include <linux/of.h>
 #include <linux/tegra-soc.h>
 #include <linux/of_gpio.h>
+#include <linux/backlight.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
 
@@ -30,17 +31,15 @@
 #include "mach/dc.h"
 #include "board.h"
 #include "board-panel.h"
+#include "dc_priv.h"
 #include "panel-s-wuxga-8-0.c"
 #include "panel-s-edp-uhdtv-15-6.c"
+#include <linux/platform_data/lp855x.h>
 
 const struct disp_client *tegra_la_disp_clients_info;
 atomic_t sd_brightness = ATOMIC_INIT(255);
 EXPORT_SYMBOL(sd_brightness);
 
-void nvsd_check_prism_thresh(struct device *dev, int brightness)
-{
-	pr_info("%s no support added \n", __func__);
-}
 int tegra_is_clk_enabled(struct clk *c)
 {
 	dump_stack();
@@ -49,6 +48,84 @@ int tegra_is_clk_enabled(struct clk *c)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_is_clk_enabled);
+
+int tegra_bl_notify(struct device *dev, int brightness)
+{
+	int cur_sd_brightness;
+	struct lp855x *lp = NULL;
+	u8 *bl_measured = NULL;
+	u8 *bl_curve = NULL;
+
+	/* Apply any backlight response curve */
+	if (brightness > 255)
+		pr_info("Error: Brightness > 255!\n");
+	else if (of_device_is_compatible(dev->of_node,
+				"ti,lp8550") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8551") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8552") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8553") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8554") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8555") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8556") ||
+		of_device_is_compatible(dev->of_node,
+				"ti,lp8557")) {
+		lp = (struct lp855x *)dev_get_drvdata(dev);
+		if (lp && lp->pdata) {
+			bl_measured = lp->pdata->bl_measured;
+			bl_curve = lp->pdata->bl_curve;
+		}
+	}
+
+	if (bl_curve)
+		brightness = bl_curve[brightness];
+
+	cur_sd_brightness = atomic_read(&sd_brightness);
+	/* SD brightness is a percentage */
+	brightness = (brightness * cur_sd_brightness) / 255;
+
+	if (bl_measured)
+		brightness = bl_measured[brightness];
+
+	return brightness;
+}
+
+static int tegra_t210ref_i2c_notifier_call(struct notifier_block *nb,
+	unsigned long event, void *data)
+{
+	struct backlight_device_brightness_info *smartdim_info = data;
+	struct device *dev = smartdim_info->dev;
+	if (dev->of_node) {
+		if (of_device_is_compatible(dev->of_node,
+			"ti,lp8557")) {
+			smartdim_info->brightness = tegra_bl_notify(dev,
+				smartdim_info->brightness);
+		}
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block i2c_nb = {
+	.notifier_call = tegra_t210ref_i2c_notifier_call,
+};
+
+int nvdisp_register_backlight_notifier(struct tegra_dc *dc)
+{
+	if (dc->out->sd_settings && !dc->out->sd_settings->bl_device &&
+		dc->out->sd_settings->bl_device_name) {
+		char *bl_device_name = dc->out->sd_settings->bl_device_name;
+		struct backlight_device *bl_device =
+			get_backlight_device_by_name(bl_device_name);
+		if (bl_device)
+			backlight_device_register_notifier(bl_device, &i2c_nb);
+	}
+	return 0;
+}
 
 /* Update this after carve out is defined */
 void tegra_get_fb_resource(struct resource *fb_res)

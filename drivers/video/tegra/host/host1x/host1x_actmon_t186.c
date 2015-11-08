@@ -152,8 +152,8 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 		return 0;
 
 	if (actmon->init == ACTMON_OFF) {
-		actmon->usecs_per_sample = 20;
-		actmon->k = 3;
+		actmon->usecs_per_sample = 80;
+		actmon->k = 4;
 	}
 
 	actmon->clk = host_pdata->clk[1];

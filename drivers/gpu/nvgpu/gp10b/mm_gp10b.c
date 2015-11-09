@@ -157,18 +157,17 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 			   int rw_flag, bool sparse, bool priv)
 {
 	u64 pte_addr = 0;
+	u64 pde_addr = 0;
 	struct gk20a_mm_entry *pte = parent->entries + i;
 	u32 pde_v[2] = {0, 0};
 	u32 *pde;
 
 	gk20a_dbg_fn("");
 
-	if (!sparse)
-		pte_addr = sg_phys(pte->sgt->sgl)
-			   >> gmmu_new_pde_address_shift_v();
+	pte_addr = sg_phys(pte->sgt->sgl) >> gmmu_new_pde_address_shift_v();
+	pde_addr = sg_phys(parent->sgt->sgl);
 
-	pde_v[0] |= sparse ? gmmu_new_pde_aperture_invalid_f()
-			   : gmmu_new_pde_aperture_video_memory_f();
+	pde_v[0] |= gmmu_new_pde_aperture_video_memory_f();
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
 	pde_v[0] |= gmmu_new_pde_vol_true_f();
 	pde_v[1] |= pte_addr >> 24;
@@ -205,12 +204,9 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	u32 *pde;
 
 	gk20a_dbg_fn("");
-	gk20a_dbg(gpu_dbg_pte, "entry %p\n", entry);
 
-	small_valid = !sparse && entry->size
-			      && entry->pgsz == gmmu_page_size_small;
-	big_valid = !sparse && entry->size
-			    && entry->pgsz == gmmu_page_size_big;
+	small_valid = entry->size && entry->pgsz == gmmu_page_size_small;
+	big_valid = entry->size && entry->pgsz == gmmu_page_size_big;
 
 	if (small_valid)
 		pte_addr_small = sg_phys(entry->sgt->sgl)
@@ -232,11 +228,6 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
 		pde_v[0] |= gmmu_new_dual_pde_aperture_big_video_memory_f();
 		pde_v[1] |= pte_addr_big >> 28;
-	}
-
-	if (sparse) {
-		pde_v[0] |= gmmu_new_dual_pde_aperture_big_invalid_f();
-		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
 	}
 
 	pde = pde0_from_index(pte, i);

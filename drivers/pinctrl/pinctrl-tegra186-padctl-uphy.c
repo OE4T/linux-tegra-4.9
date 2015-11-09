@@ -1429,6 +1429,7 @@ static int uphy_pll_source_clk_disable(struct tegra_padctl_uphy *uphy, int pll,
 				       enum tegra186_function func)
 {
 	struct device *dev = uphy->dev;
+	int i;
 	int rc = 0;
 
 	rc = uphy_pll_source_clk_state_check(uphy, pll);
@@ -1442,15 +1443,22 @@ static int uphy_pll_source_clk_disable(struct tegra_padctl_uphy *uphy, int pll,
 		uphy->pll_mgmt_state[pll] = PLL_POWER_DOWN;
 	}
 
-	/* power down PLLE */
+	if ((pll == 1) && (func == TEGRA186_FUNC_SATA)) {
+		dev_dbg(dev, "disable PLLE passthrough\n");
+		clk_disable_unprepare(uphy->pllrefe_pex);
+	}
+
+	for (i = 0; i < T186_UPHY_PLLS; i++) {
+		if (uphy->pll_mgmt_state[pll] != PLL_POWER_DOWN)
+			return 0;
+	}
+
+	/* both UPHY PLLs are powered down, power down PLLE */
 	if (uphy->plle_state == PLL_POWER_UP_SW_CTL) {
 		dev_dbg(dev, "disable PLLE\n");
 		clk_disable_unprepare(uphy->plle);
 		uphy->plle_state = PLL_POWER_DOWN;
 	}
-
-	if (pll == 0)
-		return 0; /* already done, pll0 needs plle only */
 
 	/* for pll1, power down PLLREFE */
 	if (uphy->pllrefe_state == PLL_POWER_UP_SW_CTL) {
@@ -1595,18 +1603,20 @@ static int uphy_pll_hw_sequencer_enable(struct tegra_padctl_uphy *uphy, int pll,
 static int uphy_pll_hw_sequencer_disable(struct tegra_padctl_uphy *uphy, int pll
 					, enum tegra186_function func)
 {
+	struct device *dev = uphy->dev;
 
 	if (uphy->plle_state == PLL_POWER_UP_HW_SEQ) {
+		dev_dbg(dev, "disable PLLE hardware power sequencer\n");
 		clk_disable_unprepare(uphy->plle_pwrseq);
 		uphy->plle_state = PLL_POWER_UP_SW_CTL;
 	}
 
 	/* TODO check PLL physical state */
 
-	/* remove SW overrides to allow HW sequencer to run */
 	uphy_pll_set_sw_overrides(uphy, pll, func);
 
 	/* get back to software control */
+	dev_dbg(dev, "disable PLL%d hardware power sequencer\n", pll);
 	clk_disable_unprepare(uphy->uphy_pll_pwrseq[pll]);
 	uphy->uphy_pll_state[pll] = UPHY_PLL_POWER_UP_FULL;
 
@@ -1642,6 +1652,7 @@ static int uphy_pll_power_down(struct tegra_padctl_uphy *uphy, int pll
 	reg = uphy_pll_readl(uphy, pll, UPHY_PLL_CTL_1);
 	reg |= PLL_IDDQ;
 	uphy_pll_writel(uphy, pll, reg, UPHY_PLL_CTL_1);
+	uphy->uphy_pll_state[pll] = UPHY_PLL_POWER_DOWN;
 
 	return 0;
 }
@@ -1849,7 +1860,7 @@ int uphy_pll_deinit(struct tegra_padctl_uphy *uphy,
 	} else
 		return -EINVAL;
 
-	for (i = 0; i < T186_UPHY_PLLS; i++) {
+	for (i = T186_UPHY_PLLS - 1; i >= 0; i--) {
 		dev_dbg(dev, "PLL%d users 0x%lx\n", i, uphy->uphy_pll_users[i]);
 		if (uphy->uphy_pll_users[i] == 0) {
 			/* TODO error handling */
@@ -1889,7 +1900,7 @@ static int uphy_pll_reset_deassert(struct tegra_padctl_uphy *uphy, int pll)
 	rc = reset_control_deassert(uphy->uphy_pll_rst[pll]);
 	if (rc) {
 		uphy->uphy_pll_clients[pll]--;
-		dev_err(dev, "failed to deassert reset for PLL%d\n", pll);
+		dev_err(dev, "failed to deassert reset PLL%d %d\n", pll, rc);
 	}
 
 out:
@@ -1917,7 +1928,7 @@ static int uphy_pll_reset_assert(struct tegra_padctl_uphy *uphy, int pll)
 	rc = reset_control_assert(uphy->uphy_pll_rst[pll]);
 	if (rc) {
 		uphy->uphy_pll_clients[pll]++;
-		dev_err(dev, "failed to assert reset for PLL%d\n", pll);
+		dev_err(dev, "failed to assert reset for PLL%d %d\n", pll, rc);
 	}
 out:
 	return rc;
@@ -1936,7 +1947,8 @@ static int uphy_lanes_reset_deassert(struct tegra_padctl_uphy *uphy,
 		dev_dbg(dev, "deassert reset to Lane %d\n", lane);
 		rc = reset_control_deassert(uphy->uphy_lane_rst[lane]);
 		if (rc) {
-			dev_err(dev, "failed to deassert Lane %d\n", lane);
+			dev_err(dev, "failed to deassert reset Lane %d %d\n",
+				lane, rc);
 			goto assert;
 		}
 		last_done_lane = lane;
@@ -1964,7 +1976,7 @@ static int uphy_lanes_reset_assert(struct tegra_padctl_uphy *uphy,
 		dev_dbg(dev, "assert reset to Lane %d\n", lane);
 		rc = reset_control_assert(uphy->uphy_lane_rst[lane]);
 		if (rc) {
-			dev_err(dev, "failed to assert Lane %d\n", lane);
+			dev_err(dev, "failed to assert Lane %d %d\n", lane, rc);
 			goto deassert;
 		}
 		last_done_lane = lane;
@@ -2686,23 +2698,18 @@ static int tegra186_pcie_phy_power_off(struct phy *phy)
 	return 0;
 }
 
-static int tegra186_pcie_phy_init(struct phy *phy)
+static int tegra186_pcie_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 {
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-	int controller = pcie_phy_to_controller(phy);
 	unsigned long uphy_lane_bitmap;
 	unsigned int uphy_lane;
 	u32 reg;
 	int rc;
 
-	if (controller < 0)
-		return controller;
-
 	mutex_lock(&uphy->lock);
 
-	uphy_lane_bitmap = uphy->pcie_controllers[controller].uphy_lane_bitmap;
-	dev_dbg(uphy->dev, "phy init PCIE controller %d uphy-lanes 0x%lx\n",
-		controller, uphy_lane_bitmap);
+	uphy_lane_bitmap = uphy->pcie_lanes;
+	dev_dbg(uphy->dev, "%s PCIE controller uphy-lanes 0x%lx\n",
+		__func__, uphy_lane_bitmap);
 
 	/* Program lane ownership by selecting mux to PCIE */
 	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
@@ -2732,8 +2739,6 @@ static int tegra186_pcie_phy_init(struct phy *phy)
 	if (rc)
 		goto assert_lanes_reset;
 
-	tegra_padctl_uphy_enable(phy);
-
 	mutex_unlock(&uphy->lock);
 	return 0;
 
@@ -2746,10 +2751,65 @@ unlock_out:
 	return rc;
 }
 
+static int tegra186_pcie_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
+{
+	int rc;
+
+	dev_dbg(uphy->dev, "%s PCIE controller uphy-lanes 0x%lx\n",
+		__func__, uphy->pcie_lanes);
+
+	mutex_lock(&uphy->lock);
+
+	rc = uphy_pll_reset_assert(uphy, 0);
+	if (rc)
+		goto unlock_out;
+
+	rc = uphy_lanes_reset_assert(uphy, uphy->pcie_lanes);
+	if (rc)
+		goto deassert_pll0_reset;
+
+	rc = uphy_pll_deinit(uphy, TEGRA186_FUNC_PCIE);
+	if (rc)
+		goto deassert_lanes_reset;
+
+	mutex_unlock(&uphy->lock);
+
+	return 0;
+
+deassert_lanes_reset:
+	uphy_lanes_reset_deassert(uphy, uphy->pcie_lanes);
+deassert_pll0_reset:
+	uphy_pll_reset_deassert(uphy, 0);
+unlock_out:
+	mutex_unlock(&uphy->lock);
+
+	return rc;
+}
+
+static int tegra186_pcie_phy_init(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	int controller = pcie_phy_to_controller(phy);
+	unsigned long uphy_lane_bitmap;
+
+	if (controller < 0)
+		return controller;
+
+	mutex_lock(&uphy->lock);
+
+	uphy_lane_bitmap = uphy->pcie_controllers[controller].uphy_lane_bitmap;
+	dev_dbg(uphy->dev, "phy init PCIE controller %d uphy-lanes 0x%lx\n",
+		controller, uphy_lane_bitmap);
+
+	tegra_padctl_uphy_enable(phy);
+
+	mutex_unlock(&uphy->lock);
+	return 0;
+}
+
 static int tegra186_pcie_phy_exit(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-	struct device *dev = uphy->dev;
 	int controller = pcie_phy_to_controller(phy);
 	unsigned long uphy_lane_bitmap;
 
@@ -2762,17 +2822,6 @@ static int tegra186_pcie_phy_exit(struct phy *phy)
 	dev_dbg(uphy->dev, "phy exit PCIE controller %d uphy-lanes 0x%lx\n",
 		controller, uphy_lane_bitmap);
 
-#if 0
-	uphy_pll_deinit(uphy, TEGRA186_FUNC_PCIE);
-
-	/* Assert reset on lanes and pll */
-	uphy_pll_reset_assert(uphy, 0);
-	uphy_lanes_reset_assert(uphy, uphy_lane_bitmap);
-
-	/* Disable plle and pllp */
-#else
-	dev_info(dev, "skip phy exit till UPHY is stable\n");
-#endif
 	tegra_padctl_uphy_disable(phy);
 	mutex_unlock(&uphy->lock);
 
@@ -2864,17 +2913,16 @@ static int tegra186_sata_phy_power_off(struct phy *phy)
 	return 0;
 }
 
-static int tegra186_sata_phy_init(struct phy *phy)
+static int tegra186_sata_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 {
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	struct device *dev = uphy->dev;
 	unsigned int uphy_lane;
 	u32 reg;
 	int rc;
 
-	mutex_lock(&uphy->lock);
+	dev_dbg(dev, "%s SATA uphy-lanes 0x%lx\n", __func__, uphy->sata_lanes);
 
-	dev_dbg(dev, "phy init SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
+	mutex_lock(&uphy->lock);
 
 	/* Program lane ownership by selecting mux to SATA */
 	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
@@ -2901,13 +2949,11 @@ static int tegra186_sata_phy_init(struct phy *phy)
 	sata_pll_defaults(uphy);
 
 	/* Program lane defaults */
-	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES)
 		sata_lane_defaults(uphy, uphy_lane);
-	}
 
-	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES)
 		tegra186_sata_fuse_calibration(uphy, uphy_lane);
-	}
 
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_SATA);
 	if (rc)
@@ -2915,7 +2961,7 @@ static int tegra186_sata_phy_init(struct phy *phy)
 
 	mutex_unlock(&uphy->lock);
 
-	return tegra_padctl_uphy_enable(phy);
+	return 0;
 
 assert_lanes_reset:
 	uphy_lanes_reset_assert(uphy, uphy->sata_lanes);
@@ -2924,6 +2970,64 @@ assert_pll1_reset:
 assert_pll0_reset:
 	uphy_pll_reset_assert(uphy, 0);
 unlock_out:
+	mutex_unlock(&uphy->lock);
+
+	return rc;
+}
+
+static int tegra186_sata_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
+{
+	struct device *dev = uphy->dev;
+	int rc;
+
+	dev_dbg(dev, "%s SATA uphy-lanes 0x%lx\n", __func__, uphy->sata_lanes);
+
+	mutex_lock(&uphy->lock);
+
+	rc = uphy_pll_reset_assert(uphy, 0);
+	if (rc)
+		goto unlock_out;
+
+	rc = uphy_pll_reset_assert(uphy, 1);
+	if (rc)
+		goto deassert_pll0_reset;
+
+	rc = uphy_lanes_reset_assert(uphy, uphy->sata_lanes);
+	if (rc)
+		goto deassert_pll1_reset;
+
+	rc = uphy_pll_deinit(uphy, TEGRA186_FUNC_SATA);
+	if (rc)
+		goto deassert_lanes_reset;
+
+	mutex_unlock(&uphy->lock);
+
+	return 0;
+
+deassert_lanes_reset:
+	uphy_lanes_reset_deassert(uphy, uphy->sata_lanes);
+deassert_pll1_reset:
+	uphy_pll_reset_deassert(uphy, 1);
+deassert_pll0_reset:
+	uphy_pll_reset_deassert(uphy, 0);
+unlock_out:
+	mutex_unlock(&uphy->lock);
+
+	return rc;
+}
+
+static int tegra186_sata_phy_init(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	struct device *dev = uphy->dev;
+	int rc;
+
+	dev_dbg(dev, "phy init SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
+
+	mutex_lock(&uphy->lock);
+
+	rc = tegra_padctl_uphy_enable(phy);
+
 	mutex_unlock(&uphy->lock);
 
 	return rc;
@@ -2938,18 +3042,6 @@ static int tegra186_sata_phy_exit(struct phy *phy)
 
 	dev_dbg(dev, "phy exit SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
 
-#if 0
-	/* Assert reset on lanes and pll */
-	uphy_lanes_reset_assert(uphy, uphy->sata_lanes);
-
-	uphy_pll_reset_assert(uphy, 1);
-
-	/* Disable plle and pllp */
-
-	uphy_pll_deinit(uphy, TEGRA186_FUNC_SATA);
-#else
-	dev_info(dev, "skip phy exit till UPHY is stable\n");
-#endif
 	tegra_padctl_uphy_disable(phy);
 
 	mutex_unlock(&uphy->lock);
@@ -3060,16 +3152,16 @@ static void ufs_lane_pad_macro_configuration(struct tegra_padctl_uphy *uphy,
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_MISC_CTL_2);
 }
 
-static int tegra186_ufs_phy_power_on(struct phy *phy)
+static int tegra186_ufs_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 {
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	struct device *dev = uphy->dev;
 	unsigned int uphy_lane;
 	u32 reg;
 	int rc;
 
 	mutex_lock(&uphy->lock);
 
-	dev_dbg(uphy->dev, "power on UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
+	dev_dbg(dev, "%s UFS uphy-lanes 0x%lx\n", __func__, uphy->ufs_lanes);
 
 	/* step 2.2: Program lane ownership by selecting mux to MPHY */
 	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
@@ -3082,7 +3174,7 @@ static int tegra186_ufs_phy_power_on(struct phy *phy)
 	/* step 5.2: Bias PWM detector logic */
 	rc = clk_prepare_enable(uphy->rx_byp_clk);
 	if (rc) {
-		dev_err(uphy->dev, "failed to enable rx_byp reference clock %d\n",
+		dev_err(dev, "failed to enable rx_byp reference clock %d\n",
 			rc);
 	}
 
@@ -3104,7 +3196,7 @@ static int tegra186_ufs_phy_power_on(struct phy *phy)
 
 	/* step 6.2: Program lane defaults */
 	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
-		TRACE(uphy->dev, "uphy_lane %u", uphy_lane);
+		TRACE(dev, "uphy_lane %u", uphy_lane);
 		ufs_lane_defaults(uphy, uphy_lane);
 	}
 
@@ -3124,8 +3216,6 @@ static int tegra186_ufs_phy_power_on(struct phy *phy)
 	if (rc)
 		goto assert_lanes_reset;
 
-	uphy_lanes_clamp_disable(uphy, uphy->ufs_lanes);
-
 	mutex_unlock(&uphy->lock);
 
 	return 0;
@@ -3141,32 +3231,73 @@ unlock_out:
 	return rc;
 }
 
+static int tegra186_ufs_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
+{
+	struct device *dev = uphy->dev;
+	int rc;
+
+	dev_dbg(dev, "%s UFS uphy-lanes 0x%lx\n", __func__, uphy->ufs_lanes);
+
+	mutex_lock(&uphy->lock);
+
+	rc = uphy_pll_reset_assert(uphy, 0);
+	if (rc)
+		goto unlock_out;
+
+	rc = uphy_pll_reset_assert(uphy, 1);
+	if (rc)
+		goto deassert_pll0_reset;
+
+	rc = uphy_lanes_reset_assert(uphy, uphy->ufs_lanes);
+	if (rc)
+		goto deassert_pll1_reset;
+
+	rc = uphy_pll_deinit(uphy, TEGRA186_FUNC_MPHY);
+	if (rc)
+		goto deassert_lanes_reset;
+
+	mutex_unlock(&uphy->lock);
+
+	return 0;
+
+deassert_lanes_reset:
+	uphy_lanes_reset_deassert(uphy, uphy->ufs_lanes);
+deassert_pll1_reset:
+	uphy_pll_reset_deassert(uphy, 1);
+deassert_pll0_reset:
+	uphy_pll_reset_deassert(uphy, 0);
+unlock_out:
+	mutex_unlock(&uphy->lock);
+
+	return rc;
+}
+
+static int tegra186_ufs_phy_power_on(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+
+	mutex_lock(&uphy->lock);
+
+	dev_dbg(uphy->dev, "power on UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
+
+	uphy_lanes_clamp_disable(uphy, uphy->ufs_lanes);
+
+	mutex_unlock(&uphy->lock);
+
+	return 0;
+}
+
 static int tegra186_ufs_phy_power_off(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	struct device *dev = uphy->dev;
-#if 0
-	unsigned int uphy_lane;
-	u32 reg;
-#endif
 
 	dev_dbg(dev, "power off UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
 
 	mutex_lock(&uphy->lock);
+
 	uphy_lanes_clamp_enable(uphy, uphy->ufs_lanes);
 
-#if 0
-	/* Assert reset on lanes and pll */
-	uphy_lanes_reset_assert(uphy, uphy->ufs_lanes);
-	uphy_pll_reset_assert(uphy, 0);
-	uphy_pll_reset_assert(uphy, 1);
-
-	clk_disable_unprepare(uphy->rx_byp_clk);
-
-	/* Disable pllrefe and pllp */
-#else
-	dev_info(dev, "skip power off till UPHY is stable\n");
-#endif
 	mutex_unlock(&uphy->lock);
 	return 0;
 }
@@ -3371,34 +3502,32 @@ static int tegra186_usb3_phy_disable_wakelogic(struct tegra_padctl_uphy *uphy,
 	return 0;
 }
 
-static int tegra186_usb3_phy_init(struct phy *phy)
+static int tegra186_usb3_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 {
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-	int port = usb3_phy_to_port(phy);
+	unsigned long uphy_lane_bitmap;
 	unsigned uphy_lane;
 	u32 reg;
 	int rc;
 
-	if (port < 0)
-		return port;
+	uphy_lane_bitmap = uphy->usb3_lanes;
+	dev_dbg(uphy->dev, "%s XUSB controller uphy-lanes 0x%lx\n",
+		__func__, uphy_lane_bitmap);
 
 	mutex_lock(&uphy->lock);
 
-	uphy_lane = uphy->usb3_ports[port].uphy_lane;
-	dev_dbg(uphy->dev, "phy init USB3 port %d uphy-lane-%u\n",
-		port, uphy_lane);
-
-	reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
-	reg &= ~SEL(~0);
-	reg |= SEL_XUSB;
-	uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MUX);
+		reg &= ~SEL(~0);
+		reg |= SEL_XUSB;
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MUX);
+	}
 
 	/* Reset release of lanes and PLL0 */
 	rc = uphy_pll_reset_deassert(uphy, 0);
 	if (rc)
 		goto unlock_out;
 
-	rc = uphy_lanes_reset_deassert(uphy, BIT(uphy_lane));
+	rc = uphy_lanes_reset_deassert(uphy, uphy_lane_bitmap);
 	if (rc)
 		goto assert_pll0_reset;
 
@@ -3406,24 +3535,81 @@ static int tegra186_usb3_phy_init(struct phy *phy)
 	pcie_usb3_pll_defaults(uphy);
 
 	/* Program lane defaults */
-	usb3_lane_defaults(uphy, uphy_lane);
+	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES)
+		usb3_lane_defaults(uphy, uphy_lane);
 
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_USB3);
 	if (rc)
 		goto assert_lanes_reset;
 
-	tegra_padctl_uphy_enable(phy);
-
 	mutex_unlock(&uphy->lock);
 	return 0;
 
 assert_lanes_reset:
-	uphy_lanes_reset_assert(uphy, BIT(uphy_lane));
+	uphy_lanes_reset_assert(uphy, uphy_lane_bitmap);
 assert_pll0_reset:
 	uphy_pll_reset_assert(uphy, 0);
 unlock_out:
 	mutex_unlock(&uphy->lock);
 	return rc;
+}
+
+static int tegra186_usb3_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
+{
+	unsigned long uphy_lane_bitmap;
+	int rc;
+
+	uphy_lane_bitmap = uphy->usb3_lanes;
+	dev_dbg(uphy->dev, "%s XUSB controller uphy-lanes 0x%lx\n",
+		__func__, uphy_lane_bitmap);
+
+	mutex_lock(&uphy->lock);
+
+	rc = uphy_pll_reset_assert(uphy, 0);
+	if (rc)
+		goto unlock_out;
+
+	rc = uphy_lanes_reset_assert(uphy, uphy_lane_bitmap);
+	if (rc)
+		goto deassert_pll0_reset;
+
+	rc = uphy_pll_deinit(uphy, TEGRA186_FUNC_USB3);
+	if (rc)
+		goto deassert_lanes_reset;
+
+	mutex_unlock(&uphy->lock);
+
+	return 0;
+
+deassert_lanes_reset:
+	uphy_lanes_reset_deassert(uphy, uphy_lane_bitmap);
+deassert_pll0_reset:
+	uphy_pll_reset_deassert(uphy, 0);
+unlock_out:
+	mutex_unlock(&uphy->lock);
+
+	return rc;
+}
+
+static int tegra186_usb3_phy_init(struct phy *phy)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	int port = usb3_phy_to_port(phy);
+	unsigned uphy_lane;
+
+	if (port < 0)
+		return port;
+
+	uphy_lane = uphy->usb3_ports[port].uphy_lane;
+	dev_dbg(uphy->dev, "phy init USB3 port %d uphy-lane-%u\n",
+		port, uphy_lane);
+
+	mutex_lock(&uphy->lock);
+
+	tegra_padctl_uphy_enable(phy);
+
+	mutex_unlock(&uphy->lock);
+	return 0;
 }
 
 static int tegra186_usb3_phy_exit(struct phy *phy)
@@ -3442,13 +3628,6 @@ static int tegra186_usb3_phy_exit(struct phy *phy)
 	dev_dbg(dev, "phy exit USB3 port %d uphy-lane-%u\n",
 		port, uphy_lane);
 
-#if 0
-	uphy_pll_reset_assert(uphy, 0);
-	uphy_lanes_reset_assert(uphy, BIT(uphy_lane));
-	uphy_pll_deinit(uphy, TEGRA186_FUNC_USB3);
-#else
-	dev_info(dev, "skip phy exit till UPHY is stable\n");
-#endif
 	tegra_padctl_uphy_disable(phy);
 	mutex_unlock(&uphy->lock);
 	return 0;
@@ -3541,7 +3720,8 @@ static int tegra186_utmi_phy_enable_sleepwalk(struct tegra_padctl_uphy *uphy,
 
 	/* enable the trigger of the sleepwalk logic */
 	reg = ao_readl(uphy, XUSB_AO_UTMIP_SLEEPWALK_CFG(port));
-	reg |= (WAKE_WALK_EN | LINEVAL_WALK_EN);
+	reg |= LINEVAL_WALK_EN;
+	reg &= ~WAKE_WALK_EN;
 	ao_writel(uphy, reg, XUSB_AO_UTMIP_SLEEPWALK_CFG(port));
 
 	/* reset the walk pointer and clear the alarm of the sleepwalk logic,
@@ -3692,15 +3872,6 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	reg |= RPD_CTRL(uphy->calib.rpd_ctrl);
 	padctl_writel(uphy, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL1(port));
 
-	if (uphy->vbus[port] && uphy->utmi_ports[port].port_cap == HOST_ONLY) {
-		err = regulator_enable(uphy->vbus[port]);
-		if (err) {
-			dev_err(uphy->dev, "enable port %d vbus failed %d\n",
-				port, err);
-			return err;
-		}
-	}
-
 	mutex_lock(&uphy->lock);
 
 	if (uphy->utmi_enable++ > 0)
@@ -3749,21 +3920,12 @@ static int tegra186_utmi_phy_power_off(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	int port = utmi_phy_to_port(phy);
-	int rc;
 	u32 reg;
 
 	if (port < 0)
 		return port;
 
 	dev_dbg(uphy->dev, "power off UTMI port %d\n", port);
-
-	if (uphy->vbus[port] && uphy->utmi_ports[port].port_cap == HOST_ONLY) {
-		rc = regulator_disable(uphy->vbus[port]);
-		if (rc) {
-			dev_err(uphy->dev, "disable port %d vbus failed %d\n",
-				port, rc);
-		}
-	}
 
 	mutex_lock(&uphy->lock);
 
@@ -3792,24 +3954,60 @@ static int tegra186_utmi_phy_init(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	int port = utmi_phy_to_port(phy);
+	int rc;
 
 	if (port < 0)
 		return port;
 
 	dev_dbg(uphy->dev, "phy init UTMI port %d\n",  port);
-	return tegra_padctl_uphy_enable(phy);
+
+	mutex_lock(&uphy->lock);
+
+	if (uphy->vbus[port] && uphy->utmi_ports[port].port_cap == HOST_ONLY) {
+		rc = regulator_enable(uphy->vbus[port]);
+		if (rc) {
+			dev_err(uphy->dev, "enable port %d vbus failed %d\n",
+				port, rc);
+			mutex_unlock(&uphy->lock);
+			return rc;
+		}
+	}
+
+	tegra_padctl_uphy_enable(phy);
+
+	mutex_unlock(&uphy->lock);
+
+	return 0;
 }
 
 static int tegra186_utmi_phy_exit(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	int port = utmi_phy_to_port(phy);
+	int rc;
 
 	if (port < 0)
 		return port;
 
 	dev_dbg(uphy->dev, "phy exit UTMI port %d\n",  port);
-	return tegra_padctl_uphy_disable(phy);
+
+	mutex_lock(&uphy->lock);
+
+	if (uphy->vbus[port] && uphy->utmi_ports[port].port_cap == HOST_ONLY) {
+		rc = regulator_disable(uphy->vbus[port]);
+		if (rc) {
+			dev_err(uphy->dev, "disable port %d vbus failed %d\n",
+				port, rc);
+			mutex_unlock(&uphy->lock);
+			return rc;
+		}
+	}
+
+	tegra_padctl_uphy_disable(phy);
+
+	mutex_unlock(&uphy->lock);
+
+	return 0;
 }
 
 static const struct phy_ops utmi_phy_ops = {
@@ -4677,6 +4875,90 @@ skip_hsic:
 #define reg_dump(_dev, _base, _reg)	do {} while (0)
 #endif
 
+static int tegra186_uphy_pll_init(struct tegra_padctl_uphy *uphy)
+{
+	int rc;
+
+	if (uphy->pcie_lanes) {
+		rc = tegra186_pcie_uphy_pll_init(uphy);
+		if (rc)
+			return rc;
+	}
+	if (uphy->usb3_lanes) {
+		rc = tegra186_usb3_uphy_pll_init(uphy);
+		if (rc)
+			return rc;
+	}
+
+	if (uphy->sata_lanes) {
+		rc = tegra186_sata_uphy_pll_init(uphy);
+		if (rc)
+			return rc;
+	}
+
+	if (uphy->ufs_lanes) {
+		rc = tegra186_ufs_uphy_pll_init(uphy);
+		if (rc)
+			return rc;
+	}
+
+	return 0;
+}
+
+static int tegra186_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
+{
+	int rc;
+
+	if (uphy->pcie_lanes) {
+		rc = tegra186_pcie_uphy_pll_deinit(uphy);
+		if (rc)
+			return rc;
+	}
+
+	if (uphy->usb3_lanes) {
+		rc = tegra186_usb3_uphy_pll_deinit(uphy);
+		if (rc)
+			return rc;
+	}
+
+	if (uphy->sata_lanes) {
+		rc = tegra186_sata_uphy_pll_deinit(uphy);
+		if (rc)
+			return rc;
+	}
+
+	if (uphy->ufs_lanes) {
+		rc = tegra186_ufs_uphy_pll_deinit(uphy);
+		if (rc)
+			return rc;
+	}
+
+	return 0;
+}
+
+static int tegra186_padctl_uphy_suspend(struct device *dev)
+{
+	struct tegra_padctl_uphy *uphy = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "%s\n", __func__);
+
+	return tegra186_uphy_pll_deinit(uphy);
+}
+
+static int tegra186_padctl_uphy_resume(struct device *dev)
+{
+	struct tegra_padctl_uphy *uphy = dev_get_drvdata(dev);
+
+	dev_dbg(dev, "%s\n", __func__);
+
+	return tegra186_uphy_pll_init(uphy);
+}
+
+static const struct dev_pm_ops tegra186_padctl_uphy_pm_ops = {
+	.suspend_noirq = tegra186_padctl_uphy_suspend,
+	.resume_noirq = tegra186_padctl_uphy_resume,
+};
+
 static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 {
 	struct tegra_padctl_uphy *uphy;
@@ -4918,11 +5200,17 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 		goto assert_uphy_reset;
 	}
 
+	err = tegra186_uphy_pll_init(uphy);
+	if (err) {
+		dev_err(dev, "failed to initialize UPHY PLLs %d\n", err);
+		goto unregister;
+	}
+
 	for (i = 0; i < TEGRA_PCIE_PHYS; i++) {
 		phy = devm_phy_create(dev, NULL, &pcie_phy_ops, NULL);
 		if (IS_ERR(phy)) {
 			err = PTR_ERR(phy);
-			goto unregister;
+			goto uphy_pll_deinit;
 		}
 		uphy->pcie_phys[i] = phy;
 		phy_set_drvdata(phy, uphy);
@@ -4931,7 +5219,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	phy = devm_phy_create(dev, NULL, &sata_phy_ops, NULL);
 	if (IS_ERR(phy)) {
 		err = PTR_ERR(phy);
-		goto unregister;
+		goto uphy_pll_deinit;
 	}
 	uphy->sata_phys[0] = phy;
 	phy_set_drvdata(phy, uphy);
@@ -4939,7 +5227,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	phy = devm_phy_create(dev, NULL, &ufs_phy_ops, NULL);
 	if (IS_ERR(phy)) {
 		err = PTR_ERR(phy);
-		goto unregister;
+		goto uphy_pll_deinit;
 	}
 	uphy->ufs_phys[0] = phy;
 	phy_set_drvdata(phy, uphy);
@@ -4955,7 +5243,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 		err = PTR_ERR(uphy->mbox_chan);
 		if (err == -EPROBE_DEFER) {
 			dev_info(&pdev->dev, "mailbox is not ready yet\n");
-			goto unregister;
+			goto uphy_pll_deinit;
 		} else {
 			dev_warn(&pdev->dev,
 				 "failed to get mailbox, USB Host PHY support disabled\n");
@@ -4998,6 +5286,8 @@ free_mailbox:
 		cancel_work_sync(&uphy->mbox_req_work);
 		mbox_free_channel(uphy->mbox_chan);
 	}
+uphy_pll_deinit:
+	tegra186_uphy_pll_deinit(uphy);
 unregister:
 	pinctrl_unregister(uphy->pinctrl);
 assert_uphy_reset:
@@ -5037,6 +5327,7 @@ static struct platform_driver tegra186_padctl_uphy_driver = {
 	.driver = {
 		.name = "tegra186-padctl-uphy",
 		.of_match_table = tegra_padctl_uphy_of_match,
+		.pm = &tegra186_padctl_uphy_pm_ops,
 	},
 	.probe = tegra186_padctl_uphy_probe,
 	.remove = tegra186_padctl_uphy_remove,

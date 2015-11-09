@@ -28,10 +28,10 @@
 		 * 0x2 = Enabled for Legacy, 0x3 = Reserved
 		 */
 		nvidia,rxq_enable_ctrl = <2 1 1 1>;
-		nvidia,queue_prio = <0 1 2 3>;
+		nvidia,queue_prio = <0 7 2 3>;
 
 		nvidia,use_tagged_ptp;
-		nvidia,ptp_dma_ch = <3>;
+		nvidia,ptp_dma_ch = <1>;
 
 		nvidia,chan_napi_quota = <64 64 64 64>;
 		nvidia,pause_frames = <1>; /*0=enable, 1=disable */

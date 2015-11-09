@@ -648,7 +648,7 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 int tegra_nvdisp_init(struct tegra_dc *dc)
 {
 	char rst_name[6];
-	int err;
+	int err = 0;
 
 	/* Only need init once no matter how many dc objects */
 	if (!dc->ndev->id) {

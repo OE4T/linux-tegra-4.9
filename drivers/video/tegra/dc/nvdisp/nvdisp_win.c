@@ -769,7 +769,10 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 	/* Pulls configuration in from TEGRA_DC_FEATURE_INVERT_TYPE field */
 	bool enable_blx4 = tegra_dc_feature_has_scan_column(dc, idx);
 
-	if (win && win->dc == dc) { /* already assigned to current head */
+	if (win == NULL)
+		return -EINVAL;
+
+	if (win->dc == dc) { /* already assigned to current head */
 		/* If Reset happens without detach_win call
 		 * call attach idx for safety. Can remove this
 		 * once make sure detach_win is called before attach
@@ -780,7 +783,7 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	if (win->dc) {		/* window is owned by another head */
+	if (win->dc) {	/* window is owned by another head */
 		dev_err(&dc->ndev->dev,
 			"%s: cannot assign win %d to head %d, it owned by %d\n",
 			__func__, idx, dc->ctrl_num, win->dc->ctrl_num);

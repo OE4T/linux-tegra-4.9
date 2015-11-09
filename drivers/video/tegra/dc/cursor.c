@@ -115,9 +115,11 @@ static inline u32 cursor_alpha_value(struct tegra_dc *dc, u32 *val)
 	u32 retval = 0;
 	u32 data;
 
-	data = *val & (~TEGRA_DC_EXT_CURSOR_FORMAT_ALPHA_MSK);
 	if (!val | !dc)
 		return -EINVAL;
+
+	data = *val & (~TEGRA_DC_EXT_CURSOR_FORMAT_ALPHA_MSK);
+
 	if (dc->cursor.alpha > TEGRA_DC_EXT_CURSOR_FORMAT_ALPHA_MAX)
 		return -EINVAL;
 

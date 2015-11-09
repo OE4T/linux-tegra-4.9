@@ -428,6 +428,7 @@ static u8 encode_bMaxPower(enum usb_device_speed speed,
 		struct usb_configuration *c)
 {
 	unsigned val;
+	u8 bMaxPower;
 
 	if (c->MaxPower)
 		val = c->MaxPower;
@@ -437,10 +438,15 @@ static u8 encode_bMaxPower(enum usb_device_speed speed,
 		return 0;
 	switch (speed) {
 	case USB_SPEED_SUPER:
-		return DIV_ROUND_UP(val, 8);
+		/* USB 3.0 max power <= 900 mA: 0x70 * 8 mA = 896 mA */
+		bMaxPower = min(DIV_ROUND_UP(val, 8), 0x70);
+		break;
 	default:
-		return DIV_ROUND_UP(val, 2);
+		/* USB 2.0 max power <= 500 mA: 0xfa * 2 mA = 500 mA */
+		bMaxPower = min(DIV_ROUND_UP(val, 2), 0xfa);
 	}
+
+	return bMaxPower;
 }
 
 static int config_buf(struct usb_configuration *config,

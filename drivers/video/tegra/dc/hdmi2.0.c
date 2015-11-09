@@ -1044,6 +1044,7 @@ static int tegra_hdmi_dpaux_init(struct tegra_dc *dc)
 			goto dpaux_fail;
 		}
 		reset_control_deassert(dpaux_rst);
+		reset_control_put(dpaux_rst);
 	}
 
 	tegra_set_dpaux_addr(hdmi_dpaux_base[sor_num], sor_num);

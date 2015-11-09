@@ -82,18 +82,6 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 {
 	int flag = tegra_dc_is_clk_enabled(sor->sor_clk);
 
-	/* BRINGUP HACK: DIRECTLY ENABLE SOR SAFE CLK
-	 *
-	 * Calling tegra_clk_cfg_ex() currently results in a kernel panic.
-	 * HDMI hacks around tegra_hdmi_config_clk(), which is the only HDMI
-	 * codepath where tegra_clk_cfg_ex() is called. HDMI also doesn't use
-	 * tegra_sor_config_safe_clk at all.
-	 */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	tegra_sor_safe_clk_enable(sor);
-	return;
-#endif
-
 	if (sor->clk_type == TEGRA_SOR_SAFE_CLK)
 		return;
 
@@ -106,7 +94,11 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 		tegra_sor_clk_disable(sor);
 
 	if (tegra_platform_is_silicon())
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		clk_set_parent(sor->src_switch_clk, sor->safe_clk);
+#else
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
+#endif
 
 	if (flag)
 		tegra_sor_clk_enable(sor);
@@ -1026,6 +1018,13 @@ static inline void tegra_dc_sor_update(struct tegra_dc_sor_data *sor)
 	tegra_sor_writel(sor, NV_SOR_STATE0, 0);
 }
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
+{
+	/* BRINGUP HACK: DISABLE DPD SEQUENCE FOR NOW */
+	return;
+}
+#else
 static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 {
 	u32 reg_val;
@@ -1034,11 +1033,6 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 
 	if (tegra_platform_is_linsim())
 		return;
-
-	/* BRINGUP HACK: DISABLE DPD SEQUENCE FOR NOW */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	return;
-#endif
 
 	if (up) {
 		writel(APBDEV_PMC_DPD_SAMPLE_ON_ENABLE,
@@ -1073,6 +1067,7 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 		writel(APBDEV_PMC_DPD_SAMPLE_ON_DISABLE,
 			pmc_base + APBDEV_PMC_DPD_SAMPLE);
 }
+#endif
 
 /* hdmi uses sor sequencer for pad power up */
 void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)

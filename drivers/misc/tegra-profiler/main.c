@@ -368,7 +368,6 @@ get_capabilities_for_cpu(int cpuid, struct quadd_comm_cap_for_cpu *cap)
 		    event == QUADD_EVENT_TYPE_L2_ICACHE_MISSES) {
 			cap->l2_cache = 1;
 			cap->l2_multiple_events = 1;
-			break;
 		}
 
 

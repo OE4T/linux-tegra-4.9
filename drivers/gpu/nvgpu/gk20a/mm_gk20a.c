@@ -2164,10 +2164,8 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 
 	gk20a_dbg_fn("");
 
-	small_valid = !sparse && entry->size
-			      && entry->pgsz == gmmu_page_size_small;
-	big_valid   = !sparse && entry->size
-			      && entry->pgsz == gmmu_page_size_big;
+	small_valid = entry->size && entry->pgsz == gmmu_page_size_small;
+	big_valid   = entry->size && entry->pgsz == gmmu_page_size_big;
 
 	if (small_valid)
 		pte_addr_small = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0);
@@ -2186,9 +2184,6 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 		    |
 		    (big_valid ? (gmmu_pde_vol_big_true_f()) :
 		     gmmu_pde_vol_big_false_f());
-
-	if (sparse)
-		pde_v[1] |= gmmu_pde_vol_big_true_f();
 
 	pde = pde_from_index(vm, i);
 
@@ -2264,8 +2259,6 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 	} else if (sparse) {
 		pte_w[0] = gmmu_pte_valid_false_f();
 		pte_w[1] |= gmmu_pte_vol_true_f();
-		gk20a_dbg(gpu_dbg_pte, "pte_cur=%d [0x%08x,0x%08x]",
-			  i, pte_w[1], pte_w[0]);
 	} else {
 		gk20a_dbg(gpu_dbg_pte, "pte_cur=%d [0x0,0x0]", i);
 	}
@@ -2324,39 +2317,41 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 
 	while (gpu_va < gpu_end) {
 		struct gk20a_mm_entry *next_pte = NULL;
-		u64 next = (gpu_va + pde_size) & ~(pde_size-1);
-		u64 curr = gpu_va  & ~(pde_size-1);
-		bool sparse_entry = sparse &&
-				    ((gpu_va == curr && gpu_end >= next) ||
-				      !next_l->update_entry);
-
-		gk20a_dbg(gpu_dbg_pte, "pde_i %d [%llx-%llx] gpu_va %llx sparse %d (%d)\n",
-				pde_i, curr, next, gpu_va, sparse_entry, pte->sparse);
+		u64 next = min((gpu_va + pde_size) & ~(pde_size-1), gpu_end);
 
 		/* Allocate next level */
-		if (!pte->entries) {
-			int num_entries =
-				1 <<
-				 (l->hi_bit[pgsz_idx]
-				  - l->lo_bit[pgsz_idx] + 1);
-			pte->entries =
-				vzalloc(sizeof(struct gk20a_mm_entry) *
-					num_entries);
-			if (!pte->entries)
-				return -ENOMEM;
-			pte->pgsz = pgsz_idx;
-			pte->num_entries = num_entries;
-		}
-		next_pte = pte->entries + pde_i;
+		if (next_l->update_entry) {
+			if (!pte->entries) {
+				int num_entries =
+					1 <<
+					 (l->hi_bit[pgsz_idx]
+					  - l->lo_bit[pgsz_idx] + 1);
+				pte->entries =
+					vzalloc(sizeof(struct gk20a_mm_entry) *
+						num_entries);
+				if (!pte->entries)
+					return -ENOMEM;
+				pte->pgsz = pgsz_idx;
+				pte->num_entries = num_entries;
+			}
+			next_pte = pte->entries + pde_i;
 
-		if (next_l->update_entry && !sparse_entry) {
 			if (!next_pte->size) {
 				err = gk20a_zalloc_gmmu_page_table(vm,
 					pgsz_idx, next_l, next_pte);
 				if (err)
 					return err;
 			}
+		}
 
+		err = l->update_entry(vm, pte, pde_i, pgsz_idx,
+				sgl, offset, iova,
+				kind_v, ctag, cacheable, unmapped_pte,
+				rw_flag, sparse, priv);
+		if (err)
+			return err;
+
+		if (next_l->update_entry) {
 			/* get cpu access to the ptes */
 			err = map_gmmu_pages(next_pte);
 			if (err) {
@@ -2365,29 +2360,13 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 					   vm_aspace_id(vm));
 				return err;
 			}
-			if (next_pte->sparse) {
-				u64 null = 0;
-
-				gk20a_dbg(gpu_dbg_pte, "convert sparse PDE to sparse PTE array [%llx,%llx]",
-					  curr, next);
-				err = update_gmmu_level_locked(vm, next_pte,
-					pgsz_idx,
-					sgl,
-					offset,
-					&null,
-					curr,
-					next,
-					kind_v, NULL, cacheable, unmapped_pte,
-					rw_flag, true, lvl+1, priv);
-				next_pte->sparse = false;
-			}
 			err = update_gmmu_level_locked(vm, next_pte,
 				pgsz_idx,
 				sgl,
 				offset,
 				iova,
 				gpu_va,
-				min(next, gpu_end),
+				next,
 				kind_v, ctag, cacheable, unmapped_pte,
 				rw_flag, sparse, lvl+1, priv);
 			unmap_gmmu_pages(next_pte);
@@ -2395,15 +2374,6 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 			if (err)
 				return err;
 		}
-
-		err = l->update_entry(vm, pte, pde_i, pgsz_idx,
-				sgl, offset, iova,
-				kind_v, ctag, cacheable, unmapped_pte,
-				rw_flag, sparse_entry, priv);
-		if (err)
-			return err;
-
-		next_pte->sparse = sparse_entry;
 
 		pde_i++;
 		gpu_va = next;
@@ -2471,8 +2441,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 		}
 	}
 
-	gk20a_dbg(gpu_dbg_map, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx, sparse=%d",
-			pgsz_idx, gpu_va, gpu_end-1, iova, sparse);
+	gk20a_dbg(gpu_dbg_map, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx",
+			pgsz_idx, gpu_va, gpu_end-1, iova);
 	err = map_gmmu_pages(&vm->pdb);
 	if (err) {
 		gk20a_err(dev_from_vm(vm),
@@ -3026,7 +2996,7 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 					va_node->pgsz_idx,
 					true,
 					gk20a_mem_flag_none,
-					false,
+					true,
 					NULL);
 		kfree(va_node);
 	}

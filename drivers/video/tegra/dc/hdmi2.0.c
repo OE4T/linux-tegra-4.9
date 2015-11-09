@@ -878,14 +878,6 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	int i;
 	int err = 0;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	/* BRINGUP HACK
-	 * TEMPORARILY setting the prod set values here
-	 * Will move to tegra_prodlist dt later
-	 */
-	struct tegra_dc_sor_data *sor = hdmi->sor;
-#endif
-
 	/* Select mode with smallest clk freq > pclk */
 	tmds_len = ARRAY_SIZE(tmds_config_modes);
 	for (i = 0; i < tmds_len - 1 &&
@@ -893,79 +885,6 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 
 	if (tegra_platform_is_linsim())
 		return 0;
-
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	/* BRINGUP HACK
-	 * TEMPORARILY setting the prod set values here
-	 * Will move to tegra_prodlist dt later
-	 */
-	if (hdmi->dc->mode.pclk <= 54000000) { /* For 480p */
-		/* setting the prod set values here */
-		pr_info("Running on 480p\n");
-		tegra_sor_writel(sor, NV_SOR_CLK_CNTRL, 0x28);
-		tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(0),
-					0x333A3A3A);
-		tegra_sor_writel(sor, NV_SOR_PR(0), 0x0);
-		tegra_sor_writel(sor, NV_SOR_PLL0, 0x05050000);
-		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301300);
-		tegra_sor_writel(sor, NV_SOR_PLL3, 0x38000440);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(0), 0x00401000);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(2), 0x52000000);
-		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
-					0x333A3A3A);
-	} else if (hdmi->dc->mode.pclk <= 75000000) { /* For 720p */
-		pr_info("Running on 720p\n");
-		tegra_sor_writel(sor, NV_SOR_CLK_CNTRL, 0x28);
-		tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(0),
-					0x333A3A3A);
-		tegra_sor_writel(sor, NV_SOR_PR(0), 0x0);
-		tegra_sor_writel(sor, NV_SOR_PLL0, 0x05050100);
-		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301300);
-		tegra_sor_writel(sor, NV_SOR_PLL3, 0x38000440);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(0), 0x00404000);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(2), 0x42000000);
-		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
-					0x333A3A3A);
-	} else if (hdmi->dc->mode.pclk <= 150000000) { /* For 1080p */
-		pr_info("Running on 1080p\n");
-		tegra_sor_writel(sor, NV_SOR_CLK_CNTRL, 0x28);
-		tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(0),
-					0x333A3A3A);
-		tegra_sor_writel(sor, NV_SOR_PR(0), 0x0);
-		tegra_sor_writel(sor, NV_SOR_PLL0, 0x05050300);
-		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301300);
-		tegra_sor_writel(sor, NV_SOR_PLL3, 0x38000440);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(0), 0x00406600);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(2), 0x32000000);
-		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
-					0x333A3A3A);
-	} else if (hdmi->dc->mode.pclk <= 300000000) { /* For 2160p */
-		pr_info("Running on 2160p\n");
-		tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(0),
-					0x333F3F3F);
-		tegra_sor_writel(sor, NV_SOR_PR(0), 0x00171717);
-		tegra_sor_writel(sor, NV_SOR_PLL0, 0x05050300);
-		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301300);
-		tegra_sor_writel(sor, NV_SOR_PLL3, 0x3C000440);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(0), 0x00406600);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(2), 0x32000000);
-		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
-					0x333F3F3F);
-	} else {
-		pr_info("Running on 2160p\n");
-		tegra_sor_writel(sor, NV_SOR_LANE_DRIVE_CURRENT(0),
-					0x333F3F3F);
-		tegra_sor_writel(sor, NV_SOR_PR(0), 0x00070707);
-		tegra_sor_writel(sor, NV_SOR_PLL0, 0x05050300);
-		tegra_sor_writel(sor, NV_SOR_PLL1, 0x00301300);
-		tegra_sor_writel(sor, NV_SOR_PLL3, 0x3C000440);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(0), 0x00406600);
-		tegra_sor_writel(sor, NV_SOR_DP_PADCTL(2), 0x32000000);
-		tegra_sor_writel(sor, NV_SOR_LANE4_DRIVE_CURRENT(0),
-					0x333F3F3F);
-	}
-	return 0;
-#endif
 
 	err = tegra_prod_set_by_name(&hdmi->sor->base,
 				tmds_config_modes[i].name, hdmi->prod_list);

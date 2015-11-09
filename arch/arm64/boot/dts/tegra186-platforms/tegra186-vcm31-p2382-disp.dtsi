@@ -33,18 +33,18 @@
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <0>;
 			nvidia,dc-ctrlnum = <0>;
-			nvidia,dc-or-node = "/host1x/sor1";
+			nvidia,dc-or-node = "/host1x/sor";
 		};
 
 		nvdisplay@15210000 {
-			status = "disabled";
+			status = "okay";
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <3>;
 			nvidia,dc-ctrlnum = <1>;
-			nvidia,dc-or-node = "/host1x/sor";
+			nvidia,dc-or-node = "/host1x/sor1";
 		};
 
 		dsi {   /* dsi@15300000 */
@@ -64,7 +64,7 @@
 		};
 
 		sor{
-			status = "disabled";
+			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			//nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) 0>;
 			dp-display {
@@ -80,6 +80,7 @@
 				};
 				/* default display timing for test
 				 * (only the first entry is effective) */
+/*
 				display-timings {
 					1920x1080-32 {
 						clock-frequency = <148500000>;
@@ -95,16 +96,22 @@
 						nvidia,v-ref-to-sync = <1>;
 					};
 				};
+*/
+			};
+			hdmi-display {
+				status = "disabled";
 			};
 		};
 
 		sor1 {
 			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
+			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
 
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
+
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
 					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
@@ -116,6 +123,7 @@
 				};
 				/* default display timing for test
 				 * (only the first entry is effective) */
+/*
 				display-timings {
 					1920x1080-32 {
 						clock-frequency = <148500000>;
@@ -131,6 +139,7 @@
 						nvidia,v-ref-to-sync = <1>;
 					};
 				};
+*/
 			};
 		};
 

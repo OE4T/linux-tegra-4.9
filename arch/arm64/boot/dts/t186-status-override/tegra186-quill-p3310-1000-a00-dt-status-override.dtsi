@@ -27,10 +27,6 @@
 			status = "disabled";
 		};
 
-		nvdisplay@15210000 {
-			status = "disabled";
-		};
-
 		sor {
 			status = "disabled";
 			hdmi-display {

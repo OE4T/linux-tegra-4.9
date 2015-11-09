@@ -95,7 +95,7 @@ static int gp10b_tegra_probe(struct platform_device *pdev)
 	}
 
 	platform->g->host1x_dev = host1x_pdev;
-	platform->bypass_smmu = 1;
+	platform->bypass_smmu = !device_is_iommuable(&pdev->dev);
 	platform->disable_bigpage = platform->bypass_smmu;
 
 	platform->g->gr.t18x.ctx_vars.dump_ctxsw_stats_on_channel_close

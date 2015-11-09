@@ -43,6 +43,45 @@ static u32 actmon_readl(struct host1x_actmon *actmon, u32 reg)
 	return val;
 }
 
+static void host1x_actmon_dump_regs(struct host1x_actmon *actmon)
+{
+	nvhost_dbg(dbg_reg, "global ctrl: 0x%x\n",
+		actmon_readl(actmon, actmon_glb_ctrl_r()));
+
+	nvhost_dbg(dbg_reg, "global intr enable: 0x%x\n",
+		actmon_readl(actmon, actmon_glb_intr_en_r()));
+
+	nvhost_dbg(dbg_reg, "global intr status: 0x%x\n",
+		actmon_readl(actmon, actmon_glb_intr_status_r()));
+
+	nvhost_dbg(dbg_reg, "local ctrl: 0x%x\n",
+		actmon_readl(actmon, actmon_local_ctrl_r()));
+
+	nvhost_dbg(dbg_reg, "local intr enable: 0x%x\n",
+		actmon_readl(actmon, actmon_local_intr_en_r()));
+
+	nvhost_dbg(dbg_reg, "local intr status: 0x%x\n",
+		actmon_readl(actmon, actmon_local_intr_status_r()));
+
+	nvhost_dbg(dbg_reg, "local avg upper watermark: 0x%x\n",
+		actmon_readl(actmon, actmon_local_avg_upper_wmark_r()));
+
+	nvhost_dbg(dbg_reg, "local avg lower watermark: 0x%x\n",
+		actmon_readl(actmon, actmon_local_avg_lower_wmark_r()));
+
+	nvhost_dbg(dbg_reg, "local init avg: 0x%x\n",
+		actmon_readl(actmon, actmon_local_init_avg_r()));
+
+	nvhost_dbg(dbg_reg, "local count : 0x%x\n",
+		actmon_readl(actmon, actmon_local_count_r()));
+
+	nvhost_dbg(dbg_reg, "local avg count : 0x%x\n",
+		actmon_readl(actmon, actmon_local_avg_count_r()));
+
+	nvhost_dbg(dbg_reg, "local cumulative count : 0x%x\n",
+		actmon_readl(actmon, actmon_local_cumulative_r()));
+}
+
 static void host1x_actmon_event_fn(struct work_struct *work)
 {
 	struct host1x_actmon_worker *worker =
@@ -63,6 +102,7 @@ static void host1x_actmon_event_fn(struct work_struct *work)
 					    host1x_actmon_process_isr,
 					    worker->actmon);
 	}
+	host1x_actmon_dump_regs(actmon);
 	nvhost_module_idle(pdev);
 }
 
@@ -127,6 +167,8 @@ static void actmon_update_sample_period_safe(struct host1x_actmon *actmon)
 
 	/* AVG value depends on sample period => clear it */
 	actmon_writel(actmon, 0, actmon_local_init_avg_r());
+
+	host1x_actmon_dump_regs(actmon);
 }
 
 static void __iomem *host1x_actmon_get_regs(struct host1x_actmon *actmon)
@@ -196,6 +238,8 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 
 	actmon->init = ACTMON_READY;
 
+	host1x_actmon_dump_regs(actmon);
+
 	return 0;
 }
 
@@ -215,6 +259,8 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 
 	nvhost_intr_disable_host_irq(&nvhost_get_host(host_pdev)->intr,
 				     engine_pdata->actmon_irq);
+
+	host1x_actmon_dump_regs(actmon);
 }
 
 static int host1x_actmon_avg(struct host1x_actmon *actmon, u32 *val)
@@ -328,6 +374,8 @@ static int host1x_set_high_wmark(struct host1x_actmon *actmon, u32 val_scaled)
 		val &= ~actmon_local_intr_en_avg_above_wmark_en_f(1);
 	actmon_writel(actmon, val, actmon_local_intr_en_r());
 
+	host1x_actmon_dump_regs(actmon);
+
 	return 0;
 }
 
@@ -350,6 +398,8 @@ static int host1x_set_low_wmark(struct host1x_actmon *actmon, u32 val_scaled)
 	else
 		val &= ~actmon_local_intr_en_avg_below_wmark_en_f(1);
 	actmon_writel(actmon, val, actmon_local_intr_en_r());
+
+	host1x_actmon_dump_regs(actmon);
 
 	return 0;
 }

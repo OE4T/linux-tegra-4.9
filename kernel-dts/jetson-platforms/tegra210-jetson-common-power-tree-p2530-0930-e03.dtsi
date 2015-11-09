@@ -329,15 +329,41 @@
 
 	pmc@7000e400 {
 		bootrom-commands {
-			commands@4-003c {
-				nvidia,command-names = "pmic-rails";
-				reg = <0x3c>;
-				nvidia,enable-8bit-register;
-				nvidia,enable-8bit-data;
-				nvidia,controller-type-i2c;
-				nvidia,controller-id = <4>;
-				nvidia,enable-controller-reset;
-				nvidia,write-commands = <0x00000016 0x00000020>;
+			reset-commands {
+				nvidia,command-retries-count = <2>;
+				nvidia,delay-between-commands-us = <10>;
+				nvidia,wait-before-start-bus-clear-us = <10>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				commands@4-003c {
+					nvidia,command-names = "pmic-rails";
+					reg = <0x3c>;
+					nvidia,enable-8bit-register;
+					nvidia,enable-8bit-data;
+					nvidia,controller-type-i2c;
+					nvidia,controller-id = <4>;
+					nvidia,enable-controller-reset;
+					nvidia,write-commands = <0x00000016 0x00000020>;
+				};
+			};
+			power-off-commands {
+				nvidia,command-retries-count = <2>;
+				nvidia,delay-between-commands-us = <10>;
+				nvidia,wait-before-start-bus-clear-us = <10>;
+				#address-cells = <1>;
+				#size-cells = <0>;
+				commands@4-003c {
+					nvidia,command-names = "pmic-rails";
+					reg = <0x3c>;
+					nvidia,enable-8bit-register;
+					nvidia,enable-8bit-data;
+					nvidia,controller-type-i2c;
+					nvidia,controller-id = <4>;
+					nvidia,enable-controller-reset;
+					nvidia,write-commands = <0x3B 0x01
+								0x42 0x5B
+								0x41 0xF8>;
+				};
 			};
 		};
 	};

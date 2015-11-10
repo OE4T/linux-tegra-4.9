@@ -48,17 +48,17 @@
 
 void eqos_enable_eee_mode(struct eqos_prv_data *pdata)
 {
-	struct eqos_tx_wrapper_descriptor *tx_desc_data = NULL;
+	struct tx_ring *ptx_ring = NULL;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int tx_idle = 0, qinx;
 
 	DBGPR_EEE("-->eqos_enable_eee_mode\n");
 
 	for (qinx = 0; qinx < pdata->tx_queue_cnt; qinx++) {
-		tx_desc_data = GET_TX_WRAPPER_DESC(qinx);
+		ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 
-		if ((tx_desc_data->dirty_tx == tx_desc_data->cur_tx) &&
-			(pdata->tx_path_in_lpi_mode == false)) {
+		if ((ptx_ring->dirty_tx == ptx_ring->cur_tx) &&
+		    (!pdata->tx_path_in_lpi_mode)) {
 			tx_idle = 1;
 		} else {
 			tx_idle = 0;

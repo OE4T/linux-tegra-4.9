@@ -61,17 +61,18 @@ extern ULONG eqos_base_addr;
 static void eqos_tx_desc_free_mem(struct eqos_prv_data *pdata,
 					 UINT tx_qcnt)
 {
-	struct eqos_tx_wrapper_descriptor *desc_data = NULL;
+	struct tx_ring *ptx_ring = NULL;
 	UINT qinx;
+	uint tx_ring_size = sizeof(struct s_tx_desc) * TX_DESC_CNT;
 
 	DBGPR("-->eqos_tx_desc_free_mem: tx_qcnt = %d\n", tx_qcnt);
 
 	for (qinx = 0; qinx < tx_qcnt; qinx++) {
-		desc_data = GET_TX_WRAPPER_DESC(qinx);
+		ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 
 		if (GET_TX_DESC_PTR(qinx, 0)) {
 			dma_free_coherent(&pdata->pdev->dev,
-					  (sizeof(struct s_tx_normal_desc) * TX_DESC_CNT),
+					  tx_ring_size,
 					  GET_TX_DESC_PTR(qinx, 0),
 					  GET_TX_DESC_DMA_ADDR(qinx, 0));
 			GET_TX_DESC_PTR(qinx, 0) = NULL;
@@ -99,17 +100,18 @@ static void eqos_tx_desc_free_mem(struct eqos_prv_data *pdata,
 static void eqos_rx_desc_free_mem(struct eqos_prv_data *pdata,
 					 UINT rx_qcnt)
 {
-	struct eqos_rx_wrapper_descriptor *desc_data = NULL;
+	struct rx_ring *prx_ring = NULL;
 	UINT qinx = 0;
+	uint rx_ring_size = sizeof(struct s_rx_desc) * RX_DESC_CNT;
 
 	DBGPR("-->eqos_rx_desc_free_mem: rx_qcnt = %d\n", rx_qcnt);
 
 	for (qinx = 0; qinx < rx_qcnt; qinx++) {
-		desc_data = GET_RX_WRAPPER_DESC(qinx);
+		prx_ring = GET_RX_WRAPPER_DESC(qinx);
 
 		if (GET_RX_DESC_PTR(qinx, 0)) {
 			dma_free_coherent(&pdata->pdev->dev,
-					  (sizeof(struct s_rx_normal_desc) * RX_DESC_CNT),
+					  rx_ring_size,
 					  GET_RX_DESC_PTR(qinx, 0),
 					  GET_RX_DESC_DMA_ADDR(qinx, 0));
 			GET_RX_DESC_PTR(qinx, 0) = NULL;
@@ -231,6 +233,10 @@ static INT allocate_buffer_and_desc(struct eqos_prv_data *pdata)
 {
 	INT ret = 0;
 	UINT qinx;
+	uint tx_ring_size = sizeof(struct s_tx_desc) * TX_DESC_CNT;
+	uint rx_ring_size = sizeof(struct s_rx_desc) * RX_DESC_CNT;
+	uint tx_swcx_size = sizeof(struct tx_swcx_desc) * TX_DESC_CNT;
+	uint rx_swcx_size = sizeof(struct rx_swcx_desc) * RX_DESC_CNT;
 
 	DBGPR("-->allocate_buffer_and_desc: TX_QUEUE_CNT = %d, "\
 		"RX_QUEUE_CNT = %d\n", EQOS_TX_QUEUE_CNT,
@@ -239,10 +245,11 @@ static INT allocate_buffer_and_desc(struct eqos_prv_data *pdata)
 	/* Allocate descriptors and buffers memory for all TX queues */
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		/* TX descriptors */
-		GET_TX_DESC_PTR(qinx, 0) = dma_alloc_coherent(&pdata->pdev->dev,
-						(sizeof(struct s_tx_normal_desc) * TX_DESC_CNT),
-						&(GET_TX_DESC_DMA_ADDR(qinx, 0)),
-						GFP_KERNEL);
+		GET_TX_DESC_PTR(qinx, 0) =
+			dma_alloc_coherent(&pdata->pdev->dev,
+					   tx_ring_size,
+					   &(GET_TX_DESC_DMA_ADDR(qinx, 0)),
+					   GFP_KERNEL);
 		if (GET_TX_DESC_PTR(qinx, 0) == NULL) {
 			ret = -ENOMEM;
 			goto err_out_tx_desc;
@@ -253,9 +260,7 @@ static INT allocate_buffer_and_desc(struct eqos_prv_data *pdata)
 
 	for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
 		/* TX wrapper buffer */
-		GET_TX_BUF_PTR(qinx, 0) =
-			kzalloc((sizeof(struct eqos_tx_buffer) * TX_DESC_CNT),
-			GFP_KERNEL);
+		GET_TX_BUF_PTR(qinx, 0) = kzalloc(tx_swcx_size, GFP_KERNEL);
 		if (GET_TX_BUF_PTR(qinx, 0) == NULL) {
 			ret = -ENOMEM;
 			goto err_out_tx_buf;
@@ -265,10 +270,11 @@ static INT allocate_buffer_and_desc(struct eqos_prv_data *pdata)
 	/* Allocate descriptors and buffers memory for all RX queues */
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		/* RX descriptors */
-		GET_RX_DESC_PTR(qinx, 0) = dma_alloc_coherent(&pdata->pdev->dev,
-						(sizeof(struct s_rx_normal_desc) * RX_DESC_CNT),
-						&(GET_RX_DESC_DMA_ADDR(qinx, 0)),
-						GFP_KERNEL);
+		GET_RX_DESC_PTR(qinx, 0) =
+			dma_alloc_coherent(&pdata->pdev->dev,
+					   rx_ring_size,
+					   &(GET_RX_DESC_DMA_ADDR(qinx, 0)),
+					   GFP_KERNEL);
 		if (GET_RX_DESC_PTR(qinx, 0) == NULL) {
 			ret = -ENOMEM;
 			goto rx_alloc_failure;
@@ -279,9 +285,7 @@ static INT allocate_buffer_and_desc(struct eqos_prv_data *pdata)
 
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
 		/* RX wrapper buffer */
-		GET_RX_BUF_PTR(qinx, 0) =
-			kzalloc((sizeof(struct eqos_rx_buffer) * RX_DESC_CNT),
-			GFP_KERNEL);
+		GET_RX_BUF_PTR(qinx, 0) = kzalloc(rx_swcx_size, GFP_KERNEL);
 		if (GET_RX_BUF_PTR(qinx, 0) == NULL) {
 			ret = -ENOMEM;
 			goto err_out_rx_buf;
@@ -343,10 +347,10 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 			UINT qinx)
 {
 	int i;
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
-	struct eqos_tx_buffer *buffer = GET_TX_BUF_PTR(qinx, 0);
-	struct s_tx_normal_desc *desc = GET_TX_DESC_PTR(qinx, 0);
+	struct tx_swcx_desc *ptx_swcx_desc = GET_TX_BUF_PTR(qinx, 0);
+	struct s_tx_desc *desc = GET_TX_DESC_PTR(qinx, 0);
 	dma_addr_t desc_dma = GET_TX_DESC_DMA_ADDR(qinx, 0);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
@@ -356,19 +360,19 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 	for (i = 0; i < TX_DESC_CNT; i++) {
 		GET_TX_DESC_PTR(qinx, i) = &desc[i];
 		GET_TX_DESC_DMA_ADDR(qinx, i) =
-		    (desc_dma + sizeof(struct s_tx_normal_desc) * i);
-		GET_TX_BUF_PTR(qinx, i) = &buffer[i];
+		    (desc_dma + sizeof(struct s_tx_desc) * i);
+		GET_TX_BUF_PTR(qinx, i) = &ptx_swcx_desc[i];
 	}
 
-	desc_data->cur_tx = 0;
-	desc_data->dirty_tx = 0;
-	desc_data->queue_stopped = 0;
-	desc_data->tx_pkt_queued = 0;
-	desc_data->packet_count = 0;
-	desc_data->free_desc_cnt = TX_DESC_CNT;
+	ptx_ring->cur_tx = 0;
+	ptx_ring->dirty_tx = 0;
+	ptx_ring->queue_stopped = 0;
+	ptx_ring->tx_pkt_queued = 0;
+	ptx_ring->packet_count = 0;
+	ptx_ring->free_desc_cnt = TX_DESC_CNT;
 
 	hw_if->tx_desc_init(pdata, qinx);
-	desc_data->cur_tx = 0;
+	ptx_ring->cur_tx = 0;
 
 	DBGPR("<--eqos_wrapper_tx_descriptor_init_single_q\n");
 }
@@ -392,23 +396,23 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 			UINT qinx)
 {
 	int i;
-	struct eqos_rx_wrapper_descriptor *desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
-	struct eqos_rx_buffer *buffer = GET_RX_BUF_PTR(qinx, 0);
-	struct s_rx_normal_desc *desc = GET_RX_DESC_PTR(qinx, 0);
+	struct rx_swcx_desc *prx_swcx_desc = GET_RX_BUF_PTR(qinx, 0);
+	struct s_rx_desc *desc = GET_RX_DESC_PTR(qinx, 0);
 	dma_addr_t desc_dma = GET_RX_DESC_DMA_ADDR(qinx, 0);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
 	DBGPR("-->eqos_wrapper_rx_descriptor_init_single_q: "\
 		"qinx = %u\n", qinx);
 
-	memset(buffer, 0, (sizeof(struct eqos_rx_buffer) * RX_DESC_CNT));
+	memset(prx_swcx_desc, 0, (sizeof(struct rx_swcx_desc) * RX_DESC_CNT));
 
 	for (i = 0; i < RX_DESC_CNT; i++) {
 		GET_RX_DESC_PTR(qinx, i) = &desc[i];
 		GET_RX_DESC_DMA_ADDR(qinx, i) =
-		    (desc_dma + sizeof(struct s_rx_normal_desc) * i);
-		GET_RX_BUF_PTR(qinx, i) = &buffer[i];
+		    (desc_dma + sizeof(struct s_rx_desc) * i);
+		GET_RX_BUF_PTR(qinx, i) = &prx_swcx_desc[i];
 
 		/* allocate skb & assign to each desc */
 		if (pdata->alloc_rx_buf(pdata, GET_RX_BUF_PTR(qinx, i), GFP_KERNEL))
@@ -417,14 +421,14 @@ static void eqos_wrapper_rx_descriptor_init_single_q(
 		wmb();
 	}
 
-	desc_data->cur_rx = 0;
-	desc_data->dirty_rx = 0;
-	desc_data->skb_realloc_idx = 0;
-	desc_data->skb_realloc_threshold = MIN_RX_DESC_CNT;
-	desc_data->pkt_received = 0;
+	prx_ring->cur_rx = 0;
+	prx_ring->dirty_rx = 0;
+	prx_ring->skb_realloc_idx = 0;
+	prx_ring->skb_realloc_threshold = MIN_RX_DESC_CNT;
+	prx_ring->pkt_received = 0;
 
 	hw_if->rx_desc_init(pdata, qinx);
-	desc_data->cur_rx = 0;
+	prx_ring->cur_rx = 0;
 
 	DBGPR("<--eqos_wrapper_rx_descriptor_init_single_q\n");
 }
@@ -535,7 +539,7 @@ static void eqos_tx_free_mem(struct eqos_prv_data *pdata)
 static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 							UINT qinx)
 {
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 
 	DBGPR("-->%s(): qinx = %u\n", __func__, qinx);
@@ -543,13 +547,13 @@ static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 	/* Unmap and return skb for tx desc/bufs owned by hw.
 	 * Caller ensures that hw is no longer accessing these descriptors
 	 */
-	while (desc_data->tx_pkt_queued > 0) {
+	while (ptx_ring->tx_pkt_queued > 0) {
 		eqos_unmap_tx_skb(pdata,
-				  GET_TX_BUF_PTR(qinx, desc_data->dirty_tx));
+				  GET_TX_BUF_PTR(qinx, ptx_ring->dirty_tx));
 
-		INCR_TX_DESC_INDEX(desc_data->dirty_tx, 1);
-		desc_data->free_desc_cnt++;
-		desc_data->tx_pkt_queued--;
+		INCR_TX_DESC_INDEX(ptx_ring->dirty_tx, 1);
+		ptx_ring->free_desc_cnt++;
+		ptx_ring->tx_pkt_queued--;
 	}
 	DBGPR("<--%s()\n", __func__);
 }
@@ -775,7 +779,7 @@ static int eqos_handle_tso(struct net_device *dev,
 
 /* returns 0 on success and -ve on failure */
 static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
-	struct eqos_tx_buffer *buffer, struct sk_buff *skb,
+	struct tx_swcx_desc *ptx_swcx_desc, struct sk_buff *skb,
 	unsigned int offset, unsigned int size)
 {
 	DBGPR("-->eqos_map_non_page_buffs_64");
@@ -787,23 +791,23 @@ static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
 		return -ENOMEM;
 	}
 
-	buffer->dma = dma_map_single((&pdata->pdev->dev),
+	ptx_swcx_desc->dma = dma_map_single((&pdata->pdev->dev),
 			(skb->data + offset),
 			ALIGN_SIZE(size), DMA_TO_DEVICE);
 
-	if (dma_mapping_error((&pdata->pdev->dev), buffer->dma)) {
+	if (dma_mapping_error((&pdata->pdev->dev), ptx_swcx_desc->dma)) {
 		pr_err("failed to do the dma map\n");
 		return -ENOMEM;
 	}
-	buffer->len = size;
-	buffer->buf1_mapped_as_page = Y_FALSE;
+	ptx_swcx_desc->len = size;
+	ptx_swcx_desc->buf1_mapped_as_page = Y_FALSE;
 
 	DBGPR("<--eqos_map_non_page_buffs_64");
 	return 0;
 }
 
 static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
-			struct eqos_tx_buffer *buffer,
+			struct tx_swcx_desc *ptx_swcx_desc,
 			struct skb_frag_struct *frag,
 			unsigned int offset,
 			unsigned int size)
@@ -813,17 +817,17 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 
 	DBGPR("-->eqos_map_page_buffs_64\n");
 	/* fill the first buffer pointer in buffer->dma */
-	buffer->dma = dma_map_page((&pdata->pdev->dev),
+	ptx_swcx_desc->dma = dma_map_page((&pdata->pdev->dev),
 				(frag->page.p + page_idx),
 				page_offset,
 				ALIGN_SIZE(size), DMA_TO_DEVICE);
 	if (dma_mapping_error((&pdata->pdev->dev),
-				buffer->dma)) {
+				ptx_swcx_desc->dma)) {
 		pr_err("failed to do the dma map\n");
 		return -ENOMEM;
 	}
-	buffer->len = size;
-	buffer->buf1_mapped_as_page = Y_TRUE;
+	ptx_swcx_desc->len = size;
+	ptx_swcx_desc->buf1_mapped_as_page = Y_TRUE;
 
 	DBGPR("<--eqos_map_page_buffs_64\n");
 	return 0;
@@ -851,14 +855,14 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	UINT qinx = skb_get_queue_mapping(skb);
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
-	struct eqos_tx_buffer *buffer =
-	    GET_TX_BUF_PTR(qinx, desc_data->cur_tx);
-	struct eqos_tx_buffer *prev_buffer = NULL;
+	struct tx_swcx_desc *ptx_swcx_desc =
+	    GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+	struct tx_swcx_desc *pprev_tx_swcx_desc = NULL;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
 	UINT varvlan_pkt;
-	int index = (int)desc_data->cur_tx;
+	int index = (int)ptx_ring->cur_tx;
 	unsigned int frag_cnt = skb_shinfo(skb)->nr_frags;
 	unsigned int hdr_len = 0;
 	unsigned int i;
@@ -868,7 +872,7 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 	int ret;
 
 	DBGPR("-->eqos_map_skb: cur_tx = %d, qinx = %u\n",
-		desc_data->cur_tx, qinx);
+		ptx_ring->cur_tx, qinx);
 
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(
 		tx_pkt_features->pkt_attributes, vartso_enable);
@@ -878,11 +882,12 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 		DBGPR("Skipped preparing index %d "\
 			"(VLAN Context descriptor)\n\n", index);
 		INCR_TX_DESC_INDEX(index, 1);
-		buffer = GET_TX_BUF_PTR(qinx, index);
-	} else if ((vartso_enable == 0x1) && (desc_data->default_mss != tx_pkt_features->mss)) {
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
+	} else if ((vartso_enable == 0x1) &&
+		   (ptx_ring->default_mss != tx_pkt_features->mss)) {
 		/* keep space for CONTEXT descriptor in the RING */
 		INCR_TX_DESC_INDEX(index, 1);
-		buffer = GET_TX_BUF_PTR(qinx, index);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
 	}
 	if (vartso_enable) {
 		hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
@@ -896,15 +901,15 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 	while (len) {
 		size = min(len, EQOS_MAX_DATA_PER_TXD);
 
-		buffer = GET_TX_BUF_PTR(qinx, index);
-		ret = eqos_map_non_page_buffs_64(pdata, buffer,
-						skb, offset, size);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
+		ret = eqos_map_non_page_buffs_64(pdata, ptx_swcx_desc,
+						 skb, offset, size);
 		if (ret < 0)
 			goto err_out_dma_map_fail;
 
 		len -= size;
 		offset += size;
-		prev_buffer = buffer;
+		pprev_tx_swcx_desc = ptx_swcx_desc;
 		INCR_TX_DESC_INDEX(index, 1);
 		count++;
 	}
@@ -915,16 +920,16 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 		while (len > 0) {
 			size = min(len, EQOS_MAX_DATA_PER_TXD);
 
-			buffer = GET_TX_BUF_PTR(qinx, index);
-			ret = eqos_map_non_page_buffs_64(pdata, buffer,
-						skb, offset, size);
+			ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
+			ret = eqos_map_non_page_buffs_64(pdata, ptx_swcx_desc,
+							 skb, offset, size);
 			if (ret < 0)
 				goto err_out_dma_map_fail;
 
 			len -= size;
 			offset += size;
-			if (buffer->dma != 0) {
-				prev_buffer = buffer;
+			if (ptx_swcx_desc->dma != 0) {
+				pprev_tx_swcx_desc = ptx_swcx_desc;
 				INCR_TX_DESC_INDEX(index, 1);
 				count++;
 			}
@@ -940,16 +945,16 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 		while (len) {
 			size = min(len, EQOS_MAX_DATA_PER_TXD);
 
-			buffer = GET_TX_BUF_PTR(qinx, index);
-			ret = eqos_map_page_buffs_64(pdata, buffer,
-							frag, offset, size);
+			ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
+			ret = eqos_map_page_buffs_64(pdata, ptx_swcx_desc,
+						     frag, offset, size);
 			if (ret < 0)
 				goto err_out_dma_map_fail;
 
 			len -= size;
 			offset += size;
-			if (buffer->dma != 0) {
-				prev_buffer = buffer;
+			if (ptx_swcx_desc->dma != 0) {
+				pprev_tx_swcx_desc = ptx_swcx_desc;
 				INCR_TX_DESC_INDEX(index, 1);
 				count++;
 			}
@@ -958,13 +963,12 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 	/* If current descriptor is not inuse, then adjust pointer to
 	 * last used one.
 	 */
-	if (buffer->dma == 0) {
-		buffer = prev_buffer;
-	}
-	buffer->skb = skb;
+	if (ptx_swcx_desc->dma == 0)
+		ptx_swcx_desc = pprev_tx_swcx_desc;
+	ptx_swcx_desc->skb = skb;
 
-	DBGPR("<--eqos_map_skb: buffer->dma = %#llx\n",
-	      (ULONG_LONG) buffer->dma);
+	DBGPR("<--eqos_map_skb: ptx_swcx_desc->dma = %#llx\n",
+	      (ULONG_LONG) ptx_swcx_desc->dma);
 
 	return count;
 
@@ -973,8 +977,8 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 
 	for (; count > 0; count--) {
 		DECR_TX_DESC_INDEX(index);
-		buffer = GET_TX_BUF_PTR(qinx, index);
-		eqos_unmap_tx_skb(pdata, buffer);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
+		eqos_unmap_tx_skb(pdata, ptx_swcx_desc);
 	}
 
 	return 0;
@@ -993,27 +997,28 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 */
 
 static void eqos_unmap_tx_skb(struct eqos_prv_data *pdata,
-				     struct eqos_tx_buffer *buffer)
+				     struct tx_swcx_desc *ptx_swcx_desc)
 {
 	DBGPR("-->eqos_unmap_tx_skb\n");
 
-	if (buffer->dma) {
-		if (buffer->buf1_mapped_as_page == Y_TRUE)
-			dma_unmap_page((&pdata->pdev->dev), buffer->dma,
-				       ALIGN_SIZE(buffer->len),
+	if (ptx_swcx_desc->dma) {
+		if (ptx_swcx_desc->buf1_mapped_as_page == Y_TRUE)
+			dma_unmap_page((&pdata->pdev->dev), ptx_swcx_desc->dma,
+				       ALIGN_SIZE(ptx_swcx_desc->len),
 				       DMA_TO_DEVICE);
 		else
-			dma_unmap_single((&pdata->pdev->dev), buffer->dma,
-					 ALIGN_SIZE(buffer->len),
+			dma_unmap_single((&pdata->pdev->dev),
+					 ptx_swcx_desc->dma,
+					 ALIGN_SIZE(ptx_swcx_desc->len),
 					 DMA_TO_DEVICE);
 
-		buffer->dma = 0;
-		buffer->len = 0;
+		ptx_swcx_desc->dma = 0;
+		ptx_swcx_desc->len = 0;
 	}
 
-	if (buffer->skb != NULL) {
-		dev_kfree_skb_any(buffer->skb);
-		buffer->skb = NULL;
+	if (ptx_swcx_desc->skb != NULL) {
+		dev_kfree_skb_any(ptx_swcx_desc->skb);
+		ptx_swcx_desc->skb = NULL;
 	}
 
 	DBGPR("<--eqos_unmap_tx_skb\n");
@@ -1030,31 +1035,31 @@ static void eqos_unmap_tx_skb(struct eqos_prv_data *pdata,
  */
 
 static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
-				     struct eqos_rx_buffer *buffer)
+				     struct rx_swcx_desc *prx_swcx_desc)
 {
 	DBGPR("-->eqos_unmap_rx_skb\n");
 
 	/* unmap the first buffer */
-	if (buffer->dma) {
+	if (prx_swcx_desc->dma) {
 		if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
-			dma_unmap_page(&pdata->pdev->dev, buffer->dma,
+			dma_unmap_page(&pdata->pdev->dev, prx_swcx_desc->dma,
 				       PAGE_SIZE, DMA_FROM_DEVICE);
 		} else {
-			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
+			dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
 					 ALIGN_SIZE(pdata->rx_buffer_len),
 					 DMA_FROM_DEVICE);
 		}
-		buffer->dma = 0;
+		prx_swcx_desc->dma = 0;
 	}
 
 	/* page1 will be present only if JUMBO is enabled */
-	if (buffer->page) {
-		put_page(buffer->page);
-		buffer->page = NULL;
+	if (prx_swcx_desc->page) {
+		put_page(prx_swcx_desc->page);
+		prx_swcx_desc->page = NULL;
 	}
-	if (buffer->skb) {
-		dev_kfree_skb_any(buffer->skb);
-		buffer->skb = NULL;
+	if (prx_swcx_desc->skb) {
+		dev_kfree_skb_any(prx_swcx_desc->skb);
+		prx_swcx_desc->skb = NULL;
 	}
 
 	DBGPR("<--eqos_unmap_rx_skb\n");
@@ -1076,34 +1081,34 @@ static void eqos_re_alloc_skb(struct eqos_prv_data *pdata,
 				UINT qinx)
 {
 	int i;
-	struct eqos_rx_wrapper_descriptor *desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
-	struct eqos_rx_buffer *buffer = NULL;
+	struct rx_swcx_desc *prx_swcx_desc = NULL;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	int tail_idx;
 
-	DBGPR("-->eqos_re_alloc_skb: desc_data->skb_realloc_idx = %d "\
-		" qinx = %u\n", desc_data->skb_realloc_idx, qinx);
+	DBGPR("-->%s: prx_ring->skb_realloc_idx = %d qinx=%u\n",
+	      __func__, prx_ring->skb_realloc_idx, qinx);
 
-	for (i = 0; i < desc_data->dirty_rx; i++) {
-		buffer = GET_RX_BUF_PTR(qinx, desc_data->skb_realloc_idx);
+	for (i = 0; i < prx_ring->dirty_rx; i++) {
+		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->skb_realloc_idx);
 		/* allocate skb & assign to each desc */
-		if (pdata->alloc_rx_buf(pdata, buffer, GFP_ATOMIC)) {
+		if (pdata->alloc_rx_buf(pdata, prx_swcx_desc, GFP_ATOMIC)) {
 			pr_err("Failed to re allocate skb\n");
 			pdata->xstats.q_re_alloc_rx_buf_failed[qinx]++;
 			break;
 		}
 
 		wmb();
-		hw_if->rx_desc_reset(desc_data->skb_realloc_idx, pdata,
-				     buffer->inte, qinx);
-		INCR_RX_DESC_INDEX(desc_data->skb_realloc_idx, 1);
+		hw_if->rx_desc_reset(prx_ring->skb_realloc_idx, pdata,
+				     prx_swcx_desc->inte, qinx);
+		INCR_RX_DESC_INDEX(prx_ring->skb_realloc_idx, 1);
 	}
-	tail_idx = desc_data->skb_realloc_idx;
+	tail_idx = prx_ring->skb_realloc_idx;
 	DECR_RX_DESC_INDEX(tail_idx);
 	hw_if->update_rx_tail_ptr(qinx,
 		GET_RX_DESC_DMA_ADDR(qinx, tail_idx));
-	desc_data->dirty_rx = 0;
+	prx_ring->dirty_rx = 0;
 
 	DBGPR("<--eqos_re_alloc_skb\n");
 

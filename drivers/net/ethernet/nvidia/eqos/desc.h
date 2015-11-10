@@ -71,10 +71,10 @@ static void eqos_rx_free_mem(struct eqos_prv_data *);
 static unsigned int eqos_map_skb(struct net_device *, struct sk_buff *);
 
 static void eqos_unmap_tx_skb(struct eqos_prv_data *,
-				     struct eqos_tx_buffer *);
+				     struct tx_swcx_desc *);
 
 static void eqos_unmap_rx_skb(struct eqos_prv_data *,
-				     struct eqos_rx_buffer *);
+				     struct rx_swcx_desc *);
 
 static void eqos_re_alloc_skb(struct eqos_prv_data *pdata,
 					UINT qinx);

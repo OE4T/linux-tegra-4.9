@@ -106,7 +106,8 @@ static int dsi_s_e3320_i2c_configure(struct i2c_client *client, u8 data[][2],
 	u32 cnt;
 	int err = 0;
 
-	i2c_msg_xfer = kzalloc(num_of_xfers * sizeof(i2c_msg_xfer), GFP_KERNEL);
+	i2c_msg_xfer = kzalloc(num_of_xfers * sizeof(*i2c_msg_xfer),
+		GFP_KERNEL);
 	if (!i2c_msg_xfer)
 		return -ENOMEM;
 

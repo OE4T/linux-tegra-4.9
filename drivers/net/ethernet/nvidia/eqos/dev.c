@@ -1089,7 +1089,7 @@ static UINT get_rx_tstamp_status(t_rx_context_desc *rxdesc)
 * \retval -1 Failure
 */
 
-static UINT rx_tstamp_available(t_rx_normal_desc *rxdesc)
+static UINT rx_tstamp_available(t_rx_desc *rxdesc)
 {
 	UINT rs1v;
 	UINT tsa;
@@ -1165,7 +1165,7 @@ static UINT get_tx_tstamp_status_via_reg(void)
 * \retval ns
 */
 
-static ULONG_LONG get_tx_tstamp(t_tx_normal_desc *txdesc)
+static ULONG_LONG get_tx_tstamp(t_tx_desc *txdesc)
 {
 	ULONG_LONG ns;
 	ULONG vartdes1;
@@ -1187,7 +1187,7 @@ static ULONG_LONG get_tx_tstamp(t_tx_normal_desc *txdesc)
 * \retval -1 Failure
 */
 
-static UINT get_tx_tstamp_status(t_tx_normal_desc *txdesc)
+static UINT get_tx_tstamp_status(t_tx_desc *txdesc)
 {
 	UINT tdes3;
 
@@ -1626,11 +1626,11 @@ static VOID config_ptp_channel(UINT ptp_ch_id, UINT addr_index)
 	DBGPR_FILTER("<--config_ptp_channel\n");
 }
 
-static VOID configure_reg_vlan_control(struct eqos_tx_wrapper_descriptor
-				       *desc_data)
+static VOID configure_reg_vlan_control(struct tx_ring
+				       *ptx_ring)
 {
-	USHORT vlan_id = desc_data->vlan_tag_id;
-	UINT vlan_control = desc_data->tx_vlan_tag_ctrl;
+	USHORT vlan_id = ptx_ring->vlan_tag_id;
+	UINT vlan_control = ptx_ring->tx_vlan_tag_ctrl;
 
 	MAC_VLANTIRR_WR(((1 << 18) | (vlan_control << 16) | (vlan_id << 0)));
 }
@@ -2111,12 +2111,12 @@ static INT start_dma_rx(UINT qinx)
 
 static INT stop_dma_tx(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_tx_wrapper_descriptor *ptxdwr = GET_TX_WRAPPER_DESC(qinx);
+	struct tx_ring *ptxdwr = GET_TX_WRAPPER_DESC(qinx);
 
 	int start_idx = ptxdwr->dirty_tx;
 	int end_idx = ptxdwr->cur_tx;
 	uint own, fd, idx, cnt;
-	t_tx_normal_desc *ptxd;
+	t_tx_desc *ptxd;
 
 	/* find desc hw is working on */
 	idx = start_idx;
@@ -2634,7 +2634,7 @@ static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
 * \retval -1 Failure
 */
 
-static INT tx_fifo_underrun(t_tx_normal_desc *txdesc)
+static INT tx_fifo_underrun(t_tx_desc *txdesc)
 {
 	UINT tdes3;
 
@@ -2656,7 +2656,7 @@ static INT tx_fifo_underrun(t_tx_normal_desc *txdesc)
 * \retval -1 Failure
 */
 
-static INT tx_carrier_lost_error(t_tx_normal_desc *txdesc)
+static INT tx_carrier_lost_error(t_tx_desc *txdesc)
 {
 	UINT tdes3;
 
@@ -2678,7 +2678,7 @@ static INT tx_carrier_lost_error(t_tx_normal_desc *txdesc)
 * \retval -1 Failure
 */
 
-static INT tx_aborted_error(t_tx_normal_desc *txdesc)
+static INT tx_aborted_error(t_tx_desc *txdesc)
 {
 	UINT tdes3;
 
@@ -2700,7 +2700,7 @@ static INT tx_aborted_error(t_tx_normal_desc *txdesc)
 * \retval -1 Failure
 */
 
-static INT tx_complete(t_tx_normal_desc *txdesc)
+static INT tx_complete(t_tx_desc *txdesc)
 {
 	UINT own;
 
@@ -2775,18 +2775,18 @@ static INT enable_rx_csum(void)
 
 static INT tx_descriptor_reset(UINT idx, struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct s_tx_normal_desc *tx_normal_desc = GET_TX_DESC_PTR(qinx, idx);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx, idx);
 
 	DBGPR("-->tx_descriptor_reset\n");
 
 	/* update buffer 1 address pointer to zero */
-	TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, 0);
+	TX_NORMAL_DESC_TDES0_WR(ptx_desc->tdes0, 0);
 	/* update buffer 2 address pointer to zero */
-	TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, 0);
+	TX_NORMAL_DESC_TDES1_WR(ptx_desc->tdes1, 0);
 	/* set all other control bits (IC, TTSE, B2L & B1L) to zero */
-	TX_NORMAL_DESC_TDES2_WR(tx_normal_desc->tdes2, 0);
+	TX_NORMAL_DESC_TDES2_WR(ptx_desc->tdes2, 0);
 	/* set all other control bits (OWN, CTXT, FD, LD, CPC, CIC etc) to zero */
-	TX_NORMAL_DESC_TDES3_WR(tx_normal_desc->tdes3, 0);
+	TX_NORMAL_DESC_TDES3_WR(ptx_desc->tdes3, 0);
 
 	DBGPR("<--tx_descriptor_reset\n");
 
@@ -2804,27 +2804,27 @@ static void rx_descriptor_reset(UINT idx,
 				struct eqos_prv_data *pdata,
 				unsigned int inte, UINT qinx)
 {
-	struct eqos_rx_buffer *buffer = GET_RX_BUF_PTR(qinx, idx);
-	struct s_rx_normal_desc *rx_normal_desc = GET_RX_DESC_PTR(qinx, idx);
+	struct rx_swcx_desc *prx_swcx_desc = GET_RX_BUF_PTR(qinx, idx);
+	struct s_rx_desc *prx_desc = GET_RX_DESC_PTR(qinx, idx);
 
 	DBGPR("-->rx_descriptor_reset\n");
 
-	memset(rx_normal_desc, 0, sizeof(struct s_rx_normal_desc));
+	memset(prx_desc, 0, sizeof(struct s_rx_desc));
 	/* update buffer 1 address pointer */
-	RX_NORMAL_DESC_RDES0_WR(rx_normal_desc->rdes0, L32(buffer->dma));
-	RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1, H32(buffer->dma));
+	RX_NORMAL_DESC_RDES0_WR(prx_desc->rdes0, L32(prx_swcx_desc->dma));
+	RX_NORMAL_DESC_RDES1_WR(prx_desc->rdes1, H32(prx_swcx_desc->dma));
 
 	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
 		/* update buffer 2 address pointer */
-		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
+		RX_NORMAL_DESC_RDES2_WR(prx_desc->rdes2, 0);
 		/* set control bits - OWN, INTE, BUF1V and BUF2V */
-		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
+		RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3,
 					(0x83000000 | inte));
 	} else {
 		/* set buffer 2 address pointer to zero */
-		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
+		RX_NORMAL_DESC_RDES2_WR(prx_desc->rdes2, 0);
 		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
+		RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3,
 					(0x81000000 | inte));
 	}
 
@@ -2838,14 +2838,14 @@ static void rx_descriptor_reset(UINT idx,
 
 static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
-	struct eqos_rx_buffer *buffer =
-	    GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
-	struct s_rx_normal_desc *rx_normal_desc =
-	    GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
+	struct rx_swcx_desc *prx_swcx_desc =
+	    GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
+	struct s_rx_desc *prx_desc =
+	    GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
 	INT i;
-	INT start_index = rx_desc_data->cur_rx;
+	INT start_index = prx_ring->cur_rx;
 	INT last_index;
 
 	DBGPR("-->rx_descriptor_init\n");
@@ -2853,37 +2853,37 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	/* initialize all desc */
 
 	for (i = 0; i < RX_DESC_CNT; i++) {
-		memset(rx_normal_desc, 0, sizeof(struct s_rx_normal_desc));
+		memset(prx_desc, 0, sizeof(struct s_rx_desc));
 		/* update buffer 1 address pointer */
-		RX_NORMAL_DESC_RDES0_WR(rx_normal_desc->rdes0,
-					(L32(buffer->dma)));
+		RX_NORMAL_DESC_RDES0_WR(prx_desc->rdes0,
+					(L32(prx_swcx_desc->dma)));
 		/* set to zero  */
-		RX_NORMAL_DESC_RDES1_WR(rx_normal_desc->rdes1,
-					(H32(buffer->dma)));
+		RX_NORMAL_DESC_RDES1_WR(prx_desc->rdes1,
+					(H32(prx_swcx_desc->dma)));
 
 		/* set buffer 2 address pointer to zero */
-		RX_NORMAL_DESC_RDES2_WR(rx_normal_desc->rdes2, 0);
+		RX_NORMAL_DESC_RDES2_WR(prx_desc->rdes2, 0);
 		/* set control bits - OWN, INTE and BUF1V */
-		RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3, 0xc1000000);
+		RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3, 0xc1000000);
 
-		buffer->inte = (1 << 30);
+		prx_swcx_desc->inte = (1 << 30);
 
 		/* reconfigure INTE bit if RX watchdog timer is enabled */
-		if (rx_desc_data->use_riwt) {
-			if ((i % rx_desc_data->rx_coal_frames) != 0) {
+		if (prx_ring->use_riwt) {
+			if ((i % prx_ring->rx_coal_frames) != 0) {
 				UINT rdes3 = 0;
-				RX_NORMAL_DESC_RDES3_RD(rx_normal_desc->rdes3,
+				RX_NORMAL_DESC_RDES3_RD(prx_desc->rdes3,
 							rdes3);
 				/* reset INTE */
-				RX_NORMAL_DESC_RDES3_WR(rx_normal_desc->rdes3,
+				RX_NORMAL_DESC_RDES3_WR(prx_desc->rdes3,
 							(rdes3 & ~(1 << 30)));
-				buffer->inte = 0;
+				prx_swcx_desc->inte = 0;
 			}
 		}
 
-		INCR_RX_DESC_INDEX(rx_desc_data->cur_rx, 1);
-		rx_normal_desc = GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
-		buffer = GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
+		INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
+		prx_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
+		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
 	}
 	/* update the total no of Rx descriptors count */
 	DMA_RDRLR_WR(qinx, (RX_DESC_CNT - 1));
@@ -2903,12 +2903,12 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 
 static void tx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_tx_wrapper_descriptor *tx_desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
-	struct s_tx_normal_desc *tx_normal_desc =
-	    GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+	struct s_tx_desc *ptx_desc =
+	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	INT i;
-	INT start_index = tx_desc_data->cur_tx;
+	INT start_index = ptx_ring->cur_tx;
 
 	DBGPR("-->tx_descriptor_init\n");
 
@@ -2916,16 +2916,16 @@ static void tx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 
 	for (i = 0; i < TX_DESC_CNT; i++) {
 		/* update buffer 1 address pointer to zero */
-		TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0, 0);
+		TX_NORMAL_DESC_TDES0_WR(ptx_desc->tdes0, 0);
 		/* update buffer 2 address pointer to zero */
-		TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1, 0);
+		TX_NORMAL_DESC_TDES1_WR(ptx_desc->tdes1, 0);
 		/* set all other control bits (IC, TTSE, B2L & B1L) to zero */
-		TX_NORMAL_DESC_TDES2_WR(tx_normal_desc->tdes2, 0);
+		TX_NORMAL_DESC_TDES2_WR(ptx_desc->tdes2, 0);
 		/* set all other control bits (OWN, CTXT, FD, LD, CPC, CIC etc) to zero */
-		TX_NORMAL_DESC_TDES3_WR(tx_normal_desc->tdes3, 0);
+		TX_NORMAL_DESC_TDES3_WR(ptx_desc->tdes3, 0);
 
-		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	}
 	/* update the total no of Tx descriptors count */
 	DMA_TDRLR_WR(qinx, (TX_DESC_CNT - 1));
@@ -2944,22 +2944,22 @@ static void tx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 
 static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_tx_wrapper_descriptor *tx_desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
-	struct eqos_tx_buffer *buffer =
-	    GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
-	struct s_tx_normal_desc *tx_normal_desc =
-	    GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+	struct tx_swcx_desc *ptx_swcx_desc =
+	    GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+	struct s_tx_desc *ptx_desc =
+	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	struct s_tx_context_desc *TX_CONTEXT_DESC =
-	    GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
+	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	UINT varcsum_enable;
 #ifdef EQOS_ENABLE_VLAN_TAG
 	UINT varvlan_pkt;
 	UINT varvt;
 #endif
 	INT i;
-	INT start_index = tx_desc_data->cur_tx;
-	INT last_index, original_start_index = tx_desc_data->cur_tx;
+	INT start_index = ptx_ring->cur_tx;
+	INT last_index, original_start_index = ptx_ring->cur_tx;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
@@ -2983,11 +2983,11 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 
-		original_start_index = tx_desc_data->cur_tx;
-		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		start_index = tx_desc_data->cur_tx;
-		tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
+		original_start_index = ptx_ring->cur_tx;
+		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+		start_index = ptx_ring->cur_tx;
+		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
 	}
 #endif				/* EQOS_ENABLE_VLAN_TAG */
 
@@ -2995,8 +2995,8 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(tx_pkt_features->
 						     pkt_attributes,
 						     vartso_enable);
-	if (vartso_enable
-	    && (tx_pkt_features->mss != tx_desc_data->default_mss)) {
+	if (vartso_enable &&
+	    (tx_pkt_features->mss != ptx_ring->default_mss)) {
 		/* get MSS and update */
 		TX_PKT_FEATURES_MSS_MSS_RD(tx_pkt_features->mss, varmss);
 		TX_CONTEXT_DESC_TDES2_MSS_WR(TX_CONTEXT_DESC->tdes2, varmss);
@@ -3009,75 +3009,75 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		 * doesn't provided the CONTEXT descriptor */
 		DMA_CR_MSS_WR(qinx, tx_pkt_features->mss);
 
-		tx_desc_data->default_mss = tx_pkt_features->mss;
+		ptx_ring->default_mss = tx_pkt_features->mss;
 
-		original_start_index = tx_desc_data->cur_tx;
-		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		start_index = tx_desc_data->cur_tx;
-		tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
+		original_start_index = ptx_ring->cur_tx;
+		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+		start_index = ptx_ring->cur_tx;
+		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
 	}
 
 	/* update the first buffer pointer and length */
-	TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0,
-				(buffer->dma) & 0xFFFFFFFF);
-	TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1,
-				(((buffer->
+	TX_NORMAL_DESC_TDES0_WR(ptx_desc->tdes0,
+				(ptx_swcx_desc->dma) & 0xFFFFFFFF);
+	TX_NORMAL_DESC_TDES1_WR(ptx_desc->tdes1,
+				(((ptx_swcx_desc->
 				   dma) & 0xFFFFFFFF00000000) >> 32) &
 				0xFFFFFFFF);
-	TX_NORMAL_DESC_TDES2_HL_B1L_WR(tx_normal_desc->tdes2, buffer->len);
+	TX_NORMAL_DESC_TDES2_HL_B1L_WR(ptx_desc->tdes2, ptx_swcx_desc->len);
 
 	if (vartso_enable) {
 		/* update TCP payload length (only for the descriptor with FD set) */
 		TX_PKT_FEATURES_PAY_LEN_RD(tx_pkt_features->pay_len,
 					   varpay_len);
 		/* tdes3[17:0] will be TCP payload length */
-		tx_normal_desc->tdes3 |= varpay_len;
+		ptx_desc->tdes3 |= varpay_len;
 	} else {
 		/* update total length of packet */
-		GET_TX_TOT_LEN(GET_TX_BUF_PTR(qinx, 0), tx_desc_data->cur_tx,
+		GET_TX_TOT_LEN(GET_TX_BUF_PTR(qinx, 0), ptx_ring->cur_tx,
 			       GET_CURRENT_XFER_DESC_CNT(qinx), total_len);
-		TX_NORMAL_DESC_TDES3_FL_WR(tx_normal_desc->tdes3, total_len);
+		TX_NORMAL_DESC_TDES3_FL_WR(ptx_desc->tdes3, total_len);
 	}
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	/* Insert a VLAN tag with a tag value programmed in MAC Reg 24 or
 	 * CONTEXT descriptor
 	 * */
-	if (tx_desc_data->vlan_tag_present
-	    && Y_FALSE == tx_desc_data->tx_vlan_tag_via_reg) {
-		TX_NORMAL_DESC_TDES2_VTIR_WR(tx_normal_desc->tdes2,
-					     tx_desc_data->tx_vlan_tag_ctrl);
+	if (ptx_ring->vlan_tag_present &&
+	    Y_FALSE == ptx_ring->tx_vlan_tag_via_reg) {
+		TX_NORMAL_DESC_TDES2_VTIR_WR(ptx_desc->tdes2,
+					     ptx_ring->tx_vlan_tag_ctrl);
 	}
 #endif				/* EQOS_ENABLE_VLAN_TAG */
 
 	/* Mark it as First Descriptor */
-	TX_NORMAL_DESC_TDES3_FD_WR(tx_normal_desc->tdes3, 0x1);
+	TX_NORMAL_DESC_TDES3_FD_WR(ptx_desc->tdes3, 0x1);
 	/* Enable CRC and Pad Insertion (NOTE: set this only
 	 * for FIRST descriptor) */
-	TX_NORMAL_DESC_TDES3_CPC_WR(tx_normal_desc->tdes3, 0);
+	TX_NORMAL_DESC_TDES3_CPC_WR(ptx_desc->tdes3, 0);
 	/* Mark it as NORMAL descriptor */
-	TX_NORMAL_DESC_TDES3_CTXT_WR(tx_normal_desc->tdes3, 0);
+	TX_NORMAL_DESC_TDES3_CTXT_WR(ptx_desc->tdes3, 0);
 	/* Enable HW CSUM */
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_ENABLE_RD(tx_pkt_features->
 						      pkt_attributes,
 						      varcsum_enable);
 	if (varcsum_enable == 0x1) {
-		TX_NORMAL_DESC_TDES3_CIC_WR(tx_normal_desc->tdes3, 0x3);
+		TX_NORMAL_DESC_TDES3_CIC_WR(ptx_desc->tdes3, 0x3);
 	}
 	/* configure SA Insertion Control */
-	TX_NORMAL_DESC_TDES3_SAIC_WR(tx_normal_desc->tdes3,
+	TX_NORMAL_DESC_TDES3_SAIC_WR(ptx_desc->tdes3,
 				     pdata->tx_sa_ctrl_via_desc);
 	if (vartso_enable) {
 		/* set TSE bit */
-		TX_NORMAL_DESC_TDES3_TSE_WR(tx_normal_desc->tdes3, 0x1);
+		TX_NORMAL_DESC_TDES3_TSE_WR(ptx_desc->tdes3, 0x1);
 
 		/* update tcp data offset or tcp hdr len */
 		TX_PKT_FEATURES_TCP_HDR_LEN_RD(tx_pkt_features->tcp_hdr_len,
 					       vartcp_hdr_len);
 		/* convert to bit value */
 		vartcp_hdr_len = vartcp_hdr_len / 4;
-		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(tx_normal_desc->tdes3,
+		TX_NORMAL_DESC_TDES3_SLOTNUM_TCPHDRLEN_WR(ptx_desc->tdes3,
 							  vartcp_hdr_len);
 	}
 
@@ -3086,49 +3086,49 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 						     pkt_attributes,
 						     varptp_enable);
 	if (varptp_enable) {
-		TX_NORMAL_DESC_TDES2_TTSE_WR(tx_normal_desc->tdes2, 0x1);
+		TX_NORMAL_DESC_TDES2_TTSE_WR(ptx_desc->tdes2, 0x1);
 	}
 
-	INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-	tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
-	buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
+	INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+	ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+	ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
 
 	for (i = 1; i < GET_CURRENT_XFER_DESC_CNT(qinx); i++) {
 		/* update the first buffer pointer and length */
-		TX_NORMAL_DESC_TDES0_WR(tx_normal_desc->tdes0,
-					(buffer->dma) & 0xFFFFFFFF);
-		TX_NORMAL_DESC_TDES1_WR(tx_normal_desc->tdes1,
-					(((buffer->
+		TX_NORMAL_DESC_TDES0_WR(ptx_desc->tdes0,
+					(ptx_swcx_desc->dma) & 0xFFFFFFFF);
+		TX_NORMAL_DESC_TDES1_WR(ptx_desc->tdes1,
+					(((ptx_swcx_desc->
 					   dma) & 0xFFFFFFFF00000000) >> 32) &
 					0xFFFFFFFF);
-		TX_NORMAL_DESC_TDES2_HL_B1L_WR(tx_normal_desc->tdes2,
-					       buffer->len);
+		TX_NORMAL_DESC_TDES2_HL_B1L_WR(ptx_desc->tdes2,
+					       ptx_swcx_desc->len);
 
 		/* set own bit */
-		TX_NORMAL_DESC_TDES3_OWN_WR(tx_normal_desc->tdes3, 0x1);
+		TX_NORMAL_DESC_TDES3_OWN_WR(ptx_desc->tdes3, 0x1);
 		/* Mark it as NORMAL descriptor */
-		TX_NORMAL_DESC_TDES3_CTXT_WR(tx_normal_desc->tdes3, 0);
+		TX_NORMAL_DESC_TDES3_CTXT_WR(ptx_desc->tdes3, 0);
 
-		INCR_TX_DESC_INDEX(tx_desc_data->cur_tx, 1);
-		tx_normal_desc = GET_TX_DESC_PTR(qinx, tx_desc_data->cur_tx);
-		buffer = GET_TX_BUF_PTR(qinx, tx_desc_data->cur_tx);
+		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
 	}
 	/* Mark it as LAST descriptor */
 	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 0);
-	tx_normal_desc = GET_TX_DESC_PTR(qinx, last_index);
-	TX_NORMAL_DESC_TDES3_LD_WR(tx_normal_desc->tdes3, 0x1);
+	ptx_desc = GET_TX_DESC_PTR(qinx, last_index);
+	TX_NORMAL_DESC_TDES3_LD_WR(ptx_desc->tdes3, 0x1);
 
 	/* set Interrupt on Completion for last descriptor */
 	if ((qinx == pdata->ptp_cfg.ptp_dma_ch_id) ||
-	    !(tx_desc_data->tx_pkt_queued % (TX_DESC_CNT >> 3)))
-		TX_NORMAL_DESC_TDES2_IC_WR(tx_normal_desc->tdes2, 0x1);
+	    !(ptx_ring->tx_pkt_queued % (TX_DESC_CNT >> 3)))
+		TX_NORMAL_DESC_TDES2_IC_WR(ptx_desc->tdes2, 0x1);
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
-	tx_normal_desc = GET_TX_DESC_PTR(qinx, start_index);
-	TX_NORMAL_DESC_TDES3_OWN_WR(tx_normal_desc->tdes3, 0x1);
+	ptx_desc = GET_TX_DESC_PTR(qinx, start_index);
+	TX_NORMAL_DESC_TDES3_OWN_WR(ptx_desc->tdes3, 0x1);
 
 #ifdef EQOS_ENABLE_TX_DESC_DUMP
-	dump_tx_desc(pdata, original_start_index, (tx_desc_data->cur_tx - 1),
+	dump_tx_desc(pdata, original_start_index, (ptx_ring->cur_tx - 1),
 		     1, qinx);
 #endif
 
@@ -3154,14 +3154,14 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 
 static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
-	struct s_rx_normal_desc *rx_normal_desc =
-	    GET_RX_DESC_PTR(qinx, rx_desc_data->cur_rx);
+	struct s_rx_desc *prx_desc =
+	    GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
 	UINT own;
 	UINT es;
-	struct eqos_rx_buffer *buffer =
-	    GET_RX_BUF_PTR(qinx, rx_desc_data->cur_rx);
+	struct rx_swcx_desc *prx_swcx_desc =
+	    GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
 	UINT rs1v;
 	UINT ippe;
 	UINT ipcb;
@@ -3179,27 +3179,27 @@ static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 	UINT re;
 	UINT ld;
 
-	DBGPR("-->device_read: cur_rx = %d\n", rx_desc_data->cur_rx);
+	DBGPR("-->device_read: cur_rx = %d\n", prx_ring->cur_rx);
 
 	/* check for data availability */
-	RX_NORMAL_DESC_RDES3_OWN_RD(rx_normal_desc->rdes3, own);
+	RX_NORMAL_DESC_RDES3_OWN_RD(prx_desc->rdes3, own);
 	if (own == 0) {
 		/* check whether it is good packet or bad packet */
-		RX_NORMAL_DESC_RDES3_ES_RD(rx_normal_desc->rdes3, es);
-		RX_NORMAL_DESC_RDES3_LD_RD(rx_normal_desc->rdes3, ld);
+		RX_NORMAL_DESC_RDES3_ES_RD(prx_desc->rdes3, es);
+		RX_NORMAL_DESC_RDES3_LD_RD(prx_desc->rdes3, ld);
 		if ((es == 0) && (ld == 1)) {
 			/* get the packet length */
-			RX_NORMAL_DESC_RDES3_FL_RD(rx_normal_desc->rdes3,
-						   buffer->len);
-			RX_NORMAL_DESC_RDES3_RS1V_RD(rx_normal_desc->rdes3,
+			RX_NORMAL_DESC_RDES3_FL_RD(prx_desc->rdes3,
+						   prx_swcx_desc->len);
+			RX_NORMAL_DESC_RDES3_RS1V_RD(prx_desc->rdes3,
 						     rs1v);
 			if (rs1v == 0x1) {
 				/* check whether device has done csum correctly or not */
-				RX_NORMAL_DESC_RDES1_IPPE_RD(rx_normal_desc->
+				RX_NORMAL_DESC_RDES1_IPPE_RD(prx_desc->
 							     rdes1, ippe);
-				RX_NORMAL_DESC_RDES1_IPCB_RD(rx_normal_desc->
+				RX_NORMAL_DESC_RDES1_IPCB_RD(prx_desc->
 							     rdes1, ipcb);
-				RX_NORMAL_DESC_RDES1_IPHE_RD(rx_normal_desc->
+				RX_NORMAL_DESC_RDES1_IPHE_RD(prx_desc->
 							     rdes1, iphe);
 				if ((ippe == 0) && (ipcb == 0) && (iphe == 0)) {
 					/* IPC Checksum done */
@@ -3209,18 +3209,18 @@ static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 				}
 			}
 #ifdef EQOS_ENABLE_VLAN_TAG
-			RX_NORMAL_DESC_RDES3_RS0V_RD(rx_normal_desc->rdes3,
+			RX_NORMAL_DESC_RDES3_RS0V_RD(prx_desc->rdes3,
 						     rs0v);
 			if (rs0v == 0x1) {
 				/*  device received frame with VLAN Tag or double VLAN Tag ? */
-				RX_NORMAL_DESC_RDES3_LT_RD(rx_normal_desc->
+				RX_NORMAL_DESC_RDES3_LT_RD(prx_desc->
 							   rdes3, lt);
 				if ((lt == 0x4) || (lt == 0x5)) {
 					RX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
 					    (rx_pkt_features->pkt_attributes,
 					     0x1);
 					/* get the VLAN Tag */
-					RX_NORMAL_DESC_RDES0_RD(rx_normal_desc->
+					RX_NORMAL_DESC_RDES0_RD(prx_desc->
 								rdes0, rdes0);
 					RX_PKT_FEATURES_VLAN_TAG_VT_WR
 					    (rx_pkt_features->vlan_tag,
@@ -3230,26 +3230,26 @@ static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 #endif
 		} else {
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, rx_normal_desc,
-				     rx_desc_data->cur_rx);
+			dump_rx_desc(qinx, prx_desc,
+				     prx_ring->cur_rx);
 #endif
 			/* not a good packet, hence check for appropriate errors. */
-			RX_NORMAL_DESC_RDES3_OE_RD(rx_normal_desc->rdes3, oe);
+			RX_NORMAL_DESC_RDES3_OE_RD(prx_desc->rdes3, oe);
 			if (oe == 1) {
 				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR
 				    (rx_error_counters->rx_errors, 1);
 			}
-			RX_NORMAL_DESC_RDES3_CE_RD(rx_normal_desc->rdes3, ce);
+			RX_NORMAL_DESC_RDES3_CE_RD(prx_desc->rdes3, ce);
 			if (ce == 1) {
 				RX_ERROR_COUNTERS_RX_ERRORS_CRC_ERROR_WR
 				    (rx_error_counters->rx_errors, 1);
 			}
-			RX_NORMAL_DESC_RDES3_RE_RD(rx_normal_desc->rdes3, re);
+			RX_NORMAL_DESC_RDES3_RE_RD(prx_desc->rdes3, re);
 			if (re == 1) {
 				RX_ERROR_COUNTERS_RX_ERRORS_FRAME_ERROR_WR
 				    (rx_error_counters->rx_errors, 1);
 			}
-			RX_NORMAL_DESC_RDES3_LD_RD(rx_normal_desc->rdes3, ld);
+			RX_NORMAL_DESC_RDES3_LD_RD(prx_desc->rdes3, ld);
 			if (re == 0) {
 				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR
 				    (rx_error_counters->rx_errors, 1);
@@ -3257,7 +3257,7 @@ static void device_read(struct eqos_prv_data *pdata, UINT qinx)
 		}
 	}
 
-	DBGPR("<--device_read: cur_rx = %d\n", rx_desc_data->cur_rx);
+	DBGPR("<--device_read: cur_rx = %d\n", prx_ring->cur_rx);
 }
 
 static void update_rx_tail_ptr(unsigned int qinx, unsigned int dma_addr)
@@ -3274,7 +3274,7 @@ static void update_rx_tail_ptr(unsigned int qinx, unsigned int dma_addr)
 * \retval -1 Failure
 */
 
-static INT get_tx_descriptor_ctxt(t_tx_normal_desc *txdesc)
+static INT get_tx_descriptor_ctxt(t_tx_desc *txdesc)
 {
 	ULONG ctxt;
 
@@ -3296,7 +3296,7 @@ static INT get_tx_descriptor_ctxt(t_tx_normal_desc *txdesc)
 * \retval -1 Failure
 */
 
-static INT get_tx_descriptor_last(t_tx_normal_desc *txdesc)
+static INT get_tx_descriptor_last(t_tx_desc *txdesc)
 {
 	ULONG ld;
 
@@ -3719,7 +3719,7 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 
 static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 {
-	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 	ULONG p_fifo, pbl;
 
@@ -3744,11 +3744,10 @@ static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 		break;
 	}
 	/* program RX watchdog timer */
-	if (rx_desc_data->use_riwt) {
-		DMA_RIWTR_RWT_WR(qinx, rx_desc_data->rx_riwt);
-	} else {
+	if (prx_ring->use_riwt)
+		DMA_RIWTR_RWT_WR(qinx, prx_ring->rx_riwt);
+	else
 		DMA_RIWTR_RWT_WR(qinx, 0);
-	}
 
 	enable_dma_interrupts(qinx, pdata);
 	/* set PBLX8 */

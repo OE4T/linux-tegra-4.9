@@ -102,7 +102,7 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data
 
 
 static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
-				    struct eqos_rx_buffer *buffer,
+				    struct rx_swcx_desc *buffer,
 				    gfp_t gfp);
 
 static void eqos_default_common_confs(struct eqos_prv_data

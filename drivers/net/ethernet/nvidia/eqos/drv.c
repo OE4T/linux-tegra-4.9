@@ -134,7 +134,7 @@ static void check_channel_data(struct sk_buff *skb, unsigned int qinx,
 		((*(((short *)skb->data) + 6) & 0xFFFF) == 0xF022) &&
 		((*(((char *)skb->data) + 80) & 0xFF) != 0xdd))) {
 			while (1)
-		printk(KERN_ALERT "Incorrect %s data 0x%x in Q %d\n",
+		pr_err("Incorrect %s data 0x%x in Q %d\n",
 		((is_rx) ? "RX" : "TX"), *(((char *)skb->data) + 80), qinx);
 	}
 }
@@ -1002,9 +1002,9 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
  */
 
 static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
-			     struct eqos_rx_buffer *buffer, gfp_t gfp)
+			     struct rx_swcx_desc *prx_swcx_desc, gfp_t gfp)
 {
-	struct sk_buff *skb = buffer->skb;
+	struct sk_buff *skb = prx_swcx_desc->skb;
 
 	DBGPR("-->eqos_alloc_rx_buf\n");
 
@@ -1019,17 +1019,17 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 		pr_err("Failed to allocate skb\n");
 		return -ENOMEM;
 	}
-	buffer->skb = skb;
-	buffer->len = pdata->rx_buffer_len;
+	prx_swcx_desc->skb = skb;
+	prx_swcx_desc->len = pdata->rx_buffer_len;
  map_skb:
-	buffer->dma = dma_map_single(&pdata->pdev->dev, skb->data,
+	prx_swcx_desc->dma = dma_map_single(&pdata->pdev->dev, skb->data,
 				     ALIGN_SIZE(pdata->rx_buffer_len),
 				     DMA_FROM_DEVICE);
 
-	if (dma_mapping_error(&pdata->pdev->dev, buffer->dma))
+	if (dma_mapping_error(&pdata->pdev->dev, prx_swcx_desc->dma))
 		pr_err("failed to do the RX dma map\n");
 
-	buffer->mapped_as_page = Y_FALSE;
+	prx_swcx_desc->mapped_as_page = Y_FALSE;
 
 	DBGPR("<--eqos_alloc_rx_buf\n");
 
@@ -1110,22 +1110,22 @@ static void eqos_default_tx_confs_single_q(struct eqos_prv_data *pdata,
 					   UINT qinx)
 {
 	struct eqos_tx_queue *queue_data = GET_TX_QUEUE_PTR(qinx);
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 
 	DBGPR("-->eqos_default_tx_confs_single_q\n");
 
 	queue_data->q_op_mode = q_op_mode[qinx];
 
-	desc_data->tx_threshold_val = EQOS_TX_THRESHOLD_32;
-	desc_data->tsf_on = EQOS_TSF_ENABLE;
-	desc_data->osf_on = EQOS_OSF_ENABLE;
-	desc_data->tx_pbl = EQOS_PBL_16;
-	desc_data->tx_vlan_tag_via_reg = Y_FALSE;
-	desc_data->tx_vlan_tag_ctrl = EQOS_TX_VLAN_TAG_INSERT;
-	desc_data->vlan_tag_present = 0;
-	desc_data->context_setup = 0;
-	desc_data->default_mss = 0;
+	ptx_ring->tx_threshold_val = EQOS_TX_THRESHOLD_32;
+	ptx_ring->tsf_on = EQOS_TSF_ENABLE;
+	ptx_ring->osf_on = EQOS_OSF_ENABLE;
+	ptx_ring->tx_pbl = EQOS_PBL_16;
+	ptx_ring->tx_vlan_tag_via_reg = Y_FALSE;
+	ptx_ring->tx_vlan_tag_ctrl = EQOS_TX_VLAN_TAG_INSERT;
+	ptx_ring->vlan_tag_present = 0;
+	ptx_ring->context_setup = 0;
+	ptx_ring->default_mss = 0;
 
 	DBGPR("<--eqos_default_tx_confs_single_q\n");
 }
@@ -1145,16 +1145,16 @@ static void eqos_default_tx_confs_single_q(struct eqos_prv_data *pdata,
 static void eqos_default_rx_confs_single_q(struct eqos_prv_data *pdata,
 					   UINT qinx)
 {
-	struct eqos_rx_wrapper_descriptor *desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 
 	DBGPR("-->eqos_default_rx_confs_single_q\n");
 
-	desc_data->rx_threshold_val = EQOS_RX_THRESHOLD_64;
-	desc_data->rsf_on = EQOS_RSF_DISABLE;
-	desc_data->rx_pbl = EQOS_PBL_16;
-	desc_data->rx_outer_vlan_strip = EQOS_RX_VLAN_STRIP_ALWAYS;
-	desc_data->rx_inner_vlan_strip = EQOS_RX_VLAN_STRIP_ALWAYS;
+	prx_ring->rx_threshold_val = EQOS_RX_THRESHOLD_64;
+	prx_ring->rsf_on = EQOS_RSF_DISABLE;
+	prx_ring->rx_pbl = EQOS_PBL_16;
+	prx_ring->rx_outer_vlan_strip = EQOS_RX_VLAN_STRIP_ALWAYS;
+	prx_ring->rx_inner_vlan_strip = EQOS_RX_VLAN_STRIP_ALWAYS;
 
 	DBGPR("<--eqos_default_rx_confs_single_q\n");
 }
@@ -1802,7 +1802,7 @@ UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
 #ifdef EQOS_ENABLE_VLAN_TAG
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 #endif
 
@@ -1822,18 +1822,18 @@ UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
 		count++;
 
 #ifdef EQOS_ENABLE_VLAN_TAG
-	desc_data->vlan_tag_present = 0;
+	ptx_ring->vlan_tag_present = 0;
 	if (vlan_tx_tag_present(skb)) {
 		USHORT vlan_tag = vlan_tx_tag_get(skb);
 		vlan_tag |= (skb->priority << 13);
-		desc_data->vlan_tag_present = 1;
-		if (vlan_tag != desc_data->vlan_tag_id ||
-		    desc_data->context_setup == 1) {
-			desc_data->vlan_tag_id = vlan_tag;
-			if (Y_TRUE == desc_data->tx_vlan_tag_via_reg) {
+		ptx_ring->vlan_tag_present = 1;
+		if (vlan_tag != ptx_ring->vlan_tag_id ||
+		    ptx_ring->context_setup == 1) {
+			ptx_ring->vlan_tag_id = vlan_tag;
+			if (Y_TRUE == ptx_ring->tx_vlan_tag_via_reg) {
 				pr_err
 				    ("VLAN control info update via register\n\n");
-				hw_if->enable_vlan_reg_control(desc_data);
+				hw_if->enable_vlan_reg_control(ptx_ring);
 			} else {
 				hw_if->enable_vlan_desc_control(pdata);
 				TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
@@ -1870,7 +1870,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	UINT qinx = skb_get_queue_mapping(skb);
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
 	unsigned long flags;
@@ -1886,7 +1886,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	DBGPR("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
 
-	if (desc_data->tx_pkt_queued > (TX_DESC_CNT >> 2))
+	if (ptx_ring->tx_pkt_queued > (TX_DESC_CNT >> 2))
 		eqos_tx_interrupt(pdata->dev, pdata, qinx);
 
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
@@ -1908,8 +1908,8 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	/* check total number of desc required for current xfer */
 	desc_count = eqos_get_total_desc_cnt(pdata, skb, qinx);
-	if (desc_data->free_desc_cnt < desc_count) {
-		desc_data->queue_stopped = 1;
+	if (ptx_ring->free_desc_cnt < desc_count) {
+		ptx_ring->queue_stopped = 1;
 		netif_stop_subqueue(dev, qinx);
 		DBGPR("stopped TX queue(%d) since there are no sufficient "
 		      "descriptor available for the current transfer\n", qinx);
@@ -1926,7 +1926,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 			    (tx_pkt_features->pkt_attributes, 1);
 			DBGPR_PTP
 			    ("Got PTP pkt to transmit [qinx = %d, cur_tx = %d]\n",
-			     qinx, desc_data->cur_tx);
+			     qinx, ptx_ring->cur_tx);
 		}
 	}
 
@@ -1954,9 +1954,9 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		goto tx_netdev_return;
 	}
 
-	desc_data->packet_count = count;
+	ptx_ring->packet_count = count;
 
-	if (tso && (desc_data->default_mss != tx_pkt_features->mss))
+	if (tso && (ptx_ring->default_mss != tx_pkt_features->mss))
 		count++;
 
 	dev->trans_start = jiffies;
@@ -1968,11 +1968,11 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		count++;
 #endif
 
-	desc_data->free_desc_cnt -= count;
-	desc_data->tx_pkt_queued += count;
+	ptx_ring->free_desc_cnt -= count;
+	ptx_ring->tx_pkt_queued += count;
 
 #ifdef EQOS_ENABLE_TX_PKT_DUMP
-	print_pkt(skb, skb->len, 1, (desc_data->cur_tx - 1));
+	print_pkt(skb, skb->len, 1, (ptx_ring->cur_tx - 1));
 #endif
 
 #ifdef ENABLE_CHANNEL_DATA_CHECK
@@ -1999,7 +1999,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	return retval;
 }
 
-static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
+static void eqos_print_rx_tstamp_info(struct s_rx_desc *rxdesc,
 				      unsigned int qinx)
 {
 	u32 ptp_status = 0;
@@ -2090,7 +2090,7 @@ static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
 *
 * \param[in] pdata - pointer to private data structure.
 * \param[in] skb - pointer to sk_buff structure.
-* \param[in] desc_data - pointer to wrapper receive descriptor structure.
+* \param[in] prx_ring - pointer to wrapper receive descriptor structure.
 * \param[in] qinx - Queue/Channel number.
 *
 * \return integer
@@ -2102,11 +2102,11 @@ static void eqos_print_rx_tstamp_info(struct s_rx_normal_desc *rxdesc,
 
 static unsigned char eqos_get_rx_hwtstamp(struct eqos_prv_data *pdata,
 					  struct sk_buff *skb,
-					  struct eqos_rx_wrapper_descriptor
-					  *desc_data, unsigned int qinx)
+					  struct rx_ring
+					  *prx_ring, unsigned int qinx)
 {
-	struct s_rx_normal_desc *rx_normal_desc =
-	    GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+	struct s_rx_desc *prx_desc =
+	    GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
 	struct s_rx_context_desc *rx_context_desc = NULL;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct skb_shared_hwtstamps *shhwtstamp = NULL;
@@ -2115,15 +2115,15 @@ static unsigned char eqos_get_rx_hwtstamp(struct eqos_prv_data *pdata,
 
 	DBGPR_PTP("-->eqos_get_rx_hwtstamp\n");
 
-	eqos_print_rx_tstamp_info(rx_normal_desc, qinx);
+	eqos_print_rx_tstamp_info(prx_desc, qinx);
 
-	desc_data->dirty_rx++;
-	INCR_RX_DESC_INDEX(desc_data->cur_rx, 1);
-	rx_context_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+	prx_ring->dirty_rx++;
+	INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
+	rx_context_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
 
 	DBGPR_PTP("\nRX_CONTEX_DESC[%d %4p %d RECEIVED FROM DEVICE]"
 		  " = %#x:%#x:%#x:%#x",
-		  qinx, rx_context_desc, desc_data->cur_rx,
+		  qinx, rx_context_desc, prx_ring->cur_rx,
 		  rx_context_desc->rdes0, rx_context_desc->rdes1,
 		  rx_context_desc->rdes2, rx_context_desc->rdes3);
 
@@ -2148,8 +2148,8 @@ static unsigned char eqos_get_rx_hwtstamp(struct eqos_prv_data *pdata,
 	if (retry == 10) {
 		pr_err("Device has not yet updated the context "
 		       "desc to hold Rx time stamp(retry = %d)\n", retry);
-		desc_data->dirty_rx--;
-		DECR_RX_DESC_INDEX(desc_data->cur_rx);
+		prx_ring->dirty_rx--;
+		DECR_RX_DESC_INDEX(prx_ring->cur_rx);
 		return 0;
 	}
 
@@ -2183,7 +2183,7 @@ static unsigned char eqos_get_rx_hwtstamp(struct eqos_prv_data *pdata,
 */
 
 static unsigned int eqos_get_tx_hwtstamp(struct eqos_prv_data *pdata,
-					 struct s_tx_normal_desc *txdesc,
+					 struct s_tx_desc *txdesc,
 					 struct sk_buff *skb)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
@@ -2245,19 +2245,19 @@ static unsigned int eqos_get_tx_hwtstamp(struct eqos_prv_data *pdata,
 static void eqos_tx_interrupt(struct net_device *dev,
 			      struct eqos_prv_data *pdata, UINT qinx)
 {
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
-	struct s_tx_normal_desc *txptr = NULL;
-	struct eqos_tx_buffer *buffer = NULL;
+	struct s_tx_desc *ptx_desc = NULL;
+	struct tx_swcx_desc *ptx_swcx_desc = NULL;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct desc_if_struct *desc_if = &(pdata->desc_if);
 	int err_incremented;
 	unsigned int tstamp_taken = 0;
 	unsigned long flags;
 
-	DBGPR("-->eqos_tx_interrupt: desc_data->tx_pkt_queued = %d"
+	DBGPR("-->eqos_tx_interrupt: ptx_ring->tx_pkt_queued = %d"
 	      " dirty_tx = %d, qinx = %u\n",
-	      desc_data->tx_pkt_queued, desc_data->dirty_tx, qinx);
+	      ptx_ring->tx_pkt_queued, ptx_ring->dirty_tx, qinx);
 
 	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
 		spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
@@ -2265,74 +2265,74 @@ static void eqos_tx_interrupt(struct net_device *dev,
 		spin_lock_irqsave(&pdata->tx_lock, flags);
 
 	pdata->xstats.tx_clean_n[qinx]++;
-	while (desc_data->tx_pkt_queued > 0) {
-		txptr = GET_TX_DESC_PTR(qinx, desc_data->dirty_tx);
-		buffer = GET_TX_BUF_PTR(qinx, desc_data->dirty_tx);
+	while (ptx_ring->tx_pkt_queued > 0) {
+		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->dirty_tx);
+		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->dirty_tx);
 		tstamp_taken = 0;
 
-		if (!hw_if->tx_complete(txptr))
+		if (!hw_if->tx_complete(ptx_desc))
 			break;
 
 #ifdef EQOS_ENABLE_TX_DESC_DUMP
-		dump_tx_desc(pdata, desc_data->dirty_tx, desc_data->dirty_tx,
+		dump_tx_desc(pdata, ptx_ring->dirty_tx, ptx_ring->dirty_tx,
 			     0, qinx);
 #endif
 
 		/* update the tx error if any by looking at last segment
 		 * for NORMAL descriptors
 		 * */
-		if ((hw_if->get_tx_desc_ls(txptr))
-		    && !(hw_if->get_tx_desc_ctxt(txptr))) {
+		if ((hw_if->get_tx_desc_ls(ptx_desc)) &&
+		    !(hw_if->get_tx_desc_ctxt(ptx_desc))) {
 			/* check whether skb support hw tstamp */
 			if ((pdata->hw_feat.tsstssel) &&
-			    (skb_shinfo(buffer->skb)->
+			    (skb_shinfo(ptx_swcx_desc->skb)->
 			     tx_flags & SKBTX_IN_PROGRESS)) {
 				tstamp_taken =
-				    eqos_get_tx_hwtstamp(pdata, txptr,
-							 buffer->skb);
+				    eqos_get_tx_hwtstamp(pdata, ptx_desc,
+							 ptx_swcx_desc->skb);
 				if (tstamp_taken) {
 					DBGPR_PTP
 					    ("passed tx timestamp to stack[qinx = %d, dirty_tx = %d]\n",
-					     qinx, desc_data->dirty_tx);
+					     qinx, ptx_ring->dirty_tx);
 				}
 			}
 
 			err_incremented = 0;
 			if (hw_if->tx_window_error) {
-				if (hw_if->tx_window_error(txptr)) {
+				if (hw_if->tx_window_error(ptx_desc)) {
 					err_incremented = 1;
 					dev->stats.tx_window_errors++;
 				}
 			}
 			if (hw_if->tx_aborted_error) {
-				if (hw_if->tx_aborted_error(txptr)) {
+				if (hw_if->tx_aborted_error(ptx_desc)) {
 					err_incremented = 1;
 					dev->stats.tx_aborted_errors++;
 					if (hw_if->tx_handle_aborted_error)
 						hw_if->
 						    tx_handle_aborted_error
-						    (txptr);
+						    (ptx_desc);
 				}
 			}
 			if (hw_if->tx_carrier_lost_error) {
-				if (hw_if->tx_carrier_lost_error(txptr)) {
+				if (hw_if->tx_carrier_lost_error(ptx_desc)) {
 					err_incremented = 1;
 					dev->stats.tx_carrier_errors++;
 				}
 			}
 			if (hw_if->tx_fifo_underrun) {
-				if (hw_if->tx_fifo_underrun(txptr)) {
+				if (hw_if->tx_fifo_underrun(ptx_desc)) {
 					err_incremented = 1;
 					dev->stats.tx_fifo_errors++;
 					if (hw_if->tx_update_fifo_threshold)
 						hw_if->
 						    tx_update_fifo_threshold
-						    (txptr);
+						    (ptx_desc);
 				}
 			}
 			if (hw_if->tx_get_collision_count)
 				dev->stats.collisions +=
-				    hw_if->tx_get_collision_count(txptr);
+				    hw_if->tx_get_collision_count(ptx_desc);
 
 			if (err_incremented == 1)
 				dev->stats.tx_errors++;
@@ -2341,19 +2341,19 @@ static void eqos_tx_interrupt(struct net_device *dev,
 			pdata->xstats.tx_pkt_n++;
 			dev->stats.tx_packets++;
 		}
-		dev->stats.tx_bytes += buffer->len;
-		desc_if->unmap_tx_skb(pdata, buffer);
+		dev->stats.tx_bytes += ptx_swcx_desc->len;
+		desc_if->unmap_tx_skb(pdata, ptx_swcx_desc);
 
 		/* reset the descriptor so that driver/host can reuse it */
-		hw_if->tx_desc_reset(desc_data->dirty_tx, pdata, qinx);
+		hw_if->tx_desc_reset(ptx_ring->dirty_tx, pdata, qinx);
 
-		INCR_TX_DESC_INDEX(desc_data->dirty_tx, 1);
-		desc_data->free_desc_cnt++;
-		desc_data->tx_pkt_queued--;
+		INCR_TX_DESC_INDEX(ptx_ring->dirty_tx, 1);
+		ptx_ring->free_desc_cnt++;
+		ptx_ring->tx_pkt_queued--;
 	}
 
-	if ((desc_data->queue_stopped == 1) && (desc_data->free_desc_cnt > 0)) {
-		desc_data->queue_stopped = 0;
+	if ((ptx_ring->queue_stopped == 1) && (ptx_ring->free_desc_cnt > 0)) {
+		ptx_ring->queue_stopped = 0;
 		netif_wake_subqueue(dev, qinx);
 	}
 
@@ -2370,15 +2370,15 @@ static void eqos_tx_interrupt(struct net_device *dev,
 	else
 		spin_unlock_irqrestore(&pdata->tx_lock, flags);
 
-	DBGPR("<--eqos_tx_interrupt: desc_data->tx_pkt_queued = %d\n",
-	      desc_data->tx_pkt_queued);
+	DBGPR("<--eqos_tx_interrupt: ptx_ring->tx_pkt_queued = %d\n",
+	      ptx_ring->tx_pkt_queued);
 }
 
 #ifdef YDEBUG_FILTER
-static void eqos_check_rx_filter_status(struct s_rx_normal_desc *rx_normal_desc)
+static void eqos_check_rx_filter_status(struct s_rx_desc *prx_desc)
 {
-	u32 rdes2 = rx_normal_desc->rdes2;
-	u32 rdes3 = rx_normal_desc->rdes3;
+	u32 rdes2 = prx_desc->rdes2;
+	u32 rdes3 = prx_desc->rdes3;
 
 	/* Receive Status rdes2 Valid ? */
 	if ((rdes3 & 0x8000000) == 0x8000000) {
@@ -2429,7 +2429,7 @@ static void eqos_receive_skb(struct eqos_prv_data *pdata,
 /* Receive Checksum Offload configuration */
 static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
 				       struct sk_buff *skb,
-				       struct s_rx_normal_desc *rx_normal_desc)
+				       struct s_rx_desc *prx_desc)
 {
 	UINT rdes1;
 
@@ -2437,9 +2437,9 @@ static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
 
 	if ((pdata->dev_state & NETIF_F_RXCSUM) == NETIF_F_RXCSUM) {
 		/* Receive Status rdes1 Valid ? */
-		if ((rx_normal_desc->rdes3 & EQOS_RDESC3_RS1V)) {
+		if ((prx_desc->rdes3 & EQOS_RDESC3_RS1V)) {
 			/* check(rdes1.IPCE bit) whether device has done csum correctly or not */
-			RX_NORMAL_DESC_RDES1_RD(rx_normal_desc->rdes1, rdes1);
+			RX_NORMAL_DESC_RDES1_RD(prx_desc->rdes1, rdes1);
 			if ((rdes1 & 0xC8) == 0x0)
 				skb->ip_summed = CHECKSUM_UNNECESSARY;	/* csum done by device */
 		}
@@ -2448,21 +2448,21 @@ static inline void eqos_config_rx_csum(struct eqos_prv_data *pdata,
 
 static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
 				    struct sk_buff *skb,
-				    struct s_rx_normal_desc *rx_normal_desc)
+				    struct s_rx_desc *prx_desc)
 {
 	USHORT vlan_tag = 0;
 
 	if ((pdata->dev_state & NETIF_F_HW_VLAN_CTAG_RX) ==
 	    NETIF_F_HW_VLAN_CTAG_RX) {
 		/* Receive Status rdes0 Valid ? */
-		if ((rx_normal_desc->rdes3 & EQOS_RDESC3_RS0V)) {
+		if ((prx_desc->rdes3 & EQOS_RDESC3_RS0V)) {
 			/* device received frame with VLAN Tag or
 			 * double VLAN Tag ? */
-			if (((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) ==
-			     0x40000)
-			    || ((rx_normal_desc->rdes3 & EQOS_RDESC3_LT) ==
+			if (((prx_desc->rdes3 & EQOS_RDESC3_LT) ==
+			     0x40000) ||
+			     ((prx_desc->rdes3 & EQOS_RDESC3_LT) ==
 				0x50000)) {
-				vlan_tag = rx_normal_desc->rdes0 & 0xffff;
+				vlan_tag = prx_desc->rdes0 & 0xffff;
 				/* insert VLAN tag into skb */
 				__vlan_hwaccel_put_tag(skb, htons(ETH_P_8021Q),
 						       vlan_tag);
@@ -2475,7 +2475,7 @@ static inline void eqos_get_rx_vlan(struct eqos_prv_data *pdata,
 /* This api check for payload type and returns
  * 1 if payload load is TCP else returns 0;
  * */
-static int eqos_check_for_tcp_payload(struct s_rx_normal_desc *rxdesc)
+static int eqos_check_for_tcp_payload(struct s_rx_desc *rxdesc)
 {
 	u32 pt_type = 0;
 	int ret = 0;
@@ -2510,15 +2510,15 @@ static int eqos_check_for_tcp_payload(struct s_rx_normal_desc *rxdesc)
 
 static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 {
-	struct eqos_rx_wrapper_descriptor *desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 	struct net_device *dev = pdata->dev;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct sk_buff *skb = NULL;
 	int received = 0;
-	struct eqos_rx_buffer *buffer = NULL;
-	struct s_rx_normal_desc *rx_normal_desc = NULL;
+	struct rx_swcx_desc *prx_swcx_desc = NULL;
+	struct s_rx_desc *prx_desc = NULL;
 	UINT pkt_len;
 	UINT err_bits = EQOS_RDESC3_ES;
 
@@ -2527,28 +2527,28 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 	DBGPR("-->eqos_clean_rx_irq: qinx = %u, quota = %d\n", qinx, quota);
 
 	while (received < quota) {
-		buffer = GET_RX_BUF_PTR(qinx, desc_data->cur_rx);
-		rx_normal_desc = GET_RX_DESC_PTR(qinx, desc_data->cur_rx);
+		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
+		prx_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
 
 		/* check for data availability */
-		if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_OWN)) {
+		if (!(prx_desc->rdes3 & EQOS_RDESC3_OWN)) {
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, rx_normal_desc, desc_data->cur_rx);
+			dump_rx_desc(qinx, prx_desc, prx_ring->cur_rx);
 #endif
 			/* assign it to new skb */
-			skb = buffer->skb;
-			buffer->skb = NULL;
+			skb = prx_swcx_desc->skb;
+			prx_swcx_desc->skb = NULL;
 
-			dma_unmap_single(&pdata->pdev->dev, buffer->dma,
+			dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
 					 ALIGN_SIZE(pdata->rx_buffer_len),
 					 DMA_FROM_DEVICE);
-			buffer->dma = 0;
+			prx_swcx_desc->dma = 0;
 
 			/* get the packet length */
-			pkt_len = (rx_normal_desc->rdes3 & EQOS_RDESC3_PL);
+			pkt_len = (prx_desc->rdes3 & EQOS_RDESC3_PL);
 
 #ifdef EQOS_ENABLE_RX_PKT_DUMP
-			print_pkt(skb, pkt_len, 0, (desc_data->cur_rx));
+			print_pkt(skb, pkt_len, 0, (prx_ring->cur_rx));
 #endif
 
 #ifdef ENABLE_CHANNEL_DATA_CHECK
@@ -2562,8 +2562,8 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 			if (tegra_platform_is_unit_fpga())
 				err_bits = EQOS_RDESC3_CRC | EQOS_RDESC3_OF;
 
-			if (!(rx_normal_desc->rdes3 & err_bits) &&
-			    (rx_normal_desc->rdes3 & EQOS_RDESC3_LD)) {
+			if (!(prx_desc->rdes3 & err_bits) &&
+			    (prx_desc->rdes3 & EQOS_RDESC3_LD)) {
 				/* pkt_len = pkt_len - 4; *//* CRC stripping */
 
 				/* code added for copybreak, this should improve
@@ -2580,7 +2580,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 						     (skb->data - NET_IP_ALIGN),
 						     (pkt_len + NET_IP_ALIGN));
 						/* recycle actual desc skb */
-						buffer->skb = skb;
+						prx_swcx_desc->skb = skb;
 						skb = new_skb;
 					} else {
 						/* just continue the old skb */
@@ -2588,23 +2588,23 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 				}
 				skb_put(skb, pkt_len);
 
-				eqos_config_rx_csum(pdata, skb, rx_normal_desc);
+				eqos_config_rx_csum(pdata, skb, prx_desc);
 
 #ifdef EQOS_ENABLE_VLAN_TAG
-				eqos_get_rx_vlan(pdata, skb, rx_normal_desc);
+				eqos_get_rx_vlan(pdata, skb, prx_desc);
 #endif
 
 #ifdef YDEBUG_FILTER
-				eqos_check_rx_filter_status(rx_normal_desc);
+				eqos_check_rx_filter_status(prx_desc);
 #endif
 
 				if (pdata->hw_feat.tsstssel &&
 				    pdata->hwts_rx_en &&
 				    hw_if->
-				    rx_tstamp_available(rx_normal_desc)) {
+				    rx_tstamp_available(prx_desc)) {
 					/* get rx tstamp if available */
 					ret = eqos_get_rx_hwtstamp(pdata, skb,
-								   desc_data,
+								   prx_ring,
 								   qinx);
 					if (ret == 0) {
 						/* device has not yet updated
@@ -2612,8 +2612,8 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 						 * time stamp, hence delay the
 						 * packet reception
 						 */
-						buffer->skb = skb;
-						buffer->dma =
+						prx_swcx_desc->skb = skb;
+						prx_swcx_desc->dma =
 						    dma_map_single(&pdata->
 								   pdev->dev,
 								   skb->data,
@@ -2625,7 +2625,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 
 						if (dma_mapping_error
 						    (&pdata->pdev->dev,
-						     buffer->dma))
+						     prx_swcx_desc->dma))
 							pr_err
 							    ("failed to do the RX dma map\n");
 						goto rx_tstmp_failed;
@@ -2636,7 +2636,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 				    (dev->features & NETIF_F_LRO)) {
 					pdata->tcp_pkt =
 					    eqos_check_for_tcp_payload
-					    (rx_normal_desc);
+					    (prx_desc);
 				}
 
 				dev->last_rx = jiffies;
@@ -2646,25 +2646,25 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 				eqos_receive_skb(pdata, dev, skb, qinx);
 				received++;
 			} else {
-				dump_rx_desc(qinx, rx_normal_desc,
-					     desc_data->cur_rx);
-				if (!(rx_normal_desc->rdes3 & EQOS_RDESC3_LD))
+				dump_rx_desc(qinx, prx_desc,
+					     prx_ring->cur_rx);
+				if (!(prx_desc->rdes3 & EQOS_RDESC3_LD))
 					DBGPR("Received oversized pkt,"
 					      "spanned across multiple desc\n");
 
 				/* recycle skb */
-				buffer->skb = skb;
+				prx_swcx_desc->skb = skb;
 				dev->stats.rx_errors++;
 				eqos_update_rx_errors(dev,
-						      rx_normal_desc->rdes3);
+						      prx_desc->rdes3);
 			}
 
-			desc_data->dirty_rx++;
-			if (desc_data->dirty_rx >=
-			    desc_data->skb_realloc_threshold)
+			prx_ring->dirty_rx++;
+			if (prx_ring->dirty_rx >=
+			    prx_ring->skb_realloc_threshold)
 				desc_if->realloc_skb(pdata, qinx);
 
-			INCR_RX_DESC_INDEX(desc_data->cur_rx, 1);
+			INCR_RX_DESC_INDEX(prx_ring->cur_rx, 1);
 		} else {
 			/* no more data to read */
 			break;
@@ -2673,7 +2673,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 
  rx_tstmp_failed:
 
-	if (desc_data->dirty_rx)
+	if (prx_ring->dirty_rx)
 		desc_if->realloc_skb(pdata, qinx);
 
 	DBGPR("<--eqos_clean_rx_irq: received = %d, qinx=%d\n", received, qinx);
@@ -3625,9 +3625,9 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 				 struct ifr_data_struct *req)
 {
 	unsigned int qinx = req->qinx;
-	struct eqos_tx_wrapper_descriptor *tx_desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
-	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct net_device *dev = pdata->dev;
@@ -3696,40 +3696,40 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		break;
 
 	case EQOS_RX_THRESHOLD_CMD:
-		rx_desc_data->rx_threshold_val = req->flags;
+		prx_ring->rx_threshold_val = req->flags;
 		hw_if->config_rx_threshold(qinx,
-					   rx_desc_data->rx_threshold_val);
+					   prx_ring->rx_threshold_val);
 		pr_err("Configured Rx threshold with %d\n",
-		       rx_desc_data->rx_threshold_val);
+		       prx_ring->rx_threshold_val);
 		break;
 
 	case EQOS_TX_THRESHOLD_CMD:
-		tx_desc_data->tx_threshold_val = req->flags;
+		ptx_ring->tx_threshold_val = req->flags;
 		hw_if->config_tx_threshold(qinx,
-					   tx_desc_data->tx_threshold_val);
+					   ptx_ring->tx_threshold_val);
 		pr_err("Configured Tx threshold with %d\n",
-		       tx_desc_data->tx_threshold_val);
+		       ptx_ring->tx_threshold_val);
 		break;
 
 	case EQOS_RSF_CMD:
-		rx_desc_data->rsf_on = req->flags;
-		hw_if->config_rsf_mode(qinx, rx_desc_data->rsf_on);
+		prx_ring->rsf_on = req->flags;
+		hw_if->config_rsf_mode(qinx, prx_ring->rsf_on);
 		pr_err("Receive store and forward mode %s\n",
-		       (rx_desc_data->rsf_on) ? "enabled" : "disabled");
+		       (prx_ring->rsf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_TSF_CMD:
-		tx_desc_data->tsf_on = req->flags;
-		hw_if->config_tsf_mode(qinx, tx_desc_data->tsf_on);
+		ptx_ring->tsf_on = req->flags;
+		hw_if->config_tsf_mode(qinx, ptx_ring->tsf_on);
 		pr_err("Transmit store and forward mode %s\n",
-		       (tx_desc_data->tsf_on) ? "enabled" : "disabled");
+		       (ptx_ring->tsf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_OSF_CMD:
-		tx_desc_data->osf_on = req->flags;
-		hw_if->config_osf_mode(qinx, tx_desc_data->osf_on);
+		ptx_ring->osf_on = req->flags;
+		hw_if->config_osf_mode(qinx, ptx_ring->osf_on);
 		pr_err("Transmit DMA OSF mode is %s\n",
-		       (tx_desc_data->osf_on) ? "enabled" : "disabled");
+		       (ptx_ring->osf_on) ? "enabled" : "disabled");
 		break;
 
 	case EQOS_INCR_INCRX_CMD:
@@ -3740,13 +3740,13 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 		break;
 
 	case EQOS_RX_PBL_CMD:
-		rx_desc_data->rx_pbl = req->flags;
-		eqos_config_rx_pbl(pdata, rx_desc_data->rx_pbl, qinx);
+		prx_ring->rx_pbl = req->flags;
+		eqos_config_rx_pbl(pdata, prx_ring->rx_pbl, qinx);
 		break;
 
 	case EQOS_TX_PBL_CMD:
-		tx_desc_data->tx_pbl = req->flags;
-		eqos_config_tx_pbl(pdata, tx_desc_data->tx_pbl, qinx);
+		ptx_ring->tx_pbl = req->flags;
+		eqos_config_tx_pbl(pdata, ptx_ring->tx_pbl, qinx);
 		break;
 
 	case EQOS_PTPOFFLOADING_CMD:
@@ -3852,8 +3852,8 @@ static int eqos_handle_prv_ioctl(struct eqos_prv_data *pdata,
 
 	case EQOS_SETUP_CONTEXT_DESCRIPTOR:
 		if (pdata->hw_feat.sa_vlan_ins) {
-			tx_desc_data->context_setup = req->context_setup;
-			if (tx_desc_data->context_setup == 1) {
+			ptx_ring->context_setup = req->context_setup;
+			if (ptx_ring->context_setup == 1) {
 				pr_err("Context descriptor will be transmitted"
 				       " with every normal descriptor on %d DMA Channel\n",
 				       qinx);
@@ -4535,7 +4535,7 @@ INT eqos_powerdown(struct net_device *dev, UINT wakeup_type, UINT caller)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	ULONG flags;
 
-	DBGPR(KERN_ALERT "-->eqos_powerdown\n");
+	DBGPR("-->eqos_powerdown\n");
 
 	if (!dev || !netif_running(dev) ||
 	    (caller == EQOS_IOCTL_CONTEXT && pdata->power_down)) {
@@ -5648,7 +5648,7 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 		  int last_desc_idx, int flag, UINT qinx)
 {
 	int i;
-	struct s_tx_normal_desc *desc = NULL;
+	struct s_tx_desc *desc = NULL;
 	UINT ctxt;
 
 	if (first_desc_idx == last_desc_idx) {
@@ -5657,7 +5657,7 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 		TX_NORMAL_DESC_TDES3_CTXT_RD(desc->tdes3, ctxt);
 
 		pr_err("\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
-		       (ctxt == 1) ? "TX_CONTXT_DESC" : "tx_normal_desc",
+		       (ctxt == 1) ? "TX_CONTXT_DESC" : "ptx_desc",
 		       qinx, desc, first_desc_idx,
 		       ((flag == 1) ? "QUEUED FOR TRANSMISSION" :
 			((flag ==
@@ -5677,7 +5677,7 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 
 			pr_err("\n%s[%02d %4p %03d %s] = %#x:%#x:%#x:%#x\n",
 			       (ctxt ==
-				1) ? "TX_CONTXT_DESC" : "tx_normal_desc", qinx,
+				1) ? "TX_CONTXT_DESC" : "ptx_desc", qinx,
 			       desc, i,
 			       ((flag ==
 				 1) ? "QUEUED FOR TRANSMISSION" :
@@ -5699,9 +5699,9 @@ void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
  * \return void
  */
 
-void dump_rx_desc(UINT qinx, struct s_rx_normal_desc *desc, int desc_idx)
+void dump_rx_desc(UINT qinx, struct s_rx_desc *desc, int desc_idx)
 {
-	pr_err("\nrx_normal_desc[%02d %4p %03d RECEIVED FROM DEVICE]"
+	pr_err("\nprx_desc[%02d %4p %03d RECEIVED FROM DEVICE]"
 	       " = %#x:%#x:%#x:%#x",
 	       qinx, desc, desc_idx, desc->rdes0, desc->rdes1,
 	       desc->rdes2, desc->rdes3);
@@ -5764,17 +5764,17 @@ void print_pkt(struct sk_buff *skb, int len, bool tx_rx, int desc_idx)
 
 void eqos_init_rx_coalesce(struct eqos_prv_data *pdata)
 {
-	struct eqos_rx_wrapper_descriptor *rx_desc_data = NULL;
+	struct rx_ring *prx_ring = NULL;
 	UINT i;
 
 	DBGPR("-->eqos_init_rx_coalesce\n");
 
 	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
-		rx_desc_data = GET_RX_WRAPPER_DESC(i);
+		prx_ring = GET_RX_WRAPPER_DESC(i);
 
-		rx_desc_data->use_riwt = 1;
-		rx_desc_data->rx_coal_frames = EQOS_RX_MAX_FRAMES;
-		rx_desc_data->rx_riwt =
+		prx_ring->use_riwt = 1;
+		prx_ring->rx_coal_frames = EQOS_RX_MAX_FRAMES;
+		prx_ring->rx_riwt =
 		    eqos_usec2riwt(EQOS_OPTIMAL_DMA_RIWT_USEC, pdata);
 	}
 

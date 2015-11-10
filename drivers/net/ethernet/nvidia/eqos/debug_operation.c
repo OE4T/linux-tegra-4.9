@@ -44,7 +44,6 @@
 #include <linux/debugfs.h>
 #include "yheader.h"
 
-extern ULONG eqos_base_addr;
 #include "yregacc.h"
 
 #define DEBUGFS_MAX_SIZE 100
@@ -878,19 +877,18 @@ void get_reg_name(char *regname, char *buffer, unsigned long buffer_size)
 	DBGPR("--> get_reg_name\n");
 
 	while (cnt > 0) {
-		if ((buffer[j] == '\t') || (buffer[j]) == ' ') {
+		if ((buffer[j] == '\t') || (buffer[j]) == ' ')
 			break;
-		} else {
-			regname[i] = buffer[j];
-			i++;
-		}
+
+		regname[i] = buffer[j];
+		i++;
+
 		j++;
 		cnt--;
 	}
 	regname[i] = '\0';
 
 	DBGPR("<-- get_reg_name\n");
-	return;
 }
 
 /*!
@@ -915,9 +913,8 @@ void get_reg_value(char *value, char *buffer, unsigned long buffer_size)
 	DBGPR("--> get_reg_value\n");
 
 	while (cnt) {
-		if ((buffer[j] == ' ') || (buffer[j] == '\t')) {
+		if ((buffer[j] == ' ') || (buffer[j] == '\t'))
 			value_present = 1;
-		}
 
 		if (value_present == 1 && (buffer[j] != ' ')
 		    && (buffer[j] != '\t')) {
@@ -930,7 +927,6 @@ void get_reg_value(char *value, char *buffer, unsigned long buffer_size)
 	value[i] = '\0';
 
 	DBGPR("<-- get_reg_value\n");
-	return;
 }
 
 /*!
@@ -969,10 +965,12 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		get_reg_value(reg_value, debugfs_buf, count);
 		ret = count;
 
-		integer_value = simple_strtoul(reg_value, (char **)&end_ptr, 16);
+		/*integer_value = simple_strtoul(reg_value, */
+		integer_value = kstrtoul(reg_value,
+					 (char **)&end_ptr,
+					 16);
 		if ((*end_ptr != '\0') && (*end_ptr != '\n')) {
-			printk(KERN_ERR
-			       "Invalid value specified for register write");
+			pr_err("Invalid value specified for register write");
 			return -EINVAL;
 		}
 
@@ -1587,22 +1585,18 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MAC_PCS")) {
 			MAC_PCS_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_TES")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_TES : ReadOnly Register");
+			pr_err("MAC_TES is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_AE")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_AE : ReadOnly Register");
+			pr_err("MAC_AE is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_ALPA")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_ALPA : ReadOnly Register");
+			pr_err("MAC_ALPA is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_AAD")) {
 			MAC_AAD_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_ANS")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_ANS : ReadOnly Register");
+			pr_err("MAC_ANS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_ANC")) {
 			MAC_ANC_WR(integer_value);
@@ -1659,26 +1653,21 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MAC_TIAC")) {
 			MAC_TIAC_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_ATS")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_ATS : ReadOnly Register");
+			pr_err("MAC_ATS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_ATN")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_ATN : ReadOnly Register");
+			pr_err("MAC_ATN is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_AC")) {
 			MAC_AC_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_TTN")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_TTN : ReadOnly Register");
+			pr_err("MAC_TTN is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_TTSN")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_TTSN : ReadOnly Register");
+			pr_err("MAC_TTSN is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_TSR")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_TSR : ReadOnly Register");
+			pr_err("MAC_TSR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_STHWR")) {
 			MAC_STHWR_WR(integer_value);
@@ -1689,12 +1678,10 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MAC_STSUR")) {
 			MAC_STSUR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_STNSR")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_STNSR : ReadOnly Register");
+			pr_err("MAC_STNSR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_STSR")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_STSR : ReadOnly Register");
+			pr_err("MAC_STSR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_SSIR")) {
 			MAC_SSIR_WR(integer_value);
@@ -1705,8 +1692,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MAC_RWPFFR")) {
 			MAC_RWPFFR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_RTSR")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_RTSR : ReadOnly Register");
+			pr_err("MAC_RTSR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_IER")) {
 			MTL_IER_WR(integer_value);
@@ -1725,32 +1711,25 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MTL_QRCR1")) {
 			MTL_QRCR1_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_QRDR7")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QRDR7 : ReadOnly Register");
+			pr_err("MTL_QRDR7 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR6")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QRDR6 : ReadOnly Register");
+			pr_err("MTL_QRDR6 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR5")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QRDR5 : ReadOnly Register");
+			pr_err("MTL_QRDR5 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR4")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QRDR4 : ReadOnly Register");
+			pr_err("MTL_QRDR4 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR3")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QRDR3 : ReadOnly Register");
+			pr_err("MTL_QRDR3 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR2")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QRDR2 : ReadOnly Register");
+			pr_err("MTL_QRDR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QRDR1")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QRDR1 : ReadOnly Register");
+			pr_err("MTL_QRDR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QOCR7")) {
 			MTL_QOCR7_WR(integer_value);
@@ -1837,32 +1816,25 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MTL_QW1")) {
 			MTL_QW1_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_QESR7")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QESR7 : ReadOnly Register");
+			pr_err("MTL_QESR7 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR6")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QESR6 : ReadOnly Register");
+			pr_err("MTL_QESR6 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR5")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QESR5 : ReadOnly Register");
+			pr_err("MTL_QESR5 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR4")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QESR4 : ReadOnly Register");
+			pr_err("MTL_QESR4 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR3")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QESR3 : ReadOnly Register");
+			pr_err("MTL_QESR3 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR2")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QESR2 : ReadOnly Register");
+			pr_err("MTL_QESR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QESR1")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QESR1 : ReadOnly Register");
+			pr_err("MTL_QESR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QECR7")) {
 			MTL_QECR7_WR(integer_value);
@@ -1879,32 +1851,25 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MTL_QECR1")) {
 			MTL_QECR1_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_QTDR7")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QTDR7 : ReadOnly Register");
+			pr_err("MTL_QTDR7 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR6")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QTDR6 : ReadOnly Register");
+			pr_err("MTL_QTDR6 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR5")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QTDR5 : ReadOnly Register");
+			pr_err("MTL_QTDR5 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR4")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QTDR4 : ReadOnly Register");
+			pr_err("MTL_QTDR4 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR3")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QTDR3 : ReadOnly Register");
+			pr_err("MTL_QTDR3 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR2")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QTDR2 : ReadOnly Register");
+			pr_err("MTL_QTDR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QTDR1")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_QTDR1 : ReadOnly Register");
+			pr_err("MTL_QTDR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_QUCR7")) {
 			MTL_QUCR7_WR(integer_value);
@@ -1937,328 +1902,247 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MAC_PMTCSR")) {
 			MAC_PMTCSR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MMC_RXICMP_ERR_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXICMP_ERR_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXICMP_ERR_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXICMP_GD_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXICMP_GD_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXICMP_GD_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_ERR_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXTCP_ERR_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXTCP_ERR_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_GD_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXTCP_GD_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXTCP_GD_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_ERR_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXUDP_ERR_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXUDP_ERR_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_GD_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXUDP_GD_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXUDP_GD_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_NOPAY_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV6_NOPAY_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV6_NOPAY_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_HDRERR_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV6_HDRERR_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV6_HDRERR_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_GD_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV6_GD_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV6_GD_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_UDSBL_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_UDSBL_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_UDSBL_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_FRAG_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_FRAG_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_FRAG_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_NOPAY_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_NOPAY_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_NOPAY_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_HDRERR_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_HDRERR_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_HDRERR_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_GD_OCTETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_GD_OCTETS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_GD_OCTETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXICMP_ERR_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXICMP_ERR_PKTS : ReadOnly Register");
+			pr_err("MMC_RXICMP_ERR_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXICMP_GD_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXICMP_GD_PKTS : ReadOnly Register");
+			pr_err("MMC_RXICMP_GD_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_ERR_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXTCP_ERR_PKTS : ReadOnly Register");
+			pr_err("MMC_RXTCP_ERR_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXTCP_GD_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXTCP_GD_PKTS : ReadOnly Register");
+			pr_err("MMC_RXTCP_GD_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_ERR_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXUDP_ERR_PKTS : ReadOnly Register");
+			pr_err("MMC_RXUDP_ERR_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUDP_GD_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXUDP_GD_PKTS : ReadOnly Register");
+			pr_err("MMC_RXUDP_GD_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_NOPAY_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV6_NOPAY_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV6_NOPAY_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_HDRERR_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV6_HDRERR_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV6_HDRERR_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV6_GD_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV6_GD_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV6_GD_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_UBSBL_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_UBSBL_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_UBSBL_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_FRAG_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_FRAG_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_FRAG_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_NOPAY_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_NOPAY_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_NOPAY_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_HDRERR_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_HDRERR_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_HDRERR_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXIPV4_GD_PKTS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXIPV4_GD_PKTS : ReadOnly Register");
+			pr_err("MMC_RXIPV4_GD_PKTS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXCTRLPACKETS_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXCTRLPACKETS_G : ReadOnly Register");
+			pr_err("MMC_RXCTRLPACKETS_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXRCVERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXRCVERROR : ReadOnly Register");
+			pr_err("MMC_RXRCVERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXWATCHDOGERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXWATCHDOGERROR : ReadOnly Register");
+			pr_err("MMC_RXWATCHDOGERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXVLANPACKETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXVLANPACKETS_GB : ReadOnly Register");
+			pr_err("MMC_RXVLANPACKETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXFIFOOVERFLOW")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXFIFOOVERFLOW : ReadOnly Register");
+			pr_err("MMC_RXFIFOOVERFLOW is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXPAUSEPACKETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXPAUSEPACKETS : ReadOnly Register");
+			pr_err("MMC_RXPAUSEPACKETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOUTOFRANGETYPE")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXOUTOFRANGETYPE : ReadOnly Register");
+			pr_err("MMC_RXOUTOFRANGETYPE is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXLENGTHERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXLENGTHERROR : ReadOnly Register");
+			pr_err("MMC_RXLENGTHERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUNICASTPACKETS_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXUNICASTPACKETS_G : ReadOnly Register");
+			pr_err("MMC_RXUNICASTPACKETS_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX1024TOMAXOCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RX1024TOMAXOCTETS_GB : ReadOnly Register");
+			pr_err("MMC_RX1024TOMAXOCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX512TO1023OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RX512TO1023OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_RX512TO1023OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX256TO511OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RX256TO511OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_RX256TO511OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX128TO255OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RX128TO255OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_RX128TO255OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX65TO127OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RX65TO127OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_RX65TO127OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RX64OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RX64OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_RX64OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOVERSIZE_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXOVERSIZE_G : ReadOnly Register");
+			pr_err("MMC_RXOVERSIZE_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXUNDERSIZE_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXUNDERSIZE_G : ReadOnly Register");
+			pr_err("MMC_RXUNDERSIZE_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXJABBERERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXJABBERERROR : ReadOnly Register");
+			pr_err("MMC_RXJABBERERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXRUNTERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXRUNTERROR : ReadOnly Register");
+			pr_err("MMC_RXRUNTERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXALIGNMENTERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXALIGNMENTERROR : ReadOnly Register");
+			pr_err("MMC_RXALIGNMENTERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXCRCERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXCRCERROR : ReadOnly Register");
+			pr_err("MMC_RXCRCERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXMULTICASTPACKETS_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXMULTICASTPACKETS_G : ReadOnly Register");
+			pr_err("MMC_RXMULTICASTPACKETS_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXBROADCASTPACKETS_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXBROADCASTPACKETS_G : ReadOnly Register");
+			pr_err("MMC_RXBROADCASTPACKETS_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOCTETCOUNT_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXOCTETCOUNT_G : ReadOnly Register");
+			pr_err("MMC_RXOCTETCOUNT_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXOCTETCOUNT_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXOCTETCOUNT_GB : ReadOnly Register");
+			pr_err("MMC_RXOCTETCOUNT_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_RXPACKETCOUNT_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_RXPACKETCOUNT_GB : ReadOnly Register");
+			pr_err("MMC_RXPACKETCOUNT_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXOVERSIZE_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXOVERSIZE_G : ReadOnly Register");
+			pr_err("MMC_TXOVERSIZE_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXVLANPACKETS_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXVLANPACKETS_G : ReadOnly Register");
+			pr_err("MMC_TXVLANPACKETS_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXPAUSEPACKETS")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXPAUSEPACKETS : ReadOnly Register");
+			pr_err("MMC_TXPAUSEPACKETS is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXEXCESSDEF")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXEXCESSDEF : ReadOnly Register");
+			pr_err("MMC_TXEXCESSDEF is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXPACKETSCOUNT_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXPACKETSCOUNT_G : ReadOnly Register");
+			pr_err("MMC_TXPACKETSCOUNT_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXOCTETCOUNT_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXOCTETCOUNT_G : ReadOnly Register");
+			pr_err("MMC_TXOCTETCOUNT_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXCARRIERERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXCARRIERERROR : ReadOnly Register");
+			pr_err("MMC_TXCARRIERERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXEXESSCOL")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXEXESSCOL : ReadOnly Register");
+			pr_err("MMC_TXEXESSCOL is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXLATECOL")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXLATECOL : ReadOnly Register");
+			pr_err("MMC_TXLATECOL is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXDEFERRED")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXDEFERRED : ReadOnly Register");
+			pr_err("MMC_TXDEFERRED is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXMULTICOL_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXMULTICOL_G : ReadOnly Register");
+			pr_err("MMC_TXMULTICOL_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXSINGLECOL_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXSINGLECOL_G : ReadOnly Register");
+			pr_err("MMC_TXSINGLECOL_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXUNDERFLOWERROR")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXUNDERFLOWERROR : ReadOnly Register");
+			pr_err("MMC_TXUNDERFLOWERROR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXBROADCASTPACKETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXBROADCASTPACKETS_GB : ReadOnly Register");
+			pr_err("MMC_TXBROADCASTPACKETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXMULTICASTPACKETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXMULTICASTPACKETS_GB : ReadOnly Register");
+			pr_err("MMC_TXMULTICASTPACKETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXUNICASTPACKETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXUNICASTPACKETS_GB : ReadOnly Register");
+			pr_err("MMC_TXUNICASTPACKETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX1024TOMAXOCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TX1024TOMAXOCTETS_GB : ReadOnly Register");
+			pr_err("MMC_TX1024TOMAXOCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX512TO1023OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TX512TO1023OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_TX512TO1023OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX256TO511OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TX256TO511OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_TX256TO511OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX128TO255OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TX128TO255OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_TX128TO255OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX65TO127OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TX65TO127OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_TX65TO127OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TX64OCTETS_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TX64OCTETS_GB : ReadOnly Register");
+			pr_err("MMC_TX64OCTETS_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXMULTICASTPACKETS_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXMULTICASTPACKETS_G : ReadOnly Register");
+			pr_err("MMC_TXMULTICASTPACKETS_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXBROADCASTPACKETS_G")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXBROADCASTPACKETS_G : ReadOnly Register");
+			pr_err("MMC_TXBROADCASTPACKETS_G is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXPACKETCOUNT_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXPACKETCOUNT_GB : ReadOnly Register");
+			pr_err("MMC_TXPACKETCOUNT_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_TXOCTETCOUNT_GB")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_TXOCTETCOUNT_GB : ReadOnly Register");
+			pr_err("MMC_TXOCTETCOUNT_GB is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_IPC_INTR_RX")) {
-			pr_err(
-			       "Could not complete Write Operation MMC_IPC_INTR_RX : ReadOnly Register");
+			pr_err("MMC_IPC_INTR_RX is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MMC_IPC_INTR_MASK_RX")) {
 			MMC_IPC_INTR_MASK_RX_WR(integer_value);
@@ -2287,24 +2171,19 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MAC_GMIIAR")) {
 			MAC_GMIIAR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_HFR2")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_HFR2 : ReadOnly Register");
+			pr_err("MAC_HFR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_HFR1")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_HFR1 : ReadOnly Register");
+			pr_err("MAC_HFR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_HFR0")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_HFR0 : ReadOnly Register");
+			pr_err("MAC_HFR0 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_MDR")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_MDR : ReadOnly Register");
+			pr_err("MAC_MDR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_VR")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_VR : ReadOnly Register");
+			pr_err("MAC_VR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MAC_HTR7")) {
 			MAC_HTR7_WR(integer_value);
@@ -2453,12 +2332,10 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MAC_IMR")) {
 			MAC_IMR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MAC_ISR")) {
-			pr_err(
-			       "Could not complete Write Operation MAC_ISR : ReadOnly Register");
+			pr_err("MAC_ISR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_ISR")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_ISR : ReadOnly Register");
+			pr_err("MTL_ISR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_SR7")) {
 			DMA_SR_WR(7, integer_value);
@@ -2477,160 +2354,121 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "DMA_SR0")) {
 			DMA_SR_WR(0, integer_value);
 		} else if (!strcmp(reg_name, "DMA_ISR")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_ISR : ReadOnly Register");
+			pr_err("DMA_ISR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_DSR2")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_DSR2 : ReadOnly Register");
+			pr_err("DMA_DSR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_DSR1")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_DSR1 : ReadOnly Register");
+			pr_err("DMA_DSR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_DSR0")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_DSR0 : ReadOnly Register");
+			pr_err("DMA_DSR0 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0RDR")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_Q0RDR : ReadOnly Register");
+			pr_err("MTL_Q0RDR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0ESR")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_Q0ESR : ReadOnly Register");
+			pr_err("MTL_Q0ESR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0TDR")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_Q0TDR : ReadOnly Register");
+			pr_err("MTL_Q0TDR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR7")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR7 : ReadOnly Register");
+			pr_err("DMA_CHRBAR7 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR6")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR6 : ReadOnly Register");
+			pr_err("DMA_CHRBAR6 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR5")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR5 : ReadOnly Register");
+			pr_err("DMA_CHRBAR5 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR4")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR4 : ReadOnly Register");
+			pr_err("DMA_CHRBAR4 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR3")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR3 : ReadOnly Register");
+			pr_err("DMA_CHRBAR3 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR2")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR2 : ReadOnly Register");
+			pr_err("DMA_CHRBAR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR1")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR1 : ReadOnly Register");
+			pr_err("DMA_CHRBAR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRBAR0")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRBAR0 : ReadOnly Register");
+			pr_err("DMA_CHRBAR0 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR7")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR7 : ReadOnly Register");
+			pr_err("DMA_CHTBAR7 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR6")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR6 : ReadOnly Register");
+			pr_err("DMA_CHTBAR6 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR5")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR5 : ReadOnly Register");
+			pr_err("DMA_CHTBAR5 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR4")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR4 : ReadOnly Register");
+			pr_err("DMA_CHTBAR4 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR3")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR3 : ReadOnly Register");
+			pr_err("DMA_CHTBAR3 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR2")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR2 : ReadOnly Register");
+			pr_err("DMA_CHTBAR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR1")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR1 : ReadOnly Register");
+			pr_err("DMA_CHTBAR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTBAR0")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTBAR0 : ReadOnly Register");
+			pr_err("DMA_CHTBAR0 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR7")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR7 : ReadOnly Register");
+			pr_err("DMA_CHRDR7 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR6")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR6 : ReadOnly Register");
+			pr_err("DMA_CHRDR6 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR5")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR5 : ReadOnly Register");
+			pr_err(": is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR4")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR4 : ReadOnly Register");
+			pr_err(": is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR3")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR3 : ReadOnly Register");
+			pr_err(": is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR2")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR2 : ReadOnly Register");
+			pr_err("DMA_CHRDR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR1")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR1 : ReadOnly Register");
+			pr_err("DMA_CHRDR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHRDR0")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHRDR0 : ReadOnly Register");
+			pr_err("DMA_CHRDR0 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR7")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR7 : ReadOnly Register");
+			pr_err("DMA_CHTDR7 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR6")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR6 : ReadOnly Register");
+			pr_err("DMA_CHTDR6 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR5")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR5 : ReadOnly Register");
+			pr_err("DMA_CHTDR5 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR4")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR4 : ReadOnly Register");
+			pr_err("DMA_CHTDR4 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR3")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR3 : ReadOnly Register");
+			pr_err("DMA_CHTDR3 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR2")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR2 : ReadOnly Register");
+			pr_err("DMA_CHTDR2 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR1")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR1 : ReadOnly Register");
+			pr_err("DMA_CHTDR1 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_CHTDR0")) {
-			pr_err(
-			       "Could not complete Write Operation DMA_CHTDR0 : ReadOnly Register");
+			pr_err("DMA_CHTDR0 is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "DMA_SFCSR7")) {
 			DMA_SFCSR7_WR(integer_value);
@@ -2663,8 +2501,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MTL_Q0RCR")) {
 			MTL_Q0RCR_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_Q0OCR")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_Q0OCR : ReadOnly Register");
+			pr_err("MTL_Q0OCR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_Q0ROMR")) {
 			MTL_Q0ROMR_WR(integer_value);
@@ -2681,8 +2518,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "MTL_RQDCM0R")) {
 			MTL_RQDCM0R_WR(integer_value);
 		} else if (!strcmp(reg_name, "MTL_FDDR")) {
-			pr_err(
-			       "Could not complete Write Operation MTL_FDDR : ReadOnly Register");
+			pr_err("MTL_FDDR is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MTL_FDACS")) {
 			MTL_FDACS_WR(integer_value);
@@ -2798,16 +2634,13 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 						      MII_BMCR,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_BMSR_REG")) {
-			pr_err(
-			       "Could not complete Write Operation MII_BMSR_REG : ReadOnly Register");
+			pr_err("MII_BMSR_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_PHYSID1_REG")) {
-			pr_err(
-			       "Could not complete Write Operation MII_PHYSID1_REG : ReadOnly Register");
+			pr_err("MII_PHYSID1_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_PHYSID2_REG")) {
-			pr_err(
-			       "Could not complete Write Operation MII_PHYSID2_REG : ReadOnly Register");
+			pr_err("MII_PHYSID2_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_ADVERTISE_REG")) {
 			eqos_mdio_write_direct(pdata,
@@ -2815,12 +2648,10 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 						      MII_ADVERTISE,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_LPA_REG")) {
-			pr_err(
-			       "Could not complete Write Operation MII_LPA_REG : ReadOnly Register");
+			pr_err("MII_LPA_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_EXPANSION_REG")) {
-			pr_err(
-			       "Could not complete Write Operation MII_EXPANSION_REG : ReadOnly Register");
+			pr_err("MII_EXPANSION_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "AUTO_NEGO_NP_REG")) {
 			eqos_mdio_write_direct(pdata,
@@ -2828,8 +2659,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 						      EQOS_AUTO_NEGO_NP,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_ESTATUS_REG")) {
-			pr_err(
-			       "Could not complete Write Operation MII_ESTATUS_REG : ReadOnly Register");
+			pr_err("MII_ESTATUS_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "MII_CTRL1000_REG")) {
 			eqos_mdio_write_direct(pdata,
@@ -2837,8 +2667,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 						      MII_CTRL1000,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "MII_STAT1000_REG")) {
-			pr_err(
-			       "Could not complete Write Operation MII_STAT1000_REG : ReadOnly Register");
+			pr_err("MII_STAT1000_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "PHY_CTL_REG")) {
 			eqos_mdio_write_direct(pdata,
@@ -2846,15 +2675,13 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 						      EQOS_PHY_CTL,
 						      (int)integer_value);
 		} else if (!strcmp(reg_name, "PHY_STS_REG")) {
-			pr_err(
-			       "Could not complete Write Operation PHY_STS_REG : ReadOnly Register");
+			pr_err("PHY_STS_REG is readonly\n");
 			ret = -EFAULT;
 		} else if (!strcmp(reg_name, "feature_drop_tx_pktburstcnt")) {
 			feature_drop_tx_pktburstcnt_val = (int)integer_value;
 			if (feature_drop_tx_pktburstcnt_val == 0) {
 				feature_drop_tx_pktburstcnt_val++;
-				pr_err(
-				       "Drop Tx frame count should be a positive non-zero number only\n");
+				pr_err("drop_tx_pktburstcnt is negative\n");
 			}
 			pdata->drop_tx_pktburstcnt =
 			    feature_drop_tx_pktburstcnt_val;
@@ -2891,13 +2718,10 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 			do_tx_align_tst_val = (int)integer_value;
 			do_transmit_alignment_test(pdata);
 		} else if (!strcmp(reg_name, "BCM_REGS")) {
-
-			pr_err(
-			       "Could not complete Write Operation BCM_REGS : ReadOnly Register");
+			pr_err("BCM_REGS is readonly\n");
 			ret = -EFAULT;
 		} else {
-			pr_err(
-			       "Could not complete Write Operation to Register. Register not found.\n");
+			pr_err("%s not found\n", reg_name);
 			ret = -EFAULT;
 		}
 	}
@@ -2911,8 +2735,7 @@ static ssize_t registers_write(struct file *file, const char __user *buf,
 			       size_t count, loff_t *ppos)
 {
 	DBGPR("--> registers_write\n");
-	pr_info(
-	       "Specify the correct file name for write operation: write error\n");
+	pr_info("Error: Invalid file name\n");
 	DBGPR("<-- registers_write\n");
 
 	return -1;
@@ -2922,6 +2745,7 @@ static ssize_t registers_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	char *debug_buf = NULL;
 
 	DBGPR("--> registers_read\n");
@@ -3702,7 +3526,7 @@ static ssize_t registers_read(struct file *file, char __user *userbuf,
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, EQOS_PHY_STS,
 				     &phy_sts_reg_val);
 
-	debug_buf = (char *)kmalloc(26820, GFP_KERNEL);
+	debug_buf = kmalloc(26820, GFP_KERNEL);
 
 	sprintf(debug_buf,
 		"MAC_MA32_127LR127            :%#x\n"
@@ -5254,6 +5078,7 @@ static ssize_t MAC_MA32_127LR127_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(127, MAC_MA32_127LR127_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR127            :%#x\n",
 		MAC_MA32_127LR127_val);
@@ -5272,6 +5097,7 @@ static ssize_t MAC_MA32_127LR126_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(126, MAC_MA32_127LR126_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR126            :%#x\n",
 		MAC_MA32_127LR126_val);
@@ -5290,6 +5116,7 @@ static ssize_t MAC_MA32_127LR125_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(125, MAC_MA32_127LR125_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR125            :%#x\n",
 		MAC_MA32_127LR125_val);
@@ -5308,6 +5135,7 @@ static ssize_t MAC_MA32_127LR124_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(124, MAC_MA32_127LR124_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR124            :%#x\n",
 		MAC_MA32_127LR124_val);
@@ -5326,6 +5154,7 @@ static ssize_t MAC_MA32_127LR123_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(123, MAC_MA32_127LR123_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR123            :%#x\n",
 		MAC_MA32_127LR123_val);
@@ -5344,6 +5173,7 @@ static ssize_t MAC_MA32_127LR122_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(122, MAC_MA32_127LR122_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR122            :%#x\n",
 		MAC_MA32_127LR122_val);
@@ -5362,6 +5192,7 @@ static ssize_t MAC_MA32_127LR121_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(121, MAC_MA32_127LR121_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR121            :%#x\n",
 		MAC_MA32_127LR121_val);
@@ -5380,6 +5211,7 @@ static ssize_t MAC_MA32_127LR120_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(120, MAC_MA32_127LR120_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR120            :%#x\n",
 		MAC_MA32_127LR120_val);
@@ -5398,6 +5230,7 @@ static ssize_t MAC_MA32_127LR119_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(119, MAC_MA32_127LR119_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR119            :%#x\n",
 		MAC_MA32_127LR119_val);
@@ -5416,6 +5249,7 @@ static ssize_t MAC_MA32_127LR118_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(118, MAC_MA32_127LR118_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR118            :%#x\n",
 		MAC_MA32_127LR118_val);
@@ -5434,6 +5268,7 @@ static ssize_t MAC_MA32_127LR117_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(117, MAC_MA32_127LR117_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR117            :%#x\n",
 		MAC_MA32_127LR117_val);
@@ -5452,6 +5287,7 @@ static ssize_t MAC_MA32_127LR116_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(116, MAC_MA32_127LR116_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR116            :%#x\n",
 		MAC_MA32_127LR116_val);
@@ -5470,6 +5306,7 @@ static ssize_t MAC_MA32_127LR115_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(115, MAC_MA32_127LR115_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR115            :%#x\n",
 		MAC_MA32_127LR115_val);
@@ -5488,6 +5325,7 @@ static ssize_t MAC_MA32_127LR114_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(114, MAC_MA32_127LR114_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR114            :%#x\n",
 		MAC_MA32_127LR114_val);
@@ -5506,6 +5344,7 @@ static ssize_t MAC_MA32_127LR113_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(113, MAC_MA32_127LR113_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR113            :%#x\n",
 		MAC_MA32_127LR113_val);
@@ -5524,6 +5363,7 @@ static ssize_t MAC_MA32_127LR112_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(112, MAC_MA32_127LR112_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR112            :%#x\n",
 		MAC_MA32_127LR112_val);
@@ -5542,6 +5382,7 @@ static ssize_t MAC_MA32_127LR111_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(111, MAC_MA32_127LR111_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR111            :%#x\n",
 		MAC_MA32_127LR111_val);
@@ -5560,6 +5401,7 @@ static ssize_t MAC_MA32_127LR110_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(110, MAC_MA32_127LR110_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR110            :%#x\n",
 		MAC_MA32_127LR110_val);
@@ -5578,6 +5420,7 @@ static ssize_t MAC_MA32_127LR109_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(109, MAC_MA32_127LR109_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR109            :%#x\n",
 		MAC_MA32_127LR109_val);
@@ -5596,6 +5439,7 @@ static ssize_t MAC_MA32_127LR108_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(108, MAC_MA32_127LR108_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR108            :%#x\n",
 		MAC_MA32_127LR108_val);
@@ -5614,6 +5458,7 @@ static ssize_t MAC_MA32_127LR107_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(107, MAC_MA32_127LR107_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR107            :%#x\n",
 		MAC_MA32_127LR107_val);
@@ -5632,6 +5477,7 @@ static ssize_t MAC_MA32_127LR106_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(106, MAC_MA32_127LR106_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR106            :%#x\n",
 		MAC_MA32_127LR106_val);
@@ -5650,6 +5496,7 @@ static ssize_t MAC_MA32_127LR105_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(105, MAC_MA32_127LR105_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR105            :%#x\n",
 		MAC_MA32_127LR105_val);
@@ -5668,6 +5515,7 @@ static ssize_t MAC_MA32_127LR104_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(104, MAC_MA32_127LR104_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR104            :%#x\n",
 		MAC_MA32_127LR104_val);
@@ -5686,6 +5534,7 @@ static ssize_t MAC_MA32_127LR103_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(103, MAC_MA32_127LR103_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR103            :%#x\n",
 		MAC_MA32_127LR103_val);
@@ -5704,6 +5553,7 @@ static ssize_t MAC_MA32_127LR102_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(102, MAC_MA32_127LR102_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR102            :%#x\n",
 		MAC_MA32_127LR102_val);
@@ -5722,6 +5572,7 @@ static ssize_t MAC_MA32_127LR101_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(101, MAC_MA32_127LR101_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR101            :%#x\n",
 		MAC_MA32_127LR101_val);
@@ -5740,6 +5591,7 @@ static ssize_t MAC_MA32_127LR100_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(100, MAC_MA32_127LR100_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR100            :%#x\n",
 		MAC_MA32_127LR100_val);
@@ -5758,6 +5610,7 @@ static ssize_t MAC_MA32_127LR99_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(99, MAC_MA32_127LR99_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR99            :%#x\n",
 		MAC_MA32_127LR99_val);
@@ -5776,6 +5629,7 @@ static ssize_t MAC_MA32_127LR98_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(98, MAC_MA32_127LR98_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR98            :%#x\n",
 		MAC_MA32_127LR98_val);
@@ -5794,6 +5648,7 @@ static ssize_t MAC_MA32_127LR97_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(97, MAC_MA32_127LR97_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR97            :%#x\n",
 		MAC_MA32_127LR97_val);
@@ -5812,6 +5667,7 @@ static ssize_t MAC_MA32_127LR96_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(96, MAC_MA32_127LR96_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR96            :%#x\n",
 		MAC_MA32_127LR96_val);
@@ -5830,6 +5686,7 @@ static ssize_t MAC_MA32_127LR95_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(95, MAC_MA32_127LR95_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR95            :%#x\n",
 		MAC_MA32_127LR95_val);
@@ -5848,6 +5705,7 @@ static ssize_t MAC_MA32_127LR94_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(94, MAC_MA32_127LR94_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR94            :%#x\n",
 		MAC_MA32_127LR94_val);
@@ -5866,6 +5724,7 @@ static ssize_t MAC_MA32_127LR93_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(93, MAC_MA32_127LR93_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR93            :%#x\n",
 		MAC_MA32_127LR93_val);
@@ -5884,6 +5743,7 @@ static ssize_t MAC_MA32_127LR92_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(92, MAC_MA32_127LR92_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR92            :%#x\n",
 		MAC_MA32_127LR92_val);
@@ -5902,6 +5762,7 @@ static ssize_t MAC_MA32_127LR91_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(91, MAC_MA32_127LR91_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR91            :%#x\n",
 		MAC_MA32_127LR91_val);
@@ -5920,6 +5781,7 @@ static ssize_t MAC_MA32_127LR90_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(90, MAC_MA32_127LR90_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR90            :%#x\n",
 		MAC_MA32_127LR90_val);
@@ -5938,6 +5800,7 @@ static ssize_t MAC_MA32_127LR89_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(89, MAC_MA32_127LR89_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR89            :%#x\n",
 		MAC_MA32_127LR89_val);
@@ -5956,6 +5819,7 @@ static ssize_t MAC_MA32_127LR88_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(88, MAC_MA32_127LR88_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR88            :%#x\n",
 		MAC_MA32_127LR88_val);
@@ -5974,6 +5838,7 @@ static ssize_t MAC_MA32_127LR87_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(87, MAC_MA32_127LR87_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR87            :%#x\n",
 		MAC_MA32_127LR87_val);
@@ -5992,6 +5857,7 @@ static ssize_t MAC_MA32_127LR86_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(86, MAC_MA32_127LR86_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR86            :%#x\n",
 		MAC_MA32_127LR86_val);
@@ -6010,6 +5876,7 @@ static ssize_t MAC_MA32_127LR85_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(85, MAC_MA32_127LR85_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR85            :%#x\n",
 		MAC_MA32_127LR85_val);
@@ -6028,6 +5895,7 @@ static ssize_t MAC_MA32_127LR84_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(84, MAC_MA32_127LR84_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR84            :%#x\n",
 		MAC_MA32_127LR84_val);
@@ -6046,6 +5914,7 @@ static ssize_t MAC_MA32_127LR83_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(83, MAC_MA32_127LR83_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR83            :%#x\n",
 		MAC_MA32_127LR83_val);
@@ -6064,6 +5933,7 @@ static ssize_t MAC_MA32_127LR82_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(82, MAC_MA32_127LR82_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR82            :%#x\n",
 		MAC_MA32_127LR82_val);
@@ -6082,6 +5952,7 @@ static ssize_t MAC_MA32_127LR81_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(81, MAC_MA32_127LR81_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR81            :%#x\n",
 		MAC_MA32_127LR81_val);
@@ -6100,6 +5971,7 @@ static ssize_t MAC_MA32_127LR80_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(80, MAC_MA32_127LR80_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR80            :%#x\n",
 		MAC_MA32_127LR80_val);
@@ -6118,6 +5990,7 @@ static ssize_t MAC_MA32_127LR79_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(79, MAC_MA32_127LR79_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR79            :%#x\n",
 		MAC_MA32_127LR79_val);
@@ -6136,6 +6009,7 @@ static ssize_t MAC_MA32_127LR78_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(78, MAC_MA32_127LR78_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR78            :%#x\n",
 		MAC_MA32_127LR78_val);
@@ -6154,6 +6028,7 @@ static ssize_t MAC_MA32_127LR77_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(77, MAC_MA32_127LR77_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR77            :%#x\n",
 		MAC_MA32_127LR77_val);
@@ -6172,6 +6047,7 @@ static ssize_t MAC_MA32_127LR76_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(76, MAC_MA32_127LR76_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR76            :%#x\n",
 		MAC_MA32_127LR76_val);
@@ -6190,6 +6066,7 @@ static ssize_t MAC_MA32_127LR75_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(75, MAC_MA32_127LR75_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR75            :%#x\n",
 		MAC_MA32_127LR75_val);
@@ -6208,6 +6085,7 @@ static ssize_t MAC_MA32_127LR74_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(74, MAC_MA32_127LR74_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR74            :%#x\n",
 		MAC_MA32_127LR74_val);
@@ -6226,6 +6104,7 @@ static ssize_t MAC_MA32_127LR73_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(73, MAC_MA32_127LR73_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR73            :%#x\n",
 		MAC_MA32_127LR73_val);
@@ -6244,6 +6123,7 @@ static ssize_t MAC_MA32_127LR72_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(72, MAC_MA32_127LR72_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR72            :%#x\n",
 		MAC_MA32_127LR72_val);
@@ -6262,6 +6142,7 @@ static ssize_t MAC_MA32_127LR71_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(71, MAC_MA32_127LR71_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR71            :%#x\n",
 		MAC_MA32_127LR71_val);
@@ -6280,6 +6161,7 @@ static ssize_t MAC_MA32_127LR70_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(70, MAC_MA32_127LR70_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR70            :%#x\n",
 		MAC_MA32_127LR70_val);
@@ -6298,6 +6180,7 @@ static ssize_t MAC_MA32_127LR69_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(69, MAC_MA32_127LR69_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR69            :%#x\n",
 		MAC_MA32_127LR69_val);
@@ -6316,6 +6199,7 @@ static ssize_t MAC_MA32_127LR68_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(68, MAC_MA32_127LR68_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR68            :%#x\n",
 		MAC_MA32_127LR68_val);
@@ -6334,6 +6218,7 @@ static ssize_t MAC_MA32_127LR67_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(67, MAC_MA32_127LR67_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR67            :%#x\n",
 		MAC_MA32_127LR67_val);
@@ -6352,6 +6237,7 @@ static ssize_t MAC_MA32_127LR66_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(66, MAC_MA32_127LR66_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR66            :%#x\n",
 		MAC_MA32_127LR66_val);
@@ -6370,6 +6256,7 @@ static ssize_t MAC_MA32_127LR65_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(65, MAC_MA32_127LR65_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR65            :%#x\n",
 		MAC_MA32_127LR65_val);
@@ -6388,6 +6275,7 @@ static ssize_t MAC_MA32_127LR64_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(64, MAC_MA32_127LR64_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR64            :%#x\n",
 		MAC_MA32_127LR64_val);
@@ -6406,6 +6294,7 @@ static ssize_t MAC_MA32_127LR63_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(63, MAC_MA32_127LR63_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR63            :%#x\n",
 		MAC_MA32_127LR63_val);
@@ -6424,6 +6313,7 @@ static ssize_t MAC_MA32_127LR62_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(62, MAC_MA32_127LR62_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR62            :%#x\n",
 		MAC_MA32_127LR62_val);
@@ -6442,6 +6332,7 @@ static ssize_t MAC_MA32_127LR61_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(61, MAC_MA32_127LR61_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR61            :%#x\n",
 		MAC_MA32_127LR61_val);
@@ -6460,6 +6351,7 @@ static ssize_t MAC_MA32_127LR60_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(60, MAC_MA32_127LR60_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR60            :%#x\n",
 		MAC_MA32_127LR60_val);
@@ -6478,6 +6370,7 @@ static ssize_t MAC_MA32_127LR59_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(59, MAC_MA32_127LR59_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR59            :%#x\n",
 		MAC_MA32_127LR59_val);
@@ -6496,6 +6389,7 @@ static ssize_t MAC_MA32_127LR58_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(58, MAC_MA32_127LR58_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR58            :%#x\n",
 		MAC_MA32_127LR58_val);
@@ -6514,6 +6408,7 @@ static ssize_t MAC_MA32_127LR57_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(57, MAC_MA32_127LR57_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR57            :%#x\n",
 		MAC_MA32_127LR57_val);
@@ -6532,6 +6427,7 @@ static ssize_t MAC_MA32_127LR56_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(56, MAC_MA32_127LR56_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR56            :%#x\n",
 		MAC_MA32_127LR56_val);
@@ -6550,6 +6446,7 @@ static ssize_t MAC_MA32_127LR55_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(55, MAC_MA32_127LR55_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR55            :%#x\n",
 		MAC_MA32_127LR55_val);
@@ -6568,6 +6465,7 @@ static ssize_t MAC_MA32_127LR54_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(54, MAC_MA32_127LR54_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR54            :%#x\n",
 		MAC_MA32_127LR54_val);
@@ -6586,6 +6484,7 @@ static ssize_t MAC_MA32_127LR53_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(53, MAC_MA32_127LR53_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR53            :%#x\n",
 		MAC_MA32_127LR53_val);
@@ -6604,6 +6503,7 @@ static ssize_t MAC_MA32_127LR52_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(52, MAC_MA32_127LR52_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR52            :%#x\n",
 		MAC_MA32_127LR52_val);
@@ -6622,6 +6522,7 @@ static ssize_t MAC_MA32_127LR51_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(51, MAC_MA32_127LR51_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR51            :%#x\n",
 		MAC_MA32_127LR51_val);
@@ -6640,6 +6541,7 @@ static ssize_t MAC_MA32_127LR50_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(50, MAC_MA32_127LR50_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR50            :%#x\n",
 		MAC_MA32_127LR50_val);
@@ -6658,6 +6560,7 @@ static ssize_t MAC_MA32_127LR49_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(49, MAC_MA32_127LR49_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR49            :%#x\n",
 		MAC_MA32_127LR49_val);
@@ -6676,6 +6579,7 @@ static ssize_t MAC_MA32_127LR48_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(48, MAC_MA32_127LR48_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR48            :%#x\n",
 		MAC_MA32_127LR48_val);
@@ -6694,6 +6598,7 @@ static ssize_t MAC_MA32_127LR47_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(47, MAC_MA32_127LR47_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR47            :%#x\n",
 		MAC_MA32_127LR47_val);
@@ -6712,6 +6617,7 @@ static ssize_t MAC_MA32_127LR46_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(46, MAC_MA32_127LR46_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR46            :%#x\n",
 		MAC_MA32_127LR46_val);
@@ -6730,6 +6636,7 @@ static ssize_t MAC_MA32_127LR45_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(45, MAC_MA32_127LR45_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR45            :%#x\n",
 		MAC_MA32_127LR45_val);
@@ -6748,6 +6655,7 @@ static ssize_t MAC_MA32_127LR44_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(44, MAC_MA32_127LR44_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR44            :%#x\n",
 		MAC_MA32_127LR44_val);
@@ -6766,6 +6674,7 @@ static ssize_t MAC_MA32_127LR43_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(43, MAC_MA32_127LR43_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR43            :%#x\n",
 		MAC_MA32_127LR43_val);
@@ -6784,6 +6693,7 @@ static ssize_t MAC_MA32_127LR42_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(42, MAC_MA32_127LR42_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR42            :%#x\n",
 		MAC_MA32_127LR42_val);
@@ -6802,6 +6712,7 @@ static ssize_t MAC_MA32_127LR41_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(41, MAC_MA32_127LR41_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR41            :%#x\n",
 		MAC_MA32_127LR41_val);
@@ -6820,6 +6731,7 @@ static ssize_t MAC_MA32_127LR40_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(40, MAC_MA32_127LR40_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR40            :%#x\n",
 		MAC_MA32_127LR40_val);
@@ -6838,6 +6750,7 @@ static ssize_t MAC_MA32_127LR39_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(39, MAC_MA32_127LR39_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR39            :%#x\n",
 		MAC_MA32_127LR39_val);
@@ -6856,6 +6769,7 @@ static ssize_t MAC_MA32_127LR38_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(38, MAC_MA32_127LR38_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR38            :%#x\n",
 		MAC_MA32_127LR38_val);
@@ -6874,6 +6788,7 @@ static ssize_t MAC_MA32_127LR37_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(37, MAC_MA32_127LR37_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR37            :%#x\n",
 		MAC_MA32_127LR37_val);
@@ -6892,6 +6807,7 @@ static ssize_t MAC_MA32_127LR36_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(36, MAC_MA32_127LR36_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR36            :%#x\n",
 		MAC_MA32_127LR36_val);
@@ -6910,6 +6826,7 @@ static ssize_t MAC_MA32_127LR35_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(35, MAC_MA32_127LR35_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR35            :%#x\n",
 		MAC_MA32_127LR35_val);
@@ -6928,6 +6845,7 @@ static ssize_t MAC_MA32_127LR34_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(34, MAC_MA32_127LR34_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR34            :%#x\n",
 		MAC_MA32_127LR34_val);
@@ -6946,6 +6864,7 @@ static ssize_t MAC_MA32_127LR33_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(33, MAC_MA32_127LR33_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR33            :%#x\n",
 		MAC_MA32_127LR33_val);
@@ -6964,6 +6883,7 @@ static ssize_t MAC_MA32_127LR32_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127LR_RD(32, MAC_MA32_127LR32_val);
 	sprintf(debugfs_buf, "MAC_MA32_127LR32            :%#x\n",
 		MAC_MA32_127LR32_val);
@@ -6982,6 +6902,7 @@ static ssize_t MAC_MA32_127HR127_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(127, MAC_MA32_127HR127_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR127            :%#x\n",
 		MAC_MA32_127HR127_val);
@@ -7000,6 +6921,7 @@ static ssize_t MAC_MA32_127HR126_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(126, MAC_MA32_127HR126_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR126            :%#x\n",
 		MAC_MA32_127HR126_val);
@@ -7018,6 +6940,7 @@ static ssize_t MAC_MA32_127HR125_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(125, MAC_MA32_127HR125_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR125            :%#x\n",
 		MAC_MA32_127HR125_val);
@@ -7036,6 +6959,7 @@ static ssize_t MAC_MA32_127HR124_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(124, MAC_MA32_127HR124_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR124            :%#x\n",
 		MAC_MA32_127HR124_val);
@@ -7054,6 +6978,7 @@ static ssize_t MAC_MA32_127HR123_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(123, MAC_MA32_127HR123_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR123            :%#x\n",
 		MAC_MA32_127HR123_val);
@@ -7072,6 +6997,7 @@ static ssize_t MAC_MA32_127HR122_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(122, MAC_MA32_127HR122_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR122            :%#x\n",
 		MAC_MA32_127HR122_val);
@@ -7090,6 +7016,7 @@ static ssize_t MAC_MA32_127HR121_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(121, MAC_MA32_127HR121_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR121            :%#x\n",
 		MAC_MA32_127HR121_val);
@@ -7108,6 +7035,7 @@ static ssize_t MAC_MA32_127HR120_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(120, MAC_MA32_127HR120_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR120            :%#x\n",
 		MAC_MA32_127HR120_val);
@@ -7126,6 +7054,7 @@ static ssize_t MAC_MA32_127HR119_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(119, MAC_MA32_127HR119_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR119            :%#x\n",
 		MAC_MA32_127HR119_val);
@@ -7144,6 +7073,7 @@ static ssize_t MAC_MA32_127HR118_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(118, MAC_MA32_127HR118_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR118            :%#x\n",
 		MAC_MA32_127HR118_val);
@@ -7162,6 +7092,7 @@ static ssize_t MAC_MA32_127HR117_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(117, MAC_MA32_127HR117_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR117            :%#x\n",
 		MAC_MA32_127HR117_val);
@@ -7180,6 +7111,7 @@ static ssize_t MAC_MA32_127HR116_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(116, MAC_MA32_127HR116_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR116            :%#x\n",
 		MAC_MA32_127HR116_val);
@@ -7198,6 +7130,7 @@ static ssize_t MAC_MA32_127HR115_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(115, MAC_MA32_127HR115_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR115            :%#x\n",
 		MAC_MA32_127HR115_val);
@@ -7216,6 +7149,7 @@ static ssize_t MAC_MA32_127HR114_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(114, MAC_MA32_127HR114_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR114            :%#x\n",
 		MAC_MA32_127HR114_val);
@@ -7234,6 +7168,7 @@ static ssize_t MAC_MA32_127HR113_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(113, MAC_MA32_127HR113_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR113            :%#x\n",
 		MAC_MA32_127HR113_val);
@@ -7252,6 +7187,7 @@ static ssize_t MAC_MA32_127HR112_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(112, MAC_MA32_127HR112_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR112            :%#x\n",
 		MAC_MA32_127HR112_val);
@@ -7270,6 +7206,7 @@ static ssize_t MAC_MA32_127HR111_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(111, MAC_MA32_127HR111_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR111            :%#x\n",
 		MAC_MA32_127HR111_val);
@@ -7288,6 +7225,7 @@ static ssize_t MAC_MA32_127HR110_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(110, MAC_MA32_127HR110_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR110            :%#x\n",
 		MAC_MA32_127HR110_val);
@@ -7306,6 +7244,7 @@ static ssize_t MAC_MA32_127HR109_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(109, MAC_MA32_127HR109_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR109            :%#x\n",
 		MAC_MA32_127HR109_val);
@@ -7324,6 +7263,7 @@ static ssize_t MAC_MA32_127HR108_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(108, MAC_MA32_127HR108_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR108            :%#x\n",
 		MAC_MA32_127HR108_val);
@@ -7342,6 +7282,7 @@ static ssize_t MAC_MA32_127HR107_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(107, MAC_MA32_127HR107_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR107            :%#x\n",
 		MAC_MA32_127HR107_val);
@@ -7360,6 +7301,7 @@ static ssize_t MAC_MA32_127HR106_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(106, MAC_MA32_127HR106_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR106            :%#x\n",
 		MAC_MA32_127HR106_val);
@@ -7378,6 +7320,7 @@ static ssize_t MAC_MA32_127HR105_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(105, MAC_MA32_127HR105_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR105            :%#x\n",
 		MAC_MA32_127HR105_val);
@@ -7396,6 +7339,7 @@ static ssize_t MAC_MA32_127HR104_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(104, MAC_MA32_127HR104_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR104            :%#x\n",
 		MAC_MA32_127HR104_val);
@@ -7414,6 +7358,7 @@ static ssize_t MAC_MA32_127HR103_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(103, MAC_MA32_127HR103_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR103            :%#x\n",
 		MAC_MA32_127HR103_val);
@@ -7432,6 +7377,7 @@ static ssize_t MAC_MA32_127HR102_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(102, MAC_MA32_127HR102_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR102            :%#x\n",
 		MAC_MA32_127HR102_val);
@@ -7450,6 +7396,7 @@ static ssize_t MAC_MA32_127HR101_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(101, MAC_MA32_127HR101_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR101            :%#x\n",
 		MAC_MA32_127HR101_val);
@@ -7468,6 +7415,7 @@ static ssize_t MAC_MA32_127HR100_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(100, MAC_MA32_127HR100_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR100            :%#x\n",
 		MAC_MA32_127HR100_val);
@@ -7486,6 +7434,7 @@ static ssize_t MAC_MA32_127HR99_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(99, MAC_MA32_127HR99_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR99            :%#x\n",
 		MAC_MA32_127HR99_val);
@@ -7504,6 +7453,7 @@ static ssize_t MAC_MA32_127HR98_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(98, MAC_MA32_127HR98_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR98            :%#x\n",
 		MAC_MA32_127HR98_val);
@@ -7522,6 +7472,7 @@ static ssize_t MAC_MA32_127HR97_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(97, MAC_MA32_127HR97_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR97            :%#x\n",
 		MAC_MA32_127HR97_val);
@@ -7540,6 +7491,7 @@ static ssize_t MAC_MA32_127HR96_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(96, MAC_MA32_127HR96_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR96            :%#x\n",
 		MAC_MA32_127HR96_val);
@@ -7558,6 +7510,7 @@ static ssize_t MAC_MA32_127HR95_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(95, MAC_MA32_127HR95_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR95            :%#x\n",
 		MAC_MA32_127HR95_val);
@@ -7576,6 +7529,7 @@ static ssize_t MAC_MA32_127HR94_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(94, MAC_MA32_127HR94_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR94            :%#x\n",
 		MAC_MA32_127HR94_val);
@@ -7594,6 +7548,7 @@ static ssize_t MAC_MA32_127HR93_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(93, MAC_MA32_127HR93_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR93            :%#x\n",
 		MAC_MA32_127HR93_val);
@@ -7612,6 +7567,7 @@ static ssize_t MAC_MA32_127HR92_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(92, MAC_MA32_127HR92_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR92            :%#x\n",
 		MAC_MA32_127HR92_val);
@@ -7630,6 +7586,7 @@ static ssize_t MAC_MA32_127HR91_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(91, MAC_MA32_127HR91_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR91            :%#x\n",
 		MAC_MA32_127HR91_val);
@@ -7648,6 +7605,7 @@ static ssize_t MAC_MA32_127HR90_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(90, MAC_MA32_127HR90_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR90            :%#x\n",
 		MAC_MA32_127HR90_val);
@@ -7666,6 +7624,7 @@ static ssize_t MAC_MA32_127HR89_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(89, MAC_MA32_127HR89_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR89            :%#x\n",
 		MAC_MA32_127HR89_val);
@@ -7684,6 +7643,7 @@ static ssize_t MAC_MA32_127HR88_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(88, MAC_MA32_127HR88_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR88            :%#x\n",
 		MAC_MA32_127HR88_val);
@@ -7702,6 +7662,7 @@ static ssize_t MAC_MA32_127HR87_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(87, MAC_MA32_127HR87_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR87            :%#x\n",
 		MAC_MA32_127HR87_val);
@@ -7720,6 +7681,7 @@ static ssize_t MAC_MA32_127HR86_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(86, MAC_MA32_127HR86_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR86            :%#x\n",
 		MAC_MA32_127HR86_val);
@@ -7738,6 +7700,7 @@ static ssize_t MAC_MA32_127HR85_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(85, MAC_MA32_127HR85_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR85            :%#x\n",
 		MAC_MA32_127HR85_val);
@@ -7756,6 +7719,7 @@ static ssize_t MAC_MA32_127HR84_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(84, MAC_MA32_127HR84_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR84            :%#x\n",
 		MAC_MA32_127HR84_val);
@@ -7774,6 +7738,7 @@ static ssize_t MAC_MA32_127HR83_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(83, MAC_MA32_127HR83_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR83            :%#x\n",
 		MAC_MA32_127HR83_val);
@@ -7792,6 +7757,7 @@ static ssize_t MAC_MA32_127HR82_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(82, MAC_MA32_127HR82_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR82            :%#x\n",
 		MAC_MA32_127HR82_val);
@@ -7810,6 +7776,7 @@ static ssize_t MAC_MA32_127HR81_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(81, MAC_MA32_127HR81_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR81            :%#x\n",
 		MAC_MA32_127HR81_val);
@@ -7828,6 +7795,7 @@ static ssize_t MAC_MA32_127HR80_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(80, MAC_MA32_127HR80_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR80            :%#x\n",
 		MAC_MA32_127HR80_val);
@@ -7846,6 +7814,7 @@ static ssize_t MAC_MA32_127HR79_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(79, MAC_MA32_127HR79_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR79            :%#x\n",
 		MAC_MA32_127HR79_val);
@@ -7864,6 +7833,7 @@ static ssize_t MAC_MA32_127HR78_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(78, MAC_MA32_127HR78_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR78            :%#x\n",
 		MAC_MA32_127HR78_val);
@@ -7882,6 +7852,7 @@ static ssize_t MAC_MA32_127HR77_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(77, MAC_MA32_127HR77_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR77            :%#x\n",
 		MAC_MA32_127HR77_val);
@@ -7900,6 +7871,7 @@ static ssize_t MAC_MA32_127HR76_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(76, MAC_MA32_127HR76_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR76            :%#x\n",
 		MAC_MA32_127HR76_val);
@@ -7918,6 +7890,7 @@ static ssize_t MAC_MA32_127HR75_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(75, MAC_MA32_127HR75_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR75            :%#x\n",
 		MAC_MA32_127HR75_val);
@@ -7936,6 +7909,7 @@ static ssize_t MAC_MA32_127HR74_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(74, MAC_MA32_127HR74_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR74            :%#x\n",
 		MAC_MA32_127HR74_val);
@@ -7954,6 +7928,7 @@ static ssize_t MAC_MA32_127HR73_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(73, MAC_MA32_127HR73_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR73            :%#x\n",
 		MAC_MA32_127HR73_val);
@@ -7972,6 +7947,7 @@ static ssize_t MAC_MA32_127HR72_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(72, MAC_MA32_127HR72_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR72            :%#x\n",
 		MAC_MA32_127HR72_val);
@@ -7990,6 +7966,7 @@ static ssize_t MAC_MA32_127HR71_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(71, MAC_MA32_127HR71_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR71            :%#x\n",
 		MAC_MA32_127HR71_val);
@@ -8008,6 +7985,7 @@ static ssize_t MAC_MA32_127HR70_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(70, MAC_MA32_127HR70_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR70            :%#x\n",
 		MAC_MA32_127HR70_val);
@@ -8026,6 +8004,7 @@ static ssize_t MAC_MA32_127HR69_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(69, MAC_MA32_127HR69_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR69            :%#x\n",
 		MAC_MA32_127HR69_val);
@@ -8044,6 +8023,7 @@ static ssize_t MAC_MA32_127HR68_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(68, MAC_MA32_127HR68_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR68            :%#x\n",
 		MAC_MA32_127HR68_val);
@@ -8062,6 +8042,7 @@ static ssize_t MAC_MA32_127HR67_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(67, MAC_MA32_127HR67_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR67            :%#x\n",
 		MAC_MA32_127HR67_val);
@@ -8080,6 +8061,7 @@ static ssize_t MAC_MA32_127HR66_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(66, MAC_MA32_127HR66_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR66            :%#x\n",
 		MAC_MA32_127HR66_val);
@@ -8098,6 +8080,7 @@ static ssize_t MAC_MA32_127HR65_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(65, MAC_MA32_127HR65_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR65            :%#x\n",
 		MAC_MA32_127HR65_val);
@@ -8116,6 +8099,7 @@ static ssize_t MAC_MA32_127HR64_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(64, MAC_MA32_127HR64_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR64            :%#x\n",
 		MAC_MA32_127HR64_val);
@@ -8134,6 +8118,7 @@ static ssize_t MAC_MA32_127HR63_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(63, MAC_MA32_127HR63_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR63            :%#x\n",
 		MAC_MA32_127HR63_val);
@@ -8152,6 +8137,7 @@ static ssize_t MAC_MA32_127HR62_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(62, MAC_MA32_127HR62_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR62            :%#x\n",
 		MAC_MA32_127HR62_val);
@@ -8170,6 +8156,7 @@ static ssize_t MAC_MA32_127HR61_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(61, MAC_MA32_127HR61_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR61            :%#x\n",
 		MAC_MA32_127HR61_val);
@@ -8188,6 +8175,7 @@ static ssize_t MAC_MA32_127HR60_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(60, MAC_MA32_127HR60_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR60            :%#x\n",
 		MAC_MA32_127HR60_val);
@@ -8206,6 +8194,7 @@ static ssize_t MAC_MA32_127HR59_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(59, MAC_MA32_127HR59_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR59            :%#x\n",
 		MAC_MA32_127HR59_val);
@@ -8224,6 +8213,7 @@ static ssize_t MAC_MA32_127HR58_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(58, MAC_MA32_127HR58_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR58            :%#x\n",
 		MAC_MA32_127HR58_val);
@@ -8242,6 +8232,7 @@ static ssize_t MAC_MA32_127HR57_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(57, MAC_MA32_127HR57_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR57            :%#x\n",
 		MAC_MA32_127HR57_val);
@@ -8260,6 +8251,7 @@ static ssize_t MAC_MA32_127HR56_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(56, MAC_MA32_127HR56_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR56            :%#x\n",
 		MAC_MA32_127HR56_val);
@@ -8278,6 +8270,7 @@ static ssize_t MAC_MA32_127HR55_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(55, MAC_MA32_127HR55_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR55            :%#x\n",
 		MAC_MA32_127HR55_val);
@@ -8296,6 +8289,7 @@ static ssize_t MAC_MA32_127HR54_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(54, MAC_MA32_127HR54_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR54            :%#x\n",
 		MAC_MA32_127HR54_val);
@@ -8314,6 +8308,7 @@ static ssize_t MAC_MA32_127HR53_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(53, MAC_MA32_127HR53_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR53            :%#x\n",
 		MAC_MA32_127HR53_val);
@@ -8332,6 +8327,7 @@ static ssize_t MAC_MA32_127HR52_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(52, MAC_MA32_127HR52_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR52            :%#x\n",
 		MAC_MA32_127HR52_val);
@@ -8350,6 +8346,7 @@ static ssize_t MAC_MA32_127HR51_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(51, MAC_MA32_127HR51_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR51            :%#x\n",
 		MAC_MA32_127HR51_val);
@@ -8368,6 +8365,7 @@ static ssize_t MAC_MA32_127HR50_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(50, MAC_MA32_127HR50_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR50            :%#x\n",
 		MAC_MA32_127HR50_val);
@@ -8386,6 +8384,7 @@ static ssize_t MAC_MA32_127HR49_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(49, MAC_MA32_127HR49_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR49            :%#x\n",
 		MAC_MA32_127HR49_val);
@@ -8404,6 +8403,7 @@ static ssize_t MAC_MA32_127HR48_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(48, MAC_MA32_127HR48_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR48            :%#x\n",
 		MAC_MA32_127HR48_val);
@@ -8422,6 +8422,7 @@ static ssize_t MAC_MA32_127HR47_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(47, MAC_MA32_127HR47_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR47            :%#x\n",
 		MAC_MA32_127HR47_val);
@@ -8440,6 +8441,7 @@ static ssize_t MAC_MA32_127HR46_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(46, MAC_MA32_127HR46_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR46            :%#x\n",
 		MAC_MA32_127HR46_val);
@@ -8458,6 +8460,7 @@ static ssize_t MAC_MA32_127HR45_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(45, MAC_MA32_127HR45_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR45            :%#x\n",
 		MAC_MA32_127HR45_val);
@@ -8476,6 +8479,7 @@ static ssize_t MAC_MA32_127HR44_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(44, MAC_MA32_127HR44_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR44            :%#x\n",
 		MAC_MA32_127HR44_val);
@@ -8494,6 +8498,7 @@ static ssize_t MAC_MA32_127HR43_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(43, MAC_MA32_127HR43_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR43            :%#x\n",
 		MAC_MA32_127HR43_val);
@@ -8512,6 +8517,7 @@ static ssize_t MAC_MA32_127HR42_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(42, MAC_MA32_127HR42_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR42            :%#x\n",
 		MAC_MA32_127HR42_val);
@@ -8530,6 +8536,7 @@ static ssize_t MAC_MA32_127HR41_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(41, MAC_MA32_127HR41_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR41            :%#x\n",
 		MAC_MA32_127HR41_val);
@@ -8548,6 +8555,7 @@ static ssize_t MAC_MA32_127HR40_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(40, MAC_MA32_127HR40_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR40            :%#x\n",
 		MAC_MA32_127HR40_val);
@@ -8566,6 +8574,7 @@ static ssize_t MAC_MA32_127HR39_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(39, MAC_MA32_127HR39_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR39            :%#x\n",
 		MAC_MA32_127HR39_val);
@@ -8584,6 +8593,7 @@ static ssize_t MAC_MA32_127HR38_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(38, MAC_MA32_127HR38_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR38            :%#x\n",
 		MAC_MA32_127HR38_val);
@@ -8602,6 +8612,7 @@ static ssize_t MAC_MA32_127HR37_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(37, MAC_MA32_127HR37_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR37            :%#x\n",
 		MAC_MA32_127HR37_val);
@@ -8620,6 +8631,7 @@ static ssize_t MAC_MA32_127HR36_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(36, MAC_MA32_127HR36_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR36            :%#x\n",
 		MAC_MA32_127HR36_val);
@@ -8638,6 +8650,7 @@ static ssize_t MAC_MA32_127HR35_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(35, MAC_MA32_127HR35_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR35            :%#x\n",
 		MAC_MA32_127HR35_val);
@@ -8656,6 +8669,7 @@ static ssize_t MAC_MA32_127HR34_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(34, MAC_MA32_127HR34_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR34            :%#x\n",
 		MAC_MA32_127HR34_val);
@@ -8674,6 +8688,7 @@ static ssize_t MAC_MA32_127HR33_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(33, MAC_MA32_127HR33_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR33            :%#x\n",
 		MAC_MA32_127HR33_val);
@@ -8692,6 +8707,7 @@ static ssize_t MAC_MA32_127HR32_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA32_127HR_RD(32, MAC_MA32_127HR32_val);
 	sprintf(debugfs_buf, "MAC_MA32_127HR32            :%#x\n",
 		MAC_MA32_127HR32_val);
@@ -8710,6 +8726,7 @@ static ssize_t MAC_MA1_31LR31_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(31, MAC_MA1_31LR31_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR31              :%#x\n",
 		MAC_MA1_31LR31_val);
@@ -8728,6 +8745,7 @@ static ssize_t MAC_MA1_31LR30_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(30, MAC_MA1_31LR30_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR30              :%#x\n",
 		MAC_MA1_31LR30_val);
@@ -8746,6 +8764,7 @@ static ssize_t MAC_MA1_31LR29_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(29, MAC_MA1_31LR29_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR29              :%#x\n",
 		MAC_MA1_31LR29_val);
@@ -8764,6 +8783,7 @@ static ssize_t MAC_MA1_31LR28_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(28, MAC_MA1_31LR28_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR28              :%#x\n",
 		MAC_MA1_31LR28_val);
@@ -8782,6 +8802,7 @@ static ssize_t MAC_MA1_31LR27_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(27, MAC_MA1_31LR27_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR27              :%#x\n",
 		MAC_MA1_31LR27_val);
@@ -8800,6 +8821,7 @@ static ssize_t MAC_MA1_31LR26_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(26, MAC_MA1_31LR26_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR26              :%#x\n",
 		MAC_MA1_31LR26_val);
@@ -8818,6 +8840,7 @@ static ssize_t MAC_MA1_31LR25_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(25, MAC_MA1_31LR25_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR25              :%#x\n",
 		MAC_MA1_31LR25_val);
@@ -8836,6 +8859,7 @@ static ssize_t MAC_MA1_31LR24_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(24, MAC_MA1_31LR24_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR24              :%#x\n",
 		MAC_MA1_31LR24_val);
@@ -8854,6 +8878,7 @@ static ssize_t MAC_MA1_31LR23_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(23, MAC_MA1_31LR23_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR23              :%#x\n",
 		MAC_MA1_31LR23_val);
@@ -8872,6 +8897,7 @@ static ssize_t MAC_MA1_31LR22_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(22, MAC_MA1_31LR22_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR22              :%#x\n",
 		MAC_MA1_31LR22_val);
@@ -8890,6 +8916,7 @@ static ssize_t MAC_MA1_31LR21_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(21, MAC_MA1_31LR21_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR21              :%#x\n",
 		MAC_MA1_31LR21_val);
@@ -8908,6 +8935,7 @@ static ssize_t MAC_MA1_31LR20_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(20, MAC_MA1_31LR20_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR20              :%#x\n",
 		MAC_MA1_31LR20_val);
@@ -8926,6 +8954,7 @@ static ssize_t MAC_MA1_31LR19_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(19, MAC_MA1_31LR19_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR19              :%#x\n",
 		MAC_MA1_31LR19_val);
@@ -8944,6 +8973,7 @@ static ssize_t MAC_MA1_31LR18_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(18, MAC_MA1_31LR18_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR18              :%#x\n",
 		MAC_MA1_31LR18_val);
@@ -8962,6 +8992,7 @@ static ssize_t MAC_MA1_31LR17_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(17, MAC_MA1_31LR17_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR17              :%#x\n",
 		MAC_MA1_31LR17_val);
@@ -8980,6 +9011,7 @@ static ssize_t MAC_MA1_31LR16_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(16, MAC_MA1_31LR16_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR16              :%#x\n",
 		MAC_MA1_31LR16_val);
@@ -8998,6 +9030,7 @@ static ssize_t MAC_MA1_31LR15_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(15, MAC_MA1_31LR15_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR15              :%#x\n",
 		MAC_MA1_31LR15_val);
@@ -9016,6 +9049,7 @@ static ssize_t MAC_MA1_31LR14_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(14, MAC_MA1_31LR14_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR14              :%#x\n",
 		MAC_MA1_31LR14_val);
@@ -9034,6 +9068,7 @@ static ssize_t MAC_MA1_31LR13_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(13, MAC_MA1_31LR13_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR13              :%#x\n",
 		MAC_MA1_31LR13_val);
@@ -9052,6 +9087,7 @@ static ssize_t MAC_MA1_31LR12_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(12, MAC_MA1_31LR12_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR12              :%#x\n",
 		MAC_MA1_31LR12_val);
@@ -9070,6 +9106,7 @@ static ssize_t MAC_MA1_31LR11_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(11, MAC_MA1_31LR11_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR11              :%#x\n",
 		MAC_MA1_31LR11_val);
@@ -9088,6 +9125,7 @@ static ssize_t MAC_MA1_31LR10_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(10, MAC_MA1_31LR10_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR10              :%#x\n",
 		MAC_MA1_31LR10_val);
@@ -9106,6 +9144,7 @@ static ssize_t MAC_MA1_31LR9_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(9, MAC_MA1_31LR9_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR9              :%#x\n",
 		MAC_MA1_31LR9_val);
@@ -9124,6 +9163,7 @@ static ssize_t MAC_MA1_31LR8_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(8, MAC_MA1_31LR8_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR8              :%#x\n",
 		MAC_MA1_31LR8_val);
@@ -9142,6 +9182,7 @@ static ssize_t MAC_MA1_31LR7_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(7, MAC_MA1_31LR7_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR7              :%#x\n",
 		MAC_MA1_31LR7_val);
@@ -9160,6 +9201,7 @@ static ssize_t MAC_MA1_31LR6_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(6, MAC_MA1_31LR6_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR6              :%#x\n",
 		MAC_MA1_31LR6_val);
@@ -9178,6 +9220,7 @@ static ssize_t MAC_MA1_31LR5_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(5, MAC_MA1_31LR5_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR5              :%#x\n",
 		MAC_MA1_31LR5_val);
@@ -9196,6 +9239,7 @@ static ssize_t MAC_MA1_31LR4_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(4, MAC_MA1_31LR4_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR4              :%#x\n",
 		MAC_MA1_31LR4_val);
@@ -9214,6 +9258,7 @@ static ssize_t MAC_MA1_31LR3_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(3, MAC_MA1_31LR3_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR3              :%#x\n",
 		MAC_MA1_31LR3_val);
@@ -9232,6 +9277,7 @@ static ssize_t MAC_MA1_31LR2_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(2, MAC_MA1_31LR2_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR2              :%#x\n",
 		MAC_MA1_31LR2_val);
@@ -9250,6 +9296,7 @@ static ssize_t MAC_MA1_31LR1_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31LR_RD(1, MAC_MA1_31LR1_val);
 	sprintf(debugfs_buf, "MAC_MA1_31LR1              :%#x\n",
 		MAC_MA1_31LR1_val);
@@ -9268,6 +9315,7 @@ static ssize_t MAC_MA1_31HR31_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(31, MAC_MA1_31HR31_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR31              :%#x\n",
 		MAC_MA1_31HR31_val);
@@ -9286,6 +9334,7 @@ static ssize_t MAC_MA1_31HR30_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(30, MAC_MA1_31HR30_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR30              :%#x\n",
 		MAC_MA1_31HR30_val);
@@ -9304,6 +9353,7 @@ static ssize_t MAC_MA1_31HR29_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(29, MAC_MA1_31HR29_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR29              :%#x\n",
 		MAC_MA1_31HR29_val);
@@ -9322,6 +9372,7 @@ static ssize_t MAC_MA1_31HR28_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(28, MAC_MA1_31HR28_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR28              :%#x\n",
 		MAC_MA1_31HR28_val);
@@ -9340,6 +9391,7 @@ static ssize_t MAC_MA1_31HR27_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(27, MAC_MA1_31HR27_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR27              :%#x\n",
 		MAC_MA1_31HR27_val);
@@ -9358,6 +9410,7 @@ static ssize_t MAC_MA1_31HR26_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(26, MAC_MA1_31HR26_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR26              :%#x\n",
 		MAC_MA1_31HR26_val);
@@ -9376,6 +9429,7 @@ static ssize_t MAC_MA1_31HR25_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(25, MAC_MA1_31HR25_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR25              :%#x\n",
 		MAC_MA1_31HR25_val);
@@ -9394,6 +9448,7 @@ static ssize_t MAC_MA1_31HR24_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(24, MAC_MA1_31HR24_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR24              :%#x\n",
 		MAC_MA1_31HR24_val);
@@ -9412,6 +9467,7 @@ static ssize_t MAC_MA1_31HR23_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(23, MAC_MA1_31HR23_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR23              :%#x\n",
 		MAC_MA1_31HR23_val);
@@ -9430,6 +9486,7 @@ static ssize_t MAC_MA1_31HR22_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(22, MAC_MA1_31HR22_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR22              :%#x\n",
 		MAC_MA1_31HR22_val);
@@ -9448,6 +9505,7 @@ static ssize_t MAC_MA1_31HR21_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(21, MAC_MA1_31HR21_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR21              :%#x\n",
 		MAC_MA1_31HR21_val);
@@ -9466,6 +9524,7 @@ static ssize_t MAC_MA1_31HR20_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(20, MAC_MA1_31HR20_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR20              :%#x\n",
 		MAC_MA1_31HR20_val);
@@ -9484,6 +9543,7 @@ static ssize_t MAC_MA1_31HR19_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(19, MAC_MA1_31HR19_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR19              :%#x\n",
 		MAC_MA1_31HR19_val);
@@ -9502,6 +9562,7 @@ static ssize_t MAC_MA1_31HR18_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(18, MAC_MA1_31HR18_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR18              :%#x\n",
 		MAC_MA1_31HR18_val);
@@ -9520,6 +9581,7 @@ static ssize_t MAC_MA1_31HR17_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(17, MAC_MA1_31HR17_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR17              :%#x\n",
 		MAC_MA1_31HR17_val);
@@ -9538,6 +9600,7 @@ static ssize_t MAC_MA1_31HR16_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(16, MAC_MA1_31HR16_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR16              :%#x\n",
 		MAC_MA1_31HR16_val);
@@ -9556,6 +9619,7 @@ static ssize_t MAC_MA1_31HR15_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(15, MAC_MA1_31HR15_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR15              :%#x\n",
 		MAC_MA1_31HR15_val);
@@ -9574,6 +9638,7 @@ static ssize_t MAC_MA1_31HR14_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(14, MAC_MA1_31HR14_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR14              :%#x\n",
 		MAC_MA1_31HR14_val);
@@ -9592,6 +9657,7 @@ static ssize_t MAC_MA1_31HR13_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(13, MAC_MA1_31HR13_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR13              :%#x\n",
 		MAC_MA1_31HR13_val);
@@ -9610,6 +9676,7 @@ static ssize_t MAC_MA1_31HR12_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(12, MAC_MA1_31HR12_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR12              :%#x\n",
 		MAC_MA1_31HR12_val);
@@ -9628,6 +9695,7 @@ static ssize_t MAC_MA1_31HR11_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(11, MAC_MA1_31HR11_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR11              :%#x\n",
 		MAC_MA1_31HR11_val);
@@ -9646,6 +9714,7 @@ static ssize_t MAC_MA1_31HR10_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(10, MAC_MA1_31HR10_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR10              :%#x\n",
 		MAC_MA1_31HR10_val);
@@ -9664,6 +9733,7 @@ static ssize_t MAC_MA1_31HR9_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(9, MAC_MA1_31HR9_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR9              :%#x\n",
 		MAC_MA1_31HR9_val);
@@ -9682,6 +9752,7 @@ static ssize_t MAC_MA1_31HR8_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(8, MAC_MA1_31HR8_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR8              :%#x\n",
 		MAC_MA1_31HR8_val);
@@ -9700,6 +9771,7 @@ static ssize_t MAC_MA1_31HR7_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(7, MAC_MA1_31HR7_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR7              :%#x\n",
 		MAC_MA1_31HR7_val);
@@ -9718,6 +9790,7 @@ static ssize_t MAC_MA1_31HR6_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(6, MAC_MA1_31HR6_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR6              :%#x\n",
 		MAC_MA1_31HR6_val);
@@ -9736,6 +9809,7 @@ static ssize_t MAC_MA1_31HR5_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(5, MAC_MA1_31HR5_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR5              :%#x\n",
 		MAC_MA1_31HR5_val);
@@ -9754,6 +9828,7 @@ static ssize_t MAC_MA1_31HR4_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(4, MAC_MA1_31HR4_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR4              :%#x\n",
 		MAC_MA1_31HR4_val);
@@ -9772,6 +9847,7 @@ static ssize_t MAC_MA1_31HR3_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(3, MAC_MA1_31HR3_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR3              :%#x\n",
 		MAC_MA1_31HR3_val);
@@ -9790,6 +9866,7 @@ static ssize_t MAC_MA1_31HR2_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(2, MAC_MA1_31HR2_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR2              :%#x\n",
 		MAC_MA1_31HR2_val);
@@ -9808,6 +9885,7 @@ static ssize_t MAC_MA1_31HR1_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1_31HR_RD(1, MAC_MA1_31HR1_val);
 	sprintf(debugfs_buf, "MAC_MA1_31HR1              :%#x\n",
 		MAC_MA1_31HR1_val);
@@ -9826,8 +9904,9 @@ static ssize_t mac_arpa_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_ARPA_RD(mac_arpa_val);
-	sprintf(debugfs_buf, "MAC_ARPA                   :%#x\n", mac_arpa_val);
+	sprintf(debugfs_buf, "MAC_ARPA                  :%#x\n", mac_arpa_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -9843,6 +9922,7 @@ static ssize_t MAC_L3A3R7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R7_RD(MAC_L3A3R7_val);
 	sprintf(debugfs_buf, "MAC_L3A3R7                 :%#x\n",
 		MAC_L3A3R7_val);
@@ -9861,6 +9941,7 @@ static ssize_t MAC_L3A3R6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R6_RD(MAC_L3A3R6_val);
 	sprintf(debugfs_buf, "MAC_L3A3R6                 :%#x\n",
 		MAC_L3A3R6_val);
@@ -9879,6 +9960,7 @@ static ssize_t MAC_L3A3R5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R5_RD(MAC_L3A3R5_val);
 	sprintf(debugfs_buf, "MAC_L3A3R5                 :%#x\n",
 		MAC_L3A3R5_val);
@@ -9897,6 +9979,7 @@ static ssize_t MAC_L3A3R4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R4_RD(MAC_L3A3R4_val);
 	sprintf(debugfs_buf, "MAC_L3A3R4                 :%#x\n",
 		MAC_L3A3R4_val);
@@ -9915,6 +9998,7 @@ static ssize_t MAC_L3A3R3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R3_RD(MAC_L3A3R3_val);
 	sprintf(debugfs_buf, "MAC_L3A3R3                 :%#x\n",
 		MAC_L3A3R3_val);
@@ -9933,6 +10017,7 @@ static ssize_t MAC_L3A3R2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R2_RD(MAC_L3A3R2_val);
 	sprintf(debugfs_buf, "MAC_L3A3R2                 :%#x\n",
 		MAC_L3A3R2_val);
@@ -9951,6 +10036,7 @@ static ssize_t MAC_L3A3R1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R1_RD(MAC_L3A3R1_val);
 	sprintf(debugfs_buf, "MAC_L3A3R1                 :%#x\n",
 		MAC_L3A3R1_val);
@@ -9969,6 +10055,7 @@ static ssize_t MAC_L3A3R0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A3R0_RD(MAC_L3A3R0_val);
 	sprintf(debugfs_buf, "MAC_L3A3R0                 :%#x\n",
 		MAC_L3A3R0_val);
@@ -9987,6 +10074,7 @@ static ssize_t MAC_L3A2R7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R7_RD(MAC_L3A2R7_val);
 	sprintf(debugfs_buf, "MAC_L3A2R7                 :%#x\n",
 		MAC_L3A2R7_val);
@@ -10005,6 +10093,7 @@ static ssize_t MAC_L3A2R6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R6_RD(MAC_L3A2R6_val);
 	sprintf(debugfs_buf, "MAC_L3A2R6                 :%#x\n",
 		MAC_L3A2R6_val);
@@ -10023,6 +10112,7 @@ static ssize_t MAC_L3A2R5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R5_RD(MAC_L3A2R5_val);
 	sprintf(debugfs_buf, "MAC_L3A2R5                 :%#x\n",
 		MAC_L3A2R5_val);
@@ -10041,6 +10131,7 @@ static ssize_t MAC_L3A2R4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R4_RD(MAC_L3A2R4_val);
 	sprintf(debugfs_buf, "MAC_L3A2R4                 :%#x\n",
 		MAC_L3A2R4_val);
@@ -10059,6 +10150,7 @@ static ssize_t MAC_L3A2R3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R3_RD(MAC_L3A2R3_val);
 	sprintf(debugfs_buf, "MAC_L3A2R3                 :%#x\n",
 		MAC_L3A2R3_val);
@@ -10077,6 +10169,7 @@ static ssize_t MAC_L3A2R2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R2_RD(MAC_L3A2R2_val);
 	sprintf(debugfs_buf, "MAC_L3A2R2                 :%#x\n",
 		MAC_L3A2R2_val);
@@ -10095,6 +10188,7 @@ static ssize_t MAC_L3A2R1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R1_RD(MAC_L3A2R1_val);
 	sprintf(debugfs_buf, "MAC_L3A2R1                 :%#x\n",
 		MAC_L3A2R1_val);
@@ -10113,6 +10207,7 @@ static ssize_t MAC_L3A2R0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A2R0_RD(MAC_L3A2R0_val);
 	sprintf(debugfs_buf, "MAC_L3A2R0                 :%#x\n",
 		MAC_L3A2R0_val);
@@ -10131,6 +10226,7 @@ static ssize_t MAC_L3A1R7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R7_RD(MAC_L3A1R7_val);
 	sprintf(debugfs_buf, "MAC_L3A1R7                 :%#x\n",
 		MAC_L3A1R7_val);
@@ -10149,6 +10245,7 @@ static ssize_t MAC_L3A1R6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R6_RD(MAC_L3A1R6_val);
 	sprintf(debugfs_buf, "MAC_L3A1R6                 :%#x\n",
 		MAC_L3A1R6_val);
@@ -10167,6 +10264,7 @@ static ssize_t MAC_L3A1R5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R5_RD(MAC_L3A1R5_val);
 	sprintf(debugfs_buf, "MAC_L3A1R5                 :%#x\n",
 		MAC_L3A1R5_val);
@@ -10185,6 +10283,7 @@ static ssize_t MAC_L3A1R4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R4_RD(MAC_L3A1R4_val);
 	sprintf(debugfs_buf, "MAC_L3A1R4                 :%#x\n",
 		MAC_L3A1R4_val);
@@ -10203,6 +10302,7 @@ static ssize_t MAC_L3A1R3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R3_RD(MAC_L3A1R3_val);
 	sprintf(debugfs_buf, "MAC_L3A1R3                 :%#x\n",
 		MAC_L3A1R3_val);
@@ -10221,6 +10321,7 @@ static ssize_t MAC_L3A1R2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R2_RD(MAC_L3A1R2_val);
 	sprintf(debugfs_buf, "MAC_L3A1R2                 :%#x\n",
 		MAC_L3A1R2_val);
@@ -10239,6 +10340,7 @@ static ssize_t MAC_L3A1R1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R1_RD(MAC_L3A1R1_val);
 	sprintf(debugfs_buf, "MAC_L3A1R1                 :%#x\n",
 		MAC_L3A1R1_val);
@@ -10257,6 +10359,7 @@ static ssize_t MAC_L3A1R0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A1R0_RD(MAC_L3A1R0_val);
 	sprintf(debugfs_buf, "MAC_L3A1R0                 :%#x\n",
 		MAC_L3A1R0_val);
@@ -10275,6 +10378,7 @@ static ssize_t MAC_L3A0R7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R7_RD(MAC_L3A0R7_val);
 	sprintf(debugfs_buf, "MAC_L3A0R7                 :%#x\n",
 		MAC_L3A0R7_val);
@@ -10293,6 +10397,7 @@ static ssize_t MAC_L3A0R6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R6_RD(MAC_L3A0R6_val);
 	sprintf(debugfs_buf, "MAC_L3A0R6                 :%#x\n",
 		MAC_L3A0R6_val);
@@ -10311,6 +10416,7 @@ static ssize_t MAC_L3A0R5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R5_RD(MAC_L3A0R5_val);
 	sprintf(debugfs_buf, "MAC_L3A0R5                 :%#x\n",
 		MAC_L3A0R5_val);
@@ -10329,6 +10435,7 @@ static ssize_t MAC_L3A0R4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R4_RD(MAC_L3A0R4_val);
 	sprintf(debugfs_buf, "MAC_L3A0R4                 :%#x\n",
 		MAC_L3A0R4_val);
@@ -10347,6 +10454,7 @@ static ssize_t MAC_L3A0R3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R3_RD(MAC_L3A0R3_val);
 	sprintf(debugfs_buf, "MAC_L3A0R3                 :%#x\n",
 		MAC_L3A0R3_val);
@@ -10365,6 +10473,7 @@ static ssize_t MAC_L3A0R2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R2_RD(MAC_L3A0R2_val);
 	sprintf(debugfs_buf, "MAC_L3A0R2                 :%#x\n",
 		MAC_L3A0R2_val);
@@ -10383,6 +10492,7 @@ static ssize_t MAC_L3A0R1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R1_RD(MAC_L3A0R1_val);
 	sprintf(debugfs_buf, "MAC_L3A0R1                 :%#x\n",
 		MAC_L3A0R1_val);
@@ -10401,6 +10511,7 @@ static ssize_t MAC_L3A0R0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3A0R0_RD(MAC_L3A0R0_val);
 	sprintf(debugfs_buf, "MAC_L3A0R0                 :%#x\n",
 		MAC_L3A0R0_val);
@@ -10419,8 +10530,9 @@ static ssize_t MAC_L4AR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR7_RD(MAC_L4AR7_val);
-	sprintf(debugfs_buf, "MAC_L4AR7                 :%#x\n", MAC_L4AR7_val);
+	sprintf(debugfs_buf, "MAC_L4AR7                :%#x\n", MAC_L4AR7_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10436,8 +10548,9 @@ static ssize_t MAC_L4AR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR6_RD(MAC_L4AR6_val);
-	sprintf(debugfs_buf, "MAC_L4AR6                 :%#x\n", MAC_L4AR6_val);
+	sprintf(debugfs_buf, "MAC_L4AR6                :%#x\n", MAC_L4AR6_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10453,8 +10566,9 @@ static ssize_t MAC_L4AR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR5_RD(MAC_L4AR5_val);
-	sprintf(debugfs_buf, "MAC_L4AR5                 :%#x\n", MAC_L4AR5_val);
+	sprintf(debugfs_buf, "MAC_L4AR5                :%#x\n", MAC_L4AR5_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10470,8 +10584,9 @@ static ssize_t MAC_L4AR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR4_RD(MAC_L4AR4_val);
-	sprintf(debugfs_buf, "MAC_L4AR4                 :%#x\n", MAC_L4AR4_val);
+	sprintf(debugfs_buf, "MAC_L4AR4                :%#x\n", MAC_L4AR4_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10487,8 +10602,9 @@ static ssize_t MAC_L4AR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR3_RD(MAC_L4AR3_val);
-	sprintf(debugfs_buf, "MAC_L4AR3                 :%#x\n", MAC_L4AR3_val);
+	sprintf(debugfs_buf, "MAC_L4AR3                :%#x\n", MAC_L4AR3_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10504,8 +10620,9 @@ static ssize_t MAC_L4AR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR2_RD(MAC_L4AR2_val);
-	sprintf(debugfs_buf, "MAC_L4AR2                 :%#x\n", MAC_L4AR2_val);
+	sprintf(debugfs_buf, "MAC_L4AR2                :%#x\n", MAC_L4AR2_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10521,8 +10638,9 @@ static ssize_t MAC_L4AR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR1_RD(MAC_L4AR1_val);
-	sprintf(debugfs_buf, "MAC_L4AR1                 :%#x\n", MAC_L4AR1_val);
+	sprintf(debugfs_buf, "MAC_L4AR1                :%#x\n", MAC_L4AR1_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10538,8 +10656,9 @@ static ssize_t MAC_L4AR0_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L4AR0_RD(MAC_L4AR0_val);
-	sprintf(debugfs_buf, "MAC_L4AR0                 :%#x\n", MAC_L4AR0_val);
+	sprintf(debugfs_buf, "MAC_L4AR0                :%#x\n", MAC_L4AR0_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -10555,6 +10674,7 @@ static ssize_t MAC_L3L4CR7_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR7_RD(MAC_L3L4CR7_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR7                :%#x\n",
 		MAC_L3L4CR7_val);
@@ -10573,6 +10693,7 @@ static ssize_t MAC_L3L4CR6_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR6_RD(MAC_L3L4CR6_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR6                :%#x\n",
 		MAC_L3L4CR6_val);
@@ -10591,6 +10712,7 @@ static ssize_t MAC_L3L4CR5_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR5_RD(MAC_L3L4CR5_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR5                :%#x\n",
 		MAC_L3L4CR5_val);
@@ -10609,6 +10731,7 @@ static ssize_t MAC_L3L4CR4_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR4_RD(MAC_L3L4CR4_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR4                :%#x\n",
 		MAC_L3L4CR4_val);
@@ -10627,6 +10750,7 @@ static ssize_t MAC_L3L4CR3_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR3_RD(MAC_L3L4CR3_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR3                :%#x\n",
 		MAC_L3L4CR3_val);
@@ -10645,6 +10769,7 @@ static ssize_t MAC_L3L4CR2_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR2_RD(MAC_L3L4CR2_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR2                :%#x\n",
 		MAC_L3L4CR2_val);
@@ -10663,6 +10788,7 @@ static ssize_t MAC_L3L4CR1_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR1_RD(MAC_L3L4CR1_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR1                :%#x\n",
 		MAC_L3L4CR1_val);
@@ -10681,6 +10807,7 @@ static ssize_t MAC_L3L4CR0_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_L3L4CR0_RD(MAC_L3L4CR0_val);
 	sprintf(debugfs_buf, "MAC_L3L4CR0                :%#x\n",
 		MAC_L3L4CR0_val);
@@ -10699,6 +10826,7 @@ static ssize_t mac_gpios_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_GPIOS_RD(mac_gpios_val);
 	sprintf(debugfs_buf, "MAC_GPIOS                  :%#x\n",
 		mac_gpios_val);
@@ -10717,6 +10845,7 @@ static ssize_t mac_pcs_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PCS_RD(mac_pcs_val);
 	sprintf(debugfs_buf, "MAC_PCS                    :%#x\n", mac_pcs_val);
 	ret =
@@ -10734,6 +10863,7 @@ static ssize_t mac_tes_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TES_RD(mac_tes_val);
 	sprintf(debugfs_buf, "MAC_TES                    :%#x\n", mac_tes_val);
 	ret =
@@ -10751,6 +10881,7 @@ static ssize_t mac_ae_read(struct file *file, char __user *userbuf,
 			   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_AE_RD(mac_ae_val);
 	sprintf(debugfs_buf, "MAC_AE                     :%#x\n", mac_ae_val);
 	ret =
@@ -10768,6 +10899,7 @@ static ssize_t mac_alpa_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_ALPA_RD(mac_alpa_val);
 	sprintf(debugfs_buf, "MAC_ALPA                   :%#x\n", mac_alpa_val);
 	ret =
@@ -10785,6 +10917,7 @@ static ssize_t mac_aad_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_AAD_RD(mac_aad_val);
 	sprintf(debugfs_buf, "MAC_AAD                    :%#x\n", mac_aad_val);
 	ret =
@@ -10802,6 +10935,7 @@ static ssize_t mac_ans_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_ANS_RD(mac_ans_val);
 	sprintf(debugfs_buf, "MAC_ANS                    :%#x\n", mac_ans_val);
 	ret =
@@ -10819,6 +10953,7 @@ static ssize_t mac_anc_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_ANC_RD(mac_anc_val);
 	sprintf(debugfs_buf, "MAC_ANC                    :%#x\n", mac_anc_val);
 	ret =
@@ -10836,6 +10971,7 @@ static ssize_t mac_lpc_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_LPC_RD(mac_lpc_val);
 	sprintf(debugfs_buf, "MAC_LPC                    :%#x\n", mac_lpc_val);
 	ret =
@@ -10853,6 +10989,7 @@ static ssize_t mac_lps_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_LPS_RD(mac_lps_val);
 	sprintf(debugfs_buf, "MAC_LPS                    :%#x\n", mac_lps_val);
 	ret =
@@ -10871,9 +11008,14 @@ static ssize_t mac_lmir_read(struct file *file, char __user *userbuf,
 		size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_LMIR_RD(mac_lmir_val);
 	sprintf(debugfs_buf, "MAC_LMIR                  :%#x\n", mac_lmir_val);
-	ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf, strlen(debugfs_buf));
+	ret = simple_read_from_buffer(userbuf,
+				count,
+				ppos,
+				debugfs_buf,
+				strlen(debugfs_buf));
 	return ret;
 }
 
@@ -10886,9 +11028,14 @@ static ssize_t MAC_SPI2r_read(struct file *file, char __user *userbuf,
 		size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_SPI2R_RD(MAC_SPI2r_val);
-	sprintf(debugfs_buf, "MAC_SPI2R                  :%#x\n", MAC_SPI2r_val);
-	ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf, strlen(debugfs_buf));
+	sprintf(debugfs_buf, "MAC_SPI2R                :%#x\n", MAC_SPI2r_val);
+	ret = simple_read_from_buffer(userbuf,
+				count,
+				ppos,
+				debugfs_buf,
+				strlen(debugfs_buf));
 	return ret;
 }
 
@@ -10901,9 +11048,14 @@ static ssize_t MAC_SPI1r_read(struct file *file, char __user *userbuf,
 		size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_SPI1R_RD(MAC_SPI1r_val);
-	sprintf(debugfs_buf, "MAC_SPI1R                  :%#x\n", MAC_SPI1r_val);
-	ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf, strlen(debugfs_buf));
+	sprintf(debugfs_buf, "MAC_SPI1R                :%#x\n", MAC_SPI1r_val);
+	ret = simple_read_from_buffer(userbuf,
+				count,
+				ppos,
+				debugfs_buf,
+				strlen(debugfs_buf));
 	return ret;
 }
 
@@ -10916,9 +11068,14 @@ static ssize_t MAC_SPI0r_read(struct file *file, char __user *userbuf,
 		size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_SPI0R_RD(MAC_SPI0r_val);
-	sprintf(debugfs_buf, "MAC_SPI0R                  :%#x\n", MAC_SPI0r_val);
-	ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf, strlen(debugfs_buf));
+	sprintf(debugfs_buf, "MAC_SPI0R                :%#x\n", MAC_SPI0r_val);
+	ret = simple_read_from_buffer(userbuf,
+				count,
+				ppos,
+				debugfs_buf,
+				strlen(debugfs_buf));
 	return ret;
 }
 
@@ -10931,9 +11088,14 @@ static ssize_t mac_pto_cr_read(struct file *file, char __user *userbuf,
 		size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PTO_CR_RD(mac_pto_cr_val);
-	sprintf(debugfs_buf, "MAC_PTO_CR                 :%#x\n", mac_pto_cr_val);
-	ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf, strlen(debugfs_buf));
+	sprintf(debugfs_buf, "MAC_PTO_CR              :%#x\n", mac_pto_cr_val);
+	ret = simple_read_from_buffer(userbuf,
+				count,
+				ppos,
+				debugfs_buf,
+				strlen(debugfs_buf));
 	return ret;
 }
 
@@ -10948,6 +11110,7 @@ static ssize_t MAC_PPS_WIDTH3_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_WIDTH3_RD(MAC_PPS_WIDTH3_val);
 	sprintf(debugfs_buf, "MAC_PPS_WIDTH3             :%#x\n",
 		MAC_PPS_WIDTH3_val);
@@ -10966,6 +11129,7 @@ static ssize_t MAC_PPS_WIDTH2_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_WIDTH2_RD(MAC_PPS_WIDTH2_val);
 	sprintf(debugfs_buf, "MAC_PPS_WIDTH2             :%#x\n",
 		MAC_PPS_WIDTH2_val);
@@ -10984,6 +11148,7 @@ static ssize_t MAC_PPS_WIDTH1_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_WIDTH1_RD(MAC_PPS_WIDTH1_val);
 	sprintf(debugfs_buf, "MAC_PPS_WIDTH1             :%#x\n",
 		MAC_PPS_WIDTH1_val);
@@ -11002,6 +11167,7 @@ static ssize_t MAC_PPS_WIDTH0_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_WIDTH0_RD(MAC_PPS_WIDTH0_val);
 	sprintf(debugfs_buf, "MAC_PPS_WIDTH0             :%#x\n",
 		MAC_PPS_WIDTH0_val);
@@ -11020,6 +11186,7 @@ static ssize_t MAC_PPS_INTVAL3_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_INTVAL3_RD(MAC_PPS_INTVAL3_val);
 	sprintf(debugfs_buf, "MAC_PPS_INTVAL3            :%#x\n",
 		MAC_PPS_INTVAL3_val);
@@ -11038,6 +11205,7 @@ static ssize_t MAC_PPS_INTVAL2_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_INTVAL2_RD(MAC_PPS_INTVAL2_val);
 	sprintf(debugfs_buf, "MAC_PPS_INTVAL2            :%#x\n",
 		MAC_PPS_INTVAL2_val);
@@ -11056,6 +11224,7 @@ static ssize_t MAC_PPS_INTVAL1_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_INTVAL1_RD(MAC_PPS_INTVAL1_val);
 	sprintf(debugfs_buf, "MAC_PPS_INTVAL1            :%#x\n",
 		MAC_PPS_INTVAL1_val);
@@ -11074,6 +11243,7 @@ static ssize_t MAC_PPS_INTVAL0_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_INTVAL0_RD(MAC_PPS_INTVAL0_val);
 	sprintf(debugfs_buf, "MAC_PPS_INTVAL0            :%#x\n",
 		MAC_PPS_INTVAL0_val);
@@ -11092,6 +11262,7 @@ static ssize_t MAC_PPS_TTNS3_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTNS3_RD(MAC_PPS_TTNS3_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTNS3              :%#x\n",
 		MAC_PPS_TTNS3_val);
@@ -11110,6 +11281,7 @@ static ssize_t MAC_PPS_TTNS2_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTNS2_RD(MAC_PPS_TTNS2_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTNS2              :%#x\n",
 		MAC_PPS_TTNS2_val);
@@ -11128,6 +11300,7 @@ static ssize_t MAC_PPS_TTNS1_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTNS1_RD(MAC_PPS_TTNS1_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTNS1              :%#x\n",
 		MAC_PPS_TTNS1_val);
@@ -11146,6 +11319,7 @@ static ssize_t MAC_PPS_TTNS0_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTNS0_RD(MAC_PPS_TTNS0_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTNS0              :%#x\n",
 		MAC_PPS_TTNS0_val);
@@ -11164,6 +11338,7 @@ static ssize_t MAC_PPS_TTS3_read(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTS3_RD(MAC_PPS_TTS3_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTS3               :%#x\n",
 		MAC_PPS_TTS3_val);
@@ -11182,6 +11357,7 @@ static ssize_t MAC_PPS_TTS2_read(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTS2_RD(MAC_PPS_TTS2_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTS2               :%#x\n",
 		MAC_PPS_TTS2_val);
@@ -11200,6 +11376,7 @@ static ssize_t MAC_PPS_TTS1_read(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTS1_RD(MAC_PPS_TTS1_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTS1               :%#x\n",
 		MAC_PPS_TTS1_val);
@@ -11218,6 +11395,7 @@ static ssize_t MAC_PPS_TTS0_read(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPS_TTS0_RD(MAC_PPS_TTS0_val);
 	sprintf(debugfs_buf, "MAC_PPS_TTS0               :%#x\n",
 		MAC_PPS_TTS0_val);
@@ -11236,8 +11414,9 @@ static ssize_t mac_ppsc_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PPSC_RD(mac_ppsc_val);
-	sprintf(debugfs_buf, "MAC_PPSC                   :%#x\n", mac_ppsc_val);
+	sprintf(debugfs_buf, "MAC_PPSC                  :%#x\n", mac_ppsc_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -11253,8 +11432,9 @@ static ssize_t mac_teac_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TEAC_RD(mac_teac_val);
-	sprintf(debugfs_buf, "MAC_TEAC                   :%#x\n", mac_teac_val);
+	sprintf(debugfs_buf, "MAC_TEAC                  :%#x\n", mac_teac_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -11270,8 +11450,9 @@ static ssize_t mac_tiac_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TIAC_RD(mac_tiac_val);
-	sprintf(debugfs_buf, "MAC_TIAC                   :%#x\n", mac_tiac_val);
+	sprintf(debugfs_buf, "MAC_TIAC                  :%#x\n", mac_tiac_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -11287,6 +11468,7 @@ static ssize_t mac_ats_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_ATS_RD(mac_ats_val);
 	sprintf(debugfs_buf, "MAC_ATS                    :%#x\n", mac_ats_val);
 	ret =
@@ -11304,6 +11486,7 @@ static ssize_t mac_atn_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_ATN_RD(mac_atn_val);
 	sprintf(debugfs_buf, "MAC_ATN                    :%#x\n", mac_atn_val);
 	ret =
@@ -11321,6 +11504,7 @@ static ssize_t mac_ac_read(struct file *file, char __user *userbuf,
 			   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_AC_RD(mac_ac_val);
 	sprintf(debugfs_buf, "MAC_AC                     :%#x\n", mac_ac_val);
 	ret =
@@ -11338,6 +11522,7 @@ static ssize_t mac_ttn_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TTN_RD(mac_ttn_val);
 	sprintf(debugfs_buf, "MAC_TTN                    :%#x\n", mac_ttn_val);
 	ret =
@@ -11355,8 +11540,9 @@ static ssize_t mac_ttsn_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TTSN_RD(mac_ttsn_val);
-	sprintf(debugfs_buf, "MAC_TTSN                   :%#x\n", mac_ttsn_val);
+	sprintf(debugfs_buf, "MAC_TTSN                  :%#x\n", mac_ttsn_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -11372,6 +11558,7 @@ static ssize_t mac_tsr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TSR_RD(mac_tsr_val);
 	sprintf(debugfs_buf, "MAC_TSR                    :%#x\n", mac_tsr_val);
 	ret =
@@ -11389,6 +11576,7 @@ static ssize_t mac_sthwr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_STHWR_RD(mac_sthwr_val);
 	sprintf(debugfs_buf, "MAC_STHWR                  :%#x\n",
 		mac_sthwr_val);
@@ -11407,6 +11595,7 @@ static ssize_t mac_tar_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TAR_RD(mac_tar_val);
 	sprintf(debugfs_buf, "MAC_TAR                    :%#x\n", mac_tar_val);
 	ret =
@@ -11424,6 +11613,7 @@ static ssize_t mac_stnsur_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_STNSUR_RD(mac_stnsur_val);
 	sprintf(debugfs_buf, "MAC_STNSUR                 :%#x\n",
 		mac_stnsur_val);
@@ -11442,6 +11632,7 @@ static ssize_t mac_stsur_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_STSUR_RD(mac_stsur_val);
 	sprintf(debugfs_buf, "MAC_STSUR                  :%#x\n",
 		mac_stsur_val);
@@ -11460,6 +11651,7 @@ static ssize_t mac_stnsr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_STNSR_RD(mac_stnsr_val);
 	sprintf(debugfs_buf, "MAC_STNSR                  :%#x\n",
 		mac_stnsr_val);
@@ -11478,8 +11670,9 @@ static ssize_t mac_stsr_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_STSR_RD(mac_stsr_val);
-	sprintf(debugfs_buf, "MAC_STSR                   :%#x\n", mac_stsr_val);
+	sprintf(debugfs_buf, "MAC_STSR                  :%#x\n", mac_stsr_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -11495,8 +11688,9 @@ static ssize_t mac_ssir_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_SSIR_RD(mac_ssir_val);
-	sprintf(debugfs_buf, "MAC_SSIR                   :%#x\n", mac_ssir_val);
+	sprintf(debugfs_buf, "MAC_SSIR                  :%#x\n", mac_ssir_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -11512,6 +11706,7 @@ static ssize_t mac_tcr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TCR_RD(mac_tcr_val);
 	sprintf(debugfs_buf, "MAC_TCR                    :%#x\n", mac_tcr_val);
 	ret =
@@ -11529,6 +11724,7 @@ static ssize_t mtl_dsr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_DSR_RD(mtl_dsr_val);
 	sprintf(debugfs_buf, "MTL_DSR                    :%#x\n", mtl_dsr_val);
 	ret =
@@ -11546,6 +11742,7 @@ static ssize_t mac_rwpffr_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_RWPFFR_RD(mac_rwpffr_val);
 	sprintf(debugfs_buf, "MAC_RWPFFR                 :%#x\n",
 		mac_rwpffr_val);
@@ -11564,8 +11761,9 @@ static ssize_t mac_rtsr_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_RTSR_RD(mac_rtsr_val);
-	sprintf(debugfs_buf, "MAC_RTSR                   :%#x\n", mac_rtsr_val);
+	sprintf(debugfs_buf, "MAC_RTSR                  :%#x\n", mac_rtsr_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -11581,6 +11779,7 @@ static ssize_t mtl_ier_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_IER_RD(mtl_ier_val);
 	sprintf(debugfs_buf, "MTL_IER                    :%#x\n", mtl_ier_val);
 	ret =
@@ -11598,6 +11797,7 @@ static ssize_t MTL_QRCR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRCR7_RD(MTL_QRCR7_val);
 	sprintf(debugfs_buf, "MTL_QRCR7                  :%#x\n",
 		MTL_QRCR7_val);
@@ -11616,6 +11816,7 @@ static ssize_t MTL_QRCR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRCR6_RD(MTL_QRCR6_val);
 	sprintf(debugfs_buf, "MTL_QRCR6                  :%#x\n",
 		MTL_QRCR6_val);
@@ -11634,6 +11835,7 @@ static ssize_t MTL_QRCR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRCR5_RD(MTL_QRCR5_val);
 	sprintf(debugfs_buf, "MTL_QRCR5                  :%#x\n",
 		MTL_QRCR5_val);
@@ -11652,6 +11854,7 @@ static ssize_t MTL_QRCR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRCR4_RD(MTL_QRCR4_val);
 	sprintf(debugfs_buf, "MTL_QRCR4                  :%#x\n",
 		MTL_QRCR4_val);
@@ -11670,6 +11873,7 @@ static ssize_t MTL_QRCR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRCR3_RD(MTL_QRCR3_val);
 	sprintf(debugfs_buf, "MTL_QRCR3                  :%#x\n",
 		MTL_QRCR3_val);
@@ -11688,6 +11892,7 @@ static ssize_t MTL_QRCR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRCR2_RD(MTL_QRCR2_val);
 	sprintf(debugfs_buf, "MTL_QRCR2                  :%#x\n",
 		MTL_QRCR2_val);
@@ -11706,6 +11911,7 @@ static ssize_t MTL_QRCR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRCR1_RD(MTL_QRCR1_val);
 	sprintf(debugfs_buf, "MTL_QRCR1                  :%#x\n",
 		MTL_QRCR1_val);
@@ -11724,6 +11930,7 @@ static ssize_t MTL_QRDR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRDR7_RD(MTL_QRDR7_val);
 	sprintf(debugfs_buf, "MTL_QRDR7                  :%#x\n",
 		MTL_QRDR7_val);
@@ -11742,6 +11949,7 @@ static ssize_t MTL_QRDR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRDR6_RD(MTL_QRDR6_val);
 	sprintf(debugfs_buf, "MTL_QRDR6                  :%#x\n",
 		MTL_QRDR6_val);
@@ -11760,6 +11968,7 @@ static ssize_t MTL_QRDR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRDR5_RD(MTL_QRDR5_val);
 	sprintf(debugfs_buf, "MTL_QRDR5                  :%#x\n",
 		MTL_QRDR5_val);
@@ -11778,6 +11987,7 @@ static ssize_t MTL_QRDR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRDR4_RD(MTL_QRDR4_val);
 	sprintf(debugfs_buf, "MTL_QRDR4                  :%#x\n",
 		MTL_QRDR4_val);
@@ -11796,6 +12006,7 @@ static ssize_t MTL_QRDR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRDR3_RD(MTL_QRDR3_val);
 	sprintf(debugfs_buf, "MTL_QRDR3                  :%#x\n",
 		MTL_QRDR3_val);
@@ -11814,6 +12025,7 @@ static ssize_t MTL_QRDR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRDR2_RD(MTL_QRDR2_val);
 	sprintf(debugfs_buf, "MTL_QRDR2                  :%#x\n",
 		MTL_QRDR2_val);
@@ -11832,6 +12044,7 @@ static ssize_t MTL_QRDR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QRDR1_RD(MTL_QRDR1_val);
 	sprintf(debugfs_buf, "MTL_QRDR1                  :%#x\n",
 		MTL_QRDR1_val);
@@ -11850,6 +12063,7 @@ static ssize_t MTL_QOCR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QOCR7_RD(MTL_QOCR7_val);
 	sprintf(debugfs_buf, "MTL_QOCR7                  :%#x\n",
 		MTL_QOCR7_val);
@@ -11868,6 +12082,7 @@ static ssize_t MTL_QOCR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QOCR6_RD(MTL_QOCR6_val);
 	sprintf(debugfs_buf, "MTL_QOCR6                  :%#x\n",
 		MTL_QOCR6_val);
@@ -11886,6 +12101,7 @@ static ssize_t MTL_QOCR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QOCR5_RD(MTL_QOCR5_val);
 	sprintf(debugfs_buf, "MTL_QOCR5                  :%#x\n",
 		MTL_QOCR5_val);
@@ -11904,6 +12120,7 @@ static ssize_t MTL_QOCR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QOCR4_RD(MTL_QOCR4_val);
 	sprintf(debugfs_buf, "MTL_QOCR4                  :%#x\n",
 		MTL_QOCR4_val);
@@ -11922,6 +12139,7 @@ static ssize_t MTL_QOCR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QOCR3_RD(MTL_QOCR3_val);
 	sprintf(debugfs_buf, "MTL_QOCR3                  :%#x\n",
 		MTL_QOCR3_val);
@@ -11940,6 +12158,7 @@ static ssize_t MTL_QOCR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QOCR2_RD(MTL_QOCR2_val);
 	sprintf(debugfs_buf, "MTL_QOCR2                  :%#x\n",
 		MTL_QOCR2_val);
@@ -11958,6 +12177,7 @@ static ssize_t MTL_QOCR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QOCR1_RD(MTL_QOCR1_val);
 	sprintf(debugfs_buf, "MTL_QOCR1                  :%#x\n",
 		MTL_QOCR1_val);
@@ -11976,6 +12196,7 @@ static ssize_t MTL_QROMR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QROMR_RD(7, MTL_QROMR7_val);
 	sprintf(debugfs_buf, "MTL_QROMR7                 :%#x\n",
 		MTL_QROMR7_val);
@@ -11994,6 +12215,7 @@ static ssize_t MTL_QROMR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QROMR_RD(6, MTL_QROMR6_val);
 	sprintf(debugfs_buf, "MTL_QROMR6                 :%#x\n",
 		MTL_QROMR6_val);
@@ -12012,6 +12234,7 @@ static ssize_t MTL_QROMR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QROMR_RD(5, MTL_QROMR5_val);
 	sprintf(debugfs_buf, "MTL_QROMR5                 :%#x\n",
 		MTL_QROMR5_val);
@@ -12030,6 +12253,7 @@ static ssize_t MTL_QROMR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QROMR_RD(4, MTL_QROMR4_val);
 	sprintf(debugfs_buf, "MTL_QROMR4                 :%#x\n",
 		MTL_QROMR4_val);
@@ -12048,6 +12272,7 @@ static ssize_t MTL_QROMR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QROMR_RD(3, MTL_QROMR3_val);
 	sprintf(debugfs_buf, "MTL_QROMR3                 :%#x\n",
 		MTL_QROMR3_val);
@@ -12066,6 +12291,7 @@ static ssize_t MTL_QROMR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QROMR_RD(2, MTL_QROMR2_val);
 	sprintf(debugfs_buf, "MTL_QROMR2                 :%#x\n",
 		MTL_QROMR2_val);
@@ -12084,6 +12310,7 @@ static ssize_t MTL_QROMR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QROMR_RD(1, MTL_QROMR1_val);
 	sprintf(debugfs_buf, "MTL_QROMR1                 :%#x\n",
 		MTL_QROMR1_val);
@@ -12102,6 +12329,7 @@ static ssize_t MTL_QLCR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QLCR7_RD(MTL_QLCR7_val);
 	sprintf(debugfs_buf, "MTL_QLCR7                  :%#x\n",
 		MTL_QLCR7_val);
@@ -12120,6 +12348,7 @@ static ssize_t MTL_QLCR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QLCR6_RD(MTL_QLCR6_val);
 	sprintf(debugfs_buf, "MTL_QLCR6                  :%#x\n",
 		MTL_QLCR6_val);
@@ -12138,6 +12367,7 @@ static ssize_t MTL_QLCR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QLCR5_RD(MTL_QLCR5_val);
 	sprintf(debugfs_buf, "MTL_QLCR5                  :%#x\n",
 		MTL_QLCR5_val);
@@ -12156,6 +12386,7 @@ static ssize_t MTL_QLCR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QLCR4_RD(MTL_QLCR4_val);
 	sprintf(debugfs_buf, "MTL_QLCR4                  :%#x\n",
 		MTL_QLCR4_val);
@@ -12174,6 +12405,7 @@ static ssize_t MTL_QLCR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QLCR3_RD(MTL_QLCR3_val);
 	sprintf(debugfs_buf, "MTL_QLCR3                  :%#x\n",
 		MTL_QLCR3_val);
@@ -12192,6 +12424,7 @@ static ssize_t MTL_QLCR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QLCR2_RD(MTL_QLCR2_val);
 	sprintf(debugfs_buf, "MTL_QLCR2                  :%#x\n",
 		MTL_QLCR2_val);
@@ -12210,6 +12443,7 @@ static ssize_t MTL_QLCR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QLCR1_RD(MTL_QLCR1_val);
 	sprintf(debugfs_buf, "MTL_QLCR1                  :%#x\n",
 		MTL_QLCR1_val);
@@ -12228,6 +12462,7 @@ static ssize_t MTL_QHCR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QHCR7_RD(MTL_QHCR7_val);
 	sprintf(debugfs_buf, "MTL_QHCR7                  :%#x\n",
 		MTL_QHCR7_val);
@@ -12246,6 +12481,7 @@ static ssize_t MTL_QHCR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QHCR6_RD(MTL_QHCR6_val);
 	sprintf(debugfs_buf, "MTL_QHCR6                  :%#x\n",
 		MTL_QHCR6_val);
@@ -12264,6 +12500,7 @@ static ssize_t MTL_QHCR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QHCR5_RD(MTL_QHCR5_val);
 	sprintf(debugfs_buf, "MTL_QHCR5                  :%#x\n",
 		MTL_QHCR5_val);
@@ -12282,6 +12519,7 @@ static ssize_t MTL_QHCR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QHCR4_RD(MTL_QHCR4_val);
 	sprintf(debugfs_buf, "MTL_QHCR4                  :%#x\n",
 		MTL_QHCR4_val);
@@ -12300,6 +12538,7 @@ static ssize_t MTL_QHCR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QHCR3_RD(MTL_QHCR3_val);
 	sprintf(debugfs_buf, "MTL_QHCR3                  :%#x\n",
 		MTL_QHCR3_val);
@@ -12318,6 +12557,7 @@ static ssize_t MTL_QHCR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QHCR2_RD(MTL_QHCR2_val);
 	sprintf(debugfs_buf, "MTL_QHCR2                  :%#x\n",
 		MTL_QHCR2_val);
@@ -12336,6 +12576,7 @@ static ssize_t MTL_QHCR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QHCR1_RD(MTL_QHCR1_val);
 	sprintf(debugfs_buf, "MTL_QHCR1                  :%#x\n",
 		MTL_QHCR1_val);
@@ -12354,6 +12595,7 @@ static ssize_t MTL_QSSCR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QSSCR7_RD(MTL_QSSCR7_val);
 	sprintf(debugfs_buf, "MTL_QSSCR7                 :%#x\n",
 		MTL_QSSCR7_val);
@@ -12372,6 +12614,7 @@ static ssize_t MTL_QSSCR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QSSCR6_RD(MTL_QSSCR6_val);
 	sprintf(debugfs_buf, "MTL_QSSCR6                 :%#x\n",
 		MTL_QSSCR6_val);
@@ -12390,6 +12633,7 @@ static ssize_t MTL_QSSCR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QSSCR5_RD(MTL_QSSCR5_val);
 	sprintf(debugfs_buf, "MTL_QSSCR5                 :%#x\n",
 		MTL_QSSCR5_val);
@@ -12408,6 +12652,7 @@ static ssize_t MTL_QSSCR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QSSCR4_RD(MTL_QSSCR4_val);
 	sprintf(debugfs_buf, "MTL_QSSCR4                 :%#x\n",
 		MTL_QSSCR4_val);
@@ -12426,6 +12671,7 @@ static ssize_t MTL_QSSCR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QSSCR3_RD(MTL_QSSCR3_val);
 	sprintf(debugfs_buf, "MTL_QSSCR3                 :%#x\n",
 		MTL_QSSCR3_val);
@@ -12444,6 +12690,7 @@ static ssize_t MTL_QSSCR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QSSCR2_RD(MTL_QSSCR2_val);
 	sprintf(debugfs_buf, "MTL_QSSCR2                 :%#x\n",
 		MTL_QSSCR2_val);
@@ -12462,6 +12709,7 @@ static ssize_t MTL_QSSCR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QSSCR1_RD(MTL_QSSCR1_val);
 	sprintf(debugfs_buf, "MTL_QSSCR1                 :%#x\n",
 		MTL_QSSCR1_val);
@@ -12480,6 +12728,7 @@ static ssize_t MTL_QW7_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QW7_RD(MTL_QW7_val);
 	sprintf(debugfs_buf, "MTL_QW7                    :%#x\n", MTL_QW7_val);
 	ret =
@@ -12497,6 +12746,7 @@ static ssize_t MTL_QW6_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QW6_RD(MTL_QW6_val);
 	sprintf(debugfs_buf, "MTL_QW6                    :%#x\n", MTL_QW6_val);
 	ret =
@@ -12514,6 +12764,7 @@ static ssize_t MTL_QW5_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QW5_RD(MTL_QW5_val);
 	sprintf(debugfs_buf, "MTL_QW5                    :%#x\n", MTL_QW5_val);
 	ret =
@@ -12531,6 +12782,7 @@ static ssize_t MTL_QW4_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QW4_RD(MTL_QW4_val);
 	sprintf(debugfs_buf, "MTL_QW4                    :%#x\n", MTL_QW4_val);
 	ret =
@@ -12548,6 +12800,7 @@ static ssize_t MTL_QW3_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QW3_RD(MTL_QW3_val);
 	sprintf(debugfs_buf, "MTL_QW3                    :%#x\n", MTL_QW3_val);
 	ret =
@@ -12565,6 +12818,7 @@ static ssize_t MTL_QW2_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QW2_RD(MTL_QW2_val);
 	sprintf(debugfs_buf, "MTL_QW2                    :%#x\n", MTL_QW2_val);
 	ret =
@@ -12582,6 +12836,7 @@ static ssize_t MTL_QW1_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QW1_RD(MTL_QW1_val);
 	sprintf(debugfs_buf, "MTL_QW1                    :%#x\n", MTL_QW1_val);
 	ret =
@@ -12599,6 +12854,7 @@ static ssize_t MTL_QESR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QESR7_RD(MTL_QESR7_val);
 	sprintf(debugfs_buf, "MTL_QESR7                  :%#x\n",
 		MTL_QESR7_val);
@@ -12617,6 +12873,7 @@ static ssize_t MTL_QESR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QESR6_RD(MTL_QESR6_val);
 	sprintf(debugfs_buf, "MTL_QESR6                  :%#x\n",
 		MTL_QESR6_val);
@@ -12635,6 +12892,7 @@ static ssize_t MTL_QESR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QESR5_RD(MTL_QESR5_val);
 	sprintf(debugfs_buf, "MTL_QESR5                  :%#x\n",
 		MTL_QESR5_val);
@@ -12653,6 +12911,7 @@ static ssize_t MTL_QESR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QESR4_RD(MTL_QESR4_val);
 	sprintf(debugfs_buf, "MTL_QESR4                  :%#x\n",
 		MTL_QESR4_val);
@@ -12671,6 +12930,7 @@ static ssize_t MTL_QESR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QESR3_RD(MTL_QESR3_val);
 	sprintf(debugfs_buf, "MTL_QESR3                  :%#x\n",
 		MTL_QESR3_val);
@@ -12689,6 +12949,7 @@ static ssize_t MTL_QESR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QESR2_RD(MTL_QESR2_val);
 	sprintf(debugfs_buf, "MTL_QESR2                  :%#x\n",
 		MTL_QESR2_val);
@@ -12707,6 +12968,7 @@ static ssize_t MTL_QESR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QESR1_RD(MTL_QESR1_val);
 	sprintf(debugfs_buf, "MTL_QESR1                  :%#x\n",
 		MTL_QESR1_val);
@@ -12725,6 +12987,7 @@ static ssize_t MTL_QECR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QECR7_RD(MTL_QECR7_val);
 	sprintf(debugfs_buf, "MTL_QECR7                  :%#x\n",
 		MTL_QECR7_val);
@@ -12743,6 +13006,7 @@ static ssize_t MTL_QECR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QECR6_RD(MTL_QECR6_val);
 	sprintf(debugfs_buf, "MTL_QECR6                  :%#x\n",
 		MTL_QECR6_val);
@@ -12761,6 +13025,7 @@ static ssize_t MTL_QECR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QECR5_RD(MTL_QECR5_val);
 	sprintf(debugfs_buf, "MTL_QECR5                  :%#x\n",
 		MTL_QECR5_val);
@@ -12779,6 +13044,7 @@ static ssize_t MTL_QECR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QECR4_RD(MTL_QECR4_val);
 	sprintf(debugfs_buf, "MTL_QECR4                  :%#x\n",
 		MTL_QECR4_val);
@@ -12797,6 +13063,7 @@ static ssize_t MTL_QECR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QECR3_RD(MTL_QECR3_val);
 	sprintf(debugfs_buf, "MTL_QECR3                  :%#x\n",
 		MTL_QECR3_val);
@@ -12815,6 +13082,7 @@ static ssize_t MTL_QECR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QECR2_RD(MTL_QECR2_val);
 	sprintf(debugfs_buf, "MTL_QECR2                  :%#x\n",
 		MTL_QECR2_val);
@@ -12833,6 +13101,7 @@ static ssize_t MTL_QECR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QECR1_RD(MTL_QECR1_val);
 	sprintf(debugfs_buf, "MTL_QECR1                  :%#x\n",
 		MTL_QECR1_val);
@@ -12851,6 +13120,7 @@ static ssize_t MTL_QTDR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTDR7_RD(MTL_QTDR7_val);
 	sprintf(debugfs_buf, "MTL_QTDR7                  :%#x\n",
 		MTL_QTDR7_val);
@@ -12869,6 +13139,7 @@ static ssize_t MTL_QTDR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTDR6_RD(MTL_QTDR6_val);
 	sprintf(debugfs_buf, "MTL_QTDR6                  :%#x\n",
 		MTL_QTDR6_val);
@@ -12887,6 +13158,7 @@ static ssize_t MTL_QTDR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTDR5_RD(MTL_QTDR5_val);
 	sprintf(debugfs_buf, "MTL_QTDR5                  :%#x\n",
 		MTL_QTDR5_val);
@@ -12905,6 +13177,7 @@ static ssize_t MTL_QTDR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTDR4_RD(MTL_QTDR4_val);
 	sprintf(debugfs_buf, "MTL_QTDR4                  :%#x\n",
 		MTL_QTDR4_val);
@@ -12923,6 +13196,7 @@ static ssize_t MTL_QTDR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTDR3_RD(MTL_QTDR3_val);
 	sprintf(debugfs_buf, "MTL_QTDR3                  :%#x\n",
 		MTL_QTDR3_val);
@@ -12941,6 +13215,7 @@ static ssize_t MTL_QTDR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTDR2_RD(MTL_QTDR2_val);
 	sprintf(debugfs_buf, "MTL_QTDR2                  :%#x\n",
 		MTL_QTDR2_val);
@@ -12959,6 +13234,7 @@ static ssize_t MTL_QTDR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTDR1_RD(MTL_QTDR1_val);
 	sprintf(debugfs_buf, "MTL_QTDR1                  :%#x\n",
 		MTL_QTDR1_val);
@@ -12977,6 +13253,7 @@ static ssize_t MTL_QUCR7_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QUCR7_RD(MTL_QUCR7_val);
 	sprintf(debugfs_buf, "MTL_QUCR7                  :%#x\n",
 		MTL_QUCR7_val);
@@ -12995,6 +13272,7 @@ static ssize_t MTL_QUCR6_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QUCR6_RD(MTL_QUCR6_val);
 	sprintf(debugfs_buf, "MTL_QUCR6                  :%#x\n",
 		MTL_QUCR6_val);
@@ -13013,6 +13291,7 @@ static ssize_t MTL_QUCR5_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QUCR5_RD(MTL_QUCR5_val);
 	sprintf(debugfs_buf, "MTL_QUCR5                  :%#x\n",
 		MTL_QUCR5_val);
@@ -13031,6 +13310,7 @@ static ssize_t MTL_QUCR4_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QUCR4_RD(MTL_QUCR4_val);
 	sprintf(debugfs_buf, "MTL_QUCR4                  :%#x\n",
 		MTL_QUCR4_val);
@@ -13049,6 +13329,7 @@ static ssize_t MTL_QUCR3_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QUCR3_RD(MTL_QUCR3_val);
 	sprintf(debugfs_buf, "MTL_QUCR3                  :%#x\n",
 		MTL_QUCR3_val);
@@ -13067,6 +13348,7 @@ static ssize_t MTL_QUCR2_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QUCR2_RD(MTL_QUCR2_val);
 	sprintf(debugfs_buf, "MTL_QUCR2                  :%#x\n",
 		MTL_QUCR2_val);
@@ -13085,6 +13367,7 @@ static ssize_t MTL_QUCR1_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QUCR1_RD(MTL_QUCR1_val);
 	sprintf(debugfs_buf, "MTL_QUCR1                  :%#x\n",
 		MTL_QUCR1_val);
@@ -13103,6 +13386,7 @@ static ssize_t MTL_QTOMR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTOMR7_RD(MTL_QTOMR7_val);
 	sprintf(debugfs_buf, "MTL_QTOMR7                 :%#x\n",
 		MTL_QTOMR7_val);
@@ -13121,6 +13405,7 @@ static ssize_t MTL_QTOMR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTOMR6_RD(MTL_QTOMR6_val);
 	sprintf(debugfs_buf, "MTL_QTOMR6                 :%#x\n",
 		MTL_QTOMR6_val);
@@ -13139,6 +13424,7 @@ static ssize_t MTL_QTOMR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTOMR5_RD(MTL_QTOMR5_val);
 	sprintf(debugfs_buf, "MTL_QTOMR5                 :%#x\n",
 		MTL_QTOMR5_val);
@@ -13157,6 +13443,7 @@ static ssize_t MTL_QTOMR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTOMR4_RD(MTL_QTOMR4_val);
 	sprintf(debugfs_buf, "MTL_QTOMR4                 :%#x\n",
 		MTL_QTOMR4_val);
@@ -13175,6 +13462,7 @@ static ssize_t MTL_QTOMR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTOMR3_RD(MTL_QTOMR3_val);
 	sprintf(debugfs_buf, "MTL_QTOMR3                 :%#x\n",
 		MTL_QTOMR3_val);
@@ -13193,6 +13481,7 @@ static ssize_t MTL_QTOMR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTOMR2_RD(MTL_QTOMR2_val);
 	sprintf(debugfs_buf, "MTL_QTOMR2                 :%#x\n",
 		MTL_QTOMR2_val);
@@ -13211,6 +13500,7 @@ static ssize_t MTL_QTOMR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_QTOMR1_RD(MTL_QTOMR1_val);
 	sprintf(debugfs_buf, "MTL_QTOMR1                 :%#x\n",
 		MTL_QTOMR1_val);
@@ -13229,6 +13519,7 @@ static ssize_t mac_pmtcsr_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_PMTCSR_RD(mac_pmtcsr_val);
 	sprintf(debugfs_buf, "MAC_PMTCSR                 :%#x\n",
 		mac_pmtcsr_val);
@@ -13248,6 +13539,7 @@ static ssize_t mmc_rxicmp_err_octets_read(struct file *file,
 					  loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13274,6 +13566,7 @@ static ssize_t mmc_rxicmp_gd_octets_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13298,6 +13591,7 @@ static ssize_t mmc_rxtcp_err_octets_read(struct file *file,
 					 loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13324,6 +13618,7 @@ static ssize_t mmc_rxtcp_gd_octets_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13348,6 +13643,7 @@ static ssize_t mmc_rxudp_err_octets_read(struct file *file,
 					 loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13374,6 +13670,7 @@ static ssize_t mmc_rxudp_gd_octets_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13398,6 +13695,7 @@ static ssize_t MMC_RXIPV6_nopay_octets_read(struct file *file,
 					    loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13424,6 +13722,7 @@ static ssize_t MMC_RXIPV6_hdrerr_octets_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13448,6 +13747,7 @@ static ssize_t MMC_RXIPV6_gd_octets_read(struct file *file,
 					 loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13474,6 +13774,7 @@ static ssize_t MMC_RXIPV4_udsbl_octets_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13498,6 +13799,7 @@ static ssize_t MMC_RXIPV4_frag_octets_read(struct file *file,
 					   loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13524,6 +13826,7 @@ static ssize_t MMC_RXIPV4_nopay_octets_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13548,6 +13851,7 @@ static ssize_t MMC_RXIPV4_hdrerr_octets_read(struct file *file,
 					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13574,6 +13878,7 @@ static ssize_t MMC_RXIPV4_gd_octets_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13599,6 +13904,7 @@ static ssize_t mmc_rxicmp_err_pkts_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13622,6 +13928,7 @@ static ssize_t mmc_rxicmp_gd_pkts_read(struct file *file, char __user *userbuf,
 				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13647,6 +13954,7 @@ static ssize_t mmc_rxtcp_err_pkts_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13670,6 +13978,7 @@ static ssize_t mmc_rxtcp_gd_pkts_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13695,6 +14004,7 @@ static ssize_t mmc_rxudp_err_pkts_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13718,6 +14028,7 @@ static ssize_t mmc_rxudp_gd_pkts_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13744,6 +14055,7 @@ static ssize_t MMC_RXIPV6_nopay_pkts_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13769,6 +14081,7 @@ static ssize_t MMC_RXIPV6_hdrerr_pkts_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13792,6 +14105,7 @@ static ssize_t MMC_RXIPV6_gd_pkts_read(struct file *file, char __user *userbuf,
 				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13818,6 +14132,7 @@ static ssize_t MMC_RXIPV4_ubsbl_pkts_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13842,6 +14157,7 @@ static ssize_t MMC_RXIPV4_frag_pkts_read(struct file *file,
 					 loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13868,6 +14184,7 @@ static ssize_t MMC_RXIPV4_nopay_pkts_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13893,6 +14210,7 @@ static ssize_t MMC_RXIPV4_hdrerr_pkts_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13916,6 +14234,7 @@ static ssize_t MMC_RXIPV4_gd_pkts_read(struct file *file, char __user *userbuf,
 				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13942,6 +14261,7 @@ static ssize_t mmc_rxctrlpackets_g_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -13965,6 +14285,7 @@ static ssize_t mmc_rxrcverror_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -13991,6 +14312,7 @@ static ssize_t mmc_rxwatchdogerror_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14016,6 +14338,7 @@ static ssize_t mmc_rxvlanpackets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14040,6 +14363,7 @@ static ssize_t mmc_rxfifooverflow_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14063,6 +14387,7 @@ static ssize_t mmc_rxpausepackets_read(struct file *file, char __user *userbuf,
 				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14089,6 +14414,7 @@ static ssize_t mmc_rxoutofrangetype_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14112,6 +14438,7 @@ static ssize_t mmc_rxlengtherror_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14138,6 +14465,7 @@ static ssize_t mmc_rxunicastpackets_g_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14162,6 +14490,7 @@ static ssize_t MMC_RX1024tomaxoctets_gb_read(struct file *file,
 					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14188,6 +14517,7 @@ static ssize_t MMC_RX512TO1023octets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14212,6 +14542,7 @@ static ssize_t MMC_RX256TO511octets_gb_read(struct file *file,
 					    loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14238,6 +14569,7 @@ static ssize_t MMC_RX128TO255octets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14263,6 +14595,7 @@ static ssize_t MMC_RX65TO127octets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14286,6 +14619,7 @@ static ssize_t MMC_RX64octets_gb_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14311,6 +14645,7 @@ static ssize_t mmc_rxoversize_g_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14334,6 +14669,7 @@ static ssize_t mmc_rxundersize_g_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14359,6 +14695,7 @@ static ssize_t mmc_rxjabbererror_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14382,6 +14719,7 @@ static ssize_t mmc_rxrunterror_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14408,6 +14746,7 @@ static ssize_t mmc_rxalignmenterror_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14431,6 +14770,7 @@ static ssize_t mmc_rxcrcerror_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14457,6 +14797,7 @@ static ssize_t mmc_rxmulticastpackets_g_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14482,6 +14823,7 @@ static ssize_t mmc_rxbroadcastpackets_g_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14505,6 +14847,7 @@ static ssize_t mmc_rxoctetcount_g_read(struct file *file, char __user *userbuf,
 				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14531,6 +14874,7 @@ static ssize_t mmc_rxoctetcount_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14556,6 +14900,7 @@ static ssize_t mmc_rxpacketcount_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14579,6 +14924,7 @@ static ssize_t mmc_txoversize_g_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14605,6 +14951,7 @@ static ssize_t mmc_txvlanpackets_g_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14629,6 +14976,7 @@ static ssize_t mmc_txpausepackets_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14652,6 +15000,7 @@ static ssize_t mmc_txexcessdef_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14678,6 +15027,7 @@ static ssize_t mmc_txpacketscount_g_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14701,6 +15051,7 @@ static ssize_t mmc_txoctetcount_g_read(struct file *file, char __user *userbuf,
 				       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14726,6 +15077,7 @@ static ssize_t mmc_txcarriererror_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14749,6 +15101,7 @@ static ssize_t mmc_txexesscol_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14774,6 +15127,7 @@ static ssize_t mmc_txlatecol_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14797,6 +15151,7 @@ static ssize_t mmc_txdeferred_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14822,6 +15177,7 @@ static ssize_t mmc_txmulticol_g_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14845,6 +15201,7 @@ static ssize_t mmc_txsinglecol_g_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14871,6 +15228,7 @@ static ssize_t mmc_txunderflowerror_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14895,6 +15253,7 @@ static ssize_t mmc_txbroadcastpackets_gb_read(struct file *file,
 					      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14921,6 +15280,7 @@ static ssize_t mmc_txmulticastpackets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14945,6 +15305,7 @@ static ssize_t mmc_txunicastpackets_gb_read(struct file *file,
 					    loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -14971,6 +15332,7 @@ static ssize_t MMC_TX1024tomaxoctets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -14995,6 +15357,7 @@ static ssize_t MMC_TX512TO1023octets_gb_read(struct file *file,
 					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -15021,6 +15384,7 @@ static ssize_t MMC_TX256TO511octets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15045,6 +15409,7 @@ static ssize_t MMC_TX128TO255octets_gb_read(struct file *file,
 					    loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -15071,6 +15436,7 @@ static ssize_t MMC_TX65TO127octets_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15094,6 +15460,7 @@ static ssize_t MMC_TX64octets_gb_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -15120,6 +15487,7 @@ static ssize_t mmc_txmulticastpackets_g_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15144,6 +15512,7 @@ static ssize_t mmc_txbroadcastpackets_g_read(struct file *file,
 					     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -15170,6 +15539,7 @@ static ssize_t mmc_txpacketcount_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15195,6 +15565,7 @@ static ssize_t mmc_txoctetcount_gb_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15218,6 +15589,7 @@ static ssize_t mmc_ipc_intr_rx_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -15244,6 +15616,7 @@ static ssize_t mmc_ipc_intr_mask_rx_read(struct file *file,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15267,6 +15640,7 @@ static ssize_t mmc_intr_mask_tx_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -15292,6 +15666,7 @@ static ssize_t mmc_intr_mask_rx_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15315,6 +15690,7 @@ static ssize_t mmc_intr_tx_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
@@ -15340,6 +15716,7 @@ static ssize_t mmc_intr_rx_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15364,6 +15741,7 @@ static ssize_t mmc_cntrl_read(struct file *file, char __user *userbuf,
 {
 	ssize_t ret;
 
+
 	if (!pdata->hw_feat.mmc_sel) {
 		pr_err(
 		       "MMC Module not selected. Register cannot be read\n");
@@ -15387,6 +15765,7 @@ static ssize_t MAC_MA1lr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1LR_RD(MAC_MA1lr_val);
 	sprintf(debugfs_buf, "MAC_MA1LR                  :%#x\n",
 		MAC_MA1lr_val);
@@ -15405,6 +15784,7 @@ static ssize_t MAC_MA1hr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA1HR_RD(MAC_MA1hr_val);
 	sprintf(debugfs_buf, "MAC_MA1HR                  :%#x\n",
 		MAC_MA1hr_val);
@@ -15423,6 +15803,7 @@ static ssize_t MAC_MA0lr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA0LR_RD(MAC_MA0lr_val);
 	sprintf(debugfs_buf, "MAC_MA0LR                  :%#x\n",
 		MAC_MA0lr_val);
@@ -15441,6 +15822,7 @@ static ssize_t MAC_MA0hr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MA0HR_RD(MAC_MA0hr_val);
 	sprintf(debugfs_buf, "MAC_MA0HR       :%#x\n", MAC_MA0hr_val);
 	ret =
@@ -15458,6 +15840,7 @@ static ssize_t mac_gpior_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_GPIOR_RD(mac_gpior_val);
 	sprintf(debugfs_buf, "MAC_GPIOR       :%#x\n", mac_gpior_val);
 	ret =
@@ -15475,6 +15858,7 @@ static ssize_t mac_gmiidr_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_GMIIDR_RD(mac_gmiidr_val);
 	sprintf(debugfs_buf, "MAC_GMIIDR      :%#x\n", mac_gmiidr_val);
 	ret =
@@ -15492,6 +15876,7 @@ static ssize_t mac_gmiiar_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_GMIIAR_RD(mac_gmiiar_val);
 	sprintf(debugfs_buf, "MAC_GMIIAR      :%#x\n", mac_gmiiar_val);
 	ret =
@@ -15509,6 +15894,7 @@ static ssize_t MAC_HFR2_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HFR2_RD(MAC_HFR2_val);
 	sprintf(debugfs_buf, "MAC_HFR2        :%#x\n", MAC_HFR2_val);
 	ret =
@@ -15526,6 +15912,7 @@ static ssize_t MAC_HFR1_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HFR1_RD(MAC_HFR1_val);
 	sprintf(debugfs_buf, "MAC_HFR1        :%#x\n", MAC_HFR1_val);
 	ret =
@@ -15543,6 +15930,7 @@ static ssize_t MAC_HFR0_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HFR0_RD(MAC_HFR0_val);
 	sprintf(debugfs_buf, "MAC_HFR0        :%#x\n", MAC_HFR0_val);
 	ret =
@@ -15560,6 +15948,7 @@ static ssize_t mac_mdr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MDR_RD(mac_mdr_val);
 	sprintf(debugfs_buf, "MAC_MDR         :%#x\n", mac_mdr_val);
 	ret =
@@ -15577,6 +15966,7 @@ static ssize_t mac_vr_read(struct file *file, char __user *userbuf,
 			   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_VR_RD(mac_vr_val);
 	sprintf(debugfs_buf, "MAC_VR          :%#x\n", mac_vr_val);
 	ret =
@@ -15594,6 +15984,7 @@ static ssize_t MAC_HTR7_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR7_RD(MAC_HTR7_val);
 	sprintf(debugfs_buf, "MAC_HTR7        :%#x\n", MAC_HTR7_val);
 	ret =
@@ -15611,6 +16002,7 @@ static ssize_t MAC_HTR6_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR6_RD(MAC_HTR6_val);
 	sprintf(debugfs_buf, "MAC_HTR6        :%#x\n", MAC_HTR6_val);
 	ret =
@@ -15628,6 +16020,7 @@ static ssize_t MAC_HTR5_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR5_RD(MAC_HTR5_val);
 	sprintf(debugfs_buf, "MAC_HTR5        :%#x\n", MAC_HTR5_val);
 	ret =
@@ -15645,6 +16038,7 @@ static ssize_t MAC_HTR4_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR4_RD(MAC_HTR4_val);
 	sprintf(debugfs_buf, "MAC_HTR4        :%#x\n", MAC_HTR4_val);
 	ret =
@@ -15662,6 +16056,7 @@ static ssize_t MAC_HTR3_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR3_RD(MAC_HTR3_val);
 	sprintf(debugfs_buf, "MAC_HTR3        :%#x\n", MAC_HTR3_val);
 	ret =
@@ -15679,6 +16074,7 @@ static ssize_t MAC_HTR2_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR2_RD(MAC_HTR2_val);
 	sprintf(debugfs_buf, "MAC_HTR2        :%#x\n", MAC_HTR2_val);
 	ret =
@@ -15696,6 +16092,7 @@ static ssize_t MAC_HTR1_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR1_RD(MAC_HTR1_val);
 	sprintf(debugfs_buf, "MAC_HTR1        :%#x\n", MAC_HTR1_val);
 	ret =
@@ -15713,6 +16110,7 @@ static ssize_t MAC_HTR0_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_HTR0_RD(MAC_HTR0_val);
 	sprintf(debugfs_buf, "MAC_HTR0        :%#x\n", MAC_HTR0_val);
 	ret =
@@ -15730,6 +16128,7 @@ static ssize_t DMA_RIWTR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR7_RD(DMA_RIWTR7_val);
 	sprintf(debugfs_buf, "DMA_RIWTR7      :%#x\n", DMA_RIWTR7_val);
 	ret =
@@ -15747,6 +16146,7 @@ static ssize_t DMA_RIWTR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR6_RD(DMA_RIWTR6_val);
 	sprintf(debugfs_buf, "DMA_RIWTR6      :%#x\n", DMA_RIWTR6_val);
 	ret =
@@ -15764,6 +16164,7 @@ static ssize_t DMA_RIWTR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR5_RD(DMA_RIWTR5_val);
 	sprintf(debugfs_buf, "DMA_RIWTR5      :%#x\n", DMA_RIWTR5_val);
 	ret =
@@ -15781,6 +16182,7 @@ static ssize_t DMA_RIWTR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR4_RD(DMA_RIWTR4_val);
 	sprintf(debugfs_buf, "DMA_RIWTR4      :%#x\n", DMA_RIWTR4_val);
 	ret =
@@ -15798,6 +16200,7 @@ static ssize_t DMA_RIWTR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR3_RD(DMA_RIWTR3_val);
 	sprintf(debugfs_buf, "DMA_RIWTR3      :%#x\n", DMA_RIWTR3_val);
 	ret =
@@ -15815,6 +16218,7 @@ static ssize_t DMA_RIWTR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR2_RD(DMA_RIWTR2_val);
 	sprintf(debugfs_buf, "DMA_RIWTR2      :%#x\n", DMA_RIWTR2_val);
 	ret =
@@ -15832,6 +16236,7 @@ static ssize_t DMA_RIWTR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR1_RD(DMA_RIWTR1_val);
 	sprintf(debugfs_buf, "DMA_RIWTR1      :%#x\n", DMA_RIWTR1_val);
 	ret =
@@ -15849,6 +16254,7 @@ static ssize_t DMA_RIWTR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RIWTR0_RD(DMA_RIWTR0_val);
 	sprintf(debugfs_buf, "DMA_RIWTR0      :%#x\n", DMA_RIWTR0_val);
 	ret =
@@ -15866,6 +16272,7 @@ static ssize_t DMA_RDRLR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR7_RD(DMA_RDRLR7_val);
 	sprintf(debugfs_buf, "DMA_RDRLR7      :%#x\n", DMA_RDRLR7_val);
 	ret =
@@ -15883,6 +16290,7 @@ static ssize_t DMA_RDRLR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR6_RD(DMA_RDRLR6_val);
 	sprintf(debugfs_buf, "DMA_RDRLR6      :%#x\n", DMA_RDRLR6_val);
 	ret =
@@ -15900,6 +16308,7 @@ static ssize_t DMA_RDRLR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR5_RD(DMA_RDRLR5_val);
 	sprintf(debugfs_buf, "DMA_RDRLR5      :%#x\n", DMA_RDRLR5_val);
 	ret =
@@ -15917,6 +16326,7 @@ static ssize_t DMA_RDRLR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR4_RD(DMA_RDRLR4_val);
 	sprintf(debugfs_buf, "DMA_RDRLR4      :%#x\n", DMA_RDRLR4_val);
 	ret =
@@ -15934,6 +16344,7 @@ static ssize_t DMA_RDRLR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR3_RD(DMA_RDRLR3_val);
 	sprintf(debugfs_buf, "DMA_RDRLR3      :%#x\n", DMA_RDRLR3_val);
 	ret =
@@ -15951,6 +16362,7 @@ static ssize_t DMA_RDRLR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR2_RD(DMA_RDRLR2_val);
 	sprintf(debugfs_buf, "DMA_RDRLR2      :%#x\n", DMA_RDRLR2_val);
 	ret =
@@ -15968,6 +16380,7 @@ static ssize_t DMA_RDRLR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR1_RD(DMA_RDRLR1_val);
 	sprintf(debugfs_buf, "DMA_RDRLR1      :%#x\n", DMA_RDRLR1_val);
 	ret =
@@ -15985,6 +16398,7 @@ static ssize_t DMA_RDRLR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDRLR0_RD(DMA_RDRLR0_val);
 	sprintf(debugfs_buf, "DMA_RDRLR0      :%#x\n", DMA_RDRLR0_val);
 	ret =
@@ -16002,6 +16416,7 @@ static ssize_t DMA_TDRLR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR7_RD(DMA_TDRLR7_val);
 	sprintf(debugfs_buf, "DMA_TDRLR7      :%#x\n", DMA_TDRLR7_val);
 	ret =
@@ -16019,6 +16434,7 @@ static ssize_t DMA_TDRLR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR6_RD(DMA_TDRLR6_val);
 	sprintf(debugfs_buf, "DMA_TDRLR6      :%#x\n", DMA_TDRLR6_val);
 	ret =
@@ -16036,6 +16452,7 @@ static ssize_t DMA_TDRLR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR5_RD(DMA_TDRLR5_val);
 	sprintf(debugfs_buf, "DMA_TDRLR5      :%#x\n", DMA_TDRLR5_val);
 	ret =
@@ -16053,6 +16470,7 @@ static ssize_t DMA_TDRLR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR4_RD(DMA_TDRLR4_val);
 	sprintf(debugfs_buf, "DMA_TDRLR4      :%#x\n", DMA_TDRLR4_val);
 	ret =
@@ -16070,6 +16488,7 @@ static ssize_t DMA_TDRLR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR3_RD(DMA_TDRLR3_val);
 	sprintf(debugfs_buf, "DMA_TDRLR3      :%#x\n", DMA_TDRLR3_val);
 	ret =
@@ -16087,6 +16506,7 @@ static ssize_t DMA_TDRLR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR2_RD(DMA_TDRLR2_val);
 	sprintf(debugfs_buf, "DMA_TDRLR2      :%#x\n", DMA_TDRLR2_val);
 	ret =
@@ -16104,6 +16524,7 @@ static ssize_t DMA_TDRLR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR1_RD(DMA_TDRLR1_val);
 	sprintf(debugfs_buf, "DMA_TDRLR1      :%#x\n", DMA_TDRLR1_val);
 	ret =
@@ -16121,6 +16542,7 @@ static ssize_t DMA_TDRLR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDRLR0_RD(DMA_TDRLR0_val);
 	sprintf(debugfs_buf, "DMA_TDRLR0      :%#x\n", DMA_TDRLR0_val);
 	ret =
@@ -16138,6 +16560,7 @@ static ssize_t DMA_RDTP_RPDR7_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR7_RD(DMA_RDTP_RPDR7_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR7  :%#x\n", DMA_RDTP_RPDR7_val);
 	ret =
@@ -16155,6 +16578,7 @@ static ssize_t DMA_RDTP_RPDR6_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR6_RD(DMA_RDTP_RPDR6_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR6  :%#x\n", DMA_RDTP_RPDR6_val);
 	ret =
@@ -16172,6 +16596,7 @@ static ssize_t DMA_RDTP_RPDR5_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR5_RD(DMA_RDTP_RPDR5_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR5  :%#x\n", DMA_RDTP_RPDR5_val);
 	ret =
@@ -16189,6 +16614,7 @@ static ssize_t DMA_RDTP_RPDR4_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR4_RD(DMA_RDTP_RPDR4_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR4  :%#x\n", DMA_RDTP_RPDR4_val);
 	ret =
@@ -16206,6 +16632,7 @@ static ssize_t DMA_RDTP_RPDR3_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR3_RD(DMA_RDTP_RPDR3_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR3  :%#x\n", DMA_RDTP_RPDR3_val);
 	ret =
@@ -16223,6 +16650,7 @@ static ssize_t DMA_RDTP_RPDR2_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR2_RD(DMA_RDTP_RPDR2_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR2  :%#x\n", DMA_RDTP_RPDR2_val);
 	ret =
@@ -16240,6 +16668,7 @@ static ssize_t DMA_RDTP_RPDR1_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR1_RD(DMA_RDTP_RPDR1_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR1  :%#x\n", DMA_RDTP_RPDR1_val);
 	ret =
@@ -16257,6 +16686,7 @@ static ssize_t DMA_RDTP_RPDR0_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDTP_RPDR0_RD(DMA_RDTP_RPDR0_val);
 	sprintf(debugfs_buf, "DMA_RDTP_RPDR0  :%#x\n", DMA_RDTP_RPDR0_val);
 	ret =
@@ -16274,6 +16704,7 @@ static ssize_t DMA_TDTP_TPDR7_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR7_RD(DMA_TDTP_TPDR7_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR7  :%#x\n", DMA_TDTP_TPDR7_val);
 	ret =
@@ -16291,6 +16722,7 @@ static ssize_t DMA_TDTP_TPDR6_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR6_RD(DMA_TDTP_TPDR6_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR6  :%#x\n", DMA_TDTP_TPDR6_val);
 	ret =
@@ -16308,6 +16740,7 @@ static ssize_t DMA_TDTP_TPDR5_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR5_RD(DMA_TDTP_TPDR5_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR5  :%#x\n", DMA_TDTP_TPDR5_val);
 	ret =
@@ -16325,6 +16758,7 @@ static ssize_t DMA_TDTP_TPDR4_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR4_RD(DMA_TDTP_TPDR4_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR4  :%#x\n", DMA_TDTP_TPDR4_val);
 	ret =
@@ -16342,6 +16776,7 @@ static ssize_t DMA_TDTP_TPDR3_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR3_RD(DMA_TDTP_TPDR3_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR3  :%#x\n", DMA_TDTP_TPDR3_val);
 	ret =
@@ -16359,6 +16794,7 @@ static ssize_t DMA_TDTP_TPDR2_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR2_RD(DMA_TDTP_TPDR2_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR2  :%#x\n", DMA_TDTP_TPDR2_val);
 	ret =
@@ -16376,6 +16812,7 @@ static ssize_t DMA_TDTP_TPDR1_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR1_RD(DMA_TDTP_TPDR1_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR1  :%#x\n", DMA_TDTP_TPDR1_val);
 	ret =
@@ -16393,6 +16830,7 @@ static ssize_t DMA_TDTP_TPDR0_read(struct file *file, char __user *userbuf,
 				   size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDTP_TPDR0_RD(DMA_TDTP_TPDR0_val);
 	sprintf(debugfs_buf, "DMA_TDTP_TPDR0  :%#x\n", DMA_TDTP_TPDR0_val);
 	ret =
@@ -16410,6 +16848,7 @@ static ssize_t DMA_RDLAR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR7_RD(DMA_RDLAR7_val);
 	sprintf(debugfs_buf, "DMA_RDLAR7      :%#llx\n", DMA_RDLAR7_val);
 	ret =
@@ -16427,6 +16866,7 @@ static ssize_t DMA_RDLAR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR6_RD(DMA_RDLAR6_val);
 	sprintf(debugfs_buf, "DMA_RDLAR6      :%#llx\n", DMA_RDLAR6_val);
 	ret =
@@ -16444,6 +16884,7 @@ static ssize_t DMA_RDLAR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR5_RD(DMA_RDLAR5_val);
 	sprintf(debugfs_buf, "DMA_RDLAR5      :%#llx\n", DMA_RDLAR5_val);
 	ret =
@@ -16461,6 +16902,7 @@ static ssize_t DMA_RDLAR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR4_RD(DMA_RDLAR4_val);
 	sprintf(debugfs_buf, "DMA_RDLAR4      :%#llx\n", DMA_RDLAR4_val);
 	ret =
@@ -16478,6 +16920,7 @@ static ssize_t DMA_RDLAR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR3_RD(DMA_RDLAR3_val);
 	sprintf(debugfs_buf, "DMA_RDLAR3      :%#llx\n", DMA_RDLAR3_val);
 	ret =
@@ -16495,6 +16938,7 @@ static ssize_t DMA_RDLAR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR2_RD(DMA_RDLAR2_val);
 	sprintf(debugfs_buf, "DMA_RDLAR2      :%#llx\n", DMA_RDLAR2_val);
 	ret =
@@ -16512,6 +16956,7 @@ static ssize_t DMA_RDLAR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR1_RD(DMA_RDLAR1_val);
 	sprintf(debugfs_buf, "DMA_RDLAR1      :%#llx\n", DMA_RDLAR1_val);
 	ret =
@@ -16529,6 +16974,7 @@ static ssize_t DMA_RDLAR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RDLAR0_RD(DMA_RDLAR0_val);
 	sprintf(debugfs_buf, "DMA_RDLAR0      :%#llx\n", DMA_RDLAR0_val);
 	ret =
@@ -16546,6 +16992,7 @@ static ssize_t DMA_TDLAR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR7_RD(DMA_TDLAR7_val);
 	sprintf(debugfs_buf, "DMA_TDLAR7      :%#llx\n", DMA_TDLAR7_val);
 	ret =
@@ -16563,6 +17010,7 @@ static ssize_t DMA_TDLAR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR6_RD(DMA_TDLAR6_val);
 	sprintf(debugfs_buf, "DMA_TDLAR6      :%#llx\n", DMA_TDLAR6_val);
 	ret =
@@ -16580,6 +17028,7 @@ static ssize_t DMA_TDLAR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR5_RD(DMA_TDLAR5_val);
 	sprintf(debugfs_buf, "DMA_TDLAR5      :%#llx\n", DMA_TDLAR5_val);
 	ret =
@@ -16597,6 +17046,7 @@ static ssize_t DMA_TDLAR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR4_RD(DMA_TDLAR4_val);
 	sprintf(debugfs_buf, "DMA_TDLAR4      :%#llx\n", DMA_TDLAR4_val);
 	ret =
@@ -16614,6 +17064,7 @@ static ssize_t DMA_TDLAR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR3_RD(DMA_TDLAR3_val);
 	sprintf(debugfs_buf, "DMA_TDLAR3      :%#llx\n", DMA_TDLAR3_val);
 	ret =
@@ -16631,6 +17082,7 @@ static ssize_t DMA_TDLAR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR2_RD(DMA_TDLAR2_val);
 	sprintf(debugfs_buf, "DMA_TDLAR2      :%#llx\n", DMA_TDLAR2_val);
 	ret =
@@ -16648,6 +17100,7 @@ static ssize_t DMA_TDLAR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR1_RD(DMA_TDLAR1_val);
 	sprintf(debugfs_buf, "DMA_TDLAR1      :%#llx\n", DMA_TDLAR1_val);
 	ret =
@@ -16665,6 +17118,7 @@ static ssize_t DMA_TDLAR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TDLAR0_RD(DMA_TDLAR0_val);
 	sprintf(debugfs_buf, "DMA_TDLAR0      :%#llx\n", DMA_TDLAR0_val);
 	ret =
@@ -16682,6 +17136,7 @@ static ssize_t DMA_IER7_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(7, DMA_IER7_val);
 	sprintf(debugfs_buf, "DMA_IER7        :%#x\n", DMA_IER7_val);
 	ret =
@@ -16699,6 +17154,7 @@ static ssize_t DMA_IER6_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(6, DMA_IER6_val);
 	sprintf(debugfs_buf, "DMA_IER6        :%#x\n", DMA_IER6_val);
 	ret =
@@ -16716,6 +17172,7 @@ static ssize_t DMA_IER5_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(5, DMA_IER5_val);
 	sprintf(debugfs_buf, "DMA_IER5        :%#x\n", DMA_IER5_val);
 	ret =
@@ -16733,6 +17190,7 @@ static ssize_t DMA_IER4_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(4, DMA_IER4_val);
 	sprintf(debugfs_buf, "DMA_IER4        :%#x\n", DMA_IER4_val);
 	ret =
@@ -16750,6 +17208,7 @@ static ssize_t DMA_IER3_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(3, DMA_IER3_val);
 	sprintf(debugfs_buf, "DMA_IER3        :%#x\n", DMA_IER3_val);
 	ret =
@@ -16767,6 +17226,7 @@ static ssize_t DMA_IER2_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(2, DMA_IER2_val);
 	sprintf(debugfs_buf, "DMA_IER2        :%#x\n", DMA_IER2_val);
 	ret =
@@ -16784,6 +17244,7 @@ static ssize_t DMA_IER1_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(1, DMA_IER1_val);
 	sprintf(debugfs_buf, "DMA_IER1        :%#x\n", DMA_IER1_val);
 	ret =
@@ -16801,6 +17262,7 @@ static ssize_t DMA_IER0_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_IER_RD(0, DMA_IER0_val);
 	sprintf(debugfs_buf, "DMA_IER0        :%#x\n", DMA_IER0_val);
 	ret =
@@ -16818,6 +17280,7 @@ static ssize_t mac_imr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_IMR_RD(mac_imr_val);
 	sprintf(debugfs_buf, "MAC_IMR         :%#x\n", mac_imr_val);
 	ret =
@@ -16835,6 +17298,7 @@ static ssize_t mac_isr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_ISR_RD(mac_isr_val);
 	sprintf(debugfs_buf, "MAC_ISR         :%#x\n", mac_isr_val);
 	ret =
@@ -16852,6 +17316,7 @@ static ssize_t mtl_isr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_ISR_RD(mtl_isr_val);
 	sprintf(debugfs_buf, "MTL_ISR         :%#x\n", mtl_isr_val);
 	ret =
@@ -16869,6 +17334,7 @@ static ssize_t DMA_SR7_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(7, DMA_SR7_val);
 	sprintf(debugfs_buf, "DMA_SR7         :%#x\n", DMA_SR7_val);
 	ret =
@@ -16886,6 +17352,7 @@ static ssize_t DMA_SR6_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(6, DMA_SR6_val);
 	sprintf(debugfs_buf, "DMA_SR6         :%#x\n", DMA_SR6_val);
 	ret =
@@ -16903,6 +17370,7 @@ static ssize_t DMA_SR5_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(5, DMA_SR5_val);
 	sprintf(debugfs_buf, "DMA_SR5         :%#x\n", DMA_SR5_val);
 	ret =
@@ -16920,6 +17388,7 @@ static ssize_t DMA_SR4_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(4, DMA_SR4_val);
 	sprintf(debugfs_buf, "DMA_SR4         :%#x\n", DMA_SR4_val);
 	ret =
@@ -16937,6 +17406,7 @@ static ssize_t DMA_SR3_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(3, DMA_SR3_val);
 	sprintf(debugfs_buf, "DMA_SR3         :%#x\n", DMA_SR3_val);
 	ret =
@@ -16954,6 +17424,7 @@ static ssize_t DMA_SR2_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(2, DMA_SR2_val);
 	sprintf(debugfs_buf, "DMA_SR2         :%#x\n", DMA_SR2_val);
 	ret =
@@ -16971,6 +17442,7 @@ static ssize_t DMA_SR1_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(1, DMA_SR1_val);
 	sprintf(debugfs_buf, "DMA_SR1         :%#x\n", DMA_SR1_val);
 	ret =
@@ -16988,6 +17460,7 @@ static ssize_t DMA_SR0_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SR_RD(0, DMA_SR0_val);
 	sprintf(debugfs_buf, "DMA_SR0         :%#x\n", DMA_SR0_val);
 	ret =
@@ -17005,6 +17478,7 @@ static ssize_t dma_isr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_ISR_RD(dma_isr_val);
 	sprintf(debugfs_buf, "DMA_ISR         :%#x\n", dma_isr_val);
 	ret =
@@ -17022,8 +17496,9 @@ static ssize_t DMA_DSR2_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_DSR2_RD(DMA_DSR2_val);
-	sprintf(debugfs_buf, "DMA_DSR2                   :%#x\n", DMA_DSR2_val);
+	sprintf(debugfs_buf, "DMA_DSR2                  :%#x\n", DMA_DSR2_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -17039,8 +17514,9 @@ static ssize_t DMA_DSR1_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_DSR1_RD(DMA_DSR1_val);
-	sprintf(debugfs_buf, "DMA_DSR1                   :%#x\n", DMA_DSR1_val);
+	sprintf(debugfs_buf, "DMA_DSR1                  :%#x\n", DMA_DSR1_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -17056,8 +17532,9 @@ static ssize_t DMA_DSR0_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_DSR0_RD(DMA_DSR0_val);
-	sprintf(debugfs_buf, "DMA_DSR0                   :%#x\n", DMA_DSR0_val);
+	sprintf(debugfs_buf, "DMA_DSR0                  :%#x\n", DMA_DSR0_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -17073,6 +17550,7 @@ static ssize_t MTL_Q0rdr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0RDR_RD(MTL_Q0rdr_val);
 	sprintf(debugfs_buf, "MTL_Q0RDR       :%#x\n", MTL_Q0rdr_val);
 	ret =
@@ -17090,6 +17568,7 @@ static ssize_t MTL_Q0esr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0ESR_RD(MTL_Q0esr_val);
 	sprintf(debugfs_buf, "MTL_Q0ESR       :%#x\n", MTL_Q0esr_val);
 	ret =
@@ -17107,6 +17586,7 @@ static ssize_t MTL_Q0tdr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0TDR_RD(MTL_Q0tdr_val);
 	sprintf(debugfs_buf, "MTL_Q0TDR       :%#x\n", MTL_Q0tdr_val);
 	ret =
@@ -17124,6 +17604,7 @@ static ssize_t DMA_CHRBAR7_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR7_RD(DMA_CHRBAR7_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR7     :%#x\n", DMA_CHRBAR7_val);
 	ret =
@@ -17141,6 +17622,7 @@ static ssize_t DMA_CHRBAR6_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR6_RD(DMA_CHRBAR6_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR6     :%#x\n", DMA_CHRBAR6_val);
 	ret =
@@ -17158,6 +17640,7 @@ static ssize_t DMA_CHRBAR5_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR5_RD(DMA_CHRBAR5_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR5     :%#x\n", DMA_CHRBAR5_val);
 	ret =
@@ -17175,6 +17658,7 @@ static ssize_t DMA_CHRBAR4_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR4_RD(DMA_CHRBAR4_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR4     :%#x\n", DMA_CHRBAR4_val);
 	ret =
@@ -17192,6 +17676,7 @@ static ssize_t DMA_CHRBAR3_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR3_RD(DMA_CHRBAR3_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR3     :%#x\n", DMA_CHRBAR3_val);
 	ret =
@@ -17209,6 +17694,7 @@ static ssize_t DMA_CHRBAR2_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR2_RD(DMA_CHRBAR2_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR2     :%#x\n", DMA_CHRBAR2_val);
 	ret =
@@ -17226,6 +17712,7 @@ static ssize_t DMA_CHRBAR1_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR1_RD(DMA_CHRBAR1_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR1     :%#x\n", DMA_CHRBAR1_val);
 	ret =
@@ -17243,6 +17730,7 @@ static ssize_t DMA_CHRBAR0_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRBAR0_RD(DMA_CHRBAR0_val);
 	sprintf(debugfs_buf, "DMA_CHRBAR0     :%#x\n", DMA_CHRBAR0_val);
 	ret =
@@ -17260,6 +17748,7 @@ static ssize_t DMA_CHTBAR7_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR7_RD(DMA_CHTBAR7_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR7     :%#x\n", DMA_CHTBAR7_val);
 	ret =
@@ -17277,6 +17766,7 @@ static ssize_t DMA_CHTBAR6_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR6_RD(DMA_CHTBAR6_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR6     :%#x\n", DMA_CHTBAR6_val);
 	ret =
@@ -17294,6 +17784,7 @@ static ssize_t DMA_CHTBAR5_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR5_RD(DMA_CHTBAR5_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR5     :%#x\n", DMA_CHTBAR5_val);
 	ret =
@@ -17311,6 +17802,7 @@ static ssize_t DMA_CHTBAR4_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR4_RD(DMA_CHTBAR4_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR4     :%#x\n", DMA_CHTBAR4_val);
 	ret =
@@ -17328,6 +17820,7 @@ static ssize_t DMA_CHTBAR3_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR3_RD(DMA_CHTBAR3_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR3     :%#x\n", DMA_CHTBAR3_val);
 	ret =
@@ -17345,6 +17838,7 @@ static ssize_t DMA_CHTBAR2_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR2_RD(DMA_CHTBAR2_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR2     :%#x\n", DMA_CHTBAR2_val);
 	ret =
@@ -17362,6 +17856,7 @@ static ssize_t DMA_CHTBAR1_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR1_RD(DMA_CHTBAR1_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR1     :%#x\n", DMA_CHTBAR1_val);
 	ret =
@@ -17379,6 +17874,7 @@ static ssize_t DMA_CHTBAR0_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTBAR0_RD(DMA_CHTBAR0_val);
 	sprintf(debugfs_buf, "DMA_CHTBAR0     :%#x\n", DMA_CHTBAR0_val);
 	ret =
@@ -17396,6 +17892,7 @@ static ssize_t DMA_CHRDR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR7_RD(DMA_CHRDR7_val);
 	sprintf(debugfs_buf, "DMA_CHRDR7      :%#x\n", DMA_CHRDR7_val);
 	ret =
@@ -17413,6 +17910,7 @@ static ssize_t DMA_CHRDR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR6_RD(DMA_CHRDR6_val);
 	sprintf(debugfs_buf, "DMA_CHRDR6      :%#x\n", DMA_CHRDR6_val);
 	ret =
@@ -17430,6 +17928,7 @@ static ssize_t DMA_CHRDR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR5_RD(DMA_CHRDR5_val);
 	sprintf(debugfs_buf, "DMA_CHRDR5      :%#x\n", DMA_CHRDR5_val);
 	ret =
@@ -17447,6 +17946,7 @@ static ssize_t DMA_CHRDR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR4_RD(DMA_CHRDR4_val);
 	sprintf(debugfs_buf, "DMA_CHRDR4      :%#x\n", DMA_CHRDR4_val);
 	ret =
@@ -17464,6 +17964,7 @@ static ssize_t DMA_CHRDR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR3_RD(DMA_CHRDR3_val);
 	sprintf(debugfs_buf, "DMA_CHRDR3      :%#x\n", DMA_CHRDR3_val);
 	ret =
@@ -17481,6 +17982,7 @@ static ssize_t DMA_CHRDR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR2_RD(DMA_CHRDR2_val);
 	sprintf(debugfs_buf, "DMA_CHRDR2      :%#x\n", DMA_CHRDR2_val);
 	ret =
@@ -17498,6 +18000,7 @@ static ssize_t DMA_CHRDR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR1_RD(DMA_CHRDR1_val);
 	sprintf(debugfs_buf, "DMA_CHRDR1      :%#x\n", DMA_CHRDR1_val);
 	ret =
@@ -17515,6 +18018,7 @@ static ssize_t DMA_CHRDR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHRDR0_RD(DMA_CHRDR0_val);
 	sprintf(debugfs_buf, "DMA_CHRDR0      :%#x\n", DMA_CHRDR0_val);
 	ret =
@@ -17532,6 +18036,7 @@ static ssize_t DMA_CHTDR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR7_RD(DMA_CHTDR7_val);
 	sprintf(debugfs_buf, "DMA_CHTDR7      :%#x\n", DMA_CHTDR7_val);
 	ret =
@@ -17549,6 +18054,7 @@ static ssize_t DMA_CHTDR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR6_RD(DMA_CHTDR6_val);
 	sprintf(debugfs_buf, "DMA_CHTDR6      :%#x\n", DMA_CHTDR6_val);
 	ret =
@@ -17566,6 +18072,7 @@ static ssize_t DMA_CHTDR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR5_RD(DMA_CHTDR5_val);
 	sprintf(debugfs_buf, "DMA_CHTDR5      :%#x\n", DMA_CHTDR5_val);
 	ret =
@@ -17583,6 +18090,7 @@ static ssize_t DMA_CHTDR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR4_RD(DMA_CHTDR4_val);
 	sprintf(debugfs_buf, "DMA_CHTDR4      :%#x\n", DMA_CHTDR4_val);
 	ret =
@@ -17600,6 +18108,7 @@ static ssize_t DMA_CHTDR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR3_RD(DMA_CHTDR3_val);
 	sprintf(debugfs_buf, "DMA_CHTDR3      :%#x\n", DMA_CHTDR3_val);
 	ret =
@@ -17617,6 +18126,7 @@ static ssize_t DMA_CHTDR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR2_RD(DMA_CHTDR2_val);
 	sprintf(debugfs_buf, "DMA_CHTDR2      :%#x\n", DMA_CHTDR2_val);
 	ret =
@@ -17634,6 +18144,7 @@ static ssize_t DMA_CHTDR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR1_RD(DMA_CHTDR1_val);
 	sprintf(debugfs_buf, "DMA_CHTDR1      :%#x\n", DMA_CHTDR1_val);
 	ret =
@@ -17651,6 +18162,7 @@ static ssize_t DMA_CHTDR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CHTDR0_RD(DMA_CHTDR0_val);
 	sprintf(debugfs_buf, "DMA_CHTDR0      :%#x\n", DMA_CHTDR0_val);
 	ret =
@@ -17668,6 +18180,7 @@ static ssize_t DMA_SFCSR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR7_RD(DMA_SFCSR7_val);
 	sprintf(debugfs_buf, "DMA_SFCSR7      :%#x\n", DMA_SFCSR7_val);
 	ret =
@@ -17685,6 +18198,7 @@ static ssize_t DMA_SFCSR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR6_RD(DMA_SFCSR6_val);
 	sprintf(debugfs_buf, "DMA_SFCSR6      :%#x\n", DMA_SFCSR6_val);
 	ret =
@@ -17702,6 +18216,7 @@ static ssize_t DMA_SFCSR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR5_RD(DMA_SFCSR5_val);
 	sprintf(debugfs_buf, "DMA_SFCSR5      :%#x\n", DMA_SFCSR5_val);
 	ret =
@@ -17719,6 +18234,7 @@ static ssize_t DMA_SFCSR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR4_RD(DMA_SFCSR4_val);
 	sprintf(debugfs_buf, "DMA_SFCSR4      :%#x\n", DMA_SFCSR4_val);
 	ret =
@@ -17736,6 +18252,7 @@ static ssize_t DMA_SFCSR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR3_RD(DMA_SFCSR3_val);
 	sprintf(debugfs_buf, "DMA_SFCSR3      :%#x\n", DMA_SFCSR3_val);
 	ret =
@@ -17753,6 +18270,7 @@ static ssize_t DMA_SFCSR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR2_RD(DMA_SFCSR2_val);
 	sprintf(debugfs_buf, "DMA_SFCSR2      :%#x\n", DMA_SFCSR2_val);
 	ret =
@@ -17770,6 +18288,7 @@ static ssize_t DMA_SFCSR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR1_RD(DMA_SFCSR1_val);
 	sprintf(debugfs_buf, "DMA_SFCSR1      :%#x\n", DMA_SFCSR1_val);
 	ret =
@@ -17787,6 +18306,7 @@ static ssize_t DMA_SFCSR0_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SFCSR0_RD(DMA_SFCSR0_val);
 	sprintf(debugfs_buf, "DMA_SFCSR0      :%#x\n", DMA_SFCSR0_val);
 	ret =
@@ -17804,6 +18324,7 @@ static ssize_t mac_ivlantirr_read(struct file *file, char __user *userbuf,
 				  size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_IVLANTIRR_RD(mac_ivlantirr_val);
 	sprintf(debugfs_buf, "MAC_IVLANTIRR              :%#x\n",
 		mac_ivlantirr_val);
@@ -17822,6 +18343,7 @@ static ssize_t mac_vlantirr_read(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_VLANTIRR_RD(mac_vlantirr_val);
 	sprintf(debugfs_buf, "MAC_VLANTIRR               :%#x\n",
 		mac_vlantirr_val);
@@ -17840,6 +18362,7 @@ static ssize_t mac_vlanhtr_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_VLANHTR_RD(mac_vlanhtr_val);
 	sprintf(debugfs_buf, "MAC_VLANHTR                :%#x\n",
 		mac_vlanhtr_val);
@@ -17858,6 +18381,7 @@ static ssize_t mac_vlantr_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_VLANTR_RD(mac_vlantr_val);
 	sprintf(debugfs_buf, "MAC_VLANTR                 :%#x\n",
 		mac_vlantr_val);
@@ -17876,8 +18400,9 @@ static ssize_t dma_sbus_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_SBUS_RD(dma_sbus_val);
-	sprintf(debugfs_buf, "DMA_SBUS                   :%#x\n", dma_sbus_val);
+	sprintf(debugfs_buf, "DMA_SBUS                  :%#x\n", dma_sbus_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
 				    strlen(debugfs_buf));
@@ -17893,6 +18418,7 @@ static ssize_t dma_bmr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_BMR_RD(dma_bmr_val);
 	sprintf(debugfs_buf, "DMA_BMR                    :%#x\n", dma_bmr_val);
 	ret =
@@ -17910,6 +18436,7 @@ static ssize_t MTL_Q0rcr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0RCR_RD(MTL_Q0rcr_val);
 	sprintf(debugfs_buf, "MTL_Q0RCR       :%#x\n", MTL_Q0rcr_val);
 	ret =
@@ -17927,6 +18454,7 @@ static ssize_t MTL_Q0ocr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0OCR_RD(MTL_Q0ocr_val);
 	sprintf(debugfs_buf, "MTL_Q0OCR       :%#x\n", MTL_Q0ocr_val);
 	ret =
@@ -17944,6 +18472,7 @@ static ssize_t MTL_Q0romr_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0ROMR_RD(MTL_Q0romr_val);
 	sprintf(debugfs_buf, "MTL_Q0ROMR      :%#x\n", MTL_Q0romr_val);
 	ret =
@@ -17961,6 +18490,7 @@ static ssize_t MTL_Q0qr_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0QR_RD(MTL_Q0qr_val);
 	sprintf(debugfs_buf, "MTL_Q0QR        :%#x\n", MTL_Q0qr_val);
 	ret =
@@ -17978,6 +18508,7 @@ static ssize_t MTL_Q0ecr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0ECR_RD(MTL_Q0ecr_val);
 	sprintf(debugfs_buf, "MTL_Q0ECR       :%#x\n", MTL_Q0ecr_val);
 	ret =
@@ -17995,6 +18526,7 @@ static ssize_t MTL_Q0ucr_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0UCR_RD(MTL_Q0ucr_val);
 	sprintf(debugfs_buf, "MTL_Q0UCR       :%#x\n", MTL_Q0ucr_val);
 	ret =
@@ -18012,6 +18544,7 @@ static ssize_t MTL_Q0tomr_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_Q0TOMR_RD(MTL_Q0tomr_val);
 	sprintf(debugfs_buf, "MTL_Q0TOMR      :%#x\n", MTL_Q0tomr_val);
 	ret =
@@ -18029,6 +18562,7 @@ static ssize_t MTL_RQDCM1r_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_RQDCM1R_RD(MTL_RQDCM1r_val);
 	sprintf(debugfs_buf, "MTL_RQDCM1R     :%#x\n", MTL_RQDCM1r_val);
 	ret =
@@ -18046,6 +18580,7 @@ static ssize_t MTL_RQDCM0r_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_RQDCM0R_RD(MTL_RQDCM0r_val);
 	sprintf(debugfs_buf, "MTL_RQDCM0R     :%#x\n", MTL_RQDCM0r_val);
 	ret =
@@ -18063,6 +18598,7 @@ static ssize_t mtl_fddr_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_FDDR_RD(mtl_fddr_val);
 	sprintf(debugfs_buf, "MTL_FDDR        :%#x\n", mtl_fddr_val);
 	ret =
@@ -18080,6 +18616,7 @@ static ssize_t mtl_fdacs_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_FDACS_RD(mtl_fdacs_val);
 	sprintf(debugfs_buf, "MTL_FDACS       :%#x\n", mtl_fdacs_val);
 	ret =
@@ -18097,6 +18634,7 @@ static ssize_t mtl_omr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MTL_OMR_RD(mtl_omr_val);
 	sprintf(debugfs_buf, "MTL_OMR         :%#x\n", mtl_omr_val);
 	ret =
@@ -18114,6 +18652,7 @@ static ssize_t MAC_RQC3r_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_RQC3R_RD(MAC_RQC3r_val);
 	sprintf(debugfs_buf, "MAC_RQC3R       :%#x\n", MAC_RQC3r_val);
 	ret =
@@ -18131,6 +18670,7 @@ static ssize_t MAC_RQC2r_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_RQC2R_RD(MAC_RQC2r_val);
 	sprintf(debugfs_buf, "MAC_RQC2R       :%#x\n", MAC_RQC2r_val);
 	ret =
@@ -18148,6 +18688,7 @@ static ssize_t MAC_RQC1r_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_RQC1R_RD(MAC_RQC1r_val);
 	sprintf(debugfs_buf, "MAC_RQC1R       :%#x\n", MAC_RQC1r_val);
 	ret =
@@ -18165,6 +18706,7 @@ static ssize_t MAC_RQC0r_read(struct file *file, char __user *userbuf,
 			      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_RQC0R_RD(MAC_RQC0r_val);
 	sprintf(debugfs_buf, "MAC_RQC0R       :%#x\n", MAC_RQC0r_val);
 	ret =
@@ -18182,6 +18724,7 @@ static ssize_t MAC_TQPM1r_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TQPM1R_RD(MAC_TQPM1r_val);
 	sprintf(debugfs_buf, "MAC_TQPM1R      :%#x\n", MAC_TQPM1r_val);
 	ret =
@@ -18199,6 +18742,7 @@ static ssize_t MAC_TQPM0r_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_TQPM0R_RD(MAC_TQPM0r_val);
 	sprintf(debugfs_buf, "MAC_TQPM0R      :%#x\n", MAC_TQPM0r_val);
 	ret =
@@ -18216,6 +18760,7 @@ static ssize_t mac_rfcr_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_RFCR_RD(mac_rfcr_val);
 	sprintf(debugfs_buf, "MAC_RFCR        :%#x\n", mac_rfcr_val);
 	ret =
@@ -18233,6 +18778,7 @@ static ssize_t MAC_QTFCR7_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_QTFCR7_RD(MAC_QTFCR7_val);
 	sprintf(debugfs_buf, "MAC_QTFCR7      :%#x\n", MAC_QTFCR7_val);
 	ret =
@@ -18250,6 +18796,7 @@ static ssize_t MAC_QTFCR6_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_QTFCR6_RD(MAC_QTFCR6_val);
 	sprintf(debugfs_buf, "MAC_QTFCR6      :%#x\n", MAC_QTFCR6_val);
 	ret =
@@ -18267,6 +18814,7 @@ static ssize_t MAC_QTFCR5_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_QTFCR5_RD(MAC_QTFCR5_val);
 	sprintf(debugfs_buf, "MAC_QTFCR5      :%#x\n", MAC_QTFCR5_val);
 	ret =
@@ -18284,6 +18832,7 @@ static ssize_t MAC_QTFCR4_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_QTFCR4_RD(MAC_QTFCR4_val);
 	sprintf(debugfs_buf, "MAC_QTFCR4      :%#x\n", MAC_QTFCR4_val);
 	ret =
@@ -18301,6 +18850,7 @@ static ssize_t MAC_QTFCR3_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_QTFCR3_RD(MAC_QTFCR3_val);
 	sprintf(debugfs_buf, "MAC_QTFCR3      :%#x\n", MAC_QTFCR3_val);
 	ret =
@@ -18318,6 +18868,7 @@ static ssize_t MAC_QTFCR2_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_QTFCR2_RD(MAC_QTFCR2_val);
 	sprintf(debugfs_buf, "MAC_QTFCR2      :%#x\n", MAC_QTFCR2_val);
 	ret =
@@ -18335,6 +18886,7 @@ static ssize_t MAC_QTFCR1_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_QTFCR1_RD(MAC_QTFCR1_val);
 	sprintf(debugfs_buf, "MAC_QTFCR1      :%#x\n", MAC_QTFCR1_val);
 	ret =
@@ -18352,6 +18904,7 @@ static ssize_t MAC_Q0tfcr_read(struct file *file, char __user *userbuf,
 			       size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_Q0TFCR_RD(MAC_Q0tfcr_val);
 	sprintf(debugfs_buf, "MAC_Q0TFCR      :%#x\n", MAC_Q0tfcr_val);
 	ret =
@@ -18369,6 +18922,7 @@ static ssize_t DMA_AXI4CR7_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR7_RD(DMA_AXI4CR7_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR7     :%#x\n", DMA_AXI4CR7_val);
 	ret =
@@ -18386,6 +18940,7 @@ static ssize_t DMA_AXI4CR6_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR6_RD(DMA_AXI4CR6_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR6     :%#x\n", DMA_AXI4CR6_val);
 	ret =
@@ -18403,6 +18958,7 @@ static ssize_t DMA_AXI4CR5_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR5_RD(DMA_AXI4CR5_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR5     :%#x\n", DMA_AXI4CR5_val);
 	ret =
@@ -18420,6 +18976,7 @@ static ssize_t DMA_AXI4CR4_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR4_RD(DMA_AXI4CR4_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR4     :%#x\n", DMA_AXI4CR4_val);
 	ret =
@@ -18437,6 +18994,7 @@ static ssize_t DMA_AXI4CR3_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR3_RD(DMA_AXI4CR3_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR3     :%#x\n", DMA_AXI4CR3_val);
 	ret =
@@ -18454,6 +19012,7 @@ static ssize_t DMA_AXI4CR2_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR2_RD(DMA_AXI4CR2_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR2     :%#x\n", DMA_AXI4CR2_val);
 	ret =
@@ -18471,6 +19030,7 @@ static ssize_t DMA_AXI4CR1_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR1_RD(DMA_AXI4CR1_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR1     :%#x\n", DMA_AXI4CR1_val);
 	ret =
@@ -18488,6 +19048,7 @@ static ssize_t DMA_AXI4CR0_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_AXI4CR0_RD(DMA_AXI4CR0_val);
 	sprintf(debugfs_buf, "DMA_AXI4CR0     :%#x\n", DMA_AXI4CR0_val);
 	ret =
@@ -18505,6 +19066,7 @@ static ssize_t DMA_RCR7_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR7_RD(DMA_RCR7_val);
 	sprintf(debugfs_buf, "DMA_RCR7        :%#x\n", DMA_RCR7_val);
 	ret =
@@ -18522,6 +19084,7 @@ static ssize_t DMA_RCR6_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR6_RD(DMA_RCR6_val);
 	sprintf(debugfs_buf, "DMA_RCR6        :%#x\n", DMA_RCR6_val);
 	ret =
@@ -18539,6 +19102,7 @@ static ssize_t DMA_RCR5_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR5_RD(DMA_RCR5_val);
 	sprintf(debugfs_buf, "DMA_RCR5        :%#x\n", DMA_RCR5_val);
 	ret =
@@ -18556,6 +19120,7 @@ static ssize_t DMA_RCR4_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR4_RD(DMA_RCR4_val);
 	sprintf(debugfs_buf, "DMA_RCR4        :%#x\n", DMA_RCR4_val);
 	ret =
@@ -18573,6 +19138,7 @@ static ssize_t DMA_RCR3_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR3_RD(DMA_RCR3_val);
 	sprintf(debugfs_buf, "DMA_RCR3        :%#x\n", DMA_RCR3_val);
 	ret =
@@ -18590,6 +19156,7 @@ static ssize_t DMA_RCR2_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR2_RD(DMA_RCR2_val);
 	sprintf(debugfs_buf, "DMA_RCR2        :%#x\n", DMA_RCR2_val);
 	ret =
@@ -18607,6 +19174,7 @@ static ssize_t DMA_RCR1_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR1_RD(DMA_RCR1_val);
 	sprintf(debugfs_buf, "DMA_RCR1        :%#x\n", DMA_RCR1_val);
 	ret =
@@ -18624,6 +19192,7 @@ static ssize_t DMA_RCR0_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_RCR0_RD(DMA_RCR0_val);
 	sprintf(debugfs_buf, "DMA_RCR0        :%#x\n", DMA_RCR0_val);
 	ret =
@@ -18641,6 +19210,7 @@ static ssize_t DMA_TCR7_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR7_RD(DMA_TCR7_val);
 	sprintf(debugfs_buf, "DMA_TCR7        :%#x\n", DMA_TCR7_val);
 	ret =
@@ -18658,6 +19228,7 @@ static ssize_t DMA_TCR6_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR6_RD(DMA_TCR6_val);
 	sprintf(debugfs_buf, "DMA_TCR6        :%#x\n", DMA_TCR6_val);
 	ret =
@@ -18675,6 +19246,7 @@ static ssize_t DMA_TCR5_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR5_RD(DMA_TCR5_val);
 	sprintf(debugfs_buf, "DMA_TCR5        :%#x\n", DMA_TCR5_val);
 	ret =
@@ -18692,6 +19264,7 @@ static ssize_t DMA_TCR4_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR4_RD(DMA_TCR4_val);
 	sprintf(debugfs_buf, "DMA_TCR4        :%#x\n", DMA_TCR4_val);
 	ret =
@@ -18709,6 +19282,7 @@ static ssize_t DMA_TCR3_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR3_RD(DMA_TCR3_val);
 	sprintf(debugfs_buf, "DMA_TCR3        :%#x\n", DMA_TCR3_val);
 	ret =
@@ -18726,6 +19300,7 @@ static ssize_t DMA_TCR2_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR2_RD(DMA_TCR2_val);
 	sprintf(debugfs_buf, "DMA_TCR2        :%#x\n", DMA_TCR2_val);
 	ret =
@@ -18743,6 +19318,7 @@ static ssize_t DMA_TCR1_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR1_RD(DMA_TCR1_val);
 	sprintf(debugfs_buf, "DMA_TCR1        :%#x\n", DMA_TCR1_val);
 	ret =
@@ -18760,6 +19336,7 @@ static ssize_t DMA_TCR0_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_TCR0_RD(DMA_TCR0_val);
 	sprintf(debugfs_buf, "DMA_TCR0        :%#x\n", DMA_TCR0_val);
 	ret =
@@ -18777,6 +19354,7 @@ static ssize_t DMA_CR7_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR7_RD(DMA_CR7_val);
 	sprintf(debugfs_buf, "DMA_CR7         :%#x\n", DMA_CR7_val);
 	ret =
@@ -18794,6 +19372,7 @@ static ssize_t DMA_CR6_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR6_RD(DMA_CR6_val);
 	sprintf(debugfs_buf, "DMA_CR6         :%#x\n", DMA_CR6_val);
 	ret =
@@ -18811,6 +19390,7 @@ static ssize_t DMA_CR5_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR5_RD(DMA_CR5_val);
 	sprintf(debugfs_buf, "DMA_CR5         :%#x\n", DMA_CR5_val);
 	ret =
@@ -18828,6 +19408,7 @@ static ssize_t DMA_CR4_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR4_RD(DMA_CR4_val);
 	sprintf(debugfs_buf, "DMA_CR4         :%#x\n", DMA_CR4_val);
 	ret =
@@ -18845,6 +19426,7 @@ static ssize_t DMA_CR3_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR3_RD(DMA_CR3_val);
 	sprintf(debugfs_buf, "DMA_CR3         :%#x\n", DMA_CR3_val);
 	ret =
@@ -18862,6 +19444,7 @@ static ssize_t DMA_CR2_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR2_RD(DMA_CR2_val);
 	sprintf(debugfs_buf, "DMA_CR2         :%#x\n", DMA_CR2_val);
 	ret =
@@ -18879,6 +19462,7 @@ static ssize_t DMA_CR1_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR1_RD(DMA_CR1_val);
 	sprintf(debugfs_buf, "DMA_CR1         :%#x\n", DMA_CR1_val);
 	ret =
@@ -18896,6 +19480,7 @@ static ssize_t DMA_CR0_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	DMA_CR0_RD(DMA_CR0_val);
 	sprintf(debugfs_buf, "DMA_CR0         :%#x\n", DMA_CR0_val);
 	ret =
@@ -18913,6 +19498,7 @@ static ssize_t mac_wtr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_WTR_RD(mac_wtr_val);
 	sprintf(debugfs_buf, "MAC_WTR         :%#x\n", mac_wtr_val);
 	ret =
@@ -18930,6 +19516,7 @@ static ssize_t mac_mpfr_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MPFR_RD(mac_mpfr_val);
 	sprintf(debugfs_buf, "MAC_MPFR        :%#x\n", mac_mpfr_val);
 	ret =
@@ -18947,6 +19534,7 @@ static ssize_t mac_mecr_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MECR_RD(mac_mecr_val);
 	sprintf(debugfs_buf, "MAC_MECR        :%#x\n", mac_mecr_val);
 	ret =
@@ -18964,6 +19552,7 @@ static ssize_t mac_mcr_read(struct file *file, char __user *userbuf,
 			    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	MAC_MCR_RD(mac_mcr_val);
 	sprintf(debugfs_buf, "MAC_MCR         :%#x\n", mac_mcr_val);
 	ret =
@@ -18982,6 +19571,7 @@ static ssize_t mii_bmcr_reg_read(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_BMCR,
 				     &mii_bmcr_reg_val);
 	sprintf(debugfs_buf,
@@ -19002,6 +19592,7 @@ static ssize_t mii_bmsr_reg_read(struct file *file, char __user *userbuf,
 				 size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_BMSR,
 				     &mii_bmsr_reg_val);
 	sprintf(debugfs_buf,
@@ -19021,6 +19612,7 @@ static ssize_t MII_PHYSID1_reg_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID1,
 				     &MII_PHYSID1_reg_val);
 	sprintf(debugfs_buf,
@@ -19040,6 +19632,7 @@ static ssize_t MII_PHYSID2_reg_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_PHYSID2,
 				     &MII_PHYSID2_reg_val);
 	sprintf(debugfs_buf,
@@ -19059,6 +19652,7 @@ static ssize_t mii_advertise_reg_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_ADVERTISE,
 				     &mii_advertise_reg_val);
 	sprintf(debugfs_buf,
@@ -19079,6 +19673,7 @@ static ssize_t mii_lpa_reg_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_LPA,
 				     &mii_lpa_reg_val);
 	sprintf(debugfs_buf,
@@ -19098,6 +19693,7 @@ static ssize_t mii_expansion_reg_read(struct file *file, char __user *userbuf,
 				      size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_EXPANSION,
 				     &mii_expansion_reg_val);
 	sprintf(debugfs_buf,
@@ -19117,6 +19713,7 @@ static ssize_t auto_nego_np_reg_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr,
 				     EQOS_AUTO_NEGO_NP,
 				     &auto_nego_np_reg_val);
@@ -19138,6 +19735,7 @@ static ssize_t mii_estatus_reg_read(struct file *file, char __user *userbuf,
 				    size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_ESTATUS,
 				     &mii_estatus_reg_val);
 	sprintf(debugfs_buf,
@@ -19157,6 +19755,7 @@ static ssize_t MII_CTRL1000_reg_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_CTRL1000,
 				     &MII_CTRL1000_reg_val);
 	sprintf(debugfs_buf,
@@ -19177,6 +19776,7 @@ static ssize_t MII_STAT1000_reg_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_STAT1000,
 				     &MII_STAT1000_reg_val);
 	sprintf(debugfs_buf,
@@ -19196,6 +19796,7 @@ static ssize_t phy_ctl_reg_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, EQOS_PHY_CTL,
 				     &phy_ctl_reg_val);
 	sprintf(debugfs_buf,
@@ -19216,6 +19817,7 @@ static ssize_t phy_sts_reg_read(struct file *file, char __user *userbuf,
 				size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, EQOS_PHY_STS,
 				     &phy_sts_reg_val);
 	sprintf(debugfs_buf,
@@ -19236,6 +19838,7 @@ static ssize_t feature_drop_tx_pktburstcnt_read(struct file *file,
 						size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	sprintf(debugfs_buf, "feature_drop_tx_pktburstcnt             :%#x\n",
 		feature_drop_tx_pktburstcnt_val);
 	ret =
@@ -19253,6 +19856,7 @@ static ssize_t qinx_read(struct file *file,
 			 char __user *userbuf, size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	sprintf(debugfs_buf, "qinx             :%#x\n", qinx_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
@@ -19269,6 +19873,7 @@ static ssize_t reg_offset_read(struct file *file,
 			 char __user *userbuf, size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	sprintf(debugfs_buf, "reg_offset             :%#x\n", reg_offset_val);
 	ret =
 	    simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
@@ -19285,31 +19890,43 @@ static ssize_t gen_reg_read(struct file *file, char __user *userbuf,
 			     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	unsigned int data_val;
 
 	if (reg_offset_val & 0x10000) {
 		/* read clause45 phy reg */
-		bcm_regs_clause45_read(2, (reg_offset_val & 0xffff), &data_val);
+		bcm_regs_clause45_read(2,
+				(reg_offset_val & 0xffff),
+				&data_val);
 		sprintf(debugfs_buf, "reg(%#x) = %#x\n",
 			reg_offset_val, data_val);
-		ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
-			strlen(debugfs_buf));
+		ret = simple_read_from_buffer(userbuf,
+					count,
+					ppos,
+					debugfs_buf,
+					strlen(debugfs_buf));
 	} else if (reg_offset_val & 0x20000) {
 		/* read phy reg */
 		eqos_mdio_read_direct(pdata, pdata->phyaddr,
 			(reg_offset_val & 0xffff), &data_val);
 		sprintf(debugfs_buf, "reg(%#x) = %#x\n",
 			reg_offset_val, data_val);
-		ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
-			strlen(debugfs_buf));
+		ret = simple_read_from_buffer(userbuf,
+					count,
+					ppos,
+					debugfs_buf,
+					strlen(debugfs_buf));
 	} else  {
 		/* read mac reg */
 		gen_reg_val = ioread32((void *)(ULONG *)
 			(BASE_ADDRESS + reg_offset_val));
 		sprintf(debugfs_buf, "reg(%#x) = %#x\n", reg_offset_val,
 			gen_reg_val);
-		ret = simple_read_from_buffer(userbuf, count, ppos, debugfs_buf,
-				strlen(debugfs_buf));
+		ret = simple_read_from_buffer(userbuf,
+					count,
+					ppos,
+					debugfs_buf,
+					strlen(debugfs_buf));
 	}
 	return ret;
 }
@@ -19323,6 +19940,7 @@ static ssize_t do_tx_align_tst_read(struct file *file,
 			 char __user *userbuf, size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	sprintf(debugfs_buf, "do_tx_align_tst        :%#x\n",
 		do_tx_align_tst_val);
 	ret =
@@ -19340,36 +19958,33 @@ static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read0\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num)
-			, p_rx_normal_desc[desc_num].rdes3,
-			p_rx_normal_desc[desc_num].rdes2,
-			p_rx_normal_desc[desc_num].rdes1,
-			p_rx_normal_desc[desc_num].rdes0);
+			, prx_desc[desc_num].rdes3,
+			prx_desc[desc_num].rdes2,
+			prx_desc[desc_num].rdes1,
+			prx_desc[desc_num].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19391,36 +20006,33 @@ static ssize_t RX_NORMAL_DESC_descriptor_read1(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+						GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read1\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 20)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 20)
-			, p_rx_normal_desc[desc_num + 20].rdes3,
-			p_rx_normal_desc[desc_num + 20].rdes2,
-			p_rx_normal_desc[desc_num + 20].rdes1,
-			p_rx_normal_desc[desc_num + 20].rdes0);
+			, prx_desc[desc_num + 20].rdes3,
+			prx_desc[desc_num + 20].rdes2,
+			prx_desc[desc_num + 20].rdes1,
+			prx_desc[desc_num + 20].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19442,36 +20054,36 @@ static ssize_t RX_NORMAL_DESC_descriptor_read2(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read2\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 40)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 40)
-			, p_rx_normal_desc[desc_num + 40].rdes3,
-			p_rx_normal_desc[desc_num + 40].rdes2,
-			p_rx_normal_desc[desc_num + 40].rdes1,
-			p_rx_normal_desc[desc_num + 40].rdes0);
+			, prx_desc[desc_num + 40].rdes3,
+			prx_desc[desc_num + 40].rdes2,
+			prx_desc[desc_num + 40].rdes1,
+			prx_desc[desc_num + 40].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19493,36 +20105,36 @@ static ssize_t RX_NORMAL_DESC_descriptor_read3(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read3\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 60)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 60)
-			, p_rx_normal_desc[desc_num + 60].rdes3,
-			p_rx_normal_desc[desc_num + 60].rdes2,
-			p_rx_normal_desc[desc_num + 60].rdes1,
-			p_rx_normal_desc[desc_num + 60].rdes0);
+			, prx_desc[desc_num + 60].rdes3,
+			prx_desc[desc_num + 60].rdes2,
+			prx_desc[desc_num + 60].rdes1,
+			prx_desc[desc_num + 60].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19544,36 +20156,36 @@ static ssize_t RX_NORMAL_DESC_descriptor_read4(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read4\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 80)
 			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 80)
-			, p_rx_normal_desc[desc_num + 80].rdes3,
-			p_rx_normal_desc[desc_num + 80].rdes2,
-			p_rx_normal_desc[desc_num + 80].rdes1,
-			p_rx_normal_desc[desc_num + 80].rdes0);
+			, prx_desc[desc_num + 80].rdes3,
+			prx_desc[desc_num + 80].rdes2,
+			prx_desc[desc_num + 80].rdes1,
+			prx_desc[desc_num + 80].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19595,36 +20207,36 @@ static ssize_t RX_NORMAL_DESC_descriptor_read5(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read5\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 100)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 100)
-			, p_rx_normal_desc[desc_num + 100].rdes3,
-			p_rx_normal_desc[desc_num + 100].rdes2,
-			p_rx_normal_desc[desc_num + 100].rdes1,
-			p_rx_normal_desc[desc_num + 100].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 100)
+			, prx_desc[desc_num + 100].rdes3,
+			prx_desc[desc_num + 100].rdes2,
+			prx_desc[desc_num + 100].rdes1,
+			prx_desc[desc_num + 100].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19646,36 +20258,36 @@ static ssize_t RX_NORMAL_DESC_descriptor_read6(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read6\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 120)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 120)
-			, p_rx_normal_desc[desc_num + 120].rdes3,
-			p_rx_normal_desc[desc_num + 120].rdes2,
-			p_rx_normal_desc[desc_num + 120].rdes1,
-			p_rx_normal_desc[desc_num + 120].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 120)
+			, prx_desc[desc_num + 120].rdes3,
+			prx_desc[desc_num + 120].rdes2,
+			prx_desc[desc_num + 120].rdes1,
+			prx_desc[desc_num + 120].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19697,36 +20309,36 @@ static ssize_t RX_NORMAL_DESC_descriptor_read7(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read7\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 140)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 140)
-			, p_rx_normal_desc[desc_num + 140].rdes3,
-			p_rx_normal_desc[desc_num + 140].rdes2,
-			p_rx_normal_desc[desc_num + 140].rdes1,
-			p_rx_normal_desc[desc_num + 140].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 140)
+			, prx_desc[desc_num + 140].rdes3,
+			prx_desc[desc_num + 140].rdes2,
+			prx_desc[desc_num + 140].rdes1,
+			prx_desc[desc_num + 140].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19748,36 +20360,37 @@ static ssize_t RX_NORMAL_DESC_descriptor_read8(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read8\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 160)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 160)
-			, p_rx_normal_desc[desc_num + 160].rdes3,
-			p_rx_normal_desc[desc_num + 160].rdes2,
-			p_rx_normal_desc[desc_num + 160].rdes1,
-			p_rx_normal_desc[desc_num + 160].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 160)
+			, prx_desc[desc_num + 160].rdes3,
+			prx_desc[desc_num + 160].rdes2,
+			prx_desc[desc_num + 160].rdes1,
+			prx_desc[desc_num + 160].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19799,36 +20412,37 @@ static ssize_t RX_NORMAL_DESC_descriptor_read9(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read9\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 180)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 180)
-			, p_rx_normal_desc[desc_num + 180].rdes3,
-			p_rx_normal_desc[desc_num + 180].rdes2,
-			p_rx_normal_desc[desc_num + 180].rdes1,
-			p_rx_normal_desc[desc_num + 180].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 180)
+			, prx_desc[desc_num + 180].rdes3,
+			prx_desc[desc_num + 180].rdes2,
+			prx_desc[desc_num + 180].rdes1,
+			prx_desc[desc_num + 180].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19850,36 +20464,37 @@ static ssize_t RX_NORMAL_DESC_descriptor_read10(struct file *file,
 						char __user *userbuf,
 						size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read10\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 200)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 200)
-			, p_rx_normal_desc[desc_num + 200].rdes3,
-			p_rx_normal_desc[desc_num + 200].rdes2,
-			p_rx_normal_desc[desc_num + 200].rdes1,
-			p_rx_normal_desc[desc_num + 200].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 200)
+			, prx_desc[desc_num + 200].rdes3,
+			prx_desc[desc_num + 200].rdes2,
+			prx_desc[desc_num + 200].rdes1,
+			prx_desc[desc_num + 200].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19901,36 +20516,37 @@ static ssize_t RX_NORMAL_DESC_descriptor_read11(struct file *file,
 						char __user *userbuf,
 						size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read11\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 220)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 220)
-			, p_rx_normal_desc[desc_num + 220].rdes3,
-			p_rx_normal_desc[desc_num + 220].rdes2,
-			p_rx_normal_desc[desc_num + 220].rdes1,
-			p_rx_normal_desc[desc_num + 220].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 220)
+			, prx_desc[desc_num + 220].rdes3,
+			prx_desc[desc_num + 220].rdes2,
+			prx_desc[desc_num + 220].rdes1,
+			prx_desc[desc_num + 220].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -19952,36 +20568,37 @@ static ssize_t RX_NORMAL_DESC_descriptor_read12(struct file *file,
 						char __user *userbuf,
 						size_t count, loff_t *ppos)
 {
-	struct s_rx_normal_desc *p_rx_normal_desc = GET_RX_DESC_PTR(qinx_val, 0);
+	struct s_rx_desc *prx_desc =
+					GET_RX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> RX_NORMAL_DESC_descriptor_read12\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(9952, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 16; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"rx_normal_desc.rdes3             :%x\n"
-			"rx_normal_desc.rdes2             :%x\n"
-			"rx_normal_desc.rdes1             :%x\n"
-			"rx_normal_desc.rdes0             :%x\n",
+			"rx_desc.rdes3             :%x\n"
+			"rx_desc.rdes2             :%x\n"
+			"rx_desc.rdes1             :%x\n"
+			"rx_desc.rdes0             :%x\n",
 			qinx_val, (int)(desc_num + 240)
-			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val, desc_num + 240)
-			, p_rx_normal_desc[desc_num + 240].rdes3,
-			p_rx_normal_desc[desc_num + 240].rdes2,
-			p_rx_normal_desc[desc_num + 240].rdes1,
-			p_rx_normal_desc[desc_num + 240].rdes0);
+			, (ULONG) GET_RX_DESC_DMA_ADDR(qinx_val,
+						desc_num + 240)
+			, prx_desc[desc_num + 240].rdes3,
+			prx_desc[desc_num + 240].rdes2,
+			prx_desc[desc_num + 240].rdes1,
+			prx_desc[desc_num + 240].rdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20003,36 +20620,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read0(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read0\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num)
-			, p_tx_normal_desc[desc_num].tdes3,
-			p_tx_normal_desc[desc_num].tdes2,
-			p_tx_normal_desc[desc_num].tdes1,
-			p_tx_normal_desc[desc_num].tdes0);
+			, ptx_desc[desc_num].tdes3,
+			ptx_desc[desc_num].tdes2,
+			ptx_desc[desc_num].tdes1,
+			ptx_desc[desc_num].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20054,36 +20670,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read1(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read1\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 20)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 20)
-			, p_tx_normal_desc[desc_num + 20].tdes3,
-			p_tx_normal_desc[desc_num + 20].tdes2,
-			p_tx_normal_desc[desc_num + 20].tdes1,
-			p_tx_normal_desc[desc_num + 20].tdes0);
+			, ptx_desc[desc_num + 20].tdes3,
+			ptx_desc[desc_num + 20].tdes2,
+			ptx_desc[desc_num + 20].tdes1,
+			ptx_desc[desc_num + 20].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20105,36 +20720,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read2(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read2\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 40)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 40)
-			, p_tx_normal_desc[desc_num + 40].tdes3,
-			p_tx_normal_desc[desc_num + 40].tdes2,
-			p_tx_normal_desc[desc_num + 40].tdes1,
-			p_tx_normal_desc[desc_num + 40].tdes0);
+			, ptx_desc[desc_num + 40].tdes3,
+			ptx_desc[desc_num + 40].tdes2,
+			ptx_desc[desc_num + 40].tdes1,
+			ptx_desc[desc_num + 40].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20156,36 +20770,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read3(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read3\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 60)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 60)
-			, p_tx_normal_desc[desc_num + 60].tdes3,
-			p_tx_normal_desc[desc_num + 60].tdes2,
-			p_tx_normal_desc[desc_num + 60].tdes1,
-			p_tx_normal_desc[desc_num + 60].tdes0);
+			, ptx_desc[desc_num + 60].tdes3,
+			ptx_desc[desc_num + 60].tdes2,
+			ptx_desc[desc_num + 60].tdes1,
+			ptx_desc[desc_num + 60].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20207,36 +20820,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read4(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read4\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 80)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 80)
-			, p_tx_normal_desc[desc_num + 80].tdes3,
-			p_tx_normal_desc[desc_num + 80].tdes2,
-			p_tx_normal_desc[desc_num + 80].tdes1,
-			p_tx_normal_desc[desc_num + 80].tdes0);
+			, ptx_desc[desc_num + 80].tdes3,
+			ptx_desc[desc_num + 80].tdes2,
+			ptx_desc[desc_num + 80].tdes1,
+			ptx_desc[desc_num + 80].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20258,36 +20870,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read5(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read5\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 100)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 100)
-			, p_tx_normal_desc[desc_num + 100].tdes3,
-			p_tx_normal_desc[desc_num + 100].tdes2,
-			p_tx_normal_desc[desc_num + 100].tdes1,
-			p_tx_normal_desc[desc_num + 100].tdes0);
+			, ptx_desc[desc_num + 100].tdes3,
+			ptx_desc[desc_num + 100].tdes2,
+			ptx_desc[desc_num + 100].tdes1,
+			ptx_desc[desc_num + 100].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20309,36 +20920,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read6(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read6\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 120)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 120)
-			, p_tx_normal_desc[desc_num + 120].tdes3,
-			p_tx_normal_desc[desc_num + 120].tdes2,
-			p_tx_normal_desc[desc_num + 120].tdes1,
-			p_tx_normal_desc[desc_num + 120].tdes0);
+			, ptx_desc[desc_num + 120].tdes3,
+			ptx_desc[desc_num + 120].tdes2,
+			ptx_desc[desc_num + 120].tdes1,
+			ptx_desc[desc_num + 120].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20360,36 +20970,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read7(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read7\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 140)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 140)
-			, p_tx_normal_desc[desc_num + 140].tdes3,
-			p_tx_normal_desc[desc_num + 140].tdes2,
-			p_tx_normal_desc[desc_num + 140].tdes1,
-			p_tx_normal_desc[desc_num + 140].tdes0);
+			, ptx_desc[desc_num + 140].tdes3,
+			ptx_desc[desc_num + 140].tdes2,
+			ptx_desc[desc_num + 140].tdes1,
+			ptx_desc[desc_num + 140].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20411,36 +21020,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read8(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read8\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 160)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 160)
-			, p_tx_normal_desc[desc_num + 160].tdes3,
-			p_tx_normal_desc[desc_num + 160].tdes2,
-			p_tx_normal_desc[desc_num + 160].tdes1,
-			p_tx_normal_desc[desc_num + 160].tdes0);
+			, ptx_desc[desc_num + 160].tdes3,
+			ptx_desc[desc_num + 160].tdes2,
+			ptx_desc[desc_num + 160].tdes1,
+			ptx_desc[desc_num + 160].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20462,36 +21070,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read9(struct file *file,
 					       char __user *userbuf,
 					       size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read9\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 180)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 180)
-			, p_tx_normal_desc[desc_num + 180].tdes3,
-			p_tx_normal_desc[desc_num + 180].tdes2,
-			p_tx_normal_desc[desc_num + 180].tdes1,
-			p_tx_normal_desc[desc_num + 180].tdes0);
+			, ptx_desc[desc_num + 180].tdes3,
+			ptx_desc[desc_num + 180].tdes2,
+			ptx_desc[desc_num + 180].tdes1,
+			ptx_desc[desc_num + 180].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20513,36 +21120,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read10(struct file *file,
 						char __user *userbuf,
 						size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read10\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 200)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 200)
-			, p_tx_normal_desc[desc_num + 200].tdes3,
-			p_tx_normal_desc[desc_num + 200].tdes2,
-			p_tx_normal_desc[desc_num + 200].tdes1,
-			p_tx_normal_desc[desc_num + 200].tdes0);
+			, ptx_desc[desc_num + 200].tdes3,
+			ptx_desc[desc_num + 200].tdes2,
+			ptx_desc[desc_num + 200].tdes1,
+			ptx_desc[desc_num + 200].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20564,36 +21170,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read11(struct file *file,
 						char __user *userbuf,
 						size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc = GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read11\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(12440, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 220)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 220)
-			, p_tx_normal_desc[desc_num + 220].tdes3,
-			p_tx_normal_desc[desc_num + 220].tdes2,
-			p_tx_normal_desc[desc_num + 220].tdes1,
-			p_tx_normal_desc[desc_num + 220].tdes0);
+			, ptx_desc[desc_num + 220].tdes3,
+			ptx_desc[desc_num + 220].tdes2,
+			ptx_desc[desc_num + 220].tdes1,
+			ptx_desc[desc_num + 220].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20615,36 +21220,35 @@ static ssize_t TX_NORMAL_DESC_descriptor_read12(struct file *file,
 						char __user *userbuf,
 						size_t count, loff_t *ppos)
 {
-	struct s_tx_normal_desc *p_tx_normal_desc = GET_TX_DESC_PTR(qinx_val, 0);
+	struct s_tx_desc *ptx_desc =  GET_TX_DESC_PTR(qinx_val, 0);
 	ssize_t ret = 0, desc_num = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 
 	DBGPR("--> TX_NORMAL_DESC_descriptor_read12\n");
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(9952, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 16; desc_num++) {
 		sprintf(tmp_buf,
 			"Channel %d Descriptor %d's [%#lx] contents are:\n"
-			"tx_normal_desc.tdes3             :%x\n"
-			"tx_normal_desc.tdes2             :%x\n"
-			"tx_normal_desc.tdes1             :%x\n"
-			"tx_normal_desc.tdes0             :%x\n",
+			"tx_desc.tdes3             :%x\n"
+			"tx_desc.tdes2             :%x\n"
+			"tx_desc.tdes1             :%x\n"
+			"tx_desc.tdes0             :%x\n",
 			qinx_val, (int)(desc_num + 240)
 			, (ULONG) GET_TX_DESC_DMA_ADDR(qinx_val, desc_num + 240)
-			, p_tx_normal_desc[desc_num + 240].tdes3,
-			p_tx_normal_desc[desc_num + 240].tdes2,
-			p_tx_normal_desc[desc_num + 240].tdes1,
-			p_tx_normal_desc[desc_num + 240].tdes0);
+			, ptx_desc[desc_num + 240].tdes3,
+			ptx_desc[desc_num + 240].tdes2,
+			ptx_desc[desc_num + 240].tdes1,
+			ptx_desc[desc_num + 240].tdes0);
 		strcat(debug_buf, tmp_buf);
 	}
 	ret =
@@ -20666,33 +21270,31 @@ static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 					  char __user *userbuf, size_t count,
 					  loff_t *ppos)
 {
-	struct eqos_tx_wrapper_descriptor *desc_data =
+	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx_val);
 	ssize_t ret = 0;
 	char *tmp_buf = NULL;
 	char *debug_buf = NULL;
 	int i;
 	/* shadow variables */
-	unsigned int cur_tx = desc_data->cur_tx;
-	unsigned int dirty_tx = desc_data->dirty_tx;
-	unsigned int free_desc_cnt = desc_data->free_desc_cnt;
-	unsigned int tx_pkt_queued = desc_data->tx_pkt_queued;
+	unsigned int cur_tx = ptx_ring->cur_tx;
+	unsigned int dirty_tx = ptx_ring->dirty_tx;
+	unsigned int free_desc_cnt = ptx_ring->free_desc_cnt;
+	unsigned int tx_pkt_queued = ptx_ring->tx_pkt_queued;
 
 	unsigned int tmp_cur_tx = 0;
 	unsigned int tmp_dirty_tx = 0;
 
 	DBGPR("--> TX_NORMAL_DESC_status_read\n");
 
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(9952, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 
 	sprintf(debug_buf,
@@ -20747,7 +21349,7 @@ static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 					i++;
 				}
 			} else {	/* (tmp_cur_tx < tmp_dirty_tx) */
-				for (; tmp_cur_tx > tmp_dirty_tx; tmp_cur_tx++) {
+				for (; tmp_cur_tx > tmp_dirty_tx; ) {
 					sprintf(tmp_buf, "%d ", tmp_cur_tx);
 					strcat(debug_buf, tmp_buf);
 					if ((i % 16) == 0) {
@@ -20755,6 +21357,7 @@ static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 						strcat(debug_buf, tmp_buf);
 					}
 					i++;
+					tmp_cur_tx++;
 				}
 			}
 			sprintf(tmp_buf, "\n");
@@ -20827,7 +21430,7 @@ static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
 					  char __user *userbuf, size_t count,
 					  loff_t *ppos)
 {
-	struct eqos_rx_wrapper_descriptor *desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx_val);
 	ssize_t ret = 0;
 	char *tmp_buf = NULL;
@@ -20839,32 +21442,30 @@ static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
 	UINT head_idx;
 	UINT drv_desc_cnt = 0;
 	UINT dev_desc_cnt = 0;
-	unsigned int cur_rx = desc_data->cur_rx;
+	unsigned int cur_rx = prx_ring->cur_rx;
 
 	DBGPR("-->RX_NORMAL_DESC_status_read\n");
 
-	tmp_buf = (char *)kmalloc(622, GFP_KERNEL);
-	if (!tmp_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	tmp_buf = kmalloc(622, GFP_KERNEL);
+	if (!tmp_buf)
 		return -ENOMEM;
-	}
-	debug_buf = (char *)kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+
+	debug_buf = kmalloc(9952, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 	debug_buf[0] = '\0';
 
-	cur_rx = desc_data->cur_rx;
+	cur_rx = prx_ring->cur_rx;
 	DMA_CHRDR_RD(qinx_val, dma_chrdr);
 	DMA_RDTP_RPDR_RD(qinx_val, dma_rdtp_rpdr);
 	DMA_RDLAR_RD(qinx_val, dma_rdlar);
 
 	tail_idx =
-	    (dma_rdtp_rpdr - dma_rdlar) / sizeof(struct s_rx_normal_desc);
+	    (dma_rdtp_rpdr - dma_rdlar) / sizeof(struct s_rx_desc);
 
 	head_idx =
-	    (dma_chrdr - dma_rdlar) / sizeof(struct s_rx_normal_desc);
+	    (dma_chrdr - dma_rdlar) / sizeof(struct s_rx_desc);
 
 	if (tail_idx == head_idx) {
 		dev_desc_cnt = 0;
@@ -20949,13 +21550,13 @@ static ssize_t bcm_regs_read(struct file *file, char __user *userbuf,
 				     size_t count, loff_t *ppos)
 {
 	ssize_t ret;
+
 	char *debug_buf = NULL;
 
-	debug_buf = (char *)kmalloc(26820, GFP_KERNEL);
-	if (!debug_buf) {
-		printk(KERN_ERR "Memory allocation failed:\n");
+	debug_buf = kmalloc(26820, GFP_KERNEL);
+	if (!debug_buf)
 		return -ENOMEM;
-	}
+
 
 	/* For MII/GMII register read */
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, MII_BMCR,
@@ -20994,19 +21595,19 @@ static ssize_t bcm_regs_read(struct file *file, char __user *userbuf,
 
 	/* read shadow regs */
 	eqos_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
-					((BCM_10BASET_SHADOW_REG << 12) | 0x7));
+			       ((BCM_10BASET_SHADOW_REG << 12) | 0x7));
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
 				&BCM_10baset_reg_val);
 	eqos_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
-					((BCM_POWER_MII_CTRL_SHADOW_REG << 12) | 0x7));
+			       ((BCM_POWER_MII_CTRL_SHADOW_REG << 12) | 0x7));
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
 				&bcm_power_mii_ctrl_reg_val);
 	eqos_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
-					((BCM_MISC_TEST_SHADOW_REG << 12) | 0x7));
+			       ((BCM_MISC_TEST_SHADOW_REG << 12) | 0x7));
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
 				&bcm_misc_test_reg_val);
 	eqos_mdio_write_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
-					((BCM_MISC_CTRL_SHADOW_REG << 12) | 0x7));
+			       ((BCM_MISC_CTRL_SHADOW_REG << 12) | 0x7));
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, BCM_AUX_CTRL_SHADOW_REG,
 				&bcm_misc_ctrl_reg_val);
 
@@ -21020,7 +21621,8 @@ static ssize_t bcm_regs_read(struct file *file, char __user *userbuf,
 					BCM_PKT_CNT_EXP_REG);
 	eqos_mdio_read_direct(pdata, pdata->phyaddr, BCM_EXPANSION_REG,
 				     &bcm_pkt_cnt_reg_val);
-	eqos_mdio_write_direct(pdata, pdata->phyaddr, BCM_EXPANSION_CTRL_REG, 0x000);
+	eqos_mdio_write_direct(pdata, pdata->phyaddr, BCM_EXPANSION_CTRL_REG,
+			       0x000);
 
 	/* EEE advertisement regs */
 	bcm_regs_clause45_read(MDIO_MMD_AN, CL45_ADV_EEE_REG,
@@ -21107,13 +21709,13 @@ static const struct file_operations bcm_regs_fops = {
 * \details This function will creates debug files required for debugging.
 * All debug files are created inside a directory named as 2490000.eqos
 * (debugfs directory /sys/kernel/debug/2490000.eqos directory).
-* Note: Before doing any read or write operation, debugfs has to be mounted on system.
-*
+* Note: Before doing any read or write operation, debugfs has to be mounted
+* on system.
 * \retval  0 on Success.
 * \retval  error number on Failure.
 */
 
-int create_debug_files()
+int create_debug_files(void)
 {
 	int ret = 0;
 	struct dentry *registers;
@@ -21430,7 +22032,7 @@ int create_debug_files()
 	struct dentry *MAC_ANC;
 	struct dentry *MAC_LPC;
 	struct dentry *MAC_LPS;
-    struct dentry *MAC_LMIR;
+	struct dentry *MAC_LMIR;
 	struct dentry *MAC_SPI2R;
 	struct dentry *MAC_SPI1R;
 	struct dentry *MAC_SPI0R;
@@ -24803,35 +25405,41 @@ int create_debug_files()
 		goto remove_debug_file;
 	}
 
-	MAC_LMIR = debugfs_create_file("MAC_LMIR", 744, dir, &mac_lmir_val, &mac_lmir_fops);
+	MAC_LMIR = debugfs_create_file("MAC_LMIR", 744, dir, &mac_lmir_val,
+				       &mac_lmir_fops);
 	if (MAC_LMIR == NULL) {
 		pr_info("error creating file: MAC_LMIR\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
-	MAC_SPI2R = debugfs_create_file("MAC_SPI2R", 744, dir, &MAC_SPI2r_val, &MAC_SPI2r_fops);
+	MAC_SPI2R = debugfs_create_file("MAC_SPI2R", 744, dir, &MAC_SPI2r_val,
+					&MAC_SPI2r_fops);
 	if (MAC_SPI2R == NULL) {
 		pr_info("error creating file: MAC_SPI2R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
-	MAC_SPI1R = debugfs_create_file("MAC_SPI1R", 744, dir, &MAC_SPI1r_val, &MAC_SPI1r_fops);
+	MAC_SPI1R = debugfs_create_file("MAC_SPI1R", 744, dir, &MAC_SPI1r_val,
+					&MAC_SPI1r_fops);
 	if (MAC_SPI1R == NULL) {
 		pr_info("error creating file: MAC_SPI1R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
-	MAC_SPI0R = debugfs_create_file("MAC_SPI0R", 744, dir, &MAC_SPI0r_val, &MAC_SPI0r_fops);
+	MAC_SPI0R = debugfs_create_file("MAC_SPI0R", 744, dir, &MAC_SPI0r_val,
+					&MAC_SPI0r_fops);
 	if (MAC_SPI0R == NULL) {
 		pr_info("error creating file: MAC_SPI0R\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}
 
-	MAC_PTO_CR = debugfs_create_file("MAC_PTO_CR", 744, dir, &mac_pto_cr_val, &mac_pto_cr_fops);
+	MAC_PTO_CR = debugfs_create_file("MAC_PTO_CR", 744, dir,
+					 &mac_pto_cr_val,
+					 &mac_pto_cr_fops);
 	if (MAC_PTO_CR == NULL) {
 		pr_info("error creating file: MAC_PTO_CR\n");
 		ret = -ENODEV;
@@ -28920,7 +29528,8 @@ int create_debug_files()
 		goto remove_debug_file;
 	}
 
-	reg_offset = debugfs_create_file("reg_offset", 744, dir, &reg_offset_val, &reg_offset_fops);
+	reg_offset = debugfs_create_file("reg_offset", 744, dir,
+					 &reg_offset_val, &reg_offset_fops);
 	if (reg_offset == NULL) {
 		pr_info("error creating file: reg_offset\n");
 		ret = -ENODEV;
@@ -29253,12 +29862,11 @@ int create_debug_files()
 * \retval  error number on Failure.
 */
 
-void remove_debug_files()
+void remove_debug_files(void)
 {
 	DBGPR("--> remove_debug_files\n");
 	debugfs_remove_recursive(dir);
 	DBGPR("<-- remove_debug_files\n");
-	return;
 }
 
 /* test function to send a packet with buffer aligned to from 0-63.
@@ -29272,10 +29880,10 @@ static void do_transmit_alignment_test(struct eqos_prv_data *pdata)
 {
 #ifdef DO_TX_ALIGN_TST
 	uint q_idx = 0;
-	struct eqos_tx_wrapper_descriptor *ptx_wr =
+	struct tx_ring *ptx_wr =
 	    GET_TX_WRAPPER_DESC(q_idx);
 
-	struct s_tx_normal_desc *ptxd = GET_TX_DESC_PTR(q_idx, ptx_wr->cur_tx);
+	struct s_tx_desc *ptxd = GET_TX_DESC_PTR(q_idx, ptx_wr->cur_tx);
 
 	unsigned long flags;
 	uint i;

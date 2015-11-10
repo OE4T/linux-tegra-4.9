@@ -671,8 +671,8 @@ int eqos_probe(struct platform_device *pdev)
 	DBGPR("============================================================\n");
 	DBGPR("Sizeof rx context desc %lu\n", sizeof(struct s_rx_context_desc));
 	DBGPR("Sizeof tx context desc %lu\n", sizeof(struct s_tx_context_desc));
-	DBGPR("Sizeof rx normal desc %lu\n", sizeof(struct s_rx_normal_desc));
-	DBGPR("Sizeof tx normal desc %lu\n\n", sizeof(struct s_tx_normal_desc));
+	DBGPR("Sizeof rx normal desc %lu\n", sizeof(struct s_rx_desc));
+	DBGPR("Sizeof tx normal desc %lu\n\n", sizeof(struct s_tx_desc));
 	DBGPR("============================================================\n");
 
 	/* remap base address */

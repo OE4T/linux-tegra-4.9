@@ -763,15 +763,15 @@ static int eqos_get_coalesce(struct net_device *dev,
 			     struct ethtool_coalesce *ec)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(0);
 
 	DBGPR("-->eqos_get_coalesce\n");
 
 	memset(ec, 0, sizeof(struct ethtool_coalesce));
 
-	ec->rx_coalesce_usecs = eqos_riwt2usec(rx_desc_data->rx_riwt, pdata);
-	ec->rx_max_coalesced_frames = rx_desc_data->rx_coal_frames;
+	ec->rx_coalesce_usecs = eqos_riwt2usec(prx_ring->rx_riwt, pdata);
+	ec->rx_max_coalesced_frames = prx_ring->rx_coal_frames;
 
 	DBGPR("<--eqos_get_coalesce\n");
 
@@ -796,7 +796,7 @@ static int eqos_set_coalesce(struct net_device *dev,
 			     struct ethtool_coalesce *ec)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct eqos_rx_wrapper_descriptor *rx_desc_data =
+	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(0);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	unsigned int rx_riwt, rx_usec, local_use_riwt, qinx;
@@ -842,7 +842,7 @@ static int eqos_set_coalesce(struct net_device *dev,
 			      EQOS_RX_MAX_FRAMES);
 		return -EINVAL;
 	}
-	if (rx_desc_data->rx_coal_frames != ec->rx_max_coalesced_frames
+	if (prx_ring->rx_coal_frames != ec->rx_max_coalesced_frames
 	    && netif_running(dev)) {
 		DBGPR_ETHTOOL("Coalesce frame parameter can be changed"
 			" only if interface is down\n");
@@ -853,11 +853,11 @@ static int eqos_set_coalesce(struct net_device *dev,
 	 * are in sync
 	 */
 	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
-		rx_desc_data = GET_RX_WRAPPER_DESC(qinx);
-		rx_desc_data->use_riwt = local_use_riwt;
-		rx_desc_data->rx_riwt = rx_riwt;
-		rx_desc_data->rx_coal_frames = ec->rx_max_coalesced_frames;
-		hw_if->config_rx_watchdog(qinx, rx_desc_data->rx_riwt);
+		prx_ring = GET_RX_WRAPPER_DESC(qinx);
+		prx_ring->use_riwt = local_use_riwt;
+		prx_ring->rx_riwt = rx_riwt;
+		prx_ring->rx_coal_frames = ec->rx_max_coalesced_frames;
+		hw_if->config_rx_watchdog(qinx, prx_ring->rx_riwt);
 	}
 
 	DBGPR("<--eqos_set_coalesce\n");

@@ -386,13 +386,16 @@
 
 #define GET_TX_QUEUE_PTR(qinx) (&(pdata->tx_queue[(qinx)]))
 
-#define GET_TX_DESC_PTR(qinx, dinx) (pdata->tx_queue[(qinx)].tx_desc_data.tx_desc_ptrs[(dinx)])
+#define GET_TX_DESC_PTR(qinx, dinx)\
+	(pdata->tx_queue[(qinx)].ptx_ring.tx_desc_ptrs[(dinx)])
 
-#define GET_TX_DESC_DMA_ADDR(qinx, dinx) (pdata->tx_queue[(qinx)].tx_desc_data.tx_desc_dma_addrs[(dinx)])
+#define GET_TX_DESC_DMA_ADDR(qinx, dinx)\
+	(pdata->tx_queue[(qinx)].ptx_ring.tx_desc_dma_addrs[(dinx)])
 
-#define GET_TX_WRAPPER_DESC(qinx) (&(pdata->tx_queue[(qinx)].tx_desc_data))
+#define GET_TX_WRAPPER_DESC(qinx) (&(pdata->tx_queue[(qinx)].ptx_ring))
 
-#define GET_TX_BUF_PTR(qinx, dinx) (pdata->tx_queue[(qinx)].tx_desc_data.tx_buf_ptrs[(dinx)])
+#define GET_TX_BUF_PTR(qinx, dinx)\
+	(pdata->tx_queue[(qinx)].ptx_ring.tx_buf_ptrs[(dinx)])
 
 #define INCR_TX_DESC_INDEX(inx, offset) do {\
 	(inx) += (offset);\
@@ -410,7 +413,8 @@
 	(((inx) + (offset)) >= TX_DESC_CNT ?\
 	((inx) + (offset) - TX_DESC_CNT) : ((inx) + (offset)))
 
-#define GET_CURRENT_XFER_DESC_CNT(qinx) (pdata->tx_queue[(qinx)].tx_desc_data.packet_count)
+#define GET_CURRENT_XFER_DESC_CNT(qinx)\
+	(pdata->tx_queue[(qinx)].ptx_ring.packet_count)
 
 #define GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, offset)\
 	(GET_CURRENT_XFER_DESC_CNT((qinx)) == 0) ? (TX_DESC_CNT - 1) :\
@@ -429,13 +433,16 @@
 
 #define GET_RX_QUEUE_PTR(qinx) (&(pdata->rx_queue[(qinx)]))
 
-#define GET_RX_DESC_PTR(qinx, dinx) (pdata->rx_queue[(qinx)].rx_desc_data.rx_desc_ptrs[(dinx)])
+#define GET_RX_DESC_PTR(qinx, dinx)\
+	(pdata->rx_queue[(qinx)].prx_ring.rx_desc_ptrs[(dinx)])
 
-#define GET_RX_DESC_DMA_ADDR(qinx, dinx) (pdata->rx_queue[(qinx)].rx_desc_data.rx_desc_dma_addrs[(dinx)])
+#define GET_RX_DESC_DMA_ADDR(qinx, dinx)\
+	(pdata->rx_queue[(qinx)].prx_ring.rx_desc_dma_addrs[(dinx)])
 
-#define GET_RX_WRAPPER_DESC(qinx) (&(pdata->rx_queue[(qinx)].rx_desc_data))
+#define GET_RX_WRAPPER_DESC(qinx) (&(pdata->rx_queue[(qinx)].prx_ring))
 
-#define GET_RX_BUF_PTR(qinx, dinx) (pdata->rx_queue[(qinx)].rx_desc_data.rx_buf_ptrs[(dinx)])
+#define GET_RX_BUF_PTR(qinx, dinx)\
+	(pdata->rx_queue[(qinx)].prx_ring.rx_buf_ptrs[(dinx)])
 
 #define INCR_RX_DESC_INDEX(inx, offset) do {\
   (inx) += (offset);\
@@ -453,13 +460,16 @@
 	(((inx) + (offset)) >= RX_DESC_CNT ?\
 	((inx) + (offset) - RX_DESC_CNT) : ((inx) + (offset)))
 
-#define GET_CURRENT_RCVD_DESC_CNT(qinx) (pdata->rx_queue[(qinx)].rx_desc_data.pkt_received)
+#define GET_CURRENT_RCVD_DESC_CNT(qinx)\
+	(pdata->rx_queue[(qinx)].prx_ring.pkt_received)
 
 #define GET_CURRENT_RCVD_LAST_DESC_INDEX(start_index, offset) (RX_DESC_CNT - 1)
 
-#define GET_TX_DESC_IDX(qinx, desc) (((desc) - GET_TX_DESC_DMA_ADDR((qinx), 0))/(sizeof(struct s_tx_normal_desc)))
+#define GET_TX_DESC_IDX(qinx, desc)\
+	(((desc) - GET_TX_DESC_DMA_ADDR((qinx), 0))/(sizeof(struct s_tx_desc)))
 
-#define GET_RX_DESC_IDX(qinx, desc) (((desc) - GET_RX_DESC_DMA_ADDR((qinx), 0))/(sizeof(struct s_rx_normal_desc)))
+#define GET_RX_DESC_IDX(qinx, desc)\
+	 (((desc) - GET_RX_DESC_DMA_ADDR((qinx), 0))/(sizeof(struct s_rx_desc)))
 
 /* Helper macro for handling coalesce parameters via ethtool */
 /* Obtained by trial and error  */
@@ -609,23 +619,23 @@ struct s_tx_context_desc {
 
 typedef struct s_tx_context_desc t_tx_context_desc;
 
-struct s_rx_normal_desc {
+struct s_rx_desc {
 	UINT rdes0;
 	UINT rdes1;
 	UINT rdes2;
 	UINT rdes3;
 };
 
-typedef struct s_rx_normal_desc t_rx_normal_desc;
+typedef struct s_rx_desc t_rx_desc;
 
-struct s_tx_normal_desc {
+struct s_tx_desc {
 	UINT tdes0;
 	UINT tdes1;
 	UINT tdes2;
 	UINT tdes3;
 };
 
-typedef struct s_tx_normal_desc t_tx_normal_desc;
+typedef struct s_tx_desc t_tx_desc;
 
 struct s_tx_error_counters {
 	UINT tx_errors;
@@ -689,18 +699,18 @@ typedef enum {
 
 /* do forward declaration of private data structure */
 struct eqos_prv_data;
-struct eqos_tx_wrapper_descriptor;
+struct tx_ring;
 
 struct hw_if_struct {
 
-	INT(*tx_complete) (struct s_tx_normal_desc *);
-	INT(*tx_window_error) (struct s_tx_normal_desc *);
-	INT(*tx_aborted_error) (struct s_tx_normal_desc *);
-	INT(*tx_carrier_lost_error) (struct s_tx_normal_desc *);
-	INT(*tx_fifo_underrun) (struct s_tx_normal_desc *);
-	INT(*tx_get_collision_count) (struct s_tx_normal_desc *);
-	INT(*tx_handle_aborted_error) (struct s_tx_normal_desc *);
-	INT(*tx_update_fifo_threshold) (struct s_tx_normal_desc *);
+	INT (*tx_complete)(struct s_tx_desc *);
+	INT (*tx_window_error)(struct s_tx_desc *);
+	INT (*tx_aborted_error)(struct s_tx_desc *);
+	INT (*tx_carrier_lost_error)(struct s_tx_desc *);
+	INT (*tx_fifo_underrun)(struct s_tx_desc *);
+	INT (*tx_get_collision_count)(struct s_tx_desc *);
+	INT (*tx_handle_aborted_error)(struct s_tx_desc *);
+	INT (*tx_update_fifo_threshold)(struct s_tx_desc *);
 	/*tx threshold config */
 	INT(*tx_config_threshold) (UINT);
 
@@ -744,8 +754,8 @@ struct hw_if_struct {
 			       UINT, UINT qinx);
 	 INT(*tx_desc_reset) (UINT, struct eqos_prv_data *, UINT qinx);
 	/* last tx segmnet reports the tx status */
-	 INT(*get_tx_desc_ls) (struct s_tx_normal_desc *);
-	 INT(*get_tx_desc_ctxt) (struct s_tx_normal_desc *);
+	 INT (*get_tx_desc_ls)(struct s_tx_desc *);
+	 INT (*get_tx_desc_ctxt)(struct s_tx_desc *);
 	void (*update_rx_tail_ptr) (unsigned int qinx, unsigned int dma_addr);
 
 	/* for FLOW ctrl */
@@ -792,8 +802,8 @@ struct hw_if_struct {
 	 INT(*config_pblx8) (UINT ch_no, UINT val);
 
 	/* for TX vlan control */
-	 VOID(*enable_vlan_reg_control) (struct eqos_tx_wrapper_descriptor *desc_data);
-	 VOID(*enable_vlan_desc_control) (struct eqos_prv_data *pdata);
+	 VOID (*enable_vlan_reg_control)(struct tx_ring *ptx_ring);
+	 VOID (*enable_vlan_desc_control)(struct eqos_prv_data *pdata);
 
 	/* for rx vlan stripping */
 //	 VOID(*config_rx_outer_vlan_stripping) (u32);
@@ -835,11 +845,11 @@ struct hw_if_struct {
 	INT(*config_addend)(UINT);
 	INT(*adjust_systime)(UINT, UINT, INT, bool);
 	ULONG_LONG(*get_systime)(void);
-	UINT(*get_tx_tstamp_status)(struct s_tx_normal_desc *txdesc);
-	ULONG_LONG(*get_tx_tstamp)(struct s_tx_normal_desc *txdesc);
-	UINT(*get_tx_tstamp_status_via_reg)(void);
+	UINT (*get_tx_tstamp_status)(struct s_tx_desc *txdesc);
+	ULONG_LONG (*get_tx_tstamp)(struct s_tx_desc *txdesc);
+	UINT (*get_tx_tstamp_status_via_reg)(void);
 	ULONG_LONG(*get_tx_tstamp_via_reg)(void);
-	UINT(*rx_tstamp_available)(struct s_rx_normal_desc *rxdesc);
+	UINT (*rx_tstamp_available)(struct s_rx_desc *rxdesc);
 	UINT(*get_rx_tstamp_status)(struct s_rx_context_desc *rxdesc);
 	ULONG_LONG(*get_rx_tstamp)(struct s_rx_context_desc *rxdesc);
 	INT(*drop_tx_status_enabled)(void);
@@ -909,20 +919,20 @@ struct hw_if_struct {
 };
 
 /* wrapper buffer structure to hold transmit pkt details */
-struct eqos_tx_buffer {
+struct tx_swcx_desc {
 	dma_addr_t dma;		/* dma address of skb */
 	struct sk_buff *skb;	/* virtual address of skb */
 	unsigned short len;	/* length of first skb */
 	unsigned char buf1_mapped_as_page;
 };
 
-struct eqos_tx_wrapper_descriptor {
+struct tx_ring {
 	char *desc_name;	/* ID of descriptor */
 
 	void *tx_desc_ptrs[TX_DESC_CNT];
 	dma_addr_t tx_desc_dma_addrs[TX_DESC_CNT];
 
-	struct eqos_tx_buffer *tx_buf_ptrs[TX_DESC_CNT];
+	struct tx_swcx_desc *tx_buf_ptrs[TX_DESC_CNT];
 
 	unsigned char contigous_mem;
 
@@ -958,12 +968,12 @@ struct eqos_tx_wrapper_descriptor {
 
 struct eqos_tx_queue {
 	/* Tx descriptors */
-	struct eqos_tx_wrapper_descriptor tx_desc_data;
+	struct tx_ring ptx_ring;
 	int q_op_mode;
 };
 
 /* wrapper buffer structure to hold received pkt details */
-struct eqos_rx_buffer {
+struct rx_swcx_desc {
 	dma_addr_t dma;		/* dma address of skb */
 	struct sk_buff *skb;	/* virtual address of skb */
 	unsigned short len;	/* length of received packet */
@@ -975,13 +985,13 @@ struct eqos_rx_buffer {
 				corresponding desc */
 };
 
-struct eqos_rx_wrapper_descriptor {
+struct rx_ring {
 	char *desc_name;	/* ID of descriptor */
 
 	void *rx_desc_ptrs[RX_DESC_CNT];
 	dma_addr_t rx_desc_dma_addrs[RX_DESC_CNT];
 
-	struct eqos_rx_buffer *rx_buf_ptrs[RX_DESC_CNT];
+	struct rx_swcx_desc *rx_buf_ptrs[RX_DESC_CNT];
 
 	unsigned char contigous_mem;
 
@@ -1011,7 +1021,7 @@ struct eqos_rx_wrapper_descriptor {
 
 struct eqos_rx_queue {
 	/* Rx descriptors */
-	struct eqos_rx_wrapper_descriptor rx_desc_data;
+	struct rx_ring prx_ring;
 	struct napi_struct napi;
 	struct eqos_prv_data *pdata;
 	uint	chan_num;
@@ -1028,9 +1038,9 @@ struct desc_if_struct {
 	void(*free_buff_and_desc) (struct eqos_prv_data *);
 	void (*realloc_skb) (struct eqos_prv_data *, UINT);
 	void (*unmap_rx_skb) (struct eqos_prv_data *,
-			      struct eqos_rx_buffer *);
+			      struct rx_swcx_desc *);
 	void (*unmap_tx_skb) (struct eqos_prv_data *,
-			      struct eqos_tx_buffer *);
+			      struct tx_swcx_desc *);
 	unsigned int (*map_tx_skb) (struct net_device *, struct sk_buff *);
 	void (*tx_free_mem) (struct eqos_prv_data *);
 	void (*rx_free_mem) (struct eqos_prv_data *);
@@ -1415,7 +1425,7 @@ struct eqos_prv_data {
 
 	int (*clean_rx) (struct eqos_prv_data *pdata, int quota, UINT qinx);
 	int (*alloc_rx_buf) (struct eqos_prv_data *pdata,
-			     struct eqos_rx_buffer *buffer, gfp_t gfp);
+			     struct rx_swcx_desc *buffer, gfp_t gfp);
 	unsigned int rx_buffer_len;
 
 	/* variable frame burst size */
@@ -1548,7 +1558,7 @@ void dbgpr_regs(void);
 void dump_phy_registers(struct eqos_prv_data *);
 void dump_tx_desc(struct eqos_prv_data *pdata, int first_desc_idx,
 		  int last_desc_idx, int flag, UINT qinx);
-void dump_rx_desc(UINT, struct s_rx_normal_desc *desc, int cur_rx);
+void dump_rx_desc(UINT, struct s_rx_desc *desc, int cur_rx);
 void print_pkt(struct sk_buff *skb, int len, bool tx_rx, int desc_idx);
 void eqos_get_all_hw_features(struct eqos_prv_data *pdata);
 void eqos_print_all_hw_features(struct eqos_prv_data *pdata);

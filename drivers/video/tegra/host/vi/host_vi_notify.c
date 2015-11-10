@@ -46,7 +46,6 @@
 #define VI_NOTIFY_ERROR_0			0x6020
 
 #define VI_CH_REG(n, r)				((n+1) * 0x10000 + (r))
-#define VI_CH_CHANNEL_COMMAND(n)		VI_CH_REG(n, 0x04)
 #define VI_CH_CONTROL(n)			VI_CH_REG(n, 0x1c)
 
 #define VI_HOST_PKTINJECT_STALL_ERR_MASK	0x00000080
@@ -56,15 +55,16 @@
 #define VI_NOTIFY_FIFO_OVFL_ERR_MASK		0x00000008
 #define VI_ISPBUFA_ERR_MASK			0x00000001
 
-#define VI_CH_CHANNEL_COMMAND_LOAD		0x01
 #define VI_CH_CONTROL_ENABLE			0x01
+#define VI_CH_CONTROL_SINGLESHOT		0x02
 
-#define VI_NOTIFY_TAG_FE			0x01
-#define VI_NOTIFY_TAG_CSIMUX_FRAME		0x03
-#define VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME	0x0d
-#define VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED	0x0e
+#define VI_NOTIFY_TAG_CHANSEL_COLLISION		0x0C
+#define VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME	0x0D
+#define VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED	0x0E
+#define VI_NOTIFY_TAG_ATOMP_FS			0x10
 #define VI_NOTIFY_TAG_ATOMP_FE			0x11
-#define VI_NOTIFY_TAG_ISPBUF_FE			0x1A
+#define VI_NOTIFY_TAG_ISPBUF_FS			0x1B
+#define VI_NOTIFY_TAG_ISPBUF_FE			0x1C
 
 #define VI_NOTIFY_TAG_DATA_FE			0x20
 #define VI_NOTIFY_TAG_DATA_LOAD_FRAMED		0x08000000
@@ -158,34 +158,38 @@ static irqreturn_t nvhost_vi_notify_isr(int irq, void *dev_id)
 		msg.reserve = 0;
 
 		switch (tag) {
-		case VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED:
+		case VI_NOTIFY_TAG_CHANSEL_COLLISION:
 		case VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME:
+		case VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED:
 			if (!(msg.data & VI_NOTIFY_TAG_DATA_LOAD_FRAMED))
 				break;
 			ch = msg.data >> 28; /* yes, really */
 			hvnd->ld_mask |= (1 << ch);
 			break;
 
-		case VI_NOTIFY_TAG_CSIMUX_FRAME:
-			if (!(msg.data & VI_NOTIFY_TAG_DATA_FE))
+		case VI_NOTIFY_TAG_ATOMP_FS:
+		case VI_NOTIFY_TAG_ISPBUF_FS:
+			ch = VI_NOTIFY_TAG_CHANNEL(msg.tag);
+			if (ch >= 12)
 				break;
-			/* FE - fall through */
+			hvnd->ld_mask &= ~(1 << ch);
+			break;
 
-		case VI_NOTIFY_TAG_FE:
 		case VI_NOTIFY_TAG_ATOMP_FE:
 		case VI_NOTIFY_TAG_ISPBUF_FE:
 			ch = VI_NOTIFY_TAG_CHANNEL(msg.tag);
-			if (ch >= 32 || !(hvnd->ld_mask & (1 << ch)))
+			if (ch >= 12)
 				break;
-			hvnd->ld_mask &= ~(1 << ch);
-			v = host1x_readl(pdev, VI_CH_CHANNEL_COMMAND(ch));
-			v |= VI_CH_CHANNEL_COMMAND_LOAD;
-			host1x_writel(pdev, VI_CH_CHANNEL_COMMAND(ch), v);
+
 			v = host1x_readl(pdev, VI_CH_CONTROL(ch));
-			v |= VI_CH_CONTROL_ENABLE;
-			host1x_writel(pdev, VI_CH_CONTROL(ch), v);
-			dev_dbg(&pdev->dev, "ch %u enabled: frame %x\n", ch,
-				VI_NOTIFY_TAG_FRAME(msg.tag));
+			if (hvnd->ld_mask & (1 << ch)) {
+				hvnd->ld_mask &= ~(1 << ch);
+				v |= VI_CH_CONTROL_ENABLE;
+				host1x_writel(pdev, VI_CH_CONTROL(ch), v);
+			} else if (!(v & VI_CH_CONTROL_SINGLESHOT)) {
+				v &= ~VI_CH_CONTROL_ENABLE;
+				host1x_writel(pdev, VI_CH_CONTROL(ch), v);
+			}
 			break;
 
 		default:

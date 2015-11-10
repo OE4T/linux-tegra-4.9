@@ -143,7 +143,7 @@
 	};
 
 	sdhci@3460000 {
-		uhs-mask = <0x40>; /*enable HS200 mode*/
+		uhs-mask = <0x0>; /*enable HS400 mode*/
 		status = "okay";
 	};
 

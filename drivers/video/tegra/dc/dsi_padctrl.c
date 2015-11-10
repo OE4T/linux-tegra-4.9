@@ -116,15 +116,16 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 	 * instances. Use DSI_PADCTRL_INSTANCE to get the resource for
 	 * dsi pad control module.
 	 */
-	if (np_dsi && of_device_is_available(np_dsi))
-		of_address_to_resource(np_dsi, DSI_PADCTRL_INSTANCE, &padctrl_res);
-	res = &padctrl_res;
-	if (!res) {
-		dev_err(&dc->ndev->dev, "dsi padctl: no mem resource\n");
-		err = -ENOENT;
-		goto fail;
+	if (np_dsi && of_device_is_available(np_dsi)) {
+		err = of_address_to_resource(np_dsi, DSI_PADCTRL_INSTANCE,
+			&padctrl_res);
+		if (err) {
+			dev_err(&dc->ndev->dev, "dsi padctl: no mem res\n");
+			goto fail;
+		}
 	}
 
+	res = &padctrl_res;
 	dsi_padctrl->base_res = request_mem_region(res->start,
 		resource_size(res), dc->ndev->name);
 	if (!dsi_padctrl->base_res) {

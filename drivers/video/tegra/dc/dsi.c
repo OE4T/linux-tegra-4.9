@@ -5091,7 +5091,8 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 #else
 	dsi_fixed_clk = tegra_disp_clk_get(&dc->ndev->dev, "pllp_display");
-	dsi_fixed_clk = NULL;
+	if (IS_ERR_OR_NULL(dsi_fixed_clk))
+		dsi_fixed_clk = NULL;
 #endif
 
 	/* TO DO - check out which clock is needed here for T186
@@ -5765,26 +5766,31 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 	tegra_mipi_cal_destroy(dc);
 }
 
+static bool is_shift_clk_div_available(void)
+{
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	return false;
+#else
+	return true;
+#endif
+}
+
 static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	unsigned long rate;
 	struct clk *parent_clk = NULL;
 	struct clk *base_clk = NULL;
-	bool shift_clk_div_avail = true;
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	u8 i;
-	
-	shift_clk_div_avail = false;
 
 	for (i = 0; i < dsi->max_instances; i++)
 		tegra_disp_clk_prepare_enable(dsi->dsi_clk[i]);
-
 #endif
 	/* divide by 1000 to avoid overflow */
 	dc->mode.pclk /= 1000;
 
-	if (shift_clk_div_avail)
+	if (is_shift_clk_div_available())
 		rate = (dc->mode.pclk * dc->shift_clk_div.mul * 2)
 			/ dc->shift_clk_div.div;
 	else

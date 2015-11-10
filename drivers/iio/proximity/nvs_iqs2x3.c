@@ -35,7 +35,7 @@
 #include <asm/atomic.h>
 
 
-#define IQS_DRIVER_VERSION		(19)
+#define IQS_DRIVER_VERSION		(20)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -65,6 +65,9 @@
 #define IQS_I2C_STOP_DLY_NS		(1000000) /* must be >= 1ms */
 #define IQS_I2C_RETRY_N			(10)
 #define IQS_RDY_RETRY_N			(25)
+#define IQS_RDY_DELAY_N			(2000)
+#define IQS_RDY_DELAY_US_MIN		(100)
+#define IQS_RDY_DELAY_US_MAX		(110)
 /* proximity defines */
 #define IQS_PROX_VERSION		(1)
 /* binary proximity when max_range and resolution are 1.0 */
@@ -549,6 +552,9 @@ struct iqs_state {
 	unsigned int dbnc_hi_n[IQS_DEV_HW_N]; /* binary high debounce count */
 	unsigned int ati_redo_n;	/* ATI redo count */
 	unsigned int wd_to_ms;		/* watchdog timeout ms */
+	unsigned int gpio_rdy_dly_n;	/* GPIO RDY delay loop count */
+	unsigned int gpio_rdy_dly_min;	/* GPIO RDY delay us min */
+	unsigned int gpio_rdy_dly_max;	/* GPIO RDY delay us max */
 	unsigned int gpio_rdy_retry;	/* GPIO RDY assert loop limit */
 	unsigned int i2c_retry;		/* I2C transaction loop limit */
 	s64 i2c_ss_war_ns;		/* I2C stop/start delay WAR */
@@ -715,14 +721,15 @@ static int iqs_gpio_sar(struct iqs_state *st, int assert)
 static int iqs_gpio_rdy_poll(struct iqs_state *st)
 {
 	unsigned int i;
-	int ret;
+	int ret = 0;
 
-	for (i = 0; i < 2000; i++) {
+	for (i = 0; i < st->gpio_rdy_dly_n; i++) {
 		ret = gpio_get_value_cansleep(st->gpio_rdy);
 		if (st->susrsm || !ret)
 			break;
 
-		usleep_range(500, 1000);
+		usleep_range((unsigned long)st->gpio_rdy_dly_min,
+			     (unsigned long)st->gpio_rdy_dly_max);
 	}
 	return ret;
 }
@@ -2069,6 +2076,12 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		t += sprintf(buf + t, "i2c_retry=%u\n", st->i2c_retry);
 		t += sprintf(buf + t, "gpio_rdy_retry=%u\n",
 			     st->gpio_rdy_retry);
+		t += sprintf(buf + t, "gpio_rdy_delay_count=%u\n",
+			     st->gpio_rdy_dly_n);
+		t += sprintf(buf + t, "gpio_rdy_delay_us_min=%u\n",
+			     st->gpio_rdy_dly_min);
+		t += sprintf(buf + t, "gpio_rdy_delay_us_max=%u\n",
+			     st->gpio_rdy_dly_max);
 		if (st->gpio_rdy < 0)
 			t += sprintf(buf + t, "NO gpio_rdy\n");
 		else
@@ -2460,6 +2473,9 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 	st->i2c_ss_war_ns = IQS_I2C_STOP_DLY_NS;
 	st->i2c_retry = IQS_I2C_RETRY_N;
 	st->gpio_rdy_retry = IQS_RDY_RETRY_N;
+	st->gpio_rdy_dly_n = IQS_RDY_DELAY_N;
+	st->gpio_rdy_dly_min = IQS_RDY_DELAY_US_MIN;
+	st->gpio_rdy_dly_max = IQS_RDY_DELAY_US_MAX;
 	st->gpio_rdy = -1;
 	st->gpio_sar = -1;
 	st->gpio_sar_sus_asrt = -1;
@@ -2519,6 +2535,12 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		of_property_read_u32(dn, "i2c_retry", &st->i2c_retry);
 		of_property_read_u32(dn, "gpio_rdy_retry",
 				     &st->gpio_rdy_retry);
+		of_property_read_u32(dn, "gpio_rdy_delay_count",
+				     &st->gpio_rdy_dly_n);
+		of_property_read_u32(dn, "gpio_rdy_delay_us_min",
+				     &st->gpio_rdy_dly_min);
+		of_property_read_u32(dn, "gpio_rdy_delay_us_max",
+				     &st->gpio_rdy_dly_max);
 		if (!of_property_read_u32(dn, "gpio_sar_assert_polarity",
 					  &st->gpio_sar_asrt_pol))
 			st->gpio_sar_asrt_pol = !!st->gpio_sar_asrt_pol;

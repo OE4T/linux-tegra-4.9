@@ -807,6 +807,17 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 				win_ihub_linebuf_config_mode_two_lines_f(),
 				win_ihub_linebuf_config_r());
 
+	/* assign a default thread group to the window.
+	 * WinA=group 0, WinB=group 1, ... */
+	nvdisp_win_write(win, win_ihub_thread_group_num_f(idx) |
+			win_ihub_thread_group_enable_yes_f(),
+			win_ihub_thread_group_r());
+
+	/* TODO: configure the mempool
+	nvdisp_win_write(win, win_ihub_pool_config_entries_f(817),
+			win_ihub_pool_config_r());
+	*/
+
 	/* promote the state */
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_update_enable_f() |
 		nvdisp_cmd_state_ctrl_win_a_update_enable_f() << win->idx,

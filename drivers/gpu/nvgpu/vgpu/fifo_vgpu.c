@@ -271,10 +271,12 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	f->channel = kzalloc(f->num_channels * sizeof(*f->channel),
 				GFP_KERNEL);
+	f->tsg = kzalloc(f->num_channels * sizeof(*f->tsg),
+				GFP_KERNEL);
 	f->engine_info = kzalloc(f->max_engines * sizeof(*f->engine_info),
 				GFP_KERNEL);
 
-	if (!(f->channel && f->engine_info)) {
+	if (!(f->channel && f->tsg && f->engine_info)) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
@@ -296,7 +298,9 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 			f->userd.gpu_va + chid * f->userd_entry_size;
 
 		gk20a_init_channel_support(g, chid);
+		gk20a_init_tsg_support(g, chid);
 	}
+	mutex_init(&f->tsg_inuse_mutex);
 
 	f->deferred_reset_pending = false;
 	mutex_init(&f->deferred_reset_mutex);
@@ -315,6 +319,8 @@ clean_up:
 
 	kfree(f->channel);
 	f->channel = NULL;
+	kfree(f->tsg);
+	f->tsg = NULL;
 	kfree(f->engine_info);
 	f->engine_info = NULL;
 

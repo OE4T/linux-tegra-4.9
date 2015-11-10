@@ -181,6 +181,11 @@ static int get_capabilities(struct tegra_dc_ext_control_capabilities *caps)
 #if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_14x_SOC)
 	caps->caps |= TEGRA_DC_EXT_CAPABILITIES_CURSOR_RGBA_PREMULT_ALPHA;
 #endif
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	caps->caps |= TEGRA_DC_EXT_CAPABILITIES_NVDISPLAY;
+#endif
+
 	return 0;
 }
 

@@ -814,6 +814,7 @@ struct tegra_dc_ext_control_event_bandwidth {
 #define TEGRA_DC_EXT_CAPABILITIES_CURSOR_TWO_COLOR		(1 << 2)
 #define TEGRA_DC_EXT_CAPABILITIES_CURSOR_RGBA_NON_PREMULT_ALPHA	(1 << 3)
 #define TEGRA_DC_EXT_CAPABILITIES_CURSOR_RGBA_PREMULT_ALPHA	(1 << 4)
+#define TEGRA_DC_EXT_CAPABILITIES_NVDISPLAY			(1 << 5)
 
 struct tegra_dc_ext_control_capabilities {
 	__u32 caps;

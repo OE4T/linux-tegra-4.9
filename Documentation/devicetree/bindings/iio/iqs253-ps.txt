@@ -186,7 +186,7 @@ For overall status information:
 #echo 10 > nvs
 #cat nvs
 The results will be something like:
-	IQS driver v. 19
+	IQS driver v. 20
 	ATI redo count=0
 	os_options=0
 	stream_mode=2
@@ -194,6 +194,9 @@ The results will be something like:
 	i2c_ss_delay_ns=1000000
 	i2c_retry=10
 	gpio_rdy_retry=25
+	gpio_rdy_delay_count=2000
+	gpio_rdy_delay_us_min=100
+	gpio_rdy_delay_us_max=1000
 	gpio_rdy 1=1
 	gpio_sar 173=0
 	gpio_sar_assert_polarity=0
@@ -381,6 +384,16 @@ Optional properties:
 	then repeat above steps. This is done i2c_retry times before exiting as
 	a failure.
 	BTW, this is all done according to the Azotec spec.
+- gpio_rdy_delay_count: The delay loop count of polling for the GPIO RDY signal
+                        to go low.
+- gpio_rdy_delay_us_min: The minimum delay in microseconds of the delay in the
+			 loop of polling for the GPIO RDY signal to go low.
+- gpio_rdy_delay_us_max: The maximum delay in microseconds of the delay in the
+			 loop of polling for the GPIO RDY signal to go low.
+  Note: The gpio_rdy_delay_* variables are used in the function that checks for
+        the gpio_rdy GPIO low level in a loop.  If the level is high a sleep is
+	done using the gpio_rdy_delay_us_min/max and the loop continues for
+	gpio_rdy_delay_count interations.
 - i2c_ss_delay_ns: The I2C bus must be idle for 100us after an I2C transaction
                    with the IQS device or it will hold the I2C clock low.  This
 		   WAR is already accounted for in the driver but the delay can

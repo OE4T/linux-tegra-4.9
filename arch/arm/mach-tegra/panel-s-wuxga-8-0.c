@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-s-wuxga-8-0.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -252,8 +252,11 @@ static int dsi_s_wuxga_8_0_bl_notify(struct device *dev, int brightness)
 	bl = (struct backlight_device *)dev_get_drvdata(dev);
 	pb = (struct pwm_bl_data *)dev_get_drvdata(&bl->dev);
 
-	if (dc_dev)
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		tegra_sd_check_prism_thresh(dc_dev, brightness);
+#else
 		nvsd_check_prism_thresh(dc_dev, brightness);
+#endif
 
 	cur_sd_brightness = atomic_read(&sd_brightness);
 	/* SD brightness is a percentage */

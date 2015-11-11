@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/board-panel.h
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -138,5 +138,4 @@ void tegra_set_fixed_pwm_bl_ops(struct pwm_bl_data_dt_ops *p_ops);
 void tegra_pwm_bl_ops_register(struct device *dev);
 
 void ti_lp855x_bl_ops_register(struct device *dev);
-
 #endif /* __MACH_TEGRA_BOARD_PANEL_H */

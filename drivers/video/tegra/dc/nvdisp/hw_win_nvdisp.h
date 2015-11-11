@@ -134,6 +134,10 @@ static inline u32 win_base_addr_dc_f_winbuf_r(void)
 {
 	return 0x00001ac0;
 }
+static inline u32 win_precomp_wgrp_capa_r(void)
+{
+	return 0x00000500;
+}
 static inline u32 win_precomp_wgrp_capb_r(void)
 {
 	return 0x00000501;
@@ -158,6 +162,22 @@ static inline u32 win_precomp_wgrp_capb_max_windows_v(u32 r)
 {
 	return (r >> 0) & 0x3;
 }
+static inline u32 win_precomp_wgrp_capc_r(void)
+{
+	return 0x00000502;
+}
+static inline u32 win_precomp_wgrp_capc_max_pixels_5tap444_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 win_precomp_wgrp_cape_r(void)
+{
+	return 0x00000504;
+}
+static inline u32 win_precomp_wgrp_cape_max_pixels_2tap444_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
 static inline u32 win_act_control_r(void)
 {
 	return 0x0000050e;
@@ -173,6 +193,10 @@ static inline u32 win_act_control_ctrl_sel_hcounter_f(void)
 static inline u32 win_precomp_loadv_counter_r(void)
 {
 	return 0x00000520;
+}
+static inline u32 win_precomp_pipe_meter_r(void)
+{
+	return 0x00000560;
 }
 static inline u32 win_ihub_pool_config_r(void)
 {

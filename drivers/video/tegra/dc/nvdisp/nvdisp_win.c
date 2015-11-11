@@ -221,6 +221,7 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	bool is_scalar_column = win->flags & TEGRA_WIN_FLAG_SCAN_COLUMN;
 	fixed20_12 hscalar = win->w;
 	fixed20_12 vscalar = win->h;
+	u32 min_width, win_capc, win_cape;
 
 	if (is_scalar_column) {
 		hscalar = win->h;
@@ -230,12 +231,26 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	hbypass = (dfixed_trunc(hscalar) == win->out_w);
 	vbypass = (dfixed_trunc(vscalar) == win->out_h);
 
-	/* default set to 5-taps coeff - have to check
-         * whether this should be changed based on use case
-	 */
-	nvdisp_win_write(win, win_scaler_input_h_taps_5_f() |
-				win_scaler_input_v_taps_5_f(),
-				win_scaler_input_r());
+	/* Select 2 taps vs 5 taps */
+	min_width = (dfixed_trunc(win->w) < win->out_w) ?
+		dfixed_trunc(win->w) : win->out_w;
+
+	win_capc = nvdisp_win_read(win, win_precomp_wgrp_capc_r());
+	win_cape = nvdisp_win_read(win, win_precomp_wgrp_cape_r());
+
+	if (min_width < win_precomp_wgrp_capc_max_pixels_5tap444_v(win_capc)) {
+		nvdisp_win_write(win, win_scaler_input_h_taps_5_f() |
+			win_scaler_input_v_taps_5_f(),
+			win_scaler_input_r());
+	} else if (min_width <
+			win_precomp_wgrp_cape_max_pixels_2tap444_v(win_cape)) {
+		nvdisp_win_write(win, win_scaler_input_h_taps_2_f() |
+			win_scaler_input_v_taps_2_f(),
+			win_scaler_input_r());
+	} else {
+		dev_err(&win->dc->ndev->dev, "Scaler can't be used\n");
+		return -EINVAL;
+	}
 
 	nvdisp_win_write(win, win_scaler_usage_hbypass_f(hbypass) |
 		win_scaler_usage_vbypass_f(vbypass) |

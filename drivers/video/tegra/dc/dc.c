@@ -3808,9 +3808,8 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 	if (status & V_BLANK_INT) {
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		if (status & SMARTDIM_INT) {
-			if (dc->out->sd_settings) {
+			if (dc->out->sd_settings)
 				dc->out->sd_settings->update_sd = true;
-			}
 		}
 #endif
 		queue_work(system_freezable_wq, &dc->vblank_work);
@@ -5542,7 +5541,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			"No default output specified.  Leaving output disabled.\n");
 	}
 	dc->mode_dirty = false; /* ignore changes tegra_dc_set_out has done */
-
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	nvdisp_register_backlight_notifier(dc);
+#endif
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {
 		struct fb_monspecs specs;

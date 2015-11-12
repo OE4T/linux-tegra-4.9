@@ -30,7 +30,6 @@
 #include "fifo_gk20a.h"
 #include "pmu_gk20a.h"
 
-
 #define PTIMER_FP_FACTOR			1000000
 
 #define ROOTRW (S_IRWXU|S_IRGRP|S_IROTH)
@@ -787,8 +786,15 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_allow_all);
 	device_remove_file(dev, &dev_attr_tpc_fs_mask);
 
-	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev))
+	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev)) {
 		sysfs_remove_link(&g->host1x_dev->dev.kobj, dev_name(dev));
+		if (strcmp(dev_name(dev), "gpu.0")) {
+			struct kobject *kobj = &dev->kobj;
+			struct device *parent = container_of((kobj->parent),
+					struct device, kobj);
+			sysfs_remove_link(&parent->kobj, "gpu.0");
+		}
+	}
 }
 
 void gk20a_create_sysfs(struct platform_device *dev)
@@ -820,10 +826,19 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_allow_all);
 	error |= device_create_file(&dev->dev, &dev_attr_tpc_fs_mask);
 
-	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev))
+	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev)) {
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,
 					   &dev->dev.kobj,
 					   dev_name(&dev->dev));
+		if (strcmp(dev_name(&dev->dev), "gpu.0")) {
+			struct kobject *kobj = &dev->dev.kobj;
+			struct device *parent = container_of((kobj->parent),
+						struct device, kobj);
+			error |= sysfs_create_link(&parent->kobj,
+					   &dev->dev.kobj, "gpu.0");
+		}
+
+	}
 
 	if (error)
 		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");

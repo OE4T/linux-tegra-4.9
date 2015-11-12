@@ -1,7 +1,7 @@
 /*
  * IOMMU driver for SMMU on Tegra 3 series SoCs and later.
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1573,12 +1573,34 @@ static void smmu_iommu_domain_free(struct iommu_domain *domain)
 	dev_dbg(smmu->dev, "smmu_as@%p\n", as);
 }
 
+/*
+ * Traverse the PCI tree to find the root of the PCI tree. That's the device
+ * that should be used for finding the SMMU mapping.
+ */
+struct device *__get_pci_dev(struct device *dev)
+{
+	struct pci_bus *bus;
+
+	if (!dev_is_pci(dev))
+		return dev;
+
+	bus = to_pci_dev(dev)->bus;
+
+	while (!pci_is_root_bus(bus))
+		bus = bus->parent;
+	return bus->bridge->parent;
+}
+
 static int __smmu_iommu_add_device(struct device *dev, u64 swgids)
 {
 	struct dma_iommu_mapping *map;
 	int err;
 
-	map = tegra_smmu_of_get_mapping(dev, swgids,
+	/*
+	 * If the device is a PCI device we need to use the root of the PCI
+	 * tree for looking up the SMMU mapping.
+	 */
+	map = tegra_smmu_of_get_mapping(__get_pci_dev(dev), swgids,
 					&smmu_handle->asprops);
 	if (!map) {
 		dev_err(dev, "map creation failed!!!\n");

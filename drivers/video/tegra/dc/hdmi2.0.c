@@ -449,7 +449,15 @@ static int tegra_hdmi_get_mon_spec(struct tegra_hdmi *hdmi)
 
 	if (err < 0) {
 		dev_err(&hdmi->dc->ndev->dev, "hdmi: edid read failed\n");
-		return err;
+		/* Try to load and parse the fallback edid */
+		hdmi->edid->errors = EDID_ERRORS_READ_FAILED;
+		err = tegra_edid_get_monspecs(hdmi->edid, &hdmi->mon_spec);
+		if (err < 0) {
+			dev_err(&hdmi->dc->ndev->dev,
+				"hdmi: parsing fallback edid failed\n");
+			return err;
+		}
+		dev_info(&hdmi->dc->ndev->dev, "hdmi: using fallback edid\n");
 	}
 
 	hdmi->mon_spec_valid = true;

@@ -115,6 +115,19 @@ enum {
 	EDID_SRC_DT,
 };
 
+/* Flag panel edid checksum is corrupted.
+ * SW fixes checksum before passing on the
+ * edid block to parser. For now just represent checksum
+ * corruption on any of the edid blocks.
+ */
+#define EDID_ERRORS_CHECKSUM_CORRUPTED	0x01
+
+/* Flag edid read failed after all retries. */
+#define EDID_ERRORS_READ_FAILED		0x02
+
+/* Flag fallback edid is in use. */
+#define EDID_ERRORS_USING_FALLBACK	0x04
+
 struct tegra_edid {
 	struct tegra_edid_pvt	*data;
 
@@ -122,14 +135,8 @@ struct tegra_edid {
 	struct tegra_dc_i2c_ops i2c_ops;
 	struct tegra_dc		*dc;
 
-	/*
-	 * flag panel edid checksum is corrupted.
-	 * SW fixes checksum before passing on the
-	 * edid block to parser. For now just represent checksum
-	 * corruption on any of the edid blocks.
-	 * Field can be extended as bitmap in future.
-	 */
-	u8 checksum_corrupted;
+	/* Bitmap to flag EDID reading / parsing error conditions. */
+	u8 errors;
 };
 
 /*

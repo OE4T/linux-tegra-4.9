@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi_debug.c
  *
- * Copyright (c) 2013-2014 NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2013-2015 NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -26,6 +26,7 @@
 #include "dev.h"
 #include "dsi_regs.h"
 #include "dsi.h"
+#include <asm/uaccess.h>
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -444,6 +445,138 @@ static const struct file_operations write_data_fops = {
 	.release = single_release,
 };
 
+/* long packet write
+ * [data_id(cmd_type)] [word count] [data_0] [data_1] [data_2] ...
+ */
+static u32 long_data_id;
+static u32 data_count;
+static u8 *data_buf;
+
+static int send_write_long_data_cmd(struct seq_file *s, void *unused)
+{
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+	int err, i;
+	u8 del = 100;
+
+	struct tegra_dsi_cmd user_command[] = {
+	DSI_CMD_LONG_SIZE(long_data_id, data_buf, data_count),
+	DSI_DLY_MS(20),
+	};
+
+	if (data_buf == NULL)
+		return -EINVAL;
+
+	seq_printf(s, "data_id taken : 0x%x\n", long_data_id);
+	seq_printf(s, "WC value taken : 0x%x\n", data_count);
+	for (i = 0; i < data_count; i++)
+		seq_printf(s, "data %d taken : 0x%x\n", i, data_buf[i]);
+
+	err = tegra_dsi_write_data(dc, dsi, user_command, del);
+
+	mdelay(20);
+	kfree(data_buf);
+	data_buf = NULL;
+
+	return err;
+}
+
+static ssize_t write_long_data_get_cmd(struct file *file,
+			const char __user *buf, size_t count, loff_t *off)
+{
+	struct seq_file *s = file->private_data;
+	struct tegra_dc_dsi_data *dsi = s->private;
+	struct tegra_dc *dc = dsi->dc;
+
+	char *token, *buffer, *orig_buffer;
+	u32 i, j, value;
+
+	orig_buffer = kzalloc(count, GFP_KERNEL);
+	if (!orig_buffer) {
+		dev_err(&dc->ndev->dev, "Not enough memory for buffer\n");
+		return -ENOMEM;
+	}
+
+	if (copy_from_user(orig_buffer, buf, count)) {
+		dev_err(&dc->ndev->dev, "Copy from user failed\n");
+		goto fail;
+	}
+
+	buffer = orig_buffer;
+
+	i = sscanf(buffer, "%x %x", &long_data_id, &data_count);
+	if (i != 2 || !data_count) {
+		dev_err(&dc->ndev->dev, "Invalid data id or word count\n");
+		goto fail;
+	}
+	dev_info(&dc->ndev->dev, "data_id taken : 0x%x\n", long_data_id);
+	dev_info(&dc->ndev->dev, "WC taken : 0x%x\n", data_count);
+
+	/* data buffer could be already allocated if this is called
+	 * twice without sending data, so free it first and re-alloc */
+	kfree(data_buf);
+	data_buf = kzalloc(data_count, GFP_KERNEL);
+	if (!data_buf) {
+		dev_err(&dc->ndev->dev, "Not enough memory for data buffer\n");
+		goto fail;
+	}
+
+	/* skip first two params which are id and count */
+	i = 0;
+	while (i < 2) {
+		token = strsep(&buffer, " ");
+		if (*token == '\0')
+			continue;
+		i++;
+	}
+
+	/* parse space separated list of data packets */
+	i = 0;
+	while ((token = strsep(&buffer, " ")) != NULL) {
+		if (*token == '\0')
+			continue;
+		if (i >= data_count)
+			break;
+		j = sscanf(token, "%x", &value);
+		if (j != 1)
+			break;
+		data_buf[i] = (u8)value;
+		dev_info(&dc->ndev->dev, "data %d taken:0x%x\n",
+				i, data_buf[i]);
+		i++;
+	}
+
+	if (i < data_count) {
+		dev_err(&dc->ndev->dev, "Number of data is less than word count\n");
+		goto fail;
+	} else if (token != NULL) {
+		dev_err(&dc->ndev->dev, "Number of data is greater than word count\n");
+		goto fail;
+	}
+
+	kfree(orig_buffer);
+	return count;
+
+fail:
+	kfree(orig_buffer);
+	kfree(data_buf);
+	data_buf = NULL;
+	return -EINVAL;
+}
+
+static int write_long_data_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, send_write_long_data_cmd, inode->i_private);
+}
+
+static const struct file_operations write_long_data_fops = {
+	.open = write_long_data_open,
+	.read = seq_read,
+	.write = write_long_data_get_cmd,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static int dsi_crc_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dsi_data *dsi;
@@ -698,6 +831,10 @@ void tegra_dc_dsi_debug_create(struct tegra_dc_dsi_data *dsi)
 		goto free_out;
 	retval = debugfs_create_file("write_data", S_IRUGO|S_IWUSR,
 				 dsidir, dsi, &write_data_fops);
+	if (!retval)
+		goto free_out;
+	retval = debugfs_create_file("write_long_data", S_IRUGO|S_IWUSR,
+				 dsidir, dsi, &write_long_data_fops);
 	if (!retval)
 		goto free_out;
 	retval = debugfs_create_file("crc", S_IRUGO, dsidir, dsi,

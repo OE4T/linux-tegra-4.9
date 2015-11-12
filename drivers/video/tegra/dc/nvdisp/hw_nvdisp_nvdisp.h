@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -897,6 +897,66 @@ static inline u32 nvdisp_cursor_cropped_size_in_width_range_v(u32 r)
 static inline u32 nvdisp_cursor_cropped_size_in_height_range_v(u32 r)
 {
 	return (r >> 16) & 0xffff;
+}
+static inline u32 nvdisp_cursor_pipe_meter_r(void)
+{
+	return 0x00000450;
+}
+static inline u32 nvdisp_cursor_pipe_meter_status_f(u32 v)
+{
+	return (v & 0x3) << 30;
+}
+static inline u32 nvdisp_cursor_pipe_meter_status_active_f(void)
+{
+	return 0x0;
+}
+static inline u32 nvdisp_cursor_pipe_meter_status_armed_f(void)
+{
+	return 0x40000000;
+}
+static inline u32 nvdisp_cursor_pipe_meter_status_assembly_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 nvdisp_cursor_pipe_meter_val_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 nvdisp_ihub_common_fetch_meter_r(void)
+{
+	return 0x00000451;
+}
+static inline u32 nvdisp_ihub_common_fetch_meter_cursor_slots_f(u32 v)
+{
+	return (v & 0xff) << 8;
+}
+static inline u32 nvdisp_ihub_common_fetch_meter_wgrp_slots_f(u32 v)
+{
+	return (v & 0xff) << 0;
+}
+static inline u32 nvdisp_ihub_cursor_pool_config_r(void)
+{
+	return 0x00000452;
+}
+static inline u32 nvdisp_ihub_cursor_pool_config_status_pending_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 nvdisp_ihub_cursor_pool_config_status_pending_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 nvdisp_ihub_cursor_pool_config_entries_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 nvdisp_ihub_cursor_fetch_meter_r(void)
+{
+	return 0x00000453;
+}
+static inline u32 nvdisp_ihub_cursor_fetch_meter_slots_f(u32 v)
+{
+	return (v & 0xff) << 0;
 }
 static inline u32 nvdisp_sd_hist_ctrl_r(void)
 {

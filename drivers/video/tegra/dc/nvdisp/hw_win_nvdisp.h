@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -190,6 +190,54 @@ static inline u32 win_act_control_ctrl_sel_hcounter_f(void)
 {
 	return 0x1;
 }
+static inline u32 win_ihub_latency_ctla_r(void)
+{
+	return 0x00000543;
+}
+static inline u32 win_ihub_latency_ctla_submode_v(u32 r)
+{
+	return (r >> 0) & 0x3;
+}
+static inline u32 win_ihub_latency_ctla_submode_watermark_f(void)
+{
+	return 0x0;
+}
+static inline u32 win_ihub_latency_ctla_submode_vblank_f(void)
+{
+	return 0x1;
+}
+static inline u32 win_ihub_latency_ctla_submode_watermark_and_vblank_f(void)
+{
+	return 0x2;
+}
+static inline u32 win_ihub_latency_ctla_ctl_mode_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 win_ihub_latency_ctla_ctl_mode_enable_f(void)
+{
+	return 0x4;
+}
+static inline u32 win_ihub_latency_ctlb_r(void)
+{
+	return 0x00000544;
+}
+static inline u32 win_ihub_latency_ctlb_status_above_watermark_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 win_ihub_latency_ctlb_status_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 win_ihub_latency_ctlb_status_above_watermark_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 win_ihub_latency_ctlb_watermark_f(u32 v)
+{
+	return (v & 0x1fffffff) << 0;
+}
 static inline u32 win_precomp_loadv_counter_r(void)
 {
 	return 0x00000520;
@@ -197,6 +245,22 @@ static inline u32 win_precomp_loadv_counter_r(void)
 static inline u32 win_precomp_pipe_meter_r(void)
 {
 	return 0x00000560;
+}
+static inline u32 win_precomp_pipe_meter_status_pending_v(u32 r)
+{
+	return (r >> 31) & 0x1;
+}
+static inline u32 win_precomp_pipe_meter_status_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
+static inline u32 win_precomp_pipe_meter_status_pending_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 win_precomp_pipe_meter_val_f(u32 v)
+{
+	return (v & 0xffff) << 0;
 }
 static inline u32 win_ihub_pool_config_r(void)
 {

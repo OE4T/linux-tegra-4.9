@@ -482,7 +482,6 @@ struct tegra_pcie_port {
 	unsigned int index;
 	unsigned int lanes;
 	unsigned int loopback_stat;
-	unsigned int loopback_err;
 	int gpio_presence_detection;
 	bool disable_clock_request;
 	bool ep_status;
@@ -3544,8 +3543,8 @@ static int loopback(struct seq_file *s, void *data)
 		return -EINVAL;
 	}
 
+	/* reset and clear status */
 	port->loopback_stat = 0;
-	port->loopback_err = 0;
 
 	new = rp_readl(port, RP_VEND_XP);
 	new &= ~RP_VEND_XP_PRBS_EN;
@@ -3556,6 +3555,7 @@ static int loopback(struct seq_file *s, void *data)
 	rp_writel(port, new, NV_PCIE2_RP_XP_CTL_1);
 
 	rp_writel(port, 0x10000001, NV_PCIE2_RP_VEND_XP_BIST);
+	rp_writel(port, 0, NV_PCIE2_RP_PRBS);
 
 	mdelay(1);
 
@@ -3572,22 +3572,32 @@ static int loopback(struct seq_file *s, void *data)
 
 	mdelay(1000);
 
-	new = rp_readl(port, NV_PCIE2_RP_PRBS);
-	pr_info("loopback locked bit 0x%08x\n", new);
-
 	new = rp_readl(port, RP_VEND_XP);
 	port->loopback_stat = (new & RP_VEND_XP_PRBS_STAT) >> 2;
-	pr_info("loopback status %x\n", port->loopback_stat);
+	pr_info("--- loopback status ---\n");
+	for (i = 0; i < port->lanes; ++i)
+		pr_info("@lane %d: %s\n", i,
+			(port->loopback_stat & 0x01 << i) ? "pass" : "fail");
+
+	new = rp_readl(port, NV_PCIE2_RP_PRBS);
+	pr_info("--- PRBS pattern locked ---\n");
+	for (i = 0; i < port->lanes; ++i)
+		pr_info("@lane %d: %s\n", i,
+			(new >> 16 & 0x01 << i) ? "Y" : "N");
+	pr_info("--- err overflow bits ---\n");
+	for (i = 0; i < port->lanes; ++i)
+		pr_info("@lane %d: %s\n", i,
+			((new & 0xffff) & 0x01 << i) ? "Y" : "N");
 
 	new = rp_readl(port, NV_PCIE2_RP_XP_CTL_1);
 	new &= ~PCIE2_RP_XP_CTL_1_OLD_IOBIST_EN_BIT25;
 	rp_writel(port, new, NV_PCIE2_RP_XP_CTL_1);
 
-	for (i = 0; i < 16; ++i) {
+	pr_info("--- err counts ---\n");
+	for (i = 0; i < port->lanes; ++i) {
 		rp_writel(port, i, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
 		new = rp_readl(port, NV_PCIE2_RP_LANE_PRBS_ERR_COUNT);
-		port->loopback_err = new >> 16;
-		pr_info("[%u] loopback error %u\n", i, port->loopback_err);
+		pr_info("@lane %d: %u\n", i, new >> 16);
 	}
 
 	rp_writel(port, 0x90000001, NV_PCIE2_RP_VEND_XP_BIST);
@@ -3600,7 +3610,7 @@ static int loopback(struct seq_file *s, void *data)
 
 	rp_writel(port, 0x92000001, NV_PCIE2_RP_VEND_XP_BIST);
 	rp_writel(port, 0x90000001, NV_PCIE2_RP_VEND_XP_BIST);
-	pr_info("pcie loopback  test is done\n");
+	pr_info("pcie loopback test is done\n");
 
 	return 0;
 }
@@ -4047,12 +4057,6 @@ static int tegra_pcie_port_debugfs_init(struct tegra_pcie_port *port)
 	d = debugfs_create_x32("loopback_status", S_IWUGO | S_IRUGO,
 					port->port_debugfs,
 					&(port->loopback_stat));
-	if (!d)
-		goto remove;
-
-	d = debugfs_create_x32("loopback_error", S_IWUGO | S_IRUGO,
-					port->port_debugfs,
-					&(port->loopback_err));
 	if (!d)
 		goto remove;
 

@@ -531,8 +531,26 @@ static void vgpu_mm_tlb_invalidate(struct vm_gk20a *vm)
 	WARN_ON(err || msg.ret);
 }
 
+static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_mmu_debug_mode *p = &msg.params.mmu_debug_mode;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_SET_MMU_DEBUG_MODE;
+	msg.handle = platform->virt_handle;
+	p->enable = (u32)enable;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+}
+
 void vgpu_init_mm_ops(struct gpu_ops *gops)
 {
+	gops->mm.is_debug_mode_enabled = NULL;
+	gops->mm.set_debug_mode = vgpu_mm_mmu_set_debug_mode;
 	gops->mm.gmmu_map = vgpu_locked_gmmu_map;
 	gops->mm.gmmu_unmap = vgpu_locked_gmmu_unmap;
 	gops->mm.vm_remove = vgpu_vm_remove_support;

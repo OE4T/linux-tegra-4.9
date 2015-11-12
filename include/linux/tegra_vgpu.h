@@ -70,7 +70,8 @@ enum {
 	TEGRA_VGPU_CMD_ZBC_SET_TABLE,
 	TEGRA_VGPU_CMD_ZBC_QUERY_TABLE,
 	TEGRA_VGPU_CMD_AS_MAP_EX,
-	TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS
+	TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS,
+	TEGRA_VGPU_CMD_SET_MMU_DEBUG_MODE
 };
 
 struct tegra_vgpu_connect_params {
@@ -259,6 +260,10 @@ struct tegra_vgpu_gr_bind_ctxsw_buffers_params {
 	u32 mode;
 };
 
+struct tegra_vgpu_mmu_debug_mode {
+	u32 enable;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -283,6 +288,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_zbc_set_table_params zbc_set_table;
 		struct tegra_vgpu_zbc_query_table_params zbc_query_table;
 		struct tegra_vgpu_gr_bind_ctxsw_buffers_params gr_bind_ctxsw_buffers;
+		struct tegra_vgpu_mmu_debug_mode mmu_debug_mode;
 		char padding[192];
 	} params;
 };

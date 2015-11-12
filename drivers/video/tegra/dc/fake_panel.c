@@ -214,7 +214,11 @@ int tegra_dc_init_fakedp_panel(struct tegra_dc *dc)
 	dc_out->out_pins = NULL;
 	dc_out->n_out_pins = 0;
 	dc_out->depth = 18;
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	dc_out->parent_clk = "pllp_display";
+#else
 	dc_out->parent_clk = "pll_d_out0";
+#endif
 	dc_out->enable = NULL;
 	dc_out->disable = NULL;
 	dc_out->postsuspend = NULL;
@@ -253,7 +257,11 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 	tegra_dc_add_fakedisp_resources(dc->ndev, dc_outtype);
 
 	dc_out->dsi = &dsi_fake_panel_pdata;
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	dc_out->parent_clk = "pllp_display";
+#else
 	dc_out->parent_clk = "pll_d_out0";
+#endif
 	dc_out->modes = dsi_fake_panel_modes;
 	dc_out->n_modes = ARRAY_SIZE(dsi_fake_panel_modes);
 	dc_out->enable = NULL;

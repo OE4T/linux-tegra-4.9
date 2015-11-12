@@ -2853,6 +2853,7 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		} else
 			tegra_dc_set_mode(dc, &dc->out->modes[0]);
 	}
+	tegra_dc_sor_instance(dc, out->type);
 
 	switch (out->type) {
 	case TEGRA_DC_OUT_RGB:
@@ -4315,8 +4316,6 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		return false;
 	}
 
-	tegra_dc_sor_instance(dc, dc->out->type);
-
 #if !defined(CONFIG_ARCH_TEGRA_21x_SOC) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (dc->out->type != TEGRA_DC_OUT_DP) {
 		int sor_num = tegra_dc_which_sor(dc);
@@ -5270,8 +5269,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->pdata = dt_pdata;
 
 	dc->bw_kbps = 0;
-
-	tegra_dc_sor_instance(dc, dc->pdata->default_out->type);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	/* dc variables need to initialized before nvdisp init */

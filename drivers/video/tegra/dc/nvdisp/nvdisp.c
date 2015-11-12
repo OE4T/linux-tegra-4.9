@@ -1202,6 +1202,11 @@ int tegra_nvdisp_powergate_partition(int pg_id)
 
 	nvdisp_pg[pd_index].head_inuse = false;
 
+	disable_disp[pd_index] = true;
+	/* Request from DISPB or DISPC - disable DISP also */
+	if ((pd_index == 1) || (pd_index == 2))
+		disable_disp[NVDISP_PD_INDEX] = true;
+
 	for (i = NVDISP_PD_COUNT - 1; i >= 0; i--) {
 		if (disable_disp[i] && (--nvdisp_pg[i].ref_cnt == 0)) {
 

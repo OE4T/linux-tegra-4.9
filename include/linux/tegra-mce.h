@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -92,6 +92,7 @@ typedef union {
 		u8 cmd;
 		u8 subidx;
 		u8 idx;
+		u8 inst;
 	};
 	struct {
 		u32 low;

@@ -41,12 +41,20 @@ config TEGRA_BRIDGE_MCA
 	  The Tegra AXI/APB Bridge Machine Check handler. This
 	  handes the SERRs from failed AXI/APB transactions.
 
+config TEGRA_A57_SERR
+        tristate "A57 SError Handler"
+	select SERROR_HANDLER
+	help
+	  The A57 SError Handler.  This handles the SERRs from A57 cores,
+	  specifically L1 ECC errors.
+
 config TEGRA_18X_SERROR
         tristate "Tegra18 SError handler"
         depends on ARCH_TEGRA_18x_SOC
         select DENVER_MCA
 	select TEGRA_ARI_MCA
 	select TEGRA_BRIDGE_MCA
+	select TEGRA_A57_SERR
         help
-          The Tegra18 SError handler. This handles Denver SErrors, CCPLEX
-	  errors, and fabric slave errors.
+          The Tegra18 SError handler. This handles Denver SErrors, A57 SErrors,
+	  CCPLEX errors, and fabric slave errors.

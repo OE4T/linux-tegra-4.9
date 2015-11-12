@@ -105,6 +105,9 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 			reg = <0x61>;
+			interrupt-parent = <&tegra_gpio>;
+			interrupts = <TEGRA_GPIO(FF, 2) 0x0>;
+			tmpm32xi2c,irq_flags = <IRQ_TYPE_LEVEL_LOW>;
 			gpio-init-names = "default", "pwr_on_default";
 			gpio-init-0 = <&tmpm32xi2c_default>;
 			gpio-init-1 = <&tmpm32xi2c_default_pwr_on>;

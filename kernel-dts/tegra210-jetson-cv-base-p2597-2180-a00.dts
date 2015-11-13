@@ -42,7 +42,7 @@
 #include "tegra210-platforms/tegra210-thermal-nct72-p2530.dtsi"
 #include "tegra210-platforms/tegra210-thermal-Tboard-Tdiode.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
-#include "tegra210-platforms/tegra210-hawkeye-jetson-cpufreq.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cpufreq.dtsi"
 #include "tegra210-plugin-manager/tegra210-jetson-cv-base-p2597-2180-a00-plugin-manager.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-powermon-p2597.dtsi"
 

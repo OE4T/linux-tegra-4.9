@@ -20,14 +20,6 @@
 		};
 	};
 
-	i2c@3190000 {
-		status = "disabled";
-	};
-
-	i2c@31b0000 {
-		status = "disabled";
-	};
-
 	pmc-iopower {
 		status = "disabled";
 	};

@@ -1449,6 +1449,7 @@ struct eqos_prv_data {
 	bool one_nsec_accuracy; /* set to 1 if one nano second accuracy
 				   is enabled else set to zero */
 
+	bool suspended;
 	/* for filtering */
 	int max_hash_table_size;
 	int max_addr_reg_cnt;

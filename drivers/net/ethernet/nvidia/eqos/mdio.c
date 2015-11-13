@@ -72,6 +72,8 @@ INT eqos_mdio_read_direct(struct eqos_prv_data *pdata,
 	int phy_reg_read_status;
 
 	DBGPR_MDIO("--> eqos_mdio_read_direct\n");
+	if (pdata->suspended)
+		return -ENODEV;
 
 	if (hw_if->read_phy_regs) {
 		phy_reg_read_status =
@@ -109,6 +111,9 @@ INT eqos_mdio_write_direct(struct eqos_prv_data *pdata,
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phy_reg_write_status;
+
+	if (pdata->suspended)
+		return -ENODEV;
 
 	DBGPR_MDIO("--> eqos_mdio_write_direct\n");
 

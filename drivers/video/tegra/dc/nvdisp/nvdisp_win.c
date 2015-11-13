@@ -775,17 +775,15 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			((0x3f & dc->pdata->win_mask) << 1)/*WIN_ALL_ACT_REQ*/;
 		int  i = 17000;  /* 60Hz frame period in uSec */
 
-		while (tegra_dc_windows_are_dirty(dc, winmask) && i--)
+		while (tegra_dc_windows_are_dirty(dc, winmask) && --i)
 			udelay(1);
 
 		if (i) {
-			for_each_set_bit(i, &dc->valid_windows, n)
-				tegra_dc_get_window(dc,
-					windows[i]->idx)->dirty = 0;
+			for (i = 0; i < n; i++)
+				windows[i]->dirty = 0;
 		} else {  /* time out */
-			for_each_set_bit(i, &dc->valid_windows, n)
-				tegra_dc_get_window(dc,
-					windows[i]->idx)->dirty = 0;
+			for (i = 0; i < n; i++)
+				windows[i]->dirty = 0;
 		}
 	}
 

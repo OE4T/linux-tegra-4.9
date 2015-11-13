@@ -299,12 +299,6 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 			client->task->pid, task_comm);
 	}
 
-	/* convert iovmm requests to generic carveout. */
-	if (heap_mask & NVMAP_HEAP_IOVMM) {
-		heap_mask = (heap_mask & ~NVMAP_HEAP_IOVMM) |
-			    NVMAP_HEAP_CARVEOUT_GENERIC;
-	}
-
 	/* If user specifies IVM carveout, allocation from no other heap should
 	 * be allowed.
 	 */

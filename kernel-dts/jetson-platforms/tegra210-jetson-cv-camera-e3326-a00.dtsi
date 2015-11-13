@@ -23,14 +23,25 @@
 /* camera control gpio definitions */
 
 / {
-	ov5693_c@36 {
-		/* Define any required hw resources needed by driver */
-		/* ie. clocks, io pins, power sources */
-		mclk = "cam_mclk1";
-		reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
-		pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
-		vana-supply = <&en_vdd_cam_hv_2v8>;
-		vif-supply = <&en_vdd_cam>;
+	host1x {
+		i2c@546c0000 {
+			ov5693_c@36 {
+				/* Define any required hw resources needed by driver */
+				/* ie. clocks, io pins, power sources */
+				/* mclk-index indicates the index of the */
+				/* mclk-name with in the clock-names array */
+
+				clocks = <&tegra_car TEGRA210_CLK_ID_CLK_OUT_3>;
+				clock-names = "mclk";
+				clock-frequency = <24000000>;
+
+				mclk = "cam_mclk1";
+				reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
+				pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+				vana-supply = <&en_vdd_cam_hv_2v8>;
+				vif-supply = <&en_vdd_cam>;
+			};
+		};
 	};
 
 	gpio: gpio@6000d000 {

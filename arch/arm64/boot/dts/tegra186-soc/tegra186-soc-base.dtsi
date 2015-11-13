@@ -153,6 +153,7 @@
 			      <&{/xhci@3530000}		TEGRA_SID_XUSB_HOST>,
 			      <&{/xudc@3550000}		TEGRA_SID_XUSB_DEV>,
 			      <&{/hda@3510000}		TEGRA_SID_HDA>,
+			      <&tegra_adsp_audio	TEGRA_SID_APE>,
 			      <&{/sound}		TEGRA_SID_APE>,
 			      <&{/sound_ref}		TEGRA_SID_APE>,
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
@@ -1402,13 +1403,11 @@
 	};
 
 	sound {
-		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		#stream-id-cells = <1>;
 		status = "disabled";
 	};
 
 	sound_ref {
-		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		#stream-id-cells = <1>;
 		status = "disabled";
 	};
@@ -1918,7 +1917,6 @@
 	hda@3510000 {
 		compatible = "nvidia,tegra30-hda";
 		power-domains = <&mc_clk_pd>;
-		iommus = <&smmu TEGRA_SWGROUP_HDA>;
 		#stream-id-cells = <1>;
 		reg = <0x0 0x3510000 0x0 0x10000>;
 		nvidia,max-codec-slot = <8>;
@@ -1940,7 +1938,6 @@
 	tegra_adsp_audio: adsp_audio {
 		compatible = "nvidia,tegra210-adsp-audio";
 		power-domains = <&adsp_pd>;
-		iommus = <&smmu TEGRA_SWGROUP_APE>;
 		#stream-id-cells = <1>;
 		status = "disabled";
         };

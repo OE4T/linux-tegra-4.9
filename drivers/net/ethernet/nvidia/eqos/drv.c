@@ -59,9 +59,6 @@ static void eqos_poll_timer(unsigned long data);
 static void eqos_all_chans_timer(unsigned long data);
 static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx);
 
-static void eqos_stop_dev(struct eqos_prv_data *pdata);
-static void eqos_start_dev(struct eqos_prv_data *pdata);
-
 /* SA(Source Address) operations on TX */
 unsigned char mac_addr0[6] = { 0x00, 0x11, 0x22, 0x33, 0x44, 0x55 };
 unsigned char mac_addr1[6] = { 0x00, 0x66, 0x77, 0x88, 0x99, 0xaa };
@@ -6085,7 +6082,7 @@ static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 	DBGPR("<--%s()\n", __func__);
 }
 
-static void eqos_stop_dev(struct eqos_prv_data *pdata)
+void eqos_stop_dev(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
@@ -6126,7 +6123,7 @@ static void eqos_stop_dev(struct eqos_prv_data *pdata)
 	DBGPR("<--%s()\n", __func__);
 }
 
-static void eqos_start_dev(struct eqos_prv_data *pdata)
+void eqos_start_dev(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;

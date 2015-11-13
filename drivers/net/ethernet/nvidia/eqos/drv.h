@@ -120,4 +120,6 @@ static void eqos_mmc_setup(struct eqos_prv_data *pdata);
 inline unsigned int eqos_reg_read(volatile ULONG *ptr);
 static int eqos_vlan_rx_add_vid(struct net_device *dev, __be16 proto, u16 vid);
 static int eqos_vlan_rx_kill_vid(struct net_device *dev, __be16 proto, u16 vid);
+void eqos_stop_dev(struct eqos_prv_data *pdata);
+void eqos_start_dev(struct eqos_prv_data *pdata);
 #endif

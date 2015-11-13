@@ -1194,64 +1194,20 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	INT ret, pmt_flags = 0;
-	unsigned int rwk_filter_values[] = {
-		/* for filter 0 CRC is computed on 0 - 7 bytes from offset */
-		0x000000ff,
 
-		/* for filter 1 CRC is computed on 0 - 7 bytes from offset */
-		0x000000ff,
-
-		/* for filter 2 CRC is computed on 0 - 7 bytes from offset */
-		0x000000ff,
-
-		/* for filter 3 CRC is computed on 0 - 31 bytes from offset */
-		0x000000ff,
-
-		/* filter 0, 1 independently enabled and would apply for
-		 * unicast packet only filter 3, 2 combined as,
-		 * "Filter-3 pattern AND NOT Filter-2 pattern"
-		 */
-		0x03050101,
-
-		/* filter 3, 2, 1 and 0 offset is 50, 58, 66, 74 bytes
-		 * from start
-		 */
-		0x4a423a32,
-
-		/* pattern for filter 1 and 0, "0x55", "11", repeated 8 times */
-		0xe7b77eed,
-
-		/* pattern for filter 3 and 4, "0x44", "33", repeated 8 times */
-		0x9b8a5506,
-	};
-
-	DBGPR("-->eqos_suspend\n");
-
-	if (!dev || !netif_running(dev) || (!pdata->hw_feat.mgk_sel &&
-			!pdata->hw_feat.rwk_sel)) {
-		DBGPR("<--eqos_dev_suspend\n");
+	if (pdata->suspended) {
+		pr_err("eqos already suspended\n");
 		return -EINVAL;
 	}
+	pdata->suspended = 1;
+	eqos_stop_dev(pdata);
 
-	if (pdata->hw_feat.rwk_sel && (pdata->wolopts & WAKE_UCAST)) {
-		pmt_flags |= EQOS_REMOTE_WAKEUP;
-		hw_if->configure_rwk_filter(rwk_filter_values, 8);
-	}
+	/* disable clocks */
+	eqos_clock_deinit(pdata);
+	/* disable regulators */
+	eqos_regulator_deinit(pdata);
 
-	if (pdata->hw_feat.mgk_sel && (pdata->wolopts & WAKE_MAGIC))
-		pmt_flags |= EQOS_MAGIC_WAKEUP;
-
-	ret = eqos_powerdown(dev, pmt_flags, EQOS_DRIVER_CONTEXT);
-#if (LP_SUPPORTED)
-	pci_save_state(pdev);
-	pci_set_power_state(pdev, pci_choose_state(pdev, state));
-#endif
-
-	DBGPR("<--eqos_suspend\n");
-
-	return ret;
+	return 0;
 }
 
 /*!
@@ -1279,24 +1235,23 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 static INT eqos_resume(struct platform_device *pdev)
 {
 	struct net_device *dev = platform_get_drvdata(pdev);
-	INT ret;
+	struct eqos_prv_data *pdata = netdev_priv(dev);
 
-	DBGPR("-->eqos_resume\n");
-
-	if (!dev || !netif_running(dev)) {
-		DBGPR("<--eqos_dev_resume\n");
+	if (!pdata->suspended) {
+		pr_err("eqos already resumed\n");
 		return -EINVAL;
 	}
-#if (LP_SUPPORTED)
-	pci_set_power_state(pdev, PCI_D0);
-	pci_restore_state(pdev);
-#endif
 
-	ret = eqos_powerup(dev, EQOS_DRIVER_CONTEXT);
+	/* start regulators */
+	eqos_regulator_init(pdata);
 
-	DBGPR("<--eqos_resume\n");
+	/* enable clocks */
+	eqos_clock_init(pdata);
 
-	return ret;
+	eqos_start_dev(pdata);
+	pdata->suspended = 0;
+
+	return 0;
 }
 
 #endif	/* CONFIG_PM */

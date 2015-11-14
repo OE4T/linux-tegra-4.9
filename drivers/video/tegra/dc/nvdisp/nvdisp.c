@@ -41,10 +41,8 @@ DEFINE_MUTEX(tegra_nvdisp_lock);
 /* Global variables provided for clocks
  * common to all heads
  */
-static struct clk *compclk_parent;
 static struct clk *hubclk;
 static struct clk *compclk;
-static u32 compclk_rate;
 
 static struct reset_control *nvdisp_common_rst[DC_N_WINDOWS+1];
 
@@ -66,6 +64,8 @@ static struct of_device_id nvdisp_disc_pd[] = {
 };
 
 static struct nvdisp_pd_info nvdisp_pg[NVDISP_PD_COUNT];
+static struct nvdisp_compclk_client compclk_client[TEGRA_MAX_DC];
+
 static unsigned int default_sRGB_OutLUT[] = {
 	0x00006000,  0x000060ce,  0x0000619d,  0x0000626c,  0x0000632d,
 	0x000063d4,  0x00006469,  0x000064f0,  0x0000656b,  0x000065df,
@@ -445,6 +445,32 @@ static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
 			return PTR_ERR(nvdisp_common_rst[i+1]);
 		}
 	}
+
+	return 0;
+}
+
+static int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
+{
+	int i;
+	unsigned long rate = 0;
+
+	compclk_client[dc->ctrl_num].clk = dc->clk;
+	compclk_client[dc->ctrl_num].rate = dc->mode.pclk;
+	compclk_client[dc->ctrl_num].inuse = true;
+
+	/* comp clk will be maximum of head0/1/2 */
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		if (compclk_client[i].inuse &&
+			rate <= compclk_client[i].rate) {
+			rate = compclk_client[i].rate;
+			pr_info(" rate get on compclk %ld\n", rate);
+			/* Set parent for Display clock */
+			clk_set_parent(compclk, compclk_client[i].clk);
+		}
+	}
+
+	/* Enable Display comp clock */
+	tegra_disp_clk_prepare_enable(compclk);
 
 	return 0;
 }
@@ -841,6 +867,7 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 				dc->ctrl_num);
 	}
 
+	compclk_client[dc->ctrl_num].inuse = false;
 	return 0;
 }
 
@@ -906,24 +933,11 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	/* Enable DC clock */
 	tegra_disp_clk_prepare_enable(dc->clk);
 
-	/* Enable Display comp clock */
-	tegra_disp_clk_prepare_enable(compclk);
-
 	pr_info(" dc clk %ld\n", clk_get_rate(dc->clk));
 
-	/* comp clk will be maximum of head0/1/2 */
-	if (dc->mode.pclk >= compclk_rate) {
-		compclk_rate = dc->mode.pclk;
-		compclk_parent = dc->clk;
-		pr_info(" rate get on compclk %d\n", compclk_rate);
-		/* Set parent for Display clock */
-		clk_set_parent(compclk, dc->clk);
-	}
+	tegra_nvdisp_set_compclk(dc);
 
 	tegra_dc_get(dc);
-
-	if (ret)
-		return ret;
 
 	/* Deassert the dc reset */
 	res = reset_control_deassert(dc->rst);

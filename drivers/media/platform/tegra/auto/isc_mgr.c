@@ -240,15 +240,22 @@ int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 {
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int i;
+	u32 pwr_gpio;
 
 	dev_dbg(isc_mgr->dev, "%s - %lu\n", __func__, arg);
 
 	if (!pd->num_pwr_gpios)
 		goto pwr_up_end;
 
-	if (arg < pd->num_pwr_gpios) {
-		gpio_set_value(pd->pwr_gpios[arg], PW_ON(pd->pwr_flags[arg]));
-		isc_mgr->pwr_state |= BIT(arg);
+	if (arg >= MAX_ISC_GPIOS)
+		arg = MAX_ISC_GPIOS - 1;
+
+	pwr_gpio = pd->pwr_mapping[arg];
+
+	if (pwr_gpio < pd->num_pwr_gpios) {
+		gpio_set_value(pd->pwr_gpios[pwr_gpio],
+			PW_ON(pd->pwr_flags[pwr_gpio]));
+		isc_mgr->pwr_state |= BIT(pwr_gpio);
 		return 0;
 	}
 
@@ -267,17 +274,24 @@ int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 {
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int i;
+	u32 pwr_gpio;
 
 	dev_dbg(isc_mgr->dev, "%s - %lx\n", __func__, arg);
 
-	if (arg < pd->num_pwr_gpios) {
-		gpio_set_value(pd->pwr_gpios[arg], PW_OFF(pd->pwr_flags[arg]));
-		isc_mgr->pwr_state &= ~BIT(arg);
-		return 0;
-	}
-
 	if (!pd->num_pwr_gpios)
 		goto pwr_dn_end;
+
+	if (arg >= MAX_ISC_GPIOS)
+		arg = MAX_ISC_GPIOS - 1;
+
+	pwr_gpio = pd->pwr_mapping[arg];
+
+	if (pwr_gpio < pd->num_pwr_gpios) {
+		gpio_set_value(pd->pwr_gpios[pwr_gpio],
+				PW_OFF(pd->pwr_flags[pwr_gpio]));
+		isc_mgr->pwr_state &= ~BIT(pwr_gpio);
+		return 0;
+	}
 
 	for (i = 0; i < pd->num_pwr_gpios; i++) {
 		dev_dbg(isc_mgr->dev, "  - %d, %d\n",
@@ -538,6 +552,56 @@ static int isc_mgr_of_get_grp_gpio(
 	return num;
 }
 
+static int isc_mgr_get_pwr_map(
+	struct device *dev, struct device_node *np,
+	struct isc_mgr_platform_data *pd)
+{
+	int num_map_items = 0;
+	u32 pwr_map_val;
+	unsigned int i;
+
+	for (i = 0; i < MAX_ISC_GPIOS; i++)
+		pd->pwr_mapping[i] = i;
+
+	if (!of_get_property(np, "pwr-items", NULL))
+		return 0;
+
+	num_map_items = of_property_count_elems_of_size(np,
+				"pwr-items", sizeof(u32));
+	if (num_map_items < pd->num_pwr_gpios) {
+		dev_err(dev, "%s: invalid number of pwr items\n",
+			__func__);
+		return -1;
+	}
+
+	for (i = 0; i < num_map_items; i++) {
+		if (of_property_read_u32_index(np, "pwr-items",
+			i, &pwr_map_val)) {
+			dev_err(dev, "%s: failed to get pwr item\n",
+				__func__);
+			goto pwr_map_err;
+		}
+
+		if (pwr_map_val >= pd->num_pwr_gpios) {
+			dev_err(dev, "%s: invalid power item index provided\n",
+				__func__);
+			goto pwr_map_err;
+		}
+		pd->pwr_mapping[i] = pwr_map_val;
+	}
+
+	pd->num_pwr_map = num_map_items;
+	return 0;
+
+pwr_map_err:
+	for (i = 0; i < MAX_ISC_GPIOS; i++)
+		pd->pwr_mapping[i] = i;
+
+	pd->num_pwr_map = pd->num_pwr_gpios;
+
+	return -1;
+}
+
 static struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device
 	*pdev)
 {
@@ -587,6 +651,12 @@ static struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device
 	pd->default_pwr_on = of_property_read_bool(np, "default-power-on");
 	pd->runtime_pwrctrl_off =
 		of_property_read_bool(np, "runtime-pwrctrl-off");
+
+	err = isc_mgr_get_pwr_map(&pdev->dev, np, pd);
+	if (err)
+		dev_err(&pdev->dev,
+			"%s: failed to map pwr items. Using default values\n",
+			__func__);
 
 	return pd;
 }

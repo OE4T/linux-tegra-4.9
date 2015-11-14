@@ -304,8 +304,9 @@ struct fb_bitfield {
 #define FB_VMODE_IS_CEA		0x400000
 #define FB_VMODE_IS_HDMI_EXT	0x800000
 #define FB_VMODE_ADJUSTED	0x000080 /* adj to meet timing restrictions */
+#define FB_VMODE_VRR	0x08000000
 
-#define FB_VMODE_MASK		0xe3ffff
+#define FB_VMODE_MASK		0x8e3ffff
 
 #define FB_VMODE_YWRAP		0x40000  /* ywrap instead of panning */
 #define FB_VMODE_SMOOTH_XPAN	0x80000  /* smooth xpan possible (internally used) */

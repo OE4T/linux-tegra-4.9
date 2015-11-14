@@ -685,28 +685,82 @@ fail:
 	return err;
 }
 
-void tegra_hdmi_update_vrr_mode(const struct tegra_dc *dc,
-	struct fb_videomode *mode)
+static bool tegra_hdmivrr_fb_mode_is_compatible(struct tegra_hdmi *hdmi,
+	struct fb_videomode *m)
+{
+	struct fb_videomode m_tmp;
+
+	if ((m->vmode & FB_VMODE_IS_DETAILED) ||
+		!(m->vmode & FB_VMODE_IS_CEA))
+		return false;
+
+	/* Currently HDMI VRR is supported only in 1920x1080p 60Hz mode.
+	 * 1920x1080p 60Hz CEA mode index is 16. Strip out vmode flags
+	 * that we don't expect to find in this CEA mode before comparison,
+	 * to ignore non-standard flags added during hotplug.
+	 *
+	 * Note fb_mode_is_equal() doesn't check for pixclock;
+	 * use fb_mode_is_equal_tolerance() for that purpose */
+	BUG_ON(tegra_hdmi_get_cea_modedb_size(hdmi) <= 16);
+
+	m_tmp = *m;
+	m_tmp.vmode &= cea_modes[16].vmode;
+	return fb_mode_is_equal(&m_tmp, &cea_modes[16]) &&
+		fb_mode_is_equal_tolerance(&m_tmp, &cea_modes[16], 0);
+}
+
+/* If the monitor supports VRR, scan for VRR-capable modes.
+ * Make a copy of these modes, mark them as VRR-capable.
+ * and add them to the available list of modes. The original modes
+ * may still be used on systems that are not VRR-compatible.
+ */
+void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
+	struct list_head *head)
 {
 	struct tegra_vrr *vrr;
+	struct list_head *pos;
+	struct fb_modelist *modelist;
+	struct fb_videomode *m;
+	struct fb_videomode m_vrr;
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
-	if (!mode || !dc || !dc->out || !dc->out->vrr)
+	if (!head)
 		return;
 
 	vrr = dc->out->vrr;
+
+	if (!vrr)
+		return;
 
 #ifdef VRR_AUTHENTICATION_ENABLED
 	if (!vrr->capability)
 		return;
 #endif
-	/*
-	 * Inform VRR monitor to turn on VRR mode by increase vertical
-	 * backporch by 2, and decrease vertical front porch by 2 to keep
-	 * vertical total the same
-	 */
-	mode->upper_margin += 2;
-	if (mode->lower_margin >= 4)
-		mode->lower_margin -= 2;
+
+	/* Check whether VRR modes were already added */
+	list_for_each(pos, head) {
+		modelist = list_entry(pos, struct fb_modelist, list);
+		m = &modelist->mode;
+
+		if (m->vmode & FB_VMODE_VRR)
+			return;
+	}
+
+	list_for_each(pos, head) {
+		modelist = list_entry(pos, struct fb_modelist, list);
+		m = &modelist->mode;
+
+		/* VRR modes will be added to the end of the list;
+		 * don't add them twice. */
+		if (m->vmode & FB_VMODE_VRR)
+			break;
+
+		if (tegra_hdmivrr_fb_mode_is_compatible(hdmi, m)) {
+			m_vrr = *m;
+			m_vrr.vmode |= FB_VMODE_VRR;
+			fb_add_videomode(&m_vrr, head);
+		}
+	}
 }
 
 int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)

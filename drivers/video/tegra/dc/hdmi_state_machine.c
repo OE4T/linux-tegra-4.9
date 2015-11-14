@@ -190,7 +190,7 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 #ifdef CONFIG_ADF_TEGRA
 	tegra_adf_process_hotplug_disconnected(hdmi->dc->adf);
 #else
-	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL, NULL);
+	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL);
 #endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
@@ -284,7 +284,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 #endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 	tegra_fb_update_monspecs(hdmi->dc->fb, &specs,
-		tegra_dc_hdmi_mode_filter, NULL);
+		tegra_dc_hdmi_mode_filter);
 #endif
 #ifdef CONFIG_SWITCH
 	state = tegra_edid_audio_supported(hdmi->edid) ? 1 : 0;

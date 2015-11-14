@@ -570,8 +570,7 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	}
 	if (dc->fb && 0 == n_display_timings) {
 		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec,
-					tegra_hdmi_fb_mode_filter,
-					tegra_hdmi_update_vrr_mode);
+					tegra_hdmi_fb_mode_filter);
 		tegra_fb_update_fix(hdmi->dc->fb, mon_spec);
 	}
 #endif
@@ -1307,7 +1306,7 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 		tegra_sor_writel(sor, data_reg, *data);
 }
 
-static u32 tegra_hdmi_get_cea_modedb_size(struct tegra_hdmi *hdmi)
+u32 tegra_hdmi_get_cea_modedb_size(struct tegra_hdmi *hdmi)
 {
 	if (!tegra_hdmi_is_connected(hdmi) || !hdmi->mon_spec_valid)
 		return 0;
@@ -2746,8 +2745,14 @@ static void tegra_dc_hdmi_vrr_enable(struct tegra_dc *dc, bool enable)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (vrr)
+	if (!vrr)
+		return;
+
+	if (dc->mode.vmode & FB_VMODE_VRR)
 		vrr->enable = enable;
+	else
+		WARN(enable, "VRR enable request in non-VRR mode\n");
+
 }
 
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
@@ -2767,6 +2772,6 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.mode_filter = tegra_hdmi_fb_mode_filter,
 	.hpd_state = tegra_dc_hdmi_hpd_state,
 	.vrr_enable = tegra_dc_hdmi_vrr_enable,
-	.vrr_mode = tegra_hdmi_update_vrr_mode,
+	.vrr_update_monspecs = tegra_hdmivrr_update_monspecs,
 	.set_hdr = tegra_dc_hdmi_set_hdr,
 };

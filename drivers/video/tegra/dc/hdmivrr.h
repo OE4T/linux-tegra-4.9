@@ -88,14 +88,14 @@
 
 #ifdef CONFIG_TEGRA_HDMIVRR
 int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi);
-void tegra_hdmi_update_vrr_mode(const struct tegra_dc *dc,
-	struct fb_videomode *mode);
+void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
+	struct list_head *head);
 int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi);
 void te_authenticate_vrr(u8 *buf_ptr, u32 buflen);
 #else
 int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi) { return -EPROTONOSUPPORT; }
-void tegra_hdmi_update_vrr_mode(const struct tegra_dc *dc,
-	struct fb_videomode *mode) { return; }
+void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
+	struct list_head *head) { return; }
 int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi) { return -EPROTONOSUPPORT; }
 #endif
 

@@ -444,6 +444,7 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 						void *reg_payload,
 						u32 reg_payload_len,
 						bool sw_checksum);
+u32 tegra_hdmi_get_cea_modedb_size(struct tegra_hdmi *hdmi);
 
 #endif
 int tegra_hdmi_get_hotplug_state(struct tegra_hdmi *hdmi);

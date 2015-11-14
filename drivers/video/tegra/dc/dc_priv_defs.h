@@ -128,13 +128,13 @@ struct tegra_dc_out_ops {
 	int (*ddc_disable)(struct tegra_dc *dc);
 	/* Enable/disable VRR */
 	void (*vrr_enable)(struct tegra_dc *dc, bool enable);
+	/* Mark VRR-compatible modes in fb_info->info->modelist */
+	void (*vrr_update_monspecs)(struct tegra_dc *dc,
+		struct list_head *head);
 	/* return if hpd asserted or deasserted */
 	bool (*hpd_state)(struct tegra_dc *dc);
 	/* Configure controller to receive hotplug events */
 	int (*hotplug_init)(struct tegra_dc *dc);
-	/* Set up VRR mode */
-	void (*vrr_mode)(const struct tegra_dc *dc,
-			struct fb_videomode *mode);
 	int (*set_hdr)(struct tegra_dc *dc);
 };
 

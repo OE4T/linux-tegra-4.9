@@ -75,7 +75,7 @@ static void hpd_disable(struct tegra_hpd_data *data)
 		tegra_adf_process_hotplug_disconnected(data->dc->adf);
 #else
 	if (data->dc->fb)
-		tegra_fb_update_monspecs(data->dc->fb, NULL, NULL, NULL);
+		tegra_fb_update_monspecs(data->dc->fb, NULL, NULL);
 #endif
 
 	if (data->ops->disable)
@@ -173,7 +173,7 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 	tegra_fb_update_monspecs(data->dc->fb, &data->mon_spec,
 				(data->ops->get_mode_filter) ?
 				(data->ops->get_mode_filter(data->drv_data)) :
-				NULL, NULL);
+				NULL);
 	tegra_fb_update_fix(data->dc->fb, &data->mon_spec);
 #endif
 #ifdef CONFIG_SWITCH

@@ -149,7 +149,187 @@
 			vdd-supply = <&vdd_1v8_ap>;
 		};
 	};
+
 	pwm-fan {
 		vdd-fan-supply = <&vdd_fan>;
+	};
+
+	bpmp_i2c {
+		spmic@3c {
+			pinmux@0 {
+
+				pin_gpio1 {
+					maxim,fps-power-up-slot = <2>;
+					maxim,fps-power-down-slot = <6>;
+				};
+
+				pin_gpio2 {
+					maxim,fps-power-up-slot = <7>;
+					maxim,fps-power-down-slot = <3>;
+				};
+
+				pin_gpio3 {
+					maxim,fps-power-up-slot = <1>;
+					maxim,fps-power-down-slot = <6>;
+					maxim,suspend-fps-power-down-slot = <7>;
+				};
+			};
+
+			regulators {
+				sd0 {
+					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-power-up-slot = <5>;
+					maxim,fps-power-down-slot = <3>;
+					regulator-enable-ramp-delay = <278>;
+					regulator-disable-ramp-delay = <153000>;
+					regulator-ramp-delay = <27500>;
+					regulator-ramp-delay-scale = <700>;
+				};
+
+				sd1 {
+					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-power-up-slot = <3>;
+					maxim,fps-power-down-slot = <5>;
+					regulator-enable-ramp-delay = <211>;
+					regulator-disable-ramp-delay = <40000>;
+					regulator-ramp-delay = <27500>;
+					regulator-ramp-delay-scale = <500>;
+				};
+
+				sd2 {
+					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-power-up-slot = <0>;
+					maxim,fps-power-down-slot = <7>;
+					regulator-enable-ramp-delay = <4000>;
+					regulator-disable-ramp-delay = <21000>;
+					regulator-ramp-delay = <27500>;
+					regulator-ramp-delay-scale = <6150>;
+				};
+
+				sd3 {
+					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-power-up-slot = <4>;
+					maxim,fps-power-down-slot = <3>;
+					regulator-enable-ramp-delay = <574>;
+					regulator-disable-ramp-delay = <40000>;
+					regulator-ramp-delay = <27500>;
+					regulator-ramp-delay-scale = <500>;
+				};
+
+				ldo0 {
+					regulator-ramp-delay = <100000>;
+				};
+
+				ldo1 {
+					regulator-ramp-delay = <100000>;
+				};
+
+				ldo2 {
+					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-power-up-slot = <2>;
+					maxim,fps-power-down-slot = <5>;
+					regulator-enable-ramp-delay = <152>;
+					regulator-disable-ramp-delay = <14000>;
+					regulator-ramp-delay = <100000>;
+					regulator-ramp-delay-scale = <500>;
+				};
+
+				ldo3 {
+					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-power-up-slot = <0>;
+					maxim,fps-power-down-slot = <7>;
+					regulator-enable-ramp-delay = <160>;
+					regulator-disable-ramp-delay = <16000>;
+					regulator-ramp-delay = <100000>;
+					regulator-ramp-delay-scale = <500>;
+				};
+
+				ldo4 {
+					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-power-up-slot = <1>;
+					maxim,fps-power-down-slot = <7>;
+					regulator-enable-ramp-delay = <26>;
+					regulator-disable-ramp-delay = <1650>;
+					regulator-ramp-delay = <100000>;
+					regulator-ramp-delay-scale = <300>;
+				};
+
+				ldo5 {
+					maxim,fps-power-up-slot = <0>;
+					maxim,fps-power-down-slot = <7>;
+					regulator-enable-ramp-delay = <309>;
+					regulator-disable-ramp-delay = <16000>;
+					regulator-ramp-delay = <100000>;
+					regulator-ramp-delay-scale = <950>;
+				};
+
+				ldo6 {
+					regulator-ramp-delay = <100000>;
+				};
+
+				ldo7 {
+					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-power-up-slot = <4>;
+					maxim,fps-power-down-slot = <4>;
+					regulator-enable-ramp-delay = <95>;
+					regulator-disable-ramp-delay = <15000>;
+					regulator-ramp-delay = <100000>;
+					regulator-ramp-delay-scale = <950>;
+				};
+
+			};
+		};
+	};
+
+	fixed-regulators {
+		regulator@1 {
+			regulator-enable-ramp-delay = <1120>;
+			regulator-disable-ramp-delay = <16500>;
+		};
+
+		regulator@2 {
+			regulator-enable-ramp-delay = <108>;
+			regulator-disable-ramp-delay = <1200>;
+		};
+
+		regulator@3 {
+			regulator-enable-ramp-delay = <745>;
+			regulator-disable-ramp-delay = <74000>;
+		};
+
+		regulator@4 {
+			regulator-enable-ramp-delay = <945>;
+			regulator-disable-ramp-delay = <2650>;
+		};
+
+		regulator@5 {
+			regulator-enable-ramp-delay = <800>;
+			regulator-disable-ramp-delay = <13000>;
+		};
+
+		regulator@6 {
+			regulator-enable-ramp-delay = <173>;
+			regulator-disable-ramp-delay = <13000>;
+		};
+
+		regulator@7 {
+			regulator-enable-ramp-delay = <245>;
+			regulator-disable-ramp-delay = <43000>;
+		};
+
+		regulator@8 {
+			regulator-enable-ramp-delay = <216>;
+			regulator-disable-ramp-delay = <43000>;
+		};
+
+		regulator@10 {
+			regulator-enable-ramp-delay = <178>;
+			regulator-disable-ramp-delay = <10000>;
+		};
+
+		regulator@11 {
+			regulator-enable-ramp-delay = <5000>;
+			regulator-disable-ramp-delay = <87000>;
+		};
 	};
 };

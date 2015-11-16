@@ -313,33 +313,17 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 		struct gk20a *g,
 		struct nvgpu_gpu_mmu_debug_mode_args *args)
 {
-	int err = 0;
-	u32 reg_val, mmu_debug_ctrl;
-
-	err = gk20a_busy(g->dev);
-	if (err) {
+	if (gk20a_busy(g->dev)) {
 		gk20a_err(dev_from_gk20a(g), "failed to power on gpu\n");
 		return -EINVAL;
 	}
 
 	mutex_lock(&g->dbg_sessions_lock);
-
-	if (args->state == 1) {
-		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
-		g->mmu_debug_ctrl = true;
-	} else {
-		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
-		g->mmu_debug_ctrl = false;
-	}
-
-	reg_val = gk20a_readl(g, fb_mmu_debug_ctrl_r());
-	reg_val = set_field(reg_val,
-				fb_mmu_debug_ctrl_debug_m(), mmu_debug_ctrl);
-	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
-
+	g->ops.mm.set_debug_mode(g, args->state == 1);
 	mutex_unlock(&g->dbg_sessions_lock);
+
 	gk20a_idle(g->dev);
-	return err;
+	return 0;
 }
 
 static int nvgpu_gpu_ioctl_set_debug_mode(

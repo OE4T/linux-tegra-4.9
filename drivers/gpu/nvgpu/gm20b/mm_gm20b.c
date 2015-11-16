@@ -78,6 +78,31 @@ static bool gm20b_mm_mmu_debug_mode_enabled(struct gk20a *g)
 		gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v();
 }
 
+static void gm20b_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
+{
+	u32 reg_val, fb_debug_ctrl, gpc_debug_ctrl;
+
+	if (enable) {
+		fb_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
+		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_f();
+		g->mmu_debug_ctrl = true;
+	} else {
+		fb_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
+		gpc_debug_ctrl = gr_gpcs_pri_mmu_debug_ctrl_debug_disabled_f();
+		g->mmu_debug_ctrl = false;
+	}
+
+	reg_val = gk20a_readl(g, fb_mmu_debug_ctrl_r());
+	reg_val = set_field(reg_val,
+			fb_mmu_debug_ctrl_debug_m(), fb_debug_ctrl);
+	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
+
+	reg_val = gk20a_readl(g, gr_gpcs_pri_mmu_debug_ctrl_r());
+	reg_val = set_field(reg_val,
+			gr_gpcs_pri_mmu_debug_ctrl_debug_m(), gpc_debug_ctrl);
+	gk20a_writel(g, gr_gpcs_pri_mmu_debug_ctrl_r(), reg_val);
+}
+
 static void gm20b_mm_set_big_page_size(struct gk20a *g,
 				void *inst_ptr, int size)
 {
@@ -112,6 +137,7 @@ void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.support_sparse = gm20b_mm_support_sparse;
 	gops->mm.is_debug_mode_enabled = gm20b_mm_mmu_debug_mode_enabled;
+	gops->mm.set_debug_mode = gm20b_mm_mmu_set_debug_mode;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
 	gops->mm.vm_remove = gk20a_vm_remove_support;

@@ -3723,6 +3723,24 @@ bool gk20a_mm_mmu_debug_mode_enabled(struct gk20a *g)
 		fb_mmu_debug_ctrl_debug_enabled_v();
 }
 
+static void gk20a_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
+{
+	u32 reg_val, debug_ctrl;
+
+	reg_val = gk20a_readl(g, fb_mmu_debug_ctrl_r());
+	if (enable) {
+		debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
+		g->mmu_debug_ctrl = true;
+	} else {
+		debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
+		g->mmu_debug_ctrl = false;
+	}
+
+	reg_val = set_field(reg_val,
+				fb_mmu_debug_ctrl_debug_m(), debug_ctrl);
+	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
+}
+
 u32 gk20a_mm_get_physical_addr_bits(struct gk20a *g)
 {
 	return 34;
@@ -3769,6 +3787,7 @@ clean_up:
 void gk20a_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.is_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled;
+	gops->mm.set_debug_mode = gk20a_mm_mmu_set_debug_mode;
 	gops->mm.gmmu_map = gk20a_locked_gmmu_map;
 	gops->mm.gmmu_unmap = gk20a_locked_gmmu_unmap;
 	gops->mm.vm_remove = gk20a_vm_remove_support;

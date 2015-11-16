@@ -747,21 +747,6 @@ static int gk20a_detect_chip(struct gk20a *g)
 	return gpu_init_hal(g);
 }
 
-static void gk20a_pm_restore_debug_setting(struct gk20a *g)
-{
-	u32 mmu_debug_ctrl;
-
-	/* restore mmu debug state */
-	if (g->mmu_debug_ctrl)
-		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_v();
-	else
-		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_v();
-
-	mmu_debug_ctrl = gk20a_readl(g, fb_mmu_debug_ctrl_r());
-	mmu_debug_ctrl = set_field(mmu_debug_ctrl, fb_mmu_debug_ctrl_debug_m(), mmu_debug_ctrl);
-	gk20a_writel(g, fb_mmu_debug_ctrl_r(), mmu_debug_ctrl);
-}
-
 static int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
@@ -890,7 +875,7 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	}
 
 	/* Restore the debug setting */
-	gk20a_pm_restore_debug_setting(g);
+	g->ops.mm.set_debug_mode(g, g->mmu_debug_ctrl);
 
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);

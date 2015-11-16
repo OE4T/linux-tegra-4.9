@@ -3562,6 +3562,10 @@ static inline u32 gr_gpcs_pri_mmu_debug_ctrl_r(void)
 {
 	return 0x004188b0;
 }
+static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_m(void)
+{
+	return 0x1 << 16;
+}
 static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_v(u32 r)
 {
 	return (r >> 16) & 0x1;
@@ -3569,6 +3573,18 @@ static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_v(u32 r)
 static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_enabled_f(void)
+{
+	return 0x10000;
+}
+static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gr_gpcs_pri_mmu_debug_ctrl_debug_disabled_f(void)
+{
+	return 0x0;
 }
 static inline u32 gr_gpcs_pri_mmu_debug_wr_r(void)
 {

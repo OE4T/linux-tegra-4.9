@@ -346,6 +346,7 @@ struct gpu_ops {
 	struct {
 		bool (*support_sparse)(struct gk20a *g);
 		bool (*is_debug_mode_enabled)(struct gk20a *g);
+		void (*set_debug_mode)(struct gk20a *g, bool enable);
 		u64 (*gmmu_map)(struct vm_gk20a *vm,
 				u64 map_offset,
 				struct sg_table *sgt,

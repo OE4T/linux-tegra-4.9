@@ -183,7 +183,7 @@ struct nvhost_device_data t18_isp_info = {
 };
 #endif
 
-#if defined(CONFIG_TEGRA_GRHOST_VI) || defined(CONFIG_TEGRA_GRHOST_VI_MODULE)
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 struct nvhost_device_data t18_vi_info = {
 	.devfs_name		= "vi",
 	.exclusive		= true,

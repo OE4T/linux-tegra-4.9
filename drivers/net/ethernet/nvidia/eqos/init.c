@@ -311,6 +311,7 @@ static int eqos_clock_init(struct eqos_prv_data *pdata)
 		goto tx_en_fail;
 
 	DBGPR("%s(): axi_cbb/axi/rx/ptp/tx = %ld/%ld/%ld/%ld/%ld\n",
+		__func__,
 		clk_get_rate(pdata->axi_cbb_clk),
 		clk_get_rate(pdata->axi_clk), clk_get_rate(pdata->rx_clk),
 		clk_get_rate(pdata->ptp_ref_clk), clk_get_rate(pdata->tx_clk));

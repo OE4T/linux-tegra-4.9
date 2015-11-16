@@ -3873,10 +3873,6 @@ void tegra_dc_set_color_control(struct tegra_dc *dc)
 		break;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	color_control = BASE_COLOR_SIZE888;
-#endif
-
 	switch (dc->out->dither) {
 	case TEGRA_DC_UNDEFINED_DITHER:
 	case TEGRA_DC_DISABLE_DITHER:

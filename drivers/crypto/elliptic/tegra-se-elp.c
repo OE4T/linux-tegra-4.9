@@ -25,7 +25,7 @@
 #include <linux/init.h>
 #include <linux/errno.h>
 #include <linux/kernel.h>
-#include <linux/clk.h>
+#include <linux/clk/tegra.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
 #include <linux/scatterlist.h>
@@ -123,6 +123,7 @@ struct tegra_se_elp_dev {
 	struct platform_device *pdev;
 	struct device *dev;
 	void __iomem *io_reg[2];
+	struct clk *c;
 	struct tegra_se_slot *slot_list;
 	struct tegra_se_chipdata *chipdata;
 	struct tegra_se_elp_pka_request *pka_req;
@@ -1660,6 +1661,18 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 		goto res_fail;
 	}
 
+	se_dev->c = devm_clk_get(se_dev->dev, "se");
+	if (IS_ERR(se_dev->c)) {
+		err = PTR_ERR(se_dev->c);
+		dev_err(se_dev->dev, "clk_get_sys failed for se: %d\n", err);
+		goto clk_get_fail;
+	}
+
+	err = clk_prepare_enable(se_dev->c);
+	if (err) {
+		dev_err(se_dev->dev, "clk enable failed for se\n");
+		goto clk_en_fail;
+	}
 	elp_dev = se_dev;
 
 	err = tegra_se_pka_init_key_slot();
@@ -1672,6 +1685,10 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 	return 0;
 
 kslt_fail:
+	clk_disable_unprepare(se_dev->c);
+clk_en_fail:
+	devm_clk_put(se_dev->dev, se_dev->c);
+clk_get_fail:
 	iounmap(se_dev->io_reg[1]);
 res_fail:
 	iounmap(se_dev->io_reg[0]);
@@ -1692,6 +1709,8 @@ static int tegra_se_elp_remove(struct platform_device *pdev)
 		return -ENODEV;
 	for (i = 0; i < 2; i++)
 		iounmap(se_dev->io_reg[i]);
+	clk_disable_unprepare(se_dev->c);
+	devm_clk_put(se_dev->dev, se_dev->c);
 	devm_kfree(&pdev->dev, se_dev);
 	elp_dev = NULL;
 

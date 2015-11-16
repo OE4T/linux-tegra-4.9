@@ -71,6 +71,10 @@ static int native_handshake(void)
 	if (tegra_platform_is_linsim())
 		return -ENODEV;
 
+	/* WAR for simulator */
+	if (!__raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA))
+		return -ENODEV;
+
 	pr_info("bpmp: waiting for handshake\n");
 	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
 		;

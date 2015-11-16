@@ -967,8 +967,8 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 
 		/*integer_value = simple_strtoul(reg_value, */
 		integer_value = kstrtoul(reg_value,
-					 (char **)&end_ptr,
-					 16);
+					 16,
+					 (unsigned long *)&end_ptr);
 		if ((*end_ptr != '\0') && (*end_ptr != '\n')) {
 			pr_err("Invalid value specified for register write");
 			return -EINVAL;

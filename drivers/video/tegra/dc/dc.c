@@ -4503,12 +4503,12 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	if (dc->enabled)
 		return true;
 
-	pm_runtime_get_sync(&dc->ndev->dev);
-
 	if ((dc->out->type == TEGRA_DC_OUT_HDMI ||
 		dc->out->type == TEGRA_DC_OUT_DP) &&
 		!tegra_dc_hpd(dc))
 		return false;
+
+	pm_runtime_get_sync(&dc->ndev->dev);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (tegra_nvdisp_head_enable(dc)) {

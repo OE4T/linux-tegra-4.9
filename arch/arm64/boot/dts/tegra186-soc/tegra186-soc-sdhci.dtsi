@@ -25,7 +25,6 @@
 
 	sdmmc4: sdhci@3460000 { /* Used for eMMC */
 		compatible = "nvidia,tegra186-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3460000 0x0 0x210>;
 		interrupts = < 0 65 0x04>;
 		max-clk-limit = <200000000>;
@@ -64,7 +63,6 @@
 
 	sdmmc3: sdhci@3440000 {
 		compatible = "nvidia,tegra186-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3440000 0x0 0x210>;
 		interrupts = < 0 64 0x04>;
 		max-clk-limit = <204000000>;
@@ -97,7 +95,6 @@
 
 	sdmmc2: sdhci@3420000 { /* Should be used for eMMC. HS400 mode is not supported */
 		compatible = "nvidia,tegra186-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3420000 0x0 0x210>;
 		interrupts = < 0 63 0x04>;
 		max-clk-limit = <200000000>;
@@ -135,7 +132,6 @@
 
 	sdmmc1: sdhci@3400000 {
 		compatible = "nvidia,tegra186-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x3400000 0x0 0x210>;
 		interrupts = < 0 62 0x04>;
 		max-clk-limit = <204000000>;

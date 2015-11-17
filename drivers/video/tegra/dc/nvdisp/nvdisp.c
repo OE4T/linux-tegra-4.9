@@ -1466,6 +1466,112 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 EXPORT_SYMBOL(tegra_nvdisp_update_cmu);
 #endif
 
+static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
+			struct tegra_dc_imp_head_results *imp_head_results)
+{
+	struct tegra_dc_win *win = NULL;
+	u32 val;
+	int i;
+
+	if (!dc)
+		return;
+
+	mutex_lock(&dc->lock);
+	if (!dc->enabled) {
+		mutex_unlock(&dc->lock);
+		return;
+	}
+
+	for (i = 0; i < imp_head_results->num_windows; i++) {
+		win = tegra_dc_get_window(dc, imp_head_results->win_ids[i]);
+		if (!win)
+			continue;
+
+		/* program wgrp fetch meter slots */
+		val = imp_head_results->metering_slots_value_win[i];
+		nvdisp_win_write(win,
+			win_ihub_fetch_meter_slots_f(val),
+			win_ihub_fetch_meter_r());
+
+		/* program wgrp latency registers */
+		val = imp_head_results->thresh_lwm_dvfs_win[i];
+		tegra_dc_writel(dc,
+			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) &
+			~nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+			nvdisp_ihub_misc_ctl_r());
+
+		if (val) {
+			nvdisp_win_write(win,
+				win_ihub_latency_ctla_ctl_mode_enable_f() |
+				win_ihub_latency_ctla_submode_watermark_f(),
+				win_ihub_latency_ctla_r());
+			nvdisp_win_write(win,
+				win_ihub_latency_ctlb_watermark_f(val),
+				win_ihub_latency_ctlb_r());
+			tegra_dc_writel(dc,
+				nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+				nvdisp_ihub_misc_ctl_r());
+		}
+
+		/* program wgrp pipe meter value */
+		val = imp_head_results->pipe_meter_value_win[i];
+		nvdisp_win_write(win,
+			win_precomp_pipe_meter_val_f(val),
+			win_precomp_pipe_meter_r());
+	}
+
+	/* program cursor fetch meter slots */
+	val = imp_head_results->metering_slots_value_cursor;
+	tegra_dc_writel(dc,
+			nvdisp_ihub_cursor_fetch_meter_slots_f(val),
+			nvdisp_ihub_cursor_fetch_meter_r());
+
+	/* program cursor pipe meter value */
+	val = imp_head_results->pipe_meter_value_cursor;
+	tegra_dc_writel(dc,
+			nvdisp_cursor_pipe_meter_val_f(val),
+			nvdisp_cursor_pipe_meter_r());
+
+	mutex_unlock(&dc->lock);
+}
+
+int tegra_nvdisp_program_imp_results(struct tegra_dc *dc,
+				struct tegra_dc_imp_head_results imp_results[])
+{
+	u32 val = 0;
+	int i;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	for (i = 0; i < TEGRA_MAX_DC; i++)
+		tegra_nvdisp_program_imp_head_results(tegra_dc_get_dc(i),
+							&imp_results[i]);
+
+	/* program common win and cursor fetch meter slots */
+	val = (imp_results[dc->ndev->id].window_slots_value) |
+		(imp_results[dc->ndev->id].cursor_slots_value << 8);
+	tegra_dc_writel(dc, val, nvdisp_ihub_common_fetch_meter_r());
+
+	/* promote the COMMON channel state */
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_update_enable_f(),
+			nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
+			nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+
+	/* wait for COMMON_ACT_REQ to complete or time out */
+	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
+			COMMON_ACT_REQ, 0, 1, NVDISP_TEGRA_POLL_TIMEOUT_MS))
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for DC to stop\n");
+
+	mutex_unlock(&tegra_nvdisp_lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_nvdisp_program_imp_head_results);
+
 void reg_dump(struct tegra_dc *dc, void *data,
 		       void (* print)(void *data, const char *str))
 {

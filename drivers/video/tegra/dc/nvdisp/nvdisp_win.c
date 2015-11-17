@@ -24,8 +24,6 @@
 
 #include "dc_config.h"
 
-#define NVDISP_TEGRA_POLL_TIMEOUT_MS       50
-
 /* Num Fractional Bits in 8.24 fixed point phase and phase increment values */
 #define NFB 24
 

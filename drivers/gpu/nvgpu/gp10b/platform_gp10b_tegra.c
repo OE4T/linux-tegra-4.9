@@ -34,7 +34,7 @@ static struct {
 	char *name;
 	unsigned long default_rate;
 } tegra_gp10b_clocks[] = {
-	{"gpu", 1900000000},
+	{"gpu", 1000000000},
 	{"gpu_sys", 204000000} };
 
 /*

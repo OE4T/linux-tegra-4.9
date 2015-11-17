@@ -30,6 +30,7 @@
 #include <media/v4l2-ioctl.h>
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-dma-contig.h>
+#include <media/camera_common.h>
 
 #include <mach/clk.h>
 #include <mach/io_dpd.h>
@@ -408,23 +409,32 @@ static int tegra_channel_open(struct file *fp)
 	int ret = 0;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
-	struct v4l2_subdev *sd = NULL;
+	struct v4l2_subdev *sd = chan->subdev;
 
-	ret = v4l2_fh_open(fp);
-	if (ret < 0)
-		return ret;
-
-	ret = tegra_channel_get_subdev(chan, &sd);
-	if (ret < 0)
-		return ret;
-
-	if (sd) {
+	if (sd == NULL) {
+		ret = tegra_channel_get_subdev(chan, &sd);
+		if (ret < 0)
+			return ret;
+		/* Initialize the subdev and controls here at first open */
+		/* add loop for multiple subdevices support for same node */
 		chan->subdev = sd;
-		/* power on sensors connected in channel */
-		ret = tegra_channel_set_power(chan, 1);
+		/* Add control handler for the subdevice */
+		ret = v4l2_ctrl_add_handler(&chan->ctrl_handler,
+					sd->ctrl_handler, NULL);
+		if (chan->ctrl_handler.error)
+			dev_err(chan->vi->dev, "Failed to add controls\n");
+
+		ret = v4l2_ctrl_handler_setup(&chan->ctrl_handler);
+		if (ret < 0)
+			dev_err(chan->vi->dev, "Failed to setup controls\n");
 	}
 
-	return ret;
+	/* power on sensors connected in channel */
+	ret = tegra_channel_set_power(chan, 1);
+	if (ret < 0)
+		return ret;
+
+	return v4l2_fh_open(fp);
 }
 
 static int tegra_channel_close(struct file *fp)
@@ -437,7 +447,6 @@ static int tegra_channel_close(struct file *fp)
 	ret = tegra_channel_set_power(chan, 0);
 	if (ret < 0)
 		dev_err(chan->vi->dev, "Failed to power off subdevices\n");
-	chan->subdev = NULL;
 
 	return vb2_fop_release(fp);
 }
@@ -463,6 +472,7 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 	chan->vi = vi;
 	chan->port = port;
 	chan->align = 64;
+	chan->subdev = NULL;
 
 	/* Init video format */
 	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF);
@@ -482,7 +492,14 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 	if (ret < 0)
 		return ret;
 
-	/* ... and the video node... */
+	/* init control handler */
+	ret = v4l2_ctrl_handler_init(&chan->ctrl_handler, MAX_CID_CONTROLS);
+	if (chan->ctrl_handler.error) {
+		dev_err(&chan->video.dev, "failed to init control handler\n");
+		goto video_register_error;
+	}
+
+	/* init video node... */
 	chan->video.fops = &tegra_channel_fops;
 	chan->video.v4l2_dev = &vi->v4l2_dev;
 	chan->video.queue = &chan->queue;
@@ -492,6 +509,7 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 	chan->video.vfl_dir = VFL_DIR_RX;
 	chan->video.release = video_device_release_empty;
 	chan->video.ioctl_ops = &tegra_channel_ioctl_ops;
+	chan->video.ctrl_handler = &chan->ctrl_handler;
 
 	video_set_drvdata(&chan->video, chan);
 
@@ -536,8 +554,10 @@ vb2_init_error:
 
 static int tegra_channel_cleanup(struct tegra_channel *chan)
 {
+	chan->subdev = NULL;
 	video_unregister_device(&chan->video);
 
+	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	vb2_queue_release(&chan->queue);
 	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
 

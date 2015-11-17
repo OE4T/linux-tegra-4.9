@@ -147,6 +147,7 @@ struct tegra_channel {
 	struct vi *vi;
 	struct v4l2_subdev *subdev;
 
+	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_pix_format format;
 	const struct tegra_video_format *fmtinfo;
 

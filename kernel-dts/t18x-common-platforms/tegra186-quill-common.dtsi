@@ -118,7 +118,7 @@
 		sor{
 			status = "okay";
 			nvidia,xbar-ctrl = <0 1 2 3 4>;
-			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) 0>;
+			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) GPIO_ACTIVE_LOW>;
 			panel-s-edp-uhdtv-15-6 {
 				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 5) 0>;
 			};
@@ -126,13 +126,12 @@
 		sor1 {
 			status = "okay";
 			nvidia,xbar-ctrl = <0 1 2 3 4>;
-			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
+			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) GPIO_ACTIVE_LOW>;
 			hdmi-display {
 				status = "okay";
 			};
 
 			dp-display {
-				nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
 				status = "disabled";
 			};
 		};
@@ -161,32 +160,6 @@
 		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
 		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 4) 0>;
 		status = "okay";
-	};
-
-	host1x {
-                nvdisplay@15200000 {
-                        status = "okay";
-                        nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
-                        nvidia,emc-rate = <300000000>;
-                        nvidia,fb-bpp = <32>;
-                        nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
-                };
-
-		dsi {	/* dsi@15300000 */
-			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			status = "okay";
-			panel-s-wuxga-8-0 {
-				status = "okay";
-				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
-				nvidia,panel-bl-en-gpio = <&tegra_gpio TEGRA_GPIO(U, 3) 1>; /* PU3 */
-				nvidia,panel-en-gpio = <&gpio_i2c_0_77 4 1>; /* tca9539 7h77 pin4 */
-				nvidia,en-vmm-vpp-with-i2c-config;
-				disp-default-out {
-					nvidia,out-rotation = <180>;
-				};
-			};
-		};
 	};
 
 	adsp_audio {

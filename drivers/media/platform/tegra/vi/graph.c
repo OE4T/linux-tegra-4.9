@@ -194,7 +194,7 @@ static int tegra_vi_graph_build_links(struct vi *vi)
 			continue;
 		}
 
-		if (link.local_port > MAX_CHAN_NUM) {
+		if (link.local_port >= MAX_CHAN_NUM) {
 			dev_err(vi->dev, "wrong channel number for port %u\n",
 				link.local_port);
 			v4l2_of_put_link(&link);

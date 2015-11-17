@@ -204,7 +204,8 @@ tegra_channel_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
 	for (i = 0; i < f->index + 1; i++, index++)
 		index = find_next_bit(fmts_bitmap, MAX_FORMAT_NUM, index);
 
-	f->pixelformat = tegra_core_get_fourcc_by_idx(index - 1);
+	index -= 1;
+	f->pixelformat = tegra_core_get_fourcc_by_idx(index);
 
 	return 0;
 }

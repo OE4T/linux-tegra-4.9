@@ -747,14 +747,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	dc->crc_pending = true;
 
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
-		act_req_mask |= (nvdisp_cmd_state_ctrl_host_trig_enable_f() |
-			nvdisp_cmd_state_ctrl_common_act_req_enable_f());
-
-	update_mask |= nvdisp_cmd_state_ctrl_common_act_update_enable_f();
-
-	/* setting common active request as default now to
-	 * get scan_column feature working */
-	act_req_mask |= nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
+		act_req_mask |= nvdisp_cmd_state_ctrl_host_trig_enable_f();
 
 	/* cannot set fields related to UPDATE and ACT_REQ in the same write */
 	tegra_dc_writel(dc, update_mask, nvdisp_cmd_state_ctrl_r());

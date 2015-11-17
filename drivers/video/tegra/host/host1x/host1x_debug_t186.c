@@ -138,7 +138,6 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 	struct nvhost_channel *ch, struct output *o, int chid)
 {
 	u32 val, temp, rd_ptr, wr_ptr, start, end, max = 64;
-	struct nvhost_channel *channel = ch;
 	struct platform_device *pdev = to_platform_device(ch->dev->dev.parent);
 
 	nvhost_debug_output(o, "%d: fifo:\n", chid);
@@ -153,7 +152,7 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 			| host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid));
 	wmb();
 
-	val = host1x_channel_readl(channel, host1x_channel_fifostat_r());
+	val = host1x_channel_readl(ch, host1x_channel_fifostat_r());
 	if (host1x_channel_fifostat_cfempty_v(val)) {
 		host1x_hypervisor_writel(pdev, host1x_sync_cfpeek_ctrl_r(), 0x0);
 		nvhost_debug_output(o, "FIFOSTAT %08x\n[empty]\n",
@@ -161,11 +160,11 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 		return;
 	}
 
-	val = host1x_hypervisor_readl(channel->dev, host1x_sync_cfpeek_ptrs_r());
+	val = host1x_hypervisor_readl(pdev, host1x_sync_cfpeek_ptrs_r());
 	rd_ptr = host1x_sync_cfpeek_ptrs_cf_rd_ptr_v(val);
 	wr_ptr = host1x_sync_cfpeek_ptrs_cf_wr_ptr_v(val);
 
-	val = host1x_hypervisor_readl(channel->dev,
+	val = host1x_hypervisor_readl(pdev,
 			host1x_sync_cf0_setup_r() + 4 * chid);
 	start = host1x_sync_cf0_setup_cf0_base_v(val);
 	end = host1x_sync_cf0_setup_cf0_limit_v(val);
@@ -178,7 +177,7 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 			       | host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid)
 			       | host1x_sync_cfpeek_ctrl_cfpeek_addr_f(rd_ptr));
 		wmb();
-		val = host1x_hypervisor_readl(channel->dev,
+		val = host1x_hypervisor_readl(pdev,
 				host1x_sync_cfpeek_read_r());
 		rmb();
 

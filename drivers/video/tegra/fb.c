@@ -698,10 +698,10 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	fb_info->info->state =  FBINFO_STATE_RUNNING;
 #ifdef CONFIG_FRAMEBUFFER_CONSOLE
 	console_lock();
-	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 	tegra_dc_set_fb_mode(fb_info->win.dc, specs->modedb, false);
 	fb_videomode_to_var(&fb_info->info->var, &specs->modedb[0]);
 	fb_notifier_call_chain(FB_EVENT_MODE_CHANGE_ALL, &event);
+	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 	console_unlock();
 #else
 	fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);

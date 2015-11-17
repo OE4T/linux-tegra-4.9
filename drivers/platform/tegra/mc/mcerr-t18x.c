@@ -241,17 +241,6 @@ enum {
 	INTSTATUS_BROADCAST = 24,
 };
 
-irqreturn_t tegra_mc_error_thread_ovr(int irq, void *data)
-{
-	irqreturn_t ret = tegra_mc_handle_general_fault(mc_err_channel,
-							local_intstatus);
-
-	/* reenable mcerr interrupts */
-	mc_writel(mc_int_mask, MC_INTMASK);
-
-	return ret;
-}
-
 irqreturn_t tegra_mc_error_hard_irq_ovr(int irq, void *data)
 {
 	u32 g_instatus = mc_readl(MC_GLOBAL_INTSTATUS);

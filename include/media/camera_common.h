@@ -50,6 +50,7 @@
 #define V4L2_CID_TEGRA_CAMERA_LAST	(V4L2_CID_TEGRA_CAMERA_BASE+8)
 
 #define MAX_BUFFER_SIZE			32
+#define MAX_CID_CONTROLS		16
 
 struct reg_8 {
 	u16 addr;

@@ -1784,9 +1784,7 @@
 
 		tegra_arad: arad@290e400 {
 			compatible = "nvidia,tegra186-arad";
-			interrupt-parent = <&tegra_agic>;
 			reg = <0x290e400 0x400>;
-			interrupts =  <GIC_SPI INT_AHUB_ERR IRQ_TYPE_LEVEL_HIGH>;
 			nvidia,ahub-arad-id = <0>;
 			status = "disabled";
 		};

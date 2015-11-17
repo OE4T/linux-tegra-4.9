@@ -41,7 +41,6 @@ typedef void (*tegra186_ahc_cb)(void *);
 
 struct tegra186_ahc {
 	int irq;
-	int virq;
 	spinlock_t int_lock;
 	void __iomem *ahc_base;
 	struct tasklet_struct tasklet;

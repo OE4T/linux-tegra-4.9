@@ -159,9 +159,8 @@ static int tegra186_ahc_platform_probe(struct platform_device *pdev)
 	}
 
 	ahc->irq = platform_get_irq(pdev, 0);
-	ahc->virq = tegra_agic_irq_get_virq(ahc->irq);
 	ret = devm_request_irq(&pdev->dev,
-			ahc->virq,
+			ahc->irq,
 			tegra186_ahc_int_handler,
 			0, pdev->name, &pdev->dev);
 	if (ret)
@@ -183,7 +182,7 @@ err:
 static int tegra186_ahc_platform_remove(struct platform_device *pdev)
 {
 	struct tegra186_ahc *ahc = dev_get_drvdata(&pdev->dev);
-	devm_free_irq(&pdev->dev, ahc->virq, &pdev->dev);
+	devm_free_irq(&pdev->dev, ahc->irq, &pdev->dev);
 	tasklet_kill(&ahc->tasklet);
 	devm_kfree(&pdev->dev, ahc);
 	return 0;

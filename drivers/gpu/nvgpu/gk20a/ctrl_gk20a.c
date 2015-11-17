@@ -314,7 +314,7 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 		struct nvgpu_gpu_mmu_debug_mode_args *args)
 {
 	int err = 0;
-	u32 mmu_debug_ctrl;
+	u32 reg_val, mmu_debug_ctrl;
 
 	err = gk20a_busy(g->dev);
 	if (err) {
@@ -325,16 +325,17 @@ static int nvgpu_gpu_ioctl_set_mmu_debug_mode(
 	mutex_lock(&g->dbg_sessions_lock);
 
 	if (args->state == 1) {
-		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_v();
+		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_enabled_f();
 		g->mmu_debug_ctrl = true;
 	} else {
-		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_v();
+		mmu_debug_ctrl = fb_mmu_debug_ctrl_debug_disabled_f();
 		g->mmu_debug_ctrl = false;
 	}
 
-	mmu_debug_ctrl = gk20a_readl(g, fb_mmu_debug_ctrl_r());
-	mmu_debug_ctrl = set_field(mmu_debug_ctrl, fb_mmu_debug_ctrl_debug_m(), mmu_debug_ctrl);
-	gk20a_writel(g, fb_mmu_debug_ctrl_r(), mmu_debug_ctrl);
+	reg_val = gk20a_readl(g, fb_mmu_debug_ctrl_r());
+	reg_val = set_field(reg_val,
+				fb_mmu_debug_ctrl_debug_m(), mmu_debug_ctrl);
+	gk20a_writel(g, fb_mmu_debug_ctrl_r(), reg_val);
 
 	mutex_unlock(&g->dbg_sessions_lock);
 	gk20a_idle(g->dev);
@@ -376,12 +377,20 @@ static int nvgpu_gpu_ioctl_set_debug_mode(
 			sm_dbgr_ctrl0 = ops.value_lo;
 
 			if (args->enable) {
-				sm_dbgr_ctrl0 = gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_v() |
-							  gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_disable_f() |
-							  gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f() |
-							  sm_dbgr_ctrl0;
-			} else
-				sm_dbgr_ctrl0 = gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_v() | sm_dbgr_ctrl0;
+				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
+							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_m(),
+							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_f());
+				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
+							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_m(),
+							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_disable_f());
+				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
+							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_m(),
+							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f());
+			} else {
+				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
+							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_m(),
+							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_f());
+			}
 
 			if (!err) {
 				ops.op = REGOP(WRITE_32);

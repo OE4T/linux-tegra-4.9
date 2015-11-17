@@ -3038,6 +3038,10 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_r(void)
 {
 	return 0x00504610;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_m(void)
+{
+	return 0x1 << 0;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_v(u32 r)
 {
 	return (r >> 0) & 0x1;
@@ -3046,9 +3050,17 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_f(void)
+{
+	return 0x1;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_f(void)
+{
+	return 0x0;
 }
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_enable_f(void)
 {
@@ -3062,6 +3074,10 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_run_trigger_task_f(void)
 {
 	return 0x40000000;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_m(void)
+{
+	return 0x1 << 1;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_v(u32 r)
 {
 	return (r >> 1) & 0x1;
@@ -3069,6 +3085,10 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_v(u32 r)
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_disable_f(void)
 {
 	return 0x0;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_m(void)
+{
+	return 0x1 << 2;
 }
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_v(u32 r)
 {

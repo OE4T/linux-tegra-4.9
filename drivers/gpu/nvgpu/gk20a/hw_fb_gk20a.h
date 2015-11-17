@@ -202,9 +202,17 @@ static inline u32 fb_mmu_debug_ctrl_debug_enabled_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 fb_mmu_debug_ctrl_debug_enabled_f(void)
+{
+	return 0x10000;
+}
 static inline u32 fb_mmu_debug_ctrl_debug_disabled_v(void)
 {
 	return 0x00000000;
+}
+static inline u32 fb_mmu_debug_ctrl_debug_disabled_f(void)
+{
+	return 0x0;
 }
 static inline u32 fb_mmu_vpr_info_r(void)
 {

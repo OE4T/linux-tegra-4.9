@@ -415,9 +415,7 @@ static int nvidia_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	int ret;
 	struct nvidia_tp_loc *loc;
 
-	loc = (struct nvidia_tp_loc *)
-		kmalloc(sizeof(struct nvidia_tp_loc *), GFP_KERNEL);
-
+	loc = kmalloc(sizeof(*loc), GFP_KERNEL);
 	if (!loc) {
 		hid_err(hdev, "cannot alloc device touchpad state\n");
 		return -ENOMEM;

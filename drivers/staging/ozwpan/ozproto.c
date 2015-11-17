@@ -272,8 +272,11 @@ done:
 		if (resume_apps)
 			if (oz_services_start(pd, resume_apps, 1))
 				rsp_status = OZ_STATUS_TOO_MANY_PDS;
-		if (stop_apps)
+		if (stop_apps) {
+			spin_lock_bh(&g_polling_lock);
 			oz_services_stop(pd, stop_apps, 0);
+			spin_unlock_bh(&g_polling_lock);
+		}
 		oz_pd_request_heartbeat(pd);
 	} else {
 		spin_unlock_bh(&g_polling_lock);

@@ -354,6 +354,7 @@ int oz_services_start(struct oz_pd *pd, u16 apps, int resume)
 }
 /*------------------------------------------------------------------------------
  * Context: softirq or process
+ * Caller responsible for holding g_polling_lock
  */
 void oz_services_stop(struct oz_pd *pd, u16 apps, int pause)
 {
@@ -363,14 +364,12 @@ void oz_services_stop(struct oz_pd *pd, u16 apps, int pause)
 		apps |= 1<<OZ_APPID_SERIAL;
 	for (ai = g_app_if; ai < &g_app_if[OZ_APPID_MAX]; ai++) {
 		if (apps & (1<<ai->app_id)) {
-			oz_polling_lock_bh();
 			if (pause) {
 				pd->paused_apps |= (1<<ai->app_id);
 			} else {
 				pd->total_apps &= ~(1<<ai->app_id);
 				pd->paused_apps &= ~(1<<ai->app_id);
 			}
-			oz_polling_unlock_bh();
 			if (ai->stop)
 				ai->stop(pd, pause);
 		}
@@ -403,21 +402,23 @@ void oz_pd_heartbeat(struct oz_pd *pd, u16 apps)
 void oz_pd_stop(struct oz_pd *pd)
 {
 	u16 stop_apps = 0;
-	oz_trace_msg(M, "oz_pd_stop() State = 0x%x\n", pd->state);
 	oz_polling_lock_bh();
+	if (pd == NULL) {
+		oz_polling_unlock_bh();
+		return;
+	}
+	oz_trace_msg(M, "oz_pd_stop() State = 0x%x\n", pd->state);
 	if (pd->state == OZ_PD_S_STOPPED) {
 		pr_info("%s: pd already stopped, return\n", __func__);
 		oz_polling_unlock_bh();
 		return;
 	}
 	oz_pd_indicate_farewells(pd);
+	oz_pd_set_state(pd, OZ_PD_S_STOPPED);
 	stop_apps = pd->total_apps;
 	pd->total_apps = 0;
 	pd->paused_apps = 0;
-	oz_polling_unlock_bh();
 	oz_services_stop(pd, stop_apps, 0);
-	oz_polling_lock_bh();
-	oz_pd_set_state(pd, OZ_PD_S_STOPPED);
 
 	if (hrtimer_active(&pd->timeout)) {
 		oz_trace_msg(M, "hrtimer timeout active\n");
@@ -459,12 +460,13 @@ int oz_pd_sleep(struct oz_pd *pd)
 		do_stop = 1;
 	}
 	stop_apps = pd->total_apps;
-	oz_polling_unlock_bh();
 	if (do_stop) {
+		oz_polling_unlock_bh();
 		pr_info("%s: disconnect requested from device\n", __func__);
 		oz_pd_stop(pd);
 	} else {
 		oz_services_stop(pd, stop_apps, 1);
+		oz_polling_unlock_bh();
 		oz_timer_add(pd, OZ_TIMER_STOP, pd->keep_alive);
 	}
 	return do_stop;

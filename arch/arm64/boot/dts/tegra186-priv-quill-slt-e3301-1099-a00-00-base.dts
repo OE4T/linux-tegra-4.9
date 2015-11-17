@@ -60,7 +60,7 @@
 		};
 	};
 	pcie-controller@10003000 {
-		nvidia,lane-map = <0x111>;
+		nvidia,lane-map = <0x211>;
 		status = "okay";
 		pci@1,0 {
 			status = "okay";

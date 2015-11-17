@@ -948,12 +948,6 @@ struct net_device *alloc_mttcan_dev(void)
 	    CAN_CTRLMODE_LISTENONLY | CAN_CTRLMODE_FD |
 	    CAN_CTRLMODE_BERR_REPORTING | CAN_CTRLMODE_ONE_SHOT;
 
-	if (can_change_mtu(dev, CANFD_MTU)) {
-		netdev_err(dev, "unable to change MTU\n");
-		free_candev(dev);
-		return NULL;
-	}
-
 	netif_napi_add(dev, &priv->napi, mttcan_poll_ir, MTT_CAN_NAPI_WEIGHT);
 
 	return dev;

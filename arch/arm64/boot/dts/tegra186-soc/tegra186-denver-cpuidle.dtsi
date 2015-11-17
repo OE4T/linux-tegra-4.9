@@ -69,12 +69,12 @@
 				crossover_c1_c6         = <100>;
 				crossover_cc1_cc6       = <500>;
 				crossover_cc1_cc7       = <700>;
-				crossover_ccp1_ccp3     = <300>;
-				crossover_ccp3_sc1      = <400>;
-				crossover_ccp3_sc2      = <500>;
-				crossover_ccp3_sc3      = <600>;
-				crossover_ccp3_sc4      = <700>;
-				crossover_ccp3_sc7      = <800>;
+				crossover_ccp1_ccp3     = <50000000>;
+				crossover_ccp3_sc1      = <50000000>;
+				crossover_ccp3_sc2      = <50000000>;
+				crossover_ccp3_sc3      = <50000000>;
+				crossover_ccp3_sc4      = <50000000>;
+				crossover_ccp3_sc7      = <50000000>;
 			};
 		};
 	};

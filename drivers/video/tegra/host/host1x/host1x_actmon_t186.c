@@ -175,9 +175,13 @@ static void __iomem *host1x_actmon_get_regs(struct host1x_actmon *actmon)
 {
 	struct nvhost_device_data *pdata =
 		platform_get_drvdata(actmon->pdev);
+	void __iomem *actmon_base = NULL;
 
-	return get_aperture(actmon->host->dev, HOST1X_ACTMON_APERTURE) +
-			pdata->actmon_regs;
+	actmon_base = get_aperture(actmon->host->dev, HOST1X_ACTMON_APERTURE);
+	if (actmon_base)
+		return actmon_base + pdata->actmon_regs;
+
+	return NULL;
 }
 
 static int host1x_actmon_init(struct host1x_actmon *actmon)

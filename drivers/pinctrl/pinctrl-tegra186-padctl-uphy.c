@@ -5161,9 +5161,16 @@ static int tegra186_padctl_id_override(struct tegra_padctl_uphy *uphy,
 
 	reg = padctl_readl(uphy, USB2_VBUS_ID);
 	if (grounded) {
+		if (reg & VBUS_OVERRIDE) {
+			reg &= ~VBUS_OVERRIDE;
+			padctl_writel(uphy, reg, USB2_VBUS_ID);
+			usleep_range(1000, 2000);
+
+			reg = padctl_readl(uphy, USB2_VBUS_ID);
+		}
+
 		reg &= ~ID_OVERRIDE(~0);
 		reg |= ID_OVERRIDE_GROUNDED;
-		reg &= ~VBUS_OVERRIDE;
 	} else {
 		reg &= ~ID_OVERRIDE(~0);
 		reg |= ID_OVERRIDE_FLOATING;

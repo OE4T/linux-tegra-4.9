@@ -244,6 +244,11 @@
 				sid-list-len = <1>;
 			};
 
+			hda_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_HDA>;
+				sid-list-len = <1>;
+			};
 			sdmmc1a_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_SDMMC1A>;

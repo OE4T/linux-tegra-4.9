@@ -82,5 +82,9 @@
 			status = "disabled";
 		};
 	};
+
+	cluster_clk_priv@e090000 {
+		status = "okay";
+	};
 };
 

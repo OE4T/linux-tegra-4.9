@@ -2388,12 +2388,15 @@
 		mboxes = <&aon 1>;
 	};
 
-	cluster_clk_priv@e0a0000 {
+	cluster_clk_priv@e090000 {
 		compatible = "nvidia,t18x-cluster-clk-priv";
 			#address-cells = <2>;
 			#size-cells = <2>;
-		reg = < 0x0 0x0e0a0000 0x0 0x64 >, /* B cluster clk priv base */
-		      < 0x0 0x0e0b0000 0x0 0x64 >; /* m cluster clk priv base */
+		reg = < 0x0 0x0e090000 0x00 0xfff0 >, /* sys_clock / PLLX regs */
+		      < 0x0 0x0e0a0000 0x00 0xfff0 >, /* b_cluster_clk_pub */
+		      < 0x0 0x0e0b0000 0x00 0xfff0 >, /* b_cluster_clk_priv */
+		      < 0x0 0x0e0c0000 0x00 0xfff0 >, /* m_cluster_clk_pub */
+		      < 0x0 0x0e0d0000 0x00 0xfff0 >; /* m_cluster_clk_priv */
 		status = "disabled";
 	};
 

@@ -344,7 +344,7 @@
 		};
 	};
 
-	cluster_clk_priv@e0a0000 {
+	cluster_clk_priv@e090000 {
 		status = "okay";
 	};
 };

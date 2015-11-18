@@ -86,7 +86,7 @@ struct tegra210_adsp_app {
 	plugin_shared_mem_t *plugin;
 	apm_shared_state_t *apm; /* For a plugin it stores parent apm data */
 	struct nvadsp_mbox apm_mbox;
-	struct completion msg_complete; /* For ADSP ack wait */
+	struct completion *msg_complete; /* For ADSP ack wait */
 	uint32_t reg;
 	uint32_t adma_chan; /* Valid for only ADMA app */
 	uint32_t fe:1; /* Whether the app is used as a FE APM */
@@ -390,7 +390,6 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 				__func__);
 			flags &= ~TEGRA210_ADSP_MSG_FLAG_NEED_ACK;
 		} else {
-			reinit_completion(&app->msg_complete);
 			apm_msg->msg.call_params.method |=
 				NVFX_APM_METHOD_ACK_BIT;
 		}
@@ -443,7 +442,7 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 	}
 
 	ret = wait_for_completion_interruptible_timeout(
-		&app->msg_complete,
+		app->msg_complete,
 		msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
 	if (WARN_ON(ret == 0))
 		pr_err("%s: ACK timed out %d\n", __func__, app->reg);
@@ -667,7 +666,14 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 			goto err_app_exit;
 		}
 
-		init_completion(&app->msg_complete);
+		app->msg_complete = devm_kzalloc(adsp->dev,
+					sizeof(struct completion), GFP_KERNEL);
+		if (!app->msg_complete) {
+			dev_err(adsp->dev, "Failed to allocate completion struct.");
+			return -ENOMEM;
+		}
+
+		init_completion(app->msg_complete);
 
 		ret = nvadsp_app_start(app->info);
 		if (ret < 0) {
@@ -679,6 +685,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		apm_out->plugin = app->plugin;
 		apm_out->apm = app->apm;
 		apm_out->apm_mbox = app->apm_mbox;
+		apm_out->msg_complete = app->msg_complete;
 	} else if (IS_ADMA(app->reg)) {
 		app->adma_chan = find_first_zero_bit(adsp->adma_usage,
 					TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
@@ -961,7 +968,7 @@ static int tegra210_adsp_app_default_msg_handler(struct tegra210_adsp_app *app,
 {
 	switch (apm_msg->msg.call_params.method) {
 	case nvfx_apm_method_ack:
-		complete(&app->msg_complete);
+		complete(app->msg_complete);
 		break;
 	default:
 		pr_err("Unsupported cmd %d.", apm_msg->msg.call_params.method);
@@ -979,7 +986,7 @@ static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 		snd_pcm_period_elapsed(prtd->substream);
 		break;
 	case nvfx_apm_method_ack:
-		complete(&app->msg_complete);
+		complete(app->msg_complete);
 		break;
 	default:
 		dev_err(prtd->dev, "Unsupported cmd %d.",
@@ -1010,7 +1017,7 @@ static int tegra210_adsp_compr_msg_handler(struct tegra210_adsp_app *app,
 		prtd->is_draining = 0;
 		break;
 	case nvfx_apm_method_ack:
-		complete(&app->msg_complete);
+		complete(app->msg_complete);
 		break;
 	default:
 		dev_err(prtd->dev, "Unsupported cmd %d.",
@@ -1432,7 +1439,8 @@ static int tegra210_adsp_pcm_close(struct snd_pcm_substream *substream)
 
 	if (prtd) {
 		tegra210_adsp_send_reset_msg(prtd->fe_apm,
-			TEGRA210_ADSP_MSG_FLAG_SEND);
+			TEGRA210_ADSP_MSG_FLAG_SEND |
+			TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
 
 		spin_lock_irqsave(&prtd->fe_apm->lock, flags);
 

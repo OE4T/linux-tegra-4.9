@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -718,6 +718,8 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc,
 void tegra_nvdisp_underflow_handler(struct tegra_dc *dc);
 void reg_dump(struct tegra_dc *dc, void *data,
 	void (*print)(void *data, const char *str));
+
+u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_num, int ihub_switch);
 
 struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 	struct tegra_dc *dc, struct tegra_fb_data *fb_data,

@@ -373,6 +373,11 @@ void nvhost_scale_init(struct platform_device *pdev)
 			actmon->type = i;
 
 			actmon->regs = actmon_op().get_actmon_regs(actmon);
+			if (!actmon->regs) {
+				nvhost_err(&pdev->dev,
+					"can't access actmon regs");
+				goto err_get_actmon_regs;
+			}
 
 			actmon_op().init(actmon);
 			nvhost_actmon_debug_init(actmon, pdata->debugfs);
@@ -419,7 +424,7 @@ void nvhost_scale_init(struct platform_device *pdev)
 	nvhost_module_idle(nvhost_get_host(pdev)->dev);
 
 	return;
-
+err_get_actmon_regs:
 err_allocate_actmon:
 	kfree(profile->actmon);
 err_allocate_actmons:

@@ -951,7 +951,6 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 	char reg_name[50];
 	char reg_value[25];
 	unsigned long integer_value;
-	char *end_ptr;
 
 	DBGPR("--> eqos_write\n");
 
@@ -965,11 +964,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		get_reg_value(reg_value, debugfs_buf, count);
 		ret = count;
 
-		/*integer_value = simple_strtoul(reg_value, */
-		integer_value = kstrtoul(reg_value,
-					 16,
-					 (unsigned long *)&end_ptr);
-		if ((*end_ptr != '\0') && (*end_ptr != '\n')) {
+		if (kstrtoul(reg_value, 16, &integer_value)) {
 			pr_err("Invalid value specified for register write");
 			return -EINVAL;
 		}

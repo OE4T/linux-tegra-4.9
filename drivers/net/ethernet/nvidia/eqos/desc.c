@@ -987,7 +987,7 @@ static unsigned int eqos_map_skb(struct net_device *dev,
 /*!
 * \brief API to release the skb.
 *
-* \details This function is called in *_tx_interrupt function to release
+* \details This function is called in process_tx_completions() to release
 * the skb for the successfully transmited packets.
 *
 * \param[in] pdata - pointer to private data structure.

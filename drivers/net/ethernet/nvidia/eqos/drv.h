@@ -53,15 +53,11 @@ static void eqos_set_rx_mode(struct net_device *);
 
 static int eqos_start_xmit(struct sk_buff *, struct net_device *);
 
-static void eqos_tx_interrupt(struct net_device *,
-				     struct eqos_prv_data *,
-				     UINT qinx);
+static void process_tx_completions(struct net_device *,
+				   struct eqos_prv_data *,
+				   uint qinx);
 
 static struct net_device_stats *eqos_get_stats(struct net_device *);
-
-#ifdef CONFIG_NET_POLL_CONTROLLER
-static void eqos_poll_controller(struct net_device *);
-#endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 
 static int eqos_set_features(struct net_device *dev,
 	netdev_features_t features);
@@ -89,8 +85,8 @@ irqreturn_t eqos_isr(int, void *);
 
 static INT eqos_change_mtu(struct net_device *dev, INT new_mtu);
 
-static int eqos_clean_rx_irq(struct eqos_prv_data *pdata,
-				    int quota, UINT qinx);
+static int process_rx_completions(struct eqos_prv_data *pdata,
+				  int quota, UINT qinx);
 
 static void eqos_receive_skb(struct eqos_prv_data *pdata,
 				    struct net_device *dev,
@@ -113,8 +109,6 @@ static void eqos_default_tx_confs_single_q(struct eqos_prv_data
 static void eqos_default_rx_confs(struct eqos_prv_data *pdata);
 static void eqos_default_rx_confs_single_q(struct eqos_prv_data
 						  *pdata, UINT qinx);
-
-int eqos_poll(struct eqos_prv_data *pdata, int budget, int qinx);
 
 static void eqos_mmc_setup(struct eqos_prv_data *pdata);
 inline unsigned int eqos_reg_read(volatile ULONG *ptr);

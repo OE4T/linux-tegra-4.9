@@ -104,9 +104,7 @@ static struct tmds_prod_pair tmds_config_modes[] = {
 static struct tegra_hdmi *dc_hdmi;
 
 static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi);
-#ifndef CONFIG_TEGRA_NVDISPLAY
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
-#endif
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
 static void tegra_hdmi_scdc_worker(struct work_struct *work);
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi);
@@ -1884,9 +1882,9 @@ static void _tegra_hdmi_clock_enable(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	tegra_disp_clk_prepare_enable(sor->safe_clk);
-#ifndef CONFIG_TEGRA_NVDISPLAY
+
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
-#endif
+
 	/* Setting various clock to figure out whether bpmp is able to
 	 * handle this
 	 */
@@ -2045,38 +2043,7 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_pad_cal_power(sor, true);
 	tegra_hdmi_config_tmds(hdmi);
 	tegra_sor_pad_cal_power(sor, false);
-
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
-#else
-	/* Divide rate to half if rate higher than 340Mhz */
-	if (dc->mode.pclk > 340000000) {
-		int val = 0;
-		long rate = clk_get_rate(sor->sor_clk);
-		rate = rate >> 1;
-		pr_info("Modified sor_clk %ld\n", rate);
-
-		/* Set Rate to SOR_CLK*/
-		clk_set_rate(sor->sor_clk, rate);
-
-		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4 |
-			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
-		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
-		usleep_range(250, 300); /* sor brick pll stabilization delay */
-	} else {
-		int val = 0;
-		long rate = clk_get_rate(sor->sor_clk);
-		pr_info("Modified sor_clk %ld\n", rate);
-
-		/* Set Rate to SOR_CLK*/
-		clk_set_rate(sor->sor_clk, rate);
-
-		val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7 |
-			NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
-		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
-		usleep_range(250, 300); /* sor brick pll stabilization delay */
-	}
-#endif
 	tegra_dc_sor_attach(sor);
 
 	if (!hdmi->dvi)
@@ -2138,8 +2105,48 @@ static inline u32 tegra_hdmi_get_shift_clk_div(struct tegra_hdmi *hdmi)
 	return 0;
 }
 
-/* HDMI_CLOCK_CONFIG DISABLED */
-#ifndef CONFIG_TEGRA_NVDISPLAY
+#ifdef CONFIG_TEGRA_NVDISPLAY
+static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
+{
+	if (clk_type == hdmi->clk_type)
+		return;
+
+	if (tegra_platform_is_linsim())
+		return;
+
+	if (clk_type == TEGRA_HDMI_BRICK_CLK) {
+
+		struct tegra_dc_sor_data *sor = hdmi->sor;
+		int val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G2_7;
+
+		if (hdmi->dc->mode.pclk > 340000000) {
+			long rate = clk_get_rate(sor->sor_clk);
+
+			/*half rate and double vco*/
+			val = NV_SOR_CLK_CNTRL_DP_LINK_SPEED_G5_4;
+			/* Set Rate to SOR_CLK*/
+			clk_set_rate(sor->sor_clk, (rate >> 1));
+		}
+
+		val |= NV_SOR_CLK_CNTRL_DP_CLK_SEL_SINGLE_PCLK;
+		tegra_sor_writel(hdmi->sor, NV_SOR_CLK_CNTRL, val);
+		usleep_range(250, 300); /* sor brick pll stabilization delay */
+
+		clk_set_parent(sor->src_switch_clk, sor->brick_clk);
+
+		hdmi->clk_type = TEGRA_HDMI_BRICK_CLK;
+	} else if (clk_type == TEGRA_HDMI_SAFE_CLK) {
+		if (!hdmi->dc->initialized) {
+			clk_set_parent(hdmi->sor->src_switch_clk,
+					hdmi->sor->safe_clk);
+			hdmi->clk_type = TEGRA_HDMI_SAFE_CLK;
+		}
+	} else {
+		dev_err(&hdmi->dc->ndev->dev,
+				"hdmi: incorrect clk type configured\n");
+	}
+}
+#else
 static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 {
 	if (clk_type == hdmi->clk_type)
@@ -2354,21 +2361,14 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	struct tegra_dc_sor_data *sor = hdmi->sor;
-#endif
-
 	hdmi->enabled = false;
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	switch_set_state(&hdmi->audio_switch, 0);
 #endif
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
-#else
-	clk_set_parent(sor->src_switch_clk, sor->safe_clk);
-#endif
+
 	tegra_hdmi_controller_disable(hdmi);
 
 #ifndef CONFIG_TEGRA_NVDISPLAY

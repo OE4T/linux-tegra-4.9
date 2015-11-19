@@ -3289,6 +3289,80 @@ static void eqos_disable_pad_cal(struct eqos_prv_data *pdata)
 	PAD_AUTO_CAL_CFG_WR(hwreg);
 }
 
+static void eqos_read_err_counter(struct eqos_prv_data *pdata, bool save)
+{
+	u32 val;
+	if (save) {
+		MMC_TXUNDERFLOWERROR_RD(val);
+		pdata->mmc.mmc_tx_underflow_error_pre_recalib += val;
+		MMC_TXCARRIERERROR_RD(val);
+		pdata->mmc.mmc_tx_carrier_error_pre_recalib += val;
+		MMC_TXEXCESSDEF_RD(val);
+		pdata->mmc.mmc_tx_excessdef_pre_recalib += val;
+		MMC_RXCRCERROR_RD(val);
+		pdata->mmc.mmc_rx_crc_errror_pre_recalib += val;
+		MMC_RXALIGNMENTERROR_RD(val);
+		pdata->mmc.mmc_rx_align_error_pre_recalib += val;
+		MMC_RXRUNTERROR_RD(val);
+		pdata->mmc.mmc_rx_run_error_pre_recalib += val;
+		MMC_RXJABBERERROR_RD(val);
+		pdata->mmc.mmc_rx_jabber_error_pre_recalib += val;
+		MMC_RXLENGTHERROR_RD(val);
+		pdata->mmc.mmc_rx_length_error_pre_recalib += val;
+		MMC_RXOUTOFRANGETYPE_RD(val);
+		pdata->mmc.mmc_rx_outofrangetype_pre_recalib += val;
+		MMC_RXFIFOOVERFLOW_RD(val);
+		pdata->mmc.mmc_rx_fifo_overflow_pre_recalib += val;
+		MMC_RXWATCHDOGERROR_RD(val);
+		pdata->mmc.mmc_rx_watchdog_error_pre_recalib += val;
+		MMC_RXRCVERROR_RD(val);
+		pdata->mmc.mmc_rx_receive_error_pre_recalib += val;
+		MMC_RXIPV4_HDRERR_PKTS_RD(val);
+		pdata->mmc.mmc_rx_ipv4_hderr_pre_recalib += val;
+		MMC_RXIPV6_HDRERR_PKTS_RD(val);
+		pdata->mmc.mmc_rx_ipv6_hderr_octets_pre_recalib += val;
+		MMC_RXUDP_ERR_PKTS_RD(val);
+		pdata->mmc.mmc_rx_udp_err_pre_recalib += val;
+		MMC_RXTCP_ERR_PKTS_RD(val);
+		pdata->mmc.mmc_rx_tcp_err_pre_recalib += val;
+		MMC_RXICMP_ERR_PKTS_RD(val);
+		pdata->mmc.mmc_rx_icmp_err_pre_recalib += val;
+		MMC_RXIPV4_HDRERR_OCTETS_RD(val);
+		pdata->mmc.mmc_rx_ipv4_hderr_octets_pre_recalib += val;
+		MMC_RXIPV6_HDRERR_OCTETS_RD(val);
+		pdata->mmc.mmc_rx_ipv6_hderr_pre_recalib += val;
+		MMC_RXUDP_ERR_OCTETS_RD(val);
+		pdata->mmc.mmc_rx_udp_err_octets_pre_recalib += val;
+		MMC_RXTCP_ERR_OCTETS_RD(val);
+		pdata->mmc.mmc_rx_tcp_err_octets_pre_recalib += val;
+		MMC_RXICMP_ERR_OCTETS_RD(val);
+		pdata->mmc.mmc_rx_icmp_err_octets_pre_recalib += val;
+	} else {
+		MMC_TXUNDERFLOWERROR_RD(val);
+		MMC_TXCARRIERERROR_RD(val);
+		MMC_TXEXCESSDEF_RD(val);
+		MMC_RXCRCERROR_RD(val);
+		MMC_RXALIGNMENTERROR_RD(val);
+		MMC_RXRUNTERROR_RD(val);
+		MMC_RXJABBERERROR_RD(val);
+		MMC_RXLENGTHERROR_RD(val);
+		MMC_RXOUTOFRANGETYPE_RD(val);
+		MMC_RXFIFOOVERFLOW_RD(val);
+		MMC_RXWATCHDOGERROR_RD(val);
+		MMC_RXRCVERROR_RD(val);
+		MMC_RXIPV4_HDRERR_PKTS_RD(val);
+		MMC_RXIPV6_HDRERR_PKTS_RD(val);
+		MMC_RXUDP_ERR_PKTS_RD(val);
+		MMC_RXTCP_ERR_PKTS_RD(val);
+		MMC_RXICMP_ERR_PKTS_RD(val);
+		MMC_RXIPV4_HDRERR_OCTETS_RD(val);
+		MMC_RXIPV6_HDRERR_OCTETS_RD(val);
+		MMC_RXUDP_ERR_OCTETS_RD(val);
+		MMC_RXTCP_ERR_OCTETS_RD(val);
+		MMC_RXICMP_ERR_OCTETS_RD(val);
+	}
+}
+
 static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
@@ -4016,6 +4090,7 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->car_reset = eqos_car_reset;
 	hw_if->pad_calibrate = eqos_pad_calibrate;
 	hw_if->disable_pad_cal = eqos_disable_pad_cal;
+	hw_if->read_err_counter = eqos_read_err_counter;
 	/* Descriptor related Sequences have to be initialized here */
 	hw_if->tx_desc_init = tx_descriptor_init;
 	hw_if->rx_desc_init = rx_descriptor_init;

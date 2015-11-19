@@ -827,12 +827,8 @@ int eqos_probe(struct platform_device *pdev)
 		PTP_DMA_CH_DEFAULT, PTP_DMA_CH_MAX);
 
 	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
-	get_dt_u32(pdata, "nvidia,intr_mode", &pdt_cfg->intr_mode,
-			INTR_MODE_DEFAULT, MODE_MAX);
 	get_dt_u32(pdata, "nvidia,pause_frames", &pdt_cfg->pause_frames,
 			PAUSE_FRAMES_DEFAULT, PAUSE_FRAMES_MAX);
-	get_dt_u32_array(pdata, "nvidia,chan_mode", pdt_cfg->chan_mode,
-			CHAN_MODE_DEFAULT, CHAN_MODE_MAX, 4);
 	get_dt_u32_array(pdata, "nvidia,chan_napi_quota",
 			pdt_cfg->chan_napi_quota,
 			CHAN_NAPI_QUOTA_DEFAULT, CHAN_NAPI_QUOTA_MAX, 4);
@@ -844,18 +840,10 @@ int eqos_probe(struct platform_device *pdev)
 	for (i = 0; i < MAX_CHANS; i++) {
 		pchinfo = &pdata->chinfo[i];
 		pchinfo->chan_num = i;
-		pchinfo->poll_interval = 1000;
 		pchinfo->int_mask = VIRT_INTR_CH_CRTL_RX_WR_MASK;
 
 		/* enable tx interrupts for all chan */
 		pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
-	}
-
-	if (pdata->dt_cfg.intr_mode == MODE_COMMON_IRQ) {
-		pdata->dt_cfg.chan_mode[0] = CHAN_MODE_NONE;
-		pdata->dt_cfg.chan_mode[1] = CHAN_MODE_NONE;
-		pdata->dt_cfg.chan_mode[2] = CHAN_MODE_NONE;
-		pdata->dt_cfg.chan_mode[3] = CHAN_MODE_NONE;
 	}
 
 	for (i = 0; i < MAX_CHANS; i++)
@@ -896,14 +884,8 @@ int eqos_probe(struct platform_device *pdev)
 	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
 		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 
-		if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-			netif_napi_add(ndev, &rx_queue->napi,
-					eqos_poll_mq_napi,
-					pdata->napi_quota_all_chans);
-		} else
-			netif_napi_add(ndev, &rx_queue->napi,
-					eqos_poll_mq,
-					pdata->napi_quota_all_chans);
+		netif_napi_add(ndev, &rx_queue->napi,
+			       eqos_napi_mq, pdata->napi_quota_all_chans);
 		rx_queue->chan_num = i;
 	}
 

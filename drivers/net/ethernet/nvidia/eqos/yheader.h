@@ -363,10 +363,19 @@
 #define EQOS_RDESC3_RS1V	0x04000000
 #define EQOS_RDESC3_RS0V	0x02000000
 #define EQOS_RDESC3_CRC		0x01000000
+#define EQOS_RDESC3_GP		0x00800000
+#define EQOS_RDESC3_WD		0x00400000
 #define EQOS_RDESC3_OF		0x00200000
+#define EQOS_RDESC3_RE		0x00100000
+#define EQOS_RDESC3_DRIB	0x00080000
 #define EQOS_RDESC3_LT		0x00070000
 #define EQOS_RDESC3_ES		0x00008000
 #define EQOS_RDESC3_PL		0x00007FFF
+
+/* err bits which make up err summary */
+#define EQOS_RDESC3_ES_BITS \
+		(EQOS_RDESC3_CRC | EQOS_RDESC3_GP | EQOS_RDESC3_WD | \
+		EQOS_RDESC3_OF | EQOS_RDESC3_RE | EQOS_RDESC3_DRIB)
 
 #define EQOS_RDESC2_HL	0x000003FF
 
@@ -1253,31 +1262,11 @@ struct eqos_extra_stats {
 	unsigned long link_connect_count;
 };
 
-#define ALL_POLLING 1
-
-typedef enum {
-	MODE_COMMON_IRQ,
-	MODE_MULTI_IRQ,
-#ifdef ALL_POLLING
-	MODE_ALL_POLLING,
-#endif
-	MODE_MAX,
-} intr_mode_e;
-#define INTR_MODE_DEFAULT MODE_COMMON_IRQ
 
 struct ptp_cfg_params {
 	bool use_tagged_ptp;
 	unsigned int ptp_dma_ch_id;
 };
-
-typedef enum {
-	CHAN_MODE_NONE,
-	CHAN_MODE_NAPI,
-	CHAN_MODE_INTR,
-	CHAN_MODE_POLLING,
-	CHAN_MODE_MAX,
-} chan_mode_e;
-#define CHAN_MODE_DEFAULT CHAN_MODE_NAPI
 
 typedef enum {
 	RXQ_CTRL_NOT_ENABLED,
@@ -1301,8 +1290,6 @@ typedef enum {
 #define CHAN_NAPI_QUOTA_DEFAULT	64
 #define CHAN_NAPI_QUOTA_MAX	CHAN_NAPI_QUOTA_DEFAULT
 struct eqos_cfg {
-	intr_mode_e	intr_mode;
-	chan_mode_e	chan_mode[MAX_CHANS];
 	rxq_ctrl_e	rxq_ctrl[MAX_CHANS];
 	uint		q_prio[MAX_CHANS];
 	uint		chan_napi_quota[MAX_CHANS];
@@ -1311,12 +1298,10 @@ struct eqos_cfg {
 
 struct chan_data {
 	uint	chan_num;
-	uint	poll_interval;  /* only for type_polled */
 	uint	cpu;
 	u32	int_mask;
 	spinlock_t chan_tx_lock;
 	spinlock_t chan_lock;
-	struct	timer_list	poll_timer;
 };
 
 struct eqos_prv_data {
@@ -1423,7 +1408,8 @@ struct eqos_prv_data {
 	UINT axi_worl;
 	UINT axi_rorl;
 
-	int (*clean_rx) (struct eqos_prv_data *pdata, int quota, UINT qinx);
+	int (*process_rx_completions)(struct eqos_prv_data *pdata,
+				      int quota, UINT qinx);
 	int (*alloc_rx_buf) (struct eqos_prv_data *pdata,
 			     struct rx_swcx_desc *buffer, gfp_t gfp);
 	unsigned int rx_buffer_len;
@@ -1469,7 +1455,6 @@ struct eqos_prv_data {
 	unsigned int lp_pause;
 	unsigned int lp_duplex;
 
-	struct timer_list all_chans_timer;
 
 	/* for handling EEE */
 	struct timer_list eee_ctrl_timer;
@@ -1540,8 +1525,7 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *);
 void eqos_init_function_ptrs_desc(struct desc_if_struct *);
 struct net_device_ops *eqos_get_netdev_ops(void);
 struct ethtool_ops *eqos_get_ethtool_ops(void);
-int eqos_poll_mq_napi(struct napi_struct *, int);
-int eqos_poll_mq(struct napi_struct *, int);
+int eqos_napi_mq(struct napi_struct *, int);
 
 void eqos_get_pdata(struct eqos_prv_data *pdata);
 

@@ -2715,6 +2715,9 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 		} else if (!strcmp(reg_name, "BCM_REGS")) {
 			pr_err("BCM_REGS is readonly\n");
 			ret = -EFAULT;
+		} else if (!strcmp(reg_name, "pre_padcal_err_counters")) {
+			pr_err("pre_padcal_err_counters is readonly\n");
+			ret = -EFAULT;
 		} else {
 			pr_err("%s not found\n", reg_name);
 			ret = -EFAULT;
@@ -21758,6 +21761,103 @@ static const struct file_operations bcm_regs_fops = {
 	.read = bcm_regs_read,
 };
 
+static ssize_t pre_padcal_err_regs_read(struct file *file,
+		char __user *userbuf,
+		size_t count, loff_t *ppos)
+{
+	ssize_t ret;
+
+	char *debug_buf = NULL;
+
+	debug_buf = kmalloc(1024, GFP_KERNEL);
+	if (!debug_buf)
+		return -ENOMEM;
+
+	sprintf(debug_buf,
+		"\nError counter reg values before temp based recalibration\n"
+		"total number of temp based recalibration %#lx\n"
+		"tx_underflow_error(0x748): %#lx\n"
+		"tx_carrier_error(0x760): %#lx\n"
+		"tx_excessdef(0x76c): %#lx\n"
+		"rx_crc_errror(0x794): %#lx\n"
+		"rx_align_error(0x798): %#lx\n"
+		"rx_run_error(0x79c): %#lx\n"
+		"rx_jabber_error(0x7a0): %#lx\n"
+		"rx_length_error(0x7c8): %#lx\n"
+		"rx_outofrangetype(0x7cc): %#lx\n"
+		"rx_fifo_overflow(0x7d4): %#lx\n"
+		"rx_watchdog_error(0x7dc): %#lx\n"
+		"rx_receive_error(0x7e0): %#lx\n"
+		"rx_ipv4_hderr(0x814): %#lx\n"
+		"rx_ipv6_hderr(0x828): %#lx\n"
+		"rx_udp_err(0x834): %#lx\n"
+		"rx_tcp_err(0x83c): %#lx\n"
+		"rx_icmp_err(0x844): %#lx\n"
+		"rx_ipv4_hderr(0x854): %#lx\n"
+		"rx_ipv6_hderr(0x868): %#lx\n"
+		"rx_udp_err(0x874): %#lx\n"
+		"rx_tcp_err(0x87c): %#lx\n"
+		"rx_icmp_err(0x884): %#lx\n",
+		pdata->xstats.temp_pad_recalib_count,
+		pdata->mmc.mmc_tx_underflow_error_pre_recalib,
+		pdata->mmc.mmc_tx_carrier_error_pre_recalib,
+		pdata->mmc.mmc_tx_excessdef_pre_recalib,
+		pdata->mmc.mmc_rx_crc_errror_pre_recalib,
+		pdata->mmc.mmc_rx_align_error_pre_recalib,
+		pdata->mmc.mmc_rx_run_error_pre_recalib,
+		pdata->mmc.mmc_rx_jabber_error_pre_recalib,
+		pdata->mmc.mmc_rx_length_error_pre_recalib,
+		pdata->mmc.mmc_rx_outofrangetype_pre_recalib,
+		pdata->mmc.mmc_rx_fifo_overflow_pre_recalib,
+		pdata->mmc.mmc_rx_watchdog_error_pre_recalib,
+		pdata->mmc.mmc_rx_receive_error_pre_recalib,
+		pdata->mmc.mmc_rx_ipv4_hderr_pre_recalib,
+		pdata->mmc.mmc_rx_ipv6_hderr_octets_pre_recalib,
+		pdata->mmc.mmc_rx_udp_err_pre_recalib,
+		pdata->mmc.mmc_rx_tcp_err_pre_recalib,
+		pdata->mmc.mmc_rx_icmp_err_pre_recalib,
+		pdata->mmc.mmc_rx_ipv4_hderr_octets_pre_recalib,
+		pdata->mmc.mmc_rx_ipv6_hderr_pre_recalib,
+		pdata->mmc.mmc_rx_udp_err_octets_pre_recalib,
+		pdata->mmc.mmc_rx_tcp_err_octets_pre_recalib,
+		pdata->mmc.mmc_rx_icmp_err_octets_pre_recalib
+		);
+
+	/* reset the counters */
+	pdata->mmc.mmc_tx_underflow_error_pre_recalib = 0;
+	pdata->mmc.mmc_tx_carrier_error_pre_recalib = 0;
+	pdata->mmc.mmc_tx_excessdef_pre_recalib = 0;
+	pdata->mmc.mmc_rx_crc_errror_pre_recalib = 0;
+	pdata->mmc.mmc_rx_align_error_pre_recalib = 0;
+	pdata->mmc.mmc_rx_run_error_pre_recalib = 0;
+	pdata->mmc.mmc_rx_jabber_error_pre_recalib = 0;
+	pdata->mmc.mmc_rx_length_error_pre_recalib = 0;
+	pdata->mmc.mmc_rx_outofrangetype_pre_recalib = 0;
+	pdata->mmc.mmc_rx_fifo_overflow_pre_recalib = 0;
+	pdata->mmc.mmc_rx_watchdog_error_pre_recalib = 0;
+	pdata->mmc.mmc_rx_receive_error_pre_recalib = 0;
+	pdata->mmc.mmc_rx_ipv4_hderr_pre_recalib = 0;
+	pdata->mmc.mmc_rx_ipv6_hderr_octets_pre_recalib = 0;
+	pdata->mmc.mmc_rx_udp_err_pre_recalib = 0;
+	pdata->mmc.mmc_rx_tcp_err_pre_recalib = 0;
+	pdata->mmc.mmc_rx_icmp_err_pre_recalib = 0;
+	pdata->mmc.mmc_rx_ipv4_hderr_octets_pre_recalib = 0;
+	pdata->mmc.mmc_rx_ipv6_hderr_pre_recalib = 0;
+	pdata->mmc.mmc_rx_udp_err_octets_pre_recalib = 0;
+	pdata->mmc.mmc_rx_tcp_err_octets_pre_recalib = 0;
+	pdata->mmc.mmc_rx_icmp_err_octets_pre_recalib = 0;
+
+	ret =
+	    simple_read_from_buffer(userbuf, count, ppos, debug_buf,
+				    strlen(debug_buf));
+	kfree(debug_buf);
+	return ret;
+}
+
+static const struct file_operations pre_padcal_err_regs_fops = {
+	.read = pre_padcal_err_regs_read,
+};
+
 /*!
 *  \brief  API to create debugfs files
 *
@@ -22569,6 +22669,7 @@ int create_debug_files(void)
 	struct dentry *TX_NORMAL_DESC_STATUS;
 	struct dentry *RX_NORMAL_DESC_STATUS;
 	struct dentry *BCM_REGS;
+	struct dentry *pre_padcal_err_counters;
 
 	DBGPR("--> create_debug_files\n");
 
@@ -29892,6 +29993,15 @@ int create_debug_files(void)
 				&bcm_regs_val, &bcm_regs_fops);
 	if (BCM_REGS == NULL) {
 		pr_info("error creating file: BCM_REGS\n");
+		ret = -ENODEV;
+		goto remove_debug_file;
+	}
+
+	pre_padcal_err_counters =
+	    debugfs_create_file("pre_padcal_err_counters", 744, dir,
+				NULL, &pre_padcal_err_regs_fops);
+	if (pre_padcal_err_counters == NULL) {
+		pr_info("error creating file: pre_padcal_err_counters\n");
 		ret = -ENODEV;
 		goto remove_debug_file;
 	}

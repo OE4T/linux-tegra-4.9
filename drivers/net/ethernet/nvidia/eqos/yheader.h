@@ -90,6 +90,7 @@
 #include <linux/ioport.h>
 #include <linux/phy.h>
 #include <linux/mdio.h>
+#include <linux/thermal.h>
 
 #define L32(data) ((data)&0xFFFFFFFF)
 #define H32(data) (((data)&0xFFFFFFFF00000000)>>32)
@@ -754,6 +755,7 @@ struct hw_if_struct {
 	INT(*car_reset) (struct eqos_prv_data *);
 	INT(*pad_calibrate) (struct eqos_prv_data *);
 	void(*disable_pad_cal) (struct eqos_prv_data *);
+	void(*read_err_counter) (struct eqos_prv_data *, bool);
 	INT(*enable_int) (e_eqos_int_id);
 	INT(*disable_int) (e_eqos_int_id);
 	void (*pre_xmit) (struct eqos_prv_data *, UINT qinx);
@@ -1139,15 +1141,18 @@ struct eqos_mmc_counters {
 	unsigned long mmc_tx_multicast_gb;
 	unsigned long mmc_tx_broadcast_gb;
 	unsigned long mmc_tx_underflow_error;
+	unsigned long mmc_tx_underflow_error_pre_recalib;
 	unsigned long mmc_tx_singlecol_g;
 	unsigned long mmc_tx_multicol_g;
 	unsigned long mmc_tx_deferred;
 	unsigned long mmc_tx_latecol;
 	unsigned long mmc_tx_exesscol;
 	unsigned long mmc_tx_carrier_error;
+	unsigned long mmc_tx_carrier_error_pre_recalib;
 	unsigned long mmc_tx_octetcount_g;
 	unsigned long mmc_tx_framecount_g;
 	unsigned long mmc_tx_excessdef;
+	unsigned long mmc_tx_excessdef_pre_recalib;
 	unsigned long mmc_tx_pause_frame;
 	unsigned long mmc_tx_vlan_frame_g;
 	unsigned long mmc_tx_osize_frame_g;
@@ -1159,9 +1164,13 @@ struct eqos_mmc_counters {
 	unsigned long mmc_rx_broadcastframe_g;
 	unsigned long mmc_rx_multicastframe_g;
 	unsigned long mmc_rx_crc_errror;
+	unsigned long mmc_rx_crc_errror_pre_recalib;
 	unsigned long mmc_rx_align_error;
+	unsigned long mmc_rx_align_error_pre_recalib;
 	unsigned long mmc_rx_run_error;
+	unsigned long mmc_rx_run_error_pre_recalib;
 	unsigned long mmc_rx_jabber_error;
+	unsigned long mmc_rx_jabber_error_pre_recalib;
 	unsigned long mmc_rx_undersize_g;
 	unsigned long mmc_rx_oversize_g;
 	unsigned long mmc_rx_64_octets_gb;
@@ -1172,12 +1181,17 @@ struct eqos_mmc_counters {
 	unsigned long mmc_rx_1024_to_max_octets_gb;
 	unsigned long mmc_rx_unicast_g;
 	unsigned long mmc_rx_length_error;
+	unsigned long mmc_rx_length_error_pre_recalib;
 	unsigned long mmc_rx_outofrangetype;
+	unsigned long mmc_rx_outofrangetype_pre_recalib;
 	unsigned long mmc_rx_pause_frames;
 	unsigned long mmc_rx_fifo_overflow;
+	unsigned long mmc_rx_fifo_overflow_pre_recalib;
 	unsigned long mmc_rx_vlan_frames_gb;
 	unsigned long mmc_rx_watchdog_error;
+	unsigned long mmc_rx_watchdog_error_pre_recalib;
 	unsigned long mmc_rx_receive_error;
+	unsigned long mmc_rx_receive_error_pre_recalib;
 	unsigned long mmc_rx_ctrl_frames_g;
 
 	/* IPC */
@@ -1187,6 +1201,7 @@ struct eqos_mmc_counters {
 	/* IPv4 */
 	unsigned long mmc_rx_ipv4_gd;
 	unsigned long mmc_rx_ipv4_hderr;
+	unsigned long mmc_rx_ipv4_hderr_pre_recalib;
 	unsigned long mmc_rx_ipv4_nopay;
 	unsigned long mmc_rx_ipv4_frag;
 	unsigned long mmc_rx_ipv4_udsbl;
@@ -1194,19 +1209,24 @@ struct eqos_mmc_counters {
 	/* IPV6 */
 	unsigned long mmc_rx_ipv6_gd_octets;
 	unsigned long mmc_rx_ipv6_hderr_octets;
+	unsigned long mmc_rx_ipv6_hderr_octets_pre_recalib;
 	unsigned long mmc_rx_ipv6_nopay_octets;
 
 	/* Protocols */
 	unsigned long mmc_rx_udp_gd;
 	unsigned long mmc_rx_udp_err;
+	unsigned long mmc_rx_udp_err_pre_recalib;
 	unsigned long mmc_rx_tcp_gd;
 	unsigned long mmc_rx_tcp_err;
+	unsigned long mmc_rx_tcp_err_pre_recalib;
 	unsigned long mmc_rx_icmp_gd;
 	unsigned long mmc_rx_icmp_err;
+	unsigned long mmc_rx_icmp_err_pre_recalib;
 
 	/* IPv4 */
 	unsigned long mmc_rx_ipv4_gd_octets;
 	unsigned long mmc_rx_ipv4_hderr_octets;
+	unsigned long mmc_rx_ipv4_hderr_octets_pre_recalib;
 	unsigned long mmc_rx_ipv4_nopay_octets;
 	unsigned long mmc_rx_ipv4_frag_octets;
 	unsigned long mmc_rx_ipv4_udsbl_octets;
@@ -1214,15 +1234,19 @@ struct eqos_mmc_counters {
 	/* IPV6 */
 	unsigned long mmc_rx_ipv6_gd;
 	unsigned long mmc_rx_ipv6_hderr;
+	unsigned long mmc_rx_ipv6_hderr_pre_recalib;
 	unsigned long mmc_rx_ipv6_nopay;
 
 	/* Protocols */
 	unsigned long mmc_rx_udp_gd_octets;
 	unsigned long mmc_rx_udp_err_octets;
+	unsigned long mmc_rx_udp_err_octets_pre_recalib;
 	unsigned long mmc_rx_tcp_gd_octets;
 	unsigned long mmc_rx_tcp_err_octets;
+	unsigned long mmc_rx_tcp_err_octets_pre_recalib;
 	unsigned long mmc_rx_icmp_gd_octets;
 	unsigned long mmc_rx_icmp_err_octets;
+	unsigned long mmc_rx_icmp_err_octets_pre_recalib;
 };
 
 struct eqos_extra_stats {
@@ -1261,6 +1285,7 @@ struct eqos_extra_stats {
 
 	unsigned long link_disconnect_count;
 	unsigned long link_connect_count;
+	unsigned long temp_pad_recalib_count;
 };
 
 
@@ -1509,6 +1534,10 @@ struct eqos_prv_data {
 	struct work_struct fbe_work;
 	u8	fbe_chan_mask;
 
+#ifdef CONFIG_THERMAL
+	struct thermal_cooling_device *cdev;
+	atomic_t therm_state;
+#endif
 #ifdef DO_TX_ALIGN_TEST
 	u8 *ptst_buf;
 	u32 tst_buf_dma_addr;

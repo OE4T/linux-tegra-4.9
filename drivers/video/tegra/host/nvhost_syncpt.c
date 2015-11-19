@@ -202,7 +202,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			struct timespec *ts, bool interruptible)
 {
 	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
-	void *ref;
+	void *ref = NULL;
 	void *waiter;
 	int err = 0, check_count = 0, low_timeout = 0;
 	u32 val, old_val, new_val;
@@ -327,7 +327,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			syncpt_update_min_is_expired(sp, id, thresh)) {
 			if (value)
 				*value = nvhost_syncpt_read_min(sp, id);
-			if (ts) {
+			if (ref && ts) {
 				err = nvhost_intr_release_time(ref, ts);
 				if (err)
 					ktime_get_ts(ts);

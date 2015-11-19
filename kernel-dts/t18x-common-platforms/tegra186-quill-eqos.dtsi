@@ -31,11 +31,6 @@
 		nvidia,rxq_enable_ctrl = <2 2 2 2>;
 		nvidia,queue_prio = <0 1 2 3>;
 
-		nvidia,intr_mode = <1>;   /* 0=common irq, 1=multi irq*/
-
-		/*0=none, 1=napi, 2=intr , 3=polling*/
-		nvidia,chan_mode = <1 1 1 1>; /*0=none, 1=napi, 2=intr , 3=polling*/
-
 		nvidia,use_tagged_ptp;
 		nvidia,ptp_dma_ch = <3>;
 

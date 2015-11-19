@@ -1840,7 +1840,7 @@ unknown:
 			switch (ctrl->bRequestType & USB_RECIP_MASK) {
 			case USB_RECIP_DEVICE:
 				if (w_index != 0x4 || (w_value >> 8))
-					break;
+					goto done;
 				buf[6] = w_index;
 				if (w_length == 0x10) {
 					/* Number of ext compat interfaces */
@@ -1864,7 +1864,7 @@ unknown:
 				break;
 			case USB_RECIP_INTERFACE:
 				if (w_index != 0x5 || (w_value >> 8))
-					break;
+					goto done;
 				interface = w_value & 0xFF;
 				buf[6] = w_index;
 				if (w_length == 0x0A) {

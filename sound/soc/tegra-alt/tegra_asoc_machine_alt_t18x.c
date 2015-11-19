@@ -633,7 +633,7 @@ static struct snd_soc_dai_link
 		.stream_name = "AMX3 CIF",
 		.cpu_dai_name = "OUT",
 		.codec_dai_name = "AMX3",
-		.cpu_name = "tegra210-amx.1",
+		.cpu_name = "tegra210-amx.2",
 		.codec_name = "2900800.ahub",
 		.params = &tdm_link_params,
 	},

@@ -753,6 +753,7 @@ struct hw_if_struct {
 	INT(*exit) (void);
 	INT(*car_reset) (struct eqos_prv_data *);
 	INT(*pad_calibrate) (struct eqos_prv_data *);
+	void(*disable_pad_cal) (struct eqos_prv_data *);
 	INT(*enable_int) (e_eqos_int_id);
 	INT(*disable_int) (e_eqos_int_id);
 	void (*pre_xmit) (struct eqos_prv_data *, UINT qinx);
@@ -1364,6 +1365,7 @@ struct eqos_prv_data {
 	struct phy_device *phydev;
 	int oldlink;
 	int speed;
+	int oldspeed;
 	int oldduplex;
 	int phyaddr;
 	int bus_id;

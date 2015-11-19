@@ -331,6 +331,36 @@ static int tegra186_arad_put_enable_lane(struct snd_kcontrol *kcontrol,
 		return 0;
 }
 
+static int tegra186_arad_get_prescalar(struct snd_kcontrol *kcontrol,
+		    struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *arad_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_arad *arad = snd_soc_codec_get_drvdata(codec);
+	unsigned int reg = arad_private->reg;
+	unsigned int val = 0;
+
+	regmap_read(arad->regmap, reg, &val);
+	ucontrol->value.integer.value[0] = val;
+
+	return 0;
+}
+
+static int tegra186_arad_put_prescalar(struct snd_kcontrol *kcontrol,
+		    struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *arad_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_arad *arad = snd_soc_codec_get_drvdata(codec);
+	unsigned int reg = arad_private->reg;
+
+	regmap_write(arad->regmap, reg, ucontrol->value.integer.value[0]);
+
+	return 0;
+}
+
 #define SOC_VALUE_ENUM_WIDE(xreg, shift, xmax, xtexts, xvalues) \
 {	.reg = xreg, .shift_l = shift, .shift_r = shift, \
 	.items = xmax, .texts = xtexts, .values = xvalues, \
@@ -469,6 +499,18 @@ static const struct snd_soc_dapm_route tegra186_arad_routes[] = {
 	{ "ARAD Transmit", NULL, "Packetizer" },
 };
 
+#define ARAD_NUMERATOR_PRESCALAR(id) \
+	SOC_SINGLE_EXT("Numerator"#id" Prescalar", \
+		TEGRA186_ARAD_LANE1_NUMERATOR_PRESCALAR + (id-1)*TEGRA186_ARAD_LANE_STRIDE, \
+		0, 0xffff, 0, tegra186_arad_get_prescalar, \
+		tegra186_arad_put_prescalar)
+
+#define ARAD_DENOMINATOR_PRESCALAR(id) \
+	SOC_SINGLE_EXT("Denominator"#id" Prescalar", \
+		TEGRA186_ARAD_LANE1_DENOMINATOR_PRESCALAR + (id-1)*TEGRA186_ARAD_LANE_STRIDE, \
+		0, 0xffff, 0, tegra186_arad_get_prescalar, \
+		tegra186_arad_put_prescalar)
+
 static const struct snd_kcontrol_new tegra186_arad_controls[] = {
 	SOC_SINGLE_EXT("Lane1 enable", TEGRA186_ARAD_LANE_ENABLE, 0, 1, 0,
 		tegra186_arad_get_enable_lane, tegra186_arad_put_enable_lane),
@@ -531,6 +573,20 @@ static const struct snd_kcontrol_new tegra186_arad_controls[] = {
 		TEGRA186_ARAD_LANE6_RATIO_FRACTIONAL_PART,
 		0, TEGRA186_ARAD_LANE_RATIO_FRAC_PART_MASK, 0,
 		tegra186_arad_get_ratio_frac, NULL),
+
+	ARAD_NUMERATOR_PRESCALAR(1),
+	ARAD_NUMERATOR_PRESCALAR(2),
+	ARAD_NUMERATOR_PRESCALAR(3),
+	ARAD_NUMERATOR_PRESCALAR(4),
+	ARAD_NUMERATOR_PRESCALAR(5),
+	ARAD_NUMERATOR_PRESCALAR(6),
+
+	ARAD_DENOMINATOR_PRESCALAR(1),
+	ARAD_DENOMINATOR_PRESCALAR(2),
+	ARAD_DENOMINATOR_PRESCALAR(3),
+	ARAD_DENOMINATOR_PRESCALAR(4),
+	ARAD_DENOMINATOR_PRESCALAR(5),
+	ARAD_DENOMINATOR_PRESCALAR(6),
 };
 
 static struct snd_soc_codec_driver tegra186_arad_codec = {

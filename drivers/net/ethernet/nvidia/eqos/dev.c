@@ -3280,6 +3280,15 @@ static INT get_tx_descriptor_last(t_tx_desc *txdesc)
 	}
 }
 
+static void eqos_disable_pad_cal(struct eqos_prv_data *pdata)
+{
+	u32 hwreg;
+
+	PAD_AUTO_CAL_CFG_RD(hwreg);
+	hwreg &= ~PAD_AUTO_CAL_CFG_ENABLE_MASK;
+	PAD_AUTO_CAL_CFG_WR(hwreg);
+}
+
 static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
@@ -4006,6 +4015,7 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->exit = eqos_yexit;
 	hw_if->car_reset = eqos_car_reset;
 	hw_if->pad_calibrate = eqos_pad_calibrate;
+	hw_if->disable_pad_cal = eqos_disable_pad_cal;
 	/* Descriptor related Sequences have to be initialized here */
 	hw_if->tx_desc_init = tx_descriptor_init;
 	hw_if->rx_desc_init = rx_descriptor_init;

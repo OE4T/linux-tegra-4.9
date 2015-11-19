@@ -367,6 +367,8 @@ static void eqos_adjust_link(struct net_device *dev)
 				break;
 			case SPEED_10:
 				hw_if->set_mii_speed_10(pdata);
+				/* disable auto calibration */
+				hw_if->disable_pad_cal(pdata);
 				break;
 			}
 			pdata->speed = phydev->speed;
@@ -396,8 +398,14 @@ static void eqos_adjust_link(struct net_device *dev)
 #endif
 
 	spin_unlock_irqrestore(&pdata->lock, flags);
-	if (speed_changed)
+	if (speed_changed) {
 		hw_if->set_tx_clk_speed(pdata, phydev->speed);
+		/* recalibrate if speed 10 to 100 or 1000mbps */
+		if (pdata->oldspeed == SPEED_10)
+			hw_if->pad_calibrate(pdata);
+		pdata->oldspeed = pdata->speed;
+	}
+
 
 	DBGPR_MDIO("<--eqos_adjust_link\n");
 }

@@ -123,15 +123,6 @@ static int tegra186_asrc_get_ratio_lock_status(struct tegra186_asrc *asrc,
 static void tegra186_asrc_set_ratio_lock_status(struct tegra186_asrc *asrc,
 				unsigned int lane_id)
 {
-	int dcnt = 10;
-
-	regmap_write(asrc->regmap,
-		ASRC_STREAM_REG(
-			TEGRA186_ASRC_STREAM1_RATIO_LOCK_STATUS, lane_id), 0);
-
-	while (tegra186_asrc_get_ratio_lock_status(asrc, lane_id) && dcnt--)
-		udelay(100);
-
 	regmap_write(asrc->regmap,
 		ASRC_STREAM_REG(
 			TEGRA186_ASRC_STREAM1_RATIO_LOCK_STATUS, lane_id), 1);

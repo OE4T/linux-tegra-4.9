@@ -25,6 +25,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/tick.h>
 #include <linux/vmalloc.h>
+#include <linux/syscore_ops.h>
 
 #define TMRCR	0x000
 #define TMRSR	0x004
@@ -50,7 +51,6 @@ struct tegra186_tke {
 };
 
 static struct tegra186_tke *tke;
-
 
 static int tegra186_timer_set_next_event(unsigned long cycles,
 					 struct clock_event_device *evt)
@@ -143,6 +143,26 @@ static struct notifier_block tegra186_timer_cpu_nb = {
 	.notifier_call = tegra186_timer_cpu_notify,
 };
 
+static void tegra186_timer_resume(void)
+{
+	int cpu;
+	struct tegra186_tmr *tmr;
+
+	for_each_possible_cpu(cpu) {
+		tmr = &tke->tegra186_tmr[cpu];
+
+		/* Configure TSC as the TKE source */
+		__raw_writel(2, tmr->reg_base + TMRCSSR);
+
+		__raw_writel(1 << tmr->tmr_index,   tke->reg_base
+					     + TKEIE + 4 * tmr->tmr_index);
+	}
+}
+
+static struct syscore_ops tegra186_timer_syscore_ops = {
+	.resume = tegra186_timer_resume,
+};
+
 static void __init tegra186_timer_init(struct device_node *np)
 {
 	int cpu;
@@ -223,6 +243,8 @@ static void __init tegra186_timer_init(struct device_node *np)
 		pr_err("%s: cannot setup CPU notifier\n", __func__);
 		BUG();
 	}
+
+	register_syscore_ops(&tegra186_timer_syscore_ops);
 
 	of_node_put(np);
 }

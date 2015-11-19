@@ -1473,7 +1473,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 
 			buf_addr = (u64)sg_phys(sgl);
 
-			align = 1 << __ffs(buf_addr | (u64)sgl->length);
+			align = 1ULL << __ffs(buf_addr | (u64)sgl->length);
 			if (bfr.align)
 				bfr.align = min_t(u64, align, bfr.align);
 			else
@@ -1481,7 +1481,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			sgl = sg_next(sgl);
 		}
 	} else
-		bfr.align = 1 << __ffs(buf_addr);
+		bfr.align = 1ULL << __ffs(buf_addr);
 
 	bfr.pgsz_idx = -1;
 	mapping_size = mapping_size ? mapping_size : bfr.size;

@@ -1102,7 +1102,7 @@ static int gk20a_pm_enable_clk(struct device *dev)
 	for (index = 0; index < platform->num_clks; index++) {
 		int err = 0;
 		if (platform->clk[index])
-			clk_prepare_enable(platform->clk[index]);
+			err = clk_prepare_enable(platform->clk[index]);
 		if (err)
 			return -EINVAL;
 	}
@@ -1623,14 +1623,12 @@ static int gk20a_domain_init(struct of_device_id *matches)
 {
 	int ret = 0;
 	struct device_node *np;
-	const struct of_device_id *match;
 	struct gk20a_domain_data *gk20a_domain;
 
 	np = of_find_matching_node(NULL, matches);
 	if (!np)
 		return -ENOENT;
 
-	match = of_match_node(matches, np);
 	gk20a_domain = (struct gk20a_domain_data *)kzalloc
 		       (sizeof(struct gk20a_domain_data), GFP_KERNEL);
 	if (!gk20a_domain)

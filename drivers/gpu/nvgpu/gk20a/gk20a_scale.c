@@ -314,8 +314,7 @@ void gk20a_scale_init(struct platform_device *pdev)
 	return;
 
 err_get_freqs:
-	kfree(g->scale_profile);
-	g->scale_profile = NULL;
+	kfree(profile);
 }
 
 void gk20a_scale_exit(struct platform_device *pdev)

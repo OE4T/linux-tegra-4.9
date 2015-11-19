@@ -105,7 +105,7 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	int err = 0;
 	struct gr_gk20a *gr = &g->gr;
 	u32 fbp, slice, ctrl1, val, hw_op = 0;
-	u32  retry = 200;
+	int retry = 200;
 	u32 slices_per_fbp =
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
 			gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));

@@ -1688,17 +1688,14 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	if (!skip_buffer_refcounting) {
 		err = gk20a_vm_get_buffers(vm, &mapped_buffers,
 					&num_mapped_buffers);
-		if (err) {
-			gk20a_vm_put(vm);
-			return err;
-		}
+		if (err)
+			goto err_put_vm;
 	}
 
 	job = kzalloc(sizeof(*job), GFP_KERNEL);
 	if (!job) {
-		gk20a_vm_put_buffers(vm, mapped_buffers, num_mapped_buffers);
-		gk20a_vm_put(vm);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto err_put_buffers;
 	}
 
 	/* put() is done in gk20a_channel_update() when the job is done */
@@ -1718,10 +1715,20 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 		list_add_tail(&job->list, &c->jobs);
 		mutex_unlock(&c->jobs_lock);
 	} else {
-		return -ETIMEDOUT;
+		err = -ETIMEDOUT;
+		goto err_free_job;
 	}
 
 	return 0;
+
+err_free_job:
+	kfree(job);
+err_put_buffers:
+	gk20a_vm_put_buffers(vm, mapped_buffers, num_mapped_buffers);
+err_put_vm:
+	gk20a_vm_put(vm);
+
+	return err;
 }
 
 void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)

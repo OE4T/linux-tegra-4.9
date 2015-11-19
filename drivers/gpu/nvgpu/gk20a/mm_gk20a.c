@@ -1735,7 +1735,7 @@ int gk20a_vm_get_compbits_info(struct vm_gk20a *vm,
 
 	mapped_buffer = find_mapped_buffer_locked(&vm->mapped_buffers, mapping_gva);
 
-	if (!mapped_buffer | !mapped_buffer->user_mapped)
+	if (!mapped_buffer || !mapped_buffer->user_mapped)
 	{
 		mutex_unlock(&vm->update_gmmu_lock);
 		gk20a_err(d, "%s: bad offset 0x%llx", __func__, mapping_gva);

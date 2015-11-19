@@ -565,7 +565,7 @@ int tegra_hsp_init(void)
 		return -EINVAL;
 	}
 
-	ret = request_irq(irq, dbell_irq, 0, "hsp", NULL);
+	ret = request_irq(irq, dbell_irq, IRQF_NO_SUSPEND, "hsp", NULL);
 	if (ret) {
 		pr_err("tegra-hsp: request_irq() failed (%d)\n", ret);
 		return -EINVAL;

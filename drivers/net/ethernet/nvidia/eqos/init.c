@@ -574,6 +574,78 @@ err_out:
 	return ret;
 }
 
+#ifdef CONFIG_THERMAL
+#define TEGRA_EQOS_THERM_MAX_STATE     5
+static int tegra_eqos_max_state(struct thermal_cooling_device *tcd,
+				   unsigned long *state)
+{
+	struct eqos_prv_data *pdata = tcd->devdata;
+
+	pr_info("%s state=%d\n", __func__, pdata->therm_state.counter);
+	*state = TEGRA_EQOS_THERM_MAX_STATE;
+
+	return 0;
+}
+
+static int tegra_eqos_cur_state(struct thermal_cooling_device *tcd,
+				   unsigned long *state)
+{
+	struct eqos_prv_data *pdata = tcd->devdata;
+
+	pr_info("%s state=%d\n", __func__, pdata->therm_state.counter);
+	*state = (unsigned long)atomic_read(&pdata->therm_state);
+
+	return 0;
+}
+
+static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
+				   unsigned long state)
+{
+	struct eqos_prv_data *pdata = tcd->devdata;
+	struct hw_if_struct *hw_if = &(pdata->hw_if);
+
+	pr_info("%s cur state=%d new state=%ld, recalibrating eqos pads\n",
+		__func__, pdata->therm_state.counter, state);
+	atomic_set(&pdata->therm_state, state);
+
+	/* read-to-clear and save error counters if any */
+	hw_if->read_err_counter(pdata, true);
+
+	/* increment counter for temp based pad recalibration */
+	pdata->xstats.temp_pad_recalib_count++;
+
+	/* trigger the pad re-calibration */
+	hw_if->pad_calibrate(pdata);
+
+	/* read-to-clear error counters */
+	hw_if->read_err_counter(pdata, false);
+
+	return 0;
+}
+
+/* Cooling device support */
+static struct thermal_cooling_device_ops eqos_cdev_ops = {
+	.get_max_state = tegra_eqos_max_state,
+	.get_cur_state = tegra_eqos_cur_state,
+	.set_cur_state = tegra_eqos_set_state,
+};
+#endif
+
+static int eqos_therm_init(struct eqos_prv_data *pdata)
+{
+#ifdef CONFIG_THERMAL
+	pdata->cdev = thermal_cooling_device_register("tegra-eqos", pdata,
+			&eqos_cdev_ops);
+	if (IS_ERR(pdata->cdev))
+		return PTR_ERR(pdata->cdev);
+	if (pdata->cdev == NULL)
+		return -ENODEV;
+
+	pr_info("EQOS cooling dev registered\n");
+#endif
+	return 0;
+}
+
 /*!
 * \brief API to initialize the device.
 *
@@ -962,6 +1034,13 @@ int eqos_probe(struct platform_device *pdev)
 	}
 	INIT_WORK(&pdata->fbe_work, eqos_fbe_work);
 
+	/* register cooling device */
+	ret = eqos_therm_init(pdata);
+	if (ret != 0) {
+		pr_err("unable to register cooling device err: %d\n", ret);
+		goto err_out_fbe_wq_failed;
+	}
+
 	return 0;
 
  err_out_fbe_wq_failed:
@@ -1050,6 +1129,10 @@ int eqos_remove(struct platform_device *pdev)
 	ndev = platform_get_drvdata(pdev);
 	pdata = netdev_priv(ndev);
 	desc_if = &(pdata->desc_if);
+
+#ifdef CONFIG_THERMAL
+	thermal_cooling_device_unregister(pdata->cdev);
+#endif
 
 	/* free tx skb's */
 	desc_if->tx_skb_free_mem(pdata, EQOS_TX_QUEUE_CNT);

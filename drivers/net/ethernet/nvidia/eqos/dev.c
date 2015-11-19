@@ -1487,17 +1487,9 @@ static INT disable_rx_interrupt(UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		VIRT_INTR_CH_CRTL_RD(qinx, reg);
-		reg &= ~VIRT_INTR_CH_CRTL_RX_WR_MASK;
-		VIRT_INTR_CH_CRTL_WR(qinx, reg);
-
-	} else {
-		DMA_IER_RD(qinx, reg);
-		reg &= DMA_IER_RBUE_WR_MASK;
-		reg &= DMA_IER_RIE_WR_MASK;
-		DMA_IER_WR(qinx, reg);
-	}
+	VIRT_INTR_CH_CRTL_RD(qinx, reg);
+	reg &= ~VIRT_INTR_CH_CRTL_RX_WR_MASK;
+	VIRT_INTR_CH_CRTL_WR(qinx, reg);
 
 	return Y_SUCCESS;
 }
@@ -1514,16 +1506,9 @@ static INT enable_rx_interrupt(UINT qinx, struct eqos_prv_data *pdata)
 {
 	u32 reg;
 
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		VIRT_INTR_CH_CRTL_RD(qinx, reg);
-		reg |= VIRT_INTR_CH_CRTL_RX_WR_MASK;
-		VIRT_INTR_CH_CRTL_WR(qinx, reg);
-	} else {
-		DMA_IER_RD(qinx, reg);
-		reg |= ~DMA_IER_RBUE_WR_MASK;
-		reg |= ~DMA_IER_RIE_WR_MASK;
-		DMA_IER_WR(qinx, reg);
-	}
+	VIRT_INTR_CH_CRTL_RD(qinx, reg);
+	reg |= VIRT_INTR_CH_CRTL_RX_WR_MASK;
+	VIRT_INTR_CH_CRTL_WR(qinx, reg);
 
 	return Y_SUCCESS;
 }
@@ -2283,19 +2268,7 @@ static INT enable_dma_interrupts(UINT qinx, struct eqos_prv_data *pdata)
 	/* For multi-irqs to work nie needs to be disabled.
 	 * And disable tx ints for now
 	 */
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		dma_ier &= ~((0x1) << 15);
-
-#ifdef ALL_POLLING
-	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING) {
-		dma_ier &= ~((0x1) << 0) | ((0x1) << 2);
-		dma_ier &= ~((0x1) << 6) | ((0x1) << 7);
-	}
-#endif
-	if (pdata->dt_cfg.chan_mode[qinx] == CHAN_MODE_POLLING) {
-		dma_ier &= ~((0x1) << 0) | ((0x1) << 2);
-		dma_ier &= ~((0x1) << 6) | ((0x1) << 7);
-	}
+	dma_ier &= ~((0x1) << 15);
 
 	DMA_IER_WR(qinx, dma_ier);
 
@@ -3119,9 +3092,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	TX_NORMAL_DESC_TDES3_LD_WR(ptx_desc->tdes3, 0x1);
 
 	/* set Interrupt on Completion for last descriptor */
-	if ((qinx == pdata->ptp_cfg.ptp_dma_ch_id) ||
-	    !(ptx_ring->tx_pkt_queued % (TX_DESC_CNT >> 3)))
-		TX_NORMAL_DESC_TDES2_IC_WR(ptx_desc->tdes2, 0x1);
+	TX_NORMAL_DESC_TDES2_IC_WR(ptx_desc->tdes2, 0x1);
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
 	ptx_desc = GET_TX_DESC_PTR(qinx, start_index);
@@ -3897,10 +3868,11 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 		      (pdata->dev->dev_addr[1] << 8) |
 		      (pdata->dev->dev_addr[0])));
 
-	/*Enable MAC Transmit process */
-	/*Enable MAC Receive process */
-	/*Enable padding - disabled */
-	/*Enable CRC stripping - disabled */
+	/* Enable MAC Transmit process */
+	/* Enable MAC Receive process */
+	/* Enable padding - disabled */
+	/* Enable CRC stripping - disabled */
+	/* Enable disable receive own */
 	MAC_MCR_RD(mac_mcr);
 	mac_mcr = mac_mcr & (ULONG) (0xffcfff7c);
 	mac_mcr = mac_mcr | ((0x1) << 0) | ((0x1) << 20) | ((0x1) << 21);
@@ -3959,20 +3931,8 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	i = (VIRT_INTR_CH_CRTL_RX_WR_MASK | VIRT_INTR_CH_CRTL_TX_WR_MASK);
 	for (j = 0; j < MAX_CHANS; j++) {
 
-		if ((pdata->dt_cfg.chan_mode[j] == CHAN_MODE_NAPI) ||
-		    (pdata->dt_cfg.chan_mode[j] == CHAN_MODE_INTR)) {
-			VIRT_INTR_CH_STAT_WR(j, i);
-			VIRT_INTR_CH_CRTL_WR(j, VIRT_INTR_CH_CRTL_RX_WR_MASK);
-			if (pdata->ptp_cfg.ptp_dma_ch_id == j) {
-				VIRT_INTR_CH_CRTL_WR(j,
-					(VIRT_INTR_CH_CRTL_RX_WR_MASK |
-					VIRT_INTR_CH_CRTL_TX_WR_MASK));
-			}
-		} else {
-			/* ensure wrapper ints are disabled */
-			VIRT_INTR_CH_CRTL_WR(j, 0);
-			VIRT_INTR_CH_STAT_WR(j, i);
-		}
+		VIRT_INTR_CH_STAT_WR(j, i);
+		VIRT_INTR_CH_CRTL_WR(j, pdata->chinfo[j].int_mask);
 	}
 	configure_mac(pdata);
 

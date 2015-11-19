@@ -55,8 +55,6 @@ extern ULONG eqos_base_addr;
 #include <linux/tegra-soc.h>
 
 static INT eqos_status;
-static void eqos_poll_timer(unsigned long data);
-static void eqos_all_chans_timer(unsigned long data);
 static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx);
 
 /* SA(Source Address) operations on TX */
@@ -232,11 +230,6 @@ void eqos_enable_all_ch_rx_interrpt(struct eqos_prv_data *pdata)
 	DBGPR("<--eqos_enable_all_ch_rx_interrpt\n");
 }
 
-/* pnapi_sched is only needed for intr_mode=COMMON_IRQ.  In COMMON_IRQ,
- * there is one napi handler to process all queues.  So we need to ensure
- * we only schedule napi once.
- * For MULTI_IRQ, each IRQ has own napi handler.
- */
 void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 {
 	ULONG dma_sr;
@@ -302,11 +295,6 @@ void handle_non_ti_ri_chan_intrs(struct eqos_prv_data *pdata, int qinx)
 	DBGPR("<--%s()\n", __func__);
 }
 
-/* pnapi_sched is only needed for intr_mode=COMMON_IRQ.  In COMMON_IRQ,
- * there is one napi handler to process all queues.  So we need to ensure
- * we only schedule napi once.
- * For MULTI_IRQ, each IRQ has own napi handler.
- */
 void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 			     int qinx, int *pnapi_sched)
 {
@@ -362,34 +350,12 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 		pdata->xstats.tx_normal_irq_n[qinx]++;
 	}
 
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		switch (pdata->dt_cfg.chan_mode[qinx]) {
-		case CHAN_MODE_NAPI:
-			if (likely(napi_schedule_prep(&rx_queue->napi))) {
-				hw_if->disable_chan_interrupts(qinx, pdata);
-				__napi_schedule(&rx_queue->napi);
-			} else {
-				pr_err
-				    ("driver bug! Rx interrupt while in poll\n");
-				hw_if->disable_chan_interrupts(qinx, pdata);
-			}
-			break;
-		case CHAN_MODE_INTR:
-			handle_txrx_completions(pdata, qinx);
-			break;
-		default:
-			pr_err
-			    ("driver bug! rx interrupt when chan mode is polling\n");
-		}
+	if (likely(napi_schedule_prep(&rx_queue->napi))) {
+		hw_if->disable_chan_interrupts(qinx, pdata);
+		__napi_schedule(&rx_queue->napi);
 	} else {
-		*pnapi_sched = 1;
-		if (likely(napi_schedule_prep(&rx_queue->napi))) {
-			eqos_disable_all_ch_rx_interrpt(pdata);
-			__napi_schedule(&rx_queue->napi);
-		} else {
-			pr_err("driver bug! Rx interrupt while in poll\n");
-			eqos_disable_all_ch_rx_interrpt(pdata);
-		}
+		pr_err("driver bug! Rx interrupt while in poll\n");
+		hw_if->disable_chan_interrupts(qinx, pdata);
 	}
 
 	DBGPR("<--%s()\n", __func__);
@@ -508,49 +474,6 @@ void handle_mac_intrs(struct eqos_prv_data *pdata, ULONG dma_isr)
 	DBGPR("<--%s()\n", __func__);
 }
 
-/*!
-* \brief Interrupt Service Routine
-* \details Interrupt Service Routine
-*
-* \param[in] irq         - interrupt number for particular device
-* \param[in] device_id   - pointer to device structure
-* \return returns positive integer
-* \retval IRQ_HANDLED
-*/
-
-irqreturn_t eqos_isr(int irq, void *device_id)
-{
-	ULONG dma_isr;
-	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
-	UINT qinx;
-	int napi_sched = 0;
-
-	DBGPR("-->eqos_isr\n");
-
-	DMA_ISR_RD(dma_isr);
-	if (dma_isr == 0x0)
-		return IRQ_NONE;
-
-	DBGPR("DMA_ISR = %#lx\n", dma_isr);
-
-	/* Handle DMA interrupts */
-#ifdef ALL_POLLING
-	if (pdata->dt_cfg.intr_mode != MODE_ALL_POLLING)
-#endif
-		if (dma_isr & 0xf)
-			for (qinx = 0; qinx < EQOS_TX_QUEUE_CNT; qinx++) {
-				handle_ti_ri_chan_intrs(pdata, qinx,
-							&napi_sched);
-				handle_non_ti_ri_chan_intrs(pdata, qinx);
-			}
-
-	handle_mac_intrs(pdata, dma_isr);
-
-	DBGPR("<--eqos_isr\n");
-
-	return IRQ_HANDLED;
-
-}
 
 /*!
 * Only used when multi irq is enabled
@@ -1050,7 +973,7 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 	DBGPR("-->eqos_configure_rx_fun_ptr\n");
 
 	pdata->rx_buffer_len = EQOS_ETH_FRAME_LEN;
-	pdata->clean_rx = eqos_clean_rx_irq;
+	pdata->process_rx_completions = process_rx_completions;
 	pdata->alloc_rx_buf = eqos_alloc_rx_buf;
 
 	DBGPR("<--eqos_configure_rx_fun_ptr\n");
@@ -1188,22 +1111,17 @@ void free_txrx_irqs(struct eqos_prv_data *pdata)
 
 	DBGPR("-->%s()\n", __func__);
 
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		free_irq(pdata->common_irq, pdata);
+	free_irq(pdata->common_irq, pdata);
 
-		for (i = 0; i < MAX_CHANS; i++) {
-			if (pdata->rx_irq_alloc_mask & (1 << i)) {
-				irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
-				free_irq(pdata->rx_irqs[i], pdata);
-			}
-			if (pdata->tx_irq_alloc_mask & (1 << i)) {
-				irq_set_affinity_hint(pdata->tx_irqs[i], NULL);
-				free_irq(pdata->tx_irqs[i], pdata);
-			}
+	for (i = 0; i < MAX_CHANS; i++) {
+		if (pdata->rx_irq_alloc_mask & (1 << i)) {
+			irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
+			free_irq(pdata->rx_irqs[i], pdata);
 		}
-	} else if (pdata->irq_number != 0) {
-		free_irq(pdata->irq_number, pdata);
-		pdata->irq_number = 0;
+		if (pdata->tx_irq_alloc_mask & (1 << i)) {
+			irq_set_affinity_hint(pdata->tx_irqs[i], NULL);
+			free_irq(pdata->tx_irqs[i], pdata);
+		}
 	}
 
 	DBGPR("<--%s()\n", __func__);
@@ -1219,19 +1137,6 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 
 	pdata->irq_number = pdata->dev->irq;
 
-	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ) {
-		ret = request_irq(pdata->irq_number,
-				  eqos_isr, IRQF_SHARED, DEV_NAME, pdata);
-
-		if (ret != 0) {
-			dev_err(&pdata->pdev->dev,
-				"Unable to register IRQ %d\n",
-				pdata->irq_number);
-			return -EBUSY;
-		}
-		return Y_SUCCESS;
-	}
-
 	ret = request_irq(pdata->common_irq,
 			  eqos_common_isr, IRQF_SHARED, DEV_NAME, pdata);
 	if (ret != Y_SUCCESS) {
@@ -1240,9 +1145,6 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 		goto err_common_irq;
 	}
 	for (i = 0; i < MAX_CHANS; i++) {
-		if ((pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING) ||
-		    (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_NONE))
-			continue;
 
 		ret = request_irq(pdata->rx_irqs[i],
 				  eqos_ch_isr, 0, DEV_NAME, pdata);
@@ -1281,84 +1183,6 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 	return ret;
 }
 
-void init_txrx_poll_timers(struct eqos_prv_data *pdata)
-{
-	uint i;
-	struct chan_data *pchinfo;
-
-	DBGPR("-->%s()\n", __func__);
-
-#ifdef ALL_POLLING
-	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING) {
-		init_timer(&pdata->all_chans_timer);
-		pdata->all_chans_timer.function = eqos_all_chans_timer;
-		pdata->all_chans_timer.data = (unsigned long)pdata;
-		pdata->all_chans_timer.expires = jiffies + msecs_to_jiffies(1000);	/* 1 s */
-		add_timer(&pdata->all_chans_timer);
-	}
-#endif
-	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ)
-		return;
-
-	for (i = 0; i < MAX_CHANS; i++) {
-		pchinfo = &pdata->chinfo[i];
-
-		if (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING) {
-			init_timer(&pchinfo->poll_timer);
-			pchinfo->poll_timer.function = eqos_poll_timer;
-			pchinfo->poll_timer.data = (unsigned long)pchinfo;
-			pchinfo->poll_timer.expires =
-			    jiffies + msecs_to_jiffies(pchinfo->poll_interval);
-			add_timer(&pchinfo->poll_timer);
-		}
-	}
-	DBGPR("<--%s()\n", __func__);
-}
-
-void start_txrx_poll_timers(struct eqos_prv_data *pdata)
-{
-	uint i;
-	struct chan_data *pchinfo;
-
-	DBGPR("-->%s()\n", __func__);
-
-#ifdef ALL_POLLING
-	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING)
-		add_timer(&pdata->all_chans_timer);
-#endif
-	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ)
-		return;
-
-	for (i = 0; i < MAX_CHANS; i++) {
-		pchinfo = &pdata->chinfo[i];
-
-		if (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING)
-			add_timer(&pchinfo->poll_timer);
-	}
-	DBGPR("<--%s()\n", __func__);
-}
-
-void stop_txrx_poll_timers(struct eqos_prv_data *pdata)
-{
-	uint i;
-	struct chan_data *pchinfo;
-
-	DBGPR("-->%s()\n", __func__);
-#ifdef ALL_POLLING
-	if (pdata->dt_cfg.intr_mode == MODE_ALL_POLLING)
-		del_timer_sync(&pdata->all_chans_timer);
-#endif
-	if (pdata->dt_cfg.intr_mode != MODE_MULTI_IRQ)
-		return;
-
-	for (i = 0; i < MAX_CHANS; i++) {
-		pchinfo = &pdata->chinfo[i];
-
-		if (pdata->dt_cfg.chan_mode[i] == CHAN_MODE_POLLING)
-			del_timer_sync(&pchinfo->poll_timer);
-	}
-	DBGPR("<--%s()\n", __func__);
-}
 
 /*!
 * \brief API to open a deivce for data transmission & reception.
@@ -1397,7 +1221,6 @@ static int eqos_open(struct net_device *dev)
 		ret = -ENOMEM;
 		goto err_out_desc_buf_alloc_failed;
 	}
-	init_txrx_poll_timers(pdata);
 	eqos_start_dev(pdata);
 
 	DBGPR("<--%s()\n", __func__);
@@ -1884,12 +1707,9 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	DBGPR("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
 
 	if (ptx_ring->tx_pkt_queued > (TX_DESC_CNT >> 2))
-		eqos_tx_interrupt(pdata->dev, pdata, qinx);
+		process_tx_completions(pdata->dev, pdata, qinx);
 
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
-	else
-		spin_lock_irqsave(&pdata->tx_lock, flags);
+	spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
 
 	if (skb->len <= 0) {
 		dev_kfree_skb_any(skb);
@@ -1985,11 +1805,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	hw_if->pre_xmit(pdata, qinx);
 
  tx_netdev_return:
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		spin_unlock_irqrestore(&pdata->chinfo[qinx].chan_tx_lock,
-				       flags);
-	else
-		spin_unlock_irqrestore(&pdata->tx_lock, flags);
+	spin_unlock_irqrestore(&pdata->chinfo[qinx].chan_tx_lock, flags);
 
 	DBGPR("<--eqos_start_xmit\n");
 
@@ -2239,8 +2055,8 @@ static unsigned int eqos_get_tx_hwtstamp(struct eqos_prv_data *pdata,
 * \return void
 */
 
-static void eqos_tx_interrupt(struct net_device *dev,
-			      struct eqos_prv_data *pdata, UINT qinx)
+static void process_tx_completions(struct net_device *dev,
+				   struct eqos_prv_data *pdata, UINT qinx)
 {
 	struct tx_ring *ptx_ring =
 	    GET_TX_WRAPPER_DESC(qinx);
@@ -2252,14 +2068,12 @@ static void eqos_tx_interrupt(struct net_device *dev,
 	unsigned int tstamp_taken = 0;
 	unsigned long flags;
 
-	DBGPR("-->eqos_tx_interrupt: ptx_ring->tx_pkt_queued = %d"
+	DBGPR("-->%s(): ptx_ring->tx_pkt_queued = %d"
 	      " dirty_tx = %d, qinx = %u\n",
+	      __func__,
 	      ptx_ring->tx_pkt_queued, ptx_ring->dirty_tx, qinx);
 
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
-	else
-		spin_lock_irqsave(&pdata->tx_lock, flags);
+	spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
 
 	pdata->xstats.tx_clean_n[qinx]++;
 	while (ptx_ring->tx_pkt_queued > 0) {
@@ -2361,14 +2175,10 @@ static void eqos_tx_interrupt(struct net_device *dev,
 			  EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER));
 	}
 
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-		spin_unlock_irqrestore(&pdata->chinfo[qinx].chan_tx_lock,
-				       flags);
-	else
-		spin_unlock_irqrestore(&pdata->tx_lock, flags);
+	spin_unlock_irqrestore(&pdata->chinfo[qinx].chan_tx_lock, flags);
 
-	DBGPR("<--eqos_tx_interrupt: ptx_ring->tx_pkt_queued = %d\n",
-	      ptx_ring->tx_pkt_queued);
+	DBGPR("<--%s(): ptx_ring->tx_pkt_queued = %d\n",
+	      __func__, ptx_ring->tx_pkt_queued);
 }
 
 #ifdef YDEBUG_FILTER
@@ -2505,7 +2315,8 @@ static int eqos_check_for_tcp_payload(struct s_rx_desc *rxdesc)
 * \retval number of packets received.
 */
 
-static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
+static int process_rx_completions(struct eqos_prv_data *pdata,
+				  int quota, UINT qinx)
 {
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
@@ -2517,11 +2328,11 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 	struct rx_swcx_desc *prx_swcx_desc = NULL;
 	struct s_rx_desc *prx_desc = NULL;
 	UINT pkt_len;
-	UINT err_bits = EQOS_RDESC3_ES;
+	UINT err_bits = EQOS_RDESC3_ES_BITS;
 
 	int ret;
 
-	DBGPR("-->eqos_clean_rx_irq: qinx = %u, quota = %d\n", qinx, quota);
+	DBGPR("-->%s(): qinx = %u, quota = %d\n", __func__, qinx, quota);
 
 	while (received < quota) {
 		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
@@ -2673,7 +2484,7 @@ static int eqos_clean_rx_irq(struct eqos_prv_data *pdata, int quota, UINT qinx)
 	if (prx_ring->dirty_rx)
 		desc_if->realloc_skb(pdata, qinx);
 
-	DBGPR("<--eqos_clean_rx_irq: received = %d, qinx=%d\n", received, qinx);
+	DBGPR("<--%s(): received = %d, qinx=%d\n", __func__, received, qinx);
 
 	return received;
 }
@@ -2709,7 +2520,7 @@ void eqos_update_rx_errors(struct net_device *dev, unsigned int rx_status)
 	DBGPR("<--eqos_update_rx_errors\n");
 }
 
-int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
+static int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 {
 	struct eqos_rx_queue *rx_queue;
 	int received = 0;
@@ -2720,10 +2531,10 @@ int handle_txrx_completions(struct eqos_prv_data *pdata, int qinx)
 	rx_queue = GET_RX_QUEUE_PTR(qinx);
 
 	/* check for tx descriptor status */
-	eqos_tx_interrupt(pdata->dev, pdata, qinx);
+	process_tx_completions(pdata->dev, pdata, qinx);
 	rx_queue->lro_flush_needed = 0;
 
-	received = pdata->clean_rx(pdata, budget, qinx);
+	received = pdata->process_rx_completions(pdata, budget, qinx);
 
 	pdata->xstats.rx_pkt_n += received;
 	pdata->xstats.q_rx_pkt_n[qinx] += received;
@@ -2750,21 +2561,15 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 	 * tell the kernel & re-enable interrupt
 	 */
 	if (received < budget) {
-		if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-			rx_queue =
-			    container_of(napi, struct eqos_rx_queue, napi);
-			qinx = rx_queue->chan_num;
-			hw_if = &(pdata->hw_if);
-		}
+		rx_queue = container_of(napi, struct eqos_rx_queue, napi);
+		qinx = rx_queue->chan_num;
+		hw_if = &pdata->hw_if;
 		if (pdata->dev->features & NETIF_F_GRO) {
 			/* to turn off polling */
 			napi_complete(napi);
 
 			/* Enable RX interrupt */
-			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-				hw_if->enable_chan_interrupts(qinx, pdata);
-			else
-				eqos_enable_all_ch_rx_interrpt(pdata);
+			hw_if->enable_chan_interrupts(qinx, pdata);
 		} else {
 			unsigned long flags;
 
@@ -2772,10 +2577,7 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 			__napi_complete(napi);
 
 			/* Enable RX interrupt */
-			if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ)
-				hw_if->enable_chan_interrupts(qinx, pdata);
-			else
-				eqos_enable_all_ch_rx_interrpt(pdata);
+			hw_if->enable_chan_interrupts(qinx, pdata);
 
 			spin_unlock_irqrestore(&pdata->lock, flags);
 		}
@@ -2783,89 +2585,8 @@ static void do_txrx_post_processing(struct eqos_prv_data *pdata,
 	DBGPR("<--%s():\n", __func__);
 }
 
-/*!
-* \brief API to pass the received packets to stack
-*
-* \details This function is provided by NAPI-compliant drivers to operate
-* the interface in a polled mode, with interrupts disabled.
-*
-* \param[in] napi - pointer to napi_stuct structure.
-* \param[in] budget - maximum no. of packets that we are allowed to pass
-* to into the kernel.
-*
-* \return integer
-*
-* \retval number of packets received.
-*/
 
-int eqos_poll_mq(struct napi_struct *napi, int budget)
-{
-	struct eqos_rx_queue *rx_queue =
-	    container_of(napi, struct eqos_rx_queue, napi);
-	struct eqos_prv_data *pdata = rx_queue->pdata;
-	int qinx = 0;
-	int received = 0;
-
-	DBGPR("-->eqos_poll_mq:\n");
-
-	pdata->xstats.napi_poll_n++;
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++) {
-		received += handle_txrx_completions(pdata, qinx);
-	}
-
-	do_txrx_post_processing(pdata, napi, received,
-				pdata->napi_quota_all_chans);
-
-	DBGPR("<--eqos_poll_mq\n");
-
-	return received;
-}
-
-/* Used only when multi-irq is disabled and all channels are being polled.
- * TYPE_POLL.  Main difference is that is will not enable interrupts.
- */
-void eqos_poll_mq_all_chans(struct eqos_prv_data *pdata)
-{
-	int qinx = 0;
-
-	DBGPR("-->%s():\n", __func__);
-
-	pdata->xstats.napi_poll_n++;
-	for (qinx = 0; qinx < EQOS_RX_QUEUE_CNT; qinx++)
-		handle_txrx_completions(pdata, qinx);
-
-	DBGPR("<--%s():\n", __func__);
-}
-
-/* Used only when multi-irq is enablded.  Used in two cases
- * 1) when one or more channels are configured for TYPE_POLL.
- * 2) Napi handler will call this function for TYPE_NAPI.
- *
- * Main difference is that is will not enable interrupts.  And it
- * will only handle tx/rx completions for one channel.
- */
-void eqos_poll_chan_mq_nv(struct chan_data *pchinfo)
-{
-
-	struct eqos_prv_data *pdata =
-	    container_of((pchinfo - pchinfo->chan_num),
-			 struct eqos_prv_data, chinfo[0]);
-
-	int qinx = pchinfo->chan_num;
-
-	DBGPR("-->%s(): chan=%d\n", __func__, qinx);
-
-	pdata->xstats.napi_poll_n++;
-
-	handle_txrx_completions(pdata, qinx);
-
-	DBGPR("<--%s():\n", __func__);
-}
-
-/* Used only when multi-irq is enabled and one or more channel is configured for
- * TYPE_NAPI.
- */
-int eqos_poll_mq_napi(struct napi_struct *napi, int budget)
+int eqos_napi_mq(struct napi_struct *napi, int budget)
 {
 	struct eqos_rx_queue *rx_queue =
 	    container_of(napi, struct eqos_rx_queue, napi);
@@ -2907,33 +2628,6 @@ static struct net_device_stats *eqos_get_stats(struct net_device *dev)
 	return &dev->stats;
 }
 
-#ifdef CONFIG_NET_POLL_CONTROLLER
-
-/*!
-* \brief API to receive packets in polling mode.
-*
-* \details This is polling receive function used by netconsole and other
-* diagnostic tool to allow network i/o with interrupts disabled.
-*
-* \param[in] dev - pointer to net_device structure
-*
-* \return void
-*/
-
-static void eqos_poll_controller(struct net_device *dev)
-{
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-
-	DBGPR("-->eqos_poll_controller\n");
-
-	disable_irq(pdata->irq_number);
-	eqos_isr(pdata->irq_number, pdata);
-	enable_irq(pdata->irq_number);
-
-	DBGPR("<--eqos_poll_controller\n");
-}
-
-#endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 
 /*!
  * \brief User defined parameter setting API
@@ -5627,7 +5321,7 @@ void dbgpr_regs(void)
 
 /*!
  * \details This function is invoked by eqos_start_xmit and
- * eqos_tx_interrupt function for dumping the TX descriptor contents
+ * process_tx_completions function for dumping the TX descriptor contents
  * which are prepared for packet transmission and which are transmitted by
  * device. It is mainly used during development phase for debug purpose. Use
  * of these function may affect the performance during normal operation.
@@ -5998,9 +5692,6 @@ static const struct net_device_ops eqos_netdev_ops = {
 	.ndo_start_xmit = eqos_start_xmit,
 	.ndo_get_stats = eqos_get_stats,
 	.ndo_set_rx_mode = eqos_set_rx_mode,
-#ifdef CONFIG_NET_POLL_CONTROLLER
-	.ndo_poll_controller = eqos_poll_controller,
-#endif				/*end of CONFIG_NET_POLL_CONTROLLER */
 	.ndo_set_features = eqos_set_features,
 	.ndo_do_ioctl = eqos_ioctl,
 	.ndo_change_mtu = eqos_change_mtu,
@@ -6017,33 +5708,6 @@ struct net_device_ops *eqos_get_netdev_ops(void)
 	return (struct net_device_ops *)&eqos_netdev_ops;
 }
 
-/* Wrapper timer handler.  Only used when configured for multi irq and at least
- * one channel is being polled.
- */
-static void eqos_poll_timer(unsigned long data)
-{
-	struct chan_data *pchinfo = (struct chan_data *)data;
-
-	DBGPR("-->%s(): chan=%d\n", __func__, pchinfo->chan_num);
-
-	eqos_poll_chan_mq_nv(pchinfo);
-	add_timer(&pchinfo->poll_timer);
-
-	DBGPR("<--%s():\n", __func__);
-}
-
-/* Wrapper timer handler.  Only used when configured for single irq
- * and all chans are being polled
- */
-static void eqos_all_chans_timer(unsigned long data)
-{
-	struct eqos_prv_data *pdata = (struct eqos_prv_data *)data;
-
-	eqos_poll_mq_all_chans(pdata);
-
-	pdata->all_chans_timer.expires = jiffies + msecs_to_jiffies(1000);	/* 1s */
-	add_timer(&pdata->all_chans_timer);
-}
 
 static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 {
@@ -6052,31 +5716,19 @@ static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 
 	DBGPR("-->%s()\n", __func__);
 
-	/* disable all interrupts */
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		for (i = 0; i < MAX_CHANS; i++)
-			hw_if->disable_chan_interrupts(i, pdata);
-	} else {
-		for (i = 0; i < MAX_CHANS; i++) {
-			DMA_IER_WR(i, 0);
-			DMA_SR_WR(i, 0xffffffff);
-		}
-	}
+	for (i = 0; i < MAX_CHANS; i++)
+		hw_if->disable_chan_interrupts(i, pdata);
+
 	/* disable mac interrupts */
 	MAC_IMR_WR(0);
 
 	/* ensure irqs are not executing */
-	if (pdata->dt_cfg.intr_mode == MODE_MULTI_IRQ) {
-		synchronize_irq(pdata->common_irq);
-		for (i = 0; i < MAX_CHANS; i++) {
-			if (pdata->rx_irq_alloc_mask & (1 << i))
-				synchronize_irq(pdata->rx_irqs[i]);
-			if (pdata->tx_irq_alloc_mask & (1 << i))
-				synchronize_irq(pdata->tx_irqs[i]);
-		}
-	} else {
-		if (pdata->irq_number != 0)
-			synchronize_irq(pdata->irq_number);
+	synchronize_irq(pdata->common_irq);
+	for (i = 0; i < MAX_CHANS; i++) {
+		if (pdata->rx_irq_alloc_mask & (1 << i))
+			synchronize_irq(pdata->rx_irqs[i]);
+		if (pdata->tx_irq_alloc_mask & (1 << i))
+			synchronize_irq(pdata->tx_irqs[i]);
 	}
 
 	DBGPR("<--%s()\n", __func__);
@@ -6094,7 +5746,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	hw_if->stop_mac_rx();
 
 	eqos_disable_all_irqs(pdata);
-	stop_txrx_poll_timers(pdata);
 
 	eqos_all_ch_napi_disable(pdata);
 
@@ -6147,8 +5798,6 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 
 	eqos_set_rx_mode(pdata->dev);
 	eqos_mmc_setup(pdata);
-
-	start_txrx_poll_timers(pdata);
 
 	/* initializes MAC and DMA */
 	hw_if->init(pdata);

@@ -1,7 +1,7 @@
 /*
  * tegra186-soc-base.dtsi: SoC Base DTSI file.
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -2057,6 +2057,23 @@
 		status = "disabled";
 	};
 
+	stm@8070000 {
+		compatible = "arm,coresight-stm", "arm,primecell";
+		reg = <0x0 0x08070000 0x0 0x1000>,
+		      <0x0 0x0A000000 0x0 0x180000>;
+		reg-names = "stm-base", "stm-channel-base";
+
+		clocks = <&tegra_car TEGRA186_CLK_DBGAPB>;
+		clock-names = "apb_pclk";
+		status = "disabled";
+
+		port {
+			stm_out_port: endpoint {
+				remote-endpoint = <&funnel_major_in_port3>;
+			};
+		};
+	};
+
 	ptm_a57_0: ptm@9840000 {
 		compatible = "arm,coresight-etm4x", "arm,primecell";
 		reg = <0x0 0x09840000 0x0 0x1000>;
@@ -2190,6 +2207,14 @@
 				reg = <1>;
 				funnel_major_in_port1: endpoint {
 					slave-mode;
+				};
+			};
+
+			port@3 {
+				reg = <3>;
+				funnel_major_in_port3: endpoint {
+					slave-mode;
+					remote-endpoint = <&stm_out_port>;
 				};
 			};
 		};

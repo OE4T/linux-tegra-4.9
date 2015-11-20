@@ -66,7 +66,7 @@ in HS400 mode.
 - nvidia,enable-strobe-mode: Enable enhance strobe mode when eMMC device runs at HS400 mode.
 - nvidia,en-periodic-calib: Enable periodic calibration support for sdmmc1/sdmmc3. Auto calibration sequence will be run at interval of 100ms during sdmmc1/sdmmc3 interfaces are active.
 - nvidia,adma3-enable: boolean property to enable ADMA3 for the sdhci controller instance if supported by the Tegra chip.
-
+- nvidia,en-32bit-bc: Enables 32 bit block count support on sdhci controller, if HW supports.
 
 
 Example:

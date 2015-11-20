@@ -34,6 +34,11 @@
 
 #include <linux/atomic.h>
 
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+#include <../virt/tegra/syscalls.h>
+#include <linux/tegra-soc.h>
+#endif
+
 #define  RSC_DESCR_VER  1
 
 struct trusty_vdev;
@@ -78,6 +83,24 @@ struct trusty_vdev {
 };
 
 #define vdev_to_tvdev(vd)  container_of((vd), struct trusty_vdev, vdev)
+
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+int hyp_ipa_translate(uint64_t *ipa)
+{
+	int gid, ret;
+	struct hyp_ipa_pa_info info;
+
+	if (is_tegra_hypervisor_mode()) {
+		ret = hyp_read_gid(&gid);
+		memset(&info, 0, sizeof(info));
+		ret = hyp_read_ipa_pa_info(&info, gid, *ipa);
+
+		*ipa = info.base + info.offset;
+	}
+
+	return ret;
+}
+#endif
 
 static void check_all_vqs(struct work_struct *work)
 {
@@ -328,6 +351,9 @@ static struct virtqueue *_find_vq(struct virtio_device *vdev,
 
 	pa = virt_to_phys(tvr->vaddr);
 	/* save vring address to shared structure */
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	hyp_ipa_translate(&pa);
+#endif
 	tvr->vr_descr->da = (u32)pa;
 	/* da field is only 32 bit wide. Use previously unused 'reserved' field
 	 * to store top 32 bits of 64-bit address

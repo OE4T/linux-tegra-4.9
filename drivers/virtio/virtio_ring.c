@@ -27,6 +27,10 @@
 #include <linux/dma-mapping.h>
 #include <xen/xen.h>
 
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+#include <linux/trusty/trusty.h>
+#endif
+
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
 #define BAD_RING(_vq, fmt, args...)				\
@@ -341,6 +345,9 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+			hyp_ipa_translate(&desc[i].addr);
+#endif
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
 			prev_initialized = true;
@@ -355,6 +362,9 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT | VRING_DESC_F_WRITE);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+			hyp_ipa_translate(&desc[i].addr);
+#endif
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
 			prev_initialized = true;

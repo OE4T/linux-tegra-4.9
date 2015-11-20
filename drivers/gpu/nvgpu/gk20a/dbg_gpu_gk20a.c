@@ -449,6 +449,22 @@ static int nvgpu_dbg_gpu_ioctl_timeout(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
+static void nvgpu_dbg_gpu_ioctl_get_timeout(struct dbg_session_gk20a *dbg_s,
+			 struct nvgpu_dbg_gpu_timeout_args *args)
+{
+	int status;
+	struct gk20a *g = get_gk20a(dbg_s->pdev);
+
+	mutex_lock(&g->dbg_sessions_lock);
+	status = g->timeouts_enabled;
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	if (status)
+		args->enable = NVGPU_DBG_GPU_IOCTL_TIMEOUT_ENABLE;
+	else
+		args->enable = NVGPU_DBG_GPU_IOCTL_TIMEOUT_DISABLE;
+}
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -528,6 +544,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 
 	case NVGPU_DBG_GPU_IOCTL_TIMEOUT:
 		err = nvgpu_dbg_gpu_ioctl_timeout(dbg_s,
+			   (struct nvgpu_dbg_gpu_timeout_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_GET_TIMEOUT:
+		nvgpu_dbg_gpu_ioctl_get_timeout(dbg_s,
 			   (struct nvgpu_dbg_gpu_timeout_args *)buf);
 		break;
 

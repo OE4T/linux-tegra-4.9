@@ -421,9 +421,11 @@
 	};
 
 	xusb_pad_ctl: xusb_padctl { /* Put common control config here */
-		nvidia,ss_portmap = <0x21>;
-		nvidia,lane_owner = <0xff56>; /* Use 0xF to disable lane assign */
 		nvidia,lane-map = <0x14>;
+		nvidia,ss_ports = <TEGRA_XHCI_SS_P0 TEGRA_XHCI_USB2_P1 TEGRA_XHCI_LANE_6 TEGRA_XHCI_PORT_STD
+				   TEGRA_XHCI_SS_P1 TEGRA_XHCI_USB2_P2 TEGRA_XHCI_LANE_5 TEGRA_XHCI_PORT_STD
+				   TEGRA_XHCI_SS_P2 TEGRA_XHCI_USB2_P0 TEGRA_XHCI_UNUSED_LANE TEGRA_XHCI_PORT_OTG
+				   TEGRA_XHCI_SS_P3 TEGRA_XHCI_UNUSED_PORT TEGRA_XHCI_UNUSED_LANE TEGRA_XHCI_PORT_STD>;
 		nvidia,enable-sata-port;
 		status = "okay";
 	};

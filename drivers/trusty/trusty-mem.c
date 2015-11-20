@@ -86,7 +86,9 @@ int trusty_encode_page_info(struct ns_mem_page_info *inf,
 
 	/* get physical address */
 	pte = (uint64_t) page_to_phys(page);
-
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
+	hyp_ipa_translate(&pte);
+#endif
 	/* get memory attributes */
 	mem_attr = get_mem_attr(page, pgprot);
 	if (mem_attr < 0)

@@ -1353,17 +1353,11 @@ static int uphy_pll_source_clk_state_check(struct tegra_padctl_uphy *uphy,
 }
 
 /* caller must hold uphy->lock */
-static int uphy_pll_source_clk_enable(struct tegra_padctl_uphy *uphy,
+static int uphy_pll_source_clk_enable(struct tegra_padctl_uphy *uphy, int pll,
 				      enum tegra186_function func)
 {
 	struct device *dev = uphy->dev;
-	int pll;
 	int rc = 0;
-
-	if ((func == TEGRA186_FUNC_PCIE) || (func == TEGRA186_FUNC_USB3))
-		pll = 0;
-	else
-		pll = 1;
 
 	rc = uphy_pll_source_clk_state_check(uphy, pll);
 	if (rc)
@@ -1799,12 +1793,16 @@ static int uphy_pll_init(struct tegra_padctl_uphy *uphy,
 
 	dev_dbg(dev, "PLL init by function %d\n", func);
 
-	if (func == TEGRA186_FUNC_USB3 || func == TEGRA186_FUNC_PCIE ||
-		func == TEGRA186_FUNC_SATA || func == TEGRA186_FUNC_MPHY) {
-		rc = uphy_pll_source_clk_enable(uphy, func);
+	if (func == TEGRA186_FUNC_USB3 || func == TEGRA186_FUNC_PCIE) {
+		rc = uphy_pll_source_clk_enable(uphy, 0, func);
+	} else if (func == TEGRA186_FUNC_SATA || func == TEGRA186_FUNC_MPHY) {
+		rc = uphy_pll_source_clk_enable(uphy, 0, func);
 		if (rc)
 			return rc;
+		rc = uphy_pll_source_clk_enable(uphy, 1, func);
 	}
+	if (rc)
+		return rc;
 
 	switch (func) {
 	case TEGRA186_FUNC_PCIE:
@@ -1812,16 +1810,10 @@ static int uphy_pll_init(struct tegra_padctl_uphy *uphy,
 		rc = uphy_pll_init_full(uphy, 0, func);
 		break;
 	case TEGRA186_FUNC_SATA:
-		rc = uphy_pll_init_partial(uphy, 0, func);
-		if (rc)
-			return rc;
-		rc = uphy_pll_init_full(uphy, 1, func);
-		break;
 	case TEGRA186_FUNC_MPHY:
 		rc = uphy_pll_init_partial(uphy, 0, func);
 		if (rc)
 			return rc;
-		/* TODO: check UFS mode */
 		rc = uphy_pll_init_full(uphy, 1, func);
 		break;
 	default:

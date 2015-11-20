@@ -329,62 +329,21 @@ static int nvgpu_gpu_ioctl_set_debug_mode(
 		struct gk20a *g,
 		struct nvgpu_gpu_sm_debug_mode_args *args)
 {
-	int gpc, tpc, err = 0;
-	u32 sm_id, sm_dbgr_ctrl0;
 	struct channel_gk20a *ch;
-	struct nvgpu_dbg_gpu_reg_op ops;
-	u32  tpc_offset, gpc_offset, reg_offset;
+	int err;
 
 	ch = gk20a_get_channel_from_file(args->channel_fd);
+	if (!ch)
+		return -EINVAL;
 
 	mutex_lock(&g->dbg_sessions_lock);
-
-	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
-		if (args->sms & (1 << sm_id)) {
-			gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
-			tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
-
-			tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
-			gpc_offset = proj_gpc_stride_v() * gpc;
-			reg_offset = tpc_offset + gpc_offset;
-
-			ops.op	   = REGOP(READ_32);
-			ops.type   = REGOP(TYPE_GR_CTX);
-			ops.status = REGOP(STATUS_SUCCESS);
-			ops.value_hi	  = 0;
-			ops.and_n_mask_lo = 0;
-			ops.and_n_mask_hi = 0;
-			ops.offset	 = gr_gpc0_tpc0_sm_dbgr_control0_r() + reg_offset;
-
-			err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 0, 1);
-			sm_dbgr_ctrl0 = ops.value_lo;
-
-			if (args->enable) {
-				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
-							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_m(),
-							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_f());
-				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
-							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_m(),
-							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_disable_f());
-				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
-							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_m(),
-							gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f());
-			} else {
-				sm_dbgr_ctrl0 = set_field(sm_dbgr_ctrl0,
-							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_m(),
-							gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_f());
-			}
-
-			if (!err) {
-				ops.op = REGOP(WRITE_32);
-				ops.value_lo = sm_dbgr_ctrl0;
-				err = gr_gk20a_exec_ctx_ops(ch, &ops, 1, 1, 0);
-			} else
-				gk20a_err(dev_from_gk20a(g), "Failed to access register\n");
-		}
-	}
-
+	if (g->ops.gr.set_sm_debug_mode)
+		err = g->ops.gr.set_sm_debug_mode(g, ch,
+				args->sms, !!args->enable);
+	else
+		err = -ENOSYS;
 	mutex_unlock(&g->dbg_sessions_lock);
+
 	return err;
 }
 

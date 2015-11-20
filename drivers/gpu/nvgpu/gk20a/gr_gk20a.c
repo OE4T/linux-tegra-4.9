@@ -7261,6 +7261,59 @@ static void gr_gk20a_init_cyclestats(struct gk20a *g)
 #endif
 }
 
+static int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
+	struct channel_gk20a *ch, u64 sms, bool enable)
+{
+	struct nvgpu_dbg_gpu_reg_op *ops;
+	int i = 0, sm_id, err;
+
+	ops = kcalloc(g->gr.no_of_sm, sizeof(*ops), GFP_KERNEL);
+	if (!ops)
+		return -ENOMEM;
+	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
+		int gpc, tpc;
+		u32 tpc_offset, gpc_offset, reg_offset, reg_mask, reg_val;
+
+		if (!(sms & (1 << sm_id)))
+			continue;
+
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+		tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
+		gpc_offset = proj_gpc_stride_v() * gpc;
+		reg_offset = tpc_offset + gpc_offset;
+
+		ops[i].op = REGOP(WRITE_32);
+		ops[i].type = REGOP(TYPE_GR_CTX);
+		ops[i].offset  = gr_gpc0_tpc0_sm_dbgr_control0_r() + reg_offset;
+
+		reg_mask = 0;
+		reg_val = 0;
+		if (enable) {
+			reg_mask |= gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_m();
+			reg_val |= gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_on_f();
+			reg_mask |= gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_m();
+			reg_val |= gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_warp_disable_f();
+			reg_mask |= gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_m();
+			reg_val |= gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f();
+		} else {
+			reg_mask |= gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_m();
+			reg_val |= gr_gpc0_tpc0_sm_dbgr_control0_debugger_mode_off_f();
+		}
+
+		ops[i].and_n_mask_lo = reg_mask;
+		ops[i].value_lo = reg_val;
+		i++;
+	}
+
+	err = gr_gk20a_exec_ctx_ops(ch, ops, i, i, 0);
+	if (err)
+		gk20a_err(dev_from_gk20a(g), "Failed to access register\n");
+	kfree(ops);
+	return err;
+}
+
 static void gr_gk20a_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 {
 	/* Check if we have at least one valid warp */
@@ -7374,6 +7427,7 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.init_sm_dsm_reg_info = gr_gk20a_init_sm_dsm_reg_info;
 	gops->gr.wait_empty = gr_gk20a_wait_idle;
 	gops->gr.init_cyclestats = gr_gk20a_init_cyclestats;
+	gops->gr.set_sm_debug_mode = gr_gk20a_set_sm_debug_mode;
 	gops->gr.bpt_reg_info = gr_gk20a_bpt_reg_info;
 	gops->gr.get_access_map = gr_gk20a_get_access_map;
 }

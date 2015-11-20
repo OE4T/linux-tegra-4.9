@@ -185,6 +185,8 @@ struct gpu_ops {
 		       u32 expect_delay);
 		void (*init_cyclestats)(struct gk20a *g);
 		void (*enable_cde_in_fecs)(void *ctx_ptr);
+		int (*set_sm_debug_mode)(struct gk20a *g, struct channel_gk20a *ch,
+					u64 sms, bool enable);
 		void (*bpt_reg_info)(struct gk20a *g,
 				struct warpstate *w_state);
 		void (*get_access_map)(struct gk20a *g,

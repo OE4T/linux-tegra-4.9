@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Init for T186 Architecture Chips
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -136,6 +136,19 @@ struct nvhost_device_data t18_host1x_info = {
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
 	.isolate_contexts	= true,
+};
+
+struct nvhost_device_data t18_host1x_hv_info = {
+	.clocks			= {
+		{"host1x", UINT_MAX},
+		{"actmon", UINT_MAX}
+	},
+	NVHOST_MODULE_NO_POWERGATE_ID,
+	.can_powergate          = false,
+	.clockgate_delay        = 2000,
+	.private_data		= &host1x04_info,
+	.finalize_poweron = nvhost_host1x_finalize_poweron,
+	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
 };
 
 static struct host1x_device_info host1xb04_info = {

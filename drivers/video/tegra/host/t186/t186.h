@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Chip support for T186
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,7 @@
 #define T186_NVHOST_NUMCHANNELS 63
 
 extern struct nvhost_device_data t18_host1x_info;
+extern struct nvhost_device_data t18_host1x_hv_info;
 extern struct nvhost_device_data t18_host1xb_info;
 extern struct nvhost_device_data t18_vic_info;
 extern struct nvhost_device_data t18_nvdec_info;

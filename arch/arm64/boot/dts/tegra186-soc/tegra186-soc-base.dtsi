@@ -1159,9 +1159,10 @@
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
 		dma-names = "rx", "tx";
 		clocks = <&tegra_car TEGRA186_CLK_QSPI>,
+			<&tegra_car TEGRA186_CLK_QSPI_OUT>,
 			<&tegra_car TEGRA186_CLK_PLLP_GRTBA>,
 			<&tegra_car TEGRA186_CLK_CLK_M>;
-		clock-names = "qspi","pll_p","clk_m";
+		clock-names = "qspi","qspi_out","pll_p","clk_m";
 		resets = <&tegra_car TEGRA186_RESET_QSPI>;
 		reset-names = "qspi";
 		status = "disabled";

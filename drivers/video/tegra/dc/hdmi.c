@@ -1612,7 +1612,9 @@ static int tegra_dc_hdmi_setup_audio(struct tegra_dc *dc, unsigned audio_freq,
 	return 0;
 }
 
-int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_source)
+int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
+					unsigned audio_source,
+					int sor_num)
 {
 	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;
 
@@ -1646,7 +1648,7 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_sourc
 EXPORT_SYMBOL(tegra_hdmi_setup_audio_freq_source);
 
 #if !defined(CONFIG_ARCH_TEGRA_2x_SOC)
-int tegra_hdmi_audio_null_sample_inject(bool on)
+int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num)
 {
 	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;
 	unsigned int val = 0;
@@ -1671,7 +1673,7 @@ int tegra_hdmi_audio_null_sample_inject(bool on)
 }
 EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 
-int tegra_hdmi_setup_hda_presence()
+int tegra_hdmi_setup_hda_presence(int sor_num)
 {
 	struct tegra_dc_hdmi_data *hdmi = dc_hdmi;
 
@@ -2033,7 +2035,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	int dispclk_div_8_2;
 	int retries;
 	unsigned long val;
-	unsigned i;
+	unsigned i, sor_num = 0;
 	const struct tmds_config *tmds_ptr;
 	size_t tmds_len;
 	bool edid_read;
@@ -2267,7 +2269,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
 
-	tegra_hdmi_setup_hda_presence();
+	tegra_hdmi_setup_hda_presence(sor_num);
 }
 
 static void tegra_dc_hdmi_disable(struct tegra_dc *dc)

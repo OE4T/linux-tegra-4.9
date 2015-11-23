@@ -23,6 +23,12 @@ enum {
 	SINK_DP = 1,
 };
 
+enum {
+	SOR0 = 0,
+	SOR1,
+	MAX_SOR_COUNT,
+};
+
 struct tegra_dc_hda_data {
 	struct tegra_dc_sor_data *sor;
 	struct tegra_dc *dc;

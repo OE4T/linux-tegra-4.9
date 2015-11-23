@@ -32,12 +32,13 @@
 #include "hda_dc.h"
 #include <linux/reset.h>
 
+static struct tegra_dc_hda_data *hda_inst[MAX_SOR_COUNT];
+
 #define to_hdmi(DATA)	((struct tegra_hdmi *)DATA)
 #define to_dp(DATA)	((struct tegra_dc_dp_data *)DATA)
 
-static struct tegra_dc_hda_data *hda;
-
-static void tegra_hda_get_eld_header(u8 *eld_mem_block)
+static void tegra_hda_get_eld_header(u8 *eld_mem_block,
+					struct tegra_dc_hda_data *hda)
 {
 	struct tegra_edid_hdmi_eld *eld = hda->eld;
 
@@ -49,7 +50,8 @@ static void tegra_hda_get_eld_header(u8 *eld_mem_block)
 			DIV_ROUND_UP(eld->baseline_len, 4);
 }
 
-static void tegra_hda_get_eld_baseline(u8 *eld_mem_block)
+static void tegra_hda_get_eld_baseline(u8 *eld_mem_block,
+					struct tegra_dc_hda_data *hda)
 {
 	struct tegra_edid_hdmi_eld *eld = hda->eld;
 	u8 tmp;
@@ -79,7 +81,8 @@ static void tegra_hda_get_eld_baseline(u8 *eld_mem_block)
 						eld->sad, eld->sad_count * 3);
 }
 
-static void tegra_hda_get_eld_vendor(u8 *eld_mem_block)
+static void tegra_hda_get_eld_vendor(u8 *eld_mem_block,
+					struct tegra_dc_hda_data *hda)
 {
 	struct tegra_edid_hdmi_eld *eld = hda->eld;
 	u32 vendor_block_index = 4 + eld->baseline_len; /* 4 byte header */
@@ -92,7 +95,7 @@ static void tegra_hda_get_eld_vendor(u8 *eld_mem_block)
 		HDMI_ELD_BUF - vendor_block_index + 1);
 }
 
-static int tegra_hda_eld_config(void)
+static int tegra_hda_eld_config(struct tegra_dc_hda_data *hda)
 {
 	u8 *eld_mem;
 	int cnt;
@@ -105,9 +108,9 @@ static int tegra_hda_eld_config(void)
 		return -ENOMEM;
 	}
 
-	tegra_hda_get_eld_header(eld_mem);
-	tegra_hda_get_eld_baseline(eld_mem);
-	tegra_hda_get_eld_vendor(eld_mem);
+	tegra_hda_get_eld_header(eld_mem, hda);
+	tegra_hda_get_eld_baseline(eld_mem, hda);
+	tegra_hda_get_eld_vendor(eld_mem, hda);
 
 	for (cnt = 0; cnt < HDMI_ELD_BUF; cnt++)
 		tegra_sor_writel(hda->sor, NV_SOR_AUDIO_HDA_ELD_BUFWR,
@@ -119,8 +122,11 @@ static int tegra_hda_eld_config(void)
 }
 
 /* Applicable for dp too, func name still uses hdmi as per generic hda driver */
-int tegra_hdmi_setup_hda_presence(void)
+int tegra_hdmi_setup_hda_presence(int sor_num)
 {
+	struct tegra_dc_hda_data *hda;
+
+	hda = hda_inst[sor_num];
 	if (!hda)
 		return -EAGAIN;
 
@@ -137,7 +143,7 @@ int tegra_hdmi_setup_hda_presence(void)
 		/* remove hda presence while setting up eld */
 		tegra_sor_writel(hda->sor, NV_SOR_AUDIO_HDA_PRESENCE, 0);
 
-		tegra_hda_eld_config();
+		tegra_hda_eld_config(hda);
 		tegra_sor_writel(hda->sor, NV_SOR_AUDIO_HDA_PRESENCE,
 				NV_SOR_AUDIO_HDA_PRESENCE_ELDV(1) |
 				NV_SOR_AUDIO_HDA_PRESENCE_PD(1));
@@ -153,7 +159,7 @@ int tegra_hdmi_setup_hda_presence(void)
 	return -ENODEV;
 }
 
-static void tegra_hdmi_audio_infoframe(void)
+static void tegra_hdmi_audio_infoframe(struct tegra_dc_hda_data *hda)
 {
 	if (hda->sink == SINK_HDMI && to_hdmi(hda->client_data)->dvi)
 		return;
@@ -183,7 +189,7 @@ static void tegra_hdmi_audio_infoframe(void)
 }
 
 /* HW generated CTS and N */
-static void tegra_hdmi_audio_acr(u32 audio_freq)
+static void tegra_hdmi_audio_acr(u32 audio_freq, struct tegra_dc_hda_data *hda)
 {
 #define GET_AVAL(n, fs_hz) ((24000 * n) / (128 * fs_hz / 1000))
 	u32 val;
@@ -233,7 +239,8 @@ static void tegra_hdmi_audio_acr(u32 audio_freq)
 #undef GET_AVAL
 }
 
-static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src)
+static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src,
+					struct tegra_dc_hda_data *hda)
 {
 	u32 val;
 	struct tegra_dc_dp_link_config *cfg = NULL;
@@ -281,17 +288,20 @@ static void tegra_hda_audio_config(u32 audio_freq, u32 audio_src)
 	}
 
 	if (hda->sink == SINK_HDMI) {
-		tegra_hdmi_audio_acr(audio_freq);
-		tegra_hdmi_audio_infoframe();
+		tegra_hdmi_audio_acr(audio_freq, hda);
+		tegra_hdmi_audio_infoframe(hda);
 	}
 }
 
 /* Applicable for dp too, func name still uses hdmi as per generic hda driver */
 int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
-					unsigned audio_source)
+					unsigned audio_source,
+					int sor_num)
 {
 	bool valid_freq;
+	struct tegra_dc_hda_data *hda;
 
+	hda = hda_inst[sor_num];
 	if (!hda)
 		return -ENODEV;
 
@@ -311,7 +321,7 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 		if (hda->sink == SINK_HDMI)
 			tegra_hdmi_get(hda->dc);
 
-		tegra_hda_audio_config(audio_freq, audio_source);
+		tegra_hda_audio_config(audio_freq, audio_source, hda);
 		hda->audio_freq = audio_freq;
 
 		if (hda->sink == SINK_HDMI)
@@ -325,8 +335,12 @@ int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
 EXPORT_SYMBOL(tegra_hdmi_setup_audio_freq_source);
 
 /* Applicable for dp too, func name still uses hdmi as per generic hda driver */
-int tegra_hdmi_audio_null_sample_inject(bool on)
+int tegra_hdmi_audio_null_sample_inject(bool on,
+					int sor_num)
 {
+	struct tegra_dc_hda_data *hda;
+
+	hda = hda_inst[sor_num];
 	if (!hda)
 		return -ENODEV;
 
@@ -346,7 +360,8 @@ int tegra_hdmi_audio_null_sample_inject(bool on)
 }
 EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 
-static void tegra_dc_hda_get_clocks(struct tegra_dc *dc)
+static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
+					struct tegra_dc_hda_data *hda)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	int sor_num = tegra_dc_which_sor(dc);
@@ -461,7 +476,8 @@ err_get_clk:
 	}
 }
 
-static void tegra_dc_hda_put_clocks(struct tegra_dc *dc)
+static void tegra_dc_hda_put_clocks(struct tegra_dc *dc,
+					struct tegra_dc_hda_data *hda)
 {
 	if (!hda)
 		return;
@@ -480,7 +496,7 @@ static void tegra_dc_hda_put_clocks(struct tegra_dc *dc)
 	}
 }
 
-static void tegra_dc_hda_enable_clocks(void)
+static void tegra_dc_hda_enable_clocks(struct tegra_dc_hda_data *hda)
 {
 	if (!hda)
 		return;
@@ -500,7 +516,7 @@ static void tegra_dc_hda_enable_clocks(void)
 	}
 }
 
-static void tegra_dc_hda_disable_clocks(void)
+static void tegra_dc_hda_disable_clocks(struct tegra_dc_hda_data *hda)
 {
 	if (!hda)
 		return;
@@ -515,7 +531,16 @@ static void tegra_dc_hda_disable_clocks(void)
 
 void tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink)
 {
-	hda = kzalloc(sizeof(struct tegra_dc_hda_data), GFP_KERNEL);
+	struct tegra_dc_hda_data *hda;
+	int sor_num = tegra_dc_which_sor(dc);
+
+	if (sor_num < 0)
+		return;
+
+	hda_inst[sor_num] =
+			kzalloc(sizeof(struct tegra_dc_hda_data), GFP_KERNEL);
+
+	hda = hda_inst[sor_num];
 	if (!hda)
 		return;
 
@@ -541,18 +566,26 @@ void tegra_hda_set_data(struct tegra_dc *dc, void *data, int sink)
 	}
 
 	hda->null_sample_inject = false;
-	tegra_dc_hda_get_clocks(dc);
-	tegra_dc_hda_enable_clocks();
+	tegra_dc_hda_get_clocks(dc, hda);
+	tegra_dc_hda_enable_clocks(hda);
 
-	tegra_hdmi_setup_hda_presence();
+	tegra_hdmi_setup_hda_presence(sor_num);
 }
 
 void tegra_hda_reset_data(struct tegra_dc *dc)
 {
-	tegra_dc_hda_disable_clocks();
-	tegra_dc_hda_put_clocks(dc);
+	struct tegra_dc_hda_data *hda;
+	int sor_num = tegra_dc_which_sor(dc);
 
-	kfree(hda);
-	if (hda)
-		hda = NULL;
+	if (sor_num < 0)
+		return;
+
+	hda = hda_inst[sor_num];
+	tegra_dc_hda_disable_clocks(hda);
+	tegra_dc_hda_put_clocks(dc, hda);
+
+	if (hda_inst[sor_num] != NULL) {
+		kfree(hda_inst[sor_num]);
+		hda_inst[sor_num] = NULL;
+	}
 }

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/include/mach/hdmi-audio.h
  *
- * Copyright (c) 2008-2011, NVIDIA Corporation.
+ * Copyright (c) 2008-2015, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,12 +40,14 @@ enum {
 	HDA,
 };
 
-int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq, unsigned audio_source);
+int tegra_hdmi_setup_audio_freq_source(unsigned audio_freq,
+					unsigned audio_source,
+					int sor_num);
 #ifdef CONFIG_TEGRA_DC
-int tegra_hdmi_setup_hda_presence(void);
+int tegra_hdmi_setup_hda_presence(int sor_num);
 #else
-static inline int tegra_hdmi_setup_hda_presence(void) { return -ENODEV; }
+static inline int tegra_hdmi_setup_hda_presence(int sor_num) { return -ENODEV; }
 #endif
-int tegra_hdmi_audio_null_sample_inject(bool on);
+int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num);
 
 #endif /* __MACH_TEGRA_HDMI_AUDIO_H */

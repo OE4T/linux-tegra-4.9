@@ -527,8 +527,6 @@ out:
 static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
 				struct nvgpu_free_obj_ctx_args *args)
 {
-	unsigned long timeout = gk20a_get_gr_idle_timeout(c->g);
-
 	gk20a_dbg_fn("");
 
 	if (c->num_objects == 0)
@@ -538,9 +536,7 @@ static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
 
 	if (c->num_objects == 0) {
 		c->first_init = false;
-		gk20a_disable_channel(c,
-			!c->has_timedout,
-			timeout);
+		gk20a_disable_channel(c);
 	}
 
 	return 0;

@@ -453,26 +453,10 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 	return 0;
 }
 
-void gk20a_disable_channel(struct channel_gk20a *ch,
-			   bool finish,
-			   unsigned long finish_timeout)
+void gk20a_disable_channel(struct channel_gk20a *ch)
 {
-	gk20a_dbg_fn("");
-
-	if (finish) {
-		int err = gk20a_channel_finish(ch, finish_timeout);
-		WARN_ON(err);
-	}
-
-	/* disable the channel from hw and increment syncpoints */
 	gk20a_channel_abort(ch);
-
-	gk20a_wait_channel_idle(ch);
-
-	/* preempt the channel */
 	ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
-
-	/* remove channel from runlist */
 	channel_gk20a_update_runlist(ch, false);
 }
 
@@ -769,9 +753,8 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 
 	trace_gk20a_free_channel(ch->hw_chid);
 
-	/* prevent new kickoffs */
-	ch->has_timedout = true;
-	wmb();
+	/* abort channel and remove from runlist */
+	gk20a_disable_channel(ch);
 
 	/* wait until there's only our ref to the channel */
 	gk20a_wait_until_counter_is_N(
@@ -829,8 +812,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 
 	gk20a_dbg_info("freeing bound channel context, timeout=%ld",
 			timeout);
-
-	gk20a_disable_channel(ch, !ch->has_timedout, timeout);
 
 	gk20a_free_error_notifiers(ch);
 

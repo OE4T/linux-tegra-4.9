@@ -84,6 +84,14 @@
 			alloc-ranges = <0x0 0x0 0x1 0x0>;
 			no-map;
 		};
+
+		vpr: vpr-carveout {
+			compatible = "nvidia,vpr-carveout";
+			size = <0 0x2a000000>;
+			alignment = <0 0x400000>;
+			alloc-ranges = <0x0 0x80000000 0x0 0x70000000>;
+			reusable;
+		};
 	};
 
 	timer {
@@ -97,7 +105,7 @@
 
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
-		memory-region = <&generic_reserved>;
+		memory-region = <&generic_reserved &vpr>;
 	};
 
 	mc_sid@2c00000 {

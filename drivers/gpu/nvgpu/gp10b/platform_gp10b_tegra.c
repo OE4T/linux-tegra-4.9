@@ -31,7 +31,7 @@
 #include "platform_tegra.h"
 
 #define GP10B_MAX_SUPPORTED_FREQS 11
-unsigned long gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS];
+static unsigned long gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS];
 
 static struct {
 	char *name;

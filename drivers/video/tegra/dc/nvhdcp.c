@@ -831,13 +831,6 @@ static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 		return -ETIMEDOUT;
 	}
 
-	memset(nvhdcp->v_prime, 0, sizeof nvhdcp->v_prime);
-	e = get_vprime(nvhdcp, nvhdcp->v_prime);
-	if (e) {
-		nvhdcp_err("repeater Vprime read failure!\n");
-		return e;
-	}
-
 	e = nvhdcp_i2c_read16(nvhdcp, 0x41, &b_status);
 	if (e) {
 		nvhdcp_err("Bstatus read failure!\n");
@@ -863,6 +856,13 @@ static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 	e = get_ksvfifo(nvhdcp, nvhdcp->num_bksv_list, nvhdcp->bksv_list);
 	if (e) {
 		nvhdcp_err("repeater:could not read KSVFIFO (err %d)\n", e);
+		return e;
+	}
+
+	memset(nvhdcp->v_prime, 0, sizeof nvhdcp->v_prime);
+	e = get_vprime(nvhdcp, nvhdcp->v_prime);
+	if (e) {
+		nvhdcp_err("repeater Vprime read failure!\n");
 		return e;
 	}
 

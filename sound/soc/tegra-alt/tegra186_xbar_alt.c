@@ -661,8 +661,8 @@ static const struct snd_soc_dapm_widget tegra186_xbar_widgets[] = {
 	{ name " Mux",      "ADX4-1",		"ADX4-1 RX" },		\
 	{ name " Mux",      "ADX4-2",		"ADX4-2 RX" },		\
 	{ name " Mux",      "ADX4-3",		"ADX4-3 RX" },		\
-	{ name " Mux",      "ADX4-4",		"ADX4-4 RX" },
-
+	{ name " Mux",      "ADX4-4",		"ADX4-4 RX" },		\
+	{ name " Mux",      "ARAD1",		"ARAD1 RX" },
 #define IN_OUT_ROUTES(name)				\
 	{ name " RX",       NULL,	name " Receive" },	\
 	{ name " Transmit", NULL,	name " TX" },	\

@@ -202,7 +202,7 @@ static int tegra186_arad_mux_get(struct snd_kcontrol *kcontrol,
 {
 	struct soc_enum *arad_private =
 		(struct soc_enum  *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra186_arad *arad = snd_soc_codec_get_drvdata(codec);
 	unsigned int val, loop = 0;
 
@@ -224,12 +224,12 @@ static int tegra186_arad_mux_get(struct snd_kcontrol *kcontrol,
 static int tegra186_arad_mux_put(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
+
 	struct soc_enum *arad_private =
 		(struct soc_enum  *)kcontrol->private_value;
-	struct snd_soc_codec *codec = snd_soc_dapm_kcontrol_codec(kcontrol);
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra186_arad *arad = snd_soc_codec_get_drvdata(codec);
 	unsigned int val = ucontrol->value.integer.value[0];
-
 	if (!val)
 		regmap_write(arad->regmap, arad_private->reg, 0);
 	else
@@ -330,6 +330,39 @@ static int tegra186_arad_put_enable_lane(struct snd_kcontrol *kcontrol,
 	} else
 		return 0;
 }
+static int tegra186_arad_tx_stop(struct snd_soc_dapm_widget *w,
+			struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct device *dev = codec->dev;
+	struct tegra186_arad *arad = dev_get_drvdata(dev);
+
+	regmap_write(arad->regmap, TEGRA186_ARAD_LANE_ENABLE, 0);
+	regmap_write(arad->regmap, TEGRA186_ARAD_GLOBAL_SOFT_RESET, 1);
+	return 0;
+}
+static const struct snd_soc_dapm_widget tegra186_arad_widgets[] = {
+	SND_SOC_DAPM_SIGGEN("Lane1 SIG"),
+	SND_SOC_DAPM_SIGGEN("Lane2 SIG"),
+	SND_SOC_DAPM_SIGGEN("Lane3 SIG"),
+	SND_SOC_DAPM_SIGGEN("Lane4 SIG"),
+	SND_SOC_DAPM_SIGGEN("Lane5 SIG"),
+	SND_SOC_DAPM_SIGGEN("Lane6 SIG"),
+
+	SND_SOC_DAPM_AIF_OUT_E("Packetizer", NULL, 0, SND_SOC_NOPM, 0, 0,
+		tegra186_arad_tx_stop, SND_SOC_DAPM_PRE_PMD),
+};
+
+static const struct snd_soc_dapm_route tegra186_arad_routes[] = {
+
+	{ "Packetizer",    NULL, "Lane1 SIG"},
+	{ "Packetizer",    NULL, "Lane2 SIG"},
+	{ "Packetizer",    NULL, "Lane3 SIG"},
+	{ "Packetizer",    NULL, "Lane4 SIG"},
+	{ "Packetizer",    NULL, "Lane5 SIG"},
+	{ "Packetizer",    NULL, "Lane6 SIG"},
+	{ "ARAD Transmit", NULL, "Packetizer" },
+};
 
 static int tegra186_arad_get_prescalar(struct snd_kcontrol *kcontrol,
 		    struct snd_ctl_elem_value *ucontrol)
@@ -371,13 +404,9 @@ static int tegra186_arad_put_prescalar(struct snd_kcontrol *kcontrol,
 	struct soc_enum name = SOC_VALUE_ENUM_WIDE(xreg, shift, \
 					ARRAY_SIZE(xtexts), xtexts, xvalues)
 
-#define ARAD_MUX_ENUM_CTRL_DECL(ename, reg)		\
-	SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, reg, 0,	\
-			tegra186_arad_mux_text, tegra186_arad_mux_value); \
-	static const struct snd_kcontrol_new ename##_ctrl =		\
-		SOC_DAPM_ENUM_EXT("Mux", ename##_enum,		\
-			tegra186_arad_mux_get,	\
-			tegra186_arad_mux_put)
+#define ARAD_MUX_ENUM_CTRL_DECL(ename, reg)             \
+	SOC_VALUE_ENUM_WIDE_DECL(ename##_enum, reg, 0,  \
+		tegra186_arad_mux_text, tegra186_arad_mux_value);
 
 static ARAD_MUX_ENUM_CTRL_DECL(numerator1,
 		TEGRA186_ARAD_LANE1_NUMERATOR_MUX_SEL);
@@ -391,6 +420,7 @@ static ARAD_MUX_ENUM_CTRL_DECL(numerator5,
 		TEGRA186_ARAD_LANE5_NUMERATOR_MUX_SEL);
 static ARAD_MUX_ENUM_CTRL_DECL(numerator6,
 		TEGRA186_ARAD_LANE6_NUMERATOR_MUX_SEL);
+
 static ARAD_MUX_ENUM_CTRL_DECL(denominator1,
 		TEGRA186_ARAD_LANE1_DENOMINATOR_MUX_SEL);
 static ARAD_MUX_ENUM_CTRL_DECL(denominator2,
@@ -403,101 +433,6 @@ static ARAD_MUX_ENUM_CTRL_DECL(denominator5,
 		TEGRA186_ARAD_LANE5_DENOMINATOR_MUX_SEL);
 static ARAD_MUX_ENUM_CTRL_DECL(denominator6,
 		TEGRA186_ARAD_LANE6_DENOMINATOR_MUX_SEL);
-
-#define ARAD_RATIO_GEN_WIDGETS(sname, ename)	\
-	SND_SOC_DAPM_AIF_OUT(sname " TX", NULL, 0, SND_SOC_NOPM, 0, 0),	\
-	SND_SOC_DAPM_MUX(sname " MUX", SND_SOC_NOPM, 0, 0, &ename##_ctrl)
-
-static const struct snd_soc_dapm_widget tegra186_arad_widgets[] = {
-	SND_SOC_DAPM_SIGGEN("I2S1 SIG"),
-	SND_SOC_DAPM_SIGGEN("I2S2 SIG"),
-	SND_SOC_DAPM_SIGGEN("I2S3 SIG"),
-	SND_SOC_DAPM_SIGGEN("I2S4 SIG"),
-	SND_SOC_DAPM_SIGGEN("I2S5 SIG"),
-	SND_SOC_DAPM_SIGGEN("I2S6 SIG"),
-	SND_SOC_DAPM_SIGGEN("DMIC1 SIG"),
-	SND_SOC_DAPM_SIGGEN("DMIC2 SIG"),
-	SND_SOC_DAPM_SIGGEN("DMIC3 SIG"),
-	SND_SOC_DAPM_SIGGEN("DMIC4 SIG"),
-	SND_SOC_DAPM_SIGGEN("DSPK1 SIG"),
-	SND_SOC_DAPM_SIGGEN("DSPK2 SIG"),
-	SND_SOC_DAPM_SIGGEN("IQC1 SIG"),
-	SND_SOC_DAPM_SIGGEN("IQC2 SIG"),
-	SND_SOC_DAPM_SIGGEN("SPDIF1_RX1 SIG"),
-	SND_SOC_DAPM_SIGGEN("SPDIF1_RX2 SIG"),
-	SND_SOC_DAPM_SIGGEN("SPDIF1_TX1 SIG"),
-	SND_SOC_DAPM_SIGGEN("SPDIF1_TX2 SIG"),
-
-	ARAD_RATIO_GEN_WIDGETS("Numerator1", numerator1),
-	ARAD_RATIO_GEN_WIDGETS("Numerator2", numerator2),
-	ARAD_RATIO_GEN_WIDGETS("Numerator3", numerator3),
-	ARAD_RATIO_GEN_WIDGETS("Numerator4", numerator4),
-	ARAD_RATIO_GEN_WIDGETS("Numerator5", numerator5),
-	ARAD_RATIO_GEN_WIDGETS("Numerator6", numerator6),
-	ARAD_RATIO_GEN_WIDGETS("Denominator1", denominator1),
-	ARAD_RATIO_GEN_WIDGETS("Denominator2", denominator2),
-	ARAD_RATIO_GEN_WIDGETS("Denominator3", denominator3),
-	ARAD_RATIO_GEN_WIDGETS("Denominator4", denominator4),
-	ARAD_RATIO_GEN_WIDGETS("Denominator5", denominator5),
-	ARAD_RATIO_GEN_WIDGETS("Denominator6", denominator6),
-
-	SND_SOC_DAPM_AIF_OUT("Packetizer", NULL, 0, 0, 0, 0),
-};
-
-#define RATIO_GEN_ROUTE(sname)	\
-	{ sname " MUX",		NULL,	"I2S1 SIG" },	\
-	{ sname " MUX",		NULL,	"I2S2 SIG" },	\
-	{ sname " MUX",		NULL,	"I2S3 SIG" },	\
-	{ sname " MUX",		NULL,	"I2S4 SIG" },	\
-	{ sname " MUX",		NULL,	"I2S5 SIG" },	\
-	{ sname " MUX",		NULL,	"I2S6 SIG" },	\
-	{ sname " MUX",		NULL,	"DMIC1 SIG" },	\
-	{ sname " MUX",		NULL,	"DMIC2 SIG" },	\
-	{ sname " MUX",		NULL,	"DMIC3 SIG" },	\
-	{ sname " MUX",		NULL,	"DMIC4 SIG" },	\
-	{ sname " MUX",		NULL,	"IQC1 SIG" },	\
-	{ sname " MUX",		NULL,	"IQC2 SIG" },	\
-	{ sname " MUX",		NULL,	"SPDIF1_RX1 SIG" },	\
-	{ sname " MUX",		NULL,	"SPDIF1_RX2 SIG" },	\
-	{ sname " MUX",		NULL,	"SPDIF1_TX1 SIG" },	\
-	{ sname " MUX",		NULL,	"SPDIF1_TX2 SIG" }
-
-#define RATIO_GEN(sname)	\
-	RATIO_GEN_ROUTE(sname),	\
-	{ sname " TX",		NULL,		sname " MUX" }
-
-#define PACKETIZER_ROUTE(sname)	\
-	{ sname,	"Numerator1 TX",	"Numerator1 TX" },	\
-	{ sname,	"Numerator2 TX",	"Numerator2 TX" },	\
-	{ sname,	"Numerator3 TX",	"Numerator3 TX" },	\
-	{ sname,	"Numerator4 TX",	"Numerator4 TX" },	\
-	{ sname,	"Numerator5 TX",	"Numerator5 TX" },	\
-	{ sname,	"Numerator6 TX",	"Numerator6 TX" },	\
-	{ sname,	"Denominator1 TX",	"Denominator1 TX" },	\
-	{ sname,	"Denominator2 TX",	"Denominator2 TX" },	\
-	{ sname,	"Denominator3 TX",	"Denominator3 TX" },	\
-	{ sname,	"Denominator4 TX",	"Denominator4 TX" },	\
-	{ sname,	"Denominator5 TX",	"Denominator5 TX" },	\
-	{ sname,	"Denominator6 TX",	"Denominator6 TX" }
-
-static const struct snd_soc_dapm_route tegra186_arad_routes[] = {
-	RATIO_GEN("Numerator1"),
-	RATIO_GEN("Numerator2"),
-	RATIO_GEN("Numerator3"),
-	RATIO_GEN("Numerator4"),
-	RATIO_GEN("Numerator5"),
-	RATIO_GEN("Numerator6"),
-	RATIO_GEN("Denominator1"),
-	RATIO_GEN("Denominator2"),
-	RATIO_GEN("Denominator3"),
-	RATIO_GEN("Denominator4"),
-	RATIO_GEN("Denominator5"),
-	RATIO_GEN("Denominator6"),
-
-	PACKETIZER_ROUTE("Packetizer"),
-
-	{ "ARAD Transmit", NULL, "Packetizer" },
-};
 
 #define ARAD_NUMERATOR_PRESCALAR(id) \
 	SOC_SINGLE_EXT("Numerator"#id" Prescalar", \
@@ -524,6 +459,33 @@ static const struct snd_kcontrol_new tegra186_arad_controls[] = {
 		tegra186_arad_get_enable_lane, tegra186_arad_put_enable_lane),
 	SOC_SINGLE_EXT("Lane6 enable", TEGRA186_ARAD_LANE_ENABLE, 5, 1, 0,
 		tegra186_arad_get_enable_lane, tegra186_arad_put_enable_lane),
+
+	SOC_ENUM_EXT("Numerator1 Mux", numerator1_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Numerator2 Mux", numerator2_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Numerator3 Mux", numerator3_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Numerator4 Mux", numerator4_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Numerator5 Mux", numerator5_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Numerator6 Mux", numerator6_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+
+
+	SOC_ENUM_EXT("Denominator1 Mux", denominator1_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Denominator2 Mux", denominator2_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Denominator3 Mux", denominator3_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Denominator4 Mux", denominator4_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Denominator5 Mux", denominator5_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
+	SOC_ENUM_EXT("Denominator6 Mux", denominator6_enum,
+		tegra186_arad_mux_get, tegra186_arad_mux_put),
 
 	SOC_SINGLE_EXT("Lane1 Ratio Int",
 		TEGRA186_ARAD_LANE1_RATIO_INTEGER_PART,
@@ -725,12 +687,10 @@ static const struct of_device_id tegra186_arad_of_match[] = {
 #ifdef CONFIG_SND_SOC_TEGRA186_ARAD_WAR
 void tegra186_arad_ahc_cb(void *data)
 {
-	unsigned long flags;
 	int i = 0;
 	unsigned int val = 0, status;
 	struct tegra186_arad *arad = dev_get_drvdata(
 					(struct device *) data);
-
 	/* WAR for Bug 200102368 */
 	regmap_read(arad->regmap,
 		TEGRA186_ARAD_LANE_INT_STATUS, &status);
@@ -879,7 +839,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 		ret = -ENODEV;
 		goto err;
 	}
-	tegra186_arad_runtime_resume(&pdev->dev);
 
 	pm_runtime_enable(&pdev->dev);
 

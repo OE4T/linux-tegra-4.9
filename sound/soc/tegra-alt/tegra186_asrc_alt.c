@@ -182,7 +182,6 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 {
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
 	int ret, lane_id;
-
 	ret = pm_runtime_get_sync(dev->parent);
 
 	if (ret < 0) {
@@ -546,6 +545,11 @@ static struct snd_soc_dai_driver tegra186_asrc_dais[] = {
 	OUT_DAI(TX, 6, &tegra186_asrc_out_dai_ops),
 };
 
+#define SND_SOC_DAPM_IN(wname, wevent) \
+{	.id = snd_soc_dapm_spk, .name = wname, .kcontrol_news = NULL, \
+	.num_kcontrols = 0, .reg = SND_SOC_NOPM, .event = wevent, \
+	.event_flags = SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_PRE_PMD}
+
 static const struct snd_soc_dapm_widget tegra186_asrc_widgets[] = {
 	SND_SOC_DAPM_AIF_IN("RX1", NULL, 0, SND_SOC_NOPM,
 				0, 0),
@@ -559,8 +563,6 @@ static const struct snd_soc_dapm_widget tegra186_asrc_widgets[] = {
 				0, 0),
 	SND_SOC_DAPM_AIF_IN("RX6", NULL, 0, SND_SOC_NOPM,
 				0, 0),
-	SND_SOC_DAPM_AIF_IN("RX7", NULL, 0, SND_SOC_NOPM,
-				0, 0),
 	SND_SOC_DAPM_AIF_OUT("TX1", NULL, 0, TEGRA186_ASRC_STREAM1_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
 	SND_SOC_DAPM_AIF_OUT("TX2", NULL, 0, TEGRA186_ASRC_STREAM2_ENABLE,
@@ -573,6 +575,7 @@ static const struct snd_soc_dapm_widget tegra186_asrc_widgets[] = {
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
 	SND_SOC_DAPM_AIF_OUT("TX6", NULL, 0, TEGRA186_ASRC_STREAM6_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
+	SND_SOC_DAPM_IN("RX7", NULL),
 };
 
 static const struct snd_soc_dapm_route tegra186_asrc_routes[] = {

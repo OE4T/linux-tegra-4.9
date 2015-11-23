@@ -1564,14 +1564,8 @@ static int uphy_pll_hw_sequencer_enable(struct tegra_padctl_uphy *uphy, int pll,
 	struct device *dev = uphy->dev;
 	int rc;
 
-	dev_dbg(dev, "PLL%d enable HW sequencer by function %d\n", pll, func);
-
-	if (func == TEGRA186_FUNC_SATA && pll == 1) {
-		pr_info("%s skip enabling uphy pll hw power sequencer\n", __func__);
-		return 0;
-	}
-
-	dev_dbg(dev, "enable PLL%d Power sequencer\n", pll);
+	dev_dbg(dev, "enable PLL%d HW power sequencer by function %d\n",
+						pll, func);
 	rc = clk_prepare_enable(uphy->uphy_pll_pwrseq[pll]);
 	if (rc) {
 		dev_err(dev, "failed to enable PLL%d Power sequencer %d\n",

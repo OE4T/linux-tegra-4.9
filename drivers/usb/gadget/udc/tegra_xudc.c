@@ -1128,18 +1128,45 @@ static void squeeze_transfer_ring(struct tegra_xudc_ep *ep,
 	}
 }
 
-static bool trb_processed(struct tegra_xudc_ep *ep, struct tegra_xudc_trb *trb)
+/*
+ * Determine if the given TRB is in the range [first trb, last trb] for the
+ * given request.
+ */
+static bool trb_in_request(struct tegra_xudc_ep *ep,
+			   struct tegra_xudc_request *req,
+			   struct tegra_xudc_trb *trb)
 {
-	struct tegra_xudc_trb *deq_trb, *enq_trb;
+	dev_dbg(ep->xudc->dev, "%s: request %p -> %p; trb %p\n", __func__,
+		req->first_trb, req->last_trb, trb);
 
-	deq_trb = trb_phys_to_virt(ep, ep_ctx_read_deq_ptr(ep->context));
-	enq_trb = &ep->transfer_ring[ep->enq_ptr];
+	if (trb >= req->first_trb && (trb <= req->last_trb ||
+				      req->last_trb < req->first_trb))
+		return true;
+	if (trb < req->first_trb && trb <= req->last_trb &&
+	    req->last_trb < req->first_trb)
+		return true;
+	return false;
+}
 
-	if (trb > deq_trb && (enq_trb > trb || enq_trb < deq_trb))
-		return false;
-	if (trb < deq_trb && enq_trb > trb && enq_trb < deq_trb)
-		return false;
-	return true;
+/*
+ * Determine if the given TRB is in the range [EP enqueue pointer, first TRB)
+ * for the given endpoint and request.
+ */
+static bool trb_before_request(struct tegra_xudc_ep *ep,
+			       struct tegra_xudc_request *req,
+			       struct tegra_xudc_trb *trb)
+{
+	struct tegra_xudc_trb *enq_trb = &ep->transfer_ring[ep->enq_ptr];
+
+	dev_dbg(ep->xudc->dev, "%s: request %p -> %p; enq ptr: %p; trb %p\n",
+		__func__, req->first_trb, req->last_trb, enq_trb, trb);
+
+	if (trb < req->first_trb && (enq_trb <= trb ||
+				     req->first_trb < enq_trb))
+		return true;
+	if (trb > req->first_trb && req->first_trb < enq_trb && enq_trb <= trb)
+		return true;
+	return false;
 }
 
 static int
@@ -1148,7 +1175,8 @@ __tegra_xudc_ep_dequeue(struct tegra_xudc_ep *ep,
 {
 	struct tegra_xudc *xudc = ep->xudc;
 	struct tegra_xudc_request *r;
-	bool kick_queue = false;
+	struct tegra_xudc_trb *deq_trb;
+	bool busy, kick_queue = false;
 	int ret = 0;
 
 	/* Make sure the request is actually queued to this endpoint. */
@@ -1171,21 +1199,11 @@ __tegra_xudc_ep_dequeue(struct tegra_xudc_ep *ep,
 		ep_wait_for_inactive(xudc, ep->index);
 	}
 
-	if (!trb_processed(ep, req->first_trb)) {
-		/* Request hasn't started processing yet. */
-		squeeze_transfer_ring(ep, req);
+	deq_trb = trb_phys_to_virt(ep, ep_ctx_read_deq_ptr(ep->context));
+	/* Is the hardware processing the TRB at the dequeue pointer? */
+	busy = (trb_read_cycle(deq_trb) == ep_ctx_read_dcs(ep->context));
 
-		tegra_xudc_req_done(ep, req, -ECONNRESET);
-		kick_queue = true;
-	} else if (req->trbs_queued == req->trbs_needed &&
-		   trb_processed(ep, req->last_trb)) {
-		/*
-		 * Request has completed, but we haven't processed the
-		 * completion event yet.
-		 */
-		tegra_xudc_req_done(ep, req, -ECONNRESET);
-		ret = -EINVAL;
-	} else {
+	if (trb_in_request(ep, req, deq_trb) && busy) {
 		dma_addr_t deq_ptr;
 
 		/* Request has been partially completed. */
@@ -1205,6 +1223,19 @@ __tegra_xudc_ep_dequeue(struct tegra_xudc_ep *ep,
 		ep_ctx_write_dcs(ep->context, ep->pcs);
 
 		ep_reload(xudc, ep->index);
+	} else if (trb_before_request(ep, req, deq_trb) && busy) {
+		/* Request hasn't started processing yet. */
+		squeeze_transfer_ring(ep, req);
+
+		tegra_xudc_req_done(ep, req, -ECONNRESET);
+		kick_queue = true;
+	} else {
+		/*
+		 * Request has completed, but we haven't processed the
+		 * completion event yet.
+		 */
+		tegra_xudc_req_done(ep, req, -ECONNRESET);
+		ret = -EINVAL;
 	}
 
 	/* Resume the endpoint. */
@@ -2258,11 +2289,7 @@ trb_to_request(struct tegra_xudc_ep *ep, struct tegra_xudc_trb *trb)
 		if (!req->trbs_queued)
 			break;
 
-		if (trb >= req->first_trb && (trb <= req->last_trb ||
-					      req->last_trb < req->first_trb))
-			return req;
-		if (trb < req->first_trb && trb < req->last_trb &&
-		    req->last_trb < req->first_trb)
+		if (trb_in_request(ep, req, trb))
 			return req;
 	}
 

@@ -339,7 +339,7 @@ static const struct file_operations vi_notify_fops = {
 
 /* Character device */
 static struct class *vi_notify_class;
-static dev_t vi_notify_major;
+static int vi_notify_major;
 
 int vi_notify_register(struct vi_notify_driver *drv, struct device *dev,
 			u8 num_channels)

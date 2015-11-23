@@ -387,6 +387,7 @@ struct tegra_xudc_request {
 	size_t buf_queued;
 	unsigned int trbs_queued;
 	unsigned int trbs_needed;
+	bool need_zlp;
 
 	struct tegra_xudc_trb *first_trb;
 	struct tegra_xudc_trb *last_trb;
@@ -886,7 +887,8 @@ static void tegra_xudc_queue_one_trb(struct tegra_xudc_ep *ep,
 	trb_write_transfer_len(trb, len);
 	trb_write_td_size(trb, req->trbs_needed - req->trbs_queued - 1);
 
-	if (req->trbs_queued == req->trbs_needed - 1)
+	if (req->trbs_queued == req->trbs_needed - 1 ||
+		(req->need_zlp && req->trbs_queued == req->trbs_needed - 2))
 		trb_write_chain(trb, 0);
 	else
 		trb_write_chain(trb, 1);
@@ -935,6 +937,7 @@ static unsigned int tegra_xudc_queue_trbs(struct tegra_xudc_ep *ep,
 					  struct tegra_xudc_request *req)
 {
 	unsigned int i, count, available;
+	bool wait_td = false;
 
 	available = ep_available_trbs(ep);
 	count = req->trbs_needed - req->trbs_queued;
@@ -943,6 +946,26 @@ static unsigned int tegra_xudc_queue_trbs(struct tegra_xudc_ep *ep,
 		ep->ring_full = true;
 	}
 
+	/*
+	 * To generate zero-length packet on USB bus, SW needs schedule a
+	 * standalone zero-length TD. According to HW's behavior, SW needs
+	 * to schedule TDs in different ways for different endpoint types.
+	 *
+	 * For control endpoint:
+	 * - Data stage TD (IOC = 1, CH = 0)
+	 * - Ring doorbell and wait transfer event
+	 * - Data stage TD for ZLP (IOC = 1, CH = 0)
+	 * - Ring doorbell
+	 *
+	 * For bulk and interrupt endpoints:
+	 * - Normal transfer TD (IOC = 0, CH = 0)
+	 * - Normal transfer TD for ZLP (IOC = 1, CH = 0)
+	 * - Ring doorbell
+	 */
+
+	if (req->need_zlp && usb_endpoint_xfer_control(ep->desc) && count > 1)
+		wait_td = true;
+
 	if (!req->first_trb)
 		req->first_trb = &ep->transfer_ring[ep->enq_ptr];
 
@@ -950,7 +973,7 @@ static unsigned int tegra_xudc_queue_trbs(struct tegra_xudc_ep *ep,
 		struct tegra_xudc_trb *trb = &ep->transfer_ring[ep->enq_ptr];
 		bool ioc = false;
 
-		if (i == count - 1)
+		if ((i == count - 1) || (wait_td && i == count - 2))
 			ioc = true;
 
 		tegra_xudc_queue_one_trb(ep, req, trb, ioc);
@@ -963,6 +986,9 @@ static unsigned int tegra_xudc_queue_trbs(struct tegra_xudc_ep *ep,
 			ep->pcs = !ep->pcs;
 			ep->enq_ptr = 0;
 		}
+
+		if (ioc)
+			break;
 	}
 
 	return count;
@@ -1037,14 +1063,17 @@ __tegra_xudc_ep_queue(struct tegra_xudc_ep *ep, struct tegra_xudc_request *req)
 	req->last_trb = NULL;
 	req->buf_queued = 0;
 	req->trbs_queued = 0;
+	req->need_zlp = false;
 	req->trbs_needed = DIV_ROUND_UP(req->usb_req.length,
 					XUDC_TRB_MAX_BUFFER_SIZE);
 	if (req->usb_req.length == 0)
 		req->trbs_needed++;
 	if (!usb_endpoint_xfer_isoc(ep->desc) &&
 	    req->usb_req.zero && (req->usb_req.length != 0) &&
-	    ((req->usb_req.length % ep->usb_ep.maxpacket) == 0))
+	    ((req->usb_req.length % ep->usb_ep.maxpacket) == 0)) {
 		req->trbs_needed++;
+		req->need_zlp = true;
+	}
 
 	req->usb_req.status = -EINPROGRESS;
 	req->usb_req.actual = 0;
@@ -2313,7 +2342,8 @@ static void tegra_xudc_handle_transfer_completion(struct tegra_xudc *xudc,
 	 * TDs are complete on short packet or when the completed TRB is the
 	 * last TRB in the TD (the CHAIN bit is unset).
 	 */
-	if (req && (short_packet || !trb_read_chain(trb))) {
+	if (req && (short_packet || (!trb_read_chain(trb) &&
+		(req->trbs_needed == req->trbs_queued)))) {
 		struct tegra_xudc_trb *last = req->last_trb;
 		unsigned int residual;
 

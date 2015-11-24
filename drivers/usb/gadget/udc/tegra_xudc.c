@@ -2493,10 +2493,13 @@ static void tegra_xudc_port_connect(struct tegra_xudc *xudc)
 		val &= ~(PORTPM_U2TIMEOUT_MASK << PORTPM_U2TIMEOUT_SHIFT);
 		xudc_writel(xudc, val, PORTPM);
 	}
-	if (!xudc->soc->lpm_enable && xudc->gadget.speed <= USB_SPEED_HIGH) {
+	if (xudc->gadget.speed <= USB_SPEED_HIGH) {
 		val = xudc_readl(xudc, PORTPM);
 		val &= ~(PORTPM_L1S_MASK << PORTPM_L1S_SHIFT);
-		val |= PORTPM_L1S_NYET << PORTPM_L1S_SHIFT;
+		if (xudc->soc->lpm_enable)
+			val |= PORTPM_L1S_ACCEPT << PORTPM_L1S_SHIFT;
+		else
+			val |= PORTPM_L1S_NYET << PORTPM_L1S_SHIFT;
 		xudc_writel(xudc, val, PORTPM);
 	}
 

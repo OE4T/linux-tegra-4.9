@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1500,8 +1500,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u64 buf_addr;
 	u64 ctag_map_win_size = 0;
 	u32 ctag_map_win_ctagline = 0;
-	u32 ctag_offset;
 	struct vm_reserved_va_node *va_node = NULL;
+	u32 ctag_offset;
 
 	if (user_mapped && vm->userspace_managed &&
 	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
@@ -1677,8 +1677,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	 */
 	ctag_offset = comptags.offset;
 	if (ctag_offset)
-		ctag_offset += buffer_offset /
-			       g->ops.fb.compression_page_size(g);
+		ctag_offset += buffer_offset >>
+			       ilog2(g->ops.fb.compression_page_size(g));
 
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm, map_offset,
@@ -2366,7 +2366,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   int rw_flag, bool sparse, bool priv)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u64 ctag_granularity = g->ops.fb.compression_page_size(g);
+	int ctag_shift = ilog2(g->ops.fb.compression_page_size(g));
 	u32 page_size  = vm->gmmu_page_sizes[gmmu_pgsz_idx];
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 
@@ -2385,7 +2385,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 
 		pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 			gmmu_pte_kind_f(kind_v) |
-			gmmu_pte_comptagline_f((u32)(*ctag / ctag_granularity));
+			gmmu_pte_comptagline_f((u32)(*ctag >> ctag_shift));
 
 		if (vm->mm->use_full_comp_tag_line && *iova & 0x10000) {
 			pte_w[1] |= gmmu_pte_comptagline_f(
@@ -2416,7 +2416,7 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		gk20a_dbg(gpu_dbg_pte,
 			"pte=%d iova=0x%llx kind=%d ctag=%d vol=%d [0x%08x, 0x%08x]",
 			   i, *iova,
-			   kind_v, (u32)(*ctag / ctag_granularity), !cacheable,
+			   kind_v, (u32)(*ctag >> ctag_shift), !cacheable,
 			   pte_w[1], pte_w[0]);
 
 		if (*ctag)

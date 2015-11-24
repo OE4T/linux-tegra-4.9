@@ -45,6 +45,7 @@ enum {
 	MCE_SMC_ROC_FLUSH_CACHE,
 	MCE_SMC_ENUM_READ_MCA,
 	MCE_SMC_ENUM_WRITE_MCA,
+	MCE_SMC_ROC_FLUSH_CACHE_ONLY,
 	MCE_SMC_ENUM_MAX = 0xFF,	/* enums cannot exceed this value */
 };
 
@@ -291,6 +292,13 @@ int tegra_roc_flush_cache(void)
 	return send_smc(MCE_SMC_ROC_FLUSH_CACHE, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_flush_cache);
+
+int tegra_roc_flush_cache_only(void)
+{
+	struct mce_regs regs;
+	return send_smc(MCE_SMC_ROC_FLUSH_CACHE_ONLY, &regs);
+}
+EXPORT_SYMBOL(tegra_roc_flush_cache_only);
 
 /**
  * Read uncore MCA errors.

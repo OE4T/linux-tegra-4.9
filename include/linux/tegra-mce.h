@@ -116,5 +116,6 @@ int tegra_mce_enum_features(u64 *features);
 int tegra_roc_flush_cache(void);
 int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error);
 int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error);
+int tegra_roc_flush_cache_only(void);
 
 #endif

@@ -155,6 +155,7 @@
 #define PORT_TM	0x070
 #define EP_THREAD_ACTIVE 0x074
 #define EP_STOPPED 0x078
+#define HSFSPI_COUNT0 0x100
 #define HSFSPI_COUNT16 0x19c
 #define SSPX_CORE_CNT0 0x610
 #define  SSPX_CORE_CNT0_PING_TBURST_SHIFT 0
@@ -2977,9 +2978,16 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 	val |= 0xb0 << SSPX_CORE_CNT32_POLL_TBURST_MAX_SHIFT;
 	xudc_writel(xudc, val, SSPX_CORE_CNT32);
 
-	/* increase HS link stability */
-	if (XUDC_IS_T186(xudc))
+	if (XUDC_IS_T186(xudc)) {
+		/* Increase HS link stability */
 		xudc_writel(xudc, 0x5840, HSFSPI_COUNT16);
+
+		/* Change INIT value of "NV_PROJ__XUSB_DEV_XHCI_HSFSPI_COUNT0"
+		 * register from 0x12c to 0x3E8. This counter is used by xUSB
+		 * device to respond to HS detection handshake after the
+		 * detection of SE0 from host. */
+		xudc_writel(xudc, 0x3e8, HSFSPI_COUNT0);
+	}
 
 	/* Direct HS/FS port instance to RxDetect. */
 	val = xudc_readl(xudc, CFG_DEV_FE);

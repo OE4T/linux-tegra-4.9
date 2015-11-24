@@ -1269,13 +1269,13 @@ static int __tegra_xudc_ep_set_halt(struct tegra_xudc_ep *ep, bool halt)
 		ep_ctx_write_state(ep->context, EP_STATE_DISABLED);
 
 		ep_reload(xudc, ep->index);
-		ep_unhalt(xudc, ep->index);
 
 		ep_ctx_write_state(ep->context, EP_STATE_RUNNING);
 		ep_ctx_write_seq_num(ep->context, 0);
 
 		ep_reload(xudc, ep->index);
 		ep_unpause(xudc, ep->index);
+		ep_unhalt(xudc, ep->index);
 
 		tegra_xudc_ep_ring_doorbell(ep);
 	}

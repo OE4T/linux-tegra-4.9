@@ -1414,13 +1414,16 @@ err_done:
 /*!
 *	Wait for PMU to halt
 *	@param[in]	g		GPU object pointer
-*	@param[in]	timeout_us	Timeout in Us for PMU to halt
+*	@param[in]	timeout_us	Timeout in msec for PMU to halt
 *	@return '0' if PMU halts
 */
 int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
-	while (timeout != 0) {
+	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+
+	while (time_before(jiffies, end_jiffies) ||
+			!tegra_platform_is_silicon()) {
 		data = gk20a_readl(g, pwr_falcon_cpuctl_r());
 		if (data & pwr_falcon_cpuctl_halt_intr_m())
 			/*CPU is halted break*/
@@ -1441,13 +1444,16 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 /*!
 *	Wait for PMU halt interrupt status to be cleared
 *	@param[in]	g		GPU object pointer
-*	@param[in]	timeout_us	Timeout in Us for PMU to halt
+*	@param[in]	timeout_us	Timeout in msec for halt to clear
 *	@return '0' if PMU halt irq status is clear
 */
 int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
-	while (timeout != 0) {
+	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
+
+	while (time_before(jiffies, end_jiffies) ||
+			!tegra_platform_is_silicon()) {
 		gk20a_writel(g, pwr_falcon_irqsclr_r(),
 			     gk20a_readl(g, pwr_falcon_irqsclr_r()) | (0x10));
 		data = gk20a_readl(g, (pwr_falcon_irqstat_r()));

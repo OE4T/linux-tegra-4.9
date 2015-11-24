@@ -1233,7 +1233,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	gk20a_dbg(gpu_dbg_map,
 	   "as=%d pgsz=%d "
 	   "kind=0x%x flags=0x%x "
-	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
+	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x + %llx",
 	   vm_aspace_id(vm), pgsz_idx,
 	   kind_v, flags,
 	   ctag_lines, ctag_offset,
@@ -1241,7 +1241,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	   hi32((u64)sg_dma_address(sgt->sgl)),
 	   lo32((u64)sg_dma_address(sgt->sgl)),
 	   hi32((u64)sg_phys(sgt->sgl)),
-	   lo32((u64)sg_phys(sgt->sgl)));
+	   lo32((u64)sg_phys(sgt->sgl)),
+	   buffer_offset);
 
 	err = update_gmmu_ptes_locked(vm, pgsz_idx,
 				      sgt,
@@ -1421,6 +1422,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u64 buf_addr;
 	u64 ctag_map_win_size = 0;
 	u32 ctag_map_win_ctagline = 0;
+	u32 ctag_offset;
 	struct vm_reserved_va_node *va_node = NULL;
 
 	if (user_mapped && vm->userspace_managed &&
@@ -1609,6 +1611,15 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	bfr.ctag_allocated_lines = comptags.allocated_lines;
 	bfr.ctag_user_mappable = comptags.user_mappable;
 
+	/*
+	 * Calculate comptag index for this mapping. Differs in
+	 * case of partial mapping.
+	 */
+	ctag_offset = comptags.offset;
+	if (ctag_offset)
+		ctag_offset += buffer_offset /
+			       g->ops.fb.compression_page_size(g);
+
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm, map_offset,
 					bfr.sgt,
@@ -1616,7 +1627,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 					mapping_size,
 					bfr.pgsz_idx,
 					bfr.kind_v,
-					bfr.ctag_offset,
+					ctag_offset,
 					flags, rw_flag,
 					clear_ctags,
 					false,

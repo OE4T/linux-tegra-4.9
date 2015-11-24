@@ -1398,12 +1398,90 @@ static void setup_link_trb(struct tegra_xudc_ep *ep,
 	trb_write_toggle_cycle(trb, 1);
 }
 
+static int __tegra_xudc_ep_disable(struct tegra_xudc_ep *ep)
+{
+	struct tegra_xudc *xudc = ep->xudc;
+
+	if (ep_ctx_read_state(ep->context) == EP_STATE_DISABLED) {
+		dev_err(xudc->dev, "endpoint %u already disabled\n",
+			ep->index);
+		return -EINVAL;
+	}
+	ep_ctx_write_state(ep->context, EP_STATE_DISABLED);
+
+	ep_reload(xudc, ep->index);
+
+	tegra_xudc_ep_nuke(ep, -ESHUTDOWN);
+
+	xudc->nr_enabled_eps--;
+	if (usb_endpoint_xfer_isoc(ep->desc))
+		xudc->nr_isoch_eps--;
+
+	ep->desc = NULL;
+	ep->comp_desc = NULL;
+
+	memset(ep->context, 0, sizeof(*ep->context));
+
+	ep_unpause(xudc, ep->index);
+	ep_unhalt(xudc, ep->index);
+	if (xudc_readl(xudc, EP_STOPPED) & BIT(ep->index))
+		xudc_writel(xudc, BIT(ep->index), EP_STOPPED);
+
+	/*
+	 * If this is the last endpoint disabled in a de-configure request,
+	 * switch back to address state.
+	 */
+	if ((xudc->device_state == USB_STATE_CONFIGURED) &&
+	    (xudc->nr_enabled_eps == 1)) {
+		u32 val;
+
+		xudc->device_state = USB_STATE_ADDRESS;
+
+		val = xudc_readl(xudc, CTRL);
+		val &= ~CTRL_RUN;
+		xudc_writel(xudc, val, CTRL);
+	}
+
+	dev_info(xudc->dev, "ep %u disabled\n", ep->index);
+
+	return 0;
+}
+
+static int tegra_xudc_ep_disable(struct usb_ep *usb_ep)
+{
+	struct tegra_xudc_ep *ep;
+	struct tegra_xudc *xudc;
+	unsigned long flags;
+	int ret;
+
+	if (!usb_ep)
+		return -EINVAL;
+
+	ep = to_xudc_ep(usb_ep);
+	xudc = ep->xudc;
+
+	spin_lock_irqsave(&xudc->lock, flags);
+	if (xudc->powergated) {
+		ret = -ESHUTDOWN;
+		goto unlock;
+	}
+	ret = __tegra_xudc_ep_disable(ep);
+unlock:
+	spin_unlock_irqrestore(&xudc->lock, flags);
+
+	return ret;
+}
+
 static int __tegra_xudc_ep_enable(struct tegra_xudc_ep *ep,
 				  const struct usb_endpoint_descriptor *desc)
 {
 	struct tegra_xudc *xudc = ep->xudc;
 	unsigned int i;
 	u32 val;
+
+	/* Disable the EP if it is not disabled */
+	if (ep_ctx_read_state(ep->context) != EP_STATE_DISABLED)
+		__tegra_xudc_ep_disable(ep);
 
 	ep->desc = desc;
 	ep->comp_desc = ep->usb_ep.comp_desc;
@@ -1499,80 +1577,6 @@ static int tegra_xudc_ep_enable(struct usb_ep *usb_ep,
 		goto unlock;
 	}
 	ret = __tegra_xudc_ep_enable(ep, desc);
-unlock:
-	spin_unlock_irqrestore(&xudc->lock, flags);
-
-	return ret;
-}
-
-static int __tegra_xudc_ep_disable(struct tegra_xudc_ep *ep)
-{
-	struct tegra_xudc *xudc = ep->xudc;
-
-	if (ep_ctx_read_state(ep->context) == EP_STATE_DISABLED) {
-		dev_err(xudc->dev, "endpoint %u already disabled\n",
-			ep->index);
-		return -EINVAL;
-	}
-	ep_ctx_write_state(ep->context, EP_STATE_DISABLED);
-
-	ep_reload(xudc, ep->index);
-
-	tegra_xudc_ep_nuke(ep, -ESHUTDOWN);
-
-	xudc->nr_enabled_eps--;
-	if (usb_endpoint_xfer_isoc(ep->desc))
-		xudc->nr_isoch_eps--;
-
-	ep->desc = NULL;
-	ep->comp_desc = NULL;
-
-	memset(ep->context, 0, sizeof(*ep->context));
-
-	ep_unpause(xudc, ep->index);
-	ep_unhalt(xudc, ep->index);
-	if (xudc_readl(xudc, EP_STOPPED) & BIT(ep->index))
-		xudc_writel(xudc, BIT(ep->index), EP_STOPPED);
-
-	/*
-	 * If this is the last endpoint disabled in a de-configure request,
-	 * switch back to address state.
-	 */
-	if ((xudc->device_state == USB_STATE_CONFIGURED) &&
-	    (xudc->nr_enabled_eps == 1)) {
-		u32 val;
-
-		xudc->device_state = USB_STATE_ADDRESS;
-
-		val = xudc_readl(xudc, CTRL);
-		val &= ~CTRL_RUN;
-		xudc_writel(xudc, val, CTRL);
-	}
-
-	dev_info(xudc->dev, "ep %u disabled\n", ep->index);
-
-	return 0;
-}
-
-static int tegra_xudc_ep_disable(struct usb_ep *usb_ep)
-{
-	struct tegra_xudc_ep *ep;
-	struct tegra_xudc *xudc;
-	unsigned long flags;
-	int ret;
-
-	if (!usb_ep)
-		return -EINVAL;
-
-	ep = to_xudc_ep(usb_ep);
-	xudc = ep->xudc;
-
-	spin_lock_irqsave(&xudc->lock, flags);
-	if (xudc->powergated) {
-		ret = -ESHUTDOWN;
-		goto unlock;
-	}
-	ret = __tegra_xudc_ep_disable(ep);
 unlock:
 	spin_unlock_irqrestore(&xudc->lock, flags);
 

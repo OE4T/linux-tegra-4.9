@@ -1660,10 +1660,10 @@ static void tegra_xudc_resume_device_state(struct tegra_xudc *xudc)
 
 	/* Direct link to U0. */
 	val = xudc_readl(xudc, PORTSC);
-	if (((val & PORTSC_PLS_MASK) >> PORTSC_PLS_SHIFT) != PORTSC_PLS_U0) {
+	if (((val >> PORTSC_PLS_SHIFT) & PORTSC_PLS_MASK) != PORTSC_PLS_U0) {
 		val &= ~(PORTSC_CHANGE_MASK |
 			 (PORTSC_PLS_MASK << PORTSC_PLS_SHIFT));
-		val |= PORTSC_LWS | (PORTSC_PLS_RXDETECT << PORTSC_PLS_SHIFT);
+		val |= PORTSC_LWS | (PORTSC_PLS_U0 << PORTSC_PLS_SHIFT);
 		xudc_writel(xudc, val, PORTSC);
 	}
 
@@ -1694,6 +1694,8 @@ static int tegra_xudc_gadget_wakeup(struct usb_gadget *gadget)
 		goto unlock;
 	}
 	val = xudc_readl(xudc, PORTPM);
+	dev_dbg(xudc->dev, "%s: PORTPM=%#x, speed=%x\n", __func__,
+			val, gadget->speed);
 	if (((xudc->gadget.speed <= USB_SPEED_HIGH) &&
 	     (val & PORTPM_RWE)) ||
 	    ((xudc->gadget.speed == USB_SPEED_SUPER) &&

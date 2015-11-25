@@ -350,7 +350,7 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 			return err;
 	}
 
-	idx = tegra_machine_get_codec_dai_link_idx_t18x("dspk-playback");
+	idx = tegra_machine_get_codec_dai_link_idx_t18x("dspk-playback-r");
 	if (idx != -EINVAL) {
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
@@ -369,6 +369,26 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		if (err < 0)
 			return err;
 	}
+
+	idx = tegra_machine_get_codec_dai_link_idx_t18x("dspk-playback-l");
+        if (idx != -EINVAL) {
+                dai_params =
+                (struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+                err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+                0, clk_out_rate, SND_SOC_CLOCK_IN);
+                if (err < 0) {
+                        dev_err(card->dev, "codec_dai clock not set\n");
+                        return err;
+                }
+
+                err = tegra_t186ref_set_params(dai_params,
+                                                card->rtd[idx].cpu_dai,
+                                                &card->rtd[idx], card,
+                                                clk_rate, channels, formats);
+                if (err < 0)
+                        return err;
+        }
 	return 0;
 }
 
@@ -619,11 +639,13 @@ static const struct snd_soc_dapm_widget tegra_t186ref_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("y Headphone", NULL),
 	SND_SOC_DAPM_HP("z Headphone", NULL),
 	SND_SOC_DAPM_HP("m Headphone", NULL),
-	SND_SOC_DAPM_SPK("n Headphone", NULL),
 	SND_SOC_DAPM_MIC("y Mic", NULL),
 	SND_SOC_DAPM_MIC("z Mic", NULL),
 	SND_SOC_DAPM_MIC("m Mic", NULL),
-	SND_SOC_DAPM_MIC("n Mic", NULL),
+	SND_SOC_DAPM_SPK("d1 Headphone", NULL),
+	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
+	SND_SOC_DAPM_MIC("d1 Mic", NULL),
+	SND_SOC_DAPM_MIC("d2 Mic", NULL),
 };
 
 static int tegra_t186ref_suspend_pre(struct snd_soc_card *card)
@@ -781,9 +803,11 @@ static void dai_link_setup(struct platform_device *pdev, int dummy)
 				"rt565x-playback"))
 				tegra_t186ref_codec_links[i].init = tegra_t186ref_init;
 			else if (strstr(tegra_t186ref_codec_links[i].name,
-				"dspk-playback"))
-				tegra_t186ref_codec_links[i].init =
-					tegra_t186ref_dspk_init;
+				"dspk-playback-r"))
+				tegra_t186ref_codec_links[i].init = tegra_t186ref_dspk_init;
+			else if (strstr(tegra_t186ref_codec_links[i].name,
+				"dspk-playback-l"))
+				tegra_t186ref_codec_links[i].init = tegra_t186ref_dspk_init;
 		}
 	}
 

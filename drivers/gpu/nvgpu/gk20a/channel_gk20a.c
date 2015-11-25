@@ -630,6 +630,17 @@ static int gk20a_channel_cycle_stats_snapshot(struct channel_gk20a *ch,
 }
 #endif
 
+static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
+		struct nvgpu_channel_wdt_args *args)
+{
+	if (args->wdt_status == NVGPU_IOCTL_CHANNEL_DISABLE_WDT)
+		ch->wdt_enabled = false;
+	else if (args->wdt_status == NVGPU_IOCTL_CHANNEL_ENABLE_WDT)
+		ch->wdt_enabled = true;
+
+	return 0;
+}
+
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		struct nvgpu_set_error_notifier *args) {
 	void *va;
@@ -1424,12 +1435,7 @@ bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
-
-	if (ch->g->timeouts_enabled && ch->g->ch_wdt_enabled &&
-				platform->ch_wdt_timeout_ms)
-		return platform->ch_wdt_timeout_ms;
-	else
-		return (u32)MAX_SCHEDULE_TIMEOUT;
+	return platform->ch_wdt_timeout_ms;
 }
 
 static u32 get_gp_free_count(struct channel_gk20a *c)
@@ -1519,6 +1525,14 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 static void gk20a_channel_timeout_start(struct channel_gk20a *ch,
 		struct channel_gk20a_job *job)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
+
+	if (!ch->g->timeouts_enabled || !platform->ch_wdt_timeout_ms)
+		return;
+
+	if (!ch->wdt_enabled)
+		return;
+
 	mutex_lock(&ch->timeout.lock);
 
 	if (ch->timeout.initialized) {
@@ -2117,6 +2131,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->g = NULL;
 	c->hw_chid = chid;
 	c->bound = false;
+	c->wdt_enabled = true;
 	spin_lock_init(&c->ref_obtain_lock);
 	atomic_set(&c->ref_count, 0);
 	c->referenceable = false;
@@ -2839,6 +2854,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_idle(dev);
 		break;
 #endif
+	case NVGPU_IOCTL_CHANNEL_WDT:
+		err = gk20a_channel_set_wdt_status(ch,
+				(struct nvgpu_channel_wdt_args *)buf);
+		break;
 	default:
 		dev_dbg(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

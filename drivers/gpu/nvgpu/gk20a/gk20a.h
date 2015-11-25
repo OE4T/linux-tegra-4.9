@@ -499,7 +499,6 @@ struct gk20a {
 	u32 gr_idle_timeout_default;
 	u32 timeouts_enabled;
 
-	u32 ch_wdt_enabled;
 	struct mutex ch_wdt_lock;
 
 	/* Channel priorities */

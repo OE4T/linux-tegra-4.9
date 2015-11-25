@@ -92,6 +92,7 @@ struct channel_gk20a {
 	wait_queue_head_t ref_count_dec_wq;
 
 	int hw_chid;
+	bool wdt_enabled;
 	bool bound;
 	bool first_init;
 	bool vpr;

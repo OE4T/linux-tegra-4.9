@@ -802,6 +802,13 @@ struct nvgpu_cycle_stats_snapshot_args {
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_ATTACH  1
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT_CMD_DETACH  2
 
+/* disable watchdog per-channel */
+struct nvgpu_channel_wdt_args {
+	__u32 wdt_status;
+	__u32 padding;
+};
+#define NVGPU_IOCTL_CHANNEL_DISABLE_WDT		1
+#define NVGPU_IOCTL_CHANNEL_ENABLE_WDT		2
 
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
@@ -843,9 +850,11 @@ struct nvgpu_cycle_stats_snapshot_args {
 	_IOW(NVGPU_IOCTL_MAGIC,  117, struct nvgpu_channel_events_ctrl_args)
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT	\
 	_IOWR(NVGPU_IOCTL_MAGIC, 118, struct nvgpu_cycle_stats_snapshot_args)
+#define NVGPU_IOCTL_CHANNEL_WDT \
+	_IOW(NVGPU_IOCTL_MAGIC, 119, struct nvgpu_channel_wdt_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_WDT)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
 
 /*

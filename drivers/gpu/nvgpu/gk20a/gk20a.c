@@ -1436,7 +1436,6 @@ static int gk20a_probe(struct platform_device *dev)
 			CONFIG_GK20A_DEFAULT_TIMEOUT;
 	if (tegra_platform_is_silicon())
 		gk20a->timeouts_enabled = true;
-	gk20a->ch_wdt_enabled = true;
 
 	gk20a->timeslice_low_priority_us = 1300;
 	gk20a->timeslice_medium_priority_us = 2600;

@@ -1104,8 +1104,10 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_memcpy(
 
 	mc_seq =  tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
 	/* retain stream-id and clean rest */
-	mc_seq &= (TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK <<
-			TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
+	mc_seq &= ((TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK <<
+			TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT) |
+			(TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK <<
+			TEGRA_GPCDMA_MCSEQ_STREAM_ID1_SHIFT));
 
 	/* Set the address wrapping */
 	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
@@ -1599,6 +1601,7 @@ static int tegra_dma_program_sid(struct tegra_dma_channel *tdc, int chan, int st
 	reg_val &= ~(TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK << TEGRA_GPCDMA_MCSEQ_STREAM_ID1_SHIFT);
 
 	reg_val |= (stream_id << TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
+	reg_val |= (stream_id << TEGRA_GPCDMA_MCSEQ_STREAM_ID1_SHIFT);
 
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_MCSEQ, reg_val);
 	return 0;

@@ -2983,7 +2983,7 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 
 	if (XUDC_IS_T186(xudc)) {
 		/* Increase HS link stability */
-		xudc_writel(xudc, 0x5840, HSFSPI_COUNT16);
+		xudc_writel(xudc, 0x927c0, HSFSPI_COUNT16);
 
 		/* Change INIT value of "NV_PROJ__XUSB_DEV_XHCI_HSFSPI_COUNT0"
 		 * register from 0x12c to 0x3E8. This counter is used by xUSB

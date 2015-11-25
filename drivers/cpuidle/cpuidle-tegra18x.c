@@ -37,11 +37,11 @@
 #include "../../kernel/irq/internals.h"
 #include <linux/pm_qos.h>
 #include <linux/cpu_pm.h>
+#include <linux/psci.h>
 
 #include <asm/cpuidle.h>
 #include <asm/suspend.h>
 #include <asm/cputype.h> /* cpuid */
-#include <asm/psci.h>
 #include <asm/cpu.h>
 #include "../../drivers/cpuidle/dt_idle_states.h"
 
@@ -67,7 +67,6 @@ static bool check_mce_version(void)
 	else
 		return false;
 }
-
 static void tegra186_denver_enter_c6(u32 wake_time)
 {
 	tegra_mce_update_cstate_info(0, 0, 0, 0, DENVER_CORE_WAKE_MASK, 1);
@@ -77,17 +76,12 @@ static void tegra186_denver_enter_c6(u32 wake_time)
 
 static void tegra186_denver_enter_c7(u32 wake_time)
 {
-	unsigned long arg =  (TEGRA186_DENVER_CPUIDLE_C7 |
-		(wake_time & PSCI_STATE_ID_WKTIM_MASK) |
-		(0x1 << PSCI_STATE_TYPE_SHIFT));
-	arg = TEGRA186_DENVER_CPUIDLE_C7;
-
 	tegra_mce_update_cstate_info(0, 0, 0, 0, DENVER_CORE_WAKE_MASK, 1);
 	/* Block all interrupts in the cpu core */
 	local_irq_disable();
 	local_fiq_disable();
 	cpu_pm_enter();  /* power down notifier */
-	cpu_suspend(arg);
+	arm_cpuidle_suspend(TEGRA186_DENVER_CPUIDLE_C7);
 	cpu_pm_exit();
 	local_fiq_enable();
 	local_irq_enable();
@@ -95,15 +89,10 @@ static void tegra186_denver_enter_c7(u32 wake_time)
 
 static void tegra186_a57_enter_c7(u32 wake_time)
 {
-	unsigned long arg =  (TEGRA186_CPUIDLE_C7 |
-		(wake_time & PSCI_STATE_ID_WKTIM_MASK) |
-		(0x1 << PSCI_STATE_TYPE_SHIFT));
-	arg = TEGRA186_A57_CPUIDLE_C7;
-
 	/* Set wake mask */
 	tegra_mce_update_cstate_info(0, 0, 0, 0, A57_CORE_WAKE_MASK, 1);
 	cpu_pm_enter();  /* power down notifier */
-	cpu_suspend(arg);
+	arm_cpuidle_suspend(TEGRA186_A57_CPUIDLE_C7);
 	cpu_pm_exit();
 }
 
@@ -173,6 +162,18 @@ static int t18x_a57_enter_state(
 		asm volatile("wfi\n");
 
 	return index;
+}
+
+u32 t18x_make_power_state(u32 state)
+{
+	u32 wake_time;
+	struct timespec t;
+
+	t = ktime_to_timespec(tick_nohz_get_sleep_length());
+	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;
+	state = state | (wake_time << 4);
+
+	return state;
 }
 
 static struct cpuidle_driver t18x_denver_idle_driver = {
@@ -463,7 +464,7 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 		else
 			cpumask_set_cpu(cpu_number, &denver_cpumask);
 
-		err = cpu_init_idle(cpu_number);
+		err = arm_cpuidle_init(cpu_number);
 		if (err) {
 			pr_err("cpuidle: failed to register cpuidle driver\n");
 			return err;
@@ -495,6 +496,7 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 		/* A57 cluster cpuidle init */
 		pr_info("cpuidle: Initializing cpuidle driver init for "
 				"A57 cluster\n");
+		extended_ops.make_power_state = t18x_make_power_state;
 
 		t18x_a57_idle_driver.cpumask = &a57_cpumask;
 		err = dt_init_idle_driver(&t18x_a57_idle_driver,

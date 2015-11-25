@@ -21,7 +21,7 @@
 #include "tegra186-soc/tegra186-cpus-2D4A.dtsi"
 #include "tegra186-soc/tegra186-soc-base.dtsi"
 #include "tegra186-soc/tegra186-soc-prod.dtsi"
-#include "tegra186-soc/tegra186-audio.dtsi"
+#include "tegra186-soc/tegra186-soc-audio.dtsi"
 
 / {
 

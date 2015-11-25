@@ -696,10 +696,6 @@
 			status = "disabled";
 		};
 
-		spdif-dit.0@0 {
-			status = "disabled";
-		};
-
 		adx@2903a00 {
 			status = "disabled";
 		};
@@ -709,20 +705,28 @@
 		};
 	};
 
-	spdif-dit.0@0 {
-		status = "disabled";
-	};
+	spdif_dit {
+		status = "okay";
 
-	spdif-dit.1@1 {
-		status = "disabled";
-	};
+		spdif-dit.0@0 {
+			status = "okay";
+		};
 
-	spdif-dit.2@2 {
-		status = "disabled";
-	};
+		spdif-dit.1@1 {
+			status = "disabled";
+		};
 
-	spdif-dit.3@3 {
-		status = "disabled";
+		spdif-dit.2@2 {
+			status = "disabled";
+		};
+
+		spdif-dit.3@3 {
+			status = "disabled";
+		};
+
+		spdif-dit.4@4 {
+			status = "disabled";
+		};
 	};
 
 	sound {
@@ -931,10 +935,6 @@
 		reg = <0x0 0x02a51000 0x0 0x1000>,
 			<0x0 0x02a52000 0x0 0x2000>;
 		interrupts = <0 146 0xf04>;
-		status = "okay";
-        };
-
-	spdif_dit0: spdif-dit.0@0 {
 		status = "okay";
         };
 

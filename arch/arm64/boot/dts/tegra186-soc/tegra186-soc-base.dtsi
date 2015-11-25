@@ -30,6 +30,7 @@
 #include "tegra186-soc/tegra186-soc-sata.dtsi"
 #include "tegra186-soc/tegra186-soc-ufshc.dtsi"
 #include "tegra186-soc/tegra186-soc-i2c.dtsi"
+#include "tegra186-soc/tegra186-soc-spdif.dtsi"
 #include "tegra186-soc/tegra186-soc-spi.dtsi"
 #include "tegra186-soc/tegra186-soc-pwm.dtsi"
 #include "../../../../include/dt-bindings/soc/tegra186-powergate.h"
@@ -1888,36 +1889,6 @@
 			clock-names = "dspk", "pll_a_out0", "sync_dspk";
 			status = "disabled";
 		};
-	};
-
-	spdif_dit0: spdif-dit.0@0 {
-		compatible = "linux,spdif-dit";
-		reg = <0x0 0x0 0x0 0x0>;
-		status = "disabled";
-	};
-
-	spdif_dit1: spdif-dit.1@1 {
-		compatible = "linux,spdif-dit";
-		reg = <0x0 0x1 0x0 0x0>;
-		status = "disabled";
-	};
-
-	spdif_dit2: spdif-dit.2@2 {
-		compatible = "linux,spdif-dit";
-		reg = <0x0 0x2 0x0 0x0>;
-		status = "disabled";
-	};
-
-	spdif_dit3: spdif-dit.3@3 {
-		compatible = "linux,spdif-dit";
-		reg = <0x0 0x03 0x0 0x0>;
-		status = "disabled";
-	};
-
-	spdif_dit4: spdif-dit.4@4 {
-		compatible = "linux,spdif-dit";
-		reg = <0x0 0x04 0x0 0x0>;
-		status = "disabled";
 	};
 
 	tegra_agic: agic-controller@2a41000 {

@@ -17,7 +17,7 @@
 #include "tegra186-soc/tegra186-soc-vcm.dtsi"
 #include "tegra186-platforms/tegra186-sunstreaker-eqos.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-thermal.dtsi"
-#include "tegra186-soc/tegra186-audio.dtsi"
+#include "tegra186-soc/tegra186-soc-audio.dtsi"
 #include "tegra186-platforms/tegra186-platforms-simple-bus.dtsi"
 
 #include <dt-bindings/sound/tegra-asoc-alt.h>

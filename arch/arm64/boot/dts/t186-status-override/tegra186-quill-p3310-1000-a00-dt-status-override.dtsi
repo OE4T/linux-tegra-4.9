@@ -57,10 +57,6 @@
 		status = "disabled";
 	};
 
-	hda@3510000 {
-		status = "disabled";
-	};
-
 	roc-flush@e080000 {
 		status = "disabled";
 	};

@@ -363,7 +363,6 @@ struct cache_maint_op {
 
 static int do_cache_maint(struct cache_maint_op *cache_work)
 {
-	pgprot_t prot;
 	unsigned long kaddr;
 	phys_addr_t pstart = cache_work->start;
 	phys_addr_t pend = cache_work->end;
@@ -409,7 +408,6 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		goto out;
 	}
 
-	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 	area = alloc_vm_area(PAGE_SIZE, NULL);
 	if (!area) {
 		err = -ENOMEM;
@@ -427,7 +425,7 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		next = min(next, pend);
 
 		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
-			loop, prot);
+			loop, PG_PROT_KERNEL);
 		inner_cache_maint(op, base, next - loop);
 		loop = next;
 		unmap_kernel_range(kaddr, PAGE_SIZE);

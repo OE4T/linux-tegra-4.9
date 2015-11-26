@@ -5816,7 +5816,10 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 		phy_start_machine(pdata->phydev);
 	}
 #ifdef EQOS_ENABLE_EEE
-	pdata->eee_enabled = eqos_eee_init(pdata);
+	if (pdata->phydev)
+		pdata->eee_enabled = eqos_eee_init(pdata);
+	else
+		pdata->eee_enabled = false;
 #else
 	pdata->eee_enabled = false;
 #endif

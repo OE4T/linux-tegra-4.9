@@ -19963,9 +19963,13 @@ static ssize_t RX_NORMAL_DESC_descriptor_read0(struct file *file,
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
 		return -ENOMEM;
+
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
@@ -20011,9 +20015,13 @@ static ssize_t RX_NORMAL_DESC_descriptor_read1(struct file *file,
 	tmp_buf = kmalloc(622, GFP_KERNEL);
 	if (!tmp_buf)
 		return -ENOMEM;
+
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
+
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
 		sprintf(tmp_buf,
@@ -20062,8 +20070,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read2(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20113,8 +20123,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read3(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20164,8 +20176,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read4(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20214,8 +20228,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read5(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20265,8 +20281,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read6(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20316,8 +20334,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read7(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20368,8 +20388,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read8(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20420,8 +20442,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read9(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20472,8 +20496,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read10(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20524,8 +20550,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read11(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20576,8 +20604,10 @@ static ssize_t RX_NORMAL_DESC_descriptor_read12(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 16; desc_num++) {
@@ -20627,8 +20657,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read0(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20677,8 +20709,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read1(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20727,8 +20761,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read2(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20777,8 +20813,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read3(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20827,8 +20865,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read4(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	};
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20877,8 +20917,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read5(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20927,8 +20969,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read6(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -20977,8 +21021,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read7(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -21027,8 +21073,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read8(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -21077,8 +21125,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read9(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -21127,8 +21177,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read10(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -21177,8 +21229,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read11(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(12440, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 20; desc_num++) {
@@ -21227,8 +21281,10 @@ static ssize_t TX_NORMAL_DESC_descriptor_read12(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 	for (desc_num = 0; desc_num < 16; desc_num++) {
@@ -21287,8 +21343,10 @@ static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 
@@ -21446,8 +21504,10 @@ static ssize_t RX_NORMAL_DESC_status_read(struct file *file,
 		return -ENOMEM;
 
 	debug_buf = kmalloc(9952, GFP_KERNEL);
-	if (!debug_buf)
+	if (!debug_buf) {
+		kfree(tmp_buf);
 		return -ENOMEM;
+	}
 
 	debug_buf[0] = '\0';
 

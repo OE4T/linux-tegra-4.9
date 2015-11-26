@@ -1319,7 +1319,8 @@ static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 		       m.refresh == curr->refresh + 1) &&
 		      m.xres         == curr->xres &&
 		      m.yres         == curr->yres &&
-		      m.pixclock     == curr->pixclock &&
+		      (m.pixclock    == curr->pixclock ||
+		      (m.pixclock * 1001 / 1000) == curr->pixclock) &&
 		      m.hsync_len    == curr->hsync_len &&
 		      m.vsync_len    == curr->vsync_len &&
 		      m.left_margin  == curr->left_margin &&
@@ -1327,6 +1328,7 @@ static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 		      m.upper_margin == curr->upper_margin &&
 		      m.lower_margin == curr->lower_margin &&
 		      m.sync         == curr->sync &&
+		      m.flag         == curr->flag &&
 		      m.vmode        == curr->vmode))
 			continue;
 

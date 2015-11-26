@@ -542,8 +542,10 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 		return -EINVAL;
 
 	priv = kzalloc(sizeof(*priv), GFP_KERNEL);
-	if (!priv)
+	if (!priv) {
+		nvmap_handle_put(h);
 		return -ENOMEM;
+	}
 	priv->handle = h;
 
 	vma->vm_flags |= VM_SHARED | VM_DONTEXPAND |

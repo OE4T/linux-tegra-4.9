@@ -149,48 +149,20 @@ unsigned long nvmap_carveout_usage(struct nvmap_client *c,
 int nvmap_flush_heap_block(struct nvmap_client *client,
 	struct nvmap_heap_block *block, size_t len, unsigned int prot)
 {
-	ulong kaddr;
 	phys_addr_t phys = block->base;
 	phys_addr_t end = block->base + len;
-	struct vm_struct *area = NULL;
+	int ret = 0;
 
 	if (prot == NVMAP_HANDLE_UNCACHEABLE || prot == NVMAP_HANDLE_WRITE_COMBINE)
 		goto out;
 
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-	if (len >= cache_maint_inner_threshold) {
-		inner_flush_cache_all();
-		if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
-			outer_flush_range(block->base, block->base + len);
+	ret = nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV, phys, end,
+				true, prot != NVMAP_HANDLE_INNER_CACHEABLE);
+	if (ret)
 		goto out;
-	}
-#endif
-
-	area = alloc_vm_area(PAGE_SIZE, NULL);
-	if (!area)
-		return -ENOMEM;
-
-	kaddr = (ulong)area->addr;
-
-	while (phys < end) {
-		phys_addr_t next = (phys + PAGE_SIZE) & PAGE_MASK;
-		void *base = (void *)kaddr + (phys & ~PAGE_MASK);
-
-		next = min(next, end);
-		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
-			phys, PG_PROT_KERNEL);
-		FLUSH_DCACHE_AREA(base, next - phys);
-		phys = next;
-		unmap_kernel_range(kaddr, PAGE_SIZE);
-	}
-
-	if (prot != NVMAP_HANDLE_INNER_CACHEABLE)
-		outer_flush_range(block->base, block->base + len);
-
-	free_vm_area(area);
 out:
 	wmb();
-	return 0;
+	return ret;
 }
 
 static

@@ -2065,7 +2065,7 @@
 
 		port {
 			ptm_a57_0_out_port: endpoint {
-				remote-endpoint = <&funnel_bccplex_in_port0>;
+				remote-endpoint = <&funnel_bccplex_in_port1>;
 			};
 		};
 	};
@@ -2097,7 +2097,7 @@
 
 		port {
 			ptm_a57_2_out_port: endpoint {
-				remote-endpoint = <&funnel_bccplex_in_port2>;
+				remote-endpoint = <&funnel_bccplex_in_port1>;
 			};
 		};
 	};
@@ -2113,7 +2113,7 @@
 
 		port {
 			ptm_a57_3_out_port: endpoint {
-				remote-endpoint = <&funnel_bccplex_in_port3>;
+				remote-endpoint = <&funnel_bccplex_in_port1>;
 			};
 		};
 	};
@@ -2141,7 +2141,6 @@
 				reg = <0>;
 				funnel_bccplex_in_port0: endpoint {
 					slave-mode;
-					remote-endpoint = <&ptm_a57_0_out_port>;
 				};
 			};
 
@@ -2149,23 +2148,10 @@
 				reg = <1>;
 				funnel_bccplex_in_port1: endpoint {
 					slave-mode;
-					remote-endpoint = <&ptm_a57_1_out_port>;
-				};
-			};
-
-			port@3 {
-				reg = <2>;
-				funnel_bccplex_in_port2: endpoint {
-					slave-mode;
-					remote-endpoint = <&ptm_a57_2_out_port>;
-				};
-			};
-
-			port@4 {
-				reg = <3>;
-				funnel_bccplex_in_port3: endpoint {
-					slave-mode;
-					remote-endpoint = <&ptm_a57_3_out_port>;
+					remote-endpoint0 = <&ptm_a57_0_out_port>;
+					remote-endpoint1 = <&ptm_a57_1_out_port>;
+					remote-endpoint2 = <&ptm_a57_2_out_port>;
+					remote-endpoint3 = <&ptm_a57_3_out_port>;
 				};
 			};
 		};

@@ -106,16 +106,20 @@
 		status = "okay";
 		clock-frequency = <400000>;
 		max9291@84 {	/* instrument */
-			reg = <0x84>;
+			reg = <0x42>;
+			compatible = "dummy";
 		};
 		tmp451@4c {	/* thermal sensor */
-			reg = <0x4C>;
+			reg = <0x26>;
+			compatible = "dummy";
 		};
 		usb-hsic@58 {
-			reg = <0x58>;
+			reg = <0x2c>;
+			compatible = "dummy";
 		};
 		usb-hsic@5c {
-			reg = <0x5c>;
+			reg = <0x2e>;
+			compatible = "dummy";
 		};
 	};
 
@@ -123,20 +127,24 @@
 		status = "okay";
 		nvidia,clock-always-on;
 		max9293@80 {	/* central display */
-			reg = <0x80>;
+			reg = <0x40>;
+			compatible = "dummy";
 		};
 	};
 
 	i2c@c250000 { /* Tegra I2C8 (I2CC) */
 		status = "okay";
 		max9288@d0 {	/* RVC/parkman */
-			reg = <0xd0>;
+			reg = <0x68>;
+			compatible = "dummy";
 		};
 		max9288@d4 {	/* AR camera   */
-			reg = <0xd4>;
+			reg = <0x6a>;
+			compatible = "dummy";
 		};
 		max9288@d8 {
-			reg = <0xd8>;
+			reg = <0x6c>;
+			compatible = "dummy";
 		};
 	};
 
@@ -145,6 +153,7 @@
 		clock-frequency = <40000>;
 		apple {
 			reg = <0x20>;
+			compatible = "dummy";
 		};
 	};
 

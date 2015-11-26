@@ -730,30 +730,20 @@ static void __exit free_allocated_res_exit(void)
 	free_resources();
 }
 
-static bool __init adjust_remainder(uint16_t ndiv_max, int16_t *steps)
-{
-	bool ret;
-
-	*steps = (ndiv_max / CPUFREQ_TBL_STEP_SIZE);
-	ret = ((ndiv_max % CPUFREQ_TBL_STEP_SIZE) != 0);
-	if (ret)
-		*steps += 1;
-	return ret;
-}
-
 static int __init init_freqtbls(void)
 {
 	struct cpufreq_frequency_table *ftbl;
 	struct cpu_vhint_table *vhtbl;
 	uint16_t ndiv, max_freq_steps;
 	enum cluster cl;
-	bool rem;
-	int ret = 0;
+	int ret = 0, index;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
-		rem  = adjust_remainder(vhtbl->ndiv_max,
-					&max_freq_steps);
+
+		max_freq_steps = vhtbl->ndiv_max / CPUFREQ_TBL_STEP_SIZE +
+			(vhtbl->ndiv_max %
+			CPUFREQ_TBL_STEP_SIZE ? 1 : 0);
 
 		/* Allocate memory 1 + max_freq_steps to write END_OF_TABLE */
 		ftbl = kzalloc(sizeof(struct cpufreq_frequency_table) *
@@ -765,17 +755,18 @@ static int __init init_freqtbls(void)
 			goto err_out;
 		}
 
-		/* generate freq table from ndiv table */
-		for (ndiv = 0; ndiv < (max_freq_steps - rem); ndiv++)
-			ftbl[ndiv].frequency = ((ndiv + 1) *
-				CPUFREQ_TBL_STEP_SIZE * vhtbl->ref_clk_hz) /
-				(vhtbl->pdiv * vhtbl->mdiv * 1000);
-		if (rem)
-			ftbl[ndiv++].frequency = (vhtbl->ndiv_max *
-			vhtbl->ref_clk_hz) /
+		for (index = 0, ndiv = vhtbl->ndiv_min;
+				ndiv < vhtbl->ndiv_max;
+				index++, ndiv += CPUFREQ_TBL_STEP_SIZE)
+			ftbl[index].frequency = (unsigned long)
+				(vhtbl->ref_clk_hz * ndiv)
+				/ (vhtbl->pdiv * vhtbl->mdiv * 1000);
+
+		ftbl[index++].frequency = (unsigned long)
+			(vhtbl->ndiv_max * vhtbl->ref_clk_hz) /
 			(vhtbl->pdiv * vhtbl->mdiv * 1000);
 
-		ftbl[ndiv].frequency = CPUFREQ_TABLE_END;
+		ftbl[index].frequency = CPUFREQ_TABLE_END;
 
 		tfreq_data.pcluster[cl].clft = ftbl;
 	}

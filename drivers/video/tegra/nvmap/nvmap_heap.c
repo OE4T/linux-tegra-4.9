@@ -370,39 +370,11 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->vm_id = co->vmid;
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-	inner_flush_cache_all();
-#else
-	{
-		unsigned long kaddr;
-		struct vm_struct *area;
-		phys_addr_t pstart = base;
-		phys_addr_t pend = base + len;
-		phys_addr_t loop;
-
-		area = alloc_vm_area(PAGE_SIZE, NULL);
-		if (!area)
-			goto fail;
-
-		kaddr = (unsigned long)area->addr;
-		loop = pstart;
-
-		while (loop < pend) {
-			phys_addr_t next = (loop + PAGE_SIZE) & PAGE_MASK;
-			void *start = (void *)kaddr + (loop & ~PAGE_MASK);
-			next = min(next, pend);
-
-			ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
-					loop, PG_PROT_KERNEL);
-			inner_cache_maint(NVMAP_CACHE_OP_WB_INV, start, next - loop);
-			loop = next;
-			unmap_kernel_range(kaddr, PAGE_SIZE);
-		}
-
-		free_vm_area(area);
+	if (nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
+				base, base + len, true, true)) {
+		dev_err(parent, "cache flush failed\n");
+		goto fail;
 	}
-#endif
-	outer_flush_range(base, base + len);
 	wmb();
 
 	if (!co->enable_static_dma_map)

@@ -190,7 +190,6 @@
 #define CMD_TRANSFER				0
 #define ADDR_TRANSFER				1
 #define DATA_TRANSFER				2
-#define CLK_SRC_QSPI				0x55C3000
 
 struct tegra_qspi_data {
 	struct device				*dev;
@@ -198,12 +197,14 @@ struct tegra_qspi_data {
 	spinlock_t				lock;
 
 	struct clk				*clk;
-	struct reset_control 			*rstc;
+	struct clk				*sdr_ddr_clk;
+	struct reset_control			*rstc;
 	void __iomem				*base;
 	phys_addr_t				phys;
 	unsigned				irq;
 	int					dma_req_sel;
 	bool					clock_always_on;
+	bool					is_ddr_mode;
 	u32					qspi_max_frequency;
 	u32					cur_speed;
 	u8					qspi_num_dummy_cycle;
@@ -223,7 +224,7 @@ struct tegra_qspi_data {
 	unsigned				max_buf_size;
 	bool					is_curr_dma_xfer;
 	bool					is_hw_based_cs;
-	bool 					dcycle_non_cmbseq_mode;
+	bool					dcycle_non_cmbseq_mode;
 
 	struct completion			rx_dma_complete;
 	struct completion			tx_dma_complete;
@@ -965,7 +966,8 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		bool is_single_xfer)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
-	u32 speed, qspi_cs_timing2 = 0, clk_val = 0;
+	u32 speed, qspi_cs_timing2 = 0;
+	u32 actual_speed = 0;
 	u8 bits_per_word;
 	unsigned total_fifo_words;
 	int ret;
@@ -974,7 +976,6 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	u8 bus_width = X1, num_dummy_cycles = 0;
 	bool is_ddr = false;
 	struct tegra_qspi_device_controller_data *cdata = spi->controller_data;
-	void __iomem *clk_base;
 	bits_per_word = t->bits_per_word;
 	tqspi->cur_qspi = spi;
 	tqspi->cur_pos = 0;
@@ -1010,37 +1011,6 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	 */
 	is_ddr = get_sdr_ddr(t->delay_usecs);
 	bus_width = get_bus_width(t->delay_usecs);
-
-#ifndef QSPI_BRINGUP_BUILD
-	if (is_ddr) {
-		ret = tegra_clk_cfg_ex(tqspi->clk, TEGRA_CLK_QSPI_DIV2_ENB, 1);
-		if (ret) {
-			dev_err(tqspi->dev, "Failed to set clk DIV2 %d\n", ret);
-			return -EINVAL;
-		}
-	} else if (!cdata->ifddr_div2_sdr) {
-		ret = tegra_clk_cfg_ex(tqspi->clk, TEGRA_CLK_QSPI_DIV2_ENB, 0);
-		if (ret) {
-			dev_err(tqspi->dev, "Failed to reset clk DIV2\n");
-			return -EINVAL;
-		}
-	}
-#else
-	clk_base = ioremap(CLK_SRC_QSPI, 0x4);
-	/* FixMe Add BPMP FW based APIS
-	instead of Register based programming */
-	if (is_ddr) {
-		clk_val = readl(clk_base);
-		clk_val |= 0x100;
-		writel(clk_val, clk_base);
-	} else {
-		clk_val = readl(clk_base);
-		clk_val &= 0xFFFFFEFF;
-		writel(clk_val, clk_base);
-	}
-	udelay(10);
-	iounmap(clk_base);
-#endif
 	ret = tegra_qspi_validate_request(spi, tqspi, t, is_ddr);
 	if (ret)
 		return ret;
@@ -1049,12 +1019,27 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	if (speed != tqspi->cur_speed) {
 		ret = clk_set_rate(tqspi->clk, speed);
 		if (ret) {
-			dev_err(tqspi->dev, "Failed to set clk freq %d\n", ret);
+			dev_err(tqspi->dev,
+			"Failed to set qspi clk freq %d\n", ret);
 			return -EINVAL;
 		}
 		tqspi->cur_speed = speed;
 	}
-
+	if (is_ddr != tqspi->is_ddr_mode) {
+		actual_speed = clk_get_rate(tqspi->clk);
+		if (is_ddr)
+			ret = clk_set_rate(tqspi->sdr_ddr_clk,
+				(actual_speed>>1));
+		else
+			ret = clk_set_rate(tqspi->sdr_ddr_clk, actual_speed);
+		if (ret) {
+			dev_err(tqspi->dev,
+			"Failed to set qspi_out clk freq %d\n"
+			, ret);
+			return -EINVAL;
+		}
+		tqspi->is_ddr_mode = is_ddr;
+	}
 	if (is_first_of_msg) {
 		tegra_qspi_clear_status(tqspi);
 
@@ -1111,15 +1096,15 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		int rx_tap_delay;
 		int tx_tap_delay;
 
-		if(cdata->rx_tap_delay) {
+		if (cdata->rx_tap_delay) {
 			rx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
 			command2_reg = QSPI_RX_TAP_DELAY(rx_tap_delay);
 		}
-		if(cdata->tx_tap_delay) {
+		if (cdata->tx_tap_delay) {
 			tx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
 			command2_reg |= QSPI_TX_TAP_DELAY(tx_tap_delay);
 		}
-		if((cdata->rx_tap_delay) || (cdata->tx_tap_delay))
+		if ((cdata->rx_tap_delay) || (cdata->tx_tap_delay))
 			tegra_qspi_writel(tqspi, command2_reg, QSPI_COMMAND2);
 	}
 
@@ -1803,6 +1788,14 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 		goto exit_free_irq;
 	}
 
+	tqspi->sdr_ddr_clk = devm_clk_get(&pdev->dev, "qspi_out");
+	if (IS_ERR(tqspi->sdr_ddr_clk)) {
+		dev_err(&pdev->dev, "can not get clock\n");
+		ret = PTR_ERR(tqspi->sdr_ddr_clk);
+		goto exit_free_irq;
+	}
+	/* Set default mode to SDR */
+	tqspi->is_ddr_mode = false;
 	tqspi->max_buf_size = QSPI_FIFO_DEPTH << 2;
 	tqspi->dma_buf_size = DEFAULT_SPI_DMA_BUF_LEN;
 	tqspi->qspi_max_frequency = pdata->qspi_max_frequency;
@@ -1829,9 +1822,17 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	if (tqspi->clock_always_on) {
 		ret = clk_prepare_enable(tqspi->clk);
 		if (ret < 0) {
-			dev_err(tqspi->dev, "clk_prepare failed: %d\n", ret);
+			dev_err(tqspi->dev, "clk_prepare failed qspi clk: %d\n"
+				, ret);
 			goto exit_deinit_dma;
 		}
+		ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
+		if (ret < 0) {
+			dev_err(tqspi->dev, "clk_prepare failed for qspi_out clk: %d\n"
+				, ret);
+			goto exit_deinit_dma;
+		}
+
 	}
 
 	pm_runtime_enable(&pdev->dev);
@@ -1880,8 +1881,10 @@ exit_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_qspi_runtime_suspend(&pdev->dev);
-	if (tqspi->clock_always_on)
+	if (tqspi->clock_always_on) {
+		clk_disable_unprepare(tqspi->sdr_ddr_clk);
 		clk_disable_unprepare(tqspi->clk);
+	}
 exit_deinit_dma:
 	tegra_qspi_deinit_dma_param(tqspi, false);
 exit_rx_dma_free:
@@ -1913,8 +1916,10 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_qspi_runtime_suspend(&pdev->dev);
 
-	if (tqspi->clock_always_on)
+	if (tqspi->clock_always_on) {
+		clk_disable_unprepare(tqspi->sdr_ddr_clk);
 		clk_disable_unprepare(tqspi->clk);
+	}
 	return 0;
 }
 #ifdef CONFIG_PM_SLEEP
@@ -1926,9 +1931,10 @@ static int tegra_qspi_suspend(struct device *dev)
 
 	ret = spi_master_suspend(master);
 
-	if (tqspi->clock_always_on)
+	if (tqspi->clock_always_on) {
+		clk_disable_unprepare(tqspi->sdr_ddr_clk);
 		clk_disable_unprepare(tqspi->clk);
-
+	}
 	return ret;
 }
 
@@ -1941,11 +1947,17 @@ static int tegra_qspi_resume(struct device *dev)
 	if (tqspi->clock_always_on) {
 		ret = clk_prepare_enable(tqspi->clk);
 		if (ret < 0) {
-			dev_err(tqspi->dev, "clk_prepare failed: %d\n", ret);
+			dev_err(tqspi->dev, "clk_prepare failed for qspi clk: %d\n"
+				, ret);
+			return ret;
+		}
+		ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
+		if (ret < 0) {
+			dev_err(tqspi->dev, "clk_prepare failed for qspi_out clk: %d\n"
+				, ret);
 			return ret;
 		}
 	}
-
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
 		dev_err(dev, "pm runtime failed, e = %d\n", ret);
@@ -1966,6 +1978,7 @@ static int tegra_qspi_runtime_suspend(struct device *dev)
 	/* Flush all write which are in PPSB queue by reading back */
 	tegra_qspi_readl(tqspi, QSPI_COMMAND1);
 
+	clk_disable_unprepare(tqspi->sdr_ddr_clk);
 	clk_disable_unprepare(tqspi->clk);
 	return 0;
 }
@@ -1978,7 +1991,14 @@ static int tegra_qspi_runtime_resume(struct device *dev)
 
 	ret = clk_prepare_enable(tqspi->clk);
 	if (ret < 0) {
-		dev_err(tqspi->dev, "clk_prepare failed: %d\n", ret);
+		dev_err(tqspi->dev, "clk_prepare failed for qspi clk: %d\n"
+			, ret);
+		return ret;
+	}
+	ret = clk_prepare_enable(tqspi->sdr_ddr_clk);
+	if (ret < 0) {
+		dev_err(tqspi->dev, "clk_prepare failed for qspi_out clk: %d\n"
+			, ret);
 		return ret;
 	}
 	return 0;

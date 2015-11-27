@@ -158,9 +158,7 @@
 			      <&{/sound_ref}		TEGRA_SID_APE>,
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
 			      <&{/aon@c160000}		TEGRA_SID_AON>,
-			      <&{/bpmp}			TEGRA_SID_BPMP>;
-
-			      /*
+			      <&{/bpmp}			TEGRA_SID_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,
@@ -180,7 +178,6 @@
 			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
-			      */
 
 		status = "disabled";
 

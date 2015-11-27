@@ -347,7 +347,7 @@ static int pm_irq_set_type(struct irq_data *d, unsigned int flow_type)
 	return err;
 }
 
-int pm_irq_set_wake(struct irq_data *d, unsigned int enable)
+static int pm_irq_set_wake(struct irq_data *d, unsigned int enable)
 {
 	int i;
 	int ret;

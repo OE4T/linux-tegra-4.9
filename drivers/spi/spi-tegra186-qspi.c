@@ -521,7 +521,8 @@ static unsigned tegra_qspi_fill_tx_fifo_from_client_txbuf(
 			x = 0;
 			for (i = 0; nbytes && (i < tqspi->bytes_per_word);
 					i++, nbytes--)
-				x |= (*tx_buf++) << (i*8);
+				x |= (unsigned long)
+					(((unsigned)(*tx_buf++)) << (i*8));
 			tegra_qspi_writel(tqspi, x, QSPI_TX_FIFO);
 		}
 	}

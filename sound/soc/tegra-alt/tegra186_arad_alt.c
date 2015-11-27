@@ -138,6 +138,7 @@ static int tegra186_arad_get_lane_lock_status(
 	return val;
 }
 
+#if defined(CONFIG_SND_SOC_TEGRA186_ARAD_WAR) || defined(CONFIG_SND_SOC_TEGRA186_ASRC_WAR)
 static int tegra186_arad_get_lane_ratio_change_status(
 	struct tegra186_arad *arad, unsigned int lane_id)
 {
@@ -149,6 +150,8 @@ static int tegra186_arad_get_lane_ratio_change_status(
 
 	return val;
 }
+#endif
+
 static struct snd_soc_dai_ops tegra186_arad_out_dai_ops = {
 };
 

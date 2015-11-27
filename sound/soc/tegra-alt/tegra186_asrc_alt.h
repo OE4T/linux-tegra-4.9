@@ -130,6 +130,9 @@ enum task_event {
 	STREAM_DISABLE,
 	STREAM_ENABLE,
 };
+
+struct tegra210_xbar_cif_conf;
+
 struct tegra186_asrc_soc_data {
 	void (*set_audio_cif)(struct regmap *map,
 			unsigned int reg,

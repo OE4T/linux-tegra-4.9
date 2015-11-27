@@ -594,13 +594,11 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int tegra_wdt_t18x_shutdown(struct platform_device *pdev)
+static void tegra_wdt_t18x_shutdown(struct platform_device *pdev)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x = platform_get_drvdata(pdev);
 
 	__tegra_wdt_t18x_ping(tegra_wdt_t18x);
-
-	return 0;
 }
 
 static int tegra_wdt_t18x_remove(struct platform_device *pdev)

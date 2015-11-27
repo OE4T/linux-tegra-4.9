@@ -2520,8 +2520,6 @@ EXPORT_SYMBOL(tegra_dc_update_cmu_aligned);
 int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 						bool cache_dirty)
 {
-	int ret;
-
 	mutex_lock(&dc->lock);
 
 	if (!dc->enabled) {
@@ -2545,7 +2543,7 @@ int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 
 	mutex_unlock(&dc->lock);
 
-	return ret;
+	return 0;
 }
 EXPORT_SYMBOL(tegra_dc_set_hdr);
 

@@ -481,6 +481,15 @@
 			prod_c_hsic0 {
 				prod = <0 0x344 0xffffff80 0x2d>;
 			};
+			prod_c_utmi0 {
+				prod = <0 0x88 0xfe01ffff 0xcc0000>;
+			};
+			prod_c_utmi1 {
+				prod = <0 0xc8 0xfe01ffff 0xcc0000>;
+			};
+			prod_c_utmi2 {
+				prod = <0 0x108 0xfe01ffff 0xcc0000>;
+			};
 			prod_c_ss0 {
 				prod = <0 0x14 0x08000000 0x1010002
 					0 0x14 0x08000000 0x1040032

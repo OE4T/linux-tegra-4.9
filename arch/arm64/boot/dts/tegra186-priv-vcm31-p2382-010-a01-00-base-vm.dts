@@ -54,12 +54,49 @@
 	};
 
 	i2c@3160000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
 		tegra_nct72: onsemi,nct72@4c {
 			status = "okay";
 			/delete-property/ interrupt-parent;
 			/delete-property/ interrupts;
 			/delete-property/ temp-alert-gpio;
 		};
+	};
+
+	i2c@3180000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
+	};
+
+	i2c@3190000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
+	};
+
+	i2c@31b0000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
+	};
+
+	i2c@31c0000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
+	};
+
+	i2c@31e0000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
+	};
+
+	i2c@c240000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
+	};
+
+	i2c@c250000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 33>;
 	};
 
 	mc_sid@2c00000 {

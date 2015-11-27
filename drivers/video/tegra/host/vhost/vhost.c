@@ -163,17 +163,16 @@ void vhost_init_host1x_debug_ops(struct nvhost_debug_ops *ops)
 
 int nvhost_virt_init(struct platform_device *dev, int moduleid)
 {
-	struct nvhost_virt_ctx *virt_ctx =
-				kzalloc(sizeof(*virt_ctx), GFP_KERNEL);
-	int err;
+	int err = 0;
 	bool channel_management_in_guest = false;
 	struct nvhost_master *host = nvhost_get_host(dev);
-
-	if (host->info.vmserver_owns_engines)
-		channel_management_in_guest = true;
+	struct nvhost_virt_ctx *virt_ctx = kzalloc(sizeof(*virt_ctx), GFP_KERNEL);
 
 	if (!virt_ctx)
 		return -ENOMEM;
+
+	if (host->info.vmserver_owns_engines)
+		channel_management_in_guest = true;
 
 	/* If host1x, init comm */
 	if (moduleid == NVHOST_MODULE_NONE) {
@@ -185,7 +184,7 @@ int nvhost_virt_init(struct platform_device *dev, int moduleid)
 	}
 
 	if (channel_management_in_guest)
-		return 0;
+		goto fail;
 
 	virt_ctx->handle = vhost_virt_connect(moduleid);
 	if (!virt_ctx->handle) {

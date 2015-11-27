@@ -235,7 +235,7 @@ int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np)
 	struct padctrl_config config = { };
 	int ret;
 
-	pmc_padctrl = kzalloc(sizeof(*pmc_padctrl), GFP_KERNEL);
+	pmc_padctrl = devm_kzalloc(dev, sizeof(*pmc_padctrl), GFP_KERNEL);
 	if (!pmc_padctrl) {
 		pr_err("Mem allocation for pmc_padctrl failed\n");
 		return -ENOMEM;
@@ -247,7 +247,7 @@ int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np)
 	if (IS_ERR(pmc_padctrl->pad_dev)) {
 		ret = PTR_ERR(pmc_padctrl->pad_dev);
 		pr_err("T186 padctrl driver init failed: %d\n", ret);
-		kfree(pmc_padctrl);
+		devm_kfree(dev, pmc_padctrl);
 		return ret;
 	}
 	padctrl_set_drvdata(pmc_padctrl->pad_dev, pmc_padctrl);

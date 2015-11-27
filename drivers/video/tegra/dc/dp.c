@@ -2665,7 +2665,7 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	struct device_node *np_dp =
-		dp->sor->instance ? of_find_node_by_path(DPAUX1_NODE) :
+		(dp->sor && dp->sor->instance) ? of_find_node_by_path(DPAUX1_NODE) :
 		of_find_node_by_path(DPAUX_NODE);
 
 	if (dp->sor)

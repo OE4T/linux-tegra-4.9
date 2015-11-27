@@ -1501,6 +1501,7 @@ static void trace_write_pushbuffer_range(struct channel_gk20a *c,
 
 			if (copy_from_user(g,
 				(void __user *)(uintptr_t)args->gpfifo,	size)) {
+				nvgpu_free(g);
 				return;
 			}
 		}

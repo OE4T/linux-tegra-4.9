@@ -23,9 +23,8 @@
 			avdd_lcd-supply = <&en_avdd_disp_3v3>;
 			dvdd_lcd-supply = <&en_vdd_disp_1v8>;
 			avdd_dsi_csi-supply = <&spmic_sd1>;
-			vdd_ts_3v3-supply = <&en_vdd_ts_hv_3v3>;
-			vdd_ts_1v8-supply = <&en_vdd_ts_1v8>;
-			avdd_lcd_1v2-supply = <&dis_vdd_1v2>;
+			outp-supply = <&vpp_lcd>;
+			outn-supply = <&vmm_lcd>;
 		};
 		nvdisplay@15210000 {
 			avdd_hdmi-supply = <&spmic_ldo7>;

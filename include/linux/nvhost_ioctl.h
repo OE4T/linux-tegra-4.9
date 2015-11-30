@@ -103,6 +103,12 @@ struct nvhost_channel_open_args {
 	__s32 channel_fd;
 };
 
+struct nvhost_set_syncpt_name_args {
+	__u64 name;
+	__u32 syncpt_id;
+	__u32 padding;
+};
+
 struct nvhost_set_nvmap_fd_args {
 	__u32 fd;
 } __packed;
@@ -302,6 +308,9 @@ struct nvhost_channel_map_buffer_args {
 	_IOWR(NVHOST_IOCTL_MAGIC, 28, struct nvhost_channel_map_buffer_args)
 #define	NVHOST_IOCTL_CHANNEL_UNMAP_BUFFER	\
 	_IOWR(NVHOST_IOCTL_MAGIC, 29, struct nvhost_channel_unmap_buffer_args)
+
+#define NVHOST_IOCTL_CHANNEL_SET_SYNCPOINT_NAME	\
+	_IOW(NVHOST_IOCTL_MAGIC, 30, struct nvhost_set_syncpt_name_args)
 
 #define NVHOST_IOCTL_CHANNEL_SET_ERROR_NOTIFIER  \
 	_IOWR(NVHOST_IOCTL_MAGIC, 111, struct nvhost_set_error_notifier)

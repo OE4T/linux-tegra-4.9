@@ -1399,3 +1399,16 @@ void nvhost_syncpt_set_min_eq_max(struct nvhost_syncpt *sp, u32 id)
 	atomic_set(&sp->min_val[id], atomic_read(&sp->max_val[id]));
 	syncpt_op().reset(sp, id);
 }
+
+int nvhost_channel_set_syncpoint_name(struct nvhost_syncpt *sp,
+	u32 syncpt_id, const char *syncpt_name)
+{
+	int ret = 0;
+
+	mutex_lock(&sp->syncpt_mutex);
+	kfree(sp->syncpt_names[syncpt_id]);
+	ret = nvhost_syncpt_assign_name(sp, syncpt_id, syncpt_name);
+	mutex_unlock(&sp->syncpt_mutex);
+
+	return ret;
+}

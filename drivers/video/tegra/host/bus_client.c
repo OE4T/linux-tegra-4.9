@@ -938,6 +938,50 @@ static int nvhost_ioctl_channel_get_client_syncpt(
 	return 0;
 }
 
+static int nvhost_ioctl_channel_set_syncpoint_name(
+				struct nvhost_channel_userctx *ctx,
+				struct nvhost_set_syncpt_name_args *buf)
+{
+
+	struct nvhost_device_data *pdata = platform_get_drvdata(ctx->pdev);
+	struct nvhost_master *host = nvhost_get_host(pdata->pdev);
+	const char __user *args_name =
+		(const char __user *)(uintptr_t)buf->name;
+	const u32 *syncpt_array;
+	char *syncpt_name;
+	char name[32];
+	int j;
+
+	if (args_name) {
+		if (strncpy_from_user(name, args_name, sizeof(name)) < 0)
+			return -EFAULT;
+		name[sizeof(name) - 1] = '\0';
+	} else {
+		name[0] = '\0';
+	}
+
+	syncpt_array =
+		(pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) ?
+		ctx->syncpts :
+		ctx->ch->syncpts;
+
+	for (j = 0; j < NVHOST_MODULE_MAX_SYNCPTS; j++) {
+		if (syncpt_array[j] == buf->syncpt_id) {
+			syncpt_name = kasprintf(GFP_KERNEL, "%s", name);
+			if (syncpt_name) {
+				return nvhost_channel_set_syncpoint_name(
+					&host->syncpt,
+					buf->syncpt_id,
+					(const char *)syncpt_name);
+			} else {
+				return -ENOMEM;
+			}
+		}
+	}
+
+	return -EINVAL;
+}
+
 static long nvhost_channelctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -1265,6 +1309,12 @@ static long nvhost_channelctl(struct file *filp,
 		dev_dbg(&priv->pdev->dev,
 			"%s: setting buffer timeout (%d ms) for userctx 0x%p\n",
 			__func__, priv->timeout, priv);
+		break;
+	}
+	case NVHOST_IOCTL_CHANNEL_SET_SYNCPOINT_NAME:
+	{
+		err = nvhost_ioctl_channel_set_syncpoint_name(priv,
+			(struct nvhost_set_syncpt_name_args *)buf);
 		break;
 	}
 	default:

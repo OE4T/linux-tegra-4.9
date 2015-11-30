@@ -94,5 +94,6 @@ int nvhost_channel_ch_base(struct nvhost_master *host);
 int nvhost_channel_ch_limit(struct nvhost_master *host);
 int nvhost_channel_get_id_from_index(struct nvhost_master *host, int index);
 int nvhost_channel_get_index_from_id(struct nvhost_master *host, int chid);
-
+int nvhost_channel_set_syncpoint_name(struct nvhost_syncpt *sp, u32 syncpt_id,
+	const char *syncpt_name);
 #endif

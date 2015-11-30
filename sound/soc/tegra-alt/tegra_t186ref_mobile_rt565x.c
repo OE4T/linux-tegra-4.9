@@ -78,6 +78,7 @@ struct tegra_t186ref {
 	struct regulator *dmic_reg;
 	struct snd_soc_card *pcard;
 	int rate_via_kcontrol;
+	int is_codec_dummy;
 };
 
 static const int tegra_t186ref_srate_values[] = {
@@ -92,7 +93,7 @@ static const int tegra_t186ref_srate_values[] = {
 	32000,
 	88200,
 	96000,
-	176000,
+	176400,
 	192000,
 };
 
@@ -125,6 +126,7 @@ static int tegra_t186ref_jack_notifier(struct notifier_block *self,
 
 	if (!gpio_is_valid(pdata->gpio_hp_det))
 		return NOTIFY_OK;
+
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
 	/* check if idx has valid number */
 	if (idx == -EINVAL)
@@ -238,6 +240,9 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int idx, mclk, clk_out_rate;
 	int err, codec_rate, clk_rate;
+
+	if (machine->is_codec_dummy)
+		return 0;
 
 	codec_rate = tegra_t186ref_srate_values[machine->rate_via_kcontrol];
 	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
@@ -779,6 +784,39 @@ static struct snd_soc_card snd_soc_tegra_t186ref = {
 	.fully_routed = true,
 };
 
+static void replace_codec_link(struct platform_device *pdev,
+	struct snd_soc_dai_link *links)
+{
+	int i;
+	struct snd_soc_card *card = platform_get_drvdata(pdev);
+	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+	struct device_node *np = pdev->dev.of_node;
+
+	for (i = 0; i < machine->num_codec_links; i++) {
+		if (links[i].name &&
+			(strstr(links[i].name, "rt565x-playback") ||
+			strstr(links[i].name, "dspk-playback-l") ||
+			strstr(links[i].name, "dspk-playback-r"))) {
+
+			links[i].init = NULL;
+			links[i].codec_of_node =
+				of_parse_phandle(np, "nvidia,dummy-codec-dai",
+					0);
+
+			machine->is_codec_dummy = 1;
+
+			if (of_property_read_string(np,
+				"nvidia,dummy-codec-dai-name",
+				&links[i].codec_dai_name)) {
+				dev_err(&pdev->dev,
+				"Property dummy-codec-dai-name' missing or invalid\n");
+			}
+		}
+	}
+
+	return;
+}
+
 static void dai_link_setup(struct platform_device *pdev, int dummy)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
@@ -787,7 +825,14 @@ static void dai_link_setup(struct platform_device *pdev, int dummy)
 	struct snd_soc_codec_conf *tegra_t186ref_codec_conf = NULL;
 	struct snd_soc_dai_link *tegra_machine_dai_links = NULL;
 	struct snd_soc_dai_link *tegra_t186ref_codec_links = NULL;
+	struct tegra_asoc_platform_data *pdata = machine->pdata;
 	int i;
+
+	if (dummy) {
+		tegra_machine_remove_dai_link();
+		tegra_machine_remove_codec_conf();
+		pdata->gpio_hp_det = -1;
+	}
 
 	/* set new codec links and conf */
 	tegra_t186ref_codec_links = tegra_machine_new_codec_links(pdev,
@@ -810,6 +855,10 @@ static void dai_link_setup(struct platform_device *pdev, int dummy)
 				tegra_t186ref_codec_links[i].init = tegra_t186ref_dspk_init;
 		}
 	}
+
+	/* overwrite codec link */
+	if (dummy)
+		replace_codec_link(pdev, tegra_t186ref_codec_links);
 
 	tegra_t186ref_codec_conf = tegra_machine_new_codec_conf(pdev,
 		tegra_t186ref_codec_conf,
@@ -906,6 +955,7 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	card->dev = &pdev->dev;
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, machine);
+	machine->is_codec_dummy = 0;
 
 	ret = snd_soc_of_parse_card_name(card, "nvidia,model");
 	if (ret)
@@ -952,17 +1002,17 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	if (ret)
 		goto err_alloc_dai_link;
 
-#if !defined(CONFIG_SND_SOC_TEGRA_ALT_FORCE_CARD_REG)
-	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
-	/* check if idx has valid number */
-	if (idx == -EINVAL)
-		goto err_fini_utils;
-#endif
 	ret = snd_soc_register_card(card);
 	if (ret) {
-		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
-			ret);
-		goto err_fini_utils;
+#if defined(CONFIG_SND_SOC_TEGRA_ALT_FORCE_CARD_REG)
+		dai_link_setup(pdev, 1);
+		ret = snd_soc_register_card(card);
+#endif
+		if (ret) {
+			dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
+				ret);
+			goto err_fini_utils;
+		}
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");

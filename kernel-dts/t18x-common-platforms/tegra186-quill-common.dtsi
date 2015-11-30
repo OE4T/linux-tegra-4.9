@@ -208,6 +208,10 @@
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
 
+		/* used when no audio codec on board */
+		nvidia,dummy-codec-dai = <&spdif_dit1>;
+		nvidia,dummy-codec-dai-name = "dit-hifi";
+
 		status = "okay";
 		nvidia,audio-routing =
 			"y Headphone",		"y OUT",

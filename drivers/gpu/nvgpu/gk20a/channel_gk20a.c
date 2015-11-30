@@ -1754,9 +1754,14 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 
 	trace_gk20a_channel_update(c->hw_chid);
 
+	update_gp_get(c->g, c);
 	wake_up(&c->submit_wq);
 
 	mutex_lock(&c->submit_lock);
+
+	/* gp_put check needs to be done inside submit lock */
+	check_gp_put(c->g, c);
+
 	mutex_lock(&c->jobs_lock);
 	list_for_each_entry_safe(job, n, &c->jobs, list) {
 		struct gk20a *g = c->g;
@@ -1893,8 +1898,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 					  flags,
 					  fence ? fence->id : 0,
 					  fence ? fence->value : 0);
-	check_gp_put(g, c);
-	update_gp_get(g, c);
 
 	gk20a_dbg_info("pre-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);

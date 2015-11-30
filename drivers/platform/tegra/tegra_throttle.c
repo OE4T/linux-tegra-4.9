@@ -28,6 +28,9 @@
 #include <linux/of.h>
 #include <linux/module.h>
 #include <linux/platform_device.h>
+#include <asm/cpu.h>
+#include <asm/cputype.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #define MAX_THROT_TABLE_SIZE	(64)
 #define NO_CAP			(ULONG_MAX) /* no cap */
@@ -36,11 +39,18 @@
 static DEFINE_MUTEX(bthrot_list_lock);
 static LIST_HEAD(bthrot_list);
 
+enum throttle_type {
+	THROT_DEFAULT,
+	THROT_MCPU,
+	THROT_BCPU,
+};
+
 /* Tracks the final throttle freq. for the given clk */
 struct bthrot_freqs {
 	const char *cap_name;
 	struct clk *cap_clk;
 	unsigned long cap_freq;
+	enum throttle_type type;
 };
 
 /* Array of final bthrot caps for each clk */
@@ -61,6 +71,7 @@ struct balanced_throttle {
 #define CAP_TBL_CAP_NAME(index)	(cap_freqs_table[index].cap_name)
 #define CAP_TBL_CAP_CLK(index)	(cap_freqs_table[index].cap_clk)
 #define CAP_TBL_CAP_FREQ(index)	(cap_freqs_table[index].cap_freq)
+#define CAP_TBL_CAP_TYPE(index) (cap_freqs_table[index].type)
 
 #define THROT_TBL_IDX(row, col)		(((row) * num_cap_clks) + (col))
 #define THROT_VAL(tbl, row, col)	(tbl)[(THROT_TBL_IDX(row, col))]
@@ -106,11 +117,71 @@ tegra_throttle_get_cur_state(struct thermal_cooling_device *cdev,
 	return 0;
 }
 
+static DEFINE_PER_CPU(unsigned long, max_cpu_rate);
+
+/* Apply thermal constraints on all policy updates */
+static int tegra_throttle_policy_notifier(struct notifier_block *nb,
+					unsigned long event, void *data)
+{
+	struct cpufreq_policy *policy = data;
+	unsigned long cpu_max;
+
+	if (event != CPUFREQ_ADJUST)
+		return 0;
+
+	cpu_max = per_cpu(max_cpu_rate, policy->cpu);
+
+	if (policy->max != cpu_max)
+		cpufreq_verify_within_limits(policy, 0, cpu_max);
+
+	return 0;
+}
+
+static struct notifier_block tegra_throttle_cpufreq_nb = {
+	.notifier_call = tegra_throttle_policy_notifier,
+};
+
+/* Must be called with the bthrot_list_lock held */
+static void tegra_throttle_update_cpu_cap(enum throttle_type type,
+					unsigned long rate)
+{
+	int cpu;
+	struct cpufreq_policy policy;
+	struct cpuinfo_arm64 *cpuinfo;
+	int mcpu = false;
+
+	if (type != THROT_BCPU && type != THROT_MCPU)
+		return;
+
+	/* Hz to Khz for cpufreq */
+	rate = rate / 1000;
+
+	for_each_present_cpu(cpu) {
+		if (cpufreq_get_policy(&policy, cpu))
+			continue;
+
+		cpuinfo = &per_cpu(cpu_data, cpu);
+		if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) == ARM_CPU_IMP_NVIDIA)
+			mcpu = true;
+
+		if (type == THROT_MCPU && !mcpu)
+			continue;
+
+		if (type == THROT_BCPU && mcpu)
+			continue;
+
+		per_cpu(max_cpu_rate, cpu) = rate;
+		pr_debug("tegra_throttle: cpu=%d max_rate=%lu\n", cpu, rate);
+		cpufreq_update_policy(cpu);
+	}
+}
+
 /* Must be called with bthrot_list_lock held */
 static void tegra_throttle_set_cap_clk(unsigned long cap_rate,
 					int cap_clk_index)
 {
 	unsigned long cur_rate, max_rate = NO_CAP;
+	unsigned int type = CAP_TBL_CAP_TYPE(cap_clk_index);
 	struct clk *c = CAP_TBL_CAP_CLK(cap_clk_index);
 	int ret;
 
@@ -118,24 +189,35 @@ static void tegra_throttle_set_cap_clk(unsigned long cap_rate,
 	if (cap_rate != NO_CAP)
 		max_rate = cap_rate * 1000UL;
 
-	if (max_rate > LONG_MAX)
-		max_rate = LONG_MAX;
-	max_rate = clk_round_rate(c, max_rate);
 	if (CAP_TBL_CAP_FREQ(cap_clk_index) == max_rate)
 		return;
 
-	clk_set_max_rate(c, max_rate);
-	cur_rate = clk_get_rate(c);
-	if (cur_rate > max_rate) {
-		ret = clk_set_rate(c, max_rate);
-		if (ret) {
-			pr_err("%s: Set max rate failed for %s - %lu\n",
-				__func__, CAP_TBL_CAP_NAME(cap_clk_index),
-				max_rate);
-			return;
+	switch (type) {
+	case THROT_DEFAULT:
+		if (max_rate > LONG_MAX)
+			max_rate = LONG_MAX;
+		max_rate = clk_round_rate(c, max_rate);
+		clk_set_max_rate(c, max_rate);
+		cur_rate = clk_get_rate(c);
+		if (cur_rate > max_rate) {
+			ret = clk_set_rate(c, max_rate);
+			if (ret) {
+				pr_err("%s: Set max rate failed: %s - %lu\n",
+				    __func__, CAP_TBL_CAP_NAME(cap_clk_index),
+				    max_rate);
+				break;
+			}
 		}
+		CAP_TBL_CAP_FREQ(cap_clk_index) = max_rate;
+		break;
+	case THROT_MCPU:
+	case THROT_BCPU:
+		tegra_throttle_update_cpu_cap(type, max_rate);
+		CAP_TBL_CAP_FREQ(cap_clk_index) = max_rate;
+		break;
+	default:
+		break;
 	}
-	CAP_TBL_CAP_FREQ(cap_clk_index) = max_rate;
 }
 
 static int
@@ -368,6 +450,16 @@ static int parse_throttle_dt_data(struct device *dev)
 		}
 		CAP_TBL_CAP_CLK(i) = c;
 		CAP_TBL_CAP_FREQ(i) = NO_CAP;
+		CAP_TBL_CAP_TYPE(i) = THROT_DEFAULT;
+
+		if (!strcmp("mcpu", CAP_TBL_CAP_NAME(i)))
+			CAP_TBL_CAP_TYPE(i) = THROT_MCPU;
+		else if (!strcmp("bcpu", CAP_TBL_CAP_NAME(i)) ||
+			!strcmp("cclk_g", CAP_TBL_CAP_NAME(i)))
+			CAP_TBL_CAP_TYPE(i) = THROT_BCPU;
+
+		pr_info("%s: clk=%s type=%d\n", __func__, CAP_TBL_CAP_NAME(i),
+			CAP_TBL_CAP_TYPE(i));
 	}
 
 	for_each_child_of_node(np, child) {
@@ -420,7 +512,7 @@ static void balanced_throttle_unregister(void)
 static int tegra_throttle_probe(struct platform_device *pdev)
 {
 	struct balanced_throttle *bthrot;
-	int ret, num_cdevs = 0;
+	int cpu, ret, num_cdevs = 0;
 
 	ret = parse_throttle_dt_data(&pdev->dev);
 
@@ -428,6 +520,12 @@ static int tegra_throttle_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Platform data parse failed.\n");
 		return ret;
 	}
+
+	for_each_possible_cpu(cpu)
+		per_cpu(max_cpu_rate, cpu) = ULONG_MAX;
+
+	cpufreq_register_notifier(&tegra_throttle_cpufreq_nb,
+					CPUFREQ_POLICY_NOTIFIER);
 
 	list_for_each_entry(bthrot, &bthrot_list, node) {
 		ret = balanced_throttle_register(bthrot);
@@ -449,6 +547,9 @@ static int tegra_throttle_probe(struct platform_device *pdev)
 
 static int tegra_throttle_remove(struct platform_device *pdev)
 {
+	cpufreq_unregister_notifier(&tegra_throttle_cpufreq_nb,
+					CPUFREQ_POLICY_NOTIFIER);
+
 	mutex_lock(&bthrot_list_lock);
 	balanced_throttle_unregister();
 	mutex_unlock(&bthrot_list_lock);

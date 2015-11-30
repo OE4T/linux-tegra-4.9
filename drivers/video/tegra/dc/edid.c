@@ -779,6 +779,7 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 				    }
 				    memcpy(&m[l], &hdmi_ext_modes[vic],
 						sizeof(m[l]));
+				    m[l].vmode |= FB_VMODE_IS_HDMI_EXT;
 				    l++;
 				}
 				kfree(specs->modedb);
@@ -802,10 +803,17 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 		if (frac_modes) {
 			for (j = 0; j < specs->modedb_len; ++j) {
 				int rate = tegra_dc_calc_fb_refresh(&specs->modedb[j]);
-				/* 1000/1001 modes are only supported on CEA SVDs. */
-				bool svd = (specs->modedb[j].vmode & FB_VMODE_IS_CEA) &&
-				           !(specs->modedb[j].vmode & FB_VMODE_IS_DETAILED);
-				if (svd && (rate == 24000 ||
+				/*
+				 * 1000/1001 modes are only supported on CEA
+				 * SVDs or on HDMI EXT
+				 * */
+				bool supported = ((specs->modedb[j].vmode &
+						   FB_VMODE_IS_CEA) &&
+						  !(specs->modedb[j].vmode &
+						    FB_VMODE_IS_DETAILED)) ||
+						 specs->modedb[j].vmode &
+						 FB_VMODE_IS_HDMI_EXT;
+				if (supported && (rate == 24000 ||
 				     rate == 30000 ||
 				    (rate > (60000 - 20) && rate < (60000 + 20))) &&
 				    frac_n < max_modes) {

@@ -1515,6 +1515,9 @@ static int tegra_hdmi_get_extended_vic(const struct tegra_dc_mode *mode)
 
 	tegra_dc_to_fb_videomode(&m, mode);
 
+	/* only interlaced required for VIC identification */
+	m.vmode &= FB_VMODE_INTERLACED;
+
 	for (i = 1; i < HDMI_EXT_MODEDB_SIZE; i++) {
 		const struct fb_videomode *curr = &hdmi_ext_modes[i];
 

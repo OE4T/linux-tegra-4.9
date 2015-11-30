@@ -4832,17 +4832,16 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 	return -EINVAL;
 }
 
-static int gk20a_gr_handle_fecs_error(struct gk20a *g,
+static int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 					  struct gr_isr_data *isr_data)
 {
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
+
 	gk20a_dbg_fn("");
 
 	gk20a_err(dev_from_gk20a(g),
 		   "unhandled fecs error interrupt 0x%08x for channel %u",
-		   gr_fecs_intr, ch->hw_chid);
+		   gr_fecs_intr, isr_data->chid);
 
 	if (gr_fecs_intr & gr_fecs_host_int_status_umimp_firmware_method_f(1)) {
 		gk20a_err(dev_from_gk20a(g),
@@ -5360,12 +5359,10 @@ int gk20a_gr_isr(struct gk20a *g)
 	isr_data.class_num = gr_fe_object_table_nvclass_v(obj_table);
 
 	ch = gk20a_gr_get_channel_from_ctx(g, isr_data.curr_ctx, &tsgid);
-	if (!ch) {
-		gk20a_err(dev_from_gk20a(g), "invalid channel ctx 0x%08x",
-			   isr_data.curr_ctx);
-		goto clean_up;
-	}
-	isr_data.chid = ch->hw_chid;
+	if (ch)
+		isr_data.chid = ch->hw_chid;
+	else
+		isr_data.chid = 0xffffffff;
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		"channel %d: addr 0x%08x, "
@@ -5422,7 +5419,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	if (gr_intr & gr_intr_fecs_error_pending_f()) {
-		need_reset |= gk20a_gr_handle_fecs_error(g, &isr_data);
+		need_reset |= gk20a_gr_handle_fecs_error(g, ch, &isr_data);
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_fecs_error_reset_f());
 		gr_intr &= ~gr_intr_fecs_error_pending_f();
@@ -5509,12 +5506,14 @@ int gk20a_gr_isr(struct gk20a *g)
 		if (tsgid != NVGPU_INVALID_TSG_ID)
 			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
 					   tsgid, true, true, true);
-		else
+		else if (ch)
 			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
 					   ch->hw_chid, false, true, true);
+		else
+			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
+					   0, false, false, true);
 	}
 
-clean_up:
 	if (gr_intr && !ch) {
 		/* Clear interrupts for unused channel. This is
 		   probably an interrupt during gk20a_free_channel() */

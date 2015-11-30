@@ -623,17 +623,6 @@ static struct tegra_dc_shift_clk_div tegra_dsi_get_shift_clk_div(
 	 */
 	shift_clk_div = dsi->default_shift_clk_div;
 
-	/*
-	 * There is no shift clock divider in T18x. In order to maintain
-	 * backward compatibility in the driver, just set the shift clock
-	 * divisor and multiplier to 1.
-	 */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	shift_clk_div.mul = 1;
-	shift_clk_div.div = 1;
-	return shift_clk_div;
-#endif
-
 	/* Calculate shift_clk_div which can match the video_burst_mode. */
 	if (dsi->info.video_burst_mode >=
 			TEGRA_DSI_VIDEO_BURST_MODE_LOWEST_SPEED) {
@@ -2042,6 +2031,9 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	 * clock control register and not shift clk div programming.
 	 */
 #if defined CONFIG_ARCH_TEGRA_18x_SOC
+	if (clk_set_rate(dc->clk, dc->mode.pclk))
+		dev_err(&dc->ndev->dev, "Failed to set dc clk to %d\n",
+			dc->mode.pclk);
 	return;
 #endif
 	/* formula: (dsi->shift_clk_div - 1) * 2 */
@@ -5766,21 +5758,13 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 	tegra_mipi_cal_destroy(dc);
 }
 
-static bool is_shift_clk_div_available(void)
-{
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	return false;
-#else
-	return true;
-#endif
-}
-
 static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	unsigned long rate;
 	struct clk *parent_clk = NULL;
 	struct clk *base_clk = NULL;
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
+	int err;
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	u8 i;
 
@@ -5790,11 +5774,8 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	/* divide by 1000 to avoid overflow */
 	dc->mode.pclk /= 1000;
 
-	if (is_shift_clk_div_available())
-		rate = (dc->mode.pclk * dc->shift_clk_div.mul * 2)
-			/ dc->shift_clk_div.div;
-	else
-		rate = dc->mode.pclk;
+	rate = (dc->mode.pclk * dc->shift_clk_div.mul * 2)
+		/ dc->shift_clk_div.div;
 
 	rate *= 1000;
 	dc->mode.pclk *= 1000;
@@ -5837,11 +5818,14 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 
 	/* Fix me: Revert bpmp check once bpmp FW is fixed */
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	if (!tegra_bpmp_running() && base_clk && rate != clk_get_rate(base_clk))
+	if (tegra_bpmp_running() && base_clk && rate != clk_get_rate(base_clk)) {
 #else
-	if (rate != clk_get_rate(base_clk))
+	if (rate != clk_get_rate(base_clk)) {
 #endif
-		clk_set_rate(base_clk, rate);
+		err = clk_set_rate(base_clk, rate);
+		if (err)
+			dev_err(&dc->ndev->dev, "Failed to set pll freq\n");
+	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (parent_clk && (clk_get_parent(clk) != parent_clk))

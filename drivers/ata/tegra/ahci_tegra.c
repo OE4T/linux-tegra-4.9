@@ -36,7 +36,7 @@ static int tegra_ahci_suspend(struct device *dev);
 static int tegra_ahci_resume(struct device *dev);
 #endif
 
-static char * const tegra_rail_names[] = {"vdd-3v3-sata"};
+static char * const tegra_rail_names[] = {};
 
 static const struct tegra_ahci_soc_data tegra_ahci_data = {
 	.sata_regulator_names = tegra_rail_names,

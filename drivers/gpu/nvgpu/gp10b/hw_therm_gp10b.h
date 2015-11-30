@@ -170,6 +170,18 @@ static inline u32 therm_config1_r(void)
 {
 	return 0x00020050;
 }
+static inline u32 therm_config2_r(void)
+{
+	return 0x00020130;
+}
+static inline u32 therm_config2_slowdown_factor_extended_f(u32 v)
+{
+	return (v & 0x1) << 24;
+}
+static inline u32 therm_config2_grad_enable_f(u32 v)
+{
+	return (v & 0x1) << 31;
+}
 static inline u32 therm_gate_ctrl_r(u32 i)
 {
 	return 0x00020200 + i*4;
@@ -277,5 +289,113 @@ static inline u32 therm_clk_slowdown_idle_factor_v(u32 r)
 static inline u32 therm_clk_slowdown_idle_factor_disabled_f(void)
 {
 	return 0x0;
+}
+static inline u32 therm_grad_stepping_table_r(u32 i)
+{
+	return 0x000202c8 + i*4;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_f(u32 v)
+{
+	return (v & 0x3f) << 0;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_m(void)
+{
+	return 0x3f << 0;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by1p5_f(void)
+{
+	return 0x1;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by2_f(void)
+{
+	return 0x2;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by4_f(void)
+{
+	return 0x6;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor0_fpdiv_by8_f(void)
+{
+	return 0xe;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor1_f(u32 v)
+{
+	return (v & 0x3f) << 6;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor1_m(void)
+{
+	return 0x3f << 6;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor2_f(u32 v)
+{
+	return (v & 0x3f) << 12;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor2_m(void)
+{
+	return 0x3f << 12;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor3_f(u32 v)
+{
+	return (v & 0x3f) << 18;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor3_m(void)
+{
+	return 0x3f << 18;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor4_f(u32 v)
+{
+	return (v & 0x3f) << 24;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor4_m(void)
+{
+	return 0x3f << 24;
+}
+static inline u32 therm_grad_stepping0_r(void)
+{
+	return 0x000202c0;
+}
+static inline u32 therm_grad_stepping0_feature_s(void)
+{
+	return 1;
+}
+static inline u32 therm_grad_stepping0_feature_f(u32 v)
+{
+	return (v & 0x1) << 0;
+}
+static inline u32 therm_grad_stepping0_feature_m(void)
+{
+	return 0x1 << 0;
+}
+static inline u32 therm_grad_stepping0_feature_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 therm_grad_stepping0_feature_enable_f(void)
+{
+	return 0x1;
+}
+static inline u32 therm_grad_stepping1_r(void)
+{
+	return 0x000202c4;
+}
+static inline u32 therm_grad_stepping1_pdiv_duration_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 therm_clk_timing_r(u32 i)
+{
+	return 0x000203c0 + i*4;
+}
+static inline u32 therm_clk_timing_grad_slowdown_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
+static inline u32 therm_clk_timing_grad_slowdown_m(void)
+{
+	return 0x1 << 16;
+}
+static inline u32 therm_clk_timing_grad_slowdown_enabled_f(void)
+{
+	return 0x10000;
 }
 #endif

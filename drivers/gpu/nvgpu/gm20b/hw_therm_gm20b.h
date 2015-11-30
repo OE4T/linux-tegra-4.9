@@ -262,17 +262,33 @@ static inline u32 therm_grad_stepping_table_slowdown_factor1_f(u32 v)
 {
 	return (v & 0x3f) << 6;
 }
+static inline u32 therm_grad_stepping_table_slowdown_factor1_m(void)
+{
+	return 0x3f << 6;
+}
 static inline u32 therm_grad_stepping_table_slowdown_factor2_f(u32 v)
 {
 	return (v & 0x3f) << 12;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor2_m(void)
+{
+	return 0x3f << 12;
 }
 static inline u32 therm_grad_stepping_table_slowdown_factor3_f(u32 v)
 {
 	return (v & 0x3f) << 18;
 }
+static inline u32 therm_grad_stepping_table_slowdown_factor3_m(void)
+{
+	return 0x3f << 18;
+}
 static inline u32 therm_grad_stepping_table_slowdown_factor4_f(u32 v)
 {
 	return (v & 0x3f) << 24;
+}
+static inline u32 therm_grad_stepping_table_slowdown_factor4_m(void)
+{
+	return 0x3f << 24;
 }
 static inline u32 therm_grad_stepping0_r(void)
 {

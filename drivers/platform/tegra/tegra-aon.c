@@ -457,6 +457,17 @@ static int tegra_aon_remove(struct platform_device *pdev)
 	return 0;
 }
 
+static int tegra_aon_resume(struct device *dev)
+{
+	struct tegra_aon *aon = platform_get_drvdata(to_platform_device(dev));
+
+	return tegra_hsp_db_enable_master(aon->hsp_master);
+}
+
+static const struct dev_pm_ops tegra_aon_pm_ops = {
+	.resume = tegra_aon_resume,
+};
+
 static const struct of_device_id tegra_aon_of_match[] = {
 	{ .compatible = NV("tegra186-aon"), },
 	{},
@@ -470,6 +481,7 @@ static struct platform_driver tegra_aon_driver = {
 		.owner	= THIS_MODULE,
 		.name	= "tegra_aon",
 		.of_match_table = of_match_ptr(tegra_aon_of_match),
+		.pm = &tegra_aon_pm_ops,
 	},
 };
 module_platform_driver(tegra_aon_driver);

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,14 +52,8 @@ struct mail_ops {
 	int (*init_irq)(void);
 	int (*iomem_init)(void);
 	int (*handshake)(void);
-	bool (*master_acked)(int ch);
-	bool (*master_free)(int ch);
-	bool (*slave_signalled)(int ch);
 	int (*channel_init)(int ch);
-	void (*free_master)(int ch);
 	void (*resume)(void);
-	void (*return_data)(int ch, int code, void *data, int sz);
-	void (*signal_slave)(int ch);
 	void (*ring_doorbell)(void);
 };
 
@@ -67,6 +61,7 @@ extern struct mail_ops mail_ops;
 extern struct transport_layer_ops trans_ops;
 
 int init_native_override(void);
+
 #ifdef CONFIG_TEGRA_HV_MANAGER
 int init_virt_override(void);
 

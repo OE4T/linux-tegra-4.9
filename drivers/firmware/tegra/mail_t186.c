@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,43 +21,101 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/tegra-hsp.h>
+#include <linux/tegra-ivc.h>
 #include <soc/tegra/bpmp_abi.h>
 #include "bpmp.h"
 #include "mail_t186.h"
 
+struct transport_layer_ops trans_ops;
+
+static bool ivc_rx_ready(int ch)
+{
+	struct ivc *ivc;
+	void *frame;
+	bool ready;
+
+	ivc = trans_ops.channel_to_ivc(ch);
+	frame = tegra_ivc_read_get_next_frame(ivc);
+	ready = !IS_ERR_OR_NULL(frame);
+	channel_area[ch].ib = ready ? frame : NULL;
+
+	return ready;
+}
+
 bool bpmp_master_acked(int ch)
 {
-	return mail_ops.master_acked(ch);
+	return ivc_rx_ready(ch);
 }
 
 bool bpmp_slave_signalled(int ch)
 {
-	return mail_ops.slave_signalled(ch);
+	return ivc_rx_ready(ch);
 }
 
 void bpmp_free_master(int ch)
 {
-	mail_ops.free_master(ch);
+	struct ivc *ivc;
+
+	ivc = trans_ops.channel_to_ivc(ch);
+	if (tegra_ivc_read_advance(ivc))
+		WARN_ON(1);
 }
 
 void bpmp_signal_slave(int ch)
 {
-	mail_ops.signal_slave(ch);
+	struct ivc *ivc;
+
+	ivc = trans_ops.channel_to_ivc(ch);
+	if (tegra_ivc_write_advance(ivc))
+		WARN_ON(1);
 }
 
 bool bpmp_master_free(int ch)
 {
-	return mail_ops.master_free(ch);
+	struct ivc *ivc;
+	void *frame;
+	bool ready;
+
+	ivc = trans_ops.channel_to_ivc(ch);
+	frame = tegra_ivc_write_get_next_frame(ivc);
+	ready = !IS_ERR_OR_NULL(frame);
+	channel_area[ch].ob = ready ? frame : NULL;
+
+	return ready;
 }
 
 void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 {
+	const int flags = channel_area[ch].ib->flags;
+	struct ivc *ivc;
+	struct mb_data *frame;
+	int r;
+
 	if (sz > MSG_DATA_SZ) {
 		WARN_ON(1);
 		return;
 	}
 
-	mail_ops.return_data(ch, code, data, sz);
+	ivc = trans_ops.channel_to_ivc(ch);
+	r = tegra_ivc_read_advance(ivc);
+	WARN_ON(r);
+
+	if (!(flags & DO_ACK))
+		return;
+
+	frame = tegra_ivc_write_get_next_frame(ivc);
+	if (IS_ERR_OR_NULL(frame)) {
+		WARN_ON(1);
+		return;
+	}
+
+	frame->code = code;
+	memcpy(frame->data, data, sz);
+	r = tegra_ivc_write_advance(ivc);
+	WARN_ON(r);
+
+	if (flags & RING_DOORBELL)
+		bpmp_ring_doorbell();
 }
 EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
 
@@ -146,11 +204,37 @@ int bpmp_connect(void)
 	return ret;
 }
 
+/* FIXME: consider using an attr */
+static const char *ofm_native = "nvidia,tegra186-bpmp";
+struct mail_ops mail_ops;
+
+static int mail_ops_probe(void)
+{
+	struct device_node *np;
+
+	np = of_find_compatible_node(NULL, NULL, ofm_native);
+	if (np) {
+		of_node_put(np);
+		return init_native_override();
+	}
+
+#ifdef CONFIG_TEGRA_HV_MANAGER
+	np = of_find_compatible_node(NULL, NULL, ofm_virt);
+	if (np) {
+		of_node_put(np);
+		return init_virt_override();
+	}
+#endif
+
+	WARN_ON(1);
+	return -ENODEV;
+}
+
 int bpmp_mail_init_prepare(void)
 {
 	int r;
 
-	r = mail_ops.probe();
+	r = mail_ops_probe();
 	if (r)
 		return r;
 

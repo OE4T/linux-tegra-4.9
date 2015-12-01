@@ -142,11 +142,21 @@ static void intr_set_syncpt_threshold(struct nvhost_intr *intr,
 static void intr_enable_syncpt_intr(struct nvhost_intr *intr, u32 id)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
+	u32 thresh;
 
 	host1x_writel(dev->dev,
 			host1x_sync_syncpt_thresh_int_enable_cpu0_r() +
 			bit_word(id) * REGISTER_STRIDE,
 			bit_mask(id));
+
+	/* set thershold again to make sure
+	 * interrupt doesn't miss
+	 */
+	thresh = host1x_readl(dev->dev,
+		(host1x_sync_syncpt_int_thresh_0_r() + id * REGISTER_STRIDE));
+	host1x_writel(dev->dev,
+		(host1x_sync_syncpt_int_thresh_0_r() + id * REGISTER_STRIDE),
+		thresh);
 }
 
 static void intr_disable_syncpt_intr(struct nvhost_intr *intr, u32 id)

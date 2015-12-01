@@ -42,10 +42,11 @@
 #include "tegra210-platforms/tegra210-thermal-nct72-p2530.dtsi"
 #include "tegra210-platforms/tegra210-thermal-Tboard-Tdiode.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-powermon-p2180-1000-a00.dtsi"
-#include "tegra210-platforms/tegra210-jetson-cpufreq.dtsi"
-#include "tegra210-plugin-manager/tegra210-jetson-cv-eeprom-manager.dtsi"
-#include "tegra210-plugin-manager/tegra210-jetson-cv-base-p2597-2180-a00-plugin-manager.dtsi"
 #include "tegra210-platforms/tegra210-jetson-cv-powermon-p2597.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cpufreq.dtsi"
+#include "tegra210-platforms/tegra210-jetson-cv-super-module-e2614.dtsi"
+#include "tegra210-plugin-manager/tegra210-jetson-cv-eeprom-manager.dtsi"
+#include "tegra210-plugin-manager/tegra210-jetson-cv-plugin-manager.dtsi"
 
 / {
 	model = "jetson_cv";
@@ -257,7 +258,7 @@
 		status = "okay";
 	};
 
-	sound {
+	sound_card: sound {
 		compatible = "nvidia,tegra-audio-t210ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t210ref-mobile-rt565x";
 		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;

@@ -281,7 +281,13 @@ struct gr_gk20a {
 
 	u32 max_comptag_mem; /* max memory size (MB) for comptag */
 	struct compbit_store_desc compbit_store;
-	struct gk20a_allocator comp_tags;
+	struct gk20a_comptag_allocator {
+		struct mutex lock;
+		/* this bitmap starts at ctag 1. 0th cannot be taken */
+		unsigned long *bitmap;
+		/* size of bitmap, not max ctags, so one less */
+		unsigned long size;
+	} comp_tags;
 
 	struct gr_zcull_gk20a zcull;
 
@@ -400,6 +406,10 @@ int gk20a_init_gr_support(struct gk20a *g);
 int gk20a_enable_gr_hw(struct gk20a *g);
 int gk20a_gr_reset(struct gk20a *g);
 void gk20a_gr_wait_initialized(struct gk20a *g);
+/* real size here, but first (ctag 0) isn't used */
+int gk20a_comptag_allocator_init(struct gk20a_comptag_allocator *allocator,
+		unsigned long size);
+void gk20a_comptag_allocator_destroy(struct gk20a_comptag_allocator *allocator);
 
 int gk20a_init_gr_channel(struct channel_gk20a *ch_gk20a);
 

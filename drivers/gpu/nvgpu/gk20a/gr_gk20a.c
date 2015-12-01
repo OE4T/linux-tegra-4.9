@@ -2878,6 +2878,33 @@ int gk20a_free_obj_ctx(struct channel_gk20a  *c,
 	return 0;
 }
 
+int gk20a_comptag_allocator_init(struct gk20a_comptag_allocator *allocator,
+		unsigned long size)
+{
+	mutex_init(&allocator->lock);
+	/*
+	 * 0th comptag is special and is never used. The base for this bitmap
+	 * is 1, and its size is one less than the size of comptag store.
+	 */
+	size--;
+	allocator->bitmap = vzalloc(BITS_TO_LONGS(size) * sizeof(long));
+	if (!allocator->bitmap)
+		return -ENOMEM;
+	allocator->size = size;
+	return 0;
+}
+
+void gk20a_comptag_allocator_destroy(struct gk20a_comptag_allocator *allocator)
+{
+	/*
+	 * called only when exiting the driver (gk20a_remove, or unwinding the
+	 * init stage); no users should be active, so taking the mutex is
+	 * unnecessary here.
+	 */
+	allocator->size = 0;
+	vfree(allocator->bitmap);
+}
+
 static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 {
 	struct gk20a *g = gr->g;
@@ -2936,7 +2963,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	kfree(gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;
 
-	gk20a_allocator_destroy(&gr->comp_tags);
+	gk20a_comptag_allocator_destroy(&gr->comp_tags);
 }
 
 static void gr_gk20a_bundle_cb_defaults(struct gk20a *g)

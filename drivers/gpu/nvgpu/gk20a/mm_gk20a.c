@@ -111,7 +111,7 @@ static int __must_check gk20a_init_cde_vm(struct mm_gk20a *mm);
 struct gk20a_dmabuf_priv {
 	struct mutex lock;
 
-	struct gk20a_allocator *comptag_allocator;
+	struct gk20a_comptag_allocator *comptag_allocator;
 	struct gk20a_comptags comptags;
 
 	struct dma_buf_attachment *attach;
@@ -126,6 +126,41 @@ struct gk20a_dmabuf_priv {
 
 static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm);
 
+static int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
+		u32 *offset, u32 len)
+{
+	unsigned long addr;
+	int err = 0;
+
+	mutex_lock(&allocator->lock);
+	addr = bitmap_find_next_zero_area(allocator->bitmap, allocator->size,
+			0, len, 0);
+	if (addr < allocator->size) {
+		/* number zero is reserved; bitmap base is 1 */
+		*offset = 1 + addr;
+		bitmap_set(allocator->bitmap, addr, len);
+	} else {
+		err = -ENOMEM;
+	}
+	mutex_unlock(&allocator->lock);
+
+	return err;
+}
+
+static void gk20a_comptaglines_free(struct gk20a_comptag_allocator *allocator,
+		u32 offset, u32 len)
+{
+	/* number zero is reserved; bitmap base is 1 */
+	u32 addr = offset - 1;
+	WARN_ON(offset == 0);
+	WARN_ON(addr > allocator->size);
+	WARN_ON(addr + len > allocator->size);
+
+	mutex_lock(&allocator->lock);
+	bitmap_clear(allocator->bitmap, addr, len);
+	mutex_unlock(&allocator->lock);
+}
+
 static void gk20a_mm_delete_priv(void *_priv)
 {
 	struct gk20a_buffer_state *s, *s_tmp;
@@ -135,8 +170,9 @@ static void gk20a_mm_delete_priv(void *_priv)
 
 	if (priv->comptags.lines) {
 		BUG_ON(!priv->comptag_allocator);
-		gk20a_bfree(priv->comptag_allocator,
-			    priv->comptags.real_offset);
+		gk20a_comptaglines_free(priv->comptag_allocator,
+				priv->comptags.offset,
+				priv->comptags.allocated_lines);
 	}
 
 	/* Free buffer states */
@@ -221,19 +257,21 @@ void gk20a_get_comptags(struct device *dev, struct dma_buf *dmabuf,
 static int gk20a_alloc_comptags(struct gk20a *g,
 				struct device *dev,
 				struct dma_buf *dmabuf,
-				struct gk20a_allocator *allocator,
+				struct gk20a_comptag_allocator *allocator,
 				u32 lines, bool user_mappable,
 				u64 *ctag_map_win_size,
 				u32 *ctag_map_win_ctagline)
 {
 	struct gk20a_dmabuf_priv *priv = dma_buf_get_drvdata(dmabuf, dev);
-	u32 ctaglines_to_allocate;
-	u32 ctagline_align = 1;
+	u32 ctaglines_allocsize;
+	u32 ctagline_align;
 	u32 offset;
+	u32 alignment_lines;
 	const u32 aggregate_cacheline_sz =
 		g->gr.cacheline_size * g->gr.slices_per_ltc *
 		g->ltc_count;
 	const u32 small_pgsz = 4096;
+	int err;
 
 	if (!priv)
 		return -ENOSYS;
@@ -242,17 +280,19 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 		return -EINVAL;
 
 	if (!user_mappable) {
-		ctaglines_to_allocate = lines;
+		ctaglines_allocsize = lines;
+		ctagline_align = 1;
 	} else {
-		/* Unfortunately, we cannot use allocation alignment
-		 * here, since compbits per cacheline is not always a
-		 * power of two. So, we just have to allocate enough
-		 * extra that we're guaranteed to find a ctagline
-		 * inside the allocation so that: 1) it is the first
-		 * ctagline in a cacheline that starts at a page
-		 * boundary, and 2) we can add enough overallocation
-		 * that the ctaglines of the succeeding allocation
-		 * are on different page than ours
+		/*
+		 * For security, align the allocation on a page, and reserve
+		 * whole pages. Unfortunately, we cannot ask the allocator to
+		 * align here, since compbits per cacheline is not always a
+		 * power of two. So, we just have to allocate enough extra that
+		 * we're guaranteed to find a ctagline inside the allocation so
+		 * that: 1) it is the first ctagline in a cacheline that starts
+		 * at a page boundary, and 2) we can add enough overallocation
+		 * that the ctaglines of the succeeding allocation are on
+		 * different page than ours.
 		 */
 
 		ctagline_align =
@@ -260,7 +300,7 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 			 aggregate_cacheline_sz) *
 			g->gr.comptags_per_cacheline;
 
-		ctaglines_to_allocate =
+		ctaglines_allocsize =
 			/* for alignment */
 			ctagline_align +
 
@@ -272,36 +312,70 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 			DIV_ROUND_UP(aggregate_cacheline_sz, small_pgsz) *
 			g->gr.comptags_per_cacheline;
 
-		if (ctaglines_to_allocate < lines)
+		if (ctaglines_allocsize < lines)
 			return -EINVAL; /* integer overflow */
 	}
 
 	/* store the allocator so we can use it when we free the ctags */
 	priv->comptag_allocator = allocator;
-	offset = gk20a_balloc(allocator, ctaglines_to_allocate);
-	if (!offset)
-		return -ENOMEM;
+	err = gk20a_comptaglines_alloc(allocator, &offset,
+			       ctaglines_allocsize);
+	if (err)
+		return err;
 
-	priv->comptags.lines = lines;
-	priv->comptags.real_offset = offset;
-	priv->comptags.allocated_lines = ctaglines_to_allocate;
-
-	if (user_mappable) {
-		u64 win_size =
-			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline) *
-			aggregate_cacheline_sz;
-		win_size = roundup(win_size, small_pgsz);
-
-		offset = DIV_ROUND_UP(offset, ctagline_align) * ctagline_align;
-		*ctag_map_win_ctagline = offset;
-		*ctag_map_win_size = win_size;
+	/* 
+	 * offset needs to be at the start of a page/cacheline boundary;
+	 * prune the preceding ctaglines that were allocated for alignment.
+	 */
+	alignment_lines =
+		DIV_ROUND_UP(offset, ctagline_align) * ctagline_align - offset;
+	if (alignment_lines) {
+		gk20a_comptaglines_free(allocator, offset, alignment_lines);
+		offset += alignment_lines;
+		ctaglines_allocsize -= alignment_lines;
 	}
 
+	/*
+	 * check if we can prune the trailing, too; we just need to reserve
+	 * whole pages and ctagcachelines.
+	 */
+	if (user_mappable) {
+		u32 needed_cachelines =
+			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline);
+		u32 needed_bytes = round_up(needed_cachelines *
+					    aggregate_cacheline_sz,
+					    small_pgsz);
+		u32 first_unneeded_cacheline =
+			DIV_ROUND_UP(needed_bytes, aggregate_cacheline_sz);
+		u32 needed_ctaglines = first_unneeded_cacheline *
+			g->gr.comptags_per_cacheline;
+		u64 win_size;
+
+		if (needed_ctaglines < ctaglines_allocsize) {
+			gk20a_comptaglines_free(allocator,
+				offset + needed_ctaglines,
+				ctaglines_allocsize - needed_ctaglines);
+			ctaglines_allocsize = needed_ctaglines;
+		}
+
+		*ctag_map_win_ctagline = offset;
+		win_size =
+			DIV_ROUND_UP(lines, g->gr.comptags_per_cacheline) *
+			aggregate_cacheline_sz;
+
+		*ctag_map_win_size = round_up(win_size, small_pgsz);
+	}
 
 	priv->comptags.offset = offset;
+	priv->comptags.lines = lines;
+	priv->comptags.allocated_lines = ctaglines_allocsize;
+	priv->comptags.user_mappable = user_mappable;
 
 	return 0;
 }
+
+
+
 
 static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 {
@@ -1412,7 +1486,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct vm_gk20a_mapping_batch *batch)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct gk20a_allocator *ctag_allocator = &g->gr.comp_tags;
+	struct gk20a_comptag_allocator *ctag_allocator = &g->gr.comp_tags;
 	struct device *d = dev_from_vm(vm);
 	struct mapped_buffer_node *mapped_buffer = NULL;
 	bool inserted = false, va_allocated = false;
@@ -1579,32 +1653,14 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			gk20a_get_comptags(d, dmabuf, &comptags);
 			clear_ctags = true;
 
-			comptags.user_mappable = user_mappable;
+			if (comptags.lines < comptags.allocated_lines) {
+				/* clear tail-padding comptags */
+				u32 ctagmin = comptags.offset + comptags.lines;
+				u32 ctagmax = comptags.offset +
+					comptags.allocated_lines - 1;
 
-			if (user_mappable) {
-				/* comptags for the buffer will be
-				   cleared later, but we need to make
-				   sure the whole comptags allocation
-				   (which may be bigger) is cleared in
-				   order not to leak compbits */
-
-				const u32 buffer_ctag_end =
-					comptags.offset + comptags.lines;
-				const u32 alloc_ctag_end =
-					comptags.real_offset +
-					comptags.allocated_lines;
-
-				if (comptags.real_offset < comptags.offset)
-					g->ops.ltc.cbc_ctrl(
-						g, gk20a_cbc_op_clear,
-						comptags.real_offset,
-						comptags.offset - 1);
-
-				if (buffer_ctag_end < alloc_ctag_end)
-					g->ops.ltc.cbc_ctrl(
-						g, gk20a_cbc_op_clear,
-						buffer_ctag_end,
-						alloc_ctag_end - 1);
+				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
+						    ctagmin, ctagmax);
 			}
 		}
 	}

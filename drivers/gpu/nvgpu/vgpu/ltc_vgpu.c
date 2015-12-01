@@ -56,8 +56,10 @@ static int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	if (max_comptag_lines < 2)
 		return -ENXIO;
 
-	__gk20a_allocator_init(&gr->comp_tags, NULL, "comptag",
-			       1, max_comptag_lines - 1, 1, 10, 0); /* length*/
+	err = gk20a_comptag_allocator_init(&gr->comp_tags, max_comptag_lines);
+	if (err)
+		return err;
+
 	return 0;
 }
 

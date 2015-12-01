@@ -795,7 +795,7 @@ static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 {
 	gk20a_dbg_fn("");
 
-	gk20a_allocator_destroy(&gr->comp_tags);
+	gk20a_comptag_allocator_destroy(&gr->comp_tags);
 
 	kfree(gr->gpc_tpc_mask);
 	gr->gpc_tpc_mask = NULL;

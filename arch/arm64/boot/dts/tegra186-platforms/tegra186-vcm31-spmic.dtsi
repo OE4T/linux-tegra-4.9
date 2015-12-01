@@ -33,6 +33,8 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 
+			maxim,system-pmic-power-off;
+
 			maxim,avoid-rtc-bulk-register-write;
 
 			watchdog {

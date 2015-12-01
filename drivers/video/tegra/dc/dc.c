@@ -4605,6 +4605,11 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (dc->out_ops && dc->out_ops->postpoweroff)
 		dc->out_ops->postpoweroff(dc);
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* clear the windows ownership from head*/
+	tegra_nvdisp_head_disable(dc);
+#endif
+
 	tegra_dc_put(dc);
 
 #ifndef CONFIG_TEGRA_NVDISPLAY

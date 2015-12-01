@@ -63,14 +63,6 @@
 			no-map;
 		};
 
-		aon_reserved_ivc_buf: aon-ivc {
-			compatible = "nvidia,aon-ipc-carveout";
-			size = <0x0 0x1000000>;
-			alignment = <0x0 0x1000>;
-			alloc-ranges = <0x0 0x0 0x1 0x0>;
-			status = "disabled";
-		};
-
 	        adsp_reserved_mem: adsp_carveout {
                         compatible = "nvidia,tegra18x-adsp-carveout";
                         reg = <0x0 0xd8300000 0x0 0x01000000>;
@@ -165,6 +157,7 @@
 			      <&{/sound}		TEGRA_SID_APE>,
 			      <&{/sound_ref}		TEGRA_SID_APE>,
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
+			      <&{/aon@c160000}		TEGRA_SID_AON>,
 			      <&{/bpmp}			TEGRA_SID_BPMP>;
 
 			      /*
@@ -302,6 +295,11 @@
 			bpmp_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_BPMP>;
+				sid-list-len = <1>;
+			};
+			aon_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_AON>;
 				sid-list-len = <1>;
 			};
 			afi_domain {
@@ -2356,6 +2354,7 @@
 		#address-cells = <2>;
 		#size-cells = <2>;
 		#mbox-cells = <1>;
+		#stream-id-cells = <1>;
 		status = "disabled";
 		ranges;
 		ivc_aon_echo {

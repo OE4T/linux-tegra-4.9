@@ -12,6 +12,7 @@
  */
 
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
 #include <linux/tegra-hsp.h>
 #include <linux/mailbox_controller.h>
 #include <linux/module.h>
@@ -31,10 +32,15 @@
 #define SHRD_SEM_OFFSET	0x10000
 #define SHRD_SEM_SET	0x4
 
+#define IPCBUF_SIZE 8192
+
 struct tegra_aon {
 	struct mbox_controller mbox;
 	int hsp_master;
 	struct work_struct ch_rx_work;
+	void *ipcbuf;
+	dma_addr_t ipcbuf_dma;
+	size_t ipcbuf_size;
 };
 
 struct tegra_aon_ivc_chan {
@@ -47,9 +53,6 @@ struct tegra_aon_ivc_chan {
 	struct ivc ivc;
 	bool last_tx_done;
 };
-
-static uint64_t aon_ipcbuf_phys = 0;
-static uint64_t aon_ipcbuf_size = 0;
 
 static void tegra_aon_notify_remote(struct ivc *ivc)
 {
@@ -96,10 +99,13 @@ static int parse_channel(struct device *dev, struct mbox_chan *mbox_chan,
 {
 	struct tegra_aon_ivc_chan *ivc_chan;
 	uint64_t tx_offset, rx_offset, ch_size;
+	struct tegra_aon *aon;
 	int ret = 0;
 
+	aon = platform_get_drvdata(to_platform_device(dev));
+
 	/* Sanity check */
-	if (!mbox_chan || !np || !dev)
+	if (!mbox_chan || !np || !dev || !aon)
 		return -EINVAL;
 
 	ivc_chan = devm_kzalloc(dev, sizeof(*ivc_chan), GFP_KERNEL);
@@ -141,16 +147,18 @@ static int parse_channel(struct device *dev, struct mbox_chan *mbox_chan,
 		return -EINVAL;
 	}
 
-	ivc_chan->tx_base = phys_to_virt(aon_ipcbuf_phys + tx_offset);
-	ivc_chan->rx_base = phys_to_virt(aon_ipcbuf_phys + rx_offset);
+	ivc_chan->tx_base = (char *)aon->ipcbuf + tx_offset;
+	ivc_chan->rx_base = (char *)aon->ipcbuf + rx_offset;
 
 	memset(ivc_chan->tx_base, 0, ch_size);
 	memset(ivc_chan->rx_base, 0, ch_size);
 
 	/* Allocate the IVC links */
-	ret = tegra_ivc_init(&ivc_chan->ivc,
+	ret = tegra_ivc_init_with_dma_handle(&ivc_chan->ivc,
 			     (uintptr_t)ivc_chan->rx_base,
+			     (u64)aon->ipcbuf_dma + rx_offset,
 			     (uintptr_t)ivc_chan->tx_base,
+			     (u64)aon->ipcbuf_dma + tx_offset,
 			     ivc_chan->nframes, ivc_chan->framesz,
 			     dev,
 			     tegra_aon_notify_remote);
@@ -229,15 +237,18 @@ static int tegra_aon_probe(struct platform_device *pdev)
 
 	dev_dbg(&pdev->dev, "tegra aon driver probe Start\n");
 
-	if (!aon_ipcbuf_phys || !aon_ipcbuf_size) {
-		dev_err(dev, "no carveout memory.\n");
-		return -ENOMEM;
-	}
-
 	aon = devm_kzalloc(&pdev->dev, sizeof(*aon), GFP_KERNEL);
 	if (!aon)
 		return -ENOMEM;
 	platform_set_drvdata(pdev, aon);
+	aon->ipcbuf_size = IPCBUF_SIZE;
+
+	aon->ipcbuf = dmam_alloc_coherent(dev, aon->ipcbuf_size,
+			&aon->ipcbuf_dma, GFP_KERNEL);
+	if (!aon->ipcbuf) {
+		dev_err(dev, "failed to allocate IPC memory\n");
+		return -ENOMEM;
+	}
 
 	smbox_base = of_iomap(dn, 0);
 	if (!smbox_base) {
@@ -307,8 +318,8 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to register mailbox: %d\n", ret);
 		goto exit;
 	}
-	writel((u32)aon_ipcbuf_phys, shrdsem_base + SHRD_SEM_SET);
-	writel((u32)aon_ipcbuf_size, shrdsem_base + SHRD_SEM_OFFSET
+	writel((u32)aon->ipcbuf_dma, shrdsem_base + SHRD_SEM_SET);
+	writel((u32)aon->ipcbuf_size, shrdsem_base + SHRD_SEM_OFFSET
 					+ SHRD_SEM_SET);
 	writel(SMBOX_IVC_READY_MSG, smbox_base + SMBOX1_OFFSET);
 
@@ -346,14 +357,3 @@ static struct platform_driver tegra_aon_driver = {
 	},
 };
 module_platform_driver(tegra_aon_driver);
-
-static int __init tegra_aon_ipc_setup(struct reserved_mem *rmem)
-{
-	aon_ipcbuf_phys = rmem->base;
-	aon_ipcbuf_size = rmem->size;
-	pr_info("aon ipc buffer at phys %llx size %llu\n",
-		aon_ipcbuf_phys, aon_ipcbuf_size);
-
-	return 0;
-}
-RESERVEDMEM_OF_DECLARE(aon_ipc, NV("aon-ipc-carveout"), tegra_aon_ipc_setup);

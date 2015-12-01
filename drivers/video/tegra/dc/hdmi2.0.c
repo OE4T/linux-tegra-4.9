@@ -1952,7 +1952,6 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	/*TO DO: Cleanup properly later */
 	/* switch the sor_out to use the pad_clk */
 	clk_set_parent(sor->src_switch_clk, sor->brick_clk);
-	pr_info("sor clock 0x%x\n", readl(ioremap(0x053a3000, 4)));
 #endif
 	tegra_dc_sor_set_internal_panel(sor, false);
 	tegra_hdmi_config(hdmi);

@@ -25,6 +25,7 @@
 #include "tegra_asoc_utils_alt.h"
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
+#include "tegra210_xbar_alt.h"
 
 #define DRV_NAME "tegra186-snd-p2382"
 #define MAX_STR_SIZE 50
@@ -258,7 +259,7 @@ static int tegra_t186ref_p2382_audio_dsp_tdm1_hw_params(
 	/* Default sampling rate*/
 	srate = dai_params->rate_min;
 	clk_out_rate = srate * 256;
-	mclk = clk_out_rate;
+	mclk = clk_out_rate * 2;
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
 				srate, mclk, clk_out_rate);
@@ -267,6 +268,12 @@ static int tegra_t186ref_p2382_audio_dsp_tdm1_hw_params(
 		return err;
 	}
 
+	err = tegra210_xbar_set_clock(mclk);
+	if (err < 0) {
+		dev_err(card->dev,
+			"Can't configure xbar clock = %d Hz\n", mclk);
+		return err;
+	}
 	return 0;
 }
 
@@ -281,9 +288,31 @@ static int tegra_t186ref_p2382_audio_dsp_tdm2_hw_params(
 				("p2382-audio-dsp-tdm1-2");
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+	struct tegra_t186ref_p2382 *machine = snd_soc_card_get_drvdata(card);
+	unsigned int mclk, clk_out_rate, srate;
+	int err = 0;
+
 	/* update dai params rate for audio dsp TDM link */
 	dai_params->rate_min = params_rate(params);
 
+	/* Default sampling rate*/
+	srate = dai_params->rate_min;
+	clk_out_rate = srate * 256;
+	mclk = clk_out_rate * 2;
+
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+			srate, mclk, clk_out_rate);
+	if (err < 0) {
+		dev_err(card->dev, "Can't configure clocks\n");
+		return err;
+	}
+
+	err = tegra210_xbar_set_clock(mclk);
+	if (err < 0) {
+		dev_err(card->dev,
+			"Can't configure xbar clock = %d Hz\n", mclk);
+		return err;
+	}
 	return 0;
 }
 
@@ -301,8 +330,7 @@ static int tegra_t186ref_p2382_spdif_hw_params(
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
 	/* dummy hw_params; clocks set in the init function */
-	/* dai_params->rate_min = params_rate(params);*/
-	dai_params->rate_min = 8000;
+	dai_params->rate_min = params_rate(params);
 
 	return 0;
 }

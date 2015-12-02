@@ -132,12 +132,14 @@
 		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 3) 0>;
 		mmc-ocr-mask = <3>;
 		/delete-property/ non-removable;
+		uhs-mask = <0x1F>;
 	};
 
 	sdhci@3400000 { /* SDMMC_A  sd card 4-bit*/
 		status = "okay";
 		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
 		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 4) 0>;
+		uhs-mask = <0x1F>;
 	};
 
 	/* FIXME: Check which I2C are common across all VCM31 T186 platforms */

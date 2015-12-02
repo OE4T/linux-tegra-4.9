@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,9 +18,9 @@
 #include "bpmp.h"
 #include "mail_t186.h"
 
-static struct ivc ivc_channels[NR_CHANNELS];
+#define HSP_SHRD_SEM_1_STA			0x1b0000
 
-static void __iomem *bpmp_base;
+static struct ivc ivc_channels[NR_CHANNELS];
 static void __iomem *cpu_ma_page;
 static void __iomem *cpu_sl_page;
 
@@ -51,10 +51,6 @@ static int native_iomem_init(void)
 	if (WARN_ON(!of_device_is_available(of_node)))
 		return -ENODEV;
 
-	bpmp_base = of_iomap(of_node, 0);
-	if (!bpmp_base)
-		return -ENODEV;
-
 	cpu_ma_page = of_iomap(of_node, 1);
 	if (!cpu_ma_page)
 		return -ENODEV;
@@ -68,11 +64,28 @@ static int native_iomem_init(void)
 
 static int native_handshake(void)
 {
+	struct device_node *of_node;
+	void __iomem *bpmp_base;
+	uint32_t sem;
+
 	if (tegra_platform_is_linsim())
 		return -ENODEV;
 
+	/* FIXME: do not assume DT path */
+	of_node = of_find_node_by_path("/bpmp");
+	if (WARN_ON(!of_device_is_available(of_node)))
+		return -ENODEV;
+
+	bpmp_base = of_iomap(of_node, 0);
+	if (!bpmp_base)
+		return -ENODEV;
+
 	/* WAR for simulator */
-	if (!__raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA))
+	sem = __raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA);
+
+	iounmap(bpmp_base);
+
+	if (!sem)
 		return -ENODEV;
 
 	pr_info("bpmp: waiting for handshake\n");
@@ -142,22 +155,32 @@ static void native_ring_doorbell(void)
 	tegra_hsp_db_ring(HSP_DB_BPMP);
 }
 
-static struct ivc *native_channel_to_ivc(int ch)
+static struct ivc *native_ivc_obj(int ch)
 {
 	return ivc_channels + ch;
 }
 
-int init_native_override(void)
+static struct mail_ops mail_ops = {
+	.init_prepare = native_init_prepare,
+	.ring_doorbell = native_ring_doorbell,
+	.init_irq = native_init_irq,
+	.iomem_init = native_iomem_init,
+	.handshake = native_handshake,
+	.channel_init = native_channel_init,
+	.ivc_obj = native_ivc_obj,
+	.resume = native_resume
+};
+
+struct mail_ops *native_mail_ops(void)
 {
-	trans_ops.channel_to_ivc = native_channel_to_ivc;
+	/* FIXME: consider using an attr */
+	const char *ofm_native = "nvidia,tegra186-bpmp";
+	struct device_node *np;
 
-	mail_ops.init_prepare = native_init_prepare;
-	mail_ops.ring_doorbell = native_ring_doorbell;
-	mail_ops.init_irq = native_init_irq;
-	mail_ops.iomem_init = native_iomem_init;
-	mail_ops.handshake = native_handshake;
-	mail_ops.channel_init = native_channel_init;
-	mail_ops.resume = native_resume;
+	np = of_find_compatible_node(NULL, NULL, ofm_native);
+	if (!np)
+		return NULL;
 
-	return 0;
+	of_node_put(np);
+	return &mail_ops;
 }

@@ -16,15 +16,6 @@
 
 #include <linux/kernel.h>
 
-#define TEGRA_BPMP_HSP_BASE		0x150000
-#define TEGRA_BPMP_HSP_SHRD_SEM_BASE	(TEGRA_BPMP_HSP_BASE + 0x50000)
-#define HSP_SHRD_SEM_0_STA		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x0)
-#define HSP_SHRD_SEM_0_SET		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x4)
-#define HSP_SHRD_SEM_0_CLR		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x8)
-#define HSP_SHRD_SEM_1_STA		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x10000)
-#define HSP_SHRD_SEM_1_SET		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x10004)
-#define HSP_SHRD_SEM_1_CLR		(TEGRA_BPMP_HSP_SHRD_SEM_BASE + 0x10008)
-
 #define CPU_0_TO_BPMP_CH		0
 #define CPU_1_TO_BPMP_CH		1
 #define CPU_2_TO_BPMP_CH		2
@@ -42,30 +33,23 @@
 
 struct ivc;
 
-struct transport_layer_ops {
-	struct ivc *(*channel_to_ivc)(int ch);
-};
-
 struct mail_ops {
-	int (*probe)(void);
 	int (*init_prepare)(void);
 	int (*init_irq)(void);
 	int (*iomem_init)(void);
 	int (*handshake)(void);
 	int (*channel_init)(int ch);
+	struct ivc *(*ivc_obj)(int ch);
 	void (*resume)(void);
 	void (*ring_doorbell)(void);
 };
 
-extern struct mail_ops mail_ops;
-extern struct transport_layer_ops trans_ops;
-
-int init_native_override(void);
+struct mail_ops *native_mail_ops(void);
 
 #ifdef CONFIG_TEGRA_HV_MANAGER
-int init_virt_override(void);
-
-extern const char *ofm_virt;
+struct mail_ops *virt_mail_ops(void);
+#else
+static inline struct mail_ops *virt_mail_ops(void) { return NULL; }
 #endif
 
 #endif

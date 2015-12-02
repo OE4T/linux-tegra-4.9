@@ -26,7 +26,7 @@
 #include "bpmp.h"
 #include "mail_t186.h"
 
-struct transport_layer_ops trans_ops;
+static struct mail_ops *mail_ops;
 
 static bool ivc_rx_ready(int ch)
 {
@@ -34,7 +34,7 @@ static bool ivc_rx_ready(int ch)
 	void *frame;
 	bool ready;
 
-	ivc = trans_ops.channel_to_ivc(ch);
+	ivc = mail_ops->ivc_obj(ch);
 	frame = tegra_ivc_read_get_next_frame(ivc);
 	ready = !IS_ERR_OR_NULL(frame);
 	channel_area[ch].ib = ready ? frame : NULL;
@@ -56,7 +56,7 @@ void bpmp_free_master(int ch)
 {
 	struct ivc *ivc;
 
-	ivc = trans_ops.channel_to_ivc(ch);
+	ivc = mail_ops->ivc_obj(ch);
 	if (tegra_ivc_read_advance(ivc))
 		WARN_ON(1);
 }
@@ -65,7 +65,7 @@ void bpmp_signal_slave(int ch)
 {
 	struct ivc *ivc;
 
-	ivc = trans_ops.channel_to_ivc(ch);
+	ivc = mail_ops->ivc_obj(ch);
 	if (tegra_ivc_write_advance(ivc))
 		WARN_ON(1);
 }
@@ -76,7 +76,7 @@ bool bpmp_master_free(int ch)
 	void *frame;
 	bool ready;
 
-	ivc = trans_ops.channel_to_ivc(ch);
+	ivc = mail_ops->ivc_obj(ch);
 	frame = tegra_ivc_write_get_next_frame(ivc);
 	ready = !IS_ERR_OR_NULL(frame);
 	channel_area[ch].ob = ready ? frame : NULL;
@@ -96,7 +96,7 @@ void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 		return;
 	}
 
-	ivc = trans_ops.channel_to_ivc(ch);
+	ivc = mail_ops->ivc_obj(ch);
 	r = tegra_ivc_read_advance(ivc);
 	WARN_ON(r);
 
@@ -121,8 +121,8 @@ EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
 
 void bpmp_ring_doorbell(void)
 {
-	if (mail_ops.ring_doorbell)
-		mail_ops.ring_doorbell();
+	if (mail_ops->ring_doorbell)
+		mail_ops->ring_doorbell();
 }
 
 int bpmp_thread_ch_index(int ch)
@@ -144,8 +144,8 @@ int bpmp_ob_channel(void)
 
 int bpmp_init_irq(void)
 {
-	if (mail_ops.init_irq)
-		return mail_ops.init_irq();
+	if (mail_ops->init_irq)
+		return mail_ops->init_irq();
 
 	return 0;
 }
@@ -155,19 +155,19 @@ static int bpmp_channel_init(void)
 	int e = 0;
 	int i;
 
-	if (!mail_ops.channel_init)
+	if (!mail_ops->channel_init)
 		return 0;
 
 	for (i = 0; i < NR_CHANNELS && !e; i++)
-		e = mail_ops.channel_init(i);
+		e = mail_ops->channel_init(i);
 
 	return e;
 }
 
 void tegra_bpmp_resume(void)
 {
-	if (mail_ops.resume)
-		mail_ops.resume();
+	if (mail_ops->resume)
+		mail_ops->resume();
 }
 
 int bpmp_connect(void)
@@ -178,15 +178,15 @@ int bpmp_connect(void)
 	if (connected)
 		return 0;
 
-	if (mail_ops.iomem_init)
-		ret = mail_ops.iomem_init();
+	if (mail_ops->iomem_init)
+		ret = mail_ops->iomem_init();
 
 	if (ret) {
 		pr_err("bpmp iomem init failed (%d)\n", ret);
 		return ret;
 	}
 
-	ret = mail_ops.handshake();
+	ret = mail_ops->handshake();
 	if (ret) {
 		pr_err("bpmp handshake failed (%d)\n", ret);
 		return ret;
@@ -204,42 +204,16 @@ int bpmp_connect(void)
 	return ret;
 }
 
-/* FIXME: consider using an attr */
-static const char *ofm_native = "nvidia,tegra186-bpmp";
-struct mail_ops mail_ops;
-
-static int mail_ops_probe(void)
-{
-	struct device_node *np;
-
-	np = of_find_compatible_node(NULL, NULL, ofm_native);
-	if (np) {
-		of_node_put(np);
-		return init_native_override();
-	}
-
-#ifdef CONFIG_TEGRA_HV_MANAGER
-	np = of_find_compatible_node(NULL, NULL, ofm_virt);
-	if (np) {
-		of_node_put(np);
-		return init_virt_override();
-	}
-#endif
-
-	WARN_ON(1);
-	return -ENODEV;
-}
-
 int bpmp_mail_init_prepare(void)
 {
-	int r;
+	mail_ops = native_mail_ops() ?: virt_mail_ops();
+	if (!mail_ops) {
+		WARN_ON(1);
+		return -ENODEV;
+	}
 
-	r = mail_ops_probe();
-	if (r)
-		return r;
-
-	if (mail_ops.init_prepare)
-		return mail_ops.init_prepare();
+	if (mail_ops->init_prepare)
+		return mail_ops->init_prepare();
 
 	return 0;
 }

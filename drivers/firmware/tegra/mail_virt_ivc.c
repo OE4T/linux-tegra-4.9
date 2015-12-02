@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -29,14 +29,6 @@ static int hv_bpmp_get_cookie_index(uint32_t queue_id)
 	if ((hv_bpmp_first_queue == -1) || (queue_id < hv_bpmp_first_queue))
 		return -1;
 	return (queue_id - hv_bpmp_first_queue);
-}
-
-static int virt_init_prepare(void)
-{
-	/* Nothing to do here, hv-ivc should have already initialized itself
-	 * via an initcall
-	 */
-	return 0;
 }
 
 static irqreturn_t hv_bpmp_irq_handler(int irq, void *dev_id)
@@ -171,7 +163,7 @@ cleanup:
 	return -ENOMEM;
 }
 
-static struct ivc *virt_channel_to_ivc(int ch)
+static struct ivc *virt_ivc_obj(int ch)
 {
 	struct tegra_hv_ivc_cookie *cookie = hv_bpmp_ivc_cookies[ch];
 
@@ -203,17 +195,20 @@ static int virt_handshake(void)
 	return 0;
 }
 
-int init_virt_override(void)
+static struct mail_ops mail_ops = {
+	.iomem_init = virt_init_io,
+	.handshake = virt_handshake,
+	.ivc_obj = virt_ivc_obj
+};
+
+struct mail_ops *virt_mail_ops(void)
 {
-	trans_ops.channel_to_ivc = virt_channel_to_ivc;
+	struct device_node *np;
 
-	mail_ops.init_prepare = virt_init_prepare;
-	mail_ops.ring_doorbell = NULL;
-	mail_ops.init_irq = NULL;
-	mail_ops.iomem_init = virt_init_io;
-	mail_ops.handshake = virt_handshake;
-	mail_ops.channel_init = NULL;
-	mail_ops.resume = NULL;
+	np = of_find_compatible_node(NULL, NULL, ofm_virt);
+	if (!np)
+		return NULL;
 
-	return 0;
+	of_node_put(np);
+	return &mail_ops;
 }

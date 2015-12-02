@@ -1132,8 +1132,8 @@ void fb_edid_add_monspecs(unsigned char *edid, struct fb_monspecs *specs)
 			}
 
 			/* OUI for hdmi forum: C4-5D-D8 */
-			if (edid[pos] == 0xc4 && edid[pos + 1] == 0x5d &&
-			    edid[pos + 2] == 0xd8)
+			if (edid[pos] == 0xd8 && edid[pos + 1] == 0x5d &&
+			    edid[pos + 2] == 0xc4)
 				specs->misc |= FB_MISC_HDMI_FORUM;
 
 		} else if (type == CEA_DATA_BLOCK_EXT) {

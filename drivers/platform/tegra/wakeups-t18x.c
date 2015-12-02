@@ -76,6 +76,7 @@
 #define INT_AO_DEBUG_WAKE 29 + INT_OFFSET
 #define INT_AOPM2LIC   30 + INT_OFFSET
 #define INT_AON_CAR    226 + INT_OFFSET
+#define INT_SPE_WDT_EXPIRY 15 + INT_OFFSET
 
 static int tegra_gpio_wakes[] = {
 	TEGRA_GPIO(A, 6),		/* wake0 */
@@ -261,7 +262,7 @@ static int tegra_wake_event_irq[] = {
 	INT_XUSB,		/* wake81 */
 	INT_XUSB,		/* wake82 */
 	INT_SW_WAKE_TRIGGER,	/* wake83 */
-	-EINVAL,		/* wake84 */
+	INT_SPE_WDT_EXPIRY,	/* wake84 */
 	INT_AOVIC_FIQ,		/* wake85 */
 	INT_AOVIC_IRQ,		/* wake86 */
 	INT_AON_GPIO_0,		/* wake87 */

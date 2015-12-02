@@ -1,6 +1,5 @@
 menuconfig TEGRA_CEC_SUPPORT
 	bool "Tegra CEC support"
-	depends on ARCH_TEGRA
 	---help---
 	  Say Y here to get to see options for tegra CEC support.
 	  This option alone does not add any kernel code.

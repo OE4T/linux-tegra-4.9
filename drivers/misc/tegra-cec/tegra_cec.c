@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-cec/tegra_cec.c
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -419,6 +419,9 @@ static int tegra_cec_probe(struct platform_device *pdev)
 {
 	struct tegra_cec *cec;
 	struct resource *res;
+#if defined(CONFIG_TEGRA_DISPLAY)
+	struct device_node *np = pdev->dev->of_node;
+#endif
 	int ret = 0;
 
 	cec = devm_kzalloc(&pdev->dev, sizeof(struct tegra_cec), GFP_KERNEL);
@@ -467,7 +470,12 @@ static int tegra_cec_probe(struct platform_device *pdev)
 	atomic_set(&cec->init_done, 0);
 	mutex_init(&cec->tx_lock);
 
+#if defined(CONFIG_TEGRA_DISPLAY)
+    if (np)
+        cec->clk = of_clk_get_by_name(np, "cec");
+#else
 	cec->clk = clk_get(&pdev->dev, "cec");
+#endif
 
 	if (IS_ERR_OR_NULL(cec->clk)) {
 		dev_err(&pdev->dev, "can't get clock for CEC\n");
@@ -475,7 +483,7 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		goto clk_error;
 	}
 
-	clk_enable(cec->clk);
+	clk_prepare_enable(cec->clk);
 
 	/* set context info. */
 	cec->dev = &pdev->dev;
@@ -586,6 +594,7 @@ static struct of_device_id tegra_cec_of_match[] = {
 	{ .compatible = "nvidia,tegra114-cec", },
 	{ .compatible = "nvidia,tegra124-cec", },
 	{ .compatible = "nvidia,tegra210-cec", },
+	{ .compatible = "nvidia,tegra186-cec", },
 	{},
 };
 

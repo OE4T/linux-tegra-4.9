@@ -55,7 +55,7 @@ can get by with defining, say 4 for LENGTH, and only the first 4 bytes will be
 written.
 
 The DT labeling mechanism is based on the part number and the command to be
-accomplished. Currently there are four commands: initialization, enable,
+accomplished. Currently there are four main commands: initialization, enable,
 disable, and event.  For each label, a "_?" is appended where ? is a decimal
 number starting at 0.  Note the driver will put the entries in the sequence
 defined by ? and not by the order defined in the DT.
@@ -98,6 +98,15 @@ The suspend command allows any necessary action whenever the driver receives
 notification of a suspend:
 	263suspend_?
 	253suspend_?
+The external state is the sar_external_status function that an external driver
+can call to notify the IQS driver of an external status.  It's purpose is for
+WARs and is therefore defined by the WAR implemented in the device tree byte
+stream "external_lo" and "external_hi" when the external state transitions to
+low and high respectively.
+	263external_lo_?
+	253external_lo_?
+	263external_hi_?
+	253external_hi_?
 
 Due to the IQS device's design for communicating with the device, each entry,
 which represents an I2C transaction, is actually stacked so that the entire
@@ -134,6 +143,8 @@ where XX = part device ID (0x29=IQS253, 0x3C=IQS263)
 	   4: event
 	   5: suspend
 	   6: delta (see delta options far below)
+	   7: external state low
+	   8: external state high
 	   If YY is 0, then all the commands will be displayed.
       ZZ = device
 	   Possible devices are:
@@ -178,15 +189,12 @@ switches the gpio_rdy GPIO to input.
 toggles SAR GPIO status message spew.
 #echo 0x18 > nvs
 toggles external state status message spew.
-The external state is the sar_external_status function that an external driver
-can call to notify the IQS driver of an external status.  It's purpose is for
-WARs and is therefore defined by the WAR implemented.
 
 For overall status information:
 #echo 10 > nvs
 #cat nvs
 The results will be something like:
-	IQS driver v. 20
+	IQS driver v. 21
 	ATI redo count=0
 	os_options=0
 	stream_mode=2

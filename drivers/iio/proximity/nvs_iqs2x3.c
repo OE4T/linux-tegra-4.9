@@ -35,7 +35,7 @@
 #include <asm/atomic.h>
 
 
-#define IQS_DRIVER_VERSION		(20)
+#define IQS_DRIVER_VERSION		(21)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -159,6 +159,8 @@ enum IQS_DB_CMD {
 	IQS_DB_CMD_EVNT,
 	IQS_DB_CMD_SUSPND,
 	IQS_DB_CMD_DELTA,
+	IQS_DB_CMD_EXT_LO,
+	IQS_DB_CMD_EXT_HI,
 	IQS_DB_CMD_N,
 };
 
@@ -292,8 +294,11 @@ struct iqs_hal {
 #define IQS263_BI_ACTIVE_CH		(IQS263_BI_GESTURE_TIMERS + \
 					 IQS263_RL_GESTURE_TIMERS + 1)
 #define IQS263_RL_ACTIVE_CH		(1)
-#define IQS263_BI_N			(IQS263_BI_ACTIVE_CH + \
+#define IQS263_BI_ENG			(IQS263_BI_ACTIVE_CH + \
 					 IQS263_RL_ACTIVE_CH + 1)
+#define IQS263_RL_ENG			(1)
+#define IQS263_BI_N			(IQS263_BI_ENG + \
+					 IQS263_RL_ENG + 1)
 /* IQS253 */
 #define IQS253_BI_SYSFLAGS		(IQS_BI_DEVINF + \
 					 IQS_RL_DEVINF + 1)
@@ -343,6 +348,7 @@ static const struct iqs_hal const iqs263_hal_tbl[] = {
 	{ 0x0B, IQS263_RL_TIMINGS, IQS263_BI_TIMINGS, true, },
 	{ 0x0C, IQS263_RL_GESTURE_TIMERS, IQS263_BI_GESTURE_TIMERS, true, },
 	{ 0x0D, IQS263_RL_ACTIVE_CH, IQS263_BI_ACTIVE_CH, true, },
+	{ 0x48, IQS263_RL_ENG, IQS263_BI_ENG, true, },
 };
 
 static const struct iqs_hal const iqs253_hal_tbl[] = {
@@ -359,9 +365,10 @@ static const struct iqs_hal const iqs253_hal_tbl[] = {
 
 #define IQS_DT_INIT_N			(96) /* max DT init bytes */
 #define IQS_DT_ABLE_N			(32) /* max DT en/dis-able bytes */
-#define IQS_DT_EVNT_N			(32) /* max DT en/dis-able bytes */
+#define IQS_DT_EVNT_N			(32) /* max DT event bytes */
+#define IQS_DT_EXT_N			(32) /* max DT external state bytes */
 #define IQS_DT_SUSPND_N			(64) /* max DT suspend bytes */
-#define IQS263_MSG_N			(14)
+#define IQS263_MSG_N			(15)
 #define IQS253_MSG_N			(9)
 
 #if IQS263_MSG_N < IQS253_MSG_N
@@ -581,6 +588,8 @@ struct iqs_state {
 	unsigned char dt_dis[IQS_PART_N][IQS_DEV_HW_N][IQS_DT_ABLE_N]; /* " */
 	unsigned char dt_evnt[IQS_PART_N][IQS_DT_EVNT_N]; /* DT byte stream */
 	unsigned char dt_suspnd[IQS_PART_N][IQS_DT_SUSPND_N]; /* " */
+	unsigned char dt_ext_lo[IQS_PART_N][IQS_DT_EXT_N]; /* DT byte stream */
+	unsigned char dt_ext_hi[IQS_PART_N][IQS_DT_EXT_N]; /* DT byte stream */
 	u8 rc[IQS_BI_N];		/* register cache */
 	u16 *delta_avg[IQS_CH_N];	/* delta moving average data */
 	struct iqs_delta_tst delta_tst[IQS_DELTA_TEST0_N][IQS_DELTA_TEST1_N];
@@ -1426,8 +1435,14 @@ static int iqs_rd(struct iqs_state *st, bool poll)
 		iqs_i2c_rd(st, st->op_read_reg[i], 0);
 	ret = iqs_i2c(st, true);
 #else /* IQS_I2C_M_NO_RD_ACK */
-	if (atomic_xchg(&iqs_ext_sts_chg, 0))
-		iqs_ati_redo(st);
+	if (atomic_xchg(&iqs_ext_sts_chg, 0)) {
+		/* DT WAR action based on external state */
+		if (iqs_ext_sts)
+			iqs_wr(st, st->dt_ext_hi[st->part_i]);
+		else
+			iqs_wr(st, st->dt_ext_lo[st->part_i]);
+		st->op_i = st->op_read_n; /* restart cycle */
+	}
 	st->op_i++;
 	if (st->op_i >= st->op_read_n) {
 		st->op_i = 0; /* restart read cycle */
@@ -2061,6 +2076,16 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 				     iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_suspnd[i]);
 		}
+		if (cmd == IQS_DB_CMD_EXT_LO || !cmd) {
+			t += sprintf(buf + t, "%s external_lo:\n",
+				     iqs_i2c_device_id[i].name);
+			t += iqs_nvs_dbg_db(st, buf, t, st->dt_ext_lo[i]);
+		}
+		if (cmd == IQS_DB_CMD_EXT_HI || !cmd) {
+			t += sprintf(buf + t, "%s external_hi:\n",
+				     iqs_i2c_device_id[i].name);
+			t += iqs_nvs_dbg_db(st, buf, t, st->dt_ext_hi[i]);
+		}
 		break;
 
 	default:
@@ -2581,6 +2606,12 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 			sprintf(str, "%uevent", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_evnt[i],
 					    IQS_DT_EVNT_N);
+			sprintf(str, "%uexternal_lo", part);
+			ret |= iqs_of_dt_db(st, dn, str, st->dt_ext_lo[i],
+					    IQS_DT_EXT_N);
+			sprintf(str, "%uexternal_hi", part);
+			ret |= iqs_of_dt_db(st, dn, str, st->dt_ext_hi[i],
+					    IQS_DT_EXT_N);
 			sprintf(str, "%ususpend", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_suspnd[i],
 					    IQS_DT_SUSPND_N);

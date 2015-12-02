@@ -449,7 +449,7 @@ static struct sid_to_oids sid_to_oids[] = {
 			SCEDMAR,
 			SCEDMAW,
 		},
-		.ord = OVERRIDE,
+		.ord = NO_OVERRIDE,
 		.name = "SCE",
 	},
 	{

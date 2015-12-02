@@ -54,12 +54,12 @@
 		#stream-id-cells = <1>;
 		dmas = <&gpcdma 16>, <&gpcdma 16>;
 		dma-names = "rx", "tx";
-		nvidia,clk-parents = "pll_p", "clk_m";
+		nvidia,clk-parents = "pll_p", "osc";
 		spi-max-frequency = <25000000>;
 		clocks = <&tegra_car TEGRA186_CLK_SPI2>,
 			<&tegra_car TEGRA186_CLK_PLLP_OUT0>,
-			<&tegra_car TEGRA186_CLK_CLK_M>;
-		clock-names = "spi", "pll_p", "clk_m";
+			<&tegra_car TEGRA186_CLK_OSC>;
+		clock-names = "spi", "pll_p", "osc";
 		resets = <&tegra_car TEGRA186_RESET_SPI2>;
 		reset-names = "spi";
 		status = "disabled";

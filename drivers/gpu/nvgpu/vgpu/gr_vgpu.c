@@ -15,6 +15,7 @@
 
 #include "vgpu/vgpu.h"
 #include "gk20a/hw_gr_gk20a.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 static int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
@@ -899,6 +900,9 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 	case TEGRA_VGPU_GR_INTR_EXCEPTION:
 		gk20a_set_error_notifier(ch,
 				NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
+		break;
+	case TEGRA_VGPU_GR_INTR_SM_EXCEPTION:
+		gk20a_dbg_gpu_post_events(ch);
 		break;
 	default:
 		WARN_ON(1);

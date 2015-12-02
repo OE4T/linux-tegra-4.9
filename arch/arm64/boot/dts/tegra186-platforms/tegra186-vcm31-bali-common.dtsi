@@ -288,7 +288,7 @@
 
 	sdhci@3460000 { /* SDMMC_D: Used for eMMC */
 		status = "okay";
-		uhs-mask = <0x60>;
+		uhs-mask = <0x00>;
 	};
 
 	sdhci@3440000 { /* SDMMC_C  sd card 4-bit*/

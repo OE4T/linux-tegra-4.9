@@ -2,7 +2,7 @@
  * tegra186-vcm31-p2382-common.dtsi: VCM3.1 based P2382(sunstreaker)
  * common dtsi.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -557,17 +557,6 @@
 			firmware-name = "libnvwirefx.elf";
 			widget-name = "WIRE";
 		};
-	};
-
-	csi_mipical {
-		compatible = "nvidia, tegra186_csi_mipical";
-		reg = <0x0 0x03990000 0x0 0x100>;
-		clocks = <&tegra_car TEGRA186_CLK_MIPI_CAL>,
-			<&tegra_car TEGRA186_CLK_UART_FST_MIPI_CAL>;
-		clock-names = "mipi_cal", "uart_fs_mipi_cal";
-		resets = <&tegra_car TEGRA186_RESET_MIPI_CAL>;
-		reset-names = "mipi_cal";
-		status = "okay";
 	};
 
 	isc-mgr.0 {

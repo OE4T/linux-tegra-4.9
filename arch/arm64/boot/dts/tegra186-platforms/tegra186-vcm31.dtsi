@@ -1,7 +1,7 @@
 /*
  * tegra186-vcm31.dtsi: VCM3.1 board specific dtsi file for all VCM31 boards.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -181,4 +181,14 @@
 		freq_table_step_size = /bits/ 16 <1>;
 	};
 
+	csi_mipical {
+		compatible = "nvidia, tegra186_csi_mipical";
+		reg = <0x0 0x03990000 0x0 0x100>;
+		clocks = <&tegra_car TEGRA186_CLK_MIPI_CAL>,
+			<&tegra_car TEGRA186_CLK_UART_FST_MIPI_CAL>;
+		clock-names = "mipi_cal", "uart_fs_mipi_cal";
+		resets = <&tegra_car TEGRA186_RESET_MIPI_CAL>;
+		reset-names = "mipi_cal";
+		status = "okay";
+	};
 };

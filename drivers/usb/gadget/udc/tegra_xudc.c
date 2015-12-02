@@ -2606,7 +2606,7 @@ static void __tegra_xudc_handle_port_status(struct tegra_xudc *xudc)
 	portsc = xudc_readl(xudc, PORTSC);
 	if (portsc & PORTSC_PRC) {
 		dev_dbg(xudc->dev, "PRC, PORTSC = %#x\n", portsc);
-		clear_port_change(xudc, PORTSC_PRC);
+		clear_port_change(xudc, PORTSC_PRC | PORTSC_PED);
 		if (!(xudc_readl(xudc, PORTSC) & PORTSC_PR))
 			tegra_xudc_port_reset(xudc);
 	}
@@ -2614,7 +2614,7 @@ static void __tegra_xudc_handle_port_status(struct tegra_xudc *xudc)
 	portsc = xudc_readl(xudc, PORTSC);
 	if (portsc & PORTSC_WRC) {
 		dev_dbg(xudc->dev, "WRC, PORTSC = %#x\n", portsc);
-		clear_port_change(xudc, PORTSC_WRC);
+		clear_port_change(xudc, PORTSC_WRC | PORTSC_PED);
 		if (!(xudc_readl(xudc, PORTSC) & PORTSC_WPR))
 			tegra_xudc_port_reset(xudc);
 	}

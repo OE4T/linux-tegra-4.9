@@ -722,6 +722,16 @@ static struct snd_soc_dai_link
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
+	[TEGRA186_DAI_LINK_ADSP_EAVB] = {
+		.name = "ADSP EAVB",
+		.stream_name = "ADSP EAVB",
+		.cpu_dai_name = "ADSP-EAVB",
+		.codec_dai_name = "ADSP EAVB",
+		.cpu_name = "adsp_audio",
+		.codec_name = "adsp_audio",
+		.platform_name = "adsp_audio",
+		.params = &default_link_params,
+	},
 	[TEGRA186_DAI_LINK_AMX1_1] = {
 		.name = "AMX1 IN1",
 		.stream_name = "AMX1 IN",

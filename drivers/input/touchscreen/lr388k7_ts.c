@@ -40,8 +40,6 @@
 #define DEBUG_LR388K7
 #endif
 
-/* INPUT_ENABLE */
-#define INPUT_ENABLE
 /* ACTIVE */
 /* #define ACTIVE_ENABLE */
 /* UDEV */
@@ -89,7 +87,7 @@
 #define K7_CMD_DATA_OFFSET (0x030400)
 #define K7_CMD_DATA_SIZE (251 + K7_RD_HEADER_SIZE)
 #define K7_Q_SIZE (8)
-#define K7_DRIVER_VERSION (14)
+#define K7_DRIVER_VERSION (18)
 #define K7_INT_STATUS_MASK_DATA (0x01)
 #define K7_INT_STATUS_MASK_BOOT (0x02)
 #define K7_INT_STATUS_MASK_CMD  (0x04)
@@ -125,6 +123,7 @@ struct lr388k7_ts_parameter {
 	bool b_is_calc_finish;
 	bool b_is_suspended;
 	bool b_is_reset;
+	bool b_is_disabled;
 	u32 u32SCK;
 	u16 u16fw_ver;
 	u16 u16module_ver;
@@ -143,8 +142,8 @@ struct lr388k7 {
 #if defined(ACTIVE_ENABLE)
 	struct input_dev	*idev_active;
 	int                     tool;
-	unsigned int            gpio_clk_sel;
 #endif
+	unsigned int            gpio_clk_sel;
 	char			phys[32];
 	struct mutex		mutex;
 	unsigned int		irq;
@@ -275,6 +274,9 @@ static int lr388k7_set_clk_sel(unsigned int sel)
 	struct lr388k7 *ts = spi_get_drvdata(g_spi);
 
 	if (!ts)
+		return false;
+
+	if (!gpio_is_valid(ts->gpio_clk_sel))
 		return false;
 
 	if (!sel)
@@ -624,33 +626,6 @@ static void lr388k7_read_spec_size(void)
 	}
 }
 
-static bool lr388k7_check_status(void)
-{
-	u8 u8_tx_buf[K7_RD_HEADER_SIZE + 1], u8_rx_buf[K7_RD_HEADER_SIZE + 1];
-	u8 u8Ret = 0;
-	size_t count = 1;
-
-	u8_tx_buf[0] = K7_RD_OPCODE;
-	u8_tx_buf[1] = (K7_CMD_DATA_OFFSET >> 16) & 0xFF;
-	u8_tx_buf[2] = (K7_CMD_DATA_OFFSET >>  8) & 0xFF;
-	u8_tx_buf[3] = (K7_CMD_DATA_OFFSET >>  0) & 0xFF;
-	u8_tx_buf[4] = 0x00;
-
-	g_st_state.u32SCK = 0;
-
-	if (lr388k7_spi_read(u8_tx_buf, u8_rx_buf, count)) {
-		u8Ret = u8_rx_buf[K7_RD_HEADER_SIZE];
-
-		g_st_state.u32SCK = g_spi->max_speed_hz;
-
-		if (u8Ret == K7_REMOTE_WAKEUP_CODE)
-			return true;
-	}
-	g_st_state.u32SCK = g_spi->max_speed_hz;
-
-	return false;
-}
-
 static void lr388k7_event_handler(u8 u8Status)
 {
 	void *p_q_buf;
@@ -763,22 +738,6 @@ static void lr388k7_work_handler(struct work_struct *work)
 	mutex_unlock(&ts->mutex);
 }
 
-static void lr388k7_enable_irq(struct lr388k7 *ts)
-{
-	if (g_st_dbg.wakeup.enable == 1)
-		disable_irq_wake(ts->irq);
-	else
-		enable_irq(ts->irq);
-}
-
-static void lr388k7_disable_irq(struct lr388k7 *ts)
-{
-	if (g_st_dbg.wakeup.enable == 1)
-		enable_irq_wake(ts->irq);
-	else
-		disable_irq(ts->irq);
-}
-
 static irqreturn_t lr388k7_wakeup_thread(int irq, void *_ts)
 {
 	struct lr388k7 *ts = (struct lr388k7 *)_ts;
@@ -787,13 +746,8 @@ static irqreturn_t lr388k7_wakeup_thread(int irq, void *_ts)
 
 	dev_info(&g_spi->dev, "[ENTER] Wakeup thread\n");
 
+	/* just try to clear */
 	u8_status = lr388k7_clear_irq();
-	if (u8_status & K7_INT_STATUS_MASK_CMD) {
-		if (!lr388k7_check_status()) {
-			lr388k7_event_handler(u8_status);
-			return IRQ_HANDLED;
-		}
-	}
 
 	dev_info(&g_spi->dev, "Tap wakeup\n");
 
@@ -801,11 +755,6 @@ static irqreturn_t lr388k7_wakeup_thread(int irq, void *_ts)
 	input_sync(input_dev);
 	input_report_key(input_dev, KEY_POWER, 0);
 	input_sync(input_dev);
-
-	if (u8_status & K7_INT_STATUS_MASK_DATA) {
-		dev_info(&g_spi->dev, "[DATA] Wakeup thread\n");
-		lr388k7_read_spec_size();
-	}
 
 	if (g_st_state.b_is_suspended)
 		g_st_state.b_is_suspended = false;
@@ -837,26 +786,16 @@ static irqreturn_t lr388k7_irq_thread(int irq, void *_ts)
 	return IRQ_HANDLED;
 }
 
-static void lr388k7_start_scan(struct lr388k7 *ts)
-{
-	lr388k7_enable_irq(ts);
-}
-
-static void lr388k7_stop_scan(struct lr388k7 *ts)
-{
-	lr388k7_disable_irq(ts);
-}
-
 /* must be called with ts->mutex held */
 static void __lr388k7_disable(struct lr388k7 *ts)
 {
-	lr388k7_stop_scan(ts);
+	disable_irq(ts->irq);
 }
 
 /* must be called with ts->mutex held */
 static void __lr388k7_enable(struct lr388k7 *ts)
 {
-	lr388k7_start_scan(ts);
+	enable_irq(ts->irq);
 }
 
 static ssize_t lr388k7_ts_force_cap_show(struct device *dev,
@@ -983,8 +922,7 @@ static ssize_t lr388k7_ts_slowscan_enable_store(struct device *dev,
 	if (count < 2)
 		return -EINVAL;
 
-	if (g_st_state.b_is_suspended &&
-	    g_st_dbg.wakeup.enable == 0)
+	if (g_st_state.b_is_suspended)
 		return -EINVAL;
 
 	ret = (ssize_t) count;
@@ -1047,8 +985,7 @@ static ssize_t lr388k7_ts_wakeup_enable_store(struct device *dev,
 	if (count < 2)
 		return -EINVAL;
 
-	if (g_st_state.b_is_suspended &&
-	    g_st_dbg.wakeup.enable == 0)
+	if (g_st_state.b_is_suspended)
 		return -EINVAL;
 
 	ret = (ssize_t) count;
@@ -1318,11 +1255,11 @@ static ssize_t lr388k7_ts_log_show(struct device *dev,
 		if (g_log_rear == g_log_front) {
 			spin_unlock_irqrestore(&lr388k7log_lock, flags);
 			return (ssize_t)(s - buf);
-		} else {
-			g_log_front++;
-			if (g_log_front >= log_size)
-				g_log_front = 0;
 		}
+
+		g_log_front++;
+		if (g_log_front >= log_size)
+			g_log_front = 0;
 		log = glog[g_log_front];
 		spin_unlock_irqrestore(&lr388k7log_lock, flags);
 
@@ -1404,6 +1341,8 @@ static int lr388k7_open(struct input_dev *input)
 static void lr388k7_close(struct input_dev *input)
 {
 	struct lr388k7 *ts = input_get_drvdata(input);
+
+	dev_info(&ts->spi->dev, "[ENTER] close\n");
 	mutex_lock(&ts->mutex);
 
 	__lr388k7_disable(ts);
@@ -1411,6 +1350,7 @@ static void lr388k7_close(struct input_dev *input)
 	ts->opened = false;
 
 	mutex_unlock(&ts->mutex);
+	dev_info(&ts->spi->dev, "[EXIT] close\n");
 }
 
 
@@ -1610,14 +1550,6 @@ static void lr388k7_touch_report(void *p)
 		input_report_abs(input_dev,
 				 ABS_MT_PRESSURE,
 				 p_touch_report->tc[i] . z);
-#if 0
-		input_report_abs(input_dev,
-				 ABS_MT_TOUCH_MAJOR,
-				 p_touch_report->tc[i] .width);
-		input_report_abs(input_dev,
-				 ABS_MT_TOUCH_MINOR,
-				 p_touch_report->tc[i] .height);
-#endif
 		input_mt_sync(input_dev);
 		u8_num_of_touch++;
 	}
@@ -2199,6 +2131,7 @@ static void lr388k7_init_parameter(void)
 	g_st_state.b_is_init_finish = false;
 	g_st_state.b_is_suspended = false;
 	g_st_state.b_is_reset = false;
+	g_st_state.b_is_disabled = false;
 	g_st_state.u32SCK = 0;
 	lr388k7_queue_reset();
 
@@ -2224,7 +2157,7 @@ static void lr388k7_init_ts(void)
 	lr388k7_init_parameter();
 	memset(&g_st_state, 0, sizeof(struct lr388k7_ts_parameter));
 
-	g_st_state.st_wq_k7 = alloc_workqueue("lr388k7_work", WQ_HIGHPRI, 1);
+	g_st_state.st_wq_k7 = create_singlethread_workqueue("lr388k7_work");
 	INIT_WORK(&g_st_state.st_work_k7, lr388k7_work_handler);
 }
 
@@ -2234,7 +2167,9 @@ static struct lr388k7_platform_data *lr388k7_parse_dt(struct device *dev,
 	struct lr388k7_platform_data *pdata;
 	struct device_node *np = dev->of_node;
 	int ret, val, irq_gpio;
-
+#if defined(ACTIVE_ENABLE)
+	const char *str;
+#endif
 	pdata = devm_kzalloc(dev, sizeof(*pdata), GFP_KERNEL);
 	if (!pdata)
 		return ERR_PTR(-ENOMEM);
@@ -2302,21 +2237,28 @@ static struct lr388k7_platform_data *lr388k7_parse_dt(struct device *dev,
 	pdata->ts_touch_num_max = val;
 
 #if defined(ACTIVE_ENABLE)
+	ret = of_property_read_string(np, "name-of-clock", &str);
+	if (ret < 0)
+		goto exit_release_all_gpio;
+	pdata->name_of_clock = (char *)str;
+
+	ret = of_property_read_string(np, "name-of-clock-con", &str);
+	if (ret < 0)
+		goto exit_release_all_gpio;
+	pdata->name_of_clock_con = (char *)str;
+
+#endif
 	pdata->gpio_clk_sel = of_get_named_gpio_flags(np,
 						      "clock-sel-gpio",
 						      0,
 						      NULL);
-	if (!gpio_is_valid(pdata->gpio_clk_sel)) {
-		dev_err(dev, "Invalid clock-sel-gpio\n");
-		return ERR_PTR(-EINVAL);
+	if (gpio_is_valid(pdata->gpio_clk_sel)) {
+		ret = gpio_request(pdata->gpio_clk_sel, "clock-sel-gpio");
+		if (ret)
+			dev_err(dev, "gpio_request(clk_sel) failed\n");
+		else
+			gpio_direction_output(pdata->gpio_clk_sel, 0);
 	}
-	ret = gpio_request(pdata->gpio_clk_sel, "clock-sel-gpio");
-	if (ret < 0) {
-		dev_err(dev, "gpio_request failed\n");
-		return ERR_PTR(-EINVAL);
-	}
-	gpio_direction_output(pdata->gpio_clk_sel, 0);
-#endif
 
 	ret = of_property_read_u32(np, "platform-id", &val);
 	if (ret < 0)
@@ -2447,8 +2389,8 @@ static int lr388k7_probe(struct spi_device *spi)
 	ts->b_eraser_active = false;
 #if defined(ACTIVE_ENABLE)
 	ts->tool        = 0;
-	ts->gpio_clk_sel = pdata->gpio_clk_sel;
 #endif
+	ts->gpio_clk_sel = pdata->gpio_clk_sel;
 	ts->platform_id = pdata->platform_id;
 
 	mutex_init(&ts->mutex);
@@ -2477,10 +2419,15 @@ static int lr388k7_probe(struct spi_device *spi)
 		goto err_free_mem;
 	}
 
+	if (gpio_is_valid(ts->gpio_clk_sel)) {
 #if defined(ACTIVE_ENABLE)
-	/* Select external clock */
-	gpio_set_value(ts->gpio_clk_sel, 0);
+		/* Select external clock */
+		gpio_set_value(ts->gpio_clk_sel, 1);
+#else
+		/* Select internal clock */
+		gpio_set_value(ts->gpio_clk_sel, 0);
 #endif
+	}
 	/* Reset assert */
 	gpio_set_value(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
@@ -2552,12 +2499,6 @@ static int lr388k7_probe(struct spi_device *spi)
 				     0,
 				     0);
 	}
-#if 0
-	input_set_abs_params(input_dev, ABS_MT_TOUCH_MAJOR,
-			     0, 0xff, 0, 0);
-	input_set_abs_params(input_dev, ABS_MT_TOUCH_MINOR,
-			     0, 0xff, 0, 0);
-#endif
 	input_set_abs_params(input_dev,
 			     ABS_MT_PRESSURE,
 			     0,
@@ -2648,25 +2589,18 @@ static int lr388k7_probe(struct spi_device *spi)
 	input_set_drvdata(input_dev_active, ts);
 #endif
 
-#if 0
-	error = request_irq(spi->irq, lr388k7_irq_thread,
-			    IRQF_TRIGGER_FALLING,
-			    "lr388k7_ts", ts);
-#else
 	error = request_threaded_irq(spi->irq,
 				     lr388k7_irq_thread,
 				     lr388k7_wakeup_thread,
 				     IRQF_TRIGGER_FALLING,
 				     "lr388k7_ts", ts);
 
-#endif
-
 	if (error) {
 		dev_err(dev, "Failed to request irq, err: %d\n", error);
 		goto err_free_mem;
 	}
 
-	lr388k7_disable_irq(ts);
+	disable_irq(ts->irq);
 
 	spi_set_drvdata(spi, ts);
 
@@ -2739,9 +2673,9 @@ static int lr388k7_remove(struct spi_device *spi)
 
 	gpio_free(ts->gpio_reset);
 	gpio_free(ts->gpio_irq);
-#if defined(ACTIVE_ENABLE)
-	gpio_free(ts->gpio_clk_sel);
-#endif
+	if (gpio_is_valid(ts->gpio_clk_sel))
+		gpio_free(ts->gpio_clk_sel);
+
 	input_unregister_device(ts->idev);
 
 	kfree(ts);
@@ -2900,15 +2834,8 @@ static void lr388k7_stop(struct lr388k7 *ts)
 	lr388k7_ctrl_suspend(ts);
 }
 
-#ifdef CONFIG_PM
-static int lr388k7_suspend(struct device *dev)
+static int lr388k7_suspend(struct lr388k7 *ts)
 {
-	struct lr388k7 *ts = dev_get_drvdata(dev);
-
-	if (g_st_state.b_is_suspended)
-		return 0;
-
-	lr388k7_disable_irq(ts);
 
 	lr388k7_stop(ts);
 
@@ -2919,16 +2846,15 @@ static int lr388k7_suspend(struct device *dev)
 	return 0;
 }
 
-static int lr388k7_resume(struct device *dev)
+static int lr388k7_resume(struct lr388k7 *ts)
 {
-	struct lr388k7 *ts = dev_get_drvdata(dev);
 	u8 u8_status = 0;
 	int irq_value;
+
 	lr388k7_start(ts);
 
 	lr388k7_send_signal(g_st_state.u32_pid, LR388K7_SIGNAL_WAKE);
 
-	lr388k7_enable_irq(ts);
 
 	if (g_st_dbg.wakeup.enable == 2)
 		g_st_dbg.wakeup.enable = g_u16_wakeup_enable;
@@ -2964,6 +2890,47 @@ static int lr388k7_resume(struct device *dev)
 
 	return 0;
 }
+
+#ifdef CONFIG_PM
+static int lr388k7_dev_pm_suspend(struct device *dev)
+{
+	struct lr388k7 *ts = dev_get_drvdata(dev);
+
+	if (!g_st_state.b_is_suspended && !g_st_state.b_is_disabled) {
+		/* only called when input device is not disabled/enabled via
+		 * /sys/class/input/input0/enabled interface.
+		 * Android uses sysfs by default and will not run into here
+		 */
+		lr388k7_suspend(ts);
+#if defined(CONFIG_ANDROID)
+		dev_info(ts->dev, "disabled without input powerhal support.\n");
+#endif
+	}
+	if (g_st_dbg.wakeup.enable == 1)
+		enable_irq_wake(ts->irq);
+
+	return 0;
+}
+
+static int lr388k7_dev_pm_resume(struct device *dev)
+{
+	struct lr388k7 *ts = dev_get_drvdata(dev);
+
+	if (!g_st_state.b_is_disabled) {
+		/* only called when input device is not disabled/enabled via
+		 * /sys/class/input/input0/enabled interface.
+		 * Android uses sysfs by default and will not run into here
+		 */
+		lr388k7_resume(ts);
+#if defined(CONFIG_ANDROID)
+		dev_info(ts->dev, "enabled without input powerhal support.\n");
+#endif
+	}
+	if (g_st_dbg.wakeup.enable == 1)
+		disable_irq_wake(ts->irq);
+
+	return 0;
+}
 #endif /*CONFIG_PM */
 
 static int lr388k7_input_enable(struct input_dev *idev)
@@ -2974,9 +2941,8 @@ static int lr388k7_input_enable(struct input_dev *idev)
 	dev_info(ts->dev, "[ENTER] input enable\n");
 #endif
 
-#ifdef CONFIG_PM
-	err = lr388k7_resume(ts->dev);
-#endif
+	g_st_state.b_is_disabled = false;
+	err = lr388k7_resume(ts);
 
 #if defined(DEBUG_LR388K7)
 	dev_info(ts->dev, "[EXIT] input enable\n");
@@ -2988,13 +2954,13 @@ static int lr388k7_input_disable(struct input_dev *idev)
 {
 	struct lr388k7 *ts = input_get_drvdata(idev);
 	int err = 0;
+
 #if defined(DEBUG_LR388K7)
 	dev_info(ts->dev, "[ENTER] input disable\n");
 #endif
 
-#ifdef CONFIG_PM
-	err = lr388k7_suspend(ts->dev);
-#endif
+	err = lr388k7_suspend(ts);
+	g_st_state.b_is_disabled = true;
 
 #if defined(DEBUG_LR388K7)
 	dev_info(ts->dev, "[EXIT] input disable\n");
@@ -3002,10 +2968,10 @@ static int lr388k7_input_disable(struct input_dev *idev)
 	return 0;
 }
 
-#if defined(CONFIG_PM) & !defined(INPUT_ENABLE)
+#if defined(CONFIG_PM)
 static const struct dev_pm_ops lr388k7_pm_ops = {
-	.suspend = lr388k7_suspend,
-	.resume = lr388k7_resume,
+	.suspend = lr388k7_dev_pm_suspend,
+	.resume = lr388k7_dev_pm_resume,
 };
 #endif
 
@@ -3019,7 +2985,7 @@ static struct spi_driver lr388k7_driver = {
 	.driver	= {
 		.name	= "lr388k7_ts",
 		.owner	= THIS_MODULE,
-#if defined(CONFIG_PM) & !defined(INPUT_ENABLE)
+#if defined(CONFIG_PM)
 		.pm     = &lr388k7_pm_ops,
 #endif
 		.of_match_table = lr388k7_ts_match,

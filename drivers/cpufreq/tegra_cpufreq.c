@@ -170,6 +170,22 @@ static void tegra_cpu_spin(void *arg)
 	slock = &per_cpu(pcpu_slock, c->cpu);
 	spin_lock_irqsave(slock, flags);
 
+	/*
+	 * ref_clk_counter(28 bit counter) runs from constant clk,
+	 * pll_p(408MHz).
+	 * It will take = 2 ^ 28 / 408 MHz to overflow ref clk counter
+	 *              = 65793 usec = 657 msec to overflow
+	 *
+	 * Like wise core_clk_counter(32 bit counter) runs from
+	 * crab_clk(ctu_clk). ctu_clk, runs at full freq of cluster,
+	 * Assuming max cluster clock ~2000MHz
+	 * It will take = 2 ^ 32 / 2000 MHz to overflow core clk counter
+	 *              = 2 sec to overflow
+	 *
+	 * Unsigned susbstraction of core clock counter(32 bit) and ref clk
+	 * counter(28 bit) with modulo of 2^28 avoids single overflow.
+	*/
+
 	c->last_coreclk_cnt = get_coreclk_count(c->cpu);
 	c->last_refclk_cnt = get_refclk_count(c->cpu);
 	udelay(tfreq_data.freq_compute_delay);
@@ -202,8 +218,8 @@ static void tegra_cpu_spin(void *arg)
  */
 static unsigned int tegra_get_speed(uint32_t cpu)
 {
-	uint32_t delta_ccnt;
-	uint32_t delta_refcnt;
+	uint32_t delta_ccnt = 0;
+	uint32_t delta_refcnt = 0;
 	unsigned long rate_mhz = 0;
 	struct tegra_cpu_ctr c;
 
@@ -212,15 +228,24 @@ static unsigned int tegra_get_speed(uint32_t cpu)
 		c.cpu = cpu;
 		if (!smp_call_function_single(cpu, tegra_cpu_spin, &c, 1)) {
 			delta_ccnt = c.coreclk_cnt - c.last_coreclk_cnt;
+			if (!delta_ccnt)
+				goto err_out;
+
 			/* ref clock is 28 bits */
 			delta_refcnt = ((c.refclk_cnt - c.last_refclk_cnt)
 					% (1 << 28));
+			if (!delta_refcnt) {
+				pr_err("Warning: %d is idle, delta_refcnt: 0\n",
+					 cpu);
+				goto err_out;
+			}
+
 			rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ)
 				/ delta_refcnt;
 		}
 	}
+err_out:
 	put_online_cpus();
-	/* Do we have to align rate as nearest freq step ? */
 	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }
 

@@ -21,6 +21,22 @@
 / {
 	host1x {
 		vi {
+			ports {
+				port@6 {
+					reg = <6>;
+
+					vi_in6: endpoint {
+						remote-endpoint = <&lc898212_out0>;
+					};
+				};
+				port@7 {
+					reg = <7>;
+
+					vi_in7: endpoint {
+						remote-endpoint = <&lc898212_out1>;
+					};
+				};
+			};
 			csia@54080838 {
 				ports {
 					#address-cells = <1>;
@@ -227,6 +243,31 @@
 					};
 				};
 			};
+			lc898212@6_0072 {
+				compatible = "nvidia,lc898212";
+				reg = <0x72>;
+
+				/* physical camera layer interface tags */
+				devnode = "/dev/camera/video6";
+				/**
+				* Type specifies the control features supported by
+				* the focuser driver.
+				* default type means only position control setting
+				* supported by the focuser
+				*/
+				type = "default";
+
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						lc898212_out0: endpoint {
+							remote-endpoint = <&vi_in6>;
+						};
+					};
+				};
+			};
 		};
 	};
 
@@ -313,6 +354,26 @@
 				};
 			};
 		};
+
+		lc898212@0_0072 {
+			compatible = "nvidia,lc898212";
+			reg = <0x72>;
+
+			/* physical camera layer interface tags */
+			devnode = "/dev/camera/video7";
+			type = "default";
+
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					lc898212_out1: endpoint {
+						remote-endpoint = <&vi_in7>;
+					};
+				};
+			};
+		};
 	};
 
 	tegra-camera-platform {
@@ -337,6 +398,12 @@
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/host1x/i2c@546c0000/ov23850_a@10";
 				};
+				drivernode1 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_focuser";
+					/* Declare the device-tree hierarchy to driver instance */
+					proc-device-tree = "/proc/device-tree/host1x/i2c@546c0000/lc898212@6_0072";
+				};
 			};
 			module1 {
 				badge = "e3323_top_CH06P1";
@@ -347,6 +414,12 @@
 					pcl_id = "v4l2_soc_sensor";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@7000c000/ov23850_c@36";
+				};
+				drivernode1 {
+					/* Declare PCL support driver (classically known as guid)  */
+					pcl_id = "v4l2_focuser";
+					/* Declare the device-tree hierarchy to driver instance */
+					proc-device-tree = "/proc/device-tree/i2c@7000c000/lc898212@0_0072";
 				};
 			};
 		};

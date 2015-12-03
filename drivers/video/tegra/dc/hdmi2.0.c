@@ -1328,7 +1328,6 @@ static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 		      m.upper_margin == curr->upper_margin &&
 		      m.lower_margin == curr->lower_margin &&
 		      m.sync         == curr->sync &&
-		      m.flag         == curr->flag &&
 		      m.vmode        == curr->vmode))
 			continue;
 

@@ -1046,7 +1046,7 @@ static void eqos_unmap_rx_skb(struct eqos_prv_data *pdata,
 				       PAGE_SIZE, DMA_FROM_DEVICE);
 		} else {
 			dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
-					 ALIGN_SIZE(pdata->rx_buffer_len),
+					 pdata->rx_buffer_len,
 					 DMA_FROM_DEVICE);
 		}
 		prx_swcx_desc->dma = 0;

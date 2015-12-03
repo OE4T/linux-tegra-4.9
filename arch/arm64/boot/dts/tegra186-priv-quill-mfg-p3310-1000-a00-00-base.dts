@@ -22,6 +22,11 @@
 	nvidia,boardids = "3310:0000:A0";
 	nvidia,proc-boardid = "3310:0000:A0";
 
+	chosen {
+		bootargs ="console=ttyS0,115200";
+		stdout-path = &uarta;
+	};
+
 	xudc@3550000 {
 		status = "okay";
 		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,

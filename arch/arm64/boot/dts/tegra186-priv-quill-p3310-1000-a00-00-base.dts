@@ -30,6 +30,11 @@
 	nvidia,boardids = "3310:0000:A0";
 	nvidia,proc-boardid = "3310:0000:A0";
 
+	chosen {
+		bootargs ="console=ttyS0,115200";
+		stdout-path = &uarta;
+	};
+
 	firmware {
 		android {
 			compatible = "android,firmware";

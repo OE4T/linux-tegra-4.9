@@ -23,6 +23,11 @@
 	nvidia,boardids = "3340:1080:A0";
 	nvidia,proc-boardid = "3340:1080:A0";
 
+	chosen {
+		bootargs ="console=ttyS0,115200";
+		stdout-path = &uarta;
+	};
+
 	spi@3270000 {/* QSPI NOR */
 		status = "okay";
 		spi@0 {

@@ -72,7 +72,8 @@ enum {
 	TEGRA_VGPU_CMD_AS_MAP_EX,
 	TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS,
 	TEGRA_VGPU_CMD_SET_MMU_DEBUG_MODE,
-	TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE
+	TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE,
+	TEGRA_VGPU_CMD_REG_OPS
 };
 
 struct tegra_vgpu_connect_params {
@@ -271,6 +272,26 @@ struct tegra_vgpu_sm_debug_mode {
 	u32 enable;
 };
 
+struct tegra_vgpu_reg_op {
+	u8 op;
+	u8 type;
+	u8 status;
+	u8 quad;
+	u32 group_mask;
+	u32 sub_group_mask;
+	u32 offset;
+	u32 value_lo;
+	u32 value_hi;
+	u32 and_n_mask_lo;
+	u32 and_n_mask_hi;
+};
+
+struct tegra_vgpu_reg_ops_params {
+	u64 handle;
+	u64 num_ops;
+	u32 is_profiler;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -297,6 +318,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_gr_bind_ctxsw_buffers_params gr_bind_ctxsw_buffers;
 		struct tegra_vgpu_mmu_debug_mode mmu_debug_mode;
 		struct tegra_vgpu_sm_debug_mode sm_debug_mode;
+		struct tegra_vgpu_reg_ops_params reg_ops;
 		char padding[192];
 	} params;
 };

@@ -77,6 +77,7 @@ nvgpu-$(CONFIG_TEGRA_GR_VIRTUALIZATION) += \
 	vgpu/mm_vgpu.o \
 	vgpu/debug_vgpu.o \
 	vgpu/vgpu.o \
+	vgpu/dbg_vgpu.o \
 	vgpu/gk20a/vgpu_hal_gk20a.o \
 	vgpu/gk20a/vgpu_gr_gk20a.o \
 	vgpu/gm20b/vgpu_hal_gm20b.o \

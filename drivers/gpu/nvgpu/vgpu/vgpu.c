@@ -408,6 +408,7 @@ int vgpu_probe(struct platform_device *dev)
 		return err;
 
 	vgpu_init_support(dev);
+	vgpu_dbg_init();
 
 	init_rwsem(&gk20a->busy_lock);
 

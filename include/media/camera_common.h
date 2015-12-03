@@ -35,6 +35,7 @@
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-ctrls.h>
 #include <media/soc_camera.h>
+#include <media/nvc_focus.h>
 
 #define V4L2_CID_TEGRA_CAMERA_BASE	(V4L2_CTRL_CLASS_CAMERA | 0x2000)
 
@@ -171,6 +172,28 @@ struct camera_common_data {
 	int	fmt_width, fmt_height;
 };
 
+struct camera_common_focuser_data;
+
+struct camera_common_focuser_ops {
+	int (*power_on)(struct camera_common_focuser_data *s_data);
+	void (*power_off)(struct camera_common_focuser_data *s_data);
+	void (*load_config)(struct camera_common_focuser_data *s_data);
+	int (*ctrls_init)(struct camera_common_focuser_data *s_data);
+};
+
+struct camera_common_focuser_data {
+	struct camera_common_focuser_ops	*ops;
+	struct v4l2_ctrl_handler		*ctrl_handler;
+	struct v4l2_subdev			subdev;
+	struct v4l2_ctrl			**ctrls;
+	struct i2c_client			*i2c_client;
+
+	struct nv_focuser_config		config;
+	void					*priv;
+	int					pwr_dev;
+	int					def_position;
+};
+
 static inline void msleep_range(unsigned int delay_base)
 {
 	usleep_range(delay_base * 1000, delay_base * 1000 + 500);
@@ -181,6 +204,13 @@ static inline struct camera_common_data *to_camera_common_data(
 {
 	return container_of(i2c_get_clientdata(client),
 			    struct camera_common_data, subdev);
+}
+
+static inline struct camera_common_focuser_data *to_camera_common_focuser_data(
+	const struct i2c_client *client)
+{
+	return container_of(i2c_get_clientdata(client),
+			    struct camera_common_focuser_data, subdev);
 }
 
 int camera_common_g_ctrl(struct camera_common_data *s_data,
@@ -215,6 +245,8 @@ int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
 int camera_common_s_power(struct v4l2_subdev *sd, int on);
 int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 			      struct v4l2_mbus_config *cfg);
-
+/* Focuser */
+int camera_common_focuser_init(struct camera_common_focuser_data *s_data);
+int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on);
 
 #endif /* __camera_common__ */

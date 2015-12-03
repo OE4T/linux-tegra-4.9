@@ -2,7 +2,7 @@
  * tegra_nvfx_plugin.h - Shared NVFX interface for different plugins between
  *                       Tegra ADSP ALSA driver and ADSP side user space code.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,13 @@
 #define ADMA_AHUB_TO_MEMORY     2
 #define ADMA_MEMORY_TO_AHUB     4
 #define ADMA_AHUB_TO_AHUB       8
+
+#define EAVB_RX_DMA		0
+#define EAVB_TX_DMA		1
+
+/* EAVB DMA PLUGIN NAMES */
+#define EAVB_RX_PLUGIN		"eavb_dma_rx"
+#define EAVB_TX_PLUGIN		"eavb_dma_tx"
 
 /* ADMA plugin related interface */
 enum {
@@ -58,5 +65,23 @@ typedef union {
 	nvfx_adma_init_params_t init;
 	nvfx_adma_get_position_params_t get_position;
 } nvfx_adma_req_call_params_t;
+
+/* EAVB DMA plugin related interface */
+enum {
+	/* NVFX EAVB DMA params */
+	nvfx_eavbdma_method_init = nvfx_method_external_start,
+	nvfx_eavbdma_method_get_position,
+};
+
+typedef struct {
+	nvfx_call_params_t call_params;
+	int32_t direction;
+	variant_t event;
+} nvfx_eavbdma_init_params_t;
+
+typedef union {
+	nvfx_req_call_params_t req_call;
+	nvfx_eavbdma_init_params_t init;
+} nvfx_eavbdma_req_call_params_t;
 
 #endif /* #ifndef _TEGRA_NVFX_PLUGIN_H_ */

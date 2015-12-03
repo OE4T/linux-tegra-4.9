@@ -52,6 +52,8 @@ enum tegra210_adsp_virt_regs {
 	TEGRA210_ADSP_ADMAIF19,
 	TEGRA210_ADSP_ADMAIF20,
 
+	TEGRA210_ADSP_EAVB,
+
 	/* Virtual regs for apps */
 	TEGRA210_ADSP_APM_IN1, /* 16 */
 	TEGRA210_ADSP_APM_IN2,
@@ -108,6 +110,7 @@ enum tegra210_adsp_virt_regs {
 #define ADSP_FE_END			TEGRA210_ADSP_FRONT_END5
 #define ADSP_ADMAIF_START	TEGRA210_ADSP_ADMAIF1
 #define ADSP_ADMAIF_END		TEGRA210_ADSP_ADMAIF20
+#define ADSP_EAVB_START		TEGRA210_ADSP_EAVB
 #define APM_IN_START		TEGRA210_ADSP_APM_IN1
 #define APM_IN_END			TEGRA210_ADSP_APM_IN8
 #define APM_OUT_START		TEGRA210_ADSP_APM_OUT1
@@ -123,7 +126,8 @@ enum tegra210_adsp_virt_regs {
 #define IS_PLUGIN(reg)			((reg >= PLUGIN_START) && (reg <= PLUGIN_END))
 #define IS_ADMA(reg)			((reg >= ADMA_START) && (reg <= ADMA_END))
 #define IS_ADSP_APP(reg) 		(IS_APM(reg) | IS_PLUGIN(reg) | IS_ADMA(reg))
-#define IS_ADSP_FE(reg)			((reg >= ADSP_FE_START) && (reg <= ADSP_FE_END))
+#define IS_ADSP_FE(reg)			(((reg >= ADSP_FE_START) && (reg <= ADSP_FE_END)) || \
+									(reg == ADSP_EAVB_START))
 #define IS_ADSP_ADMAIF(reg) 	((reg >= ADSP_ADMAIF_START) && (reg <= ADSP_ADMAIF_END))
 
 /* ADSP_MSG_FLAGs */
@@ -136,8 +140,8 @@ enum tegra210_adsp_virt_regs {
 #define TEGRA210_ADSP_ADMA_CHANNEL_COUNT	10
 
 /* ADSP base index for widget name update */
-#define TEGRA210_ADSP_ROUTE_BASE	((TEGRA210_ADSP_ADMAIF20 * 11) + (8 * TEGRA210_ADSP_APM_OUT1))
-#define TEGRA210_ADSP_WIDGET_BASE	((TEGRA210_ADSP_ADMAIF20 * 3) + \
+#define TEGRA210_ADSP_ROUTE_BASE	((TEGRA210_ADSP_EAVB * 11) + (8 * TEGRA210_ADSP_APM_OUT1))
+#define TEGRA210_ADSP_WIDGET_BASE	((TEGRA210_ADSP_EAVB * 3) + \
 									(TEGRA210_ADSP_PLUGIN1 - TEGRA210_ADSP_APM_IN1) * 2)
 
 #endif

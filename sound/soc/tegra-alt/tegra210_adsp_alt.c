@@ -253,6 +253,22 @@ static void tegra210_adsp_reg_update_bits(struct tegra210_adsp *adsp,
 	dev_vdbg(adsp->dev, "%s : 0x%x -> 0x%x\n", __func__, reg, val);
 }
 
+/* API to find Plugin app from name*/
+static struct tegra210_adsp_app *tegra210_adsp_get_plugin(
+				struct tegra210_adsp *adsp,
+				const char *plugin_name)
+{
+	struct tegra210_adsp_app *app;
+	int i;
+
+	for (i = PLUGIN_START; i <= PLUGIN_END; i++) {
+		app = &adsp->apps[i];
+		if (!strcmp(app->desc->name, plugin_name))
+			return app;
+	}
+	return NULL;
+}
+
 /* API to get source widget id connected to a widget */
 static uint32_t tegra210_adsp_get_source(struct tegra210_adsp *adsp,
 					 uint32_t reg)
@@ -487,6 +503,28 @@ static int tegra210_adsp_adma_params_msg(struct tegra210_adsp_app *app,
 
 	return tegra210_adsp_send_msg(app, &apm_msg, flags);
 }
+
+static int tegra210_adsp_eavbdma_params_msg(struct tegra210_adsp_app *app,
+					nvfx_eavbdma_init_params_t *params,
+					uint32_t flags)
+{
+	apm_msg_t apm_msg;
+
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_set_param_params_t);
+	apm_msg.msg.call_params.size = sizeof(apm_fx_set_param_params_t);
+	apm_msg.msg.call_params.method = nvfx_apm_method_fx_set_param;
+	apm_msg.msg.fx_set_param_params.plugin.pvoid =
+		app->plugin->plugin.pvoid;
+
+	params->call_params.size = sizeof(nvfx_eavbdma_init_params_t);
+	params->call_params.method = nvfx_eavbdma_method_init;
+	memcpy(&apm_msg.msg.fx_set_param_params.params, params,
+		sizeof(*params));
+
+	return tegra210_adsp_send_msg(app, &apm_msg, flags);
+}
+
+
 
 static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 					int32_t state, uint32_t flags)
@@ -1627,6 +1665,48 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
+/* ADSP-EAVB codec driver HW-params. Used for configuring EAVB ADMA */
+static int tegra210_adsp_eavb_hw_params(struct snd_pcm_substream *substream,
+				 struct snd_pcm_hw_params *params,
+				 struct snd_soc_dai *dai)
+{
+	struct tegra210_adsp *adsp = snd_soc_dai_get_drvdata(dai);
+	struct tegra210_adsp_app *app;
+	nvfx_eavbdma_init_params_t eavbdma_params;
+	int ret;
+
+	if (!adsp->adsp_started)
+		return -EINVAL;
+
+	/* As a COCEC DAI, CAPTURE is transmit */
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
+		app = tegra210_adsp_get_plugin(adsp, EAVB_TX_PLUGIN);
+
+		if (!app)
+			return -EINVAL;
+
+		eavbdma_params.direction = EAVB_TX_DMA;
+		eavbdma_params.event.pvoid = app->apm->output_event.pvoid;
+	} else {
+		app = tegra210_adsp_get_plugin(adsp, EAVB_RX_PLUGIN);
+
+		if (!app)
+			return -EINVAL;
+
+		eavbdma_params.direction = EAVB_RX_DMA;
+		eavbdma_params.event.pvoid = app->apm->input_event.pvoid;
+	}
+
+	ret = tegra210_adsp_eavbdma_params_msg(app, &eavbdma_params,
+			TEGRA210_ADSP_MSG_FLAG_SEND);
+	if (ret < 0) {
+		dev_err(adsp->dev, "EAVB DMA params msg failed. %d.", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 #ifdef CONFIG_PM_RUNTIME
 static int tegra210_adsp_runtime_suspend(struct device *dev)
 {
@@ -1877,6 +1957,10 @@ static struct snd_soc_dai_ops tegra210_adsp_admaif_dai_ops = {
 	.hw_params	= tegra210_adsp_admaif_hw_params,
 };
 
+static struct snd_soc_dai_ops tegra210_adsp_eavb_dai_ops = {
+	.hw_params	= tegra210_adsp_eavb_hw_params,
+};
+
 static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 	{
 		.name = "ADSP PCM1",
@@ -1934,6 +2018,23 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 			.formats = SNDRV_PCM_FMTBIT_S16_LE,
 		},
 	},
+	{
+		.name = "ADSP EAVB",
+		.playback = {
+			.stream_name = "ADSP EAVB Transmit",
+			.channels_min = 1,
+			.channels_max = 2,
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		},
+		.capture = {
+			.stream_name = "ADSP EAVB Receive",
+			.channels_min = 1,
+			.channels_max = 2,
+			.rates = SNDRV_PCM_RATE_8000_48000,
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,
+		},
+	},
 };
 
 #define ADSP_FE_CODEC_DAI(idx)					\
@@ -1977,6 +2078,28 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 		.ops = &tegra210_adsp_admaif_dai_ops,		\
 	}
 
+#define ADSP_EAVB_CODEC_DAI()					\
+	{							\
+		.name = "ADSP-EAVB",				\
+		.id = ADSP_EAVB_START,				\
+		.playback = {					\
+		.stream_name = "ADSP-EAVB Receive",		\
+			.channels_min = 1,			\
+			.channels_max = 2,			\
+			.rates = SNDRV_PCM_RATE_8000_48000,	\
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
+		},						\
+		.capture = {					\
+			.stream_name = "ADSP-EAVB Transmit",	\
+			.channels_min = 1,			\
+			.channels_max = 2,			\
+			.rates = SNDRV_PCM_RATE_8000_48000,	\
+			.formats = SNDRV_PCM_FMTBIT_S16_LE,	\
+		},						\
+		.ops = &tegra210_adsp_eavb_dai_ops,		\
+	}
+
+
 static struct snd_soc_dai_driver tegra210_adsp_codec_dai[] = {
 	ADSP_FE_CODEC_DAI(1),
 	ADSP_FE_CODEC_DAI(2),
@@ -2003,6 +2126,7 @@ static struct snd_soc_dai_driver tegra210_adsp_codec_dai[] = {
 	ADSP_ADMAIF_CODEC_DAI(18),
 	ADSP_ADMAIF_CODEC_DAI(19),
 	ADSP_ADMAIF_CODEC_DAI(20),
+	ADSP_EAVB_CODEC_DAI(),
 };
 
 /* This array is linked with tegra210_adsp_virt_widgets enum defines. Any thing
@@ -2034,6 +2158,7 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADSP-ADMAIF18",
 	"ADSP-ADMAIF19",
 	"ADSP-ADMAIF20",
+	"ADSP-EAVB",
 	"APM-IN1",
 	"APM-IN2",
 	"APM-IN3",
@@ -2105,6 +2230,7 @@ static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif17, TEGRA210_ADSP_ADMAIF17);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif18, TEGRA210_ADSP_ADMAIF18);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif19, TEGRA210_ADSP_ADMAIF19);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif20, TEGRA210_ADSP_ADMAIF20);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_eavb, TEGRA210_ADSP_EAVB);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in1, TEGRA210_ADSP_APM_IN1);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in2, TEGRA210_ADSP_APM_IN2);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in3, TEGRA210_ADSP_APM_IN3);
@@ -2179,6 +2305,7 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-ADMAIF18", adsp_admaif18),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF19", adsp_admaif19),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF20", adsp_admaif20),
+	ADSP_EP_WIDGETS("ADSP-EAVB", adsp_eavb),
 	ADSP_WIDGETS("APM-IN1", apm_in1, TEGRA210_ADSP_APM_IN1),
 	ADSP_WIDGETS("APM-IN2", apm_in2, TEGRA210_ADSP_APM_IN2),
 	ADSP_WIDGETS("APM-IN3", apm_in3, TEGRA210_ADSP_APM_IN3),
@@ -2242,7 +2369,8 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	{ name " MUX",		"ADSP-ADMAIF17", "ADSP-ADMAIF17 RX"}, \
 	{ name " MUX",		"ADSP-ADMAIF18", "ADSP-ADMAIF18 RX"}, \
 	{ name " MUX",		"ADSP-ADMAIF19", "ADSP-ADMAIF19 RX"}, \
-	{ name " MUX",		"ADSP-ADMAIF20", "ADSP-ADMAIF20 RX"}
+	{ name " MUX",		"ADSP-ADMAIF20", "ADSP-ADMAIF20 RX"}, \
+	{ name " MUX",		"ADSP-EAVB", "ADSP-EAVB RX"}
 
 #define ADSP_APM_IN_ROUTES(name)				\
 	{ name " MUX",	"APM-IN1",	"APM-IN1 TX"},		\
@@ -2341,6 +2469,8 @@ static const struct snd_soc_dapm_route tegra210_adsp_routes[] = {
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF18"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF19"),
 	ADSP_EP_MUX_ROUTES("ADSP-ADMAIF20"),
+
+	ADSP_EP_MUX_ROUTES("ADSP-EAVB"),
 
 	ADSP_APM_IN_MUX_ROUTES("APM-IN1"),
 	ADSP_APM_IN_MUX_ROUTES("APM-IN2"),

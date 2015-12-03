@@ -3782,21 +3782,9 @@ static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 	/*Enable OSF mode */
 	DMA_TCR_OSP_WR(qinx, 0x1);
 
-	/*Select Rx Buffer size = 2048bytes */
-	switch (pdata->rx_buffer_len) {
-	case 16384:
-		DMA_RCR_RBSZ_WR(qinx, 16384);
-		break;
-	case 8192:
-		DMA_RCR_RBSZ_WR(qinx, 8192);
-		break;
-	case 4096:
-		DMA_RCR_RBSZ_WR(qinx, 4096);
-		break;
-	default:		/* default is 2K */
-		DMA_RCR_RBSZ_WR(qinx, 2048);
-		break;
-	}
+	/*Select Rx Buffer size */
+	DMA_RCR_RBSZ_WR(qinx, EQOS_RX_BUF_LEN);
+
 	/* program RX watchdog timer */
 	if (prx_ring->use_riwt)
 		DMA_RIWTR_RWT_WR(qinx, prx_ring->rx_riwt);

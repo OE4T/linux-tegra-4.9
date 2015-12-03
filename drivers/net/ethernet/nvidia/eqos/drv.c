@@ -943,7 +943,7 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 	prx_swcx_desc->len = pdata->rx_buffer_len;
  map_skb:
 	prx_swcx_desc->dma = dma_map_single(&pdata->pdev->dev, skb->data,
-				     ALIGN_SIZE(pdata->rx_buffer_len),
+				     pdata->rx_buffer_len,
 				     DMA_FROM_DEVICE);
 
 	if (dma_mapping_error(&pdata->pdev->dev, prx_swcx_desc->dma))
@@ -972,7 +972,7 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 {
 	DBGPR("-->eqos_configure_rx_fun_ptr\n");
 
-	pdata->rx_buffer_len = EQOS_ETH_FRAME_LEN;
+	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->process_rx_completions = process_rx_completions;
 	pdata->alloc_rx_buf = eqos_alloc_rx_buf;
 
@@ -2348,7 +2348,7 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 			prx_swcx_desc->skb = NULL;
 
 			dma_unmap_single(&pdata->pdev->dev, prx_swcx_desc->dma,
-					 ALIGN_SIZE(pdata->rx_buffer_len),
+					 pdata->rx_buffer_len,
 					 DMA_FROM_DEVICE);
 			prx_swcx_desc->dma = 0;
 
@@ -2423,13 +2423,10 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 						prx_swcx_desc->skb = skb;
 						prx_swcx_desc->dma =
 						    dma_map_single(&pdata->
-								   pdev->dev,
-								   skb->data,
-								   ALIGN_SIZE
-								   (pdata->
-								    rx_buffer_len)
-								   ,
-								   DMA_FROM_DEVICE);
+							pdev->dev,
+							skb->data,
+							pdata->rx_buffer_len,
+							DMA_FROM_DEVICE);
 
 						if (dma_mapping_error
 						    (&pdata->pdev->dev,
@@ -3990,48 +3987,10 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 
 static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 {
-	struct eqos_prv_data *pdata = netdev_priv(dev);
-	int max_frame = (new_mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN);
-
 	DBGPR("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
-
-	if (dev->mtu == new_mtu) {
-		pr_err("%s: is already configured to %d mtu\n",
-		       dev->name, new_mtu);
-		return 0;
-	}
-
-	/* Supported frame sizes */
-	if ((new_mtu < EQOS_MIN_SUPPORTED_MTU) ||
-	    (max_frame > EQOS_MAX_SUPPORTED_MTU)) {
-		pr_err("%s: invalid MTU, min %d and max %d MTU are supported\n",
-		       dev->name, EQOS_MIN_SUPPORTED_MTU,
-		       EQOS_MAX_SUPPORTED_MTU);
-		return -EINVAL;
-	}
-
-	pr_err("changing MTU from %d to %d\n", dev->mtu, new_mtu);
-
-	eqos_stop_dev(pdata);
-
-	if (max_frame <= 2048)
-		pdata->rx_buffer_len = 2048;
-	else
-		pdata->rx_buffer_len = PAGE_SIZE;	/* in case of JUMBO frame,
-							   max buffer allocated is
-							   PAGE_SIZE */
-
-	if ((max_frame == ETH_FRAME_LEN + ETH_FCS_LEN) ||
-	    (max_frame == ETH_FRAME_LEN + ETH_FCS_LEN + VLAN_HLEN))
-		pdata->rx_buffer_len = EQOS_ETH_FRAME_LEN;
-
-	dev->mtu = new_mtu;
-
-	eqos_start_dev(pdata);
-
+	DBGPR("Changing MTU not supported\n");
 	DBGPR("<--eqos_change_mtu\n");
-
-	return 0;
+	return -1;
 }
 
 #ifdef EQOS_QUEUE_SELECT_ALGO

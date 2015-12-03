@@ -109,16 +109,44 @@ static void tegra_channel_buffer_queue(struct vb2_buffer *vb)
 
 static int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 {
-	struct v4l2_subdev *subdev = chan->subdev;
+	int num_sd = 0;
+	int ret = 0;
+	struct v4l2_subdev *subdev = chan->subdev[num_sd];
 
-	return v4l2_subdev_call(subdev, video, s_stream, on);
+	while (subdev != NULL) {
+		ret = v4l2_subdev_call(subdev, video, s_stream, on);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return ret;
+
+		num_sd++;
+		if (num_sd >= chan->num_subdevs)
+			break;
+
+		subdev = chan->subdev[num_sd];
+	}
+
+	return 0;
 }
 
 static int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 {
-	struct v4l2_subdev *subdev = chan->subdev;
+	int num_sd = 0;
+	int ret = 0;
+	struct v4l2_subdev *subdev = chan->subdev[num_sd];
 
-	return v4l2_subdev_call(subdev, core, s_power, on);
+	while (subdev != NULL) {
+		ret = v4l2_subdev_call(subdev, core, s_power, on);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return ret;
+
+		num_sd++;
+		if (num_sd >= chan->num_subdevs)
+			break;
+
+		subdev = chan->subdev[num_sd];
+	}
+
+	return 0;
 }
 
 
@@ -246,13 +274,12 @@ static void tegra_channel_fmt_align(struct v4l2_pix_format *pix,
 	pix->sizeimage = pix->bytesperline * pix->height;
 }
 
-static int tegra_channel_get_subdev(struct tegra_channel *chan,
-				struct v4l2_subdev **subdev)
+static int tegra_channel_get_subdevices(struct tegra_channel *chan)
 {
 	struct media_entity *entity;
 	struct media_pad *pad;
-	int ret = 0;
 	int index = 0;
+	int num_sd = 0;
 
 	/* set_stream of CSI */
 	entity = &chan->video.entity;
@@ -261,9 +288,8 @@ static int tegra_channel_get_subdev(struct tegra_channel *chan,
 		return -ENODEV;
 
 	entity = pad->entity;
-	*subdev = media_entity_to_v4l2_subdev(entity);
+	chan->subdev[num_sd++] = media_entity_to_v4l2_subdev(entity);
 
-	/* Need to extend logic for bunch of subdevices */
 	index = pad->index - 1;
 	while (index >= 0) {
 		pad = &entity->pads[index];
@@ -275,13 +301,17 @@ static int tegra_channel_get_subdev(struct tegra_channel *chan,
 		    media_entity_type(pad->entity) != MEDIA_ENT_T_V4L2_SUBDEV)
 			break;
 
+		if (num_sd >= MAX_SUBDEVICES)
+			break;
+
 		entity = pad->entity;
-		*subdev = media_entity_to_v4l2_subdev(entity);
+		chan->subdev[num_sd++] = media_entity_to_v4l2_subdev(entity);
 
 		index = pad->index - 1;
 	}
+	chan->num_subdevs = num_sd;
 
-	return ret;
+	return 0;
 }
 
 static int
@@ -290,21 +320,35 @@ tegra_channel_get_format(struct file *file, void *fh,
 {
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
-	struct v4l2_subdev *sd = chan->subdev;
 	struct v4l2_mbus_framefmt mf;
 	struct v4l2_pix_format *pix = &format->fmt.pix;
 	int ret = 0;
+	int num_sd = 0;
+	struct v4l2_subdev *sd = chan->subdev[num_sd];
 
-	ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
-	if (IS_ERR_VALUE(ret))
+	while (sd != NULL) {
+		ret = v4l2_subdev_call(sd, video, g_mbus_fmt, &mf);
+		if (IS_ERR_VALUE(ret)) {
+			if (ret == -ENOIOCTLCMD) {
+				num_sd++;
+				if (num_sd < chan->num_subdevs) {
+					sd = chan->subdev[num_sd];
+					continue;
+				} else
+					break;
+			} else
+				return ret;
+		}
+
+		pix->width = mf.width;
+		pix->height = mf.height;
+		pix->field = mf.field;
+		pix->colorspace = mf.colorspace;
+
 		return ret;
+	}
 
-	pix->width = mf.width;
-	pix->height = mf.height;
-	pix->field = mf.field;
-	pix->colorspace = mf.colorspace;
-
-	return ret;
+	return -ENODEV;
 }
 
 static int
@@ -314,8 +358,9 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 {
 	const struct tegra_video_format *info;
 	struct v4l2_mbus_framefmt mf;
-	struct v4l2_subdev *sd = chan->subdev;
 	int ret = 0;
+	int num_sd = 0;
+	struct v4l2_subdev *sd = chan->subdev[num_sd];
 
 	/* Retrieve format information and select the default format if the
 	 * requested format isn't supported.
@@ -338,20 +383,34 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 	mf.colorspace = pix->colorspace;
 	mf.code = info->code;
 
-	ret = v4l2_subdev_call(sd, video, try_mbus_fmt, &mf);
-	if (IS_ERR_VALUE(ret))
+	while (sd != NULL) {
+		ret = v4l2_subdev_call(sd, video, try_mbus_fmt, &mf);
+		if (IS_ERR_VALUE(ret)) {
+			if (ret == -ENOIOCTLCMD) {
+				num_sd++;
+				if (num_sd < chan->num_subdevs) {
+					sd = chan->subdev[num_sd];
+					continue;
+				} else
+					break;
+			} else
+				return ret;
+		}
+
+		pix->width = mf.width;
+		pix->height = mf.height;
+		pix->colorspace = mf.colorspace;
+
+		tegra_channel_fmt_align(pix, chan->align, info->bpp);
+		if (fmtinfo) {
+			*fmtinfo = info;
+			ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);
+		}
+
 		return ret;
-
-	pix->width = mf.width;
-	pix->height = mf.height;
-	pix->colorspace = mf.colorspace;
-
-	tegra_channel_fmt_align(pix, chan->align, info->bpp);
-	if (fmtinfo) {
-		*fmtinfo = info;
-		ret = v4l2_subdev_call(sd, video, s_mbus_fmt, &mf);
 	}
-	return ret;
+
+	return -ENODEV;
 }
 
 static int
@@ -361,7 +420,6 @@ tegra_channel_try_format(struct file *file, void *fh,
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
 	int ret = 0;
-
 
 	ret = __tegra_channel_try_format(chan, &format->fmt.pix, NULL);
 
@@ -409,24 +467,34 @@ static int tegra_channel_open(struct file *fp)
 	int ret = 0;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
-	struct v4l2_subdev *sd = chan->subdev;
+	int num_sd = 0;
+	struct v4l2_subdev *sd = chan->subdev[num_sd];
 
 	if (sd == NULL) {
-		ret = tegra_channel_get_subdev(chan, &sd);
+		ret = tegra_channel_get_subdevices(chan);
 		if (ret < 0)
 			return ret;
-		/* Initialize the subdev and controls here at first open */
-		/* add loop for multiple subdevices support for same node */
-		chan->subdev = sd;
-		/* Add control handler for the subdevice */
-		ret = v4l2_ctrl_add_handler(&chan->ctrl_handler,
-					sd->ctrl_handler, NULL);
-		if (chan->ctrl_handler.error)
-			dev_err(chan->vi->dev, "Failed to add controls\n");
 
-		ret = v4l2_ctrl_handler_setup(&chan->ctrl_handler);
-		if (ret < 0)
-			dev_err(chan->vi->dev, "Failed to setup controls\n");
+		/* Initialize the subdev and controls here at first open */
+		sd = chan->subdev[num_sd];
+		while (sd != NULL) {
+			/* Add control handler for the subdevice */
+			ret = v4l2_ctrl_add_handler(&chan->ctrl_handler,
+						sd->ctrl_handler, NULL);
+			if (chan->ctrl_handler.error)
+				dev_err(chan->vi->dev,
+					"Failed to add controls\n");
+
+			ret = v4l2_ctrl_handler_setup(&chan->ctrl_handler);
+			if (ret < 0)
+				dev_err(chan->vi->dev,
+					"Failed to setup controls\n");
+
+			num_sd++;
+			if (num_sd >= chan->num_subdevs)
+				break;
+			sd = chan->subdev[num_sd];
+		}
 	}
 
 	/* power on sensors connected in channel */
@@ -468,11 +536,14 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 {
 	int ret;
 	struct tegra_channel *chan  = &vi->chans[port];
+	int num_sd = MAX_SUBDEVICES - 1;
 
 	chan->vi = vi;
 	chan->port = port;
 	chan->align = 64;
-	chan->subdev = NULL;
+	while (num_sd < 0)
+		chan->subdev[num_sd] = NULL;
+	chan->num_subdevs = 0;
 
 	/* Init video format */
 	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF);
@@ -554,7 +625,10 @@ vb2_init_error:
 
 static int tegra_channel_cleanup(struct tegra_channel *chan)
 {
-	chan->subdev = NULL;
+	int num_sd = MAX_SUBDEVICES - 1;
+
+	while (num_sd < 0)
+		chan->subdev[num_sd] = NULL;
 	video_unregister_device(&chan->video);
 
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);

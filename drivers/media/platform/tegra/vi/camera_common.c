@@ -568,3 +568,46 @@ int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 
 	return 0;
 }
+
+int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on)
+{
+	int err = 0;
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_focuser_data *s_data =
+			to_camera_common_focuser_data(client);
+
+	if (on) {
+		err = call_s_op(s_data, power_on);
+		if (err)
+			dev_err(&s_data->i2c_client->dev,
+				"%s: error power on\n", __func__);
+	} else
+		call_s_op(s_data, power_off);
+
+	return err;
+}
+
+int camera_common_focuser_init(struct camera_common_focuser_data *s_data)
+{
+	int err = 0;
+
+	/* power on */
+	err = call_s_op(s_data, power_on);
+	if (err)
+		dev_err(&s_data->i2c_client->dev,
+			"%s: error power on\n", __func__);
+
+	/* load default configuration */
+	call_s_op(s_data, load_config);
+
+	/* set controls */
+	err = call_s_op(s_data, ctrls_init);
+	if (err)
+		dev_err(&s_data->i2c_client->dev,
+			"%s: error initializing controls\n", __func__);
+
+	/* power off */
+	call_s_op(s_data, power_off);
+
+	return err;
+}

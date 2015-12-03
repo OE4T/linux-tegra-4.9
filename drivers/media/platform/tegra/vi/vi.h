@@ -36,8 +36,9 @@
 #include "camera_priv_defs.h"
 #include "chip_support.h"
 
-#define MAX_CHAN_NUM	6
+#define MAX_CHAN_NUM	8
 #define MAX_FORMAT_NUM	64
+#define MAX_SUBDEVICES 4
 
 #define VI_CFG_INTERRUPT_MASK_0				0x8c
 #define VI_CFG_INTERRUPT_STATUS_0			0x98
@@ -145,7 +146,7 @@ struct tegra_channel {
 	struct media_pipeline pipe;
 
 	struct vi *vi;
-	struct v4l2_subdev *subdev;
+	struct v4l2_subdev *subdev[MAX_SUBDEVICES];
 
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_pix_format format;
@@ -158,6 +159,7 @@ struct tegra_channel {
 	unsigned int align;
 	unsigned int port;
 	unsigned int io_id;
+	unsigned int num_subdevs;
 
 	DECLARE_BITMAP(fmts_bitmap, MAX_FORMAT_NUM);
 	bool bypass;

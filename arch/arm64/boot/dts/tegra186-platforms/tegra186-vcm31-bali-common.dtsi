@@ -229,15 +229,26 @@
 			 * cstate[x].bit0 -> VBUS cable
 			 * cstate[x].bit1 -> nID cable
 			 *
-			 * Since we don't support VBUS sensing, in gadget mode
-			 * (cstate[x].bit1 == 0), set cstate[x].bit0 to 1.
+			 * For this platform, set cstate to indicate host mode
+			 * always. sysfs writes can be performed to change the
+			 * mode if needed from userspace.
+			 *
+			 * Since we don't support VBUS sensing, if gadget mode
+			 * is to be setup for cstate, it should be indicated
+			 * that VBUS is always available from the connector.
+			 *
+			 * We will use PMIC GPIO0 here for gstate (which is
+			 * NC in this platform) to maintain compatibility
+			 * with T186 reference platform.  Irrespective of
+			 * PMIC GPIO0 state (extcon driver will probe for GPIO
+			 * state during init time and also if GPIO state
+			 * changes by monitoring for GPIO interrupt), cstate
+			 * will always indicate host mode.
 			 */
-			extcon-gpio,cable-states = <0x3 0x1
-						0x0 0x2
-						0x1 0x2
-						0x2 0x1>;
-			/* C.00 is an unused GPIO in our reference platform */
-			gpios = <&tegra_gpio TEGRA_GPIO(C, 0) 0 &spmic 0 0>;
+			extcon-gpio,cable-states = <0x1 0x2
+						0x0 0x2>;
+			/* PMIC GPIO 0 */
+			gpios = <&spmic 0 0>;
 			extcon-gpio,out-cable-names = "USB", "USB-Host";
 			#extcon-cells = <1>;
 		};

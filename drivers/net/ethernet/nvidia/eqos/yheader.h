@@ -132,6 +132,12 @@
 /* Width of AXI bus in bytes */
 #define AXI_BUS_WIDTH 16
 
+/* Length of RX buffer in bytes.
+ * Note that this should be a multiple
+ * of EQOS_DMA_BURST_SIZE.
+ */
+#define EQOS_RX_BUF_LEN 2048
+
 /* Max value of RXPBL */
 #define MAX_RXPBL 32
 

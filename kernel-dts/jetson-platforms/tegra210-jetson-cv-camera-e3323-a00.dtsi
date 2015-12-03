@@ -41,6 +41,9 @@
 				vif-supply = <&en_vdd_cam>;
 				vvcm-suply = <&en_vdd_vcm_2v8>;
 			};
+			lc898212_1: lc898212@6_0072 {
+				vvcm-supply = <&en_vdd_vcm_2v8>;
+			};
 		};
 	};
 
@@ -55,6 +58,9 @@
 			vdig-supply = <&en_vdd_cam_1v2>;
 			vif-supply = <&en_vdd_cam>;
 			vvcm-suply = <&en_vdd_vcm_2v8>;
+		};
+		lc898212_2: lc898212@0_0072 {
+			vvcm-supply = <&en_vdd_vcm_2v8>;
 		};
 	};
 

@@ -44,15 +44,16 @@ enum {
 	MCE_SMC_ROC_FLUSH_CACHE,
 	MCE_SMC_ENUM_READ_MCA,
 	MCE_SMC_ENUM_WRITE_MCA,
+	MCE_SMC_ENUM_MAX = 0xFF,	/* enums cannot exceed this value */
 };
 
 struct mce_regs {
 	u64 args[NR_SMC_REGS];
 };
 
-static noinline notrace int __send_smc(u64 func, struct mce_regs *regs)
+static noinline notrace int __send_smc(u8 func, struct mce_regs *regs)
 {
-	u32 ret = SMC_SIP_INVOKE_MCE;
+	u32 ret = SMC_SIP_INVOKE_MCE | func;
 	asm volatile (
 	"	mov	x0, %0 \n"
 	"	mov	x1, %1 \n"

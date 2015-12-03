@@ -263,14 +263,22 @@
 #define PCIE2_RP_LTSSM_DBGREG_LINKFSM17		(1 << 17)
 
 #define NV_PCIE2_RP_LTSSM_TRACE_CONTROL				0x00000E50
+#define LTSSM_TRACE_CONTROL_CLEAR_STORE_EN			(1 << 0)
 #define LTSSM_TRACE_CONTROL_CLEAR_RAM				(1 << 2)
+#define LTSSM_TRACE_CONTROL_TRIG_ON_EVENT			(1 << 3)
+#define LTSSM_TRACE_CONTROL_TRIG_LTSSM_MAJOR_OFFSET		4
+#define LTSSM_TRACE_CONTROL_TRIG_PTX_LTSSM_MINOR_OFFSET		8
+#define LTSSM_TRACE_CONTROL_TRIG_PRX_LTSSM_MAJOR_OFFSET		11
 
 #define NV_PCIE2_RP_LTSSM_TRACE_STATUS				0x00000E54
 #define LTSSM_TRACE_STATUS_PRX_MINOR(reg)			(((reg) >> 19) & 0x7)
 #define LTSSM_TRACE_STATUS_PTX_MINOR(reg)			(((reg) >> 16) & 0x7)
 #define LTSSM_TRACE_STATUS_MAJOR(reg)				(((reg) >> 12) & 0xf)
+#define LTSSM_TRACE_STATUS_READ_DATA_VALID(reg)			(((reg) >> 11) & 0x1)
 #define LTSSM_TRACE_STATUS_READ_ADDR(reg)			((reg) << 6)
 #define LTSSM_TRACE_STATUS_WRITE_POINTER(reg)			(((reg) >> 1) & 0x1f)
+#define LTSSM_TRACE_STATUS_RAM_FULL(reg)			(reg & 0x1)
+
 
 #define NV_PCIE2_RP_XP_REF					0x00000F30
 #define PCIE2_RP_XP_REF_MICROSECOND_LIMIT_MASK			(0xFF)
@@ -3534,7 +3542,7 @@ out:
 static int loopback(struct seq_file *s, void *data)
 {
 	struct tegra_pcie_port *port = (struct tegra_pcie_port *)(s->private);
-	unsigned int new, i;
+	unsigned int new, i, val;
 
 	new = rp_readl(port, RP_LINK_CONTROL_STATUS);
 
@@ -3542,6 +3550,21 @@ static int loopback(struct seq_file *s, void *data)
 		pr_info("PCIE port %d not active\n", port->index);
 		return -EINVAL;
 	}
+
+	/* trigger trace ram on loopback states */
+	val = LTSSM_TRACE_CONTROL_CLEAR_STORE_EN |
+		LTSSM_TRACE_CONTROL_TRIG_ON_EVENT |
+		(0x08 << LTSSM_TRACE_CONTROL_TRIG_LTSSM_MAJOR_OFFSET) |
+		(0x00 << LTSSM_TRACE_CONTROL_TRIG_PTX_LTSSM_MINOR_OFFSET) |
+		(0x00 << LTSSM_TRACE_CONTROL_TRIG_PRX_LTSSM_MAJOR_OFFSET);
+	rp_writel(port, val, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);
+
+	/* clear trace ram */
+	val = rp_readl(port, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);
+	val |= LTSSM_TRACE_CONTROL_CLEAR_RAM;
+	rp_writel(port, val, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);
+	val &= ~LTSSM_TRACE_CONTROL_CLEAR_RAM;
+	rp_writel(port, val, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);
 
 	/* reset and clear status */
 	port->loopback_stat = 0;
@@ -3959,13 +3982,14 @@ static const char *ltssm_get_minor(unsigned int major, unsigned int minor)
 static int dump_ltssm_trace(struct seq_file *s, void *data)
 {
 	struct tegra_pcie_port *port = (struct tegra_pcie_port *)(s->private);
-	unsigned int val, ridx, widx;
+	unsigned int val, ridx, widx, entries;
 
 	seq_printf(s, "LTSSM trace dump:\n");
 	val = rp_readl(port, NV_PCIE2_RP_LTSSM_TRACE_STATUS);
 	widx = LTSSM_TRACE_STATUS_WRITE_POINTER(val);
-	ridx = 0;
-	while (1) {
+	entries = LTSSM_TRACE_STATUS_RAM_FULL(val) ? 32 : widx;
+	seq_printf(s, "LTSSM trace dump - %d entries:\n", entries);
+	for (ridx = 0; ridx < entries; ridx++) {
 		val = LTSSM_TRACE_STATUS_READ_ADDR(ridx);
 		rp_writel(port, val, NV_PCIE2_RP_LTSSM_TRACE_STATUS);
 		val = rp_readl(port, NV_PCIE2_RP_LTSSM_TRACE_STATUS);
@@ -3974,10 +3998,6 @@ static int dump_ltssm_trace(struct seq_file *s, void *data)
 			ltssm_get_major(LTSSM_TRACE_STATUS_MAJOR(val)),
 			ltssm_get_minor(LTSSM_TRACE_STATUS_MAJOR(val),  LTSSM_TRACE_STATUS_PTX_MINOR(val)),
 			ltssm_get_minor(LTSSM_TRACE_STATUS_MAJOR(val),  LTSSM_TRACE_STATUS_PRX_MINOR(val)));
-
-		ridx = (ridx + 1) % 32;
-		if (ridx == widx)
-			break;
 	}
 	/* clear trace ram */
 	val = rp_readl(port, NV_PCIE2_RP_LTSSM_TRACE_CONTROL);

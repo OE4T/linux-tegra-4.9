@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -181,6 +181,9 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 
 		if (!(co_heap->heap_bit & type))
 			continue;
+
+		if (type & NVMAP_HEAP_CARVEOUT_IVM)
+			handle->size = ALIGN(handle->size, SZ_1M);
 
 		block = nvmap_heap_alloc(co_heap->carveout, handle, start);
 		if (block)

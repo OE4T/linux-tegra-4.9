@@ -142,6 +142,7 @@ int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 	case 22050:
 	case 44100:
 	case 88200:
+	case 176400:
 		if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA20)
 			new_baseclock = 56448000;
 		else if (data->soc == TEGRA_ASOC_UTILS_SOC_TEGRA30)

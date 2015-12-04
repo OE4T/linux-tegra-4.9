@@ -115,6 +115,32 @@ static const struct backlight_ops pwm_backlight_ops = {
 	.check_fb	= pwm_backlight_check_fb,
 };
 
+static int pwm_backlight_notify(struct device *dev, int brightness)
+{
+	struct backlight_device *bl = dev_get_drvdata(dev);
+	struct backlight_device_brightness_info bl_info;
+
+	bl_info.dev = dev;
+	bl_info.brightness = brightness;
+
+	return backlight_device_notifier_call_chain(bl,
+			BACKLIGHT_DEVICE_PRE_BRIGHTNESS_CHANGE,
+			(void *)&bl_info);
+}
+
+static void pwm_backlight_notify_after(struct device *dev, int brightness)
+{
+	struct backlight_device *bl = dev_get_drvdata(dev);
+	struct backlight_device_brightness_info bl_info;
+
+	bl_info.dev = dev;
+	bl_info.brightness = brightness;
+
+	backlight_device_notifier_call_chain(bl,
+			BACKLIGHT_DEVICE_POST_BRIGHTNESS_CHANGE,
+			(void *)&bl_info);
+}
+
 #ifdef CONFIG_OF
 static int pwm_backlight_parse_dt(struct device *dev,
 				  struct platform_pwm_backlight_data *data,
@@ -287,7 +313,11 @@ static int pwm_backlight_probe(struct platform_device *pdev)
 			defdata.check_fb = pops->check_fb;
 			defdata.exit = pops->exit;
 			blnode_compatible = pops->blnode_compatible;
+		} else {
+			defdata.notify = pwm_backlight_notify;
+			defdata.notify_after = pwm_backlight_notify_after;
 		}
+
 		ret = pwm_backlight_parse_dt(&pdev->dev, &defdata,
 			blnode_compatible);
 		if (ret < 0) {

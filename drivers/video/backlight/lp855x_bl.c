@@ -268,6 +268,22 @@ static const struct backlight_ops lp855x_bl_ops = {
 	.check_fb = lp855x_bl_check_fb,
 };
 
+static int lp855x_backlight_notify(struct device *dev, int brightness)
+{
+	struct lp855x *lp = dev_get_drvdata(dev);
+	struct backlight_device *bl = lp->bl;
+	struct backlight_device_brightness_info bl_info;
+
+	bl_info.dev = dev;
+	bl_info.brightness = brightness;
+
+	backlight_device_notifier_call_chain(bl,
+		BACKLIGHT_DEVICE_PRE_BRIGHTNESS_CHANGE,
+		(void *)&bl_info);
+
+	return bl_info.brightness;
+}
+
 static int lp855x_backlight_register(struct lp855x *lp)
 {
 	struct backlight_device *bl;
@@ -495,6 +511,8 @@ static int lp855x_probe(struct i2c_client *cl, const struct i2c_device_id *id)
 	gn = (struct generic_bl_data_dt_ops *)dev_get_drvdata(lp->dev);
 	if (gn && gn->notify)
 		lp->notify = gn->notify;
+	else
+		lp->notify = lp855x_backlight_notify;
 
 	i2c_set_clientdata(cl, lp);
 

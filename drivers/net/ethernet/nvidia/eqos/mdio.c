@@ -473,7 +473,6 @@ static int eqos_init_phy(struct net_device *dev)
 		   phydev->phy_id, phydev->link);
 
 	pdata->phydev = phydev;
-	phy_start(pdata->phydev);
 
 	DBGPR_MDIO("<--eqos_init_phy\n");
 

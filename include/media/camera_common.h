@@ -84,6 +84,7 @@ struct camera_common_regulators {
 
 struct camera_common_pdata {
 	const char *mclk_name; /* NULL for default default_mclk */
+	const char *parentclk_name; /* NULL for no parent clock*/
 	unsigned int pwdn_gpio;
 	unsigned int reset_gpio;
 	unsigned int af_gpio;
@@ -187,6 +188,10 @@ int camera_common_g_ctrl(struct camera_common_data *s_data,
 
 int camera_common_regulator_get(struct i2c_client *client,
 		       struct regulator **vreg, const char *vreg_name);
+int camera_common_parse_clocks(struct i2c_client *client,
+			struct camera_common_pdata *pdata);
+int camera_common_parse_ports(struct i2c_client *client,
+			      struct camera_common_data *s_data);
 
 int camera_common_debugfs_show(struct seq_file *s, void *unused);
 ssize_t camera_common_debugfs_write(

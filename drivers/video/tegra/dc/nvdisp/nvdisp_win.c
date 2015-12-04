@@ -613,6 +613,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	u32 act_req_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
 	u32 act_control = 0;
 
+	mutex_lock(&tegra_nvdisp_lock);
+
 	/* If any of the window updates requires vsync to program the window
 	   update safely, vsync all windows in this flip.  Safety overrides both
 	   the requested wait_for_vblank, and also the no_vsync global.
@@ -638,6 +640,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		if (!win) {
 			dev_err(&dc->ndev->dev,
 				"Invalid window %d to update\n", i);
+			mutex_unlock(&tegra_nvdisp_lock);
+
 			return -EINVAL;
 		}
 
@@ -646,6 +650,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		if (!dc_win) {
 			dev_err(&dc->ndev->dev,
 				"Cannot get window %d to update\n", i);
+			mutex_unlock(&tegra_nvdisp_lock);
+
 			return -EINVAL;
 		}
 
@@ -794,6 +800,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				windows[i]->dirty = 0;
 		}
 	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
 
 	return 0;
 }

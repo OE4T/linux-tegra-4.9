@@ -1268,6 +1268,7 @@ int tegra_nvdisp_unpowergate_partition(int pg_id)
 		pr_info(" Not a disp powerdomain\n");
 		return 0;
 	}
+	mutex_lock(&tegra_nvdisp_lock);
 
 	nvdisp_pg[pd_index].head_inuse = true;
 	enable_disp[pd_index] = true;
@@ -1304,11 +1305,13 @@ int tegra_nvdisp_unpowergate_partition(int pg_id)
 						nvdisp_pg[i].powergate_id);*/
 			if (ret) {
 				pr_err("Fail to Unpowergate DISP%d\n", i);
+				mutex_unlock(&tegra_nvdisp_lock);
 				return ret;
 			}
 		}
 	}
 
+	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
 }
 static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)

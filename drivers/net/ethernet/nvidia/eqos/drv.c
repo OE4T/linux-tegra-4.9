@@ -1617,8 +1617,9 @@ static void eqos_set_rx_mode(struct net_device *dev)
 UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
 			     struct sk_buff *skb, UINT qinx)
 {
-	UINT count = 0, size = 0;
+	UINT count = 0, size = 0, i;
 	INT length = 0;
+	unsigned int frag_cnt = skb_shinfo(skb)->nr_frags;
 #ifdef EQOS_ENABLE_VLAN_TAG
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
@@ -1627,7 +1628,16 @@ UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
 #endif
 
 	/* SG fragment count */
-	count += skb_shinfo(skb)->nr_frags;
+	for (i = 0; i < frag_cnt; i++) {
+		struct skb_frag_struct *frag = &skb_shinfo(skb)->frags[i];
+
+		length = frag->size;
+		while (length) {
+			size = min(length, EQOS_MAX_DATA_PER_TXD);
+			count++;
+			length -= size;
+		}
+	}
 
 	/* descriptors required based on data limit per descriptor */
 	length = (skb->len - skb->data_len);

@@ -17,6 +17,8 @@
  */
 
 #include <media/camera_common.h>
+#include <linux/of_graph.h>
+#include <linux/string.h>
 #include <mach/io_dpd.h>
 
 #define has_s_op(master, op) \
@@ -102,6 +104,116 @@ int camera_common_regulator_get(struct i2c_client *client,
 
 	*vreg = reg;
 	return err;
+}
+
+int camera_common_parse_clocks(struct i2c_client *client,
+			struct camera_common_pdata *pdata)
+{
+	struct device_node *np = client->dev.of_node;
+	const char *prop;
+	int proplen = 0;
+	int i = 0;
+	int numclocks = 0;
+	int mclk_index = 0;
+	int parentclk_index = -1;
+	int err = 0;
+
+
+	pdata->mclk_name = NULL;
+	pdata->parentclk_name = NULL;
+	err = of_property_read_string(np, "mclk", &pdata->mclk_name);
+	if (!err) {
+		dev_dbg(&client->dev, "mclk in DT %s\n", pdata->mclk_name);
+		of_property_read_string(np, "parent-clk",
+					      &pdata->parentclk_name);
+		return 0;
+	}
+
+	prop = (const char *)of_get_property(np, "clock-names", &proplen);
+	if (!prop)
+		return -ENODATA;
+
+	/* find length of clock-names string array */
+	for (i = 0; i < proplen; i++) {
+		if (prop[i] == '\0')
+			numclocks++;
+	}
+
+	if (numclocks > 1) {
+		err = of_property_read_u32(np, "mclk-index", &mclk_index);
+		if (err) {
+			dev_err(&client->dev, "Failed to find mclk index\n");
+			return err;
+		}
+		err = of_property_read_u32(np, "parent-clk-index",
+					   &parentclk_index);
+	}
+
+	for (i = 0; i < numclocks; i++) {
+		if (i == mclk_index) {
+			pdata->mclk_name = prop;
+			dev_dbg(&client->dev, "%s: mclk_name is %s\n",
+				 __func__, pdata->mclk_name);
+		} else if (i == parentclk_index) {
+			pdata->parentclk_name = prop;
+			dev_dbg(&client->dev, "%s: parentclk_name is %s\n",
+				 __func__, pdata->parentclk_name);
+		} else
+			dev_dbg(&client->dev, "%s: %s\n", __func__, prop);
+		prop += strlen(prop) + 1;
+	}
+
+	return 0;
+}
+
+int camera_common_parse_ports(struct i2c_client *client,
+			      struct camera_common_data *s_data)
+{
+	struct device_node *node = client->dev.of_node;
+	struct device_node *ep = NULL;
+	struct device_node *next;
+	struct device_node *remote = NULL;
+	int bus_width = 0;
+	const char *name = NULL;
+	const char name_pre[4] = "csi\0";
+	int size = ARRAY_SIZE(name_pre);
+	int err = 0;
+
+	/* Parse all the remote entities and put them into the list */
+	next = of_graph_get_next_endpoint(node, ep);
+	if (!next)
+		return -ENODATA;
+
+	of_node_put(ep);
+	ep = next;
+
+	err = of_property_read_u32(ep, "bus-width", &bus_width);
+	if (err) {
+		dev_err(&client->dev,
+			"Failed to find num of lanes\n");
+		return err;
+	}
+	s_data->numlanes = bus_width;
+
+	dev_dbg(&client->dev, "%s: num of lanes %d\n",
+		__func__, s_data->numlanes);
+
+	remote = of_graph_get_remote_port_parent(ep);
+	if (!remote)
+		return -ENODATA;
+
+	dev_dbg(&client->dev, "%s: name %s\n", __func__, remote->name);
+
+	name = strstr(remote->name, name_pre);
+	if (!name || name[size-1] < 'a' || name[size-1] > 'f') {
+		dev_err(&client->dev, "%s: invalid name %s, expect %s[a-f]\n",
+			 __func__, remote->name, name_pre);
+		return -EINVAL;
+	}
+
+	s_data->csi_port = (int)(name[size-1] - 'a');
+
+	return 0;
 }
 
 int camera_common_debugfs_show(struct seq_file *s, void *unused)
@@ -370,9 +482,19 @@ static int camera_common_mclk_enable(struct camera_common_data *s_data)
 		__func__, mclk_init_rate);
 
 	err = clk_set_rate(pw->mclk, mclk_init_rate);
-	if (!err)
-		err = clk_prepare_enable(pw->mclk);
-	return err;
+	if (err) {
+		dev_err(&s_data->i2c_client->dev, "%s: error set rate\n",
+			__func__);
+		return err;
+	}
+	err = clk_prepare_enable(pw->mclk);
+	if (err) {
+		dev_err(&s_data->i2c_client->dev, "%s: error prepare enable\n",
+			__func__);
+		return err;
+	}
+
+	return 0;
 }
 
 static void camera_common_dpd_disable(struct camera_common_data *s_data)
@@ -415,10 +537,15 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 
 	if (on) {
 		err = camera_common_mclk_enable(s_data);
+		if (err)
+			return err;
+
 		camera_common_dpd_disable(s_data);
-		if (!err)
-			err = call_s_op(s_data, power_on);
+
+		err = call_s_op(s_data, power_on);
 		if (err) {
+			dev_err(&s_data->i2c_client->dev,
+				"%s: error power on\n", __func__);
 			camera_common_dpd_enable(s_data);
 			camera_common_mclk_disable(s_data);
 		}

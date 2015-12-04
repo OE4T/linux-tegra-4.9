@@ -363,7 +363,6 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	bool ret = false;
-	unsigned int val;
 
 	DBGPR_EEE("-->eqos_eee_init\n");
 
@@ -398,16 +397,6 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 
 		ret = true;
 	}
-
-	/* disable AUTOEEEgr in TOP level expansion register 0x40 */
-	eqos_mdio_write_direct(pdata, pdata->phyaddr,
-		BCM_EXPANSION_CTRL_REG,
-		BCM_EXP_REG_SEL_TOPL | BCM_TOPL_E40);
-	eqos_mdio_read_direct(pdata, pdata->phyaddr,
-		BCM_EXPANSION_REG, &val);
-	DBGPR_EEE("Default value in top-level exp reg 0x40h : 0x%x\n", val);
-	eqos_mdio_write_direct(pdata, pdata->phyaddr,
-		BCM_EXPANSION_REG, val & ~(BCM_TOPL_E40_AUTOGREEE_EN));
 
 	DBGPR_EEE("<--eqos_eee_init\n");
 

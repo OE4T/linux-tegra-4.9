@@ -304,9 +304,6 @@
 
 /* Broadcom expansion regs */
 #define BCM_PKT_CNT_EXP_REG			0xf00
-#define BCM_TOPL_E40				0x40
-#define BCM_EXP_REG_SEL_TOPL			0xd00
-#define BCM_TOPL_E40_AUTOGREEE_EN		(1 << 0)
 
 /* Clause 22 registers to access clause 45 register set */
 #define MMD_CTRL_REG		0x0D	/* MMD Access Control Register */

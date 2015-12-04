@@ -926,6 +926,27 @@ int vgpu_gr_nonstall_isr(struct gk20a *g,
 	return 0;
 }
 
+static int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
+	struct channel_gk20a *ch, u64 sms, bool enable)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_sm_debug_mode *p = &msg.params.sm_debug_mode;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE;
+	msg.handle = platform->virt_handle;
+	p->handle = ch->virt_ctx;
+	p->sms = sms;
+	p->enable = (u32)enable;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
+	return err ? err : msg.ret;
+}
+
 void vgpu_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.free_channel_ctx = vgpu_gr_free_channel_ctx;
@@ -944,4 +965,5 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.zbc_set_table = vgpu_gr_add_zbc;
 	gops->gr.zbc_query_table = vgpu_gr_query_zbc;
 	gops->gr.init_ctx_state = vgpu_gr_init_ctx_state;
+	gops->gr.set_sm_debug_mode = vgpu_gr_set_sm_debug_mode;
 }

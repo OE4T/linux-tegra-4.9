@@ -28,28 +28,34 @@
 /* camera control gpio definitions */
 
 / {
-	ov23850_a@10 {
-		/* Define any required hw resources needed by driver */
-		/* ie. clocks, io pins, power sources */
-		mclk = "cam_mclk1";
-		reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;   //also for VCM_2V8 en
-		pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
-		vana-supply = <&en_vdd_cam_hv_2v8>;
-		vdig-supply = <&en_vdd_cam_1v2>;
-		vif-supply = <&en_vdd_cam>;
-		vvcm-suply = <&en_vdd_vcm_2v8>;
+	host1x {
+		i2c@546c0000 {
+			ov23850_a@10 {
+				/* Define any required hw resources needed by driver */
+				/* ie. clocks, io pins, power sources */
+				mclk = "cam_mclk1";
+				reset-gpios = <&gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;   //also for VCM_2V8 en
+				pwdn-gpios = <&gpio CAM0_PWDN GPIO_ACTIVE_HIGH>;
+				vana-supply = <&en_vdd_cam_hv_2v8>;
+				vdig-supply = <&en_vdd_cam_1v2>;
+				vif-supply = <&en_vdd_cam>;
+				vvcm-suply = <&en_vdd_vcm_2v8>;
+			};
+		};
 	};
 
-	ov23850_c@36 {
-		/* Define any required hw resources needed by driver */
-		/* ie. clocks, io pins, power sources */
-		mclk = "cam_mclk1";
-		reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;   //also for VCM_2V8 en
-		pwdn-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
-		vana-supply = <&en_vdd_cam_hv_2v8>;
-		vdig-supply = <&en_vdd_cam_1v2>;
-		vif-supply = <&en_vdd_cam>;
-		vvcm-suply = <&en_vdd_vcm_2v8>;
+	i2c@7000c000 {
+		ov23850_c@36 {
+			/* Define any required hw resources needed by driver */
+			/* ie. clocks, io pins, power sources */
+			mclk = "cam_mclk1";
+			reset-gpios = <&gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;   //also for VCM_2V8 en
+			pwdn-gpios = <&gpio CAM1_PWDN GPIO_ACTIVE_HIGH>;
+			vana-supply = <&en_vdd_cam_hv_2v8>;
+			vdig-supply = <&en_vdd_cam_1v2>;
+			vif-supply = <&en_vdd_cam>;
+			vvcm-suply = <&en_vdd_vcm_2v8>;
+		};
 	};
 
 	gpio: gpio@6000d000 {

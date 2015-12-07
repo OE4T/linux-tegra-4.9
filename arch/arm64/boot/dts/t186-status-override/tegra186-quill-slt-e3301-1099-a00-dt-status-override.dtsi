@@ -300,10 +300,6 @@
 		status = "disabled";
 	};
 
-	roc-flush@e080000 {
-		status = "disabled";
-	};
-
 	mttcan@c310000 {
 		status = "disabled";
 	};

@@ -54,11 +54,6 @@
 		};
 	};
 
-
-	roc-flush@e080000 {
-		status = "disabled";
-	};
-
 	cpuidle {
 		status = "disabled";
 	};

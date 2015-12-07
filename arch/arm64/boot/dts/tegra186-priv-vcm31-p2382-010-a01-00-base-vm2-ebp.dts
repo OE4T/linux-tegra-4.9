@@ -328,10 +328,6 @@
 		status = "disabled";
 	};
 
-	roc-flush@e080000 {
-		status = "disabled";
-	};
-
 	clocks {
 	     clk32k_in@0 {
 		status = "disabled";

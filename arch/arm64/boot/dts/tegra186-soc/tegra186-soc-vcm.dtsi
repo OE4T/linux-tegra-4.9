@@ -295,10 +295,6 @@
 		};
 	};
 
-	roc-flush@e080000 {
-		status = "okay";
-	};
-
 	clocks {
 		status = "okay";
 

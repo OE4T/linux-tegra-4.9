@@ -223,8 +223,9 @@ static unsigned int tegra_ahci_qc_issue(struct ata_queued_cmd *qc)
 						T_SATA0_CFG_LINK_0);
 
 		tegra->host_naking_war_applied = true;
-	} else if (qc->tf.command == ATA_CMD_SET_FEATURES) {
-		WARN_ON(qc->tf.feature ==  SATA_FPDMA_OFFSET);
+	} else if (qc->tf.command == ATA_CMD_SET_FEATURES &&
+				qc->tf.feature ==  SATA_FPDMA_OFFSET) {
+		WARN(1, "SATA_FPDMA_OFFSET Feature is not supported");
 		return AC_ERR_INVALID;
 	}
 

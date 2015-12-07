@@ -53,10 +53,6 @@
 		status = "disabled";
 	};
 
-	chipid@100000 {
-		status = "disabled";
-	};
-
 	adma@2930000 {
 		status = "disabled";
 	};

@@ -237,10 +237,6 @@
 		status = "disabled";
 	};
 
-	chipid@100000 {
-		status = "disabled";
-	};
-
 	dma@2600000 {
 		status = "disabled";
 	};

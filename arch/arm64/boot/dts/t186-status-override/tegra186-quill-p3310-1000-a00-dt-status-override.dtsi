@@ -49,10 +49,6 @@
 		status = "disabled";
 	};
 
-	chipid@100000 {
-		status = "disabled";
-	};
-
 	mttcan@c310000 {
 		status = "disabled";
 	};

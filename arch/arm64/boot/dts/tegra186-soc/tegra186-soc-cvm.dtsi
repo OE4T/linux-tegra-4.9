@@ -215,10 +215,6 @@
 		status = "okay";
 	};
 
-	chipid@100000 {
-		status = "okay";
-	};
-
 	bpmp {
 		status = "okay";
 

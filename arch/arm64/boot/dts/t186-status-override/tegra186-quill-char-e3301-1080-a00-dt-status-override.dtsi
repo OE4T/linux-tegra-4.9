@@ -99,11 +99,6 @@
 		status = "disabled";
 	};
 
-	chipid@100000 {
-		status = "disabled";
-	};
-
-
 	ahci-sata@3507000 {
 		status = "disabled";
 	};

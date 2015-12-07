@@ -62,6 +62,27 @@
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
 			};
+
+			tdiode_shutdown_warn_cool_dev: shutdown-warn-cool-dev {
+				#cooling-cells = <2>; /* min followed by max */
+			};
+
+			trips {
+				tdiode_shutdown_warn: shutdown-warn-throttle {
+					temperature = <104000>;
+					hysteresis = <1000>;
+					type = "passive";
+				};
+			};
+
+			cooling-maps {
+				map-shutdown-warn {
+					trip = <&tdiode_shutdown_warn>;
+					cooling-device = <&tdiode_shutdown_warn_cool_dev
+							THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+					cdev-type = "shutdown_warning";
+				};
+			};
 		};
 	};
 };

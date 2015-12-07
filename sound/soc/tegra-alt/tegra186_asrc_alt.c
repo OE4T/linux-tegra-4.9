@@ -1,7 +1,7 @@
 /*
  * tegra186_asrc_alt.c - Tegra186 ASRC driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,6 +35,7 @@
 
 #include "tegra210_xbar_alt.h"
 #include "tegra186_asrc_alt.h"
+#include "tegra186_arad_alt.h"
 
 #define DRV_NAME "tegra186-asrc"
 #define ASRC_ARAM_START_ADDR 0x3F800000
@@ -473,6 +474,24 @@ static int tegra186_asrc_put_ratio_frac(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra186_asrc_req_arad_ratio(struct snd_soc_dapm_widget *w,
+				struct snd_kcontrol *kcontrol, int event)
+{
+	struct snd_soc_codec *codec = w->codec;
+	struct device *dev = codec->dev;
+	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
+	int ret = 0;
+	unsigned int lane_id = 0;
+
+	lane_id = (w->reg - TEGRA186_ASRC_STREAM1_ENABLE) /
+			TEGRA186_ASRC_STREAM_STRIDE;
+
+	if (asrc->lane[lane_id].ratio_source == RATIO_ARAD)
+		tegra186_arad_send_ratio();
+
+	return ret;
+}
+
 static int tegra186_asrc_codec_probe(struct snd_soc_codec *codec)
 {
 	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
@@ -556,18 +575,30 @@ static const struct snd_soc_dapm_widget tegra186_asrc_widgets[] = {
 				0, 0),
 	SND_SOC_DAPM_AIF_IN("RX6", NULL, 0, SND_SOC_NOPM,
 				0, 0),
-	SND_SOC_DAPM_AIF_OUT("TX1", NULL, 0, TEGRA186_ASRC_STREAM1_ENABLE,
-				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
-	SND_SOC_DAPM_AIF_OUT("TX2", NULL, 0, TEGRA186_ASRC_STREAM2_ENABLE,
-				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
-	SND_SOC_DAPM_AIF_OUT("TX3", NULL, 0, TEGRA186_ASRC_STREAM3_ENABLE,
-				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
-	SND_SOC_DAPM_AIF_OUT("TX4", NULL, 0, TEGRA186_ASRC_STREAM4_ENABLE,
-				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
-	SND_SOC_DAPM_AIF_OUT("TX5", NULL, 0, TEGRA186_ASRC_STREAM5_ENABLE,
-				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
-	SND_SOC_DAPM_AIF_OUT("TX6", NULL, 0, TEGRA186_ASRC_STREAM6_ENABLE,
-				TEGRA186_ASRC_STREAM_EN_SHIFT, 0),
+	SND_SOC_DAPM_AIF_OUT_E("TX1", NULL, 0, TEGRA186_ASRC_STREAM1_ENABLE,
+				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
+				tegra186_asrc_req_arad_ratio,
+				SND_SOC_DAPM_POST_PMU),
+	SND_SOC_DAPM_AIF_OUT_E("TX2", NULL, 0, TEGRA186_ASRC_STREAM2_ENABLE,
+				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
+				tegra186_asrc_req_arad_ratio,
+				SND_SOC_DAPM_POST_PMU),
+	SND_SOC_DAPM_AIF_OUT_E("TX3", NULL, 0, TEGRA186_ASRC_STREAM3_ENABLE,
+				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
+				tegra186_asrc_req_arad_ratio,
+				SND_SOC_DAPM_POST_PMU),
+	SND_SOC_DAPM_AIF_OUT_E("TX4", NULL, 0, TEGRA186_ASRC_STREAM4_ENABLE,
+				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
+				tegra186_asrc_req_arad_ratio,
+				SND_SOC_DAPM_POST_PMU),
+	SND_SOC_DAPM_AIF_OUT_E("TX5", NULL, 0, TEGRA186_ASRC_STREAM5_ENABLE,
+				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
+				tegra186_asrc_req_arad_ratio,
+				SND_SOC_DAPM_POST_PMU),
+	SND_SOC_DAPM_AIF_OUT_E("TX6", NULL, 0, TEGRA186_ASRC_STREAM6_ENABLE,
+				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
+				tegra186_asrc_req_arad_ratio,
+				SND_SOC_DAPM_POST_PMU),
 	SND_SOC_DAPM_IN("RX7", NULL),
 };
 

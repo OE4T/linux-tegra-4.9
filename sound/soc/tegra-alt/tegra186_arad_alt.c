@@ -1,7 +1,7 @@
 /*
  * tegra186_arad_alt.c - Tegra186 ARAD driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -38,6 +38,8 @@
 #include "tegra186_arad_alt.h"
 
 #define DRV_NAME "tegra186-arad"
+
+static struct device *arad_dev;
 
 #define ARAD_LANE_NUMERATOR_MUX(id)	\
 	(TEGRA186_ARAD_LANE1_NUMERATOR_MUX_SEL + id*TEGRA186_ARAD_LANE_STRIDE)
@@ -555,6 +557,17 @@ static const struct snd_kcontrol_new tegra186_arad_controls[] = {
 	ARAD_DENOMINATOR_PRESCALAR(6),
 };
 
+void tegra186_arad_send_ratio(void)
+{
+	struct tegra186_arad *arad = dev_get_drvdata(arad_dev);
+
+	if (!arad)
+		return;
+	pm_runtime_get_sync(arad_dev);
+	regmap_write(arad->regmap, TEGRA186_ARAD_SEND_RATIO, 0x1);
+	pm_runtime_put(arad_dev);
+}
+
 static struct snd_soc_codec_driver tegra186_arad_codec = {
 	.probe = tegra186_arad_codec_probe,
 	.dapm_widgets = tegra186_arad_widgets,
@@ -800,6 +813,7 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
+	arad_dev = &pdev->dev;
 
 	arad->soc_data = soc_data;
 

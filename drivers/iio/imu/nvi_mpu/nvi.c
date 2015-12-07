@@ -1900,6 +1900,29 @@ static int nvi_aux_enable(struct nvi_state *st, bool enable)
 	return ret;
 }
 
+static void nvi_aux_port_delay_update(struct nvi_state *st)
+{
+	unsigned int i, delay_us;
+	bool updated = false;
+
+	delay_us = st->delay_us[DEV_AUX];
+	st->delay_us[DEV_AUX] = st->hal->smplrt[DEV_AUX]->delay_us_max;
+	for (i = 0; i < AUX_PORT_MAX; i++) {
+		if (st->aux.port[i].nmp.delay_us && (st->enabled[DEV_AUX] &
+						     (1 << i))) {
+			if (st->aux.port[i].nmp.delay_us <
+						 st->delay_us[DEV_AUX]) {
+				st->delay_us[DEV_AUX] =
+						st->aux.port[i].nmp.delay_us;
+				updated = true;
+			}
+		}
+	}
+
+	if (updated == false)
+		st->delay_us[DEV_AUX] = delay_us;
+}
+
 static int nvi_aux_port_enable(struct nvi_state *st, int port, bool enable)
 {
 	bool fifo_enable = true;
@@ -2406,6 +2429,7 @@ int nvi_mpu_batch(int port, unsigned int flags,
 			st->aux.port[port].batch_timeout_us = timeout_us;
 			if (st->aux.port[port].nmp.delay_us != period_us) {
 				st->aux.port[port].nmp.delay_us = period_us;
+				nvi_aux_port_delay_update(st);
 				if (st->rc.i2c_slv_ctrl[port] & BIT_SLV_EN)
 					ret = nvi_dev_delay(st, DEV_AUX);
 			}

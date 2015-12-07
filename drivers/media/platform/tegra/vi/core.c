@@ -160,6 +160,10 @@ static const struct tegra_video_format tegra_video_formats[] = {
  */
 u32 tegra_core_get_fourcc_by_idx(unsigned int index)
 {
+	/* return default fourcc format if the index out of bounds */
+	if (index > (ARRAY_SIZE(tegra_video_formats) - 1))
+		return V4L2_PIX_FMT_SGRBG10;
+
 	return tegra_video_formats[index].fourcc;
 }
 

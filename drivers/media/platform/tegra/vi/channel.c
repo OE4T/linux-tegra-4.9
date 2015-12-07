@@ -536,13 +536,10 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 {
 	int ret;
 	struct tegra_channel *chan  = &vi->chans[port];
-	int num_sd = MAX_SUBDEVICES - 1;
 
 	chan->vi = vi;
 	chan->port = port;
 	chan->align = 64;
-	while (num_sd < 0)
-		chan->subdev[num_sd] = NULL;
 	chan->num_subdevs = 0;
 
 	/* Init video format */
@@ -625,10 +622,6 @@ vb2_init_error:
 
 static int tegra_channel_cleanup(struct tegra_channel *chan)
 {
-	int num_sd = MAX_SUBDEVICES - 1;
-
-	while (num_sd < 0)
-		chan->subdev[num_sd] = NULL;
 	video_unregister_device(&chan->video);
 
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);

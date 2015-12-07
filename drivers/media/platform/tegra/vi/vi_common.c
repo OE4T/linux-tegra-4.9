@@ -54,6 +54,7 @@ int tegra_vi_v4l2_init(struct vi *vi)
 {
 	int ret;
 
+	vi->pg_mode = 0;
 	vi->media_dev.dev = vi->dev;
 	strlcpy(vi->media_dev.model, "NVIDIA Tegra Video Input Device",
 		sizeof(vi->media_dev.model));

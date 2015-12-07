@@ -295,12 +295,6 @@
 		status = "disabled";
 	};
 
-	thermal-zones {
-		AO-therm {
-			status = "disabled";
-		};
-	};
-
 	pwm-fan {
 		status = "disabled";
 	};

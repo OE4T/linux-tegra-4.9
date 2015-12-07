@@ -52,11 +52,5 @@
 	dummy-cool-dev {
 		status = "disabled";
 	};
-
-	thermal-zones {
-		AO-therm {
-			status = "disabled";
-		};
-	};
 };
 

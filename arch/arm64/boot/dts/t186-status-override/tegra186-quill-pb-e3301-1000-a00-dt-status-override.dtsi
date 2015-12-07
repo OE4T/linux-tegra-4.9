@@ -62,10 +62,6 @@
 		};
 	};
 
-	interrupt-controller@3000000 {
-		status = "disabled";
-	};
-
 	spi@3270000 {
 		status = "disabled";
 	};

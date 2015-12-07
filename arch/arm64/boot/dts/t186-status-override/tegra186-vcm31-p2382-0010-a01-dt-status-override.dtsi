@@ -36,10 +36,6 @@
 		};
 	};
 
-	interrupt-controller@3000000 {
-		status = "disabled";
-	};
-
 	tegra-hsp@3c00000 {
 		status = "disabled";
 	};

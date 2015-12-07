@@ -188,10 +188,6 @@
 		status = "okay";
 	};
 
-	interrupt-controller@3000000 {
-		status = "okay";
-	};
-
 	agic-controller@2a41000 {
 		status = "okay";
 	};

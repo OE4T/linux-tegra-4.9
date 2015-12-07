@@ -41,10 +41,6 @@
 		};
 	};
 
-	spi@3270000 {
-		status = "disabled";
-	};
-
 	tegra-hsp@3c00000 {
 		status = "disabled";
 	};

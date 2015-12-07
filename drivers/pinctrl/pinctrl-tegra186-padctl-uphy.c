@@ -3985,7 +3985,7 @@ static ssize_t otg_vbus_store(struct device *dev,
 	return n;
 }
 
-DEVICE_ATTR(otg_vbus, S_IRUGO | S_IWUSR, otg_vbus_show, otg_vbus_store);
+static DEVICE_ATTR(otg_vbus, S_IRUGO | S_IWUSR, otg_vbus_show, otg_vbus_store);
 
 static struct attribute *padctl_uphy_attrs[] = {
 	&dev_attr_hsic_power.attr,

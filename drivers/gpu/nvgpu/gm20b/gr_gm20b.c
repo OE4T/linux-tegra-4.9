@@ -1050,7 +1050,7 @@ static void gr_gm20b_enable_cde_in_fecs(void *ctx_ptr)
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0, cde_v);
 }
 
-void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+static void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 {
 	/* Check if we have at least one valid warp */
 	/* get paused state on maxwell */

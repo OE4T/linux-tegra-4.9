@@ -7261,7 +7261,7 @@ static void gr_gk20a_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-void gr_gk20a_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
+static void gr_gk20a_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 {
 	/* Check if we have at least one valid warp */
 	struct gr_gk20a *gr = &g->gr;

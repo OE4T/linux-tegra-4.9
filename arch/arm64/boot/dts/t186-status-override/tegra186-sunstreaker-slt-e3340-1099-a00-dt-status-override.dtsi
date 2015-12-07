@@ -61,10 +61,6 @@
 		};
 	};
 
-	tegra-hsp@3c00000 {
-		status = "disabled";
-	};
-
 	adma@2930000 {
 		status = "disabled";
 	};

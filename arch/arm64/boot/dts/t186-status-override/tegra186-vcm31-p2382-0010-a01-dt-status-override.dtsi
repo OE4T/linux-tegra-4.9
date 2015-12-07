@@ -36,10 +36,6 @@
 		};
 	};
 
-	tegra-hsp@3c00000 {
-		status = "disabled";
-	};
-
 	bpmp {
 		bpmpthermal {
 			status = "disabled";

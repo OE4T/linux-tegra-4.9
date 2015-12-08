@@ -1,7 +1,7 @@
 /*
  * tegra186-vcm31-bali-override.dtsi
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,71 +97,71 @@
 	};
 
 	host-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	tsec-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	nvdec-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	ispa-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	ve-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	vic03-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	msenc-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	nvjpg-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	gpu-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	pcie-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	sata-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	disa-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	disb-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	disc-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	xusba-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	xusbb-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 	xusbc-pd {
-		status = "disabled";
+		status = "okay";
 	};
 
 

@@ -241,7 +241,7 @@ int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np)
 		return -ENOMEM;
 	}
 
-	config.of_node = (dev && dev->of_node) ? dev->of_node : np;
+	config.of_node = dev->of_node ? dev->of_node : np;
 	pmc_padctrl->pad_dev = padctrl_register(dev, &tegra186_pmc_padctrl_desc,
 					&config);
 	if (IS_ERR(pmc_padctrl->pad_dev)) {

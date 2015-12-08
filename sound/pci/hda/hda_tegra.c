@@ -311,7 +311,8 @@ static int hda_tegra_resume(struct device *dev)
 
 	snd_power_change_state(card, SNDRV_CTL_POWER_D0);
 
-	pm_runtime_put(hda->dev);
+	if (hda->dev)
+		pm_runtime_put(hda->dev);
 
 	return 0;
 }

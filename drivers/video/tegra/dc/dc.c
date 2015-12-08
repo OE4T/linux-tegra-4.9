@@ -4779,7 +4779,7 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 
 	pm_runtime_put(&dc->ndev->dev);
 
-	tegra_log_suspend_time();
+	tegra_log_suspend_entry_time();
 }
 
 void tegra_dc_disable(struct tegra_dc *dc)

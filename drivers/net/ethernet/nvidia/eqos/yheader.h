@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -113,6 +113,7 @@
 /* Macro definitions*/
 
 #include <asm-generic/errno.h>
+#include <linux/platform/tegra/isomgr.h>
 
 #ifdef CONFIG_PTPSUPPORT_OBJ
 #define EQOS_CONFIG_PTP
@@ -1301,11 +1302,14 @@ typedef enum {
 #define QUEUE_PRIO_MAX 7
 #define CHAN_NAPI_QUOTA_DEFAULT	64
 #define CHAN_NAPI_QUOTA_MAX	CHAN_NAPI_QUOTA_DEFAULT
+#define ISO_BW_DEFAULT (80 * 1024)
 struct eqos_cfg {
 	rxq_ctrl_e	rxq_ctrl[MAX_CHANS];
 	uint		q_prio[MAX_CHANS];
 	uint		chan_napi_quota[MAX_CHANS];
 	pause_frames_e	pause_frames;
+	uint		iso_bw;
+	uint		eth_iso_enable;
 };
 
 struct chan_data {
@@ -1529,6 +1533,7 @@ struct eqos_prv_data {
 	u32 tst_buf_dma_addr;
 	int tst_buf_size;
 #endif
+	tegra_isomgr_handle isomgr_handle;
 };
 
 typedef enum {

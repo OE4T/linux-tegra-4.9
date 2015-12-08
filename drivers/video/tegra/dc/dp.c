@@ -3059,6 +3059,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	if (mode->lower_margin == 1) {
 		mode->lower_margin++;
 		mode->upper_margin--;
+		mode->vmode |= FB_VMODE_ADJUSTED;
 	}
 
 	if (!tegra_dp_check_dc_constraint(mode))

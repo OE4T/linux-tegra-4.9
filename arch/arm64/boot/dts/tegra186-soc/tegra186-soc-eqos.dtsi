@@ -33,6 +33,7 @@
 				<0 193 0x4>,	/* rx3 */
 				<0 189 0x4>;	/* tx3 */
 		nvidia,csr_clock_speed = <0x19>; /* CSR clock speed 25MHz */
+		nvidia,iso_bw = <81920>; /* sum of read and write bw, 80Mb/s */
 		/* bootloader should update MAC address */
 		nvidia,local-mac-address = <0x00 0x00 0x00 0x00 0x00 0x00>;
 		clocks = <&tegra_car TEGRA186_CLK_EQOS_AXI>,

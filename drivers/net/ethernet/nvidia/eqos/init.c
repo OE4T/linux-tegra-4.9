@@ -906,6 +906,10 @@ int eqos_probe(struct platform_device *pdev)
 			RXQ_CTRL_DEFAULT, RXQ_CTRL_MAX, 4);
 	get_dt_u32_array(pdata, "nvidia,queue_prio", pdt_cfg->q_prio,
 			QUEUE_PRIO_DEFAULT, QUEUE_PRIO_MAX, 4);
+	get_dt_u32(pdata, "nvidia,iso_bw", &pdt_cfg->iso_bw, ISO_BW_DEFAULT,
+		ISO_BW_DEFAULT);
+	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
+		1);
 
 	for (i = 0; i < MAX_CHANS; i++) {
 		pchinfo = &pdata->chinfo[i];
@@ -1032,14 +1036,33 @@ int eqos_probe(struct platform_device *pdev)
 	}
 	INIT_WORK(&pdata->fbe_work, eqos_fbe_work);
 
+	if (pdt_cfg->eth_iso_enable) {
+		/* Bandwidth Negotiation call back is NULL as of now */
+		pdata->isomgr_handle =
+			tegra_isomgr_register(TEGRA_ISO_CLIENT_EQOS,
+					pdata->dt_cfg.iso_bw, NULL, NULL);
+		if (!pdata->isomgr_handle) {
+			dev_err(&pdata->pdev->dev, "EQOS ISO Bandwidth allocation failed\n");
+			ret = -EIO;
+			goto err_isomgr_reg_failed;
+		}
+	}
+
 	/* register cooling device */
 	ret = eqos_therm_init(pdata);
 	if (ret != 0) {
 		pr_err("unable to register cooling device err: %d\n", ret);
-		goto err_out_fbe_wq_failed;
+		goto err_therm_init;
 	}
 
 	return 0;
+
+ err_therm_init:
+	if (pdt_cfg->eth_iso_enable)
+		tegra_isomgr_unregister(pdata->isomgr_handle);
+
+ err_isomgr_reg_failed:
+	destroy_workqueue(pdata->fbe_wq);
 
  err_out_fbe_wq_failed:
 	if ((tegra_platform_is_unit_fpga()) &&
@@ -1116,6 +1139,7 @@ int eqos_remove(struct platform_device *pdev)
 	struct eqos_prv_data *pdata;
 	struct desc_if_struct *desc_if;
 	int i, ret_val = 0;
+	struct eqos_cfg *pdt_cfg;
 
 	DBGPR("--> eqos_remove\n");
 
@@ -1126,6 +1150,7 @@ int eqos_remove(struct platform_device *pdev)
 
 	ndev = platform_get_drvdata(pdev);
 	pdata = netdev_priv(ndev);
+	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	desc_if = &(pdata->desc_if);
 
 #ifdef CONFIG_THERMAL
@@ -1140,6 +1165,9 @@ int eqos_remove(struct platform_device *pdev)
 		free_irq(pdata->power_irq, pdata);
 		pdata->power_irq = 0;
 	}
+
+	if (pdt_cfg->eth_iso_enable)
+		tegra_isomgr_unregister(pdata->isomgr_handle);
 
 	unregister_netdev(ndev);
 

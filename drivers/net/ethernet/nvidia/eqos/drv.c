@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1204,6 +1204,7 @@ static int eqos_open(struct net_device *dev)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	int ret = Y_SUCCESS;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
+	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 
 	DBGPR("-->eqos_open\n");
 
@@ -1221,10 +1222,36 @@ static int eqos_open(struct net_device *dev)
 		ret = -ENOMEM;
 		goto err_out_desc_buf_alloc_failed;
 	}
+
+	if (pdt_cfg->eth_iso_enable) {
+		/* Latency is set to 0, which means EQOS does not
+		 * care for any latency seen.
+		 */
+		ret = tegra_isomgr_reserve(pdata->isomgr_handle,
+			pdata->dt_cfg.iso_bw, 0);
+		if (ret == 0) {
+			dev_err(&pdata->pdev->dev, "EQOS ISO BW reservation failed\n");
+			ret = -ENOMEM;
+			goto err_isomgr_fail;
+		}
+
+		ret = tegra_isomgr_realize(pdata->isomgr_handle);
+		if (ret == 0) {
+			dev_err(&pdata->pdev->dev, "EQOS ISO BW realize failed\n");
+			ret = -ENOMEM;
+			goto err_isomgr_fail;
+		}
+	}
+
 	eqos_start_dev(pdata);
 
 	DBGPR("<--%s()\n", __func__);
 	return Y_SUCCESS;
+
+	if (pdt_cfg->eth_iso_enable) {
+ err_isomgr_fail:
+		desc_if->free_buff_and_desc(pdata);
+	}
 
  err_out_desc_buf_alloc_failed:
 	free_txrx_irqs(pdata);

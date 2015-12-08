@@ -28,6 +28,8 @@
 #include <soc/tegra/bpmp_abi.h>
 #include <linux/delay.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
+#include <linux/platform/tegra/tegra18_cpu_map.h>
+#include <linux/tegra-mce.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
 #define MAX_VINDEX		80 /* No of voltage index */
@@ -43,7 +45,8 @@
 				"B_CLUSTER" : "M_CLUSTER")
 #define LOOP_FOR_EACH_CLUSTER(cl)	for (cl = M_CLUSTER; \
 					cl < MAX_CLUSTERS; cl++)
-
+#define SAFE_CC3_NDIV		11
+#define SAFE_CC3_VINDEX		25
 /* EDVD register details */
 #define EDVD_CL_NDIV_VHINT_OFFSET	0x20
 #define EDVD_COREX_NDIV_VAL_SHIFT	(0)
@@ -103,6 +106,7 @@ struct per_cluster_data {
 	void __iomem *edvd_pub;
 	struct cpu_vhint_table dvfs_tbl;
 	struct tegra_bwmgr_client *bwmgr;
+	struct cpumask cpu_mask;
 };
 
 struct tegra_cpufreq_data {
@@ -113,11 +117,18 @@ struct tegra_cpufreq_data {
 	unsigned long emc_max_rate; /* Hz */
 };
 
+struct cc3_ari_params {
+	uint32_t ndiv;
+	uint32_t vindx;
+	uint8_t enable;
+};
+
 static struct tegra_cpufreq_data tfreq_data;
 static struct freq_attr *tegra_cpufreq_attr[] = {
 	&cpufreq_freq_attr_scaling_available_freqs,
 	NULL,
 };
+
 static DEFINE_PER_CPU(spinlock_t, pcpu_slock);
 static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
 
@@ -376,6 +387,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 		vindx = vhtbl->vceil;
 	if (vhtbl->vindex_div > 0)
 		vindx = vhtbl->vindex_mult * vindx / vhtbl->vindex_div;
+
 	val |= (vindx << EDVD_COREX_VINDEX_VAL_SHIFT);
 	phy_cpu = logical_to_phys_map(cpu);
 
@@ -929,10 +941,50 @@ err_out:
 	return ret;
 }
 
+static void set_cpu_mask(void)
+{
+	int cpu_num;
+
+	cpumask_clear(&tfreq_data.pcluster[M_CLUSTER].cpu_mask);
+	cpumask_clear(&tfreq_data.pcluster[B_CLUSTER].cpu_mask);
+
+	for_each_possible_cpu(cpu_num) {
+		if (tegra18_is_cpu_denver(cpu_num))
+			cpumask_set_cpu(cpu_num,
+				&tfreq_data.pcluster[M_CLUSTER].cpu_mask);
+		else
+			cpumask_set_cpu(cpu_num,
+				&tfreq_data.pcluster[B_CLUSTER].cpu_mask);
+
+	}
+}
+
+static void __tegra_mce_cc3_ctrl(void *data)
+{
+	tegra_mce_cc3_ctrl(SAFE_CC3_NDIV, SAFE_CC3_VINDEX, 1);
+}
+
+static int __init enable_autocc3(void)
+{
+	enum cluster cl;
+	int wait = 1;
+	int ret = 0;
+
+	set_cpu_mask();
+
+	LOOP_FOR_EACH_CLUSTER(cl) {
+		ret = smp_call_function_any(&tfreq_data.pcluster[cl].cpu_mask,
+				__tegra_mce_cc3_ctrl,
+				&tfreq_data.pcluster[cl].dvfs_tbl, wait);
+	}
+
+	return ret;
+}
+
 static int __init register_with_emc_bwmgr(void)
 {
-	struct tegra_bwmgr_client *bwmgr;
 	enum tegra_bwmgr_client_id bw_id = TEGRA_BWMGR_CLIENT_CPU_0;
+	struct tegra_bwmgr_client *bwmgr;
 	enum cluster cl;
 	int ret = 0;
 
@@ -990,6 +1042,13 @@ static int __init tegra_cpufreq_init(void)
 	ret = create_ndiv_to_vindex_table();
 	if (ret)
 		goto err_free_res;
+
+	if (of_property_read_bool(dn, "nvidia,enable-autocc3")) {
+		pr_debug("enabling autocc3\n");
+		ret = enable_autocc3();
+		if (ret)
+			goto err_free_res;
+	}
 
 	ret = init_freqtbls(dn);
 	if (ret)

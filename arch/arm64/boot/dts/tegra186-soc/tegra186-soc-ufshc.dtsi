@@ -47,9 +47,9 @@
 				<&tegra_car TEGRA186_RESET_UFSHC>,
 				<&tegra_car TEGRA186_RESET_UFSHC_AXI_M>,
 				<&tegra_car TEGRA186_RESET_UFSHC_LP>;
-		reset-names = "mphy_l0_rx_rst", "mphy_l0_tx_rst", "mphy_l1_rx_rst",
-				"mphy_l1_tx_rst", "mphy_clk_ctl_rst", "ufs_rst",
-				"ufs_axi_m_rst", "ufshc_lp_rst";
+		reset-names = "mphy-l0-rx-rst", "mphy-l0-tx-rst", "mphy-l1-rx-rst",
+				"mphy-l1-tx-rst", "mphy-clk-ctl-rst", "ufs-rst",
+				"ufs-axi-m-rst", "ufshc-lp-rst";
 		nvidia,enable-x2-config;
 		nvidia,mask-fast-auto-mode;
 		nvidia,mask-hs-mode-b;

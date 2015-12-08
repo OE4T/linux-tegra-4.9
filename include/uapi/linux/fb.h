@@ -303,6 +303,7 @@ struct fb_bitfield {
 #define FB_VMODE_IS_DETAILED	0x200000
 #define FB_VMODE_IS_CEA		0x400000
 #define FB_VMODE_IS_HDMI_EXT	0x800000
+#define FB_VMODE_ADJUSTED	0x000080 /* adj to meet timing restrictions */
 
 #define FB_VMODE_MASK		0xe3ffff
 

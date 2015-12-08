@@ -153,6 +153,7 @@
 
 			      /* Non-host devices. */
 			      <&{/adsp@2993000}		TEGRA_SID_APE>,
+			      <&{/ether_qos@2490000}	TEGRA_SID_EQOS>,
 			      <&{/sdhci@3460000}	TEGRA_SID_SDMMC4A>,
 			      <&{/sdhci@3440000}	TEGRA_SID_SDMMC3A>,
 			      <&{/sdhci@3420000}	TEGRA_SID_SDMMC2A>,
@@ -280,8 +281,8 @@
 			};
 			ape_domain {
 				address-space = <&ape_as>;
-				sid-list = <TEGRA_SID_APE>;
-				sid-list-len = <1>;
+				sid-list = <TEGRA_SID(APE) TEGRA_SID(EQOS)>;
+				sid-list-len = <2>;
 			};
 			xusb_host_domain {
 				address-space = <&common_as>;

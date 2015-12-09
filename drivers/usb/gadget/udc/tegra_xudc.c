@@ -3472,6 +3472,11 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 		val &= ~(BLCG_DFPCI | BLCG_UFPCI | BLCG_FE |
 				BLCG_COREPLL_PWRDN);
 		xudc_writel(xudc, val, BLCG);
+	} else if (XUDC_IS_T186(xudc)) {
+		/* T186 WAR: Disable BLCG COREPLL_PWRDN */
+		val = xudc_readl(xudc, BLCG);
+		val &= ~BLCG_COREPLL_PWRDN;
+		xudc_writel(xudc, val, BLCG);
 	}
 
 	tegra_xudc_fpci_ipfs_init(xudc);

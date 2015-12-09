@@ -54,6 +54,7 @@ struct tegra_edid_pvt {
 	u16			hdr_desired_max_luma;
 	u16			hdr_desired_max_frame_avg_luma;
 	u16			hdr_desired_min_luma;
+	u32			quirks;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
 };
@@ -614,6 +615,16 @@ bool tegra_edid_is_420db_present(struct tegra_edid *edid)
 	return edid->data->db420_present;
 }
 
+u32 tegra_edid_get_quirks(struct tegra_edid *edid)
+{
+	if (!edid || !edid->data) {
+		pr_warn("edid invalid\n");
+		return false;
+	}
+
+	return edid->data->quirks;
+}
+
 u16 tegra_edid_get_ex_colorimetry(struct tegra_edid *edid)
 {
 	if (!edid || !edid->data) {
@@ -700,6 +711,8 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 	new_data->eld.product_id[1] = data[0x9];
 	new_data->eld.manufacture_id[0] = data[0xA];
 	new_data->eld.manufacture_id[1] = data[0xB];
+	new_data->quirks = tegra_edid_lookup_quirks(specs->manufacturer,
+		specs->model, specs->monitor);
 
 	extension_blocks = data[0x7e];
 

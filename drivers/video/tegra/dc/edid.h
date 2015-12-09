@@ -128,6 +128,10 @@ enum {
 /* Flag fallback edid is in use. */
 #define EDID_ERRORS_USING_FALLBACK	0x04
 
+#define TEGRA_EDID_QUIRK_NONE      (0)
+/* TV doesn't support YUV420, but declares support */
+#define TEGRA_EDID_QUIRK_NO_YUV (1 << 0)
+
 struct tegra_edid {
 	struct tegra_edid_pvt	*data;
 
@@ -175,7 +179,9 @@ bool tegra_edid_support_yuv422(struct tegra_edid *edid);
 bool tegra_edid_support_yuv444(struct tegra_edid *edid);
 u16 tegra_edid_get_ex_colorimetry(struct tegra_edid *edid);
 int tegra_edid_get_eld(struct tegra_edid *edid, struct tegra_edid_hdmi_eld *elddata);
-
+u32 tegra_edid_get_quirks(struct tegra_edid *edid);
+u32 tegra_edid_lookup_quirks(const char *manufacturer, u32 model,
+	const char *monitor_name);
 struct tegra_dc_edid *tegra_edid_get_data(struct tegra_edid *edid);
 void tegra_edid_put_data(struct tegra_dc_edid *data);
 int tegra_dc_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs, int num);

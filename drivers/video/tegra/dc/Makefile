@@ -35,7 +35,8 @@ obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
 ccflags-$(CONFIG_TEGRA_HDMIHDCP) += -DCONFIG_HDCP
 endif
 endif
-obj-y += edid.o
+#endif
+obj-y += edid.o edid_quirks.o
 ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-$(CONFIG_TEGRA_NVSD) += nvsd.o
 endif

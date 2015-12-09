@@ -29,15 +29,22 @@
 #include <linux/hashtable.h>
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
+#include "gk20a/gk20a_scale.h"
 #include "platform_tegra.h"
 #include "gr_gp10b.h"
 #include "ltc_gp10b.h"
 #include "hw_gr_gp10b.h"
 #include "hw_ltc_gp10b.h"
 #include "gp10b_sysfs.h"
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #define GP10B_MAX_SUPPORTED_FREQS 11
 static unsigned long gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS];
+
+#define TEGRA_GP10B_BW_PER_FREQ 64
+#define TEGRA_DDR4_BW_PER_FREQ 16
+
+#define EMC_BW_RATIO  (TEGRA_GP10B_BW_PER_FREQ / TEGRA_DDR4_BW_PER_FREQ)
 
 static struct {
 	char *name;
@@ -83,6 +90,30 @@ static int gp10b_tegra_get_clocks(struct platform_device *pdev)
 
 	return 0;
 }
+
+static void gp10b_tegra_scale_init(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+	struct tegra_bwmgr_client *bwmgr_handle;
+
+	bwmgr_handle = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_GPU);
+	if (!bwmgr_handle)
+		return;
+
+	profile->private_data = (void *)bwmgr_handle;
+}
+
+static void gp10b_tegra_scale_exit(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+
+	if (profile)
+		tegra_bwmgr_unregister(
+			(struct tegra_bwmgr_client *)profile->private_data);
+}
+
 
 static int gp10b_tegra_probe(struct platform_device *pdev)
 {
@@ -145,6 +176,9 @@ static int gp10b_tegra_late_probe(struct platform_device *pdev)
 	nvhost_register_client_domain(dev_to_genpd(&pdev->dev));
 	/*Create GP10B specific sysfs*/
 	gp10b_create_sysfs(pdev);
+
+	/* Initialise tegra specific scaling quirks */
+	gp10b_tegra_scale_init(pdev);
 	return 0;
 }
 
@@ -155,6 +189,10 @@ static int gp10b_tegra_remove(struct platform_device *pdev)
 	gr_gp10b_remove_sysfs(&pdev->dev);
 	/*Remove GP10B specific sysfs*/
 	gp10b_remove_sysfs(&pdev->dev);
+
+	/* deinitialise tegra specific scaling quirks */
+	gp10b_tegra_scale_exit(pdev);
+
 	return 0;
 
 }
@@ -240,7 +278,6 @@ static void gp10b_tegra_prescale(struct platform_device *pdev)
 	gk20a_dbg_fn("");
 
 	gk20a_pmu_load_norm(g, &avg);
-	/* TBD - Notify EDP about changed constrains */
 
 	gk20a_dbg_fn("done");
 }
@@ -248,8 +285,23 @@ static void gp10b_tegra_prescale(struct platform_device *pdev)
 static void gp10b_tegra_postscale(struct platform_device *pdev,
 					unsigned long freq)
 {
-	/* TBD -  notify EMC about frequency change */
+	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+	struct gk20a *g = get_gk20a(pdev);
+	unsigned long emc_rate;
+
 	gk20a_dbg_fn("");
+	if (profile) {
+		emc_rate = (freq * EMC_BW_RATIO * g->emc3d_ratio) / 1000;
+
+		if (emc_rate > tegra_bwmgr_get_max_emc_rate())
+			emc_rate = tegra_bwmgr_get_max_emc_rate();
+
+		tegra_bwmgr_set_emc(
+			(struct tegra_bwmgr_client *)profile->private_data,
+			emc_rate, TEGRA_BWMGR_SET_EMC_FLOOR);
+	}
+	gk20a_dbg_fn("done");
 }
 
 static unsigned long gp10b_get_clk_rate(struct platform_device *dev)

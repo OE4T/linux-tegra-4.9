@@ -521,7 +521,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	res_wdt = platform_get_resource(pdev, IORESOURCE_MEM, 1);
 	res_tke = platform_get_resource(pdev, IORESOURCE_MEM, 2);
 
-	if (!res_src || !res_wdt) {
+	if (!res_src || !res_wdt || !res_tke) {
 		dev_err(&pdev->dev, "incorrect resources\n");
 		return -ENOENT;
 	}
@@ -541,7 +541,8 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return PTR_ERR(tegra_wdt_t18x->wdt_timer);
 	}
 
-	tegra_wdt_t18x->wdt_tke = devm_ioremap_resource(&pdev->dev, res_tke);
+	tegra_wdt_t18x->wdt_tke = devm_ioremap(&pdev->dev,
+			res_tke->start, resource_size(res_tke));
 	if (IS_ERR(tegra_wdt_t18x->wdt_tke)) {
 		dev_err(&pdev->dev,
 			"Cannot request memregion/iomap res_tke\n");

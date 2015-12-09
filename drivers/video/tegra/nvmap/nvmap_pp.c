@@ -462,10 +462,14 @@ static unsigned long nvmap_page_pool_count_objects(struct shrinker *shrinker,
 static unsigned long nvmap_page_pool_scan_objects(struct shrinker *shrinker,
 						  struct shrink_control *sc)
 {
+	unsigned long remaining;
+
 	pr_debug("sh_pages=%lu", sc->nr_to_scan);
 
-	return sc->nr_to_scan - \
-		nvmap_page_pool_free(&nvmap_dev->pool, sc->nr_to_scan);
+	remaining = nvmap_page_pool_free(&nvmap_dev->pool, sc->nr_to_scan);
+
+	return (remaining == sc->nr_to_scan) ? \
+			   SHRINK_STOP : (sc->nr_to_scan - remaining);
 }
 
 static struct shrinker nvmap_page_pool_shrinker = {

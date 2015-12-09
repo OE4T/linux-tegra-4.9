@@ -54,6 +54,24 @@
 					function = "gpio";
 				};
 
+				pin_gpio1 {
+					pins = "gpio1";
+					function = "fps-out";
+					maxim,fps-source = <FPS_SRC_1>;
+				};
+
+				pin_gpio2 {
+					pins = "gpio2";
+					function = "fps-out";
+					maxim,fps-source = <FPS_SRC_1>;
+				};
+
+				pin_gpio3 {
+					pins = "gpio3";
+					function = "fps-out";
+					maxim,fps-source = <FPS_SRC_1>;
+				};
+
 				pin_gpio4 {
 					pins = "gpio4";
 					function = "32k-out1";
@@ -81,6 +99,29 @@
 				maxim,wdt-boot-timeout = <32>;
 				maxim,wdt-suspend-timeout = <120>;
 				status = "disabled";
+			};
+
+			fps {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				fps@0 {
+					reg = <0>;
+					maxim,active-fps-time-period = <2560>;
+					maxim,suspend-fps-time-period = <640>;
+					maxim,fps-enable-input = <FPS_EN_SRC_EN0>;
+				};
+
+				fps@1 {
+					reg = <1>;
+					maxim,active-fps-time-period = <2560>;
+					maxim,suspend-fps-time-period = <640>;
+					maxim,fps-enable-input = <FPS_EN_SRC_EN1>;
+				};
+
+				fps@2 {
+					reg = <2>;
+					maxim,fps-enable-input = <FPS_EN_SRC_EN0>;
+				};
 			};
 
 			backup-battery {

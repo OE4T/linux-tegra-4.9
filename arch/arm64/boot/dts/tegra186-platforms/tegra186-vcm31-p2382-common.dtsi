@@ -22,6 +22,7 @@
 /memreserve/ 0x80000000 0x00010000;
 
 #include "tegra186-platforms/tegra186-vcm31.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-power-tree-p2382-010-a01-00.dtsi"
 
 / {
         model = "p2382_t186";

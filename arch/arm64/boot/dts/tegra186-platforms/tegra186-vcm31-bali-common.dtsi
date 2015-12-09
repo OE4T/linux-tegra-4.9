@@ -21,6 +21,7 @@
 
 #include "tegra186-platforms/tegra186-vcm31.dtsi"
 #include "tegra186-vcm31-bali-disp.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-power-tree-bali.dtsi"
 
 / {
         model = "t186-vcm31-bali";

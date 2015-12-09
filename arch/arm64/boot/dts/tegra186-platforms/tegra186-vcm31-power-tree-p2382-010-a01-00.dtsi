@@ -12,7 +12,7 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-vcm31-spmic.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-spmic-p2382-010-a01-00.dtsi"
 
 / {
 	ether_qos@2490000 {

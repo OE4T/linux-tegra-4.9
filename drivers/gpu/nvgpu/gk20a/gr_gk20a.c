@@ -5159,7 +5159,7 @@ bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
 	return false;
 }
 
-static void gk20a_gr_clear_sm_hww(struct gk20a *g,
+void gk20a_gr_clear_sm_hww(struct gk20a *g,
 				  u32 gpc, u32 tpc, u32 global_esr)
 {
 	u32 offset = proj_gpc_stride_v() * gpc +

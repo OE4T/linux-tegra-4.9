@@ -3142,6 +3142,10 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_0_r(void)
 {
 	return 0x00504634;
 }
+static inline u32 gr_gpcs_tpcs_sm_dbgr_bpt_pause_mask_r(void)
+{
+	return 0x00419e24;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_stop_on_any_warp_disable_v(void)
 {
 	return 0x00000000;

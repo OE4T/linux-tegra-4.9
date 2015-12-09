@@ -431,6 +431,8 @@ void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine);
 
 /* sm */
 bool gk20a_gr_sm_debugger_attached(struct gk20a *g);
+void gk20a_gr_clear_sm_hww(struct gk20a *g,
+				  u32 gpc, u32 tpc, u32 global_esr);
 
 #define gr_gk20a_elpg_protected_call(g, func) \
 	({ \

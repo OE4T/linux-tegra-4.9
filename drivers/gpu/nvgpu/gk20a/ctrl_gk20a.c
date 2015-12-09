@@ -388,6 +388,26 @@ static int nvgpu_gpu_ioctl_set_debug_mode(
 	return err;
 }
 
+static int nvgpu_gpu_ioctl_trigger_suspend(struct gk20a *g)
+{
+	int err = 0;
+	u32 dbgr_control0;
+
+	mutex_lock(&g->dbg_sessions_lock);
+	/* assert stop trigger. uniformity assumption: all SMs will have
+	 * the same state in dbg_control0. */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r());
+	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f();
+
+	/* broadcast write */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_control0_r(), dbgr_control0);
+
+	mutex_unlock(&g->dbg_sessions_lock);
+	return err;
+}
+
 static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		struct nvgpu_gpu_wait_pause_args *args)
 {
@@ -439,6 +459,57 @@ end:
 	mutex_unlock(&g->dbg_sessions_lock);
 	kfree(w_state);
 	return err;
+}
+
+static int nvgpu_gpu_ioctl_resume_from_pause(struct gk20a *g)
+{
+	int err = 0;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	/* Clear the pause mask to tell the GPU we want to resume everyone */
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_bpt_pause_mask_r(), 0);
+
+	/* explicitly re-enable forwarding of SM interrupts upon any resume */
+	gk20a_writel(g, gr_gpcs_tpcs_tpccs_tpc_exception_en_r(),
+		gr_gpcs_tpcs_tpccs_tpc_exception_en_sm_enabled_f());
+
+	/* Now resume all sms, write a 0 to the stop trigger
+	 * then a 1 to the run trigger */
+	gk20a_resume_all_sms(g);
+
+	mutex_unlock(&g->dbg_sessions_lock);
+	return err;
+}
+
+static int nvgpu_gpu_ioctl_clear_sm_errors(struct gk20a *g)
+{
+	int ret = 0;
+	u32 gpc_offset, tpc_offset, gpc, tpc;
+	struct gr_gk20a *gr = &g->gr;
+	u32 global_esr;
+
+	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
+
+		gpc_offset = proj_gpc_stride_v() * gpc;
+
+		/* check if any tpc has an exception */
+		for (tpc = 0; tpc < gr->tpc_count; tpc++) {
+
+			tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
+
+			global_esr = gk20a_readl(g,
+					gr_gpc0_tpc0_sm_hww_global_esr_r() +
+					gpc_offset + tpc_offset);
+
+			/* clear the hwws, also causes tpc and gpc
+			 * exceptions to be cleared */
+			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr);
+		}
+	}
+
+	return ret;
 }
 
 static int nvgpu_gpu_ioctl_has_any_exception(
@@ -694,9 +765,21 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 				nvgpu_gpu_ioctl_set_debug_mode(g, (struct nvgpu_gpu_sm_debug_mode_args *)buf));
 		break;
 
+	case NVGPU_GPU_IOCTL_TRIGGER_SUSPEND:
+		err = nvgpu_gpu_ioctl_trigger_suspend(g);
+		break;
+
 	case NVGPU_GPU_IOCTL_WAIT_FOR_PAUSE:
-		err =  nvgpu_gpu_ioctl_wait_for_pause(g,
+		err = nvgpu_gpu_ioctl_wait_for_pause(g,
 				(struct nvgpu_gpu_wait_pause_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_RESUME_FROM_PAUSE:
+		err = nvgpu_gpu_ioctl_resume_from_pause(g);
+		break;
+
+	case NVGPU_GPU_IOCTL_CLEAR_SM_ERRORS:
+		err = nvgpu_gpu_ioctl_clear_sm_errors(g);
 		break;
 
 	case NVGPU_GPU_IOCTL_GET_TPC_EXCEPTION_EN_STATUS:

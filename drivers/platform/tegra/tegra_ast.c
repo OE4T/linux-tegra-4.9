@@ -38,8 +38,6 @@
 
 #define AST_MAX_REGION			7
 #define AST_ADDR_MASK			0xfffff000
-#define AST_VM_IDX_MASK			0x00078000
-#define AST_VM_IDX_BIT_SHFT		15
 
 /* TEGRA_APS_AST_CONTROL register fields */
 #define AST_MATCH_ERR_CTRL		0x2
@@ -127,9 +125,8 @@ int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
 	writel(master_base & AST_ADDR_MASK,
 		ast_base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO + roffset);
 
-	writel(((region << AST_VM_IDX_BIT_SHFT) & AST_VM_IDX_MASK) |
-		AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP,
-			ast_base + TEGRA_APS_AST_REGION_0_CONTROL + roffset);
+	writel(AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP,
+		ast_base + TEGRA_APS_AST_REGION_0_CONTROL + roffset);
 
 	writel(0, ast_base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI + roffset);
 

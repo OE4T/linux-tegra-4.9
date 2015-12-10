@@ -1478,6 +1478,10 @@ static inline u32 gr_fecs_ctxsw_idlestate_r(void)
 {
 	return 0x00409420;
 }
+static inline u32 gr_fecs_feature_override_ecc_r(void)
+{
+	return 0x00409658;
+}
 static inline u32 gr_gpc0_gpccs_ctxsw_idlestate_r(void)
 {
 	return 0x00502420;

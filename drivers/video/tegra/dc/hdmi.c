@@ -1778,6 +1778,7 @@ static int tegra_dc_find_hdmi_vic(const struct tegra_dc_mode *mode)
 	unsigned i;
 
 	tegra_dc_to_fb_videomode(&m, mode);
+	m.vmode &= FB_VMODE_INTERLACED;
 
 	for (i = 1; i < HDMI_EXT_MODEDB_SIZE; i++) {
 		const struct fb_videomode *curr = &hdmi_ext_modes[i];

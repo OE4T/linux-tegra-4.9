@@ -2861,6 +2861,8 @@ void tegra_dc_set_out_pin_polars(struct tegra_dc *dc,
 
 static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 {
+	unsigned long refresh;
+
 	if (dc->out->type == TEGRA_DC_OUT_HDMI &&
 			tegra_is_bl_display_initialized(dc->ndev->id)) {
 
@@ -2900,7 +2902,15 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 		val = tegra_dc_readl(dc, DC_DISP_DISP_ACTIVE);
 		mode->h_active = val & 0xffff;
 		mode->v_active = (val >> 16) & 0xffff;
-		tegra_dc_put(dc);
+
+		/* Check the freq setup by the BL, 59.94 or 60Hz
+		 * If 59.94, vmode needs to be FB_VMODE_1000DIV1001
+		 * for seamless
+		 */
+		refresh = tegra_dc_calc_refresh(mode);
+		if (refresh % 1000)
+			mode->vmode |= FB_VMODE_1000DIV1001;
+
 	}
 
 	if (dc->out->type == TEGRA_DC_OUT_RGB  ||

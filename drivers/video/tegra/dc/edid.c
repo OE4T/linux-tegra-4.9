@@ -808,7 +808,7 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid, struct fb_monspecs *specs)
 				    (rate > (60000 - 20) && rate < (60000 + 20))) &&
 				    frac_n < max_modes) {
 					memcpy(&frac_modes[frac_n], &specs->modedb[j], sizeof(struct fb_videomode));
-					frac_modes[frac_n].pixclock = frac_modes[frac_n].pixclock * 1000 / 1001;
+					frac_modes[frac_n].pixclock = frac_modes[frac_n].pixclock * 1001 / 1000;
 					frac_modes[frac_n].vmode |= FB_VMODE_1000DIV1001;
 					frac_n++;
 				}

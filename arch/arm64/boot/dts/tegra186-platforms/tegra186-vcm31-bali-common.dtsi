@@ -67,6 +67,7 @@
 	spi@c260000 { /* Tegra SPI1: RH, slave */
 		status = "okay";
 		compatible = "nvidia,tegra186-spi-slave";
+		nvidia,slave-ready-gpio = <&tegra_gpio TEGRA_GPIO(V,6) 1>;
 		spi@0 {
 			compatible = "spidev";
 			/* reg = <0> - CS0 */
@@ -75,6 +76,9 @@
 			spi-max-frequency = <25000000>;
 			spi-cpha;
 			spi-cpol;
+			controller-data {
+				nvidia,variable-length-transfer;
+			};
 		};
 	};
 

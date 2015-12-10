@@ -600,7 +600,7 @@ struct nvgpu_dbg_gpu_timeout_args {
 	_IOR(NVGPU_DBG_GPU_IOCTL_MAGIC, 11, struct nvgpu_dbg_gpu_timeout_args)
 
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_TIMEOUT)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_GET_TIMEOUT)
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)
 

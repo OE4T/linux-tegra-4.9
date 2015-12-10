@@ -34,6 +34,7 @@
 #include "ltc_gp10b.h"
 #include "hw_gr_gp10b.h"
 #include "hw_ltc_gp10b.h"
+#include "gp10b_sysfs.h"
 
 #define GP10B_MAX_SUPPORTED_FREQS 11
 static unsigned long gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS];
@@ -142,7 +143,8 @@ static int gp10b_tegra_late_probe(struct platform_device *pdev)
 {
 	/* Make gk20a power domain a subdomain of host1x */
 	nvhost_register_client_domain(dev_to_genpd(&pdev->dev));
-
+	/*Create GP10B specific sysfs*/
+	gp10b_create_sysfs(pdev);
 	return 0;
 }
 
@@ -150,9 +152,9 @@ static int gp10b_tegra_remove(struct platform_device *pdev)
 {
 	/* remove gk20a power subdomain from host1x */
 	nvhost_unregister_client_domain(dev_to_genpd(&pdev->dev));
-
 	gr_gp10b_remove_sysfs(&pdev->dev);
-
+	/*Remove GP10B specific sysfs*/
+	gp10b_remove_sysfs(&pdev->dev);
 	return 0;
 
 }

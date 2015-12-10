@@ -28,6 +28,7 @@
 #include "hw_proj_gp10b.h"
 #include "hw_ctxsw_prog_gp10b.h"
 #include "hw_mc_gp10b.h"
+#include "gp10b_sysfs.h"
 #include <linux/vmalloc.h>
 
 static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
@@ -1702,6 +1703,14 @@ static u32 gp10b_mask_hww_warp_esr(u32 hww_warp_esr)
 	return hww_warp_esr;
 }
 
+static u32 get_ecc_override_val(struct gk20a *g)
+{
+	if (tegra_fuse_readl(FUSE_OPT_ECC_EN))
+		return gk20a_readl(g, gr_fecs_feature_override_ecc_r());
+	else
+		return 0;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -1739,4 +1748,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 		gr_gp10b_pre_process_sm_exception;
 	gops->gr.handle_fecs_error = gr_gp10b_handle_fecs_error;
 	gops->gr.create_gr_sysfs = gr_gp10b_create_sysfs;
+	gops->gr.get_lrf_tex_ltc_dram_override = get_ecc_override_val;
 }

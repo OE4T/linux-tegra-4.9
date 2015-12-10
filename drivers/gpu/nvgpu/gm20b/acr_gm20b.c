@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1300,6 +1300,8 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	pmu_enable_irq(pmu, false);
 	pmu->isr_enabled = false;
 	mutex_unlock(&pmu->isr_mutex);
+	/*Clearing mailbox register used to reflect capabilities*/
+	gk20a_writel(g, pwr_falcon_mailbox1_r(), 0);
 	err = bl_bootstrap(pmu, desc, bl_sz);
 	if (err)
 		return err;
@@ -1436,6 +1438,8 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 	if (completion)
 		gk20a_err(dev_from_gk20a(g), "ACR boot timed out");
 	else {
+		g->acr.capabilities = gk20a_readl(g, pwr_falcon_mailbox1_r());
+		gm20b_dbg_pmu("ACR capabilities %x\n", g->acr.capabilities);
 		data = gk20a_readl(g, pwr_falcon_mailbox0_r());
 		if (data) {
 			gk20a_err(dev_from_gk20a(g),

@@ -1,7 +1,7 @@
 /*
  * GM20B ACR
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -123,6 +123,10 @@
 	(FLCN_NL_UCODE_HDR_APP_DATA_END_IND(N) + 1)
 #define FLCN_NL_UCODE_HDR_OS_OVL_SIZE_IND(N) \
 	(FLCN_NL_UCODE_HDR_APP_DATA_END_IND(N) + 2)
+
+enum acr_capabilities {
+	ACR_LRF_TEX_LTC_DRAM_PRIV_MASK_ENABLE_LS_OVERRIDE =     (0x00000001),
+};
 
 /*Externs*/
 
@@ -397,6 +401,7 @@ struct acr_gm20b {
 	struct flcn_bl_dmem_desc bl_dmem_desc;
 	const struct firmware *pmu_fw;
 	const struct firmware *pmu_desc;
+	u32 capabilities;
 };
 
 void gm20b_init_secure_pmu(struct gpu_ops *gops);

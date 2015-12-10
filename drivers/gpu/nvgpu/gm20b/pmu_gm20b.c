@@ -1,7 +1,7 @@
 /*
  * GM20B PMU
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
 *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -308,4 +308,5 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.write_dmatrfbase = gm20b_write_dmatrfbase;
 	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
 	gops->pmu.pmu_pg_grinit_param = NULL;
+	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 }

@@ -1429,14 +1429,6 @@ static int gk20a_probe(struct platform_device *dev)
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_init(dev);
 
-	if (platform->late_probe) {
-		err = platform->late_probe(dev);
-		if (err) {
-			dev_err(&dev->dev, "late probe failed");
-			return err;
-		}
-	}
-
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dev.dma_parms = &gk20a->dma_parms;
 	dma_set_max_seg_size(&dev->dev, UINT_MAX);
@@ -1474,6 +1466,14 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->pmu.aelpg_param[2] = APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
 	gk20a->pmu.aelpg_param[3] = APCTRL_POWER_BREAKEVEN_DEFAULT_US;
 	gk20a->pmu.aelpg_param[4] = APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
+
+	if (platform->late_probe) {
+		err = platform->late_probe(dev);
+		if (err) {
+			dev_err(&dev->dev, "late probe failed");
+			return err;
+		}
+	}
 
 	gk20a_create_sysfs(dev);
 

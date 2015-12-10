@@ -1232,4 +1232,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.mask_hww_warp_esr = gk20a_mask_hww_warp_esr;
 	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gk20a_handle_tex_exception;
+	gops->gr.get_lrf_tex_ltc_dram_override = NULL;
 }

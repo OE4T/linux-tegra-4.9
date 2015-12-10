@@ -2771,6 +2771,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.write_dmatrfbase = gk20a_write_dmatrfbase;
 	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
 	gops->pmu.pmu_pg_grinit_param = NULL;
+	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)

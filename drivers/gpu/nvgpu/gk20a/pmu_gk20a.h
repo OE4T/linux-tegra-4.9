@@ -50,7 +50,7 @@
 #define PMU_AP_IDLE_MASK_GRAPHICS	(PMU_AP_IDLE_MASK_HIST_IDX_1)
 
 #define APP_VERSION_NC_1	20313802
-#define APP_VERSION_NC_0	20120791
+#define APP_VERSION_NC_0	20360931
 #define APP_VERSION_GM20B_4 19008461
 #define APP_VERSION_GM20B_3 18935575
 #define APP_VERSION_GM20B_2 18694072
@@ -451,6 +451,8 @@ struct pmu_ucode_desc {
 #define PMU_UNIT_PERFMON_T18X	(0x11)
 #define PMU_UNIT_PERFMON	(0x12)
 #define PMU_UNIT_RC			(0x1F)
+#define PMU_UNIT_FECS_MEM_OVERRIDE      (0x1E)
+
 #define PMU_UNIT_END		(0x23)
 
 #define PMU_UNIT_TEST_START	(0xFE)
@@ -814,6 +816,47 @@ struct pmu_acr_msg {
 #define PMU_DOMAIN_GROUP_GPC2CLK	1
 #define PMU_DOMAIN_GROUP_NUM		2
 
+/* FECS mem override command*/
+
+#define PMU_LRF_TEX_LTC_DRAM_CMD_ID_EN_DIS   0
+
+/*!
+ * Enable/Disable FECS error feature
+ */
+struct pmu_cmd_lrf_tex_ltc_dram_en_dis {
+	/*Command type must be first*/
+	u8  cmd_type;
+	/*unit bitmask*/
+	u8  en_dis_mask;
+};
+
+struct pmu_lrf_tex_ltc_dram_cmd {
+	union {
+		u8 cmd_type;
+		struct pmu_cmd_lrf_tex_ltc_dram_en_dis en_dis;
+	};
+};
+
+/*  FECS mem override messages*/
+#define PMU_LRF_TEX_LTC_DRAM_MSG_ID_EN_DIS    0
+
+struct pmu_msg_lrf_tex_ltc_dram_en_dis {
+	/*!
+	 * Must be at start
+	 */
+	u8 msg_type;
+	u8 en_fail_mask;
+	u8 dis_fail_mask;
+	u32 pmu_status;
+};
+
+struct pmu_lrf_tex_ltc_dram_msg {
+	union {
+		u8 msg_type;
+		struct pmu_msg_lrf_tex_ltc_dram_en_dis en_dis;
+	};
+};
+
 /* TBD: smart strategy */
 #define PMU_PERFMON_PCT_TO_INC		58
 #define PMU_PERFMON_PCT_TO_DEC		23
@@ -958,6 +1001,7 @@ struct pmu_cmd {
 		struct pmu_pg_cmd pg;
 		struct pmu_zbc_cmd zbc;
 		struct pmu_acr_cmd acr;
+		struct pmu_lrf_tex_ltc_dram_cmd lrf_tex_ltc_dram;
 	} cmd;
 };
 
@@ -969,6 +1013,7 @@ struct pmu_msg {
 		struct pmu_pg_msg pg;
 		struct pmu_rc_msg rc;
 		struct pmu_acr_msg acr;
+		struct pmu_lrf_tex_ltc_dram_msg lrf_tex_ltc_dram;
 	} msg;
 };
 
@@ -1318,6 +1363,7 @@ struct pmu_gk20a {
 	u8 pmu_mode; /*Added for GM20b, and ACR*/
 	u32 falcon_id;
 	u32 aelpg_param[5];
+	u32 override_done;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);

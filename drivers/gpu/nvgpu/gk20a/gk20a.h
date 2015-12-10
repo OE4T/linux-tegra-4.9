@@ -207,6 +207,7 @@ struct gpu_ops {
 		int (*handle_tex_exception)(struct gk20a *g, u32 gpc, u32 tpc,
 						bool *post_event);
 		void (*create_gr_sysfs)(struct platform_device *dev);
+		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {
@@ -434,6 +435,8 @@ struct gpu_ops {
 			u32 *gating_cnt);
 		int (*pmu_pg_grinit_param)(struct gk20a *g,
 			u8 grfeaturemask);
+		int (*send_lrf_tex_ltc_dram_overide_en_dis_cmd)
+			(struct gk20a *g, u32 mask);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;

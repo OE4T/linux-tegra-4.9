@@ -368,7 +368,6 @@ static void eqos_wrapper_tx_descriptor_init_single_q(
 	ptx_ring->dirty_tx = 0;
 	ptx_ring->queue_stopped = 0;
 	ptx_ring->tx_pkt_queued = 0;
-	ptx_ring->packet_count = 0;
 	ptx_ring->free_desc_cnt = TX_DESC_CNT;
 
 	hw_if->tx_desc_init(pdata, qinx);
@@ -548,8 +547,8 @@ static void eqos_tx_skb_free_mem_single_q(struct eqos_prv_data *pdata,
 	 * Caller ensures that hw is no longer accessing these descriptors
 	 */
 	while (ptx_ring->tx_pkt_queued > 0) {
-		eqos_unmap_tx_skb(pdata,
-				  GET_TX_BUF_PTR(qinx, ptx_ring->dirty_tx));
+		tx_swcx_free(pdata,
+			     GET_TX_BUF_PTR(qinx, ptx_ring->dirty_tx));
 
 		INCR_TX_DESC_INDEX(ptx_ring->dirty_tx, 1);
 		ptx_ring->free_desc_cnt++;
@@ -797,6 +796,7 @@ static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
 
 	if (dma_mapping_error((&pdata->pdev->dev), ptx_swcx_desc->dma)) {
 		pr_err("failed to do the dma map\n");
+		ptx_swcx_desc->dma = 0;
 		return -ENOMEM;
 	}
 	ptx_swcx_desc->len = size;
@@ -824,6 +824,7 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 	if (dma_mapping_error((&pdata->pdev->dev),
 				ptx_swcx_desc->dma)) {
 		pr_err("failed to do the dma map\n");
+		ptx_swcx_desc->dma = 0;
 		return -ENOMEM;
 	}
 	ptx_swcx_desc->len = size;
@@ -835,193 +836,196 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 
 
 /*!
- * \details This function is invoked by start_xmit functions. This function
- * will get the dma/physical address of the packet to be transmitted and
- * its length. All this information about the packet to be transmitted is
- * stored in private data structure and same is used later in the driver to
- * setup the descriptor for transmission.
+ * \details This function is invoked by start_xmit functions. Given a skb
+ * this function will allocate and initialize tx_swcx entries.
+ * Function needs to handle case where there is not enough free tx_swcx to
+ * handle the skb.  A free tx_swcx entry is one with len set to zero.
+ * Note that since tx_swcx mirrors the tx descriptor ring, an entry must
+ * be used if a context descriptor is needed.  A len value of "-1" is used for
+ * these tx_swcx entries.
  *
  * \param[in] dev – pointer to net device structure.
  * \param[in] skb – pointer to socket buffer structure.
  *
  * \return unsigned int
  *
- * \retval count – number of packet to be programmed in the descriptor or
- * zero on failure.
+ * \retval count of number of tx_swcx entries allocated.  "-1" is returned
+ * if there is a map failure.  "0" is returned if there is not a free
+ * tx_swcx entry.
  */
 
-static unsigned int eqos_map_skb(struct net_device *dev,
-					struct sk_buff *skb)
+static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	UINT qinx = skb_get_queue_mapping(skb);
-	struct tx_ring *ptx_ring =
-	    GET_TX_WRAPPER_DESC(qinx);
-	struct tx_swcx_desc *ptx_swcx_desc =
-	    GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
-	struct tx_swcx_desc *pprev_tx_swcx_desc = NULL;
-	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
-	UINT varvlan_pkt;
-	int index = (int)ptx_ring->cur_tx;
-	unsigned int frag_cnt = skb_shinfo(skb)->nr_frags;
-	unsigned int hdr_len = 0;
-	unsigned int i;
-	unsigned int count = 0, offset = 0, size;
-	int len;
-	int vartso_enable = 0;
-	int ret;
 
-	DBGPR("-->eqos_map_skb: cur_tx = %d, qinx = %u\n",
-		ptx_ring->cur_tx, qinx);
+	uint qinx = skb_get_queue_mapping(skb);
+
+	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(qinx);
+	int idx = (int)ptx_ring->cur_tx;
+
+	struct tx_swcx_desc *ptx_swcx = NULL;
+	struct s_tx_pkt_features *ppkt_opts = GET_TX_PKT_FEATURES_PTR;
+
+	uint frag_cnt;
+	uint hdr_len = 0;
+	uint i;
+	uint cnt = 0, offset = 0, size;
+	int len;
+	int totlen = 0;
+	int ret = -1;
+	bool is_pkt_tso, is_pkt_vlan;
+
+	DBGPR("-->%s(): cur_tx = %d, qinx = %u\n", __func__, idx, qinx);
 
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(
-		tx_pkt_features->pkt_attributes, vartso_enable);
+		ppkt_opts->pkt_attributes, is_pkt_tso);
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD(
-			tx_pkt_features->pkt_attributes, varvlan_pkt);
-	if (varvlan_pkt == 0x1) {
-		DBGPR("Skipped preparing index %d "\
-			"(VLAN Context descriptor)\n\n", index);
-		INCR_TX_DESC_INDEX(index, 1);
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
-	} else if ((vartso_enable == 0x1) &&
-		   (ptx_ring->default_mss != tx_pkt_features->mss)) {
-		/* keep space for CONTEXT descriptor in the RING */
-		INCR_TX_DESC_INDEX(index, 1);
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
+		ppkt_opts->pkt_attributes, is_pkt_vlan);
+
+	if ((is_pkt_vlan) ||
+	    ((is_pkt_tso) && (ptx_ring->default_mss != ppkt_opts->mss))) {
+		ptx_swcx = GET_TX_BUF_PTR(qinx, idx);
+		if (ptx_swcx->len)
+			goto tx_swcx_alloc_failed;
+
+		ptx_swcx->len = -1;
+		cnt++;
+		INCR_TX_DESC_INDEX(idx, 1);
 	}
-	if (vartso_enable) {
+
+	if (is_pkt_tso) {
 		hdr_len = skb_transport_offset(skb) + tcp_hdrlen(skb);
 		len = hdr_len;
 	} else {
 		len = (skb->len - skb->data_len);
 	}
 
-	DBGPR("skb->len - skb->data_len = %d, hdr_len = %d\n",
-				len, hdr_len);
+	DBGPR("%s(): skb->len - skb->data_len = %d, hdr_len = %d\n",
+	      __func__, len, hdr_len);
+
+	totlen += len;
 	while (len) {
+		ptx_swcx = GET_TX_BUF_PTR(qinx, idx);
+		if (ptx_swcx->len)
+			goto tx_swcx_alloc_failed;
+
 		size = min(len, EQOS_MAX_DATA_PER_TXD);
 
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
-		ret = eqos_map_non_page_buffs_64(pdata, ptx_swcx_desc,
+		ret = eqos_map_non_page_buffs_64(pdata, ptx_swcx,
 						 skb, offset, size);
 		if (ret < 0)
-			goto err_out_dma_map_fail;
+			goto tx_swcx_map_failed;
 
 		len -= size;
 		offset += size;
-		pprev_tx_swcx_desc = ptx_swcx_desc;
-		INCR_TX_DESC_INDEX(index, 1);
-		count++;
+		cnt++;
+
+		INCR_TX_DESC_INDEX(idx, 1);
 	}
 
 	/* Process remaining pay load in skb->data in case of TSO packet */
-	if (vartso_enable) {
+	if (is_pkt_tso) {
 		len = ((skb->len - skb->data_len) - hdr_len);
+		totlen += len;
 		while (len > 0) {
+			ptx_swcx = GET_TX_BUF_PTR(qinx, idx);
+			if (ptx_swcx->len)
+				goto tx_swcx_alloc_failed;
+
 			size = min(len, EQOS_MAX_DATA_PER_TXD);
 
-			ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
-			ret = eqos_map_non_page_buffs_64(pdata, ptx_swcx_desc,
+			ret = eqos_map_non_page_buffs_64(pdata, ptx_swcx,
 							 skb, offset, size);
 			if (ret < 0)
-				goto err_out_dma_map_fail;
+				goto tx_swcx_map_failed;
 
 			len -= size;
 			offset += size;
-			if (ptx_swcx_desc->dma != 0) {
-				pprev_tx_swcx_desc = ptx_swcx_desc;
-				INCR_TX_DESC_INDEX(index, 1);
-				count++;
-			}
+			cnt++;
+
+			INCR_TX_DESC_INDEX(idx, 1);
 		}
 	}
 
 	/* Process fragmented skb's */
+	frag_cnt = skb_shinfo(skb)->nr_frags;
 	for (i = 0; i < frag_cnt; i++) {
 		struct skb_frag_struct *frag = &skb_shinfo(skb)->frags[i];
 
 		len = frag->size;
+		totlen += len;
 		offset = 0;
 		while (len) {
+			ptx_swcx = GET_TX_BUF_PTR(qinx, idx);
+		if (ptx_swcx->len)
+			goto tx_swcx_alloc_failed;
+
 			size = min(len, EQOS_MAX_DATA_PER_TXD);
 
-			ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
-			ret = eqos_map_page_buffs_64(pdata, ptx_swcx_desc,
+			ret = eqos_map_page_buffs_64(pdata, ptx_swcx,
 						     frag, offset, size);
 			if (ret < 0)
-				goto err_out_dma_map_fail;
+				goto tx_swcx_map_failed;
 
 			len -= size;
 			offset += size;
-			if (ptx_swcx_desc->dma != 0) {
-				pprev_tx_swcx_desc = ptx_swcx_desc;
-				INCR_TX_DESC_INDEX(index, 1);
-				count++;
-			}
+			cnt++;
+
+			INCR_TX_DESC_INDEX(idx, 1);
 		}
 	}
-	/* If current descriptor is not inuse, then adjust pointer to
-	 * last used one.
-	 */
-	if (ptx_swcx_desc->dma == 0)
-		ptx_swcx_desc = pprev_tx_swcx_desc;
-	ptx_swcx_desc->skb = skb;
+	ptx_swcx->skb = skb;
 
-	DBGPR("<--eqos_map_skb: ptx_swcx_desc->dma = %#llx\n",
-	      (ULONG_LONG) ptx_swcx_desc->dma);
+	ppkt_opts->desc_cnt = cnt;
+	if (!is_pkt_tso)
+		ppkt_opts->pay_len = totlen;
 
-	return count;
+	DBGPR("<--%s(): ptx_swcx->dma = %#llx\n",
+	      __func__, (ULONG_LONG) ptx_swcx->dma);
 
- err_out_dma_map_fail:
-	pr_err("Tx DMA map failed\n");
+	return cnt;
 
-	for (; count > 0; count--) {
-		DECR_TX_DESC_INDEX(index);
-		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, index);
-		eqos_unmap_tx_skb(pdata, ptx_swcx_desc);
+tx_swcx_alloc_failed:
+
+	ret = 0;
+	DECR_TX_DESC_INDEX(idx);
+
+tx_swcx_map_failed:
+	while (cnt) {
+		ptx_swcx = GET_TX_BUF_PTR(qinx, idx);
+		tx_swcx_free(pdata, ptx_swcx);
+		DECR_TX_DESC_INDEX(idx);
+		cnt--;
 	}
-
-	return 0;
+	return ret;
 }
 
-/*!
-* \brief API to release the skb.
-*
-* \details This function is called in process_tx_completions() to release
-* the skb for the successfully transmited packets.
-*
-* \param[in] pdata - pointer to private data structure.
-* \param[in] buffer - pointer to *_tx_buffer structure
-*
-* \return void
-*/
 
-static void eqos_unmap_tx_skb(struct eqos_prv_data *pdata,
-				     struct tx_swcx_desc *ptx_swcx_desc)
+static void tx_swcx_free(struct eqos_prv_data *pdata,
+			 struct tx_swcx_desc *ptx_swcx)
 {
-	DBGPR("-->eqos_unmap_tx_skb\n");
-
-	if (ptx_swcx_desc->dma) {
-		if (ptx_swcx_desc->buf1_mapped_as_page == Y_TRUE)
-			dma_unmap_page((&pdata->pdev->dev), ptx_swcx_desc->dma,
-				       ALIGN_SIZE(ptx_swcx_desc->len),
+	DBGPR("-->%s()\n", __func__);
+	if (ptx_swcx->dma) {
+		if (ptx_swcx->buf1_mapped_as_page == Y_TRUE)
+			dma_unmap_page((&pdata->pdev->dev), ptx_swcx->dma,
+				       ALIGN_SIZE(ptx_swcx->len),
 				       DMA_TO_DEVICE);
 		else
 			dma_unmap_single((&pdata->pdev->dev),
-					 ptx_swcx_desc->dma,
-					 ALIGN_SIZE(ptx_swcx_desc->len),
+					 ptx_swcx->dma,
+					 ALIGN_SIZE(ptx_swcx->len),
 					 DMA_TO_DEVICE);
 
-		ptx_swcx_desc->dma = 0;
-		ptx_swcx_desc->len = 0;
+		ptx_swcx->dma = 0;
 	}
 
-	if (ptx_swcx_desc->skb != NULL) {
-		dev_kfree_skb_any(ptx_swcx_desc->skb);
-		ptx_swcx_desc->skb = NULL;
+	if (ptx_swcx->skb != NULL) {
+		dev_kfree_skb_any(ptx_swcx->skb);
+		ptx_swcx->skb = NULL;
 	}
+	ptx_swcx->len = 0;
 
-	DBGPR("<--eqos_unmap_tx_skb\n");
+	DBGPR("<--%s()\n", __func__);
 }
 
 /*!
@@ -1137,8 +1141,8 @@ void eqos_init_function_ptrs_desc(struct desc_if_struct *desc_if)
 	desc_if->free_buff_and_desc = free_buffer_and_desc;
 	desc_if->realloc_skb = eqos_re_alloc_skb;
 	desc_if->unmap_rx_skb = eqos_unmap_rx_skb;
-	desc_if->unmap_tx_skb = eqos_unmap_tx_skb;
-	desc_if->map_tx_skb = eqos_map_skb;
+	desc_if->tx_swcx_free = tx_swcx_free;
+	desc_if->tx_swcx_alloc = tx_swcx_alloc;
 	desc_if->tx_free_mem = eqos_tx_free_mem;
 	desc_if->rx_free_mem = eqos_rx_free_mem;
 	desc_if->wrapper_tx_desc_init = eqos_wrapper_tx_descriptor_init;

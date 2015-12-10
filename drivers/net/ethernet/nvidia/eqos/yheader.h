@@ -426,22 +426,6 @@
 	(((inx) + (offset)) >= TX_DESC_CNT ?\
 	((inx) + (offset) - TX_DESC_CNT) : ((inx) + (offset)))
 
-#define GET_CURRENT_XFER_DESC_CNT(qinx)\
-	(pdata->tx_queue[(qinx)].ptx_ring.packet_count)
-
-#define GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, offset)\
-	(GET_CURRENT_XFER_DESC_CNT((qinx)) == 0) ? (TX_DESC_CNT - 1) :\
-	((GET_CURRENT_XFER_DESC_CNT((qinx)) == 1) ? (INCR_TX_LOCAL_INDEX((start_index), (offset))) :\
-	INCR_TX_LOCAL_INDEX((start_index), (GET_CURRENT_XFER_DESC_CNT((qinx)) + (offset) - 1)))
-
-#define GET_TX_TOT_LEN(buffer, start_index, packet_count, total_len) do {\
-  int i, pkt_idx = (start_index);\
-  for(i = 0; i < (packet_count); i++) {\
-	(total_len) += ((buffer)[pkt_idx].len);\
-    pkt_idx = INCR_TX_LOCAL_INDEX(pkt_idx, 1);\
-  } \
-} while (0)
-
 /* Helper macros for RX descriptor handling */
 
 #define GET_RX_QUEUE_PTR(qinx) (&(pdata->rx_queue[(qinx)]))
@@ -682,7 +666,8 @@ struct s_tx_pkt_features {
 	UCHAR tucso;
 	USHORT tucse;
 	UINT pkt_type;
-  ULONG tcp_hdr_len;
+	ULONG tcp_hdr_len;
+	uint desc_cnt;
 };
 
 typedef struct s_tx_pkt_features t_tx_pkt_features;
@@ -937,7 +922,7 @@ struct hw_if_struct {
 struct tx_swcx_desc {
 	dma_addr_t dma;		/* dma address of skb */
 	struct sk_buff *skb;	/* virtual address of skb */
-	unsigned short len;	/* length of first skb */
+	unsigned short len;	/* length of fragment */
 	unsigned char buf1_mapped_as_page;
 };
 
@@ -960,7 +945,6 @@ struct tx_ring {
 	unsigned int tx_pkt_queued;	/* always gives total number of packets
 					queued for transmission */
 	unsigned int queue_stopped;
-	int packet_count;
 
 	UINT tx_threshold_val;	/* contain bit value for TX threshold */
 	UINT tsf_on;		/* set to 1 if TSF is enabled else set to 0 */
@@ -1054,9 +1038,8 @@ struct desc_if_struct {
 	void (*realloc_skb) (struct eqos_prv_data *, UINT);
 	void (*unmap_rx_skb) (struct eqos_prv_data *,
 			      struct rx_swcx_desc *);
-	void (*unmap_tx_skb) (struct eqos_prv_data *,
-			      struct tx_swcx_desc *);
-	unsigned int (*map_tx_skb) (struct net_device *, struct sk_buff *);
+	void (*tx_swcx_free)(struct eqos_prv_data *, struct tx_swcx_desc *);
+	int (*tx_swcx_alloc)(struct net_device *, struct sk_buff *);
 	void (*tx_free_mem) (struct eqos_prv_data *);
 	void (*rx_free_mem) (struct eqos_prv_data *);
 	void (*wrapper_tx_desc_init) (struct eqos_prv_data *);
@@ -1593,8 +1576,6 @@ void eqos_stop_all_ch_tx_dma(struct eqos_prv_data *pdata);
 UCHAR get_tx_queue_count(void);
 UCHAR get_rx_queue_count(void);
 void eqos_mmc_read(struct eqos_mmc_counters *mmc);
-UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
-		struct sk_buff *skb, UINT qinx);
 
 int eqos_ptp_init(struct eqos_prv_data *pdata);
 void eqos_ptp_remove(struct eqos_prv_data *pdata);

@@ -1599,87 +1599,6 @@ static void eqos_set_rx_mode(struct net_device *dev)
 	DBGPR("<--eqos_set_rx_mode\n");
 }
 
-/*!
-* \brief API to calculate number of descriptor.
-*
-* \details This function is invoked by start_xmit function. This function
-* calculates number of transmit descriptor required for a given transfer.
-*
-* \param[in] pdata - pointer to private data structure
-* \param[in] skb - pointer to sk_buff structure
-* \param[in] qinx - Queue number.
-*
-* \return integer
-*
-* \retval number of descriptor required.
-*/
-
-UINT eqos_get_total_desc_cnt(struct eqos_prv_data *pdata,
-			     struct sk_buff *skb, UINT qinx)
-{
-	UINT count = 0, size = 0, i;
-	INT length = 0;
-	unsigned int frag_cnt = skb_shinfo(skb)->nr_frags;
-#ifdef EQOS_ENABLE_VLAN_TAG
-	struct hw_if_struct *hw_if = &pdata->hw_if;
-	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
-	struct tx_ring *ptx_ring =
-	    GET_TX_WRAPPER_DESC(qinx);
-#endif
-
-	/* SG fragment count */
-	for (i = 0; i < frag_cnt; i++) {
-		struct skb_frag_struct *frag = &skb_shinfo(skb)->frags[i];
-
-		length = frag->size;
-		while (length) {
-			size = min(length, EQOS_MAX_DATA_PER_TXD);
-			count++;
-			length -= size;
-		}
-	}
-
-	/* descriptors required based on data limit per descriptor */
-	length = (skb->len - skb->data_len);
-	while (length) {
-		size = min(length, EQOS_MAX_DATA_PER_TXD);
-		count++;
-		length = length - size;
-	}
-
-	/* we need one context descriptor to carry tso details */
-	if (skb_shinfo(skb)->gso_size != 0)
-		count++;
-
-#ifdef EQOS_ENABLE_VLAN_TAG
-	ptx_ring->vlan_tag_present = 0;
-	if (vlan_tx_tag_present(skb)) {
-		USHORT vlan_tag = vlan_tx_tag_get(skb);
-		vlan_tag |= (skb->priority << 13);
-		ptx_ring->vlan_tag_present = 1;
-		if (vlan_tag != ptx_ring->vlan_tag_id ||
-		    ptx_ring->context_setup == 1) {
-			ptx_ring->vlan_tag_id = vlan_tag;
-			if (Y_TRUE == ptx_ring->tx_vlan_tag_via_reg) {
-				pr_err
-				    ("VLAN control info update via register\n\n");
-				hw_if->enable_vlan_reg_control(ptx_ring);
-			} else {
-				hw_if->enable_vlan_desc_control(pdata);
-				TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
-				    (tx_pkt_features->pkt_attributes, 1);
-				TX_PKT_FEATURES_VLAN_TAG_VT_WR
-				    (tx_pkt_features->vlan_tag, vlan_tag);
-				/* we need one context descriptor to carry vlan tag info */
-				count++;
-			}
-		}
-		pdata->xstats.tx_vlan_pkt_n++;
-	}
-#endif
-
-	return count;
-}
 
 /*!
 * \brief API to transmit the packets
@@ -1700,18 +1619,15 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	UINT qinx = skb_get_queue_mapping(skb);
-	struct tx_ring *ptx_ring =
-	    GET_TX_WRAPPER_DESC(qinx);
+
+	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(qinx);
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
+
 	unsigned long flags;
-	unsigned int desc_count = 0;
-	unsigned int count = 0;
+	int cnt = 0;
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 	INT retval = NETDEV_TX_OK;
-#ifdef EQOS_ENABLE_VLAN_TAG
-	UINT varvlan_pkt;
-#endif
 	int tso;
 
 	DBGPR("-->eqos_start_xmit: skb->len = %d, qinx = %u\n", skb->len, qinx);
@@ -1727,22 +1643,33 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		goto tx_netdev_return;
 	}
 
-	if ((pdata->eee_enabled) && (pdata->tx_path_in_lpi_mode) &&
-	    (!pdata->use_lpi_tx_automate))
-		eqos_disable_eee_mode(pdata);
 
 	memset(&pdata->tx_pkt_features, 0, sizeof(pdata->tx_pkt_features));
 
-	/* check total number of desc required for current xfer */
-	desc_count = eqos_get_total_desc_cnt(pdata, skb, qinx);
-	if (ptx_ring->free_desc_cnt < desc_count) {
-		ptx_ring->queue_stopped = 1;
-		netif_stop_subqueue(dev, qinx);
-		DBGPR("stopped TX queue(%d) since there are no sufficient "
-		      "descriptor available for the current transfer\n", qinx);
-		retval = NETDEV_TX_BUSY;
-		goto tx_netdev_return;
+#ifdef EQOS_ENABLE_VLAN_TAG
+	ptx_ring->vlan_tag_present = 0;
+	if (vlan_tx_tag_present(skb)) {
+		USHORT vlan_tag = vlan_tx_tag_get(skb);
+
+		vlan_tag |= (skb->priority << 13);
+		ptx_ring->vlan_tag_present = 1;
+		if (vlan_tag != ptx_ring->vlan_tag_id ||
+		    ptx_ring->context_setup == 1) {
+			ptx_ring->vlan_tag_id = vlan_tag;
+			if (Y_TRUE == ptx_ring->tx_vlan_tag_via_reg) {
+				pr_err("VLAN control info update via reg\n");
+				hw_if->enable_vlan_reg_control(ptx_ring);
+			} else {
+				hw_if->enable_vlan_desc_control(pdata);
+				TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
+				    (tx_pkt_features->pkt_attributes, 1);
+				TX_PKT_FEATURES_VLAN_TAG_VT_WR
+				    (tx_pkt_features->vlan_tag, vlan_tag);
+			}
+		}
+		pdata->xstats.tx_vlan_pkt_n++;
 	}
+#endif
 
 	/* check for hw tstamping */
 	if (pdata->hw_feat.tsstssel && pdata->hwts_tx_en) {
@@ -1774,29 +1701,25 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 							      1);
 	}
 
-	count = desc_if->map_tx_skb(dev, skb);
-	if (count == 0) {
+	cnt = desc_if->tx_swcx_alloc(dev, skb);
+	if (cnt <= 0) {
+		if (cnt == 0) {
+			ptx_ring->queue_stopped = 1;
+			netif_stop_subqueue(dev, qinx);
+			DBGPR("%s(): TX ring full for queue %d\n",
+			      __func__, qinx);
+			retval = NETDEV_TX_BUSY;
+			goto tx_netdev_return;
+		}
 		dev_kfree_skb_any(skb);
 		retval = NETDEV_TX_OK;
 		goto tx_netdev_return;
 	}
 
-	ptx_ring->packet_count = count;
-
-	if (tso && (ptx_ring->default_mss != tx_pkt_features->mss))
-		count++;
-
 	dev->trans_start = jiffies;
 
-#ifdef EQOS_ENABLE_VLAN_TAG
-	TX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_RD
-	    (tx_pkt_features->pkt_attributes, varvlan_pkt);
-	if (varvlan_pkt == 0x1)
-		count++;
-#endif
-
-	ptx_ring->free_desc_cnt -= count;
-	ptx_ring->tx_pkt_queued += count;
+	ptx_ring->free_desc_cnt -= cnt;
+	ptx_ring->tx_pkt_queued += cnt;
 
 #ifdef EQOS_ENABLE_TX_PKT_DUMP
 	print_pkt(skb, skb->len, 1, (ptx_ring->cur_tx - 1));
@@ -1805,6 +1728,10 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 #ifdef ENABLE_CHANNEL_DATA_CHECK
 	check_channel_data(skb, qinx, 0);
 #endif
+
+	if ((pdata->eee_enabled) && (pdata->tx_path_in_lpi_mode) &&
+	    (!pdata->use_lpi_tx_automate))
+		eqos_disable_eee_mode(pdata);
 
 	/* fallback to software time stamping if core doesn't
 	 * support hardware time stamping */
@@ -2163,7 +2090,7 @@ static void process_tx_completions(struct net_device *dev,
 			dev->stats.tx_packets++;
 		}
 		dev->stats.tx_bytes += ptx_swcx_desc->len;
-		desc_if->unmap_tx_skb(pdata, ptx_swcx_desc);
+		desc_if->tx_swcx_free(pdata, ptx_swcx_desc);
 
 		/* reset the descriptor so that driver/host can reuse it */
 		hw_if->tx_desc_reset(ptx_ring->dirty_tx, pdata, qinx);

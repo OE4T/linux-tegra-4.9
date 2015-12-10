@@ -64,7 +64,7 @@
 		status = "okay";
 	};
 
-	spi@c260000 { /* Tegra SPI1: RH, slave */
+	spi@c260000 { /* Tegra SPI2: RH, slave */
 		status = "okay";
 		compatible = "nvidia,tegra186-spi-slave";
 		nvidia,slave-ready-gpio = <&tegra_gpio TEGRA_GPIO(V,6) 1>;
@@ -82,7 +82,7 @@
 		};
 	};
 
-	spi@3210000 { /* Tegra SPI2: master */
+	spi@3210000 { /* Tegra SPI1: master */
 		status = "okay";
 		spi@0 {				/* gyro */
 			compatible = "spidev";

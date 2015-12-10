@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,7 @@
 #include <linux/platform_device.h>
 #include <linux/tegra-mce.h>
 #include <linux/platform/tegra/ari_mca.h>
+#include <linux/ioport.h>
 
 #define ARI_BANK_PRINTF		0
 #define ARI_MCA_SAVE_PREBOOT	0
@@ -530,6 +531,8 @@ static void print_mca_error_code(struct seq_file *file,
 static void print_address(struct seq_file *file, u64 addr)
 {
 	u64 addr_type;
+	u64 phys_addr;
+	struct resource *res;
 
 	addr_type = get_mca_addr_type(addr);
 
@@ -537,7 +540,14 @@ static void print_address(struct seq_file *file, u64 addr)
 		  (addr_type & 0x02) ? "Non-" : "",
 		  (addr_type & 0x01) ? "MMIO" : "DRAM");
 
-	print_mca(file, "\tAddress = 0x%llx\n", get_mca_addr_addr(addr));
+	phys_addr = get_mca_addr_addr(addr);
+	res = locate_resource(&iomem_resource, phys_addr);
+	if (res == NULL)
+		print_mca(file, "\tAddress = 0x%llx (Unknown Device)\n",
+			  phys_addr);
+	else
+		print_mca(file, "\tAddress = 0x%llx -- %s + 0x%llx\n",
+			  phys_addr, res->name, phys_addr - res->start);
 }
 
 /* SYS:DPMU Decoders */

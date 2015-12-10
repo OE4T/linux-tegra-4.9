@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/bridge_mca.h>
+#include <linux/ioport.h>
 
 #define BUS_ADDR_MASK 0x3fffffff
 #define BUS_ERROR_TYPE_MASK 0x3e0
@@ -30,6 +31,8 @@ static void bus_print_error(struct bridge_mca_bank *bank) {
 	int bus_status;
 	int error_type;
 	int count = 0;
+	struct resource *res = NULL;
+	u64 addr;
 
 	if (bank->error_fifo_count(bank->vaddr) == 0)
 		return;
@@ -47,7 +50,17 @@ static void bus_print_error(struct bridge_mca_bank *bank) {
 		bus_addr &= BUS_ADDR_MASK;
 		error_type = (bus_status & BUS_ERROR_TYPE_MASK) >>
 			     BUS_ERROR_TYPE_SHIFT;
-		pr_crit("Bus addr[%d]: 0x%x\n", count, bus_addr);
+
+		addr = bus_addr;
+		res = locate_resource(&iomem_resource, addr);
+		if (res == NULL)
+			pr_crit("Bus addr[%d]: 0x%x (Unknown)\n",
+				count, bus_addr);
+		else
+			pr_crit("Bus addr[%d]: 0x%x -- %s + 0x%llx\n",
+				count, bus_addr, res->name,
+				bus_addr - res->start);
+
 		pr_crit("Error status[%d] 0x%x: %s\n", count, bus_status,
 			(error_type >= bank->max_error ? "Unknown" :
 			 bank->errors[error_type].desc));

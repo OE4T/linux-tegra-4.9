@@ -5471,7 +5471,7 @@ int gk20a_gr_isr(struct gk20a *g)
 					gk20a_dbg_gpu_post_events(fault_ch);
 			}
 
-			if (need_reset)
+			if (need_reset && ch)
 				gk20a_set_error_notifier(ch,
 					NVGPU_CHANNEL_GR_ERROR_SW_NOTIFY);
 		}

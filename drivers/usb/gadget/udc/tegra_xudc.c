@@ -1184,7 +1184,7 @@ __tegra_xudc_ep_dequeue(struct tegra_xudc_ep *ep,
 		if (r == req)
 			break;
 	}
-	if (!r)
+	if (r != req)
 		return -EINVAL;
 
 	/* Request hasn't been queued in the transfer ring yet. */

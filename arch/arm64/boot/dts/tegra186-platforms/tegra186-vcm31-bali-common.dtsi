@@ -279,7 +279,7 @@
 	};
 
 	pcie-controller@10003000 {
-		status = "okay";
+		status = "disabled";
 	};
 
 	ahci-sata@3507000 {

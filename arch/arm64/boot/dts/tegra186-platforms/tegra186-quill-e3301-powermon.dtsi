@@ -20,6 +20,7 @@
 			reg = <0x40>;
 			ti,trigger-config = <0x7003>;
 			ti,continuous-config = <0x7c07>;
+			ti,enable-forced-continuous;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			channel@0 {
@@ -44,6 +45,7 @@
 			reg = <0x41>;
 			ti,trigger-config = <0x7003>;
 			ti,continuous-config = <0x7c07>;
+			ti,enable-forced-continuous;
 			#address-cells = <1>;
 			#size-cells = <0>;
 			channel@0 {

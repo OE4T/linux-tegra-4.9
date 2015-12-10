@@ -392,7 +392,7 @@ void channel_gk20a_disable(struct channel_gk20a *ch)
 			ccsr_channel_enable_clr_true_f());
 }
 
-void gk20a_channel_abort(struct channel_gk20a *ch)
+void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 {
 	struct channel_gk20a_job *job, *n;
 	bool released_job_semaphore = false;
@@ -403,6 +403,9 @@ void gk20a_channel_abort(struct channel_gk20a *ch)
 	ch->has_timedout = true;
 
 	ch->g->ops.fifo.disable_channel(ch);
+
+	if (channel_preempt)
+		ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
 
 	/* ensure no fences are pending */
 	mutex_lock(&ch->sync_lock);
@@ -455,8 +458,7 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 
 void gk20a_disable_channel(struct channel_gk20a *ch)
 {
-	gk20a_channel_abort(ch);
-	ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
+	gk20a_channel_abort(ch, true);
 	channel_gk20a_update_runlist(ch, false);
 }
 
@@ -1621,7 +1623,7 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 			gk20a_fifo_abort_tsg(g, ch->tsgid);
 		} else {
 			gk20a_fifo_set_ctx_mmu_error_ch(g, ch);
-			gk20a_channel_abort(ch);
+			gk20a_channel_abort(ch, false);
 		}
 	} else {
 		/* If failing engine, trigger recovery */

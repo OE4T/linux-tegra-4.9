@@ -566,7 +566,7 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 		break;
 	case TEGRA_VGPU_FIFO_INTR_MMU_FAULT:
 		vgpu_fifo_set_ctx_mmu_error(g, ch);
-		gk20a_channel_abort(ch);
+		gk20a_channel_abort(ch, false);
 		break;
 	default:
 		WARN_ON(1);

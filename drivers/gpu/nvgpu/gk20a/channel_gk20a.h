@@ -195,7 +195,7 @@ void gk20a_channel_close(struct channel_gk20a *ch);
 bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 					    u32 timeout_delta_ms);
 void gk20a_disable_channel(struct channel_gk20a *ch);
-void gk20a_channel_abort(struct channel_gk20a *ch);
+void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt);
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout);
 void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error);
 void gk20a_channel_semaphore_wakeup(struct gk20a *g);

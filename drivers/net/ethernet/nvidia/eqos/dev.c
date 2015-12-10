@@ -2372,6 +2372,9 @@ static INT set_half_duplex(void)
 
 	MAC_MCR_DM_WR(0);
 
+	/* Need to do WAR to flush tx q when going to hd */
+	MTL_Q0TOMR_FTQ_WR(1);
+
 	return Y_SUCCESS;
 }
 
@@ -2923,6 +2926,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	    GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
 	struct s_tx_desc *ptx_desc =
 	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
+	struct s_tx_desc *plast_desc;
 	struct s_tx_context_desc *TX_CONTEXT_DESC =
 	    GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	UINT varcsum_enable;
@@ -2932,14 +2936,14 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 #endif
 	INT i;
 	INT start_index = ptx_ring->cur_tx;
-	INT last_index, original_start_index = ptx_ring->cur_tx;
+	INT original_start_index = ptx_ring->cur_tx;
 	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
 	UINT varpay_len = 0;
 	UINT vartcp_hdr_len = 0;
 	UINT varptp_enable = 0;
-	INT total_len = 0;
+	uint desc_cnt = tx_pkt_features->desc_cnt;
 
 	DBGPR("-->pre_transmit: qinx = %u\n", qinx);
 
@@ -2961,6 +2965,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		start_index = ptx_ring->cur_tx;
 		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+		desc_cnt--;
 	}
 #endif				/* EQOS_ENABLE_VLAN_TAG */
 
@@ -2989,6 +2994,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		start_index = ptx_ring->cur_tx;
 		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+		desc_cnt--;
 	}
 
 	/* update the first buffer pointer and length */
@@ -3000,18 +3006,10 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 				0xFFFFFFFF);
 	TX_NORMAL_DESC_TDES2_HL_B1L_WR(ptx_desc->tdes2, ptx_swcx_desc->len);
 
-	if (vartso_enable) {
-		/* update TCP payload length (only for the descriptor with FD set) */
-		TX_PKT_FEATURES_PAY_LEN_RD(tx_pkt_features->pay_len,
-					   varpay_len);
-		/* tdes3[17:0] will be TCP payload length */
-		ptx_desc->tdes3 |= varpay_len;
-	} else {
-		/* update total length of packet */
-		GET_TX_TOT_LEN(GET_TX_BUF_PTR(qinx, 0), ptx_ring->cur_tx,
-			       GET_CURRENT_XFER_DESC_CNT(qinx), total_len);
-		TX_NORMAL_DESC_TDES3_FL_WR(ptx_desc->tdes3, total_len);
-	}
+	/* update TCP payload length (only for the descriptor with FD set) */
+	TX_PKT_FEATURES_PAY_LEN_RD(tx_pkt_features->pay_len, varpay_len);
+	/* tdes3[17:0] will be TCP payload length */
+	ptx_desc->tdes3 |= varpay_len;
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	/* Insert a VLAN tag with a tag value programmed in MAC Reg 24 or
@@ -3063,10 +3061,12 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	}
 
 	INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+	plast_desc = ptx_desc;
 	ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 	ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
+	desc_cnt--;
 
-	for (i = 1; i < GET_CURRENT_XFER_DESC_CNT(qinx); i++) {
+	for (i = 0; i < desc_cnt; i++) {
 		/* update the first buffer pointer and length */
 		TX_NORMAL_DESC_TDES0_WR(ptx_desc->tdes0,
 					(ptx_swcx_desc->dma) & 0xFFFFFFFF);
@@ -3083,16 +3083,15 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		TX_NORMAL_DESC_TDES3_CTXT_WR(ptx_desc->tdes3, 0);
 
 		INCR_TX_DESC_INDEX(ptx_ring->cur_tx, 1);
+		plast_desc = ptx_desc;
 		ptx_desc = GET_TX_DESC_PTR(qinx, ptx_ring->cur_tx);
 		ptx_swcx_desc = GET_TX_BUF_PTR(qinx, ptx_ring->cur_tx);
 	}
 	/* Mark it as LAST descriptor */
-	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 0);
-	ptx_desc = GET_TX_DESC_PTR(qinx, last_index);
-	TX_NORMAL_DESC_TDES3_LD_WR(ptx_desc->tdes3, 0x1);
+	TX_NORMAL_DESC_TDES3_LD_WR(plast_desc->tdes3, 0x1);
 
 	/* set Interrupt on Completion for last descriptor */
-	TX_NORMAL_DESC_TDES2_IC_WR(ptx_desc->tdes2, 0x1);
+	TX_NORMAL_DESC_TDES2_IC_WR(plast_desc->tdes2, 0x1);
 
 	/* set OWN bit of FIRST descriptor at end to avoid race condition */
 	ptx_desc = GET_TX_DESC_PTR(qinx, start_index);
@@ -3105,8 +3104,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 
 	/* issue a poll command to Tx DMA by writing address
 	 * of next immediate free descriptor */
-	last_index = GET_CURRENT_XFER_LAST_DESC_INDEX(qinx, start_index, 1);
-	DMA_TDTP_TPDR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, last_index));
+	DMA_TDTP_TPDR_WR(qinx, GET_TX_DESC_DMA_ADDR(qinx, ptx_ring->cur_tx));
 
 	if (pdata->eee_enabled) {
 		/* restart EEE timer */
@@ -3691,8 +3689,6 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	MTL_QTOMR_TXQEN_WR(qinx, queue_data->q_op_mode);
 	/* Transmit Queue weight */
 	MTL_QW_ISCQW_WR(qinx, (0x10 + qinx));
-
-	MTL_QROMR_FEP_WR(qinx, 0x1);
 
 	/* Configure for Jumbo frame in MTL */
 	i = 1;

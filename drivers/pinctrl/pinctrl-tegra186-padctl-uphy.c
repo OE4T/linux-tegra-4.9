@@ -617,6 +617,10 @@ static const char * const source_pll_states[] = {
 	"PLL_POWER_UP_HW_SEQ",
 };
 
+struct padctl_context {
+	u32 vbus_id;
+};
+
 struct tegra_padctl_uphy {
 	struct device *dev;
 	void __iomem *padctl_regs;
@@ -701,6 +705,7 @@ struct tegra_padctl_uphy {
 	bool otg_vbus_alwayson;
 
 	struct regulator_bulk_data *supplies;
+	struct padctl_context padctl_context;
 };
 
 #ifdef VERBOSE_DEBUG
@@ -4936,11 +4941,23 @@ static int tegra186_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
 	return 0;
 }
 
+static void tegra186_padctl_save(struct tegra_padctl_uphy *uphy)
+{
+	uphy->padctl_context.vbus_id = padctl_readl(uphy, USB2_VBUS_ID);
+}
+
+static void tegra186_padctl_restore(struct tegra_padctl_uphy *uphy)
+{
+	padctl_writel(uphy, uphy->padctl_context.vbus_id, USB2_VBUS_ID);
+}
+
 static int tegra186_padctl_uphy_suspend(struct device *dev)
 {
 	struct tegra_padctl_uphy *uphy = dev_get_drvdata(dev);
 
 	dev_dbg(dev, "%s\n", __func__);
+
+	tegra186_padctl_save(uphy);
 
 	return tegra186_uphy_pll_deinit(uphy);
 }
@@ -4950,6 +4967,8 @@ static int tegra186_padctl_uphy_resume(struct device *dev)
 	struct tegra_padctl_uphy *uphy = dev_get_drvdata(dev);
 
 	dev_dbg(dev, "%s\n", __func__);
+
+	tegra186_padctl_restore(uphy);
 
 	return tegra186_uphy_pll_init(uphy);
 }

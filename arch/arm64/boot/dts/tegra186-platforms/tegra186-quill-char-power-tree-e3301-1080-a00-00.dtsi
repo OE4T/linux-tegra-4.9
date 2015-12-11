@@ -101,9 +101,8 @@
 	};
 
 	ufshci@2450000 {
-		vddio_ufs_ap-supply = <&vdd_1v8_sw>;
-		vddio_ufs_fl-supply = <&vdd_1v8_sw>;
-		vdd_3v3_ufs-supply = <&spmic_sd3>;
+		vddio-ufs-supply = <&spmic_sd1>;
+		vddio-ufs-ap-supply = <&spmic_ldo7>;
 	};
 
 	pcie-controller@10003000 {

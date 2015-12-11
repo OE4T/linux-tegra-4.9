@@ -78,9 +78,10 @@
 	spi@3230000 { /* Tegra SPI3 <-> VCM SPID: HD, DAB AIC, */
 		status = "okay";
 		spi@0 {
-			compatible = "spidev";
+			compatible = "saf36xx";
 			reg = <0>;
-			spi-max-frequency = <25000000>;
+			spi-max-frequency = <4000000>;
+			spi-cpha;
 		};
 	};
 
@@ -183,7 +184,12 @@
 		id = <0>;
 		rst-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(A, 7) 0>;
 	};
-
+	saf36xx { /* Saturn */
+		compatible = "nvidia,tegra-saf36xx";
+		id = <0>;
+		sat-rst-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(E, 1) 0>;
+		sat-spi-int-gpio = <&tegra_gpio TEGRA_GPIO(V, 7) 0>;
+	};
 	padctl_uphy: pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&p2382_uphy_default>;

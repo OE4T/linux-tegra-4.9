@@ -19,6 +19,7 @@
 #include "mm_gm20b.h"
 
 /*Defines*/
+#define ACR_COMPLETION_TIMEOUT_MS 10000 /*in msec */
 
 /*chip specific defines*/
 #define MAX_SUPPORTED_LSFM 3 /*PMU, FECS, GPCCS*/

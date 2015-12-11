@@ -1386,7 +1386,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	gm20b_init_pmu_setup_hw1(g, desc, acr->hsbl_ucode.size);
 	/* Poll for HALT */
 	if (b_wait_for_halt) {
-		err = pmu_wait_for_halt(g, gk20a_get_gr_idle_timeout(g));
+		err = pmu_wait_for_halt(g, ACR_COMPLETION_TIMEOUT_MS);
 		if (err == 0) {
 			/* Clear the HALT interrupt */
 		  if (clear_halt_interrupt_status(g, gk20a_get_gr_idle_timeout(g)))
@@ -1414,31 +1414,36 @@ err_done:
 /*!
 *	Wait for PMU to halt
 *	@param[in]	g		GPU object pointer
-*	@param[in]	timeout_us	Timeout in msec for PMU to halt
+*	@param[in]	timeout		Timeout in msec for PMU to halt
 *	@return '0' if PMU halts
 */
 int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
+	int completion = -EBUSY;
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);
 
 	while (time_before(jiffies, end_jiffies) ||
 			!tegra_platform_is_silicon()) {
 		data = gk20a_readl(g, pwr_falcon_cpuctl_r());
-		if (data & pwr_falcon_cpuctl_halt_intr_m())
+		if (data & pwr_falcon_cpuctl_halt_intr_m()) {
 			/*CPU is halted break*/
+			completion = 0;
 			break;
-		timeout--;
+		}
 		udelay(1);
 	}
-	if (timeout == 0)
-		return -EBUSY;
-	data = gk20a_readl(g, pwr_falcon_mailbox0_r());
-	if (data) {
-		gk20a_err(dev_from_gk20a(g), "ACR boot failed, err %x", data);
-		return -EAGAIN;
+	if (completion)
+		gk20a_err(dev_from_gk20a(g), "ACR boot timed out");
+	else {
+		data = gk20a_readl(g, pwr_falcon_mailbox0_r());
+		if (data) {
+			gk20a_err(dev_from_gk20a(g),
+				"ACR boot failed, err %x", data);
+			completion = -EAGAIN;
+		}
 	}
-	return 0;
+	return completion;
 }
 
 /*!

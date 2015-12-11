@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -21,17 +21,14 @@
 / {
 	host1x {
 		vi {
-			csic@54081038 {
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					port@0 {
-						reg = <0>;
-						csi_in0: endpoint@0 {
-							bus-width = <2>;
-							remote-endpoint = <&ov5693_out0>;
-						};
+			num-channels = <1>;
+			ports {
+				#address-cells = <1>;
+				#size-cells = <0>;
+				port@0 {
+					reg = <0>;
+					vi_in0: endpoint {
+						remote-endpoint = <&ov5693_out0>;
 					};
 				};
 			};
@@ -49,7 +46,7 @@
 				reg = <0x36>;
 
 				/* V4L2 device node location */
-				devnode = "/dev/camera/video2";
+				devnode = "video0";
 
 				/* Physical dimensions of sensor */
 				physical_w = "3.674";
@@ -266,8 +263,9 @@
 					port@0 {
 						reg = <0>;
 						ov5693_out0: endpoint {
+							csi-port = <2>;
 							bus-width = <2>;
-							remote-endpoint = <&csi_in0>;
+							remote-endpoint = <&vi_in0>;
 						};
 					};
 				};

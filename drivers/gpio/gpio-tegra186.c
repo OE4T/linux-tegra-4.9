@@ -261,6 +261,18 @@ static inline bool is_gpio_accessible(u32 offset)
 	return false;
 }
 
+int tegra_gpio_is_enabled(int gpio, int *is_gpio, int *is_input)
+{
+	u32 val;
+	if (is_gpio_accessible(gpio)) {
+		val = tegra_gpio_readl(gpio, GPIO_ENB_CONFIG_REG);
+		*is_gpio = val & 0x1;
+		*is_input = tegra_gpio_readl(gpio, GPIO_OUT_CTRL_REG);
+	}
+	return 0;
+}
+EXPORT_SYMBOL(tegra_gpio_is_enabled);
+
 static void tegra_gpio_enable(int gpio)
 {
 	tegra_gpio_update(gpio, GPIO_ENB_CONFIG_REG, 0x1, 0x1);

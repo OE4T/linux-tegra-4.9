@@ -1,7 +1,7 @@
 /*
  * FPDLink Serializer driver
  *
- * Copyright (C) 2014-2015 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2016 NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -24,19 +24,27 @@
 #include <linux/of_gpio.h>
 #include <linux/delay.h>
 #include <linux/regmap.h>
+#include <linux/list.h>
 
 #include <mach/dc.h>
 
 #include "dc_priv.h"
 #include "hdmi2fpd_ds90uh949.h"
-#include "hdmi.h"
 
 static struct tegra_dc_hdmi2fpd_data *hdmi2fpd;
 static struct i2c_client *ds90uh949_i2c_client;
 
-int hdmi2fpd_enable(struct tegra_dc_hdmi_data *hdmi)
+struct i2c_client_list {
+	struct list_head i2c_list;
+	int type;
+	struct i2c_client *ds90uh949_i2c_client;
+};
+
+struct i2c_client_list ds90uh949_i2c;
+
+int hdmi2fpd_enable(struct tegra_dc *dc)
 {
-	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(hdmi);
+	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(dc);
 	int err;
 
 	if (hdmi2fpd && hdmi2fpd->hdmi2fpd_enabled)
@@ -55,9 +63,9 @@ int hdmi2fpd_enable(struct tegra_dc_hdmi_data *hdmi)
 	return err;
 }
 
-void hdmi2fpd_disable(struct tegra_dc_hdmi_data *hdmi)
+void hdmi2fpd_disable(struct tegra_dc *dc)
 {
-	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(hdmi);
+	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(dc);
 
 	mutex_lock(&hdmi2fpd->lock);
 	/* Turn off serializer chip */
@@ -71,14 +79,14 @@ void hdmi2fpd_disable(struct tegra_dc_hdmi_data *hdmi)
 }
 
 #ifdef CONFIG_PM
-void hdmi2fpd_suspend(struct tegra_dc_hdmi_data *hdmi)
+void hdmi2fpd_suspend(struct tegra_dc *dc)
 {
-	hdmi2fpd_disable(hdmi);
+	hdmi2fpd_disable(dc);
 }
 
-int hdmi2fpd_resume(struct tegra_dc_hdmi_data *hdmi)
+int hdmi2fpd_resume(struct tegra_dc *dc)
 {
-	return hdmi2fpd_enable(hdmi);
+	return hdmi2fpd_enable(dc);
 }
 #endif
 
@@ -87,7 +95,7 @@ static struct regmap_config hdmi2fpd_regmap_config = {
 	.val_bits = 8,
 };
 
-static int of_hdmi2fpd_parse_platform_data(struct tegra_dc_hdmi_data *hdmi,
+static int of_hdmi2fpd_parse_platform_data(struct tegra_dc *dc,
 						struct i2c_client *client)
 {
 	struct device_node *np = client->dev.of_node;
@@ -96,7 +104,7 @@ static int of_hdmi2fpd_parse_platform_data(struct tegra_dc_hdmi_data *hdmi,
 	int err = 0;
 
 	if (!np) {
-		dev_err(&hdmi->dc->ndev->dev,
+		dev_err(&dc->ndev->dev,
 				"hdmi2fpd: device node not defined in DT\n");
 		err = -EINVAL;
 		goto err;
@@ -107,11 +115,14 @@ static int of_hdmi2fpd_parse_platform_data(struct tegra_dc_hdmi_data *hdmi,
 	hdmi2fpd->en_gpio_flags = flags;
 
 	if (!hdmi2fpd->en_gpio) {
-		dev_err(&hdmi->dc->ndev->dev,
+		dev_err(&dc->ndev->dev,
 				"hdmi2fpd: gpio number not provided\n");
 		err = -EINVAL;
 		goto err;
 	}
+
+	if (!of_property_read_u32(np, "out-type", &temp))
+		hdmi2fpd->out_type = temp;
 
 	if (!of_property_read_u32(np, "ti,power-on-delay", &temp))
 		hdmi2fpd->power_on_delay = temp;
@@ -122,21 +133,35 @@ err:
 	return err;
 }
 
-int hdmi2fpd_init(struct tegra_dc_hdmi_data *hdmi)
+struct i2c_client *get_i2c_client(struct tegra_dc *dc)
+{
+	struct list_head *pos;
+	struct i2c_client_list *tmp;
+	struct device_node *np;
+	u32 out_type;
+
+	list_for_each(pos, &ds90uh949_i2c.i2c_list) {
+		tmp = list_entry(pos, struct i2c_client_list, i2c_list);
+		np = tmp->ds90uh949_i2c_client->dev.of_node;
+		if (!of_property_read_u32(np, "out-type", &out_type))
+			if (out_type == dc->out->type)
+				return tmp->ds90uh949_i2c_client;
+	}
+	return NULL;
+}
+
+int hdmi2fpd_init(struct tegra_dc *dc)
 {
 	int err = 0;
 
-	if (hdmi2fpd) {
-		tegra_hdmi_set_outdata(hdmi, hdmi2fpd);
-		return err;
-	}
-
-	hdmi2fpd = devm_kzalloc(&hdmi->dc->ndev->dev,
+	hdmi2fpd = devm_kzalloc(&dc->ndev->dev,
 				sizeof(*hdmi2fpd), GFP_KERNEL);
 	if (!hdmi2fpd)
 		return -ENOMEM;
 
-	err = of_hdmi2fpd_parse_platform_data(hdmi, ds90uh949_i2c_client);
+	ds90uh949_i2c_client = get_i2c_client(dc);
+
+	err = of_hdmi2fpd_parse_platform_data(dc, ds90uh949_i2c_client);
 	if (err)
 		return err;
 
@@ -159,18 +184,18 @@ int hdmi2fpd_init(struct tegra_dc_hdmi_data *hdmi)
 		return err;
 	}
 
-	hdmi2fpd->hdmi = hdmi;
+	hdmi2fpd->dc = dc;
 
-	tegra_hdmi_set_outdata(hdmi, hdmi2fpd);
+	tegra_hdmi_set_outdata(dc, hdmi2fpd);
 
 	mutex_init(&hdmi2fpd->lock);
 
 	return err;
 }
 
-void hdmi2fpd_destroy(struct tegra_dc_hdmi_data *hdmi)
+void hdmi2fpd_destroy(struct tegra_dc *dc)
 {
-	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(hdmi);
+	struct tegra_dc_hdmi2fpd_data *hdmi2fpd = tegra_hdmi_get_outdata(dc);
 
 	if (!hdmi2fpd)
 		return;
@@ -182,6 +207,8 @@ void hdmi2fpd_destroy(struct tegra_dc_hdmi_data *hdmi)
 static int ds90uh949_probe(struct i2c_client *client,
 					const struct i2c_device_id *id)
 {
+	struct i2c_client_list *new = (struct i2c_client_list *)
+				kzalloc(sizeof(*new), GFP_KERNEL);
 	if (!i2c_check_functionality(client->adapter,
 					I2C_FUNC_SMBUS_BYTE_DATA)) {
 		dev_err(&client->dev, "SMBUS Byte Data not Supported\n");
@@ -189,6 +216,10 @@ static int ds90uh949_probe(struct i2c_client *client,
 	}
 	ds90uh949_i2c_client = client;
 
+	INIT_LIST_HEAD(&new->i2c_list);
+
+	new->ds90uh949_i2c_client = client;
+	list_add(&new->i2c_list, &ds90uh949_i2c.i2c_list);
 	return 0;
 }
 
@@ -230,6 +261,8 @@ static int __init ds90uh949_i2c_client_init(void)
 {
 	int err = 0;
 
+	INIT_LIST_HEAD(&ds90uh949_i2c.i2c_list);
+
 	err = i2c_add_driver(&ds90uh949_driver);
 	if (err)
 		pr_err("ds90uh949: Failed to add i2c client driver\n");
@@ -241,7 +274,6 @@ static void __exit ds90uh949_i2c_client_exit(void)
 {
 	i2c_del_driver(&ds90uh949_driver);
 }
-
 subsys_initcall(ds90uh949_i2c_client_init);
 module_exit(ds90uh949_i2c_client_exit);
 

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/of_dc.c
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2349,6 +2349,16 @@ struct tegra_dc_platform_data
 				goto fail_parse;
 			else
 				np_target_disp = np_dp_panel;
+
+			if (!of_property_read_u32(np_target_disp,
+					"nvidia,hdmi-fpd-bridge", &temp)) {
+				pdata->default_out->dp_out->
+					hdmi2fpd_bridge_enable = (bool)temp;
+
+				OF_DC_LOG("hdmi2fpd_bridge_enabled %d\n",
+						pdata->default_out->hdmi_out->
+						hdmi2fpd_bridge_enable);
+			}
 
 			/* enable/disable ops for DP monitors */
 			if (!pdata->default_out->enable &&

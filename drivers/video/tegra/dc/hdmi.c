@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -51,6 +51,8 @@
 #include "nvhdcp.h"
 #include <linux/of.h>
 #include <linux/of_address.h>
+
+#include "hdmi2fpd_ds90uh949.h"
 
 /* datasheet claims this will always be 216MHz */
 #define HDMI_AUDIOCLK_FREQ		216000000
@@ -919,7 +921,7 @@ static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 	tegra_nvhdcp_suspend(hdmi->nvhdcp);
 
 	if (hdmi->info.hdmi2fpd_bridge_enable)
-		hdmi2fpd_suspend(hdmi);
+		hdmi2fpd_suspend(dc);
 
 	if (dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0) {
 		int wake_irq = gpio_to_irq(dc->out->hotplug_gpio);
@@ -952,7 +954,7 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 		disable_irq_wake(gpio_to_irq(dc->out->hotplug_gpio));
 
 	if (hdmi->info.hdmi2fpd_bridge_enable)
-		hdmi2fpd_resume(hdmi);
+		hdmi2fpd_resume(dc);
 
 	tegra_nvhdcp_resume(hdmi->nvhdcp);
 }
@@ -1266,7 +1268,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		}
 	}
 	if (hdmi->info.hdmi2fpd_bridge_enable)
-		hdmi2fpd_init(hdmi);
+		hdmi2fpd_init(dc);
 
 	/* NOTE: Below code is applicable to L4T or embedded systems and is
 	 * protected accordingly. This section early enables DC with first mode
@@ -1346,7 +1348,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	hdmi_state_machine_shutdown();
 
 	if (hdmi->info.hdmi2fpd_bridge_enable)
-		hdmi2fpd_destroy(hdmi);
+		hdmi2fpd_destroy(dc);
 
 	i2c_release_client(hdmi->i2c_info.client);
 #ifdef CONFIG_SWITCH
@@ -2264,7 +2266,7 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 	 * don't just assume a connection but check hpd.
 	 */
 	if (hdmi->info.hdmi2fpd_bridge_enable)
-		hdmi2fpd_enable(hdmi);
+		hdmi2fpd_enable(dc);
 
 	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
 	tegra_dc_io_end(dc);
@@ -2277,7 +2279,7 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 
 	if (hdmi->info.hdmi2fpd_bridge_enable)
-		hdmi2fpd_disable(hdmi);
+		hdmi2fpd_disable(dc);
 
 	/*
 	 * set DC to STOP mode

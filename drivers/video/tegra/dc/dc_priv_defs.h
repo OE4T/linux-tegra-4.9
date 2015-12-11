@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -202,7 +202,9 @@ struct tegra_dc {
 	 * a.k.a the call stack above tegra_dc_probe().
 	 */
 	bool				initialized;
-
+#ifdef CONFIG_TEGRA_HDMI2FPD
+	struct tegra_dc_hdmi2fpd_data   *fpddata;
+#endif
 	struct tegra_dc_out		*out;
 	struct tegra_dc_out_ops		*out_ops;
 	void				*out_data;

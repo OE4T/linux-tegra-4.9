@@ -58,6 +58,7 @@
 
 #include <linux/tegra_prod.h>
 
+#include "hdmi2fpd_ds90uh949.h"
 static bool tegra_dp_debug = true;
 module_param(tegra_dp_debug, bool, 0644);
 MODULE_PARM_DESC(tegra_dp_debug, "Enable to print all link configs");
@@ -2120,6 +2121,11 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 	tegra_dc_set_outdata(dc, dp);
 
+	if (dp->pdata->hdmi2fpd_bridge_enable) {
+		hdmi2fpd_init(dc);
+		hdmi2fpd_enable(dc);
+	}
+
 	/*
 	 * We don't really need hpd driver for eDP.
 	 * Nevertheless, go ahead and init hpd driver.
@@ -2667,6 +2673,9 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 		(dp->sor && dp->sor->instance) ? of_find_node_by_path(DPAUX1_NODE) :
 		of_find_node_by_path(DPAUX_NODE);
 
+	if (dp->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_destroy(dc);
+
 	if (dp->sor)
 		tegra_dc_sor_destroy(dp->sor);
 
@@ -2845,6 +2854,9 @@ static void tegra_dc_dp_suspend(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
+	if (dp->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_suspend(dc);
+
 	if (dp->suspended)
 		return;
 
@@ -2869,6 +2881,8 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 
 	tegra_dc_unpowergate_locked(dc);
 
+	if (dp->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_resume(dc);
 	/* Get ready to receive any hpd event */
 	_tegra_dpaux_init(dp);
 	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)

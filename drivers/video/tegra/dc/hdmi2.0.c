@@ -53,6 +53,8 @@
 #include <linux/tegra_prod.h>
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
+#include "hdmi2fpd_ds90uh949.h"
+
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static struct of_device_id tegra_sor_pd[] = {
 	{ .compatible = "nvidia,tegra210-sor-pd", },
@@ -1075,6 +1077,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_set_outdata(dc, hdmi);
 
+	if (hdmi->pdata->hdmi2fpd_bridge_enable) {
+		hdmi2fpd_init(dc);
+		hdmi2fpd_enable(dc);
+	}
 	/* NOTE: Below code is applicable to L4T or embedded systems and is
 	 * protected accordingly. This section early enables DC with first mode
 	 * from the monitor specs.
@@ -1144,6 +1150,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
+	if (hdmi->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_destroy(dc);
 	tegra_dc_sor_destroy(hdmi->sor);
 	tegra_edid_destroy(hdmi->edid);
 	tegra_nvhdcp_destroy(hdmi->nvhdcp);
@@ -2282,6 +2290,8 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
+	if (hdmi->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_disable(dc);
 	hdmi->enabled = false;
 
 #ifdef CONFIG_SWITCH
@@ -2320,6 +2330,9 @@ static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
+	if (hdmi->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_suspend(dc);
+
 	if (dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0) {
 		int wake_irq = gpio_to_irq(dc->out->hotplug_gpio);
 		int ret;
@@ -2343,6 +2356,9 @@ static void tegra_dc_hdmi_resume(struct tegra_dc *dc)
 
 	if (dc->out->flags & TEGRA_DC_OUT_HOTPLUG_WAKE_LP0)
 		disable_irq_wake(gpio_to_irq(dc->out->hotplug_gpio));
+
+	if (hdmi->pdata->hdmi2fpd_bridge_enable)
+		hdmi2fpd_resume(dc);
 
 	cancel_delayed_work(&hdmi->hpd_worker);
 	schedule_delayed_work(&hdmi->hpd_worker,

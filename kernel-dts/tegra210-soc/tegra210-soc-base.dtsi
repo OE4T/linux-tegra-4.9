@@ -1,7 +1,7 @@
 /*
  * tegra210-soc-base.dtsi: SOC specific DTSI file with all node disabled.
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -642,135 +642,15 @@
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_ID_VI>,
 				 <&tegra_car TEGRA210_CLK_ID_CSI>,
-				 <&tegra_car TEGRA210_CLK_ID_PLL_C>;
-			clock-names = "vi", "csi", "parent";
+				 <&tegra_car TEGRA210_CLK_ID_PLL_C>,
+				 <&tegra_car TEGRA210_CLK_ID_CILAB>,
+				 <&tegra_car TEGRA210_CLK_ID_CILCD>,
+				 <&tegra_car TEGRA210_CLK_ID_CILE>;
+			clock-names = "vi", "csi", "cil", "parent";
 			resets = <&tegra_car 20>;
 			reset-names = "vi";
 			#address-cells = <1>;
 			#size-cells = <0>;
-
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-
-				port@0 {
-					reg = <0>;
-
-					vi_in0: endpoint {
-						remote-endpoint = <&csi_out0>;
-					};
-				};
-				port@1 {
-					reg = <1>;
-
-					vi_in1: endpoint {
-						remote-endpoint = <&csi_out1>;
-					};
-				};
-				port@2 {
-					reg = <2>;
-
-					vi_in2: endpoint {
-						remote-endpoint = <&csi_out2>;
-					};
-				};
-				port@3 {
-					reg = <3>;
-
-					vi_in3: endpoint {
-						remote-endpoint = <&csi_out3>;
-					};
-				};
-				port@4 {
-					reg = <4>;
-
-					vi_in4: endpoint {
-						remote-endpoint = <&csi_out4>;
-					};
-				};
-				port@5 {
-					reg = <5>;
-
-					vi_in5: endpoint {
-						remote-endpoint = <&csi_out5>;
-					};
-				};
-			};
-
-			csia@54080838 {
-				compatible = "nvidia,tegra210-csi";
-				reg = <0x0 0x54080838 0x0 0x700>;
-				clocks = <&tegra_car TEGRA210_CLK_ID_CILAB>;
-				clock-names = "cil";
-
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					port@1 {
-						reg = <1>;
-						csi_out0: endpoint@1 {
-							remote-endpoint = <&vi_in0>;
-						};
-					};
-					port@3 {
-						reg = <3>;
-						csi_out1: endpoint@3 {
-							remote-endpoint = <&vi_in1>;
-						};
-					};
-				};
-			};
-
-			csic@54081038 {
-				compatible = "nvidia,tegra210-csi";
-				reg = <0x0 0x54081038 0x0 0x700>;
-				clocks = <&tegra_car TEGRA210_CLK_ID_CILCD>;
-				clock-names = "cil";
-
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					port@1 {
-						reg = <1>;
-						csi_out2: endpoint@1 {
-							remote-endpoint = <&vi_in2>;
-						};
-					};
-					port@3 {
-						reg = <3>;
-						csi_out3: endpoint@3 {
-							remote-endpoint = <&vi_in3>;
-						};
-					};
-				};
-			};
-
-			csie@54081838 {
-				compatible = "nvidia,tegra210-csi";
-				reg = <0x0 0x54081838 0x0 0x700>;
-				clocks = <&tegra_car TEGRA210_CLK_ID_CILE>;
-				clock-names = "cil";
-
-				ports {
-					#address-cells = <1>;
-					#size-cells = <0>;
-
-					port@1 {
-						reg = <1>;
-						csi_out4: endpoint@1 {
-							remote-endpoint = <&vi_in4>;
-						};
-					};
-					port@3 {
-						reg = <3>;
-						csi_out5: endpoint@3 {
-							remote-endpoint = <&vi_in5>;
-						};
-					};
-				};
-			};
 		};
 
 		vi-bypass {

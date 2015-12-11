@@ -17,7 +17,7 @@
 #include <linux/tegra-hsp.h>
 #include <linux/irqchip/tegra-agic.h>
 
-void nvadsp_dbell_handler(int master, void *data)
+static void nvadsp_dbell_handler(int master, void *data)
 {
 	struct platform_device *pdev = data;
 	struct device *dev = &pdev->dev;

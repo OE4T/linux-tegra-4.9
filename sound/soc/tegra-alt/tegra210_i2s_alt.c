@@ -314,7 +314,9 @@ static int tegra210_i2s_suspend(struct device *dev)
 {
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(i2s->regmap);
+	if (i2s)
+		regcache_mark_dirty(i2s->regmap);
+
 	return 0;
 }
 #endif
@@ -907,7 +909,6 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, i2s);
 
 	i2s->soc_data = soc_data;
 	i2s->tx_mask = i2s->rx_mask = 0xFFFF;
@@ -1080,6 +1081,8 @@ err_dap:
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
+
+	dev_set_drvdata(&pdev->dev, i2s);
 
 	return 0;
 

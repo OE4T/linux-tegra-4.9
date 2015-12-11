@@ -306,7 +306,9 @@ static int tegra210_amx_suspend(struct device *dev)
 {
 	struct tegra210_amx *amx = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(amx->regmap);
+	if (amx)
+		regcache_mark_dirty(amx->regmap);
+
 	return 0;
 }
 #endif
@@ -829,7 +831,6 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, amx);
 
 	amx->soc_data = soc_data;
 	memset(amx->map, 0, sizeof(amx->map));
@@ -889,6 +890,8 @@ static int tegra210_amx_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
+
+	dev_set_drvdata(&pdev->dev, amx);
 
 	return 0;
 

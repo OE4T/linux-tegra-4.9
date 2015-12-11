@@ -249,7 +249,9 @@ static int tegra210_admaif_suspend(struct device *dev)
 {
 	struct tegra210_admaif *admaif = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(admaif->regmap);
+	if (admaif)
+		regcache_mark_dirty(admaif->regmap);
+
 	return 0;
 }
 #endif
@@ -801,8 +803,6 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	dev_set_drvdata(&pdev->dev, admaif);
-
 	admaif->refcnt = 0;
 
 	admaif->soc_data = soc_data;
@@ -920,6 +920,8 @@ static int tegra210_admaif_probe(struct platform_device *pdev)
 
 	regmap_update_bits(admaif->regmap,
 				TEGRA210_ADMAIF_GLOBAL_ENABLE, 1, 1);
+
+	dev_set_drvdata(&pdev->dev, admaif);
 
 	return 0;
 

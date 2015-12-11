@@ -91,7 +91,9 @@ static int tegra210_mvc_suspend(struct device *dev)
 {
 	struct tegra210_mvc *mvc = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(mvc->regmap);
+	if (mvc)
+		regcache_mark_dirty(mvc->regmap);
+
 	return 0;
 }
 #endif
@@ -635,7 +637,6 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, mvc);
 
 	mvc->soc_data = soc_data;
 
@@ -709,6 +710,8 @@ static int tegra210_mvc_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
+
+	dev_set_drvdata(&pdev->dev, mvc);
 
 	return 0;
 

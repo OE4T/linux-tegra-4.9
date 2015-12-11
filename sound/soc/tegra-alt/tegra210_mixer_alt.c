@@ -108,7 +108,9 @@ static int tegra210_mixer_suspend(struct device *dev)
 {
 	struct tegra210_mixer *mixer = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(mixer->regmap);
+	if (mixer)
+		regcache_mark_dirty(mixer->regmap);
+
 	return 0;
 }
 #endif
@@ -651,7 +653,6 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, mixer);
 
 	mixer->soc_data = soc_data;
 	mixer->gain_coeff[0] = 0;
@@ -726,6 +727,8 @@ static int tegra210_mixer_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
+
+	dev_set_drvdata(&pdev->dev, mixer);
 
 	return 0;
 

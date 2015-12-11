@@ -135,7 +135,6 @@ struct nvhost_device_data t18_host1x_info = {
 	.private_data		= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
-	.isolate_contexts	= true,
 };
 
 static struct host1x_device_info host1xb04_info = {
@@ -258,7 +257,6 @@ struct nvhost_device_data t18_msenc_info = {
 	.transcfg_addr		= 0x1844,
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
-	.isolate_contexts	= true,
 };
 
 struct nvhost_device_data t18_nvdec_info = {
@@ -291,7 +289,6 @@ struct nvhost_device_data t18_nvdec_info = {
 	.transcfg_addr		= 0x2c44,
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
-	.isolate_contexts	= true,
 };
 
 struct nvhost_device_data t18_nvjpg_info = {
@@ -322,7 +319,6 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.transcfg_addr		= 0x1444,
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
-	.isolate_contexts	= true,
 };
 
 struct nvhost_device_data t18_tsec_info = {
@@ -428,7 +424,6 @@ struct nvhost_device_data t18_vic_info = {
 	.devfreq_governor	= "wmark_active",
 	.freqs			= {100000000, 200000000, 300000000,
 					400000000, 500000000, 600000000},
-	.isolate_contexts	= true,
 };
 
 struct nvhost_device_data t18_nvcsi_info = {

@@ -84,9 +84,12 @@ static int tegra210_ope_suspend(struct device *dev)
 {
 	struct tegra210_ope *ope = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(ope->regmap);
-	regcache_mark_dirty(ope->peq_regmap);
-	regcache_mark_dirty(ope->mbdrc_regmap);
+	if (ope) {
+		regcache_mark_dirty(ope->regmap);
+		regcache_mark_dirty(ope->peq_regmap);
+		regcache_mark_dirty(ope->mbdrc_regmap);
+	}
+
 	return 0;
 }
 #endif
@@ -353,7 +356,6 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, ope);
 
 	ope->soc_data = soc_data;
 
@@ -387,6 +389,8 @@ static int tegra210_ope_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 	regcache_cache_only(ope->regmap, true);
+
+	dev_set_drvdata(&pdev->dev, ope);
 
 	ret = ope->soc_data->peq_soc_data.init(pdev,
 				TEGRA210_PEQ_IORESOURCE_MEM);

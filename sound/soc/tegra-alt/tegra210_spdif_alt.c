@@ -107,7 +107,9 @@ static int tegra210_spdif_suspend(struct device *dev)
 {
 	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(spdif->regmap);
+	if (spdif)
+		regcache_mark_dirty(spdif->regmap);
+
 	return 0;
 }
 #endif
@@ -397,7 +399,6 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, spdif);
 
 	spdif->soc_data = soc_data;
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
@@ -472,6 +473,8 @@ static int tegra210_spdif_platform_probe(struct platform_device *pdev)
 
 	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
 		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+
+	dev_set_drvdata(&pdev->dev, spdif);
 
 	return 0;
 

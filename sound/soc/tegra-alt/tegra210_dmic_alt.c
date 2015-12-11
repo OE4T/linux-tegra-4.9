@@ -112,7 +112,9 @@ static int tegra210_dmic_suspend(struct device *dev)
 {
 	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(dmic->regmap);
+	if (dmic)
+		regcache_mark_dirty(dmic->regmap);
+
 	return 0;
 }
 #endif
@@ -435,7 +437,6 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, dmic);
 
 	dmic->soc_data = soc_data;
 
@@ -524,6 +525,8 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 
 	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
 		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+
+	dev_set_drvdata(&pdev->dev, dmic);
 
 	return 0;
 

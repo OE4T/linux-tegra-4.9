@@ -108,56 +108,20 @@
 	i2c@3160000 { /* Tegra I2C1 (I2CA) */
 		status = "okay";
 		clock-frequency = <400000>;
-		max9291@84 {	/* instrument */
-			reg = <0x42>;
-			compatible = "dummy";
-		};
-		tmp451@4c {	/* thermal sensor */
-			reg = <0x26>;
-			compatible = "dummy";
-		};
-		usb-hsic@58 {
-			reg = <0x2c>;
-			compatible = "dummy";
-		};
-		usb-hsic@5c {
-			reg = <0x2e>;
-			compatible = "dummy";
-		};
 	};
 
 	i2c@c240000 { /* Tegra I2C2 (I2CB) */
 		status = "okay";
 		nvidia,clock-always-on;
-		max9293@80 {	/* central display */
-			reg = <0x40>;
-			compatible = "dummy";
-		};
 	};
 
 	i2c@c250000 { /* Tegra I2C8 (I2CC) */
 		status = "okay";
-		max9288@d0 {	/* RVC/parkman */
-			reg = <0x68>;
-			compatible = "dummy";
-		};
-		max9288@d4 {	/* AR camera   */
-			reg = <0x6a>;
-			compatible = "dummy";
-		};
-		max9288@d8 {
-			reg = <0x6c>;
-			compatible = "dummy";
-		};
 	};
 
 	i2c@3180000 { /* Tegra I2C3 (I2CD) */
 		status = "okay";
 		clock-frequency = <40000>;
-		apple {
-			reg = <0x20>;
-			compatible = "dummy";
-		};
 	};
 
 

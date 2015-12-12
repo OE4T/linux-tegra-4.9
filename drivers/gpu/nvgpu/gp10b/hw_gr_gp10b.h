@@ -530,6 +530,98 @@ static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm1_pe
 {
 	return 0x200;
 }
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r(void)
+{
+	return 0x005046bc;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r(void)
+{
+	return 0x005046c0;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r(void)
+{
+	return 0x005044a4;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_m(void)
+{
+	return 0xff << 0;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_m(void)
+{
+	return 0xff << 8;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_v(u32 r)
+{
+	return (r >> 8) & 0xff;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_m(void)
+{
+	return 0xff << 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_v(u32 r)
+{
+	return (r >> 16) & 0xff;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_routing_r(void)
+{
+	return 0x005042c4;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_routing_sel_default_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_routing_sel_pipe0_f(void)
+{
+	return 0x1;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_routing_sel_pipe1_f(void)
+{
+	return 0x2;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r(void)
+{
+	return 0x00504218;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r(void)
+{
+	return 0x005042ec;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_m(void)
+{
+	return 0xffff << 0;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_m(void)
+{
+	return 0xffff << 16;
+}
+static inline u32 gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_v(u32 r)
+{
+	return (r >> 16) & 0xffff;
+}
 static inline u32 gr_pri_be0_crop_status1_r(void)
 {
 	return 0x00410134;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -313,6 +313,26 @@ static inline u32 ltc_ltcs_ltss_intr_en_ecc_ded_error_enabled_f(void)
 static inline u32 ltc_ltc0_lts0_intr_r(void)
 {
 	return 0x0014040c;
+}
+static inline u32 ltc_ltc0_lts0_dstg_ecc_report_r(void)
+{
+	return 0x0014051c;
+}
+static inline u32 ltc_ltc0_lts0_dstg_ecc_report_sec_count_m(void)
+{
+	return 0xff << 0;
+}
+static inline u32 ltc_ltc0_lts0_dstg_ecc_report_sec_count_v(u32 r)
+{
+	return (r >> 0) & 0xff;
+}
+static inline u32 ltc_ltc0_lts0_dstg_ecc_report_ded_count_m(void)
+{
+	return 0xff << 16;
+}
+static inline u32 ltc_ltc0_lts0_dstg_ecc_report_ded_count_v(u32 r)
+{
+	return (r >> 16) & 0xff;
 }
 static inline u32 ltc_ltcs_ltss_tstg_cmgmt0_r(void)
 {

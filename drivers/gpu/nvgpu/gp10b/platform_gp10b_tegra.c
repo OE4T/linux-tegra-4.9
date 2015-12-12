@@ -26,9 +26,14 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/reset.h>
 #include <soc/tegra/tegra_bpmp.h>
+#include <linux/hashtable.h>
 #include "gk20a/platform_gk20a.h"
 #include "gk20a/gk20a.h"
 #include "platform_tegra.h"
+#include "gr_gp10b.h"
+#include "ltc_gp10b.h"
+#include "hw_gr_gp10b.h"
+#include "hw_ltc_gp10b.h"
 
 #define GP10B_MAX_SUPPORTED_FREQS 11
 static unsigned long gp10b_freq_table[GP10B_MAX_SUPPORTED_FREQS];
@@ -39,6 +44,8 @@ static struct {
 } tegra_gp10b_clocks[] = {
 	{"gpu", 1000000000},
 	{"gpu_sys", 204000000} };
+
+static void gr_gp10b_remove_sysfs(struct device *dev);
 
 /*
  * gp10b_tegra_get_clocks()
@@ -143,6 +150,8 @@ static int gp10b_tegra_remove(struct platform_device *pdev)
 {
 	/* remove gk20a power subdomain from host1x */
 	nvhost_unregister_client_domain(dev_to_genpd(&pdev->dev));
+
+	gr_gp10b_remove_sysfs(&pdev->dev);
 
 	return 0;
 
@@ -345,3 +354,322 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 
 	.force_reset_in_do_idle = true,
 };
+
+
+#define ECC_STAT_NAME_MAX_SIZE	100
+
+
+DEFINE_HASHTABLE(ecc_hash_table, 5);
+
+static struct device_attribute *dev_attr_sm_lrf_ecc_single_err_count_array;
+static struct device_attribute *dev_attr_sm_lrf_ecc_double_err_count_array;
+
+static struct device_attribute *dev_attr_sm_shm_ecc_sec_count_array;
+static struct device_attribute *dev_attr_sm_shm_ecc_sed_count_array;
+static struct device_attribute *dev_attr_sm_shm_ecc_ded_count_array;
+
+static struct device_attribute *dev_attr_tex_ecc_total_sec_pipe0_count_array;
+static struct device_attribute *dev_attr_tex_ecc_total_ded_pipe0_count_array;
+static struct device_attribute *dev_attr_tex_ecc_unique_sec_pipe0_count_array;
+static struct device_attribute *dev_attr_tex_ecc_unique_ded_pipe0_count_array;
+static struct device_attribute *dev_attr_tex_ecc_total_sec_pipe1_count_array;
+static struct device_attribute *dev_attr_tex_ecc_total_ded_pipe1_count_array;
+static struct device_attribute *dev_attr_tex_ecc_unique_sec_pipe1_count_array;
+static struct device_attribute *dev_attr_tex_ecc_unique_ded_pipe1_count_array;
+
+static struct device_attribute *dev_attr_l2_ecc_sec_count_array;
+static struct device_attribute *dev_attr_l2_ecc_ded_count_array;
+
+
+static u32 gen_ecc_hash_key(char *str)
+{
+	int i = 0;
+	u32 hash_key = 0;
+
+	while (str[i]) {
+		hash_key += (u32)(str[i]);
+		i++;
+	};
+
+	return hash_key;
+}
+
+static ssize_t ecc_stat_show(struct device *dev,
+				struct device_attribute *attr,
+				char *buf)
+{
+	const char *ecc_stat_full_name = attr->attr.name;
+	const char *ecc_stat_base_name;
+	unsigned int hw_unit;
+	struct ecc_stat *ecc_stat;
+	u32 hash_key;
+
+	if (sscanf(ecc_stat_full_name, "ltc%u", &hw_unit) == 1) {
+		ecc_stat_base_name = &(ecc_stat_full_name[strlen("ltc0_")]);
+	} else if (sscanf(ecc_stat_full_name, "gpc0_tpc%u", &hw_unit) == 1) {
+		ecc_stat_base_name = &(ecc_stat_full_name[strlen("gpc0_tpc0_")]);
+	} else {
+		return snprintf(buf,
+				PAGE_SIZE,
+				"Error: Invalid ECC stat name!\n");
+	}
+
+	hash_key = gen_ecc_hash_key((char *)ecc_stat_base_name);
+	hash_for_each_possible(ecc_hash_table,
+				ecc_stat,
+				hash_node,
+				hash_key) {
+		if (!strcmp(ecc_stat_full_name, ecc_stat->names[hw_unit]))
+			return snprintf(buf, PAGE_SIZE, "%u\n", ecc_stat->counters[hw_unit]);
+	}
+
+	return snprintf(buf, PAGE_SIZE, "Error: No ECC stat found!\n");
+}
+
+static int ecc_stat_create(struct platform_device *dev,
+				int is_l2,
+				char *ecc_stat_name,
+				struct ecc_stat *ecc_stat,
+				struct device_attribute *dev_attr_array)
+{
+	int error = 0;
+	struct gk20a *g = get_gk20a(dev);
+	int num_hw_units = 0;
+	int hw_unit = 0;
+	u32 hash_key = 0;
+
+	if (is_l2)
+		num_hw_units = g->ltc_count;
+	else
+		num_hw_units = g->gr.tpc_count;
+
+	/* Allocate arrays */
+	dev_attr_array = kzalloc(sizeof(struct device_attribute) * num_hw_units, GFP_KERNEL);
+	ecc_stat->counters = kzalloc(sizeof(u32) * num_hw_units, GFP_KERNEL);
+	ecc_stat->names = kzalloc(sizeof(char *) * num_hw_units, GFP_KERNEL);
+	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+		ecc_stat->names[hw_unit] = kzalloc(sizeof(char) * ECC_STAT_NAME_MAX_SIZE, GFP_KERNEL);
+	}
+
+	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+		/* Fill in struct device_attribute members */
+		if (is_l2)
+			snprintf(ecc_stat->names[hw_unit],
+				ECC_STAT_NAME_MAX_SIZE,
+				"ltc%d_%s",
+				hw_unit,
+				ecc_stat_name);
+		else
+			snprintf(ecc_stat->names[hw_unit],
+				ECC_STAT_NAME_MAX_SIZE,
+				"gpc0_tpc%d_%s",
+				hw_unit,
+				ecc_stat_name);
+		dev_attr_array[hw_unit].attr.name = ecc_stat->names[hw_unit];
+		dev_attr_array[hw_unit].attr.mode = VERIFY_OCTAL_PERMISSIONS(S_IRUGO);
+		dev_attr_array[hw_unit].show = ecc_stat_show;
+		dev_attr_array[hw_unit].store = NULL;
+
+		/* Create sysfs file */
+		error |= device_create_file(&dev->dev,
+				&dev_attr_array[hw_unit]);
+	}
+
+	/* Add hash table entry */
+	hash_key = gen_ecc_hash_key(ecc_stat_name);
+	hash_add(ecc_hash_table,
+		&ecc_stat->hash_node,
+		hash_key);
+
+	return error;
+}
+
+static void ecc_stat_remove(struct device *dev,
+				int is_l2,
+				struct ecc_stat *ecc_stat,
+				struct device_attribute *dev_attr_array)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(ndev);
+	int num_hw_units = 0;
+	int hw_unit = 0;
+
+	if (is_l2)
+		num_hw_units = g->ltc_count;
+	else
+		num_hw_units = g->gr.tpc_count;
+
+	/* Remove sysfs files */
+	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+		device_remove_file(dev, &dev_attr_array[hw_unit]);
+	}
+
+	/* Remove hash table entry */
+	hash_del(&ecc_stat->hash_node);
+
+	/* Free arrays */
+	kfree(ecc_stat->counters);
+	for (hw_unit = 0; hw_unit < num_hw_units; hw_unit++) {
+		kfree(ecc_stat->names[hw_unit]);
+	}
+	kfree(ecc_stat->names);
+	kfree(dev_attr_array);
+}
+
+void gr_gp10b_create_sysfs(struct platform_device *dev)
+{
+	int error = 0;
+	struct gk20a *g = get_gk20a(dev);
+
+	error |= ecc_stat_create(dev,
+				0,
+				"sm_lrf_ecc_single_err_count",
+				&g->gr.t18x.ecc_stats.sm_lrf_single_err_count,
+				dev_attr_sm_lrf_ecc_single_err_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"sm_lrf_ecc_double_err_count",
+				&g->gr.t18x.ecc_stats.sm_lrf_double_err_count,
+				dev_attr_sm_lrf_ecc_double_err_count_array);
+
+	error |= ecc_stat_create(dev,
+				0,
+				"sm_shm_ecc_sec_count",
+				&g->gr.t18x.ecc_stats.sm_shm_sec_count,
+				dev_attr_sm_shm_ecc_sec_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"sm_shm_ecc_sed_count",
+				&g->gr.t18x.ecc_stats.sm_shm_sed_count,
+				dev_attr_sm_shm_ecc_sed_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"sm_shm_ecc_ded_count",
+				&g->gr.t18x.ecc_stats.sm_shm_ded_count,
+				dev_attr_sm_shm_ecc_ded_count_array);
+
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_total_sec_pipe0_count",
+				&g->gr.t18x.ecc_stats.tex_total_sec_pipe0_count,
+				dev_attr_tex_ecc_total_sec_pipe0_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_total_ded_pipe0_count",
+				&g->gr.t18x.ecc_stats.tex_total_ded_pipe0_count,
+				dev_attr_tex_ecc_total_ded_pipe0_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_unique_sec_pipe0_count",
+				&g->gr.t18x.ecc_stats.tex_unique_sec_pipe0_count,
+				dev_attr_tex_ecc_unique_sec_pipe0_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_unique_ded_pipe0_count",
+				&g->gr.t18x.ecc_stats.tex_unique_ded_pipe0_count,
+				dev_attr_tex_ecc_unique_ded_pipe0_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_total_sec_pipe1_count",
+				&g->gr.t18x.ecc_stats.tex_total_sec_pipe1_count,
+				dev_attr_tex_ecc_total_sec_pipe1_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_total_ded_pipe1_count",
+				&g->gr.t18x.ecc_stats.tex_total_ded_pipe1_count,
+				dev_attr_tex_ecc_total_ded_pipe1_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_unique_sec_pipe1_count",
+				&g->gr.t18x.ecc_stats.tex_unique_sec_pipe1_count,
+				dev_attr_tex_ecc_unique_sec_pipe1_count_array);
+	error |= ecc_stat_create(dev,
+				0,
+				"tex_ecc_unique_ded_pipe1_count",
+				&g->gr.t18x.ecc_stats.tex_unique_ded_pipe1_count,
+				dev_attr_tex_ecc_unique_ded_pipe1_count_array);
+
+	error |= ecc_stat_create(dev,
+				1,
+				"lts0_ecc_sec_count",
+				&g->gr.t18x.ecc_stats.l2_sec_count,
+				dev_attr_l2_ecc_sec_count_array);
+	error |= ecc_stat_create(dev,
+				1,
+				"lts0_ecc_ded_count",
+				&g->gr.t18x.ecc_stats.l2_ded_count,
+				dev_attr_l2_ecc_ded_count_array);
+
+	if (error)
+		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");
+}
+
+static void gr_gp10b_remove_sysfs(struct device *dev)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct gk20a *g = get_gk20a(ndev);
+
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.sm_lrf_single_err_count,
+			dev_attr_sm_lrf_ecc_single_err_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.sm_lrf_double_err_count,
+			dev_attr_sm_lrf_ecc_double_err_count_array);
+
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.sm_shm_sec_count,
+			dev_attr_sm_shm_ecc_sec_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.sm_shm_sed_count,
+			dev_attr_sm_shm_ecc_sed_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.sm_shm_ded_count,
+			dev_attr_sm_shm_ecc_ded_count_array);
+
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_total_sec_pipe0_count,
+			dev_attr_tex_ecc_total_sec_pipe0_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_total_ded_pipe0_count,
+			dev_attr_tex_ecc_total_ded_pipe0_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_unique_sec_pipe0_count,
+			dev_attr_tex_ecc_unique_sec_pipe0_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_unique_ded_pipe0_count,
+			dev_attr_tex_ecc_unique_ded_pipe0_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_total_sec_pipe1_count,
+			dev_attr_tex_ecc_total_sec_pipe1_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_total_ded_pipe1_count,
+			dev_attr_tex_ecc_total_ded_pipe1_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_unique_sec_pipe1_count,
+			dev_attr_tex_ecc_unique_sec_pipe1_count_array);
+	ecc_stat_remove(dev,
+			0,
+			&g->gr.t18x.ecc_stats.tex_unique_ded_pipe1_count,
+			dev_attr_tex_ecc_unique_ded_pipe1_count_array);
+
+	ecc_stat_remove(dev,
+			1,
+			&g->gr.t18x.ecc_stats.l2_sec_count,
+			dev_attr_l2_ecc_sec_count_array);
+	ecc_stat_remove(dev,
+			1,
+			&g->gr.t18x.ecc_stats.l2_ded_count,
+			dev_attr_l2_ecc_ded_count_array);
+}

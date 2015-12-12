@@ -35,6 +35,13 @@ enum {
 void gp10b_init_gr(struct gpu_ops *ops);
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct mem_desc *mem);
+void gr_gp10b_create_sysfs(struct platform_device *dev);
+
+struct ecc_stat {
+	char **names;
+	u32 *counters;
+	struct hlist_node hash_node;
+};
 
 struct gr_t18x {
 	struct {
@@ -46,6 +53,27 @@ struct gr_t18x {
 		struct dentry *debugfs_force_preemption_gfxp;
 		struct dentry *debugfs_dump_ctxsw_stats;
 	} ctx_vars;
+
+	struct {
+		struct ecc_stat sm_lrf_single_err_count;
+		struct ecc_stat sm_lrf_double_err_count;
+
+		struct ecc_stat sm_shm_sec_count;
+		struct ecc_stat sm_shm_sed_count;
+		struct ecc_stat sm_shm_ded_count;
+
+		struct ecc_stat tex_total_sec_pipe0_count;
+		struct ecc_stat tex_total_ded_pipe0_count;
+		struct ecc_stat tex_unique_sec_pipe0_count;
+		struct ecc_stat tex_unique_ded_pipe0_count;
+		struct ecc_stat tex_total_sec_pipe1_count;
+		struct ecc_stat tex_total_ded_pipe1_count;
+		struct ecc_stat tex_unique_sec_pipe1_count;
+		struct ecc_stat tex_unique_ded_pipe1_count;
+
+		struct ecc_stat l2_sec_count;
+		struct ecc_stat l2_ded_count;
+	} ecc_stats;
 
 	int cilp_preempt_pending_chid;
 };

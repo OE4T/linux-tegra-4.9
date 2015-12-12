@@ -84,6 +84,7 @@ static const u8 tegra_dp_link_config_priority[][2] = {
 	{SOR_LINK_SPEED_G1_62, 1}, /* 1.62Gbps */
 };
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 static const u32 tegra_dp_vs_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{
@@ -118,12 +119,46 @@ static const u32 tegra_dp_vs_regs[][4][4] = {
 		{0x32},
 	},
 };
+#else
+static const u32 tegra_dp_vs_regs[][4][4] = {
+	/* postcursor2 L0 */
+	{
+		/* pre-emphasis: L0, L1, L2, L3 */
+		{0x13, 0x19, 0x1e, 0x28}, /* voltage swing: L0 */
+		{0x1e, 0x25, 0x2d}, /* L1 */
+		{0x28, 0x32}, /* L2 */
+		{0x39}, /* L3 */
+	},
+
+	/* postcursor2 L1 */
+	{
+		{0x12, 0x17, 0x1b, 0x25},
+		{0x1c, 0x23, 0x2a},
+		{0x25, 0x2f},
+		{0x37},
+	},
+
+	/* postcursor2 L2 */
+	{
+		{0x12, 0x16, 0x1a, 0x22},
+		{0x1b, 0x20, 0x27},
+		{0x24, 0x2d},
+		{0x35},
+	},
+
+	/* postcursor2 L3 */
+	{
+		{0x11, 0x14, 0x17, 0x1f},
+		{0x19, 0x1e, 0x24},
+		{0x22, 0x2a},
+		{0x32},
+	},
+};
+#endif
 
 /* Both 12x and 13x config enabled for 13x */
 #if (defined(CONFIG_ARCH_TEGRA_12x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_13x_SOC)) || \
-	defined(CONFIG_ARCH_TEGRA_21x_SOC)  || \
-	defined(CONFIG_TEGRA_NVDISPLAY)
+	!defined(CONFIG_ARCH_TEGRA_13x_SOC))
 static const u32 tegra_dp_pe_regs[][4][4] = {
 	/* postcursor2 L0 */
 	{

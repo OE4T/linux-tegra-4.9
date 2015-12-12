@@ -931,8 +931,20 @@ int tegra186_xbar_registration(struct platform_device *pdev)
 		return -EBUSY;
 	}
 
+	ret = pm_runtime_get_sync(&pdev->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "pm_runtime_get failed. ret: %d\n", ret);
+		return ret;
+	}
+
 	of_platform_populate(pdev->dev.of_node, NULL, tegra186_xbar_auxdata,
 			     &pdev->dev);
+
+	ret = pm_runtime_put_sync(&pdev->dev);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "pm_runtime_put failed. ret: %d\n", ret);
+		return ret;
+	}
 
 	return 0;
 }

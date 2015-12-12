@@ -133,21 +133,48 @@ static void gp10b_ltc_isr(struct gk20a *g)
 		if ((mc_intr & 1 << ltc) == 0)
 			continue;
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
-			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
-					   proj_ltc_stride_v() * ltc +
-					   proj_lts_stride_v() * slice);
+			u32 offset = proj_ltc_stride_v() * ltc +
+					proj_lts_stride_v() * slice;
+			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() + offset);
 
 			/* Detect and handle ECC errors */
 			if (ltc_intr &
 				ltc_ltcs_ltss_intr_ecc_sec_error_pending_f()) {
+				u32 ecc_stats_reg_val;
+
 				gk20a_err(dev_from_gk20a(g),
 					"Single bit error detected in GPU L2!");
+
+				ecc_stats_reg_val =
+					gk20a_readl(g,
+						ltc_ltc0_lts0_dstg_ecc_report_r() + offset);
+				g->gr.t18x.ecc_stats.l2_sec_count.counters[ltc] +=
+					ltc_ltc0_lts0_dstg_ecc_report_sec_count_v(ecc_stats_reg_val);
+				ecc_stats_reg_val &=
+					~(ltc_ltc0_lts0_dstg_ecc_report_sec_count_m());
+				gk20a_writel(g,
+					ltc_ltc0_lts0_dstg_ecc_report_r() + offset,
+					ecc_stats_reg_val);
+
 				g->ops.mm.l2_flush(g, true);
 			}
 			if (ltc_intr &
 				ltc_ltcs_ltss_intr_ecc_ded_error_pending_f()) {
+				u32 ecc_stats_reg_val;
+
 				gk20a_err(dev_from_gk20a(g),
 					"Double bit error detected in GPU L2!");
+
+				ecc_stats_reg_val =
+					gk20a_readl(g,
+						ltc_ltc0_lts0_dstg_ecc_report_r() + offset);
+				g->gr.t18x.ecc_stats.l2_ded_count.counters[ltc] +=
+					ltc_ltc0_lts0_dstg_ecc_report_ded_count_v(ecc_stats_reg_val);
+				ecc_stats_reg_val &=
+					~(ltc_ltc0_lts0_dstg_ecc_report_ded_count_m());
+				gk20a_writel(g,
+					ltc_ltc0_lts0_dstg_ecc_report_r() + offset,
+					ecc_stats_reg_val);
 			}
 
 			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",

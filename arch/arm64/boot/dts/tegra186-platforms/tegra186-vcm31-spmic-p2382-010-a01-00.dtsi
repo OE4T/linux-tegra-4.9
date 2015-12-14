@@ -34,6 +34,7 @@
 			#gpio-cells = <2>;
 
 			maxim,system-pmic-power-off;
+			maxim,enable-sleep;
 
 			maxim,avoid-rtc-bulk-register-write;
 

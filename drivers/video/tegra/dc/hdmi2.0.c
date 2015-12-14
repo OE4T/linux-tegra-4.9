@@ -2172,10 +2172,15 @@ static long tegra_hdmi_get_pclk(struct tegra_dc_mode *mode)
 	refresh = tegra_dc_calc_refresh(mode);
 	refresh = DIV_ROUND_CLOSEST(refresh, 1000);
 
-	pclk = h_total * v_total * refresh;
-
-	if (mode->vmode & FB_VMODE_1000DIV1001)
-		pclk = pclk * 1000 / 1001;
+	if (mode->vmode & FB_VMODE_1000DIV1001) {
+		refresh = refresh * 1000 * 1000 / 1001;
+		refresh = DIV_ROUND_CLOSEST(refresh, 10);
+		refresh = refresh * 10;
+		pclk = h_total * v_total * refresh / 1000;
+		pclk = DIV_ROUND_CLOSEST(pclk, 10000) * 10000;
+	} else {
+		pclk = h_total * v_total * refresh;
+	}
 
 	return pclk;
 }

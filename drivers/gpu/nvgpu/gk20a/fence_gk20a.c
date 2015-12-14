@@ -217,7 +217,8 @@ struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
 	f = alloc_fence(&gk20a_syncpt_fence_ops, sync_fence, wfi);
 	if (!f) {
 #ifdef CONFIG_SYNC
-		sync_fence_put(sync_fence);
+		if (sync_fence)
+			sync_fence_put(sync_fence);
 #endif
 		return NULL;
 	}

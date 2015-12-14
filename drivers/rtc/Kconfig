@@ -47,6 +47,10 @@ config RTC_HCTOSYS_DEVICE
 	  time when the system boots from a power-off state. Otherwise, your
 	  system will need an external clock source (like an NTP server).
 
+	  If this clock is not battery-backed, backup clock can be used
+	  to set time for this clock. Set it under RTC_HCTOSYS_BACKUP_DEVICE.
+	  Leave RTC_HCTOSYS_BACKUP_DEVICE black to avoid modifying this clock.
+
 	  If the clock you specify here is not battery backed, it may still
 	  be useful to reinitialize system time when resuming from system
 	  sleep states. Do not specify an RTC here unless it stays powered
@@ -70,6 +74,22 @@ config RTC_SYSTOHC_DEVICE
 	  between RTC_HCTOSYS_DEVICE and RTC_SYSTOHC_DEVICE is that this
 	  one can sleep when setting time, because it runs in the workqueue
 	  context.
+
+config RTC_BACKUP_HCTOSYS_DEVICE
+	string "Backup RTC used to feed RTC maintaining system time"
+	default ""
+	help
+	  Battery-backed RTC device to set time for system RTC. Leave it
+	  blank if system RTC should not be changed or if there is no
+	  battery-backed RTC in system.
+
+	  RTC device used for RTC_HCTOSYS_DEVICE may not be battery-backed.
+	  In this case system time will be reset upon device reset. A backup
+	  RTC device can be specified here to feed time to system RTC.
+
+	  Maintaining multiple RTC might be required when battery-backed
+	  device is slow in responding when connected through I2C or other
+	  slow interface.
 
 config RTC_DEBUG
 	bool "RTC debug support"

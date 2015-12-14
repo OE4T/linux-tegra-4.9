@@ -1,6 +1,7 @@
 /*
  * RTC subsystem, initialize system time on startup
  *
+ * Copyright (C) 2016 NVIDIA CORPORATION. All rights reserved.
  * Copyright (C) 2005 Tower Technologies
  * Author: Alessandro Zummo <a.zummo@towertech.it>
  *
@@ -24,6 +25,63 @@
  * the best guess is to add 0.5s.
  */
 
+
+static int set_hctosys_rtc_time(struct rtc_device *rtc)
+{
+	int err = -ENODEV;
+	struct rtc_time tm;
+	struct rtc_device *backup_rtc;
+
+	backup_rtc = rtc_class_open(CONFIG_RTC_BACKUP_HCTOSYS_DEVICE);
+	if (backup_rtc == NULL)
+		return err;
+
+	err = rtc_read_time(backup_rtc, &tm);
+	if (err) {
+		rtc_class_close(backup_rtc);
+		return err;
+	}
+
+	err = rtc_set_time(rtc, &tm);
+	if (err) {
+		rtc_class_close(backup_rtc);
+		return err;
+	}
+
+	rtc_class_close(backup_rtc);
+	return 0;
+}
+
+void set_systohc_rtc_time(void)
+{
+	int err = -ENODEV;
+	struct rtc_time tm;
+	struct rtc_device *backup_rtc;
+	struct rtc_device *system_rtc;
+
+	system_rtc = rtc_class_open(CONFIG_RTC_HCTOSYS_DEVICE);
+	if (system_rtc == NULL)
+		return;
+
+	err = rtc_read_time(system_rtc, &tm);
+	if (err) {
+		rtc_class_close(system_rtc);
+		return;
+	}
+
+	backup_rtc = rtc_class_open(CONFIG_RTC_BACKUP_HCTOSYS_DEVICE);
+	if (backup_rtc == NULL) {
+		rtc_class_close(system_rtc);
+		return;
+	}
+
+	rtc_set_time(backup_rtc, &tm);
+
+	rtc_class_close(system_rtc);
+	rtc_class_close(backup_rtc);
+}
+EXPORT_SYMBOL(set_systohc_rtc_time);
+
 static int __init rtc_hctosys(void)
 {
 	int err = -ENODEV;
@@ -37,6 +95,13 @@ static int __init rtc_hctosys(void)
 		pr_info("unable to open rtc device (%s)\n",
 			CONFIG_RTC_HCTOSYS_DEVICE);
 		goto err_open;
+	}
+
+	if (CONFIG_RTC_BACKUP_HCTOSYS_DEVICE[0] != '\0') {
+		err = set_hctosys_rtc_time(rtc);
+		if (err)
+			pr_warn("%s: Ignoring backup rtc device (%s)\n",
+				__FILE__, CONFIG_RTC_BACKUP_HCTOSYS_DEVICE);
 	}
 
 	err = rtc_read_time(rtc, &tm);

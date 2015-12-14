@@ -37,6 +37,8 @@
 		udc0 = &udc;
 		ehci0 = &ehci1;
 		ehci1 = &ehci2;
+		rtc0 = "/rtc";
+		rtc1 = "/i2c@7000d000/max77620@3c";
 	};
 
 	cpus {

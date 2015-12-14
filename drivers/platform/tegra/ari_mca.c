@@ -26,6 +26,7 @@
 #include <linux/tegra-mce.h>
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/ioport.h>
+#include <linux/tegra-soc.h>
 
 #define ARI_BANK_PRINTF		0
 #define ARI_MCA_SAVE_PREBOOT	0
@@ -550,6 +551,25 @@ static void print_address(struct seq_file *file, u64 addr)
 			  phys_addr, res->name, phys_addr - res->start);
 }
 
+static void print_axi_id(struct seq_file *file, u64 axi_id)
+{
+	if (axi_id & 0x40) {
+		print_mca(file, "\tAXI_ID: 0x%x -- DPMU\n", axi_id);
+	} else {
+		if (axi_id < 0x04)
+			print_mca(file,
+				  "\tAXI_ID: 0x%x -- Denver Core %d\n",
+				  axi_id, axi_id);
+		else if (axi_id < 0x08)
+			print_mca(file,
+				  "\tAXI_ID: 0x%x -- A57 Core %d\n",
+				  axi_id, axi_id - 0x4);
+		else
+			print_mca(file,
+				  "\tAXI_ID: 0x%x -- Pool B\n", axi_id);
+	}
+}
+
 /* SYS:DPMU Decoders */
 
 static void print_mca_sys_dpmu(struct seq_file *file,
@@ -657,8 +677,7 @@ static void print_mca_roc_iob(struct seq_file *file,
 		print_mca_table(file, "Response Error Type",
 				axi_responses, NUM_AXI_RESPONSES,
 				get_mca_roc_iob_stat_resp_errt(status));
-		print_mca(file, "\tAXI ID of Request = 0x%llx\n",
-			   get_mca_roc_iob_addr_axi_id(addr));
+		print_axi_id(file, get_mca_roc_iob_addr_axi_id(addr));
 	}
 
 	print_address(file, get_mca_roc_iob_msc1_addr(msc1));
@@ -1175,6 +1194,12 @@ static struct serr_hook hook = {
 static int __init ari_serr_init(void)
 {
 	int rc;
+
+	/*
+	 * ARI is not supported on the simulator
+	 */
+	if (tegra_cpu_is_asim())
+		return 0;
 
 	/* Register the SError hook so that this driver is called on SError */
 	register_serr_hook(&hook);

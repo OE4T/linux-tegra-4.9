@@ -20,16 +20,30 @@
 static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 				struct gr_ctx_desc *gr_ctx)
 {
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
+	int err;
+
 	gk20a_dbg_fn("");
 
 	if (!gr_ctx || !gr_ctx->mem.gpu_va)
 		return;
 
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_GR_CTX;
+	msg.handle = platform->virt_handle;
+	p->handle = gr_ctx->virt_ctx;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
+	gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va, gr_ctx->mem.size, 0);
+
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.pagepool_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
 	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
-	vgpu_gr_free_gr_ctx(g, vm, gr_ctx);
+
+	kfree(gr_ctx);
 }
 
 static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,

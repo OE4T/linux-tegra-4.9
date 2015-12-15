@@ -14,3 +14,17 @@
  */
 
 #include "tegra186-quill-odm-data-plugin-manager.dtsi"
+
+/ {
+	plugin-manager {
+		e3325_supports {
+			ids = "3325-0000-a00";
+			override@0 {
+				target = <&m2_pcie_mux>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
+	};
+};

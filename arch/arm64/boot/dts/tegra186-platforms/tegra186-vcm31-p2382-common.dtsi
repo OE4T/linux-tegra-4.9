@@ -474,7 +474,9 @@
 			"Headphone-d", "d OUT",
 			"d IN", "LineIn-d",
 			"BT-out", "b OUT",
-			"b IN", "BT-in";
+			"b IN", "BT-in",
+			"EAVB-out", "ADSP EAVB Transmit",
+			"ADSP EAVB Receive", "EAVB-in";
 
 		nvidia,xbar = <&tegra_axbar>;
 

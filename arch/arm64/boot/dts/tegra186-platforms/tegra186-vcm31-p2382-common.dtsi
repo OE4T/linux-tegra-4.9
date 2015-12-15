@@ -337,6 +337,10 @@
 		status = "okay";
 	};
 
+	tegra_arm_wdt:watchdog@30d0000 {
+		status = "okay";
+	};
+
 	adma@2930000 {
 		dma-channels = <10>;
 	};

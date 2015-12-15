@@ -467,6 +467,10 @@
 		ivc = <&tegra_hv 52>;
 	};
 
+	tegra_arm_wdt:watchdog@30d0000 {
+		status = "disabled";
+	};
+
 	pmc@c370000 {
 		status = "disabled";
 	};

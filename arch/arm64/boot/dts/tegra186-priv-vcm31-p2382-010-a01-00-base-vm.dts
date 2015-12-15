@@ -138,6 +138,10 @@
 		};
 	};
 
+	tegra_arm_wdt:watchdog@30d0000 {
+		status = "disabled";
+	};
+
 	host1x: host1x {
 		compatible = "nvidia,tegra186-host1x-hv", "simple-bus";
 		reg = <0x0 0x13e10000 0x0 0x00010000>;

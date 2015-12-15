@@ -155,6 +155,10 @@
 		ivc = <&tegra_hv 51>;
 	};
 
+	tegra_arm_wdt:watchdog@30d0000 {
+		status = "disabled";
+	};
+
 	mc_sid@2c00000 {
 		nvidia,by-pass-smmu-streamid = <0x7e>;
 		status = "okay";

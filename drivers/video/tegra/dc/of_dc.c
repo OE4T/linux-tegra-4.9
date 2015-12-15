@@ -2696,6 +2696,12 @@ struct tegra_dc_platform_data
 	}
 #endif
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* no valid window set for device */
+	if (pdata->win_mask == 0)
+		pdata->fb->win = -1;
+#endif
+
 	if (pdata->default_out->type == TEGRA_DC_OUT_DP)
 		pdata->default_out->is_ext_dp_panel = of_property_read_bool(
 				np_target_disp, "nvidia,is_ext_dp_panel");

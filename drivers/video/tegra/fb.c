@@ -876,15 +876,17 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	phys_addr_t fb_size = 0;
 	int ret = 0;
 	int mode_idx;
-	unsigned stride;
+	unsigned stride = 0;
 	struct fb_videomode m;
 	DEFINE_DMA_ATTRS(attrs);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	if (!tegra_dc_get_window(dc, fb_data->win)) {
 		dev_err(&ndev->dev, "dc does not have a window at index %d\n",
 			fb_data->win);
 		return ERR_PTR(-ENOENT);
 	}
+#endif
 
 	info = framebuffer_alloc(sizeof(struct tegra_fb_info), &ndev->dev);
 	if (!info) {
@@ -930,7 +932,8 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 
 	info->fix.line_length = fb_data->xres * fb_data->bits_per_pixel / 8;
 
-	stride = tegra_dc_get_stride(dc, fb_data->win);
+	if (fb_data->win > -1)
+		stride = tegra_dc_get_stride(dc, fb_data->win);
 	if (!stride) /* default to pad the stride */
 		stride = round_up(info->fix.line_length,
 			TEGRA_LINEAR_PITCH_ALIGNMENT);
@@ -1018,7 +1021,8 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 
 	tegra_fb->info = info;
 
-	if (fb_data->flags & TEGRA_FB_FLIP_ON_PROBE) {
+	if ((fb_data->flags & TEGRA_FB_FLIP_ON_PROBE) &&
+			(fb_data->win > -1)) {
 		struct tegra_dc_win *win = &tegra_fb->win;
 		tegra_dc_update_windows(&win, 1, NULL, true);
 		tegra_dc_sync_windows(&win, 1);

@@ -408,6 +408,7 @@ static struct platform_driver nvmap_driver = {
 		.name	= "tegra-carveouts",
 		.owner	= THIS_MODULE,
 		.of_match_table = nvmap_of_ids,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 };
 

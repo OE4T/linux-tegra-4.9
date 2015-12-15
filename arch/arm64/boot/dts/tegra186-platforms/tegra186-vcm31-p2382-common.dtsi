@@ -566,7 +566,7 @@
 	adsp_audio {
 		compr-ops = <0>;
 		status = "okay";
-		num-plugin = <2>;
+		num-plugin = <6>;
 		plugin-info-1 {
 			plugin-name = "reverb";
 			firmware-name = "libnvreverbfx.elf";
@@ -577,6 +577,27 @@
 			plugin-name = "wire";
 			firmware-name = "libnvwirefx.elf";
 			widget-name = "WIRE";
+		};
+		plugin-info-3 {
+                        plugin-name = "eavb_dma_rx";
+                        firmware-name = "libnveavb_dma_rxfx.elf";
+                        widget-name = "EAVB_DMA_RX";
+		};
+		plugin-info-4 {
+			plugin-name = "avb_depack";
+			firmware-name = "libnvavb_depackfx.elf";
+			widget-name = "AVB_DEPACK";
+		};
+		plugin-info-5 {
+                        plugin-name = "eavb_dma_tx";
+                        firmware-name = "libnveavb_dma_txfx.elf";
+                        widget-name = "EAVB_DMA_TX";
+		};
+		plugin-info-6 {
+			plugin-name = "avb_pack";
+			firmware-name = "libnvavb_packfx.elf";
+			widget-name = "AVB_PACK";
+			param-type = <2>;
 		};
 	};
 

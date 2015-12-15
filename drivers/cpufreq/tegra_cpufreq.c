@@ -109,18 +109,19 @@ struct per_cluster_data {
 	struct cpumask cpu_mask;
 };
 
+struct cc3_ari_params {
+	u32 ndiv;
+	u32 vindex;
+	u8 enable;
+};
+
 struct tegra_cpufreq_data {
 	struct per_cluster_data pcluster[MAX_CLUSTERS];
 	struct mutex mlock; /* lock protecting below params */
 	uint32_t freq_compute_delay; /* delay in reading clock counters */
 	uint32_t cpu_freq[CONFIG_NR_CPUS];
 	unsigned long emc_max_rate; /* Hz */
-};
-
-struct cc3_ari_params {
-	uint32_t ndiv;
-	uint32_t vindx;
-	uint8_t enable;
+	struct cc3_ari_params cc3;
 };
 
 static struct tegra_cpufreq_data tfreq_data;
@@ -445,6 +446,28 @@ out:
 	return ret;
 }
 
+static void __tegra_mce_cc3_ctrl(void *data)
+{
+	struct cc3_ari_params *param = (struct cc3_ari_params *)data;
+
+	tegra_mce_cc3_ctrl(param->ndiv, param->vindex, param->enable);
+}
+
+static int enable_autocc3(void)
+{
+	enum cluster cl;
+	int wait = 1;
+	int ret = 0;
+
+	LOOP_FOR_EACH_CLUSTER(cl) {
+		ret = smp_call_function_any(&tfreq_data.pcluster[cl].cpu_mask,
+				__tegra_mce_cc3_ctrl,
+				&tfreq_data.cc3, wait);
+	}
+
+	return ret;
+}
+
 #ifdef CONFIG_DEBUG_FS
 #define RW_MODE			(S_IWUSR | S_IRUGO)
 #define RO_MODE			(S_IRUGO)
@@ -600,6 +623,33 @@ static const struct file_operations lut_fops = {
 	.release = single_release,
 };
 
+static int get_cc3_status(void *data, u64 *val)
+{
+	mutex_lock(&tfreq_data.mlock);
+
+	*val = tfreq_data.cc3.enable;
+
+	mutex_unlock(&tfreq_data.mlock);
+	return 0;
+}
+
+static int set_cc3(void *data, u64 val)
+{
+	int ret = 0;
+
+	mutex_lock(&tfreq_data.mlock);
+
+	if ((bool)tfreq_data.cc3.enable ^ (bool) val) {
+		tfreq_data.cc3.enable = (bool) val;
+		ret = enable_autocc3();
+	}
+
+	mutex_unlock(&tfreq_data.mlock);
+	return ret;
+}
+DEFINE_SIMPLE_ATTRIBUTE(cc3_fops, get_cc3_status, set_cc3,
+	"%llu\n");
+
 static struct dentry *tegra_cpufreq_debugfs_root;
 static int __init tegra_cpufreq_debug_init(void)
 {
@@ -622,6 +672,14 @@ static int __init tegra_cpufreq_debug_init(void)
 					NULL,
 					&freq_compute_fops))
 		goto err_out;
+
+	if (tfreq_data.cc3.enable) {
+		if (!debugfs_create_file("auto_cc3", RW_MODE,
+				 tegra_cpufreq_debugfs_root,
+					NULL,
+					&cc3_fops))
+			goto err_out;
+	}
 
 	for_each_possible_cpu(cpu) {
 		sprintf(buff, "cpu%llu", cpu);
@@ -959,28 +1017,6 @@ static void set_cpu_mask(void)
 	}
 }
 
-static void __tegra_mce_cc3_ctrl(void *data)
-{
-	tegra_mce_cc3_ctrl(SAFE_CC3_NDIV, SAFE_CC3_VINDEX, 1);
-}
-
-static int __init enable_autocc3(void)
-{
-	enum cluster cl;
-	int wait = 1;
-	int ret = 0;
-
-	set_cpu_mask();
-
-	LOOP_FOR_EACH_CLUSTER(cl) {
-		ret = smp_call_function_any(&tfreq_data.pcluster[cl].cpu_mask,
-				__tegra_mce_cc3_ctrl,
-				&tfreq_data.pcluster[cl].dvfs_tbl, wait);
-	}
-
-	return ret;
-}
-
 static int __init register_with_emc_bwmgr(void)
 {
 	enum tegra_bwmgr_client_id bw_id = TEGRA_BWMGR_CLIENT_CPU_0;
@@ -1043,11 +1079,18 @@ static int __init tegra_cpufreq_init(void)
 	if (ret)
 		goto err_free_res;
 
+	set_cpu_mask();
+
 	if (of_property_read_bool(dn, "nvidia,enable-autocc3")) {
 		pr_debug("enabling autocc3\n");
+		tfreq_data.cc3.ndiv = SAFE_CC3_NDIV;
+		tfreq_data.cc3.vindex = SAFE_CC3_VINDEX;
+		tfreq_data.cc3.enable = true;
 		ret = enable_autocc3();
-		if (ret)
+		if (ret) {
+			tfreq_data.cc3.enable = false;
 			goto err_free_res;
+		}
 	}
 
 	ret = init_freqtbls(dn);

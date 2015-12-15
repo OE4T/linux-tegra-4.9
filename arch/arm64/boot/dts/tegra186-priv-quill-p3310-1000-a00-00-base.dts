@@ -34,6 +34,11 @@
 	chosen {
 		bootargs ="console=ttyS0,115200";
 		stdout-path = &uarta;
+		plugin-manager {
+			ids {
+				3325-0000-a00;
+			};
+		};
 	};
 
 	firmware {

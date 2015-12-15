@@ -50,6 +50,11 @@
 		wifi_over_pcie {
 			gpio-output-high = <TEGRA_GPIO(R, 4)>;
 		};
+
+		m2_pcie_mux: m2_pcie_mux {
+			gpio-output-high = <TEGRA_GPIO(B, 4)>;
+			status = "disabled";
+		};
 	};
 
 	ahci-sata@3507000 {

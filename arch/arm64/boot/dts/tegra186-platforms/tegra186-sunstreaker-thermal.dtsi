@@ -17,6 +17,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
+#include "tegra186-platforms/tegra186-balanced-throttle.dtsi"
 
 /* THERMAL gpio definitions */
 #define TEMP_ALERT		TEGRA_GPIO(V, 0)
@@ -94,6 +95,19 @@
 					hysteresis = <0>;
 					writable;
 				};
+				trip_bthrot {
+					temperature = <127000>;
+					type = "passive";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/BCPU-therm/trips/trip_bthrot}>;
+					cdev-type = "cpu-balanced";
+					cooling-device = <&{/bthrot_cdev/cpu_balanced} THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
 			};
 		};
 
@@ -106,11 +120,39 @@
 					hysteresis = <0>;
 					writable;
 				};
+				trip_bthrot {
+					temperature = <127000>;
+					type = "passive";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/MCPU-therm/trips/trip_bthrot}>;
+					cdev-type = "cpu-balanced";
+					cooling-device = <&{/bthrot_cdev/cpu_balanced} THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
 			};
 		};
 
 		GPU-therm {
 			status = "okay";
+			trips {
+				trip_bthrot {
+					temperature = <127000>;
+					type = "passive";
+					hysteresis = <0>;
+					writable;
+				};
+			};
+			cooling-maps {
+				map0 {
+					trip = <&{/thermal-zones/GPU-therm/trips/trip_bthrot}>;
+					cdev-type = "gpu-balanced";
+					cooling-device = <&{/bthrot_cdev/gpu_balanced} THERMAL_NO_LIMIT THERMAL_NO_LIMIT>;
+				};
+			};
 		};
 
 		PLL-therm {

@@ -13,7 +13,7 @@
  * more details.
  */
 
-#include "tegra186-quill-p3310-1000-a00-plugin-manager.dtsi"
+#include "tegra186-quill-odm-data-plugin-manager.dtsi"
 
 / {
 	plugin-manager {

@@ -131,4 +131,10 @@
 		iopower-sdmmc2-hv-supply = <&spmic_sd3>;
 		iopower-sdmmc3-hv-supply =  <&spmic_ldo5>;
 	};
+
+	i2c@c250000 {
+		onsemi,nct72@4c {
+			vdd-supply = <&vdd_1v8_sw>;
+		};
+	};
 };

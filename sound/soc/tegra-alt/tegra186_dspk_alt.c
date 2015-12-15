@@ -99,7 +99,10 @@ static int tegra186_dspk_runtime_resume(struct device *dev)
 static int tegra186_dspk_suspend(struct device *dev)
 {
 	struct tegra186_dspk *dspk = dev_get_drvdata(dev);
-	regcache_mark_dirty(dspk->regmap);
+
+	if (dspk)
+		regcache_mark_dirty(dspk->regmap);
+
 	return 0;
 }
 #endif
@@ -376,7 +379,6 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, dspk);
 
 	dspk->soc_data = soc_data;
 
@@ -458,6 +460,8 @@ static int tegra186_dspk_platform_probe(struct platform_device *pdev)
 
 	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
 		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+
+	dev_set_drvdata(&pdev->dev, dspk);
 
 	return 0;
 

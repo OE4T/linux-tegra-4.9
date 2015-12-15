@@ -445,14 +445,6 @@
 		status = "disabled";
 	};
 
-	mttcan@c310000 {
-		status = "disabled";
-	};
-
-	mttcan@c320000 {
-		status = "disabled";
-	};
-
         efuse@3820000 {
                 status = "disabled";
         };

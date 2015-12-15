@@ -319,6 +319,7 @@
 		mram-params = <0 16 16 8 8 8 16 16 16>;
 		tx-config = <8 8 0 64>;
 		rx-config = <64 64 64>;
+		status = "okay";
 	};
 
 	mttcan@c320000 {
@@ -327,6 +328,7 @@
 		mram-params = <0 16 16 8 8 8 16 16 16>;
 		tx-config = <8 8 0 64>;
 		rx-config = <64 64 64>;
+		status = "okay";
 	};
 	ahci-sata@3507000 {
 		status = "okay";

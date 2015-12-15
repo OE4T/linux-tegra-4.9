@@ -283,14 +283,6 @@
 		status = "disabled";
 	};
 
-	mttcan@c310000 {
-		status = "disabled";
-	};
-
-	mttcan@c320000 {
-		status = "disabled";
-	};
-
 	dummy-cool-dev {
 		status = "disabled";
 	};

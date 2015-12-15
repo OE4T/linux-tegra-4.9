@@ -2429,11 +2429,6 @@
 		status = "disabled";
 	};
 
-	axi2apb@2380000 {
-		compatible = "nvidia,tegra186-AXI2APB-bridge";
-		reg = <0x0 0x02380000 0x0 0x1000>;
-	};
-
 	axi2apb@2390000 {
 		compatible = "nvidia,tegra186-AXI2APB-bridge";
 		reg = <0x0 0x02390000 0x0 0x1000>;

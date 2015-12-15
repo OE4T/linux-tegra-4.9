@@ -1026,11 +1026,15 @@ struct tegra_fb_info *tegra_nvdisp_fb_register(struct platform_device *ndev,
 {
 	void *virt_addr = NULL;
 
-	/* Assign the given window to current dc */
-	if (!tegra_dc_get_window(dc, fb_data->win)) {
-		dev_err(&ndev->dev, "%s, failed to get window %d for head %d\n",
-			__func__, fb_data->win, dc->ctrl_num);
-		return ERR_PTR(-ENOENT);
+	/* Check fb_data->win is valid before checking for valid window */
+	if (fb_data->win > -1) {
+		/* Assign the given window to current dc */
+		if (!tegra_dc_get_window(dc, fb_data->win)) {
+			dev_err(&ndev->dev, "%s, failed to get window %d for head %d\n",
+				__func__, fb_data->win, dc->ctrl_num);
+			return ERR_PTR(-ENOENT);
+		}
+
 	}
 
 	/* Allocate FBMem if not already allocated */

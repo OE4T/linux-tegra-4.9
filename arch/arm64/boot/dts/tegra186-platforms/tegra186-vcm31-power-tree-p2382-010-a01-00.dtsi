@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015 - 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -105,6 +105,70 @@
 	};
 
 	fixed-regulators {
+		vdd_3v3: regulator@0 {
+			compatible = "regulator-fixed-sync";
+			reg = <0>;
+			regulator-name = "vdd-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		vdd_dummy: regulator@2 {
+			compatible = "regulator-fixed";
+			reg = <2>;
+			regulator-name = "vdd_dummy";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
+		vdd_dummy_1v8: regulator@3 {
+			compatible = "regulator-fixed";
+			reg = <3>;
+			regulator-name = "vdd_dummy_1v8";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
+
+		en_vdd_sdcard1: regulator@4 {
+			compatible = "regulator-fixed-sync";
+			reg = <4>;
+			regulator-name = "en-vdd-sdcard1";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(J, 5) 0>;
+			regulator-enable-ramp-delay = <5400>;
+			regulator-disable-ramp-delay = <1000000>;
+			enable-active-high;
+		};
+
+		en_vdd_sdcard3: regulator@5 {
+			compatible = "regulator-fixed-sync";
+			reg = <5>;
+			regulator-name = "en-vdd-sdcard3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			gpio = <&tegra_gpio TEGRA_GPIO(J, 6) 0>;
+			regulator-enable-ramp-delay = <6000>;
+			regulator-disable-ramp-delay = <1000000>;
+			enable-active-high;
+		};
+
+		vdd_wl_bt: regulator@6 {
+			compatible = "regulator-fixed-sync";
+			reg = <6>;
+			gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(E, 5) 0>;
+			regulator-name = "vdd_wl_bt";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			enable-active-high;
+			regulator-enable-ramp-delay = <6400>;
+			regulator-disable-ramp-delay = <66400>;
+			regulator-always-on;
+		};
+
 		vdd_usb0_5v: regulator@7 {
 			compatible = "regulator-fixed";
 			reg = <7>;
@@ -112,6 +176,8 @@
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&tegra_gpio TEGRA_GPIO(L, 4) 0>;
+			regulator-enable-ramp-delay = <19000>;
+			regulator-disable-ramp-delay = <100000>;
 			enable-active-high;
 			gpio-open-drain;
 			vin-supply = <&vdd_dummy>;

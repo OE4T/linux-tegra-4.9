@@ -271,8 +271,21 @@
                 spmic: spmic@3c {
 			/delete-property/ maxim,enable-sleep;
 			/delete-node/ backup-battery;
+			/delete-node/ fps;
 			regulators {
+				/delete-node/ sd0;
+				/delete-node/ sd1;
+				/delete-node/ sd2;
+				/delete-node/ sd3;
+				/delete-node/ sd4;
+				/delete-node/ ldo0;
+				/delete-node/ ldo1;
+				/delete-node/ ldo2;
 				/delete-node/ ldo3;
+				/delete-node/ ldo4;
+				/delete-node/ ldo6;
+				/delete-node/ ldo7;
+				/delete-node/ ldo8;
 			};
 		};
 	};

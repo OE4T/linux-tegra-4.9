@@ -5844,6 +5844,7 @@ static struct platform_driver tegra_dc_driver = {
 		.of_match_table =
 			of_match_ptr(tegra_display_of_match),
 #endif
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe = tegra_dc_probe,
 	.remove = tegra_dc_remove,

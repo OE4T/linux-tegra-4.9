@@ -28,6 +28,18 @@
 		stdout-path = &uarta;
 	};
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "sunstreaker";
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
 	spi@3270000 {/* QSPI NOR */
 		status = "okay";
 		spi@0 {

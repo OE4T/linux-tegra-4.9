@@ -27,6 +27,18 @@
 		stdout-path = &uarta;
 	};
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "sunstreaker";
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
 	i2c@3160000 {
 		i2cmux@71 {
 			vcc-supply = <&spmic_sd3>;

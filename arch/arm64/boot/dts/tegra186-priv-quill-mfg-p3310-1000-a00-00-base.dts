@@ -27,6 +27,18 @@
 		stdout-path = &uarta;
 	};
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "quill-mfg";
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
 	xudc@3550000 {
 		status = "okay";
 		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,

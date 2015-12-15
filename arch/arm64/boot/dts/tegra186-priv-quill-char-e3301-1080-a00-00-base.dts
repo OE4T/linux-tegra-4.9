@@ -27,6 +27,18 @@
 		stdout-path = &uarta;
 	};
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "quill-char";
+		};
+	};
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
 	padctl_uphy: pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&quill_default>;

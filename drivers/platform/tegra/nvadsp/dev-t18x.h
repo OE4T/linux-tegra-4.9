@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2016, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -45,6 +45,8 @@ enum adsp_mem_dt {
 	ADSP_APP_SIZE,
 	ARAM_ALIAS_0_ADDR,
 	ARAM_ALIAS_0_SIZE,
+	ACSR_ADDR, /* ACSR: ADSP CPU SHARED REGION */
+	ACSR_SIZE,
 	ADSP_MEM_END,
 };
 

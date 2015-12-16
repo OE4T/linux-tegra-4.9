@@ -1,0 +1,16 @@
+Tegra ADSP bindings
+-------------------
+
+These are additional bindings compared to exiting ADSP bindings.
+
+Optional properties:
+- nvidia,adsp_os_secload: shall be added when boot-loader has securely loaded
+	adsp firmware image into carve out memory.
+
+Example:
+	adsp {
+             compatible = "nvidia,tegra210-adsp";
+	     ...
+	     nvidia,adsp_os_secload;
+	};
+

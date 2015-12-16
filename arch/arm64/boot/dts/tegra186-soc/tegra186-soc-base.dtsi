@@ -1922,6 +1922,7 @@
 	adsp@2993000 {
 		status = "disabled";
 		compatible = "nvidia,tegra18x-adsp";
+		nvidia,adsp_os_secload;
 		power-domains = <&adsp_pd>;
 		wakeup-disable;
 		interrupt-parent = <&tegra_agic>;

@@ -212,6 +212,17 @@
 				disp-default-out {
 					nvidia,out-rotation = <180>;
 				};
+				smartdimmer {
+					status = "okay";
+					nvidia,turn-off-brightness = <0>;
+					nvidia,turn-on-brightness = <255>;
+					nvidia,sw-update-delay = <0>;
+					nvidia,aggressiveness = <5>;
+					nvidia,phase-in-settings = <0>;
+					nvidia,phase-in-adjustments = <0>;
+					nvidia,sd-window-enable = <0>;
+					nvidia,bl-device-name = "pwm-backlight";
+				};
 			};
 		};
 

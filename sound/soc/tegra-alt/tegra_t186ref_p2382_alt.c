@@ -727,6 +727,7 @@ static struct platform_driver tegra_t186ref_p2382_driver = {
 		.owner = THIS_MODULE,
 		.pm = &snd_soc_pm_ops,
 		.of_match_table = tegra_t186ref_p2382_of_match,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 	},
 	.probe = tegra_t186ref_p2382_driver_probe,
 	.remove = tegra_t186ref_p2382_driver_remove,

@@ -771,6 +771,7 @@ static struct platform_driver tegra_t186ref_bali_driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,
 		.pm = &snd_soc_pm_ops,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 		.of_match_table = tegra_t186ref_bali_of_match,
 	},
 	.probe = tegra_t186ref_bali_driver_probe,

@@ -223,7 +223,9 @@ static int tegra186_asrc_suspend(struct device *dev)
 {
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(asrc->regmap);
+	if (asrc)
+		regcache_mark_dirty(asrc->regmap);
+
 	return 0;
 }
 #endif
@@ -896,7 +898,6 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, asrc);
 
 	asrc->soc_data = soc_data;
 
@@ -971,6 +972,8 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "Could not register CODEC: %d\n", ret);
 		goto err_suspend;
 	}
+
+	dev_set_drvdata(&pdev->dev, asrc);
 
 	return 0;
 

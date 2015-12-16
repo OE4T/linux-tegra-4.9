@@ -111,7 +111,8 @@ static int tegra186_arad_suspend(struct device *dev)
 {
 	struct tegra186_arad *arad = dev_get_drvdata(dev);
 
-	regcache_mark_dirty(arad->regmap);
+	if (arad)
+		regcache_mark_dirty(arad->regmap);
 
 	return 0;
 }
@@ -799,7 +800,6 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 		ret = -ENOMEM;
 		goto err;
 	}
-	dev_set_drvdata(&pdev->dev, arad);
 
 	arad->soc_data = soc_data;
 
@@ -862,6 +862,8 @@ static int tegra186_arad_platform_probe(struct platform_device *pdev)
 			TEGRA186_AHC_ARAD1_CB, &pdev->dev);
 #endif
 #endif
+	dev_set_drvdata(&pdev->dev, arad);
+
 	return 0;
 
 err_suspend:

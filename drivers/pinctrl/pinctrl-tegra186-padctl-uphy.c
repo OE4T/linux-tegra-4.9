@@ -560,6 +560,7 @@ struct tegra_xusb_fuse_calibration {
 	u32 hs_squelch;
 	u32 hs_term_range_adj;
 	u32 rpd_ctrl;
+	int hs_curr_level_offset; /* deal with platform design deviation */
 };
 
 struct tegra_fuse_calibration {
@@ -684,7 +685,6 @@ struct tegra_padctl_uphy {
 
 	bool host_mode_phy_disabled; /* set true if mailbox is not available */
 	unsigned int utmi_enable;
-	unsigned int hs_curr_level_offset[TEGRA_UTMI_PHYS];
 	/* TODO: should move to host controller driver? */
 	struct regulator *vbus[TEGRA_UTMI_PHYS];
 	struct regulator *vddio_hsic;
@@ -3872,7 +3872,23 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	reg &= ~(USB2_OTG_PD | USB2_OTG_PD_ZI);
 	reg |= TERM_SEL;
 	reg &= ~HS_CURR_LEVEL(~0);
-	reg |= HS_CURR_LEVEL(uphy->calib.hs_curr_level[port]);
+	if (uphy->calib.hs_curr_level_offset) {
+		int hs_current_level;
+
+		dev_dbg(uphy->dev, "UTMI port %d apply hs_curr_level_offset %d\n",
+			port, uphy->calib.hs_curr_level_offset);
+
+		hs_current_level = (int) uphy->calib.hs_curr_level[port] +
+			uphy->calib.hs_curr_level_offset;
+
+		if (hs_current_level < 0)
+			hs_current_level = 0;
+		if (hs_current_level > 0x3f)
+			hs_current_level = 0x3f;
+
+		reg |= HS_CURR_LEVEL(hs_current_level);
+	} else
+		reg |= HS_CURR_LEVEL(uphy->calib.hs_curr_level[port]);
 	padctl_writel(uphy, reg, XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
 
 	reg = padctl_readl(uphy, XUSB_PADCTL_USB2_OTG_PADX_CTL1(port));
@@ -4736,8 +4752,11 @@ MODULE_DEVICE_TABLE(of, tegra_padctl_uphy_of_match);
 
 static int tegra_xusb_read_fuse_calibration(struct tegra_padctl_uphy *uphy)
 {
+	struct platform_device *pdev = to_platform_device(uphy->dev);
+	struct device_node *np = pdev->dev.of_node;
 	unsigned int i;
 	u32 reg;
+	s32 v;
 
 	reg = tegra_fuse_readl(FUSE_SKU_USB_CALIB_0);
 	dev_info(uphy->dev, "FUSE_SKU_USB_CALIB_0 0x%x\n", reg);
@@ -4750,10 +4769,14 @@ static int tegra_xusb_read_fuse_calibration(struct tegra_padctl_uphy *uphy)
 	uphy->calib.hs_term_range_adj = (reg >> HS_TERM_RANGE_ADJ_SHIFT) &
 					HS_TERM_RANGE_ADJ_MASK;
 
-
 	reg = tegra_fuse_readl(FUSE_USB_CALIB_EXT_0);
 	dev_info(uphy->dev, "FUSE_USB_CALIB_EXT_0 0x%x\n", reg);
 	uphy->calib.rpd_ctrl = (reg >> RPD_CTRL_SHIFT) & RPD_CTRL_MASK;
+
+	if (of_property_read_s32(np, "nvidia,hs_curr_level_offset", &v) == 0) {
+		dev_dbg(uphy->dev, "HS current level offset %d\n", v);
+		uphy->calib.hs_curr_level_offset = v;
+	}
 
 	return 0;
 }

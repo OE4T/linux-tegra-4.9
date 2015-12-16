@@ -1195,6 +1195,7 @@ static struct platform_driver eqos_driver = {
 	.driver = {
 		   .name = DEV_NAME,
 		   .owner = THIS_MODULE,
+		   .probe_type = PROBE_PREFER_ASYNCHRONOUS,
 			 .of_match_table = eqos_of_match,
 	},
 };

@@ -671,7 +671,7 @@ sd_fail:
  * 2. Disable interrupt bounds
  * 3. Disable the histogram function
  * */
-static void tegra_sd_stop(struct tegra_dc *dc)
+void tegra_sd_stop(struct tegra_dc *dc)
 {
 	struct tegra_dc_sd_settings *sd = dc->out->sd_settings;
 

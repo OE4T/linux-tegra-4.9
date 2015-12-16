@@ -189,6 +189,7 @@ static struct platform_driver tegra_vi4_driver = {
 	.driver = {
 		.name = "tegra-vi4",
 		.owner = THIS_MODULE,
+		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
 #ifdef CONFIG_OF
 		.of_match_table = tegra_vi4_of_match,
 #endif

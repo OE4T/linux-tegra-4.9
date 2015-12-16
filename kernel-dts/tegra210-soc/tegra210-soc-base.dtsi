@@ -1296,7 +1296,8 @@
 	     iommus = <&smmu TEGRA_SWGROUP_APE>;
 	     nvidia,adsp_mem = <0x80300000 0x01000000>, /* ADSP OS */
 			       <0x80B00000 0x00800000>, /* ADSP APP */
-			       <0x00400000 0x00010000>; /* ARAM ALIAS 0 */
+			       <0x00400000 0x00010000>, /* ARAM ALIAS 0 */
+			       <0x80300000 0x00200000>; /* ACSR */
 	     interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH>, /* MBOX SEND */
 			     <GIC_SPI INT_AMISC_MBOX_FULL0 IRQ_TYPE_LEVEL_HIGH>, /* MBOX RECV */
 			     <GIC_SPI INT_ADSP_WDT IRQ_TYPE_LEVEL_HIGH>, /* Watchdog */

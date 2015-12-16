@@ -349,6 +349,11 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	if (dsi->mipi_cal)
 		tegra_mipi_cal_destroy(dc);
 
+#if defined (CONFIG_ARCH_TEGRA_18x_SOC)
+	if (dsi->pad_ctrl)
+		tegra_dsi_padctrl_shutdown(dc);
+#endif
+
 	tegra_dc_io_end(dc);
 	mutex_unlock(&dsi->lock);
 
@@ -446,11 +451,24 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		goto err_release_regs;
 	}
 
+#if defined (CONFIG_ARCH_TEGRA_18x_SOC)
+	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
+	if (IS_ERR(dsi->pad_ctrl)) {
+		dev_err(&dc->ndev->dev, "dsi: Padctrl sw init failed\n");
+		err = PTR_ERR(dsi->pad_ctrl);
+		goto err_mipical_dest;
+	}
+#endif
 	/* Need to always reinitialize clocks to ensure proper functionality */
 	tegra_dsi_init_clock_param(dc);
 	of_node_put(np_dsi);
 	return 0;
 
+#if defined (CONFIG_ARCH_TEGRA_18x_SOC)
+err_mipical_dest:
+	if(dsi->mipi_cal)
+		tegra_mipi_cal_destroy(dc);
+#endif
 err_release_regs:
 	if (dsi->avdd_dsi_csi)
 		regulator_put(dsi->avdd_dsi_csi);

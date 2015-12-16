@@ -5742,7 +5742,17 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	 * boot. It should not apply for e.g. HDMI hotplug.
 	 */
 	dc->initialized = false;
-
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (dc->out->sd_settings) {
+		if (dc->out->sd_settings->enable) {
+			mutex_lock(&dc->lock);
+			tegra_dc_unmask_interrupt(dc, SMARTDIM_INT);
+			tegra_sd_stop(dc);
+			tegra_sd_init(dc);
+			mutex_unlock(&dc->lock);
+		}
+	}
+#endif
 	/*
 	 * Initialize vedid state. This is placed here
 	 * to allow persistence across sw HDMI hotplugs.

@@ -636,10 +636,6 @@ static int parse_sd_settings(struct device_node *np,
 		sd_settings->enable_int = (unsigned) 0;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	sd_settings->enable = 0;
-#endif
-
 	OF_DC_LOG("nvidia,sd-enable %d\n", sd_settings->enable);
 	if (!of_property_read_u32(np, "nvidia,turn-off-brightness", &temp)) {
 		sd_settings->turn_off_brightness = (u8) temp;
@@ -657,6 +653,12 @@ static int parse_sd_settings(struct device_node *np,
 		sd_settings->hw_update_delay = (u8) temp;
 		OF_DC_LOG("nvidia,hw-update-delay %d\n", temp);
 	}
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (!of_property_read_u32(np, "nvidia,sw-update-delay", &temp)) {
+		sd_settings->sw_update_delay = (u8) temp;
+		OF_DC_LOG("nvidia,sw-update-delay %d\n", temp);
+	}
+#endif
 	if (!of_property_read_u32(np, "nvidia,bin-width", &temp)) {
 		s32 s32_val;
 		s32_val = (s32)temp;

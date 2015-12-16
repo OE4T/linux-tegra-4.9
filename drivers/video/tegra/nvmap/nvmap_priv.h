@@ -3,7 +3,7 @@
  *
  * GPU memory management driver for Tegra
  *
- * Copyright (c) 2009-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -411,7 +411,7 @@ struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
 
 /* MM definitions. */
 extern size_t cache_maint_inner_threshold;
-extern size_t cache_maint_outer_threshold;
+extern int nvmap_cache_maint_by_set_ways;
 
 extern void v7_flush_kern_cache_all(void);
 extern void v7_clean_kern_cache_all(void *);

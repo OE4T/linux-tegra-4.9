@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_cache.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,8 +39,24 @@ size_t cache_maint_inner_threshold = SZ_1M;
 size_t cache_maint_inner_threshold = SZ_2M;
 #endif
 
-#ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
-size_t cache_maint_outer_threshold = SZ_1M;
+#ifndef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
+static int nvmap_outer_cache_maint_by_set_ways;
+static size_t cache_maint_outer_threshold = SIZE_MAX;
+#else
+static int nvmap_outer_cache_maint_by_set_ways = 1;
+static size_t cache_maint_outer_threshold = SZ_1M;
+#endif
+
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
+int nvmap_cache_maint_by_set_ways = 1;
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU
+static int nvmap_cache_maint_by_set_ways_on_one_cpu = 1;
+#else
+static int nvmap_cache_maint_by_set_ways_on_one_cpu;
+#endif
+#else
+int nvmap_cache_maint_by_set_ways;
+static int nvmap_cache_maint_by_set_ways_on_one_cpu;
 #endif
 
 inline static void nvmap_flush_dcache_all(void *dummy)
@@ -66,14 +82,16 @@ inline static void nvmap_flush_dcache_all(void *dummy)
 
 static void nvmap_inner_flush_cache_all(void)
 {
-#if defined(CONFIG_ARM64) && defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
-	nvmap_flush_dcache_all(NULL);
-#elif defined(CONFIG_ARM64)
-	on_each_cpu(nvmap_flush_dcache_all, NULL, 1);
-#elif defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
-	v7_flush_kern_cache_all();
+#if defined(CONFIG_ARM64)
+	if (nvmap_cache_maint_by_set_ways_on_one_cpu)
+		nvmap_flush_dcache_all(NULL);
+	else
+		on_each_cpu(nvmap_flush_dcache_all, NULL, 1);
 #else
-	on_each_cpu(v7_flush_kern_cache_all, NULL, 1);
+	if (nvmap_cache_maint_by_set_ways_on_one_cpu)
+		on_each_cpu(v7_flush_kern_cache_all, NULL, 1);
+	else
+		v7_flush_kern_cache_all();
 #endif
 }
 void (*inner_flush_cache_all)(void) = nvmap_inner_flush_cache_all;
@@ -82,17 +100,20 @@ extern void __clean_dcache_louis(void *);
 extern void v7_clean_kern_cache_louis(void *);
 static void nvmap_inner_clean_cache_all(void)
 {
-#if defined(CONFIG_ARM64) && \
-	defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
-	on_each_cpu(__clean_dcache_louis, NULL, 1);
-	__clean_dcache_all(NULL);
-#elif defined(CONFIG_ARM64)
-	on_each_cpu(__clean_dcache_all, NULL, 1);
-#elif defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS_ON_ONE_CPU)
-	on_each_cpu(v7_clean_kern_cache_louis, NULL, 1);
-	v7_clean_kern_cache_all(NULL);
+#if defined(CONFIG_ARM64)
+	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {
+		on_each_cpu(__clean_dcache_louis, NULL, 1);
+		__clean_dcache_all(NULL);
+	} else {
+		on_each_cpu(__clean_dcache_all, NULL, 1);
+	}
 #else
-	on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
+	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {
+		on_each_cpu(v7_clean_kern_cache_louis, NULL, 1);
+		v7_clean_kern_cache_all(NULL);
+	} else {
+		on_each_cpu(v7_clean_kern_cache_all, NULL, 1);
+	}
 #endif
 }
 void (*inner_clean_cache_all)(void) = nvmap_inner_clean_cache_all;
@@ -233,48 +254,35 @@ per_page_cache_maint:
 	}
 }
 
-#if defined(CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS)
 static bool fast_cache_maint_outer(unsigned long start,
 		unsigned long end, unsigned int op)
 {
-	bool result = false;
-	if (end - start >= cache_maint_outer_threshold) {
-		if (op == NVMAP_CACHE_OP_WB_INV) {
-			outer_flush_all();
-			result = true;
-		}
-		if (op == NVMAP_CACHE_OP_WB) {
-			outer_clean_all();
-			result = true;
-		}
-	}
+	if (!nvmap_outer_cache_maint_by_set_ways)
+		return false;
 
-	return result;
-}
-#else
-static inline bool fast_cache_maint_outer(unsigned long start,
-		unsigned long end, unsigned int op)
-{
-	return false;
-}
-#endif
+	if ((op == NVMAP_CACHE_OP_INV) ||
+		((end - start) < cache_maint_outer_threshold))
+		return false;
 
-#if defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS)
+	if (op == NVMAP_CACHE_OP_WB_INV)
+		outer_flush_all();
+	else if (op == NVMAP_CACHE_OP_WB)
+		outer_clean_all();
+
+	return true;
+}
+
 static inline bool can_fast_cache_maint(unsigned long start,
 			unsigned long end, unsigned int op)
 {
+	if (!nvmap_cache_maint_by_set_ways)
+		return false;
+
 	if ((op == NVMAP_CACHE_OP_INV) ||
 		((end - start) < cache_maint_inner_threshold))
 		return false;
 	return true;
 }
-#else
-static inline bool can_fast_cache_maint(unsigned long start,
-			unsigned long end, unsigned int op)
-{
-	return false;
-}
-#endif
 
 static bool fast_cache_maint(struct nvmap_handle *h,
 	unsigned long start,
@@ -521,6 +529,8 @@ out:
  * This will optimze the op if it can.
  * In the case that all the handles together are larger than the inner cache
  * maint threshold it is possible to just do an entire inner cache flush.
+ *
+ * NOTE: this omits outer cache operations which is fine for ARM64
  */
 int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 			      u32 *sizes, int op, int nr)
@@ -529,9 +539,11 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 	u64 total = 0;
 	u64 thresh = ~0;
 
-#if defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS)
-	thresh = cache_maint_inner_threshold;
-#endif
+	WARN(!config_enabled(CONFIG_ARM64),
+		"cache list operation may not function properly");
+
+	if (nvmap_cache_maint_by_set_ways)
+		thresh = cache_maint_inner_threshold;
 
 	for (i = 0; i < nr; i++)
 		if ((op == NVMAP_CACHE_OP_WB) && nvmap_handle_track_dirty(handles[i]))
@@ -584,6 +596,102 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 	return 0;
 }
 
+static int cache_inner_threshold_show(struct seq_file *m, void *v)
+{
+	if (nvmap_cache_maint_by_set_ways)
+		seq_printf(m, "%zuB\n", cache_maint_inner_threshold);
+	else
+		seq_printf(m, "%zuB\n", SIZE_MAX);
+	return 0;
+}
+
+static int cache_inner_threshold_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, cache_inner_threshold_show, inode->i_private);
+}
+
+static ssize_t cache_inner_threshold_write(struct file *file,
+					const char __user *buffer,
+					size_t count, loff_t *pos)
+{
+	int ret;
+	struct seq_file *p = file->private_data;
+	char str[] = "0123456789abcdef";
+
+	count = min_t(size_t, strlen(str), count);
+	if (copy_from_user(str, buffer, count))
+		return -EINVAL;
+
+	if (!nvmap_cache_maint_by_set_ways)
+		return -EINVAL;
+
+	mutex_lock(&p->lock);
+	ret = sscanf(str, "%zu", &cache_maint_inner_threshold);
+	mutex_unlock(&p->lock);
+	if (ret != 1)
+		return -EINVAL;
+
+	pr_debug("nvmap:cache_maint_inner_threshold is now :%zuB\n",
+			cache_maint_inner_threshold);
+	return count;
+}
+
+static const struct file_operations cache_inner_threshold_fops = {
+	.open		= cache_inner_threshold_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+	.write		= cache_inner_threshold_write,
+};
+
+static int cache_outer_threshold_show(struct seq_file *m, void *v)
+{
+	if (nvmap_outer_cache_maint_by_set_ways)
+		seq_printf(m, "%zuB\n", cache_maint_outer_threshold);
+	else
+		seq_printf(m, "%zuB\n", SIZE_MAX);
+	return 0;
+}
+
+static int cache_outer_threshold_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, cache_outer_threshold_show, inode->i_private);
+}
+
+static ssize_t cache_outer_threshold_write(struct file *file,
+					const char __user *buffer,
+					size_t count, loff_t *pos)
+{
+	int ret;
+	struct seq_file *p = file->private_data;
+	char str[] = "0123456789abcdef";
+
+	count = min_t(size_t, strlen(str), count);
+	if (copy_from_user(str, buffer, count))
+		return -EINVAL;
+
+	if (!nvmap_outer_cache_maint_by_set_ways)
+		return -EINVAL;
+
+	mutex_lock(&p->lock);
+	ret = sscanf(str, "%zu", &cache_maint_outer_threshold);
+	mutex_unlock(&p->lock);
+	if (ret != 1)
+		return -EINVAL;
+
+	pr_debug("nvmap:cache_maint_outer_threshold is now :%zuB\n",
+			cache_maint_outer_threshold);
+	return count;
+}
+
+static const struct file_operations cache_outer_threshold_fops = {
+	.open		= cache_outer_threshold_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+	.write		= cache_outer_threshold_write,
+};
+
 int nvmap_cache_debugfs_init(struct dentry *nvmap_root)
 {
 	struct dentry *cache_root;
@@ -595,24 +703,38 @@ int nvmap_cache_debugfs_init(struct dentry *nvmap_root)
 	if (!cache_root)
 		return -ENODEV;
 
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-	debugfs_create_size_t("cache_maint_inner_threshold",
-			      S_IRUSR | S_IWUSR,
-			      cache_root,
-			      &cache_maint_inner_threshold);
+	if (nvmap_cache_maint_by_set_ways) {
+		debugfs_create_x32("nvmap_cache_maint_by_set_ways",
+				   S_IRUSR | S_IWUSR,
+				   cache_root,
+				   &nvmap_cache_maint_by_set_ways);
 
-	pr_info("nvmap:inner cache maint threshold=%zd",
-		cache_maint_inner_threshold);
-#endif
-#ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
-	debugfs_create_size_t("cache_maint_outer_threshold",
-			      S_IRUSR | S_IWUSR,
-			      cache_root,
-			      &cache_maint_outer_threshold);
+	debugfs_create_file("cache_maint_inner_threshold",
+			    S_IRUSR | S_IWUSR,
+			    cache_root,
+			    NULL,
+			    &cache_inner_threshold_fops);
+	}
 
-	pr_info("nvmap:outer cache maint threshold=%zd",
-		cache_maint_outer_threshold);
-#endif
+	if (nvmap_cache_maint_by_set_ways_on_one_cpu) {
+		debugfs_create_x32("nvmap_cache_maint_by_set_ways_on_one_cpu",
+				   S_IRUSR | S_IWUSR,
+				   cache_root,
+				   &nvmap_cache_maint_by_set_ways_on_one_cpu);
+	}
+
+	if (nvmap_outer_cache_maint_by_set_ways) {
+		debugfs_create_x32("nvmap_cache_outer_maint_by_set_ways",
+				   S_IRUSR | S_IWUSR,
+				   cache_root,
+				   &nvmap_outer_cache_maint_by_set_ways);
+
+		debugfs_create_file("cache_maint_outer_threshold",
+				    S_IRUSR | S_IWUSR,
+				    cache_root,
+				    NULL,
+				    &cache_outer_threshold_fops);
+	}
 
 	return 0;
 }

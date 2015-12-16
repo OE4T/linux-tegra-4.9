@@ -164,6 +164,19 @@ static struct tegra_dsi_out dsi_fake_panel_pdata = {
 
 static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 	{
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		.pclk = 193224000, /* @60Hz*/
+		.h_ref_to_sync = 1,
+		.v_ref_to_sync = 11,
+		.h_sync_width = 1,
+		.v_sync_width = 1,
+		.h_back_porch = 20,
+		.v_back_porch = 7,
+		.h_active = 1200,
+		.v_active = 1920,
+		.h_front_porch = 107,
+		.v_front_porch = 497,
+#else
 		.pclk = 154700000, /* @60Hz*/
 		.h_ref_to_sync = 4,
 		.v_ref_to_sync = 1,
@@ -175,6 +188,7 @@ static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 		.v_active = 1200,
 		.h_front_porch = 120,
 		.v_front_porch = 17,
+#endif
 	},
 };
 

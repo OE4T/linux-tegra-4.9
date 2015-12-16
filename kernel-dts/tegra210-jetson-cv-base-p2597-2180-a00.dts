@@ -260,7 +260,7 @@
 		nvidia,hp-det-gpios = <&gpio TEGRA_GPIO(E, 6) GPIO_ACTIVE_HIGH>;
 
 		/* used when no audio codec on board */
-		nvidia,dummy-codec-dai = <&spdif_dit3>;
+		nvidia,dummy-codec-dai = <&spdif_dit0>;
 		nvidia,dummy-codec-dai-name = "dit-hifi";
 
 		nvidia,num-codec-link = <5>;

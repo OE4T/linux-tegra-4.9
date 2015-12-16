@@ -76,6 +76,13 @@
 		avdd_pll_erefeut-supply = <&vdd_dummy>;
 	};
 
+	i2c@3160000 { /* Tegra I2C1 - VCM I2CA */
+		touch-controller@4b {
+			vdd-supply = <&vdd_dummy>;
+			avdd-supply = <&vdd_dummy>;
+		};
+	};
+
 	fixed-regulators {
 		vdd_usb0_5v: regulator@7 {
 			compatible = "regulator-fixed";

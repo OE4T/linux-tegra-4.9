@@ -239,6 +239,11 @@
 		};
 	};
 
+        sdhci@3460000 { /* SDMMC_D: Used for eMMc */
+                        status = "okay";
+                        uhs-mask = <0x40>;   /*HS400 is not supported*/
+        };
+
 	external-connection {
 		vbus_id_extcon: extcon@1 {
 			compatible = "extcon-gpio-states";

@@ -22,6 +22,7 @@
 
 #include <linux/highmem.h>
 #include <linux/io.h>
+#include <linux/debugfs.h>
 
 #include <trace/events/nvmap.h>
 
@@ -579,6 +580,39 @@ int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 				return err;
 		}
 	}
+
+	return 0;
+}
+
+int nvmap_cache_debugfs_init(struct dentry *nvmap_root)
+{
+	struct dentry *cache_root;
+
+	if (!nvmap_root)
+		return -ENODEV;
+
+	cache_root = debugfs_create_dir("cache", nvmap_root);
+	if (!cache_root)
+		return -ENODEV;
+
+#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
+	debugfs_create_size_t("cache_maint_inner_threshold",
+			      S_IRUSR | S_IWUSR,
+			      cache_root,
+			      &cache_maint_inner_threshold);
+
+	pr_info("nvmap:inner cache maint threshold=%zd",
+		cache_maint_inner_threshold);
+#endif
+#ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
+	debugfs_create_size_t("cache_maint_outer_threshold",
+			      S_IRUSR | S_IWUSR,
+			      cache_root,
+			      &cache_maint_outer_threshold);
+
+	pr_info("nvmap:outer cache maint threshold=%zd",
+		cache_maint_outer_threshold);
+#endif
 
 	return 0;
 }

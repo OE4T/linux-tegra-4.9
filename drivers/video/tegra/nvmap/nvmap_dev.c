@@ -1664,23 +1664,8 @@ int nvmap_probe(struct platform_device *pdev)
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 		nvmap_page_pool_debugfs_init(nvmap_debug_root);
 #endif
-#ifdef CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS
-		debugfs_create_size_t("cache_maint_inner_threshold",
-				      S_IRUSR | S_IWUSR,
-				      nvmap_debug_root,
-				      &cache_maint_inner_threshold);
 
-		pr_info("nvmap:inner cache maint threshold=%zd",
-			cache_maint_inner_threshold);
-#endif
-#ifdef CONFIG_NVMAP_OUTER_CACHE_MAINT_BY_SET_WAYS
-		debugfs_create_size_t("cache_maint_outer_threshold",
-				      S_IRUSR | S_IWUSR,
-				      nvmap_debug_root,
-				      &cache_maint_outer_threshold);
-		pr_info("nvmap:outer cache maint threshold=%zd",
-			cache_maint_outer_threshold);
-#endif
+		nvmap_cache_debugfs_init(nvmap_debug_root);
 		dev->handles_by_pid = debugfs_create_dir("handles_by_pid",
 				nvmap_debug_root);
 	}

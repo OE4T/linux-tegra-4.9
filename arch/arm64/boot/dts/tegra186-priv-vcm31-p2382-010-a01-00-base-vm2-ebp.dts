@@ -30,6 +30,7 @@
 
 	chosen {
 		nvidia,tegra-hypervisor-mode;
+		bootargs = "mem=512M@2048M quiet loglevel=3 rootfstype=ramfs maxcpus=1 console=ttyS0,115200 earlycon=uart8250,mmio32,0x3110000";
 	};
 
 	reserved-memory {
@@ -63,6 +64,8 @@
 
 
 	sdhci@3400000 { /* Used for SDCard */
+		/delete-property/ vddio_sdmmc-supply;
+		/delete-property/ vddio_sd_slot-supply;
 		status = "disabled";
 	};
 
@@ -74,6 +77,12 @@
 		status = "disabled";
 	};
 
+	fixed-regulators {
+		regulator@4 {
+			status = "disabled";
+		};
+	};
+
 	xudc@3550000 {
 		status = "disabled";
 	};
@@ -82,7 +91,14 @@
 		status = "disabled";
 	};
 
+	power-domain {
+		host-pd {
+			compatible = "nvidia,tegra186-host1x-pd-hv";
+		};
+	};
+
 	host1x {
+		compatible = "nvidia,tegra186-host1x-hv", "simple-bus";
 		reg = <0x0 0x13e20000 0x0 0x00010000>;
 		interrupts = <0 266 0x04
 					0 263 0x04>;
@@ -116,19 +132,19 @@
 		};
 
 		ctx4 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		ctx5 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		ctx6 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		ctx7 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		nvcsi@150c0000 {
@@ -208,6 +224,10 @@
 		status = "disabled";
 	};
 
+	spi@3270000 {
+		status = "disabled";
+	};
+
 	spi@3210000 {
 		status = "disabled";
 	};
@@ -248,6 +268,16 @@
 
 		bpmpthermal {
 			status = "disabled";
+		};
+	};
+
+	bpmp_i2c {
+                spmic: spmic@3c {
+			/delete-property/ maxim,enable-sleep;
+			/delete-node/ backup-battery;
+			regulators {
+				/delete-node/ ldo3;
+			};
 		};
 	};
 

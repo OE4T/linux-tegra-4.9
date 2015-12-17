@@ -48,14 +48,19 @@
 		memory-region = <&ivm0>;
 	};
 
-
-	spi@3270000 {
-		status = "disabled";
-	};
-
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp-hv";
 		ivc_queue = <&tegra_hv 0 14>;
+	};
+
+	bpmp_i2c {
+                spmic: spmic@3c {
+			/delete-property/ maxim,enable-sleep;
+			/delete-node/ backup-battery;
+			regulators {
+				/delete-node/ ldo5;
+			};
+		};
 	};
 
 	aon@c160000 {
@@ -68,7 +73,15 @@
 	};
 
 	sdhci@3440000 {
+		/delete-property/ vddio_sdmmc-supply;
+		/delete-property/ vddio_sd_slot-supply;
 		status = "disabled";
+	};
+
+	fixed-regulators {
+		regulator@5 {
+			status = "disabled";
+		};
 	};
 
 	i2c@3160000 {
@@ -111,7 +124,14 @@
 		status = "disabled";
 	};
 
+	power-domain {
+		host-pd {
+			compatible = "nvidia,tegra186-host1x-pd-hv";
+		};
+	};
+
 	host1x: host1x {
+		compatible = "nvidia,tegra186-host1x-hv", "simple-bus";
 		reg = <0x0 0x13e10000 0x0 0x00010000>;
 		interrupts = <0 265 0x04
 					0 263 0x04>;
@@ -123,6 +143,38 @@
 		nvidia,nb-hw-pts = <576>;
 		nvidia,pts-base = <0>;
 		nvidia,nb-pts = <288>;
+
+		host1x_ctx0: ctx0 {
+			 status = "okay";
+		};
+
+		host1x_ctx1: ctx1 {
+			 status = "okay";
+		};
+
+		host1x_ctx2: ctx2 {
+			 status = "okay";
+		};
+
+		host1x_ctx3: ctx3 {
+			 status = "okay";
+		};
+
+		ctx4 {
+			status = "disabled";
+		};
+
+		ctx5 {
+			status = "disabled";
+		};
+
+		ctx6 {
+			status = "disabled";
+		};
+
+		ctx7 {
+			status = "disabled";
+		};
 
 		nvdisplay@15200000 {
 			status = "disabled";

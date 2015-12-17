@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Virtual Memory
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -176,6 +176,7 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 
 	trace_nvhost_vm_allocate(pdev->name, identifier);
 
+	mutex_lock(&host->vm_alloc_mutex);
 	mutex_lock(&host->vm_mutex);
 
 	if (identifier) {
@@ -185,6 +186,7 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 				if (!kref_get_unless_zero(&vm->kref))
 					continue;
 				mutex_unlock(&host->vm_mutex);
+				mutex_unlock(&host->vm_alloc_mutex);
 
 				trace_nvhost_vm_allocate_reuse(pdev->name,
 					identifier, vm, vm->pdev->name);
@@ -205,17 +207,19 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 	vm->enable_hw = pdata->isolate_contexts;
 	vm->identifier = identifier;
 
+	/* add this vm into list of vms */
+	list_add_tail(&vm->vm_list, &host->vm_list);
+
+	/* release the vm mutex */
+	mutex_unlock(&host->vm_mutex);
+
 	if (vm_op().init && vm->enable_hw) {
 		err = vm_op().init(vm);
 		if (err)
 			goto err_init;
 	}
 
-	/* add this vm into list of vms */
-	list_add_tail(&vm->vm_list, &host->vm_list);
-
-	/* release the vm mutex */
-	mutex_unlock(&host->vm_mutex);
+	mutex_unlock(&host->vm_alloc_mutex);
 
 	trace_nvhost_vm_allocate_done(pdev->name, identifier, vm,
 				      vm->pdev->name);
@@ -223,8 +227,11 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 	return vm;
 
 err_init:
+	mutex_lock(&host->vm_mutex);
+	list_del(&vm->vm_list);
+	mutex_unlock(&host->vm_mutex);
 	kfree(vm);
 err_alloc_vm:
-
+	mutex_unlock(&host->vm_alloc_mutex);
 	return NULL;
 }

@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,6 +46,7 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 		return -ENOMEM;
 
 	mutex_init(&host->chlist_mutex);
+	mutex_init(&host->ch_alloc_mutex);
 
 	for (index = 0;	index < nvhost_channel_nb_channels(host); index++) {
 		ch = kzalloc(sizeof(*ch), GFP_KERNEL);
@@ -185,6 +186,7 @@ err_module_busy:
 	index = nvhost_channel_get_index_from_id(host, ch->chid);
 	clear_bit(index, host->allocated_channels);
 
+	ch->vm = NULL;
 	ch->dev = NULL;
 	ch->identifier = NULL;
 }
@@ -206,6 +208,7 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 
 	host = nvhost_get_host(pdata->pdev);
 
+	mutex_lock(&host->ch_alloc_mutex);
 	mutex_lock(&host->chlist_mutex);
 	max_channels = nvhost_channel_nb_channels(host);
 
@@ -217,6 +220,8 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 			/* yes, client can continue using it */
 			*channel = ch;
 			mutex_unlock(&host->chlist_mutex);
+			mutex_unlock(&host->ch_alloc_mutex);
+
 			trace_nvhost_channel_remap(pdata->pdev->name, ch->chid,
 						 pdata->num_mapped_chs,
 						 identifier);
@@ -243,6 +248,9 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 	ch->identifier = identifier;
 	kref_init(&ch->refcount);
 
+	/* channel is allocated, release mutex */
+	mutex_unlock(&host->chlist_mutex);
+
 	/* allocate vm */
 	ch->vm = nvhost_vm_allocate(pdata->pdev,
 				    (void *)(uintptr_t)current->pid);
@@ -255,18 +263,21 @@ int nvhost_channel_map(struct nvhost_device_data *pdata,
 				 identifier);
 	dev_dbg(&ch->dev->dev, "channel %d mapped\n", ch->chid);
 
-	mutex_unlock(&host->chlist_mutex);
+	mutex_unlock(&host->ch_alloc_mutex);
 
 	*channel = ch;
 
 	return 0;
 
 err_alloc_vm:
+	/* re-acquire chlist mutex for freeing the channel */
+	mutex_lock(&host->chlist_mutex);
 	clear_bit(index, host->allocated_channels);
 	ch->dev = NULL;
 	ch->identifier = NULL;
-
 	mutex_unlock(&host->chlist_mutex);
+
+	mutex_unlock(&host->ch_alloc_mutex);
 
 	return -ENOMEM;
 }

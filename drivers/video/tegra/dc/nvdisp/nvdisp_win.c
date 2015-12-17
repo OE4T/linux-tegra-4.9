@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis_win.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -708,6 +708,12 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			win_options = win_options_win_enable_disable_f();
 			nvdisp_win_write(win, win_options, win_options_r());
 
+			/* disable HSync Flip */
+			wait_for_vblank = true;
+			nvdisp_win_write(win,
+				win_act_control_ctrl_sel_vcounter_f(),
+				win_act_control_r());
+
 			dc_win->dirty = no_vsync ? 0 : 1;
 		} else {
 			/* attach window to the head */
@@ -801,8 +807,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 			for (i = 0; i < n; i++)
 				windows[i]->dirty = 0;
 		} else {  /* time out */
-			for (i = 0; i < n; i++)
-				windows[i]->dirty = 0;
+			dev_warn(&dc->ndev->dev, "winmask:0x%x: HSync timeout\n",
+				winmask);
 		}
 	}
 

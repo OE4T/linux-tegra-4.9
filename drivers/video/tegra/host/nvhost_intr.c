@@ -38,6 +38,7 @@
 /*** Wait list management ***/
 
 struct nvhost_waitlist {
+	struct nvhost_master *host;
 	struct list_head list;
 	struct kref refcount;
 	u32 thresh;
@@ -71,7 +72,11 @@ static inline bool nvhost_intr_is_virtual_dev(struct nvhost_intr_syncpt *sp)
 
 static void waiter_release(struct kref *kref)
 {
-	kfree(container_of(kref, struct nvhost_waitlist, refcount));
+	struct nvhost_waitlist *waiter =
+		container_of(kref, struct nvhost_waitlist, refcount);
+
+	nvhost_module_idle(waiter->host->dev);
+	kfree(waiter);
 }
 
 int nvhost_intr_release_time(void *ref, struct timespec *ts)
@@ -253,6 +258,7 @@ static void run_handlers(struct list_head *completed[NVHOST_INTR_ACTION_COUNT])
 			    handler != action_wakeup)
 				WARN_ON(atomic_xchg(&waiter->state, WLS_HANDLED)
 					!= WLS_REMOVED);
+
 			kref_put(&waiter->refcount, waiter_release);
 		}
 	}
@@ -406,11 +412,17 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 	struct nvhost_waitlist *waiter = _waiter;
 	struct nvhost_intr_syncpt *syncpt;
 	int queue_was_empty;
+	int err;
 
 	if (waiter == NULL) {
 		pr_warn("%s: NULL waiter\n", __func__);
 		return -EINVAL;
 	}
+
+	/* make sure host1x stays on */
+	err = nvhost_module_busy(intr_to_dev(intr)->dev);
+	if (err)
+		return err;
 
 	/* initialize a new waiter */
 	INIT_LIST_HEAD(&waiter->list);
@@ -422,6 +434,7 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 	atomic_set(&waiter->state, WLS_PENDING);
 	waiter->data = data;
 	waiter->count = 1;
+	waiter->host = intr_to_dev(intr);
 
 	syncpt = intr->syncpt + id;
 

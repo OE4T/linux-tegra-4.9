@@ -23,6 +23,27 @@
 		phy_pllvdd-supply = <&vdd_dummy>;
 	};
 
+        host1x {
+		nvdisplay@15200000 {
+			vdd_hdmi_5v0-supply = <&vdd_dummy>;
+			vdd-dp-pad-supply = <&vdd_dummy_1v8>;
+			vdd-edp-sec-mode-supply = <&vdd_dummy_1v8>;
+			vdd-dp-pwr-supply = <&vdd_dummy>;
+			avdd-dp-pll-supply = <&vdd_dummy>;
+		};
+		nvdisplay@15210000 {
+			vdd_hdmi_5v0-supply = <&vdd_dummy>;
+			vdd-dp-pad-supply = <&vdd_dummy_1v8>;
+			vdd-edp-sec-mode-supply = <&vdd_dummy_1v8>;
+			vdd-dp-pwr-supply = <&vdd_dummy>;
+			avdd-dp-pll-supply = <&vdd_dummy>;
+		};
+		nvcsi@150c0000 {
+			nvidia,csi_regulator = "dummy";
+			dummy-supply = <&vdd_dummy>;
+		};
+        };
+
 	sdhci@3460000 { /* SDMMC_D/4 */
 		vddio_sdmmc-supply = <&vdd_dummy_1v8>;
 	};

@@ -582,7 +582,7 @@ int camera_common_focuser_s_power(struct v4l2_subdev *sd, int on)
 			dev_err(&s_data->i2c_client->dev,
 				"%s: error power on\n", __func__);
 	} else
-		call_s_op(s_data, power_off);
+		err = call_s_op(s_data, power_off);
 
 	return err;
 }
@@ -593,12 +593,19 @@ int camera_common_focuser_init(struct camera_common_focuser_data *s_data)
 
 	/* power on */
 	err = call_s_op(s_data, power_on);
-	if (err)
+	if (err) {
 		dev_err(&s_data->i2c_client->dev,
 			"%s: error power on\n", __func__);
+		return err;
+	}
 
 	/* load default configuration */
-	call_s_op(s_data, load_config);
+	err = call_s_op(s_data, load_config);
+	if (err) {
+		dev_err(&s_data->i2c_client->dev,
+			"%s: error loading config\n", __func__);
+		goto fail;
+	}
 
 	/* set controls */
 	err = call_s_op(s_data, ctrls_init);
@@ -606,8 +613,9 @@ int camera_common_focuser_init(struct camera_common_focuser_data *s_data)
 		dev_err(&s_data->i2c_client->dev,
 			"%s: error initializing controls\n", __func__);
 
+fail:
 	/* power off */
-	call_s_op(s_data, power_off);
+	err |= call_s_op(s_data, power_off);
 
 	return err;
 }

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -209,6 +209,10 @@ static inline u32 gmmu_pte_read_disable_w(void)
 static inline u32 gmmu_pte_read_disable_true_f(void)
 {
 	return 0x40000000;
+}
+static inline u32 gmmu_pte_comptagline_s(void)
+{
+	return 17;
 }
 static inline u32 gmmu_pte_comptagline_f(u32 v)
 {

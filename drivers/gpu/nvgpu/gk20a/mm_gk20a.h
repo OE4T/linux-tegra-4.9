@@ -329,6 +329,7 @@ struct mm_gk20a {
 	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;
 	int physical_bits;
+	bool use_full_comp_tag_line;
 #ifdef CONFIG_DEBUG_FS
 	u32 ltc_enabled;
 	u32 ltc_enabled_debug;

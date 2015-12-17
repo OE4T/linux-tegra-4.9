@@ -94,6 +94,14 @@ static inline u32 fb_mmu_ctrl_use_pdb_big_page_size_false_f(void)
 {
 	return 0x0;
 }
+static inline u32 fb_mmu_ctrl_use_full_comp_tag_line_v(u32 r)
+{
+	return (r >> 12) & 0x1;
+}
+static inline u32 fb_mmu_ctrl_use_full_comp_tag_line_true_f(void)
+{
+	return 0x1000;
+}
 static inline u32 fb_priv_mmu_phy_secure_r(void)
 {
 	return 0x00100ce4;

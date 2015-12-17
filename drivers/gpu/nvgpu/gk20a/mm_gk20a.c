@@ -414,6 +414,10 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	g->ops.fb.set_mmu_page_size(g);
+	if (g->ops.fb.set_use_full_comp_tag_line)
+		mm->use_full_comp_tag_line =
+			g->ops.fb.set_use_full_comp_tag_line(g);
+
 
 	inst_pa = (u32)(inst_pa >> bar1_instance_block_shift_gk20a());
 	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
@@ -2326,6 +2330,11 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		pte_w[1] = gmmu_pte_aperture_video_memory_f() |
 			gmmu_pte_kind_f(kind_v) |
 			gmmu_pte_comptagline_f((u32)(*ctag / ctag_granularity));
+
+		if (vm->mm->use_full_comp_tag_line && *iova & 0x10000) {
+			pte_w[1] |= gmmu_pte_comptagline_f(
+					1 << (gmmu_pte_comptagline_s() - 1));
+		}
 
 		if (rw_flag == gk20a_mem_flag_read_only) {
 			pte_w[0] |= gmmu_pte_read_only_true_f();

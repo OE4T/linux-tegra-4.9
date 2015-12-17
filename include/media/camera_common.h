@@ -176,8 +176,8 @@ struct camera_common_focuser_data;
 
 struct camera_common_focuser_ops {
 	int (*power_on)(struct camera_common_focuser_data *s_data);
-	void (*power_off)(struct camera_common_focuser_data *s_data);
-	void (*load_config)(struct camera_common_focuser_data *s_data);
+	int (*power_off)(struct camera_common_focuser_data *s_data);
+	int (*load_config)(struct camera_common_focuser_data *s_data);
 	int (*ctrls_init)(struct camera_common_focuser_data *s_data);
 };
 

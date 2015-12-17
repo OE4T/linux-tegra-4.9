@@ -55,6 +55,7 @@
 
 	bpmp_i2c {
                 spmic: spmic@3c {
+			/delete-property/ maxim,enable-sleep;
 			/delete-node/ backup-battery;
 			regulators {
 				/delete-node/ ldo5;

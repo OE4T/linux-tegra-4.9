@@ -1932,6 +1932,14 @@ static int tegra_dc_dp_hotplug_init(struct tegra_dc *dc)
 	 */
 	tegra_dpaux_init(dp);
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/* DC powergate will not happen
+	 * if the dp is enabled and no panel is connected.
+	 * DC enable code is ungating the power before register
+	 * access.
+	 */
+	tegra_dc_powergate_locked(dc);
+#endif
 	return 0;
 }
 

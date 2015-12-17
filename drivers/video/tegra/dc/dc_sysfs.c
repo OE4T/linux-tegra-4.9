@@ -794,19 +794,20 @@ static ssize_t win_mask_store(struct device *dev,
 			}
 		}
 	}
-	/* attach/detach per all requested bits for current head */
-	for (i = 0; i < DC_N_WINDOWS; i++) {
-		if (test_bit(i, &requested_winmask)) {
-			if (tegra_dc_attach_win(dc, i)) {
-				count = -EINVAL;
-				goto exit;
-			}
-		} else {
-			if (test_bit(i, &dc->pdata->win_mask))
-				tegra_dc_dettach_win(dc, i);
-		}
-	}
+
+	/* attach window happens on device enable call and
+	 * detach window happens on device disable call
+	 */
+
 	dc->pdata->win_mask = requested_winmask;
+	dc->valid_windows = requested_winmask;
+	/* cleanup the valid windows bits */
+	if (!requested_winmask) {
+		/* disable the fb win_index */
+		tegra_fb_set_win_index(dc, requested_winmask);
+		dc->pdata->fb->win = -1;
+	}
+
 exit:
 	mutex_unlock(&dc->lock);
 	return count;

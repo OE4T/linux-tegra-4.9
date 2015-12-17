@@ -848,6 +848,37 @@ static void tegra_fb_fill_420_10bpc_blank_frame(struct tegra_dc_win *win)
 #undef phase0
 }
 
+int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask)
+{
+	int i;
+	unsigned long mask = win_mask;
+	unsigned stride = 0;
+	struct tegra_fb_info *tegra_fb;
+
+	if (!dc && !dc->fb)
+		return -1;
+
+	tegra_fb = dc->fb;
+
+	if (win_mask) {
+		/* Set the first valid bit as fb win index */
+		for (i = 0; i < DC_N_WINDOWS; i++) {
+			if (test_bit(i, &mask))
+				break;
+		}
+
+		tegra_fb->win.idx = i;
+		stride = tegra_dc_get_stride(dc, tegra_fb->win.idx);
+		if (stride) {
+			tegra_fb->info->fix.line_length = stride;
+			tegra_fb->win.stride = stride;
+		}
+	} else
+		tegra_fb->win.idx = -1;
+
+	return 0;
+}
+
 struct tegra_dc_win *tegra_fb_get_win(struct tegra_fb_info *tegra_fb)
 {
 	if (!tegra_fb)

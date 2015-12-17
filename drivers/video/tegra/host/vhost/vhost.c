@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host functions for HOST1X
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -182,9 +182,6 @@ int nvhost_virt_init(struct platform_device *dev, int moduleid)
 			goto fail;
 		}
 	}
-
-	if (channel_management_in_guest)
-		goto fail;
 
 	virt_ctx->handle = vhost_virt_connect(moduleid);
 	if (!virt_ctx->handle) {

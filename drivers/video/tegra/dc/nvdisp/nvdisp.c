@@ -882,6 +882,9 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	if (WARN_ON(!dc || !dc->out || !dc->out_ops))
 		return false;
 
+	/* Save for powermgmt purpose */
+	nvdisp_pg[dc->ctrl_num].valid_windows = dc->pdata->win_mask;
+
 	/* TODO: confirm power domains for parker */
 	tegra_dc_unpowergate_locked(dc);
 
@@ -998,6 +1001,14 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 			dev_dbg(&dc->ndev->dev,
 				"Window %d assigned to head %d\n", idx,
 				dc->ctrl_num);
+	}
+
+	/* Set the fb_index on changing from a zero win_mask to
+	 * to a valid one.
+	 */
+	if ((dc->pdata->fb->win == -1) && dc->pdata->win_mask) {
+		tegra_fb_set_win_index(dc, dc->pdata->win_mask);
+		dc->pdata->fb->win = dc->pdata->win_mask;
 	}
 
 	/* Enable RG underflow logging */

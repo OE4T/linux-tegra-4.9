@@ -26,5 +26,15 @@
 				};
 			};
 		};
+
+		fragement@8 {
+			odm-data = "enable-sdmmc-hwcq";
+			override@0 {
+				target = <&sdmmc4>;
+				_overlay_ {
+					nvidia,enable-hwcq;
+				};
+			};
+		};
 	};
 };

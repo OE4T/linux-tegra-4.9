@@ -131,6 +131,30 @@
 		nvidia,pts-base = <0>;
 		nvidia,nb-pts = <288>;
 
+		vmserver-owns-engines = <1>;
+
+		ivc-queue0 = <&tegra_hv 43>;
+
+		vic@15340000 {
+			compatible = "nvidia,tegra186-vhost-vic";
+			status = "okay";
+		};
+
+		nvenc@154c0000 {
+			compatible = "nvidia,tegra186-vhost-nvenc";
+			status = "okay";
+		};
+
+		nvdec@15480000 {
+			compatible = "nvidia,tegra186-vhost-nvdec";
+			status = "okay";
+		};
+
+		nvjpg@15380000 {
+			compatible = "nvidia,tegra186-vhost-nvjpg";
+			status = "okay";
+		};
+
 		host1x_ctx0: ctx0 {
 			 status = "okay";
 		};

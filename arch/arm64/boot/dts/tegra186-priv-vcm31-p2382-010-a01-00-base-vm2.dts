@@ -134,18 +134,15 @@
 		};
 
 		nvcsi@150c0000 {
-			compatible = "nvidia,tegra186-vhost-nvcsi";
-			status = "okay";
+			status = "disabled";
 		};
 
 		vi@15700000 {
-			compatible = "nvidia,tegra186-vhost-vi";
-			status = "okay";
+			status = "disabled";
 		};
 
 		isp@15600000 {
-			compatible = "nvidia,tegra186-vhost-isp";
-			status = "okay";
+			status = "disabled";
 		};
 
 		vii2c@156c0000 {

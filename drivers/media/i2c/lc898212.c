@@ -333,7 +333,7 @@ static int lc898212_init(struct lc898212 *priv)
 	return err;
 }
 
-static void lc898212_load_config(struct camera_common_focuser_data *s_data)
+static int lc898212_load_config(struct camera_common_focuser_data *s_data)
 {
 	struct nv_focuser_config *cfg = &s_data->config;
 
@@ -355,9 +355,11 @@ static void lc898212_load_config(struct camera_common_focuser_data *s_data)
 	cfg->focuser_set[0].hyper = LC898212_FOCUS_INFINITY;
 	cfg->focuser_set[0].inf = LC898212_FOCUS_INFINITY;
 	cfg->focuser_set[0].settle_time = SETTLETIME_MS;
+
+	return 0;
 }
 
-static void lc898212_power_off(struct camera_common_focuser_data *s_data)
+static int lc898212_power_off(struct camera_common_focuser_data *s_data)
 {
 	struct lc898212 *priv = (struct lc898212 *)s_data->priv;
 
@@ -365,6 +367,8 @@ static void lc898212_power_off(struct camera_common_focuser_data *s_data)
 	if (priv->regulator)
 		regulator_disable(priv->regulator);
 	s_data->pwr_dev = LC898212_PWR_DEV_OFF;
+
+	return 0;
 }
 
 static int lc898212_power_on(struct camera_common_focuser_data *s_data)

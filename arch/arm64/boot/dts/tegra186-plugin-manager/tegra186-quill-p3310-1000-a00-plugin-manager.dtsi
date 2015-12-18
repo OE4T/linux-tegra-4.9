@@ -16,6 +16,19 @@
 #include "tegra186-quill-odm-data-plugin-manager.dtsi"
 
 / {
+	eeprom-manager {
+		data-size = <0x100>;
+		bus@0 {
+			i2c-bus = <&gen8_i2c>;
+			word-address-1-byte-slave-addresses = <0x50 0x57>;
+		};
+		bus@1 {
+			i2c-bus = <&gen2_i2c>;
+			word-address-1-byte-slave-addresses = <0x51>;
+		};
+
+	};
+
 	plugin-manager {
 		e3325_supports {
 			ids = "3325-0000-a00";

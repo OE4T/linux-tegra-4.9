@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -285,5 +285,9 @@ static inline u32 ctxsw_prog_main_image_compute_preemption_options_control_cta_f
 static inline u32 ctxsw_prog_main_image_compute_preemption_options_control_cilp_f(void)
 {
 	return 0x2;
+}
+static inline u32 ctxsw_prog_main_image_context_id_o(void)
+{
+	return 0x000000f0;
 }
 #endif

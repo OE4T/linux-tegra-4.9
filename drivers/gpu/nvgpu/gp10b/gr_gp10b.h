@@ -46,6 +46,8 @@ struct gr_t18x {
 		struct dentry *debugfs_force_preemption_gfxp;
 		struct dentry *debugfs_dump_ctxsw_stats;
 	} ctx_vars;
+
+	int cilp_preempt_pending_chid;
 };
 
 struct gr_ctx_desc_t18x {
@@ -53,6 +55,9 @@ struct gr_ctx_desc_t18x {
 	struct mem_desc spill_ctxsw_buffer;
 	struct mem_desc betacb_ctxsw_buffer;
 	struct mem_desc pagepool_ctxsw_buffer;
+	u32 ctx_id;
+	bool ctx_id_valid;
+	bool cilp_preempt_pending;
 };
 
 #define NVGPU_GR_PREEMPTION_MODE_GFXP		1

@@ -407,25 +407,17 @@ error:
 }
 
 #ifdef _hw_host1x04_channel_h_
-static int t124_channel_init_gather_filter(struct nvhost_channel *ch)
+static int t124_channel_init_gather_filter(struct platform_device *pdev,
+	struct nvhost_channel *ch)
 {
 
-	struct platform_device *pdev = ch->dev;
 	struct nvhost_master *master = nvhost_get_host(pdev);
-	int err;
 
 	if (!nvhost_gather_filter_enabled(&master->syncpt))
 		return -EINVAL;
 
-	err = nvhost_module_busy(nvhost_get_parent(pdev));
-	if (err) {
-		dev_warn(&ch->dev->dev, "failed to initialise gather filter");
-		return err;
-	}
-
 	host1x_channel_writel(ch, host1x_channel_channelctrl_r(),
 		host1x_channel_channelctrl_kernel_filter_gbuffer_f(1));
-	nvhost_module_idle(nvhost_get_parent(pdev));
 
 	return 0;
 }

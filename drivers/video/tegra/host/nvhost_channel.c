@@ -78,6 +78,9 @@ int nvhost_alloc_channels(struct nvhost_master *host)
 
 		/* store the channel */
 		host->chlist[index] = ch;
+
+		/* initialise gather filter for the channel */
+		nvhost_channel_init_gather_filter(host->dev, ch);
 	}
 
 	return 0;
@@ -293,10 +296,11 @@ int nvhost_channel_list_free(struct nvhost_master *host)
 	return 0;
 }
 
-void nvhost_channel_init_gather_filter(struct nvhost_channel *ch)
+void nvhost_channel_init_gather_filter(struct platform_device *pdev,
+	struct nvhost_channel *ch)
 {
 	if (channel_op(ch).init_gather_filter)
-		channel_op(ch).init_gather_filter(ch);
+		channel_op(ch).init_gather_filter(pdev, ch);
 }
 
 int nvhost_channel_submit(struct nvhost_job *job)

@@ -982,8 +982,10 @@ static int nvhost_probe(struct platform_device *dev)
 		host_device_op().load_gating_regs(dev, pdata->engine_can_cg);
 
 	err = nvhost_alloc_channels(host);
-	if (err)
+	if (err) {
+		nvhost_module_idle(dev);
 		goto fail;
+	}
 
 	nvhost_syncpt_reset(&host->syncpt);
 	if (tegra_cpu_is_asim() || pdata->virtual_dev)
@@ -1073,10 +1075,19 @@ static int nvhost_suspend(struct device *dev)
 static int nvhost_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_master *host = nvhost_get_host(pdev);
+	int index;
 
 	nvhost_module_enable_clk(dev);
 	power_on_host(pdev);
 	enable_irq_host(pdev);
+
+	for (index = 0; index < nvhost_channel_nb_channels(host); index++) {
+		/* reinitialise gather filter for each channel */
+		nvhost_channel_init_gather_filter(host->dev,
+			host->chlist[index]);
+	}
+
 	nvhost_module_disable_clk(dev);
 
 	dev_info(dev, "resuming\n");

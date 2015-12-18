@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger/Profiler Driver
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -867,7 +867,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 	if (ch_is_curr_ctx) {
 		switch (action) {
 		case NVGPU_DBG_GPU_SUSPEND_ALL_SMS:
-			gk20a_suspend_all_sms(g);
+			gk20a_suspend_all_sms(g, 0, false);
 			break;
 
 		case NVGPU_DBG_GPU_RESUME_ALL_SMS:

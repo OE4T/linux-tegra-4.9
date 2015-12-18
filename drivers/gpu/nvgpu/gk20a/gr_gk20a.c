@@ -7021,7 +7021,42 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 	return -EAGAIN;
 }
 
-void gk20a_suspend_all_sms(struct gk20a *g)
+void gk20a_suspend_single_sm(struct gk20a *g,
+		u32 gpc, u32 tpc,
+		u32 global_esr_mask, bool check_errors)
+{
+	u32 offset;
+	int err;
+	u32 dbgr_control0;
+
+	offset = proj_gpc_stride_v() * gpc +
+		 proj_tpc_in_gpc_stride_v() * tpc;
+
+	/* if an SM debugger isn't attached, skip suspend */
+	if (!gk20a_gr_sm_debugger_attached(g)) {
+		gk20a_err(dev_from_gk20a(g),
+			"SM debugger not attached, skipping suspend!\n");
+		return;
+	}
+
+	/* assert stop trigger. */
+	dbgr_control0 = gk20a_readl(g,
+				gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
+	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f();
+	gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset,
+			dbgr_control0);
+
+	err = gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc,
+			global_esr_mask, check_errors);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"SuspendSm failed\n");
+		return;
+	}
+}
+
+void gk20a_suspend_all_sms(struct gk20a *g,
+		u32 global_esr_mask, bool check_errors)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc, tpc;
@@ -7030,8 +7065,8 @@ void gk20a_suspend_all_sms(struct gk20a *g)
 
 	/* if an SM debugger isn't attached, skip suspend */
 	if (!gk20a_gr_sm_debugger_attached(g)) {
-		gk20a_err(dev_from_gk20a(g), "SM debugger not attached, "
-				"skipping suspend!\n");
+		gk20a_err(dev_from_gk20a(g),
+			"SM debugger not attached, skipping suspend!\n");
 		return;
 	}
 
@@ -7048,7 +7083,8 @@ void gk20a_suspend_all_sms(struct gk20a *g)
 	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
 		for (tpc = 0; tpc < gr->tpc_count; tpc++) {
 			err =
-			 gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc, 0, false);
+			 gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc,
+					global_esr_mask, check_errors);
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 					"SuspendAllSms failed\n");
@@ -7056,6 +7092,42 @@ void gk20a_suspend_all_sms(struct gk20a *g)
 			}
 		}
 	}
+}
+
+void gk20a_resume_single_sm(struct gk20a *g,
+		u32 gpc, u32 tpc)
+{
+	u32 dbgr_control0;
+	u32 offset;
+	/*
+	 * The following requires some clarification. Despite the fact that both
+	 * RUN_TRIGGER and STOP_TRIGGER have the word "TRIGGER" in their
+	 *  names, only one is actually a trigger, and that is the STOP_TRIGGER.
+	 * Merely writing a 1(_TASK) to the RUN_TRIGGER is not sufficient to
+	 * resume the gpu - the _STOP_TRIGGER must explicitly be set to 0
+	 * (_DISABLE) as well.
+
+	* Advice from the arch group:  Disable the stop trigger first, as a
+	* separate operation, in order to ensure that the trigger has taken
+	* effect, before enabling the run trigger.
+	*/
+
+	offset = proj_gpc_stride_v() * gpc +
+		 proj_tpc_in_gpc_stride_v() * tpc;
+
+	/*De-assert stop trigger */
+	dbgr_control0 =
+		gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
+	dbgr_control0 = set_field(dbgr_control0,
+			gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_m(),
+			gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_disable_f());
+	gk20a_writel(g,
+		gr_gpcs_tpcs_sm_dbgr_control0_r() + offset, dbgr_control0);
+
+	/* Run trigger */
+	dbgr_control0 |= gr_gpcs_tpcs_sm_dbgr_control0_run_trigger_task_f();
+	gk20a_writel(g,
+		gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 }
 
 void gk20a_resume_all_sms(struct gk20a *g)

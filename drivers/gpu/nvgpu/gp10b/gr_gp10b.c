@@ -19,6 +19,7 @@
 
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 #include "gm20b/gr_gm20b.h" /* for MAXWELL classes */
 #include "gp10b/gr_gp10b.h"
@@ -657,6 +658,8 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	if (err)
 		return err;
 
+	(*gr_ctx)->t18x.ctx_id_valid = false;
+
 	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
 		flags |= NVGPU_ALLOC_OBJ_FLAGS_GFXP;
 
@@ -1224,6 +1227,314 @@ static void gr_gp10b_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gp10b);
 }
 
+static int gr_gp10b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a *fault_ch)
+{
+	int ret = 0;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+
+	ret = gk20a_disable_channel_tsg(g, fault_ch);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+				"CILP: failed to disable channel/TSG!\n");
+		return ret;
+	}
+
+	ret = g->ops.fifo.update_runlist(g, 0, ~0, true, false);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+				"CILP: failed to restart runlist 0!");
+		return ret;
+	}
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: restarted runlist");
+
+	if (gk20a_is_channel_marked_as_tsg(fault_ch))
+		gk20a_fifo_issue_preempt(g, fault_ch->tsgid, true);
+	else
+		gk20a_fifo_issue_preempt(g, fault_ch->hw_chid, false);
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "CILP: preempted the channel/tsg");
+
+	return ret;
+}
+
+static int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk20a *fault_ch)
+{
+	int ret;
+	struct gr_ctx_desc *gr_ctx = fault_ch->ch_ctx.gr_ctx;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+
+	if (!gr_ctx)
+		return -EINVAL;
+
+	if (gr_ctx->t18x.cilp_preempt_pending) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+				"CILP is already pending for chid %d",
+				fault_ch->hw_chid);
+		return 0;
+	}
+
+	/* get ctx_id from the ucode image */
+	if (!gr_ctx->t18x.ctx_id_valid) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+				"CILP: looking up ctx id");
+		ret = gr_gk20a_get_ctx_id(g, fault_ch, &gr_ctx->t18x.ctx_id);
+		if (ret) {
+			gk20a_err(dev_from_gk20a(g), "CILP: error looking up ctx id!\n");
+			return ret;
+		}
+		gr_ctx->t18x.ctx_id_valid = true;
+	}
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP: ctx id is 0x%x", gr_ctx->t18x.ctx_id);
+
+	/* send ucode method to set ctxsw interrupt */
+	ret = gr_gk20a_submit_fecs_sideband_method_op(g,
+			(struct fecs_method_op_gk20a) {
+			.method.data = gr_ctx->t18x.ctx_id,
+			.method.addr =
+			gr_fecs_method_push_adr_configure_interrupt_completion_option_v(),
+			.mailbox = {
+			.id = 1 /* sideband */, .data = 0,
+			.clr = ~0, .ret = NULL,
+			.ok = gr_fecs_ctxsw_mailbox_value_pass_v(),
+			.fail = 0},
+			.cond.ok = GR_IS_UCODE_OP_EQUAL,
+			.cond.fail = GR_IS_UCODE_OP_SKIP});
+
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+				"CILP: failed to enable ctxsw interrupt!");
+		return ret;
+	}
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+				"CILP: enabled ctxsw completion interrupt");
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP: disabling channel %d",
+			fault_ch->hw_chid);
+
+	ret = gr_gp10b_disable_channel_or_tsg(g, fault_ch);
+	if (ret) {
+		gk20a_err(dev_from_gk20a(g),
+				"CILP: failed to disable channel!!");
+		return ret;
+	}
+
+	/* set cilp_preempt_pending = true and record the channel */
+	gr_ctx->t18x.cilp_preempt_pending = true;
+	g->gr.t18x.cilp_preempt_pending_chid = fault_ch->hw_chid;
+
+	return 0;
+}
+
+static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
+					       struct channel_gk20a *fault_ch)
+{
+	struct gr_ctx_desc *gr_ctx = fault_ch->ch_ctx.gr_ctx;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+
+	if (!gr_ctx)
+		return -EINVAL;
+
+	/* The ucode is self-clearing, so all we need to do here is
+	   to clear cilp_preempt_pending. */
+	if (!gr_ctx->t18x.cilp_preempt_pending) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+				"CILP is already cleared for chid %d\n",
+				fault_ch->hw_chid);
+		return 0;
+	}
+
+	gr_ctx->t18x.cilp_preempt_pending = false;
+	g->gr.t18x.cilp_preempt_pending_chid = -1;
+
+	return 0;
+}
+
+/* @brief pre-process work on the SM exceptions to determine if we clear them or not.
+ *
+ * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
+ */
+int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 global_esr, u32 warp_esr,
+		bool sm_debugger_attached, struct channel_gk20a *fault_ch,
+		bool *early_exit, bool *ignore_debugger)
+{
+	int ret;
+	bool cilp_enabled = (fault_ch->ch_ctx.gr_ctx->preempt_mode ==
+			NVGPU_GR_PREEMPTION_MODE_CILP) ;
+	u32 global_mask = 0, dbgr_control0, global_esr_copy;
+	u32 offset = proj_gpc_stride_v() * gpc +
+		     proj_tpc_in_gpc_stride_v() * tpc;
+
+	*early_exit = false;
+	*ignore_debugger = false;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "SM Exception received on gpc %d tpc %d = %u\n",
+			gpc, tpc, global_esr);
+
+	if (cilp_enabled && sm_debugger_attached) {
+		if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f())
+			gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
+					gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f());
+
+		if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f())
+			gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
+					gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f());
+
+		global_mask = gr_gpc0_tpc0_sm_hww_global_esr_sm_to_sm_fault_pending_f() |
+			gr_gpcs_tpcs_sm_hww_global_esr_l1_error_pending_f() |
+			gr_gpcs_tpcs_sm_hww_global_esr_multiple_warp_errors_pending_f() |
+			gr_gpcs_tpcs_sm_hww_global_esr_physical_stack_overflow_error_pending_f() |
+			gr_gpcs_tpcs_sm_hww_global_esr_timeout_error_pending_f() |
+			gr_gpcs_tpcs_sm_hww_global_esr_bpt_pause_pending_f();
+
+		if (warp_esr != 0 || (global_esr & global_mask) != 0) {
+			*ignore_debugger = true;
+
+			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+					"CILP: starting wait for LOCKED_DOWN on gpc %d tpc %d\n",
+					gpc, tpc);
+
+			if (gk20a_dbg_gpu_broadcast_stop_trigger(fault_ch)) {
+				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+						"CILP: Broadcasting STOP_TRIGGER from gpc %d tpc %d\n",
+						gpc, tpc);
+				gk20a_suspend_all_sms(g, global_mask, false);
+
+				gk20a_dbg_gpu_clear_broadcast_stop_trigger(fault_ch);
+			} else {
+				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+						"CILP: STOP_TRIGGER from gpc %d tpc %d\n",
+						gpc, tpc);
+				gk20a_suspend_single_sm(g, gpc, tpc, global_mask, true);
+			}
+
+			/* reset the HWW errors after locking down */
+			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
+			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr_copy);
+			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+					"CILP: HWWs cleared for gpc %d tpc %d\n",
+					gpc, tpc);
+
+			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: Setting CILP preempt pending\n");
+			ret = gr_gp10b_set_cilp_preempt_pending(g, fault_ch);
+			if (ret) {
+				gk20a_err(dev_from_gk20a(g), "CILP: error while setting CILP preempt pending!\n");
+				return ret;
+			}
+
+			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
+			if (dbgr_control0 & gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_enable_f()) {
+				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+						"CILP: clearing SINGLE_STEP_MODE before resume for gpc %d tpc %d\n",
+						gpc, tpc);
+				dbgr_control0 = set_field(dbgr_control0,
+						gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_m(),
+						gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_disable_f());
+				gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
+			}
+
+			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+					"CILP: resume for gpc %d tpc %d\n",
+					gpc, tpc);
+			gk20a_resume_single_sm(g, gpc, tpc);
+
+			*ignore_debugger = true;
+			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "CILP: All done on gpc %d, tpc %d\n", gpc, tpc);
+		}
+
+		*early_exit = true;
+	}
+	return 0;
+}
+
+static int gr_gp10b_get_cilp_preempt_pending_chid(struct gk20a *g, int *__chid)
+{
+	struct gr_ctx_desc *gr_ctx;
+	struct channel_gk20a *ch;
+	int chid;
+	int ret = -EINVAL;
+
+	chid = g->gr.t18x.cilp_preempt_pending_chid;
+
+	ch = gk20a_channel_get(gk20a_fifo_channel_from_hw_chid(g, chid));
+	if (!ch)
+		return ret;
+
+	gr_ctx = ch->ch_ctx.gr_ctx;
+
+	if (gr_ctx->t18x.cilp_preempt_pending) {
+		*__chid = chid;
+		ret = 0;
+	}
+
+	gk20a_channel_put(ch);
+
+	return ret;
+}
+
+static int gr_gp10b_handle_fecs_error(struct gk20a *g,
+				struct channel_gk20a *__ch,
+				struct gr_gk20a_isr_data *isr_data)
+{
+	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
+	struct channel_gk20a *ch;
+	int chid = -1;
+	int ret = 0;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+
+	/*
+	 * INTR1 (bit 1 of the HOST_INT_STATUS_CTXSW_INTR)
+	 * indicates that a CILP ctxsw save has finished
+	 */
+	if (gr_fecs_intr & gr_fecs_host_int_status_ctxsw_intr_f(2)) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+				"CILP: ctxsw save completed!\n");
+
+		/* now clear the interrupt */
+		gk20a_writel(g, gr_fecs_host_int_clear_r(),
+				gr_fecs_host_int_clear_ctxsw_intr1_clear_f());
+
+		ret = gr_gp10b_get_cilp_preempt_pending_chid(g, &chid);
+		if (ret)
+			goto clean_up;
+
+		ch = gk20a_channel_get(
+				gk20a_fifo_channel_from_hw_chid(g, chid));
+		if (!ch)
+			goto clean_up;
+
+
+		/* set preempt_pending to false */
+		ret = gr_gp10b_clear_cilp_preempt_pending(g, ch);
+		if (ret) {
+			gk20a_err(dev_from_gk20a(g), "CILP: error while unsetting CILP preempt pending!\n");
+			gk20a_channel_put(ch);
+			goto clean_up;
+		}
+
+		if (gk20a_gr_sm_debugger_attached(g)) {
+			gk20a_err(dev_from_gk20a(g), "CILP: posting usermode event");
+			gk20a_dbg_gpu_post_events(ch);
+			gk20a_channel_post_event(ch);
+		}
+
+		gk20a_channel_put(ch);
+	}
+
+clean_up:
+	/* handle any remaining interrupts */
+	return gk20a_gr_handle_fecs_error(g, __ch, isr_data);
+}
+
 static u32 gp10b_mask_hww_warp_esr(u32 hww_warp_esr)
 {
 	if (!(hww_warp_esr & gr_gpc0_tpc0_sm_hww_warp_esr_addr_valid_m()))
@@ -1267,4 +1578,7 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.handle_sm_exception = gr_gp10b_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gp10b_handle_tex_exception;
 	gops->gr.mask_hww_warp_esr = gp10b_mask_hww_warp_esr;
+	gops->gr.pre_process_sm_exception =
+		gr_gp10b_pre_process_sm_exception;
+	gops->gr.handle_fecs_error = gr_gp10b_handle_fecs_error;
 }

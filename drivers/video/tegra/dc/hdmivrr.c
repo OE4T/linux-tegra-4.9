@@ -31,6 +31,7 @@
 #include <linux/ote_protocol.h>
 
 #include <mach/dc.h>
+#include <mach/fb.h>
 
 #include "dc_priv.h"
 #include "edid.h"
@@ -45,6 +46,8 @@
 
 #define HDMIVRR_CHLNG_SRC_MON 0
 #define HDMIVRR_CHLNG_SRC_DRV 1
+
+#define NS_IN_MS (1000 * 1000)
 
 static int hdmivrr_i2c_read(struct tegra_hdmi *hdmi, size_t len, void *data)
 {
@@ -761,6 +764,34 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 			fb_add_videomode(&m_vrr, head);
 		}
 	}
+}
+
+/* Active or deactivate VRR mode on the monitor side */
+void _tegra_hdmivrr_activate(struct tegra_hdmi *hdmi, bool activate)
+{
+	struct tegra_dc *dc = hdmi->dc;
+	struct tegra_vrr *vrr  = dc->out->vrr;
+	struct fb_videomode *fbmode = tegra_fb_get_mode(dc);
+	int frametime_ms = (int)div64_s64(dc->frametime_ns, NS_IN_MS);
+
+	if (!vrr || !fbmode || !(dc->mode.vmode & FB_VMODE_VRR))
+		return;
+
+	if (activate) {
+		/*
+		   Inform VRR monitor to turn on VRR mode by increase
+		   vertical backporch by 2.
+		   The monitor needs a few frames of standard timing
+		   before activating VRR mode.
+		   */
+		msleep(frametime_ms * 20);
+		dc->mode.v_back_porch = fbmode->upper_margin + 2;
+	} else
+		dc->mode.v_back_porch = fbmode->upper_margin;
+
+	_tegra_dc_set_mode(dc, &dc->mode);
+	tegra_dc_update_mode(dc);
+	msleep(frametime_ms * 2);
 }
 
 int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)

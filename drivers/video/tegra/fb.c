@@ -586,11 +586,19 @@ int tegra_fb_update_modelist(struct tegra_dc *dc, int fblistindex)
 	return index;
 }
 
-static int tegra_fb_get_mode(struct tegra_dc *dc)
+static int tegra_fb_get_mode_refresh(struct tegra_dc *dc)
 {
 	if (!dc->fb->info->mode)
 		return -1;
 	return dc->fb->info->mode->refresh;
+}
+
+struct fb_videomode *tegra_fb_get_mode(struct tegra_dc *dc)
+{
+	if (dc && dc->fb && dc->fb->info && dc->fb->info->mode)
+		return dc->fb->info->mode;
+	else
+		return NULL;
 }
 
 static int tegra_fb_set_mode(struct tegra_dc *dc, int fps)
@@ -797,7 +805,7 @@ static ssize_t nvdps_show(struct device *device,
 	struct platform_device *ndev = to_platform_device(device);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
 
-	refresh_rate = tegra_fb_get_mode(dc);
+	refresh_rate = tegra_fb_get_mode_refresh(dc);
 	return snprintf(buf, PAGE_SIZE, "%d\n", refresh_rate);
 }
 

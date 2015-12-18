@@ -92,11 +92,14 @@ void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 	struct list_head *head);
 int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi);
 void te_authenticate_vrr(u8 *buf_ptr, u32 buflen);
+void _tegra_hdmivrr_activate(struct tegra_hdmi *hdmi, bool activate);
 #else
 int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi) { return -EPROTONOSUPPORT; }
 void tegra_hdmivrr_update_monspecs(struct tegra_dc *dc,
 	struct list_head *head) { return; }
 int tegra_hdmi_vrr_init(struct tegra_hdmi *hdmi) { return -EPROTONOSUPPORT; }
+void _tegra_hdmivrr_activate(struct tegra_hdmi *hdmi, bool activate)
+{ return; }
 #endif
 
 #endif

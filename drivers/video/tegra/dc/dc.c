@@ -2945,7 +2945,14 @@ static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out)
 		dc->initialized = false;
 	} else if (dc->out->type == TEGRA_DC_OUT_DSI &&
 			tegra_is_bl_display_initialized(dc->ndev->id)) {
-		dc->initialized = true;
+		/*
+		 * In case of dsi->csi loopback support, force re-initialize
+		 * all DSI controllers. So, set dc->initialized to false.
+		 */
+		if (dc->out->dsi->dsi_csi_loopback)
+			dc->initialized = false;
+		else
+			dc->initialized = true;
 	}
 #endif
 	mode = tegra_dc_get_override_mode(dc);

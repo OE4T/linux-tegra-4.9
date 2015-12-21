@@ -1669,6 +1669,11 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 	if (!of_property_read_u32(np_dsi_panel,
 			"nvidia,comp-rate", &temp))
 		pdata->default_out->dsc_bpp = (u8)temp;
+	if (of_property_read_bool(np_dsi, "nvidia,dsi-csi-loopback")) {
+		dsi->dsi_csi_loopback = 1;
+		OF_DC_LOG("DSI CSI loopback %d\n",
+			dsi->dsi_csi_loopback);
+	}
 
 	return np_dsi_panel;
 

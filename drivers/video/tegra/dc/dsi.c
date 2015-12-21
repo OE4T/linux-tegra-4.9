@@ -2041,7 +2041,8 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 
 	if (tegra_platform_is_fpga()) {
 		shift_clk_div_register = 1;
-		if (dsi->info.ganged_type || dsi->info.split_link_type)
+		if (dsi->info.ganged_type || dsi->info.split_link_type ||
+			dsi->info.dsi_csi_loopback)
 			shift_clk_div_register = 0;
 	}
 
@@ -2386,7 +2387,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 	}
 
 	/* Calibrate DSI 0 */
-	if (dsi->info.ganged_type ||
+	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
 		dsi->info.dsi_instance == DSI_INSTANCE_0) {
 		val = MIPI_CAL_OVERIDEDSIA(0x0) |
 			MIPI_CAL_SELDSIA(0x1) |
@@ -2430,7 +2431,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
 	/* Calibrate DSI 1 */
-	if (dsi->info.ganged_type ||
+	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
 		dsi->info.dsi_instance == DSI_INSTANCE_1) {
 		val = MIPI_CAL_OVERIDEC(0x0) |
 			MIPI_CAL_SELC(0x1) |
@@ -2517,7 +2518,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_4_VS1);
 
 	/* Calibrate DSI 0 */
-	if (dsi->info.ganged_type ||
+	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
 		dsi->info.dsi_instance == DSI_INSTANCE_0) {
 		val = MIPI_CAL_OVERIDEDSIA(0x0) |
 			MIPI_CAL_SELDSIA(0x1) |
@@ -2547,7 +2548,7 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
 	/* Calibrate DSI 1 */
-	if (dsi->info.ganged_type ||
+	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
 		dsi->info.dsi_instance == DSI_INSTANCE_1) {
 		val = MIPI_CAL_OVERIDEDSIC(0x0) |
 			MIPI_CAL_SELDSIC(0x1) |
@@ -3017,7 +3018,9 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 	/* stabilization delay */
 	udelay(300);
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (dsi->info.dsi_instance || dsi->info.ganged_type)
+
+	if (dsi->info.dsi_instance || dsi->info.ganged_type ||
+		dsi->info.dsi_csi_loopback)
 		tegra_dsi_panelB_enable();
 #endif
 	tegra_dsi_set_phy_timing(dsi, DSI_LPHS_IN_LP_MODE);
@@ -3597,7 +3600,8 @@ static int _tegra_dsi_controller_write_data(struct tegra_dc_dsi_data *dsi,
 
 	err = 0;
 
-	if (!dsi->info.ganged_type && link_id == TEGRA_DSI_LINK1) {
+	if (!dsi->info.ganged_type && !dsi->info.dsi_csi_loopback &&
+		link_id == TEGRA_DSI_LINK1) {
 		dev_err(&dsi->dc->ndev->dev, "DSI invalid command\n");
 		return -EINVAL;
 	}
@@ -4948,13 +4952,15 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 
 	dsi->max_instances = (dc->out->dsi->ganged_type ||
-			dc->out->dsi->split_link_type) ? MAX_DSI_INSTANCE : 1;
+		dc->out->dsi->dsi_csi_loopback ||
+		dc->out->dsi->split_link_type) ? MAX_DSI_INSTANCE : 1;
 	dsi_instance = (int)dc->out->dsi->dsi_instance;
 	for (i = 0; i < dsi->max_instances; i++) {
 		if (np) {
 			if (np_dsi && of_device_is_available(np_dsi)) {
 				if (!dc->out->dsi->ganged_type &&
-						!dc->out->dsi->split_link_type)
+					!dc->out->dsi->split_link_type &&
+					!dc->out->dsi->dsi_csi_loopback)
 					of_address_to_resource(np_dsi,
 						dsi_instance, &dsi_res);
 				else /* ganged type OR split link*/
@@ -4968,10 +4974,11 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		} else {
 			res = platform_get_resource_byname(dc->ndev,
 					IORESOURCE_MEM,
+					(dc->out->dsi->split_link_type ||
+					dc->out->dsi->dsi_csi_loopback) ?
+					split_link_reg_name[i] :
 					dc->out->dsi->ganged_type ?
-					ganged_reg_name[i] :
-					dc->out->dsi->split_link_type ?
-					split_link_reg_name[i] : "dsi_regs");
+					ganged_reg_name[i] : "dsi_regs");
 		}
 		if (!res) {
 			dev_err(&dc->ndev->dev, "dsi: no mem resource\n");
@@ -5138,7 +5145,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	/*
 	 * Enable DPD mode for DSI pads if required.
 	 */
-	if (!dsi->info.ganged_type &&
+	if (!dsi->info.ganged_type && !dsi->info.dsi_csi_loopback &&
 		(dsi->info.controller_vs >= DSI_VS_1)) {
 		if (dsi->info.dpd_dsi_pads & DSI_DPD_EN)
 			tegra_io_dpd_enable(&dsi_io);

@@ -1397,4 +1397,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.record_sm_error_state = gm20b_gr_record_sm_error_state;
 	gops->gr.update_sm_error_state = gm20b_gr_update_sm_error_state;
 	gops->gr.clear_sm_error_state = gm20b_gr_clear_sm_error_state;
+	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
 }

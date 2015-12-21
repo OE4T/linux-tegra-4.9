@@ -248,6 +248,9 @@ struct gpu_ops {
 								sm_error_state);
 		int (*clear_sm_error_state)(struct gk20a *g,
 				struct channel_gk20a *ch, u32 sm_id);
+		int (*suspend_contexts)(struct gk20a *g,
+				struct dbg_session_gk20a *dbg_s,
+				int *ctx_resident_ch_fd);
 	} gr;
 	const char *name;
 	struct {

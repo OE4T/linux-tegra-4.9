@@ -8458,6 +8458,123 @@ static void gr_gk20a_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gk20a);
 }
 
+/*
+ * gr_gk20a_suspend_context()
+ * This API should be called with dbg_session lock held
+ * and ctxsw disabled
+ * Returns bool value indicating if context was resident
+ * or not
+ */
+bool gr_gk20a_suspend_context(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+	bool ctx_resident = false;
+
+	if (gk20a_is_channel_ctx_resident(ch)) {
+		gk20a_suspend_all_sms(g, 0, false);
+		ctx_resident = true;
+	} else {
+		gk20a_disable_channel_tsg(g, ch);
+	}
+
+	return ctx_resident;
+}
+
+bool gr_gk20a_resume_context(struct channel_gk20a *ch)
+{
+	struct gk20a *g = ch->g;
+	bool ctx_resident = false;
+
+	if (gk20a_is_channel_ctx_resident(ch)) {
+		gk20a_resume_all_sms(g);
+		ctx_resident = true;
+	} else {
+		gk20a_enable_channel_tsg(g, ch);
+	}
+
+	return ctx_resident;
+}
+
+int gr_gk20a_suspend_contexts(struct gk20a *g,
+			      struct dbg_session_gk20a *dbg_s,
+			      int *ctx_resident_ch_fd)
+{
+	int local_ctx_resident_ch_fd = -1;
+	bool ctx_resident;
+	struct channel_gk20a *ch;
+	struct dbg_session_channel_data *ch_data;
+	int err = 0;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
+		goto clean_up;
+	}
+
+	mutex_lock(&dbg_s->ch_list_lock);
+
+	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+		ch = g->fifo.channel + ch_data->chid;
+
+		ctx_resident = gr_gk20a_suspend_context(ch);
+		if (ctx_resident)
+			local_ctx_resident_ch_fd = ch_data->channel_fd;
+	}
+
+	mutex_unlock(&dbg_s->ch_list_lock);
+
+	err = gr_gk20a_enable_ctxsw(g);
+	if (err)
+		gk20a_err(dev_from_gk20a(g), "unable to restart ctxsw!\n");
+
+	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;
+
+clean_up:
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return err;
+}
+
+int gr_gk20a_resume_contexts(struct gk20a *g,
+			      struct dbg_session_gk20a *dbg_s,
+			      int *ctx_resident_ch_fd)
+{
+	int local_ctx_resident_ch_fd = -1;
+	bool ctx_resident;
+	struct channel_gk20a *ch;
+	int err = 0;
+	struct dbg_session_channel_data *ch_data;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
+		goto clean_up;
+	}
+
+	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+		ch = g->fifo.channel + ch_data->chid;
+
+		ctx_resident = gr_gk20a_resume_context(ch);
+		if (ctx_resident)
+			local_ctx_resident_ch_fd = ch_data->channel_fd;
+	}
+
+	err = gr_gk20a_enable_ctxsw(g);
+	if (err)
+		gk20a_err(dev_from_gk20a(g), "unable to restart ctxsw!\n");
+
+	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;
+
+clean_up:
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return err;
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -8522,4 +8639,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.record_sm_error_state = gk20a_gr_record_sm_error_state;
 	gops->gr.update_sm_error_state = gk20a_gr_update_sm_error_state;
 	gops->gr.clear_sm_error_state = gk20a_gr_clear_sm_error_state;
+	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
 }

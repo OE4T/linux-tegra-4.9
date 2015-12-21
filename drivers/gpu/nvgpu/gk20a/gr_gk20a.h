@@ -614,4 +614,13 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 
 u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr);
 
+bool gr_gk20a_suspend_context(struct channel_gk20a *ch);
+bool gr_gk20a_resume_context(struct channel_gk20a *ch);
+int gr_gk20a_suspend_contexts(struct gk20a *g,
+			      struct dbg_session_gk20a *dbg_s,
+			      int *ctx_resident_ch_fd);
+int gr_gk20a_resume_contexts(struct gk20a *g,
+			      struct dbg_session_gk20a *dbg_s,
+			      int *ctx_resident_ch_fd);
+
 #endif /*__GR_GK20A_H__*/

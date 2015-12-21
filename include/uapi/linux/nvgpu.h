@@ -738,8 +738,22 @@ struct nvgpu_dbg_gpu_unbind_channel_args {
 	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 17, struct nvgpu_dbg_gpu_unbind_channel_args)
 
 
+#define NVGPU_DBG_GPU_SUSPEND_ALL_CONTEXTS	1
+#define NVGPU_DBG_GPU_RESUME_ALL_CONTEXTS	2
+
+struct nvgpu_dbg_gpu_suspend_resume_contexts_args {
+	__u32 action;
+	__u32 is_resident_context;
+	__s32 resident_context_fd;
+	__u32 padding;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_CONTEXTS			\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 18, struct nvgpu_dbg_gpu_suspend_resume_contexts_args)
+
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_UNBIND_CHANNEL)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_CONTEXTS)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)

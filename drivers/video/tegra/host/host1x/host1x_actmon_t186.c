@@ -279,6 +279,12 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 	actmon_writel(actmon, 0x0, actmon_local_ctrl_r());
 	actmon_writel(actmon, 0x0, actmon_glb_ctrl_r());
 
+	/* wait for work to finish and then cancel*/
+	if (engine_pdata->actmon_irq) {
+		cancel_work_sync(&actmon->above_wmark_worker.work);
+		cancel_work_sync(&actmon->below_wmark_worker.work);
+	}
+
 	actmon->init = ACTMON_SLEEP;
 
 	nvhost_intr_disable_host_irq(&nvhost_get_host(host_pdev)->intr,

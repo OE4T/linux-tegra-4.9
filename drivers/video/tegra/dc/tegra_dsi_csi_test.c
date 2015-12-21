@@ -37,6 +37,7 @@ struct dsi_csi_test_info {
 	u32 y_res;
 	u32 bpp;
 	u8 fixed_pattern;
+	u8 dsi_instance;
 	struct tegra_dc_dsi_data *dsi;
 	struct dentry *root;
 	struct dsi_status *init_status;
@@ -131,6 +132,7 @@ static ssize_t dsi_csi_send_fixed_pattern(struct file *file, const char __user *
 	*((u32 *)line_buf) = *((u32 *)line_payload_cmd);
 
 	/* Send start of CSI frame packet */
+	start_of_frame.link_id = info->dsi_instance;
 	ret = tegra_dsi_write_data(dc, dsi, &start_of_frame, del);
 	if (ret) {
 		pr_err("%s: Err in sending CSI SOF pkt %d\n", __func__,	ret);
@@ -143,6 +145,7 @@ static ssize_t dsi_csi_send_fixed_pattern(struct file *file, const char __user *
 	 */
 	for (i = 0; i < info->y_res; i++) {
 		/* Send start of line packet */
+		start_of_line.link_id = info->dsi_instance;
 		ret = tegra_dsi_write_data(dc, dsi, &start_of_line, del);
 		if (ret) {
 			pr_err("%s: Err in sending CSI SOL pkt %d\n", __func__,
@@ -155,6 +158,7 @@ static ssize_t dsi_csi_send_fixed_pattern(struct file *file, const char __user *
 		 * Host fifo buffer size is small(64 words). So, use video buffer fifo
 		 * for transferring CSI frame data. Video buffer size is 1920 words.
 		 */
+		data_cmd.link_id = info->dsi_instance;
 		ret = tegra_dsi_write_data(dc, dsi, &data_cmd, del);
 		if (ret) {
 			pr_err("%s: Failed to send csi frame data\n", __func__);
@@ -163,6 +167,7 @@ static ssize_t dsi_csi_send_fixed_pattern(struct file *file, const char __user *
 		}
 
 		/* Send end of line packet */
+		end_of_line.link_id = info->dsi_instance;
 		ret = tegra_dsi_write_data(dc, dsi, &end_of_line, del);
 		if (ret) {
 			pr_err("%s: Err in sending CSI EOL pkt %d\n", __func__,
@@ -172,6 +177,7 @@ static ssize_t dsi_csi_send_fixed_pattern(struct file *file, const char __user *
 	}
 
 	/* Send end of frame packet */
+	end_of_frame.link_id = info->dsi_instance;
 	ret = tegra_dsi_write_data(dc, dsi, &end_of_frame, del);
 	if (ret)
 		pr_err("%s: Err in sending CSI EOF pkt %d\n", __func__,	ret);
@@ -258,6 +264,11 @@ static int dsi_csi_create_debugfs(struct dsi_csi_test_info *info)
 
 	d = debugfs_create_u8("fixed-pattern", S_IWUSR | S_IRUGO, info->root,
 		(u8 *)&info->fixed_pattern);
+	if (IS_ERR_OR_NULL(d))
+		goto err_node;
+
+	d = debugfs_create_u8("dsi-instance", S_IWUSR | S_IRUGO, info->root,
+		(u8 *)&info->dsi_instance);
 	if (IS_ERR_OR_NULL(d))
 		goto err_node;
 

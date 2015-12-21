@@ -230,16 +230,19 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	actmon_writel(actmon, val, actmon_local_ctrl_r());
 
 	/* setup watermark workers */
-	actmon->below_wmark_worker.actmon = actmon;
-	actmon->below_wmark_worker.type = ACTMON_INTR_BELOW_WMARK;
-	INIT_WORK(&actmon->below_wmark_worker.work, host1x_actmon_event_fn);
-	actmon->above_wmark_worker.actmon = actmon;
-	actmon->above_wmark_worker.type = ACTMON_INTR_ABOVE_WMARK;
-	INIT_WORK(&actmon->above_wmark_worker.work, host1x_actmon_event_fn);
+	if (engine_pdata->actmon_irq) {
+		actmon->below_wmark_worker.actmon = actmon;
+		actmon->below_wmark_worker.type = ACTMON_INTR_BELOW_WMARK;
+		INIT_WORK(&actmon->below_wmark_worker.work,
+			  host1x_actmon_event_fn);
+		actmon->above_wmark_worker.actmon = actmon;
+		actmon->above_wmark_worker.type = ACTMON_INTR_ABOVE_WMARK;
+		INIT_WORK(&actmon->above_wmark_worker.work,
+			  host1x_actmon_event_fn);
 
-	/* Enable global interrupt */
-	if (engine_pdata->actmon_irq)
+		/* Enable global interrupt */
 		actmon_writel(actmon, 0x1, actmon_glb_intr_en_r());
+	}
 
 	nvhost_intr_enable_host_irq(&nvhost_get_host(host_pdev)->intr,
 				    engine_pdata->actmon_irq,

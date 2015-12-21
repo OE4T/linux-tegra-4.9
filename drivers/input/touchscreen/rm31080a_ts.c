@@ -427,9 +427,9 @@ static int rm_tch_spi_burst_write(u8 reg, u8 *txbuf, size_t len)
 	u8 *p_u8_Tmp;
 	/*to do: check result*/
 	p_u8_Tmp = kmalloc(len + 1, GFP_KERNEL);
-	p_u8_Tmp[0] = reg;
 	if (p_u8_Tmp == NULL)
 		return -ENOMEM;
+	p_u8_Tmp[0] = reg;
 	for (i = 0; i < len; i++)
 		p_u8_Tmp[i + 1] = txbuf[i];
 	rm_tch_spi_write(p_u8_Tmp, len + 1);

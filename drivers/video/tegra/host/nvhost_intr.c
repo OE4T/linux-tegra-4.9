@@ -350,16 +350,15 @@ static void nvhost_syncpt_low_prio_work(struct work_struct *work)
 }
 
 /*** host syncpt interrupt service functions ***/
-/**
- * Sync point threshold interrupt service thread function
- * Handles sync point threshold triggers, in thread context
- */
-irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id)
+void nvhost_syncpt_thresh_fn(void *dev_id)
 {
 	struct nvhost_intr_syncpt *syncpt = dev_id;
 	unsigned int id = syncpt->id;
 	struct nvhost_intr *intr = intr_syncpt_to_intr(syncpt);
 	struct nvhost_master *dev = intr_to_dev(intr);
+
+	/* make sure host1x is powered */
+	nvhost_module_busy(dev->dev);
 
 	if (nvhost_dev_is_virtual(dev->dev))
 		(void)process_wait_list(intr, syncpt,
@@ -368,7 +367,7 @@ irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id)
 		(void)process_wait_list(intr, syncpt,
 				nvhost_syncpt_update_min(&dev->syncpt, id));
 
-	return IRQ_HANDLED;
+	nvhost_module_idle(dev->dev);
 }
 
 /*** host general interrupt service functions ***/

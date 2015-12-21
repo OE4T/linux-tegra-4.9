@@ -144,7 +144,7 @@ void nvhost_intr_enable_host_irq(struct nvhost_intr *intr, int irq,
 				 void *priv);
 void nvhost_intr_disable_host_irq(struct nvhost_intr *intr, int irq);
 
-irqreturn_t nvhost_syncpt_thresh_fn(void *dev_id);
+void nvhost_syncpt_thresh_fn(void *dev_id);
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id);
 void nvhost_scale_actmon_irq(struct platform_device *pdev, int type);
 

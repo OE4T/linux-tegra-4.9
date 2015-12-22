@@ -1144,6 +1144,7 @@ static void ufs_lane_rateid_init(struct tegra_padctl_uphy *uphy, int lane)
 }
 
 static struct init_data pcie_lane_g1_g2_init_data[] = {
+	{.cfg_addr = 0x97, .cfg_wdata = 0x0080},
 };
 
 static void pcie_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)

@@ -755,20 +755,34 @@ static void __exit free_allocated_res_exit(void)
 	free_resources();
 }
 
-static int __init init_freqtbls(void)
+static int __init init_freqtbls(struct device_node *dn)
 {
+	u16 dt_freq_table_step_size = 0;
 	struct cpufreq_frequency_table *ftbl;
 	struct cpu_vhint_table *vhtbl;
-	uint16_t ndiv, max_freq_steps;
+	u16 ndiv, max_freq_steps;
+	u16 freq_table_step_size = CPUFREQ_TBL_STEP_SIZE;
 	enum cluster cl;
 	int ret = 0, index;
+
+	if (!of_property_read_u16(dn, "freq_table_step_size",
+					&dt_freq_table_step_size)) {
+		freq_table_step_size = dt_freq_table_step_size;
+		if (!freq_table_step_size) {
+			freq_table_step_size = CPUFREQ_TBL_STEP_SIZE;
+			pr_info("Invalid cpu freq_table_step_size:%d setting to default value:%d\n",
+				dt_freq_table_step_size, freq_table_step_size);
+		}
+	}
+
+	pr_debug("CPU frequency table step size: %d\n", freq_table_step_size);
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
 
-		max_freq_steps = vhtbl->ndiv_max / CPUFREQ_TBL_STEP_SIZE +
+		max_freq_steps = vhtbl->ndiv_max / freq_table_step_size +
 			(vhtbl->ndiv_max %
-			CPUFREQ_TBL_STEP_SIZE ? 1 : 0);
+			freq_table_step_size ? 1 : 0);
 
 		/* Allocate memory 1 + max_freq_steps to write END_OF_TABLE */
 		ftbl = kzalloc(sizeof(struct cpufreq_frequency_table) *
@@ -782,7 +796,7 @@ static int __init init_freqtbls(void)
 
 		for (index = 0, ndiv = vhtbl->ndiv_min;
 				ndiv < vhtbl->ndiv_max;
-				index++, ndiv += CPUFREQ_TBL_STEP_SIZE)
+				index++, ndiv += freq_table_step_size)
 			ftbl[index].frequency = (unsigned long)
 				(vhtbl->ref_clk_hz * ndiv)
 				/ (vhtbl->pdiv * vhtbl->mdiv * 1000);
@@ -973,7 +987,7 @@ static int __init tegra_cpufreq_init(void)
 	if (ret)
 		goto err_free_res;
 
-	ret = init_freqtbls();
+	ret = init_freqtbls(dn);
 	if (ret)
 		goto err_free_res;
 

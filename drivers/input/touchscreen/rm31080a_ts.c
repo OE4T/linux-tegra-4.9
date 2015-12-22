@@ -1,9 +1,9 @@
 /*
  * Raydium RM31080 touchscreen driver
  *
- * Copyright (C) 2012-2014, Raydium Semiconductor Corporation.
+ * Copyright (C) 2012-2016, Raydium Semiconductor Corporation.
  * All Rights Reserved.
- * Copyright (C) 2012-2014, NVIDIA Corporation.  All Rights Reserved.
+ * Copyright (C) 2012-2016, NVIDIA Corporation.  All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License as published by the
@@ -145,6 +145,7 @@ struct rm31080a_ts_para {
 	bool b_calc_finish;
 	bool b_enable_scriber;
 	bool b_is_suspended;
+	bool b_is_disabled;
 	bool b_init_service;
 
 	u32 u32_watch_dog_cnt;
@@ -2134,6 +2135,7 @@ static void rm_tch_init_ts_structure_part(void)
 	rm_ctrl_watchdog_func(0);
 
 	g_st_ts.b_is_suspended = false;
+	g_st_ts.b_is_disabled = false;
 	/*g_st_ts.u8_test_mode = false;*/
 	g_st_ts.u8_test_mode_type = RM_TEST_MODE_NULL;
 
@@ -3262,10 +3264,8 @@ static void rm_ctrl_suspend(struct rm_tch_ts *ts)
 
 }
 
-#ifdef CONFIG_PM
-static int rm_tch_suspend(struct device *dev)
+static int rm_tch_suspend(struct rm_tch_ts *ts)
 {
-	struct rm_tch_ts *ts = dev_get_drvdata(dev);
 	if (g_st_ts.b_init_service) {
 		dev_info(ts->dev, "Raydium - Disable input device\n");
 		rm_ctrl_suspend(ts);
@@ -3274,10 +3274,8 @@ static int rm_tch_suspend(struct device *dev)
 	return RETURN_OK;
 }
 
-static int rm_tch_resume(struct device *dev)
+static int rm_tch_resume(struct rm_tch_ts *ts)
 {
-	struct rm_tch_ts *ts = dev_get_drvdata(dev);
-
 	if (g_st_ts.b_init_service) {
 		dev_info(ts->dev, "Raydium - Enable input device\n");
 		if (wake_lock_active(&g_st_ts.wakelock_initialization))
@@ -3285,6 +3283,31 @@ static int rm_tch_resume(struct device *dev)
 		wake_lock_timeout(&g_st_ts.wakelock_initialization,
 			TCH_WAKE_LOCK_TIMEOUT);
 		rm_ctrl_resume(ts);
+	}
+	return RETURN_OK;
+}
+
+#ifdef CONFIG_PM
+static int rm_dev_pm_suspend(struct device *dev)
+{
+	struct rm_tch_ts *ts = dev_get_drvdata(dev);
+	if (!g_st_ts.b_is_suspended && !g_st_ts.b_is_disabled) {
+		rm_tch_suspend(ts);
+#if defined(CONFIG_ANDROID)
+		dev_info(ts->dev, "disabled without input powerhal support.\n");
+#endif
+	}
+	return RETURN_OK;
+}
+
+static int rm_dev_pm_resume(struct device *dev)
+{
+	struct rm_tch_ts *ts = dev_get_drvdata(dev);
+	if (!g_st_ts.b_is_disabled) {
+		rm_tch_resume(ts);
+#if defined(CONFIG_ANDROID)
+		dev_info(ts->dev, "enabled without input powerhal support.\n");
+#endif
 	}
 	return RETURN_OK;
 }
@@ -3322,13 +3345,13 @@ static int rm_tch_input_enable(struct input_dev *in_dev)
 {
 	int error = RETURN_OK;
 
-#ifdef CONFIG_PM
 	struct rm_tch_ts *ts = input_get_drvdata(in_dev);
 
-	error = rm_tch_resume(ts->dev);
+	g_st_ts.b_is_disabled = false;
+	error = rm_tch_resume(ts);
 	if (error)
 		dev_err(ts->dev, "Raydium - %s : failed\n", __func__);
-#endif
+
 	return error;
 }
 
@@ -3336,13 +3359,13 @@ static int rm_tch_input_disable(struct input_dev *in_dev)
 {
 	int error = RETURN_OK;
 
-#ifdef CONFIG_PM
 	struct rm_tch_ts *ts = input_get_drvdata(in_dev);
 
-	error = rm_tch_suspend(ts->dev);
+	error = rm_tch_suspend(ts);
+	g_st_ts.b_is_disabled = true;
 	if (error)
 		dev_err(ts->dev, "Raydium - %s : failed\n", __func__);
-#endif
+
 	return error;
 }
 
@@ -4117,6 +4140,13 @@ err_spi_speed:
 	return ret;
 }
 
+#if defined(CONFIG_PM)
+static const struct dev_pm_ops rm_pm_ops = {
+	.suspend = rm_dev_pm_suspend,
+	.resume = rm_dev_pm_resume,
+};
+#endif
+
 static const struct of_device_id rm_ts_dt_match[] = {
 	{ .compatible = "raydium, rm_ts_spidev" },
 	{ },
@@ -4128,6 +4158,9 @@ static struct spi_driver rm_tch_spi_driver = {
 		.name = "rm_ts_spidev",
 		.bus = &spi_bus_type,
 		.owner = THIS_MODULE,
+#if defined(CONFIG_PM)
+		.pm     = &rm_pm_ops,
+#endif
 #ifdef CONFIG_OF
 		.of_match_table = rm_ts_dt_match,
 #endif

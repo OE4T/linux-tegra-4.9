@@ -221,9 +221,9 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, int edid_src)
 		.addr = 0x50,
 	};
 
-	if (edid_src == 0)
+	if (edid_src == EDID_SRC_PANEL)
 		hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
-	else if (edid_src == 1)
+	else if (edid_src == EDID_SRC_DT)
 		hdmi->edid = tegra_edid_create(dc, tegra_dc_edid_blob);
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't create edid\n");
@@ -997,7 +997,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct device_node *np_hdmi = NULL;
 #endif
 	struct device_node *np_panel = NULL;
-	int edid_src = 0;
+	int edid_src = EDID_SRC_PANEL;
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
@@ -1026,7 +1026,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			if (np_panel && of_device_is_available(np_panel)) {
 				if (of_property_read_bool(np_panel,
 							"nvidia,edid"))
-					edid_src = 1;
+					edid_src = EDID_SRC_DT;
 				of_node_put(np_panel);
 			}
 		} else {

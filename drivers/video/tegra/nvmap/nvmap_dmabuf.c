@@ -708,19 +708,6 @@ struct dma_buf *__nvmap_dmabuf_export(struct nvmap_client *client,
 EXPORT_SYMBOL(__nvmap_dmabuf_export);
 
 /*
- * You must dma_buf_put() the dma_buf object when you are done with
- * it.
- */
-struct dma_buf *__nvmap_dmabuf_export_from_ref(struct nvmap_handle_ref *ref)
-{
-	if (!virt_addr_valid(ref))
-		return ERR_PTR(-EINVAL);
-
-	get_dma_buf(ref->handle->dmabuf);
-	return ref->handle->dmabuf;
-}
-
-/*
  * Returns the nvmap handle ID associated with the passed dma_buf's fd. This
  * does not affect the ref count of the dma_buf.
  * NOTE: Callers of this utility function must invoke nvmap_handle_put after

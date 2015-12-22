@@ -633,5 +633,41 @@
 		/* 68: enable SDR12,SDR25,SDR50,SDR104 ... */
                 uhs-mask = <0x68>;
 	};
+
+        ptm_a57_0: ptm@9840000 {
+                status = "okay";
+        };
+
+        ptm_a57_1: ptm@9940000 {
+                status = "okay";
+        };
+
+        ptm_a57_2: ptm@9a40000 {
+                status = "okay";
+        };
+
+        ptm_a57_3: ptm@9b40000 {
+                status = "okay";
+        };
+
+        funnel_bccplex@9010000 {
+                status = "okay";
+        };
+
+        funnel_major@8010000 {
+                status = "okay";
+        };
+
+        replicator@0x8040000 {
+                status = "okay";
+        };
+
+        etf@8030000 {
+                status = "okay";
+        };
+
+        tpiu@8060000 {
+                status = "okay";
+        };
 };
 

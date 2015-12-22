@@ -124,6 +124,23 @@ const uint8_t msbc_sequence_table[NUM_SEQUENCES] = {0x08, 0x38, 0xc8, 0xf8};
 #define BYTES_PER_MSBC_FRAME \
 	(MSBC_PACKET1_BYTES + MSBC_PACKET2_BYTES + MSBC_PACKET3_BYTES)
 
+const uint8_t msbc_start_offset_in_packet[BLE_PACKETS_PER_MSBC_FRAME] = {
+	1, /* SBC header starts after 1 byte sequence num portion of H2 */
+	0,
+	0
+};
+const uint8_t msbc_start_offset_in_buffer[BLE_PACKETS_PER_MSBC_FRAME] = {
+	0,
+	MSBC_PACKET1_BYTES,
+	MSBC_PACKET1_BYTES + MSBC_PACKET2_BYTES
+};
+const uint8_t msbc_bytes_in_packet[BLE_PACKETS_PER_MSBC_FRAME] = {
+	/* includes the SBC header but not the sequence num or keycode */
+	MSBC_PACKET1_BYTES,
+	MSBC_PACKET2_BYTES,
+	MSBC_PACKET3_BYTES
+};
+
 struct fifo_packet {
 	uint8_t  type;
 	uint8_t  num_bytes;
@@ -322,7 +339,7 @@ struct snd_atvr {
 
 	/* msbc decoder */
 	uint8_t msbc_frame_data[BYTES_PER_MSBC_FRAME];
-	int16_t audio_output[MAX_SAMPLES_PER_PACKET];
+	int16_t audio_output[2*MAX_SAMPLES_PER_PACKET];
 	uint8_t packet_in_frame;
 	uint8_t seq_index;
 
@@ -627,15 +644,81 @@ static int snd_atvr_decode_16KHz_msbc_packet(
 	uint remaining;
 	uint i;
 	uint32_t pos;
+	static int16_t last_sample;
 	uint read_index;
+	uint write_index;
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
+	if (num_bytes < BYTES_PER_MSBC_FRAME) {
+		/* assume we have a BLE frame that needs to be reconstructed */
+		if (atvr_snd->packet_in_frame == 0) {
+			if (sbc_input[0] !=
+				msbc_sequence_table[atvr_snd->seq_index]) {
 
-	/* we have a complete mSBC frame, send it to the decoder */
-	num_samples = sbc_decode(BLOCKS_PER_PACKET, NUM_BITS,
-				 sbc_input,
-				 BYTES_PER_MSBC_FRAME,
-				 &atvr_snd->audio_output[0]);
+				snd_atvr_log(
+				"sequence_num err, 0x%02x != 0x%02x\n",
+				sbc_input[1],
+				msbc_sequence_table[atvr_snd->seq_index]);
 
+				return 0;
+			}
+			atvr_snd->seq_index++;
+			if (atvr_snd->seq_index == NUM_SEQUENCES)
+				atvr_snd->seq_index = 0;
+
+			/* subtract the sequence number */
+			num_bytes--;
+		}
+		if (num_bytes !=
+			msbc_bytes_in_packet[atvr_snd->packet_in_frame]) {
+
+			pr_err(
+			  "%s: received %zd audio bytes but expected %d bytes\n",
+			  __func__, num_bytes,
+			  msbc_bytes_in_packet[atvr_snd->packet_in_frame]);
+
+			return 0;
+		}
+		write_index =
+			msbc_start_offset_in_buffer[atvr_snd->packet_in_frame];
+		read_index =
+			msbc_start_offset_in_packet[atvr_snd->packet_in_frame];
+		memcpy(&atvr_snd->msbc_frame_data[write_index],
+			   &sbc_input[read_index],
+			   msbc_bytes_in_packet[atvr_snd->packet_in_frame]);
+		atvr_snd->packet_in_frame++;
+		if (atvr_snd->packet_in_frame < BLE_PACKETS_PER_MSBC_FRAME) {
+			/* we don't have a complete mSBC frame yet,
+			 * just return */
+			return 0;
+		}
+		/* reset for next mSBC frame */
+		atvr_snd->packet_in_frame = 0;
+		/* we have a complete mSBC frame, send it to the decoder */
+		num_samples = sbc_decode(BLOCKS_PER_PACKET, NUM_BITS,
+					 atvr_snd->msbc_frame_data,
+					 BYTES_PER_MSBC_FRAME,
+					 &atvr_snd->audio_output[0]);
+		/* WAR for 8kHZ, double each sample starting from the end */
+		for (i = num_samples; i > 0; i--) {
+			int16_t s = atvr_snd->audio_output[i-1];
+
+			int16_t l = (i - 1) == 0 ?
+				last_sample : atvr_snd->audio_output[i-2];
+
+			atvr_snd->audio_output[i*2 - 1] = s;
+
+			atvr_snd->audio_output[i*2 - 2] =
+					(int16_t)((int32_t)s + (int32_t)l) / 2;
+		}
+		num_samples = num_samples * 2;
+		last_sample = atvr_snd->audio_output[num_samples - 1];
+	} else {
+		/* we have a complete mSBC frame, send it to the decoder */
+		num_samples = sbc_decode(BLOCKS_PER_PACKET, NUM_BITS,
+					 sbc_input,
+					 BYTES_PER_MSBC_FRAME,
+					 &atvr_snd->audio_output[0]);
+	}
 	/* Write PCM data to the buffer. */
 	pos = atvr_snd->write_index;
 	read_index = 0;
@@ -1409,9 +1492,9 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 #if (DEBUG_HID_RAW_INPUT == 1)
 	pr_info("%s: report->id = 0x%x, size = %d\n",
 		__func__, report->id, size);
-	if (size < 20) {
+	if (size < 22) {
 		int i;
-		for (i = 1; i < size; i++)
+		for (i = 1; i < 4; i++)
 			pr_info("data[%d] = 0x%02x\n", i, data[i]);
 	}
 #endif
@@ -1573,6 +1656,8 @@ static void atvr_remove(struct hid_device *hdev)
 static const struct hid_device_id atvr_devices[] = {
 	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
 			      USB_DEVICE_ID_NVIDIA_JARVIS)},
+	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
+			      USB_DEVICE_ID_NVIDIA_PEPPER)},
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, atvr_devices);

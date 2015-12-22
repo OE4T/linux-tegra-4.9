@@ -23,11 +23,45 @@ Required properties:
 
 - status: "okay" or "disabled" to enable/disable the node.
 
-Example:
+Optional properties:
+- freq_table_step_size:
+  Cpu frequency table step size. If not provided, default value 4.
+
+  For example, if list of original available frequencies(in KHz) are:
+  345600 384000 422400 460800 499200 537600 576000 614400 652800 691200
+  729600 768000 806400 844800 883200 921600 960000 998400 1036800 1075200
+  1113600 1152000 1190400 1228800 1267200 1305600 1344000 1382400 1420800
+  1459200 1497600 1536000 1574400 1612800 1651200 1689600 1728000 1766400
+  1804800 1843200
+
+  Setting freq_table_step_size to 1 will include all these frequencies in
+  cpufreq table as available frequencies.
+
+  Setting freq_table_step_size to 2 will skip alternative entries and will
+  include remaining entries in cpufreq table as available frequencies.
+  With freq_table_step_size as 2, cpufreq table available frequencies will be:
+  345600 422400 499200 576000 652800 729600 806400 883200 960000 1036800
+  1113600 1190400 1267200 1344000 1420800 1497600 1574400 1651200 1728000
+  1804800 1843200
+
+  Similarly, freq_table_step_size of value 3 will skip every 2nd and 3rd entries
+  in groups of 3 entries consecutively.
+
+
+Example 1:
 --------
        cpufreq@e070000 {
                compatible = "nvidia,tegra18x-cpufreq";
                reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
                      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
                status = "disabled";
+       };
+
+Example 2:
+----------
+       cpufreq@e070000 {
+               compatible = "nvidia,tegra18x-cpufreq";
+               reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
+                     <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+               freq_table_step_size = /bits/ 16 <1>;
        };

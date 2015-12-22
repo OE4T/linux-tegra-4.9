@@ -177,4 +177,8 @@
 		nvidia,invert-pmic-interrupt-polarity;
 	};
 
+	cpufreq@e070000 {
+		freq_table_step_size = /bits/ 16 <1>;
+	};
+
 };

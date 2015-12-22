@@ -1,4 +1,5 @@
 KBUILD_CFLAGS += -I$(srctree)/sound/soc/tegra-alt
+subdir-ccflags-y += -Werror
 
 snd-soc-tegra186-alt-asrc-objs := tegra186_asrc_alt.o
 snd-soc-tegra186-alt-arad-objs := tegra186_arad_alt.o

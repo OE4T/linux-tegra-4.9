@@ -24,14 +24,14 @@
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
-/*
+
 		gpio_i2c_0_21: gpio@21 {
-			compatible = "ti,tca9539";
+			compatible = "ti,tca6408";
 			reg = <0x21>;
 			gpio-controller;
 			#gpio-cells = <2>;
 		};
-*/
+
 		gpio_i2c_0_22: gpio@22 {
 			compatible = "ti,tca9539";
 			reg = <0x22>;

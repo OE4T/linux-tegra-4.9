@@ -17,6 +17,7 @@
 #include "tegra186-platforms/tegra186-quill-pb-power-tree-e3301-1000-a00-00.dtsi"
 #include "tegra186-modules/tegra186-cvb-e3320-1000-a00.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-e3301-0000-a00-plugin-manager.dtsi"
+#include "tegra186-plugin-manager/tegra186-quill-display-plugin-manager.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

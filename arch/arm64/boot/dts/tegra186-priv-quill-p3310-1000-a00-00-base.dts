@@ -21,6 +21,7 @@
 /* comms dtsi file should be included after gpio dtsi file */
 #include "tegra186-platforms/tegra186-quill-comms.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-p3310-1000-a00-plugin-manager.dtsi"
+#include "tegra186-plugin-manager/tegra186-quill-display-plugin-manager.dtsi"
 
 / {
 	model = "quill";

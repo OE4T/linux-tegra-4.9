@@ -634,5 +634,15 @@
 		default-power-on;
 		status = "okay";
 	};
+
+	sdhci@3400000 {
+		/* 68: enable SDR12,SDR25,SDR50,SDR104 ... */
+                uhs-mask = <0x68>;
+	};
+
+	sdhci@3440000 {
+		/* 68: enable SDR12,SDR25,SDR50,SDR104 ... */
+                uhs-mask = <0x68>;
+	};
 };
 

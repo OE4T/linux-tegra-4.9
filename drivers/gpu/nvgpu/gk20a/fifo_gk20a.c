@@ -780,6 +780,7 @@ void gk20a_fifo_reset_engine(struct gk20a *g, u32 engine_id)
 			/* resetting engine using mc_enable_r() is not
 			enough, we do full init sequence */
 			gk20a_gr_reset(g);
+			gk20a_pmu_enable_elpg(g);
 	}
 	if (engine_id == top_device_info_type_enum_copy0_v())
 		gk20a_reset(g, mc_enable_ce2_m());
@@ -1086,7 +1087,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 			   " deferring channel recovery to channel free");
 		/* clear interrupt */
 		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
-		return verbose;
+		goto exit_enable;
 	}
 
 	/* clear interrupt */
@@ -1101,6 +1102,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		     gr_gpfifo_ctl_access_enabled_f() |
 		     gr_gpfifo_ctl_semaphore_access_enabled_f());
 
+exit_enable:
 	/* It is safe to enable ELPG again. */
 	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
 		gk20a_pmu_enable_elpg(g);

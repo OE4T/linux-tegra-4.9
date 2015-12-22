@@ -439,7 +439,10 @@ void gk20a_gr_clear_sm_hww(struct gk20a *g,
 		int err = 0; \
 		if (support_gk20a_pmu(g->dev)) \
 			err = gk20a_pmu_disable_elpg(g); \
-		if (err) return err; \
+		if (err) { \
+			gk20a_pmu_enable_elpg(g); \
+			return err; \
+		} \
 		err = func; \
 		if (support_gk20a_pmu(g->dev)) \
 			gk20a_pmu_enable_elpg(g); \

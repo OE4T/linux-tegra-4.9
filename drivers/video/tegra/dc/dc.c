@@ -2394,6 +2394,7 @@ void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)
 {
 	dc->cmu_enabled = cmu_enable;
 #if defined(CONFIG_TEGRA_NVDISPLAY)
+	dc->pdata->cmu_enable = cmu_enable;
 	tegra_dc_cache_cmu(dc, tegra_dc_get_cmu(dc));
 	tegra_nvdisp_update_cmu(dc, &dc->cmu);
 #else

@@ -388,7 +388,7 @@ static ssize_t mode_3d_store(struct device *dev,
 static DEVICE_ATTR(stereo_mode,
 	S_IRUGO|S_IWUSR, mode_3d_show, mode_3d_store);
 
-#ifdef CONFIG_TEGRA_DC_CMU
+#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 static ssize_t cmu_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -830,7 +830,7 @@ void tegra_dc_remove_sysfs(struct device *dev)
 #ifdef CONFIG_TEGRA_DC_WIN_H
 	device_remove_file(dev, &dev_attr_win_h);
 #endif
-#ifdef CONFIG_TEGRA_DC_CMU
+#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	device_remove_file(dev, &dev_attr_cmu_enable);
 #endif
 #ifdef CONFIG_TEGRA_ISOMGR
@@ -884,7 +884,7 @@ void tegra_dc_create_sysfs(struct device *dev)
 #ifdef CONFIG_TEGRA_DC_WIN_H
 	error |= device_create_file(dev, &dev_attr_win_h);
 #endif
-#ifdef CONFIG_TEGRA_DC_CMU
+#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	error |= device_create_file(dev, &dev_attr_cmu_enable);
 #endif
 #ifdef CONFIG_TEGRA_ISOMGR

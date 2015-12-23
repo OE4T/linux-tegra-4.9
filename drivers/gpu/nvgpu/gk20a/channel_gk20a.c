@@ -446,6 +446,34 @@ void channel_gk20a_disable(struct channel_gk20a *ch)
 			ccsr_channel_enable_clr_true_f());
 }
 
+int gk20a_enable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
+{
+	struct tsg_gk20a *tsg;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		tsg = &g->fifo.tsg[ch->tsgid];
+		gk20a_enable_tsg(tsg);
+	} else {
+		g->ops.fifo.enable_channel(ch);
+	}
+
+	return 0;
+}
+
+int gk20a_disable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
+{
+	struct tsg_gk20a *tsg;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		tsg = &g->fifo.tsg[ch->tsgid];
+		gk20a_disable_tsg(tsg);
+	} else {
+		g->ops.fifo.disable_channel(ch);
+	}
+
+	return 0;
+}
+
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 {
 	struct channel_gk20a_job *job, *n;

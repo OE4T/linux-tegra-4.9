@@ -205,6 +205,9 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g);
 int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 size,
 			     struct priv_cmd_entry **entry);
 
+int gk20a_enable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch);
+int gk20a_disable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch);
+
 int gk20a_channel_suspend(struct gk20a *g);
 int gk20a_channel_resume(struct gk20a *g);
 

@@ -318,8 +318,7 @@
 		nvidia,audio-routing =
 			"y Headphone",		"y OUT",
 			"y IN",			"y Mic",
-			"z Headphone",		"z OUT",
-			"z IN",			"z Mic",
+			"z IN",			"z OUT",
 			"m Headphone",		"m OUT",
 			"m IN",			"m Mic";
 

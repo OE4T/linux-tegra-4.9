@@ -568,7 +568,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 	}
 
 	app->info = nvadsp_app_init(app->desc->handle, NULL);
-	if (!app->info) {
+	if (IS_ERR_OR_NULL(app->info)) {
 		dev_err(adsp->dev, "Failed to init app %s(%s).",
 			app->desc->name, app->desc->fw_name);
 		return -ENODEV;

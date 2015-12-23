@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -694,12 +694,12 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (!g->power_on)
 		return 0;
 
+	/* cancel any pending cde work */
+	gk20a_cde_suspend(g);
+
 	ret = gk20a_channel_suspend(g);
 	if (ret)
 		return ret;
-
-	/* cancel any pending cde work */
-	gk20a_cde_suspend(g);
 
 	/* disable elpg before gr or fifo suspend */
 	ret |= gk20a_pmu_destroy(g);

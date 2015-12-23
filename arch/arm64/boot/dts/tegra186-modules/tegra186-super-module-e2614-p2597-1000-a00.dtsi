@@ -216,7 +216,7 @@
 	};
 
 	tegra_sound: sound {
-		e2614_dai_link3: nvidia,dai-link-3 {
+		e2614_rt565x_dai_link: nvidia,dai-link-4 {
 			link-name = "rt565x-playback";
 			cpu-dai = <&tegra_i2s1>;
 			cpu-dai-name = "I2S1";
@@ -234,7 +234,7 @@
 			status = "disabled";
 		};
 
-		e2614_dai_link4: nvidia,dai-link-4 {
+		e2614_dspk_r_dai_link: nvidia,dai-link-5 {
 			link-name = "dspk-playback-r";
 			cpu-dai = <&tegra_dspk2>;
 			codec-dai = <&e2614_tas2552_r>;
@@ -249,7 +249,7 @@
 			status = "disabled";
 		};
 
-		e2614_dai_link5: nvidia,dai-link-5 {
+		e2614_dspk_l_dai_link: nvidia,dai-link-6 {
                         link-name = "dspk-playback-l";
                         cpu-dai = <&tegra_dspk2>;
                         codec-dai = <&e2614_tas2552_l>;
@@ -321,12 +321,14 @@
 				target = <&tegra_sound>;
 				_overlay_ {
 					nvidia,hp-det-gpios = <&tegra_gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
-					nvidia,num-codec-link = <5>;
+					nvidia,num-codec-link = <6>;
 					nvidia,audio-routing =
 						"y Headphone",		"y OUT",
 						"y IN",			"y Mic",
 						"z Headphone",		"z OUT",
 						"z IN",			"z Mic",
+						"m Headphone",		"m OUT",
+						"m IN",			"m Mic",
 						"x Headphone Jack",	"x HPO L Playback",
 						"x Headphone Jack",	"x HPO R Playback",
 						"x MICBIAS1",		"x Mic Jack",
@@ -345,19 +347,19 @@
 			};
 
 			overrides@11 {
-				target = <&e2614_dai_link3>;
+				target = <&e2614_rt565x_dai_link>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
 			overrides@12 {
-				target = <&e2614_dai_link4>;
+				target = <&e2614_dspk_r_dai_link>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
 			overrides@13 {
-                                target = <&e2614_dai_link5>;
+                                target = <&e2614_dspk_l_dai_link>;
                                 _overlay_ {
                                         status = "okay";
                                 };
@@ -373,7 +375,7 @@
 				};
 			};
 			overrides@1 {
-				target = <&e2614_dai_link3>;
+				target = <&e2614_rt565x_dai_link>;
 				_overlay_ {
 					codec-dai = <&e2614_rt5658>;
 					codec = "rt5659.1-001a";
@@ -391,7 +393,7 @@
 			};
 
 			overrides@1 {
-				target = <&e2614_dai_link3>;
+				target = <&e2614_rt565x_dai_link>;
 				_overlay_ {
 					codec-dai = <&e2614_rt5658_i2c3>;
 					codec = "rt5659.12-001a";

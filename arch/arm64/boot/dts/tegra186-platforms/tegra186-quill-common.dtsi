@@ -299,7 +299,7 @@
 	sound {
 		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
-		nvidia,num-codec-link = <2>;
+		nvidia,num-codec-link = <3>;
 		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_PLLA>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
@@ -319,7 +319,9 @@
 			"y Headphone",		"y OUT",
 			"y IN",			"y Mic",
 			"z Headphone",		"z OUT",
-			"z IN",			"z Mic";
+			"z IN",			"z Mic",
+			"m Headphone",		"m OUT",
+			"m IN",			"m Mic";
 
 		nvidia,xbar = <&tegra_axbar>;
 
@@ -360,6 +362,24 @@
 			num-channel = <2>;
 			codec = "1.spdif-dit.1";
 			name-prefix = "z";
+		};
+		nvidia,dai-link-3 {
+			link-name = "spdif-dit-2";
+			cpu-dai = <&tegra_i2s4>;
+			codec-dai = <&spdif_dit2>;
+			cpu-dai-name = "I2S4";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s16_le";
+			bclk_ratio = <1>;
+			srate = <48000>;
+			num-channel = <2>;
+			codec = "2.spdif-dit.2";
+			name-prefix = "m";
 		};
 	};
 

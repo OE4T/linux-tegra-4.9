@@ -3,7 +3,7 @@
  *
  * Author: Mohan Kumar <mkumard@nvidia.com>
  *
- * Copyright (C) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -116,6 +116,24 @@
 #define ADMA_GLOBAL_TRIGGERS					0x4060
 #define ADMA_GLOBAL_TRANSFER_ERROR_LOG				0x4068
 
+#define ADMA_AST_CONTROL					0x000
+#define ADMA_AST_RGN_SLAVE_BASE_LO				0x100
+#define ADMA_AST_RGN_SLAVE_BASE_HI				0x104
+#define ADMA_AST_RGN_MASK_BASE_LO				0x108
+#define ADMA_AST_RGN_MASK_BASE_HI				0x10c
+#define ADMA_AST_RGN_MASTER_BASE_LO				0x110
+#define ADMA_AST_RGN_MASTER_BASE_HI				0x114
+#define ADMA_AST_RGN_CONTOL					0x118
+
+#define AST_PAGE_MASK						(~0xFFF)
+#define AST_LO_SHIFT						32
+#define AST_LO_MASK						0xFFFFFFFF
+#define AST_PHY_SID_IDX						0
+#define AST_APE_SID_IDX						1
+#define AST_NS							(1 << 3)
+#define AST_VMINDEX(IDX)					(IDX << 15)
+#define AST_RGN_ENABLE						(1 << 0)
+#define AST_RGN_OFFSET						0x20
 
 #define ADMA_CH_SIZE						0x100
 #define ADMA_PAGE_SIZE						0x10000
@@ -219,6 +237,7 @@ enum {
 	ADDR2,
 	ADDR3,
 	ADDR4,
+	ADAST_REG,
 	ADMA_MAX_ADDR
 };
 
@@ -257,5 +276,7 @@ enum tegra_adma_transfer_direction {
 	MEMORY_TO_AHUB = 4,
 	AHUB_TO_AHUB = 8,
 };
+
+int tegra_adma_init(struct platform_device *pdev, void __iomem *adma_addr[]);
 
 #endif

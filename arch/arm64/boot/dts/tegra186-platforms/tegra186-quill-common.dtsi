@@ -311,7 +311,7 @@
 		reset-names = "extern1_rst";
 
 		/* used when no audio codec on board */
-		nvidia,dummy-codec-dai = <&spdif_dit1>;
+		nvidia,dummy-codec-dai = <&spdif_dit2>;
 		nvidia,dummy-codec-dai-name = "dit-hifi";
 
 		status = "okay";

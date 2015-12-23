@@ -86,6 +86,31 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 /*elcg init */
 static void gr_gk20a_enable_elcg(struct gk20a *g);
 
+int gr_gk20a_get_ctx_id(struct gk20a *g,
+		struct channel_gk20a *c,
+		u32 *ctx_id)
+{
+	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	void *ctx_ptr = NULL;
+
+	/* Channel gr_ctx buffer is gpu cacheable.
+	   Flush and invalidate before cpu update. */
+	g->ops.mm.l2_flush(g, true);
+
+	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
+			0, pgprot_writecombine(PAGE_KERNEL));
+	if (!ctx_ptr)
+		return -ENOMEM;
+
+	*ctx_id = gk20a_mem_rd32(ctx_ptr +
+				 ctxsw_prog_main_image_context_id_o(), 0);
+
+	vunmap(ctx_ptr);
+
+	return 0;
+}
+
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 {
 	int i;

@@ -242,4 +242,8 @@ static inline u32 ctxsw_prog_main_image_misc_options_verif_features_disabled_f(v
 {
 	return 0x0;
 }
+static inline u32 ctxsw_prog_main_image_context_id_o(void)
+{
+	return 0x000000f0;
+}
 #endif

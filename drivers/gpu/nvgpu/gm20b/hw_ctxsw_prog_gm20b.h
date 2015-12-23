@@ -270,4 +270,8 @@ static inline u32 ctxsw_prog_main_image_preemption_options_control_cta_enabled_f
 {
 	return 0x1;
 }
+static inline u32 ctxsw_prog_main_image_context_id_o(void)
+{
+	return 0x000000f0;
+}
 #endif

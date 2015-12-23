@@ -562,4 +562,8 @@ int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
 			    u32 mailbox_ok, u32 opc_fail,
 			    u32 mailbox_fail, bool sleepduringwait);
 
+int gr_gk20a_get_ctx_id(struct gk20a *g,
+		struct channel_gk20a *c,
+		u32 *ctx_id);
+
 #endif /*__GR_GK20A_H__*/

@@ -2138,26 +2138,18 @@ static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 
 static inline u32 gk20a_get_tsg_runlist_entry_0(struct tsg_gk20a *tsg)
 {
-	u32 runlist_entry_0 = 0;
+	u32 runlist_entry_0 = ram_rl_entry_id_f(tsg->tsgid) |
+			ram_rl_entry_type_tsg_f() |
+			ram_rl_entry_tsg_length_f(tsg->num_active_channels);
 
 	if (tsg->timeslice_timeout)
-		runlist_entry_0 = ram_rl_entry_id_f(tsg->tsgid) |
-			ram_rl_entry_type_f(ram_rl_entry_type_tsg_f()) |
-			ram_rl_entry_timeslice_scale_f(
-				tsg->timeslice_scale) |
-			ram_rl_entry_timeslice_timeout_f(
-				tsg->timeslice_timeout) |
-			ram_rl_entry_tsg_length_f(
-				tsg->num_active_channels);
+		runlist_entry_0 |=
+			ram_rl_entry_timeslice_scale_f(tsg->timeslice_scale) |
+			ram_rl_entry_timeslice_timeout_f(tsg->timeslice_timeout);
 	else
-		runlist_entry_0 = ram_rl_entry_id_f(tsg->tsgid) |
-			ram_rl_entry_type_f(ram_rl_entry_type_tsg_f()) |
-			ram_rl_entry_timeslice_scale_f(
-				ram_rl_entry_timeslice_scale_3_f()) |
-			ram_rl_entry_timeslice_timeout_f(
-			       ram_rl_entry_timeslice_timeout_128_f()) |
-			ram_rl_entry_tsg_length_f(
-				tsg->num_active_channels);
+		runlist_entry_0 |=
+			ram_rl_entry_timeslice_scale_3_f() |
+			ram_rl_entry_timeslice_timeout_128_f();
 
 	return runlist_entry_0;
 }

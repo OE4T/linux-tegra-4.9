@@ -487,7 +487,7 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 	ch->g->ops.fifo.disable_channel(ch);
 
 	if (channel_preempt)
-		ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
+		gk20a_fifo_preempt(ch->g, ch);
 
 	/* ensure no fences are pending */
 	mutex_lock(&ch->sync_lock);

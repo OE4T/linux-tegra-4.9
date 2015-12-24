@@ -564,6 +564,86 @@ static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
 	return 0;
 }
 
+static int nvgpu_dbg_gpu_ioctl_clear_single_sm_error_state(
+		struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_clear_single_sm_error_state_args *args)
+{
+	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gr_gk20a *gr = &g->gr;
+	u32 sm_id;
+	struct channel_gk20a *ch = dbg_s->ch;
+	int err = 0;
+
+	sm_id = args->sm_id;
+
+	if (sm_id >= gr->no_of_sm)
+		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		return err;
+
+	err = gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.clear_sm_error_state(g, ch, sm_id));
+
+	gk20a_idle(g->dev);
+
+	return err;
+}
+
+static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
+		struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_write_single_sm_error_state_args *args)
+{
+	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gr_gk20a *gr = &g->gr;
+	u32 sm_id;
+	struct channel_gk20a *ch = dbg_s->ch;
+	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state;
+	int err = 0;
+
+	sm_id = args->sm_id;
+	if (sm_id >= gr->no_of_sm)
+		return -EINVAL;
+
+	sm_error_state = kzalloc(sizeof(*sm_error_state), GFP_KERNEL);
+	if (!sm_error_state)
+		return -ENOMEM;
+
+	if (args->sm_error_state_record_size > 0) {
+		size_t read_size = sizeof(*sm_error_state);
+
+		if (read_size > args->sm_error_state_record_size)
+			read_size = args->sm_error_state_record_size;
+
+		mutex_lock(&g->dbg_sessions_lock);
+		err = copy_from_user(sm_error_state,
+			  (void __user *)(uintptr_t)
+				args->sm_error_state_record_mem,
+			  read_size);
+		mutex_unlock(&g->dbg_sessions_lock);
+		if (err) {
+			err = -ENOMEM;
+			goto err_free;
+		}
+	}
+
+	err = gk20a_busy(g->dev);
+	if (err)
+		goto err_free;
+
+	err = gr_gk20a_elpg_protected_call(g,
+			g->ops.gr.update_sm_error_state(g, ch,
+					sm_id, sm_error_state));
+
+	gk20a_idle(g->dev);
+
+err_free:
+	kfree(sm_error_state);
+
+	return err;
+}
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -664,6 +744,16 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_READ_SINGLE_SM_ERROR_STATE:
 		err = nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(dbg_s,
 		   (struct nvgpu_dbg_gpu_read_single_sm_error_state_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_CLEAR_SINGLE_SM_ERROR_STATE:
+		err = nvgpu_dbg_gpu_ioctl_clear_single_sm_error_state(dbg_s,
+		  (struct nvgpu_dbg_gpu_clear_single_sm_error_state_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_WRITE_SINGLE_SM_ERROR_STATE:
+		err = nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(dbg_s,
+		  (struct nvgpu_dbg_gpu_write_single_sm_error_state_args *)buf);
 		break;
 
 	default:

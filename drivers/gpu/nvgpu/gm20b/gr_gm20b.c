@@ -1219,6 +1219,115 @@ static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 	return 0;
 }
 
+static int gm20b_gr_update_sm_error_state(struct gk20a *g,
+		struct channel_gk20a *ch, u32 sm_id,
+		struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state)
+{
+	u32 gpc, tpc, offset;
+	struct gr_gk20a *gr = &g->gr;
+	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+	int err = 0;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	gr->sm_error_states[sm_id].hww_global_esr =
+			sm_error_state->hww_global_esr;
+	gr->sm_error_states[sm_id].hww_warp_esr =
+			sm_error_state->hww_warp_esr;
+	gr->sm_error_states[sm_id].hww_warp_esr_pc =
+			sm_error_state->hww_warp_esr_pc;
+	gr->sm_error_states[sm_id].hww_global_esr_report_mask =
+			sm_error_state->hww_global_esr_report_mask;
+	gr->sm_error_states[sm_id].hww_warp_esr_report_mask =
+			sm_error_state->hww_warp_esr_report_mask;
+
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw\n");
+		goto fail;
+	}
+
+	gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+	tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+	offset = proj_gpc_stride_v() * gpc +
+		     proj_tpc_in_gpc_stride_v() * tpc;
+
+	if (gk20a_is_channel_ctx_resident(ch)) {
+		gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
+				gr->sm_error_states[sm_id].hww_global_esr);
+		gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset,
+				gr->sm_error_states[sm_id].hww_warp_esr);
+		gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_pc_r() + offset,
+				gr->sm_error_states[sm_id].hww_warp_esr_pc);
+		gk20a_writel(g, gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r() + offset,
+				gr->sm_error_states[sm_id].hww_global_esr_report_mask);
+		gk20a_writel(g, gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset,
+				gr->sm_error_states[sm_id].hww_warp_esr_report_mask);
+	} else {
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		if (err)
+			goto enable_ctxsw;
+
+		gr_gk20a_ctx_patch_write(g, ch_ctx,
+				gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r() + offset,
+				gr->sm_error_states[sm_id].hww_global_esr_report_mask,
+				true);
+		gr_gk20a_ctx_patch_write(g, ch_ctx,
+				gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset,
+				gr->sm_error_states[sm_id].hww_warp_esr_report_mask,
+				true);
+
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+	}
+
+enable_ctxsw:
+	err = gr_gk20a_enable_ctxsw(g);
+
+fail:
+	mutex_unlock(&g->dbg_sessions_lock);
+	return err;
+}
+
+static int gm20b_gr_clear_sm_error_state(struct gk20a *g,
+		struct channel_gk20a *ch, u32 sm_id)
+{
+	u32 gpc, tpc, offset;
+	u32 val;
+	struct gr_gk20a *gr = &g->gr;
+	int err = 0;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	memset(&gr->sm_error_states[sm_id], 0, sizeof(*gr->sm_error_states));
+
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw\n");
+		goto fail;
+	}
+
+	if (gk20a_is_channel_ctx_resident(ch)) {
+		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+		offset = proj_gpc_stride_v() * gpc +
+			     proj_tpc_in_gpc_stride_v() * tpc;
+
+		val = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
+		gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
+				val);
+		gk20a_writel(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset,
+				0);
+	}
+
+	err = gr_gk20a_enable_ctxsw(g);
+
+fail:
+	mutex_unlock(&g->dbg_sessions_lock);
+	return err;
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1286,4 +1395,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode;
 	gops->gr.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode;
 	gops->gr.record_sm_error_state = gm20b_gr_record_sm_error_state;
+	gops->gr.update_sm_error_state = gm20b_gr_update_sm_error_state;
+	gops->gr.clear_sm_error_state = gm20b_gr_clear_sm_error_state;
 }

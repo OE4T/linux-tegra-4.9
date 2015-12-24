@@ -242,6 +242,12 @@ struct gpu_ops {
 		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
 		int (*record_sm_error_state)(struct gk20a *g,
 				u32 gpc, u32 tpc);
+		int (*update_sm_error_state)(struct gk20a *g,
+				struct channel_gk20a *ch, u32 sm_id,
+				struct nvgpu_dbg_gpu_sm_error_state_record *
+								sm_error_state);
+		int (*clear_sm_error_state)(struct gk20a *g,
+				struct channel_gk20a *ch, u32 sm_id);
 	} gr;
 	const char *name;
 	struct {

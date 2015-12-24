@@ -5182,6 +5182,11 @@ void gk20a_gr_clear_sm_hww(struct gk20a *g,
 			gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f());
 }
 
+u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr)
+{
+	return hww_warp_esr;
+}
+
 static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event, struct channel_gk20a *fault_ch)
 {
@@ -5206,6 +5211,7 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	global_esr = gk20a_readl(g,
 				 gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
 	warp_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
+	warp_esr = g->ops.gr.mask_hww_warp_esr(warp_esr);
 
 	if (g->ops.gr.pre_process_sm_exception) {
 		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc,
@@ -7009,6 +7015,9 @@ int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 				gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
 		u32 dbgr_status0 = gk20a_readl(g,
 				gr_gpc0_tpc0_sm_dbgr_status0_r() + offset);
+
+		warp_esr = g->ops.gr.mask_hww_warp_esr(warp_esr);
+
 		locked_down =
 		    (gr_gpc0_tpc0_sm_dbgr_status0_locked_down_v(dbgr_status0) ==
 		     gr_gpc0_tpc0_sm_dbgr_status0_locked_down_true_v());
@@ -7531,4 +7540,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.bpt_reg_info = gr_gk20a_bpt_reg_info;
 	gops->gr.get_access_map = gr_gk20a_get_access_map;
 	gops->gr.handle_fecs_error = gk20a_gr_handle_fecs_error;
+	gops->gr.mask_hww_warp_esr = gk20a_mask_hww_warp_esr;
 }

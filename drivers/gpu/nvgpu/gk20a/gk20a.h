@@ -201,6 +201,7 @@ struct gpu_ops {
 				bool sm_debugger_attached,
 				struct channel_gk20a *fault_ch,
 				bool *early_exit, bool *ignore_debugger);
+		u32 (*mask_hww_warp_esr)(u32 hww_warp_esr);
 	} gr;
 	const char *name;
 	struct {

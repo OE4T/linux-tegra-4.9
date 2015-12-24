@@ -1227,4 +1227,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.bpt_reg_info = gr_gm20b_bpt_reg_info;
 	gops->gr.get_access_map = gr_gm20b_get_access_map;
 	gops->gr.handle_fecs_error = gk20a_gr_handle_fecs_error;
+	gops->gr.mask_hww_warp_esr = gk20a_mask_hww_warp_esr;
 }

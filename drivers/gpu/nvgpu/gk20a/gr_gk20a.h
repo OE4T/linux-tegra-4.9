@@ -566,4 +566,6 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 		struct channel_gk20a *c,
 		u32 *ctx_id);
 
+u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr);
+
 #endif /*__GR_GK20A_H__*/

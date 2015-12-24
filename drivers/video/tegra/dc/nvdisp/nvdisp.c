@@ -289,6 +289,18 @@ int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 	return 0;
 }
 
+void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu)
+{
+	int i;
+	u64 r = 0;
+
+	for (i = 0; i < NVDISP_OUTPUT_LUT_SIZE; i++) {
+		r = default_sRGB_OutLUT[i];
+		default_cmu->rgb[i] = (r << 32) |
+					(r << 16) | r;
+	}
+}
+
 static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
 {
 	struct tegra_dc_lut *lut;

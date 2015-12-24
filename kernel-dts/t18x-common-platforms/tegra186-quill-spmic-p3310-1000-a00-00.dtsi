@@ -121,6 +121,7 @@
 					maxim,active-fps-time-period = <2560>;
 					maxim,suspend-fps-time-period = <1280>;
 					maxim,fps-enable-input = <FPS_EN_SRC_EN1>;
+					maxim,enable-sleep;
 				};
 
 				fps@2 {

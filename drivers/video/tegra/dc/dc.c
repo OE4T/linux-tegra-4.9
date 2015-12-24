@@ -2650,12 +2650,15 @@ EXPORT_SYMBOL(tegra_dc_update_cmu_aligned);
 int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 						bool cache_dirty)
 {
+	int ret;
+
 	mutex_lock(&dc->lock);
 
 	if (!dc->enabled) {
 		mutex_unlock(&dc->lock);
 		return 0;
 	}
+	trace_hdr_data_update(dc, hdr);
 	if (cache_dirty) {
 		dc->hdr.eotf = hdr->eotf;
 		dc->hdr.static_metadata_id = hdr->static_metadata_id;
@@ -2669,11 +2672,11 @@ int tegra_dc_set_hdr(struct tegra_dc *dc, struct tegra_dc_hdr *hdr,
 	dc->hdr_cache_dirty = true;
 	if (!dc->hdr.enabled)
 		memset(&dc->hdr, 0, sizeof(dc->hdr));
-	_tegra_dc_config_frame_end_intr(dc, true);
+	ret = _tegra_dc_config_frame_end_intr(dc, true);
 
 	mutex_unlock(&dc->lock);
 
-	return 0;
+	return ret;
 }
 EXPORT_SYMBOL(tegra_dc_set_hdr);
 

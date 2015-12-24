@@ -298,6 +298,68 @@ TRACE_EVENT(scanout_vrr_stats,
 		__entry->syncpt_val_value,__entry->db_val_value)
 );
 
+TRACE_EVENT(hdr_data_update,
+	TP_PROTO(struct tegra_dc *dc, struct tegra_dc_hdr *hdr),
+	TP_ARGS(dc, hdr),
+	TP_STRUCT__entry(
+		__field(	bool,	hdr_enabled_dc)
+		__field(	bool,	hdr_enabled_flip)
+		__field(	u32,	eotf)
+		__field(	u32,	static_metadata_id)
+		__array(	u8,	static_metadata,	24)
+	),
+	TP_fast_assign(
+		__entry->hdr_enabled_dc = dc->hdr.enabled;
+		__entry->hdr_enabled_flip = hdr->enabled;
+		__entry->eotf = hdr->eotf;
+		__entry->static_metadata_id = hdr->static_metadata_id;
+		memcpy(__entry->static_metadata, hdr->static_metadata, 24);
+	),
+	TP_printk("hdr enabled in dc=%d hdr enabled rcvd in flip=%d"
+		" eotf=%d static_metadata_id=%d green_pri_x_lsb=%u"
+		" green_pri_x_msb=%u green_pri_y_lsb=%u green_pri_y_msb=%u"
+		" blue_pri_x_lsb=%u blue_pri_x_msb=%u blue_pri_y_lsb=%u"
+		" blue_pri_y_msb=%u red_pri_x_lsb=%u red_pri_x_msb=%u"
+		" red_pri_y_lsb=%u red_pri_y_msb=%u white_pri_x_lsb=%u"
+		" white_pri_x_msb=%u" "white_pri_y_lsb=%u" "white_pri_y_msb=%u"
+		" max_lum_lsb=%u max_lum_msb=%u min_lum_lsb=%u"
+		" min_lum_msb=%umax_con_light_level_lsb=%u"
+		" max_con_light_level_msb=%u max_frm_avg_light_level_lsb=%u"
+		" max_frm_avg_light_level_msb=%u",
+		__entry->hdr_enabled_dc, __entry->hdr_enabled_flip,
+		__entry->eotf, __entry->static_metadata_id,
+		__entry->static_metadata[0], __entry->static_metadata[1],
+		__entry->static_metadata[2], __entry->static_metadata[3],
+		__entry->static_metadata[4], __entry->static_metadata[5],
+		__entry->static_metadata[6], __entry->static_metadata[7],
+		__entry->static_metadata[8], __entry->static_metadata[9],
+		__entry->static_metadata[10], __entry->static_metadata[11],
+		__entry->static_metadata[12], __entry->static_metadata[13],
+		__entry->static_metadata[14], __entry->static_metadata[15],
+		__entry->static_metadata[16], __entry->static_metadata[17],
+		__entry->static_metadata[18], __entry->static_metadata[19],
+		__entry->static_metadata[20], __entry->static_metadata[21],
+		__entry->static_metadata[22], __entry->static_metadata[23]
+	)
+);
+
+/*
+	Do not use this with a traceName that will be deleted!
+	(only use with the macros below)
+*/
+TRACE_EVENT(function_frame,
+	TP_PROTO(const char *trace_name, char trace_prefix),
+	TP_ARGS(trace_name, trace_prefix),
+	TP_STRUCT__entry(
+		__field(const char*,	name)
+		__field(char,			prefix)
+	),
+	TP_fast_assign(
+		__entry->name = trace_name;
+		__entry->prefix = trace_prefix;
+	),
+	TP_printk("%c|%s\n", __entry->prefix, __entry->name)
+);
 
 #endif /* _TRACE_DISPLAY_H */
 

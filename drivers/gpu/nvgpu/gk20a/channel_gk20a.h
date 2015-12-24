@@ -223,6 +223,7 @@ struct channel_gk20a *gk20a_get_channel_from_file(int fd);
 void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
 unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait);
 void gk20a_channel_event(struct channel_gk20a *ch);
+void gk20a_channel_post_event(struct channel_gk20a *ch);
 
 void gk20a_init_channel(struct gpu_ops *gops);
 

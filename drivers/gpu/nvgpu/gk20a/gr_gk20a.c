@@ -4890,8 +4890,7 @@ static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 
-	gk20a_channel_event(ch);
-	wake_up(&ch->semaphore_wq);
+	gk20a_channel_post_event(ch);
 
 	return 0;
 }

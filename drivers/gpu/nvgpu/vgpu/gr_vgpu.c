@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Graphics
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -871,8 +871,7 @@ int vgpu_gr_isr(struct gk20a *g, struct tegra_vgpu_gr_intr_info *info)
 		wake_up(&ch->notifier_wq);
 		break;
 	case TEGRA_VGPU_GR_INTR_SEMAPHORE:
-		gk20a_channel_event(ch);
-		wake_up(&ch->semaphore_wq);
+		gk20a_channel_post_event(ch);
 		break;
 	case TEGRA_VGPU_GR_INTR_SEMAPHORE_TIMEOUT:
 		gk20a_set_error_notifier(ch,

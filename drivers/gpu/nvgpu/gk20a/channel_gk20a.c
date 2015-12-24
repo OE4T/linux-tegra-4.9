@@ -2501,6 +2501,12 @@ void gk20a_channel_event(struct channel_gk20a *ch)
 	mutex_unlock(&ch->poll_events.lock);
 }
 
+void gk20a_channel_post_event(struct channel_gk20a *ch)
+{
+	gk20a_channel_event(ch);
+	wake_up_interruptible_all(&ch->semaphore_wq);
+}
+
 unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait)
 {
 	unsigned int mask = 0;
@@ -2656,8 +2662,7 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = g->fifo.channel+chid;
 		if (gk20a_channel_get(c)) {
-			gk20a_channel_event(c);
-			wake_up_interruptible_all(&c->semaphore_wq);
+			gk20a_channel_post_event(c);
 			gk20a_channel_update(c, 0);
 			gk20a_channel_put(c);
 		}

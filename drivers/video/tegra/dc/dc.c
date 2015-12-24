@@ -2379,6 +2379,9 @@ static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
 		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED ||
 		dc->out->type == TEGRA_DC_OUT_NULL)
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+		tegra_nvdisp_get_default_cmu(&default_cmu);
+#endif
 		return &default_cmu;
 	if (dc->pdata->cmu && !dc->pdata->default_clr_space)
 		return dc->pdata->cmu;
@@ -2386,8 +2389,12 @@ static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 		return dc->pdata->cmu_adbRGB;
 	else if (dc->out->type == TEGRA_DC_OUT_HDMI)
 		return &default_limited_cmu;
-	else
+	else{
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+		tegra_nvdisp_get_default_cmu(&default_cmu);
+#endif
 		return &default_cmu;
+	}
 }
 
 void tegra_dc_cmu_enable(struct tegra_dc *dc, bool cmu_enable)

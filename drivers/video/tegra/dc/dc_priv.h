@@ -730,6 +730,7 @@ int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 					struct tegra_dc_lut *lut);
 int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *lut);
 void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu);
+void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu);
 #endif
 
 #endif

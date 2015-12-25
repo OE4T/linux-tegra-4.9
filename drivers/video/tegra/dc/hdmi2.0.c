@@ -1293,11 +1293,6 @@ static void tegra_hdmi_get_cea_fb_videomode(struct fb_videomode *m,
 		dc_mode.pclk = (dc_mode.pclk / 5) * 8;
 	}
 
-	if (dc_mode.vmode & FB_VMODE_1000DIV1001) {
-		dc_mode.pclk = DIV_ROUND_UP((u64)dc_mode.pclk * 1001,  1000);
-		dc_mode.vmode &= ~FB_VMODE_1000DIV1001;
-	}
-
 	tegra_dc_to_fb_videomode(m, &dc_mode);
 
 	/* only interlaced required for VIC identification */
@@ -1329,21 +1324,8 @@ static int tegra_hdmi_find_cea_vic(struct tegra_hdmi *hdmi)
 	for (i = 1; i < modedb_size; i++) {
 		const struct fb_videomode *curr = &cea_modes[i];
 
-		if (!((m.refresh == curr->refresh ||
-		       m.refresh + 1 == curr->refresh ||
-		       m.refresh == curr->refresh + 1) &&
-		      m.xres         == curr->xres &&
-		      m.yres         == curr->yres &&
-		      (m.pixclock    == curr->pixclock ||
-		      (m.pixclock * 1001 / 1000) == curr->pixclock) &&
-		      m.hsync_len    == curr->hsync_len &&
-		      m.vsync_len    == curr->vsync_len &&
-		      m.left_margin  == curr->left_margin &&
-		      m.right_margin == curr->right_margin &&
-		      m.upper_margin == curr->upper_margin &&
-		      m.lower_margin == curr->lower_margin &&
-		      m.sync         == curr->sync &&
-		      m.vmode        == curr->vmode))
+		if (!fb_mode_is_equal_tolerance(curr, &m,
+			FB_MODE_TOLERANCE_DEFAULT))
 			continue;
 
 		if (!best)
@@ -1548,7 +1530,8 @@ static int tegra_hdmi_get_extended_vic(const struct tegra_dc_mode *mode)
 	for (i = 1; i < HDMI_EXT_MODEDB_SIZE; i++) {
 		const struct fb_videomode *curr = &hdmi_ext_modes[i];
 
-		if (fb_mode_is_equal(&m, curr))
+		if (fb_mode_is_equal_tolerance(curr, &m,
+			FB_MODE_TOLERANCE_DEFAULT))
 			return i;
 	}
 	return 0;

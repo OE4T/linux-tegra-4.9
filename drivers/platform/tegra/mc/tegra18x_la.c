@@ -746,7 +746,6 @@ static void t18x_init_ptsa(void)
 	T18X_MC_SET_INIT_PTSA(p, aud, NISO, -2, 0);
 	T18X_MC_SET_INIT_PTSA(p, bpmpdmapc, NISO, -2, 0);
 	T18X_MC_SET_INIT_PTSA(p, bpmppc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, dfd, NISO, -2, 0);
 	T18X_MC_SET_INIT_PTSA(p, dis, HISO, -5, 31);
 	T18X_MC_SET_INIT_PTSA(p, eqospc, HISO, -5, 31);
 	T18X_MC_SET_INIT_PTSA(p, ftop, NISO, -2, 0);

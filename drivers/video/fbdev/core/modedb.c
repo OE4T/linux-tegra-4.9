@@ -1992,6 +1992,39 @@ int fb_mode_is_equal(const struct fb_videomode *mode1,
 }
 
 /**
+ * fb_mode_is_equal_tolerance - compare 2 videomodes with a tolerance in
+ * pixclock. Similar to fb_mode_is_equal
+ *
+ * RETURNS:
+ * 1 if equal, 0 if not
+ */
+int fb_mode_is_equal_tolerance(const struct fb_videomode *mode1,
+			       const struct fb_videomode *mode2,
+			       unsigned int tolerance)
+{
+	/*
+	 * Note: this function intentionally doesn't check refresh and flags.
+	 * refresh is an optional field and always has +1/-1 rounding errors
+	 */
+
+	if (mode1->xres             == mode2->xres &&
+		mode1->yres         == mode2->yres &&
+		mode2->pixclock * (1000-tolerance) / 1000 <= mode1->pixclock &&
+		mode1->pixclock <= mode2->pixclock * (1000+tolerance) / 1000 &&
+		mode1->hsync_len    == mode2->hsync_len &&
+		mode1->vsync_len    == mode2->vsync_len &&
+		mode1->left_margin  == mode2->left_margin &&
+		mode1->right_margin == mode2->right_margin &&
+		mode1->upper_margin == mode2->upper_margin &&
+		mode1->lower_margin == mode2->lower_margin &&
+		mode1->sync         == mode2->sync &&
+		mode1->vmode        == mode2->vmode)
+		return 1;
+	else
+		return 0;
+}
+
+/**
  * fb_var_is_equal - compare two struct fb_var_screeninfo for equality
  * @var1: first variable screen info
  * @var2: second variable screen info

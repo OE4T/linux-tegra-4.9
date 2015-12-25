@@ -754,6 +754,7 @@ extern int fb_videomode_from_videomode(const struct videomode *vm,
 #define CEA_MODEDB_SIZE (CEA_861_F_MODEDB_SIZE)
 #define DMT_SIZE 0x58
 #define HDMI_EXT_MODEDB_SIZE 5
+#define FB_MODE_TOLERANCE_DEFAULT 5
 
 extern void fb_var_to_videomode(struct fb_videomode *mode,
 				const struct fb_var_screeninfo *var);
@@ -761,6 +762,9 @@ extern void fb_videomode_to_var(struct fb_var_screeninfo *var,
 				const struct fb_videomode *mode);
 extern int fb_mode_is_equal(const struct fb_videomode *mode1,
 			    const struct fb_videomode *mode2);
+extern int fb_mode_is_equal_tolerance(const struct fb_videomode *mode1,
+				      const struct fb_videomode *mode2,
+				      unsigned int tolerance);
 extern int fb_add_videomode(const struct fb_videomode *mode,
 			    struct list_head *head);
 extern void fb_delete_videomode(const struct fb_videomode *mode,

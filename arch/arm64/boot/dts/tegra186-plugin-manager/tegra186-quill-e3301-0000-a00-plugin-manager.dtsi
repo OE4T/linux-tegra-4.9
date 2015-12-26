@@ -18,7 +18,7 @@
 / {
 	plugin-manager {
 		e3301-a02-slt-char@0 {
-			id = "3301-1080-02", "3301-1099-02";
+			ids = "3301-1080-02", "3301-1099-02";
 			override@0 {
 				target = <&spmic_ldo1>;
 				_overlay_ {
@@ -46,6 +46,18 @@
 				target = <&tegra_pwm5>;
 				_overlay_ {
 					status = "okay";
+				};
+			};
+		};
+
+		fragement-e3301-a01@1 {
+			ids = "3301-1000-01";
+			override@0 {
+				target = <&ina3221x_41>;
+				_overlay_ {
+					channel@1 {
+						ti,shunt-resistor-mohm = <10>;
+					};
 				};
 			};
 		};

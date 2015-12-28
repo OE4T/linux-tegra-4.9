@@ -509,4 +509,24 @@
 	tpiu@8060000 {
 		status = "okay";
 	};
+
+	ast@b040000 {
+		status = "okay";
+	};
+
+	ast@b050000 {
+		status = "okay";
+	};
+
+	rtcpu@b000000 {
+		status = "okay";
+	};
+
+	rtcpu-echo {
+		status = "okay";
+	};
+
+	sce-mods {
+		status = "okay";
+	};
 };

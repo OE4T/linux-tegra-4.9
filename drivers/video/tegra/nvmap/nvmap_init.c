@@ -251,6 +251,16 @@ static int nvmap_co_device_init(struct reserved_mem *rmem, struct device *dev)
 				"%s :dma coherent mem declare fail %pa,%zu\n",
 				co->name, &co->base, co->size);
 	} else {
+		/*
+		 * When vpr memory is reserved, kmemleak tries to scan vpr
+		 * memory for pointers. vpr memory should not be accessed
+		 * from cpu so avoid scanning it. When vpr memory is removed,
+		 * the memblock_remove() API ensures that kmemleak won't scan
+		 * a removed block.
+		 */
+		if (!strncmp(co->name, "vpr", 3))
+			kmemleak_no_scan(__va(co->base));
+
 		co->dma_info->cma_dev = co->cma_dev;
 		err = dma_declare_coherent_resizable_cma_memory(
 				co->dma_dev, co->dma_info);

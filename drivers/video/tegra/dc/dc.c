@@ -5108,6 +5108,70 @@ int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	return NOTIFY_OK;
 }
 
+int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
+{
+	struct tegra_dc *dc_other;
+	struct tegra_dc_win *win;
+	int i, j, ret = 0;
+
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	return -EINVAL;
+#endif /* CONFIG_TEGRA_NVDISPLAY */
+
+	/* check that dc is not NULL and do range check */
+	if (!dc || (winmask >= (1 << DC_N_WINDOWS)))
+		return -EINVAL;
+
+	mutex_lock(&dc->lock);
+	if ((!dc->ndev) || (dc->enabled)) {
+		ret = -EINVAL;
+		goto exit;
+	}
+
+	/* check requested=enabled windows NOT owned by other dcs */
+	for_each_set_bit(i, &winmask, DC_N_WINDOWS) {
+		j = dc->ndev->id;
+		win = tegra_dc_get_window(dc, i);
+		/* is window already owned by this dc? */
+		if (win && win->dc && (win->dc == dc))
+			continue;
+		/* is window already owned by other dc? */
+		for (j = 0; j < TEGRA_MAX_DC; j++) {
+			dc_other = tegra_dc_get_dc(j);
+			if (!dc_other)
+				continue;
+			if (!dc_other->pdata) {
+				ret = -EINVAL;
+				goto exit;
+			}
+			/* found valid dc, does it own window=i? */
+			if ((dc_other->pdata->win_mask >> i) & 0x1) {
+				dev_err(&dc->ndev->dev,
+					"win[%d] already on fb%d\n", i, j);
+				ret = -EINVAL;
+				goto exit;
+			}
+		}
+	}
+
+	/* attach window happens on device enable call and
+	 * detach window happens on device disable call
+	 */
+
+	dc->pdata->win_mask = winmask;
+	dc->valid_windows = winmask;
+	/* cleanup the valid window bits */
+	if (!winmask) {
+		/* disable the fb win_index */
+		tegra_fb_set_win_index(dc, winmask);
+		dc->pdata->fb->win = -1;
+	}
+
+exit:
+	mutex_unlock(&dc->lock);
+	return ret;
+}
+
 struct clk *tegra_disp_of_clk_get_by_name(struct device_node *np,
 						const char *name)
 {

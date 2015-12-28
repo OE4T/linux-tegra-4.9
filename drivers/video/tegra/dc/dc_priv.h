@@ -694,6 +694,9 @@ void tegra_dc_win_partial_update(struct tegra_dc *dc, struct tegra_dc_win *win,
 int tegra_dc_slgc_disp0(struct notifier_block *nb, unsigned long unused0,
 	void *unused1);
 
+/* defined in dc.c, used in dc_sysfs.c and ext/dev.c */
+int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask);
+
 /* common display clock calls */
 struct clk *tegra_disp_clk_get(struct device *dev, const char *id);
 void tegra_disp_clk_put(struct device *dev, struct clk *clk);

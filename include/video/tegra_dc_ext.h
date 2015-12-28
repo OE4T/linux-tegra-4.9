@@ -763,6 +763,12 @@ struct tegra_dc_ext_feature {
 #define TEGRA_DC_EXT_FLIP4\
 	_IOW('D', 0x1D, struct tegra_dc_ext_flip_4)
 
+#define TEGRA_DC_EXT_GET_WINMASK \
+	_IOR('D', 0x1E, __u32)
+
+#define TEGRA_DC_EXT_SET_WINMASK \
+	_IOW('D', 0x1F, __u32)
+
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,
 	TEGRA_DC_EXT_LVDS,

@@ -210,6 +210,20 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 	return ret;
 }
 
+static unsigned long tegra_dc_ext_get_winmask(struct tegra_dc_ext_user *user)
+{
+	return user->ext->dc->valid_windows;
+}
+
+static int tegra_dc_ext_set_winmask(struct tegra_dc_ext_user *user,
+					unsigned long winmask)
+{
+	if (!user || !user->ext || !user->ext->dc)
+		return -EINVAL;
+
+	return tegra_dc_update_winmask(user->ext->dc, winmask);
+}
+
 int tegra_dc_ext_restore(struct tegra_dc_ext *ext)
 {
 	struct tegra_dc_win *wins[DC_N_WINDOWS];
@@ -1903,6 +1917,18 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			tegra_dc_ext_unpin_window(&user->ext->win[arg]);
 		}
 		return ret;
+
+	case TEGRA_DC_EXT_GET_WINMASK:
+	{
+		u32 winmask = tegra_dc_ext_get_winmask(user);
+
+		if (copy_to_user(user_arg, &winmask, sizeof(winmask)))
+			return -EFAULT;
+
+		return 0;
+	}
+	case TEGRA_DC_EXT_SET_WINMASK:
+		return tegra_dc_ext_set_winmask(user, arg);
 
 	case TEGRA_DC_EXT_FLIP:
 	{

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dc_sysfs.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -747,10 +747,8 @@ static ssize_t win_mask_store(struct device *dev,
 {
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	struct tegra_dc *dc_other;
-	struct tegra_dc_win *win;
 	unsigned long requested_winmask = 0;
-	int i, j;
+	size_t ret;
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	return -EINVAL;
@@ -760,57 +758,11 @@ static ssize_t win_mask_store(struct device *dev,
 	if ((kstrtoul(buf, 10, &requested_winmask) < 0) &&
 		(kstrtoul(buf, 0, &requested_winmask) < 0))
 			return -EINVAL;
-	/* do range check */
-	if (requested_winmask >= (1 << DC_N_WINDOWS))
-		return -EINVAL;
 
-	mutex_lock(&dc->lock);
-	if ((!dc->ndev) || (dc->enabled)) {
-		count = -EINVAL;
-		goto exit;
-	}
-	/* check requested=enabled windows NOT owned by other dcs */
-	for_each_set_bit(i, &requested_winmask, DC_N_WINDOWS) {
-		j = dc->ndev->id;
-		win = tegra_dc_get_window(dc, i);
-		/* is window already owned by this dc? */
-		if (win && win->dc && (win->dc == dc))
-			continue;
-		/* is window already owned by other dc? */
-		for (j = 0; j < TEGRA_MAX_DC; j++) {
-			dc_other = tegra_dc_get_dc(j);
-			if (!dc_other)
-				continue;
-			if (!dc_other->pdata) {
-				count = -EINVAL;
-				goto exit;
-			}
-			/* found valid dc, does it own window=i? */
-			if ((dc_other->pdata->win_mask >> i) & 0x1) {
-				dev_err(&dc->ndev->dev,
-					"win[%d] already on fb%d\n", i, j);
-				count = -EINVAL;
-				goto exit;
-			}
-		}
-	}
-
-	/* attach window happens on device enable call and
-	 * detach window happens on device disable call
-	 */
-
-	dc->pdata->win_mask = requested_winmask;
-	dc->valid_windows = requested_winmask;
-	/* cleanup the valid windows bits */
-	if (!requested_winmask) {
-		/* disable the fb win_index */
-		tegra_fb_set_win_index(dc, requested_winmask);
-		dc->pdata->fb->win = -1;
-	}
-
-exit:
-	mutex_unlock(&dc->lock);
-	return count;
+	ret = tegra_dc_update_winmask(dc, requested_winmask);
+	if (!ret)
+		return count;
+	return ret;
 }
 
 static DEVICE_ATTR(win_mask, S_IRUSR | S_IWUSR, win_mask_show, win_mask_store);

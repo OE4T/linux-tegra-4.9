@@ -519,6 +519,8 @@ int gr_gk20a_init_ctx_state(struct gk20a *g);
 int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 				   struct fecs_method_op_gk20a op,
 				   bool sleepduringwait);
+int gr_gk20a_submit_fecs_sideband_method_op(struct gk20a *g,
+		struct fecs_method_op_gk20a op);
 int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 			  struct gr_ctx_desc **__gr_ctx, struct vm_gk20a *vm,
 			  u32 class, u32 padding);

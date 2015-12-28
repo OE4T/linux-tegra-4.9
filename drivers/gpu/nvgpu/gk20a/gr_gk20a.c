@@ -535,6 +535,32 @@ int gr_gk20a_submit_fecs_method_op(struct gk20a *g,
 	return ret;
 }
 
+/* Sideband mailbox writes are done a bit differently */
+int gr_gk20a_submit_fecs_sideband_method_op(struct gk20a *g,
+		struct fecs_method_op_gk20a op)
+{
+	struct gr_gk20a *gr = &g->gr;
+	int ret;
+
+	mutex_lock(&gr->fecs_mutex);
+
+	gk20a_writel(g, gr_fecs_ctxsw_mailbox_clear_r(op.mailbox.id),
+		gr_fecs_ctxsw_mailbox_clear_value_f(op.mailbox.clr));
+
+	gk20a_writel(g, gr_fecs_method_data_r(), op.method.data);
+	gk20a_writel(g, gr_fecs_method_push_r(),
+		gr_fecs_method_push_adr_f(op.method.addr));
+
+	ret = gr_gk20a_ctx_wait_ucode(g, op.mailbox.id, op.mailbox.ret,
+				      op.cond.ok, op.mailbox.ok,
+				      op.cond.fail, op.mailbox.fail,
+				      false);
+
+	mutex_unlock(&gr->fecs_mutex);
+
+	return ret;
+}
+
 static int gr_gk20a_ctrl_ctxsw(struct gk20a *g, u32 fecs_method, u32 *ret)
 {
 	return gr_gk20a_submit_fecs_method_op(g,

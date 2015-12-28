@@ -38,3 +38,4 @@ obj-$(CONFIG_TEGRA_A57_SERR) += tegra18_a57_serr.o
 ifeq ($(CONFIG_TEGRA_THERMAL_THROTTLE), y)
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_throttle.o
 endif
+obj-$(CONFIG_TEGRA_CENTRAL_ACTMON) += cactmon_t18x.o

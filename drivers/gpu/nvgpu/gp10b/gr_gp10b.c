@@ -1224,6 +1224,16 @@ static void gr_gp10b_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gp10b);
 }
 
+static u32 gp10b_mask_hww_warp_esr(u32 hww_warp_esr)
+{
+	if (!(hww_warp_esr & gr_gpc0_tpc0_sm_hww_warp_esr_addr_valid_m()))
+		hww_warp_esr = set_field(hww_warp_esr,
+			gr_gpc0_tpc0_sm_hww_warp_esr_addr_error_type_m(),
+			gr_gpc0_tpc0_sm_hww_warp_esr_addr_error_type_none_f());
+
+	return hww_warp_esr;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -1256,4 +1266,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_access_map = gr_gp10b_get_access_map;
 	gops->gr.handle_sm_exception = gr_gp10b_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gp10b_handle_tex_exception;
+	gops->gr.mask_hww_warp_esr = gp10b_mask_hww_warp_esr;
 }

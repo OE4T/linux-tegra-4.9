@@ -1,7 +1,7 @@
 /*
  * tegra186-sunstreaker-e3340-1080-a00-00-base.dts Sunstreaker-CHAR A00 Board
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -194,6 +194,19 @@
 	};
 
 	pwm@c340000 {
+		status = "okay";
+	};
+
+	ast@b040000 {
+		status = "okay";
+	};
+	ast@b050000 {
+		status = "okay";
+	};
+	rtcpu@b000000 {
+		status = "okay";
+	};
+	sce-mods {
 		status = "okay";
 	};
 };

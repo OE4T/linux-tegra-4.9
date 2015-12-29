@@ -103,16 +103,7 @@ void (*inner_clean_cache_all)(void) = nvmap_inner_clean_cache_all;
  *   __clean_dcache_page() is only available on ARM64 (well, we haven't
  *   implemented it on ARMv7).
  */
-void nvmap_clean_cache_page(struct page *page)
-{
 #if defined(CONFIG_ARM64)
-	__clean_dcache_page(page);
-#else
-	__flush_dcache_page(page_mapping(page), page);
-#endif
-	outer_clean_range(page_to_phys(page), page_to_phys(page) + PAGE_SIZE);
-}
-
 void nvmap_clean_cache(struct page **pages, int numpages)
 {
 	int i;
@@ -125,7 +116,53 @@ void nvmap_clean_cache(struct page **pages, int numpages)
 		nvmap_stats_read(NS_CFLUSH_DONE));
 
 	for (i = 0; i < numpages; i++)
-		nvmap_clean_cache_page(pages[i]);
+		__clean_dcache_page(pages[i]);
+}
+#endif
+
+void nvmap_clean_cache_page(struct page *page)
+{
+#if defined(CONFIG_ARM64)
+	__clean_dcache_page(page);
+#else
+	__flush_dcache_page(page_mapping(page), page);
+#endif
+}
+
+void nvmap_flush_cache(struct page **pages, int numpages)
+{
+	unsigned int i;
+	bool flush_inner = true;
+	__attribute__((unused)) unsigned long base;
+
+	nvmap_stats_inc(NS_CFLUSH_RQ, numpages << PAGE_SHIFT);
+#if defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS)
+	if (numpages >= (cache_maint_inner_threshold >> PAGE_SHIFT)) {
+		nvmap_stats_inc(NS_CFLUSH_DONE, cache_maint_inner_threshold);
+		inner_flush_cache_all();
+		flush_inner = false;
+	}
+#endif
+	if (flush_inner)
+		nvmap_stats_inc(NS_CFLUSH_DONE, numpages << PAGE_SHIFT);
+	trace_nvmap_cache_flush(numpages << PAGE_SHIFT,
+		nvmap_stats_read(NS_ALLOC),
+		nvmap_stats_read(NS_CFLUSH_RQ),
+		nvmap_stats_read(NS_CFLUSH_DONE));
+
+	for (i = 0; i < numpages; i++) {
+		struct page *page = nvmap_to_page(pages[i]);
+#ifdef CONFIG_ARM64 //__flush_dcache_page flushes inner and outer on ARM64
+		if (flush_inner)
+			__flush_dcache_area(page_address(page), PAGE_SIZE);
+#else
+		if (flush_inner)
+			__flush_dcache_page(page_mapping(page), page);
+
+		base = page_to_phys(page);
+		outer_flush_range(base, base + PAGE_SIZE);
+#endif
+	}
 }
 
 __weak void nvmap_override_cache_ops(void)

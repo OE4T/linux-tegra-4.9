@@ -145,13 +145,19 @@ static int handle_page_alloc(struct nvmap_client *client,
 
 	/*
 	 * Make sure any data in the caches is cleaned out before
-	 * passing these pages to userspace. Many nvmap clients assume that
-	 * the buffers are clean as soon as they are allocated. nvmap
-	 * clients can pass the buffer to hardware as it is without any
-	 * explicit cache maintenance.
+	 * passing these pages to userspace. otherwise, It can lead to
+	 * corruption in pages that get mapped as something other than WB in
+	 * userspace and leaked kernel data structures.
+	 *
+	 * FIXME: For ARMv7 we don't have __clean_dcache_page() so we continue
+	 * to use the flush cache version.
 	 */
 	if (page_index < nr_page)
+#ifdef ARM64
 		nvmap_clean_cache(&pages[page_index], nr_page - page_index);
+#else
+		nvmap_flush_cache(&pages[page_index], nr_page - page_index);
+#endif
 
 	h->size = size;
 	h->pgalloc.pages = pages;

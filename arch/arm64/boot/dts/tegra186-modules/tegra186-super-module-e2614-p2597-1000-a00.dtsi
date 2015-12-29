@@ -134,7 +134,6 @@
 					compatible = "realtek,rt5658";
 					reg = <0x1a>;
 					status = "disabled";
-					realtek,sysclk = <12288000>;
 				};
 			};
 		};

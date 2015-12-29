@@ -5365,9 +5365,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			return -EINVAL;
 
 		dc->powergate_id = partition_id_disa;
-#ifdef CONFIG_TEGRA_ISOMGR
-		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
-#endif
 		dc->slgc_notifier.notifier_call = tegra_dc_slgc_disp0;
 		slcg_register_notifier(dc->powergate_id,
 			&dc->slgc_notifier);
@@ -5390,15 +5387,21 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			return -EINVAL;
 
 		dc->powergate_id = partition_id_disb;
-#ifdef CONFIG_TEGRA_ISOMGR
-		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
-#endif
 	} else {
 		dev_err(&ndev->dev,
 			"Unknown base address %llx: unable to assign syncpt\n",
 			(u64)res->start);
 	}
 #endif	/* !CONFIG_TEGRA_NVDISPLAY */
+
+#ifdef CONFIG_TEGRA_ISOMGR
+	if (dc->ctrl_num == 0)
+		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_0;
+	else if (dc->ctrl_num == 1)
+		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
+	else if (dc->ctrl_num == 2)
+		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_2;
+#endif
 
 	if (np) {
 		struct resource of_fb_res;

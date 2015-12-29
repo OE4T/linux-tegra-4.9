@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -85,10 +85,6 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 					  struct channel_gk20a *c);
 /*elcg init */
 static void gr_gk20a_enable_elcg(struct gk20a *g);
-
-/* sm lock down */
-static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
-		u32 global_esr_mask, bool check_errors);
 
 void gk20a_fecs_dump_falcon_stats(struct gk20a *g)
 {
@@ -363,10 +359,10 @@ static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 	return -EAGAIN;
 }
 
-static int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
-				   u32 *mailbox_ret, u32 opc_success,
-				   u32 mailbox_ok, u32 opc_fail,
-				   u32 mailbox_fail, bool sleepduringwait)
+int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
+			    u32 *mailbox_ret, u32 opc_success,
+			    u32 mailbox_ok, u32 opc_fail,
+			    u32 mailbox_fail, bool sleepduringwait)
 {
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
@@ -4483,17 +4479,6 @@ void gk20a_gr_wait_initialized(struct gk20a *g)
 
 #define NVA297_SET_SHADER_EXCEPTIONS_ENABLE_FALSE 0
 
-struct gr_isr_data {
-	u32 addr;
-	u32 data_lo;
-	u32 data_hi;
-	u32 curr_ctx;
-	u32 chid;
-	u32 offset;
-	u32 sub_chan;
-	u32 class_num;
-};
-
 void gk20a_gr_set_shader_exceptions(struct gk20a *g, u32 data)
 {
 	gk20a_dbg_fn("");
@@ -4763,7 +4748,7 @@ fail:
 }
 
 static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
-		  struct gr_isr_data *isr_data)
+		  struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -4776,7 +4761,7 @@ static int gk20a_gr_handle_semaphore_timeout_pending(struct gk20a *g,
 }
 
 static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
-		  struct gr_isr_data *isr_data)
+		  struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -4790,7 +4775,7 @@ static int gk20a_gr_intr_illegal_notify_pending(struct gk20a *g,
 }
 
 static int gk20a_gr_handle_illegal_method(struct gk20a *g,
-					  struct gr_isr_data *isr_data)
+					  struct gr_gk20a_isr_data *isr_data)
 {
 	int ret = g->ops.gr.handle_sw_method(g, isr_data->addr,
 			isr_data->class_num, isr_data->offset,
@@ -4804,7 +4789,7 @@ static int gk20a_gr_handle_illegal_method(struct gk20a *g,
 }
 
 static int gk20a_gr_handle_illegal_class(struct gk20a *g,
-					  struct gr_isr_data *isr_data)
+					  struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -4817,8 +4802,8 @@ static int gk20a_gr_handle_illegal_class(struct gk20a *g,
 	return -EINVAL;
 }
 
-static int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
-					  struct gr_isr_data *isr_data)
+int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
+					  struct gr_gk20a_isr_data *isr_data)
 {
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
 
@@ -4840,7 +4825,7 @@ static int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 }
 
 static int gk20a_gr_handle_class_error(struct gk20a *g,
-					  struct gr_isr_data *isr_data)
+				       struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -4858,7 +4843,7 @@ static int gk20a_gr_handle_class_error(struct gk20a *g,
 }
 
 static int gk20a_gr_handle_firmware_method(struct gk20a *g,
-					     struct gr_isr_data *isr_data)
+					   struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -4875,7 +4860,7 @@ static int gk20a_gr_handle_firmware_method(struct gk20a *g,
 }
 
 static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
-					     struct gr_isr_data *isr_data)
+					     struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -4908,7 +4893,7 @@ static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
 #endif
 
 static int gk20a_gr_handle_notify_pending(struct gk20a *g,
-					  struct gr_isr_data *isr_data)
+					  struct gr_gk20a_isr_data *isr_data)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
@@ -5160,7 +5145,7 @@ bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
 }
 
 void gk20a_gr_clear_sm_hww(struct gk20a *g,
-				  u32 gpc, u32 tpc, u32 global_esr)
+		u32 gpc, u32 tpc, u32 global_esr)
 {
 	u32 offset = proj_gpc_stride_v() * gpc +
 		     proj_tpc_in_gpc_stride_v() * tpc;
@@ -5173,17 +5158,11 @@ void gk20a_gr_clear_sm_hww(struct gk20a *g,
 			gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f());
 }
 
-static struct channel_gk20a *
-channel_from_hw_chid(struct gk20a *g, u32 hw_chid)
-{
-	return g->fifo.channel+hw_chid;
-}
-
 static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
-		bool *post_event)
+		bool *post_event, struct channel_gk20a *fault_ch)
 {
 	int ret = 0;
-	bool do_warp_sync = false;
+	bool do_warp_sync = false, early_exit = false, ignore_debugger = false;
 	u32 offset = proj_gpc_stride_v() * gpc +
 		     proj_tpc_in_gpc_stride_v() * tpc;
 
@@ -5204,9 +5183,28 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 				 gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
 	warp_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
 
+	if (g->ops.gr.pre_process_sm_exception) {
+		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc,
+				global_esr, warp_esr,
+				sm_debugger_attached,
+				fault_ch,
+				&early_exit,
+				&ignore_debugger);
+		if (ret) {
+			gk20a_err(dev_from_gk20a(g), "could not pre-process sm error!\n");
+			return ret;
+		}
+	}
+
+	if (early_exit) {
+		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				"returning early, skipping event posting");
+		return ret;
+	}
+
 	/* if an sm debugger is attached, disable forwarding of tpc exceptions.
 	 * the debugger will reenable exceptions after servicing them. */
-	if (sm_debugger_attached) {
+	if (!ignore_debugger && sm_debugger_attached) {
 		u32 tpc_exception_en = gk20a_readl(g,
 				gr_gpc0_tpc0_tpccs_tpc_exception_en_r() +
 				offset);
@@ -5218,7 +5216,7 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	}
 
 	/* if a debugger is present and an error has occurred, do a warp sync */
-	if (sm_debugger_attached &&
+	if (!ignore_debugger && sm_debugger_attached &&
 	    ((warp_esr != 0) || ((global_esr & ~global_mask) != 0))) {
 		gk20a_dbg(gpu_dbg_intr, "warp sync needed");
 		do_warp_sync = true;
@@ -5232,13 +5230,16 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		}
 	}
 
-	*post_event |= true;
+	if (ignore_debugger)
+		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "ignore_debugger set, skipping event posting");
+	else
+		*post_event |= true;
 
 	return ret;
 }
 
 static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
-		bool *post_event)
+		bool *post_event, struct channel_gk20a *fault_ch)
 {
 	int ret = 0;
 	u32 offset = proj_gpc_stride_v() * gpc +
@@ -5253,13 +5254,15 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gr_gpc0_tpc0_tpccs_tpc_exception_sm_pending_v()) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				"GPC%d TPC%d: SM exception pending", gpc, tpc);
-		ret = gk20a_gr_handle_sm_exception(g, gpc, tpc, post_event);
+		ret = gk20a_gr_handle_sm_exception(g, gpc, tpc,
+					post_event, fault_ch);
 	}
 
 	return ret;
 }
 
-static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event)
+static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
+		struct channel_gk20a *fault_ch)
 {
 	int ret = 0;
 	u32 gpc_offset, tpc_offset, gpc, tpc;
@@ -5297,7 +5300,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event)
 					gpc_offset + tpc_offset);
 
 			ret = gk20a_gr_handle_tpc_exception(g, gpc, tpc,
-					post_event);
+					post_event, fault_ch);
 
 			/* clear the hwws, also causes tpc and gpc
 			 * exceptions to be cleared */
@@ -5311,7 +5314,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event)
 int gk20a_gr_isr(struct gk20a *g)
 {
 	struct device *dev = dev_from_gk20a(g);
-	struct gr_isr_data isr_data;
+	struct gr_gk20a_isr_data isr_data;
 	u32 grfifo_ctl;
 	u32 obj_table;
 	int need_reset = 0;
@@ -5404,7 +5407,7 @@ int gk20a_gr_isr(struct gk20a *g)
 	}
 
 	if (gr_intr & gr_intr_fecs_error_pending_f()) {
-		need_reset |= gk20a_gr_handle_fecs_error(g, ch, &isr_data);
+		need_reset |= g->ops.gr.handle_fecs_error(g, ch, &isr_data);
 		gk20a_writel(g, gr_intr_r(),
 			gr_intr_fecs_error_reset_f());
 		gr_intr &= ~gr_intr_fecs_error_pending_f();
@@ -5460,13 +5463,14 @@ int gk20a_gr_isr(struct gk20a *g)
 			} else {
 				bool post_event = false;
 
+				fault_ch = gk20a_fifo_channel_from_hw_chid(g,
+								isr_data.chid);
+
 				/* check if any gpc has an exception */
 				need_reset |= gk20a_gr_handle_gpc_exception(g,
-						&post_event);
+						&post_event, fault_ch);
 
 				/* signal clients waiting on an event */
-				fault_ch = channel_from_hw_chid(g,
-								isr_data.chid);
 				if (post_event && fault_ch)
 					gk20a_dbg_gpu_post_events(fault_ch);
 			}
@@ -6960,7 +6964,7 @@ static u32 gr_gk20a_get_tpc_num(u32 addr)
 	return 0;
 }
 
-static int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
+int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
 		u32 global_esr_mask, bool check_errors)
 {
 	bool locked_down;
@@ -7430,4 +7434,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.set_sm_debug_mode = gr_gk20a_set_sm_debug_mode;
 	gops->gr.bpt_reg_info = gr_gk20a_bpt_reg_info;
 	gops->gr.get_access_map = gr_gk20a_get_access_map;
+	gops->gr.handle_fecs_error = gk20a_gr_handle_fecs_error;
 }

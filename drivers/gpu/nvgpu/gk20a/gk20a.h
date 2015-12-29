@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -193,6 +193,14 @@ struct gpu_ops {
 				struct warpstate *w_state);
 		void (*get_access_map)(struct gk20a *g,
 				      u32 **whitelist, int *num_entries);
+		int (*handle_fecs_error)(struct gk20a *g,
+				struct channel_gk20a *ch,
+				struct gr_gk20a_isr_data *isr_data);
+		int (*pre_process_sm_exception)(struct gk20a *g,
+				u32 gpc, u32 tpc, u32 global_esr, u32 warp_esr,
+				bool sm_debugger_attached,
+				struct channel_gk20a *fault_ch,
+				bool *early_exit, bool *ignore_debugger);
 	} gr;
 	const char *name;
 	struct {

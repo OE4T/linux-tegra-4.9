@@ -1,7 +1,7 @@
 /*
  * GM20B GPC MMU
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1226,4 +1226,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.enable_cde_in_fecs = gr_gm20b_enable_cde_in_fecs;
 	gops->gr.bpt_reg_info = gr_gm20b_bpt_reg_info;
 	gops->gr.get_access_map = gr_gm20b_get_access_map;
+	gops->gr.handle_fecs_error = gk20a_gr_handle_fecs_error;
 }

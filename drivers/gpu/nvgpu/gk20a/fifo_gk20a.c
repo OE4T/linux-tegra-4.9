@@ -2529,6 +2529,12 @@ int gk20a_fifo_set_channel_priority(
 	return 0;
 }
 
+struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
+		u32 hw_chid)
+{
+	return g->fifo.channel + hw_chid;
+}
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);

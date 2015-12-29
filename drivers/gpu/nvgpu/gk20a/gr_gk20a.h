@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Engine
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -174,6 +174,17 @@ struct sm_info {
 struct gk20a_cs_snapshot_client;
 struct gk20a_cs_snapshot;
 #endif
+
+struct gr_gk20a_isr_data {
+	u32 addr;
+	u32 data_lo;
+	u32 data_hi;
+	u32 curr_ctx;
+	u32 chid;
+	u32 offset;
+	u32 sub_chan;
+	u32 class_num;
+};
 
 struct gr_gk20a {
 	struct gk20a *g;
@@ -532,5 +543,17 @@ static inline void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g)
 	(void)g;
 }
 #endif
+
+
+int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
+		struct gr_gk20a_isr_data *isr_data);
+int gk20a_gr_wait_for_sm_lock_down(struct gk20a *g, u32 gpc, u32 tpc,
+		u32 global_esr_mask, bool check_errors);
+void gk20a_gr_clear_sm_hww(struct gk20a *g,
+		u32 gpc, u32 tpc, u32 global_esr);
+int gr_gk20a_ctx_wait_ucode(struct gk20a *g, u32 mailbox_id,
+			    u32 *mailbox_ret, u32 opc_success,
+			    u32 mailbox_ok, u32 opc_fail,
+			    u32 mailbox_fail, bool sleepduringwait);
 
 #endif /*__GR_GK20A_H__*/

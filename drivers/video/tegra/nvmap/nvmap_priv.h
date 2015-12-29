@@ -408,7 +408,7 @@ struct nvmap_handle *nvmap_handle_get_from_fd(int fd);
 
 /* MM definitions. */
 extern size_t cache_maint_inner_threshold;
-extern int nvmap_cache_maint_by_set_ways;
+extern size_t cache_maint_outer_threshold;
 
 extern void v7_flush_kern_cache_all(void);
 extern void v7_clean_kern_cache_all(void *);

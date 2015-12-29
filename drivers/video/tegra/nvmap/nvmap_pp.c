@@ -3,7 +3,7 @@
  *
  * Manage page pools to speed up page allocation.
  *
- * Copyright (c) 2009-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -82,7 +82,7 @@ static void pp_clean_cache(struct nvmap_page_pool *pool)
 
 	if (!dirty_pages)
 		return;
-	if (nvmap_cache_maint_by_set_ways &&
+	if (IS_ENABLED(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS) &&
 		(dirty_pages >= (cache_maint_inner_threshold >> PAGE_SHIFT))) {
 		inner_clean_cache_all();
 		outer_clean_all();

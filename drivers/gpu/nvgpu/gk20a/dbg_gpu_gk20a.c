@@ -261,6 +261,51 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 	mutex_unlock(&ch->dbg_s_lock);
 }
 
+bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch)
+{
+	struct dbg_session_gk20a *dbg_s;
+	bool broadcast = false;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+
+	/* guard against the session list being modified */
+	mutex_lock(&ch->dbg_s_lock);
+
+	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
+		if (dbg_s->broadcast_stop_trigger) {
+			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
+					"stop trigger broadcast enabled");
+			broadcast = true;
+			break;
+		}
+	}
+
+	mutex_unlock(&ch->dbg_s_lock);
+
+	return broadcast;
+}
+
+int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch)
+{
+	struct dbg_session_gk20a *dbg_s;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
+
+	/* guard against the session list being modified */
+	mutex_lock(&ch->dbg_s_lock);
+
+	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
+		if (dbg_s->broadcast_stop_trigger) {
+			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
+					"stop trigger broadcast disabled");
+			dbg_s->broadcast_stop_trigger = false;
+		}
+	}
+
+	mutex_unlock(&ch->dbg_s_lock);
+
+	return 0;
+}
 
 static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 				__u32  powermode);
@@ -465,6 +510,21 @@ static void nvgpu_dbg_gpu_ioctl_get_timeout(struct dbg_session_gk20a *dbg_s,
 		args->enable = NVGPU_DBG_GPU_IOCTL_TIMEOUT_DISABLE;
 }
 
+static int nvgpu_dbg_gpu_ioctl_set_next_stop_trigger_type(
+		struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_set_next_stop_trigger_type_args *args)
+{
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
+
+	gk20a_dbg_session_mutex_lock(dbg_s);
+
+	dbg_s->broadcast_stop_trigger = (args->broadcast != 0);
+
+	gk20a_dbg_session_mutex_unlock(dbg_s);
+
+	return 0;
+}
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -540,6 +600,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_PC_SAMPLING:
 		err = gk20a_dbg_pc_sampling(dbg_s,
 			   (struct nvgpu_dbg_gpu_pc_sampling_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_SET_NEXT_STOP_TRIGGER_TYPE:
+		err = nvgpu_dbg_gpu_ioctl_set_next_stop_trigger_type(dbg_s,
+		       (struct nvgpu_dbg_gpu_set_next_stop_trigger_type_args *)buf);
 		break;
 
 	case NVGPU_DBG_GPU_IOCTL_TIMEOUT:

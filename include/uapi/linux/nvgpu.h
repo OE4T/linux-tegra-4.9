@@ -607,8 +607,19 @@ struct nvgpu_dbg_gpu_timeout_args {
 #define NVGPU_DBG_GPU_IOCTL_GET_TIMEOUT \
 	_IOR(NVGPU_DBG_GPU_IOCTL_MAGIC, 11, struct nvgpu_dbg_gpu_timeout_args)
 
+
+struct nvgpu_dbg_gpu_set_next_stop_trigger_type_args {
+	__u32 broadcast;
+	__u32 reserved;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_SET_NEXT_STOP_TRIGGER_TYPE			\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 12, struct nvgpu_dbg_gpu_set_next_stop_trigger_type_args)
+
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_GET_TIMEOUT)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SET_NEXT_STOP_TRIGGER_TYPE)
+
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)
 

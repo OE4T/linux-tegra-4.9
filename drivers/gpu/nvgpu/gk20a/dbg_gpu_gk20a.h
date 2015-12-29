@@ -79,8 +79,13 @@ struct dbg_session_gk20a {
 	/* event support */
 	struct dbg_gpu_session_events dbg_events;
 	struct list_head dbg_s_list_node;
+
+	bool broadcast_stop_trigger;
 };
 
 extern struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a;
+
+bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch);
+int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch);
 
 #endif /* DBG_GPU_GK20A_H */

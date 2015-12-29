@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2011-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -117,11 +117,9 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	dmaput = host1x_channel_readl(channel, host1x_channel_dmaput_r());
 	dmaget = host1x_channel_readl(channel, host1x_channel_dmaget_r());
 	dmactrl = host1x_channel_readl(channel, host1x_channel_dmactrl_r());
-	cbread = host1x_sync_readl(channel->dev,
-			host1x_sync_cbread0_r() + 4 * chid);
-	cbstat = host1x_sync_readl(channel->dev,
-			host1x_sync_cbstat_0_r() + 4 * chid);
-	cmdstat = host1x_sync_readl(channel->dev, host1x_sync_cmdproc_stat_r());
+	cbread = host1x_sync_readl(m, host1x_sync_cbread0_r() + 4 * chid);
+	cbstat = host1x_sync_readl(m, host1x_sync_cbstat_0_r() + 4 * chid);
+	cmdstat = host1x_sync_readl(m, host1x_sync_cmdproc_stat_r());
 
 #ifdef CONFIG_PM_RUNTIME
 	nvhost_debug_output(o, "%d-%s (%d): ", chid,
@@ -148,7 +146,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 
 	case 0x00010009:
 		base = (cbread >> 16) & 0xff;
-		baseval = host1x_sync_readl(channel->dev,
+		baseval = host1x_sync_readl(m,
 				host1x_sync_syncpt_base_0_r() + 4 * base);
 		val = cbread & 0xffff;
 		nvhost_debug_output(o, "waiting on syncpt %d val %d "
@@ -182,38 +180,36 @@ static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 
 	nvhost_debug_output(o, "%d: fifo:\n", chid);
 
-	host1x_sync_writel(ch->dev, host1x_sync_cfpeek_ctrl_r(),
+	host1x_sync_writel(m, host1x_sync_cfpeek_ctrl_r(),
 			host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
 			| host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid));
 	wmb();
 
 	val = host1x_channel_readl(channel, host1x_channel_fifostat_r());
 	if (host1x_channel_fifostat_cfempty_v(val)) {
-		host1x_sync_writel(ch->dev, host1x_sync_cfpeek_ctrl_r(), 0x0);
+		host1x_sync_writel(m, host1x_sync_cfpeek_ctrl_r(), 0x0);
 		nvhost_debug_output(o, "FIFOSTAT %08x\n[empty]\n",
 				val);
 		return;
 	}
 
-	val = host1x_sync_readl(channel->dev, host1x_sync_cfpeek_ptrs_r());
+	val = host1x_sync_readl(m, host1x_sync_cfpeek_ptrs_r());
 	rd_ptr = host1x_sync_cfpeek_ptrs_cf_rd_ptr_v(val);
 	wr_ptr = host1x_sync_cfpeek_ptrs_cf_wr_ptr_v(val);
 
-	val = host1x_sync_readl(channel->dev,
-			host1x_sync_cf0_setup_r() + 4 * chid);
+	val = host1x_sync_readl(m, host1x_sync_cf0_setup_r() + 4 * chid);
 	start = host1x_sync_cf0_setup_cf0_base_v(val);
 	end = host1x_sync_cf0_setup_cf0_limit_v(val);
 
 	nvhost_debug_output(o, "FIFOSTAT %08x, %03x - %03x, RD %03x, WR %03x\n",
 			val, start, end, rd_ptr, wr_ptr);
 	do {
-		host1x_sync_writel(ch->dev, host1x_sync_cfpeek_ctrl_r(),
+		host1x_sync_writel(m, host1x_sync_cfpeek_ctrl_r(),
 			host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
 			       | host1x_sync_cfpeek_ctrl_cfpeek_channr_f(chid)
 			       | host1x_sync_cfpeek_ctrl_cfpeek_addr_f(rd_ptr));
 		wmb();
-		val = host1x_sync_readl(channel->dev,
-				host1x_sync_cfpeek_read_r());
+		val = host1x_sync_readl(m, host1x_sync_cfpeek_read_r());
 		rmb();
 
 		nvhost_debug_output(o, "%08x ", val);
@@ -228,7 +224,7 @@ static void t20_debug_show_channel_fifo(struct nvhost_master *m,
 
 	nvhost_debug_output(o, "\n");
 
-	host1x_sync_writel(ch->dev, host1x_sync_cfpeek_ctrl_r(), 0x0);
+	host1x_sync_writel(m, host1x_sync_cfpeek_ctrl_r(), 0x0);
 }
 
 static void t20_debug_show_mlocks(struct nvhost_master *m, struct output *o)
@@ -237,7 +233,7 @@ static void t20_debug_show_mlocks(struct nvhost_master *m, struct output *o)
 
 	nvhost_debug_output(o, "---- mlocks ----\n");
 	for (i = 0; i < NV_HOST1X_NB_MLOCKS; i++) {
-		u32 owner = host1x_sync_readl(m->dev,
+		u32 owner = host1x_sync_readl(m,
 				host1x_sync_mlock_owner_0_r() + i * 4);
 		if (host1x_sync_mlock_owner_0_mlock_ch_owns_0_v(owner))
 			nvhost_debug_output(o, "%d: locked by channel %d\n",

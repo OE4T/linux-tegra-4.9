@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Client Module
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -131,22 +131,23 @@ u32 host1x_channel_readl(struct nvhost_channel *ch, u32 r)
 }
 EXPORT_SYMBOL_GPL(host1x_channel_readl);
 
-void host1x_sync_writel(struct platform_device *pdev, u32 r, u32 v)
+void host1x_sync_writel(struct nvhost_master *dev, u32 r, u32 v)
 {
-	void __iomem *addr = nvhost_get_host(pdev)->sync_aperture + r;
-	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
+	void __iomem *addr = dev->sync_aperture + r;
+
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", dev->dev->name, r, v);
 	writel(v, addr);
 }
 EXPORT_SYMBOL_GPL(host1x_sync_writel);
 
-u32 host1x_sync_readl(struct platform_device *pdev, u32 r)
+u32 host1x_sync_readl(struct nvhost_master *dev, u32 r)
 {
-	void __iomem *addr = nvhost_get_host(pdev)->sync_aperture + r;
+	void __iomem *addr = dev->sync_aperture + r;
 	u32 v;
 
-	nvhost_dbg(dbg_reg, " d=%s r=0x%x", pdev->name, r);
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x", dev->dev->name, r);
 	v = readl(addr);
-	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", pdev->name, r, v);
+	nvhost_dbg(dbg_reg, " d=%s r=0x%x v=0x%x", dev->dev->name, r, v);
 
 	return v;
 }

@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2009-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -617,8 +617,8 @@ u32 host1x_readl(struct platform_device *dev, u32 r);
 void host1x_channel_writel(struct nvhost_channel *ch, u32 r, u32 v);
 u32 host1x_channel_readl(struct nvhost_channel *ch, u32 r);
 
-void host1x_sync_writel(struct platform_device *pdev, u32 r, u32 v);
-u32 host1x_sync_readl(struct platform_device *pdev, u32 r);
+void host1x_sync_writel(struct nvhost_master *dev, u32 r, u32 v);
+u32 host1x_sync_readl(struct nvhost_master *dev, u32 r);
 
 /* public host1x power management APIs */
 bool nvhost_module_powered_ext(struct platform_device *dev);

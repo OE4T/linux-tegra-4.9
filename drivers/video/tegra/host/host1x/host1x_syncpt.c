@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints for HOST1X
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,7 +33,7 @@ static void t20_syncpt_reset(struct nvhost_syncpt *sp, u32 id)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	int min = nvhost_syncpt_read_min(sp, id);
-	host1x_sync_writel(dev->dev, (host1x_sync_syncpt_0_r() + id * 4), min);
+	host1x_sync_writel(dev, (host1x_sync_syncpt_0_r() + id * 4), min);
 }
 
 /**
@@ -47,7 +47,7 @@ static u32 t20_syncpt_update_min(struct nvhost_syncpt *sp, u32 id)
 
 	do {
 		old = nvhost_syncpt_read_min(sp, id);
-		live = host1x_sync_readl(dev->dev,
+		live = host1x_sync_readl(dev,
 				(host1x_sync_syncpt_0_r() + id * 4));
 	} while ((u32)atomic_cmpxchg(&sp->min_val[id], old, live) != old);
 
@@ -71,7 +71,7 @@ static void t20_syncpt_cpu_incr(struct nvhost_syncpt *sp, u32 id)
 		nvhost_debug_dump(syncpt_to_dev(sp));
 		return;
 	}
-	host1x_sync_writel(dev->dev,
+	host1x_sync_writel(dev,
 		host1x_sync_syncpt_cpu_incr_r() + reg_offset * 4, bit_mask(id));
 }
 
@@ -111,7 +111,7 @@ static int syncpt_mutex_try_lock(struct nvhost_syncpt *sp,
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 	/* mlock registers returns 0 when the lock is aquired.
 	 * writing 0 clears the lock. */
-	return !!host1x_sync_readl(dev->dev,
+	return !!host1x_sync_readl(dev,
 			(host1x_sync_mlock_0_r() + idx * 4));
 }
 
@@ -120,7 +120,7 @@ static void syncpt_mutex_unlock(struct nvhost_syncpt *sp,
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
 
-	host1x_sync_writel(dev->dev, (host1x_sync_mlock_0_r() + idx * 4), 0);
+	host1x_sync_writel(dev, (host1x_sync_mlock_0_r() + idx * 4), 0);
 }
 
 static void syncpt_mutex_owner(struct nvhost_syncpt *sp,
@@ -129,7 +129,7 @@ static void syncpt_mutex_owner(struct nvhost_syncpt *sp,
 				unsigned int *chid)
 {
 	struct nvhost_master *dev = syncpt_to_dev(sp);
-	u32 owner = host1x_sync_readl(dev->dev,
+	u32 owner = host1x_sync_readl(dev,
 			host1x_sync_mlock_owner_0_r() + idx * 4);
 
 	*chid = host1x_sync_mlock_owner_0_mlock_owner_chid_0_v(owner);

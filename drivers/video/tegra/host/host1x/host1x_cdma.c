@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -327,11 +327,9 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	dev_dbg(&dev->dev->dev,
 		"begin channel teardown (channel id %d)\n", ch->chid);
 
-	cmdproc_stop = host1x_sync_readl(dev->dev,
-			host1x_sync_cmdproc_stop_r());
+	cmdproc_stop = host1x_sync_readl(dev, host1x_sync_cmdproc_stop_r());
 	cmdproc_stop |= BIT(ch->chid);
-	host1x_sync_writel(dev->dev, host1x_sync_cmdproc_stop_r(),
-			cmdproc_stop);
+	host1x_sync_writel(dev, host1x_sync_cmdproc_stop_r(), cmdproc_stop);
 
 	dev_dbg(&dev->dev->dev,
 		"%s: DMA GET 0x%x, PUT HW 0x%x / shadow 0x%x\n",
@@ -343,8 +341,7 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 	host1x_channel_writel(ch, host1x_channel_dmactrl_r(),
 			host1x_channel_dmactrl(true, false, false));
 
-	host1x_sync_writel(dev->dev,
-			host1x_sync_ch_teardown_r(), BIT(ch->chid));
+	host1x_sync_writel(dev, host1x_sync_ch_teardown_r(), BIT(ch->chid));
 
 	/* if resources are allocated per channel instance, the channel does
 	 * not necessaryly hold the mlock */
@@ -383,11 +380,9 @@ static void cdma_timeout_teardown_end(struct nvhost_cdma *cdma, u32 getptr)
 		"end channel teardown (id %d, DMAGET restart = 0x%x)\n",
 		ch->chid, getptr);
 
-	cmdproc_stop = host1x_sync_readl(dev->dev,
-			host1x_sync_cmdproc_stop_r());
+	cmdproc_stop = host1x_sync_readl(dev, host1x_sync_cmdproc_stop_r());
 	cmdproc_stop &= ~(BIT(ch->chid));
-	host1x_sync_writel(dev->dev, host1x_sync_cmdproc_stop_r(),
-			cmdproc_stop);
+	host1x_sync_writel(dev, host1x_sync_cmdproc_stop_r(), cmdproc_stop);
 
 	cdma->torndown = false;
 	cdma_timeout_restart(cdma, getptr);
@@ -397,9 +392,9 @@ static bool cdma_check_dependencies(struct nvhost_cdma *cdma)
 {
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
 	struct nvhost_master *dev = cdma_to_dev(cdma);
-	u32 cbstat = host1x_sync_readl(dev->dev,
+	u32 cbstat = host1x_sync_readl(dev,
 		host1x_sync_cbstat_0_r() + 4 * ch->chid);
-	u32 cbread = host1x_sync_readl(dev->dev,
+	u32 cbread = host1x_sync_readl(dev,
 		host1x_sync_cbread0_r() + 4 * ch->chid);
 	u32 waiting = cbstat == 0x00010008;
 	u32 syncpt_id = cbread >> 24;
@@ -479,11 +474,9 @@ static void cdma_timeout_handler(struct work_struct *work)
 	}
 
 	/* stop processing to get a clean snapshot */
-	prev_cmdproc = host1x_sync_readl(dev->dev,
-			host1x_sync_cmdproc_stop_r());
+	prev_cmdproc = host1x_sync_readl(dev, host1x_sync_cmdproc_stop_r());
 	cmdproc_stop = prev_cmdproc | BIT(ch->chid);
-	host1x_sync_writel(dev->dev,
-			host1x_sync_cmdproc_stop_r(), cmdproc_stop);
+	host1x_sync_writel(dev, host1x_sync_cmdproc_stop_r(), cmdproc_stop);
 
 	dev_dbg(&dev->dev->dev, "cdma_timeout: cmdproc was 0x%x is 0x%x\n",
 		prev_cmdproc, cmdproc_stop);
@@ -504,7 +497,7 @@ static void cdma_timeout_handler(struct work_struct *work)
 			 "cdma_timeout: expired, but buffer had completed\n");
 		/* restore */
 		cmdproc_stop = prev_cmdproc & ~(BIT(ch->chid));
-		host1x_sync_writel(dev->dev,
+		host1x_sync_writel(dev,
 			host1x_sync_cmdproc_stop_r(), cmdproc_stop);
 		mutex_unlock(&cdma->lock);
 		mutex_unlock(&dev->timeout_mutex);

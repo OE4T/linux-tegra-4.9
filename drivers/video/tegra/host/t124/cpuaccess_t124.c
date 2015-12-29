@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Cpu Register Access
  *
- * Copyright (c) 2011-2012, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,7 +33,7 @@ static int t124_cpuaccess_mutex_try_lock(struct nvhost_cpuaccess *ctx,
 	nvhost_dbg_fn("");
 	/* mlock registers returns 0 when the lock is aquired.
 	 * writing 0 clears the lock. */
-	return !!host1x_sync_readl(dev->dev, (host1x_sync_mlock_0_0_r() + idx * 4));
+	return !!host1x_sync_readl(dev, (host1x_sync_mlock_0_0_r() + idx * 4));
 }
 
 static void t124_cpuaccess_mutex_unlock(struct nvhost_cpuaccess *ctx,
@@ -42,7 +42,7 @@ static void t124_cpuaccess_mutex_unlock(struct nvhost_cpuaccess *ctx,
 	struct nvhost_master *dev = cpuaccess_to_dev(ctx);
 
 	nvhost_dbg_fn("");
-	host1x_sync_writel(dev->dev, (host1x_sync_mlock_0_0_r() + idx * 4), 0);
+	host1x_sync_writel(dev, (host1x_sync_mlock_0_0_r() + idx * 4), 0);
 }
 
 int nvhost_init_t124_cpuaccess_support(struct nvhost_master *host,

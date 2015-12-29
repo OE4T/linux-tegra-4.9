@@ -138,7 +138,7 @@
 
 				pin_gpio2 {
 					maxim,fps-power-up-slot = <0>;
-					maxim,fps-power-down-slot = <7>;
+					maxim,fps-power-down-slot = <1>;
 				};
 
 				pin_gpio3 {

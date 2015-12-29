@@ -260,8 +260,9 @@ static inline bool fast_cache_maint_outer(unsigned long start,
 #endif
 
 #if defined(CONFIG_NVMAP_CACHE_MAINT_BY_SET_WAYS)
-static inline bool can_fast_cache_maint(unsigned long start,
-			unsigned long end, unsigned int op)
+static inline bool can_fast_cache_maint(struct nvmap_handle *h,
+	unsigned long start,
+	unsigned long end, unsigned int op)
 {
 	if ((op == NVMAP_CACHE_OP_INV) ||
 		((end - start) < cache_maint_inner_threshold))
@@ -269,8 +270,9 @@ static inline bool can_fast_cache_maint(unsigned long start,
 	return true;
 }
 #else
-static inline bool can_fast_cache_maint(unsigned long start,
-			unsigned long end, unsigned int op)
+static inline bool can_fast_cache_maint(struct nvmap_handle *h,
+	unsigned long start,
+	unsigned long end, unsigned int op)
 {
 	return false;
 }
@@ -281,7 +283,7 @@ static bool fast_cache_maint(struct nvmap_handle *h,
 	unsigned long end, unsigned int op,
 	bool clean_only_dirty)
 {
-	if (!can_fast_cache_maint(start, end, op))
+	if (!can_fast_cache_maint(h, start, end, op))
 		return false;
 
 	if (h->userflags & NVMAP_HANDLE_CACHE_SYNC) {
@@ -323,75 +325,36 @@ struct cache_maint_op {
 	bool clean_only_dirty;
 };
 
-int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
-		phys_addr_t pend, int inner, int outer)
-{
-	unsigned long kaddr;
-	struct vm_struct *area = NULL;
-	phys_addr_t loop;
-
-	if (!inner)
-		goto do_outer;
-
-	if (can_fast_cache_maint((unsigned long)pstart,
-				 (unsigned long)pend, op)) {
-		if (op == NVMAP_CACHE_OP_WB_INV)
-			inner_flush_cache_all();
-		else if (op == NVMAP_CACHE_OP_WB)
-			inner_clean_cache_all();
-		goto do_outer;
-	}
-
-	area = alloc_vm_area(PAGE_SIZE, NULL);
-	if (!area)
-		return -ENOMEM;
-	kaddr = (ulong)area->addr;
-
-	loop = pstart;
-	while (loop < pend) {
-		phys_addr_t next = (loop + PAGE_SIZE) & PAGE_MASK;
-		void *base = (void *)kaddr + (loop & ~PAGE_MASK);
-
-		next = min(next, pend);
-		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
-			loop, PG_PROT_KERNEL);
-		inner_cache_maint(op, base, next - loop);
-		loop = next;
-		unmap_kernel_range(kaddr, PAGE_SIZE);
-	}
-
-	free_vm_area(area);
-do_outer:
-	if (!outer)
-		return 0;
-
-	if (!fast_cache_maint_outer(pstart, pend, op))
-		outer_cache_maint(op, pstart, pend - pstart);
-	return 0;
-}
-
 static int do_cache_maint(struct cache_maint_op *cache_work)
 {
+	unsigned long kaddr;
 	phys_addr_t pstart = cache_work->start;
 	phys_addr_t pend = cache_work->end;
+	phys_addr_t loop;
 	int err = 0;
 	struct nvmap_handle *h = cache_work->h;
+	struct nvmap_client *client;
 	unsigned int op = cache_work->op;
+	struct vm_struct *area = NULL;
 
 	if (!h || !h->alloc)
 		return -EFAULT;
+
+	client = h->owner;
+	if (can_fast_cache_maint(h, pstart, pend, op))
+		nvmap_stats_inc(NS_CFLUSH_DONE, cache_maint_inner_threshold);
+	else
+		nvmap_stats_inc(NS_CFLUSH_DONE, pend - pstart);
+	trace_nvmap_cache_maint(client, h, pstart, pend, op, pend - pstart);
+	trace_nvmap_cache_flush(pend - pstart,
+		nvmap_stats_read(NS_ALLOC),
+		nvmap_stats_read(NS_CFLUSH_RQ),
+		nvmap_stats_read(NS_CFLUSH_DONE));
 
 	wmb();
 	if (h->flags == NVMAP_HANDLE_UNCACHEABLE ||
 	    h->flags == NVMAP_HANDLE_WRITE_COMBINE || pstart == pend)
 		goto out;
-
-	trace_nvmap_cache_maint(h->owner, h, pstart, pend, op, pend - pstart);
-	if (pstart > h->size || pend > h->size) {
-		pr_warn("cache maintenance outside handle\n");
-		err = -EINVAL;
-		goto out;
-	}
 
 	if (fast_cache_maint(h, pstart, pend, op, cache_work->clean_only_dirty))
 		goto out;
@@ -403,27 +366,42 @@ static int do_cache_maint(struct cache_maint_op *cache_work)
 		goto out;
 	}
 
-	pstart += h->carveout->base;
-	pend += h->carveout->base;
-
-	err = nvmap_cache_maint_phys_range(op, pstart, pend, true,
-			h->flags != NVMAP_HANDLE_INNER_CACHEABLE);
-
-out:
-	if (!err) {
-		if (can_fast_cache_maint(pstart, pend, op))
-			nvmap_stats_inc(NS_CFLUSH_DONE,
-					cache_maint_inner_threshold);
-		else
-			nvmap_stats_inc(NS_CFLUSH_DONE, pend - pstart);
+	if (pstart > h->size || pend > h->size) {
+		pr_warn("cache maintenance outside handle\n");
+		err = -EINVAL;
+		goto out;
 	}
 
-	trace_nvmap_cache_flush(pend - pstart,
-		nvmap_stats_read(NS_ALLOC),
-		nvmap_stats_read(NS_CFLUSH_RQ),
-		nvmap_stats_read(NS_CFLUSH_DONE));
+	area = alloc_vm_area(PAGE_SIZE, NULL);
+	if (!area) {
+		err = -ENOMEM;
+		goto out;
+	}
+	kaddr = (ulong)area->addr;
 
-	return 0;
+	pstart += h->carveout->base;
+	pend += h->carveout->base;
+	loop = pstart;
+
+	while (loop < pend) {
+		phys_addr_t next = (loop + PAGE_SIZE) & PAGE_MASK;
+		void *base = (void *)kaddr + (loop & ~PAGE_MASK);
+		next = min(next, pend);
+
+		ioremap_page_range(kaddr, kaddr + PAGE_SIZE,
+			loop, PG_PROT_KERNEL);
+		inner_cache_maint(op, base, next - loop);
+		loop = next;
+		unmap_kernel_range(kaddr, PAGE_SIZE);
+	}
+
+	if (h->flags != NVMAP_HANDLE_INNER_CACHEABLE)
+		outer_cache_maint(op, pstart, pend - pstart);
+
+out:
+	if (area)
+		free_vm_area(area);
+	return err;
 }
 
 int __nvmap_do_cache_maint(struct nvmap_client *client,

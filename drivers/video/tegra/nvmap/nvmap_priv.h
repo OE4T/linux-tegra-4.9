@@ -421,8 +421,6 @@ void nvmap_override_cache_ops(void);
 void nvmap_clean_cache(struct page **pages, int numpages);
 void nvmap_clean_cache_page(struct page *page);
 void nvmap_flush_cache(struct page **pages, int numpages);
-int nvmap_cache_maint_phys_range(unsigned int op, phys_addr_t pstart,
-		phys_addr_t pend, int inner, int outer);
 
 int nvmap_do_cache_maint_list(struct nvmap_handle **handles, u32 *offsets,
 			      u32 *sizes, int op, int nr);

@@ -29,6 +29,7 @@
 	chosen {
 		fastboot-instructions = "Press <PWR> to select, <VOL D/REC> for selection move\n";
 		bootargs = "earlycon=uart8250,mmio32,0x70006000";
+		stdout-path = &uarta;
 	};
 
 	firmware {

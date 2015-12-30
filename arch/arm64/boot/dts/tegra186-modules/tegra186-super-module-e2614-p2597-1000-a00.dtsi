@@ -134,6 +134,9 @@
 					compatible = "realtek,rt5658";
 					reg = <0x1a>;
 					status = "disabled";
+
+					/* gpio for jack detection */
+					gpios = <&tegra_gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
 				};
 			};
 		};
@@ -319,7 +322,6 @@
 			overrides@10 {
 				target = <&tegra_sound>;
 				_overlay_ {
-					nvidia,hp-det-gpios = <&tegra_gpio TEGRA_GPIO(J , 5) GPIO_ACTIVE_HIGH>;
 					nvidia,num-codec-link = <6>;
 					nvidia,audio-routing =
 						"y Headphone",		"y OUT",

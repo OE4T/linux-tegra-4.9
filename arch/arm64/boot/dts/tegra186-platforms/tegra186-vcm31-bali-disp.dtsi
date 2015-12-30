@@ -1,7 +1,7 @@
 /*
  * tegra186-vcm31-bali-disp.dtsi: VCM3.1 based bali display dtsi.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,8 +15,6 @@
 
 #include <dt-bindings/display/tegra-dc.h>
 #include <dt-bindings/display/tegra-panel.h>
-
-#include <dt-bindings/display/tegra-dc.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 
 / {
@@ -52,6 +50,64 @@
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
                         nvidia,ddc-i2c-bus = <&dp_aux_ch0_i2c>;
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) 1>;
+
+			prod-settings {
+				prod_c_54M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050000
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x38000440
+						0x00000138 0x00000000 0x333A3A3A
+						0x00000148 0x00000000 0x00000000
+						0x000005a0 0xffbf00ff 0x00401000
+						0x000005a8 0x00ffffff 0x52000000
+					>;
+				};
+				prod_c_75M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050100
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x38000440
+						0x00000138 0x00000000 0x333A3A3A
+						0x00000148 0x00000000 0x00000000
+						0x000005a0 0xffbf00ff 0x00404000
+						0x000005a8 0x00ffffff 0x42000000
+					>;
+				};
+				prod_c_150M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050300
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x38000440
+						0x00000138 0x00000000 0x333A3A3A
+						0x00000148 0x00000000 0x00000000
+						0x000005a0 0xffbf00ff 0x00406600
+						0x000005a8 0x00ffffff 0x32000000
+					>;
+				};
+				prod_c_300M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050300
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x3C000440
+						0x00000138 0x00000000 0x333F3F3F
+						0x00000148 0x00000000 0x00171717
+						0x000005a0 0xffbf00ff 0x00406600
+						0x000005a8 0x00ffffff 0x32000000
+					>;
+				};
+				prod_c_600M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050300
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x3C000440
+						0x00000138 0x00000000 0x333F3F3F
+						0x00000148 0x00000000 0x00070707
+						0x000005a0 0xffbf00ff 0x00406600
+						0x000005a8 0x00ffffff 0x32000000
+					>;
+				};
+			};
 
 			hdmi-display {
 				status = "okay";
@@ -91,6 +147,64 @@
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
 			nvidia,ddc-i2c-bus = <&dp_aux_ch1_i2c>;
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;
+
+			prod-settings {
+				prod_c_54M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050000
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x38000440
+						0x00000138 0x00000000 0x333A3A3A
+						0x00000148 0x00000000 0x00000000
+						0x000005a0 0xffbf00ff 0x00401000
+						0x000005a8 0x00ffffff 0x52000000
+					>;
+				};
+				prod_c_75M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050100
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x38000440
+						0x00000138 0x00000000 0x333A3A3A
+						0x00000148 0x00000000 0x00000000
+						0x000005a0 0xffbf00ff 0x00404000
+						0x000005a8 0x00ffffff 0x42000000
+					>;
+				};
+				prod_c_150M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050300
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x38000440
+						0x00000138 0x00000000 0x333A3A3A
+						0x00000148 0x00000000 0x00000000
+						0x000005a0 0xffbf00ff 0x00406600
+						0x000005a8 0x00ffffff 0x32000000
+					>;
+				};
+				prod_c_300M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050300
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x3C000440
+						0x00000138 0x00000000 0x333F3F3F
+						0x00000148 0x00000000 0x00171717
+						0x000005a0 0xffbf00ff 0x00406600
+						0x000005a8 0x00ffffff 0x32000000
+					>;
+				};
+				prod_c_600M {
+					prod = <
+						0x0000058c 0xf0f0f0ff 0x05050300
+						0x00000590 0xff0fe0ff 0x00301300
+						0x00000598 0x00fff00f 0x3C000440
+						0x00000138 0x00000000 0x333F3F3F
+						0x00000148 0x00000000 0x00070707
+						0x000005a0 0xffbf00ff 0x00406600
+						0x000005a8 0x00ffffff 0x32000000
+					>;
+				};
+			};
 
 			hdmi-display {
 				status = "okay";

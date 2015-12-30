@@ -831,8 +831,7 @@ static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv)
 	struct device *dev = &pdev->dev;
 
 	if (tegra_platform_is_silicon())
-		tegra->soc_data->ops.tegra_ahci_power_off(hpriv);
-	pm_runtime_put_sync(dev);
+		tegra_ahci_runtime_suspend(dev);
 	pm_runtime_disable(dev);
 }
 
@@ -1300,6 +1299,28 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 		pm_runtime_enable(&pdev->dev);
 	}
 
+	if (!tegra_ahci_bar5_readl(hpriv, T_AHCI_PORT_PXSSTS)) {
+		struct ata_host *host = platform_get_drvdata(pdev);
+		struct platform_driver *drv =
+					to_platform_driver(pdev->dev.driver);
+		int i;
+
+		for (i = 0; i < host->n_ports; i++) {
+			struct ata_port *ap = host->ports[i];
+
+			dev_info(&pdev->dev, "Wait for EH to complete\n");
+			ata_port_wait_eh(ap);
+			if (ata_dev_enabled(ap->link.device))
+				goto skip_ata_platform_remove;
+		}
+		dev_info(&pdev->dev, "Drive not present "
+					"un-registering from ATA\n");
+		ata_platform_remove_one(pdev);
+		drv->driver.pm = NULL;
+		return -ENODEV;
+	}
+
+skip_ata_platform_remove:
 #ifdef CONFIG_DEBUG_FS
 	tegra_ahci_dump_debuginit(hpriv);
 #endif

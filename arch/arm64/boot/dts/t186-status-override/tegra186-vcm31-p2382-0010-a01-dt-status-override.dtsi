@@ -106,10 +106,6 @@
 		};
 	};
 
-	dummy-cool-dev {
-		status = "disabled";
-	};
-
 	gpio-keys {
 		status = "disabled";
 	};

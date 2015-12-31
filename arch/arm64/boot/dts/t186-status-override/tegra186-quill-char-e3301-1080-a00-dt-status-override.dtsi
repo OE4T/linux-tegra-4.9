@@ -282,10 +282,6 @@
 		status = "disabled";
 	};
 
-	dummy-cool-dev {
-		status = "disabled";
-	};
-
 	pwm-fan {
 		status = "disabled";
 	};

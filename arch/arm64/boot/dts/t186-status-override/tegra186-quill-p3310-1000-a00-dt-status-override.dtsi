@@ -40,9 +40,5 @@
 			};
 		};
 	};
-
-	dummy-cool-dev {
-		status = "disabled";
-	};
 };
 

@@ -82,6 +82,9 @@ int gk20a_tegra_secure_page_alloc(struct platform_device *pdev)
 	dma_addr_t iova;
 	size_t size = PAGE_SIZE;
 
+	if (tegra_platform_is_linsim())
+		return -EINVAL;
+
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
 				      DMA_MEMORY_NOMAP, &attrs);
 	if (dma_mapping_error(&tegra_vpr_dev, iova))

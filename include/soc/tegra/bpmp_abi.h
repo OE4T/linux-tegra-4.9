@@ -91,6 +91,7 @@
  *   3.47 AVFS temp index (MRQ_AVFS_TEMP_IDX)
  *   3.48 firmware booted (MRQ_FW_BOOTED)
  *   3.49 System shutdown (MRQ_SHUTDOWN)
+ *   3.50 EDVD integral check (MRQ_EDVD_CHECK)
  *  4. Enumerations
  *   4.1 CPU enumerations
  *   4.2 CPU Cluster enumerations
@@ -194,7 +195,7 @@ struct mrq_response {
 #define MRQ_AVFS_TEMP_IDX	47
 #define MRQ_FW_BOOTED		48
 #define MRQ_SHUTDOWN		49
-#define MRQ_DMCE_50		50
+#define MRQ_EDVD_CHECK		50
 #define MRQ_DMCE_51		51
 #define MRQ_DMCE_52		52
 #define MRQ_DMCE_53		53
@@ -1969,6 +1970,28 @@ struct mrq_fw_booted_response {
 
 struct mrq_shutdown_request {
 	uint32_t state;
+} __ABI_PACKED;
+
+/**
+ * 3.50 EDVD integral check
+ *
+ * Platforms: T186
+ * Initiators: BPMP
+ * Targets: DMCE
+ */
+
+/**
+ * Sent by BPMP to DMCE whenever DMCE should check the EDVD integral
+ * errors for the clusters whose bits are set in @cluster_mask. . When
+ * the absolute value of an integral error exceeds @err_thresh, DMCE
+ * should clear the integrator.
+ * @err_thresh : maximum acceptable value for the error integral
+ * @cluster_mask: bit 0 corresponds to MCLUSTER, bit 1 to BCLUSTER
+ */
+struct mrq_edvd_check_request {
+	uint32_t err_thresh;
+	uint32_t cluster_mask;
+
 } __ABI_PACKED;
 
 /**

@@ -16,6 +16,7 @@
 #include "tegra186-platforms/tegra186-quill-common-e3301-0000-a00.dtsi"
 #include "tegra186-platforms/tegra186-quill-char-power-tree-e3301-1080-a00-00.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-e3301-0000-a00-plugin-manager.dtsi"
+#include "t186-status-override/tegra186-quill-char-e3301-1080-a00-dt-status-override.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

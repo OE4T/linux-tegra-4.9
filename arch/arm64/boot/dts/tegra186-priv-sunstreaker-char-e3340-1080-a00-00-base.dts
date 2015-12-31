@@ -17,6 +17,7 @@
 #include "tegra186-platforms/tegra186-sunstreaker-char-power-tree-e3340-1080-a00-00.dtsi"
 #include "tegra186-platforms/tegra186-sunstreaker-char-e3340-a00-disp.dsti"
 #include "tegra186-plugin-manager/tegra186-sunstreaker-e3340-0000-a00-plugin-manager.dtsi"
+#include "t186-status-override/tegra186-sunstreaker-char-e3340-1080-a00-dt-status-override.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

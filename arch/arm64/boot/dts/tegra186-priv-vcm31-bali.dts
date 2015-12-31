@@ -14,6 +14,7 @@
  */
 
 #include "tegra186-platforms/tegra186-vcm31-bali-common.dtsi"
+#include "t186-status-override/tegra186-vcm31-bali-override.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

@@ -22,7 +22,6 @@
 #include "tegra186-platforms/tegra186-quill-comms.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-p3310-1000-a00-plugin-manager.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-display-plugin-manager.dtsi"
-#include "t186-status-override/tegra186-quill-p3310-1000-a00-dt-status-override.dtsi"
 
 / {
 	model = "quill";
@@ -118,6 +117,33 @@
 	i2c@3160000 {
 		lp8557-backlight-s-wuxga-8-0@2c {
 			status = "okay";
+		};
+	};
+
+	cpus {
+		status = "disabled";
+	};
+
+	pmc-iopower {
+		status = "disabled";
+	};
+
+	host1x {
+		vii2c@156c0000 {
+			status = "disabled";
+		};
+
+		sor {
+			status = "disabled";
+			hdmi-display {
+				status = "disabled";
+			};
+
+			panel-s-edp-uhdtv-15-6 {
+				smartdimmer {
+					status = "disabled";
+				};
+			};
 		};
 	};
 };

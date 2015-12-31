@@ -49,7 +49,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_SATA>,
 			<&tegra_car TEGRA186_CLK_SATA_OOB>,
 			<&tegra_car TEGRA186_CLK_PLLP>,
-			<&tegra_car TEGRA186_CLK_PLLP_UPHY>;
+			<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "sata", "sata_oob", "pllp", "pllp_uphy";
 		resets = <&tegra_car TEGRA186_RESET_SATA>,
 			<&tegra_car TEGRA186_RESET_SATACOLD>;

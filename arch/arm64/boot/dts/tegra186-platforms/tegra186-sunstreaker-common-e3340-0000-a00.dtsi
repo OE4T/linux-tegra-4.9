@@ -108,15 +108,37 @@
 	};
 
 	host1x {
+		nvcsi@150c0000 {
+			status = "disabled";
+		};
+
+		vi@15700000 {
+			status = "disabled";
+		};
+
+		isp@15600000 {
+			status = "disabled";
+		};
+
+		vii2c@156c0000 {
+			status = "disabled";
+		};
+
 		dsi {	/* dsi@15300000 */
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 			status = "disabled";
+			panel-s-wuxga-8-0 {
+				smartdimmer {
+					status = "disabled";
+				};
+			};
 		};
 	};
 
 	adsp_audio {
 		compr-ops = <1>;
 		num-plugin = <4>;
+		status = "disabled";
 		plugin-info-1 {
 			plugin-name = "mp3-dec1";
 			firmware-name = "nvmp3dec.elf";
@@ -141,10 +163,11 @@
 
 	adma@2930000 {
 		dma-channels = <10>;
+		status = "disabled";
 	};
 
 	hda@3510000 {
-		status = "okay";
+		status = "disabled";
        };
 
 	sound {
@@ -161,7 +184,7 @@
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
 
-		status = "okay";
+		status = "disabled";
 		nvidia,audio-routing =
 			"y Headphone",		"y OUT",
 			"y IN",			"y Mic",
@@ -291,5 +314,189 @@
         tpiu@8060000 {
                 status = "okay";
         };
+
+	cpus {
+		status = "disabled";
+	};
+
+	pmc-iopower {
+		status = "disabled";
+	};
+
+	ahub {
+		status = "disabled";
+
+		admaif@290f000 {
+			status = "disabled";
+		};
+
+		sfc@2902000 {
+			status = "disabled";
+		};
+
+		sfc@2902200 {
+			status = "disabled";
+		};
+
+		sfc@2902400 {
+			status = "disabled";
+		};
+
+		sfc@2902600 {
+			status = "disabled";
+		};
+
+		spkprot@2908c00 {
+			status = "disabled";
+		};
+
+		amixer@290bb00 {
+			status = "disabled";
+		};
+
+		i2s@2901000 {
+			status = "disabled";
+		};
+
+		i2s@2901100 {
+			status = "disabled";
+		};
+
+		i2s@2901200 {
+			status = "disabled";
+		};
+
+		i2s@2901300 {
+			status = "disabled";
+		};
+
+		i2s@2901400 {
+			status = "disabled";
+		};
+
+		i2s@2901500 {
+			status = "disabled";
+		};
+
+		amx@2903000 {
+			status = "disabled";
+		};
+
+		amx@2903100 {
+			status = "disabled";
+		};
+
+		amx@2903200 {
+			status = "disabled";
+		};
+
+		amx@2903300 {
+			status = "disabled";
+		};
+
+		adx@2903800 {
+			status = "disabled";
+		};
+
+		adx@2903900 {
+			status = "disabled";
+		};
+
+		adx@2903a00 {
+			status = "disabled";
+		};
+
+		adx@2903b00 {
+			status = "disabled";
+		};
+
+		dmic@2904000 {
+			status = "disabled";
+		};
+
+		afc@2907000 {
+			status = "disabled";
+		};
+
+		afc@2907100 {
+			status = "disabled";
+		};
+
+		afc@2907200 {
+			status = "disabled";
+		};
+
+		afc@2907300 {
+			status = "disabled";
+		};
+
+		afc@2907400 {
+			status = "disabled";
+		};
+
+		afc@2907500 {
+			status = "disabled";
+		};
+
+		mvc@290a000 {
+			status = "disabled";
+		};
+
+		mvc@290a200 {
+			status = "disabled";
+		};
+
+		spdif@2906000 {
+			status = "disabled";
+		};
+
+		iqc@290e000 {
+			status = "disabled";
+		};
+
+		asrc@2910000 {
+			status = "disabled";
+		};
+
+		arad@290e400 {
+			status = "disabled";
+		};
+
+		ope@2908000 {
+			status = "disabled";
+
+			peq@2908100 {
+				status = "disabled";
+			};
+
+			mbdrc@2908200 {
+				status = "disabled";
+			};
+		};
+
+		dspk@2905000 {
+			status = "disabled";
+		};
+
+		dspk@2905100 {
+			status = "disabled";
+		};
+	};
+
+	spdif-dit.0@0 {
+		status = "disabled";
+	};
+
+	spdif-dit.1@1 {
+		status = "disabled";
+	};
+
+	spdif-dit.2@2 {
+		status = "disabled";
+	};
+
+	spdif-dit.3@3 {
+		status = "disabled";
+	};
 };
 

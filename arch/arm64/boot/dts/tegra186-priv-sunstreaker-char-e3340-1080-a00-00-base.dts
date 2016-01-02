@@ -185,4 +185,16 @@
 			status = "disabled";
 		};
 	};
+
+	pwm@3280000 {
+		status = "okay";
+	};
+
+	pwm@32a0000 {
+		status = "okay";
+	};
+
+	pwm@c340000 {
+		status = "okay";
+	};
 };

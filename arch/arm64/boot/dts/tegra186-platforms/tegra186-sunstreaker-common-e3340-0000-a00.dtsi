@@ -216,18 +216,6 @@
 		};
 	};
 
-	tegra_pwm1: pwm@3280000 {
-		status = "okay";
-	};
-
-	tegra_pwm3: pwm@32a0000 {
-		status = "okay";
-	};
-
-	tegra_pwm4: pwm@c340000 {
-		status = "okay";
-	};
-
 	soft_wdt: soft_watchdog {
 		compatible = "softdog-platform";
 		status = "okay";

@@ -1,7 +1,7 @@
 /*
  * GK20A graphics channel
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -252,6 +252,7 @@ void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 void channel_gk20a_disable(struct channel_gk20a *ch);
 int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch);
 void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch);
+u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c);
 int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries, u32 flags);
 void channel_gk20a_enable(struct channel_gk20a *ch);

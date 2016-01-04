@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -274,13 +274,33 @@ static inline u32 pbdma_acquire_retry_exp_2_f(void)
 {
 	return 0x100;
 }
+static inline u32 pbdma_acquire_timeout_exp_f(u32 v)
+{
+	return (v & 0xf) << 11;
+}
+static inline u32 pbdma_acquire_timeout_exp_max_v(void)
+{
+	return 0x0000000f;
+}
 static inline u32 pbdma_acquire_timeout_exp_max_f(void)
 {
 	return 0x7800;
 }
+static inline u32 pbdma_acquire_timeout_man_f(u32 v)
+{
+	return (v & 0xffff) << 15;
+}
+static inline u32 pbdma_acquire_timeout_man_max_v(void)
+{
+	return 0x0000ffff;
+}
 static inline u32 pbdma_acquire_timeout_man_max_f(void)
 {
 	return 0x7fff8000;
+}
+static inline u32 pbdma_acquire_timeout_en_enable_f(void)
+{
+	return 0x80000000;
 }
 static inline u32 pbdma_acquire_timeout_en_disable_f(void)
 {

@@ -1,7 +1,7 @@
 /*
 * drivers/video/tegra/dc/sor_regs.h
 *
-* Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+* Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
 *
 * This software is licensed under the terms of the GNU General Public
 * License version 2, as published by the Free Software Foundation, and
@@ -872,6 +872,9 @@
 #define NV_SOR_DP_PADCTL_PD_TXD_MASK				(0xf)
 #define NV_SOR_DP_DEBUG(i)					(0x5e + i)
 #define NV_SOR_DP_SPARE(i)					(0x60 + (i))
+#define NV_SOR_DP_SPARE_MSA_SRC_RG				(1 << 30)
+#define NV_SOR_DP_SPARE_MSA_SRC_SOR				(0 << 30)
+#define NV_SOR_DP_SPARE_MSA_SRC_MASK				(1 << 30)
 #define NV_SOR_DP_SPARE_REG_SHIFT				(3)
 #define NV_SOR_DP_SPARE_REG_DEFAULT_MASK			(0x1fffffff << 3)
 #define NV_SOR_DP_SPARE_VIDEO_PREANBLE_CYA_MASK			(1 << 3)

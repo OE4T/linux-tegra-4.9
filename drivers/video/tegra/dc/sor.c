@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2065,6 +2065,13 @@ void tegra_dc_sor_set_internal_panel(struct tegra_dc_sor_data *sor, bool is_int)
 	reg_val |= NV_SOR_DP_SPARE_SOR_CLK_SEL_MACRO_SORCLK;
 
 	tegra_sor_writel(sor, NV_SOR_DP_SPARE(sor->portnum), reg_val);
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (sor->dc->out->type == TEGRA_DC_OUT_DP)
+		tegra_sor_write_field(sor, NV_SOR_DP_SPARE(sor->portnum),
+					NV_SOR_DP_SPARE_MSA_SRC_MASK,
+					NV_SOR_DP_SPARE_MSA_SRC_SOR);
+#endif
 
 	if (sor->dc->out->type == TEGRA_DC_OUT_HDMI)
 #if defined(CONFIG_TEGRA_NVDISPLAY)

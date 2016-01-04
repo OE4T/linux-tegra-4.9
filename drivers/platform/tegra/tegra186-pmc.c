@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -54,7 +54,9 @@
 
 #define PMC_RST_STATUS			0x70
 #define PMC_RST_LEVEL_MASK		0x3
-#define PMC_RST_SOURCE			0x3C
+#define PMC_RST_LEVEL_SHIFT		0x0
+#define PMC_RST_SOURCE_MASK		0x3C
+#define PMC_RST_SOURCE_SHIFT	0x2
 
 #define PMC_IO_DPD_REQ			0x74
 #define PMC_IO_DPD_CSIA_MASK	BIT(0)
@@ -414,6 +416,43 @@ static int tegra186_pmc_parse_dt(struct device_node *np)
 static void tegra186_pmc_dev_release(struct device *dev)
 {
 }
+
+static void tegra186_pmc_rst_status(void)
+{
+	u32 val, rst_src, rst_lvl;
+	char *reset_source[] = {
+		"Power on reset",
+		"AOWDT",
+		"Denvor watchdog time out",
+		"BPMPWDT",
+		"SCEWDT",
+		"SPEWDT",
+		"APEWDT",
+		"A57 watchdog time out",
+		"SENSOR",
+		"AOTAG",
+		"VFSENSOR",
+		"Software reset",
+		"SC7",
+		"HSM",
+		"CSITE",
+	};
+	char *reset_level[] = {
+		"L0",
+		"L1",
+		"L2",
+		"WARM",
+	};
+
+	val = tegra186_pmc_readl(PMC_RST_STATUS);
+	rst_src = (val & PMC_RST_SOURCE_MASK) >> PMC_RST_SOURCE_SHIFT;
+	rst_lvl = (val & PMC_RST_LEVEL_MASK) >> PMC_RST_LEVEL_SHIFT;
+	pr_info("### PMC reset source: %s\n", reset_source[rst_src]);
+	pr_info("### PMC reset level: %s\n", reset_level[rst_lvl]);
+	pr_info("### PMC reset status reg: 0x%x\n", val);
+	return;
+}
+
 static struct device tegra186_pmc_dev = { };
 static struct tegra_prod_list *prod_list;
 
@@ -474,6 +513,8 @@ static int __init tegra186_pmc_init(void)
 		pr_err("ERROR: Pad control driver init failed: %d\n",
 				ret);
 	}
+
+	tegra186_pmc_rst_status();
 
 	return 0;
 }

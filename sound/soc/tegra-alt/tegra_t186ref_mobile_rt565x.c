@@ -225,9 +225,6 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	unsigned int idx, mclk, clk_out_rate;
 	int err, codec_rate, clk_rate;
 
-	if (machine->is_codec_dummy)
-		return 0;
-
 	codec_rate = tegra_t186ref_srate_values[machine->rate_via_kcontrol];
 	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
 
@@ -289,11 +286,14 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	if (idx != -EINVAL) {
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-		RT5659_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
-		if (err < 0) {
-			dev_err(card->dev, "codec_dai clock not set\n");
-			return err;
+
+		if (!machine->is_codec_dummy) {
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+			RT5659_SCLK_S_MCLK, clk_out_rate, SND_SOC_CLOCK_IN);
+			if (err < 0) {
+				dev_err(card->dev, "codec_dai clock not set\n");
+				return err;
+			}
 		}
 
 		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
@@ -540,8 +540,6 @@ static int tegra_t186ref_init(struct snd_soc_pcm_runtime *rtd)
 	snd_jack_set_key(tegra_t186ref_hp_jack.jack,
 		SND_JACK_BTN_3, KEY_VOLUMEDOWN);
 
-	rt5659_set_jack_detect(codec, &tegra_t186ref_hp_jack);
-
 	snd_soc_dapm_sync(dapm);
 
 	return 0;
@@ -663,9 +661,11 @@ static const struct snd_soc_dapm_widget tegra_t186ref_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("x Int Mic", tegra_rt565x_event_int_mic),
 	SND_SOC_DAPM_MIC("x Mic Jack", tegra_rt565x_event_ext_mic),
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
+	SND_SOC_DAPM_HP("x Headphone", NULL),
 	SND_SOC_DAPM_HP("y Headphone", NULL),
 	SND_SOC_DAPM_HP("z Headphone", NULL),
 	SND_SOC_DAPM_HP("m Headphone", NULL),
+	SND_SOC_DAPM_MIC("x Mic", NULL),
 	SND_SOC_DAPM_MIC("y Mic", NULL),
 	SND_SOC_DAPM_MIC("z Mic", NULL),
 	SND_SOC_DAPM_MIC("m Mic", NULL),
@@ -841,40 +841,7 @@ static struct snd_soc_card snd_soc_tegra_t186ref = {
 	.fully_routed = true,
 };
 
-static void replace_codec_link(struct platform_device *pdev,
-	struct snd_soc_dai_link *links)
-{
-	int i;
-	struct snd_soc_card *card = platform_get_drvdata(pdev);
-	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
-	struct device_node *np = pdev->dev.of_node;
-
-	for (i = 0; i < machine->num_codec_links; i++) {
-		if (links[i].name &&
-			(strstr(links[i].name, "rt565x-playback") ||
-			strstr(links[i].name, "dspk-playback-l") ||
-			strstr(links[i].name, "dspk-playback-r"))) {
-
-			links[i].init = NULL;
-			links[i].codec_of_node =
-				of_parse_phandle(np, "nvidia,dummy-codec-dai",
-					0);
-
-			machine->is_codec_dummy = 1;
-
-			if (of_property_read_string(np,
-				"nvidia,dummy-codec-dai-name",
-				&links[i].codec_dai_name)) {
-				dev_err(&pdev->dev,
-				"Property dummy-codec-dai-name' missing or invalid\n");
-			}
-		}
-	}
-
-	return;
-}
-
-static void dai_link_setup(struct platform_device *pdev, int dummy)
+static void dai_link_setup(struct platform_device *pdev)
 {
 	struct snd_soc_card *card = platform_get_drvdata(pdev);
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
@@ -882,14 +849,7 @@ static void dai_link_setup(struct platform_device *pdev, int dummy)
 	struct snd_soc_codec_conf *tegra_t186ref_codec_conf = NULL;
 	struct snd_soc_dai_link *tegra_machine_dai_links = NULL;
 	struct snd_soc_dai_link *tegra_t186ref_codec_links = NULL;
-	struct tegra_asoc_platform_data *pdata = machine->pdata;
 	int i;
-
-	if (dummy) {
-		tegra_machine_remove_dai_link();
-		tegra_machine_remove_codec_conf();
-		pdata->gpio_hp_det = -1;
-	}
 
 	/* set new codec links and conf */
 	tegra_t186ref_codec_links = tegra_machine_new_codec_links(pdev,
@@ -912,10 +872,6 @@ static void dai_link_setup(struct platform_device *pdev, int dummy)
 				tegra_t186ref_codec_links[i].init = tegra_t186ref_dspk_init;
 		}
 	}
-
-	/* overwrite codec link */
-	if (dummy)
-		replace_codec_link(pdev, tegra_t186ref_codec_links);
 
 	tegra_t186ref_codec_conf = tegra_machine_new_codec_conf(pdev,
 		tegra_t186ref_codec_conf,
@@ -995,6 +951,7 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	struct snd_soc_codec *codec = NULL;
 	int idx = 0;
 	int ret = 0;
+	const char *codec_dai_name;
 
 	if (!np) {
 		dev_err(&pdev->dev, "No device tree node for t186ref driver");
@@ -1023,7 +980,7 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	if (ret)
 		goto err;
 
-	dai_link_setup(pdev, 0);
+	dai_link_setup(pdev);
 
 #ifdef CONFIG_SWITCH
 	/* Addd h2w swith class support */
@@ -1063,23 +1020,26 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 
 	ret = snd_soc_register_card(card);
 	if (ret) {
-#if defined(CONFIG_SND_SOC_TEGRA_ALT_FORCE_CARD_REG)
-		dai_link_setup(pdev, 1);
-		ret = snd_soc_register_card(card);
-#endif
-		if (ret) {
-			dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
-				ret);
-			goto err_fini_utils;
-		}
+		dev_err(&pdev->dev, "snd_soc_register_card failed (%d)\n",
+			ret);
+		goto err_fini_utils;
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
 	/* check if idx has valid number */
 	if (idx == -EINVAL)
 		dev_warn(&pdev->dev, "codec link not defined - codec not part of sound card");
-	else
+	else {
 		codec = card->rtd[idx].codec;
+		codec_dai_name = card->rtd[idx].dai_link->codec_dai_name;
+
+		dev_info(&pdev->dev,
+			"codec-dai \"%s\" registered\n", codec_dai_name);
+		if (!strcmp("dit-hifi", codec_dai_name)) {
+			dev_info(&pdev->dev, "This is a dummy codec\n");
+			machine->is_codec_dummy = 1;
+		}
+	}
 
 	if (!machine->is_codec_dummy) {
 		/* setup for jack detection only in non-dummy case */

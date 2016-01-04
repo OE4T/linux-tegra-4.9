@@ -1,7 +1,7 @@
 /*
  * tegra186-super-module-e2614-p2597-1000-a00.dtsi: E2600 DTSI file.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -221,24 +221,6 @@
 	};
 
 	tegra_sound: sound {
-		e2614_rt565x_dai_link: nvidia,dai-link-4 {
-			link-name = "rt565x-playback";
-			cpu-dai = <&tegra_i2s1>;
-			cpu-dai-name = "I2S1";
-			codec-dai-name = "rt5659-aif1";
-			format = "i2s";
-			bitclock-slave;
-			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
-			bit-format = "s16_le";
-			bclk_ratio = <0>;
-			srate = <48000>;
-			num-channel = <2>;
-			name-prefix = "x";
-			status = "disabled";
-		};
-
 		e2614_dspk_r_dai_link: nvidia,dai-link-5 {
 			link-name = "dspk-playback-r";
 			cpu-dai = <&tegra_dspk2>;
@@ -255,18 +237,18 @@
 		};
 
 		e2614_dspk_l_dai_link: nvidia,dai-link-6 {
-                        link-name = "dspk-playback-l";
-                        cpu-dai = <&tegra_dspk2>;
-                        codec-dai = <&e2614_tas2552_l>;
-                        codec = "tas2552.9-0041";
-                        cpu-dai-name = "DSPK2";
-                        codec-dai-name = "tas2552-amplifier";
-                        format = "i2s";
-                        bit-format = "s16_le";
-                        srate = <48000>;
-                        num-channel = <2>;
-                        name-prefix = "d2";
-                        status = "disabled";
+			link-name = "dspk-playback-l";
+			cpu-dai = <&tegra_dspk2>;
+			codec-dai = <&e2614_tas2552_l>;
+			codec = "tas2552.9-0041";
+			cpu-dai-name = "DSPK2";
+			codec-dai-name = "tas2552-amplifier";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "d2";
+			status = "disabled";
                 };
 	};
 
@@ -354,7 +336,7 @@
 			overrides@11 {
 				target = <&e2614_rt565x_dai_link>;
 				_overlay_ {
-					status = "okay";
+					codec-dai-name = "rt5659-aif1";
 				};
 			};
 			overrides@12 {
@@ -364,11 +346,11 @@
 				};
 			};
 			overrides@13 {
-                                target = <&e2614_dspk_l_dai_link>;
-                                _overlay_ {
-                                        status = "okay";
-                                };
-                        };
+				target = <&e2614_dspk_l_dai_link>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 			overrides@14 {
                                 target = <&e2614_icm20628>;
                                 _overlay_ {

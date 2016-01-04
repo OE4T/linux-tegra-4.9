@@ -833,7 +833,7 @@ static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 	 */
 	struct tegra_dc_lut *lut = &dc->cmu;
 
-	dc->cmu_enabled = true;
+	dc->pdata->cmu_enable = dc->cmu_enabled = true;
 
 	tegra_nvdisp_set_output_lut(dc, lut);
 	tegra_nvdisp_set_color_control(dc);

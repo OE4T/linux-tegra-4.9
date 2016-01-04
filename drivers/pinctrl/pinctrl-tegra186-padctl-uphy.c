@@ -643,7 +643,6 @@ struct tegra_padctl_uphy {
 	struct clk *plle_pwrseq; /* plle in hardware power sequencer control */
 	struct clk *pllrefe_pex;
 	struct clk *plle_passthrough;
-	struct clk *pllrefe; /* alternate pll1 parent */
 	struct clk *utmipll; /* utmi pads */
 	struct clk *usb2_trk_clk; /* utmi tracking circuit clock */
 	struct clk *hsic_trk_clk; /* hsic tracking circuit clock */
@@ -677,8 +676,6 @@ struct tegra_padctl_uphy {
 	unsigned long pcie_lanes;
 	unsigned long sata_lanes;
 	unsigned long ufs_lanes;
-
-	unsigned int enable_counts;
 	bool sata_bypass_fuse;
 
 	struct work_struct mbox_req_work;
@@ -695,7 +692,6 @@ struct tegra_padctl_uphy {
 	unsigned long uphy_pll_users[T186_UPHY_PLLS];
 	enum uphy_pll_state uphy_pll_state[T186_UPHY_PLLS];
 	enum source_pll_state plle_state;
-	enum source_pll_state pllrefe_state;
 	enum source_pll_state pll_mgmt_state[T186_UPHY_PLLS];
 
 	int uphy_pll_clients[T186_UPHY_PLLS];
@@ -966,75 +962,6 @@ struct init_data {
 	u16 cfg_wdata;
 };
 
-static struct init_data usb3_pll_g1_init_data[] = {
-	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
-	{.cfg_addr = 0x3,  .cfg_wdata = 0x7051},
-};
-
-static void pcie_usb3_pll_defaults(struct tegra_padctl_uphy *uphy)
-{
-	u32 reg;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(usb3_pll_g1_init_data); i++) {
-		reg = CFG_ADDR(usb3_pll_g1_init_data[i].cfg_addr);
-		reg |= CFG_WDATA(usb3_pll_g1_init_data[i].cfg_wdata);
-		reg |= CFG_RESET;
-		reg |= CFG_WDS;
-		uphy_pll_writel(uphy, 0, reg, UPHY_PLL_CTL_4);
-	}
-}
-
-#define pcie_pll_init pcie_usb3_pll_defaults
-
-static struct init_data sata_pll_g1_g2_g3_init_data[] = {
-	{.cfg_addr = 0x0,  .cfg_wdata = 0x001E},
-	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
-	{.cfg_addr = 0x3,  .cfg_wdata = 0x7001},
-};
-
-static void sata_pll_defaults(struct tegra_padctl_uphy *uphy)
-{
-	u32 reg;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(sata_pll_g1_g2_g3_init_data); i++) {
-		reg = CFG_ADDR(sata_pll_g1_g2_g3_init_data[i].cfg_addr);
-		reg |= CFG_WDATA(sata_pll_g1_g2_g3_init_data[i].cfg_wdata);
-		reg |= CFG_RESET;
-		reg |= CFG_WDS;
-		uphy_pll_writel(uphy, 1, reg, UPHY_PLL_CTL_4);
-	}
-}
-
-static struct init_data ufs_pll_g1_g2_g3_A_B_init_data[] = {
-	{.cfg_addr = 0x0,  .cfg_wdata = 0x0041},
-	{.cfg_addr = 0x1,  .cfg_wdata = 0x004C},
-	{.cfg_addr = 0x2,  .cfg_wdata = 0x0001},
-	{.cfg_addr = 0x3,  .cfg_wdata = 0x7001},
-	{.cfg_addr = 0x4,  .cfg_wdata = 0x3001},
-	{.cfg_addr = 0x13, .cfg_wdata = 0x0002},
-	{.cfg_addr = 0x16, .cfg_wdata = 0x162A},
-	{.cfg_addr = 0x17, .cfg_wdata = 0x162A},
-	{.cfg_addr = 0x19, .cfg_wdata = 0x001F},
-	{.cfg_addr = 0x1C, .cfg_wdata = 0x160E},
-	{.cfg_addr = 0x1D, .cfg_wdata = 0x160E},
-};
-
-static void ufs_pll_defaults(struct tegra_padctl_uphy *uphy)
-{
-	u32 reg;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(ufs_pll_g1_g2_g3_A_B_init_data); i++) {
-		reg = CFG_ADDR(ufs_pll_g1_g2_g3_A_B_init_data[i].cfg_addr);
-		reg |= CFG_WDATA(ufs_pll_g1_g2_g3_A_B_init_data[i].cfg_wdata);
-		reg |= CFG_RESET;
-		reg |= CFG_WDS;
-		uphy_pll_writel(uphy, 1, reg, UPHY_PLL_CTL_4);
-	}
-}
-
 static struct init_data ufs_pll_rateid_init_data[] = {
 	{.cfg_addr = 0x00, .cfg_wdata = 0x0041},
 	{.cfg_addr = 0x01, .cfg_wdata = 0x004c},
@@ -1147,23 +1074,65 @@ static void ufs_lane_rateid_init(struct tegra_padctl_uphy *uphy, int lane)
 	}
 }
 
+static struct init_data usb3_pll_g1_init_data[] = {
+	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x7051},
+};
+
+static struct init_data sata_pll_g1_g2_g3_init_data[] = {
+	{.cfg_addr = 0x0,  .cfg_wdata = 0x001E},
+	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x7001},
+};
+
+static struct init_data ufs_pll_g1_g2_g3_A_B_init_data[] = {
+	{.cfg_addr = 0x0,  .cfg_wdata = 0x0041},
+	{.cfg_addr = 0x1,  .cfg_wdata = 0x004C},
+	{.cfg_addr = 0x2,  .cfg_wdata = 0x0001},
+	{.cfg_addr = 0x3,  .cfg_wdata = 0x7001},
+	{.cfg_addr = 0x4,  .cfg_wdata = 0x3001},
+	{.cfg_addr = 0x13, .cfg_wdata = 0x0002},
+	{.cfg_addr = 0x16, .cfg_wdata = 0x162A},
+	{.cfg_addr = 0x17, .cfg_wdata = 0x162A},
+	{.cfg_addr = 0x19, .cfg_wdata = 0x001F},
+	{.cfg_addr = 0x1C, .cfg_wdata = 0x160E},
+	{.cfg_addr = 0x1D, .cfg_wdata = 0x160E},
+};
+
+static void uphy_pll_defaults(struct tegra_padctl_uphy *uphy,
+		enum tegra186_function func)
+{
+	struct init_data *pll_init_data = NULL;
+	u32 reg;
+	int i, len = 0;
+
+	if (func == TEGRA186_FUNC_MPHY) {
+		pll_init_data = ufs_pll_g1_g2_g3_A_B_init_data;
+		len = ARRAY_SIZE(ufs_pll_g1_g2_g3_A_B_init_data);
+	} else if (func == TEGRA186_FUNC_SATA) {
+		pll_init_data = sata_pll_g1_g2_g3_init_data;
+		len = ARRAY_SIZE(sata_pll_g1_g2_g3_init_data);
+	} else if (func == TEGRA186_FUNC_PCIE || func == TEGRA186_FUNC_USB3) {
+		pll_init_data = usb3_pll_g1_init_data;
+		len = ARRAY_SIZE(usb3_pll_g1_init_data);
+	}
+
+	for (i = 0; i < len; i++) {
+		reg = CFG_ADDR(pll_init_data[i].cfg_addr);
+		reg |= CFG_WDATA(pll_init_data[i].cfg_wdata);
+		reg |= CFG_RESET;
+		reg |= CFG_WDS;
+		if (func == TEGRA186_FUNC_PCIE || func == TEGRA186_FUNC_USB3) {
+			uphy_pll_writel(uphy, 0, reg, UPHY_PLL_CTL_4);
+		} else if (func == TEGRA186_FUNC_MPHY
+					|| func == TEGRA186_FUNC_SATA)
+			uphy_pll_writel(uphy, 1, reg, UPHY_PLL_CTL_4);
+	}
+}
+
 static struct init_data pcie_lane_g1_g2_init_data[] = {
 	{.cfg_addr = 0x97, .cfg_wdata = 0x0080},
 };
-
-static void pcie_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
-{
-	u32 reg;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(pcie_lane_g1_g2_init_data); i++) {
-		reg = CFG_ADDR(pcie_lane_g1_g2_init_data[i].cfg_addr);
-		reg |= CFG_WDATA(pcie_lane_g1_g2_init_data[i].cfg_wdata);
-		reg |= CFG_RESET;
-		reg |= CFG_WDS;
-		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
-	}
-}
 
 static struct init_data usb3_lane_g1_init_data[] = {
 	{.cfg_addr = 0x1,  .cfg_wdata = 0x0002},
@@ -1177,21 +1146,6 @@ static struct init_data usb3_lane_g1_init_data[] = {
 	{.cfg_addr = 0x5D, .cfg_wdata = 0xFF07},
 	{.cfg_addr = 0x5E, .cfg_wdata = 0x141A},
 };
-
-static void usb3_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
-{
-	u32 reg;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(usb3_lane_g1_init_data); i++) {
-		reg = CFG_ADDR(usb3_lane_g1_init_data[i].cfg_addr);
-		reg |= CFG_WDATA(usb3_lane_g1_init_data[i].cfg_wdata);
-		reg |= CFG_RESET;
-		reg |= CFG_WDS;
-		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
-	}
-
-}
 
 static struct init_data sata_lane_g1_g2_init_data[] = {
 	{.cfg_addr = 0x1,  .cfg_wdata = 0x0003},
@@ -1207,21 +1161,6 @@ static struct init_data sata_lane_g1_g2_init_data[] = {
 	{.cfg_addr = 0x49, .cfg_wdata = 0x0F37},
 	{.cfg_addr = 0x4A, .cfg_wdata = 0x0F67},
 };
-
-static void sata_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
-{
-	u32 reg;
-	int i;
-
-	for (i = 0; i < ARRAY_SIZE(sata_lane_g1_g2_init_data); i++) {
-		reg = CFG_ADDR(sata_lane_g1_g2_init_data[i].cfg_addr);
-		reg |= CFG_WDATA(sata_lane_g1_g2_init_data[i].cfg_wdata);
-		reg |= CFG_RESET;
-		reg |= CFG_WDS;
-		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
-	}
-
-}
 
 static struct init_data ufs_lane_g1_g2_g3_init_data[] = {
 	{.cfg_addr = 0x0,  .cfg_wdata = 0x0004},
@@ -1248,19 +1187,34 @@ static struct init_data ufs_lane_g1_g2_g3_init_data[] = {
 	{.cfg_addr = 0x96, .cfg_wdata = 0x0001},
 };
 
-static void ufs_lane_defaults(struct tegra_padctl_uphy *uphy, int lane)
+static void uphy_lane_defaults(struct tegra_padctl_uphy *uphy, int lane,
+		enum tegra186_function func)
 {
+	struct init_data *lane_init_data = NULL;
 	u32 reg;
-	int i;
+	int i, len = 0;
 
-	for (i = 0; i < ARRAY_SIZE(ufs_lane_g1_g2_g3_init_data); i++) {
-		reg = CFG_ADDR(ufs_lane_g1_g2_g3_init_data[i].cfg_addr);
-		reg |= CFG_WDATA(ufs_lane_g1_g2_g3_init_data[i].cfg_wdata);
+	if (func == TEGRA186_FUNC_MPHY) {
+		lane_init_data = ufs_lane_g1_g2_g3_init_data;
+		len = ARRAY_SIZE(ufs_lane_g1_g2_g3_init_data);
+	} else if (func == TEGRA186_FUNC_SATA) {
+		lane_init_data = sata_lane_g1_g2_init_data;
+		len = ARRAY_SIZE(sata_lane_g1_g2_init_data);
+	} else if (func == TEGRA186_FUNC_PCIE) {
+		lane_init_data = pcie_lane_g1_g2_init_data;
+		len = ARRAY_SIZE(pcie_lane_g1_g2_init_data);
+	} else if (func == TEGRA186_FUNC_USB3) {
+		lane_init_data = usb3_lane_g1_init_data;
+		len = ARRAY_SIZE(usb3_lane_g1_init_data);
+	}
+
+	for (i = 0; i < len; i++) {
+		reg = CFG_ADDR(lane_init_data[i].cfg_addr);
+		reg |= CFG_WDATA(lane_init_data[i].cfg_wdata);
 		reg |= CFG_RESET;
 		reg |= CFG_WDS;
 		uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DIRECT_CTL_2);
 	}
-
 }
 
 static int tegra186_padctl_uphy_regulators_init(struct tegra_padctl_uphy *uphy)
@@ -1350,15 +1304,6 @@ static int uphy_pll_source_clk_state_check(struct tegra_padctl_uphy *uphy,
 	}
 	dev_dbg(dev, "PLLE state %s\n", source_pll_states[uphy->plle_state]);
 
-
-	if ((uphy->pllrefe_state < PLL_POWER_DOWN) ||
-		(uphy->pllrefe_state > PLL_POWER_UP_SW_CTL)) {
-		dev_err(dev, "invalid PLLREFE state %d\n", uphy->pllrefe_state);
-		return -EINVAL;
-	}
-	dev_dbg(dev, "PLLREFE state %s\n",
-		source_pll_states[uphy->pllrefe_state]);
-
 	return 0;
 }
 
@@ -1419,18 +1364,6 @@ static int uphy_pll_source_clk_enable(struct tegra_padctl_uphy *uphy, int pll,
 		return 0; /* in this case, needs plle only */
 	}
 
-#if 0	/* by default, MPHY use XTAL */
-	/* for pll1, power up PLLREFE if it has not been enabled */
-	if (uphy->pllrefe_state == PLL_POWER_DOWN) {
-		dev_dbg(dev, "enable PLLREFE\n");
-		rc = clk_prepare_enable(uphy->pllrefe);
-		if (rc) {
-			dev_err(dev, "failed to enable PLLREFE clock %d\n", rc);
-			return rc;
-		}
-		uphy->pllrefe_state = PLL_POWER_UP_SW_CTL;
-	}
-#endif
 	return rc;
 }
 
@@ -1468,13 +1401,6 @@ static int uphy_pll_source_clk_disable(struct tegra_padctl_uphy *uphy, int pll,
 		dev_dbg(dev, "disable PLLE\n");
 		clk_disable_unprepare(uphy->plle);
 		uphy->plle_state = PLL_POWER_DOWN;
-	}
-
-	/* for pll1, power down PLLREFE */
-	if (uphy->pllrefe_state == PLL_POWER_UP_SW_CTL) {
-		dev_dbg(dev, "disable PLLREFE\n");
-		clk_disable_unprepare(uphy->pllrefe);
-		uphy->pllrefe_state = PLL_POWER_DOWN;
 	}
 
 	return rc;
@@ -2578,39 +2504,6 @@ static const struct pinconf_ops tegra_padctl_uphy_pinconf_ops = {
 };
 
 /* caller must hold uphy->lock */
-static int tegra_padctl_uphy_enable(struct phy *phy)
-{
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-
-	TRACE(uphy->dev, "enable_counts %d", uphy->enable_counts);
-
-	if (uphy->enable_counts++ > 0)
-		goto out;
-
-	/* TODO: anything we need to initialize */
-out:
-	return 0;
-}
-
-/* caller must hold uphy->lock */
-static int tegra_padctl_uphy_disable(struct phy *phy)
-{
-	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
-
-	TRACE(uphy->dev, "enable_counts %d", uphy->enable_counts);
-
-	if (WARN_ON(uphy->enable_counts == 0))
-		goto out;
-
-	if (--uphy->enable_counts > 0)
-		goto out;
-
-	/* TODO: anything we need to de-initialize */
-out:
-	return 0;
-}
-
-/* caller must hold uphy->lock */
 static inline void uphy_lanes_clamp(struct tegra_padctl_uphy *uphy,
 				    unsigned long uphy_lane_bitmap,
 				    bool enable)
@@ -2743,11 +2636,11 @@ static int tegra186_pcie_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 		goto assert_pll0_reset;
 
 	/* Program pll defaults */
-	pcie_usb3_pll_defaults(uphy);
+	uphy_pll_defaults(uphy, TEGRA186_FUNC_PCIE);
 
 	/* Program lane defaults */
 	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES)
-		pcie_lane_defaults(uphy, uphy_lane);
+		uphy_lane_defaults(uphy, uphy_lane, TEGRA186_FUNC_PCIE);
 
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_PCIE);
 	if (rc)
@@ -2815,8 +2708,6 @@ static int tegra186_pcie_phy_init(struct phy *phy)
 	dev_dbg(uphy->dev, "phy init PCIE controller %d uphy-lanes 0x%lx\n",
 		controller, uphy_lane_bitmap);
 
-	tegra_padctl_uphy_enable(phy);
-
 	mutex_unlock(&uphy->lock);
 	return 0;
 }
@@ -2836,7 +2727,6 @@ static int tegra186_pcie_phy_exit(struct phy *phy)
 	dev_dbg(uphy->dev, "phy exit PCIE controller %d uphy-lanes 0x%lx\n",
 		controller, uphy_lane_bitmap);
 
-	tegra_padctl_uphy_disable(phy);
 	mutex_unlock(&uphy->lock);
 
 	return 0;
@@ -2873,6 +2763,7 @@ static int tegra186_sata_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	idx = SATA_NV_CALIB_0_1(uphy->fuse_calib.sata_nv);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_AUX_CTL_1);
+	reg &= ~AUX_RX_IDLE_TH(~0);
 	reg |= AUX_RX_IDLE_TH(sata_data[idx].aux_rx_idle_th);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_AUX_CTL_1);
 
@@ -2883,11 +2774,15 @@ static int tegra186_sata_fuse_calibration(struct tegra_padctl_uphy *uphy,
 	idx = SATA_MPHY_ODM_CALIB_0_1(uphy->fuse_calib.sata_mphy_odm);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_DYN_CTL_1);
+	reg &= ~TX_DRV_AMP_SEL0(~0);
+	reg &= ~TX_DRV_AMP_SEL1(~0);
 	reg |= TX_DRV_AMP_SEL0(sata_data[idx].tx_drv_amp_sel0);
 	reg |= TX_DRV_AMP_SEL1(sata_data[idx].tx_drv_amp_sel1);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_1);
 
 	reg = uphy_lane_readl(uphy, lane, UPHY_LANE_DYN_CTL_4);
+	reg &= ~TX_DRV_POST_SEL0(~0);
+	reg &= ~TX_DRV_POST_SEL1(~0);
 	reg |= TX_DRV_POST_SEL0(sata_data[idx].tx_drv_post_sel0);
 	reg |= TX_DRV_POST_SEL1(sata_data[idx].tx_drv_post_sel1);
 	uphy_lane_writel(uphy, lane, reg, UPHY_LANE_DYN_CTL_4);
@@ -2960,11 +2855,11 @@ static int tegra186_sata_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 		goto assert_pll1_reset;
 
 	/* Program pll defaults */
-	sata_pll_defaults(uphy);
+	uphy_pll_defaults(uphy, TEGRA186_FUNC_SATA);
 
 	/* Program lane defaults */
 	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES)
-		sata_lane_defaults(uphy, uphy_lane);
+		uphy_lane_defaults(uphy, uphy_lane, TEGRA186_FUNC_SATA);
 
 	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES)
 		tegra186_sata_fuse_calibration(uphy, uphy_lane);
@@ -3034,17 +2929,10 @@ static int tegra186_sata_phy_init(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	struct device *dev = uphy->dev;
-	int rc;
 
 	dev_dbg(dev, "phy init SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
 
-	mutex_lock(&uphy->lock);
-
-	rc = tegra_padctl_uphy_enable(phy);
-
-	mutex_unlock(&uphy->lock);
-
-	return rc;
+	return 0;
 }
 
 static int tegra186_sata_phy_exit(struct phy *phy)
@@ -3052,13 +2940,7 @@ static int tegra186_sata_phy_exit(struct phy *phy)
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	struct device *dev = uphy->dev;
 
-	mutex_lock(&uphy->lock);
-
 	dev_dbg(dev, "phy exit SATA uphy-lanes 0x%lx\n", uphy->sata_lanes);
-
-	tegra_padctl_uphy_disable(phy);
-
-	mutex_unlock(&uphy->lock);
 
 	return 0;
 }
@@ -3206,12 +3088,12 @@ static int tegra186_ufs_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 		goto assert_pll1_reset;
 
 	/* step 6.1: Program pll defaults */
-	ufs_pll_defaults(uphy);
+	uphy_pll_defaults(uphy, TEGRA186_FUNC_MPHY);
 
 	/* step 6.2: Program lane defaults */
 	for_each_set_bit(uphy_lane, &uphy->ufs_lanes, T186_UPHY_LANES) {
 		TRACE(dev, "uphy_lane %u", uphy_lane);
-		ufs_lane_defaults(uphy, uphy_lane);
+		uphy_lane_defaults(uphy, uphy_lane, TEGRA186_FUNC_MPHY);
 	}
 
 	/* step 6.3: Electrical parameters programming based on fuses */
@@ -3320,13 +3202,8 @@ static int tegra186_ufs_phy_init(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 
-	mutex_lock(&uphy->lock);
-
 	dev_dbg(uphy->dev, "phy init UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
 
-	tegra_padctl_uphy_enable(phy);
-
-	mutex_unlock(&uphy->lock);
 	return 0;
 }
 
@@ -3334,13 +3211,8 @@ static int tegra186_ufs_phy_exit(struct phy *phy)
 {
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 
-	mutex_lock(&uphy->lock);
-
 	dev_dbg(uphy->dev, "phy exit UFS uphy-lanes 0x%lx\n", uphy->ufs_lanes);
 
-	tegra_padctl_uphy_disable(phy);
-
-	mutex_unlock(&uphy->lock);
 	return 0;
 }
 
@@ -3546,11 +3418,11 @@ static int tegra186_usb3_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 		goto assert_pll0_reset;
 
 	/* Program pll defaults */
-	pcie_usb3_pll_defaults(uphy);
+	uphy_pll_defaults(uphy, TEGRA186_FUNC_USB3);
 
 	/* Program lane defaults */
 	for_each_set_bit(uphy_lane, &uphy_lane_bitmap, T186_UPHY_LANES)
-		usb3_lane_defaults(uphy, uphy_lane);
+		uphy_lane_defaults(uphy, uphy_lane, TEGRA186_FUNC_USB3);
 
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_USB3);
 	if (rc)
@@ -3614,13 +3486,11 @@ static int tegra186_usb3_phy_init(struct phy *phy)
 	if (port < 0)
 		return port;
 
+	mutex_lock(&uphy->lock);
+
 	uphy_lane = uphy->usb3_ports[port].uphy_lane;
 	dev_dbg(uphy->dev, "phy init USB3 port %d uphy-lane-%u\n",
 		port, uphy_lane);
-
-	mutex_lock(&uphy->lock);
-
-	tegra_padctl_uphy_enable(phy);
 
 	mutex_unlock(&uphy->lock);
 	return 0;
@@ -3642,7 +3512,6 @@ static int tegra186_usb3_phy_exit(struct phy *phy)
 	dev_dbg(dev, "phy exit USB3 port %d uphy-lane-%u\n",
 		port, uphy_lane);
 
-	tegra_padctl_uphy_disable(phy);
 	mutex_unlock(&uphy->lock);
 	return 0;
 }
@@ -4086,8 +3955,6 @@ static int tegra186_utmi_phy_init(struct phy *phy)
 		}
 	}
 
-	tegra_padctl_uphy_enable(phy);
-
 	mutex_unlock(&uphy->lock);
 
 	return 0;
@@ -4115,8 +3982,6 @@ static int tegra186_utmi_phy_exit(struct phy *phy)
 			return rc;
 		}
 	}
-
-	tegra_padctl_uphy_disable(phy);
 
 	mutex_unlock(&uphy->lock);
 
@@ -4558,12 +4423,8 @@ static int tegra186_hsic_phy_init(struct phy *phy)
 	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
 	int port = hsic_phy_to_port(phy);
 
-	mutex_lock(&uphy->lock);
-
 	dev_dbg(uphy->dev, "phy init HSIC port %d\n", port);
-	tegra_padctl_uphy_enable(phy);
 
-	mutex_unlock(&uphy->lock);
 	return 0;
 }
 
@@ -4575,7 +4436,6 @@ static int tegra186_hsic_phy_exit(struct phy *phy)
 	mutex_lock(&uphy->lock);
 
 	dev_dbg(uphy->dev, "phy exit HSIC port %d\n", port);
-	tegra_padctl_uphy_disable(phy);
 
 	mutex_unlock(&uphy->lock);
 	return 0;
@@ -5233,12 +5093,6 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	if (IS_ERR(uphy->plle_pwrseq)) {
 		dev_err(dev, "failed to get plle_pwrseq clock\n");
 		return PTR_ERR(uphy->plle_pwrseq);
-	}
-
-	uphy->pllrefe = devm_clk_get(dev, "pllrefe");
-	if (IS_ERR(uphy->pllrefe)) {
-		dev_err(dev, "failed to get pllrefe clock\n");
-		return PTR_ERR(uphy->pllrefe);
 	}
 
 	uphy->utmipll = devm_clk_get(dev, "utmipll");

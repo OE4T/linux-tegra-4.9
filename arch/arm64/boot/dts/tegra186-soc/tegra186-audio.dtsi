@@ -187,4 +187,20 @@
         adsp_audio {
                 status = "okay";
         };
+
+	spdif-dit.0@0 {
+                status = "okay";
+        };
+
+	spdif-dit.1@1 {
+                status = "okay";
+        };
+
+	spdif-dit.2@2 {
+                status = "okay";
+        };
+
+	spdif-dit.3@3 {
+                status = "okay";
+        };
 };

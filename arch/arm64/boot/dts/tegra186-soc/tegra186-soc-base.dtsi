@@ -1877,25 +1877,25 @@
 	spdif_dit0: spdif-dit.0@0 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x0 0x0 0x0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	spdif_dit1: spdif-dit.1@1 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x1 0x0 0x0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	spdif_dit2: spdif-dit.2@2 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x2 0x0 0x0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	spdif_dit3: spdif-dit.3@3 {
 		compatible = "linux,spdif-dit";
 		reg = <0x0 0x03 0x0 0x0>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	tegra_agic: agic-controller@2a41000 {

@@ -842,10 +842,8 @@
 			reg = <0x0 0x15340000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_VIC>;
 			clocks = <&tegra_car TEGRA186_CLK_VIC>,
-				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&clk32k_in>,
-				 <&clk32k_in>;
-			clock-names = "vic", "emc", "vic_floor", "emc_shared";
+				 <&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "vic", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};

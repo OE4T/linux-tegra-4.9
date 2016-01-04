@@ -51,9 +51,8 @@
 		};
 
 		vic@15340000 {
-			clocks = <&clk32k_in>, <&clk32k_in>,
-				 <&clk32k_in>, <&clk32k_in>;
-			clock-names = "vic", "emc", "vic_floor", "emc_shared";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "vic", "emc";
 		};
 
 		nvenc@154c0000 {

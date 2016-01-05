@@ -162,9 +162,10 @@ static int tegra186_io_power_cell_init_one(struct device *dev,
 	regulator = devm_regulator_get(dev, cell->reg_id);
 	if (IS_ERR(regulator)) {
 		ret = PTR_ERR(regulator);
-		dev_err(dev, "regulator %s not found: %d\n",
+		dev_info(dev, "regulator %s not found: %d\n",
 				cell->reg_id, ret);
-		return ret;
+		cell->regulator = NULL;
+		return 0;
 	}
 
 	ret = regulator_get_constraint_voltages(regulator, &min_uv, &max_uv);
@@ -217,6 +218,7 @@ static int tegra186_pmc_iopower_probe(struct platform_device *pdev)
 	int i, ret;
 	bool rails_found = true;
 	bool enable_pad_volt_config = false;
+	unsigned long io_power_status;
 
 	if (!pdev->dev.of_node)
 		return -ENODEV;
@@ -241,7 +243,8 @@ static int tegra186_pmc_iopower_probe(struct platform_device *pdev)
 		return 0;
 	}
 
-	dev_info(dev, "NO_IO_POWER setting 0x%x\n", pwrio_disabled_mask);
+	io_power_status = tegra_pmc_register_get(PMC_PWR_NO_IOPOWER);
+	dev_info(dev, "NO_IO_POWER setting 0x%08lx\n", io_power_status);
 	return 0;
 }
 

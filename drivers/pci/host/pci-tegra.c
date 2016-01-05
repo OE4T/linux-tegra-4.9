@@ -463,6 +463,7 @@ struct tegra_pcie_port {
 	unsigned int lanes;
 	int gpio_presence_detection;
 	bool disable_clock_request;
+	bool ep_status;
 	int status;
 	struct dentry *port_debugfs;
 };
@@ -2260,10 +2261,12 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 	list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
 		if (tegra_pcie_port_check_link(port)) {
 			port->status = 1;
+			port->ep_status = 1;
 			pcie->num_ports++;
 			tegra_pcie_update_lane_width(port);
 			continue;
 		}
+		port->ep_status = 0;
 		dev_info(pcie->dev, "link %u down, ignoring\n", port->index);
 		tegra_pcie_port_disable(port);
 	}
@@ -2455,6 +2458,8 @@ static void tegra_pcie_change_link_speed(struct tegra_pcie *pcie,
 {
 	u16 val, link_sts_up_spd, link_sts_dn_spd;
 	u16 link_cap_up_spd, link_cap_dn_spd;
+	u32 rp = 0;
+	struct tegra_pcie_port *port = NULL;
 	struct pci_dev *up_dev, *dn_dev;
 
 	PR_FUNC_LINE;
@@ -2469,6 +2474,13 @@ static void tegra_pcie_change_link_speed(struct tegra_pcie *pcie,
 	/* initialize upstream/endpoint and downstream/root port device ptr */
 	up_dev = pdev;
 	dn_dev = pdev->bus->self;
+
+	rp = PCI_SLOT(dn_dev->devfn);
+	list_for_each_entry(port, &pcie->ports, list)
+		if (rp == port->index + 1)
+			break;
+	if (!port->ep_status)
+		goto skip;
 
 	/* read link status register to find current speed */
 	pcie_capability_read_word(up_dev, PCI_EXP_LNKSTA, &link_sts_up_spd);
@@ -2557,7 +2569,7 @@ static void tegra_pcie_config_l1ss_l12_thtime(void)
 	}
 }
 
-static void tegra_pcie_enable_ltr_support(void)
+static void tegra_pcie_enable_ltr_support(struct tegra_pcie *pcie)
 {
 	struct pci_dev *pdev = NULL;
 	u16 val = 0;
@@ -2566,9 +2578,22 @@ static void tegra_pcie_enable_ltr_support(void)
 	PR_FUNC_LINE;
 	/* enable LTR mechanism for L1.2 support in end points */
 	for_each_pci_dev(pdev) {
+		struct pci_dev *parent = NULL;
+		struct tegra_pcie_port *port = NULL;
+		u32 rp = 0;
+
 		if ((pci_pcie_type(pdev) == PCI_EXP_TYPE_DOWNSTREAM) ||
 			(pci_pcie_type(pdev) == PCI_EXP_TYPE_ROOT_PORT))
 			continue;
+
+		parent = pdev->bus->self;
+		rp = PCI_SLOT(parent->devfn);
+		list_for_each_entry(port, &pcie->ports, list)
+			if (rp == port->index + 1)
+				break;
+		if (!port->ep_status)
+			continue;
+
 		pos = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
 		if (!pos)
 			continue;
@@ -2662,6 +2687,9 @@ static void tegra_pcie_enable_aspm(struct tegra_pcie *pcie)
 		list_for_each_entry(port, &pcie->ports, list)
 			if (rp == port->index + 1)
 				break;
+		if (!port->ep_status)
+			continue;
+
 		ctrl = tegra_pcie_port_get_pex_ctrl(port);
 		/* AFI_PEX_STATUS is AFI_PEX_CTRL + 4 */
 		val = afi_readl(port->pcie, ctrl + 4);
@@ -2692,7 +2720,7 @@ static void tegra_pcie_enable_aspm(struct tegra_pcie *pcie)
 	}
 	/* L1.2 specific common configuration */
 	tegra_pcie_config_l1ss_l12_thtime();
-	tegra_pcie_enable_ltr_support();
+	tegra_pcie_enable_ltr_support(pcie);
 }
 
 static void tegra_pcie_enable_features(struct tegra_pcie *pcie)
@@ -4331,6 +4359,8 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 	switch (pm_opt) {
 	case TEGRA_PCIE_SUSPEND:
 		pr_debug("---> in suspend\n");
+
+		port->ep_status = 0;
 		/* now setting it to '1' */
 		val = afi_readl(pcie, AFI_PCIE_PME);
 		val |= (0x1 << get_pme_port_offset(port));
@@ -4353,6 +4383,7 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 	case TEGRA_PCIE_RESUME_PRE:
 		pr_debug("---> in resume (pre)\n");
 
+		port->ep_status = 1;
 		/* assert SBR on RP */
 		pr_debug("---> perform assert,de-assert of SBR\n");
 		pci_read_config_word(rpdev, PCI_BRIDGE_CONTROL, &val_16);

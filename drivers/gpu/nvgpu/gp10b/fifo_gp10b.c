@@ -1,7 +1,7 @@
 /*
  * GP10B fifo
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -122,11 +122,7 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 	gk20a_mem_wr32(inst_ptr, ram_fc_target_w(), pbdma_target_engine_sw_f());
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_acquire_w(),
-		pbdma_acquire_retry_man_2_f() |
-		pbdma_acquire_retry_exp_2_f() |
-		pbdma_acquire_timeout_exp_max_f() |
-		pbdma_acquire_timeout_man_max_f() |
-		pbdma_acquire_timeout_en_disable_f());
+		channel_gk20a_pbdma_acquire_val(c));
 
 	gk20a_mem_wr32(inst_ptr, ram_fc_runlist_timeslice_w(),
 		pbdma_runlist_timeslice_timeout_128_f() |

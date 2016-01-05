@@ -102,4 +102,8 @@
 			status = "okay";
 		};
 	};
+
+	pmc-iopower {
+		status = "disabled";
+	};
 };

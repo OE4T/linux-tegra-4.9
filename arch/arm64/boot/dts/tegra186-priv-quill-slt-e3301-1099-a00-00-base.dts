@@ -305,4 +305,8 @@
 	adsp_audio {
 		status = "disabled";
 	};
+
+	pmc-iopower {
+		status = "disabled";
+	};
 };

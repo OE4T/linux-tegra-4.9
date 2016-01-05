@@ -91,10 +91,6 @@
 		status = "disabled";
 	};
 
-	pmc-iopower {
-		status = "disabled";
-	};
-
 	host1x {
 		nvcsi@150c0000 {
 			status = "disabled";

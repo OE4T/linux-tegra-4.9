@@ -58,6 +58,7 @@ struct tegra_wdt_t18x {
 	bool			enable_on_init;
 	int			expiry_count;
 	int			heartbeat;
+	int			shutdown_timeout;
 /* Bit numbers for status flags */
 #define WDT_ENABLED		0
 #define WDT_ENABLED_ON_INIT	1
@@ -89,6 +90,9 @@ static struct tegra_wdt_t18x *t18x_wdt_array[WDT_CLUSTER_ID_COUNT];
  * expiry_count*MAX_WDT_PERIOD.
  */
 #define HEARTBEAT	120
+
+/* Watchdog configured to this time before reset during shutdown */
+#define SHUTDOWN_TIMEOUT	150
 
 static inline struct tegra_wdt_t18x *to_tegra_wdt_t18x(
 					struct watchdog_device *wdt)
@@ -504,6 +508,12 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	else
 		tegra_wdt_t18x->expiry_count = EXPIRY_COUNT;
 
+	ret = of_property_read_u32(np, "nvidia,shutdown-timeout", &pval);
+	if (!ret)
+		tegra_wdt_t18x->shutdown_timeout = pval;
+	else
+		tegra_wdt_t18x->shutdown_timeout = SHUTDOWN_TIMEOUT;
+
 	tegra_wdt_t18x->pdev = pdev;
 	tegra_wdt_t18x->wdt.info = &tegra_wdt_t18x_info;
 	tegra_wdt_t18x->wdt.ops = &tegra_wdt_t18x_ops;
@@ -610,6 +620,9 @@ static void tegra_wdt_t18x_shutdown(struct platform_device *pdev)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x = platform_get_drvdata(pdev);
 
+	if (tegra_wdt_t18x->wdt.timeout < tegra_wdt_t18x->shutdown_timeout)
+		tegra_wdt_t18x->wdt.timeout =
+			tegra_wdt_t18x->shutdown_timeout;
 	__tegra_wdt_t18x_ping(tegra_wdt_t18x);
 }
 

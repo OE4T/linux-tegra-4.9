@@ -12,6 +12,8 @@ Optional properties for recovery mode:
 - nvidia,wdt-cluster-id: ID of the cpu cluster monitored by this WDT instance.
 - nvidia,enable-on-init: toggle switch for enable during init
 - nvidia,heartbeat-init: default timeout in secs (120 secs if not specified)
+- nvidia,shutdown-timeout: timeout in secs during shutdown before watchdog
+			reset occurs. same as heartbeat if not specified.
 - nvidia,expiry-count: total expiration levels supported by the watchdog.
        Should be 1 if not specified.
 

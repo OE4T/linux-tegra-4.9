@@ -52,7 +52,7 @@
 	};
 
 	ahci-sata@3507000 {
-		status = "okay";
+		status = "disabled";
 	};
 
 	xudc@3550000 {
@@ -87,21 +87,69 @@
 		};
 	};
 
+	cpus {
+		status = "disabled";
+	};
+
+	pmc-iopower {
+		status = "disabled";
+	};
+
 	host1x {
-		sor1 {
-                        hdmi-display {
-                                disp-default-out {
-                                        nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+		nvcsi@150c0000 {
+			status = "disabled";
+		};
+		vi@15700000 {
+			status = "disabled";
+		};
+
+		isp@15600000 {
+			status = "disabled";
+		};
+
+		vii2c@156c0000 {
+			status = "disabled";
+		};
+
+		dsi {
+			panel-s-wuxga-8-0 {
+				smartdimmer {
+					status = "disabled";
 				};
 			};
 		};
+
 		sor {
-                        hdmi-display {
-                                disp-default-out {
-                                        nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+			status = "disabled";
+			hdmi-display {
+				status = "disabled";
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+
+			panel-s-edp-uhdtv-15-6 {
+				smartdimmer {
+					status = "disabled";
 				};
 			};
 		};
+
+		sor1 {
+			hdmi-display {
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+		};
+	};
+
+	hda@3510000 {
+		status = "disabled";
+	};
+
+	pwm-fan {
+		status = "disabled";
 	};
 };
 

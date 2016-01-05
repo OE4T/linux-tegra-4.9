@@ -30,6 +30,7 @@
  * =========================================================================
  */
 /*
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
@@ -1262,7 +1263,9 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 		return -EINVAL;
 	}
 	pdata->suspended = 1;
-	eqos_stop_dev(pdata);
+
+	if (netif_running(dev))
+		eqos_stop_dev(pdata);
 
 	/* disable clocks */
 	eqos_clock_deinit(pdata);
@@ -1310,7 +1313,8 @@ static INT eqos_resume(struct platform_device *pdev)
 	/* enable clocks */
 	eqos_clock_init(pdata);
 
-	eqos_start_dev(pdata);
+	if (netif_running(dev))
+		eqos_start_dev(pdata);
 	pdata->suspended = 0;
 
 	return 0;

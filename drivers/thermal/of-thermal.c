@@ -220,8 +220,7 @@ static int of_thermal_bind(struct thermal_zone_device *thermal,
 	for (i = 0; i < data->num_tbps; i++) {
 		struct __thermal_bind_params *tbp = data->tbps + i;
 
-		if ((tbp->cooling_device == cdev->np) ||
-			(tbp->type && cdev->type &&
+		if ((tbp->cooling_device == cdev->np) || (tbp->type &&
 			!strncmp(tbp->type, cdev->type, THERMAL_NAME_LENGTH))) {
 			int ret;
 
@@ -251,8 +250,7 @@ static int of_thermal_unbind(struct thermal_zone_device *thermal,
 	for (i = 0; i < data->num_tbps; i++) {
 		struct __thermal_bind_params *tbp = data->tbps + i;
 
-		if ((tbp->cooling_device == cdev->np) ||
-			(tbp->type && cdev->type &&
+		if ((tbp->cooling_device == cdev->np) || (tbp->type &&
 			!strncmp(tbp->type, cdev->type, THERMAL_NAME_LENGTH))) {
 			int ret;
 

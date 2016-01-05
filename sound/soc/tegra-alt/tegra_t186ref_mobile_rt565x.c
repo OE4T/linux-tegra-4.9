@@ -1,7 +1,7 @@
 /*
  * tegra_t186ref_mobile_rt565x.c - Tegra t186ref Machine driver
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -506,9 +506,17 @@ static int tegra_t186ref_init(struct snd_soc_pcm_runtime *rtd)
 			1, &tegra_t186ref_hp_jack_gpio);
 	}
 
+	/* single button supporting play/pause */
+	snd_jack_set_key(tegra_t186ref_hp_jack.jack,
+		SND_JACK_BTN_0, KEY_MEDIA);
+
+	/* multiple buttons supporting play/pause and volume up/down */
 	snd_jack_set_key(tegra_t186ref_hp_jack.jack,
 		SND_JACK_BTN_1, KEY_MEDIA);
-	/* FIXME: map other button events too */
+	snd_jack_set_key(tegra_t186ref_hp_jack.jack,
+		SND_JACK_BTN_2, KEY_VOLUMEUP);
+	snd_jack_set_key(tegra_t186ref_hp_jack.jack,
+		SND_JACK_BTN_3, KEY_VOLUMEDOWN);
 
 	rt5659_set_jack_detect(codec, &tegra_t186ref_hp_jack);
 
@@ -1015,6 +1023,11 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 		dev_warn(&pdev->dev, "codec link not defined - codec not part of sound card");
 	else
 		codec = card->rtd[idx].codec;
+
+	if (!machine->is_codec_dummy) {
+		/* setup for jack detection only in non-dummy case */
+		rt5659_set_jack_detect(codec, &tegra_t186ref_hp_jack);
+	}
 
 	return 0;
 

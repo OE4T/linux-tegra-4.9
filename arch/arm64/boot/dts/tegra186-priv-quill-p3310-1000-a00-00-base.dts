@@ -124,10 +124,6 @@
 		status = "disabled";
 	};
 
-	pmc-iopower {
-		status = "disabled";
-	};
-
 	host1x {
 		vii2c@156c0000 {
 			status = "disabled";

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/cursor.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * Author:
  *  Robert Morell <rmorell@nvidia.com>
@@ -408,14 +408,11 @@ int tegra_dc_cursor_clip(struct tegra_dc *dc, unsigned clip)
 /* disable the cursor on suspend. but leave the state unmodified */
 int tegra_dc_cursor_suspend(struct tegra_dc *dc)
 {
-	u32 val;
-
 	if (!dc->enabled)
 		return 0;
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
-	val = tegra_dc_readl(dc, DC_DISP_DISP_WIN_OPTIONS);
-	val &= ~CURSOR_ENABLE;
+	set_cursor_enable(dc, false);
 	tegra_dc_cursor_do_update(dc, true);
 	dc->cursor.dirty = true;
 	tegra_dc_put(dc);

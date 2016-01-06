@@ -461,13 +461,16 @@ static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
 	return 0;
 }
 
-static int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
+int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 {
 	int i;
 	unsigned long rate = 0;
+	bool compclk_already_on = false;
 
 	compclk_client[dc->ctrl_num].clk = dc->clk;
 	compclk_client[dc->ctrl_num].rate = dc->mode.pclk;
+	if (compclk_client[dc->ctrl_num].inuse)
+		compclk_already_on = true;
 	compclk_client[dc->ctrl_num].inuse = true;
 
 	/* comp clk will be maximum of head0/1/2 */
@@ -482,7 +485,8 @@ static int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 	}
 
 	/* Enable Display comp clock */
-	tegra_disp_clk_prepare_enable(compclk);
+	if (!compclk_already_on)
+		tegra_disp_clk_prepare_enable(compclk);
 
 	return 0;
 }
@@ -879,7 +883,17 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 				dc->ctrl_num);
 	}
 
-	compclk_client[dc->ctrl_num].inuse = false;
+	/* Disable display comp clock */
+	if (compclk_client[dc->ctrl_num].inuse) {
+		tegra_disp_clk_disable_unprepare(compclk);
+		compclk_client[dc->ctrl_num].inuse = false;
+	}
+
+	/* Disable DC clock */
+	tegra_disp_clk_disable_unprepare(dc->clk);
+
+	/* Disable display hub clock */
+	tegra_disp_clk_disable_unprepare(hubclk);
 	return 0;
 }
 

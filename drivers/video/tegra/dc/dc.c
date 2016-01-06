@@ -2378,11 +2378,12 @@ static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 		dc->out->type == TEGRA_DC_OUT_FAKE_DSIA ||
 		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
 		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED ||
-		dc->out->type == TEGRA_DC_OUT_NULL)
+		dc->out->type == TEGRA_DC_OUT_NULL) {
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 		tegra_nvdisp_get_default_cmu(&default_cmu);
 #endif
 		return &default_cmu;
+	}
 	if (dc->pdata->cmu && !dc->pdata->default_clr_space)
 		return dc->pdata->cmu;
 	else if (dc->pdata->cmu_adbRGB && dc->pdata->default_clr_space)

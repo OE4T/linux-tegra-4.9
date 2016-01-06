@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-p3310-1000-a00-plugin-manager.dtsi: P3310 plugin manager
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -50,6 +50,36 @@
 				target = <&sdmmc4>;
 				_overlay_ {
 					nvidia,enable-hwcq;
+				};
+			};
+		};
+
+		fragement-e3310-a03@9 {
+			ids = "3310-1000-03";
+			override@0 {
+				target = <&ina3221x_40>;
+				_overlay_ {
+					channel@0 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@1 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
+			};
+
+			override@1 {
+				target = <&ina3221x_41>;
+				_overlay_ {
+					channel@0 {
+						ti,shunt-resistor-mohm = <5>;
+					};
+					channel@1 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						ti,shunt-resistor-mohm = <10>;
+					};
 				};
 			};
 		};

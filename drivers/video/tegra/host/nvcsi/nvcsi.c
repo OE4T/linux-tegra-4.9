@@ -1,7 +1,7 @@
 /*
  * NVCSI driver for T186
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <asm/ioctls.h>
 #include <linux/of.h>
+#include <linux/of_graph.h>
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
@@ -35,6 +36,7 @@
 #include "nvhost_acm.h"
 #include "t186/t186.h"
 #include "nvcsi.h"
+#include "csi/csi.h"
 
 static struct of_device_id tegra_nvcsi_of_match[] = {
 	{ .compatible = "nvidia,tegra186-nvcsi",
@@ -45,6 +47,7 @@ static struct of_device_id tegra_nvcsi_of_match[] = {
 struct nvcsi {
 	struct platform_device *pdev;
 	struct regulator *regulator;
+	struct tegra_csi_device csi;
 };
 
 struct nvcsi_private {
@@ -159,8 +162,13 @@ static int nvcsi_probe(struct platform_device *dev)
 	if (err)
 		goto err_client_device_init;
 
+	err = tegra_csi_media_controller_init(&nvcsi->csi, dev);
+	if (err < 0)
+		goto err_mediacontroller_init;
+
 	return 0;
 
+err_mediacontroller_init:
 err_client_device_init:
 err_add_domain:
 	nvhost_module_deinit(dev);
@@ -174,6 +182,11 @@ err_get_pdata:
 
 static int __exit nvcsi_remove(struct platform_device *dev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	struct nvcsi *nvcsi = (struct nvcsi *)pdata->private_data;
+
+	tegra_csi_media_controller_remove(&nvcsi->csi);
+
 	return 0;
 }
 

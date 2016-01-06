@@ -1671,11 +1671,11 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	ch->timeout.initialized = false;
 	mutex_unlock(&ch->timeout.lock);
 
-	if (gk20a_fifo_disable_all_engine_activity(g, true))
+	if (gr_gk20a_disable_ctxsw(g))
 		goto fail_unlock;
 
 	if (gk20a_fence_is_expired(job->post_fence))
-		goto fail_enable_engine_activity;
+		goto fail_enable_ctxsw;
 
 	gk20a_err(dev_from_gk20a(g), "Job on channel %d timed out\n",
 		ch->hw_chid);
@@ -1698,7 +1698,7 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 		/* If failing engine, trigger recovery */
 		failing_ch = gk20a_channel_get(&g->fifo.channel[id]);
 		if (!failing_ch)
-			goto fail_enable_engine_activity;
+			goto fail_enable_ctxsw;
 
 		if (failing_ch->hw_chid != ch->hw_chid)
 			gk20a_channel_timeout_start(ch, job);
@@ -1710,8 +1710,8 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 		gk20a_channel_put(failing_ch);
 	}
 
-fail_enable_engine_activity:
-	gk20a_fifo_enable_all_engine_activity(g);
+fail_enable_ctxsw:
+	gr_gk20a_enable_ctxsw(g);
 fail_unlock:
 	mutex_unlock(&g->ch_wdt_lock);
 	gk20a_channel_put(ch);

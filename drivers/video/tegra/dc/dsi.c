@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2030,9 +2030,7 @@ static void tegra_dsi_set_dc_clk(struct tegra_dc *dc,
 	 * clock control register and not shift clk div programming.
 	 */
 #if defined CONFIG_ARCH_TEGRA_18x_SOC
-	if (clk_set_rate(dc->clk, dc->mode.pclk))
-		dev_err(&dc->ndev->dev, "Failed to set dc clk to %d\n",
-			dc->mode.pclk);
+	tegra_dc_clk_set_rate(dc, dc->mode.pclk);
 	return;
 #endif
 	/* formula: (dsi->shift_clk_div - 1) * 2 */
@@ -5760,16 +5758,11 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	unsigned long rate;
+	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	struct clk *parent_clk = NULL;
 	struct clk *base_clk = NULL;
-	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	u8 i;
 
-	for (i = 0; i < dsi->max_instances; i++)
-		tegra_disp_clk_prepare_enable(dsi->dsi_clk[i]);
-#endif
 	/* divide by 1000 to avoid overflow */
 	dc->mode.pclk /= 1000;
 
@@ -5812,8 +5805,8 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 			base_clk = clk_get_parent(parent_clk);
 		}
 	}
-	tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 #endif
+	tegra_dsi_config_phy_clk(dsi, TEGRA_DSI_ENABLE);
 
 	/* Fix me: Revert bpmp check once bpmp FW is fixed */
 #ifdef CONFIG_TEGRA_NVDISPLAY

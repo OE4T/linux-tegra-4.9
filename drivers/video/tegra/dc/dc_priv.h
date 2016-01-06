@@ -64,6 +64,7 @@
 #ifdef CONFIG_TEGRA_NVDISPLAY
 int tegra_nvdisp_powergate_partition(int pg_id);
 int tegra_nvdisp_unpowergate_partition(int pg_id);
+int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
 #endif
 
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
@@ -409,20 +410,22 @@ static inline void tegra_dc_restore_interrupt(struct tegra_dc *dc, u32 val)
 	tegra_dc_writel(dc, val, DC_CMD_INT_MASK);
 }
 
-static inline int tegra_dc_clk_set_rate(struct clk *clk, unsigned long rate)
+static inline int tegra_dc_clk_set_rate(struct tegra_dc *dc, unsigned long rate)
 {
-	int err;
-
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	return 0;
 #else
-	if (!tegra_platform_is_silicon())
-#endif
+	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
 		return 0;
 
-	err = clk_set_rate(clk, rate);
-	if (err)
-		return err;
+	if (clk_set_rate(dc->clk, rate)) {
+		dev_err(&dc->ndev->dev, "Failed to set dc clk to %ld\n", rate);
+		return -EINVAL;
+	}
+
+	tegra_nvdisp_set_compclk(dc);
+#endif
+	return 0;
 }
 
 static inline unsigned long tegra_dc_clk_get_rate(struct tegra_dc *dc)
@@ -719,6 +722,7 @@ u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc);
 int tegra_nvdisp_program_mode(struct tegra_dc *dc,
 			struct tegra_dc_mode *mode);
 void tegra_nvdisp_underflow_handler(struct tegra_dc *dc);
+int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
 void reg_dump(struct tegra_dc *dc, void *data,
 	void (*print)(void *data, const char *str));
 

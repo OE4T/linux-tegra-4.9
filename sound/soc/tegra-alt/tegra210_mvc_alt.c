@@ -1,7 +1,7 @@
 /*
  * tegra210_mvc_alt.c - Tegra210 MVC driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -237,7 +237,7 @@ static int tegra210_mvc_put_curve_type(struct snd_kcontrol *kcontrol,
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_mvc *mvc = snd_soc_codec_get_drvdata(codec);
 	unsigned int reg = TEGRA210_MVC_CTRL;
-	unsigned int dcnt = 10;
+	int dcnt = 10;
 	int ret = 0;
 	u32 value;
 

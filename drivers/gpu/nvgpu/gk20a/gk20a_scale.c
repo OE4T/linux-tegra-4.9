@@ -190,17 +190,9 @@ void gk20a_scale_resume(struct platform_device *pdev)
 
 static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 	struct gk20a *g = get_gk20a(pdev);
 	struct gk20a_scale_profile *profile = g->scale_profile;
 	struct devfreq *devfreq = g->devfreq;
-
-	/* update the software shadow */
-	gk20a_pmu_load_update(g);
-
-	/* inform edp about new constraint */
-	if (platform->prescale)
-		platform->prescale(pdev);
 
 	/* Is the device profile initialised? */
 	if (!(profile && devfreq))
@@ -236,6 +228,13 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 	struct gk20a_scale_profile *profile = g->scale_profile;
 	struct platform_device *pdev = to_platform_device(dev);
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+
+	/* update the software shadow */
+	gk20a_pmu_load_update(g);
+
+	/* inform edp about new constraint */
+	if (platform->prescale)
+		platform->prescale(pdev);
 
 	/* Make sure there are correct values for the current frequency */
 	profile->dev_stat.current_frequency =

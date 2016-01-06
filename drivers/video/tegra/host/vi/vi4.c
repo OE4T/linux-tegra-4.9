@@ -1,7 +1,7 @@
 /*
  * VI driver for T186
  *
- * Copyright (c) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -160,6 +160,12 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		return err;
 	}
 #endif
+	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);
+	if (err) {
+		nvhost_client_device_release(pdev);
+		return err;
+	}
+
 	return 0;
 }
 
@@ -173,6 +179,8 @@ static int __exit tegra_vi4_remove(struct platform_device *pdev)
 	if (!tegra_platform_is_unit_fpga())
 		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
 #endif
+
+	tegra_vi_media_controller_cleanup(&vi->mc_vi);
 
 	nvhost_client_device_release(pdev);
 	/* ^ includes call to nvhost_module_deinit() */

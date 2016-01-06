@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -20,6 +20,8 @@
 
 #ifndef __TEGRA_VI4_H__
 #define __TEGRA_VI4_H__
+
+#include "mc_common.h"
 
 struct nvhost_vi_notify_dev {
 	struct vi_notify_dev *vnd;
@@ -49,6 +51,7 @@ struct nvhost_vi_dev {
 	struct reset_control *vi_reset;
 	struct reset_control *vi_tsc_reset;
 	struct dentry *debug_dir;
+	struct tegra_mc_vi mc_vi;
 };
 
 void nvhost_vi4_reset(struct platform_device *);

@@ -63,3 +63,10 @@ M:	Arto Merilainen <amerilainen@nvidia.com>
 L:	sw-mobile-host1x@exchange.nvidia.com
 S:	Supported
 F:	drivers/video/tegra/host/
+
+USB
+M:	Ashu Jha <ajha@nvidia.com>
+L:	usb3-sweng@exchange.nvidia.com
+S:	Supported
+F:	drivers/pinctrl/pinctrl-tegra186-padctl-uphy.c
+

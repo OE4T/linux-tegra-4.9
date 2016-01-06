@@ -53,9 +53,10 @@ static void gk20a_ltc_set_zbc_color_entry(struct gk20a *g,
 
 	for (i = 0;
 	     i < ltc_ltcs_ltss_dstg_zbc_color_clear_value__size_1_v(); i++) {
-		gk20a_writel_check(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i),
+		gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_color_clear_value_r(i),
 			     color_val->color_l2[i]);
 	}
+	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
 }
 
 /*
@@ -70,8 +71,10 @@ static void gk20a_ltc_set_zbc_depth_entry(struct gk20a *g,
 	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_index_r(),
 		     ltc_ltcs_ltss_dstg_zbc_index_address_f(real_index));
 
-	gk20a_writel_check(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(),
+	gk20a_writel(g, ltc_ltcs_ltss_dstg_zbc_depth_clear_value_r(),
 		     depth_val->depth);
+
+	gk20a_readl(g, ltc_ltcs_ltss_dstg_zbc_index_r());
 }
 
 static int gk20a_ltc_alloc_phys_cbc(struct gk20a *g,

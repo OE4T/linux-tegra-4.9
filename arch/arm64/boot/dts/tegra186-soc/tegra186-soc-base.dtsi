@@ -687,6 +687,7 @@
 			interrupts = <0 119 0x04>;
 			#stream-id-cells = <1>;
 			status = "disabled";
+			num-ports = <6>;
 		};
 
 		vi@15700000 {

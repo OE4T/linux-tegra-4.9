@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi_regs.h
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,7 +29,7 @@ enum {
 #define DSI_INCR_SYNCPT 0x00
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 10)
-#define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0x2ff) << 0)
+#define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0x3ff) << 0)
 #else
 #define DSI_INCR_SYNCPT_COND(x)		(((x) & 0xff) << 8)
 #define DSI_INCR_SYNCPT_INDX(x)		(((x) & 0xff) << 0)

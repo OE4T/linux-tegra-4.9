@@ -286,8 +286,8 @@ struct fb_bitfield {
 #define FB_VMODE_YUV_MASK	(FB_VMODE_Y420_ONLY | FB_VMODE_SET_YUV_MASK)
 
 /* extended colorimetry */
-#define FB_VMODE_EC_ENABLE	0x400
-#define FB_VMODE_EC_SHIFT	11
+#define FB_VMODE_EC_ENABLE	0x1000
+#define FB_VMODE_EC_SHIFT	13
 #define FB_VMODE_EC_MASK	(0xf << FB_VMODE_EC_SHIFT)
 #define FB_VMODE_EC_XVYCC601	((0x0 << FB_VMODE_EC_SHIFT) & FB_VMODE_EC_MASK)
 #define FB_VMODE_EC_XVYCC709	((0x1 << FB_VMODE_EC_SHIFT) & FB_VMODE_EC_MASK)
@@ -300,15 +300,15 @@ struct fb_bitfield {
 #define FB_VMODE_EC_BT2020_YCC_RGB	((0x6 << FB_VMODE_EC_SHIFT) & \
 					FB_VMODE_EC_MASK)
 
-#define FB_VMODE_1000DIV1001	0x008000
-#define FB_VMODE_IS_DETAILED	0x080000
-#define FB_VMODE_IS_CEA		0x100000
+#define FB_VMODE_1000DIV1001	0x020000
+#define FB_VMODE_IS_DETAILED	0x200000
+#define FB_VMODE_IS_CEA		0x400000
 
-#define FB_VMODE_MASK		0x18ffff
+#define FB_VMODE_MASK		0x63ffff
 
-#define FB_VMODE_YWRAP		0x10000	/* ywrap instead of panning     */
-#define FB_VMODE_SMOOTH_XPAN	0x20000	/* smooth xpan possible (internally used) */
-#define FB_VMODE_CONUPDATE	0x40000	/* don't update x/yoffset	*/
+#define FB_VMODE_YWRAP		0x40000  /* ywrap instead of panning */
+#define FB_VMODE_SMOOTH_XPAN	0x80000  /* smooth xpan possible (internally used) */
+#define FB_VMODE_CONUPDATE	0x100000 /* don't update x/yoffset */
 
 #define FB_FLAG_RATIO_4_3	64
 #define FB_FLAG_RATIO_16_9	128

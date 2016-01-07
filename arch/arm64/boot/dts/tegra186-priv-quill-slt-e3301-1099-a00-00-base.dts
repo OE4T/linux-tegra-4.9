@@ -40,6 +40,24 @@
 		reg = <0x0 0x80000000 0x0 0x70000000>;
 	};
 
+	mttcan@c310000 {
+		status = "okay";
+		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 0) GPIO_ACTIVE_HIGH>;
+		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 1) GPIO_ACTIVE_HIGH>;
+		mram-params = <0 16 16 8 8 8 16 16 16>;
+		tx-config = <8 8 0 64>;
+		rx-config = <64 64 64>;
+	};
+
+	mttcan@c320000 {
+		status = "okay";
+		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 6) GPIO_ACTIVE_HIGH>;
+		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 7) GPIO_ACTIVE_HIGH>;
+		mram-params = <0 16 16 8 8 8 16 16 16>;
+		tx-config = <8 8 0 64>;
+		rx-config = <64 64 64>;
+	};
+
 	pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;

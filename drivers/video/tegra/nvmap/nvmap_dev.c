@@ -1553,10 +1553,12 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 	}
 
 	for (i = 0; i < nvmap_dev->nr_heaps; i++)
-		if (nvmap_dev->heaps[i].heap_bit & co->usage_mask) {
+		if ((co->usage_mask != NVMAP_HEAP_CARVEOUT_IVM) &&
+		    (nvmap_dev->heaps[i].heap_bit & co->usage_mask)) {
 			pr_err("carveout %s already exists\n", co->name);
 			return -EEXIST;
 		}
+
 	node = &nvmap_dev->heaps[nvmap_dev->nr_carveouts];
 
 	node->base = round_up(co->base, PAGE_SIZE);

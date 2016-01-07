@@ -374,6 +374,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 {
 	u32 win_options, win_params, swap_uv;
 	fixed20_12 h_offset, v_offset;
+	bool boffset = true;
 
 	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
@@ -510,19 +511,23 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 
 	nvdisp_win_write(win, win_params, win_win_set_params_r());
 
-	/* In T186 - Relative offset of the image is displayed w.r.t the
-	 * Source image on rotation. So With HD/VD -> 0 or 1 Cropped_pt.x/y
-	 * is set as zero. Recheck how to handle the case of passing
-	 * offset values or change existing apps to pass corrected values for
-	 * x & y
-	 */
-/*
+
 	h_offset.full = dfixed_floor(win->x);
 	v_offset      = win->y;
-*/
-	h_offset.full = 0;
-	v_offset.full = 0;
-	nvdisp_win_write(win,
+
+	/* For YUV 420/422 format X & Y must be even */
+	if ((dc->mode.vmode & FB_VMODE_Y420) ||
+		(dc->mode.vmode & FB_VMODE_Y422)) {
+		if ((dfixed_trunc(h_offset) % 2 != 0)
+		 || (dfixed_trunc(v_offset) % 2 != 0)) {
+			dev_err(&dc->ndev->dev,
+				"X and Y offsets must be EVEN \n");
+			boffset = false;
+		}
+	}
+
+	if (boffset)
+		nvdisp_win_write(win,
 			win_cropped_point_h_offset_f(dfixed_trunc(h_offset))|
 			win_cropped_point_v_offset_f(dfixed_trunc(v_offset)),
 			win_cropped_point_r());

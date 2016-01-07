@@ -1,7 +1,7 @@
 /*
  * "drivers/net/can/m_ttcan/m_ttcan_linux.c"
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * References are taken from "Bosch C_CAN controller" at
  * "drivers/net/can/c_can/c_can.c"
@@ -1023,6 +1023,7 @@ static int mttcan_power_down(struct net_device *dev)
 static int mttcan_open(struct net_device *dev)
 {
 	int err;
+	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
 
 	mttcan_pm_runtime_get_sync(priv);
@@ -1032,21 +1033,23 @@ static int mttcan_open(struct net_device *dev)
 		netdev_err(dev, "unable to power on\n");
 		goto exit;
 	}
-	if (gpio_is_valid(priv->gpio_can_stb)) {
-		err = gpio_request(priv->gpio_can_stb, "gpio_can_stb");
+	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
+		err = gpio_request(priv->gpio_can_stb.gpio, "gpio_can_stb");
 		if (err) {
 			netdev_err(dev, "stb gpio request failed\n");
 			goto exit;
 		}
-		gpio_direction_output(priv->gpio_can_stb, 1);
+		level = !priv->gpio_can_stb.active_low;
+		gpio_direction_output(priv->gpio_can_stb.gpio, level);
 	}
-	if (gpio_is_valid(priv->gpio_can_en)) {
-		err = gpio_request(priv->gpio_can_en, "gpio_can_en");
+	if (gpio_is_valid(priv->gpio_can_en.gpio)) {
+		err = gpio_request(priv->gpio_can_en.gpio, "gpio_can_en");
 		if (err) {
 			netdev_err(dev, "stb gpio request failed\n");
 			goto exit_free_gpio;
 		}
-		gpio_direction_output(priv->gpio_can_en, 1);
+		level = !priv->gpio_can_en.active_low;
+		gpio_direction_output(priv->gpio_can_en.gpio, level);
 	}
 	err = open_candev(dev);
 	if (err) {
@@ -1072,11 +1075,11 @@ static int mttcan_open(struct net_device *dev)
 fail:
 	close_candev(dev);
 exit_open_fail:
-	if (gpio_is_valid(priv->gpio_can_en))
-		gpio_free(priv->gpio_can_en);
+	if (gpio_is_valid(priv->gpio_can_en.gpio))
+		gpio_free(priv->gpio_can_en.gpio);
 exit_free_gpio:
-	if (gpio_is_valid(priv->gpio_can_stb))
-		gpio_free(priv->gpio_can_stb);
+	if (gpio_is_valid(priv->gpio_can_stb.gpio))
+		gpio_free(priv->gpio_can_stb.gpio);
 exit:
 	mttcan_pm_runtime_put_sync(priv);
 	return err;
@@ -1084,19 +1087,22 @@ exit:
 
 static int mttcan_close(struct net_device *dev)
 {
+	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
 	netif_stop_queue(dev);
 	napi_disable(&priv->napi);
 	mttcan_power_down(dev);
 	mttcan_stop(dev);
 	close_candev(dev);
-	if (gpio_is_valid(priv->gpio_can_stb)) {
-		gpio_direction_output(priv->gpio_can_stb, 0);
-		gpio_free(priv->gpio_can_stb);
+	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
+		level = priv->gpio_can_en.active_low;
+		gpio_direction_output(priv->gpio_can_stb.gpio, level);
+		gpio_free(priv->gpio_can_stb.gpio);
 	}
-	if (gpio_is_valid(priv->gpio_can_en)) {
-		gpio_direction_output(priv->gpio_can_en, 0);
-		gpio_free(priv->gpio_can_en);
+	if (gpio_is_valid(priv->gpio_can_en.gpio)) {
+		level = priv->gpio_can_en.active_low;
+		gpio_direction_output(priv->gpio_can_en.gpio, level);
+		gpio_free(priv->gpio_can_en.gpio);
 	}
 	mttcan_pm_runtime_put_sync(priv);
 
@@ -1269,7 +1275,8 @@ pclk_exit:
 static int mttcan_probe(struct platform_device *pdev)
 {
 	int ret = 0;
-	int irq;
+	int irq = 0;
+	enum of_gpio_flags flags;
 	void __iomem *regs = NULL, *xregs = NULL;
 	void __iomem *mram_addr = NULL;
 	struct net_device *dev;
@@ -1354,8 +1361,12 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (set_can_clk_src_and_rate(priv, 40000000))
 		goto exit_free_device;
 
-	priv->gpio_can_en = of_get_named_gpio(np, "gpio_can_en", 0);
-	priv->gpio_can_stb = of_get_named_gpio(np, "gpio_can_stb", 0);
+	priv->gpio_can_en.gpio = of_get_named_gpio_flags(np,
+					"gpio_can_en", 0, &flags);
+	priv->gpio_can_en.active_low = flags & OF_GPIO_ACTIVE_LOW;
+	priv->gpio_can_stb.gpio = of_get_named_gpio_flags(np,
+					"gpio_can_stb", 0, &flags);
+	priv->gpio_can_stb.active_low = flags & OF_GPIO_ACTIVE_LOW;
 	priv->instance = of_alias_get_id(np, "mttcan");
 	priv->poll = of_property_read_bool(np, "use-polling");
 	of_property_read_u32_array(np, "tt-param", priv->tt_param, 2);

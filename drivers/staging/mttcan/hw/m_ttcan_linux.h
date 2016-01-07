@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -59,6 +59,11 @@
 #define MTT_MAX_TX_CONF		4
 #define MTT_MAX_RX_CONF		3
 
+struct can_gpio {
+	int gpio;
+	int active_low;
+};
+
 struct mttcan_priv {
 	struct can_priv can;
 	struct ttcan_controller *ttcan;
@@ -67,6 +72,8 @@ struct mttcan_priv {
 	struct net_device *dev;
 	struct device *device;
 	struct clk *hclk, *cclk;
+	struct can_gpio gpio_can_en;
+	struct can_gpio gpio_can_stb;
 	void __iomem *regs;
 	void __iomem *mres;
 	u32 irq_flags;
@@ -80,8 +87,6 @@ struct mttcan_priv {
 	u32 tt_irqstatus;
 	u32 instance;
 	int tt_intrs;
-	int gpio_can_en;
-	int gpio_can_stb;
 	int tt_param[2];
 	u32 mram_param[MTT_CAN_MAX_MRAM_ELEMS];
 	u32 tx_conf[MTT_MAX_TX_CONF]; /*<txb, txq, txq_mode, txb_dsize>*/

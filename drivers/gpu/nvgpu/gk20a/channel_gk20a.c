@@ -1700,8 +1700,13 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 		if (!failing_ch)
 			goto fail_enable_ctxsw;
 
-		if (failing_ch->hw_chid != ch->hw_chid)
+		if (failing_ch->hw_chid != ch->hw_chid) {
 			gk20a_channel_timeout_start(ch, job);
+
+			mutex_lock(&failing_ch->timeout.lock);
+			failing_ch->timeout.initialized = false;
+			mutex_unlock(&failing_ch->timeout.lock);
+		}
 
 		gk20a_fifo_recover(g, BIT(engine_id),
 			failing_ch->hw_chid, is_tsg,

@@ -26,6 +26,10 @@
 			i2c-bus = <&gen2_i2c>;
 			word-address-1-byte-slave-addresses = <0x51>;
 		};
+		bus@2 {
+			i2c-bus = <&gen1_i2c>;
+			word-address-1-byte-slave-addresses = <0x50>;
+		};
 
 	};
 

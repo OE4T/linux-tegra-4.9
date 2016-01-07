@@ -2019,7 +2019,7 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_sor_pad_cal_power(sor, false);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_BRICK_CLK);
 	tegra_dc_sor_attach(sor);
-	tegra_nvhdcp_set_plug(hdmi->nvhdcp, tegra_dc_hpd(dc));
+	tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_dc_setup_clk(dc, dc->clk);

@@ -32,7 +32,7 @@
 			reg = <0x4c>;
 			sensor-name = "tmp451-ext";
 			supported-hwrev = <1>;
-			offset = <0>;
+			offset = <(-44)>;
 			conv-rate = <0x06>;
 			extended-rage = <1>;
 			interrupt-parent = <&tegra_gpio>;

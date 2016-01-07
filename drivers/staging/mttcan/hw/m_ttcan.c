@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -314,7 +314,7 @@ int ttcan_set_bitrate(struct ttcan_controller *ttcan)
 	nbtp_reg |= (ttcan->bt_config.nominal.brp - 1) <<
 	    MTT_NBTP_NBRP_SHIFT & MTT_NBTP_NBRP_MASK;
 
-	pr_info("%s NBTP(0x%x) value (0x%x)\n", __func__, ADR_MTTCAN_NBTP,
+	pr_debug("%s NBTP(0x%x) value (0x%x)\n", __func__, ADR_MTTCAN_NBTP,
 		nbtp_reg);
 	ret = ttcan_write32_check(ttcan, ADR_MTTCAN_NBTP, nbtp_reg,
 		MTTCAN_NBTP_MSK);
@@ -339,7 +339,7 @@ int ttcan_set_bitrate(struct ttcan_controller *ttcan)
 		tdcr_reg = (ttcan->bt_config.data.tdc_offset <<
 			MTT_TDCR_TDCO_SHIFT) & MTT_TDCR_TDCO_MASK;
 
-		pr_info("%s DBTP(0x%x) value (0x%x)\n", __func__,
+		pr_debug("%s DBTP(0x%x) value (0x%x)\n", __func__,
 			ADR_MTTCAN_DBTP, dbtp_reg);
 		ret = ttcan_write32_check(ttcan, ADR_MTTCAN_DBTP,
 					dbtp_reg, MTTCAN_DBTP_MSK);
@@ -728,12 +728,12 @@ unsigned int ttcan_read_hp_mesgs(struct ttcan_controller *ttcan,
 
 	if (hpms & MTT_HPMS_FLST_MASK) {
 		/* Extended Filter list */
-		pr_info("Xtd Filter:%d Matched\n", fltr_idx);
-		pr_info("0x%llx\n", ttcan_get_xtd_id_filter(ttcan, fltr_idx));
+		pr_debug("Xtd Filter:%d Matched\n", fltr_idx);
+		pr_debug("0x%llx\n", ttcan_get_xtd_id_filter(ttcan, fltr_idx));
 	} else {
 		/* Standard Filter list */
-		pr_info("Std Filter:%d Matched\n", fltr_idx);
-		pr_info("0x%x\n", ttcan_get_std_id_filter(ttcan, fltr_idx));
+		pr_debug("Std Filter:%d Matched\n", fltr_idx);
+		pr_debug("0x%x\n", ttcan_get_std_id_filter(ttcan, fltr_idx));
 	}
 
 	switch (msi) {

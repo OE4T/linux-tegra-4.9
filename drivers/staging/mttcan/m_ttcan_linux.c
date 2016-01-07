@@ -361,28 +361,28 @@ static int mttcan_handle_bus_err(struct net_device *dev,
 
 	switch (lec_type) {
 	case LEC_STUFF_ERROR:
-		netdev_warn(dev, "Stuff Error Detected\n");
+		netdev_err(dev, "Stuff Error Detected\n");
 		cf->data[2] |= CAN_ERR_PROT_STUFF;
 		break;
 	case LEC_FORM_ERROR:
-		netdev_warn(dev, "Format Error Detected\n");
+		netdev_err(dev, "Format Error Detected\n");
 		cf->data[2] |= CAN_ERR_PROT_FORM;
 		break;
 	case LEC_ACK_ERROR:
-		netdev_warn(dev, "Acknowledgement Error Detected\n");
+		netdev_err(dev, "Acknowledgement Error Detected\n");
 		cf->data[3] |= (CAN_ERR_PROT_LOC_ACK |
 				CAN_ERR_PROT_LOC_ACK_DEL);
 		break;
 	case LEC_BIT1_ERROR:
-		netdev_warn(dev, "Bit1 Error Detected\n");
+		netdev_err(dev, "Bit1 Error Detected\n");
 		cf->data[2] |= CAN_ERR_PROT_BIT1;
 		break;
 	case LEC_BIT0_ERROR:
-		netdev_warn(dev, "Bit0 Error Detected\n");
+		netdev_err(dev, "Bit0 Error Detected\n");
 		cf->data[2] |= CAN_ERR_PROT_BIT0;
 		break;
 	case LEC_CRC_ERROR:
-		netdev_warn(dev, "CRC Error Detected\n");
+		netdev_err(dev, "CRC Error Detected\n");
 		cf->data[3] |= (CAN_ERR_PROT_LOC_CRC_SEQ |
 				CAN_ERR_PROT_LOC_CRC_DEL);
 		break;
@@ -444,7 +444,7 @@ static void mttcan_tx_event(struct net_device *dev)
 			MTT_TXEVT_ELE_F0_XTD_SHIFT;
 		id = (txevt.f0 & MTT_TXEVT_ELE_F0_ID_MASK) >>
 			MTT_TXEVT_ELE_F0_ID_SHIFT;
-		pr_info("%s:TS %llu:(index %u) ID %x(%s %s %s) Evt_Type %02d\n",
+		pr_debug("%s:TS %llu:(index %u) ID %x(%s %s %s) Evt_Type %02d\n",
 			__func__, mttcan_ts_value(priv->ttcan, txevt.f1 &
 			MTT_TXEVT_ELE_F1_TXTS_MASK), (txevt.f1 &
 			MTT_TXEVT_ELE_F1_MM_MASK) >> MTT_TXEVT_ELE_F1_MM_SHIFT,
@@ -481,7 +481,7 @@ static void mttcan_tx_complete(struct net_device *dev)
 				can_led_event(dev, CAN_LED_EVENT_TX);
 			}
 		} else {
-			pr_info("%s TC %x priv->tx_object %x\n",
+			pr_debug("%s TC %x priv->tx_object %x\n",
 				__func__, completed_tx, priv->tx_object);
 			break;
 		}
@@ -519,7 +519,7 @@ static void mttcan_tx_cancelled(struct net_device *dev)
 			stats->tx_aborted_errors++;
 			can_free_echo_skb(dev, (msg_no - 1));
 		} else {
-			pr_info("%s TCF %x priv->tx_object %x\n", __func__,
+			pr_debug("%s TCF %x priv->tx_object %x\n", __func__,
 					cancelled_msg, priv->tx_object);
 			break;
 		}
@@ -555,13 +555,13 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			if ((ir & MTT_IR_EP_MASK) && (psr & MTT_PSR_EP_MASK)) {
 				work_done += mttcan_state_change(dev,
 					CAN_STATE_ERROR_PASSIVE);
-				netdev_warn(dev,
+				netdev_err(dev,
 					    "entered error passive state\n");
 			}
 			if ((ir & MTT_IR_BO_MASK) && (psr & MTT_PSR_BO_MASK)) {
 				work_done +=
 				    mttcan_state_change(dev, CAN_STATE_BUS_OFF);
-				netdev_warn(dev, "entered bus off state\n");
+				netdev_err(dev, "entered bus off state\n");
 			}
 			if (((ir & MTT_IR_EP_MASK) && !(psr & MTT_PSR_EP_MASK))
 				|| ((ir & MTT_IR_EW_MASK) &&
@@ -603,7 +603,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			ttcan_ir_write(priv->ttcan, ack);
 			if (ttcan_read_hp_mesgs(priv->ttcan, &ttcanfd))
 				work_done += mttcan_do_receive(dev, &ttcanfd);
-			pr_info("%s: hp mesg received\n", __func__);
+			pr_debug("%s: hp mesg received\n", __func__);
 		}
 
 		/* Handle dedicated buffer */
@@ -615,7 +615,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			    mttcan_read_rcv_list(dev, &priv->ttcan->rx_b,
 						 BUFFER, rec_msgs,
 						 quota - work_done);
-			pr_info("%s: buffer mesg received\n", __func__);
+			pr_debug("%s: buffer mesg received\n", __func__);
 
 		}
 		/* Handle RX Fifo interrupt */
@@ -645,7 +645,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 							 &priv->ttcan->rx_q1,
 							 FIFO_1, rec_msgs,
 							 quota - work_done);
-				pr_info("%s: msg received in Q1\n", __func__);
+				pr_debug("%s: msg received in Q1\n", __func__);
 			}
 			if (ir & (MTT_IR_RF0F_MASK | MTT_IR_RF0W_MASK |
 				MTT_IR_RF0N_MASK)) {
@@ -658,18 +658,18 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 							 &priv->ttcan->rx_q0,
 							 FIFO_0, rec_msgs,
 							 quota - work_done);
-				pr_info("%s: msg received in Q0\n", __func__);
+				pr_debug("%s: msg received in Q0\n", __func__);
 			}
 
 			if (ir & MTT_IR_RF0L_MASK) {
-				pr_info("%s: some msgs lost on in Q0\n",
+				netdev_err(dev, "%s: some msgs lost on in Q0\n",
 					__func__);
 				ack = MTT_IR_RF0L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 			}
 
 			if (ir & MTT_IR_RF1L_MASK) {
-				pr_info("%s: some msgs lost on in Q1\n",
+				netdev_err(dev, "%s: some msgs lost on in Q1\n",
 					__func__);
 				ack = MTT_IR_RF1L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
@@ -711,7 +711,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 
 			if ((ir & MTT_IR_TEFL_MASK) &&
 				priv->ttcan->tx_config.evt_q_num)
-				pr_err("%s: Tx event lost\n", __func__);
+				netdev_err(dev, "Tx event lost\n");
 
 			ack = MTTCAN_TX_EV_FIFO_INTR;
 			ttcan_ir_write(priv->ttcan, ack);

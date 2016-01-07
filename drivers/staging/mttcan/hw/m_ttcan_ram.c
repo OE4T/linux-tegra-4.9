@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -109,7 +109,7 @@ int ttcan_read_rx_msg_ram(struct ttcan_controller *ttcan, u32 read_addrs,
 		}
 		i++;
 	}
-	pr_info("%s:received ID(0x%x) %s %s(%s)\n", __func__,
+	pr_debug("%s:received ID(0x%x) %s %s(%s)\n", __func__,
 		(ttcanfd->can_id & CAN_FMT) ?
 			(ttcanfd->can_id & CAN_EXT_ID_MASK) :
 			(ttcanfd->can_id & CAN_STD_ID_MASK),
@@ -160,7 +160,7 @@ int ttcan_write_tx_msg_ram(struct ttcan_controller *ttcan, u32 write_addrs,
 
 	msg_data |= index <<  TX_BUF_MM_SHIFT;
 
-	pr_info("%s:buf_id(%d):- %s(%s)\n", __func__, index,
+	pr_debug("%s:buf_id(%d):- %s(%s)\n", __func__, index,
 		(ttcanfd->flags & CAN_FD_FLAG) ? "FD" : "NON-FD",
 		(ttcanfd->flags & CAN_BRS_FLAG) ? "BRS" : "NOBRS");
 

@@ -1086,16 +1086,6 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	tegra_io_dpd_disable(&hdmi_dpd);
 	mdelay(50);
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	tegra_sor_writel(sor, NV_SOR_SEQ_INST(0), 0x0080A001);
-	tegra_sor_writel(sor, NV_SOR_LANE_SEQ_CTL, 0x80000000);
-	tegra_sor_writel(sor, NV_SOR_PLL2, 0x00020000);
-	tegra_sor_writel(sor, NV_SOR_PLL0, 0x00000000);
-
-	tegra_sor_writel(sor, NV_SOR_CSTM, 0x02005000);
-
-
-#else
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 				NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE,
 				NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE);
@@ -1133,7 +1123,6 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	tegra_sor_write_field(sor, NV_SOR_PLL1,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE);
-#endif
 }
 
 void tegra_sor_hdmi_pad_power_down(struct tegra_dc_sor_data *sor)
@@ -1371,15 +1360,13 @@ static void tegra_dc_sor_config_panel(struct tegra_dc_sor_data *sor,
 	/* TODO: adding interlace mode support */
 	tegra_sor_writel(sor, NV_HEAD_STATE5(head_num), 0x1);
 
-/* BRINGUP HACK */
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	tegra_sor_write_field(sor, NV_SOR_CSTM,
 		NV_SOR_CSTM_ROTCLK_DEFAULT_MASK |
 		NV_SOR_CSTM_LVDS_EN_ENABLE,
 		2 << NV_SOR_CSTM_ROTCLK_SHIFT |
 		is_lvds ? NV_SOR_CSTM_LVDS_EN_ENABLE :
 		NV_SOR_CSTM_LVDS_EN_DISABLE);
-#endif
+
 	tegra_dc_sor_config_pwm(sor, 1024, 1024);
 
 	tegra_dc_sor_update(sor);
@@ -1677,12 +1664,6 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for ATTACH = TRUE\n");
 	}
-
-	/* BRINGUP HACK */
-	/* ADD POWER BEFORE set to NORMAL */
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	tegra_sor_writel(sor,  NV_SOR_PWR, 0x80000001);
-#endif
 
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |

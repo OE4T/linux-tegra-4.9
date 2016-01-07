@@ -1,7 +1,7 @@
 /*
  * kernel/drivers/video/tegra/dc/fake_panel.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -192,6 +192,22 @@ static struct tegra_dc_mode dsi_fake_panel_modes[] = {
 	},
 };
 
+static struct tegra_dc_mode dp_fake_panel_modes[] = {
+	{
+		.pclk = 148500000, /* @60Hz*/
+		.h_ref_to_sync = 1,
+		.v_ref_to_sync = 1,
+		.h_sync_width = 44,
+		.v_sync_width = 5,
+		.h_back_porch = 148,
+		.v_back_porch = 36,
+		.h_active = 1920,
+		.v_active = 1080,
+		.h_front_porch = 88,
+		.v_front_porch = 4,
+	},
+};
+
 int tegra_dc_init_fake_panel_link_cfg(struct tegra_dc_dp_link_config *cfg)
 {
 	/*
@@ -229,10 +245,13 @@ int tegra_dc_init_fakedp_panel(struct tegra_dc *dc)
 	dc_out->n_out_pins = 0;
 	dc_out->depth = 18;
 #if defined(CONFIG_TEGRA_NVDISPLAY)
-	dc_out->parent_clk = "pllp_display";
+	dc_out->parent_clk = "plld2";
 #else
 	dc_out->parent_clk = "pll_d_out0";
 #endif
+	dc_out->modes = dp_fake_panel_modes;
+	dc_out->n_modes = ARRAY_SIZE(dp_fake_panel_modes);
+
 	dc_out->enable = NULL;
 	dc_out->disable = NULL;
 	dc_out->postsuspend = NULL;

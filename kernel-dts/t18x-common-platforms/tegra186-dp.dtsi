@@ -25,7 +25,7 @@
         host1x {
                 sor {
                         dp-display {
-                                status = "disabled";
+                                status = "okay";
                                 compatible = "dp, display";
                                 nvidia,is_ext_dp_panel = <1>;
 				nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) 1>;

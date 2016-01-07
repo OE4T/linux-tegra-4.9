@@ -1992,6 +1992,46 @@ int fb_mode_is_equal(const struct fb_videomode *mode1,
 }
 
 /**
+ * fb_var_is_equal - compare two struct fb_var_screeninfo for equality
+ * @var1: first variable screen info
+ * @var2: second variable screen info
+ *
+ * This is stricter than strictly necessary, but it is assumed that this will
+ * only be called on screen info structures derived from the same mode and
+ * will therefore have the exact same flags. Flexibility is sacrificed for
+ * simplicity.
+ *
+ * Returns:
+ * True if both screen info structures match, false otherwise.
+ */
+static bool fb_var_is_equal(const struct fb_var_screeninfo *var1,
+			    const struct fb_var_screeninfo *var2)
+{
+	if (var1->xres != var2->xres ||
+	    var1->yres != var2->yres ||
+	    var1->pixclock != var2->pixclock ||
+	    var1->left_margin != var2->left_margin ||
+	    var1->right_margin != var2->right_margin ||
+	    var1->upper_margin != var2->upper_margin ||
+	    var1->lower_margin != var2->lower_margin ||
+	    var1->hsync_len != var2->hsync_len ||
+	    var1->vsync_len != var2->vsync_len)
+		return false;
+
+	if (var1->vmode == var2->vmode)
+		return true;
+
+	/*
+	 * This could probably be less strict, similar to what's done in the
+	 * fb_mode_is_equal() function, but given the assumption that both
+	 * screen info structures are derived from the same mode, the above
+	 * checks should be good enough.
+	 */
+
+	return false;
+}
+
+/**
  * fb_find_best_mode - find best matching videomode
  * @var: pointer to struct fb_var_screeninfo
  * @head: pointer to struct list_head of modelist
@@ -2091,14 +2131,13 @@ const struct fb_videomode *fb_match_mode(const struct fb_var_screeninfo *var,
 {
 	struct list_head *pos;
 	struct fb_modelist *modelist;
-	struct fb_videomode *m, mode;
+	struct fb_var_screeninfo v;
 
-	fb_var_to_videomode(&mode, var);
 	list_for_each(pos, head) {
 		modelist = list_entry(pos, struct fb_modelist, list);
-		m = &modelist->mode;
-		if (fb_mode_is_equal(m, &mode))
-			return m;
+		fb_videomode_to_var(&v, &modelist->mode);
+		if (fb_var_is_equal(var, &v))
+			return &modelist->mode;
 	}
 	return NULL;
 }

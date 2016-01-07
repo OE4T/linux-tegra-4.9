@@ -1639,7 +1639,14 @@ static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 {
 	struct mmc_blk_data *md = mq->data;
 	struct mmc_card *card = md->queue.card;
+	struct mmc_host *host = card->host;
 	int ret = 0;
+
+	if (host->en_periodic_cflush && host->flush_timeout &&
+			!host->cache_flush_needed) {
+		blk_end_request(req, 0, 0);
+		return 0;
+	}
 
 	ret = mmc_flush_cache(card);
 	if (ret)
@@ -1664,6 +1671,11 @@ static int mmc_blk_issue_flush(struct mmc_queue *mq, struct request *req)
 #endif
 	blk_end_request_all(req, ret);
 
+	if (host->en_periodic_cflush && host->flush_timeout && !ret) {
+		host->cache_flush_needed = false;
+		mod_timer(&host->flush_timer, jiffies +
+			msecs_to_jiffies(host->flush_timeout));
+	}
 	return ret ? 0 : 1;
 }
 
@@ -2616,6 +2628,11 @@ int mmc_blk_cmdq_issue_flush_rq(struct mmc_queue *mq, struct request *req)
 	BUG_ON(!host);
 
 	ctx_info = &host->cmdq_ctx;
+	if (host->en_periodic_cflush && host->flush_timeout &&
+			!host->cache_flush_needed) {
+		blk_end_request(req, 0, 0);
+		return 0;
+	}
 
 	BUG_ON((req->tag < 0) || (req->tag > card->ext_csd.cmdq_depth));
 	BUG_ON(test_and_set_bit(req->tag, &host->cmdq_ctx.active_reqs));
@@ -2641,6 +2658,11 @@ int mmc_blk_cmdq_issue_flush_rq(struct mmc_queue *mq, struct request *req)
 		return err;
 
 	err = mmc_blk_cmdq_start_req(card->host, cmdq_req);
+	if (host->en_periodic_cflush && host->flush_timeout && !err) {
+		host->cache_flush_needed = false;
+		mod_timer(&host->flush_timer, jiffies +
+			msecs_to_jiffies(host->flush_timeout));
+	}
 	return err;
 }
 EXPORT_SYMBOL(mmc_blk_cmdq_issue_flush_rq);
@@ -3130,6 +3152,7 @@ again:
 	     card->ext_csd.rel_sectors)) {
 		md->flags |= MMC_BLK_REL_WR;
 		blk_queue_write_cache(md->queue.queue, true, true);
+		card->host->cache_flush_needed = true;
 	}
 
 	if (card->cmdq_init) {

@@ -396,6 +396,7 @@ struct mmc_host {
 #define MMC_CAP2_CMDQ_QBR	(1 << 26)	/* CMDQ Queue barrier supported */
 #define MMC_CAP2_ONLY_1V8_SIGNAL_VOLTAGE	(1 << 27)	/* Supports only 1V8 voltage */
 #define MMC_CAP2_NO_SLEEP_CMD	(1 << 28)	/* cannot support sleep mode */
+#define MMC_CAP2_PERIODIC_CACHE_FLUSH	(1 << 29)
 
 	mmc_pm_flag_t		pm_caps;	/* supported pm features */
 
@@ -506,6 +507,10 @@ struct mmc_host {
 	struct io_latency_state io_lat_s;
 #endif
 
+	bool			cache_flush_needed;
+	bool			en_periodic_cflush;
+	unsigned int		flush_timeout;
+	struct timer_list	flush_timer;
 	unsigned long		private[0] ____cacheline_aligned;
 };
 

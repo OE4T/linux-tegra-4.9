@@ -147,6 +147,13 @@ static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
 	offset = BIT(tegra186_pads[i].bit_position);
 	val = (voltage == tegra186_pads[i].hi_volt) ? offset : 0;
 	tegra_pmc_pad_voltage_update(tegra186_pads[i].pad_reg, offset, val);
+	if ((pad_id == TEGRA_IO_PAD_GROUP_SDMMC1_HV) ||
+		(pad_id == TEGRA_IO_PAD_GROUP_SDMMC2_HV) ||
+		(pad_id == TEGRA_IO_PAD_GROUP_SDMMC3_HV)) {
+		pad_mask = tegra_pmc_pad_voltage_get(tegra186_pads[i].pad_reg);
+		pr_info("pad_id %d:  PMC_IMPL_E_33V_PWR_0 = [0x%x]"
+				, pad_id, pad_mask );
+	}
 	udelay(100);
 	return 0;
 }

@@ -59,13 +59,16 @@ MODULE_LICENSE("GPL v2");
 /* Define these all in one place so they stay in sync. */
 #define USE_RATE_MIN          8000
 #define USE_RATE_MAX          16000
+#define USE_RATE_MAX_PEPPER   8000
 #define USE_RATES_ARRAY      {USE_RATE_MIN}
 #define USE_RATES_MASK       (SNDRV_PCM_RATE_8000|SNDRV_PCM_RATE_16000)
+#define USE_RATES_MASK_PEPPER    SNDRV_PCM_RATE_8000
 
 #define MAX_FRAMES_PER_BUFFER  (8192)
 
 #define USE_CHANNELS_MIN   1
 #define USE_CHANNELS_MAX   2
+#define USE_CHANNELS_MAX_PEPPER   1
 #define USE_PERIODS_MIN    1
 #define USE_PERIODS_MAX    1024
 
@@ -339,7 +342,7 @@ struct snd_atvr {
 
 	/* msbc decoder */
 	uint8_t msbc_frame_data[BYTES_PER_MSBC_FRAME];
-	int16_t audio_output[2*MAX_SAMPLES_PER_PACKET];
+	int16_t audio_output[MAX_SAMPLES_PER_PACKET];
 	uint8_t packet_in_frame;
 	uint8_t seq_index;
 
@@ -634,7 +637,7 @@ static int snd_atvr_decode_adpcm_packet(
 #define BLOCKS_PER_PACKET 15
 #define NUM_BITS 26
 
-static int snd_atvr_decode_16KHz_msbc_packet(
+static int snd_atvr_decode_msbc_packet(
 			struct snd_pcm_substream *substream,
 			const uint8_t *sbc_input,
 			size_t num_bytes
@@ -644,7 +647,6 @@ static int snd_atvr_decode_16KHz_msbc_packet(
 	uint remaining;
 	uint i;
 	uint32_t pos;
-	static int16_t last_sample;
 	uint read_index;
 	uint write_index;
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
@@ -698,20 +700,6 @@ static int snd_atvr_decode_16KHz_msbc_packet(
 					 atvr_snd->msbc_frame_data,
 					 BYTES_PER_MSBC_FRAME,
 					 &atvr_snd->audio_output[0]);
-		/* WAR for 8kHZ, double each sample starting from the end */
-		for (i = num_samples; i > 0; i--) {
-			int16_t s = atvr_snd->audio_output[i-1];
-
-			int16_t l = (i - 1) == 0 ?
-				last_sample : atvr_snd->audio_output[i-2];
-
-			atvr_snd->audio_output[i*2 - 1] = s;
-
-			atvr_snd->audio_output[i*2 - 2] =
-					(int16_t)((int32_t)s + (int32_t)l) / 2;
-		}
-		num_samples = num_samples * 2;
-		last_sample = atvr_snd->audio_output[num_samples - 1];
 	} else {
 		/* we have a complete mSBC frame, send it to the decoder */
 		num_samples = sbc_decode(BLOCKS_PER_PACKET, NUM_BITS,
@@ -884,7 +872,7 @@ static uint snd_atvr_decode_from_fifo(struct snd_pcm_substream *substream)
 						     packet->raw_data,
 						     packet->num_bytes);
 		} else if (packet->type == PACKET_TYPE_MSBC) {
-			snd_atvr_decode_16KHz_msbc_packet(substream,
+			snd_atvr_decode_msbc_packet(substream,
 							 packet->raw_data,
 							 packet->num_bytes);
 		} else {
@@ -1120,6 +1108,25 @@ static struct snd_pcm_hardware atvr_pcm_hardware = {
 	.rate_max =		USE_RATE_MAX,
 	.channels_min =		USE_CHANNELS_MIN,
 	.channels_max =		USE_CHANNELS_MAX,
+	.buffer_bytes_max =	MAX_PCM_BUFFER_SIZE,
+	.period_bytes_min =	MIN_PERIOD_SIZE,
+	.period_bytes_max =	MAX_PERIOD_SIZE,
+	.periods_min =		USE_PERIODS_MIN,
+	.periods_max =		USE_PERIODS_MAX,
+	.fifo_size =		0,
+};
+
+static struct snd_pcm_hardware atvr_pcm_hardware_pepper = {
+	.info =			(SNDRV_PCM_INFO_MMAP |
+				 SNDRV_PCM_INFO_INTERLEAVED |
+				 SNDRV_PCM_INFO_RESUME |
+				 SNDRV_PCM_INFO_MMAP_VALID),
+	.formats =		USE_FORMATS,
+	.rates =		USE_RATES_MASK_PEPPER,
+	.rate_min =		USE_RATE_MIN,
+	.rate_max =		USE_RATE_MAX_PEPPER,
+	.channels_min =		USE_CHANNELS_MIN,
+	.channels_max =		USE_CHANNELS_MAX_PEPPER,
 	.buffer_bytes_max =	MAX_PCM_BUFFER_SIZE,
 	.period_bytes_min =	MIN_PERIOD_SIZE,
 	.period_bytes_max =	MAX_PERIOD_SIZE,
@@ -1390,8 +1397,10 @@ static int atvr_snd_initialize(struct hid_device *hdev,
 		}
 	}
 
-
-	atvr_snd->pcm_hw = atvr_pcm_hardware;
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER)
+		atvr_snd->pcm_hw = atvr_pcm_hardware_pepper;
+	else
+		atvr_snd->pcm_hw = atvr_pcm_hardware;
 
 	strcpy(shdr_card->driver, "SHIELD Remote Audio");
 	strcpy(shdr_card->shortname, "SHDRAudio");
@@ -1497,8 +1506,8 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 	pr_info("%s: report->id = 0x%x, size = %d\n",
 		__func__, report->id, size);
 	if (size < 22) {
-		int i;
-		for (i = 1; i < 4; i++)
+		u32 i;
+		for (i = 1; i < sizeof(i); i++)
 			pr_info("data[%d] = 0x%02x\n", i, data[i]);
 	}
 #endif

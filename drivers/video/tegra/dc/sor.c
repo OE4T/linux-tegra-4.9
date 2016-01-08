@@ -2148,8 +2148,24 @@ void tegra_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 		dc_parent_clk = clk_get_parent(clk);
 		BUG_ON(!dc_parent_clk);
 
-		if (dc->mode.pclk != clk_get_rate(dc_parent_clk))
+		if (dc->mode.pclk != clk_get_rate(dc_parent_clk)) {
 			clk_set_rate(dc_parent_clk, dc->mode.pclk);
+			clk_set_rate(clk, dc->mode.pclk);
+		}
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		/*
+		 * For t18x plldx cannot go below 27MHz.
+		 * Real HW limit is lesser though.
+		 * 27Mz is chosen to have a safe margin.
+		 */
+		if (dc->mode.pclk < 27000000) {
+			if ((2 * dc->mode.pclk) != clk_get_rate(dc_parent_clk))
+				clk_set_rate(dc_parent_clk, 2 * dc->mode.pclk);
+			if (dc->mode.pclk != clk_get_rate(dc->clk))
+				clk_set_rate(dc->clk, dc->mode.pclk);
+		}
+#endif
 	}
 }
 

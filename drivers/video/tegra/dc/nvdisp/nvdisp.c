@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdisp.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -916,9 +916,6 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	if (dc->out->enable)
 		dc->out->enable(&dc->ndev->dev);
 
-	if (dc->out_ops->setup_clk)
-		pclk = dc->out_ops->setup_clk(dc, dc->clk);
-
 	/* Setting DC clocks, DC, COMPCLK
 	 * Set maximum of DC clock for COMPCLK
 	 */
@@ -944,6 +941,9 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	/* Set rate on DC same as pclk */
 	clk_set_rate(dc->clk, dc->mode.pclk);
+
+	if (dc->out_ops->setup_clk)
+		pclk = dc->out_ops->setup_clk(dc, dc->clk);
 
 	/* Enable DC clock */
 	tegra_disp_clk_prepare_enable(dc->clk);

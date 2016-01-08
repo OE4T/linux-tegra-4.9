@@ -205,4 +205,23 @@
 			status = "disabled";
 		};
 	};
+	sound {
+		status = "disabled";
+	};
+
+	sound_ref {
+		status = "disabled";
+	};
+
+	ahub {
+		status = "disabled";
+	};
+
+        adsp_audio {
+                status = "disabled";
+        };
+
+        adsp@2993000 {
+                status = "disabled";
+        };
 };

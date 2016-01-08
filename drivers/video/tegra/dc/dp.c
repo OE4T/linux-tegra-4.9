@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1419,7 +1419,7 @@ bool tegra_dc_dp_calc_config(struct tegra_dc_dp_data *dp,
 	unsigned long rate;
 
 	cfg->is_valid = false;
-	rate = tegra_dc_pclk_round_rate(dp->sor->dc, dp->sor->dc->mode.pclk);
+	rate = tegra_dc_clk_get_rate(dp->dc);
 
 	if (!link_rate || !cfg->lane_count || !rate ||
 		!cfg->bits_per_pixel)

@@ -53,21 +53,19 @@ struct mce_regs {
 
 static noinline notrace int __send_smc(u8 func, struct mce_regs *regs)
 {
-	u32 ret = SMC_SIP_INVOKE_MCE | func;
+	u32 ret = SMC_SIP_INVOKE_MCE | (func & MCE_SMC_ENUM_MAX);
 	asm volatile (
 	"	mov	x0, %0 \n"
-	"	mov	x1, %1 \n"
-	"	ldp	x2, x3, [%2, #16 * 0] \n"
-	"	ldp	x4, x5, [%2, #16 * 1] \n"
-	"	ldp	x6, x7, [%2, #16 * 2] \n"
+	"	ldp	x1, x2, [%1, #16 * 0] \n"
+	"	ldp	x3, x4, [%1, #16 * 1] \n"
+	"	ldp	x5, x6, [%1, #16 * 2] \n"
 	"	isb \n"
 	"	smc	#0 \n"
 	"	mov	%0, x0 \n"
-	"	stp	x2, x3, [%2, #16 * 0] \n"
-	"	stp	x4, x5, [%2, #16 * 1] \n"
-	"	stp	x6, x7, [%2, #16 * 2] \n"
+	"	stp	x0, x1, [%1, #16 * 0] \n"
+	"	stp	x2, x3, [%1, #16 * 1] \n"
 	: "+r" (ret)
-	: "r" (func), "r" (regs)
+	: "r" (regs)
 	: "x0", "x1", "x2", "x3", "x4", "x5", "x6", "x7", "x8",
 	"x9", "x10", "x11", "x12", "x13", "x14", "x15", "x16", "x17");
 	return ret;
@@ -156,7 +154,7 @@ int tegra_mce_read_cstate_stats(u32 state, u32 *stats)
 	struct mce_regs regs;
 	regs.args[0] = state;
 	send_smc(MCE_SMC_READ_CSTATE_STATS, &regs);
-	*stats = (u32)regs.args[1];
+	*stats = (u32)regs.args[2];
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_read_cstate_stats);
@@ -247,7 +245,7 @@ int tegra_mce_echo_data(u32 data, int *matched)
 	struct mce_regs regs;
 	regs.args[0] = data;
 	send_smc(MCE_SMC_ECHO_DATA, &regs);
-	*matched = (u32)regs.args[1];
+	*matched = (u32)regs.args[2];
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_echo_data);
@@ -264,8 +262,8 @@ int tegra_mce_read_versions(u32 *major, u32 *minor)
 {
 	struct mce_regs regs;
 	send_smc(MCE_SMC_READ_VERSIONS, &regs);
-	*major = (u32)regs.args[0];
-	*minor = (u32)regs.args[1];
+	*major = (u32)regs.args[1];
+	*minor = (u32)regs.args[2];
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_read_versions);
@@ -281,7 +279,7 @@ int tegra_mce_enum_features(u64 *features)
 {
 	struct mce_regs regs;
 	send_smc(MCE_SMC_ENUM_FEATURES, &regs);
-	*features = (u32)regs.args[0];
+	*features = (u32)regs.args[1];
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_enum_features);
@@ -308,8 +306,8 @@ int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error)
 	regs.args[0] = cmd.data;
 	regs.args[1] = 0;
 	send_smc(MCE_SMC_ENUM_READ_MCA, &regs);
-	*data = regs.args[1];
-	*error = (u32)regs.args[2];
+	*data = regs.args[2];
+	*error = (u32)regs.args[3];
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_read_uncore_mca);
@@ -329,7 +327,7 @@ int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error)
 	regs.args[0] = cmd.data;
 	regs.args[1] = data;
 	send_smc(MCE_SMC_ENUM_WRITE_MCA, &regs);
-	*error = (u32)regs.args[2];
+	*error = (u32)regs.args[3];
 	return 0;
 }
 EXPORT_SYMBOL(tegra_mce_write_uncore_mca);

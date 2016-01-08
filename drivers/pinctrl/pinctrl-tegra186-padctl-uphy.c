@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -86,6 +86,7 @@
 /* UPHY Lane registers */
 #define UPHY_LANE_AUX_CTL_1			(0x0)
 #define   AUX_RX_IDLE_TH(x)			(((x) & 0x3) << 24)
+#define   AUX_TX_RDET_STATUS		(0x1 << 7)
 
 #define UPHY_LANE_DIRECT_CTL_1			(0x10)
 #define   MISC_CTRL(x)				(((x) & 0xff) << 0)
@@ -5355,6 +5356,17 @@ static struct platform_driver tegra186_padctl_uphy_driver = {
 module_platform_driver(tegra186_padctl_uphy_driver);
 
 /* Tegra Generic PHY Extensions */
+bool tegra_phy_get_lane_rdet(struct phy *phy, u8 lane_num)
+{
+	struct tegra_padctl_uphy *uphy = phy_get_drvdata(phy);
+	u32 data;
+
+	data = uphy_lane_readl(uphy, lane_num, UPHY_LANE_AUX_CTL_1);
+	data = data & AUX_TX_RDET_STATUS;
+	return !(!data);
+}
+EXPORT_SYMBOL_GPL(tegra_phy_get_lane_rdet);
+
 int tegra_phy_xusb_enable_sleepwalk(struct phy *phy,
 				    enum usb_device_speed speed)
 {

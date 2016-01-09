@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-platforms/tegra186-dp.dtsi
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -115,14 +115,17 @@
 			prod-settings {
 				prod_c_dp {
 					prod = <
-					0x0000058c 0xf0fff0ef 0x01000310 // SOR_NV_PDISP_SOR_PLL0_0      27:24=ICHPMP       0x01
-									//                              11:08=VCOCAP       0x03
-									//                              04:04=RESISTORSEL  0x01
-					0x00000590 0xfcfffeff 0x00000100 // SOR_NV_PDISP_SOR_PLL1_0      25:24=LVDSCM       0x00
-									//                              08:08=TMDS_TERM    0x01
-					0x00000598 0xffffdfff 0x00002000 // SOR_NV_PDISP_SOR_PLL3_0      13:13=PLVVDD_MODE  0x01
-					0x00000070 0x00000000 0x00000000 // SOR_NV_PDISP_SOR_LVDS_0
-					0x00000180 0xfffffffe 0x00000001 // SOR_NV_PDISP_SOR_DP_SPARE0_0 00:00=SEQ_ENABLE   0x01
+						0x0000058c 0xf0f0f0ef 0x05050310	//SOR_NV_PDISP_SOR_PLL0_0	27:24=ICHPMP		0x05
+											//				19:16=FILTER		0x05
+											//				11:08=VCOCAP		0x03
+											//				04:04=RESISTORSEL	0x01
+						0x00000590 0xfcfffeff 0x00000100	//SOR_NV_PDISP_SOR_PLL1_0	25:24=LVDSCM		0x00
+											//				08:08=TMDS_TERM		0x01
+						0x00000598 0xffffd00f 0x00002440	//SOR_NV_PDISP_SOR_PLL3_0	13:13=PLVVDD_MODE	0x01
+											//				11:08=AVDD10_LEVEL	0x04
+											//				07:04=AVDD14_LEVEL	0x04
+						0x00000070 0x00000000 0x00000000	//SOR_NV_PDISP_SOR_LVDS_0
+						0x00000180 0xfffffffe 0x00000001	//SOR_NV_PDISP_SOR_DP_SPARE0_0	00:00=SEQ_ENABLE	0x01
 					>;
 				};//prod_c_dp
 			};//prod-settings

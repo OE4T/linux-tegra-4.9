@@ -156,20 +156,20 @@
                         interrupts = <TEGRA_GPIO(AA, 2) 0x01>;
                         accelerometer_matrix	= [01 00 00 00 01 00 00 00 01];
                         gyroscope_matrix	= [01 00 00 00 01 00 00 00 01];
-			status = "okay";
+			status = "disabled";
                 };
 
                 e2614_ak8963: ak8963@0d {
                         compatible = "ak,ak89xx";
                         reg = <0x0d>;
                         magnetic_field_matrix	= [01 00 00 00 01 00 00 00 01];
-			status = "okay";
+			status = "disabled";
                 };
 
                 e2614_bmp280: bmp280@77 {
                         compatible = "bmp,bmpX80";
                         reg = <0x77>;
-			status = "okay";
+			status = "disabled";
                 };
 
                 e2614_cm32180: cm32180@48 {
@@ -180,7 +180,7 @@
                         light_calibrated_lo = <150>;
                         light_uncalibrated_hi = <95000>;
                         light_calibrated_hi = <1750000>;
-			status = "okay";
+			status = "disabled";
                 };
 
                 e2614_iqs263: iqs263@44 {
@@ -360,6 +360,30 @@
 			};
 			overrides@13 {
                                 target = <&e2614_dspk_l_dai_link>;
+                                _overlay_ {
+                                        status = "okay";
+                                };
+                        };
+			overrides@14 {
+                                target = <&e2614_icm20628>;
+                                _overlay_ {
+                                        status = "okay";
+                                };
+                        };
+			overrides@15 {
+                                target = <&e2614_ak8963>;
+                                _overlay_ {
+                                        status = "okay";
+                                };
+                        };
+			overrides@16 {
+                                target = <&e2614_bmp280>;
+                                _overlay_ {
+                                        status = "okay";
+                                };
+                        };
+			overrides@17 {
+                                target = <&e2614_cm32180>;
                                 _overlay_ {
                                         status = "okay";
                                 };

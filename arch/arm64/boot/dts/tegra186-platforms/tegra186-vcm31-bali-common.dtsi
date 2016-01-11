@@ -529,5 +529,76 @@
 		csi-port = <0>;
 		status = "okay";
 	};
+
+	arm-pmu {
+		status = "okay";
+	};
+
+	cpus {
+		status = "disabled";
+	};
+
+	i2c@31b0000 {
+		status = "disabled";
+	};
+
+	thermal-zones {
+		status = "disabled";
+
+		Tboard_tegra {
+			status = "disabled";
+
+			thermal-zone-params {
+			};
+		};
+
+		Tdiode_tegra {
+			status = "disabled";
+
+			thermal-zone-params {
+			};
+		};
+	};
+
+	mc_sid@2c00000 {
+		status = "disabled";
+	};
+
+	iommu@12000000 {
+		status = "disabled";
+	};
+
+	pmc-iopower {
+		status = "disabled";
+	};
+
+	host1x {
+
+		vii2c@156c0000 {
+			status = "disabled";
+		};
+
+		vii2c {
+			status = "disabled";
+		};
+	};
+
+	bpmp {
+		bpmpthermal {
+			status = "disabled";
+		};
+	};
+
+	efuse@3820000 {
+                status = "disabled";
+        };
+
+	aon@c160000 {
+		status = "disabled";
+	};
+
+	external-connection {
+		status = "disabled";
+	};
 };
 

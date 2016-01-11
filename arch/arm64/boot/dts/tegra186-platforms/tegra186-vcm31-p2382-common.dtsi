@@ -99,7 +99,7 @@
 		saf775x@1c {
 			 compatible = "saf775x";
 			 reg = <0x1c>;
-			 status = "okay";
+			 status = "disabled";
 		};
 
 		tmpm32xi2c_61: tmpm32xi2c@61 {
@@ -675,5 +675,31 @@
         tpiu@8060000 {
                 status = "okay";
         };
+
+	pmc-iopower {
+		status = "disabled";
+	};
+
+	host1x {
+
+		vii2c@156c0000 {
+			status = "disabled";
+		};
+
+		vii2c {
+			status = "disabled";
+		};
+	};
+
+	bpmp {
+		bpmpthermal {
+			status = "disabled";
+		};
+	};
+
+	cpus {
+		status = "disabled";
+
+	};
 };
 

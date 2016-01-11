@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -362,9 +362,14 @@ void nvhost_syncpt_thresh_fn(void *dev_id)
 	unsigned int id = syncpt->id;
 	struct nvhost_intr *intr = intr_syncpt_to_intr(syncpt);
 	struct nvhost_master *dev = intr_to_dev(intr);
+	int err;
 
 	/* make sure host1x is powered */
-	nvhost_module_busy(dev->dev);
+	err = nvhost_module_busy(dev->dev);
+	if (err) {
+		WARN(1, "failed to powerON host1x.");
+		return;
+	}
 
 	if (nvhost_dev_is_virtual(dev->dev))
 		(void)process_wait_list(intr, syncpt,

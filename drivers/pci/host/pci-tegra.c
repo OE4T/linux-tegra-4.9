@@ -60,6 +60,7 @@
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
+#include <linux/pm_clock.h>
 
 #include <asm/sizes.h>
 #include <asm/mach/pci.h>
@@ -360,13 +361,6 @@
 #define pin_pex_l1_clkreq	"pex_l1_clkreq_n_pa4"
 #endif
 
-static struct of_device_id tegra_pcie_pd[] = {
-	{ .compatible = "nvidia,tegra186-pcie-pd", },
-	{ .compatible = "nvidia,tegra210-pcie-pd", },
-	{ .compatible = "nvidia,tegra132-pcie-pd", },
-	{},
-};
-
 #define PCIE_LANES_X4_X0_X1 0x401
 #define PCIE_LANES_X2_X1_X1 0x211
 #define PCIE_LANES_X1_X1_X1 0x111
@@ -428,16 +422,7 @@ struct tegra_pcie {
 	struct reset_control *afi_rst;
 	struct reset_control *pcie_rst;
 	struct reset_control *pciex_rst;
-#if !defined(CONFIG_COMMON_CLK)
-	struct clk		*pcie_xclk;
-	struct clk		*pcie_afi;
-	struct clk		*pcie_pcie;
-	struct clk		*pcie_pll_e;
-	struct clk		*pcie_mselect;
-	struct clk		*pcie_emc;
-#else
-	struct clk		*pcie_afi;
-	struct clk		*pcie_pcie;
+#if defined(CONFIG_COMMON_CLK)
 	struct tegra_bwmgr_client *emc_bwmgr;
 #endif
 
@@ -459,6 +444,15 @@ struct tegra_pcie {
 	struct delayed_work detect_delay;
 	struct tegra_prod_list	*prod_list;
 };
+
+struct tegra_pcie_domain {
+	struct tegra_pcie *tegra_pcie;
+	struct tegra_pm_domain tpd;
+};
+
+static int tegra_pcie_enable_msi(struct tegra_pcie *pcie, bool no_init);
+static void tegra_pcie_check_ports(struct tegra_pcie *pcie);
+static int tegra_pcie_power_off(struct tegra_pcie *pcie);
 
 struct tegra_pcie_port {
 	struct tegra_pcie *pcie;
@@ -1103,6 +1097,80 @@ static void tegra_pcie_setup_translations(struct tegra_pcie *pcie)
 	afi_writel(pcie, 0, AFI_MSI_BAR_SZ);
 }
 
+static int tegra_pcie_get_clocks(struct tegra_pcie *pcie)
+{
+	int error;
+	struct device *dev = pcie->dev;
+
+	PR_FUNC_LINE;
+	error = pm_clk_create(dev);
+	if (error) {
+		dev_err(dev, "pm_clk_create failed %d\n", error);
+		return error;
+	}
+
+#if !defined(CONFIG_COMMON_CLK)
+	error = pm_clk_add(dev, "pciex");
+	if (error) {
+		dev_err(dev, "unable to get PCIE Xclock\n");
+		return error;
+	}
+	error = pm_clk_add(dev, "afi");
+	if (error) {
+		pm_clk_remove(dev, "pciex");
+		dev_err(dev, "unable to get PCIE afi clock\n");
+		return error;
+	}
+	error = pm_clk_add(dev, "pcie");
+	if (error) {
+		pm_clk_remove(dev, "pciex");
+		pm_clk_remove(dev, "afi");
+		dev_err(dev, "unable to get PCIE pcie clock\n");
+		return error;
+	}
+	error = pm_clk_add(dev, "mselect");
+	if (error) {
+		pm_clk_remove(dev, "pciex");
+		pm_clk_remove(dev, "afi");
+		pm_clk_remove(dev, "pcie");
+		dev_err(dev, "unable to get PCIE mselect clock\n");
+		return error;
+	}
+	error = pm_clk_add(dev, "emc");
+	if (error) {
+		dev_err(dev, "unable to get PCIE emc clock\n");
+		return error;
+	}
+#else
+	error = pm_clk_add(dev, "afi");
+	if (error) {
+		dev_err(dev, "missing afi clock");
+		return error;
+	}
+	error = pm_clk_add(dev, "pcie");
+	if (error) {
+		dev_err(dev, "missing pcie clock");
+		return error;
+	}
+	pcie->emc_bwmgr = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_PCIE);
+	if (!pcie->emc_bwmgr) {
+		dev_err(pcie->dev, "couldn't register with EMC BwMgr\n");
+		return -EINVAL;
+	}
+#endif
+	return 0;
+}
+
+static void tegra_pcie_clocks_put(struct tegra_pcie *pcie)
+{
+#if !defined(CONFIG_COMMON_CLK)
+	pm_clk_destroy(pcie->dev);
+#else
+	tegra_bwmgr_set_emc(pcie->emc_bwmgr, 0, TEGRA_BWMGR_SET_EMC_FLOOR);
+	tegra_bwmgr_unregister(pcie->emc_bwmgr);
+#endif
+}
+
 static int tegra_pcie_enable_pads(struct tegra_pcie *pcie, bool enable)
 {
 	int err = 0;
@@ -1299,75 +1367,6 @@ static int tegra_pcie_disable_regulators(struct tegra_pcie *pcie)
 
 }
 
-static int tegra_pcie_power_ungate(struct tegra_pcie *pcie)
-{
-	int err;
-	int partition_id;
-
-	PR_FUNC_LINE;
-#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
-	partition_id = tegra_pd_get_powergate_id(tegra_pcie_pd);
-#else
-	partition_id = TEGRA_POWERGATE_PCIE;
-#endif
-	if (partition_id < 0)
-		return -EINVAL;
-
-#if !defined(CONFIG_COMMON_CLK)
-	err = clk_prepare_enable(pcie->pcie_pll_e);
-	if (err) {
-		dev_err(pcie->dev, "PCIE: PLLE clk enable failed: %d\n", err);
-		return err;
-	}
-#endif
-
-	err = tegra_unpowergate_partition_with_clk_on(partition_id);
-	if (err) {
-		dev_err(pcie->dev, "PCIE: powerup sequence failed: %d\n", err);
-		return err;
-	}
-
-#if !defined(CONFIG_COMMON_CLK)
-	err = clk_prepare_enable(pcie->pcie_mselect);
-	if (err) {
-		dev_err(pcie->dev, "PCIE: mselect clk enable failed: %d\n",
-			err);
-		return err;
-	}
-	err = clk_enable(pcie->pcie_xclk);
-	if (err) {
-		dev_err(pcie->dev, "PCIE: pciex clk enable failed: %d\n", err);
-		return err;
-	}
-	err = clk_prepare_enable(pcie->pcie_emc);
-	if (err) {
-		dev_err(pcie->dev, "PCIE:  emc clk enable failed: %d\n", err);
-		return err;
-	}
-#else
-	err  = clk_prepare_enable(pcie->pcie_afi);
-	if (err < 0) {
-		dev_err(pcie->dev,
-			"Error in enabling afi clock %d\n", err);
-		return err;
-	}
-	err  = clk_prepare_enable(pcie->pcie_pcie);
-	if (err < 0) {
-		dev_err(pcie->dev,
-			"Error in enabling pcie clock %d\n", err);
-		goto disable_afi_clk;
-	}
-#endif
-	return err;
-
-#if defined(CONFIG_COMMON_CLK)
-disable_afi_clk:
-	if (pcie->pcie_afi)
-		clk_disable_unprepare(pcie->pcie_afi);
-#endif
-	return err;
-}
-
 static int tegra_pcie_map_resources(struct tegra_pcie *pcie)
 {
 	struct platform_device *pdev = to_platform_device(pcie->dev);
@@ -1487,6 +1486,7 @@ static void tegra_pcie_pme_turnoff(struct tegra_pcie *pcie)
 	afi_writel(pcie, data, AFI_PLLE_CONTROL);
 }
 
+#ifdef CONFIG_TEGRA3_PM
 static struct tegra_io_dpd pexbias_io = {
 	.name			= "PEX_BIAS",
 	.io_dpd_reg_index	= 0,
@@ -1502,102 +1502,196 @@ static struct tegra_io_dpd pexclk2_io = {
 	.io_dpd_reg_index	= 0,
 	.io_dpd_bit		= 6,
 };
-static int tegra_pcie_power_on(struct tegra_pcie *pcie)
+#endif
+
+static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
 {
-	int err = 0;
+	int ret;
+	struct device *dev;
+	struct tegra_pcie *pcie;
+	struct tegra_pcie_domain *tegra_pcie_domain;
+	struct tegra_pm_domain *tpd = to_tegra_pd(genpd);
 
 	PR_FUNC_LINE;
+
+	if (!tpd || (tpd->partition_id < 0))
+		return -EINVAL;
+
+	tegra_pcie_domain = container_of(tpd, struct tegra_pcie_domain, tpd);
+	pcie = tegra_pcie_domain->tegra_pcie;
+	dev = pcie->dev;
+
 	if (pcie->pcie_power_enabled) {
 		dev_info(pcie->dev, "PCIE: Already powered on");
-		goto err_exit;
+		return 0;
 	}
 	pcie->pcie_power_enabled = 1;
-	pm_runtime_get_sync(pcie->dev);
 
+	if (gpio_is_valid(pcie->plat_data->gpio_wake) &&
+		device_may_wakeup(dev)) {
+		ret = disable_irq_wake(gpio_to_irq(
+			pcie->plat_data->gpio_wake));
+		if (ret < 0) {
+			dev_err(dev,
+				"ID wake-up event failed with error %d\n", ret);
+			return ret;
+		}
+	} else {
+		ret = tegra_pcie_enable_regulators(pcie);
+		if (ret) {
+			dev_err(pcie->dev, "PCIE: Failed to enable regulators\n");
+			return ret;
+		}
+	}
+#if !defined(CONFIG_COMMON_CLK)
+	ret = clk_prepare_enable(clk_get_sys("tegra_pcie", "pll_e"));
+	if (ret)
+		return ret;
+#endif
+	ret = tegra_unpowergate_partition_with_clk_on(tpd->partition_id);
+	return ret;
+}
+
+static int tegra_pcie_restore_device(struct device *dev)
+{
+	int ret;
+	int err = 0;
+	struct tegra_pcie *pcie = dev_get_drvdata(dev);
+
+	PR_FUNC_LINE;
+
+#ifdef CONFIG_TEGRA3_PM
+	if (!tegra_platform_is_fpga()) {
+		/* disable PEX IOs DPD mode to turn on pcie */
+		tegra_io_dpd_disable(&pexbias_io);
+		tegra_io_dpd_disable(&pexclk1_io);
+		tegra_io_dpd_disable(&pexclk2_io);
+	}
+#endif
 	err = tegra_pcie_map_resources(pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: Failed to map resources\n");
 		goto err_map_resource;
 	}
-	err = tegra_pcie_power_ungate(pcie);
-	if (err) {
-		dev_err(pcie->dev, "PCIE: Failed to power ungate\n");
-		goto err_power_ungate;
-	}
-
 	if (tegra_platform_is_fpga()) {
 		err = tegra_pcie_fpga_phy_init(pcie);
 		if (err)
 			dev_err(pcie->dev, "PCIE: Failed to initialize FPGA Phy\n");
 	}
+
+	tegra_pcie_enable_pads(pcie, true);
+	reset_control_deassert(pcie->afi_rst);
+	tegra_pcie_enable_controller(pcie);
+	tegra_pcie_setup_translations(pcie);
+	/* Set up MSI registers, if MSI have been enabled */
+	tegra_pcie_enable_msi(pcie, true);
+	reset_control_deassert(pcie->pcie_rst);
+	tegra_pcie_check_ports(pcie);
+	if (!pcie->num_ports) {
+		tegra_pcie_power_off(pcie);
+		ret = tegra_pcie_disable_regulators(pcie);
+		if (ret)
+			return ret;
+	}
 	return 0;
-err_power_ungate:
-	tegra_pcie_unmap_resources(pcie);
 err_map_resource:
-	pm_runtime_put(pcie->dev);
-	pcie->pcie_power_enabled = 0;
-err_exit:
+#ifdef CONFIG_TEGRA3_PM
+	tegra_io_dpd_enable(&pexbias_io);
+	tegra_io_dpd_enable(&pexclk1_io);
+	tegra_io_dpd_enable(&pexclk2_io);
+#endif
 	return err;
 }
 
-static int tegra_pcie_power_off(struct tegra_pcie *pcie, bool all)
+static int tegra_pcie_power_on(struct tegra_pcie *pcie)
 {
 	int err = 0;
-	struct tegra_pcie_port *port;
-	int partition_id;
 
 	PR_FUNC_LINE;
+	err = pm_runtime_get_sync(pcie->dev);
+	if (err) {
+		pm_runtime_put(pcie->dev);
+		pcie->pcie_power_enabled = 0;
+	}
+	return err;
+}
+
+static int tegra_pcie_save_device(struct device *dev)
+{
+	struct tegra_pcie *pcie = dev_get_drvdata(dev);
+	struct tegra_pcie_port *port;
+
+	PR_FUNC_LINE;
+
 	if (pcie->pcie_power_enabled == 0) {
 		dev_info(pcie->dev, "PCIE: Already powered off");
-		goto err_exit;
+		return 0;
 	}
-	if (all) {
-		list_for_each_entry(port, &pcie->ports, list) {
-			tegra_pcie_prsnt_map_override(port, false);
-		}
-		tegra_pcie_pme_turnoff(pcie);
-		tegra_pcie_enable_pads(pcie, false);
+	list_for_each_entry(port, &pcie->ports, list) {
+		tegra_pcie_prsnt_map_override(port, false);
 	}
+	tegra_pcie_pme_turnoff(pcie);
+	tegra_pcie_enable_pads(pcie, false);
 	tegra_pcie_unmap_resources(pcie);
-#if !defined(CONFIG_COMMON_CLK)
-	if (pcie->pcie_mselect)
-		clk_disable(pcie->pcie_mselect);
-	if (pcie->pcie_xclk)
-		clk_disable(pcie->pcie_xclk);
-	if (pcie->pcie_emc)
-		clk_disable(pcie->pcie_emc);
-#else
-	if (pcie->pcie_afi)
-		clk_disable_unprepare(pcie->pcie_afi);
-	if (pcie->pcie_pcie)
-		clk_disable_unprepare(pcie->pcie_pcie);
-#endif
-	partition_id = tegra_pd_get_powergate_id(tegra_pcie_pd);
-	if (partition_id < 0)
-		return -EINVAL;
-
-	err = tegra_powergate_partition_with_clk_off(partition_id);
-	if (err)
-		goto err_exit;
-
-#if !defined(CONFIG_COMMON_CLK)
-	if (pcie->pcie_pll_e)
-		clk_disable(pcie->pcie_pll_e);
-#endif
-
+#ifdef CONFIG_TEGRA3_PM
 	if (!tegra_platform_is_fpga()) {
 		/* put PEX pads into DPD mode to save additional power */
-	/*
-	 * Please revove below protection once config is enabled.
-	 */
-#ifdef CONFIG_TEGRA3_PM
 		tegra_io_dpd_enable(&pexbias_io);
 		tegra_io_dpd_enable(&pexclk1_io);
 		tegra_io_dpd_enable(&pexclk2_io);
-#endif
 	}
-	pm_runtime_put(pcie->dev);
+#endif
+	return 0;
+}
 
+static int tegra_pcie_module_power_gate(struct generic_pm_domain *genpd)
+{
+	int ret;
+	struct device *dev;
+	struct tegra_pcie *pcie;
+	struct tegra_pcie_domain *tegra_pcie_domain;
+	struct tegra_pm_domain *tpd = to_tegra_pd(genpd);
+
+	PR_FUNC_LINE;
+
+	if (!tpd || (tpd->partition_id < 0))
+		return -EINVAL;
+
+	ret = tegra_powergate_partition_with_clk_off(tpd->partition_id);
+	if (ret)
+		return ret;
+
+#if !defined(CONFIG_COMMON_CLK)
+	clk_disable(clk_get_sys("tegra_pcie", "pll_e"));
+#endif
+	tegra_pcie_domain = container_of(tpd, struct tegra_pcie_domain, tpd);
+	pcie = tegra_pcie_domain->tegra_pcie;
+	dev = pcie->dev;
+	/* configure PE_WAKE signal as wake sources */
+	if (gpio_is_valid(pcie->plat_data->gpio_wake) &&
+			device_may_wakeup(dev)) {
+		ret = enable_irq_wake(gpio_to_irq(
+		pcie->plat_data->gpio_wake));
+		if (ret < 0) {
+			dev_err(dev,
+				"ID wake-up event failed with error %d\n", ret);
+		}
+	} else {
+		ret = tegra_pcie_disable_regulators(pcie);
+	}
+
+	pcie->pcie_power_enabled = 0;
+	return ret;
+}
+
+static int tegra_pcie_power_off(struct tegra_pcie *pcie)
+{
+	int err = 0;
+
+	PR_FUNC_LINE;
+	err = pm_runtime_put(pcie->dev);
+	if (err)
+		goto err_exit;
 	pcie->pcie_power_enabled = 0;
 err_exit:
 	return err;
@@ -1626,98 +1720,6 @@ static int tegra_pcie_get_resets(struct tegra_pcie *pcie)
 	return 0;
 }
 
-static int tegra_pcie_get_clocks(struct tegra_pcie *pcie)
-{
-	PR_FUNC_LINE;
-
-#if !defined(CONFIG_COMMON_CLK)
-	pcie->pcie_xclk = clk_get_sys("tegra_pcie", "pciex");
-	if (IS_ERR_OR_NULL(pcie->pcie_xclk)) {
-		dev_err(pcie->dev, "unable to get PCIE Xclock\n");
-		return -EINVAL;
-	}
-	pcie->pcie_afi = clk_get_sys("tegra_pcie", "afi");
-	if (IS_ERR_OR_NULL(pcie->pcie_afi)) {
-		clk_put(pcie->pcie_xclk);
-		dev_err(pcie->dev, "unable to get PCIE afi clock\n");
-		return -EINVAL;
-	}
-	pcie->pcie_pcie = clk_get_sys("tegra_pcie", "pcie");
-	if (IS_ERR_OR_NULL(pcie->pcie_pcie)) {
-		clk_put(pcie->pcie_afi);
-		clk_put(pcie->pcie_xclk);
-		dev_err(pcie->dev, "unable to get PCIE pcie clock\n");
-		return -EINVAL;
-	}
-
-	pcie->pcie_pll_e = clk_get_sys("tegra_pcie", "pll_e");
-	if (IS_ERR_OR_NULL(pcie->pcie_pll_e)) {
-		clk_put(pcie->pcie_afi);
-		clk_put(pcie->pcie_xclk);
-		clk_put(pcie->pcie_pcie);
-		dev_err(pcie->dev, "unable to get PCIE PLLE clock\n");
-		return -EINVAL;
-	}
-
-	pcie->pcie_mselect = clk_get_sys("tegra_pcie", "mselect");
-	if (IS_ERR_OR_NULL(pcie->pcie_mselect)) {
-		clk_put(pcie->pcie_pll_e);
-		clk_put(pcie->pcie_pcie);
-		clk_put(pcie->pcie_afi);
-		clk_put(pcie->pcie_xclk);
-		dev_err(pcie->dev,
-			"unable to get PCIE mselect clock\n");
-		return -EINVAL;
-	}
-	pcie->pcie_emc = clk_get_sys("tegra_pcie", "emc");
-	if (IS_ERR_OR_NULL(pcie->pcie_emc)) {
-		dev_err(pcie->dev,
-			"unable to get PCIE emc clock\n");
-		return -EINVAL;
-	}
-#else
-	pcie->pcie_afi = devm_clk_get(pcie->dev, "afi");
-	if (IS_ERR(pcie->pcie_afi)) {
-		dev_err(pcie->dev, "missing afi clock\n");
-		return PTR_ERR(pcie->pcie_afi);
-	}
-	pcie->pcie_pcie = devm_clk_get(pcie->dev, "pcie");
-	if (IS_ERR(pcie->pcie_pcie)) {
-		dev_err(pcie->dev, "missing pcie clock\n");
-		return PTR_ERR(pcie->pcie_pcie);
-	}
-	pcie->emc_bwmgr = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_PCIE);
-	if (!pcie->emc_bwmgr) {
-		dev_err(pcie->dev, "couldn't register with EMC BwMgr\n");
-		return -EINVAL;
-	}
-#endif
-
-	return 0;
-}
-
-static void tegra_pcie_clocks_put(struct tegra_pcie *pcie)
-{
-	PR_FUNC_LINE;
-#if !defined(CONFIG_COMMON_CLK)
-	if (pcie->pcie_xclk)
-		clk_put(pcie->pcie_xclk);
-	if (pcie->pcie_pcie)
-		clk_put(pcie->pcie_pcie);
-	if (pcie->pcie_afi)
-		clk_put(pcie->pcie_afi);
-	if (pcie->pcie_mselect)
-		clk_put(pcie->pcie_mselect);
-	if (pcie->pcie_pll_e)
-		clk_put(pcie->pcie_pll_e);
-	if (pcie->pcie_emc)
-		clk_put(pcie->pcie_emc);
-#else
-	tegra_bwmgr_set_emc(pcie->emc_bwmgr, 0, TEGRA_BWMGR_SET_EMC_FLOOR);
-	tegra_bwmgr_unregister(pcie->emc_bwmgr);
-#endif
-}
-
 static int tegra_pcie_get_resources(struct tegra_pcie *pcie)
 {
 	struct platform_device *pdev = to_platform_device(pcie->dev);
@@ -1735,22 +1737,17 @@ static int tegra_pcie_get_resources(struct tegra_pcie *pcie)
 	err = tegra_pcie_get_resets(pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: failed to get resets: %d\n", err);
-		goto err_clk_get;
+		goto err_reset_get;
 	}
 	err = tegra_pcie_enable_regulators(pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: Failed to enable regulators\n");
-		goto err_enable_reg;
-	}
-	err = tegra_pcie_power_on(pcie);
-	if (err) {
-		dev_err(pcie->dev, "PCIE: Failed to power on: %d\n", err);
-		goto err_pwr_on;
+		goto err_reset_get;
 	}
 	err = platform_get_irq_byname(pdev, "intr");
 	if (err < 0) {
 		dev_err(pcie->dev, "failed to get IRQ: %d\n", err);
-		goto err_clk_rate;
+		goto err_irq;
 	}
 
 	pcie->irq = err;
@@ -1759,19 +1756,24 @@ static int tegra_pcie_get_resources(struct tegra_pcie *pcie)
 			IRQF_SHARED, "PCIE", pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: Failed to register IRQ: %d\n", err);
-		goto err_clk_rate;
+		goto err_irq;
 	}
 
 	return 0;
 
-err_clk_rate:
-	tegra_pcie_power_off(pcie, true);
-err_pwr_on:
+err_irq:
 	tegra_pcie_disable_regulators(pcie);
-err_enable_reg:
+err_reset_get:
 	tegra_pcie_clocks_put(pcie);
 err_clk_get:
 	return err;
+}
+
+static void tegra_pcie_release_resources(struct tegra_pcie *pcie)
+{
+	devm_free_irq(pcie->dev, pcie->irq, pcie);
+	tegra_pcie_disable_regulators(pcie);
+	tegra_pcie_clocks_put(pcie);
 }
 
 static unsigned long tegra_pcie_port_get_pex_ctrl(struct tegra_pcie_port *port)
@@ -2408,7 +2410,7 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 	active_lanes = 0;
 	dev_dbg(pcie->dev, "mselect_clk is set @ %u\n",
 		dvfs_data[active_lanes][is_gen2].afi_clk);
-	err = clk_set_rate(pcie->pcie_mselect,
+	err = clk_set_rate(clk_get_sys("tegra_pcie", "mselect"),
 		dvfs_data[active_lanes][is_gen2].afi_clk);
 	if (err) {
 		dev_err(pcie->dev, "setting mselect clk to %u failed : %d\n",
@@ -2417,7 +2419,7 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 	}
 	dev_dbg(pcie->dev, "emc_clk is set @ %u\n",
 		dvfs_data[active_lanes][is_gen2].emc_clk);
-	err = clk_set_rate(pcie->pcie_emc,
+	err = clk_set_rate(clk_get_sys("tegra_pcie", "emc"),
 		dvfs_data[active_lanes][is_gen2].emc_clk);
 	if (err) {
 		dev_err(pcie->dev, "setting emc clk to %u failed : %d\n",
@@ -2427,7 +2429,7 @@ static int tegra_pcie_scale_voltage(struct tegra_pcie *pcie)
 #else
 	dev_dbg(pcie->dev, "afi_clk is set @ %u\n",
 		dvfs_data[active_lanes][is_gen2].afi_clk);
-	err = clk_set_rate(pcie->pcie_afi,
+	err = clk_set_rate(devm_clk_get(pcie->dev, "afi"),
 		dvfs_data[active_lanes][is_gen2].afi_clk);
 	if (err) {
 		dev_err(pcie->dev, "setting afi clk to %u failed : %d\n",
@@ -2712,50 +2714,25 @@ static int tegra_pcie_disable_msi(struct tegra_pcie *pcie);
 static int tegra_pcie_init(struct tegra_pcie *pcie)
 {
 	int err = 0;
-	struct platform_device *pdev = to_platform_device(pcie->dev);
 
 	PR_FUNC_LINE;
+
 	INIT_WORK(&pcie->hotplug_detect, work_hotplug_handler);
 	err = tegra_pcie_get_resources(pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: get resources failed\n");
 		return err;
 	}
-
-	if (tegra_platform_is_silicon()) {
-		err = tegra_pcie_enable_pads(pcie, true);
-		if (err) {
-			dev_err(pcie->dev, "PCIE: enable pads failed\n");
-			goto fail_release_resource;
-		}
+	err = tegra_pcie_power_on(pcie);
+	if (err) {
+		dev_err(pcie->dev, "PCIE: Failed to power on: %d\n", err);
+		goto fail_release_resource;
 	}
-
-	reset_control_deassert(pcie->afi_rst);
-
-	tegra_pcie_enable_controller(pcie);
-
 	err = tegra_pcie_conf_gpios(pcie);
 	if (err) {
 		dev_err(pcie->dev, "PCIE: configuring gpios failed\n");
-		goto fail_release_resource;
+		goto fail_power_off;
 	}
-
-	/* setup the AFI address translations */
-	tegra_pcie_setup_translations(pcie);
-
-	if (IS_ENABLED(CONFIG_PCI_MSI)) {
-		err = tegra_pcie_enable_msi(pcie, false);
-		if (err < 0) {
-			dev_err(&pdev->dev,
-				"failed to enable MSI support: %d\n",
-				err);
-			goto fail_release_resource;
-		}
-	}
-
-	reset_control_deassert(pcie->pcie_rst);
-
-	tegra_pcie_check_ports(pcie);
 
 	if (pcie->num_ports) {
 		tegra_pcie_hw.private_data = (void **)&pcie;
@@ -2764,7 +2741,7 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 		pci_common_init_dev(pcie->dev, &tegra_pcie_hw);
 	} else {
 		dev_info(pcie->dev, "PCIE: no ports detected\n");
-		goto fail_enum;
+		goto fail_power_off;
 	}
 	tegra_pcie_enable_features(pcie);
 	/* register pcie device as wakeup source */
@@ -2772,16 +2749,10 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 
 	return 0;
 
-fail_enum:
-	if (IS_ENABLED(CONFIG_PCI_MSI))
-		tegra_pcie_disable_msi(pcie);
-	tegra_pcie_pme_turnoff(pcie);
-	tegra_pcie_enable_pads(pcie, false);
+fail_power_off:
+	tegra_pcie_power_off(pcie);
 fail_release_resource:
-	tegra_pcie_power_off(pcie, false);
-	tegra_pcie_disable_regulators(pcie);
-	tegra_pcie_clocks_put(pcie);
-
+	tegra_pcie_release_resources(pcie);
 	return err;
 }
 
@@ -4151,6 +4122,13 @@ static void pcie_delayed_detect(struct work_struct *work)
 	}
 }
 
+static struct tegra_pcie_domain pcie_domain = {
+	.tpd.gpd.power_on = tegra_pcie_module_power_ungate,
+	.tpd.gpd.power_off = tegra_pcie_module_power_gate,
+	.tpd.gpd.flags = GENPD_FLAG_PM_CLK | GENPD_FLAG_PM_UPSTREAM,
+	.tpd.is_off = false,
+};
+
 static int tegra_pcie_probe(struct platform_device *pdev)
 {
 	int ret = 0;
@@ -4173,6 +4151,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, pcie);
 	pcie->dev = &pdev->dev;
+	pcie_domain.tegra_pcie = pcie;
 
 #if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
 	pcie->u_phy = devm_phy_get(pcie->dev, "pcie-phy");
@@ -4248,6 +4227,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	ret = tegra_pcie_probe_complete(pcie);
 	if (ret) {
 		pm_runtime_disable(pcie->dev);
+		pm_runtime_set_suspended(pcie->dev);
 		tegra_pd_remove_device(pcie->dev);
 		goto release_regulators;
 	}
@@ -4284,7 +4264,7 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 		tegra_prod_release(&pcie->prod_list);
 	tegra_pcie_detach(pcie);
 	tegra_pd_remove_device(pcie->dev);
-	tegra_pcie_power_off(pcie, true);
+	tegra_pcie_power_off(pcie);
 #if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
 	if (tegra_platform_is_silicon())
 		phy_exit(pcie->u_phy);
@@ -4432,74 +4412,8 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 }
 
 #ifdef CONFIG_PM
-static int tegra_pcie_suspend_noirq(struct device *dev)
-{
-	int ret = 0;
-	struct tegra_pcie *pcie = dev_get_drvdata(dev);
-
-	PR_FUNC_LINE;
-	ret = tegra_pcie_power_off(pcie, true);
-	if (ret)
-		return ret;
-	/* configure PE_WAKE signal as wake sources */
-	if (gpio_is_valid(pcie->plat_data->gpio_wake) &&
-			device_may_wakeup(dev)) {
-		ret = enable_irq_wake(gpio_to_irq(
-			pcie->plat_data->gpio_wake));
-		if (ret < 0) {
-			dev_err(dev,
-				"ID wake-up event failed with error %d\n", ret);
-		}
-	} else{
-		ret = tegra_pcie_disable_regulators(pcie);
-	}
-
-	return ret;
-
-}
 
 static int tegra_pcie_enable_msi(struct tegra_pcie *, bool);
-
-static int tegra_pcie_resume_noirq(struct device *dev)
-{
-	int ret = 0;
-	struct tegra_pcie *pcie = dev_get_drvdata(dev);
-
-	PR_FUNC_LINE;
-	if (gpio_is_valid(pcie->plat_data->gpio_wake) &&
-			device_may_wakeup(dev)) {
-		ret = disable_irq_wake(gpio_to_irq(
-			pcie->plat_data->gpio_wake));
-		if (ret < 0) {
-			dev_err(dev,
-				"ID wake-up event failed with error %d\n", ret);
-			return ret;
-		}
-	} else {
-		ret = tegra_pcie_enable_regulators(pcie);
-		if (ret) {
-			dev_err(pcie->dev, "PCIE: Failed to enable regulators\n");
-			return ret;
-		}
-	}
-	ret = tegra_pcie_power_on(pcie);
-	if (ret) {
-		dev_err(dev, "PCIE: Failed to power on: %d\n", ret);
-		return ret;
-	}
-	tegra_pcie_enable_pads(pcie, true);
-	reset_control_deassert(pcie->afi_rst);
-	tegra_pcie_enable_controller(pcie);
-	tegra_pcie_setup_translations(pcie);
-	/* Set up MSI registers, if MSI have been enabled */
-	tegra_pcie_enable_msi(pcie, true);
-	reset_control_deassert(pcie->pcie_rst);
-	tegra_pcie_check_ports(pcie);
-
-	/* WAR do not power off PCIE controller, add it back once issue fixed */
-
-	return 0;
-}
 
 static int tegra_pcie_resume(struct device *dev)
 {
@@ -4510,9 +4424,9 @@ static int tegra_pcie_resume(struct device *dev)
 }
 
 static const struct dev_pm_ops tegra_pcie_pm_ops = {
-	.suspend_noirq  = tegra_pcie_suspend_noirq,
-	.resume_noirq = tegra_pcie_resume_noirq,
 	.resume = tegra_pcie_resume,
+	.runtime_suspend = tegra_pcie_save_device,
+	.runtime_resume = tegra_pcie_restore_device,
 	};
 #endif /* CONFIG_PM */
 
@@ -4530,8 +4444,21 @@ static struct platform_driver __refdata tegra_pcie_driver = {
 	},
 };
 
+static struct of_device_id tegra_pcie_domain_match[] = {
+	{.compatible = "nvidia,tegra132-pcie-pd"},
+	{.compatible = "nvidia,tegra210-pcie-pd"},
+	{.compatible = "nvidia,tegra186-pcie-pd"},
+	{},
+};
+
 static int __init tegra_pcie_init_driver(void)
 {
+	int ret;
+
+	ret = tegra_pd_add_domain(tegra_pcie_domain_match, &pcie_domain.tpd.gpd);
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&tegra_pcie_driver);
 }
 

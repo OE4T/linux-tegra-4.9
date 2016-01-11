@@ -106,7 +106,9 @@
 
 		pcie_pd: pcie-pd {
 			compatible = "nvidia,tegra186-pcie-pd";
+			is_off;
 			#power-domain-cells = <0>;
+			power-domains = <&mc_clk_pd>;
 			partition-id = <TEGRA186_POWER_DOMAIN_PCX>;
 		};
 

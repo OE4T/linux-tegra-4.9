@@ -1320,6 +1320,7 @@
 
 	pcie-controller@10003000 {
 		compatible = "nvidia,tegra186-pcie";
+		power-domains = <&pcie_pd>;
 		device_type = "pci";
 		reg = <0x0 0x10003000 0x0 0x00000800   /* PADS registers */
 		       0x0 0x10003800 0x0 0x00000800   /* AFI registers */

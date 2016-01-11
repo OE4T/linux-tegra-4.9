@@ -1,7 +1,7 @@
 /*
  * tegra_t210ref_mobile_rt565x_alt.c - Tegra T210 Machine driver for mobile
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -72,6 +72,7 @@ struct tegra_t210ref {
 	struct snd_soc_card *pcard;
 	int is_codec_dummy;
 	int rate_via_kcontrol;
+	int fmt_via_kcontrol;
 };
 
 static const int tegra_t210ref_srate_values[] = {
@@ -234,6 +235,21 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		return err;
 	}
 
+	/* update dai link hw_params for non pcm links */
+	for (idx = 0; idx < TEGRA210_XBAR_DAI_LINKS; idx++) {
+		if (card->rtd[idx].dai_link->params) {
+			dai_params =
+			  (struct snd_soc_pcm_stream *)
+			  card->rtd[idx].dai_link->params;
+			dai_params->rate_min = rate;
+			dai_params->channels_min = channels;
+			dai_params->formats = 1ULL <<
+				((machine->fmt_via_kcontrol == 2) ?
+				SNDRV_PCM_FORMAT_S32_LE :
+				SNDRV_PCM_FORMAT_S16_LE);
+		}
+	}
+
 	idx = tegra_machine_get_codec_dai_link_idx("rt565x-playback");
 	/* check if idx has valid number */
 	if (idx != -EINVAL) {
@@ -246,11 +262,14 @@ static int tegra_t210ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 			return err;
 		}
 
-		/* update link_param to update hw_param for DAPM */
+		dai_params->formats = 1ULL <<
+			((machine->fmt_via_kcontrol == 2) ?
+			SNDRV_PCM_FORMAT_S32_LE :
+			SNDRV_PCM_FORMAT_S16_LE);
+
 		dai_params->rate_min = (machine->rate_via_kcontrol) ?
 			codec_rate : rate;
 		dai_params->channels_min = channels;
-		dai_params->formats = formats;
 
 		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
 		tegra_machine_get_bclk_ratio(&card->rtd[idx]));
@@ -633,9 +652,42 @@ static int tegra_t210ref_codec_put_rate(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const char * const tegra_t210ref_format_text[] = {
+	"None",
+	"16",
+	"32",
+};
+
+static int tegra_t210ref_codec_get_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->fmt_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_t210ref_codec_put_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t210ref *machine = snd_soc_card_get_drvdata(card);
+
+	/* set the format control flag */
+	machine->fmt_via_kcontrol = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
 static const struct soc_enum tegra_t210ref_codec_rate =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t210ref_srate_text),
 		tegra_t210ref_srate_text);
+
+static const struct soc_enum tegra_t210ref_codec_format =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t210ref_format_text),
+		tegra_t210ref_format_text);
 
 static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Spk"),
@@ -644,6 +696,8 @@ static const struct snd_kcontrol_new tegra_t210ref_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Mic"),
 	SOC_ENUM_EXT("codec-x rate", tegra_t210ref_codec_rate,
 		tegra_t210ref_codec_get_rate, tegra_t210ref_codec_put_rate),
+	SOC_ENUM_EXT("codec-x format", tegra_t210ref_codec_format,
+		tegra_t210ref_codec_get_format, tegra_t210ref_codec_put_format),
 };
 
 static int tegra_t210ref_remove(struct snd_soc_card *card)

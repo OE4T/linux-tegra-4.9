@@ -80,7 +80,7 @@
 	};
 
 	ahci-sata@3507000 {
-		target-3v3-supply = <&vdd_dummy>;
+		target-3v3-supply = <&vdd_sata_3v3>;
 	};
 
 	pinctrl@3520000 {
@@ -193,6 +193,18 @@
 			enable-active-high;
 			gpio-open-drain;
 			vin-supply = <&vdd_dummy>;
+		};
+
+		vdd_sata_3v3: regulator@9 {
+			compatible = "regulator-fixed";
+			reg = <9>;
+			regulator-name = "vdd-sata-3v3";
+			gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(G, 7) 0>;
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-enable-ramp-delay = <6300>;
+			regulator-disable-ramp-delay = <132000>;
+			enable-active-high;
 		};
 	};
 };

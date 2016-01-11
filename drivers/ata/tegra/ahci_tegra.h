@@ -33,6 +33,7 @@
 #include <linux/tegra_prod.h>
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
+#include <linux/of_gpio.h>
 
 #include "../ahci.h"
 
@@ -204,6 +205,7 @@ struct tegra_ahci_priv {
 	struct pinctrl_state	   *devslp_active;
 	struct pinctrl_state	   *devslp_pullup;
 	struct tegra_prod_list	   *prod_list;
+	int			   devslp_gpio;
 	bool			   devslp_override;
 	bool			   devslp_pinmux_override;
 	bool			   host_naking_war_applied;

@@ -918,12 +918,23 @@ static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv)
 	}
 
 	if (devslp_enabled) {
+		if (gpio_is_valid(tegra->devslp_gpio)) {
+			ret = gpio_request(tegra->devslp_gpio,
+					"ahci-tegra");
+			if (ret != 0) {
+				dev_err(&pdev->dev,
+						"gpio request failed\n");
+				return ret;
+			}
+			gpio_direction_output(tegra->devslp_gpio, 1);
+		}
+
 		if (tegra->devslp_pin) {
 			ret = pinctrl_select_state(tegra->devslp_pin,
-							tegra->devslp_active);
+					tegra->devslp_active);
 			if (ret < 0) {
 				dev_err(&pdev->dev,
-					"setting devslp pin state failed\n");
+						"setting devslp pin state failed\n");
 				return ret;
 			}
 		}
@@ -1151,6 +1162,9 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 			ret = PTR_ERR(tegra->devslp_pullup);
 			goto err_out;
 		}
+
+		tegra->devslp_gpio =
+				of_get_named_gpio(dev->of_node, "gpios", 0);
 	}
 
 	ret = tegra_ahci_platform_get_memory_resources(tegra);

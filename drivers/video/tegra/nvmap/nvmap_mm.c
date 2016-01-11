@@ -100,6 +100,7 @@ void nvmap_vm_insert_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 		int i;
 
 		vma = vma_list->vma;
+		down_write(&vma->vm_mm->mmap_sem);
 		priv = vma->vm_private_data;
 		if ((offset + size) > (vma->vm_end - vma->vm_start))
 			vm_size = vma->vm_end - vma->vm_start - offset;
@@ -132,8 +133,9 @@ void nvmap_vm_insert_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 			do_set_pte(vma, vma->vm_start + (i << PAGE_SHIFT), page,
 					pte, true, false);
 			pte_unmap_unlock(pte, ptl);
-			up_write(&vma->vm_mm->mmap_sem);
 		}
+
+		up_write(&vma->vm_mm->mmap_sem);
 	}
 	mutex_unlock(&handle->lock);
 }

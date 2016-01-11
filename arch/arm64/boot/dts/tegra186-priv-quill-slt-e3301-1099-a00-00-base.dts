@@ -105,7 +105,7 @@
 
 	host1x {
 		nvdisplay@15210000 {
-			status = "disabled";
+			status = "okay";
 		};
 
 		sor1 {
@@ -118,7 +118,7 @@
 			status = "disabled";
 		};
 		dpaux@15040000 {
-			status = "disabled";
+			status = "okay";
 		};
 	};
 

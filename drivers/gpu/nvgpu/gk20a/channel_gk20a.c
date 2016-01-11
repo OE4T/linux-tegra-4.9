@@ -1141,6 +1141,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	ch->timeout_ms_max = gk20a_get_gr_idle_timeout(g);
 	ch->timeout_debug_dump = true;
 	ch->has_timedout = false;
+	ch->wdt_enabled = true;
 	ch->obj_class = 0;
 	ch->interleave = false;
 	gk20a_fifo_set_channel_priority(
@@ -2231,7 +2232,6 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->g = NULL;
 	c->hw_chid = chid;
 	c->bound = false;
-	c->wdt_enabled = true;
 	spin_lock_init(&c->ref_obtain_lock);
 	atomic_set(&c->ref_count, 0);
 	c->referenceable = false;

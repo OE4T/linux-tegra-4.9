@@ -190,7 +190,6 @@ static int tegra_t186ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_card *card = rtd->card;
-	struct tegra_t186ref_p2382 *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int fmt = rtd->dai_link->dai_fmt;

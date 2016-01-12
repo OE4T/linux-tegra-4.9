@@ -80,6 +80,7 @@ struct tegra_t186ref {
 	struct snd_soc_card *pcard;
 	int rate_via_kcontrol;
 	int is_codec_dummy;
+	int fmt_via_kcontrol;
 };
 
 static const int tegra_t186ref_srate_values[] = {
@@ -268,6 +269,21 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		return err;
 	}
 
+	/* update dai link hw_params for non pcm links */
+	for (idx = 0; idx < TEGRA186_XBAR_DAI_LINKS; idx++) {
+		if (card->rtd[idx].dai_link->params) {
+			dai_params =
+			  (struct snd_soc_pcm_stream *)
+			  card->rtd[idx].dai_link->params;
+			dai_params->rate_min = rate;
+			dai_params->channels_min = channels;
+			dai_params->formats = 1ULL <<
+				((machine->fmt_via_kcontrol == 2) ?
+				SNDRV_PCM_FORMAT_S32_LE :
+				SNDRV_PCM_FORMAT_S16_LE);
+		}
+	}
+
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
 	/* check if idx has valid number */
 	if (idx != -EINVAL) {
@@ -294,6 +310,12 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 						clk_rate, channels, formats);
 		if (err < 0)
 			return err;
+
+		/* Override PCM format for HRA */
+		dai_params->formats = 1ULL <<
+			((machine->fmt_via_kcontrol == 2) ?
+			SNDRV_PCM_FORMAT_S32_LE :
+			SNDRV_PCM_FORMAT_S16_LE);
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-dit-0");
@@ -754,9 +776,42 @@ static int tegra_t186ref_codec_put_rate(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const char * const tegra_t186ref_format_text[] = {
+	"None",
+	"16",
+	"32",
+};
+
+static int tegra_t186ref_codec_get_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+
+	ucontrol->value.integer.value[0] = machine->fmt_via_kcontrol;
+
+	return 0;
+}
+
+static int tegra_t186ref_codec_put_format(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+
+	/* set the format control flag */
+	machine->fmt_via_kcontrol = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
 static const struct soc_enum tegra_t186ref_codec_rate =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t186ref_srate_text),
 		tegra_t186ref_srate_text);
+
+static const struct soc_enum tegra_t186ref_codec_format =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t186ref_format_text),
+		tegra_t186ref_format_text);
 
 static const struct snd_soc_dapm_route tegra_t186ref_audio_map[] = {
 };
@@ -768,6 +823,8 @@ static const struct snd_kcontrol_new tegra_t186ref_controls[] = {
 	SOC_DAPM_PIN_SWITCH("x Int Mic"),
 	SOC_ENUM_EXT("codec-x rate", tegra_t186ref_codec_rate,
 		tegra_t186ref_codec_get_rate, tegra_t186ref_codec_put_rate),
+	SOC_ENUM_EXT("codec-x format", tegra_t186ref_codec_format,
+		tegra_t186ref_codec_get_format, tegra_t186ref_codec_put_format),
 };
 
 static struct snd_soc_card snd_soc_tegra_t186ref = {

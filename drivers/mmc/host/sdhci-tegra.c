@@ -185,6 +185,7 @@ struct sdhci_tegra {
 	struct pinctrl *pinctrl_sdmmc;
 	struct pinctrl_state *e_33v_enable;
 	struct pinctrl_state *e_33v_disable;
+	bool en_periodic_cflush; /* Enable periodic cache flush for eMMC */
 };
 
 /* Module params */
@@ -1427,6 +1428,20 @@ static int sdhci_tegra_parse_dt(struct platform_device *pdev)
 	tegra_host->rate_change_needs_clk = of_property_read_bool(np,
 		"nvidia,rate-change-needs-clock-enabled");
 
+	tegra_host->en_periodic_cflush = of_property_read_bool(np,
+			"nvidia,en-periodic-cflush");
+	if (tegra_host->en_periodic_cflush) {
+		val = 0;
+		of_property_read_u32(np, "nvidia,periodic-cflush-to", &val);
+		host->mmc->flush_timeout = val;
+		if (val == 0) {
+			tegra_host->en_periodic_cflush = false;
+			dev_warn(&pdev->dev,
+				 "Periodic cache flush feature disabled,"
+				 "since flush timeout value is zero.\n");
+		}
+	}
+
 	return 0;
 }
 
@@ -1529,6 +1544,9 @@ static int sdhci_tegra_probe(struct platform_device *pdev)
 
 	if (!en_boot_part_access)
 		host->mmc->caps2 |= MMC_CAP2_BOOTPART_NOACC;
+
+	if (tegra_host->en_periodic_cflush)
+		host->mmc->caps2 |= MMC_CAP2_PERIODIC_CACHE_FLUSH;
 
 #ifdef CONFIG_MMC_CQ_HCI
 	if (tegra_host->enable_hwcq) {

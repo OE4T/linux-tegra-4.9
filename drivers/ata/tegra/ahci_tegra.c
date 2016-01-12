@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -729,6 +729,11 @@ static void tegra_ahci_power_off(struct ahci_host_priv *hpriv)
 
 	regulator_bulk_disable(tegra->soc_data->num_sata_regulators,
 			tegra->supplies);
+
+	if (tegra && tegra->prod_list) {
+		tegra_prod_release(&tegra->prod_list);
+		tegra->prod_list = NULL;
+	}
 }
 
 static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv)
@@ -928,8 +933,12 @@ static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv)
 
 static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 {
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	struct platform_device *pdev = tegra->pdev;
+	struct device *dev = &pdev->dev;
 	unsigned int val;
 	unsigned int mask;
+	int ret = 0;
 
 	/* SATA WARS */
 	/* For SQUELCH Filter & Gen3 drive getting detected as Gen1 drive */
@@ -952,7 +961,14 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv)
 	val = T_SATA0_CFG2NVOOB_2_COMWAKE_IDLE_CNT_LOW;
 	tegra_ahci_scfg_update(hpriv, val, mask, T_SATA0_CFG2NVOOB_2);
 
-	return 0;
+	if (tegra && tegra->prod_list) {
+		ret = tegra_prod_set_by_name(tegra->base_list, "prod",
+							tegra->prod_list);
+		if (ret)
+			dev_err(dev, "Prod setting from DT failed\n");
+	}
+
+	return ret;
 }
 
 static int
@@ -1195,6 +1211,12 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 		goto err_out;
 	}
 
+	tegra->prod_list = tegra_prod_init(dev->of_node);
+	if (IS_ERR(tegra->prod_list)) {
+		dev_err(dev, "Prod Init failed\n");
+		tegra->prod_list = NULL;
+	}
+
 #ifdef CONFIG_PM
 	ret = tegra_ahci_pg_save_restore_init(hpriv);
 	if (ret) {
@@ -1213,6 +1235,7 @@ static void tegra_ahci_shutdown(struct platform_device *pdev)
 {
 	struct ata_host *host = platform_get_drvdata(pdev);
 	struct ahci_host_priv *hpriv = host->private_data;
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	u32 mask;
 	u32 val;
 	u32 px_cmd;
@@ -1238,6 +1261,11 @@ static void tegra_ahci_shutdown(struct platform_device *pdev)
 		ahci_ops.port_stop(ap);
 	}
 	ata_platform_remove_one(pdev);
+
+	if (tegra && tegra->prod_list) {
+		tegra_prod_release(&tegra->prod_list);
+		tegra->prod_list = NULL;
+	}
 }
 
 static int tegra_ahci_probe(struct platform_device *pdev)
@@ -1317,6 +1345,10 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 					"un-registering from ATA\n");
 		ata_platform_remove_one(pdev);
 		drv->driver.pm = NULL;
+		if (tegra && tegra->prod_list) {
+			tegra_prod_release(&tegra->prod_list);
+			tegra->prod_list = NULL;
+		}
 		return -ENODEV;
 	}
 

@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,6 +30,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-pmc.h>
 #include <linux/tegra-soc.h>
+#include <linux/tegra_prod.h>
 #include <linux/pm.h>
 #include <linux/pm_runtime.h>
 
@@ -199,6 +200,7 @@ struct tegra_ahci_priv {
 	struct pinctrl		   *devslp_pin;
 	struct pinctrl_state	   *devslp_active;
 	struct pinctrl_state	   *devslp_pullup;
+	struct tegra_prod_list	   *prod_list;
 	bool			   devslp_override;
 	bool			   devslp_pinmux_override;
 	bool			   host_naking_war_applied;

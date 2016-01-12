@@ -1385,6 +1385,8 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		status = "disabled";
 		clock-frequency = <400000>;
+		dmas = <&apbdma 21>, <&apbdma 21>;
+		dma-names = "rx", "tx";
 	};
 
 	i2c2: i2c@7000c400 {
@@ -1396,6 +1398,8 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		status = "disabled";
 		clock-frequency = <100000>;
+		dmas = <&apbdma 22>, <&apbdma 22>;
+		dma-names = "rx", "tx";
 	};
 
 	i2c3: i2c@7000c500 {
@@ -1407,6 +1411,8 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		status = "disabled";
 		clock-frequency = <400000>;
+		dmas = <&apbdma 23>, <&apbdma 23>;
+		dma-names = "rx", "tx";
 	};
 
 	i2c4: i2c@7000c700 {
@@ -1418,6 +1424,8 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		status = "disabled";
 		clock-frequency = <100000>;
+		dmas = <&apbdma 26>, <&apbdma 26>;
+		dma-names = "rx", "tx";
 	};
 
 	i2c5: i2c@7000d000 {
@@ -1432,6 +1440,8 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		status = "disabled";
 		clock-frequency = <400000>;
+		dmas = <&apbdma 24>, <&apbdma 24>;
+		dma-names = "rx", "tx";
 	};
 
 	i2c6: i2c@7000d100 {
@@ -1443,6 +1453,8 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>;
 		status = "disabled";
 		clock-frequency = <400000>;
+		dmas = <&apbdma 30>, <&apbdma 30>;
+		dma-names = "rx", "tx";
 	};
 
 	sdhci@700b0600 {

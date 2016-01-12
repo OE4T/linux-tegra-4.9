@@ -80,6 +80,12 @@ struct channel_gk20a_poll_events {
 	int num_pending_events;
 };
 
+struct channel_gk20a_clean_up {
+	struct mutex lock;
+	bool scheduled;
+	struct delayed_work wq;
+};
+
 /* this is the priv element of struct nvhost_channel */
 struct channel_gk20a {
 	struct gk20a *g; /* set only when channel is active */
@@ -133,6 +139,7 @@ struct channel_gk20a {
 	u32 timeout_gpfifo_get;
 
 	struct channel_gk20a_timeout timeout;
+	struct channel_gk20a_clean_up clean_up;
 
 	bool cmds_pending;
 	struct {

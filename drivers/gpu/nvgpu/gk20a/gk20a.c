@@ -1155,26 +1155,23 @@ static int gk20a_pm_disable_clk(struct device *dev)
 
 static void gk20a_pm_shutdown(struct platform_device *pdev)
 {
-#ifdef CONFIG_PM
-	unsigned long timeout = jiffies +
-		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
-	int ref_cnt;
-#endif
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 
 	dev_info(&pdev->dev, "shutting down");
+
+	/* If GPU is already railgated,
+	 * just prevent more requests, and return */
+	if (platform->is_railgated && platform->is_railgated(&pdev->dev)) {
+#ifdef CONFIG_PM
+		__pm_runtime_disable(&pdev->dev, false);
+#endif
+		return;
+	}
+
 
 #ifdef CONFIG_PM
 	/* Prevent more requests by disabling Runtime PM */
 	__pm_runtime_disable(&pdev->dev, false);
-
-	/* Wait until current running requests are finished */
-	while (time_before(jiffies, timeout)) {
-		ref_cnt = atomic_read(&pdev->dev.power.usage_count);
-		if (ref_cnt > 1)
-			msleep(1);
-		else
-			break;
-	}
 #endif
 
 	/* Be ready for rail-gate after this point */
@@ -1182,6 +1179,8 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 		vgpu_pm_prepare_poweroff(&pdev->dev);
 	else
 		gk20a_pm_prepare_poweroff(&pdev->dev);
+
+	dev_info(&pdev->dev, "shut down complete\n");
 }
 
 #ifdef CONFIG_PM

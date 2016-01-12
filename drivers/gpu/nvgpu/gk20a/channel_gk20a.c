@@ -1936,6 +1936,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	bool skip_buffer_refcounting = (flags &
 			NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING);
 	bool need_sync_fence = false;
+	bool new_sync_created = false;
 
 	/*
 	 * If user wants to allocate sync_fence_fd always, then respect that;
@@ -2033,15 +2034,21 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		c->sync = gk20a_channel_sync_create(c);
 		if (!c->sync) {
 			err = -ENOMEM;
+			mutex_unlock(&c->sync_lock);
 			mutex_unlock(&c->submit_lock);
 			goto clean_up;
 		}
-		if (g->ops.fifo.resetup_ramfc)
-			err = g->ops.fifo.resetup_ramfc(c);
-		if (err)
-			return err;
+		new_sync_created = true;
 	}
 	mutex_unlock(&c->sync_lock);
+
+	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
+		err = g->ops.fifo.resetup_ramfc(c);
+		if (err) {
+			mutex_unlock(&c->submit_lock);
+			goto clean_up;
+		}
+	}
 
 	/*
 	 * optionally insert syncpt wait in the beginning of gpfifo submission

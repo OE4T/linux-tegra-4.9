@@ -1025,7 +1025,14 @@ static irqreturn_t tegra_pcie_isr(int irq, void *arg)
 	if (code >= ARRAY_SIZE(err_msg))
 		code = 0;
 
-	if ((code != AFI_INTR_LEGACY) && (code != AFI_INTR_PRSNT_SENSE))
+	/*
+	 * do not pollute kernel log with master abort reports since they
+	 * happen a lot during enumeration
+	 */
+	if (code == AFI_INTR_MASTER_ABORT)
+		dev_dbg(pcie->dev, "PCIE: %s, signature: %08x\n",
+				err_msg[code], signature);
+	else if ((code != AFI_INTR_LEGACY) && (code != AFI_INTR_PRSNT_SENSE))
 		dev_err(pcie->dev, "PCIE: %s, signature: %08x\n",
 				err_msg[code], signature);
 

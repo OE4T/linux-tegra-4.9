@@ -183,10 +183,12 @@
 			      <&{/serial@3150000}	TEGRA_SID_GPCDMA_0>,
 			      <&{/serial@c290000}	TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@3160000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@c240000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@3180000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@3190000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
+			      <&{/i2c@c250000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
 
 		status = "disabled";

@@ -1,7 +1,7 @@
 /*
  * tegra210_amx_alt.c - Tegra210 AMX driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -241,6 +241,7 @@ static int tegra210_amx_runtime_suspend(struct device *dev)
 	struct tegra210_amx *amx = dev_get_drvdata(dev);
 
 	regcache_cache_only(amx->regmap, true);
+	regcache_mark_dirty(amx->regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -304,11 +305,6 @@ static int tegra210_amx_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_amx_suspend(struct device *dev)
 {
-	struct tegra210_amx *amx = dev_get_drvdata(dev);
-
-	if (amx)
-		regcache_mark_dirty(amx->regmap);
-
 	return 0;
 }
 #endif

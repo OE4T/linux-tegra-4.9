@@ -1,7 +1,7 @@
 /*
  * tegra210_afc_alt.c - Tegra210 AFC driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,6 +65,7 @@ static int tegra210_afc_runtime_suspend(struct device *dev)
 	struct tegra210_afc *afc = dev_get_drvdata(dev);
 
 	regcache_cache_only(afc->regmap, true);
+	regcache_mark_dirty(afc->regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -91,11 +92,6 @@ static int tegra210_afc_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_afc_suspend(struct device *dev)
 {
-	struct tegra210_afc *afc = dev_get_drvdata(dev);
-
-	if (afc)
-		regcache_mark_dirty(afc->regmap);
-
 	return 0;
 }
 #endif

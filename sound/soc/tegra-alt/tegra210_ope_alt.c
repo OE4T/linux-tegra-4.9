@@ -1,7 +1,7 @@
 /*
  * tegra210_ope_alt.c - Tegra210 OPE driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,6 +52,9 @@ static int tegra210_ope_runtime_suspend(struct device *dev)
 	regcache_cache_only(ope->mbdrc_regmap, true);
 	regcache_cache_only(ope->peq_regmap, true);
 	regcache_cache_only(ope->regmap, true);
+	regcache_mark_dirty(ope->regmap);
+	regcache_mark_dirty(ope->peq_regmap);
+	regcache_mark_dirty(ope->mbdrc_regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -82,14 +85,6 @@ static int tegra210_ope_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_ope_suspend(struct device *dev)
 {
-	struct tegra210_ope *ope = dev_get_drvdata(dev);
-
-	if (ope) {
-		regcache_mark_dirty(ope->regmap);
-		regcache_mark_dirty(ope->peq_regmap);
-		regcache_mark_dirty(ope->mbdrc_regmap);
-	}
-
 	return 0;
 }
 #endif

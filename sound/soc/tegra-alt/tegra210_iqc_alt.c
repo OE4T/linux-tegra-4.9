@@ -1,7 +1,7 @@
 /*
  * tegra210_iqc.c - Tegra210 IQC driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,6 +49,7 @@ static int tegra210_iqc_runtime_suspend(struct device *dev)
 	struct tegra210_iqc *iqc = dev_get_drvdata(dev);
 
 	regcache_cache_only(iqc->regmap, true);
+	regcache_mark_dirty(iqc->regmap);
 
 #ifndef CONFIG_MACH_GRENADA
 	clk_disable_unprepare(iqc->clk_iqc);
@@ -86,11 +87,6 @@ static int tegra210_iqc_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_iqc_suspend(struct device *dev)
 {
-	struct tegra210_iqc *iqc = dev_get_drvdata(dev);
-
-	if (iqc)
-		regcache_mark_dirty(iqc->regmap);
-
 	return 0;
 }
 #endif

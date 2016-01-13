@@ -87,6 +87,7 @@ struct nvmap_vma_list {
 	struct list_head list;
 	struct vm_area_struct *vma;
 	pid_t pid;
+	atomic_t ref;
 };
 
 struct nvmap_carveout_node {

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_fault.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -95,7 +95,12 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 		 * handle offsets
 		 */
 		list_for_each_entry(tmp, &h->vmas, list) {
-			BUG_ON(tmp->vma == vma);
+			/* if vma exists in list, just increment refcount */
+			if (tmp->vma == vma) {
+				atomic_inc(&tmp->ref);
+				kfree(vma_list);
+				goto unlock;
+			}
 
 			if (!vma_pos_found && (current_pid == tmp->pid)) {
 				if (vma->vm_pgoff < tmp->vma->vm_pgoff) {
@@ -109,7 +114,9 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 
 		vma_list->vma = vma;
 		vma_list->pid = current_pid;
+		atomic_set(&vma_list->ref, 1);
 		list_add_tail(&vma_list->list, tmp_head);
+unlock:
 		mutex_unlock(&h->lock);
 	} else {
 		WARN(1, "vma not tracked");
@@ -136,8 +143,10 @@ static void nvmap_vma_close(struct vm_area_struct *vma)
 	list_for_each_entry(vma_list, &h->vmas, list) {
 		if (vma_list->vma != vma)
 			continue;
-		list_del(&vma_list->list);
-		kfree(vma_list);
+		if (atomic_dec_return(&vma_list->ref) == 0) {
+			list_del(&vma_list->list);
+			kfree(vma_list);
+		}
 		vma_found = true;
 		break;
 	}

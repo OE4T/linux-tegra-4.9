@@ -41,6 +41,11 @@
 			alloc = <0>;
 			no-map;
 		};
+
+		vpr: vpr-carveout {
+			size = <0x0 0x0>;
+			status = "disabled";
+		};
 	};
 
 	tegra-carveouts {

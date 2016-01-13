@@ -402,11 +402,12 @@ static int lp855x_parse_dt(struct lp855x *lp)
 		if (!pdata->bl_measured) {
 			pr_err("bl_measured memory allocation failed\n");
 			ret = -ENOMEM;
+		} else {
+			n_bl_measured = 0;
+			of_property_for_each_u32(node,
+				"bl-measured", prop, p, u)
+				pdata->bl_measured[n_bl_measured++] = u;
 		}
-		n_bl_measured = 0;
-		of_property_for_each_u32(node,
-			"bl-measured", prop, p, u)
-			pdata->bl_measured[n_bl_measured++] = u;
 	}
 
 	of_property_for_each_u32(node, "bl-curve", prop, p, u)
@@ -417,11 +418,12 @@ static int lp855x_parse_dt(struct lp855x *lp)
 		if (!pdata->bl_curve) {
 			pr_err("bl_curve memory allocation failed\n");
 			ret = -ENOMEM;
+		} else {
+			n_bl_curve = 0;
+			of_property_for_each_u32(node,
+				"bl-curve", prop, p, u)
+				pdata->bl_curve[n_bl_curve++] = u;
 		}
-		n_bl_curve = 0;
-		of_property_for_each_u32(node,
-			"bl-curve", prop, p, u)
-			pdata->bl_curve[n_bl_curve++] = u;
 	}
 
 	lp->pdata = pdata;

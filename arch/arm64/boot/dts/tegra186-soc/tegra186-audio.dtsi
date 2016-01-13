@@ -203,4 +203,8 @@
 	spdif-dit.3@3 {
                 status = "okay";
         };
+
+	spdif-dit.4@4 {
+		status = "okay";
+	};
 };

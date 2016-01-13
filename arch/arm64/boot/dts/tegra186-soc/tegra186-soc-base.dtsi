@@ -1926,6 +1926,12 @@
 		status = "disabled";
 	};
 
+	spdif_dit4: spdif-dit.4@4 {
+		compatible = "linux,spdif-dit";
+		reg = <0x0 0x04 0x0 0x0>;
+		status = "disabled";
+	};
+
 	tegra_agic: agic-controller@2a41000 {
 		compatible = "nvidia,tegra18x-agic";
 		interrupt-controller;

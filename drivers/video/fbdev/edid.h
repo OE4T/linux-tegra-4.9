@@ -121,8 +121,8 @@
 #define INTERLACED         (FLAGS&128)
 #define SYNC_TYPE          (FLAGS&3<<3)	/* bits 4,3 */
 #define SYNC_SEPARATE      (3<<3)
-#define HSYNC_POSITIVE     (FLAGS & 4)
-#define VSYNC_POSITIVE     (FLAGS & 2)
+#define HSYNC_POSITIVE     (FLAGS & 2)
+#define VSYNC_POSITIVE     (FLAGS & 4)
 
 #define V_MIN_RATE              block[ 5 ]
 #define V_MAX_RATE              block[ 6 ]

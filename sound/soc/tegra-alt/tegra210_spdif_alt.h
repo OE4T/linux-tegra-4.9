@@ -254,6 +254,8 @@ struct tegra210_spdif_soc_data {
 struct tegra210_spdif {
 	struct clk *clk_spdif_out;
 	struct clk *clk_spdif_in;
+	struct clk *clk_pll_a_out0;
+	struct clk *clk_pll_p_out0;
 	struct regmap *regmap;
 	unsigned int loopback;
 	const struct tegra210_spdif_soc_data *soc_data;

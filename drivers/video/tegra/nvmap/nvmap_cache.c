@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/nvmap/nvmap_cache.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,12 +24,21 @@
 
 static void nvmap_roc_flush_cache(void)
 {
+	int ret;
+
 	if (!tegra_platform_is_silicon() && !tegra_platform_is_fpga()) {
 		pr_info_once("ROC flush supported on only FPGA and silicon\n");
+		pr_info_once("Fall back to flush by VA\n");
+		nvmap_cache_maint_by_set_ways = 0;
 		return;
 	}
 
-	tegra_roc_flush_cache();
+	ret = tegra_roc_flush_cache();
+	if (ret) {
+		pr_info_once("ROC flush failed with %u\n", ret);
+		pr_info_once("Fall back to flush by VA\n");
+		nvmap_cache_maint_by_set_ways = 0;
+	}
 }
 
 void nvmap_override_cache_ops(void)
@@ -37,4 +46,6 @@ void nvmap_override_cache_ops(void)
 	inner_flush_cache_all = nvmap_roc_flush_cache;
 	inner_clean_cache_all = nvmap_roc_flush_cache;
 	pr_info("set roc flush ops to replace cache ops by set/ways\n");
+	inner_flush_cache_all();
+	inner_clean_cache_all();
 }

@@ -29,7 +29,7 @@
 
 	chosen {
 		nvidia,tegra-hypervisor-mode;
-		bootargs = "mem=512M@2048M quiet loglevel=3 rootfstype=ramfs maxcpus=1 console=ttyS0,115200 earlycon=uart8250,mmio32,0x3110000";
+		bootargs = "mem=512M@2048M quiet loglevel=3 clk_ignore_unused rootfstype=ramfs maxcpus=1 console=ttyS0,115200 earlycon=uart8250,mmio32,0x3110000";
 	};
 
 	reserved-memory {

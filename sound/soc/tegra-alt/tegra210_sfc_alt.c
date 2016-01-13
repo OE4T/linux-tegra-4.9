@@ -1,7 +1,7 @@
 /*
  * tegra210_sfc_alt.c - Tegra210 SFC driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -67,6 +67,7 @@ static int tegra210_sfc_runtime_suspend(struct device *dev)
 	struct tegra210_sfc *sfc = dev_get_drvdata(dev);
 
 	regcache_cache_only(sfc->regmap, true);
+	regcache_mark_dirty(sfc->regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -93,11 +94,6 @@ static int tegra210_sfc_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_sfc_suspend(struct device *dev)
 {
-	struct tegra210_sfc *sfc = dev_get_drvdata(dev);
-
-	if (sfc)
-		regcache_mark_dirty(sfc->regmap);
-
 	return 0;
 }
 #endif

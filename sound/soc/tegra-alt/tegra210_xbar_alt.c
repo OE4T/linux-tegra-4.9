@@ -1,7 +1,7 @@
 /*
  * tegra210_xbar_alt.c - Tegra210 XBAR driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,6 +58,7 @@ static const struct regmap_config tegra210_xbar_regmap_config = {
 static int tegra210_xbar_runtime_suspend(struct device *dev)
 {
 	regcache_cache_only(xbar->regmap, true);
+	regcache_mark_dirty(xbar->regmap);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		clk_disable_unprepare(xbar->clk);
@@ -109,7 +110,6 @@ static int tegra210_xbar_child_suspend(struct device *dev, void *data)
 
 static int tegra210_xbar_suspend(struct device *dev)
 {
-	regcache_mark_dirty(xbar->regmap);
 	device_for_each_child(dev, NULL, tegra210_xbar_child_suspend);
 
 	return 0;

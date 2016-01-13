@@ -61,6 +61,7 @@ static int tegra210_spdif_runtime_suspend(struct device *dev)
 	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
 
 	regcache_cache_only(spdif->regmap, true);
+	regcache_mark_dirty(spdif->regmap);
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		clk_disable_unprepare(spdif->clk_spdif_out);
 		clk_disable_unprepare(spdif->clk_spdif_in);
@@ -105,11 +106,6 @@ static int tegra210_spdif_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_spdif_suspend(struct device *dev)
 {
-	struct tegra210_spdif *spdif = dev_get_drvdata(dev);
-
-	if (spdif)
-		regcache_mark_dirty(spdif->regmap);
-
 	return 0;
 }
 #endif

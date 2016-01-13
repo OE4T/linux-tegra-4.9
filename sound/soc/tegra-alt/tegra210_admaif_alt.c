@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -222,6 +222,7 @@ static int tegra210_admaif_runtime_suspend(struct device *dev)
 	struct tegra210_admaif *admaif = dev_get_drvdata(dev);
 
 	regcache_cache_only(admaif->regmap, true);
+	regcache_mark_dirty(admaif->regmap);
 	pm_runtime_put_sync(dev->parent);
 
 	return 0;
@@ -247,11 +248,6 @@ static int tegra210_admaif_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_admaif_suspend(struct device *dev)
 {
-	struct tegra210_admaif *admaif = dev_get_drvdata(dev);
-
-	if (admaif)
-		regcache_mark_dirty(admaif->regmap);
-
 	return 0;
 }
 #endif

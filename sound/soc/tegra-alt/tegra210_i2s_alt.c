@@ -1,7 +1,7 @@
 /*
  * tegra210_i2s.c - Tegra210 I2S driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -260,6 +260,7 @@ static int tegra210_i2s_runtime_suspend(struct device *dev)
 		}
 
 		regcache_cache_only(i2s->regmap, true);
+		regcache_mark_dirty(i2s->regmap);
 
 		clk_disable_unprepare(i2s->clk_i2s);
 	} else
@@ -312,11 +313,6 @@ static int tegra210_i2s_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_i2s_suspend(struct device *dev)
 {
-	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
-
-	if (i2s)
-		regcache_mark_dirty(i2s->regmap);
-
 	return 0;
 }
 #endif

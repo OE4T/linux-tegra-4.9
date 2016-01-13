@@ -1,7 +1,7 @@
 /*
  * tegra210_mixer_alt.c - Tegra210 MIXER driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -80,6 +80,7 @@ static int tegra210_mixer_runtime_suspend(struct device *dev)
 	struct tegra210_mixer *mixer = dev_get_drvdata(dev);
 
 	regcache_cache_only(mixer->regmap, true);
+	regcache_mark_dirty(mixer->regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -106,11 +107,6 @@ static int tegra210_mixer_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_mixer_suspend(struct device *dev)
 {
-	struct tegra210_mixer *mixer = dev_get_drvdata(dev);
-
-	if (mixer)
-		regcache_mark_dirty(mixer->regmap);
-
 	return 0;
 }
 #endif

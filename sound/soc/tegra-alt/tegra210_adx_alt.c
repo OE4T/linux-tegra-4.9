@@ -1,7 +1,7 @@
 /*
  * tegra210_adx_alt.c - Tegra210 ADX driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -247,6 +247,7 @@ static int tegra210_adx_runtime_suspend(struct device *dev)
 	struct tegra210_adx *adx = dev_get_drvdata(dev);
 
 	regcache_cache_only(adx->regmap, true);
+	regcache_mark_dirty(adx->regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -277,11 +278,6 @@ static int tegra210_adx_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra210_adx_suspend(struct device *dev)
 {
-	struct tegra210_adx *adx = dev_get_drvdata(dev);
-
-	if (adx)
-		regcache_mark_dirty(adx->regmap);
-
 	return 0;
 }
 #endif

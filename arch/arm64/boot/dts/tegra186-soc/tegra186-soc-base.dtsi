@@ -1829,9 +1829,12 @@
 			clocks = <&tegra_car TEGRA186_CLK_SPDIF_IN>,
 				<&tegra_car TEGRA186_CLK_SPDIF_OUT>,
 				<&tegra_car TEGRA186_CLK_SPDIF_DOUBLER>,
-				<&tegra_car TEGRA186_CLK_SYNC_SPDIF>;
+				<&tegra_car TEGRA186_CLK_SYNC_SPDIF>,
+				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+				<&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 			clock-names = "spdif_in", "spdif_out",
-					"spdif_doubler", "sync_spdif";
+					"spdif_doubler", "sync_spdif",
+					"pll_a_out0", "pll_p_out0";
 			status = "disabled";
 		};
 

@@ -261,6 +261,21 @@
 			name-prefix = "d2";
 			status = "disabled";
                 };
+
+		e2614_spdif_dai_link: nvidia,dai-link-7 {
+			link-name = "spdif-playback";
+			cpu-dai = <&tegra_spdif>;
+			codec-dai = <&spdif_dit4>;
+			codec = "4.spdif-dit.4";
+			cpu-dai-name = "SPDIF1-1";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bit-format = "s16_le";
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "s";
+			status = "disabled";
+		};
 	};
 
 	plugin-manager {
@@ -318,7 +333,7 @@
 			overrides@10 {
 				target = <&tegra_sound>;
 				_overlay_ {
-					nvidia,num-codec-link = <6>;
+					nvidia,num-codec-link = <7>;
 					nvidia,audio-routing =
 						"y Headphone",		"y OUT",
 						"y IN",			"y Mic",
@@ -338,7 +353,9 @@
 						"d1 Headphone",		"d1 OUT",
 						"d1 IN",		"d1 Mic",
 						"d2 Headphone",		"d2 OUT",
-						"d2 IN",		"d2 Mic";
+						"d2 IN",		"d2 Mic",
+						"s Headphone",		"s OUT",
+						"s IN",			"s Mic";
 				};
 			};
 
@@ -384,6 +401,12 @@
                                         status = "okay";
                                 };
                         };
+			overrides@18 {
+				target = <&e2614_spdif_dai_link>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 		};
 
 		fragment-e2614-a00@1 {

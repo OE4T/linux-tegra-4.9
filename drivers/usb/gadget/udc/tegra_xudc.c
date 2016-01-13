@@ -1,7 +1,7 @@
 /*
 * NVIDIA XUSB device mode controller
 *
-* Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
 * Copyright (c) 2015, Google Inc.
 *
 * This program is free software; you can redistribute it and/or modify it
@@ -3097,15 +3097,9 @@ static int tegra_xudc_clk_enable(struct tegra_xudc *xudc)
 {
 	int err;
 
-	err = clk_prepare_enable(xudc->ss_clk);
-	if (err < 0)
-		return err;
-	err = clk_prepare_enable(xudc->dev_clk);
-	if (err < 0)
-		goto disable_ss_clk;
 	err = clk_prepare_enable(xudc->pll_e);
 	if (err < 0)
-		goto disable_dev_clk;
+		return err;
 	err = clk_prepare_enable(xudc->pll_u_480M);
 	if (err < 0)
 		goto disable_pll_e;
@@ -3113,10 +3107,6 @@ static int tegra_xudc_clk_enable(struct tegra_xudc *xudc)
 
 disable_pll_e:
 	clk_disable_unprepare(xudc->pll_e);
-disable_dev_clk:
-	clk_disable_unprepare(xudc->dev_clk);
-disable_ss_clk:
-	clk_disable_unprepare(xudc->ss_clk);
 	return err;
 }
 
@@ -3124,8 +3114,6 @@ static void tegra_xudc_clk_disable(struct tegra_xudc *xudc)
 {
 	clk_disable_unprepare(xudc->pll_u_480M);
 	clk_disable_unprepare(xudc->pll_e);
-	clk_disable_unprepare(xudc->dev_clk);
-	clk_disable_unprepare(xudc->ss_clk);
 }
 
 static int tegra_xudc_phy_power_on(struct tegra_xudc *xudc)
@@ -3411,9 +3399,9 @@ disable_phy:
 disable_clk:
 	tegra_xudc_clk_disable(xudc);
 powergate_xusbb:
-	tegra_powergate_partition(partition_id_xusbb);
+	tegra_powergate_partition_with_clk_off(partition_id_xusbb);
 powergate_xusba:
-	tegra_powergate_partition(partition_id_xusba);
+	tegra_powergate_partition_with_clk_off(partition_id_xusba);
 disable_regulator:
 	regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
 	return err;
@@ -3439,8 +3427,8 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	partition_id_xusba = tegra_pd_get_powergate_id(tegra_xusba_pd);
 	if (partition_id_xusba < 0)
 		return -EINVAL;
-	tegra_powergate_partition(partition_id_xusbb);
-	tegra_powergate_partition(partition_id_xusba);
+	tegra_powergate_partition_with_clk_off(partition_id_xusbb);
+	tegra_powergate_partition_with_clk_off(partition_id_xusba);
 	regulator_bulk_disable(xudc->soc->num_supplies, xudc->supplies);
 
 	pm_runtime_disable(xudc->dev);
@@ -3471,11 +3459,11 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusba_pd);
 	if (partition_id < 0)
 		return -EINVAL;
-	tegra_powergate_partition(partition_id);
+	tegra_powergate_partition_with_clk_off(partition_id);
 	partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);
 	if (partition_id < 0)
 		return -EINVAL;
-	tegra_powergate_partition(partition_id);
+	tegra_powergate_partition_with_clk_off(partition_id);
 
 	phy_exit(xudc->usb3_phy);
 	phy_exit(xudc->utmi_phy);
@@ -3504,13 +3492,13 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);
 	if (partition_id < 0)
 		return -EINVAL;
-	err = tegra_unpowergate_partition(partition_id);
+	err = tegra_unpowergate_partition_with_clk_on(partition_id);
 	if (err < 0)
 		return err;
 	partition_id = tegra_pd_get_powergate_id(tegra_xusba_pd);
 	if (partition_id < 0)
 		return -EINVAL;
-	err = tegra_unpowergate_partition(partition_id);
+	err = tegra_unpowergate_partition_with_clk_on(partition_id);
 	if (err < 0)
 		return err;
 

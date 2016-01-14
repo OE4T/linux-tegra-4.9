@@ -770,4 +770,53 @@
 	csi_mipical {
 		status = "disabled";
 	};
+
+	ptm_a57_0: ptm@9840000 {
+		status = "disabled";
+	};
+
+	ptm_a57_1: ptm@9940000 {
+		status = "disabled";
+	};
+
+	ptm_a57_2: ptm@9a40000 {
+		status = "disabled";
+	};
+
+	ptm_a57_3: ptm@9b40000 {
+		status = "disabled";
+	};
+
+	funnel_bccplex@9010000 {
+		status = "disabled";
+	};
+
+	funnel_major@8010000 {
+		status = "disabled";
+	};
+
+	replicator@0x8040000 {
+		status = "disabled";
+	};
+
+	etf@8030000 {
+		status = "disabled";
+	};
+
+	tpiu@8060000 {
+		status = "disabled";
+	};
+
+	watchdog@30c0000 {
+		status = "disabled";
+	};
+
+	watchdog@30d0000 {
+		status = "disabled";
+	};
+
+	timer@3020000 {
+		status = "disabled";
+	};
+
 };

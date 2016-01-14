@@ -147,5 +147,9 @@
 	pwm-fan {
 		status = "disabled";
 	};
+
+	sound {
+		status = "disabled";
+	};
 };
 

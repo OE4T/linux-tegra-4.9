@@ -875,35 +875,44 @@ static int tegra_dc_sor_enable_lane_sequencer(struct tegra_dc_sor_data *sor,
 	return 0;
 }
 
+static u32 tegra_sor_get_pd_tx_bitmap(struct tegra_dc_sor_data *sor,
+						u32 lane_count)
+{
+	int i;
+	u32 val = 0;
+
+	for (i = 0; i < lane_count; i++) {
+		u32 index = sor->xbar_ctrl[i];
+
+		switch (index) {
+		case 0:
+			val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;
+			break;
+		case 1:
+			val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
+			break;
+		case 2:
+			val |= NV_SOR_DP_PADCTL_PD_TXD_2_NO;
+			break;
+		case 3:
+			val |= NV_SOR_DP_PADCTL_PD_TXD_3_NO;
+			break;
+		default:
+			dev_err(&sor->dc->ndev->dev,
+				"dp: incorrect lane cnt\n");
+		}
+	}
+
+	return val;
+}
+
 int tegra_sor_power_lanes(struct tegra_dc_sor_data *sor,
 					u32 lane_count, bool pu)
 {
 	u32 val = 0;
-	u8 pd_txd_0_no = NV_SOR_DP_PADCTL_PD_TXD_0_NO,
-		pd_txd_2_no = NV_SOR_DP_PADCTL_PD_TXD_2_NO;
-
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
-	pd_txd_0_no = NV_SOR_DP_PADCTL_PD_TXD_2_NO;
-	pd_txd_2_no = NV_SOR_DP_PADCTL_PD_TXD_0_NO;
-#endif
 
 	if (pu) {
-		switch (lane_count) {
-		/* T210 boards need to swap lanes 0 and 2 - bug 1545275 */
-		case 4:
-			val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO | pd_txd_2_no);
-			/* fall through */
-		case 2:
-			val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
-		case 1:
-			val |= pd_txd_0_no;
-			break;
-		default:
-			dev_dbg(&sor->dc->ndev->dev,
-				"dp: invalid lane number %d\n", lane_count);
-			return -EFAULT;
-		}
-
+		val = tegra_sor_get_pd_tx_bitmap(sor, lane_count);
 		tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
 						NV_SOR_DP_PADCTL_PD_TXD_MASK, val);
 		tegra_dc_sor_set_lane_count(sor, lane_count);
@@ -2174,30 +2183,7 @@ void tegra_sor_precharge_lanes(struct tegra_dc_sor_data *sor)
 	const struct tegra_dc_dp_link_config *cfg = sor->link_cfg;
 	u32 val = 0;
 
-	switch (cfg->lane_count) {
-	/* T210 boards need to swap lanes 0 and 2 */
-	case 4:
-		val |= (NV_SOR_DP_PADCTL_PD_TXD_3_NO |
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-			NV_SOR_DP_PADCTL_PD_TXD_0_NO);
-#else
-			NV_SOR_DP_PADCTL_PD_TXD_2_NO);
-#endif
-		/* fall through */
-	case 2:
-		val |= NV_SOR_DP_PADCTL_PD_TXD_1_NO;
-	case 1:
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		val |= NV_SOR_DP_PADCTL_PD_TXD_2_NO;
-#else
-		val |= NV_SOR_DP_PADCTL_PD_TXD_0_NO;
-#endif
-		break;
-	default:
-		dev_dbg(&sor->dc->ndev->dev,
-			"dp: invalid lane number %d\n", cfg->lane_count);
-		return;
-	}
+	val = tegra_sor_get_pd_tx_bitmap(sor, cfg->lane_count);
 
 	/* force lanes to output common mode voltage */
 	tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),

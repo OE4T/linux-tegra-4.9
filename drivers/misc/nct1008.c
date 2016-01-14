@@ -3,7 +3,7 @@
  *
  * Driver for NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -178,9 +178,11 @@ static int nct1008_write_reg(struct i2c_client *client, u8 reg, u16 value)
 {
 	int ret = 0;
 	struct nct1008_data *data = i2c_get_clientdata(client);
+	if (!data)
+		return -ENODEV;
 
 	mutex_lock(&data->mutex);
-	if (data && data->nct_disabled) {
+	if (data->nct_disabled) {
 		mutex_unlock(&data->mutex);
 		return -ENODEV;
 	}
@@ -198,8 +200,11 @@ static int nct1008_read_reg(struct i2c_client *client, u8 reg)
 {
 	int ret = 0;
 	struct nct1008_data *data = i2c_get_clientdata(client);
+	if (!data)
+		return -ENODEV;
+
 	mutex_lock(&data->mutex);
-	if (data && data->nct_disabled) {
+	if (data->nct_disabled) {
 		mutex_unlock(&data->mutex);
 		return -ENODEV;
 	}
@@ -1200,13 +1205,17 @@ static void nct1008_work_func(struct work_struct *work)
 		nct1008_update(EXT, data);
 
 	/* Initiate one-shot conversion */
-	nct1008_write_reg(data->client, ONE_SHOT, 0x1);
+	err = nct1008_write_reg(data->client, ONE_SHOT, 0x1);
+	if (err < 0)
+		return;
 
 	/* Give hardware necessary time to finish conversion */
 	ts = ns_to_timespec(MAX_CONV_TIME_ONESHOT_MS * 1000 * 1000);
 	hrtimer_nanosleep(&ts, NULL, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
 
-	nct1008_read_reg(data->client, STATUS_RD);
+	err = nct1008_read_reg(data->client, STATUS_RD);
+	if (err < 0)
+		return;
 
 	nct1008_enable(data->client);
 

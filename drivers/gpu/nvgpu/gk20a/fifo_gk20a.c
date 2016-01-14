@@ -1810,6 +1810,18 @@ void gk20a_fifo_nonstall_isr(struct gk20a *g)
 	return;
 }
 
+void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg)
+{
+	if (is_tsg)
+		gk20a_writel(g, fifo_preempt_r(),
+			fifo_preempt_id_f(id) |
+			fifo_preempt_type_tsg_f());
+	else
+		gk20a_writel(g, fifo_preempt_r(),
+			fifo_preempt_chid_f(id) |
+			fifo_preempt_type_channel_f());
+}
+
 static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 {
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
@@ -1820,14 +1832,7 @@ static int __locked_fifo_preempt(struct gk20a *g, u32 id, bool is_tsg)
 	gk20a_dbg_fn("%d", id);
 
 	/* issue preempt */
-	if (is_tsg)
-		gk20a_writel(g, fifo_preempt_r(),
-			fifo_preempt_id_f(id) |
-			fifo_preempt_type_tsg_f());
-	else
-		gk20a_writel(g, fifo_preempt_r(),
-			fifo_preempt_chid_f(id) |
-			fifo_preempt_type_channel_f());
+	gk20a_fifo_issue_preempt(g, id, is_tsg);
 
 	gk20a_dbg_fn("%d", id);
 	/* wait for preempt */

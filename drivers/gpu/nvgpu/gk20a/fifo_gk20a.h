@@ -196,4 +196,6 @@ bool gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 
 struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
 		u32 hw_chid);
+
+void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg);
 #endif /*__GR_GK20A_H__*/

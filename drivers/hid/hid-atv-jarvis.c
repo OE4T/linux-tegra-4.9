@@ -3,7 +3,7 @@
  *  providing keys and microphone audio functionality
  *
  * Copyright (C) 2014 Google, Inc.
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1437,6 +1437,10 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 
 	pr_debug("%s: packet 0x%02x#%i\n", __func__, data[0], size);
 
+	/* donot break the event from thunderstrike for now */
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
+		return 0;
+
 	if (!((report->id == JAR_BUTTON_REPORT_ID &&
 	       size >= JAR_BUTTON_REPORT_SIZE) ||
 	      (report->id == JAR_AUDIO_REPORT_ID &&
@@ -1658,6 +1662,10 @@ static const struct hid_device_id atvr_devices[] = {
 			      USB_DEVICE_ID_NVIDIA_JARVIS)},
 	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
 			      USB_DEVICE_ID_NVIDIA_PEPPER)},
+	{HID_BLUETOOTH_DEVICE(USB_VENDOR_ID_NVIDIA,
+			      USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)},
+	{HID_USB_DEVICE(USB_VENDOR_ID_NVIDIA,
+			      USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)},
 	{ }
 };
 MODULE_DEVICE_TABLE(hid, atvr_devices);

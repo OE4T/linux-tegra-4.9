@@ -335,4 +335,11 @@
 	cluster_clk_priv@e090000 {
 		status = "okay";
 	};
+
+	actmon@d230000 {
+		status = "okay";
+		mc_all {	/* MC_ALL actmon device */
+			status = "okay";
+		};
+	};
 };

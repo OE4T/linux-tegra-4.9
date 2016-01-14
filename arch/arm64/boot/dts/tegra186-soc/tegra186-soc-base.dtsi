@@ -42,6 +42,7 @@
 #include <../../../../include/dt-bindings/hsp/tegra-hsp.h>
 #include "tegra186-soc/tegra186-soc-thermal.dtsi"
 #include "tegra186-soc/tegra186-camera.dtsi"
+#include "tegra186-soc/tegra186-soc-actmon.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";

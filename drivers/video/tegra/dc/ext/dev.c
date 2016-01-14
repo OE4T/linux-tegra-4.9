@@ -1438,6 +1438,7 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 		return -EACCES;
 	}
 
+	csc->csc_enable = new_csc->csc_enable;
 	csc->r2r = new_csc->r2r;
 	csc->g2r = new_csc->g2r;
 	csc->b2r = new_csc->b2r;
@@ -1450,7 +1451,6 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 	csc->g2b = new_csc->g2b;
 	csc->b2b = new_csc->b2b;
 	csc->const2b = new_csc->const2b;
-
 	tegra_nvdisp_update_csc(dc, index);
 
 	mutex_unlock(&ext_win->lock);

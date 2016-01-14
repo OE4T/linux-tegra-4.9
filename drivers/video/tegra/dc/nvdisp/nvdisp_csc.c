@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisp/nvdisp_csc.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -31,26 +31,32 @@ void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc)
 
 int tegra_nvdisp_set_csc(struct tegra_dc_win *win, struct tegra_dc_csc_v2 *csc)
 {
-	nvdisp_win_write(win, win_r2r_coeff_f(csc->r2r), win_r2r_r());
-	nvdisp_win_write(win, win_g2r_coeff_f(csc->g2r), win_g2r_r());
-	nvdisp_win_write(win, win_b2r_coeff_f(csc->b2r), win_b2r_r());
-	nvdisp_win_write(win,
+	u32 csc_enable = win_window_set_control_csc_disable_f();
+
+	if (csc->csc_enable) {
+		nvdisp_win_write(win, win_r2r_coeff_f(csc->r2r), win_r2r_r());
+		nvdisp_win_write(win, win_g2r_coeff_f(csc->g2r), win_g2r_r());
+		nvdisp_win_write(win, win_b2r_coeff_f(csc->b2r), win_b2r_r());
+		nvdisp_win_write(win,
 			win_const2r_coeff_f(csc->const2r), win_const2r_r());
-	nvdisp_win_write(win, win_r2g_coeff_f(csc->r2g), win_r2g_r());
-	nvdisp_win_write(win, win_g2g_coeff_f(csc->g2g), win_g2g_r());
-	nvdisp_win_write(win, win_b2g_coeff_f(csc->b2g), win_b2g_r());
-	nvdisp_win_write(win,
+
+		nvdisp_win_write(win, win_r2g_coeff_f(csc->r2g), win_r2g_r());
+		nvdisp_win_write(win, win_g2g_coeff_f(csc->g2g), win_g2g_r());
+		nvdisp_win_write(win, win_b2g_coeff_f(csc->b2g), win_b2g_r());
+		nvdisp_win_write(win,
 			win_const2g_coeff_f(csc->const2g), win_const2g_r());
-	nvdisp_win_write(win, win_r2b_coeff_f(csc->r2b), win_r2b_r());
-	nvdisp_win_write(win, win_g2b_coeff_f(csc->g2b), win_r2b_r());
-	nvdisp_win_write(win, win_b2b_coeff_f(csc->b2b), win_r2b_r());
-	nvdisp_win_write(win,
+
+		nvdisp_win_write(win, win_r2b_coeff_f(csc->r2b), win_r2b_r());
+		nvdisp_win_write(win, win_g2b_coeff_f(csc->g2b), win_g2b_r());
+		nvdisp_win_write(win, win_b2b_coeff_f(csc->b2b), win_b2b_r());
+		nvdisp_win_write(win,
 			win_const2b_coeff_f(csc->const2b), win_const2b_r());
 
+		csc_enable = win_window_set_control_csc_enable_f();
+	}
+
 	/* Enable the CSC */
-	nvdisp_win_write(win,
-		win_window_set_control_csc_enable_f(),
-		win_window_set_control_r());
+	nvdisp_win_write(win, csc_enable, win_window_set_control_r());
 
 	return 0;
 }
@@ -69,7 +75,7 @@ int tegra_nvdisp_update_csc(struct tegra_dc *dc, int win_idx)
 	}
 
 	tegra_dc_get(dc);
-	tegra_nvdisp_set_csc(win, &win->csc);
+	win->csc_dirty = true;
 	tegra_dc_put(dc);
 
 	mutex_unlock(&dc->lock);

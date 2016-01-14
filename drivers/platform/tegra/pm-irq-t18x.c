@@ -303,6 +303,9 @@ static int tegra_pm_irq_suspend(void)
 	/* Clear PMC Wake Status registers while going to suspend */
 	wke_clear_wake_status();
 
+	/* HACK for bug 200161663: Disable XUSB wake events */
+	wake_enb[2] &= ~(7 << 12);
+
 	wke_write_wake_levels(wake_level);
 	wke_write_wake_masks(wake_enb);
 	wke_write_tier2_routing(wake_enb);

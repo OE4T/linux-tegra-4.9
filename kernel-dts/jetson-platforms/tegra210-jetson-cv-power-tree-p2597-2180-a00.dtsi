@@ -98,9 +98,9 @@
 				};
 
 				ldo1 {
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,fps-source = <FPS_SRC_0>;
 					maxim,fps-power-up-period = <0>;
-					maxim,fps-power-down-period = <7>;
+					maxim,fps-power-down-period = <3>;
 					regulator-enable-ramp-delay = <34>;
 					regulator-disable-ramp-delay = <660>;
 					regulator-ramp-delay = <100000>;

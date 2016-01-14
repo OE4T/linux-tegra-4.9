@@ -164,6 +164,7 @@ static int tegra186_asrc_runtime_suspend(struct device *dev)
 	regmap_write(asrc->regmap, TEGRA186_ASRC_GLOBAL_INT_MASK, 0x1);
 #endif
 	regcache_cache_only(asrc->regmap, true);
+	regcache_mark_dirty(asrc->regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -222,11 +223,6 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra186_asrc_suspend(struct device *dev)
 {
-	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
-
-	if (asrc)
-		regcache_mark_dirty(asrc->regmap);
-
 	return 0;
 }
 #endif

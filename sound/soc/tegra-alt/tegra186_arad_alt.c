@@ -85,6 +85,7 @@ static int tegra186_arad_runtime_suspend(struct device *dev)
 	struct tegra186_arad *arad = dev_get_drvdata(dev);
 
 	regcache_cache_only(arad->regmap, true);
+	regcache_mark_dirty(arad->regmap);
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -111,11 +112,6 @@ static int tegra186_arad_runtime_resume(struct device *dev)
 #ifdef CONFIG_PM_SLEEP
 static int tegra186_arad_suspend(struct device *dev)
 {
-	struct tegra186_arad *arad = dev_get_drvdata(dev);
-
-	if (arad)
-		regcache_mark_dirty(arad->regmap);
-
 	return 0;
 }
 #endif

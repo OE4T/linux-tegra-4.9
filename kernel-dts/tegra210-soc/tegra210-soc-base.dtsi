@@ -1493,6 +1493,8 @@
 	efuse@7000f800 {
 		compatible = "nvidia,tegra210-efuse";
 		reg = <0x0 0x7000f800 0x0 0x400>;
+		clocks = <&tegra_car TEGRA210_CLK_ID_FUSE>;
+		clock-names = "fuse";
 		status = "disabled";
 	};
 

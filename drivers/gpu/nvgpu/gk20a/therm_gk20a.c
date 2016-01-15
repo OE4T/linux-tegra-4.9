@@ -3,7 +3,7 @@
  *
  * GK20A Therm
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,13 +43,13 @@ static int gk20a_init_therm_setup_hw(struct gk20a *g)
 			therm_use_a_ext_therm_2_enable_f());
 	/* priority for EXT_THERM_0 event set to highest */
 	gk20a_writel(g, therm_evt_ext_therm_0_r(),
-		therm_evt_ext_therm_0_slow_factor_f(1) |
+		therm_evt_ext_therm_0_slow_factor_f(0x2) |
 		therm_evt_ext_therm_0_priority_f(3));
 	gk20a_writel(g, therm_evt_ext_therm_1_r(),
-		therm_evt_ext_therm_1_slow_factor_f(2) |
+		therm_evt_ext_therm_1_slow_factor_f(0x6) |
 		therm_evt_ext_therm_1_priority_f(2));
 	gk20a_writel(g, therm_evt_ext_therm_2_r(),
-		therm_evt_ext_therm_2_slow_factor_f(3) |
+		therm_evt_ext_therm_2_slow_factor_f(0xe) |
 		therm_evt_ext_therm_2_priority_f(1));
 
 

@@ -21,15 +21,22 @@
 #define pr_fmt(fmt) "ecc-err: " fmt
 
 #include <linux/kernel.h>
+#include <linux/uaccess.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <linux/of.h>
 #include <linux/of_reserved_mem.h>
 #include <linux/of_irq.h>
+#include <linux/seq_file.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr_ecc_t18x.h>
 #include <linux/platform/tegra/tegra18_emc.h>
 
 static struct mc_ecc_err_log ecc_log;
+static u32 mc_emem_arb_misc1;
+static u32 mc_emem_arb_cfg;
+
 void __iomem *emc;
 void __iomem *emc_regs[MAX_CHANNELS];
 u32 emc_int_status[MAX_CHANNELS];
@@ -125,8 +132,9 @@ static int mc_check_subp1_err(struct mc_ecc_err_log *log)
 		return 0; /*Error on both Subpartitions or only Subp0*/
 }
 
-static void mc_ecc_read_log(struct mc_ecc_err_log *log, u32 ch)
+static u64 mc_ecc_read_log(struct mc_ecc_err_log *log, u32 ch)
 {
+	u64 addr;
 	u32 val;
 
 	memset((void *)log, 0, sizeof(struct mc_ecc_err_log));
@@ -202,6 +210,12 @@ static void mc_ecc_read_log(struct mc_ecc_err_log *log, u32 ch)
 	pr_debug("D.X.R.B.C.S.L:%d.%d.0x%x.%d.0x%x.%d.0\n", log->ecc_err_dev,
 			log->ecc_err_ch, log->row, log->bank, log->col,
 			log->subp);
+
+	addr = mc_addr_translate(log->ecc_err_dev, log->ecc_err_ch,
+			log->row, log->bank, log->col, log->subp, 0);
+
+	pr_debug("Linear addr = 0x%016llx\n", addr);
+	return addr;
 }
 
 static void mc_ecc_dump_intr_mask(void)
@@ -237,6 +251,63 @@ static void mc_ecc_clear_all_intr(void)
 	emc_writel(0xF, EMC_MCH_GLOBAL_CRITICAL_INTSTATUS);
 }
 
+static void mc_ecc_sec_scrub(u32 scrub_addr)
+{
+	u32 val;
+
+	mc_writel(scrub_addr, MC_MEM_SCRUBBER_ECC_ADDR);
+
+	pr_debug("MC_MEM_SCRUBBER_ECC_ADDR = 0x%08x\n",
+			mc_readl(MC_MEM_SCRUBBER_ECC_ADDR));
+
+	val = mc_readl(MC_MEM_SCRUBBER_ECC_REG_CTRL);
+	val |= (1 << SCRUB_ECC_TRIGGER_SHIFT);
+
+	mc_writel(val, MC_MEM_SCRUBBER_ECC_REG_CTRL);
+
+	do {
+		val = mc_readl(MC_MEM_SCRUBBER_ECC_REG_CTRL);
+		val = ((val >> SCRUB_ECC_PENDING_SHIFT) &
+					SCRUB_ECC_PENDING_MASK);
+		pr_debug("SCrubbing in progress : %d\n", val);
+	} while (val);
+
+	pr_debug("SCrubbing done\n");
+}
+
+static void mc_check_ecc_err(struct mc_ecc_err_log *pecclog, u32 ch)
+{
+	u32 err = false;
+	u64 addr;
+
+	addr = mc_ecc_read_log(pecclog, ch);
+	mc_ecc_dump_log(pecclog);
+
+	if (mc_check_poison(pecclog)) {
+		ecc_err_pr("-----POISON Bit ERR, addr:0x%016llx\n",
+								addr);
+		err = true;
+	}
+	if (mc_check_ebe(pecclog)) {
+		ecc_err_pr("-----ECC Bit ERR, addr:0x%016llx\n", addr);
+		err = true;
+	}
+	if (mc_check_sbe(pecclog)) {
+		ecc_err_pr("------SBE ERR, addr:0x%016llx\n", addr);
+		err = true;
+		/* Demand scrub in case of SBE */
+		if (pecclog->ecc_err_cgid != HW_SCRUBBER_CGID)
+			mc_ecc_sec_scrub((u32)(addr >> 6));
+	}
+	if (mc_check_dbe(pecclog)) {
+		ecc_err_pr("------DBE ERR, addr:0x%016llx\n", addr);
+		err = true;
+	}
+
+	if (err)
+		mc_ecc_dump_regs(pecclog);
+}
+
 static void mc_ecc_dump_ch_logs(uint32_t ch)
 {
 	uint32_t val, err_buff_count;
@@ -249,8 +320,7 @@ static void mc_ecc_dump_ch_logs(uint32_t ch)
 	while (err_buff_count) {
 		pr_debug("----ch%d---Error log(%d)---<Start>-----\n", ch,
 				err_buff_count);
-		mc_ecc_read_log(pecclog, ch);
-		mc_ecc_dump_log(pecclog);
+		mc_check_ecc_err(pecclog, ch);
 		pr_debug("----ch%d---Error log(%d)---<End>-----\n", ch,
 				err_buff_count);
 		val = __emc_readl(ch, EMC_ECC_STATUS);
@@ -301,26 +371,44 @@ static void mc_ecc_dump_status(void)
 		emc_readl(EMC_MCH_GLOBAL_NONCRITICAL_INTSTATUS));
 }
 
+static int mc_ecc_debugfs_dump_status(struct seq_file *s, void *v)
+{
+	mc_ecc_dump_status();
+
+	return 0;
+}
 static void mc_increase_ecc_errors(void)
 {
-	uint32_t val;
-
 	mc_writel(0x02, MC_TIMING_CONTROL_DBG);
 	mc_writel(0x40040001, MC_EMEM_ARB_CFG);
 	mc_writel(0x00400b39, MC_EMEM_ARB_MISC1);
 	mc_writel(0x0, MC_TIMING_CONTROL_DBG);
+}
+
+static void mc_normal_ecc_errors(void)
+{
+	mc_writel(0x02, MC_TIMING_CONTROL_DBG);
+	mc_writel(mc_emem_arb_cfg, MC_EMEM_ARB_CFG);
+	mc_writel(mc_emem_arb_misc1, MC_EMEM_ARB_MISC1);
+	mc_writel(0x0, MC_TIMING_CONTROL_DBG);
+}
+
+static int mc_dump_regs_emem_arb(struct seq_file *s, void *v)
+{
+	uint32_t val;
 
 	val = mc_readl(MC_EMEM_ARB_CFG);
-	pr_debug("MC_EMEM_ARB_CFG = 0x%x\n", val);
+	seq_printf(s, "MC_EMEM_ARB_CFG = 0x%x\n", val);
 	val = mc_readl(MC_EMEM_ARB_MISC1);
-	pr_debug("MC_EMEM_ARB_MISC1 = 0x%x\n", val);
+	seq_printf(s, "MC_EMEM_ARB_MISC1 = 0x%x\n", val);
+
+	return 0;
 }
 
 static int mc_handle_err_intr_ch(u32 ch)
 {
 	u32 val, err_buff_count;
 	struct mc_ecc_err_log *pecclog = &ecc_log;
-	u32 err = false;
 
 	if (ch >= MAX_CHANNELS) {
 		pr_err("!ERROR:Invalid channel number, ch :%d\n", ch);
@@ -336,29 +424,8 @@ static int mc_handle_err_intr_ch(u32 ch)
 	err_buff_count = ((val >> ERR_BUFFER_CNT_SHIFT) &
 					ERR_BUFFER_CNT_MASK);
 	while (err_buff_count) {
-		mc_ecc_read_log(pecclog, ch);
 
-		mc_ecc_dump_log(pecclog);
-
-		if (mc_check_poison(pecclog)) {
-			ecc_err_pr("POISON Bit ERR\n");
-			err = true;
-		}
-		if (mc_check_ebe(pecclog)) {
-			ecc_err_pr("ECC Bit ERR\n");
-			err = true;
-		}
-		if (mc_check_sbe(pecclog)) {
-			ecc_err_pr("SBE ERR\n");
-			err = true;
-		}
-		if (mc_check_dbe(pecclog)) {
-			ecc_err_pr("DBE ERR\n");
-			err = true;
-		}
-
-		if (err)
-			mc_ecc_dump_regs(pecclog);
+		mc_check_ecc_err(pecclog, ch);
 
 		val = __emc_readl(ch, EMC_ECC_STATUS);
 		err_buff_count = ((val >> ERR_BUFFER_CNT_SHIFT) &
@@ -453,7 +520,98 @@ irqreturn_t tegra_ecc_error_hard_irq(int irq, void *data)
 
 	return IRQ_WAKE_THREAD;
 }
-static int mc_ecc_err_init(struct platform_device *pdev)
+static struct dentry *ecc_err_debugfs_dir;
+
+static int ecc_err_rate_debugfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mc_dump_regs_emem_arb, NULL);
+}
+
+static ssize_t ecc_err_rate_debugfs_write(struct file *file,
+		const char __user *user_buf, size_t size, loff_t *ppos)
+{
+	char buf[64];
+	int buf_size;
+	int ret;
+
+	buf_size = min(size, (sizeof(buf) - 1));
+	if (strncpy_from_user(buf, user_buf, buf_size) < 0)
+		return -EFAULT;
+	buf[buf_size] = 0;
+
+	if (strncmp(buf, "increase", 8) == 0)
+		mc_increase_ecc_errors();
+	 else if (strncmp(buf, "normal", 6) == 0)
+		mc_normal_ecc_errors();
+	else
+		ret = -EINVAL;
+
+	/* ignore the rest of the buffer, only one command at a time */
+	*ppos += size;
+	return size;
+}
+
+static const struct file_operations ecc_err_rate_debugfs_fops = {
+	.open           = ecc_err_rate_debugfs_open,
+	.read           = seq_read,
+	.write          = ecc_err_rate_debugfs_write,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+static int ecc_status_debugfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mc_ecc_debugfs_dump_status, NULL);
+}
+
+static const struct file_operations ecc_status_debugfs_fops = {
+	.open           = ecc_status_debugfs_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+static int ecc_cfg_debugfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, mc_ecc_config_dump, NULL);
+}
+
+static const struct file_operations ecc_cfg_debugfs_fops = {
+	.open           = ecc_cfg_debugfs_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+static int mc_ecc_debugfs_init(struct dentry *mc_parent)
+{
+	if (!mc_parent)
+		return -EINVAL;
+
+	ecc_err_debugfs_dir = debugfs_create_dir("ecc", mc_parent);
+	if (ecc_err_debugfs_dir == NULL) {
+		pr_err("Failed to make debugfs node: %ld\n",
+		       PTR_ERR(ecc_err_debugfs_dir));
+		return -EINVAL;
+	}
+
+	debugfs_create_file("cfg", 0644, ecc_err_debugfs_dir, NULL,
+			    &ecc_cfg_debugfs_fops);
+
+	debugfs_create_file("status", 0644, ecc_err_debugfs_dir, NULL,
+			    &ecc_status_debugfs_fops);
+
+	debugfs_create_file("error_rate", 0644, ecc_err_debugfs_dir, NULL,
+			    &ecc_err_rate_debugfs_fops);
+
+	debugfs_create_u32("quiet", 0644, ecc_err_debugfs_dir,
+					&ecc_err_silenced);
+
+	return 0;
+}
+
+static int mc_ecc_err_init(struct dentry *mc_parent,
+				struct platform_device *pdev)
 {
 	struct resource *res;
 	u32 reg_index = DT_REG_INDEX_EMC_BROADCAST;
@@ -501,6 +659,16 @@ static int mc_ecc_err_init(struct platform_device *pdev)
 	}
 	ecc_int_mask = be32_to_cpup(prop);
 
+	mc_ecc_config_read();
+
+	/*
+		Read the default MC EMEM config, so that we can decrease
+		the rate of ecc errors later
+	*/
+
+	mc_emem_arb_misc1 = mc_readl(MC_EMEM_ARB_MISC1);
+	mc_emem_arb_cfg = mc_readl(MC_EMEM_ARB_CFG);
+
 	mc_ecc_dump_status();
 
 	mc_config_ecc_log(MC_ECC_LOG_RING_MODE, MC_ECC_LOG_BUFF_DEPTH);
@@ -509,23 +677,23 @@ static int mc_ecc_err_init(struct platform_device *pdev)
 
 	mc_ecc_dump_status();
 
+	mc_ecc_debugfs_init(mc_parent);
+
 	emc_writel(ecc_int_mask, EMC_INTMASK);
 
 	mc_ecc_dump_intr_mask();
 
-	mc_increase_ecc_errors();
-
 	return 0;
 }
 
-void tegra_emcerr_init(struct platform_device *pdev)
+void tegra_emcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 {
 	u32 mc_ecc_control = mc_readl(MC_ECC_CONTROL);
 
 	if (mc_ecc_control & 1) {
 		pr_info("dram ecc enabled-MC_ECC_CONTROL:0x%08x\n",
 							mc_ecc_control);
-		if (mc_ecc_err_init(pdev))
+		if (mc_ecc_err_init(mc_parent, pdev))
 			pr_err("ecc error init failed\n");
 
 	} else {

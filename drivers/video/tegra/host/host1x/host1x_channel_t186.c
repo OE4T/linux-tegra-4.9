@@ -477,15 +477,15 @@ error:
 	return err;
 }
 
-static int host1x_channel_init_security(struct nvhost_channel *ch)
+static int host1x_channel_init_security(struct platform_device *pdev,
+	struct nvhost_channel *ch)
 {
-	struct nvhost_master *host = nvhost_get_host(ch->dev);
 	u32 val;
 
-	val = host1x_hypervisor_readl(host->dev,
+	val = host1x_hypervisor_readl(pdev,
 				      host1x_channel_filter_gbuffer_r() +
 				      BIT_WORD(ch->chid) * sizeof(u32));
-	host1x_hypervisor_writel(host->dev,
+	host1x_hypervisor_writel(pdev,
 				 host1x_channel_filter_gbuffer_r() +
 				 BIT_WORD(ch->chid) * sizeof(u32),
 				 val | BIT_MASK(ch->chid));

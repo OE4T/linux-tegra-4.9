@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Init for T124 Architecture Chips
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -278,6 +278,7 @@ struct nvhost_device_data t124_msenc_info = {
 	.actmon_enabled	= true,
 	.firmware_name	= "nvhost_msenc031.fw",
 	.resource_policy = RESOURCE_PER_CHANNEL_INSTANCE,
+	.serialize	= true,
 };
 
 static struct platform_device tegra_msenc03_device = {
@@ -318,6 +319,7 @@ struct nvhost_device_data t124_tsec_info = {
 	.finalize_poweron = nvhost_tsec_finalize_poweron,
 	.prepare_poweroff = nvhost_tsec_prepare_poweroff,
 	.resource_policy  = RESOURCE_PER_CHANNEL_INSTANCE,
+	.serialize        = true,
 };
 
 static struct platform_device tegra_tsec01_device = {
@@ -376,6 +378,7 @@ struct nvhost_device_data t124_vic_info = {
 	.aggregate_constraints	= nvhost_vic_aggregate_constraints,
 	.num_ppc		= 2,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.serialize		= true,
 };
 
 static struct platform_device tegra_vic03_device = {
@@ -409,6 +412,7 @@ static struct nvhost_device_data t132_msenc_info = {
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
 	.firmware_name	= "nvhost_msenc031.fw",
 	.resource_policy = RESOURCE_PER_CHANNEL_INSTANCE,
+	.serialize	= true,
 };
 
 static struct {

@@ -1140,7 +1140,7 @@
 			     <0 7 4>,
 			     <0 8 4>,
 			     <0 9 4>;
-		clock-frequency = <38400000>;
+		clock-frequency = <19200000>;
 		reg = <0x0 0x03010000 0x0 0x000e0000>;
 		tmr-count = <10>;
 		wdt-count = <3>;

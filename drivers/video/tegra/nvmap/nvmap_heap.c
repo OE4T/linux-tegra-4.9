@@ -302,9 +302,13 @@ struct nvmap_heap *nvmap_block_to_heap(struct nvmap_heap_block *b)
 /* nvmap_heap_free: frees block b*/
 void nvmap_heap_free(struct nvmap_heap_block *b)
 {
-	struct nvmap_heap *h = nvmap_block_to_heap(b);
+	struct nvmap_heap *h;
 	struct list_block *lb;
 
+	if (!b)
+		return;
+
+	h = nvmap_block_to_heap(b);
 	mutex_lock(&h->lock);
 
 	lb = container_of(b, struct list_block, block);

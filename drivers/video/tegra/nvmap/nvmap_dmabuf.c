@@ -461,8 +461,11 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 				   info->handle->owner->name : "unknown",
 				   info->handle,
 				   dmabuf);
+
+	mutex_lock(&info->handle->lock);
 	BUG_ON(dmabuf != info->handle->dmabuf);
 	info->handle->dmabuf = NULL;
+	mutex_unlock(&info->handle->lock);
 
 	mutex_lock(&info->maps_lock);
 	while (!list_empty(&info->maps)) {

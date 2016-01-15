@@ -3,7 +3,7 @@
  *
  * Handle allocation and freeing routines for nvmap
  *
- * Copyright (c) 2009-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -152,10 +152,12 @@ ref_alloc_fail:
 	return err;
 }
 
-struct nvmap_handle *nvmap_validate_get_by_ivmid(struct nvmap_client *client,
-						 unsigned int ivm_id)
+struct nvmap_handle_ref *nvmap_try_duplicate_by_ivmid(
+		struct nvmap_client *client, unsigned int ivm_id,
+		struct nvmap_heap_block **block)
 {
 	struct nvmap_handle *h = NULL;
+	struct nvmap_handle_ref *ref = NULL;
 	struct rb_node *n;
 
 	spin_lock(&nvmap_dev->handle_lock);
@@ -166,11 +168,47 @@ struct nvmap_handle *nvmap_validate_get_by_ivmid(struct nvmap_client *client,
 		if (h->ivm_id == ivm_id) {
 			h = nvmap_handle_get(h);
 			spin_unlock(&nvmap_dev->handle_lock);
-			return h;
+			goto found;
 		}
 	}
 
 	spin_unlock(&nvmap_dev->handle_lock);
+	/* handle is either freed or being freed, don't duplicate it */
+	goto finish;
+
+	/*
+	 * From this point, handle and its buffer are valid and won't be
+	 * freed as a reference is taken on it. The dmabuf can still be
+	 * freed anytime till reference is taken on it below.
+	 */
+found:
+	mutex_lock(&h->lock);
+	/*
+	 * Save this block. If dmabuf's reference is not held in time,
+	 * this can be reused to avoid the delay to free the buffer
+	 * in this old handle and allocate it for a new handle from
+	 * the ivm allocation ioctl.
+	 */
+	*block = h->carveout;
+	if (!h->dmabuf)
+		goto fail;
+	BUG_ON(!h->dmabuf->file);
+	/* This is same as get_dma_buf() if file->f_count was non-zero */
+	if (atomic_long_inc_not_zero(&h->dmabuf->file->f_count) == 0)
+		goto fail;
+	mutex_unlock(&h->lock);
+
+	/* h->dmabuf can't be NULL anymore. Duplicate the handle. */
+	ref = nvmap_duplicate_handle(client, h, true);
+	/* put the extra ref taken using get_dma_buf. */
+	dma_buf_put(h->dmabuf);
+finish:
+	return ref;
+fail:
+	/* free handle but not its buffer */
+	h->carveout = NULL;
+	mutex_unlock(&h->lock);
+	nvmap_handle_put(h);
 	return NULL;
 }
 

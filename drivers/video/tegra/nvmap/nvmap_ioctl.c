@@ -522,7 +522,7 @@ int nvmap_ioctl_get_ivc_heap(struct file *filp, void __user *arg)
 int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 {
 	struct nvmap_create_handle op;
-	struct nvmap_handle_ref *ref = NULL;
+	struct nvmap_handle_ref *ref;
 	struct nvmap_client *client = filp->private_data;
 	int err = 0;
 	int fd;
@@ -530,7 +530,6 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	size_t size = 0;
 	int peer;
 	struct nvmap_heap_block *block = NULL;
-	struct nvmap_handle *h;
 
 	/* First create a new handle and then fake carveout allocation */
 	if (copy_from_user(&op, arg, sizeof(op)))
@@ -539,12 +538,8 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	if (!client)
 		return -ENODEV;
 
-	h = nvmap_validate_get_by_ivmid(client, op.id);
-	if (h) {
-		ref = nvmap_duplicate_handle(client, h, true);
-		if (!ref)
-			return -ENOMEM;
-	} else {
+	ref = nvmap_try_duplicate_by_ivmid(client, op.id, &block);
+	if (!ref) {
 		/*
 		 * See nvmap_heap_alloc() for encoding details.
 		 */
@@ -556,15 +551,16 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		peer = (op.id >> NVMAP_IVM_IVMID_SHIFT);
 
 		ref = nvmap_create_handle(client, PAGE_ALIGN(size));
-		if (!IS_ERR(ref))
-			ref->handle->orig_size = size;
-		else
+		if (IS_ERR(ref)) {
+			nvmap_heap_free(block);
 			return PTR_ERR(ref);
+		}
+		ref->handle->orig_size = size;
 
 		ref->handle->peer = peer;
-
-		block = nvmap_carveout_alloc(client, ref->handle,
-				NVMAP_HEAP_CARVEOUT_IVM, &offs);
+		if (!block)
+			block = nvmap_carveout_alloc(client, ref->handle,
+					NVMAP_HEAP_CARVEOUT_IVM, &offs);
 		if (!block) {
 			nvmap_free_handle(client, ref->handle);
 			return -ENOMEM;
@@ -589,6 +585,8 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		ref->handle->heap_type = NVMAP_HEAP_CARVEOUT_IVM;
 		ref->handle->heap_pgalloc = false;
 		ref->handle->ivm_id = op.id;
+		ref->handle->carveout = block;
+		block->handle = ref->handle;
 		mb();
 		ref->handle->alloc = true;
 		trace_nvmap_alloc_from_ivc(client, ref->handle, ref);

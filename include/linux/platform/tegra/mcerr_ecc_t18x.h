@@ -65,4 +65,10 @@ struct mc_ecc_err_log {
 #define DT_REG_INDEX_EMC_BROADCAST	5
 
 
+void mc_ecc_config_read(void);
+int mc_ecc_config_dump(struct seq_file *s, void *v);
+
+u64 mc_addr_translate(u32 device, u32 ch, u32 row, u32 bank, u32 col, u32 subp,
+								u32 lsb);
+
 #endif

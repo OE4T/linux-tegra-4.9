@@ -2539,8 +2539,7 @@ unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait)
 	return mask;
 }
 
-static int gk20a_channel_set_priority(struct channel_gk20a *ch,
-		u32 priority)
+int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 {
 	u32 timeslice_timeout;
 	bool interleave = false;
@@ -2723,6 +2722,7 @@ void gk20a_init_channel(struct gpu_ops *gops)
 	gops->fifo.alloc_inst = channel_gk20a_alloc_inst;
 	gops->fifo.free_inst = channel_gk20a_free_inst;
 	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
+	gops->fifo.channel_set_priority = gk20a_channel_set_priority;
 }
 
 long gk20a_channel_ioctl(struct file *filp,
@@ -2897,7 +2897,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		err = gk20a_channel_set_priority(ch,
+		err = ch->g->ops.fifo.channel_set_priority(ch,
 			((struct nvgpu_set_priority_args *)buf)->priority);
 		gk20a_idle(dev);
 		break;

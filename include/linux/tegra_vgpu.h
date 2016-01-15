@@ -73,7 +73,8 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS,
 	TEGRA_VGPU_CMD_SET_MMU_DEBUG_MODE,
 	TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE,
-	TEGRA_VGPU_CMD_REG_OPS
+	TEGRA_VGPU_CMD_REG_OPS,
+	TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY
 };
 
 struct tegra_vgpu_connect_params {
@@ -292,6 +293,11 @@ struct tegra_vgpu_reg_ops_params {
 	u32 is_profiler;
 };
 
+struct tegra_vgpu_channel_priority_params {
+	u64 handle;
+	u32 priority;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -319,6 +325,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_mmu_debug_mode mmu_debug_mode;
 		struct tegra_vgpu_sm_debug_mode sm_debug_mode;
 		struct tegra_vgpu_reg_ops_params reg_ops;
+		struct tegra_vgpu_channel_priority_params channel_priority;
 		char padding[192];
 	} params;
 };

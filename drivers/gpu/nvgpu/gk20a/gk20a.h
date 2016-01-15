@@ -260,6 +260,7 @@ struct gpu_ops {
 		int (*wait_engine_idle)(struct gk20a *g);
 		u32 (*get_num_fifos)(struct gk20a *g);
 		u32 (*get_pbdma_signature)(struct gk20a *g);
+		int (*channel_set_priority)(struct channel_gk20a *ch, u32 priority);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

@@ -194,6 +194,12 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	if (!runlist->active_channels)
 		goto clean_up_runlist_info;
 
+	runlist->high_prio_channels =
+		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
+			GFP_KERNEL);
+	if (!runlist->high_prio_channels)
+		goto clean_up_runlist_info;
+
 	runlist_size  = sizeof(u16) * f->num_channels;
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 		int err = gk20a_gmmu_alloc(g, runlist_size, &runlist->mem[i]);
@@ -215,10 +221,13 @@ clean_up_runlist:
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
 		gk20a_gmmu_free(g, &runlist->mem[i]);
 
+clean_up_runlist_info:
+	kfree(runlist->high_prio_channels);
+	runlist->high_prio_channels = NULL;
+
 	kfree(runlist->active_channels);
 	runlist->active_channels = NULL;
 
-clean_up_runlist_info:
 	kfree(f->runlist_info);
 	f->runlist_info = NULL;
 
@@ -521,6 +530,26 @@ static int vgpu_fifo_wait_engine_idle(struct gk20a *g)
 	return 0;
 }
 
+static int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_channel_priority_params *p =
+			&msg.params.channel_priority;
+	int err;
+
+	gk20a_dbg_info("channel %d set priority %u", ch->hw_chid, priority);
+
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY;
+	msg.handle = platform->virt_handle;
+	p->handle = ch->virt_ctx;
+	p->priority = priority;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
+	return err ? err : msg.ret;
+}
+
 static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
@@ -605,5 +634,6 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 	gops->fifo.preempt_channel = vgpu_fifo_preempt_channel;
 	gops->fifo.update_runlist = vgpu_fifo_update_runlist;
 	gops->fifo.wait_engine_idle = vgpu_fifo_wait_engine_idle;
+	gops->fifo.channel_set_priority = vgpu_channel_set_priority;
 }
 

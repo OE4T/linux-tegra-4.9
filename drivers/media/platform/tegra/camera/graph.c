@@ -1,7 +1,7 @@
 /*
  * NVIDIA Media controller graph management
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -30,8 +30,7 @@
 #include <media/v4l2-of.h>
 #include <media/tegra_v4l2_camera.h>
 
-#include "vi.h"
-#include "vi_common.h"
+#include "mc_common.h"
 
 
 /* -----------------------------------------------------------------------------
@@ -39,7 +38,7 @@
  */
 
 static struct tegra_vi_graph_entity *
-tegra_vi_graph_find_entity(struct vi *vi,
+tegra_vi_graph_find_entity(struct tegra_mc_vi *vi,
 		       const struct device_node *node)
 {
 	struct tegra_vi_graph_entity *entity;
@@ -52,7 +51,7 @@ tegra_vi_graph_find_entity(struct vi *vi,
 	return NULL;
 }
 
-static int tegra_vi_graph_build_one(struct vi *vi,
+static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 				    struct tegra_vi_graph_entity *entity)
 {
 	u32 link_flags = MEDIA_LNK_FL_ENABLED;
@@ -159,7 +158,7 @@ static int tegra_vi_graph_build_one(struct vi *vi,
 	return ret;
 }
 
-static int tegra_vi_graph_build_links(struct vi *vi)
+static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 {
 	u32 link_flags = MEDIA_LNK_FL_ENABLED;
 	struct device_node *node = vi->dev->of_node;
@@ -194,7 +193,7 @@ static int tegra_vi_graph_build_links(struct vi *vi)
 			continue;
 		}
 
-		if (link.local_port >= MAX_CHAN_NUM) {
+		if (link.local_port >= vi->num_channels) {
 			dev_err(vi->dev, "wrong channel number for port %u\n",
 				link.local_port);
 			v4l2_of_put_link(&link);
@@ -249,8 +248,8 @@ static int tegra_vi_graph_build_links(struct vi *vi)
 
 static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 {
-	struct vi *vi =
-		container_of(notifier, struct vi, notifier);
+	struct tegra_mc_vi *vi =
+		container_of(notifier, struct tegra_mc_vi, notifier);
 	struct tegra_vi_graph_entity *entity;
 	int ret;
 
@@ -279,7 +278,8 @@ static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 				   struct v4l2_subdev *subdev,
 				   struct v4l2_async_subdev *asd)
 {
-	struct vi *vi = container_of(notifier, struct vi, notifier);
+	struct tegra_mc_vi *vi =
+		container_of(notifier, struct tegra_mc_vi, notifier);
 	struct tegra_vi_graph_entity *entity;
 
 	/* Locate the entity corresponding to the bound subdev and store the
@@ -305,7 +305,7 @@ static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 	return -EINVAL;
 }
 
-void tegra_vi_graph_cleanup(struct vi *vi)
+void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi)
 {
 	struct tegra_vi_graph_entity *entityp;
 	struct tegra_vi_graph_entity *entity;
@@ -319,7 +319,7 @@ void tegra_vi_graph_cleanup(struct vi *vi)
 }
 
 
-static int tegra_vi_graph_parse_one(struct vi *vi,
+static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 				struct device_node *node)
 {
 	struct device_node *ep = NULL;
@@ -373,7 +373,7 @@ static int tegra_vi_graph_parse_one(struct vi *vi,
 	return ret;
 }
 
-int tegra_vi_graph_init(struct vi *vi)
+int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 {
 	struct tegra_vi_graph_entity *entity;
 	struct v4l2_async_subdev **subdevs = NULL;
@@ -401,16 +401,6 @@ int tegra_vi_graph_init(struct vi *vi)
 		goto done;
 	}
 
-	/*
-	 * VI has at least MAX_CHAN_NUM / 2 subdevices for CSI blocks.
-	 * If just found CSI subdevices connecting to VI, VI has no sensors
-	 * described in DT but has to use test pattern generator mode.
-	 * Otherwise VI has sensors connecting.
-	 */
-	vi->has_sensors = (vi->num_subdevs > MAX_CHAN_NUM / 2);
-	if (!vi->has_sensors)
-		dev_dbg(vi->dev, "has no sensors connected!\n");
-
 	/* Register the subdevices notifier. */
 	num_subdevs = vi->num_subdevs;
 	subdevs = devm_kzalloc(vi->dev, sizeof(*subdevs) * num_subdevs,
@@ -420,6 +410,11 @@ int tegra_vi_graph_init(struct vi *vi)
 		goto done;
 	}
 
+	/*
+	 * Add code to check for sensors and
+	 * set TPG mode for VI if no sensors found
+	 * logic varies for different platforms
+	 */
 	i = 0;
 	list_for_each_entry(entity, &vi->entities, list)
 		subdevs[i++] = &entity->asd;

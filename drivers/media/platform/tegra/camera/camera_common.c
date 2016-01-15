@@ -1,7 +1,7 @@
 /*
  * camera_common.c - utilities for tegra camera driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -172,12 +172,9 @@ int camera_common_parse_ports(struct i2c_client *client,
 	struct device_node *node = client->dev.of_node;
 	struct device_node *ep = NULL;
 	struct device_node *next;
-	struct device_node *remote = NULL;
 	int bus_width = 0;
-	const char *name = NULL;
-	const char name_pre[4] = "csi\0";
-	int size = ARRAY_SIZE(name_pre);
 	int err = 0;
+	int port = 0;
 
 	/* Parse all the remote entities and put them into the list */
 	next = of_graph_get_next_endpoint(node, ep);
@@ -195,23 +192,16 @@ int camera_common_parse_ports(struct i2c_client *client,
 	}
 	s_data->numlanes = bus_width;
 
-	dev_dbg(&client->dev, "%s: num of lanes %d\n",
-		__func__, s_data->numlanes);
-
-	remote = of_graph_get_remote_port_parent(ep);
-	if (!remote)
-		return -ENODATA;
-
-	dev_dbg(&client->dev, "%s: name %s\n", __func__, remote->name);
-
-	name = strstr(remote->name, name_pre);
-	if (!name || name[size-1] < 'a' || name[size-1] > 'f') {
-		dev_err(&client->dev, "%s: invalid name %s, expect %s[a-f]\n",
-			 __func__, remote->name, name_pre);
-		return -EINVAL;
+	err = of_property_read_u32(ep, "csi-port", &port);
+	if (err) {
+		dev_err(&client->dev,
+			"Failed to find CSI port\n");
+		return err;
 	}
+	s_data->csi_port = port;
 
-	s_data->csi_port = (int)(name[size-1] - 'a');
+	dev_dbg(&client->dev, "%s: csi port %d num of lanes %d\n",
+		__func__, s_data->csi_port, s_data->numlanes);
 
 	return 0;
 }
@@ -263,12 +253,12 @@ ssize_t camera_common_debugfs_write(
 	return -EFAULT;
 
 set_attr:
-	dev_info(&client->dev,
+	dev_dbg(&client->dev,
 			"new address = %x, data = %x\n", address, data);
 	err |= call_s_ops(s_data, write_reg, address, data);
 read:
 	err |= call_s_ops(s_data, read_reg, address, &readback);
-	dev_info(&client->dev,
+	dev_dbg(&client->dev,
 			"wrote to address 0x%x with value 0x%x\n",
 			address, readback);
 

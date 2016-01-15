@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,7 +39,6 @@
 #include "t210/t210.h"
 #include "vi.h"
 #include "vi_irq.h"
-#include "vi_common.h"
 #include "camera_priv_defs.h"
 
 #define MAX_DEVID_LENGTH	16
@@ -269,13 +268,11 @@ static int vi_probe(struct platform_device *dev)
 	if (!tegra_vi)
 		return -ENOMEM;
 
+	tegra_vi->ndev = dev;
+	tegra_vi->dev = &dev->dev;
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		goto vi_probe_fail;
-
-	tegra_vi->ndev = dev;
-	tegra_vi->dev = &dev->dev;
-	INIT_LIST_HEAD(&tegra_vi->entities);
 
 	/* create workqueue for mfi callback */
 	tegra_vi->vi_workqueue = alloc_workqueue("vi_workqueue",
@@ -342,32 +339,17 @@ static int vi_probe(struct platform_device *dev)
 	 * as sub-domain of host1x domain */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
-
 	err = nvhost_client_device_init(dev);
 	if (err)
 		goto camera_unregister;
 
-	err = tegra_vi_v4l2_init(tegra_vi);
-	if (err < 0)
-		goto vi_init_error;
-
-	/* Init Tegra VI channels */
-	err = tegra_vi_channels_init(tegra_vi);
-	if (err < 0)
-		goto channels_error;
-
-	/* Setup media links between VI and external sensor subdev. */
-	err = tegra_vi_graph_init(tegra_vi);
-	if (err < 0)
-		goto graph_error;
+	err = tegra_vi_media_controller_init(&tegra_vi->mc_vi, dev);
+	if (err)
+		goto vi_mc_init_error;
 
 	return 0;
 
-graph_error:
-	tegra_vi_channels_cleanup(tegra_vi);
-channels_error:
-	tegra_vi_v4l2_cleanup(tegra_vi);
-vi_init_error:
+vi_mc_init_error:
 	nvhost_client_device_release(dev);
 camera_unregister:
 #ifdef CONFIG_TEGRA_CAMERA
@@ -409,6 +391,8 @@ static int __exit vi_remove(struct platform_device *dev)
 
 	vi_remove_debugfs(tegra_vi);
 
+	tegra_vi_media_controller_cleanup(&tegra_vi->mc_vi);
+
 	nvhost_client_device_release(dev);
 
 	if (pdata->slcg_notifier_enable &&
@@ -439,10 +423,6 @@ static int __exit vi_remove(struct platform_device *dev)
 		i2c_ctrl->remove_devices(dev);
 
 	pdata->private_data = i2c_ctrl;
-
-	tegra_vi_graph_cleanup(tegra_vi);
-	tegra_vi_channels_cleanup(tegra_vi);
-	tegra_vi_v4l2_cleanup(tegra_vi);
 
 	return 0;
 }

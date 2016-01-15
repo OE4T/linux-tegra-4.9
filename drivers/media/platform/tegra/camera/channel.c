@@ -1,7 +1,7 @@
 /*
  * NVIDIA Tegra Video Input Device
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Bryan Wu <pengw@nvidia.com>
  *
@@ -35,8 +35,7 @@
 #include <mach/clk.h>
 #include <mach/io_dpd.h>
 
-#include "vi.h"
-#include "vi_common.h"
+#include "mc_common.h"
 
 void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
 				    struct tegra_vi_graph_entity *entity)
@@ -97,7 +96,9 @@ static int tegra_channel_buffer_prepare(struct vb2_buffer *vb)
 
 	buf->chan = chan;
 	vb2_set_plane_payload(vb, 0, chan->format.sizeimage);
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	buf->addr = vb2_dma_contig_plane_dma_addr(vb, 0);
+#endif
 
 	return 0;
 }
@@ -532,7 +533,7 @@ static const struct v4l2_file_operations tegra_channel_fops = {
 	.mmap		= vb2_fop_mmap,
 };
 
-static int tegra_channel_init(struct vi *vi, unsigned int port)
+static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int port)
 {
 	int ret;
 	struct tegra_channel *chan  = &vi->chans[port];
@@ -581,6 +582,7 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 
 	video_set_drvdata(&chan->video, chan);
 
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	/* get the buffers queue... */
 	chan->alloc_ctx = vb2_dma_contig_init_ctx(&chan->video.dev);
 	if (IS_ERR(chan->alloc_ctx)) {
@@ -588,13 +590,16 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 		ret = -ENOMEM;
 		goto vb2_init_error;
 	}
+#endif
 
 	chan->queue.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	chan->queue.io_modes = VB2_MMAP | VB2_DMABUF | VB2_READ | VB2_USERPTR;
 	chan->queue.drv_priv = chan;
 	chan->queue.buf_struct_size = sizeof(struct tegra_channel_buffer);
 	chan->queue.ops = &tegra_channel_queue_qops;
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	chan->queue.mem_ops = &vb2_dma_contig_memops;
+#endif
 	chan->queue.timestamp_flags = V4L2_BUF_FLAG_TIMESTAMP_MONOTONIC
 				   | V4L2_BUF_FLAG_TSTAMP_SRC_EOF;
 	ret = vb2_queue_init(&chan->queue);
@@ -614,8 +619,10 @@ static int tegra_channel_init(struct vi *vi, unsigned int port)
 video_register_error:
 	vb2_queue_release(&chan->queue);
 vb2_queue_error:
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
 vb2_init_error:
+#endif
 	media_entity_cleanup(&chan->video.entity);
 	return ret;
 }
@@ -626,19 +633,21 @@ static int tegra_channel_cleanup(struct tegra_channel *chan)
 
 	v4l2_ctrl_handler_free(&chan->ctrl_handler);
 	vb2_queue_release(&chan->queue);
+#if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
+#endif
 
 	media_entity_cleanup(&chan->video.entity);
 
 	return 0;
 }
 
-int tegra_vi_channels_init(struct vi *vi)
+int tegra_vi_channels_init(struct tegra_mc_vi *vi)
 {
 	unsigned int i;
 	int ret;
 
-	for (i = 0; i < ARRAY_SIZE(vi->chans); i++) {
+	for (i = 0; i < vi->num_channels; i++) {
 		ret = tegra_channel_init(vi, i);
 		if (ret < 0) {
 			dev_err(vi->dev, "channel %d init failed\n", i);
@@ -648,12 +657,12 @@ int tegra_vi_channels_init(struct vi *vi)
 	return 0;
 }
 
-int tegra_vi_channels_cleanup(struct vi *vi)
+int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi)
 {
 	unsigned int i;
 	int ret;
 
-	for (i = 0; i < ARRAY_SIZE(vi->chans); i++) {
+	for (i = 0; i < vi->num_channels; i++) {
 		ret = tegra_channel_cleanup(&vi->chans[i]);
 		if (ret < 0) {
 			dev_err(vi->dev, "channel %d cleanup failed\n", i);

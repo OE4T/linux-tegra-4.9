@@ -1,7 +1,7 @@
 /*
  * GM20B THERMAL
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,11 +27,11 @@ static int gm20b_init_therm_setup_hw(struct gk20a *g)
 			therm_use_a_ext_therm_1_enable_f()  |
 			therm_use_a_ext_therm_2_enable_f());
 	gk20a_writel(g, therm_evt_ext_therm_0_r(),
-			therm_evt_ext_therm_0_slow_factor_f(1));
+			therm_evt_ext_therm_0_slow_factor_f(0x2));
 	gk20a_writel(g, therm_evt_ext_therm_1_r(),
-			therm_evt_ext_therm_1_slow_factor_f(2));
+			therm_evt_ext_therm_1_slow_factor_f(0x6));
 	gk20a_writel(g, therm_evt_ext_therm_2_r(),
-			therm_evt_ext_therm_2_slow_factor_f(3));
+			therm_evt_ext_therm_2_slow_factor_f(0xe));
 
 	gk20a_writel(g, therm_grad_stepping_table_r(0),
 		therm_grad_stepping_table_slowdown_factor0_f(therm_grad_stepping_table_slowdown_factor0_fpdiv_by1p5_f()) |

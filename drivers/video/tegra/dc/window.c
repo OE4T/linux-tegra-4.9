@@ -520,7 +520,7 @@ static void tegra_dc_vrr_flip_time(struct tegra_dc *dc)
 	struct timespec time_now;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr)
+	if (!vrr || !vrr->capability)
 		return;
 
 	if (vrr->enable) {
@@ -539,7 +539,7 @@ static void tegra_dc_vrr_cancel_vfp(struct tegra_dc *dc)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr)
+	if (!vrr || !vrr->capability)
 		return;
 
 	if (vrr->enable) {

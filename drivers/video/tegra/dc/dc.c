@@ -3481,6 +3481,9 @@ void tegra_dc_set_act_vfp(struct tegra_dc *dc, int vfp)
 {
 	WARN_ON(!mutex_is_locked(&dc->lock));
 	WARN_ON(vfp < dc->mode.v_ref_to_sync + 1);
+	/* It's very unlikely that active vfp will need to
+	 * be changed outside of vrr context */
+	WARN_ON(!dc->out->vrr || !dc->out->vrr->capability);
 
 	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
 			DC_CMD_STATE_ACCESS);
@@ -3494,7 +3497,10 @@ static void tegra_dc_vrr_extend_vfp(struct tegra_dc *dc)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr || !vrr->enable)
+	if (!vrr || !vrr->capability)
+		return;
+
+	if (!vrr->enable)
 		return;
 
 	tegra_dc_set_act_vfp(dc, MAX_VRR_V_FRONT_PORCH);
@@ -3513,7 +3519,8 @@ static void tegra_dc_vrr_get_ts(struct tegra_dc *dc)
 	struct timespec time_now;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr || (!vrr->enable && !vrr->lastenable))
+	if (!vrr || !vrr->capability ||
+		(!vrr->enable && !vrr->lastenable))
 		return;
 
 	getnstimeofday(&time_now);
@@ -3526,7 +3533,10 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 {
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr || (!vrr->enable && !vrr->fe_intr_req))
+	if (!vrr || !vrr->capability)
+		return;
+
+	if (!vrr->enable && !vrr->fe_intr_req)
 		return;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
@@ -4864,7 +4874,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (dc->out && dc->out->prepoweroff)
 		dc->out->prepoweroff();
 
-	if (dc->out_ops && dc->out_ops->vrr_enable) {
+	if (dc->out_ops && dc->out_ops->vrr_enable &&
+		dc->out->vrr && dc->out->vrr->capability) {
 		dc->out_ops->vrr_enable(dc, 0);
 		/* TODO: Fix properly. Bug 1644102. */
 		tegra_dc_set_act_vfp(dc, dc->mode.v_front_porch);

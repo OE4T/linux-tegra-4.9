@@ -313,7 +313,6 @@ static int sor_crc_show(struct seq_file *s, void *unused)
 	struct tegra_dc_sor_data *sor = s->private;
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val;
-	int i = 0;
 
 	tegra_dc_io_start(sor->dc);
 	tegra_sor_clk_enable(sor);
@@ -323,26 +322,22 @@ static int sor_crc_show(struct seq_file *s, void *unused)
 	if (reg_val == NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_NO) {
 		pr_err("SOR CRC is DISABLED, aborting with CRC=0\n");
 		seq_printf(s, "NV_SOR[%d]_CRCB = 0x%08x\n",
-			sor->dc->ctrl_num, reg_val);
+			sor->instance, reg_val);
 		goto exit;
 	}
-
-	do {
-		if (tegra_dc_sor_poll_register(sor, NV_SOR_CRCA,
-				NV_SOR_CRCA_VALID_DEFAULT_MASK,
-				NV_SOR_CRCA_VALID_TRUE,
-				100, TEGRA_SOR_TIMEOUT_MS)) {
-			dev_err(&sor->dc->ndev->dev,
-				"NV_SOR[%d]_CRCA_VALID_TRUE timeout\n", i);
-			goto exit;
-		}
-		mutex_lock(&dc->lock);
-		reg_val = tegra_sor_readl(sor, NV_SOR_CRCB);
-		mutex_unlock(&dc->lock);
-		seq_printf(s, "NV_SOR[%x]_CRCB = 0x%08x\n",
-			sor->dc->ctrl_num, reg_val);
-		i++;
-	} while (i < sor->portnum);
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_CRCA,
+			NV_SOR_CRCA_VALID_DEFAULT_MASK,
+			NV_SOR_CRCA_VALID_TRUE,
+			100, TEGRA_SOR_TIMEOUT_MS)) {
+		dev_err(&sor->dc->ndev->dev,
+			"NV_SOR[%d]_CRCA_VALID_TRUE timeout\n", sor->instance);
+		goto exit;
+	}
+	mutex_lock(&dc->lock);
+	reg_val = tegra_sor_readl(sor, NV_SOR_CRCB);
+	mutex_unlock(&dc->lock);
+	seq_printf(s, "NV_SOR[%x]_CRCB = 0x%08x\n",
+		sor->instance, reg_val);
 
 exit:
 	tegra_sor_clk_disable(sor);
@@ -364,7 +359,6 @@ static ssize_t sor_crc_write(struct file *file,
 	struct tegra_dc *dc = sor->dc;
 	u32 reg_val;
 	u32    data;
-	int    i = 0;
 	static u8 asy_crcmode;
 
 	if (sscanf(buf, "%x", &data) != 1)
@@ -380,35 +374,34 @@ static ssize_t sor_crc_write(struct file *file,
 	asy_crcmode >>= 4;  /* asy_crcmode[1:0] = ASY_CRCMODE */
 	data &= 1;          /* data[0:0] = enable|disable CRC */
 	mutex_lock(&dc->lock);
-	do {
-		if (data == 1) {
-			reg_val = tegra_sor_readl(sor, NV_SOR_CRCA);
-			if (reg_val & NV_SOR_CRCA_VALID_TRUE) {
-				tegra_sor_write_field(sor,
-					NV_SOR_CRCA,
-					NV_SOR_CRCA_VALID_DEFAULT_MASK,
-					NV_SOR_CRCA_VALID_RST << NV_SOR_CRCA_VALID_SHIFT);
-			}
+
+	if (data == 1) {
+		reg_val = tegra_sor_readl(sor, NV_SOR_CRCA);
+		if (reg_val & NV_SOR_CRCA_VALID_TRUE) {
 			tegra_sor_write_field(sor,
-				NV_SOR_TEST,
-				NV_SOR_TEST_CRC_DEFAULT_MASK,
-				NV_SOR_TEST_CRC_PRE_SERIALIZE << NV_SOR_TEST_CRC_SHIFT);
-			tegra_sor_write_field(sor, NV_SOR_STATE1,
-				NV_SOR_STATE1_ASY_CRCMODE_DEFAULT_MASK,
-				asy_crcmode << NV_SOR_STATE1_ASY_CRCMODE_SHIFT);
-			tegra_sor_write_field(sor,
-				NV_SOR_STATE0,
-				NV_SOR_STATE0_UPDATE_DEFAULT_MASK,
-				NV_SOR_STATE0_UPDATE_UPDATE << NV_SOR_STATE0_UPDATE_SHIFT);
+				NV_SOR_CRCA,
+				NV_SOR_CRCA_VALID_DEFAULT_MASK,
+				NV_SOR_CRCA_VALID_RST << NV_SOR_CRCA_VALID_SHIFT);
 		}
-		reg_val = tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
 		tegra_sor_write_field(sor,
-			NV_SOR_CRC_CNTRL,
-			NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_DEFAULT_MASK,
-			data << NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_SHIFT);
-		reg_val = tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
-		i++;
-	} while (i < sor->portnum);
+			NV_SOR_TEST,
+			NV_SOR_TEST_CRC_DEFAULT_MASK,
+			NV_SOR_TEST_CRC_PRE_SERIALIZE << NV_SOR_TEST_CRC_SHIFT);
+		tegra_sor_write_field(sor, NV_SOR_STATE1,
+			NV_SOR_STATE1_ASY_CRCMODE_DEFAULT_MASK,
+			asy_crcmode << NV_SOR_STATE1_ASY_CRCMODE_SHIFT);
+		tegra_sor_write_field(sor,
+			NV_SOR_STATE0,
+			NV_SOR_STATE0_UPDATE_DEFAULT_MASK,
+			NV_SOR_STATE0_UPDATE_UPDATE << NV_SOR_STATE0_UPDATE_SHIFT);
+	}
+
+	reg_val = tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
+	tegra_sor_write_field(sor,
+		NV_SOR_CRC_CNTRL,
+		NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_DEFAULT_MASK,
+		data << NV_SOR_CRC_CNTRL_ARM_CRC_ENABLE_SHIFT);
+	reg_val = tegra_sor_readl(sor, NV_SOR_CRC_CNTRL);
 
 	mutex_unlock(&dc->lock);
 	tegra_sor_clk_disable(sor);

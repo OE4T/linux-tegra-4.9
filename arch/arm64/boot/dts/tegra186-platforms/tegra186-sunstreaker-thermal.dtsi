@@ -133,6 +133,10 @@
 			};
 		};
 
+		AO-therm {
+			status = "okay";
+		};
+
 		BCPU-therm {
 			status = "okay";
 		};

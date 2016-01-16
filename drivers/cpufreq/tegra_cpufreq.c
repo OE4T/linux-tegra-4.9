@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -757,11 +757,11 @@ static void __exit free_allocated_res_exit(void)
 
 static int __init init_freqtbls(struct device_node *dn)
 {
+	u16 freq_table_step_size = CPUFREQ_TBL_STEP_SIZE;
 	u16 dt_freq_table_step_size = 0;
 	struct cpufreq_frequency_table *ftbl;
 	struct cpu_vhint_table *vhtbl;
-	u16 ndiv, max_freq_steps;
-	u16 freq_table_step_size = CPUFREQ_TBL_STEP_SIZE;
+	u16 ndiv, max_freq_steps, delta_ndiv;
 	enum cluster cl;
 	int ret = 0, index;
 
@@ -780,9 +780,13 @@ static int __init init_freqtbls(struct device_node *dn)
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
 
-		max_freq_steps = vhtbl->ndiv_max / freq_table_step_size +
-			(vhtbl->ndiv_max %
-			freq_table_step_size ? 1 : 0);
+		delta_ndiv = vhtbl->ndiv_max - vhtbl->ndiv_min;
+		if (unlikely(delta_ndiv == 0))
+			max_freq_steps = 1;
+		else
+			max_freq_steps = delta_ndiv / freq_table_step_size;
+
+		max_freq_steps += (delta_ndiv % freq_table_step_size) ? 1 : 0;
 
 		/* Allocate memory 1 + max_freq_steps to write END_OF_TABLE */
 		ftbl = kzalloc(sizeof(struct cpufreq_frequency_table) *

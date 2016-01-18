@@ -106,9 +106,12 @@
 		iopower-uart-supply = <&vdd_1v8_sw>;
 		iopower-conn-supply = <&vdd_1v8_sw>;
 		iopower-edp-supply = <&vdd_1v8_sw>;
+		iopower-pex-ctrl-audio-supply = <&vdd_1v8_sw>;
 		iopower-ufs-supply = <&spmic_sd1>;
+		iopower-ddr0-supply = <&spmic_sd0>;
+		iopower-ddr1-supply = <&spmic_sd0>;
+		iopower-csi-dsi-supply = <&spmic_sd1>;
 		iopower-cam-supply = <&vdd_1v8_sw>;
-		iopower-pex-ctrl-supply = <&vdd_1v8_sw>;
 		iopower-sdmmc4-supply = <&vdd_1v8_sw>;
 		iopower-sdmmc1-hv-supply = <&spmic_ldo3>;
 		iopower-audio-hv-supply = <&spmic_sd3>;

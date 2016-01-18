@@ -323,10 +323,6 @@
 		status = "disabled";
 	};
 
-	pmc-iopower {
-		status = "disabled";
-	};
-
 	ahub {
 		status = "disabled";
 

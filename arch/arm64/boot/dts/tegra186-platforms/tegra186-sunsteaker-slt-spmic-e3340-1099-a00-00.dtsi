@@ -222,6 +222,8 @@
 					regulator-name = "vdd-1v8-sys";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <1800000>;
+					regulator-always-on;
+					regulator-boot-on;
 					maxim,fps-source = <FPS_SRC_DEF>;
 				};
 

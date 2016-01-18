@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Command DMA
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -140,18 +140,6 @@ static void add_to_sync_queue(struct nvhost_cdma *cdma,
 	job->num_slots = nr_slots;
 	nvhost_job_get(job);
 	list_add_tail(&job->list, &cdma->sync_queue);
-
-	switch (job->priority) {
-	case NVHOST_PRIORITY_HIGH:
-		cdma->high_prio_count++;
-		break;
-	case NVHOST_PRIORITY_MEDIUM:
-		cdma->med_prio_count++;
-		break;
-	case NVHOST_PRIORITY_LOW:
-		cdma->low_prio_count++;
-		break;
-	}
 }
 
 /**
@@ -313,18 +301,6 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 		}
 
 		list_del(&job->list);
-
-		switch (job->priority) {
-		case NVHOST_PRIORITY_HIGH:
-			cdma->high_prio_count--;
-			break;
-		case NVHOST_PRIORITY_MEDIUM:
-			cdma->med_prio_count--;
-			break;
-		case NVHOST_PRIORITY_LOW:
-			cdma->low_prio_count--;
-			break;
-		}
 
 		nvhost_job_put(job);
 	}
@@ -597,11 +573,7 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 	if (job->timeout && was_idle)
 		cdma_start_timer_locked(cdma, job);
 
-	trace_nvhost_cdma_end(job->ch->dev->name,
-			job->priority,
-			job->ch->cdma.high_prio_count,
-			job->ch->cdma.med_prio_count,
-			job->ch->cdma.low_prio_count);
+	trace_nvhost_cdma_end(job->ch->dev->name);
 
 	mutex_unlock(&cdma->lock);
 }

@@ -135,9 +135,6 @@ static void nvhost_channel_unmap_locked(struct kref *ref)
 	/* turn off channel cdma */
 	channel_cdma_op().stop(&ch->cdma);
 
-	if (channel_op(ch).set_low_ch_prio)
-		channel_op(ch).set_low_ch_prio(ch);
-
 	/* log this event */
 	dev_dbg(&ch->dev->dev, "channel %d un-mapped\n", ch->chid);
 	trace_nvhost_channel_unmap_locked(pdata->pdev->name, ch->chid,

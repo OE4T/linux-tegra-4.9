@@ -182,10 +182,7 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 
 	/*  Add nr_completed to trace */
 	trace_nvhost_channel_submit_complete(channel->dev->name,
-			nr_completed, waiter->thresh,
-			channel->cdma.high_prio_count,
-			channel->cdma.med_prio_count,
-			channel->cdma.low_prio_count);
+			nr_completed, waiter->thresh);
 
 	nvhost_putchannel(channel, nr_completed);
 

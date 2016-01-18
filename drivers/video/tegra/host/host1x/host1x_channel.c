@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Channel
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -291,34 +291,6 @@ static void submit_work(struct nvhost_job *job)
 		lock_device(job, false);
 }
 
-static int host1x_channel_prio_check(struct nvhost_job *job)
-{
-	/*
-	 * Check if queue has higher priority jobs running. If so, wait until
-	 * queue is empty. Ignores result from nvhost_cdma_flush, as we submit
-	 * either when push buffer is empty or when we reach the timeout.
-	 */
-	int higher_count = 0;
-
-	switch (job->priority) {
-	case NVHOST_PRIORITY_HIGH:
-		higher_count = 0;
-		break;
-	case NVHOST_PRIORITY_MEDIUM:
-		higher_count = job->ch->cdma.high_prio_count;
-		break;
-	case NVHOST_PRIORITY_LOW:
-		higher_count = job->ch->cdma.high_prio_count
-			+ job->ch->cdma.med_prio_count;
-		break;
-	}
-	if (higher_count > 0)
-		(void)nvhost_cdma_flush(&job->ch->cdma,
-			NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT);
-
-	return 0;
-}
-
 static int host1x_channel_submit(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -326,8 +298,6 @@ static int host1x_channel_submit(struct nvhost_job *job)
 	u32 prev_max = 0;
 	int err, i;
 	void *completed_waiters[job->num_syncpts];
-
-	host1x_channel_prio_check(job);
 
 	memset(completed_waiters, 0, sizeof(void *) * job->num_syncpts);
 

@@ -113,7 +113,6 @@ struct nvhost_master {
 	struct mutex chlist_mutex;	/* mutex for channel list */
 	struct mutex ch_alloc_mutex;	/* mutex for channel allocation */
 	unsigned long allocated_channels[2];
-	struct mutex priority_lock;	/* mutex for priority update */
 
 	/* nvhost vm specific structures */
 	struct nvhost_vm_firmware_area firmware_area;

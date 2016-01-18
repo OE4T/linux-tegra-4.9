@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -101,9 +101,6 @@ struct nvhost_job {
 	u32 client_managed_syncpt;
 	struct nvhost_job_syncpt *sp;
 	int num_syncpts;
-
-	/* Priority of this submit. */
-	int priority;
 
 	/* Maximum time to wait for this job */
 	int timeout;

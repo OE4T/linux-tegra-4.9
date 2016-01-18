@@ -204,7 +204,6 @@ int nvhost_write_module_regs(struct platform_device *ndev,
 struct nvhost_channel_userctx {
 	struct nvhost_channel *ch;
 	u32 timeout;
-	u32 priority;
 	int clientid;
 	bool timeout_debug_dump;
 	struct platform_device *pdev;
@@ -363,7 +362,6 @@ static int __nvhost_channelopen(struct inode *inode,
 
 	/* Initialize private structure */
 	priv->timeout = host1x_pdata->nvhost_timeout_default;
-	priv->priority = NVHOST_PRIORITY_MEDIUM;
 	priv->timeout_debug_dump = true;
 	mutex_init(&priv->ioctl_lock);
 	priv->pdev = pdev;
@@ -513,7 +511,6 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	job->num_relocs = args->num_relocs;
 	job->num_waitchk = args->num_waitchks;
 	job->num_syncpts = args->num_syncpt_incrs;
-	job->priority = ctx->priority;
 	job->clientid = ctx->clientid;
 	job->client_managed_syncpt =
 		(pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) ?
@@ -1163,8 +1160,7 @@ static long nvhost_channelctl(struct file *filp,
 		((struct nvhost_get_param_args *)buf)->value = false;
 		break;
 	case NVHOST_IOCTL_CHANNEL_SET_PRIORITY:
-		priv->priority =
-			(u32)((struct nvhost_set_priority_args *)buf)->priority;
+		err = -EINVAL;
 		break;
 	case NVHOST32_IOCTL_CHANNEL_MODULE_REGRDWR:
 	{

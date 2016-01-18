@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hpd.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -60,8 +60,6 @@ static void hpd_disable(struct tegra_hpd_data *data)
 {
 #ifdef CONFIG_SWITCH
 	if (data->hpd_switch.name) {
-		switch_set_state(&data->audio_switch, 0);
-		pr_info("hpd: audio_switch 0\n");
 		switch_set_state(&data->hpd_switch, 0);
 		pr_info("hpd: hpd_switch 0\n");
 	}
@@ -94,16 +92,6 @@ static const char *get_hpd_switch_name(struct tegra_hpd_data *data)
 
 	if (data->hpd_switch_name)
 		name = data->hpd_switch_name;
-
-	return name;
-}
-
-static const char *get_audio_switch_name(struct tegra_hpd_data *data)
-{
-	const char *name = NULL;
-
-	if (data->audio_switch_name)
-		name = data->audio_switch_name;
 
 	return name;
 }
@@ -178,10 +166,6 @@ static int recheck_edid(struct tegra_hpd_data *data, int *match)
 
 static void edid_read_notify(struct tegra_hpd_data *data)
 {
-#ifdef CONFIG_SWITCH
-	int state;
-#endif
-
 #ifdef CONFIG_ADF_TEGRA
 	tegra_adf_process_hotplug_connected(data->dc->adf, &data->mon_spec);
 #endif
@@ -193,10 +177,7 @@ static void edid_read_notify(struct tegra_hpd_data *data)
 	tegra_fb_update_fix(data->dc->fb, &data->mon_spec);
 #endif
 #ifdef CONFIG_SWITCH
-	state = !!tegra_edid_audio_supported(data->edid);
 	if (data->hpd_switch.name) {
-		switch_set_state(&data->audio_switch, state);
-		pr_info("hpd: audio_switch %d\n", state);
 		switch_set_state(&data->hpd_switch, 1);
 		pr_info("hpd: Display connected, hpd_switch 1\n");
 	}
@@ -510,7 +491,6 @@ void tegra_hpd_shutdown(struct tegra_hpd_data *data)
 
 	if (data->hpd_switch.name) {
 		switch_dev_unregister(&data->hpd_switch);
-		switch_dev_unregister(&data->audio_switch);
 	}
 #endif
 }
@@ -575,10 +555,6 @@ void tegra_hpd_init(struct tegra_hpd_data *data,
 
 	if (data->hpd_switch.name) {
 		err = switch_dev_register(&data->hpd_switch);
-		BUG_ON(err);
-
-		data->audio_switch.name = get_audio_switch_name(data);
-		err = switch_dev_register(&data->audio_switch);
 		BUG_ON(err);
 	}
 #endif

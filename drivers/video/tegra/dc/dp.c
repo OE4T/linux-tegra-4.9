@@ -2149,6 +2149,12 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->test_settings = default_dp_test_settings;
 #endif
 
+#ifdef CONFIG_SWITCH
+	dp->audio_switch.name = "dp_audio";
+	err = switch_dev_register(&dp->audio_switch);
+	BUG_ON(err);
+#endif
+
 	tegra_dc_dp_debug_create(dp);
 	of_node_put(np_dp);
 
@@ -2663,6 +2669,13 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	dc->connected = true;
 	tegra_dc_io_end(dc);
 
+#ifdef CONFIG_SWITCH
+	if (tegra_edid_audio_supported(dp->hpd_data.edid)) {
+		pr_info("dp_audio switch 1\n");
+		switch_set_state(&dp->audio_switch, 1);
+	}
+#endif
+
 	return;
 }
 
@@ -2703,6 +2716,10 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	devm_kfree(&dc->ndev->dev, dp);
 	if (!IS_ERR(dp->prod_list))
 		tegra_prod_release(&dp->prod_list);
+
+#ifdef CONFIG_SWITCH
+	switch_dev_unregister(&dp->audio_switch);
+#endif
 	of_node_put(np_dp);
 }
 
@@ -2755,6 +2772,13 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (tegra_dc_is_ext_dp_panel(dc))
 		tegra_hda_reset_data(dc);
+#endif
+
+#ifdef CONFIG_SWITCH
+	if (tegra_edid_audio_supported(dp->hpd_data.edid)) {
+		pr_info("dp_audio switch 0\n");
+		switch_set_state(&dp->audio_switch, 0);
+	}
 #endif
 }
 
@@ -3020,7 +3044,6 @@ static void tegra_dp_hpd_op_init(void *drv_data)
 #ifdef CONFIG_SWITCH
 	if (tegra_dc_is_ext_dp_panel(dp->dc)) {
 		dp->hpd_data.hpd_switch_name = "dp";
-		dp->hpd_data.audio_switch_name = "dp_audio";
 	}
 #endif
 }

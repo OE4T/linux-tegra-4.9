@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hpd.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -79,8 +79,6 @@ struct tegra_hpd_data {
 	struct rt_mutex lock;
 
 #ifdef CONFIG_SWITCH
-	const char *audio_switch_name;
-	struct switch_dev audio_switch;
 	const char *hpd_switch_name;
 	struct switch_dev hpd_switch;
 #endif

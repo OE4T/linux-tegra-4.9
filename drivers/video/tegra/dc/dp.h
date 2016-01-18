@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp.h
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -93,6 +93,9 @@ struct tegra_dc_dp_data {
 
 	u8 edid_src;
 	struct tegra_hpd_data hpd_data;
+#ifdef CONFIG_SWITCH
+	struct switch_dev audio_switch;
+#endif
 
 	struct delayed_work irq_evt_dwork;
 

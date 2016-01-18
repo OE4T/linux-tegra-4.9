@@ -873,9 +873,6 @@ static void tegra_pcie_enable_aer(struct tegra_pcie_port *port, bool enable)
 	unsigned int data;
 
 	PR_FUNC_LINE;
-	if (!port->status)
-		return;
-
 	data = rp_readl(port, NV_PCIE2_RP_VEND_CTL1);
 	if (enable)
 		data |= PCIE2_RP_VEND_CTL1_ERPT;
@@ -898,7 +895,8 @@ static int tegra_pcie_attach(struct tegra_pcie *pcie)
 		pci_rescan_bus(bus);
 	/* unhide AER capability */
 	list_for_each_entry(port, &pcie->ports, list)
-		tegra_pcie_enable_aer(port, true);
+		if (port->status)
+			tegra_pcie_enable_aer(port, true);
 
 	hotplug_event = false;
 	return 0;
@@ -916,7 +914,8 @@ static int tegra_pcie_detach(struct tegra_pcie *pcie)
 
 	/* hide AER capability to avoid log spew */
 	list_for_each_entry(port, &pcie->ports, list)
-		tegra_pcie_enable_aer(port, false);
+		if (port->status)
+			tegra_pcie_enable_aer(port, false);
 
 	/* remove all pcie data structures */
 	for_each_pci_dev(pdev) {

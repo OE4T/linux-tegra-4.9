@@ -164,7 +164,7 @@ static int t18x_a57_enter_state(
 	return index;
 }
 
-u32 t18x_make_power_state(u32 state)
+static u32 t18x_make_power_state(u32 state)
 {
 	u32 wake_time;
 	struct timespec t;
@@ -653,7 +653,7 @@ static int __init tegra_mce_early_init(void)
 	if (!check_mce_version()) {
 		pr_err("cpuidle: skipping crossover programming."
 			" Incompatible MCE version.\n");
-		return;
+		return -ENODEV;
 	}
 
         /* Initialize thresholds for boot cpu now */

@@ -32,7 +32,6 @@
 #include <linux/irqchip/chained_irq.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
-#include <linux/syscore_ops.h>
 #include <linux/tegra-soc.h>
 #include <linux/irqchip/tegra.h>
 
@@ -699,59 +698,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static void tegra_gpio_resume(void)
-{
-	unsigned long flags;
-	int pin;
-
-	local_irq_save(flags);
-
-	for (pin = 0; pin < tegra_gpio_chip.ngpio; pin++) {
-		if (is_gpio_accessible(pin)) {
-			tegra_gpio_writel(tegra_gpio_controllers->cnf[pin],
-					pin, GPIO_ENB_CONFIG_REG);
-			tegra_gpio_writel(tegra_gpio_controllers->dbc[pin],
-					pin, GPIO_DBC_THRES_REG);
-			tegra_gpio_writel(tegra_gpio_controllers->out_ctrl[pin],
-					pin, GPIO_OUT_CTRL_REG);
-			tegra_gpio_writel(tegra_gpio_controllers->out_val[pin],
-					pin, GPIO_OUT_VAL_REG);
-		}
-	}
-	local_irq_restore(flags);
-}
-
-static int tegra_gpio_suspend(void)
-{
-	unsigned long flags;
-	int pin;
-
-	local_irq_save(flags);
-	for (pin = 0; pin < tegra_gpio_chip.ngpio; pin++) {
-		if (is_gpio_accessible(pin)) {
-			tegra_gpio_controllers->cnf[pin] =
-				tegra_gpio_readl(pin, GPIO_ENB_CONFIG_REG);
-			tegra_gpio_controllers->dbc[pin] =
-				tegra_gpio_readl(pin, GPIO_DBC_THRES_REG);
-			tegra_gpio_controllers->out_ctrl[pin] =
-				tegra_gpio_readl(pin, GPIO_OUT_CTRL_REG);
-			tegra_gpio_controllers->out_val[pin] =
-				tegra_gpio_readl(pin, GPIO_OUT_VAL_REG);
-		}
-	}
-	local_irq_restore(flags);
-
-	of_gpiochip_suspend(&tegra_gpio_chip);
-	return 0;
-}
-
-static struct syscore_ops tegra_gpio_syscore_ops = {
-	.suspend = tegra_gpio_suspend,
-	.resume = tegra_gpio_resume,
-	.save = tegra_gpio_suspend,
-	.restore = tegra_gpio_resume,
-};
-
 static struct platform_driver tegra_gpio_driver = {
 	.driver		= {
 		.name	= "tegra-gpio",
@@ -763,7 +709,6 @@ static struct platform_driver tegra_gpio_driver = {
 
 static int __init tegra_gpio_init(void)
 {
-	register_syscore_ops(&tegra_gpio_syscore_ops);
 	return platform_driver_register(&tegra_gpio_driver);
 }
 postcore_initcall(tegra_gpio_init);

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmi2.0.h
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -424,3 +424,5 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 						bool sw_checksum);
 
 #endif
+int tegra_hdmi_get_hotplug_state(struct tegra_hdmi *hdmi);
+void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state);

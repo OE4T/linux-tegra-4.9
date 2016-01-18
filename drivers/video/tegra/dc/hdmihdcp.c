@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmihdcp.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1238,9 +1238,6 @@ exit:
 		nvhdcp_err("HDCP authentication failed with err %d\n", err);
 	return err;
 }
-
-int tegra_hdmi_get_hotplug_state(struct tegra_hdmi *hdmi);
-void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state);
 
 static void nvhdcp_fallback_worker(struct work_struct *work)
 {

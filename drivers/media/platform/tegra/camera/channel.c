@@ -61,6 +61,12 @@ void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
 
 		code.index++;
 	}
+
+	if (0 == bitmap_weight(chan->fmts_bitmap, MAX_FORMAT_NUM)) {
+		index = tegra_core_get_idx_by_code(V4L2_MBUS_FMT_SRGGB10_1X10);
+		if (index >= 0)
+			bitmap_set(chan->fmts_bitmap, index, 1);
+	}
 }
 
 /* -----------------------------------------------------------------------------
@@ -228,7 +234,7 @@ tegra_channel_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
 	else
 		fmts_bitmap = chan->fmts_bitmap;
 
-	if (f->index > bitmap_weight(fmts_bitmap, MAX_FORMAT_NUM) - 1)
+	if (f->index >= bitmap_weight(fmts_bitmap, MAX_FORMAT_NUM))
 		return -EINVAL;
 
 	for (i = 0; i < f->index + 1; i++, index++)

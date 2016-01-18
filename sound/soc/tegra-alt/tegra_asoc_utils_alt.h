@@ -2,7 +2,7 @@
  * tegra_alt_asoc_utils.h - Definitions for MCLK and DAP Utility driver
  *
  * Author: Stephen Warren <swarren@nvidia.com>
- * Copyright (c) 2011-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -40,6 +40,19 @@ enum tegra_asoc_utils_soc {
 	TEGRA_ASOC_UTILS_SOC_TEGRA186,
 };
 
+/* Maintain same order in DT entry */
+enum tegra_asoc_utils_clkrate {
+	PLLA_x11025_RATE,
+	AUD_MCLK_x11025_RATE,
+	PLLA_OUT0_x11025_RATE,
+	AHUB_x11025_RATE,
+	PLLA_x8000_RATE,
+	AUD_MCLK_x8000_RATE,
+	PLLA_OUT0_x8000_RATE,
+	AHUB_x8000_RATE,
+	MAX_NUM_RATES,
+};
+
 /* These values are copied from WiredAccessoryObserver */
 enum headset_state {
 	BIT_NO_HEADSET = 0,
@@ -54,6 +67,7 @@ struct tegra_asoc_audio_clock_info {
 	struct clk *clk_pll_a;
 	struct clk *clk_pll_a_out0;
 	struct clk *clk_cdev1;
+	struct clk *clk_ahub;
 	struct reset_control *clk_cdev1_rst;
 	int clk_cdev1_state;
 	struct clk *clk_m;
@@ -61,8 +75,14 @@ struct tegra_asoc_audio_clock_info {
 	int set_mclk;
 	int lock_count;
 	int set_baseclock;
+	int num_clk;
+	unsigned int clk_out_rate;
+	u32 clk_rates[MAX_NUM_RATES];
 };
 
+struct clk *tegra_alt_asoc_utils_get_clk(struct device *dev,
+					bool dev_id,
+					const char *clk_name);
 int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 				int srate,
 				int mclk,

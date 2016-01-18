@@ -950,21 +950,9 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		ret = clk_set_rate(xbar->clk_parent, 24576000);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to set clock rate of pll_a_out0\n");
-			goto err_clk_put_ape;
-		}
-
 		ret = clk_set_parent(xbar->clk, xbar->clk_parent);
 		if (ret) {
 			dev_err(&pdev->dev, "Failed to set parent clock with pll_a_out0\n");
-			goto err_clk_put_ape;
-		}
-
-		ret = clk_set_rate(xbar->clk, 12288000);
-		if (ret) {
-			dev_err(&pdev->dev, "Failed to set clock rate of ahub\n");
 			goto err_clk_put_ape;
 		}
 	}

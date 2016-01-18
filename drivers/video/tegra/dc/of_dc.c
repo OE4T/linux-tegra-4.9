@@ -987,25 +987,47 @@ static int parse_cmu_data(struct device_node *np,
 static int parse_cmu_data(struct device_node *np,
 	struct tegra_dc_cmu *cmu)
 {
-#if 0
-	u8 *addr_cmu_lut;
-	addr_cmu_lut = &(cmu->lut[0]);
-	memcpy(cmu, &default_cmu, sizeof(struct tegra_dc_cmu));
+	u64 *addr_cmu_lut;
+	struct property *prop;
+	const __be32 *p;
+	u32 u, index = 0, lut_count = 0;
+	u64 lutvalue = 0;
+
+	addr_cmu_lut = &(cmu->rgb[0]);
+
 	of_property_for_each_u32(np, "nvidia,cmu-lut", prop, p, u)
 		lut_count++;
-
-	if (lut_count >
-		(sizeof(cmu->lut) / sizeof(cmu->lut[0]))) {
+	/* Each Index is being represented by 3 consecutive 16 bit values
+	 * for RED, GREEN and BLUE in DT.
+	 * 1024 LUT indicies will be represented using 3072 entires in DT
+	 */
+	if ((lut_count / 3) >
+		(sizeof(cmu->rgb) / sizeof(cmu->rgb[0]))) {
 		pr_err("cmu lut overflow\n");
 		return -EINVAL;
 	} else {
+		/* RED, GREEN, BLUE to read and place in a 64bit variable
+		 * to pass to hw register
+		 */
 		of_property_for_each_u32(np, "nvidia,cmu-lut",
 			prop, p, u) {
-			/* OF_DC_LOG("cmu lut2 0x%x\n", u); */
-			*(addr_cmu_lut++) = (u8)u;
+			OF_DC_LOG("0x%x\n", u);
+			lutvalue = (u64) u;
+			switch (index % 3) {
+			case 0: /* red */
+				*(addr_cmu_lut) = lutvalue;
+				break;
+			case 1: /* green */
+				*(addr_cmu_lut) |= lutvalue << 16;
+				break;
+			case 2: /* blue */
+				*(addr_cmu_lut++) |= lutvalue << 32;
+				break;
+			}
+			index += 1;
 		}
 	}
-#endif
+
 	return 0;
 }
 #endif

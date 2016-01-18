@@ -69,6 +69,8 @@
 		status = "disabled";
 	};
 
+	/delete-node/ pmc-iopower;
+
 	fixed-regulators {
 		regulator@4 {
 			status = "disabled";

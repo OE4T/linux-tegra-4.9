@@ -155,4 +155,121 @@
 			};
 		};
 	};
+
+	spmic-otp-regulators {
+		compatible = "simple-bus";
+		device_type = "spmic-otp-regulator";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spmic_otp_sd0: otp-regulator@0 {
+			compatible = "regulator-pmic-otp";
+			reg = <0>;
+			regulator-name = "vdd-1v1";
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_sd1: otp-regulator@1 {
+			compatible = "regulator-pmic-otp";
+			reg = <1>;
+			regulator-name = "vdd-1v2";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_sd2: otp-regulator@2 {
+			compatible = "regulator-pmic-otp";
+			reg = <2>;
+			regulator-name = "vdd-1v8-ddr";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_sd3: otp-regulator@3 {
+			compatible = "regulator-pmic-otp";
+			reg = <3>;
+			regulator-name = "vdd-3v3";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_sd4: otp-regulator@4 {
+			compatible = "regulator-pmic-otp";
+			reg = <4>;
+			regulator-name = "spmic-sd4";
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_ldo0: otp-regulator@5 {
+			compatible = "regulator-pmic-otp";
+			reg = <5>;
+			regulator-name = "vdd-1v8-pll";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_ldo1: otp-regulator@6 {
+			compatible = "regulator-pmic-otp";
+			reg = <6>;
+			regulator-name = "spmic-ldo1";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <800000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_ldo2: otp-regulator@7 {
+			compatible = "regulator-pmic-otp";
+			reg = <7>;
+			regulator-name = "vdd-v3v-ao";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_ldo4: otp-regulator@9 {
+			compatible = "regulator-pmic-otp";
+			reg = <9>;
+			regulator-name = "en-vdd-rtc";
+			regulator-min-microvolt = <1100000>;
+			regulator-max-microvolt = <1100000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_ldo6: otp-regulator@11 {
+			compatible = "regulator-pmic-otp";
+			reg = <11>;
+			regulator-name = "vdd-1v8-ao";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_ldo7: otp-regulator@12 {
+			compatible = "regulator-pmic-otp";
+			reg = <12>;
+			regulator-name = "vdd-1v05";
+			regulator-min-microvolt = <1050000>;
+			regulator-max-microvolt = <1050000>;
+			vin-supply = <&spmic_otp_sd1>;
+			regulator-boot-on;
+		};
+
+		spmic_otp_ldo8: otp-regulator@13 {
+			compatible = "regulator-pmic-otp";
+			reg = <13>;
+			regulator-name = "spmic-ldo8";
+			regulator-min-microvolt = <800000>;
+			regulator-max-microvolt = <800000>;
+			vin-supply = <&spmic_otp_sd1>;
+			regulator-boot-on;
+		};
+	};
 };

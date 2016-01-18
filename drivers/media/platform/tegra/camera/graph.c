@@ -186,7 +186,7 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 	do {
 		/* Get the next endpoint and parse its link. */
 		next = of_graph_get_next_endpoint(node, ep);
-		if (next == NULL)
+		if (next == NULL || !of_device_is_available(next))
 			break;
 
 		of_node_put(ep);
@@ -426,7 +426,8 @@ static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 
 		/* Skip entities that we have already processed. */
 		if (remote == vi->dev->of_node ||
-		    tegra_vi_graph_find_entity(vi, remote))
+		    tegra_vi_graph_find_entity(vi, remote) ||
+		    !of_device_is_available(remote))
 			continue;
 
 		entity = devm_kzalloc(vi->dev, sizeof(*entity),

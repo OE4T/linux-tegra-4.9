@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-e3301-1000-a00-00-base.dts Quill-PB A00 Board
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -102,9 +102,5 @@
 		lp8557-backlight-s-wuxga-8-0@2c {
 			status = "okay";
 		};
-	};
-
-	pmc-iopower {
-		status = "disabled";
 	};
 };

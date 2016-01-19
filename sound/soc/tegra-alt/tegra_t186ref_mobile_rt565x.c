@@ -222,49 +222,20 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_card *card = codec->component.card;
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params;
-	unsigned int idx, mclk, clk_out_rate;
+	unsigned int idx, clk_out_rate;
 	int err, codec_rate, clk_rate;
 
 	codec_rate = tegra_t186ref_srate_values[machine->rate_via_kcontrol];
 	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
 
-	switch (clk_rate) {
-	case 11025:
-	case 22050:
-	case 44100:
-	case 88200:
-	case 176400:
-		clk_out_rate = 11289600; /* Codec rate */
-		mclk = 11289600 * 4; /* PLL_A rate */
-		break;
-	case 8000:
-	case 16000:
-	case 32000:
-	case 48000:
-	case 64000:
-	case 96000:
-	case 192000:
-	default:
-		clk_out_rate = 12288000;
-		mclk = 12288000 * 3;
-		break;
-	}
-
-	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-				clk_rate, mclk, clk_out_rate);
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock, clk_rate,
+						0, 0);
 	if (err < 0) {
-		dev_err(card->dev,
-			"Can't configure clocks clk_rate %dHz pll_a = %dHz clk_out = %dHz\n",
-			clk_rate, mclk, clk_out_rate);
+		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
 
-	err = tegra210_xbar_set_clock(mclk);
-	if (err < 0) {
-		dev_err(card->dev,
-			"Can't configure xbar clock = %d Hz\n", mclk);
-		return err;
-	}
+	clk_out_rate = machine->audio_clock.clk_out_rate;
 
 	/* update dai link hw_params for non pcm links */
 	for (idx = 0; idx < TEGRA186_XBAR_DAI_LINKS; idx++) {
@@ -979,6 +950,23 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 				"nvidia,audio-routing");
 	if (ret)
 		goto err;
+
+	if (of_property_read_u32(np, "nvidia,num-clk",
+			       &machine->audio_clock.num_clk) < 0) {
+		dev_err(&pdev->dev,
+			"Missing property nvidia,num-clk\n");
+		ret = -ENODEV;
+		goto err;
+	}
+
+	if (of_property_read_u32_array(np, "nvidia,clk-rates",
+				(u32 *)&machine->audio_clock.clk_rates,
+				machine->audio_clock.num_clk) < 0) {
+		dev_err(&pdev->dev,
+			"Missing property nvidia,clk-rates\n");
+		ret = -ENODEV;
+		goto err;
+	}
 
 	dai_link_setup(pdev);
 

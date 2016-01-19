@@ -706,14 +706,6 @@
 		};
 	};
 
-	mc_sid@2c00000 {
-		status = "disabled";
-	};
-
-	iommu@12000000 {
-		status = "disabled";
-	};
-
 	pmc-iopower {
 		status = "disabled";
 	};

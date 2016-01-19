@@ -213,7 +213,7 @@
 					nvidia,out-rotation = <180>;
 				};
 				smartdimmer {
-					status = "okay";
+					status = "disabled";
 					nvidia,turn-off-brightness = <0>;
 					nvidia,turn-on-brightness = <255>;
 					nvidia,sw-update-delay = <0>;

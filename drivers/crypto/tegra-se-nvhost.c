@@ -133,6 +133,8 @@ struct tegra_se_dev {
 	struct workqueue_struct *se_work_q;
 	int syncpt_id_num;
 	int se_dev_num;
+	u32 *aes_cmdbuf_cpuvaddr;
+	dma_addr_t aes_cmdbuf_iova;
 };
 
 static struct tegra_se_dev *sg_tegra_se_dev[4];
@@ -207,10 +209,8 @@ static DEFINE_MUTEX(se_hw_lock);
 static void tegra_se_work_handler(struct work_struct *work);
 
 static DEFINE_DMA_ATTRS(attrs);
-static u32 *aes_cmdbuf_cpuvaddr;
 static DEFINE_MUTEX(aes_cmdbuf_lock);
 static int cmdbuf_cnt;
-static dma_addr_t aes_cmdbuf_iova;
 static unsigned int aes_opcode_start_addr;
 static unsigned int rsa_opcode_start_addr;
 static unsigned int sha_opcode_start_addr;
@@ -579,20 +579,11 @@ static int tegra_se_send_ctr_seed(struct tegra_se_dev *se_dev, u32 *pdata)
 	int err = 0;
 	u32 cmdbuf_num_words = 0, i = 0;
 
-	mutex_lock(&aes_cmdbuf_lock);
-	aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
-			SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
-	if (!aes_cmdbuf_cpuvaddr) {
-		mutex_unlock(&aes_cmdbuf_lock);
-		return -ENOMEM;
-	}
-
-	aes_cmdbuf_cpuvaddr[i++] =
+	se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_incr(aes_opcode_start_addr + 0x18, 4);
 
 	for (j = 0; j < SE_CRYPTO_CTR_REG_COUNT; j++)
-		aes_cmdbuf_cpuvaddr[i++] = pdata[j];
-	mutex_unlock(&aes_cmdbuf_lock);
+		se_dev->aes_cmdbuf_cpuvaddr[i++] = pdata[j];
 
 	cmdbuf_num_words = i;
 	cmdbuf_cnt = i;
@@ -609,14 +600,10 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata, u32 da
 	u32 cmdbuf_num_words = 0, i = 0;
 	int err = 0;
 
-	mutex_lock(&aes_cmdbuf_lock);
-	if (pdata_buf == NULL) {
-		mutex_unlock(&aes_cmdbuf_lock);
+	if (pdata_buf == NULL)
 		return -ENOMEM;
-	}
 
 	if ((type == SE_KEY_TABLE_TYPE_KEY) && (slot_num == ssk_slot.slot_num)) {
-		mutex_unlock(&aes_cmdbuf_lock);
 		return -EINVAL;
 	}
 
@@ -627,56 +614,46 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata, u32 da
 	else
 		quad = QUAD_KEYS_128;
 
-	if (!host1x_submit_sz) {
-		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
-				SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
+	if (!host1x_submit_sz)
 		cmdbuf_cnt = 0;
-		if (!aes_cmdbuf_cpuvaddr) {
-			mutex_unlock(&aes_cmdbuf_lock);
-			return -ENOMEM;
-		}
-	}
 
 	i = cmdbuf_cnt;
-	aes_cmdbuf_cpuvaddr[i++] =
+	se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34, 1);
-	aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
+	se_dev->aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
 						SE_OPERATION_OP(OP_DUMMY);
 
 	data_size = SE_KEYTABLE_QUAD_SIZE_BYTES;
 	do {
-		aes_cmdbuf_cpuvaddr[i++] =
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_nonincr(aes_opcode_start_addr + 0xB8, 1);
 		pkt = SE_KEYTABLE_SLOT(slot_num) | SE_KEYTABLE_QUAD(quad);
 		val = SE_KEYTABLE_PKT(pkt);
-		aes_cmdbuf_cpuvaddr[i++] = val;
+		se_dev->aes_cmdbuf_cpuvaddr[i++] = val;
 
-		aes_cmdbuf_cpuvaddr[i++] =
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_incr(aes_opcode_start_addr + 0xBC, data_size/4);
 		for (j = 0; j < data_size; j += 4, data_len -= 4)
-			aes_cmdbuf_cpuvaddr[i++] = *pdata_buf++;
+			se_dev->aes_cmdbuf_cpuvaddr[i++] = *pdata_buf++;
 
 		data_size = data_len;
 		quad = QUAD_KEYS_256;
 	} while (data_len);
 
-	aes_cmdbuf_cpuvaddr[i++] =
+
+	se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34, 1);
-	aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_OP(OP_DUMMY);
+	se_dev->aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_OP(OP_DUMMY);
 
 	cmdbuf_num_words = i;
 	cmdbuf_cnt = i;
 
 	if (type == SE_KEY_TABLE_TYPE_KEY) {
-		err = tegra_se_channel_submit_gather(se_dev, NULL,
-				aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova,
+			err = tegra_se_channel_submit_gather(se_dev, NULL,
+				se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 				0, cmdbuf_num_words, true);
-		dma_free_attrs(se_dev->dev->parent,
-			SZ_16K, aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova, &attrs);
-		aes_cmdbuf_cpuvaddr = NULL;
 	}
 
-	mutex_unlock(&aes_cmdbuf_lock);
 	return err;
 }
 
@@ -885,45 +862,35 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	total = nbytes;
 	/* Create Gather Buffer Command */
 
-	mutex_lock(&aes_cmdbuf_lock);
-	if (req_ctx->op_mode == SE_AES_OP_MODE_RNG_DRBG) {
-		aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
-				SZ_16K, &aes_cmdbuf_iova, GFP_KERNEL, &attrs);
-		if (!aes_cmdbuf_cpuvaddr) {
-			mutex_unlock(&aes_cmdbuf_lock);
-			return -ENOMEM;
-		}
-	}
-
-	aes_cmdbuf_cpuvaddr[i++] =
+	se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34, 1);
-	aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
+	se_dev->aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
 					SE_OPERATION_OP(OP_DUMMY);
 
 	while (total) {
 		if (total == nbytes) {
-			aes_cmdbuf_cpuvaddr[i++] =
+			se_dev->aes_cmdbuf_cpuvaddr[i++] =
 				__nvhost_opcode_incr(aes_opcode_start_addr, 6);
-			aes_cmdbuf_cpuvaddr[i++] = req_ctx->config;
-			aes_cmdbuf_cpuvaddr[i++] = req_ctx->crypto_config;
+			se_dev->aes_cmdbuf_cpuvaddr[i++] = req_ctx->config;
+			se_dev->aes_cmdbuf_cpuvaddr[i++] = req_ctx->crypto_config;
 		} else {
-			aes_cmdbuf_cpuvaddr[i++] =
+			se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_incr(aes_opcode_start_addr + 8, 4);
 		}
 
-		aes_cmdbuf_cpuvaddr[i++] = (u32)(src_ll->addr);
-		aes_cmdbuf_cpuvaddr[i++] =
+		se_dev->aes_cmdbuf_cpuvaddr[i++] = (u32)(src_ll->addr);
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			(u32)(SE_ADDR_HI_MSB(MSB(src_ll->addr))
 				| SE_ADDR_HI_SZ(src_ll->data_len));
-		aes_cmdbuf_cpuvaddr[i++] = (u32)(dst_ll->addr);
-		aes_cmdbuf_cpuvaddr[i++] =
+		se_dev->aes_cmdbuf_cpuvaddr[i++] = (u32)(dst_ll->addr);
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			(u32)(SE_ADDR_HI_MSB(MSB(dst_ll->addr))
 				| SE_ADDR_HI_SZ(dst_ll->data_len));
 		if (total == nbytes) {
-			aes_cmdbuf_cpuvaddr[i++] =
+			se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x28,
 				1);
-			aes_cmdbuf_cpuvaddr[i++] = ((nbytes/16) - 1);
+			se_dev->aes_cmdbuf_cpuvaddr[i++] = ((nbytes/16) - 1);
 		}
 
 		if (req_ctx->op_mode == SE_AES_OP_MODE_CMAC)
@@ -935,33 +902,33 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 
 		if (host1x_submit_sz == 0 && total == nbytes) {
 			if (total == src_ll->data_len) {
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34,
 					1);
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_TRUE)
 					| SE_OPERATION_OP(OP_START);
 			} else {
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34,
 					1);
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_FALSE)
 					| SE_OPERATION_OP(OP_START);
 			}
 		} else {
 			if (total == src_ll->data_len) {
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34,
 					1);
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_TRUE)
 					| SE_OPERATION_OP(restart_op);
 			} else {
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			__nvhost_opcode_nonincr(aes_opcode_start_addr + 0x34,
 					1);
-				aes_cmdbuf_cpuvaddr[i++] =
+				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_FALSE)
 					| SE_OPERATION_OP(restart_op);
 			}
@@ -978,7 +945,6 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	if (se_dev->queue.qlen) {
 		host1x_submit_sz++;
 		if (host1x_submit_sz < SE_TASKS_PER_SUBMIT) {
-			mutex_unlock(&aes_cmdbuf_lock);
 			return 0;
 		} else {
 			host1x_submit_sz = 0;
@@ -990,14 +956,9 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	}
 
 	err = tegra_se_channel_submit_gather(se_dev, req,
-			aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova,
+			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 			0, cmdbuf_num_words, true);
-
-	dma_free_attrs(se_dev->dev->parent, SZ_16K,
-			aes_cmdbuf_cpuvaddr, aes_cmdbuf_iova, &attrs);
-	aes_cmdbuf_cpuvaddr = NULL;
 	cmdbuf_cnt = 0;
-	mutex_unlock(&aes_cmdbuf_lock);
 	return err;
 }
 
@@ -1339,12 +1300,14 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev[0];
+	mutex_lock(&se_dev->mtx);
 
 	rng_ctx->se_dev = se_dev;
 	rng_ctx->dt_buf = dma_alloc_coherent(se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
 		&rng_ctx->dt_buf_adr, GFP_KERNEL);
 	if (!rng_ctx->dt_buf) {
 		dev_err(se_dev->dev, "can not allocate rng dma buffer");
+		mutex_unlock(&se_dev->mtx);
 		return -ENOMEM;
 	}
 
@@ -1354,8 +1317,10 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 		dev_err(se_dev->dev, "can not allocate rng dma buffer");
 		dma_free_coherent(rng_ctx->se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
 					rng_ctx->dt_buf, rng_ctx->dt_buf_adr);
+		mutex_unlock(&se_dev->mtx);
 		return -ENOMEM;
 	}
+	mutex_unlock(&se_dev->mtx);
 
 	return 0;
 }
@@ -1382,7 +1347,7 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	if (data_len == 0)
 		num_blocks = num_blocks - 1;
 
-	tegra_se_engine = 0;
+	mutex_lock(&se_dev->mtx);
 	aes_opcode_start_addr = SE1_AES0_CONFIG_REG_OFFSET;
 	req_ctx->op_mode = SE_AES_OP_MODE_RNG_DRBG;
 
@@ -1419,6 +1384,7 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	}
 
 	cmdbuf_cnt = i;
+	mutex_unlock(&se_dev->mtx);
 	kfree(req_ctx);
 	return dlen;
 }
@@ -2806,12 +2772,24 @@ static int tegra_se_probe(struct platform_device *pdev)
 	se_dev->src_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
 	se_dev->dst_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
 
+	se_dev->aes_cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent,
+			SZ_16K, &se_dev->aes_cmdbuf_iova, GFP_KERNEL, &attrs);
+	if (!se_dev->aes_cmdbuf_cpuvaddr)
+		goto cmd_buf_alloc_fail;
+
 	se_dev->se_dev_num = se_num;
 	sg_tegra_se_dev[se_num] = se_dev;
 	se_num++;
 
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
+
+cmd_buf_alloc_fail:
+	if (se_dev->src_ll)
+		kfree(se_dev->src_ll);
+	if (se_dev->dst_ll)
+		kfree(se_dev->dst_ll);
+	nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
 
 host_clk_fail:
 	for (i = 0; i < ARRAY_SIZE(reg_aes_alg); i++)
@@ -2857,6 +2835,9 @@ static int tegra_se_remove(struct platform_device *pdev)
 	nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
 
 	nvhost_client_device_release(pdev);
+
+	dma_free_attrs(se_dev->dev->parent, SZ_16K,
+			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova, &attrs);
 
 	kfree(se_dev);
 	for (i = 0; i < 4; i++)

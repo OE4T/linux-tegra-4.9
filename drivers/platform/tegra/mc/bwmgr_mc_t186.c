@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -213,6 +213,7 @@ unsigned long bwmgr_apply_efficiency(
 
 	return max(total_bw, iso_bw);
 }
+EXPORT_SYMBOL_GPL(bwmgr_apply_efficiency);
 
 unsigned long bwmgr_freq_to_bw(unsigned long freq)
 {
@@ -224,6 +225,7 @@ unsigned long bwmgr_freq_to_bw(unsigned long freq)
 
 	return freq * 16;
 }
+EXPORT_SYMBOL_GPL(bwmgr_freq_to_bw);
 
 unsigned long bwmgr_bw_to_freq(unsigned long bw)
 {
@@ -235,6 +237,7 @@ unsigned long bwmgr_bw_to_freq(unsigned long bw)
 
 	return (bw + 16 - 1) / 16;
 }
+EXPORT_SYMBOL_GPL(bwmgr_bw_to_freq);
 
 u32 bwmgr_dvfs_latency(u32 ufreq)
 {
@@ -257,8 +260,10 @@ u32 bwmgr_dvfs_latency(u32 ufreq)
 
 	return lt / 1000; /* convert nsec to usec, Bug 1697424 */
 }
+EXPORT_SYMBOL_GPL(bwmgr_dvfs_latency);
 
 int bwmgr_iso_bw_percentage_max(void)
 {
 	return bwmgr_iso_bw_percentage;
 }
+EXPORT_SYMBOL_GPL(bwmgr_iso_bw_percentage_max);

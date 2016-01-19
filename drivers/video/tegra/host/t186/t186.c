@@ -181,7 +181,6 @@ struct nvhost_device_data t18_isp_info = {
 	.class			= NV_VIDEO_STREAMING_ISP_CLASS_ID,
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_ISP},
 	.devfs_name		= "isp",
-	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
 	.can_powergate          = true,
@@ -198,6 +197,7 @@ struct nvhost_device_data t18_isp_info = {
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
 	.hw_init		= nvhost_isp_register_isr_v2,
 	.ctrl_ops		= &tegra_isp_ctrl_ops,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize		= 1,
 	.push_work_done		= 1,
 	.vm_regs		= {{0x50, true} },

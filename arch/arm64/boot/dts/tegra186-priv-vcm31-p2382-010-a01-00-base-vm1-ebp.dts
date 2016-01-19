@@ -2,7 +2,7 @@
  * tegra186-priv-vcm31-p2382-010-a01-00-base-vm1.dts: P2382(sunstreaker) base vm1 dts
  * file
  *
- * Copyright (c) 2015 - 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -98,12 +98,19 @@
 	};
 
 	i2c@3160000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 53>;
 		tegra_nct72: onsemi,nct72@4c {
 			status = "okay";
 			/delete-property/ interrupt-parent;
 			/delete-property/ interrupts;
 			/delete-property/ temp-alert-gpio;
 		};
+	};
+
+	i2c@3180000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 53>;
 	};
 
 	/* I2C4 used by HDMI in early boot partition */
@@ -114,6 +121,26 @@
 	/* I2C6 used by DP in early boot partition */
 	i2c@31b0000 {
 		status = "disabled";
+	};
+
+	i2c@31c0000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 53>;
+	};
+
+	i2c@31e0000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 53>;
+	};
+
+	i2c@c240000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 53>;
+	};
+
+	i2c@c250000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 53>;
 	};
 
 	tegra_hv_net {
@@ -137,14 +164,7 @@
 		status = "disabled";
 	};
 
-	power-domain {
-		host-pd {
-			compatible = "nvidia,tegra186-host1x-pd-hv";
-		};
-	};
-
 	host1x: host1x {
-		compatible = "nvidia,tegra186-host1x-hv", "simple-bus";
 		reg = <0x0 0x13e10000 0x0 0x00010000>;
 		interrupts = <0 265 0x04
 					0 263 0x04>;
@@ -305,6 +325,26 @@
 			status = "disabled";
 		};
 	};
+
+	sound {
+		status = "disabled";
+	};
+
+	sound_ref {
+		status = "disabled";
+	};
+
+	ahub {
+		status = "disabled";
+	};
+
+        adsp_audio {
+                status = "disabled";
+        };
+
+        adsp@2993000 {
+                status = "disabled";
+        };
 
 	ptm_a57_0: ptm@9840000 {
 		status = "disabled";

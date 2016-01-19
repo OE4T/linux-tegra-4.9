@@ -95,14 +95,7 @@
 		status = "disabled";
 	};
 
-	power-domain {
-		host-pd {
-			compatible = "nvidia,tegra186-host1x-pd-hv";
-		};
-	};
-
 	host1x {
-		compatible = "nvidia,tegra186-host1x-hv", "simple-bus";
 		reg = <0x0 0x13e20000 0x0 0x00010000>;
 		interrupts = <0 266 0x04
 					0 263 0x04>;
@@ -319,28 +312,64 @@
 		status = "disabled";
 	};
 
-	i2c@3160000 {
+	isc-mgr.0 {
 		status = "disabled";
 	};
 
-	i2c@c240000 {
+	isc-mgr.1 {
 		status = "disabled";
+	};
+
+	i2c@3160000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 54>;
+		status = "okay";
+		tegra_nct72: onsemi,nct72@4c {
+			/delete-property/ interrupt-parent;
+			/delete-property/ interrupts;
+			/delete-property/ temp-alert-gpio;
+		};
+		tmpm32xi2c@61 {
+			status = "disabled";
+		};
 	};
 
 	i2c@3180000 {
-		status = "disabled";
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 54>;
+		status = "okay";
+	};
+
+	i2c@3190000 {
+		status = "okay";
+	};
+
+	i2c@31b0000 {
+		status = "okay";
 	};
 
 	i2c@31c0000 {
-		status = "disabled";
-	};
-
-	i2c@c250000 {
-		status = "disabled";
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 54>;
+		status = "okay";
 	};
 
 	i2c@31e0000 {
-		status = "disabled";
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 54>;
+		status = "okay";
+	};
+
+	i2c@c240000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 54>;
+		status = "okay";
+	};
+
+	i2c@c250000 {
+		compatible = "nvidia,tegra186-i2c-hv";
+		ivc_queue = <&tegra_hv 54>;
+		status = "okay";
 	};
 
 	ahci-sata@3507000 {

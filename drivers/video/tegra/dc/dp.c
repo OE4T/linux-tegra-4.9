@@ -1739,10 +1739,18 @@ static void tegra_dp_link_cal(struct tegra_dc_dp_data *dp)
 		load_adj = 0x3;
 		break;
 	case SOR_LINK_SPEED_G2_7:
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		load_adj = 0x3;
+#else
 		load_adj = 0x4;
+#endif
 		break;
 	case SOR_LINK_SPEED_G5_4:
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		load_adj = 0x4;
+#else
 		load_adj = 0x6;
+#endif
 		break;
 	default:
 		BUG();

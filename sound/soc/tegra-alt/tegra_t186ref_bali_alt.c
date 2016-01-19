@@ -1,7 +1,7 @@
 /*
  * tegra_t186ref_bali_alt.c - Tegra t186ref bali Machine driver
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <linux/module.h>
-
 #include <sound/soc.h>
 #include <linux/tegra-soc.h>
 
@@ -73,10 +72,10 @@ static struct snd_soc_pcm_stream tegra_t186ref_bali_amx_input_params[][4] = {
 		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
 	},
 	{
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	},
 	{
 		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
@@ -88,48 +87,48 @@ static struct snd_soc_pcm_stream tegra_t186ref_bali_amx_input_params[][4] = {
 static struct snd_soc_pcm_stream tegra_t186ref_bali_amx_output_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 4),
-	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 };
 static struct snd_soc_pcm_stream tegra_t186ref_bali_adx_output_params[][4] = {
 	{
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
-		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-	},
-	{
-		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
-		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
-		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
-		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
-	},
-	{
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	},
 	{
 		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
-		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	},
+	{
 		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
-		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	},
 };
 static struct snd_soc_pcm_stream tegra_t186ref_bali_adx_input_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 1),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 };
 static const struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
 };
 static const struct snd_soc_pcm_stream tegra_t186ref_arad_link_params[] = {
@@ -149,6 +148,11 @@ static struct snd_soc_dai_link
 	},
 };
 
+static const struct snd_soc_pcm_stream
+		tegra_t186ref_bali_sse_admaif_params[] = {
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+};
 static int tegra_t186ref_bali_amx_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_card *card = rtd->card;
@@ -664,6 +668,17 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 		tegra_machine_set_dai_params(TEGRA186_DAI_LINK_ASRC1_RX1 + i,
 			(struct snd_soc_pcm_stream *)
 				&tegra_t186ref_asrc_link_params[i]);
+	}
+
+	for (i = 0; i < 2; i++) {
+		tegra_machine_set_dai_params(
+			TEGRA186_DAI_LINK_ADMAIF11 + (2 * i),
+			(struct snd_soc_pcm_stream *)
+			&tegra_t186ref_bali_sse_admaif_params[i]);
+		tegra_machine_set_dai_params(
+			TEGRA186_DAI_LINK_ADSP_ADMAIF11 + (2 * i),
+			(struct snd_soc_pcm_stream *)
+			&tegra_t186ref_bali_sse_admaif_params[i]);
 	}
 
 	/* The packet from ARAD to ASRC for the ratio update is 24 bit */

@@ -27,6 +27,7 @@ obj-y += powergate/
 obj-$(CONFIG_TEGRA_AON) += tegra-aon.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra18_cpu_debugfs.o
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += reboot-t18x.o
+obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += pm-tegra186.o
 obj-$(CONFIG_TEGRA_AON) += tegra186_aondbg.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += tegra-sysfs-mbox.o
 obj-$(CONFIG_TEGRA_NVADSP) += nvadsp/

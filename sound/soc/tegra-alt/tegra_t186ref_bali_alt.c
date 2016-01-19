@@ -295,7 +295,7 @@ static int tegra_t186ref_bali_audio_dsp_tdm1_hw_params(
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_t186ref_bali *machine = snd_soc_card_get_drvdata(card);
-	unsigned int mclk, clk_out_rate, srate;
+	unsigned int srate;
 	int err = 0;
 
 	unsigned int idx =
@@ -307,22 +307,14 @@ static int tegra_t186ref_bali_audio_dsp_tdm1_hw_params(
 	dai_params->rate_min = params_rate(params);
 
 	srate = dai_params->rate_min;
-	clk_out_rate = srate * 512 * 2;
-	mclk = clk_out_rate;
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-				srate, mclk, clk_out_rate);
+						srate, 0, 0);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
 
-	err = tegra210_xbar_set_clock(mclk);
-	if (err < 0) {
-		dev_err(card->dev,
-			"Can't configure xbar clock = %d Hz\n", mclk);
-		return err;
-	}
 
 	return 0;
 }
@@ -334,7 +326,7 @@ static int tegra_t186ref_bali_audio_dsp_tdm2_hw_params(
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
 	struct tegra_t186ref_bali *machine = snd_soc_card_get_drvdata(card);
-	unsigned int mclk, clk_out_rate, srate;
+	unsigned int srate;
 	int err = 0;
 
 	unsigned int idx =
@@ -346,22 +338,14 @@ static int tegra_t186ref_bali_audio_dsp_tdm2_hw_params(
 	dai_params->rate_min = params_rate(params);
 
 	srate = dai_params->rate_min;
-	clk_out_rate = srate * 512 * 2;
-	mclk = clk_out_rate;
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-				srate, mclk, clk_out_rate);
+						srate, 0, 0);
 	if (err < 0) {
 		dev_err(card->dev, "Can't configure clocks\n");
 		return err;
 	}
 
-	err = tegra210_xbar_set_clock(mclk);
-	if (err < 0) {
-		dev_err(card->dev,
-			"Can't configure xbar clock = %d Hz\n", mclk);
-		return err;
-	}
 
 	return 0;
 }
@@ -545,6 +529,23 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 					"nvidia,audio-routing");
 		if (ret)
 			goto err;
+
+		if (of_property_read_u32(np, "nvidia,num-clk",
+					&machine->audio_clock.num_clk) < 0) {
+			dev_err(&pdev->dev,
+				"Missing property nvidia,num-clk\n");
+			ret = -ENODEV;
+			goto err;
+		}
+
+		if (of_property_read_u32_array(np, "nvidia,clk-rates",
+					(u32 *)&machine->audio_clock.clk_rates,
+					machine->audio_clock.num_clk) < 0) {
+			dev_err(&pdev->dev,
+				"Missing property nvidia,clk-rates\n");
+			ret = -ENODEV;
+			goto err;
+		}
 
 		if (of_property_read_u32(np, "nvidia,num-amx",
 			(u32 *)&machine->amx_adx_conf.num_amx)) {

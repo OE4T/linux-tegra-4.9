@@ -5187,7 +5187,8 @@ unlock:
 }
 
 int gk20a_gr_lock_down_sm(struct gk20a *g,
-				 u32 gpc, u32 tpc, u32 global_esr_mask)
+				 u32 gpc, u32 tpc, u32 global_esr_mask,
+				 bool check_errors)
 {
 	u32 offset =
 		proj_gpc_stride_v() * gpc + proj_tpc_in_gpc_stride_v() * tpc;
@@ -5204,7 +5205,7 @@ int gk20a_gr_lock_down_sm(struct gk20a *g,
 		gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 
 	return gk20a_gr_wait_for_sm_lock_down(g, gpc, tpc, global_esr_mask,
-			true);
+			check_errors);
 }
 
 bool gk20a_gr_sm_debugger_attached(struct gk20a *g)
@@ -5306,7 +5307,7 @@ static int gk20a_gr_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	}
 
 	if (do_warp_sync) {
-		ret = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask);
+		ret = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask, true);
 		if (ret) {
 			gk20a_err(dev_from_gk20a(g), "sm did not lock down!\n");
 			return ret;

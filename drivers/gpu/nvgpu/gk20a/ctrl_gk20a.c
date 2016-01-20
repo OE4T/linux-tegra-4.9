@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2011-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -397,7 +397,7 @@ static int nvgpu_gpu_ioctl_wait_for_pause(struct gk20a *g,
 		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
 		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
 
-		err = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask);
+		err = gk20a_gr_lock_down_sm(g, gpc, tpc, global_mask, false);
 
 		if (err) {
 			gk20a_err(dev_from_gk20a(g), "sm did not lock down!\n");

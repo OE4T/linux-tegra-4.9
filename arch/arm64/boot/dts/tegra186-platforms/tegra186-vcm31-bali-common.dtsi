@@ -663,11 +663,11 @@
 	};
 
 	mttcan@c310000 {
-		status = "okay";
+		status = "disabled";
 	};
 
 	mttcan@c320000 {
-		status = "okay";
+		status = "disabled";
 	};
 
 	isc-mgr.0 {

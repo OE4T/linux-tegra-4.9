@@ -1,0 +1,25 @@
+EXTCON FOR GPIO-STATES
+
+Required Properties:
+ - compatible : Should be "extcon-gpio-states";
+
+Optional Properties:
+ - extcon-gpio,name: Name of extcon device.
+ - gpios: List of teh gpios.
+ - extcon-gpio,irq-flags: IRQ flags for GPIO.
+ - extcon-gpio,debounce: Debounce time in ms.
+ - extcon-gpio,wait-for-gpio-scan: Wait timeout for scanning all gpio states
+	after chnage found in gpio and debounce timeof gpio is completed.
+ - extcon-gpio,out-cable-names: Output cable names.
+ - extcon-gpio,cable-states: GPIO states and ther corresponding output cable
+	state. This is array of the data for table as
+		gpio-state <-> output cable-state
+extcon-gpio {
+	compatible = "extcon-gpio-states";
+       	gpio = <&gpio 20 0 &gpio 30 0>;
+	extcon-gpio,cable-states = <0x00 0x00
+				    0x01 0x01
+				    0x02 0x02
+				    0x03 0x4>;
+	extcon-gpio,out-cable-names = "vbus", "host", "otg-y-cable";
+};

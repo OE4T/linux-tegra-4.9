@@ -4115,6 +4115,7 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	/* enable fecs error interrupts */
 	gk20a_writel(g, gr_fecs_host_int_enable_r(),
+		     gr_fecs_host_int_enable_ctxsw_intr1_enable_f() |
 		     gr_fecs_host_int_enable_fault_during_ctxsw_enable_f() |
 		     gr_fecs_host_int_enable_umimp_firmware_method_enable_f() |
 		     gr_fecs_host_int_enable_umimp_illegal_method_enable_f() |

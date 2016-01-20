@@ -693,5 +693,10 @@
 		status = "disabled";
 
 	};
+
+	soft_wdt:soft_watchdog {
+		compatible = "softdog-platform";
+		status = "okay";
+	};
 };
 

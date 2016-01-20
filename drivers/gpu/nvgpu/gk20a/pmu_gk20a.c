@@ -1,7 +1,7 @@
 /*
  * GK20A PMU (aka. gPMU outside gk20a context)
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1005,8 +1005,8 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	pmu->remove_support = gk20a_remove_pmu_support;
 
 	switch (pmu->desc->app_version) {
-	case APP_VERSION_T186_1:
-	case APP_VERSION_T186_0:
+	case APP_VERSION_NC_1:
+	case APP_VERSION_NC_0:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =
 				pg_cmd_eng_buf_load_size_v1;
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type =

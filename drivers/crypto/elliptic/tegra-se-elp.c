@@ -1320,8 +1320,9 @@ static int tegra_se_elp_rng_do(struct tegra_se_elp_dev *se_dev,
 		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
 		if (ret)
 			goto ret;
+
 		rdata = tegra_se_check_rng1_result(req);
-		if (ret) {
+		if (!rdata) {
 			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 1\n");
 			goto ret;
 		}
@@ -1392,7 +1393,7 @@ static int tegra_se_elp_rng_do(struct tegra_se_elp_dev *se_dev,
 			goto ret;
 
 		rdata = tegra_se_check_rng1_result(req);
-		if (ret) {
+		if (!rdata) {
 			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 2\n");
 			goto ret;
 		}
@@ -1469,6 +1470,7 @@ static int tegra_se_elp_rng_do(struct tegra_se_elp_dev *se_dev,
 		ret = tegra_se_execute_rng1_ctrl_cmd(RNG1_CMD_GEN_RANDOM);
 		if (ret)
 			goto ret;
+
 		rdata = tegra_se_check_rng1_result(req);
 		if (!rdata) {
 			dev_err(se_dev->dev, "\nRNG1 Failed for Sub-Step 3\n");

@@ -571,7 +571,6 @@ const char *tegra_mc_get_sid_name(int sid)
 
 static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 {
-	const char *name = sid_override_reg[oid].name;
 	int offs = sid_override_reg[oid].offs;
 	volatile void __iomem *addr;
 	u32 val;
@@ -586,21 +585,13 @@ static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 		addr = TO_MC_SID_STREAMID_SECURITY_CONFIG(mc_sid_base + offs);
 		val = readl_relaxed(addr);
 
-		if (val & SCEW_STREAMID_OVERRIDE) {
-			/* OK */;
-		} else if (val & SCEW_STREAMID_WRITE_ACCESS_DISABLED) {
-			pr_info("Cann't OVERRIDE SID for MC_SID_STRAMID_SECURITY_CONFIG_%s(%x) %x\n",
-				name, offs, val);
+		if (!(val & SCEW_STREAMID_OVERRIDE)
+			&& (val & SCEW_STREAMID_WRITE_ACCESS_DISABLED))
 			return;
-		}
-
-		if ((val & SCEW_NS) == 0)
-			pr_info("SECURE for MC_SID_STRAMID_SECURITY_CONFIG_%s(%x) %x\n",
-				name, offs, val);
 
 		/*
 		 * Only valid when kernel runs in secure mode.
-		 * Otherwise, no effect on MC_SID_STRAMID_SECURITY_CONFIG_*.
+		 * Otherwise, no effect on MC_SID_STREAMID_SECURITY_CONFIG_*.
 		 */
 		if ((ord == OVERRIDE) ||
 		    (tegra_platform_is_linsim() && ord == SIM_OVERRIDE))

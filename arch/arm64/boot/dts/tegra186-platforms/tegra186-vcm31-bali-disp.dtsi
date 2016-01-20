@@ -45,6 +45,14 @@
 			//win-mask = <0x38>;
 		};
 
+		nvdisplay@15220000 {
+			status = "disabled";
+		};
+
+		dsi { /* dsi@15300000 */
+			status = "disabled";
+		};
+
 		sor {
 			status = "okay";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;

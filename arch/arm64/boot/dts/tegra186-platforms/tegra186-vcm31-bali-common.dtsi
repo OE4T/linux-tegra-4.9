@@ -211,12 +211,7 @@
 		};
 	};
 
-	extcon {
-		compatible = "simple-bus";
-		device_type = "external-connection";
-		#address-cells = <1>;
-		#size-cells = <0>;
-
+	external-connection {
 		vbus_id_extcon: extcon@1 {
 			compatible = "extcon-gpio-states";
 			reg = <0x1>;
@@ -317,6 +312,12 @@
 
 	adma@2930000 {
 		dma-channels = <10>;
+	};
+
+	ahub {
+		arad@290e400 {
+			status = "okay";
+		};
 	};
 
 	sound_ref {
@@ -684,10 +685,6 @@
 		status = "disabled";
 	};
 
-	i2c@31b0000 {
-		status = "disabled";
-	};
-
 	thermal-zones {
 		status = "disabled";
 
@@ -705,6 +702,42 @@
 			};
 		};
 	};
+
+        ptm_a57_0: ptm@9840000 {
+                status = "okay";
+        };
+
+        ptm_a57_1: ptm@9940000 {
+                status = "okay";
+        };
+
+        ptm_a57_2: ptm@9a40000 {
+                status = "okay";
+        };
+
+        ptm_a57_3: ptm@9b40000 {
+                status = "okay";
+        };
+
+        funnel_bccplex@9010000 {
+                status = "okay";
+        };
+
+        funnel_major@8010000 {
+                status = "okay";
+        };
+
+        replicator@0x8040000 {
+                status = "okay";
+        };
+
+        etf@8030000 {
+                status = "okay";
+        };
+
+        tpiu@8060000 {
+                status = "okay";
+        };
 
 	pmc-iopower {
 		status = "disabled";
@@ -727,15 +760,16 @@
 		};
 	};
 
-	efuse@3820000 {
-                status = "disabled";
-        };
+	cpus {
+		status = "disabled";
 
-	aon@c160000 {
+	};
+
+	bluedroid_pm {
 		status = "disabled";
 	};
 
-	external-connection {
+	bcmdhd_wlan {
 		status = "disabled";
 	};
 };

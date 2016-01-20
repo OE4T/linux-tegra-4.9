@@ -308,7 +308,6 @@
 			overrides@10 {
 				target = <&tegra_sound>;
 				_overlay_ {
-					status = "okay";
 					nvidia,num-codec-link = <6>;
 					nvidia,audio-routing =
 						"y Headphone",		"y OUT",

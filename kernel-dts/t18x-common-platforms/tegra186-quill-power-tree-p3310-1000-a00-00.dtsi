@@ -156,6 +156,11 @@
 		vdd-fan-supply = <&vdd_fan>;
 	};
 
+	bluedroid_pm {
+		avdd-supply = <&battery_reg>;
+		dvdd-supply = <&spmic_sd2>;
+	};
+
 	bpmp_i2c {
 		spmic@3c {
 			pinmux@0 {

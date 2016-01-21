@@ -518,6 +518,8 @@ void gk20a_suspend_all_sms(struct gk20a *g,
 		u32 global_esr_mask, bool check_errors);
 int gk20a_gr_lock_down_sm(struct gk20a *g,
 				 u32 gpc, u32 tpc, u32 global_esr_mask);
+int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
+	struct channel_gk20a *ch, u64 sms, bool enable);
 bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch);
 int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *color_val, u32 index);

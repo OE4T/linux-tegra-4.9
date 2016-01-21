@@ -7423,7 +7423,7 @@ static void gr_gk20a_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-static int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
+int gr_gk20a_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {
 	struct nvgpu_dbg_gpu_reg_op *ops;

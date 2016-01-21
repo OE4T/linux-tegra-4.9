@@ -1223,6 +1223,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_sm_dsm_reg_info = gr_gm20b_init_sm_dsm_reg_info;
 	gops->gr.wait_empty = gr_gk20a_wait_idle;
 	gops->gr.init_cyclestats = gr_gm20b_init_cyclestats;
+	gops->gr.set_sm_debug_mode = gr_gk20a_set_sm_debug_mode;
 	gops->gr.enable_cde_in_fecs = gr_gm20b_enable_cde_in_fecs;
 	gops->gr.bpt_reg_info = gr_gm20b_bpt_reg_info;
 	gops->gr.get_access_map = gr_gm20b_get_access_map;

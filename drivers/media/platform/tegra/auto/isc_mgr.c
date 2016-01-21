@@ -291,7 +291,7 @@ pwr_dn_end:
 	return 0;
 }
 
-int isc_mgr_misc_ctrl(struct isc_mgr_priv *isc_mgr, bool misc_on)
+static int isc_mgr_misc_ctrl(struct isc_mgr_priv *isc_mgr, bool misc_on)
 {
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int err, i;
@@ -538,7 +538,8 @@ static int isc_mgr_of_get_grp_gpio(
 	return num;
 }
 
-struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device *pdev)
+static struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device
+	*pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
 	struct isc_mgr_platform_data *pd = NULL;

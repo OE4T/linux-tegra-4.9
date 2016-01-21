@@ -300,7 +300,7 @@ static int isc_dev_open(struct inode *inode, struct file *file)
 	return 0;
 }
 
-int isc_dev_release(struct inode *inode, struct file *file)
+static int isc_dev_release(struct inode *inode, struct file *file)
 {
 	struct isc_dev_info *info = file->private_data;
 

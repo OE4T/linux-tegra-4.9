@@ -1942,7 +1942,7 @@ int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch)
 	if (gk20a_is_channel_marked_as_tsg(ch))
 		err = gk20a_fifo_preempt_tsg(ch->g, ch->tsgid);
 	else
-		err = gk20a_fifo_preempt_channel(ch->g, ch->hw_chid);
+		err = g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
 
 	return err;
 }

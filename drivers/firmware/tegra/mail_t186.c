@@ -217,14 +217,3 @@ int bpmp_mail_init_prepare(void)
 
 	return 0;
 }
-
-/*
- * FIXME: this initcall is here due to legacy reasons.
- * This should be moved nearer to the function definition.
- */
-postcore_initcall(bpmp_mail_init);
-
-void tegra_bpmp_init_early(void)
-{
-	bpmp_mail_init();
-}

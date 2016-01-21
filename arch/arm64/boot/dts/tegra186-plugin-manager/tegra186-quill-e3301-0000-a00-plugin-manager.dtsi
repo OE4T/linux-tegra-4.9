@@ -18,7 +18,7 @@
 / {
 	eeprom-manager {
 		data-size = <0x100>;
-		boardid-with-version = <3301>;
+		boardid-with-revision = <3301>;
 		bus@0 {
 			i2c-bus = <&gen8_i2c>;
 			word-address-1-byte-slave-addresses = <0x50 0x57>;

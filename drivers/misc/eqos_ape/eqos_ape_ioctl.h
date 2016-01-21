@@ -34,8 +34,8 @@ struct eqos_ape_cmd {
 enum {
 	EQOS_APE_AMISC_INIT = _IO(0xF9, 0x01),
 	EQOS_APE_AMISC_DEINIT = _IO(0xF9, 0x02),
-	EQOS_APE_AMISC_SYNC = _IO(0xF9, 0x03),
-	EQOS_APE_AMISC_RESET = _IO(0xF9, 0x04),
+	EQOS_APE_AMISC_FREQ_SYNC = _IO(0xF9, 0x03),
+	EQOS_APE_AMISC_PHASE_SYNC = _IO(0xF9, 0x04),
 	EQOS_APE_TEST_FREQ_ADJ = _IOW(0xF9, 0x05, struct eqos_ape_cmd),
 };
 

@@ -18,8 +18,31 @@
 
 
 #include "eqos_ape_global.h"
+extern struct eqos_drvdata *eqos_ape_drv_data;
 
-void amisc_clk_init(struct eqos_drvdata *eqos_ape_drv_data)
+u32 amisc_readl(u32 reg)
+{
+	return readl(eqos_ape_drv_data->base_regs[AMISC_EAVB] +
+			(reg - AMISC_APE_TSC_CTRL_0_0));
+}
+
+void amisc_writel(u32 val, u32 reg)
+{
+	writel(val, eqos_ape_drv_data->base_regs[AMISC_EAVB] +
+			(reg - AMISC_APE_TSC_CTRL_0_0));
+}
+
+void amisc_idle_enable(void)
+{
+	writel((1 << 31) , eqos_ape_drv_data->base_regs[AMISC_IDLE]);
+}
+
+void amisc_idle_disable(void)
+{
+	writel(0 , eqos_ape_drv_data->base_regs[AMISC_IDLE]);
+}
+
+void amisc_clk_init(void)
 {
 	int ret = 0;
 	int rate;
@@ -61,7 +84,7 @@ void amisc_clk_init(struct eqos_drvdata *eqos_ape_drv_data)
 	dev_dbg(&pdev->dev, "ape rate %d\n", rate);
 }
 
-void amisc_clk_deinit(struct eqos_drvdata *eqos_ape_drv_data)
+void amisc_clk_deinit(void)
 {
 	int err;
 	struct platform_device *pdev = eqos_ape_drv_data->pdev;
@@ -81,7 +104,7 @@ void amisc_clk_deinit(struct eqos_drvdata *eqos_ape_drv_data)
 	devm_clk_put(&pdev->dev, eqos_ape_drv_data->ape_clk);
 }
 
-int amisc_ape_get_rate(struct eqos_drvdata *eqos_ape_drv_data)
+int amisc_ape_get_rate(void)
 {
 	int rate;
 
@@ -89,14 +112,14 @@ int amisc_ape_get_rate(struct eqos_drvdata *eqos_ape_drv_data)
 	return rate;
 }
 
-void amisc_ape_set_rate(struct eqos_drvdata *eqos_ape_drv_data, int rate)
+void amisc_ape_set_rate(int rate)
 {
 	int err;
 
 	err = clk_set_rate(eqos_ape_drv_data->ape_clk, rate);
 }
 
-int amisc_plla_get_rate(struct eqos_drvdata *eqos_ape_drv_data)
+int amisc_plla_get_rate(void)
 {
 	int rate;
 
@@ -104,10 +127,9 @@ int amisc_plla_get_rate(struct eqos_drvdata *eqos_ape_drv_data)
 	return rate;
 }
 
-void amisc_plla_set_rate(struct eqos_drvdata *eqos_ape_drv_data, int rate)
+void amisc_plla_set_rate(int rate)
 {
 	int err;
 
 	err = clk_set_rate(eqos_ape_drv_data->pll_a_clk, rate);
 }
-

@@ -16,5 +16,5 @@
 obj-$(CONFIG_EQOS_APE_HWDEP) := eqos_ape.o
 
 eqos_ape-objs := \
-    eqos_ape_amisc.o \
-    eqos_ape_ioctl.o
+	eqos_ape_amisc.o \
+	eqos_ape_ioctl.o

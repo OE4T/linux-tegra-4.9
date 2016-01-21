@@ -23,7 +23,6 @@
 #include <linux/clk.h>
 #include <mach/clk.h>
 
-#define AMISC_OFFSET				             0x4
 #define AMISC_IDLE_0				             0x54
 
 #define AMISC_APE_TSC_CTRL_0_0			         0xc0
@@ -51,7 +50,14 @@
 #define AMISC_EAVB_SNAP_TSC_NS_0		         0xe0
 #define AMISC_EAVB_SNAP_TSC_SEC_0		         0xe4
 
+enum {
+	AMISC_IDLE,
+	AMISC_EAVB,
+	AMISC_MAX_REG,
+};
+
 struct eqos_drvdata {
+	void __iomem **base_regs;
 	struct platform_device *pdev;
 	int first_sync;
 	u64 ape_sec_snap;
@@ -65,16 +71,16 @@ struct eqos_drvdata {
 	int pll_a_clk_rate;
 };
 
-void amisc_clk_init(struct eqos_drvdata *eqos_ape_drv_data);
-void amisc_clk_deinit(struct eqos_drvdata *eqos_ape_drv_data);
-int amisc_ape_get_rate(struct eqos_drvdata *eqos_ape_drv_data);
-void amisc_ape_set_rate(struct eqos_drvdata *eqos_ape_drv_data, int rate);
-int amisc_plla_get_rate(struct eqos_drvdata *eqos_ape_drv_data);
-void amisc_plla_set_rate(struct eqos_drvdata *eqos_ape_drv_data, int rate);
 
-extern u32 amisc_readl(u32 reg);
-extern void amisc_writel(u32 val, u32 reg);
-extern void tegra_ape_pd_add_device(struct device *dev);
-
+void amisc_clk_init(void);
+void amisc_clk_deinit(void);
+u32 amisc_readl(u32 reg);
+void amisc_writel(u32 val, u32 reg);
+void amisc_idle_enable(void);
+void amisc_idle_disable(void);
+int amisc_ape_get_rate(void);
+void amisc_ape_set_rate(int rate);
+int amisc_plla_get_rate(void);
+void amisc_plla_set_rate(int rate);
 
 #endif /* __EQOS_APE_GLOBAL_H__ */

@@ -227,6 +227,10 @@
 		status = "okay";
 	};
 
+	eqos_ape@2990000 {
+		status = "okay";
+	};
+
 	spi@3270000 {
 		status = "okay";
 	};

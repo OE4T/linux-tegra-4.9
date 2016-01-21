@@ -2006,6 +2006,18 @@
 		#stream-id-cells = <1>;
 	};
 
+	eqos_ape@2990000 {
+		status = "disabled";
+		compatible = "nvidia,tegra18x-eqos-ape";
+		power-domains = <&ape_pd>;
+		reg = <0x0 0x02990054 0x0 0x4>, /* AMISC IDLE*/
+			<0x0 0x029900c0 0x0 0x28>;  /* AMISC EAVB*/
+		clocks = <&tegra_car TEGRA186_CLK_APE>,
+			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA186_CLK_PLLA>;
+		clock-names = "eqos_ape.ape", "pll_a_out0", "pll_a";
+	};
+
 	tegra_denver_wdt:watchdog@30c0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
 		reg = <0x0 0x030c0000 0x0 0x10000>, /* WDT0 */

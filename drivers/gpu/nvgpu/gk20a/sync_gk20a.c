@@ -1,7 +1,7 @@
 /*
  * GK20A Sync Framework Integration
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,7 @@
 #include <linux/hrtimer.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/spinlock.h>
 #include <uapi/linux/nvgpu.h>
 #include "../../../staging/android/sync.h"
 #include "semaphore_gk20a.h"
@@ -44,6 +45,12 @@ struct gk20a_sync_pt {
 	struct gk20a_sync_timeline	*obj;
 	struct sync_fence		*dep;
 	ktime_t				dep_timestamp;
+
+	/*
+	 * A spinlock is necessary since there are times when this lock
+	 * will be acquired in interrupt context.
+	 */
+	spinlock_t			lock;
 };
 
 struct gk20a_sync_pt_inst {
@@ -149,7 +156,10 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 		}
 	}
 
+	spin_lock_init(&shared->lock);
+
 	gk20a_semaphore_get(sema);
+
 	return shared;
 }
 
@@ -194,14 +204,20 @@ static struct sync_pt *gk20a_sync_pt_dup_inst(struct sync_pt *sync_pt)
 	return &pti->pt;
 }
 
+/*
+ * This function must be able to run on the same sync_pt concurrently. This
+ * requires a lock to protect access to the sync_pt's internal data structures
+ * which are modified as a side effect of calling this function.
+ */
 static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 {
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	struct gk20a_sync_timeline *obj = pt->obj;
-	bool signaled;
+	bool signaled = true;
 
+	spin_lock(&pt->lock);
 	if (!pt->sema)
-		return true;
+		goto done;
 
 	/* Acquired == not realeased yet == active == not signaled. */
 	signaled = !gk20a_semaphore_is_acquired(pt->sema);
@@ -232,6 +248,9 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 		gk20a_semaphore_put(pt->sema);
 		pt->sema = NULL;
 	}
+done:
+	spin_unlock(&pt->lock);
+
 	return signaled;
 }
 

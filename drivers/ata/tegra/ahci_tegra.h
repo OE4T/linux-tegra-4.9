@@ -145,6 +145,9 @@
 
 
 /* AHCI registers */
+#define T_AHCI_HBA_GHC					0x4
+#define T_AHCI_HBA_GHC_HR				BIT(0)
+#define T_AHCI_HBA_GHC_AE				BIT(31)
 
 /* AHCI Port Registers */
 #define T_AHCI_PORT_PXSSTS				0x128

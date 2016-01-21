@@ -456,7 +456,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct wait_fence_work *w;
 	int written;
-	int err;
+	int err, ret;
 	u64 va;
 
 	sync_fence = gk20a_sync_fence_fdget(fd);
@@ -490,8 +490,18 @@ static int gk20a_channel_semaphore_wait_fd(
 	va = gk20a_semaphore_gpu_va(w->sema, c->vm);
 	/* GPU unblocked when when the semaphore value becomes 1. */
 	written = add_sema_cmd(wait_cmd->ptr, va, 1, true, false);
+
 	WARN_ON(written != wait_cmd->size);
-	sync_fence_wait_async(sync_fence, &w->waiter);
+	ret = sync_fence_wait_async(sync_fence, &w->waiter);
+
+	/*
+	 * If the sync_fence has already signaled then the above async_wait
+	 * will never trigger. This causes the semaphore release op to never
+	 * happen which, in turn, hangs the GPU. That's bad. So let's just
+	 * do the semaphore_release right now.
+	 */
+	if (ret == 1)
+		gk20a_semaphore_release(w->sema);
 
 	/* XXX - this fixes an actual bug, we need to hold a ref to this
 	   semaphore while the job is in flight. */

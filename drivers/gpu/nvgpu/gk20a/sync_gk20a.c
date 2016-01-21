@@ -47,8 +47,9 @@ struct gk20a_sync_pt {
 	ktime_t				dep_timestamp;
 
 	/*
-	 * A spinlock is necessary since there are times when this lock
-	 * will be acquired in interrupt context.
+	 * Use a spin lock here since it will have better performance
+	 * than a mutex - there should be very little contention on this
+	 * lock.
 	 */
 	spinlock_t			lock;
 };

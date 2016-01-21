@@ -1039,6 +1039,13 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 		int index = wins[i].index;
 
 		memcpy(&flip_win->attr, &wins[i], sizeof(flip_win->attr));
+
+		/* Set first frame timestamp to 0 after device boot-up
+		   to prevent wait on 1st flip request */
+		if (!dc->frame_end_timestamp)
+			memset(&flip_win->attr.timestamp, 0,
+				sizeof(flip_win->attr.timestamp));
+
 		if (has_timestamp && tegra_timespec_to_ns(
 			&flip_win->attr.timestamp))
 			*has_timestamp = true;

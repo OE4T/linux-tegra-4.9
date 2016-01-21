@@ -677,10 +677,9 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	if (c->vm->as_share)
 		asid = c->vm->as_share->id;
 
-	/* A pool of 256 semaphores fits into one 4k page. */
 	sprintf(pool_name, "semaphore_pool-%d", c->hw_chid);
 	sema->pool = gk20a_semaphore_pool_alloc(dev_from_gk20a(c->g),
-						pool_name, 256);
+						pool_name, 1024);
 	if (!sema->pool)
 		goto clean_up;
 

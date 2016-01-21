@@ -266,9 +266,11 @@ static int nct1008_get_temp_common(int sensor,
 		temp_milli += off;
 
 	} else if (sensor == LOC) {
-		value = nct1008_read_reg(client, LOC_TEMP_RD);
-		if (value < 0)
+		ret = nct1008_read_reg(client, LOC_TEMP_RD);
+		if (ret < 0)
 			return -1;
+		else
+			value = ret;
 		temp_hi = value_to_temperature(pdata->extended_range, value);
 		temp_milli = CELSIUS_TO_MILLICELSIUS(temp_hi);
 	}
@@ -594,7 +596,8 @@ static ssize_t nct1008_set_offsets(struct device *dev,
 	int rv = count;
 
 	strim((char *)buf);
-	sscanf(buf, "[%u] %u %d", &index, &temp, &off);
+	if (sscanf(buf, "[%u] %u %d", &index, &temp, &off) != 3)
+		return -EINVAL;
 
 	if (index >= ARRAY_SIZE(nct->sensors[EXT].offset_table)) {
 		pr_info("%s: invalid index [%d]\n", __func__, index);
@@ -1449,7 +1452,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 	data->sensors[LOC].current_lo_limit =
 		value_to_temperature(pdata->extended_range, value);
 
-	value = nct1008_read_reg(data->client, LOC_TEMP_HI_LIMIT_RD);
+	ret = nct1008_read_reg(data->client, LOC_TEMP_HI_LIMIT_RD);
 	if (ret < 0)
 		goto error;
 	else

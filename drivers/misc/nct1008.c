@@ -1782,6 +1782,11 @@ static void nct1008_shutdown(struct i2c_client *client)
 	data->stop_workqueue = 1;
 	mutex_unlock(&data->mutex);
 
+	cancel_work_sync(&data->work);
+
+	if (client->irq)
+		disable_irq(client->irq);
+
 	if (data->sensors[LOC].thz) {
 		if (client->dev.of_node)
 			thermal_zone_of_sensor_unregister
@@ -1798,11 +1803,6 @@ static void nct1008_shutdown(struct i2c_client *client)
 			thermal_zone_device_unregister(data->sensors[EXT].thz);
 		data->sensors[EXT].thz = NULL;
 	}
-
-	cancel_work_sync(&data->work);
-
-	if (client->irq)
-		disable_irq(client->irq);
 
 	mutex_lock(&data->mutex);
 	data->nct_disabled = 1;

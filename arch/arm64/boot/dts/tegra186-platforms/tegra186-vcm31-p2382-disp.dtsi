@@ -2,7 +2,7 @@
  * tegra186-vcm31-p2382-disp.dtsi: VCM3.1 based P2382(sunstreaker)
  * display dtsi.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,9 @@
 #include <dt-bindings/display/tegra-dc.h>
 #include <dt-bindings/display/tegra-panel.h>
 
-//#include "tegra210-display-p2393-0000-a00-panel-dsi-1080p.dtsi"
+#include "panel-s-wuxga-8-0.dtsi"
+#include "tegra210-display-p2393-0000-a00-panel-dsi-1080p.dtsi"
+#include "tegra210-display-p2393-0000-a00-panel-dsi-25x16.dtsi"
 #include "tegra186-hdmi.dtsi"
 #include "tegra186-dp.dtsi"
 
@@ -43,22 +45,6 @@
 			nvidia,fb-win = <3>;
 			nvidia,dc-ctrlnum = <1>;
 			nvidia,dc-or-node = "/host1x/sor1";
-		};
-
-		dsi {   /* dsi@15300000 */
-			status = "disabled";
-			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			panel-s-wuxga-8-0 {
-				status = "disabled";
-			};
-			panel-dsi-1080p-p2393 {
-				status = "okay";
-				nvidia,dsi-edp-bridge = <TEGRA_DSI_ENABLE>;
-				nvidia,panel-bridge-en-0-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>; /* PO1 */
-				disp-default-out {
-					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
-				};
-			};
 		};
 
 		sor{
@@ -208,6 +194,103 @@
 		dpaux@15040000 {
 			status = "okay";
 		};
+
+		dsi {   /* dsi@15300000 */
+			status = "okay";
+			nvidia,dsi-controller-vs = <DSI_VS_1>;
+			panel-s-wuxga-8-0 {
+				status = "disabled";
+			};
+			panel-dsi-1080p-p2382 {  /* p2393 DSI2DP 1920x1080@60 */
+				status = "okay";
+				nvidia,dsi-video-burst-mode = <TEGRA_DSI_VIDEO_NONE_BURST_MODE>;
+				nvidia,dsi-refresh-rate = <60>;
+				nvidia,dsi-edp-bridge = <TEGRA_DSI_ENABLE>;
+				nvidia,panel-bridge-en-0-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>; /* PO1 */
+
+				/*
+				 * for 1920x1080@60Hz@148.5MHz / DSI 4 lanes 445.5MHz HS clk
+				 */
+				/*
+				nvidia,dsi-n-data-lanes = <4>;
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+					nvidia,out-parent-clk = "pll_d_out1";
+					nvidia,out-xres = <1920>;
+					nvidia,out-yres = <1080>;
+				};
+				display-timings {
+					1920x1080-32 {
+						clock-frequency = <148500000>;
+					};
+				};
+				*/
+
+				/*
+				 * for 1920x1200@60Hz@193.2MHz / DSI 8 lanes 290MHz HS clk
+				 * (closest to Quill DSI config. this works without BPMP pll_d preset)
+				 */
+				nvidia,dsi-n-data-lanes = <8>;
+				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
+				nvidia,dsi-ganged-swap-links = <0>;
+				nvidia,dsi-ganged-write-to-all-links = <1>;
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+					nvidia,out-parent-clk = "pll_d_out1";
+					nvidia,out-xres = <1920>;
+					nvidia,out-yres = <1200>;
+				};
+				display-timings {
+					1920x1080-32 {
+						clock-frequency = <193155840>;
+						hactive = <1920>;
+						vactive = <1200>;
+						hfront-porch = <228>;
+						hsync-len = <208>;
+						hback-porch = <236>;
+						vfront-porch = <3>;
+						vsync-len = <3>;
+						vback-porch = <36>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
+
+			};
+			panel-s-wqxga-10-1 {  /* p2393 DSI2DP 2560x1600@60 */
+				status = "disabled";
+				nvidia,dsi-edp-bridge = <TEGRA_DSI_ENABLE>;
+				nvidia,panel-bridge-en-0-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>; /* PO1 */
+				nvidia,dsi-n-data-lanes = <8>;
+				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
+				nvidia,dsi-ganged-swap-links = <0>;
+				nvidia,dsi-ganged-write-to-all-links = <1>;
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+					nvidia,out-parent-clk = "pll_d_out1";
+					nvidia,out-xres = <2560>;
+					nvidia,out-yres = <1600>;
+				};
+				display-timings {
+					2560x1600-32 {
+						clock-frequency = <268500000>;
+						hactive = <2560>;
+						vactive = <1600>;
+						hfront-porch = <48>;
+						hback-porch = <80>;
+						hsync-len = <32>;
+						vfront-porch = <3>;
+						vback-porch = <37>;
+						vsync-len = <6>;
+						nvidia,h-ref-to-sync = <0>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
+			};
+		};
 	};
 
 	i2c@31b0000 {  //i2c5, dp_aux_ch0_i2c
@@ -217,11 +300,119 @@
 		status = "okay";
 	};
 
-	i2c@3160000 { /* Tegra I2C1 - VCM I2CA */
+	i2c@3160000 { /* Tegra I2C0 - VCM I2CA */
 		ds1050-backlight@2f {
 			 compatible = "maxim,ds1050";
 			 reg = <0x2f>;
 			 status = "okay";
 		};
 	};
+
+	/*
+	 * for P2393 SN65DSI86 DSI-to-DP bridge
+	 */
+	mipical {
+		status = "okay";
+	};
+
+	backlight {
+		pwms = <&tegra_pwm1 0 40161>;
+		panel-s-wuxga-8-0-bl {
+			pwms = <&tegra_pwm1 0 40161>;
+		};
+		panel-s-wqxga-10-1-bl {
+			pwms = <&tegra_pwm1 0 40161>;
+		};
+	};
+	tegra_pwm1: pwm@3280000 {
+		status = "okay";
+	};
+
+	i2c@3160000 { /* GEN1 */
+		status = "okay";
+		/*
+		 * 1920x1080@148.5MHz DSI 4 lanes HS clk 445.5MHz
+		 */
+		/*
+		sn65dsi86@2d {
+			compatible = "ti,sn65dsi86";
+			reg = <0x2d>;
+			status = "okay";
+			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
+			ti,pll-refclk-cfg = <0x4>;
+			ti,dsi-cha-clk-range = <0x59>;
+			ti,disable-assr = <1>;
+			ti,dp-ssc-cfg = <0x30>;
+			ti,h-pulse-width-low = <0x2c>;
+			ti,h-pulse-width-high = <0x80>;
+			ti,v-pulse-width-low = <0x05>;
+			ti,v-pulse-width-high = <0x80>;
+			ti,h-back-porch = <0x94>;
+			ti,v-back-porch = <0x24>;
+			ti,h-front-porch = <0x58>;
+			ti,v-front-porch = <0x04>;
+		};
+		*/
+		/*
+		 * 1920x1200@193.2Hz DSI 8 lanes HS clk 290MHz
+		 */
+		sn65dsi86@2d {
+			compatible = "ti,sn65dsi86";
+			reg = <0x2d>;
+			status = "okay";
+			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
+			ti,pll-refclk-cfg = <0x4>;
+			ti,dsi-cfg1 = <0x80>;
+			ti,dsi-cha-clk-range = <0x3a>;
+			ti,dsi-chb-clk-range = <0x3a>;
+			ti,disable-assr = <1>;
+			ti,dp-ssc-cfg = <0x30>;
+			ti,video-cha-line-low = <0xc0>;
+			ti,video-cha-line-high = <0x03>;
+			ti,video-chb-line-low = <0xc0>;
+			ti,video-chb-line-high = <0x03>;
+			ti,cha-vert-disp-size-low = <0xb0>;
+			ti,cha-vert-disp-size-high = <0x4>;
+			ti,h-pulse-width-low = <0xd0>;
+			ti,h-pulse-width-high = <0x80>;
+			ti,v-pulse-width-low = <0x03>;
+			ti,v-pulse-width-high = <0x00>;
+			ti,h-back-porch = <0xec>;
+			ti,v-back-porch = <0x24>;
+			ti,h-front-porch = <0xe4>;
+			ti,v-front-porch = <0x03>;
+		};
+		/*
+		 * 2560x1600@60Hz DSI 8 lanes
+		 */
+		/*
+		sn65dsi86@2d {
+			compatible = "ti,sn65dsi86";
+			reg = <0x2d>;
+			status = "okay";
+			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
+			ti,pll-refclk-cfg = <0x4>;
+			ti,dsi-cfg1 = <0x80>;
+			ti,dsi-cha-clk-range = <0x50>;
+			ti,dsi-chb-clk-range = <0x50>;
+			ti,disable-assr = <1>;
+			ti,dp-ssc-cfg = <0x30>;
+			ti,video-cha-line-low = <0x0>;
+			ti,video-cha-line-high = <0x05>;
+			ti,video-chb-line-low = <0x0>;
+			ti,video-chb-line-high = <0x05>;
+			ti,cha-vert-disp-size-low = <0x40>;
+			ti,cha-vert-disp-size-high = <0x6>;
+			ti,h-pulse-width-low = <0x20>;
+			ti,h-pulse-width-high = <0x80>;
+			ti,v-pulse-width-low = <0x06>;
+			ti,v-pulse-width-high = <0x0>;
+			ti,h-back-porch = <0x50>;
+			ti,v-back-porch = <0x25>;
+			ti,h-front-porch = <0x30>;
+			ti,v-front-porch = <0x03>;
+		};
+		*/
+	};
+
 };

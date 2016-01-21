@@ -312,16 +312,21 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 	/* Initialize thermal zones */
 
 	for (i = 0; i < tegra->zone_count; ++i) {
+		long temp;
 		tegra->zones[i].idx = i;
 		tegra->zones[i].tegra = tegra;
 		atomic_set(&tegra->zones[i].needs_update, false);
+
+		err = tegra_bpmp_thermal_get_temp(&tegra->zones[i], &temp);
+		if (err == -BPMP_EINVAL || err == -BPMP_ENOENT)
+			continue;
+
 		tzd = thermal_zone_of_sensor_register2(tegra->dev, i,
 						       &tegra->zones[i],
 						       &tegra_of_thermal_ops);
 		if (IS_ERR(tzd)) {
 			err = PTR_ERR(tzd);
-			dev_warn(tegra->dev, "failed to register sensor: %d\n",
-				 err);
+			dev_notice(tegra->dev, "zone %d not supported\n", i);
 			tzd = NULL;
 		}
 

@@ -1009,14 +1009,14 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 
 	if (dc->out->hotplug_state == TEGRA_HPD_STATE_NORMAL
 		&& new_state != TEGRA_HPD_STATE_NORMAL
-		&& tegra_dc_hotplug_supported(dc)) {
+		&& dc->hotplug_supported) {
 		/* SW controlled hotplug. Ignore hpd HW interrupts. */
 		tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT |
 				DPAUX_INTR_EN_AUX_UNPLUG_EVENT |
 				DPAUX_INTR_EN_AUX_PLUG_EVENT);
 	} else if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL
 		&& new_state == TEGRA_HPD_STATE_NORMAL
-		&& tegra_dc_hotplug_supported(dc)) {
+		&& dc->hotplug_supported) {
 		/* Enable hpd HW interrupts */
 		tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT |
 				DPAUX_INTR_EN_AUX_UNPLUG_EVENT |

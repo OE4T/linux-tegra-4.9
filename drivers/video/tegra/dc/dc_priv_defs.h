@@ -335,5 +335,6 @@ struct tegra_dc {
 	u8	*vedid_data;
 	int	enable_count;
 	bool	hdr_cache_dirty;
+	bool    hotplug_supported;
 };
 #endif

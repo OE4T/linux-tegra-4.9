@@ -1537,14 +1537,14 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 	rmb();
 	hotplug_state = dc->out->hotplug_state;
 	if (hotplug_state == 0 && new_state != 0
-			&& tegra_dc_hotplug_supported(dc)) {
+			&& dc->hotplug_supported) {
 		/* was 0, now -1 or 1.
 		 * we are overriding the hpd GPIO, so ignore the interrupt. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
 
 		disable_irq(gpio_irq);
 	} else if (hotplug_state != 0 && new_state == 0
-			&& tegra_dc_hotplug_supported(dc)) {
+			&& dc->hotplug_supported) {
 		/* was -1 or 1, and now 0
 		 * restore the interrupt for hpd GPIO. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
@@ -2431,7 +2431,7 @@ bool tegra_dc_hpd(struct tegra_dc *dc)
 			return false;
 	}
 
-	if (!tegra_dc_hotplug_supported(dc))
+	if (!dc->hotplug_supported)
 		return true;
 
 	if (dc->out_ops && dc->out_ops->hpd_state)
@@ -5554,6 +5554,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	nvdisp_register_backlight_notifier(dc);
 #endif
+
+	dc->hotplug_supported = (dc && dc->out ? (dc->out->hotplug_gpio >= 0 ||
+				(dc->out->type == TEGRA_DC_OUT_DP &&
+				tegra_dc_is_ext_dp_panel(dc))) : 0);
+
 	if ((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			dc->out && dc->out->type == TEGRA_DC_OUT_LVDS) {
 		struct fb_monspecs specs;

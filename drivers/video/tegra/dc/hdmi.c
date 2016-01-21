@@ -721,14 +721,14 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 		return ret;
 
 	if (dc->out->hotplug_state == 0 && new_state != 0
-			&& tegra_dc_hotplug_supported(dc)) {
+			&& dc->hotplug_supported) {
 		/* was 0, now -1 or 1.
 		 * we are overriding the hpd GPIO, so ignore the interrupt. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
 
 		disable_irq(gpio_irq);
 	} else if (dc->out->hotplug_state != 0 && new_state == 0
-			&& tegra_dc_hotplug_supported(dc)) {
+			&& dc->hotplug_supported) {
 		/* was -1 or 1, and now 0
 		 * restore the interrupt for hpd GPIO. */
 		int gpio_irq = gpio_to_irq(dc->out->hotplug_gpio);
@@ -1242,7 +1242,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_hdmi_debug_create(hdmi);
 
-	if (tegra_dc_hotplug_supported(dc)) {
+	if (dc->hotplug_supported) {
 		err = gpio_request(dc->out->hotplug_gpio, "hdmi_hpd");
 		if (err < 0) {
 			dev_err(&dc->ndev->dev, "hdmi: hpd gpio_request failed\n");
@@ -1305,7 +1305,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	return 0;
 
 err_gpio_free:
-	if (tegra_dc_hotplug_supported(dc))
+	if (dc->hotplug_supported)
 		gpio_free(dc->out->hotplug_gpio);
 err_nvhdcp_destroy:
 	if (hdmi->nvhdcp)
@@ -1343,7 +1343,7 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 {
 	struct tegra_dc_hdmi_data *hdmi = tegra_dc_get_outdata(dc);
 
-	if (tegra_dc_hotplug_supported(dc))
+	if (dc->hotplug_supported)
 		free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	hdmi_state_machine_shutdown();
 

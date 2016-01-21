@@ -2443,11 +2443,11 @@ void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state)
 
 	if (hotplug_state == TEGRA_HPD_STATE_NORMAL &&
 			new_hpd_state != TEGRA_HPD_STATE_NORMAL &&
-			tegra_dc_hotplug_supported(dc)) {
+			dc->hotplug_supported) {
 		disable_irq(gpio_to_irq(dc->out->hotplug_gpio));
 	} else if (hotplug_state != TEGRA_HPD_STATE_NORMAL &&
 			new_hpd_state == TEGRA_HPD_STATE_NORMAL &&
-			tegra_dc_hotplug_supported(dc)) {
+			dc->hotplug_supported) {
 		enable_irq(gpio_to_irq(dc->out->hotplug_gpio));
 	}
 

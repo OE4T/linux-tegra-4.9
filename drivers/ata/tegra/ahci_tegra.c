@@ -1267,6 +1267,76 @@ static void tegra_ahci_shutdown(struct platform_device *pdev)
 		tegra->prod_list = NULL;
 	}
 }
+static void tegra_ahci_enable_ahci(struct ahci_host_priv *hpriv)
+{
+	int i;
+	u32 tmp;
+	u32 val;
+	u32 mask;
+
+	/* turn on AHCI_EN */
+	tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
+	if (tmp & HOST_AHCI_EN)
+		return;
+
+	/* Some controllers need AHCI_EN to be written multiple times.
+	 * Try a few times before giving up.
+	 */
+	for (i = 0; i < 5; i++) {
+		val = mask = T_AHCI_HBA_GHC_AE;
+		tegra_ahci_bar5_update(hpriv, val, mask, T_AHCI_HBA_GHC);
+		tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
+		if (tmp & T_AHCI_HBA_GHC_AE)
+			return;
+		msleep(10);
+	}
+
+	WARN_ON(1);
+}
+
+
+int tegra_ahci_reset_controller(struct ahci_host_priv *hpriv)
+{
+	struct tegra_ahci_priv *tegra = hpriv->plat_data;
+	void __iomem *mmio = tegra->base_list[TEGRA_SATA_AHCI];
+	struct platform_device *pdev = tegra->pdev;
+	struct device *dev = &pdev->dev;
+	u32 tmp;
+	u32 val;
+	u32 mask;
+
+	/* we must be in AHCI mode, before using anything
+	 * AHCI-specific, such as HOST_RESET.
+	 */
+	tegra_ahci_enable_ahci(hpriv);
+
+	/* global controller reset */
+	tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
+	if ((tmp & T_AHCI_HBA_GHC_HR) == 0) {
+		val = mask = T_AHCI_HBA_GHC_HR;
+		tegra_ahci_bar5_update(hpriv, val, mask, T_AHCI_HBA_GHC);
+
+		tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
+	}
+
+	/*
+	 * to perform host reset, OS should set HOST_RESET
+	 * and poll until this bit is read to be "0".
+	 * reset must complete within 1 second, or
+	 * the hardware should be considered fried.
+	 */
+	tmp = ata_wait_register(NULL, mmio + HOST_CTL, HOST_RESET,
+			HOST_RESET, 10, 1000);
+
+	if (tmp & T_AHCI_HBA_GHC_HR) {
+		dev_err(dev, "controller reset failed (0x%x)\n",
+				tmp);
+		return -EIO;
+	}
+	mdelay(20);
+
+	return 0;
+}
 
 static int tegra_ahci_probe(struct platform_device *pdev)
 {
@@ -1303,6 +1373,21 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	if (ret)
 		goto poweroff_controller;
 
+	ret = tegra_ahci_reset_controller(hpriv);
+	if (ret)
+		goto poweroff_controller;
+
+	if (!tegra_ahci_bar5_readl(hpriv, T_AHCI_PORT_PXSSTS)) {
+		struct platform_driver *drv =
+			to_platform_driver(pdev->dev.driver);
+
+		dev_info(&pdev->dev, "Drive not present\n");
+		drv->driver.pm = NULL;
+		ret = -ENODEV;
+		goto poweroff_controller;
+	}
+
+
 	ret = ahci_platform_init_host(pdev, hpriv, &ahci_tegra_port_info);
 	if (ret)
 		goto poweroff_controller;
@@ -1327,32 +1412,6 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 		pm_runtime_enable(&pdev->dev);
 	}
 
-	if (!tegra_ahci_bar5_readl(hpriv, T_AHCI_PORT_PXSSTS)) {
-		struct ata_host *host = platform_get_drvdata(pdev);
-		struct platform_driver *drv =
-					to_platform_driver(pdev->dev.driver);
-		int i;
-
-		for (i = 0; i < host->n_ports; i++) {
-			struct ata_port *ap = host->ports[i];
-
-			dev_info(&pdev->dev, "Wait for EH to complete\n");
-			ata_port_wait_eh(ap);
-			if (ata_dev_enabled(ap->link.device))
-				goto skip_ata_platform_remove;
-		}
-		dev_info(&pdev->dev, "Drive not present "
-					"un-registering from ATA\n");
-		ata_platform_remove_one(pdev);
-		drv->driver.pm = NULL;
-		if (tegra && tegra->prod_list) {
-			tegra_prod_release(&tegra->prod_list);
-			tegra->prod_list = NULL;
-		}
-		return -ENODEV;
-	}
-
-skip_ata_platform_remove:
 #ifdef CONFIG_DEBUG_FS
 	tegra_ahci_dump_debuginit(hpriv);
 #endif

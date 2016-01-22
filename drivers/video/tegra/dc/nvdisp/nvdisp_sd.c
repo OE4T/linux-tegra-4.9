@@ -492,7 +492,7 @@ bool tegra_sd_update_brightness(struct tegra_dc *dc)
 	return true;
 }
 
-void tegra_sd_set_over_saturated_pixels(struct tegra_dc *dc)
+static void tegra_sd_set_over_saturated_pixels(struct tegra_dc *dc)
 {
 	int reg_val;
 	int total_pixel_count;

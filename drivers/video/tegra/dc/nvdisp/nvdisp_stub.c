@@ -49,7 +49,7 @@ int tegra_is_clk_enabled(struct clk *c)
 }
 EXPORT_SYMBOL(tegra_is_clk_enabled);
 
-int tegra_bl_notify(struct device *dev, int brightness)
+static int tegra_bl_notify(struct device *dev, int brightness)
 {
 	int cur_sd_brightness;
 	struct lp855x *lp = NULL;

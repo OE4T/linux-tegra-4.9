@@ -161,7 +161,14 @@
 		status = "disabled";
 	};
 
+	power-domain {
+		host-pd {
+			compatible = "nvidia,tegra186-host1x-pd-hv";
+		};
+	};
+
 	host1x: host1x {
+		compatible = "nvidia,tegra186-host1x-hv", "simple-bus";
 		reg = <0x0 0x13e10000 0x0 0x00010000>;
 		interrupts = <0 265 0x04
 					0 263 0x04>;

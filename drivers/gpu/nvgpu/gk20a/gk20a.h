@@ -414,6 +414,7 @@ struct gpu_ops {
 	} mm;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);
+		int (*update_therm_gate_ctrl)(struct gk20a *g);
 	} therm;
 	struct {
 		int (*prepare_ucode)(struct gk20a *g);

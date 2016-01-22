@@ -1,7 +1,7 @@
 /*
  * GK20A priv ring
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,6 +39,10 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 			0x2);
 
 	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
+
+	if (g->ops.therm.update_therm_gate_ctrl)
+		g->ops.therm.update_therm_gate_ctrl(g);
+
 }
 
 void gk20a_priv_ring_isr(struct gk20a *g)

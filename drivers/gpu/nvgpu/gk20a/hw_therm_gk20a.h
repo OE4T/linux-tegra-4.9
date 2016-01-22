@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -197,6 +197,14 @@ static inline u32 therm_gate_ctrl_eng_idle_filt_mant_f(u32 v)
 static inline u32 therm_gate_ctrl_eng_idle_filt_mant_m(void)
 {
 	return 0x7 << 13;
+}
+static inline u32 therm_gate_ctrl_eng_delay_before_f(u32 v)
+{
+	return (v & 0xf) << 16;
+}
+static inline u32 therm_gate_ctrl_eng_delay_before_m(void)
+{
+	return 0xf << 16;
 }
 static inline u32 therm_gate_ctrl_eng_delay_after_f(u32 v)
 {

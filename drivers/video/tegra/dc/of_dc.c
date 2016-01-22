@@ -2622,9 +2622,14 @@ struct tegra_dc_platform_data
 	}
 
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
+
+#if defined(CONFIG_TEGRA_DC_CMU)
 	cmu_np = of_get_child_by_name(np_target_disp,
 		"cmu");
-
+#else
+	cmu_np = of_get_child_by_name(np_target_disp,
+		"nvdisp-cmu");
+#endif
 	if (!cmu_np) {
 		pr_info("%s: could not find cmu node\n",
 			__func__);
@@ -2651,7 +2656,6 @@ struct tegra_dc_platform_data
 			goto fail_parse;
 		}
 	}
-
 #endif
 
 	/*

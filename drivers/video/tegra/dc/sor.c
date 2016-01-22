@@ -75,6 +75,7 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 
 	dev_err(&sor->dc->ndev->dev,
 		"sor_poll_register 0x%x: timeout\n", reg);
+
 	return jiffies - timeout_jf + 1;
 }
 
@@ -1824,12 +1825,21 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
 #else
+	/* set OR mode to SAFE */
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_AWAKE |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_YES);
 	tegra_dc_sor_super_update(sor);
+	if (tegra_dc_sor_poll_register(sor, NV_SOR_PWR,
+		NV_SOR_PWR_MODE_DEFAULT_MASK,
+		NV_SOR_PWR_MODE_SAFE,
+		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
+		dev_err(&dc->ndev->dev,
+			"dc timeout waiting for OR MODE = SAFE\n");
+	}
 
+	/* set HEAD mode to SLEEP */
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
@@ -1844,7 +1854,7 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 		NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
 		100, TEGRA_SOR_ATTACH_TIMEOUT_MS)) {
 		dev_err(&dc->ndev->dev,
-			"dc timeout waiting for OPMOD = SLEEP\n");
+			"dc timeout waiting for HEAD MODE = SLEEP\n");
 	}
 
 	sor->sor_state = SOR_DETACHING;
@@ -1868,12 +1878,12 @@ void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor)
 	if (sor->sor_state != SOR_DETACHING)
 		tegra_dc_sor_pre_detach(sor);
 
+	/* detach SOR */
 	tegra_sor_writel(sor, NV_SOR_SUPER_STATE1,
 		NV_SOR_SUPER_STATE1_ASY_HEAD_OP_SLEEP |
 		NV_SOR_SUPER_STATE1_ASY_ORMODE_SAFE |
 		NV_SOR_SUPER_STATE1_ATTACHED_NO);
 	tegra_dc_sor_super_update(sor);
-
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
 		NV_SOR_TEST_ATTACHED_DEFAULT_MASK,
 		NV_SOR_TEST_ATTACHED_FALSE,

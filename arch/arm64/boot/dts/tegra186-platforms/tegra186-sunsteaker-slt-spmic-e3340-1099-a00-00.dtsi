@@ -199,7 +199,7 @@
 					regulator-name = "vddio-sdmmc1";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,fps-source = <FPS_SRC_NONE>;
 				};
 
 				spmic_ldo4: ldo4 {

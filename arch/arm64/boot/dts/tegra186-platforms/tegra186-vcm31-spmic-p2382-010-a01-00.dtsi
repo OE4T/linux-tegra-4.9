@@ -54,6 +54,7 @@
 					pins = "gpio2";
 					function = "fps-out";
 					maxim,fps-source = <FPS_SRC_1>;
+					maxim,fps-power-down-slot = <1>;
 				};
 
 				pin_gpio3 {

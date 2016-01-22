@@ -90,7 +90,7 @@ static bool get_clock_recovery_status(struct tegra_dp_lt_data *lt_data)
 {
 	u32 cnt;
 	u32 n_lanes = lt_data->n_lanes;
-	u8 data_ptr;
+	u8 data_ptr = 0;
 
 	/* support for 1 lane */
 	u32 loopcnt = (n_lanes == 1) ? 1 : n_lanes >> 1;
@@ -114,7 +114,7 @@ static bool get_channel_eq_status(struct tegra_dp_lt_data *lt_data)
 {
 	u32 cnt;
 	u32 n_lanes = lt_data->n_lanes;
-	u8 data_ptr;
+	u8 data_ptr = 0;
 	bool ce_done = true;
 
 	/* support for 1 lane */

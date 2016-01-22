@@ -179,6 +179,8 @@
 			     <0 145 0x4>,
 			     <0 146 0x4>,
 			     <0 147 0x4>;
+		interrupt-affinity = <&{/cpus/cpu@0} &{/cpus/cpu@1}
+		                     &{/cpus/cpu@2} &{/cpus/cpu@3}>;
 	};
 
 	tegra_car: clock {

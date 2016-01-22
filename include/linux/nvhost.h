@@ -62,7 +62,7 @@ struct sync_pt;
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM 3
 #define NVHOST_NAME_SIZE			24
 #define NVSYNCPT_INVALID			(-1)
-#define NVHOST_MODULE_MAX_FREQS			6
+#define NVHOST_MODULE_MAX_FREQS			8
 
 #define NVSYNCPT_AVP_0			(10)	/* t20, t30, t114, t148 */
 #define NVSYNCPT_3D			(22)	/* t20, t30, t114, t148 */

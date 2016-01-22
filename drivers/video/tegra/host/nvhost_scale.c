@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Unit clock scaling
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,8 +26,6 @@
 #include <linux/clk/tegra.h>
 #include <linux/platform_data/tegra_edp.h>
 #include <linux/tegra-soc.h>
-#include <linux/tegra-soc.h>
-#include <linux/platform_data/tegra_edp.h>
 #include <linux/pm_qos.h>
 #include <trace/events/nvhost.h>
 #include <linux/uaccess.h>
@@ -65,6 +63,49 @@ static DEVICE_ATTR(load, S_IRUGO, nvhost_scale_load_show, NULL);
  * This function initialises the frequency table for the given device profile
  */
 
+static int tegra_update_freq_table(struct clk *c,
+				   struct nvhost_device_data *pdata,
+				   int *num_freqs)
+{
+	unsigned long max_freq =  clk_round_rate(c, UINT_MAX);
+	unsigned long min_freq =  clk_round_rate(c, 0);
+	unsigned long clk_step, found_rate, last_rate, rate;
+	int cnt = 0;
+
+	/* check if clk scaling is available */
+	if (min_freq == 0 || max_freq == 0)
+		return 0;
+
+	/* initial default min freq */
+	pdata->freqs[0] = min_freq;
+	last_rate = min_freq;
+	cnt++;
+
+	/* pick clk_step with assumption that all frequency table gets full.
+	 * If it is too small, we will not get any high frequencies to the table
+	 */
+	clk_step =  (max_freq + min_freq) / NVHOST_MODULE_MAX_FREQS;
+	/* tune to get next freq in steps */
+	for (rate = min_freq + clk_step; rate <= max_freq; rate += clk_step) {
+		found_rate = clk_round_rate(c, rate);
+		if (found_rate > last_rate) {
+			pdata->freqs[cnt] = found_rate;
+			last_rate = found_rate;
+			cnt++;
+		}
+		if (cnt == NVHOST_MODULE_MAX_FREQS)
+			break;
+	}
+
+	/* fill the remaining table with max_freq */
+	for (; cnt < NVHOST_MODULE_MAX_FREQS; cnt++)
+		pdata->freqs[cnt] = max_freq;
+
+	*num_freqs = cnt;
+
+	return 0;
+}
+
 static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 {
 	unsigned long *freqs = NULL;
@@ -79,11 +120,12 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	if (err)
 		return err;
 #endif
+	if (!freqs)
+		err = tegra_update_freq_table(clk_get_parent(profile->clk),
+					 pdata, &num_freqs);
 
-	if (pdata->freqs[0]) {
-		num_freqs = NVHOST_MODULE_MAX_FREQS;
+	if (pdata->freqs[0])
 		freqs = pdata->freqs;
-	}
 
 	/* check for duplicate frequencies at higher end */
 	while (((num_freqs >= 2) &&

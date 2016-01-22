@@ -160,7 +160,7 @@
 			enable-active-high;
 		};
 
-		vdd_sdcard1_sw: regulator@110 {
+		en_vdd_sdcard1: regulator@110 {
 			compatible = "regulator-fixed";
 			reg = <110>;
 			regulator-name = "vdd-sdcard1-sw";

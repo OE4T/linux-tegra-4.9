@@ -132,7 +132,7 @@
 			regulator-always-on;
 		};
 
-		en_vdd_sd: regulator@1 {
+		en_vdd_sdcard1: regulator@1 {
 			compatible = "regulator-fixed-sync";
 			reg = <1>;
 			regulator-name = "en-vdd-sd";

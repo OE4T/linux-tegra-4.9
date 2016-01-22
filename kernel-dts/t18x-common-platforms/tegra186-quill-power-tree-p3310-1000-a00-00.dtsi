@@ -78,7 +78,7 @@
 
 	sdhci@3400000 {
 		vddio_sdmmc-supply = <&spmic_ldo3>;
-		vddio_sd_slot-supply = <&en_vdd_sd>;
+		vddio_sd_slot-supply = <&en_vdd_sdcard1>;
 	};
 
 	xhci@3530000 {

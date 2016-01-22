@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015 - 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Mikko Perttunen <mperttunen@nvidia.com>
@@ -33,8 +33,7 @@
 #include <linux/workqueue.h>
 
 #include <soc/tegra/tegra_bpmp.h>
-
-#include "tegra_bpmp_thermal_mrq.h"
+#include <soc/tegra/bpmp_abi.h>
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/bpmp_thermal.h>
@@ -56,8 +55,8 @@ struct tegra_bpmp_thermal {
 static int tegra_bpmp_thermal_get_temp(void *data, long *out_temp)
 {
 	struct tegra_bpmp_thermal_zone *zone = data;
-	struct mrq_thermal_host_to_bpmp_req req;
-	union mrq_thermal_bpmp_to_host_reply reply;
+	struct mrq_thermal_host_to_bpmp_request req;
+	union mrq_thermal_bpmp_to_host_response reply;
 	int ret;
 
 	req.type = CMD_THERMAL_GET_TEMP;
@@ -75,7 +74,7 @@ static int tegra_bpmp_thermal_get_temp(void *data, long *out_temp)
 
 static int tegra_bpmp_thermal_program_trips(int zone, int low, int high)
 {
-	struct mrq_thermal_host_to_bpmp_req req;
+	struct mrq_thermal_host_to_bpmp_request req;
 	int ret;
 
 	req.type = CMD_THERMAL_SET_TRIP;
@@ -172,7 +171,7 @@ static void tz_device_update_work_fn(struct work_struct *work)
 
 static void bpmp_mrq_thermal(int code, void *data, int ch)
 {
-	struct mrq_thermal_bpmp_to_host_req req;
+	struct mrq_thermal_bpmp_to_host_request req;
 	struct tegra_bpmp_thermal *tegra = data;
 	int zone_idx;
 
@@ -207,8 +206,8 @@ static void bpmp_mrq_thermal(int code, void *data, int ch)
 
 static int tegra_bpmp_thermal_get_num_zones(unsigned int *num)
 {
-	struct mrq_thermal_host_to_bpmp_req req;
-	union mrq_thermal_bpmp_to_host_reply reply;
+	struct mrq_thermal_host_to_bpmp_request req;
+	union mrq_thermal_bpmp_to_host_response reply;
 	int ret;
 
 	req.type = CMD_THERMAL_GET_NUM_ZONES;
@@ -225,8 +224,8 @@ static int tegra_bpmp_thermal_get_num_zones(unsigned int *num)
 
 static int tegra_bpmp_thermal_query_abi(unsigned int type)
 {
-	struct mrq_thermal_host_to_bpmp_req req;
-	union mrq_thermal_bpmp_to_host_reply reply;
+	struct mrq_thermal_host_to_bpmp_request req;
+	union mrq_thermal_bpmp_to_host_response reply;
 	int err;
 
 	req.type = CMD_THERMAL_QUERY_ABI;

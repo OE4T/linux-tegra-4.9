@@ -318,6 +318,12 @@ static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
 	if (!lut->rgb)
 		return -ENOMEM;
 
+	/* Init LUT with cmu data provided from DT file */
+	if (dc->pdata->cmu && dc->pdata->cmu_enable) {
+		memcpy(lut->rgb, dc->pdata->cmu, lut->size);
+		return 0;
+	}
+
 	/* Init the LUT table with default sRGB values */
 	for (i = 0; i < NVDISP_OUTPUT_LUT_SIZE; i++) {
 		r = default_sRGB_OutLUT[i];
@@ -327,7 +333,6 @@ static int nvdisp_alloc_output_lut(struct tegra_dc *dc)
 	}
 
 	return 0;
-
 }
 
 static int nvdisp_alloc_input_lut(struct tegra_dc *dc,

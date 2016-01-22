@@ -77,6 +77,7 @@
 #define INT_AOPM2LIC   30 + INT_OFFSET
 #define INT_AON_CAR    226 + INT_OFFSET
 #define INT_SPE_WDT_EXPIRY 15 + INT_OFFSET
+#define INT_EXTERNAL_PMU 209 + INT_OFFSET
 
 static int tegra_gpio_wakes[] = {
 	TEGRA_GPIO(A, 6),		/* wake0 */
@@ -202,7 +203,7 @@ static int tegra_wake_event_irq[] = {
 	-EAGAIN,		/* wake21 */
 	-EAGAIN,		/* wake22 */
 	-EAGAIN,		/* wake23 */
-	-EINVAL,		/* wake24 */
+	INT_EXTERNAL_PMU,		/* wake24 */
 	-EAGAIN,		/* wake25 */
 	-EAGAIN,		/* wake26 */
 	-EAGAIN,		/* wake27 */

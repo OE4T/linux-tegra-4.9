@@ -3,7 +3,7 @@
  *
  * GPU heap allocator.
  *
- * Copyright (c) 2011-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -270,13 +270,12 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 		/* Generate IVM for partition that can alloc */
 		if (h->is_ivm && h->can_alloc) {
 			unsigned int offs = (b->base - h->base);
-			/* offset should be 1M aligned => 7 bits for offset
-			 * since we allow 128 MB
-			 */
+			/* 8 bits reserved for offset; must be 1M aligned */
 			BUG_ON(offs & (SZ_1M - 1));
+			BUG_ON((offs >> 20) & ~((1 << 8) - 1));
 			/* 3 bits reserved for VM_ID */
 			BUG_ON(h->vm_id & ~(0x7));
-			/* We have 22 bits for the length.
+			/* We have 20 bits for the length.
 			 * So, page alignment is sufficient check.
 			 */
 			BUG_ON(len & ~(PAGE_MASK));
@@ -286,7 +285,7 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 			 */
 			handle->ivm_id = (h->vm_id << 29);
 			handle->ivm_id |= (((offs >> 20)
-					     & ((1 << 7) - 1)) << 21);
+					     & ((1 << 8) - 1)) << 21);
 			handle->ivm_id |= (len >> PAGE_SHIFT);
 		}
 	}

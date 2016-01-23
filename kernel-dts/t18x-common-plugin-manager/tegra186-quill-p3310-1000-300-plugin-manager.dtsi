@@ -84,5 +84,36 @@
 				};
 			};
 		};
+
+		fragement-power-monitor-p3310-1000-300 {
+			ids = "3310-1000-300", "3310-1000-200-F";
+			override@0 {
+				target = <&ina3221x_40>;
+				_overlay_ {
+					channel@0 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@1 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
+			};
+
+			override@1 {
+				target = <&ina3221x_41>;
+				_overlay_ {
+					channel@0 {
+						ti,shunt-resistor-mohm = <5>;
+					};
+					channel@1 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+					channel@2 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
+			};
+		};
+
 	};
 };

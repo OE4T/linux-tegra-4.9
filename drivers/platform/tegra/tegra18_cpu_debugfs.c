@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,7 +32,6 @@ static int __init tegra18_cpu_debugfs_init(void)
 	char name[8];
 	int cpu;
 
-	pr_crit("tegra18_cpu_debugfs_probe");
 	debugfs_dir = debugfs_create_dir("cpu_topology", NULL);
 	/* Save off the debugfs dir so that it can be removed */
 

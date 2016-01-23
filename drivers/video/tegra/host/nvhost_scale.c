@@ -184,37 +184,6 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 }
 
 /*
- * nvhost_scale_qos_notify()
- *
- * This function is called when the minimum QoS requirement for the device
- * has changed. The function calls postscaling callback if it is defined.
- */
-
-static int nvhost_scale_qos_notify(struct notifier_block *nb,
-				   unsigned long n, void *p)
-{
-	struct nvhost_device_profile *profile =
-		container_of(nb, struct nvhost_device_profile,
-			     qos_notify_block);
-	struct nvhost_device_data *pdata = platform_get_drvdata(profile->pdev);
-	unsigned long freq;
-
-	if (!pdata->scaling_post_cb)
-		return NOTIFY_OK;
-
-	/* get the frequency requirement. if devfreq is enabled, check if it
-	 * has higher demand than qos */
-	freq = clk_round_rate(clk_get_parent(profile->clk),
-			      pm_qos_request(pdata->qos_id));
-	if (pdata->power_manager)
-		freq = max(pdata->power_manager->previous_freq, freq);
-
-	pdata->scaling_post_cb(profile, freq);
-
-	return NOTIFY_OK;
-}
-
-/*
  * update_load_estimate_actmon(profile)
  *
  * Update load estimate using hardware actmon. The actmon value is normalised
@@ -427,7 +396,8 @@ void nvhost_scale_init(struct platform_device *pdev)
 		}
 	}
 
-	if (pdata->devfreq_governor) {
+	/* initialize devfreq if governor is set and actmon enabled */
+	if (pdata->actmon_enabled && pdata->devfreq_governor) {
 		struct devfreq *devfreq;
 
 		profile->devfreq_profile.initial_freq =
@@ -452,15 +422,6 @@ void nvhost_scale_init(struct platform_device *pdev)
 			nvhost_err(&pdev->dev,
 				"failed to register devfreq as acm client");
 		}
-	}
-
-	/* Should we register QoS callback for this device? */
-	if (pdata->qos_id < PM_QOS_NUM_CLASSES &&
-	    pdata->qos_id != PM_QOS_RESERVED) {
-		profile->qos_notify_block.notifier_call =
-			&nvhost_scale_qos_notify;
-		pm_qos_add_notifier(pdata->qos_id,
-				    &profile->qos_notify_block);
 	}
 
 	nvhost_module_idle(nvhost_get_host(pdev)->dev);

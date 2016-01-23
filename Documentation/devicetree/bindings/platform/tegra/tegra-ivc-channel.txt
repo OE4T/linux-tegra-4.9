@@ -1,62 +1,62 @@
 NVIDIA Tegra IVC channel bindings
 
-Each IVC channel represents the unique communication protocol defined
-between kernel running on CCPLEX CPUs and remote CPU core. Each IVC
-channel has two memory buffers, one for each direction. The RX buffer
-is for messages sent by the remote CPU, the TX channel for
-messages sent to the remote CPU.
+Each IVC channel represents the unique communication protocol defined between
+CCPLEX and remote CPU.
 
-Both IPC memory buffers are have two headers followed by data
-frames. The first write header is updated only by the producer and the
-second read header is updated only by the consumer. The header and
-frame sizes are multiples of 64-byte cache lines.
+IVC IPC memory layout assumptions:
+Its assumed that this memory will be divided into two halves,
+with this CPU writing to the first half and the remote CPU
+writing to the second half.
+
+Within each "half" of the IPC memory:
+
+IPC memory portion written by A, at "chan-offset", includes:
+write header for A->B transfer
+read header for B->A transfer
+data for A->B transfer.
+
+IPC memory portion written by B, at "chan-offset", includes:
+write header for B->A transfer
+read header for A->B transfer
+data for B->A transfer.
 
 == IVC channel top-level node ==
 
 List of IVC channels implemented by remote core to talk to CCPLEX.
-The top-level node defines the AST region shared by IVC channels below
-it. The node name must be "ivc-channels[@<region-address>]".
+The node name must be "ivc-channels[@<unit-address>]".
 
 Required properties:
 - #address-cells: Number of address cells in each subnode.
-  Must be set to <1>.
+  * Must be set to <1>.
 - #size-cells: Number of size cells in each subnode.
-  Must be set to <0>.
-- reg: Address and size of the IVC region within the remote CPU
-  address space.  Size must be a power of two. Address must be aligned
-  on size.
+  * Must be set ot <0>.
+- reg: Must contain an arbitrary unique ID for the channel list.
 
 == IVC channel sub nodes ==
 
-Each IVC channel implemented by the remote CPU must be represented as
-a separate child node within the top-level node.
+Each IVC channel implemented by the remote core must be represented as a
+separate child node within the IVC channel top-level node.
 
 Required properties:
 - compatible: Should represent the protocol to be used on this IVC channel.
   See other binding documents in this directory for potential values.
-  For example:
+  For e.g.:
   "nvidia,tegra186-ivc-protocol-echo" for ivc echo test channel.
-- reg: Address of the rx and tx buffers, respectively, inside the IVC region.
-  Must be a multiple of 64.
-- nvidia,frame-size: Size of the data frame. Must be a multiple of 64.
-- nvidia,frame-count: Number of frames in rx or tx buffers.
+- nvidia,frame-size: Size of the data frame, should be word-aligned.
+- nvidia,chan-offset: Absolute offset from ivc base addr.
+- nvidia,frame-count: Number of frames in rx/tx buffer.
+- reg: Must contain an arbitrary unique ID for the channel.
 
-Optional properties:
-- reg-names: Names of the rx and tx buffers, respectively.
-
-Example:
-
-#address-cells = <1>;
-#size-cells = <1>;
-ivc-channels@90000000 {
+Possible example:
+ivc-channels@0 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	reg = <0x90000000 0x10000>;
-	echo@0 {
+	reg = <0>;
+	ivc-channel@0 {
 		compatible = "nvidia,tegra186-ivc-protocol-echo";
-		reg = <0x0000>, <0x0480>;
-		reg-names = "rx-echo", "tx-echo";
+		reg = <0>;
 		nvidia,frame-size = <64>;
+		nvidia,chan-offset = <0x0>;
 		nvidia,frame-count = <16>;
 	};
 }

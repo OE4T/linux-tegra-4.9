@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -278,6 +278,7 @@ static int devfreq_watermark_start(struct devfreq *df)
 static int devfreq_watermark_event_handler(struct devfreq *df,
 			unsigned int event, void *wmark_type)
 {
+	struct wmark_gov_info *wmarkinfo;
 	int ret = 0;
 
 	switch (event) {
@@ -291,6 +292,10 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 		ret = devfreq_watermark_start(df);
 		if (ret < 0)
 			break;
+
+		/* initialize average target freq */
+		wmarkinfo = df->data;
+		wmarkinfo->average_target_freq = dev_stat.current_frequency;
 
 		update_watermarks(df, dev_stat.current_frequency,
 					dev_stat.current_frequency);
@@ -308,6 +313,10 @@ static int devfreq_watermark_event_handler(struct devfreq *df,
 		ret = df->profile->get_dev_status(df->dev.parent, &dev_stat);
 		if (ret < 0)
 			break;
+
+		/* reset average target freq to current freq */
+		wmarkinfo = df->data;
+		wmarkinfo->average_target_freq = dev_stat.current_frequency;
 
 		update_watermarks(df, dev_stat.current_frequency,
 					dev_stat.current_frequency);

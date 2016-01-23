@@ -30,6 +30,7 @@
 			vdd-edp-sec-mode-supply = <&vdd_dummy_1v8>;
 			vdd-dp-pwr-supply = <&vdd_dummy>;
 			avdd-dp-pll-supply = <&vdd_dummy>;
+			avdd_dsi_csi-supply = <&vdd_dummy>;
 		};
 		nvdisplay@15210000 {
 			vdd_hdmi_5v0-supply = <&vdd_dummy>;
@@ -37,6 +38,7 @@
 			vdd-edp-sec-mode-supply = <&vdd_dummy_1v8>;
 			vdd-dp-pwr-supply = <&vdd_dummy>;
 			avdd-dp-pll-supply = <&vdd_dummy>;
+			avdd_dsi_csi-supply = <&vdd_dummy>;
 		};
 		nvcsi@150c0000 {
 			nvidia,csi_regulator = "dummy";

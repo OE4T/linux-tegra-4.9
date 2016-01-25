@@ -23,6 +23,7 @@
 
 int nvadsp_acast_init(struct platform_device *pdev);
 
+#ifdef CONFIG_PM_RUNTIME
 static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
@@ -179,6 +180,21 @@ static int __nvadsp_t18x_runtime_idle(struct device *dev)
 	return 0;
 }
 
+int nvadsp_pm_init(struct platform_device *pdev)
+{
+	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+
+	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
+
+	d->runtime_suspend = __nvadsp_t18x_runtime_suspend;
+	d->runtime_resume = __nvadsp_t18x_runtime_resume;
+	d->runtime_idle = __nvadsp_t18x_runtime_idle;
+
+	return 0;
+}
+#endif /* CONFIG_PM_RUNTIME */
+
 static int __assert_t18x_adsp(struct nvadsp_drv_data *d)
 {
 	struct platform_device *pdev = d->pdev;
@@ -219,41 +235,18 @@ static int __deassert_t18x_adsp(struct nvadsp_drv_data *d)
 	return ret;
 }
 
-int nvadsp_t18x_reset_init(struct platform_device *pdev)
+int nvadsp_reset_init(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
 	int ret = 0;
 
+	d->assert_adsp = __assert_t18x_adsp;
+	d->deassert_adsp = __deassert_t18x_adsp;
 	d->adspall_rst = devm_reset_control_get(dev, "adspall");
 	if (IS_ERR(d->adspall_rst)) {
 		dev_err(dev, "can not get adspall reset\n");
 		ret = PTR_ERR(d->adspall_rst);
 	}
 	return ret;
-}
-
-int nvadsp_t18x_probe(struct platform_device *pdev)
-{
-	struct device *dev = &pdev->dev;
-
-	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
-
-	return nvadsp_t18x_reset_init(pdev);
-}
-
-int nvadsp_t18x_pm_init(struct platform_device *pdev)
-{
-	struct nvadsp_drv_data *d = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
-
-	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
-
-	d->runtime_suspend = __nvadsp_t18x_runtime_suspend;
-	d->runtime_resume = __nvadsp_t18x_runtime_resume;
-	d->runtime_idle = __nvadsp_t18x_runtime_idle;
-	d->assert_adsp = __assert_t18x_adsp;
-	d->deassert_adsp = __deassert_t18x_adsp;
-
-	return 0;
 }

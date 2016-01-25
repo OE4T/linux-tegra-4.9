@@ -369,15 +369,11 @@
 	};
 
 	i2c@3190000 {
-		compatible = "nvidia,tegra186-i2c-hv";
-		ivc_queue = <&tegra_hv 54>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	i2c@31b0000 {
-		compatible = "nvidia,tegra186-i2c-hv";
-		ivc_queue = <&tegra_hv 54>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	i2c@31c0000 {

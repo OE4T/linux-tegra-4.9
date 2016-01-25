@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -20,6 +20,8 @@
 #include <asm/delay.h>
 
 #include "dev.h"
+
+int nvadsp_acast_init(struct platform_device *pdev);
 
 static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 {
@@ -143,10 +145,23 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 static int __nvadsp_t18x_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	int ret;
 
 	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
 
-	return nvadsp_t18x_clocks_enable(pdev);
+	ret = nvadsp_t18x_clocks_enable(pdev);
+	if (ret) {
+		dev_dbg(dev, "failed in nvadsp_t18x_clocks_enable\n");
+		return ret;
+	}
+
+	ret = nvadsp_acast_init(pdev);
+	if (ret) {
+		dev_dbg(dev, "failed in nvadsp_t18x_clocks_enable\n");
+		return ret;
+	}
+
+	return ret;
 }
 
 static int __nvadsp_t18x_runtime_suspend(struct device *dev)

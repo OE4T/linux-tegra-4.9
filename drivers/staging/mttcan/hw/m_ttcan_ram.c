@@ -348,7 +348,7 @@ int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, int trig_index,
 	trig_elem.f0 = (time_mark << MTT_TRIG_ELE_F0_TM_SHIFT) &
 		MTT_TRIG_ELE_F0_TM_MASK;
 	trig_elem.f0 |= cycle_code << MTT_TRIG_ELE_F0_CC_SHIFT &
-		MTT_TRIG_ELE_F0_CC_SHIFT;
+		MTT_TRIG_ELE_F0_CC_MASK;
 	/* ASC = 0 */;
 	trig_elem.f0 |= (tmin <<  MTT_TRIG_ELE_F0_TMIN_SHIFT) &
 		MTT_TRIG_ELE_F0_TMIN_MASK;

@@ -438,7 +438,8 @@ static void mttcan_tx_event(struct net_device *dev)
 		list_del_init(cur);
 
 		evt = list_entry(cur, struct ttcan_txevt_msg_list, txevt_list);
-		memcpy(&txevt, &evt->txevt, sizeof(struct canfd_frame));
+		memcpy(&txevt, &evt->txevt,
+			sizeof(struct mttcan_tx_evt_element));
 		kfree(evt);
 		xtd = (txevt.f0 & MTT_TXEVT_ELE_F0_XTD_MASK) >>
 			MTT_TXEVT_ELE_F0_XTD_SHIFT;
@@ -1252,7 +1253,7 @@ static int set_can_clk_src_and_rate(struct mttcan_priv *priv, ulong rate)
 	}
 
 	new_rate = clk_round_rate(cclk, rate);
-	if (new_rate < 0)
+	if (!new_rate)
 		dev_warn(priv->device, "incorrect clock rate\n");
 
 pclk_exit:

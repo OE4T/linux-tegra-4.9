@@ -1,7 +1,7 @@
 /*
  * ov5693_v4l2.c - ov5693 sensor driver
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -270,7 +270,7 @@ static int ov5693_write_table(struct ov5693 *priv,
 static void ov5693_gpio_set(struct ov5693 *priv,
 			    unsigned int gpio, int val)
 {
-	if (priv->pdata->use_cam_gpio)
+	if (priv->pdata && priv->pdata->use_cam_gpio)
 		cam_gpio_ctrl(priv->i2c_client, gpio, val, 1);
 	else
 		gpio_set_value(gpio, val);
@@ -380,7 +380,7 @@ static int ov5693_power_put(struct ov5693 *priv)
 	pw->avdd = NULL;
 	pw->iovdd = NULL;
 
-	if (priv->pdata->use_cam_gpio)
+	if (priv->pdata && priv->pdata->use_cam_gpio)
 		cam_gpio_deregister(priv->i2c_client, pw->pwdn_gpio);
 	else
 		gpio_free(pw->pwdn_gpio);
@@ -430,14 +430,14 @@ static int ov5693_power_get(struct ov5693 *priv)
 		pw->pwdn_gpio = pdata->pwdn_gpio;
 	}
 
-	if (priv->pdata->use_cam_gpio) {
+	if (priv->pdata && priv->pdata->use_cam_gpio) {
 		err = cam_gpio_register(priv->i2c_client, pw->pwdn_gpio);
 		if (err)
 			dev_err(&priv->i2c_client->dev,
 				"%s ERR can't register cam gpio %u!\n",
 				 __func__, pw->pwdn_gpio);
 	} else
-		gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
+		err = gpio_request(pw->pwdn_gpio, "cam_pwdn_gpio");
 
 	pw->state = SWITCH_OFF;
 	return err;
@@ -805,7 +805,7 @@ static int ov5693_eeprom_device_init(struct ov5693 *priv)
 		return -EINVAL;
 	}
 
-	if (!priv->pdata->has_eeprom) {
+	if (priv->pdata && !priv->pdata->has_eeprom) {
 		ctrl->flags = V4L2_CTRL_FLAG_DISABLED;
 		return 0;
 	}

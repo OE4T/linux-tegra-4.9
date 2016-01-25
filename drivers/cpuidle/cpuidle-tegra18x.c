@@ -1,7 +1,7 @@
 /*
  * drivers/cpuidle/cpuidle-tegra18x.c
  *
- * Copyright (C) 2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2016 NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -440,11 +440,44 @@ static const struct of_device_id tegra18x_denver_idle_state_match[] = {
 	{ },
 };
 
+static void cluster_state_init(void *data)
+{
+	u32 power = UINT_MAX;
+	u32 value, pmstate;
+	struct device_node *of_states = (struct device_node *)data;
+	struct device_node *child;
+	int err;
+
+	for_each_child_of_node(of_states, child) {
+		if (of_property_match_string(child, "status", "okay"))
+			continue;
+		err = of_property_read_u32(child, "power", &value);
+		if (err) {
+			pr_warn(" %s missing power property\n",
+				child->full_name);
+			continue;
+		}
+		err = of_property_read_u32(child, "pmstate", &pmstate);
+		if (err) {
+			pr_warn(" %s missing pmstate property\n",
+				child->full_name);
+			continue;
+		}
+		/* Enable the deepest power state */
+		if (value > power)
+			continue;
+		power = value;
+		tegra_mce_update_cstate_info(pmstate, 0, 0, 0, 0, 0);
+	}
+}
+
 static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 {
 	int cpu_number;
 	struct cpumask denver_cpumask;
 	struct cpumask a57_cpumask;
+	struct device_node *a57_cluster_states;
+	struct device_node *denver_cluster_states;
 	int err;
 
 	if (!check_mce_version()) {
@@ -471,10 +504,18 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 		}
 	}
 
+	a57_cluster_states =
+		of_find_node_by_name(NULL, "a57_cluster_power_states");
+	denver_cluster_states =
+		of_find_node_by_name(NULL, "denver_cluster_power_states");
+
 	if (!cpumask_empty(&denver_cpumask)) {
 		/* Denver cluster cpuidle init */
 		pr_info("cpuidle: Initializing cpuidle driver init for "
 				"Denver cluster\n");
+
+		smp_call_function_any(&denver_cpumask, cluster_state_init,
+			denver_cluster_states, 1);
 
 		t18x_denver_idle_driver.cpumask = &denver_cpumask;
 		err = dt_init_idle_driver(&t18x_denver_idle_driver,
@@ -497,6 +538,9 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 		pr_info("cpuidle: Initializing cpuidle driver init for "
 				"A57 cluster\n");
 		extended_ops.make_power_state = t18x_make_power_state;
+
+		smp_call_function_any(&a57_cpumask, cluster_state_init,
+			a57_cluster_states, 1);
 
 		t18x_a57_idle_driver.cpumask = &a57_cpumask;
 		err = dt_init_idle_driver(&t18x_a57_idle_driver,

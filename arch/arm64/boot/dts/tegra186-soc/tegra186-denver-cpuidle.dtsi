@@ -15,7 +15,7 @@
 			DENVER_C6: c6 {
 				compatible = "nvidia,tegra186-cpuidle-denver";
 				state-name = "Virtual core powergate";
-				wakeup-latency-us = <40000000>;
+				wakeup-latency-us = <3000>;
 				min-residency-us = <50>;
 				power = <60>;
 				pmstate = <0x6>;

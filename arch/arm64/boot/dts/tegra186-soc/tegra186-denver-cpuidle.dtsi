@@ -50,7 +50,7 @@
 				min-residency-us = <500>;
 				power = <19>;
 				pmstate = <0x6>;
-				status = "disabled";
+				status = "okay";
 			};
 			cc7 {
 				state-name = "Cluster railgate";
@@ -58,7 +58,7 @@
 				min-residency-us = <800>;
 				power = <5>;
 				pmstate = <0x7>;
-				status = "disabled";
+				status = "okay";
 			};
 		};
 
@@ -67,8 +67,8 @@
 
 			thresholds {
 				crossover_c1_c6         = <100>;
-				crossover_cc1_cc6       = <500>;
-				crossover_cc1_cc7       = <700>;
+				crossover_cc1_cc6       = <15000>;
+				crossover_cc1_cc7       = <20000>;
 				crossover_ccp1_ccp3     = <50000000>;
 				crossover_ccp3_sc1      = <50000000>;
 				crossover_ccp3_sc2      = <50000000>;

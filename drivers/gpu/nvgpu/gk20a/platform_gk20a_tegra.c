@@ -726,6 +726,7 @@ static int gk20a_tegra_probe(struct device *dev)
 	struct device_node *np = dev->of_node;
 	const __be32 *host1x_ptr;
 	struct platform_device *host1x_pdev = NULL;
+	bool joint_xpu_rail = false;
 
 	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
 	if (host1x_ptr) {
@@ -748,6 +749,15 @@ static int gk20a_tegra_probe(struct device *dev)
 	if (platform->g->host1x_dev)
 		nvhost_register_dump_device(platform->g->host1x_dev,
 					gk20a_debug_dump_device);
+#ifdef CONFIG_OF
+	joint_xpu_rail = of_property_read_bool(of_chosen,
+				"nvidia,tegra-joint_xpu_rail");
+#endif
+
+	if (joint_xpu_rail) {
+		gk20a_dbg_info("XPU rails are joint\n");
+		platform->can_railgate = false;
+	}
 
 	/* WAR for bug 1547668: Disable railgating and scaling irrespective of
 	 * platform data if the rework has not been made. */

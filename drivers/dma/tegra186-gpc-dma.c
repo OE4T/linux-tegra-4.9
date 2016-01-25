@@ -55,6 +55,8 @@
 #define TEGRA_GPCDMA_CSR_DMA_MEM2MEM		(4 << 21)
 #define TEGRA_GPCDMA_CSR_DMA_FIXED_PAT		(6 << 21)
 #define TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT		16
+#define TEGRA_GPCDMA_CSR_REQ_SEL_MASK		0x1F
+#define TEGRA_GPCDMA_CSR_REQ_SEL_RSVD		0x4
 #define TEGRA_GPCDMA_CSR_IRQ_MASK		BIT(15)
 #define TEGRA_GPCDMA_CSR_WEIGHT_SHIFT		10
 
@@ -156,6 +158,7 @@
  * on-flight burst and update DMA status register.
  */
 #define TEGRA_GPCDMA_BURST_COMPLETE_TIME	20
+#define TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT	100
 
 /* Channel base address offset from GPCDMA base address */
 #define TEGRA_GPCDMA_CHANNEL_BASE_ADD_OFFSET	0x10000
@@ -308,6 +311,28 @@ static inline struct device *tdc2dev(struct tegra_dma_channel *tdc)
 
 static dma_cookie_t tegra_dma_tx_submit(struct dma_async_tx_descriptor *tx);
 
+static void tegra_dma_dump_chan_regs(struct tegra_dma_channel *tdc)
+{
+	pr_info("DMA Channel %d name %s register dump:\n",
+		tdc->id, tdc->name);
+	pr_info("CSR %x STA %x CSRE %x SRC %x DST %x\n",
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_CSR),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_CSRE),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_SRC_PTR),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_DST_PTR)
+	);
+	pr_info("MCSEQ %x IOSEQ %x WCNT %x XFER %x BSTA %x\n",
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_MMIOSEQ),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_WCOUNT),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT),
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_DMA_BYTE_STATUS)
+	);
+	pr_info("DMA ERR_STA %x\n",
+		tdc_read(tdc, TEGRA_GPCDMA_CHAN_ERR_STATUS));
+}
+
 /* Get DMA desc from free list, if not there then allocate it.  */
 static struct tegra_dma_desc *tegra_dma_desc_get(
 		struct tegra_dma_channel *tdc)
@@ -391,15 +416,6 @@ static int tegra_dma_slave_config(struct dma_chan *dc,
 		tdc->slave_id = sconfig->slave_id;
 	tdc->config_init = true;
 	return 0;
-}
-
-static void tegra_dma_pause(struct tegra_dma_channel *tdc,
-	bool wait_for_burst_complete)
-{
-	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSRE,
-		TEGRA_GPCDMA_CHAN_CSRE_PAUSE);
-	if (wait_for_burst_complete)
-		udelay(TEGRA_GPCDMA_BURST_COMPLETE_TIME);
 }
 
 static void tegra_dma_resume(struct tegra_dma_channel *tdc)
@@ -766,13 +782,24 @@ end:
 	return;
 }
 
+static void tegra_dma_reset_client(struct tegra_dma_channel *tdc)
+{
+	uint32_t csr = tdc_read(tdc, TEGRA_GPCDMA_CHAN_CSR);
+
+	csr &= ~(TEGRA_GPCDMA_CSR_REQ_SEL_MASK <<
+			TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT);
+	csr |= (TEGRA_GPCDMA_CSR_REQ_SEL_RSVD
+			<< TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT);
+	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, csr);
+}
+
 static void tegra_dma_terminate_all(struct dma_chan *dc)
 {
 	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
 	struct tegra_dma_sg_req *sgreq;
 	struct tegra_dma_desc *dma_desc;
 	unsigned long flags;
-	unsigned long status;
+	unsigned long status, burst_time;
 	unsigned long wcount = 0;
 	bool was_busy;
 
@@ -785,8 +812,34 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 	if (!tdc->busy)
 		goto skip_dma_stop;
 
-	/* Pause DMA before checking the queue status */
-	tegra_dma_pause(tdc, true);
+	/* Before Reading DMA status to figure out number
+	 * of bytes transferred by DMA channel:
+	 * Change the client associated with the DMA channel
+	 * to stop DMA engine from starting any more bursts for
+	 * the given client and wait for in flight bursts to complete
+	 */
+	tegra_dma_reset_client(tdc);
+
+	/* Wait for in flight data transfer to finish */
+	udelay(TEGRA_GPCDMA_BURST_COMPLETE_TIME);
+
+	/* If TX/RX path is still active wait till it becomes
+	 * inactive */
+	burst_time = 0;
+	while (burst_time < TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT) {
+		status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
+		if (status & (TEGRA_GPCDMA_STATUS_CHANNEL_TX |
+			TEGRA_GPCDMA_STATUS_CHANNEL_RX)) {
+			udelay(5);
+			burst_time += 5;
+		} else
+			break;
+	}
+
+	if (burst_time >= TEGRA_GPCDMA_BURST_COMPLETION_TIMEOUT) {
+		pr_err("Timeout waiting for DMA burst completion!\n");
+		tegra_dma_dump_chan_regs(tdc);
+	}
 
 	status = tdc_read(tdc, TEGRA_GPCDMA_CHAN_STATUS);
 	wcount = tdc_read(tdc, TEGRA_GPCDMA_CHAN_XFER_COUNT);
@@ -806,7 +859,6 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 		sgreq->dma_desc->bytes_transferred +=
 			sgreq->req_len - (wcount * 4);
 	}
-	tegra_dma_resume(tdc);
 
 skip_dma_stop:
 	tegra_dma_abort_all(tdc);

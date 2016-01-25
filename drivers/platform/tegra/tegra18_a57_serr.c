@@ -53,7 +53,7 @@ static int report_serr(int cpu, int uncorrected, int corrected)
 {
 	u32 error;
 	int e;
-	u64 *data = 0;
+	u64 *data = NULL;
 	mca_cmd_t mca_cmd = {.cmd = MCA_ARI_CMD_REPORT_SERR,
 			     .idx = 0x1,
 			     .subidx = cpu};
@@ -70,7 +70,7 @@ static int report_serr(int cpu, int uncorrected, int corrected)
 	return 0;
 }
 
-struct a57_ramid ramids[] = {
+static struct a57_ramid ramids[] = {
 	{.name = "Instruction L1 Tag RAM", .id = 0x00},
 	{.name = "Instruction L1 Data RAM", .id = 0x01},
 	{.name = "Data L1 Tag RAM", .id = 0x08},

@@ -374,9 +374,9 @@ static u32 lane_map_configs[] = {
 #endif
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-static u32 rp_to_lane_map[] = {1, 0};
+static u32 rp_to_lane_map[2][4] = { {1, 2, 3, 4}, {0} };
 #else
-static u32 rp_to_lane_map[] = {4, 3, 0};
+static u32 rp_to_lane_map[3][3] = { {4, 2, 1}, {3}, {0} };
 #endif
 
 struct tegra_pcie_soc_data {
@@ -1915,6 +1915,21 @@ void tegra_pcie_port_disable_per_pdev(struct pci_dev *pdev)
 	afi_writel(port->pcie, data, AFI_PCIE_CONFIG);
 }
 
+static bool get_rdet_status(struct tegra_pcie *pcie, u32 index)
+{
+	u32 i = 0;
+	bool flag = 0;
+
+	for (i = 0; i < ARRAY_SIZE(rp_to_lane_map[index]); i++)
+#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+		flag |= tegra_phy_get_lane_rdet(pcie->u_phy,
+					rp_to_lane_map[index][i]);
+#else
+		flag |= tegra_phy_get_lane_rdet(rp_to_lane_map[index][i]);
+#endif
+	return flag;
+}
+
 /*
  * FIXME: If there are no PCIe cards attached, then calling this function
  * can result in the increase of the bootup time as there are big timeout
@@ -1927,6 +1942,9 @@ static bool tegra_pcie_port_check_link(struct tegra_pcie_port *port)
 	unsigned long value;
 
 	PR_FUNC_LINE;
+	if (!get_rdet_status(port->pcie, port->index))
+		return false;
+
 	do {
 		unsigned int timeout = TEGRA_PCIE_LINKUP_TIMEOUT;
 
@@ -1936,23 +1954,6 @@ static bool tegra_pcie_port_check_link(struct tegra_pcie_port *port)
 				return true;
 			usleep_range(1000, 2000);
 		} while (--timeout);
-
-#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
-#if 0
-		if (tegra_phy_get_lane_rdet(port->pcie->u_phy,
-				rp_to_lane_map[port->index]))
-#else
-		if (1)
-#endif
-#else
-		if (tegra_phy_get_lane_rdet(
-				rp_to_lane_map[port->index]))
-#endif
-			goto retry;
-		else
-			return false;
-
-retry:
 		dev_info(port->pcie->dev, "link %u down, retrying\n",
 					port->index);
 		tegra_pcie_port_reset(port);
@@ -2250,7 +2251,12 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 	/* Wait for clock to latch (min of 100us) */
 	udelay(100);
 	reset_control_deassert(pcie->pciex_rst);
-
+	/* at this point in time, there is no end point which would
+	 * take more than 20 msec for root port to detect receiver and
+	 * set AUX_TX_RDET_STATUS bit. This would bring link up checking
+	 * time from its current value (around 200ms) to flat 20ms
+	 */
+	msleep(20);
 	list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
 		if (tegra_pcie_port_check_link(port)) {
 			port->status = 1;

@@ -1082,14 +1082,15 @@ static void tegra_se_work_handler(struct work_struct *work)
 	struct tegra_se_dev *se_dev = container_of(work, struct tegra_se_dev, se_work);
 	struct crypto_async_request *async_req = NULL;
 	struct crypto_async_request *backlog = NULL;
+	unsigned long flags;
 
 	do {
-		spin_lock_irq(&se_dev->lock);
+		spin_lock_irqsave(&se_dev->lock, flags);
 		backlog = crypto_get_backlog(&se_dev->queue);
 		async_req = crypto_dequeue_request(&se_dev->queue);
 		if (!async_req)
 			se_dev->work_q_busy = false;
-		spin_unlock_irq(&se_dev->lock);
+		spin_unlock_irqrestore(&se_dev->lock, flags);
 
 		if (backlog) {
 			backlog->complete(backlog, -EINPROGRESS);

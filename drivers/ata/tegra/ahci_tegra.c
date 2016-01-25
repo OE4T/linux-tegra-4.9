@@ -1267,7 +1267,15 @@ static void tegra_ahci_shutdown(struct platform_device *pdev)
 		tegra->prod_list = NULL;
 	}
 }
-static void tegra_ahci_enable_ahci(struct ahci_host_priv *hpriv)
+
+/*
+       This function is similar to ahci_enable_ahci which is
+       defined in libahci.c.
+       Since tegra_ahci_enable needs to be called before a
+       host is allocated we will not be able to call ahci_enable_ahci
+*/
+
+static void tegra_ahci_enable(struct ahci_host_priv *hpriv)
 {
 	int i;
 	u32 tmp;
@@ -1294,8 +1302,13 @@ static void tegra_ahci_enable_ahci(struct ahci_host_priv *hpriv)
 	WARN_ON(1);
 }
 
-
-int tegra_ahci_reset_controller(struct ahci_host_priv *hpriv)
+/*
+       This function is similar to ahci_reset_controller which is
+       defined in libahci.c.
+       Since tegra_ahci_reset_controller needs to be called before a
+       host is allocated we will not be able to call ahci_reset_controller
+*/
+static int tegra_ahci_reset_controller(struct ahci_host_priv *hpriv)
 {
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	void __iomem *mmio = tegra->base_list[TEGRA_SATA_AHCI];
@@ -1308,7 +1321,7 @@ int tegra_ahci_reset_controller(struct ahci_host_priv *hpriv)
 	/* we must be in AHCI mode, before using anything
 	 * AHCI-specific, such as HOST_RESET.
 	 */
-	tegra_ahci_enable_ahci(hpriv);
+	tegra_ahci_enable(hpriv);
 
 	/* global controller reset */
 	tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);

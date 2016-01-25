@@ -16,6 +16,7 @@
 #include "tegra186-platforms/tegra186-quill-common-e3301-0000-a00.dtsi"
 #include "tegra186-platforms/tegra186-quill-slt-power-tree-e3301-1099-a00-00.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-e3301-0000-a00-plugin-manager.dtsi"
+#include "tegra186-plugin-manager/tegra186-quill-slt-e3301-1099-a00-00-plugin-manager.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -43,7 +44,7 @@
 		status = "okay";
 		pinctrl-0 = <&quill_default>;
 		pinctrl-names = "default";
-		quill_default: pinmux {
+		tegra_padctl_uphy_pinmux_default: quill_default: pinmux {
 			usb2-micro-AB {
 				nvidia,lanes = "otg-0";
 				nvidia,function = "xusb";

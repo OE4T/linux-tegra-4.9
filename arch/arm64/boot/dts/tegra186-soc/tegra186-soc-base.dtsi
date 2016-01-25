@@ -409,7 +409,7 @@
 		status = "disabled";
 	};
 
-	xhci@3530000 {
+	tegra_xhci: xhci@3530000 {
 		compatible = "nvidia,tegra186-xhci";
 		reg = <0x0 0x03530000 0x0 0x8000>,
 			<0x0 0x03538000 0x0 0x1000>;
@@ -431,7 +431,7 @@
 			"fs_src", "pll_u_480M", "clk_m", "pll_e";
 	};
 
-	xudc@3550000 {
+	tegra_xudc: xudc@3550000 {
 		compatible = "nvidia,tegra186-xudc";
 		reg = <0x0 0x03550000 0x0 0x8000>,
 			<0x0 0x03558000 0x0 0x1000>;
@@ -445,7 +445,7 @@
 		status = "disabled";
 	};
 
-	padctl_uphy: pinctrl@3520000 {
+	tegra_padctl_uphy: padctl_uphy: pinctrl@3520000 {
 		compatible = "nvidia,tegra186-padctl-uphy";
 		reg = <0x0 0x03520000 0x0 0x1000>,
 			<0x0 0x03540000 0x0 0x1000>,
@@ -1324,7 +1324,7 @@
                                         1 0x1000>;
         };
 
-	pcie-controller@10003000 {
+	tegra_pcie: pcie-controller@10003000 {
 		compatible = "nvidia,tegra186-pcie";
 		power-domains = <&pcie_pd>;
 		device_type = "pci";

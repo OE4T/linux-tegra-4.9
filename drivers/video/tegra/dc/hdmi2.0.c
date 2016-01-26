@@ -526,6 +526,7 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 {
 	struct tegra_dc *dc = hdmi->dc;
 	struct fb_monspecs *mon_spec;
+	int n_display_timings, idx;
 
 	if (is_asserted)
 		mon_spec = &hdmi->mon_spec;
@@ -536,7 +537,18 @@ static void tegra_hdmi_hotplug_notify(struct tegra_hdmi *hdmi,
 	if (dc->adf)
 		tegra_adf_process_hotplug_connected(hdmi->dc->adf, mon_spec);
 #else
-	if (dc->fb) {
+	n_display_timings = 0;
+	/*
+	 * If display timing with non-zero pclk is specified in DT,
+	 * skip parsing EDID from monitor.
+	 */
+	for (idx = 0; idx < dc->out->n_modes; idx++) {
+		if (0 != dc->out->modes->pclk) {
+			n_display_timings++;
+			break;
+		}
+	}
+	if (dc->fb && 0 == n_display_timings) {
 		tegra_fb_update_monspecs(hdmi->dc->fb, mon_spec,
 					tegra_hdmi_fb_mode_filter,
 					tegra_hdmi_update_vrr_mode);

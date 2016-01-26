@@ -1517,7 +1517,7 @@ static int set_lut_channel(struct tegra_dc_ext_lut *new_lut,
 				inlut = (u64)lut16bpp[i];
 				/*16bit data in MSB format*/
 				channel_to[start+i] |=
-					((inlut && 0xFF00) << (j * 16));
+					((inlut & 0xFF00) << (j * 16));
 			}
 		} else {
 			for (i = 0; i < len; i++) {

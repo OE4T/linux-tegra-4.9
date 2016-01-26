@@ -557,7 +557,6 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 
 	mutex_init(&intr->mutex);
 	intr->syncpt_irq = irq_sync;
-	intr->wq = alloc_workqueue("host_syncpt", WQ_MEM_RECLAIM | WQ_HIGHPRI, 4);
 	intr->general_irq = irq_gen;
 
 	for (id = 0, syncpt = intr->syncpt;
@@ -582,7 +581,6 @@ int nvhost_intr_init(struct nvhost_intr *intr, u32 irq_gen, u32 irq_sync)
 void nvhost_intr_deinit(struct nvhost_intr *intr)
 {
 	nvhost_intr_stop(intr);
-	destroy_workqueue(intr->wq);
 }
 
 void nvhost_intr_start(struct nvhost_intr *intr, u32 hz)

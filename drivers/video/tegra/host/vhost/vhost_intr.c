@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host Interrupt Management
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -28,13 +28,6 @@
 
 /* Spacing between sync registers */
 #define REGISTER_STRIDE 4
-
-static void syncpt_thresh_cascade_fn(struct work_struct *work)
-{
-	struct nvhost_intr_syncpt *sp =
-		container_of(work, struct nvhost_intr_syncpt, work);
-	nvhost_syncpt_thresh_fn(sp);
-}
 
 static void syncpt_thresh_cascade_handler(struct nvhost_master *dev,
 			struct tegra_vhost_syncpt_intr_info *info)
@@ -65,7 +58,7 @@ static void syncpt_thresh_cascade_handler(struct nvhost_master *dev,
 			 __func__, graphics_host_sp);
 		nvhost_syncpt_patch_check(&dev->syncpt);
 	} else
-		queue_work(intr->wq, &sp->work);
+		nvhost_syncpt_thresh_fn(sp);
 
 }
 
@@ -133,12 +126,8 @@ static void vhost_intr_init_host_sync(struct nvhost_intr *intr)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
 	struct nvhost_virt_ctx *ctx = nvhost_get_virt_data(dev->dev);
-	int i;
 
 	intr_op().disable_all_syncpt_intrs(intr);
-
-	for (i = 0; i < nvhost_syncpt_nb_hw_pts(&dev->syncpt); i++)
-		INIT_WORK(&intr->syncpt[i].work, syncpt_thresh_cascade_fn);
 
 	ctx->syncpt_handler =
 		kthread_run(vhost_intr_handler, dev, "vhost_intr");
@@ -222,7 +211,6 @@ static int vhost_free_syncpt_irq(struct nvhost_intr *intr)
 				&msg, sizeof(msg));
 	WARN_ON(err);
 	kthread_stop(ctx->syncpt_handler);
-	flush_workqueue(intr->wq);
 	return 0;
 }
 

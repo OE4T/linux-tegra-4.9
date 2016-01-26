@@ -2179,7 +2179,7 @@ int sar_external_status(int status)
 }
 EXPORT_SYMBOL(sar_external_status);
 
-
+#ifdef CONFIG_SUSPEND
 static int iqs_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -2258,6 +2258,7 @@ static int iqs_resume(struct device *dev)
 			 __func__, nvs_timestamp() - ts, ret);
 	return 0;
 }
+#endif
 
 static SIMPLE_DEV_PM_OPS(iqs_pm_ops, iqs_suspend, iqs_resume);
 

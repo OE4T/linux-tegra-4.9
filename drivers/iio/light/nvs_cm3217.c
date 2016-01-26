@@ -364,6 +364,7 @@ static struct nvs_fn_dev cm_fn_dev = {
 	.nvs_read			= cm_dbg,
 };
 
+#ifdef CONFIG_SUSPEND
 static int cm_suspend(struct device *dev)
 {
 	struct i2c_client *client = to_i2c_client(dev);
@@ -391,6 +392,7 @@ static int cm_resume(struct device *dev)
 		dev_info(&client->dev, "%s\n", __func__);
 	return ret;
 }
+#endif
 
 static SIMPLE_DEV_PM_OPS(cm_pm_ops, cm_suspend, cm_resume);
 

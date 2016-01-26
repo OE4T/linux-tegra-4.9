@@ -26,7 +26,6 @@
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
-			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <0>;
 			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/sor";
@@ -38,7 +37,6 @@
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
-			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
 			nvidia,fb-win = <3>;
 			nvidia,dc-ctrlnum = <1>;
 			nvidia,dc-or-node = "/host1x/sor1";
@@ -120,10 +118,19 @@
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
+                                nvidia,edid =
+                                   [00 FF FF FF FF FF FF 00 04 21 00 00 00 00 00 00
+                                        01 00 01 03 00 00 00 00 00 00 00 00 00 00 00 00
+                                        00 00 00 00 00 00 01 01 01 01 01 01 01 01 01 01
+                                        01 01 01 01 01 01 00 23 80 80 70 D0 09 20 28 28
+                                        42 00 00 00 00 00 00 00 00 00 00 10 00 00 00 00
+                                        00 00 00 00 00 00 00 00 00 00 00 00 00 10 00 00
+                                        00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 10
+                                        00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 7E];
 
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
-					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
 					nvidia,out-parent-clk = "plld2";
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
@@ -136,11 +143,11 @@
 						clock-frequency = <89600000>;
 						hactive = <1920>;
 						vactive = <720>;
-						hfront-porch = <0>;
-						hback-porch = <88>;
+						hfront-porch = <40>;
+						hback-porch = <48>;
 						hsync-len = <40>;
-						vfront-porch = <2>;
-						vback-porch = <5>;
+						vfront-porch = <4>;
+						vback-porch = <3>;
 						vsync-len = <2>;
 						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;
@@ -217,11 +224,20 @@
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
+                                nvidia,edid =
+                                   [00 FF FF FF FF FF FF 00 04 21 00 00 00 00 00 00
+                                        01 00 01 03 00 00 00 00 00 00 00 00 00 00 00 00
+                                        00 00 00 00 00 00 01 01 01 01 01 01 01 01 01 01
+                                        01 01 01 01 01 01 00 23 80 80 70 D0 09 20 28 28
+                                        42 00 00 00 00 00 00 00 00 00 00 10 00 00 00 00
+                                        00 00 00 00 00 00 00 00 00 00 00 00 00 10 00 00
+                                        00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 10
+                                        00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 7E];
 
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
-					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
-					nvidia,out-parent-clk = "plld2";
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_LOW>;
+					nvidia,out-parent-clk = "plld3";
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
 					nvidia,out-xres = <1920>;
@@ -233,11 +249,11 @@
 						clock-frequency = <89600000>;
 						hactive = <1920>;
 						vactive = <720>;
-						hfront-porch = <0>;
-						hback-porch = <88>;
+						hfront-porch = <40>;
+						hback-porch = <48>;
 						hsync-len = <40>;
-						vfront-porch = <2>;
-						vback-porch = <5>;
+						vfront-porch = <4>;
+						vback-porch = <3>;
 						vsync-len = <2>;
 						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;

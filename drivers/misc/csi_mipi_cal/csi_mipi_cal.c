@@ -1,7 +1,7 @@
 /*
  * csi_mipi_cal.c - csi mipi calibration driver
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,9 @@
 #include <linux/of_device.h>
 #include <linux/tegra-soc.h>
 #include <linux/reset.h>
+#include <dt-bindings/soc/tegra186-powergate.h>
+#include <linux/tegra-powergate.h>
+#include "dc_priv.h"
 
 #define DRV_NAME "tegra186_csi_mipical"
 
@@ -63,6 +66,9 @@ static int tegra186_csi_mipical_platform_probe(struct platform_device *pdev)
 	void __iomem *regs;
 	struct reset_control *rst = NULL;
 	int ret = 0;
+#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
+	bool powergate = false;
+#endif
 
 	match = of_match_device(tegra186_csi_mipical_of_match, &pdev->dev);
 	if (!match) {
@@ -159,9 +165,21 @@ static int tegra186_csi_mipical_platform_probe(struct platform_device *pdev)
 		reset_control_put(rst);
 	}
 
+#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
+	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_DISP)) {
+		tegra_nvdisp_unpowergate_partition(TEGRA186_POWER_DOMAIN_DISP);
+		powergate = true;
+	}
+#endif
+
 	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG0_0, 1);
 	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG1_0, 0);
 	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG2_0, 0);
+
+#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
+	if (powergate)
+		tegra_nvdisp_powergate_partition(TEGRA186_POWER_DOMAIN_DISP);
+#endif
 
 	return 0;
 

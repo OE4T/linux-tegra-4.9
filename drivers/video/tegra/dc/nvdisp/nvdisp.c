@@ -696,6 +696,7 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 {
 	char rst_name[6];
 	int err = 0;
+	char vblank_name[32];
 
 	/* Only need init once no matter how many dc objects */
 	if (!dc->ndev->id) {
@@ -725,6 +726,11 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	/* Save for powermgmt purpose */
 	/* valid_windows should be updated on dynamically changing windows */
 	nvdisp_pg[dc->ctrl_num].valid_windows = dc->valid_windows;
+
+	/* Allocate a syncpoint for vblank on each head */
+	snprintf(vblank_name, sizeof(vblank_name), "vblank%u", dc->ctrl_num);
+	dc->vblank_syncpt = nvhost_get_syncpt_client_managed(dc->ndev,
+								vblank_name);
 
 	/* Take the controller out of reset if bpmp is loaded*/
 	if (tegra_bpmp_running() && tegra_platform_is_silicon()) {
@@ -786,7 +792,7 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 	/* Disabled this feature as unit fpga hang on enabling this*/
 	if (tegra_platform_is_silicon())
 		tegra_dc_writel(dc, nvdisp_cont_syncpt_vsync_en_enable_f() |
-			(NVSYNCPT_VBLANK0 + dc->ctrl_num),
+			nvdisp_cont_syncpt_vsync_indx_f(dc->vblank_syncpt),
 			nvdisp_cont_syncpt_vsync_r());
 
 	/* Init interrupts */

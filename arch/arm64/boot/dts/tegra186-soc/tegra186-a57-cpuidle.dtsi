@@ -20,7 +20,7 @@
 				min-residency-us = <200>;
 				power = <60>;
 				pmstate = <0x7>;
-				arm,psci-suspend-param= <0x10007>;
+				arm,psci-suspend-param= <0x40000007>;
 				status = "disabled";
 			};
 		};

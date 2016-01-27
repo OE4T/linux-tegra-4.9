@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-e3301-0000-a00-plugin-manager.dtsi: E3301 plugin manager
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -74,6 +74,34 @@
 					channel@1 {
 						ti,shunt-resistor-mohm = <10>;
 					};
+				};
+			};
+		};
+
+		fragment-e3301-a02@1 {
+			ids = "3301-1000-200";
+			override@1 {
+				target = <&{/host1x/sor}>;
+				_overlay_ {
+					status = "okay";
+					hdmi-display {
+						status = "okay";
+					};
+				};
+			};
+			override@2 {
+				target = <&{/host1x/sor1}>;
+				_overlay_ {
+					status = "disabled";
+					hdmi-display {
+						status = "disabled";
+					};
+				};
+			};
+			override@3 {
+				target = <&{/host1x/nvdisplay@15210000}>;
+				_overlay_ {
+					nvidia,dc-or-node = "/host1x/sor";
 				};
 			};
 		};

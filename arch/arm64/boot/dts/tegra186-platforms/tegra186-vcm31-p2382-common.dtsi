@@ -638,13 +638,13 @@
 	};
 
 	sdhci@3400000 {
-		/* 68: enable SDR12,SDR25,SDR50,SDR104 ... */
-                uhs-mask = <0x68>;
+		/* 7F: disable all UHS mode */
+                uhs-mask = <0x7F>;
 	};
 
 	sdhci@3440000 {
-		/* 68: enable SDR12,SDR25,SDR50,SDR104 ... */
-                uhs-mask = <0x68>;
+		/* 7F: disable all UHS mode */
+                uhs-mask = <0x7F>;
 	};
 
         ptm_a57_0: ptm@9840000 {

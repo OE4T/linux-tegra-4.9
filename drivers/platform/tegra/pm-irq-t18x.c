@@ -142,7 +142,7 @@ int tegra_read_wake_status(u32 *status)
 		status[i] = status[i] & tegra_aowake_read(mask);
 	}
 
-	return 0;
+	return WAKE_NR_VECTORS;
 }
 
 static void wke_read_sw_wake_status(u32 *status)

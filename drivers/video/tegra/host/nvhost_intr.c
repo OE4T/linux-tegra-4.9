@@ -37,18 +37,6 @@
 
 /*** Wait list management ***/
 
-struct nvhost_waitlist {
-	struct nvhost_master *host;
-	struct list_head list;
-	struct kref refcount;
-	u32 thresh;
-	enum nvhost_intr_action action;
-	atomic_t state;
-	struct timespec isr_recv;
-	void *data;
-	int count;
-};
-
 struct nvhost_waitlist_external_notifier {
 	struct nvhost_master *master;
 	void (*callback)(void *, int);
@@ -190,7 +178,7 @@ static void action_submit_complete(struct nvhost_waitlist *waiter)
 
 static void action_wakeup(struct nvhost_waitlist *waiter)
 {
-	wait_queue_head_t *wq = waiter->data;
+	wait_queue_head_t *wq = &waiter->wq;
 
 	WARN_ON(atomic_xchg(&waiter->state, WLS_HANDLED) != WLS_REMOVED);
 	wake_up(wq);
@@ -210,7 +198,7 @@ static void action_notify(struct nvhost_waitlist *waiter)
 
 static void action_wakeup_interruptible(struct nvhost_waitlist *waiter)
 {
-	wait_queue_head_t *wq = waiter->data;
+	wait_queue_head_t *wq = &waiter->wq;
 
 	WARN_ON(atomic_xchg(&waiter->state, WLS_HANDLED) != WLS_REMOVED);
 	wake_up_interruptible(wq);
@@ -428,6 +416,7 @@ int nvhost_intr_add_action(struct nvhost_intr *intr, u32 id, u32 thresh,
 
 	/* initialize a new waiter */
 	INIT_LIST_HEAD(&waiter->list);
+	init_waitqueue_head(&waiter->wq);
 	kref_init(&waiter->refcount);
 	if (ref)
 		kref_get(&waiter->refcount);

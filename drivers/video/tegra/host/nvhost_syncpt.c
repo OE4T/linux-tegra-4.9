@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Syncpoints
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -201,9 +201,8 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 			u32 thresh, u32 timeout, u32 *value,
 			struct timespec *ts, bool interruptible)
 {
-	DECLARE_WAIT_QUEUE_HEAD_ONSTACK(wq);
 	void *ref = NULL;
-	void *waiter;
+	struct nvhost_waitlist *waiter = NULL;
 	int err = 0, check_count = 0, low_timeout = 0;
 	u32 val, old_val, new_val;
 	struct nvhost_master *host = syncpt_to_dev(sp);
@@ -273,7 +272,7 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 				interruptible ?
 				  NVHOST_INTR_ACTION_WAKEUP_INTERRUPTIBLE :
 				  NVHOST_INTR_ACTION_WAKEUP,
-				&wq,
+				&waiter->wq,
 				waiter,
 				&ref);
 		if (err)
@@ -316,11 +315,11 @@ int nvhost_syncpt_wait_timeout(struct nvhost_syncpt *sp, u32 id,
 							SYNCPT_POLL_PERIOD);
 
 		} else if (interruptible)
-			remain = wait_event_interruptible_timeout(wq,
+			remain = wait_event_interruptible_timeout(waiter->wq,
 				syncpt_is_expired(sp, id, thresh),
 				check);
 		else
-			remain = wait_event_timeout(wq,
+			remain = wait_event_timeout(waiter->wq,
 				syncpt_is_expired(sp, id, thresh),
 				check);
 		if (remain > 0 ||

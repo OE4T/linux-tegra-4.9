@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Interrupt Management
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -76,6 +76,19 @@ enum nvhost_intr_action {
 	(NVHOST_INTR_ACTION_COUNT - NVHOST_INTR_HIGH_PRIO_COUNT)
 
 struct nvhost_intr;
+
+struct nvhost_waitlist {
+	struct nvhost_master *host;
+	struct list_head list;
+	struct kref refcount;
+	u32 thresh;
+	enum nvhost_intr_action action;
+	atomic_t state;
+	struct timespec isr_recv;
+	void *data;
+	int count;
+	wait_queue_head_t wq;
+};
 
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;

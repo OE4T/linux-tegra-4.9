@@ -34,6 +34,7 @@ static struct regulator *vmm_lcd;
 static struct device *dc_dev;
 static u16 en_panel_rst;
 static u16 en_backlight;
+static u16 en_panel;
 static bool vmm_vpp_fixed_regulators;
 
 static int dsi_s_wuxga_8_0_regulator_get(struct device *dev)
@@ -118,6 +119,11 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 	else
 		pr_err("display backlight enable gpio invalid\n");
 
+	if (gpio_is_valid(panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN]))
+		en_panel = panel_of.panel_gpio[TEGRA_GPIO_PANEL_EN];
+	else
+		pr_err("display backlight enable gpio invalid\n");
+
 	if (dvdd_lcd_1v8) {
 		err = regulator_enable(dvdd_lcd_1v8);
 		if (err < 0) {
@@ -140,6 +146,9 @@ static int dsi_s_wuxga_8_0_enable(struct device *dev)
 
 	if (gpio_is_valid(en_backlight))
 		gpio_direction_output(en_backlight, 1);
+
+	if (en_panel)
+		gpio_direction_output(en_panel, 1);
 
 	if (vpp_lcd) {
 		err = regulator_enable(vpp_lcd);
@@ -221,6 +230,9 @@ static int dsi_s_wuxga_8_0_disable(struct device *dev)
 		regulator_disable(vpp_lcd);
 
 	msleep(125);
+
+	if (en_panel)
+		gpio_direction_output(en_panel, 0);
 
 	if (avdd_lcd_3v0)
 		regulator_disable(avdd_lcd_3v0);

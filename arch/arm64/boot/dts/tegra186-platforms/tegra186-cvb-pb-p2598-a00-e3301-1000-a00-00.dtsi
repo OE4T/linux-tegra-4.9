@@ -1,7 +1,7 @@
 /*
  * tegra186-cvb-pb-p2598-a00-e3301-1000-a00-00.dtsi
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -75,9 +75,7 @@
 				regulator-name = "outp";
 				regulator-min-microvol = <4000000>;
 				regulator-max-microvol = <6000000>;
-				ti,enable-gpio = <&gpio_i2c_0_77 4 0>; /* tca9539 7h77 pin4 */
 				enable-active-high;
-				ti,disable-active-discharge;
 			};
 
 			vmm_lcd: outn {

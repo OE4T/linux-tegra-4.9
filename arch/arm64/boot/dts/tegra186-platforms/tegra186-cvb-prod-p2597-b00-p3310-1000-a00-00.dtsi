@@ -2,7 +2,7 @@
  * tegra186-cvb-prod-p2597-b00-p3310-1000-a00-00.dtsi: CVB-PROD P2597-B00 with
  *				P3310-1000
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -97,6 +97,7 @@
 			#gpio-cells = <2>;
 		};
 
+		/* outp,outn enable gpios set through plugin manager dt */
 		tps65132@3e {
 			reg = <0x3e>;
 			compatible = "ti,tps65132";
@@ -105,16 +106,13 @@
 				regulator-name = "outp";
 				regulator-min-microvol = <4000000>;
 				regulator-max-microvol = <6000000>;
-				ti,enable-gpio = <&gpio_i2c_0_77 4 0>; /* tca9539 7h77 pin4 */
 				enable-active-high;
-				ti,disable-active-discharge;
 			};
 
 			vmm_lcd: outn {
 				regulator-name = "outn";
 				regulator-min-microvol = <4000000>;
 				regulator-max-microvol = <6000000>;
-				ti,enable-gpio = <&gpio_i2c_0_21 2 0>; /* tca6408 7h21 pin2 */
 				enable-active-high;
 				ti,disable-active-discharge;
 			};
@@ -281,6 +279,8 @@
 			regulator-max-microvolt = <1200000>;
 			gpio = <&gpio_i2c_0_74 10 1>;
 			enable-active-high;
+			regulator-always-on;
+			regulator-boot-on;
 		};
 
 		en_vdd_vcm_2v8: regulator@16 {

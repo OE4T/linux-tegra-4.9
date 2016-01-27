@@ -208,6 +208,7 @@
 				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
 				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
 				nvidia,panel-bl-en-gpio = <&tegra_gpio TEGRA_GPIO(U, 3) 1>; /* PU3 */
+				nvidia,panel-en-gpio = <&gpio_i2c_0_77 4 1>; /* tca9539 0x77 Pin 4 */
 				nvidia,en-vmm-vpp-with-i2c-config;
 				disp-default-out {
 					nvidia,out-rotation = <180>;

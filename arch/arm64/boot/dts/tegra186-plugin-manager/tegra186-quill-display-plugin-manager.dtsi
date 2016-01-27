@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-display-plugin-manager.dtsi: Display override DTSI file.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -15,17 +15,39 @@
 
 / {
 	plugin-manager {
-		fragment-e3320-a01@0 {
+		fragment-e3320-a00@1 {
+			ids = "3320-1000-000", "3320-1100-000";
+			overrides@0 {
+				target = <&{/i2c@3160000/tps65132@3e/outp}>;
+				_overlay_ {
+					ti,enable-gpio = <&gpio_i2c_0_21 2 0>;
+				};
+			};
+			overrides@1 {
+				target = <&{/i2c@3160000/tps65132@3e/outn}>;
+				_overlay_ {
+					ti,enable-gpio = <&gpio_i2c_0_21 3 0>;
+				};
+			};
+		};
+		fragment-e3320-a01@1 {
 			ids = "3320-1000-100";
 			overrides@0 {
+				target = <&{/i2c@3160000/tps65132@3e/outp}>;
+				_overlay_ {
+					ti,enable-gpio = <&gpio_i2c_0_77 4 0>;
+				};
+			};
+			overrides@1 {
 				target = <&{/i2c@3160000/tps65132@3e/outn}>;
 				_overlay_ {
 					delete-target-property = "ti,disable-active-discharge";
+					ti,enable-gpio = <&gpio_i2c_0_21 2 0>;
 					ti,active-discharge-gpio = <&gpio_i2c_0_21 3 0>;
 					ti,active-discharge-time = <2000>; /* in us */
 				};
 			};
-			overrides@1 {
+			overrides@2 {
 				target = <&en_vdd_disp_1v8>;
 				_overlay_ {
 					gpio = <&gpio_i2c_0_21 0 0>;

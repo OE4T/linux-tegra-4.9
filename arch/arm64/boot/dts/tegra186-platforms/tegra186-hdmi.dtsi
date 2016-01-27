@@ -93,8 +93,8 @@
 					nvidia,out-parent-clk = "plld2";
                                         nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
                                         nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
-					nvidia,out-xres = <1920>; /* 1080 p*/
-					nvidia,out-yres = <1080>; /* 1080 p*/
+					nvidia,out-xres = <4096>; /* 4096 p*/
+					nvidia,out-yres = <2160>; /* 2160 p*/
 //					nvidia,out-xres = <1280>; /*720 p*/
 //					nvidia,out-yres = <720>;  /*720 p*/
 //					nvidia,out-xres = <720>;  /*480 p*/

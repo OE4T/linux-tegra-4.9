@@ -78,8 +78,22 @@ static int gp10b_init_therm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
+static int gp10b_update_therm_gate_ctrl(struct gk20a *g)
+{
+	u32 gate_ctrl;
+
+	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(ENGINE_CE2_GK20A));
+	gate_ctrl = set_field(gate_ctrl,
+		therm_gate_ctrl_eng_delay_before_m(),
+		therm_gate_ctrl_eng_delay_before_f(4));
+	gk20a_writel(g, therm_gate_ctrl_r(ENGINE_CE2_GK20A), gate_ctrl);
+
+	return 0;
+}
+
 void gp10b_init_therm_ops(struct gpu_ops *gops)
 {
 	gops->therm.init_therm_setup_hw = gp10b_init_therm_setup_hw;
+	gops->therm.update_therm_gate_ctrl = gp10b_update_therm_gate_ctrl;
 
 }

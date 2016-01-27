@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -68,6 +68,31 @@
 
 	sdhci@3400000 {
 		vddio_sdmmc-supply = <&spmic_ldo3>;
+	};
+
+	xhci@3530000 {
+		avddio_usb-supply = <&spmic_sd3>;
+		avdd_pll_utmip-supply = <&spmic_sd2>;
+		hvdd_usb-supply =  <&spmic_sd2>;
+	};
+
+	xudc@3550000 {
+		avdd-usb-supply = <&spmic_sd3>;
+		dvdd-pex-supply = <&spmic_ldo7>;
+		hvdd-pex-supply =  <&spmic_sd2>;
+		dvdd-pex-pll-supply = <&spmic_ldo7>;
+		hvdd-pex-pll-supply = <&spmic_sd2>;
+	};
+
+	pinctrl@3520000 {
+		vbus-0-supply = <&vdd_usb0_5v_con>;
+		vbus-1-supply = <&vdd_usb1_5v_con>;
+		hvdd_pex_pll-supply = <&spmic_sd2>;
+		hvdd_pex-supply = <&spmic_sd2>;
+		dvdd_pex-supply = <&spmic_ldo7>;
+		avdd_usb-supply = <&spmic_sd3>;
+		vclamp_usb-supply = <&spmic_sd2>;
+		avdd_pll_erefeut-supply = <&spmic_sd2>;
 	};
 
 	pcie-controller@10003000 {

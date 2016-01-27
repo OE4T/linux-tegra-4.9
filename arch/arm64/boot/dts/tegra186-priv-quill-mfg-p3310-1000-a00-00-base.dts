@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-p3310-a00-00-base.dts Quill-MFG A00 Board
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -174,10 +174,6 @@
 	};
 
 	i2c@3190000 {
-		status = "disabled";
-	};
-
-	bpmp_i2c {
 		status = "disabled";
 	};
 

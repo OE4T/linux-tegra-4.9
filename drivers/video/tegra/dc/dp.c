@@ -2739,12 +2739,13 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 				"dp: failed to enter panel power save mode\n");
 	}
 
+	tegra_dc_sor_detach(dp->sor);
+
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	/* switch back to SOR safe clock */
 	clk_set_parent(dp->sor->src_switch_clk, dp->sor->safe_clk);
 #endif
 
-	tegra_dc_sor_detach(dp->sor);
 	tegra_dc_sor_disable(dp->sor, false);
 
 	tegra_dp_clk_disable(dp);

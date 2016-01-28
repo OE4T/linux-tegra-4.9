@@ -138,7 +138,7 @@ static int gic_get_clocks(struct device *dev, const struct gic_clk_data *data)
 static int gic_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
-	const struct gic_clk_data *data;
+	const struct gic_data *data;
 	struct gic_chip_data *gic;
 	int ret, irq;
 
@@ -154,7 +154,7 @@ static int gic_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ret = gic_get_clocks(dev, data);
+	ret = gic_get_clocks(dev, data->clk_data);
 	if (ret)
 		goto irq_dispose;
 
@@ -205,8 +205,15 @@ static const struct gic_clk_data gic400_data = {
 	.clocks = gic400_clocks,
 };
 
+
+static const struct gic_data agic_t18x_data = {
+	.clk_data = &gic400_data,
+	.supports_routing = true,
+	.num_interfaces = MAX_AGIC_T18x_INTERFACES,
+};
+
 static const struct of_device_id gic_match[] = {
-	{ .compatible = "nvidia,tegra210-agic",	.data = &gic400_data },
+	{ .compatible = "nvidia,tegra210-agic",	.data = &agic_t18x_data },
 	{},
 };
 MODULE_DEVICE_TABLE(of, gic_match);

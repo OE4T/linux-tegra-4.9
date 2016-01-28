@@ -97,6 +97,12 @@ struct gic_chip_data {
 #ifdef CONFIG_FIQ
 	bool fiq_enable;
 #endif
+	/*
+	 * The flag indicates if the gic allows routing the
+	 * interrupts to other modules
+	 */
+	bool supports_routing;
+	u32 num_interfaces;
 };
 
 #ifdef CONFIG_BL_SWITCHER
@@ -1274,6 +1280,8 @@ static int gic_irq_domain_translate(struct irq_domain *d,
 				    unsigned long *hwirq,
 				    unsigned int *type)
 {
+	struct gic_chip_data *gic = d->host_data;
+
 	if (is_of_node(fwspec->fwnode)) {
 		if (fwspec->param_count < 3)
 			return -EINVAL;
@@ -1289,6 +1297,13 @@ static int gic_irq_domain_translate(struct irq_domain *d,
 			*hwirq += 16;
 
 		*type = fwspec->param[2] & IRQ_TYPE_SENSE_MASK;
+
+		if ((gic->supports_routing) &&
+			(fwspec->param_count == 4) &&
+			(fwspec->param[3] < gic->num_interfaces))
+			return gic_route_interrupt(gic, *hwirq,
+				fwspec->param[3]);
+
 		return 0;
 	}
 
@@ -1612,6 +1627,7 @@ error:
 
 int gic_of_init_child(struct device *dev, struct gic_chip_data **gic, int irq)
 {
+	const struct gic_data *data;
 	int ret;
 
 	if (!dev || !dev->of_node || !gic || !irq)
@@ -1620,6 +1636,12 @@ int gic_of_init_child(struct device *dev, struct gic_chip_data **gic, int irq)
 	*gic = devm_kzalloc(dev, sizeof(**gic), GFP_KERNEL);
 	if (!*gic)
 		return -ENOMEM;
+
+	data = of_device_get_match_data(dev);
+	if (data) {
+		(*gic)->supports_routing = data->supports_routing;
+		(*gic)->num_interfaces = data->num_interfaces;
+	}
 
 	gic_init_chip(*gic, dev, dev->of_node->name, false);
 

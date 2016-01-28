@@ -113,6 +113,12 @@
 struct device_node;
 struct gic_chip_data;
 
+struct gic_data {
+	const struct gic_clk_data *clk_data;
+	bool supports_routing;
+	u32 num_interfaces;
+};
+
 void gic_cascade_irq(unsigned int gic_nr, unsigned int irq);
 int gic_cpu_if_down(unsigned int gic_nr);
 void gic_cpu_save(struct gic_chip_data *gic);

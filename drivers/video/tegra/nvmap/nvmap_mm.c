@@ -68,7 +68,7 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 	mutex_unlock(&handle->lock);
 }
 
-void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
+static void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
 		       u32 *sizes, u32 nr)
 {
 	int i;
@@ -77,6 +77,7 @@ void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
 		nvmap_zap_handle(handles[i], offsets[i], sizes[i]);
 }
 
+static
 void nvmap_vm_insert_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 {
 	struct list_head *vmas;
@@ -140,7 +141,7 @@ void nvmap_vm_insert_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 	mutex_unlock(&handle->lock);
 }
 
-void nvmap_vm_insert_handles(struct nvmap_handle **handles, u32 *offsets,
+static void nvmap_vm_insert_handles(struct nvmap_handle **handles, u32 *offsets,
 		       u32 *sizes, u32 nr)
 {
 	int i;

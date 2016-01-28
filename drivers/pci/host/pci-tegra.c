@@ -1332,12 +1332,10 @@ static int tegra_pcie_enable_regulators(struct tegra_pcie *pcie)
 {
 	int i;
 	PR_FUNC_LINE;
-	if (pcie->power_rails_enabled) {
-		dev_info(pcie->dev, "PCIE: Already power rails enabled\n");
+	if (pcie->power_rails_enabled)
 		return 0;
-	}
+
 	pcie->power_rails_enabled = 1;
-	dev_info(pcie->dev, "PCIE: Enable power rails\n");
 
 	for (i = 0; i < pcie->soc_data->num_pcie_regulators; i++) {
 		if (pcie->pcie_regulators[i])
@@ -1355,11 +1353,8 @@ static int tegra_pcie_disable_regulators(struct tegra_pcie *pcie)
 {
 	int i;
 	PR_FUNC_LINE;
-	if (pcie->power_rails_enabled == 0) {
-		dev_info(pcie->dev, "PCIE: Already power rails disabled\n");
+	if (pcie->power_rails_enabled == 0)
 		return 0;
-	}
-	dev_info(pcie->dev, "PCIE: Disable power rails\n");
 
 	for (i = 0; i < pcie->soc_data->num_pcie_regulators; i++) {
 		if (pcie->pcie_regulators[i] != NULL)
@@ -1779,7 +1774,6 @@ err_clk_get:
 static void tegra_pcie_release_resources(struct tegra_pcie *pcie)
 {
 	devm_free_irq(pcie->dev, pcie->irq, pcie);
-	tegra_pcie_disable_regulators(pcie);
 	tegra_pcie_clocks_put(pcie);
 }
 
@@ -2774,13 +2768,22 @@ static int tegra_pcie_init(struct tegra_pcie *pcie)
 	}
 
 	if (pcie->num_ports) {
+		if (IS_ENABLED(CONFIG_PCI_MSI)) {
+			err = tegra_pcie_enable_msi(pcie, false);
+			if (err < 0) {
+				dev_err(pcie->dev,
+					"failed to enable MSI support: %d\n",
+					err);
+				goto fail_release_resource;
+			}
+		}
 		tegra_pcie_hw.private_data = (void **)&pcie;
 		tegra_pcie_hw.ops = &tegra_pcie_ops;
 		tegra_pcie_hw.sys = &pcie->sys;
 		pci_common_init_dev(pcie->dev, &tegra_pcie_hw);
 	} else {
-		dev_info(pcie->dev, "PCIE: no ports detected\n");
-		goto fail_power_off;
+		dev_info(pcie->dev, "PCIE: no end points detected\n");
+		goto fail_release_resource;
 	}
 	tegra_pcie_enable_features(pcie);
 	/* register pcie device as wakeup source */

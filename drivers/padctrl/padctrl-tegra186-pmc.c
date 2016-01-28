@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,6 +21,8 @@
 #define PMC_DDR_PWR	0x38
 #define PMC_E_18V_PWR	0x3C
 #define PMC_E_33V_PWR	0x40
+#define PMC_IO_DPD_REQ	0x74
+#define PMC_IO_DPD2_REQ	0x7C
 
 struct tegra186_pmc_pads {
 	const char *pad_name;
@@ -29,6 +31,8 @@ struct tegra186_pmc_pads {
 	int lo_volt;
 	int hi_volt;
 	int bit_position;
+	int io_dpd_bit_pos;
+	int io_dpd_reg_off;
 	bool dynamic_pad_voltage;
 };
 
@@ -36,7 +40,7 @@ struct tegra186_pmc_padcontrl {
 	struct padctrl_dev *pad_dev;
 };
 
-#define TEGRA_186_PADS(_name, _id, _reg, _bit, _lvolt, _hvolt)	\
+#define TEGRA_186_PADS(_name, _id, _reg, _bit, _lvolt, _hvolt, _dpd_off, _dpd_bit)	\
 {								\
 	.pad_name = _name,					\
 	.pad_id = TEGRA_IO_PAD_GROUP_##_id,			\
@@ -44,22 +48,53 @@ struct tegra186_pmc_padcontrl {
 	.lo_volt = _lvolt * 1000,				\
 	.hi_volt = _hvolt * 1000,				\
 	.bit_position = _bit,					\
+	.io_dpd_reg_off = _dpd_off,				\
+	.io_dpd_bit_pos = _dpd_bit,				\
 }
 
 static struct tegra186_pmc_pads tegra186_pads[] = {
-	TEGRA_186_PADS("ddr-dvi", DDR_DVI, PMC_DDR_PWR, 0, 1200, 1800),
-	TEGRA_186_PADS("ddr-gmi", DDR_GMI, PMC_DDR_PWR, 1, 1200, 1800),
-	TEGRA_186_PADS("ddr-sdmmc2", DDR_SDMMC2, PMC_DDR_PWR, 2, 1200, 1800),
-	TEGRA_186_PADS("ddr-spi", DDR_SPI, PMC_DDR_PWR, 3, 1200, 1800),
-	TEGRA_186_PADS("ufs", UFS, PMC_E_18V_PWR, 1, 1200, 1800),
-	TEGRA_186_PADS("dbg", DBG, PMC_E_18V_PWR, 4, 1200, 1800),
-	TEGRA_186_PADS("spi", SPI, PMC_E_18V_PWR, 5, 1200, 1800),
-	TEGRA_186_PADS("ao-hv", AO_HV, PMC_E_33V_PWR, 0, 1800, 3300),
-	TEGRA_186_PADS("audio-hv", AUDIO_HV, PMC_E_33V_PWR, 1, 1800, 3300),
-	TEGRA_186_PADS("dmic-hv", DMIC_HV, PMC_E_33V_PWR, 2, 1800, 3300),
-	TEGRA_186_PADS("sdmmc1-hv", SDMMC1_HV, PMC_E_33V_PWR, 4, 1800, 3300),
-	TEGRA_186_PADS("sdmmc2-hv", SDMMC2_HV, PMC_E_33V_PWR, 5, 1800, 3300),
-	TEGRA_186_PADS("sdmmc3-hv", SDMMC3_HV, PMC_E_33V_PWR, 6, 1800, 3300),
+	TEGRA_186_PADS("audio", AUDIO, PMC_IO_DPD_REQ, -1, -1, -1, 0, 17),
+	TEGRA_186_PADS("audio-hv", AUDIO_HV, PMC_E_33V_PWR, 1, 1800, 3300, 1, 29),
+	TEGRA_186_PADS("cam", CAM, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 6),
+	TEGRA_186_PADS("conn", CONN, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 28),
+	TEGRA_186_PADS("csia", CSIA, PMC_IO_DPD_REQ, -1, -1, -1, 0, 0),
+	TEGRA_186_PADS("csib", CSIB, PMC_IO_DPD_REQ, -1, -1, -1, 0, 1),
+	TEGRA_186_PADS("csic", CSIC, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 11),
+	TEGRA_186_PADS("csid", CSID, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 12),
+	TEGRA_186_PADS("csie", CSIE, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 13),
+	TEGRA_186_PADS("csif", CSIF, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 14),
+	TEGRA_186_PADS("dbg", DBG, PMC_E_18V_PWR, 4, 1200, 1800, 0, 25),
+	TEGRA_186_PADS("dmic-hv", DMIC_HV, PMC_E_33V_PWR, 2, 1800, 3300, 1, 20),
+	TEGRA_186_PADS("dsi", DSI, PMC_IO_DPD_REQ, -1, -1, -1, 0, 2),
+	TEGRA_186_PADS("dsib", DSIB, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 8),
+	TEGRA_186_PADS("dsic", DSIC, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 9),
+	TEGRA_186_PADS("dsid", DSID, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 10),
+	TEGRA_186_PADS("edp", EDP, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 21),
+	TEGRA_186_PADS("hdmi-dp0", HDMI_DP0, PMC_IO_DPD_REQ, -1, -1, -1, 0, 28),
+	TEGRA_186_PADS("hdmi-dp1", HDMI_DP1, PMC_IO_DPD_REQ, -1, -1, -1, 0, 29),
+	TEGRA_186_PADS("hsic", HSIC, PMC_IO_DPD_REQ, -1, -1, -1, 0, 19),
+	TEGRA_186_PADS("mipi-bias", MIPI_BIAS, PMC_IO_DPD_REQ, -1, -1, -1, 0, 3),
+	TEGRA_186_PADS("pex-clk-bias", PEX_CLK_BIAS, PMC_IO_DPD_REQ, -1, -1, -1, 0, 4),
+	TEGRA_186_PADS("pex-clk1", PEX_CLK1, PMC_IO_DPD_REQ, -1, -1, -1, 0, 7),
+	TEGRA_186_PADS("pex-clk2", PEX_CLK2, PMC_IO_DPD_REQ, -1, -1, -1, 0, 6),
+	TEGRA_186_PADS("pex-clk3", PEX_CLK3, PMC_IO_DPD_REQ, -1, -1, -1, 0, 5),
+	TEGRA_186_PADS("pex-ctrl", PEX_CTRL, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 0),
+	TEGRA_186_PADS("sdmmc1-hv", SDMMC1_HV, PMC_E_33V_PWR, 4, 1800, 3300, 1, 23),
+	TEGRA_186_PADS("sdmmc2-hv", SDMMC2_HV, PMC_E_33V_PWR, 5, 1800, 3300, 1, 2),
+	TEGRA_186_PADS("sdmmc3-hv", SDMMC3_HV, PMC_E_33V_PWR, 6, 1800, 3300, 1, 24),
+	TEGRA_186_PADS("sdmmc4", SDMMC4, PMC_IO_DPD2_REQ, -1, -1, -1, 1, 4),
+	TEGRA_186_PADS("spi", SPI, PMC_E_18V_PWR, 5, 1200, 1800, 1, 15),
+	TEGRA_186_PADS("uart", UART, PMC_IO_DPD_REQ, -1, -1, -1, 0, 14),
+	TEGRA_186_PADS("usb-bias", USB_BIAS, PMC_IO_DPD_REQ, -1, -1, -1, 0, 12),
+	TEGRA_186_PADS("usb0", USB0, PMC_IO_DPD_REQ, -1, -1, -1, 0, 9),
+	TEGRA_186_PADS("usb1", USB1, PMC_IO_DPD_REQ, -1, -1, -1, 0, 10),
+	TEGRA_186_PADS("usb2", USB2, PMC_IO_DPD_REQ, -1, -1, -1, 0, 11),
+	TEGRA_186_PADS("ufs", UFS, PMC_E_18V_PWR, 1, 1200, 1800, 1, 17),
+	TEGRA_186_PADS("ao-hv", AO_HV, PMC_E_33V_PWR, 0, 1800, 3300, -1, -1),
+	TEGRA_186_PADS("ddr-dvi", DDR_DVI, PMC_DDR_PWR, 0, 1200, 1800, -1, -1),
+	TEGRA_186_PADS("ddr-gmi", DDR_GMI, PMC_DDR_PWR, 1, 1200, 1800, -1, -1),
+	TEGRA_186_PADS("ddr-sdmmc2", DDR_SDMMC2, PMC_DDR_PWR, 2, 1200, 1800, -1, -1),
+	TEGRA_186_PADS("ddr-spi", DDR_SPI, PMC_DDR_PWR, 3, 1200, 1800, -1, -1),
 };
 
 static int tegra186_pmc_padctrl_set_voltage(struct padctrl_dev *pad_dev,
@@ -138,9 +173,50 @@ static int tegra186_pmc_padctl_get_voltage(struct padctrl_dev *pad_dev,
 	return 0;
 }
 
+static int tegra186_pmc_padctrl_set_power(struct padctrl_dev *pad_dev,
+		int pad_id, u32 enable)
+{
+	u32 bit, reg;
+	int i;
+	int ret;
+
+	for (i = 0; i < ARRAY_SIZE(tegra186_pads); ++i) {
+		if (tegra186_pads[i].pad_id == pad_id)
+			break;
+	}
+
+	if (i == ARRAY_SIZE(tegra186_pads))
+		return -EINVAL;
+
+	if (tegra186_pads[i].io_dpd_bit_pos < 0)
+		return -EINVAL;
+
+	bit = tegra186_pads[i].io_dpd_bit_pos;
+	reg = tegra186_pads[i].io_dpd_reg_off;
+	if (enable)
+		ret = tegra186_pmc_io_dpd_disable(reg, bit);
+	else
+		ret = tegra186_pmc_io_dpd_enable(reg, bit);
+	return ret;
+}
+
+static int tegra186_pmc_padctrl_power_enable(struct padctrl_dev *pad_dev,
+		int pad_id)
+{
+	return tegra186_pmc_padctrl_set_power(pad_dev, pad_id, 1);
+}
+
+static int tegra186_pmc_padctrl_power_disable(struct padctrl_dev *pad_dev,
+		int pad_id)
+{
+	return tegra186_pmc_padctrl_set_power(pad_dev, pad_id, 0);
+}
+
 static struct padctrl_ops tegra186_pmc_padctrl_ops = {
 	.set_voltage = &tegra186_pmc_padctrl_set_voltage,
 	.get_voltage = &tegra186_pmc_padctl_get_voltage,
+	.power_enable = &tegra186_pmc_padctrl_power_enable,
+	.power_disable = &tegra186_pmc_padctrl_power_disable,
 };
 
 static struct padctrl_desc tegra186_pmc_padctrl_desc = {
@@ -156,10 +232,10 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 	int pad_id;
 	const char *pad_name, *name;
 	int n_config;
-	u32 *volt_configs;
+	u32 *volt_configs, *iodpd_configs;
 	int i, index, vcount;
-	bool dyn_pad_volt;
-	int pindex;
+	bool dyn_pad_volt, dpd_en, dpd_dis, pad_en, pad_dis, io_dpd_en, io_dpd_dis;
+	int pindex, dpd_count;
 	int ret;
 
 	pad_np = of_get_child_by_name(np, "io-pad-defaults");
@@ -176,7 +252,14 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 	if (!volt_configs)
 		return -ENOMEM;
 
+	iodpd_configs = kzalloc(n_config * sizeof(*iodpd_configs), GFP_KERNEL);
+	if (!iodpd_configs) {
+		kfree(volt_configs);
+		return -ENOMEM;
+	}
+
 	vcount = 0;
+	dpd_count = 0;
 	for_each_child_of_node(pad_np, child) {
 		/* Ignore the nodes if disabled */
 		ret = of_device_is_available(child);
@@ -199,6 +282,30 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 			tegra186_pads[i].dynamic_pad_voltage =
 				of_property_read_bool(child,
 					"nvidia,enable-dynamic-pad-voltage");
+
+			dpd_en = of_property_read_bool(child,
+						"nvidia,deep-power-down-enable");
+			dpd_dis = of_property_read_bool(child,
+						"nvidia,deep-power-down-disable");
+			pad_en = of_property_read_bool(child,
+						"nvidia,io-pad-power-enable");
+			pad_dis = of_property_read_bool(child,
+						"nvidia,io-pad-power-disable");
+
+			io_dpd_en = dpd_en | pad_dis;
+			io_dpd_dis = dpd_dis | pad_en;
+
+			if ((dpd_en && pad_en)	|| (dpd_dis && pad_dis) ||
+					(io_dpd_en & io_dpd_dis)) {
+				pr_err("PMC: Conflict on io-pad %s config\n",
+					name);
+				continue;
+			}
+			if (io_dpd_en || io_dpd_dis) {
+				iodpd_configs[dpd_count] = i;
+				iodpd_configs[dpd_count + 1] = !!io_dpd_dis;
+				dpd_count += 2;
+			}
 		}
 	}
 
@@ -225,7 +332,26 @@ static int tegra186_pmc_parse_io_pad_init(struct device_node *np,
 		tegra186_pads[pindex].dynamic_pad_voltage = dyn_pad_volt;
 	}
 
+	for (i = 0; i < dpd_count / 2; ++i) {
+		index = i * 2;
+		pad_id = tegra186_pads[iodpd_configs[index]].pad_id;
+		pad_name = tegra186_pads[iodpd_configs[index]].pad_name;
+
+		ret = tegra186_pmc_padctrl_set_power(pad_dev,
+				pad_id, iodpd_configs[index + 1]);
+		if (ret < 0) {
+			pr_warn("PMC: IO pad %s power config failed: %d\n",
+			     pad_name, ret);
+			WARN_ON(1);
+		} else {
+			pr_info("PMC: IO pad %s power is %s\n",
+				pad_name, (iodpd_configs[index + 1]) ?
+				"enable" : "disable");
+		}
+	}
+
 	kfree(volt_configs);
+	kfree(iodpd_configs);
 	return 0;
 }
 

@@ -521,6 +521,8 @@ struct gk20a {
 
 	struct mutex ch_wdt_lock;
 
+	struct mutex poweroff_lock;
+
 	/* Channel priorities */
 	u32 timeslice_low_priority_us;
 	u32 timeslice_medium_priority_us;

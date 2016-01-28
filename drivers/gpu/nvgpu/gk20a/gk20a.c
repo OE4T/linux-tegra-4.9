@@ -669,6 +669,7 @@ static int gk20a_init_support(struct platform_device *dev)
 	mutex_init(&g->dbg_sessions_lock);
 	mutex_init(&g->client_lock);
 	mutex_init(&g->ch_wdt_lock);
+	mutex_init(&g->poweroff_lock);
 
 	mutex_init(&g->interleave_lock);
 	g->num_interleaved_channels = 0;
@@ -689,17 +690,19 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	gk20a_dbg_fn("");
 
-	gk20a_scale_suspend(pdev);
+	mutex_lock(&g->poweroff_lock);
 
 	if (!g->power_on)
-		return 0;
+		goto done;
+
+	gk20a_scale_suspend(pdev);
 
 	/* cancel any pending cde work */
 	gk20a_cde_suspend(g);
 
 	ret = gk20a_channel_suspend(g);
 	if (ret)
-		return ret;
+		goto done;
 
 	/* disable elpg before gr or fifo suspend */
 	ret |= gk20a_pmu_destroy(g);
@@ -722,6 +725,9 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	/* Stop CPU from accessing the GPU registers. */
 	gk20a_lockout_registers(g);
+
+done:
+	mutex_unlock(&g->poweroff_lock);
 
 	return ret;
 }

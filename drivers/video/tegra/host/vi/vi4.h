@@ -23,6 +23,14 @@
 
 #include "mc_common.h"
 
+#define MAX_VI_CH_INCRS 6
+
+struct nvhost_vi_ch_incrs {
+	spinlock_t lock;
+	u8 tags[MAX_VI_CH_INCRS];
+	u32 syncpt_ids[MAX_VI_CH_INCRS];
+};
+
 struct nvhost_vi_notify_dev {
 	struct vi_notify_dev *vnd;
 	u32 mask;
@@ -33,11 +41,7 @@ struct nvhost_vi_notify_dev {
 	atomic_t overflow;
 	atomic_t notify_overflow;
 	atomic_t fmlite_overflow;
-
-	struct {
-		spinlock_t lock;
-		struct list_head list;
-	} incr[12];
+	struct nvhost_vi_ch_incrs incr[12];
 };
 
 struct reset_control;

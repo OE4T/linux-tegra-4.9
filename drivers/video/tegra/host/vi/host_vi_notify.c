@@ -1,7 +1,7 @@
 /*
  * VI NOTIFY driver for T186
  *
- * Copyright (c) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,7 +19,6 @@
 #include <linux/debugfs.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
-#include <linux/slab.h>
 
 #include "dev.h"
 #include "nvhost_acm.h"
@@ -69,12 +68,6 @@
 
 #define VI_NOTIFY_TAG_DATA_FE			0x20
 #define VI_NOTIFY_TAG_DATA_LOAD_FRAMED		0x08000000
-
-struct nvhost_vi_syncpt_incr {
-	struct list_head node;
-	u8 tag;
-	u32 syncpt_id;
-};
 
 static void nvhost_vi_notify_dump_status(struct platform_device *pdev)
 {
@@ -145,24 +138,33 @@ static void nvhost_vi_notify_do_increment(struct platform_device *pdev,
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
-	struct nvhost_vi_syncpt_incr *incr, *n;
+	struct nvhost_vi_ch_incrs *incrs;
 	unsigned long flags;
+	int i;
 
 	if (unlikely(ch >= ARRAY_SIZE(hvnd->incr)))
 		return;
 
-	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
-	list_for_each_entry_safe(incr, n, &hvnd->incr[ch].list, node) {
-		struct nvhost_master *master;
+	incrs = &hvnd->incr[ch];
 
-		if (incr->tag != tag)
+	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
+	for (i = 0; i < MAX_VI_CH_INCRS; i++) {
+		struct nvhost_master *master;
+		u32 id;
+
+		if (incrs->tags[i] != tag)
 			continue;
 
-		list_del(&incr->node);
+		id = incrs->syncpt_ids[i];
+
+		memmove(incrs->tags + i, incrs->tags + i + 1,
+			MAX_VI_CH_INCRS - (i + 1));
+		incrs->tags[MAX_VI_CH_INCRS - 1] = 0xff;
+		memmove(incrs->syncpt_ids + i, incrs->syncpt_ids + i + 1,
+			(MAX_VI_CH_INCRS - (i + 1)) * sizeof(id));
 
 		master = nvhost_get_host(pdev);
-		nvhost_syncpt_cpu_incr(&master->syncpt, incr->syncpt_id);
-		kfree(incr);
+		nvhost_syncpt_cpu_incr(&master->syncpt, id);
 		break;
 	}
 
@@ -288,7 +290,7 @@ static int nvhost_vi_notify_probe(struct device *dev,
 
 	for (i = 0; i < ARRAY_SIZE(hvnd->incr); i++) {
 		spin_lock_init(&hvnd->incr[i].lock);
-		INIT_LIST_HEAD(&hvnd->incr[i].list);
+		memset(hvnd->incr[i].tags, 0xff, MAX_VI_CH_INCRS);
 	}
 
 	hvnd->error_irq = nvhost_vi_get_irq(pdev, 0, nvhost_vi_error_isr);
@@ -387,25 +389,27 @@ static int nvhost_vi_notify_program_increment(struct device *dev, u8 ch,
 	struct nvhost_master *master = nvhost_get_host(pdev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
-	struct nvhost_vi_syncpt_incr *incr;
+	struct nvhost_vi_ch_incrs *incrs;
 	unsigned long flags;
+	u8 *p;
 
 	if (!nvhost_syncpt_is_valid_pt(&master->syncpt, id))
 		return -EINVAL;
 	if (ch >= ARRAY_SIZE(hvnd->incr))
 		return -EOPNOTSUPP;
 
-	incr = kmalloc(sizeof(*incr), GFP_KERNEL);
-	if (unlikely(incr == NULL))
-		return -ENOMEM;
+	incrs = &hvnd->incr[ch];
 
-	incr->tag = tag;
-	incr->syncpt_id = id;
+	spin_lock_irqsave(&incrs->lock, flags);
+	p = memchr(incrs->tags, 0xff, MAX_VI_CH_INCRS);
 
-	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
-	list_add_tail(&incr->node, &hvnd->incr[ch].list);
-	spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
-	return 0;
+	if (p != NULL) {
+		*p = tag;
+		incrs->syncpt_ids[p - incrs->tags] = id;
+	}
+	spin_unlock_irqrestore(&incrs->lock, flags);
+
+	return p ? 0 : -ENOBUFS;
 }
 
 static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
@@ -413,24 +417,17 @@ static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
-	struct list_head list;
+	struct nvhost_vi_ch_incrs *incrs;
 	unsigned long flags;
 
-	INIT_LIST_HEAD(&list);
+	BUG_ON(ch >= ARRAY_SIZE(hvnd->incr));
+	incrs = &hvnd->incr[ch];
 
-	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
-	list_splice_init(&hvnd->incr[ch].list, &list);
-	spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
+	spin_lock_irqsave(&incrs->lock, flags);
+	memset(incrs->tags, 0xff, MAX_VI_CH_INCRS);
+	spin_unlock_irqrestore(&incrs->lock, flags);
 
 	synchronize_irq(hvnd->norm_irq);
-
-	while (!list_empty(&list)) {
-		struct nvhost_vi_syncpt_incr *entry;
-
-		entry = list_first_entry(&list, typeof(*entry), node);
-		list_del(&entry->node);
-		kfree(entry);
-	}
 }
 
 struct vi_notify_driver nvhost_vi_notify_driver = {

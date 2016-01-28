@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -26,6 +26,8 @@
         host1x {
 		nvdisplay@15200000 {
 			vdd_hdmi_5v0-supply = <&vdd_dummy>;
+			avdd_hdmi-supply = <&vdd_dummy>;
+			avdd_hdmi_pll-supply = <&vdd_dummy>;
 			vdd-dp-pad-supply = <&vdd_dummy_1v8>;
 			vdd-edp-sec-mode-supply = <&vdd_dummy_1v8>;
 			vdd-dp-pwr-supply = <&vdd_dummy>;
@@ -33,6 +35,17 @@
 		};
 		nvdisplay@15210000 {
 			vdd_hdmi_5v0-supply = <&vdd_dummy>;
+			avdd_hdmi-supply = <&vdd_dummy>;
+			avdd_hdmi_pll-supply = <&vdd_dummy>;
+			vdd-dp-pad-supply = <&vdd_dummy_1v8>;
+			vdd-edp-sec-mode-supply = <&vdd_dummy_1v8>;
+			vdd-dp-pwr-supply = <&vdd_dummy>;
+			avdd-dp-pll-supply = <&vdd_dummy>;
+		};
+		nvdisplay@15220000 {
+			vdd_hdmi_5v0-supply = <&vdd_dummy>;
+			avdd_hdmi-supply = <&vdd_dummy>;
+			avdd_hdmi_pll-supply = <&vdd_dummy>;
 			vdd-dp-pad-supply = <&vdd_dummy_1v8>;
 			vdd-edp-sec-mode-supply = <&vdd_dummy_1v8>;
 			vdd-dp-pwr-supply = <&vdd_dummy>;

@@ -50,6 +50,8 @@
 			vdd-edp-sec-mode-supply = <&spmic_otp_ldo7>;
 			vdd-dp-pwr-supply = <&sys_3v3>;
 			avdd-dp-pll-supply = <&vdd_1v8>;
+			avdd_hdmi-supply = <&spmic_otp_ldo7>;
+			avdd_hdmi_pll-supply = <&vdd_1v8>;
 		};
 		nvcsi@150c0000 {
 			nvidia,csi_regulator = "vdd";

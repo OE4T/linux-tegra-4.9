@@ -516,7 +516,7 @@ static void se_nvhost_write_method(u32 *buf, u32 op1, u32 op2, u32 *offset)
 static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 			struct ablkcipher_request *req,
 			u32 *cpuvaddr, dma_addr_t iova,
-			u32 offset, u32 num_words, bool wait_for_comp)
+			u32 offset, u32 num_words)
 {
 	struct nvhost_job *job = NULL;
 	u32 syncpt_id = 0;
@@ -586,8 +586,10 @@ static int tegra_se_send_ctr_seed(struct tegra_se_dev *se_dev, u32 *pdata,
 	return err;
 }
 
-static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata, u32 data_len,
-	u8 slot_num, enum tegra_se_key_table_type type, unsigned int opcode_addr, int *cmdbuf_cnt)
+static int tegra_se_send_key_data(struct tegra_se_dev *se_dev,
+			u8 *pdata, u32 data_len, u8 slot_num,
+		enum tegra_se_key_table_type type, unsigned int opcode_addr,
+		int *cmdbuf_cnt)
 {
 	u32 data_size;
 	u32 *pdata_buf = (u32 *)pdata;
@@ -642,8 +644,8 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata, u32 da
 
 	if (type == SE_KEY_TABLE_TYPE_KEY) {
 			err = tegra_se_channel_submit_gather(se_dev, NULL,
-				se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
-				0, cmdbuf_num_words, true);
+				se_dev->aes_cmdbuf_cpuvaddr,
+				se_dev->aes_cmdbuf_iova, 0, cmdbuf_num_words);
 	}
 
 	return err;
@@ -794,7 +796,7 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 	cmdbuf_num_words = i;
 	err = tegra_se_channel_submit_gather(se_dev, NULL,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
-			0, cmdbuf_num_words, true);
+			0, cmdbuf_num_words);
 	dma_free_attrs(se_dev->dev->parent, SZ_4K,
 			cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
 	return err;
@@ -840,8 +842,8 @@ static void tegra_se_read_hash_result(struct tegra_se_dev *se_dev,
 }
 
 static int tegra_se_send_data(struct tegra_se_dev *se_dev,
-			struct tegra_se_req_context *req_ctx,
-			struct ablkcipher_request *req, u32 nbytes, unsigned int opcode_addr, int cmdbuf_cnt)
+	struct tegra_se_req_context *req_ctx, struct ablkcipher_request *req,
+		u32 nbytes, unsigned int opcode_addr, int cmdbuf_cnt)
 {
 	u32 cmdbuf_num_words = 0, i = 0;
 	int err = 0;
@@ -862,6 +864,10 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	while (total) {
 		if (total == nbytes) {
 			se_dev->aes_cmdbuf_cpuvaddr[i++] =
+				__nvhost_opcode_nonincr(opcode_addr + 0x28, 1);
+			se_dev->aes_cmdbuf_cpuvaddr[i++] = ((nbytes/16) - 1);
+
+			se_dev->aes_cmdbuf_cpuvaddr[i++] =
 				__nvhost_opcode_incr(opcode_addr, 6);
 			se_dev->aes_cmdbuf_cpuvaddr[i++] = req_ctx->config;
 			se_dev->aes_cmdbuf_cpuvaddr[i++] = req_ctx->crypto_config;
@@ -878,12 +884,6 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 		se_dev->aes_cmdbuf_cpuvaddr[i++] =
 			(u32)(SE_ADDR_HI_MSB(MSB(dst_ll->addr))
 				| SE_ADDR_HI_SZ(dst_ll->data_len));
-		if (total == nbytes) {
-			se_dev->aes_cmdbuf_cpuvaddr[i++] =
-			__nvhost_opcode_nonincr(opcode_addr + 0x28,
-				1);
-			se_dev->aes_cmdbuf_cpuvaddr[i++] = ((nbytes/16) - 1);
-		}
 
 		if (req_ctx->op_mode == SE_AES_OP_MODE_CMAC)
 			restart_op = OP_RESTART_IN;
@@ -892,38 +892,27 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 		else
 			restart_op = OP_RESTART_INOUT;
 
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(opcode_addr + 0x34, 1);
+
 		if (total == nbytes) {
-			if (total == src_ll->data_len) {
-				se_dev->aes_cmdbuf_cpuvaddr[i++] =
-			__nvhost_opcode_nonincr(opcode_addr + 0x34,
-					1);
+			if (total == src_ll->data_len)
 				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_TRUE)
 					| SE_OPERATION_OP(OP_START);
-			} else {
-				se_dev->aes_cmdbuf_cpuvaddr[i++] =
-			__nvhost_opcode_nonincr(opcode_addr + 0x34,
-					1);
+			else
 				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_FALSE)
 					| SE_OPERATION_OP(OP_START);
-			}
 		} else {
-			if (total == src_ll->data_len) {
-				se_dev->aes_cmdbuf_cpuvaddr[i++] =
-			__nvhost_opcode_nonincr(opcode_addr + 0x34,
-					1);
+			if (total == src_ll->data_len)
 				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_TRUE)
 					| SE_OPERATION_OP(restart_op);
-			} else {
-				se_dev->aes_cmdbuf_cpuvaddr[i++] =
-			__nvhost_opcode_nonincr(opcode_addr + 0x34,
-					1);
+			else
 				se_dev->aes_cmdbuf_cpuvaddr[i++] =
 					SE_OPERATION_LASTBUF(LASTBUF_FALSE)
 					| SE_OPERATION_OP(restart_op);
-			}
 		}
 
 		total -= src_ll->data_len;
@@ -934,7 +923,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	cmdbuf_num_words = i;
 	err = tegra_se_channel_submit_gather(se_dev, req,
 			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
-			0, cmdbuf_num_words, true);
+			0, cmdbuf_num_words);
 
 	return err;
 }
@@ -1054,12 +1043,12 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 	/* write IV */
 	if (req->info) {
 		if (req_ctx->op_mode == SE_AES_OP_MODE_CTR) {
-			ret = tegra_se_send_ctr_seed(se_dev, (u32 *)req->info, opcode_addr, &cmdbuf_cnt);
+			ret = tegra_se_send_ctr_seed(se_dev, (u32 *)req->info,
+					opcode_addr, &cmdbuf_cnt);
 		} else {
 			ret = tegra_se_send_key_data(se_dev, req->info,
-				TEGRA_SE_AES_IV_SIZE,
-				aes_ctx->slot->slot_num,
-				SE_KEY_TABLE_TYPE_ORGIV, opcode_addr, &cmdbuf_cnt);
+				TEGRA_SE_AES_IV_SIZE, aes_ctx->slot->slot_num,
+			SE_KEY_TABLE_TYPE_ORGIV, opcode_addr, &cmdbuf_cnt);
 		}
 	}
 
@@ -1069,7 +1058,8 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 	req_ctx->crypto_config = tegra_se_get_crypto_config(se_dev,
 		req_ctx->op_mode, req_ctx->encrypt, aes_ctx->slot->slot_num,
 			req->info ? true : false);
-	ret = tegra_se_send_data(se_dev, req_ctx, req, req->nbytes, opcode_addr, cmdbuf_cnt);
+	ret = tegra_se_send_data(se_dev, req_ctx, req, req->nbytes,
+				opcode_addr, cmdbuf_cnt);
 
 	tegra_se_dequeue_complete_req(se_dev, req);
 	mutex_unlock(&se_dev->mtx);
@@ -1079,7 +1069,8 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 
 static void tegra_se_work_handler(struct work_struct *work)
 {
-	struct tegra_se_dev *se_dev = container_of(work, struct tegra_se_dev, se_work);
+	struct tegra_se_dev *se_dev = container_of(work,
+					struct tegra_se_dev, se_work);
 	struct crypto_async_request *async_req = NULL;
 	struct crypto_async_request *backlog = NULL;
 	unsigned long flags;
@@ -1104,7 +1095,8 @@ static void tegra_se_work_handler(struct work_struct *work)
 	} while (se_dev->work_q_busy);
 }
 
-static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev, struct ablkcipher_request *req)
+static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
+				struct ablkcipher_request *req)
 {
 	unsigned long flags;
 	bool idle = true;
@@ -1344,7 +1336,8 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 		se_dev->dst_ll->data_len = TEGRA_SE_RNG_DT_SIZE;
 
 		ret = tegra_se_send_data(se_dev,
-			req_ctx, NULL, TEGRA_SE_RNG_DT_SIZE, SE1_AES0_CONFIG_REG_OFFSET, 0);
+			req_ctx, NULL, TEGRA_SE_RNG_DT_SIZE,
+			SE1_AES0_CONFIG_REG_OFFSET, 0);
 		if (!ret) {
 			rdata_addr = (rdata + (j * TEGRA_SE_RNG_DT_SIZE));
 
@@ -1566,12 +1559,14 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 		memset(piv, 0, TEGRA_SE_AES_IV_SIZE);
 
 		ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
-			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV, SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
+			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV,
+				SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
 
 		req_ctx->crypto_config = tegra_se_get_crypto_config(se_dev,
 			req_ctx->op_mode, true, cmac_ctx->slot->slot_num, true);
 
-		ret = tegra_se_send_data(se_dev, req_ctx, NULL, total, SE2_AES1_CONFIG_REG_OFFSET, 0);
+		ret = tegra_se_send_data(se_dev, req_ctx, NULL, total,
+					SE2_AES1_CONFIG_REG_OFFSET, 0);
 
 		tegra_se_read_cmac_result(se_dev, piv,
 				TEGRA_SE_AES_CMAC_DIGEST_SIZE, false);
@@ -1638,10 +1633,12 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 			less <= block size */
 		memset(piv, 0, TEGRA_SE_AES_IV_SIZE);
 		ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
-			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV, SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
+			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV,
+				SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
 	} else {
 		ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
-			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_UPDTDIV, SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
+			cmac_ctx->slot->slot_num, SE_KEY_TABLE_TYPE_UPDTDIV,
+			SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
 	}
 
 	req_ctx->config = tegra_se_get_config(se_dev, req_ctx->op_mode,
@@ -1738,7 +1735,8 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	/* load the key */
 	ret = tegra_se_send_key_data(se_dev, (u8 *)key, keylen,
-			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY, SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
+			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY,
+			SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"tegra_se_send_key_data for loading cmac key failed\n");
@@ -1750,7 +1748,8 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	/* load IV */
 	ret = tegra_se_send_key_data(se_dev, piv, TEGRA_SE_AES_IV_SIZE,
-			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV, SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
+			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_ORGIV,
+			SE2_AES1_CONFIG_REG_OFFSET, &cmdbuf_cnt);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"tegra_se_send_key_data for loading cmac iv failed\n");
@@ -1764,7 +1763,8 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 		SE_AES_OP_MODE_CBC, true, ctx->slot->slot_num, true);
 
 	ret = tegra_se_send_data(se_dev,
-			req_ctx, NULL, TEGRA_SE_AES_BLOCK_SIZE, SE2_AES1_CONFIG_REG_OFFSET, 0);
+			req_ctx, NULL, TEGRA_SE_AES_BLOCK_SIZE,
+			SE2_AES1_CONFIG_REG_OFFSET, 0);
 	if (ret) {
 		dev_err(se_dev->dev,
 			"tegra_se_aes_cmac_setkey:: start op failed\n");
@@ -1939,7 +1939,7 @@ static int tegra_se_send_rsa_data(struct tegra_se_dev *se_dev,
 
 	err = tegra_se_channel_submit_gather(se_dev, NULL,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
-			0, cmdbuf_num_words, true);
+			0, cmdbuf_num_words);
 
 	dma_free_attrs(se_dev->dev->parent,
 		SZ_4K, cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
@@ -1991,8 +1991,8 @@ static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	rsa_opcode_start_addr = SE3_RSA_CONFIG_REG_OFFSET;
 
-	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_64K, &cmdbuf_iova,
-				GFP_KERNEL, &attrs);
+	cmdbuf_cpuvaddr = dma_alloc_attrs(se_dev->dev->parent, SZ_64K,
+				&cmdbuf_iova, GFP_KERNEL, &attrs);
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
 
@@ -2047,7 +2047,7 @@ static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	err = tegra_se_channel_submit_gather(se_dev, NULL,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
-			0, cmdbuf_num_words, true);
+			0, cmdbuf_num_words);
 
 	dma_free_attrs(se_dev->dev->parent,
 		SZ_64K, cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
@@ -2530,11 +2530,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 	struct tegra_se_dev *se_dev = NULL;
 	struct nvhost_device_data *pdata = NULL;
 	const struct of_device_id *match;
-	int err = 0, i = 0, j = 0, k = 0;
-	/* aes_algs that are registered */
-	int reg_aes_alg[ARRAY_SIZE(aes_algs)];
-	/*hash_algs that are registered */
-	int reg_hash_alg[ARRAY_SIZE(hash_algs)];
+	int err = 0, i = 0;
+	char se_nvhost_name[15];
 
 	se_dev = kzalloc(sizeof(struct tegra_se_dev), GFP_KERNEL);
 	if (!se_dev) {
@@ -2643,7 +2640,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	if (se_num == 0) {
-		for (i = 0; i < 2; i++, j++) {
+		for (i = 0; i < 2; i++) {
 			if (is_algo_supported(se_dev, aes_algs[i].cra_name)) {
 				INIT_LIST_HEAD(&aes_algs[i].cra_list);
 				err = crypto_register_alg(&aes_algs[i]);
@@ -2654,12 +2651,11 @@ static int tegra_se_probe(struct platform_device *pdev)
 					goto reg_fail;
 				}
 			}
-			reg_aes_alg[j] = i;
 		}
 	}
 
 	if (se_num == 1) {
-		for (i = 2; i < ARRAY_SIZE(aes_algs); i++, j++) {
+		for (i = 2; i < ARRAY_SIZE(aes_algs); i++) {
 			if (is_algo_supported(se_dev, aes_algs[i].cra_name)) {
 				INIT_LIST_HEAD(&aes_algs[i].cra_list);
 				err = crypto_register_alg(&aes_algs[i]);
@@ -2670,7 +2666,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 					goto reg_fail;
 				}
 			}
-			reg_aes_alg[j] = i;
 		}
 
 		if (is_algo_supported(se_dev,
@@ -2682,12 +2677,10 @@ static int tegra_se_probe(struct platform_device *pdev)
 				goto reg_fail;
 			}
 		}
-		reg_hash_alg[k] = 0;
-		k++;
 	}
 
 	if (se_num == 3) {
-		for (i = 1; i < 6; i++, k++) {
+		for (i = 1; i < 6; i++) {
 			if (is_algo_supported(se_dev,
 				hash_algs[i].halg.base.cra_name)) {
 				err = crypto_register_ahash(&hash_algs[i]);
@@ -2698,12 +2691,11 @@ static int tegra_se_probe(struct platform_device *pdev)
 					goto reg_fail;
 				}
 			}
-			reg_hash_alg[k] = i;
 		}
 	}
 
 	if (se_num == 2) {
-		for (i = 6; i < ARRAY_SIZE(hash_algs); i++, k++) {
+		for (i = 6; i < ARRAY_SIZE(hash_algs); i++) {
 			if (is_algo_supported(se_dev,
 				hash_algs[i].halg.base.cra_name)) {
 				err = crypto_register_ahash(&hash_algs[i]);
@@ -2714,7 +2706,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 					goto reg_fail;
 				}
 			}
-			reg_hash_alg[k] = i;
 		}
 	}
 
@@ -2722,26 +2713,27 @@ static int tegra_se_probe(struct platform_device *pdev)
 	err = nvhost_module_busy(pdev);
 	if (err) {
 		dev_err(se_dev->dev, "nvhost_module_busy failed for se_dev\n");
-		goto host_clk_fail;
+		goto reg_fail;
 	}
 
 	/* RNG register only exists in se0/se1 */
 	if (se_num == 0) {
 		se_writel(se_dev,
-			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE)
-			|SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
+			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE) |
+		SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
 				SE_RNG_SRC_CONFIG_REG_OFFSET);
 	}
 	/* Power OFF after SE register update */
 	nvhost_module_idle(pdev);
 
-	se_dev->syncpt_id =
-			nvhost_get_syncpt_host_managed(pdev, 0, "se");
+	sprintf(se_nvhost_name, "158%d0000.se", (se_num+1));
+	se_dev->syncpt_id = nvhost_get_syncpt_host_managed(se_dev->pdev,
+						0, se_nvhost_name);
 	if (!se_dev->syncpt_id) {
 		err = -EINVAL;
 		dev_err(se_dev->dev, "Cannot get syncpt_id for SE%d\n",
 				se_num + 1);
-		goto host_clk_fail;
+		goto reg_fail;
 	}
 
 	se_dev->src_ll = kzalloc(sizeof(struct tegra_se_ll), GFP_KERNEL);
@@ -2766,12 +2758,6 @@ cmd_buf_alloc_fail:
 		kfree(se_dev->dst_ll);
 	nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
 
-host_clk_fail:
-	for (i = 0; i < ARRAY_SIZE(reg_aes_alg); i++)
-		crypto_unregister_alg(&aes_algs[reg_aes_alg[i]]);
-
-	for (i = 0; i < ARRAY_SIZE(reg_hash_alg); i++)
-		crypto_unregister_ahash(&hash_algs[reg_hash_alg[i]]);
 reg_fail:
 	tegra_se_free_ll_buf(se_dev);
 ll_alloc_fail:
@@ -2808,11 +2794,11 @@ static int tegra_se_remove(struct platform_device *pdev)
 		crypto_unregister_ahash(&hash_algs[i]);
 
 	nvhost_syncpt_put_ref_ext(se_dev->pdev, se_dev->syncpt_id);
-
 	nvhost_client_device_release(pdev);
 
 	dma_free_attrs(se_dev->dev->parent, SZ_16K,
-			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova, &attrs);
+			se_dev->aes_cmdbuf_cpuvaddr,
+			se_dev->aes_cmdbuf_iova, &attrs);
 
 	kfree(se_dev);
 	for (i = 0; i < 4; i++)
@@ -2858,4 +2844,3 @@ MODULE_DESCRIPTION("Tegra Crypto algorithm support using Host1x Interface");
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_LICENSE("GPL");
 MODULE_ALIAS("tegra-se-nvhost");
-

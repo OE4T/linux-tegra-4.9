@@ -30,6 +30,10 @@
 #define TEGRA_SID_GPCDMA_6	0x26	/* 38 */
 #define TEGRA_SID_GPCDMA_7	0x27	/* 39 */
 
+/* The APE DMA Clients. */
+#define TEGRA_SID_APE_1		0x28	/* 40 */
+#define TEGRA_SID_APE_2		0x29	/* 41 */
+
 /* Host1x virtualization clients. */
 #define TEGRA_SID_HOST1X_CTX0	0x38	/* 56 */
 #define TEGRA_SID_HOST1X_CTX1	0x39	/* 57 */

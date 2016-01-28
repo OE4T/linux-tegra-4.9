@@ -227,6 +227,22 @@ static unsigned int tegra_ahci_qc_issue(struct ata_queued_cmd *qc)
 				qc->tf.feature ==  SATA_FPDMA_OFFSET) {
 		WARN(1, "SATA_FPDMA_OFFSET Feature is not supported");
 		return AC_ERR_INVALID;
+	} else if (qc->tf.command == ATA_CMD_READ_LOG_EXT &&
+					qc->tf.lbal == ATA_LOG_SATA_NCQ) {
+		u8 *buf =
+		(u8 *) page_address((const struct page *)qc->sg->page_link);
+
+		/*
+		 * Since our SATA Controller does not support this command
+		 * don't send this command to the drive instead complete
+		 * the function here and indicate to the upper layer
+		 * that there is no entries in the buffer.
+		*/
+		buf += qc->sg->offset;
+		buf[0] = TEGRA_AHCI_READ_LOG_EXT_NOENTRY;
+		qc->complete_fn(qc);
+
+		return 0;
 	}
 
 	return ahci_ops.qc_issue(qc);

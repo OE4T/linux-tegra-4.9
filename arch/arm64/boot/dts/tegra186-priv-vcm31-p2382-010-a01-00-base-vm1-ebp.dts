@@ -50,6 +50,10 @@
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp-hv";
 		ivc_queue = <&tegra_hv 0 14>;
+
+		bpmpthermal {
+			status = "disabled";
+		};
 	};
 
 	bpmp_i2c {

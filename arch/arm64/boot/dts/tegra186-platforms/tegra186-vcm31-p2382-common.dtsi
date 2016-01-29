@@ -704,7 +704,7 @@
 
 	bpmp {
 		bpmpthermal {
-			status = "disabled";
+			status = "okay";
 		};
 	};
 

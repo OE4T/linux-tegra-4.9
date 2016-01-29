@@ -33,7 +33,7 @@ static void nvmap_roc_flush_cache(void)
 		return;
 	}
 
-	ret = tegra_roc_flush_cache();
+	ret = tegra_roc_flush_cache_only();
 	if (ret) {
 		pr_info_once("ROC flush failed with %u\n", ret);
 		pr_info_once("Fall back to flush by VA\n");

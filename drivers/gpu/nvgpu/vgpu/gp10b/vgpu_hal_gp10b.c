@@ -16,6 +16,7 @@
 #include "vgpu_gr_gp10b.h"
 #include "vgpu_fifo_gp10b.h"
 #include "vgpu_mm_gp10b.h"
+#include "nvgpu_gpuid_t18x.h"
 
 int vgpu_gp10b_init_hal(struct gk20a *g)
 {

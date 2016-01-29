@@ -583,6 +583,7 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	unsigned long v_front_porch;
 	unsigned long v_sync_width;
 	unsigned long v_active;
+	u32 csc2_control;
 
 	if (!dc->mode.pclk)
 		return 0;
@@ -672,6 +673,33 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 				mode->pclk, dc->mode.pclk);
 
 
+	/* Check whether the extended colorimetry
+	 * is requested in mode set for output csc
+	 */
+	csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
+
+	if (mode->vmode & FB_VMODE_EC_ENABLE) {
+		if ((mode->vmode & FB_VMODE_EC_ADOBE_YCC601) ||
+			(mode->vmode & FB_VMODE_EC_SYCC601) ||
+			(mode->vmode & FB_VMODE_EC_XVYCC601))
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y601_f();
+		else if ((mode->vmode & FB_VMODE_EC_BT2020_CYCC) ||
+			(mode->vmode & FB_VMODE_EC_BT2020_YCC_RGB))
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y2020_f();
+		else if (mode->vmode & FB_VMODE_EC_XVYCC709)
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y709_f();
+	}
+
+	tegra_dc_writel(dc, csc2_control, nvdisp_csc2_control_r());
+
+	/* general-update */
+	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_update_enable_f(),
+			nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+
 #ifdef CONFIG_SWITCH
 	switch_set_state(&dc->modeset_switch,
 			 (mode->h_active << 16) | mode->v_active);
@@ -679,6 +707,7 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
 			nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
 
 	if (dc->out_ops && dc->out_ops->modeset_notifier)
 		dc->out_ops->modeset_notifier(dc);

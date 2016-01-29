@@ -83,6 +83,7 @@ struct tegra_asoc_audio_clock_info {
 struct clk *tegra_alt_asoc_utils_get_clk(struct device *dev,
 					bool dev_id,
 					const char *clk_name);
+void tegra_alt_asoc_utils_clk_put(struct device *dev, struct clk *clk);
 int tegra_alt_asoc_utils_set_rate(struct tegra_asoc_audio_clock_info *data,
 				int srate,
 				int mclk,

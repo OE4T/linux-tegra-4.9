@@ -21,18 +21,13 @@
 #include <linux/miscdevice.h>
 #include <linux/clk.h>
 #include <linux/platform/tegra/mc.h>
+#include <linux/of.h>
 
 #include "vi.h"
 #include "tegra_camera_dev_mfi.h"
 #include "tegra_camera_platform.h"
 
 #define CAMDEV_NAME "tegra_camera_ctrl"
-
-/* Peak BPP for any of the YUV/Bayer formats */
-#define CAMERA_PEAK_BPP 2
-
-#define LANE_SPEED_1_GBPS 1000000000
-#define LANE_SPEED_1_5_GBPS 1500000000
 
 static const struct of_device_id tegra_camera_of_ids[] = {
 	{ .compatible = "nvidia, tegra-camera-platform" },
@@ -44,56 +39,62 @@ static struct miscdevice tegra_camera_misc;
 static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
 {
 #if defined(CONFIG_TEGRA_ISOMGR)
-	u32 num_csi_lanes;
-	u32 max_num_streams;
-	u64 max_lane_speed;
-	u32 min_bits_per_pixel;
+	int ret = 0;
+	u32 num_csi_lanes = 0;
+	u32 max_lane_speed = 0;
+	u32 bits_per_pixel = 0;
+	u32 vi_bpp = 0;
+	u64 vi_iso_bw = 0;
+	u32 vi_margin_pct = 0;
+	u32 max_pixel_rate = 0;
+	u32 isp_bpp = 0;
+	u64 isp_iso_bw = 0;
+	u32 isp_margin_pct = 0;
+	struct device_node *np = info->dev->of_node;
 
 	dev_dbg(info->dev, "%s++\n", __func__);
 
-	/* TODO: Extract these values from DT */
-#if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	num_csi_lanes = 2;
-	max_num_streams = 6;
-	max_lane_speed = LANE_SPEED_1_5_GBPS;
-	min_bits_per_pixel = 10;
-#elif defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
-	num_csi_lanes = 2;
-	max_num_streams = 2;
-	max_lane_speed = LANE_SPEED_1_GBPS;
-	min_bits_per_pixel = 10;
-#else
-	dev_err(info->dev, "%s Invalid chip-id\n", __func__);
-	return -EINVAL;
-#endif
+	ret |= of_property_read_u32(np, "num_csi_lanes", &num_csi_lanes);
+	ret |= of_property_read_u32(np, "max_lane_speed", &max_lane_speed);
+	ret |= of_property_read_u32(np, "min_bits_per_pixel", &bits_per_pixel);
+	ret |= of_property_read_u32(np, "vi_peak_byte_per_pixel", &vi_bpp);
+	ret |= of_property_read_u32(np, "vi_bw_margin_pct", &vi_margin_pct);
+	ret |= of_property_read_u32(np, "max_pixel_rate", &max_pixel_rate);
+	ret |= of_property_read_u32(np, "isp_peak_byte_per_pixel", &isp_bpp);
+	ret |= of_property_read_u32(np, "isp_bw_margin_pct", &isp_margin_pct);
+
+	if (ret)
+		dev_info(info->dev, "%s: some fields not in DT.\n", __func__);
+
 	/*
-	 * Let's go with simple registering max dedicated BW
-	 * approach for now.
+	 * Use per-camera specifics to calculate ISO BW needed,
+	 * which is smaller than the per-asic max.
 	 *
-	 * The formula is:
-	 * Camera's max total ISO BW =
-	 * ((max_num_streams *
-	 * num_csi_lanes * max_lane_speed) /
-	 * min_bits_per_pixel) * max_peak_BPP
+	 * The formula for VI ISO BW is based on total number
+	 * of active csi lanes when all cameras on the camera
+	 * board are active.
 	 *
-	 * Above considered cap is CSI link cap, but we need to
-	 * consider real sensor-on-board cap also, DT based approach
-	 * should handle it.
+	 * The formula for ISP ISO BW is based on max number
+	 * of ISP's used in ISO mode given number of camera(s)
+	 * on the camera board and the number of ISP's on the ASIC.
 	 *
-	 * Only VI out is considered, because in case of
-	 * max # of cameras running, only VI is in ISO mode.
-	 *
-	 * TODO: Try renegotiate approach later.
+	 * The final ISO BW is based on the max of the two.
 	 */
-	info->max_bw = (((num_csi_lanes * max_lane_speed * max_num_streams) /
-				min_bits_per_pixel) * CAMERA_PEAK_BPP) / 1000;
+	vi_iso_bw = ((num_csi_lanes * max_lane_speed) / bits_per_pixel)
+				* vi_bpp * (100 + vi_margin_pct) / 100;
+	isp_iso_bw = max_pixel_rate * isp_bpp * (100 + isp_margin_pct) / 100;
+	if (vi_iso_bw > isp_iso_bw)
+		info->max_bw = vi_iso_bw;
+	else
+		info->max_bw = isp_iso_bw;
+
 	if (!info->max_bw) {
 		dev_err(info->dev, "%s: BW must be non-zero\n", __func__);
 		return -EINVAL;
 	}
 
-	dev_info(info->dev, "%s camera's max_iso_bw %llu\n",
-				__func__, info->max_bw);
+	dev_info(info->dev, "%s isp_iso_bw=%llu, vi_iso_bw=%llu, max_bw=%llu\n",
+				__func__, isp_iso_bw, vi_iso_bw, info->max_bw);
 
 	/* Register with max possible BW for CAMERA usecases.*/
 	info->isomgr_handle = tegra_isomgr_register(
@@ -397,7 +398,7 @@ static int tegra_camera_probe(struct platform_device *pdev)
 	memset(info, 0, sizeof(*info));
 
 	strcpy(info->devname, tegra_camera_misc.name);
-	info->dev = tegra_camera_misc.this_device;
+	info->dev = &pdev->dev;
 
 	/* Register Camera as isomgr client. */
 	ret = tegra_camera_isomgr_register(info);

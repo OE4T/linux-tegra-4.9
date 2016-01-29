@@ -1,7 +1,7 @@
 /*
  * GK20A Cycle stats snapshots support (subsystem for gr_gk20a).
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -757,4 +757,5 @@ void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g)
 	mutex_lock(&gr->cs_lock);
 	css_gr_free_shared_data(gr);
 	mutex_unlock(&gr->cs_lock);
+	mutex_destroy(&gr->cs_lock);
 }

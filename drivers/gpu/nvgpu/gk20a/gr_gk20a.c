@@ -4441,6 +4441,10 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	mutex_init(&gr->ctx_mutex);
 	spin_lock_init(&gr->ch_tlb_lock);
 
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	mutex_init(&g->gr.cs_lock);
+#endif
+
 	gr->remove_support = gk20a_remove_gr_support;
 	gr->sw_ready = true;
 
@@ -4506,11 +4510,6 @@ int gk20a_init_gr_support(struct gk20a *g)
 	u32 err;
 
 	gk20a_dbg_fn("");
-
-#if defined(CONFIG_GK20A_CYCLE_STATS)
-	mutex_init(&g->gr.cs_lock);
-	g->gr.cs_data = NULL;
-#endif
 
 	/* this is required before gr_gk20a_init_ctx_state */
 	mutex_init(&g->gr.fecs_mutex);

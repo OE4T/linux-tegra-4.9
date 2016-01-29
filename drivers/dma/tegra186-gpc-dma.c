@@ -1,7 +1,7 @@
 /*
  * DMA driver for Nvidia's Tegra186 GPC DMA controller.
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1932,18 +1932,7 @@ static struct platform_driver tegra_dmac_driver = {
 	.id_table	= tegra_dma_devtype,
 };
 
-static int __init tegra_dmac_init_driver(void)
-{
-	return platform_driver_register(&tegra_dmac_driver);
-}
-
-static void __exit tegra_dmac_exit_driver(void)
-{
-	platform_driver_unregister(&tegra_dmac_driver);
-}
-
-arch_initcall_sync(tegra_dmac_init_driver);
-module_exit(tegra_dmac_exit_driver);
+module_platform_driver(tegra_dmac_driver);
 
 MODULE_ALIAS("platform:tegra186-gpcdma");
 MODULE_DESCRIPTION("NVIDIA Tegra GPC DMA Controller driver");

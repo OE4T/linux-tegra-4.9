@@ -423,7 +423,7 @@ void tegra_hv_i2c_poll_cleanup(struct tegra_hv_i2c_comm_chan *comm_chan)
 	}
 }
 
-struct tegra_hv_i2c_comm_dev *_hv_i2c_get_comm_dev(struct device *dev,
+static struct tegra_hv_i2c_comm_dev *_hv_i2c_get_comm_dev(struct device *dev,
 		struct device_node *hv_dn, uint32_t ivc_queue)
 {
 	static HLIST_HEAD(ivc_comm_devs);

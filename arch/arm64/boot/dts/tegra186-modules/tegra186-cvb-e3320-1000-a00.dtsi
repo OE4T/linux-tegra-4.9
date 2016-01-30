@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -34,6 +34,7 @@
 			interrupt-parent = <&tegra_gpio>;
 			interrupts = <TEGRA_GPIO(AA, 7) 0x01>; /* GPIO_PAA7 */
 			reset-gpio = <&tegra_gpio TEGRA_GPIO(S, 3) 0>; /* GPIO_PS3 */
+			clock-sel-gpio = <&gpio_i2c_0_21 1 0>; /* tca6408 7h21 pin1 */
 			x-max = <9600>;
 			y-max = <15360>;
 			z-max = <65535>;

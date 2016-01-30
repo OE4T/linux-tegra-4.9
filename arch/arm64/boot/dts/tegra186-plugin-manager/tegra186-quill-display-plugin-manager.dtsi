@@ -16,7 +16,7 @@
 / {
 	plugin-manager {
 		fragment-e3320-a01@0 {
-			ids = "3320-1000-A01", "3320-1000-100";
+			ids = "3320-1000-100";
 			overrides@0 {
 				target = <&{/i2c@3160000/tps65132@3e/outn}>;
 				_overlay_ {

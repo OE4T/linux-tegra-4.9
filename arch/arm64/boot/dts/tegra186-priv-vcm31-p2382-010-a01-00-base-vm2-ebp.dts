@@ -48,6 +48,8 @@
 		};
 	};
 
+	/delete-node/ trusty;
+
 	tegra-carveouts {
 		status = "okay";
 		memory-region = <&ivm0>;

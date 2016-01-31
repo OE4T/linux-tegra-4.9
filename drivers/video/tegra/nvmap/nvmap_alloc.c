@@ -3,7 +3,7 @@
  *
  * Handle allocation and freeing routines for nvmap
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -371,12 +371,11 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	BUG_ON(h->size & ~PAGE_MASK);
 	BUG_ON(!h->pgalloc.pages);
 
-#ifdef NVMAP_LAZY_VFREE
 	if (h->vaddr) {
 		nvmap_kmaps_dec(h);
-		vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
+		if (h->heap_pgalloc)
+			vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
 	}
-#endif
 
 	for (i = 0; i < nr_page; i++)
 		h->pgalloc.pages[i] = nvmap_to_page(h->pgalloc.pages[i]);

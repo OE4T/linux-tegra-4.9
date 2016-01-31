@@ -3,7 +3,7 @@
  *
  * Memory manager for Tegra GPU
  *
- * Copyright (c) 2009-2014, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2009-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -285,7 +285,6 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 			if (!vaddr && !h->vaddr)
 				goto out;
 		}
-#ifdef NVMAP_LAZY_VFREE
 		else
 			nvmap_kmaps_dec(h);
 
@@ -294,8 +293,6 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
 		}
 		return h->vaddr;
-#endif
-		return vaddr;
 	}
 
 	/* carveout - explicitly map the pfns into a vmalloc area */
@@ -331,11 +328,6 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 	/* Handle can be locked by cache maintenance in
 	 * separate thread */
 	if (h->heap_pgalloc) {
-#ifndef NVMAP_LAZY_VFREE
-		BUG_ON(h->vaddr);
-		vm_unmap_ram(addr, h->size >> PAGE_SHIFT);
-		nvmap_kmaps_dec(h);
-#endif
 	} else {
 		struct vm_struct *vm;
 		addr -= (h->carveout->base & ~PAGE_MASK);

@@ -186,7 +186,6 @@ static void heap_page_cache_maint(
 		nvmap_zap_handle(h, start, end - start);
 	}
 
-#ifdef NVMAP_LAZY_VFREE
 	if (inner) {
 		void *vaddr = NULL;
 
@@ -224,7 +223,6 @@ per_page_cache_maint:
 		if (!h->vaddr)
 			nvmap_kmaps_dec(h);
 	}
-#endif
 
 	while (start < end) {
 		struct page *page;

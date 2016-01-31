@@ -57,10 +57,6 @@
 
 #define GFP_NVMAP              (__GFP_NVMAP | __GFP_NOWARN)
 
-#ifdef CONFIG_64BIT
-#define NVMAP_LAZY_VFREE
-#endif
-
 struct page;
 struct nvmap_device;
 

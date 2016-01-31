@@ -373,8 +373,18 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 
 	if (h->vaddr) {
 		nvmap_kmaps_dec(h);
-		if (h->heap_pgalloc)
+		if (h->heap_pgalloc) {
 			vm_unmap_ram(h->vaddr, h->size >> PAGE_SHIFT);
+		} else {
+			struct vm_struct *vm;
+			void *addr = h->vaddr;
+
+			addr -= (h->carveout->base & ~PAGE_MASK);
+			vm = find_vm_area(addr);
+			BUG_ON(!vm);
+			free_vm_area(vm);
+		}
+		h->vaddr = NULL;
 	}
 
 	for (i = 0; i < nr_page; i++)

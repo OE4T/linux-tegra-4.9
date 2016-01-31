@@ -255,10 +255,9 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 void *__nvmap_mmap(struct nvmap_handle *h)
 {
 	pgprot_t prot;
-	void *vaddr = NULL;
+	void *vaddr;
 	unsigned long adj_size;
 	struct vm_struct *v;
-	void *p;
 	struct page **pages;
 
 	if (!virt_addr_valid(h))
@@ -268,25 +267,21 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	if (!h)
 		return NULL;
 
+	if (h->vaddr)
+		return h->vaddr;
+
 	nvmap_kmaps_inc(h);
 	prot = nvmap_pgprot(h, PG_PROT_KERNEL);
 
 	if (h->heap_pgalloc) {
+		pages = nvmap_pages(h->pgalloc.pages, h->size >> PAGE_SHIFT);
+		if (!pages)
+			goto out;
 
-		if (!h->vaddr) {
-			pages = nvmap_pages(h->pgalloc.pages,
-					    h->size >> PAGE_SHIFT);
-			if (!pages)
-				goto out;
-			vaddr = vm_map_ram(pages,
-				h->size >> PAGE_SHIFT, -1, prot);
-			nvmap_altfree(pages,
-				(h->size >> PAGE_SHIFT) * sizeof(*pages));
-			if (!vaddr && !h->vaddr)
-				goto out;
-		}
-		else
-			nvmap_kmaps_dec(h);
+		vaddr = vm_map_ram(pages, h->size >> PAGE_SHIFT, -1, prot);
+		nvmap_altfree(pages, (h->size >> PAGE_SHIFT) * sizeof(*pages));
+		if (!vaddr && !h->vaddr)
+			goto out;
 
 		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr)) {
 			nvmap_kmaps_dec(h);
@@ -304,14 +299,24 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	if (!v)
 		goto out;
 
-	p = v->addr + (h->carveout->base & ~PAGE_MASK);
+	vaddr = v->addr + (h->carveout->base & ~PAGE_MASK);
 	ioremap_page_range((ulong)v->addr, (ulong)v->addr + adj_size,
 		h->carveout->base & PAGE_MASK, prot);
+
+	if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr)) {
+		struct vm_struct *vm;
+
+		vaddr -= (h->carveout->base & ~PAGE_MASK);
+		vm = find_vm_area(vaddr);
+		BUG_ON(!vm);
+		free_vm_area(vm);
+		nvmap_kmaps_dec(h);
+	}
 
 	/* leave the handle ref count incremented by 1, so that
 	 * the handle will not be freed while the kernel mapping exists.
 	 * nvmap_handle_put will be called by unmapping this address */
-	return p;
+	return h->vaddr;
 out:
 	nvmap_kmaps_dec(h);
 	nvmap_handle_put(h);
@@ -325,17 +330,6 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 	    WARN_ON(!addr))
 		return;
 
-	/* Handle can be locked by cache maintenance in
-	 * separate thread */
-	if (h->heap_pgalloc) {
-	} else {
-		struct vm_struct *vm;
-		addr -= (h->carveout->base & ~PAGE_MASK);
-		vm = find_vm_area(addr);
-		BUG_ON(!vm);
-		free_vm_area(vm);
-		nvmap_kmaps_dec(h);
-	}
 	nvmap_handle_put(h);
 }
 

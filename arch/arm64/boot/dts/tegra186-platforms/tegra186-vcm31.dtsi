@@ -151,6 +151,10 @@
 		status = "okay";
 	};
 
+	i2c@3180000 { /* Tegra I2C3 - VCM I2CD */
+		status = "okay";
+	};
+
 	i2c@3190000 { /* Tegra I2C4 - VCM DP_AUX1 */
 		status = "okay";
 	};

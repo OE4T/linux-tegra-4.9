@@ -1,6 +1,6 @@
 /*
 * Copyright (C) 2012 Invensense, Inc.
-* Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
 *
 * This software is licensed under the terms of the GNU General Public
 * License version 2, as published by the Free Software Foundation, and
@@ -174,8 +174,12 @@ struct mpu_platform_data {
  * - *ext_driver: A generic pointer that can be used by the
  *      external driver.  Note that this is specifically for the
  *      external driver and not used by the MPU.
+ * - matrix: device orientation on platform.
+ *      Needed by the DMP.
  * - type: Define if device is to be used by the MPU DMP.
  * - id: Define if device is to be used by the MPU DMP.
+ * - asa: compass axis sensitivity adjustment.
+ *      Needed by the DMP.
  */
 struct nvi_mpu_port {
 	u8 addr;
@@ -188,8 +192,10 @@ struct nvi_mpu_port {
 	void (*handler)(u8 *data, unsigned int len,
 			long long timestamp, void *ext_driver);
 	void *ext_driver;
+	signed char matrix[9];
 	enum secondary_slave_type type;
 	enum ext_slave_id id;
+	u8 asa[3];
 	int rate_scale;
 };
 
@@ -313,28 +319,6 @@ int nvi_mpu_port_free(int port);
 int nvi_mpu_enable(int port, bool enable);
 
 /**
- * Use to change the ports sampling delay in microseconds. The
- * hardware only supports one sampling rate so the shortest time
- * is used among all enabled ports, accelerometer, and gyro. If
- * the requested rate is longer than the actual rate and the
- * port is configured for reads, the data will be reported at
- * the requested rate skipping the data polled at the faster
- * rate.  Setting this to zero causes other enabled devices to
- * determine the sampling rate.  If there are no other enabled
- * devices, then the MPU default rate is used.
- * @param port
- * @param delay_us
- * @return int error
- *            Possible errors are:
- *            - -EAGAIN: MPU is not initialized yet.
- *            - -EPERM: MPU is shutdown.  MPU API won't be
- *                 available until a system restart.
- *            - -EBUSY: MPU is busy with another request.
- *            - -EINVAL: Problem with input parameters.
- */
-int nvi_mpu_delay_us(int port, unsigned long delay_us);
-
-/**
  * Use to change the ports polling delay in milliseconds.
  * A delay value of 0 disables the delay for that port.  The
  * hardware only supports one delay value so the largest request
@@ -372,22 +356,17 @@ int nvi_mpu_data_out(int port, u8 data_out);
 /**
  * batch mode.
  * @param port
- * @param flags
  * @param period_us
  * @param timeout_us
  * @return int error
- *            if return >= 0 then this is the supported batch
- *            flags.  If batch is not supported then 0 is
- *            returned.
  *            Possible errors are:
  *            - -EAGAIN: MPU is not initialized yet.
  *            - -EPERM: MPU is shutdown.  MPU API won't be
  *                 available until a system restart.
  *            - -EBUSY: MPU is busy with another request.
- *            - -EINVAL: Problem with input parameters.
+ *            - -EINVAL: timeout_us not supported if > 0.
  */
-int nvi_mpu_batch(int port, unsigned int flags,
-		  unsigned int period_us, unsigned int timeout_us);
+int nvi_mpu_batch(int port, unsigned int period_us, unsigned int timeout_us);
 
 /**
  * batch flush.

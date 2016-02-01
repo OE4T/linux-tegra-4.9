@@ -76,7 +76,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(210)
+#define NVS_IIO_DRIVER_VERSION		(211)
 #define NVS_ATTRS_ARRAY_SIZE		(12)
 
 enum NVS_ATTR {
@@ -1113,7 +1113,7 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 		old = st->batch_period_us;
 		if (val < st->cfg->delay_us_min)
 			val = st->cfg->delay_us_min;
-		if (val > st->cfg->delay_us_max)
+		if (st->cfg->delay_us_max && val > st->cfg->delay_us_max)
 			val = st->cfg->delay_us_max;
 		if (st->fn_dev->batch) {
 			ret = st->fn_dev->batch(st->client, st->cfg->snsr_id,

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved
  *
  * Permission is hereby granted, free of charge, to any person obtaining
  * a copy of this software and associated documentation files
@@ -175,10 +175,17 @@ static int tegra186_init_refcount(void)
 		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBB);
 	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_XUSBC))
 		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBC);
+	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_SAX))
+		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_SAX);
+	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_PCX))
+		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_PCX);
+
 
 	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBA);
 	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBB);
 	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBC);
+	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_SAX);
+	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_PCX);
 
 	return 0;
 }

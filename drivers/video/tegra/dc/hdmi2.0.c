@@ -2193,6 +2193,9 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	/* Set rate on PARENT */
 	clk_set_rate(parent_clk, dc->mode.pclk);
 
+	if (clk == dc->clk)
+		clk_set_rate(clk, dc->mode.pclk);
+
 	/* Enable safe sor clock */
 	tegra_sor_safe_clk_enable(sor);
 	/* Set Parent to SOR_CLK*/

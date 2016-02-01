@@ -22,11 +22,19 @@
 		vdd_usb1_5v_con: regulator@113 {
 			compatible = "regulator-fixed";
 			reg = <113>;
-			regulator-name = "vdd-usb0-5v-con";
+			regulator-name = "vdd-usb1-5v-con";
 			regulator-min-microvolt = <5000000>;
 			regulator-max-microvolt = <5000000>;
 			gpio = <&tegra_gpio TEGRA_GPIO(L, 5) 0>;
 			enable-active-high;
+		};
+
+		vdd_usb2_5v_con: regulator@114 {
+			compatible = "regulator-fixed";
+			reg = <114>;
+			regulator-name = "vdd-usb2-5v-con";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
 		};
 	};
 
@@ -87,6 +95,9 @@
 	pinctrl@3520000 {
 		vbus-0-supply = <&vdd_usb0_5v_con>;
 		vbus-1-supply = <&vdd_usb1_5v_con>;
+		vbus-2-supply = <&vdd_usb2_5v_con>;
+		vbus-3-supply = <&vdd_usb2_5v_con>;
+		vddio-hsic-supply = <&vdd_usb2_5v_con>;
 		hvdd_pex_pll-supply = <&spmic_sd2>;
 		hvdd_pex-supply = <&spmic_sd2>;
 		dvdd_pex-supply = <&spmic_ldo7>;

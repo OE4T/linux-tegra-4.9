@@ -1,7 +1,7 @@
 /*
  * isc manager.
  *
- * Copyright (c) 2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -528,7 +528,7 @@ static int isc_mgr_of_get_grp_gpio(
 
 	for (i = 0; (i < num) && (i < size); i++) {
 		grp[i] = of_get_named_gpio_flags(np, name, i, &flags[i]);
-		if (grp[i] < 0) {
+		if ((int)grp[i] < 0) {
 			dev_err(dev, "%s: gpio[%d] invalid\n", __func__, i);
 			return -EINVAL;
 		}

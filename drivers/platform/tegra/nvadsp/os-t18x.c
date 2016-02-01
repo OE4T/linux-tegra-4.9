@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2016, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,27 +30,6 @@ int nvadsp_os_init(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	int ret;
-
-	ret = tegra_agic_route_interrupt(INT_ATKE_TMR0,
-					 TEGRA_AGIC_ADSP);
-	if (ret) {
-		dev_err(dev, "failed to atke interrupt\n");
-		goto end;
-	}
-
-	ret = tegra_agic_route_interrupt(INT_ATKE_TMR1,
-			TEGRA_AGIC_ADSP);
-	if (ret) {
-		dev_err(dev, "failed to atke interrupt\n");
-		goto end;
-	}
-
-	ret = tegra_agic_route_interrupt(INT_SHSP2APE_DB,
-					 TEGRA_AGIC_ADSP);
-	if (ret) {
-		dev_err(dev, "failed to INT_SHSP2APE_DB interrupt\n");
-		goto end;
-	}
 
 	ret = tegra_hsp_db_add_handler(HSP_MASTER_APE,
 				       nvadsp_dbell_handler, pdev);

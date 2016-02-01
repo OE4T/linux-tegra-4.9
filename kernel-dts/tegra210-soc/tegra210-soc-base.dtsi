@@ -348,7 +348,7 @@
 	tegra_agic: agic-controller {
 		compatible = "nvidia,tegra210-agic";
 		interrupt-controller;
-		#interrupt-cells = <3>;
+		#interrupt-cells = <4>;
 		no-gic-extension;
 		not-per-cpu;
 		reg = <0x0 0x702f9000 0x0 0x2000>,

@@ -3,7 +3,7 @@
  *
  * Header file for managing AGIC interrupt controller
  *
- * Copyright (C) 2015 NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2015-2016 NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -21,9 +21,15 @@
 
 #define TEGRA_AGIC_COMPAT "nvidia,tegra18x-agic"
 
+
 enum tegra_agic_cpu {
 	TEGRA_AGIC_APE_HOST = 0,
+	TEGRA_AGIC_APE_HOST0 = 0,
+	TEGRA_AGIC_APE_HOST1 = 1,
+	TEGRA_AGIC_APE_HOST2 = 2,
+	TEGRA_AGIC_APE_HOST3 = 3,
 	TEGRA_AGIC_ADSP = 4,
+	MAX_AGIC_INTERFACES,
 };
 
 /* INT_ADMA Channel End of Transfer Interrupt */

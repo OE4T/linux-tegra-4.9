@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +15,12 @@
 #define _DT_BINDINGS_INTERRUPT_CONTROLLER_TEGRA_T18X_AGIC_H
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+
+#define ROUTE_TO_HOST_INTF0	0
+#define ROUTE_TO_HOST_INTF1	1
+#define ROUTE_TO_HOST_INTF2	2
+#define ROUTE_TO_HOST_INTF3	3
+#define ROUTE_TO_ADSP		4
 
 /* The DT adds an offset of 32 to IRQs defined as SPI */
 #define AGIC_IRQ(x)			(x - 32)

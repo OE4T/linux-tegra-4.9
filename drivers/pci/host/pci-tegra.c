@@ -1556,7 +1556,6 @@ static int tegra_pcie_module_power_ungate(struct generic_pm_domain *genpd)
 
 static int tegra_pcie_restore_device(struct device *dev)
 {
-	int ret;
 	int err = 0;
 	struct tegra_pcie *pcie = dev_get_drvdata(dev);
 
@@ -1589,12 +1588,6 @@ static int tegra_pcie_restore_device(struct device *dev)
 	tegra_pcie_enable_msi(pcie, true);
 	reset_control_deassert(pcie->pcie_rst);
 	tegra_pcie_check_ports(pcie);
-	if (!pcie->num_ports) {
-		tegra_pcie_power_off(pcie);
-		ret = tegra_pcie_disable_regulators(pcie);
-		if (ret)
-			return ret;
-	}
 	return 0;
 err_map_resource:
 #ifdef CONFIG_TEGRA3_PM

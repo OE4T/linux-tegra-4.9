@@ -52,7 +52,7 @@
 	};
 
 	ahci-sata@3507000 {
-		status = "disabled";
+		status = "okay";
 	};
 
 	xudc@3550000 {

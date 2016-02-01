@@ -2905,18 +2905,10 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	/* HACK : Should be handled through dma-engine */
 	tegra_adsp_pd_add_device(&pdev->dev);
 	pm_runtime_get_sync(&pdev->dev);
-	for (i = 0; i < TEGRA210_ADSP_ADMA_CHANNEL_COUNT; i++) {
-		ret = tegra_agic_route_interrupt(
-			INT_ADMA_EOT0 + TEGRA210_ADSP_ADMA_CHANNEL_START + i,
-			TEGRA_AGIC_ADSP);
-		if (ret < 0) {
-			dev_err(&pdev->dev, "Failed to route INT to ADSP");
-			goto err_pm_disable;
-		}
-	}
-	pm_runtime_put(&pdev->dev);
+	pm_runtime_put_sync(&pdev->dev);
 	tegra_adsp_pd_remove_device(&pdev->dev);
-	/* HACK end */
+       /* HACK end */
+
 
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++) {
 		adsp->apps[i].reg = i;

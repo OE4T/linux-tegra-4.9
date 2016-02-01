@@ -1,7 +1,7 @@
 /*
  * debugfs.c - debug fs access support
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -172,7 +172,7 @@ static int i2c_val_get(void *data, u64 *val)
 	struct isc_dev_info *isc_dev = data;
 	u8 temp = 0;
 
-	if (isc_dev_raw_rd(isc_dev, 0, isc_dev->reg_off, &temp, 1)) {
+	if (isc_dev_raw_rd(isc_dev, isc_dev->reg_off, 0, &temp, 1)) {
 		dev_err(isc_dev->dev, "ERR:%s failed\n", __func__);
 		return -EIO;
 	}

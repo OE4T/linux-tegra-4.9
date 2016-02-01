@@ -47,23 +47,23 @@
 #define TEGRA_CAM_RTCPU_HSP_DATA_ARRAY_SIZE	3
 
 static const char * const sce_clock_names[] = {
-	"sce_apb",
+	"sce-apb",
 };
 
 static const char * const sce_reset_names[] = {
-	"sce_apb",
-	"sce_nsysporeset",
-	"sce_nreset",
-	"sce_dbgresetn",
-	"sce_presetdbgn",
-	"sce_actmon",
-	"sce_pm",
-	"sce_dma",
-	"sce_hsp",
+	"sce-apb",
+	"sce-nsysporeset",
+	"sce-nreset",
+	"sce-dbgresetn",
+	"sce-presetdbgn",
+	"sce-actmon",
+	"sce-pm",
+	"sce-dma",
+	"sce-hsp",
 	"tsctnsce",
-	"sce_tke",
-	"sce_gte",
-	"sce_cfg",
+	"sce-tke",
+	"sce-gte",
+	"sce-cfg",
 };
 
 static const char * const ape_clock_names[] = {
@@ -505,6 +505,8 @@ static int tegra_cam_rtcpu_get_clks_resets(struct device *dev)
 			dev_err(dev, "clock %s not found: %ld\n",
 				pdata->clock_names[i],
 				PTR_ERR(pdata->clocks[i]));
+			if (PTR_ERR(pdata->clocks[i]) == -EPROBE_DEFER)
+				return PTR_ERR(pdata->clocks[i]);
 		}
 	}
 
@@ -515,6 +517,8 @@ static int tegra_cam_rtcpu_get_clks_resets(struct device *dev)
 			dev_err(dev, "reset %s not found: %ld\n",
 				pdata->reset_names[i],
 				PTR_ERR(pdata->resets[i]));
+			if (PTR_ERR(pdata->resets[i]) == -EPROBE_DEFER)
+				return PTR_ERR(pdata->resets[i]);
 		}
 	}
 
@@ -654,6 +658,12 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		}
 	}
 
+	ret = tegra_cam_rtcpu_get_clks_resets(dev);
+	if (ret) {
+		dev_err(dev, "failed to get clocks/resets: %d\n", ret);
+		return ret;
+	}
+
 	num_chans = tegra_cam_rtcpu_count_channels(dev_node);
 	if (num_chans <= 0) {
 		dev_err(dev, "no ivc channels\n");
@@ -674,13 +684,10 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	ret = tegra_cam_rtcpu_parse_channels(dev);
 	if (ret) {
-		dev_err(dev, "failed to set up ivc-channels\n");
-		return ret;
-	}
-
-	ret = tegra_cam_rtcpu_get_clks_resets(dev);
-	if (ret) {
-		dev_err(dev, "failed to get clocks/resets: %d\n", ret);
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "ivc-channels set up failed: %d\n", ret);
+		else
+			dev_err(dev, "ivc-channels set up deferred\n");
 		return ret;
 	}
 

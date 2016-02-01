@@ -1962,6 +1962,7 @@ int gk20a_do_unidle(void)
 int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
+	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
 
 	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
@@ -2028,6 +2029,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->cbc_comptags_per_line = g->gr.comptags_per_cacheline;
 
 	gpu->map_buffer_batch_limit = 256;
+
+	gpu->max_freq = platform->clk_round_rate(g->dev, UINT_MAX);
 
 	return 0;
 }

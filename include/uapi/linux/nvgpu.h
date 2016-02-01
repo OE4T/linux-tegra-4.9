@@ -1,7 +1,7 @@
 /*
  * NVGPU Public Interface Header
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -178,6 +178,8 @@ struct nvgpu_gpu_characteristics {
 	/* MAP_BUFFER_BATCH: the upper limit for num_unmaps and
 	 * num_maps */
 	__u32 map_buffer_batch_limit;
+
+	__u64 max_freq;
 
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always

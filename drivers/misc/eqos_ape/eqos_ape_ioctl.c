@@ -27,6 +27,20 @@
 #include "eqos_ape_ioctl.h"
 #include <../../platform/tegra/nvadsp/amisc.h>
 
+struct rate_to_time_period {
+	unsigned int rate;
+	unsigned int n_int;
+	unsigned int n_fract;
+	unsigned int n_modulo;
+};
+
+struct rate_to_time_period rate_table[] = {
+	{  24575996,   40, 3604,  5223 },
+	{  12288000,   81,   73,   192 },
+	{ 204000000,    4,   46,    51 },
+	{ 245759960,    4,  679,  9839 },
+	{ 368639941,    2, 9981, 14005 }
+};
 
 static int eqos_ape_ioctl_major;
 static struct cdev eqos_ape_ioctl_cdev;
@@ -64,6 +78,8 @@ unsigned int cmd, unsigned long arg)
 	int cur_rate;
 	int new_rate;
 	int set_rate;
+	int ape_rate;
+	int i;
 
 	switch (cmd) {
 	case EQOS_APE_AMISC_INIT:
@@ -71,8 +87,21 @@ unsigned int cmd, unsigned long arg)
 		amisc_writel(AMISC_APE_TSC_CTRL_3_0_ENABLE,
 					AMISC_APE_TSC_CTRL_3_0);
 
-		/* configuring n_fract/n_modulo for 24.576Mhz*/
-		n_modulo = 100; n_fract = 69; n_int = 40;
+		/* configuring n_fract/n_modulo based on the rate table*/
+		ape_rate = amisc_ape_get_rate(data);
+		for (i = 0; i < ARRAY_SIZE(rate_table) ; i++) {
+			if (ape_rate == rate_table[i].rate) {
+				n_int = rate_table[i].n_int;
+				n_fract = rate_table[i].n_fract;
+				n_modulo = rate_table[i].n_modulo;
+				break;
+			}
+		}
+		if (i == ARRAY_SIZE(rate_table)) {
+			dev_err(dev, "No Matching frequency\n");
+			return -EINVAL;
+		}
+
 		amisc_writel((AMISC_APE_TSC_CTRL_NMODULE_0_0_MASK(n_modulo) |
 			AMISC_APE_TSC_CTRL_NFRACT_0_0_MASK(n_fract)),
 			AMISC_APE_TSC_CTRL_0_0);
@@ -107,7 +136,6 @@ unsigned int cmd, unsigned long arg)
 		ape_ns_snap_prev = data->ape_ns_snap;
 
 		sync_snapshot();
-
 		/* TODO: implementation for clock change logic */
 		den = (data->ape_sec_snap - ape_sec_snap_prev) * (1000000000)
 		+ (data->ape_ns_snap - ape_ns_snap_prev);

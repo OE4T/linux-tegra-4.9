@@ -1,7 +1,7 @@
 /*
  * dma_buf exporter for nvmap
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -734,33 +734,6 @@ struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
 	}
 	dma_buf_put(dmabuf);
 	return handle;
-}
-
-int nvmap_ioctl_share_dmabuf(struct file *filp, void __user *arg)
-{
-	struct nvmap_create_handle op;
-	struct nvmap_client *client = filp->private_data;
-	struct nvmap_handle *handle;
-
-	BUG_ON(!client);
-
-	if (copy_from_user(&op, (void __user *)arg, sizeof(op)))
-		return -EFAULT;
-
-	handle = nvmap_handle_get_from_fd(op.id);
-	if (!handle)
-		return -EINVAL;
-
-	op.fd = nvmap_get_dmabuf_fd(client, handle);
-	nvmap_handle_put(handle);
-	if (op.fd < 0)
-		return op.fd;
-
-	if (copy_to_user((void __user *)arg, &op, sizeof(op))) {
-		sys_close(op.fd);
-		return -EFAULT;
-	}
-	return 0;
 }
 
 int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result)

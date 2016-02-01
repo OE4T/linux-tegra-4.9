@@ -682,7 +682,9 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	case NVMAP_IOC_SHARE:
-		err = nvmap_ioctl_share_dmabuf(filp, uarg);
+		pr_warn("NVMAP_IOC_SHARE is deprecated and no longer supported."
+			" Use NVMAP_IOC_GET_FD.\n");
+		err = -ENOTTY;
 		break;
 
 	default:

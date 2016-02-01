@@ -1,7 +1,7 @@
 /*
  * isc_dev.c - ISC generic i2c driver.
  *
- * Copyright (c) 2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -356,7 +356,7 @@ static int isc_dev_probe(struct i2c_client *client,
 	info->i2c_client = client;
 	info->dev = &client->dev;
 
-	if (info->pdata && info->pdata->drv_name)
+	if (info->pdata)
 		strncpy(info->devname, info->pdata->drv_name,
 			sizeof(info->devname));
 	else

@@ -1,4 +1,5 @@
 /*
+
  * tegra186-quill-p3310-a00-00-base.dts Quill A00 Board
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
@@ -51,23 +52,23 @@
 
 	xudc@3550000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
 		phy-names = "usb2";
 	};
 
 	xhci@3530000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
 		phy-names = "utmi-0", "utmi-1", "usb3-1";
 	};
 
-	padctl_uphy: pinctrl@3520000 {
+	pinctrl@3520000 {
 		status = "okay";
-		pinctrl-0 = <&quill_default>;
+		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;
 		pinctrl-names = "default";
-		quill_default: pinmux {
+		tegra_padctl_uphy_pinmux_default: pinmux {
 			/* Quill does not support usb3-micro AB */
 			usb2-micro-AB {
 				nvidia,lanes = "otg-0";

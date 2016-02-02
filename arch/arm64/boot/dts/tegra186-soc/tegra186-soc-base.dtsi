@@ -450,7 +450,7 @@
 		status = "disabled";
 	};
 
-	tegra_padctl_uphy: padctl_uphy: pinctrl@3520000 {
+	tegra_padctl_uphy: pinctrl@3520000 {
 		compatible = "nvidia,tegra186-padctl-uphy";
 		reg = <0x0 0x03520000 0x0 0x1000>,
 			<0x0 0x03540000 0x0 0x1000>,
@@ -1369,7 +1369,7 @@
 			  0x82000000 0 0x50100000 0x0 0x50100000 0 0x07F00000   /* non-prefetchable memory (127 MiB) */
 			  0xc2000000 0 0x58000000 0x0 0x58000000 0 0x28000000>; /* prefetchable memory (640 MiB) */
 
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
 		phy-names = "pcie-phy";
 
 		nvidia,lane-map = <0x04>;

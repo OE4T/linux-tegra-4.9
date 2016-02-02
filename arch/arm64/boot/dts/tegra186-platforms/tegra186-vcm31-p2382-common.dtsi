@@ -182,7 +182,7 @@
 		sat-rst-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(E, 1) 0>;
 		sat-spi-int-gpio = <&tegra_gpio TEGRA_GPIO(V, 7) 0>;
 	};
-	padctl_uphy: pinctrl@3520000 {
+	pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&p2382_uphy_default>;
 		pinctrl-names = "default";
@@ -280,8 +280,8 @@
 		extcon-cables = <&vbus_id_extcon 0>;
 		extcon-cable-names = "vbus";
 		#extcon-cells = <1>;
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
 		phy-names = "usb2", "usb3";
 	};
 
@@ -290,11 +290,11 @@
 		extcon-cables = <&vbus_id_extcon 1>;
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
 		phy-names = "utmi-0", "utmi-1", "utmi-2", "usb3-1", "usb3-2";
 	};
 

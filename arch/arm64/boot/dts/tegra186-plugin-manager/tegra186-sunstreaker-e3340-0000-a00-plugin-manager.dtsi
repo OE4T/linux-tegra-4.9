@@ -93,7 +93,7 @@
 				};
 			};
 			override@1 {
-				target = <&padctl_uphy>;
+				target = <&tegra_padctl_uphy>;
 				_overlay_ {
 					delete-target-property = "mboxes";
 				};

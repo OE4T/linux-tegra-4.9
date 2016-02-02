@@ -55,7 +55,7 @@
 		nvidia,mask-hs-mode-b;
 		nvidia,max-hs-gear = <1>;
 		nvidia,max-pwm-gear = <4>;
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UFS_P(0)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UFS_P(0)>;
 		phy-names = "uphy";
 		status = "disabled";
 

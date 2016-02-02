@@ -47,23 +47,23 @@
 
 	xudc@3550000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
 		phy-names = "usb2", "usb3";
 	};
 
 	xhci@3530000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
 		phy-names = "utmi-0", "utmi-1", "utmi-2", "usb3-1","usb3-0", "usb3-2";
 	};
 
-	padctl_uphy: pinctrl@3520000 {
+	pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&sunstreak_default>;
 		pinctrl-names = "default";

@@ -45,7 +45,7 @@
 				target = <&tegra_xudc>;
 				_overlay_ {
 					status = "okay";
-					phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+					phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
 					phy-names = "usb2";
 				};
 			};

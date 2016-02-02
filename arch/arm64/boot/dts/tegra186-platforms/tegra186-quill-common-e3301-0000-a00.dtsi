@@ -57,18 +57,18 @@
 
 	xudc@3550000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
 		phy-names = "usb2", "usb3";
 	};
 
 	xhci@3530000 {
 		status = "okay";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_HSIC_P(0)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_HSIC_P(0)>;
 		phy-names = "utmi-0", "usb3-1", "utmi-2", "usb3-2", "hsic-0";
 	};
 

@@ -40,11 +40,11 @@
 		reg = <0x0 0x80000000 0x0 0x70000000>;
 	};
 
-	padctl_uphy: pinctrl@3520000 {
+	pinctrl@3520000 {
 		status = "okay";
-		pinctrl-0 = <&quill_default>;
+		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;
 		pinctrl-names = "default";
-		tegra_padctl_uphy_pinmux_default: quill_default: pinmux {
+		tegra_padctl_uphy_pinmux_default: pinmux {
 			usb2-micro-AB {
 				nvidia,lanes = "otg-0";
 				nvidia,function = "xusb";

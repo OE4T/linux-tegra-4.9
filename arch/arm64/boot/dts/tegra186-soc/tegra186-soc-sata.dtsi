@@ -54,7 +54,7 @@
 		resets = <&tegra_car TEGRA186_RESET_SATA>,
 			<&tegra_car TEGRA186_RESET_SATACOLD>;
 		reset-names = "sata", "satacold";
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
 		phy-names = "sata-phy";
 		pinctrl-names = "devslp_active", "devslp_pullup";
 		pinctrl-0 = <&devslp_active_state>;

@@ -4885,6 +4885,7 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 					  struct gr_gk20a_isr_data *isr_data)
 {
 	u32 gr_fecs_intr = gk20a_readl(g, gr_fecs_host_int_status_r());
+	int ret = 0;
 
 	gk20a_dbg_fn("");
 
@@ -4897,10 +4898,11 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 			  "firmware method error 0x%08x for offset 0x%04x",
 			  gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(6)),
 			  isr_data->data_lo);
+		ret = -1;
 	}
 
 	gk20a_writel(g, gr_fecs_host_int_clear_r(), gr_fecs_intr);
-	return -EINVAL;
+	return ret;
 }
 
 static int gk20a_gr_handle_class_error(struct gk20a *g,

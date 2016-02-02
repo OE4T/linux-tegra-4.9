@@ -62,6 +62,7 @@
 #include "dsi.h"
 #include "edid.h"
 #include "hdmi2.0.h"
+#include "dp_lt.h"
 
 #ifdef CONFIG_OF
 /* #define OF_DC_DEBUG */
@@ -1736,6 +1737,81 @@ static int parse_lt_setting(struct device_node *np,
 	return 0;
 }
 
+static const char * const lt_data_name[] = {
+	"tegra-dp-vs-regs",
+	"tegra-dp-pe-regs",
+	"tegra-dp-pc-regs",
+	"tegra-dp-tx-pu",
+};
+
+static const char * const lt_data_child_name[] = {
+	"pc2_l0",
+	"pc2_l1",
+	"pc2_l2",
+	"pc2_l3",
+};
+
+/*
+ * get lt_data from platform device tree
+ */
+static int parse_lt_data(struct device_node *np,
+	struct tegra_dp_out *dpout)
+{
+	int i, j, k, m, n;
+	struct device_node *entry;
+	struct property *prop;
+	const __be32 *p;
+	u32 u;
+	u32 temp[10];
+
+	for (i = 0; i < dpout->n_lt_data; i++) {
+		entry = of_get_child_by_name(np, lt_data_name[i]);
+		if (!entry) {
+			pr_info("%s: lt-data node has no child node named %s\n",
+					__func__, lt_data_name[i]);
+			return -1;
+		}
+
+		dpout->lt_data[i].name = lt_data_name[i];
+		for (j = 0; j < 4; j++) {
+			k = 0;
+			memset(temp, 0, sizeof(temp));
+			of_property_for_each_u32(entry,
+				lt_data_child_name[j] , prop, p, u) {
+				temp[k++] = (u32)u;
+			}
+
+			k = 0;
+			for (m = 0; m < 4; m++) {
+				for (n = 0; n < 4-m; n++) {
+					dpout->lt_data[i].data[j][m][n] = temp[k++];
+				}
+			}
+		}
+		of_node_put(entry);
+	}
+	return 0;
+}
+
+/*
+ * get SoC lt_data from header file, dp_lt.h
+ */
+static int set_lt_data(struct tegra_dp_out *dpout)
+{
+	int j, m, n;
+	for (j = 0; j < 4; j++) {
+		for (m = 0; m < 4; m++) {
+			for (n = 0; n < 4-m; n++) {
+				dpout->lt_data[DP_VS].data[j][m][n] = tegra_dp_vs_regs[j][m][n];
+				dpout->lt_data[DP_PE].data[j][m][n] = tegra_dp_pe_regs[j][m][n];
+				dpout->lt_data[DP_PC].data[j][m][n] = tegra_dp_pc_regs[j][m][n];
+				dpout->lt_data[DP_TX_PU].data[j][m][n] = tegra_dp_tx_pu[j][m][n];
+			}
+		}
+	}
+	return 0;
+}
+
 static struct device_node *parse_dp_settings(struct platform_device *ndev,
 	struct tegra_dc_platform_data *pdata)
 {
@@ -1744,6 +1820,7 @@ static struct device_node *parse_dp_settings(struct platform_device *ndev,
 	struct tegra_dp_out *dpout = pdata->default_out->dp_out;
 	struct device_node *np_dp_panel = NULL;
 	struct device_node *np_dp_lt_set = NULL;
+	struct device_node *np_lt_data = NULL;
 	struct device_node *entry = NULL;
 	int err;
 
@@ -1793,6 +1870,28 @@ static struct device_node *parse_dp_settings(struct platform_device *ndev,
 		}
 	}
 
+	np_lt_data =
+		of_get_child_by_name(np_dp_panel,
+		"lt-data");
+	dpout->n_lt_data = 4;
+	dpout->lt_data = devm_kzalloc(&ndev->dev,
+		dpout->n_lt_data * sizeof(struct tegra_dc_lt_data),
+		GFP_KERNEL);
+	if (!dpout->lt_data) {
+		pr_err("not enough memory\n");
+		goto parse_dp_settings_fail;
+	}
+	if (!np_lt_data ||
+		!of_get_child_count(np_lt_data)) {
+		pr_info("%s: No lt-data node. Using default setting.\n",
+			__func__);
+		set_lt_data(dpout);
+	} else {
+		err = parse_lt_data(np_lt_data, dpout);
+		if (err)
+			goto parse_dp_settings_fail;
+	}
+
 	if (!of_property_read_u32(np_dp_panel,
 			"nvidia,tx-pu-disable", &temp)) {
 		dpout->tx_pu_disable = (bool)temp;
@@ -1813,9 +1912,11 @@ static struct device_node *parse_dp_settings(struct platform_device *ndev,
 	}
 
 	of_node_put(np_dp_lt_set);
+	of_node_put(np_lt_data);
 	return np_dp_panel;
 parse_dp_settings_fail:
 	of_node_put(np_dp_lt_set);
+	of_node_put(np_lt_data);
 	of_node_put(np_dp_panel);
 	return NULL;
 }

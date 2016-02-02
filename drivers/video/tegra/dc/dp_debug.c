@@ -272,9 +272,9 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 			test_settings->dynrange_val);
 
 	/* set drive strength, preemphasis, and postcursor */
-	vs_reg = tegra_dp_vs_regs[POST_CURSOR2_L0]
+	vs_reg = dp->pdata->lt_data[DP_VS].data[POST_CURSOR2_L0]
 		[test_settings->drive_strength][test_settings->preemphasis];
-	pe_reg = tegra_dp_pe_regs[POST_CURSOR2_L0]
+	pe_reg = dp->pdata->lt_data[DP_PE].data[POST_CURSOR2_L0]
 		[test_settings->drive_strength][test_settings->preemphasis];
 	tegra_sor_writel(sor, NV_SOR_DC(sor->portnum), vs_reg | (vs_reg << 8) |
 				(vs_reg << 16) | (vs_reg << 24));
@@ -290,7 +290,7 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 				NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,
 				NV_SOR_DP_PADCTL_TX_PU_DISABLE);
 	} else {
-		max_tx_pu = tegra_dp_tx_pu[POST_CURSOR2_L0]
+		max_tx_pu = dp->pdata->lt_data[DP_TX_PU].data[POST_CURSOR2_L0]
 		[test_settings->drive_strength][test_settings->preemphasis];
 		tegra_sor_write_field(sor, NV_SOR_DP_PADCTL(sor->portnum),
 				NV_SOR_DP_PADCTL_TX_PU_VALUE_DEFAULT_MASK,

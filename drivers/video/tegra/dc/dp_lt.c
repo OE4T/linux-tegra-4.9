@@ -239,7 +239,7 @@ static void set_tx_pu(struct tegra_dp_lt_data *lt_data)
 	u32 *vs = lt_data->drive_current;
 	u32 *pe = lt_data->pre_emphasis;
 	u32 *pc = lt_data->post_cursor2;
-	u32 max_tx_pu = tegra_dp_tx_pu[pc[0]][vs[0]][pe[0]];
+	u32 max_tx_pu = dp->pdata->lt_data[DP_TX_PU].data[pc[0]][vs[0]][pe[0]];
 
 	if (dp->pdata && dp->pdata->tx_pu_disable) {
 		tegra_sor_write_field(dp->sor,
@@ -252,8 +252,8 @@ static void set_tx_pu(struct tegra_dp_lt_data *lt_data)
 
 	for (; cnt < n_lanes; cnt++) {
 		max_tx_pu = (max_tx_pu <
-			tegra_dp_tx_pu[pc[cnt]][vs[cnt]][pe[cnt]]) ?
-			tegra_dp_tx_pu[pc[cnt]][vs[cnt]][pe[cnt]] :
+			dp->pdata->lt_data[DP_TX_PU].data[pc[cnt]][vs[cnt]][pe[cnt]]) ?
+			dp->pdata->lt_data[DP_TX_PU].data[pc[cnt]][vs[cnt]][pe[cnt]] :
 			max_tx_pu;
 	}
 
@@ -321,9 +321,9 @@ static void set_lt_config(struct tegra_dp_lt_data *lt_data)
 				"dp: incorrect lane cnt\n");
 		}
 
-		pe_reg = tegra_dp_pe_regs[pc[i]][vs[i]][pe[i]];
-		vs_reg = tegra_dp_vs_regs[pc[i]][vs[i]][pe[i]];
-		pc_reg = tegra_dp_pc_regs[pc[i]][vs[i]][pe[i]];
+		pe_reg = dp->pdata->lt_data[DP_PE].data[pc[i]][vs[i]][pe[i]];
+		vs_reg = dp->pdata->lt_data[DP_VS].data[pc[i]][vs[i]][pe[i]];
+		pc_reg = dp->pdata->lt_data[DP_PC].data[pc[i]][vs[i]][pe[i]];
 
 		tegra_sor_write_field(sor, NV_SOR_PR(sor->portnum),
 						mask, (pe_reg << shift));

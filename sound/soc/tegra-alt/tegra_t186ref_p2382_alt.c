@@ -358,12 +358,10 @@ static const struct snd_soc_dapm_widget tegra_p2382_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
 	SND_SOC_DAPM_HP("Headphone-d", NULL),
 	SND_SOC_DAPM_HP("BT-out", NULL),
-	SND_SOC_DAPM_HP("EAVB-out", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
 	SND_SOC_DAPM_LINE("LineIn-d", NULL),
 	SND_SOC_DAPM_LINE("BT-in", NULL),
-	SND_SOC_DAPM_LINE("EAVB-in", NULL),
 };
 
 static int tegra_t186ref_p2382_suspend_pre(struct snd_soc_card *card)

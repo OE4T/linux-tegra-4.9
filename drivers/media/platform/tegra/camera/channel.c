@@ -517,39 +517,49 @@ static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_streamoff		= vb2_ioctl_streamoff,
 };
 
+static int tegra_channel_setup_controls(struct tegra_channel *chan)
+{
+	int num_sd = 0;
+	struct v4l2_subdev *sd = NULL;
+
+	/* Initialize the subdev and controls here at first open */
+	sd = chan->subdev[num_sd];
+	while ((sd = chan->subdev[num_sd++]) &&
+		(num_sd <= chan->num_subdevs)) {
+		/* Add control handler for the subdevice */
+		v4l2_ctrl_add_handler(&chan->ctrl_handler,
+					sd->ctrl_handler, NULL);
+		if (chan->ctrl_handler.error)
+			dev_err(chan->vi->dev,
+				"Failed to add sub-device controls\n");
+	}
+
+	/* Add the vi ctrl handler */
+	v4l2_ctrl_add_handler(&chan->ctrl_handler,
+			&chan->vi->ctrl_handler, NULL);
+	if (chan->ctrl_handler.error)
+		dev_err(chan->vi->dev,
+			"Failed to add vi controls\n");
+
+	/* setup the controls */
+	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);
+}
+
 static int tegra_channel_open(struct file *fp)
 {
 	int ret = 0;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
-	int num_sd = 0;
-	struct v4l2_subdev *sd = chan->subdev[num_sd];
 
-	if (sd == NULL) {
+	if (chan->subdev[0] == NULL) {
 		ret = tegra_channel_get_subdevices(chan);
 		if (ret < 0)
 			return ret;
 
-		/* Initialize the subdev and controls here at first open */
-		sd = chan->subdev[num_sd];
-		while (sd != NULL) {
-			/* Add control handler for the subdevice */
-			ret = v4l2_ctrl_add_handler(&chan->ctrl_handler,
-						sd->ctrl_handler, NULL);
-			if (chan->ctrl_handler.error)
-				dev_err(chan->vi->dev,
-					"Failed to add controls\n");
-
-			ret = v4l2_ctrl_handler_setup(&chan->ctrl_handler);
-			if (ret < 0)
-				dev_err(chan->vi->dev,
-					"Failed to setup controls\n");
-
-			num_sd++;
-			if (num_sd >= chan->num_subdevs)
-				break;
-			sd = chan->subdev[num_sd];
-		}
+		ret = tegra_channel_setup_controls(chan);
+		if (ret < 0)
+			dev_err(chan->vi->dev,
+				"Channel controls setup failed\n");
 	}
 
 	/* power on sensors connected in channel */

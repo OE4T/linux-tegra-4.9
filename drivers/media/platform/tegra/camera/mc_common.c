@@ -18,9 +18,13 @@
 #include <linux/of_platform.h>
 
 #include <media/tegra_v4l2_camera.h>
+#include <media/camera_common.h>
 
 #include "dev.h"
 #include "mc_common.h"
+
+#define TPG_CHANNELS 6
+#define INVALID_PORT 100
 
 /* -----------------------------------------------------------------------------
  * Media Controller and V4L2
@@ -32,13 +36,53 @@ static const char *const vi_pattern_strings[] = {
 	"Color Patch Mode",
 };
 
+static void set_vi_mode(struct tegra_mc_vi *vi)
+{
+	int i;
+	struct tegra_channel *chan = NULL;
+
+	for (i = 0; i < vi->num_channels; i++) {
+		chan = &vi->chans[i];
+		chan->bypass = 0;
+	}
+}
+
+static void set_v4l2_ctrl(struct v4l2_ctrl *ctrl, int value)
+{
+	v4l2_ctrl_unlock(ctrl);
+	v4l2_ctrl_s_ctrl(ctrl, value);
+	v4l2_ctrl_lock(ctrl);
+}
+
 static int vi_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct tegra_mc_vi *vi = container_of(ctrl->handler, struct tegra_mc_vi,
 					   ctrl_handler);
+	struct tegra_channel *chan = NULL;
+
 	switch (ctrl->id) {
 	case V4L2_CID_TEST_PATTERN:
+		/* set all channels to vi mode before TPG is set */
+		/* set bypass port to invalid port */
+		if (ctrl->val) {
+			set_v4l2_ctrl(vi->bypass, INVALID_PORT);
+			dev_info(&vi->ndev->dev, "Turning on TPG mode\n");
+		}
 		vi->pg_mode = ctrl->val;
+		break;
+	case V4L2_CID_VI_SET_BYPASS_PORT:
+		if (vi->pg_mode) {
+			dev_info(&vi->ndev->dev, "Turn off TPG mode\n");
+			set_v4l2_ctrl(vi->pattern, 0);
+			vi->pg_mode = 0;
+		}
+
+		if (ctrl->val < vi->num_channels) {
+			chan = &vi->chans[ctrl->val];
+			chan->bypass = 1;
+		} else
+			/* set all channels to vi mode for invalid port */
+			set_vi_mode(vi);
 		break;
 	}
 
@@ -47,6 +91,23 @@ static int vi_s_ctrl(struct v4l2_ctrl *ctrl)
 
 static const struct v4l2_ctrl_ops vi_ctrl_ops = {
 	.s_ctrl	= vi_s_ctrl,
+};
+
+/**
+ * Default value is invalid port, max 99 channels are available
+ * By default all the channels will be in VI mode
+ * Idea is to enable the user space to set bypass flag per channel
+ */
+static const struct v4l2_ctrl_config bypass_ctrl = {
+	.ops = &vi_ctrl_ops,
+	.id = V4L2_CID_VI_SET_BYPASS_PORT,
+	.name = "Bypass port",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_SLIDER,
+	.def = INVALID_PORT,
+	.min = 0,
+	.max = INVALID_PORT,
+	.step = 1,
 };
 
 void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi)
@@ -81,12 +142,14 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 		goto register_error;
 	}
 
-	v4l2_ctrl_handler_init(&vi->ctrl_handler, 1);
+	v4l2_ctrl_handler_init(&vi->ctrl_handler, 2);
 	vi->pattern = v4l2_ctrl_new_std_menu_items(&vi->ctrl_handler,
 					&vi_ctrl_ops, V4L2_CID_TEST_PATTERN,
 					ARRAY_SIZE(vi_pattern_strings) - 1,
 					0, 0, vi_pattern_strings);
 
+	vi->bypass = v4l2_ctrl_new_custom(&vi->ctrl_handler,
+					&bypass_ctrl, NULL);
 	if (vi->ctrl_handler.error) {
 		dev_err(vi->dev, "failed to add controls\n");
 		ret = vi->ctrl_handler.error;

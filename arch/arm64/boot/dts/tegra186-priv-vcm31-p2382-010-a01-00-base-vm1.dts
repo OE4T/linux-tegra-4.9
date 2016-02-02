@@ -374,7 +374,6 @@
 		status = "disabled";
 	};
 
-	/* HACK: Populate earlier than other device */
 	iommu@12000000{
 
 		mmu-masters = <&host1x				TEGRA_SID_HC

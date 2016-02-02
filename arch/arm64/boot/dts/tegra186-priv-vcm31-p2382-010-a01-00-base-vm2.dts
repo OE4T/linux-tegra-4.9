@@ -828,7 +828,6 @@
 		status = "disabled";
 	};
 
-	/* HACK: Populate earlier than other device */
 	iommu@12000000{
 
 		mmu-masters = <&host1x				TEGRA_SID_HC
@@ -887,35 +886,42 @@
 			      <&{/aon@c160000}		TEGRA_SID_AON>,
 			      <&{/rtcpu@b000000}	TEGRA_SID_SCE>,
 			      <&{/bpmp}			TEGRA_SID_BPMP>,
-			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3240000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@3270000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/spi@c260000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3100000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3110000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@c280000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3130000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3140000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@3150000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/serial@c290000}	TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@3160000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@c240000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@3180000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@3190000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@c250000}		TEGRA_SID_GPCDMA_0>,
-			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
+			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/spi@3240000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/spi@3270000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/spi@c260000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/serial@3100000}	TEGRA_SID_GPCDMA_1>,
+			      <&{/serial@3110000}	TEGRA_SID_GPCDMA_1>,
+			      <&{/serial@c280000}	TEGRA_SID_GPCDMA_1>,
+			      <&{/serial@3130000}	TEGRA_SID_GPCDMA_1>,
+			      <&{/serial@3140000}	TEGRA_SID_GPCDMA_1>,
+			      <&{/serial@3150000}	TEGRA_SID_GPCDMA_1>,
+			      <&{/serial@c290000}	TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@3160000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@c240000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@3180000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@3190000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@c250000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_1>;
 		domains {
 			ape_domain {
 				address-space = <&ape_as>;
 				sid-list = <TEGRA_SID(APE_1)>;
 				sid-list-len = <1>;
 			};
+
+			gpcdma_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_GPCDMA_1>;
+				sid-list-len = <1>;
+			};
 		};
-        };
+	};
+
 	tegra_agic_1: agic-controller@2a51000 {
 		compatible = "nvidia,tegra18x-agic";
 		interrupt-controller;

@@ -309,6 +309,11 @@
 				sid-list = <TEGRA_SID_BPMP>;
 				sid-list-len = <1>;
 			};
+			sce_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SCE>;
+				sid-list-len = <1>;
+			};
 			aon_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_AON>;

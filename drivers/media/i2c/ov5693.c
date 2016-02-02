@@ -397,8 +397,13 @@ static int ov5693_power_get(struct ov5693 *priv)
 	struct clk *parent;
 	int err = 0;
 
-	mclk_name = priv->pdata->mclk_name ?
-		    priv->pdata->mclk_name : "cam_mclk1";
+	if (!pdata) {
+		dev_err(&priv->i2c_client->dev, "pdata missing\n");
+		return -EFAULT;
+	}
+
+	mclk_name = pdata->mclk_name ?
+		    pdata->mclk_name : "cam_mclk1";
 	pw->mclk = devm_clk_get(&priv->i2c_client->dev, mclk_name);
 	if (IS_ERR(pw->mclk)) {
 		dev_err(&priv->i2c_client->dev,
@@ -406,7 +411,7 @@ static int ov5693_power_get(struct ov5693 *priv)
 		return PTR_ERR(pw->mclk);
 	}
 
-	parentclk_name = priv->pdata->parentclk_name;
+	parentclk_name = pdata->parentclk_name;
 	if (parentclk_name) {
 		parent = devm_clk_get(&priv->i2c_client->dev, parentclk_name);
 		if (IS_ERR(parent)) {
@@ -430,7 +435,7 @@ static int ov5693_power_get(struct ov5693 *priv)
 		pw->pwdn_gpio = pdata->pwdn_gpio;
 	}
 
-	if (priv->pdata && priv->pdata->use_cam_gpio) {
+	if (pdata->use_cam_gpio) {
 		err = cam_gpio_register(priv->i2c_client, pw->pwdn_gpio);
 		if (err)
 			dev_err(&priv->i2c_client->dev,

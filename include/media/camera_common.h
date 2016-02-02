@@ -154,6 +154,7 @@ struct camera_common_data {
 	struct camera_common_sensor_ops		*ops;
 	struct v4l2_ctrl_handler		*ctrl_handler;
 	struct i2c_client			*i2c_client;
+	struct device				*dev;
 	const struct camera_common_frmfmt	*frmfmt;
 	const struct camera_common_colorfmt	*colorfmt;
 	struct dentry				*debugdir;
@@ -245,6 +246,8 @@ int camera_common_try_fmt(struct v4l2_subdev *sd,
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
 int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
 int camera_common_s_power(struct v4l2_subdev *sd, int on);
+void camera_common_dpd_disable(struct camera_common_data *s_data);
+void camera_common_dpd_enable(struct camera_common_data *s_data);
 int camera_common_g_mbus_config(struct v4l2_subdev *sd,
 			      struct v4l2_mbus_config *cfg);
 /* Focuser */

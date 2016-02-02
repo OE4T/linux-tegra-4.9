@@ -1325,6 +1325,7 @@ static int ov5693_probe(struct i2c_client *client,
 	priv->s_data			= common_data;
 	priv->subdev			= &common_data->subdev;
 	priv->subdev->dev		= &client->dev;
+	priv->s_data->dev		= &client->dev;
 
 	err = ov5693_power_get(priv);
 	if (err)

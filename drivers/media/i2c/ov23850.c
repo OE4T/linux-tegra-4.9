@@ -1328,6 +1328,7 @@ static int ov23850_probe(struct i2c_client *client,
 	priv->s_data			= common_data;
 	priv->subdev			= &common_data->subdev;
 	priv->subdev->dev		= &client->dev;
+	priv->s_data->dev		= &client->dev;
 	priv->group_hold_prev		= 0;
 
 	err = ov23850_power_get(priv);

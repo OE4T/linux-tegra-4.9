@@ -464,31 +464,22 @@ static int camera_common_mclk_enable(struct camera_common_data *s_data)
 	unsigned long mclk_init_rate = s_data->def_clk_freq;
 
 	if (!pw) {
-		dev_err(&s_data->i2c_client->dev, "%s: no device power rail\n",
+		dev_err(s_data->dev, "%s: no device power rail\n",
 			__func__);
-		return -EFAULT;
+		return -ENODEV;
 	}
 
-	dev_dbg(&s_data->i2c_client->dev, "%s: enable MCLK with %lu Hz\n",
+	dev_dbg(s_data->dev, "%s: enable MCLK with %lu Hz\n",
 		__func__, mclk_init_rate);
 
 	err = clk_set_rate(pw->mclk, mclk_init_rate);
-	if (err) {
-		dev_err(&s_data->i2c_client->dev, "%s: error set rate\n",
-			__func__);
-		return err;
-	}
-	err = clk_prepare_enable(pw->mclk);
-	if (err) {
-		dev_err(&s_data->i2c_client->dev, "%s: error prepare enable\n",
-			__func__);
-		return err;
-	}
+	if (!err)
+		err = clk_prepare_enable(pw->mclk);
 
-	return 0;
+	return err;
 }
 
-static void camera_common_dpd_disable(struct camera_common_data *s_data)
+void camera_common_dpd_disable(struct camera_common_data *s_data)
 {
 	int i;
 	int io_idx;
@@ -499,12 +490,12 @@ static void camera_common_dpd_disable(struct camera_common_data *s_data)
 	for (i = 0; i < numports; i++) {
 		io_idx = s_data->csi_port + i;
 		tegra_io_dpd_disable(&camera_common_csi_io[io_idx]);
-		dev_dbg(&s_data->i2c_client->dev,
+		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
 	}
 }
 
-static void camera_common_dpd_enable(struct camera_common_data *s_data)
+void camera_common_dpd_enable(struct camera_common_data *s_data)
 {
 	int i;
 	int io_idx;
@@ -515,7 +506,7 @@ static void camera_common_dpd_enable(struct camera_common_data *s_data)
 	for (i = 0; i < numports; i++) {
 		io_idx = s_data->csi_port + i;
 		tegra_io_dpd_enable(&camera_common_csi_io[io_idx]);
-		dev_dbg(&s_data->i2c_client->dev,
+		dev_dbg(s_data->dev,
 			 "%s: csi %d\n", __func__, io_idx);
 	}
 }
@@ -535,7 +526,7 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 
 		err = call_s_op(s_data, power_on);
 		if (err) {
-			dev_err(&s_data->i2c_client->dev,
+			dev_err(s_data->dev,
 				"%s: error power on\n", __func__);
 			camera_common_dpd_enable(s_data);
 			camera_common_mclk_disable(s_data);

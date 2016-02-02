@@ -4461,8 +4461,43 @@ static int tegra_pcie_resume(struct device *dev)
 	return 0;
 }
 
+/* Since BCM4359 WiFi driver is not informing the system about its absence
+ * when Wifi is turned off, PCIe subsystem tries to do save/restore as part
+ * of its routine during SC7 cycle will lead to error interrupt generation
+ * which prevents system entering into SC7 state. Hence, it is better to
+ * disable interrupts in suspend_late as there are no interrupts after this
+ * stage anyway and re-enable in resume_early
+ */
+static int tegra_pcie_suspend_late(struct device *dev)
+{
+	struct tegra_pcie *pcie = dev_get_drvdata(dev);
+	u32 val = 0;
+
+	PR_FUNC_LINE;
+	val = afi_readl(pcie, AFI_INTR_MASK);
+	val &= ~AFI_INTR_MASK_INT_MASK;
+	val &= ~AFI_INTR_MASK_MSI_MASK;
+	afi_writel(pcie, val, AFI_INTR_MASK);
+	return 0;
+}
+
+static int tegra_pcie_resume_early(struct device *dev)
+{
+	struct tegra_pcie *pcie = dev_get_drvdata(dev);
+	u32 val = 0;
+
+	PR_FUNC_LINE;
+	val = afi_readl(pcie, AFI_INTR_MASK);
+	val |= AFI_INTR_MASK_INT_MASK;
+	val |= AFI_INTR_MASK_MSI_MASK;
+	afi_writel(pcie, val, AFI_INTR_MASK);
+	return 0;
+}
+
 static const struct dev_pm_ops tegra_pcie_pm_ops = {
 	.resume = tegra_pcie_resume,
+	.suspend_late = tegra_pcie_suspend_late,
+	.resume_early = tegra_pcie_resume_early,
 	.runtime_suspend = tegra_pcie_save_device,
 	.runtime_resume = tegra_pcie_restore_device,
 	};

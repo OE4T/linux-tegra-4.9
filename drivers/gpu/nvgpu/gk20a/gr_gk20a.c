@@ -4449,6 +4449,9 @@ static int gk20a_init_gr_setup_sw(struct gk20a *g)
 	gr->remove_support = gk20a_remove_gr_support;
 	gr->sw_ready = true;
 
+	if (g->ops.gr.create_gr_sysfs)
+		g->ops.gr.create_gr_sysfs(g->dev);
+
 	gk20a_dbg_fn("done");
 	return 0;
 

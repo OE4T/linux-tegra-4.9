@@ -206,6 +206,7 @@ struct gpu_ops {
 			bool *post_event, struct channel_gk20a *fault_ch);
 		int (*handle_tex_exception)(struct gk20a *g, u32 gpc, u32 tpc,
 						bool *post_event);
+		void (*create_gr_sysfs)(struct platform_device *dev);
 	} gr;
 	const char *name;
 	struct {

@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -167,7 +167,7 @@ static void vgpu_remove_support(struct platform_device *dev)
 
 	if (g->bar1) {
 		iounmap(g->bar1);
-		g->bar1 = 0;
+		g->bar1 = NULL;
 	}
 }
 

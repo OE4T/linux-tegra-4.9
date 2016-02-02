@@ -1984,21 +1984,9 @@
 			<&tegra_car TEGRA186_CLK_ADSPNEON>,
 			<&tegra_car TEGRA186_CLK_ADSP>,
 			<&tegra_car TEGRA186_CLK_EMC>;
-		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon", "adsp",
-			"adsp.emc";
+		clock-names = "adsp.ape", "adsp.apb2ape", "adspneon", "adsp", "adsp.emc";
 		resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
 		reset-names = "adspall";
-		#stream-id-cells = <1>;
-	};
-
-	eqos_ape@2990000 {
-		status = "disabled";
-		compatible = "nvidia,tegra18x-eqos-ape";
-		power-domains = <&ape_pd>;
-		clocks = <&tegra_car TEGRA186_CLK_APE>,
-			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
-			<&tegra_car TEGRA186_CLK_PLLA>;
-		clock-names = "eqos_ape.ape", "pll_a_out0", "pll_a";
 		#stream-id-cells = <1>;
 	};
 

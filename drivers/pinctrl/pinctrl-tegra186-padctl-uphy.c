@@ -2206,6 +2206,10 @@ static int tegra_padctl_uphy_dt_node_to_map(struct pinctrl_dev *pinctrl,
 	*maps = NULL;
 
 	for_each_child_of_node(parent, np) {
+		/* If node status is disabled then ignore the node */
+		if (!of_device_is_available(np))
+			continue;
+
 		err = tegra186_padctl_uphy_parse_subnode(uphy, np, maps,
 						      &reserved_maps,
 						      num_maps);

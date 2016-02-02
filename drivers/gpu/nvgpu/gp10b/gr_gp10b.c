@@ -1523,8 +1523,21 @@ static int gr_gp10b_handle_fecs_error(struct gk20a *g,
 
 		if (gk20a_gr_sm_debugger_attached(g)) {
 			gk20a_err(dev_from_gk20a(g), "CILP: posting usermode event");
-			gk20a_dbg_gpu_post_events(ch);
-			gk20a_channel_post_event(ch);
+
+			if (gk20a_is_channel_marked_as_tsg(ch)) {
+				struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+				struct channel_gk20a *__ch;
+
+				mutex_lock(&tsg->ch_list_lock);
+				list_for_each_entry(__ch, &tsg->ch_list, ch_entry) {
+					gk20a_dbg_gpu_post_events(__ch);
+					gk20a_channel_post_event(__ch);
+				}
+				mutex_unlock(&tsg->ch_list_lock);
+			} else {
+				gk20a_dbg_gpu_post_events(ch);
+				gk20a_channel_post_event(ch);
+			}
 		}
 
 		gk20a_channel_put(ch);

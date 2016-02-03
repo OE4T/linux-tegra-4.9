@@ -3,7 +3,7 @@
  *
  * watchdog driver for NVIDIA tegra internal watchdog
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * based on drivers/watchdog/softdog.c and drivers/watchdog/omap_wdt.c
  *
@@ -56,6 +56,8 @@ struct tegra_wdt_t18x {
 	unsigned long		status;
 	int			cluster_id;
 	bool			enable_on_init;
+	int			expiry_count;
+	int			heartbeat;
 /* Bit numbers for status flags */
 #define WDT_ENABLED		0
 #define WDT_ENABLED_ON_INIT	1
@@ -78,7 +80,7 @@ static struct tegra_wdt_t18x *t18x_wdt_array[WDT_CLUSTER_ID_COUNT];
  * on skip configuration if supported. To be safe, we set the default expiry
  * count to 1. It should be updated later with value specified in device tree.
  */
-static int expiry_count = 1;
+#define EXPIRY_COUNT	1
 
 /*
  * To detect lockup condition, the heartbeat should be expiry_count*lockup.
@@ -86,7 +88,7 @@ static int expiry_count = 1;
  * Must be greater than expiry_count*MIN_WDT_PERIOD and lower than
  * expiry_count*MAX_WDT_PERIOD.
  */
-static int heartbeat = 120;
+#define HEARTBEAT	120
 
 static inline struct tegra_wdt_t18x *to_tegra_wdt_t18x(
 					struct watchdog_device *wdt)
@@ -133,7 +135,8 @@ static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *tegra_wdt_t18x)
 
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +
 							TOP_TKE_TMR_PCR);
-	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) / expiry_count;
+	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) /
+				tegra_wdt_t18x->expiry_count;
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 
@@ -196,7 +199,8 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	 * timeout requested by application. The program timeout should make
 	 * sure WDT FIQ will never be asserted in a valid use case.
 	 */
-	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) / expiry_count;
+	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) /
+			tegra_wdt_t18x->expiry_count;
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 
@@ -481,14 +485,6 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return -EPERM;
 	}
 
-	ret = of_property_read_u32(np, "nvidia,heartbeat-init", &pval);
-	if (!ret)
-		heartbeat = pval;
-
-	ret = of_property_read_u32(np, "nvidia,expiry-count", &pval);
-	if (!ret)
-		expiry_count = pval;
-
 	tegra_wdt_t18x = devm_kzalloc(&pdev->dev, sizeof(*tegra_wdt_t18x),
 								GFP_KERNEL);
 	if (!tegra_wdt_t18x) {
@@ -496,12 +492,26 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	ret = of_property_read_u32(np, "nvidia,heartbeat-init", &pval);
+	if (!ret)
+		tegra_wdt_t18x->heartbeat = pval;
+	else
+		tegra_wdt_t18x->heartbeat = HEARTBEAT;
+
+	ret = of_property_read_u32(np, "nvidia,expiry-count", &pval);
+	if (!ret)
+		tegra_wdt_t18x->expiry_count = pval;
+	else
+		tegra_wdt_t18x->expiry_count = EXPIRY_COUNT;
+
 	tegra_wdt_t18x->pdev = pdev;
 	tegra_wdt_t18x->wdt.info = &tegra_wdt_t18x_info;
 	tegra_wdt_t18x->wdt.ops = &tegra_wdt_t18x_ops;
-	tegra_wdt_t18x->wdt.min_timeout = MIN_WDT_PERIOD * expiry_count;
-	tegra_wdt_t18x->wdt.max_timeout = MAX_WDT_PERIOD * expiry_count;
-	tegra_wdt_t18x->wdt.timeout = heartbeat;
+	tegra_wdt_t18x->wdt.min_timeout = MIN_WDT_PERIOD *
+					tegra_wdt_t18x->expiry_count;
+	tegra_wdt_t18x->wdt.max_timeout = MAX_WDT_PERIOD *
+					tegra_wdt_t18x->expiry_count;
+	tegra_wdt_t18x->wdt.timeout = tegra_wdt_t18x->heartbeat;
 	tegra_wdt_t18x->irq = irq_of_parse_and_map(np, 0);
 	tegra_wdt_t18x->enable_on_init =
 			of_property_read_bool(np, "nvidia,enable-on-init");
@@ -578,7 +588,8 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	 */
 	tegra_wdt_t18x_setup_pet(tegra_wdt_t18x, index);
 
-	watchdog_init_timeout(&tegra_wdt_t18x->wdt, heartbeat,  &pdev->dev);
+	watchdog_init_timeout(&tegra_wdt_t18x->wdt,
+			tegra_wdt_t18x->heartbeat,  &pdev->dev);
 
 	ret = watchdog_register_device(&tegra_wdt_t18x->wdt);
 	if (ret) {

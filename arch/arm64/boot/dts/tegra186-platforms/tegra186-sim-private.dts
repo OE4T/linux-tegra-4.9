@@ -33,6 +33,12 @@
 	model = "t186ref";
 	compatible = "nvidia,tegra186";
 
+	reserved-memory {
+		vpr: vpr-carveout {
+			status = "disabled";
+		};
+	};
+
 	chosen {
 		bootargs ="mem=1024M@2048M console=ttyS0,115200 earlyprintk=uart8250-32bit,0x03100000";
 		stdout-path = &uarta;

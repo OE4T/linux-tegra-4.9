@@ -89,6 +89,9 @@ static const struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 static const struct snd_soc_pcm_stream tegra_t186ref_arad_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S24_LE, 2),
 };
+static const struct snd_soc_pcm_stream tegra_t186ref_eavb_link_params[] = {
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+};
 
 static struct snd_soc_dai_link
 	tegra186_arad_dai_links[1] = {
@@ -100,6 +103,18 @@ static struct snd_soc_dai_link
 		.cpu_name = "tegra186-arad",
 		.codec_name = "2900800.ahub",
 		.params = &tegra_t186ref_arad_link_params[0],
+	},
+};
+static struct snd_soc_dai_link
+	tegra186_eavb_dai_links[1] = {
+	[0] = {
+		.name = "ADSP EAVB",
+		.stream_name = "ADSP EAVB",
+		.cpu_dai_name = "ADSP-EAVB",
+		.codec_dai_name = "ADSP EAVB",
+		.cpu_name = "adsp_audio",
+		.codec_name = "adsp_audio",
+		.params = &tegra_t186ref_eavb_link_params[0],
 	},
 };
 
@@ -358,10 +373,12 @@ static const struct snd_soc_dapm_widget tegra_p2382_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
 	SND_SOC_DAPM_HP("Headphone-d", NULL),
 	SND_SOC_DAPM_HP("BT-out", NULL),
+	SND_SOC_DAPM_HP("EAVB-out", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
 	SND_SOC_DAPM_LINE("LineIn-d", NULL),
 	SND_SOC_DAPM_LINE("BT-in", NULL),
+	SND_SOC_DAPM_LINE("EAVB-in", NULL),
 };
 
 static int tegra_t186ref_p2382_suspend_pre(struct snd_soc_card *card)
@@ -661,6 +678,9 @@ static int tegra_t186ref_p2382_driver_probe(struct platform_device *pdev)
 			2 * machine->num_codec_links);
 	card->num_links =
 		tegra_machine_append_dai_link_t18x(tegra186_arad_dai_links,
+			1);
+	card->num_links =
+		tegra_machine_append_dai_link_t18x(tegra186_eavb_dai_links,
 			1);
 	tegra_machine_dai_links = tegra_machine_get_dai_link_t18x();
 	card->dai_link = tegra_machine_dai_links;

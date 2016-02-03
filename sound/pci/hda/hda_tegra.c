@@ -2,6 +2,8 @@
  *
  * Implementation of primary ALSA driver code base for NVIDIA Tegra HDA.
  *
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
  * version 2, as published by the Free Software Foundation.
@@ -93,6 +95,7 @@ struct hda_tegra {
 	struct reset_control *hda2codec_2x_rst;
 	struct reset_control *hda2hdmi_rst;
 #endif
+	bool is_power_on;
 };
 
 #ifdef CONFIG_PM
@@ -229,51 +232,69 @@ static void hda_tegra_init(struct hda_tegra *hda)
 	writel(v, hda->regs + HDA_IPFS_INTR_MASK);
 }
 
-static int hda_tegra_enable_clocks(struct hda_tegra *data)
+static int hda_tegra_enable_clocks(struct hda_tegra *hda)
 {
 	int rc;
 
-	tegra_unpowergate_partition(data->partition_id);
+	if (hda->is_power_on == false) {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		tegra_unpowergate_partition(hda->partition_id);
+#else
+		tegra_unpowergate_partition_with_clk_on(
+				hda->partition_id);
+#endif
+		hda->is_power_on = true;
+	}
 
 #if defined(CONFIG_COMMON_CLK)
-	reset_control_reset(data->hda_rst);
-	reset_control_reset(data->hda2codec_2x_rst);
-	reset_control_reset(data->hda2hdmi_rst);
+	reset_control_reset(hda->hda_rst);
+	reset_control_reset(hda->hda2codec_2x_rst);
+	reset_control_reset(hda->hda2hdmi_rst);
 #endif
 
-	rc = clk_prepare_enable(data->hda_clk);
+	rc = clk_prepare_enable(hda->hda_clk);
 	if (rc)
 		return rc;
-	rc = clk_prepare_enable(data->hda2codec_2x_clk);
+	rc = clk_prepare_enable(hda->hda2codec_2x_clk);
 	if (rc)
 		goto disable_hda;
-	rc = clk_prepare_enable(data->hda2hdmi_clk);
+	rc = clk_prepare_enable(hda->hda2hdmi_clk);
 	if (rc)
 		goto disable_codec_2x;
 
 	return 0;
 
 disable_codec_2x:
-	clk_disable_unprepare(data->hda2codec_2x_clk);
+	clk_disable_unprepare(hda->hda2codec_2x_clk);
 disable_hda:
-	clk_disable_unprepare(data->hda_clk);
-	tegra_powergate_partition(data->partition_id);
+	clk_disable_unprepare(hda->hda_clk);
+	if (hda->is_power_on)
+		tegra_powergate_partition(hda->partition_id);
+	hda->is_power_on = false;
 	return rc;
 }
 
-#ifdef CONFIG_PM_SLEEP
 static void hda_tegra_disable_clocks(struct hda_tegra *hda)
 {
 	clk_disable_unprepare(hda->hda2hdmi_clk);
 	clk_disable_unprepare(hda->hda2codec_2x_clk);
 	clk_disable_unprepare(hda->hda_clk);
 
-	tegra_powergate_partition(hda->partition_id);
+	if (hda->is_power_on) {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		tegra_powergate_partition(hda->partition_id);
+#else
+		tegra_powergate_partition_with_clk_off(
+					hda->partition_id);
+#endif
+		hda->is_power_on = false;
+	}
 }
 
 /*
  * power management
  */
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_SUSPEND)
 static int hda_tegra_suspend(struct device *dev)
 {
 	struct snd_card *card = dev_get_drvdata(dev);
@@ -606,6 +627,7 @@ static int hda_tegra_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	hda->dev = &pdev->dev;
 	chip = &hda->chip;
+	hda->is_power_on = false;
 
 	hda->partition_id = tegra_pd_get_powergate_id(tegra_disb_pd);
 	if (hda->partition_id < 0) {

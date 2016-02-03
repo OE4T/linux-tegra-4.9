@@ -18,6 +18,8 @@
 #include "tegra186-platforms/tegra186-quill-comms.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-p3310-mfg-1000-a00-plugin-manager.dtsi"
 #include "tegra186-prod/tegra186-priv-quill-mfg-p3310-1000-a00-prod.dtsi"
+#include "tegra186-platforms/tegra186-quill-mfg-p3310-1000-e2598-1099-a00.dtsi"
+#include "tegra186-plugin-manager/tegra186-quill-mfg-e3301-1099-a01-00-plugin-manager.dtsi"
 
 / {
 	model = "quill-mfg";

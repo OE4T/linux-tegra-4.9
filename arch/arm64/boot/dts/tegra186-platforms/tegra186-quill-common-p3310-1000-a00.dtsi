@@ -46,9 +46,14 @@
 		status = "okay";
 	};
 
-	gpio@2200000 {
-		wifi_over_pcie {
-			gpio-output-high = <TEGRA_GPIO(R, 4)>;
+	tegra_gpio: gpio@2200000 {
+		wifi_over_pcie: wifi_over_pcie {
+			gpio-output-low = <TEGRA_GPIO(R, 4)>;
+			status = "disabled";
+		};
+		pcie0_lane2_mux: pcie0_lane2_mux {
+			gpio-output-low = <TEGRA_GPIO(R, 3)>;
+			status = "disabled";
 		};
 		e3325_sdio_rst {
 			gpio-output-high = <TEGRA_GPIO(B, 6)>;

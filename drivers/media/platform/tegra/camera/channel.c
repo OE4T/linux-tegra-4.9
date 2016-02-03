@@ -36,19 +36,36 @@
 #include <mach/io_dpd.h>
 
 #include "mc_common.h"
+#include "vi.h"
 
-void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
-				    struct tegra_vi_graph_entity *entity)
+void tegra_channel_write(struct tegra_channel *chan,
+			unsigned int addr, u32 val)
 {
-	int ret, index;
-	struct v4l2_subdev *subdev = entity->subdev;
+	writel(val, chan->vi->iomem + addr);
+}
+
+/* CSI registers */
+static void csi_write(struct tegra_channel *chan, unsigned int addr, u32 val)
+{
+	writel(val, chan->csibase + addr);
+}
+
+static u32 csi_read(struct tegra_channel *chan, unsigned int addr)
+{
+	return readl(chan->csibase + addr);
+}
+
+static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
+{
+	int ret, index = 0, num_sd = 0;
+	struct v4l2_subdev *subdev = chan->subdev[0];
 	struct v4l2_subdev_mbus_code_enum code = {
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 	};
 
 	bitmap_zero(chan->fmts_bitmap, MAX_FORMAT_NUM);
 
-	while (1) {
+	while (subdev != NULL) {
 		ret = v4l2_subdev_call(subdev, pad, enum_mbus_code,
 				       NULL, &code);
 		if (ret < 0)
@@ -60,6 +77,14 @@ void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
 			bitmap_set(chan->fmts_bitmap, index, 1);
 
 		code.index++;
+		num_sd++;
+		subdev = chan->subdev[num_sd];
+	}
+
+	if (!num_sd) {
+		index = tegra_core_get_idx_by_code(TEGRA_VF_DEF);
+		if (index >= 0)
+			bitmap_set(chan->fmts_bitmap, index, 1);
 	}
 
 	if (bitmap_weight(chan->fmts_bitmap, MAX_FORMAT_NUM) == 0) {
@@ -69,10 +94,181 @@ void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
 	}
 }
 
-/* -----------------------------------------------------------------------------
- * videobuf2 queue operations
+/*
+ * -----------------------------------------------------------------------------
+ * Tegra channel frame setup and capture operations
+ * -----------------------------------------------------------------------------
  */
 
+static int tegra_channel_capture_setup(struct tegra_channel *chan)
+{
+	u32 height = chan->format.height;
+	u32 width = chan->format.width;
+	u32 format = chan->fmtinfo->img_fmt;
+	u32 data_type = chan->fmtinfo->img_dt;
+	u32 word_count = tegra_core_get_word_count(width, chan->fmtinfo);
+
+	csi_write(chan, TEGRA_VI_CSI_ERROR_STATUS, 0xFFFFFFFF);
+	csi_write(chan, TEGRA_VI_CSI_IMAGE_DEF,
+		  ((chan->vi->pg_mode ? 0 : 1) << BYPASS_PXL_TRANSFORM_OFFSET) |
+		  (format << IMAGE_DEF_FORMAT_OFFSET) |
+		  IMAGE_DEF_DEST_MEM);
+	csi_write(chan, TEGRA_VI_CSI_IMAGE_DT, data_type);
+	csi_write(chan, TEGRA_VI_CSI_IMAGE_SIZE_WC, word_count);
+	csi_write(chan, TEGRA_VI_CSI_IMAGE_SIZE,
+		  (height << IMAGE_SIZE_HEIGHT_OFFSET) | width);
+	return 0;
+}
+
+static void tegra_channel_capture_error(struct tegra_channel *chan)
+{
+	u32 val;
+
+	val = csi_read(chan, TEGRA_VI_CSI_ERROR_STATUS);
+	dev_err(&chan->video.dev, "TEGRA_VI_CSI_ERROR_STATUS 0x%08x\n", val);
+	tegra_csi_status(chan->vi->csi, chan->port);
+}
+
+static void tegra_channel_capture_frame(struct tegra_channel *chan,
+				       struct tegra_channel_buffer *buf)
+{
+	int err = 0;
+	u32 thresh = 0, val, frame_start;
+	int bytes_per_line = chan->format.bytesperline;
+
+	/* Program buffer address by using surface 0 */
+	csi_write(chan, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB, 0x0);
+	csi_write(chan, TEGRA_VI_CSI_SURFACE0_OFFSET_LSB, buf->addr);
+	csi_write(chan, TEGRA_VI_CSI_SURFACE0_STRIDE, bytes_per_line);
+
+	/* Program syncpoint */
+	thresh = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
+					chan->syncpt, 1);
+	frame_start = VI_CSI_PP_FRAME_START(chan->port);
+	val = VI_CFG_VI_INCR_SYNCPT_COND(frame_start) | chan->syncpt;
+	tegra_channel_write(chan, TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
+
+	csi_write(chan, TEGRA_VI_CSI_SINGLE_SHOT, SINGLE_SHOT_CAPTURE);
+
+	err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
+			chan->syncpt, thresh,
+			TEGRA_VI_SYNCPT_WAIT_TIMEOUT,
+			NULL,
+			NULL);
+	/* Move buffer to capture done queue */
+	spin_lock(&chan->done_lock);
+	list_add_tail(&buf->queue, &chan->done);
+	spin_unlock(&chan->done_lock);
+
+	/* Wait up kthread for capture done */
+	wake_up_interruptible(&chan->done_wait);
+
+	if (err) {
+		dev_err(&chan->video.dev, "frame start syncpt timeout!\n");
+		tegra_channel_capture_error(chan);
+	}
+}
+
+static void tegra_channel_capture_done(struct tegra_channel *chan,
+				       struct tegra_channel_buffer *buf)
+{
+	struct vb2_v4l2_buffer *vb = &buf->buf;
+	int err = 0;
+	u32 thresh = 0, val, mw_ack_done;
+
+	/* Program syncpoint */
+	thresh = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
+				chan->syncpt, 1);
+
+	mw_ack_done = VI_CSI_MW_ACK_DONE(chan->port);
+	val = VI_CFG_VI_INCR_SYNCPT_COND(mw_ack_done) | chan->syncpt;
+	tegra_channel_write(chan, TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
+
+	err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
+			chan->syncpt, thresh,
+			TEGRA_VI_SYNCPT_WAIT_TIMEOUT,
+			NULL,
+			NULL);
+	if (err)
+		dev_err(&chan->video.dev, "MW_ACK_DONE syncpoint time out!\n");
+
+	/* Captured one frame */
+	vb->sequence = chan->sequence++;
+	vb->field = V4L2_FIELD_NONE;
+	v4l2_get_timestamp(&vb->timestamp);
+	vb2_set_plane_payload(&vb->vb2_buf, 0, chan->format.sizeimage);
+	vb2_buffer_done(&vb->vb2_buf, err < 0 ? VB2_BUF_STATE_ERROR : VB2_BUF_STATE_DONE);
+}
+
+static int tegra_channel_kthread_capture_start(void *data)
+{
+	struct tegra_channel *chan = data;
+	struct tegra_channel_buffer *buf;
+
+	set_freezable();
+
+	while (1) {
+		try_to_freeze();
+		wait_event_interruptible(chan->start_wait,
+					 !list_empty(&chan->capture) ||
+					 kthread_should_stop());
+		if (kthread_should_stop())
+			break;
+
+		spin_lock(&chan->start_lock);
+		if (list_empty(&chan->capture)) {
+			spin_unlock(&chan->start_lock);
+			continue;
+		}
+
+		buf = list_entry(chan->capture.next,
+				 struct tegra_channel_buffer, queue);
+		list_del_init(&buf->queue);
+		spin_unlock(&chan->start_lock);
+
+		tegra_channel_capture_frame(chan, buf);
+	}
+
+	return 0;
+}
+
+static int tegra_channel_kthread_capture_done(void *data)
+{
+	struct tegra_channel *chan = data;
+	struct tegra_channel_buffer *buf;
+
+	set_freezable();
+
+	while (1) {
+		try_to_freeze();
+		wait_event_interruptible(chan->done_wait,
+					 !list_empty(&chan->done) ||
+					 kthread_should_stop());
+		if (kthread_should_stop() && list_empty(&chan->done))
+			break;
+
+		spin_lock(&chan->done_lock);
+		if (list_empty(&chan->done)) {
+			spin_unlock(&chan->done_lock);
+			continue;
+		}
+
+		buf = list_entry(chan->done.next,
+				 struct tegra_channel_buffer, queue);
+		list_del_init(&buf->queue);
+		spin_unlock(&chan->done_lock);
+
+		tegra_channel_capture_done(chan, buf);
+	}
+
+	return 0;
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * videobuf2 queue operations
+ * -----------------------------------------------------------------------------
+ */
 static int
 tegra_channel_queue_setup(struct vb2_queue *vq, const void *parg,
 		     unsigned int *nbuffers, unsigned int *nplanes,
@@ -97,8 +293,9 @@ tegra_channel_queue_setup(struct vb2_queue *vq, const void *parg,
 
 static int tegra_channel_buffer_prepare(struct vb2_buffer *vb)
 {
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
 	struct tegra_channel *chan = vb2_get_drv_priv(vb->vb2_queue);
-	struct tegra_channel_buffer *buf = to_tegra_channel_buffer(vb);
+	struct tegra_channel_buffer *buf = to_tegra_channel_buffer(vbuf);
 
 	buf->chan = chan;
 	vb2_set_plane_payload(vb, 0, chan->format.sizeimage);
@@ -111,9 +308,42 @@ static int tegra_channel_buffer_prepare(struct vb2_buffer *vb)
 
 static void tegra_channel_buffer_queue(struct vb2_buffer *vb)
 {
+	struct vb2_v4l2_buffer *vbuf = to_vb2_v4l2_buffer(vb);
+	struct tegra_channel *chan = vb2_get_drv_priv(vb->vb2_queue);
+	struct tegra_channel_buffer *buf = to_tegra_channel_buffer(vbuf);
+
 	/* for bypass mode - do nothing */
+	if (chan->bypass)
+		return;
+
+	/* Put buffer into the capture queue */
+	spin_lock(&chan->start_lock);
+	list_add_tail(&buf->queue, &chan->capture);
+	spin_unlock(&chan->start_lock);
+
+	/* Wait up kthread for capture */
+	wake_up_interruptible(&chan->start_wait);
 }
 
+/* Return all queued buffers back to videobuf2 */
+static void tegra_channel_queued_buf_done(struct tegra_channel *chan,
+					  enum vb2_buffer_state state)
+{
+	struct tegra_channel_buffer *buf, *nbuf;
+
+	spin_lock(&chan->start_lock);
+	list_for_each_entry_safe(buf, nbuf, &chan->capture, queue) {
+		vb2_buffer_done(&buf->buf.vb2_buf, state);
+		list_del(&buf->queue);
+	}
+	spin_unlock(&chan->start_lock);
+}
+
+/*
+ * -----------------------------------------------------------------------------
+ * subdevice set/unset operations
+ * -----------------------------------------------------------------------------
+ */
 static int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 {
 	int num_sd = 0;
@@ -167,16 +397,53 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	if (ret < 0)
 		goto error_pipeline_start;
 
-	/* Start the pipeline. */
-	ret = tegra_channel_set_stream(chan, true);
+	if (!chan->vi->pg_mode) {
+		/* Start the pipeline. */
+		ret = tegra_channel_set_stream(chan, true);
+		if (ret < 0)
+			goto error_set_stream;
+	}
+
+	if (chan->bypass)
+		return ret;
+
+	tegra_csi_start_streaming(chan->vi->csi, chan->port);
+	/* Note: Program VI registers after TPG, sensors and CSI streaming */
+	ret = tegra_channel_capture_setup(chan);
 	if (ret < 0)
-		goto error_set_stream;
+		goto error_capture_setup;
+
+	chan->sequence = 0;
+	/* Start kthread to capture data to buffer */
+	chan->kthread_capture_start = kthread_run(
+					tegra_channel_kthread_capture_start,
+					chan, chan->video.name);
+	if (IS_ERR(chan->kthread_capture_start)) {
+		dev_err(&chan->video.dev,
+			"failed to run kthread for capture start\n");
+		ret = PTR_ERR(chan->kthread_capture_start);
+		goto error_capture_setup;
+	}
+
+	chan->kthread_capture_done = kthread_run(
+					tegra_channel_kthread_capture_done,
+					chan, chan->video.name);
+	if (IS_ERR(chan->kthread_capture_done)) {
+		dev_err(&chan->video.dev,
+			"failed to run kthread for capture done\n");
+		ret = PTR_ERR(chan->kthread_capture_done);
+		goto error_capture_setup;
+	}
 
 	return 0;
+
+error_capture_setup:
+	tegra_channel_set_stream(chan, false);
 error_set_stream:
 	media_entity_pipeline_stop(&chan->video.entity);
 error_pipeline_start:
 	vq->start_streaming_called = 0;
+	tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_QUEUED);
 
 	return ret;
 }
@@ -185,9 +452,23 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 
-	media_entity_pipeline_stop(&chan->video.entity);
+	if (!chan->bypass) {
+		/* Stop the kthread for capture */
+		kthread_stop(chan->kthread_capture_start);
+		chan->kthread_capture_start = NULL;
+		kthread_stop(chan->kthread_capture_done);
+		chan->kthread_capture_done = NULL;
+	}
 
-	tegra_channel_set_stream(chan, false);
+	if (!chan->vi->pg_mode)
+		tegra_channel_set_stream(chan, false);
+
+	if (!chan->bypass) {
+		tegra_csi_stop_streaming(chan->vi->csi, chan->port);
+		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
+	}
+
+	media_entity_pipeline_stop(&chan->video.entity);
 }
 
 static const struct vb2_ops tegra_channel_queue_qops = {
@@ -560,12 +841,24 @@ static int tegra_channel_open(struct file *fp)
 		if (ret < 0)
 			dev_err(chan->vi->dev,
 				"Channel controls setup failed\n");
+
+		tegra_channel_fmts_bitmap_init(chan);
 	}
 
-	/* power on sensors connected in channel */
-	ret = tegra_channel_set_power(chan, 1);
-	if (ret < 0)
-		return ret;
+	if (!chan->bypass) {
+		tegra_vi_power_on(chan);
+		tegra_csi_power(chan->vi->csi, chan->port, 1);
+	}
+
+	if (!chan->vi->pg_mode) {
+		/* power on sensors connected in channel */
+		ret = tegra_channel_set_power(chan, 1);
+		if (ret < 0)
+			return ret;
+	}
+
+	chan->saved_ctx_bypass = chan->bypass;
+	chan->saved_ctx_pgmode = chan->vi->pg_mode;
 
 	return v4l2_fh_open(fp);
 }
@@ -576,12 +869,26 @@ static int tegra_channel_close(struct file *fp)
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
 
-	/* power off sensors connected in channel */
-	ret = tegra_channel_set_power(chan, 0);
-	if (ret < 0)
-		dev_err(chan->vi->dev, "Failed to power off subdevices\n");
+	ret = vb2_fop_release(fp);
 
-	return vb2_fop_release(fp);
+	if (!chan->saved_ctx_pgmode) {
+		/* power off sensors connected in channel */
+		ret = tegra_channel_set_power(chan, 0);
+		if (ret < 0)
+			dev_err(chan->vi->dev,
+				"Failed to power off subdevices\n");
+	}
+
+	if (!chan->saved_ctx_bypass) {
+		int pg_mode = chan->vi->csi->pg_mode;
+		/* save TPG mode context for clean closure of CSI */
+		chan->vi->csi->pg_mode = chan->saved_ctx_pgmode;
+		tegra_csi_power(chan->vi->csi, chan->port, 0);
+		chan->vi->csi->pg_mode = pg_mode;
+		tegra_vi_power_off(chan->vi);
+	}
+
+	return ret;
 }
 
 /* -----------------------------------------------------------------------------
@@ -597,15 +904,36 @@ static const struct v4l2_file_operations tegra_channel_fops = {
 	.mmap		= vb2_fop_mmap,
 };
 
-static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int port)
+static void vi_channel_syncpt_init(struct tegra_channel *chan)
+{
+	chan->syncpt = nvhost_get_syncpt_client_managed(chan->vi->ndev, "vi");
+}
+
+static void vi_channel_syncpt_free(struct tegra_channel *chan)
+{
+	nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt);
+}
+
+static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 {
 	int ret;
-	struct tegra_channel *chan  = &vi->chans[port];
+	struct tegra_channel *chan  = &vi->chans[index];
 
 	chan->vi = vi;
-	chan->port = port;
+	tegra_vi_get_port_info(chan, vi->dev->of_node, index);
+	if (csi_port_is_valid(chan->port)) {
+		chan->csibase = vi->iomem + TEGRA_VI_CSI_BASE(chan->port);
+		set_csi_portinfo(vi->csi, chan->port, chan->numlanes);
+	}
 	chan->align = 64;
 	chan->num_subdevs = 0;
+	mutex_init(&chan->video_lock);
+	INIT_LIST_HEAD(&chan->capture);
+	INIT_LIST_HEAD(&chan->done);
+	init_waitqueue_head(&chan->start_wait);
+	init_waitqueue_head(&chan->done_wait);
+	spin_lock_init(&chan->start_lock);
+	spin_lock_init(&chan->done_lock);
 
 	/* Init video format */
 	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF);
@@ -637,18 +965,21 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int port)
 	chan->video.v4l2_dev = &vi->v4l2_dev;
 	chan->video.queue = &chan->queue;
 	snprintf(chan->video.name, sizeof(chan->video.name), "%s-%s-%u",
-		 dev_name(vi->dev), "output", port);
+		 dev_name(vi->dev), "output", chan->port);
 	chan->video.vfl_type = VFL_TYPE_GRABBER;
 	chan->video.vfl_dir = VFL_DIR_RX;
 	chan->video.release = video_device_release_empty;
 	chan->video.ioctl_ops = &tegra_channel_ioctl_ops;
 	chan->video.ctrl_handler = &chan->ctrl_handler;
+	chan->video.lock = &chan->video_lock;
 
 	video_set_drvdata(&chan->video, chan);
 
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
+	vi_channel_syncpt_init(chan);
+
 	/* get the buffers queue... */
-	chan->alloc_ctx = vb2_dma_contig_init_ctx(&chan->video.dev);
+	chan->alloc_ctx = vb2_dma_contig_init_ctx(chan->vi->dev);
 	if (IS_ERR(chan->alloc_ctx)) {
 		dev_err(chan->vi->dev, "failed to init vb2 buffer\n");
 		ret = -ENOMEM;
@@ -658,6 +989,7 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int port)
 
 	chan->queue.type = V4L2_BUF_TYPE_VIDEO_CAPTURE;
 	chan->queue.io_modes = VB2_MMAP | VB2_DMABUF | VB2_READ | VB2_USERPTR;
+	chan->queue.lock = &chan->video_lock;
 	chan->queue.drv_priv = chan;
 	chan->queue.buf_struct_size = sizeof(struct tegra_channel_buffer);
 	chan->queue.ops = &tegra_channel_queue_qops;
@@ -701,6 +1033,7 @@ static int tegra_channel_cleanup(struct tegra_channel *chan)
 	vb2_dma_contig_cleanup_ctx(chan->alloc_ctx);
 #endif
 
+	vi_channel_syncpt_free(chan);
 	media_entity_cleanup(&chan->video.entity);
 
 	return 0;

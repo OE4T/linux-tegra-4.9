@@ -22,9 +22,82 @@
 
 #include "dev.h"
 #include "mc_common.h"
+#include "vi.h"
+#include "registers.h"
 
 #define TPG_CHANNELS 6
 #define INVALID_PORT 100
+
+/* In TPG mode, VI only support 2 formats */
+static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
+{
+	int index;
+
+	bitmap_zero(vi->tpg_fmts_bitmap, MAX_FORMAT_NUM);
+
+	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_SRGGB10_1X10);
+	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
+
+	index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_RGB888_1X32_PADHI);
+	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
+}
+
+int tegra_vi_power_on(struct tegra_channel *chan)
+{
+	int ret;
+	struct tegra_mc_vi *vi = chan->vi;
+
+	ret = nvhost_module_busy_ext(vi->ndev);
+	if (ret) {
+		dev_err(vi->dev, "%s:nvhost module is busy\n", __func__);
+		return ret;
+	}
+
+	if (vi->reg) {
+		ret = regulator_enable(vi->reg);
+		if (ret) {
+			dev_err(vi->dev, "%s: enable csi regulator failed.\n",
+					__func__);
+			goto error_regulator_fail;
+		}
+	}
+
+	tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, 1);
+
+	/* unpowergate VE */
+	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VENC);
+	if (ret) {
+		dev_err(vi->dev, "failed to unpower gate VI\n");
+		goto error_unpowergate;
+	}
+
+	/* clock settings */
+	clk_prepare_enable(vi->clk);
+	ret = clk_set_rate(vi->clk, 408000000);
+	if (ret) {
+		dev_err(vi->dev, "failed to set vi clock to 408MHz!\n");
+		goto error_clk_set_rate;
+	}
+
+	return 0;
+
+error_clk_set_rate:
+	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
+error_unpowergate:
+	regulator_disable(vi->reg);
+error_regulator_fail:
+	nvhost_module_idle_ext(vi->ndev);
+
+	return ret;
+}
+
+void tegra_vi_power_off(struct tegra_mc_vi *vi)
+{
+	clk_disable_unprepare(vi->clk);
+	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
+	regulator_disable(vi->reg);
+	nvhost_module_idle_ext(vi->ndev);
+}
 
 /* -----------------------------------------------------------------------------
  * Media Controller and V4L2
@@ -69,17 +142,18 @@ static int vi_s_ctrl(struct v4l2_ctrl *ctrl)
 			dev_info(&vi->ndev->dev, "Turning on TPG mode\n");
 		}
 		vi->pg_mode = ctrl->val;
+		vi->csi->pg_mode = vi->pg_mode;
 		break;
 	case V4L2_CID_VI_SET_BYPASS_PORT:
-		if (vi->pg_mode) {
-			dev_info(&vi->ndev->dev, "Turn off TPG mode\n");
-			set_v4l2_ctrl(vi->pattern, 0);
-			vi->pg_mode = 0;
-		}
-
 		if (ctrl->val < vi->num_channels) {
 			chan = &vi->chans[ctrl->val];
 			chan->bypass = 1;
+			if (vi->pg_mode) {
+				dev_info(&vi->ndev->dev,
+					"Turning off TPG mode\n");
+				set_v4l2_ctrl(vi->pattern, 0);
+				vi->pg_mode = vi->csi->pg_mode = 0;
+			}
 		} else
 			/* set all channels to vi mode for invalid port */
 			set_vi_mode(vi);
@@ -122,6 +196,8 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 	int ret;
 
 	vi->pg_mode = 0;
+	vi_tpg_fmts_bitmap_init(vi);
+
 	vi->media_dev.dev = vi->dev;
 	strlcpy(vi->media_dev.model, "NVIDIA Tegra Video Input Device",
 		sizeof(vi->media_dev.model));
@@ -173,6 +249,19 @@ register_error:
 	return ret;
 }
 
+static int vi_get_clks(struct tegra_mc_vi *vi, struct platform_device *pdev)
+{
+	int ret = 0;
+
+	vi->clk = devm_clk_get(&pdev->dev, "vi");
+	if (IS_ERR(vi->clk)) {
+		dev_err(&pdev->dev, "Failed to get vi clock\n");
+		return PTR_ERR(vi->clk);
+	}
+
+	return ret;
+}
+
 static int vi_parse_dt(struct tegra_mc_vi *vi, struct platform_device *dev)
 {
 	int err = 0;
@@ -197,10 +286,23 @@ static int vi_parse_dt(struct tegra_mc_vi *vi, struct platform_device *dev)
 	return 0;
 }
 
+static void set_vi_register_base(struct tegra_mc_vi *mc_vi,
+			void __iomem *regbase)
+{
+	mc_vi->iomem = regbase;
+}
+
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev)
 {
 	int err = 0;
+	struct nvhost_device_data *pdata = pdev->dev.platform_data;
+
+	set_vi_register_base(mc_vi, pdata->aperture[0]);
+
+	err = vi_get_clks(mc_vi, pdev);
+	if (err)
+		return err;
 
 	err = vi_parse_dt(mc_vi, pdev);
 	if (err)

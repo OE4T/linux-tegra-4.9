@@ -89,6 +89,7 @@ struct vi {
 	struct device *dev;
 	struct nvhost_device_data *ndata;
 	struct tegra_mc_vi mc_vi;
+	struct tegra_csi_device csi;
 
 	struct regulator *reg;
 	struct dentry *debugdir;

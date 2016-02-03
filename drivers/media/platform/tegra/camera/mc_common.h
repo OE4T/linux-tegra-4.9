@@ -28,9 +28,9 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-dev.h>
 #include <media/videobuf2-core.h>
-#include <media/mc_common.h>
 
 #include "core.h"
+#include "../csi/csi.h"
 
 #define MAX_FORMAT_NUM	64
 #define MAX_SUBDEVICES 4
@@ -43,7 +43,7 @@
  * @addr: Tegra IOVA buffer address for VI output
  */
 struct tegra_channel_buffer {
-	struct vb2_buffer buf;
+	struct vb2_v4l2_buffer buf;
 	struct list_head queue;
 	struct tegra_channel *chan;
 
@@ -106,6 +106,7 @@ struct tegra_channel {
 	struct video_device video;
 	struct media_pad pad;
 	struct media_pipeline pipe;
+	struct mutex video_lock;
 
 	struct tegra_mc_vi *vi;
 	struct v4l2_subdev *subdev[MAX_SUBDEVICES];
@@ -114,14 +115,28 @@ struct tegra_channel {
 	struct v4l2_pix_format format;
 	const struct tegra_video_format *fmtinfo;
 
+	unsigned int syncpt;
+
+	struct task_struct *kthread_capture_start;
+	wait_queue_head_t start_wait;
+	struct task_struct *kthread_capture_done;
+	wait_queue_head_t done_wait;
 	struct vb2_queue queue;
 	void *alloc_ctx;
+	struct list_head capture;
+	spinlock_t start_lock;
+	struct list_head done;
+	spinlock_t done_lock;
 
-	void __iomem *csi;
+	void __iomem *csibase;
 	unsigned int align;
 	unsigned int port;
+	unsigned int numlanes;
 	unsigned int io_id;
 	unsigned int num_subdevs;
+	unsigned int sequence;
+	unsigned int saved_ctx_bypass;
+	unsigned int saved_ctx_pgmode;
 
 	DECLARE_BITMAP(fmts_bitmap, MAX_FORMAT_NUM);
 	bool bypass;
@@ -164,12 +179,18 @@ struct tegra_mc_vi {
 	struct device *dev;
 	struct nvhost_device_data *ndata;
 
+	struct regulator *reg;
+	struct clk *clk;
+	struct clk *parent_clk;
+
 	struct v4l2_async_notifier notifier;
 	struct list_head entities;
 	unsigned int num_channels;
 	unsigned int num_subdevs;
 
+	struct tegra_csi_device *csi;
 	struct tegra_channel *chans;
+	void __iomem *iomem;
 
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_ctrl *pattern;
@@ -180,14 +201,18 @@ struct tegra_mc_vi {
 	bool has_sensors;
 };
 
+int tegra_vi_get_port_info(struct tegra_channel *chan,
+			struct device_node *node, unsigned int index);
+void tegra_channel_write(struct tegra_channel *chan,
+			unsigned int addr, u32 val);
 void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi);
 int tegra_vi_v4l2_init(struct tegra_mc_vi *vi);
 int tegra_vi_graph_init(struct tegra_mc_vi *vi);
 void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi);
 int tegra_vi_channels_init(struct tegra_mc_vi *vi);
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
-void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan,
-				    struct tegra_vi_graph_entity *entity);
+int tegra_vi_power_on(struct tegra_channel *chan);
+void tegra_vi_power_off(struct tegra_mc_vi *vi);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev);
 void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);

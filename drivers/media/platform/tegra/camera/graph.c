@@ -238,8 +238,6 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 				sink->name, sink_pad->index);
 			break;
 		}
-
-		tegra_channel_fmts_bitmap_init(chan, ent);
 	} while (next != NULL);
 
 	of_node_put(ep);
@@ -318,6 +316,51 @@ void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi)
 	}
 }
 
+int tegra_vi_get_port_info(struct tegra_channel *chan,
+			struct device_node *node, unsigned int index)
+{
+	struct device_node *ep = NULL;
+	struct device_node *ports;
+	struct device_node *port;
+	int value = 0xFFFF;
+	int ret = 0;
+
+	ports = of_get_child_by_name(node, "ports");
+	if (ports == NULL)
+		ports = node;
+
+	for_each_child_of_node(ports, port) {
+		if (!port->name || of_node_cmp(port->name, "port"))
+			continue;
+
+		ret = of_property_read_u32(port, "reg", &value);
+		if (ret < 0)
+			continue;
+
+		if (value != index)
+			continue;
+
+		for_each_child_of_node(port, ep) {
+			if (!ep->name || of_node_cmp(ep->name, "endpoint"))
+				continue;
+
+			/* Get CSI port */
+			ret = of_property_read_u32(ep, "csi-port", &value);
+			if (ret < 0)
+				pr_info("csi port error\n");
+			chan->port = value;
+
+			/* Get number of data lanes for the endpoint */
+			ret = of_property_read_u32(ep, "bus-width", &value);
+			if (ret < 0)
+				pr_info("num of lanes error\n");
+			chan->numlanes = value;
+
+		}
+	}
+
+	return ret;
+}
 
 static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 				struct device_node *node)

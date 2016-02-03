@@ -187,6 +187,52 @@
 			status = "okay";
 		};
 
+		sor {
+			dp-display {
+				disp-default-out {
+					nvidia,out-hotplug-state = <1>;	/*TEGRA_HPD_STATE_FORCE_ASSERT*/
+				};
+				display-timings {
+					1920x1080-32 {
+						clock-frequency = <148500000>;
+						hactive = <1920>;
+						vactive = <1080>;
+						hfront-porch = <88>;
+						hback-porch = <148>;
+						hsync-len = <44>;
+						vfront-porch = <4>;
+						vback-porch = <36>;
+						vsync-len = <5>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
+			};
+		};
+
+		sor1 {
+			hdmi-display {
+				disp-default-out {
+					nvidia,out-hotplug-state = <1>;	/*TEGRA_HPD_STATE_FORCE_ASSERT*/
+				};
+				display-timings {
+					1920x1080-32 {
+						clock-frequency = <148500000>;
+						hactive = <1920>;
+						vactive = <1080>;
+						hfront-porch = <88>;
+						hback-porch = <148>;
+						hsync-len = <44>;
+						vfront-porch = <4>;
+						vback-porch = <36>;
+						vsync-len = <5>;
+						nvidia,h-ref-to-sync = <1>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
+			};
+		};
+
 		tsec@15500000 {
 			status = "disabled";
 		};

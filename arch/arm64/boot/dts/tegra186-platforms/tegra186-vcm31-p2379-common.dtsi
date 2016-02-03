@@ -226,19 +226,37 @@
 		status = "disabled";
         };
 
-	/* FIXME: not implement yet */
 	isc-mgr.0 {
-		status = "disabled";
+		compatible = "nvidia,isc-mgr";
+		i2c-bus = <7>;
+		csi-port = <0>;
+		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(S, 4) GPIO_ACTIVE_HIGH >;  /* GMSLA_PWRDN */
+		interrupt-parent = <&tegra_gpio>;
+		interrupts = <TEGRA_GPIO(EE, 2) 2>; /* GMSLA_STATUS_OC : falling edge sensitive */
+		/*interrupts = <TEGRA_GPIO(Y, 2) 2>;*/ /* GMSLA_LOCKOUT : falling edge sensitive */
+		status = "okay";
 	};
 
-	/* FIXME: not implement yet */
 	isc-mgr.1 {
-		status = "disabled";
+		compatible = "nvidia,isc-mgr";
+		i2c-bus = <2>;
+		csi-port = <2>;
+		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(V, 5) GPIO_ACTIVE_HIGH >;  /* GMSLB_PWRDN */
+		interrupt-parent = <&tegra_gpio>;
+		interrupts = <TEGRA_GPIO(FF, 0) 2>; /* GMSLB_STATUS_OC : falling edge sensitive */
+		/*interrupts = <TEGRA_GPIO(Y, 5) 2>;*/ /* GMSLB_LOCKOUT : falling edge sensitive */
+		status = "okay";
 	};
 
-	/* FIXME: not implement yet */
 	isc-mgr.2 {
-		status = "disabled";
+		compatible = "nvidia,isc-mgr";
+		i2c-bus = <1>;
+		csi-port = <4>;
+		pwdn-gpios = < &tegra_gpio TEGRA_GPIO(U, 5) GPIO_ACTIVE_HIGH >;  /* GMSLC_PWRDN */
+		interrupt-parent = <&tegra_gpio>;
+		interrupts = <TEGRA_GPIO(V, 7) 2>; /* GMSLC_STATUS_OC : falling edge sensitive */
+		/*interrupts = <TEGRA_GPIO(Y, 6) 2>;*/ /* GMSLC_LOCKOUT : falling edge sensitive */
+		status = "okay";
 	};
 
 	sdhci@3400000 {

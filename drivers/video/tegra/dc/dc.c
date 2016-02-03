@@ -3219,6 +3219,8 @@ static void _tegra_dc_vsync_enable(struct tegra_dc *dc)
 {
 	int vsync_irq;
 
+	if (test_bit(V_BLANK_USER, &dc->vblank_ref_count))
+		return; /* already set, nothing needs to be done */
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		vsync_irq = MSF_INT;
 	else
@@ -3245,6 +3247,8 @@ static void _tegra_dc_vsync_disable(struct tegra_dc *dc)
 {
 	int vsync_irq;
 
+	if (!test_bit(V_BLANK_USER, &dc->vblank_ref_count))
+		return; /* already clear, nothing needs to be done */
 	if (dc->out->type == TEGRA_DC_OUT_DSI)
 		vsync_irq = MSF_INT;
 	else
@@ -4739,6 +4743,15 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	/* clear the windows ownership from head*/
 	tegra_nvdisp_head_disable(dc);
 #endif
+
+	/* clean up tegra_dc_vsync_enable() */
+	while (dc->out->user_needs_vblank > 0)
+		_tegra_dc_user_vsync_enable(dc, false);
+
+	if (test_bit(V_BLANK_USER, &dc->vblank_ref_count)) {
+		tegra_dc_release_dc_out(dc);
+		clear_bit(V_BLANK_USER, &dc->vblank_ref_count);
+	}
 
 	tegra_dc_put(dc);
 

@@ -799,4 +799,21 @@
 	timer@3020000 {
 		status = "disabled";
 	};
+
+        /delete-node/ axi2apb@2390000;
+        /delete-node/ axi2apb@23a0000;
+        /delete-node/ axi2apb@23b0000;
+        /delete-node/ axi2apb@23c0000;
+        /delete-node/ axi2apb@23d0000;
+        /delete-node/ axip2p@2100000;
+        /delete-node/ axip2p@2110000;
+        /delete-node/ axip2p@2120000;
+        /delete-node/ axip2p@2130000;
+        /delete-node/ axip2p@2140000;
+        /delete-node/ axip2p@2150000;
+        /delete-node/ axip2p@2160000;
+        /delete-node/ axip2p@2170000;
+        /delete-node/ axip2p@2180000;
+        /delete-node/ axip2p@2190000;
+
 };

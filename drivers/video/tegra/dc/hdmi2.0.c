@@ -2330,8 +2330,6 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
-	if (hdmi->pdata->hdmi2fpd_bridge_enable)
-		hdmi2fpd_disable(dc);
 	hdmi->enabled = false;
 
 #ifdef CONFIG_SWITCH

@@ -2358,12 +2358,9 @@ static bool tegra_dc_hdmi_detect(struct tegra_dc *dc)
 	if (dc->out->hotplug_state != TEGRA_HPD_STATE_NORMAL)
 		delay = 0;
 
-	if (tegra_dc_hpd(dc)) {
-		cancel_delayed_work(&hdmi->hpd_worker);
-		schedule_delayed_work(&hdmi->hpd_worker, delay);
-		return true;
-	}
-	return false;
+	cancel_delayed_work(&hdmi->hpd_worker);
+	schedule_delayed_work(&hdmi->hpd_worker, delay);
+	return tegra_dc_hpd(dc);
 }
 
 static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,6 +23,9 @@ struct tegra_ast *tegra_ast_add_ref(const struct device_node *client_np,
 			const char *ast_prop_name, u32 ast_prop_index);
 
 int tegra_ast_del_ref(void);
+
+int tegra_ast_set_streamid(struct tegra_ast *ast,
+		u32 vmindex, u32 stream_id);
 
 int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
 		u32 slave_base, u32 mask, u64 master_base);

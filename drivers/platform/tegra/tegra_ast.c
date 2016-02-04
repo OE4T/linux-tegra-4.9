@@ -46,6 +46,11 @@
 #define AST_RGN_CTRL_NON_SECURE		0x8
 #define AST_RGN_CTRL_SNOOP		0x4
 
+#define AST_MAX_VMINDEX			15
+#define AST_MAX_STREAMID		255
+#define AST_STREAMID(id)		((id) << 8)
+#define AST_STREAMID_CTL_ENABLE		0x01
+
 /* TEGRA_APS_AST_REGION_<x>_SLAVE_BASE_LO register fields */
 #define AST_SLV_BASE_LO_ENABLE		1
 
@@ -93,6 +98,33 @@ int tegra_ast_del_ref(void)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_ast_del_ref);
+
+int tegra_ast_set_streamid(struct tegra_ast *ast,
+				u32 vmindex, u32 stream_id)
+{
+	if (!ast)
+		return -EINVAL;
+
+	if (vmindex > AST_MAX_VMINDEX) {
+		dev_err(ast->dev,
+			"%s: Invalid VM index %u\n",
+			__func__, vmindex);
+		return -EINVAL;
+	}
+
+	if (stream_id > AST_MAX_STREAMID) {
+		dev_err(ast->dev,
+			"%s: Invalid streamID %u\n",
+			__func__, stream_id);
+		return -EINVAL;
+	}
+
+	writel(AST_STREAMID(stream_id) | AST_STREAMID_CTL_ENABLE,
+		ast->ast_base + TEGRA_APS_AST_STREAMID_CTL + (vmindex * 4));
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_ast_set_streamid);
 
 int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
 			u32 slave_base, u32 mask, u64 master_base)

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -26,6 +26,7 @@
 #include <linux/nvs.h>
 #include <linux/nvs_light.h>
 
+#define CM_DRIVER_VERSION		(102)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3217"
 #define CM_LIGHT_VERSION		(1)
@@ -83,6 +84,7 @@ struct cm_state {
 	struct delayed_work dw;
 	struct regulator_bulk_data vreg[ARRAY_SIZE(cm_vregs)];
 	struct nvs_light light;
+	struct nld_thresh nld_thr[ARRAY_SIZE(cm_nld_tbl)];
 	unsigned int sts;		/* debug flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
@@ -322,20 +324,40 @@ static int cm_batch(void *client, int snsr_id, int flags,
 	return 0;
 }
 
+static int cm_resolution(void *client, int snsr_id, int resolution)
+{
+	struct cm_state *st = (struct cm_state *)client;
+	int ret;
+
+	ret = nvs_light_resolution(&st->light, resolution);
+	if (st->light.nld_i_change)
+		cm_cmd_wr(st);
+	return ret;
+}
+
+static int cm_max_range(void *client, int snsr_id, int max_range)
+{
+	struct cm_state *st = (struct cm_state *)client;
+	int ret;
+
+	ret = nvs_light_max_range(&st->light, max_range);
+	if (st->light.nld_i_change)
+		cm_cmd_wr(st);
+	return ret;
+}
+
 static int cm_thresh_lo(void *client, int snsr_id, int thresh_lo)
 {
 	struct cm_state *st = (struct cm_state *)client;
 
-	nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
-	return 0;
+	return nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
 }
 
 static int cm_thresh_hi(void *client, int snsr_id, int thresh_hi)
 {
 	struct cm_state *st = (struct cm_state *)client;
 
-	nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
-	return 0;
+	return nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
 }
 
 static int cm_regs(void *client, int snsr_id, char *buf)
@@ -349,19 +371,24 @@ static int cm_regs(void *client, int snsr_id, char *buf)
 	return t;
 }
 
-static int cm_dbg(void *client, int snsr_id, char *buf)
+static int cm_nvs_read(void *client, int snsr_id, char *buf)
 {
 	struct cm_state *st = (struct cm_state *)client;
-	return nvs_light_dbg(&st->light, buf);
+	ssize_t t;
+
+	t = sprintf(buf, "driver v.%u\n", CM_DRIVER_VERSION);
+	return nvs_light_dbg(&st->light, buf + t);
 }
 
 static struct nvs_fn_dev cm_fn_dev = {
 	.enable				= cm_enable,
 	.batch				= cm_batch,
+	.resolution			= cm_resolution,
+	.max_range			= cm_max_range,
 	.thresh_lo			= cm_thresh_lo,
 	.thresh_hi			= cm_thresh_hi,
 	.regs				= cm_regs,
-	.nvs_read			= cm_dbg,
+	.nvs_read			= cm_nvs_read,
 };
 
 #ifdef CONFIG_SUSPEND
@@ -462,6 +489,8 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 	memcpy(&st->cfg, &cm_cfg_dflt, sizeof(st->cfg));
 	st->light.cfg = &st->cfg;
 	st->light.hw_mask = 0xFFFF;
+	st->light.nld_thr = st->nld_thr;
+	st->light.nld_tbl_n = ARRAY_SIZE(cm_nld_tbl);
 	st->light.nld_tbl = cm_nld_tbl;
 	/* device tree parameters */
 	ret = nvs_of_dt(dn, &st->cfg, NULL);

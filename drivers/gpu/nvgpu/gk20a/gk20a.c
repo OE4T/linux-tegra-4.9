@@ -2031,7 +2031,8 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	gpu->map_buffer_batch_limit = 256;
 
-	gpu->max_freq = platform->clk_round_rate(g->dev, UINT_MAX);
+	if (platform->clk_round_rate)
+		gpu->max_freq = platform->clk_round_rate(g->dev, UINT_MAX);
 
 	return 0;
 }

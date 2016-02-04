@@ -286,7 +286,7 @@
 	};
 
 	sdhci@3440000 { /* SDMMC_C  sd card 4-bit*/
-		status = "disabled";
+		status = "okay";
 
                 nvidia,sd-device;
 		/* 79: enable SDR25, SDR50 ... */

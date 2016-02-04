@@ -1087,7 +1087,7 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	if (sor->dc->initialized)
 		return;
 	tegra_io_dpd_disable(&hdmi_dpd);
-	mdelay(50);
+	usleep_range(20, 70);
 
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 				NV_SOR_PLL2_AUX9_LVDSEN_OVERRIDE,
@@ -1101,28 +1101,28 @@ void tegra_sor_hdmi_pad_power_up(struct tegra_dc_sor_data *sor)
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 				NV_SOR_PLL2_AUX0_MASK,
 				NV_SOR_PLL2_AUX0_SEQ_PLL_PULLDOWN_OVERRIDE);
-	mdelay(100);
-
 	tegra_sor_write_field(sor, NV_SOR_PLL0, NV_SOR_PLL0_PWR_MASK,
 						NV_SOR_PLL0_PWR_ON);
 	tegra_sor_write_field(sor, NV_SOR_PLL0, NV_SOR_PLL0_VCOPD_MASK,
 						NV_SOR_PLL0_VCOPD_RESCIND);
-	mdelay(100);
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+				NV_SOR_PLL2_CLKGEN_MODE_MASK,
+				NV_SOR_PLL2_CLKGEN_MODE_DP_TMDS);
+	usleep_range(20, 70);
+
+	tegra_sor_write_field(sor, NV_SOR_PLL2,
+				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
+				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
+	usleep_range(50, 100);
 
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_MASK,
 				NV_SOR_PLL2_AUX8_SEQ_PLLCAPPD_ENFORCE_DISABLE);
-	tegra_sor_write_field(sor, NV_SOR_PLL2,
-				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_MASK,
-				NV_SOR_PLL2_AUX6_BANDGAP_POWERDOWN_DISABLE);
+	usleep_range(250, 300);
+
 	tegra_sor_write_field(sor, NV_SOR_PLL2,
 				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_MASK,
 				NV_SOR_PLL2_AUX7_PORT_POWERDOWN_DISABLE);
-	tegra_sor_write_field(sor, NV_SOR_PLL2,
-				NV_SOR_PLL2_CLKGEN_MODE_MASK,
-				NV_SOR_PLL2_CLKGEN_MODE_DP_TMDS);
-	mdelay(100);
-
 	tegra_sor_write_field(sor, NV_SOR_PLL1,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE,
 				NV_SOR_PLL1_TMDS_TERM_ENABLE);

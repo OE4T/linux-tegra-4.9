@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,7 +29,7 @@
 #include <linux/nvs.h>
 #include <linux/nvs_light.h>
 
-#define CM_DRIVER_VERSION		(301)
+#define CM_DRIVER_VERSION		(302)
 #define CM_VENDOR			"Capella Microsystems, Inc."
 #define CM_NAME				"cm3218x"
 #define CM_NAME_CM3218			"cm3218"
@@ -138,6 +138,7 @@ struct cm_state {
 	struct regulator_bulk_data vreg[ARRAY_SIZE(cm_vregs)];
 	struct nvs_light light;
 	struct nvs_light_dynamic nld_tbl[ARRAY_SIZE(cm32181_nld_tbl)];
+	struct nld_thresh nld_thr[ARRAY_SIZE(cm32181_nld_tbl)];
 	unsigned int sts;		/* debug flags */
 	unsigned int errs;		/* error count */
 	unsigned int enabled;		/* enable status */
@@ -170,10 +171,10 @@ static int cm_irq_ack(struct cm_state *st, bool force)
 	int ret = 0;
 
 	if (st->ara && st->gpio_irq >= 0) {
-		if (!force)
-			gpio_sts = gpio_get_value(st->gpio_irq);
-		else
+		if (force)
 			gpio_sts = false;
+		else
+			gpio_sts = gpio_get_value(st->gpio_irq);
 		if (!gpio_sts)
 			ret = i2c_smbus_read_byte(st->ara);
 		if (st->sts & NVS_STS_SPEW_IRQ)
@@ -464,20 +465,44 @@ static int cm_batch(void *client, int snsr_id, int flags,
 	return 0;
 }
 
+static int cm_resolution(void *client, int snsr_id, int resolution)
+{
+	struct cm_state *st = (struct cm_state *)client;
+	int ret;
+
+	ret = nvs_light_resolution(&st->light, resolution);
+	if (st->light.nld_i_change) {
+		cm_cmd_wr(st, false);
+		schedule_delayed_work(&st->dw, 0);
+	}
+	return ret;
+}
+
+static int cm_max_range(void *client, int snsr_id, int max_range)
+{
+	struct cm_state *st = (struct cm_state *)client;
+	int ret;
+
+	ret = nvs_light_max_range(&st->light, max_range);
+	if (st->light.nld_i_change) {
+		cm_cmd_wr(st, false);
+		schedule_delayed_work(&st->dw, 0);
+	}
+	return ret;
+}
+
 static int cm_thresh_lo(void *client, int snsr_id, int thresh_lo)
 {
 	struct cm_state *st = (struct cm_state *)client;
 
-	nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
-	return 0;
+	return nvs_light_threshold_calibrate_lo(&st->light, thresh_lo);
 }
 
 static int cm_thresh_hi(void *client, int snsr_id, int thresh_hi)
 {
 	struct cm_state *st = (struct cm_state *)client;
 
-	nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
-	return 0;
+	return nvs_light_threshold_calibrate_hi(&st->light, thresh_hi);
 }
 
 static int cm_regs(void *client, int snsr_id, char *buf)
@@ -590,6 +615,8 @@ static int cm_nvs_read(void *client, int snsr_id, char *buf)
 static struct nvs_fn_dev cm_fn_dev = {
 	.enable				= cm_enable,
 	.batch				= cm_batch,
+	.resolution			= cm_resolution,
+	.max_range			= cm_max_range,
 	.thresh_lo			= cm_thresh_lo,
 	.thresh_hi			= cm_thresh_hi,
 	.regs				= cm_regs,
@@ -658,18 +685,25 @@ static int cm_remove(struct i2c_client *client)
 static int cm_id_dev(struct cm_state *st, const char *name)
 {
 	u16 val = 0;
-	bool ara = false;
 	unsigned int i;
 	unsigned int j;
 	int ret = 1;
 
-	if (!strcmp(name, CM_NAME_CM3218))
+	/* CM3218 & CM32180 POR will come up with random registers which may
+	 * cause a pending IRQ.  The WAR is to do the cm_irq_ack ARA before the
+	 * first communication attempt.
+	 */
+	if (!strcmp(name, CM_NAME_CM3218)) {
 		st->dev_id = CM_DEVID_CM3218;
-	else if (!strcmp(name, CM_NAME_CM32180))
+		cm_irq_ack(st, true);
+	} else if (!strcmp(name, CM_NAME_CM32180)) {
 		st->dev_id = CM_DEVID_CM32180;
-	else if (!strcmp(name, CM_NAME_CM32181))
+		cm_irq_ack(st, true);
+	} else if ((!strcmp(name, CM_NAME_CM32181)) || !st->ara) {
 		st->dev_id = CM_DEVID_CM32181;
+	}
 	if (!st->dev_id) {
+		cm_irq_ack(st, true);
 		ret = cm_i2c_rd(st, CM_REG_CFG, &val);
 		if (ret) {
 			return ret;
@@ -690,12 +724,12 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 		st->cfg.part = CM_NAME_CM3218;
 		st->als_cfg_mask = CM_REG_CFG_USER_MSK_CM3218;
 		memcpy(&st->nld_tbl, &cm3218_nld_tbl, sizeof(cm3218_nld_tbl));
+		st->light.nld_tbl_n = ARRAY_SIZE(cm3218_nld_tbl);
 		i = ARRAY_SIZE(cm3218_nld_tbl) - 1;
 		if (st->light.nld_i_hi > i)
 			st->light.nld_i_hi = i;
 		if (st->light.nld_i_lo > i)
 			st->light.nld_i_lo = i;
-		ara = true;
 		break;
 
 	case CM_DEVID_CM32180:
@@ -703,18 +737,23 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 		st->als_cfg_mask = CM_REG_CFG_USER_MSK_CM32180;
 		memcpy(&st->nld_tbl, &cm32180_nld_tbl,
 		       sizeof(cm32180_nld_tbl));
+		st->light.nld_tbl_n = ARRAY_SIZE(cm32180_nld_tbl);
 		i = ARRAY_SIZE(cm32180_nld_tbl) - 1;
 		if (st->light.nld_i_hi > i)
 			st->light.nld_i_hi = i;
 		if (st->light.nld_i_lo > i)
 			st->light.nld_i_lo = i;
-		ara = true;
 		break;
 
 	case CM_DEVID_CM32181:
+		if (st->ara) {
+			i2c_unregister_device(st->ara);
+			st->ara = NULL;
+		}
 		st->cfg.part = CM_NAME_CM32181;
 		st->als_cfg_mask = CM_REG_CFG_USER_MSK_CM32181;
 		memcpy(&st->nld_tbl, &cm32181_nld_tbl, sizeof(st->nld_tbl));
+		st->light.nld_tbl_n = ARRAY_SIZE(cm32181_nld_tbl);
 		if (st->als_psm & (1 << CM_REG_PSM_EN)) {
 			j = st->als_psm >> 1;
 			for (i = 0; i < ARRAY_SIZE(cm32181_nld_tbl); i++) {
@@ -729,19 +768,13 @@ static int cm_id_dev(struct cm_state *st, const char *name)
 		break;
 	}
 
-	st->als_cfg &= st->als_cfg_mask;
-	if (ara) {
-		st->ara = i2c_new_dummy(st->i2c->adapter, CM_I2C_ARA);
-		if (!st->ara) {
-			/* must have ARA control for IRQ acknowledge */
-			dev_err(&st->i2c->dev,
-				"%s ERR: i2c_new_dummy\n",
-				__func__);
-			return -ENODEV;
-		}
-	} else {
-		st->ara = NULL;
+	/* this device supports these programmable parameters */
+	st->light.nld_thr = st->nld_thr;
+	if (nvs_light_of_dt(&st->light, st->i2c->dev.of_node, st->cfg.part)) {
+		st->light.nld_i_lo = 0;
+		st->light.nld_i_hi = st->light.nld_tbl_n - 1;
 	}
+	st->als_cfg &= st->als_cfg_mask;
 	if (ret != 1)
 		dev_info(&st->i2c->dev, "%s found %s\n",
 			 __func__, st->cfg.part);
@@ -851,16 +884,20 @@ static int cm_of_dt(struct cm_state *st, struct device_node *dn)
 					return -ENODEV;
 				}
 			}
+
+			st->ara = i2c_new_dummy(st->i2c->adapter, CM_I2C_ARA);
+			if (!st->ara) {
+				/* must have ARA control for IRQ acknowledge */
+				dev_err(&st->i2c->dev,
+					"%s ERR: i2c_new_dummy\n",
+					__func__);
+				return -ENODEV;
+			}
 		} else {
 			return -EPROBE_DEFER;
 		}
 	}
 
-	/* this device supports these programmable parameters */
-	if (nvs_light_of_dt(&st->light, dn, NULL)) {
-		st->light.nld_i_lo = 0;
-		st->light.nld_i_hi = ARRAY_SIZE(cm32181_nld_tbl) - 1;
-	}
 	return 0;
 }
 

@@ -1,4 +1,4 @@
-/* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -68,19 +68,30 @@
  * The corresponding calibrated values are what the correct value should be.
  * All values are programmed into the device tree settings.
  * 1. Read scale sysfs attribute.  This value will need to be written back.
- * 2. Disable device.
- * 3. Write 1 to the scale sysfs attribute.
- * 4. Enable device.
- * 5. The NVS HAL will announce in the log that calibration mode is enabled and
+ * 2. Disable device.  (Write 0 = buffer/enable sysfs attribute)
+ * 3. Write 1 to the scale sysfs attribute (e.g. in_illuminance_scale).
+ * 4. Enable device. (Write 1 = buffer/enable sysfs attribute)
+ * 5. The NVS HAL will announce in the 'logcat -v time | grep -i "sensors"'
+ *    that calibration mode is enabled and
  *    display the data along with the scale and offset parameters applied.
  * 6. Write the scale value read in step 1 back to the scale sysfs attribute.
  * 7. Put the device into a state where the data read is a low value.
+ *    (Generate light source < 100 lux.)
  * 8. Note the values displayed in the log.  Separately measure the actual
- *    value.  The value from the sensor will be the uncalibrated value and the
+ *    value with a high accuracy light meter.  Make sure the light meter
+ *    is calibrated to the same color temperature as your light source.
+ *    The value from the sensor will be the uncalibrated value and the
  *    separately measured value will be the calibrated value for the current
  *    state (low or high values).
+ *    Device Tree nodes related to light calibration:
+ *    light_uncalibrated_lo <-- Value found in logcat.
+ *    light_calibrated_lo <-- Value read from light meter.
  * 9. Put the device into a state where the data read is a high value.
+ *    (Generate light source > 3000 lux.)
  * 10. Repeat step 8.
+ *    Device Tree nodes related to light calibration:
+ *    light_uncalibrated_hi <-- Value found in logcat.
+ *    light_calibrated_hi <-- Value read from light meter.
  * 11. Enter the values in the device tree settings for the device.  Both
  *     calibrated and uncalibrated values will be the values before scale and
  *     offset are applied.
@@ -90,38 +101,44 @@
  *     light_uncalibrated_hi
  *     light_calibrated_hi
  *
+ * To test calibration values in realtime.
  * An NVS ALS driver may support a simplified version of method 1 that can be
  * used in realtime:
- * At step 8, write the calibrated value to the in_illuminance_threshold_low
- * attribute.  When in calibration mode this value will be written to the
- * light_calibrated_lo and the current lux written to light_uncalibrated_lo
- * internal to the driver.
- * If this is after step 9, then use the in_illuminance_threshold_high
- * attribute.
+ * 1. At step 8, while the light source is still at this low value,
+ *    write the light meter value to the in_illuminance_threshold_low
+ *    attribute.  When in calibration mode this value will be written to the
+ *    light_calibrated_lo and the current lux written to light_uncalibrated_lo
+ *    internal to the driver.
+ * 2. If this is after step 9, while the light source is still at this high
+ *    value, write the light meter value to the in_illuminance_threshold_high
+ *    attribute.
+ * 3. To confirm the realtime values and see what the driver used for
+ *    uncalibrated values, do the following at the adb prompt in the driver
+ *    space:
+ *    # echo 5 > nvs
+ *    # cat nvs
+ *    This will be a partial dump of the sensor's configuration structure that
+ *    will show the calibrated and uncalibrated values.  For example:
+ *    ...
+ *    uncal_lo=52	<-- Program this value into DT: light_uncalibrated_lo
+ *    uncal_hi=1627	<-- Program this value into DT: light_uncalibrated_hi
+ *    cal_lo=8050	<-- Program this value into DT: light_calibrated_lo
+ *    cal_hi=308000	<-- Program this value into DT: light_calibrated_hi
+ *    thresh_lo=10
+ *    thresh_hi=10
+ *    ...
  * Note that the calibrated value must be the value before the scale and offset
  * is applied.  For example, if the calibrated lux reading is 123.4 lux, and
  * the in_illuminance_scale is normally 0.01, then the value entered is 12340
  * which will be 123.4 lux when the scale is applied at the HAL layer.
- * To confirm the realtime values and see what the driver used for uncalibrated
- * values, do the following at the adb prompt in the driver space:
- * # echo 5 > nvs
- * # cat nvs
- * This will be a partial dump of the sensor's configuration structure that
- * will show the calibrated and uncalibrated values.  For example:
- * ...
- * uncal_lo=1
- * uncal_hi=96346
- * cal_lo=230
- * cal_hi=1888000
- * thresh_lo=10
- * thresh_hi=10
- * ...
+ *
  * If the thresholds have changed instead of the calibration settings, then
  * the driver doesn't support this feature.
  * In order to display raw values, interpolation, that uses the calibration
  * values, is not executed by the driver when in calibration mode, so to test,
  * disable and reenable the device to exit calibration mode and test the new
  * calibration values.
+ *
  *
  * Method 2 can only be used if dynamic resolution is not used by the HW
  * driver.  The data passed up to the HAL is the HW value read so that the HAL
@@ -148,18 +165,20 @@
 #include <linux/of.h>
 #include <linux/nvs_light.h>
 
-#define NVS_LIGHT_VERSION		(100)
+#define NVS_LIGHT_VERSION		(103)
 
 
 ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
 {
 	ssize_t t;
+	unsigned int n;
 	unsigned int i;
 
 	t = sprintf(buf, "%s v.%u:\n", __func__, NVS_LIGHT_VERSION);
 	t += sprintf(buf + t, "timestamp=%lld\n", nl->timestamp);
 	t += sprintf(buf + t, "timestamp_report=%lld\n", nl->timestamp_report);
 	t += sprintf(buf + t, "lux=%u\n", nl->lux);
+	t += sprintf(buf + t, "lux_max=%u\n", nl->lux_max);
 	t += sprintf(buf + t, "hw=%u\n", nl->hw);
 	t += sprintf(buf + t, "hw_mask=%x\n", nl->hw_mask);
 	t += sprintf(buf + t, "hw_thresh_lo=%u\n", nl->hw_thresh_lo);
@@ -177,8 +196,26 @@ ssize_t nvs_light_dbg(struct nvs_light *nl, char *buf)
 	t += sprintf(buf + t, "nld_i=%u\n", nl->nld_i);
 	t += sprintf(buf + t, "nld_i_lo=%u\n", nl->nld_i_lo);
 	t += sprintf(buf + t, "nld_i_hi=%u\n", nl->nld_i_hi);
+	t += sprintf(buf + t, "nld_tbl_n=%u\n", nl->nld_tbl_n);
 	if (nl->nld_tbl) {
-		for (i = nl->nld_i_lo; i <= nl->nld_i_hi; i++) {
+		if (nl->nld_tbl_n) {
+			i = 0;
+			n = nl->nld_tbl_n;
+		} else {
+			i = nl->nld_i_lo;
+			n = nl->nld_i_hi + 1;
+		}
+		for (; i < n; i++) {
+			if (nl->nld_thr) {
+				t += sprintf(buf + t, "nld_thr[%u].lo=%u\n",
+					     i, nl->nld_thr[i].lo);
+				t += sprintf(buf + t, "nld_thr[%u].hi=%u\n",
+					     i, nl->nld_thr[i].hi);
+				t += sprintf(buf + t, "nld_thr[%u].i_lo=%u\n",
+					     i, nl->nld_thr[i].i_lo);
+				t += sprintf(buf + t, "nld_thr[%u].i_hi=%u\n",
+					     i, nl->nld_thr[i].i_hi);
+			}
 			if (nl->cfg->float_significance) {
 				t += sprintf(buf + t,
 					    "nld_tbl[%d].resolution=%d.%09u\n",
@@ -277,8 +314,8 @@ int nvs_light_read(struct nvs_light *nl)
 	s64 delay;
 	bool report_delay_min = true;
 	unsigned int poll_delay = 0;
-	unsigned int thresh_lo;
-	unsigned int thresh_hi;
+	unsigned int thr_lo;
+	unsigned int thr_hi;
 	int ret;
 
 	if (nl->calibration_en)
@@ -300,33 +337,54 @@ int nvs_light_read(struct nvs_light *nl)
 		}
 	}
 	/* threshold flags */
-	thresh_lo = nl->cfg->thresh_lo;
-	thresh_hi = nl->cfg->thresh_lo;
-	if (thresh_lo < nl->hw_mask) {
+	if (nl->nld_thr) {
+		thr_lo = nl->nld_thr[nl->nld_i].lo;
+		thr_hi = nl->nld_thr[nl->nld_i].hi;
+	} else {
+		thr_lo = nl->cfg->thresh_lo;
+		thr_hi = nl->cfg->thresh_hi;
+	}
+	if (thr_lo < nl->hw_mask) {
 		nl->thresh_valid_lo = true;
 	} else {
 		nl->thresh_valid_lo = false;
-		thresh_lo = 0;
+		thr_lo = 0;
 	}
-	if (thresh_hi < nl->hw_mask) {
+	if (thr_hi < nl->hw_mask) {
 		nl->thresh_valid_hi = true;
 	} else {
 		nl->thresh_valid_hi = false;
-		thresh_hi = 0;
+		thr_hi = 0;
 	}
 	if (nl->thresh_valid_lo && nl->thresh_valid_hi)
 		nl->thresholds_valid = true;
 	else
 		nl->thresholds_valid = false;
 	/* limit flags */
-	if ((nl->hw < thresh_lo) || (nl->hw == 0))
+	if (nl->nld_thr) {
+		/* using absolute values */
+		if (nl->hw < nl->nld_thr[nl->nld_i].i_lo)
+			nl->hw_limit_lo = true;
+		else
+			nl->hw_limit_lo = false;
+		if (nl->hw > nl->nld_thr[nl->nld_i].i_hi)
+			nl->hw_limit_hi = true;
+		else
+			nl->hw_limit_hi = false;
+	} else {
+		if (nl->hw < thr_lo)
+			nl->hw_limit_lo = true;
+		else
+			nl->hw_limit_lo = false;
+		if (nl->hw > (nl->hw_mask - thr_hi))
+			nl->hw_limit_hi = true;
+		else
+			nl->hw_limit_hi = false;
+	}
+	if (nl->hw == 0)
 		nl->hw_limit_lo = true;
-	else
-		nl->hw_limit_lo = false;
-	if ((nl->hw >= nl->hw_mask) || (nl->hw > (nl->hw_mask - thresh_hi)))
+	if (nl->hw >= nl->hw_mask)
 		nl->hw_limit_hi = true;
-	else
-		nl->hw_limit_hi = false;
 	/* reporting and thresholds */
 	if (nl->nld_i_change) {
 		/* HW resolution just changed.  Need thresholds and reporting
@@ -350,7 +408,6 @@ int nvs_light_read(struct nvs_light *nl)
 	if (nl->report && report_delay_min) {
 		nl->report--;
 		nl->timestamp_report = nl->timestamp;
-		calc_i = nl->hw;
 		calc_f = 0;
 		if (nl->cfg->scale.fval && !nl->dynamic_resolution_dis) {
 			/* The mechanism below allows floating point to be
@@ -377,7 +434,11 @@ int nvs_light_read(struct nvs_light *nl)
 				do_div(calc_i, nl->cfg->scale.fval);
 				calc_i *= (u64)
 					  (nl->hw * nl->cfg->resolution.ival);
+			} else {
+				calc_i = 0;
 			}
+		} else {
+			calc_i = nl->hw;
 		}
 		calc = (s64)(calc_i + calc_f);
 		if (nl->calibration_en)
@@ -390,19 +451,23 @@ int nvs_light_read(struct nvs_light *nl)
 							nl->cfg->uncal_hi,
 							nl->cfg->cal_lo,
 							nl->cfg->cal_hi);
+		if (nl->lux_max) {
+			if (nl->lux > nl->lux_max)
+				nl->lux = nl->lux_max;
+		}
 		/* report lux */
 		nl->handler(nl->nvs_st, &nl->lux, nl->timestamp_report);
-		if ((nl->thresholds_valid) && !nl->report) {
+		if (nl->thresholds_valid && !nl->report) {
 			/* calculate low threshold */
 			calc = (s64)nl->hw;
-			calc -= thresh_lo;
+			calc -= thr_lo;
 			if (calc < 0)
 				/* low threshold is disabled */
 				nl->hw_thresh_lo = 0;
 			else
 				nl->hw_thresh_lo = calc;
 			/* calculate high threshold */
-			calc = nl->hw + thresh_hi;
+			calc = nl->hw + thr_hi;
 			if (calc > nl->hw_mask)
 				/* high threshold is disabled */
 				nl->hw_thresh_hi = nl->hw_mask;
@@ -415,11 +480,11 @@ int nvs_light_read(struct nvs_light *nl)
 	nl->nld_i_change = false;
 	if (nl->nld_tbl) { /* if dynamic resolution is enabled */
 		/* adjust resolution if need to make room for thresholds */
-		if (nl->hw_limit_hi && (nl->nld_i < nl->nld_i_hi))
-			/* too many photons - need to increase resolution */
+		if (nl->hw_limit_hi && nl->nld_i < nl->nld_i_hi)
+			/* too many photons - decrease integration time */
 			ret = nvs_light_nld(nl, nl->nld_i + 1);
-		else if (nl->hw_limit_lo && (nl->nld_i > nl->nld_i_lo))
-			/* not enough photons - need to decrease resolution */
+		else if (nl->hw_limit_lo && nl->nld_i > nl->nld_i_lo)
+			/* not enough photons - increase integration time */
 			ret = nvs_light_nld(nl, nl->nld_i - 1);
 	}
 	/* poll time */
@@ -479,9 +544,11 @@ int nvs_light_enable(struct nvs_light *nl)
 int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 		    const char *dev_name)
 {
+	bool nld_thr_disable;
 	char str[256];
+	unsigned int i;
 	int ret;
-	int ret_t = -EINVAL;
+	int ret_t;
 
 	if (nl->cfg)
 		nl->cfg->flags |= SENSOR_FLAG_ON_CHANGE_MODE;
@@ -490,6 +557,58 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 
 	if (dev_name == NULL)
 		dev_name = NVS_LIGHT_STRING;
+	if (nl->nld_thr) {
+		/* nl->nld_tbl_n == 0 is allowed in case HW driver provides
+		 * hardcoded values in nl->nld_thr
+		 */
+		if (nl->nld_tbl_n)
+			nld_thr_disable = true;
+		else
+			nld_thr_disable = false;
+		for (i = 0; i < nl->nld_tbl_n; i++) {
+			nl->nld_thr[i].lo = nl->cfg->thresh_lo;
+			nl->nld_thr[i].i_lo = nl->cfg->thresh_lo;
+			ret = sprintf(str, "%s_nld_thr_lo_%u", dev_name, i);
+			if (ret > 0) {
+				ret = of_property_read_u32(np, str,
+							   &nl->nld_thr[i].lo);
+				if (!ret)
+					nld_thr_disable = false;
+			}
+			ret = sprintf(str, "%s_nld_thr_i_lo_%u", dev_name, i);
+			if (ret > 0) {
+				ret = of_property_read_u32(np, str,
+							 &nl->nld_thr[i].i_lo);
+				if (!ret)
+					nld_thr_disable = false;
+			}
+			nl->nld_thr[i].hi = nl->cfg->thresh_hi;
+			nl->nld_thr[i].i_hi = nl->hw_mask - nl->cfg->thresh_hi;
+			ret = sprintf(str, "%s_nld_thr_hi_%u", dev_name, i);
+			if (ret > 0) {
+				ret = of_property_read_u32(np, str,
+							   &nl->nld_thr[i].hi);
+				if (!ret)
+					nld_thr_disable = false;
+			}
+			ret = sprintf(str, "%s_nld_thr_i_hi_%u", dev_name, i);
+			if (ret > 0) {
+				ret = of_property_read_u32(np, str,
+							 &nl->nld_thr[i].i_hi);
+				if (!ret)
+					nld_thr_disable = false;
+			}
+		}
+
+		if (nld_thr_disable)
+			/* there isn't a DT entry so disable this feature */
+			nl->nld_thr = NULL;
+	}
+
+	ret = sprintf(str, "%s_lux_maximum", dev_name);
+	if (ret > 0)
+		of_property_read_u32(np, str, &nl->lux_max);
+	ret_t = -EINVAL;
 	ret = sprintf(str, "%s_dynamic_resolution_index_limit_low", dev_name);
 	if (ret > 0)
 		ret_t = of_property_read_u32(np, str, &nl->nld_i_lo);
@@ -503,40 +622,180 @@ int nvs_light_of_dt(struct nvs_light *nl, const struct device_node *np,
 }
 
 /**
+ * nvs_light_resolution - runtime mechanism to modify nld_i_lo.
+ * @nl: the common structure between driver and common module.
+ * @resolution: an integer value that will be nld_i_lo.
+ *
+ * Returns 0 on success or a negative error code if a dynamic
+ * resolution table exists.  Otherwise a 1 is returned.
+ *
+ * NOTE: A returned 1 allows the NVS layer above this one to
+ *       simply store the new resolution value.
+ * NOTE: Caller can check nld_i_change to update the HW with the
+ *       new indexed values.
+ */
+int nvs_light_resolution(struct nvs_light *nl, int resolution)
+{
+	if (nl->nld_tbl == NULL)
+		return 1;
+
+	if (!nl->nld_tbl_n) {
+		pr_err("%s ERR: feature not supported\n", __func__);
+		return -EINVAL;
+	}
+
+	if (resolution < 0 || resolution >= nl->nld_tbl_n) {
+		pr_err("%s ERR: nld_i_lo (%d) out of range (0-%u)\n",
+		       __func__, resolution, nl->nld_tbl_n - 1);
+		return -EINVAL;
+	}
+
+	if (resolution > nl->nld_i_hi) {
+		pr_err("%s ERR: nld_i_lo (%d) > nld_i_hi (%u)\n",
+		       __func__, resolution, nl->nld_i_hi);
+		return -EINVAL;
+	}
+
+	nl->nld_i_lo = resolution;
+	if (nl->nld_i < nl->nld_i_lo)
+		nvs_light_nld(nl, nl->nld_i_lo);
+	return 0;
+}
+
+/**
+ * nvs_light_max_range - runtime mechanism to modify nld_i_hi.
+ * @nl: the common structure between driver and common module.
+ * @max_range: an integer value that will be nld_i_hi.
+ *
+ * Returns 0 on success or a negative error code if a dynamic
+ * resolution table exists.  Otherwise a 1 is returned.
+ *
+ * NOTE: A returned 1 allows the NVS layer above this one to
+ *       simply store the new max_range value.
+ * NOTE: Caller can check nld_i_change to update the HW with the
+ *       new indexed values.
+ */
+int nvs_light_max_range(struct nvs_light *nl, int max_range)
+{
+	if (nl->nld_tbl == NULL)
+		return 1;
+
+	if (!nl->nld_tbl_n) {
+		pr_err("%s ERR: feature not supported\n", __func__);
+		return -EINVAL;
+	}
+
+	if (max_range < 0 || max_range >= nl->nld_tbl_n) {
+		pr_err("%s ERR: nld_i_hi (%d) out of range (0-%u)\n",
+		       __func__, max_range, nl->nld_tbl_n - 1);
+		return -EINVAL;
+	}
+
+	if (max_range < nl->nld_i_lo) {
+		pr_err("%s ERR: nld_i_hi (%d) < nld_i_lo (%u)\n",
+		       __func__, max_range, nl->nld_i_lo);
+		return -EINVAL;
+	}
+
+	nl->nld_i_hi = max_range;
+	if (nl->nld_i > nl->nld_i_hi)
+		nvs_light_nld(nl, nl->nld_i_hi);
+	return 0;
+}
+
+/**
  * nvs_light_threshold_calibrate_lo - runtime mechanism to
  * modify calibrated/uncalibrated low value.
  * @nl: the common structure between driver and common module.
+ * @lo: either cal_lo or thresh_lo.
+ *
+ * Returns 0 on success or a negative error code.
  *
  * NOTE: If not in calibration mode then thresholds are modified
  * instead.
  */
-void nvs_light_threshold_calibrate_lo(struct nvs_light *nl, int lo)
+int nvs_light_threshold_calibrate_lo(struct nvs_light *nl, int lo)
 {
+	bool i_thr;
+	unsigned int i;
 
 	if (nl->calibration_en) {
 		nl->cfg->uncal_lo = nl->lux;
 		nl->cfg->cal_lo = lo;
 	} else {
-		nl->cfg->thresh_lo = lo;
+		if (nl->nld_thr) {
+			if (!nl->nld_tbl_n) {
+				pr_err("%s ERR: feature not supported\n",
+				       __func__);
+				return -EINVAL;
+			}
+
+			i = lo >> NVS_LIGHT_THRESH_CMD_SHIFT;
+			i_thr = (bool)(i & NVS_LIGHT_THRESH_CMD_SEL_MSK);
+			i &= NVS_LIGHT_THRESH_CMD_NDX_MSK;
+			if (i >= nl->nld_tbl_n) {
+				pr_err("%s ERR: index %d > %u\n",
+				       __func__, i, nl->nld_tbl_n - 1);
+				return -EINVAL;
+			}
+
+			if (i_thr)
+				nl->nld_thr[i].i_lo = lo & nl->hw_mask;
+			else
+				nl->nld_thr[i].lo = lo & nl->hw_mask;
+		} else {
+			nl->cfg->thresh_lo = lo;
+		}
 	}
+
+	return 0;
 }
 
 /**
  * nvs_light_threshold_calibrate_hi - runtime mechanism to
  * modify calibrated/uncalibrated high value.
  * @nl: the common structure between driver and common module.
+ * @hi: either cal_hi or thresh_hi.
+ *
+ * Returns 0 on success or a negative error code.
  *
  * NOTE: If not in calibration mode then thresholds are modified
  * instead.
  */
-void nvs_light_threshold_calibrate_hi(struct nvs_light *nl, int hi)
+int nvs_light_threshold_calibrate_hi(struct nvs_light *nl, int hi)
 {
+	bool i_thr;
+	unsigned int i;
 
 	if (nl->calibration_en) {
 		nl->cfg->uncal_hi = nl->lux;
 		nl->cfg->cal_hi = hi;
 	} else {
-		nl->cfg->thresh_hi = hi;
+		if (nl->nld_thr) {
+			if (!nl->nld_tbl_n) {
+				pr_err("%s ERR: feature not supported\n",
+				       __func__);
+				return -EINVAL;
+			}
+
+			i = hi >> NVS_LIGHT_THRESH_CMD_SHIFT;
+			i_thr = (bool)(i & NVS_LIGHT_THRESH_CMD_SEL_MSK);
+			i &= NVS_LIGHT_THRESH_CMD_NDX_MSK;
+			if (i >= nl->nld_tbl_n) {
+				pr_err("%s ERR: index %u > %u\n",
+				       __func__, i, nl->nld_tbl_n - 1);
+				return -EINVAL;
+			}
+
+			if (i_thr)
+				nl->nld_thr[i].i_hi = hi & nl->hw_mask;
+			else
+				nl->nld_thr[i].hi = hi & nl->hw_mask;
+		} else {
+			nl->cfg->thresh_hi = hi;
+		}
 	}
+
+	return 0;
 }
 

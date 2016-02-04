@@ -47,6 +47,8 @@
 		interrupt-parent = <&tegra_gpio>;
 		interrupts = <TEGRA_GPIO(FF, 3) 0x14>;
 		wlan-pwr-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
+		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
+		nv_path = "/system/etc/nvram_4359_b1.txt";
 		status = "okay";
 	};
 };

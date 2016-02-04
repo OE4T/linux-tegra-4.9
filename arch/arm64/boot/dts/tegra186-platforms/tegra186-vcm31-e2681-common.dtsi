@@ -158,6 +158,8 @@
 	bcmdhd_wlan {
 			compatible = "android,bcmdhd_wlan";
 			wlan-pwr-gpio = <&tegra_gpio TEGRA_GPIO(Y, 5) GPIO_ACTIVE_HIGH>;
+			fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
+			nv_path = "/system/etc/nvram_murata_4359_b1.txt";
 			status = "okay";
 	};
 

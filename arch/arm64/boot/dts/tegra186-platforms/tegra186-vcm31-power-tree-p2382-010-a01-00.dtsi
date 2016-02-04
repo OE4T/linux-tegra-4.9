@@ -98,7 +98,7 @@
 
 	pinctrl@3520000 {
 		vbus-0-supply = <&vdd_usb0_5v>;
-		vbus-1-supply = <&vdd_usb1_5v>;
+		vbus-1-supply = <&vdd_mdm>;
 		vbus-2-supply = <&vdd_usb2_5v>;
 		vddio-hsic-supply = <&spmic_otp_sd1>;
 		hvdd_pex_pll-supply = <&vdd_1v8>;
@@ -234,13 +234,12 @@
 			vin-supply = <&vdd_1v8>;
 		};
 
-		/* MDM_PWR_EN */
-		vdd_usb1_5v: regulator@8 {
+		vdd_mdm: regulator@8 {
 			compatible = "regulator-fixed";
 			reg = <8>;
-			regulator-name = "vdd-usb1-5v";
-			regulator-min-microvolt = <5000000>;
-			regulator-max-microvolt = <5000000>;
+			regulator-name = "vdd-mdm";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
 			gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(E, 3) 0>;
 			enable-active-high;
 			gpio-open-drain;

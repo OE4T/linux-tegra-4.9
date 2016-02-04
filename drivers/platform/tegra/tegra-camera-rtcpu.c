@@ -34,6 +34,9 @@
 #include <linux/tegra_ast.h>
 #include <linux/tegra_camera_rtcpu.h>
 
+#include <dt-bindings/memory/tegra-swgroup.h>
+#include <dt-bindings/memory/tegra186-swgroup.h>
+
 /* Register specifics */
 #define TEGRA_APS_FRSC_SC_CTL_0			0x0
 #define TEGRA_SCE_APS_FRSC_SC_MODEIN_0		0x14
@@ -91,7 +94,7 @@ static struct reset_control *sce_resets[ARRAY_SIZE(sce_reset_names)];
 static struct reset_control *ape_resets[ARRAY_SIZE(ape_reset_names)];
 
 enum tegra_cam_rtcpu_id {
-	TEGRA_CAM_RTCPU_SCE = 0,
+	TEGRA_CAM_RTCPU_SCE,
 	TEGRA_CAM_RTCPU_APE,
 };
 
@@ -102,6 +105,7 @@ struct tegra_cam_rtcpu_pdata {
 	struct clk **clocks;
 	struct reset_control **resets;
 	enum tegra_cam_rtcpu_id id;
+	u32 sid;
 	u32 num_clocks;
 	u32 num_resets;
 };
@@ -113,6 +117,7 @@ static const struct tegra_cam_rtcpu_pdata sce_pdata = {
 	.clocks = sce_clocks,
 	.resets = sce_resets,
 	.id = TEGRA_CAM_RTCPU_SCE,
+	.sid = TEGRA_SID_SCE,
 	.num_clocks = ARRAY_SIZE(sce_clock_names),
 	.num_resets = ARRAY_SIZE(sce_reset_names),
 };
@@ -124,6 +129,7 @@ static const struct tegra_cam_rtcpu_pdata ape_pdata = {
 	.clocks = ape_clocks,
 	.resets = ape_resets,
 	.id = TEGRA_CAM_RTCPU_APE,
+	.sid = TEGRA_SID_APE,
 	.num_clocks = ARRAY_SIZE(ape_clock_names),
 	.num_resets = ARRAY_SIZE(ape_reset_names),
 };
@@ -374,6 +380,11 @@ static int tegra_cam_rtcpu_parse_channels(struct device *dev)
 	}
 
 	i = 0;
+
+	/* Use AST vmindex 0 for all regions, set default stream ID */
+	ret = tegra_ast_set_streamid(ast0, 0, cam_rtcpu->rtcpu_pdata->sid);
+	ret = tegra_ast_set_streamid(ast1, 0, cam_rtcpu->rtcpu_pdata->sid);
+
 	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
 	region = 2;
 

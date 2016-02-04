@@ -1,7 +1,7 @@
 /*
  * GPIO driver for NVIDIA Tegra186
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Suresh Mangipudi <smangipudi@nvidia.com>
  *
@@ -724,14 +724,33 @@ static int dbg_gpio_show(struct seq_file *s, void *unused)
 {
 	int i;
 	bool accessible;
+	char x, y;
+	int count = 0;
 
-	seq_puts(s, "Pin:ENB DBC IN OUT_CTRL OUT_VAL INT_CLR\n");
+	x = ' ';
+	y = 'A';
+
+	seq_puts(s, "Port:Pin:ENB DBC IN OUT_CTRL OUT_VAL INT_CLR\n");
 
 	for (i = 0; i < TOTAL_GPIOS; i++) {
 		accessible = is_gpio_accessible(i);
+		if (count == 8)
+			count = 0;
+
+		if ((count == 0) && (i/8)) {
+			if (x != ' ')
+				x++;
+			if (y == 'Z') {
+				y = 'A';
+				x = 'A';
+			} else {
+				y++;
+			}
+		}
+		count++;
 		if (accessible) {
-			seq_printf(s, "%d   0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
-				i,
+			seq_printf(s, "%c%c:%d 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n",
+				x, y, i%8,
 				tegra_gpio_readl(i, GPIO_ENB_CONFIG_REG),
 				tegra_gpio_readl(i, GPIO_DBC_THRES_REG),
 				tegra_gpio_readl(i, GPIO_INPUT_REG),

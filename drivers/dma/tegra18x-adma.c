@@ -31,10 +31,6 @@ struct adast_region {
 
 #define ADAST_REGIONS	1
 
-#define ADAST_GLOBAL_CTRL_VAL		0x07b80009
-#define ADAST_STREAMID_CTL_0_VAL	0x00007f01
-#define ADAST_STREAMID_CTL_1_VAL	0x00001e01
-
 static struct adast_region adast_regions[ADAST_REGIONS];
 
 static inline void adast_write(void __iomem *adast, u32 reg, u32 val)
@@ -96,12 +92,6 @@ int tegra_adma_init(struct platform_device *pdev, void __iomem *adma_addr[])
 			 "valid nvidia,adast dt prop not present.\n");
 		return 0;
 	}
-
-	adast_write(adast,
-		    ADMA_AST_STREAMID_CTL_0, ADAST_STREAMID_CTL_0_VAL);
-	adast_write(adast,
-		    ADMA_AST_STREAMID_CTL_1, ADAST_STREAMID_CTL_1_VAL);
-	adast_write(adast, ADMA_AST_CONTROL, ADAST_GLOBAL_CTRL_VAL);
 
 	for (i = 0; i < ADAST_REGIONS; i++) {
 		tegra18x_adast_map(adast,

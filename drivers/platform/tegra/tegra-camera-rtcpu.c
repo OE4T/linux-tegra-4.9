@@ -211,7 +211,7 @@ static void tegra_cam_rtcpu_isr(int irq, void *data)
 }
 
 static int tegra_cam_rtcpu_parse_channel(struct device *dev,
-			uintptr_t ivc_base, u32 ivc_size,
+			uintptr_t ivc_base, dma_addr_t ivc_dma, u32 ivc_size,
 			struct mbox_chan *mbox_chan,
 			struct device_node *ch_node)
 {
@@ -273,9 +273,11 @@ static int tegra_cam_rtcpu_parse_channel(struct device *dev,
 	mbox_chan->con_priv = ivc_chan;
 
 	/* Init IVC */
-	ret = tegra_ivc_init(&ivc_chan->ivc,
+	ret = tegra_ivc_init_with_dma_handle(&ivc_chan->ivc,
 				ivc_base + start.rx,
+				(u64)ivc_dma + start.rx,
 				ivc_base + start.tx,
+				(u64)ivc_dma + start.tx,
 				nframes,
 				frame_size,
 				dev,
@@ -361,7 +363,7 @@ static int tegra_cam_rtcpu_parse_channels(struct device *dev)
 		u32 va, size;
 	} ivc;
 	uintptr_t ivc_base;
-	u64 pa;
+	dma_addr_t ivc_dma;
 	int ret, i, region;
 
 	cam_rtcpu = dev_get_drvdata(dev);
@@ -407,22 +409,18 @@ static int tegra_cam_rtcpu_parse_channels(struct device *dev)
 		}
 
 		/* Allocate RAM for IVC */
-		ivc_base = devm_get_free_pages(dev,
-				GFP_KERNEL | GFP_DMA | __GFP_ZERO,
-				get_order(ivc.size));
+		ivc_base = (uintptr_t)dmam_alloc_coherent(dev, ivc.size,
+				&ivc_dma, GFP_KERNEL | __GFP_ZERO);
 		if (ivc_base == 0)
 			return -ENOMEM;
 
-		/* XXX - we should use IOVA address and let SMMU do mapping */
-		pa = virt_to_phys((void *)ivc_base);
-
 		ret = tegra_ast_region_enable(ast0, region,
-				ivc.va, ivc.size - 1, pa);
+				ivc.va, ivc.size - 1, ivc_dma);
 		if (ret)
 			return ret;
 
 		ret = tegra_ast_region_enable(ast1, region,
-				ivc.va, ivc.size - 1, pa);
+				ivc.va, ivc.size - 1, ivc_dma);
 		if (ret)
 			return ret;
 
@@ -430,7 +428,7 @@ static int tegra_cam_rtcpu_parse_channels(struct device *dev)
 
 		for_each_child_of_node(reg_node, ch_node) {
 			ret = tegra_cam_rtcpu_parse_channel(dev,
-					ivc_base, ivc.size,
+					ivc_base, ivc_dma, ivc.size,
 					&cam_rtcpu->mbox.chans[i++], ch_node);
 			if (ret)
 				return ret;

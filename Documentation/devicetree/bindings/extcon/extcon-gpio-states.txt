@@ -14,6 +14,18 @@ Optional Properties:
  - extcon-gpio,cable-states: GPIO states and ther corresponding output cable
 	state. This is array of the data for table as
 		gpio-state <-> output cable-state
+- cable-connected-on-boot: Cable connected on boot. It should be cable index
+	in the output cable names. The number start from 0. Absence of this
+	property will be assume as there is no cable connected. This property
+	will be valid if there is no gpios provided for cable states.
+- wakeup-source: Boolean, device can wake-up the system.
+
+This driver also supports the extcon interface for different cable without
+gpios. On this case, if property cable-connected-on-boot provided then
+it will be consider this as the default cable otherwise it will assume
+that there is no cable connected. Later on, through extcon sysfs, the
+state can be chnaged.
+
 extcon-gpio {
 	compatible = "extcon-gpio-states";
        	gpio = <&gpio 20 0 &gpio 30 0>;

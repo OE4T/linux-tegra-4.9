@@ -983,7 +983,7 @@ static int create_extcon_class(void)
 		extcon_class->dev_groups = extcon_groups;
 
 #if defined(CONFIG_ANDROID)
-		switch_class = class_compat_register("switch");
+		switch_class = class_compat_register("switch_extcon");
 		if (WARN(!switch_class, "cannot allocate"))
 			return -ENOMEM;
 #endif /* CONFIG_ANDROID */

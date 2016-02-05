@@ -33,6 +33,18 @@
 		};
 	};
 	plugin-manager {
+		fragement-e3301-a01@1 {
+			ids = "3301-1000-100";
+			override@0 {
+				target = <&ina3221x_41>;
+				_overlay_ {
+					channel@1 {
+						ti,shunt-resistor-mohm = <10>;
+					};
+				};
+			};
+		};
+
 		e3301-a02-slt-char@0 {
 			ids = "3301-1080-200", "3301-1099-200";
 			override@0 {
@@ -66,20 +78,8 @@
 			};
 		};
 
-		fragement-e3301-a01@1 {
-			ids = "3301-1000-100";
-			override@0 {
-				target = <&ina3221x_41>;
-				_overlay_ {
-					channel@1 {
-						ti,shunt-resistor-mohm = <10>;
-					};
-				};
-			};
-		};
-
-		fragment-e3301-a02@1 {
-			ids = "3301-1000-200";
+		e3301-a02-all@1 {
+			ids = "3301-1000-200", "3301-1080-200", "3301-1099-200";
 			override@1 {
 				target = <&{/host1x/sor}>;
 				_overlay_ {

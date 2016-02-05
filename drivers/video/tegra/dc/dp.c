@@ -2916,10 +2916,9 @@ static void tegra_dc_dp_resume(struct tegra_dc *dc)
 
 	if (dp->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_resume(dc);
+
 	/* Get ready to receive any hpd event */
-	_tegra_dpaux_init(dp);
-	if (dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP)
-		tegra_dp_enable_irq(dp->irq);
+	tegra_dpaux_init(dp);
 
 	tegra_dp_pending_hpd(dp);
 

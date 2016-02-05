@@ -467,8 +467,19 @@ static int tegra210_amx_get_byte_map(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
 	unsigned char *bytes_map = (unsigned char *)&amx->map;
+	int reg = mc->reg;
+	int enabled;
 
-	ucontrol->value.integer.value[0] = bytes_map[mc->reg];
+	if (reg > 31)
+		enabled = amx->byte_mask[1] & (1 << (reg - 32));
+	else
+		enabled = amx->byte_mask[0] & (1 << reg);
+
+	if (enabled)
+		ucontrol->value.integer.value[0] = bytes_map[reg];
+	else
+		ucontrol->value.integer.value[0] = -1;
+
 	return 0;
 }
 
@@ -479,27 +490,25 @@ static int tegra210_amx_put_byte_map(struct snd_kcontrol *kcontrol,
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_amx *amx = snd_soc_codec_get_drvdata(codec);
+	unsigned char *bytes_map = (unsigned char *)&amx->map;
 	int reg = mc->reg;
 	int value = ucontrol->value.integer.value[0];
-	unsigned int stream, channel, byte;
 
-	stream = (value & TEGRA210_AMX_MAP_STREAM_NUMBER_MASK)
-					>> TEGRA210_AMX_MAP_STREAM_NUMBER_SHIFT;
-
-	channel = (value & TEGRA210_AMX_MAP_WORD_NUMBER_MASK)
-					>> TEGRA210_AMX_MAP_WORD_NUMBER_SHIFT;
-
-	byte = (value & TEGRA210_AMX_MAP_BYTE_NUMBER_MASK)
-					>> TEGRA210_AMX_MAP_BYTE_NUMBER_SHIFT;
-
-	/* update byte map */
-	tegra210_amx_set_map_table(amx, reg, stream, channel, byte);
-
-	/* update byte_mask to enable slot */
-	if (reg > 31)
-		amx->byte_mask[1] |= (1 << (reg - 32));
-	else
-		amx->byte_mask[0] |= (1 << reg);
+	if (value >= 0) {
+		/* update byte map and enable slot */
+		bytes_map[reg] = value;
+		if (reg > 31)
+			amx->byte_mask[1] |= (1 << (reg - 32));
+		else
+			amx->byte_mask[0] |= (1 << reg);
+	} else {
+		/* reset byte map and disable slot */
+		bytes_map[reg] = 0;
+		if (reg > 31)
+			amx->byte_mask[1] &= ~(1 << (reg - 32));
+		else
+			amx->byte_mask[0] &= ~(1 << reg);
+	}
 
 	return 0;
 }

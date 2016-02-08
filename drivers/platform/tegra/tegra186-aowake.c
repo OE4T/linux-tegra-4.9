@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,8 @@
 #include "tegra186-aowake.h"
 
 #define WAKE_AOWAKE_CTRL_0	0x4F4
+#define WAKE_AOWAKE_CNTRL_24	0x60
+#define WAKE24_WAKE_LEVEL_MASK	BIT(3)
 
 struct tegra_aowake_info {
 	struct device *dev;
@@ -90,6 +92,14 @@ static void aowake_configure_pmic_polarity(struct device *dev,
 		reg &= ~0x1;
 	writel(reg, taowake->aobase + WAKE_AOWAKE_CTRL_0);
 	dev_info(dev, "WAKE_AOWAKE_CTRL_0 = %lu\n", reg);
+
+	reg = readl(taowake->aobase + WAKE_AOWAKE_CNTRL_24);
+	if (taowake->invert_pmic_interrupt)
+		reg &= ~(WAKE24_WAKE_LEVEL_MASK);
+	else
+		reg |= WAKE24_WAKE_LEVEL_MASK;
+	writel(reg, taowake->aobase + WAKE_AOWAKE_CNTRL_24);
+	dev_info(dev, "WAKE_AOWAKE_CNTRL_24(PMU_INT) = %lu\n", reg);
 }
 
 static int tegra_aowake_probe(struct platform_device *pdev)

@@ -319,6 +319,7 @@
 
 	cpufreq@e070000 {
 		status = "okay";
+		nvidia,enable-autocc3;
 	};
 
 	efuse@3820000 {

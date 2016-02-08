@@ -264,6 +264,7 @@
 
 	cpufreq@e070000 {
 		status = "okay";
+		nvidia,enable-autocc3;
 	};
 
 	ast@b040000 {

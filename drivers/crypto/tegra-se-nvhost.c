@@ -616,22 +616,22 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev, u8 *pdata, u32 da
 						SE_OPERATION_OP(OP_DUMMY);
 
 	data_size = SE_KEYTABLE_QUAD_SIZE_BYTES;
+
 	do {
-		se_dev->aes_cmdbuf_cpuvaddr[i++] =
-		__nvhost_opcode_nonincr(opcode_addr + 0xB8, 1);
 		pkt = SE_KEYTABLE_SLOT(slot_num) | SE_KEYTABLE_QUAD(quad);
-		val = SE_KEYTABLE_PKT(pkt);
-		se_dev->aes_cmdbuf_cpuvaddr[i++] = val;
+		for (j = 0; j < data_size; j += 4, data_len -= 4) {
+			se_dev->aes_cmdbuf_cpuvaddr[i++] =
+				__nvhost_opcode_nonincr(opcode_addr + 0xB8, 1);
+			val = (SE_KEYTABLE_PKT(pkt) | (j / 4));
+			se_dev->aes_cmdbuf_cpuvaddr[i++] = val;
 
-		se_dev->aes_cmdbuf_cpuvaddr[i++] =
-		__nvhost_opcode_incr(opcode_addr + 0xBC, data_size/4);
-		for (j = 0; j < data_size; j += 4, data_len -= 4)
+			se_dev->aes_cmdbuf_cpuvaddr[i++] =
+				__nvhost_opcode_incr(opcode_addr + 0xBC, 1);
 			se_dev->aes_cmdbuf_cpuvaddr[i++] = *pdata_buf++;
-
+		}
 		data_size = data_len;
 		quad = QUAD_KEYS_256;
 	} while (data_len);
-
 
 	se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_nonincr(opcode_addr + 0x34, 1);

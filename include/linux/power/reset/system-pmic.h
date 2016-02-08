@@ -2,7 +2,7 @@
  * system-pmic.h -- Interface to access system PMIC functionality for
  * system power off/reset.
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -35,6 +35,7 @@ enum system_pmic_power_on_event {
 struct system_pmic_config {
 	bool allow_power_reset;
 	bool allow_power_off;
+	bool avoid_power_off_command;
 };
 
 struct system_pmic_ops {

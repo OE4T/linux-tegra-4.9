@@ -1,7 +1,7 @@
 /*
  * system-pmic.c -- Core power off/reset functionality from system PMIC.
  *
- * Copyright (c) 2013, NVIDIA Corporation.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
  *
@@ -33,6 +33,7 @@ struct system_pmic_dev {
 	void *pmic_drv_data;
 	bool allow_power_off;
 	bool allow_power_reset;
+	bool avoid_power_off_command;
 	struct system_pmic_ops *ops;
 	bool power_on_event[SYSTEM_PMIC_MAX_POWER_ON_EVENT];
 	void *power_on_data[SYSTEM_PMIC_MAX_POWER_ON_EVENT];
@@ -71,6 +72,11 @@ static void system_pmic_power_off(void)
 		soc_specific_power_off();
 	}
 
+	if (system_pmic_dev->avoid_power_off_command) {
+		dev_info(system_pmic_dev->pmic_dev,
+				"Avoid PMIC power off\n");
+		return;
+	}
 	dev_err(system_pmic_dev->pmic_dev,
 		"System PMIC is not able to power off system\n");
 	while (1);
@@ -115,6 +121,8 @@ struct system_pmic_dev *system_pmic_register(struct device *dev,
 	system_pmic_dev->pmic_drv_data = drv_data;
 	system_pmic_dev->allow_power_off = config->allow_power_off;
 	system_pmic_dev->allow_power_reset = config->allow_power_reset;
+	system_pmic_dev->avoid_power_off_command =
+			config->avoid_power_off_command;
 
 	if (system_pmic_dev->allow_power_off) {
 		if (!ops->power_off)

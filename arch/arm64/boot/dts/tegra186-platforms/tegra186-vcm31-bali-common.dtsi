@@ -657,7 +657,7 @@
 	adsp_audio {
 		compr-ops = <0>;
 		status = "okay";
-		num-plugin = <2>;
+		num-plugin = <3>;
 		plugin-info-1 {
 			plugin-name = "reverb";
 			firmware-name = "libnvreverbfx.elf";
@@ -668,6 +668,11 @@
 			plugin-name = "wire";
 			firmware-name = "libnvwirefx.elf";
 			widget-name = "WIRE";
+		};
+		plugin-info-3 {
+			plugin-name = "ssewrapper";
+			firmware-name = "libnvssewrapperfx.elf";
+			widget-name = "SSEWRAPPER";
 		};
 	};
 

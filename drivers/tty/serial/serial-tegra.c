@@ -102,7 +102,8 @@ struct tegra_uart_chip_data {
 };
 
 struct tegra_baud_tolerance {
-	u32 baud;
+	u32 lower_range_baud;
+	u32 upper_range_baud;
 	s32 tolerance;
 };
 
@@ -325,7 +326,8 @@ static long tegra_get_tolerance_rate(struct tegra_uart_port *tup,
 	int i;
 
 	for (i = 0; i < tup->n_adjustable_baud_rates; ++i) {
-		if (tup->baud_tolerance[i].baud == baud)
+		if (baud >= tup->baud_tolerance[i].lower_range_baud &&
+			baud <= tup->baud_tolerance[i].upper_range_baud)
 			return (rate + (rate *
 				tup->baud_tolerance[i].tolerance) / 10000);
 	}
@@ -1294,8 +1296,11 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 	struct device_node *np = pdev->dev.of_node;
 	int port;
 	int ret;
+	int index;
 	u32 pval;
 	int count;
+	int n_entries;
+
 
 	port = of_alias_get_id(np, "serial");
 	if (port < 0) {
@@ -1307,22 +1312,26 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 	tup->enable_modem_interrupt = of_property_read_bool(np,
 					"nvidia,enable-modem-interrupt");
 
-	tup->n_adjustable_baud_rates = of_property_count_u32_elems(np, "nvidia,adjust-baud-rates");
-	if (tup->n_adjustable_baud_rates > 0) {
-		tup->n_adjustable_baud_rates /= 2;
+	n_entries = of_property_count_u32_elems(np, "nvidia,adjust-baud-rates");
+	if (n_entries > 0) {
+		tup->n_adjustable_baud_rates = n_entries/3;
 		tup->baud_tolerance = devm_kzalloc(&pdev->dev, (tup->n_adjustable_baud_rates) *
 				sizeof(*tup->baud_tolerance), GFP_KERNEL);
 		if (!tup->baud_tolerance)
 			return -ENOMEM;
-		for (count = 0; count < tup->n_adjustable_baud_rates; count++) {
+		for (count = 0, index = 0; count < n_entries; count += 3, index++) {
 			ret = of_property_read_u32_index(np, "nvidia,adjust-baud-rates",
-					count * 2, &pval);
+					count, &pval);
 			if (!ret)
-				tup->baud_tolerance[count].baud = pval;
+				tup->baud_tolerance[index].lower_range_baud = pval;
 			ret = of_property_read_u32_index(np, "nvidia,adjust-baud-rates",
-					count * 2 + 1, &pval);
+					count + 1, &pval);
 			if (!ret)
-				tup->baud_tolerance[count].tolerance = (s32)pval;
+				tup->baud_tolerance[index].upper_range_baud = pval;
+			ret = of_property_read_u32_index(np, "nvidia,adjust-baud-rates",
+					count + 2, &pval);
+			if (!ret)
+				tup->baud_tolerance[index].tolerance = (s32)pval;
 		}
 	} else
 		tup->n_adjustable_baud_rates = 0;

@@ -428,10 +428,6 @@
 			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
 		};
 
-	ahci-sata@3507000 {
-		status = "disabled";
-	};
-
 	adma: adma@2930000 {
 		dma-channels = <4>;
 		adma-page = <1>;

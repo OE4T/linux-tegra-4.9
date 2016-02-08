@@ -415,10 +415,6 @@
 		status = "disabled";
 	};
 
-	ahci-sata@3507000 {
-		status = "disabled";
-	};
-
         /delete-node/ axi2apb@2390000;
         /delete-node/ axi2apb@23a0000;
         /delete-node/ axi2apb@23b0000;

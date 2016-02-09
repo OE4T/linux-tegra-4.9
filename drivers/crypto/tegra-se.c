@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2011-2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -732,7 +732,7 @@ static int tegra_se_start_operation(struct tegra_se_dev *se_dev, u32 nbytes,
 		se_writel(se_dev, SE_OPERATION(OP_CTX_SAVE),
 			SE_OPERATION_REG_OFFSET);
 	else
-		se_writel(se_dev, SE_OPERATION(OP_SRART),
+		se_writel(se_dev, SE_OPERATION(OP_START),
 			SE_OPERATION_REG_OFFSET);
 
 	if (se_dev->polling) {
@@ -952,12 +952,16 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 			dst_ll->addr = se_dev->sg_out_buf_adr;
 			dst_ll->data_len = req->nbytes;
 		} else {
-			tegra_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE,
-						src_ll, total);
-			tegra_map_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE,
-						dst_ll, total);
+			if (src_sg == dst_sg)
+				tegra_map_sg(se_dev->dev, src_sg, 1,
+					DMA_BIDIRECTIONAL, src_ll, total);
+			else {
+				tegra_map_sg(se_dev->dev, src_sg, 1,
+					DMA_TO_DEVICE, src_ll, total);
+				tegra_map_sg(se_dev->dev, dst_sg, 1,
+					DMA_FROM_DEVICE, dst_ll, total);
+			}
 		}
-
 		WARN_ON(src_sg->length != dst_sg->length);
 	}
 	return ret;
@@ -973,8 +977,15 @@ static void tegra_se_dequeue_complete_req(struct tegra_se_dev *se_dev,
 		src_sg = req->src;
 		dst_sg = req->dst;
 		total = req->nbytes;
-		tegra_unmap_sg(se_dev->dev, dst_sg,  DMA_FROM_DEVICE, total);
-		tegra_unmap_sg(se_dev->dev, src_sg,  DMA_TO_DEVICE, total);
+		if (src_sg == dst_sg)
+			tegra_unmap_sg(se_dev->dev, dst_sg, DMA_BIDIRECTIONAL,
+				total);
+		else {
+			tegra_unmap_sg(se_dev->dev, dst_sg, DMA_FROM_DEVICE,
+				total);
+			tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE,
+				total);
+		}
 	}
 }
 
@@ -1205,7 +1216,7 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 
 	if (key) {
 		if (!ctx->slot || (ctx->slot &&
-		    ctx->slot->slot_num == ssk_slot.slot_num)) {
+				ctx->slot->slot_num == ssk_slot.slot_num)) {
 			pslot = tegra_se_alloc_key_slot();
 			if (!pslot) {
 				dev_err(se_dev->dev, "no free key slot\n");
@@ -1544,16 +1555,6 @@ static int tegra_se_sha_init(struct ahash_request *req)
 
 static int tegra_se_sha_update(struct ahash_request *req)
 {
-	return 0;
-}
-
-static int tegra_se_sha_finup(struct ahash_request *req)
-{
-	return 0;
-}
-
-static int tegra_se_sha_final(struct ahash_request *req)
-{
 	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
 	struct tegra_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
@@ -1567,29 +1568,34 @@ static int tegra_se_sha_final(struct ahash_request *req)
 	if (!req->nbytes)
 		return -EINVAL;
 
-	if (crypto_ahash_digestsize(tfm) == SHA1_DIGEST_SIZE) {
+	switch (crypto_ahash_digestsize(tfm)) {
+	case SHA1_DIGEST_SIZE:
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA1;
 		freq = se_dev->chipdata->sha1_freq;
-	}
+		break;
 
-	if (crypto_ahash_digestsize(tfm) == SHA224_DIGEST_SIZE) {
+	case SHA224_DIGEST_SIZE:
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA224;
 		freq = se_dev->chipdata->sha224_freq;
-	}
+		break;
 
-	if (crypto_ahash_digestsize(tfm) == SHA256_DIGEST_SIZE) {
+	case SHA256_DIGEST_SIZE:
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA256;
 		freq = se_dev->chipdata->sha256_freq;
-	}
+		break;
 
-	if (crypto_ahash_digestsize(tfm) == SHA384_DIGEST_SIZE) {
+	case SHA384_DIGEST_SIZE:
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA384;
 		freq = se_dev->chipdata->sha384_freq;
-	}
+		break;
 
-	if (crypto_ahash_digestsize(tfm) == SHA512_DIGEST_SIZE) {
+	case SHA512_DIGEST_SIZE:
 		sha_ctx->op_mode = SE_AES_OP_MODE_SHA512;
 		freq = se_dev->chipdata->sha512_freq;
+		break;
+
+	default:
+		return -EINVAL;
 	}
 
 	/* take access to the hw */
@@ -1616,28 +1622,74 @@ static int tegra_se_sha_final(struct ahash_request *req)
 	tegra_se_config_algo(se_dev, sha_ctx->op_mode, false, 0);
 	tegra_se_config_sha(se_dev, req->nbytes, freq);
 	err = tegra_se_start_operation(se_dev, 0, false);
-	if (!err) {
-		tegra_se_read_hash_result(se_dev, req->result,
-			crypto_ahash_digestsize(tfm), true);
-		if ((sha_ctx->op_mode == SE_AES_OP_MODE_SHA384) ||
-			(sha_ctx->op_mode == SE_AES_OP_MODE_SHA512)) {
-			u32 *result = (u32 *)req->result;
-			u32 temp, i;
-
-			for (i = 0; i < crypto_ahash_digestsize(tfm)/4;
-				i += 2) {
-				temp = result[i];
-				result[i] = result[i+1];
-				result[i+1] = temp;
-			}
-		}
-	}
 
 	src_sg = req->src;
 	total = req->nbytes;
 	if (total)
 		tegra_unmap_sg(se_dev->dev, src_sg, DMA_TO_DEVICE, total);
 
+	pm_runtime_put(se_dev->dev);
+	mutex_unlock(&se_hw_lock);
+
+	return err;
+}
+
+static int tegra_se_sha_finup(struct ahash_request *req)
+{
+	return 0;
+}
+
+static int tegra_se_sha_final(struct ahash_request *req)
+{
+	struct crypto_ahash *tfm = crypto_ahash_reqtfm(req);
+	struct tegra_se_sha_context *sha_ctx = crypto_ahash_ctx(tfm);
+	struct tegra_se_dev *se_dev = sg_tegra_se_dev;
+	int err = 0;
+
+	if (req->nbytes) {
+		err = tegra_se_sha_update(req);
+		if (err)
+			return err;
+	} else
+		switch (crypto_ahash_digestsize(tfm)) {
+		case SHA1_DIGEST_SIZE:
+			sha_ctx->op_mode = SE_AES_OP_MODE_SHA1;
+			break;
+		case SHA224_DIGEST_SIZE:
+			sha_ctx->op_mode = SE_AES_OP_MODE_SHA224;
+			break;
+		case SHA256_DIGEST_SIZE:
+			sha_ctx->op_mode = SE_AES_OP_MODE_SHA256;
+			break;
+		case SHA384_DIGEST_SIZE:
+			sha_ctx->op_mode = SE_AES_OP_MODE_SHA384;
+			break;
+		case SHA512_DIGEST_SIZE:
+			sha_ctx->op_mode = SE_AES_OP_MODE_SHA512;
+			break;
+		default:
+			return -EINVAL;
+		}
+
+	/* take access to the hw */
+	mutex_lock(&se_hw_lock);
+	pm_runtime_get_sync(se_dev->dev);
+
+	/* read hash result */
+	tegra_se_read_hash_result(se_dev, req->result,
+		crypto_ahash_digestsize(tfm), true);
+
+	if ((sha_ctx->op_mode == SE_AES_OP_MODE_SHA384) ||
+		(sha_ctx->op_mode == SE_AES_OP_MODE_SHA512)) {
+		u32 *result = (u32 *)req->result;
+		u32 temp, i;
+
+		for (i = 0; i < crypto_ahash_digestsize(tfm) / 4; i += 2) {
+			temp = result[i];
+			result[i] = result[i + 1];
+			result[i + 1] = temp;
+		}
+	}
 	pm_runtime_put(se_dev->dev);
 	mutex_unlock(&se_hw_lock);
 
@@ -1872,7 +1924,7 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 
 	if (key) {
 		if (!ctx->slot || (ctx->slot &&
-		    ctx->slot->slot_num == ssk_slot.slot_num)) {
+				ctx->slot->slot_num == ssk_slot.slot_num)) {
 			pslot = tegra_se_alloc_key_slot();
 			if (!pslot) {
 				dev_err(se_dev->dev, "no free key slot\n");

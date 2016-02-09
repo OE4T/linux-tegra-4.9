@@ -1935,7 +1935,7 @@ static bool get_rdet_status(struct tegra_pcie *pcie, u32 index)
  * can result in the increase of the bootup time as there are big timeout
  * loops.
  */
-#define TEGRA_PCIE_LINKUP_TIMEOUT	100	/* up to 100 ms */
+#define TEGRA_PCIE_LINKUP_TIMEOUT	350	/* up to 350 ms */
 static bool tegra_pcie_port_check_link(struct tegra_pcie_port *port)
 {
 	unsigned int retries = 3;

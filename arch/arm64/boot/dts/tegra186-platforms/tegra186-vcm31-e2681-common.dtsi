@@ -218,6 +218,13 @@
 				nvidia,lanes = "uphy-lane-5";
 				nvidia,function = "sata";
 			};
+                        usb3-std-A-port0 {
+                                nvidia,lanes = "uphy-lane-0";
+                                nvidia,function = "usb3";
+                                nvidia,usb3-port = <0>;
+                                nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+                        };
+
 		};
 	};
 
@@ -283,9 +290,10 @@
 		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+                        <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
-		phy-names = "utmi-0", "utmi-1", "utmi-2", "usb3-1", "usb3-2";
+		phy-names = "utmi-0", "utmi-1", "utmi-2", "usb3-0", "usb3-1", "usb3-2";
 	};
 
 	pcie-controller@10003000 {

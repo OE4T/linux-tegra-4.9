@@ -1,7 +1,7 @@
 /*
  * Driver for Tegra Security Engine
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -164,7 +164,7 @@
 #define SE_OPERATION_REG_OFFSET		0x008
 #define SE_OPERATION_SHIFT			0
 #define OP_ABORT		0
-#define OP_SRART		1
+#define OP_START		1
 #define OP_RESTART		2
 #define OP_CTX_SAVE		3
 #define OP_RESTART_IN	4

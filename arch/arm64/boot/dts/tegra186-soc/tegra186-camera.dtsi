@@ -123,6 +123,81 @@
 		};
 	};
 
+	tegra_ape: rtcpu@2993000 {
+		compatible = "nvidia,tegra186-ape-ivc";
+		status = "disabled";
+
+		reg = <0x0 0x02993000 0x0 0x1000>; /* APE EVP */
+
+		nvidia,hsp-notifications = <&hsp_top
+					TEGRA_HSP_PROC_APE
+					TEGRA_HSP_DB_APE>;
+		#stream-id-cells = <1>;
+
+		#mbox-cells = <1>;
+
+		clocks =
+			<&tegra_car TEGRA186_CLK_APE>,
+			<&tegra_car TEGRA186_CLK_APB2APE>,
+			<&tegra_car TEGRA186_CLK_ADSPNEON>,
+			<&tegra_car TEGRA186_CLK_ADSP>,
+			<&tegra_car TEGRA186_CLK_AHUB>,
+			<&tegra_car TEGRA186_CLK_EMC>;
+		clock-names =
+			"ape",
+			"apb2ape",
+			"adspneon",
+			"adsp",
+			"ahub",
+			"adsp.emc";
+		resets =
+			<&tegra_car TEGRA186_RESET_ADSPDBG>,
+			<&tegra_car TEGRA186_RESET_ADSPINTF>,
+			<&tegra_car TEGRA186_RESET_ADSPNEON>,
+			<&tegra_car TEGRA186_RESET_ADSPPERIPH>,
+			<&tegra_car TEGRA186_RESET_ADSPSCU>,
+			<&tegra_car TEGRA186_RESET_ADSPWDT>,
+			<&tegra_car TEGRA186_RESET_APE>,
+			<&tegra_car TEGRA186_RESET_ADSP>;
+		reset-names =
+				"adspdbg",
+				"adspintf",
+				"adspneon",
+				"adspperiph",
+				"adspscu",
+				"adspwdt",
+				"ape",
+				"adsp";
+
+		nvidia,ast = <&ape_ast0>, <&ape_ast1>;
+
+		#address-cells = <1>;
+		#size-cells = <1>;
+
+		ivc-channels@405c0000 {
+			reg = <0x405c0000 0x10000>;
+
+			#address-cells = <1>;
+			#size-cells = <0>;
+
+			echo@0 {
+				compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
+				reg = <0x0000>, <0x8000>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <16>;
+				nvidia,frame-size = <64>;
+			};
+
+			vinotify@12c0 {
+				compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
+				reg = <0x012C0>, <0x92C0>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <63>;
+				nvidia,frame-size = <128>;
+			};
+		};
+	};
+
 	rtcpu-echo {
 		compatible = "nvidia,tegra186-sysfs-mbox";
 		status = "disabled";

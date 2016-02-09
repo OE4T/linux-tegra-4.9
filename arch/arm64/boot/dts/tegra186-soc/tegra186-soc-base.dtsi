@@ -155,6 +155,7 @@
 
 			      /* Non-host devices. */
 			      <&{/adsp@2993000}		TEGRA_SID_APE>,
+			      <&{/rtcpu@2993000}	TEGRA_SID_APE>,
 			      <&{/ether_qos@2490000}	TEGRA_SID_EQOS>,
 			      <&{/sdhci@3460000}	TEGRA_SID_SDMMC4A>,
 			      <&{/sdhci@3440000}	TEGRA_SID_SDMMC3A>,
@@ -2351,6 +2352,18 @@
 	sce_ast1: ast@b050000 {
 		compatible = "nvidia,tegra186-ast";
 		reg = <0 0x0b050000 0 0x10000>;
+		status = "disabled";
+	};
+
+	ape_ast0: ast@2994000 {
+		compatible = "nvidia,tegra186-ast";
+		reg = <0 0x02994000 0 0x10000>;
+		status = "disabled";
+	};
+
+	ape_ast1: ast@2996000 {
+		compatible = "nvidia,tegra186-ast";
+		reg = <0 0x02996000 0 0x10000>;
 		status = "disabled";
 	};
 

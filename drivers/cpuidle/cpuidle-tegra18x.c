@@ -471,6 +471,72 @@ static void cluster_state_init(void *data)
 	}
 }
 
+struct xover_table {
+	char *name;
+	int index;
+};
+
+static void send_crossover(void *data)
+{
+	struct device_node *child;
+	struct device_node *of_states = (struct device_node *)data;
+	u32 value;
+	int i;
+
+	struct xover_table table1[] = {
+		{"crossover_c1_c6", TEGRA_MCE_XOVER_C1_C6},
+		{"crossover_cc1_cc6", TEGRA_MCE_XOVER_CC1_CC6},
+		{"crossover_cc1_cc7", TEGRA_MCE_XOVER_CC1_CC7},
+		{"crossover_ccp1_ccp3", TEGRA_MCE_XOVER_CCP1_CCP3},
+		{"crossover_ccp3_sc2", TEGRA_MCE_XOVER_CCP3_SC2},
+		{"crossover_ccp3_sc3", TEGRA_MCE_XOVER_CCP3_SC3},
+		{"crossover_ccp3_sc4", TEGRA_MCE_XOVER_CCP3_SC4},
+		{"crossover_ccp3_sc7", TEGRA_MCE_XOVER_CCP3_SC7},
+	};
+
+	for_each_child_of_node(of_states, child)
+		for (i = 0; i < TEGRA_MCE_XOVER_MAX; i++) {
+			if (of_property_read_u32(child,
+				table1[i].name, &value) == 0)
+				tegra_mce_update_crossover_time
+					(table1[i].index, value);
+	}
+}
+
+static int crossover_init(struct cpumask *denver_cpumask,
+			struct cpumask *a57_cpumask)
+{
+	struct device_node *denver_xover;
+	struct device_node *a57_xover;
+
+	if (!check_mce_version()) {
+		pr_err("WARNING: cpuidle: skipping crossover programming."
+			" Incompatible MCE version.\n");
+		return -ENODEV;
+	}
+
+	denver_xover = of_find_node_by_name(NULL,
+			"denver_crossover_thresholds");
+	a57_xover = of_find_node_by_name(NULL, "a57_crossover_thresholds");
+
+	pr_debug("cpuidle: Init Power Crossover thresholds.\n");
+	if (!a57_xover)
+		pr_err("WARNING: cpuidle: %s: DT entry missing for A57"
+			" thresholds\n", __func__);
+	else
+		smp_call_function_any(a57_cpumask, send_crossover,
+			a57_xover, 1);
+
+	if (!denver_xover)
+		pr_err("WARNING: cpuidle: %s: DT entry missing for Denver"
+			" thresholds\n", __func__);
+	else
+		smp_call_function_any(denver_cpumask, send_crossover,
+			denver_xover, 1);
+
+	return 0;
+}
+
 static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 {
 	int cpu_number;
@@ -503,6 +569,8 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 			return err;
 		}
 	}
+
+	crossover_init(&denver_cpumask, &a57_cpumask);
 
 	a57_cluster_states =
 		of_find_node_by_name(NULL, "a57_cluster_power_states");
@@ -577,90 +645,3 @@ static struct platform_driver tegra18x_cpuidle_driver = {
 };
 
 module_platform_driver(tegra18x_cpuidle_driver);
-
-struct xover_table {
-	char *name;
-	int index;
-};
-
-static void crossover_init(struct device_node *of_states) {
-
-	struct device_node *child;
-	u32 value;
-	int i;
-
-	struct xover_table table1[] = {
-		{"crossover_c1_c6", TEGRA_MCE_XOVER_C1_C6},
-		{"crossover_cc1_cc6", TEGRA_MCE_XOVER_CC1_CC6},
-		{"crossover_cc1_cc7", TEGRA_MCE_XOVER_CC1_CC7},
-		{"crossover_ccp1_ccp3", TEGRA_MCE_XOVER_CCP1_CCP3},
-		{"crossover_ccp3_sc2", TEGRA_MCE_XOVER_CCP3_SC2},
-		{"crossover_ccp3_sc3", TEGRA_MCE_XOVER_CCP3_SC3},
-		{"crossover_ccp3_sc4", TEGRA_MCE_XOVER_CCP3_SC4},
-		{"crossover_ccp3_sc7", TEGRA_MCE_XOVER_CCP3_SC7},
-	};
-
-	for_each_child_of_node(of_states, child)
-		for (i=0; i< TEGRA_MCE_XOVER_MAX; i++) {
-			if (of_property_read_u32(child,
-				table1[i].name, &value) == 0)
-				tegra_mce_update_crossover_time
-					(table1[i].index, value);
-	}
-}
-
-static int tegra_mce_cpu_notify(struct notifier_block *nb,
-        unsigned long action, void *pcpu)
-{
-	struct device_node *denver_xover;
-	struct device_node *a57_xover;
-        int cpu = (long)pcpu;
-
-	denver_xover = of_find_node_by_name(NULL, "denver_crossover_thresholds");
-	a57_xover = of_find_node_by_name(NULL, "a57_crossover_thresholds");
-
-        switch (action) {
-        case CPU_STARTING:
-		pr_debug("cpuidle: Init Power Crossover thresholds for core %d\n"
-				, cpu);
-                if (read_cpuid_implementor() == ARM_CPU_IMP_ARM) {
-			if (!a57_xover) {
-				pr_err("%s: failed to init xover for core %d\n",
-					__func__, cpu);
-				break;
-			}
-			crossover_init(a57_xover);
-                } else {
-			if (!denver_xover) {
-				pr_err("%s: failed to init xover for core %d\n",
-					__func__, cpu);
-				break;
-			}
-			crossover_init(denver_xover);
-		}
-                break;
-        }
-
-        return NOTIFY_OK;
-}
-
-static struct notifier_block mce_cpu_notifier = {
-        .notifier_call = tegra_mce_cpu_notify,
-};
-
-static int __init tegra_mce_early_init(void)
-{
-
-	if (!check_mce_version()) {
-		pr_err("cpuidle: skipping crossover programming."
-			" Incompatible MCE version.\n");
-		return -ENODEV;
-	}
-
-        /* Initialize thresholds for boot cpu now */
-        tegra_mce_cpu_notify(NULL, CPU_STARTING, (void *)0);
-	/* Initialize thresholds for rest of the cpu when they start */
-        register_cpu_notifier(&mce_cpu_notifier);
-        return 0;
-}
-early_initcall(tegra_mce_early_init);

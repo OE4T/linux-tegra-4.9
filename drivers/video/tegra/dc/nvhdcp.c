@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvhdcp.c
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -37,6 +37,8 @@
 #include "hdmi_reg.h"
 #include "hdmi.h"
 
+#include "tsec/tsec_methods.h"
+
 DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 
 /* for 0x40 Bcaps */
@@ -47,6 +49,10 @@ DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 /* for 0x41 Bstatus */
 #define BSTATUS_MAX_DEVS_EXCEEDED	(1 << 7)
 #define BSTATUS_MAX_CASCADE_EXCEEDED	(1 << 11)
+
+#define HDCP11_SRM_PATH "etc/hdcpsrm/hdcp1x.srm"
+
+#define RCVR_ID_LIST_SIZE			635
 
 #ifdef VERBOSE_DEBUG
 #define nvhdcp_vdbg(...)	\
@@ -66,6 +72,7 @@ DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define nvhdcp_info(...)	\
 		pr_info("nvhdcp: " __VA_ARGS__)
 
+#define TSEC_SRM_REVOCATION_CHECK	(1)
 
 /* for nvhdcp.state */
 enum tegra_nvhdcp_state {
@@ -120,7 +127,7 @@ static int nvhdcp_i2c_read(struct tegra_nvhdcp *nvhdcp, u8 reg,
 					size_t len, void *data)
 {
 	int status;
-	int retries = 15;
+	int retries = 11;
 	struct i2c_msg msg[] = {
 		{
 			.addr = 0x74 >> 1, /* primary link */
@@ -802,6 +809,139 @@ static int verify_link(struct tegra_nvhdcp *nvhdcp, bool wait_ri)
 	return 0;
 }
 
+static int hdcp1x_read_srm(struct hdcp_context_t *hdcp_context)
+{
+	struct file *fp = NULL;
+	mm_segment_t seg;
+	unsigned int size = 0;
+	struct hdcp_revocation_check_param revocation_check_param;
+
+	memset(&revocation_check_param, 0,
+			sizeof(struct hdcp_revocation_check_param));
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
+		HDCP_MTHD_RPLY_BUF_SIZE);
+	revocation_check_param.trans_id.session_id = hdcp_context->session_id;
+	revocation_check_param.is_ver_hdcp2x = 0;
+	fp = filp_open(HDCP11_SRM_PATH, O_RDONLY, 0);
+	if (IS_ERR(fp) || !fp) {
+		nvhdcp_err("Opening SRM file failed!\n");
+		return -ENOENT;
+	}
+	seg = get_fs();
+	set_fs(get_ds());
+	/* copy SRM to buffer */
+	fp->f_op->read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
+			HDCP_SRM_SIZE, &fp->f_pos);
+	set_fs(seg);
+	size = fp->f_pos;
+	filp_close(fp, NULL);
+	return 0;
+}
+
+static int tsec_hdcp_init(struct hdcp_context_t *hdcp_context)
+{
+	int err = 0;
+	struct hdcp_init_param init_param;
+
+	memset(&init_param, 0, sizeof(struct hdcp_init_param));
+
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
+		HDCP_MTHD_RPLY_BUF_SIZE);
+	init_param.flags = 0;
+	init_param.chip_id = 0;
+
+	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
+		&init_param,
+		sizeof(struct hdcp_init_param));
+
+	tsec_send_method(hdcp_context, HDCP_INIT, HDCP_MTHD_FLAGS_SB);
+
+	memcpy(&init_param,
+		hdcp_context->cpuvaddr_mthd_buf_aligned,
+		sizeof(struct hdcp_init_param));
+
+	if (init_param.ret_code) {
+		nvhdcp_err("tsec_hdcp_init: failed with error %d\n",
+			init_param.ret_code);
+	}
+	err = init_param.ret_code;
+	return err;
+}
+
+static int verify_vprime(struct tegra_nvhdcp *nvhdcp, u8 repeater)
+{
+	int i;
+	u8 *p;
+	u8 buf[RCVR_ID_LIST_SIZE];
+	struct hdcp_context_t *hdcp_context =
+		kmalloc(sizeof(*hdcp_context), GFP_KERNEL);
+	struct hdcp_verify_vprime_param verify_vprime_param;
+	int e = 0;
+
+	e = tsec_hdcp_create_context(hdcp_context);
+	if (e) {
+		nvhdcp_err("Error creating hdcp context\n");
+		goto exit;
+	}
+	e = tsec_hdcp_init(hdcp_context);
+	if (e)
+		nvhdcp_err("Error initializing context\n");
+	memset(&verify_vprime_param, 0x0,
+		sizeof(struct hdcp_verify_vprime_param));
+	memset(hdcp_context->cpuvaddr_mthd_buf_aligned, 0,
+		HDCP_MTHD_RPLY_BUF_SIZE);
+	e = hdcp1x_read_srm(hdcp_context);
+	if (e) {
+		nvhdcp_err("srm read failed\n");
+		goto exit;
+	}
+	if (!repeater) {
+		nvhdcp->num_bksv_list = 1;
+		nvhdcp->bksv_list[0] = nvhdcp->b_ksv;
+		verify_vprime_param.reserved1[0] = TSEC_SRM_REVOCATION_CHECK;
+	}
+
+	/* get receiver id list into the buffer */
+	p = buf;
+	for (i = 0; i < nvhdcp->num_bksv_list; i++) {
+		p[0] = (u8)(nvhdcp->bksv_list[i] & 0xff);
+		p[1] = (u8)((nvhdcp->bksv_list[i]>>8) & 0xff);
+		p[2] = (u8)((nvhdcp->bksv_list[i]>>16) & 0xff);
+		p[3] = (u8)((nvhdcp->bksv_list[i]>>24) & 0xff);
+		p[4] = (u8)((nvhdcp->bksv_list[i]>>32) & 0xff);
+		p += 5;
+	}
+	memcpy(hdcp_context->cpuvaddr_rcvr_id_list, buf,
+			(nvhdcp->num_bksv_list)*5);
+	memcpy(verify_vprime_param.vprime, nvhdcp->v_prime,
+			HDCP_SIZE_VPRIME_1X_8);
+	verify_vprime_param.trans_id.session_id = 0;
+	verify_vprime_param.is_ver_hdcp2x = 0; /* hdcp 1.x */
+	verify_vprime_param.bstatus = nvhdcp->b_status;
+	verify_vprime_param.depth = 0; /* depth not used */
+	verify_vprime_param.device_count = nvhdcp->num_bksv_list;
+	verify_vprime_param.has_hdcp2_repeater = 0;
+	verify_vprime_param.has_hdcp1_device = 0;
+	memcpy(hdcp_context->cpuvaddr_mthd_buf_aligned,
+		&verify_vprime_param,
+		sizeof(struct hdcp_verify_vprime_param));
+	tsec_send_method(hdcp_context,
+	HDCP_VERIFY_VPRIME,
+	HDCP_MTHD_FLAGS_SB|HDCP_MTHD_FLAGS_RECV_ID_LIST|HDCP_MTHD_FLAGS_SRM);
+	memcpy(&verify_vprime_param,
+		hdcp_context->cpuvaddr_mthd_buf_aligned,
+		sizeof(struct hdcp_verify_vprime_param));
+	if (verify_vprime_param.ret_code) {
+		nvhdcp_err("tsec_hdcp_verify_vprime: failed with error:%d\n",
+		verify_vprime_param.ret_code);
+	}
+	e = verify_vprime_param.ret_code;
+exit:
+	tsec_hdcp_free_context(hdcp_context);
+	kfree(hdcp_context);
+	return e;
+}
+
 static int get_repeater_info(struct tegra_nvhdcp *nvhdcp)
 {
 	int e, retries;
@@ -877,6 +1017,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
 	int e;
 	u8 b_caps;
+	u8 repeater_val;
 	u32 tmp;
 	u32 res;
 
@@ -1020,6 +1161,15 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		}
 	}
 
+	repeater_val = b_caps & BCAPS_REPEATER;
+
+	/* V' verification */
+	e = verify_vprime(nvhdcp, repeater_val);
+	if (e) {
+		nvhdcp_err("Vprime verification failed\n");
+		goto failure;
+	}
+
 	tmp = tegra_hdmi_readl(hdmi, HDMI_NV_PDISP_RG_HDCP_CTRL);
 	tmp |= CRYPT_ENABLED;
 	if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
@@ -1030,6 +1180,24 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	nvhdcp->state = STATE_LINK_VERIFY;
 	nvhdcp_info("link verified!\n");
+
+	/* if repeater then get repeater info */
+	if (b_caps & BCAPS_REPEATER) {
+		e = get_repeater_info(nvhdcp);
+		if (e) {
+			nvhdcp_err("get repeater info failed\n");
+			goto failure;
+		}
+	}
+
+	repeater_val = b_caps & BCAPS_REPEATER;
+
+	/* V' verification */
+	e = verify_vprime(nvhdcp, repeater_val);
+	if (e) {
+		nvhdcp_err("Vprime verification failed\n");
+		goto failure;
+	}
 
 	while (1) {
 		if (!nvhdcp_is_plugged(nvhdcp))

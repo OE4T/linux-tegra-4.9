@@ -1,7 +1,7 @@
 /*
  * IVC character device driver
  *
- * Copyright (C) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -236,7 +236,7 @@ static ssize_t ivc_dev_write(struct file *filp, const char __user *buf,
 static unsigned int ivc_dev_poll(struct file *filp, poll_table *wait)
 {
 	struct ivc_dev *ivcd = filp->private_data;
-	struct ivc *ivc = tegra_hv_ivc_convert_cookie(ivcd->ivck);
+	struct ivc *ivc;
 	int mask = 0;
 
 	BUG_ON(!ivcd);

@@ -329,6 +329,8 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+	g->gpu_characteristics.flags &= ~NVGPU_GPU_FLAGS_SUPPORT_TSG;
+
 	gk20a_channel_resume(g);
 
 done:

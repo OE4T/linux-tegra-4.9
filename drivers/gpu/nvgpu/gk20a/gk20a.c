@@ -1999,6 +1999,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 		gpu->flags |= NVGPU_GPU_FLAGS_HAS_SYNCPOINTS;
 
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS;
+	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_TSG;
 
 	gpu->gpc_mask = 1;
 

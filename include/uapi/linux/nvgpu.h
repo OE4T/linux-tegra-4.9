@@ -95,19 +95,21 @@ struct nvgpu_gpu_zbc_query_table_args {
 #define NVGPU_GPU_BUS_TYPE_NONE         0
 #define NVGPU_GPU_BUS_TYPE_AXI         32
 
-#define NVGPU_GPU_FLAGS_HAS_SYNCPOINTS			(1 << 0)
+#define NVGPU_GPU_FLAGS_HAS_SYNCPOINTS			(1ULL << 0)
 /* MAP_BUFFER_EX with partial mappings */
-#define NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS	(1 << 1)
+#define NVGPU_GPU_FLAGS_SUPPORT_PARTIAL_MAPPINGS	(1ULL << 1)
 /* MAP_BUFFER_EX with sparse allocations */
-#define NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS		(1 << 2)
+#define NVGPU_GPU_FLAGS_SUPPORT_SPARSE_ALLOCS		(1ULL << 2)
 /* sync fence FDs are available in, e.g., submit_gpfifo */
-#define NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS		(1 << 3)
+#define NVGPU_GPU_FLAGS_SUPPORT_SYNC_FENCE_FDS		(1ULL << 3)
 /* NVGPU_IOCTL_CHANNEL_CYCLE_STATS is available */
-#define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS		(1 << 4)
+#define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS		(1ULL << 4)
 /* NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT is available */
-#define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT	(1 << 6)
+#define NVGPU_GPU_FLAGS_SUPPORT_CYCLE_STATS_SNAPSHOT	(1ULL << 6)
 /* User-space managed address spaces support */
-#define NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS	(1 << 7)
+#define NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS	(1ULL << 7)
+/* Both gpu driver and device support TSG */
+#define NVGPU_GPU_FLAGS_SUPPORT_TSG			(1ULL << 8)
 
 struct nvgpu_gpu_characteristics {
 	__u32 arch;

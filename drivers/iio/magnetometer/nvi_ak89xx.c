@@ -69,7 +69,7 @@
 #include <linux/mpu_iio.h>
 #endif /* AKM_NVI_MPU_SUPPORT */
 
-#define AKM_DRIVER_VERSION		(300)
+#define AKM_DRIVER_VERSION		(301)
 #define AKM_VENDOR			"AsahiKASEI"
 #define AKM_NAME			"ak89xx"
 #define AKM_NAME_AK8963			"ak8963"
@@ -1449,8 +1449,12 @@ static int akm_id_dev(struct akm_state *st, const char *name)
 			__func__, val, ret);
 		if ((!ret) && (val == AKM_WIA_ID))
 			ret = akm_id_compare(st, name);
+		else
+			/* setup default ptrs even though err */
+			akm_id_hal(st, 0);
 	}
-	akm_init_hw(st);
+	if (!ret)
+		akm_init_hw(st);
 	if (st->i2c->irq && !ret) {
 		if ((st->hal->cmode_tbl == NULL) || !st->hal->irq) {
 			nvi_disable_irq(st);

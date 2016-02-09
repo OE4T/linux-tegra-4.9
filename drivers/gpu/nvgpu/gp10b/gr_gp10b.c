@@ -1,7 +1,7 @@
 /*
  * GP10B GPU GR
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1361,7 +1361,7 @@ static int gr_gp10b_clear_cilp_preempt_pending(struct gk20a *g,
  *
  * On Pascal, if we are in CILP preemtion mode, preempt the channel and handle errors with special processing
  */
-int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
+static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 		u32 gpc, u32 tpc, u32 global_esr, u32 warp_esr,
 		bool sm_debugger_attached, struct channel_gk20a *fault_ch,
 		bool *early_exit, bool *ignore_debugger)

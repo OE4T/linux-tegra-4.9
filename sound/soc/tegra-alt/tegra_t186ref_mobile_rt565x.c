@@ -215,7 +215,8 @@ static int tegra_t186ref_set_params(struct snd_soc_pcm_stream *dai_params,
 static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 					int rate,
 					int channels,
-					u64 formats)
+					u64 formats,
+					bool is_playback)
 {
 	struct snd_soc_dai *codec_dai = rtd->codec_dai;
 	struct snd_soc_codec *codec = codec_dai->codec;
@@ -370,6 +371,44 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
                 if (err < 0)
                         return err;
         }
+
+	idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-playback");
+	if (idx != -EINVAL) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+		if (is_playback) {
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
+						clk_rate, SND_SOC_CLOCK_OUT);
+			if (err < 0) {
+				dev_err(card->dev, "cpu_dai out clock not set\n");
+				return err;
+			}
+		} else {
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].cpu_dai, 0,
+						clk_rate, SND_SOC_CLOCK_IN);
+			if (err < 0) {
+				dev_err(card->dev, "cpu_dai in clock not set\n");
+				return err;
+			}
+		}
+
+		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
+			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
+		if (err < 0) {
+			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
+				card->rtd[idx].dai_link->name);
+			return err;
+		}
+
+		err = tegra_t186ref_set_params(dai_params,
+						card->rtd[idx].cpu_dai,
+						&card->rtd[idx], card,
+						clk_rate, channels, formats);
+		if (err < 0)
+			return err;
+	}
+
 	return 0;
 }
 
@@ -381,10 +420,17 @@ static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 	struct snd_soc_codec *codec = codec_dai->codec;
 	struct snd_soc_card *card = codec->component.card;
 	int err;
+	bool is_playback;
+
+	if (substream->stream == SNDRV_PCM_STREAM_PLAYBACK)
+		is_playback = true;
+	else
+		is_playback = false;
 
 	err = tegra_t186ref_dai_init(rtd, params_rate(params),
 			params_channels(params),
-			(1ULL << (params_format(params))));
+			(1ULL << (params_format(params))),
+			is_playback);
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;
@@ -431,6 +477,7 @@ static int tegra_t186ref_compr_set_params(struct snd_compr_stream *cstream)
 	struct snd_soc_platform *platform = rtd->platform;
 	struct snd_codec codec_params;
 	int err;
+	bool is_playback;
 
 	if (platform->driver->compr_ops &&
 		platform->driver->compr_ops->get_params) {
@@ -445,8 +492,14 @@ static int tegra_t186ref_compr_set_params(struct snd_compr_stream *cstream)
 		return -EINVAL;
 	}
 
+	if (cstream->direction == SND_COMPRESS_PLAYBACK)
+		is_playback = true;
+	else
+		is_playback = false;
+
 	err = tegra_t186ref_dai_init(rtd, codec_params.sample_rate,
-			codec_params.ch_out, SNDRV_PCM_FMTBIT_S16_LE);
+			codec_params.ch_out, SNDRV_PCM_FMTBIT_S16_LE,
+			is_playback);
 	if (err < 0) {
 		dev_err(card->dev, "Failed dai init\n");
 		return err;
@@ -644,6 +697,8 @@ static const struct snd_soc_dapm_widget tegra_t186ref_dapm_widgets[] = {
 	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
 	SND_SOC_DAPM_MIC("d1 Mic", NULL),
 	SND_SOC_DAPM_MIC("d2 Mic", NULL),
+	SND_SOC_DAPM_HP("s Headphone", NULL),
+	SND_SOC_DAPM_MIC("s Mic", NULL),
 };
 
 static int tegra_t186ref_suspend_pre(struct snd_soc_card *card)

@@ -39,13 +39,6 @@
 
 static bool enable_pp = 1;
 static int pool_size;
-static u32 fill_thresh = NVMAP_PP_DEF_FILL_THRESH;
-static u32 zero_mem_fill_min = NVMAP_PP_DEF_ZERO_MEM_FILL_MIN;
-static u32 min_available_mb = NVMAP_PP_DEF_MIN_AVAILABLE_MB;
-
-module_param(fill_thresh, uint, 0644);
-module_param(zero_mem_fill_min, uint, 0644);
-module_param(min_available_mb, uint, 0644);
 
 static struct task_struct *background_allocator;
 static DECLARE_WAIT_QUEUE_HEAD(nvmap_bg_wait);

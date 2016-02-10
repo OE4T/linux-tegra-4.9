@@ -136,14 +136,14 @@ static const struct tegra_cam_rtcpu_pdata ape_pdata = {
 
 #define NV(p) "nvidia," #p
 
-static struct of_device_id tegra_cam_rtcpu_of_match[] = {
+static const struct of_device_id tegra_cam_rtcpu_of_match[] = {
 	{
 		.compatible = NV(tegra186-sce-ivc), .data = &sce_pdata
 	},
 	{
 		.compatible = NV(tegra186-ape-ivc), .data = &ape_pdata
 	},
-	{},
+	{ },
 };
 MODULE_DEVICE_TABLE(of, tegra_cam_rtcpu_of_match);
 

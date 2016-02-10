@@ -440,9 +440,9 @@ static void nvmap_page_pool_resize(struct nvmap_page_pool *pool, int size)
 	while (pool->count > size)
 		__free_page(nvmap_page_pool_alloc_locked(pool, 0));
 
+	pr_debug("page pool resized to %d from %d pages\n", size, pool->max);
 	pool->max = size;
 
-	pr_debug("page pool resized to %d from %d pages\n", size, pool->max);
 	mutex_unlock(&pool->lock);
 }
 
@@ -549,7 +549,19 @@ module_param_cb(enable_page_pools, &enable_pp_ops, &enable_pp, 0644);
 static int pool_size_set(const char *arg, const struct kernel_param *kp)
 {
 	param_set_int(arg, kp);
+
+	if (pool_size < 0) {
+		pr_err("pool_size can't be less than zero!\n");
+		return -EINVAL;
+	}
+
 	nvmap_page_pool_resize(&nvmap_dev->pool, pool_size);
+	if (nvmap_dev->pool.max != pool_size) {
+		pool_size = 0;
+		pr_err("Resize failed!\n");
+		return -ENOMEM;
+	}
+
 	return 0;
 }
 

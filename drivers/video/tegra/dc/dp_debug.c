@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp_debug.c
  *
- * Copyright (c) 2015 NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -36,6 +36,7 @@
 #define PLLDP_EN_SSC_ENABLE			(1 << 30)
 #define CLK_RST_CONTROLLER_PLLDP_SS_CFG_0	(0x598)
 
+__maybe_unused
 static void __iomem *clk_base = IO_ADDRESS(TEGRA_CLK_RESET_BASE);
 
 struct tegra_dp_test_settings default_dp_test_settings = {
@@ -229,7 +230,8 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
 	struct tegra_dp_test_settings *test_settings = &dp->test_settings;
 	int dc_out_type = dc->out->type;
-	u32 ssc_reg, vs_reg, pe_reg;
+	u32 ssc_reg __maybe_unused;
+	u32 vs_reg, pe_reg;
 	u32 max_tx_pu;
 
 	if (parse_test_settings(buf, count, test_settings))
@@ -251,6 +253,7 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	tegra_dc_sor_detach(sor);
 	tegra_sor_precharge_lanes(sor);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	/* configure SSC */
 	ssc_reg = readl(clk_base + CLK_RST_CONTROLLER_PLLDP_SS_CFG_0);
 	if (test_settings->disable_ssc)
@@ -258,6 +261,10 @@ static ssize_t test_settings_set(struct file *file, const char __user *buf,
 	else
 		ssc_reg |= PLLDP_EN_SSC_ENABLE;
 	writel(ssc_reg, clk_base + CLK_RST_CONTROLLER_PLLDP_SS_CFG_0);
+#else
+	test_settings->disable_ssc = false;
+	dev_info(&dc->ndev->dev, "t18x DP SS is fixed clk prod setting\n");
+#endif
 
 	tegra_dc_io_start(dc);
 

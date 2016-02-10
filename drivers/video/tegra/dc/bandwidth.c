@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/bandwidth.c
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Jon Mayo <jmayo@nvidia.com>
  *
@@ -724,7 +724,7 @@ static unsigned long tegra_dc_calc_win_bandwidth(struct tegra_dc *dc,
 	unsigned in_h;
 	unsigned out_h;
 
-	if (!WIN_IS_ENABLED(w))
+	if (!dc || !WIN_IS_ENABLED(w))
 		return 0;
 
 	if (dfixed_trunc(w->w) == 0 || dfixed_trunc(w->h) == 0 ||

@@ -711,16 +711,7 @@
 	};
 
 	thermal-zones {
-		status = "disabled";
-
 		Tboard_tegra {
-			status = "disabled";
-
-			thermal-zone-params {
-			};
-		};
-
-		Tdiode_tegra {
 			status = "disabled";
 
 			thermal-zone-params {
@@ -766,12 +757,6 @@
 
 	pmc-iopower {
 		status = "disabled";
-	};
-
-	bpmp {
-		bpmpthermal {
-			status = "disabled";
-		};
 	};
 
 	cpus {

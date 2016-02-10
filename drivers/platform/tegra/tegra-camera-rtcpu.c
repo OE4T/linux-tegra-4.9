@@ -612,6 +612,8 @@ static void tegra_cam_rtcpu_boot(struct device *dev)
 	} /* else the rtcpu is ape. */
 }
 
+static int tegra_cam_rtcpu_remove(struct platform_device *pdev);
+
 static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu;
@@ -744,8 +746,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	return 0;
 
 fail:
-	tegra_hsp_db_del_handler(cam_rtcpu->hsp_master);
-	mbox_controller_unregister(&cam_rtcpu->mbox);
+	tegra_cam_rtcpu_remove(pdev);
 	return ret;
 }
 
@@ -753,8 +754,9 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu = platform_get_drvdata(pdev);
 
-	mbox_controller_unregister(&cam_rtcpu->mbox);
 	tegra_hsp_db_del_handler(cam_rtcpu->hsp_master);
+	flush_scheduled_work();
+	mbox_controller_unregister(&cam_rtcpu->mbox);
 	tegra_ast_del_ref();
 
 	return 0;

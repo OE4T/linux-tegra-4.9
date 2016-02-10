@@ -126,6 +126,8 @@ struct tegra_se_dev {
 	u32 dst_ll_size;        /* Size of destination linked list buffer */
 	struct tegra_se_ll *src_ll;
 	struct tegra_se_ll *dst_ll;
+	struct ablkcipher_request *reqs[SE_MAX_TASKS_PER_SUBMIT];
+	int req_cnt;
 	u32 syncpt_id;
 	bool work_q_busy;	/* Work queue busy status */
 	struct nvhost_channel *channel;
@@ -497,11 +499,46 @@ static u32 tegra_se_get_config(struct tegra_se_dev *se_dev,
 	return val;
 }
 
-static void tegra_se_complete_callback(void *priv, int nr_completed)
+static void tegra_unmap_sg(struct device *dev, struct scatterlist *sg,
+				enum dma_data_direction dir, u32 total)
 {
-	int ret = 0;
-	struct ablkcipher_request *req = priv;
-	req->base.complete(&req->base, ret);
+	while (sg) {
+		dma_unmap_sg(dev, sg, 1, dir);
+			sg = scatterwalk_sg_next(sg);
+	}
+}
+
+static void tegra_se_dequeue_complete_req(struct tegra_se_dev *se_dev,
+	struct ablkcipher_request *req)
+{
+	struct scatterlist *src_sg, *dst_sg;
+	u32 total;
+
+	if (req) {
+		src_sg = req->src;
+		dst_sg = req->dst;
+		total = req->nbytes;
+		tegra_unmap_sg(se_dev->dev, dst_sg,  DMA_FROM_DEVICE, total);
+		tegra_unmap_sg(se_dev->dev, src_sg,  DMA_TO_DEVICE, total);
+	}
+}
+
+static void tegra_se_complete_callback(struct ablkcipher_request *req)
+{
+	int i = 0;
+	struct tegra_se_req_context *req_ctx;
+	struct tegra_se_dev *se_dev;
+
+	req_ctx = ablkcipher_request_ctx(req);
+	se_dev = req_ctx->se_dev;
+
+	for (i = 0; i < se_dev->req_cnt; i++)
+		tegra_se_dequeue_complete_req(se_dev, se_dev->reqs[i]);
+
+	for (i = 0; i < se_dev->req_cnt; i++)
+		se_dev->reqs[i]->base.complete(&se_dev->reqs[i]->base, 0);
+
+	se_dev->req_cnt = 0;
 }
 
 static void se_nvhost_write_method(u32 *buf, u32 op1, u32 op2, u32 *offset)
@@ -562,6 +599,9 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 		job->sp->fence,
 		(u32)MAX_SCHEDULE_TIMEOUT,
 		NULL, NULL);
+
+	if (req)
+		tegra_se_complete_callback(req);
 exit:
 	nvhost_job_put(job);
 	job = NULL;
@@ -855,6 +895,8 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	struct tegra_se_ll *dst_ll = se_dev->dst_ll;
 
 	i = se_dev->cmdbuf_cnt;
+	se_dev->reqs[se_dev->req_cnt++] = req;
+
 	total = nbytes;
 	/* Create Gather Buffer Command */
 
@@ -927,7 +969,9 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 
 	host1x_submit_sz++;
 
-	if (se_dev->queue.qlen && (host1x_submit_sz < SE_TASKS_PER_SUBMIT))
+	if (se_dev->queue.qlen &&
+		(host1x_submit_sz < SE_MAX_TASKS_PER_SUBMIT) &&
+		(se_dev->req_cnt != SE_MAX_TASKS_PER_SUBMIT))
 		return 0;
 
 	host1x_submit_sz = 0;
@@ -956,15 +1000,6 @@ static int tegra_map_sg(struct device *dev, struct scatterlist *sg,
 		se_ll++;
 	}
 	return nents;
-}
-
-static void tegra_unmap_sg(struct device *dev, struct scatterlist *sg,
-				enum dma_data_direction dir, u32 total)
-{
-	while (sg) {
-		dma_unmap_sg(dev, sg, 1, dir);
-			sg = scatterwalk_sg_next(sg);
-	}
 }
 
 static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes, int *chained)
@@ -1021,21 +1056,6 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev,
 	return ret;
 }
 
-static void tegra_se_dequeue_complete_req(struct tegra_se_dev *se_dev,
-	struct ablkcipher_request *req)
-{
-	struct scatterlist *src_sg, *dst_sg;
-	u32 total;
-
-	if (req) {
-		src_sg = req->src;
-		dst_sg = req->dst;
-		total = req->nbytes;
-		tegra_unmap_sg(se_dev->dev, dst_sg,  DMA_FROM_DEVICE, total);
-		tegra_unmap_sg(se_dev->dev, src_sg,  DMA_TO_DEVICE, total);
-	}
-}
-
 static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 {
 	struct tegra_se_dev *se_dev;
@@ -1072,10 +1092,7 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 	ret = tegra_se_send_data(se_dev, req_ctx, req, req->nbytes,
 				opcode_addr);
 
-	tegra_se_dequeue_complete_req(se_dev, req);
 	mutex_unlock(&se_dev->mtx);
-	if (req)
-		tegra_se_complete_callback(req, 1);
 }
 
 static void tegra_se_work_handler(struct work_struct *work)

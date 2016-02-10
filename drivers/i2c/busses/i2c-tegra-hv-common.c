@@ -1,7 +1,7 @@
 /*
  * IVC based Library for I2C services.
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -323,6 +323,7 @@ static void hv_i2c_work(struct work_struct *work)
 	struct tegra_hv_i2c_comm_chan *comm_chan = NULL;
 	int comm_chan_id;
 	u32 len = 0;
+	int data_ptr_offset;
 
 	if (tegra_hv_ivc_channel_notified(ivck)) {
 		pr_warn("%s: Skipping work since queue is not ready\n",
@@ -380,10 +381,17 @@ static void hv_i2c_work(struct work_struct *work)
 		}
 
 		if (comm_chan->rx_state == I2C_RX_PENDING) {
+			data_ptr_offset = _hv_i2c_get_data_ptr_offset(
+					i2c_ivc_msg_type(fake_rx_msg));
+			if (data_ptr_offset < 0) {
+				dev_err(comm_chan->dev,
+						"Bad offset for message type %u\n",
+						i2c_ivc_msg_type(fake_rx_msg));
+				continue;
+			}
 			/* Copy the message to consumer*/
 			tegra_hv_ivc_read_peek(ivck, comm_chan->rcvd_data,
-					_hv_i2c_get_data_ptr_offset(
-						i2c_ivc_msg_type(fake_rx_msg)),
+					data_ptr_offset,
 					comm_chan->data_len);
 			*comm_chan->rcvd_err = i2c_ivc_error_field(fake_rx_msg);
 			_hv_i2c_comm_chan_cleanup(comm_chan);

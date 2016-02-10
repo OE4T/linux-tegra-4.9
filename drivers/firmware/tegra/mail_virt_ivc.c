@@ -19,6 +19,8 @@
 #include "bpmp.h"
 #include "mail_t186.h"
 
+#define VIRT_BPMP_COMPAT "nvidia,tegra186-bpmp-hv"
+
 static int hv_bpmp_first_queue = -1;
 static uint32_t num_ivc_queues;
 static struct tegra_hv_ivc_cookie **hv_bpmp_ivc_cookies;
@@ -37,8 +39,6 @@ static irqreturn_t hv_bpmp_irq_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
-const char *ofm_virt = "nvidia,tegra186-bpmp-hv";
-
 static int virt_init_io(void)
 {
 	struct device_node *of_node;
@@ -48,7 +48,7 @@ static int virt_init_io(void)
 	int index;
 	struct tegra_hv_ivc_cookie *cookie;
 
-	of_node = of_find_compatible_node(NULL, NULL, ofm_virt);
+	of_node = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
 	if (!of_node) {
 		pr_err("%s: Unable to find virt bpmp node", __func__);
 		return -ENODEV;
@@ -205,7 +205,7 @@ struct mail_ops *virt_mail_ops(void)
 {
 	struct device_node *np;
 
-	np = of_find_compatible_node(NULL, NULL, ofm_virt);
+	np = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
 	if (!np)
 		return NULL;
 

@@ -517,6 +517,7 @@ int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 	struct gr_comm_context *ctx;
 	struct gr_comm_queue *queue;
 	struct gr_comm_element *element;
+	int err;
 
 	if (virt_ctx >= NUM_CONTEXTS || index >= NUM_QUEUES)
 		return -EINVAL;
@@ -526,7 +527,9 @@ int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 	if (!queue->valid)
 		return -EINVAL;
 
-	down(&queue->sem);
+	err = down_timeout(&queue->sem, 10 * HZ);
+	if (unlikely(err))
+		return err;
 	mutex_lock(&queue->lock);
 	element = list_first_entry(&queue->pending,
 			struct gr_comm_element, list);
@@ -537,7 +540,7 @@ int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 	*size = element->size;
 	if (sender)
 		*sender = element->sender;
-	return 0;
+	return err;
 }
 
 /* NOTE: tegra_gr_comm_recv() should not be running concurrently */
@@ -561,6 +564,9 @@ int tegra_gr_comm_sendrecv(u32 virt_ctx, u32 peer, u32 index, void **handle,
 	if (err)
 		goto fail;
 	err = tegra_gr_comm_recv(virt_ctx, index, handle, data, size, NULL);
+	if (unlikely(err))
+		dev_err(&queue->ivc_ctx->pdev->dev,
+			"tegra_gr_comm_recv: timeout for response!\n");
 fail:
 	mutex_unlock(&queue->resp_lock);
 	return err;

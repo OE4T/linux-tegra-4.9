@@ -109,6 +109,8 @@ static int vgpu_intr_thread(void *dev_id)
 		err = tegra_gr_comm_recv(TEGRA_GR_COMM_CTX_CLIENT,
 					TEGRA_VGPU_QUEUE_INTR, &handle,
 					(void **)&msg, &size, &sender);
+		if (err == -ETIME)
+			continue;
 		if (WARN_ON(err))
 			continue;
 

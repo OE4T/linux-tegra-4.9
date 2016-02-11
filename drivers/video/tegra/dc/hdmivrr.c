@@ -371,6 +371,7 @@ static int hdmivrr_dpcd_write_u32(struct tegra_hdmi *hdmi, u32 reg, u32 val)
 	return status;
 }
 
+__maybe_unused
 static int tegra_hdmivrr_is_vrr_capable(struct tegra_hdmi *hdmi)
 {
 	int status;
@@ -386,6 +387,7 @@ static int tegra_hdmivrr_is_vrr_capable(struct tegra_hdmi *hdmi)
 	return status;
 }
 
+__maybe_unused
 static int tegra_hdmivrr_page_init(struct tegra_hdmi *hdmi)
 {
 	int status;
@@ -624,6 +626,7 @@ static int tegra_hdmivrr_monitor_unlock(struct tegra_hdmi *hdmi,
 	return status;
 }
 
+__maybe_unused
 static int tegra_hdmivrr_authentication(struct tegra_hdmi *hdmi,
 						struct tegra_vrr *vrr)
 {
@@ -695,9 +698,10 @@ void tegra_hdmi_update_vrr_mode(const struct tegra_dc *dc,
 
 	vrr = dc->out->vrr;
 
+#ifdef VRR_AUTHENTICATION_ENABLED
 	if (!vrr->capability)
 		return;
-
+#endif
 	/*
 	 * Inform VRR monitor to turn on VRR mode by increase vertical
 	 * backporch by 2, and decrease vertical front porch by 2 to keep
@@ -719,7 +723,10 @@ int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
 
 	dc = hdmi->dc;
 	vrr = dc->out->vrr;
-
+	/* TODO: Remove this conditional
+	 * once we have support for authentication
+	 * */
+#ifdef VRR_AUTHENTICATION_ENABLED
 	status = tegra_hdmivrr_is_vrr_capable(hdmi);
 	if (status)
 		goto fail;
@@ -731,6 +738,7 @@ int tegra_hdmivrr_setup(struct tegra_hdmi *hdmi)
 	status = tegra_hdmivrr_authentication(hdmi, vrr);
 	if (status)
 		goto fail;
+#endif
 
 	vrr->capability = 1;
 	goto exit;

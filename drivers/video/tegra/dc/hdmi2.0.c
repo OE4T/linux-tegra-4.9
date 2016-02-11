@@ -108,7 +108,6 @@ static char *hpd_switch_name_array[TEGRA_MAX_DC] = {"hdmi0", "hdmi1"};
 static char *hpd_switch_name_first_link = "hdmi";
 static char *audio_switch_name_array[TEGRA_MAX_DC]
 	= {"hdmi0_audio", "hdmi1_audio"};
-static char *audio_switch_name_first_link = "hdmi_audio";
 static char *hdmi_ddc_name_array[TEGRA_MAX_DC]
 	= {"hdmi0_ddc_power_toggle", "hdmi1_ddc_power_toggle"};
 static char *hdmi_ddc_name_first_link = "hdmi_ddc_power_toggle";
@@ -1135,7 +1134,11 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			sor_num, err);
 
 #ifdef CONFIG_SWITCH
-	hdmi->audio_switch.name = audio_switch_name_array[sor_num];
+	if (hdmi->sor->audio_switch_name == NULL)
+		hdmi->audio_switch.name = audio_switch_name_array[sor_num];
+	else
+		hdmi->audio_switch.name = hdmi->sor->audio_switch_name;
+
 	err = switch_dev_register(&hdmi->audio_switch);
 	if (err)
 		dev_err(&dc->ndev->dev,
@@ -1160,9 +1163,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		err = sysfs_create_link(hdmi->hpd_switch.dev->kobj.parent,
 			&(hdmi->hpd_switch.dev->kobj),
 			hpd_switch_name_first_link);
-		err = sysfs_create_link(hdmi->hpd_switch.dev->kobj.parent,
-			&(hdmi->audio_switch.dev->kobj),
-			audio_switch_name_first_link);
 		err = sysfs_create_link(kernel_kobj, hdmi_ddc_array[sor_num],
 			hdmi_ddc_name_first_link);
 	}

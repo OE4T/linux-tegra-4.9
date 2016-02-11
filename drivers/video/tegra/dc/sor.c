@@ -638,9 +638,14 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 
 	for (i = 0; i < sizeof(sor->xbar_ctrl)/sizeof(u32); i++)
 		sor->xbar_ctrl[i] = i;
-	if (np_sor && of_device_is_available(np_sor))
+	if (np_sor && of_device_is_available(np_sor)) {
+		if (of_property_read_string(np_sor, "nvidia,audio-switch-name",
+			(const char **)&sor->audio_switch_name) != 0)
+			sor->audio_switch_name = NULL;
+
 		of_property_read_u32_array(np_sor, "nvidia,xbar-ctrl",
 			sor->xbar_ctrl, sizeof(sor->xbar_ctrl)/sizeof(u32));
+	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	res_name = sor_num ? "sor1" : "sor0";

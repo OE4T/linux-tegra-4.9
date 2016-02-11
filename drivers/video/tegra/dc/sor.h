@@ -2,7 +2,7 @@
 /*
  * drivers/video/tegra/dc/sor.h
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -118,6 +118,7 @@ struct tegra_dc_sor_data {
 
 	u8	clk_type;
 	u32  xbar_ctrl[5];
+	u8 *audio_switch_name;
 };
 
 #define TEGRA_SOR_TIMEOUT_MS		1000

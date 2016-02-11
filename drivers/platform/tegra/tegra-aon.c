@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,10 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
 
-#define IVC_MIN_FRAME_SIZE		4
+#include <asm/cache.h>
+
+/* This has to be a multiple of the cache line size */
+#define IVC_MIN_FRAME_SIZE		L1_CACHE_BYTES
 
 #define SMBOX1_OFFSET			0x8000
 #define SMBOX_IVC_READY_MSG		0xAAAA5555

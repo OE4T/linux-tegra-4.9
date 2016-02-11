@@ -48,6 +48,7 @@
 #include <dhd_bus.h>
 #include <dhd_proto.h>
 #include <dhd_dbg.h>
+#include <nv_logger.h>
 #include <msgtrace.h>
 
 #ifdef WL_CFG80211
@@ -1393,6 +1394,8 @@ wl_show_host_event(dhd_pub_t *dhd_pub, wl_event_msg_t *event, void *event_data,
 	if (flags & WLC_EVENT_MSG_FLUSHTXQ)
 		flush_txq = TRUE;
 
+	write_log(event_type, event_name, eabuf);
+
 	switch (event_type) {
 	case WLC_E_START:
 	case WLC_E_DEAUTH:
@@ -1992,7 +1995,7 @@ wl_host_event(dhd_pub_t *dhd_pub, int *ifidx, void *pktdata, size_t pktlen,
 	}
 
 #ifdef SHOW_EVENTS
-	if (DHD_FWLOG_ON() || DHD_EVENT_ON()) {
+	if (DHD_FWLOG_ON() || DHD_EVENT_ON() || NV_FILELOG_ON()) {
 		wl_show_host_event(dhd_pub, event,
 			(void *)event_data, raw_event, dhd_pub->enable_log);
 	}

@@ -71,6 +71,7 @@
 #define DHD_NOCHECKDIED_ON()	(dhd_msg_level & DHD_NOCHECKDIED_VAL)
 #define DHD_PNO_ON()		(dhd_msg_level & DHD_PNO_VAL)
 #define DHD_FWLOG_ON()		(dhd_msg_level & DHD_FWLOG_VAL)
+#define NV_FILELOG_ON()		(enable_file_logging)
 
 #else /* defined(BCMDBG) || defined(DHD_DEBUG) */
 
@@ -113,6 +114,7 @@
 #define DHD_NOCHECKDIED_ON()	0
 #define DHD_PNO_ON()		0
 #define DHD_FWLOG_ON()		0
+#define NV_FILELOG_ON()		0
 
 #endif 
 

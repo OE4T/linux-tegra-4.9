@@ -75,6 +75,7 @@ struct tegra_asoc_audio_clock_info {
 	int set_mclk;
 	int lock_count;
 	int set_baseclock;
+	int set_clk_out_rate;
 	int num_clk;
 	unsigned int clk_out_rate;
 	u32 clk_rates[MAX_NUM_RATES];

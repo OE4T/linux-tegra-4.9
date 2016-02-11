@@ -37,7 +37,7 @@
 	};
 	plugin-manager {
 		fragment-devslp@0 {
-			ids = "3310-1000-A02";
+			ids = "3310-1000-A02", "3310-1000-300";
 			override@0 {
 				target = <&{/ahci-sata@3507000}>;
 				_overlay_ {

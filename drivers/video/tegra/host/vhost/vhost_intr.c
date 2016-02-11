@@ -83,6 +83,8 @@ static int vhost_intr_handler(void *dev_id)
 		err = tegra_gr_comm_recv(TEGRA_GR_COMM_CTX_CLIENT,
 					TEGRA_VHOST_QUEUE_INTR, &handle,
 					(void **)&msg, &size, &sender);
+		if (err == -ETIME)
+			continue;
 		if (WARN_ON(err))
 			continue;
 		if (unlikely(msg->event == TEGRA_VHOST_EVENT_ABORT)) {

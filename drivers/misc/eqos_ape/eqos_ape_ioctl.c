@@ -38,11 +38,11 @@ struct rate_to_time_period {
 };
 
 struct rate_to_time_period rate_table[] = {
-	{  24575996,   40, 3604,  5223 },
-	{  12288000,   81,   73,   192 },
-	{ 204000000,    4,   46,    51 },
-	{ 245759960,    4,  679,  9839 },
-	{ 368639941,    2, 9981, 14005 }
+	{  24575996,   40, 23608, 34209 },
+	{  12288000,   81,    73,   192 },
+	{ 204000000,    4,    46,    51 },
+	{ 245759960,    4,   679,  9839 },
+	{ 368639941,    2,  9981, 14005 }
 };
 
 static int eqos_ape_ioctl_major;
@@ -70,6 +70,9 @@ unsigned int cmd, unsigned long arg)
 {
 	struct eqos_ape_cmd __user *_eqos_ape = (struct eqos_ape_cmd *)arg;
 	struct eqos_ape_cmd eqos_ape;
+	struct eqos_ape_sync_cmd __user *_eqos_ape_sync =
+					(struct eqos_ape_sync_cmd *)arg;
+	struct eqos_ape_sync_cmd eqos_ape_sync;
 	unsigned int n_modulo = 0, n_fract = 0, n_int = 0;
 	u64 ape_sec_snap_prev = 0, ape_ns_snap_prev = 0;
 	u64 eavb_sec_snap_prev = 0, eavb_ns_snap_prev = 0;
@@ -131,6 +134,13 @@ unsigned int cmd, unsigned long arg)
 				data->ape_sec_snap, data->ape_ns_snap);
 			break;
 		}
+		if (arg && copy_from_user(&eqos_ape_sync,
+					_eqos_ape_sync,
+					sizeof(eqos_ape_sync)))
+			return -EFAULT;
+
+
+
 		/* Store previous timestamp*/
 		eavb_sec_snap_prev = data->eavb_sec_snap;
 		eavb_ns_snap_prev = data->eavb_ns_snap;
@@ -143,21 +153,19 @@ unsigned int cmd, unsigned long arg)
 		+ (data->ape_ns_snap - ape_ns_snap_prev);
 		num = (data->eavb_sec_snap - eavb_sec_snap_prev) * ONE_BILLION
 		+ (data->eavb_ns_snap - eavb_ns_snap_prev);
+
+		eqos_ape_sync.drift_num = num;
+		eqos_ape_sync.drift_den = den;
+
 		dev_dbg(dev, "num %lld den %lld\n", num, den);
-
-		cur_rate = amisc_plla_get_rate();
-		dev_dbg(dev, "current rate %d\n", cur_rate);
-
-		new_rate = (int)((num * cur_rate)/den);
-		dev_dbg(dev, "new rate %d\n", new_rate);
-		amisc_plla_set_rate(new_rate);
-
-		set_rate = amisc_plla_get_rate();
-		dev_dbg(dev, "applied rate %d\n", set_rate);
-
+		if (copy_to_user((struct eqos_ape_sync_cmd *)_eqos_ape_sync,
+					&eqos_ape_sync,
+					sizeof(eqos_ape_sync)))
+			return -EFAULT;
 
 		break;
 	case EQOS_APE_TEST_FREQ_ADJ:
+
 		if (arg && copy_from_user(&eqos_ape,
 			_eqos_ape,
 			sizeof(eqos_ape)))

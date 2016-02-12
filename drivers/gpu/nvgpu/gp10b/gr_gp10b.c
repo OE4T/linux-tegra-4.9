@@ -64,7 +64,7 @@ static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			proj_tpc_in_gpc_stride_v() * tpc;
 	u32 lrf_ecc_status, shm_ecc_status;
 
-	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, NULL);
+	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch);
 
 	/* Check for LRF ECC errors. */
         lrf_ecc_status = gk20a_readl(g,

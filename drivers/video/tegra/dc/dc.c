@@ -683,6 +683,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	char buff[256];
 	const char winname[] = "ABCDHT";
 	/* for above, see also: DC_CMD_DISPLAY_WINDOW_HEADER and DC_N_WINDOWS */
+	unsigned long cmd_state;
 
 	/* If gated, quietly return. */
 	if (!tegra_powergate_is_powered(dc->powergate_id))
@@ -690,6 +691,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
+	cmd_state = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 	tegra_dc_writel(dc, WRITE_MUX_ACTIVE | READ_MUX_ACTIVE,
 		DC_CMD_STATE_ACCESS);
 
@@ -905,6 +907,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 #endif
 	}
 
+	tegra_dc_writel(dc, cmd_state, DC_CMD_STATE_ACCESS);
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);
 }

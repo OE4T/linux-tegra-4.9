@@ -154,7 +154,7 @@ static int tegra_t186ref_p2382_amx_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (amx_dai->driver->ops->set_channel_map)
 		amx_dai->driver->ops->set_channel_map(amx_dai,
-			slot_size, tx_slot, 0, 0);
+			slot_size, tx_slot, 0, NULL);
 
 	return 0;
 }
@@ -196,7 +196,7 @@ static int tegra_t186ref_p2382_adx_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 	if (adx_dai->driver->ops->set_channel_map)
 		adx_dai->driver->ops->set_channel_map(adx_dai,
-			0, 0, slot_size, rx_slot);
+			0, NULL, slot_size, rx_slot);
 
 	return 0;
 }

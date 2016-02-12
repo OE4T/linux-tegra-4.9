@@ -878,7 +878,7 @@ static const struct regmap_config tegra186_asrc_regmap_config = {
 };
 
 #ifdef CONFIG_TEGRA186_AHC
-void tegra186_asrc_ahc_cb(void *data)
+static void tegra186_asrc_ahc_cb(void *data)
 {
 	struct device *dev = (struct device *)data;
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);

@@ -698,7 +698,7 @@ static const struct of_device_id tegra186_arad_of_match[] = {
 };
 
 #ifdef CONFIG_SND_SOC_TEGRA186_ARAD_WAR
-void tegra186_arad_ahc_cb(void *data)
+static void tegra186_arad_ahc_cb(void *data)
 {
 	int i = 0;
 	unsigned int val = 0, status;

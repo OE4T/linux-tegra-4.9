@@ -782,7 +782,7 @@ static int tegra_cam_rtcpu_suspend(struct device *dev)
 	return 0;
 }
 
-const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
+static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.suspend = tegra_cam_rtcpu_suspend,
 	.resume = tegra_cam_rtcpu_resume,
 };

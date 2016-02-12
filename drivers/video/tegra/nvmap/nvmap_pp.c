@@ -550,15 +550,10 @@ static int pool_size_set(const char *arg, const struct kernel_param *kp)
 {
 	param_set_int(arg, kp);
 
-	if (pool_size < 0) {
-		pr_err("pool_size can't be less than zero!\n");
-		return -EINVAL;
-	}
-
 	nvmap_page_pool_resize(&nvmap_dev->pool, pool_size);
 	if (nvmap_dev->pool.max != pool_size) {
-		pool_size = 0;
-		pr_err("Resize failed!\n");
+		pool_size = nvmap_dev->pool.max;
+		pr_err("pool resize failed!\n");
 		return -ENOMEM;
 	}
 

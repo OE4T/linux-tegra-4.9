@@ -1,7 +1,7 @@
 /*
  * pwm_fan.c fan driver that is controlled by pwm
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author: Anshul Jain <anshulj@nvidia.com>
  *
@@ -442,8 +442,7 @@ static void set_pwm_duty_cycle(int pwm, struct fan_dev_data *fan_data)
 			duty, fan_data->pwm_period);
 		pwm_enable(fan_data->pwm_dev);
 	} else {
-		dev_err(fan_data->dev,
-				"FAN:PWM device or fan data is null\n");
+		pr_err("FAN:PWM device or fan data is null\n");
 	}
 }
 

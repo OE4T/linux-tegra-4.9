@@ -279,9 +279,9 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
 	if (err || msg.ret) {
-		kfree(gr_ctx);
 		gk20a_vm_free_va(vm, gr_ctx->mem.gpu_va,
 				 gr_ctx->mem.size, 0);
+		kfree(gr_ctx);
 		err = -ENOMEM;
 	}
 

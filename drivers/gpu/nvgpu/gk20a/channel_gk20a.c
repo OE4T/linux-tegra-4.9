@@ -214,6 +214,12 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 	u64 timeout;
 	int val_len;
 
+	val = pbdma_acquire_retry_man_2_f() |
+		pbdma_acquire_retry_exp_2_f();
+
+	if (!c->g->timeouts_enabled)
+		return val;
+
 	timeout = gk20a_get_channel_watchdog_timeout(c);
 	do_div(timeout, 2); /* set acquire timeout to half of channel wdt */
 	timeout *= 1000000UL; /* ms -> ns */
@@ -232,11 +238,10 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 		man = timeout;
 	}
 
-	val = pbdma_acquire_retry_man_2_f() |
-		pbdma_acquire_retry_exp_2_f() |
-		pbdma_acquire_timeout_exp_f(exp) |
+	val |= pbdma_acquire_timeout_exp_f(exp) |
 		pbdma_acquire_timeout_man_f(man) |
 		pbdma_acquire_timeout_en_enable_f();
+
 	return val;
 }
 

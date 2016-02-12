@@ -462,8 +462,7 @@ static void gk20a_init_fifo_pbdma_intr_descs(struct fifo_gk20a *f)
 	/* Can be used for sw-methods, or represents
 	 * a recoverable timeout. */
 	f->intr.pbdma.restartable_0 =
-		pbdma_intr_0_device_pending_f() |
-		pbdma_intr_0_acquire_pending_f();
+		pbdma_intr_0_device_pending_f();
 }
 
 static int gk20a_init_fifo_setup_sw(struct gk20a *g)
@@ -1653,6 +1652,12 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			u32 val = gk20a_readl(g, pbdma_acquire_r(pbdma_id));
 			val &= ~pbdma_acquire_timeout_en_enable_f();
 			gk20a_writel(g, pbdma_acquire_r(pbdma_id), val);
+			if (g->timeouts_enabled) {
+				reset = true;
+				gk20a_err(dev_from_gk20a(g),
+					"semaphore acquire timeout!");
+			}
+			handled |= pbdma_intr_0_acquire_pending_f();
 		}
 
 		if (pbdma_intr_0 & pbdma_intr_0_pbentry_pending_f()) {

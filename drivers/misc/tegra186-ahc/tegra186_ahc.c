@@ -35,13 +35,13 @@ static const struct of_device_id tegra186_ahc_of_match[] = {
 	{},
 };
 
-static struct tegra186_ahc_task {
+struct tegra186_ahc_task {
 	struct list_head list;
 	tegra186_ahc_cb func;
 	void *data;
 };
 
-static struct tegra186_ahc_cb_info {
+struct tegra186_ahc_cb_info {
 	tegra186_ahc_cb ahub_int_cb_fn;
 	tegra186_ahc_cb ahub_int_deferred_cb_fn;
 	void *ahub_int_cb_data;
@@ -65,7 +65,7 @@ void tegra186_ahc_register_deferred_cb(tegra186_ahc_cb func, int idx, void *data
 	}
 }
 
-irqreturn_t tegra186_ahc_int_handler(int irq, void *data)
+static irqreturn_t tegra186_ahc_int_handler(int irq, void *data)
 {
 	u64 status;
 	unsigned long flags;
@@ -74,7 +74,7 @@ irqreturn_t tegra186_ahc_int_handler(int irq, void *data)
 								(struct device *)data);
 
 	spin_lock_irqsave(&ahc->int_lock, flags);
-	status = readl(ahc->ahc_base + TEGRA186_AHC_AHUB_INTR_STATUS_0) & ((1 << 32) - 1);
+	status = readl(ahc->ahc_base + TEGRA186_AHC_AHUB_INTR_STATUS_0) & ((1UL << 32) - 1);
 	status |= ((u64)readl(ahc->ahc_base + TEGRA186_AHC_AHUB_INTR_STATUS_1) << 32);
 
 	for (i = 0; i < TEGRA186_AHC_MAX_CB; i++)

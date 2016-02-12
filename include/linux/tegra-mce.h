@@ -118,5 +118,6 @@ int tegra_mce_read_uncore_mca(mca_cmd_t cmd, u64 *data, u32 *error);
 int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error);
 int tegra_roc_flush_cache_only(void);
 int tegra_roc_clean_cache(void);
+int tegra_mce_enable_latic(void);
 
 #endif

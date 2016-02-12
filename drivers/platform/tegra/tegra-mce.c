@@ -47,6 +47,7 @@ enum {
 	MCE_SMC_ENUM_WRITE_MCA,
 	MCE_SMC_ROC_FLUSH_CACHE_ONLY,
 	MCE_SMC_ROC_CLEAN_CACHE_ONLY,
+	MCE_SMC_ENABLE_LATIC,
 	MCE_SMC_ENUM_MAX = 0xFF,	/* enums cannot exceed this value */
 };
 
@@ -349,6 +350,13 @@ int tegra_mce_write_uncore_mca(mca_cmd_t cmd, u64 data, u32 *error)
 }
 EXPORT_SYMBOL(tegra_mce_write_uncore_mca);
 
+int tegra_mce_enable_latic(void)
+{
+	struct mce_regs regs;
+	return send_smc(MCE_SMC_ENABLE_LATIC, &regs);
+}
+EXPORT_SYMBOL(tegra_mce_enable_latic);
+
 #ifdef CONFIG_DEBUG_FS
 
 #define CSTAT_ENTRY(stat) [MCE_ARI_READ_CSTATE_STATS_##stat] = #stat
@@ -418,6 +426,13 @@ static int mce_dbg_cstats_show(struct seq_file *s, void *data)
 	return 0;
 }
 
+static int mce_enable_latic_set(void *data, u64 val)
+{
+	if (tegra_mce_enable_latic())
+		return -EINVAL;
+	return 0;
+}
+
 static int mce_dbg_cstats_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, mce_dbg_cstats_show, inode->i_private);
@@ -433,6 +448,8 @@ static const struct file_operations mce_cstats_fops = {
 DEFINE_SIMPLE_ATTRIBUTE(mce_echo_fops, NULL, mce_echo_set, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(mce_versions_fops, mce_versions_get, NULL, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(mce_features_fops, mce_features_get, NULL, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(mce_enable_latic_fops,
+			NULL, mce_enable_latic_set, "%llu\n");
 
 static struct dentry *mce_debugfs_root;
 
@@ -447,6 +464,7 @@ static struct debugfs_entry mce_dbg_attrs[] = {
 	{ "versions", &mce_versions_fops, S_IRUGO },
 	{ "features", &mce_features_fops, S_IRUGO },
 	{ "cstats", &mce_cstats_fops, S_IRUGO },
+	{ "enable-latic", &mce_enable_latic_fops, S_IWUSR },
 	{ NULL, NULL, 0 }
 };
 

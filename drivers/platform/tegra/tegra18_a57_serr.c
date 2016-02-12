@@ -27,6 +27,7 @@
 #include <linux/tegra-mce.h>
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/platform/tegra/tegra18_a57_mca.h>
+#include <linux/tegra-soc.h>
 
 static u64 read_cpumerrsr(void)
 {
@@ -132,7 +133,7 @@ static int a57_serr_hook(struct pt_regs *regs, int reason,
 	cpu = smp_processor_id();
 	cpuinfo = &per_cpu(cpu_data, cpu);
 
-	if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) == ARM_CPU_PART_CORTEX_A57) {
+	if (MIDR_PARTNUM(cpuinfo->reg_midr) == ARM_CPU_PART_CORTEX_A57) {
 		syndrome = read_cpumerrsr();
 		if (syndrome & A57_CPUMERRSR_VALID) {
 			mpidr = read_cpuid_mpidr();
@@ -163,11 +164,18 @@ static int __init tegra18_a57_serr_init(void)
 	struct cpuinfo_arm64 *cpuinfo;
 	char *core_type	= "Denver";
 
+	/*
+	 * No point in registering an ECC error handler on the
+	 * simulator.
+	 */
+	if (tegra_cpu_is_asim())
+		return 0;
+
 	raw_spin_lock_irqsave(&a57_mca_lock, flags);
 	cpu = smp_processor_id();
 	cpuinfo = &per_cpu(cpu_data, cpu);
 
-	if (MIDR_IMPLEMENTOR(cpuinfo->reg_midr) == ARM_CPU_PART_CORTEX_A57) {
+	if (MIDR_PARTNUM(cpuinfo->reg_midr) == ARM_CPU_PART_CORTEX_A57) {
 		ecc_settings = read_l2ctlr();
 		pr_info("**** A57 ECC: %s\n",
 			(ecc_settings & A57_L2CTLR_ECC_EN) ? "Enabled" :

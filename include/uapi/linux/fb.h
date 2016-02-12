@@ -274,10 +274,10 @@ struct fb_bitfield {
 #define FB_VMODE_Y422		0x0020	/* select YCrCb 4:2:2 if setting mode */
 #define FB_VMODE_Y444		0x0040	/* select YCrCb 4:4:4 if setting mode */
 
-#define FB_VMODE_Y24		0x0100	/* select 24 bits per pixel */
-#define FB_VMODE_Y30		0x0200	/* select 30 bits per pixel */
-#define FB_VMODE_Y36		0x0400	/* select 36 bits per pixel */
-#define FB_VMODE_Y48		0x0800	/* select 48 bits per pixel */
+#define FB_VMODE_Y24		0x0100	/* select 8 bits per component */
+#define FB_VMODE_Y30		0x0200	/* select 10 bits per component */
+#define FB_VMODE_Y36		0x0400	/* select 12 bits per component */
+#define FB_VMODE_Y48		0x0800	/* select 16 bits per component */
 
 #define FB_VMODE_SET_YUV_MASK	(FB_VMODE_Y420 | FB_VMODE_Y422 | \
 				FB_VMODE_Y444 | FB_VMODE_Y24 | FB_VMODE_Y30 | \

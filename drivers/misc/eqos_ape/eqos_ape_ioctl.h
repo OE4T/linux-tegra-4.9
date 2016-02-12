@@ -31,6 +31,11 @@ struct eqos_ape_cmd {
 	int ppm;
 };
 
+struct eqos_ape_sync_cmd {
+	u64 drift_num;
+	u64 drift_den;
+};
+
 enum {
 	EQOS_APE_AMISC_INIT = _IO(0xF9, 0x01),
 	EQOS_APE_AMISC_DEINIT = _IO(0xF9, 0x02),

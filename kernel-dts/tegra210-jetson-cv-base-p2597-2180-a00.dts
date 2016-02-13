@@ -995,4 +995,12 @@
 			sample-rate = <20000>;
 		};
 	};
+
+	soctherm@0x700E2000 {
+		therm_gpu {
+			enable-hw-pllx-offsetting;
+			pllx-offset-max = <4000>;
+			pllx-offset-min = <2000>;
+		};
+	};
 };

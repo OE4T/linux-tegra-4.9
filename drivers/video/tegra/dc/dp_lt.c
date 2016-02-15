@@ -239,9 +239,9 @@ static void set_tx_pu(struct tegra_dp_lt_data *lt_data)
 	u32 *vs = lt_data->drive_current;
 	u32 *pe = lt_data->pre_emphasis;
 	u32 *pc = lt_data->post_cursor2;
-	u32 max_tx_pu = dp->pdata->lt_data[DP_TX_PU].data[pc[0]][vs[0]][pe[0]];
+	u32 max_tx_pu;
 
-	if (dp->pdata && dp->pdata->tx_pu_disable) {
+	if (!dp->pdata || (dp->pdata && dp->pdata->tx_pu_disable)) {
 		tegra_sor_write_field(dp->sor,
 				NV_SOR_DP_PADCTL(dp->sor->portnum),
 				NV_SOR_DP_PADCTL_TX_PU_ENABLE,
@@ -250,6 +250,7 @@ static void set_tx_pu(struct tegra_dp_lt_data *lt_data)
 		return;
 	}
 
+	max_tx_pu = dp->pdata->lt_data[DP_TX_PU].data[pc[0]][vs[0]][pe[0]];
 	for (; cnt < n_lanes; cnt++) {
 		max_tx_pu = (max_tx_pu <
 			dp->pdata->lt_data[DP_TX_PU].data[pc[cnt]][vs[cnt]][pe[cnt]]) ?

@@ -902,6 +902,23 @@ static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 		WARN_ON("Cannot map context");
 		return;
 	}
+	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_magic_value_o : %x (expect %x)\n",
+		gk20a_mem_rd32(ctx_ptr +
+				ctxsw_prog_main_image_magic_value_o(), 0),
+		ctxsw_prog_main_image_magic_value_v_value_v());
+
+	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi : %x\n",
+		gk20a_mem_rd32(ctx_ptr +
+				ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(), 0));
+
+	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_ptr : %x\n",
+		gk20a_mem_rd32(ctx_ptr +
+				ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(), 0));
+
+	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_control : %x\n",
+		gk20a_mem_rd32(ctx_ptr +
+				ctxsw_prog_main_image_context_timestamp_buffer_control_o(), 0));
+
 	gk20a_err(dev_from_gk20a(g), "NUM_SAVE_OPERATIONS : %d\n",
 		gk20a_mem_rd32(ctx_ptr +
 			ctxsw_prog_main_image_num_save_ops_o(), 0));

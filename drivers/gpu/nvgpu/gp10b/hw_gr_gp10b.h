@@ -1094,6 +1094,10 @@ static inline u32 gr_fecs_method_push_adr_set_watchdog_timeout_f(void)
 {
 	return 0x21;
 }
+static inline u32 gr_fecs_method_push_adr_write_timestamp_record_v(void)
+{
+	return 0x0000003d;
+}
 static inline u32 gr_fecs_method_push_adr_discover_preemption_image_size_v(void)
 {
 	return 0x0000001a;

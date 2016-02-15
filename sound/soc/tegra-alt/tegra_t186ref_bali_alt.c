@@ -294,10 +294,7 @@ static int tegra_t186ref_bali_audio_dsp_tdm1_hw_params(
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
-	struct tegra_t186ref_bali *machine = snd_soc_card_get_drvdata(card);
 	unsigned int srate;
-	int err = 0;
-
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx_t18x
 				("bali-audio-dsp-tdm1-1");
@@ -308,14 +305,6 @@ static int tegra_t186ref_bali_audio_dsp_tdm1_hw_params(
 
 	srate = dai_params->rate_min;
 
-	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-						srate, 0, 0);
-	if (err < 0) {
-		dev_err(card->dev, "Can't configure clocks\n");
-		return err;
-	}
-
-
 	return 0;
 }
 
@@ -325,10 +314,7 @@ static int tegra_t186ref_bali_audio_dsp_tdm2_hw_params(
 {
 	struct snd_soc_pcm_runtime *rtd = substream->private_data;
 	struct snd_soc_card *card = rtd->card;
-	struct tegra_t186ref_bali *machine = snd_soc_card_get_drvdata(card);
 	unsigned int srate;
-	int err = 0;
-
 	unsigned int idx =
 		tegra_machine_get_codec_dai_link_idx_t18x
 				("bali-audio-dsp-tdm1-2");
@@ -338,14 +324,6 @@ static int tegra_t186ref_bali_audio_dsp_tdm2_hw_params(
 	dai_params->rate_min = params_rate(params);
 
 	srate = dai_params->rate_min;
-
-	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
-						srate, 0, 0);
-	if (err < 0) {
-		dev_err(card->dev, "Can't configure clocks\n");
-		return err;
-	}
-
 
 	return 0;
 }

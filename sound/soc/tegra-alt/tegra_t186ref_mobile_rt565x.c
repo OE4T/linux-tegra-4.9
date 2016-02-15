@@ -73,7 +73,6 @@ struct tegra_t186ref {
 	int jack_status;
 #endif
 	enum snd_soc_bias_level bias_level;
-	int clock_enabled;
 	struct regulator *digital_reg;
 	struct regulator *spk_reg;
 	struct regulator *dmic_reg;
@@ -721,11 +720,10 @@ static int tegra_t186ref_suspend_pre(struct snd_soc_card *card)
 static int tegra_t186ref_suspend_post(struct snd_soc_card *card)
 {
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
 
-	if (machine->clock_enabled) {
-		machine->clock_enabled = 0;
+	if (data->clk_cdev1_state)
 		tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
-	}
 
 	if (machine->digital_reg)
 		regulator_disable(machine->digital_reg);
@@ -737,6 +735,7 @@ static int tegra_t186ref_resume_pre(struct snd_soc_card *card)
 {
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_jack_gpio *gpio = &tegra_t186ref_hp_jack_gpio;
+	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
 	int ret, val;
 
 	if (machine->digital_reg)
@@ -750,10 +749,8 @@ static int tegra_t186ref_resume_pre(struct snd_soc_card *card)
 		enable_irq(gpio_to_irq(gpio->gpio));
 	}
 
-	if (!machine->clock_enabled) {
-		machine->clock_enabled = 1;
+	if (!data->clk_cdev1_state)
 		tegra_alt_asoc_utils_clk_enable(&machine->audio_clock);
-	}
 
 	return 0;
 }
@@ -996,6 +993,10 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, card);
 	snd_soc_card_set_drvdata(card, machine);
 	machine->is_codec_dummy = 0;
+	machine->audio_clock.clk_cdev1_state = 0;
+	machine->digital_reg = NULL;
+	machine->spk_reg = NULL;
+	machine->dmic_reg = NULL;
 
 	ret = snd_soc_of_parse_card_name(card, "nvidia,model");
 	if (ret)

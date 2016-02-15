@@ -59,7 +59,7 @@
 		pinctrl-names = "devslp_active", "devslp_pullup";
 		pinctrl-0 = <&devslp_active_state>;
 		pinctrl-1 = <&devslp_pullup_state>;
-		nvidia,disable-features = "devslp";
+		nvidia,disable-features = "devslp", "dipm";
 		nvidia,link-flags = "min_power";
 		status = "disabled";
 		prod-settings {

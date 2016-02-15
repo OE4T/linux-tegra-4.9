@@ -698,7 +698,18 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		irq_set_chained_handler(tg_cont->irq, tegra_gpio_irq_handler);
 	}
 
-	gpiochip_add(&tegra_gpio_chip);
+	ret = gpiochip_add(&tegra_gpio_chip);
+	if (ret < 0) {
+		local_irq_restore(flags);
+		dev_err(&pdev->dev, "Could not register gpiochip, %d\n", ret);
+		for (gpio = 0; gpio < tegra_gpio_chip.ngpio; gpio++) {
+			int irq = irq_find_mapping(irq_domain, gpio);
+			if (irq)
+				irq_dispose_mapping(irq);
+		}
+		irq_domain_remove(irq_domain);
+		return ret;
+	}
 	local_irq_restore(flags);
 	return 0;
 }

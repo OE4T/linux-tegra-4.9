@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -43,23 +43,16 @@
  *  3. Message payloads
  *   3.0 Ping message (MRQ_PING)
  *   3.1 TAG query (MRQ_QUERY_TAG)
- *   3.2 Do idle (MRQ_DO_IDLE)
- *   3.3 Tolerate idle (MRQ_TOLERATE_IDLE)
  *   3.4 Module load (MRQ_MODULE_LOAD)
  *   3.5 Module unload (MRQ_MODULE_UNLOAD)
- *   3.6 Switch cluster (MRQ_SWITCH_CLUSTER)
  *   3.7 Trace modify (MRQ_TRACE_MODIFY)
  *   3.8 Write trace (MRQ_WRITE_TRACE)
  *   3.9 Threaded ping (MRQ_THREADED_PING)
  *   3.10 Cpuidle usage (MRQ_CPUIDLE_USAGE)
  *   3.11 Module mail (MRQ_MODULE_MAIL)
- *   3.12 SCx enable (MRQ_SCX_ENABLE)
  *   3.13 Notify frozen CPUs (MRQ_CPU_FROZEN)
  *   3.14 BPMP idle usage (BRQ_BPMPIDLE_USAGE)
  *   3.15 Heap usage (MRQ_HEAP_USAGE)
- *   3.16 SCLK skip set rate (MRQ_SCLK_SKIP_SET_RATE)
- *   3.17 Enable suspend (MRQ_ENABLE_SUSPEND)
- *   3.18 PASR mask (MRQ_PASR_MASK)
  *   3.19 Debugfs (MRQ_DEBUGFS)
  *   3.20 Reset (MRQ_RESET)
  *   3.21 I2C (MRQ_I2C)
@@ -73,25 +66,7 @@
  *   3.29 ABI ratchet (MRQ_ABI_RATCHET)
  *   3.30 Reset IPC channel (MRQ_IPC_RESET)
  *   3.31 EMC DVFS Latency (MRQ_EMC_DVFS_LATENCY)
- *   3.32 Waypoint2 (MRQ_SC7_WAYPOINT2)
- *   3.33 Start deep sleep entry (MRQ_SC7_ENTRY_START)
- *   3.34 MRQ_SC7_ENTRY_READY
- *   3.35 CC7 entry (MRQ_CC7_ENTRY)
- *   3.36 CC7 exit (MRQ_CC7_EXIT)
- *   3.37 MRQ_CC7_EXIT_DONE
- *   3.38 CCP3 state entry (MRQ_CCP3_ENTRY)
- *   3.39 CCP3 state exit (MRQ_CCP3_EXIT)
- *   3.40 SCx entry (MRQ_SCX_ENTRY)
- *   3.41 SCx exit (MRQ_SCX_EXIT)
- *   3.42 SCx exit done (MRQ_SCX_EXIT_DONE)
- *   3.43 SCx wake (MRQ_SCX_WAKE)
- *   3.44 SiMon enable (MRQ_SIMON_ENABLE)
- *   3.45 AVFS init (MRQ_AVFS_INIT)
- *   3.46 AVFS frequency caps (MRQ_AVFS_FREQ_CAPS)
- *   3.47 AVFS temp index (MRQ_AVFS_TEMP_IDX)
- *   3.48 firmware booted (MRQ_FW_BOOTED)
- *   3.49 System shutdown (MRQ_SHUTDOWN)
- *   3.50 EDVD integral check (MRQ_EDVD_CHECK)
+ *   3.64 Trace iterator (MRQ_TRACE_ITER)
  *  4. Enumerations
  *   4.1 CPU enumerations
  *   4.2 CPU Cluster enumerations
@@ -146,23 +121,23 @@ struct mrq_response {
  */
 #define MRQ_PING		0
 #define MRQ_QUERY_TAG		1
-#define MRQ_DO_IDLE		2
-#define MRQ_TOLERATE_IDLE	3
+#define MRQ_RESERVED_2		2
+#define MRQ_RESERVED_3		3
 #define MRQ_MODULE_LOAD		4
 #define MRQ_MODULE_UNLOAD	5
-#define MRQ_SWITCH_CLUSTER	6
+#define MRQ_RESERVED_6		6
 #define MRQ_TRACE_MODIFY	7
 #define MRQ_WRITE_TRACE		8
 #define MRQ_THREADED_PING	9
 #define MRQ_CPUIDLE_USAGE	10
 #define MRQ_MODULE_MAIL		11
-#define MRQ_SCX_ENABLE		12
-#define MRQ_CPU_FROZEN		13
+#define MRQ_RESERVED_12		12
+#define MRQ_RESERVED_13		13
 #define MRQ_BPMPIDLE_USAGE	14
 #define MRQ_HEAP_USAGE		15
-#define MRQ_SCLK_SKIP_SET_RATE	16
-#define MRQ_ENABLE_SUSPEND	17
-#define MRQ_PASR_MASK		18
+#define MRQ_RESERVED_16		16
+#define MRQ_RESERVED_17		17
+#define MRQ_RESERVED_18		18
 #define MRQ_DEBUGFS		19
 #define MRQ_RESET		20
 #define MRQ_I2C			21
@@ -175,40 +150,10 @@ struct mrq_response {
 #define MRQ_CPU_VHINT		28
 #define MRQ_ABI_RATCHET		29
 #define MRQ_IPC_RESET		30
-
 #define MRQ_EMC_DVFS_LATENCY	31
-#define MRQ_SC7_WAYPOINT2	32
-#define MRQ_SC7_ENTRY_START	33
-#define MRQ_SC7_ENTRY_READY	34
-#define MRQ_CC7_ENTRY		35
-#define MRQ_CC7_EXIT		36
-#define MRQ_CC7_EXIT_DONE	37
-#define MRQ_CCP3_ENTRY		38
-#define MRQ_CCP3_EXIT		39
-#define MRQ_SCX_ENTRY		40
-#define MRQ_SCX_EXIT		41
-#define MRQ_SCX_EXIT_DONE	42
-#define MRQ_SCX_WAKE		43
-#define MRQ_SIMON_ENABLE	44
-#define MRQ_AVFS_INIT		45
-#define MRQ_AVFS_FREQ_CAPS	46
-#define MRQ_AVFS_TEMP_IDX	47
-#define MRQ_FW_BOOTED		48
-#define MRQ_SHUTDOWN		49
-#define MRQ_EDVD_CHECK		50
-#define MRQ_DMCE_51		51
-#define MRQ_DMCE_52		52
-#define MRQ_DMCE_53		53
-#define MRQ_DMCE_54		54
-#define MRQ_DMCE_55		55
-#define MRQ_DMCE_56		56
-#define MRQ_DMCE_57		57
-#define MRQ_DMCE_58		58
-#define MRQ_DMCE_59		59
-#define MRQ_DMCE_60		60
-#define MRQ_DMCE_61		61
-#define MRQ_DMCE_62		62
-#define MRQ_DMCE_63		63
+#define MRQ_TRACE_ITER		64
+#define MAX_CPU_MRQ_ID		64
+
 
 /**
  * 3. Message payloads
@@ -282,25 +227,6 @@ struct mrq_query_tag_request
  * %MRQ_QUERY_TAG request.
  */
 
-/**
- * 3.2 Do idle (MRQ_DO_IDLE)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * This is T210 specific call
- */
-
-/**
- * 3.3 Tolerate idle (MRQ_TOLERATE_IDLE)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * This is T210 specific call
- */
 
 /**
  * 3.4 Module load (MRQ_MODULE_LOAD)
@@ -366,16 +292,6 @@ struct mrq_module_unload_request
 {
 	uint32_t base;
 } __ABI_PACKED;
-
-/**
- * 3.6 Switch cluster (MRQ_SWITCH_CLUSTER)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * This is T210 specific call
- */
 
 /**
  * 3.7 Trace modify (MRQ_TRACE_MODIFY)
@@ -515,29 +431,6 @@ struct mrq_module_mail_response
 } __ABI_PACKED;
 
 /**
- * 3.12 SCx enable (MRQ_SCX_ENABLE)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * This is T210 specific call
- */
-
-/**
- * 3.13 Notify frozen CPUs (MRQ_CPU_FROZEN)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * Inform BPMP about the CPUs that are being frozen
- * as part of the System suspend process.
- *
- * This is T210 specific call
- */
-
-/**
  * 3.14 BPMP idle usage (MRQ_BPMPIDLE_USAGE)
  *
  * Platforms: All
@@ -579,36 +472,6 @@ struct mrq_heap_usage_response
 	uint32_t heap_max_chunk;
 	uint32_t heap_low_watermark;
 } __ABI_PACKED;
-
-/**
- * 3.16 SCLK skip set rate (MRQ_SCLK_SKIP_SET_RATE)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * This is T210 specific call
- */
-
-/**
- * 3.17 Enable suspend (MRQ_ENABLE_SUSPEND)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * This is T210 specific call
- */
-
-/**
- * 3.18 PASR mask (MRQ_PASR_MASK)
- *
- * Platforms: T210
- * Initiators: CCPLEX
- * Targets: BPMP
- *
- * This is T210 specific call
- */
 
 /**
  * 3.19 Debugfs (MRQ_DEBUGFS)
@@ -1492,506 +1355,25 @@ struct mrq_emc_dvfs_latency_response {
 } __ABI_PACKED;
 
 /**
- * 3.32 Waypoint2 (MRQ_SC7_WAYPOINT2)
+ * 3.64 Trace iterator (MRQ_TRACE_ITER)
  *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * struct mrq_sc7_waypoint2_request
- * @cpu_id: CPU to boot
- *
- * Used by %MRQ_SC7_WAYPOINT2 as part of SC7 exit handshake to
- * indicate that BPMP has resumed and there is wake event for CCPLEX.
- */
-struct mrq_sc7_waypoint2_request {
-	uint32_t cpu_id; /* enum cpu_id */
-} __ABI_PACKED;
-
-/**
- * DMCE responds to %MRQ_SC7_WAYPOINT2 message without additional
- * payload data.
- */
-
-/**
- * 3.33 Start deep sleep entry (MRQ_SC7_ENTRY_START)
- *
- * Platforms: T186
- * Initiators: DMCE
+ * Platforms: All
+ * Initiators: CCPLEX
  * Targets: BPMP
  *
- * This message indicates that BPMP-FW should start deep sleep entry
- * sequence. MCE will ignore any messages except the one to prepare
- * for deep sleep from BPMP firmware after this. Ignoring means MCE
- * need not handle the message but just ack back the IPC. Full IPC
- * mechanism is used for this message.
+ * MRQ for controller the trace iterator states
+ *
+ * @cmd:
+ *	TRACE_ITER_INIT: (re)init the trace iterator
+ *	TRACE_ITER_CLEAN: wipe out all existing trace entries
  */
-
-/**
- * struct mrq_sc7_entry_start_request
- * @cpu_id: This is the CPU ID (see enum cpu_id) from which deep sleep
- * entry is triggered for SC7 entry through system suspend and CPU
- * with minimum sleep time for SC7 entry through idle state. This
- * information is used on resume to decide which CPU to wake. For
- * system suspend resume must happen from last CPU as all other CPUs
- * would be in offline state. For SC7 from idle if the wake event is
- * RTC then resume must happen from the CPU with minimum wake
- * time. For SC8/shutdown/reboot, this parameter is un-used and can be
- * the core ID from which this state is triggered.
- *
- * @state_id: one of SC7, SC8 (see enum state_id).
- *
- * @sleep_time: [TSC cycles (relative)]. This parameter will be used
- * only for SC7 entry through idle state and not for system
- * suspend. For system suspend this value must be set to 0xFFFFFFFF by
- * MCE, BPMP will use it to distinguish between entry methods.
- *
- */
-struct mrq_sc7_entry_start_request {
-	uint32_t cpu_id; /* enum cpu_id */
-	uint32_t state_id; /* enum state_id */
-	uint32_t sleep_time;
-} __ABI_PACKED;
-
-/**
- * There is no payload data to be sent as a response for
- * %MRQ_SC7_ENTRY_START request.
- */
-
-/**
- * 3.34 MRQ_SC7_ENTRY_READY
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- *
- * This message indicates that BPMP firmware is ready to enter SC7/SC8
- * state, it has suspended its services and completed handshake with
- * SPE. This ensures that no system agent will be modifying memory
- * that CPU might have cached translations and there won’t be any
- * message from BPMP to MCE except doorbell ring for ROC
- * shutdown. After this message MCE can suspend its services e.g. IPC
- * and start waiting for DBELL ring from BPMP indicating MCE to
- * proceed with ROC shutdown. It will use full IPC protocol for
- * communication. This same IPC will get used during SC7 exit to
- * indicate that BPMP firmware has decided to re-enter SC7 and is
- * ready.
- *
- * This message has no additional payload data
- */
-
-/**
- * 3.35 CC7 entry (MRQ_CC7_ENTRY)
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- *
- */
-
-/**
- * struct mrq_cc7_entry_request
- * @cluster_id: cluster to enter CC7 state.
- *
- * Used by %MRQ_CC7_ENTRY call by DMCE to request CC7 entry for a
- * given cluster.
- */
-struct mrq_cc7_entry_request {
-	uint32_t cluster_id; /* enum cluster_id */
-} __ABI_PACKED;
-
-/**
- * BPMP responds to %MRQ_CC7_ENTRY message without additional payload data.
- */
-
-/**
- * 3.36 CC7 exit (MRQ_CC7_EXIT)
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- */
-
-/**
- * struct mrq_cc7_exit_request
- *
- * @cluster_id: cluster to exit CC7 state.
- *
- * Used by %MRQ_CC7_EXIT call to indicate that MCE have received wake
- * event for the cluster and requesting to turn on rail of this
- * cluster.
- */
-struct mrq_cc7_exit_request {
-	uint32_t cluster_id; /* enum cluster_id */
-} __ABI_PACKED;
-
-/**
- * BPMP responds to %MRQ_CC7_EXIT message without additional payload data.
- */
-
-
-/**
- * 3.37 MRQ_CC7_EXIT_DONE
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * struct mrq_cc7_exit_done_request
- *
- * @cluster_id: cluster id
- *
- * Used by %MRQ_CC7_EXIT_DONE call to indicate that BPMP has completed
- * the CC7 sequence for cluster $cluster_id
- */
-struct mrq_cc7_exit_done_request {
-	uint32_t cluster_id; /* enum cluster_id */
-} __ABI_PACKED;
-
-/**
- * DMCE responds to %MRQ_CC7_EXIT_DONE message without additional payload data.
- */
-
-/**
- * 3.38 CCP3 state entry (MRQ_CCP3_ENTRY)
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- *
- * This message is sent by DMCE to indicate that all cores are in C3
- * or lower power state. There is no request or response payload data
- * associated.
- */
-
-/**
- * 3.39 CCP3 state exit (MRQ_CCP3_EXIT)
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- *
- * This message is sent by DMCE to indicate that a core in CCPLEX has
- * received a wake event and is being brought online. There is no
- * request or response payload data associated.
- */
-
-/**
- * 3.40 SCx entry (MRQ_SCX_ENTRY)
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- */
-
-/**
- * struct mrq_scx_entry_request
- * @state_id: requested SCx state to enter
- *
- * Used by %MRQ_SCX_ENTRY calls to request entry to a specific system
- * low power state (SC state). The desired state is passed with
- * @state_id.
- */
-struct mrq_scx_entry_request {
-	uint32_t state_id; /* enum state_id */
-} __ABI_PACKED;
-
-/**
- * BPMP responds to %MRQ_SCX_ENTRY message without additional payload
- * data.
- */
-
-/**
- * 3.41 SCx exit (MRQ_SCX_EXIT)
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- */
-
-/**
- * struct mrq_scx_exit_request
- * @state_id: TODO - why do we need this?
- *
- * Used by %MRQ_SCX_EXIT call by DMCE to indicate that a core in
- * CCPLEX has received wake event and is requesting exit from SCx
- * state.
- */
-struct mrq_scx_exit_request {
-	uint32_t state_id; /* TODO: why do we need this */
+enum {
+	TRACE_ITER_INIT = 0,
+	TRACE_ITER_CLEAN = 1
 };
 
-/**
- * BPMP responds to %MRQ_SCX_EXIT message with acknowledgement without
- * any payload data.
- */
-
-/**
- * 3.42 SCx exit done (MRQ_SCX_EXIT_DONE)
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * This message indicates that BPMP has restored all system resource
- * and MCE can continue with SCx exit sequence. There is no request or
- * response payload data associated.
- */
-
-/**
- * 3.43 SCx wake (MRQ_SCX_WAKE)
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * struct mrq_scx_wake
- * @cpu_id: CPU to boot
- *
- * Used by %MRQ_SCX_WAKE call to request DMCE to exit SCx state.
- */
-struct mrq_scx_wake {
-	uint32_t cpu_id;
-} __ABI_PACKED;
-
-/**
- * DMCE responds to %MRQ_SCX_WAKE message without additional payload data.
- */
-
-
-/**
- * 3.44 SiMon enable (MRQ_SIMON_ENABLE)
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- */
-
-/**
- * struct mrq_simon_enable_request
- * @cluster_id: cluster of which SiMon to be enabled
- *
- * Used by %MRQ_SIMON_ENABLE call by DMCE to indicate BPMP that SiMon
- * and Vmin sensors are initialized and can be enabled. See also
- * MRQ_FW_BOOTED.
- */
-struct mrq_simon_enable_request {
-	uint32_t cluster_id; /* enum cluster_id */
-};
-
-/**
- * BPMP responds to %MRQ_SIMON_ENABLE message without additional
- * payload data.
- */
-
-/**
- * 3.45 MRQ_AVFS_INIT
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * struct mrq_avfs_init_request
- * @phys_addr: physical addres of AVFS initialization data
- * @cluster_id: id of cluster to initialize
- *
- * Used by %MRQ_AVFS_INIT calls to ask the DMCE to initialize the AVFS
- * clocking hardware of cluster @cluster_id with data located at
- * @phys_addr. The format for data at @phys_addr is specified by
- * struct avfs_init_data.
- *
- */
-struct mrq_avfs_init_request {
-	uint64_t phys_addr; /* struct avfs_init_data * */
-	uint32_t cluster_id; /* enum cluster_id */
-} __ABI_PACKED;
-
-/**
- * struct avfs_init_data
- * @lut: AVFS lut data
- *
- * Used by %MRQ_AVFS_INIT calls to carry data pointed by @phys_addr of
- * struct mrq_avfs_init_request
- */
-struct avfs_init_data {
-	uint32_t lut[200];
-} __ABI_PACKED;
-
-/**
- * BPMP responds to %MRQ_AVFS_INIT message without additional payload
- * data.
- */
-
-/**
- * 3.46 AVFS frequency caps (MRQ_AVFS_FREQ_CAPS)
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * struct mrq_avfs_freq_caps_request
- * @ndivMB_0[64] – maximum allowed ndiv values for M cluster CPUs when
- *                 both clusters are ON
- * @ndivM_0[4] – maximum allowed ndiv values for M cluster when only
- *               M cluster is ON
- * @ndivMB_1[64] – maximum allowed ndiv values for B cluster CPUs then
- *                 both clusters are ON
- * @ndivB_1[16] – maximum allowed ndiv values for B cluster when only
- *                 B cluster is ON
- *
- * Used by %MRQ_AVFS_FREQ_CAPS call to ask DMCE to enforce maximum
- * allowed CPU frequencies for both clusters (NDIV value) for a given
- * number of online cores.
- *
- * Data in ndiv tables are organized as follows:
- * Data in ndivMB_?[] is indexed using (Mcore_mask << 4)| Bcore_mask
- * Data in ndivM_0[4] is indexed using Mcore_mask
- * Data in ndivB_1[16] is indexed using Bcore_mask
- *
- * Mcore_mask is 2 bit value, bit0 represents the state of CPU0, bit1 is CPU1
- * Bcore_mask is 4 bit value, bit0 is the state of CPU4, …, bit3 is
- * the state of CPU7
- *
- * Example for ndivMB_0[] array:
- *  ndivMB_0[0] - All cpus offline
- *  mdivMB_0[1] - CPU4 online
- *  ndivMB_0[2] - CPU5 online
- *  ...
- *  ndivMB_0[16] - CPU0 online
- *  ndivMB_0[17] - CPU0 and CPU4 online
- *  ...
- *  ndivMB_0[48] - CPU0 and CPU1 online
- *  ndivMB_0[49] - CPU0, CPU1, and CPU4 online
- *  ...
- *  ndivMB_0[63] - All CPUs online
- */
-
-struct mrq_avfs_freq_caps_request {
-	uint16_t ndivMB_0[64];
-	uint16_t ndivM_0[4];
-	uint16_t ndivMB_1[64];
-	uint16_t ndivB_1[16];
-} __ABI_PACKED;
-
-/**
- * DMCE respond to %MRQ_AVFS_FREQ_CAPS message without additional
- * payload data.
- */
-
-/**
- * 3.47 AVFS temp index (MRQ_AVFS_TEMP_IDX)
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * struct mrq_avfs_temp_index_request
- * @temp_index: temperature index for AVFS hardware
- * @cluster_mask: bitmask identifying the clusters to be updated
- *
- * Used by %MRQ_AVFS_TEMP_IDX call to ask DMCE to program the
- * temperature index register fields of AVFS clocking hardware. The
- * @cluster_mask field indicates which clusters to update: if i'th bit
- * of cluster_mask is set then cluster_id=i should be updated.
- */
-struct mrq_avfs_temp_index_request {
-	uint32_t temp_index;
-	uint32_t cluster_mask;
-} __ABI_PACKED;
-
-/**
- * DMCE responds to %MRQ_AVFS_TEMP_IDX message without additional
- * payload data
- */
-
-/**
- * 3.48 Firmware booted (MRQ_FW_BOOTED)
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * This message indicates that BPMP Firmware has been loaded and
- * booted and that it is ready to respond to messages from the
- * DMCE. There is no request payload data associated. In response
- * to this message DMCE will send present cpus and bsp.
- * BPMP firmware will enable SiMon for the present clusters. Also,
- * BPMP firmware assumes that CPU rail is enabled for all present
- * clusters.
-
- * @cpus_present[0] - Denver Core 0
- * @cpus_present[1] - Denver Core 1
- * @cpus_present[4] - A57 Core 0
- * @cpus_present[5] - A57 Core 1
- * @cpus_present[6] - A57 Core 2
- * @cpus_present[7] - A57 Core 3
- * @bsp - Boot CPU
- */
-struct mrq_fw_booted_response {
-	uint32_t cpus_present;
-	uint32_t bsp;
-} __ABI_PACKED;
-
-/**
- * 3.49 System shutdown
- *
- * Platforms: T186
- * Initiators: DMCE
- * Targets: BPMP
- */
-
-/**
- * This message indicates system shutdown request. ARM SW requests
- * system shutdown/reboot to DMCE through ARI. DMCE has no action
- * but just to forward this message to BPMP. BPMP will initiate
- * system shutdown/reboot after receiving this message, it may
- * include turning  off some rails in sequence and programming
- * PMIC. There is no response data associated with this message.
- * @state:
- *       0 - Power off
- *       1 - Reboot
- */
-
-struct mrq_shutdown_request {
-	uint32_t state;
-} __ABI_PACKED;
-
-/**
- * 3.50 EDVD integral check
- *
- * Platforms: T186
- * Initiators: BPMP
- * Targets: DMCE
- */
-
-/**
- * Sent by BPMP to DMCE whenever DMCE should check the EDVD integral
- * errors for the clusters whose bits are set in @cluster_mask. . When
- * the absolute value of an integral error exceeds @err_thresh, DMCE
- * should clear the integrator.
- * @err_thresh : maximum acceptable value for the error integral
- * @cluster_mask: bit 0 corresponds to MCLUSTER, bit 1 to BCLUSTER
- */
-struct mrq_edvd_check_request {
-	uint32_t err_thresh;
-	uint32_t cluster_mask;
-
+struct mrq_trace_iter_request {
+	uint32_t cmd;
 } __ABI_PACKED;
 
 /**

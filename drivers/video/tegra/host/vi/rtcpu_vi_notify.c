@@ -22,7 +22,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
-#include <linux/tegra_camera_rtcpu.h>
+#include <linux/tegra-ivc-bus.h>
 
 #include "vi/vi_notify.h"
 #include "nvhost_acm.h"

@@ -23,7 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 
-#include <linux/tegra_camera_rtcpu.h>
+#include <linux/tegra-ivc-bus.h>
 
 #define NV(p) "nvidia," #p
 

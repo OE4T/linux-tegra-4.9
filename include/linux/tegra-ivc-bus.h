@@ -11,8 +11,14 @@
  * more details.
  */
 
-#ifndef _LINUX_TEGRA_CAMERA_RTCPU_H
-#define _LINUX_TEGRA_CAMERA_RTCPU_H
+#ifndef _LINUX_TEGRA_IVC_BUS_H
+#define _LINUX_TEGRA_IVC_BUS_H
+
+extern struct bus_type tegra_ivc_bus_type;
+struct tegra_ivc_bus;
+
+struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *, u32 sid);
+void tegra_ivc_bus_destroy(struct tegra_ivc_bus *ibus);
 
 struct tegra_ivc_mbox_msg {
 	int length;

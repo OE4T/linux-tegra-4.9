@@ -930,6 +930,8 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 
 	if (skb) {
 		skb_trim(skb, 0);
+		if (prx_swcx_desc->dma)
+			goto skip_mapping;
 		goto map_skb;
 	}
 
@@ -941,14 +943,17 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 	}
 	prx_swcx_desc->skb = skb;
 	prx_swcx_desc->len = pdata->rx_buffer_len;
+
  map_skb:
 	prx_swcx_desc->dma = dma_map_single(&pdata->pdev->dev, skb->data,
 				     pdata->rx_buffer_len,
 				     DMA_FROM_DEVICE);
-
-	if (dma_mapping_error(&pdata->pdev->dev, prx_swcx_desc->dma))
+	if (dma_mapping_error(&pdata->pdev->dev, prx_swcx_desc->dma)) {
 		pr_err("failed to do the RX dma map\n");
+		return -ENOMEM;
+	}
 
+skip_mapping:
 	prx_swcx_desc->mapped_as_page = Y_FALSE;
 
 	DBGPR("<--eqos_alloc_rx_buf\n");

@@ -1342,7 +1342,6 @@
 
 	sdhci@700b0600 {
 		compatible = "nvidia,tegra210-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x700b0600 0x0 0x200>;
 		interrupts = < 0 31 0x04 >;
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC4A>;
@@ -1352,7 +1351,6 @@
 
 	sdhci@700b0400 {
 		compatible = "nvidia,tegra210-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x700b0400 0x0 0x200>;
 		interrupts = < 0 19 0x04 >;
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC3A>;
@@ -1365,7 +1363,6 @@
 
 	sdhci@700b0200 {
 		compatible = "nvidia,tegra210-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x700b0200 0x0 0x200>;
 		interrupts = < 0 15 0x04 >;
 		nvidia,runtime-pm-type = <1>;
@@ -1374,7 +1371,6 @@
 
 	sdhci@700b0000 {
 		compatible = "nvidia,tegra210-sdhci";
-		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x700b0000 0x0 0x200>;
 		interrupts = < 0 14 0x04 >;
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC1A>;

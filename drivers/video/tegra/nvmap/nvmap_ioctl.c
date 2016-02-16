@@ -3,7 +3,7 @@
  *
  * User-space interface to nvmap
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -494,55 +494,6 @@ int nvmap_ioctl_free(struct file *filp, unsigned long arg)
 	return sys_close(arg);
 }
 
-static int rw_handle_page(struct nvmap_handle *h, int is_read,
-			  unsigned long start, unsigned long rw_addr,
-			  unsigned long bytes, unsigned long kaddr)
-{
-	pgprot_t prot = nvmap_pgprot(h, PG_PROT_KERNEL);
-	unsigned long end = start + bytes;
-	int err = 0;
-
-	while (!err && start < end) {
-		struct page *page = NULL;
-		phys_addr_t phys;
-		size_t count;
-		void *src;
-
-		if (!h->heap_pgalloc) {
-			phys = h->carveout->base + start;
-		} else {
-			page =
-			   nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
-			BUG_ON(!page);
-			get_page(page);
-			phys = page_to_phys(page) + (start & ~PAGE_MASK);
-		}
-
-		ioremap_page_range(kaddr, kaddr + PAGE_SIZE, phys, prot);
-
-		src = (void *)kaddr + (phys & ~PAGE_MASK);
-		phys = PAGE_SIZE - (phys & ~PAGE_MASK);
-		count = min_t(size_t, end - start, phys);
-
-		if (is_read)
-			err = copy_to_user((void *)rw_addr, src, count);
-		else
-			err = copy_from_user(src, (void *)rw_addr, count);
-
-		if (err)
-			err = -EFAULT;
-
-		rw_addr += count;
-		start += count;
-
-		if (page)
-			put_page(page);
-		unmap_kernel_range(kaddr, PAGE_SIZE);
-	}
-
-	return err;
-}
-
 static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			 int is_read, unsigned long h_offs,
 			 unsigned long sys_addr, unsigned long h_stride,
@@ -552,7 +503,6 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	ssize_t copied = 0;
 	void *addr;
 	int ret = 0;
-	struct vm_struct *area;
 
 	if (!elem_size || !count)
 		return -EINVAL;
@@ -575,10 +525,13 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		h_offs + h_stride * (count - 1) + elem_size > h->size)
 		return -EINVAL;
 
-	area = alloc_vm_area(PAGE_SIZE, NULL);
-	if (!area)
-		return -ENOMEM;
-	addr = area->addr;
+	if (!h->vaddr) {
+		if (!__nvmap_mmap(h))
+			return -ENOMEM;
+		__nvmap_munmap(h, h->vaddr);
+	}
+
+	addr = h->vaddr + h_offs;
 
 	while (count--) {
 		if (h_offs + elem_size > h->size) {
@@ -591,8 +544,10 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 			__nvmap_do_cache_maint(client, h, h_offs,
 				h_offs + elem_size, NVMAP_CACHE_OP_INV, false);
 
-		ret = rw_handle_page(h, is_read, h_offs, sys_addr,
-				     elem_size, (unsigned long)addr);
+		if (is_read)
+			ret = copy_to_user((void *)sys_addr, addr, elem_size);
+		else
+			ret = copy_from_user(addr, (void *)sys_addr, elem_size);
 
 		if (ret)
 			break;
@@ -606,9 +561,9 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 		copied += elem_size;
 		sys_addr += sys_stride;
 		h_offs += h_stride;
+		addr += h_stride;
 	}
 
-	free_vm_area(area);
 	return ret ?: copied;
 }
 

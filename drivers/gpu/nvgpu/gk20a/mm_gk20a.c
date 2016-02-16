@@ -3269,20 +3269,6 @@ out:
 
 }
 
-static int gk20a_dmabuf_get_kind(struct dma_buf *dmabuf)
-{
-	int kind = 0;
-#ifdef CONFIG_TEGRA_NVMAP
-	int err;
-	u64 nvmap_param;
-
-	err = nvmap_get_dmabuf_param(dmabuf, NVMAP_HANDLE_PARAM_KIND,
-				     &nvmap_param);
-	kind = err ? kind : nvmap_param;
-#endif
-	return kind;
-}
-
 int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,
 			u64 *offset_align,
@@ -3311,9 +3297,6 @@ int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 		dma_buf_put(dmabuf);
 		return err;
 	}
-
-	if (kind == -1)
-		kind = gk20a_dmabuf_get_kind(dmabuf);
 
 	ret_va = gk20a_vm_map(vm, dmabuf, *offset_align,
 			flags, kind, NULL, true,

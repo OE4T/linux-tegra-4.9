@@ -3,11 +3,6 @@ config TEGRA_HSP
 	depends on ARCH_TEGRA_18x_SOC
 	default y
 
-config TEGRA_IPC
-	bool "Enable Tegra Inter-processor Communication Framework"
-	select TEGRA_IVC
-	default y
-
 config TEGRA186_PMC
         bool "Tegra Power Management Controller"
 	depends on ARCH_TEGRA_18x_SOC

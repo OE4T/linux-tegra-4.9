@@ -17,7 +17,7 @@
 #ifndef _TEGRA_NVFX_APM_H_
 #define _TEGRA_NVFX_APM_H_
 
-#define NVFX_APM_CMD_QUEUE_WSIZE    1024
+#define NVFX_APM_CMD_QUEUE_WSIZE    2048
 
 /**
  * Pin types
@@ -33,11 +33,13 @@
  *
  * @apm_cmd_none:           no operation.
  * @apm_cmd_msg_ready       message queue holds a new message.
+ * @apm_cmd_raw_data_ready  message queue holds a raw data message
  * @apm_cmd_msg_exit        exit command
  */
 enum apm_mbx_cmd {
 	apm_cmd_none = 0,
 	apm_cmd_msg_ready,
+	apm_cmd_raw_data_ready,
 	apm_cmd_msg_exit,
 };
 
@@ -78,7 +80,9 @@ enum {
 	nvfx_apm_method_set_priority,
 	/* ADSP to CPU : To send acknowledgement */
 	nvfx_apm_method_ack,
-	nvfx_apm_method_set_input_mode
+	nvfx_apm_method_set_input_mode,
+	nvfx_apm_method_write_data,
+	nvfx_apm_method_read_data,
 };
 
 /* For method nvfx_apm_method_set_io_buffer */
@@ -144,6 +148,19 @@ typedef struct {
 	int32_t params[NVFX_MAX_CALL_PARAMS_WSIZE];
 } apm_fx_set_param_params_t;
 
+typedef struct {
+	nvfx_call_params_t call_params;
+	variant_t plugin; /* pointer to plugin_t */
+	int32_t data[NVFX_MAX_RAW_DATA_WSIZE];
+	int32_t size;
+} apm_fx_raw_data_params_t;
+
+typedef struct {
+	nvfx_call_params_t call_params;
+	variant_t plugin; /* pointer to plugin_t */
+	uint32_t req_size;
+} apm_fx_read_request_params_t;
+
 /* unified app message structure */
 #pragma pack(4)
 typedef union {
@@ -163,9 +180,21 @@ typedef union {
 			apm_fx_connect_params_t            fx_connect_params;
 			apm_fx_remove_params_t             fx_remove_params;
 			apm_fx_set_param_params_t          fx_set_param_params;
+			apm_fx_read_request_params_t	   fx_read_request_params;
 		};
 	} msg;
 } apm_msg_t;
+
+typedef union {
+	msgq_message_t msgq_msg;
+	struct {
+		int32_t header[MSGQ_MESSAGE_HEADER_WSIZE];
+		union {
+			nvfx_call_params_t                 call_params;
+			apm_fx_raw_data_params_t	fx_raw_data_params;
+		};
+	} msg;
+} apm_raw_data_msg_t;
 
 /* app message queue */
 typedef union {

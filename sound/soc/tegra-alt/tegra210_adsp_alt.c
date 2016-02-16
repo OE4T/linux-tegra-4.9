@@ -78,6 +78,10 @@ static struct tegra210_adsp_app_desc {
 static struct tegra210_adsp_app_desc *adsp_app_desc;
 static unsigned int adsp_app_count; /* total number of apps initialized */
 
+struct tegra210_adsp_app_read_data {
+	int32_t data[NVFX_MAX_RAW_DATA_WSIZE];
+};
+
 /* ADSP APP specific structure */
 struct tegra210_adsp_app {
 	struct tegra210_adsp *adsp;
@@ -94,6 +98,7 @@ struct tegra210_adsp_app {
 	uint32_t priority; /* Valid for only APM app */
 	uint32_t min_adsp_clock; /* Min ADSP clock required in MHz */
 	uint32_t input_mode; /* APM input mode */
+	struct tegra210_adsp_app_read_data read_data;
 	spinlock_t lock;
 	void *private_data;
 	int (*msg_handler)(struct tegra210_adsp_app *, apm_msg_t *);
@@ -379,6 +384,16 @@ static int tegra210_adsp_get_msg(apm_shared_state_t *apm, apm_msg_t *apm_msg)
 		&apm_msg->msgq_msg);
 }
 
+static int tegra210_adsp_get_raw_data_msg(apm_shared_state_t *apm,
+		apm_raw_data_msg_t *apm_msg)
+{
+	apm_msg->msgq_msg.size = MSGQ_MSG_WSIZE(apm_raw_data_msg_t) -
+		MSGQ_MESSAGE_HEADER_WSIZE;
+
+	return msgq_dequeue_message(&apm->msgq_send.msgq,
+		&apm_msg->msgq_msg);
+}
+
 static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 				  apm_msg_t *apm_msg, uint32_t flags)
 {
@@ -443,6 +458,47 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 
 	ret = wait_for_completion_interruptible_timeout(
 		app->msg_complete,
+		msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
+	if (WARN_ON(ret == 0))
+		pr_err("%s: ACK timed out %d\n", __func__, app->reg);
+
+	return ret;
+}
+
+static int tegra210_adsp_send_raw_data_msg(struct tegra210_adsp_app *app,
+				  apm_raw_data_msg_t *apm_msg)
+{
+	int ret = 0;
+	struct tegra210_adsp_app *apm = app;
+
+	/* Find parent APM to wait for ACK*/
+	if (!IS_APM_IN(apm->reg)) {
+		uint32_t source;
+		while (IS_ADSP_APP(apm->reg) && !IS_APM_IN(apm->reg)) {
+			source = tegra210_adsp_get_source(apm->adsp, apm->reg);
+			apm = &apm->adsp->apps[source];
+		}
+		if (!IS_APM_IN(apm->reg)) {
+			pr_err("%s: No APM found, skip ACK wait\n", __func__);
+			return ret;
+		}
+	}
+	reinit_completion(apm->msg_complete);
+	apm_msg->msg.call_params.method |= NVFX_APM_METHOD_ACK_BIT;
+
+	ret = msgq_queue_message(&app->apm->msgq_recv.msgq, &apm_msg->msgq_msg);
+	if (ret < 0)
+		return ret;
+
+	ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_raw_data_ready,
+		NVADSP_MBOX_SMSG, true, 100);
+	if (ret) {
+		pr_err("Failed to send mailbox message id %d ret %d\n",
+			app->apm->mbox_id, ret);
+	}
+
+	ret = wait_for_completion_interruptible_timeout(
+		apm->msg_complete,
 		msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
 	if (WARN_ON(ret == 0))
 		pr_err("%s: ACK timed out %d\n", __func__, app->reg);
@@ -620,6 +676,20 @@ static int tegra210_adsp_send_pos_msg(struct tegra210_adsp_app *app,
 		NVFX_PIN_TYPE_INPUT : NVFX_PIN_TYPE_OUTPUT;
 	apm_msg.msg.position_params.pin_id = 0;
 	apm_msg.msg.position_params.offset = pos;
+
+	return tegra210_adsp_send_msg(app, &apm_msg, flags);
+}
+
+static int tegra210_adsp_send_data_request_msg(struct tegra210_adsp_app *app,
+					uint32_t size, uint32_t flags)
+{
+	apm_msg_t apm_msg;
+
+	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_read_request_params_t);
+	apm_msg.msg.call_params.size = sizeof(apm_fx_read_request_params_t);
+	apm_msg.msg.call_params.method = nvfx_apm_method_read_data;
+	apm_msg.msg.fx_read_request_params.plugin.pvoid = app->plugin->plugin.pvoid;
+	apm_msg.msg.fx_read_request_params.req_size = size;
 
 	return tegra210_adsp_send_msg(app, &apm_msg, flags);
 }
@@ -954,6 +1024,19 @@ static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 
 		if (app->msg_handler)
 			ret = app->msg_handler(app, &apm_msg);
+	}
+	break;
+	case apm_cmd_raw_data_ready: {
+		apm_raw_data_msg_t *msg = kzalloc(sizeof(apm_raw_data_msg_t), GFP_ATOMIC);
+		ret = tegra210_adsp_get_raw_data_msg(app->apm, msg);
+		if (ret < 0) {
+			pr_err("Dequeue failed %d.", ret);
+			break;
+		}
+		memcpy(app->read_data.data, msg->msg.fx_raw_data_params.data,
+				sizeof(app->read_data.data));
+		kfree(msg);
+		complete(app->msg_complete);
 	}
 	break;
 	default:
@@ -2760,6 +2843,110 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	return ret;
 }
 
+int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
+	int op_flag, unsigned int size, unsigned int __user *tlv)
+{
+	struct soc_bytes *params = (void *)kcontrol->private_value;
+	struct snd_soc_component *cmpnt = snd_soc_kcontrol_component(kcontrol);
+	struct tegra210_adsp *adsp = snd_soc_component_get_drvdata(cmpnt);
+	unsigned int count = size < params->num_regs ? size : params->num_regs;
+	struct tegra210_adsp_app *app = &adsp->apps[params->base];
+	unsigned int *tlv_data;
+	int ret = 0;
+
+	if (!adsp->init_done) {
+		dev_warn(adsp->dev, "ADSP is not booted yet\n");
+		return 0;
+	}
+
+	if (!app->plugin) {
+		dev_warn(adsp->dev, "Plugin not yet initialized\n");
+		return 0;
+	}
+
+	tlv_data = devm_kzalloc(adsp->dev, count, GFP_KERNEL);
+	if (!tlv_data)
+		return -ENOMEM;
+
+	switch (op_flag) {
+	case SNDRV_CTL_TLV_OP_WRITE:
+	{
+		apm_raw_data_msg_t *apm_msg;
+		nvfx_call_params_t *call_params;
+
+		apm_msg = devm_kzalloc(adsp->dev, sizeof(apm_raw_data_msg_t), GFP_KERNEL);
+		if (!apm_msg) {
+			dev_err(adsp->dev, "Failed to allocate memory for message\n");
+			ret = -ENOMEM;
+			goto end;
+		}
+		apm_msg->msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_raw_data_params_t);
+		apm_msg->msg.call_params.size = sizeof(apm_fx_raw_data_params_t);
+		apm_msg->msg.call_params.method = nvfx_apm_method_write_data;
+		apm_msg->msg.fx_raw_data_params.plugin.pvoid =
+			app->plugin->plugin.pvoid;
+
+		if (copy_from_user(tlv_data, tlv, count)) {
+			ret = -EFAULT;
+			devm_kfree(adsp->dev, apm_msg);
+			goto end;
+		}
+
+		call_params = (nvfx_call_params_t *)tlv_data;
+
+		memcpy(&apm_msg->msg.fx_raw_data_params.data,
+			call_params, call_params->size);
+
+		ret = pm_runtime_get_sync(adsp->dev);
+		if (ret < 0) {
+			dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
+				__func__, ret);
+			devm_kfree(adsp->dev, apm_msg);
+			goto end;
+		}
+		ret = tegra210_adsp_send_raw_data_msg(app, apm_msg);
+		pm_runtime_put(adsp->dev);
+		devm_kfree(adsp->dev, apm_msg);
+		break;
+	}
+	case SNDRV_CTL_TLV_OP_READ:
+	{
+		int src = app->reg;
+		struct tegra210_adsp_app *apm;
+
+		while (!IS_APM_IN(src))
+			src = tegra210_adsp_get_source(adsp, src);
+		apm = &adsp->apps[src];
+		reinit_completion(apm->msg_complete);
+		ret = pm_runtime_get_sync(adsp->dev);
+		if (ret < 0) {
+			dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
+				__func__, ret);
+			goto end;
+		}
+		ret = tegra210_adsp_send_data_request_msg(app, count,
+				TEGRA210_ADSP_MSG_FLAG_SEND);
+		ret = wait_for_completion_interruptible_timeout(
+			apm->msg_complete,
+			msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
+		pm_runtime_put(adsp->dev);
+		if (ret <= 0) {
+			dev_err(adsp->dev, "No data received\n");
+			ret = -ETIMEDOUT;
+			goto end;
+		}
+		if (copy_to_user(tlv, apm->read_data.data, count)) {
+			ret = -EFAULT;
+			goto end;
+		}
+	}
+	}
+
+end:
+	devm_kfree(adsp->dev, tlv_data);
+	return ret;
+}
+
 static int tegra210_adsp_apm_get(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
@@ -2857,6 +3044,18 @@ static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
 		{.base = xbase, .num_regs = 512,		\
 		.mask = SNDRV_CTL_ELEM_TYPE_BYTES}) }
 
+#define SND_SOC_PARAM_TLV(xname, xbase, xcount)	\
+{	.iface = SNDRV_CTL_ELEM_IFACE_MIXER,	\
+	.name = xname,	\
+	.access = SNDRV_CTL_ELEM_ACCESS_TLV_READWRITE |	\
+			SNDRV_CTL_ELEM_ACCESS_TLV_CALLBACK,	\
+	.tlv.c = tegra210_adsp_tlv_callback,	\
+	.info = snd_soc_bytes_info_ext,	\
+	.private_value =		\
+		((unsigned long)&(struct soc_bytes)		\
+		{.base = xbase, .num_regs = xcount,		\
+		.mask = SNDRV_CTL_ELEM_TYPE_BYTES}) }
+
 #define APM_CONTROL(xname, xmax)	\
 	SOC_SINGLE_EXT("APM1 " xname, TEGRA210_ADSP_APM_IN1, 0, xmax, 0,\
 	tegra210_adsp_apm_get, tegra210_adsp_apm_put),	\
@@ -2918,6 +3117,26 @@ static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 		TEGRA210_ADSP_PLUGIN_ADMA9),
 	SND_SOC_PARAM_EXT("ADMA10 set params",
 		TEGRA210_ADSP_PLUGIN_ADMA10),
+	SND_SOC_PARAM_TLV("PLUGIN1 send bytes",
+			TEGRA210_ADSP_PLUGIN1, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN2 send bytes",
+			TEGRA210_ADSP_PLUGIN2, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN3 send bytes",
+			TEGRA210_ADSP_PLUGIN3, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN4 send bytes",
+			TEGRA210_ADSP_PLUGIN4, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN5 send bytes",
+			TEGRA210_ADSP_PLUGIN5, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN6 send bytes",
+			TEGRA210_ADSP_PLUGIN6, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN7 send bytes",
+			TEGRA210_ADSP_PLUGIN7, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN8 send bytes",
+			TEGRA210_ADSP_PLUGIN8, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN9 send bytes",
+			TEGRA210_ADSP_PLUGIN9, 0x1000),
+	SND_SOC_PARAM_TLV("PLUGIN10 send bytes",
+			TEGRA210_ADSP_PLUGIN10, 0x1000),
 	APM_CONTROL("Priority", APM_PRIORITY_MAX),
 	APM_CONTROL("Min ADSP Clock", INT_MAX),
 	APM_CONTROL("Input Mode", INT_MAX),
@@ -3070,12 +3289,16 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 						adsp_app_desc[i].wt_name);
 					strcpy((char *)tegra210_adsp_controls[i+1].name,
 						adsp_app_desc[i].wt_name);
+					strcpy((char *)tegra210_adsp_controls[i+21].name,
+						adsp_app_desc[i].wt_name);
 					strcat((char *)tegra210_adsp_widgets[wt_idx].name,
 						" TX");
 					strcat((char *)tegra210_adsp_widgets[wt_idx+1].name,
 						" MUX");
 					strcat((char *)tegra210_adsp_controls[i+1].name,
 						" set params");
+					strcat((char *)tegra210_adsp_controls[i+21].name,
+						" send bytes");
 					strcpy((char *)tegra210_adsp_mux_texts[mux_idx],
 						adsp_app_desc[i].wt_name);
 				}

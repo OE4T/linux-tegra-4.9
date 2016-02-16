@@ -601,16 +601,6 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 #ifdef CONFIG_COMPAT
-	case NVMAP_IOC_PARAM_32:
-		err = nvmap_ioctl_get_param(filp, uarg, true);
-		break;
-#endif
-
-	case NVMAP_IOC_PARAM:
-		err = nvmap_ioctl_get_param(filp, uarg, false);
-		break;
-
-#ifdef CONFIG_COMPAT
 	case NVMAP_IOC_UNPIN_MULT_32:
 	case NVMAP_IOC_PIN_MULT_32:
 		err = nvmap_ioctl_pinop(filp, cmd == NVMAP_IOC_PIN_MULT_32,

@@ -736,21 +736,6 @@ struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
 	return handle;
 }
 
-int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result)
-{
-	struct nvmap_handle_info *info;
-
-	if (!dmabuf_is_nvmap(dmabuf))
-		return -EINVAL;
-
-	if (WARN_ON(!virt_addr_valid(dmabuf)))
-		return -EINVAL;
-
-	info = dmabuf->priv;
-	return __nvmap_get_handle_param(NULL, info->handle, param, result);
-}
-EXPORT_SYMBOL(nvmap_get_dmabuf_param);
-
 /*
  * List detailed info for all buffers allocated.
  */

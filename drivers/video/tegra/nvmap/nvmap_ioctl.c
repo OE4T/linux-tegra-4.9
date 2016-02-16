@@ -395,56 +395,6 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	return err;
 }
 
-int nvmap_ioctl_get_param(struct file *filp, void __user *arg, bool is32)
-{
-#ifdef CONFIG_COMPAT
-	struct nvmap_handle_param_32 __user *uarg32 = arg;
-#endif
-	struct nvmap_handle_param __user *uarg = arg;
-	struct nvmap_handle_param op;
-	struct nvmap_client *client = filp->private_data;
-	struct nvmap_handle_ref *ref;
-	struct nvmap_handle *h;
-	u64 result;
-	int err = 0;
-
-#ifdef CONFIG_COMPAT
-	/* This is safe because the incoming value of result doesn't matter */
-	if (is32) {
-		if (copy_from_user(&op, arg,
-				sizeof(struct nvmap_handle_param_32)))
-			return -EFAULT;
-	} else
-#endif
-		if (copy_from_user(&op, arg, sizeof(op)))
-			return -EFAULT;
-
-	h = nvmap_handle_get_from_fd(op.handle);
-	if (!h)
-		return -EINVAL;
-
-	nvmap_ref_lock(client);
-	ref = __nvmap_validate_locked(client, h);
-	if (IS_ERR_OR_NULL(ref)) {
-		err = ref ? PTR_ERR(ref) : -EINVAL;
-		goto ref_fail;
-	}
-
-	err = nvmap_get_handle_param(client, ref, op.param, &result);
-
-#ifdef CONFIG_COMPAT
-	if (is32)
-		err = put_user((__u32)result, &uarg32->result);
-	else
-#endif
-		err = put_user((unsigned long)result, &uarg->result);
-
-ref_fail:
-	nvmap_ref_unlock(client);
-	nvmap_handle_put(h);
-	return err;
-}
-
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 			  bool is32)
 {

@@ -60,8 +60,6 @@
 
 #if defined(__KERNEL__)
 
-int nvmap_get_dmabuf_param(struct dma_buf *dmabuf, u32 param, u64 *result);
-
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 ulong nvmap_page_pool_get_unused_pages(void);
 #else

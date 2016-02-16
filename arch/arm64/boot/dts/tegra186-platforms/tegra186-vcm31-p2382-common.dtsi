@@ -310,7 +310,7 @@
 		nvidia,lane-map = <0x111>;
 		status = "okay";
 		pci@1,0 {
-			status = "okay";
+			status = "disabled";
 			nvidia,num-lanes = <0x1>;
 		};
 		pci@2,0 {

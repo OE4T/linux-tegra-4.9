@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dpaux.c
  *
- * Copyright (c) 2014 - 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014 - 2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -136,6 +136,7 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 		return;
 	}
 
+	tegra_dc_unpowergate_locked(dc);
 	tegra_dpaux_clk_en(np_dp, id);
 	tegra_dc_io_start(dc);
 
@@ -152,6 +153,8 @@ void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 
 	tegra_dc_io_end(dc);
 	tegra_dpaux_clk_dis(np_dp, id);
+	tegra_dc_powergate_locked(dc);
+
 	of_node_put(np_dp);
 }
 

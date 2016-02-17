@@ -418,5 +418,22 @@
 		compatible = "softdog-platform";
 		status = "okay";
 	};
+
+	mttcan@c310000 {
+		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 0) GPIO_ACTIVE_LOW>;
+		mram-params = <0 16 16 8 8 8 16 16 16>;
+		tx-config = <8 8 0 64>;
+		rx-config = <64 64 64>;
+		status = "okay";
+	};
+
+	mttcan@c320000 {
+		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 6) GPIO_ACTIVE_LOW>;
+		mram-params = <0 16 16 8 8 8 16 16 16>;
+		tx-config = <8 8 0 64>;
+		rx-config = <64 64 64>;
+		status = "okay";
+	};
+
 };
 

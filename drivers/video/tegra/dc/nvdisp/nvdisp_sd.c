@@ -712,11 +712,13 @@ static ssize_t nvsd_settings_show(struct kobject *kobj,
 	struct device *dev = container_of((kobj->parent), struct device, kobj);
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	struct tegra_dc_sd_settings *sd = dc->out->sd_settings;
+	struct tegra_dc_sd_settings *sd;
 	ssize_t res = 0;
 
-if (!dc)
-	return res;
+	if (!dc)
+		return res;
+
+	sd = dc->out->sd_settings;
 
 	mutex_lock(&dc->lock);
 	if (sd) {
@@ -803,7 +805,7 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 	struct device *dev = container_of((kobj->parent), struct device, kobj);
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
-	struct tegra_dc_sd_settings *sd = dc->out->sd_settings;
+	struct tegra_dc_sd_settings *sd;
 	ssize_t res = count;
 	bool enable_updated = false;
 	bool aggressiveness_updated = false;
@@ -812,8 +814,10 @@ static ssize_t nvsd_settings_store(struct kobject *kobj,
 	bool old_backlight_updated = false;
 	bool settings_updated = false;
 
-if (!dc)
-	return res;
+	if (!dc)
+		return res;
+
+	sd = dc->out->sd_settings;
 
 	mutex_lock(&dc->lock);
 	if (sd) {

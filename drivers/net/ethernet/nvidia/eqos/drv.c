@@ -1648,7 +1648,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	UINT qinx = skb_get_queue_mapping(skb);
 
 	struct tx_ring *ptx_ring = GET_TX_WRAPPER_DESC(qinx);
-	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
+	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
 
 	unsigned long flags;
 	int cnt = 0;
@@ -1671,7 +1671,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 	}
 
 
-	memset(&pdata->tx_pkt_features, 0, sizeof(pdata->tx_pkt_features));
+	memset(tx_pkt_features, 0, sizeof(struct s_tx_pkt_features));
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	ptx_ring->vlan_tag_present = 0;
@@ -2058,6 +2058,10 @@ static void process_tx_completions(struct net_device *dev,
 		 * */
 		if ((hw_if->get_tx_desc_ls(ptx_desc)) &&
 		    !(hw_if->get_tx_desc_ctxt(ptx_desc))) {
+			if (ptx_swcx_desc->skb == NULL) {
+				dev_err(&pdata->pdev->dev,
+				"NULL SKB in process_tx_completions()\n");
+			}
 			/* check whether skb support hw tstamp */
 			if ((pdata->hw_feat.tsstssel) &&
 			    (skb_shinfo(ptx_swcx_desc->skb)->
@@ -3962,7 +3966,7 @@ u16 eqos_select_queue(struct net_device *dev,
 		      struct sk_buff *skb, void *accel_priv,
 		      select_queue_fallback_t fallback)
 {
-	static u16 txqueue_select;
+	int  txqueue_select = -1;
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct eqos_cfg *pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	UINT i;
@@ -3974,6 +3978,12 @@ u16 eqos_select_queue(struct net_device *dev,
 			txqueue_select = i;
 			break;
 		}
+	}
+
+	if (txqueue_select < 0) {
+		pr_err("Bad Value of skb->priority in eqos_select_queue(). \
+		    Using default value of qinx = 0\n");
+		txqueue_select = 0;
 	}
 
 	DBGPR("<--eqos_select_queue txqueue-select:%d\n", txqueue_select);

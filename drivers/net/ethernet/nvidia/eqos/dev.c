@@ -2937,7 +2937,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	INT i;
 	INT start_index = ptx_ring->cur_tx;
 	INT original_start_index = ptx_ring->cur_tx;
-	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
+	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
 	UINT vartso_enable = 0;
 	UINT varmss = 0;
 	UINT varpay_len = 0;
@@ -2973,8 +2973,7 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	TX_PKT_FEATURES_PKT_ATTRIBUTES_TSO_ENABLE_RD(tx_pkt_features->
 						     pkt_attributes,
 						     vartso_enable);
-	if (vartso_enable &&
-	    (tx_pkt_features->mss != ptx_ring->default_mss)) {
+	if (vartso_enable) {
 		/* get MSS and update */
 		TX_PKT_FEATURES_MSS_MSS_RD(tx_pkt_features->mss, varmss);
 		TX_CONTEXT_DESC_TDES2_MSS_WR(TX_CONTEXT_DESC->tdes2, varmss);
@@ -2982,10 +2981,6 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 		TX_CONTEXT_DESC_TDES3_TCMSSV_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 		TX_CONTEXT_DESC_TDES3_CTXT_WR(TX_CONTEXT_DESC->tdes3, 0x1);
 		TX_CONTEXT_DESC_TDES3_OWN_WR(TX_CONTEXT_DESC->tdes3, 0x1);
-
-		/* DMA uses the MSS value programed in DMA_CR if driver
-		 * doesn't provided the CONTEXT descriptor */
-		DMA_CR_MSS_WR(qinx, tx_pkt_features->mss);
 
 		ptx_ring->default_mss = tx_pkt_features->mss;
 
@@ -3113,120 +3108,6 @@ static void pre_transmit(struct eqos_prv_data *pdata, UINT qinx)
 	}
 
 	DBGPR("<--pre_transmit\n");
-}
-
-/*!
-* \brief This sequence is used to read data from device,
-* it checks whether data is good or bad and updates the errors appropriately
-* \param[in] pdata
-*/
-
-static void device_read(struct eqos_prv_data *pdata, UINT qinx)
-{
-	struct rx_ring *prx_ring =
-	    GET_RX_WRAPPER_DESC(qinx);
-	struct s_rx_desc *prx_desc =
-	    GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
-	UINT own;
-	UINT es;
-	struct rx_swcx_desc *prx_swcx_desc =
-	    GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
-	UINT rs1v;
-	UINT ippe;
-	UINT ipcb;
-	UINT iphe;
-	struct s_rx_pkt_features *rx_pkt_features = GET_RX_PKT_FEATURES_PTR;
-#ifdef EQOS_ENABLE_VLAN_TAG
-	UINT rs0v;
-	UINT lt;
-	UINT rdes0;
-#endif
-	UINT oe;
-	struct s_rx_error_counters *rx_error_counters =
-	    GET_RX_ERROR_COUNTERS_PTR;
-	UINT ce;
-	UINT re;
-	UINT ld;
-
-	DBGPR("-->device_read: cur_rx = %d\n", prx_ring->cur_rx);
-
-	/* check for data availability */
-	RX_NORMAL_DESC_RDES3_OWN_RD(prx_desc->rdes3, own);
-	if (own == 0) {
-		/* check whether it is good packet or bad packet */
-		RX_NORMAL_DESC_RDES3_ES_RD(prx_desc->rdes3, es);
-		RX_NORMAL_DESC_RDES3_LD_RD(prx_desc->rdes3, ld);
-		if ((es == 0) && (ld == 1)) {
-			/* get the packet length */
-			RX_NORMAL_DESC_RDES3_FL_RD(prx_desc->rdes3,
-						   prx_swcx_desc->len);
-			RX_NORMAL_DESC_RDES3_RS1V_RD(prx_desc->rdes3,
-						     rs1v);
-			if (rs1v == 0x1) {
-				/* check whether device has done csum correctly or not */
-				RX_NORMAL_DESC_RDES1_IPPE_RD(prx_desc->
-							     rdes1, ippe);
-				RX_NORMAL_DESC_RDES1_IPCB_RD(prx_desc->
-							     rdes1, ipcb);
-				RX_NORMAL_DESC_RDES1_IPHE_RD(prx_desc->
-							     rdes1, iphe);
-				if ((ippe == 0) && (ipcb == 0) && (iphe == 0)) {
-					/* IPC Checksum done */
-					RX_PKT_FEATURES_PKT_ATTRIBUTES_CSUM_DONE_WR
-					    (rx_pkt_features->pkt_attributes,
-					     0x1);
-				}
-			}
-#ifdef EQOS_ENABLE_VLAN_TAG
-			RX_NORMAL_DESC_RDES3_RS0V_RD(prx_desc->rdes3,
-						     rs0v);
-			if (rs0v == 0x1) {
-				/*  device received frame with VLAN Tag or double VLAN Tag ? */
-				RX_NORMAL_DESC_RDES3_LT_RD(prx_desc->
-							   rdes3, lt);
-				if ((lt == 0x4) || (lt == 0x5)) {
-					RX_PKT_FEATURES_PKT_ATTRIBUTES_VLAN_PKT_WR
-					    (rx_pkt_features->pkt_attributes,
-					     0x1);
-					/* get the VLAN Tag */
-					RX_NORMAL_DESC_RDES0_RD(prx_desc->
-								rdes0, rdes0);
-					RX_PKT_FEATURES_VLAN_TAG_VT_WR
-					    (rx_pkt_features->vlan_tag,
-					     (rdes0 & 0xffff));
-				}
-			}
-#endif
-		} else {
-#ifdef EQOS_ENABLE_RX_DESC_DUMP
-			dump_rx_desc(qinx, prx_desc,
-				     prx_ring->cur_rx);
-#endif
-			/* not a good packet, hence check for appropriate errors. */
-			RX_NORMAL_DESC_RDES3_OE_RD(prx_desc->rdes3, oe);
-			if (oe == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR
-				    (rx_error_counters->rx_errors, 1);
-			}
-			RX_NORMAL_DESC_RDES3_CE_RD(prx_desc->rdes3, ce);
-			if (ce == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_CRC_ERROR_WR
-				    (rx_error_counters->rx_errors, 1);
-			}
-			RX_NORMAL_DESC_RDES3_RE_RD(prx_desc->rdes3, re);
-			if (re == 1) {
-				RX_ERROR_COUNTERS_RX_ERRORS_FRAME_ERROR_WR
-				    (rx_error_counters->rx_errors, 1);
-			}
-			RX_NORMAL_DESC_RDES3_LD_RD(prx_desc->rdes3, ld);
-			if (re == 0) {
-				RX_ERROR_COUNTERS_RX_ERRORS_OVERRUN_ERROR_WR
-				    (rx_error_counters->rx_errors, 1);
-			}
-		}
-	}
-
-	DBGPR("<--device_read: cur_rx = %d\n", prx_ring->cur_rx);
 }
 
 static void update_rx_tail_ptr(unsigned int qinx, unsigned int dma_addr)
@@ -4068,7 +3949,6 @@ void eqos_init_function_ptrs_dev(struct hw_if_struct *hw_if)
 	hw_if->stop_mac_rx = stop_mac_rx;
 
 	hw_if->pre_xmit = pre_transmit;
-	hw_if->dev_read = device_read;
 	hw_if->init = eqos_yinit;
 	hw_if->exit = eqos_yexit;
 	hw_if->car_reset = eqos_car_reset;

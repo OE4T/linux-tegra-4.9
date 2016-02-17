@@ -742,7 +742,8 @@ static int eqos_handle_tso(struct net_device *dev,
 	struct sk_buff *skb)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
-	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR;
+	UINT qinx = skb_get_queue_mapping(skb);
+	struct s_tx_pkt_features *tx_pkt_features = GET_TX_PKT_FEATURES_PTR(qinx);
 	int ret = 1;
 
 	DBGPR("-->eqos_handle_tso\n");
@@ -864,7 +865,7 @@ static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 	int idx = (int)ptx_ring->cur_tx;
 
 	struct tx_swcx_desc *ptx_swcx = NULL;
-	struct s_tx_pkt_features *ppkt_opts = GET_TX_PKT_FEATURES_PTR;
+	struct s_tx_pkt_features *ppkt_opts = GET_TX_PKT_FEATURES_PTR(qinx);
 
 	uint frag_cnt;
 	uint hdr_len = 0;
@@ -883,7 +884,7 @@ static int tx_swcx_alloc(struct net_device *dev, struct sk_buff *skb)
 		ppkt_opts->pkt_attributes, is_pkt_vlan);
 
 	if ((is_pkt_vlan) ||
-	    ((is_pkt_tso) && (ptx_ring->default_mss != ppkt_opts->mss))) {
+	    (is_pkt_tso)) {
 		ptx_swcx = GET_TX_BUF_PTR(qinx, idx);
 		if (ptx_swcx->len)
 			goto tx_swcx_alloc_failed;

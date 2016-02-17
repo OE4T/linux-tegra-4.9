@@ -220,9 +220,7 @@
 
 #define GET_RX_ERROR_COUNTERS_PTR (&(pdata->rx_error_counters))
 
-#define GET_RX_PKT_FEATURES_PTR (&(pdata->rx_pkt_features))
-
-#define GET_TX_PKT_FEATURES_PTR (&(pdata->tx_pkt_features))
+#define GET_TX_PKT_FEATURES_PTR(qinx) (&(pdata->tx_pkt_ctx[(qinx)]))
 
 #define MASK (0x1ULL << 0 | \
 	0x13c7ULL << 32)
@@ -1363,8 +1361,8 @@ struct eqos_prv_data {
 
 	struct s_tx_error_counters tx_error_counters;
 	struct s_rx_error_counters rx_error_counters;
-	struct s_rx_pkt_features rx_pkt_features;
-	struct s_tx_pkt_features tx_pkt_features;
+
+	struct s_tx_pkt_features tx_pkt_ctx[MAX_CHANS];
 
 	/* TX Queue */
 	struct eqos_tx_queue *tx_queue;

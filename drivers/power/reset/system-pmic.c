@@ -44,6 +44,8 @@ static struct system_pmic_dev *system_pmic_dev;
 void (*soc_specific_power_off)(void);
 EXPORT_SYMBOL(soc_specific_power_off);
 
+void (*system_pmic_post_power_off_handler)(void);
+
 static void system_pmic_power_reset(void)
 {
 	system_pmic_dev->ops->power_reset(system_pmic_dev->pmic_drv_data);
@@ -75,7 +77,8 @@ static void system_pmic_power_off(void)
 	if (system_pmic_dev->avoid_power_off_command) {
 		dev_info(system_pmic_dev->pmic_dev,
 				"Avoid PMIC power off\n");
-		return;
+		if (system_pmic_post_power_off_handler)
+			system_pmic_post_power_off_handler();
 	}
 	dev_err(system_pmic_dev->pmic_dev,
 		"System PMIC is not able to power off system\n");

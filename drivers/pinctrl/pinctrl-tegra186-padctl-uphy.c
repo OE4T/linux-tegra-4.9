@@ -85,6 +85,10 @@
 
 /* UPHY Lane registers */
 #define UPHY_LANE_AUX_CTL_1			(0x0)
+#define AUX_TX_IDDQ				BIT(0)
+#define AUX_TX_IDDQ_OVRD			BIT(1)
+#define AUX_RX_IDDQ				BIT(16)
+#define AUX_RX_IDDQ_OVRD			BIT(17)
 #define   AUX_RX_IDLE_TH(x)			(((x) & 0x3) << 24)
 #define   AUX_TX_RDET_STATUS		(0x1 << 7)
 
@@ -150,6 +154,12 @@
 
 #define UPHY_LANE_MISC_CTL_2	0x8
 #define   RX_BYP_REFCLK_EN	(1 << 11)
+
+#define UPHY_LANE_MISC_CTL_1	0x4
+#define MISC_TX_IDDQ		BIT(0)
+#define MISC_TX_IDDQ_OVRD	BIT(1)
+#define MISC_RX_IDDQ		BIT(8)
+#define MISC_RX_IDDQ_OVRD	BIT(9)
 
 /* FUSE USB_CALIB registers */
 /* FUSE_USB_CALIB_0 */
@@ -2866,6 +2876,19 @@ static int tegra186_sata_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 
 	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES)
 		tegra186_sata_fuse_calibration(uphy, uphy_lane);
+
+	/* WAR to keep idle detector on always */
+	for_each_set_bit(uphy_lane, &uphy->sata_lanes, T186_UPHY_LANES) {
+		reg = uphy_lane_readl(uphy, uphy_lane , UPHY_LANE_AUX_CTL_1);
+		reg &= ~(AUX_TX_IDDQ | AUX_TX_IDDQ_OVRD | AUX_RX_IDDQ | AUX_RX_IDDQ_OVRD);
+		reg |= (AUX_TX_IDDQ_OVRD | AUX_RX_IDDQ_OVRD);
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_AUX_CTL_1);
+
+		reg = uphy_lane_readl(uphy, uphy_lane, UPHY_LANE_MISC_CTL_1);
+		reg &= ~(MISC_TX_IDDQ | MISC_TX_IDDQ_OVRD | MISC_RX_IDDQ | MISC_RX_IDDQ_OVRD);
+		reg |= (MISC_TX_IDDQ_OVRD | MISC_RX_IDDQ_OVRD);
+		uphy_lane_writel(uphy, uphy_lane, reg, UPHY_LANE_MISC_CTL_1);
+	}
 
 	rc = uphy_pll_init(uphy, TEGRA186_FUNC_SATA);
 	if (rc)

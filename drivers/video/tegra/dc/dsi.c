@@ -4735,6 +4735,9 @@ static void tegra_dc_dsi_postpoweron(struct tegra_dc *dc)
 			tegra_dsi_start_dc_stream(dc, dsi);
 
 		dsi->host_suspended = false;
+
+		if (dsi->out_ops && dsi->out_ops->postpoweron)
+			dsi->out_ops->postpoweron(dsi);
 	}
 fail:
 	tegra_dc_io_end(dc);

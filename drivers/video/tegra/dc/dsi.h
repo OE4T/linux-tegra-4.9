@@ -463,6 +463,10 @@ struct tegra_dsi_out_ops {
 	void (*suspend)(struct tegra_dc_dsi_data *);
 	/* resume output.  dsi clocks are on at this point */
 	void (*resume)(struct tegra_dc_dsi_data *);
+	/* output postpoweron, called at the end of dc out_ops postpoweron.
+	 * usually used for bridge devices.
+	 * dsi clocks and video stream are on at this point */
+	void (*postpoweron)(struct tegra_dc_dsi_data *);
 };
 extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
 #if defined(CONFIG_TEGRA_DSI2EDP_TC358767) || \

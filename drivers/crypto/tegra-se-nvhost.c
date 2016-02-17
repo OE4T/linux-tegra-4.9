@@ -142,6 +142,12 @@ struct tegra_se_dev {
 
 static struct tegra_se_dev *sg_tegra_se_dev[4];
 
+struct tegra_se_priv_data {
+	struct ablkcipher_request *reqs[SE_MAX_TASKS_PER_SUBMIT];
+	struct tegra_se_dev *se_dev;
+	int req_cnt;
+};
+
 /* Security Engine AES context */
 struct tegra_se_aes_context {
 	struct tegra_se_dev *se_dev;	/* Security Engine device */
@@ -523,22 +529,25 @@ static void tegra_se_dequeue_complete_req(struct tegra_se_dev *se_dev,
 	}
 }
 
-static void tegra_se_complete_callback(struct ablkcipher_request *req)
+static void tegra_se_complete_callback(void *priv, int nr_completed)
 {
-	int i = 0;
-	struct tegra_se_req_context *req_ctx;
+	int i = 0, cnt = 0;
+	struct tegra_se_priv_data *priv_data = priv;
+	struct ablkcipher_request *reqs[SE_MAX_TASKS_PER_SUBMIT];
 	struct tegra_se_dev *se_dev;
 
-	req_ctx = ablkcipher_request_ctx(req);
-	se_dev = req_ctx->se_dev;
+	cnt = priv_data->req_cnt;
+	se_dev = priv_data->se_dev;
 
-	for (i = 0; i < se_dev->req_cnt; i++)
-		tegra_se_dequeue_complete_req(se_dev, se_dev->reqs[i]);
+	for (i = 0; i < cnt; i++) {
+		reqs[i] = priv_data->reqs[i];
+		if (!reqs[i])
+			return;
+		tegra_se_dequeue_complete_req(se_dev, reqs[i]);
+		reqs[i]->base.complete(&reqs[i]->base, 0);
+	}
 
-	for (i = 0; i < se_dev->req_cnt; i++)
-		se_dev->reqs[i]->base.complete(&se_dev->reqs[i]->base, 0);
-
-	se_dev->req_cnt = 0;
+	kfree(priv);
 }
 
 static void se_nvhost_write_method(u32 *buf, u32 op1, u32 op2, u32 *offset)
@@ -551,13 +560,15 @@ static void se_nvhost_write_method(u32 *buf, u32 op1, u32 op2, u32 *offset)
 }
 
 static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
-			struct ablkcipher_request *req,
 			u32 *cpuvaddr, dma_addr_t iova,
 			u32 offset, u32 num_words)
 {
+	int i = 0;
 	struct nvhost_job *job = NULL;
 	u32 syncpt_id = 0;
 	int err = 0;
+	struct tegra_se_priv_data *priv =
+		kzalloc(sizeof(struct tegra_se_priv_data), GFP_KERNEL);
 
 	job = nvhost_job_alloc(se_dev->channel, 1, 0, 0, 1);
 	if (!job) {
@@ -594,14 +605,20 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 		goto exit;
 	}
 
-	/* wait until host1x has processed work */
-	nvhost_syncpt_wait_timeout_ext(se_dev->pdev, job->sp->id,
-		job->sp->fence,
-		(u32)MAX_SCHEDULE_TIMEOUT,
-		NULL, NULL);
+	priv->se_dev = se_dev;
+	for (i = 0; i < se_dev->req_cnt; i++)
+		priv->reqs[i] = se_dev->reqs[i];
+	priv->req_cnt = se_dev->req_cnt;
 
-	if (req)
-		tegra_se_complete_callback(req);
+	se_dev->req_cnt = 0;
+
+	/* Register callback to be called once syncpt value has been reached*/
+	err = nvhost_intr_register_fast_notifier(se_dev->pdev, job->sp->id,
+			job->sp->fence, tegra_se_complete_callback, priv);
+	if (err) {
+		dev_err(se_dev->dev, "add nvhost interrupt action failed\n");
+		goto exit;
+	}
 exit:
 	nvhost_job_put(job);
 	job = NULL;
@@ -686,7 +703,7 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev,
 
 	if (type == SE_KEY_TABLE_TYPE_KEY) {
 		se_dev->cmdbuf_cnt = 0;
-		err = tegra_se_channel_submit_gather(se_dev, NULL,
+		err = tegra_se_channel_submit_gather(se_dev,
 			se_dev->aes_cmdbuf_cpuvaddr,
 			se_dev->aes_cmdbuf_iova, 0, cmdbuf_num_words);
 	}
@@ -837,7 +854,7 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 				SE_OPERATION_OP(OP_START);
 
 	cmdbuf_num_words = i;
-	err = tegra_se_channel_submit_gather(se_dev, NULL,
+	err = tegra_se_channel_submit_gather(se_dev,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
 			0, cmdbuf_num_words);
 	dma_free_attrs(se_dev->dev->parent, SZ_4K,
@@ -900,8 +917,8 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	se_dev->reqs[se_dev->req_cnt++] = req;
 
 	total = nbytes;
-	/* Create Gather Buffer Command */
 
+	/* Create Gather Buffer Command */
 	se_dev->aes_cmdbuf_cpuvaddr[i++] =
 		__nvhost_opcode_nonincr(opcode_addr + 0x34, 1);
 	se_dev->aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
@@ -977,7 +994,7 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	host1x_submit_sz = 0;
 	se_dev->cmdbuf_cnt = 0;
 
-	err = tegra_se_channel_submit_gather(se_dev, req,
+	err = tegra_se_channel_submit_gather(se_dev,
 			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 			0, cmdbuf_num_words);
 
@@ -1963,7 +1980,7 @@ static int tegra_se_send_rsa_data(struct tegra_se_dev *se_dev,
 
 	cmdbuf_num_words = i;
 
-	err = tegra_se_channel_submit_gather(se_dev, NULL,
+	err = tegra_se_channel_submit_gather(se_dev,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
 			0, cmdbuf_num_words);
 
@@ -2071,7 +2088,7 @@ static int tegra_se_rsa_setkey(struct crypto_ahash *tfm, const u8 *key,
 			| SE_OPERATION_OP(OP_DUMMY);
 	cmdbuf_num_words = i;
 
-	err = tegra_se_channel_submit_gather(se_dev, NULL,
+	err = tegra_se_channel_submit_gather(se_dev,
 			cmdbuf_cpuvaddr, cmdbuf_iova,
 			0, cmdbuf_num_words);
 

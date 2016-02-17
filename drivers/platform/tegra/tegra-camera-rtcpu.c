@@ -217,11 +217,11 @@ static int tegra_cam_rtcpu_parse_channel(struct device *dev,
 {
 	struct tegra_cam_rtcpu *cam_rtcpu;
 	struct tegra_cam_rtcpu_ivc_chan *ivc_chan;
-	struct {
-		u32 rx, tx;
-	} start, end;
 	int ret;
 	u32 nframes, frame_size;
+	struct {
+		u32 rx, tx;
+	} start = {0, 0}, end = {0, 0};
 
 	cam_rtcpu = dev_get_drvdata(dev);
 
@@ -359,12 +359,12 @@ static int tegra_cam_rtcpu_parse_channels(struct device *dev)
 	struct device_node *reg_node, *ch_node;
 	struct tegra_ast *ast0;
 	struct tegra_ast *ast1;
-	struct {
-		u32 va, size;
-	} ivc;
 	uintptr_t ivc_base;
 	dma_addr_t ivc_dma;
 	int ret, i, region;
+	struct {
+		u32 va, size;
+	} ivc = {0, 0};
 
 	cam_rtcpu = dev_get_drvdata(dev);
 

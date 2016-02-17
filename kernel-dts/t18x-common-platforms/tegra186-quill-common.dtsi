@@ -239,6 +239,7 @@
 		sor{
 			status = "okay";
 			nvidia,xbar-ctrl = <0 1 2 3 4>;
+			nvidia,audio-switch-name = "hdmi0_audio";
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) GPIO_ACTIVE_LOW>;
 			panel-s-edp-uhdtv-15-6 {
 				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 5) 0>;
@@ -247,6 +248,7 @@
 		sor1 {
 			status = "okay";
 			nvidia,xbar-ctrl = <0 1 2 3 4>;
+			nvidia,audio-switch-name = "hdmi_audio";
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 1) GPIO_ACTIVE_LOW>;
 			hdmi-display {
 				status = "okay";

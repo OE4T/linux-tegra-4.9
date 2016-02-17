@@ -5584,8 +5584,20 @@ int gk20a_gr_isr(struct gk20a *g)
 					&post_event, fault_ch);
 
 			/* signal clients waiting on an event */
-			if (gk20a_gr_sm_debugger_attached(g) && post_event && fault_ch)
-				gk20a_dbg_gpu_post_events(fault_ch);
+			if (gk20a_gr_sm_debugger_attached(g) && post_event && fault_ch) {
+				if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
+					struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
+					struct channel_gk20a *__ch;
+
+					mutex_lock(&tsg->ch_list_lock);
+					list_for_each_entry(__ch, &tsg->ch_list, ch_entry) {
+						gk20a_dbg_gpu_post_events(__ch);
+					}
+					mutex_unlock(&tsg->ch_list_lock);
+				} else {
+					gk20a_dbg_gpu_post_events(fault_ch);
+				}
+			}
 
 			if (need_reset && ch)
 				gk20a_set_error_notifier(ch,

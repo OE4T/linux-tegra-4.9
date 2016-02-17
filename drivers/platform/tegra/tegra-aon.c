@@ -35,11 +35,14 @@
 #define SHRD_SEM_OFFSET	0x10000
 #define SHRD_SEM_SET	0x4
 
+#define TEGRA_AON_HSP_DATA_ARRAY_SIZE	3
+
 #define IPCBUF_SIZE 8192
 
 struct tegra_aon {
 	struct mbox_controller mbox;
 	int hsp_master;
+	int hsp_db;
 	struct work_struct ch_rx_work;
 	void *ipcbuf;
 	dma_addr_t ipcbuf_dma;
@@ -47,43 +50,40 @@ struct tegra_aon {
 };
 
 struct tegra_aon_ivc_chan {
-	char *name;
-	int hsp_db;
-	u32 nframes;
-	u32 framesz;
-	void *tx_base;
-	void *rx_base;
 	struct ivc ivc;
+	char *name;
+	struct tegra_aon *aon;
 	bool last_tx_done;
 };
 
 static void tegra_aon_notify_remote(struct ivc *ivc)
 {
 	struct tegra_aon_ivc_chan *ivc_chan;
+	int ret;
 
 	ivc_chan = container_of(ivc, struct tegra_aon_ivc_chan, ivc);
-	tegra_hsp_db_ring(ivc_chan->hsp_db);
+	ret = tegra_hsp_db_ring(ivc_chan->aon->hsp_db);
+	if (ret)
+		pr_err("tegra_hsp_db_ring failed: %d\n", ret);
 }
 
 static void tegra_aon_rx_worker(struct work_struct *work)
 {
 	struct mbox_chan *mbox_chan;
-	struct tegra_aon_ivc_chan *ivc_chan;
+	struct ivc *ivc;
 	struct tegra_aon_mbox_msg msg;
-	u32 *buf;
 	int i;
 	struct tegra_aon *aon = container_of(work,
 					struct tegra_aon, ch_rx_work);
 
 	for (i = 0; i < aon->mbox.num_chans; i++) {
 		mbox_chan = &aon->mbox.chans[i];
-		ivc_chan = (struct tegra_aon_ivc_chan *)mbox_chan->con_priv;
-		while (tegra_ivc_can_read(&ivc_chan->ivc)) {
-			buf = tegra_ivc_read_get_next_frame(&ivc_chan->ivc);
-			msg.length = ivc_chan->framesz;
-			msg.data = buf;
+		ivc = (struct ivc *)mbox_chan->con_priv;
+		while (tegra_ivc_can_read(ivc)) {
+			msg.data = tegra_ivc_read_get_next_frame(ivc);
+			msg.length = ivc->frame_size;
 			mbox_chan_received_data(mbox_chan, &msg);
-			tegra_ivc_read_advance(&ivc_chan->ivc);
+			tegra_ivc_read_advance(ivc);
 		}
 	}
 }
@@ -97,92 +97,183 @@ static void hsp_irq_handler(int master, void *data)
 
 #define NV(p) "nvidia," p
 
-static int parse_channel(struct device *dev, struct mbox_chan *mbox_chan,
-			 struct device_node *np, int hsp_db)
+static int tegra_aon_parse_channel(struct device *dev,
+				struct mbox_chan *mbox_chan,
+				struct device_node *ch_node)
 {
-	struct tegra_aon_ivc_chan *ivc_chan;
-	uint64_t tx_offset, rx_offset, ch_size;
 	struct tegra_aon *aon;
+	struct tegra_aon_ivc_chan *ivc_chan;
+	struct {
+		u32 rx, tx;
+	} start, end;
+	u32 nframes, frame_size;
 	int ret = 0;
 
 	aon = platform_get_drvdata(to_platform_device(dev));
 
 	/* Sanity check */
-	if (!mbox_chan || !np || !dev || !aon)
+	if (!mbox_chan || !ch_node || !dev || !aon)
 		return -EINVAL;
+
+	ret = of_property_read_u32_array(ch_node, "reg", &start.rx, 2);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n", "reg");
+		return ret;
+	}
+	ret = of_property_read_u32(ch_node, NV("frame-count"), &nframes);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n", NV("frame-count"));
+		return ret;
+	}
+	ret = of_property_read_u32(ch_node, NV("frame-size"), &frame_size);
+	if (ret) {
+		dev_err(dev, "missing <%s> property\n", NV("frame-size"));
+		return ret;
+	}
+
+	if (!nframes) {
+		dev_err(dev, "Invalid <nframes> property\n");
+		return -EINVAL;
+	}
+
+	if (frame_size < IVC_MIN_FRAME_SIZE) {
+		dev_err(dev, "Invalid <frame-size> property\n");
+		return -EINVAL;
+	}
+
+	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
+	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
+
+	if (end.rx > aon->ipcbuf_size) {
+		dev_err(dev, "%s buffer exceeds ivc size\n", "rx");
+		return -EINVAL;
+	}
+	if (end.tx > aon->ipcbuf_size) {
+		dev_err(dev, "%s buffer exceeds ivc size\n", "tx");
+		return -EINVAL;
+	}
+
+	if (start.tx < start.rx ? end.tx > start.rx : end.rx > start.tx) {
+		dev_err(dev, "rx and tx buffers overlap on channel %s\n",
+			ch_node->name);
+		return -EINVAL;
+	}
 
 	ivc_chan = devm_kzalloc(dev, sizeof(*ivc_chan), GFP_KERNEL);
 	if (!ivc_chan) {
-		dev_err(dev, "out of memory.\n");
+		dev_err(dev, "Failed to allocate AON IVC channel\n");
 		return -ENOMEM;
 	}
 
-	ivc_chan->name = devm_kstrdup(dev, np->name, GFP_KERNEL);
+	ivc_chan->name = devm_kstrdup(dev, ch_node->name, GFP_KERNEL);
 	if (!ivc_chan->name)
 		return -ENOMEM;
 
-	ret = of_property_read_u64(np, "ivc-tx", &tx_offset);
-	ret |= of_property_read_u64(np, "ivc-rx", &rx_offset);
-	ret |= of_property_read_u64(np, "ivc-channel-size", &ch_size);
-	ret |= of_property_read_u32(np, "ivc-num-frames", &ivc_chan->nframes);
-	ret |= of_property_read_u32(np, "ivc-frame-size", &ivc_chan->framesz);
-	if (ret) {
-		dev_err(dev, "invalid ivc channel property.\n");
-		return ret;
-	}
-
-	if (ivc_chan->framesz < IVC_MIN_FRAME_SIZE ||
-		ivc_chan->framesz > ch_size) {
-		dev_err(dev,
-			"ivc-frame-size exceeds range (%d-%lld).\n",
-			IVC_MIN_FRAME_SIZE, ch_size);
-		return -EINVAL;
-	}
-
-	if (!ivc_chan->nframes) {
-		dev_err(dev, "invalid <ivc-num-frames> property.\n");
-		return -EINVAL;
-	}
-
-	if(ch_size <
-	   ((ivc_chan->nframes * ivc_chan->framesz) + (2 * IVC_ALIGN))) {
-		dev_err(dev, "ivc channel size too small.\n");
-		return -EINVAL;
-	}
-
-	ivc_chan->tx_base = (char *)aon->ipcbuf + tx_offset;
-	ivc_chan->rx_base = (char *)aon->ipcbuf + rx_offset;
-
-	memset(ivc_chan->tx_base, 0, ch_size);
-	memset(ivc_chan->rx_base, 0, ch_size);
-
 	/* Allocate the IVC links */
 	ret = tegra_ivc_init_with_dma_handle(&ivc_chan->ivc,
-			     (uintptr_t)ivc_chan->rx_base,
-			     (u64)aon->ipcbuf_dma + rx_offset,
-			     (uintptr_t)ivc_chan->tx_base,
-			     (u64)aon->ipcbuf_dma + tx_offset,
-			     ivc_chan->nframes, ivc_chan->framesz,
-			     dev,
+			     (unsigned long)aon->ipcbuf + start.rx,
+			     (u64)aon->ipcbuf_dma + start.rx,
+			     (unsigned long)aon->ipcbuf + start.tx,
+			     (u64)aon->ipcbuf_dma + start.tx,
+			     nframes, frame_size, dev,
 			     tegra_aon_notify_remote);
 	if (ret) {
-		dev_err(dev,
-			"failed to instantiate IVC.\n");
+		dev_err(dev, "failed to instantiate IVC.\n");
 		return ret;
 	}
-	ivc_chan->hsp_db = hsp_db;
+
+	ivc_chan->aon = aon;
 	mbox_chan->con_priv = ivc_chan;
 
-	dev_dbg(dev, "%s: TX: 0x%lx-0x%lx\n",
-		 ivc_chan->name,
-		 (ulong)ivc_chan->tx_base,
-		 (ulong)ivc_chan->tx_base + (u32)ch_size);
-	dev_dbg(dev, "%s: RX: 0x%lx-0x%lx\n",
-		 ivc_chan->name,
-		 (ulong)ivc_chan->rx_base,
-		 (ulong)ivc_chan->rx_base + (u32)ch_size);
+	dev_dbg(dev, "%s: RX: 0x%x-0x%x TX: 0x%x-0x%x\n",
+		ivc_chan->name, start.rx, end.rx, start.tx, end.tx);
 
 	return ret;
+}
+
+static int tegra_aon_check_channels_overlap(struct device *dev,
+			struct tegra_aon_ivc_chan *ch0,
+			struct tegra_aon_ivc_chan *ch1)
+{
+	unsigned s0, s1;
+	unsigned long tx0, rx0, tx1, rx1;
+
+	if (ch0 == NULL || ch1 == NULL)
+		return -EINVAL;
+
+	tx0 = (unsigned long)ch0->ivc.tx_channel;
+	rx0 = (unsigned long)ch0->ivc.rx_channel;
+	s0 = ch0->ivc.nframes * ch0->ivc.frame_size;
+	s0 = tegra_ivc_total_queue_size(s0);
+
+	tx1 = (unsigned long)ch1->ivc.tx_channel;
+	rx1 = (unsigned long)ch1->ivc.rx_channel;
+	s1 = ch1->ivc.nframes * ch1->ivc.frame_size;
+	s1 = tegra_ivc_total_queue_size(s1);
+
+	if ((tx0 < tx1 ? tx0 + s0 > tx1 : tx1 + s1 > tx0) ||
+		(rx0 < tx1 ? rx0 + s0 > tx1 : tx1 + s1 > rx0) ||
+		(rx0 < rx1 ? rx0 + s0 > rx1 : rx1 + s1 > rx0) ||
+		(tx0 < rx1 ? tx0 + s0 > rx1 : rx1 + s1 > tx0)) {
+		dev_err(dev, "ivc buffers overlap on channels %s and %s\n",
+			ch0->name, ch1->name);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int tegra_aon_validate_channels(struct device *dev)
+{
+	struct tegra_aon *aon;
+	struct tegra_aon_ivc_chan *i_chan, *j_chan;
+	int i, j;
+	int ret;
+
+	aon = dev_get_drvdata(dev);
+
+	for (i = 0; i < aon->mbox.num_chans; i++) {
+		i_chan = aon->mbox.chans[i].con_priv;
+
+		for (j = i + 1; j < aon->mbox.num_chans; j++) {
+			j_chan = aon->mbox.chans[j].con_priv;
+
+			ret = tegra_aon_check_channels_overlap(dev, i_chan,
+								j_chan);
+			if (ret)
+				return ret;
+		}
+	}
+
+	return 0;
+}
+
+static int tegra_aon_parse_channels(struct device *dev)
+{
+	struct tegra_aon *aon;
+	struct device_node *reg_node, *ch_node;
+	int ret, i;
+
+	aon = dev_get_drvdata(dev);
+	i = 0;
+
+	for_each_child_of_node(dev->of_node, reg_node) {
+		if (strcmp(reg_node->name, "ivc-channels"))
+			continue;
+
+		for_each_child_of_node(reg_node, ch_node) {
+			ret = tegra_aon_parse_channel(dev,
+						&aon->mbox.chans[i++],
+						ch_node);
+			if (ret) {
+				dev_err(dev, "failed to parse a channel\n");
+				return ret;
+			}
+		}
+		break;
+	}
+
+	return tegra_aon_validate_channels(dev);
 }
 
 static int tegra_aon_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
@@ -226,16 +317,30 @@ static struct mbox_chan_ops tegra_aon_mbox_chan_ops = {
 	.last_tx_done = tegra_aon_mbox_last_tx_done,
 };
 
+static int tegra_aon_count_ivc_channels(struct device_node *dev_node)
+{
+	int num = 0;
+	struct device_node *child_node;
+
+	for_each_child_of_node(dev_node, child_node) {
+		if (strcmp(child_node->name, "ivc-channels"))
+			continue;
+		num = of_get_child_count(child_node);
+		break;
+	}
+
+	return num;
+}
+
 static int tegra_aon_probe(struct platform_device *pdev)
 {
 	struct tegra_aon *aon;
 	struct device *dev = &pdev->dev;
-	struct device_node *child;
 	struct device_node *dn = dev->of_node;
 	void __iomem *smbox_base;
 	void __iomem *shrdsem_base;
-	u32 hsp_data[2];
-	int i, num_chans;
+	u32 hsp_data[TEGRA_AON_HSP_DATA_ARRAY_SIZE];
+	int num_chans;
 	int ret = 0;
 
 	dev_dbg(&pdev->dev, "tegra aon driver probe Start\n");
@@ -247,7 +352,7 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	aon->ipcbuf_size = IPCBUF_SIZE;
 
 	aon->ipcbuf = dmam_alloc_coherent(dev, aon->ipcbuf_size,
-			&aon->ipcbuf_dma, GFP_KERNEL);
+			&aon->ipcbuf_dma, GFP_KERNEL | __GFP_ZERO);
 	if (!aon->ipcbuf) {
 		dev_err(dev, "failed to allocate IPC memory\n");
 		return -ENOMEM;
@@ -266,27 +371,19 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		return -EINVAL;
 	}
 
-	ret = of_property_read_u32_array(dn, NV("notifications"), hsp_data, 2);
+	ret = of_property_read_u32_array(dn, NV("hsp-notifications"), hsp_data,
+					ARRAY_SIZE(hsp_data));
 	if (ret) {
-		dev_err(dev, "missing <notification> property\n");
+		dev_err(dev, "missing <%s> property\n",
+				NV("hsp-notifications"));
 		goto exit;
 	}
 
-	aon->hsp_master = hsp_data[0];
+	/* hsp_data[0] is HSP phandle */
+	aon->hsp_master = hsp_data[1];
+	aon->hsp_db = hsp_data[2];
 
-	/* Init IVC channels ch_rx_work */
-	INIT_WORK(&aon->ch_rx_work, tegra_aon_rx_worker);
-
-	/* Listen to the remote's notification */
-	ret = tegra_hsp_db_add_handler(aon->hsp_master, hsp_irq_handler, aon);
-	if (ret)
-		goto exit;
-	/* Allow remote to ring CCPLEX's doorbell */
-	ret = tegra_hsp_db_enable_master(aon->hsp_master);
-	if (ret)
-		goto exit;
-
-	num_chans = of_get_child_count(dn);
+	num_chans = tegra_aon_count_ivc_channels(dn);
 	if (num_chans <= 0) {
 		dev_err(dev, "no ivc channels\n");
 		ret = -EINVAL;
@@ -294,8 +391,9 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	}
 
 	aon->mbox.dev = &pdev->dev;
-	aon->mbox.chans = devm_kzalloc(&pdev->dev, num_chans *
-					sizeof(*aon->mbox.chans), GFP_KERNEL);
+	aon->mbox.chans = devm_kzalloc(&pdev->dev,
+					num_chans * sizeof(*aon->mbox.chans),
+					GFP_KERNEL);
 	if (!aon->mbox.chans) {
 		ret = -ENOMEM;
 		goto exit;
@@ -305,20 +403,35 @@ static int tegra_aon_probe(struct platform_device *pdev)
 	aon->mbox.ops = &tegra_aon_mbox_chan_ops;
 	aon->mbox.txdone_poll = true;
 	aon->mbox.txpoll_period = 1;
-	i = 0;
+
 	/* Parse out all channels from DT */
-	for_each_child_of_node(dn, child) {
-		ret = parse_channel(dev, &aon->mbox.chans[i++], child,
-				    hsp_data[1]);
-		if (ret) {
-			dev_err(dev, "failed to parse a channel\n");
-			goto exit;
-		}
+	ret = tegra_aon_parse_channels(dev);
+	if (ret) {
+		dev_err(dev, "ivc-channels set up failed: %d\n", ret);
+		goto exit;
+	}
+
+	/* Init IVC channels ch_rx_work */
+	INIT_WORK(&aon->ch_rx_work, tegra_aon_rx_worker);
+
+	/* Listen to the remote's notification */
+	ret = tegra_hsp_db_add_handler(aon->hsp_master, hsp_irq_handler, aon);
+	if (ret) {
+		dev_err(dev, "failed to add hsp db handler: %d\n", ret);
+		goto exit;
+	}
+	/* Allow remote to ring CCPLEX's doorbell */
+	ret = tegra_hsp_db_enable_master(aon->hsp_master);
+	if (ret) {
+		dev_err(dev, "failed to enable hsp db master: %d\n", ret);
+		tegra_hsp_db_del_handler(aon->hsp_master);
+		goto exit;
 	}
 
 	ret = mbox_controller_register(&aon->mbox);
 	if (ret) {
 		dev_err(&pdev->dev, "failed to register mailbox: %d\n", ret);
+		tegra_hsp_db_del_handler(aon->hsp_master);
 		goto exit;
 	}
 	writel((u32)aon->ipcbuf_dma, shrdsem_base + SHRD_SEM_SET);

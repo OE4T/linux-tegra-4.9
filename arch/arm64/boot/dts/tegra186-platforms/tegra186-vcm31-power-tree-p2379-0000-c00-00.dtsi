@@ -168,7 +168,6 @@
 			regulator-max-microvolt = <5000000>;
 			gpio = <&tegra_gpio TEGRA_GPIO(L, 5) 0>;
 			enable-active-high;
-			gpio-open-drain;
 			vin-supply = <&vdd_1v8>;
 		};
 	};

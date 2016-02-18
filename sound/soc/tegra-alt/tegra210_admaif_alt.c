@@ -142,7 +142,9 @@ static bool tegra210_admaif_rd_reg(struct device *dev, unsigned int reg)
 
 static bool tegra210_admaif_volatile_reg(struct device *dev, unsigned int reg)
 {
-	reg = reg % TEGRA210_ADMAIF_CHANNEL_REG_STRIDE;
+	if (reg > 0 && (reg < TEGRA210_ADMAIF_CHANNEL_COUNT *
+					TEGRA210_ADMAIF_CHANNEL_REG_STRIDE * 2))
+		reg = reg % TEGRA210_ADMAIF_CHANNEL_REG_STRIDE;
 
 	switch (reg) {
 	case TEGRA210_ADMAIF_XBAR_RX_STATUS:
@@ -151,6 +153,8 @@ static bool tegra210_admaif_volatile_reg(struct device *dev, unsigned int reg)
 	case TEGRA210_ADMAIF_XBAR_TX_INT_STATUS:
 	case TEGRA210_ADMAIF_XBAR_RX_SOFT_RESET:
 	case TEGRA210_ADMAIF_XBAR_TX_SOFT_RESET:
+	case TEGRA210_ADMAIF_XBAR_TX_ENABLE:
+	case TEGRA210_ADMAIF_XBAR_RX_ENABLE:
 		return true;
 	default:
 		break;

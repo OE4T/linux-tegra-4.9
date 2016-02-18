@@ -35,6 +35,7 @@
 #include <linux/tegra_pm_domains.h>
 #include <linux/version.h>
 #include <linux/reset.h>
+#include <linux/platform/tegra/tegra-mc-sid.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
 
 #include "dmaengine.h"
@@ -1705,11 +1706,15 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		if (ret)
 			start_chan_idx = 0;
 
-		ret = of_property_read_u32(pdev->dev.of_node, "nvidia,stream-id",
-							&stream_id);
-		if (ret)
-			stream_id = TEGRA_SID_GPCDMA_0;
-
+		if (of_property_read_bool(pdev->dev.of_node,
+				"nvidia,bypass-smmu")) {
+			stream_id = tegra_mc_get_smmu_bypass_sid();
+		} else {
+			ret = of_property_read_u32(pdev->dev.of_node,
+				"nvidia,stream-id", &stream_id);
+			if (ret)
+				stream_id = TEGRA_SID_GPCDMA_0;
+		}
 	} else {
 		/* If no device tree then fallback to tegra186 data */
 		cdata = (struct tegra_dma_chip_data *)pdev->id_entry->driver_data;

@@ -370,9 +370,12 @@ struct snd_atvr {
 	bool pcm_stopped;
 };
 
+#define TS_HOSTCMD_REPORT_SIZE 33
+#define JAR_HOSTCMD_REPORT_SIZE 19
+
 static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
 {
-	unsigned char report[] = {
+	unsigned char report[TS_HOSTCMD_REPORT_SIZE] = {
 		0x04, 0x0e, 0x00, 0x01,
 		0x00, 0x00, 0x00, 0x00,
 		0x00, 0x00, 0x00, 0x00,
@@ -380,10 +383,13 @@ static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
 		0x00, 0x00, 0x00,
 		};
 	int ret;
+	int report_size = JAR_HOSTCMD_REPORT_SIZE;
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
+		report_size = TS_HOSTCMD_REPORT_SIZE;
 
 	report[3] = enable ? 0x01 : 0x00;
 	hid_info(hdev, "%s remote mic\n", enable ? "enable" : "disable");
-	ret =  hdev->hid_output_raw_report(hdev, report, sizeof(report),
+	ret =  hdev->hid_output_raw_report(hdev, report, report_size,
 					HID_OUTPUT_REPORT);
 	if (ret < 0)
 		hid_info(hdev, "failed to send mic ctrl report, err=%d\n", ret);
@@ -1432,7 +1438,7 @@ __nodev:
 }
 
 #define JAR_BUTTON_REPORT_ID	0x01
-#define JAR_BUTTON_REPORT_SIZE	0x03
+#define JAR_BUTTON_REPORT_SIZE	3
 
 #define JAR_AUDIO_REPORT_ID	0xFD
 #define JAR_AUDIO_REPORT_SIZE	233
@@ -1442,18 +1448,25 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 				    struct hid_report *report,
 				    u8 *data, int size)
 {
-	/* breaks events apart if they are not proper */
+	unsigned int button_report_id = JAR_BUTTON_REPORT_ID;
+	unsigned int button_report_size = JAR_BUTTON_REPORT_SIZE;
+	unsigned int audio_report_id = JAR_AUDIO_REPORT_ID;
+	unsigned int audio_report_size = JAR_AUDIO_REPORT_SIZE;
 
+	/* breaks events apart if they are not proper */
 	pr_debug("%s: packet 0x%02x#%i\n", __func__, data[0], size);
 
-	/* donot break the event from thunderstrike for now */
+	/*
+	 * break the ts events also similarly,
+	 * just account for size differences
+	 */
 	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
-		return 0;
+		button_report_size = TS_HOSTCMD_REPORT_SIZE;
 
-	if (!((report->id == JAR_BUTTON_REPORT_ID &&
-	       size >= JAR_BUTTON_REPORT_SIZE) ||
-	      (report->id == JAR_AUDIO_REPORT_ID &&
-	       size >= JAR_AUDIO_REPORT_SIZE)))
+	if (!((report->id == button_report_id &&
+	       size >= button_report_size) ||
+	      (report->id == audio_report_id &&
+	       size >= audio_report_size)))
 		return 0;
 
 	/*
@@ -1462,15 +1475,15 @@ static int atvr_jarvis_break_events(struct hid_device *hdev,
 	 */
 	while (size > 0) {
 		int amount = 0;
-		if ((data[0] == JAR_BUTTON_REPORT_ID) &&
-		    (size >= JAR_BUTTON_REPORT_SIZE)) {
-			amount = JAR_BUTTON_REPORT_SIZE;
+		if ((data[0] == button_report_id) &&
+		    (size >= button_report_size)) {
+			amount = button_report_size;
 			hid_report_raw_event(hdev, 0, data,
-					     sizeof(amount), 0);
-		} else if ((data[0] == JAR_AUDIO_REPORT_ID) &&
-			   (size >= JAR_AUDIO_REPORT_SIZE)) {
+					     amount, 0);
+		} else if ((data[0] == audio_report_id) &&
+			   (size >= audio_report_size)) {
 			u8 *frame = &data[1];
-			amount = JAR_AUDIO_REPORT_SIZE;
+			amount = audio_report_size;
 			while (frame < &data[JAR_AUDIO_REPORT_SIZE]) {
 				audio_dec(hdev, &frame[0], PACKET_TYPE_MSBC,
 					  JAR_AUDIO_FRAME_SIZE);

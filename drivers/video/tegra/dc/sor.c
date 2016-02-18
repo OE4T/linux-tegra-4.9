@@ -1873,8 +1873,6 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 	tegra_dc_sor_super_update(sor);
 #endif
 
-	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
-
 	if (tegra_dc_sor_poll_register(sor, NV_SOR_TEST,
 		NV_SOR_TEST_ACT_HEAD_OPMODE_DEFAULT_MASK,
 		NV_SOR_TEST_ACT_HEAD_OPMODE_SLEEP,
@@ -1882,6 +1880,8 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for HEAD MODE = SLEEP\n");
 	}
+
+	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
 
 	sor->sor_state = SOR_DETACHING;
 	tegra_dc_put(dc);

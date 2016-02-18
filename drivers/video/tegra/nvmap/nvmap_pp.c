@@ -432,9 +432,6 @@ int nvmap_page_pool_clear(void)
  */
 static void nvmap_page_pool_resize(struct nvmap_page_pool *pool, int size)
 {
-	if (!enable_pp || size == pool->max || size < 0)
-		return;
-
 	mutex_lock(&pool->lock);
 
 	while (pool->count > size)
@@ -550,11 +547,12 @@ static int pool_size_set(const char *arg, const struct kernel_param *kp)
 {
 	param_set_int(arg, kp);
 
-	nvmap_page_pool_resize(&nvmap_dev->pool, pool_size);
-	if (nvmap_dev->pool.max != pool_size) {
+	if (pool_size  < 0) {
 		pool_size = nvmap_dev->pool.max;
-		pr_err("pool resize failed!\n");
-		return -ENOMEM;
+		pr_err("pool_size can't be set to -ve value!\n");
+		return -EINVAL;
+	} else if (pool_size != nvmap_dev->pool.max) {
+		nvmap_page_pool_resize(&nvmap_dev->pool, pool_size);
 	}
 
 	return 0;

@@ -5571,28 +5571,21 @@ int gk20a_gr_isr(struct gk20a *g)
 		/* check if a gpc exception has occurred */
 		if (exception & gr_exception_gpc_m() && need_reset == 0) {
 			struct channel_gk20a *fault_ch;
+			bool post_event = false;
 
 			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "GPC exception pending");
 
-			/* if no sm debugger is present, clean up the channel */
-			if (!gk20a_gr_sm_debugger_attached(g)) {
-				gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-					   "SM debugger not attached, clearing interrupt");
-				need_reset |= -EFAULT;
-			} else {
-				bool post_event = false;
 
-				fault_ch = gk20a_fifo_channel_from_hw_chid(g,
-								isr_data.chid);
+			fault_ch = gk20a_fifo_channel_from_hw_chid(g,
+							isr_data.chid);
 
-				/* check if any gpc has an exception */
-				need_reset |= gk20a_gr_handle_gpc_exception(g,
-						&post_event, fault_ch);
+			/* check if any gpc has an exception */
+			need_reset |= gk20a_gr_handle_gpc_exception(g,
+					&post_event, fault_ch);
 
-				/* signal clients waiting on an event */
-				if (post_event && fault_ch)
-					gk20a_dbg_gpu_post_events(fault_ch);
-			}
+			/* signal clients waiting on an event */
+			if (gk20a_gr_sm_debugger_attached(g) && post_event && fault_ch)
+				gk20a_dbg_gpu_post_events(fault_ch);
 
 			if (need_reset && ch)
 				gk20a_set_error_notifier(ch,

@@ -488,6 +488,8 @@ static struct irq_chip tegra_gpio_irq_chip = {
 	.irq_set_type	= tegra_gpio_irq_set_type,
 	.irq_set_wake	= tegra_gpio_irq_set_wake,
 	.flags		= IRQCHIP_MASK_ON_SUSPEND,
+	.irq_shutdown	= tegra_gpio_irq_mask,
+	.irq_disable	= tegra_gpio_irq_mask,
 };
 
 static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
@@ -591,6 +593,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	u32 i, j;
 	int gpio;
 	u32 ret;
+	unsigned long flags;
 
 	read_gpio_mapping_data(pdev);
 
@@ -684,6 +687,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		set_irq_flags(irq, IRQF_VALID);
 	}
 
+	local_irq_save(flags);
 	for (i = 0; i < tegra_gpio_bank_count; i++) {
 		tg_cont = &tegra_gpio_controllers[i];
 
@@ -695,6 +699,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 
 	gpiochip_add(&tegra_gpio_chip);
+	local_irq_restore(flags);
 	return 0;
 }
 

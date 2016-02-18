@@ -209,4 +209,8 @@
 	sce-mods {
 		status = "okay";
 	};
+	cpuidle {
+		compatible = "nvidia,tegra18x-cpuidle";
+		status = "okay";
+	};
 };

@@ -2650,10 +2650,10 @@ struct dev_ids {
 	unsigned short	did;
 };
 
-static struct dev_ids aspm_l0s_whitelist_dev[2] = {
-	{0x10de, 0x13ae},	/* dGPU-GM107	*/
-	{0x10de, 0x12b0},	/* dGPU-GK108	*/
-/*	{0x14e4, 0x4355},	// BCM-4359	*/
+static const struct pci_device_id aspm_l0s_blacklist[] = {
+	{ PCI_DEVICE(PCI_VENDOR_ID_BROADCOM, 0x4355), 0, 0, 0 },
+	{ PCI_DEVICE(PCI_VENDOR_ID_NEC, 0x0194), 0, 0, 0 },
+	{ PCI_DEVICE(PCI_VENDOR_ID_TOSHIBA, 0x010f), 0, 0, 0 },
 };
 
 /* Enable ASPM support of all devices based on it's capability */
@@ -2674,9 +2674,7 @@ static void tegra_pcie_enable_aspm(struct tegra_pcie *pcie)
 		struct pci_dev *parent = NULL;
 		struct tegra_pcie_port *port = NULL;
 		unsigned long ctrl = 0;
-		u32 rp = 0, val = 0, disable = 0;
-		int i = 0;
-		bool whitelist = false;
+		u32 rp = 0, val = 0, data = 0;
 
 		if ((pci_pcie_type(pdev) == PCI_EXP_TYPE_ROOT_PORT) ||
 			(pci_pcie_type(pdev) == PCI_EXP_TYPE_DOWNSTREAM))
@@ -2693,30 +2691,26 @@ static void tegra_pcie_enable_aspm(struct tegra_pcie *pcie)
 		/* AFI_PEX_STATUS is AFI_PEX_CTRL + 4 */
 		val = afi_readl(port->pcie, ctrl + 4);
 		if (val & 0x1) {
-			disable |= PCIE_LINK_STATE_CLKPM;
+			data |= PCIE_LINK_STATE_CLKPM;
 			/* disalbe PADS2PLLE control */
 			val = afi_readl(port->pcie, AFI_PLLE_CONTROL);
 			val &= ~AFI_PLLE_CONTROL_PADS2PLLE_CONTROL_EN;
 			afi_writel(port->pcie, val, AFI_PLLE_CONTROL);
 		}
 
-		/* Enable ASPM-l0s for only whitelisted devices */
-		for (i = 0; i < ARRAY_SIZE(aspm_l0s_whitelist_dev); i++) {
-			if ((pdev->vendor == aspm_l0s_whitelist_dev[i].vid) &&
-				(pdev->device == aspm_l0s_whitelist_dev[i].did))
-				whitelist = true;
-		}
-		if (!whitelist)
-			disable |= PCIE_LINK_STATE_L0S;
-		pci_disable_link_state_locked(pdev, disable);
+		/* Disable ASPM-l0s for blacklisted devices */
+		if (pci_match_id(aspm_l0s_blacklist, pdev))
+			data |= PCIE_LINK_STATE_L0S;
+
+		pci_disable_link_state_locked(pdev, data);
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 		/* check if L1SS capability is supported in current device */
-		i = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
-		if (!i)
+		data = pci_find_ext_capability(pdev, PCI_EXT_CAP_ID_L1SS);
+		if (!data)
 			continue;
 		/* avoid L1SS config if no support of L1PM substate feature */
-		pci_read_config_dword(pdev, i + PCI_L1SS_CAP, &val);
+		pci_read_config_dword(pdev, data + PCI_L1SS_CAP, &val);
 		if ((val & PCI_L1SS_CAP_L1PMS) ||
 			(val & PCI_L1SS_CAP_L1PM_MASK))
 			tegra_pcie_config_clkreq(pcie, port->index);

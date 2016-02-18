@@ -1,7 +1,7 @@
 /*
  * tegra_asoc_machine_alt.c - Tegra xbar dai link for machine drivers
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2204,9 +2204,10 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 		if (subnp) {
 			of_node = of_parse_phandle(subnp, "codec-dai", 0);
 
-			if (of_property_read_string(subnp, "codec",
-				&tegra_codec_conf[i].dev_name) == -EINVAL)
-				tegra_codec_conf[i].dev_name = of_node->name;
+			/* specify device by DT/OF node,
+			   rather than device name */
+			tegra_codec_conf[i].dev_name = NULL;
+			tegra_codec_conf[i].of_node = of_node;
 
 			if (of_property_read_string(subnp, "name-prefix",
 				&tegra_codec_conf[i].name_prefix)) {

@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1290,12 +1290,6 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
 	u32 ctag_lines = DIV_ROUND_UP_ULL(size, ctag_granularity);
 
-	if (clear_ctags && ctag_offset) {
-		/* init/clear the ctag buffer */
-		g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
-				ctag_offset, ctag_offset + ctag_lines - 1);
-	}
-
 	/* Allocate (or validate when map_offset != 0) the virtual address. */
 	if (!map_offset) {
 		map_offset = gk20a_vm_alloc_va(vm, size,
@@ -1651,17 +1645,14 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 			bfr.kind_v = bfr.uc_kind_v;
 		} else {
 			gk20a_get_comptags(d, dmabuf, &comptags);
-			clear_ctags = true;
 
-			if (comptags.lines < comptags.allocated_lines) {
-				/* clear tail-padding comptags */
-				u32 ctagmin = comptags.offset + comptags.lines;
-				u32 ctagmax = comptags.offset +
-					comptags.allocated_lines - 1;
-
+			if (g->ops.ltc.cbc_ctrl)
 				g->ops.ltc.cbc_ctrl(g, gk20a_cbc_op_clear,
-						    ctagmin, ctagmax);
-			}
+						    comptags.offset,
+						    comptags.offset +
+							comptags.allocated_lines - 1);
+			else
+				clear_ctags = true;
 		}
 	}
 

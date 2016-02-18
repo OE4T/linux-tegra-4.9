@@ -140,6 +140,13 @@
 						      <&{/bpmp}			TEGRA_SID_BPMP>;
 				};
 			};
+
+			override@3 {
+				target = <&gpcdma>;
+				_overlay_ {
+					nvidia,bypass-smmu;
+				};
+			};
 		};
 
 		fragement@7 {

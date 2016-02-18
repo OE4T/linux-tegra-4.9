@@ -1,7 +1,7 @@
 /*
  * tegra186_ahc.c - Tegra186 ASRC driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -119,7 +119,7 @@ static int tegra186_ahc_platform_probe(struct platform_device *pdev)
 	struct tegra186_ahc *ahc;
 	struct resource *mem, *memregion;
 
-	dev_err(&pdev->dev, "ahc platform probe started\n");
+	dev_info(&pdev->dev, "ahc platform probe started\n");
 
 	match = of_match_device(tegra186_ahc_of_match, &pdev->dev);
 	if (!match) {
@@ -173,7 +173,7 @@ static int tegra186_ahc_platform_probe(struct platform_device *pdev)
 			(unsigned long)&pdev->dev);
 
 	if (!ret)
-		dev_err(&pdev->dev, "ahc platform probe successful\n");
+		dev_info(&pdev->dev, "ahc platform probe successful\n");
 
 err:
 	return ret;

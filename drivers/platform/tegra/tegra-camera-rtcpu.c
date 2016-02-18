@@ -43,13 +43,12 @@ static const char * const sce_clock_names[] = {
 };
 
 static const char * const sce_reset_names[] = {
-	"sce-apb",
+	"sce-pm",
 	"sce-nsysporeset",
 	"sce-nreset",
 	"sce-dbgresetn",
 	"sce-presetdbgn",
 	"sce-actmon",
-	"sce-pm",
 	"sce-dma",
 	"sce-hsp",
 	"tsctnsce",

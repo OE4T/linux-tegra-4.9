@@ -147,6 +147,21 @@
 					nvidia,bypass-smmu;
 				};
 			};
+
+			override@4 {
+				target = <&sdmmc3>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+
+			override@5 {
+				target = <&sdmmc1>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+
 		};
 
 		fragement@7 {

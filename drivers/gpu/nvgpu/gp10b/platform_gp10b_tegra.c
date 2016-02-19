@@ -309,6 +309,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.enable_blcg		= true,
 	.enable_slcg		= true,
 	.enable_elcg		= true,
+	.enable_aelpg       = true,
 
 	/* ptimer src frequency in hz*/
 	.ptimer_src_freq	= 31250000,

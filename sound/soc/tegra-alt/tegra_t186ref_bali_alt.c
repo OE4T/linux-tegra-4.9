@@ -35,6 +35,8 @@
 #define MAX_ADX_NUM 4
 #define DEFAULT_BT_FS_RATE 8000
 
+#define DEFAULT_SAMPLE_RATE 48000
+
 #define PARAMS(sformat, channels)			\
 	{						\
 		.formats = sformat,			\
@@ -240,6 +242,7 @@ static int tegra_t186ref_bali_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 {
 	struct snd_soc_dai *cpu_dai = rtd->cpu_dai;
 	struct snd_soc_card *card = rtd->card;
+	struct tegra_t186ref_bali *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_pcm_stream *dai_params =
 		(struct snd_soc_pcm_stream *)rtd->dai_link->params;
 	unsigned int fmt = rtd->dai_link->dai_fmt;
@@ -249,6 +252,9 @@ static int tegra_t186ref_bali_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 
 	/* Default sampling rate*/
 	srate = dai_params->rate_min;
+
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+			DEFAULT_SAMPLE_RATE, 0, 0);
 
 	/* set sys clk */
 	if (cpu_dai->driver->ops->set_sysclk) {

@@ -3985,11 +3985,8 @@ u16 eqos_select_queue(struct net_device *dev,
 		}
 	}
 
-	if (txqueue_select < 0) {
-		pr_err("Bad Value of skb->priority in eqos_select_queue(). \
-		    Using default value of qinx = 0\n");
+	if (txqueue_select < 0)
 		txqueue_select = 0;
-	}
 
 	DBGPR("<--eqos_select_queue txqueue-select:%d\n", txqueue_select);
 

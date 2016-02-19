@@ -650,17 +650,10 @@ static int eqos_therm_init(struct eqos_prv_data *pdata)
 /*!
 * \brief API to initialize the device.
 *
-* \details This probing function gets called (during execution of
-* pci_register_driver() for already existing devices or later if a
-* new device gets inserted) for all PCI devices which match the ID table
-* and are not "owned" by the other drivers yet. This function gets passed
-* a "struct pci_dev *" for each device whose entry in the ID table matches
-* the device. The probe function returns zero when the driver chooses to take
-* "ownership" of the device or an error code (negative number) otherwise.
-* The probe function always gets called from process context, so it can sleep.
+* \details This probing function gets called by the kernel when a node with a
+* matching compatible string is found in the device tree.
 *
-* \param[in] pdev - pointer to pci_dev structure.
-* \param[in] id   - pointer to table of device ID/ID's the driver is inerested.
+* \param[in] pdev - pointer to platform_dev structure.
 *
 * \return integer
 *
@@ -1146,7 +1139,7 @@ int eqos_probe(struct platform_device *pdev)
 * should reverse operations performed at probe time. The remove function
 * always gets called from process context, so it can sleep.
 *
-* \param[in] pdev - pointer to pci_dev structure.
+* \param[in] pdev - pointer to platform_dev structure.
 *
 * \return void
 */
@@ -1281,18 +1274,10 @@ static INT eqos_resume_early(struct platform_device *pdev)
 /*!
  * \brief Routine to put the device in suspend mode
  *
- * \details This function gets called by PCI core when the device is being
- * suspended. The suspended state is passed as input argument to it.
- * Following operations are performed in this function,
- * - stop the phy.
- * - detach the device from stack.
- * - stop the queue.
- * - Disable napi.
- * - Stop DMA TX and RX process.
- * - Enable power down mode using PMT module or disable MAC TX and RX process.
- * - Save the pci state.
+ * \details This function gets called by the kernel core when the device is
+ * being suspended. The suspended state is passed as input argument to it.
  *
- * \param[in] pdev – pointer to pci device structure.
+ * \param[in] pdev – pointer to platform device structure.
  * \param[in] state – suspend state of device.
  *
  * \return int
@@ -1325,19 +1310,11 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 /*!
  * \brief Routine to resume device operation
  *
- * \details This function gets called by PCI core when the device is being
+ * \details This function gets called by the kernel when the device is being
  * resumed. It is always called after suspend has been called. These function
- * reverse operations performed at suspend time. Following operations are
- * performed in this function,
- * - restores the saved pci power state.
- * - Wakeup the device using PMT module if supported.
- * - Starts the phy.
- * - Enable MAC and DMA TX and RX process.
- * - Attach the device to stack.
- * - Enable napi.
- * - Starts the queue.
+ * reverse operations performed at suspend time.
  *
- * \param[in] pdev – pointer to pci device structure.
+ * \param[in] pdev – pointer to platform device structure.
  *
  * \return int
  *
@@ -1373,7 +1350,7 @@ static INT eqos_resume(struct platform_device *pdev)
 * \brief API to register the driver.
 *
 * \details This is the first function called when the driver is loaded.
-* It register the driver with PCI sub-system
+* It register the driver with the kernel
 *
 * \return void.
 */
@@ -1404,7 +1381,7 @@ static int eqos_init_module(void)
 * \brief API to unregister the driver.
 *
 * \details This is the first function called when the driver is removed.
-* It unregister the driver from PCI sub-system
+* It unregister the driver from the kernel
 *
 * \return void.
 */

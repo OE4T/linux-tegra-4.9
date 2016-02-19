@@ -45,5 +45,50 @@
 				};
 			};
 		};
+		e3325_xusb {
+			odm-data = "enable-xusb-on-uphy-lane0";
+			override@0 {
+				target = <&tegra_padctl_uphy_pinmux_default>;
+				_overlay_ {
+					e3325-usb3-std-A-HS {
+						status = "okay";
+					};
+					e3325-usb3-std-A-SS {
+						status = "okay";
+					};
+					pcie {
+						nvidia,lanes = "uphy-lane-2", "uphy-lane-3", "uphy-lane-4";
+					};
+				};
+			};
+			override@1 {
+				target = <&{/xhci@3530000}>;
+				_overlay_ {
+					phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+							<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+							<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+							<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+							<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
+					phy-names = "utmi-0", "utmi-1", "usb3-1", "utmi-2", "usb3-0";
+				};
+			};
+			override@2 {
+				target = <&tegra_gpio>;
+				_overlay_ {
+					e3325_sdio_rst {
+						status = "okay";
+					};
+					e3325_lane0_mux {
+						status = "okay";
+					};
+				};
+			};
+			override@3 {
+				target = <&tegra_pcie>;
+				_overlay_ {
+					nvidia,lane-map = <0x210>;
+				};
+			};
+		};
 	};
 };

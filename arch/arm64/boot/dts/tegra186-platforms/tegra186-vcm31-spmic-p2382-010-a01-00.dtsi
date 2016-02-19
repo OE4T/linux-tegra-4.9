@@ -117,7 +117,8 @@
 
 				spmic_ldo3: ldo3 {
 					regulator-name = "vddio-sdmmc1";
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,power-ok-control = <0>;
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
 					regulator-enable-ramp-delay = <660>;
@@ -134,7 +135,8 @@
 					regulator-name = "vddio-sdmmc3";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,power-ok-control = <0>;
 					regulator-enable-ramp-delay = <680>;
 					regulator-disable-ramp-delay = <1000>;
 					regulator-ramp-delay = <5000>;

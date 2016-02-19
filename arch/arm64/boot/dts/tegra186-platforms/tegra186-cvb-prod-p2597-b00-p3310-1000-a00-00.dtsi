@@ -291,6 +291,15 @@
 			regulator-max-microvol = <2800000>;
 			enable-active-high;
 		};
+
+		vdd_usb2_5v: regulator@17 {
+			compatible = "regulator-fixed-sync";
+			reg = <17>;
+			regulator-name = "vdd-usb2-5v";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			gpio = <&gpio_i2c_0_74 0 0>;
+		};
 	};
 
 	gpio-keys {

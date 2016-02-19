@@ -86,6 +86,22 @@
 				nvidia,usb3-port = <1>;
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
+
+			e3325-usb3-std-A-HS {
+				nvidia,lanes = "otg-2";
+				nvidia,function = "xusb";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				status = "disabled";
+			};
+
+			e3325-usb3-std-A-SS {
+				nvidia,lanes = "uphy-lane-0";
+				nvidia,function = "usb3";
+				nvidia,usb3-port = <0>;
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				status = "disabled";
+			};
+
 			pcie {
 				nvidia,lanes = "uphy-lane-0", "uphy-lane-2", "uphy-lane-3", "uphy-lane-4";
 				nvidia,function = "pcie";

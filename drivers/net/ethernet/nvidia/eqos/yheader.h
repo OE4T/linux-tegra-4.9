@@ -1532,6 +1532,10 @@ struct eqos_prv_data {
 	int tst_buf_size;
 #endif
 	tegra_isomgr_handle isomgr_handle;
+	struct workqueue_struct *dma_stat_mon_wq;
+	struct work_struct dma_stat_mon_work;
+	int dma_stat_monitor_inter;
+	struct timer_list dma_stat_monitor_timer;
 };
 
 typedef enum {

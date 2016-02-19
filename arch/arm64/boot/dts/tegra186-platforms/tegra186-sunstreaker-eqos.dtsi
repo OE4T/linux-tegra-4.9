@@ -38,6 +38,7 @@
 		nvidia,phy-reset-gpio = <&tegra_gpio TEGRA_GPIO(M, 4) 0>;
 		nvidia,phy-intr-gpio = <&tegra_gpio TEGRA_GPIO(M, 5) 0>;
 		nvidia,eth_iso_enable = <1>; /*1=enable, 0=disable */
+		nvidia,dma_stat_monitor_inter = <5>; /* 5 seconds */
         };
 
 };

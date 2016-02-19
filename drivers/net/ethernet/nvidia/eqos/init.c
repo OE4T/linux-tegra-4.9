@@ -647,6 +647,63 @@ static int eqos_therm_init(struct eqos_prv_data *pdata)
 	return 0;
 }
 
+void eqos_dma_stat_mon_work(struct work_struct *work)
+{
+	struct eqos_prv_data *pdata =
+	    container_of(work, struct eqos_prv_data, dma_stat_mon_work);
+	unsigned int val = 0;
+
+	pdata->dev->flags &= ~IFF_UP;
+	eqos_stop_dev(pdata);
+
+	mdelay(100);
+
+	eqos_start_dev(pdata);
+	pdata->dev->flags |= IFF_UP;
+
+}
+
+static bool is_dma_running(struct eqos_prv_data *pdata)
+{
+	u32 val;
+	int i;
+
+	for (i = 0; i < EQOS_TX_QUEUE_CNT; i++) {
+		DMA_CHTBAR_RD(i, val);
+		if (val == 0xffffffff) {
+			dev_err(&pdata->pdev->dev, "TX:Channel %d is halted\n", i);
+			goto dma_halted;
+		}
+	}
+
+	for (i = 0; i < EQOS_RX_QUEUE_CNT; i++) {
+		DMA_CHRBAR_RD(i, val);
+		if (val == 0xffffffff) {
+			dev_err(&pdata->pdev->dev, "RX:Channel %d is halted\n", i);
+			goto dma_halted;
+		}
+	}
+
+	return true;
+
+dma_halted:
+	return false;
+}
+
+static void eqos_dma_stat_monitor_timer_func(unsigned long data)
+{
+	struct eqos_prv_data *pdata =
+		(struct eqos_prv_data *)data;
+	if (!is_dma_running(pdata)) {
+		queue_work(pdata->dma_stat_mon_wq, &pdata->dma_stat_mon_work);
+		return NETDEV_TX_BUSY;
+	} else {
+		pdata->dma_stat_monitor_timer.expires = jiffies +
+			(HZ * pdata->dma_stat_monitor_inter);
+		add_timer(&pdata->dma_stat_monitor_timer);
+	}
+}
+
 /*!
 * \brief API to initialize the device.
 *
@@ -910,6 +967,10 @@ int eqos_probe(struct platform_device *pdev)
 		ISO_BW_DEFAULT);
 	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
 		1);
+	/* Timer interval can be between 1 sec to 100 sec */
+	get_dt_u32(pdata, "nvidia,dma_stat_monitor_inter",
+		&pdata->dma_stat_monitor_inter, 1,
+		100);
 
 	for (i = 0; i < MAX_CHANS; i++) {
 		pchinfo = &pdata->chinfo[i];
@@ -1055,8 +1116,22 @@ int eqos_probe(struct platform_device *pdev)
 		goto err_therm_init;
 	}
 
+	pdata->dma_stat_mon_wq = alloc_workqueue("DMA Satus Monitor WQ\n",
+		WQ_HIGHPRI|WQ_UNBOUND, 0);
+	if (!pdata->dma_stat_mon_wq) {
+		dev_err(&pdev->dev, "Work Queue Allocation Failed\n");
+		goto err_out_dma_stat_mon_wq_failed;
+	}
+	INIT_WORK(&pdata->dma_stat_mon_work, eqos_dma_stat_mon_work);
+
+	init_timer(&pdata->dma_stat_monitor_timer);
+	pdata->dma_stat_monitor_timer.function =
+		eqos_dma_stat_monitor_timer_func;
+	pdata->dma_stat_monitor_timer.data = (unsigned long)pdata;
+
 	return 0;
 
+ err_out_dma_stat_mon_wq_failed:
  err_therm_init:
 	if (pdt_cfg->eth_iso_enable)
 		tegra_isomgr_unregister(pdata->isomgr_handle);
@@ -1195,6 +1270,8 @@ int eqos_remove(struct platform_device *pdev)
 		devm_gpio_free(&pdev->dev, pdata->phy_intr_gpio);
 		eqos_regulator_deinit(pdata);
 	}
+
+	destroy_workqueue(pdata->dma_stat_mon_wq);
 
 	free_netdev(ndev);
 

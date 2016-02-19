@@ -81,6 +81,7 @@ struct max77620_regulator_pdata {
 	int suspend_fps_pd_slot;
 	int suspend_fps_pu_slot;
 	int current_mode;
+	int power_ok;
 	int ramp_rate_setting;
 };
 
@@ -351,10 +352,43 @@ static int max77620_set_slew_rate(struct max77620_regulator *pmic, int id,
 	return 0;
 }
 
+static int max77620_config_power_ok(struct max77620_regulator *pmic, int id)
+{
+	struct max77620_regulator_pdata *rpdata = &pmic->reg_pdata[id];
+	struct max77620_regulator_info *rinfo = pmic->rinfo[id];
+	struct max77620_chip *chip = dev_get_drvdata(pmic->dev->parent);
+	u8 val, mask;
+	int ret;
+
+	if (chip->chip_id == MAX20024) {
+		if (rpdata->power_ok >= 0) {
+			if (rinfo->type == MAX77620_REGULATOR_TYPE_SD)
+				mask = MAX20024_SD_CFG1_MPOK_MASK;
+			else
+				mask = MAX20024_LDO_CFG2_MPOK_MASK;
+
+			val = rpdata->power_ok ? mask : 0;
+
+			ret = regmap_update_bits(pmic->rmap, rinfo->cfg_addr,
+						 mask, val);
+			if (ret < 0) {
+				dev_err(pmic->dev,
+					"Reg 0x%02x update failed %d\n",
+					rinfo->cfg_addr, ret);
+				return ret;
+			}
+		}
+	}
+
+	return 0;
+}
+
 static int max77620_init_pmic(struct max77620_regulator *pmic, int id)
 {
 	struct max77620_regulator_pdata *rpdata = &pmic->reg_pdata[id];
 	int ret;
+
+	max77620_config_power_ok(pmic, id);
 
 	/* Update power mode */
 	ret = max77620_regulator_get_power_mode(pmic, id);
@@ -595,6 +629,9 @@ static int max77620_of_parse_cb(struct device_node *np,
 			np, "maxim,suspend-fps-power-down-slot", &pval);
 	rpdata->suspend_fps_pd_slot = (!ret) ? pval : -1;
 
+	ret = of_property_read_u32(np, "maxim,power-ok-control", &pval);
+	rpdata->power_ok = (!ret) ? pval : -1;
+
 	ret = of_property_read_u32(np, "maxim,ramp-rate-setting", &pval);
 	rpdata->ramp_rate_setting = (!ret) ? pval : 0;
 
@@ -806,6 +843,8 @@ static int max77620_regulator_resume(struct device *dev)
 
 	for (id = 0; id < MAX77620_NUM_REGS; id++) {
 		reg_pdata = &pmic->reg_pdata[id];
+
+		max77620_config_power_ok(pmic, id);
 
 		max77620_regulator_set_fps_slots(pmic, id, false);
 		if (reg_pdata->active_fps_src < 0)

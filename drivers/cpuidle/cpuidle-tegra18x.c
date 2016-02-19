@@ -56,6 +56,8 @@
 #define TEGRA186_DENVER_CPUIDLE_C7	2
 #define TEGRA186_DENVER_CPUIDLE_C6	1
 #define TEGRA186_A57_CPUIDLE_C7		1
+#define DENVER_CLUSTER			0
+#define A57_CLUSTER			1
 
 static bool check_mce_version(void)
 {
@@ -366,9 +368,80 @@ static int a57_idle_write(void *data, u64 val)
         return 0;
 }
 
+struct xover_smp_call_data {
+	int index;
+	int value;
+};
+
+static void program_single_crossover(void *data)
+{
+	struct xover_smp_call_data *xover_data =
+		(struct xover_smp_call_data *)data;
+	tegra_mce_update_crossover_time(xover_data->index, xover_data->value);
+}
+
+static int setup_crossover(int cluster, int index, int value)
+{
+	struct cpumask denver_cpumask;
+	struct cpumask a57_cpumask;
+	int cpu_number;
+	struct xover_smp_call_data xover_data;
+
+	cpumask_clear(&denver_cpumask);
+	cpumask_clear(&a57_cpumask);
+
+	for_each_online_cpu(cpu_number) {
+		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu_number);
+		u32 midr = cpuinfo->reg_midr;
+		if (MIDR_IMPLEMENTOR(midr) == ARM_CPU_IMP_ARM)
+			cpumask_set_cpu(cpu_number, &a57_cpumask);
+		else
+			cpumask_set_cpu(cpu_number, &denver_cpumask);
+	}
+
+	xover_data.index = index;
+	xover_data.value = value;
+
+	if (cluster == DENVER_CLUSTER)
+		smp_call_function_any(&denver_cpumask, program_single_crossover,
+			&xover_data, 1);
+	else
+		smp_call_function_any(&a57_cpumask, program_single_crossover,
+			&xover_data, 1);
+	return 0;
+}
+
+static int a57_cc6_write(void *data, u64 val)
+{
+	return setup_crossover(A57_CLUSTER, TEGRA_MCE_XOVER_CC1_CC6, (u32) val);
+}
+
+static int a57_cc7_write(void *data, u64 val)
+{
+	return setup_crossover(A57_CLUSTER, TEGRA_MCE_XOVER_CC1_CC7, (u32) val);
+}
+
+static int denver_cc6_write(void *data, u64 val)
+{
+	return setup_crossover(DENVER_CLUSTER, TEGRA_MCE_XOVER_CC1_CC6,
+		(u32) val);
+}
+
+static int denver_cc7_write(void *data, u64 val)
+{
+	return setup_crossover(DENVER_CLUSTER, TEGRA_MCE_XOVER_CC1_CC7,
+		(u32) val);
+}
+
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_denver_fops, NULL,
 						denver_idle_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_a57_fops, NULL, a57_idle_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(denver_xover_cc6_fops, NULL,
+						denver_cc6_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(denver_xover_cc7_fops, NULL,
+						denver_cc7_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(a57_xover_cc6_fops, NULL, a57_cc6_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(a57_xover_cc7_fops, NULL, a57_cc7_write, "%llu\n");
 
 static int cpuidle_debugfs_init(void)
 {
@@ -378,46 +451,66 @@ static int cpuidle_debugfs_init(void)
 	if (!cpuidle_debugfs_denver)
 		goto err_out;
 
-        dfs_file = debugfs_create_u64("forced_idle_state", 0644,
-                        cpuidle_debugfs_denver, &denver_idle_state);
+	dfs_file = debugfs_create_u64("forced_idle_state", 0644,
+		cpuidle_debugfs_denver, &denver_idle_state);
 
-        if (!dfs_file)
-                goto err_out;
+	if (!dfs_file)
+		goto err_out;
 
-        dfs_file = debugfs_create_u64("forced_cluster_idle_state", 0644,
-                        cpuidle_debugfs_denver, &denver_cluster_idle_state);
+	dfs_file = debugfs_create_u64("forced_cluster_idle_state", 0644,
+		cpuidle_debugfs_denver, &denver_cluster_idle_state);
 
-        if (!dfs_file)
-                goto err_out;
+	if (!dfs_file)
+		goto err_out;
 
-        dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
-                        cpuidle_debugfs_denver, NULL, &duration_us_denver_fops);
+	dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
+		cpuidle_debugfs_denver, NULL, &duration_us_denver_fops);
 
-        if (!dfs_file)
-                goto err_out;
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_file("crossover_cc1_cc6", 0644,
+		cpuidle_debugfs_denver, NULL, &denver_xover_cc6_fops);
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_file("crossover_cc1_cc7", 0644,
+		cpuidle_debugfs_denver, NULL, &denver_xover_cc7_fops);
+	if (!dfs_file)
+		goto err_out;
 
 
 	cpuidle_debugfs_a57 = debugfs_create_dir("cpuidle_a57", NULL);
 	if (!cpuidle_debugfs_a57)
 		goto err_out;
 
-        dfs_file = debugfs_create_u64("forced_idle_state", 0644,
-                        cpuidle_debugfs_a57, &a57_idle_state);
+	dfs_file = debugfs_create_u64("forced_idle_state", 0644,
+		cpuidle_debugfs_a57, &a57_idle_state);
 
-        if (!dfs_file)
-                goto err_out;
+	if (!dfs_file)
+		goto err_out;
 
-        dfs_file = debugfs_create_u64("forced_cluster_idle_state", 0644,
-                        cpuidle_debugfs_a57, &a57_cluster_idle_state);
+	dfs_file = debugfs_create_u64("forced_cluster_idle_state", 0644,
+		cpuidle_debugfs_a57, &a57_cluster_idle_state);
 
-        if (!dfs_file)
-                goto err_out;
+	if (!dfs_file)
+		goto err_out;
 
-        dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
-                        cpuidle_debugfs_a57, NULL, &duration_us_a57_fops);
+	dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
+		cpuidle_debugfs_a57, NULL, &duration_us_a57_fops);
 
-        if (!dfs_file)
-                goto err_out;
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_file("crossover_cc1_cc6", 0644,
+		cpuidle_debugfs_a57, NULL, &a57_xover_cc6_fops);
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_file("crossover_cc1_cc7", 0644,
+		cpuidle_debugfs_a57, NULL, &a57_xover_cc7_fops);
+	if (!dfs_file)
+		goto err_out;
 
 	return 0;
 

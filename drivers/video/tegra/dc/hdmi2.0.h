@@ -388,6 +388,23 @@ struct tegra_hdmi {
 	bool device_shutdown;
 	int plug_state;
 	atomic_t suspended;
+	struct tegra_hdmi_out_ops *out_ops;
+	void	*out_data;	/* HDMI to GMSL bridge, etc. */
+};
+
+struct tegra_hdmi_out_ops {
+	/* initialize output.  dsi clocks are not on at this point */
+	int (*init)(struct tegra_hdmi *);
+	/* destroy output.  dsi clocks are not on at this point */
+	void (*destroy)(struct tegra_hdmi *);
+	/* enable output.  dsi clocks are on at this point */
+	void (*enable)(struct tegra_hdmi *);
+	/* disable output.  dsi clocks are on at this point */
+	void (*disable)(struct tegra_hdmi *dc);
+	/* suspend output.  dsi clocks are on at this point */
+	void (*suspend)(struct tegra_hdmi *);
+	/* resume output.  dsi clocks are on at this point */
+	void (*resume)(struct tegra_hdmi *);
 };
 
 #define HDMI_ELD_BUF 96
@@ -428,3 +445,16 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 #endif
 int tegra_hdmi_get_hotplug_state(struct tegra_hdmi *hdmi);
 void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state);
+
+#ifdef CONFIG_TEGRA_HDMI2GMSL_MAX929x
+static inline void *tegra_hdmi_get_outdata(struct tegra_hdmi *hdmi)
+{
+	return hdmi->out_data;
+}
+
+static inline void tegra_hdmi_set_outdata(struct tegra_hdmi *hdmi,
+						void *data)
+{
+	hdmi->out_data = data;
+}
+#endif	/* CONFIG_TEGRA_HDMI2GMSL_MAX929x */

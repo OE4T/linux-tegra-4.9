@@ -55,6 +55,7 @@
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
 #include "hdmi2fpd_ds90uh949.h"
+#include "max929x_hdmi2gmsl.h"
 
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 static struct of_device_id tegra_sor_pd[] = {
@@ -1045,6 +1046,12 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		hdmi2fpd_init(dc);
 		hdmi2fpd_enable(dc);
 	}
+#ifdef CONFIG_TEGRA_HDMI2GMSL_MAX929x
+	if (hdmi->pdata->hdmi2gmsl_bridge_enable) {
+		hdmi->out_ops = &tegra_hdmi2gmsl_ops;
+		hdmi->out_ops->init(hdmi);
+	}
+#endif	/* CONFIG_TEGRA_HDMI2GMSL_MAX929x */
 	/* NOTE: Below code is applicable to L4T or embedded systems and is
 	 * protected accordingly. This section early enables DC with first mode
 	 * from the monitor specs.
@@ -1132,6 +1139,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 
 	if (hdmi->pdata->hdmi2fpd_bridge_enable)
 		hdmi2fpd_destroy(dc);
+	if (NULL != hdmi->out_ops && NULL != hdmi->out_ops->destroy)
+		hdmi->out_ops->destroy(hdmi);
 	tegra_dc_sor_destroy(hdmi->sor);
 	tegra_edid_destroy(hdmi->edid);
 	tegra_nvhdcp_destroy(hdmi->nvhdcp);
@@ -2004,7 +2013,8 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 
 	if (hdmi->enabled)
 		return;
-
+	if (NULL != hdmi->out_ops && NULL != hdmi->out_ops->enable)
+		hdmi->out_ops->enable(hdmi);
 	tegra_hdmi_controller_enable(hdmi);
 
 	hdmi->enabled = true;
@@ -2282,6 +2292,8 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 {
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
+	if (NULL != hdmi->out_ops && NULL != hdmi->out_ops->disable)
+		hdmi->out_ops->disable(hdmi);
 	hdmi->enabled = false;
 
 #ifdef CONFIG_SWITCH

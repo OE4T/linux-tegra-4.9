@@ -47,6 +47,7 @@ static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 	temp = gk20a_readl(g, fb_mmu_ctrl_r());
 	temp &= gr_gpcs_pri_mmu_ctrl_vm_pg_size_m() |
 		gr_gpcs_pri_mmu_ctrl_use_pdb_big_page_size_m() |
+		gr_gpcs_pri_mmu_ctrl_use_full_comp_tag_line_m() |
 		gr_gpcs_pri_mmu_ctrl_vol_fault_m() |
 		gr_gpcs_pri_mmu_ctrl_comp_fault_m() |
 		gr_gpcs_pri_mmu_ctrl_miss_gran_m() |

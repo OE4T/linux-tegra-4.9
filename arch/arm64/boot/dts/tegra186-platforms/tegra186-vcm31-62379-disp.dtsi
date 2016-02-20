@@ -21,7 +21,6 @@
 #include "tegra210-display-p2393-0000-a00-panel-dsi-1080p.dtsi"
 #include "tegra210-display-p2393-0000-a00-panel-dsi-25x16.dtsi"
 #include "tegra186-hdmi.dtsi"
-#include "tegra186-dp.dtsi"
 
 / {
 	host1x {
@@ -147,6 +146,17 @@
 			hdmi-display {
 				status = "okay";
 				compatible = "hdmi,display";
+				nvidia,edid = [	//EDID1280x720x60Hz.hex
+					00 FF FF FF FF FF FF 00 22 49 00 02 00 00 00 00
+					0B 16 01 03 68 00 00 8C EE EE 91 A3 54 4C 99 26
+					0F 50 54 00 00 00 01 01 01 01 01 01 01 01 01 01
+					01 01 01 01 01 01 2E 1D 00 80 51 D0 1C 20 40 80
+					35 00 00 00 00 00 00 1E D8 18 00 30 41 00 1E 30
+					30 68 34 00 00 00 00 00 00 18 00 00 00 FD 00 32
+					55 1E A0 10 00 00 00 00 00 00 00 00 00 00 00 00
+					00 00 00 E1 C0 E1 40 01 00 01 00 01 00 0A 00 5F
+					];
+				nvidia,hdmi-gmsl-bridge = <TEGRA_HDMI_ENABLE>;
 
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_HDMI>;
@@ -154,27 +164,28 @@
 					nvidia,out-parent-clk = "plld3";
 					nvidia,out-align = <TEGRA_DC_ALIGN_MSB>;
 					nvidia,out-order = <TEGRA_DC_ORDER_RED_BLUE>;
-					nvidia,out-xres = <1920>;
-					nvidia,out-yres = <1080>;
+					nvidia,out-hotplug-state = <1>;	/*TEGRA_HPD_STATE_FORCE_ASSERT*/
+					nvidia,out-xres = <1280>;
+					nvidia,out-yres = <720>;
 
 				};
 				/* default display timing for test
 				 * (only the first entry is effective) */
-				display-timings {
-					1920x1080-32 {
-						clock-frequency = <148500000>;
-						hactive = <1920>;
-						vactive = <1080>;
-						hfront-porch = <88>;
-						hback-porch = <148>;
-						hsync-len = <44>;
-						vfront-porch = <4>;
-						vback-porch = <36>;
+				/*display-timings {
+					1280x720-32 {
+						clock-frequency = <74250000>;
+						hactive = <1280>;
+						vactive = <720>;
+						hfront-porch = <110>;
+						hback-porch = <220>;
+						hsync-len = <40>;
+						vfront-porch = <5>;
+						vback-porch = <20>;
 						vsync-len = <5>;
 						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;
 					};
-				};
+				};*/
 			};
 
 			prod-settings {
@@ -287,11 +298,20 @@
 		};
 	};
 
-	i2c@31b0000 {  //i2c5, dp_aux_ch0_i2c
+	i2c@31b0000 {  //i2c6, dp_aux_ch0_i2c
 		status = "okay";
 	};
-	i2c@3190000 {  //i2c3, dp_aux_ch1_i2c
+	i2c@3190000 {  //i2c4, dp_aux_ch1_i2c
 		status = "okay";
+	};
+	i2c@31c0000 {  //i2c7. Schematic: I2CE -> MAX9291_I2C
+		status = "okay";
+		max9291@40 {
+			compatible = "maxim,max9291";
+			reg = <0x40>;
+			status = "okay";
+			maxim,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
+		};
 	};
 
 	i2c@3160000 { /* Tegra I2C0 - VCM I2CA */

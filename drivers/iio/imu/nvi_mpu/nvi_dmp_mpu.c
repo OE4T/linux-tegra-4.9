@@ -22,7 +22,8 @@ static int nvi_dmp_press_init(struct nvi_state *st)
 	return 1;
 }
 
-static int nvi_dmp_cpass_init(struct nvi_state *st)
+/* gmf = GeoMagnetic Field (compass) */
+static int nvi_dmp_gmf_init(struct nvi_state *st)
 {
 	int ret = 1;
 
@@ -102,8 +103,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 			.en_len		= 2,
 			.en		= { 0x00, 0x01 },
 			.dis		= { 0x00, 0x00 },
-			.odr_cfg	= KEY_CFG_ACCL_ODR,
-			.odr_cntr	= KEY_ODR_CNTR_ACCL,
 		},
 	},
 	{
@@ -113,7 +112,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.hdr_n			= 2,
 		.hdr			= { 0x10, 0x00 },
 		.hdr_msk		= { 0xFF, 0xF0 },
-		.fn_init		= &nvi_dmp_cpass_init,
+		.fn_init		= &nvi_dmp_gmf_init,
 		.mpu			= {
 			.en_addr	= CFG_OUT_CPASS,
 			.en_len		= 2,
@@ -142,11 +141,29 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	},
 };
 
+static int nvi_dmp_fifo_irq(struct nvi_state *st)
+{
+	u8 en[] = {0xFE};
+	u8 dis[] = {0xA3};
+	u8 *able;
+
+	if ((st->en_msk & MSK_DEV_ALL) & ~((1 << DEV_SM) | (1 << DEV_STP)))
+		/* DMP requires FIFO IRQ */
+		able = en;
+	else
+		/* DMP IRQ is in event mode */
+		able = dis;
+	return nvi_mem_wr(st, CFG_FIFO_INT, 1, able, false);
+}
+
 static int nvi_dd_odr(struct nvi_state *st, struct nvi_dmp_dev *dd)
 {
 	u16 odr_cfg;
 	unsigned int period_us;
 	int ret;
+
+	if (!(dd->mpu.odr_cfg | dd->mpu.odr_cntr))
+		return 0;
 
 	if (dd->dev == DEV_AUX)
 		period_us = st->aux.port[dd->aux_port].period_us;
@@ -166,6 +183,9 @@ static int nvi_dd_en(struct nvi_state *st, struct nvi_dmp_dev *dd)
 {
 	int ret;
 
+	if (dd->dev >= DEV_N_AUX)
+		return 0;
+
 	if (st->snsr[dd->dev].enable) {
 		if (dd->fn_init)
 			ret = dd->fn_init(st);
@@ -179,8 +199,12 @@ static int nvi_dd_en(struct nvi_state *st, struct nvi_dmp_dev *dd)
 			ret |= nvi_mem_wr(st, dd->mpu.en_addr, dd->mpu.en_len,
 					  &dd->mpu.en[0], false);
 		}
-		if (ret && (dd->dev != DEV_AUX))
-			st->en_msk &= ~(1 << dd->dev);
+		if (dd->dev != DEV_AUX) {
+			if (ret)
+				st->en_msk &= ~(1 << dd->dev);
+			else
+				st->snsr[dd->dev].buf_n = dd->data_n;
+		}
 	} else {
 		ret = nvi_mem_wr(st, dd->mpu.en_addr, dd->mpu.en_len,
 				 &dd->mpu.dis[0], false);
@@ -220,12 +244,15 @@ static int nvi_dd_batch(struct nvi_state *st, unsigned int dev, int port)
 static int nvi_dd_enable(struct nvi_state *st, unsigned int dev, int port)
 {
 	struct nvi_dmp_dev *dd;
+	int ret;
 
 	dd = nvi_dd(st, dev, port);
 	if (dd == NULL)
 		return -EINVAL;
 
-	return nvi_dd_en(st, dd);
+	ret = nvi_dd_en(st, dd);
+	ret |= nvi_dmp_fifo_irq(st);
+	return ret;
 }
 
 static int nvi_dd_init(struct nvi_state *st, unsigned int dev)
@@ -352,6 +379,8 @@ static int nvi_dmp_en(struct nvi_state *st)
 	unsigned int i;
 	int ret = 0;
 
+	st->snsr[DEV_ACC].matrix = true;
+	st->snsr[DEV_GYR].matrix = true;
 	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->gyro_config1, 0x03,
 			     __func__, &st->rc.gyro_config1);
 	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->gyro_config2, 0x18,
@@ -362,6 +391,9 @@ static int nvi_dmp_en(struct nvi_state *st)
 			     __func__, (u8 *)&st->rc.smplrt[0]);
 	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++)
 		ret |= nvi_dd_en(st, &nvi_dmp_devs[i]);
+	ret |= nvi_dmp_fifo_irq(st);
+	nvi_push_delay(st);
+	ret |= nvi_reset(st, __func__, true, false, true);
 	return ret;
 }
 

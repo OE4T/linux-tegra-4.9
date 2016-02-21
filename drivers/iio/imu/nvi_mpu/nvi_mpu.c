@@ -256,6 +256,7 @@ static const int gyro_6050_st_tb[31] = {
 static short index_of_key(u16 key)
 {
 	int i;
+
 	for (i = 0; i < NUM_OF_PROD_REVS; i++)
 		if (prod_rev_map[i].mpl_product_key == key)
 			return (short)i;
@@ -691,11 +692,12 @@ static int inv_check_6500_accel_self_test(struct nvi_state *st,
  *  inv_mpu_do_test() - do the actual test of self testing
  */
 static int inv_mpu_do_test(struct nvi_state *st, int self_test_flag,
-		int *gyro_result, int *accel_result)
+			   int *gyro_result, int *accel_result)
 {
 	int ret, i, j, packet_size;
 	u8 data[BYTES_PER_SENSOR * 2], d, lpf;
 	u16 fifo_en;
+	short vals[3];
 	int fifo_count, packet_count, ind, s;
 
 	packet_size = BYTES_PER_SENSOR * 2;
@@ -781,7 +783,6 @@ static int inv_mpu_do_test(struct nvi_state *st, int self_test_flag,
 		packet_count = fifo_count / packet_size;
 		i = 0;
 		while ((i < packet_count) && (s < ST_MAX_SAMPLES)) {
-			short vals[3];
 			ret = nvi_i2c_r(st, st->hal->reg->fifo_rw.bank,
 					st->hal->reg->fifo_rw.reg,
 					packet_size, data);
@@ -1011,6 +1012,8 @@ static int nvi_en_acc(struct nvi_state *st)
 	u8 val;
 	int ret = 0;
 
+	st->snsr[DEV_ACC].matrix = true;
+	st->snsr[DEV_ACC].buf_n = 6;
 	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->accel_config2, 0,
 			     __func__, &st->rc.accel_config2);
 	val = (st->snsr[DEV_ACC].usr_cfg << 1) | 0x01;
@@ -1023,6 +1026,7 @@ static int nvi_en_gyr(struct nvi_state *st)
 {
 	u8 val = st->snsr[DEV_GYR].usr_cfg << 3;
 
+	st->snsr[DEV_GYR].matrix = true;
 	return nvi_i2c_wr_rc(st, &st->hal->reg->gyro_config2, val,
 			     __func__, &st->rc.gyro_config2);
 }
@@ -1482,6 +1486,8 @@ static const struct nvi_hal_reg nvi_hal_reg_6050 = {
 };
 
 static const struct nvi_hal_bit nvi_hal_bit_6050 = {
+	.dmp_int_sm			= 2,
+	.dmp_int_stp			= 3,
 	.int_i2c_mst			= 0,
 	.int_dmp			= 1,
 	.int_pll_rdy			= 7,

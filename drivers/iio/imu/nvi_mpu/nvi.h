@@ -73,6 +73,7 @@
 					 MSK_DEV_DMP)
 #define MSK_PM_LP			((1 << EN_LP) | (1 << DEV_ACC))
 #define MSK_PM_STDBY			((1 << EN_STDBY) | (1 << FW_LOADED))
+#define MSK_PM_ACC_EN			((1 << DEV_ACC) | (1 << DEV_SM))
 #define NVI_PM_ERR			(0)
 #define NVI_PM_AUTO			(1)
 #define NVI_PM_OFF_FORCE		(2)
@@ -232,6 +233,8 @@ struct nvi_hal_reg {
 };
 
 struct nvi_hal_bit {
+	u8 dmp_int_sm;
+	u8 dmp_int_stp;
 	u8 int_i2c_mst;
 	u8 int_dmp;
 	u8 int_pll_rdy;
@@ -263,6 +266,7 @@ struct nvi_rc {
 	u8 lp_config;
 	u8 int_pin_cfg;
 	u32 int_enable;
+	u8 int_dmp;
 	u32 int_status;
 	u8 i2c_mst_odr_config;
 	u8 i2c_mst_ctrl;
@@ -307,7 +311,6 @@ struct nvi_dmp_dev {
 	u8 hdr[DMP_HDR_LEN_MAX];
 	u8 hdr_msk[DMP_HDR_LEN_MAX];
 	int (*fn_init)(struct nvi_state *st);
-	int (*fn_push)(struct nvi_state *st, u8 *buf);
 	union {
 		struct nvi_dmp_icm icm;
 		struct nvi_dmp_mpu mpu;
@@ -362,6 +365,8 @@ struct nvi_snsr {
 	void *nvs_st;
 	struct sensor_cfg cfg;
 	unsigned int usr_cfg;
+	int buf_shft;
+	unsigned int buf_n;
 	unsigned int enable;
 	unsigned int period_us;
 	unsigned int timeout_us;
@@ -372,6 +377,7 @@ struct nvi_snsr {
 	s64 ts_last;
 	bool ts_reset;
 	bool flush;
+	bool matrix;
 };
 
 struct aux_port {
@@ -471,13 +477,13 @@ int nvi_wr_gyro_offset(struct nvi_state *st, unsigned int axis, u16 offset);
 int nvi_wr_fifo_cfg(struct nvi_state *st, int fifo);
 int nvi_int_able(struct nvi_state *st, const char *fn, bool enable);
 int nvi_reset(struct nvi_state *st, const char *fn,
-	      bool rst_fifo, bool rst_i2c);
+	      bool rst_fifo, bool rst_i2c, bool en_irq);
 int nvi_user_ctrl_en(struct nvi_state *st, const char *fn,
 		     bool en_dmp, bool en_fifo, bool en_i2c, bool en_irq);
 int nvi_wr_pm1(struct nvi_state *st, const char *fn, u8 pm1);
 int nvi_pm_wr(struct nvi_state *st, const char *fn, u8 pm1, u8 pm2, u8 lp);
-int nvi_pm(struct nvi_state *st, const char *fn, int pm_req);
 int nvi_aux_delay(struct nvi_state *st, const char *fn);
+void nvi_push_delay(struct nvi_state *st);
 
 extern const struct nvi_hal nvi_hal_20628;
 extern const struct nvi_hal nvi_hal_6515;

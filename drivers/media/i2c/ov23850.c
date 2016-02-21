@@ -1,7 +1,7 @@
 /*
  * ov23850.c - ov23850 sensor driver
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -341,13 +341,12 @@ static int ov23850_power_on(struct camera_common_data *s_data)
 	if (err)
 		goto ov23850_vcmvdd_fail;
 
-	usleep_range(1, 2);
 	if (pw->reset_gpio)
 		gpio_set_value(pw->reset_gpio, 1);
 	if (pw->pwdn_gpio)
 		gpio_set_value(pw->pwdn_gpio, 1);
 
-	usleep_range(300, 310);
+	usleep_range(5350, 5360);	/* 5ms + 8192 EXTCLK cycles */
 
 	pw->state = SWITCH_ON;
 	return 0;

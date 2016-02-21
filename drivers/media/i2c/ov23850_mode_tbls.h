@@ -1,7 +1,7 @@
 /*
  * ov23850.c - ov23850 sensor driver
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All Rights Reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -4035,11 +4035,9 @@ static ov23850_reg mode_5632x3168_30fps_dpcm[] = {
 };
 
 static ov23850_reg mode_table_common[] = {
-	{OV23850_TABLE_WAIT_MS, OV23850_WAIT_MS},
 	{0x301e, 0x00},
 	{OV23850_TABLE_WAIT_MS, OV23850_WAIT_MS},
 	{0x0103, 0x01},
-	{OV23850_TABLE_WAIT_MS, OV23850_WAIT_MS},
 	{0x0300, 0x00},
 	{0x0301, 0x6C},
 	{0x0302, 0x10},

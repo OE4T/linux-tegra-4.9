@@ -587,6 +587,7 @@ static int nvi_en_gyr(struct nvi_state *st)
 	int i;
 	int ret = 0;
 
+	st->snsr[DEV_GYR].matrix = true;
 	for (i = 0; i < AXIS_N; i++)
 		ret |= nvi_wr_gyro_offset(st, i,
 					  (u16)(st->rom_offset[DEV_GYR][i] +
@@ -605,6 +606,9 @@ static int nvi_en_acc(struct nvi_state *st)
 	int i;
 	int ret = 0;
 
+	st->snsr[DEV_ACC].matrix = true;
+	st->snsr[DEV_ACC].buf_n = 6;
+	st->snsr[DEV_ACC].buf_shft = 0;
 	for (i = 0; i < AXIS_N; i++)
 		ret |= nvi_wr_accel_offset(st, i,
 					   (u16)(st->rom_offset[DEV_ACC][i] +
@@ -1268,6 +1272,8 @@ static const struct nvi_hal_reg nvi_hal_reg_icm = {
 };
 
 static const struct nvi_hal_bit nvi_hal_bit_icm = {
+	.dmp_int_sm			= 2,
+	.dmp_int_stp			= 3,
 	.int_i2c_mst			= 0,
 	.int_dmp			= 1,
 	.int_pll_rdy			= 2,

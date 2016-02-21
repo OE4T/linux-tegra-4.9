@@ -834,6 +834,18 @@ static inline u32 nvdisp_cursor_ctrl_r(void)
 {
 	return 0x0000043b;
 }
+static inline u32 nvdisp_display_rate_r(void)
+{
+	return 0x00000415;
+}
+static inline u32 nvdisp_display_rate_min_refresh_enable_f(u32 v)
+{
+	return (v & 0x1) << 23;
+}
+static inline u32 nvdisp_display_rate_min_refresh_interval_f(u32 v)
+{
+	return (v & 0x3fffff) << 1;
+}
 static inline u32 nvdisp_cursor_startaddr_r(void)
 {
 	return 0x0000043e;

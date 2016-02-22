@@ -37,6 +37,7 @@ DEFINE_MUTEX(tegra_nvdisp_lock);
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
+#define NSEC_PER_MICROSEC 1000
 
 /* Global variables provided for clocks
  * common to all heads
@@ -1131,6 +1132,19 @@ failed_enable:
 	/* TODO: disable DC clock */
 	return -EINVAL;
 }
+
+void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc) {
+	tegra_dc_writel(dc,
+		nvdisp_display_rate_min_refresh_enable_f(1) |
+		nvdisp_display_rate_min_refresh_interval_f(
+		(u32)(div_s64(dc->frametime_ns, NSEC_PER_MICROSEC))),
+		nvdisp_display_rate_r());
+	tegra_dc_writel(dc, nvdisp_display_command_control_mode_nc_display_f(),
+		nvdisp_display_command_r());
+	tegra_dc_writel(dc,  nvdisp_cmd_state_ctrl_host_trig_enable_f()
+		, nvdisp_cmd_state_ctrl_r());
+}
+EXPORT_SYMBOL(tegra_nvdisp_set_vrr_mode);
 
 u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_number,
 				int ihub_switch)

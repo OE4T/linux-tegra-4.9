@@ -32,6 +32,7 @@
 #include "vi/vi4.h"
 #include "t186/t186.h"
 #include <linux/nvhost_vi_ioctl.h>
+#include <linux/platform/tegra/latency_allowance.h>
 
 /* NV host device */
 void nvhost_vi4_reset(struct platform_device *pdev)
@@ -44,11 +45,31 @@ void nvhost_vi4_reset(struct platform_device *pdev)
 		reset_control_reset(vi->vi_tsc_reset);
 }
 
+static int vi_set_la(u32 vi_bw, struct platform_device *pdev)
+{
+	int ret = 0;
+
+	ret = tegra_set_camera_ptsa(TEGRA_LA_VI_W, vi_bw, 1);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: set ptsa failed: %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	ret = tegra_set_latency_allowance(TEGRA_LA_VI_W, vi_bw);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: set latency failed: %d\n",
+			__func__, ret);
+		return ret;
+	}
+
+	return ret;
+}
+
 static long nvhost_vi4_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct platform_device *pdev = file->private_data;
-
 	switch (cmd) {
 	case NVHOST_VI_IOCTL_SET_VI_CLK: {
 		long rate;
@@ -61,8 +82,25 @@ static long nvhost_vi4_ioctl(struct file *file, unsigned int cmd,
 		return nvhost_module_set_rate(pdev, file, rate, 0,
 						NVHOST_CLOCK);
 	}
-	}
+	case NVHOST_VI_IOCTL_SET_VI_LA_BW: {
+		int ret = 0;
+		u32 vi_la_bw;
 
+		if (!(file->f_mode & FMODE_WRITE))
+			return -EINVAL;
+		if (get_user(vi_la_bw, (u32 __user *)arg))
+			return -EFAULT;
+
+		/* Set latency allowance for VI, BW is in MBps */
+		ret = vi_set_la(vi_la_bw, pdev);
+		if (ret) {
+			dev_err(&pdev->dev, "%s: failed to set la vi_bw %u MBps\n",
+				__func__, vi_la_bw);
+			return -ENOMEM;
+		}
+		return 0;
+	}
+	}
 	return -ENOIOCTLCMD;
 }
 

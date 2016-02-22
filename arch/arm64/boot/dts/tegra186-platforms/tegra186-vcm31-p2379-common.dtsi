@@ -22,6 +22,8 @@
 
 #include "tegra186-platforms/tegra186-vcm31.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-power-tree-p2379-0000-c00-00.dtsi"
+#include "tegra186-vcm31-p2379-pwm-fan.dtsi"
+#include "tegra186-vcm31-p2379-thermal-fan-est.dtsi"
 
 / {
         model = "p2379_t186";
@@ -265,6 +267,10 @@
 
 	sdhci@3440000 {
 		status = "disabled";
+	};
+
+	pwm@c340000 {
+		status = "okay";
 	};
 
         ptm_a57_0: ptm@9840000 {

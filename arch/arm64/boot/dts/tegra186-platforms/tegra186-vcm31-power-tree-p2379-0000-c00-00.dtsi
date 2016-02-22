@@ -120,6 +120,10 @@
 		iopower-sdmmc2-hv-supply = <&spmic_otp_sd3>;
 	};
 
+	pwm-fan {
+		vdd-fan-supply = <&sys_5v0>;
+	};
+
 	fixed-regulators {
 		sys_3v3: regulator@0 {
 			compatible = "regulator-fixed";

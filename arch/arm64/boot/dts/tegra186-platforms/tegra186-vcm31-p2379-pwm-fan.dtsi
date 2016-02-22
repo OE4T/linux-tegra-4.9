@@ -1,0 +1,46 @@
+/*
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ */
+
+
+/ {
+	pwm_fan_shared_data: pfsd {
+		num_resources = <0>;
+		secret = <47>;
+		active_steps = <10>;
+		active_rpm = <1386 2310 2310 2310 2310 2310 2310 2310 2310 2310>;
+		active_rru = <40 2 1 1 1 1 1 1 1 1>;
+		active_rrd = <40 2 1 1 1 1 1 1 1 1>;
+		state_cap_lookup = <2 2 2 2 3 3 3 4 4 4>;
+		/* WAR: 12V fan spec is 37KHz, but use 15KHz */
+		/* PWM freq = 1/ pwm_period = 15KHz*/
+		pwm_period = <66500>; /* nanoseconds */
+		pwm_id = <0>;
+		step_time = <100>; /* milliseconds */
+		state_cap = <2>; /* Cap pwm max to 256 = active_pwm[2] */
+		active_pwm_max = <256>;
+		/* Not use Tachometer pin */
+		/* tach_gpio =  <TEGRA_GPIO(FF, 2)>; */
+		pwm_gpio = <TEGRA_GPIO(V, 6)>; /* TEGRA_GPIO_PV6 */
+		status = "okay";
+	};
+
+	pwm-fan {
+		compatible = "pwm-fan";
+		shared_data = <&pwm_fan_shared_data>;
+		/* WAR: 12V fan PWM wave is not square.
+		 * Use duty 86% to set 60% speed of max */
+		/* Duty = <86 100 ... */
+		active_pwm = <220 256 256 256 256 256 256 256 256 256>;
+		status = "okay";
+	};
+};

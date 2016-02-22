@@ -332,7 +332,7 @@
 				     12288000	/* AUD_MCLK_x8000_RATE */
 				     245759960	/* PLLA_OUT0_x8000_RATE */
 				     49151992 >;/* AHUB_x8000_RATE */
-		clocks =<&tegra_car TEGRA186_CLK_PLLP_AUDIO>,
+		clocks =<&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_PLLA>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
 			<&tegra_car TEGRA186_CLK_AHUB>,

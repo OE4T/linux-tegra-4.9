@@ -72,7 +72,6 @@ struct tegra_t186ref {
 #ifdef CONFIG_SWITCH
 	int jack_status;
 #endif
-	enum snd_soc_bias_level bias_level;
 	struct regulator *digital_reg;
 	struct regulator *spk_reg;
 	struct regulator *dmic_reg;
@@ -437,10 +436,75 @@ static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 
 	return 0;
 }
+
+static int tegra_t186ref_set_bias_level(struct snd_soc_card *card,
+					struct snd_soc_dapm_context *dapm,
+					enum snd_soc_bias_level level)
+{
+	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
+	struct snd_soc_dai *codec_dai;
+	int idx;
+
+	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
+
+	if (idx != -EINVAL) {
+		codec_dai = card->rtd[idx].codec_dai;
+
+		if (dapm->dev != codec_dai->dev)
+			return 0;
+
+		switch (level) {
+		case SND_SOC_BIAS_PREPARE:
+			if (dapm->bias_level == SND_SOC_BIAS_STANDBY) {
+				if (!data->clk_cdev1_state)
+					tegra_alt_asoc_utils_clk_enable(
+							&machine->audio_clock);
+			}
+			break;
+		default:
+			break;
+		}
+	}
+	return 0;
+}
+
+static int tegra_t186ref_set_bias_level_post(struct snd_soc_card *card,
+					struct snd_soc_dapm_context *dapm,
+					enum snd_soc_bias_level level)
+{
+	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
+	struct snd_soc_dai *codec_dai;
+	int idx;
+
+	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
+
+	if (idx != -EINVAL) {
+		codec_dai = card->rtd[idx].codec_dai;
+
+		if (dapm->dev != codec_dai->dev)
+			return 0;
+
+		switch (level) {
+		case SND_SOC_BIAS_STANDBY:
+			if (data->clk_cdev1_state)
+				tegra_alt_asoc_utils_clk_disable(
+						&machine->audio_clock);
+			break;
+		default:
+			break;
+		}
+	dapm->bias_level = level;
+	}
+	return 0;
+}
+
 static int tegra_t186ref_startup(struct snd_pcm_substream *substream)
 {
 	return 0;
 }
+
 static void tegra_t186ref_shutdown(struct snd_pcm_substream *substream)
 {
 	return;
@@ -720,10 +784,6 @@ static int tegra_t186ref_suspend_pre(struct snd_soc_card *card)
 static int tegra_t186ref_suspend_post(struct snd_soc_card *card)
 {
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
-
-	if (data->clk_cdev1_state)
-		tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
 
 	if (machine->digital_reg)
 		regulator_disable(machine->digital_reg);
@@ -735,7 +795,6 @@ static int tegra_t186ref_resume_pre(struct snd_soc_card *card)
 {
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
 	struct snd_soc_jack_gpio *gpio = &tegra_t186ref_hp_jack_gpio;
-	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
 	int ret, val;
 
 	if (machine->digital_reg)
@@ -748,9 +807,6 @@ static int tegra_t186ref_resume_pre(struct snd_soc_card *card)
 			snd_soc_jack_report(gpio->jack, val, gpio->report);
 		enable_irq(gpio_to_irq(gpio->gpio));
 	}
-
-	if (!data->clk_cdev1_state)
-		tegra_alt_asoc_utils_clk_enable(&machine->audio_clock);
 
 	return 0;
 }
@@ -857,6 +913,8 @@ static struct snd_soc_card snd_soc_tegra_t186ref = {
 	.suspend_post = tegra_t186ref_suspend_post,
 	.suspend_pre = tegra_t186ref_suspend_pre,
 	.resume_pre = tegra_t186ref_resume_pre,
+	.set_bias_level = tegra_t186ref_set_bias_level,
+	.set_bias_level_post = tegra_t186ref_set_bias_level_post,
 	.controls = tegra_t186ref_controls,
 	.num_controls = ARRAY_SIZE(tegra_t186ref_controls),
 	.dapm_widgets = tegra_t186ref_dapm_widgets,
@@ -997,6 +1055,7 @@ static int tegra_t186ref_driver_probe(struct platform_device *pdev)
 	machine->digital_reg = NULL;
 	machine->spk_reg = NULL;
 	machine->dmic_reg = NULL;
+	card->dapm.idle_bias_off = true;
 
 	ret = snd_soc_of_parse_card_name(card, "nvidia,model");
 	if (ret)

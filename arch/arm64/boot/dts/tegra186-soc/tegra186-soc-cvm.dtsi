@@ -37,7 +37,8 @@
 		serial5 = &uartf;
 		serial6 = &uartg;
 		qspi6 = &qspi6;
-
+		rtc1 = "/rtc";
+		rtc0 = "/bpmp_i2c/spmic@3c";
 	};
 
 	cpus {
@@ -73,6 +74,10 @@
 	};
 
 	timer {
+		status = "okay";
+	};
+
+	rtc@c2a0000 {
 		status = "okay";
 	};
 

@@ -411,6 +411,10 @@
 		status = "disabled";
 	};
 
+	rtc@c2a0000 {
+		status = "disabled";
+	};
+
 	ahci-sata@3507000 {
 		status = "disabled";
 	};

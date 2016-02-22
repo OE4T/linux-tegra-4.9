@@ -98,6 +98,13 @@
 		status = "disabled";
 	};
 
+	rtc@c2a0000 {
+		compatible = "nvidia,tegra18-rtc";
+		reg = <0x0 0x0c2a0000 0x0 0x100>;
+		interrupts = <0 10 0x04>;
+		status = "disabled";
+	};
+
 	tegra-carveouts {
 		compatible = "nvidia,carveouts";
 		memory-region = <&generic_reserved &vpr>;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015 - 2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,7 +46,7 @@
 				shutdown-limit = <190>;
 			};
 			ext {
-				shutdown-limit = <110>;
+				shutdown-limit = <109>;
 			};
 		};
 	};
@@ -77,7 +77,7 @@
 			trips {
 				trip_critical {
 					/* keep this below HW shutdown to log alerts */
-					temperature = <108000>;
+					temperature = <109000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -89,7 +89,7 @@
 			status = "okay";
 			trips {
 				trip_critical {
-					temperature = <108000>;
+					temperature = <100000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -101,7 +101,7 @@
 			status = "okay";
 			trips {
 				trip_critical {
-					temperature = <108000>;
+					temperature = <100000>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -111,46 +111,22 @@
 
 		GPU-therm {
 			status = "okay";
-			trips {
-				trip_critical {
-					temperature = <108000>;
-					type = "critical";
-					hysteresis = <0>;
-					writable;
-				};
-			};
 		};
 
 		PLL-therm {
 			status = "okay";
-			trips {
-				trip_critical {
-					temperature = <108000>;
-					type = "critical";
-					hysteresis = <0>;
-					writable;
-				};
-			};
 		};
 
 		AO-therm {
 			status = "okay";
-		};
-
-		BCPU-therm {
-			status = "okay";
-		};
-
-		MCPU-therm {
-			status = "okay";
-		};
-
-		GPU-therm {
-			status = "okay";
-		};
-
-		PLL-therm {
-			status = "okay";
+			trips {
+				trip_critical {
+					temperature = <100500>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+			};
 		};
 	};
 };

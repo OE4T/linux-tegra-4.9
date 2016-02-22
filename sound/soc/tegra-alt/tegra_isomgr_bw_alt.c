@@ -21,7 +21,7 @@
 #include <linux/platform/tegra/isomgr.h>
 #include "tegra_isomgr_bw_alt.h"
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) && defined(CONFIG_TEGRA_ISOMGR)
 
 #define MAX_BW	393216 /*Maximum KiloByte*/
 

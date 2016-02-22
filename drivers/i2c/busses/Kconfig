@@ -10,3 +10,8 @@ config I2C_BPMP_TEGRA
 	  This I2C driver is a 'virtual' I2C driver. The real driver is
 	  embedded in the BPMP firmware, and this driver merely communicates
 	  with that real driver.
+config TEGRA_I2CSLV_T186
+	bool "Tegra i2c slave controller driver"
+	default y
+	help
+	  Enable on-chip i2c slave controller.

@@ -219,13 +219,18 @@ static int tegra_cam_rtcpu_parse_channel(struct device *dev,
 	struct tegra_cam_rtcpu_ivc_chan *ivc_chan;
 	int ret;
 	u32 nframes, frame_size;
-	struct {
-		u32 rx, tx;
-	} start = {0, 0}, end = {0, 0};
+	union {
+		u32 tab[2];
+		struct {
+			u32 rx;
+			u32 tx;
+		};
+	} start, end;
 
 	cam_rtcpu = dev_get_drvdata(dev);
 
-	ret = of_property_read_u32_array(ch_node, "reg", &start.rx, 2);
+	ret = of_property_read_u32_array(ch_node, "reg", start.tab,
+						ARRAY_SIZE(start.tab));
 	if (ret) {
 		dev_err(dev, "missing <%s> property\n", "reg");
 		return ret;

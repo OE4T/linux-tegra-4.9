@@ -344,11 +344,6 @@ static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
 	return tfreq_data.pcluster[cur_cl].clft;
 }
 
-static int tegra_verify_speed(struct cpufreq_policy *policy)
-{
-	return 0;
-}
-
 /**
  * tegra_update_cpu_speed - update cpu freq
  * @rate - in kHz
@@ -771,7 +766,7 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.name		= "tegra_cpufreq",
 	.flags		= CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_STICKY |
 				CPUFREQ_CONST_LOOPS,
-	.verify		= tegra_verify_speed,
+	.verify		= cpufreq_generic_frequency_table_verify,
 	.target_index	= tegra_setspeed,
 	.get		= tegra_get_speed,
 	.init		= tegra_cpu_init,

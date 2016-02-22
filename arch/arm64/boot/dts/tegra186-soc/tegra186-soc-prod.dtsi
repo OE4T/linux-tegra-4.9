@@ -121,4 +121,19 @@
 			};
 		};
 	};
+
+	i2c@c240000 {
+		nvidia,high-clock-count = <3>;
+		nvidia,clk-div-std-fast-mode = <0x16>;
+	};
+
+	i2c@3190000 {
+		nvidia,high-clock-count = <3>;
+		nvidia,clk-div-std-fast-mode = <0x16>;
+	};
+
+	i2c@3190000 {
+		nvidia,high-clock-count = <3>;
+		nvidia,clk-div-std-fast-mode = <0x16>;
+	};
 };

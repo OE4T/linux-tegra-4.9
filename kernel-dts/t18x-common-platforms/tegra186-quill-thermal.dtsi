@@ -47,7 +47,7 @@
 				shutdown-limit = <110>;
 			};
 			ext {
-				shutdown-limit = <110>;
+				shutdown-limit = <108>;
 			};
 		};
 	};
@@ -99,7 +99,7 @@
 			status = "okay";
 			trips {
 				trip_critical {
-					temperature = <108000>;
+					temperature = <101500>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -111,7 +111,7 @@
 			status = "okay";
 			trips {
 				trip_critical {
-					temperature = <108000>;
+					temperature = <101500>;
 					type = "critical";
 					hysteresis = <0>;
 					writable;
@@ -121,46 +121,22 @@
 
 		GPU-therm {
 			status = "okay";
-			trips {
-				trip_critical {
-					temperature = <108000>;
-					type = "critical";
-					hysteresis = <0>;
-					writable;
-				};
-			};
 		};
 
 		PLL-therm {
 			status = "okay";
-			trips {
-				trip_critical {
-					temperature = <108000>;
-					type = "critical";
-					hysteresis = <0>;
-					writable;
-				};
-			};
 		};
 
 		AO-therm {
 			status = "okay";
-		};
-
-		BCPU-therm {
-			status = "okay";
-		};
-
-		MCPU-therm {
-			status = "okay";
-		};
-
-		GPU-therm {
-			status = "okay";
-		};
-
-		PLL-therm {
-			status = "okay";
+			trips {
+				trip_critical {
+					temperature = <101500>;
+					type = "critical";
+					hysteresis = <0>;
+					writable;
+				};
+			};
 		};
 	};
 };

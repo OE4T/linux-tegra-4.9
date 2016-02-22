@@ -303,12 +303,6 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	if (!runlist->active_tsgs)
 		goto clean_up_runlist_info;
 
-	runlist->high_prio_channels =
-		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
-			GFP_KERNEL);
-	if (!runlist->high_prio_channels)
-		goto clean_up_runlist_info;
-
 	runlist_size  = ram_rl_entry_size_v() * f->num_runlist_entries;
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 		int err = gk20a_gmmu_alloc(g, runlist_size, &runlist->mem[i]);
@@ -336,9 +330,6 @@ clean_up_runlist_info:
 
 	kfree(runlist->active_tsgs);
 	runlist->active_tsgs = NULL;
-
-	kfree(runlist->high_prio_channels);
-	runlist->high_prio_channels = NULL;
 
 	kfree(f->runlist_info);
 	f->runlist_info = NULL;
@@ -2162,32 +2153,153 @@ static inline u32 gk20a_get_tsg_runlist_entry_0(struct tsg_gk20a *tsg)
 	return runlist_entry_0;
 }
 
-/* add all active high priority channels */
-static inline u32 gk20a_fifo_runlist_add_high_prio_entries(
-		struct fifo_gk20a *f,
-		struct fifo_runlist_info_gk20a *runlist,
-		u32 *runlist_entry)
+/* recursively construct a runlist with interleaved bare channels and TSGs */
+static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
+				struct fifo_runlist_info_gk20a *runlist,
+				u32 cur_level,
+				u32 *runlist_entry,
+				bool interleave_enabled,
+				bool prev_empty,
+				u32 *entries_left)
 {
-	struct channel_gk20a *ch = NULL;
-	unsigned long high_prio_chid;
-	u32 count = 0;
+	bool last_level = cur_level == NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH;
+	struct channel_gk20a *ch;
+	bool skip_next = false;
+	u32 chid, tsgid, count = 0;
 
-	for_each_set_bit(high_prio_chid,
-			runlist->high_prio_channels, f->num_channels) {
-		ch = &f->channel[high_prio_chid];
+	gk20a_dbg_fn("");
 
-		if (!gk20a_is_channel_marked_as_tsg(ch) &&
-		     test_bit(high_prio_chid, runlist->active_channels) == 1) {
-			gk20a_dbg_info("add high prio channel %lu to runlist",
-					high_prio_chid);
-			runlist_entry[0] = ram_rl_entry_chid_f(high_prio_chid);
+	/* for each bare channel, CH, on this level, insert all higher-level
+	   channels and TSGs before inserting CH. */
+	for_each_set_bit(chid, runlist->active_channels, f->num_channels) {
+		ch = &f->channel[chid];
+
+		if (ch->interleave_level != cur_level)
+			continue;
+
+		if (gk20a_is_channel_marked_as_tsg(ch))
+			continue;
+
+		if (!last_level && !skip_next) {
+			runlist_entry = gk20a_runlist_construct_locked(f,
+							runlist,
+							cur_level + 1,
+							runlist_entry,
+							interleave_enabled,
+							false,
+							entries_left);
+			/* if interleaving is disabled, higher-level channels
+			   and TSGs only need to be inserted once */
+			if (!interleave_enabled)
+				skip_next = true;
+		}
+
+		if (!(*entries_left))
+			return NULL;
+
+		gk20a_dbg_info("add channel %d to runlist", chid);
+		runlist_entry[0] = ram_rl_entry_chid_f(chid);
+		runlist_entry[1] = 0;
+		runlist_entry += 2;
+		count++;
+		(*entries_left)--;
+	}
+
+	/* for each TSG, T, on this level, insert all higher-level channels
+	   and TSGs before inserting T. */
+	for_each_set_bit(tsgid, runlist->active_tsgs, f->num_channels) {
+		struct tsg_gk20a *tsg = &f->tsg[tsgid];
+
+		if (tsg->interleave_level != cur_level)
+			continue;
+
+		if (!last_level && !skip_next) {
+			runlist_entry = gk20a_runlist_construct_locked(f,
+							runlist,
+							cur_level + 1,
+							runlist_entry,
+							interleave_enabled,
+							false,
+							entries_left);
+			if (!interleave_enabled)
+				skip_next = true;
+		}
+
+		if (!(*entries_left))
+			return NULL;
+
+		/* add TSG entry */
+		gk20a_dbg_info("add TSG %d to runlist", tsg->tsgid);
+		runlist_entry[0] = gk20a_get_tsg_runlist_entry_0(tsg);
+		runlist_entry[1] = 0;
+		runlist_entry += 2;
+		count++;
+		(*entries_left)--;
+
+		mutex_lock(&tsg->ch_list_lock);
+		/* add runnable channels bound to this TSG */
+		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+			if (!test_bit(ch->hw_chid,
+				      runlist->active_channels))
+				continue;
+
+			if (!(*entries_left)) {
+				mutex_unlock(&tsg->ch_list_lock);
+				return NULL;
+			}
+
+			gk20a_dbg_info("add channel %d to runlist",
+				ch->hw_chid);
+			runlist_entry[0] = ram_rl_entry_chid_f(ch->hw_chid);
 			runlist_entry[1] = 0;
 			runlist_entry += 2;
 			count++;
+			(*entries_left)--;
 		}
+		mutex_unlock(&tsg->ch_list_lock);
 	}
 
-	return count;
+	/* append entries from higher level if this level is empty */
+	if (!count && !last_level)
+		runlist_entry = gk20a_runlist_construct_locked(f,
+							runlist,
+							cur_level + 1,
+							runlist_entry,
+							interleave_enabled,
+							true,
+							entries_left);
+
+	/*
+	 * if previous and this level have entries, append
+	 * entries from higher level.
+	 *
+	 * ex. dropping from MEDIUM to LOW, need to insert HIGH
+	 */
+	if (interleave_enabled && count && !prev_empty && !last_level)
+		runlist_entry = gk20a_runlist_construct_locked(f,
+							runlist,
+							cur_level + 1,
+							runlist_entry,
+							interleave_enabled,
+							false,
+							entries_left);
+	return runlist_entry;
+}
+
+int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
+				u32 id,
+				bool is_tsg,
+				u32 runlist_id,
+				u32 new_level)
+{
+	gk20a_dbg_fn("");
+
+	if (is_tsg)
+		g->fifo.tsg[id].interleave_level = new_level;
+	else
+		g->fifo.channel[id].interleave_level = new_level;
+
+	return 0;
 }
 
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
@@ -2198,14 +2310,11 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_runlist_info_gk20a *runlist = NULL;
 	u32 *runlist_entry_base = NULL;
-	u32 *runlist_entry = NULL;
 	u64 runlist_iova;
 	u32 old_buf, new_buf;
-	u32 chid, tsgid;
 	struct channel_gk20a *ch = NULL;
 	struct tsg_gk20a *tsg = NULL;
 	u32 count = 0;
-	u32 count_channels_in_tsg;
 	runlist = &f->runlist_info[runlist_id];
 
 	/* valid channel, add/remove it from active list.
@@ -2254,91 +2363,23 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 
 	if (hw_chid != ~0 || /* add/remove a valid channel */
 	    add /* resume to add all channels back */) {
-		runlist_entry = runlist_entry_base;
+		u32 max_entries = f->num_runlist_entries;
+		u32 *runlist_end;
 
-		/* Runlist manipulation:
-		   Insert an entry of all high priority channels inbetween
-		   all lower priority channels. This ensure that the maximum
-		   delay a runnable high priority channel has to wait is one
-		   medium timeslice + any context switching overhead +
-		   wait on other high priority channels.
-		   add non-TSG channels first */
-		for_each_set_bit(chid,
-			runlist->active_channels, f->num_channels) {
-			ch = &f->channel[chid];
-
-			if (!gk20a_is_channel_marked_as_tsg(ch) &&
-				!ch->interleave) {
-				u32 added;
-
-				gk20a_dbg_info("add normal prio channel %d to runlist",
-					chid);
-				runlist_entry[0] = ram_rl_entry_chid_f(chid);
-				runlist_entry[1] = 0;
-				runlist_entry += 2;
-				count++;
-
-				added =	gk20a_fifo_runlist_add_high_prio_entries(
-						f,
+		runlist_end = gk20a_runlist_construct_locked(f,
 						runlist,
-						runlist_entry);
-				count += added;
-				runlist_entry += 2 * added;
-			}
+						0,
+						runlist_entry_base,
+						g->runlist_interleave,
+						true,
+						&max_entries);
+		if (!runlist_end) {
+			ret = -E2BIG;
+			goto clean_up;
 		}
 
-		/* if there were no lower priority channels, then just
-		 * add the high priority channels once. */
-		if (count == 0) {
-			count =	gk20a_fifo_runlist_add_high_prio_entries(
-					f,
-					runlist,
-					runlist_entry);
-			runlist_entry += 2 * count;
-		}
-
-		/* now add TSG entries and channels bound to TSG */
-		mutex_lock(&f->tsg_inuse_mutex);
-		for_each_set_bit(tsgid,
-				runlist->active_tsgs, f->num_channels) {
-			u32 added;
-			tsg = &f->tsg[tsgid];
-			/* add TSG entry */
-			gk20a_dbg_info("add TSG %d to runlist", tsg->tsgid);
-			runlist_entry[0] = gk20a_get_tsg_runlist_entry_0(tsg);
-			runlist_entry[1] = 0;
-			runlist_entry += 2;
-			count++;
-
-			/* add runnable channels bound to this TSG */
-			count_channels_in_tsg = 0;
-			mutex_lock(&tsg->ch_list_lock);
-			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-				if (!test_bit(ch->hw_chid,
-						runlist->active_channels))
-					continue;
-				gk20a_dbg_info("add channel %d to runlist",
-					ch->hw_chid);
-				runlist_entry[0] =
-					ram_rl_entry_chid_f(ch->hw_chid);
-				runlist_entry[1] = 0;
-				runlist_entry += 2;
-				count++;
-				count_channels_in_tsg++;
-			}
-			mutex_unlock(&tsg->ch_list_lock);
-
-			WARN_ON(tsg->num_active_channels !=
-				count_channels_in_tsg);
-
-			added = gk20a_fifo_runlist_add_high_prio_entries(
-					f,
-					runlist,
-					runlist_entry);
-			count += added;
-			runlist_entry += 2 * added;
-		}
-		mutex_unlock(&f->tsg_inuse_mutex);
+		count = (runlist_end - runlist_entry_base) / 2;
+		WARN_ON(count > f->num_runlist_entries);
 	} else	/* suspend to remove all channels */
 		count = 0;
 
@@ -2493,42 +2534,6 @@ u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g)
 	return pbdma_signature_hw_valid_f() | pbdma_signature_sw_zero_f();
 }
 
-int gk20a_fifo_set_channel_priority(
-		struct gk20a *g,
-		u32 runlist_id,
-		u32 hw_chid,
-		bool interleave)
-{
-	struct fifo_runlist_info_gk20a *runlist = NULL;
-	struct fifo_gk20a *f = &g->fifo;
-	struct channel_gk20a *ch = NULL;
-
-	if (hw_chid >= f->num_channels)
-		return -EINVAL;
-
-	if (runlist_id >= f->max_runlists)
-		return -EINVAL;
-
-	ch = &f->channel[hw_chid];
-
-	gk20a_dbg_fn("");
-
-	runlist = &f->runlist_info[runlist_id];
-
-	mutex_lock(&runlist->mutex);
-
-	if (ch->interleave)
-		set_bit(hw_chid, runlist->high_prio_channels);
-	else
-		clear_bit(hw_chid, runlist->high_prio_channels);
-
-	gk20a_dbg_fn("done");
-
-	mutex_unlock(&runlist->mutex);
-
-	return 0;
-}
-
 struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
 		u32 hw_chid)
 {
@@ -2545,4 +2550,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
 	gops->fifo.get_num_fifos = gk20a_fifo_get_num_fifos;
 	gops->fifo.get_pbdma_signature = gk20a_fifo_get_pbdma_signature;
+	gops->fifo.set_runlist_interleave = gk20a_fifo_set_runlist_interleave;
 }

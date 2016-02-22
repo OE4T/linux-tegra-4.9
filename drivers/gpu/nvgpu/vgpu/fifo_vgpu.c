@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Fifo
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -194,12 +194,6 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 	if (!runlist->active_channels)
 		goto clean_up_runlist_info;
 
-	runlist->high_prio_channels =
-		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
-			GFP_KERNEL);
-	if (!runlist->high_prio_channels)
-		goto clean_up_runlist_info;
-
 	runlist_size  = sizeof(u16) * f->num_channels;
 	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 		int err = gk20a_gmmu_alloc(g, runlist_size, &runlist->mem[i]);
@@ -222,9 +216,6 @@ clean_up_runlist:
 		gk20a_gmmu_free(g, &runlist->mem[i]);
 
 clean_up_runlist_info:
-	kfree(runlist->high_prio_channels);
-	runlist->high_prio_channels = NULL;
-
 	kfree(runlist->active_channels);
 	runlist->active_channels = NULL;
 

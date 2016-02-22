@@ -177,7 +177,7 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 }
 
 static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
-				u32 timeslice_period, bool interleave)
+				u32 timeslice_period)
 {
 	void *inst_ptr;
 	int shift = 0, value = 0;
@@ -204,30 +204,6 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 	gk20a_writel(c->g, ccsr_channel_r(c->hw_chid),
 		gk20a_readl(c->g, ccsr_channel_r(c->hw_chid)) |
 		ccsr_channel_enable_set_true_f());
-
-	if (c->interleave != interleave) {
-		mutex_lock(&c->g->interleave_lock);
-		c->interleave = interleave;
-		if (interleave)
-			if (c->g->num_interleaved_channels >=
-					MAX_INTERLEAVED_CHANNELS) {
-				gk20a_err(dev_from_gk20a(c->g),
-					"Change of priority would exceed runlist length, only changing timeslice\n");
-				c->interleave = false;
-			} else
-				c->g->num_interleaved_channels += 1;
-		else
-			c->g->num_interleaved_channels -= 1;
-
-		mutex_unlock(&c->g->interleave_lock);
-		gk20a_dbg_info("Set channel %d to interleave %d",
-			c->hw_chid, c->interleave);
-
-		gk20a_fifo_set_channel_priority(
-				c->g, 0, c->hw_chid, c->interleave);
-		c->g->ops.fifo.update_runlist(
-				c->g, 0, ~0, true, false);
-	}
 
 	return 0;
 }
@@ -711,6 +687,32 @@ static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
 	return 0;
 }
 
+static int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
+						u32 level)
+{
+	struct gk20a *g = ch->g;
+	int ret;
+
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		gk20a_err(dev_from_gk20a(g), "invalid operation for TSG!\n");
+		return -EINVAL;
+	}
+
+	switch (level) {
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
+		ret = g->ops.fifo.set_runlist_interleave(g, ch->hw_chid,
+							false, 0, level);
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret ? ret : g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+}
+
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
 		struct nvgpu_set_error_notifier *args)
 {
@@ -898,17 +900,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 		g->fifo.deferred_reset_pending = false;
 	}
 	mutex_unlock(&f->deferred_reset_mutex);
-
-	if (ch->interleave) {
-		ch->interleave = false;
-		gk20a_fifo_set_channel_priority(
-				ch->g, 0, ch->hw_chid, ch->interleave);
-
-		mutex_lock(&f->g->interleave_lock);
-		WARN_ON(f->g->num_interleaved_channels == 0);
-		f->g->num_interleaved_channels -= 1;
-		mutex_unlock(&f->g->interleave_lock);
-	}
 
 	if (!ch->bound)
 		goto release;
@@ -1154,11 +1145,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	ch->has_timedout = false;
 	ch->wdt_enabled = true;
 	ch->obj_class = 0;
-	ch->interleave = false;
 	ch->clean_up.scheduled = false;
-	gk20a_fifo_set_channel_priority(
-			ch->g, 0, ch->hw_chid, ch->interleave);
-
+	ch->interleave_level = NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW;
 
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */
@@ -2613,7 +2601,6 @@ unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait)
 int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 {
 	u32 timeslice_timeout;
-	bool interleave = false;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		gk20a_err(dev_from_gk20a(ch->g),
@@ -2630,8 +2617,6 @@ int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 		timeslice_timeout = ch->g->timeslice_medium_priority_us;
 		break;
 	case NVGPU_PRIORITY_HIGH:
-		if (ch->g->interleave_high_priority)
-			interleave = true;
 		timeslice_timeout = ch->g->timeslice_high_priority_us;
 		break;
 	default:
@@ -2640,7 +2625,7 @@ int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 	}
 
 	return channel_gk20a_set_schedule_params(ch,
-			timeslice_timeout, interleave);
+			timeslice_timeout);
 }
 
 static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
@@ -3044,6 +3029,18 @@ long gk20a_channel_ioctl(struct file *filp,
 	case NVGPU_IOCTL_CHANNEL_WDT:
 		err = gk20a_channel_set_wdt_status(ch,
 				(struct nvgpu_channel_wdt_args *)buf);
+		break;
+	case NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE:
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(&dev->dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			break;
+		}
+		err = gk20a_channel_set_runlist_interleave(ch,
+			((struct nvgpu_runlist_interleave_args *)buf)->level);
+		gk20a_idle(dev);
 		break;
 	default:
 		dev_dbg(&dev->dev, "unrecognized ioctl cmd: 0x%x", cmd);

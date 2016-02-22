@@ -228,6 +228,7 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 
 	tsg->tsg_gr_ctx = NULL;
 	tsg->vm = NULL;
+	tsg->interleave_level = NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW;
 
 	filp->private_data = tsg;
 

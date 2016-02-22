@@ -31,7 +31,6 @@
 struct fifo_runlist_info_gk20a {
 	unsigned long *active_channels;
 	unsigned long *active_tsgs;
-	unsigned long *high_prio_channels;
 	/* Each engine has its own SW and HW runlist buffer.*/
 	struct mem_desc mem[MAX_RUNLIST_BUFFERS];
 	u32  cur_buffer;
@@ -184,8 +183,6 @@ void fifo_gk20a_finish_mmu_fault_handling(struct gk20a *g,
 int gk20a_fifo_wait_engine_idle(struct gk20a *g);
 u32 gk20a_fifo_engine_interrupt_mask(struct gk20a *g);
 u32 gk20a_fifo_get_pbdma_signature(struct gk20a *g);
-int gk20a_fifo_set_channel_priority(struct gk20a *g, u32 runlist_id,
-		u32 hw_chid, bool interleave);
 u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 		int *__id, bool *__is_tsg);
 bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
@@ -198,4 +195,9 @@ struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
 		u32 hw_chid);
 
 void gk20a_fifo_issue_preempt(struct gk20a *g, u32 id, bool is_tsg);
+int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
+				u32 id,
+				bool is_tsg,
+				u32 runlist_id,
+				u32 new_level);
 #endif /*__GR_GK20A_H__*/

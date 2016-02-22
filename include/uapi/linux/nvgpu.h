@@ -834,6 +834,28 @@ struct nvgpu_channel_wdt_args {
 #define NVGPU_IOCTL_CHANNEL_DISABLE_WDT		1
 #define NVGPU_IOCTL_CHANNEL_ENABLE_WDT		2
 
+/*
+ * Interleaving channels in a runlist is an approach to improve
+ * GPU scheduling by allowing certain channels to appear multiple
+ * times on the runlist. The number of times a channel appears is
+ * governed by the following levels:
+ *
+ * low (L)   : appears once
+ * medium (M): if L, appears L times
+ *             else, appears once
+ * high (H)  : if L, appears (M + 1) x L times
+ *             else if M, appears M times
+ *             else, appears once
+ */
+struct nvgpu_runlist_interleave_args {
+	__u32 level;
+	__u32 reserved;
+};
+#define NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW	0
+#define NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM	1
+#define NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH	2
+#define NVGPU_RUNLIST_INTERLEAVE_NUM_LEVELS	3
+
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
@@ -876,9 +898,11 @@ struct nvgpu_channel_wdt_args {
 	_IOWR(NVGPU_IOCTL_MAGIC, 118, struct nvgpu_cycle_stats_snapshot_args)
 #define NVGPU_IOCTL_CHANNEL_WDT \
 	_IOW(NVGPU_IOCTL_MAGIC, 119, struct nvgpu_channel_wdt_args)
+#define NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE \
+	_IOW(NVGPU_IOCTL_MAGIC, 120, struct nvgpu_runlist_interleave_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_WDT)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
 
 /*

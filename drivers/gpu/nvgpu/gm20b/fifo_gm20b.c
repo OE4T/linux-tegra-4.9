@@ -1,7 +1,7 @@
 /*
  * GM20B Fifo
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,4 +121,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.wait_engine_idle = gk20a_fifo_wait_engine_idle;
 	gops->fifo.get_num_fifos = gm20b_fifo_get_num_fifos;
 	gops->fifo.get_pbdma_signature = gk20a_fifo_get_pbdma_signature;
+	gops->fifo.set_runlist_interleave = gk20a_fifo_set_runlist_interleave;
 }

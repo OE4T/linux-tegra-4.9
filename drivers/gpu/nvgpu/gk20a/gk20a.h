@@ -54,8 +54,6 @@ struct acr_gm20b;
     32 ns is the resolution of ptimer. */
 #define PTIMER_REF_FREQ_HZ                      31250000
 
-#define MAX_INTERLEAVED_CHANNELS                32
-
 struct cooling_device_gk20a {
 	struct thermal_cooling_device *gk20a_cooling_dev;
 	unsigned int gk20a_freq_state;
@@ -268,6 +266,9 @@ struct gpu_ops {
 		u32 (*get_num_fifos)(struct gk20a *g);
 		u32 (*get_pbdma_signature)(struct gk20a *g);
 		int (*channel_set_priority)(struct channel_gk20a *ch, u32 priority);
+		int (*set_runlist_interleave)(struct gk20a *g, u32 id,
+					bool is_tsg, u32 runlist_id,
+					u32 new_level);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
@@ -536,10 +537,7 @@ struct gk20a {
 	u32 timeslice_low_priority_us;
 	u32 timeslice_medium_priority_us;
 	u32 timeslice_high_priority_us;
-	u32 interleave_high_priority;
-
-	struct mutex interleave_lock;
-	u32 num_interleaved_channels;
+	u32 runlist_interleave;
 
 	bool slcg_enabled;
 	bool blcg_enabled;
@@ -564,7 +562,7 @@ struct gk20a {
 	struct dentry *debugfs_timeslice_low_priority_us;
 	struct dentry *debugfs_timeslice_medium_priority_us;
 	struct dentry *debugfs_timeslice_high_priority_us;
-	struct dentry *debugfs_interleave_high_priority;
+	struct dentry *debugfs_runlist_interleave;
 
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;

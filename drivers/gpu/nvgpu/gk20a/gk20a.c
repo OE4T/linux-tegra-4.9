@@ -672,9 +672,6 @@ static int gk20a_init_support(struct platform_device *dev)
 	mutex_init(&g->ch_wdt_lock);
 	mutex_init(&g->poweroff_lock);
 
-	mutex_init(&g->interleave_lock);
-	g->num_interleaved_channels = 0;
-
 	g->remove_support = gk20a_remove_support;
 	return 0;
 
@@ -1439,14 +1436,11 @@ static int gk20a_probe(struct platform_device *dev)
 	if (tegra_platform_is_silicon())
 		gk20a->timeouts_enabled = true;
 
-	gk20a->interleave_high_priority = true;
+	gk20a->runlist_interleave = true;
 
 	gk20a->timeslice_low_priority_us = 1300;
 	gk20a->timeslice_medium_priority_us = 2600;
-	if (gk20a->interleave_high_priority)
-		gk20a->timeslice_high_priority_us = 3000;
-	else
-		gk20a->timeslice_high_priority_us = 5200;
+	gk20a->timeslice_high_priority_us = 5200;
 
 	/* Set up initial power settings. For non-slicon platforms, disable *
 	 * power features and for silicon platforms, read from platform data */
@@ -1527,11 +1521,11 @@ static int gk20a_probe(struct platform_device *dev)
 					platform->debugfs,
 					&gk20a->timeslice_high_priority_us);
 
-	gk20a->debugfs_interleave_high_priority =
-			debugfs_create_bool("interleave_high_priority",
+	gk20a->debugfs_runlist_interleave =
+			debugfs_create_bool("runlist_interleave",
 					S_IRUGO|S_IWUSR,
 					platform->debugfs,
-					&gk20a->interleave_high_priority);
+					&gk20a->runlist_interleave);
 
 	gr_gk20a_debugfs_init(gk20a);
 	gk20a_pmu_debugfs_init(dev);

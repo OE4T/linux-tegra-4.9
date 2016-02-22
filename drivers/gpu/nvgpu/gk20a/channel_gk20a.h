@@ -188,8 +188,7 @@ struct channel_gk20a {
 	spinlock_t update_fn_lock; /* make access to the two above atomic */
 	struct work_struct update_fn_work;
 
-	/* true if channel is interleaved with lower priority channels */
-	bool interleave;
+	u32 interleave_level;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)

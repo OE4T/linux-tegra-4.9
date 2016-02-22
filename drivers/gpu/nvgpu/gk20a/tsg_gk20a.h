@@ -49,6 +49,8 @@ struct tsg_gk20a {
 	struct gr_ctx_desc *tsg_gr_ctx;
 
 	struct vm_gk20a *vm;
+
+	u32 interleave_level;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);

@@ -1063,8 +1063,7 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 
 	tegra_se_dequeue_complete_req(se_dev, req);
 	mutex_unlock(&se_dev->mtx);
-	if (req)
-		tegra_se_complete_callback(req, 1);
+	tegra_se_complete_callback(req, 1);
 }
 
 static void tegra_se_work_handler(struct work_struct *work)

@@ -407,13 +407,14 @@ int tegra_alt_asoc_utils_init(struct tegra_asoc_audio_clock_info *data,
 			goto err_put_ahub;
 	}
 
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	ret = clk_prepare_enable(data->clk_cdev1);
 	if (ret) {
 		dev_err(data->dev, "Can't enable clk cdev1/extern1");
 		goto err_put_ahub;
 	}
 	data->clk_cdev1_state = 1;
-
+#endif
 	return 0;
 
 err_put_ahub:
@@ -502,7 +503,7 @@ EXPORT_SYMBOL_GPL(tegra_alt_asoc_utils_set_extern_parent);
 void tegra_alt_asoc_utils_fini(struct tegra_asoc_audio_clock_info *data)
 {
 	if (data->clk_cdev1_state)
-		clk_disable(data->clk_cdev1);
+		clk_disable_unprepare(data->clk_cdev1);
 
 	if (data->soc > TEGRA_ASOC_UTILS_SOC_TEGRA210)
 		if (!IS_ERR(data->clk_ahub))

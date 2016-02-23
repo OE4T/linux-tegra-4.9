@@ -479,6 +479,12 @@
 		admaif_ch_list = <1>, <2>, <3>, <4>;
         };
 
+	trusty {
+		virtio {
+			status = "disabled";
+		};
+        };
+
         /delete-node/ axi2apb@2390000;
         /delete-node/ axi2apb@23a0000;
         /delete-node/ axi2apb@23b0000;

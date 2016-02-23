@@ -934,11 +934,13 @@ static int ov5693_otp_setup(struct ov5693 *priv)
 		return -ENODEV;
 
 	for (i = 0; i < OV5693_OTP_NUM_BANKS; i++) {
-		ov5693_read_otp_bank(priv,
-				     &otp_buf[i * OV5693_OTP_BANK_SIZE],
-				     i,
-				     OV5693_OTP_BANK_START_ADDR,
-				     OV5693_OTP_BANK_SIZE);
+		err = ov5693_read_otp_bank(priv,
+					&otp_buf[i * OV5693_OTP_BANK_SIZE],
+					i,
+					OV5693_OTP_BANK_START_ADDR,
+					OV5693_OTP_BANK_SIZE);
+		if (err)
+			return -ENODEV;
 	}
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_OTP_DATA);
@@ -971,11 +973,13 @@ static int ov5693_fuse_id_setup(struct ov5693 *priv)
 	if (err)
 		return -ENODEV;
 
-	ov5693_read_otp_bank(priv,
-			     &fuse_id[0],
-			     OV5693_FUSE_ID_OTP_BANK,
-			     OV5693_FUSE_ID_OTP_START_ADDR,
-			     OV5693_FUSE_ID_SIZE);
+	err = ov5693_read_otp_bank(priv,
+				&fuse_id[0],
+				OV5693_FUSE_ID_OTP_BANK,
+				OV5693_FUSE_ID_OTP_START_ADDR,
+				OV5693_FUSE_ID_SIZE);
+	if (err)
+		return -ENODEV;
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_FUSE_ID);
 	if (!ctrl) {

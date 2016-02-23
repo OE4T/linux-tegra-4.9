@@ -3,7 +3,7 @@
  *
  * Instantiates virtualization-related resources.
  *
- * Copyright (C) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2014-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This file is licensed under the terms of the GNU General Public License
  * version 2.  This program is licensed "as is" without any warranty of any
@@ -110,7 +110,7 @@ static void ivc_raise_irq(struct ivc *ivc_channel)
 static const struct tegra_hv_data *get_hvd(void)
 {
 	if (!tegra_hv_data) {
-		ERR("%s: not initialized yet\n", __func__);
+		INFO("%s: not initialized yet\n", __func__);
 		return ERR_PTR(-EPROBE_DEFER);
 	} else
 		return tegra_hv_data;

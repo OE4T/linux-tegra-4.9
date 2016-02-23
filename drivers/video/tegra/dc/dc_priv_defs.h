@@ -336,5 +336,9 @@ struct tegra_dc {
 	int	enable_count;
 	bool	hdr_cache_dirty;
 	bool    hotplug_supported;
+
+	/* user call-back for shared ISR */
+	int  (*isr_usr_cb)(int dcid, unsigned long irq_sts, void *usr_pdt);
+	void  *isr_usr_pdt;
 };
 #endif

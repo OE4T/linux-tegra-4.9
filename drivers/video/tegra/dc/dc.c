@@ -69,6 +69,7 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 #include "dc_reg.h"
 #include "dc_config.h"
 #include "dc_priv.h"
+#include "dc_shared_isr.h"
 #include "dev.h"
 #include "nvhost_sync.h"
 #include "nvsd.h"
@@ -3956,6 +3957,13 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 		}
 
 	tegra_dc_put(dc);
+
+#ifdef TEGRA_DC_USR_SHARED_IRQ
+	/* user shared display ISR call-back */
+	if (dc->isr_usr_cb)
+		dc->isr_usr_cb(dc->ctrl_num, status, dc->isr_usr_pdt);
+#endif /* TEGRA_DC_USR_SHARED_IRQ */
+
 	mutex_unlock(&dc->lock);
 
 	if (need_disable)
@@ -6147,6 +6155,145 @@ static int __init tegra_dc_mode_override(char *str)
 
 __setup("disp_params=", tegra_dc_mode_override);
 #endif
+
+
+#ifdef TEGRA_DC_USR_SHARED_IRQ
+
+static struct tegra_dc  *tegra_dc_hwidx2dc(int dcid)
+{
+	struct tegra_dc  *dc;
+	int              i;
+
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		dc = tegra_dc_get_dc(i);
+		if (dc && (dcid == dc->ctrl_num))
+			return dc;
+	}
+
+	return NULL;
+}
+
+
+/*
+ * get number of Tegra display heads
+ * o inputs: none
+ * o outputs:
+ *  - return: number of Tegra display heads
+ */
+int  tegra_dc_get_numof_dispheads(void)
+{
+	return TEGRA_MAX_DC;
+}
+EXPORT_SYMBOL(tegra_dc_get_numof_dispheads);
+
+
+/*
+ * get Tegra display head status
+ * o inputs:
+ *  - dcid: display head HW index (0 to TEGRA_MAX_DC-1)
+ *  - pSts: pointer to the head status structure to be returned
+ * o outputs:
+ *  - return: error number
+ *   . 0: registration successful without an error
+ *   . !0: registration failed with an error
+ *  - *pSts: head status
+ * o notes:
+ */
+int  tegra_dc_get_disphead_sts(int dcid, struct tegra_dc_head_status *pSts)
+{
+	struct tegra_dc  *dc = tegra_dc_hwidx2dc(dcid);
+
+	if (dc) {
+		pSts->magic = TEGRA_DC_HEAD_STATUS_MAGIC1;
+		pSts->irqnum = dc->irq;
+		pSts->init = dc->initialized ? 1 : 0;
+		pSts->connected = dc->connected ? 1 : 0;
+		pSts->active = dc->enabled ? 1 : 0;
+		return 0;
+	} else {
+		return -ENODEV;
+	}
+}
+EXPORT_SYMBOL(tegra_dc_get_disphead_sts);
+
+
+/*
+ * to register the Tegra display ISR user call-back routine
+ * o inputs:
+ *  - dcid: display head HW index (0 to TEGRA_MAX_DC-1)
+ *  - usr_isr_cb: function pointer to the user call-back routine
+ *  - usr_isr_pdt: user call-back private data
+ * o outputs:
+ *  - return: error code
+ *   . 0: registration successful without an error
+ *   . !0: registration failed with an error
+ * o notes: will overwrite the old CB always
+ */
+int  tegra_dc_register_isr_usr_cb(int dcid,
+	int (*usr_isr_cb)(int dcid, unsigned long irq_sts, void *usr_isr_pdt),
+	void *usr_isr_pdt)
+{
+	struct tegra_dc  *dc = tegra_dc_hwidx2dc(dcid);
+
+	/* register usr ISR */
+	if (dc && usr_isr_cb) {
+		if (dc->isr_usr_cb) {
+			dev_warn(&dc->ndev->dev,
+				"%s DC%d: overwriting ISR USR CB:%p PDT:%p\n",
+				 __func__, dcid,
+				 dc->isr_usr_cb, dc->isr_usr_pdt);
+		}
+		mutex_lock(&dc->lock);
+		/* always replace the old ISR */
+		dc->isr_usr_cb  = usr_isr_cb;
+		dc->isr_usr_pdt = usr_isr_pdt;
+		mutex_unlock(&dc->lock);
+		dev_info(&dc->ndev->dev,
+			"DC%d: ISR USR CB:%p PDT:%p registered\n",
+			dcid, usr_isr_cb, usr_isr_pdt);
+		return 0;
+	} else {
+		return dc ? -EINVAL : -ENODEV;
+	}
+}
+EXPORT_SYMBOL(tegra_dc_register_isr_usr_cb);
+
+
+/*
+ * to unregister the Tegra display ISR user call-back routine
+ * o inputs:
+ *  - dcid: display head HW index (0 to TEGRA_MAX_DC-1)
+ *  - usr_isr_cb: registered user call-back. ignored.
+ *  - usr_isr_pdt: registered user call-back private data. ignored.
+ * o outputs:
+ *  - return: error code
+ *   . 0: unregistration successful
+ *   . !0: unregistration failed with an error
+ * o notes: will unregister the current CB always
+ */
+int  tegra_dc_unregister_isr_usr_cb(int dcid,
+	int (*usr_isr_cb)(int dcid, unsigned long irq_sts, void *usr_isr_pdt),
+	void *usr_isr_pdt)
+{
+	struct tegra_dc  *dc = tegra_dc_hwidx2dc(dcid);
+
+	/* unregister USR ISR CB */
+	if (dc) {
+		mutex_lock(&dc->lock);
+		dc->isr_usr_cb = NULL;
+		dc->isr_usr_pdt = NULL;
+		mutex_unlock(&dc->lock);
+		dev_info(&dc->ndev->dev,
+			"DC%d: USR ISR CB unregistered\n", dcid);
+		return 0;
+	} else {
+		return -ENODEV;
+	}
+}
+EXPORT_SYMBOL(tegra_dc_unregister_isr_usr_cb);
+
+#endif /* TEGRA_DC_USR_SHARED_IRQ */
+
 
 static int __init tegra_dc_module_init(void)
 {

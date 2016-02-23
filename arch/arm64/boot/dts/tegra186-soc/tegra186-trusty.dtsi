@@ -39,4 +39,10 @@
 			compatible = "android,trusty-log-v1";
 		};
 	};
+
+	IPI: interrupt-controller {
+		compatible = "android,CustomIPI";
+		#interrupt-cells = <1>;
+		interrupt-controller;
+	};
 };

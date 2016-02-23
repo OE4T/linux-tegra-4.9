@@ -270,5 +270,14 @@
 			regulator-disable-ramp-delay = <132000>;
 			enable-active-high;
 		};
+
+		vdd_wlreg_on: regulator@11 {
+			compatible = "regulator-fixed";
+			reg = <11>;
+			regulator-name = "vdd-wlreg_on";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
 	};
 };

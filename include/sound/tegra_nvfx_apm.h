@@ -2,7 +2,7 @@
  * tegra_nvfx_apm.h - Shared APM interface between Tegra ADSP ALSA driver and
  *                    ADSP side user space code.
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,6 +47,16 @@ enum apm_mbx_cmd {
  */
 #define NVFX_APM_METHOD_ACK_BIT		(1 << 31) /* Flag to request ACK */
 
+/* Input modes of APM
+ * In PUSH mode, APM blocks if there is no input available. Usually
+ * a continuous mode ADMA sends interrupt when input data is available.
+ * In PULL mode, APM blocks only if there is no input available and
+ * a input fetch request is pending. Usually a one shot mode ADMA
+ * fetches input data when required and signals event to wake up APM.
+ */
+#define NVFX_APM_INPUT_MODE_PUSH	0
+#define NVFX_APM_INPUT_MODE_PULL	1
+
 enum {
 	/* NVFX APM params */
 	nvfx_apm_method_fx_connect = nvfx_method_external_start,
@@ -67,7 +77,8 @@ enum {
 	nvfx_apm_method_set_eos,
 	nvfx_apm_method_set_priority,
 	/* ADSP to CPU : To send acknowledgement */
-	nvfx_apm_method_ack
+	nvfx_apm_method_ack,
+	nvfx_apm_method_set_input_mode
 };
 
 /* For method nvfx_apm_method_set_io_buffer */
@@ -107,12 +118,18 @@ typedef struct {
 	uint32_t priority;
 } apm_set_priority_params_t;
 
+/* For nvfx_apm_method_set_input_mode */
+typedef struct {
+	nvfx_call_params_t call_params;
+	uint32_t mode;
+} apm_set_input_mode_params_t;
+
 /* Module specific structures */
 typedef struct {
 	nvfx_call_params_t call_params;
 	variant_t plugin_src; /* source plugin pointer */
 	int32_t pin_src;      /* input pin id */
-	variant_t plugin_dst; /* destination plugin pointer */;
+	variant_t plugin_dst; /* destination plugin pointer */
 	int32_t pin_dst;      /* destination pin id */
 } apm_fx_connect_params_t;
 
@@ -142,6 +159,7 @@ typedef union {
 			nvfx_reset_params_t                reset_params;
 			apm_eos_params_t                   eos_params;
 			apm_set_priority_params_t          priority_params;
+			apm_set_input_mode_params_t        input_mode_params;
 			apm_fx_connect_params_t            fx_connect_params;
 			apm_fx_remove_params_t             fx_remove_params;
 			apm_fx_set_param_params_t          fx_set_param_params;

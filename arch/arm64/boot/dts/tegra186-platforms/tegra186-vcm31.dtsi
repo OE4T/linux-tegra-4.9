@@ -108,7 +108,7 @@
 			controller-data {
 				nvidia,x1-len-limit = <16>;
 				nvidia,x1-bus-speed = <133000000>; /* In Mhz */
-				nvidia,x1-dymmy-cycle = <0>;
+				nvidia,x1-dymmy-cycle = <8>;
 				nvidia,x4-bus-speed = <133000000>;
 				nvidia,x4-dymmy-cycle = <8>;
 				nvidia,ifddr-div2-sdr = <1>;

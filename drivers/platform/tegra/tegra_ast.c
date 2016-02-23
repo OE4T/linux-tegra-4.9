@@ -25,7 +25,6 @@
 #include <linux/of_platform.h>
 #include <linux/tegra_ast.h>
 
-#define TEGRA_APS_AST_CONTROL			0
 #define TEGRA_APS_AST_STREAMID_CTL		0x20
 #define TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO	0x100
 #define TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI	0x104
@@ -38,9 +37,6 @@
 
 #define AST_MAX_REGION			7
 #define AST_ADDR_MASK			0xfffff000
-
-/* TEGRA_APS_AST_CONTROL register fields */
-#define AST_MATCH_ERR_CTRL		0x2
 
 /* TEGRA_APS_AST_REGION_<x>_CONTROL register fieds */
 #define AST_RGN_CTRL_NON_SECURE		0x8
@@ -144,8 +140,6 @@ int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
 
 	roffset = tegra_ast_region_offset(region);
 	ast_base = ast->ast_base;
-
-	writel(AST_MATCH_ERR_CTRL, ast_base + TEGRA_APS_AST_CONTROL);
 
 	writel(0, ast_base + TEGRA_APS_AST_REGION_0_MASK_HI + roffset);
 

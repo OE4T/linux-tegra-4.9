@@ -1160,6 +1160,7 @@ static struct init_data sata_lane_g1_g2_init_data[] = {
 	{.cfg_addr = 0x2F, .cfg_wdata = 0x0050},
 	{.cfg_addr = 0x49, .cfg_wdata = 0x0F37},
 	{.cfg_addr = 0x4A, .cfg_wdata = 0x0F67},
+	{.cfg_addr = 0x97, .cfg_wdata = 0x0080},
 };
 
 static struct init_data ufs_lane_g1_g2_g3_init_data[] = {

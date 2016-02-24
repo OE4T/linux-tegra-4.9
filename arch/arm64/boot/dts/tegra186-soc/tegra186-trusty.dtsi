@@ -38,6 +38,10 @@
 		log {
 			compatible = "android,trusty-log-v1";
 		};
+
+                ote {
+                        compatible = "android,trusty-ote-v1";
+                };
 	};
 
 	IPI: interrupt-controller {

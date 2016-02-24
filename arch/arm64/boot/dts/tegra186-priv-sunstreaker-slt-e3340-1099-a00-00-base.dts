@@ -19,6 +19,7 @@
 #include "tegra186-platforms/tegra186-sunstreaker-char-e3340-a00-disp.dsti"
 #include "tegra186-platforms/mods-display.dtsi"
 #include "tegra186-prod/tegra186-priv-sunstreaker-slt-e3340-1099-a00-00-prod.dtsi"
+#include "tegra186-plugin-manager/tegra186-sunstreaker-slt-e3340-1099-a00-00-plugin-manager.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -70,7 +71,7 @@
 		status = "okay";
 		pinctrl-0 = <&sunstreak_default>;
 		pinctrl-names = "default";
-		sunstreak_default: pinmux {
+		tegra_padctl_uphy_pinmux_default: sunstreak_default: pinmux {
 			usb2-std-A-port0 {
 				nvidia,lanes = "otg-1";
 				nvidia,function = "xusb";

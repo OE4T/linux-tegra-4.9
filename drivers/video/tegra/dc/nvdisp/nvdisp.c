@@ -679,16 +679,17 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
 
 	if (mode->vmode & FB_VMODE_EC_ENABLE) {
-		if ((mode->vmode & FB_VMODE_EC_ADOBE_YCC601) ||
-			(mode->vmode & FB_VMODE_EC_SYCC601) ||
-			(mode->vmode & FB_VMODE_EC_XVYCC601))
+		u32 ec = mode->vmode & FB_VMODE_EC_MASK;
+		if ((ec == FB_VMODE_EC_ADOBE_YCC601) ||
+		    (ec == FB_VMODE_EC_SYCC601) ||
+		    (ec == FB_VMODE_EC_XVYCC601))
 			csc2_control =
 				nvdisp_csc2_control_output_color_sel_y601_f();
-		else if ((mode->vmode & FB_VMODE_EC_BT2020_CYCC) ||
-			(mode->vmode & FB_VMODE_EC_BT2020_YCC_RGB))
+		else if ((ec == FB_VMODE_EC_BT2020_CYCC) ||
+			 (ec == FB_VMODE_EC_BT2020_YCC_RGB))
 			csc2_control =
 				nvdisp_csc2_control_output_color_sel_y2020_f();
-		else if (mode->vmode & FB_VMODE_EC_XVYCC709)
+		else if (ec == FB_VMODE_EC_XVYCC709)
 			csc2_control =
 				nvdisp_csc2_control_output_color_sel_y709_f();
 	}

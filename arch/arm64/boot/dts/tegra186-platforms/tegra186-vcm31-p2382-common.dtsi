@@ -709,10 +709,6 @@
                 status = "okay";
         };
 
-	pmc-iopower {
-		status = "disabled";
-	};
-
 	bpmp {
 		bpmpthermal {
 			status = "okay";

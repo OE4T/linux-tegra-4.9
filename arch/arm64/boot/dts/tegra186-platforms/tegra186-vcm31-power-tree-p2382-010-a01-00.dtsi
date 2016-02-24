@@ -123,25 +123,7 @@
 	};
 
 	pmc-iopower {
-		iopower-sys-supply = <&spmic_otp_ldo6>;
-		iopower-uart-supply = <&vdd_1v8>;
-		iopower-conn-supply = <&vdd_1v8>;
-		iopower-edp-supply = <&vdd_1v8>;
-		iopower-pex-ctrl-audio-supply = <&vdd_1v8>;
-		iopower-ufs-supply = <&spmic_otp_sd1>;
-		iopower-ddr0-supply = <&spmic_otp_sd0>;
-		iopower-ddr1-supply = <&spmic_otp_sd0>;
-		iopower-csi-dsi-supply = <&spmic_otp_sd1>;
-		iopower-cam-supply = <&vdd_1v8>;
-		iopower-sdmmc4-supply = <&vdd_1v8>;
 		iopower-sdmmc1-hv-supply = <&spmic_ldo3>;
-		iopower-audio-hv-supply = <&spmic_otp_sd3>;
-		iopower-dbg-supply = <&vdd_1v8>;
-		iopower-spi-supply = <&vdd_1v8>;
-		iopower-ao-supply = <&spmic_otp_ldo6>;
-		iopower-ao-hv-supply = <&spmic_otp_ldo2>;
-		iopower-dmic-hv-supply =  <&spmic_otp_sd3>;
-		iopower-sdmmc2-hv-supply = <&spmic_otp_sd3>;
 		iopower-sdmmc3-hv-supply =  <&spmic_ldo5>;
 	};
 

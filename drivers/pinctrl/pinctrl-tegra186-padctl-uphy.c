@@ -1077,6 +1077,8 @@ static void ufs_lane_rateid_init(struct tegra_padctl_uphy *uphy, int lane)
 static struct init_data usb3_pll_g1_init_data[] = {
 	{.cfg_addr = 0x2,  .cfg_wdata = 0x0000},
 	{.cfg_addr = 0x3,  .cfg_wdata = 0x7051},
+	{.cfg_addr = 0x25, .cfg_wdata = 0x0130},
+	{.cfg_addr = 0x1E, .cfg_wdata = 0x0017},
 };
 
 static struct init_data sata_pll_g1_g2_g3_init_data[] = {

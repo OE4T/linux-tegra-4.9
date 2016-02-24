@@ -1857,12 +1857,15 @@ static inline u32 tegra_hdmi_get_bpp(struct tegra_hdmi *hdmi)
 {
 	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
-	if (yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
+	if ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) ||
+		(!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y30)))
 		return 30;
 	else if (!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36))
 		return 36;
-	else
+	else if (yuv_flag == (FB_VMODE_Y422 | FB_VMODE_Y36))
 		return 24;
+	else
+		return 0;
 }
 
 static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
@@ -1870,7 +1873,9 @@ static u32 tegra_hdmi_gcp_color_depth(struct tegra_hdmi *hdmi)
 	u32 gcp_cd = 0;
 
 	switch (tegra_hdmi_get_bpp(hdmi)) {
-	case 0: /* fall through */
+	case 0:
+		gcp_cd = TEGRA_HDMI_BPP_UNKNOWN;
+		break;
 	case 24:
 		gcp_cd = TEGRA_HDMI_BPP_24;
 		break;

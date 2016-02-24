@@ -261,6 +261,19 @@ int tegra_panel_check_regulator_dt_support(const char *comp_str,
 	return err;
 }
 
+static void tegra_panel_register_mods_ops(struct tegra_dc_out *dc_out)
+{
+	BUG_ON(!dc_out);
+
+	dc_out->enable = NULL;
+	dc_out->postpoweron = NULL;
+	dc_out->prepoweroff = NULL;
+	dc_out->disable = NULL;
+	dc_out->hotplug_init = NULL;
+	dc_out->postsuspend = NULL;
+	dc_out->hotplug_report = NULL;
+}
+
 static void tegra_panel_register_ops(struct tegra_dc_out *dc_out,
 				struct tegra_panel_ops *p_ops)
 {
@@ -302,11 +315,13 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		if (of_device_is_available(np_primary)) {
 			/* DSI */
 			/* SHARP 19x12 panel is being used */
+
 			np_panel = of_get_child_by_name(np_primary,
 				"panel-s-wuxga-8-0");
 			if (of_device_is_available(np_panel) && dc_out)
 				tegra_panel_register_ops(dc_out,
 					&dsi_s_wuxga_8_0_ops);
+
 			/* P2393 DSI2DP Bridge */
 			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_primary,
@@ -329,6 +344,13 @@ struct device_node *tegra_primary_panel_get_dt_node(
 				if (of_device_is_available(np_panel) && dc_out)
 					tegra_panel_register_ops(dc_out,
 					&edp_s_uhdtv_15_6_ops);
+			}
+			/* MODS - DSI to fakeDP - Bug 1734772*/
+			if (!of_device_is_available(np_panel)) {
+				np_panel = of_get_child_by_name(np_primary,
+					"panel-s-wuxga-8-0-mods");
+				if (of_device_is_available(np_panel) && dc_out)
+					tegra_panel_register_mods_ops(dc_out);
 			}
 		}
 	} else {/* for linsim or no display panel case */

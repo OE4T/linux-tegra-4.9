@@ -74,7 +74,7 @@ static noinline notrace int __send_smc(u8 func, struct pm_regs *regs)
  * @suspend_state:	Specific suspend state to set
  *
  */
-int tegra_set_suspend_mode(u32 suspend_state)
+static int tegra_set_suspend_mode(u32 suspend_state)
 {
 	struct pm_regs regs;
 	regs.args[0] = suspend_state;
@@ -88,7 +88,7 @@ EXPORT_SYMBOL(tegra_set_suspend_mode);
  * @shutdown_state:	Specific shutdown state to set
  *
  */
-int tegra_set_shutdown_mode(u32 shutdown_state)
+static int tegra_set_shutdown_mode(u32 shutdown_state)
 {
 	struct pm_regs regs;
 	regs.args[0] = shutdown_state;

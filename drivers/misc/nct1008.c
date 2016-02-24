@@ -125,7 +125,7 @@ static int nct1008_sensor_regs[SENSORS_COUNT][REGS_COUNT] = {
 #define NCT1008_MAX_TEMP_MILLI   191750
 
 #define MAX_STR_PRINT            50
-#define MAX_CONV_TIME_ONESHOT_MS 52
+#define CONV_TIME_ONESHOT_US     52000
 
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
@@ -1181,7 +1181,6 @@ static void nct1008_work_func(struct work_struct *work)
 	struct nct1008_data *data = container_of(work, struct nct1008_data,
 						work);
 	int err;
-	struct timespec ts;
 	int intr_status;
 
 	mutex_lock(&data->mutex);
@@ -1212,8 +1211,7 @@ static void nct1008_work_func(struct work_struct *work)
 		return;
 
 	/* Give hardware necessary time to finish conversion */
-	ts = ns_to_timespec(MAX_CONV_TIME_ONESHOT_MS * 1000 * 1000);
-	hrtimer_nanosleep(&ts, NULL, HRTIMER_MODE_REL, CLOCK_MONOTONIC);
+	usleep_range(CONV_TIME_ONESHOT_US, CONV_TIME_ONESHOT_US + 1000);
 
 	err = nct1008_read_reg(data->client, STATUS_RD);
 	if (err < 0)
@@ -1737,7 +1735,6 @@ static int nct1008_probe(struct i2c_client *client,
 		nct1008_update(EXT, data);
 		shutdown_warn_saved_temp = data->sensors[EXT].thz->temperature;
 	}
-
 #endif
 	return 0;
 
@@ -1979,6 +1976,7 @@ static struct i2c_driver nct1008_driver = {
 	.shutdown	= nct1008_shutdown,
 };
 
+#ifndef MODULE
 static int __init nct1008_sync_thz(struct device *dev, void *unused)
 {
 	struct nct1008_data *data = dev_get_drvdata(dev);
@@ -1995,6 +1993,7 @@ static int __init nct1008_sync(void)
 		&nct1008_driver.driver, NULL, NULL, nct1008_sync_thz);
 }
 late_initcall_sync(nct1008_sync);
+#endif
 
 static int __init nct1008_init(void)
 {

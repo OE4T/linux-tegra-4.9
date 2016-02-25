@@ -60,7 +60,7 @@
 		spiflash@1 {
 			#address-cells = <1>;
 			#size-cells = <1>;
-			compatible = "s25fl512s";
+			compatible = "s25fs512s";
 			reg = <0>;
 			spi-max-frequency = <133000000>;
 			partition@0 {

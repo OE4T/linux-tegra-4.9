@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/latency_allowance.c
  *
- * Copyright (C) 2011-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2011-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -58,7 +58,7 @@ static void init_chip_specific(void)
 	if (!tegra_platform_is_silicon())
 		return;
 
-	cs.set_la = default_set_la;
+	cs.set_init_la = default_set_la;
 	memset(&cs.id_to_index[0], 0xFF, sizeof(cs.id_to_index));
 	spin_lock_init(&cs.lock);
 
@@ -82,7 +82,7 @@ static void init_chip_specific(void)
 		break;
 #endif
 	default:
-		cs.set_la = NULL;
+		cs.set_init_la = NULL;
 	}
 }
 
@@ -288,8 +288,8 @@ int tegra_set_disp_latency_allowance(enum tegra_la_id id,
 					struct dc_to_la_params disp_params) {
 	if (cs.set_disp_la)
 		return cs.set_disp_la(id, emc_freq_hz, bw_mbps, disp_params);
-	else if (cs.set_la)
-		return cs.set_la(id, bw_mbps);
+	else if (cs.set_dynamic_la)
+		return cs.set_dynamic_la(id, bw_mbps);
 	return 0;
 }
 
@@ -314,8 +314,8 @@ int tegra_check_disp_latency_allowance(enum tegra_la_id id,
  */
 int tegra_set_latency_allowance(enum tegra_la_id id, unsigned int bw_mbps)
 {
-	if (cs.set_la)
-		return cs.set_la(id, bw_mbps);
+	if (cs.set_dynamic_la)
+		return cs.set_dynamic_la(id, bw_mbps);
 	return 0;
 }
 
@@ -325,8 +325,8 @@ int tegra_set_camera_ptsa(enum tegra_la_id id,
 {
 	if (cs.update_camera_ptsa_rate)
 		return cs.update_camera_ptsa_rate(id, bw_mbps, is_hiso);
-	else if (cs.set_la)
-		return cs.set_la(id, bw_mbps);
+	else if (cs.set_dynamic_la)
+		return cs.set_dynamic_la(id, bw_mbps);
 	return 0;
 }
 
@@ -467,8 +467,8 @@ static int __init tegra_latency_allowance_init(void)
 		cs.id_to_index[cs.la_info_array[i].id] = i;
 
 	for (i = 0; i < cs.la_info_array_size; i++) {
-		if (cs.set_la)
-			cs.set_la(cs.la_info_array[i].id, 0);
+		if (cs.set_init_la)
+			cs.set_init_la(cs.la_info_array[i].id, 0);
 		else if (cs.la_info_array[i].init_la)
 			set_la(&cs.la_info_array[i],
 				cs.la_info_array[i].init_la);

@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/tegra12x_la.c
  *
- * Copyright (C) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1139,7 +1139,8 @@ void tegra_la_get_t12x_specific(struct la_chip_specific *cs_la)
 	cs_la->init_ptsa = t12x_init_ptsa;
 	cs_la->update_display_ptsa_rate = t12x_update_display_ptsa_rate;
 	cs_la->update_camera_ptsa_rate = t12x_update_camera_ptsa_rate;
-	cs_la->set_la = t12x_set_la;
+	cs_la->set_init_la = t12x_set_la;
+	cs_la->set_dynamic_la = t12x_set_la;
 	cs_la->set_disp_la = t12x_set_disp_la;
 	cs_la->check_disp_la = t12x_check_disp_la;
 	cs_la->save_ptsa = save_ptsa;

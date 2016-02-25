@@ -1661,7 +1661,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 
 	for (i = 0; i < DC_N_WINDOWS; ++i) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
-		if (!win)
+		if (!win || !win->dc)
 			continue;
 
 		print(data, "\n");

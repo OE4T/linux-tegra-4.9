@@ -122,6 +122,7 @@
 
 						      /* Non-host devices. */
 						      <&{/adsp@2993000}		TEGRA_SID_APE>,
+						      <&{/rtcpu@2993000}	TEGRA_SID_APE>,
 						      <&{/ether_qos@2490000}	TEGRA_SID_EQOS>,
 						      <&{/sdhci@3460000}	TEGRA_SID_SDMMC4A>,
 						      <&{/sdhci@3440000}	TEGRA_SID_SDMMC3A>,
@@ -137,6 +138,7 @@
 						      <&{/pcie-controller@10003000} TEGRA_SID_AFI>,
 						      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
 						      <&{/aon@c160000}		TEGRA_SID_AON>,
+						      <&{/rtcpu@b000000}	TEGRA_SID_SCE>,
 						      <&{/bpmp}			TEGRA_SID_BPMP>;
 				};
 			};

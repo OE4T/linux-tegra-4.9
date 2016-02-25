@@ -447,7 +447,6 @@
 			srate = <48000>;
 			num-channel = <8>;
 			name-prefix = "x";
-			codec = "0.spdif-dit.0";
 		};
 
 		nvidia,dai-link-2 {
@@ -468,7 +467,6 @@
 			srate = <48000>;
 			num-channel = <8>;
 			name-prefix = "y";
-			codec = "1.spdif-dit.1";
 		};
 
 		nvidia,dai-link-3 {
@@ -489,7 +487,6 @@
 			srate = <48000>;
 			num-channel = <8>;
 			name-prefix = "d";
-			codec = "2.spdif-dit.2";
 		};
 	};
 };

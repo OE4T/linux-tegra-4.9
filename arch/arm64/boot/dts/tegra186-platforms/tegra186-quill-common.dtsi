@@ -372,7 +372,6 @@
 			bclk_ratio = <4>;
 			srate = <8000>;
 			num-channel = <1>;
-			codec = "0.spdif-dit.0";
 			name-prefix = "y";
 		};
 		nvidia,dai-link-2 {
@@ -390,7 +389,6 @@
 			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
-			codec = "1.spdif-dit.1";
 			name-prefix = "z";
 		};
 		nvidia,dai-link-3 {
@@ -408,14 +406,12 @@
 			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
-			codec = "2.spdif-dit.2";
 			name-prefix = "m";
 		};
 		e2614_rt565x_dai_link: nvidia,dai-link-4 {
 			link-name = "rt565x-playback";
 			cpu-dai = <&tegra_i2s1>;
 			codec-dai = <&spdif_dit3>;
-			codec = "3.spdif-dit.3";
 			cpu-dai-name = "I2S1";
 			codec-dai-name = "dit-hifi";
 			format = "i2s";

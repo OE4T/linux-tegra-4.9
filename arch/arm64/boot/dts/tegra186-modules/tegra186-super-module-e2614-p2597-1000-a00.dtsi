@@ -236,7 +236,6 @@
 			link-name = "dspk-playback-r";
 			cpu-dai = <&tegra_dspk2>;
 			codec-dai = <&e2614_tas2552_r>;
-			codec = "tas2552.9-0040";
 			cpu-dai-name = "DSPK2";
 			codec-dai-name = "tas2552-amplifier";
 			format = "i2s";
@@ -251,7 +250,6 @@
 			link-name = "dspk-playback-l";
 			cpu-dai = <&tegra_dspk2>;
 			codec-dai = <&e2614_tas2552_l>;
-			codec = "tas2552.9-0041";
 			cpu-dai-name = "DSPK2";
 			codec-dai-name = "tas2552-amplifier";
 			format = "i2s";
@@ -266,7 +264,6 @@
 			link-name = "spdif-playback";
 			cpu-dai = <&tegra_spdif>;
 			codec-dai = <&spdif_dit4>;
-			codec = "4.spdif-dit.4";
 			cpu-dai-name = "SPDIF1-1";
 			codec-dai-name = "dit-hifi";
 			format = "i2s";
@@ -421,7 +418,6 @@
 				target = <&e2614_rt565x_dai_link>;
 				_overlay_ {
 					codec-dai = <&e2614_rt5658>;
-					codec = "rt5659.1-001a";
 				};
 			};
 		};
@@ -439,7 +435,6 @@
 				target = <&e2614_rt565x_dai_link>;
 				_overlay_ {
 					codec-dai = <&e2614_rt5658_i2c3>;
-					codec = "rt5659.12-001a";
 				};
 			};
 		};

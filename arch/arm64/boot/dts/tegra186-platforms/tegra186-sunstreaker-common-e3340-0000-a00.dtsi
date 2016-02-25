@@ -270,7 +270,6 @@
 			bclk_ratio = <4>;
 			srate = <48000>;
 			num-channel = <1>;
-			codec = "0.spdif-dit.0";
 			name-prefix = "y";
 		};
 		nvidia,dai-link-2 {
@@ -288,7 +287,6 @@
 			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
-			codec = "1.spdif-dit.1";
 			name-prefix = "z";
 		};
 	};

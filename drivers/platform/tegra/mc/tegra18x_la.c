@@ -12,408 +12,6 @@
  *
  */
 
-/*
- * TODO: The following commented out code has been copied from tegra21x_la.c.
- * The commented out code represents all the features that still need to be
- * added for T18x.
- */
-#if 0
-#include <asm/io.h>
-
-#include <linux/platform/tegra/clock.h>
-
-#include "la_priv.h"
-
-#define ON_LPDDR4() (tegra_emc_get_dram_type() == DRAM_TYPE_LPDDR4)
-
-#define MC_PTSA_MIN_DEFAULT_MASK				0x3f
-#define MC_PTSA_MAX_DEFAULT_MASK				0x3f
-#define MC_PTSA_RATE_DEFAULT_MASK				0xfff
-
-#define LA_ST_LA_MINUS_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP	70000
-#define LA_DRAM_WIDTH_BITS				64
-#define LA_DISP_CATCHUP_FACTOR_FP			1100
-#define MC_MAX_FREQ_MHZ					533
-#define MAX_GRANT_DEC					511
-
-#define EXP_TIME_EMCCLKS_FP				88000
-#define MAX_LA_NSEC					7650
-#define DDA_BW_MARGIN_FP				1100
-#define ONE_DDA_FRAC_FP					10
-#define CPU_RD_BW_PERC					9
-#define CPU_WR_BW_PERC					1
-#define MIN_CYCLES_PER_GRANT				2
-#define EMEM_PTSA_MINMAX_WIDTH				5
-#define RING1_FEEDER_SISO_ALLOC_DIV			2
-
-
-static unsigned int emc_min_freq_mhz_fp;
-static unsigned int emc_min_freq_mhz;
-static unsigned int emc_max_freq_mhz;
-static unsigned int hi_gd_fp;
-static unsigned int lo_gd_fp;
-static unsigned int hi_gd_fpa;
-static unsigned int lo_gd_fpa;
-static unsigned int low_freq_bw;
-static unsigned int dda_div;
-
-const struct disp_client *tegra_la_disp_clients_info;
-static unsigned int total_dc0_bw;
-static unsigned int total_dc1_bw;
-static DEFINE_MUTEX(disp_and_camera_ptsa_lock);
-
-
-/*
- * Gets the memory BW in MBps. @emc_freq should be in MHz.
- */
-static u32 get_mem_bw_mbps(u32 dram_freq)
-{
-	return dram_freq * 16;
-}
-
-
-/*
- * This now also includes ring1 since that needs to have its PTSA updated
- * based on freq and usecase.
- */
-static void t18x_calc_disp_and_camera_ptsa(void)
-{
-	struct ptsa_info *p = &cs->ptsa_info;
-	unsigned int ve_bw_fp = cs->camera_bw_array[CAMERA_IDX(VI_W)] *
-				DDA_BW_MARGIN_FP;
-	unsigned int ve2_bw_fp = 0;
-	unsigned int isp_bw_fp = 0;
-	unsigned int total_dc0_bw_fp = total_dc0_bw * DDA_BW_MARGIN_FP;
-	unsigned int total_dc1_bw_fp = total_dc1_bw * DDA_BW_MARGIN_FP;
-	unsigned int low_freq_bw_fp = la_real_to_fp(low_freq_bw);
-	unsigned int dis_frac_fp = LA_FPA_TO_FP(lo_gd_fpa * total_dc0_bw_fp /
-						low_freq_bw_fp);
-	unsigned int disb_frac_fp = LA_FPA_TO_FP(lo_gd_fpa * total_dc1_bw_fp /
-						 low_freq_bw_fp);
-	unsigned int total_iso_bw_fp = total_dc0_bw_fp + total_dc1_bw_fp;
-	int max_max = (1 << EMEM_PTSA_MINMAX_WIDTH) - 1;
-	int i = 0;
-
-	if (cs->agg_camera_array[AGG_CAMERA_ID(VE2)].is_hiso) {
-		ve2_bw_fp = (cs->camera_bw_array[CAMERA_IDX(ISP_RAB)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WAB)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WBB)]) *
-				DDA_BW_MARGIN_FP;
-	} else {
-		ve2_bw_fp = LA_REAL_TO_FP(
-				cs->camera_bw_array[CAMERA_IDX(ISP_RAB)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WAB)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WBB)]);
-	}
-
-	if (cs->agg_camera_array[AGG_CAMERA_ID(ISP)].is_hiso) {
-		isp_bw_fp = (cs->camera_bw_array[CAMERA_IDX(ISP_RA)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WA)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WB)]) *
-				DDA_BW_MARGIN_FP;
-	} else {
-		isp_bw_fp = LA_REAL_TO_FP(
-				cs->camera_bw_array[CAMERA_IDX(ISP_RA)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WA)] +
-				cs->camera_bw_array[CAMERA_IDX(ISP_WB)]);
-	}
-
-	cs->agg_camera_array[AGG_CAMERA_ID(VE)].bw_fp = ve_bw_fp;
-	cs->agg_camera_array[AGG_CAMERA_ID(VE2)].bw_fp = ve2_bw_fp;
-	cs->agg_camera_array[AGG_CAMERA_ID(ISP)].bw_fp = isp_bw_fp;
-
-	for (i = 0; i < TEGRA_LA_AGG_CAMERA_NUM_CLIENTS; i++) {
-		struct agg_camera_client_info *agg_client =
-						&cs->agg_camera_array[i];
-
-		if (agg_client->is_hiso) {
-			agg_client->frac_fp = LA_FPA_TO_FP(
-						lo_gd_fpa * agg_client->bw_fp /
-						low_freq_bw_fp);
-			agg_client->ptsa_min = (unsigned int)(-5) &
-						MC_PTSA_MIN_DEFAULT_MASK;
-			agg_client->ptsa_max = (unsigned int)(max_max) &
-						MC_PTSA_MAX_DEFAULT_MASK;
-
-			total_iso_bw_fp += agg_client->bw_fp;
-		} else {
-			agg_client->frac_fp = ONE_DDA_FRAC_FP;
-			agg_client->ptsa_min = (unsigned int)(-2) &
-						MC_PTSA_MIN_DEFAULT_MASK;
-			agg_client->ptsa_max = (unsigned int)(0) &
-						MC_PTSA_MAX_DEFAULT_MASK;
-		}
-	}
-
-	MC_SET_INIT_PTSA(p, dis, -5, max_max);
-	p->dis_ptsa_rate = fraction2dda_fp(
-				dis_frac_fp,
-				4,
-				MC_PTSA_RATE_DEFAULT_MASK) &
-		MC_PTSA_RATE_DEFAULT_MASK;
-
-	MC_SET_INIT_PTSA(p, disb, -5, max_max);
-	p->disb_ptsa_rate = fraction2dda_fp(
-				disb_frac_fp,
-				4,
-				MC_PTSA_RATE_DEFAULT_MASK) &
-		MC_PTSA_RATE_DEFAULT_MASK;
-
-	p->ve_ptsa_min = cs->agg_camera_array[AGG_CAMERA_ID(VE)].ptsa_min &
-					MC_PTSA_MIN_DEFAULT_MASK;
-	p->ve_ptsa_max = cs->agg_camera_array[AGG_CAMERA_ID(VE)].ptsa_max &
-					MC_PTSA_MAX_DEFAULT_MASK;
-	p->ve_ptsa_rate = fraction2dda_fp(
-				cs->agg_camera_array[AGG_CAMERA_ID(VE)].frac_fp,
-				4,
-				MC_PTSA_RATE_DEFAULT_MASK) &
-		MC_PTSA_RATE_DEFAULT_MASK;
-
-	p->ve2_ptsa_min = cs->agg_camera_array[AGG_CAMERA_ID(VE2)].ptsa_min &
-					MC_PTSA_MIN_DEFAULT_MASK;
-	p->ve2_ptsa_max = cs->agg_camera_array[AGG_CAMERA_ID(VE2)].ptsa_max &
-					MC_PTSA_MAX_DEFAULT_MASK;
-	p->ve2_ptsa_rate = fraction2dda_fp(
-			cs->agg_camera_array[AGG_CAMERA_ID(VE2)].frac_fp,
-			4,
-			MC_PTSA_RATE_DEFAULT_MASK) &
-		MC_PTSA_RATE_DEFAULT_MASK;
-
-	p->isp_ptsa_min = cs->agg_camera_array[AGG_CAMERA_ID(ISP)].ptsa_min &
-					MC_PTSA_MIN_DEFAULT_MASK;
-	p->isp_ptsa_max = cs->agg_camera_array[AGG_CAMERA_ID(ISP)].ptsa_max &
-					MC_PTSA_MAX_DEFAULT_MASK;
-	p->isp_ptsa_rate = fraction2dda_fp(
-			cs->agg_camera_array[AGG_CAMERA_ID(ISP)].frac_fp,
-			4,
-			MC_PTSA_RATE_DEFAULT_MASK) &
-		MC_PTSA_RATE_DEFAULT_MASK;
-
-	MC_SET_INIT_PTSA(p, ring1, -5, max_max);
-
-
-	p->ring1_ptsa_rate = p->dis_ptsa_rate + p->disb_ptsa_rate +
-		p->ve_ptsa_rate;
-	p->ring1_ptsa_rate += cs->agg_camera_array[AGG_CAMERA_ID(VE2)].is_hiso ?
-		p->ve2_ptsa_rate : 0;
-	p->ring1_ptsa_rate += cs->agg_camera_array[AGG_CAMERA_ID(ISP)].is_hiso ?
-		p->isp_ptsa_rate : 0;
-
-	if (ON_LPDDR4())
-		p->ring1_ptsa_rate /= 2;
-
-	/* These need to be read from the registers since the MC/EMC clock may
-	   be different than last time these were read into *p. */
-	p->ring1_ptsa_rate += mc_readl(MC_MLL_MPCORER_PTSA_RATE) +
-		mc_readl(MC_FTOP_PTSA_RATE);
-
-	if (p->ring1_ptsa_rate == 0)
-		p->ring1_ptsa_rate = 0x1;
-}
-
-static void t18x_update_display_ptsa_rate(unsigned int *disp_bw_array)
-{
-	struct ptsa_info *p = &cs->ptsa_info;
-
-	t18x_calc_disp_and_camera_ptsa();
-
-	mc_writel(p->ring1_ptsa_min, MC_RING1_PTSA_MIN);
-	mc_writel(p->ring1_ptsa_max, MC_RING1_PTSA_MAX);
-	mc_writel(p->ring1_ptsa_rate, MC_RING1_PTSA_RATE);
-
-	mc_writel(p->dis_ptsa_min, MC_DIS_PTSA_MIN);
-	mc_writel(p->dis_ptsa_max, MC_DIS_PTSA_MAX);
-	mc_writel(p->dis_ptsa_rate, MC_DIS_PTSA_RATE);
-
-	mc_writel(p->disb_ptsa_min, MC_DISB_PTSA_MIN);
-	mc_writel(p->disb_ptsa_max, MC_DISB_PTSA_MAX);
-	mc_writel(p->disb_ptsa_rate, MC_DISB_PTSA_RATE);
-}
-
-static int t18x_update_camera_ptsa_rate(enum tegra_la_id id,
-					unsigned int bw_mbps,
-					int is_hiso)
-{
-	struct ptsa_info *p = NULL;
-	int ret_code = 0;
-
-	mutex_lock(&disp_and_camera_ptsa_lock);
-
-	if (!is_camera_client(id)) {
-		/* Non-camera clients should be handled by t18x_set_la(...) or
-		   t18x_set_disp_la(...). */
-		pr_err("%s: Ignoring request from a non-camera client.\n",
-			__func__);
-		pr_err("%s: Non-camera clients should be handled by "
-			"t18x_set_la(...) or t18x_set_disp_la(...).\n",
-			__func__);
-		ret_code = -1;
-		goto exit;
-	}
-
-	if ((id == ID(VI_W)) &&
-		(!is_hiso)) {
-		pr_err("%s: VI is stating that its not HISO.\n", __func__);
-		pr_err("%s: Ignoring and assuming that VI is HISO because VI "
-			"is always supposed to be HISO.\n",
-			__func__);
-		is_hiso = 1;
-	}
-
-
-	p = &cs->ptsa_info;
-
-	if (id == ID(VI_W)) {
-		cs->agg_camera_array[AGG_CAMERA_ID(VE)].is_hiso = is_hiso;
-	} else if ((id == ID(ISP_RAB)) ||
-			(id == ID(ISP_WAB)) ||
-			(id == ID(ISP_WBB))) {
-		cs->agg_camera_array[AGG_CAMERA_ID(VE2)].is_hiso = is_hiso;
-	} else {
-		cs->agg_camera_array[AGG_CAMERA_ID(ISP)].is_hiso = is_hiso;
-	}
-
-	cs->camera_bw_array[CAMERA_LA_IDX(id)] = bw_mbps;
-
-	t18x_calc_disp_and_camera_ptsa();
-
-	mc_writel(p->ring1_ptsa_min, MC_RING1_PTSA_MIN);
-	mc_writel(p->ring1_ptsa_max, MC_RING1_PTSA_MAX);
-	mc_writel(p->ring1_ptsa_rate, MC_RING1_PTSA_RATE);
-
-	mc_writel(p->ve_ptsa_min, MC_VE_PTSA_MIN);
-	mc_writel(p->ve_ptsa_max, MC_VE_PTSA_MAX);
-	mc_writel(p->ve_ptsa_rate, MC_VE_PTSA_RATE);
-
-	mc_writel(p->ve2_ptsa_min, MC_VE2_PTSA_MIN);
-	mc_writel(p->ve2_ptsa_max, MC_VE2_PTSA_MAX);
-	mc_writel(p->ve2_ptsa_rate, MC_VE2_PTSA_RATE);
-
-	mc_writel(p->isp_ptsa_min, MC_ISP_PTSA_MIN);
-	mc_writel(p->isp_ptsa_max, MC_ISP_PTSA_MAX);
-	mc_writel(p->isp_ptsa_rate, MC_ISP_PTSA_RATE);
-
-exit:
-	mutex_unlock(&disp_and_camera_ptsa_lock);
-
-	return ret_code;
-}
-
-
-static unsigned int t18x_min_la(struct dc_to_la_params *disp_params)
-{
-	unsigned int min_la_fp = disp_params->drain_time_usec_fp *
-				1000 /
-				cs->ns_per_tick;
-
-	/* round up */
-	if (min_la_fp % LA_FP_FACTOR != 0)
-		min_la_fp += LA_FP_FACTOR;
-
-	return LA_FP_TO_REAL(min_la_fp);
-}
-
-static int t18x_handle_disp_la(enum tegra_la_id id,
-			       unsigned long emc_freq_hz,
-			       unsigned int bw_mbps,
-			       struct dc_to_la_params disp_params,
-			       int write_la)
-{
-	int idx = 0;
-	struct la_client_info *ci = NULL;
-	long long la_to_set = 0;
-	unsigned int dvfs_time_nsec = 0;
-	unsigned int dvfs_buffering_reqd_bytes = 0;
-	unsigned int thresh_dvfs_bytes = 0;
-	unsigned int total_buf_sz_bytes = 0;
-	int effective_mccif_buf_sz = 0;
-	long long la_bw_upper_bound_nsec_fp = 0;
-	long long la_bw_upper_bound_nsec = 0;
-	long long la_nsec = 0;
-
-	if (!is_display_client(id)) {
-		/* Non-display clients should be handled by t18x_set_la(...). */
-		return -1;
-	}
-
-	mutex_lock(&disp_and_camera_ptsa_lock);
-	total_dc0_bw = disp_params.total_dc0_bw;
-	total_dc1_bw = disp_params.total_dc1_bw;
-	cs->update_display_ptsa_rate(cs->disp_bw_array);
-	mutex_unlock(&disp_and_camera_ptsa_lock);
-
-	idx = cs->id_to_index[id];
-	ci = &cs->la_info_array[idx];
-	la_to_set = 0;
-	dvfs_time_nsec =
-		tegra_get_dvfs_clk_change_latency_nsec(emc_freq_hz / 1000);
-	dvfs_buffering_reqd_bytes = bw_mbps *
-					dvfs_time_nsec /
-					LA_USEC_TO_NSEC_FACTOR;
-
-	thresh_dvfs_bytes =
-			disp_params.thresh_lwm_bytes +
-			dvfs_buffering_reqd_bytes +
-			disp_params.spool_up_buffering_adj_bytes;
-	total_buf_sz_bytes =
-		cs->disp_clients[DISP_CLIENT_LA_ID(id)].line_buf_sz_bytes +
-		cs->disp_clients[DISP_CLIENT_LA_ID(id)].mccif_size_bytes;
-	effective_mccif_buf_sz =
-		(cs->disp_clients[DISP_CLIENT_LA_ID(id)].line_buf_sz_bytes >
-		thresh_dvfs_bytes) ?
-		cs->disp_clients[DISP_CLIENT_LA_ID(id)].mccif_size_bytes :
-		total_buf_sz_bytes - thresh_dvfs_bytes;
-
-	if (effective_mccif_buf_sz < 0)
-		return -1;
-
-	la_bw_upper_bound_nsec_fp = effective_mccif_buf_sz *
-					LA_FP_FACTOR /
-					bw_mbps;
-	la_bw_upper_bound_nsec_fp = la_bw_upper_bound_nsec_fp *
-					LA_FP_FACTOR /
-					LA_DISP_CATCHUP_FACTOR_FP;
-	la_bw_upper_bound_nsec_fp =
-		la_bw_upper_bound_nsec_fp -
-		(LA_ST_LA_MINUS_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP +
-		 EXP_TIME_EMCCLKS_FP) /
-		(emc_freq_hz / LA_HZ_TO_MHZ_FACTOR);
-	la_bw_upper_bound_nsec_fp *= LA_USEC_TO_NSEC_FACTOR;
-	la_bw_upper_bound_nsec = LA_FP_TO_REAL(la_bw_upper_bound_nsec_fp);
-
-
-	la_nsec = min(la_bw_upper_bound_nsec,
-			(long long)MAX_LA_NSEC);
-
-	la_to_set = min((long long)(la_nsec/cs->ns_per_tick),
-			(long long)MC_LA_MAX_VALUE);
-
-	if ((la_to_set < t18x_min_la(&disp_params)) || (la_to_set > 255))
-		return -1;
-
-	if (write_la)
-		program_la(ci, la_to_set);
-	return 0;
-}
-
-static int t18x_set_disp_la(enum tegra_la_id id,
-			    unsigned long emc_freq_hz,
-			    unsigned int bw_mbps,
-			    struct dc_to_la_params disp_params)
-{
-	return t18x_handle_disp_la(id, emc_freq_hz, bw_mbps, disp_params, 1);
-}
-
-static int t18x_check_disp_la(enum tegra_la_id id,
-			      unsigned long emc_freq_hz,
-			      unsigned int bw_mbps,
-			      struct dc_to_la_params disp_params)
-{
-	return t18x_handle_disp_la(id, emc_freq_hz, bw_mbps, disp_params, 0);
-}
-
-#endif
-
 
 #include <linux/types.h>
 #include <linux/clk.h>
@@ -431,9 +29,16 @@ static int t18x_check_disp_la(enum tegra_la_id id,
 #include "la_priv.h"
 
 
-#define EMEM_CHANNEL_ENABLE_MASK		0xf
-#define ECC_ENABLE_MASK				0x1
-#define T18X_2_STAGE_ECC_ISO_DDA_FACTOR_FP	1400U
+#define T18X_LA_EMEM_CHANNEL_ENABLE_MASK		0xf
+#define T18X_LA_ECC_ENABLE_MASK				0x1
+#define T18X_LA_2_STAGE_ECC_ISO_DDA_FACTOR_FP		1400U
+#define T18X_LA_DISP_CATCHUP_FACTOR_FP			1100U
+#define T18X_LA_MCCIF_BUF_SZ_BYTES_FP			30976000U
+#define T18X_LA_ST_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS	54U
+#define T18X_LA_ST_LA_MINUS_SNAP_ARB_TO_ROW_SRT_EMCCLKS	130U
+#define T18X_LA_EXPIRATION_TIME_EMCCLKS			210U
+#define T18X_LA_MAX_DRAIN_TIME_USEC			10U
+#define T18X_LA_CONS_MEM_EFF_DIV_FACTOR			2U
 
 /*
  * For T18X we need varying fixed point accuracies. "fp2" variables provide an
@@ -477,9 +82,24 @@ static int t18x_check_disp_la(enum tegra_la_id id,
 			MC_PTSA_RATE_DEFAULT_MASK;			\
 	} while (0)
 
+#define T18X_CALC_AND_UPDATE_ISO_PTSA(p, field, reg, bw_mbps)		\
+	do {								\
+		(p)->field ##_ptsa_rate =				\
+			__t18x_fraction2dda_fp(				\
+				t18x_bwfp_to_fractionfpa(		\
+					bw_mbps * iso_dda_factor_fp),	\
+				hub_dda_div,				\
+				MC_PTSA_RATE_DEFAULT_MASK,		\
+				(p)->field ##_traffic_type);		\
+		mc_writel((p)->field ##_ptsa_rate,			\
+			MC_ ## reg ## _PTSA_RATE);			\
+	} while (0)
+
+
 static struct la_chip_specific *cs;
 static unsigned int dram_type;
 static unsigned int num_channels;
+static unsigned int row_srt_sz_bytes;
 static unsigned int dram_emc_freq_factor;
 static unsigned int hi_freq_fp;
 static unsigned int lo_freq_fp;
@@ -598,7 +218,7 @@ static inline unsigned int __t18x_fraction2dda_fp(unsigned int fraction_fpa,
 		}
 	}
 
-	return min(dda & mask, (unsigned int)MAX_DDA_RATE);
+	return min(dda, (unsigned int)MAX_DDA_RATE);
 }
 
 static inline unsigned int t18x_fraction2dda_fp(unsigned int fraction_fp,
@@ -611,9 +231,15 @@ static inline unsigned int t18x_fraction2dda_fp(unsigned int fraction_fp,
 	return __t18x_fraction2dda_fp(fraction_fpa, div, mask, traffic_type);
 }
 
-static inline unsigned int t18x_bw2fraction_fpa(unsigned int bw_mbps)
+static inline unsigned int t18x_bw_to_fractionfpa(unsigned int bw_mbps)
 {
 	return (lo_gd_fpa * T18X_LA_REAL_TO_FP2(bw_mbps)) /
+		(T18X_LA_FP_TO_FP2(lo_freq_fp) * dram_width_bytes);
+}
+
+static inline unsigned int t18x_bwfp_to_fractionfpa(unsigned int bw_mbps_fp)
+{
+	return (lo_gd_fpa * T18X_LA_FP_TO_FP2(bw_mbps_fp)) /
 		(T18X_LA_FP_TO_FP2(lo_freq_fp) * dram_width_bytes);
 }
 
@@ -798,7 +424,7 @@ static void t18x_init_ptsa(void)
 
 	ring1_nb_bw = emc_freq_mhz * 2 * dram_width_bytes * 70 / 100;
 	p->ring1_rd_nb_ptsa_rate =
-		__t18x_fraction2dda_fp(t18x_bw2fraction_fpa(ring1_nb_bw),
+		__t18x_fraction2dda_fp(t18x_bw_to_fractionfpa(ring1_nb_bw),
 					r0_dda_div,
 					MC_PTSA_RATE_DEFAULT_MASK,
 					p->ring1_rd_nb_traffic_type);
@@ -814,7 +440,7 @@ static void t18x_init_ptsa(void)
 
 	cpu_rd_bw = emc_freq_mhz * 2 * dram_width_bytes * 10 / 100;
 	p->mll_mpcorer_ptsa_rate =
-		__t18x_fraction2dda_fp(t18x_bw2fraction_fpa(cpu_rd_bw),
+		__t18x_fraction2dda_fp(t18x_bw_to_fractionfpa(cpu_rd_bw),
 					r0_dda_div,
 					MC_PTSA_RATE_DEFAULT_MASK,
 					p->mll_mpcorer_traffic_type);
@@ -824,9 +450,9 @@ static void t18x_init_ptsa(void)
 
 	p->bpmpdmapc_ptsa_rate = (unsigned int)(1) & MC_PTSA_RATE_DEFAULT_MASK;
 
-	eqos_bw = LA_FP_TO_REAL(250 * T18X_2_STAGE_ECC_ISO_DDA_FACTOR_FP);
+	eqos_bw = LA_FP_TO_REAL(250 * T18X_LA_2_STAGE_ECC_ISO_DDA_FACTOR_FP);
 	p->eqospc_ptsa_rate =
-		__t18x_fraction2dda_fp(t18x_bw2fraction_fpa(eqos_bw),
+		__t18x_fraction2dda_fp(t18x_bw_to_fractionfpa(eqos_bw),
 					hub_dda_div,
 					MC_PTSA_RATE_DEFAULT_MASK,
 					p->eqospc_traffic_type);
@@ -834,7 +460,65 @@ static void t18x_init_ptsa(void)
 	program_ptsa();
 }
 
-static int t18x_set_la(enum tegra_la_id id,
+static int t18x_update_camera_ptsa_rate(enum tegra_la_id id,
+					unsigned int bw_mbps,
+					int is_hiso)
+{
+	struct ptsa_info *p = &cs->ptsa_info;
+
+	if ((id == ID(ISP_RA)) ||
+		(id == ID(ISP_WA)) ||
+		(id == ID(ISP_WB))) {
+		unsigned int client_traffic_type_config_2 =
+				mc_readl(MC_CLIENT_TRAFFIC_TYPE_CONFIG_2);
+
+		if (is_hiso) {
+			T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, isp, HISO,
+								1, 1, 0);
+			WRITE_PTSA_MIN_MAX_RATE(p, isp, ISP);
+
+			/* Make ISPWA and ISPWB non-blocking clients */
+			mc_writel(client_traffic_type_config_2 & ~0xc0,
+					MC_CLIENT_TRAFFIC_TYPE_CONFIG_2);
+
+			/* Make ISP_RA an ISO client */
+			mc_writel(0x10, MC_EMEM_ARB_ISOCHRONOUS_2);
+		} else {
+			T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, isp, SISO,
+								-2, 0, 1);
+			WRITE_PTSA_MIN_MAX_RATE(p, isp, ISP);
+
+			/* Make ISPWA and ISPWB blocking clients */
+			mc_writel(client_traffic_type_config_2 | 0xc0,
+					MC_CLIENT_TRAFFIC_TYPE_CONFIG_2);
+
+			/* Make ISP_RA a non-ISO client */
+			mc_writel(0x0, MC_EMEM_ARB_ISOCHRONOUS_2);
+		}
+	} else if (id == ID(VI_W)) {
+		if (!is_hiso)
+			pr_err("%s: Someone is trying to set VI\\VE into SISO "
+				"mode. Ignoring request because VI\\VE is "
+				"always HISO.\n",
+				__func__);
+
+		T18X_CALC_AND_UPDATE_ISO_PTSA(p, ve, VE, bw_mbps);
+	} else {
+		int idx = cs->id_to_index[id];
+		char *name = cs->la_info_array[idx].name;
+
+		pr_err("%s: Ignoring PTSA update request from %s because "
+			"its not a camera client.\n",
+			__func__, name);
+		return -1;
+	}
+
+	/* update shadowed registers */
+	mc_writel(1, MC_TIMING_CONTROL);
+	return 0;
+}
+
+static int t18x_set_init_la(enum tegra_la_id id,
 			unsigned int bw_mbps)
 {
 	int idx = cs->id_to_index[id];
@@ -876,7 +560,7 @@ static int t18x_set_la(enum tegra_la_id id,
 		la_to_set = ci->init_la;
 	} else if (ci->client_type == TEGRA_LA_DISPLAY_READ_CLIENT) {
 		/* Display clients should be handled by
-		   t18x_set_disp_la(...). */
+		   t18x_handle_disp_la(...). */
 		return -1;
 	} else if (ci->client_type == TEGRA_LA_WRITE_CLIENT) {
 		unsigned int emc_period_ns_fp = LA_REAL_TO_FP(1000) /
@@ -897,131 +581,162 @@ static int t18x_set_la(enum tegra_la_id id,
 	return 0;
 }
 
+static int t18x_set_dynamic_la(enum tegra_la_id id,
+			unsigned int bw_mbps)
+{
+	struct ptsa_info *p = &cs->ptsa_info;
+
+	if ((id == ID(APEDMAR)) ||
+		(id == ID(APEDMAW))) {
+		T18X_CALC_AND_UPDATE_ISO_PTSA(p, apedmapc, APEDMAPC, bw_mbps);
+	} else if ((id == ID(ISP_RA)) ||
+			(id == ID(ISP_WA)) ||
+			(id == ID(ISP_WB)) ||
+			(id == ID(VI_W))) {
+		int idx = cs->id_to_index[id];
+		char *name = cs->la_info_array[idx].name;
+
+		pr_warn("%s: Ignoring LA update request from %s because its "
+			"LA programming is part of the EMC DVFS table.\n",
+			__func__, name);
+		return 0;
+	} else if ((id == ID(EQOSR)) ||
+			(id == ID(EQOSW))) {
+		pr_err("%s: Ignoring LA\\PTSA update request from EQOS "
+			"because its PTSA rate is static.\n",
+			__func__);
+		return -1;
+	} else if (id == ID(NVDISPLAYR)) {
+		pr_err("%s: Ignoring LA\\PTSA update request from display. "
+			"Display should be handled by t18x_handle_disp_la(...).\n",
+			__func__);
+		return -1;
+	} else {
+		int idx = cs->id_to_index[id];
+		char *name = cs->la_info_array[idx].name;
+
+		pr_err("%s: Ignoring LA\\PTSA update request from %s because "
+			"its not a HISO\\SISO client.\n",
+			__func__, name);
+		return -1;
+	}
+
+	/* update shadowed registers */
+	mc_writel(1, MC_TIMING_CONTROL);
+	return 0;
+}
+
+static int t18x_handle_disp_la(enum tegra_la_id id,
+			       unsigned long emc_freq_hz,
+			       unsigned int bw_mbps,
+			       struct dc_to_la_params disp_params,
+			       int write_la)
+{
+	/* NOTE: We may need to divide "emc_freq_hz" with dram_emc_freq_factor
+	   because "emc_freq_hz" may actually be the dram frequency. */
+	int idx = cs->id_to_index[id];
+	struct la_client_info *ci = &cs->la_info_array[idx];
+	struct ptsa_info *p = &cs->ptsa_info;
+	unsigned long emc_freq_mhz = 0;
+	unsigned int bw_mbps_disp_catchup_factor_fp =
+						bw_mbps *
+						T18X_LA_DISP_CATCHUP_FACTOR_FP;
+	unsigned int eff_row_srt_sz_bytes = 0;
+	unsigned int drain_time_usec_fp = 0;
+	int la_bw_upper_bound_usec_fp = 0;
+	int la_to_set_fp = 0;
+	unsigned int la_to_set = 0;
+
+	if (id != ID(NVDISPLAYR)) {
+		char *name = ci->name;
+
+		pr_err("%s: Ignoring LA\\PTSA update request from %s because "
+			"its not a display client.\n",
+			__func__, name);
+		return -1;
+	}
+
+	emc_freq_mhz = emc_freq_hz / LA_HZ_TO_MHZ_FACTOR;
+	la_bw_upper_bound_usec_fp =
+		(unsigned long)T18X_LA_MCCIF_BUF_SZ_BYTES_FP *
+			(unsigned long)LA_FP_FACTOR /
+			(unsigned long)bw_mbps_disp_catchup_factor_fp -
+		LA_REAL_TO_FP(T18X_LA_ST_LA_MINUS_SNAP_ARB_TO_ROW_SRT_EMCCLKS +
+				T18X_LA_EXPIRATION_TIME_EMCCLKS) /
+			emc_freq_mhz;
+	eff_row_srt_sz_bytes = min(row_srt_sz_bytes,
+					(unsigned int)(2 * dram_width_bytes *
+							(emc_freq_mhz + 50)));
+	eff_row_srt_sz_bytes =
+		min(eff_row_srt_sz_bytes,
+			(unsigned int)((T18X_LA_MAX_DRAIN_TIME_USEC *
+				emc_freq_mhz -
+				T18X_LA_ST_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS) *
+				2 *
+				dram_width_bytes /
+				T18X_LA_CONS_MEM_EFF_DIV_FACTOR));
+	drain_time_usec_fp = LA_REAL_TO_FP(eff_row_srt_sz_bytes) /
+				(emc_freq_mhz *
+				dram_width_bytes *
+				2 /
+				T18X_LA_CONS_MEM_EFF_DIV_FACTOR);
+	drain_time_usec_fp +=
+		LA_REAL_TO_FP(T18X_LA_ST_LA_SNAP_ARB_TO_ROW_SRT_EMCCLKS) /
+		emc_freq_mhz;
+	if ((int)drain_time_usec_fp > (int)la_bw_upper_bound_usec_fp)
+		return -1;
+
+	la_to_set_fp = la_bw_upper_bound_usec_fp *
+			(int)1000 /
+			(int)cs->ns_per_tick;
+	if (la_to_set_fp < 0)
+		return -1;
+	/* rounding */
+	la_to_set_fp += 500;
+	la_to_set = LA_FP_TO_REAL(la_to_set_fp);
+	la_to_set = min(la_to_set, MC_LA_MAX_VALUE);
+	if (write_la) {
+		program_la(ci, la_to_set);
+		T18X_CALC_AND_UPDATE_ISO_PTSA(p, dis, DIS, bw_mbps);
+	}
+	return 0;
+}
+
+static int t18x_set_disp_la(enum tegra_la_id id,
+			    unsigned long emc_freq_hz,
+			    unsigned int bw_mbps,
+			    struct dc_to_la_params disp_params)
+{
+	return t18x_handle_disp_la(id, emc_freq_hz, bw_mbps, disp_params, 1);
+}
+
+static int t18x_check_disp_la(enum tegra_la_id id,
+			      unsigned long emc_freq_hz,
+			      unsigned int bw_mbps,
+			      struct dc_to_la_params disp_params)
+{
+	return t18x_handle_disp_la(id, emc_freq_hz, bw_mbps, disp_params, 0);
+}
+
 void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 {
-/*
- * TODO: The following commented out code has been copied from tegra21x_la.c.
- * The commented out code represents all the features that still need to be
- * added for T18x.
- */
-#if 0
-	int i = 0;
-
-	cs_la->ns_per_tick = 30;
-	cs_la->atom_size = 64;
-	cs_la->la_max_value = MC_LA_MAX_VALUE;
-
-	cs_la->la_params.fp_factor = LA_FP_FACTOR;
-	cs_la->la_params.la_real_to_fp = la_real_to_fp;
-	cs_la->la_params.la_fp_to_real = la_fp_to_real;
-	cs_la->la_params.static_la_minus_snap_arb_to_row_srt_emcclks_fp =
-			LA_ST_LA_MINUS_SNAP_ARB_TO_ROW_SRT_EMCCLKS_FP;
-	cs_la->la_params.dram_width_bits = LA_DRAM_WIDTH_BITS;
-	cs_la->la_params.disp_catchup_factor_fp = LA_DISP_CATCHUP_FACTOR_FP;
-
-	cs_la->update_display_ptsa_rate = t18x_update_display_ptsa_rate;
-	cs_la->update_camera_ptsa_rate = t18x_update_camera_ptsa_rate;
-	cs_la->set_disp_la = t18x_set_disp_la;
-	cs_la->set_disp_la = t18x_check_disp_la;
-
-	if (ON_LPDDR4()) {
-		emc_min_freq_mhz_fp = 25000;
-		emc_min_freq_mhz = 25;
-		emc_max_freq_mhz = 2132;
-		dda_div = 1;
-	} else {
-		emc_min_freq_mhz_fp = 12500;
-		emc_min_freq_mhz = 12;
-		emc_max_freq_mhz = 1200;
-		dda_div = 2;
-	}
-
-	low_freq_bw = emc_min_freq_mhz_fp * 2 * LA_DRAM_WIDTH_BITS / 8;
-	low_freq_bw /= 1000;
-	tegra_la_disp_clients_info = cs_la->disp_clients;
-
-	/* set some entries to zero */
-	for (i = 0; i < NUM_CAMERA_CLIENTS; i++)
-		cs_la->camera_bw_array[i] = 0;
-	for (i = 0; i < TEGRA_LA_AGG_CAMERA_NUM_CLIENTS; i++) {
-		cs_la->agg_camera_array[i].bw_fp = 0;
-		cs_la->agg_camera_array[i].frac_fp = 0;
-		cs_la->agg_camera_array[i].ptsa_min = 0;
-		cs_la->agg_camera_array[i].ptsa_max = 0;
-		cs_la->agg_camera_array[i].is_hiso = false;
-	}
-
-	/* set mccif_size_bytes values */
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0A)].mccif_size_bytes = 6144;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0B)].mccif_size_bytes = 6144;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0C)].mccif_size_bytes =
-									11520;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAYD)].mccif_size_bytes = 4672;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_T)].mccif_size_bytes = 4672;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_HC)].mccif_size_bytes = 4992;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0AB)].mccif_size_bytes =
-									11520;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0BB)].mccif_size_bytes =
-									6144;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0CB)].mccif_size_bytes =
-									6144;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_HCB)].mccif_size_bytes =
-									4992;
-
-	/* set line_buf_sz_bytes values */
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0A)].line_buf_sz_bytes =
-									151552;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0B)].line_buf_sz_bytes =
-									112640;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0C)].line_buf_sz_bytes =
-									112640;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAYD)].line_buf_sz_bytes = 18432;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_T)].line_buf_sz_bytes =
-									18432;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_HC)].line_buf_sz_bytes = 320;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0AB)].line_buf_sz_bytes =
-									112640;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0BB)].line_buf_sz_bytes =
-									112640;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0CB)].line_buf_sz_bytes =
-									112640;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_HCB)].line_buf_sz_bytes =
-									320;
-
-	/* set win_type values */
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0A)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_FULL;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0B)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_FULLA;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0C)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_FULLA;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAYD)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_SIMPLE;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_HC)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_CURSOR;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_T)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_SIMPLE;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0AB)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_FULLB;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0BB)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_FULLB;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_0CB)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_FULLB;
-	cs_la->disp_clients[DISP_CLIENT_ID(DISPLAY_HCB)].win_type =
-						TEGRA_LA_DISP_WIN_TYPE_CURSOR;
-#endif
-
 	int i;
 	unsigned int channel_enable;
 	unsigned int adj_lo_freq_fp;
 	int dram_ecc_enabled;
 	unsigned int client_traffic_type_config_2;
 
+	cs_la->ns_per_tick = 30;
+
 	cs_la->la_info_array = t18x_la_info_array;
 	cs_la->la_info_array_size = ARRAY_SIZE(t18x_la_info_array);
 
 	cs_la->init_ptsa = t18x_init_ptsa;
-	cs_la->set_la = t18x_set_la;
+	cs_la->update_camera_ptsa_rate = t18x_update_camera_ptsa_rate;
+	cs_la->set_init_la = t18x_set_init_la;
+	cs_la->set_dynamic_la = t18x_set_dynamic_la;
+	cs_la->set_disp_la = t18x_set_disp_la;
+	cs_la->check_disp_la = t18x_check_disp_la;
 	cs_la->save_ptsa = save_ptsa;
 	cs_la->program_ptsa = program_ptsa;
 	cs_la->suspend = la_suspend;
@@ -1031,13 +746,14 @@ void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 	dram_type = tegra_emc_get_dram_type();
 
 	channel_enable = mc_readl(MC_EMEM_ADR_CFG_CHANNEL_ENABLE) &
-					EMEM_CHANNEL_ENABLE_MASK;
+					T18X_LA_EMEM_CHANNEL_ENABLE_MASK;
 	num_channels = 0;
 	for (i = 0; i < 4; i++) {
 		if (channel_enable & 0x1)
 			num_channels++;
 		channel_enable >>= 1;
 	}
+	row_srt_sz_bytes = 64 * 64 * num_channels;
 
 	dram_emc_freq_factor = 1;
 	hi_gd_fpa = 14998;
@@ -1072,7 +788,7 @@ void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 	lo_gd_fpa = (hi_gd_fpa * adj_lo_freq_fp) / (hi_freq_fp / 2);
 	lo_gd_fp5 = (hi_gd_fp5 * adj_lo_freq_fp) / (hi_freq_fp / 2);
 
-	dram_ecc_enabled = mc_readl(MC_ECC_CONTROL) & ECC_ENABLE_MASK;
+	dram_ecc_enabled = mc_readl(MC_ECC_CONTROL) & T18X_LA_ECC_ENABLE_MASK;
 	if (dram_ecc_enabled)
 		iso_dda_factor_fp = 1400;
 	else

@@ -269,6 +269,7 @@
 			regulator-enable-ramp-delay = <6300>;
 			regulator-disable-ramp-delay = <132000>;
 			enable-active-high;
+			regulator-boot-on;
 		};
 
 		vdd_wlreg_on: regulator@11 {

@@ -44,6 +44,9 @@
 
 #define NVGPU_BEGIN_AGGRESSIVE_SYNC_DESTROY_LIMIT	64	/* channels */
 
+#define NVGPU_CHANNEL_MIN_TIMESLICE_US 1000
+#define NVGPU_CHANNEL_MAX_TIMESLICE_US 50000
+
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f);
 static void free_channel(struct fifo_gk20a *f, struct channel_gk20a *c);
 
@@ -2633,6 +2636,21 @@ int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 			timeslice_timeout);
 }
 
+int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
+{
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		gk20a_err(dev_from_gk20a(ch->g),
+			"invalid operation for TSG!\n");
+		return -EINVAL;
+	}
+
+	if (timeslice < NVGPU_CHANNEL_MIN_TIMESLICE_US ||
+		timeslice > NVGPU_CHANNEL_MAX_TIMESLICE_US)
+		return -EINVAL;
+
+	return channel_gk20a_set_schedule_params(ch, timeslice);
+}
+
 static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
 			    struct nvgpu_zcull_bind_args *args)
 {
@@ -2785,6 +2803,7 @@ void gk20a_init_channel(struct gpu_ops *gops)
 	gops->fifo.free_inst = channel_gk20a_free_inst;
 	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
 	gops->fifo.channel_set_priority = gk20a_channel_set_priority;
+	gops->fifo.channel_set_timeslice = gk20a_channel_set_timeslice;
 }
 
 long gk20a_channel_ioctl(struct file *filp,
@@ -3045,6 +3064,18 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_set_runlist_interleave(ch,
 			((struct nvgpu_runlist_interleave_args *)buf)->level);
+		gk20a_idle(dev);
+		break;
+	case NVGPU_IOCTL_CHANNEL_SET_TIMESLICE:
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(&dev->dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			break;
+		}
+		err = ch->g->ops.fifo.channel_set_timeslice(ch,
+			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
 		gk20a_idle(dev);
 		break;
 	default:

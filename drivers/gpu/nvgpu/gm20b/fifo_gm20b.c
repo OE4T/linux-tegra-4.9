@@ -114,6 +114,7 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.free_inst = channel_gk20a_free_inst;
 	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
 	gops->fifo.channel_set_priority = gk20a_channel_set_priority;
+	gops->fifo.channel_set_timeslice = gk20a_channel_set_timeslice;
 
 	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;
 	gops->fifo.update_runlist = gk20a_fifo_update_runlist;

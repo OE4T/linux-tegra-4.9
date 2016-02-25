@@ -880,6 +880,12 @@ struct nvgpu_runlist_interleave_args {
 #define NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH	2
 #define NVGPU_RUNLIST_INTERLEAVE_NUM_LEVELS	3
 
+/* controls how long a channel occupies an engine uninterrupted */
+struct nvgpu_timeslice_args {
+	__u32 timeslice_us;
+	__u32 reserved;
+};
+
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
@@ -924,9 +930,11 @@ struct nvgpu_runlist_interleave_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 119, struct nvgpu_channel_wdt_args)
 #define NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE \
 	_IOW(NVGPU_IOCTL_MAGIC, 120, struct nvgpu_runlist_interleave_args)
+#define NVGPU_IOCTL_CHANNEL_SET_TIMESLICE \
+	_IOW(NVGPU_IOCTL_MAGIC, 121, struct nvgpu_timeslice_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_RUNLIST_INTERLEAVE)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_TIMESLICE)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
 
 /*

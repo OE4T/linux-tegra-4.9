@@ -269,6 +269,8 @@ struct gpu_ops {
 		int (*set_runlist_interleave)(struct gk20a *g, u32 id,
 					bool is_tsg, u32 runlist_id,
 					u32 new_level);
+		int (*channel_set_timeslice)(struct channel_gk20a *ch,
+					u32 timeslice);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

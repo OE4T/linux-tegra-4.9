@@ -2285,7 +2285,7 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 	 * set AUX_TX_RDET_STATUS bit. This would bring link up checking
 	 * time from its current value (around 200ms) to flat 20ms
 	 */
-	msleep(20);
+	usleep_range(19000, 21000);
 	list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
 		if (tegra_pcie_port_check_link(port)) {
 			port->status = 1;

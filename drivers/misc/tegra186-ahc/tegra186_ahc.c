@@ -57,6 +57,8 @@ void tegra186_ahc_register_cb(tegra186_ahc_cb func, int idx, void *data)
 		ahub_cb[idx].ahub_int_cb_data = data;
 	}
 }
+EXPORT_SYMBOL_GPL(tegra186_ahc_register_cb);
+
 void tegra186_ahc_register_deferred_cb(tegra186_ahc_cb func, int idx, void *data)
 {
 	if (idx < TEGRA186_AHC_MAX_CB) {
@@ -64,6 +66,7 @@ void tegra186_ahc_register_deferred_cb(tegra186_ahc_cb func, int idx, void *data
 		ahub_cb[idx].ahub_int_deferred_cb_data = data;
 	}
 }
+EXPORT_SYMBOL_GPL(tegra186_ahc_register_deferred_cb);
 
 static irqreturn_t tegra186_ahc_int_handler(int irq, void *data)
 {

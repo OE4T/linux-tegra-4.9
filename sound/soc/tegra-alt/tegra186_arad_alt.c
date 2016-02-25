@@ -556,6 +556,7 @@ void tegra186_arad_send_ratio(void)
 	regmap_write(arad->regmap, TEGRA186_ARAD_SEND_RATIO, 0x1);
 	pm_runtime_put(arad_dev);
 }
+EXPORT_SYMBOL(tegra186_arad_send_ratio);
 
 static struct snd_soc_codec_driver tegra186_arad_codec = {
 	.probe = tegra186_arad_codec_probe,

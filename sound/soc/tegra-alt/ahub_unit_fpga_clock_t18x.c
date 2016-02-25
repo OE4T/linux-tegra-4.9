@@ -3,7 +3,7 @@
  *
  * Author: Mohan Kumar <mkumard@nvidia.com>
  *
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -97,4 +97,4 @@ void program_dspk_clk(int dspk_clk)
 	}
 	#endif
 }
-
+EXPORT_SYMBOL(program_dspk_clk);

@@ -110,6 +110,7 @@ void tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 
 	adma_isomgr_request(adma->current_bandwidth, 1000);
 }
+EXPORT_SYMBOL(tegra_isomgr_adma_setbw);
 
 void tegra_isomgr_adma_renegotiate(void *p, u32 avail_bw)
 {
@@ -118,6 +119,7 @@ void tegra_isomgr_adma_renegotiate(void *p, u32 avail_bw)
 	is added to support bandwidth request more than registered bw which
 	got initialized during register call */
 }
+EXPORT_SYMBOL(tegra_isomgr_adma_renegotiate);
 
 void tegra_isomgr_adma_register(void)
 {
@@ -145,7 +147,7 @@ void tegra_isomgr_adma_register(void)
 		adma = NULL;
 	}
 }
-
+EXPORT_SYMBOL(tegra_isomgr_adma_register);
 void tegra_isomgr_adma_unregister(void)
 {
 	if (!adma)
@@ -161,4 +163,5 @@ void tegra_isomgr_adma_unregister(void)
 	kfree(adma);
 	adma = NULL;
 }
+EXPORT_SYMBOL(tegra_isomgr_adma_unregister);
 #endif

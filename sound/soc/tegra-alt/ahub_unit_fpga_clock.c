@@ -3,7 +3,7 @@
  *
  * Author: Dara Ramesh <dramesh@nvidia.com>
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or
  * modify it under the terms of the GNU General Public License
@@ -105,6 +105,7 @@ void i2s_clk_divider(u32 i2s, u32 divider)
 			i2s+1, read_data, write_data);
 #endif
 }
+EXPORT_SYMBOL(i2s_clk_divider);
 
 void i2s_clk_setup(u32 i2s, u32 source, u32 divider)
 {
@@ -113,6 +114,7 @@ void i2s_clk_setup(u32 i2s, u32 source, u32 divider)
 	write_data = (source << 29) | (divider);
 	writel(write_data, rst_clk_base + i2s_source_clock[i2s]);
 }
+EXPORT_SYMBOL(i2s_clk_setup);
 
 void i2c_pinmux_setup(void)
 {
@@ -120,6 +122,7 @@ void i2c_pinmux_setup(void)
 	writel(0x40, pinmux_base + PINMUX_AUX_GEN1_I2C_SDA_0);
 	writel(0x40, pinmux_base + PINMUX_AUX_GEN1_I2C_SCL_0);
 }
+EXPORT_SYMBOL(i2c_pinmux_setup);
 
 void i2s_pinmux_setup(u32 i2s, u32 i2s_b)
 {
@@ -150,6 +153,7 @@ void i2s_pinmux_setup(u32 i2s, u32 i2s_b)
 		break;
 	}
 }
+EXPORT_SYMBOL(i2s_pinmux_setup);
 
 void i2c_clk_setup(u32 divider)
 {
@@ -168,6 +172,7 @@ void i2c_clk_setup(u32 divider)
 	reg_val = divider << 1;
 	writel(reg_val, rst_clk_base + CLK_RST_CONTROLLER_CLK_SOURCE_I2C1_0);
 }
+EXPORT_SYMBOL(i2c_clk_setup);
 
 void i2c_clk_divider(u32 divider)
 {
@@ -180,6 +185,7 @@ void i2c_clk_divider(u32 divider)
 		ape_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
 	read_data = readl(ape_fpga_misc_base + APE_FPGA_MISC_CLK_SOURCE_I2C1_0);
 }
+EXPORT_SYMBOL(i2c_clk_divider);
 
 void i2c_write(u32 addr, u32 reg_addr, u32 regData, u32 no_bytes)
 {
@@ -230,6 +236,7 @@ void i2c_write(u32 addr, u32 reg_addr, u32 regData, u32 no_bytes)
 		pr_err("\n FAIL NoaCK Received for Reg_add %08x before %9x Byte\n",
 			reg_addr, read_data);
 }
+EXPORT_SYMBOL(i2c_write);
 
 u32 i2c_read(u32 addr, u32 reg_addr)
 {
@@ -270,6 +277,7 @@ u32 i2c_read(u32 addr, u32 reg_addr)
 
 	return read_data;
 }
+EXPORT_SYMBOL(i2c_read);
 
 void program_cdc_pll(u32 pll_no, u32 freq)
 {
@@ -397,6 +405,7 @@ void program_cdc_pll(u32 pll_no, u32 freq)
 		i2c_write(slv_add, reg_add, cdce906_setting[i], 2);
 	}
 }
+EXPORT_SYMBOL(program_cdc_pll);
 
 void program_io_expander(void)
 {
@@ -407,6 +416,7 @@ void program_io_expander(void)
 	i2c_write(0x21, 0x2, 0x09, 2);
 	i2c_write(0x21, 0x6, 0x00, 2);
 }
+EXPORT_SYMBOL(program_io_expander);
 
 void program_max_codec(void)
 {
@@ -515,7 +525,7 @@ void program_max_codec(void)
 #endif
 	}
 }
-
+EXPORT_SYMBOL(program_max_codec);
 /* DMIC */
 
 void program_dmic_gpio(void)
@@ -526,7 +536,7 @@ void program_dmic_gpio(void)
 	writel(0x1, ahub_gpio_base + APE_AHUB_GPIO_OUT_0);
 #endif
 }
-
+EXPORT_SYMBOL(program_dmic_gpio);
 void program_dmic_clk(int dmic_clk)
 {
 	void __iomem *misc_base = ahub_unit_fpga_private.ape_fpga_misc_base;
@@ -591,7 +601,7 @@ void program_dmic_clk(int dmic_clk)
 	}
 	#endif
 }
-
+EXPORT_SYMBOL(program_dmic_clk);
 /**
  * AD1937
  */
@@ -808,6 +818,7 @@ void SetMax9485(int freq)
 
 	i2c_write(MAX9485_DEVICE_ADDRESS, max9485_value, 0, 1);
 }
+EXPORT_SYMBOL(SetMax9485);
 
 void OnAD1937CaptureAndPlayback(int mode,
 	int codec_data_format,
@@ -1259,11 +1270,13 @@ void OnAD1937CaptureAndPlayback(int mode,
 		pr_err("::Reg Addr 0x%02x 0x%02x : 0x%02x \r\n", i, ad1937_enable[codec_idx][i], val[3]);
 	}
 }
+EXPORT_SYMBOL(OnAD1937CaptureAndPlayback);
 
 struct ahub_unit_fpga *get_ahub_unit_fpga_private(void)
 {
 	return &ahub_unit_fpga_private;
 }
+EXPORT_SYMBOL(get_ahub_unit_fpga_private);
 
 void ahub_unit_fpga_init(void)
 {
@@ -1286,6 +1299,7 @@ void ahub_unit_fpga_init(void)
 	ahub_unit_fpga_private.i2s5_cya_base =
 		ioremap(NV_ADDRESS_MAP_APE_I2S5_BASE + I2S5_CYA_0, 0x10);
 }
+EXPORT_SYMBOL(ahub_unit_fpga_init);
 
 void ahub_unit_fpga_deinit(void)
 {
@@ -1300,3 +1314,4 @@ void ahub_unit_fpga_deinit(void)
 	iounmap(ahub_unit_fpga_private.rst_clk_base);
 	iounmap(ahub_unit_fpga_private.i2s5_cya_base);
 }
+EXPORT_SYMBOL(ahub_unit_fpga_deinit);

@@ -43,6 +43,7 @@ struct system_pmic_ops {
 		enum system_pmic_power_on_event event, void *event_data);
 	void (*power_reset)(void *pmic_data);
 	void (*power_off)(void *pmic_data);
+	void (*prepare_power_off)(void *pmic_data);
 };
 
 extern void (*soc_specific_power_off)(void);

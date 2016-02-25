@@ -26,6 +26,7 @@
 #include <linux/export.h>
 #include <linux/slab.h>
 #include <linux/pm.h>
+#include <linux/psci.h>
 #include <linux/power/reset/system-pmic.h>
 
 struct system_pmic_dev {
@@ -45,6 +46,13 @@ void (*soc_specific_power_off)(void);
 EXPORT_SYMBOL(soc_specific_power_off);
 
 void (*system_pmic_post_power_off_handler)(void);
+
+static void system_pmic_prepare_power_off(void)
+{
+	if (system_pmic_dev->ops->prepare_power_off)
+		system_pmic_dev->ops->prepare_power_off(
+			system_pmic_dev->pmic_drv_data);
+}
 
 static void system_pmic_power_reset(void)
 {
@@ -139,6 +147,8 @@ struct system_pmic_dev *system_pmic_register(struct device *dev,
 		pm_power_reset = system_pmic_power_reset;
 	}
 
+	psci_prepare_poweroff = system_pmic_prepare_power_off;
+
 	return system_pmic_dev;
 
 scrub:
@@ -159,6 +169,8 @@ void system_pmic_unregister(struct system_pmic_dev *pmic_dev)
 
 	if (system_pmic_dev->allow_power_reset)
 		pm_power_reset = NULL;
+
+	psci_prepare_poweroff = NULL;
 
 	kfree(system_pmic_dev);
 	system_pmic_dev = NULL;

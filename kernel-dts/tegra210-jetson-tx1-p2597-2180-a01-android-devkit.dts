@@ -21,6 +21,10 @@
 		dc@54200000 {
 			status = "disabled";
 		};
+
+		dc@54240000 {
+			nvidia,dc-or-node = "/host1x/sor1";
+		};
 	};
 
 	i2c@7000c400 {

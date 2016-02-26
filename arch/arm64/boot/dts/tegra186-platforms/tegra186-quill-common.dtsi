@@ -170,7 +170,7 @@
 	};
 
 	tegra_cec {
-		status = "okay";
+		status = "disabled";
 		compatible = "nvidia,tegra186-cec";
 		reg = <0x0 0x03960000 0x0 0x00001000>;
 		interrupts = <0 162 0x04>;

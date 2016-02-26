@@ -130,7 +130,7 @@ struct nvhost_device_data t18_host1x_info = {
 		{"actmon", UINT_MAX}
 	},
 	NVHOST_MODULE_NO_POWERGATE_ID,
-	.can_powergate          = true,
+	.can_powergate          = false,
 	.powergate_delay        = 50,
 	.private_data		= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,

@@ -740,7 +740,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 	policy->cpuinfo.transition_latency =
 	TEGRA_CPUFREQ_TRANSITION_LATENCY;
 
-	cpumask_copy(policy->cpus, cpumask_of(policy->cpu));
+	cpumask_copy(policy->cpus, &tfreq_data.pcluster[cl].cpu_mask);
 
 	mutex_unlock(mlock);
 

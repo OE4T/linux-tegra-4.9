@@ -389,9 +389,8 @@
 		};
 		plugin-info-5 {
 			plugin-name = "aec";
-			firmware-name = "libnvaecfx.elf";
+			firmware-name = "nvoice.elf";
 			widget-name = "AEC";
-			param-type = <2>; /* SNDRV_CTL_ELEM_TYPE_INTEGER */
 		};
 	};
 

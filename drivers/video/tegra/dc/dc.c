@@ -985,13 +985,14 @@ static int dbg_dc_mode_show(struct seq_file *s, void *unused)
 		"v_front_porch: %d\n"
 		"flags: 0x%x\n"
 		"stereo_mode: %d\n"
-		"avi_m: 0x%x\n",
+		"avi_m: 0x%x\n"
+		"vmode: 0x%x\n",
 		m->pclk, m->h_ref_to_sync, m->v_ref_to_sync,
 		m->h_sync_width, m->v_sync_width,
 		m->h_back_porch, m->v_back_porch,
 		m->h_active, m->v_active,
 		m->h_front_porch, m->v_front_porch,
-		m->flags, m->stereo_mode, m->avi_m);
+		m->flags, m->stereo_mode, m->avi_m, m->vmode);
 	mutex_unlock(&dc->lock);
 	return 0;
 }

@@ -405,7 +405,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	struct mutex *mlock;
 	uint32_t tgt_freq;
 	enum cluster cl;
-	int ret = 0;
+	int cpu, ret = 0;
 
 	if (!policy || (!cpu_online(policy->cpu)))
 		return -EINVAL;
@@ -423,7 +423,9 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	freqs.new = tgt_freq;
 
 	cpufreq_freq_transition_begin(policy, &freqs);
-	tegra_update_cpu_speed(tgt_freq, policy->cpu);
+
+	for_each_cpu(cpu, policy->cpus)
+		tegra_update_cpu_speed(tgt_freq, cpu);
 
 	policy->cur = tegra_get_speed(policy->cpu);
 	freqs.new = policy->cur;

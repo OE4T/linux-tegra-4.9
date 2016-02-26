@@ -25,6 +25,7 @@
 #include <linux/semaphore.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
+#include <linux/spinlock.h>
 
 struct nvhost_channel;
 struct platform_device;
@@ -93,7 +94,7 @@ struct nvhost_waitlist {
 struct nvhost_intr_syncpt {
 	struct nvhost_intr *intr;
 	u32 id;
-	struct mutex lock;
+	spinlock_t lock;
 	struct list_head wait_head;
 	char thresh_irq_name[12];
 	struct timespec isr_recv;

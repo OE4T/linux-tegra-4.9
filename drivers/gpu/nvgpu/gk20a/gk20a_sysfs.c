@@ -691,6 +691,7 @@ static ssize_t tpc_fs_mask_store(struct device *dev,
 
 	if (val && val != g->gr.gpc_tpc_mask[0] && g->ops.gr.set_gpc_tpc_mask) {
 		g->gr.gpc_tpc_mask[0] = val;
+		g->tpc_fs_mask_user = val;
 
 		g->ops.gr.set_gpc_tpc_mask(g, 0);
 

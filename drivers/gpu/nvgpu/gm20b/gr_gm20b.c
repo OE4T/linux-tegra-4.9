@@ -592,7 +592,14 @@ int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 		for (pes_index = 0; pes_index < gr->pe_count_per_gpc;
 								pes_index++)
 			pes_tpc_mask |= gr->pes_tpc_mask[pes_index][gpc_index];
-	gk20a_writel(g, gr_fe_tpc_fs_r(), pes_tpc_mask);
+	if (g->tpc_fs_mask_user && g->ops.gr.get_gpc_tpc_mask(g, 0) ==
+				(0x1 << gr->max_tpc_count) - 1) {
+		u32 val = g->tpc_fs_mask_user;
+		val &= (0x1 << gr->max_tpc_count) - 1;
+		gk20a_writel(g, gr_fe_tpc_fs_r(), val);
+	} else {
+		gk20a_writel(g, gr_fe_tpc_fs_r(), pes_tpc_mask);
+	}
 
 	for (tpc_index = 0; tpc_index < gr->tpc_count; tpc_index++) {
 		if (tpc_index == 0) {

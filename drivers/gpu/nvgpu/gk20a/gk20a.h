@@ -697,6 +697,8 @@ struct gk20a {
 
 	struct gk20a_cde_app cde_app;
 	bool mmu_debug_ctrl;
+
+	u32 tpc_fs_mask_user;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

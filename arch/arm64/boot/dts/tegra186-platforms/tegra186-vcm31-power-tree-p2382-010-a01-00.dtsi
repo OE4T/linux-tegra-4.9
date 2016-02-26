@@ -61,6 +61,7 @@
 
 	sdhci@3460000 { /* SDMMC_D/4 */
 		vddio_sdmmc-supply = <&vdd_1v8>;
+		vddio_sd_slot-supply = <&spmic_otp_sd3>;
 	};
 
 	sdhci@3440000 {

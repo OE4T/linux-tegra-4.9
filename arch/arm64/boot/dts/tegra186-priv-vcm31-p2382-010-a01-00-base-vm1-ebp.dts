@@ -524,6 +524,7 @@
 		#stream-id-cells = <1>;
 		power-domains = <&ape_pd>;
 		cardname = "tegra-virt-pcm-vm1";
+		codec = <&spdif_dit0>;
 		dmas = <&adma 1>, <&adma 1>, <&adma 2>, <&adma 2>,
 			<&adma 3>, <&adma 3>, <&adma 4>, <&adma 4>;
 		dma-names = "rx1", "tx1", "rx2", "tx2",

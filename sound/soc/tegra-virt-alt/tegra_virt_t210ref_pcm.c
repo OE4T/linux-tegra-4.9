@@ -28,7 +28,6 @@
 
 #define DAI_NAME(i)		"AUDIO" #i
 #define STREAM_NAME		"playback"
-#define CODEC_NAME		"spdif-dit.0"
 #define LINK_CPU_NAME		DRV_NAME
 #define CPU_DAI_NAME(i)		"ADMAIF" #i
 #define CODEC_DAI_NAME		"dit-hifi"
@@ -38,10 +37,11 @@
 #define TEGRA210_XBAR_RX_STRIDE	0x4
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
-#define CODEC_NAME_T186		"0.spdif-dit.0"
-#define NUM_MUX_INPUT	83
+#define CODEC_NAME		NULL
+#define NUM_MUX_INPUT		83
 #else
-#define NUM_MUX_INPUT	54
+#define CODEC_NAME		"spdif-dit.0"
+#define NUM_MUX_INPUT		54
 #endif
 
 static struct snd_soc_pcm_stream default_params = {
@@ -567,7 +567,8 @@ static int tegra_virt_t210ref_pcm_driver_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	for (i = 0; i < card->num_links; i++) {
-		strcpy((char *)card->dai_link[i].codec_name, CODEC_NAME_T186);
+		card->dai_link[i].codec_of_node =
+			of_parse_phandle(pdev->dev.of_node, "codec", 0);
 		strcpy((char *)card->dai_link[i].cpu_name, DRV_NAME_T186);
 	}
 #endif

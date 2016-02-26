@@ -236,6 +236,9 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 
 	clk_out_rate = machine->audio_clock.clk_out_rate;
 
+	pr_info("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
+		machine->audio_clock.set_mclk, clk_out_rate, clk_rate);
+
 	/* update dai link hw_params for non pcm links */
 	for (idx = 0; idx < TEGRA186_XBAR_DAI_LINKS; idx++) {
 		if (card->rtd[idx].dai_link->params) {

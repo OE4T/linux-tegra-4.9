@@ -293,7 +293,7 @@
                 uhs-mask = <0x79>;
                 mmc-ocr-mask = <0x0>;
                 cap-sdio-irq;
-                disable-clock-gate;
+                disable-dynamic-clock-gating;
 		vddio_sdmmc-supply = <&vdd_wlan2>;
 	};
 
@@ -305,7 +305,7 @@
                 uhs-mask = <0x79>;
                 mmc-ocr-mask = <0x0>;
                 cap-sdio-irq;
-                disable-clock-gate;
+                disable-dynamic-clock-gating;
 		vddio_sdmmc-supply = <&vdd_wlan1_bt>;
 	};
 

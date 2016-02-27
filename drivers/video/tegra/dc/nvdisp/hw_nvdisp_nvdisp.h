@@ -298,6 +298,18 @@ static inline u32 nvdisp_postcomp_capa_is_hsat_enable_v(u32 r)
 {
 	return (r >> 2) & 0x1;
 }
+static inline u32 nvdisp_postcomp_capa_is_yuv422_enable_v(u32 r)
+{
+	return (r >> 4) & 0x1;
+}
+static inline u32 nvdisp_postcomp_capa_is_scaler_enable_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 nvdisp_postcomp_capa_is_scaler_has_yuv422_enable_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
 static inline u32 nvdisp_ihub_capa_r(void)
 {
 	return 0x00000060;
@@ -829,6 +841,22 @@ static inline u32 nvdisp_output_lut_base_hi_r(void)
 static inline u32 nvdisp_procamp_r(void)
 {
 	return 0x00000434;
+}
+static inline u32 nvdisp_procamp_sat_sine_f(u32 v)
+{
+	return (v & 0xfff) << 15;
+}
+static inline u32 nvdisp_procamp_sat_cos_f(u32 v)
+{
+	return (v & 0xfff) << 3;
+}
+static inline u32 nvdisp_procamp_chroma_lpf_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 nvdisp_procamp_chroma_lpf_enable_f(void)
+{
+	return 0x4;
 }
 static inline u32 nvdisp_cursor_ctrl_r(void)
 {

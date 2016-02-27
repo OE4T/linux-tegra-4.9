@@ -576,6 +576,61 @@ INIT_EXIT:
 
 }
 
+static int _tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
+{
+	/* if color fmt is yuv_422 and postcomp support yuv422
+	 * enable chroma lpf by default
+	 */
+	u32 postcomp_capa = tegra_dc_readl(dc, nvdisp_postcomp_capa_r());
+	u32 chroma_lpf = tegra_dc_readl(dc, nvdisp_procamp_r());
+	chroma_lpf &= ~nvdisp_procamp_chroma_lpf_enable_f();
+
+	if ((dc->mode.vmode & FB_VMODE_Y422)  &&
+		nvdisp_postcomp_capa_is_yuv422_enable_v(postcomp_capa))
+		chroma_lpf |= nvdisp_procamp_chroma_lpf_enable_f();
+
+	/* disable chroma for by_pass mode */
+	if (dc->yuv_bypass)
+		chroma_lpf &= ~nvdisp_procamp_chroma_lpf_enable_f();
+
+	tegra_dc_writel(dc, chroma_lpf, nvdisp_procamp_r());
+
+	return 0;
+}
+
+static int _tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
+			struct tegra_dc_mode *mode)
+{
+	u32 csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
+
+	/* Check whether the extended colorimetry
+	 * is requested in mode set for output csc
+	 */
+
+	if (mode->vmode & FB_VMODE_EC_ENABLE) {
+		u32 ec = mode->vmode & FB_VMODE_EC_MASK;
+		if ((ec == FB_VMODE_EC_ADOBE_YCC601) ||
+			(ec == FB_VMODE_EC_SYCC601) ||
+			(ec == FB_VMODE_EC_XVYCC601))
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y601_f();
+		else if ((ec == FB_VMODE_EC_BT2020_CYCC) ||
+			(ec == FB_VMODE_EC_BT2020_YCC_RGB))
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y2020_f();
+		else if (ec == FB_VMODE_EC_XVYCC709)
+			csc2_control =
+				nvdisp_csc2_control_output_color_sel_y709_f();
+	}
+
+	/* For yuv-bypass - set to default */
+	if (dc->yuv_bypass)
+		csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
+
+	tegra_dc_writel(dc, csc2_control, nvdisp_csc2_control_r());
+	return 0;
+}
+
 int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 				     *mode)
 {
@@ -583,7 +638,6 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	unsigned long v_front_porch;
 	unsigned long v_sync_width;
 	unsigned long v_active;
-	u32 csc2_control;
 
 	if (!dc->mode.pclk)
 		return 0;
@@ -672,29 +726,9 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 		pr_info("Redo Clock pclk 0x%x != dc-pclk 0x%x\n",
 				mode->pclk, dc->mode.pclk);
 
+	_tegra_nvdisp_set_ocsc(dc, mode);
 
-	/* Check whether the extended colorimetry
-	 * is requested in mode set for output csc
-	 */
-	csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
-
-	if (mode->vmode & FB_VMODE_EC_ENABLE) {
-		u32 ec = mode->vmode & FB_VMODE_EC_MASK;
-		if ((ec == FB_VMODE_EC_ADOBE_YCC601) ||
-		    (ec == FB_VMODE_EC_SYCC601) ||
-		    (ec == FB_VMODE_EC_XVYCC601))
-			csc2_control =
-				nvdisp_csc2_control_output_color_sel_y601_f();
-		else if ((ec == FB_VMODE_EC_BT2020_CYCC) ||
-			 (ec == FB_VMODE_EC_BT2020_YCC_RGB))
-			csc2_control =
-				nvdisp_csc2_control_output_color_sel_y2020_f();
-		else if (ec == FB_VMODE_EC_XVYCC709)
-			csc2_control =
-				nvdisp_csc2_control_output_color_sel_y709_f();
-	}
-
-	tegra_dc_writel(dc, csc2_control, nvdisp_csc2_control_r());
+	_tegra_nvdisp_set_chroma_lpf(dc);
 
 	/* general-update */
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_update_enable_f(),

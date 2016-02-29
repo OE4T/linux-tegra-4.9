@@ -612,6 +612,12 @@ static int isc_mgr_get_pwr_map(
 
 	num_map_items = of_property_count_elems_of_size(np,
 				"pwr-items", sizeof(u32));
+	if (num_map_items < 0) {
+		dev_err(dev, "%s: error processing pwr items\n",
+			__func__);
+		return -1;
+	}
+
 	if (num_map_items < pd->num_pwr_gpios) {
 		dev_err(dev, "%s: invalid number of pwr items\n",
 			__func__);

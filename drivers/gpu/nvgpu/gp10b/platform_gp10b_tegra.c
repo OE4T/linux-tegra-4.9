@@ -524,6 +524,13 @@ void gr_gp10b_create_sysfs(struct platform_device *dev)
 	int error = 0;
 	struct gk20a *g = get_gk20a(dev);
 
+	/* This stat creation function is called on GR init. GR can get
+	   initialized multiple times but we only need to create the ECC
+	   stats once. Therefore, add the following check to avoid
+	   creating duplicate stat sysfs nodes. */
+	if (g->gr.t18x.ecc_stats.sm_lrf_single_err_count.counters != NULL)
+		return;
+
 	error |= ecc_stat_create(dev,
 				0,
 				"sm_lrf_ecc_single_err_count",

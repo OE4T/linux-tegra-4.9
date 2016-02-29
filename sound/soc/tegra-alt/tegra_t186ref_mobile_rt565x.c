@@ -887,6 +887,32 @@ static int tegra_t186ref_codec_put_format(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const char * const tegra_t186ref_jack_state_text[] = {
+	"None",
+	"HS",
+	"HP",
+};
+
+static int tegra_t186ref_codec_get_jack_state(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	ucontrol->value.integer.value[0] = tegra_t186ref_headset_switch.state;
+	return 0;
+}
+
+static int tegra_t186ref_codec_put_jack_state(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	if (ucontrol->value.integer.value[0] == 0)
+		switch_set_state(&tegra_t186ref_headset_switch, BIT_NO_HEADSET);
+	else if (ucontrol->value.integer.value[0] == 1)
+		switch_set_state(&tegra_t186ref_headset_switch, BIT_HEADSET);
+	else if (ucontrol->value.integer.value[0] == 2)
+		switch_set_state(&tegra_t186ref_headset_switch,
+			BIT_HEADSET_NO_MIC);
+	return 0;
+}
+
 static const struct soc_enum tegra_t186ref_codec_rate =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t186ref_srate_text),
 		tegra_t186ref_srate_text);
@@ -894,6 +920,10 @@ static const struct soc_enum tegra_t186ref_codec_rate =
 static const struct soc_enum tegra_t186ref_codec_format =
 	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t186ref_format_text),
 		tegra_t186ref_format_text);
+
+static const struct soc_enum tegra_t186ref_jack_state =
+	SOC_ENUM_SINGLE_EXT(ARRAY_SIZE(tegra_t186ref_jack_state_text),
+		tegra_t186ref_jack_state_text);
 
 static const struct snd_soc_dapm_route tegra_t186ref_audio_map[] = {
 };
@@ -907,6 +937,9 @@ static const struct snd_kcontrol_new tegra_t186ref_controls[] = {
 		tegra_t186ref_codec_get_rate, tegra_t186ref_codec_put_rate),
 	SOC_ENUM_EXT("codec-x format", tegra_t186ref_codec_format,
 		tegra_t186ref_codec_get_format, tegra_t186ref_codec_put_format),
+	SOC_ENUM_EXT("Jack-state", tegra_t186ref_jack_state,
+		tegra_t186ref_codec_get_jack_state,
+		tegra_t186ref_codec_put_jack_state),
 };
 
 static struct snd_soc_card snd_soc_tegra_t186ref = {

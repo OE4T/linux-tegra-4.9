@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -111,65 +111,54 @@ static int calc_ref_to_sync(struct tegra_dc_mode *mode)
 	return 0;
 }
 
-static bool check_ref_to_sync(struct tegra_dc_mode *mode)
+static bool check_ref_to_sync(struct tegra_dc_mode *mode, bool verbose)
 {
+#define CHK(c, s) do {				\
+		if (unlikely(c)) {		\
+			if (verbose)		\
+				pr_err(s);	\
+			return false;		\
+		}				\
+	} while (0)
+
 	/* Constraint 1: H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH > 11. */
-	if (mode->h_ref_to_sync + mode->h_sync_width +
-		mode->h_back_porch <= 11) {
-		pr_err("H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH <= 11\n");
-		return false;
-	}
+	CHK(mode->h_ref_to_sync + mode->h_sync_width +
+	    mode->h_back_porch <= 11,
+	    "H_REF_TO_SYNC + H_SYNC_WIDTH + H_BACK_PORCH <= 11\n");
 
 	/* Constraint 2: V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH > 1. */
-	if (mode->v_ref_to_sync + mode->v_sync_width +
-		mode->v_back_porch <= 1) {
-		pr_err("V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH <= 1\n");
-		return false;
-	}
+	CHK(mode->v_ref_to_sync + mode->v_sync_width + mode->v_back_porch <= 1,
+	    "V_REF_TO_SYNC + V_SYNC_WIDTH + V_BACK_PORCH <= 1\n");
 
 	/* Constraint 3: V_FRONT_PORCH + V_SYNC_WIDTH + V_BACK_PORCH > 1
 	 * (vertical blank). */
-	if (mode->v_front_porch + mode->v_sync_width +
-		mode->v_back_porch <= 1) {
-		pr_err("V_FRONT_PORCH + V_SYNC_WIDTH + V_BACK_PORCH <= 1\n");
-		return false;
-	}
+	CHK(mode->v_front_porch + mode->v_sync_width + mode->v_back_porch <= 1,
+	    "V_FRONT_PORCH + V_SYNC_WIDTH + V_BACK_PORCH <= 1\n");
+
 
 	/* Constraint 4: V_SYNC_WIDTH >= 1; H_SYNC_WIDTH >= 1. */
-	if (mode->v_sync_width < 1 || mode->h_sync_width < 1) {
-		pr_err("V_SYNC_WIDTH >= 1; H_SYNC_WIDTH < 1\n");
-		return false;
-	}
+	CHK(mode->v_sync_width < 1 || mode->h_sync_width < 1,
+	    "V_SYNC_WIDTH >= 1; H_SYNC_WIDTH < 1\n");
 
 	/* Constraint 5: V_REF_TO_SYNC >= 1; H_REF_TO_SYNC >= 0. */
-	if (mode->v_ref_to_sync < 1 || mode->h_ref_to_sync < 0) {
-		pr_err("V_REF_TO_SYNC >= 1; H_REF_TO_SYNC < 0");
-		return false;
-	}
+	CHK(mode->v_ref_to_sync < 1 || mode->h_ref_to_sync < 0,
+	    "V_REF_TO_SYNC >= 1; H_REF_TO_SYNC < 0\n");
 
 	/* Constraint 6: V_FRONT_PORCH >= (V_REF_TO_SYNC + 1) */
-	if (mode->v_front_porch < mode->v_ref_to_sync + 1) {
-		pr_err("V_FRONT_PORCH < (V_REF_TO_SYNC + 1)\n");
-		return false;
-	}
+	CHK(mode->v_front_porch < mode->v_ref_to_sync + 1,
+	    "V_FRONT_PORCH < (V_REF_TO_SYNC + 1)\n");
 
 	/* Constraint 7: H_FRONT_PORCH >= (H_REF_TO_SYNC + 1) */
-	if (mode->h_front_porch < mode->h_ref_to_sync + 1) {
-		pr_err("H_FRONT_PORCH < (H_REF_TO_SYNC + 1)\n");
-		return false;
-	}
+	CHK(mode->h_front_porch < mode->h_ref_to_sync + 1,
+	    "H_FRONT_PORCH < (H_REF_TO_SYNC + 1)\n");
 
 	/* Constraint 8: H_DISP_ACTIVE >= 16 */
-	if (mode->h_active < 16) {
-		pr_err("H_DISP_ACTIVE < 16\n");
-		return false;
-	}
+	CHK(mode->h_active < 16, "H_DISP_ACTIVE < 16\n");
 
 	/* Constraint 9: V_DISP_ACTIVE >= 16 */
-	if (mode->v_active < 16) {
-		pr_err("V_DISP_ACTIVE < 16\n");
-		return false;
-	}
+	CHK(mode->v_active < 16, "V_DISP_ACTIVE < 16\n");
+
+#undef CHK
 
 	return true;
 }
@@ -338,7 +327,8 @@ u32 tegra_dc_get_aspect_ratio(struct tegra_dc *dc)
 	return aspect_ratio;
 }
 
-static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
+static bool check_mode_timings(const struct tegra_dc *dc,
+			       struct tegra_dc_mode *mode, bool verbose)
 {
 #if defined(CONFIG_TEGRA_HDMI2_0)
 	if ((mode->vmode & FB_VMODE_Y420) ||
@@ -368,17 +358,41 @@ static bool check_mode_timings(struct tegra_dc *dc, struct tegra_dc_mode *mode)
 		mode->v_ref_to_sync = 1;
 	}
 
-	if (!check_ref_to_sync(mode)) {
-		dev_err(&dc->ndev->dev,
+	if (!check_ref_to_sync(mode, verbose)) {
+		if (verbose)
+			dev_err(&dc->ndev->dev,
 				"Display timing doesn't meet restrictions.\n");
 		return false;
 	}
-	dev_dbg(&dc->ndev->dev, "Using mode %dx%d pclk=%d href=%d vref=%d\n",
-		mode->h_active, mode->v_active, mode->pclk,
-		mode->h_ref_to_sync, mode->v_ref_to_sync
-	);
+	if (verbose)
+		dev_dbg(&dc->ndev->dev,
+			"Using mode %dx%d pclk=%d href=%d vref=%d\n",
+			mode->h_active, mode->v_active, mode->pclk,
+			mode->h_ref_to_sync, mode->v_ref_to_sync);
 
 	return true;
+}
+
+bool check_fb_videomode_timings(const struct tegra_dc *dc,
+				const struct fb_videomode *fbmode)
+{
+	struct tegra_dc_mode mode;
+
+	if (!dc || !fbmode)
+		return false;
+
+	/* Only copy the relevant info */
+	mode.h_front_porch = fbmode->right_margin;
+	mode.v_front_porch = fbmode->lower_margin;
+	mode.h_sync_width = fbmode->hsync_len;
+	mode.v_sync_width = fbmode->vsync_len;
+	mode.h_back_porch = fbmode->left_margin;
+	mode.v_back_porch = fbmode->upper_margin;
+	mode.h_active = fbmode->xres;
+	mode.v_active = fbmode->yres;
+	mode.vmode = fbmode->vmode;
+
+	return check_mode_timings(dc, &mode, false);
 }
 
 #ifdef DEBUG
@@ -732,7 +746,7 @@ int tegra_dc_set_drm_mode(struct tegra_dc *dc,
 		mode.vmode |= FB_VMODE_INTERLACED;
 	mode.avi_m = calc_default_avi_m(dc);
 
-	if (!check_mode_timings(dc, &mode))
+	if (!check_mode_timings(dc, &mode, true))
 		return -EINVAL;
 
 #ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT
@@ -790,7 +804,7 @@ int tegra_dc_set_fb_mode(struct tegra_dc *dc,
 	else
 		mode.avi_m = calc_default_avi_m(dc);
 
-	if (!check_mode_timings(dc, &mode))
+	if (!check_mode_timings(dc, &mode, true))
 		return -EINVAL;
 
 #ifndef CONFIG_TEGRA_HDMI_74MHZ_LIMIT

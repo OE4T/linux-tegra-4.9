@@ -614,6 +614,10 @@ int tegra_dc_calc_fb_refresh(const struct fb_videomode *fbmode);
 int tegra_dc_update_mode(struct tegra_dc *dc);
 u32 tegra_dc_get_aspect_ratio(struct tegra_dc *dc);
 
+/* defined in mode.c, used in hdmi.c and hdmi2.0.c */
+bool check_fb_videomode_timings(const struct tegra_dc *dc,
+				const struct fb_videomode *fbmode);
+
 /* defined in mode.c, used in nvsr.c */
 int _tegra_dc_set_mode(struct tegra_dc *dc, const struct tegra_dc_mode *mode);
 

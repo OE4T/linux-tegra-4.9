@@ -803,13 +803,6 @@ static bool tegra_dc_hdmi_valid_pixclock(const struct tegra_dc *dc,
 	}
 }
 
-static bool tegra_dc_check_constraint(const struct fb_videomode *mode)
-{
-	return mode->hsync_len >= 1 && mode->vsync_len >= 1 &&
-		mode->lower_margin + mode->vsync_len + mode->upper_margin > 1 &&
-		mode->xres >= 16 && mode->yres >= 16;
-}
-
 /* adjusts pixclock to fit audio table */
 static bool tegra_dc_hdmi_adjust_pixclock(const struct tegra_dc *dc,
 					struct fb_videomode *mode)
@@ -881,7 +874,7 @@ bool tegra_dc_hdmi_mode_filter(const struct tegra_dc *dc,
 	}
 
 	/* even after fix-ups the mode still isn't supported */
-	if (!tegra_dc_check_constraint(mode))
+	if (!check_fb_videomode_timings(dc, mode))
 		return false;
 
 	mode->flag |= FB_MODE_IS_DETAILED;

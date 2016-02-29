@@ -1713,7 +1713,7 @@ static int tegra_pcie_power_off(struct tegra_pcie *pcie)
 	int err = 0;
 
 	PR_FUNC_LINE;
-	err = pm_runtime_put(pcie->dev);
+	err = pm_runtime_put_sync(pcie->dev);
 	if (err)
 		goto err_exit;
 	pcie->pcie_power_enabled = 0;
@@ -4483,9 +4483,9 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	}
 
 	ret = tegra_pcie_probe_complete(pcie);
-	if (ret) {
+	if (ret || !pcie->num_ports) {
+		pm_runtime_put_sync(pcie->dev);
 		pm_runtime_disable(pcie->dev);
-		pm_runtime_set_suspended(pcie->dev);
 		tegra_pd_remove_device(pcie->dev);
 		goto release_regulators;
 	}

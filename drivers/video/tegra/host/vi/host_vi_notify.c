@@ -16,7 +16,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/debugfs.h>
 #include <linux/interrupt.h>
 #include <linux/platform_device.h>
 
@@ -25,35 +24,17 @@
 #include "vi/vi_notify.h"
 #include "vi/vi4.h"
 
-#define VI_CFG_INTERRUPT_STATUS_0		0x0044
-#define VI_CFG_INTERRUPT_MASK_0			0x0048
-
-#define VI_ISPBUFA_ERROR_0			0x1000
-
-#define VI_FMLITE_ERROR_0			0x313C
-
 #define VI_NOTIFY_FIFO_TAG_0_0			0x4000
 #define VI_NOTIFY_FIFO_TIMESTAMP_0_0		(VI_NOTIFY_FIFO_TAG_0_0 + 4)
 #define VI_NOTIFY_FIFO_DATA_0_0			(VI_NOTIFY_FIFO_TAG_0_0 + 8)
 #define VI_NOTIFY_TAG_CLASSIFY_NO_OUTPUT_0	0x6000
 #define VI_NOTIFY_TAG_CLASSIFY_HIGH_0		0x6004
-#define VI_NOTIFY_TAG_CLASSIFY_SAFETY_0		0x6008
-#define VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0	0x600C
-#define VI_NOTIFY_TAG_CLASSIFY_SAFETY_TEST_0	0x6010
 #define VI_NOTIFY_OCCUPANCY_0			0x6014
 #define VI_NOTIFY_OCCUPANCY_URGENT_0		0x6018
 #define VI_NOTIFY_HIGHPRIO_0			0x601C
-#define VI_NOTIFY_ERROR_0			0x6020
 
 #define VI_CH_REG(n, r)				((n+1) * 0x10000 + (r))
 #define VI_CH_CONTROL(n)			VI_CH_REG(n, 0x1c)
-
-#define VI_HOST_PKTINJECT_STALL_ERR_MASK	0x00000080
-#define VI_CSIMUX_FIFO_OVFL_ERR_MASK		0x00000040
-#define VI_ATOMP_PACKER_OVFL_ERR_MASK		0x00000020
-#define VI_FMLITE_BUF_OVFL_ERR_MASK		0x00000010
-#define VI_NOTIFY_FIFO_OVFL_ERR_MASK		0x00000008
-#define VI_ISPBUFA_ERR_MASK			0x00000001
 
 #define VI_CH_CONTROL_ENABLE			0x01
 #define VI_CH_CONTROL_SINGLESHOT		0x02
@@ -77,50 +58,9 @@ static void nvhost_vi_notify_dump_status(struct platform_device *pdev)
 		(r >> 10) & 0x3ff, r & 0x3ff,  (r >> 20) & 0x3ff);
 	dev_dbg(&pdev->dev, "Urgent:    %u\n",
 		host1x_readl(pdev, VI_NOTIFY_HIGHPRIO_0));
-	dev_dbg(&pdev->dev, "Error:   0x%08X\n",
-		host1x_readl(pdev, VI_NOTIFY_ERROR_0));
 }
 
 /* Interrupt handlers */
-static irqreturn_t nvhost_vi_error_isr(int irq, void *dev_id)
-{
-	struct platform_device *pdev = dev_id;
-	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
-	u32 r;
-
-	r = host1x_readl(pdev, VI_NOTIFY_ERROR_0);
-	if (r) {
-		host1x_writel(pdev, VI_NOTIFY_ERROR_0, 1);
-		dev_err(&pdev->dev, "notify buffer overflow\n");
-		atomic_inc(&hvnd->notify_overflow);
-
-		vi_notify_dev_error(hvnd->vnd);
-	}
-
-	r = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);
-	if (r) {
-		host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0, r);
-		dev_err(&pdev->dev, "safety error mask 0x%08X\n", r);
-	}
-
-	r = host1x_readl(pdev, VI_FMLITE_ERROR_0);
-	if (r) {
-		host1x_writel(pdev, VI_FMLITE_ERROR_0, 1);
-		dev_err(&pdev->dev, "FM-Lite buffer overflow\n");
-		atomic_inc(&hvnd->fmlite_overflow);
-	}
-
-	r = host1x_readl(pdev, VI_CFG_INTERRUPT_STATUS_0);
-	if (r) {
-		host1x_writel(pdev, VI_CFG_INTERRUPT_STATUS_0, 1);
-		dev_err(&pdev->dev, "master error\n");
-		atomic_inc(&hvnd->overflow);
-	}
-
-	return IRQ_HANDLED;
-}
-
 static irqreturn_t nvhost_vi_prio_isr(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
@@ -279,23 +219,10 @@ static int nvhost_vi_notify_probe(struct device *dev,
 	hvnd->mask = 0;
 	hvnd->ld_mask = 0;
 
-	if (vi->debug_dir != NULL) {
-		debugfs_create_atomic_t("overflow", S_IRUGO, vi->debug_dir,
-					&hvnd->overflow);
-		debugfs_create_atomic_t("notify-overflow", S_IRUGO,
-					vi->debug_dir, &hvnd->notify_overflow);
-		debugfs_create_atomic_t("fmlite-overflow", S_IRUGO,
-					vi->debug_dir, &hvnd->fmlite_overflow);
-	}
-
 	for (i = 0; i < ARRAY_SIZE(hvnd->incr); i++) {
 		spin_lock_init(&hvnd->incr[i].lock);
 		memset(hvnd->incr[i].tags, 0xff, MAX_VI_CH_INCRS);
 	}
-
-	hvnd->error_irq = nvhost_vi_get_irq(pdev, 0, nvhost_vi_error_isr);
-	if (IS_ERR_VALUE(hvnd->error_irq))
-		return hvnd->error_irq;
 
 	hvnd->prio_irq = nvhost_vi_get_irq(pdev, 1, nvhost_vi_prio_isr);
 	if (IS_ERR_VALUE(hvnd->prio_irq))
@@ -320,9 +247,6 @@ do { \
 
 	DUMP_TAG(NO_OUTPUT,	"no output");
 	DUMP_TAG(HIGH,		"high prio");
-	DUMP_TAG(SAFETY,	"safety   ");
-	DUMP_TAG(SAFETY_ERROR,	"error    ");
-	DUMP_TAG(SAFETY_TEST,	"test     ");
 
 	nvhost_vi_notify_dump_status(pdev);
 }
@@ -350,32 +274,20 @@ static int nvhost_vi_notify_classify(struct device *dev,
 			return err;
 		}
 
-		enable_irq(hvnd->error_irq);
 		enable_irq(hvnd->prio_irq);
 		enable_irq(hvnd->norm_irq);
-		host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0,
-				VI_HOST_PKTINJECT_STALL_ERR_MASK |
-				VI_CSIMUX_FIFO_OVFL_ERR_MASK |
-				VI_ATOMP_PACKER_OVFL_ERR_MASK |
-				VI_FMLITE_BUF_OVFL_ERR_MASK |
-				VI_NOTIFY_FIFO_OVFL_ERR_MASK |
-				VI_ISPBUFA_ERR_MASK);
 	}
 
 	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_NO_OUTPUT_0, ign_mask);
 	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_HIGH_0, pri_mask);
-	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_0, 0);
-	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_TEST_0, 0);
 	host1x_writel(pdev, VI_NOTIFY_OCCUPANCY_URGENT_0, 512);
 	nvhost_vi_notify_dump_classify(pdev);
 
 	hvnd->mask = ~ign_mask;
 
 	if (hvnd->mask == 0) {
-		host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0, 0);
 		disable_irq(hvnd->norm_irq);
 		disable_irq(hvnd->prio_irq);
-		disable_irq(hvnd->error_irq);
 		nvhost_module_idle(pdev);
 	}
 

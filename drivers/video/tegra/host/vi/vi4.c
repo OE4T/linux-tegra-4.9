@@ -34,7 +34,89 @@
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform/tegra/latency_allowance.h>
 
+#define VI_CFG_INTERRUPT_STATUS_0		0x0044
+#define VI_CFG_INTERRUPT_MASK_0			0x0048
+#define VI_ISPBUFA_ERROR_0			0x1000
+#define VI_FMLITE_ERROR_0			0x313C
+#define VI_NOTIFY_TAG_CLASSIFY_SAFETY_0		0x6008
+#define VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0	0x600C
+#define VI_NOTIFY_TAG_CLASSIFY_SAFETY_TEST_0	0x6010
+#define VI_NOTIFY_ERROR_0			0x6020
+
+#define VI_HOST_PKTINJECT_STALL_ERR_MASK	0x00000080
+#define VI_CSIMUX_FIFO_OVFL_ERR_MASK		0x00000040
+#define VI_ATOMP_PACKER_OVFL_ERR_MASK		0x00000020
+#define VI_FMLITE_BUF_OVFL_ERR_MASK		0x00000010
+#define VI_NOTIFY_FIFO_OVFL_ERR_MASK		0x00000008
+#define VI_ISPBUFA_ERR_MASK			0x00000001
+
+/* Interrupt handler */
+/* NOTE: VI4 has three interrupt lines. This handler is for the master/error
+ * line. The other lines are dedicated to VI NOTIFY and handled elsewhere. */
+static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
+{
+	struct platform_device *pdev = dev_id;
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	u32 r;
+
+	r = host1x_readl(pdev, VI_NOTIFY_ERROR_0);
+	if (r) {
+		host1x_writel(pdev, VI_NOTIFY_ERROR_0, 1);
+		dev_err(&pdev->dev, "notify buffer overflow\n");
+		atomic_inc(&vi->notify_overflow);
+#ifdef CONFIG_TEGRA_VI_NOTIFY
+		vi_notify_dev_error(vi->notify.vnd);
+#endif
+	}
+
+	r = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);
+	if (r) {
+		host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0, r);
+		dev_err(&pdev->dev, "safety error mask 0x%08X\n", r);
+	}
+
+	r = host1x_readl(pdev, VI_FMLITE_ERROR_0);
+	if (r) {
+		host1x_writel(pdev, VI_FMLITE_ERROR_0, 1);
+		dev_err(&pdev->dev, "FM-Lite buffer overflow\n");
+		atomic_inc(&vi->fmlite_overflow);
+	}
+
+	r = host1x_readl(pdev, VI_CFG_INTERRUPT_STATUS_0);
+	if (r) {
+		host1x_writel(pdev, VI_CFG_INTERRUPT_STATUS_0, 1);
+		dev_err(&pdev->dev, "master error\n");
+		atomic_inc(&vi->overflow);
+	}
+
+	return IRQ_HANDLED;
+}
+
 /* NV host device */
+int nvhost_vi4_prepare_poweroff(struct platform_device *pdev)
+{
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0, 0x00000000);
+	disable_irq(vi->error_irq);
+	return 0;
+}
+
+int nvhost_vi4_finalize_poweron(struct platform_device *pdev)
+{
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0,
+			VI_HOST_PKTINJECT_STALL_ERR_MASK |
+			VI_CSIMUX_FIFO_OVFL_ERR_MASK |
+			VI_ATOMP_PACKER_OVFL_ERR_MASK |
+			VI_FMLITE_BUF_OVFL_ERR_MASK |
+			VI_NOTIFY_FIFO_OVFL_ERR_MASK |
+			VI_ISPBUFA_ERR_MASK);
+	enable_irq(vi->error_irq);
+	return 0;
+}
+
 void nvhost_vi4_reset(struct platform_device *pdev)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
@@ -173,6 +255,15 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	vi->vi_tsc_reset = devm_reset_control_get(&pdev->dev, "tsctnvi");
 	vi->debug_dir = debugfs_create_dir("tegra_vi", NULL);
 
+	if (vi->debug_dir != NULL) {
+		debugfs_create_atomic_t("overflow", S_IRUGO, vi->debug_dir,
+					&vi->overflow);
+		debugfs_create_atomic_t("notify-overflow", S_IRUGO,
+					vi->debug_dir, &vi->notify_overflow);
+		debugfs_create_atomic_t("fmlite-overflow", S_IRUGO,
+					vi->debug_dir, &vi->fmlite_overflow);
+	}
+
 	nvhost_set_private_data(pdev, vi);
 	err = nvhost_client_device_get_resources(pdev);
 	if (err)
@@ -187,6 +278,25 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		nvhost_module_deinit(pdev);
 		return err;
 	}
+
+	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0, 0);
+	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_0, 0);
+	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_TEST_0, 0);
+
+	vi->error_irq = platform_get_irq(pdev, 0);
+	if (!IS_ERR_VALUE(vi->error_irq)) {
+		err = devm_request_threaded_irq(&pdev->dev, vi->error_irq,
+						NULL, nvhost_vi4_error_isr,
+						IRQF_ONESHOT,
+						dev_name(&pdev->dev), pdev);
+		if (err) {
+			dev_err(&pdev->dev, "cannot get master IRQ %d: %d\n",
+				vi->error_irq, err);
+			nvhost_client_device_release(pdev);
+		}
+		disable_irq(vi->error_irq);
+	} else
+		dev_warn(&pdev->dev, "missing master IRQ\n");
 
 #ifdef CONFIG_TEGRA_VI_NOTIFY
 	if (tegra_platform_is_unit_fpga())

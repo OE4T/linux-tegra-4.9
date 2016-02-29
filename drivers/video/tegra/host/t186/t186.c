@@ -227,6 +227,8 @@ struct nvhost_device_data t18_vi_info = {
 	},
 	.num_channels		= 12,
 	.ctrl_ops               = &nvhost_vi4_ctrl_ops,
+	.prepare_poweroff	= nvhost_vi4_prepare_poweroff,
+	.finalize_poweron	= nvhost_vi4_finalize_poweron,
 	.reset			= nvhost_vi4_reset,
 	.vm_regs		= {{0x4000 * 4, true},
 				   {0x8000 * 4, true},

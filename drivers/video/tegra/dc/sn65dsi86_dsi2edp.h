@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sn65dsi86_dsi2edp.h
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Bibek Basu <bbasu@nvidia.com>
@@ -27,28 +27,16 @@ struct tegra_dc_dsi2edp_data {
 	struct tegra_dc_mode *mode;
 	bool dsi2edp_enabled;
 	struct mutex lock;
-	int en_gpio; /* GPIO */
-	int en_gpio_flags;
-	int pll_refclk_cfg;
-	int dsi_cfg1;
-	int dsi_cha_clk_range;
-	int dsi_chb_clk_range;
-	int disable_assr;
-	int dp_ssc_cfg;
-	int video_cha_line_low;
-	int video_cha_line_high;
-	int video_chb_line_low;
-	int video_chb_line_high;
-	int cha_vert_disp_size_low;
-	int cha_vert_disp_size_high;
-	int h_pulse_width_low;
-	int h_pulse_width_high;
-	int v_pulse_width_low;
-	int v_pulse_width_high;
-	int h_back_porch;
-	int v_back_porch;
-	int h_front_porch;
-	int v_front_porch;
+	struct {
+		int  en_gpio; /* GPIO */
+		int  en_gpio_flags;
+		int  pll_refclk_cfg;  /* reg.0x0a */
+		int  dp_ssc_cfg;      /* reg.0x93 */
+		int  negative_hsync;
+		int  negative_vsync;
+		int  disable_assr;
+		int  enable_colorbar;
+	}  init;
 };
 
 #define  SN65DSI86_DEVICE_ID			0x00
@@ -83,6 +71,6 @@ struct tegra_dc_dsi2edp_data {
 #define  SN65DSI86_TRAINING_CFG			0x95
 #define  SN65DSI86_ML_TX_MODE			0x96
 
-#define RETRYLOOP 2
+#define RETRYLOOP 60
 #endif
 

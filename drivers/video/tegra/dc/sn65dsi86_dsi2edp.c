@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sn65dsi86_dsi2edp.c
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Bibek Basu <bbasu@nvidia.com>
@@ -67,15 +67,17 @@ static int sn65dsi86_dsi2edp_init(struct tegra_dc_dsi_data *dsi)
 	dsi2edp->mode = &dsi->dc->mode;
 	tegra_dsi_set_outdata(dsi, dsi2edp);
 
-	if (dsi2edp->en_gpio) {
-		err = gpio_request(dsi2edp->en_gpio, "dsi2dp");
+	if (dsi2edp->init.en_gpio) {
+		err = gpio_request(dsi2edp->init.en_gpio, "dsi2dp");
 		if (err < 0) {
 			pr_err("err %d: dsi2dp GPIO request failed\n", err);
 		} else {
-			if (dsi2edp->en_gpio_flags & OF_GPIO_ACTIVE_LOW)
-				gpio_direction_output(dsi2edp->en_gpio, 0);
+			if (dsi2edp->init.en_gpio_flags & OF_GPIO_ACTIVE_LOW)
+				gpio_direction_output(dsi2edp->init.en_gpio,
+					0);
 			else
-				gpio_direction_output(dsi2edp->en_gpio, 1);
+				gpio_direction_output(dsi2edp->init.en_gpio,
+					1);
 		}
 	}
 
@@ -90,15 +92,16 @@ static void sn65dsi86_dsi2edp_destroy(struct tegra_dc_dsi_data *dsi)
 	if (!dsi2edp)
 		return;
 
-	if (dsi2edp->en_gpio) {
-		if (dsi2edp->en_gpio_flags & OF_GPIO_ACTIVE_LOW)
-			gpio_set_value(dsi2edp->en_gpio, 1);
+	if (dsi2edp->init.en_gpio) {
+		if (dsi2edp->init.en_gpio_flags & OF_GPIO_ACTIVE_LOW)
+			gpio_set_value(dsi2edp->init.en_gpio, 1);
 		else
-			gpio_set_value(dsi2edp->en_gpio, 0);
+			gpio_set_value(dsi2edp->init.en_gpio, 0);
 	}
 	sn65dsi86_dsi2edp = NULL;
 	mutex_destroy(&dsi2edp->lock);
 }
+
 
 static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 {
@@ -109,121 +112,154 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	if (dsi2edp && dsi2edp->dsi2edp_enabled)
 		return;
 
+	pr_info("SN65DSI86: %dx%d@%d %d-%d-%d/%d-%d-%d lanes:%d HS:%dKHz\n",
+		dsi->dc->mode.h_active, dsi->dc->mode.v_active,
+		dsi->info.refresh_rate, dsi->dc->mode.h_front_porch,
+		dsi->dc->mode.h_sync_width, dsi->dc->mode.h_back_porch,
+		dsi->dc->mode.v_front_porch, dsi->dc->mode.v_sync_width,
+		dsi->dc->mode.v_back_porch, dsi->info.n_data_lanes,
+		dsi->target_hs_clk_khz);
+
 	mutex_lock(&dsi2edp->lock);
-	/* REFCLK 19.2MHz */
+
+	/* reg.0x0a REFCLK */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_REFCLK_CFG,
-			dsi2edp->pll_refclk_cfg);
-	usleep_range(10000, 12000);
-	/* Single 4 DSI lanes */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CFG1,
-			dsi2edp->dsi_cfg1);
-	usleep_range(10000, 12000);
-	/* DSI CLK FREQ 422.5MHz */
+			dsi2edp->init.pll_refclk_cfg);
+
+	/* reg.0x10 DSI config */
+	val = dsi->info.ganged_type ? (0 << 5) : (1 << 5);
+	val |= (TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT == dsi->info.ganged_type)
+		? (1 << 7) : (0 << 7);
+	val |= (4 - dsi->info.n_data_lanes / (dsi->info.ganged_type ? 2 : 1))
+		<< 3;
+	if (dsi->info.ganged_type)
+		val |= (4 - dsi->info.n_data_lanes / 2) << 1;
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CFG1, val);
+
+	/* reg.0x12-0x13 DSI CLK range */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE,
-			dsi2edp->dsi_cha_clk_range);
-	usleep_range(10000, 12000);
-	sn65dsi86_reg_read(dsi2edp, SN65DSI86_DSI_CHA_CLK_RANGE, &val);
-	if (dsi2edp->dsi_chb_clk_range)
+		dsi->target_hs_clk_khz / 5000);
+	if (dsi->info.ganged_type)
 		sn65dsi86_reg_write(dsi2edp, SN65DSI86_DSI_CHB_CLK_RANGE,
-				dsi2edp->dsi_chb_clk_range);
+			dsi->target_hs_clk_khz / 5000);
+	if (!(40000 <= dsi->target_hs_clk_khz
+		&& dsi->target_hs_clk_khz < 755000))
+		pr_warn("SN65DSI86: DC%d DSI HS clk %dKHz is out of range!\n",
+			dsi->dc->ndev->id, dsi->target_hs_clk_khz);
 
 	/* disable ASSR via TEST2 PULL UP */
-	if (dsi2edp->disable_assr) {
+	if (dsi2edp->init.disable_assr) {
 		sn65dsi86_reg_write(dsi2edp, 0xFF, 0x07);
 		sn65dsi86_reg_write(dsi2edp, 0x16, 0x01);
 		sn65dsi86_reg_write(dsi2edp, 0xFF, 0x00);
 	}
-
-	/* enhanced framing */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_FRAMING_CFG, 0x04);
-	usleep_range(10000, 12000);
-	/* Pre0dB 2 lanes no SSC */
+	/* reg.0x5a enhanced framing */
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_FRAMING_CFG, (1 << 2));
+	usleep_range(11000, 12000);  /* need a min 10mSec delay */
+	/* reg.0x93 DP num of lanes & SSC */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_SSC_CFG,
-			dsi2edp->dp_ssc_cfg);
-	usleep_range(10000, 12000);
-	/* L0mV HBR */
+			dsi2edp->init.dp_ssc_cfg);
+	usleep_range(11000, 12000);  /* need a min 10mSec delay */
+	/* reg.0x94 L0mV HBR */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_CFG, 0x80);
-	usleep_range(10000, 12000);
-	/* PLL ENABLE */
+	usleep_range(11000, 12000);  /* need a min 10mSec delay */
+
+	/* reg.0x0d enable DP PLL */
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_EN, (1 << 0));
+	retry = 0;
 	do {
-		sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_EN, 0x01);
-		usleep_range(10000, 12000);
+		usleep_range(1000, 1100);
 		/* DP_PLL_LOCK */
 		sn65dsi86_reg_read(dsi2edp, SN65DSI86_PLL_REFCLK_CFG, &val);
-	} while (((val & 0xFF) >> 7 == 0) && (retry++ < RETRYLOOP));
-	if ((val & 0xFF) >> 7 == 0)
-		pr_err("sn65dsi86_dsi2edp: DP_PLL not locked\n");
-	usleep_range(10000, 12000);
-	/* POST2 0dB */
+	} while (((val & (1 << 7)) == 0) && (retry++ < RETRYLOOP));
+	if ((val & (1 << 7)) == 0)
+		pr_err("SN65DSI86: DP_PLL not locked\n");
+	usleep_range(1000, 1100);
+
+	/* reg.0x95 POST2 0dB */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_TRAINING_CFG, 0x00);
-	usleep_range(10000, 12000);
-	/* Semi-Auto TRAIN */
+	/* reg.0x96 Semi-Auto Link-training (takes about 45mSec) */
 	retry = 0;
 	do {
 		sn65dsi86_reg_write(dsi2edp, SN65DSI86_ML_TX_MODE, 0x0a);
-		usleep_range(10000, 12000);
-		/* ADDR 0x96 CFR */
+		usleep_range(1000, 1100);
 		sn65dsi86_reg_read(dsi2edp, SN65DSI86_ML_TX_MODE, &val);
 	} while ((val != 0x1) && (retry++ < RETRYLOOP));
 	/* 0x1 = normal mode (idle pattern or active video) */
 	if (val != 0x1)
-		pr_err("sn65dsi86_dsi2edp: semi-auto link training failed\n");
-	msleep(20);
-	/* CHA_ACTIVE_LINE_LENGTH */
+		pr_err("SN65DSI86: semi-auto link training failed\n");
+	usleep_range(1000, 1100);
+
+	/* reg.0x20-0x21 ch.a h-active */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_LOW,
-			dsi2edp->video_cha_line_low);
+		(dsi->dc->mode.h_active / (dsi->info.ganged_type ? 2 : 1))
+		& 0xff);
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_HIGH,
-			dsi2edp->video_cha_line_high);
-	usleep_range(10000, 12000);
-	/* CHB_ACTIVE_LINE_LENGTH */
-	if (dsi2edp->video_chb_line_low >= 0)
+		(dsi->dc->mode.h_active / (dsi->info.ganged_type ? 2 : 1))
+		>> 8);
+	/* reg.0x22-0x23 ch.b h-active */
+	if (dsi->info.ganged_type) {
 		sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHB_LINE_LOW,
-				dsi2edp->video_chb_line_low);
-	if (dsi2edp->video_chb_line_high)
+			(dsi->dc->mode.h_active / 2) & 0xff);
 		sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHB_LINE_HIGH,
-				dsi2edp->video_chb_line_high);
-	usleep_range(10000, 12000);
-	/* CHA_VERTICAL_DISPLAY_SIZE */
+			(dsi->dc->mode.h_active / 2) >> 8);
+	}
+	/* reg.0x24-0x25 v-active */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERT_DISP_SIZE_LOW,
-			dsi2edp->cha_vert_disp_size_low);
+			dsi->dc->mode.v_active & 0xff);
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERT_DISP_SIZE_HIGH,
-			dsi2edp->cha_vert_disp_size_high);
-	usleep_range(10000, 12000);
-	/* CHA_HSYNC_PULSE_WIDTH */
+			dsi->dc->mode.v_active >> 8);
+	/* reg.0x2c-0x2d h-sync-width */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HSYNC_PULSE_WIDTH_LOW,
-			dsi2edp->h_pulse_width_low);
+			dsi->dc->mode.h_sync_width & 0xff);
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HSYNC_PULSE_WIDTH_HIGH,
-			dsi2edp->h_pulse_width_high);
-	usleep_range(10000, 12000);
-	/* CHA_VSYNC_PULSE_WIDTH */
+			((dsi->dc->mode.h_sync_width >> 8) & 0x7f)
+			| (dsi2edp->init.negative_hsync ? (1 << 7) : 0));
+	/* reg.0x30-0x31 v-sync-width */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VSYNC_PULSE_WIDTH_LOW,
-			dsi2edp->v_pulse_width_low);
+			dsi->dc->mode.v_sync_width & 0xff);
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VSYNC_PULSE_WIDTH_HIGH,
-			dsi2edp->v_pulse_width_high);
-	usleep_range(10000, 12000);
-	/* CHA_HORIZONTAL_BACK_PORCH */
+			((dsi->dc->mode.v_sync_width >> 8) & 0x7f)
+			| (dsi2edp->init.negative_vsync ? (1 << 7) : 0));
+	if (dsi->dc->mode.v_sync_width < 1)
+		pr_warn("SN65DSI86: V-Sync-Width %d is not valid\n",
+			dsi->dc->mode.v_sync_width);
+	/* reg.0x34 h-back-porch */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HORIZONTAL_BACK_PORCH,
-			dsi2edp->h_back_porch);
-	usleep_range(10000, 12000);
-	/* CHA_VERTICAL_BACK_PORCH */
+			dsi->dc->mode.h_back_porch & 0xff);
+	if (dsi->dc->mode.h_back_porch >> 8)
+		pr_warn("SN65DSI86: H-Back-Porch %d is out of range\n",
+			dsi->dc->mode.h_back_porch);
+	/* reg.0x36 v-back-porch */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERTICAL_BACK_PORCH,
-			dsi2edp->v_back_porch);
-	usleep_range(10000, 12000);
-	/* CHA_HORIZONTAL_FRONT_PORCH */
+			dsi->dc->mode.v_back_porch & 0xff);
+	if ((dsi->dc->mode.v_back_porch < 1)
+		|| (dsi->dc->mode.v_back_porch >> 8))
+		pr_warn("SN65DSI86: V-Back-Porch %d is out of range\n",
+			dsi->dc->mode.v_back_porch);
+	/* reg.0x38 h-front-porch */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_HORIZONTAL_FRONT_PORCH,
-			dsi2edp->h_front_porch);
-	usleep_range(10000, 12000);
-	/* CHA_VERTICAL_FRONT_PORCH */
+			dsi->dc->mode.h_front_porch & 0xff);
+	if (dsi->dc->mode.h_front_porch >> 8)
+		pr_warn("SN65DSI86: H-Front-Porch %d is out of range\n",
+			dsi->dc->mode.h_front_porch);
+	/* reg.0x3a v-front-porch */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_CHA_VERTICAL_FRONT_PORCH,
-			dsi2edp->v_front_porch);
-	usleep_range(10000, 12000);
-	/* DP-18BPP Enable */
+			dsi->dc->mode.v_front_porch & 0xff);
+	if ((dsi->dc->mode.v_front_porch < 1)
+		|| (dsi->dc->mode.v_front_porch >> 8))
+		pr_warn("SN65DSI86: V-Front-Porch %d is out of range\n",
+			dsi->dc->mode.v_front_porch);
+
+	/* reg.0x5b DP-18BPP Enable */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_DP_18BPP_EN, 0x00);
-	msleep(100);
-	/* COLOR BAR */
-	/* sn65dsi86_reg_write(dsi2edp, SN65DSI86_COLOR_BAR_CFG, 0x10);*/
-	/* enhanced framing and Vstream enable */
-	sn65dsi86_reg_write(dsi2edp, SN65DSI86_FRAMING_CFG, 0x0c);
+	/* reg.0x3c COLOR BAR */
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_COLOR_BAR_CFG,
+		dsi2edp->init.enable_colorbar ? (1 << 4) : 0);
+	/* reg.0x5a enable Vstream */
+	sn65dsi86_reg_write(dsi2edp, SN65DSI86_FRAMING_CFG,
+		(1 << 3) | (1 << 2));
+
 	dsi2edp->dsi2edp_enabled = true;
 	mutex_unlock(&dsi2edp->lock);
 }
@@ -292,111 +328,51 @@ static int of_dsi2edp_parse_platform_data(struct i2c_client *client)
 		goto err;
 	}
 
-	dsi2edp->en_gpio = of_get_named_gpio_flags(np,
+	dsi2edp->init.en_gpio = of_get_named_gpio_flags(np,
 			"ti,enable-gpio", 0, &flags);
-	dsi2edp->en_gpio_flags = flags;
-	if (!dsi2edp->en_gpio)
+	dsi2edp->init.en_gpio_flags = flags;
+	if (!dsi2edp->init.en_gpio)
 		dev_err(&client->dev, "dsi2edp: gpio number not provided\n");
 
 	if (!of_property_read_u32(np, "ti,pll-refclk-cfg", &temp))
-		dsi2edp->pll_refclk_cfg = temp;
+		dsi2edp->init.pll_refclk_cfg = temp;
 	else
-		dsi2edp->pll_refclk_cfg = 0x02;
-
-	if (!of_property_read_u32(np, "ti,dsi-cfg1", &temp))
-		dsi2edp->dsi_cfg1 = temp;
-	else
-		dsi2edp->dsi_cfg1 = 0x26;
-
-	if (!of_property_read_u32(np, "ti,dsi-cha-clk-range", &temp))
-		dsi2edp->dsi_cha_clk_range = temp;
-	else
-		dsi2edp->dsi_cha_clk_range = 0x55;
-
-	if (!of_property_read_u32(np, "ti,dsi-chb-clk-range", &temp))
-		dsi2edp->dsi_chb_clk_range = temp;
-	else
-		dsi2edp->dsi_chb_clk_range = 0x0;
+		dsi2edp->init.pll_refclk_cfg = 0x02;
 
 	if (!of_property_read_u32(np, "ti,disable-assr", &temp))
-		dsi2edp->disable_assr = temp;
+		dsi2edp->init.disable_assr = temp;
 	else
-		dsi2edp->disable_assr = 0;
+		dsi2edp->init.disable_assr = 0;
 
 	if (!of_property_read_u32(np, "ti,dp-ssc-cfg", &temp))
-		dsi2edp->dp_ssc_cfg = temp;
+		dsi2edp->init.dp_ssc_cfg = temp;
 	else
-		dsi2edp->dp_ssc_cfg = 0x20;
+		dsi2edp->init.dp_ssc_cfg = 0x20;
 
-	if (!of_property_read_u32(np, "ti,video-cha-line-low", &temp))
-		dsi2edp->video_cha_line_low = temp;
+	if (!of_property_read_u32(np, "ti,negative-hsync", &temp))
+		dsi2edp->init.negative_hsync = temp;
 	else
-		dsi2edp->video_cha_line_low = 0x80;
+		dsi2edp->init.negative_hsync = 0;
 
-	if (!of_property_read_u32(np, "ti,video-cha-line-high", &temp))
-		dsi2edp->video_cha_line_high = temp;
+	if (!of_property_read_u32(np, "ti,negative-vsync", &temp))
+		dsi2edp->init.negative_vsync = temp;
 	else
-		dsi2edp->video_cha_line_high = 0x07;
+		dsi2edp->init.negative_vsync = 0;
 
-	if (!of_property_read_u32(np, "ti,video-chb-line-low", &temp))
-		dsi2edp->video_chb_line_low = temp;
+	if (!of_property_read_u32(np, "ti,enable-colorbar", &temp))
+		dsi2edp->init.enable_colorbar = temp;
 	else
-		dsi2edp->video_chb_line_low = -1;
+		dsi2edp->init.enable_colorbar = 0;
 
-	if (!of_property_read_u32(np, "ti,video-chb-line-high", &temp))
-		dsi2edp->video_chb_line_high = temp;
-	else
-		dsi2edp->video_chb_line_high = 0x0;
-
-	if (!of_property_read_u32(np, "ti,cha-vert-disp-size-low", &temp))
-		dsi2edp->cha_vert_disp_size_low = temp;
-	else
-		dsi2edp->cha_vert_disp_size_low = 0x38;
-
-	if (!of_property_read_u32(np, "ti,cha-vert-disp-size-high", &temp))
-		dsi2edp->cha_vert_disp_size_high = temp;
-	else
-		dsi2edp->cha_vert_disp_size_high = 0x04;
-
-	if (!of_property_read_u32(np, "ti,h-pulse-width-low", &temp))
-		dsi2edp->h_pulse_width_low = temp;
-	else
-		dsi2edp->h_pulse_width_low = 0x10;
+	/* parameters below this will be obsolete */
 
 	if (!of_property_read_u32(np, "ti,h-pulse-width-high", &temp))
-		dsi2edp->h_pulse_width_high = temp;
-	else
-		dsi2edp->h_pulse_width_high = 0x80;
-
-	if (!of_property_read_u32(np, "ti,v-pulse-width-low", &temp))
-		dsi2edp->v_pulse_width_low = temp;
-	else
-		dsi2edp->v_pulse_width_low = 0x0e;
+		if (temp & (1 << 7))
+			dsi2edp->init.negative_hsync = 1;
 
 	if (!of_property_read_u32(np, "ti,v-pulse-width-high", &temp))
-		dsi2edp->v_pulse_width_high = temp;
-	else
-		dsi2edp->v_pulse_width_high = 0x80;
-
-	if (!of_property_read_u32(np, "ti,h-back-porch", &temp))
-		dsi2edp->h_back_porch = temp;
-	else
-		dsi2edp->h_back_porch = 0x98;
-
-	if (!of_property_read_u32(np, "ti,v-back-porch", &temp))
-		dsi2edp->v_back_porch = temp;
-	else
-		dsi2edp->v_back_porch = 0x13;
-
-	if (!of_property_read_u32(np, "ti,h-front-porch", &temp))
-		dsi2edp->h_front_porch = temp;
-	else
-		dsi2edp->h_front_porch = 0x10;
-
-	if (!of_property_read_u32(np, "ti,v-front-porch", &temp))
-		dsi2edp->v_front_porch = temp;
-	else
-		dsi2edp->v_front_porch = 0x03;
+		if (temp & (1 << 7))
+			dsi2edp->init.negative_vsync = 1;
 
 err:
 	return err;
@@ -428,7 +404,7 @@ static int sn65dsi86_i2c_probe(struct i2c_client *client,
 	if (IS_ERR(sn65dsi86_dsi2edp->regmap)) {
 		err = PTR_ERR(sn65dsi86_dsi2edp->regmap);
 		dev_err(&client->dev,
-				"sn65dsi86_dsi2edp: regmap init failed\n");
+				"SN65DSI86: regmap init failed\n");
 		return err;
 	}
 
@@ -503,7 +479,7 @@ static int __init sn65dsi86_i2c_client_init(void)
 
 	err = i2c_add_driver(&sn65dsi86_i2c_drv);
 	if (err)
-		pr_err("sn65dsi86_dsi2edp: Failed to add i2c client driver\n");
+		pr_err("SN65DSI86: Failed to add i2c client driver\n");
 
 	return err;
 }

@@ -4652,7 +4652,7 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	struct tegra_pcie_bus *bus;
 
 	PR_FUNC_LINE;
-	pm_runtime_disable(pcie->dev);
+
 	if (cancel_delayed_work_sync(&pcie->detect_delay))
 		return 0;
 	if (IS_ENABLED(CONFIG_DEBUG_FS))
@@ -4667,14 +4667,14 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	if (pcie->prod_list)
 		tegra_prod_release(&pcie->prod_list);
 	tegra_pcie_detach(pcie);
-	tegra_pd_remove_device(pcie->dev);
 	tegra_pcie_power_off(pcie);
 #if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
 	if (tegra_platform_is_silicon())
 		phy_exit(pcie->u_phy);
 #endif
-	tegra_pcie_disable_regulators(pcie);
-	tegra_pcie_clocks_put(pcie);
+	tegra_pcie_release_resources(pcie);
+	pm_runtime_disable(pcie->dev);
+	tegra_pd_remove_device(pcie->dev);
 
 	return 0;
 }

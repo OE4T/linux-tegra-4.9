@@ -592,7 +592,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	void __iomem *base;
 	u32 i, j;
 	int gpio;
-	u32 ret;
+	int ret;
 	unsigned long flags;
 
 	read_gpio_mapping_data(pdev);

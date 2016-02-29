@@ -163,6 +163,9 @@ static int clk_bpmp_set_rate(struct clk_hw *hw, unsigned long rate,
 	struct bpmp_clk_req *req = (struct bpmp_clk_req *)&req_d[0];
 
 	req->cmd = BPMP_CLK_CMD(MRQ_CLK_SET_RATE, bpmp_clk->clk_num);
+	if (rate > S64_MAX)
+		rate = S64_MAX;
+
 	*((s64 *)&req->args[4]) = rate;
 
 	return bpmp_send_clk_message(req, sizeof(req_d), reply, sizeof(reply));
@@ -177,6 +180,9 @@ static long clk_bpmp_round_rate(struct clk_hw *hw, unsigned long rate,
 	struct bpmp_clk_req *req = (struct bpmp_clk_req *)&req_d[0];
 
 	req->cmd = BPMP_CLK_CMD(MRQ_CLK_ROUND_RATE, bpmp_clk->clk_num);
+	if (rate > S64_MAX)
+		rate = S64_MAX;
+
 	*((s64 *)&req->args[4]) = rate;
 	err = bpmp_send_clk_message(req, sizeof(req_d), reply, sizeof(reply));
 

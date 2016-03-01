@@ -831,11 +831,28 @@ static void do_handle_rx_pio(struct tegra_uart_port *tup)
 {
 	struct tty_struct *tty = tty_port_tty_get(&tup->uport.state->port);
 	struct tty_port *port = &tup->uport.state->port;
+	int rx_level = 0;
+
+	if (tup->enable_rx_buffer_throttle) {
+		rx_level = tty_buffer_get_level(port);
+		if (rx_level > 70 && tup->rts_active &&
+				tup->is_hw_flow_enabled) {
+			set_rts(tup, false);
+			mod_timer(&tup->timer,
+				jiffies + tup->timer_timeout_jiffies);
+		}
+	}
 
 	tegra_uart_handle_rx_pio(tup, port);
 	if (tty) {
 		tty_flip_buffer_push(port);
 		tty_kref_put(tty);
+	}
+
+	if (tup->enable_rx_buffer_throttle) {
+		if ((rx_level <= 70) && tup->rts_active
+				&& tup->is_hw_flow_enabled)
+			set_rts(tup, true);
 	}
 }
 

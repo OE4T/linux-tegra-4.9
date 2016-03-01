@@ -114,7 +114,6 @@ void nvmap_vm_insert_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 			spinlock_t *ptl;
 
 			page = nvmap_to_page(handle->pgalloc.pages[i]);
-			down_write(&vma->vm_mm->mmap_sem);
 			pte = get_locked_pte(vma->vm_mm,
 					vma->vm_start + (i << PAGE_SHIFT),
 					&ptl);

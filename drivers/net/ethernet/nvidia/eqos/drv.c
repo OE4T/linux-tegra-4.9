@@ -5676,7 +5676,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 
 	DBGPR("-->%s()\n", __func__);
 
-	del_timer_sync(&pdata->dma_stat_monitor_timer);
 	/* turn off sources of data into dev */
 	netif_tx_disable(pdata->dev);
 	hw_if->stop_mac_rx();
@@ -5706,7 +5705,6 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 
 	/* free rx skb's */
 	desc_if->rx_skb_free_mem(pdata, MAX_CHANS);
-
 
 	DBGPR("<--%s()\n", __func__);
 }
@@ -5763,10 +5761,6 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 
 	if (pdata->phydev)
 		netif_tx_start_all_queues(pdata->dev);
-
-	pdata->dma_stat_monitor_timer.expires = jiffies +
-		(HZ * pdata->dma_stat_monitor_inter);
-	add_timer(&pdata->dma_stat_monitor_timer);
 
 	DBGPR("<--%s()\n", __func__);
 }

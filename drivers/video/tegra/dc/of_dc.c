@@ -2079,12 +2079,7 @@ static int dc_dp_out_hotplug_init(struct device *dev)
 	 * Required for level translator logic.
 	 */
 	if (!of_dp_hdmi_5v0) {
-		/* BRINGUP HACK: DEVM_REGULATOR_GET IS FAILING... */
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		of_dp_hdmi_5v0 = regulator_get(dev, "vdd_hdmi_5v0");
-#else
 		of_dp_hdmi_5v0 = devm_regulator_get(dev, "vdd_hdmi_5v0");
-#endif
 		if (IS_ERR(of_dp_hdmi_5v0)) {
 			err = PTR_ERR(of_dp_hdmi_5v0);
 			dev_warn(dev,

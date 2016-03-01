@@ -187,42 +187,21 @@ static void heap_page_cache_maint(
 	}
 
 	if (inner) {
-		void *vaddr = NULL;
-
 		if (!h->vaddr) {
-			struct page **pages;
-			/* mutex lock protection is not necessary as it is
-			 * already increased in __nvmap_do_cache_maint to
-			 * protect from migrations.
-			 */
-			nvmap_kmaps_inc_no_lock(h);
-			pages = nvmap_pages(h->pgalloc.pages,
-					    h->size >> PAGE_SHIFT);
-			if (!pages)
+			if (__nvmap_mmap(h))
+				__nvmap_munmap(h, h->vaddr);
+			else
 				goto per_page_cache_maint;
-			vaddr = vm_map_ram(pages,
-					h->size >> PAGE_SHIFT, -1,
-					nvmap_pgprot(h, PG_PROT_KERNEL));
-			nvmap_altfree(pages,
-				(h->size >> PAGE_SHIFT) * sizeof(*pages));
 		}
-		if (vaddr && atomic_long_cmpxchg(&h->vaddr, 0, (long)vaddr)) {
-			nvmap_kmaps_dec(h);
-			vm_unmap_ram(vaddr, h->size >> PAGE_SHIFT);
-		}
-		if (h->vaddr) {
-			/* Fast inner cache maintenance using single mapping */
-			inner_cache_maint(op, h->vaddr + start, end - start);
-			if (!outer)
-				return;
-			/* Skip per-page inner maintenance in loop below */
-			inner = false;
-		}
+		/* Fast inner cache maintenance using single mapping */
+		inner_cache_maint(op, h->vaddr + start, end - start);
+		if (!outer)
+			return;
+		/* Skip per-page inner maintenance in loop below */
+		inner = false;
 
-per_page_cache_maint:
-		if (!h->vaddr)
-			nvmap_kmaps_dec(h);
 	}
+per_page_cache_maint:
 
 	while (start < end) {
 		struct page *page;

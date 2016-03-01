@@ -240,4 +240,37 @@
     /delete-node/ axip2p@2170000;
     /delete-node/ axip2p@2180000;
     /delete-node/ axip2p@2190000;
+
+	ast@b040000 {
+		status = "disabled";
+	};
+
+	ast@b050000 {
+		status = "disabled";
+	};
+
+	ast@2994000 {
+		status = "disabled";
+	};
+
+	ast@2996000 {
+		status = "disabled";
+	};
+
+	rtcpu@b000000 {
+		status = "disabled";
+	};
+
+	rtcpu@2993000 {
+		status = "disabled";
+	};
+
+	rtcpu-echo {
+		status = "disabled";
+	};
+
+	rtcpu-vinotify {
+		status = "disabled";
+	};
+
 };

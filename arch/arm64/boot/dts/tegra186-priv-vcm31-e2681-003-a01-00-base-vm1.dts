@@ -120,4 +120,36 @@
 		reg = <0x0 0x03881000 0x0 0x00001000
 		       0x0 0x03892000 0x0 0x00002000>;
 	};
+
+	ast@b040000 {
+		status = "disabled";
+	};
+
+	ast@b050000 {
+		status = "disabled";
+	};
+
+	ast@2994000 {
+		status = "disabled";
+	};
+
+	ast@2996000 {
+		status = "disabled";
+	};
+
+	rtcpu@b000000 {
+		status = "disabled";
+	};
+
+	rtcpu@2993000 {
+		status = "disabled";
+	};
+
+	rtcpu-echo {
+		status = "disabled";
+	};
+
+	rtcpu-vinotify {
+		status = "disabled";
+	};
 };

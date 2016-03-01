@@ -197,4 +197,29 @@
 		reset-names = "mipi_cal";
 		status = "okay";
 	};
+
+	ast@b040000 {
+		status = "okay";
+	};
+
+	ast@b050000 {
+		status = "okay";
+	};
+
+	rtcpu@b000000 {	/* use SCE as camera-rtcpu */
+		status = "okay";
+	};
+
+	rtcpu@2993000 {	/* not use APE as camera-rtcpu */
+		status = "disabled";
+	};
+
+	rtcpu-echo {
+		status = "okay";
+	};
+
+	rtcpu-vinotify {
+		status = "okay";
+	};
+
 };

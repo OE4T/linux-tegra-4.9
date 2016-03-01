@@ -226,11 +226,11 @@ per_page_cache_maint:
 
 	while (start < end) {
 		struct page *page;
-		void *kaddr, *vaddr;
 		phys_addr_t paddr;
 		unsigned long next;
 		unsigned long off;
 		size_t size;
+		int ret;
 
 		page = nvmap_to_page(h->pgalloc.pages[start >> PAGE_SHIFT]);
 		next = min(((start + PAGE_SIZE) & PAGE_MASK), end);
@@ -238,16 +238,9 @@ per_page_cache_maint:
 		size = next - start;
 		paddr = page_to_phys(page) + off;
 
-		if (inner) {
-			kaddr = kmap(page);
-			vaddr = (void *)kaddr + off;
-			BUG_ON(!kaddr);
-			inner_cache_maint(op, vaddr, size);
-			kunmap(page);
-		}
-
-		if (outer)
-			outer_cache_maint(op, paddr, size);
+		ret = nvmap_cache_maint_phys_range(op, paddr, paddr + size,
+				inner, outer);
+		BUG_ON(ret != 0);
 		start = next;
 	}
 }

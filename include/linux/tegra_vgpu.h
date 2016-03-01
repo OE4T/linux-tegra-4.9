@@ -86,6 +86,7 @@ struct tegra_vgpu_connect_params {
 
 struct tegra_vgpu_channel_hwctx_params {
 	u32 id;
+	u64 pid;
 	u64 handle;
 };
 

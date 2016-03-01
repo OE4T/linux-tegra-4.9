@@ -120,6 +120,8 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type);
 static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk);
 static void tegra_hdmi_scdc_worker(struct work_struct *work);
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi);
+static void tegra_hdmi_hdr_worker(struct work_struct *work);
+
 
 static inline bool tegra_hdmi_is_connected(struct tegra_hdmi *hdmi)
 {
@@ -606,7 +608,7 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_sor_hdmi_pad_power_down(sor);
 	tegra_hdmi_reset(hdmi);
 	tegra_hdmi_put(dc);
-
+	cancel_delayed_work(&hdmi->hdr_worker);
 	tegra_dc_put(dc);
 
 	return 0;
@@ -950,6 +952,12 @@ err_free_dpaux:
 }
 #endif
 
+static int tegra_hdmi_hdr_init(struct tegra_hdmi *hdmi)
+{
+	INIT_DELAYED_WORK(&hdmi->hdr_worker, tegra_hdmi_hdr_worker);
+	return 0;
+}
+
 static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 {
 	static int s_hdmi_init_count;
@@ -1039,6 +1047,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	tegra_dc_set_outdata(dc, hdmi);
 
+	tegra_hdmi_hdr_init(hdmi);
+
 	if (hdmi->pdata->hdmi2fpd_bridge_enable) {
 		hdmi2fpd_init(dc);
 		hdmi2fpd_enable(dc);
@@ -1049,6 +1059,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 		hdmi->out_ops->init(hdmi);
 	}
 #endif	/* CONFIG_TEGRA_HDMI2GMSL_MAX929x */
+
 	/* NOTE: Below code is applicable to L4T or embedded systems and is
 	 * protected accordingly. This section early enables DC with first mode
 	 * from the monitor specs.
@@ -1650,17 +1661,11 @@ static void tegra_hdmi_hdr_infoframe_update(struct tegra_hdmi *hdmi)
 static void tegra_hdmi_hdr_infoframe(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc_sor_data *sor = hdmi->sor;
-	u32 val;
 
 	/* set_bits = contains all the bits to be set
 	 * for NV_SOR_HDMI_GENERIC_CTRL reg */
 	u32 set_bits = (NV_SOR_HDMI_GENERIC_CTRL_ENABLE_YES |
-			NV_SOR_HDMI_GENERIC_CTRL_OTHER_DISABLE |
-			NV_SOR_HDMI_GENERIC_CTRL_SINGLE_DISABLE);
-
-	/* read the current value to restore some bit values */
-	val = (tegra_sor_readl(sor, NV_SOR_HDMI_GENERIC_CTRL)
-				& ~set_bits);
+			NV_SOR_HDMI_GENERIC_CTRL_AUDIO_ENABLE);
 
 	/* disable generic infoframe before configuring */
 	tegra_sor_writel(sor, NV_SOR_HDMI_GENERIC_CTRL, 0);
@@ -1675,9 +1680,7 @@ static void tegra_hdmi_hdr_infoframe(struct tegra_hdmi *hdmi)
 					true);
 
 	/* set the required bits in NV_SOR_HDMI_GENERIC_CTRL*/
-	val = val | set_bits;
-
-	tegra_sor_writel(sor, NV_SOR_HDMI_GENERIC_CTRL, val);
+	tegra_sor_writel(sor, NV_SOR_HDMI_GENERIC_CTRL, set_bits);
 
 	return;
 }
@@ -2397,10 +2400,41 @@ static int tegra_dc_hdmi_set_hdr(struct tegra_dc *dc)
 {
 	u16 ret = 0;
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	/* If the sink isn't HDR capable, return */
 	ret = tegra_edid_get_ex_hdr_cap(hdmi->edid);
-	if (ret & FB_CAP_HDR)
-		tegra_hdmi_hdr_infoframe(hdmi);
+	if (!(ret & FB_CAP_HDR))
+		return 0;
+	tegra_hdmi_hdr_infoframe(hdmi);
+
+	/*
+	 *If hdr is disabled then send HDR infoframe for
+	 *2 secs with SDR eotf and then stop
+	 */
+	if (dc->hdr.enabled)
+		return 0;
+
+	schedule_delayed_work(&hdmi->hdr_worker,
+		msecs_to_jiffies(HDMI_HDR_INFOFRAME_STOP_TIMEOUT_MS));
+
 	return 0;
+}
+
+static void tegra_hdmi_hdr_worker(struct work_struct *work)
+{
+	struct tegra_hdmi *hdmi = container_of(to_delayed_work(work),
+				struct tegra_hdmi, hdr_worker);
+	/* TODO:Add null check */
+
+	/* Read the current regsiter value to restore the bits */
+	u32 val = tegra_sor_readl(hdmi->sor, NV_SOR_HDMI_GENERIC_CTRL);
+
+	/* Set val to disable generic infoframe */
+	val &= ~NV_SOR_HDMI_GENERIC_CTRL_ENABLE_YES;
+
+	tegra_sor_writel(hdmi->sor, NV_SOR_HDMI_GENERIC_CTRL, val);
+
+	return;
 }
 
 static int tegra_dc_hdmi_ddc_enable(struct tegra_dc *dc)

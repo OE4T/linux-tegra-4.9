@@ -21,6 +21,7 @@
 #define HDMI_SCDC_MONITOR_TIMEOUT_MS	(5000)
 #define HDMI_EDID_MAX_LENGTH 512
 #define HDMI_HPD_DROP_TIMEOUT_MS	(1500)
+#define HDMI_HDR_INFOFRAME_STOP_TIMEOUT_MS	(2000)
 
 /* SCDC block */
 #define HDMI_SCDC_TMDS_CONFIG_OFFSET	(0x20)
@@ -388,6 +389,7 @@ struct tegra_hdmi {
 	bool device_shutdown;
 	int plug_state;
 	atomic_t suspended;
+	struct delayed_work hdr_worker;
 	struct tegra_hdmi_out_ops *out_ops;
 	void	*out_data;	/* HDMI to GMSL bridge, etc. */
 };

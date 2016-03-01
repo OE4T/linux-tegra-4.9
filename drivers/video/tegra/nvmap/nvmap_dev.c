@@ -1499,7 +1499,7 @@ u64 nvmap_stats_read(enum nvmap_stats_t stat)
 	return atomic64_read(&nvmap_stats.stats[stat]);
 }
 
-int nvmap_probe(struct platform_device *pdev)
+int __init nvmap_probe(struct platform_device *pdev)
 {
 	struct nvmap_platform_data *plat;
 	struct nvmap_device *dev;

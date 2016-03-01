@@ -125,7 +125,7 @@ found:
 }
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
-int nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
+int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 {
 	struct device_node *hvn;
 	u32 id;
@@ -198,7 +198,7 @@ int nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 	return 0;
 }
 #else
-int nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
+int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)
 {
 	return -EINVAL;
 }
@@ -220,7 +220,8 @@ static int __nvmap_init_dt(struct platform_device *pdev)
 	return 0;
 }
 
-static int nvmap_co_device_init(struct reserved_mem *rmem, struct device *dev)
+static int __init nvmap_co_device_init(struct reserved_mem *rmem,
+					struct device *dev)
 {
 	struct nvmap_platform_carveout *co = rmem->priv;
 	int err;
@@ -356,7 +357,7 @@ static int __nvmap_init_legacy(struct device *dev)
  * Fills in the platform data either from the device tree or with the
  * legacy path.
  */
-int nvmap_init(struct platform_device *pdev)
+int __init nvmap_init(struct platform_device *pdev)
 {
 	int err;
 	struct reserved_mem rmem;
@@ -398,7 +399,7 @@ static int nvmap_resume(struct platform_device *pdev)
 	return 0;
 }
 
-static struct platform_driver nvmap_driver = {
+static struct platform_driver __refdata nvmap_driver = {
 	.probe		= nvmap_probe,
 	.remove		= nvmap_remove,
 	.suspend	= nvmap_suspend,

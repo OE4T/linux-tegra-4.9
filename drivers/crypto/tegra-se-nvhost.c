@@ -670,10 +670,14 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev,
 
 	i = se_dev->cmdbuf_cnt;
 
-	se_dev->aes_cmdbuf_cpuvaddr[i++] =
-		__nvhost_opcode_nonincr(opcode_addr + 0x34, 1);
-	se_dev->aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
-						SE_OPERATION_OP(OP_DUMMY);
+	if (!se_dev->cmdbuf_cnt) {
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(opcode_addr +
+				SE2_AES1_OPERATION_CONFIG_OFFSET, 1);
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
+			SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
+			SE_OPERATION_OP(OP_DUMMY);
+	}
 
 	data_size = SE_KEYTABLE_QUAD_SIZE_BYTES;
 
@@ -693,10 +697,14 @@ static int tegra_se_send_key_data(struct tegra_se_dev *se_dev,
 		quad = QUAD_KEYS_256;
 	} while (data_len);
 
-	se_dev->aes_cmdbuf_cpuvaddr[i++] =
-		__nvhost_opcode_nonincr(opcode_addr + 0x34, 1);
-	se_dev->aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
-						SE_OPERATION_OP(OP_DUMMY);
+	if (type == SE_KEY_TABLE_TYPE_KEY) {
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(opcode_addr +
+				SE2_AES1_OPERATION_CONFIG_OFFSET, 1);
+		se_dev->aes_cmdbuf_cpuvaddr[i++] =
+			SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
+			SE_OPERATION_OP(OP_DUMMY);
+	}
 
 	cmdbuf_num_words = i;
 	se_dev->cmdbuf_cnt = i;
@@ -919,11 +927,6 @@ static int tegra_se_send_data(struct tegra_se_dev *se_dev,
 	total = nbytes;
 
 	/* Create Gather Buffer Command */
-	se_dev->aes_cmdbuf_cpuvaddr[i++] =
-		__nvhost_opcode_nonincr(opcode_addr + 0x34, 1);
-	se_dev->aes_cmdbuf_cpuvaddr[i++] = SE_OPERATION_WRSTALL(WRSTALL_TRUE) |
-					SE_OPERATION_OP(OP_DUMMY);
-
 	while (total) {
 		if (total == nbytes) {
 			se_dev->aes_cmdbuf_cpuvaddr[i++] =

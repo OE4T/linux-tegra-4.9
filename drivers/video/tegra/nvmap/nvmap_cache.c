@@ -59,6 +59,8 @@ int nvmap_cache_maint_by_set_ways;
 static int nvmap_cache_maint_by_set_ways_on_one_cpu;
 #endif
 
+static struct static_key nvmap_disable_vaddr_for_cache_maint;
+
 inline static void nvmap_flush_dcache_all(void *dummy)
 {
 #if defined(CONFIG_DENVER_CPU)
@@ -185,6 +187,9 @@ static void heap_page_cache_maint(
 		nvmap_handle_mkclean(h, start, end-start);
 		nvmap_zap_handle(h, start, end - start);
 	}
+
+	if (static_key_false(&nvmap_disable_vaddr_for_cache_maint))
+		goto per_page_cache_maint;
 
 	if (inner) {
 		if (!h->vaddr) {
@@ -705,6 +710,11 @@ int nvmap_cache_debugfs_init(struct dentry *nvmap_root)
 				    NULL,
 				    &cache_outer_threshold_fops);
 	}
+
+	debugfs_create_atomic_t("nvmap_disable_vaddr_for_cache_maint",
+				S_IRUSR | S_IWUSR,
+				cache_root,
+				&nvmap_disable_vaddr_for_cache_maint.enabled);
 
 	return 0;
 }

@@ -268,10 +268,6 @@
 		status = "disabled";
 	};
 
-	iommu@12000000 {
-		status = "disabled";
-	};
-
 	usb_cd@7009f000 {
 		status = "disabled";
 	};

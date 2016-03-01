@@ -15,7 +15,7 @@
  */
 
 #include "tegra186-platforms/tegra186-vcm31-e2681-common.dtsi"
-#include "tegra186-platforms/tegra186-vcm31-p2382-disp.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-62681-disp.dtsi"
 #include "t186-status-override/tegra186-vcm31-e2681-0003-a01-dt-status-override.dtsi"
 
 / {

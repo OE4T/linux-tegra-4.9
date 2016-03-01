@@ -640,4 +640,36 @@
 	rtcpu-vinotify {
 		status = "disabled";
 	};
+
+        host1x {
+		nvdisplay@15200000 {
+			/delete-property/ vdd_hdmi_5v0-supply;
+			/delete-property/ vdd-dp-pad-supply;
+			/delete-property/ vdd-edp-sec-mode-supply;
+			/delete-property/ vdd-dp-pwr-supply;
+			/delete-property/ avdd-dp-pll-supply;
+			/delete-property/ avdd_dsi_csi-supply;
+			/delete-property/ avdd_hdmi-supply;
+			/delete-property/ avdd_hdmi_pll-supply;
+		};
+		nvdisplay@15210000 {
+			/delete-property/ vdd_hdmi_5v0-supply;
+			/delete-property/ vdd-dp-pad-supply;
+			/delete-property/ vdd-edp-sec-mode-supply;
+			/delete-property/ vdd-dp-pwr-supply;
+			/delete-property/ avdd-dp-pll-supply;
+			/delete-property/ avdd_dsi_csi-supply;
+			/delete-property/ avdd_hdmi-supply;
+			/delete-property/ avdd_hdmi_pll-supply;
+		};
+		nvdisplay@15220000 {
+			/delete-property/ vdd_hdmi_5v0-supply;
+			/delete-property/ vdd-dp-pad-supply;
+			/delete-property/ vdd-edp-sec-mode-supply;
+			/delete-property/ vdd-dp-pwr-supply;
+			/delete-property/ avdd-dp-pll-supply;
+			/delete-property/ avdd_hdmi-supply;
+			/delete-property/ avdd_hdmi_pll-supply;
+		};
+        };
 };

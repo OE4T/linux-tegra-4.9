@@ -69,8 +69,9 @@
 					regulator-ramp-delay-scale = <200>;
 				};
 
-
-
+				spmic_ldo7: ldo7 {
+					maxim,fps-source = <MAX77620_FPS_SRC_DEF>;
+				};
 			};
 		};
 	};
@@ -134,6 +135,22 @@
 			enable-active-high;
 			regulator-enable-ramp-delay = <500>;
 			regulator-always-on;
+		};
+	};
+
+	spmic-otp-regulators {
+		compatible = "simple-bus";
+		device_type = "spmic-otp-regulator";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		spmic_otp_sd1: otp-regulator@1 {
+			compatible = "regulator-pmic-otp";
+			reg = <1>;
+			regulator-name = "vdd-1v2";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			regulator-boot-on;
 		};
 	};
 };

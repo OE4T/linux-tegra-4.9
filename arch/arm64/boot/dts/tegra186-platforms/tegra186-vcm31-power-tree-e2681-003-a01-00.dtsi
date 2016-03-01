@@ -23,6 +23,38 @@
 		phy_pllvdd-supply = <&vdd_dummy>;
 	};
 
+        host1x {
+		nvdisplay@15200000 {
+			vdd_hdmi_5v0-supply = <&sys_5v0>;
+			vdd-dp-pad-supply = <&spmic_ldo7>;
+			vdd-edp-sec-mode-supply = <&spmic_ldo7>;
+			vdd-dp-pwr-supply = <&vdd_3v3>;
+			avdd-dp-pll-supply = <&vdd_dummy_1v8>;
+			avdd_dsi_csi-supply = <&spmic_otp_sd1>;
+			avdd_hdmi-supply = <&spmic_ldo7>;
+			avdd_hdmi_pll-supply = <&vdd_dummy_1v8>;
+		};
+		nvdisplay@15210000 {
+			vdd_hdmi_5v0-supply = <&sys_5v0>;
+			vdd-dp-pad-supply = <&spmic_ldo7>;
+			vdd-edp-sec-mode-supply = <&spmic_ldo7>;
+			vdd-dp-pwr-supply = <&vdd_3v3>;
+			avdd-dp-pll-supply = <&vdd_dummy_1v8>;
+			avdd_dsi_csi-supply = <&spmic_otp_sd1>;
+			avdd_hdmi-supply = <&spmic_ldo7>;
+			avdd_hdmi_pll-supply = <&vdd_dummy_1v8>;
+		};
+		nvdisplay@15220000 {
+			vdd_hdmi_5v0-supply = <&sys_5v0>;
+			vdd-dp-pad-supply = <&spmic_ldo7>;
+			vdd-edp-sec-mode-supply = <&spmic_ldo7>;
+			vdd-dp-pwr-supply = <&vdd_3v3>;
+			avdd-dp-pll-supply = <&vdd_dummy_1v8>;
+			avdd_hdmi-supply = <&spmic_ldo7>;
+			avdd_hdmi_pll-supply = <&vdd_dummy_1v8>;
+		};
+        };
+
 	sdhci@3460000 { /* SDMMC_D/4 */
 		vddio_sdmmc-supply = <&vdd_dummy_1v8>;
 	};
@@ -77,6 +109,15 @@
 	};
 
 	fixed-regulators {
+		sys_5v0: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <1>;
+			regulator-name = "sys-5v0";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
 		vdd_usb0_5v: regulator@7 {
 			compatible = "regulator-fixed";
 			reg = <7>;

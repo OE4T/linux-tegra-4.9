@@ -547,4 +547,8 @@
 	gpio-keys {
 		status = "disabled";
 	};
+
+	cpufreq@e070000 {
+		nvidia,debugfs-only;
+	};
 };

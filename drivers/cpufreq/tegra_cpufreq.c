@@ -133,6 +133,8 @@ static struct freq_attr *tegra_cpufreq_attr[] = {
 static DEFINE_PER_CPU(spinlock_t, pcpu_slock);
 static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
 
+static bool debug_fs_only;
+
 static enum cluster get_cpu_cluster(uint8_t cpu)
 {
 	struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu);
@@ -178,9 +180,21 @@ static void tegra_cpu_spin(void *arg)
 	struct tegra_cpu_ctr *c = arg;
 	unsigned long flags;
 	spinlock_t *slock;
+	uint32_t preempted;
 
 	slock = &per_cpu(pcpu_slock, c->cpu);
 	spin_lock_irqsave(slock, flags);
+
+retry:
+	/**
+	 * This block of code is expected to execute without getting
+	 * preempted. The existence of EL2 & EL3 modes makes it
+	 * impossible to guarantee this.
+	 * Use ldx/stx pair to detect the preemption and retry
+	 * in case the code block is preempted.
+	 */
+
+	ldx32(&preempted);
 
 	/*
 	 * ref_clk_counter(28 bit counter) runs from constant clk,
@@ -203,6 +217,9 @@ static void tegra_cpu_spin(void *arg)
 	udelay(tfreq_data.freq_compute_delay);
 	c->coreclk_cnt = get_coreclk_count(c->cpu);
 	c->refclk_cnt = get_refclk_count(c->cpu);
+
+	if (stx32(&preempted, 1))
+		goto retry;
 
 	spin_unlock_irqrestore(slock, flags);
 }
@@ -800,6 +817,9 @@ static void free_resources(void)
 		if (tfreq_data.pcluster[cl].edvd_pub)
 			iounmap(tfreq_data.pcluster[cl].edvd_pub);
 
+		if (debug_fs_only == true)
+			continue;
+
 		/* free ndiv_to_vindex mem */
 		kfree(tfreq_data.pcluster[cl].dvfs_tbl.vindx);
 
@@ -1058,15 +1078,35 @@ static int __init tegra_cpufreq_init(void)
 		goto err_out;
 	}
 
+	ret = mem_map_device(dn);
+	if (ret)
+		goto err_out;
+
+	set_cpu_mask();
+
+	mutex_init(&tfreq_data.mlock);
+	tfreq_data.freq_compute_delay = US_DELAY;
+
+	for_each_possible_cpu(cpu) {
+		spin_lock_init(&per_cpu(pcpu_slock, cpu));
+		mutex_init(&per_cpu(pcpu_mlock, cpu));
+	}
+
+#ifdef CONFIG_DEBUG_FS
+	tegra_cpufreq_debug_init();
+#endif
+
+	if (of_property_read_bool(dn, "nvidia,debugfs-only")) {
+		debug_fs_only = true;
+		goto err_out;
+	} else
+		debug_fs_only = false;
+
 	ret = register_with_emc_bwmgr();
 	if (ret) {
 		pr_err("tegra18x-cpufreq: unable to register with emc bw manager\n");
 		goto err_out;
 	}
-
-	ret = mem_map_device(dn);
-	if (ret)
-		return ret;
 
 	ret = get_lut_from_bpmp();
 	if (ret)
@@ -1075,8 +1115,6 @@ static int __init tegra_cpufreq_init(void)
 	ret = create_ndiv_to_vindex_table();
 	if (ret)
 		goto err_free_res;
-
-	set_cpu_mask();
 
 	if (of_property_read_bool(dn, "nvidia,enable-autocc3")) {
 		pr_debug("enabling autocc3\n");
@@ -1093,18 +1131,6 @@ static int __init tegra_cpufreq_init(void)
 	ret = init_freqtbls(dn);
 	if (ret)
 		goto err_free_res;
-
-	mutex_init(&tfreq_data.mlock);
-	tfreq_data.freq_compute_delay = US_DELAY;
-
-	for_each_possible_cpu(cpu) {
-		spin_lock_init(&per_cpu(pcpu_slock, cpu));
-		mutex_init(&per_cpu(pcpu_mlock, cpu));
-	}
-
-#ifdef CONFIG_DEBUG_FS
-	tegra_cpufreq_debug_init();
-#endif
 
 	ret = cpufreq_register_driver(&tegra_cpufreq_driver);
 	if (ret)
@@ -1126,7 +1152,8 @@ static void __exit tegra_cpufreq_exit(void)
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_exit();
 #endif
-	cpufreq_unregister_driver(&tegra_cpufreq_driver);
+	if (debug_fs_only != true)
+		cpufreq_unregister_driver(&tegra_cpufreq_driver);
 	free_allocated_res_exit();
 }
 

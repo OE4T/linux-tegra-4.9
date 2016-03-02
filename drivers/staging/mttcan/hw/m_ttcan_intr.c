@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -56,7 +56,7 @@ void ttcan_ttier_write(struct ttcan_controller *ttcan, u32 val)
 	ttcan_write32(ttcan, ADR_MTTCAN_TTIE, val);
 }
 
-void ttcan_enable_all_interrupts(struct ttcan_controller *ttcan, int enable)
+void ttcan_set_intrpts(struct ttcan_controller *ttcan, int enable)
 {
 	if (enable) {
 		ttcan_write32(ttcan, ADR_MTTCAN_IE, ttcan->intr_enable_reg);

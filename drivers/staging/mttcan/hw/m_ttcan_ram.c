@@ -198,8 +198,9 @@ int ttcan_write_tx_msg_ram(struct ttcan_controller *ttcan, u32 write_addrs,
 	return idx;
 }
 
-void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, int filter_index,
-			     u8 sft, u8 sfec, u32 sfid1, u32 sfid2)
+void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, void *std_shadow,
+				int filter_index, u8 sft, u8 sfec, u32 sfid1,
+				u32 sfid2)
 {
 	u32 filter_elem = 0;
 	void __iomem *filter_addr =
@@ -216,10 +217,12 @@ void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, int filter_index,
 	filter_elem |= (sft << MTT_STD_FLTR_SFT_SHIFT) & MTT_STD_FLTR_SFT_MASK;
 
 	pr_debug("%s %p\n", __func__, (filter_addr + filter_offset));
+	memcpy((char *)std_shadow + filter_offset, &filter_elem,
+		SIDF_ELEM_SIZE);
 	writel(filter_elem, (void __iomem *)(filter_addr + filter_offset));
 }
 
-void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan)
+void ttcan_prog_std_id_fltrs(struct ttcan_controller *ttcan, void *std_shadow)
 {
 	int idx;
 	u32 list_size = ttcan->mram_cfg[MRAM_SIDF].num;
@@ -227,7 +230,8 @@ void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan)
 					ttcan->mram_cfg[MRAM_SIDF].off;
 	for (idx = 0; idx < list_size; idx++) {
 		u32 offset = idx * SIDF_ELEM_SIZE;
-		writel(0, (void __iomem *)(filter_addr + offset));
+		writel(*(u32 *)((u8 *)std_shadow + offset),
+			(void __iomem *)(filter_addr + offset));
 	}
 }
 
@@ -240,7 +244,7 @@ u32 ttcan_get_std_id_filter(struct ttcan_controller *ttcan, int idx)
 	return readl(filter_addr + filter_offset);
 }
 
-void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan)
+void ttcan_prog_xtd_id_fltrs(struct ttcan_controller *ttcan, void *xtd_shadow)
 {
 	int idx;
 	u32 list_size = ttcan->mram_cfg[MRAM_XIDF].num;
@@ -250,30 +254,17 @@ void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan)
 	for (idx = 0; idx < list_size; idx++) {
 		u32 offset = idx * XIDF_ELEM_SIZE;
 
-		writel(0, (void __iomem *)(filter_addr + offset));
-		writel(0, (void __iomem *)(filter_addr + offset +
+		writel(*(u32 *)((u8 *)xtd_shadow + offset),
+			(void __iomem *)(filter_addr + offset));
+		writel(*(u32 *)((u8 *)xtd_shadow + offset + CAN_WORD_IN_BYTES),
+			(void __iomem *)(filter_addr + offset +
 			CAN_WORD_IN_BYTES));
 	}
 }
 
-void ttcan_reset_trigger_mem(struct ttcan_controller *ttcan)
-{
-	int idx;
-	void __iomem *filter_addr = ttcan->mram_vbase +
-			ttcan->mram_cfg[MRAM_TMC].off;
-	u32 list_size = ttcan->mram_cfg[MRAM_TMC].num;
-
-	for (idx = 0; idx < list_size; idx++) {
-		u32 offset = idx * TRIG_ELEM_SIZE;
-
-		writel(0, (void __iomem *)(filter_addr + offset));
-		writel(0, (void __iomem *)(filter_addr + offset +
-					CAN_WORD_IN_BYTES));
-	}
-}
-
-void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, int filter_index,
-			     u8 eft, u8 efec, u32 efid1, u32 efid2)
+void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, void *xtd_shadow,
+				int filter_index, u8 eft, u8 efec, u32 efid1,
+				u32 efid2)
 {
 	struct mttcan_xtd_id_filt_element xfilter_elem;
 	void __iomem *filter_addr =
@@ -289,6 +280,8 @@ void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, int filter_index,
 	xfilter_elem.f1 |= (efid2 << MTT_XTD_FLTR_F1_EFID2_SHIFT) &
 		MTT_XTD_FLTR_F1_EFID2_MASK;
 
+	memcpy((char *)xtd_shadow + filter_offset, &xfilter_elem,
+		XIDF_ELEM_SIZE);
 	writel(xfilter_elem.f0,
 	       (void __iomem *)(filter_addr + filter_offset));
 	writel(xfilter_elem.f1,
@@ -323,15 +316,33 @@ u64 ttcan_get_trigger_mem(struct ttcan_controller *ttcan, int idx)
 	return trig;
 }
 
-int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, int trig_index,
-			  u16 time_mark, u16 cycle_code, u8 tmin, u8 tmex,
-			  u16 trig_type, u8 filter_type,
-			  u8 mesg_num)
+void ttcan_prog_trigger_mem(struct ttcan_controller *ttcan, void *tmc_shadow)
+{
+	int idx;
+	void __iomem *filter_addr = ttcan->mram_vbase +
+			ttcan->mram_cfg[MRAM_TMC].off;
+	u32 list_size = ttcan->mram_cfg[MRAM_TMC].num;
+
+	for (idx = 0; idx < list_size; idx++) {
+		u32 offset = idx * TRIG_ELEM_SIZE;
+
+		writel(*(u32 *)((char *)tmc_shadow + idx),
+			(void __iomem *)(filter_addr + offset));
+		writel(*(u32 *)((char *)tmc_shadow + idx),
+			(void __iomem *)(filter_addr + offset +
+			CAN_WORD_IN_BYTES));
+	}
+}
+
+int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, void *tmc_shadow,
+				int trig_index, u16 time_mark, u16 cycle_code,
+				u8 tmin, u8 tmex, u16 trig_type, u8 filter_type,
+				u8 mesg_num)
 {
 	struct mttcan_trig_mem_element trig_elem;
 	void __iomem *trig_mem_addr = ttcan->mram_vbase +
 					ttcan->mram_cfg[MRAM_TMC].off;
-	u32 trig_mem_offset = trig_index * TRIG_ELEM_SIZE;
+	u32 idx = trig_index * TRIG_ELEM_SIZE;
 
 	if (trig_index > 63) {
 		pr_err("%s: Incorrect Index\n", __func__);
@@ -361,11 +372,10 @@ int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, int trig_index,
 	trig_elem.f1 |= (mesg_num << MTT_TRIG_ELE_F1_MNR_SHIFT) &
 		MTT_TRIG_ELE_F1_MNR_MASK;
 
-	writel(trig_elem.f0,
-	       (void __iomem *)(trig_mem_addr + trig_mem_offset));
-	writel(trig_elem.f1,
-	       (void __iomem *)(trig_mem_addr + trig_mem_offset +
-				CAN_WORD_IN_BYTES));
+	memcpy((char *)tmc_shadow + idx, &trig_elem, TRIG_ELEM_SIZE);
+	writel(trig_elem.f0, (void __iomem *)(trig_mem_addr + idx));
+	writel(trig_elem.f1, (void __iomem *)(trig_mem_addr + idx +
+		CAN_WORD_IN_BYTES));
 
 	return 0;
 }

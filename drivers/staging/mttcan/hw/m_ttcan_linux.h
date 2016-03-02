@@ -76,13 +76,17 @@ struct mttcan_priv {
 	struct can_gpio gpio_can_stb;
 	void __iomem *regs;
 	void __iomem *mres;
+	void *std_shadow;
+	void *xtd_shadow;
+	void *tmc_shadow;
+	u32 gfc_reg;
+	u32 xidam_reg;
 	u32 irq_flags;
 	u32 irq_ttflags;
 	u32 tx_next;
 	u32 tx_echo;
 	u32 tx_object;
 	u32 tx_obj_cancelled;
-	void *priv;
 	u32 irqstatus;
 	u32 tt_irqstatus;
 	u32 instance;
@@ -94,10 +98,6 @@ struct mttcan_priv {
 	bool poll;
 };
 
-struct net_device *alloc_mttcan_dev(void);
-void free_mttcan_can_dev(struct net_device *dev);
-int register_mttcan_dev(struct net_device *dev);
-void unregister_mttcan_can_dev(struct net_device *dev);
 int mttcan_create_sys_files(struct device *dev);
 void mttcan_delete_sys_files(struct device *dev);
 #endif

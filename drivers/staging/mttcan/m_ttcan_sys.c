@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -92,6 +92,7 @@ static ssize_t store_gfc_fltr(struct device *dev,
 	gfc |= (rrfs << MTT_GFC_RRFS_SHIFT) & MTT_GFC_RRFS_MASK;
 	gfc |= (rrfe << MTT_GFC_RRFE_SHIFT) & MTT_GFC_RRFE_SHIFT;
 
+	priv->gfc_reg = gfc;
 	ttcan_set_gfc(priv->ttcan, gfc);
 
 	return count;
@@ -125,6 +126,7 @@ static ssize_t store_xidam(struct device *dev,
 		return -EINVAL;
 	}
 
+	priv->xidam_reg = xidam;
 	ttcan_set_xidam(priv->ttcan, xidam);
 
 	return count;
@@ -140,7 +142,12 @@ static ssize_t store_std_fltr(struct device *dev,
 	int ret;
 
 	struct mttcan_priv *priv = netdev_priv(to_net_dev(dev));
+	struct net_device *ndev = to_net_dev(dev);
 
+	if (ndev->flags & IFF_UP) {
+		dev_err(dev, "device is running\n");
+		return -EBUSY;
+	}
 	/* usage: sft="0/1/2/3" sfec=1...7 sfid1="ID1" sfid2="ID2" idx=%u
 	*/
 	ret = sscanf(buf, "sft=%u sfec=%u sfid1=%X sfid2=%X idx=%u", &sft,
@@ -155,7 +162,7 @@ static ssize_t store_std_fltr(struct device *dev,
 	cur_filter_size = priv->ttcan->fltr_config.std_fltr_size;
 
 	if ((idx > cur_filter_size) || (idx == -1))
-		if (cur_filter_size == priv->ttcan->mram_cfg[MRAM_SIDF].num) {
+		if (cur_filter_size >= priv->ttcan->mram_cfg[MRAM_SIDF].num) {
 			dev_err(dev, "Max Invalid std filter Index\n");
 			return -ENOSPC;
 		}
@@ -165,14 +172,13 @@ static ssize_t store_std_fltr(struct device *dev,
 			dev_err(dev, "Invalid std filter Index\n");
 			return -EINVAL;
 		}
-		ttcan_set_std_id_filter(priv->ttcan, idx, (u8)sft,
-			(u8)sfec, sfid1, sfid2);
+		ttcan_set_std_id_filter(priv->ttcan, priv->std_shadow,
+			idx, (u8)sft, (u8)sfec, sfid1, sfid2);
 		if (idx == cur_filter_size)
 			priv->ttcan->fltr_config.std_fltr_size++;
 	} else {
-		ttcan_set_std_id_filter(priv->ttcan,
-			cur_filter_size, (u8) sft,
-			(u8)sfec, sfid1, sfid2);
+		ttcan_set_std_id_filter(priv->ttcan, priv->std_shadow,
+			cur_filter_size, (u8) sft, (u8)sfec, sfid1, sfid2);
 			priv->ttcan->fltr_config.std_fltr_size++;
 	}
 	return count;
@@ -188,7 +194,12 @@ static ssize_t store_xtd_fltr(struct device *dev,
 	int ret;
 
 	struct mttcan_priv *priv = netdev_priv(to_net_dev(dev));
+	struct net_device *ndev = to_net_dev(dev);
 
+	if (ndev->flags & IFF_UP) {
+		dev_err(dev, "device is running\n");
+		return -EBUSY;
+	}
 	/* usage: eft="0/1/2/3" efec=1...7 efid1="ID1h" efid2="ID2h" idx=%u
 	*/
 	ret = sscanf(buf, "eft=%u efec=%u efid1=%X efid2=%X idx=%u", &eft,
@@ -203,7 +214,7 @@ static ssize_t store_xtd_fltr(struct device *dev,
 	cur_filter_size = priv->ttcan->fltr_config.xtd_fltr_size;
 
 	if ((idx > cur_filter_size) || (idx == -1))
-		if (cur_filter_size == priv->ttcan->mram_cfg[MRAM_XIDF].num) {
+		if (cur_filter_size >= priv->ttcan->mram_cfg[MRAM_XIDF].num) {
 			dev_err(dev, "Max Invalid std filter Index\n");
 			return -ENOSPC;
 		}
@@ -213,14 +224,13 @@ static ssize_t store_xtd_fltr(struct device *dev,
 			dev_err(dev, "Invalid std filter Index\n");
 			return -EINVAL;
 		}
-		ttcan_set_xtd_id_filter(priv->ttcan, idx, (u8) eft,
-			(u8) efec, efid1, efid2);
+		ttcan_set_xtd_id_filter(priv->ttcan, priv->xtd_shadow,
+			idx, (u8) eft, (u8) efec, efid1, efid2);
 		if (idx == cur_filter_size)
 			priv->ttcan->fltr_config.xtd_fltr_size++;
 	} else {
-		ttcan_set_xtd_id_filter(priv->ttcan,
-			cur_filter_size, (u8) eft,
-			(u8) efec, efid1, efid2);
+		ttcan_set_xtd_id_filter(priv->ttcan, priv->xtd_shadow,
+			cur_filter_size, (u8) eft, (u8) efec, efid1, efid2);
 		priv->ttcan->fltr_config.xtd_fltr_size++;
 	}
 	return count;
@@ -512,7 +522,7 @@ static ssize_t store_trigger_mem(struct device *dev,
 	cur = priv->ttcan->tt_mem_elements;
 
 	if ((idx > cur) || (idx == -1))
-		if (cur == priv->ttcan->mram_cfg[MRAM_TMC].num) {
+		if (cur >= priv->ttcan->mram_cfg[MRAM_TMC].num) {
 			dev_err(dev, "Max Invalid Trigger mem Index\n");
 			return -ENOSPC;
 		}
@@ -522,14 +532,14 @@ static ssize_t store_trigger_mem(struct device *dev,
 			dev_err(dev, "Invalid Trigger Mem Index\n");
 			return -EINVAL;
 		}
-		ttcan_set_trigger_mem(priv->ttcan, idx, tm, cc, tmin,
-			tmex, type, ftype, mnr);
+		ttcan_set_trigger_mem(priv->ttcan, priv->tmc_shadow, idx, tm,
+			cc, tmin, tmex, type, ftype, mnr);
 
 		if (idx == cur)
 			priv->ttcan->tt_mem_elements++;
 	} else {
-		ttcan_set_trigger_mem(priv->ttcan, cur, tm, cc, tmin,
-			tmex, type, ftype, mnr);
+		ttcan_set_trigger_mem(priv->ttcan,  priv->tmc_shadow, cur, tm,
+			cc, tmin, tmex, type, ftype, mnr);
 		priv->ttcan->tt_mem_elements++;
 	}
 	return count;

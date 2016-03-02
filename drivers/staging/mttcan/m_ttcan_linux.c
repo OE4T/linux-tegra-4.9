@@ -24,7 +24,7 @@
 
 #define MTTCAN_POLL_TIME 50
 
-static __init int mttcan_hw_init(const struct mttcan_priv *priv)
+static __init int mttcan_hw_init(struct mttcan_priv *priv)
 {
 	int err = 0;
 	u32 ie = 0, ttie = 0, gfc_reg = 0;
@@ -44,27 +44,28 @@ static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 	if (err)
 		return err;
 
-	ttcan_set_config_change_enable(ttcan);
+	err = ttcan_set_config_change_enable(ttcan);
+	if (err)
+		return err;
 
 	/* Accept unmatched in Rx FIFO0 and reject all remote frame */
 	gfc_reg = (GFC_ANFS_RXFIFO_0 | GFC_ANFE_RXFIFO_0 | GFC_RRFS_REJECT |
 	     GFC_RRFE_REJECT);
 
+	priv->gfc_reg = gfc_reg;
 	err = ttcan_set_gfc(ttcan, gfc_reg);
 	if (err)
 		return err;
 
 	/* Reset XIDAM to default */
+	priv->xidam_reg = DEF_MTTCAN_XIDAM;
 	ttcan_set_xidam(ttcan, DEF_MTTCAN_XIDAM);
 
 	/* Rx buffers set */
 	ttcan_set_rx_buffers_elements(ttcan);
 
 	ttcan_set_std_id_filter_addr(ttcan);
-	ttcan_reset_std_id_filter(ttcan);
 	ttcan_set_xtd_id_filter_addr(ttcan);
-	ttcan_reset_xtd_id_filter(ttcan);
-
 
 	ttcan_set_time_stamp_conf(ttcan, 9, TS_INTERNAL);
 	ttcan_set_txevt_fifo_conf(ttcan);
@@ -75,8 +76,32 @@ static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 		dev_info(priv->device, "TTCAN Enabled\n");
 		ttcan_disable_auto_retransmission(ttcan, true);
 		ttcan_set_trigger_mem_conf(ttcan);
-		ttcan_reset_trigger_mem(ttcan);
 		ttcan_set_tur_config(ttcan, 0x0800, 0x0000, 1);
+	}
+
+	if (ttcan->mram_cfg[MRAM_SIDF].num) {
+		priv->std_shadow = devm_kzalloc(priv->device,
+			(ttcan->mram_cfg[MRAM_SIDF].num * SIDF_ELEM_SIZE),
+			GFP_KERNEL);
+		if (!priv->std_shadow)
+			return -ENOMEM;
+		ttcan_prog_std_id_fltrs(ttcan, priv->std_shadow);
+	}
+	if (ttcan->mram_cfg[MRAM_XIDF].num) {
+		priv->xtd_shadow = devm_kzalloc(priv->device,
+			(ttcan->mram_cfg[MRAM_XIDF].num * XIDF_ELEM_SIZE),
+			GFP_KERNEL);
+		if (!priv->xtd_shadow)
+			return -ENOMEM;
+		ttcan_prog_xtd_id_fltrs(ttcan, priv->xtd_shadow);
+	}
+	if (ttcan->mram_cfg[MRAM_TMC].num) {
+		priv->tmc_shadow = devm_kzalloc(priv->device,
+			(ttcan->mram_cfg[MRAM_TMC].num * TRIG_ELEM_SIZE),
+			GFP_KERNEL);
+		if (!priv->tmc_shadow)
+			return -ENOMEM;
+		ttcan_prog_trigger_mem(ttcan, priv->tmc_shadow);
 	}
 
 	ttcan_clear_intr(ttcan);
@@ -84,6 +109,60 @@ static __init int mttcan_hw_init(const struct mttcan_priv *priv)
 
 	ttcan_print_version(ttcan);
 
+	return err;
+}
+
+static inline void mttcan_hw_deinit(const struct mttcan_priv *priv)
+{
+	struct ttcan_controller *ttcan = priv->ttcan;
+	ttcan_set_init(ttcan);
+}
+
+static __init int mttcan_hw_reinit(const struct mttcan_priv *priv)
+{
+	int err = 0;
+
+	struct ttcan_controller *ttcan = priv->ttcan;
+
+	ttcan_set_ok(ttcan);
+
+	err = ttcan_set_config_change_enable(ttcan);
+	if (err)
+		return err;
+
+	err = ttcan_set_gfc(ttcan, priv->gfc_reg);
+	if (err)
+		return err;
+
+	/* Reset XIDAM to default */
+	ttcan_set_xidam(ttcan, priv->xidam_reg);
+
+	/* Rx buffers set */
+	ttcan_set_rx_buffers_elements(ttcan);
+
+	ttcan_set_std_id_filter_addr(ttcan);
+	ttcan_set_xtd_id_filter_addr(ttcan);
+	ttcan_set_time_stamp_conf(ttcan, 9, TS_INTERNAL);
+	ttcan_set_txevt_fifo_conf(ttcan);
+
+	ttcan_set_tx_buffer_addr(ttcan);
+
+	if (priv->tt_param[0]) {
+		dev_info(priv->device, "TTCAN Enabled\n");
+		ttcan_disable_auto_retransmission(ttcan, true);
+		ttcan_set_trigger_mem_conf(ttcan);
+		ttcan_set_tur_config(ttcan, 0x0800, 0x0000, 1);
+	}
+
+	if (ttcan->mram_cfg[MRAM_SIDF].num)
+		ttcan_prog_std_id_fltrs(ttcan, priv->std_shadow);
+	if (ttcan->mram_cfg[MRAM_XIDF].num)
+		ttcan_prog_xtd_id_fltrs(ttcan, priv->xtd_shadow);
+	if (ttcan->mram_cfg[MRAM_TMC].num)
+		ttcan_prog_trigger_mem(ttcan, priv->tmc_shadow);
+
+	ttcan_clear_intr(ttcan);
+	ttcan_clear_tt_intr(ttcan);
 	return err;
 }
 
@@ -325,7 +404,7 @@ static int mttcan_state_change(struct net_device *dev,
 		 * disable all interrupts in bus-off mode to ensure that
 		 * the CPU is not hogged down
 		 */
-		ttcan_enable_all_interrupts(priv->ttcan, 0);
+		ttcan_set_intrpts(priv->ttcan, 0);
 		can_bus_off(dev);
 		break;
 	default:
@@ -770,7 +849,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 end:
 	if (work_done < quota) {
 		napi_complete(napi);
-		ttcan_enable_all_interrupts(priv->ttcan, 1);
+		ttcan_set_intrpts(priv->ttcan, 1);
 	}
 
 	return work_done;
@@ -812,11 +891,11 @@ static int mttcan_do_set_bittiming(struct net_device *dev)
 
 	err = ttcan_set_bitrate(priv->ttcan);
 	if (err) {
-		netdev_err(dev, "Unable to set bitrate\n");
+		netdev_err(priv->dev, "Unable to set bitrate\n");
 		return err;
 	}
 
-	netdev_info(dev, "Bitrate set\n");
+	netdev_info(priv->dev, "Bitrate set\n");
 	return 0;
 }
 
@@ -866,7 +945,7 @@ static void mttcan_start(struct net_device *dev)
 
 	priv->tx_next = priv->tx_echo = 0;
 
-	ttcan_enable_all_interrupts(priv->ttcan, 1);
+	ttcan_set_intrpts(priv->ttcan, 1);
 
 	/* Set current state of CAN controller *
 	 * It is assumed the controller is reset durning probing time
@@ -880,7 +959,7 @@ static void mttcan_start(struct net_device *dev)
 	if (psr & MTT_PSR_BO_MASK) {
 		/* Bus off */
 		priv->can.state = CAN_STATE_BUS_OFF;
-		ttcan_enable_all_interrupts(priv->ttcan, 0);
+		ttcan_set_intrpts(priv->ttcan, 0);
 		can_bus_off(dev);
 	} else if (psr & MTT_PSR_EP_MASK) {
 		/* Error Passive */
@@ -902,10 +981,9 @@ static void mttcan_start(struct net_device *dev)
 			msecs_to_jiffies(MTTCAN_POLL_TIME));
 }
 
-static void mttcan_stop(struct net_device *dev)
+static void mttcan_stop(struct mttcan_priv *priv)
 {
-	struct mttcan_priv *priv = netdev_priv(dev);
-	ttcan_enable_all_interrupts(priv->ttcan, 0);
+	ttcan_set_intrpts(priv->ttcan, 0);
 
 	priv->can.state = CAN_STATE_STOPPED;
 
@@ -925,7 +1003,7 @@ static int mttcan_set_mode(struct net_device *dev, enum can_mode mode)
 	return 0;
 }
 
-struct net_device *alloc_mttcan_dev(void)
+static struct net_device *alloc_mttcan_dev(void)
 {
 	struct net_device *dev;
 	struct mttcan_priv *priv;
@@ -971,7 +1049,7 @@ static irqreturn_t mttcan_isr(int irq, void *dev_id)
 			ttcan_set_config_change_enable(priv->ttcan);
 
 	/* disable and clear all interrupts */
-	ttcan_enable_all_interrupts(priv->ttcan, 0);
+	ttcan_set_intrpts(priv->ttcan, 0);
 
 	/* schedule the NAPI */
 	napi_schedule(&priv->napi);
@@ -988,7 +1066,7 @@ static void mttcan_work(struct work_struct *work)
 
 	if (priv->irqstatus || priv->tt_irqstatus) {
 		/* disable and clear all interrupts */
-		ttcan_enable_all_interrupts(priv->ttcan, 0);
+		ttcan_set_intrpts(priv->ttcan, 0);
 
 		/* schedule the NAPI */
 		napi_schedule(&priv->napi);
@@ -997,24 +1075,44 @@ static void mttcan_work(struct work_struct *work)
 		msecs_to_jiffies(MTTCAN_POLL_TIME));
 }
 
-static int mttcan_power_up(struct net_device *dev)
+static int mttcan_power_up(struct mttcan_priv *priv)
 {
-	struct mttcan_priv *priv = netdev_priv(dev);
-
+	int level;
 	mttcan_pm_runtime_get_sync(priv);
 
-	return ttcan_power_down(priv->ttcan, 0);
+	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
+		level = !priv->gpio_can_stb.active_low;
+		gpio_direction_output(priv->gpio_can_stb.gpio, level);
+	}
+
+	if (gpio_is_valid(priv->gpio_can_en.gpio)) {
+		level = !priv->gpio_can_en.active_low;
+		gpio_direction_output(priv->gpio_can_en.gpio, level);
+	}
+
+	return ttcan_set_power(priv->ttcan, 1);
 }
 
 static int mttcan_power_down(struct net_device *dev)
 {
+	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
 
 	if (!(dev->flags & IFF_UP))
 		return 0;
 
-	if (ttcan_power_down(priv->ttcan, 1))
+	if (ttcan_set_power(priv->ttcan, 0))
 		return -ETIMEDOUT;
+
+	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
+		level = priv->gpio_can_stb.active_low;
+		gpio_direction_output(priv->gpio_can_stb.gpio, level);
+	}
+
+	if (gpio_is_valid(priv->gpio_can_en.gpio)) {
+		level = priv->gpio_can_en.active_low;
+		gpio_direction_output(priv->gpio_can_en.gpio, level);
+	}
 
 	mttcan_pm_runtime_put_sync(priv);
 
@@ -1024,33 +1122,14 @@ static int mttcan_power_down(struct net_device *dev)
 static int mttcan_open(struct net_device *dev)
 {
 	int err;
-	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
 
 	mttcan_pm_runtime_get_sync(priv);
 
-	err = mttcan_power_up(dev);
+	err = mttcan_power_up(priv);
 	if (err) {
 		netdev_err(dev, "unable to power on\n");
-		goto exit;
-	}
-	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
-		err = gpio_request(priv->gpio_can_stb.gpio, "gpio_can_stb");
-		if (err) {
-			netdev_err(dev, "stb gpio request failed\n");
-			goto exit;
-		}
-		level = !priv->gpio_can_stb.active_low;
-		gpio_direction_output(priv->gpio_can_stb.gpio, level);
-	}
-	if (gpio_is_valid(priv->gpio_can_en.gpio)) {
-		err = gpio_request(priv->gpio_can_en.gpio, "gpio_can_en");
-		if (err) {
-			netdev_err(dev, "stb gpio request failed\n");
-			goto exit_free_gpio;
-		}
-		level = !priv->gpio_can_en.active_low;
-		gpio_direction_output(priv->gpio_can_en.gpio, level);
+		goto exit_open_fail;
 	}
 	err = open_candev(dev);
 	if (err) {
@@ -1076,35 +1155,18 @@ static int mttcan_open(struct net_device *dev)
 fail:
 	close_candev(dev);
 exit_open_fail:
-	if (gpio_is_valid(priv->gpio_can_en.gpio))
-		gpio_free(priv->gpio_can_en.gpio);
-exit_free_gpio:
-	if (gpio_is_valid(priv->gpio_can_stb.gpio))
-		gpio_free(priv->gpio_can_stb.gpio);
-exit:
 	mttcan_pm_runtime_put_sync(priv);
 	return err;
 }
 
 static int mttcan_close(struct net_device *dev)
 {
-	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
 	netif_stop_queue(dev);
 	napi_disable(&priv->napi);
 	mttcan_power_down(dev);
-	mttcan_stop(dev);
+	mttcan_stop(priv);
 	close_candev(dev);
-	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
-		level = priv->gpio_can_en.active_low;
-		gpio_direction_output(priv->gpio_can_stb.gpio, level);
-		gpio_free(priv->gpio_can_stb.gpio);
-	}
-	if (gpio_is_valid(priv->gpio_can_en.gpio)) {
-		level = priv->gpio_can_en.active_low;
-		gpio_direction_output(priv->gpio_can_en.gpio, level);
-		gpio_free(priv->gpio_can_en.gpio);
-	}
 	mttcan_pm_runtime_put_sync(priv);
 
 	can_led_event(dev, CAN_LED_EVENT_STOP);
@@ -1172,9 +1234,20 @@ static const struct net_device_ops mttcan_netdev_ops = {
 	.ndo_change_mtu = mttcan_change_mtu,
 };
 
-int register_mttcan_dev(struct net_device *dev)
+static int register_mttcan_dev(struct net_device *dev)
 {
-	struct mttcan_priv *priv = netdev_priv(dev);
+	int err;
+
+	dev->netdev_ops = &mttcan_netdev_ops;
+	err = register_candev(dev);
+	if (!err)
+		devm_can_led_init(dev);
+
+	return err;
+}
+
+static int mttcan_prepare_clock(struct mttcan_priv *priv)
+{
 	int err;
 
 	mttcan_pm_runtime_enable(priv);
@@ -1183,32 +1256,24 @@ int register_mttcan_dev(struct net_device *dev)
 	if (err)
 		return err;
 	err = clk_prepare_enable(priv->cclk);
-	if (err) {
+	if (err)
 		clk_disable_unprepare(priv->hclk);
-		return err;
-	}
-
-	dev->netdev_ops = &mttcan_netdev_ops;
-
-	err = register_candev(dev);
-	if (err) {
-		mttcan_pm_runtime_disable(priv);
-		clk_disable_unprepare(priv->hclk);
-		clk_disable_unprepare(priv->cclk);
-	}
-	else
-		devm_can_led_init(dev);
 
 	return err;
 }
+
+static void mttcan_unprepare_clock(struct mttcan_priv *priv)
+{
+	clk_disable_unprepare(priv->hclk);
+	clk_disable_unprepare(priv->cclk);
+}
+
 
 void unregister_mttcan_dev(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
 	unregister_candev(dev);
 	mttcan_pm_runtime_disable(priv);
-	clk_disable_unprepare(priv->hclk);
-	clk_disable_unprepare(priv->cclk);
 }
 
 void free_mttcan_dev(struct net_device *dev)
@@ -1342,12 +1407,6 @@ static int mttcan_probe(struct platform_device *pdev)
 	xregs = devm_ioremap_resource(&pdev->dev, ext_res);
 	mram_addr = devm_ioremap_resource(&pdev->dev, mesg_ram);
 
-	pr_debug("%s: res %llx ext_res %llx  mem %llx\n", __func__,
-			ctrl_res->start, ext_res->start,
-			mesg_ram->start);
-	pr_debug("remapped : regs %p xregs %p mram_addr %p\n",
-			regs, xregs, mram_addr);
-
 	if (!mram_addr || !xregs || !regs) {
 		dev_err(&pdev->dev, "failed to map can port\n");
 		ret = -ENOMEM;
@@ -1362,6 +1421,7 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (set_can_clk_src_and_rate(priv, 40000000))
 		goto exit_free_device;
 
+	/* set device-tree properties */
 	priv->gpio_can_en.gpio = of_get_named_gpio_flags(np,
 					"gpio_can_en", 0, &flags);
 	priv->gpio_can_en.active_low = flags & OF_GPIO_ACTIVE_LOW;
@@ -1386,6 +1446,24 @@ static int mttcan_probe(struct platform_device *pdev)
 		dev_err(priv->device, "mram-param missing\n");
 		goto exit_free_device;
 	}
+
+	if (gpio_is_valid(priv->gpio_can_stb.gpio)) {
+		if (devm_gpio_request(priv->device, priv->gpio_can_stb.gpio,
+			"gpio_can_stb") < 0) {
+			dev_err(priv->device, "stb gpio request failed\n");
+			goto exit_free_device;
+		}
+	}
+	if (gpio_is_valid(priv->gpio_can_en.gpio)) {
+		if (devm_gpio_request(priv->device, priv->gpio_can_en.gpio,
+			"gpio_can_en") < 0) {
+			dev_err(priv->device, "stb gpio request failed\n");
+			goto exit_free_device;
+		}
+	}
+
+
+	/* allocate controller struct memory and set fields */
 	priv->ttcan =
 	    devm_kzalloc(priv->device, sizeof(struct ttcan_controller),
 			 GFP_KERNEL);
@@ -1413,14 +1491,7 @@ static int mttcan_probe(struct platform_device *pdev)
 		INIT_DELAYED_WORK(&priv->can_work, mttcan_work);
 	}
 
-	ret = register_mttcan_dev(dev);
-	if (ret) {
-		dev_err(&pdev->dev, "registering %s failed (err=%d)\n",
-			KBUILD_MODNAME, ret);
-		goto exit_free_device;
-	}
-
-	ret = mttcan_power_up(dev);
+	ret = mttcan_prepare_clock(priv);
 	if (ret)
 		goto exit_free_device;
 
@@ -1428,14 +1499,26 @@ static int mttcan_probe(struct platform_device *pdev)
 	if (ret)
 		goto exit_free_device;
 
+	ret = register_mttcan_dev(dev);
+	if (ret) {
+		dev_err(&pdev->dev, "registering %s failed (err=%d)\n",
+			KBUILD_MODNAME, ret);
+		goto exit_hw_deinit;
+	}
+
 	ret = mttcan_create_sys_files(&dev->dev);
 	if (ret)
-		goto exit_free_device;
+		goto exit_unreg_candev;
 
 	dev_info(&dev->dev, "%s device registered (regs=%p, irq=%d)\n",
 		 KBUILD_MODNAME, priv->ttcan->base, dev->irq);
 	return 0;
 
+exit_unreg_candev:
+	unregister_mttcan_dev(dev);
+exit_hw_deinit:
+	mttcan_hw_deinit(priv);
+	mttcan_unprepare_clock(priv);
 exit_free_device:
 	platform_set_drvdata(pdev, NULL);
 exit_free_can:
@@ -1455,14 +1538,9 @@ static int mttcan_remove(struct platform_device *pdev)
 	dev_info(&dev->dev, "%s\n", __func__);
 
 	mttcan_delete_sys_files(&dev->dev);
-	mttcan_power_down(dev);
-
-	mttcan_stop(dev);
-
 	unregister_mttcan_dev(dev);
-
+	mttcan_unprepare_clock(priv);
 	platform_set_drvdata(pdev, NULL);
-
 	free_mttcan_dev(dev);
 
 	return 0;
@@ -1485,7 +1563,7 @@ static int mttcan_suspend(struct platform_device *pdev, pm_message_t state)
 		return ret;
 	}
 
-	mttcan_stop(ndev);
+	mttcan_stop(priv);
 
 	priv->can.state = CAN_STATE_SLEEPING;
 	return 0;
@@ -1502,9 +1580,14 @@ static int mttcan_resume(struct platform_device *pdev)
 		return -EBUSY;
 	}
 
-	ret = mttcan_power_up(ndev);
+	ret = mttcan_power_up(priv);
 	if (ret)
 		return ret;
+
+	ret = mttcan_hw_reinit(priv);
+	if (ret)
+		return ret;
+
 	mttcan_start(ndev);
 
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;

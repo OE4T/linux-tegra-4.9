@@ -150,7 +150,7 @@ int ttcan_set_config_change_enable(struct ttcan_controller *ttcan)
 	return 0;
 }
 
-int ttcan_power_down(struct ttcan_controller *ttcan, int down)
+int ttcan_set_power(struct ttcan_controller *ttcan, int value)
 {
 
 	u32 cccr_reg;
@@ -158,7 +158,7 @@ int ttcan_power_down(struct ttcan_controller *ttcan, int down)
 
 	cccr_reg = ttcan_read32(ttcan, ADR_MTTCAN_CCCR);
 	cccr_reg &= ~(MTT_CCCR_CSR_MASK);
-	cccr_reg |= (down << MTT_CCCR_CSR_SHIFT) & MTT_CCCR_CSR_MASK;
+	cccr_reg |= ((~value) << MTT_CCCR_CSR_SHIFT) & MTT_CCCR_CSR_MASK;
 	ttcan_write32(ttcan, ADR_MTTCAN_CCCR, cccr_reg);
 
 	do {
@@ -166,7 +166,7 @@ int ttcan_power_down(struct ttcan_controller *ttcan, int down)
 		udelay(1);
 		timeout--;
 	} while (((cccr_reg & MTT_CCCR_CSA_MASK) >> MTT_CCCR_CSA_SHIFT)
-		 != down && timeout);
+		 == value && timeout);
 
 	if (!timeout) {
 		pr_err("Controller %s Timeout\n", __func__);

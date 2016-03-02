@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -269,20 +269,6 @@ struct ttcan_txevt_msg_list {
 
 struct ttcan_controller {
 	spinlock_t lock;
-	void __iomem *base;	/* controller regs space should be remapped. */
-	void __iomem *xbase;    /* extra registers are mapped */
-	void __iomem *mram_vbase;
-	size_t mram_base;
-	u16 list_status;	/* bit 0: 1=Full; */
-	u16 resv0;
-	u32 id;
-	u32 proto_state;
-	u32 intr_enable_reg;
-	u32 intr_tt_enable_reg;
-	u32 ts_prescalar;
-	u32 tt_mem_elements;
-	u64 ts_counter;
-	u8 tx_buf_dlc[32];
 	struct ttcan_element_size e_size;
 	struct ttcan_bittiming_fd bt_config;
 	struct ttcan_txbuff_config tx_config;
@@ -293,11 +279,25 @@ struct ttcan_controller {
 	struct list_head rx_q1;
 	struct list_head rx_b;
 	struct list_head tx_evt;
+	void __iomem *base;	/* controller regs space should be remapped. */
+	void __iomem *xbase;    /* extra registers are mapped */
+	void __iomem *mram_vbase;
+	size_t mram_base;
+	u8 tx_buf_dlc[32];
+	u64 ts_counter;
+	u32 id;
+	u32 proto_state;
+	u32 intr_enable_reg;
+	u32 intr_tt_enable_reg;
+	u32 ts_prescalar;
+	u32 tt_mem_elements;
 	int rxq0_mem;
 	int rxq1_mem;
 	int rxb_mem;
 	int evt_mem;
 	int buf_idx;
+	u16 list_status;	/* bit 0: 1=Full; */
+	u16 resv0;
 };
 
 static inline u8 ttcan_dlc2len(u8 dlc)
@@ -397,7 +397,7 @@ int ttcan_write32_check(struct ttcan_controller *ttcan,
 void ttcan_set_ok(struct ttcan_controller *ttcan);
 int ttcan_set_init(struct ttcan_controller *ttcan);
 int ttcan_reset_init(struct ttcan_controller *ttcan);
-int ttcan_power_down(struct ttcan_controller *ttcan, int down);
+int ttcan_set_power(struct ttcan_controller *ttcan, int value);
 int ttcan_set_config_change_enable(struct ttcan_controller *ttcan);
 void ttcan_reset_config_change_enable(struct ttcan_controller *ttcan);
 int ttcan_set_baudrate(struct ttcan_controller *ttcan, int fdflags);
@@ -435,14 +435,16 @@ int ttcan_tx_msg_buffer_write(struct ttcan_controller *ttcan,
 				struct ttcanfd_frame *ttcanfd,
 				bool tt_en);
 
-void ttcan_reset_std_id_filter(struct ttcan_controller *ttcan);
-void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, int filter_index,
-			     u8 sft, u8 sfec, u32 sfid1, u32 sfid2);
+void ttcan_prog_std_id_fltrs(struct ttcan_controller *ttcan, void *std_shadow);
+void ttcan_set_std_id_filter(struct ttcan_controller *ttcan, void *std_shadow,
+				int filter_index, u8 sft, u8 sfec, u32 sfid1,
+				u32 sfid2);
 u32 ttcan_get_std_id_filter(struct ttcan_controller *ttcan, int idx);
 
-void ttcan_reset_xtd_id_filter(struct ttcan_controller *ttcan);
-void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, int filter_index,
-			     u8 eft, u8 efec, u32 efid1, u32 efid2);
+void ttcan_prog_xtd_id_fltrs(struct ttcan_controller *ttcan, void *xtd_shadow);
+void ttcan_set_xtd_id_filter(struct ttcan_controller *ttcan, void *xtd_shadow,
+				int filter_index, u8 eft, u8 efec, u32 efid1,
+				u32 efid2);
 u64 ttcan_get_xtd_id_filter(struct ttcan_controller *ttcan, int idx);
 
 void ttcan_set_std_id_filter_addr(struct ttcan_controller *ttcan);
@@ -485,7 +487,7 @@ void ttcan_ir_write(struct ttcan_controller *ttcan, u32 value);
 void ttcan_ttir_write(struct ttcan_controller *ttcan, u32 value);
 u32 ttcan_read_ir(struct ttcan_controller *ttcan);
 u32 ttcan_read_ttir(struct ttcan_controller *ttcan);
-void ttcan_enable_all_interrupts(struct ttcan_controller *ttcan, int enable);
+void ttcan_set_intrpts(struct ttcan_controller *ttcan, int enable);
 
 /* TTCAN APIS */
 void ttcan_set_trigger_mem_conf(struct ttcan_controller *ttcan);
@@ -504,8 +506,8 @@ u32 ttcan_get_tttmc(struct ttcan_controller *ttcan);
 u32 ttcan_get_cccr(struct ttcan_controller *ttcan);
 void ttcan_set_txbar(struct ttcan_controller *ttcan, u32 value);
 u32 ttcan_get_ttost(struct ttcan_controller *ttcan);
-int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, int trig_index,
-	u16 time_mark, u16 cycle_code, u8 tmin, u8 tmex,
+int ttcan_set_trigger_mem(struct ttcan_controller *ttcan, void *tmc_shadow,
+	int trig_index,	u16 time_mark, u16 cycle_code, u8 tmin, u8 tmex,
 	u16 trig_type, u8 filter_type, u8 mesg_num);
 u64 ttcan_get_trigger_mem(struct ttcan_controller *ttcan, int idx);
 
@@ -519,7 +521,7 @@ int ttcan_set_matrix_limits(struct ttcan_controller *ttcan,
 int ttcan_set_tur_config(struct ttcan_controller *ttcan, u16 denominator,
 	u16 numerator, int local_timing_enable);
 
-void ttcan_reset_trigger_mem(struct ttcan_controller *ttcan);
+void ttcan_prog_trigger_mem(struct ttcan_controller *ttcan, void *tmc_shadow);
 
 /* list APIs */
 int add_msg_controller_list(struct ttcan_controller *ttcan,

@@ -21,6 +21,7 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 / {
         ether_qos@2490000 {
+		nvidia,use_multi_queues;
 		/* PTP_ref clock speed in MHz */
 		nvidia,ptp_ref_clock_speed = <125>;
 		/* rxq_enable_ctrl = <rx0 rx1 rx2 rx3>
@@ -37,6 +38,7 @@
 		nvidia,pause_frames = <1>; /*0=enable, 1=disable */
 		nvidia,phy-reset-gpio = <&tegra_gpio TEGRA_GPIO(M, 4) 0>;
 		nvidia,phy-intr-gpio = <&tegra_gpio TEGRA_GPIO(M, 5) 0>;
+		nvidia,phy-max-frame-size = <10>;	/* size in kbytes */
 		nvidia,eth_iso_enable = <1>; /*1=enable, 0=disable */
         };
 

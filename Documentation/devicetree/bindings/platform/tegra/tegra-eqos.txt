@@ -17,6 +17,9 @@ Required properties:
 - clock-names: Specifies the names of the needed clocks.
 - resets: Specifies the reset line.
 - reset-names: Specifies the name of the reset line.
+- nvidia,use_multi_queues: If specified, enables multi queue support.
+	Default is use_multi_queues is specified.  Otherwise, only
+	one queue is enabled.
 - nvidia,ptp_ref_clock_speed: Specified in microseconds.
 - nvidia,rxq_enable_ctrl: An array where each entry specifies operating
 	mode for rx queue.
@@ -24,6 +27,9 @@ Required properties:
 	tx and rx queue.
 - nvidia,phy-reset-gpio: Specifies gpio pin for resetting PHY.
 - nvidia,phy-intr-gpio: Specifies gpio pin for PHY interrupts.
+- nvidia,phy-max-frame-size: Specifies maximum frame size supported by
+	PHY in kilobytes.  Default is 10kb.   Will determine maximum
+	jumbo frame size allowed.
 
 Optional properties:
 - nvidia,use_tagged_ptp: If specified, enables tagged PTP.

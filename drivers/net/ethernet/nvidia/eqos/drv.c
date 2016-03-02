@@ -977,7 +977,6 @@ static void eqos_configure_rx_fun_ptr(struct eqos_prv_data *pdata)
 {
 	DBGPR("-->eqos_configure_rx_fun_ptr\n");
 
-	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->process_rx_completions = process_rx_completions;
 	pdata->alloc_rx_buf = eqos_alloc_rx_buf;
 
@@ -1118,7 +1117,7 @@ void free_txrx_irqs(struct eqos_prv_data *pdata)
 
 	free_irq(pdata->common_irq, pdata);
 
-	for (i = 0; i < MAX_CHANS; i++) {
+	for (i = 0; i < pdata->num_chans; i++) {
 		if (pdata->rx_irq_alloc_mask & (1 << i)) {
 			irq_set_affinity_hint(pdata->rx_irqs[i], NULL);
 			free_irq(pdata->rx_irqs[i], pdata);
@@ -1149,7 +1148,7 @@ int request_txrx_irqs(struct eqos_prv_data *pdata)
 		ret = -EBUSY;
 		goto err_common_irq;
 	}
-	for (i = 0; i < MAX_CHANS; i++) {
+	for (i = 0; i < pdata->num_chans; i++) {
 
 		ret = request_irq(pdata->rx_irqs[i],
 				  eqos_ch_isr, 0, DEV_NAME, pdata);
@@ -3960,10 +3959,53 @@ static int eqos_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
 
 static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 {
+	struct eqos_prv_data *pdata = netdev_priv(dev);
+	struct platform_device *pdev = pdata->pdev;
+	int max_frame = (new_mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN);
+
 	DBGPR("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
-	DBGPR("Changing MTU not supported\n");
+
+#ifdef EQOS_CONFIG_PGTEST
+	dev_err(&pdev->dev, "jumbo frames not supported with PG test\n");
+	return -EOPNOTSUPP;
+#endif
+	if (pdata->dt_cfg.use_multi_q) {
+		dev_err(&pdev->dev,
+			"mtu cannot be modified in multi queue mode\n");
+		return -EOPNOTSUPP;
+	}
+	if ((new_mtu != 1500) && (new_mtu != 4074) && (new_mtu != 9000)) {
+		dev_err(&pdev->dev, "valid mtus are 1500, 4074, or 9000\n");
+		return -EINVAL;
+	}
+	if (max_frame > (pdata->dt_cfg.phy_max_frame_size)) {
+		dev_err(&pdev->dev, "mtu exceeds phy max frame size of %d",
+			pdata->dt_cfg.phy_max_frame_size);
+		return -EINVAL;
+	}
+	if (dev->mtu == new_mtu) {
+		dev_err(&pdev->dev, "already configured to mtu %d\n", new_mtu);
+		return 0;
+	}
+
+	dev_info(&pdev->dev, "changing MTU from %d to %d\n", dev->mtu, new_mtu);
+
+	eqos_stop_dev(pdata);
+
+	if (max_frame <= 2048) {
+		pdata->rx_buffer_len = 2048;
+	} else {
+		pdata->rx_buffer_len = ALIGN_SIZE(max_frame);
+	}
+	pdata->rx_max_frame_size = max_frame;
+
+	dev->mtu = new_mtu;
+
+	eqos_start_dev(pdata);
+
 	DBGPR("<--eqos_change_mtu\n");
-	return -1;
+
+	return 0;
 }
 
 #ifdef EQOS_QUEUE_SELECT_ALGO
@@ -5651,7 +5693,7 @@ static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 
 	DBGPR("-->%s()\n", __func__);
 
-	for (i = 0; i < MAX_CHANS; i++)
+	for (i = 0; i < pdata->num_chans; i++)
 		hw_if->disable_chan_interrupts(i, pdata);
 
 	/* disable mac interrupts */
@@ -5659,7 +5701,7 @@ static void eqos_disable_all_irqs(struct eqos_prv_data *pdata)
 
 	/* ensure irqs are not executing */
 	synchronize_irq(pdata->common_irq);
-	for (i = 0; i < MAX_CHANS; i++) {
+	for (i = 0; i < pdata->num_chans; i++) {
 		if (pdata->rx_irq_alloc_mask & (1 << i))
 			synchronize_irq(pdata->rx_irqs[i]);
 		if (pdata->tx_irq_alloc_mask & (1 << i))
@@ -5701,10 +5743,10 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 		del_timer_sync(&pdata->eee_ctrl_timer);
 
 	/* return tx skbs */
-	desc_if->tx_skb_free_mem(pdata, MAX_CHANS);
+	desc_if->tx_skb_free_mem(pdata, pdata->num_chans);
 
 	/* free rx skb's */
-	desc_if->rx_skb_free_mem(pdata, MAX_CHANS);
+	desc_if->rx_skb_free_mem(pdata, pdata->num_chans);
 
 	DBGPR("<--%s()\n", __func__);
 }

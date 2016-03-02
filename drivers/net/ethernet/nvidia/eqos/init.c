@@ -686,6 +686,8 @@ int eqos_probe(struct platform_device *pdev)
 
 	struct eqos_cfg *pdt_cfg;
 	struct chan_data *pchinfo;
+	bool	use_multi_q;
+	uint	num_chans;
 
 	DBGPR("-->%s()\n", __func__);
 
@@ -759,9 +761,15 @@ int eqos_probe(struct platform_device *pdev)
 		goto err_out_dev_failed;
 	}
 
+	use_multi_q = of_property_read_bool(node, "nvidia,use_multi_queues");
+	if (use_multi_q)
+		num_chans = MAX_CHANS;
+	else
+		num_chans = 1;
+
 	/* allocate and set up the ethernet device */
-	ndev = alloc_etherdev_mqs(sizeof(struct eqos_prv_data),
-				MAX_CHANS, MAX_CHANS);
+	ndev = alloc_etherdev_mqs(sizeof(struct eqos_prv_data), num_chans,
+				  num_chans);
 	if (ndev == NULL) {
 		pr_err("%s:Unable to alloc new net device\n",
 		    DEV_NAME);
@@ -843,10 +851,6 @@ int eqos_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto err_out_pad_calibrate_failed;
 
-	/* queue count */
-	pdata->tx_queue_cnt = get_tx_queue_count();
-	pdata->rx_queue_cnt = get_rx_queue_count();
-
 #ifdef EQOS_CONFIG_DEBUGFS
 	/* to give prv data to debugfs */
 	eqos_get_pdata(pdata);
@@ -862,6 +866,9 @@ int eqos_probe(struct platform_device *pdev)
 		pdata->rx_irqs[j] = rx_irqs[j];
 		pdata->tx_irqs[j] = tx_irqs[j];
 	}
+
+	pdata->tx_queue_cnt = num_chans;
+	pdata->rx_queue_cnt = num_chans;
 
 	eqos_get_all_hw_features(pdata);
 
@@ -890,11 +897,18 @@ int eqos_probe(struct platform_device *pdev)
 		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
+	pdata->dt_cfg.use_multi_q = use_multi_q;
+
 	pdata->ptp_cfg.use_tagged_ptp = of_property_read_bool(node,
 			"nvidia,use_tagged_ptp");
 	get_dt_u32(pdata, "nvidia,ptp_dma_ch",
 		&(pdata->ptp_cfg.ptp_dma_ch_id),
 		PTP_DMA_CH_DEFAULT, PTP_DMA_CH_MAX);
+
+	get_dt_u32(pdata, "nvidia,phy-max-frame-size",
+		   &pdata->dt_cfg.phy_max_frame_size,
+		   PHY_MAX_FRAME_SIZE_DEFAULT, PHY_MAX_FRAME_SIZE_MAX);
+	pdata->dt_cfg.phy_max_frame_size <<= 10;
 
 	pdt_cfg = (struct eqos_cfg *)&pdata->dt_cfg;
 	get_dt_u32(pdata, "nvidia,pause_frames", &pdt_cfg->pause_frames,
@@ -911,7 +925,11 @@ int eqos_probe(struct platform_device *pdev)
 	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
 		1);
 
-	for (i = 0; i < MAX_CHANS; i++) {
+	pdata->num_chans = num_chans;
+	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
+	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;
+
+	for (i = 0; i < num_chans; i++) {
 		pchinfo = &pdata->chinfo[i];
 		pchinfo->chan_num = i;
 		pchinfo->int_mask = VIRT_INTR_CH_CRTL_RX_WR_MASK;
@@ -920,7 +938,7 @@ int eqos_probe(struct platform_device *pdev)
 		pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
 	}
 
-	for (i = 0; i < MAX_CHANS; i++)
+	for (i = 0; i < num_chans; i++)
 		pdata->napi_quota_all_chans += pdt_cfg->chan_napi_quota[i];
 
 	/* csr_clock_speed is axi_cbb_clk rate */
@@ -1000,7 +1018,7 @@ int eqos_probe(struct platform_device *pdev)
 	spin_lock_init(&pdata->tx_lock);
 	spin_lock_init(&pdata->pmt_lock);
 
-	for (i = 0; i < MAX_CHANS; i++)
+	for (i = 0; i < num_chans; i++)
 		spin_lock_init(&pdata->chinfo[i].chan_lock);
 
 	ret = register_netdev(ndev);

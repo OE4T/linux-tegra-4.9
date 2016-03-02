@@ -3653,14 +3653,19 @@ static INT configure_dma_channel(UINT qinx, struct eqos_prv_data *pdata)
 	struct rx_ring *prx_ring =
 	    GET_RX_WRAPPER_DESC(qinx);
 	ULONG p_fifo, pbl;
+	uint rx_buf_size;
 
 	DBGPR("-->configure_dma_channel\n");
 
 	/*Enable OSF mode */
 	DMA_TCR_OSP_WR(qinx, 0x1);
 
-	/*Select Rx Buffer size */
-	DMA_RCR_RBSZ_WR(qinx, EQOS_RX_BUF_LEN);
+	/* Select Rx Buffer size.  Needs to be rounded up to next multiple of
+	 * bus width
+	 */
+	rx_buf_size = ((pdata->rx_max_frame_size + (AXI_BUS_WIDTH - 1)) &
+		       ~(AXI_BUS_WIDTH - 1));
+	DMA_RCR_RBSZ_WR(qinx, rx_buf_size);
 
 	/* program RX watchdog timer */
 	if (prx_ring->use_riwt)
@@ -3789,7 +3794,7 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 
 	if (pdata->dev->mtu > EQOS_ETH_FRAME_LEN) {
 		/* Configure for Jumbo frame in MAC */
-		if (pdata->dev->mtu < EQOS_MAX_GPSL) {
+		if (pdata->dev->mtu <= EQOS_MAX_GPSL) {
 			MAC_MCR_JE_WR(0x1);
 			MAC_MCR_WD_WR(0x0);
 			MAC_MCR_GPSLCE_WR(0x0);
@@ -3877,7 +3882,7 @@ static INT eqos_yinit(struct eqos_prv_data *pdata)
 	MTL_RQDCM1R_WR(0x7060504);
 
 	i = (VIRT_INTR_CH_CRTL_RX_WR_MASK | VIRT_INTR_CH_CRTL_TX_WR_MASK);
-	for (j = 0; j < MAX_CHANS; j++) {
+	for (j = 0; j < pdata->num_chans; j++) {
 
 		VIRT_INTR_CH_STAT_WR(j, i);
 		VIRT_INTR_CH_CRTL_WR(j, pdata->chinfo[j].int_mask);

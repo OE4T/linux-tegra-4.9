@@ -127,7 +127,7 @@
 /* Enable PBLX8 setting */
 #define PBLX8
 
-/* EQOS DMA Burst size in bytes */
+/* EQOS DMA Burst size in bytes.  Note below must be power of 2 */
 #define EQOS_DMA_BURST_SIZE 128
 
 /* Width of AXI bus in bytes */
@@ -347,6 +347,10 @@
 
 #define EQOS_MAC_ADDR_LEN 6
 #define EQOS_ETH_FRAME_LEN (ETH_FRAME_LEN + ETH_FCS_LEN + VLAN_HLEN)
+
+/* max size of standard/default frame */
+#define EQOS_MAX_ETH_FRAME_LEN_DEFAULT \
+	(ETH_FRAME_LEN + ETH_FCS_LEN + VLAN_HLEN)
 
 #define FIFO_SIZE_B(x) (x)
 #define FIFO_SIZE_KB(x) (x*1024)
@@ -1301,13 +1305,19 @@ typedef enum {
 #define CHAN_NAPI_QUOTA_DEFAULT	64
 #define CHAN_NAPI_QUOTA_MAX	CHAN_NAPI_QUOTA_DEFAULT
 #define ISO_BW_DEFAULT (80 * 1024)
+
+/* PHY max frame size in kb */
+#define PHY_MAX_FRAME_SIZE_DEFAULT 10
+#define PHY_MAX_FRAME_SIZE_MAX 10
 struct eqos_cfg {
+	bool	use_multi_q;	/* 0=single queue, jumbo frames enabled */
 	rxq_ctrl_e	rxq_ctrl[MAX_CHANS];
 	uint		q_prio[MAX_CHANS];
 	uint		chan_napi_quota[MAX_CHANS];
 	pause_frames_e	pause_frames;
 	uint		iso_bw;
 	uint		eth_iso_enable;
+	u32		phy_max_frame_size; /* max size jumbo frames allowed */
 };
 
 struct chan_data {
@@ -1352,6 +1362,7 @@ struct eqos_prv_data {
 	struct eqos_cfg dt_cfg;
 	struct chan_data chinfo[MAX_CHANS];
 	uint	napi_quota_all_chans;
+	uint	num_chans;
 
 	uint rx_irq_alloc_mask;
 	uint tx_irq_alloc_mask;
@@ -1428,6 +1439,7 @@ struct eqos_prv_data {
 	int (*alloc_rx_buf) (struct eqos_prv_data *pdata,
 			     struct rx_swcx_desc *buffer, gfp_t gfp);
 	unsigned int rx_buffer_len;
+	unsigned int rx_max_frame_size;
 
 	/* variable frame burst size */
 	UINT drop_tx_pktburstcnt;

@@ -166,19 +166,18 @@
 			pinmux@0 {
 
 				pin_gpio1 {
-					maxim,fps-power-up-slot = <2>;
-					maxim,fps-power-down-slot = <6>;
+					maxim,fps-power-up-slot = <1>;
+					maxim,fps-power-down-slot = <3>;
 				};
 
 				pin_gpio2 {
 					maxim,fps-power-up-slot = <7>;
-					maxim,fps-power-down-slot = <3>;
+					maxim,fps-power-down-slot = <2>;
 				};
 
 				pin_gpio3 {
 					maxim,fps-power-up-slot = <1>;
-					maxim,fps-power-down-slot = <6>;
-					maxim,suspend-fps-power-down-slot = <7>;
+					maxim,fps-power-down-slot = <7>;
 				};
 			};
 
@@ -186,7 +185,7 @@
 				sd0 {
 					maxim,fps-source = <FPS_SRC_0>;
 					maxim,fps-power-up-slot = <5>;
-					maxim,fps-power-down-slot = <3>;
+					maxim,fps-power-down-slot = <2>;
 					regulator-enable-ramp-delay = <278>;
 					regulator-disable-ramp-delay = <153000>;
 					regulator-ramp-delay = <27500>;
@@ -194,9 +193,9 @@
 				};
 
 				sd1 {
-					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-source = <FPS_SRC_1>;
 					maxim,fps-power-up-slot = <3>;
-					maxim,fps-power-down-slot = <5>;
+					maxim,fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <211>;
 					regulator-disable-ramp-delay = <40000>;
 					regulator-ramp-delay = <27500>;
@@ -215,8 +214,8 @@
 
 				sd3 {
 					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <4>;
-					maxim,fps-power-down-slot = <3>;
+					maxim,fps-power-up-slot = <6>;
+					maxim,fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <574>;
 					regulator-disable-ramp-delay = <40000>;
 					regulator-ramp-delay = <27500>;
@@ -224,6 +223,9 @@
 				};
 
 				ldo0 {
+					maxim,fps-source = <FPS_SRC_1>;
+					maxim,fps-power-up-slot = <3>;
+					maxim,fps-power-down-slot = <3>;
 					regulator-ramp-delay = <100000>;
 				};
 
@@ -233,8 +235,8 @@
 
 				ldo2 {
 					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <2>;
-					maxim,fps-power-down-slot = <5>;
+					maxim,fps-power-up-slot = <6>;
+					maxim,fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <152>;
 					regulator-disable-ramp-delay = <14000>;
 					regulator-ramp-delay = <100000>;
@@ -275,9 +277,9 @@
 				};
 
 				ldo7 {
-					maxim,fps-source = <FPS_SRC_0>;
+					maxim,fps-source = <FPS_SRC_1>;
 					maxim,fps-power-up-slot = <4>;
-					maxim,fps-power-down-slot = <4>;
+					maxim,fps-power-down-slot = <1>;
 					regulator-enable-ramp-delay = <95>;
 					regulator-disable-ramp-delay = <15000>;
 					regulator-ramp-delay = <100000>;

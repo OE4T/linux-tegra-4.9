@@ -395,7 +395,7 @@ int tegra186_pmc_padctrl_init(struct device *dev, struct device_node *np)
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 
-static int dbg_io_pad_show(struct seq_file *s, void *unused)
+static int dbg_io_pad_voltage(struct seq_file *s, void *unused)
 {
 	unsigned int pad_mask;
 	u32 offset;
@@ -415,22 +415,51 @@ static int dbg_io_pad_show(struct seq_file *s, void *unused)
 
 	return 0;
 }
-static int dbg_io_pad_open(struct inode *inode, struct file *file)
+
+static int dbg_io_pad_dpd(struct seq_file *s, void *unused)
 {
-	return single_open(file, dbg_io_pad_show, &inode->i_private);
+	int i;
+	int enable;
+	char *estr;
+	int bit, reg;
+
+	for (i = 0; i < ARRAY_SIZE(tegra186_pads); ++i) {
+		if (tegra186_pads[i].io_dpd_bit_pos < 0)
+			continue;
+
+		bit = tegra186_pads[i].io_dpd_bit_pos;
+		reg = tegra186_pads[i].io_dpd_reg_off;
+		enable = tegra186_pmc_io_dpd_get_status(reg, bit);
+		estr = (enable) ? "enable" : "disable";
+		seq_printf(s, "PMC: IO pad DPD %s - %s\n",
+			tegra186_pads[i].pad_name, estr);
+	}
+
+	return 0;
 }
 
-static const struct file_operations debug_fops = {
-	.open	   = dbg_io_pad_open,
-	.read	   = seq_read,
-	.llseek	 = seq_lseek,
-	.release	= single_release,
-};
+#define DEBUG_IO_PAD(_f)					\
+static int dbg_io_pad_open_##_f(struct inode *inode, struct file *file) \
+{								\
+	return single_open(file, dbg_##_f, &inode->i_private);	\
+}								\
+static const struct file_operations debug_fops_##_f = {		\
+	.open		= dbg_io_pad_open_##_f,			\
+	.read		= seq_read,				\
+	.llseek		= seq_lseek,				\
+	.release	= single_release,			\
+}								\
+
+DEBUG_IO_PAD(io_pad_voltage);
+DEBUG_IO_PAD(io_pad_dpd);
 
 static int __init tegra_io_pad_debuginit(void)
 {
-	(void)debugfs_create_file("tegra_io_pad", S_IRUGO,
-				NULL, NULL, &debug_fops);
+	(void)debugfs_create_file("tegra_io_pad_voltage", S_IRUGO,
+				NULL, NULL, &debug_fops_io_pad_voltage);
+
+	(void)debugfs_create_file("tegra_io_pad_dpd", S_IRUGO,
+				NULL, NULL, &debug_fops_io_pad_dpd);
 	return 0;
 }
 late_initcall(tegra_io_pad_debuginit);

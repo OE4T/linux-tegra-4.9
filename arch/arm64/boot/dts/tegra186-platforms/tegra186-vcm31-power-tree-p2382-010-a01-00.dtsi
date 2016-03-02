@@ -263,5 +263,14 @@
 			regulator-max-microvolt = <1800000>;
 			regulator-always-on;
 		};
+
+		dvdd_wl_bt: regulator@12 {
+			compatible = "regulator-fixed";
+			reg = <12>;
+			regulator-name = "dvdd-wl_bt";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+		};
 	};
 };

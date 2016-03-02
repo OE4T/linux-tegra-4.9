@@ -162,6 +162,7 @@
 		id = <0>;
 		bluedroid_pm,shutdown-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(C, 1) 0>;
 		avdd-supply = <&vdd_wl_bt>;
+		dvdd-supply = <&dvdd_wl_bt>;
 	};
 
 	bcmdhd_wlan {

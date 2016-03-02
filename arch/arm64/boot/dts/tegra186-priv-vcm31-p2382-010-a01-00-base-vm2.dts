@@ -980,4 +980,7 @@
         /delete-node/ axip2p@2180000;
         /delete-node/ axip2p@2190000;
 
+	gpio-keys {
+		status = "disabled";
+	};
 };

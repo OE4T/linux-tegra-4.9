@@ -533,4 +533,8 @@
 		admaif_ch_num = <4>;
 		admaif_ch_list = <1>, <2>, <3>, <4>;
         };
+
+	gpio-keys {
+		status = "disabled";
+	};
 };

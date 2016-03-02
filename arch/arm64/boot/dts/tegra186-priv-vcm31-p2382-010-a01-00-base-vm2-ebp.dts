@@ -951,4 +951,8 @@
 			};
 		};
 	};
+
+	gpio-keys {
+		status = "disabled";
+	};
 };

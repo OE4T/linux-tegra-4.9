@@ -15,6 +15,7 @@
  */
 
 #include <dt-bindings/types.h>
+#include <dt-bindings/input/input.h>
 #include <dt-bindings/gpio/tmpm32x-gpio.h>
 #include <dt-bindings/input/atmel_mxt_ts.h>
 /dts-v1/;
@@ -724,6 +725,19 @@
 	soft_wdt:soft_watchdog {
 		compatible = "softdog-platform";
 		status = "okay";
+	};
+
+	gpio-keys {
+		status = "okay";
+		compatible = "gpio-keys";
+		gpio-keys,name = "gpio-keys";
+
+		power {
+			label = "Power";
+			gpios = <&tmpm32xi2c_61 TMPM32X_GPIO(K, 1) GPIO_ACTIVE_LOW>;
+			linux,code = <KEY_POWER>;
+			gpio-key,wakeup;
+		};
 	};
 };
 

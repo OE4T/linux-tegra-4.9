@@ -311,6 +311,17 @@
 			gpio = <&gpio TEGRA_GPIO(S, 4) 0>;
 			enable-active-high;
 		};
+
+		en_vdd_cam_1v2_alt: regulator@211 {
+			compatible = "regulator-fixed-sync";
+			reg = <211>;
+			regulator-name = "en-vdd-cam-1v2-alt";
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
+			vin-supply = <&vdd_3v3>;
+			gpio = <&tca9539_77 10 1>;
+			enable-active-high;
+		};
 	};
 
 	host1x {

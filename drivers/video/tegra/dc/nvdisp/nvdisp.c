@@ -1673,7 +1673,17 @@ void tegra_nvdisp_underflow_handler(struct tegra_dc *dc)
 		nvdisp_rg_underflow_uflowed_clr_f(),
 		nvdisp_rg_underflow_r());
 
-	/* Do we need to see whether the reset is done */
+	/* Check whether the reset is done */
+	reg = tegra_dc_readl(dc, nvdisp_rg_underflow_r());
+
+	if (reg & nvdisp_rg_underflow_frames_uflowed_rst_pending_f()) {
+		pr_err("nvdisp_rg_underflow_frames_uflowed_rst is pending\n");
+	} else {
+		/* Enable RG underflow logging */
+		tegra_dc_writel(dc, nvdisp_rg_underflow_enable_enable_f() |
+			nvdisp_rg_underflow_mode_red_f(),
+			nvdisp_rg_underflow_r());
+	}
 }
 
 int tegra_nvdisp_powergate_partition(int pg_id)

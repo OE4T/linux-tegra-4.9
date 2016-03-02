@@ -362,7 +362,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 #define ECC_STAT_NAME_MAX_SIZE	100
 
 
-DEFINE_HASHTABLE(ecc_hash_table, 5);
+static DEFINE_HASHTABLE(ecc_hash_table, 5);
 
 static struct device_attribute *dev_attr_sm_lrf_ecc_single_err_count_array;
 static struct device_attribute *dev_attr_sm_lrf_ecc_double_err_count_array;

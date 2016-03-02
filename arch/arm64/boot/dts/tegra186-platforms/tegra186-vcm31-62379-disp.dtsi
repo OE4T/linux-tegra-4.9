@@ -32,7 +32,7 @@
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-win = <0>;
-			win-mask = <0x00>;
+			win-mask = <0x03>;
 			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/dsi";
 		};
@@ -262,15 +262,16 @@
 				nvidia,dsi-video-burst-mode = <TEGRA_DSI_VIDEO_NONE_BURST_MODE>;
 				nvidia,dsi-refresh-rate = <60>;
 				nvidia,dsi-edp-bridge = <TEGRA_DSI_DISABLE>;
-				nvidia,panel-bridge-en-0-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>; /* PO1 */
+				nvidia,dsi-lvds-bridge = <TEGRA_DSI_ENABLE>;
+				nvidia,panel-bridge-en-0-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
 
 				/*
 				 * for 1920x1080@60Hz@148.5MHz / DSI 8 lanes 223MHz HS clk
 				 */
-				nvidia,dsi-n-data-lanes = <8>;
-				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
+				nvidia,dsi-n-data-lanes = <4>;
+				/*nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
 				nvidia,dsi-ganged-swap-links = <0>;
-				nvidia,dsi-ganged-write-to-all-links = <1>;
+				nvidia,dsi-ganged-write-to-all-links = <1>;*/
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
 					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
@@ -319,6 +320,33 @@
 			 compatible = "maxim,ds1050";
 			 reg = <0x2f>;
 			 status = "okay";
+		};
+
+		/* DSI to LVDS bridge */
+		sn65dsi85@2c {
+			compatible = "ti,sn65dsi85";
+			reg = <0x2c>;
+			status = "okay";
+			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
+			ti,pll-refclk-cfg = <0xB>; /* 137.5 < LVDS CLK < 154 MHz, HS_CLK_SRC=D-PHY */
+			ti,h-pulse-width-low = <0x2c>;
+			ti,h-pulse-width-high = <0x00>;
+			ti,v-pulse-width-low = <0x05>;
+			ti,v-pulse-width-high = <0x00>;
+			ti,h-back-porch = <0x94>;
+			ti,v-back-porch = <0x24>;
+			ti,h-front-porch = <0x58>;
+			ti,v-front-porch = <0x04>;
+		};
+
+		/* LVDS to FPDlink bridge */
+		ds90ub947-q1@0C {
+			compatible = "ti,ds90ub947-q1";
+			reg = <0x0C>;
+			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 0) 0>;
+
+			/* Set OLDI_IN_MODE to single-pixel mode */
+			init-regs = <0x4F 0x40 0x40>;
 		};
 	};
 

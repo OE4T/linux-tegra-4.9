@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -55,8 +55,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC4>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 		       <&tegra_car TEGRA186_CLK_PLLC4_OUT2>;
-		clock-names = "sdmmc4", "pll_p", "pll_c4_out2";
-		nvidia,clk-name = "sdmmc4";
+		clock-names = "sdmmc", "pll_p", "pll_c4_out2";
 		#stream-id-cells = <1>;
 		status = "disabled";
 	};
@@ -85,8 +84,7 @@
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC3>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "sdmmc3", "pll_p";
-		nvidia,clk-name = "sdmmc3";
+		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3_HV>;
 		pad-names = "sdmmc";
@@ -122,8 +120,7 @@
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC2>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "sdmmc2", "pll_p";
-		nvidia,clk-name = "sdmmc2";
+		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC2_HV>;
 		pad-names = "sdmmc";
@@ -155,8 +152,7 @@
 		reset-names = "sdmmc";
 		clocks = <&tegra_car TEGRA186_CLK_SDMMC1>,
 		       <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
-		clock-names = "sdmmc1", "pll_p";
-		nvidia,clk-name = "sdmmc1";
+		clock-names = "sdmmc", "pll_p";
 		#stream-id-cells = <1>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1_HV>;
 		pad-names = "sdmmc";

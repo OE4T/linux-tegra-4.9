@@ -403,6 +403,8 @@ static int dbg_io_pad_show(struct seq_file *s, void *unused)
 	unsigned long voltage;
 
 	for (i = 0; i < ARRAY_SIZE(tegra186_pads); ++i) {
+		if (tegra186_pads[i].bit_position < 0)
+			continue;
 		offset = BIT(tegra186_pads[i].bit_position);
 		pad_mask = tegra_pmc_pad_voltage_get(tegra186_pads[i].pad_reg);
 		voltage = (pad_mask & offset) ? tegra186_pads[i].hi_volt :

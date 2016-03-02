@@ -782,15 +782,16 @@ static int tegra_cpu_exit(struct cpufreq_policy *policy)
 }
 
 static struct cpufreq_driver tegra_cpufreq_driver = {
-	.name		= "tegra_cpufreq",
-	.flags		= CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_STICKY |
+	.name = "tegra_cpufreq",
+	.flags = CPUFREQ_ASYNC_NOTIFICATION | CPUFREQ_STICKY |
 				CPUFREQ_CONST_LOOPS,
-	.verify		= cpufreq_generic_frequency_table_verify,
-	.target_index	= tegra_setspeed,
-	.get		= tegra_get_speed,
-	.init		= tegra_cpu_init,
-	.exit		= tegra_cpu_exit,
-	.attr		= tegra_cpufreq_attr,
+	.verify = cpufreq_generic_frequency_table_verify,
+	.target_index = tegra_setspeed,
+	.get = tegra_get_speed,
+	.init = tegra_cpu_init,
+	.exit = tegra_cpu_exit,
+	.attr = tegra_cpufreq_attr,
+	.active_cycle_cnt = get_coreclk_count,
 };
 
 /* Free lut space shared beteen CPU and BPMP */

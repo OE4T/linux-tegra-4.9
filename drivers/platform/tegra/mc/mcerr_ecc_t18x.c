@@ -32,6 +32,7 @@
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr_ecc_t18x.h>
 #include <linux/platform/tegra/tegra18_emc.h>
+#include <linux/platform/tegra/tegra_emc_err.h>
 
 static struct mc_ecc_err_log ecc_log;
 static u32 mc_emem_arb_misc1;
@@ -39,10 +40,10 @@ static u32 mc_emem_arb_cfg;
 
 void __iomem *emc;
 void __iomem *emc_regs[MAX_CHANNELS];
-u32 emc_int_status[MAX_CHANNELS];
-u32 gbl_int_status;
+static u32 emc_int_status[MAX_CHANNELS];
+static u32 gbl_int_status;
 u32 ecc_int_mask;
-u32 ecc_err_silenced;
+static u32 ecc_err_silenced;
 
 #define ecc_err_pr(fmt, ...)					\
 	do {							\
@@ -485,7 +486,7 @@ static void mc_handle_err_intr(void)
 	} while (gbl_int_status);
 }
 
-irqreturn_t tegra_ecc_error_thread(int irq, void *data)
+static irqreturn_t tegra_ecc_error_thread(int irq, void *data)
 {
 	mc_handle_err_intr();
 
@@ -494,7 +495,7 @@ irqreturn_t tegra_ecc_error_thread(int irq, void *data)
 
 	return IRQ_HANDLED;
 }
-irqreturn_t tegra_ecc_error_hard_irq(int irq, void *data)
+static irqreturn_t tegra_ecc_error_hard_irq(int irq, void *data)
 {
 	u32 ch = 0;
 

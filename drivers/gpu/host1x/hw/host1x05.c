@@ -24,11 +24,13 @@
 #include "debug_hw_t186.c"
 #include "intr_hw_t186.c"
 #include "syncpt_hw_t186.c"
+#include "stremid_hw_t186.c"
 
 #include "dev.h"
 
 int host1x05_init(struct host1x *host)
 {
+	host->dev_op = &host1x_dev_t186_ops;
 	host->channel_op = &host1x_channel_t186_ops;
 	host->cdma_op = &host1x_cdma_t186_ops;
 	host->cdma_pb_op = &host1x_pushbuffer_t186_ops;

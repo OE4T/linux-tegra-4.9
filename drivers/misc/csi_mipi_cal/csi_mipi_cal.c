@@ -165,6 +165,12 @@ static int tegra186_csi_mipical_platform_probe(struct platform_device *pdev)
 		reset_control_put(rst);
 	}
 
+#ifdef CONFIG_PM
+#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
+	tegra_nvdisp_unpowergate_partition(TEGRA186_POWER_DOMAIN_DISP);
+#endif
+#endif
+
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
 	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_DISP)) {
 		tegra_nvdisp_unpowergate_partition(TEGRA186_POWER_DOMAIN_DISP);
@@ -197,6 +203,31 @@ err:
 	return ret;
 }
 
+#ifdef CONFIG_PM
+static int tegra186_csi_mipical_suspend(
+		struct platform_device *pdev, pm_message_t state)
+{
+#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
+	tegra_nvdisp_powergate_partition(TEGRA186_POWER_DOMAIN_DISP);
+#endif
+	return 0;
+}
+
+static int tegra186_csi_mipical_resume(struct platform_device *pdev)
+{
+#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
+	struct tegra186_csi_mipical *csi_mipical;
+
+	csi_mipical = dev_get_drvdata(&pdev->dev);
+	tegra_nvdisp_unpowergate_partition(TEGRA186_POWER_DOMAIN_DISP);
+	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG0_0, 1);
+	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG1_0, 0);
+	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG2_0, 0);
+#endif
+	return 0;
+}
+#endif
+
 static struct platform_driver tegra186_csi_mipi_cal_driver = {
 	.driver = {
 		.name = DRV_NAME,
@@ -204,6 +235,10 @@ static struct platform_driver tegra186_csi_mipi_cal_driver = {
 		.of_match_table = tegra186_csi_mipical_of_match,
 	},
 	.probe = tegra186_csi_mipical_platform_probe,
+#ifdef CONFIG_PM
+	.suspend = tegra186_csi_mipical_suspend,
+	.resume = tegra186_csi_mipical_resume,
+#endif
 };
 module_platform_driver(tegra186_csi_mipi_cal_driver)
 

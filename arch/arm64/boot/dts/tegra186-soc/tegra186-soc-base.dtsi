@@ -1854,7 +1854,7 @@
 			compatible = "nvidia,tegra186-ahc";
 			interrupt-parent = <&tegra_agic>;
 			reg = <0x290b900 0x200>;
-			interrupts =  <GIC_SPI INT_AHUB_ERR IRQ_TYPE_LEVEL_HIGH>;
+			interrupts =  <GIC_SPI INT_AHUB_ERR IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>;
 			status = "disabled";
 		};
 

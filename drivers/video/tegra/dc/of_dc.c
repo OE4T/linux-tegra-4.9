@@ -640,6 +640,11 @@ static int parse_sd_settings(struct device_node *np,
 	int  sd_j = 0;
 	int sd_index = 0;
 	u32 temp;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	int gain_count;
+	int gain_array_count;
+	int backlight_count;
+#endif
 
 	if (of_device_is_available(np)) {
 		sd_settings->enable = (unsigned) 1;
@@ -671,6 +676,37 @@ static int parse_sd_settings(struct device_node *np,
 		sd_settings->sw_update_delay = (u8) temp;
 		OF_DC_LOG("nvidia,sw-update-delay %d\n", temp);
 	}
+	gain_count = 0;
+	gain_array_count = 0;
+	sd_settings->gain_luts_parsed = 0;
+	of_property_for_each_u32(np, "nvidia,gain_table", prop, p, u)
+		gain_count++;
+	if (gain_count) {
+		gain_count = 0;
+		gain_array_count = 0;
+		of_property_for_each_u32(np, "nvidia,gain_table", prop, p, u) {
+			sd_settings->pixel_gain_tables[gain_array_count]
+				[gain_count] = u;
+			if ((gain_count%32) == 31) {
+				gain_count = 0;
+				gain_array_count++;
+			} else
+				gain_count++;
+		}
+	}
+	backlight_count = 0;
+	of_property_for_each_u32(np, "nvidia,backlight_table", prop, p, u)
+		backlight_count++;
+	if (backlight_count) {
+		backlight_count = 0;
+		of_property_for_each_u32(np, "nvidia,backlight_table",
+				prop, p, u) {
+			sd_settings->backlight_table[backlight_count] = u;
+			backlight_count++;
+		}
+	}
+	if ((gain_count) && (backlight_count))
+		sd_settings->gain_luts_parsed = 1;
 #endif
 	if (!of_property_read_u32(np, "nvidia,bin-width", &temp)) {
 		s32 s32_val;

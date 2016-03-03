@@ -42,6 +42,19 @@ static void write_cpumerrsr(u64 value)
 	asm volatile("msr s3_1_c15_c2_2, %0" : "=r" (value));
 }
 
+static u64 read_l2merrsr(void)
+{
+	u64 reg;
+
+	asm volatile("mrs %0, s3_1_c15_c2_3" : "=r" (reg));
+	return reg;
+}
+
+static void write_l2merrsr(u64 value)
+{
+	asm volatile ("msr s3_1_c15_c2_3, %0" : "=r" (value));
+}
+
 static u64 read_l2ctlr(void)
 {
 	u64 reg;
@@ -71,6 +84,24 @@ static int report_serr(int cpu, int uncorrected, int corrected)
 	return 0;
 }
 
+static void print_a57_serr(struct seq_file *file, const char *fmt, ...)
+{
+	va_list args;
+	struct va_format vaf;
+
+	va_start(args, fmt);
+
+	if (file) {
+		seq_vprintf(file, fmt, args);
+	} else {
+		vaf.fmt = fmt;
+		vaf.va = &args;
+		pr_crit("%pV", &vaf);
+	}
+
+	va_end(args);
+}
+
 static struct a57_ramid ramids[] = {
 	{.name = "Instruction L1 Tag RAM", .id = 0x00},
 	{.name = "Instruction L1 Data RAM", .id = 0x01},
@@ -80,40 +111,96 @@ static struct a57_ramid ramids[] = {
 	{}
 };
 
-static void print_ramid(u64 ramid)
+static struct a57_ramid l2_ramids[] = {
+	{.name = "L2 Tag RAM", .id = 0x10},
+	{.name = "L2 Data RAM", .id = 0x11},
+	{.name = "L2 Snoop Tag RAM", .id = 0x12},
+	{.name = "L2 Dirty RAM", .id = 0x14},
+	{.name = "L2 Inclusion PF RAM", .id = 0x18},
+	{}
+};
+
+static void print_ramid(struct seq_file *file, u64 ramid)
 {
 	u64 i;
 	int found = 0;
 
 	for (i = 0; ramids[i].name; i++) {
 		if (ramids[i].id == ramid) {
-			pr_crit("\t%s: 0x%llx\n", ramids[i].name, ramid);
+			print_a57_serr(file, "\t%s: 0x%llx\n",
+				       ramids[i].name, ramid);
 			found = 1;
 			break;
 		}
 	}
 
 	if (!found)
-		pr_crit("\tUnknown RAMID: 0x%llx\n", ramid);
+		print_a57_serr(file, "\tUnknown RAMID: 0x%llx\n", ramid);
 }
 
-static void print_a57_cpumerrsr(int cpu, int cpuid, u64 syndrome)
+static void print_l2ramid(struct seq_file *file, u64 ramid)
 {
-	pr_crit("**************************************\n");
-	pr_crit("A57 CPU Memory Error on CPU %d (A57 Core %d)\n",
-		cpu, cpuid);
-	if (syndrome & A57_CPUMERRSR_FATAL)
-		pr_crit("\tFATAL Error\n");
-	print_ramid(get_a57_cpumerrsr_ramid(syndrome));
-	pr_crit("\tBank/Way of Error: 0x%llx\n",
-		get_a57_cpumerrsr_bank(syndrome));
-	pr_crit("\tIndex of Error: 0x%llx\n",
-		get_a57_cpumerrsr_index(syndrome));
-	pr_crit("\tRepeat Error Count: %lld\n",
-		get_a57_cpumerrsr_repeat(syndrome));
-	pr_crit("\tOther Error Count: %lld\n",
-		get_a57_cpumerrsr_other(syndrome));
-	pr_crit("**************************************\n");
+	u64 i;
+	int found = 0;
+
+	for (i = 0; l2_ramids[i].name; i++) {
+		if (l2_ramids[i].id == ramid) {
+			print_a57_serr(file, "\t%s: 0x%llx\n",
+				       l2_ramids[i].name, ramid);
+			found = 1;
+			break;
+		}
+	}
+
+	if (!found)
+		print_a57_serr(file, "\tUnknown RAMID: 0x%llx\n", ramid);
+}
+
+static void print_a57_cpumerrsr(struct seq_file *file, u64 syndrome)
+{
+	print_a57_serr(file, "\tCPUMERRSR: 0x%llx\n", syndrome);
+	if (syndrome & A57_CPUMERRSR_VALID) {
+		if (syndrome & A57_CPUMERRSR_FATAL)
+			print_a57_serr(file, "\tFATAL Error\n");
+		print_ramid(file, get_a57_cpumerrsr_ramid(syndrome));
+		print_a57_serr(file, "\tBank/Way of Error:  0x%llx\n",
+			       get_a57_cpumerrsr_bank(syndrome));
+		print_a57_serr(file, "\tIndex of Error:     0x%llx\n",
+			       get_a57_cpumerrsr_index(syndrome));
+		print_a57_serr(file, "\tRepeat Error Count: %llu\n",
+			       get_a57_cpumerrsr_repeat(syndrome));
+		print_a57_serr(file, "\tOther Error Count:  %llu\n",
+			       get_a57_cpumerrsr_other(syndrome));
+	}
+}
+
+static void print_a57_l2merrsr(struct seq_file *file, u64 syndrome)
+{
+	print_a57_serr(file, "\tL2MERRSR: 0x%llx\n", syndrome);
+	if (syndrome & A57_L2MERRSR_VALID) {
+		if (syndrome & A57_L2MERRSR_FATAL)
+			print_a57_serr(file, "\tFATAL Error\n");
+		print_l2ramid(file, get_a57_l2merrsr_ramid(syndrome));
+		print_a57_serr(file, "\tCPU ID of Error:    %llu\n",
+			       get_a57_l2merrsr_cpuid(syndrome));
+		print_a57_serr(file, "\tWAY of Error:       %llu\n",
+			       get_a57_l2merrsr_way(syndrome));
+		print_a57_serr(file, "\tIndex of Error:     %llu\n",
+			       get_a57_l2merrsr_index(syndrome));
+		print_a57_serr(file, "\tRepeat Error Count: %llu\n",
+			       get_a57_l2merrsr_repeat(syndrome));
+		print_a57_serr(file, "\tOther Error Count:  %llu\n",
+			       get_a57_l2merrsr_other(syndrome));
+	}
+}
+
+static void print_a57_merrsr(struct seq_file *file,
+			     u64 cpu_syndrome, u64 l2_syndrome)
+{
+	if (cpu_syndrome & A57_CPUMERRSR_VALID)
+		print_a57_cpumerrsr(file, cpu_syndrome);
+	if (l2_syndrome & A57_L2MERRSR_VALID)
+		print_a57_l2merrsr(file, l2_syndrome);
 }
 
 static DEFINE_RAW_SPINLOCK(a57_mca_lock);
@@ -121,7 +208,8 @@ static DEFINE_RAW_SPINLOCK(a57_mca_lock);
 static int a57_serr_hook(struct pt_regs *regs, int reason,
 			 unsigned int esr, void *priv)
 {
-	u64 syndrome;
+	u64 cpu_syndrome;
+	u64 l2_syndrome;
 	int cpu;
 	int cpuid;
 	u64 mpidr;
@@ -134,22 +222,106 @@ static int a57_serr_hook(struct pt_regs *regs, int reason,
 	cpuinfo = &per_cpu(cpu_data, cpu);
 
 	if (MIDR_PARTNUM(cpuinfo->reg_midr) == ARM_CPU_PART_CORTEX_A57) {
-		syndrome = read_cpumerrsr();
-		if (syndrome & A57_CPUMERRSR_VALID) {
-			mpidr = read_cpuid_mpidr();
-			cpuid = (int)MCA_ARI_EXTRACT(mpidr, 1, 0);
-			print_a57_cpumerrsr(cpu, cpuid, syndrome);
-			corrected = (get_a57_cpumerrsr_other(syndrome) != 0) ||
-				    (get_a57_cpumerrsr_repeat(syndrome) != 0);
-			report_serr(cpuid,
-				    (syndrome & A57_CPUMERRSR_FATAL) == 0ULL,
-				    corrected);
+		cpu_syndrome = read_cpumerrsr();
+		l2_syndrome = read_l2merrsr();
+		mpidr = read_cpuid_mpidr();
+		cpuid = (int)MCA_ARI_EXTRACT(mpidr, 1, 0);
+		if ((cpu_syndrome & A57_CPUMERRSR_VALID)
+		    || (l2_syndrome & A57_L2MERRSR_VALID)) {
+			pr_crit("**************************************\n");
+			pr_crit("A57 CPU Memory Error on CPU %d (A57 Core %d)\n",
+				cpu, cpuid);
+			pr_crit("\tESR:               0x%x\n", esr);
+
+			print_a57_merrsr(NULL, cpu_syndrome, l2_syndrome);
+			pr_crit("**************************************\n");
+		}
+
+		if (cpu_syndrome & A57_CPUMERRSR_VALID) {
+			if (cpu_syndrome & A57_CPUMERRSR_FATAL) {
+				corrected = (get_a57_cpumerrsr_other(cpu_syndrome) != 0) ||
+					    (get_a57_cpumerrsr_repeat(cpu_syndrome) != 0);
+				report_serr(cpuid,
+					    1,
+					    corrected);
+			}
+
 			write_cpumerrsr(0x0ULL);
 		}
+		if (l2_syndrome & A57_L2MERRSR_VALID)
+			write_l2merrsr(0x0ULL);
 	}
 
 	raw_spin_unlock_irqrestore(&a57_mca_lock, flags);
-	return 0;	/* Not handled */
+	return 0;
+}
+
+static DEFINE_MUTEX(a57_serr_mutex);
+static struct dentry *a57_serr_root;
+
+static int a57_serr_show(struct seq_file *file, void *data)
+{
+	u64 cpu_syndrome;
+	u64 l2_syndrome;
+	int cpu;
+	struct cpuinfo_arm64 *cpuinfo;
+
+	mutex_lock(&a57_serr_mutex);
+
+	cpu = smp_processor_id();
+	cpuinfo = &per_cpu(cpu_data, cpu);
+
+	if (MIDR_PARTNUM(cpuinfo->reg_midr) == ARM_CPU_PART_CORTEX_A57) {
+		cpu_syndrome = read_cpumerrsr();
+		l2_syndrome = read_l2merrsr();
+		if ((cpu_syndrome & A57_CPUMERRSR_VALID)
+		    || (l2_syndrome & A57_L2MERRSR_VALID)) {
+			print_a57_merrsr(file, cpu_syndrome, l2_syndrome);
+			if (cpu_syndrome & A57_CPUMERRSR_VALID)
+				write_cpumerrsr(0x0ULL);
+			if (l2_syndrome & A57_L2MERRSR_VALID)
+				write_l2merrsr(0x0ULL);
+		} else {
+			print_a57_serr(file,
+				       "CPUMERRSR and L2MERRSR not valid\n");
+		}
+	} else {
+		print_a57_serr(file, "Not running on an A57 CPU\n");
+	}
+
+	mutex_unlock(&a57_serr_mutex);
+	return 0;
+}
+
+static int a57_serr_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, a57_serr_show, inode->i_private);
+}
+
+static const struct file_operations tegra18_a57_serr_fops = {
+	.open = a57_serr_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release
+};
+
+static int a57_serr_dbgfs_init(void)
+{
+	struct dentry *d;
+
+	d = debugfs_create_file("a57-merrsr",
+				S_IRUGO, NULL,
+				NULL,
+				&tegra18_a57_serr_fops);
+	if (IS_ERR_OR_NULL(d)) {
+		pr_err("%s: could not create '%s' node\n",
+		       __func__, "a57_merrsr");
+		return PTR_ERR(d);
+	}
+
+	a57_serr_root = d;
+
+	return 0;
 }
 
 static struct serr_hook hook = {
@@ -159,6 +331,7 @@ static struct serr_hook hook = {
 static int __init tegra18_a57_serr_init(void)
 {
 	int cpu;
+	int rc;
 	u32 ecc_settings;
 	unsigned long flags;
 	struct cpuinfo_arm64 *cpuinfo;
@@ -186,8 +359,11 @@ static int __init tegra18_a57_serr_init(void)
 	pr_info("%s: on CPU %d a %s Core\n", __func__, cpu, core_type);
 
 	register_serr_hook(&hook);
+
+	rc = a57_serr_dbgfs_init();
+
 	raw_spin_unlock_irqrestore(&a57_mca_lock, flags);
-	return 0;
+	return rc;
 }
 module_init(tegra18_a57_serr_init);
 

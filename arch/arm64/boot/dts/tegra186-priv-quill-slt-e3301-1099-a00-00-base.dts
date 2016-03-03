@@ -41,7 +41,7 @@
 	};
 
 	mttcan@c310000 {
-		status = "okay";
+		status = "disabled";
 		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 0) GPIO_ACTIVE_HIGH>;
 		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 1) GPIO_ACTIVE_HIGH>;
 		mram-params = <0 16 16 8 8 8 16 16 16>;
@@ -50,7 +50,7 @@
 	};
 
 	mttcan@c320000 {
-		status = "okay";
+		status = "disabled";
 		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 6) GPIO_ACTIVE_HIGH>;
 		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 7) GPIO_ACTIVE_HIGH>;
 		mram-params = <0 16 16 8 8 8 16 16 16>;
@@ -124,13 +124,54 @@
 
 
 	host1x {
+		nvdisplay@15200000 {
+			status = "okay";
+		};
+
 		nvdisplay@15210000 {
 			status = "okay";
+		};
+
+		sor {
+			dp-display {
+				status = "disabled";
+			};
 		};
 
 		sor1 {
 			hdmi-display {
 				status = "okay";
+			};
+		};
+
+		sor1 {
+			status = "okay";
+			hdmi-display {
+				status = "okay";
+				nvidia,edid = <0xffffff 0xffffff00 0x10ac38a0 0x554d3433 0xf130103 0x80351e78 0xeeee91a3 0x544c9926 0xf5054a5 0x4b00714f 0x8180d1c0 0x1010101 0x1010101 0x101023a 0x80187138 0x2d40582c 0x4500132a 0x2100001e 0xff 0x593138 0x33443934 0x4133344d 0x550a0000 0xfc0044 0x454c4c20 0x53323430 0x39570a20 0xfd 0x324c1e 0x5311000a 0x20202020 0x202000bb>;
+
+				disp-default-out {
+					nvidia,out-xres = <0x780>;
+					nvidia,out-yres = <0x438>;
+				};
+
+				display-timings {
+
+					1920x1080-32 {
+						clock-frequency = <0x8d9ee20>;
+						hactive = <0x780>;
+						vactive = <0x438>;
+						hfront-porch = <0x58>;
+						hback-porch = <0x94>;
+						hsync-len = <0x2c>;
+						vfront-porch = <0x4>;
+						vback-porch = <0x24>;
+						vsync-len = <0x5>;
+						nvidia,h-ref-to-sync = <0x1>;
+						nvidia,v-ref-to-sync = <0x1>;
+					};
+				};
+
 			};
 		};
 

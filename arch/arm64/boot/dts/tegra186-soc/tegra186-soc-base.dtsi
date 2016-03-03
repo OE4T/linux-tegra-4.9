@@ -739,7 +739,6 @@
 
 		nvdisplay@15200000 {
 			compatible = "nvidia,tegra186-dc";
-			power-domains = <&mc_clk_pd>;
 			reg = <0x0 0x15200000 0x0 0x10000>;
 			interrupts = <0 153 0x04>;
 			win-mask = <0x7>;
@@ -774,7 +773,6 @@
 
 		nvdisplay@15210000 {
 			compatible = "nvidia,tegra186-dc";
-			power-domains = <&mc_clk_pd>;
                         reg = <0x0 0x15210000 0x0 0x10000>;
                         interrupts = <0 154 0x04>;
 			win-mask = <0x38>;
@@ -807,7 +805,6 @@
 
 		nvdisplay@15220000 {
 			compatible = "nvidia,tegra186-dc";
-			power-domains = <&mc_clk_pd>;
                         reg = <0x0 0x15220000 0x0 0x10000>;
                         interrupts = <0 155 0x04>;
 			win-mask = <0x0>;
@@ -1912,7 +1909,6 @@
 
 	hda@3510000 {
 		compatible = "nvidia,tegra30-hda";
-		power-domains = <&mc_clk_pd>;
 		#stream-id-cells = <1>;
 		reg = <0x0 0x3510000 0x0 0x10000>;
 		nvidia,max-codec-slot = <8>;

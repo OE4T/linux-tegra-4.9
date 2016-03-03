@@ -2,16 +2,10 @@
 	power-domain {
 		compatible = "tegra-power-domains";
 
-		mc_clk_pd: mc-clk-pd {
-			compatible = "nvidia,tegra186-mc-clk-pd";
-			#power-domain-cells = <0>;
-		};
-
 		ape_pd: ape-pd {
 			compatible = "nvidia,tegra186-ape-pd";
 			is_off;
 			#power-domain-cells = <0>;
-			power-domains = <&mc_clk_pd>;
 			partition-id = <TEGRA186_POWER_DOMAIN_AUD>;
 			clocks = <&tegra_car TEGRA186_CLK_APE>,
 				<&tegra_car TEGRA186_CLK_APB2APE>,
@@ -31,7 +25,6 @@
 			is_off;
 			host1x;
 			#power-domain-cells = <0>;
-			power-domains = <&mc_clk_pd>;
 		};
 
 		tsec_pd: tsec-pd {
@@ -108,7 +101,6 @@
 			compatible = "nvidia,tegra186-pcie-pd";
 			is_off;
 			#power-domain-cells = <0>;
-			power-domains = <&mc_clk_pd>;
 			partition-id = <TEGRA186_POWER_DOMAIN_PCX>;
 		};
 

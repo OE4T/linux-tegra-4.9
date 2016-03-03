@@ -2333,19 +2333,14 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 
 static void tegra_dp_hpd_op_edid_recheck(void *drv_data)
 {
-	struct tegra_dc_dp_data *dp = drv_data;
+	struct tegra_dc_dp_data __maybe_unused *dp = drv_data;
 
 	/*
-	 * Hpd dropped but soon came back.
-	 * Panel might have gone out of sync.
-	 * Initiate LT if hpd driver found no
-	 * change in edid and DP controller is enabled.
-	 * Otherwise, next unblank would anyways
-	 * initiate LT.
+	 * If we ever encounter panel which sends unplug event
+	 * to indicate synchronization loss, this is the placeholder.
+	 * As per specification, panel is expected to send irq_event to
+	 * indicate synchronization loss to host.
 	 */
-	if (tegra_hpd_get_state(&dp->hpd_data) ==
-		STATE_DONE_ENABLED && dp->enabled)
-		tegra_dp_lt_set_pending_evt(&dp->lt_data);
 }
 
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)

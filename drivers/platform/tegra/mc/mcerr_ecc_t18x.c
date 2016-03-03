@@ -33,6 +33,7 @@
 #include <linux/platform/tegra/mcerr_ecc_t18x.h>
 #include <linux/platform/tegra/tegra18_emc.h>
 #include <linux/platform/tegra/tegra_emc_err.h>
+#include <linux/tegra-pmc.h>
 
 static struct mc_ecc_err_log ecc_log;
 static u32 mc_emem_arb_misc1;
@@ -44,6 +45,9 @@ static u32 emc_int_status[MAX_CHANNELS];
 static u32 gbl_int_status;
 u32 ecc_int_mask;
 static u32 ecc_err_silenced;
+
+#define PMC_IMPL_CNTRL_0                          0x00
+#define MAIN_RST_MASK                             (1<<0x4)
 
 #define ecc_err_pr(fmt, ...)					\
 	do {							\
@@ -303,6 +307,11 @@ static void mc_check_ecc_err(struct mc_ecc_err_log *pecclog, u32 ch)
 	if (mc_check_dbe(pecclog)) {
 		ecc_err_pr("------DBE ERR, addr:0x%016llx\n", addr);
 		err = true;
+		mc_ecc_dump_regs(pecclog);
+		ecc_err_pr("------Rebooting for DBE-----\n");
+		/* Trigger L1C Reset at PMC */
+		tegra186_pmc_register_update(PMC_IMPL_CNTRL_0, MAIN_RST_MASK,
+							MAIN_RST_MASK);
 	}
 
 	if (err)

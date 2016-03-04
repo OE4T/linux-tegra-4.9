@@ -4426,7 +4426,7 @@ int gk20a_aelpg_init_and_enable(struct gk20a *g, u8 ctrl_id)
 	return status;
 }
 
-#if CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS
 static int elpg_residency_show(struct seq_file *s, void *data)
 {
 	struct gk20a *g = s->private;

@@ -7485,6 +7485,7 @@ static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 int gr_gk20a_debugfs_init(struct gk20a *g)
 {
 	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
@@ -7496,6 +7497,7 @@ int gr_gk20a_debugfs_init(struct gk20a *g)
 
 	return 0;
 }
+#endif
 
 static void gr_gk20a_init_cyclestats(struct gk20a *g)
 {

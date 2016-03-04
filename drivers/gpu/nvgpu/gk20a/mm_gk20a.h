@@ -337,9 +337,9 @@ struct mm_gk20a {
 #ifdef CONFIG_DEBUG_FS
 	u32 ltc_enabled;
 	u32 ltc_enabled_debug;
+#endif
 	u32 bypass_smmu;
 	u32 disable_bigpage;
-#endif
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

@@ -2955,6 +2955,25 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	unsigned long mode_bw;
 	u8 max_link_bw;
 	u32 bits_per_pixel;
+	int capability = 1;
+
+	struct tegra_vrr *vrr;
+
+	if (dc->out->vrr) {
+		vrr = dc->out->vrr;
+
+/* FIXME Bug: 1740464
+ * */
+#ifdef VRR_AUTHENTICATION_ENABLED
+		capability = vrr->capability;
+#endif
+
+		if (capability) {
+			mode->upper_margin += 2;
+			if (mode->lower_margin >= 4)
+				mode->lower_margin -= 2;
+		}
+	}
 
 	if (tegra_dc_dp_dpcd_read(dp, NV_DPCD_MAX_LINK_BANDWIDTH,
 			&max_link_bw))

@@ -18,6 +18,8 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_SOR_H__
 
+#define VRR_AUTHENTICATION_ENABLED (!CONFIG_TEGRA_NVDISPLAY)
+
 #include <linux/tegra-soc.h>
 #include <linux/clk/tegra.h>
 #include <linux/reset.h>

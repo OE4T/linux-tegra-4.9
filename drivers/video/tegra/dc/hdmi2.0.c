@@ -2501,6 +2501,42 @@ static const struct file_operations tegra_hdmi_hotplug_dbg_ops = {
 	.release = single_release,
 };
 
+static int tegra_hdmi_status_dbg_show(struct seq_file *m, void *unused)
+{
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc;
+
+	if (WARN_ON(!hdmi))
+		return -EINVAL;
+
+	dc = hdmi->dc;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	seq_printf(m, "hotplug state: %d\n", tegra_dc_hpd(dc));
+	seq_printf(m, "SCDC present: %d\n",
+		tegra_edid_is_scdc_present(hdmi->edid));
+	seq_printf(m, "Forum VSDB present: %d\n",
+		tegra_edid_is_hfvsdb_present(hdmi->edid));
+	seq_printf(m, "YCbCr4:2:0 VDB present: %d\n",
+		tegra_edid_is_420db_present(hdmi->edid));
+
+	return 0;
+}
+
+static int tegra_hdmi_status_dbg_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, tegra_hdmi_status_dbg_show,
+		inode->i_private);
+}
+
+static const struct file_operations tegra_hdmi_status_dbg_ops = {
+	.open = tegra_hdmi_status_dbg_open,
+	.read = seq_read,
+	.release = single_release,
+};
+
 static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 {
 	struct dentry *dir, *ret;
@@ -2513,7 +2549,10 @@ static void tegra_hdmi_debugfs_init(struct tegra_hdmi *hdmi)
 				hdmi, &tegra_hdmi_hotplug_dbg_ops);
 	if (IS_ERR_OR_NULL(ret))
 		goto fail;
-
+	ret = debugfs_create_file("hdmi_status", S_IRUGO, dir,
+				hdmi, &tegra_hdmi_status_dbg_ops);
+	if (IS_ERR_OR_NULL(ret))
+		goto fail;
 	return;
 fail:
 	debugfs_remove_recursive(dir);

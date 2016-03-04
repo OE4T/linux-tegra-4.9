@@ -728,6 +728,7 @@ void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu);
 int tegra_nvdisp_program_imp_results(struct tegra_dc *dc,
 				struct tegra_dc_imp_head_results imp_results[]);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
+void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
 #endif
 
 #endif

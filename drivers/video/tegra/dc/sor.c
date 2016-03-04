@@ -1430,6 +1430,10 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 	if (dc->out->flags & TEGRA_DC_OUT_NVSR_MODE)
 		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
 			DC_CMD_DISPLAY_COMMAND);
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	else if (dc->out->vrr)
+		tegra_nvdisp_set_vrr_mode(dc);
+#endif
 	else
 		tegra_dc_writel(dc, DISP_CTRL_MODE_C_DISPLAY,
 			DC_CMD_DISPLAY_COMMAND);

@@ -122,10 +122,25 @@ struct nvhost_master {
 	struct mutex vm_alloc_mutex;
 };
 
+#ifdef CONFIG_DEBUG_FS
 void nvhost_debug_init(struct nvhost_master *master);
 void nvhost_device_debug_init(struct platform_device *dev);
 void nvhost_device_debug_deinit(struct platform_device *dev);
 void nvhost_debug_dump(struct nvhost_master *master);
+#else
+static inline void nvhost_debug_init(struct nvhost_master *master)
+{
+}
+static inline void nvhost_device_debug_init(struct platform_device *dev)
+{
+}
+static inline void nvhost_device_debug_deinit(struct platform_device *dev)
+{
+}
+static inline void nvhost_debug_dump(struct nvhost_master *master)
+{
+}
+#endif
 
 int nvhost_host1x_finalize_poweron(struct platform_device *dev);
 int nvhost_host1x_prepare_poweroff(struct platform_device *dev);

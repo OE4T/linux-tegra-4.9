@@ -605,10 +605,23 @@ static inline void nvhost_unregister_dump_device(struct platform_device *dev)
 
 #else
 
+#ifdef CONFIG_DEBUG_FS
 void nvhost_register_dump_device(
 		struct platform_device *dev,
 		void (*nvgpu_debug_dump_device)(struct platform_device *));
 void nvhost_unregister_dump_device(struct platform_device *dev);
+#else
+static inline void nvhost_register_dump_device(
+		struct platform_device *dev,
+		void (*nvgpu_debug_dump_device)(struct platform_device *))
+{
+}
+
+static inline void nvhost_unregister_dump_device(struct platform_device *dev)
+{
+}
+#endif
+
 void host1x_writel(struct platform_device *dev, u32 r, u32 v);
 u32 host1x_readl(struct platform_device *dev, u32 r);
 
@@ -698,16 +711,19 @@ int nvhost_intr_register_fast_notifier(struct platform_device *pdev,
 				  void (*callback)(void *, int),
 				  void *private_data);
 
-#ifdef CONFIG_TEGRA_GRHOST
+#if defined(CONFIG_TEGRA_GRHOST) && defined(CONFIG_DEBUG_FS)
 void nvhost_debug_dump_device(struct platform_device *pdev);
-const struct firmware *
-nvhost_client_request_firmware(struct platform_device *dev,
-	const char *fw_name);
 #else
 static inline void nvhost_debug_dump_device(struct platform_device *pdev)
 {
 }
+#endif
 
+#ifdef CONFIG_TEGRA_GRHOST
+const struct firmware *
+nvhost_client_request_firmware(struct platform_device *dev,
+	const char *fw_name);
+#else
 static inline const struct firmware *
 nvhost_client_request_firmware(struct platform_device *dev,
 	const char *fw_name)

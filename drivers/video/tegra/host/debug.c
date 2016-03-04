@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (C) 2011-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (C) 2011-2016, NVIDIA Corporation. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -50,6 +50,39 @@ void nvhost_debug_output(struct output *o, const char* fmt, ...)
 	o->fn(o->ctx, o->buf, len);
 }
 
+static void show_syncpts(struct nvhost_master *m, struct output *o)
+{
+	int i;
+
+	nvhost_debug_output(o, "---- syncpts ----\n");
+	mutex_lock(&m->syncpt.syncpt_mutex);
+	for (i = nvhost_syncpt_pts_base(&m->syncpt);
+			i < nvhost_syncpt_pts_limit(&m->syncpt); i++) {
+		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
+		u32 min = nvhost_syncpt_update_min(&m->syncpt, i);
+		u32 refs = nvhost_syncpt_read_ref(&m->syncpt, i);
+		if (!min && !max)
+			continue;
+		nvhost_debug_output(o,
+				"id %d (%s) min %d max %d refs %d (previous client : %s)\n",
+				i, nvhost_get_chip_ops()->syncpt.name(&m->syncpt, i),
+				min, max, refs,
+				nvhost_syncpt_get_last_client(m->dev, i));
+	}
+	mutex_unlock(&m->syncpt.syncpt_mutex);
+
+	nvhost_debug_output(o, "\n");
+}
+
+void nvhost_syncpt_debug(struct nvhost_syncpt *sp)
+{
+	struct output o = {
+	.fn = write_to_printk,
+	};
+	show_syncpts(syncpt_to_dev(sp), &o);
+}
+
+#ifdef CONFIG_DEBUG_FS
 static int show_channels(struct platform_device *pdev, void *data,
 			 int locked_id, bool fifo)
 {
@@ -113,38 +146,6 @@ static int show_channels_no_fifo(struct platform_device *pdev, void *data,
 	return show_channels(pdev, data, locked_id, false);
 }
 
-static void show_syncpts(struct nvhost_master *m, struct output *o)
-{
-	int i;
-
-	nvhost_debug_output(o, "---- syncpts ----\n");
-	mutex_lock(&m->syncpt.syncpt_mutex);
-	for (i = nvhost_syncpt_pts_base(&m->syncpt);
-			i < nvhost_syncpt_pts_limit(&m->syncpt); i++) {
-		u32 max = nvhost_syncpt_read_max(&m->syncpt, i);
-		u32 min = nvhost_syncpt_update_min(&m->syncpt, i);
-		u32 refs = nvhost_syncpt_read_ref(&m->syncpt, i);
-		if (!min && !max)
-			continue;
-		nvhost_debug_output(o,
-				"id %d (%s) min %d max %d refs %d (previous client : %s)\n",
-				i, nvhost_get_chip_ops()->syncpt.name(&m->syncpt, i),
-				min, max, refs,
-				nvhost_syncpt_get_last_client(m->dev, i));
-	}
-	mutex_unlock(&m->syncpt.syncpt_mutex);
-
-	nvhost_debug_output(o, "\n");
-}
-
-void nvhost_syncpt_debug(struct nvhost_syncpt *sp)
-{
-	struct output o = {
-	.fn = write_to_printk,
-	};
-	show_syncpts(syncpt_to_dev(sp), &o);
-}
-
 static void show_all(struct nvhost_master *m, struct output *o,
 		     int locked_id)
 {
@@ -161,7 +162,6 @@ static void show_all(struct nvhost_master *m, struct output *o,
 	nvhost_module_idle(m->dev);
 }
 
-#ifdef CONFIG_DEBUG_FS
 static void show_all_no_fifo(struct nvhost_master *m, struct output *o,
 			     int locked_id)
 {

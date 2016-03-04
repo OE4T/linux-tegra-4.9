@@ -381,12 +381,6 @@ void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h);
 
 void nvmap_free_handle_fd(struct nvmap_client *c, int fd);
 
-int nvmap_pin_handles(struct nvmap_client *client, unsigned int nr,
-		      struct nvmap_handle * const *handles);
-
-void nvmap_unpin_handles(struct nvmap_client *priv, unsigned int nr,
-			 struct nvmap_handle * const *handles);
-
 int nvmap_handle_remove(struct nvmap_device *dev, struct nvmap_handle *h);
 
 void nvmap_handle_add(struct nvmap_device *dev, struct nvmap_handle *h);

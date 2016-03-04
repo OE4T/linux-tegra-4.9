@@ -285,7 +285,7 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 		pr_err("PID %d: %s: WARNING: "
 			"All NvMap Allocations must have a tag "
 			"to identify the subsystem allocating memory."
-			"Plase pass the tag to the API call"
+			"Please pass the tag to the API call"
 			" NvRmMemHanldeAllocAttr() or relevant. \n",
 			client->task->pid, task_comm);
 	}

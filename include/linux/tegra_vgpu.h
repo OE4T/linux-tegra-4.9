@@ -1,7 +1,7 @@
 /*
  * Tegra GPU Virtualization Interfaces to Server
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -74,7 +74,8 @@ enum {
 	TEGRA_VGPU_CMD_SET_MMU_DEBUG_MODE,
 	TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE,
 	TEGRA_VGPU_CMD_REG_OPS,
-	TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY
+	TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY,
+	TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE
 };
 
 struct tegra_vgpu_connect_params {
@@ -298,6 +299,12 @@ struct tegra_vgpu_channel_priority_params {
 	u32 priority;
 };
 
+/* level follows nvgpu.h definitions */
+struct tegra_vgpu_channel_runlist_interleave_params {
+	u64 handle;
+	u32 level;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -326,6 +333,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_sm_debug_mode sm_debug_mode;
 		struct tegra_vgpu_reg_ops_params reg_ops;
 		struct tegra_vgpu_channel_priority_params channel_priority;
+		struct tegra_vgpu_channel_runlist_interleave_params channel_interleave;
 		char padding[192];
 	} params;
 };

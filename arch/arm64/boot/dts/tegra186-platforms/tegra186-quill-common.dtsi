@@ -289,7 +289,7 @@
 
 	adsp_audio {
 		compr-ops = <1>;
-		num-plugin = <4>;
+		num-plugin = <5>;
 		plugin-info-1 {
 			plugin-name = "mp3-dec1";
 			firmware-name = "nvmp3dec.elf";
@@ -309,6 +309,11 @@
 			plugin-name = "aac-dec1";
 			firmware-name = "nvaacdec.elf";
 			widget-name = "AAC-DEC1";
+		};
+		plugin-info-5 {
+			plugin-name = "aec";
+			firmware-name = "nvoice.elf";
+			widget-name = "AEC";
 		};
 	};
 

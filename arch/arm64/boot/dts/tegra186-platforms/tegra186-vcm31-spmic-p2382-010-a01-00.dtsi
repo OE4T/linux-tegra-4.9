@@ -36,6 +36,7 @@
 			maxim,system-pmic-power-off;
 			maxim,enable-sleep;
 
+			maxim,disable-rtc;
 			maxim,avoid-rtc-bulk-register-write;
 
 			watchdog {

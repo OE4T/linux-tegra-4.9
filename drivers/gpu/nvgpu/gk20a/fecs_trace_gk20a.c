@@ -745,6 +745,7 @@ static int gk20a_fecs_trace_disable(struct gk20a *g)
 
 void gk20a_init_fecs_trace_ops(struct gpu_ops *ops)
 {
+	gk20a_ctxsw_trace_init_ops(ops);
 	ops->fecs_trace.init = gk20a_fecs_trace_init;
 	ops->fecs_trace.deinit = gk20a_fecs_trace_deinit;
 	ops->fecs_trace.enable = gk20a_fecs_trace_enable;

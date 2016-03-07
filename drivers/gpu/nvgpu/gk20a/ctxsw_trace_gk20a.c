@@ -130,42 +130,55 @@ static int gk20a_ctxsw_dev_ioctl_trace_enable(struct gk20a_ctxsw_dev *dev)
 {
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "trace enabled");
 	dev->write_enabled = true;
+	dev->g->ops.fecs_trace.enable(dev->g);
 	return 0;
 }
 
 static int gk20a_ctxsw_dev_ioctl_trace_disable(struct gk20a_ctxsw_dev *dev)
 {
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "trace disabled");
+	dev->g->ops.fecs_trace.disable(dev->g);
 	dev->write_enabled = false;
 	return 0;
 }
 
-static int gk20a_ctxsw_dev_ring_alloc(struct gk20a_ctxsw_dev *dev,
-		size_t size)
+static int gk20a_ctxsw_dev_alloc_buffer(struct gk20a_ctxsw_dev *dev,
+					size_t size)
 {
-	struct nvgpu_ctxsw_ring_header *hdr;
-
-	if (atomic_read(&dev->vma_ref))
-		return -EBUSY;
+	struct gk20a *g = dev->g;
+	void *buf;
+	int err;
 
 	if ((dev->write_enabled) || (atomic_read(&dev->vma_ref)))
 		return -EBUSY;
 
-	size = roundup(size, PAGE_SIZE);
-	hdr = vmalloc_user(size);
-	if (!hdr)
-		return -ENOMEM;
+	err = g->ops.fecs_trace.alloc_user_buffer(g, &buf, &size);
+	if (err)
+		return err;
 
-	if (dev->hdr)
-		vfree(dev->hdr);
 
-	dev->hdr = hdr;
+	dev->hdr = buf;
 	dev->ents = (struct nvgpu_ctxsw_trace_entry *) (dev->hdr + 1);
 	dev->size = size;
 
+	gk20a_dbg(gpu_dbg_ctxsw, "size=%zu hdr=%p ents=%p num_ents=%d",
+		dev->size, dev->hdr, dev->ents, dev->hdr->num_ents);
+	return 0;
+}
+
+static int gk20a_ctxsw_dev_ring_alloc(struct gk20a *g,
+		void **buf, size_t *size)
+{
+	struct nvgpu_ctxsw_ring_header *hdr;
+
+	*size = roundup(*size, PAGE_SIZE);
+	hdr = vmalloc_user(*size);
+	if (!hdr)
+		return -ENOMEM;
+
 	hdr->magic = NVGPU_CTXSW_RING_HEADER_MAGIC;
 	hdr->version = NVGPU_CTXSW_RING_HEADER_VERSION;
-	hdr->num_ents = (size - sizeof(struct nvgpu_ctxsw_ring_header))
+	hdr->num_ents = (*size - sizeof(struct nvgpu_ctxsw_ring_header))
 		/ sizeof(struct nvgpu_ctxsw_trace_entry);
 	hdr->ent_size = sizeof(struct nvgpu_ctxsw_trace_entry);
 	hdr->drop_count = 0;
@@ -173,8 +186,15 @@ static int gk20a_ctxsw_dev_ring_alloc(struct gk20a_ctxsw_dev *dev,
 	hdr->write_idx = 0;
 	hdr->write_seqno = 0;
 
-	gk20a_dbg(gpu_dbg_ctxsw, "size=%zu hdr=%p ents=%p num_ents=%d",
-		dev->size, dev->hdr, dev->ents, hdr->num_ents);
+	*buf = hdr;
+	return 0;
+}
+
+static int gk20a_ctxsw_dev_ring_free(struct gk20a *g)
+{
+	struct gk20a_ctxsw_dev *dev = &g->ctxsw_trace->devs[0];
+
+	vfree(dev->hdr);
 	return 0;
 }
 
@@ -188,13 +208,17 @@ static int gk20a_ctxsw_dev_ioctl_ring_setup(struct gk20a_ctxsw_dev *dev,
 	if (size > GK20A_CTXSW_TRACE_MAX_VM_RING_SIZE)
 		return -EINVAL;
 
-	return gk20a_ctxsw_dev_ring_alloc(dev, size);
+	return gk20a_ctxsw_dev_alloc_buffer(dev, size);
 }
 
 static int gk20a_ctxsw_dev_ioctl_set_filter(struct gk20a_ctxsw_dev *dev,
 	struct nvgpu_ctxsw_trace_filter_args *args)
 {
+	struct gk20a *g = dev->g;
+
 	dev->filter = args->filter;
+	if (g->ops.fecs_trace.set_filter)
+		g->ops.fecs_trace.set_filter(g, &dev->filter);
 	return 0;
 }
 
@@ -276,14 +300,12 @@ int gk20a_ctxsw_dev_open(struct inode *inode, struct file *filp)
 	gk20a_dbg(gpu_dbg_ctxsw, "size=%zu entries=%d ent_size=%zu",
 		size, n, sizeof(struct nvgpu_ctxsw_trace_entry));
 
-	err = gk20a_ctxsw_dev_ring_alloc(dev, size);
+	err = gk20a_ctxsw_dev_alloc_buffer(dev, size);
 	if (!err) {
 		filp->private_data = dev;
 		gk20a_dbg(gpu_dbg_ctxsw, "filp=%p dev=%p size=%zu",
 			filp, dev, size);
 	}
-
-	err = g->ops.fecs_trace.enable(g);
 
 done:
 	mutex_unlock(&dev->lock);
@@ -297,18 +319,17 @@ idle:
 int gk20a_ctxsw_dev_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_ctxsw_dev *dev = filp->private_data;
-	struct gk20a *g = container_of(inode->i_cdev, struct gk20a, ctxsw.cdev);
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "dev: %p", dev);
 
 	mutex_lock(&dev->lock);
-	dev->write_enabled = false;
+	if (dev->write_enabled)
+		gk20a_ctxsw_dev_ioctl_trace_disable(dev);
+
 	if (dev->hdr) {
-		vfree(dev->hdr);
+		dev->g->ops.fecs_trace.free_user_buffer(dev->g);
 		dev->hdr = NULL;
 	}
-
-	g->ops.fecs_trace.disable(g);
 
 	mutex_unlock(&dev->lock);
 
@@ -417,6 +438,12 @@ static struct vm_operations_struct gk20a_ctxsw_dev_vma_ops = {
 	.close = gk20a_ctxsw_dev_vma_close,
 };
 
+static int gk20a_ctxsw_dev_mmap_buffer(struct gk20a *g,
+				struct vm_area_struct *vma)
+{
+	return remap_vmalloc_range(vma, g->ctxsw_trace->devs[0].hdr, 0);
+}
+
 int gk20a_ctxsw_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 {
 	struct gk20a_ctxsw_dev *dev = filp->private_data;
@@ -425,7 +452,7 @@ int gk20a_ctxsw_dev_mmap(struct file *filp, struct vm_area_struct *vma)
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "vm_start=%lx vm_end=%lx",
 		vma->vm_start, vma->vm_end);
 
-	ret = remap_vmalloc_range(vma, dev->hdr, 0);
+	ret = dev->g->ops.fecs_trace.mmap_user_buffer(dev->g, vma);
 	if (likely(!ret)) {
 		vma->vm_private_data = dev;
 		vma->vm_ops = &gk20a_ctxsw_dev_vma_ops;
@@ -482,6 +509,7 @@ int gk20a_ctxsw_trace_init(struct gk20a *g)
 	return 0;
 
 fail:
+	memset(&g->ops.fecs_trace, 0, sizeof(g->ops.fecs_trace));
 	kfree(trace);
 	g->ctxsw_trace = NULL;
 	return err;
@@ -493,6 +521,9 @@ fail:
 void gk20a_ctxsw_trace_cleanup(struct gk20a *g)
 {
 #ifdef CONFIG_GK20A_CTXSW_TRACE
+	if (!g->ctxsw_trace)
+		return;
+
 	kfree(g->ctxsw_trace);
 	g->ctxsw_trace = NULL;
 
@@ -583,4 +614,11 @@ void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid)
 	struct gk20a_ctxsw_dev *dev = &g->ctxsw_trace->devs[vmid];
 
 	wake_up_interruptible(&dev->readout_wq);
+}
+
+void gk20a_ctxsw_trace_init_ops(struct gpu_ops *ops)
+{
+	ops->fecs_trace.alloc_user_buffer = gk20a_ctxsw_dev_ring_alloc;
+	ops->fecs_trace.free_user_buffer = gk20a_ctxsw_dev_ring_free;
+	ops->fecs_trace.mmap_user_buffer = gk20a_ctxsw_dev_mmap_buffer;
 }

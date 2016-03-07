@@ -22,6 +22,7 @@
 #include "gk20a/debug_gk20a.h"
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/hw_mc_gk20a.h"
+#include "gk20a/ctxsw_trace_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -118,6 +119,12 @@ static int vgpu_intr_thread(void *dev_id)
 		if (msg->event == TEGRA_VGPU_EVENT_ABORT) {
 			tegra_gr_comm_release(handle);
 			break;
+		}
+
+		if (msg->event == TEGRA_VGPU_EVENT_FECS_TRACE) {
+			vgpu_fecs_trace_data_update(g);
+			tegra_gr_comm_release(handle);
+			continue;
 		}
 
 		if (msg->unit == TEGRA_VGPU_INTR_GR)
@@ -334,6 +341,7 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 
 	g->gpu_characteristics.flags &= ~NVGPU_GPU_FLAGS_SUPPORT_TSG;
 
+	gk20a_ctxsw_trace_init(g);
 	gk20a_channel_resume(g);
 
 done:

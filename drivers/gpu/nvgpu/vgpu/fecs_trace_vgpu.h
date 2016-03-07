@@ -16,5 +16,6 @@
 
 struct gpu_ops;
 void vgpu_init_fecs_trace_ops(struct gpu_ops *ops);
+void vgpu_fecs_trace_data_update(struct gk20a *g);
 
 #endif /* __FECS_TRACE_VGPU_H */

@@ -391,6 +391,13 @@ struct gpu_ops {
 		int (*bind_channel)(struct gk20a *, struct channel_gk20a *);
 		int (*unbind_channel)(struct gk20a *, struct channel_gk20a *);
 		int (*deinit)(struct gk20a *g);
+		int (*alloc_user_buffer)(struct gk20a *g,
+					void **buf, size_t *size);
+		int (*free_user_buffer)(struct gk20a *g);
+		int (*mmap_user_buffer)(struct gk20a *g,
+					struct vm_area_struct *vma);
+		int (*set_filter)(struct gk20a *g,
+			struct nvgpu_ctxsw_trace_filter *filter);
 	} fecs_trace;
 	struct {
 		bool (*support_sparse)(struct gk20a *g);

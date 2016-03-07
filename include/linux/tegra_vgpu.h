@@ -77,10 +77,10 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY,
 	TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE,
 	TEGRA_VGPU_CMD_CHANNEL_SET_TIMESLICE,
-	RESVD1,
-	RESVD2,
-	RESVD3,
-	RESVD4,
+	TEGRA_VGPU_CMD_FECS_TRACE_ENABLE,
+	TEGRA_VGPU_CMD_FECS_TRACE_DISABLE,
+	TEGRA_VGPU_CMD_FECS_TRACE_POLL,
+	TEGRA_VGPU_CMD_FECS_TRACE_SET_FILTER,
 	TEGRA_VGPU_CMD_CHANNEL_SET_SMPC_CTXSW_MODE,
 	TEGRA_VGPU_CMD_CHANNEL_SET_HWPM_CTXSW_MODE,
 	TEGRA_VGPU_CMD_CHANNEL_FREE_HWPM_CTX,
@@ -319,6 +319,11 @@ struct tegra_vgpu_channel_timeslice_params {
 	u32 timeslice_us;
 };
 
+#define TEGRA_VGPU_FECS_TRACE_FILTER_SIZE 256
+struct tegra_vgpu_fecs_trace_filter {
+	u64 tag_bits[(TEGRA_VGPU_FECS_TRACE_FILTER_SIZE + 63) / 64];
+};
+
 enum {
 	TEGRA_VGPU_CTXSW_MODE_NO_CTXSW = 0,
 	TEGRA_VGPU_CTXSW_MODE_CTXSW,
@@ -363,6 +368,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_channel_priority_params channel_priority;
 		struct tegra_vgpu_channel_runlist_interleave_params channel_interleave;
 		struct tegra_vgpu_channel_timeslice_params channel_timeslice;
+		struct tegra_vgpu_fecs_trace_filter fecs_trace_filter;
 		struct tegra_vgpu_channel_set_ctxsw_mode set_ctxsw_mode;
 		struct tegra_vgpu_channel_free_hwpm_ctx free_hwpm_ctx;
 		char padding[192];
@@ -412,6 +418,15 @@ struct tegra_vgpu_ce2_nonstall_intr_info {
 };
 
 enum {
+	TEGRA_VGPU_FECS_TRACE_DATA_UPDATE = 0
+};
+
+struct tegra_vgpu_fecs_trace_event_info {
+	u32 type;
+};
+
+enum {
+
 	TEGRA_VGPU_INTR_GR = 0,
 	TEGRA_VGPU_INTR_FIFO,
 	TEGRA_VGPU_INTR_CE2,
@@ -422,7 +437,8 @@ enum {
 
 enum {
 	TEGRA_VGPU_EVENT_INTR = 0,
-	TEGRA_VGPU_EVENT_ABORT
+	TEGRA_VGPU_EVENT_ABORT,
+	TEGRA_VGPU_EVENT_FECS_TRACE
 };
 
 struct tegra_vgpu_intr_msg {
@@ -434,6 +450,7 @@ struct tegra_vgpu_intr_msg {
 		struct tegra_vgpu_fifo_intr_info fifo_intr;
 		struct tegra_vgpu_fifo_nonstall_intr_info fifo_nonstall_intr;
 		struct tegra_vgpu_ce2_nonstall_intr_info ce2_nonstall_intr;
+		struct tegra_vgpu_fecs_trace_event_info fecs_trace;
 		char padding[32];
 	} info;
 };

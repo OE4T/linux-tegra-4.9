@@ -2,7 +2,7 @@
  * LR388K7 touchscreen driver
  *
  * Copyright (C) 2014, Sharp Corporation
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Makoto Itsuki <itsuki.makoto@sharp.co.jp>
  *
@@ -260,10 +260,10 @@ static int lr388k7_hardreset(unsigned long wait)
 	if (!ts)
 		return false;
 
-	gpio_set_value(ts->gpio_reset, 0);
+	gpio_set_value_cansleep(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
 	usleep_range(wait * 1000, wait * 1000 + 1000);
-	gpio_set_value(ts->gpio_reset, 1);
+	gpio_set_value_cansleep(ts->gpio_reset, 1);
 	g_st_state.b_is_reset = false;
 	return true;
 }
@@ -280,9 +280,9 @@ static int lr388k7_set_clk_sel(unsigned int sel)
 		return false;
 
 	if (!sel)
-		gpio_set_value(ts->gpio_clk_sel, 0);
+		gpio_set_value_cansleep(ts->gpio_clk_sel, 0);
 	else
-		gpio_set_value(ts->gpio_clk_sel, 1);
+		gpio_set_value_cansleep(ts->gpio_clk_sel, 1);
 	return true;
 }
 #endif
@@ -1692,7 +1692,7 @@ static int dev_release(struct inode *inode, struct file *filp)
 	spin_unlock(&dev_spin_lock);
 
 	/* Reset assert */
-	gpio_set_value(ts->gpio_reset, 0);
+	gpio_set_value_cansleep(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
 
 	return 0;
@@ -2422,14 +2422,14 @@ static int lr388k7_probe(struct spi_device *spi)
 	if (gpio_is_valid(ts->gpio_clk_sel)) {
 #if defined(ACTIVE_ENABLE)
 		/* Select external clock */
-		gpio_set_value(ts->gpio_clk_sel, 1);
+		gpio_set_value_cansleep(ts->gpio_clk_sel, 1);
 #else
 		/* Select internal clock */
-		gpio_set_value(ts->gpio_clk_sel, 0);
+		gpio_set_value_cansleep(ts->gpio_clk_sel, 0);
 #endif
 	}
 	/* Reset assert */
-	gpio_set_value(ts->gpio_reset, 0);
+	gpio_set_value_cansleep(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
 
 	init_spi_pinctrl(ts, dev);
@@ -2725,7 +2725,7 @@ static void lr388k7_start(struct lr388k7 *ts)
 	}
 
 	/* Reset assert */
-	gpio_set_value(ts->gpio_reset, 0);
+	gpio_set_value_cansleep(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
 
 	/*
@@ -2755,7 +2755,7 @@ static void lr388k7_start(struct lr388k7 *ts)
 		clk_enable(ts->clk);
 
 	/* Reset deassert */
-	gpio_set_value(ts->gpio_reset, 1);
+	gpio_set_value_cansleep(ts->gpio_reset, 1);
 	g_st_state.b_is_reset = false;
 
 	usleep_range(12000, 13000);
@@ -2821,7 +2821,7 @@ static void lr388k7_ctrl_suspend(struct lr388k7 *ts)
 	}
 
 	/* Reset assert */
-	gpio_set_value(ts->gpio_reset, 0);
+	gpio_set_value_cansleep(ts->gpio_reset, 0);
 	g_st_state.b_is_reset = true;
 
 	mutex_unlock(&ts->mutex);

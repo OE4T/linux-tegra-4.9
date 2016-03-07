@@ -150,20 +150,6 @@ int bpmp_init_irq(void)
 	return 0;
 }
 
-static int bpmp_channel_init(void)
-{
-	int e = 0;
-	int i;
-
-	if (!mail_ops->channel_init)
-		return 0;
-
-	for (i = 0; i < NR_CHANNELS && !e; i++)
-		e = mail_ops->channel_init(i);
-
-	return e;
-}
-
 void tegra_bpmp_resume(void)
 {
 	if (mail_ops->resume)
@@ -192,7 +178,14 @@ int bpmp_connect(void)
 		return ret;
 	}
 
-	bpmp_channel_init();
+	if (mail_ops->channel_init)
+		ret = mail_ops->channel_init();
+
+	if (ret) {
+		pr_err("bpmp channel init failed (%d)\n", ret);
+		return ret;
+	}
+
 	connected = 1;
 
 	local_irq_save(flags);

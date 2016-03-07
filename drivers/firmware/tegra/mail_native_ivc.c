@@ -14,6 +14,7 @@
 #include <linux/of_address.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-instance.h>
+#include <linux/tegra-ivc.h>
 #include <linux/tegra-soc.h>
 #include "bpmp.h"
 #include "mail_t186.h"
@@ -62,6 +63,25 @@ static int native_iomem_init(void)
 	return 0;
 }
 
+static void native_ring_doorbell(int ch)
+{
+	tegra_hsp_db_ring(HSP_DB_BPMP);
+}
+
+static void native_synchronize(void)
+{
+	int i;
+
+	pr_info("bpmp: synchronizing channels\n");
+
+	for (i = 0; i < NR_CHANNELS; i++) {
+		while (tegra_ivc_channel_notified(ivc_channels + i))
+			native_ring_doorbell(i);
+	}
+
+	pr_info("bpmp: channels synchronized\n");
+}
+
 static int native_handshake(void)
 {
 	struct device_node *of_node;
@@ -98,7 +118,6 @@ static int native_handshake(void)
 
 static void native_resume(void)
 {
-	size_t sz;
 	int i;
 
 	tegra_hsp_db_enable_master(HSP_MASTER_BPMP);
@@ -107,18 +126,17 @@ static void native_resume(void)
 	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
 		;
 
-	pr_info("bpmp: resuming channels\n");
-	sz = tegra_ivc_total_queue_size(0);
-
 	for (i = 0; i < NR_CHANNELS; i++)
-		memset_io((void *)ivc_channels[i].tx_channel, 0, sz);
+		tegra_ivc_channel_reset(ivc_channels + i);
+
+	native_synchronize();
 }
 
 static void native_notify(struct ivc *ivc)
 {
 }
 
-static int native_channel_init(int ch)
+static int native_single_init(int ch)
 {
 	struct ivc *ivc;
 	uintptr_t rx_base;
@@ -135,9 +153,6 @@ static int native_channel_init(int ch)
 	rx_base = (uintptr_t)((uint8_t *)cpu_sl_page + ch * que_sz);
 	tx_base = (uintptr_t)((uint8_t *)cpu_ma_page + ch * que_sz);
 
-	/* init the channel frame */
-	memset_io((void *)tx_base, 0, hdr_sz);
-
 	ivc = ivc_channels + ch;
 	r = tegra_ivc_init(ivc, rx_base, tx_base,
 			1, msg_sz, NULL, native_notify);
@@ -147,12 +162,26 @@ static int native_channel_init(int ch)
 		return r;
 	}
 
+	tegra_ivc_channel_reset(ivc);
+	native_ring_doorbell(ch);
+
 	return 0;
 }
 
-static void native_ring_doorbell(int ch)
+static int native_channel_init(void)
 {
-	tegra_hsp_db_ring(HSP_DB_BPMP);
+	int i;
+	int r;
+
+	for (i = 0; i < NR_CHANNELS; i++) {
+		r = native_single_init(i);
+		if (r)
+			return r;
+	}
+
+	native_synchronize();
+
+	return 0;
 }
 
 static struct ivc *native_ivc_obj(int ch)

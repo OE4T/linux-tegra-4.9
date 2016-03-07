@@ -38,7 +38,7 @@ struct mail_ops {
 	int (*init_irq)(void);
 	int (*iomem_init)(void);
 	int (*handshake)(void);
-	int (*channel_init)(int ch);
+	int (*channel_init)(void);
 	struct ivc *(*ivc_obj)(int ch);
 	void (*resume)(void);
 	void (*ring_doorbell)(int ch);

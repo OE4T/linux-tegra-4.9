@@ -766,9 +766,9 @@ static irqreturn_t tegra_hdmi_hpd_irq_handler(int irq, void *ptr)
 	return IRQ_HANDLED;
 }
 
-static int tegra_hdmi_hpd_init(struct tegra_hdmi *hdmi)
+static int tegra_dc_hdmi_hpd_init(struct tegra_dc *dc)
 {
-	struct tegra_dc *dc = hdmi->dc;
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	int hotplug_gpio = dc->out->hotplug_gpio;
 	int hotplug_irq;
 	int err;
@@ -801,12 +801,11 @@ static int tegra_hdmi_hpd_init(struct tegra_hdmi *hdmi)
 			"hdmi: request_threaded_irq failed: %d\n", err);
 		goto fail;
 	}
-
+	hdmi->irq = hotplug_irq;
 
 	INIT_DELAYED_WORK(&hdmi->hpd_worker, tegra_hdmi_hpd_worker);
 
 	mutex_init(&hdmi->hpd_lock);
-	hdmi->irq = hotplug_irq;
 
 	return 0;
 fail:
@@ -1033,8 +1032,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	tegra_hdmi_ddc_init(hdmi, edid_src);
 
 	tegra_hdmi_scdc_init(hdmi);
-
-	tegra_hdmi_hpd_init(hdmi);
 
 	tegra_hdmi_vrr_init(hdmi);
 
@@ -2581,6 +2578,7 @@ static void tegra_dc_hdmi_vrr_enable(struct tegra_dc *dc, bool enable)
 
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,
+	.hotplug_init = tegra_dc_hdmi_hpd_init,
 	.destroy = tegra_dc_hdmi_destroy,
 	.enable = tegra_dc_hdmi_enable,
 	.disable = tegra_dc_hdmi_disable,

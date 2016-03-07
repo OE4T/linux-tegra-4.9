@@ -5645,38 +5645,6 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->cmu_enabled = dc->pdata->cmu_enable;
 #endif
 
-	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
-		/* WAR: BL is putting DC in bad state for EDP configuration */
-		if (!tegra_platform_is_linsim() &&
-			(dc->out->type == TEGRA_DC_OUT_DP ||
-				dc->out->type == TEGRA_DC_OUT_NVSR_DP)) {
-			tegra_disp_clk_prepare_enable(dc->clk);
-			tegra_periph_reset_assert(dc->clk);
-			udelay(10);
-			tegra_periph_reset_deassert(dc->clk);
-			udelay(10);
-			tegra_disp_clk_disable_unprepare(dc->clk);
-		}
-
-		if (dc->out_ops && dc->out_ops->hotplug_init)
-			dc->out_ops->hotplug_init(dc);
-
-		_tegra_dc_set_default_videomode(dc);
-		dc->enabled = _tegra_dc_enable(dc);
-
-#if !defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
-	!defined(CONFIG_ARCH_TEGRA_14x_SOC) && \
-	!defined(CONFIG_TEGRA_NVDISPLAY)
-		/* BL or PG init will keep DISA unpowergated after booting.
-		 * Adding an extra powergate to balance the refcount
-		 * since _tegra_dc_enable() increases the refcount.
-		 */
-		if (!tegra_platform_is_fpga())
-			if (dc->powergate_id == TEGRA_POWERGATE_DISA)
-				tegra_dc_powergate_locked(dc);
-#endif
-	}
-
 #ifdef CONFIG_TEGRA_ISOMGR
 	if (isomgr_client_id == -1) {
 		dc->isomgr_handle = NULL;
@@ -5754,6 +5722,38 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			dev_err(&ndev->dev, "failed to register fb\n");
 			goto err_remove_debugfs;
 		}
+#endif
+	}
+
+	if (dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) {
+		/* WAR: BL is putting DC in bad state for EDP configuration */
+		if (!tegra_platform_is_linsim() &&
+			(dc->out->type == TEGRA_DC_OUT_DP ||
+				dc->out->type == TEGRA_DC_OUT_NVSR_DP)) {
+			tegra_disp_clk_prepare_enable(dc->clk);
+			tegra_periph_reset_assert(dc->clk);
+			udelay(10);
+			tegra_periph_reset_deassert(dc->clk);
+			udelay(10);
+			tegra_disp_clk_disable_unprepare(dc->clk);
+		}
+
+		if (dc->out_ops && dc->out_ops->hotplug_init)
+			dc->out_ops->hotplug_init(dc);
+
+		_tegra_dc_set_default_videomode(dc);
+		dc->enabled = _tegra_dc_enable(dc);
+
+#if !defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
+	!defined(CONFIG_ARCH_TEGRA_14x_SOC) && \
+	!defined(CONFIG_TEGRA_NVDISPLAY)
+		/* BL or PG init will keep DISA unpowergated after booting.
+		 * Adding an extra powergate to balance the refcount
+		 * since _tegra_dc_enable() increases the refcount.
+		 */
+		if (!tegra_platform_is_fpga())
+			if (dc->powergate_id == TEGRA_POWERGATE_DISA)
+				tegra_dc_powergate_locked(dc);
 #endif
 	}
 

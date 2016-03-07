@@ -24,6 +24,8 @@
 
 #include "dc_config.h"
 
+#define NVDISP_ODD_VAL(x) ((x) % (2))
+
 /* Num Fractional Bits in 8.24 fixed point phase and phase increment values */
 #define NFB 24
 
@@ -372,13 +374,36 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 {
 	u32 win_options, win_params, swap_uv;
 	fixed20_12 h_offset, v_offset;
-	bool boffset = true;
+	int err = 0;
 
 	bool yuv = tegra_dc_is_yuv(win->fmt);
 	bool yuvp = tegra_dc_is_yuv_planar(win->fmt);
 	bool yuvsp = tegra_dc_is_yuv_semi_planar(win->fmt);
 
 	struct tegra_dc *dc = win->dc;
+
+	/* Check the cropped size width and height are even for YUV formats
+	 * Fail the call if not even
+	 */
+	if (yuv && (NVDISP_ODD_VAL(dfixed_trunc(win->h)) ||
+			NVDISP_ODD_VAL(dfixed_trunc(win->w)))) {
+		dev_err(&dc->ndev->dev,
+		"Window HEIGHT and WIDTH must be EVEN for YUV formats\n");
+		err = -EINVAL;
+		goto attr_fail;
+	}
+
+	h_offset.full = dfixed_floor(win->x);
+	v_offset      = win->y;
+
+	/* For YUV format X & Y must be even */
+	if (yuv && (NVDISP_ODD_VAL(dfixed_trunc(h_offset))
+		 || NVDISP_ODD_VAL(dfixed_trunc(v_offset)))) {
+		dev_err(&dc->ndev->dev,
+		"X and Y offsets must be EVEN for YUV formats\n");
+		err = -EINVAL;
+		goto attr_fail;
+	}
 
 	swap_uv = tegra_nvdisp_win_swap_uv(win);
 	nvdisp_win_write(win, tegra_dc_fmt(win->fmt), win_color_depth_r());
@@ -509,23 +534,7 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 
 	nvdisp_win_write(win, win_params, win_win_set_params_r());
 
-
-	h_offset.full = dfixed_floor(win->x);
-	v_offset      = win->y;
-
-	/* For YUV 420/422 format X & Y must be even */
-	if ((dc->mode.vmode & FB_VMODE_Y420) ||
-		(dc->mode.vmode & FB_VMODE_Y422)) {
-		if ((dfixed_trunc(h_offset) % 2 != 0)
-		 || (dfixed_trunc(v_offset) % 2 != 0)) {
-			dev_err(&dc->ndev->dev,
-				"X and Y offsets must be EVEN \n");
-			boffset = false;
-		}
-	}
-
-	if (boffset)
-		nvdisp_win_write(win,
+	nvdisp_win_write(win,
 			win_cropped_point_h_offset_f(dfixed_trunc(h_offset))|
 			win_cropped_point_v_offset_f(dfixed_trunc(v_offset)),
 			win_cropped_point_r());
@@ -596,7 +605,8 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 			win_surface_kind_r());
 	}
 
-	return 0;
+attr_fail:
+	return err;
 }
 
 
@@ -740,7 +750,13 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				/* 	width, height); */
 			/* } */
 
-			tegra_nvdisp_win_attribute(win, wait_for_vblank);
+			if (tegra_nvdisp_win_attribute(win, wait_for_vblank)) {
+				dev_err(&dc->ndev->dev,
+					"win_attribute settings failed\n");
+				mutex_unlock(&tegra_nvdisp_lock);
+
+				return -EINVAL;
+			}
 
 			if (dc_win->csc_dirty) {
 				tegra_nvdisp_set_csc(win, &dc_win->csc);

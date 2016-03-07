@@ -5285,6 +5285,15 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	warp_esr = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
 	warp_esr = g->ops.gr.mask_hww_warp_esr(warp_esr);
 
+	if (!sm_debugger_attached) {
+		gk20a_err(dev_from_gk20a(g), "sm hww global %08x warp %08x\n",
+			  global_esr, warp_esr);
+		return -EFAULT;
+	}
+
+	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+		  "sm hww global %08x warp %08x", global_esr, warp_esr);
+
 	if (g->ops.gr.pre_process_sm_exception) {
 		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc,
 				global_esr, warp_esr,

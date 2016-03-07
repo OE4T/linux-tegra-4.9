@@ -142,6 +142,9 @@ static inline int mmc_blk_part_switch(struct mmc_card *card,
 				      struct mmc_blk_data *md);
 static int get_card_status(struct mmc_card *card, u32 *status, int retries);
 
+static int mmc_blk_hw_cmdq_switch(struct mmc_card *card,
+		struct mmc_blk_data *md, bool enable);
+
 static inline void mmc_blk_clear_packed(struct mmc_queue_req *mqrq)
 {
 	struct mmc_packed *packed = mqrq->packed;
@@ -878,6 +881,20 @@ static int mmc_blk_ioctl_cmd(struct block_device *bdev,
 	}
 
 	mmc_get_card(card);
+
+	if (idata->ic.opcode == MMC_FFU_INVOKE_OP) {
+		err = mmc_blk_hw_cmdq_switch(card, md, false);
+		if (err)
+			pr_debug("%s: cmdq: switch failed, %d\n",
+				mmc_hostname(card->host), err);
+		err = mmc_ffu_invoke(card, idata->buf);
+		err = mmc_blk_hw_cmdq_switch(card, md, true);
+		if (err)
+			pr_debug("%s: cmdq: switch failed, %d\n",
+				mmc_hostname(card->host), err);
+		mmc_put_card(card);
+		goto cmd_done;
+	}
 
 	ioc_err = __mmc_blk_ioctl_cmd(card, md, idata);
 

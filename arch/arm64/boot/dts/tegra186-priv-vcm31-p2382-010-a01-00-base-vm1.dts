@@ -275,6 +275,7 @@
 		ivc-queue3 = <&tegra_hv 45>;
 		ivc-queue4 = <&tegra_hv 46>;
 		mempool3 = <&tegra_hv 1>;
+		mempool-fecs-trace = <&tegra_hv 3>;
 	};
 
 	thermal-zones {

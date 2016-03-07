@@ -18,6 +18,21 @@
  *
  */
 
+#define MAKE_EQOS_TRIP(name, temp, hyst) \
+	eqos_##name: eqos-##name@temp { \
+		temperature = <(temp)>; \
+		hysteresis = <hyst>; \
+		type = "active"; \
+	}
+
+#define MAP_EQOS(name, state) \
+	map_eqos_##name { \
+		trip = <&eqos_##name>; \
+		cooling-device = <&eqos_cool_dev state state>; \
+		cdev-type = "tegra-eqos"; \
+	}
+
+
 / {
         ether_qos@2490000 {
                 compatible = "nvidia,eqos";
@@ -63,39 +78,19 @@
 	thermal-zones {
 		Tdiode_tegra {
 			trips {
-				eqos_m40: eqos-m40 {
-					temperature = <(-40000)>;
-					hysteresis = <5000>;
-					type = "active";
-				};
-				eqos_m5: eqos-m5 {
-					temperature = <(-5000)>;
-					hysteresis = <5000>;
-					type = "active";
-				};
-				eqos_p30: eqos-p30 {
-					temperature = <30000>;
-					hysteresis = <5000>;
-					type = "active";
-				};
-				eqos_p65: eqos-p65 {
-					temperature = <65000>;
-					hysteresis = <5000>;
-					type = "active";
-				};
-				eqos_p100: eqos-p100 {
-					temperature = <100000>;
-					hysteresis = <5000>;
-					type = "active";
-				};
+				MAKE_EQOS_TRIP(m40, -40000, 5000);
+				MAKE_EQOS_TRIP(m5, -5000, 5000);
+				MAKE_EQOS_TRIP(p30, 30000, 5000);
+				MAKE_EQOS_TRIP(p65, 65000, 5000);
+				MAKE_EQOS_TRIP(p100, 100000, 5000);
 			};
 
 			cooling-maps {
-				map-tegra-eqos {
-					trip = <&eqos_m40 &eqos_m5 &eqos_p30 &eqos_p65 &eqos_p100>;
-					cooling-device = <&eqos_cool_dev 0 5>;
-					cdev-type = "tegra-eqos";
-				};
+				MAP_EQOS(m40, 1);
+				MAP_EQOS(m5, 2);
+				MAP_EQOS(p30, 3);
+				MAP_EQOS(p65, 4);
+				MAP_EQOS(p100, 5);
 			};
 		};
 	};

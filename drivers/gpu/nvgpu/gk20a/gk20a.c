@@ -1397,9 +1397,11 @@ static int gk20a_probe(struct platform_device *dev)
 
 	spin_lock_init(&gk20a->mc_enable_lock);
 
+#ifdef CONFIG_RESET_CONTROLLER
 	platform->reset_control = devm_reset_control_get(&dev->dev, NULL);
 	if (IS_ERR(platform->reset_control))
 		platform->reset_control = NULL;
+#endif
 
 	gk20a_debug_init(dev);
 

@@ -59,8 +59,10 @@ struct gk20a_platform {
 	struct clk *clk[3];
 	int num_clks;
 
+#ifdef CONFIG_RESET_CONTROLLER
 	/* Reset control for device */
 	struct reset_control *reset_control;
+#endif
 
 	/* Delay before rail gated */
 	int railgate_delay;

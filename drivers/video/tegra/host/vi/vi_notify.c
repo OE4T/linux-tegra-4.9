@@ -1,7 +1,7 @@
 /*
  * VI NOTIFY driver for T186
  *
- * Copyright (c) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,7 +39,6 @@ struct tegra_vi_syncpt_incr_req {
 };
 
 #define NVHOST_VI_SET_IGN_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 10, u32)
-#define NVHOST_VI_SET_PRI_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 11, u32)
 #define NVHOST_VI_ADD_SYNCPT_INCR \
 	_IOW(NVHOST_VI_IOCTL_MAGIC, 12, struct tegra_vi_syncpt_incr_req)
 
@@ -47,7 +46,6 @@ struct vi_notify_channel {
 	struct vi_notify_dev *vnd;
 	atomic_t ign_mask;
 	u32 syncpt_mask;
-	u32 pri_mask;
 
 	wait_queue_head_t readq;
 	struct mutex read_lock;
@@ -70,7 +68,7 @@ struct vi_notify_dev {
 static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 {
 	struct vi_notify_channel *chan;
-	u32 ign_mask = -1, pri_mask = 0;
+	u32 ign_mask = -1;
 	unsigned i;
 
 	for (i = 0; i < vnd->num_channels; i++) {
@@ -78,12 +76,10 @@ static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 		if (chan != NULL) {
 			ign_mask &= atomic_read(&chan->ign_mask);
 			ign_mask &= ~chan->syncpt_mask;
-			pri_mask |= chan->pri_mask;
 		}
 	}
 
-	WARN_ON(ign_mask & pri_mask);
-	return vnd->driver->classify(vnd->device, ign_mask, pri_mask);
+	return vnd->driver->classify(vnd->device, ign_mask);
 }
 
 static unsigned vi_notify_occupancy(struct vi_notify_channel *chan)
@@ -262,26 +258,6 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 		return err;
 	}
 
-	case NVHOST_VI_SET_PRI_MASK: {
-		u32 mask, old_mask;
-		int err;
-
-		if (get_user(mask , (u32 __user *)arg))
-			return -EFAULT;
-		if (mutex_lock_interruptible(&vnd->lock))
-			return -ERESTARTSYS;
-
-		old_mask = chan->pri_mask;
-		chan->pri_mask = mask;
-
-		err = vi_notify_dev_classify(vnd);
-		if (err)
-			chan->pri_mask = old_mask;
-
-		mutex_unlock(&vnd->lock);
-		return err;
-	}
-
 	case NVHOST_VI_ADD_SYNCPT_INCR: {
 		struct tegra_vi_syncpt_incr_req req;
 		int err = 0;
@@ -345,7 +321,6 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 
 	chan->vnd = vnd;
 	atomic_set(&chan->ign_mask, 0xffffffff);
-	chan->pri_mask = 0;
 	chan->syncpt_mask = 0;
 	init_waitqueue_head(&chan->readq);
 	mutex_init(&chan->read_lock);

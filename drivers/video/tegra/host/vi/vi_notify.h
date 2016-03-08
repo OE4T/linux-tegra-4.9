@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host VI
  *
- * Copyright (c) 2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -39,7 +39,7 @@ struct vi_notify_driver {
 	struct module *owner;
 	int (*probe)(struct device *, struct vi_notify_dev *);
 	void (*remove)(struct device *);
-	int (*classify)(struct device *, u32, u32);
+	int (*classify)(struct device *, u32);
 	int (*program_increment)(struct device *, u8, u8, u32);
 	void (*reset_channel)(struct device *, u8);
 };

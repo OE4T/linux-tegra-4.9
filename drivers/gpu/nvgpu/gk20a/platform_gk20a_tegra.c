@@ -3,7 +3,7 @@
  *
  * GK20A Tegra Platform Interface
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -822,7 +822,7 @@ static long gk20a_round_clk_rate(struct platform_device *dev,
 	return gk20a_clk_round_rate(g, rate);
 }
 
-int gk20a_set_clk_rate(struct platform_device *dev, unsigned long rate)
+static int gk20a_set_clk_rate(struct platform_device *dev, unsigned long rate)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;

@@ -15,6 +15,7 @@
 
 #include "gk20a/gk20a.h"
 #include "hw_therm_gm20b.h"
+#include "therm_gm20b.h"
 
 static int gm20b_init_therm_setup_hw(struct gk20a *g)
 {

@@ -251,8 +251,7 @@ do { \
 	nvhost_vi_notify_dump_status(pdev);
 }
 
-static int nvhost_vi_notify_classify(struct device *dev,
-					u32 ign_mask, u32 pri_mask)
+static int nvhost_vi_notify_classify(struct device *dev, u32 ign_mask)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
@@ -279,7 +278,7 @@ static int nvhost_vi_notify_classify(struct device *dev,
 	}
 
 	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_NO_OUTPUT_0, ign_mask);
-	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_HIGH_0, pri_mask);
+	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_HIGH_0, 0);
 	host1x_writel(pdev, VI_NOTIFY_OCCUPANCY_URGENT_0, 512);
 	nvhost_vi_notify_dump_classify(pdev);
 

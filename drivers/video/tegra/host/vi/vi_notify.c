@@ -45,7 +45,6 @@ struct tegra_vi_syncpt_incr_req {
 struct vi_notify_channel {
 	struct vi_notify_dev *vnd;
 	atomic_t ign_mask;
-	u32 syncpt_mask;
 
 	wait_queue_head_t readq;
 	struct mutex read_lock;
@@ -73,13 +72,11 @@ static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 
 	for (i = 0; i < vnd->num_channels; i++) {
 		chan = rcu_access_pointer(vnd->channels[i]);
-		if (chan != NULL) {
+		if (chan != NULL)
 			ign_mask &= atomic_read(&chan->ign_mask);
-			ign_mask &= ~chan->syncpt_mask;
-		}
 	}
 
-	return vnd->driver->classify(vnd->device, ign_mask);
+	return vnd->driver->classify(vnd->device, ~ign_mask);
 }
 
 static unsigned vi_notify_occupancy(struct vi_notify_channel *chan)
@@ -271,17 +268,8 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 		if (mutex_lock_interruptible(&vnd->lock))
 			return -ERESTARTSYS;
 
-		if (!likely((1u << req.tag) & chan->syncpt_mask)) {
-			chan->syncpt_mask |= 1u << req.tag;
-
-			err = vi_notify_dev_classify(vnd);
-			if (err)
-				chan->syncpt_mask &= ~(1u << req.tag);
-		}
-
-		if (likely(err == 0))
-			err = vnd->driver->program_increment(vnd->device,
-					channel, req.tag, req.syncpt_id);
+		err = vnd->driver->program_increment(vnd->device, channel,
+						req.tag, req.syncpt_id);
 		mutex_unlock(&vnd->lock);
 		return err;
 	}
@@ -321,7 +309,6 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 
 	chan->vnd = vnd;
 	atomic_set(&chan->ign_mask, 0xffffffff);
-	chan->syncpt_mask = 0;
 	init_waitqueue_head(&chan->readq);
 	mutex_init(&chan->read_lock);
 

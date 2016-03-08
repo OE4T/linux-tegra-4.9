@@ -34,6 +34,7 @@ struct nvhost_vi_ch_incrs {
 struct nvhost_vi_notify_dev {
 	struct vi_notify_dev *vnd;
 	u32 mask;
+	u32 classify_mask;
 	u32 ld_mask;
 	int prio_irq;
 	int norm_irq;

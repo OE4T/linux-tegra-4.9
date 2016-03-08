@@ -224,6 +224,7 @@ static int nvhost_vi_notify_probe(struct device *dev,
 
 	hvnd->vnd = vnd;
 	hvnd->mask = 0;
+	hvnd->classify_mask = 0;
 	hvnd->ld_mask = 0;
 
 	for (i = 0; i < ARRAY_SIZE(hvnd->incr); i++) {
@@ -258,23 +259,24 @@ do { \
 	nvhost_vi_notify_dump_status(pdev);
 }
 
-static int nvhost_vi_notify_classify(struct device *dev, u32 ign_mask)
+static int nvhost_vi_notify_set_mask(struct platform_device *pdev, u32 mask)
 {
-	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
-	int err;
 
-	if (ign_mask != 0xffffffff)
+	if (mask != 0)
 		/* Unmask events handled by the interrupt handler */
-		ign_mask &= ~((1u << VI_NOTIFY_TAG_CHANSEL_COLLISION)
+		mask |= (1u << VI_NOTIFY_TAG_CHANSEL_COLLISION)
 			| (1u << VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME)
 			| (1u << VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED)
 			| (1u << VI_NOTIFY_TAG_ATOMP_FE)
-			| (1u << VI_NOTIFY_TAG_ISPBUF_FE));
+			| (1u << VI_NOTIFY_TAG_ISPBUF_FE);
+
+	if (mask == hvnd->mask)
+		return 0; /* Nothing to do */
 
 	if (hvnd->mask == 0) {
-		err = nvhost_module_busy(pdev);
+		int err = nvhost_module_busy(pdev);
 		if (err) {
 			WARN_ON(1);
 			return err;
@@ -284,12 +286,12 @@ static int nvhost_vi_notify_classify(struct device *dev, u32 ign_mask)
 		enable_irq(hvnd->norm_irq);
 	}
 
-	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_NO_OUTPUT_0, ign_mask);
+	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_NO_OUTPUT_0, ~mask);
 	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_HIGH_0, 0);
 	host1x_writel(pdev, VI_NOTIFY_OCCUPANCY_URGENT_0, 512);
 	nvhost_vi_notify_dump_classify(pdev);
 
-	hvnd->mask = ~ign_mask;
+	hvnd->mask = mask;
 
 	if (hvnd->mask == 0) {
 		disable_irq(hvnd->norm_irq);
@@ -298,6 +300,17 @@ static int nvhost_vi_notify_classify(struct device *dev, u32 ign_mask)
 	}
 
 	return 0;
+}
+
+static int nvhost_vi_notify_classify(struct device *dev, u32 mask)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+
+	hvnd->classify_mask = mask;
+
+	return nvhost_vi_notify_set_mask(pdev, hvnd->mask | mask);
 }
 
 static int nvhost_vi_notify_program_increment(struct device *dev, u8 ch,
@@ -310,11 +323,16 @@ static int nvhost_vi_notify_program_increment(struct device *dev, u8 ch,
 	struct nvhost_vi_ch_incrs *incrs;
 	unsigned long flags;
 	u8 *p;
+	int err;
 
 	if (!nvhost_syncpt_is_valid_pt(&master->syncpt, id))
 		return -EINVAL;
 	if (ch >= ARRAY_SIZE(hvnd->incr))
 		return -EOPNOTSUPP;
+
+	err = nvhost_vi_notify_set_mask(pdev, hvnd->mask | (1u << tag));
+	if (err)
+		return err;
 
 	incrs = &hvnd->incr[ch];
 
@@ -337,15 +355,29 @@ static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
 	struct nvhost_vi_ch_incrs *incrs;
 	unsigned long flags;
+	u32 mask = hvnd->classify_mask;
 
 	BUG_ON(ch >= ARRAY_SIZE(hvnd->incr));
 	incrs = &hvnd->incr[ch];
 
 	spin_lock_irqsave(&incrs->lock, flags);
-	memset(incrs->tags, 0xff, MAX_VI_CH_INCRS);
+	memset(incrs->tags, 0xff, sizeof(incrs->tags));
 	spin_unlock_irqrestore(&incrs->lock, flags);
 
 	synchronize_irq(hvnd->norm_irq);
+
+	/* Recompute the syncpoint mask and possibly power off */
+	for (ch = 0; ch < ARRAY_SIZE(hvnd->incr); ch++) {
+		int i;
+
+		spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
+		for (i = 0; i < ARRAY_SIZE(incrs->tags) &&
+				incrs->tags[i] != 0xff; i++)
+			mask |= 1u << incrs->tags[i];
+		spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
+	}
+
+	nvhost_vi_notify_set_mask(pdev, mask);
 }
 
 struct vi_notify_driver nvhost_vi_notify_driver = {

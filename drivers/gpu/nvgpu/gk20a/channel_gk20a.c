@@ -2408,6 +2408,7 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 	u32 offset;
 	unsigned long timeout;
 	int remain, ret = 0;
+	u64 end;
 
 	gk20a_dbg_fn("");
 
@@ -2423,11 +2424,18 @@ static int gk20a_channel_wait(struct channel_gk20a *ch,
 	case NVGPU_WAIT_TYPE_NOTIFIER:
 		id = args->condition.notifier.dmabuf_fd;
 		offset = args->condition.notifier.offset;
+		end = offset + sizeof(struct notification);
 
 		dmabuf = dma_buf_get(id);
 		if (IS_ERR(dmabuf)) {
 			gk20a_err(d, "invalid notifier nvmap handle 0x%lx",
 				   id);
+			return -EINVAL;
+		}
+
+		if (end > dmabuf->size || end < sizeof(struct notification)) {
+			dma_buf_put(dmabuf);
+			gk20a_err(d, "invalid notifier offset\n");
 			return -EINVAL;
 		}
 

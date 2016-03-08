@@ -219,9 +219,3 @@ struct hdcp_context_t {
 	u32				session_id;
 	struct nvhdcp_msg               msg;
 };
-
-int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context);
-int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context);
-void tsec_send_method(struct hdcp_context_t *hdcp_context,
-			u32 method,
-			u32 flags);

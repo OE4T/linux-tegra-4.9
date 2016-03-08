@@ -1716,3 +1716,25 @@ int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_vi_channels_cleanup);
+
+int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi)
+{
+	unsigned int i;
+	int ret;
+
+	for (i = 0; i < vi->num_channels; i++) {
+		struct tegra_channel *chan = &vi->chans[i];
+
+		if (chan->num_subdevs)
+			continue;
+
+		ret = tegra_channel_cleanup(chan);
+		if (ret < 0) {
+			dev_err(vi->dev, "channel %d cleanup failed\n", i);
+			return ret;
+		}
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_clean_unlinked_channels);

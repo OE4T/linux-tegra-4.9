@@ -214,6 +214,8 @@ struct tegra_mc_vi {
 
 	bool has_sensors;
 	atomic_t power_on_refcnt;
+	unsigned int link_status;
+	unsigned int subdevs_bound;
 };
 
 int tegra_vi_get_port_info(struct tegra_channel *chan,
@@ -228,6 +230,7 @@ int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init_subdevices(struct tegra_channel *chan);
 int tegra_vi_power_on(struct tegra_mc_vi *vi);
 void tegra_vi_power_off(struct tegra_mc_vi *vi);
+int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev);
 void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);

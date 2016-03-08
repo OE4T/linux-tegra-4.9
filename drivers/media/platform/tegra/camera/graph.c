@@ -272,6 +272,8 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 	if (ret < 0)
 		dev_err(vi->dev, "failed to register subdev nodes\n");
 
+	vi->link_status++;
+
 	return ret;
 }
 
@@ -299,6 +301,7 @@ static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 		dev_dbg(vi->dev, "subdev %s bound\n", subdev->name);
 		entity->entity = &subdev->entity;
 		entity->subdev = subdev;
+		vi->subdevs_bound++;
 		return 0;
 	}
 
@@ -518,11 +521,22 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 	vi->notifier.num_subdevs = num_subdevs;
 	vi->notifier.bound = tegra_vi_graph_notify_bound;
 	vi->notifier.complete = tegra_vi_graph_notify_complete;
+	vi->link_status = 0;
+	vi->subdevs_bound = 0;
 
 	ret = v4l2_async_notifier_register(&vi->v4l2_dev, &vi->notifier);
 	if (ret < 0) {
 		dev_err(vi->dev, "notifier registration failed\n");
 		goto done;
+	}
+
+	if (!vi->link_status) {
+		if (vi->subdevs_bound) {
+			ret = tegra_vi_graph_notify_complete(&vi->notifier);
+			if (ret < 0)
+				goto done;
+		}
+		tegra_clean_unlinked_channels(vi);
 	}
 
 	return 0;

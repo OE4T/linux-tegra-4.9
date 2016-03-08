@@ -288,26 +288,41 @@ int tegra_mce_enum_features(u64 *features)
 }
 EXPORT_SYMBOL(tegra_mce_enum_features);
 
-int tegra_roc_flush_cache(void)
+__always_inline int tegra_roc_flush_cache(void)
 {
 	struct mce_regs regs;
 	return send_smc(MCE_SMC_ROC_FLUSH_CACHE, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_flush_cache);
 
-int tegra_roc_flush_cache_only(void)
+__always_inline int tegra_roc_flush_cache_only(void)
 {
 	struct mce_regs regs;
 	return send_smc(MCE_SMC_ROC_FLUSH_CACHE_ONLY, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_flush_cache_only);
 
-int tegra_roc_clean_cache(void)
+__always_inline int tegra_roc_clean_cache(void)
 {
 	struct mce_regs regs;
 	return send_smc(MCE_SMC_ROC_CLEAN_CACHE_ONLY, &regs);
 }
 EXPORT_SYMBOL(tegra_roc_clean_cache);
+
+void flush_cache_all(void)
+{
+	tegra_roc_flush_cache();
+}
+
+void __flush_dcache_all(void *__maybe_unused unused)
+{
+	tegra_roc_flush_cache_only();
+}
+
+void __clean_dcache_all(void *__maybe_unused unused)
+{
+	tegra_roc_clean_cache();
+}
 
 /**
  * Read uncore MCA errors.

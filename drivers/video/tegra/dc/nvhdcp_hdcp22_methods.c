@@ -27,6 +27,8 @@
 #include <linux/atomic.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
+#include <linux/tsec.h>
+
 #include "tsec/tsec_methods.h"
 #include "nvhdcp_hdcp22_methods.h"
 #include "tsec_drv.h"

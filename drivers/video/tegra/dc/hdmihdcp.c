@@ -27,6 +27,7 @@
 #include <asm/atomic.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
+#include <linux/tsec.h>
 
 #include <mach/dc.h>
 #include <linux/platform/tegra/tegra_kfuse.h>

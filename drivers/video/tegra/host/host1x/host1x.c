@@ -990,7 +990,6 @@ static int nvhost_probe(struct platform_device *dev)
 		goto fail;
 	}
 
-	nvhost_syncpt_reset(&host->syncpt);
 	if (tegra_cpu_is_asim() || pdata->virtual_dev)
 		/* for simulation & virtualization, use a fake clock rate */
 		nvhost_intr_start(&host->intr, 12000000);

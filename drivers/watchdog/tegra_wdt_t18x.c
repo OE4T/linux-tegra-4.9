@@ -42,7 +42,7 @@
 
 /* minimum and maximum watchdog trigger periods, in seconds */
 #define MIN_WDT_PERIOD	5
-#define MAX_WDT_PERIOD	1000
+#define MAX_WDT_PERIOD	256
 
 struct tegra_wdt_t18x {
 	struct platform_device *pdev;
@@ -57,6 +57,7 @@ struct tegra_wdt_t18x {
 	int			cluster_id;
 	bool			enable_on_init;
 	int			expiry_count;
+	int			active_count;
 	int			heartbeat;
 	int			shutdown_timeout;
 /* Bit numbers for status flags */
@@ -139,8 +140,9 @@ static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *tegra_wdt_t18x)
 
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +
 							TOP_TKE_TMR_PCR);
+
 	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) /
-				tegra_wdt_t18x->expiry_count;
+					tegra_wdt_t18x->active_count;
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 
@@ -175,40 +177,51 @@ static void tegra_wdt_t18x_ref(struct watchdog_device *wdt)
 				tegra_wdt);
 }
 
-static inline void tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
+static inline int tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	u32 val = 0;
+	int skip_count = 0;
 
 	/* Skip the 2nd expiry of WDT for ARM cluster */
-	if (tegra_wdt_t18x->cluster_id == WDT_CLUSTER_ID_ARM)
+	if (tegra_wdt_t18x->cluster_id == WDT_CLUSTER_ID_ARM) {
 		val = WDT_SKIP_VAL(1, 1);
+		skip_count++;
+	}
 
 	/* Skip the 4th expiry if debug reset is disabled */
-	if (!(tegra_wdt_t18x->config & WDT_CFG_DBG_RST_EN))
+	if (!(tegra_wdt_t18x->config & WDT_CFG_DBG_RST_EN)) {
 		val |= WDT_SKIP_VAL(3, 1);
+		skip_count++;
+	}
 
 	if (val)
 		writel(val, tegra_wdt_t18x->wdt_source + WDT_SKIP);
+
+	return skip_count;
 }
 
 static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	u32 val;
 
+	/* Update skip configuration and active expiry count */
+	tegra_wdt_t18x->active_count = tegra_wdt_t18x->expiry_count -
+					 tegra_wdt_t18x_skip(tegra_wdt_t18x);
+	if (tegra_wdt_t18x->active_count < 1)
+		tegra_wdt_t18x->active_count = 1;
+
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +
 							TOP_TKE_TMR_PCR);
 	/*
-	 * The timeout needs to be divided by expiry_count here so as to
-	 * keep the ultimate watchdog reset timeout the same as the program
+	 * The timeout needs to be divided by active expiry count here so as
+	 * to keep the ultimate watchdog reset timeout the same as the program
 	 * timeout requested by application. The program timeout should make
 	 * sure WDT FIQ will never be asserted in a valid use case.
 	 */
 	val = (tegra_wdt_t18x->wdt.timeout * USEC_PER_SEC) /
-			tegra_wdt_t18x->expiry_count;
+					tegra_wdt_t18x->active_count;
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
-
-	tegra_wdt_t18x_skip(tegra_wdt_t18x);
 
 	writel(tegra_wdt_t18x->config, tegra_wdt_t18x->wdt_source + WDT_CFG);
 	writel(WDT_CMD_START_COUNTER, tegra_wdt_t18x->wdt_source + WDT_CMD);
@@ -517,11 +530,14 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	tegra_wdt_t18x->pdev = pdev;
 	tegra_wdt_t18x->wdt.info = &tegra_wdt_t18x_info;
 	tegra_wdt_t18x->wdt.ops = &tegra_wdt_t18x_ops;
+
 	tegra_wdt_t18x->wdt.min_timeout = MIN_WDT_PERIOD *
 					tegra_wdt_t18x->expiry_count;
 	tegra_wdt_t18x->wdt.max_timeout = MAX_WDT_PERIOD *
 					tegra_wdt_t18x->expiry_count;
-	tegra_wdt_t18x->wdt.timeout = tegra_wdt_t18x->heartbeat;
+	watchdog_init_timeout(&tegra_wdt_t18x->wdt,
+			tegra_wdt_t18x->heartbeat, &pdev->dev);
+
 	tegra_wdt_t18x->irq = irq_of_parse_and_map(np, 0);
 	tegra_wdt_t18x->enable_on_init =
 			of_property_read_bool(np, "nvidia,enable-on-init");
@@ -597,9 +613,6 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	 * is online. Disabled in low power state
 	 */
 	tegra_wdt_t18x_setup_pet(tegra_wdt_t18x, index);
-
-	watchdog_init_timeout(&tegra_wdt_t18x->wdt,
-			tegra_wdt_t18x->heartbeat,  &pdev->dev);
 
 	ret = watchdog_register_device(&tegra_wdt_t18x->wdt);
 	if (ret) {

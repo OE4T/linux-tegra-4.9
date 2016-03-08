@@ -8,9 +8,9 @@ ccflags-y += -Werror
 ccflags-y += -Wno-error=cpp
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu
-ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include
-ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include/uapi
+ccflags-y += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu
+ccflags-y += -I$(srctree)/../kernel-t18x/include
+ccflags-y += -I$(srctree)/../kernel-t18x/include/uapi
 endif
 
 obj-$(CONFIG_GK20A) := nvgpu.o
@@ -94,7 +94,5 @@ nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/drivers/gpu/nvgpu
-ccflags-$(CONFIG_GK20A) += -I$(srctree)/../kernel-t18x/include
-obj-$(CONFIG_GK20A)     += ../../../../kernel-t18x/drivers/gpu/nvgpu/
+include ../kernel-t18x/drivers/gpu/nvgpu/Makefile
 endif

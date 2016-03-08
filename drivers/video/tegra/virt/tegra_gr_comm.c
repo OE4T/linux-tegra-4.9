@@ -31,6 +31,7 @@
 #include <linux/interrupt.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_gr_comm.h>
+#include <linux/module.h>
 
 #define NUM_QUEUES   5
 #define NUM_CONTEXTS 1
@@ -94,6 +95,7 @@ u32 tegra_gr_comm_get_server_vmid(void)
 {
 	return server_vmid;
 }
+EXPORT_SYMBOL(tegra_gr_comm_get_server_vmid);
 
 static void free_mempool(u32 virt_ctx, u32 queue_start, u32 queue_end)
 {
@@ -437,6 +439,7 @@ fail:
 	dev_err(dev, "%s insufficient memory\n", __func__);
 	return ret;
 }
+EXPORT_SYMBOL(tegra_gr_comm_init);
 
 void tegra_gr_comm_deinit(u32 virt_ctx, u32 queue_start, u32 num_queues)
 {
@@ -471,6 +474,7 @@ void tegra_gr_comm_deinit(u32 virt_ctx, u32 queue_start, u32 num_queues)
 	free_ivc(virt_ctx, queue_start, queue_end);
 	free_mempool(virt_ctx, queue_start, queue_end);
 }
+EXPORT_SYMBOL(tegra_gr_comm_deinit);
 
 int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
 		size_t size)
@@ -510,6 +514,7 @@ int tegra_gr_comm_send(u32 virt_ctx, u32 peer, u32 index, void *data,
 	ret = tegra_hv_ivc_write(ivc_ctx->cookie, data, size);
 	return (ret != size) ? -ENOMEM : 0;
 }
+EXPORT_SYMBOL(tegra_gr_comm_send);
 
 int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 		size_t *size, u32 *sender)
@@ -542,6 +547,7 @@ int tegra_gr_comm_recv(u32 virt_ctx, u32 index, void **handle, void **data,
 		*sender = element->sender;
 	return err;
 }
+EXPORT_SYMBOL(tegra_gr_comm_recv);
 
 /* NOTE: tegra_gr_comm_recv() should not be running concurrently */
 int tegra_gr_comm_sendrecv(u32 virt_ctx, u32 peer, u32 index, void **handle,
@@ -571,6 +577,7 @@ fail:
 	mutex_unlock(&queue->resp_lock);
 	return err;
 }
+EXPORT_SYMBOL(tegra_gr_comm_sendrecv);
 
 void tegra_gr_comm_release(void *handle)
 {
@@ -581,6 +588,7 @@ void tegra_gr_comm_release(void *handle)
 	list_add(&element->list, &element->queue->free);
 	mutex_unlock(&element->queue->lock);
 }
+EXPORT_SYMBOL(tegra_gr_comm_release);
 
 void *tegra_gr_comm_oob_get_ptr(u32 virt_ctx, u32 peer, u32 index,
 				void **ptr, size_t *size)
@@ -604,6 +612,7 @@ void *tegra_gr_comm_oob_get_ptr(u32 virt_ctx, u32 peer, u32 index,
 	*ptr = mempool_ctx->ptr;
 	return queue;
 }
+EXPORT_SYMBOL(tegra_gr_comm_oob_get_ptr);
 
 void tegra_gr_comm_oob_put_ptr(void *handle)
 {
@@ -611,3 +620,4 @@ void tegra_gr_comm_oob_put_ptr(void *handle)
 
 	mutex_unlock(&queue->mempool_lock);
 }
+EXPORT_SYMBOL(tegra_gr_comm_oob_put_ptr);

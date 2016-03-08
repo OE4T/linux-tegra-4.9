@@ -933,7 +933,7 @@
 	tegra_agic_1: agic-controller@2a51000 {
 		compatible = "nvidia,tegra18x-agic";
 		interrupt-controller;
-		#interrupt-cells = <3>;
+		#interrupt-cells = <4>;
 		no-gic-extension;
 		not-per-cpu;
 		reg = <0x0 0x02a51000 0x0 0x1000>,

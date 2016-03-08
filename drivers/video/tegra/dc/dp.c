@@ -77,6 +77,9 @@ MODULE_PARM_DESC(no_lt_at_unblank, "DP enabled but link not trained");
 
 static struct tegra_hpd_ops hpd_ops;
 
+static char *audio_switch_name_array[TEGRA_MAX_DC]
+	= {"dp0_audio", "dp1_audio"};
+
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
 					bool enable);
@@ -2148,7 +2151,11 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_SWITCH
-	dp->audio_switch.name = "dp_audio";
+	if (dp->sor->audio_switch_name == NULL)
+		dp->audio_switch.name = audio_switch_name_array[dp_num];
+	else
+		dp->audio_switch.name = dp->sor->audio_switch_name;
+
 	err = switch_dev_register(&dp->audio_switch);
 	BUG_ON(err);
 #endif

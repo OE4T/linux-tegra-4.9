@@ -75,7 +75,8 @@ enum {
 	TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE,
 	TEGRA_VGPU_CMD_REG_OPS,
 	TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY,
-	TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE
+	TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE,
+	TEGRA_VGPU_CMD_CHANNEL_SET_TIMESLICE
 };
 
 struct tegra_vgpu_connect_params {
@@ -305,6 +306,11 @@ struct tegra_vgpu_channel_runlist_interleave_params {
 	u32 level;
 };
 
+struct tegra_vgpu_channel_timeslice_params {
+	u64 handle;
+	u32 timeslice_us;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -334,6 +340,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_reg_ops_params reg_ops;
 		struct tegra_vgpu_channel_priority_params channel_priority;
 		struct tegra_vgpu_channel_runlist_interleave_params channel_interleave;
+		struct tegra_vgpu_channel_timeslice_params channel_timeslice;
 		char padding[192];
 	} params;
 };

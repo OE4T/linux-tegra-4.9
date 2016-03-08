@@ -570,6 +570,25 @@ static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
+int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_channel_timeslice_params *p =
+			&msg.params.channel_timeslice;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_TIMESLICE;
+	msg.handle = platform->virt_handle;
+	p->handle = ch->virt_ctx;
+	p->timeslice_us = timeslice;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+	return err ? err : msg.ret;
+}
+
 static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
@@ -656,4 +675,5 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 	gops->fifo.wait_engine_idle = vgpu_fifo_wait_engine_idle;
 	gops->fifo.channel_set_priority = vgpu_channel_set_priority;
 	gops->fifo.set_runlist_interleave = vgpu_fifo_set_runlist_interleave;
+	gops->fifo.channel_set_timeslice = vgpu_channel_set_timeslice;
 }

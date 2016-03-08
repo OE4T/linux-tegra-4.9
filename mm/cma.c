@@ -389,10 +389,17 @@ static void __dma_clear_buffer(struct page *page, size_t size)
 	/*
 	 * Ensure that the allocated pages are zeroed, and that any data
 	 * lurking in the kernel direct-mapped region is invalidated.
+	 * The zeroing can be skipped for VPR resize as it is not
+	 * accessible by cpu for either read or write. Since VPR's
+	 * coherent device is the only device that has heap resize notifier
+	 * and that too when resize is enabled, the API
+	 * dma_contiguous_should_replace_page() would return true
+	 * if and only if the cma is VPR and the resize is enabled.
 	 */
 	ptr = page_address(page);
 	if (ptr) {
-		memset(ptr, 0, size);
+		if (!dma_contiguous_should_replace_page(page))
+			memset(ptr, 0, size);
 		__dma_flush_area(ptr, size);
 		/* comment out as not present for arm64 */
 		/* outer_flush_range(__pa(ptr), __pa(ptr) + size);*/

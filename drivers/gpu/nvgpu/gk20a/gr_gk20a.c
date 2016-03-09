@@ -58,6 +58,7 @@
 #include "semaphore_gk20a.h"
 #include "platform_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
+#include "hw_proj_gk20a.h"
 
 #define BLK_SIZE (256)
 #define NV_PMM_FBP_STRIDE	0x1000
@@ -3129,6 +3130,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	memset(&gr->compbit_store, 0, sizeof(struct compbit_store_desc));
 
+	kfree(gr->sm_error_states);
 	kfree(gr->gpc_tpc_count);
 	kfree(gr->gpc_zcb_count);
 	kfree(gr->gpc_ppc_count);
@@ -4426,6 +4428,19 @@ restore_fe_go_idle:
 	if (err)
 		goto out;
 
+	kfree(gr->sm_error_states);
+
+	/* we need to allocate this after g->ops.gr.init_fs_state() since
+	 * we initialize gr->no_of_sm in this function
+	 */
+	gr->sm_error_states = kzalloc(
+			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record)
+			* gr->no_of_sm, GFP_KERNEL);
+	if (!gr->sm_error_states) {
+		err = -ENOMEM;
+		goto restore_fe_go_idle;
+	}
+
 out:
 	gk20a_dbg_fn("done");
 	return 0;
@@ -5494,6 +5509,32 @@ u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr)
 	return hww_warp_esr;
 }
 
+static int gk20a_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
+{
+	int sm_id;
+	struct gr_gk20a *gr = &g->gr;
+	u32 offset = proj_gpc_stride_v() * gpc +
+		     proj_tpc_in_gpc_stride_v() * tpc;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	sm_id = gr_gpc0_tpc0_sm_cfg_sm_id_v(gk20a_readl(g,
+			gr_gpc0_tpc0_sm_cfg_r() + offset));
+
+	gr->sm_error_states[sm_id].hww_global_esr = gk20a_readl(g,
+			gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
+	gr->sm_error_states[sm_id].hww_warp_esr = gk20a_readl(g,
+			gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
+	gr->sm_error_states[sm_id].hww_global_esr_report_mask = gk20a_readl(g,
+		       gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r() + offset);
+	gr->sm_error_states[sm_id].hww_warp_esr_report_mask = gk20a_readl(g,
+			gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset);
+
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return 0;
+}
+
 int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event, struct channel_gk20a *fault_ch)
 {
@@ -5553,6 +5594,9 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		  "sm hww global %08x warp %08x", global_esr, warp_esr);
+
+	gr_gk20a_elpg_protected_call(g,
+		g->ops.gr.record_sm_error_state(g, gpc, tpc));
 
 	if (g->ops.gr.pre_process_sm_exception) {
 		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc,
@@ -8370,4 +8414,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_lrf_tex_ltc_dram_override = NULL;
 	gops->gr.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode;
 	gops->gr.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode;
+	gops->gr.record_sm_error_state = gk20a_gr_record_sm_error_state;
 }

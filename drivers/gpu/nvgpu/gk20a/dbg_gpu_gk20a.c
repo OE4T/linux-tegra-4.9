@@ -525,6 +525,45 @@ static int nvgpu_dbg_gpu_ioctl_set_next_stop_trigger_type(
 	return 0;
 }
 
+static int nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(
+		struct dbg_session_gk20a *dbg_s,
+		struct nvgpu_dbg_gpu_read_single_sm_error_state_args *args)
+{
+	struct gk20a *g = get_gk20a(dbg_s->dev);
+	struct gr_gk20a *gr = &g->gr;
+	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state;
+	u32 sm_id;
+	int err = 0;
+
+	sm_id = args->sm_id;
+	if (sm_id >= gr->no_of_sm)
+		return -EINVAL;
+
+	sm_error_state = gr->sm_error_states + sm_id;
+
+	if (args->sm_error_state_record_size > 0) {
+		size_t write_size = sizeof(*sm_error_state);
+
+		if (write_size > args->sm_error_state_record_size)
+			write_size = args->sm_error_state_record_size;
+
+		mutex_lock(&g->dbg_sessions_lock);
+		err = copy_to_user((void __user *)(uintptr_t)
+						args->sm_error_state_record_mem,
+				   sm_error_state,
+				   write_size);
+		mutex_unlock(&g->dbg_sessions_lock);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g), "copy_to_user failed!\n");
+			return err;
+		}
+
+		args->sm_error_state_record_size = write_size;
+	}
+
+	return 0;
+}
+
 long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
 {
@@ -620,6 +659,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_GET_TIMEOUT:
 		nvgpu_dbg_gpu_ioctl_get_timeout(dbg_s,
 			   (struct nvgpu_dbg_gpu_timeout_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_READ_SINGLE_SM_ERROR_STATE:
+		err = nvgpu_dbg_gpu_ioctl_read_single_sm_error_state(dbg_s,
+		   (struct nvgpu_dbg_gpu_read_single_sm_error_state_args *)buf);
 		break;
 
 	default:

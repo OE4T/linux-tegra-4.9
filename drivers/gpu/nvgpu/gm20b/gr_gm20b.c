@@ -31,6 +31,7 @@
 #include "hw_fuse_gm20b.h"
 #include "pmu_gm20b.h"
 #include "acr_gm20b.h"
+#include "hw_proj_gm20b.h"
 
 static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
@@ -1190,6 +1191,34 @@ static void gr_gm20b_get_access_map(struct gk20a *g,
 	*num_entries = ARRAY_SIZE(wl_addr_gm20b);
 }
 
+static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
+{
+	int sm_id;
+	struct gr_gk20a *gr = &g->gr;
+	u32 offset = proj_gpc_stride_v() * gpc +
+		     proj_tpc_in_gpc_stride_v() * tpc;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	sm_id = gr_gpc0_tpc0_sm_cfg_sm_id_v(gk20a_readl(g,
+			gr_gpc0_tpc0_sm_cfg_r() + offset));
+
+	gr->sm_error_states[sm_id].hww_global_esr = gk20a_readl(g,
+			gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
+	gr->sm_error_states[sm_id].hww_warp_esr = gk20a_readl(g,
+			gr_gpc0_tpc0_sm_hww_warp_esr_r() + offset);
+	gr->sm_error_states[sm_id].hww_warp_esr_pc = gk20a_readl(g,
+			gr_gpc0_tpc0_sm_hww_warp_esr_pc_r() + offset);
+	gr->sm_error_states[sm_id].hww_global_esr_report_mask = gk20a_readl(g,
+		       gr_gpcs_tpcs_sm_hww_global_esr_report_mask_r() + offset);
+	gr->sm_error_states[sm_id].hww_warp_esr_report_mask = gk20a_readl(g,
+			gr_gpcs_tpcs_sm_hww_warp_esr_report_mask_r() + offset);
+
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return 0;
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1256,4 +1285,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_lrf_tex_ltc_dram_override = NULL;
 	gops->gr.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode;
 	gops->gr.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode;
+	gops->gr.record_sm_error_state = gm20b_gr_record_sm_error_state;
 }

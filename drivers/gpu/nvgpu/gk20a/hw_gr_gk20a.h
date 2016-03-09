@@ -2122,6 +2122,10 @@ static inline u32 gr_gpc0_tpc0_sm_cfg_sm_id_f(u32 v)
 {
 	return (v & 0xffff) << 0;
 }
+static inline u32 gr_gpc0_tpc0_sm_cfg_sm_id_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
 static inline u32 gr_gpc0_tpc0_sm_arch_r(void)
 {
 	return 0x0050469c;

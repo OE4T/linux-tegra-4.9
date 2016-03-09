@@ -329,6 +329,7 @@ struct gr_gk20a {
 	u32 fbp_en_mask;
 	u32 no_of_sm;
 	struct sm_info *sm_to_cluster;
+	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_states;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct mutex			cs_lock;
 	struct gk20a_cs_snapshot	*cs_data;

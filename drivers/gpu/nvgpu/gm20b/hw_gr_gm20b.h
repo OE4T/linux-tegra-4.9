@@ -2130,6 +2130,10 @@ static inline u32 gr_gpc0_tpc0_sm_cfg_sm_id_f(u32 v)
 {
 	return (v & 0xffff) << 0;
 }
+static inline u32 gr_gpc0_tpc0_sm_cfg_sm_id_v(u32 r)
+{
+	return (r >> 0) & 0xffff;
+}
 static inline u32 gr_gpc0_tpc0_sm_arch_r(void)
 {
 	return 0x0050469c;
@@ -3269,6 +3273,10 @@ static inline u32 gr_gpc0_tpc0_sm_hww_warp_esr_error_none_v(void)
 static inline u32 gr_gpc0_tpc0_sm_hww_warp_esr_error_none_f(void)
 {
 	return 0x0;
+}
+static inline u32 gr_gpc0_tpc0_sm_hww_warp_esr_pc_r(void)
+{
+	return 0x00504654;
 }
 static inline u32 gr_gpc0_tpc0_sm_halfctl_ctrl_r(void)
 {

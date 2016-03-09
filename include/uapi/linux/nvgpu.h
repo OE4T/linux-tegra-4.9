@@ -676,8 +676,35 @@ struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args {
 #define NVGPU_DBG_GPU_IOCTL_HWPM_CTXSW_MODE \
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 13, struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args)
 
+
+struct nvgpu_dbg_gpu_sm_error_state_record {
+	__u32 hww_global_esr;
+	__u32 hww_warp_esr;
+	__u64 hww_warp_esr_pc;
+	__u32 hww_global_esr_report_mask;
+	__u32 hww_warp_esr_report_mask;
+
+	/*
+	 * Notes
+	 * - This struct can be safely appended with new fields. However, always
+	 *   keep the structure size multiple of 8 and make sure that the binary
+	 *   layout does not change between 32-bit and 64-bit architectures.
+	 */
+};
+
+struct nvgpu_dbg_gpu_read_single_sm_error_state_args {
+	__u32 sm_id;
+	__u32 padding;
+	__u64 sm_error_state_record_mem;
+	__u64 sm_error_state_record_size;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_READ_SINGLE_SM_ERROR_STATE			\
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 14, struct nvgpu_dbg_gpu_read_single_sm_error_state_args)
+
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_HWPM_CTXSW_MODE)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_READ_SINGLE_SM_ERROR_STATE)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)

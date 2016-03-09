@@ -240,6 +240,8 @@ struct gpu_ops {
 						bool *post_event);
 		void (*create_gr_sysfs)(struct device *dev);
 		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
+		int (*record_sm_error_state)(struct gk20a *g,
+				u32 gpc, u32 tpc);
 	} gr;
 	const char *name;
 	struct {

@@ -488,15 +488,6 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	u32 pval = 0;
 	int ret = 0, index;
 
-	/*
-	 * If HALT_IN_FIQ is set, skip driver probe to allow
-	 * external debugger to poke.
-	 */
-	if (tegra_pmc_is_halt_in_fiq()) {
-			pr_warn("Skipping WDT driver probe\n");
-			return -EACCES;
-	}
-
 	if (!np) {
 		dev_err(&pdev->dev, "Support registration from DT only");
 		return -EPERM;
@@ -599,11 +590,16 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 		tegra_wdt_t18x->config |= WDT_CFG_FINT_EN;
 	tegra_wdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
 
-	/* Enable debug and POR reset if not explicitly disabled */
-	if(!of_property_read_bool(np, "nvidia,disable-debug-reset"))
-		tegra_wdt_t18x->config |= WDT_CFG_DBG_RST_EN;
-	if(!of_property_read_bool(np, "nvidia,disable-por-reset"))
-		tegra_wdt_t18x->config |= WDT_CFG_SYS_PORST_EN;
+	/* Debug and POR reset events should be enabled by default.
+	 * Disable only if explicitly indicated in device tree or
+	 * HALT_IN_FIQ is set, so as to allow external debugger to poke.
+	 */
+	if (!tegra_pmc_is_halt_in_fiq()) {
+		if(!of_property_read_bool(np, "nvidia,disable-debug-reset"))
+			tegra_wdt_t18x->config |= WDT_CFG_DBG_RST_EN;
+		if(!of_property_read_bool(np, "nvidia,disable-por-reset"))
+			tegra_wdt_t18x->config |= WDT_CFG_SYS_PORST_EN;
+	}
 
 	tegra_wdt_t18x_disable(&tegra_wdt_t18x->wdt);
 	writel(TOP_TKE_TMR_PCR_INTR, tegra_wdt_t18x->wdt_timer +

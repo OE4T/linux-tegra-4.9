@@ -35,7 +35,7 @@
 #define DEFAULT_ADX_SLOT_SIZE 32
 #define MAX_AMX_NUM 4
 #define MAX_ADX_NUM 4
-
+#define DEFAULT_SAMPLE_RATE 48000
 #define PARAMS(sformat, channels)			\
 	{						\
 		.formats = sformat,			\
@@ -210,10 +210,12 @@ static int tegra_t186ref_p2382_i2s_dai_init(struct snd_soc_pcm_runtime *rtd)
 	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int srate;
 	unsigned int tx_mask = (1 << 8) - 1, rx_mask = (1 << 8) - 1;
+	struct tegra_t186ref_p2382 *machine = snd_soc_card_get_drvdata(card);
 	int err = 0;
 
 	srate = dai_params->rate_min;
-
+	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock,
+					DEFAULT_SAMPLE_RATE, 0, 0);
 	/* set sys clk */
 	if (cpu_dai->driver->ops->set_sysclk) {
 		err = snd_soc_dai_set_sysclk(cpu_dai, 0, srate,

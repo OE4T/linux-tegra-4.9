@@ -19,6 +19,7 @@
 
 #include <media/tegra_v4l2_camera.h>
 #include <media/camera_common.h>
+#include <media/v4l2-event.h>
 
 #include "dev.h"
 #include "mc_common.h"
@@ -135,6 +136,25 @@ void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi)
 	media_device_unregister(&vi->media_dev);
 }
 
+static void tegra_vi_notify(struct v4l2_subdev *sd,
+					  unsigned int notification, void *arg)
+{
+	struct tegra_mc_vi *vi = container_of(sd->v4l2_dev,
+			struct tegra_mc_vi, v4l2_dev);
+	unsigned ch, i;
+
+	if (notification != V4L2_DEVICE_NOTIFY_EVENT)
+		return;
+
+	for (ch = 0; ch < vi->num_channels; ch++) {
+		struct tegra_channel *chan = &vi->chans[ch];
+
+		for (i = 0; i < chan->num_subdevs; i++)
+			if (sd == chan->subdev[i])
+				v4l2_event_queue(&chan->video, arg);
+	}
+}
+
 int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 {
 	int ret;
@@ -155,6 +175,7 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 	}
 
 	vi->v4l2_dev.mdev = &vi->media_dev;
+	vi->v4l2_dev.notify = tegra_vi_notify;
 	ret = v4l2_device_register(vi->dev, &vi->v4l2_dev);
 	if (ret < 0) {
 		dev_err(vi->dev, "V4L2 device registration failed (%d)\n",

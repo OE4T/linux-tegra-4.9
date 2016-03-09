@@ -1749,6 +1749,109 @@ static u32 get_ecc_override_val(struct gk20a *g)
 		return 0;
 }
 
+static bool gr_gp10b_suspend_context(struct channel_gk20a *ch,
+				bool *cilp_preempt_pending)
+{
+	struct gk20a *g = ch->g;
+	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
+	bool ctx_resident = false;
+	int err = 0;
+
+	*cilp_preempt_pending = false;
+
+	if (gk20a_is_channel_ctx_resident(ch)) {
+		gk20a_suspend_all_sms(g, 0, false);
+
+		if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_CILP) {
+			err = gr_gp10b_set_cilp_preempt_pending(g, ch);
+			if (err)
+				gk20a_err(dev_from_gk20a(g),
+					"unable to set CILP preempt pending\n");
+			else
+				*cilp_preempt_pending = true;
+
+			gk20a_resume_all_sms(g);
+		}
+
+		ctx_resident = true;
+	} else {
+		gk20a_disable_channel_tsg(g, ch);
+	}
+
+	return ctx_resident;
+}
+
+static int gr_gp10b_suspend_contexts(struct gk20a *g,
+				struct dbg_session_gk20a *dbg_s,
+				int *ctx_resident_ch_fd)
+{
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 delay = GR_IDLE_CHECK_DEFAULT;
+	bool cilp_preempt_pending = false;
+	struct channel_gk20a *cilp_preempt_pending_ch = NULL;
+	struct channel_gk20a *ch;
+	struct dbg_session_channel_data *ch_data;
+	int err = 0;
+	int local_ctx_resident_ch_fd = -1;
+	bool ctx_resident;
+
+	mutex_lock(&g->dbg_sessions_lock);
+
+	err = gr_gk20a_disable_ctxsw(g);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "unable to stop gr ctxsw");
+		mutex_unlock(&g->dbg_sessions_lock);
+		goto clean_up;
+	}
+
+	mutex_lock(&dbg_s->ch_list_lock);
+
+	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+		ch = g->fifo.channel + ch_data->chid;
+
+		ctx_resident = gr_gp10b_suspend_context(ch,
+					&cilp_preempt_pending);
+		if (ctx_resident)
+			local_ctx_resident_ch_fd = ch_data->channel_fd;
+		if (cilp_preempt_pending)
+			cilp_preempt_pending_ch = ch;
+	}
+
+	mutex_unlock(&dbg_s->ch_list_lock);
+
+	err = gr_gk20a_enable_ctxsw(g);
+	if (err) {
+		mutex_unlock(&g->dbg_sessions_lock);
+		goto clean_up;
+	}
+
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	if (cilp_preempt_pending_ch) {
+		struct channel_ctx_gk20a *ch_ctx =
+				&cilp_preempt_pending_ch->ch_ctx;
+		struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
+
+		do {
+			if (!gr_ctx->t18x.cilp_preempt_pending)
+				break;
+
+			usleep_range(delay, delay * 2);
+			delay = min_t(u32, delay << 1, GR_IDLE_CHECK_MAX);
+		} while (time_before(jiffies, end_jiffies)
+			|| !tegra_platform_is_silicon());
+
+		err = -ETIMEDOUT;
+	}
+
+	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;
+
+clean_up:
+	return err;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -1787,4 +1890,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.handle_fecs_error = gr_gp10b_handle_fecs_error;
 	gops->gr.create_gr_sysfs = gr_gp10b_create_sysfs;
 	gops->gr.get_lrf_tex_ltc_dram_override = get_ecc_override_val;
+	gops->gr.suspend_contexts = gr_gp10b_suspend_contexts;
 }

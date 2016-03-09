@@ -48,7 +48,7 @@
 		e3301-a02-slt-char@0 {
 			ids = "3301-1080-200", "3301-1099-200";
 			override@0 {
-				target = <&spmic_ldo1>;
+				target = <&spmic_ldo8>;
 				_overlay_ {
 					regulator-min-microvolt = <3300000>;
 					regulator-max-microvolt = <3300000>;
@@ -60,8 +60,8 @@
 			override@1 {
 				target = <&tegra_pmc_iopower>;
 				_overlay_ {
-					iopower-dmic-hv-supply =  <&spmic_ldo1>;
-					iopower-audio-hv-supply = <&spmic_ldo1>;
+					iopower-dmic-hv-supply =  <&spmic_ldo8>;
+					iopower-audio-hv-supply = <&spmic_ldo8>;
 				};
 			};
 			override@2 {

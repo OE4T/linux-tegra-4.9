@@ -48,9 +48,7 @@
 #include <linux/of_address.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/uaccess.h>
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 #include <linux/ote_protocol.h>
-#endif
 #include <linux/tegra-timer.h>
 
 #define CREATE_TRACE_POINTS
@@ -3436,9 +3434,11 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 		vrr->fe_intr_req = 0;
 	}
 
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-	te_vrr_sec();
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+	if (te_is_secos_dev_enabled())
+		te_vrr_sec();
 #endif
+
 	/* Increment frame end interrupt refcount requested
 	   by secure library */
 	if (vrr->fe_intr_req)

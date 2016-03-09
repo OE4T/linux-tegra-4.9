@@ -40,13 +40,11 @@
 #include <linux/of_gpio.h>
 #include <linux/nvhost.h>
 #include <linux/timer.h>
+#include <linux/ote_protocol.h>
 #ifdef CONFIG_PINCTRL_CONSUMER
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinconf-tegra.h>
-#endif
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-#include <linux/ote_protocol.h>
 #endif
 
 #include <mach/clk.h>
@@ -2456,7 +2454,7 @@ struct tegra_dc_platform_data
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	const char *dc_or_node;
 #endif
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
 	int check_val;
 #endif
 	/*
@@ -2790,15 +2788,17 @@ struct tegra_dc_platform_data
 						&dma_addr, GFP_KERNEL);
 		vrr = pdata->default_out->vrr;
 		if (vrr) {
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-			int retval;
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+			if (te_is_secos_dev_enabled()) {
+				int retval;
 
-			retval = te_vrr_set_buf(virt_to_phys(vrr));
-			if (retval) {
-				dev_err(&ndev->dev, "failed to set buffer\n");
-				goto fail_parse;
+				retval = te_vrr_set_buf(virt_to_phys(vrr));
+				if (retval) {
+					dev_err(&ndev->dev, "failed to set buffer\n");
+					goto fail_parse;
+				}
 			}
-#endif /* CONFIG_TRUSTED_LITTLE_KERNEL */
+#endif
 		} else {
 			dev_err(&ndev->dev, "not enough memory\n");
 			goto fail_parse;
@@ -2823,14 +2823,16 @@ struct tegra_dc_platform_data
 				goto fail_parse;
 			}
 			OF_DC_LOG("nvidia,hdmi-vrr-caps: %d\n", temp);
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-			check_val = te_vrr_set_buf(virt_to_phys(
-				pdata->default_out->vrr));
-			if (check_val) {
-				dev_err(&ndev->dev, "failed to set buffer\n");
-				goto fail_parse;
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+			if (te_is_secos_dev_enabled()) {
+				check_val = te_vrr_set_buf(virt_to_phys(
+					pdata->default_out->vrr));
+				if (check_val) {
+					dev_err(&ndev->dev, "failed to set buffer\n");
+					goto fail_parse;
+				}
 			}
-#endif /* CONFIG_TRUSTED_LITTLE_KERNEL */
+#endif
 		}
 	} else
 		pr_info("%s: nvidia,hdmi-vrr-caps not present\n", __func__);

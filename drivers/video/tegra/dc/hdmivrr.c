@@ -28,9 +28,7 @@
 #include <linux/debugfs.h>
 #include <linux/delay.h>
 #include <linux/random.h>
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 #include <linux/ote_protocol.h>
-#endif
 
 #include <mach/dc.h>
 
@@ -479,11 +477,10 @@ static int tegra_hdmivrr_auth_sts_ready(struct tegra_hdmi *hdmi)
 
 static void tegra_hdmivrr_mac(struct tegra_hdmi *hdmi, struct tegra_vrr *vrr)
 {
-
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-	te_authenticate_vrr((u8 *)&vrr->keynum, 75);
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+	if (te_is_secos_dev_enabled())
+		te_authenticate_vrr((u8 *)&vrr->keynum, 75);
 #endif
-
 }
 
 static int tegra_hdmivrr_driver_unlock(struct tegra_hdmi *hdmi,

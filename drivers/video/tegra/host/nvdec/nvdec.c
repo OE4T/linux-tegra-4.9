@@ -1,7 +1,7 @@
 /*
  * Tegra NVDEC Module Support
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,9 +49,7 @@
 #include "t210/t210.h"
 #include "iomap.h"
 
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
 #include <linux/ote_protocol.h>
-#endif
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
@@ -323,8 +321,9 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	}
 	dev_dbg(&dev->dev, "nvdec_boot: success\n");
 
-#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
-	te_restore_keyslots();
+#if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
+	if (te_is_secos_dev_enabled())
+		te_restore_keyslots();
 #endif
 
 	return 0;

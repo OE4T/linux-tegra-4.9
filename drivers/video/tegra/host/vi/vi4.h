@@ -23,12 +23,8 @@
 
 #include "mc_common.h"
 
-#define MAX_VI_CH_INCRS 6
-
 struct nvhost_vi_ch_incrs {
-	spinlock_t lock;
-	u8 tags[MAX_VI_CH_INCRS];
-	u32 syncpt_ids[MAX_VI_CH_INCRS];
+	atomic_t syncpt_ids[3];
 };
 
 struct nvhost_vi_notify_dev {

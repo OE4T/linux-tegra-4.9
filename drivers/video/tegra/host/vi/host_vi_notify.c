@@ -39,6 +39,7 @@
 #define VI_CH_CONTROL_ENABLE			0x01
 #define VI_CH_CONTROL_SINGLESHOT		0x02
 
+#define VI_NOTIFY_TAG_CHANSEL_PIXEL_SOF		0x04
 #define VI_NOTIFY_TAG_CHANSEL_COLLISION		0x0C
 #define VI_NOTIFY_TAG_CHANSEL_SHORT_FRAME	0x0D
 #define VI_NOTIFY_TAG_CHANSEL_LOAD_FRAMED	0x0E
@@ -76,39 +77,32 @@ static irqreturn_t nvhost_vi_prio_isr(int irq, void *dev_id)
 static void nvhost_vi_notify_do_increment(struct platform_device *pdev,
 						u8 ch, u8 tag)
 {
+	struct nvhost_master *master = nvhost_get_host(pdev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
-	struct nvhost_vi_ch_incrs *incrs;
-	unsigned long flags;
-	int i;
+	int idx;
+	u32 id;
 
 	if (unlikely(ch >= ARRAY_SIZE(hvnd->incr)))
 		return;
 
-	incrs = &hvnd->incr[ch];
-
-	spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
-	for (i = 0; i < MAX_VI_CH_INCRS; i++) {
-		struct nvhost_master *master;
-		u32 id;
-
-		if (incrs->tags[i] != tag)
-			continue;
-
-		id = incrs->syncpt_ids[i];
-
-		memmove(incrs->tags + i, incrs->tags + i + 1,
-			MAX_VI_CH_INCRS - (i + 1));
-		incrs->tags[MAX_VI_CH_INCRS - 1] = 0xff;
-		memmove(incrs->syncpt_ids + i, incrs->syncpt_ids + i + 1,
-			(MAX_VI_CH_INCRS - (i + 1)) * sizeof(id));
-
-		master = nvhost_get_host(pdev);
-		nvhost_syncpt_cpu_incr(&master->syncpt, id);
+	switch (tag) {
+	case VI_NOTIFY_TAG_CHANSEL_PIXEL_SOF:
+		idx = 0;
 		break;
+	case VI_NOTIFY_TAG_ATOMP_FE:
+		idx = 1;
+		break;
+	case VI_NOTIFY_TAG_ISPBUF_FE:
+		idx = 2;
+		break;
+	default:
+		return;
 	}
 
-	spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
+	id = atomic_read(&hvnd->incr[ch].syncpt_ids[idx]);
+	if (id != 0xffffffff)
+		nvhost_syncpt_cpu_incr(&master->syncpt, id);
 }
 
 static irqreturn_t nvhost_vi_notify_isr(int irq, void *dev_id)
@@ -227,10 +221,8 @@ static int nvhost_vi_notify_probe(struct device *dev,
 	hvnd->classify_mask = 0;
 	hvnd->ld_mask = 0;
 
-	for (i = 0; i < ARRAY_SIZE(hvnd->incr); i++) {
-		spin_lock_init(&hvnd->incr[i].lock);
-		memset(hvnd->incr[i].tags, 0xff, MAX_VI_CH_INCRS);
-	}
+	for (i = 0; i < ARRAY_SIZE(hvnd->incr); i++)
+		memset(hvnd->incr, 0xff, sizeof(hvnd->incr));
 
 	hvnd->prio_irq = nvhost_vi_get_irq(pdev, 1, nvhost_vi_prio_isr);
 	if (IS_ERR_VALUE(hvnd->prio_irq))
@@ -313,39 +305,36 @@ static int nvhost_vi_notify_classify(struct device *dev, u32 mask)
 	return nvhost_vi_notify_set_mask(pdev, hvnd->mask | mask);
 }
 
-static int nvhost_vi_notify_program_increment(struct device *dev, u8 ch,
-						u8 tag, u32 id)
+static int nvhost_vi_notify_set_syncpts(struct device *dev, u8 ch,
+					const u32 ids[3])
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_master *master = nvhost_get_host(pdev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
 	struct nvhost_vi_ch_incrs *incrs;
-	unsigned long flags;
-	u8 *p;
 	int err;
+	int i;
 
-	if (!nvhost_syncpt_is_valid_pt(&master->syncpt, id))
-		return -EINVAL;
+	for (i = 0; i < ARRAY_SIZE(incrs->syncpt_ids); i++)
+		if (ids[i] != 0xffffffff &&
+			!nvhost_syncpt_is_valid_pt(&master->syncpt, ids[i]))
+			return -EINVAL;
+
 	if (ch >= ARRAY_SIZE(hvnd->incr))
 		return -EOPNOTSUPP;
 
-	err = nvhost_vi_notify_set_mask(pdev, hvnd->mask | (1u << tag));
+	err = nvhost_vi_notify_set_mask(pdev,
+			hvnd->mask | (1u << VI_NOTIFY_TAG_CHANSEL_PIXEL_SOF));
 	if (err)
 		return err;
 
 	incrs = &hvnd->incr[ch];
 
-	spin_lock_irqsave(&incrs->lock, flags);
-	p = memchr(incrs->tags, 0xff, MAX_VI_CH_INCRS);
+	for (i = 0; i < ARRAY_SIZE(incrs->syncpt_ids); i++)
+		atomic_set(&incrs->syncpt_ids[i], ids[i]);
 
-	if (p != NULL) {
-		*p = tag;
-		incrs->syncpt_ids[p - incrs->tags] = id;
-	}
-	spin_unlock_irqrestore(&incrs->lock, flags);
-
-	return p ? 0 : -ENOBUFS;
+	return 0;
 }
 
 static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
@@ -354,27 +343,27 @@ static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
 	struct nvhost_vi_ch_incrs *incrs;
-	unsigned long flags;
+	int i;
 	u32 mask = hvnd->classify_mask;
 
 	BUG_ON(ch >= ARRAY_SIZE(hvnd->incr));
 	incrs = &hvnd->incr[ch];
 
-	spin_lock_irqsave(&incrs->lock, flags);
-	memset(incrs->tags, 0xff, sizeof(incrs->tags));
-	spin_unlock_irqrestore(&incrs->lock, flags);
+	for (i = 0; i < ARRAY_SIZE(incrs->syncpt_ids); i++)
+		atomic_set(&incrs->syncpt_ids[i], 0xffffffff);
 
 	synchronize_irq(hvnd->norm_irq);
 
 	/* Recompute the syncpoint mask and possibly power off */
 	for (ch = 0; ch < ARRAY_SIZE(hvnd->incr); ch++) {
-		int i;
+		incrs = &hvnd->incr[ch];
 
-		spin_lock_irqsave(&hvnd->incr[ch].lock, flags);
-		for (i = 0; i < ARRAY_SIZE(incrs->tags) &&
-				incrs->tags[i] != 0xff; i++)
-			mask |= 1u << incrs->tags[i];
-		spin_unlock_irqrestore(&hvnd->incr[ch].lock, flags);
+		if (atomic_read(&incrs->syncpt_ids[0]) != 0xffffffff)
+			mask |= 1u << VI_NOTIFY_TAG_CHANSEL_PIXEL_SOF;
+		if (atomic_read(&incrs->syncpt_ids[1]) != 0xffffffff)
+			mask |= 1u << VI_NOTIFY_TAG_ATOMP_FE;
+		if (atomic_read(&incrs->syncpt_ids[2]) != 0xffffffff)
+			mask |= 1u << VI_NOTIFY_TAG_ISPBUF_FE;
 	}
 
 	nvhost_vi_notify_set_mask(pdev, mask);
@@ -384,6 +373,6 @@ struct vi_notify_driver nvhost_vi_notify_driver = {
 	.owner = THIS_MODULE,
 	.probe = nvhost_vi_notify_probe,
 	.classify = nvhost_vi_notify_classify,
-	.program_increment = nvhost_vi_notify_program_increment,
+	.set_syncpts = nvhost_vi_notify_set_syncpts,
 	.reset_channel = nvhost_vi_notify_reset,
 };

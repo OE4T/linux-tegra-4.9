@@ -31,16 +31,14 @@
 /* XXX: move ioctls to include/linux/ (after T18X merge) */
 #include <linux/nvhost_vi_ioctl.h>
 
-struct tegra_vi_syncpt_incr_req {
-	u8 tag;
-	u8 pad1;
-	u16 pad2;
-	u32 syncpt_id;
+struct tegra_vi4_syncpts_req {
+	u32 syncpt_ids[3];
+	u32 pad;
 };
 
 #define NVHOST_VI_SET_IGN_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 10, u32)
-#define NVHOST_VI_ADD_SYNCPT_INCR \
-	_IOW(NVHOST_VI_IOCTL_MAGIC, 12, struct tegra_vi_syncpt_incr_req)
+#define NVHOST_VI_SET_SYNCPTS \
+	_IOW(NVHOST_VI_IOCTL_MAGIC, 13, struct tegra_vi4_syncpts_req)
 
 struct vi_notify_channel {
 	struct vi_notify_dev *vnd;
@@ -255,21 +253,19 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 		return err;
 	}
 
-	case NVHOST_VI_ADD_SYNCPT_INCR: {
-		struct tegra_vi_syncpt_incr_req req;
-		int err = 0;
+	case NVHOST_VI_SET_SYNCPTS: {
+		struct tegra_vi4_syncpts_req req;
+		int err;
 
 		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
 			return -EFAULT;
-		if (req.tag >= 32 || req.pad1 || req.pad2)
-			return -EINVAL;
-		if (vi_notify_is_broadcast(req.tag))
+		if (req.pad)
 			return -EINVAL;
 		if (mutex_lock_interruptible(&vnd->lock))
 			return -ERESTARTSYS;
 
-		err = vnd->driver->program_increment(vnd->device, channel,
-						req.tag, req.syncpt_id);
+		err = vnd->driver->set_syncpts(vnd->device, channel,
+						req.syncpt_ids);
 		mutex_unlock(&vnd->lock);
 		return err;
 	}

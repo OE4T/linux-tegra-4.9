@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -644,22 +644,31 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 		valid = check_whitelists(dbg_s, op, offset + 4);
 
 	if (valid && (op->type != REGOP(TYPE_GLOBAL))) {
-			err = gr_gk20a_get_ctx_buffer_offsets(dbg_s->g,
+		err = gr_gk20a_get_ctx_buffer_offsets(dbg_s->g,
+						      op->offset,
+						      1,
+						      &buf_offset_lo,
+						      &buf_offset_addr,
+						      &num_offsets,
+						      op->type == REGOP(TYPE_GR_CTX_QUAD),
+						      op->quad);
+		if (err) {
+			err = gr_gk20a_get_pm_ctx_buffer_offsets(dbg_s->g,
 							      op->offset,
 							      1,
 							      &buf_offset_lo,
 							      &buf_offset_addr,
-							      &num_offsets,
-							      op->type == REGOP(TYPE_GR_CTX_QUAD),
-							      op->quad);
+							      &num_offsets);
+
 			if (err) {
 				op->status |= REGOP(STATUS_INVALID_OFFSET);
 				return -EINVAL;
 			}
-			if (!buf_offset_lo) {
-				op->status |= REGOP(STATUS_INVALID_OFFSET);
-				return -EINVAL;
-			}
+		}
+		if (!buf_offset_lo) {
+			op->status |= REGOP(STATUS_INVALID_OFFSET);
+			return -EINVAL;
+		}
 	}
 
 	if (!valid) {

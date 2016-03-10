@@ -94,6 +94,10 @@ static inline u32 ctxsw_prog_main_image_pm_mode_m(void)
 {
 	return 0x7 << 0;
 }
+static inline u32 ctxsw_prog_main_image_pm_mode_ctxsw_f(void)
+{
+	return 0x1;
+}
 static inline u32 ctxsw_prog_main_image_pm_mode_no_ctxsw_f(void)
 {
 	return 0x0;

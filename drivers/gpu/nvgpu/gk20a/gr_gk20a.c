@@ -27,6 +27,8 @@
 #include <linux/dma-mapping.h>
 #include <linux/firmware.h>
 #include <linux/nvhost.h>
+#include <linux/sort.h>
+#include <linux/bsearch.h>
 #include <trace/events/gk20a.h>
 
 #include "gk20a.h"
@@ -59,6 +61,10 @@
 #include "ctxsw_trace_gk20a.h"
 
 #define BLK_SIZE (256)
+#define NV_PMM_FBP_STRIDE	0x1000
+#define NV_PERF_PMM_FBP_ROUTER_STRIDE 0x0200
+#define NV_PERF_PMMGPC_CHIPLET_OFFSET	0x1000
+#define NV_PERF_PMMGPCROUTER_STRIDE	0x0200
 
 static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g);
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
@@ -1591,9 +1597,17 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	u32 data;
 	int ret;
 
+	gk20a_dbg_fn("");
+
+	if (!ch_ctx->gr_ctx) {
+		gk20a_err(dev_from_gk20a(g), "no graphics context allocated");
+		return -EFAULT;
+	}
+
 	c->g->ops.fifo.disable_channel(c);
 	ret = c->g->ops.fifo.preempt_channel(c->g, c->hw_chid);
 	if (ret) {
+		c->g->ops.fifo.enable_channel(c);
 		gk20a_err(dev_from_gk20a(g),
 			"failed to preempt channel\n");
 		return ret;
@@ -1603,11 +1617,18 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
 
+	if (!ch_ctx->gr_ctx) {
+		gk20a_err(dev_from_gk20a(g), "no graphics context allocated");
+		return -EFAULT;
+	}
+
 	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
 			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
 			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr)
+	if (!ctx_ptr) {
+		c->g->ops.fifo.enable_channel(c);
 		return -ENOMEM;
+	}
 
 	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
 	data = data & ~ctxsw_prog_main_image_pm_smpc_mode_m();
@@ -1620,11 +1641,135 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	vunmap(ctx_ptr);
 
 	/* enable channel */
-	gk20a_writel(c->g, ccsr_channel_r(c->hw_chid),
-		gk20a_readl(c->g, ccsr_channel_r(c->hw_chid)) |
-		ccsr_channel_enable_set_true_f());
+	c->g->ops.fifo.enable_channel(c);
 
 	return 0;
+}
+
+int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
+				  struct channel_gk20a *c,
+				  bool enable_hwpm_ctxsw)
+{
+	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	struct pm_ctx_desc *pm_ctx = &ch_ctx->pm_ctx;
+	void *ctx_ptr = NULL;
+	void *pm_ctx_ptr;
+	u32 data, virt_addr;
+	int ret;
+
+	gk20a_dbg_fn("");
+
+	if (!ch_ctx->gr_ctx) {
+		gk20a_err(dev_from_gk20a(g), "no graphics context allocated");
+		return -EFAULT;
+	}
+
+	if (enable_hwpm_ctxsw) {
+		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f())
+			return 0;
+	} else {
+		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_no_ctxsw_f())
+			return 0;
+	}
+
+	c->g->ops.fifo.disable_channel(c);
+	ret = c->g->ops.fifo.preempt_channel(c->g, c->hw_chid);
+	if (ret) {
+		c->g->ops.fifo.enable_channel(c);
+		gk20a_err(dev_from_gk20a(g),
+			"failed to preempt channel\n");
+		return ret;
+	}
+
+	/* Channel gr_ctx buffer is gpu cacheable.
+	   Flush and invalidate before cpu update. */
+	g->ops.mm.l2_flush(g, true);
+
+	if (enable_hwpm_ctxsw) {
+		/* Allocate buffer if necessary */
+		if (pm_ctx->mem.gpu_va == 0) {
+			ret = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+					g->gr.ctx_vars.pm_ctxsw_image_size,
+					&pm_ctx->mem);
+			if (ret) {
+				c->g->ops.fifo.enable_channel(c);
+				gk20a_err(dev_from_gk20a(g),
+					"failed to allocate pm ctxt buffer");
+				return ret;
+			}
+
+			pm_ctx->mem.gpu_va = gk20a_gmmu_map(c->vm,
+							&pm_ctx->mem.sgt,
+							pm_ctx->mem.size,
+							NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
+							gk20a_mem_flag_none, true);
+			if (!pm_ctx->mem.gpu_va) {
+				gk20a_err(dev_from_gk20a(g),
+					"failed to map pm ctxt buffer");
+				gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+						&pm_ctx->mem);
+				c->g->ops.fifo.enable_channel(c);
+				return -ENOMEM;
+			}
+		}
+
+		/* Now clear the buffer */
+		pm_ctx_ptr = vmap(pm_ctx->mem.pages,
+				PAGE_ALIGN(pm_ctx->mem.size) >> PAGE_SHIFT,
+				0, pgprot_writecombine(PAGE_KERNEL));
+
+		if (!pm_ctx_ptr) {
+			ret = -ENOMEM;
+			goto cleanup_pm_buf;
+		}
+
+		memset(pm_ctx_ptr, 0, pm_ctx->mem.size);
+
+		vunmap(pm_ctx_ptr);
+	}
+
+	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
+			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
+			0, pgprot_writecombine(PAGE_KERNEL));
+	if (!ctx_ptr) {
+		ret = -ENOMEM;
+		goto cleanup_pm_buf;
+	}
+
+	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	data = data & ~ctxsw_prog_main_image_pm_mode_m();
+
+	if (enable_hwpm_ctxsw) {
+		pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_ctxsw_f();
+
+		/* pack upper 32 bits of virtual address into a 32 bit number
+		 * (256 byte boundary)
+		 */
+		virt_addr = (u32)(pm_ctx->mem.gpu_va >> 8);
+	} else {
+		pm_ctx->pm_mode = ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
+		virt_addr = 0;
+	}
+
+	data |= pm_ctx->pm_mode;
+
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0, data);
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, virt_addr);
+
+	vunmap(ctx_ptr);
+
+	/* enable channel */
+	c->g->ops.fifo.enable_channel(c);
+
+	return 0;
+cleanup_pm_buf:
+	gk20a_gmmu_unmap(c->vm, pm_ctx->mem.gpu_va, pm_ctx->mem.size,
+			gk20a_mem_flag_none);
+	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &pm_ctx->mem);
+	memset(&pm_ctx->mem, 0, sizeof(struct mem_desc));
+
+	c->g->ops.fifo.enable_channel(c);
+	return ret;
 }
 
 /* load saved fresh copy of gloden image into channel gr_ctx */
@@ -1635,6 +1780,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	u32 virt_addr_lo;
 	u32 virt_addr_hi;
+	u32 virt_addr = 0;
 	u32 i, v, data;
 	int ret = 0;
 	void *ctx_ptr = NULL;
@@ -1662,15 +1808,6 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_save_ops_o(), 0, 0);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_restore_ops_o(), 0, 0);
-
-	/* no user for client managed performance counter ctx */
-	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
-	data = data & ~ctxsw_prog_main_image_pm_mode_m();
-	data |= ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0,
-		 data);
-
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, 0);
 
 	/* set priv access map */
 	virt_addr_lo =
@@ -1707,6 +1844,32 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		 virt_addr_lo);
 	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_o(), 0,
 		 virt_addr_hi);
+
+	/* Update main header region of the context buffer with the info needed
+	 * for PM context switching, including mode and possibly a pointer to
+	 * the PM backing store.
+	 */
+	if (ch_ctx->pm_ctx.pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f()) {
+		if (ch_ctx->pm_ctx.mem.gpu_va == 0) {
+			gk20a_err(dev_from_gk20a(g),
+				"context switched pm with no pm buffer!");
+			vunmap(ctx_ptr);
+			return -EFAULT;
+		}
+
+		/* pack upper 32 bits of virtual address into a 32 bit number
+		 * (256 byte boundary)
+		 */
+		virt_addr = (u32)(ch_ctx->pm_ctx.mem.gpu_va >> 8);
+	} else
+		virt_addr = 0;
+
+	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	data = data & ~ctxsw_prog_main_image_pm_mode_m();
+	data |= ch_ctx->pm_ctx.pm_mode;
+
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0, data);
+	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, virt_addr);
 
 	vunmap(ctx_ptr);
 
@@ -2205,7 +2368,6 @@ static int gr_gk20a_wait_ctxsw_ready(struct gk20a *g)
 
 int gr_gk20a_init_ctx_state(struct gk20a *g)
 {
-	u32 pm_ctx_image_size;
 	u32 ret;
 	struct fecs_method_op_gk20a op = {
 		.mailbox = { .id = 0, .data = 0,
@@ -2237,7 +2399,7 @@ int gr_gk20a_init_ctx_state(struct gk20a *g)
 		}
 		op.method.addr =
 			gr_fecs_method_push_adr_discover_pm_image_size_v();
-		op.mailbox.ret = &pm_ctx_image_size;
+		op.mailbox.ret = &g->gr.ctx_vars.pm_ctxsw_image_size;
 		ret = gr_gk20a_submit_fecs_method_op(g, op, false);
 		if (ret) {
 			gk20a_err(dev_from_gk20a(g),
@@ -2641,14 +2803,30 @@ static void gr_gk20a_free_channel_patch_ctx(struct channel_gk20a *c)
 	patch_ctx->data_count = 0;
 }
 
+static void gr_gk20a_free_channel_pm_ctx(struct channel_gk20a *c)
+{
+	struct pm_ctx_desc *pm_ctx = &c->ch_ctx.pm_ctx;
+	struct gk20a *g = c->g;
+
+	gk20a_dbg_fn("");
+
+	if (pm_ctx->mem.gpu_va) {
+		gk20a_gmmu_unmap(c->vm, pm_ctx->mem.gpu_va,
+				 pm_ctx->mem.size, gk20a_mem_flag_none);
+
+		gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &pm_ctx->mem);
+	}
+}
+
 void gk20a_free_channel_ctx(struct channel_gk20a *c)
 {
 	gr_gk20a_unmap_global_ctx_buffers(c);
 	gr_gk20a_free_channel_patch_ctx(c);
+	gr_gk20a_free_channel_pm_ctx(c);
 	if (!gk20a_is_channel_marked_as_tsg(c))
 		gr_gk20a_free_channel_gr_ctx(c);
 
-	/* zcull_ctx, pm_ctx */
+	/* zcull_ctx */
 
 	memset(&c->ch_ctx, 0, sizeof(struct channel_ctx_gk20a));
 
@@ -2742,6 +2920,9 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		}
 		ch_ctx->gr_ctx = tsg->tsg_gr_ctx;
 	}
+
+	/* PM ctxt switch is off by default */
+	ch_ctx->pm_ctx.pm_mode = ctxsw_prog_main_image_pm_mode_no_ctxsw_f();
 
 	/* commit gr ctx buffer */
 	err = gr_gk20a_commit_inst(c, ch_ctx->gr_ctx->mem.gpu_va);
@@ -2982,6 +3163,10 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 
 	kfree(gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;
+
+	if (gr->ctx_vars.hwpm_ctxsw_buffer_offset_map)
+		nvgpu_free(gr->ctx_vars.hwpm_ctxsw_buffer_offset_map);
+	gr->ctx_vars.hwpm_ctxsw_buffer_offset_map = NULL;
 
 	gk20a_comptag_allocator_destroy(&gr->comp_tags);
 }
@@ -5828,6 +6013,10 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 					       u32 context_buffer_size,
 					       u32 *priv_offset);
 
+static int gr_gk20a_find_priv_offset_in_pm_buffer(struct gk20a *g,
+					          u32 addr,
+					          u32 *priv_offset);
+
 /* This function will decode a priv address and return the partition type and numbers. */
 static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 			      int  *addr_type, /* enum ctxsw_addr_type */
@@ -6056,14 +6245,81 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 		offset_addrs[i] = priv_registers[i];
 	}
 
-    *num_offsets = num_registers;
+	*num_offsets = num_registers;
+cleanup:
+	if (!IS_ERR_OR_NULL(priv_registers))
+		kfree(priv_registers);
 
- cleanup:
+	return err;
+}
 
-    if (!IS_ERR_OR_NULL(priv_registers))
-	    kfree(priv_registers);
+int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
+				       u32 addr,
+				       u32 max_offsets,
+				       u32 *offsets, u32 *offset_addrs,
+				       u32 *num_offsets)
+{
+	u32 i;
+	u32 priv_offset = 0;
+	u32 *priv_registers;
+	u32 num_registers = 0;
+	int err = 0;
+	struct gr_gk20a *gr = &g->gr;
+	u32 potential_offsets = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
 
-    return err;
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
+
+	/* implementation is crossed-up if either of these happen */
+	if (max_offsets > potential_offsets)
+		return -EINVAL;
+
+	if (!g->gr.ctx_vars.golden_image_initialized)
+		return -ENODEV;
+
+	priv_registers = kzalloc(sizeof(u32) * potential_offsets, GFP_KERNEL);
+	if (ZERO_OR_NULL_PTR(priv_registers)) {
+		gk20a_dbg_fn("failed alloc for potential_offsets=%d", potential_offsets);
+		return -ENOMEM;
+	}
+	memset(offsets,      0, sizeof(u32) * max_offsets);
+	memset(offset_addrs, 0, sizeof(u32) * max_offsets);
+	*num_offsets = 0;
+
+	gr_gk20a_create_priv_addr_table(g, addr, priv_registers, &num_registers);
+
+	if ((max_offsets > 1) && (num_registers > max_offsets)) {
+		err = -EINVAL;
+		goto cleanup;
+	}
+
+	if ((max_offsets == 1) && (num_registers > 1))
+		num_registers = 1;
+
+	if (!g->gr.ctx_vars.local_golden_image) {
+		gk20a_dbg_fn("no context switch header info to work with");
+		err = -EINVAL;
+		goto cleanup;
+	}
+
+	for (i = 0; i < num_registers; i++) {
+		err = gr_gk20a_find_priv_offset_in_pm_buffer(g,
+						  priv_registers[i],
+						  &priv_offset);
+		if (err) {
+			gk20a_dbg_fn("Could not determine priv_offset for addr:0x%x",
+				      addr); /*, grPriRegStr(addr)));*/
+			goto cleanup;
+		}
+
+		offsets[i] = priv_offset;
+		offset_addrs[i] = priv_registers[i];
+	}
+
+	*num_offsets = num_registers;
+cleanup:
+	kfree(priv_registers);
+
+	return err;
 }
 
 /* Setup some register tables.  This looks hacky; our
@@ -6638,8 +6894,6 @@ static int gr_gk20a_determine_ppc_configuration(struct gk20a *g,
 	return 0;
 }
 
-
-
 /*
  *  This function will return the 32 bit offset for a priv register if it is
  *  present in the context buffer.
@@ -6801,6 +7055,314 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	return -EINVAL;
 }
 
+static int map_cmp(const void *a, const void *b)
+{
+	struct ctxsw_buf_offset_map_entry *e1 =
+					(struct ctxsw_buf_offset_map_entry *)a;
+	struct ctxsw_buf_offset_map_entry *e2 =
+					(struct ctxsw_buf_offset_map_entry *)b;
+
+	if (e1->addr < e2->addr)
+		return -1;
+
+	if (e1->addr > e2->addr)
+		return 1;
+	return 0;
+}
+
+static int add_ctxsw_buffer_map_entries(struct ctxsw_buf_offset_map_entry *map,
+					struct aiv_list_gk20a *regs,
+					u32 *count, u32 *offset,
+					u32 max_cnt, u32 base, u32 mask)
+{
+	u32 idx;
+	u32 cnt = *count;
+	u32 off = *offset;
+
+	if ((cnt + regs->count) > max_cnt)
+		return -EINVAL;
+
+	for (idx = 0; idx < regs->count; idx++) {
+		map[cnt].addr = base + (regs->l[idx].addr & mask);
+		map[cnt++].offset = off;
+		off += 4;
+	}
+	*count = cnt;
+	*offset = off;
+	return 0;
+}
+
+/* Helper function to add register entries to the register map for all
+ * subunits
+ */
+static int add_ctxsw_buffer_map_entries_subunits(
+					struct ctxsw_buf_offset_map_entry *map,
+					struct aiv_list_gk20a *regs,
+					u32 *count, u32 *offset,
+					u32 max_cnt, u32 base,
+					u32 num_units, u32 stride, u32 mask)
+{
+	u32 unit;
+	u32 idx;
+	u32 cnt = *count;
+	u32 off = *offset;
+
+	if ((cnt + (regs->count * num_units)) > max_cnt)
+		return -EINVAL;
+
+	/* Data is interleaved for units in ctxsw buffer */
+	for (idx = 0; idx < regs->count; idx++) {
+		for (unit = 0; unit < num_units; unit++) {
+			map[cnt].addr = base + (regs->l[idx].addr & mask) +
+					(unit * stride);
+			map[cnt++].offset = off;
+			off += 4;
+		}
+	}
+	*count = cnt;
+	*offset = off;
+	return 0;
+}
+
+static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
+					struct ctxsw_buf_offset_map_entry *map,
+					u32 *count, u32 *offset, u32 max_cnt)
+{
+	u32 num_gpcs = g->gr.gpc_count;
+	u32 num_ppcs, num_tpcs, gpc_num, base;
+
+	for (gpc_num = 0; gpc_num < num_gpcs; gpc_num++) {
+		num_tpcs = g->gr.gpc_tpc_count[gpc_num];
+		base = proj_gpc_base_v() +
+		       (proj_gpc_stride_v() * gpc_num) + proj_tpc_in_gpc_base_v();
+		if (add_ctxsw_buffer_map_entries_subunits(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_tpc,
+					count, offset, max_cnt, base, num_tpcs,
+					proj_tpc_in_gpc_stride_v(),
+					(proj_tpc_in_gpc_stride_v() - 1)))
+			return -EINVAL;
+
+		num_ppcs = g->gr.gpc_ppc_count[gpc_num];
+		base = proj_gpc_base_v() + (proj_gpc_stride_v() * gpc_num) +
+		       proj_ppc_in_gpc_base_v();
+		if (add_ctxsw_buffer_map_entries_subunits(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_ppc,
+					count, offset, max_cnt, base, num_ppcs,
+					proj_ppc_in_gpc_stride_v(),
+					(proj_ppc_in_gpc_stride_v() - 1)))
+			return -EINVAL;
+
+		base = proj_gpc_base_v() + (proj_gpc_stride_v() * gpc_num);
+		if (add_ctxsw_buffer_map_entries(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_gpc,
+					count, offset, max_cnt, base,
+					(proj_gpc_stride_v() - 1)))
+			return -EINVAL;
+
+		base = (NV_PERF_PMMGPC_CHIPLET_OFFSET * gpc_num);
+		if (add_ctxsw_buffer_map_entries(map,
+					&g->gr.ctx_vars.ctxsw_regs.perf_gpc,
+					count, offset, max_cnt, base, ~0))
+			return -EINVAL;
+
+		base = (NV_PERF_PMMGPCROUTER_STRIDE * gpc_num);
+		if (add_ctxsw_buffer_map_entries(map,
+					&g->gr.ctx_vars.ctxsw_regs.gpc_router,
+					count, offset, max_cnt, base, ~0))
+			return -EINVAL;
+
+		*offset = ALIGN(*offset, 256);
+	}
+	return 0;
+}
+
+/*
+ *            PM CTXSW BUFFER LAYOUT :
+ *|---------------------------------------------|0x00 <----PM CTXSW BUFFER BASE
+ *|                                             |
+ *|        LIST_compressed_pm_ctx_reg_SYS       |Space allocated: numRegs words
+ *|---------------------------------------------|
+ *|                                             |
+ *|    LIST_compressed_nv_perf_ctx_reg_SYS      |Space allocated: numRegs words
+ *|---------------------------------------------|
+ *|        PADDING for 256 byte alignment       |
+ *|---------------------------------------------|<----256 byte aligned
+ *|    LIST_compressed_nv_perf_fbp_ctx_regs     |
+ *|                                             |Space allocated: numRegs * n words (for n FB units)
+ *|---------------------------------------------|
+ *| LIST_compressed_nv_perf_fbprouter_ctx_regs  |
+ *|                                             |Space allocated: numRegs * n words (for n FB units)
+ *|---------------------------------------------|
+ *|    LIST_compressed_pm_fbpa_ctx_regs         |
+ *|                                             |Space allocated: numRegs * n words (for n FB units)
+ *|---------------------------------------------|
+ *|    LIST_compressed_pm_ltc_ctx_regs          |
+ *|                                  LTC0 LTS0  |
+ *|                                  LTC1 LTS0  |Space allocated: numRegs * n words (for n LTC units)
+ *|                                  LTCn LTS0  |
+ *|                                  LTC0 LTS1  |
+ *|                                  LTC1 LTS1  |
+ *|                                  LTCn LTS1  |
+ *|                                  LTC0 LTSn  |
+ *|                                  LTC1 LTSn  |
+ *|                                  LTCn LTSn  |
+ *|---------------------------------------------|
+ *|        PADDING for 256 byte alignment       |
+ *|---------------------------------------------|<----256 byte aligned
+ *|                            GPC0  REG0 TPC0  |Each GPC has space allocated to accommodate
+ *|                                  REG0 TPC1  |    all the GPC/TPC register lists
+ *| Lists in each GPC region:        REG0 TPCn  |Per GPC allocated space is always 256 byte aligned
+ *|  LIST_pm_ctx_reg_TPC             REG1 TPC0  |
+ *|             * numTpcs            REG1 TPC1  |
+ *|  LIST_pm_ctx_reg_PPC             REG1 TPCn  |
+ *|             * numPpcs            REGn TPC0  |
+ *|  LIST_pm_ctx_reg_GPC             REGn TPC1  |
+ *|  LIST_nv_perf_ctx_reg_GPC        REGn TPCn  |
+ *|                                       ----  |--
+ *|                            GPC1         .   |
+ *|                                         .   |<----
+ *|---------------------------------------------|
+ *=                                             =
+ *|                            GPCn             |
+ *=                                             =
+ *|---------------------------------------------|
+ */
+
+static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
+{
+	u32 hwpm_ctxsw_buffer_size = g->gr.ctx_vars.pm_ctxsw_image_size;
+	u32 hwpm_ctxsw_reg_count_max;
+	u32 map_size;
+	u32 i, count = 0;
+	u32 offset = 0;
+	struct ctxsw_buf_offset_map_entry *map;
+
+	if (hwpm_ctxsw_buffer_size == 0) {
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
+			"no PM Ctxsw buffer memory in context buffer");
+		return -EINVAL;
+	}
+
+	hwpm_ctxsw_reg_count_max = hwpm_ctxsw_buffer_size >> 2;
+	map_size = hwpm_ctxsw_reg_count_max * sizeof(*map);
+
+	map = nvgpu_alloc(map_size, true);
+	if (!map)
+		return -ENOMEM;
+
+	/* Add entries from _LIST_pm_ctx_reg_SYS */
+	if (add_ctxsw_buffer_map_entries(map, &g->gr.ctx_vars.ctxsw_regs.pm_sys,
+				&count, &offset, hwpm_ctxsw_reg_count_max, 0, ~0))
+		goto cleanup;
+
+	/* Add entries from _LIST_nv_perf_ctx_reg_SYS */
+	if (add_ctxsw_buffer_map_entries(map, &g->gr.ctx_vars.ctxsw_regs.perf_sys,
+				&count, &offset, hwpm_ctxsw_reg_count_max, 0, ~0))
+		goto cleanup;
+
+	offset = ALIGN(offset, 256);
+
+	/* Add entries from _LIST_nv_perf_fbp_ctx_regs */
+	if (add_ctxsw_buffer_map_entries_subunits(map,
+					&g->gr.ctx_vars.ctxsw_regs.fbp,
+					&count, &offset,
+					hwpm_ctxsw_reg_count_max, 0,
+					g->gr.num_fbps, NV_PMM_FBP_STRIDE, ~0))
+		goto cleanup;
+
+	/* Add entries from _LIST_nv_perf_fbprouter_ctx_regs */
+	if (add_ctxsw_buffer_map_entries_subunits(map,
+					&g->gr.ctx_vars.ctxsw_regs.fbp_router,
+					&count, &offset,
+					hwpm_ctxsw_reg_count_max, 0, g->gr.num_fbps,
+					NV_PERF_PMM_FBP_ROUTER_STRIDE, ~0))
+		goto cleanup;
+
+	/* Add entries from _LIST_nv_pm_fbpa_ctx_regs */
+	if (add_ctxsw_buffer_map_entries_subunits(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_fbpa,
+					&count, &offset,
+					hwpm_ctxsw_reg_count_max, 0,
+					proj_scal_litter_num_fbpas_v(),
+					proj_fbpa_stride_v(), ~0))
+		goto cleanup;
+
+	/* Add entries from _LIST_compressed_nv_pm_ltc_ctx_regs */
+	if (add_ctxsw_buffer_map_entries_subunits(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_ltc,
+					&count, &offset,
+					hwpm_ctxsw_reg_count_max, 0,
+					g->ltc_count, proj_ltc_stride_v(), ~0))
+		goto cleanup;
+
+	offset = ALIGN(offset, 256);
+
+	/* Add GPC entries */
+	if (add_ctxsw_buffer_map_entries_gpcs(g, map, &count, &offset,
+					hwpm_ctxsw_reg_count_max))
+		goto cleanup;
+
+	if (offset > hwpm_ctxsw_buffer_size) {
+		gk20a_err(dev_from_gk20a(g), "offset > buffer size");
+		goto cleanup;
+	}
+
+	sort(map, count, sizeof(*map), map_cmp, NULL);
+
+	g->gr.ctx_vars.hwpm_ctxsw_buffer_offset_map = map;
+	g->gr.ctx_vars.hwpm_ctxsw_buffer_offset_map_count = count;
+
+	gk20a_dbg_info("Reg Addr => HWPM Ctxt switch buffer offset");
+
+	for (i = 0; i < count; i++)
+		gk20a_dbg_info("%08x => %08x", map[i].addr, map[i].offset);
+
+	return 0;
+cleanup:
+	gk20a_err(dev_from_gk20a(g), "Failed to create HWPM buffer offset map");
+	nvgpu_free(map);
+	return -EINVAL;
+}
+
+/*
+ *  This function will return the 32 bit offset for a priv register if it is
+ *  present in the PM context buffer.
+ */
+static int gr_gk20a_find_priv_offset_in_pm_buffer(struct gk20a *g,
+					          u32 addr,
+					          u32 *priv_offset)
+{
+	struct gr_gk20a *gr = &g->gr;
+	int err = 0;
+	u32 count;
+	struct ctxsw_buf_offset_map_entry *map, *result, map_key;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
+
+	/* Create map of pri address and pm offset if necessary */
+	if (gr->ctx_vars.hwpm_ctxsw_buffer_offset_map == NULL) {
+		err = gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(g);
+		if (err)
+			return err;
+	}
+
+	*priv_offset = 0;
+
+	map = gr->ctx_vars.hwpm_ctxsw_buffer_offset_map;
+	count = gr->ctx_vars.hwpm_ctxsw_buffer_offset_map_count;
+
+	map_key.addr = addr;
+	result = bsearch(&map_key, map, count, sizeof(*map), map_cmp);
+
+	if (result)
+		*priv_offset = result->offset;
+	else {
+		gk20a_err(dev_from_gk20a(g), "Lookup failed for address 0x%x", addr);
+		err = -EINVAL;
+	}
+	return err;
+}
+
 bool gk20a_is_channel_ctx_resident(struct channel_gk20a *ch)
 {
 	int curr_gr_ctx, curr_gr_tsgid;
@@ -6840,6 +7402,8 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	struct gk20a *g = ch->g;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
 	void *ctx_ptr = NULL;
+	void *pm_ctx_ptr = NULL;
+	void *base_ptr = NULL;
 	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
 	u32 i, j, offset, v;
 	struct gr_gk20a *gr = &g->gr;
@@ -6940,15 +7504,6 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 	}
 	offset_addrs = offsets + max_offsets;
 
-	/* would have been a variant of gr_gk20a_apply_instmem_overrides */
-	/* recoded in-place instead.*/
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr) {
-		err = -ENOMEM;
-		goto cleanup;
-	}
 	err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 	if (err)
 		goto cleanup;
@@ -6977,13 +7532,52 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 						&num_offsets,
 						ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD),
 						ctx_ops[i].quad);
-			if (err) {
-				gk20a_dbg(gpu_dbg_gpu_dbg,
+			if (!err) {
+				if (!ctx_ptr) {
+					/* would have been a variant of
+					 * gr_gk20a_apply_instmem_overrides,
+					 * recoded in-place instead.
+					 */
+					ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
+						PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
+						0, pgprot_writecombine(PAGE_KERNEL));
+					if (!ctx_ptr) {
+						err = -ENOMEM;
+						goto cleanup;
+					}
+				}
+				base_ptr = ctx_ptr;
+			} else {
+				err = gr_gk20a_get_pm_ctx_buffer_offsets(g,
+							ctx_ops[i].offset,
+							max_offsets,
+							offsets, offset_addrs,
+							&num_offsets);
+				if (err) {
+					gk20a_dbg(gpu_dbg_gpu_dbg,
 					   "ctx op invalid offset: offset=0x%x",
 					   ctx_ops[i].offset);
-				ctx_ops[i].status =
-					NVGPU_DBG_GPU_REG_OP_STATUS_INVALID_OFFSET;
-				continue;
+					ctx_ops[i].status =
+						NVGPU_DBG_GPU_REG_OP_STATUS_INVALID_OFFSET;
+					continue;
+				}
+				if (!pm_ctx_ptr) {
+					/* Make sure ctx buffer was initialized */
+					if (!ch_ctx->pm_ctx.mem.pages) {
+						gk20a_err(dev_from_gk20a(g),
+							"Invalid ctx buffer");
+						err = -EINVAL;
+						goto cleanup;
+					}
+					pm_ctx_ptr = vmap(ch_ctx->pm_ctx.mem.pages,
+						PAGE_ALIGN(ch_ctx->pm_ctx.mem.size) >> PAGE_SHIFT,
+						0, pgprot_writecombine(PAGE_KERNEL));
+					if (!pm_ctx_ptr) {
+						err = -ENOMEM;
+						goto cleanup;
+					}
+				}
+				base_ptr = pm_ctx_ptr;
 			}
 
 			/* if this is a quad access, setup for special access*/
@@ -6993,24 +7587,27 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 							 ctx_ops[i].offset);
 
 			for (j = 0; j < num_offsets; j++) {
-				/* sanity check, don't write outside, worst case */
-				if (offsets[j] >= g->gr.ctx_vars.golden_image_size)
+				/* sanity check gr ctxt offsets,
+				 * don't write outside, worst case
+				 */
+				if ((base_ptr == ctx_ptr) &&
+					(offsets[j] >= g->gr.ctx_vars.golden_image_size))
 					continue;
 				if (pass == 0) { /* write pass */
-					v = gk20a_mem_rd32(ctx_ptr + offsets[j], 0);
+					v = gk20a_mem_rd32(base_ptr + offsets[j], 0);
 					v &= ~ctx_ops[i].and_n_mask_lo;
 					v |= ctx_ops[i].value_lo;
-					gk20a_mem_wr32(ctx_ptr + offsets[j], 0, v);
+					gk20a_mem_wr32(base_ptr + offsets[j], 0, v);
 
 					gk20a_dbg(gpu_dbg_gpu_dbg,
 						   "context wr: offset=0x%x v=0x%x",
 						   offsets[j], v);
 
 					if (ctx_ops[i].op == REGOP(WRITE_64)) {
-						v = gk20a_mem_rd32(ctx_ptr + offsets[j] + 4, 0);
+						v = gk20a_mem_rd32(base_ptr + offsets[j] + 4, 0);
 						v &= ~ctx_ops[i].and_n_mask_hi;
 						v |= ctx_ops[i].value_hi;
-						gk20a_mem_wr32(ctx_ptr + offsets[j] + 4, 0, v);
+						gk20a_mem_wr32(base_ptr + offsets[j] + 4, 0, v);
 
 						gk20a_dbg(gpu_dbg_gpu_dbg,
 							   "context wr: offset=0x%x v=0x%x",
@@ -7020,18 +7617,18 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 					/* check to see if we need to add a special WAR
 					   for some of the SMPC perf regs */
 					gr_gk20a_ctx_patch_smpc(g, ch_ctx, offset_addrs[j],
-							v, ctx_ptr);
+							v, base_ptr);
 
 				} else { /* read pass */
 					ctx_ops[i].value_lo =
-						gk20a_mem_rd32(ctx_ptr + offsets[0], 0);
+						gk20a_mem_rd32(base_ptr + offsets[0], 0);
 
 					gk20a_dbg(gpu_dbg_gpu_dbg, "context rd: offset=0x%x v=0x%x",
 						   offsets[0], ctx_ops[i].value_lo);
 
 					if (ctx_ops[i].op == REGOP(READ_64)) {
 						ctx_ops[i].value_hi =
-							gk20a_mem_rd32(ctx_ptr + offsets[0] + 4, 0);
+							gk20a_mem_rd32(base_ptr + offsets[0] + 4, 0);
 
 						gk20a_dbg(gpu_dbg_gpu_dbg,
 							   "context rd: offset=0x%x v=0x%x",
@@ -7061,6 +7658,9 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 	if (ctx_ptr)
 		vunmap(ctx_ptr);
+
+	if (pm_ctx_ptr)
+		vunmap(pm_ctx_ptr);
 
 	if (restart_gr_ctxsw) {
 		int tmp_err = gr_gk20a_enable_ctxsw(g);

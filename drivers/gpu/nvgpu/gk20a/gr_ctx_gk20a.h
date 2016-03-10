@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Context
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -75,6 +75,13 @@ union __max_name {
 #define NETLIST_REGIONID_NETLIST_NUM		18
 #define NETLIST_REGIONID_CTXREG_PPC		19
 #define NETLIST_REGIONID_CTXREG_PMPPC		20
+#define NETLIST_REGIONID_NVPERF_CTXREG_SYS	21
+#define NETLIST_REGIONID_NVPERF_FBP_CTXREGS	22
+#define NETLIST_REGIONID_NVPERF_CTXREG_GPC	23
+#define NETLIST_REGIONID_NVPERF_FBP_ROUTER	24
+#define NETLIST_REGIONID_NVPERF_GPC_ROUTER	25
+#define NETLIST_REGIONID_CTXREG_PMLTC		26
+#define NETLIST_REGIONID_CTXREG_PMFBPA		27
 
 struct netlist_region {
 	u32 region_id;
@@ -112,6 +119,11 @@ struct av_list_gk20a {
 struct u32_list_gk20a {
 	u32 *l;
 	u32 count;
+};
+
+struct ctxsw_buf_offset_map_entry {
+	u32 addr;	/* Register address */
+	u32 offset;	/* Offset in ctxt switch buffer */
 };
 
 static inline

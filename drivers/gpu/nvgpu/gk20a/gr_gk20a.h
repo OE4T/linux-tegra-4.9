@@ -198,7 +198,12 @@ struct gr_gk20a {
 		u32 golden_image_size;
 		u32 *local_golden_image;
 
+		u32 hwpm_ctxsw_buffer_offset_map_count;
+		struct ctxsw_buf_offset_map_entry *hwpm_ctxsw_buffer_offset_map;
+
 		u32 zcull_ctxsw_image_size;
+
+		u32 pm_ctxsw_image_size;
 
 		u32 buffer_header_size;
 
@@ -219,6 +224,14 @@ struct gr_gk20a {
 			struct aiv_list_gk20a pm_sys;
 			struct aiv_list_gk20a pm_gpc;
 			struct aiv_list_gk20a pm_tpc;
+			struct aiv_list_gk20a pm_ppc;
+			struct aiv_list_gk20a perf_sys;
+			struct aiv_list_gk20a perf_gpc;
+			struct aiv_list_gk20a fbp;
+			struct aiv_list_gk20a fbp_router;
+			struct aiv_list_gk20a gpc_router;
+			struct aiv_list_gk20a pm_ltc;
+			struct aiv_list_gk20a pm_fbpa;
 		} ctxsw_regs;
 		int regs_base_index;
 		bool valid;
@@ -484,9 +497,17 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 				    u32 *offsets, u32 *offset_addrs,
 				    u32 *num_offsets,
 				    bool is_quad, u32 quad);
+int gr_gk20a_get_pm_ctx_buffer_offsets(struct gk20a *g,
+				       u32 addr,
+				       u32 max_offsets,
+				       u32 *offsets, u32 *offset_addrs,
+				       u32 *num_offsets);
 int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
-				 struct channel_gk20a *c,
+				    struct channel_gk20a *c,
 				    bool enable_smpc_ctxsw);
+int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
+				  struct channel_gk20a *c,
+				  bool enable_hwpm_ctxsw);
 
 struct channel_ctx_gk20a;
 int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,

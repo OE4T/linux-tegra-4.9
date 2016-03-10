@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -70,6 +70,10 @@ static inline u32 proj_lts_stride_v(void)
 {
 	return 0x00000200;
 }
+static inline u32 proj_fbpa_stride_v(void)
+{
+	return 0x00001000;
+}
 static inline u32 proj_ppc_in_gpc_base_v(void)
 {
 	return 0x00003000;
@@ -111,6 +115,10 @@ static inline u32 proj_scal_litter_num_tpc_per_gpc_v(void)
 	return 0x00000002;
 }
 static inline u32 proj_scal_litter_num_fbps_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 proj_scal_litter_num_fbpas_v(void)
 {
 	return 0x00000001;
 }

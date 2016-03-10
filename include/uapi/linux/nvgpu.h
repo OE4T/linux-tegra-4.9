@@ -647,8 +647,20 @@ struct nvgpu_dbg_gpu_set_next_stop_trigger_type_args {
 	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 12, struct nvgpu_dbg_gpu_set_next_stop_trigger_type_args)
 
 
+/* PM Context Switch Mode */
+#define NVGPU_DBG_GPU_HWPM_CTXSW_MODE_NO_CTXSW               (0x00000000)
+#define NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW                  (0x00000001)
+
+struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args {
+	__u32 mode;
+	__u32 reserved;
+};
+
+#define NVGPU_DBG_GPU_IOCTL_HWPM_CTXSW_MODE \
+	_IOWR(NVGPU_DBG_GPU_IOCTL_MAGIC, 13, struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args)
+
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_SET_NEXT_STOP_TRIGGER_TYPE)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_HWPM_CTXSW_MODE)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)

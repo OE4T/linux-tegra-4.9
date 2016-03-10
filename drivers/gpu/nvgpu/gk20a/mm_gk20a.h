@@ -1,7 +1,7 @@
 /*
  * GK20A memory management
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -71,6 +71,11 @@ struct zcull_ctx_desc {
 	u64 gpu_va;
 	u32 ctx_attr;
 	u32 ctx_sw_mode;
+};
+
+struct pm_ctx_desc {
+	struct mem_desc mem;
+	u32 pm_mode;
 };
 
 struct gk20a;

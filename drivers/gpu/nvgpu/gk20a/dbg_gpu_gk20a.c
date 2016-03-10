@@ -457,6 +457,9 @@ static int nvgpu_ioctl_powergate_gk20a(struct dbg_session_gk20a *dbg_s,
 static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 			      struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *args);
 
+static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
+			      struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args *args);
+
 static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 		struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *args);
@@ -580,6 +583,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_DBG_GPU_IOCTL_SMPC_CTXSW_MODE:
 		err = nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(dbg_s,
 			   (struct nvgpu_dbg_gpu_smpc_ctxsw_mode_args *)buf);
+		break;
+
+	case NVGPU_DBG_GPU_IOCTL_HWPM_CTXSW_MODE:
+		err = nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(dbg_s,
+			   (struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args *)buf);
 		break;
 
 	case NVGPU_DBG_GPU_IOCTL_SUSPEND_RESUME_ALL_SMS:
@@ -880,7 +888,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	ch_gk20a = dbg_s->ch;
 
 	if (!ch_gk20a) {
-		gk20a_err(dev_from_gk20a(dbg_s->g),
+		gk20a_err(dev_from_gk20a(g),
 			  "no bound channel for smpc ctxsw mode update\n");
 		err = -EINVAL;
 		goto clean_up;
@@ -889,13 +897,48 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	err = gr_gk20a_update_smpc_ctxsw_mode(g, ch_gk20a,
 		      args->mode == NVGPU_DBG_GPU_SMPC_CTXSW_MODE_CTXSW);
 	if (err) {
-		gk20a_err(dev_from_gk20a(dbg_s->g),
+		gk20a_err(dev_from_gk20a(g),
 			  "error (%d) during smpc ctxsw mode update\n", err);
 		goto clean_up;
 	}
 
 	err = g->ops.regops.apply_smpc_war(dbg_s);
+ clean_up:
+	mutex_unlock(&g->dbg_sessions_lock);
+	return  err;
+}
 
+static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
+			       struct nvgpu_dbg_gpu_hwpm_ctxsw_mode_args *args)
+{
+	int err;
+	struct gk20a *g = get_gk20a(dbg_s->pdev);
+	struct channel_gk20a *ch_gk20a;
+
+	gk20a_dbg_fn("%s pm ctxsw mode = %d",
+		     dev_name(dbg_s->dev), args->mode);
+
+	/* Take the global lock, since we'll be doing global regops */
+	mutex_lock(&g->dbg_sessions_lock);
+
+	ch_gk20a = dbg_s->ch;
+
+	if (!ch_gk20a) {
+		gk20a_err(dev_from_gk20a(g),
+			  "no bound channel for pm ctxsw mode update\n");
+		err = -EINVAL;
+		goto clean_up;
+	}
+
+	err = gr_gk20a_update_hwpm_ctxsw_mode(g, ch_gk20a,
+		      args->mode == NVGPU_DBG_GPU_HWPM_CTXSW_MODE_CTXSW);
+	if (err)
+		gk20a_err(dev_from_gk20a(g),
+			  "error (%d) during pm ctxsw mode update\n", err);
+
+	/* gk20a would require a WAR to set the core PM_ENABLE bit, not
+	 * added here with gk20a being deprecated
+	 */
  clean_up:
 	mutex_unlock(&g->dbg_sessions_lock);
 	return  err;

@@ -3,7 +3,7 @@
  *
  * GK20A Graphics Context
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -281,7 +281,60 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 					netlist_num);
 				break;
 			case NETLIST_REGIONID_CTXREG_PMPPC:
-				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMPPC skipped");
+				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMPPC");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_ppc);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_NVPERF_CTXREG_SYS:
+				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_CTXREG_SYS");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_sys);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_NVPERF_FBP_CTXREGS:
+				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_FBP_CTXREGS");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.fbp);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_NVPERF_CTXREG_GPC:
+				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_CTXREG_GPC");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_gpc);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_NVPERF_FBP_ROUTER:
+				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_FBP_ROUTER");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.fbp_router);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_NVPERF_GPC_ROUTER:
+				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_GPC_ROUTER");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.gpc_router);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_CTXREG_PMLTC:
+				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMLTC");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_ltc);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_CTXREG_PMFBPA:
+				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMFBPA");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_fbpa);
+				if (err)
+					goto clean_up;
 				break;
 			default:
 				gk20a_dbg_info("unrecognized region %d skipped", i);
@@ -319,6 +372,14 @@ clean_up:
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_sys.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_gpc.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_tpc.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ppc.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.perf_sys.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.fbp.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.perf_gpc.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.fbp_router.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.gpc_router.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ltc.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.pm_fbpa.l);
 		release_firmware(netlist_fw);
 		err = -ENOENT;
 	}

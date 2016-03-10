@@ -2992,17 +2992,11 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	pdev->dev.dma_mask = &tegra_dma_mask;
 	pdev->dev.coherent_dma_mask = tegra_dma_mask;
 
+	tegra_pd_add_device(&pdev->dev);
+
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev))
 		goto err_pm_disable;
-
-	/* HACK : Should be handled through dma-engine */
-	tegra_adsp_pd_add_device(&pdev->dev);
-	pm_runtime_get_sync(&pdev->dev);
-	pm_runtime_put_sync(&pdev->dev);
-	tegra_adsp_pd_remove_device(&pdev->dev);
-       /* HACK end */
-
 
 	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++) {
 		adsp->apps[i].reg = i;
@@ -3153,6 +3147,7 @@ err_pm_disable:
 static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 {
 	pm_runtime_disable(&pdev->dev);
+	tegra_pd_remove_device(&pdev->dev);
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;
 }

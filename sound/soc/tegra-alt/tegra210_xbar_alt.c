@@ -980,7 +980,7 @@ static int tegra210_xbar_probe(struct platform_device *pdev)
 	}
 	regcache_cache_only(xbar->regmap, true);
 
-	tegra_ape_pd_add_device(&pdev->dev);
+	tegra_pd_add_device(&pdev->dev);
 
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
@@ -1004,7 +1004,7 @@ err_suspend:
 		tegra210_xbar_runtime_suspend(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
-	tegra_ape_pd_remove_device(&pdev->dev);
+	tegra_pd_remove_device(&pdev->dev);
 err_clk_set_parent:
 	clk_set_parent(xbar->clk, parent_clk);
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
@@ -1036,7 +1036,7 @@ static int tegra210_xbar_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra210_xbar_runtime_suspend(&pdev->dev);
 
-	tegra_ape_pd_remove_device(&pdev->dev);
+	tegra_pd_remove_device(&pdev->dev);
 
 	devm_clk_put(&pdev->dev, xbar->clk);
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)

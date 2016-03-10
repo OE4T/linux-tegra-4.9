@@ -272,6 +272,8 @@ static int nvgpu_gpu_ioctl_inval_icache(
 	struct nvgpu_dbg_gpu_reg_op ops;
 
 	ch = gk20a_get_channel_from_file(args->channel_fd);
+	if (!ch)
+		return -EINVAL;
 
 	ops.op	   = REGOP(READ_32);
 	ops.type   = REGOP(TYPE_GR_CTX);

@@ -19,6 +19,7 @@
 #include <linux/host1x.h>
 #include <linux/slab.h>
 #include <linux/iommu.h>
+#include <linux/pm_runtime.h>
 
 #include <trace/events/host1x.h>
 
@@ -193,6 +194,10 @@ static int channel_submit(struct host1x_job *job)
 	/* before error checks, return current max */
 	syncpt = host1x_syncpt_get(host, job->syncpts[0].id);
 	prev_max = host1x_syncpt_read_max(syncpt);
+
+	/* keep device powered on */
+	for (i = 0; i < job->num_syncpts; ++i)
+		pm_runtime_get_sync(ch->dev);
 
 	/* get submit lock */
 	err = mutex_lock_interruptible(&ch->submitlock);

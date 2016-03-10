@@ -26,7 +26,7 @@ struct host1x_info host1x05_info = {
 	.nb_bases = 16,
 	.init = host1x05_init,
 	.sync_offset = 0x0,
-	.gather_filter_enabled  = false,
+	.gather_filter_enabled  = true,
 };
 
 void host1x_writel(struct host1x *host1x, u32 v, u32 r)

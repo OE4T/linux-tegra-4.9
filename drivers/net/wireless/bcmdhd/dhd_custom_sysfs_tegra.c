@@ -117,10 +117,10 @@ tegra_sysfs_register(struct device *dev)
 	/* create debugfs */
 	tegra_debugfs_root = debugfs_create_dir("bcmdhd_histogram", NULL);
 	if (tegra_debugfs_root) {
-		debugfs_create_file("scan", S_IRUGO | S_IWUSR,
+		debugfs_create_file("scan", S_IRUGO,
 			tegra_debugfs_root, (void *) 0,
 			&tegra_debugfs_histogram_scan_fops);
-		debugfs_create_file("tcpdump", S_IRUGO | S_IWUSR,
+		debugfs_create_file("tcpdump", S_IRUGO,
 			tegra_debugfs_root, (void *) 0,
 			&tegra_debugfs_histogram_tcpdump_fops);
 	}

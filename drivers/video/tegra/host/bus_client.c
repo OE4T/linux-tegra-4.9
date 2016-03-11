@@ -69,6 +69,10 @@ static int validate_reg(struct platform_device *ndev, u32 offset, int count)
 	int err = 0;
 	struct resource *r;
 
+	/* check if offset is u32 aligned */
+	if (offset & 3)
+		return -EINVAL;
+
 	r = platform_get_resource(ndev, IORESOURCE_MEM, 0);
 	if (!r) {
 		dev_err(&ndev->dev, "failed to get memory resource\n");

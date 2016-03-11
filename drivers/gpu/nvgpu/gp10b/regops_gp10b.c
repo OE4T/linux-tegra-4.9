@@ -69,6 +69,7 @@ static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x00142480,   1},
 	{ 0x001424a0,   1},
 	{ 0x00142550,   1},
+	{ 0x0017e028,   1},
 	{ 0x0017e280,   1},
 	{ 0x0017e294,   1},
 	{ 0x0017e29c,   2},
@@ -138,7 +139,7 @@ static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x001b4094,   3},
 	{ 0x001b40a4,   1},
 	{ 0x001b4100,   6},
-	{ 0x001b4124,   1},
+	{ 0x001b4124,   2},
 	{ 0x001b8000,   1},
 	{ 0x001b8008,   1},
 	{ 0x001b8010,   3},
@@ -371,6 +372,7 @@ static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x00900100,   1},
 	{ 0x009a0100,   1},
 };
+
 static const u32 gp10b_global_whitelist_ranges_count =
 	ARRAY_SIZE(gp10b_global_whitelist_ranges);
 

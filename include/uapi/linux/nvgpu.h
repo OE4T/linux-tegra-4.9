@@ -351,6 +351,28 @@ struct nvgpu_gpu_get_buffer_info_args {
 	};
 };
 
+#define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_MAX_COUNT		16
+#define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TSC		1
+#define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_JIFFIES		2
+#define NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_SRC_ID_TIMEOFDAY	3
+
+struct nvgpu_gpu_get_cpu_time_correlation_sample {
+	/* gpu timestamp value */
+	__u64 cpu_timestamp;
+	/* raw GPU counter (PTIMER) value */
+	__u64 gpu_timestamp;
+};
+
+struct nvgpu_gpu_get_cpu_time_correlation_info_args {
+	/* timestamp pairs */
+	struct nvgpu_gpu_get_cpu_time_correlation_sample samples[
+		NVGPU_GPU_GET_CPU_TIME_CORRELATION_INFO_MAX_COUNT];
+	/* number of pairs to read */
+	__u32 count;
+	/* cpu clock source id */
+	__u32 source_id;
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -397,11 +419,13 @@ struct nvgpu_gpu_get_buffer_info_args {
 	_IO(NVGPU_GPU_IOCTL_MAGIC, 22)
 #define NVGPU_GPU_IOCTL_CLEAR_SM_ERRORS \
 	_IO(NVGPU_GPU_IOCTL_MAGIC, 23)
-
+#define NVGPU_GPU_IOCTL_GET_CPU_TIME_CORRELATION_INFO \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 24, \
+			struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_CLEAR_SM_ERRORS)
+	_IOC_NR(NVGPU_GPU_IOCTL_GET_CPU_TIME_CORRELATION_INFO)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
-	sizeof(struct nvgpu_gpu_prepare_compressible_read_args)
+	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 
 /*
  * /dev/nvhost-tsg-gpu device

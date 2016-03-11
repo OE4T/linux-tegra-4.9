@@ -551,4 +551,10 @@
 	cpufreq@e070000 {
 		nvidia,debugfs-only;
 	};
+
+	trusty {
+		virtio {
+			status = "disabled";
+		};
+	};
 };

@@ -1,7 +1,7 @@
 /*
  * GM20B L2
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -190,6 +190,7 @@ void gm20b_ltc_init_fs_state(struct gk20a *g)
 	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
 	reg &= ~ltc_ltcs_ltss_intr_en_evicted_cb_m();
 	reg &= ~ltc_ltcs_ltss_intr_en_illegal_compstat_access_m();
+	reg &= ~ltc_ltcs_ltss_intr_en_illegal_compstat_m();
 	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), reg);
 }
 

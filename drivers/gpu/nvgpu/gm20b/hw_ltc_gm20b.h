@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -285,6 +285,10 @@ static inline u32 ltc_ltcs_ltss_intr_en_evicted_cb_m(void)
 static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_access_m(void)
 {
 	return 0x1 << 30;
+}
+static inline u32 ltc_ltcs_ltss_intr_en_illegal_compstat_m(void)
+{
+	return 0x1 << 21;
 }
 static inline u32 ltc_ltc0_lts0_intr_r(void)
 {

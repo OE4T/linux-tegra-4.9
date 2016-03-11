@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/ltc_gk20a.c
+ * GK20A L2
  *
- * GK20A Graphics
- *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -173,9 +171,17 @@ out:
 
 static void gk20a_ltc_init_fs_state(struct gk20a *g)
 {
+	u32 reg;
+
 	gk20a_dbg_info("initialize gk20a L2");
 
 	g->max_ltc_count = g->ltc_count = 1;
+
+	/* Disable LTC interrupts */
+	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
+	reg &= ~ltc_ltcs_ltss_intr_en_evicted_cb_m();
+	reg &= ~ltc_ltcs_ltss_intr_en_illegal_compstat_m();
+	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), reg);
 }
 
 static void gk20a_ltc_isr(struct gk20a *g)

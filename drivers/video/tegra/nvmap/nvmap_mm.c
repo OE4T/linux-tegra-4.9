@@ -165,10 +165,13 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 			if ((offset != 0) || (size != handles[i]->size))
 				return -EINVAL;
 
-		if (op == NVMAP_PAGES_RESERVE)
-			nvmap_handle_mkreserved(handles[i], offset, size);
-		else
-			nvmap_handle_mkunreserved(handles[i],offset, size);
+		/*
+		 * NOTE: This unreserves the handle even when
+		 * NVMAP_PAGES_INSERT_ON_UNRESERVE is called on some portion
+		 * of the handle
+		 */
+		atomic_set(&handles[i]->pgalloc.reserved,
+				(op == NVMAP_PAGES_RESERVE) ? 1 : 0);
 	}
 
 	if (op == NVMAP_PAGES_ZAP_AND_CLEAN)

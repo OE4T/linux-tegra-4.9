@@ -105,6 +105,7 @@ struct nvmap_carveout_node {
 struct nvmap_pgalloc {
 	struct page **pages;
 	bool contig;			/* contiguous system memory */
+	atomic_t reserved;
 	atomic_t ndirty;	/* count number of dirty pages */
 };
 
@@ -493,27 +494,6 @@ static inline bool nvmap_page_mkclean(struct page **page)
 	return true;
 }
 
-static inline bool nvmap_page_reserved(struct page *page)
-{
-	return !!((unsigned long)page & 2UL);
-}
-
-static inline bool nvmap_page_mkreserved(struct page **page)
-{
-	if (nvmap_page_reserved(*page))
-		return false;
-	*page = (struct page *)((unsigned long)*page | 2UL);
-	return true;
-}
-
-static inline bool nvmap_page_mkunreserved(struct page **page)
-{
-	if (!nvmap_page_reserved(*page))
-		return false;
-	*page = (struct page *)((unsigned long)*page & ~2UL);
-	return true;
-}
-
 /*
  * FIXME: assume user space requests for reserve operations
  * are page aligned
@@ -560,18 +540,6 @@ static inline void nvmap_handle_mkdirty(struct nvmap_handle *h,
 	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkdirty);
 	if (h->heap_pgalloc)
 		atomic_add(nchanged, &h->pgalloc.ndirty);
-}
-
-static inline void nvmap_handle_mkunreserved(struct nvmap_handle *h,
-					     u32 offset, u32 size)
-{
-	nvmap_handle_mk(h, offset, size, nvmap_page_mkunreserved);
-}
-
-static inline void nvmap_handle_mkreserved(struct nvmap_handle *h,
-					   u32 offset, u32 size)
-{
-	nvmap_handle_mk(h, offset, size, nvmap_page_mkreserved);
 }
 
 static inline struct page **nvmap_pages(struct page **pg_pages, u32 nr_pages)

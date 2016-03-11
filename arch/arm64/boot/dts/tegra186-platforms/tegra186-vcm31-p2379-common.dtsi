@@ -105,7 +105,7 @@
 
         sdhci@3460000 { /* SDMMC_D: Used for eMMc */
                         status = "okay";
-                        uhs-mask = <0x40>;   /*HS400 is not supported*/
+                        uhs-mask = <0x00>;
         };
 
 	padctl_uphy: pinctrl@3520000 {

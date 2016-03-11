@@ -61,6 +61,9 @@
 
 static struct cpumask denver_cpumask;
 static struct cpumask a57_cpumask;
+static void cluster_state_init(void *data);
+static u32 deepest_denver_cluster_state;
+static u32 deepest_a57_cluster_state;
 
 static bool check_mce_version(void)
 {
@@ -534,7 +537,7 @@ static const struct of_device_id tegra18x_denver_idle_state_match[] = {
 static void cluster_state_init(void *data)
 {
 	u32 power = UINT_MAX;
-	u32 value, pmstate;
+	u32 value, pmstate, deepest_pmstate = 0;
 	struct device_node *of_states = (struct device_node *)data;
 	struct device_node *child;
 	int err;
@@ -558,8 +561,14 @@ static void cluster_state_init(void *data)
 		if (value > power)
 			continue;
 		power = value;
-		tegra_mce_update_cstate_info(pmstate, 0, 0, 0, 0, 0);
+		deepest_pmstate = pmstate;
 	}
+	tegra_mce_update_cstate_info(deepest_pmstate, 0, 0, 0, 0, 0);
+
+	if (tegra18_is_cpu_arm(smp_processor_id()))
+		deepest_a57_cluster_state = deepest_pmstate;
+	else
+		deepest_denver_cluster_state = deepest_pmstate;
 }
 
 struct xover_table {
@@ -626,6 +635,58 @@ static int crossover_init(void)
 
 	return 0;
 }
+
+static void program_cluster_state(void *data)
+{
+	u32 *cluster_state = (u32 *)data;
+	tegra_mce_update_cstate_info(*cluster_state, 0, 0, 0, 0, 0);
+}
+
+static int tegra_suspend_notify_callback(struct notifier_block *nb,
+	unsigned long action, void *pcpu)
+{
+	switch (action) {
+	case PM_POST_SUSPEND:
+	/* Re-program deepest allowed cluster power state after system */
+	/* resumes from SC7 */
+		smp_call_function_any(&denver_cpumask, program_cluster_state,
+			&deepest_denver_cluster_state, 1);
+		smp_call_function_any(&a57_cpumask, program_cluster_state,
+			&deepest_a57_cluster_state, 1);
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static int tegra_cpu_notify_callback(struct notifier_block *nb,
+	unsigned long action, void *pcpu)
+{
+	int cpu = (long) pcpu;
+
+	switch (action) {
+	case CPU_ONLINE:
+	/* Re-program deepest allowed cluster power state after core */
+	/* in that cluster is onlined. */
+		if (tegra18_is_cpu_arm(cpu))
+			smp_call_function_any(&a57_cpumask,
+				program_cluster_state,
+				&deepest_a57_cluster_state, 1);
+		else
+			smp_call_function_any(&denver_cpumask,
+				program_cluster_state,
+				&deepest_denver_cluster_state, 1);
+		break;
+	}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block cpu_on_notifier = {
+	.notifier_call = tegra_cpu_notify_callback,
+};
+
+static struct notifier_block suspend_notifier = {
+	.notifier_call = tegra_suspend_notify_callback,
+};
 
 static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 {
@@ -714,6 +775,8 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 	}
 
 	cpuidle_debugfs_init();
+	register_cpu_notifier(&cpu_on_notifier);
+	register_pm_notifier(&suspend_notifier);
 	return 0;
 }
 

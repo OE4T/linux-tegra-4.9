@@ -38,6 +38,10 @@
 #include "class_ids.h"
 #include "debug.h"
 
+/* calculated as 16 ms * 102000 kHz
+ * FIXME: add calculation based on the host1x clock frequency */
+#define MLOCK_TIMEOUT_VALUE (0x18e700)
+
 static void submit_work_done_increment(struct nvhost_job *job)
 {
 	struct nvhost_channel *ch = job->ch;
@@ -481,6 +485,7 @@ static int host1x_channel_init_security(struct platform_device *pdev,
 	struct nvhost_channel *ch)
 {
 	u32 val;
+	struct nvhost_master *host = nvhost_get_host(pdev);
 
 	val = host1x_hypervisor_readl(pdev,
 				      host1x_channel_filter_gbuffer_r() +
@@ -489,6 +494,13 @@ static int host1x_channel_init_security(struct platform_device *pdev,
 				 host1x_channel_filter_gbuffer_r() +
 				 BIT_WORD(ch->chid) * sizeof(u32),
 				 val | BIT_MASK(ch->chid));
+
+	/* set mlock timeout */
+	if (host->info.vmserver_owns_engines) {
+		host1x_channel_writel(ch, host1x_channel_intrmask_r(), 1);
+		host1x_channel_writel(ch, host1x_channel_mlock_timeout_r(),
+					MLOCK_TIMEOUT_VALUE);
+	}
 
 	return 0;
 }

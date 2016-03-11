@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -150,8 +150,16 @@ static inline u32 host1x_channel_ch_vm_0_r(void)
 {
 	return 0x644;
 }
+static inline u32 host1x_channel_intrmask_r(void)
+{
+	return 0x80;
+}
 static inline u32 host1x_channel_smmu_streamid_r(void)
 {
 	return 0x84;
+}
+static inline u32 host1x_channel_mlock_timeout_r(void)
+{
+	return 0x88;
 }
 #endif

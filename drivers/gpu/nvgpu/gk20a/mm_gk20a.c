@@ -323,7 +323,7 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 	if (err)
 		return err;
 
-	/* 
+	/*
 	 * offset needs to be at the start of a page/cacheline boundary;
 	 * prune the preceding ctaglines that were allocated for alignment.
 	 */
@@ -2806,6 +2806,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	u64 small_vma_start, small_vma_limit, large_vma_start, large_vma_limit,
 		kernel_vma_start, kernel_vma_limit;
 	u32 pde_lo, pde_hi;
+	struct gk20a *g = mm->g;
 
 	/* note: this must match gmmu_pgsz_gk20a enum */
 	u32 gmmu_page_sizes[gmmu_nr_page_sizes] = { SZ_4K, big_page_size, SZ_4K };
@@ -2893,6 +2894,31 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	    kernel_vma_start >= kernel_vma_limit) {
 		err = -EINVAL;
 		goto clean_up_pdes;
+	}
+
+	/*
+	 * Attempt to make a separate VM for fixed allocations.
+	 */
+	if (g->separate_fixed_allocs &&
+	    small_vma_start < small_vma_limit) {
+		if (g->separate_fixed_allocs >= small_vma_limit)
+			goto clean_up_pdes;
+
+		snprintf(alloc_name, sizeof(alloc_name),
+			 "gk20a_%s-fixed", name);
+
+		err = __gk20a_allocator_init(&vm->fixed,
+					     vm, alloc_name,
+					     small_vma_start,
+					     g->separate_fixed_allocs,
+					     SZ_4K,
+					     GPU_BALLOC_MAX_ORDER,
+					     GPU_BALLOC_GVA_SPACE);
+		if (err)
+			goto clean_up_ptes;
+
+		/* Make sure to update the user vma size. */
+		small_vma_start = g->separate_fixed_allocs;
 	}
 
 	if (small_vma_start < small_vma_limit) {
@@ -3057,14 +3083,17 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 	}
 
 	vma = &vm->vma[pgsz_idx];
-	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET)
+	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET) {
+		if (vm->fixed.init)
+			vma = &vm->fixed;
 		vaddr_start = gk20a_balloc_fixed(vma, args->o_a.offset,
 						 (u64)args->pages *
 						 (u64)args->page_size);
-	else
+	} else {
 		vaddr_start = gk20a_balloc(vma,
 					   (u64)args->pages *
 					   (u64)args->page_size);
+	}
 
 	if (!vaddr_start) {
 		kfree(va_node);
@@ -3131,7 +3160,10 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	pgsz_idx = __nv_gmmu_va_is_big_page_region(vm, args->offset) ?
 			gmmu_page_size_big : gmmu_page_size_small;
 
-	vma = &vm->vma[pgsz_idx];
+	if (vm->fixed.init)
+		vma = &vm->fixed;
+	else
+		vma = &vm->vma[pgsz_idx];
 	gk20a_bfree(vma, args->offset);
 
 	mutex_lock(&vm->update_gmmu_lock);
@@ -3321,6 +3353,8 @@ void gk20a_deinit_vm(struct vm_gk20a *vm)
 		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
 	if (vm->vma[gmmu_page_size_small].init)
 		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
+	if (vm->fixed.init)
+		gk20a_allocator_destroy(&vm->fixed);
 
 	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 }
@@ -3834,6 +3868,16 @@ clean_up:
 	return err;
 }
 
+void gk20a_mm_debugfs_init(struct platform_device *pdev)
+{
+	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct dentry *gpu_root = platform->debugfs;
+	struct gk20a *g = gk20a_get_platform(pdev)->g;
+
+	debugfs_create_x64("separate_fixed_allocs", 0664, gpu_root,
+			   &g->separate_fixed_allocs);
+}
+
 void gk20a_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.is_debug_mode_enabled = gk20a_mm_mmu_debug_mode_enabled;
@@ -3854,4 +3898,3 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 }
-

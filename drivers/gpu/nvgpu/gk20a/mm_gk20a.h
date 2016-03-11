@@ -259,6 +259,10 @@ struct vm_gk20a {
 	struct gk20a_mm_entry pdb;
 
 	struct gk20a_allocator vma[gmmu_nr_page_sizes];
+
+	/* If necessary, split fixed from non-fixed. */
+	struct gk20a_allocator fixed;
+
 	struct rb_root mapped_buffers;
 
 	struct list_head reserved_va_list;
@@ -279,6 +283,7 @@ struct channel_gk20a;
 int gk20a_init_mm_support(struct gk20a *g);
 int gk20a_init_mm_setup_sw(struct gk20a *g);
 int gk20a_init_mm_setup_hw(struct gk20a *g);
+void gk20a_mm_debugfs_init(struct platform_device *pdev);
 
 int gk20a_mm_fb_flush(struct gk20a *g);
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);

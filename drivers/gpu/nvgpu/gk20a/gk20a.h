@@ -591,6 +591,14 @@ struct gk20a {
 	int dbg_powergating_disabled_refcount; /*refcount for pg disable */
 	int dbg_timeout_disabled_refcount; /*refcount for timeout disable */
 
+	/*
+	 * When set subsequent VMAs will separate fixed and non-fixed
+	 * allocations. This avoids conflicts with fixed and non-fixed allocs
+	 * for some tests. The value in separate_fixed_allocs is used to
+	 * determine the split boundary.
+	 */
+	u64 separate_fixed_allocs;
+
 	void (*remove_support)(struct platform_device *);
 
 	u64 pg_ingating_time_us;

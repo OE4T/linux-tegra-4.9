@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -97,5 +97,13 @@ static inline u32 timer_pri_timeout_save_1_r(void)
 static inline u32 timer_pri_timeout_fecs_errcode_r(void)
 {
 	return 0x0000908c;
+}
+static inline u32 timer_time_0_r(void)
+{
+	return 0x00009400;
+}
+static inline u32 timer_time_1_r(void)
+{
+	return 0x00009410;
 }
 #endif

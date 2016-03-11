@@ -468,12 +468,18 @@ struct tegra_dsi_out_ops {
 	 * dsi clocks and video stream are on at this point */
 	void (*postpoweron)(struct tegra_dc_dsi_data *);
 };
-extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
+
 #if defined(CONFIG_TEGRA_DSI2EDP_TC358767) || \
 		defined(CONFIG_TEGRA_DSI2EDP_SN65DSI86)
 extern struct tegra_dsi_out_ops tegra_dsi2edp_ops;
 #else
 #define tegra_dsi2edp_ops (*(struct tegra_dsi_out_ops *)NULL)
+#endif
+
+#if defined(CONFIG_TEGRA_DSI2LVDS_SN65DSI85)
+extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
+#else
+#define tegra_dsi2lvds_ops (*(struct tegra_dsi_out_ops *)NULL)
 #endif
 
 struct sanity_status {

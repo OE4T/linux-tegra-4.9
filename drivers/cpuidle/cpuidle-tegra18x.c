@@ -48,8 +48,7 @@
 #define PSCI_STATE_ID_STATE_MASK        (0xf)
 #define PSCI_STATE_ID_WKTIM_MASK        (~0xf000000f)
 #define PSCI_STATE_TYPE_SHIFT           3
-#define A57_CORE_WAKE_MASK		0x180C
-#define DENVER_CORE_WAKE_MASK		0x180C
+#define CORE_WAKE_MASK			0x180C
 #define TSC_PER_SEC			32768
 #define NSEC_PER_TSC_TICK		30518
 #define USEC_PER_TSC_TICK		30
@@ -71,14 +70,13 @@ static bool check_mce_version(void)
 }
 static void tegra186_denver_enter_c6(u32 wake_time)
 {
-	tegra_mce_update_cstate_info(0, 0, 0, 0, DENVER_CORE_WAKE_MASK, 1);
+	tegra_mce_update_cstate_info(0, 0, 0, 0, CORE_WAKE_MASK, 1);
 	tegra_mce_enter_cstate(TEGRA186_CPUIDLE_C6, wake_time);
 	asm volatile("wfi\n");
 }
 
 static void tegra186_denver_enter_c7(u32 wake_time)
 {
-	tegra_mce_update_cstate_info(0, 0, 0, 0, DENVER_CORE_WAKE_MASK, 1);
 	/* Block all interrupts in the cpu core */
 	local_irq_disable();
 	local_fiq_disable();
@@ -91,8 +89,6 @@ static void tegra186_denver_enter_c7(u32 wake_time)
 
 static void tegra186_a57_enter_c7(u32 wake_time)
 {
-	/* Set wake mask */
-	tegra_mce_update_cstate_info(0, 0, 0, 0, A57_CORE_WAKE_MASK, 1);
 	cpu_pm_enter();  /* power down notifier */
 	arm_cpuidle_suspend(TEGRA186_A57_CPUIDLE_C7);
 	cpu_pm_exit();

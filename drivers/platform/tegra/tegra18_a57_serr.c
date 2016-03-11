@@ -67,7 +67,7 @@ static int report_serr(int cpu, int uncorrected, int corrected)
 {
 	u32 error;
 	int e;
-	u64 *data = NULL;
+	u64 data = 0;
 	mca_cmd_t mca_cmd = {.cmd = MCA_ARI_CMD_REPORT_SERR,
 			     .idx = 0x1,
 			     .subidx = cpu};
@@ -75,7 +75,7 @@ static int report_serr(int cpu, int uncorrected, int corrected)
 	mca_cmd.inst = uncorrected ? 0x1 : 0;
 	mca_cmd.inst |= corrected ? 0x2 : 0;
 
-	e = tegra_mce_read_uncore_mca(mca_cmd, data, &error);
+	e = tegra_mce_read_uncore_mca(mca_cmd, &data, &error);
 	if (e != 0) {
 		pr_err("%s: ARI call failed\n", __func__);
 		return -EINVAL;

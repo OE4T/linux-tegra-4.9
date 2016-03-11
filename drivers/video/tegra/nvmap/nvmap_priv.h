@@ -529,7 +529,12 @@ static inline int nvmap_handle_mk(struct nvmap_handle *h,
 static inline void nvmap_handle_mkclean(struct nvmap_handle *h,
 					u32 offset, u32 size)
 {
-	int nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkclean);
+	int nchanged;
+
+	if (h->heap_pgalloc && !atomic_read(&h->pgalloc.ndirty))
+		return;
+
+	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkclean);
 	if (h->heap_pgalloc)
 		atomic_sub(nchanged, &h->pgalloc.ndirty);
 }
@@ -537,8 +542,13 @@ static inline void nvmap_handle_mkclean(struct nvmap_handle *h,
 static inline void nvmap_handle_mkdirty(struct nvmap_handle *h,
 					u32 offset, u32 size)
 {
-	int nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkdirty);
+	int nchanged;
 
+	if (h->heap_pgalloc &&
+		(atomic_read(&h->pgalloc.ndirty) == (h->size >> PAGE_SHIFT)))
+		return;
+
+	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkdirty);
 	if (h->heap_pgalloc)
 		atomic_add(nchanged, &h->pgalloc.ndirty);
 }

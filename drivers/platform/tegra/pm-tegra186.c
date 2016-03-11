@@ -14,9 +14,12 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/cpu.h>
+#include <linux/init.h>
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
 #include <linux/module.h>
+#include <linux/pm.h>
 
 static struct dentry *debugfs_dir;
 static u32 suspend_state;
@@ -95,6 +98,19 @@ static int tegra_set_shutdown_mode(u32 shutdown_state)
 	return send_smc(SMC_SET_SHUTDOWN_MODE, &regs);
 }
 EXPORT_SYMBOL(tegra_set_shutdown_mode);
+
+static void tegra186_power_off_prepare(void)
+{
+	disable_nonboot_cpus();
+}
+
+static int __init tegra186_pm_init(void)
+{
+	pm_power_off_prepare = tegra186_power_off_prepare;
+
+	return 0;
+}
+core_initcall(tegra186_pm_init);
 
 static int suspend_state_get(void *data, u64 *val)
 {

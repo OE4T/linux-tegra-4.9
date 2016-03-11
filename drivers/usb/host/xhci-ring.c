@@ -2,6 +2,7 @@
  * xHCI host controller driver
  *
  * Copyright (C) 2008 Intel Corp.
+ * Copyright (c) 2017, NVIDIA CORPORATION. All rights reserved.
  *
  * Author: Sarah Sharp
  * Some code borrowed from the Linux EHCI driver.
@@ -2618,7 +2619,9 @@ cleanup:
 
 		handling_skipped_tds = ep->skip &&
 			trb_comp_code != COMP_MISSED_INT &&
-			trb_comp_code != COMP_PING_ERR;
+			trb_comp_code != COMP_PING_ERR &&
+			trb_comp_code != COMP_OVERRUN &&
+			trb_comp_code != COMP_STOP;
 
 		/*
 		 * Do not update event ring dequeue pointer if we're in a loop

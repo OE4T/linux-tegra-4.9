@@ -48,7 +48,7 @@ static struct device *arad_dev;
 
 #define ARAD_LANE_REG(reg, id) (reg + (id * TEGRA186_ARAD_LANE_STRIDE))
 
-#define ASRC_STREAM_REG_DEFAULTS(id) \
+#define ARAD_LANE_REG_DEFAULTS(id) \
 	{ ARAD_LANE_REG(TEGRA186_ARAD_LANE1_NUMERATOR_MUX_SEL, id), 0x0}, \
 	{ ARAD_LANE_REG(TEGRA186_ARAD_LANE1_RATIO_INTEGER_PART, id), 0x0}, \
 	{ ARAD_LANE_REG(TEGRA186_ARAD_LANE1_RATIO_FRACTIONAL_PART, id), 0x0}, \
@@ -71,12 +71,12 @@ static const struct reg_default tegra186_arad_reg_defaults[] = {
 	{ TEGRA186_ARAD_CG, 0x0},
 	{ TEGRA186_ARAD_CYA_GLOBAL, 0x0},
 
-	ASRC_STREAM_REG_DEFAULTS(0),
-	ASRC_STREAM_REG_DEFAULTS(1),
-	ASRC_STREAM_REG_DEFAULTS(2),
-	ASRC_STREAM_REG_DEFAULTS(3),
-	ASRC_STREAM_REG_DEFAULTS(4),
-	ASRC_STREAM_REG_DEFAULTS(5),
+	ARAD_LANE_REG_DEFAULTS(0),
+	ARAD_LANE_REG_DEFAULTS(1),
+	ARAD_LANE_REG_DEFAULTS(2),
+	ARAD_LANE_REG_DEFAULTS(3),
+	ARAD_LANE_REG_DEFAULTS(4),
+	ARAD_LANE_REG_DEFAULTS(5),
 
 	{ TEGRA186_ARAD_TX_CIF_CTRL, 0x115500},
 };
@@ -302,13 +302,6 @@ static int tegra186_arad_put_enable_lane(struct snd_kcontrol *kcontrol,
 	regmap_update_bits(arad->regmap,
 		arad_private->reg, 1<<arad_private->shift,
 		enable<<arad_private->shift);
-
-#ifdef CONFIG_SND_SOC_TEGRA186_ARAD_WAR
-	regmap_update_bits(arad->regmap,
-		TEGRA186_ARAD_LANE_INT_MASK,
-		1<<(TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT + lane_id),
-		1<<(TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT + lane_id));
-#endif
 
 	if (enable)
 		while (!tegra186_arad_get_lane_lock_status(arad, lane_id) &&
@@ -709,37 +702,21 @@ static void tegra186_arad_ahc_cb(void *data)
 		TEGRA186_ARAD_LANE_INT_STATUS, &status);
 	for (i = 0; i < TEGRA186_ARAD_LANE_MAX; i++) {
 		if ((1 << i) & status) {
-
+			/*Its a case where interrupt is because the lane
+			is unlocked */
 			regmap_read(arad->regmap,
 				TEGRA186_ARAD_LANE_ENABLE, &val);
 			val |= 1<<i;
-
 			regmap_write(arad->regmap,
 				TEGRA186_ARAD_LANE_INT_CLEAR, 1<<i);
 			regmap_write(arad->regmap,
 				TEGRA186_ARAD_LANE_SOFT_RESET, 1<<i);
 			regmap_write(arad->regmap,
 				TEGRA186_ARAD_LANE_ENABLE, val);
-			/* In case ratio change is masked becasue of
-				 previous locking, unmask it*/
-			regmap_update_bits(arad->regmap,
-				TEGRA186_ARAD_LANE_INT_MASK,
-				1<<(TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT
-				+ i), 0);
 			val = 0;
-		} /*
-			 Its a case where interrupt is because of
-			 ratio change, to offload unecessary interrupt
-			 handling in locked state mask ratio change
-			 interrupt */
-		else if (tegra186_arad_get_lane_lock_status(arad, i) &&
-				tegra186_arad_get_lane_ratio_change_status(arad, i)) {
-
-			regmap_update_bits(arad->regmap,
-				TEGRA186_ARAD_LANE_INT_MASK,
-				1<<(TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT + i),
-				1<<(TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT+i));
-
+		} else if (tegra186_arad_get_lane_ratio_change_status(arad, i)) {
+			/*Its a case where interrupt is because of
+			ratio change, clear the interrupt*/
 			regmap_write(arad->regmap,
 				TEGRA186_ARAD_LANE_INT_CLEAR,
 				1<<(TEGRA186_ARAD_LANE_INT_RATIO_CHANGE_SHIFT+i));

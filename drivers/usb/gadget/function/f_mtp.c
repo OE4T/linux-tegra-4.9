@@ -2,6 +2,8 @@
  * Gadget Function Driver for MTP
  *
  * Copyright (C) 2010 Google, Inc.
+ * Copyright (c) 2013-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
  * Author: Mike Lockwood <lockwood@android.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -1188,6 +1190,7 @@ mtp_function_bind(struct usb_configuration *c, struct usb_function *f)
 	if (id < 0)
 		return id;
 	mtp_interface_desc.bInterfaceNumber = id;
+	ptp_interface_desc.bInterfaceNumber = id;
 
 	if (mtp_string_defs[INTERFACE_STRING_INDEX].id == 0) {
 		ret = usb_string_id(c->cdev);
@@ -1205,6 +1208,7 @@ mtp_function_bind(struct usb_configuration *c, struct usb_function *f)
 		if (!f->os_desc_table)
 			return -ENOMEM;
 		f->os_desc_n = 1;
+		f->os_desc_table[0].if_id = id;
 		f->os_desc_table[0].os_desc = &fi_mtp->mtp_os_desc;
 	}
 

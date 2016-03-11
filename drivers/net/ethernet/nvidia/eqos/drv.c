@@ -951,6 +951,7 @@ static int eqos_alloc_rx_buf(struct eqos_prv_data *pdata,
 	skb =
 	    __netdev_alloc_skb_ip_align(pdata->dev, pdata->rx_buffer_len, gfp);
 	if (skb == NULL) {
+		prx_swcx_desc->skb = NULL;
 		pr_err("Failed to allocate skb\n");
 		return -ENOMEM;
 	}
@@ -2344,7 +2345,8 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 		prx_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
 
 		/* check for data availability */
-		if (!(prx_desc->rdes3 & EQOS_RDESC3_OWN)) {
+		if (!(prx_desc->rdes3 & EQOS_RDESC3_OWN) &&
+			prx_swcx_desc->skb) {
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
 			dump_rx_desc(qinx, prx_desc, prx_ring->cur_rx);
 #endif

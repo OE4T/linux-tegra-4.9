@@ -1,7 +1,7 @@
 /*
  * drivers/misc/therm_fan_est.c
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -389,7 +389,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	const char *gov_name;
 	u32 value;
 
-	pr_info("THERMAL EST start of therm_fan_est_probe.\n");
+	pr_debug("THERMAL EST start of therm_fan_est_probe.\n");
 	if (!pdev)
 		return -EINVAL;
 
@@ -430,7 +430,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		err = -ENXIO;
 		goto free_est;
 	}
-	pr_info("THERMAL EST name: %s.\n", est_data->name);
+	pr_debug("THERMAL EST name: %s.\n", est_data->name);
 
 	of_err |= of_property_read_u32(node, "num_resources", &value);
 	if (of_err) {
@@ -468,7 +468,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 			err = -ENXIO;
 			goto free_subdevs;
 		}
-		pr_info("THERMAL EST subdev name: %s\n",
+		pr_debug("THERMAL EST subdev name: %s\n",
 				(char *)subdevs[j].dev_data);
 
 		subdevs[j].get_temp = &fan_est_get_temp_func;
@@ -476,7 +476,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		of_err |= of_property_read_u32_array(child, "coeffs",
 			subdevs[j].coeffs, est_data->trip_length);
 		for (i = 0; i < est_data->trip_length; i++)
-			pr_info("THERMAL EST index %d coeffs %d\n",
+			pr_debug("THERMAL EST index %d coeffs %d\n",
 				i, subdevs[j].coeffs[i]);
 		j++;
 	}
@@ -515,7 +515,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < est_data->trip_length; i++)
-		pr_info("THERMAL EST index %d: trip_temp %d, hyst %d\n",
+		pr_debug("THERMAL EST index %d: trip_temp %d, hyst %d\n",
 			i, est_data->active_trip_temps[i],
 			est_data->active_hysteresis[i]);
 
@@ -525,7 +525,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 			est_data->active_hysteresis[i],
 			est_data->active_trip_temps[i]);
 	for (i = 0; i < (MAX_ACTIVE_STATES << 1) + 1; i++)
-		pr_info("THERMAL EST index %d: trip_temps_hyst %d\n",
+		pr_debug("THERMAL EST index %d: trip_temps_hyst %d\n",
 			i, est_data->active_trip_temps_hyst[i]);
 
 	for (i = 0; i < est_data->ndevs; i++) {
@@ -536,7 +536,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		}
 		for (j = 0; j < HIST_LEN; j++)
 			dev->hist[j] = temp;
-		pr_info("THERMAL EST init dev[%d] temp hist to %ld\n",
+		pr_debug("THERMAL EST init dev[%d] temp hist to %ld\n",
 			i, temp);
 	}
 
@@ -547,7 +547,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		err = -EINVAL;
 		goto free_subdevs;
 	}
-	pr_info("THERMAL EST cdev_type: %s.\n", est_data->cdev_type);
+	pr_debug("THERMAL EST cdev_type: %s.\n", est_data->cdev_type);
 
 	tzp = devm_kzalloc(&pdev->dev, sizeof(struct thermal_zone_params),
 				GFP_KERNEL);
@@ -564,7 +564,7 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 		goto free_tzp;
 	}
 	strcpy(tzp->governor_name, gov_name);
-	pr_info("THERMAL EST governor name: %s\n", tzp->governor_name);
+	pr_debug("THERMAL EST governor name: %s\n", tzp->governor_name);
 	est_data->tzp = tzp;
 	est_data->thz = thermal_zone_device_register(
 					(char *)dev_name(&pdev->dev),

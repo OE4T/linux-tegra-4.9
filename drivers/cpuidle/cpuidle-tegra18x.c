@@ -687,6 +687,7 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 		/* Denver cluster cpuidle init */
 		pr_info("cpuidle: Initializing cpuidle driver init for "
 				"Denver cluster\n");
+		extended_ops.make_power_state = t18x_make_power_state;
 
 		smp_call_function_any(&denver_cpumask, cluster_state_init,
 			denver_cluster_states, 1);

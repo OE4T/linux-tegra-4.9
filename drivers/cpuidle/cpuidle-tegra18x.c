@@ -403,10 +403,10 @@ static int setup_crossover(int cluster, int index, int value)
 	xover_data.value = value;
 
 	if (cluster == DENVER_CLUSTER)
-		smp_call_function_any(&denver_cpumask, program_single_crossover,
+		on_each_cpu_mask(&denver_cpumask, program_single_crossover,
 			&xover_data, 1);
 	else
-		smp_call_function_any(&a57_cpumask, program_single_crossover,
+		on_each_cpu_mask(&a57_cpumask, program_single_crossover,
 			&xover_data, 1);
 	return 0;
 }
@@ -630,14 +630,14 @@ static int crossover_init(struct cpumask *denver_cpumask,
 		pr_err("WARNING: cpuidle: %s: DT entry missing for A57"
 			" thresholds\n", __func__);
 	else
-		smp_call_function_any(a57_cpumask, send_crossover,
+		on_each_cpu_mask(a57_cpumask, send_crossover,
 			a57_xover, 1);
 
 	if (!denver_xover)
 		pr_err("WARNING: cpuidle: %s: DT entry missing for Denver"
 			" thresholds\n", __func__);
 	else
-		smp_call_function_any(denver_cpumask, send_crossover,
+		on_each_cpu_mask(denver_cpumask, send_crossover,
 			denver_xover, 1);
 
 	return 0;

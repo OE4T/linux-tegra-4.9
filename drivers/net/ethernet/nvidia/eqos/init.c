@@ -782,6 +782,8 @@ int eqos_probe(struct platform_device *pdev)
 
 	pdata->dev = ndev;
 
+	pdata->hw_state = HW_STOPPED;
+
 	/* PMT and PHY irqs are shared on FPGA system */
 	if (tegra_platform_is_unit_fpga()) {
 		phyirq = power_irq;

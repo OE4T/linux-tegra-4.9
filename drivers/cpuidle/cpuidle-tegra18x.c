@@ -46,7 +46,7 @@
 #include "../../drivers/cpuidle/dt_idle_states.h"
 
 #define PSCI_STATE_ID_STATE_MASK        (0xf)
-#define PSCI_STATE_ID_WKTIM_MASK        (~0xf)
+#define PSCI_STATE_ID_WKTIM_MASK        (~0xf000000f)
 #define PSCI_STATE_TYPE_SHIFT           3
 #define A57_CORE_WAKE_MASK		0x180C
 #define DENVER_CORE_WAKE_MASK		0x180C
@@ -173,7 +173,7 @@ static u32 t18x_make_power_state(u32 state)
 
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
 	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;
-	state = state | (wake_time << 4);
+	state = state | ((wake_time << 4) & PSCI_STATE_ID_WKTIM_MASK);
 
 	return state;
 }

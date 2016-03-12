@@ -421,6 +421,12 @@ static int a57_cc7_write(void *data, u64 val)
 	return setup_crossover(A57_CLUSTER, TEGRA_MCE_XOVER_CC1_CC7, (u32) val);
 }
 
+static int denver_c6_write(void *data, u64 val)
+{
+	return setup_crossover(DENVER_CLUSTER, TEGRA_MCE_XOVER_C1_C6,
+		(u32) val);
+}
+
 static int denver_cc6_write(void *data, u64 val)
 {
 	return setup_crossover(DENVER_CLUSTER, TEGRA_MCE_XOVER_CC1_CC6,
@@ -436,6 +442,8 @@ static int denver_cc7_write(void *data, u64 val)
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_denver_fops, NULL,
 						denver_idle_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_a57_fops, NULL, a57_idle_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(denver_xover_c6_fops, NULL,
+						denver_c6_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(denver_xover_cc6_fops, NULL,
 						denver_cc6_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(denver_xover_cc7_fops, NULL,
@@ -466,6 +474,11 @@ static int cpuidle_debugfs_init(void)
 	dfs_file = debugfs_create_file("forced_idle_duration_us", 0644,
 		cpuidle_debugfs_denver, NULL, &duration_us_denver_fops);
 
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_file("crossover_c1_c6", 0644,
+		cpuidle_debugfs_denver, NULL, &denver_xover_c6_fops);
 	if (!dfs_file)
 		goto err_out;
 

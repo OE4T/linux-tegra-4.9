@@ -1249,6 +1249,8 @@ static int eqos_open(struct net_device *dev)
 
 	eqos_start_dev(pdata);
 
+	pdata->hw_state = HW_STARTED;
+
 	DBGPR("<--%s()\n", __func__);
 	return Y_SUCCESS;
 
@@ -1289,6 +1291,8 @@ static int eqos_close(struct net_device *dev)
 
 	desc_if->free_buff_and_desc(pdata);
 	free_txrx_irqs(pdata);
+
+	pdata->hw_state = HW_STOPPED;
 
 	DBGPR("<--%s\n", __func__);
 	return Y_SUCCESS;
@@ -3990,7 +3994,8 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 	dev_info(&pdev->dev, "changing MTU from %d to %d\n", dev->mtu, new_mtu);
 
-	eqos_stop_dev(pdata);
+	if (pdata->hw_state == HW_STARTED)
+		eqos_stop_dev(pdata);
 
 	if (max_frame <= 2048) {
 		pdata->rx_buffer_len = 2048;
@@ -4001,7 +4006,8 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 	dev->mtu = new_mtu;
 
-	eqos_start_dev(pdata);
+	if (pdata->hw_state == HW_STARTED)
+		eqos_start_dev(pdata);
 
 	DBGPR("<--eqos_change_mtu\n");
 

@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -100,6 +100,9 @@ static ssize_t blcg_enable_store(struct device *device,
 
 	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
 		g->ops.clock_gating.blcg_bus_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_ce_load_gating_prod)
+		g->ops.clock_gating.blcg_ce_load_gating_prod(g,
+					g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod)
 		g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod(g, g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_fb_load_gating_prod)

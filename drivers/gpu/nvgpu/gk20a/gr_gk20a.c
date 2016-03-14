@@ -4217,7 +4217,15 @@ out:
 static void gr_gk20a_load_gating_prod(struct gk20a *g)
 {
 	/* slcg prod values */
-	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_bus_load_gating_prod)
+		g->ops.clock_gating.slcg_bus_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_chiplet_load_gating_prod)
+		g->ops.clock_gating.slcg_chiplet_load_gating_prod(g,
+				g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
+		g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+				g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod)
 		g->ops.clock_gating.slcg_ctxsw_firmware_load_gating_prod(g,
 				g->slcg_enabled);
@@ -4227,6 +4235,12 @@ static void gr_gk20a_load_gating_prod(struct gk20a *g)
 				g->slcg_enabled);
 
 	/* blcg prod values */
+	if (g->ops.clock_gating.blcg_bus_load_gating_prod)
+		g->ops.clock_gating.blcg_bus_load_gating_prod(g,
+				g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_ce_load_gating_prod)
+		g->ops.clock_gating.blcg_ce_load_gating_prod(g,
+				g->blcg_enabled);
 	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod)
 		g->ops.clock_gating.blcg_ctxsw_firmware_load_gating_prod(g,

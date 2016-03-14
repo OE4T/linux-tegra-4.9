@@ -36,7 +36,8 @@
 #define SRC_GYR				(0)
 #define SRC_ACC				(1)
 #define SRC_AUX				(2)
-#define SRC_N				(3)
+#define SRC_DMP				(3)
+#define SRC_N				(4)
 
 #define AXIS_X				(0)
 #define AXIS_Y				(1)
@@ -50,10 +51,12 @@
 #define DEV_SM				(3)
 #define DEV_STP				(4)
 #define DEV_QTN				(5)
-#define DEV_N				(6)
-#define DEV_AUX				(6)
-#define DEV_N_AUX			(7)
-#define DEV_DMP				(8)
+#define DEV_GMR				(6)
+#define DEV_GYU				(7)
+#define DEV_N				(8)
+#define DEV_AUX				(8)
+#define DEV_N_AUX			(9)
+#define DEV_DMP				(9)
 #define FW_LOADED			(16)
 #define EN_STDBY			(17)
 #define EN_LP				(18)
@@ -64,10 +67,12 @@
 					 (1 << DEV_TMP))
 #define MSK_DEV_DMP			((1 << DEV_SM) | \
 					 (1 << DEV_STP) | \
-					 (1 << DEV_QTN))
+					 (1 << DEV_QTN) | \
+					 (1 << DEV_GMR) | \
+					 (1 << DEV_GYU))
 #define MSK_DEV_SNSR			(MSK_DEV_MPU | MSK_DEV_DMP)
 #define MSK_DEV_ALL			(MSK_DEV_SNSR | (1 << DEV_AUX))
-#define MSK_PM_ON_FULL			(1 << DEV_GYR)
+#define MSK_PM_ON_FULL			((1 << DEV_GYR) | (1 << DEV_GYU))
 #define MSK_PM_ON			((1 << DEV_TMP) | \
 					 (1 << DEV_AUX) | \
 					 MSK_DEV_DMP)
@@ -108,10 +113,6 @@
 #define BIT_ZMOT_EN			(0x20)
 #define BIT_MOT_EN			(0x40)
 #define BIT_6500_WOM_EN			(0x40)
-#define BIT_SLV0_DLY_EN			(0x01)
-#define BIT_SLV1_DLY_EN			(0x02)
-#define BIT_SLV2_DLY_EN			(0x04)
-#define BIT_SLV3_DLY_EN			(0x08)
 #define BIT_DELAY_ES_SHADOW		(0x80)
 #define BIT_ACCEL_INTEL_MODE		(0x40)
 #define BIT_ACCEL_INTEL_ENABLE		(0x80)
@@ -137,8 +138,6 @@
 #define AUX_EXT_DATA_REG_MAX		(24)
 #define AUX_DEV_VALID_READ_LOOP_MAX	(20)
 #define AUX_DEV_VALID_READ_DELAY_MS	(5)
-
-#define DMP_HDR_LEN_MAX			(4)
 
 struct nvi_state;
 
@@ -285,35 +284,37 @@ struct nvi_rc {
 	u8 reg_bank;
 };
 
-#define DMP_DEV_ABLE_LEN		(2)
-
-struct nvi_dmp_icm {
-	u16 en_addr;
-	u16 en_msk;
-	u16 odr_cfg;
-	u16 odr_cntr;
+struct nvi_mc_icm {
+	u32 data_out_ctl;
+	u32 data_intr_ctl;
+	u32 motion_event_ctl;
+	u32 accel_cal_rate;
+	u32 ped_rate;
+	u32 accel_alpha_var;
+	u32 accel_a_var;
+	u32 accel_only_gain;
+	u32 cpass_time_buffer;
+	u32 cpass_alpha_var;
+	u32 cpass_a_var;
+	u32 cpass_rad_3d_thr;
+	u32 cpass_nomot_var_thr;
+	u32 smd_mot_thld;
+	u32 smd_delay_thld;
+	u32 smd_delay2_thld;
+	u32 wom_enable;
 };
 
-struct nvi_dmp_mpu {
-	u16 en_addr;
-	u8 en_len;
-	u8 en[DMP_DEV_ABLE_LEN];
-	u8 dis[DMP_DEV_ABLE_LEN];
-	u16 odr_cfg;
-	u16 odr_cntr;
+struct nvi_mc_mpu {
+	u32 cfg_fifo_int;
+	u32 d_smd_mot_thld;
+	u32 d_smd_delay_thld;
+	u32 d_smd_delay2_thld;
 };
 
-struct nvi_dmp_dev {
-	unsigned int dev;
-	unsigned int data_n;
-	unsigned int aux_port;
-	unsigned int hdr_n;
-	u8 hdr[DMP_HDR_LEN_MAX];
-	u8 hdr_msk[DMP_HDR_LEN_MAX];
-	int (*fn_init)(struct nvi_state *st);
+struct nvi_mc {
 	union {
-		struct nvi_dmp_icm icm;
-		struct nvi_dmp_mpu mpu;
+		struct nvi_mc_icm icm;
+		struct nvi_mc_mpu mpu;
 	};
 };
 
@@ -323,15 +324,16 @@ struct nvi_dmp {
 	unsigned int fw_crc32;
 	unsigned int fw_mem_addr;
 	unsigned int fw_start;
-	unsigned int dmp_period_us;
+	unsigned int dmp_reset_delay_ms;
 	unsigned int dev_msk;
 	unsigned int en_msk;
 	unsigned int dd_n;
 	const struct nvi_dmp_dev *dd;
+	int (*fn_rd)(struct nvi_state *st, s64 ts, unsigned int n);
+	int (*fn_clk_n)(struct nvi_state *st, u32 *clk_n);
 	int (*fn_init)(struct nvi_state *st);
 	int (*fn_en)(struct nvi_state *st);
 	int (*fn_dev_init)(struct nvi_state *st, unsigned int dev);
-	int (*fn_dev_enable)(struct nvi_state *st, unsigned int dev, int port);
 	int (*fn_dev_batch)(struct nvi_state *st, unsigned int dev, int port);
 };
 
@@ -370,7 +372,8 @@ struct nvi_snsr {
 	unsigned int enable;
 	unsigned int period_us;
 	unsigned int timeout_us;
-	unsigned int fsync;
+	unsigned int sts;
+	unsigned int odr;
 	unsigned int ts_n;
 	s64 ts_push_delay;
 	s64 push_delay_ns;
@@ -382,21 +385,26 @@ struct nvi_snsr {
 
 struct aux_port {
 	struct nvi_mpu_port nmp;
-	unsigned short ext_data_offset;
+	unsigned int ext_data_offset;
+	unsigned int period_us;
+	unsigned int timeout_us;
+	unsigned int odr;
+	s64 ts_last;
+	bool ts_reset;
+	bool flush;
 	bool hw_valid;
 	bool hw_en;
 	bool hw_do;
-	bool flush;
-	unsigned int period_us;
-	unsigned int timeout_us;
 };
 
 struct aux_ports {
 	struct aux_port port[AUX_PORT_MAX];
 	s64 bypass_timeout_ns;
 	unsigned int bypass_lock;
+	unsigned int dmp_en_msk;
+	unsigned int dmp_ctrl_msk;
+	unsigned int ext_data_n;
 	u8 delay_hw;
-	unsigned short ext_data_n;
 	unsigned char ext_data[AUX_EXT_DATA_REG_MAX];
 	unsigned char clock_i2c;
 	bool reset_i2c;
@@ -430,21 +438,23 @@ struct nvi_state {
 	struct notifier_block nb_vreg[2];
 	const struct nvi_hal *hal;
 	struct nvi_rc rc;
+	struct nvi_mc mc;
 	struct aux_ports aux;
 	unsigned int sts;
 	unsigned int errs;
 	unsigned int info;
 	unsigned int en_msk;
+	unsigned int bm_timeout_us;
 	struct nvi_snsr snsr[DEV_N_AUX];
 	struct nvi_src src[SRC_N];
 	int fifo_src;
-
-	unsigned int src_timeout_us[SRC_N];
-
 	bool rc_dis;
+	bool mc_dis;
 	bool irq_dis;
 	bool irq_set_irq_wake;
 	int pm;
+	u32 dmp_clk_n;
+	s64 ts_now;
 	s64 ts_vreg_en[2];
 	atomic64_t ts_irq;
 
@@ -468,10 +478,13 @@ int nvi_i2c_write_rc(struct nvi_state *st, const struct nvi_br *br, u32 val,
 		     const char *fn, u8 *rc, bool be);
 int nvi_i2c_r(struct nvi_state *st, u8 bank, u8 reg, u16 len, u8 *buf);
 int nvi_i2c_rd(struct nvi_state *st, const struct nvi_br *br, u8 *buf);
-int nvi_mem_wr(struct nvi_state *st, u16 mem_addr, u16 len, u8 *data,
+int nvi_mem_wr(struct nvi_state *st, u16 addr, u16 len, u8 *data,
 	       bool validate);
-int nvi_mem_wr_be(struct nvi_state *st, u16 mem_addr, u16 len, u32 val);
-int nvi_mem_rd(struct nvi_state *st, u16 mem_addr, u16 len, u8 *data);
+int nvi_mem_wr_be(struct nvi_state *st, u16 addr, u16 len, u32 val);
+int nvi_mem_wr_be_mc(struct nvi_state *st, u16 addr, u16 len,
+		     u32 val, u32 *mc);
+int nvi_mem_rd(struct nvi_state *st, u16 addr, u16 len, u8 *data);
+int nvi_mem_rd_le(struct nvi_state *st, u16 addr, u16 len, u32 *val);
 int nvi_wr_accel_offset(struct nvi_state *st, unsigned int axis, u16 offset);
 int nvi_wr_gyro_offset(struct nvi_state *st, unsigned int axis, u16 offset);
 int nvi_wr_fifo_cfg(struct nvi_state *st, int fifo);
@@ -482,8 +495,15 @@ int nvi_user_ctrl_en(struct nvi_state *st, const char *fn,
 		     bool en_dmp, bool en_fifo, bool en_i2c, bool en_irq);
 int nvi_wr_pm1(struct nvi_state *st, const char *fn, u8 pm1);
 int nvi_pm_wr(struct nvi_state *st, const char *fn, u8 pm1, u8 pm2, u8 lp);
+int nvi_aux_enable(struct nvi_state *st, const char *fn,
+		   bool en_req, bool force);
+int nvi_period_aux(struct nvi_state *st);
 int nvi_aux_delay(struct nvi_state *st, const char *fn);
 void nvi_push_delay(struct nvi_state *st);
+int nvi_push(struct nvi_state *st, unsigned int dev, u8 *buf, s64 ts);
+s64 nvi_ts_dev(struct nvi_state *st, s64 ts_now,
+	       unsigned int dev, unsigned int aux_port);
+void nvi_err(struct nvi_state *st);
 
 extern const struct nvi_hal nvi_hal_20628;
 extern const struct nvi_hal nvi_hal_6515;

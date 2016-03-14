@@ -13,37 +13,42 @@
 #ifndef _NVI_DMP_ICM_H_
 #define _NVI_DMP_ICM_H_
 
+#define ICM_DMP_FREQ			(102)
+#define ICM_DMP_PERIOD_US		(9804)
+#define ICM_BASE_SAMPLE_RATE		(1125)
+#define ICM_DMP_DIVIDER			(ICM_BASE_SAMPLE_RATE / ICM_DMP_FREQ)
+
 #define DATA_OUT_CTL1			(4 * 16)	/* 0x0040 */
 #define DATA_OUT_CTL2			(4 * 16 + 2)	/* 0x0042 */
 #define DATA_INTR_CTL			(4 * 16 + 12)	/* 0x004C */
 
 #define MOTION_EVENT_CTL		(4 * 16 + 14)	/* 0x004E */
 
-#define BM_BATCH_CNTR			(27 * 16)
-#define BM_BATCH_THLD			(19 * 16 + 12)
-#define BM_BATCH_MASK			(21 * 16 + 14)
+#define BM_BATCH_CNTR			(27 * 16)	/* 0x01B0 */
+#define BM_BATCH_THLD			(19 * 16 + 12)	/* 0x013C */
+#define BM_BATCH_MASK			(21 * 16 + 14)	/* 0x015E */
 
-#define ODR_ACCEL			(11 * 16 + 14)
-#define ODR_GYRO			(11 * 16 + 10)
-#define ODR_CPASS			(11 * 16 +  6)
-#define ODR_ALS				(11 * 16 +  2)
-#define ODR_QUAT6			(10 * 16 + 12)
-#define ODR_QUAT9			(10 * 16 +  8)
-#define ODR_PQUAT6			(10 * 16 +  4)
-#define ODR_PRESSURE			(11 * 16 + 12)
-#define ODR_GYRO_CALIBR			(11 * 16 +  8)
-#define ODR_CPASS_CALIBR		(11 * 16 +  4)
+#define ODR_ACCEL			(11 * 16 + 14)	/* 0x00BE */
+#define ODR_GYRO			(11 * 16 + 10)	/* 0x00BA */
+#define ODR_CPASS			(11 * 16 +  6)	/* 0x00B6 */
+#define ODR_ALS				(11 * 16 +  2)	/* 0x00B2 */
+#define ODR_QUAT6			(10 * 16 + 12)	/* 0x00AC */
+#define ODR_QUAT9			(10 * 16 +  8)	/* 0x00A8 */
+#define ODR_PQUAT6			(10 * 16 +  4)	/* 0x00A4 */
+#define ODR_PRESSURE			(11 * 16 + 12)	/* 0x00BC */
+#define ODR_GYRO_CALIBR			(11 * 16 +  8)	/* 0x00B8 */
+#define ODR_CPASS_CALIBR		(11 * 16 +  4)	/* 0x00B4 */
 
-#define ODR_CNTR_ACCEL			(9 * 16 + 14)
-#define ODR_CNTR_GYRO			(9 * 16 + 10)
-#define ODR_CNTR_CPASS			(9 * 16 +  6)
-#define ODR_CNTR_ALS			(9 * 16 +  2)
-#define ODR_CNTR_QUAT6			(8 * 16 + 12)
-#define ODR_CNTR_QUAT9			(8 * 16 +  8)
-#define ODR_CNTR_PQUAT6			(8 * 16 +  4)
-#define ODR_CNTR_PRESSURE		(9 * 16 + 12)
-#define ODR_CNTR_GYRO_CALIBR		(9 * 16 +  8)
-#define ODR_CNTR_CPASS_CALIBR		(9 * 16 +  4)
+#define ODR_CNTR_ACCEL			(9 * 16 + 14)	/* 0x009E */
+#define ODR_CNTR_GYRO			(9 * 16 + 10)	/* 0x009A */
+#define ODR_CNTR_CPASS			(9 * 16 +  6)	/* 0x0096 */
+#define ODR_CNTR_ALS			(9 * 16 +  2)	/* 0x0092 */
+#define ODR_CNTR_QUAT6			(8 * 16 + 12)	/* 0x008C */
+#define ODR_CNTR_QUAT9			(8 * 16 +  8)	/* 0x0088 */
+#define ODR_CNTR_PQUAT6			(8 * 16 +  4)	/* 0x0084 */
+#define ODR_CNTR_PRESSURE		(9 * 16 + 12)	/* 0x009C */
+#define ODR_CNTR_GYRO_CALIBR		(9 * 16 +  8)	/* 0x0098 */
+#define ODR_CNTR_CPASS_CALIBR		(9 * 16 +  4)	/* 0x0094 */
 
 #define CPASS_MTX_00			(23 * 16)
 #define CPASS_MTX_01			(23 * 16 + 4)
@@ -75,10 +80,10 @@
 #define ACCEL_ACCURACY			(97 * 16)
 #define ACCEL_CAL_RESET			(77 * 16)
 #define ACCEL_VARIANCE_THRESH		(93 * 16)
-#define ACCEL_CAL_RATE			(94 * 16 + 4)
+#define ACCEL_CAL_RATE			(94 * 16 + 4)	/* 0x05E4 */
 #define ACCEL_PRE_SENSOR_DATA		(97 * 16 + 4)
 #define ACCEL_COVARIANCE		(101 * 16 + 8)
-#define ACCEL_ALPHA_VAR			(91 * 16)
+#define ACCEL_ALPHA_VAR			(91 * 16)	/* 0x05B0 */
 #define ACCEL_A_VAR			(92 * 16)
 
 #define CPASS_BIAS_X			(126 * 16 +  4)
@@ -120,11 +125,11 @@
 #define PEDSTD_DRIVE_STATE		(43 * 16 + 10)
 #define PED_RATE			(58 * 16 +  4)
 
-#define SMD_MOT_THLD			(72 * 16 + 12)
-#define SMD_DELAY_THLD			(76 * 16 + 8)
-#define SMD_DELAY2_THLD			(76 * 16 + 12)
+#define SMD_MOT_THLD			(72 * 16 + 12)	/* 0x048C */
+#define SMD_DELAY_THLD			(76 * 16 + 8)	/* 0x04C8 */
+#define SMD_DELAY2_THLD			(76 * 16 + 12)	/* 0x04CC */
 
-#define WOM_ENABLE			(64 * 16 + 14)
+#define WOM_ENABLE			(64 * 16 + 14)	/* 0x040E */
 #define WOM_STATUS			(64 * 16 + 6)
 #define WOM_THRESHOLD			(64 * 16)
 #define WOM_CNTR_TH			(64 * 16 + 12)
@@ -174,13 +179,13 @@
 #define BATCH_MODE_EN			0x0100
 #define ACT_RECOG_SET			0x0080
 
-#define PEDOMETER_EN			0x40
-#define PEDOMETER_INT_EN		0x20
-#define SMD_EN				0x08
-#define ACCEL_CAL_EN			0x02
-#define GYRO_CAL_EN			0x01
-#define COMPASS_CAL_EN			0x80
-#define NINE_AXIS_EN			0x40
+#define PEDOMETER_EN			0x4000
+#define PEDOMETER_INT_EN		0x2000
+#define SMD_EN				0x0800
+#define ACCEL_CAL_EN			0x0200
+#define GYRO_CAL_EN			0x0100
+#define COMPASS_CAL_EN			0x0080
+#define NINE_AXIS_EN			0x0040
 
 #define HEADER_SZ			2
 #define ACCEL_DATA_SZ			12

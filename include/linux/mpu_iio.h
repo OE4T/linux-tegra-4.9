@@ -149,6 +149,11 @@ struct mpu_platform_data {
  *      3:0. If the port is to do write transactions then this
  *      value must be 1.  See MPU documentation for the other
  *      bits in I2C_SLVx_CTRL that can be applied by this byte.
+ * - dmp_ctrl: When the DMP in enabled, the number of
+ *      consecutive registers to read in 3:0. If the port is to
+ *      do write transactions then this value must be 1.  See
+ *      MPU documentation for the other bits in I2C_SLVx_CTRL
+ *      that can be applied by this byte.
  * - data_out: The data byte written if the port is configured
  *      to do writes (addr 7:7 = 0).
  * - delay_ms: The polling delay time between I2C transactions
@@ -185,6 +190,7 @@ struct nvi_mpu_port {
 	u8 addr;
 	u8 reg;
 	u8 ctrl;
+	u8 dmp_ctrl;
 	u8 data_out;
 	unsigned int delay_ms;
 	unsigned long delay_us;
@@ -195,8 +201,7 @@ struct nvi_mpu_port {
 	signed char matrix[9];
 	enum secondary_slave_type type;
 	enum ext_slave_id id;
-	u8 asa[3];
-	int rate_scale;
+	u64 q30[3];
 };
 
 /**

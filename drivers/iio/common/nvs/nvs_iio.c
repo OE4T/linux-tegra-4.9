@@ -76,8 +76,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(211)
-#define NVS_ATTRS_ARRAY_SIZE		(12)
+#define NVS_IIO_DRIVER_VERSION		(213)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -566,7 +565,7 @@ static int nvs_enable(struct iio_dev *indio_dev, bool en)
 	if (!ret)
 		st->enabled = enable;
 	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG)
-		dev_info(st->dev, "%s %s enable=%d ret=%d",
+		dev_info(st->dev, "%s %s enable=%x ret=%d",
 			 __func__, st->cfg->name, enable, ret);
 	return ret;
 }

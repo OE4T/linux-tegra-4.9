@@ -14,201 +14,774 @@
 #include "nvi.h"
 #include "nvi_dmp_icm.h"
 
-#define DMP_FREQ			(102)
-#define DMP_PERIOD_US			(9804)
-#define PEDOMETER_FREQ			(DMP_FREQ >> 1)
-#define DEFAULT_ACCEL_GAIN		33554432L
-#define BASE_SAMPLE_RATE		(1125)
-#define DMP_DIVIDER			(BASE_SAMPLE_RATE / DMP_FREQ)
+#define MPL520				(1)
+
+#define DEFAULT_ACCEL_GAIN		(0x02000000)
+#define PED_ACCEL_GAIN			(0x04000000)
+#define DMP_MULTI_SHIFT			(30)
+
+#define DMP_HDR_LEN_MAX			(4)
+#define DMP_HDR1_HDR2_MSK		(0x0008)
+#define DMP_HDR1_PUSH_MSK		(0xFEF0)
+#define DMP_DATA_OUT_CTL_HDR2_MSK	(0x0000FFFF)
+#define DMP_DATA_OUT_CTL_HDR2_BIT	(0x00080000)
 
 
-static int nvi_mem_rdwr(struct nvi_state *st, u16 addr, u16 len,
-			u32 val, u32 msk)
+struct nvi_dmp_dev {
+	unsigned int dev;
+	unsigned int aux_port;
+	unsigned int depend_msk;	/* sensor dependencies */
+	unsigned int src_msk;
+	unsigned int period_us_dflt;
+	unsigned int buf_n;
+	int buf_shft;
+	bool matrix;
+	u32 out_ctl;
+	u16 int_ctl;
+	u16 odr_cfg;
+	u16 odr_cntr;
+	int (*fn_init)(struct nvi_state *st, unsigned int en_msk,
+		       u32 *out_ctl);
+};
+
+struct nvi_dmp_hdr {
+	unsigned int dev;
+	unsigned int aux_port;
+	unsigned int data_n;
+	u16 hdr_msk;
+};
+
+
+struct inv_dmp_acc_wtf {
+	unsigned int period_us;
+	unsigned int rate;
+	unsigned int gain;
+	unsigned int alpha;
+	unsigned int a;
+};
+
+static struct inv_dmp_acc_wtf inv_dmp_acc_wtfs[] = {
+	{
+		.period_us		= 1000,
+	},
+	{
+		.period_us		= 4444,
+		.rate			= 3,
+		.gain			= DEFAULT_ACCEL_GAIN,
+		.alpha			= 0x33333333,
+		.a			= 0x0CCCCCCD,
+	},
+	{
+		.period_us		= 9804,
+		.rate			= 1,
+		.gain			= DEFAULT_ACCEL_GAIN,
+		.alpha			= 0x33333333,
+		.a			= 0x0CCCCCCD,
+	},
+	{
+		.period_us		= 4902,
+		.rate			= 0,
+		.gain			= PED_ACCEL_GAIN,
+		.alpha			= 0x33333333,
+		.a			= 0x0CCCCCCD,
+	},
+	{
+		.period_us		= 66667,
+		.rate			= 0,
+		.gain			= DEFAULT_ACCEL_GAIN,
+		.alpha			= 0x15555555,
+		.a			= 0x2AAAAAAB,
+	},
+	{
+		.period_us		= 200000,
+		.rate			= 0,
+		.gain			= DEFAULT_ACCEL_GAIN,
+		.alpha			= 0x06666666,
+		.a			= 0x3999999A,
+	},
+};
+
+static int nvi_dmp_acc_init(struct nvi_state *st, unsigned int en_msk,
+			    u32 *out_ctl)
 {
-	u8 buf_rd[4];
-	u32 buf_wr;
-	unsigned int i;
+	unsigned int i = 0;
+	unsigned int j;
+	int min_diff;
+	int tmp;
 	int ret;
 
-	ret = nvi_mem_rd(st, addr, len, buf_rd);
-	if (!ret) {
-		buf_wr = 0;
-		/* convert to little endian */
-		for (i = 0; i < len; i++) {
-			buf_wr <<= 8;
-			buf_wr |= buf_rd[i];
+	ret = st->hal->fn->en_acc(st);
+	min_diff =  inv_dmp_acc_wtfs[0].period_us;
+	for (j = 0; j < ARRAY_SIZE(inv_dmp_acc_wtfs); j++) {
+		tmp = abs(inv_dmp_acc_wtfs[j].period_us -
+			  st->src[SRC_ACC].period_us_src);
+		if (tmp < min_diff) {
+			min_diff = tmp;
+			i = j;
 		}
-
-		buf_wr &= ~msk;
-		buf_wr |= val;
-		ret = nvi_mem_wr_be(st, addr, len, buf_wr);
 	}
+
+	ret |= nvi_mem_wr_be_mc(st, ACCEL_CAL_RATE, 2,
+				inv_dmp_acc_wtfs[i].rate,
+				&st->mc.icm.accel_cal_rate);
+	ret |= nvi_mem_wr_be_mc(st, PED_RATE, 4, inv_dmp_acc_wtfs[i].rate,
+				&st->mc.icm.ped_rate);
+	ret |= nvi_mem_wr_be_mc(st, ACCEL_ALPHA_VAR, 4,
+				inv_dmp_acc_wtfs[i].alpha,
+				&st->mc.icm.accel_alpha_var);
+	ret |= nvi_mem_wr_be_mc(st, ACCEL_A_VAR, 4, inv_dmp_acc_wtfs[i].a,
+				&st->mc.icm.accel_a_var);
+	ret |= nvi_mem_wr_be_mc(st, ACCEL_ONLY_GAIN, 4,
+				inv_dmp_acc_wtfs[i].gain,
+				&st->mc.icm.accel_only_gain);
 	return ret;
 }
 
-static int nvi_dmp_cntl(struct nvi_state *st, bool en, u16 addr, u32 msk)
-{
-	u32 val = 0;
+struct inv_dmp_gmf_wtf {
+	unsigned int period_us;
+	unsigned int ct;
+	unsigned int alpha_c;
+	unsigned int a_c;
+	unsigned int rad_3d;
+	unsigned int nomot_var_thr;
+};
 
-	if (en)
-		val = msk;
-	return nvi_mem_rdwr(st, addr, 2, val, msk);
+static struct inv_dmp_gmf_wtf inv_dmp_gmf_wtfs[] = {
+	{
+		.period_us		= 5000,
+		.ct			= 200,
+	},
+	{
+		.period_us		= 14286,
+		.ct			= 70,
+		.alpha_c		= 0x36DB6DB7,
+		.a_c			= 0x09249249,
+		.rad_3d			= 0x00000E00,
+		.nomot_var_thr		= 0x0000000C,
+	},
+	{
+		.period_us		= 28571,
+		.ct			= 35,
+		.alpha_c		= 0x2DB6DB6E,
+		.a_c			= 0x12492492,
+		.rad_3d			= 0x00000E00,
+		.nomot_var_thr		= 0x0000000C,
+	},
+	{
+		.period_us		= 66667,
+		.ct			= 15,
+		.alpha_c		= 0x15555555,
+		.a_c			= 0x2AAAAAAB,
+		.rad_3d			= 0x00000E00,
+		.nomot_var_thr		= 0x00000008,
+	},
+	{
+		.period_us		= 125000,
+		.ct			= 8,
+		.alpha_c		= 0x06666666,
+		.a_c			= 0x3999999A,
+		.rad_3d			= 0x00000E00,
+		.nomot_var_thr		= 0x00000001,
+	},
+	{
+		.period_us		= 250000,
+		.ct			= 4,
+		.alpha_c		= 0x06666666,
+		.a_c			= 0x3999999A,
+		.rad_3d			= 0x00000E00,
+		.nomot_var_thr		= 0x00000001,
+	},
+};
+
+/* gmf = GeoMagnetic Field (compass) */
+static int nvi_dmp_gmf_init(struct nvi_state *st, unsigned int en_msk,
+			    u32 *out_ctl)
+{
+	unsigned int i = 0;
+	unsigned int j;
+	int min_diff;
+	int tmp;
+	int ret;
+
+	if (st->aux.port[0].nmp.type != SECONDARY_SLAVE_TYPE_COMPASS)
+		/* DMP shouldn't run if AUX device not supported */
+		return -EINVAL;
+
+	min_diff =  inv_dmp_gmf_wtfs[0].period_us;
+	for (j = 0; j < ARRAY_SIZE(inv_dmp_gmf_wtfs); j++) {
+		tmp = abs(inv_dmp_gmf_wtfs[j].period_us -
+			  st->src[SRC_AUX].period_us_src);
+		if (tmp < min_diff) {
+			min_diff = tmp;
+			i = j;
+		}
+	}
+
+	ret = nvi_mem_wr_be_mc(st, CPASS_TIME_BUFFER, 2,
+			       inv_dmp_gmf_wtfs[i].ct,
+			       &st->mc.icm.cpass_time_buffer);
+	ret |= nvi_mem_wr_be_mc(st, CPASS_ALPHA_VAR, 4,
+				inv_dmp_gmf_wtfs[i].alpha_c,
+				&st->mc.icm.cpass_alpha_var);
+	ret |= nvi_mem_wr_be_mc(st, CPASS_A_VAR, 4,
+				inv_dmp_gmf_wtfs[i].a_c,
+				&st->mc.icm.cpass_a_var);
+	ret |= nvi_mem_wr_be_mc(st,
+				CPASS_RADIUS_3D_THRESH_ANOMALY, 4,
+				inv_dmp_gmf_wtfs[i].rad_3d,
+				&st->mc.icm.cpass_rad_3d_thr);
+	ret |= nvi_mem_wr_be_mc(st, CPASS_NOMOT_VAR_THRESH, 4,
+				inv_dmp_gmf_wtfs[i].nomot_var_thr,
+				&st->mc.icm.cpass_nomot_var_thr);
+	return ret;
 }
 
-static int nvi_dmp_press_init(struct nvi_state *st)
+/* prs = pressure */
+static int nvi_dmp_prs_init(struct nvi_state *st, unsigned int en_msk,
+			    u32 *out_ctl)
 {
 	return 1;
 }
 
-static int nvi_dmp_cpass_init(struct nvi_state *st)
+static int nvi_dmp_gyr_init(struct nvi_state *st, unsigned int en_msk,
+			    u32 *out_ctl)
 {
-	int ret = 1;
-
-	if (st->aux.port[0].nmp.type == SECONDARY_SLAVE_TYPE_COMPASS) {
-		if (st->snsr[DEV_AUX].enable & (1 << 0))
-			ret = nvi_aux_delay(st, __func__);
-	}
-	return ret;
+	st->snsr[DEV_GYR].sts = 1;
+	return st->hal->fn->en_gyr(st);
 }
 
-static int nvi_dmp_sm_init(struct nvi_state *st)
+static int nvi_dmp_sm_init(struct nvi_state *st, unsigned int en_msk,
+			   u32 *out_ctl)
 {
 	int ret;
 
-	ret = nvi_mem_wr_be(st, SMD_MOT_THLD, 4,
-			    st->snsr[DEV_SM].cfg.thresh_lo << 16);
-	ret |= nvi_mem_wr_be(st, SMD_DELAY_THLD, 4,
-			     st->snsr[DEV_SM].cfg.thresh_hi);
-	ret |= nvi_mem_wr_be(st, SMD_DELAY2_THLD, 4,
-			     st->snsr[DEV_SM].cfg.delay_us_max);
+	ret = nvi_mem_wr_be_mc(st, SMD_MOT_THLD, 4,
+			       st->snsr[DEV_SM].cfg.thresh_lo << 16,
+			       &st->mc.icm.smd_mot_thld);
+	ret |= nvi_mem_wr_be_mc(st, SMD_DELAY_THLD, 4,
+				st->snsr[DEV_SM].cfg.thresh_hi,
+				&st->mc.icm.smd_delay_thld);
+	ret |= nvi_mem_wr_be_mc(st, SMD_DELAY2_THLD, 4,
+				st->snsr[DEV_SM].cfg.delay_us_max,
+				&st->mc.icm.smd_delay2_thld);
 	return ret;
+}
+
+static int nvi_dmp_gmr_init(struct nvi_state *st, unsigned int en_msk,
+			    u32 *out_ctl)
+{
+	if (out_ctl) {
+		if (en_msk & ((1 << DEV_GYR) | (1 << DEV_GYU)))
+			/* if gyro is enabled GMR becomes QTN 9-axis */
+			*out_ctl |= 0x04000000;
+		else
+			*out_ctl |= 0x04000200;
+	}
+	return 0;
 }
 
 static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	{
 		.dev			= DEV_ACC,
-		.data_n			= 12,
-		.hdr_n			= 2,
-		.hdr			= { 0x80, 0x00, 0x00, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0, 0x00, 0x00 },
-		.icm			= {
-			.en_addr	= DATA_OUT_CTL1,
-			.en_msk		= 0x8000,
-			.en_msk		= 0,
-			.odr_cfg	= ODR_ACCEL,
-			.odr_cntr	= ODR_CNTR_ACCEL,
-		},
+		.buf_n			= 12,
+		.buf_shft		= -11,
+		.matrix			= true,
+		.out_ctl		= 0x80000000,
+		.int_ctl		= ACCEL_SET,
+		.odr_cfg		= ODR_ACCEL,
+		.odr_cntr		= ODR_CNTR_ACCEL,
+		.fn_init		= &nvi_dmp_acc_init,
 	},
 	{
 		.dev			= DEV_GYR,
+		.depend_msk		= (1 << DEV_GYU),
+#ifdef MPL520
+		.buf_n			= 6,
+#else /* MPL520 */
+		.buf_n			= 12,
+#endif /* MPL520 */
+		.matrix			= true,
+		.out_ctl		= 0x00400000,
+		.int_ctl		= GYRO_CALIBR_SET,
+		.odr_cfg		= ODR_GYRO_CALIBR,
+		.odr_cntr		= ODR_CNTR_GYRO_CALIBR,
+		.fn_init		= &nvi_dmp_gyr_init,
+	},
+	{
+		.dev			= DEV_GYU,
+		.depend_msk		= (1 << DEV_GYR),
+		.buf_n			= 6,
+		.matrix			= true,
+		.out_ctl		= 0x40000000,
+		.int_ctl		= GYRO_SET,
+		.odr_cfg		= ODR_GYRO,
+		.odr_cntr		= ODR_CNTR_GYRO,
+	},
+	{
+		.dev			= DEV_QTN,
+		.depend_msk		= (1 << DEV_ACC) |
+					  (1 << DEV_GYR) |
+					  (1 << DEV_GYU),
+		.src_msk		= (1 << SRC_ACC) |
+					  (1 << SRC_GYR) |
+					  (1 << SRC_AUX),
+		.period_us_dflt		= ICM_DMP_PERIOD_US,
+		.buf_n			= 12,
+		.matrix			= true,
+		.out_ctl		= 0x08000000,
+		.int_ctl		= QUAT6_SET,
+		.odr_cfg		= ODR_QUAT6,
+		.odr_cntr		= ODR_CNTR_QUAT6,
+	},
+	{
+		.dev			= DEV_GMR,
+		.depend_msk		= (1 << DEV_ACC) |
+					  (0x03 << DEV_N_AUX),
+		.src_msk		= (1 << SRC_ACC) |
+					  (1 << SRC_GYR) |
+					  (1 << SRC_AUX),
+		.period_us_dflt		= ICM_DMP_PERIOD_US,
+		.buf_n			= 14,
+		.int_ctl		= QUAT9_SET,
+		.odr_cfg		= ODR_QUAT9,
+		.odr_cntr		= ODR_CNTR_QUAT9,
+		.fn_init		= &nvi_dmp_gmr_init,
+	},
+	{
+		.dev			= DEV_SM,
+		.depend_msk		= (1 << DEV_ACC),
+		.src_msk		= (1 << SRC_ACC),
+		.period_us_dflt		= ICM_DMP_PERIOD_US,
+		.buf_n			= 1,
+		.out_ctl		= 0x80000000,
+		.fn_init		= &nvi_dmp_sm_init,
+	},
+	{
+		.dev			= DEV_AUX,
+		.aux_port		= 0,
+		.depend_msk		= (0x03 << DEV_N_AUX),
+		.buf_n			= 6,
+		.out_ctl		= 0x20000000,
+		.int_ctl		= CPASS_SET,
+		.odr_cfg		= ODR_CPASS,
+		.odr_cntr		= ODR_CNTR_CPASS,
+		.fn_init		= &nvi_dmp_gmf_init,
+	},
+	{
+		.dev			= DEV_AUX,
+		.aux_port		= 2,
+		.depend_msk		= (0x0C << DEV_N_AUX),
+		.buf_n			= 6,
+		.out_ctl		= 0x00800000,
+		.int_ctl		= PRESSURE_SET,
+		.odr_cfg		= ODR_PRESSURE,
+		.odr_cntr		= ODR_CNTR_PRESSURE,
+		.fn_init		= &nvi_dmp_prs_init,
+	},
+};
+
+/* devices must be in the order the data comes out of the DMP */
+static struct nvi_dmp_hdr nvi_dmp_hdr2s[] = {
+	{
+		.dev			= DEV_ACC,
+		.data_n			= 2,
+		.hdr_msk		= 0x4000,
+	},
+	{
+		.dev			= DEV_GYR,
+		.data_n			= 2,
+		.hdr_msk		= 0x2000,
+	},
+	{
+		.dev			= DEV_AUX,
+		.aux_port		= 0,
+		.data_n			= 2,
+		.hdr_msk		= 0x1000,
+	},
+	{
+		.dev			= -1,
 		.data_n			= 6,
-		.hdr_n			= 2,
-		.hdr			= { 0x40, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0 },
-		.icm			= {
-			.en_addr	= DATA_OUT_CTL1,
-			.en_msk		= 0x4000,
-			.odr_cfg	= ODR_GYRO,
-			.odr_cntr	= ODR_CNTR_GYRO,
-		},
+		.hdr_msk		= 0x0080,
+	},
+};
+
+/* devices must be in the order the data comes out of the DMP */
+static struct nvi_dmp_hdr nvi_dmp_hdr1s[] = {
+	{
+		.dev			= DEV_ACC,
+		.data_n			= 12,
+		.hdr_msk		= 0x8000,
+	},
+#ifdef MPL520
+	{
+		.dev			= DEV_GYR,
+		.data_n			= 6,
+		.hdr_msk		= 0x4000,
+	},
+#else /* MPL520 */
+	{
+		.dev			= DEV_GYU,
+		.data_n			= 6,
+		.hdr_msk		= 0x4000,
+	},
+#endif /* MPL520 */
+	{
+		.dev			= DEV_AUX,
+		.aux_port		= 0,
+		.data_n			= 6,
+		.hdr_msk		= 0x2000,
+	},
+	{
+		.dev			= DEV_AUX,
+		.aux_port		= -1,
+		.data_n			= 8,
+		.hdr_msk		= 0x1000,
 	},
 	{
 		.dev			= DEV_QTN,
 		.data_n			= 12,
-		.hdr_n			= 4,
-		.hdr			= { 0x08, 0x00, 0x04, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0, 0xFF, 0xF0 },
-		.icm			= {
-			.en_addr	= DATA_OUT_CTL1,
-			.en_msk		= 0x0800,
-			.en_msk		= 0,
-			.odr_cfg	= ODR_QUAT6,
-			.odr_cntr	= ODR_CNTR_QUAT6,
-		},
+		.hdr_msk		= 0x0800,
 	},
 	{
-		.dev			= DEV_SM,
-		.data_n			= 1,
-		.hdr_n			= 0,
-		.fn_init		= &nvi_dmp_sm_init,
-		.icm			= {
-			.en_addr	= DATA_OUT_CTL1,
-			.en_msk		= 0,
-			.odr_cfg	= 0,
-			.odr_cntr	= 0,
-		},
+		.dev			= DEV_GMR,
+		.data_n			= 14,
+		.hdr_msk		= 0x0400,
+	},
+	{
+		.dev			= -1, /* PQUAT6 */
+		.data_n			= 6,
+		.hdr_msk		= 0x0200,
 	},
 	{
 		.dev			= DEV_AUX,
-		.data_n			= 6,
-		.aux_port		= 0,
-		.hdr_n			= 2,
-		.hdr			= { 0x20, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0 },
-		.fn_init		= &nvi_dmp_cpass_init,
-		.icm			= {
-			.en_addr	= DATA_OUT_CTL1,
-			.en_msk		= 0x2000,
-			.odr_cfg	= ODR_CPASS,
-			.odr_cntr	= ODR_CNTR_CPASS,
-		},
-	},
-	{
-		.dev			= DEV_AUX,
-		.data_n			= 6,
 		.aux_port		= 2,
-		.hdr_n			= 2,
-		.hdr			= { 0x80, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0 },
-		.fn_init		= &nvi_dmp_press_init,
-		.icm			= {
-			.en_addr	= DATA_OUT_CTL1,
-			.en_msk		= 0x0080,
-			.odr_cfg	= ODR_PRESSURE,
-			.odr_cntr	= ODR_CNTR_PRESSURE,
-		},
+		.data_n			= 6,
+		.hdr_msk		= 0x0080,
+	},
+#ifdef MPL520
+	{
+		.dev			= -1, /* disable for 520 */
+		.data_n			= 12,
+		.hdr_msk		= 0x0040,
+	},
+#else /* MPL520 */
+	{
+		.dev			= DEV_GYR,
+		.data_n			= 12,
+		.hdr_msk		= 0x0040,
+	},
+#endif /* MPL520 */
+	{
+		.dev			= -1, /* CPASS_CALIBR */
+		.data_n			= 12,
+		.hdr_msk		= 0x0020,
+	},
+	{
+		.dev			= DEV_STP,
+		.data_n			= 4,
+		.hdr_msk		= 0x0010,
 	},
 };
 
-static int nvi_dd_odr(struct nvi_state *st, struct nvi_dmp_dev *dd)
+static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 {
-	u16 odr_cfg;
-	int ret;
+	struct nvi_dmp_hdr *dh;
+	struct aux_port *ap;
+	unsigned int data_n;
+	unsigned int hdr1_i;
+	unsigned int hdr2_i;
+	unsigned int i;
+	unsigned int j;
+	u16 hdr1;
+	u16 hdr2;
 
-	if (dd->dev == DEV_AUX)
-		odr_cfg = (st->aux.port[dd->aux_port].period_us /
-			   DMP_PERIOD_US) - 1;
-	else
-		odr_cfg = (st->snsr[dd->dev].period_us / DMP_PERIOD_US) - 1;
-	ret = nvi_mem_wr_be(st, dd->icm.odr_cntr, 2, 0);
-	ret |= nvi_mem_wr_be(st, dd->icm.odr_cfg, 2, odr_cfg);
-	ret |= nvi_mem_wr_be(st, dd->icm.odr_cntr, 2, 0);
-	return ret;
+	while (n > DMP_HDR_LEN_MAX) {
+		if (st->sts & (NVS_STS_SUSPEND | NVS_STS_SHUTDOWN))
+			return -1;
+
+		hdr1 = (u16)be16_to_cpup((__be16 *)(&st->buf[st->buf_i]));
+		data_n = sizeof(hdr1);
+		hdr1_i = sizeof(hdr1);
+		/* make sure we have all the data for this header */
+		for (i = 0; i < ARRAY_SIZE(nvi_dmp_hdr1s); i++) {
+			if (hdr1 & nvi_dmp_hdr1s[i].hdr_msk)
+				data_n += nvi_dmp_hdr1s[i].data_n;
+		}
+		if (hdr1 & DMP_HDR1_HDR2_MSK) {
+			hdr2 = (u16)be16_to_cpup((__be16 *)
+						 (&st->buf[st->buf_i +
+							   sizeof(hdr1)]));
+			data_n += sizeof(hdr2);
+			hdr2_i = data_n; /* index to header2 data */
+			hdr1_i += sizeof(hdr2); /* index to header1 data */
+			for (i = 0; i < ARRAY_SIZE(nvi_dmp_hdr2s); i++) {
+				if (hdr2 & nvi_dmp_hdr2s[i].hdr_msk)
+					data_n += nvi_dmp_hdr2s[i].data_n;
+			}
+		} else {
+			hdr2 = 0;
+		}
+
+		if (n < data_n)
+			/* not enough data to process */
+			return 0;
+
+		if (st->sts & NVI_DBG_SPEW_FIFO)
+			dev_info(&st->i2c->dev, "%s DMP HDR1=%04x HDR2=%04x\n",
+				 __func__, hdr1, hdr2);
+		/* we process header2 accuracy data first so that it becomes
+		 * part of the header1 status data when pushed.
+		 */
+		for (i = 0; i < ARRAY_SIZE(nvi_dmp_hdr2s) && hdr2; i++) {
+			dh = &nvi_dmp_hdr2s[i];
+			if (hdr2 & dh->hdr_msk) {
+				hdr2 &= ~dh->hdr_msk;
+				if (dh->dev < DEV_N) {
+					st->snsr[dh->dev].sts = 0;
+					for (j = 0; j < dh->data_n; j++) {
+						st->snsr[dh->dev].sts <<= 8;
+						st->snsr[dh->dev].sts |=
+							    st->buf[st->buf_i +
+								    hdr2_i];
+						hdr2_i++;
+					}
+				} else {
+					hdr2_i += dh->data_n;
+				}
+			}
+		}
+
+		if (hdr2) {
+			/* unknown header: lost DMP sync so DMP reset */
+			if (st->sts & NVI_DBG_SPEW_FIFO)
+				dev_err(&st->i2c->dev,
+					"%s ERR: DMP sync HDR2=%hx\n",
+					__func__, hdr2);
+			nvi_err(st);
+			return -1;
+		}
+
+		/* process push data */
+		hdr1 &= DMP_HDR1_PUSH_MSK;
+		for (i = 0; i < ARRAY_SIZE(nvi_dmp_hdr1s) && hdr1; i++) {
+			dh = &nvi_dmp_hdr1s[i];
+			if (hdr1 & dh->hdr_msk) {
+				hdr1 &= ~dh->hdr_msk;
+				if (dh->dev == DEV_AUX &&
+						 dh->aux_port < AUX_PORT_MAX &&
+				      st->aux.port[dh->aux_port].nmp.handler) {
+					ap = &st->aux.port[dh->aux_port];
+					ap->nmp.handler(&st->buf[st->buf_i +
+								 hdr1_i],
+							dh->data_n,
+							nvi_ts_dev(st, 0,
+								   dh->dev,
+								 dh->aux_port),
+							ap->nmp.ext_driver);
+				} else if (dh->dev < DEV_N) {
+					nvi_push(st, dh->dev,
+						 &st->buf[st->buf_i + hdr1_i],
+						 nvi_ts_dev(st, ts,
+							    dh->dev, 0));
+				}
+				hdr1_i += dh->data_n;
+			}
+		}
+
+		st->buf_i += data_n;
+		n -= data_n;
+		if (hdr1) {
+			/* unknown header: lost DMP sync so DMP reset */
+			if (st->sts & NVI_DBG_SPEW_FIFO)
+				dev_err(&st->i2c->dev,
+					"%s ERR: DMP sync HDR1: %x\n",
+					__func__, hdr1);
+			nvi_err(st);
+			return -1;
+		}
+	}
+
+	return 0;
 }
 
-static int nvi_dd_en(struct nvi_state *st, struct nvi_dmp_dev *dd)
+static int nvi_dmp_clk_n(struct nvi_state *st, u32 *clk_n)
 {
-	int ret;
+	return nvi_mem_rd_le(st, DMPRATE_CNTR, 4, clk_n);
+}
 
-	if (st->snsr[dd->dev].enable) {
-		if (dd->fn_init)
-			ret = dd->fn_init(st);
-		else
-			ret = 0;
-		if (ret > 0) {
-			/* ignore without error */
-			ret = 0;
-		} else if (!ret) {
-			ret = nvi_dd_odr(st, dd);
-			ret |= nvi_dmp_cntl(st, true, dd->icm.en_addr,
-					    dd->icm.en_msk);
+static int nvi_dmp_period(struct nvi_state *st, unsigned int en_msk)
+{
+	struct nvi_dmp_dev *dd;
+	u16 int_ctl = 0;
+	u16 odr_cfg;
+	unsigned int period_us_req[SRC_N];
+	unsigned int period_us;
+	unsigned int period_us_int = -1;
+	unsigned int src_msk;
+	unsigned int src;
+	unsigned int i;
+	unsigned int j = -1;
+	int ret;
+	int ret_t = 0;
+
+	/* initialize source period */
+	for (src = 0; src < st->hal->src_n; src++)
+		period_us_req[src] = st->hal->src[src].period_us_max;
+
+	/* set source's period_us_req[] to fastest DMP device */
+	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
+		dd = &nvi_dmp_devs[i];
+		if ((!st->snsr[dd->dev].period_us) || !(en_msk &
+							(1 << dd->dev)))
+			continue;
+
+		src_msk = dd->src_msk; /* use all of device's sources */
+		if (st->hal->dev[dd->dev]->src >= 0)
+			src_msk |= (1 << st->hal->dev[dd->dev]->src);
+		for (src = 0; src < st->hal->src_n; src++) {
+			if (!(src_msk & (1 << src)))
+				continue;
+
+			if (st->snsr[dd->dev].period_us < period_us_req[src])
+				period_us_req[src] =
+						   st->snsr[dd->dev].period_us;
 		}
-		if (ret && (dd->dev != DEV_AUX))
-			st->en_msk &= ~(1 << dd->dev);
-	} else {
-		ret = nvi_dmp_cntl(st, true, dd->icm.en_addr, dd->icm.en_msk);
 	}
-	return ret;
+
+	/* override above fastest speeds with any faster defaults */
+	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
+		dd = &nvi_dmp_devs[i];
+		if ((!dd->period_us_dflt) || !(en_msk & (1 << dd->dev)))
+			continue;
+
+		src_msk = dd->src_msk; /* use all of device's sources */
+		if (st->hal->dev[dd->dev]->src >= 0)
+			src_msk |= (1 << st->hal->dev[dd->dev]->src);
+		for (src = 0; src < st->hal->src_n; src++) {
+			if (src_msk & (1 << src) && (dd->period_us_dflt <
+						     period_us_req[src]))
+				period_us_req[src] = dd->period_us_dflt;
+		}
+	}
+
+	/* WAR: SRC_ACC && SRC_GYR must be same speed for timestamps to sync.
+	 * SRC_AUX has timestamps set to ts_now = 0 since SRC_AUX has fixed
+	 * rates and can't sync with the other sources.
+	 */
+	period_us = -1;
+	for (src = 0; src < st->hal->src_n; src++) {
+		if (period_us_req[src] < period_us)
+			period_us = period_us_req[src];
+	}
+	for (src = 0; src < st->hal->src_n; src++)
+		period_us_req[src] = period_us;
+	/* WAR: end */
+
+	/* program the sources */
+	for (src = 0; src < st->hal->src_n; src++) {
+		if (!(st->hal->src[src].dev_msk & en_msk))
+			continue;
+
+		if (period_us_req[src] < st->hal->src[src].period_us_min)
+			period_us_req[src] = st->hal->src[src].period_us_min;
+		if (period_us_req[src] > st->hal->src[src].period_us_max)
+			period_us_req[src] = st->hal->src[src].period_us_max;
+		st->src[src].period_us_req = period_us_req[src];
+		switch (src) {
+		case SRC_GYR:
+		case SRC_ACC:
+			i = (st->src[src].period_us_req * 1000) /
+							   st->src[src].base_t;
+			if (i)
+				i--;
+			ret = nvi_i2c_write_rc(st, &st->hal->reg->smplrt[src],
+					       i, __func__,
+					      (u8 *)&st->rc.smplrt[src], true);
+			if (ret)
+				ret_t |= ret;
+			else
+				st->src[src].period_us_src = ((i + 1) *
+						   st->src[src].base_t) / 1000;
+			break;
+
+		case SRC_AUX:
+			ret_t |= st->hal->src[SRC_AUX].fn_period(st);
+			break;
+		}
+	}
+
+	/* now set each DMP device's ODR based on their source */
+	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
+		dd = &nvi_dmp_devs[i];
+		if (dd->dev >= DEV_N_AUX || !(dd->odr_cfg | dd->odr_cntr))
+			/* dd (DMP Device) is not ODR configurable */
+			continue;
+
+		if (!(en_msk & (1 << dd->dev)))
+			continue;
+
+		if (dd->dev == DEV_AUX) {
+			if (!(en_msk & (1 << (dd->aux_port + DEV_N_AUX))))
+				continue;
+
+			period_us = st->aux.port[dd->aux_port].period_us;
+		} else {
+			period_us = st->snsr[dd->dev].period_us;
+		}
+		if (st->bm_timeout_us) {
+			/* batch mode on */
+			int_ctl |= dd->int_ctl;
+		} else {
+			if (dd->int_ctl && period_us) {
+				/* IRQ on fastest period */
+				if (period_us < period_us_int) {
+					period_us_int = period_us;
+					j = i;
+				}
+			}
+		}
+		src = st->hal->dev[dd->dev]->src;
+		if (src < st->hal->src_n) {
+			odr_cfg = period_us / st->src[src].period_us_src;
+			if (odr_cfg)
+				odr_cfg--;
+		} else {
+			odr_cfg = -1;
+		}
+		if (dd->dev == DEV_AUX)
+			st->aux.port[dd->aux_port].odr = odr_cfg;
+		else
+			st->snsr[dd->dev].odr = odr_cfg;
+		ret_t |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
+		ret_t |= nvi_mem_wr_be(st, dd->odr_cfg, 2, odr_cfg);
+		ret_t |= nvi_mem_wr_be(st, dd->odr_cntr, 2, 0);
+	}
+
+	if (j != -1)
+		int_ctl |= nvi_dmp_devs[j].int_ctl;
+	if (en_msk & (1 << DEV_STP))
+		int_ctl |= PED_STEPDET_SET;
+	ret_t |= nvi_mem_wr_be_mc(st, DATA_INTR_CTL, 2, int_ctl,
+				  &st->mc.icm.data_intr_ctl);
+	/* WAR: DMPRATE_CNTR only runs off of SRC_ACC.  If SRC_ACC is off then
+	 * timestamps will switch to realtime when DMPRATE_CNTR doesn't tick.
+	 */
+	st->src[SRC_DMP].period_us_src = st->src[SRC_ACC].period_us_src;
+	return ret_t;
+}
+
+static int nvi_dmp_irq(struct nvi_state *st)
+{
+	u32 able;
+
+	if ((st->en_msk & MSK_DEV_ALL) & ~((1 << DEV_SM) | (1 << DEV_STP)))
+		/* DMP requires FIFO IRQ */
+		able = 0;
+	else
+		/* DMP IRQ is in event mode */
+		able = 1;
+	return nvi_mem_wr_be_mc(st, WOM_ENABLE, 4, able,
+				&st->mc.icm.wom_enable);
 }
 
 static struct nvi_dmp_dev *nvi_dd(struct nvi_state *st,
@@ -229,28 +802,6 @@ static struct nvi_dmp_dev *nvi_dd(struct nvi_state *st,
 	return NULL;
 }
 
-static int nvi_dd_batch(struct nvi_state *st, unsigned int dev, int port)
-{
-	struct nvi_dmp_dev *dd;
-
-	dd = nvi_dd(st, dev, port);
-	if (dd == NULL)
-		return -EINVAL;
-
-	return nvi_dd_odr(st, dd);
-}
-
-static int nvi_dd_enable(struct nvi_state *st, unsigned int dev, int port)
-{
-	struct nvi_dmp_dev *dd;
-
-	dd = nvi_dd(st, dev, port);
-	if (dd == NULL)
-		return -EINVAL;
-
-	return nvi_dd_en(st, dd);
-}
-
 static int nvi_dd_init(struct nvi_state *st, unsigned int dev)
 {
 	struct nvi_dmp_dev *dd;
@@ -261,136 +812,73 @@ static int nvi_dd_init(struct nvi_state *st, unsigned int dev)
 		return -EINVAL;
 
 	if (dd->fn_init)
-		ret = dd->fn_init(st);
+		ret = dd->fn_init(st, st->en_msk | (st->aux.dmp_en_msk <<
+						    DEV_N_AUX), NULL);
 	return ret;
 }
 
-#define PED_ACCEL_GAIN           67108864L
-
-struct inv_accel_cal_params {
-	unsigned int freq;
-	unsigned int rate;
-	unsigned int gain;
-	unsigned int alpha;
-	unsigned int a;
+static const u16 nvi_dmp_gmf_mtx_addrs[] = {
+	CPASS_MTX_00,
+	CPASS_MTX_01,
+	CPASS_MTX_02,
+	CPASS_MTX_10,
+	CPASS_MTX_11,
+	CPASS_MTX_12,
+	CPASS_MTX_20,
+	CPASS_MTX_21,
+	CPASS_MTX_22,
 };
 
-static struct inv_accel_cal_params accel_cal_para[] = {
-	{
-		.freq = 1000,
-	},
-	{
-		.freq = 225,
-		.rate = 3,
-		.gain = DEFAULT_ACCEL_GAIN,
-		.alpha = 858993459,
-		.a     = 214748365,
-	},
-	{
-		.freq = 102,
-		.gain = DEFAULT_ACCEL_GAIN,
-		.rate = 1,
-		.alpha = 858993459,
-		.a     = 214748365,
-	},
-	{
-		.freq = PEDOMETER_FREQ,
-		.gain = PED_ACCEL_GAIN,
-		.rate = 0,
-		.alpha = 858993459,
-		.a     = 214748365,
-	},
-	{
-		.freq = 15,
-		.gain = DEFAULT_ACCEL_GAIN,
-		.rate = 0,
-		.alpha = 357913941,
-		.a     = 715827883,
-	},
-	{
-		.freq = 5,
-		.gain = DEFAULT_ACCEL_GAIN,
-		.rate = 0,
-		.alpha = 107374182,
-		.a     = 966367642,
-	},
-};
-
-static int nvi_dmp_en(struct nvi_state *st)
+static int nvi_dmp_gmf_mtx(struct nvi_state *st, u32 *mtx)
 {
 	unsigned int i;
 	int ret = 0;
 
+	for (i = 0; i < ARRAY_SIZE(nvi_dmp_gmf_mtx_addrs); i++)
+		ret |= nvi_mem_wr_be(st, nvi_dmp_gmf_mtx_addrs[i], 4, mtx[i]);
 
-
-	st->sts ^= NVI_DBG_SPEW_MSG;
-	st->rc_dis = true;
-
-
-	nvi_wr_pm1(st, __func__, 0x01);
-	nvi_i2c_wr_rc(st, &st->hal->reg->pm2, 0x00, __func__, &st->rc.pm2);
-	nvi_i2c_wr_rc(st, &st->hal->reg->fifo_cfg, 0x01,
-		      __func__, &st->rc.fifo_cfg);
-	nvi_i2c_wr_rc(st, &st->hal->reg->fifo_sz, 0x03,
-		      __func__, &st->rc.fifo_sz);
-
-
-	ret |= nvi_i2c_write_rc(st, &st->hal->reg->fifo_en, 0,
-				__func__, (u8 *)&st->rc.fifo_en, false);
-
-
-	nvi_i2c_wr(st, &st->hal->reg->fifo_rst, 0x1F, __func__);
-	nvi_i2c_wr(st, &st->hal->reg->fifo_rst, 0x1E, __func__);
-
-
-	/* reset DMP and FIFO */
-	nvi_i2c_wr_rc(st, &st->hal->reg->user_ctrl, 0x0C,
-		      __func__, &st->rc.user_ctrl);
-
-	msleep(20);
-
-	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++)
-		ret |= nvi_dd_en(st, &nvi_dmp_devs[i]);
-
-
-	ret |= nvi_mem_wr_be(st, DATA_INTR_CTL, 2, 0xC000);
-
-	ret |= nvi_mem_wr_be(st, ACCEL_CAL_RATE, 2, accel_cal_para[i].rate);
-	ret |= nvi_mem_wr_be(st, PED_RATE, 4, accel_cal_para[i].rate);
-	ret |= nvi_mem_wr_be(st, ACCEL_ALPHA_VAR, 4, accel_cal_para[i].alpha);
-	ret |= nvi_mem_wr_be(st, ACCEL_A_VAR, 4, accel_cal_para[i].a);
-	ret |= nvi_mem_wr_be(st, ACCEL_ONLY_GAIN, 4, accel_cal_para[i].gain);
-	/* inv_enable_accel_cal_V3 */
-	ret |= nvi_dmp_cntl(st, st->en_msk & (1 << DEV_ACC),
-			    MOTION_EVENT_CTL, ACCEL_CAL_EN << 8);
-	/* inv_enable_gyro_cal_V3 */
-	ret |= nvi_dmp_cntl(st, st->en_msk & (1 << DEV_GYR),
-			    MOTION_EVENT_CTL, GYRO_CAL_EN << 8);
-	/* inv_enable_compass_cal_V3 */
-	ret |= nvi_dmp_cntl(st, 0, MOTION_EVENT_CTL, COMPASS_CAL_EN); /* dis */
-	/* inv_enable_9axes_V3 */
-	ret |= nvi_dmp_cntl(st, 1, MOTION_EVENT_CTL, NINE_AXIS_EN); /* en */
-	/* inv_setup_events */
-	ret |= nvi_dmp_cntl(st, st->en_msk & (1 << DEV_STP),
-			    MOTION_EVENT_CTL, PEDOMETER_EN << 8);
-	ret |= nvi_dmp_cntl(st, st->en_msk & (1 << DEV_SM),
-			    MOTION_EVENT_CTL, SMD_EN << 8);
-	/* inv_set_wom */
-	ret |= nvi_mem_wr_be(st, WOM_ENABLE, 4,
-			     !!(st->en_msk & (1 << DEV_SM)));
-
-
-	st->en_msk |= (1 << DEV_DMP);
-	nvi_int_able(st, __func__, true); /* 0x38 = 0x02 */
-
-	nvi_i2c_wr_rc(st, &st->hal->reg->user_ctrl, 0xC0,
-		      __func__, &st->rc.user_ctrl);
-	return 0;
+	return ret;
 }
 
-static int nvi_dmp_init(struct nvi_state *st)
+static int nvi_dmp_init_gmf(struct nvi_state *st)
 {
-	u8 init[] = { 0, 0 };
+	struct nvi_mpu_port *nmp;
+	s8 mtrx[AXIS_N * 3];
+	s32 mtx[ARRAY_SIZE(nvi_dmp_gmf_mtx_addrs)];
+	int adj[ARRAY_SIZE(nvi_dmp_gmf_mtx_addrs)];
+	unsigned int i;
+	unsigned int j;
+	unsigned int k;
+
+	if (st->aux.port[0].nmp.type != SECONDARY_SLAVE_TYPE_COMPASS)
+		return -EINVAL;
+
+	nmp = &st->aux.port[0].nmp;
+	for (i = 0; i < AXIS_N; i++) {
+		for (j = 0; j < AXIS_N; j++)
+			mtrx[AXIS_N * j + i] =
+				  st->snsr[DEV_ACC].cfg.matrix[AXIS_N * i + j];
+	}
+
+	for (i = 0; i < 9; i++) {
+		adj[i] = nmp->matrix[i] * (nmp->q30[i % AXIS_N] >>
+					   DMP_MULTI_SHIFT);
+		mtx[i] = 0;
+	}
+
+	for (i = 0; i < AXIS_N; i++) {
+		for (j = 0; j < AXIS_N; j++) {
+			for (k = 0; k < AXIS_N; k++)
+				mtx[AXIS_N * i + j] += mtrx[AXIS_N * i + k] *
+						       adj[AXIS_N * k + j];
+		}
+	}
+
+	return nvi_dmp_gmf_mtx(st, mtx);
+}
+
+static int nvi_dmp_init_gyr(struct nvi_state *st)
+{
 	u8 val;
 	s8 pll;
 	s32 gryo_sf;
@@ -399,15 +887,6 @@ static int nvi_dmp_init(struct nvi_state *st)
 	int t;
 	int ret;
 
-	/* initialize DMP control registers */
-	ret = nvi_mem_wr(st, DATA_OUT_CTL1, sizeof(init), init, false);
-	ret |= nvi_mem_wr(st, DATA_OUT_CTL2, sizeof(init), init, false);
-	ret |= nvi_mem_wr(st, DATA_INTR_CTL, sizeof(init), init, false);
-	ret |= nvi_mem_wr(st, MOTION_EVENT_CTL, sizeof(init), init, false);
-	if (ret)
-		return ret;
-
-	/* initialize GYRO_SF */
 	ret = nvi_i2c_rd(st, &st->hal->reg->tbc_pll, &val);
 	pll = abs(val & 0x7F);
 	if (val & 0x80)
@@ -415,15 +894,153 @@ static int nvi_dmp_init(struct nvi_state *st)
 	t = 102870L + 81L * pll;
 	a = (1L << 30) / t;
 	r = (1L << 30) - a * t;
-	gryo_sf = a * 797 * DMP_DIVIDER;
-	gryo_sf += (s64)((a * 1011387LL * DMP_DIVIDER) >> 20);
-	gryo_sf += r * 797L * DMP_DIVIDER / t;
-	gryo_sf += (s32)((s64)((r * 1011387LL * DMP_DIVIDER) >> 20)) / t;
+	gryo_sf = a * 797 * ICM_DMP_DIVIDER;
+	gryo_sf += (s64)((a * 1011387LL * ICM_DMP_DIVIDER) >> 20);
+	gryo_sf += r * 797L * ICM_DMP_DIVIDER / t;
+	gryo_sf += (s32)((s64)((r * 1011387LL * ICM_DMP_DIVIDER) >> 20)) / t;
 	gryo_sf <<= 1;
 	ret |= nvi_mem_wr_be(st, GYRO_SF, sizeof(gryo_sf), gryo_sf);
+	return ret;
+}
+
+static int nvi_dmp_init(struct nvi_state *st)
+{
+	int ret;
+
+	st->mc_dis = true;
+	memset(&st->mc, 0, sizeof(st->mc));
+	/* initialize DMP control registers */
+	ret = nvi_mem_wr_be_mc(st, DATA_OUT_CTL1, 4, 0,
+			       &st->mc.icm.data_out_ctl);
+	ret |= nvi_mem_wr_be_mc(st, DATA_INTR_CTL, 2, 0,
+				&st->mc.icm.data_intr_ctl);
+	ret |= nvi_mem_wr_be_mc(st, MOTION_EVENT_CTL, 2, 0,
+				&st->mc.icm.motion_event_ctl);
+	st->mc_dis = false;
 	if (ret)
 		return ret;
 
+	ret = nvi_dmp_init_gyr(st);
+	nvi_dmp_init_gmf(st);
+	return ret;
+}
+
+static int nvi_dmp_en(struct nvi_state *st)
+{
+	struct nvi_dmp_dev *dd;
+	bool en;
+	unsigned int i;
+	unsigned int en_msk = 0;
+	int ret = 0;
+	u32 out_ctl = 0;
+	u16 evnt_ctl = 0;
+
+	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
+		dd = &nvi_dmp_devs[i];
+		if (dd->dev == DEV_AUX) {
+			if (st->snsr[DEV_AUX].enable & (1 << dd->aux_port)) {
+				en_msk |= (1 << DEV_AUX);
+				en_msk |= (1 << (dd->aux_port + DEV_N_AUX));
+				en_msk |= dd->depend_msk;
+			}
+		} else if (dd->dev < DEV_AUX) {
+			if (st->snsr[dd->dev].enable) {
+				en_msk |= (1 << dd->dev);
+				en_msk |= dd->depend_msk;
+			}
+		}
+	}
+
+
+#ifdef MPL520
+	/* hack for MPL520 */
+	st->snsr[DEV_GYU].period_us = st->snsr[DEV_GYR].period_us;
+#endif /* MPL520 */
+	ret = nvi_dmp_period(st, en_msk);
+	if (ret)
+		return ret;
+
+	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
+		dd = &nvi_dmp_devs[i];
+		if (dd->dev > DEV_AUX)
+			continue;
+
+		en = false;
+		if (dd->dev == DEV_AUX) {
+			if (en_msk & (1 << (dd->aux_port + DEV_N_AUX)))
+				en = true;
+		} else if (dd->dev < DEV_AUX) {
+			if (en_msk & (1 << dd->dev))
+				en = true;
+		}
+		if (en) {
+			if (dd->fn_init)
+				ret = dd->fn_init(st, en_msk, &out_ctl);
+			else
+				ret = 0;
+			if (ret > 0) {
+				/* disable without error */
+				if (dd->dev == DEV_AUX)
+					en_msk &= ~(1 << (dd->aux_port +
+							  DEV_N_AUX));
+				else if (dd->dev < DEV_AUX)
+					en_msk &= ~(1 << dd->dev);
+			} else if (ret < 0) {
+				return ret;
+			} else {
+				if (dd->out_ctl)
+					out_ctl |= dd->out_ctl;
+				st->snsr[dd->dev].matrix = dd->matrix;
+				st->snsr[dd->dev].buf_n = dd->buf_n;
+				st->snsr[dd->dev].buf_shft = dd->buf_shft;
+			}
+		}
+	}
+
+	st->aux.dmp_en_msk = en_msk >> DEV_N_AUX;
+	if (st->aux.dmp_en_msk) {
+		ret = nvi_aux_enable(st, __func__, true, true);
+		if (ret)
+			return ret;
+	}
+
+	if (out_ctl & DMP_DATA_OUT_CTL_HDR2_MSK)
+		/* header 2 needs to be enabled */
+		out_ctl |= DMP_DATA_OUT_CTL_HDR2_BIT;
+	ret = nvi_mem_wr_be_mc(st, DATA_OUT_CTL1, 4, out_ctl,
+			       &st->mc.icm.data_out_ctl);
+	if (ret) {
+		st->en_msk &= ~(en_msk & ((1 << DEV_N_AUX) - 1));
+		return ret;
+	} else {
+		st->en_msk |= (en_msk & ((1 << DEV_N_AUX) - 1));
+	}
+
+	/* inv_enable_accel_cal_V3 */
+	/* inv_enable_gyro_cal_V3 */
+	if (en_msk & (1 << DEV_ACC))
+		evnt_ctl |= (ACCEL_CAL_EN | GYRO_CAL_EN);
+	/* inv_enable_compass_cal_V3 */
+	if (en_msk & (0x03 << DEV_N_AUX))
+		evnt_ctl |= COMPASS_CAL_EN;
+	/* inv_enable_9axes_V3 */
+	if (en_msk & (1 << DEV_GMR))
+		evnt_ctl |= NINE_AXIS_EN;
+	/* inv_setup_events */
+	if (en_msk & (1 << DEV_STP))
+		evnt_ctl |= PEDOMETER_EN;
+	if (en_msk & (1 << DEV_SM))
+		evnt_ctl |= (SMD_EN | PEDOMETER_EN);
+	ret |= nvi_mem_wr_be_mc(st, MOTION_EVENT_CTL, 2, evnt_ctl,
+				&st->mc.icm.motion_event_ctl);
+	/* inv_set_wom */
+	ret |= nvi_dmp_irq(st);
+	if (!ret) {
+		st->en_msk |= (1 << DEV_DMP);
+		ret = nvi_i2c_wr(st, &st->hal->reg->pm2, 0, __func__);
+		nvi_push_delay(st);
+		ret |= nvi_reset(st, __func__, true, false, true);
+	}
 	return ret;
 }
 
@@ -1341,16 +1958,24 @@ struct nvi_dmp nvi_dmp_icm = {
 	.fw_crc32			= 0x12F362A6,
 	.fw_mem_addr			= 0x90,
 	.fw_start			= 0x08D0,
-	.dmp_period_us			= DMP_PERIOD_US,
-	.dev_msk			= (1 << DEV_SM) | (1 << DEV_QTN),
-	.en_msk				= (1 << DEV_SM) | (1 << DEV_QTN),
+	.dmp_reset_delay_ms		= 25,
+#ifdef MPL520
+	.dev_msk			= (1 << DEV_SM) |
+					  (1 << DEV_QTN),
+#else /* MPL520 */
+	.dev_msk			= (1 << DEV_SM) |
+					  (1 << DEV_QTN) |
+					  (1 << DEV_GMR) |
+					  (1 << DEV_GYU),
+#endif /* MPL520 */
+	.en_msk				= MSK_DEV_ALL,
 	.dd_n				= ARRAY_SIZE(nvi_dmp_devs),
 	.dd				= nvi_dmp_devs,
+	.fn_rd				= &nvi_dmp_rd,
+	.fn_clk_n			= &nvi_dmp_clk_n,
 	.fn_init			= &nvi_dmp_init,
 	.fn_en				= &nvi_dmp_en,
 	.fn_dev_init			= &nvi_dd_init,
-	.fn_dev_enable			= &nvi_dd_enable,
-	.fn_dev_batch			= &nvi_dd_batch,
 };
 EXPORT_SYMBOL(nvi_dmp_icm);
 

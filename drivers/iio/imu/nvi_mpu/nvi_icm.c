@@ -14,7 +14,7 @@
 #include <linux/time.h>
 #include <linux/delay.h>
 #include "nvi.h"
-
+#include "nvi_dmp_icm.h"
 
 #define BYTES_PER_SENSOR		6
 /* full scale and LPF setting */
@@ -574,8 +574,8 @@ static int nvi_pm_icm(struct nvi_state *st, u8 pm1, u8 pm2, u8 lp)
 
 	ret = nvi_i2c_wr_rc(st, &st->hal->reg->lp_config, 0x70,
 			    __func__, &st->rc.lp_config);
-	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->pm2, pm2,
-			     __func__, &st->rc.pm2);
+	/* the DMP changes pm2 so we can't use the cache */
+	ret |= nvi_i2c_wr(st, &st->hal->reg->pm2, pm2, __func__);
 	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->pm1, pm1,
 			     __func__, &st->rc.pm1);
 	return ret;
@@ -588,6 +588,7 @@ static int nvi_en_gyr(struct nvi_state *st)
 	int ret = 0;
 
 	st->snsr[DEV_GYR].matrix = true;
+	st->snsr[DEV_GYR].buf_n = 6;
 	for (i = 0; i < AXIS_N; i++)
 		ret |= nvi_wr_gyro_offset(st, i,
 					  (u16)(st->rom_offset[DEV_GYR][i] +
@@ -625,6 +626,7 @@ static int nvi_init(struct nvi_state *st)
 {
 	u8 val;
 	s8 t;
+	unsigned int src;
 	int ret;
 
 	st->snsr[DEV_ACC].cfg.thresh_hi = 0; /* no ACC LP on ICM */
@@ -635,11 +637,13 @@ static int nvi_init(struct nvi_state *st)
 	t = abs(val & 0x7F);
 	if (val & 0x80)
 		t = -t;
-
-	st->src[SRC_ACC].base_t = NSEC_PER_SEC;
 	st->src[SRC_GYR].base_t = NSEC_PER_SEC - t * 769903 + ((t * 769903) /
 							       1270) * t;
+	st->src[SRC_ACC].base_t = NSEC_PER_SEC;
 	st->src[SRC_AUX].base_t = NSEC_PER_SEC;
+	for (src = 0; src < st->hal->src_n; src++)
+		st->src[src].base_t /= ICM_BASE_SAMPLE_RATE;
+
 	return 0;
 }
 
@@ -662,50 +666,34 @@ struct nvi_fn nvi_fn_icm = {
 };
 
 
-static int nvi_period_gyr(struct nvi_state *st)
+static int nvi_src(struct nvi_state *st, unsigned int src)
 {
-	u16 rate;
-	unsigned int us;
+	unsigned int rate;
 	int ret;
 
-	us = st->src[SRC_GYR].period_us_req;
-	if (us < st->hal->src[SRC_GYR].period_us_min)
-		us = st->hal->src[SRC_GYR].period_us_min;
-	if (us > st->hal->src[SRC_GYR].period_us_max)
-		us = st->hal->src[SRC_GYR].period_us_max;
-	rate = us / 1125 - 1;
-	st->src[SRC_GYR].period_us_src = us;
-	ret = nvi_i2c_write_rc(st, &st->hal->reg->smplrt[SRC_GYR], rate,
-			       __func__, (u8 *)&st->rc.smplrt[SRC_GYR], true);
+	rate = st->src[src].period_us_req / ICM_BASE_SAMPLE_RATE;
+	if (rate)
+		rate--;
+	ret = nvi_i2c_write_rc(st, &st->hal->reg->smplrt[src], rate,
+			       __func__, (u8 *)&st->rc.smplrt[src], true);
+	if (!ret)
+		st->src[src].period_us_src = (rate + 1) * ICM_BASE_SAMPLE_RATE;
 	if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
 		dev_info(&st->i2c->dev,
-			 "%s src[SRC_GYR]: period=%u timeout=%u err=%d\n",
-			 __func__, st->src[SRC_GYR].period_us_req,
-			 st->src_timeout_us[SRC_GYR], ret);
+			 "%s src[%u] period_req=%u period_src=%u err=%d\n",
+			 __func__, src, st->src[src].period_us_req,
+			 st->src[src].period_us_src, ret);
 	return ret;
 }
 
-static int nvi_period_acc(struct nvi_state *st)
+static int nvi_src_gyr(struct nvi_state *st)
 {
-	u16 rate;
-	unsigned int us;
-	int ret;
+	return nvi_src(st, SRC_GYR);
+}
 
-	us = st->src[SRC_ACC].period_us_req;
-	if (us < st->hal->src[SRC_ACC].period_us_min)
-		us = st->hal->src[SRC_ACC].period_us_min;
-	if (us > st->hal->src[SRC_ACC].period_us_max)
-		us = st->hal->src[SRC_ACC].period_us_max;
-	rate = us / 1125 - 1;
-	st->src[SRC_ACC].period_us_src = us;
-	ret = nvi_i2c_write_rc(st, &st->hal->reg->smplrt[SRC_ACC], rate,
-			       __func__, (u8 *)&st->rc.smplrt[SRC_ACC], true);
-	if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
-		dev_info(&st->i2c->dev,
-			 "%s src[SRC_ACC]: period=%u timeout=%u err=%d\n",
-			 __func__, st->src[SRC_ACC].period_us_req,
-			 st->src_timeout_us[SRC_ACC], ret);
-	return ret;
+static int nvi_src_acc(struct nvi_state *st)
+{
+	return nvi_src(st, SRC_ACC);
 }
 
 static unsigned int nvi_aux_period_us[] = {
@@ -723,52 +711,53 @@ static unsigned int nvi_aux_period_us[] = {
 	14222,
 };
 
-static int nvi_period_aux(struct nvi_state *st)
+static int nvi_src_aux(struct nvi_state *st)
 {
 	u8 val;
+	unsigned int i;
 	int ret;
 
-	for (val = 0; val < ARRAY_SIZE(nvi_aux_period_us); val++) {
-		if (st->src[SRC_AUX].period_us_req >= nvi_aux_period_us[val])
+	for (i = 0; i < ARRAY_SIZE(nvi_aux_period_us); i++) {
+		if (st->src[SRC_AUX].period_us_req >= nvi_aux_period_us[i])
 			break;
 	}
-	if (val >= ARRAY_SIZE(nvi_aux_period_us))
-		val = ARRAY_SIZE(nvi_aux_period_us) - 1;
-	st->src[SRC_AUX].period_us_src = nvi_aux_period_us[val];
-	val = 0x0F - val;
+	if (i >= ARRAY_SIZE(nvi_aux_period_us))
+		i = ARRAY_SIZE(nvi_aux_period_us) - 1;
+	val = 0x0F - i;
 	ret = nvi_i2c_wr_rc(st, &st->hal->reg->i2c_mst_odr_config, val,
 			    __func__, &st->rc.i2c_mst_odr_config);
-	ret |= nvi_aux_delay(st, __func__);
+	if (!ret) {
+		st->src[SRC_AUX].period_us_src = nvi_aux_period_us[i];
+		ret = nvi_aux_delay(st, __func__);
+	}
 	if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
-		dev_info(&st->i2c->dev,
-			 "%s src[SRC_AUX]: period=%u timeout=%u err=%d\n",
-			 __func__, st->src[SRC_AUX].period_us_req,
-			 st->src_timeout_us[SRC_AUX], ret);
+		dev_info(&st->i2c->dev, "%s src[SRC_AUX]: period=%u err=%d\n",
+			 __func__, st->src[SRC_AUX].period_us_req, ret);
 	return ret;
 }
 
 static const struct nvi_hal_src src[] = {
 	[SRC_GYR]			{
-		.dev_msk		= (1 << DEV_GYR),
+		.dev_msk		= (1 << DEV_GYR) | (1 << DEV_GYU),
 		.period_us_min		= 10000,
 		.period_us_max		= 256000,
-		.fn_period		= nvi_period_gyr,
+		.fn_period		= nvi_src_gyr,
 	},
 	[SRC_ACC]			{
 		.dev_msk		= (1 << DEV_ACC),
 		.period_us_min		= 10000,
 		.period_us_max		= 256000,
-		.fn_period		= nvi_period_acc,
+		.fn_period		= nvi_src_acc,
 	},
 	[SRC_AUX]			{
 		.dev_msk		= (1 << DEV_AUX),
 		.period_us_min		= 14222,
 		.period_us_max		= 29127111,
-		.fn_period		= nvi_period_aux,
+		.fn_period		= nvi_src_aux,
 	},
 };
 
-static int nvi_fifo_dev[] = {
+static int nvi_fifo_devs[] = {
 	DEV_GYR,
 	DEV_ACC,
 	-1,
@@ -958,7 +947,7 @@ static const struct nvi_hal_dev nvi_hal_aux = {
 
 static const struct nvi_hal_dev nvi_hal_dmp = {
 	.version			= 1,
-	.src				= -1,
+	.src				= SRC_GYR,
 	.rr_0n				= ARRAY_SIZE(nvi_rr_dmp) - 1,
 	.rr				= nvi_rr_dmp,
 	.milliamp			= {
@@ -1302,8 +1291,8 @@ const struct nvi_hal nvi_hal_20628 = {
 	.reg_bank_n			= 4,
 	.src				= src,
 	.src_n				= ARRAY_SIZE(src),
-	.fifo_dev			= nvi_fifo_dev,
-	.fifo_n				= ARRAY_SIZE(nvi_fifo_dev),
+	.fifo_dev			= nvi_fifo_devs,
+	.fifo_n				= ARRAY_SIZE(nvi_fifo_devs),
 	.lp_tbl				= nvi_lp_dly_us_tbl,
 	.lp_tbl_n			= ARRAY_SIZE(nvi_lp_dly_us_tbl),
 	.dev[DEV_ACC]			= &nvi_hal_acc,
@@ -1312,11 +1301,13 @@ const struct nvi_hal nvi_hal_20628 = {
 	.dev[DEV_SM]			= &nvi_hal_dmp,
 	.dev[DEV_STP]			= &nvi_hal_dmp,
 	.dev[DEV_QTN]			= &nvi_hal_dmp,
+	.dev[DEV_GMR]			= &nvi_hal_dmp,
+	.dev[DEV_GYU]			= &nvi_hal_gyr,
 	.dev[DEV_AUX]			= &nvi_hal_aux,
 	.reg				= &nvi_hal_reg_icm,
 	.bit				= &nvi_hal_bit_icm,
 	.fn				= &nvi_fn_icm,
-	.dmp				= NULL, /* &nvi_dmp_icm, */
+	.dmp				= &nvi_dmp_icm,
 };
 EXPORT_SYMBOL(nvi_hal_20628);
 

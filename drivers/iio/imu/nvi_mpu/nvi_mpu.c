@@ -1027,6 +1027,7 @@ static int nvi_en_gyr(struct nvi_state *st)
 	u8 val = st->snsr[DEV_GYR].usr_cfg << 3;
 
 	st->snsr[DEV_GYR].matrix = true;
+	st->snsr[DEV_GYR].buf_n = 6;
 	return nvi_i2c_wr_rc(st, &st->hal->reg->gyro_config2, val,
 			     __func__, &st->rc.gyro_config2);
 }
@@ -1060,7 +1061,7 @@ static const unsigned int nvi_lpf_us_tbl[] = {
 	/* 200000, 5Hz */
 };
 
-static int nvi_period(struct nvi_state *st)
+static int nvi_src(struct nvi_state *st)
 {
 	u8 lpf;
 	u16 rate;
@@ -1068,10 +1069,6 @@ static int nvi_period(struct nvi_state *st)
 	int ret;
 
 	us = st->src[SRC_MPU].period_us_req;
-	if (us < st->hal->src[SRC_MPU].period_us_min)
-		us = st->hal->src[SRC_MPU].period_us_min;
-	if (us > st->hal->src[SRC_MPU].period_us_max)
-		us = st->hal->src[SRC_MPU].period_us_max;
 	/* calculate rate */
 	rate = us / 1000 - 1;
 	st->src[SRC_MPU].period_us_src = us;
@@ -1088,10 +1085,8 @@ static int nvi_period(struct nvi_state *st)
 			     __func__, &st->rc.gyro_config1);
 	ret |= nvi_aux_delay(st, __func__);
 	if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
-		dev_info(&st->i2c->dev,
-			 "%s src[SRC_MPU]: period=%u timeout=%u err=%d\n",
-			 __func__, st->src[SRC_MPU].period_us_req,
-			 st->src_timeout_us[SRC_MPU], ret);
+		dev_info(&st->i2c->dev, "%s src[SRC_MPU]: period=%u err=%d\n",
+			 __func__, st->src[SRC_MPU].period_us_req, ret);
 	return ret;
 }
 
@@ -1108,7 +1103,7 @@ static const struct nvi_hal_src src[] = {
 					   (1 << DEV_AUX)),
 		.period_us_min		= 10000,
 		.period_us_max		= 256000,
-		.fn_period		= nvi_period,
+		.fn_period		= nvi_src,
 	},
 };
 
@@ -1399,7 +1394,6 @@ static const struct nvi_hal_reg nvi_hal_reg_6050 = {
 	},
 	.fifo_en			= {
 		.reg			= 0x23,
-		.dflt			= 0x4000,
 	},
 	.fifo_count_h			= {
 		.reg			= 0x72,
@@ -1524,6 +1518,8 @@ const struct nvi_hal nvi_hal_6050 = {
 	.dev[DEV_SM]			= &nvi_hal_dmp,
 	.dev[DEV_STP]			= &nvi_hal_dmp,
 	.dev[DEV_QTN]			= &nvi_hal_dmp,
+	.dev[DEV_GMR]			= &nvi_hal_dmp,
+	.dev[DEV_GYU]			= &nvi_hal_gyr,
 	.dev[DEV_AUX]			= &nvi_hal_aux,
 	.reg				= &nvi_hal_reg_6050,
 	.bit				= &nvi_hal_bit_6050,
@@ -1690,7 +1686,6 @@ static const struct nvi_hal_reg nvi_hal_reg_6500 = {
 	},
 	.fifo_en			= {
 		.reg			= 0x23,
-		.dflt			= 0x4000,
 	},
 	.fifo_count_h			= {
 		.reg			= 0x72,
@@ -1789,6 +1784,8 @@ const struct nvi_hal nvi_hal_6500 = {
 	.dev[DEV_SM]			= &nvi_hal_dmp,
 	.dev[DEV_STP]			= &nvi_hal_dmp,
 	.dev[DEV_QTN]			= &nvi_hal_dmp,
+	.dev[DEV_GMR]			= &nvi_hal_dmp,
+	.dev[DEV_GYU]			= &nvi_hal_gyr,
 	.dev[DEV_AUX]			= &nvi_hal_aux,
 	.reg				= &nvi_hal_reg_6500,
 	.bit				= &nvi_hal_bit_6050,
@@ -1809,6 +1806,8 @@ const struct nvi_hal nvi_hal_6515 = {
 	.dev[DEV_SM]			= &nvi_hal_dmp,
 	.dev[DEV_STP]			= &nvi_hal_dmp,
 	.dev[DEV_QTN]			= &nvi_hal_dmp,
+	.dev[DEV_GMR]			= &nvi_hal_dmp,
+	.dev[DEV_GYU]			= &nvi_hal_gyr,
 	.dev[DEV_AUX]			= &nvi_hal_aux,
 	.reg				= &nvi_hal_reg_6500,
 	.bit				= &nvi_hal_bit_6050,

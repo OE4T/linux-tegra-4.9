@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,9 @@
 #include "gk20a/gk20a.h"
 
 void gp10b_slcg_bus_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gp10b_slcg_ce2_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gp10b_slcg_chiplet_load_gating_prod(struct gk20a *g,
@@ -56,6 +59,9 @@ void gp10b_slcg_xbar_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gp10b_blcg_bus_load_gating_prod(struct gk20a *g,
+	bool prod);
+
+void gp10b_blcg_ce_load_gating_prod(struct gk20a *g,
 	bool prod);
 
 void gp10b_blcg_ctxsw_firmware_load_gating_prod(struct gk20a *g,

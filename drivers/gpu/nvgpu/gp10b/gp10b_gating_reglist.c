@@ -163,6 +163,11 @@ static const struct gating_desc gp10b_blcg_bus[] = {
 	{.addr = 0x00001c00, .prod = 0x00000042, .disable = 0x00000000},
 };
 
+/* blcg ce */
+static const struct gating_desc gp10b_blcg_ce[] = {
+	{.addr = 0x00104200, .prod = 0x00008242, .disable = 0x00000000},
+};
+
 /* blcg ctxsw prog */
 static const struct gating_desc gp10b_blcg_ctxsw_prog[] = {
 };
@@ -480,6 +485,21 @@ void gp10b_blcg_bus_load_gating_prod(struct gk20a *g,
 		else
 			gk20a_writel(g, gp10b_blcg_bus[i].addr,
 				gp10b_blcg_bus[i].disable);
+	}
+}
+
+void gp10b_blcg_ce_load_gating_prod(struct gk20a *g,
+	bool prod)
+{
+	u32 i;
+	u32 size = sizeof(gp10b_blcg_ce) / sizeof(struct gating_desc);
+	for (i = 0; i < size; i++) {
+		if (prod)
+			gk20a_writel(g, gp10b_blcg_ce[i].addr,
+				gp10b_blcg_ce[i].prod);
+		else
+			gk20a_writel(g, gp10b_blcg_ce[i].addr,
+				gp10b_blcg_ce[i].disable);
 	}
 }
 

@@ -1,7 +1,7 @@
 /*
  * GP10B Tegra HAL interface
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,6 +47,8 @@ static struct gpu_ops gp10b_ops = {
 	.clock_gating = {
 		.slcg_bus_load_gating_prod =
 			gp10b_slcg_bus_load_gating_prod,
+		.slcg_ce2_load_gating_prod =
+			gp10b_slcg_ce2_load_gating_prod,
 		.slcg_chiplet_load_gating_prod =
 			gp10b_slcg_chiplet_load_gating_prod,
 		.slcg_ctxsw_firmware_load_gating_prod =
@@ -71,6 +73,8 @@ static struct gpu_ops gp10b_ops = {
 			gp10b_slcg_xbar_load_gating_prod,
 		.blcg_bus_load_gating_prod =
 			gp10b_blcg_bus_load_gating_prod,
+		.blcg_ce_load_gating_prod =
+			gp10b_blcg_ce_load_gating_prod,
 		.blcg_ctxsw_firmware_load_gating_prod =
 			gp10b_blcg_ctxsw_firmware_load_gating_prod,
 		.blcg_fb_load_gating_prod =

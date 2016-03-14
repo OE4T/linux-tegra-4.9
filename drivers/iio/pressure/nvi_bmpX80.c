@@ -60,7 +60,7 @@
 #include <linux/mpu_iio.h>
 #endif /* BMP_NVI_MPU_SUPPORT */
 
-#define BMP_DRIVER_VERSION		(300)
+#define BMP_DRIVER_VERSION		(301)
 #define BMP_VENDOR			"Bosch"
 #define BMP_NAME			"bmpX80"
 #define BMP180_NAME			"bmp180"
@@ -1020,7 +1020,7 @@ static int bmp_batch(void *client, int snsr_id, int flags,
 		     unsigned int period, unsigned int timeout)
 {
 	struct bmp_state *st = (struct bmp_state *)client;
-	unsigned int old_peroid;
+	unsigned int old_period;
 	unsigned int old_timeout;
 	int ret;
 
@@ -1028,7 +1028,7 @@ static int bmp_batch(void *client, int snsr_id, int flags,
 		/* timeout not supported (no HW FIFO) */
 		return -EINVAL;
 
-	old_peroid = st->delay_us[snsr_id];
+	old_period = st->delay_us[snsr_id];
 	old_timeout = st->timeout_us[snsr_id];
 	st->delay_us[snsr_id] = period;
 	st->timeout_us[snsr_id] = timeout;
@@ -1036,7 +1036,7 @@ static int bmp_batch(void *client, int snsr_id, int flags,
 	if (st->enabled && st->i2c->irq && !ret)
 		ret = bmp_mode(st);
 	if (ret) {
-		st->delay_us[snsr_id] = old_peroid;
+		st->delay_us[snsr_id] = old_period;
 		st->timeout_us[snsr_id] = old_timeout;
 	}
 	return 0;
@@ -1616,7 +1616,7 @@ static int bmp_id_hal(struct bmp_state *st)
 
 	default:
 		dev_err(&st->i2c->dev, "%s ERR: Unknown device\n", __func__);
-		st->hal = &bmp_hal_180; /* to prevent NULL pointers */
+		st->hal = &bmp_hal_280; /* to prevent NULL pointers */
 		ret = -ENODEV;
 		break;
 	}
@@ -1742,7 +1742,6 @@ static int bmp_id_dev(struct bmp_state *st, const char *name)
 			nmp.ctrl = 10; /* MPU FIFO can't handle odd size */
 			nmp.handler = &bmp_mpu_handler_280;
 		}
-		nmp.rate_scale = 34;
 		ret = nvi_mpu_port_alloc(&nmp);
 		dev_dbg(&st->i2c->dev, "%s MPU port/ret=%d\n",
 			__func__, ret);
@@ -1788,14 +1787,14 @@ static int bmp_id_dev(struct bmp_state *st, const char *name)
 #endif /* BMP_NVI_MPU_SUPPORT */
 	/* NVI_CONFIG_BOOT_HOST */
 	st->mpu_en = false;
-	ret = bmp_i2c_rd(st, BMP_REG_ID, 1, &val);
-	dev_dbg(&st->i2c->dev, "%s Host read ID=%x ret=%d\n",
-		__func__, val, ret);
-	if (!ret) {
-		ret = bmp_id_compare(st, val, name);
+	if (!st->dev_id) {
+		ret = bmp_i2c_rd(st, BMP_REG_ID, 1, &val);
+		dev_dbg(&st->i2c->dev, "%s Host read ID=%x ret=%d\n",
+			__func__, val, ret);
 		if (!ret)
-			ret = bmp_id_hal(st);
+			bmp_id_compare(st, val, name);
 	}
+	ret = bmp_id_hal(st);
 	return ret;
 }
 

@@ -115,6 +115,8 @@ static int __init __reserved_mem_alloc_size(unsigned long node,
 		return -EINVAL;
 	}
 	size = dt_mem_next_cell(dt_root_size_cells, &prop);
+	if (!size)
+		return -EINVAL;
 
 	nomap = of_get_flat_dt_prop(node, "no-map", NULL) != NULL;
 

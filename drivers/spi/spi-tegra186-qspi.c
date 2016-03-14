@@ -1,7 +1,7 @@
 /*
  * QSPI driver for NVIDIA's Tegra186 QUAD SPI Controller.
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -510,7 +510,8 @@ static unsigned tegra_qspi_fill_tx_fifo_from_client_txbuf(
 		for (count = 0; count < max_n_32bit; count++) {
 			x = 0;
 			for (i = 0; (i < 4) && nbytes; i++, nbytes--)
-				x |= (*tx_buf++) << (i*8);
+				x |= (unsigned long)
+					(((unsigned)(*tx_buf++)) << (i*8));
 			tegra_qspi_writel(tqspi, x, QSPI_TX_FIFO);
 		}
 	} else {

@@ -423,15 +423,16 @@ static void destroy_client(struct nvmap_client *client)
 
 	while ((n = rb_first(&client->handle_refs))) {
 		struct nvmap_handle_ref *ref;
-		int pins, dupes;
+		int dupes;
 
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
 
 		smp_rmb();
-		pins = atomic_read(&ref->pin);
 
-		while (pins--)
-			__nvmap_unpin(ref);
+		while (atomic_add_unless(&ref->pin, -1, 0))
+			dma_buf_unmap_attachment(ref->handle->attachment,
+				ref->handle->attachment->priv,
+				DMA_BIDIRECTIONAL);
 
 		if (ref->handle->owner == client)
 			ref->handle->owner = NULL;

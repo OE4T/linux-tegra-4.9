@@ -440,8 +440,10 @@ void nvmap_free_handle(struct nvmap_client *client,
 		pr_debug("%s freeing pinned handle %p\n",
 			    current->group_leader->comm, h);
 
-	while (atomic_read(&ref->pin))
-		__nvmap_unpin(ref);
+	while (atomic_add_unless(&ref->pin, -1, 0))
+		dma_buf_unmap_attachment(ref->handle->attachment,
+			ref->handle->attachment->priv,
+			DMA_BIDIRECTIONAL);
 
 	if (h->owner == client)
 		h->owner = NULL;

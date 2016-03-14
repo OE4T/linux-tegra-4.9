@@ -57,53 +57,6 @@ static phys_addr_t handle_phys(struct nvmap_handle *h)
 	return addr;
 }
 
-/*
- * Do the actual pin. Just calls to the dma_buf code.
- */
-int __nvmap_pin(struct nvmap_handle_ref *ref, phys_addr_t *phys)
-{
-	struct nvmap_handle *h = ref->handle;
-	struct sg_table *sgt = NULL;
-
-	atomic_inc(&ref->pin);
-
-	/*
-	 * We should not be using a bidirectional mapping here; however, nvmap
-	 * does not really keep track of whether memory is readable, writable,
-	 * or both so this keeps everyone happy.
-	 */
-	sgt = dma_buf_map_attachment(h->attachment, DMA_BIDIRECTIONAL);
-	if (IS_ERR(sgt))
-		goto err;
-	*phys = sg_dma_address(sgt->sgl);
-	trace_nvmap_pin(h->owner, h->owner ? h->owner->name : "unknown", h,
-			atomic_read(&h->pin));
-	return 0;
-
-err:
-	atomic_dec(&ref->pin);
-	return PTR_ERR(sgt);
-}
-
-void __nvmap_unpin(struct nvmap_handle_ref *ref)
-{
-	struct nvmap_handle *h = ref->handle;
-
-	/*
-	 * If the handle has been pinned by other refs it is possible to arrive
-	 * here: the passed ref has a 0 pin count. This is of course invalid.
-	 */
-	if (!atomic_add_unless(&ref->pin, -1, 0))
-		goto done;
-
-	dma_buf_unmap_attachment(h->attachment,
-		h->attachment->priv, DMA_BIDIRECTIONAL);
-
-done:
-	trace_nvmap_unpin(h->owner, h->owner ? h->owner->name : "unknown", h,
-			atomic_read(&h->pin));
-}
-
 void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 {
 	phys_addr_t paddr;

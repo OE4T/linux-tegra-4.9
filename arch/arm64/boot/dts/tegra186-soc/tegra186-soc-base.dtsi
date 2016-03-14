@@ -64,6 +64,7 @@
 			alignment = <0 0x100000>;
 			alloc-ranges = <0 0 0x1 0>;
 			no-map;
+			status = "disabled";
 		};
 
 	        adsp_reserved_mem: adsp_carveout {

@@ -338,8 +338,8 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 	}
 
 	rcu_assign_pointer(vnd->channels[channel], chan);
-	vi_notify_dev_classify(vnd);
 	mutex_unlock(&vnd->lock);
+
 	file->private_data = chan;
 
 	return nonseekable_open(inode, file);

@@ -76,6 +76,9 @@ static int q_op_mode[EQOS_MAX_TX_QUEUE_CNT] = {
 	2
 };
 
+/* Store the IRQ names to be used by /proc/interrupts */
+static char irq_names[8][32];
+
 module_param_array(q_op_mode, int, NULL, S_IRUGO | S_IWUSR);
 MODULE_PARM_DESC(q_op_mode,
 		 "MTL queue operation mode [0-DISABLED, 1-AVB, 2-DCB, 3-GENERIC]");
@@ -1144,31 +1147,35 @@ void free_txrx_irqs(struct eqos_prv_data *pdata)
 int request_txrx_irqs(struct eqos_prv_data *pdata)
 {
 	int ret = Y_SUCCESS;
-	uint i;
+	uint i, j = 0;
 	struct chan_data *pchinfo;
+	struct platform_device *pdev = pdata->pdev;
 
 	DBGPR("-->%s()\n", __func__);
 
 	pdata->irq_number = pdata->dev->irq;
 
 	ret = request_irq(pdata->common_irq,
-			  eqos_common_isr, IRQF_SHARED, DEV_NAME, pdata);
+			  eqos_common_isr, IRQF_SHARED, "ether_qos.common_irq", pdata);
 	if (ret != Y_SUCCESS) {
 		pr_err("Unable to register  %d\n", pdata->common_irq);
 		ret = -EBUSY;
 		goto err_common_irq;
 	}
+
 	for (i = 0; i < pdata->num_chans; i++) {
 
+		snprintf(irq_names[j], 32, "%s.rx%d", dev_name(&pdev->dev), i);
 		ret = request_irq(pdata->rx_irqs[i],
-				  eqos_ch_isr, 0, DEV_NAME, pdata);
+				  eqos_ch_isr, 0, irq_names[j++], pdata);
 		if (ret != 0) {
 			pr_err("Unable to register  %d\n", pdata->rx_irqs[i]);
 			ret = -EBUSY;
 			goto err_chan_irq;
 		}
+		snprintf(irq_names[j], 32, "%s.tx%d", dev_name(&pdev->dev), i);
 		ret = request_irq(pdata->tx_irqs[i],
-				  eqos_ch_isr, 0, DEV_NAME, pdata);
+				  eqos_ch_isr, 0, irq_names[j++], pdata);
 		if (ret != 0) {
 			pr_err("Unable to register  %d\n", pdata->tx_irqs[i]);
 			ret = -EBUSY;

@@ -2082,7 +2082,7 @@ static int dc_dp_out_hotplug_init(struct device *dev)
 		of_dp_hdmi_5v0 = devm_regulator_get(dev, "vdd_hdmi_5v0");
 		if (IS_ERR(of_dp_hdmi_5v0)) {
 			err = PTR_ERR(of_dp_hdmi_5v0);
-			dev_warn(dev,
+			dev_info(dev,
 				"dp: couldn't get regulator vdd_hdmi_5v0\n");
 			of_dp_hdmi_5v0 = NULL;
 		}

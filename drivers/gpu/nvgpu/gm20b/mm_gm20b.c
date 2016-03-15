@@ -51,7 +51,7 @@ int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g)
 	int ret = 0;
 
 	gk20a_busy_noresume(g->dev);
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (!pm_runtime_active(&g->dev->dev))
 		goto fail;
 #endif

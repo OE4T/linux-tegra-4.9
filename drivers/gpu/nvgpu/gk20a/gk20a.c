@@ -1139,7 +1139,7 @@ static int gk20a_pm_disable_clk(struct device *dev)
 
 static void gk20a_pm_shutdown(struct platform_device *pdev)
 {
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	unsigned long timeout = jiffies +
 		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
 	int ref_cnt;
@@ -1147,7 +1147,7 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 
 	dev_info(&pdev->dev, "shutting down");
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	/* Prevent more requests by disabling Runtime PM */
 	__pm_runtime_disable(&pdev->dev, false);
 
@@ -1170,7 +1170,7 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 
 #ifdef CONFIG_PM
 static const struct dev_pm_ops gk20a_pm_ops = {
-#if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
+#if defined(CONFIG_PM) && !defined(CONFIG_PM_GENERIC_DOMAINS)
 	.runtime_resume = gk20a_pm_enable_clk,
 	.runtime_suspend = gk20a_pm_disable_clk,
 #endif
@@ -1224,7 +1224,7 @@ static int gk20a_pm_suspend(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
 #endif
@@ -1250,7 +1250,7 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 	struct dev_power_governor *pm_domain_gov = NULL;
 	struct generic_pm_domain *domain = dev_to_genpd(&pdev->dev);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (!platform->can_railgate)
 		pm_domain_gov = &pm_domain_always_on_gov;
 #endif
@@ -1686,13 +1686,13 @@ int gk20a_busy(struct platform_device *pdev)
 {
 	int ret = 0;
 	struct gk20a *g = get_gk20a(pdev);
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 #endif
 
 	down_read(&g->busy_lock);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (platform->busy) {
 		ret = platform->busy(pdev);
 		if (ret < 0) {
@@ -1728,7 +1728,7 @@ fail:
 
 void gk20a_idle(struct platform_device *pdev)
 {
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
 	if (atomic_read(&pdev->dev.power.usage_count) == 1)
 		gk20a_scale_notify_idle(pdev);
@@ -1778,7 +1778,7 @@ void gk20a_reset(struct gk20a *g, u32 units)
 	gk20a_enable(g, units);
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 /**
  * __gk20a_do_idle() - force the GPU to idle and railgate
  *

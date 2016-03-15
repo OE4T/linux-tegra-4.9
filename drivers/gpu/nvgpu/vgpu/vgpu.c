@@ -357,7 +357,7 @@ static int vgpu_pm_initialise_domain(struct platform_device *pdev)
 
 	domain->name = "gpu";
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	pm_domain_gov = &pm_domain_always_on_gov;
 #endif
 

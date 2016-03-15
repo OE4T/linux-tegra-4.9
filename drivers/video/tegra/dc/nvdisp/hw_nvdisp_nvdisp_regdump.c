@@ -78,8 +78,6 @@ DUMP_REG(nvdisp_sd_hist_over_sat_r());
 DUMP_REG(nvdisp_sd_hist_int_bounds_r());
 DUMP_REG(nvdisp_sd_hist_vid_luma_r());
 DUMP_REG(nvdisp_sd_gain_ctrl_r());
-DUMP_REG(nvdisp_sd_gain_rg_r());
-DUMP_REG(nvdisp_sd_gain_b_r());
 DUMP_REG(nvdisp_sd_hist_win_pos_r());
 DUMP_REG(nvdisp_sd_hist_win_size_r());
 DUMP_REG(nvdisp_incr_syncpt_cntrl_r());

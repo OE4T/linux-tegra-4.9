@@ -169,7 +169,6 @@
 		reset-names = "i2c";
 		dmas = <&gpcdma 0>, <&gpcdma 0>;
 		dma-names = "rx", "tx";
-		nvidia,disable-dma-mode;
 	};
 
 	gen9_i2c: i2c@31e0000 {

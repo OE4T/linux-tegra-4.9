@@ -3437,7 +3437,7 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	return 0;
 }
 
-#if IS_ENABLED(CONFIG_PM_SLEEP) || IS_ENABLED(CONFIG_PM_RUNTIME)
+#if IS_ENABLED(CONFIG_PM_SLEEP) || IS_ENABLED(CONFIG_PM)
 static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 {
 	unsigned long flags;
@@ -3588,7 +3588,7 @@ static int tegra_xudc_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int tegra_xudc_runtime_suspend(struct device *dev)
 {
 	struct tegra_xudc *xudc = dev_get_drvdata(dev);

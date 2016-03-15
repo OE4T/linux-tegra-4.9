@@ -27,7 +27,7 @@ static int tegra_ahci_quirks(struct ahci_host_priv *hpriv);
 static int tegra_ahci_disable_features(struct ahci_host_priv *hpriv);
 static struct ahci_host_priv *
 tegra_ahci_platform_get_resources(struct tegra_ahci_priv *);
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int tegra_ahci_runtime_suspend(struct device *dev);
 static int tegra_ahci_runtime_resume(struct device *dev);
 #endif
@@ -162,7 +162,7 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 	struct ahci_host_priv *hpriv =  host->private_data;
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	struct ata_link *link = NULL;
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	struct scsi_device *sdev = NULL;
 #endif
 	int ret = 0;
@@ -180,7 +180,7 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 			ata_for_each_link(link, ap, HOST_FIRST) {
 				link->eh_info.action &= ~ATA_EH_RESET;
 			}
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 		else
 			shost_for_each_device(sdev, ap->scsi_host) {
 				if (sdev->request_queue->rpm_status ==
@@ -300,7 +300,7 @@ static struct ata_port_info ahci_tegra_port_info = {
 	.port_ops	= &ahci_tegra_port_ops,
 };
 
-#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
 static void tegra_ahci_pg_save_registers(struct ata_host *host)
 {
 	struct ahci_host_priv *hpriv =  host->private_data;
@@ -552,7 +552,7 @@ disable_phys:
 }
 #endif
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int tegra_ahci_runtime_suspend(struct device *dev)
 {
 	struct ata_host *host = dev_get_drvdata(dev);

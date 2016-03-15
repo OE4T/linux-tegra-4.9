@@ -23,7 +23,7 @@
 
 int nvadsp_acast_init(struct platform_device *pdev);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
@@ -193,7 +193,7 @@ int nvadsp_pm_init(struct platform_device *pdev)
 
 	return 0;
 }
-#endif /* CONFIG_PM_RUNTIME */
+#endif /* CONFIG_PM */
 
 static int __assert_t18x_adsp(struct nvadsp_drv_data *d)
 {

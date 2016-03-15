@@ -1761,7 +1761,7 @@ static int tegra210_adsp_eavb_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static int tegra210_adsp_runtime_suspend(struct device *dev)
 {
 	struct tegra210_adsp *adsp = dev_get_drvdata(dev);

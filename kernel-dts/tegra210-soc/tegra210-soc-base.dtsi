@@ -643,11 +643,14 @@
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_ID_VI>,
 				 <&tegra_car TEGRA210_CLK_ID_CSI>,
-				 <&tegra_car TEGRA210_CLK_ID_PLL_C>,
 				 <&tegra_car TEGRA210_CLK_ID_CILAB>,
 				 <&tegra_car TEGRA210_CLK_ID_CILCD>,
-				 <&tegra_car TEGRA210_CLK_ID_CILE>;
-			clock-names = "vi", "csi", "cil", "parent";
+				 <&tegra_car TEGRA210_CLK_ID_CILE>,
+				 <&tegra_car TEGRA210_CLK_ID_VII2C>,
+				 <&tegra_car TEGRA210_CLK_ID_I2CSLOW>,
+				 <&tegra_car TEGRA210_CLK_ID_EMC>;
+			clock-names = "vi", "csi", "cilab", "cilcd",
+					"cile", "vii2c", "i2cslow", "emc";
 			resets = <&tegra_car 20>;
 			reset-names = "vi";
 			#address-cells = <1>;

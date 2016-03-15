@@ -1025,7 +1025,7 @@ static int __exit nvhost_remove(struct platform_device *dev)
 	nvhost_syncpt_deinit(&host->syncpt);
 	nvhost_virt_deinit(dev);
 	nvhost_free_resources(host);
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	pm_runtime_put(&dev->dev);
 	pm_runtime_disable(&dev->dev);
 #else

@@ -121,7 +121,7 @@ static void t20_debug_show_channel_cdma(struct nvhost_master *m,
 	cbstat = host1x_sync_readl(m, host1x_sync_cbstat_0_r() + 4 * chid);
 	cmdstat = host1x_sync_readl(m, host1x_sync_cmdproc_stat_r());
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	nvhost_debug_output(o, "%d-%s (%d): ", chid,
 			    channel->dev->name,
 			    atomic_read(&channel->dev->dev.power.usage_count));

@@ -186,7 +186,7 @@ static int vhost_client_probe(struct platform_device *dev)
 
 static int __exit vhost_client_remove(struct platform_device *dev)
 {
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	pm_runtime_put(&dev->dev);
 	pm_runtime_disable(&dev->dev);
 #endif

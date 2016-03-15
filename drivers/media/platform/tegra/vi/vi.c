@@ -377,7 +377,7 @@ static int __exit vi_remove(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct vi *tegra_vi = (struct vi *)pdata->private_data;
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (atomic_read(&dev->dev.power.usage_count) > 0)
 		return -EBUSY;
 #endif

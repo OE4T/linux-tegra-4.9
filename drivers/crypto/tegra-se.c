@@ -3633,9 +3633,7 @@ static int __maybe_unused tegra_se_resume(struct device *dev)
 
 	return 0;
 }
-#endif
 
-#if defined(CONFIG_PM_RUNTIME)
 static int tegra_se_runtime_suspend(struct device *dev)
 {
 	/*
@@ -3662,7 +3660,7 @@ static const struct dev_pm_ops tegra_se_dev_pm_ops = {
 	.resume = tegra_se_resume,
 #endif
 };
-#endif
+#endif /* CONFIG_PM */
 
 static struct platform_device_id tegra_dev_se_devtype[] = {
 	{
@@ -3690,7 +3688,7 @@ static struct platform_driver tegra_se_driver = {
 	.driver = {
 		.name   = "tegra-se",
 		.owner  = THIS_MODULE,
-#if defined(CONFIG_PM_RUNTIME)
+#if defined(CONFIG_PM)
 		.pm = &tegra_se_dev_pm_ops,
 		.of_match_table = of_match_ptr(tegra_se_of_match),
 #endif

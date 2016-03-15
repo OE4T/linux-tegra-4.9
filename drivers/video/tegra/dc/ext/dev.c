@@ -122,8 +122,6 @@ struct tegra_dc_ext_flip_data {
 	u8 flags;
 	struct tegra_dc_hdr hdr_data;
 	bool hdr_cache_dirty;
-	struct tegra_dc_imp_head_results imp_results[TEGRA_MAX_DC];
-	bool imp_results_valid;
 };
 
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
@@ -832,11 +830,6 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 
 	trace_sync_wt_ovr_syncpt_upd((data->win[win_num-1]).syncpt_max);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-	if (dc->enabled && !skip_flip && data->imp_results_valid)
-		tegra_nvdisp_program_imp_results(dc, data->imp_results);
-#endif
-
 	if (dc->enabled && !skip_flip)
 		tegra_dc_set_hdr(dc, &data->hdr_data, data->hdr_cache_dirty);
 
@@ -1137,66 +1130,6 @@ static void tegra_dc_ext_unpin_window(struct tegra_dc_ext_win *win)
 	tegra_dc_ext_unpin_handles(unpin_handles, nr_unpin);
 }
 
-static void tegra_dc_ext_parse_imp_head_results(
-			struct tegra_dc_imp_head_results *res,
-			struct tegra_dc_ext_imp_head_results *ext_res)
-{
-	size_t num_wins;
-
-	res->num_windows = ext_res->num_windows;
-	res->cursor_active = ext_res->cursor_active;
-	res->hubclk = ext_res->hubclk;
-	res->total_display_iso_bw_bytes = ext_res->total_display_iso_bw_bytes;
-
-	if (res->cursor_active) {
-		res->metering_slots_value_cursor =
-			ext_res->metering_slots_value_cursor;
-		res->pipe_meter_value_cursor =
-			ext_res->pipe_meter_value_cursor;
-		res->pool_config_entries_cursor =
-			ext_res->pool_config_entries_cursor;
-		res->cursor_slots_value = ext_res->cursor_slots_value;
-	}
-
-	num_wins = res->num_windows;
-	if (!num_wins)
-		return;
-
-	res->window_slots_value = ext_res->window_slots_value;
-	memcpy(res->win_ids, ext_res->win_ids,
-		sizeof(*res->win_ids) * num_wins);
-	memcpy(res->thread_group_win, ext_res->thread_group_win,
-		sizeof(*res->thread_group_win) * num_wins);
-	memcpy(res->metering_slots_value_win, ext_res->metering_slots_value_win,
-		sizeof(*res->metering_slots_value_win) * num_wins);
-	memcpy(res->thresh_lwm_dvfs_win, ext_res->thresh_lwm_dvfs_win,
-		sizeof(*res->thresh_lwm_dvfs_win) * num_wins);
-	memcpy(res->pipe_meter_value_win, ext_res->pipe_meter_value_win,
-		sizeof(*res->pipe_meter_value_win) * num_wins);
-	memcpy(res->pool_config_entries_win, ext_res->pool_config_entries_win,
-		sizeof(*res->pool_config_entries_win) * num_wins);
-}
-
-static void tegra_dc_ext_parse_imp_results(struct tegra_dc_ext_flip_data *data,
-			struct tegra_dc_ext_flip_user_data *flip_user_data)
-{
-	void __user *ext_res_ptr =
-		(void __user *)flip_user_data->imp_ptr.results;
-	struct tegra_dc_ext_imp_head_results ext_res[TEGRA_MAX_DC];
-	int i;
-
-	if (copy_from_user(ext_res, ext_res_ptr, sizeof(ext_res))) {
-		dev_err(&data->ext->dc->ndev->dev,
-			"Failed to copy IMP results from user\n");
-		return;
-	}
-
-	data->imp_results_valid = true;
-	for (i = 0; i < TEGRA_MAX_DC; i++)
-		tegra_dc_ext_parse_imp_head_results(&data->imp_results[i],
-							&ext_res[i]);
-}
-
 static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			struct tegra_dc_ext_flip_user_data *flip_user_data,
 			int nr_user_data)
@@ -1224,10 +1157,6 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 					sizeof(hdr->static_metadata));
 			}
 			break;
-		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA:
-			tegra_dc_ext_parse_imp_results(data,
-						&flip_user_data[i]);
-			return; /* only first IMP results struct matters */
 		default:
 			dev_err(&data->ext->dc->ndev->dev,
 				"Invalid FLIP_USER_DATA_TYPE\n");
@@ -2269,10 +2198,12 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 	}
 	case TEGRA_DC_EXT_SET_PROPOSED_BW_3:
 	{
-		int ret;
+		int ret = 0;
 		int win_num;
-		struct tegra_dc_ext_flip_3 args;
+		int nr_user_data;
+		struct tegra_dc_ext_flip_4 args;
 		struct tegra_dc_ext_flip_windowattr_v2 *win;
+		struct tegra_dc_ext_flip_user_data *flip_user_data;
 
 		/* Keeping window attribute size as version1 for old
 		 *  legacy applications
@@ -2291,7 +2222,30 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			return -EFAULT;
 		}
 
-		ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
+		nr_user_data = args.nr_elements;
+		flip_user_data = kzalloc(sizeof(*flip_user_data)
+					* nr_user_data, GFP_KERNEL);
+		if (nr_user_data > 0) {
+			if (copy_from_user(flip_user_data,
+				(void __user *) (uintptr_t)args.data,
+				sizeof(*flip_user_data) * nr_user_data)) {
+				kfree(win);
+				return -EFAULT;
+			}
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+			if (flip_user_data[0].data_type ==
+					TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA)
+				ret = tegra_nvdisp_process_imp_results(
+						user->ext->dc, flip_user_data);
+#endif
+		}
+
+		if (!ret)
+			ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
+
+		if (nr_user_data > 0)
+			kfree(flip_user_data);
 
 		kfree(win);
 

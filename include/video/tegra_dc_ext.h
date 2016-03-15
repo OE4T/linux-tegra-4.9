@@ -344,6 +344,10 @@ struct tegra_dc_ext_hdr {
 	__u8 static_metadata[24];
 };
 
+/* The value at index i of each window-specific array corresponds to the
+ * i-th window that's assigned to this head. For the actual id of the i-th
+ * window, look in win_ids[i].
+ */
 #define TEGRA_DC_EXT_N_WINDOWS	6
 /*
  * IMP info that's exported to userspace.
@@ -368,10 +372,11 @@ struct tegra_dc_ext_imp_head_results {
 	__u32	metering_slots_value_cursor;
 	__u32	pipe_meter_value_cursor;
 	__u32	pool_config_entries_cursor;
+	__u64	total_latency;
 	__u64	hubclk;
 	__u32	window_slots_value;
 	__u32	cursor_slots_value;
-	__u64	total_display_iso_bw_bytes;
+	__u64	required_total_bw_kbps;
 };
 #undef TEGRA_DC_EXT_N_WINDOWS
 
@@ -766,7 +771,7 @@ struct tegra_dc_ext_feature {
 	_IOR('D', 0x1A, struct tegra_dc_ext_cmu_v2)
 
 #define TEGRA_DC_EXT_SET_PROPOSED_BW_3 \
-	_IOR('D', 0x1B, struct tegra_dc_ext_flip_3)
+	_IOR('D', 0x1B, struct tegra_dc_ext_flip_4)
 
 #define TEGRA_DC_EXT_GET_CMU_ADBRGB\
 	_IOR('D', 0x1C, struct tegra_dc_ext_cmu)

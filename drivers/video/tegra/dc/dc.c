@@ -3453,6 +3453,13 @@ static void tegra_dc_vblank(struct work_struct *work)
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
+	/*
+	 * If this HEAD has a pending COMMON_ACT_REQ, the COMMON channel state
+	 * should be promoted on vblank. We need to signal any HEAD(s) waiting
+	 * to reserve the COMMON channel.
+	 */
+	tegra_nvdisp_signal_common_channel(dc);
+
 	if (dc->out->sd_settings) {
 		if (dc->out->sd_settings->enable) {
 			if ((dc->out->sd_settings->update_sd) ||

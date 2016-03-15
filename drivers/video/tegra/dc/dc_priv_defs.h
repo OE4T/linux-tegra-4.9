@@ -221,6 +221,12 @@ struct tegra_dc {
 	int				n_windows;
 	struct tegra_dc_hdr		hdr;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	struct tegra_dc_imp_head_results	imp_results[TEGRA_MAX_DC];
+	bool					common_channel_reserved;
+	bool					common_channel_programmed;
+#endif
+
 #if defined(CONFIG_TEGRA_DC_CMU)
 	struct tegra_dc_cmu		cmu;
 #elif defined(CONFIG_TEGRA_DC_CMU_V2)

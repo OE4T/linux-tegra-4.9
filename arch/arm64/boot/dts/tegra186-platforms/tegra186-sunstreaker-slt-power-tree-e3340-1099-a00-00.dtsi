@@ -49,7 +49,7 @@
 
 	sdhci@3440000 {
 		vddio_sdmmc-supply = <&spmic_ldo5>;
-		vddio_sd_slot-supply = <&vdd_sdcard3_3v3>;
+		vddio_sd_slot-supply = <&vdd_sdcard1_3v3>;
 	};
 
 	sdhci@3420000 {

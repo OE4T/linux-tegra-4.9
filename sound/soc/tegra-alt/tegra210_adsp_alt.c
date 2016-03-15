@@ -80,6 +80,7 @@ static unsigned int adsp_app_count; /* total number of apps initialized */
 
 /* ADSP APP specific structure */
 struct tegra210_adsp_app {
+	struct tegra210_adsp *adsp;
 	const struct tegra210_adsp_app_desc *desc;
 	nvadsp_app_info_t *info;
 	plugin_shared_mem_t *plugin;
@@ -225,6 +226,8 @@ static struct snd_compr_codec_caps adsp_compr_codec_caps[] = {
 };
 
 static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data);
+static int tegra210_adsp_app_default_msg_handler(struct tegra210_adsp_app *app,
+					apm_msg_t *apm_msg);
 
 /*
  * Utility functions
@@ -394,8 +397,24 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 	}
 
 	ret = msgq_queue_message(&app->apm->msgq_recv.msgq, &apm_msg->msgq_msg);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		/* Wakeup APM to consume messages and give it some time */
+		ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_msg_ready,
+			NVADSP_MBOX_SMSG, true, 100);
+		if (ret) {
+			pr_err("%s: Failed to send mailbox message id %d ret %d\n",
+				__func__, app->apm->mbox_id, ret);
+		}
+		msleep(20);
+		/* Attempt queueing again */
+		ret = msgq_queue_message(&app->apm->msgq_recv.msgq,
+				&apm_msg->msgq_msg);
+		if (ret < 0) {
+			pr_err("%s: Failed to queue message ret %d\n",
+				__func__, ret);
+			return ret;
+		}
+	}
 
 	if (flags & TEGRA210_ADSP_MSG_FLAG_HOLD)
 		return 0;
@@ -403,18 +422,31 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 	ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_msg_ready,
 		NVADSP_MBOX_SMSG, true, 100);
 	if (ret) {
-		pr_err("Failed to send mailbox message id %d ret %d\n",
-			app->apm->mbox_id, ret);
+		pr_err("%s: Failed to send mailbox message id %d ret %d\n",
+			__func__, app->apm->mbox_id, ret);
 	}
 
 	if (!(flags & TEGRA210_ADSP_MSG_FLAG_NEED_ACK))
 		return ret;
 
+	/* Find parent APM to wait for ACK*/
+	if (!IS_APM_IN(app->reg)) {
+		uint32_t source;
+		while (IS_ADSP_APP(app->reg) && !IS_APM_IN(app->reg)) {
+			source = tegra210_adsp_get_source(app->adsp, app->reg);
+			app = &app->adsp->apps[source];
+		}
+		if (!IS_APM_IN(app->reg)) {
+			pr_err("%s: No APM found, skip ACK wait\n", __func__);
+			return ret;
+		}
+	}
+
 	ret = wait_for_completion_interruptible_timeout(
 		&app->msg_complete,
 		msecs_to_jiffies(ADSP_RESPONSE_TIMEOUT));
-	if (WARN_ON(ret <= 0))
-		pr_err("%s: Failed to reset app %d\n", __func__, app->reg);
+	if (WARN_ON(ret == 0))
+		pr_err("%s: ACK timed out %d\n", __func__, app->reg);
 
 	return ret;
 }
@@ -616,6 +648,8 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 
 	spin_lock_init(&app->lock);
 
+	app->adsp = adsp;
+	app->msg_handler = tegra210_adsp_app_default_msg_handler;
 	app->plugin = PLUGIN_SHARED_MEM(app->info->mem.shared);
 	if (IS_APM_IN(app->reg)) {
 		uint32_t apm_out_reg = APM_OUT_START +
@@ -755,7 +789,7 @@ static int tegra210_adsp_connect_plugin(struct tegra210_adsp *adsp,
 		src->reg, app->reg);
 
 	ret = tegra210_adsp_send_connect_msg(src, app,
-		TEGRA210_ADSP_MSG_FLAG_HOLD);
+		TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0) {
 		dev_err(adsp->dev, "Connect msg failed. err %d.", ret);
 		return ret;
@@ -922,6 +956,19 @@ static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 	return ret;
 }
 
+static int tegra210_adsp_app_default_msg_handler(struct tegra210_adsp_app *app,
+					apm_msg_t *apm_msg)
+{
+	switch (apm_msg->msg.call_params.method) {
+	case nvfx_apm_method_ack:
+		complete(&app->msg_complete);
+		break;
+	default:
+		pr_err("Unsupported cmd %d.", apm_msg->msg.call_params.method);
+	}
+	return 0;
+}
+
 static int tegra210_adsp_pcm_msg_handler(struct tegra210_adsp_app *app,
 					apm_msg_t *apm_msg)
 {
@@ -1050,7 +1097,7 @@ static int tegra210_adsp_compr_free(struct snd_compr_stream *cstream)
 	spin_lock_irqsave(&prtd->fe_apm->lock, flags);
 
 	/* Reset msg handler to disable msg processing */
-	prtd->fe_apm->msg_handler = NULL;
+	prtd->fe_apm->msg_handler = tegra210_adsp_app_default_msg_handler;
 
 	spin_unlock_irqrestore(&prtd->fe_apm->lock, flags);
 
@@ -1083,7 +1130,7 @@ static int tegra210_adsp_compr_set_params(struct snd_compr_stream *cstream,
 
 	ret = tegra210_adsp_send_io_buffer_msg(prtd->fe_apm, prtd->buf.addr,
 					prtd->buf.bytes,
-					TEGRA210_ADSP_MSG_FLAG_HOLD);
+					TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0) {
 		dev_err(prtd->dev, "IO buffer send msg failed. err %d.", ret);
 		return ret;
@@ -1091,7 +1138,7 @@ static int tegra210_adsp_compr_set_params(struct snd_compr_stream *cstream,
 
 	ret = tegra210_adsp_send_period_size_msg(prtd->fe_apm,
 					params->buffer.fragment_size,
-					TEGRA210_ADSP_MSG_FLAG_HOLD);
+					TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0) {
 		dev_err(prtd->dev, "Period size send msg failed. err %d.", ret);
 		return ret;
@@ -1390,7 +1437,8 @@ static int tegra210_adsp_pcm_close(struct snd_pcm_substream *substream)
 		spin_lock_irqsave(&prtd->fe_apm->lock, flags);
 
 		/* Reset msg handler to disable msg processing */
-		prtd->fe_apm->msg_handler = NULL;
+		prtd->fe_apm->msg_handler =
+			tegra210_adsp_app_default_msg_handler;
 
 		spin_unlock_irqrestore(&prtd->fe_apm->lock, flags);
 
@@ -1418,13 +1466,13 @@ static int tegra210_adsp_pcm_hw_params(struct snd_pcm_substream *substream,
 
 	ret = tegra210_adsp_send_io_buffer_msg(prtd->fe_apm, buf->addr,
 					params_buffer_bytes(params),
-					TEGRA210_ADSP_MSG_FLAG_HOLD);
+					TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0)
 		return ret;
 
 	ret = tegra210_adsp_send_period_size_msg(prtd->fe_apm,
 					params_period_size(params),
-					TEGRA210_ADSP_MSG_FLAG_HOLD);
+					TEGRA210_ADSP_MSG_FLAG_SEND);
 	if (ret < 0)
 		return ret;
 
@@ -1717,12 +1765,25 @@ static int tegra210_adsp_eavb_hw_params(struct snd_pcm_substream *substream,
 static int tegra210_adsp_runtime_suspend(struct device *dev)
 {
 	struct tegra210_adsp *adsp = dev_get_drvdata(dev);
-	int ret = 0;
+	int ret = 0, i;
 
 	dev_dbg(adsp->dev, "%s\n", __func__);
 
 	if (!adsp->init_done)
 		return 0;
+
+	/* Check for msgq empty before suspend */
+	for (i = 0; i < TEGRA210_ADSP_VIRT_REG_MAX; i++) {
+		struct tegra210_adsp_app *app = &adsp->apps[i];
+		if (app->plugin && IS_APM_IN(app->reg)) {
+			msgq_t *msgq = &app->apm->msgq_recv.msgq;
+			if (msgq->read_index == msgq->write_index)
+				continue;
+			pr_err("%s: app %d, msgq not empty rd %d wr %d\n",
+				__func__, app->reg, msgq->read_index,
+				msgq->write_index);
+		}
+	}
 
 	ret = nvadsp_os_suspend();
 	if (ret)
@@ -1917,7 +1978,6 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 		if (IS_APM_IN(w->reg)) {
 			/* Request higher ADSP clock when starting stream.
 			 * Actmon takes care of adjusting frequency later. */
-			app->msg_handler = tegra210_adsp_pcm_msg_handler;
 			ret = pm_runtime_get_sync(adsp->dev);
 			if (ret < 0) {
 				dev_err(adsp->dev, "%s pm_runtime_get_sync error 0x%x\n",
@@ -1941,7 +2001,7 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 				return ret;
 			}
 			ret = tegra210_adsp_send_state_msg(app, nvfx_state_inactive,
-				TEGRA210_ADSP_MSG_FLAG_HOLD);
+				TEGRA210_ADSP_MSG_FLAG_SEND);
 			if (ret < 0)
 				dev_err(adsp->dev, "Failed to set state inactive.");
 			ret = tegra210_adsp_send_reset_msg(app,
@@ -1952,7 +2012,6 @@ static int tegra210_adsp_widget_event(struct snd_soc_dapm_widget *w,
 			if (app->min_adsp_clock)
 				adsp_update_dfs_min_rate(0);
 			pm_runtime_put(adsp->dev);
-			app->msg_handler = NULL;
 		}
 	}
 
@@ -2680,7 +2739,7 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 		return ret;
 	}
 	ret = tegra210_adsp_send_msg(app, &apm_msg,
-		TEGRA210_ADSP_MSG_FLAG_SEND);
+		TEGRA210_ADSP_MSG_FLAG_SEND | TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
 	pm_runtime_put(adsp->dev);
 
 	return ret;
@@ -2763,7 +2822,8 @@ static int tegra210_adsp_apm_put(struct snd_kcontrol *kcontrol,
 			return ret;
 		}
 		ret = tegra210_adsp_send_msg(app, &apm_msg,
-				TEGRA210_ADSP_MSG_FLAG_SEND);
+				TEGRA210_ADSP_MSG_FLAG_SEND |
+				TEGRA210_ADSP_MSG_FLAG_NEED_ACK);
 		pm_runtime_put(adsp->dev);
 	}
 

@@ -457,30 +457,7 @@
 	i2c@3160000 { /* GEN1 */
 		status = "okay";
 		/*
-		 * 1920x1080@148.5MHz DSI 4 lanes HS clk 445.5MHz
-		 */
-		/*
-		sn65dsi86@2d {
-			compatible = "ti,sn65dsi86";
-			reg = <0x2d>;
-			status = "okay";
-			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
-			ti,pll-refclk-cfg = <0x4>;
-			ti,dsi-cha-clk-range = <0x59>;
-			ti,disable-assr = <1>;
-			ti,dp-ssc-cfg = <0x30>;
-			ti,h-pulse-width-low = <0x2c>;
-			ti,h-pulse-width-high = <0x80>;
-			ti,v-pulse-width-low = <0x05>;
-			ti,v-pulse-width-high = <0x80>;
-			ti,h-back-porch = <0x94>;
-			ti,v-back-porch = <0x24>;
-			ti,h-front-porch = <0x58>;
-			ti,v-front-porch = <0x04>;
-		};
-		*/
-		/*
-		 * 1920x1200@193.2Hz DSI 8 lanes HS clk 290MHz
+		 * TI SN65DSI86 DSI-to-eDP bridge chip on P2393 AIC card
 		 */
 		sn65dsi86@2d {
 			compatible = "ti,sn65dsi86";
@@ -488,57 +465,9 @@
 			status = "okay";
 			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
 			ti,pll-refclk-cfg = <0x4>;
-			ti,dsi-cfg1 = <0x80>;
-			ti,dsi-cha-clk-range = <0x3a>;
-			ti,dsi-chb-clk-range = <0x3a>;
 			ti,disable-assr = <1>;
 			ti,dp-ssc-cfg = <0x30>;
-			ti,video-cha-line-low = <0xc0>;
-			ti,video-cha-line-high = <0x03>;
-			ti,video-chb-line-low = <0xc0>;
-			ti,video-chb-line-high = <0x03>;
-			ti,cha-vert-disp-size-low = <0xb0>;
-			ti,cha-vert-disp-size-high = <0x4>;
-			ti,h-pulse-width-low = <0xd0>;
-			ti,h-pulse-width-high = <0x80>;
-			ti,v-pulse-width-low = <0x03>;
-			ti,v-pulse-width-high = <0x00>;
-			ti,h-back-porch = <0xec>;
-			ti,v-back-porch = <0x24>;
-			ti,h-front-porch = <0xe4>;
-			ti,v-front-porch = <0x03>;
 		};
-		/*
-		 * 2560x1600@60Hz DSI 8 lanes
-		 */
-		/*
-		sn65dsi86@2d {
-			compatible = "ti,sn65dsi86";
-			reg = <0x2d>;
-			status = "okay";
-			ti,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
-			ti,pll-refclk-cfg = <0x4>;
-			ti,dsi-cfg1 = <0x80>;
-			ti,dsi-cha-clk-range = <0x50>;
-			ti,dsi-chb-clk-range = <0x50>;
-			ti,disable-assr = <1>;
-			ti,dp-ssc-cfg = <0x30>;
-			ti,video-cha-line-low = <0x0>;
-			ti,video-cha-line-high = <0x05>;
-			ti,video-chb-line-low = <0x0>;
-			ti,video-chb-line-high = <0x05>;
-			ti,cha-vert-disp-size-low = <0x40>;
-			ti,cha-vert-disp-size-high = <0x6>;
-			ti,h-pulse-width-low = <0x20>;
-			ti,h-pulse-width-high = <0x80>;
-			ti,v-pulse-width-low = <0x06>;
-			ti,v-pulse-width-high = <0x0>;
-			ti,h-back-porch = <0x50>;
-			ti,v-back-porch = <0x25>;
-			ti,h-front-porch = <0x30>;
-			ti,v-front-porch = <0x03>;
-		};
-		*/
 	};
 
 };

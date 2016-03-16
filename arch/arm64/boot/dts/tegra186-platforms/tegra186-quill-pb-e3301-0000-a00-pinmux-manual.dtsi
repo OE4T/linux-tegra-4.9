@@ -16,14 +16,5 @@
 
 / {
 	pinmux@2430000 {
-		pinctrl-names = "default", "drive", "unused";
-		pinctrl-1 = <&drive_default>;
-		drive_default: drive {
-		        drive_spi2 {
-			        nvidia,pins = "drive_gpio_sen1", "drive_gpio_sen2", "drive_gpio_sen3", "drive_gpio_sen4";
-				nvidia,pull-down-strength = <10>;
-				nvidia,pull-up-strength = <10>;
-			};
-		};
 	};
 };

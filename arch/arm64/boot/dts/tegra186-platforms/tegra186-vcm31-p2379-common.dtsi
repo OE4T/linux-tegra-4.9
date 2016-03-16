@@ -193,6 +193,14 @@
 		pci@1,0 {
 			status = "okay";
 			nvidia,num-lanes = <0x4>;
+			/* C00 uses PEX MXM connector
+			 * port for connecting dGPU
+			 */
+			nvidia,has-mxm-port;
+			nvidia,mxm-pwr-en-gpio = <&tegra_gpio TEGRA_GPIO(B, 4) 0>;
+			nvidia,sxm-pwr-en-gpio = <&tegra_gpio TEGRA_GPIO(C, 0) 0>;
+			nvidia,sxm-pwr-gd-gpio = <&tegra_gpio TEGRA_GPIO(B, 6) 0>;
+
 		};
 
 		pci@2,0 {

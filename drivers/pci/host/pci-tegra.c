@@ -495,6 +495,10 @@ struct tegra_pcie_port {
 	bool ep_status;
 	int status;
 	int rst_gpio;
+	bool has_mxm_port;
+	int mxm_pwr_en_gpio;
+	int sxm_pwr_en_gpio;
+	int sxm_pwr_gd_gpio;
 	struct dentry *port_debugfs;
 };
 
@@ -2263,6 +2267,35 @@ static void mbist_war(struct tegra_pcie *pcie, bool apply)
 }
 #endif
 
+static int tegra_pcie_mxm_pwr_init(struct tegra_pcie_port *port)
+{
+	/* Disable power first to ensure
+	 * that device sees power enable
+	 */
+	if (gpio_is_valid(port->mxm_pwr_en_gpio))
+		gpio_set_value(port->mxm_pwr_en_gpio, 0);
+	if (gpio_is_valid(port->sxm_pwr_en_gpio))
+		gpio_set_value(port->sxm_pwr_en_gpio, 0);
+
+	mdelay(100); /* 100ms delay */
+
+	if (gpio_is_valid(port->mxm_pwr_en_gpio))
+		gpio_set_value(port->mxm_pwr_en_gpio, 1);
+
+	mdelay(100); /* 100ms delay */
+
+	if (gpio_is_valid(port->sxm_pwr_en_gpio))
+		gpio_set_value(port->sxm_pwr_en_gpio, 1);
+
+	mdelay(100); /* 100ms delay */
+
+	if (!(gpio_get_value(port->sxm_pwr_gd_gpio)))
+		return 1;
+
+	return 0;
+}
+
+
 static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 {
 	struct tegra_pcie_port *port, *tmp;
@@ -2273,7 +2306,15 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	mbist_war(pcie, true);
 #endif
+
 	list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
+		if (port->has_mxm_port) {
+			if (tegra_pcie_mxm_pwr_init(port))
+				dev_info(pcie->dev,
+					"sxm_pwr_good is down for port %d, ignoring\n",
+					 port->index);
+		}
+
 		dev_info(pcie->dev, "probing port %u, using %u lanes and lane map as 0x%x\n",
 			 port->index, port->lanes, pcie->plat_data->lane_map);
 
@@ -3310,6 +3351,71 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 			}
 		}
 
+		rp->has_mxm_port = of_property_read_bool(port,
+			"nvidia,has-mxm-port");
+		if (rp->has_mxm_port) {
+			rp->mxm_pwr_en_gpio = of_get_named_gpio(port,
+				 "nvidia,mxm-pwr-en-gpio", 0);
+			if (gpio_is_valid(rp->mxm_pwr_en_gpio)) {
+				err = devm_gpio_request(pcie->dev,
+						rp->mxm_pwr_en_gpio,
+							 "mxm_pwr_en_gpio");
+				if (err < 0) {
+					dev_err(pcie->dev,
+						"%s: mxm_pwr_en_gpio request failed %d\n",
+							__func__, err);
+					return err;
+				}
+				err = gpio_direction_output(
+						rp->mxm_pwr_en_gpio, 1);
+				if (err < 0) {
+					dev_err(pcie->dev,
+						"%s: mxm_pwr_en_gpio direction_output failed %d\n",
+						__func__, err);
+				}
+			}
+
+			rp->sxm_pwr_en_gpio = of_get_named_gpio(port,
+						"nvidia,sxm-pwr-en-gpio", 0);
+			if (gpio_is_valid(rp->sxm_pwr_en_gpio)) {
+				err = devm_gpio_request(pcie->dev,
+							rp->sxm_pwr_en_gpio,
+							"sxm_pwr_en_gpio");
+				if (err < 0) {
+					dev_err(pcie->dev,
+						"%s: sxm_pwr_en_gpio request failed %d\n",
+						__func__, err);
+					return err;
+				}
+				err = gpio_direction_output(
+						rp->sxm_pwr_en_gpio, 1);
+				if (err < 0) {
+					dev_err(pcie->dev,
+						"%s: sxm_pwr_en_gpio direction_output failed %d\n",
+						__func__, err);
+				}
+			}
+
+			rp->sxm_pwr_gd_gpio = of_get_named_gpio(port,
+						 "nvidia,sxm-pwr-gd-gpio", 0);
+			if (gpio_is_valid(rp->sxm_pwr_gd_gpio)) {
+				err = devm_gpio_request(pcie->dev,
+						rp->sxm_pwr_gd_gpio,
+						"sxm_pwr_gd_gpio");
+				if (err < 0) {
+					dev_err(pcie->dev,
+						"%s: sxm_pwr_gd_gpio request failed %d\n",
+						__func__, err);
+					return err;
+				}
+				err = gpio_direction_input(rp->sxm_pwr_gd_gpio);
+				if (err < 0) {
+					dev_err(pcie->dev,
+						"%s: sxm_pwr_gd_gpio direction_input failed %d\n",
+						__func__, err);
+				}
+			}
+		}
 		list_add_tail(&rp->list, &pcie->ports);
 	}
 

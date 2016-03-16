@@ -196,7 +196,8 @@
 		};
 
 		pci@2,0 {
-			status = "disabled";
+			status = "okay";
+			nvidia,num-lanes = <0x1>;
 		};
 	};
 

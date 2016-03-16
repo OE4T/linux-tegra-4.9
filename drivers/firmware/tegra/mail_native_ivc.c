@@ -140,7 +140,7 @@ static int native_channel_init(int ch)
 
 	ivc = ivc_channels + ch;
 	r = tegra_ivc_init(ivc, rx_base, tx_base,
-			1, msg_sz, device, native_notify);
+			1, msg_sz, NULL, native_notify);
 	if (r) {
 		pr_err("tegra_ivc_init() ch %d returned %d\n", ch, r);
 		WARN_ON(1);

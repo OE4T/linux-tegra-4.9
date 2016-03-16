@@ -357,7 +357,6 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 		pr_err("driver bug! Rx interrupt while in poll\n");
 		hw_if->disable_chan_interrupts(qinx, pdata);
 	}
-
 	DBGPR("<--%s()\n", __func__);
 }
 
@@ -1249,7 +1248,7 @@ static int eqos_open(struct net_device *dev)
 
 	eqos_start_dev(pdata);
 
-	pdata->hw_state = HW_STARTED;
+	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);
 
 	DBGPR("<--%s()\n", __func__);
 	return Y_SUCCESS;
@@ -1284,15 +1283,21 @@ static int eqos_close(struct net_device *dev)
 {
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct desc_if_struct *desc_if = &pdata->desc_if;
+	int	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
 
 	DBGPR("-->%s\n", __func__);
+
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+	       hw_chg_count--)
+		usleep_range(20000, 40000);
 
 	eqos_stop_dev(pdata);
 
 	desc_if->free_buff_and_desc(pdata);
 	free_txrx_irqs(pdata);
 
-	pdata->hw_state = HW_STOPPED;
+	pdata->hw_state_flgs |= (1 << HW_STOPPED);
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
 	DBGPR("<--%s\n", __func__);
 	return Y_SUCCESS;
@@ -1671,6 +1676,12 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 		process_tx_completions(pdata->dev, pdata, qinx);
 
 	spin_lock_irqsave(&pdata->chinfo[qinx].chan_tx_lock, flags);
+
+	if (test_bit(HW_CHANGING, &pdata->hw_state_flgs)) {
+		dev_kfree_skb_any(skb);
+		pr_err("%s : hw stopped\n", dev->name);
+		goto tx_netdev_return;
+	}
 
 	if (skb->len <= 0) {
 		dev_kfree_skb_any(skb);
@@ -3966,6 +3977,7 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct platform_device *pdev = pdata->pdev;
 	int max_frame = (new_mtu + ETH_HLEN + ETH_FCS_LEN + VLAN_HLEN);
+	int	hw_chg_count;
 
 	DBGPR("-->eqos_change_mtu: new_mtu:%d\n", new_mtu);
 
@@ -3994,7 +4006,12 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 	dev_info(&pdev->dev, "changing MTU from %d to %d\n", dev->mtu, new_mtu);
 
-	if (pdata->hw_state == HW_STARTED)
+	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+	       hw_chg_count--)
+		usleep_range(20000, 40000);
+
+	if (!(pdata->hw_state_flgs & (1 << HW_STOPPED)))
 		eqos_stop_dev(pdata);
 
 	if (max_frame <= 2048) {
@@ -4006,8 +4023,9 @@ static INT eqos_change_mtu(struct net_device *dev, INT new_mtu)
 
 	dev->mtu = new_mtu;
 
-	if (pdata->hw_state == HW_STARTED)
+	if (!(pdata->hw_state_flgs & (1 << HW_STOPPED)))
 		eqos_start_dev(pdata);
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
 	DBGPR("<--eqos_change_mtu\n");
 
@@ -5721,16 +5739,26 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &pdata->hw_if;
 	struct desc_if_struct *desc_if = &pdata->desc_if;
+	unsigned long flags;
+	int i;
 
 	DBGPR("-->%s()\n", __func__);
 
 	/* turn off sources of data into dev */
 	netif_tx_disable(pdata->dev);
+
 	hw_if->stop_mac_rx();
-
 	eqos_disable_all_irqs(pdata);
-
 	eqos_all_ch_napi_disable(pdata);
+
+	/* Ensure no tx thread is running.  We have
+	 * already prevented any new callers of or tx thread above.
+	 * Below will allow any remaining tx threads to complete.
+	 */
+	for (i = 0; i < pdata->num_chans; i++) {
+		spin_lock_irqsave(&pdata->chinfo[i].chan_tx_lock, flags);
+		spin_unlock_irqrestore(&pdata->chinfo[i].chan_tx_lock, flags);
+	}
 
 	/* stop DMA TX */
 	eqos_stop_all_ch_tx_dma(pdata);
@@ -5819,8 +5847,18 @@ void eqos_fbe_work(struct work_struct *work)
 	    container_of(work, struct eqos_prv_data, fbe_work);
 	int i;
 	u32 dma_sr_reg;
+	int	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
 
 	DBGPR("-->%s()\n", __func__);
+
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+	       hw_chg_count--)
+		usleep_range(20000, 40000);
+
+	if (pdata->hw_state_flgs & HW_STOPPED) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+		return;
+	}
 
 	i = 0;
 	while (pdata->fbe_chan_mask) {
@@ -5834,9 +5872,9 @@ void eqos_fbe_work(struct work_struct *work)
 		pdata->fbe_chan_mask >>= 1;
 		i++;
 	}
-
 	eqos_stop_dev(pdata);
 	eqos_start_dev(pdata);
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
 	DBGPR("<--%s()\n", __func__);
 }

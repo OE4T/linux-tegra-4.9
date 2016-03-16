@@ -782,7 +782,7 @@ int eqos_probe(struct platform_device *pdev)
 
 	pdata->dev = ndev;
 
-	pdata->hw_state = HW_STOPPED;
+	pdata->hw_state_flgs |= (1 << HW_STOPPED);
 
 	/* PMT and PHY irqs are shared on FPGA system */
 	if (tegra_platform_is_unit_fpga()) {
@@ -1298,8 +1298,13 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 	}
 	pdata->suspended = 1;
 
-	if (netif_running(dev))
+	if (netif_running(dev)) {
+		while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs))
+			usleep_range(1000, 2000);
 		eqos_stop_dev(pdata);
+		pdata->hw_state_flgs |= (1 << HW_STOPPED);
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+	}
 
 	/* disable clocks */
 	eqos_clock_deinit(pdata);
@@ -1342,6 +1347,7 @@ static INT eqos_resume(struct platform_device *pdev)
 	if (netif_running(dev))
 		eqos_start_dev(pdata);
 	pdata->suspended = 0;
+	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);
 
 	return 0;
 }

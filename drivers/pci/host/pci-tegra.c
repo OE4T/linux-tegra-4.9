@@ -494,6 +494,7 @@ struct tegra_pcie_port {
 	bool disable_clock_request;
 	bool ep_status;
 	int status;
+	int rst_gpio;
 	struct dentry *port_debugfs;
 };
 
@@ -1825,15 +1826,25 @@ static void tegra_pcie_port_reset(struct tegra_pcie_port *port)
 	PR_FUNC_LINE;
 
 	/* pulse reset signal */
-	value = afi_readl(port->pcie, ctrl);
-	value &= ~AFI_PEX_CTRL_RST;
-	afi_writel(port->pcie, value, ctrl);
+	/* assert PEX_RST_A */
+	if (gpio_is_valid(port->rst_gpio)) {
+		gpio_set_value(port->rst_gpio, 0);
+	} else {
+		value = afi_readl(port->pcie, ctrl);
+		value &= ~AFI_PEX_CTRL_RST;
+		afi_writel(port->pcie, value, ctrl);
+	}
 
 	usleep_range(1000, 2000);
 
-	value = afi_readl(port->pcie, ctrl);
-	value |= AFI_PEX_CTRL_RST;
-	afi_writel(port->pcie, value, ctrl);
+	/* deAssert PEX_RST_A */
+	if (gpio_is_valid(port->rst_gpio)) {
+		gpio_set_value(port->rst_gpio, 1);
+	} else {
+		value = afi_readl(port->pcie, ctrl);
+		value |= AFI_PEX_CTRL_RST;
+		afi_writel(port->pcie, value, ctrl);
+	}
 }
 
 static void tegra_pcie_port_enable(struct tegra_pcie_port *port)
@@ -3279,6 +3290,25 @@ static int tegra_pcie_parse_dt(struct tegra_pcie *pcie)
 			return -EADDRNOTAVAIL;
 		rp->disable_clock_request = of_property_read_bool(port,
 			"nvidia,disable-clock-request");
+
+		rp->rst_gpio = of_get_named_gpio(port, "nvidia,rst-gpio", 0);
+		if (gpio_is_valid(rp->rst_gpio)) {
+			err = devm_gpio_request(pcie->dev,
+						rp->rst_gpio, "pex_rst_gpio");
+			if (err < 0) {
+				dev_err(pcie->dev,
+					"%s: pex_rst_gpio request failed %d\n",
+					__func__, err);
+				return err;
+			}
+			err = gpio_direction_output(rp->rst_gpio, 0);
+			if (err < 0) {
+				dev_err(pcie->dev,
+					"%s: pex_rst_gpio direction_output failed %d\n",
+						__func__, err);
+				return err;
+			}
+		}
 
 		list_add_tail(&rp->list, &pcie->ports);
 	}

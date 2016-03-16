@@ -114,6 +114,9 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	unsigned long min_freq =  clk_round_rate(profile->clk, 0);
 	struct nvhost_device_data *pdata = platform_get_drvdata(profile->pdev);
 
+	if (!tegra_platform_is_silicon())
+		goto exit;
+
 #if defined(CONFIG_PLATFORM_TEGRA) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	err = tegra_dvfs_get_freqs(clk_get_parent(profile->clk),
 				   &freqs, &num_freqs);
@@ -121,8 +124,7 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 		return err;
 #endif
 	if (!freqs)
-		err = tegra_update_freq_table(clk_get_parent(profile->clk),
-					 pdata, &num_freqs);
+		err = tegra_update_freq_table(profile->clk, pdata, &num_freqs);
 
 	if (pdata->freqs[0])
 		freqs = pdata->freqs;
@@ -141,6 +143,7 @@ static int nvhost_scale_make_freq_table(struct nvhost_device_profile *profile)
 	}
 	freqs += low_end_cnt;
 
+exit:
 	if (!num_freqs)
 		dev_warn(&profile->pdev->dev, "dvfs table had no applicable frequencies!\n");
 

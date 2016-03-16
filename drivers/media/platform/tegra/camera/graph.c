@@ -238,6 +238,8 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 				sink->name, sink_pad->index);
 			break;
 		}
+
+		tegra_channel_init_subdevices(chan);
 	} while (next != NULL);
 
 	of_node_put(ep);

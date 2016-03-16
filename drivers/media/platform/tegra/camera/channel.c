@@ -57,40 +57,58 @@ static u32 csi_read(struct tegra_channel *chan, unsigned int addr)
 
 static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 {
-	int ret, index = 0, num_sd = 0;
+	int ret, pixel_format_index = 0, init_code = 0;
 	struct v4l2_subdev *subdev = chan->subdev[0];
+	struct v4l2_subdev_format fmt;
 	struct v4l2_subdev_mbus_code_enum code = {
 		.which = V4L2_SUBDEV_FORMAT_ACTIVE,
 	};
 
 	bitmap_zero(chan->fmts_bitmap, MAX_FORMAT_NUM);
 
-	while (subdev != NULL) {
+	/*
+	 * Initialize all the formats available from
+	 * the sub-device and extract the corresponding
+	 * index from the pre-defined video formats and initialize
+	 * the channel default format with the active code
+	 * Index zero as the only sub-device is sensor
+	 */
+	while (1) {
 		ret = v4l2_subdev_call(subdev, pad, enum_mbus_code,
 				       NULL, &code);
 		if (ret < 0)
 			/* no more formats */
 			break;
 
-		index = tegra_core_get_idx_by_code(code.code);
-		if (index >= 0)
-			bitmap_set(chan->fmts_bitmap, index, 1);
+		pixel_format_index = tegra_core_get_idx_by_code(code.code);
+		if (pixel_format_index >= 0) {
+			bitmap_set(chan->fmts_bitmap, pixel_format_index, 1);
+			if (!init_code)
+				init_code = code.code;
+		}
 
 		code.index++;
-		num_sd++;
-		subdev = chan->subdev[num_sd];
 	}
 
-	if (!num_sd) {
-		index = tegra_core_get_idx_by_code(TEGRA_VF_DEF);
-		if (index >= 0)
-			bitmap_set(chan->fmts_bitmap, index, 1);
+	if (!init_code) {
+		/* Get the format based on active code of the sub-device */
+		ret = v4l2_subdev_call(subdev, pad, get_fmt, NULL, &fmt);
+		if (ret)
+			return;
+
+		chan->fmtinfo = tegra_core_get_format_by_code(init_code);
+		v4l2_fill_pix_format(&chan->format, &fmt.format);
+		chan->format.pixelformat = chan->fmtinfo->fourcc;
+		chan->format.bytesperline = chan->format.width *
+						chan->fmtinfo->bpp;
+		chan->format.sizeimage = chan->format.bytesperline *
+						chan->format.height;
 	}
 
 	if (bitmap_weight(chan->fmts_bitmap, MAX_FORMAT_NUM) == 0) {
-		index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_SRGGB10_1X10);
-		if (index >= 0)
-			bitmap_set(chan->fmts_bitmap, index, 1);
+		pixel_format_index = tegra_core_get_idx_by_code(MEDIA_BUS_FMT_SRGGB10_1X10);
+		if (pixel_format_index >= 0)
+			bitmap_set(chan->fmts_bitmap, pixel_format_index, 1);
 	}
 }
 
@@ -562,7 +580,35 @@ static void tegra_channel_fmt_align(struct v4l2_pix_format *pix,
 	pix->sizeimage = pix->bytesperline * pix->height;
 }
 
-static int tegra_channel_get_subdevices(struct tegra_channel *chan)
+static int tegra_channel_setup_controls(struct tegra_channel *chan)
+{
+	int num_sd = 0;
+	struct v4l2_subdev *sd = NULL;
+
+	/* Initialize the subdev and controls here at first open */
+	sd = chan->subdev[num_sd];
+	while ((sd = chan->subdev[num_sd++]) &&
+		(num_sd <= chan->num_subdevs)) {
+		/* Add control handler for the subdevice */
+		v4l2_ctrl_add_handler(&chan->ctrl_handler,
+					sd->ctrl_handler, NULL);
+		if (chan->ctrl_handler.error)
+			dev_err(chan->vi->dev,
+				"Failed to add sub-device controls\n");
+	}
+
+	/* Add the vi ctrl handler */
+	v4l2_ctrl_add_handler(&chan->ctrl_handler,
+			&chan->vi->ctrl_handler, NULL);
+	if (chan->ctrl_handler.error)
+		dev_err(chan->vi->dev,
+			"Failed to add vi controls\n");
+
+	/* setup the controls */
+	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);
+}
+
+int tegra_channel_init_subdevices(struct tegra_channel *chan)
 {
 	struct media_entity *entity;
 	struct media_pad *pad;
@@ -599,7 +645,11 @@ static int tegra_channel_get_subdevices(struct tegra_channel *chan)
 	}
 	chan->num_subdevs = num_sd;
 
-	return 0;
+	/* initialize the available formats */
+	if (chan->num_subdevs)
+		tegra_channel_fmts_bitmap_init(chan);
+
+	return tegra_channel_setup_controls(chan);
 }
 
 static int
@@ -610,22 +660,13 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 	struct v4l2_subdev_format fmt;
 	int ret = 0;
 	int num_sd = 0;
-	struct v4l2_subdev *sd = chan->subdev[num_sd];
-
-	while (sd != NULL) {
+	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+		struct v4l2_subdev *sd = chan->subdev[num_sd];
 		memset(&fmt, 0x0, sizeof(fmt));
 		fmt.pad = 0;
 		ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
-		if (ret) {
-			if (ret == -ENOIOCTLCMD) {
-				num_sd++;
-				if (num_sd < chan->num_subdevs) {
-					sd = chan->subdev[num_sd];
-					continue;
-				} else
-					break;
-			}
-		}
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return ret;
 
 		v4l2_fill_pix_format(pix, &fmt.format);
 		vfmt = tegra_core_get_format_by_code(fmt.format.code);
@@ -634,11 +675,10 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 			pix->bytesperline = pix->width * vfmt->bpp;
 			pix->sizeimage = pix->height * pix->bytesperline;
 		}
-
-		return ret;
+		return 0;
 	}
 
-	return -ENOTTY;
+	return -ENOIOCTLCMD;
 }
 
 static int
@@ -798,52 +838,14 @@ static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_streamoff		= vb2_ioctl_streamoff,
 };
 
-static int tegra_channel_setup_controls(struct tegra_channel *chan)
-{
-	int num_sd = 0;
-	struct v4l2_subdev *sd = NULL;
-
-	/* Initialize the subdev and controls here at first open */
-	sd = chan->subdev[num_sd];
-	while ((sd = chan->subdev[num_sd++]) &&
-		(num_sd <= chan->num_subdevs)) {
-		/* Add control handler for the subdevice */
-		v4l2_ctrl_add_handler(&chan->ctrl_handler,
-					sd->ctrl_handler, NULL);
-		if (chan->ctrl_handler.error)
-			dev_err(chan->vi->dev,
-				"Failed to add sub-device controls\n");
-	}
-
-	/* Add the vi ctrl handler */
-	v4l2_ctrl_add_handler(&chan->ctrl_handler,
-			&chan->vi->ctrl_handler, NULL);
-	if (chan->ctrl_handler.error)
-		dev_err(chan->vi->dev,
-			"Failed to add vi controls\n");
-
-	/* setup the controls */
-	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);
-}
-
 static int tegra_channel_open(struct file *fp)
 {
 	int ret = 0;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
 
-	if (chan->subdev[0] == NULL) {
-		ret = tegra_channel_get_subdevices(chan);
-		if (ret < 0)
-			return ret;
-
-		ret = tegra_channel_setup_controls(chan);
-		if (ret < 0)
-			dev_err(chan->vi->dev,
-				"Channel controls setup failed\n");
-
-		tegra_channel_fmts_bitmap_init(chan);
-	}
+	if (chan->subdev[0] == NULL)
+		return -ENODEV;
 
 	if (!chan->bypass) {
 		tegra_vi_power_on(chan);

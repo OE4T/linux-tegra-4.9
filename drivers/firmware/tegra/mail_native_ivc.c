@@ -150,7 +150,7 @@ static int native_channel_init(int ch)
 	return 0;
 }
 
-static void native_ring_doorbell(void)
+static void native_ring_doorbell(int ch)
 {
 	tegra_hsp_db_ring(HSP_DB_BPMP);
 }

@@ -41,7 +41,7 @@ struct mail_ops {
 	int (*channel_init)(int ch);
 	struct ivc *(*ivc_obj)(int ch);
 	void (*resume)(void);
-	void (*ring_doorbell)(void);
+	void (*ring_doorbell)(int ch);
 };
 
 struct mail_ops *native_mail_ops(void);

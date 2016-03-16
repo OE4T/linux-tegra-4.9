@@ -115,14 +115,14 @@ void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 	WARN_ON(r);
 
 	if (flags & RING_DOORBELL)
-		bpmp_ring_doorbell();
+		bpmp_ring_doorbell(ch);
 }
 EXPORT_SYMBOL(tegra_bpmp_mail_return_data);
 
-void bpmp_ring_doorbell(void)
+void bpmp_ring_doorbell(int ch)
 {
 	if (mail_ops->ring_doorbell)
-		mail_ops->ring_doorbell();
+		mail_ops->ring_doorbell(ch);
 }
 
 int bpmp_thread_ch_index(int ch)

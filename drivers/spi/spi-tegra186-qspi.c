@@ -37,7 +37,7 @@
 #include <linux/spi/spi.h>
 #include <linux/spi/qspi-tegra.h>
 #include <linux/clk/tegra.h>
-#include "../../arch/arm/mach-tegra/iomap.h"
+#include <linux/tegra_prod.h>
 
 #define QSPI_COMMAND1				0x000
 #define QSPI_BIT_LENGTH(x)			(((x) & 0x1f) << 0)
@@ -68,8 +68,8 @@
 #define QSPI_PIO				(1 << 31)
 
 #define QSPI_COMMAND2				0x004
-#define QSPI_RX_TAP_DELAY(x)			(((x) & 0xFFF) << 0)
-#define QSPI_TX_TAP_DELAY(x)			(((x) & 0xFFF) << 12)
+#define QSPI_RX_TAP_DELAY(x)			(((x) & 0xFF) << 0)
+#define QSPI_TX_TAP_DELAY(x)			(((x) & 0x1F) << 10)
 #define QSPI_RX_EXT_TAP_DELAY(x)		(((x) & 0xFF) << 24)
 
 #define QSPI_CS_TIMING1				0x008
@@ -178,7 +178,7 @@
 #define DEFAULT_SPI_DMA_BUF_LEN			(64*1024)
 #define TX_FIFO_EMPTY_COUNT_MAX			SPI_TX_FIFO_EMPTY_COUNT(0x40)
 #define RX_FIFO_FULL_COUNT_ZERO			SPI_RX_FIFO_FULL_COUNT(0)
-
+#define MAX_PROD_NAME                           15
 /*
  * NOTE: Actual chip has only one CS. Below is WAR to enable
  * spidev and mtd layer register same time.
@@ -252,6 +252,7 @@ struct tegra_qspi_data {
 	u32					*tx_dma_buf;
 	dma_addr_t				tx_dma_phys;
 	struct dma_async_tx_descriptor		*tx_dma_desc;
+	struct tegra_prod_list *prod_list;
 #ifdef QSPI_BRINGUP_BUILD
 	int					qspi_force_unpacked_mode;
 	int					qspi_enable_cmbseq_mode;
@@ -977,7 +978,8 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	int req_mode;
 	u8 bus_width = X1, num_dummy_cycles = 0;
 	bool is_ddr = false;
-	struct tegra_qspi_device_controller_data *cdata = spi->controller_data;
+	char prod_name[MAX_PROD_NAME];
+
 	bits_per_word = t->bits_per_word;
 	tqspi->cur_qspi = spi;
 	tqspi->cur_pos = 0;
@@ -1093,23 +1095,22 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 
 	tqspi->command1_reg = command1;
 
-	if (cdata) {
+	if (tqspi->prod_list) {
+		sprintf(prod_name, "prod_c_cs%d", spi->chip_select);
+		if (tegra_prod_set_by_name(&tqspi->base,
+					prod_name, tqspi->prod_list))
+			tegra_prod_set_by_name(&tqspi->base,
+					"prod", tqspi->prod_list);
+	} else {
+		/* Set Default values for Command 2 registers */
 		u32 command2_reg = 0;
-		int rx_tap_delay;
-		int tx_tap_delay;
+		int rx_tap_delay = 0;
+		int tx_tap_delay = 0;
 
-		if (cdata->rx_tap_delay) {
-			rx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
-			command2_reg = QSPI_RX_TAP_DELAY(rx_tap_delay);
-		}
-		if (cdata->tx_tap_delay) {
-			tx_tap_delay = min(cdata->tx_clk_tap_delay, 63);
-			command2_reg |= QSPI_TX_TAP_DELAY(tx_tap_delay);
-		}
-		if ((cdata->rx_tap_delay) || (cdata->tx_tap_delay))
-			tegra_qspi_writel(tqspi, command2_reg, QSPI_COMMAND2);
+		command2_reg = QSPI_RX_TAP_DELAY(rx_tap_delay)
+			| QSPI_TX_TAP_DELAY(tx_tap_delay);
+		tegra_qspi_writel(tqspi, command2_reg, QSPI_COMMAND2);
 	}
-
 	if (tqspi->dcycle_non_cmbseq_mode) {
 		tqspi->qspi_num_dummy_cycle =
 			QSPI_NUM_DUMMY_CYCLE(num_dummy_cycles);
@@ -1747,6 +1748,12 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->dma_req_sel = pdata->dma_req_sel;
 	tqspi->clock_always_on = pdata->is_clkon_always;
 	tqspi->dev = &pdev->dev;
+	tqspi->prod_list = tegra_prod_get(&pdev->dev, NULL);
+	if (IS_ERR(tqspi->prod_list)) {
+		dev_info(&pdev->dev, "Prod settings list not initialized\n");
+		tqspi->prod_list = NULL;
+	}
+
 	spin_lock_init(&tqspi->lock);
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -1894,7 +1901,10 @@ exit_rx_dma_free:
 exit_free_irq:
 	free_irq(qspi_irq, tqspi);
 exit_free_master:
+	if (tqspi->prod_list)
+		tegra_prod_release(&tqspi->prod_list);
 	spi_master_put(master);
+
 	return ret;
 }
 
@@ -1922,6 +1932,9 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 		clk_disable_unprepare(tqspi->sdr_ddr_clk);
 		clk_disable_unprepare(tqspi->clk);
 	}
+	if (tqspi->prod_list)
+		tegra_prod_release(&tqspi->prod_list);
+
 	return 0;
 }
 #ifdef CONFIG_PM_SLEEP

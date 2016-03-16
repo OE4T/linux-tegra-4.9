@@ -1196,7 +1196,8 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
 		return -ENOMEM;
 	}
 
-	trace_gk20a_channel_sched_defaults(GK20A_TP_ARGS_SCHED(ch));
+	gk20a_channel_trace_sched_param(
+		trace_gk20a_channel_sched_defaults, ch);
 
 	filp->private_data = ch;
 	return 0;
@@ -3060,8 +3061,8 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_dbg(gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
 			   timeout, ch->hw_chid);
 		ch->timeout_ms_max = timeout;
-
-		trace_gk20a_channel_set_timeout(GK20A_TP_ARGS_SCHED(ch));
+		gk20a_channel_trace_sched_param(
+			trace_gk20a_channel_set_timeout, ch);
 		break;
 	}
 	case NVGPU_IOCTL_CHANNEL_SET_TIMEOUT_EX:
@@ -3075,8 +3076,8 @@ long gk20a_channel_ioctl(struct file *filp,
 			   timeout, ch->hw_chid);
 		ch->timeout_ms_max = timeout;
 		ch->timeout_debug_dump = timeout_debug_dump;
-
-		trace_gk20a_channel_set_timeout(GK20A_TP_ARGS_SCHED(ch));
+		gk20a_channel_trace_sched_param(
+			trace_gk20a_channel_set_timeout, ch);
 		break;
 	}
 	case NVGPU_IOCTL_CHANNEL_GET_TIMEDOUT:
@@ -3095,8 +3096,8 @@ long gk20a_channel_ioctl(struct file *filp,
 			((struct nvgpu_set_priority_args *)buf)->priority);
 
 		gk20a_idle(dev);
-
-		trace_gk20a_channel_set_priority(GK20A_TP_ARGS_SCHED(ch));
+		gk20a_channel_trace_sched_param(
+			trace_gk20a_channel_set_priority, ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_ENABLE:
 		err = gk20a_busy(dev);
@@ -3182,8 +3183,8 @@ long gk20a_channel_ioctl(struct file *filp,
 			((struct nvgpu_runlist_interleave_args *)buf)->level);
 
 		gk20a_idle(dev);
-
-		trace_gk20a_channel_set_runlist_interleave(GK20A_TP_ARGS_SCHED(ch));
+		gk20a_channel_trace_sched_param(
+			trace_gk20a_channel_set_runlist_interleave, ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_TIMESLICE:
 		err = gk20a_busy(dev);
@@ -3197,8 +3198,8 @@ long gk20a_channel_ioctl(struct file *filp,
 			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
 
 		gk20a_idle(dev);
-
-		trace_gk20a_channel_set_timeslice(GK20A_TP_ARGS_SCHED(ch));
+		gk20a_channel_trace_sched_param(
+			trace_gk20a_channel_set_timeslice, ch);
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE:
 		if (ch->g->ops.gr.set_preemption_mode) {

@@ -103,9 +103,6 @@ struct gr_ctx_desc {
 #endif
 };
 
-#define NVGPU_GR_PREEMPTION_MODE_WFI		0
-#define NVGPU_GR_PREEMPTION_MODE_CTA		2
-
 struct compbit_store_desc {
 	struct mem_desc mem;
 

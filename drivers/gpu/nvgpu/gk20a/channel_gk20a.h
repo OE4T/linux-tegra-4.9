@@ -176,6 +176,7 @@ struct channel_gk20a {
 	bool has_timedout;
 	u32 timeout_ms_max;
 	bool timeout_debug_dump;
+	u32 timeslice_us;
 
 	struct dma_buf *error_notifier_ref;
 	struct nvgpu_notification *error_notifier;

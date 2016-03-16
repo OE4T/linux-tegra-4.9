@@ -184,8 +184,7 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 	return 0;
 }
 
-static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
-				u32 timeslice_period)
+static int channel_gk20a_set_schedule_params(struct channel_gk20a *c)
 {
 	void *inst_ptr;
 	int shift = 0, value = 0;
@@ -194,8 +193,8 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c,
 	if (!inst_ptr)
 		return -ENOMEM;
 
-	gk20a_channel_get_timescale_from_timeslice(c->g, timeslice_period,
-				&value, &shift);
+	gk20a_channel_get_timescale_from_timeslice(c->g,
+		c->timeslice_us, &value, &shift);
 
 	/* disable channel */
 	c->g->ops.fifo.disable_channel(c);
@@ -1162,6 +1161,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	ch->obj_class = 0;
 	ch->clean_up.scheduled = false;
 	ch->interleave_level = NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW;
+	ch->timeslice_us = g->timeslice_low_priority_us;
 
 	/* The channel is *not* runnable at this point. It still needs to have
 	 * an address space bound and allocate a gpfifo and grctx. */
@@ -1206,6 +1206,8 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
 			"failed to get f");
 		return -ENOMEM;
 	}
+
+	trace_gk20a_channel_sched_defaults(GK20A_TP_ARGS_SCHED(ch));
 
 	filp->private_data = ch;
 	return 0;
@@ -2699,8 +2701,6 @@ static int gk20a_channel_event_id_ctrl(struct channel_gk20a *ch,
 
 int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 {
-	u32 timeslice_timeout;
-
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
 		gk20a_err(dev_from_gk20a(ch->g),
 			"invalid operation for TSG!\n");
@@ -2710,21 +2710,20 @@ int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 	/* set priority of graphics channel */
 	switch (priority) {
 	case NVGPU_PRIORITY_LOW:
-		timeslice_timeout = ch->g->timeslice_low_priority_us;
+		ch->timeslice_us = ch->g->timeslice_low_priority_us;
 		break;
 	case NVGPU_PRIORITY_MEDIUM:
-		timeslice_timeout = ch->g->timeslice_medium_priority_us;
+		ch->timeslice_us = ch->g->timeslice_medium_priority_us;
 		break;
 	case NVGPU_PRIORITY_HIGH:
-		timeslice_timeout = ch->g->timeslice_high_priority_us;
+		ch->timeslice_us = ch->g->timeslice_high_priority_us;
 		break;
 	default:
 		pr_err("Unsupported priority");
 		return -EINVAL;
 	}
 
-	return channel_gk20a_set_schedule_params(ch,
-			timeslice_timeout);
+	return channel_gk20a_set_schedule_params(ch);
 }
 
 int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
@@ -2739,7 +2738,9 @@ int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 		timeslice > NVGPU_CHANNEL_MAX_TIMESLICE_US)
 		return -EINVAL;
 
-	return channel_gk20a_set_schedule_params(ch, timeslice);
+	ch->timeslice_us = timeslice;
+
+	return channel_gk20a_set_schedule_params(ch);
 }
 
 static int gk20a_channel_zcull_bind(struct channel_gk20a *ch,
@@ -3059,6 +3060,8 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_dbg(gpu_dbg_gpu_dbg, "setting timeout (%d ms) for chid %d",
 			   timeout, ch->hw_chid);
 		ch->timeout_ms_max = timeout;
+
+		trace_gk20a_channel_set_timeout(GK20A_TP_ARGS_SCHED(ch));
 		break;
 	}
 	case NVGPU_IOCTL_CHANNEL_SET_TIMEOUT_EX:
@@ -3072,6 +3075,8 @@ long gk20a_channel_ioctl(struct file *filp,
 			   timeout, ch->hw_chid);
 		ch->timeout_ms_max = timeout;
 		ch->timeout_debug_dump = timeout_debug_dump;
+
+		trace_gk20a_channel_set_timeout(GK20A_TP_ARGS_SCHED(ch));
 		break;
 	}
 	case NVGPU_IOCTL_CHANNEL_GET_TIMEDOUT:
@@ -3088,7 +3093,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = ch->g->ops.fifo.channel_set_priority(ch,
 			((struct nvgpu_set_priority_args *)buf)->priority);
+
 		gk20a_idle(dev);
+
+		trace_gk20a_channel_set_priority(GK20A_TP_ARGS_SCHED(ch));
 		break;
 	case NVGPU_IOCTL_CHANNEL_ENABLE:
 		err = gk20a_busy(dev);
@@ -3172,7 +3180,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = gk20a_channel_set_runlist_interleave(ch,
 			((struct nvgpu_runlist_interleave_args *)buf)->level);
+
 		gk20a_idle(dev);
+
+		trace_gk20a_channel_set_runlist_interleave(GK20A_TP_ARGS_SCHED(ch));
 		break;
 	case NVGPU_IOCTL_CHANNEL_SET_TIMESLICE:
 		err = gk20a_busy(dev);
@@ -3184,7 +3195,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		}
 		err = ch->g->ops.fifo.channel_set_timeslice(ch,
 			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
+
 		gk20a_idle(dev);
+
+		trace_gk20a_channel_set_timeslice(GK20A_TP_ARGS_SCHED(ch));
 		break;
 	default:
 		dev_dbg(dev, "unrecognized ioctl cmd: 0x%x", cmd);

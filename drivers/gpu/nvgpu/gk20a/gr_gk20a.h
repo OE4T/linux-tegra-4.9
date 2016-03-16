@@ -626,4 +626,21 @@ int gr_gk20a_resume_contexts(struct gk20a *g,
 			      struct dbg_session_gk20a *dbg_s,
 			      int *ctx_resident_ch_fd);
 
+#define NVGPU_GR_PREEMPTION_MODE_WFI            0
+#define NVGPU_GR_PREEMPTION_MODE_CTA            2
+
+static inline const char *gr_gk20a_preempt_mode_name(u32 preempt_mode)
+{
+	switch (preempt_mode) {
+	case NVGPU_GR_PREEMPTION_MODE_WFI:
+		return "WFI";
+
+	case NVGPU_GR_PREEMPTION_MODE_CTA:
+		return "CTA";
+
+	default:
+		return "?";
+	}
+}
+
 #endif /*__GR_GK20A_H__*/

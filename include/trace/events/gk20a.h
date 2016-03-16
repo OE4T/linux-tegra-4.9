@@ -1,7 +1,7 @@
 /*
  * gk20a event logging to ftrace.
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -188,6 +188,70 @@ DEFINE_EVENT(gk20a_channel_getput, gk20a_channel_put,
 DEFINE_EVENT(gk20a_channel_getput, gk20a_channel_put_nofree,
 	TP_PROTO(int channel, const char *caller),
 	TP_ARGS(channel, caller)
+);
+
+DECLARE_EVENT_CLASS(gk20a_channel_sched_params,
+	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
+		u32 timeout, const char *interleave, const char *preempt_mode),
+	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
+		interleave, preempt_mode),
+	TP_STRUCT__entry(
+		__field(int, chid)
+		__field(int, tsgid)
+		__field(pid_t, pid)
+		__field(u32, timeslice)
+		__field(u32, timeout)
+		__field(const char *, interleave)	/* no need to copy */
+		__field(const char *, preempt_mode)	/* no need to copy */
+	),
+	TP_fast_assign(
+		__entry->chid = chid;
+		__entry->tsgid = tsgid;
+		__entry->pid = pid;
+		__entry->timeslice = timeslice;
+		__entry->timeout = timeout;
+		__entry->interleave = interleave;
+		__entry->preempt_mode = preempt_mode;
+	),
+	TP_printk("chid=%d tsgid=%d pid=%d timeslice=%u timeout=%u interleave=%s preempt=%s",
+		__entry->chid, __entry->tsgid, __entry->pid,
+		__entry->timeslice, __entry->timeout,
+		__entry->interleave, __entry->preempt_mode)
+);
+
+DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_sched_defaults,
+	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
+		u32 timeout, const char *interleave, const char *preempt_mode),
+	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
+		interleave, preempt_mode)
+);
+
+DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_priority,
+	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
+		u32 timeout, const char *interleave, const char *preempt_mode),
+	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
+		interleave, preempt_mode)
+);
+
+DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_runlist_interleave,
+	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
+		u32 timeout, const char *interleave, const char *preempt_mode),
+	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
+		interleave, preempt_mode)
+);
+
+DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_timeslice,
+	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
+		u32 timeout, const char *interleave, const char *preempt_mode),
+	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
+		interleave, preempt_mode)
+);
+
+DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_timeout,
+	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
+		u32 timeout, const char *interleave, const char *preempt_mode),
+	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
+		interleave, preempt_mode)
 );
 
 TRACE_EVENT(gk20a_push_cmdbuf,

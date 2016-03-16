@@ -2550,6 +2550,138 @@ struct channel_gk20a *gk20a_fifo_channel_from_hw_chid(struct gk20a *g,
 	return g->fifo.channel + hw_chid;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static void *gk20a_fifo_sched_debugfs_seq_start(
+		struct seq_file *s, loff_t *pos)
+{
+	struct gk20a *g = s->private;
+	struct fifo_gk20a *f = &g->fifo;
+
+	if (*pos >= f->num_channels)
+		return NULL;
+
+	return &f->channel[*pos];
+}
+
+static void *gk20a_fifo_sched_debugfs_seq_next(
+		struct seq_file *s, void *v, loff_t *pos)
+{
+	struct gk20a *g = s->private;
+	struct fifo_gk20a *f = &g->fifo;
+
+	++(*pos);
+	if (*pos >= f->num_channels)
+		return NULL;
+
+	return &f->channel[*pos];
+}
+
+static void gk20a_fifo_sched_debugfs_seq_stop(
+		struct seq_file *s, void *v)
+{
+}
+
+static int gk20a_fifo_sched_debugfs_seq_show(
+		struct seq_file *s, void *v)
+{
+	struct gk20a *g = s->private;
+	struct fifo_gk20a *f = &g->fifo;
+	struct channel_gk20a *ch = v;
+	struct tsg_gk20a *tsg = NULL;
+
+	struct fifo_engine_info_gk20a *engine_info;
+	struct fifo_runlist_info_gk20a *runlist;
+	u32 runlist_id;
+	int ret = SEQ_SKIP;
+
+	engine_info = f->engine_info + ENGINE_GR_GK20A;
+	runlist_id = engine_info->runlist_id;
+	runlist = &f->runlist_info[runlist_id];
+
+	if (ch == f->channel) {
+		seq_puts(s, "chid     tsgid    pid      timeslice  timeout  interleave preempt\n");
+		seq_puts(s, "                            (usecs)   (msecs)\n");
+		ret = 0;
+	}
+
+	if (!test_bit(ch->hw_chid, runlist->active_channels))
+		return ret;
+
+	if (gk20a_channel_get(ch)) {
+		if (gk20a_is_channel_marked_as_tsg(ch))
+			tsg = &f->tsg[ch->tsgid];
+
+		seq_printf(s, "%-8d %-8d %-8d %-9d %-8d %-10d %-8d\n",
+				ch->hw_chid,
+				ch->tsgid,
+				ch->pid,
+				tsg ? tsg->timeslice_us : ch->timeslice_us,
+				ch->timeout_ms_max,
+				ch->interleave_level,
+				ch->ch_ctx.gr_ctx ?
+					ch->ch_ctx.gr_ctx->preempt_mode : -1);
+		gk20a_channel_put(ch);
+	}
+	return 0;
+}
+
+const struct seq_operations gk20a_fifo_sched_debugfs_seq_ops = {
+	.start = gk20a_fifo_sched_debugfs_seq_start,
+	.next = gk20a_fifo_sched_debugfs_seq_next,
+	.stop = gk20a_fifo_sched_debugfs_seq_stop,
+	.show = gk20a_fifo_sched_debugfs_seq_show
+};
+
+static int gk20a_fifo_sched_debugfs_open(struct inode *inode,
+	struct file *file)
+{
+	int err;
+
+	if (!capable(CAP_SYS_ADMIN))
+		return -EPERM;
+
+	err = seq_open(file, &gk20a_fifo_sched_debugfs_seq_ops);
+	if (err)
+		return err;
+
+	gk20a_dbg(gpu_dbg_info, "i_private=%p", inode->i_private);
+
+	((struct seq_file *)file->private_data)->private = inode->i_private;
+	return 0;
+};
+
+/*
+ * The file operations structure contains our open function along with
+ * set of the canned seq_ ops.
+ */
+const struct file_operations gk20a_fifo_sched_debugfs_fops = {
+	.owner = THIS_MODULE,
+	.open = gk20a_fifo_sched_debugfs_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = seq_release
+};
+
+void gk20a_fifo_debugfs_init(struct device *dev)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
+
+	struct dentry *gpu_root = platform->debugfs;
+	struct dentry *fifo_root;
+
+	fifo_root = debugfs_create_dir("fifo", gpu_root);
+	if (IS_ERR_OR_NULL(fifo_root))
+		return;
+
+	gk20a_dbg(gpu_dbg_info, "g=%p", g);
+
+	debugfs_create_file("sched", 0600, fifo_root, g,
+		&gk20a_fifo_sched_debugfs_fops);
+
+}
+#endif /* CONFIG_DEBUG_FS */
+
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);

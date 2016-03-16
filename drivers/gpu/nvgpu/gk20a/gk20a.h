@@ -1074,4 +1074,30 @@ int gk20a_pm_init(struct device *dev);
 int gk20a_pm_finalize_poweron(struct device *dev);
 void gk20a_remove_support(struct device *dev);
 
+static inline struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)
+{
+	struct tsg_gk20a *tsg = NULL;
+
+	if (gk20a_is_channel_marked_as_tsg(ch))
+	{
+		struct gk20a *g = ch->g;
+		struct fifo_gk20a *f = &g->fifo;
+		tsg = &f->tsg[ch->tsgid];
+	}
+
+	return tsg;
+}
+
+
+#define GK20A_TP_ARGS_SCHED(ch)						\
+	ch->hw_chid,                                                    \
+	ch->tsgid,                                                      \
+	ch->pid,                                                        \
+	gk20a_is_channel_marked_as_tsg(ch) ?                            \
+		tsg_gk20a_from_ch(ch)->timeslice_us : ch->timeslice_us, \
+	ch->timeout_ms_max,                                             \
+	gk20a_fifo_interleave_level_name(ch->interleave_level),         \
+	gr_gk20a_preempt_mode_name(ch->ch_ctx.gr_ctx ? 			\
+		ch->ch_ctx.gr_ctx->preempt_mode : 0)
+
 #endif /* GK20A_H */

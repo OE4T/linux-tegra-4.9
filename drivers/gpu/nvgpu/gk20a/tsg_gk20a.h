@@ -43,6 +43,7 @@ struct tsg_gk20a {
 	int num_active_channels;
 	struct mutex ch_list_lock;
 
+	int timeslice_us;
 	int timeslice_timeout;
 	int timeslice_scale;
 

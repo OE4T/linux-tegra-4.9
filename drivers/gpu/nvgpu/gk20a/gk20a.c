@@ -1608,6 +1608,7 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a_cde_debugfs_init(&dev->dev);
 	gk20a_alloc_debugfs_init(dev);
 	gk20a_mm_debugfs_init(&dev->dev);
+	gk20a_fifo_debugfs_init(&dev->dev);
 #endif
 
 	gk20a_init_gr(gk20a);

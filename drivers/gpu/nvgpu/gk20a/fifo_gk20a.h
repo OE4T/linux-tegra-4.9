@@ -140,6 +140,23 @@ struct fifo_gk20a {
 	struct mutex deferred_reset_mutex;
 };
 
+static inline const char *gk20a_fifo_interleave_level_name(u32 interleave_level)
+{
+	switch (interleave_level) {
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
+		return "LOW";
+
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
+		return "MEDIUM";
+
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
+		return "HIGH";
+
+	default:
+		return "?";
+	}
+}
+
 int gk20a_init_fifo_support(struct gk20a *g);
 
 void gk20a_fifo_isr(struct gk20a *g);
@@ -200,4 +217,10 @@ int gk20a_fifo_set_runlist_interleave(struct gk20a *g,
 				bool is_tsg,
 				u32 runlist_id,
 				u32 new_level);
+
+void gk20a_fifo_debugfs_init(struct device *dev);
+
+const char *gk20a_fifo_interleave_level_name(u32 interleave_level);
+
+
 #endif /*__GR_GK20A_H__*/

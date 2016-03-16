@@ -165,24 +165,22 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 static int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 				u32 priority)
 {
-	int timeslice_period;
-
 	switch (priority) {
 	case NVGPU_PRIORITY_LOW:
-		timeslice_period = g->timeslice_low_priority_us;
+		tsg->timeslice_us = g->timeslice_low_priority_us;
 		break;
 	case NVGPU_PRIORITY_MEDIUM:
-		timeslice_period = g->timeslice_medium_priority_us;
+		tsg->timeslice_us = g->timeslice_medium_priority_us;
 		break;
 	case NVGPU_PRIORITY_HIGH:
-		timeslice_period = g->timeslice_high_priority_us;
+		tsg->timeslice_us = g->timeslice_high_priority_us;
 		break;
 	default:
 		pr_err("Unsupported priority");
 		return -EINVAL;
 	}
 
-	gk20a_channel_get_timescale_from_timeslice(g, timeslice_period,
+	gk20a_channel_get_timescale_from_timeslice(g, tsg->timeslice_us,
 			&tsg->timeslice_timeout, &tsg->timeslice_scale);
 
 	g->ops.fifo.update_runlist(g, 0, ~0, true, true);
@@ -407,6 +405,7 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 	tsg->tsg_gr_ctx = NULL;
 	tsg->vm = NULL;
 	tsg->interleave_level = NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW;
+	tsg->timeslice_us = 0;
 
 	filp->private_data = tsg;
 

@@ -1328,16 +1328,17 @@ struct chan_data {
 	spinlock_t chan_lock;
 };
 
+#define EQOS_HW_CHG_MAX_COUNT	50
 enum hw_state_e {
 	HW_STOPPED,
-	HW_STARTED,
+	HW_CHANGING,
 };
 
 struct eqos_prv_data {
 	struct net_device *dev;
 	struct platform_device *pdev;
 
-	enum hw_state_e hw_state;
+	unsigned long hw_state_flgs;
 
 	spinlock_t lock;
 	spinlock_t tx_lock;

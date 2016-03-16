@@ -33,4 +33,10 @@
 			hardware = "p2379_t186";
 		};
 	};
+
+	tegra_pcie: pcie-controller@10003000 {
+		pci@1,0 {
+			nvidia,rst-gpio = <&tegra_gpio TEGRA_GPIO(A, 3) 0>;
+		};
+	};
 };

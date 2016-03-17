@@ -1952,6 +1952,7 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 	struct tegra_xusb_mbox_msg msg;
 	struct resource *regs;
 	int ret;
+	u32 val;
 
 	if (!tegra->soc->is_xhci_vf) {
 		if (!fw) {
@@ -2089,6 +2090,11 @@ static void tegra_xusb_probe_finish(const struct firmware *fw, void *context)
 			"Can't register reload_hcd attribute\n");
 		goto remove_usb3;
 	}
+
+	/* Enable EU3S bit of USBCMD */
+	val = readl(&xhci->op_regs->command);
+	val |= CMD_PM_INDEX;
+	writel(val, &xhci->op_regs->command);
 
 	return;
 

@@ -1148,6 +1148,7 @@
                 nvidia,dma-request-selector = <&gpcdma 5>;
 		dmas = <&gpcdma 5>, <&gpcdma 5>;
 		dma-names = "rx", "tx";
+		nvidia,clk-parents = "pll_p";
 		clocks = <&tegra_car TEGRA186_CLK_QSPI>,
 			<&tegra_car TEGRA186_CLK_QSPI_OUT>,
 			<&tegra_car TEGRA186_CLK_PLLP_OUT0>,

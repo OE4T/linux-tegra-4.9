@@ -540,6 +540,34 @@
 		power-domains = <>;
 	};
 
+	serial@3100000 {
+		status = "disabled";
+	};
+
+	serial@c280000 {
+		status = "disabled";
+	};
+
+	serial@3130000 {
+		status = "disabled";
+	};
+
+	spi@3210000 {
+		status = "disabled";
+	};
+
+	spi@c260000 {
+		status = "disabled";
+	};
+
+	spi@3230000 {
+		status = "disabled";
+	};
+
+	spi@3240000 {
+		status = "disabled";
+	};
+
 	virt-alt-pcm {
 		status = "okay";
 		compatible = "nvidia,tegra210-virt-pcm";

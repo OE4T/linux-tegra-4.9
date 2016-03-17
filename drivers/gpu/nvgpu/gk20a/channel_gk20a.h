@@ -215,7 +215,7 @@ void gk20a_disable_channel(struct channel_gk20a *ch);
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt);
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout);
 void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error);
-void gk20a_channel_semaphore_wakeup(struct gk20a *g);
+void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events);
 int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 size,
 			     struct priv_cmd_entry **entry);
 

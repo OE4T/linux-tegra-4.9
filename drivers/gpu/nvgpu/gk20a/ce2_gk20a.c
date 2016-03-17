@@ -87,7 +87,7 @@ void gk20a_ce2_nonstall_isr(struct gk20a *g)
 			ce2_nonblockpipe_isr(g, ce2_intr));
 
 		/* wake threads waiting in this channel */
-		gk20a_channel_semaphore_wakeup(g);
+		gk20a_channel_semaphore_wakeup(g, true);
 	}
 
 	return;

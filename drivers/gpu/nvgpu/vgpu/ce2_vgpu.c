@@ -22,7 +22,7 @@ int vgpu_ce2_nonstall_isr(struct gk20a *g,
 
 	switch (info->type) {
 	case TEGRA_VGPU_CE2_NONSTALL_INTR_NONBLOCKPIPE:
-		gk20a_channel_semaphore_wakeup(g);
+		gk20a_channel_semaphore_wakeup(g, true);
 		break;
 	default:
 		WARN_ON(1);

@@ -919,7 +919,7 @@ int vgpu_gr_nonstall_isr(struct gk20a *g,
 
 	switch (info->type) {
 	case TEGRA_VGPU_GR_NONSTALL_INTR_SEMAPHORE:
-		gk20a_channel_semaphore_wakeup(g);
+		gk20a_channel_semaphore_wakeup(g, true);
 		break;
 	default:
 		WARN_ON(1);

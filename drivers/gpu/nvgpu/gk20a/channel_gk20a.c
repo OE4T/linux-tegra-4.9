@@ -2831,7 +2831,7 @@ int gk20a_channel_resume(struct gk20a *g)
 	return 0;
 }
 
-void gk20a_channel_semaphore_wakeup(struct gk20a *g)
+void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
@@ -2842,6 +2842,18 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g)
 		struct channel_gk20a *c = g->fifo.channel+chid;
 		if (gk20a_channel_get(c)) {
 			wake_up_interruptible_all(&c->semaphore_wq);
+			if (post_events) {
+				if (gk20a_is_channel_marked_as_tsg(c)) {
+					struct tsg_gk20a *tsg =
+						&g->fifo.tsg[c->tsgid];
+
+					gk20a_tsg_event_id_post_event(tsg,
+					    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
+				} else {
+					gk20a_channel_event_id_post_event(c,
+					    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
+				}
+			}
 			gk20a_channel_update(c, 0);
 			gk20a_channel_put(c);
 		}

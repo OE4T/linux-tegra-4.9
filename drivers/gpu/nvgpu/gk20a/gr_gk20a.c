@@ -5313,6 +5313,30 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		return -EFAULT;
 	}
 
+	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()) {
+		if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
+			struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
+
+			gk20a_tsg_event_id_post_event(tsg,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
+		} else {
+			gk20a_channel_event_id_post_event(fault_ch,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
+		}
+	}
+
+	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f()) {
+		if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
+			struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
+
+			gk20a_tsg_event_id_post_event(tsg,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
+		} else {
+			gk20a_channel_event_id_post_event(fault_ch,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
+		}
+	}
+
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		  "sm hww global %08x warp %08x", global_esr, warp_esr);
 
@@ -5705,7 +5729,7 @@ int gk20a_gr_nonstall_isr(struct gk20a *g)
 		gk20a_writel(g, gr_intr_nonstall_r(),
 			gr_intr_nonstall_trap_pending_f());
 		/* Wakeup all the waiting channels */
-		gk20a_channel_semaphore_wakeup(g);
+		gk20a_channel_semaphore_wakeup(g, true);
 	}
 
 	return 0;

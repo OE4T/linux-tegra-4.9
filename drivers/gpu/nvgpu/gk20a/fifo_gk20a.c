@@ -1737,7 +1737,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 
 static u32 fifo_channel_isr(struct gk20a *g, u32 fifo_intr)
 {
-	gk20a_channel_semaphore_wakeup(g);
+	gk20a_channel_semaphore_wakeup(g, false);
 	return fifo_intr_0_channel_intr_pending_f();
 }
 

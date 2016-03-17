@@ -653,7 +653,7 @@ int vgpu_fifo_nonstall_isr(struct gk20a *g,
 
 	switch (info->type) {
 	case TEGRA_VGPU_FIFO_NONSTALL_INTR_CHANNEL:
-		gk20a_channel_semaphore_wakeup(g);
+		gk20a_channel_semaphore_wakeup(g, false);
 		break;
 	default:
 		WARN_ON(1);

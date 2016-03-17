@@ -1061,7 +1061,7 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 	struct seq_file *s = file->private_data;
 	struct tegra_dc_dp_data *dp = s->private;
 	struct tegra_dc_dp_link_config *cfg = NULL;
-	u32 bits_per_pixel = 0, previous_bpp = 0;
+	u32 bits_per_pixel = 0;
 	int ret = 0;
 
 	if (WARN_ON(!dp || !dp->dc || !dp->dc->out))
@@ -1078,11 +1078,6 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 
 	if (cfg->bits_per_pixel == bits_per_pixel)
 		return count;
-	previous_bpp = cfg->bits_per_pixel;
-
-	/* disable the dc and output controllers */
-	if (dp->dc->enabled)
-		tegra_dc_disable(dp->dc);
 
 	if ((bits_per_pixel == 18) || (bits_per_pixel == 24))
 		dev_info(&dp->dc->ndev->dev, "Setting the bits per pixel from %u to %u\n",
@@ -1090,23 +1085,26 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 	else {
 		dev_info(&dp->dc->ndev->dev, "%ubpp is not supported. Restoring to %ubpp\n",
 		bits_per_pixel, cfg->bits_per_pixel);
-		bits_per_pixel = previous_bpp;
+
+		return count;
 	}
+
+	tegra_dp_int_dis(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT |
+			DPAUX_INTR_EN_AUX_UNPLUG_EVENT |
+			DPAUX_INTR_EN_AUX_PLUG_EVENT);
+	dp->dc->out->hotplug_state = -1;
+	tegra_dp_pending_hpd(dp);
+
+	/* wait till HPD state machine has reached disable state */
+	msleep(HPD_DROP_TIMEOUT_MS + 500);
 
 	dp->dc->out->depth = bits_per_pixel;
-	cfg->bits_per_pixel = bits_per_pixel;
 
-	ret = tegra_dc_dp_calc_config(dp, dp->mode, cfg);
-	if (!ret) {
-		dev_info(&dp->dc->ndev->dev, "Unable to set %ubpp properly. Restoring to %ubpp\n",
-			cfg->bits_per_pixel, previous_bpp);
-		dp->dc->out->depth = previous_bpp;
-		cfg->bits_per_pixel = previous_bpp;
-	}
-
-	/* enable the dc and output controllers */
-	if (!dp->dc->enabled)
-		tegra_dc_enable(dp->dc);
+	tegra_dp_int_en(dp, DPAUX_INTR_EN_AUX_PLUG_EVENT |
+			DPAUX_INTR_EN_AUX_UNPLUG_EVENT |
+			DPAUX_INTR_EN_AUX_PLUG_EVENT);
+	dp->dc->out->hotplug_state = 0;
+	tegra_dp_pending_hpd(dp);
 
 	return count;
 }

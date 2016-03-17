@@ -21,8 +21,6 @@
 
 #include "dev.h"
 
-int nvadsp_acast_init(struct platform_device *pdev);
-
 #ifdef CONFIG_PM
 static int nvadsp_t18x_clocks_disable(struct platform_device *pdev)
 {
@@ -146,6 +144,7 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 static int __nvadsp_t18x_runtime_resume(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	int ret;
 
 	dev_dbg(dev, "at %s:%d\n", __func__, __LINE__);
@@ -156,10 +155,12 @@ static int __nvadsp_t18x_runtime_resume(struct device *dev)
 		return ret;
 	}
 
-	ret = nvadsp_acast_init(pdev);
-	if (ret) {
-		dev_dbg(dev, "failed in nvadsp_t18x_clocks_enable\n");
-		return ret;
+	if (!drv_data->adsp_os_secload) {
+		ret = nvadsp_acast_init(pdev);
+		if (ret) {
+			dev_err(dev, "failed in nvadsp_acast_init\n");
+			return ret;
+		}
 	}
 
 	return ret;

@@ -50,4 +50,6 @@ enum adsp_mem_dt {
 	ADSP_MEM_END,
 };
 
+int nvadsp_acast_init(struct platform_device *pdev);
+
 #endif /* __TEGRA_NVADSP_DEV_T18X_H */

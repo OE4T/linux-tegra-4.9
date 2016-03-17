@@ -124,10 +124,6 @@ int nvadsp_acast_init(struct platform_device *pdev)
 		}
 	}
 
-	acast_write(acast_base, AST_STREAMID_CTL_0, ACAST_STREAMID_CTL_0_VAL);
-	acast_write(acast_base, AST_STREAMID_CTL_1, ACAST_STREAMID_CTL_1_VAL);
-	acast_write(acast_base, AST_CONTROL, ACAST_GLOBAL_CTRL_VAL);
-
 	for (i = 0; i < ACAST_REGIONS; i++) {
 		tegra18x_acast_map(acast_base,
 				   acast_regions[i].rgn,

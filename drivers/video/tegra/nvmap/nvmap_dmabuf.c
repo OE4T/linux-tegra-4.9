@@ -378,9 +378,7 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	nvmap_lru_reset(info->handle);
 	mutex_lock(&info->maps_lock);
 
-	mutex_lock(&info->handle->lock);
 	atomic_inc(&info->handle->pin);
-	mutex_unlock(&info->handle->lock);
 
 	sgt = __nvmap_dmabuf_get_sgt_locked(attach, dir);
 	if (sgt)

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -58,7 +58,8 @@ struct db_handler_info {
 static struct hsp_top hsp_top = { .status = HSP_INIT_PENDING };
 static void __iomem *db_bases[HSP_NR_DBS];
 
-static DEFINE_SPINLOCK(db_handlers_lock);
+static DEFINE_MUTEX(db_handlers_lock);
+static int db_irq;
 static struct db_handler_info db_handlers[HSP_LAST_MASTER + 1];
 
 static const char * const master_names[] = {
@@ -127,7 +128,6 @@ static irqreturn_t dbell_irq(int irq, void *data)
 	reg = (ulong)hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING);
 	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING, reg);
 
-	spin_lock(&db_handlers_lock);
 	for_each_set_bit(master, &reg, HSP_LAST_MASTER + 1) {
 		info = &db_handlers[master];
 		if (unlikely(!is_master_valid(master))) {
@@ -137,7 +137,6 @@ static irqreturn_t dbell_irq(int irq, void *data)
 		if (info->handler)
 			info->handler(master, info->data);
 	}
-	spin_unlock(&db_handlers_lock);
 
 	return IRQ_HANDLED;
 }
@@ -275,13 +274,24 @@ EXPORT_SYMBOL(tegra_hsp_db_clr_raw);
  */
 int tegra_hsp_db_add_handler(int master, db_handler_t handler, void *data)
 {
-	ulong flags;
 	if (!handler || !is_master_valid(master))
 		return -EINVAL;
-	spin_lock_irqsave(&db_handlers_lock, flags);
+
+	if (unlikely(db_irq <= 0))
+		return -ENODEV;
+
+	mutex_lock(&db_handlers_lock);
+	if (likely(db_handlers[master].handler != NULL)) {
+		mutex_unlock(&db_handlers_lock);
+		return -EBUSY;
+	}
+
+	disable_irq(db_irq);
 	db_handlers[master].handler = handler;
 	db_handlers[master].data = data;
-	spin_unlock_irqrestore(&db_handlers_lock, flags);
+	enable_irq(db_irq);
+	mutex_unlock(&db_handlers_lock);
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_hsp_db_add_handler);
@@ -294,13 +304,20 @@ EXPORT_SYMBOL(tegra_hsp_db_add_handler);
  */
 int tegra_hsp_db_del_handler(int master)
 {
-	ulong flags;
 	if (!is_master_valid(master))
 		return -EINVAL;
-	spin_lock_irqsave(&db_handlers_lock, flags);
+
+	if (unlikely(db_irq <= 0))
+		return -ENODEV;
+
+	mutex_lock(&db_handlers_lock);
+	WARN_ON(db_handlers[master].handler == NULL);
+	disable_irq(db_irq);
 	db_handlers[master].handler = NULL;
 	db_handlers[master].data = NULL;
-	spin_unlock_irqrestore(&db_handlers_lock, flags);
+	enable_irq(db_irq);
+	mutex_unlock(&db_handlers_lock);
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_hsp_db_del_handler);
@@ -573,6 +590,7 @@ int tegra_hsp_init(void)
 
 	of_node_put(np);
 
+	db_irq = irq;
 	hsp_top.status = HSP_INIT_OKAY;
 	return 0;
 }

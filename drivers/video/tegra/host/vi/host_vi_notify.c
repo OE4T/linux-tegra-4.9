@@ -214,6 +214,13 @@ static int nvhost_vi_notify_probe(struct device *dev,
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
 	unsigned i;
+	struct device_node *rtcpu_node;
+
+	rtcpu_node = of_find_node_by_name(NULL, "rtcpu-vinotify");
+	if (of_device_is_available(rtcpu_node))
+		/* in this case, shouldn't return error because vi4
+		   probe should finish successfully */
+		return 1;
 
 	hvnd->vnd = vnd;
 	hvnd->mask = 0;

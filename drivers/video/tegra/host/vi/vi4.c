@@ -303,7 +303,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		return 0;
 
 	err = vi_notify_register(&nvhost_vi_notify_driver, &pdev->dev, 12);
-	if (err) {
+	if (IS_ERR_VALUE(err)) {
 		nvhost_client_device_release(pdev);
 		return err;
 	}

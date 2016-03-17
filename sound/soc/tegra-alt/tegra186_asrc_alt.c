@@ -176,7 +176,6 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
 	int ret, lane_id;
 	ret = pm_runtime_get_sync(dev->parent);
-
 	if (ret < 0) {
 		dev_err(dev, "parent get_sync failed: %d\n", ret);
 		return ret;
@@ -185,6 +184,10 @@ static int tegra186_asrc_runtime_resume(struct device *dev)
 	regcache_cache_only(asrc->regmap, false);
 	regcache_sync(asrc->regmap);
 
+	/* HW needs sw reset to make sure previous
+		transaction was clean */
+	regmap_write(asrc->regmap,
+		TEGRA186_ASRC_GLOBAL_SOFT_RESET, 0x1);
 	/* Set global starting address of the buffer in ARAM */
 	regmap_write(asrc->regmap,
 		TEGRA186_ASRC_GLOBAL_SCRATCH_ADDR,
@@ -478,10 +481,15 @@ static int tegra186_asrc_req_arad_ratio(struct snd_soc_dapm_widget *w,
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
 	int ret = 0;
 	unsigned int lane_id = 0;
-
 	lane_id = (w->reg - TEGRA186_ASRC_STREAM1_ENABLE) /
 			TEGRA186_ASRC_STREAM_STRIDE;
 
+	if (event == SND_SOC_DAPM_POST_PMD) {
+		regmap_write(asrc->regmap, ASRC_STREAM_REG
+			(TEGRA186_ASRC_STREAM1_SOFT_RESET, lane_id),
+			0x1);
+		return ret;
+	}
 	if (asrc->lane[lane_id].ratio_source == RATIO_ARAD)
 		tegra186_arad_send_ratio();
 
@@ -574,27 +582,27 @@ static const struct snd_soc_dapm_widget tegra186_asrc_widgets[] = {
 	SND_SOC_DAPM_AIF_OUT_E("TX1", NULL, 0, TEGRA186_ASRC_STREAM1_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
 				tegra186_asrc_req_arad_ratio,
-				SND_SOC_DAPM_POST_PMU),
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_AIF_OUT_E("TX2", NULL, 0, TEGRA186_ASRC_STREAM2_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
 				tegra186_asrc_req_arad_ratio,
-				SND_SOC_DAPM_POST_PMU),
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_AIF_OUT_E("TX3", NULL, 0, TEGRA186_ASRC_STREAM3_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
 				tegra186_asrc_req_arad_ratio,
-				SND_SOC_DAPM_POST_PMU),
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_AIF_OUT_E("TX4", NULL, 0, TEGRA186_ASRC_STREAM4_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
 				tegra186_asrc_req_arad_ratio,
-				SND_SOC_DAPM_POST_PMU),
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_AIF_OUT_E("TX5", NULL, 0, TEGRA186_ASRC_STREAM5_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
 				tegra186_asrc_req_arad_ratio,
-				SND_SOC_DAPM_POST_PMU),
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_AIF_OUT_E("TX6", NULL, 0, TEGRA186_ASRC_STREAM6_ENABLE,
 				TEGRA186_ASRC_STREAM_EN_SHIFT, 0,
 				tegra186_asrc_req_arad_ratio,
-				SND_SOC_DAPM_POST_PMU),
+				SND_SOC_DAPM_POST_PMU | SND_SOC_DAPM_POST_PMD),
 	SND_SOC_DAPM_IN("RX7", NULL),
 };
 
@@ -831,6 +839,7 @@ static bool tegra186_asrc_volatile_reg(struct device *dev, unsigned int reg)
 	switch (reg) {
 	case TEGRA186_ASRC_STREAM1_RX_STATUS:
 	case TEGRA186_ASRC_STREAM1_TX_STATUS:
+	case TEGRA186_ASRC_STREAM1_SOFT_RESET:
 	case TEGRA186_ASRC_STREAM1_RATIO_INTEGER_PART:
 	case TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART:
 	case TEGRA186_ASRC_STREAM1_STATUS:
@@ -838,7 +847,7 @@ static bool tegra186_asrc_volatile_reg(struct device *dev, unsigned int reg)
 	case TEGRA186_ASRC_STREAM1_CONFIG_ERR_TYPE:
 	case TEGRA186_ASRC_STREAM1_RATIO_LOCK_STATUS:
 	case TEGRA186_ASRC_RATIO_UPD_RX_STATUS:
-
+	case TEGRA186_ASRC_GLOBAL_SOFT_RESET:
 	case TEGRA186_ASRC_GLOBAL_STATUS:
 	case TEGRA186_ASRC_GLOBAL_STREAM_ENABLE_STATUS:
 	case TEGRA186_ASRC_GLOBAL_INT_STATUS:

@@ -835,8 +835,6 @@ static int tegra_qspi_start_cpu_based_transfer(
 		val |= QSPI_TX_EN;
 	tegra_qspi_writel(tqspi, val, QSPI_COMMAND1);
 
-	/* Need to stabilize other reg bit before PIO bit set */
-	udelay(2);
 #ifdef QSPI_DUMP_REGISTERS
 	dev_info(tqspi->dev, "CPU Transfer started\n");
 	tegra_qspi_dump_regs(tqspi);
@@ -970,7 +968,10 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
 	u32 speed, qspi_cs_timing2 = 0;
+
+#ifdef QSPI_BRINGUP
 	u32 actual_speed = 0;
+#endif
 	u8 bits_per_word;
 	unsigned total_fifo_words;
 	int ret;
@@ -1020,6 +1021,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		return ret;
 	if (!speed)
 		speed = tqspi->qspi_max_frequency;
+#ifdef QSPI_BRINGUP
 	if (speed != tqspi->cur_speed) {
 		ret = clk_set_rate(tqspi->clk, speed);
 		if (ret) {
@@ -1044,6 +1046,7 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		}
 		tqspi->is_ddr_mode = is_ddr;
 	}
+#endif
 	if (is_first_of_msg) {
 		tegra_qspi_clear_status(tqspi);
 
@@ -1590,6 +1593,55 @@ static irqreturn_t tegra_qspi_isr(int irq, void *context_data)
 	return IRQ_WAKE_THREAD;
 }
 
+static void set_best_clk_source(struct tegra_qspi_data *tqspi)
+{
+	long new_rate;
+	unsigned long err_rate;
+	unsigned long rate = tqspi->qspi_max_frequency;
+	unsigned int fin_err = rate;
+	int ret;
+	struct clk *pclk, *fpclk = NULL;
+	const char *pclk_name, *fpclk_name;
+	struct device_node *node;
+	struct property *prop;
+
+	node = (*(tqspi->dev)).of_node;
+
+	if (!of_property_count_strings(node, "nvidia,clk-parents"))
+		return;
+	of_property_for_each_string(node, "nvidia,clk-parents",
+				prop, pclk_name) {
+		pclk = clk_get(tqspi->dev, pclk_name);
+		if (IS_ERR(pclk))
+			continue;
+
+		ret = clk_set_parent(tqspi->clk, pclk);
+		if (ret < 0) {
+			dev_warn(tqspi->dev,
+				"Error in setting parent clk src %s: %d\n",
+				pclk_name, ret);
+			continue;
+		}
+
+		new_rate = clk_round_rate(tqspi->clk, rate);
+
+		if (new_rate < 0)
+			continue;
+
+		err_rate = abs(new_rate - rate);
+		if (err_rate < fin_err) {
+			fpclk = pclk;
+			fin_err = err_rate;
+			fpclk_name = pclk_name;
+		}
+	}
+
+	if (fpclk) {
+		dev_dbg(tqspi->dev, "Setting clk_src %s\n",
+				fpclk_name);
+		clk_set_parent(tqspi->clk, fpclk);
+	}
+}
 static struct tegra_qspi_device_controller_data
 	*tegra_qspi_get_cdata_dt(struct spi_device *spi)
 {
@@ -1705,6 +1757,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	struct tegra_qspi_platform_data *pdata = pdev->dev.platform_data;
 	int ret, qspi_irq;
 	int bus_num;
+	u32 actual_speed = 0;
 
 	if (pdev->dev.of_node) {
 		bus_num = of_alias_get_id(pdev->dev.of_node, "qspi");
@@ -1726,7 +1779,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	}
 
 	if (!pdata->qspi_max_frequency)
-		pdata->qspi_max_frequency = 133000000; /* 133MHz */
+		pdata->qspi_max_frequency = 136000000; /* 136MHz */
 
 	master = spi_alloc_master(&pdev->dev, sizeof(*tqspi));
 	if (!master) {
@@ -1807,8 +1860,6 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->is_ddr_mode = false;
 	tqspi->max_buf_size = QSPI_FIFO_DEPTH << 2;
 	tqspi->dma_buf_size = DEFAULT_SPI_DMA_BUF_LEN;
-	tqspi->qspi_max_frequency = pdata->qspi_max_frequency;
-
 	if (pdata->dma_req_sel) {
 		ret = tegra_qspi_init_dma_param(tqspi, true);
 		if (ret < 0) {
@@ -1855,6 +1906,26 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		dev_err(&pdev->dev, "pm runtime get failed, e = %d\n", ret);
 		goto exit_pm_disable;
+	}
+	tqspi->qspi_max_frequency = pdata->qspi_max_frequency;
+	set_best_clk_source(tqspi);
+	ret = clk_set_rate(tqspi->clk, tqspi->qspi_max_frequency);
+	if (ret) {
+		dev_err(tqspi->dev,
+		"Failed to set qspi clk freq %d\n", ret);
+		goto exit_free_irq;
+	}
+	tqspi->cur_speed = tqspi->qspi_max_frequency;
+	actual_speed = clk_get_rate(tqspi->clk);
+	if (actual_speed > 0) {
+		ret = clk_set_rate(tqspi->sdr_ddr_clk,
+			(actual_speed>>1));
+		if (ret) {
+			dev_err(tqspi->dev,
+			"Failed to set qspi_out clk freq %d\n"
+			, ret);
+			goto exit_free_irq;
+		}
 	}
 
 	tqspi->def_command1_reg  = QSPI_M_S | QSPI_CS_SW_HW |  QSPI_CS_SW_VAL;

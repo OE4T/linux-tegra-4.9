@@ -1838,7 +1838,7 @@ static void eqos_print_rx_tstamp_info(struct s_rx_desc *rxdesc,
 	ptp_pkt_type =
 	    ((ptp_status & 0x1000) ? "ptp over Eth" : "ptp over IPv4/6");
 
-	pkt_type = ((ptp_status & 0xF00) > 8);
+	pkt_type = ((ptp_status & 0xF00) >> 8);
 	switch (pkt_type) {
 	case 0:
 		ptp_msg_type = "NO PTP msg received";

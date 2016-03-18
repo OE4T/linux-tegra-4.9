@@ -567,16 +567,13 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 	if (err)
 		return -EFAULT;
 
+	err = -ENOTTY;
+
 	switch (cmd) {
 	case NVMAP_IOC_CREATE:
 	case NVMAP_IOC_FROM_FD:
 		err = nvmap_ioctl_create(filp, cmd, uarg);
 		break;
-
-	case NVMAP_IOC_FROM_ID:
-	case NVMAP_IOC_GET_ID:
-		pr_warn_once("nvmap: unsupported FROM_ID/GET_ID IOCTLs used.\n");
-		return -ENOTTY;
 
 	case NVMAP_IOC_GET_FD:
 		err = nvmap_ioctl_getfd(filp, uarg);
@@ -615,13 +612,6 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 #ifdef CONFIG_COMPAT
-	case NVMAP_IOC_MMAP_32:
-#endif
-	case NVMAP_IOC_MMAP:
-		pr_warn("nvmap: unsupported MMAP IOCTL used.\n");
-		return -ENOTTY;
-
-#ifdef CONFIG_COMPAT
 	case NVMAP_IOC_WRITE_32:
 	case NVMAP_IOC_READ_32:
 		err = nvmap_ioctl_rw_handle(filp, cmd == NVMAP_IOC_READ_32,
@@ -651,14 +641,42 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 						   cmd == NVMAP_IOC_RESERVE);
 		break;
 
+	/* Depreacted IOCTL's */
+#ifdef CONFIG_COMPAT
+	case NVMAP_IOC_MMAP_32:
+#endif
+	case NVMAP_IOC_MMAP:
+		pr_warn("NVMAP_IOC_MMAP is deprecated. Use mmap().\n");
+		break;
+
+#ifdef CONFIG_COMPAT
+	case NVMAP_IOC_UNPIN_MULT_32:
+	case NVMAP_IOC_PIN_MULT_32:
+		pr_warn("NVMAP_IOC_[UN]PIN_MULT is deprecated. "
+			"User space must never pin NvMap handles to "
+			"allow multiple IOVA spaces.\n");
+		break;
+#endif
+
+	case NVMAP_IOC_UNPIN_MULT:
+	case NVMAP_IOC_PIN_MULT:
+		pr_warn("NVMAP_IOC_[UN]PIN_MULT/ is deprecated. "
+			"User space must never pin NvMap handles to "
+			"allow multiple IOVA spaces.\n");
+		break;
+
+	case NVMAP_IOC_FROM_ID:
+	case NVMAP_IOC_GET_ID:
+		pr_warn("NVMAP_IOC_GET_ID/FROM_ID pair is deprecated. "
+			"Use the pair NVMAP_IOC_GET_FD/FROM_FD.\n");
+		break;
+
 	case NVMAP_IOC_SHARE:
-		pr_warn("NVMAP_IOC_SHARE is deprecated and no longer supported."
-			" Use NVMAP_IOC_GET_FD.\n");
-		err = -ENOTTY;
+		pr_warn("NVMAP_IOC_SHARE is deprecated. Use NVMAP_IOC_GET_FD.\n");
 		break;
 
 	default:
-		return -ENOTTY;
+		pr_warn("Unknown NVMAP_IOC = 0x%x\n", cmd);
 	}
 	return err;
 }

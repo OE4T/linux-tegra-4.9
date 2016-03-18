@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21439,7 +21439,7 @@ static ssize_t TX_NORMAL_DESC_status_read(struct file *file,
 					i++;
 				}
 			} else {	/* (tmp_dirty_tx < tmp_cur_tx) */
-				for (; tmp_dirty_tx > tmp_dirty_tx;
+				for (; tmp_dirty_tx > TX_DESC_CNT;
 				     tmp_dirty_tx++) {
 					sprintf(tmp_buf, "%d ", tmp_dirty_tx);
 					strcat(debug_buf, tmp_buf);

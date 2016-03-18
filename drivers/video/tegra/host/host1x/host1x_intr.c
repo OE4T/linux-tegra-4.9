@@ -257,8 +257,9 @@ static int t20_intr_request_host_general_irq(struct nvhost_intr *intr)
 	host1x_sync_writel(dev, host1x_sync_hintstatus_r(),
 			0xfffffffful);
 
-	err = request_irq(intr->general_irq, t20_intr_host1x_isr,
-			0, "host_status", intr);
+	err = request_threaded_irq(intr->general_irq, NULL,
+				t20_intr_host1x_isr,
+				IRQF_ONESHOT, "host_status", intr);
 	if (err)
 		return err;
 

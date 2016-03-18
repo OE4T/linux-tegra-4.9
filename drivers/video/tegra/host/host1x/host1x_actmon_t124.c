@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T124 and T210
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,11 +42,9 @@ u32 static actmon_readl(struct host1x_actmon *actmon, u32 reg)
 	return val;
 }
 
-static void host1x_actmon_event_fn(struct work_struct *work)
+static void host1x_actmon_event_fn(struct host1x_actmon *actmon,
+	enum wmark_type_e type)
 {
-	struct host1x_actmon_worker *worker =
-		container_of(work, struct host1x_actmon_worker, work);
-	struct host1x_actmon *actmon = worker->actmon;
 	struct platform_device *pdev = actmon->pdev;
 	struct nvhost_device_data *engine_pdata = platform_get_drvdata(pdev);
 
@@ -54,13 +52,13 @@ static void host1x_actmon_event_fn(struct work_struct *work)
 	nvhost_module_busy_noresume(pdev);
 	if (pm_runtime_active(&pdev->dev)) {
 		/* first, handle scaling */
-		nvhost_scale_actmon_irq(pdev, worker->type);
+		nvhost_scale_actmon_irq(pdev, type);
 
 		/* then, rewire the actmon IRQ */
 		nvhost_intr_enable_host_irq(&nvhost_get_host(pdev)->intr,
 					    engine_pdata->actmon_irq,
 					    host1x_actmon_process_isr,
-					    worker->actmon);
+					    actmon);
 	}
 	nvhost_module_idle(pdev);
 }
@@ -82,9 +80,9 @@ static void host1x_actmon_process_isr(u32 hintstat, void *priv)
 	actmon_writel(actmon, val, actmon_intr_status_r());
 
 	if (actmon_intr_status_intr_status_avg_above_v(val))
-		schedule_work(&actmon->above_wmark_worker.work);
+		host1x_actmon_event_fn(actmon, ACTMON_INTR_ABOVE_WMARK);
 	else if (actmon_intr_status_intr_status_avg_below_v(val))
-		schedule_work(&actmon->below_wmark_worker.work);
+		host1x_actmon_event_fn(actmon, ACTMON_INTR_BELOW_WMARK);
 }
 
 /*
@@ -198,18 +196,6 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	val |= actmon_ctrl_actmon_enable_f(1);
 	actmon_writel(actmon, val, actmon_ctrl_r());
 
-	if (engine_pdata->actmon_irq) {
-		/* setup watermark workers */
-		actmon->below_wmark_worker.actmon = actmon;
-		actmon->below_wmark_worker.type = ACTMON_INTR_BELOW_WMARK;
-		INIT_WORK(&actmon->below_wmark_worker.work,
-				host1x_actmon_event_fn);
-		actmon->above_wmark_worker.actmon = actmon;
-		actmon->above_wmark_worker.type = ACTMON_INTR_ABOVE_WMARK;
-		INIT_WORK(&actmon->above_wmark_worker.work,
-				host1x_actmon_event_fn);
-	}
-
 	nvhost_intr_enable_host_irq(&nvhost_get_host(host_pdev)->intr,
 				    engine_pdata->actmon_irq,
 				    host1x_actmon_process_isr,
@@ -233,12 +219,6 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 	actmon_writel(actmon, 0xffffffff, actmon_intr_status_r());
 	nvhost_intr_disable_host_irq(&nvhost_get_host(host_pdev)->intr,
 				     engine_pdata->actmon_irq);
-
-	/* wait for work to finish and then cancel*/
-	if (engine_pdata->actmon_irq) {
-		cancel_work_sync(&actmon->above_wmark_worker.work);
-		cancel_work_sync(&actmon->below_wmark_worker.work);
-	}
 
 	actmon->init = ACTMON_SLEEP;
 }

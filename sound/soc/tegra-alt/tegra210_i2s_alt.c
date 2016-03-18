@@ -743,10 +743,10 @@ static const struct snd_soc_dapm_widget tegra210_i2s_widgets[] = {
 				0, 0),
 	SND_SOC_DAPM_AIF_IN_E("DAP RX", NULL, 0, TEGRA210_I2S_AXBAR_TX_ENABLE,
 				TEGRA210_I2S_AXBAR_TX_EN_SHIFT, 0,
-				tegra210_i2s_rx_stop, SND_SOC_DAPM_POST_PMD),
+				tegra210_i2s_rx_stop, SND_SOC_DAPM_PRE_PMU),
 	SND_SOC_DAPM_AIF_OUT_E("DAP TX", NULL, 0, TEGRA210_I2S_AXBAR_RX_ENABLE,
 				TEGRA210_I2S_AXBAR_RX_EN_SHIFT, 0,
-				tegra210_i2s_tx_stop, SND_SOC_DAPM_POST_PMD),
+				tegra210_i2s_tx_stop, SND_SOC_DAPM_PRE_PMU),
 };
 
 static const struct snd_soc_dapm_route tegra210_i2s_routes[] = {
@@ -852,6 +852,8 @@ static bool tegra210_i2s_volatile_reg(struct device *dev, unsigned int reg)
 {
 	switch (reg) {
 	case TEGRA210_I2S_AXBAR_RX_INT_STATUS:
+	case TEGRA210_I2S_AXBAR_RX_STATUS:
+	case TEGRA210_I2S_AXBAR_TX_STATUS:
 	case TEGRA210_I2S_AXBAR_TX_INT_STATUS:
 	case TEGRA210_I2S_INT_STATUS:
 	case TEGRA210_I2S_AXBAR_RX_SOFT_RESET:

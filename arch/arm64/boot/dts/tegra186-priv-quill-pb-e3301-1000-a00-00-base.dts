@@ -20,6 +20,7 @@
 #include "tegra186-modules/tegra186-super-module-e2614-p2597-1000-a00.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-e3301-0000-a00-plugin-manager.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-display-plugin-manager.dtsi"
+#include "tegra186-prod/tegra186-priv-quill-pb-e3301-1000-a00-prod.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

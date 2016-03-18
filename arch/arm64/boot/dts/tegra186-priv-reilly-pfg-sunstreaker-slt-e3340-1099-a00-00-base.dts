@@ -15,6 +15,7 @@
  */
 
 #include "tegra186-priv-sunstreaker-slt-e3340-1099-a00-00-base.dts"
+#include "tegra186-prod/tegra186-priv-reilly-pfg-sunstreaker-slt-e3340-1099-a00-prod.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

@@ -18,6 +18,7 @@
 #include "tegra186-plugin-manager/tegra186-sunstreaker-e3340-0000-a00-plugin-manager.dtsi"
 #include "tegra186-platforms/tegra186-sunstreaker-char-e3340-a00-disp.dsti"
 #include "tegra186-platforms/mods-display.dtsi"
+#include "tegra186-prod/tegra186-priv-sunstreaker-slt-e3340-1099-a00-00-prod.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

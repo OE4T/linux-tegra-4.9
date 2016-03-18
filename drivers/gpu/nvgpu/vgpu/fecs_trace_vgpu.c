@@ -62,6 +62,11 @@ static int vgpu_fecs_trace_init(struct gk20a *g)
 	}
 
 	vcst->buf = ioremap_cache(vcst->cookie->ipa, vcst->cookie->size);
+	if (!vcst->buf) {
+		dev_info(dev_from_gk20a(g), "ioremap_cache failed\n");
+		err = -EINVAL;
+		goto fail;
+	}
 	vcst->header = vcst->buf;
 	vcst->num_entries = vcst->header->num_ents;
 	if (unlikely(vcst->header->ent_size != sizeof(*vcst->entries))) {
@@ -75,7 +80,7 @@ static int vgpu_fecs_trace_init(struct gk20a *g)
 	return 0;
 fail:
 	iounmap(vcst->buf);
-	if (vcst->cookie)
+	if (!IS_ERR(vcst->cookie))
 		tegra_hv_mempool_unreserve(vcst->cookie);
 	kfree(vcst);
 	return err;

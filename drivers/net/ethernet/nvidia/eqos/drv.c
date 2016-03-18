@@ -1272,10 +1272,9 @@ static int eqos_open(struct net_device *dev)
 	DBGPR("<--%s()\n", __func__);
 	return Y_SUCCESS;
 
-	if (pdt_cfg->eth_iso_enable) {
  err_isomgr_fail:
+	if (pdt_cfg->eth_iso_enable)
 		desc_if->free_buff_and_desc(pdata);
-	}
 
  err_out_desc_buf_alloc_failed:
 	free_txrx_irqs(pdata);

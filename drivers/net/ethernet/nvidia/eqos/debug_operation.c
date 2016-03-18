@@ -2682,9 +2682,7 @@ static ssize_t eqos_write(struct file *file, const char __user *buf,
 			    feature_drop_tx_pktburstcnt_val;
 		} else if (!strcmp(reg_name, "qinx")) {
 			qinx_val = (int)integer_value;
-			if (qinx_val != 0
-			    && ((qinx_val < 0)
-				|| (qinx_val > (EQOS_QUEUE_CNT - 1)))) {
+			if (qinx_val > (EQOS_QUEUE_CNT - 1)) {
 				qinx_val = 0;
 				pr_err("Invalid queue number\n");
 				ret = -EFAULT;

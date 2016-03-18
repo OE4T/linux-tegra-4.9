@@ -30,7 +30,7 @@ static int native_init_prepare(void)
 	return tegra_hsp_init();
 }
 
-static void native_inbox_irq(int master, void *data)
+static void native_inbox_irq(void *data)
 {
 	bpmp_handle_irq(BPMP_TO_CPU_CH);
 }

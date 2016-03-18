@@ -17,12 +17,12 @@
 #include <linux/tegra-hsp.h>
 #include <linux/irqchip/tegra-agic.h>
 
-static void nvadsp_dbell_handler(int master, void *data)
+static void nvadsp_dbell_handler(void *data)
 {
 	struct platform_device *pdev = data;
 	struct device *dev = &pdev->dev;
 
-	dev_info(dev, "APE DBELL handler (master:%d)\n", master);
+	dev_info(dev, "APE DBELL handler\n");
 }
 
 

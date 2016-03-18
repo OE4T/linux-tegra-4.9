@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -62,7 +62,7 @@ enum tegra_hsp_doorbell {
 	HSP_NR_DBS,
 };
 
-typedef void (*db_handler_t)(int master, void *data);
+typedef void (*db_handler_t)(void *data);
 
 int tegra_hsp_init(void);
 

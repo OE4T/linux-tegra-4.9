@@ -106,7 +106,7 @@ static void tegra_aon_rx_worker(struct work_struct *work)
 	}
 }
 
-static void hsp_irq_handler(int master, void *data)
+static void hsp_irq_handler(void *data)
 {
 	struct tegra_aon *aon = data;
 

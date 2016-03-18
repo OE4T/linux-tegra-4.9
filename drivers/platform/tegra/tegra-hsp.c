@@ -135,7 +135,7 @@ static irqreturn_t dbell_irq(int irq, void *data)
 			continue;
 		}
 		if (info->handler)
-			info->handler(master, info->data);
+			info->handler(info->data);
 	}
 
 	return IRQ_HANDLED;
@@ -398,7 +398,7 @@ static int hsp_dbg_raw_store(void *data, u64 val)
 
 static u32 ccplex_intr_count;
 
-static void hsp_dbg_db_handler(int master, void *data)
+static void hsp_dbg_db_handler(void *data)
 {
 	ccplex_intr_count++;
 }

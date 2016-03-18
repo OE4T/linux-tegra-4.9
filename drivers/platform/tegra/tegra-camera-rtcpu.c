@@ -203,7 +203,7 @@ static void cam_rtcpu_rx_worker(struct work_struct *work)
 	}
 }
 
-static void tegra_cam_rtcpu_isr(int irq, void *data)
+static void tegra_cam_rtcpu_isr(void *data)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu = data;
 

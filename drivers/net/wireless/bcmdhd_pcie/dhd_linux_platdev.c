@@ -39,6 +39,9 @@
 #include <dhd_bus.h>
 #include <dhd_linux.h>
 #include <wl_android.h>
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+#include "dhd_custom_sysfs_tegra.h"
+#endif
 #if defined(CONFIG_WIFI_CONTROL_FUNC)
 #include <linux/wlan_plat.h>
 #endif
@@ -617,6 +620,9 @@ static int dhd_wifi_platform_load_pcie(void)
 						DHD_ERROR(("failed to power up %s,"
 							" %d retry left\n",
 							adapter->name, retry));
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+						TEGRA_SYSFS_HISTOGRAM_STAT_INC(wifi_on_retry);
+#endif
 						/* WL_REG_ON state unknown, Power off forcely */
 						wifi_platform_set_power(adapter,
 							FALSE, WIFI_TURNOFF_DELAY);
@@ -627,6 +633,9 @@ static int dhd_wifi_platform_load_pcie(void)
 							DHD_ERROR(("failed to enumerate bus %s, "
 								"%d retry left\n",
 								adapter->name, retry));
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+							TEGRA_SYSFS_HISTOGRAM_STAT_INC(wifi_on_retry);
+#endif
 							wifi_platform_set_power(adapter, FALSE,
 								WIFI_TURNOFF_DELAY);
 						} else {
@@ -638,9 +647,15 @@ static int dhd_wifi_platform_load_pcie(void)
 				if (!retry) {
 					DHD_ERROR(("failed to power up %s, max retry reached**\n",
 						adapter->name));
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+					TEGRA_SYSFS_HISTOGRAM_STAT_INC(wifi_on_fail);
+#endif
 					return -ENODEV;
 				}
 			}
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(wifi_on_success);
+#endif
 		}
 
 		err = dhd_bus_register();
@@ -747,6 +762,9 @@ static int dhd_wifi_platform_load_sdio(void)
 			}
 
 			DHD_ERROR(("failed to power up %s, %d retry left\n", adapter->name, retry));
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(wifi_on_retry);
+#endif
 			dhd_bus_unreg_sdio_notify();
 			wifi_platform_set_power(adapter, FALSE, WIFI_TURNOFF_DELAY);
 			wifi_platform_bus_enumerate(adapter, FALSE);
@@ -754,8 +772,14 @@ static int dhd_wifi_platform_load_sdio(void)
 
 		if (!chip_up) {
 			DHD_ERROR(("failed to power up %s, max retry reached**\n", adapter->name));
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(wifi_on_fail);
+#endif
 			return -ENODEV;
 		}
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+		TEGRA_SYSFS_HISTOGRAM_STAT_INC(wifi_on_success);
+#endif
 
 	}
 

@@ -74,6 +74,10 @@
 #include <dhd_ip.h>
 #endif /* DHDTCPACK_SUPPRESS */
 
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+#include "dhd_custom_sysfs_tegra.h"
+#endif
+
 bool dhd_mp_halting(dhd_pub_t *dhdp);
 extern void bcmsdh_waitfor_iodrain(void *sdh);
 extern void bcmsdh_reject_ioreqs(void *sdh, bool reject);
@@ -2139,7 +2143,14 @@ dhdsdio_sendfromq(dhd_bus_t *bus, uint maxframes)
 		if (i == 0)
 			break;
 		if (dhdsdio_txpkt(bus, SDPCM_DATA_CHANNEL, pkts, i, TRUE) != BCME_OK)
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+		{
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(sdio_tx_err);
+#endif
 			dhd->tx_errors++;
+#ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
+		}
+#endif
 		else
 			dhd->dstats.tx_bytes += datalen;
 		cnt += i;

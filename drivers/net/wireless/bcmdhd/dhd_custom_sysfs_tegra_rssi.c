@@ -65,6 +65,22 @@ rssi_work_func(struct work_struct *work)
 			0);
 	}
 
+	/* save rssi value for statistics */
+	if (((int) scb_val.val) < 0) {
+		TEGRA_SYSFS_HISTOGRAM_STAT_SET(rssi, scb_val.val);
+		if (bcmdhd_stat.rssi < -67) {
+			if (bcmdhd_stat.channel_stat)
+				TEGRA_SYSFS_HISTOGRAM_STAT_INC
+					(channel_stat->rssi_low);
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_low);
+		} else {
+			if (bcmdhd_stat.channel_stat)
+				TEGRA_SYSFS_HISTOGRAM_STAT_INC
+					(channel_stat->rssi_high);
+			TEGRA_SYSFS_HISTOGRAM_STAT_INC(rssi_high);
+		}
+	}
+
 	/* schedule next rssi */
 fail:
 	schedule_delayed_work(&rssi_work,

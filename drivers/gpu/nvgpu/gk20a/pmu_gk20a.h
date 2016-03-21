@@ -60,6 +60,11 @@
 #define APP_VERSION_1 17997577
 #define APP_VERSION_0 16856675
 
+/*Fuse defines*/
+#define FUSE_GCPLEX_CONFIG_FUSE_0           0x2C8
+#define PMU_MODE_MISMATCH_STATUS_MAILBOX_R  6
+#define PMU_MODE_MISMATCH_STATUS_VAL        0xDEADDEAD
+
 
 enum pmu_perfmon_cmd_start_fields {
 	COUNTER_ALLOC

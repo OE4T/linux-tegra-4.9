@@ -14,12 +14,14 @@
  */
 
 #include <linux/delay.h>	/* for udelay */
+#include <linux/tegra-fuse.h>
 #include "gk20a/gk20a.h"
 #include "gk20a/pmu_gk20a.h"
 #include "acr_gm20b.h"
 #include "pmu_gm20b.h"
 #include "hw_gr_gm20b.h"
 #include "hw_pwr_gm20b.h"
+#include "hw_fuse_gm20b.h"
 
 /*!
  * Structure/object which single register write need to be done during PG init
@@ -289,6 +291,17 @@ static void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr)
 	gk20a_writel(g, pwr_falcon_dmatrfbase_r(), addr);
 }
 
+/*Dump Security related fuses*/
+static void pmu_dump_security_fuses_gm20b(struct gk20a *g)
+{
+	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
+			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
+	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
+			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
+	gk20a_err(dev_from_gk20a(g), "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
+			tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0));
+}
+
 void gm20b_init_pmu_ops(struct gpu_ops *gops)
 {
 	if (gops->privsecurity) {
@@ -309,4 +322,5 @@ void gm20b_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
 	gops->pmu.pmu_pg_grinit_param = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
+	gops->pmu.dump_secure_fuses = pmu_dump_security_fuses_gm20b;
 }

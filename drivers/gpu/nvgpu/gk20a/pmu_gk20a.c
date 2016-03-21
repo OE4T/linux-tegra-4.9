@@ -2772,6 +2772,7 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_elpg_statistics = gk20a_pmu_elpg_statistics;
 	gops->pmu.pmu_pg_grinit_param = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
+	gops->pmu.dump_secure_fuses = NULL;
 }
 
 int gk20a_init_pmu_support(struct gk20a *g)
@@ -3730,6 +3731,11 @@ void gk20a_pmu_isr(struct gk20a *g)
 		gk20a_err(dev_from_gk20a(g),
 			"pmu halt intr not implemented");
 		pmu_dump_falcon_stats(pmu);
+		if (gk20a_readl(g, pwr_pmu_mailbox_r
+				(PMU_MODE_MISMATCH_STATUS_MAILBOX_R)) ==
+				PMU_MODE_MISMATCH_STATUS_VAL)
+			if (g->ops.pmu.dump_secure_fuses)
+				g->ops.pmu.dump_secure_fuses(g);
 	}
 	if (intr & pwr_falcon_irqstat_exterr_true_f()) {
 		gk20a_err(dev_from_gk20a(g),

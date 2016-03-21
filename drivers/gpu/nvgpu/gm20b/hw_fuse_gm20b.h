@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -125,5 +125,13 @@ static inline u32 fuse_status_opt_fbp_r(void)
 static inline u32 fuse_status_opt_fbp_idx_v(u32 r, u32 i)
 {
 	return (r >> (0 + i*0)) & 0x1;
+}
+static inline u32 fuse_opt_sec_debug_en_r(void)
+{
+	return 0x00021218;
+}
+static inline u32 fuse_opt_priv_sec_en_r(void)
+{
+	return 0x00021434;
 }
 #endif

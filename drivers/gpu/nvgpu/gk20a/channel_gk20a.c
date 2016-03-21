@@ -2506,7 +2506,13 @@ unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 
 	mutex_lock(&event_id_data->lock);
 
-	if (!event_id_data->is_tsg) {
+	if (event_id_data->is_tsg) {
+		struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
+
+		gk20a_dbg_info(
+			"found pending event_id=%d on TSG=%d\n",
+			event_id, tsg->tsgid);
+	} else {
 		struct channel_gk20a *ch = g->fifo.channel
 					   + event_id_data->id;
 
@@ -2526,7 +2532,13 @@ int gk20a_event_id_release(struct inode *inode, struct file *filp)
 	struct gk20a_event_id_data *event_id_data = filp->private_data;
 	struct gk20a *g = event_id_data->g;
 
-	if (!event_id_data->is_tsg) {
+	if (event_id_data->is_tsg) {
+		struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
+
+		mutex_lock(&tsg->event_id_list_lock);
+		list_del_init(&event_id_data->event_id_node);
+		mutex_unlock(&tsg->event_id_list_lock);
+	} else {
 		struct channel_gk20a *ch = g->fifo.channel + event_id_data->id;
 
 		mutex_lock(&ch->event_id_list_lock);
@@ -2540,7 +2552,7 @@ int gk20a_event_id_release(struct inode *inode, struct file *filp)
 	return 0;
 }
 
-static const struct file_operations gk20a_event_id_ops = {
+const struct file_operations gk20a_event_id_ops = {
 	.owner = THIS_MODULE,
 	.poll = gk20a_event_id_poll,
 	.release = gk20a_event_id_release,

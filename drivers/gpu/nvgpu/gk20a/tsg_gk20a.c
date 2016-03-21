@@ -153,6 +153,9 @@ int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid)
 	INIT_LIST_HEAD(&tsg->ch_list);
 	mutex_init(&tsg->ch_list_lock);
 
+	INIT_LIST_HEAD(&tsg->event_id_list);
+	mutex_init(&tsg->event_id_list_lock);
+
 	return 0;
 }
 
@@ -182,6 +185,122 @@ static int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 	g->ops.fifo.update_runlist(g, 0, ~0, true, true);
 
 	return 0;
+}
+
+static int gk20a_tsg_get_event_data_from_id(struct tsg_gk20a *tsg,
+				int event_id,
+				struct gk20a_event_id_data **event_id_data)
+{
+	struct gk20a_event_id_data *local_event_id_data;
+	bool event_found = false;
+
+	mutex_lock(&tsg->event_id_list_lock);
+	list_for_each_entry(local_event_id_data, &tsg->event_id_list,
+						 event_id_node) {
+		if (local_event_id_data->event_id == event_id) {
+			event_found = true;
+			break;
+		}
+	}
+	mutex_unlock(&tsg->event_id_list_lock);
+
+	if (event_found) {
+		*event_id_data = local_event_id_data;
+		return 0;
+	} else {
+		return -1;
+	}
+}
+
+static int gk20a_tsg_event_id_enable(struct tsg_gk20a *tsg,
+					 int event_id,
+					 int *fd)
+{
+	int err = 0;
+	int local_fd;
+	struct file *file;
+	char *name;
+	struct gk20a_event_id_data *event_id_data;
+
+	err = gk20a_tsg_get_event_data_from_id(tsg,
+				event_id, &event_id_data);
+	if (err == 0) /* We already have event enabled */
+		return -EINVAL;
+
+	err = get_unused_fd_flags(O_RDWR);
+	if (err < 0)
+		return err;
+	local_fd = err;
+
+	name = kasprintf(GFP_KERNEL, "nvgpu-event%d-fd%d",
+			event_id, local_fd);
+
+	file = anon_inode_getfile(name, &gk20a_event_id_ops,
+				  NULL, O_RDWR);
+	kfree(name);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto clean_up;
+	}
+
+	event_id_data = kzalloc(sizeof(*event_id_data), GFP_KERNEL);
+	if (!event_id_data) {
+		err = -ENOMEM;
+		goto clean_up_file;
+	}
+	event_id_data->g = tsg->g;
+	event_id_data->id = tsg->tsgid;
+	event_id_data->is_tsg = true;
+	event_id_data->event_id = event_id;
+
+	init_waitqueue_head(&event_id_data->event_id_wq);
+	mutex_init(&event_id_data->lock);
+	INIT_LIST_HEAD(&event_id_data->event_id_node);
+
+	mutex_lock(&tsg->event_id_list_lock);
+	list_add_tail(&event_id_data->event_id_node, &tsg->event_id_list);
+	mutex_unlock(&tsg->event_id_list_lock);
+
+	fd_install(local_fd, file);
+	file->private_data = event_id_data;
+
+	*fd = local_fd;
+
+	return 0;
+
+clean_up_file:
+	fput(file);
+clean_up:
+	put_unused_fd(local_fd);
+	return err;
+}
+
+static int gk20a_tsg_event_id_ctrl(struct gk20a *g, struct tsg_gk20a *tsg,
+		struct nvgpu_event_id_ctrl_args *args)
+{
+	int err = 0;
+	int fd = -1;
+
+	if (args->event_id < 0 ||
+	    args->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX)
+		return -EINVAL;
+
+	switch (args->cmd) {
+	case NVGPU_IOCTL_CHANNEL_EVENT_ID_CMD_ENABLE:
+		err = gk20a_tsg_event_id_enable(tsg, args->event_id, &fd);
+		if (!err)
+			args->event_fd = fd;
+		break;
+
+	default:
+		gk20a_err(dev_from_gk20a(tsg->g),
+			   "unrecognized tsg event id cmd: 0x%x",
+			   args->cmd);
+		err = -EINVAL;
+		break;
+	}
+
+	return err;
 }
 
 static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
@@ -369,6 +488,13 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_tsg_set_priority(g, tsg,
 			((struct nvgpu_set_priority_args *)buf)->priority);
+		break;
+		}
+
+	case NVGPU_IOCTL_TSG_EVENT_ID_CTRL:
+		{
+		err = gk20a_tsg_event_id_ctrl(g, tsg,
+			(struct nvgpu_event_id_ctrl_args *)buf);
 		break;
 		}
 

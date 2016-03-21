@@ -448,11 +448,15 @@ struct nvgpu_gpu_get_cpu_time_correlation_info_args {
 	_IO(NVGPU_TSG_IOCTL_MAGIC, 5)
 #define NVGPU_IOCTL_TSG_SET_PRIORITY \
 	_IOW(NVGPU_TSG_IOCTL_MAGIC, 6, struct nvgpu_set_priority_args)
+#define NVGPU_IOCTL_TSG_EVENT_ID_CTRL \
+	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 7, struct nvgpu_event_id_ctrl_args)
 
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
-	sizeof(struct nvgpu_set_priority_args)
+	sizeof(struct nvgpu_event_id_ctrl_args)
 #define NVGPU_TSG_IOCTL_LAST		\
-	_IOC_NR(NVGPU_IOCTL_TSG_SET_PRIORITY)
+	_IOC_NR(NVGPU_IOCTL_TSG_EVENT_ID_CTRL)
+
+
 /*
  * /dev/nvhost-dbg-gpu device
  *

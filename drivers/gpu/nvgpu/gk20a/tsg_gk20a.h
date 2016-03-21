@@ -51,6 +51,9 @@ struct tsg_gk20a {
 	struct vm_gk20a *vm;
 
 	u32 interleave_level;
+
+	struct list_head event_id_list;
+	struct mutex event_id_list_lock;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);

@@ -127,7 +127,7 @@ static int csi_get_clks(struct tegra_csi_device *csi,
 static int set_csi_properties(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
 {
-	struct camera_common_data *s_data = &csi->s_data;
+	struct camera_common_data *s_data = &csi->s_data[0];
 
 	csi->pg_mode = 0;
 	/*
@@ -137,7 +137,7 @@ static int set_csi_properties(struct tegra_csi_device *csi,
 	*/
 	s_data->csi_port = 0;
 	s_data->numlanes = 12;
-	s_data->def_clk_freq = 102000000;
+	csi->clk_freq = TEGRA_CLOCK_CSI_PORT_MAX;
 
 	if (!csi->ports) {
 		int port_num = (s_data->numlanes >> 1);
@@ -155,10 +155,11 @@ static int set_csi_properties(struct tegra_csi_device *csi,
 void set_csi_portinfo(struct tegra_csi_device *csi,
 	unsigned int port, unsigned int numlanes)
 {
-	struct camera_common_data *s_data = &csi->s_data;
+	struct camera_common_data *s_data = &csi->s_data[port];
 
 	s_data->csi_port = port;
 	s_data->numlanes = numlanes;
+	s_data->def_clk_freq = TEGRA_CLOCK_CSI_PORT_MAX;
 	csi->ports[port].lanes = numlanes;
 }
 EXPORT_SYMBOL(set_csi_portinfo);
@@ -209,8 +210,6 @@ int tegra_csi_power(struct tegra_csi_device *csi, int port_num, int enable)
 {
 	int err = 0;
 	int port = port_num >> 1;
-	struct camera_common_data *s_data = &csi->s_data;
-
 
 	if (enable) {
 		/* set clk and power */
@@ -218,12 +217,12 @@ int tegra_csi_power(struct tegra_csi_device *csi, int port_num, int enable)
 		if (err)
 			pr_err("csi clk error\n");
 
-		err = clock_start(csi->cil[port], s_data->def_clk_freq);
+		err = clock_start(csi->cil[port], csi->clk_freq);
 		if (err)
 			pr_err("cil clk error\n");
 
 		if (csi->pg_mode) {
-			err = clock_start(csi->tpg_clk, 927000000);
+			err = clock_start(csi->tpg_clk, TEGRA_CLOCK_TPG_MAX);
 			if (err)
 				pr_err("tpg clk set error\n");
 			else {
@@ -234,14 +233,11 @@ int tegra_csi_power(struct tegra_csi_device *csi, int port_num, int enable)
 				tegra_clk_cfg_ex(csi->tpg_clk,
 					TEGRA_CLK_MIPI_CSI_OUT_ENB, 0);
 			}
+			camera_common_dpd_disable(&csi->s_data[port]);
 		}
-		camera_common_dpd_disable(s_data);
 	} else {
-		camera_common_dpd_enable(s_data);
-		clk_disable_unprepare(csi->cil[port]);
-		clk_disable_unprepare(csi->clk);
-
 		if (csi->pg_mode) {
+			camera_common_dpd_enable(&csi->s_data[port]);
 			tegra_clk_cfg_ex(csi->tpg_clk,
 					 TEGRA_CLK_MIPI_CSI_OUT_ENB, 1);
 			tegra_clk_cfg_ex(csi->tpg_clk,
@@ -250,6 +246,8 @@ int tegra_csi_power(struct tegra_csi_device *csi, int port_num, int enable)
 					 TEGRA_CLK_PLLD_DSI_OUT_ENB, 0);
 			clk_disable_unprepare(csi->tpg_clk);
 		}
+		clk_disable_unprepare(csi->cil[port]);
+		clk_disable_unprepare(csi->clk);
 	}
 
 	return err;
@@ -304,7 +302,10 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 			port_num>>1);
 	} else {
 		u32 val = csi_read(csi, TEGRA_CSI_PHY_CIL_COMMAND, port_num>>1);
+		int port_val = ((port_num >> 1) << 1);
+		struct tegra_csi_port *port_a = &csi->ports[port_val];
 
+		cil_write(port_a, TEGRA_CSI_CIL_PAD_CONFIG0, 0x0);
 		val |= ((port->num & 0x1) == PORT_A) ? CSI_A_PHY_CIL_ENABLE :
 			CSI_B_PHY_CIL_ENABLE;
 		csi_write(csi, TEGRA_CSI_PHY_CIL_COMMAND, val, port_num>>1);
@@ -406,7 +407,7 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 {
 	struct tegra_csi_device *csi = to_csi(subdev);
 	struct tegra_channel *chan = subdev->host_priv;
-	enum tegra_csi_port_num port_num = (chan->port & 1) ? PORT_B : PORT_A;
+	enum tegra_csi_port_num port_num = chan->port;
 
 	if (enable)
 		tegra_csi_start_streaming(csi, port_num);

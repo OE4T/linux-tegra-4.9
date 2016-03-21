@@ -17,8 +17,6 @@
 #ifndef __DRIVERS_VIDEO_VI_IRQ_H
 #define __DRIVERS_VIDEO_VI_IRQ_H
 
-#include "camera_priv_defs.h"
-
 int vi_intr_init(struct vi *vi);
 int vi_intr_free(struct vi *vi);
 void vi_stats_worker(struct work_struct *work);

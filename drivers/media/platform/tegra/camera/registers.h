@@ -204,4 +204,8 @@
 /* CSIA to CSIB register offset */
 #define TEGRA_CSI_PORT_OFFSET				0x34
 
+#define	TEGRA_CLOCK_VI					408000000
+#define	TEGRA_CLOCK_TPG_MAX				927000000
+#define	TEGRA_CLOCK_CSI_PORT_MAX			102000000
+
 #endif

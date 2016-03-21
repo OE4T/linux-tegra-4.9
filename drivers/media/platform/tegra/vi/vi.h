@@ -22,9 +22,10 @@
 #define __NVHOST_VI_H__
 
 #include <linux/platform/tegra/isomgr.h>
+#include <linux/tegra-powergate.h>
+#include <linux/clk/tegra.h>
 
 #include "../camera/mc_common.h"
-#include "camera_priv_defs.h"
 #include "chip_support.h"
 
 #define VI_CFG_INTERRUPT_MASK_0				0x8c

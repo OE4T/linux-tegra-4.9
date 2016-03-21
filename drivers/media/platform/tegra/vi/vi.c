@@ -40,7 +40,6 @@
 #include "t210/t210.h"
 #include "vi.h"
 #include "vi_irq.h"
-#include "camera_priv_defs.h"
 
 #include "tegra_camera_dev_mfi.h"
 

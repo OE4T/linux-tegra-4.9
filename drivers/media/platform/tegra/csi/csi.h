@@ -54,10 +54,11 @@ struct tegra_csi_device {
 	struct clk *tpg_clk;
 	struct clk *cil[3];
 
-	struct camera_common_data s_data;
+	struct camera_common_data s_data[6];
 	struct tegra_csi_port *ports;
 	struct media_pad *pads;
 
+	unsigned int clk_freq;
 	int num_ports;
 	int pg_mode;
 };

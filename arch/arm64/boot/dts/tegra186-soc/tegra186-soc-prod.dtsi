@@ -18,8 +18,6 @@
  *
  */
 
-#include "tegra186-soc/tegra186-soc-base.dtsi"
-
 / {
 
 	pcie-controller@10003000 {

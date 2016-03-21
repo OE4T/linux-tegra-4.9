@@ -862,6 +862,7 @@
 				<&tegra_car TEGRA186_RESET_DSID>,
 				<&tegra_car TEGRA186_RESET_DSIPADCTL>;
 			reset-names = "dsia", "dsib", "dsic", "dsid", "dsi_padctrl";
+			nvidia,enable-hs-clk-in-lp-mode;
 			status = "disabled";
 		};
 

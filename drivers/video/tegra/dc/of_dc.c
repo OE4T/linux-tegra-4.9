@@ -1253,6 +1253,12 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 		}
 	}
 
+	if (of_property_read_bool(np_dsi, "nvidia,enable-hs-clk-in-lp-mode")) {
+		dsi->enable_hs_clock_on_lp_cmd_mode = true;
+		OF_DC_LOG("Enable hs clock in lp mode %d\n",
+			dsi->enable_hs_clock_on_lp_cmd_mode);
+	}
+
 	if (!of_property_read_u32(np_dsi_panel,
 			"nvidia,dsi-n-data-lanes", &temp)) {
 		dsi->n_data_lanes = (u8)temp;

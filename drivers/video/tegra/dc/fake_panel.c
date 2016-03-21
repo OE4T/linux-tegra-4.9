@@ -491,6 +491,7 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		err = PTR_ERR(dsi->pad_ctrl);
 		goto err_mipical_dest;
 	}
+	dsi->info.enable_hs_clock_on_lp_cmd_mode = true;
 #endif
 	/* Need to always reinitialize clocks to ensure proper functionality */
 	tegra_dsi_init_clock_param(dc);

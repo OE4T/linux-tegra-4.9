@@ -245,7 +245,7 @@ static unsigned long actmon_dev_get_rate(struct actmon_dev *adev)
 	return tegra_bwmgr_get_emc_rate();
 }
 
-unsigned long actmon_dev_post_change_rate(
+static unsigned long actmon_dev_post_change_rate(
 	struct actmon_dev *adev, void *cclk)
 {
 	struct clk_notifier_data *clk_data = cclk;

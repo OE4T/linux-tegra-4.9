@@ -853,6 +853,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
 	struct dbg_session_gk20a *dbg_s;
 	bool was_reset;
+
 	gk20a_dbg_fn("");
 
 	WARN_ON(ch->g == NULL);
@@ -901,6 +902,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 		/* if lock is already taken, a reset is taking place
 		so no need to repeat */
 		if (!was_reset) {
+			trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);
 			gk20a_fifo_reset_engine(g,
 				g->fifo.deferred_fault_engines);
 		}

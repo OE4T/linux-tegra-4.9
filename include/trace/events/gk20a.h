@@ -285,6 +285,25 @@ TRACE_EVENT(gk20a_channel_submitted_gpfifo,
 		__entry->flags, __entry->incr_id, __entry->incr_value)
 );
 
+TRACE_EVENT(gk20a_channel_reset,
+		TP_PROTO(u32 hw_chid, u32 tsgid),
+
+		TP_ARGS(hw_chid, tsgid),
+
+	TP_STRUCT__entry(
+		__field(u32, hw_chid)
+		__field(u32, tsgid)
+	),
+
+	TP_fast_assign(
+		__entry->hw_chid = hw_chid;
+		__entry->tsgid = tsgid;
+	),
+
+	TP_printk("hw_chid=%d, tsgid=%d",
+		__entry->hw_chid, __entry->tsgid)
+);
+
 
 TRACE_EVENT(gk20a_as_dev_open,
 	TP_PROTO(const char *name),

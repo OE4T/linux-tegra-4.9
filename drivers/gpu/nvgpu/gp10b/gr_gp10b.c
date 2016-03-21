@@ -1491,6 +1491,16 @@ static int gr_gp10b_set_cilp_preempt_pending(struct gk20a *g, struct channel_gk2
 	gr_ctx->t18x.cilp_preempt_pending = true;
 	g->gr.t18x.cilp_preempt_pending_chid = fault_ch->hw_chid;
 
+	if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
+		struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
+
+		gk20a_tsg_event_id_post_event(tsg,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED);
+	} else {
+		gk20a_channel_event_id_post_event(fault_ch,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_STARTED);
+	}
+
 	return 0;
 }
 
@@ -1684,8 +1694,6 @@ static int gr_gp10b_handle_fecs_error(struct gk20a *g,
 		}
 
 		if (gk20a_gr_sm_debugger_attached(g)) {
-			gk20a_err(dev_from_gk20a(g), "CILP: posting usermode event");
-
 			if (gk20a_is_channel_marked_as_tsg(ch)) {
 				struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 				struct channel_gk20a *__ch;
@@ -1693,12 +1701,16 @@ static int gr_gp10b_handle_fecs_error(struct gk20a *g,
 				mutex_lock(&tsg->ch_list_lock);
 				list_for_each_entry(__ch, &tsg->ch_list, ch_entry) {
 					gk20a_dbg_gpu_post_events(__ch);
-					gk20a_channel_post_event(__ch);
 				}
 				mutex_unlock(&tsg->ch_list_lock);
+
+				gk20a_tsg_event_id_post_event(tsg,
+					NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
 			} else {
 				gk20a_dbg_gpu_post_events(ch);
-				gk20a_channel_post_event(ch);
+
+				gk20a_channel_event_id_post_event(ch,
+					NVGPU_IOCTL_CHANNEL_EVENT_ID_CILP_PREEMPTION_COMPLETE);
 			}
 		}
 

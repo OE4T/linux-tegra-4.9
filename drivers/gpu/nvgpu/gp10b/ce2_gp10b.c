@@ -26,7 +26,7 @@ static u32 ce2_nonblockpipe_isr(struct gk20a *g, u32 fifo_intr)
 	gk20a_dbg(gpu_dbg_intr, "ce2 non-blocking pipe interrupt\n");
 
 	/* wake theads waiting in this channel */
-	gk20a_channel_semaphore_wakeup(g);
+	gk20a_channel_semaphore_wakeup(g, true);
 	return ce2_intr_status_nonblockpipe_pending_f();
 }
 

@@ -24,6 +24,7 @@
 #include <linux/tegra-pm.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/uaccess.h>
+#include <linux/platform/tegra/isomgr.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -557,9 +558,22 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	nvdisp_pg[NVDISPC_PD_INDEX].powergate_id =
 			tegra_pd_get_powergate_id(nvdisp_disc_pd);
 
+#ifdef CONFIG_TEGRA_ISOMGR
+	/* Register with isomgr */
+	if (tegra_nvdisp_isomgr_register(TEGRA_ISO_CLIENT_DISP_0,
+		tegra_dc_calc_min_bandwidth(dc))) {
+		dev_err(&dc->ndev->dev, "could not register isomgr\n");
+		goto INIT_ERR;
+	}
+#endif
+
 	goto INIT_EXIT;
 
 INIT_ERR:
+#ifdef CONFIG_TEGRA_ISOMGR
+	tegra_nvdisp_isomgr_unregister();
+#endif
+
 	for (i = 0; i < DC_N_WINDOWS; ++i) {
 		struct tegra_dc_lut *lut;
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
@@ -662,10 +676,7 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 	tegra_dc_get(dc);
 
-	/* IMP related updates */
-	dc->new_bw_kbps = tegra_dc_calc_min_bandwidth(dc);
 	tegra_dc_program_bandwidth(dc, true);
-
 	tegra_dc_writel(dc,
 		nvdisp_sync_width_h_f(mode->h_sync_width) |
 		nvdisp_sync_width_v_f(v_sync_width),
@@ -801,6 +812,11 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 	snprintf(vblank_name, sizeof(vblank_name), "vblank%u", dc->ctrl_num);
 	dc->vblank_syncpt = nvhost_get_syncpt_client_managed(dc->ndev,
 								vblank_name);
+
+#ifdef CONFIG_TEGRA_ISOMGR
+	/* Save reference to isohub bw info */
+	tegra_nvdisp_isomgr_attach(dc);
+#endif
 
 	/* Take the controller out of reset if bpmp is loaded*/
 	if (tegra_bpmp_running() && tegra_platform_is_silicon()) {
@@ -1701,7 +1717,7 @@ static bool tegra_nvdisp_common_channel_is_free(void)
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
 		struct tegra_dc *dc = tegra_dc_get_dc(i);
 
-		if (dc && dc->common_channel_reserved)
+		if (dc && (dc->common_channel_reserved || dc->new_bw_pending))
 			return false;
 	}
 

@@ -810,6 +810,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	}
 	dc->crc_pending = true;
 
+	tegra_dc_program_bandwidth(dc, false);
+
 	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE)
 		act_req_mask |= nvdisp_cmd_state_ctrl_host_trig_enable_f();
 

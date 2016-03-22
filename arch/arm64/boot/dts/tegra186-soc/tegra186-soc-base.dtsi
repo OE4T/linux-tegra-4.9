@@ -221,13 +221,18 @@
 			};
 			host1x_domain {
 				address-space = <&host1x_as>;
-				sid-list = <TEGRA_SID(HC) TEGRA_SID(VIC) TEGRA_SID(VI)
+				sid-list = <TEGRA_SID(HC)>;
+				sid-list-len = <1>;
+			};
+			host1x_client_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID(VIC) TEGRA_SID(VI)
 					    TEGRA_SID(NVDEC) TEGRA_SID(NVENC) TEGRA_SID(NVJPG)
 					    TEGRA_SID(ISP) TEGRA_SID(TSEC) TEGRA_SID(TSECB)
 					    TEGRA_SID(NVDISPLAY) TEGRA_SID(NVCSI)
 					    TEGRA_SID(SE) TEGRA_SID(SE1)
 					    TEGRA_SID(SE2) TEGRA_SID(SE3)>;
-				sid-list-len = <15>;
+				sid-list-len = <14>;
 			};
 			host1x0_domain {
 				address-space = <&host1x_as>;

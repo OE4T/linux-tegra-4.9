@@ -1928,6 +1928,7 @@ void tegra_pcie_port_enable_per_pdev(struct pci_dev *pdev)
 	}
 	afi_writel(port->pcie, data, AFI_PCIE_CONFIG);
 }
+EXPORT_SYMBOL(tegra_pcie_port_enable_per_pdev);
 
 void tegra_pcie_port_disable_per_pdev(struct pci_dev *pdev)
 {
@@ -1958,6 +1959,7 @@ void tegra_pcie_port_disable_per_pdev(struct pci_dev *pdev)
 	}
 	afi_writel(port->pcie, data, AFI_PCIE_CONFIG);
 }
+EXPORT_SYMBOL(tegra_pcie_port_disable_per_pdev);
 
 static bool get_rdet_status(struct tegra_pcie *pcie, u32 index)
 {
@@ -4807,6 +4809,7 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 	}
 	return 0;
 }
+EXPORT_SYMBOL(tegra_pcie_pm_control);
 
 #ifdef CONFIG_PM
 

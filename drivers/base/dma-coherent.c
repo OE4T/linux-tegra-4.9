@@ -731,16 +731,17 @@ static int dma_release_from_coherent_heap_dev(struct device *dev, size_t len,
 	BUG_ON(!h);
 	if (!h)
 		return 1;
-	if ((uintptr_t)base < h->cma_base ||
-	    len > h->cma_chunk_size ||
-	    (uintptr_t)base - h->cma_base > h->cma_len - len) {
+
+	mutex_lock(&h->resize_lock);
+	if ((uintptr_t)base < h->curr_base || len > h->curr_len ||
+	    (uintptr_t)base - h->curr_base > h->curr_len - len) {
 		BUG();
+		mutex_unlock(&h->resize_lock);
 		return 1;
 	}
 
 	attrs |= DMA_ATTR_ALLOC_EXACT_SIZE;
 
-	mutex_lock(&h->resize_lock);
 	idx = div_u64((uintptr_t)base - h->cma_base, h->cma_chunk_size);
 	dev_dbg(&h->dev, "req free addr (%p) size (0x%zx) idx (%d)\n",
 		base, len, idx);

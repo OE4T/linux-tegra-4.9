@@ -258,6 +258,194 @@ static inline u32 ctxsw_prog_main_image_misc_options_verif_features_disabled_f(v
 {
 	return 0x0;
 }
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_control_o(void)
+{
+	return 0x000000ac;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(void)
+{
+	return 0x000000b0;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_v_m(void)
+{
+	return 0xfffffff << 0;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_m(void)
+{
+	return 0x3 << 28;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_vid_mem_f(void)
+{
+	return 0x0;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_coherent_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_noncoherent_f(void)
+{
+	return 0x30000000;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(void)
+{
+	return 0x000000b4;
+}
+static inline u32 ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ctxsw_prog_record_timestamp_record_size_in_bytes_v(void)
+{
+	return 0x00000080;
+}
+static inline u32 ctxsw_prog_record_timestamp_record_size_in_words_v(void)
+{
+	return 0x00000020;
+}
+static inline u32 ctxsw_prog_record_timestamp_magic_value_lo_o(void)
+{
+	return 0x00000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_magic_value_lo_v_value_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_magic_value_hi_o(void)
+{
+	return 0x00000004;
+}
+static inline u32 ctxsw_prog_record_timestamp_magic_value_hi_v_value_v(void)
+{
+	return 0x600dbeef;
+}
+static inline u32 ctxsw_prog_record_timestamp_context_id_o(void)
+{
+	return 0x00000008;
+}
+static inline u32 ctxsw_prog_record_timestamp_context_ptr_o(void)
+{
+	return 0x0000000c;
+}
+static inline u32 ctxsw_prog_record_timestamp_new_context_id_o(void)
+{
+	return 0x00000010;
+}
+static inline u32 ctxsw_prog_record_timestamp_new_context_ptr_o(void)
+{
+	return 0x00000014;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_lo_o(void)
+{
+	return 0x00000018;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_o(void)
+{
+	return 0x0000001c;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_v_f(u32 v)
+{
+	return (v & 0xffffff) << 0;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_v_v(u32 r)
+{
+	return (r >> 0) & 0xffffff;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_f(u32 v)
+{
+	return (v & 0xff) << 24;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_m(void)
+{
+	return 0xff << 24;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_v(u32 r)
+{
+	return (r >> 24) & 0xff;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_ctxsw_req_by_host_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_ctxsw_req_by_host_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_wfi_v(void)
+{
+	return 0x0000000a;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_wfi_f(void)
+{
+	return 0xa000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_gfxp_v(void)
+{
+	return 0x0000000b;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_gfxp_f(void)
+{
+	return 0xb000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_ctap_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_ctap_f(void)
+{
+	return 0xc000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_cilp_v(void)
+{
+	return 0x0000000d;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_fe_ack_cilp_f(void)
+{
+	return 0xd000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_save_end_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_save_end_f(void)
+{
+	return 0x3000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_restore_start_v(void)
+{
+	return 0x00000004;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_restore_start_f(void)
+{
+	return 0x4000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_context_start_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_context_start_f(void)
+{
+	return 0x5000000;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_invalid_timestamp_v(void)
+{
+	return 0x000000ff;
+}
+static inline u32 ctxsw_prog_record_timestamp_timestamp_hi_tag_invalid_timestamp_f(void)
+{
+	return 0xff000000;
+}
 static inline u32 ctxsw_prog_main_image_preemption_options_o(void)
 {
 	return 0x00000060;

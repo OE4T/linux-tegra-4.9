@@ -922,6 +922,10 @@ static inline u32 gr_fecs_method_push_adr_set_watchdog_timeout_f(void)
 {
 	return 0x21;
 }
+static inline u32 gr_fecs_method_push_adr_write_timestamp_record_v(void)
+{
+	return 0x0000003d;
+}
 static inline u32 gr_fecs_method_push_adr_halt_pipeline_v(void)
 {
 	return 0x00000004;

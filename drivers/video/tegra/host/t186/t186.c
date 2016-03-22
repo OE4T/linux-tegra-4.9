@@ -426,7 +426,8 @@ struct nvhost_device_data t18_vic_info = {
 	.devfs_name		= "vic",
 	.clocks			= {
 		{"vic", UINT_MAX, 0},
-		{"emc", UINT_MAX, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		{"emc", HOST_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW},
 	},
 	.engine_cg_regs		= t18x_vic_gating_registers,

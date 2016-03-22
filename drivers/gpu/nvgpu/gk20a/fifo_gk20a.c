@@ -1689,6 +1689,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 	u32 pbdma_intr_0 = gk20a_readl(g, pbdma_intr_0_r(pbdma_id));
 	u32 pbdma_intr_1 = gk20a_readl(g, pbdma_intr_1_r(pbdma_id));
 	u32 handled = 0;
+	u32 error_notifier = NVGPU_CHANNEL_PBDMA_ERROR;
 	bool reset = false;
 	int i;
 
@@ -1740,6 +1741,12 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			reset = true;
 		}
 
+		if (pbdma_intr_0 & pbdma_intr_0_pbcrc_pending_f()) {
+			error_notifier =
+				NVGPU_CHANNEL_PBDMA_PUSHBUFFER_CRC_MISMATCH;
+			reset = true;
+		}
+
 		if (pbdma_intr_0 & pbdma_intr_0_device_pending_f()) {
 			gk20a_fifo_reset_pbdma_header(g, pbdma_id);
 
@@ -1773,8 +1780,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			struct channel_gk20a *ch = &f->channel[id];
 
 			if (gk20a_channel_get(ch)) {
-				gk20a_set_error_notifier(ch,
-						NVGPU_CHANNEL_PBDMA_ERROR);
+				gk20a_set_error_notifier(ch, error_notifier);
 				gk20a_fifo_recover_ch(g, id, true);
 				gk20a_channel_put(ch);
 			}
@@ -1787,7 +1793,7 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 			list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 				if (gk20a_channel_get(ch)) {
 					gk20a_set_error_notifier(ch,
-						NVGPU_CHANNEL_PBDMA_ERROR);
+						error_notifier);
 					gk20a_channel_put(ch);
 				}
 			}

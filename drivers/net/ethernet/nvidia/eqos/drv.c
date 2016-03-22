@@ -613,6 +613,30 @@ void eqos_get_all_hw_features(struct eqos_prv_data *pdata)
 	pdata->hw_feat.aux_snap_num =
 	    ((mac_hfr2 >> 28) & MAC_HFR2_AUXSNAPNUM_MASK);
 
+	if (pdata->hw_feat.mac_addr64_sel)
+		pdata->max_addr_reg_cnt = 128;
+	else if (pdata->hw_feat.mac_addr32_sel)
+		pdata->max_addr_reg_cnt = 64;
+	else if (pdata->hw_feat.mac_addr16_sel)
+		pdata->max_addr_reg_cnt = 32;
+	else
+		pdata->max_addr_reg_cnt = 1;
+
+	switch (pdata->hw_feat.hash_tbl_sz) {
+	case 0:
+		pdata->max_hash_table_size = 0;
+		break;
+	case 1:
+		pdata->max_hash_table_size = 64;
+		break;
+	case 2:
+		pdata->max_hash_table_size = 128;
+		break;
+	case 3:
+		pdata->max_hash_table_size = 256;
+		break;
+	}
+
 	DBGPR("<--eqos_get_all_hw_features\n");
 }
 
@@ -670,15 +694,6 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	       pdata->hw_feat.mac_addr32_sel ? "YES" : "NO");
 	pr_err("MAC Addresses 64–127 Selected               : %s\n",
 	       pdata->hw_feat.mac_addr64_sel ? "YES" : "NO");
-
-	if (pdata->hw_feat.mac_addr64_sel)
-		pdata->max_addr_reg_cnt = 128;
-	else if (pdata->hw_feat.mac_addr32_sel)
-		pdata->max_addr_reg_cnt = 64;
-	else if (pdata->hw_feat.mac_addr16_sel)
-		pdata->max_addr_reg_cnt = 32;
-	else
-		pdata->max_addr_reg_cnt = 1;
 
 	switch (pdata->hw_feat.tsstssel) {
 	case 0:
@@ -829,19 +844,15 @@ void eqos_print_all_hw_features(struct eqos_prv_data *pdata)
 	switch (pdata->hw_feat.hash_tbl_sz) {
 	case 0:
 		str = "No hash table selected";
-		pdata->max_hash_table_size = 0;
 		break;
 	case 1:
 		str = "64";
-		pdata->max_hash_table_size = 64;
 		break;
 	case 2:
 		str = "128";
-		pdata->max_hash_table_size = 128;
 		break;
 	case 3:
 		str = "256";
-		pdata->max_hash_table_size = 256;
 		break;
 	}
 	pr_err("Hash Table Size                              : %s\n", str);

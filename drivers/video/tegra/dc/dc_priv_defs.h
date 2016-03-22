@@ -178,8 +178,14 @@ struct tegra_dc {
 	struct clk			*clk;
 	struct reset_control		*rst;
 
-#ifdef CONFIG_TEGRA_ISOMGR
+#if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_ISOMGR)
+	/* Reference to a single instance */
+	struct nvdisp_isoclient_bw_info	*ihub_bw_info;
+	bool				la_dirty;
+#elif defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle		isomgr_handle;
+	u32				reserved_bw;
+	u32				available_bw;
 #else
 	struct clk			*emc_clk;
 #endif
@@ -225,6 +231,7 @@ struct tegra_dc {
 	struct tegra_dc_imp_head_results	imp_results[TEGRA_MAX_DC];
 	bool					common_channel_reserved;
 	bool					common_channel_programmed;
+	bool					new_bw_pending;
 #endif
 
 #if defined(CONFIG_TEGRA_DC_CMU)
@@ -308,8 +315,6 @@ struct tegra_dc {
 	bool				yuv_bypass;
 	atomic_t			holding;
 
-	u32				reserved_bw;
-	u32				available_bw;
 	struct tegra_dc_win		tmp_wins[DC_N_WINDOWS];
 
 	struct tegra_edid		*edid;

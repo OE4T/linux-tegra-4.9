@@ -5,7 +5,10 @@ ccflags-$(CONFIG_ADF_TEGRA) += -Idrivers/video/tegra -Idrivers/staging/android
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I$(srctree)/../kernel-t18x/drivers/video/tegra/dc
 endif
-obj-y += dc.o bandwidth.o mode.o clock.o window.o
+obj-y += dc.o mode.o clock.o window.o
+ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
+obj-y += bandwidth.o
+endif
 obj-$(CONFIG_TEGRA_CSC) += csc.o
 obj-$(CONFIG_TEGRA_LUT) += lut.o
 obj-y += cursor.o

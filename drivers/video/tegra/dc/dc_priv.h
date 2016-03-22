@@ -733,6 +733,12 @@ void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 				struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);
 void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc);
+
+#ifdef CONFIG_TEGRA_ISOMGR
+void tegra_nvdisp_isomgr_attach(struct tegra_dc *dc);
+int tegra_nvdisp_isomgr_register(enum tegra_iso_client client, u32 udedi_bw);
+void tegra_nvdisp_isomgr_unregister(void);
+#endif
 #endif
 
 #endif

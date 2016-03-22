@@ -425,8 +425,16 @@ static ssize_t reserved_bw_show(struct device *dev,
 {
 	struct platform_device *ndev = to_platform_device(dev);
 	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	u32 reserved_bw = 0;
 
-	return snprintf(buf, PAGE_SIZE, "%d\n", dc->reserved_bw);
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (dc->ihub_bw_info)
+		reserved_bw = dc->ihub_bw_info->reserved_bw_kbps;
+#else
+	reserved_bw = dc->reserved_bw;
+#endif
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", reserved_bw);
 }
 
 static DEVICE_ATTR(reserved_bw,

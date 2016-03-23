@@ -380,8 +380,6 @@ static int gk20a_alloc_comptags(struct gk20a *g,
 static int gk20a_init_mm_reset_enable_hw(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
-	if (g->ops.fb.reset)
-		g->ops.fb.reset(g);
 
 	if (g->ops.clock_gating.slcg_fb_load_gating_prod)
 		g->ops.clock_gating.slcg_fb_load_gating_prod(g,

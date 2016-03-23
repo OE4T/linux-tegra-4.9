@@ -18,6 +18,8 @@
 #include "bpmp.h"
 #include "mail_t186.h"
 
+#define HSP_SHRD_SEM_1_STA			0x1b0000
+
 static struct ivc ivc_channels[NR_CHANNELS];
 static void __iomem *cpu_ma_page;
 static void __iomem *cpu_sl_page;
@@ -62,7 +64,28 @@ static int native_iomem_init(void)
 
 static int native_handshake(void)
 {
+	struct device_node *of_node;
+	void __iomem *bpmp_base;
+	uint32_t sem;
+
 	if (tegra_platform_is_linsim())
+		return -ENODEV;
+
+	/* FIXME: do not assume DT path */
+	of_node = of_find_node_by_path("/bpmp");
+	if (WARN_ON(!of_device_is_available(of_node)))
+		return -ENODEV;
+
+	bpmp_base = of_iomap(of_node, 0);
+	if (!bpmp_base)
+		return -ENODEV;
+
+	/* WAR for simulator */
+	sem = __raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA);
+
+	iounmap(bpmp_base);
+
+	if (!sem)
 		return -ENODEV;
 
 	pr_info("bpmp: waiting for handshake\n");

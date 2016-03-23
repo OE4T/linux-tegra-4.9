@@ -18,7 +18,11 @@ nvgpu-y += \
 	$(nvgpu-t18x)/gp10b/therm_gp10b.o \
 	$(nvgpu-t18x)/gp10b/fecs_trace_gp10b.o \
 	$(nvgpu-t18x)/gp10b/gp10b_sysfs.o \
-	$(nvgpu-t18x)/gp10b/gp10b.o
+	$(nvgpu-t18x)/gp10b/gp10b.o \
+	$(nvgpu-t18x)/gp106/hal_gp106.o \
+	$(nvgpu-t18x)/gp106/pmu_gp106.o \
+	$(nvgpu-t18x)/gp106/gr_gp106.o \
+	$(nvgpu-t18x)/gp106/gr_ctx_gp106.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t18x)/gp10b/platform_gp10b_tegra.o
 

@@ -331,7 +331,7 @@ static int __nvmap_page_pool_fill_lots_locked(struct nvmap_page_pool *pool,
 int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 				       struct page **pages, u32 nr)
 {
-	int ret;
+	int ret = 0;
 
 	mutex_lock(&pool->lock);
 	if (zero_memory) {
@@ -340,15 +340,38 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 		nr = min(nr, pool->max - pool->count - pool->to_zero);
 
 		for (i = 0; i < nr; i++) {
-			list_add_tail(&pages[i]->lru, &pool->zero_list);
-			pool->to_zero++;
+			/* If page has additonal referecnces, Don't add it into
+			 * page pool. get_user_pages() on mmap'ed nvmap handle can
+			 * hold a refcount on the page. These pages can't be
+			 * reused till the additional refs are dropped.
+			 */
+			if (atomic_read(&pages[i]->_count) > 1) {
+				__free_page(pages[i]);
+			} else {
+				list_add_tail(&pages[i]->lru, &pool->zero_list);
+				pool->to_zero++;
+			}
 		}
 
-		wake_up_interruptible(&nvmap_bg_wait);
-
+		if (i)
+			wake_up_interruptible(&nvmap_bg_wait);
 		ret = i;
 	} else {
-		ret = __nvmap_page_pool_fill_lots_locked(pool, pages, nr);
+		int i;
+		bool add_to_pp = true;
+
+		/* This path is only for debug purposes.
+		 * Need not be efficient.
+		 */
+		for (i = 0; i < nr; i++) {
+			if (atomic_read(&pages[i]->_count) > 1) {
+				add_to_pp = false;
+				break;
+			}
+		}
+
+		if (add_to_pp)
+			ret = __nvmap_page_pool_fill_lots_locked(pool, pages, nr);
 	}
 	mutex_unlock(&pool->lock);
 

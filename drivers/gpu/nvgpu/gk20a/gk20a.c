@@ -792,6 +792,11 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (err)
 		goto done;
 
+	if (g->ops.bios.init)
+		err = g->ops.bios.init(g);
+	if (err)
+		goto done;
+
 	if (!tegra_platform_is_silicon())
 		gk20a_writel(g, bus_intr_en_0_r(), 0x0);
 	else

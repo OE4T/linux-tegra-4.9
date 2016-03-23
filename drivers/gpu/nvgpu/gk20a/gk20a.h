@@ -592,6 +592,40 @@ struct gpu_ops {
 
 	int (*get_litter_value)(struct gk20a *g, enum nvgpu_litter_value value);
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);
+
+	struct {
+		int (*init)(struct gk20a *g);
+	} bios;
+};
+
+struct nvgpu_bios_ucode {
+	u8 *bootloader;
+	u32 bootloader_phys_base;
+	u32 bootloader_size;
+	u8 *ucode;
+	u32 phys_base;
+	u32 size;
+	u8 *dmem;
+	u32 dmem_phys_base;
+	u32 dmem_size;
+	u32 code_entry_point;
+};
+
+struct nvgpu_bios {
+	u8 *data;
+
+	struct nvgpu_bios_ucode devinit;
+	struct nvgpu_bios_ucode preos;
+
+	u8 *devinit_tables;
+	u32 devinit_tables_size;
+	u8 *bootscripts;
+	u32 bootscripts_size;
+
+	u32 devinit_tables_phys_base;
+	u32 devinit_script_phys_base;
+
+	u32 expansion_rom_offset;
 };
 
 struct gk20a {
@@ -763,6 +797,9 @@ struct gk20a {
 	bool mmu_debug_ctrl;
 
 	u32 tpc_fs_mask_user;
+
+	struct nvgpu_bios bios;
+	struct debugfs_blob_wrapper bios_blob;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -1019,6 +1056,12 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name);
 
 #define GK20A_GPUID_GM20B \
 	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM20B)
+
+#define GK20A_GPUID_GM204 \
+	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM204)
+
+#define GK20A_GPUID_GM206 \
+	GK20A_GPUID(NVGPU_GPU_ARCH_GM200, NVGPU_GPU_IMPL_GM206)
 
 int gk20a_init_gpu_characteristics(struct gk20a *g);
 

@@ -389,21 +389,9 @@ end:
 	return err;
 }
 
-static int nvmap_suspend(struct platform_device *pdev, pm_message_t state)
-{
-	return 0;
-}
-
-static int nvmap_resume(struct platform_device *pdev)
-{
-	return 0;
-}
-
 static struct platform_driver __refdata nvmap_driver = {
 	.probe		= nvmap_probe,
 	.remove		= nvmap_remove,
-	.suspend	= nvmap_suspend,
-	.resume		= nvmap_resume,
 
 	.driver = {
 		.name	= "tegra-carveouts",
@@ -416,8 +404,6 @@ static struct platform_driver __refdata nvmap_driver = {
 static int __init nvmap_init_driver(void)
 {
 	int e = 0;
-
-	nvmap_dev = NULL;
 
 	e = nvmap_heap_init();
 	if (e)

@@ -475,7 +475,6 @@ static void nvmap_dmabuf_release(struct dma_buf *dmabuf)
 	}
 	mutex_unlock(&info->maps_lock);
 
-	dma_buf_detach(dmabuf, info->handle->attachment);
 	nvmap_handle_put(info->handle);
 	kfree(info);
 }
@@ -765,7 +764,7 @@ static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
 			   handle->flags, atomic_read(&handle->ref));
 
 		seq_printf(s, "  device = %s, mapping = %p\n",
-			   dev_name(handle->attachment->dev),
+			   dev_name(nvmap_sgt->dev),
 			   nvmap_sgt->mapping);
 		addr = sg_dma_address(nvmap_sgt->sgt->sgl);
 		seq_printf(s, "  IO addr = %pa + 0x%zx\n",

@@ -39,22 +39,11 @@
 
 #include "nvmap_priv.h"
 
-/* private nvmap_handle flag for pinning duplicate detection */
-#define NVMAP_HANDLE_VISITED (0x1ul << 31)
-
 static phys_addr_t handle_phys(struct nvmap_handle *h)
 {
-	phys_addr_t addr;
-
-	if (h->heap_pgalloc) {
-		BUG_ON(!h->attachment->priv);
-		addr = sg_dma_address(
-				((struct sg_table *)h->attachment->priv)->sgl);
-	} else {
-		addr = h->carveout->base;
-	}
-
-	return addr;
+	if (h->heap_pgalloc)
+		BUG();
+	return h->carveout->base;
 }
 
 void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)

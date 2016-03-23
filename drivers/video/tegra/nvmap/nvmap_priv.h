@@ -116,14 +116,7 @@ struct nvmap_handle {
 	size_t align;
 	u8 kind;                /* memory kind (0=pitch, !0 -> blocklinear) */
 	struct nvmap_client *owner;
-
-	/*
-	 * dma_buf necessities. An attachment is made on dma_buf allocation to
-	 * facilitate the nvmap_pin* APIs.
-	 */
 	struct dma_buf *dmabuf;
-	struct dma_buf_attachment *attachment;
-
 	union {
 		struct nvmap_pgalloc pgalloc;
 		struct nvmap_heap_block *carveout;
@@ -153,11 +146,9 @@ struct nvmap_handle_ref {
 	struct nvmap_handle *handle;
 	struct rb_node	node;
 	atomic_t	dupes;	/* number of times to free on file close */
-	atomic_t	pin;	/* number of times to unpin on free */
 };
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-
 /*
  * This is the default ratio defining pool size. It can be thought of as pool
  * size in either MB per GB or KB per MB. That means the max this number can
@@ -165,25 +156,6 @@ struct nvmap_handle_ref {
  * at all).
  */
 #define NVMAP_PP_POOL_SIZE               (128)
-
-/*
- * The wakeup threshold is how many empty page slots there need to be in order
- * for the background allocater to be woken up.
- */
-#define NVMAP_PP_DEF_FILL_THRESH         (4096)
-
-/*
- * For when memory does not require zeroing this is the minimum number of pages
- * remaining in the page pools before the background allocer is woken up. This
- * essentially disables the background allocator (unless its extremely small).
- */
-#define NVMAP_PP_DEF_ZERO_MEM_FILL_MIN   (2048)
-
-/*
- * Minimum amount of memory we try to keep available. That is if memory sinks
- * below this amount the page pools will stop filling.
- */
-#define NVMAP_PP_DEF_MIN_AVAILABLE_MB    (128)
 
 struct nvmap_page_pool {
 	struct mutex lock;
@@ -225,8 +197,8 @@ struct nvmap_client {
 	struct list_head		list;
 	u32				handle_count;
 	u32				next_fd;
-	int warned;
-	int tag_warned;
+	int				warned;
+	int				tag_warned;
 };
 
 struct nvmap_vma_priv {

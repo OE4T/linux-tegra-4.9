@@ -107,16 +107,6 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 		goto make_dmabuf_fail;
 	}
 
-	/*
-	 * Pre-attach nvmap to this new dmabuf. This gets unattached during the
-	 * dma_buf_release() operation.
-	 */
-	h->attachment = dma_buf_attach(h->dmabuf, nvmap_dev->dev_user.parent);
-	if (IS_ERR(h->attachment)) {
-		err = h->attachment;
-		goto dma_buf_attach_fail;
-	}
-
 	nvmap_handle_add(nvmap_dev, h);
 
 	/*
@@ -125,13 +115,10 @@ struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 	 */
 	atomic_set(&ref->dupes, 1);
 	ref->handle = h;
-	atomic_set(&ref->pin, 0);
 	add_handle_ref(client, ref);
 	trace_nvmap_create_handle(client, client->name, h, size, ref);
 	return ref;
 
-dma_buf_attach_fail:
-	dma_buf_put(h->dmabuf);
 make_dmabuf_fail:
 	kfree(ref);
 ref_alloc_fail:
@@ -208,7 +195,6 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 
 	atomic_set(&ref->dupes, 1);
 	ref->handle = h;
-	atomic_set(&ref->pin, 0);
 	add_handle_ref(client, ref);
 
 	/*

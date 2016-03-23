@@ -426,14 +426,7 @@ static void destroy_client(struct nvmap_client *client)
 		int dupes;
 
 		ref = rb_entry(n, struct nvmap_handle_ref, node);
-
 		smp_rmb();
-
-		while (atomic_add_unless(&ref->pin, -1, 0))
-			dma_buf_unmap_attachment(ref->handle->attachment,
-				ref->handle->attachment->priv,
-				DMA_BIDIRECTIONAL);
-
 		if (ref->handle->owner == client)
 			ref->handle->owner = NULL;
 
@@ -703,6 +696,7 @@ static void allocations_stringify(struct nvmap_client *client,
 				  struct seq_file *s, u32 heap_type)
 {
 	struct rb_node *n;
+	unsigned int pin_count = 0;
 
 	nvmap_ref_lock(client);
 	n = rb_first(&client->handle_refs);
@@ -720,7 +714,7 @@ static void allocations_stringify(struct nvmap_client *client,
 				handle->userflags,
 				atomic_read(&handle->ref),
 				atomic_read(&ref->dupes),
-				atomic_read(&ref->pin),
+				pin_count,
 				atomic_read(&handle->kmap_count),
 				atomic_read(&handle->umap_count),
 				atomic_read(&handle->share_count),
@@ -1500,37 +1494,30 @@ int __init nvmap_probe(struct platform_device *pdev)
 	}
 
 	nvmap_override_cache_ops();
-
 	dev = kzalloc(sizeof(*dev), GFP_KERNEL);
 	if (!dev) {
 		dev_err(&pdev->dev, "out of memory for device\n");
 		return -ENOMEM;
 	}
 
-	nvmap_dev = dev;
-
 	nvmap_init(pdev);
-
 	plat = pdev->dev.platform_data;
 	if (!plat) {
 		dev_err(&pdev->dev, "no platform data?\n");
-		nvmap_dev = NULL;
 		kfree(dev);
 		return -ENODEV;
 	}
 
+	nvmap_dev = dev;
 	/*
-	 * The DMA mapping API uses these parameters to decide how to map the
-	 * passed buffers. If the maximum physical segment size is set to
-	 * smaller than the size of the buffer, then the buffer will be mapped
-	 * as separate IO virtual address ranges.
+	 * dma_parms need to be set with desired max_segment_size to avoid
+	 * DMA map API returning multiple IOVA's for the buffer size > 64KB.
 	 */
 	pdev->dev.dma_parms = &nvmap_dma_parameters;
 	dev->dev_user.minor = MISC_DYNAMIC_MINOR;
 	dev->dev_user.name = "nvmap";
 	dev->dev_user.fops = &nvmap_user_fops;
 	dev->dev_user.parent = &pdev->dev;
-
 	dev->handles = RB_ROOT;
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
@@ -1646,7 +1633,6 @@ int __init nvmap_probe(struct platform_device *pdev)
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 		nvmap_page_pool_debugfs_init(nvmap_debug_root);
 #endif
-
 		nvmap_cache_debugfs_init(nvmap_debug_root);
 		dev->handles_by_pid = debugfs_create_dir("handles_by_pid",
 				nvmap_debug_root);

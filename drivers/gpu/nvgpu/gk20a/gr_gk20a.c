@@ -8308,4 +8308,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.handle_sm_exception = gr_gk20a_handle_sm_exception;
 	gops->gr.handle_tex_exception = gr_gk20a_handle_tex_exception;
 	gops->gr.get_lrf_tex_ltc_dram_override = NULL;
+	gops->gr.update_smpc_ctxsw_mode = gr_gk20a_update_smpc_ctxsw_mode;
+	gops->gr.update_hwpm_ctxsw_mode = gr_gk20a_update_hwpm_ctxsw_mode;
 }

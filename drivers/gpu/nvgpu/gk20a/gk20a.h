@@ -172,6 +172,12 @@ struct gpu_ops {
 		void (*update_ctxsw_preemption_mode)(struct gk20a *g,
 				struct channel_ctx_gk20a *ch_ctx,
 				void *ctx_ptr);
+		int (*update_smpc_ctxsw_mode)(struct gk20a *g,
+				struct channel_gk20a *c,
+				bool enable);
+		int (*update_hwpm_ctxsw_mode)(struct gk20a *g,
+				struct channel_gk20a *c,
+				bool enable);
 		int (*dump_gr_regs)(struct gk20a *g,
 				struct gk20a_debug_output *o);
 		int (*update_pc_sampling)(struct channel_gk20a *ch,

@@ -402,12 +402,36 @@ static void vgpu_gr_free_channel_patch_ctx(struct channel_gk20a *c)
 	}
 }
 
+static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_channel_free_hwpm_ctx *p = &msg.params.free_hwpm_ctx;
+	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	/* check if hwpm was ever initialized. If not, nothing to do */
+	if (ch_ctx->pm_ctx.ctx_was_enabled == false)
+		return;
+
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_HWPM_CTX;
+	msg.handle = platform->virt_handle;
+	p->handle = c->virt_ctx;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
+	ch_ctx->pm_ctx.ctx_was_enabled = false;
+}
+
 static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
 {
 	gk20a_dbg_fn("");
 
 	vgpu_gr_unmap_global_ctx_buffers(c);
 	vgpu_gr_free_channel_patch_ctx(c);
+	vgpu_gr_free_channel_pm_ctx(c);
 	if (!gk20a_is_channel_marked_as_tsg(c))
 		vgpu_gr_free_channel_gr_ctx(c);
 
@@ -950,6 +974,63 @@ static int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
+static int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
+	struct channel_gk20a *ch, bool enable)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_channel_set_ctxsw_mode *p = &msg.params.set_ctxsw_mode;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_SMPC_CTXSW_MODE;
+	msg.handle = platform->virt_handle;
+	p->handle = ch->virt_ctx;
+
+	if (enable)
+		p->mode = TEGRA_VGPU_CTXSW_MODE_CTXSW;
+	else
+		p->mode = TEGRA_VGPU_CTXSW_MODE_NO_CTXSW;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
+	return err ? err : msg.ret;
+}
+
+static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
+	struct channel_gk20a *ch, bool enable)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_channel_set_ctxsw_mode *p = &msg.params.set_ctxsw_mode;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_HWPM_CTXSW_MODE;
+	msg.handle = platform->virt_handle;
+	p->handle = ch->virt_ctx;
+
+	/* If we just enabled HWPM context switching, flag this
+	 * so we know we need to free the buffer when channel contexts
+	 * are cleaned up.
+	 */
+	if (enable) {
+		struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+		ch_ctx->pm_ctx.ctx_was_enabled = true;
+
+		p->mode = TEGRA_VGPU_CTXSW_MODE_CTXSW;
+	} else
+		p->mode = TEGRA_VGPU_CTXSW_MODE_NO_CTXSW;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+
+	return err ? err : msg.ret;
+}
+
 void vgpu_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.free_channel_ctx = vgpu_gr_free_channel_ctx;
@@ -969,4 +1050,6 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.zbc_query_table = vgpu_gr_query_zbc;
 	gops->gr.init_ctx_state = vgpu_gr_init_ctx_state;
 	gops->gr.set_sm_debug_mode = vgpu_gr_set_sm_debug_mode;
+	gops->gr.update_smpc_ctxsw_mode = vgpu_gr_update_smpc_ctxsw_mode;
+	gops->gr.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode;
 }

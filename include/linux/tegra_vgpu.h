@@ -76,7 +76,14 @@ enum {
 	TEGRA_VGPU_CMD_REG_OPS,
 	TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY,
 	TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE,
-	TEGRA_VGPU_CMD_CHANNEL_SET_TIMESLICE
+	TEGRA_VGPU_CMD_CHANNEL_SET_TIMESLICE,
+	RESVD1,
+	RESVD2,
+	RESVD3,
+	RESVD4,
+	TEGRA_VGPU_CMD_CHANNEL_SET_SMPC_CTXSW_MODE,
+	TEGRA_VGPU_CMD_CHANNEL_SET_HWPM_CTXSW_MODE,
+	TEGRA_VGPU_CMD_CHANNEL_FREE_HWPM_CTX,
 };
 
 struct tegra_vgpu_connect_params {
@@ -312,6 +319,20 @@ struct tegra_vgpu_channel_timeslice_params {
 	u32 timeslice_us;
 };
 
+enum {
+	TEGRA_VGPU_CTXSW_MODE_NO_CTXSW = 0,
+	TEGRA_VGPU_CTXSW_MODE_CTXSW,
+};
+
+struct tegra_vgpu_channel_set_ctxsw_mode {
+	u64 handle;
+	u32 mode;
+};
+
+struct tegra_vgpu_channel_free_hwpm_ctx {
+	u64 handle;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -342,6 +363,8 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_channel_priority_params channel_priority;
 		struct tegra_vgpu_channel_runlist_interleave_params channel_interleave;
 		struct tegra_vgpu_channel_timeslice_params channel_timeslice;
+		struct tegra_vgpu_channel_set_ctxsw_mode set_ctxsw_mode;
+		struct tegra_vgpu_channel_free_hwpm_ctx free_hwpm_ctx;
 		char padding[192];
 	} params;
 };

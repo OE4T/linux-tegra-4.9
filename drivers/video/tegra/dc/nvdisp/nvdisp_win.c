@@ -646,6 +646,24 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		memcpy(&dc->shadow_windows[win->idx], win, sizeof(*win));
 	}
 
+	/*
+	 * If this HEAD has already reserved exclusive use of the COMMON
+	 * channel, go ahead ahd program the ihub registers (assembly)
+	 * if they haven't been programmed yet.
+	 */
+	if (dc->common_channel_reserved && !dc->common_channel_programmed) {
+		tegra_nvdisp_program_imp_results(dc);
+
+		/*
+		 * The ihub registers live on the COMMON channel. Update the
+		 * masks accordingly so that the COMMON channel state is
+		 * promoted along with the WINDOW channel state.
+		 */
+		update_mask |=
+			nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+		act_req_mask |= nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+	}
+
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
 		struct tegra_dc_win *dc_win;
@@ -876,6 +894,8 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		return 0;
 	}
 
+	tegra_nvdisp_reserve_common_channel(dc);
+
 	mutex_lock(&tegra_nvdisp_lock);
 
 	if (win->dc) {	/* window is owned by another head */
@@ -927,6 +947,8 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 			COMMON_ACT_REQ, 0, 1, NVDISP_TEGRA_POLL_TIMEOUT_MS))
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for DC to stop\n");
+
+	tegra_nvdisp_release_common_channel(dc);
 
 	/* set the windows scaler coeff value */
 	if (!win->is_scaler_coeff_set) {

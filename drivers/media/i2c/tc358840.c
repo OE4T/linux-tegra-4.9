@@ -1,7 +1,7 @@
 /*
  * tc358840.c - Toshiba UH2C/D HDMI-CSI bridge driver
  *
- * Copyright (c) 2015, Armin Weiss <weii@zhaw.ch>
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is based on the tc358840 - Toshiba HDMI to CSI-2 bridge driver
  * from Cisco Systems, Inc.
@@ -40,6 +40,7 @@
 #include <media/v4l2-device.h>
 #include <media/v4l2-subdev.h>
 #include <media/v4l2-of.h>
+#include <media/camera_common.h>
 
 #include <media/i2c/tc358840.h>
 #include "tc358840_regs.h"
@@ -53,6 +54,41 @@ MODULE_PARM_DESC(debug, "debug level (0-3)");
 
 #define EDID_NUM_BLOCKS_MAX 8
 #define EDID_BLOCK_SIZE 128
+
+static u8 edid[] = {
+	0x00, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0x00,
+	0x52, 0x62, 0x88, 0x88, 0x00, 0x88, 0x88, 0x88,
+	0x1C, 0x15, 0x01, 0x03, 0x80, 0x00, 0x00, 0x78,
+	0x0A, 0x0D, 0xC9, 0xA0, 0x57, 0x47, 0x98, 0x27,
+	0x12, 0x48, 0x4C, 0x00, 0x00, 0x00, 0x01, 0x01,
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0x01,
+	0x01, 0x01, 0x01, 0x01, 0x01, 0x01, 0xEC, 0x68,
+	0x00, 0xA0, 0xF0, 0x70, 0x37, 0x80, 0x30, 0x20,
+	0x3A, 0x00, 0x00, 0x70, 0xF8, 0x00, 0x00, 0x1C,
+	0x02, 0x3A, 0x80, 0x18, 0x71, 0x38, 0x2D, 0x40,
+	0x58, 0x2C, 0x45, 0x00, 0xC4, 0x8E, 0x21, 0x00,
+	0x00, 0x1E, 0x00, 0x00, 0x00, 0xFC, 0x00, 0x54,
+	0x6F, 0x73, 0x68, 0x69, 0x62, 0x61, 0x2D, 0x55,
+	0x48, 0x32, 0x44, 0x0A, 0x00, 0x00, 0x00, 0xFD,
+	0x00, 0x17, 0x3D, 0x0F, 0x8C, 0x17, 0x00, 0x0A,
+	0x20, 0x20, 0x20, 0x20, 0x20, 0x20, 0x01, 0xAF,
+	0x02, 0x03, 0x1A, 0x74, 0x47, 0x32, 0x10, 0x32,
+	0x32, 0x32, 0x32, 0x32, 0x23, 0x09, 0x07, 0x01,
+	0x83, 0x01, 0x00, 0x00, 0x65, 0x03, 0x0C, 0x00,
+	0x10, 0x00, 0xEC, 0x68, 0x00, 0xA0, 0xF0, 0x70,
+	0x37, 0x80, 0x30, 0x20, 0x3A, 0x00, 0x00, 0x70,
+	0xF8, 0x00, 0x00, 0x1C, 0xEC, 0x68, 0x00, 0xA0,
+	0xF0, 0x70, 0x37, 0x80, 0x30, 0x20, 0x3A, 0x00,
+	0x00, 0x70, 0xF8, 0x00, 0x00, 0x1C, 0xEC, 0x68,
+	0x00, 0xA0, 0xF0, 0x70, 0x37, 0x80, 0x30, 0x20,
+	0x3A, 0x00, 0x00, 0x70, 0xF8, 0x00, 0x00, 0x1C,
+	0xEC, 0x68, 0x00, 0xA0, 0xF0, 0x70, 0x37, 0x80,
+	0x30, 0x20, 0x3A, 0x00, 0x00, 0x70, 0xF8, 0x00,
+	0x00, 0x1C, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
+	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x4A,
+};
 
 static const struct v4l2_dv_timings_cap tc358840_timings_cap = {
 	.type = V4L2_DV_BT_656_1120,
@@ -331,15 +367,11 @@ static int tc358840_get_detected_timings(struct v4l2_subdev *sd,
 	frame_height = (((i2c_rd8(sd, IN_VSIZE_HI) & 0x3f) << 8) +
 		i2c_rd8(sd, IN_VSIZE_LO)) / 2;
 
-	/*
-	 * TODO: Check if frame_interval is correct
-	 * since the register is not in the datasheet rev. 1.5
-	 */
+	/* TODO: Check if frame_interval is correct
+	 * since the register is not in the datasheet rev. 1.5 */
 
-	/*
-	 * frame interval in milliseconds * 10
-	 * Require SYS_FREQ0 and SYS_FREQ1 are precisely set
-	 */
+	/* frame interval in milliseconds * 10
+	 * Require SYS_FREQ0 and SYS_FREQ1 are precisely set */
 	frame_interval = ((i2c_rd8(sd, FV_CNT_HI) & 0x3) << 8) +
 		i2c_rd8(sd, FV_CNT_LO);
 	fps = (frame_interval > 0) ?
@@ -385,8 +417,7 @@ static void tc358840_set_hdmi_hdcp(struct v4l2_subdev *sd, bool enable)
 	i2c_wr8_and_or(sd, HDCP_REG2, ~MASK_AUTO_P3_RESET,
 			SET_AUTO_P3_RESET_FRAMES(0x0f));
 
-	/*
-	 * HDCP is disabled by configuring the receiver as HDCP repeater. The
+	/* HDCP is disabled by configuring the receiver as HDCP repeater. The
 	 * repeater mode require software support to work, so HDCP
 	 * authentication will fail.
 	 */
@@ -394,8 +425,7 @@ static void tc358840_set_hdmi_hdcp(struct v4l2_subdev *sd, bool enable)
 	i2c_wr8_and_or(sd, HDCP_MODE, ~(MASK_AUTO_CLR | MASK_MODE_RST_TN),
 			enable ?  (MASK_AUTO_CLR | MASK_MODE_RST_TN) : 0);
 
-	/*
-	 * Apple MacBook Pro gen.8 has a bug that makes it freeze every fifth
+	/* Apple MacBook Pro gen.8 has a bug that makes it freeze every fifth
 	 * second when HDCP is disabled, but the MAX_EXCED bit is handled
 	 * correctly and HDCP is disabled on the HDMI output.
 	 */
@@ -413,10 +443,8 @@ static void tc358840_disable_edid(struct v4l2_subdev *sd)
 
 	cancel_delayed_work_sync(&state->delayed_work_enable_hotplug);
 
-	/*
-	 * DDC access to EDID is also disabled when hotplug is disabled. See
-	 * register DDC_CTL.
-	 */
+	/* DDC access to EDID is also disabled when hotplug is disabled. See
+	 * register DDC_CTL */
 	i2c_wr8_and_or(sd, HPD_CTL, ~MASK_HPD_OUT0, 0x0);
 }
 
@@ -431,10 +459,8 @@ static void tc358840_enable_edid(struct v4l2_subdev *sd)
 
 	v4l2_dbg(2, debug, sd, "%s:\n", __func__);
 
-	/*
-	 * Enable hotplug after 100 ms. DDC access to EDID is also enabled when
-	 * hotplug is enabled. See register DDC_CTL.
-	 */
+	/* Enable hotplug after 100 ms. DDC access to EDID is also enabled when
+	 * hotplug is enabled. See register DDC_CTL */
 	queue_delayed_work(state->work_queues,
 		&state->delayed_work_enable_hotplug, HZ / 10);
 
@@ -547,23 +573,23 @@ static int enable_stream(struct v4l2_subdev *sd, bool enable)
 	v4l2_dbg(2, debug, sd, "%s: %sable\n", __func__, enable ? "en" : "dis");
 
 	if (enable) {
+#if 0		/* Wait until we can use the clock-noncontinuous property */
 		if (pdata->endpoint.bus.mipi_csi2.flags &
 		    V4L2_MBUS_CSI2_NONCONTINUOUS_CLOCK) {
 			i2c_wr32_and_or(sd, FUNCMODE, ~(MASK_CONTCLKMODE),
 					MASK_FORCESTOP);
 		} else {
-			/*
-			 * It is critical for CSI receiver to see lane
-			 * transition LP11->HS. Set to non-continuous mode to
-			 * enable clock lane LP11 state.
-			 */
+			/* It is critical for CSI receiver to see lane transition
+			 * LP11->HS. Set to non-continuous mode to enable clock lane
+			 * LP11 state. */
 			i2c_wr32_and_or(sd, FUNCMODE, ~(MASK_CONTCLKMODE), 0);
-			/*
-			 * Set to continuous mode to trigger LP11->HS
-			 * transition
-			 */
+			/* Set to continuous mode to trigger LP11->HS transition */
 			i2c_wr32_and_or(sd, FUNCMODE, 0, MASK_CONTCLKMODE);
 		}
+#else
+		i2c_wr32_and_or(sd, FUNCMODE, ~(MASK_CONTCLKMODE),
+				MASK_FORCESTOP);
+#endif
 		/* Unmute video */
 		i2c_wr8(sd, VI_MUTE, MASK_AUTO_MUTE);
 		/* Signal end of initialization */
@@ -572,10 +598,8 @@ static int enable_stream(struct v4l2_subdev *sd, bool enable)
 		/* Enable Registers to be initialized */
 		i2c_wr8_and_or(sd, INIT_END, ~(MASK_INIT_END), 0x00);
 
-		/*
-		 * Mute video so that all data lanes go to LSP11 state.
-		 * No data is output to CSI Tx block.
-		 */
+		/* Mute video so that all data lanes go to LSP11 state.
+		 * No data is output to CSI Tx block. */
 
 		i2c_wr8(sd, VI_MUTE, MASK_AUTO_MUTE | MASK_VI_MUTE);
 	}
@@ -620,13 +644,10 @@ static void tc358840_set_splitter(struct v4l2_subdev *sd)
 		i2c_wr16_and_or(sd, SPLITTX1_CTRL, ~(MASK_IFEN | MASK_LCD_CSEL),
 				MASK_SPBP);
 
-		i2c_wr16_and_or(sd, SPLITTX0_SPLIT,
-				(u16)~(MASK_TX1SEL | MASK_EHW), 0);
+		i2c_wr16_and_or(sd, SPLITTX0_SPLIT, (u16)~(MASK_TX1SEL | MASK_EHW), 0);
 	} else {
-		i2c_wr16_and_or(sd, SPLITTX0_CTRL,
-				~(MASK_IFEN | MASK_LCD_CSEL | MASK_SPBP), 0);
-		i2c_wr16_and_or(sd, SPLITTX1_CTRL,
-				~(MASK_IFEN | MASK_LCD_CSEL | MASK_SPBP), 0);
+		i2c_wr16_and_or(sd, SPLITTX0_CTRL, ~(MASK_IFEN | MASK_LCD_CSEL | MASK_SPBP), 0);
+		i2c_wr16_and_or(sd, SPLITTX1_CTRL, ~(MASK_IFEN | MASK_LCD_CSEL | MASK_SPBP), 0);
 
 		i2c_wr16_and_or(sd, SPLITTX0_SPLIT, ~(MASK_TX1SEL), MASK_EHW);
 	}
@@ -643,6 +664,9 @@ static void tc358840_set_pll(struct v4l2_subdev *sd)
 	u32 hsck;
 
 	v4l2_dbg(2, debug, sd, "%s:\n", __func__);
+
+	BUG_ON((pdata->csi_port <= CSI_TX_NONE) ||
+		(pdata->csi_port > CSI_TX_BOTH));
 
 	if (pdata->csi_port == CSI_TX_NONE) {
 		v4l2_err(sd, "%s: No CSI port defined!\n", __func__);
@@ -684,6 +708,7 @@ static void tc358840_set_pll(struct v4l2_subdev *sd)
 
 		i2c_wr32(sd, base_addr+PLLCONF,
 			pllconf_new | SET_PLL_FRS(pll_frs));
+
 	}
 }
 
@@ -698,6 +723,8 @@ static void tc358840_set_ref_clk(struct v4l2_subdev *sd)
 	u16 csc;
 
 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
+
+	BUG_ON((pdata->refclk_hz < 40000000) || (pdata->refclk_hz > 50000000));
 
 	/* System Frequency */
 	sys_freq = pdata->refclk_hz / 10000;
@@ -732,7 +759,7 @@ static void tc358840_set_csi_mbus_config(struct v4l2_subdev *sd)
 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
 
 	switch (state->mbus_fmt_code) {
-	case MEDIA_BUS_FMT_UYVY8_1X16:
+	case V4L2_MBUS_FMT_UYVY8_1X16:
 		v4l2_dbg(2, debug, sd, "%s: YCbCr 422 16-bit\n", __func__);
 
 		i2c_wr8(sd, VOUT_FMT, MASK_OUTFMT_422 | MASK_422FMT_NORMAL);
@@ -746,7 +773,7 @@ static void tc358840_set_csi_mbus_config(struct v4l2_subdev *sd)
 		i2c_wr16(sd, CONFCTL1, 0x0);
 		break;
 
-	case MEDIA_BUS_FMT_RGB888_1X24:
+	case V4L2_MBUS_FMT_RGB888_1X24:
 		v4l2_dbg(2, debug, sd, "%s: RGB 888 24-bit\n", __func__);
 
 		i2c_wr8(sd, VOUT_FMT, MASK_OUTFMT_444_RGB);
@@ -775,14 +802,21 @@ static unsigned tc358840_num_csi_lanes_needed(struct v4l2_subdev *sd)
 	struct v4l2_bt_timings *bt = &state->timings.bt;
 	struct tc358840_platform_data *pdata = &state->pdata;
 	u32 bits_pr_pixel =
-		(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16) ?  16 : 24;
+		(state->mbus_fmt_code == V4L2_MBUS_FMT_UYVY8_1X16) ?  16 : 24;
 	u32 bps = bt->width * bt->height * fps(bt) * bits_pr_pixel;
 	u32 bps_pr_lane = (pdata->refclk_hz / pdata->pll_prd) * pdata->pll_fbd;
+
+	/* CISCO HACK: Use all lanes and lower clock speed for 1080p60 to
+	 * reduce number of CSI resets */
+	if (bt->width == 1920 && bt->height == 1080 && fps(bt) == 60 &&
+			state->mbus_fmt_code == V4L2_MBUS_FMT_UYVY8_1X16) {
+		return 4;
+	}
 
 	return DIV_ROUND_UP(bps, bps_pr_lane);
 #endif
 
-	/* FIXME : ALWAYS USE 4 LANES FOR TESTING */
+	/* FIXME : ALWAYS USE 4 LANES FOR TESTING*/
 	return 4;
 }
 
@@ -811,7 +845,7 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 			v4l2_dbg(1, debug, sd,
 				"%s: Disabling CSI TX%d\n", __func__, port-1);
 
-			/* Disable CSI lanes (High Z) */
+			/* Disable CSI lanes (High Z)*/
 			i2c_wr32_and_or(sd, base_addr+LANEEN,
 				~(MASK_CLANEEN), 0);
 			continue;
@@ -881,6 +915,11 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 		/* TODO: Check if LRXHTOCNT is necessary (0x014C) */
 		i2c_wr32(sd, base_addr+LRXHTOCNT, 0x00010000);
 
+		/*
+		 * TODO: Check if this is the correct register
+		 * (0x0150)
+		 */
+		//i2c_wr32(sd, base_addr+FUNCMODE, MASK_CONTCLKMODE);
 		/* TODO: Check if RX_VC_EN is necessary (0x0154) */
 		i2c_wr32(sd, base_addr+RX_VC_EN, MASK_RX_VC0);
 		/* TODO: Check if INPUTTOCNT is necessary (0x0158) */
@@ -1014,8 +1053,7 @@ static void tc358840_set_hdmi_info_frame_mode(struct v4l2_subdev *sd)
 
 static void tc358840_initial_setup(struct v4l2_subdev *sd)
 {
-	static struct v4l2_dv_timings default_timing =
-				V4L2_DV_BT_CEA_1920X1080P60;
+	static struct v4l2_dv_timings default_timing = V4L2_DV_BT_CEA_1920X1080P60;
 	struct tc358840_state *state = to_state(sd);
 	struct tc358840_platform_data *pdata = &state->pdata;
 
@@ -1068,7 +1106,7 @@ static void tc358840_format_change(struct v4l2_subdev *sd)
 		v4l2_dbg(1, debug, sd, "%s: No signal\n",
 				__func__);
 	} else {
-		if (!v4l2_match_dv_timings(&state->timings, &timings, 0, false))
+		if (!v4l2_match_dv_timings(&state->timings, &timings, 0))
 			enable_stream(sd, false);
 
 		if (debug)
@@ -1149,11 +1187,9 @@ static void tc358840_hdmi_misc_int_handler(struct v4l2_subdev *sd,
 	v4l2_dbg(3, debug, sd, "%s: MISC_INT = 0x%02x\n", __func__, misc_int);
 
 	if (misc_int & MASK_SYNC_CHG) {
-		/*
-		 * Reset the HDMI PHY to try to trigger proper lock on the
+		/* Reset the HDMI PHY to try to trigger proper lock on the
 		 * incoming video format. Erase BKSV to prevent that old keys
-		 * are used when a new source is connected.
-		 */
+		 * are used when a new source is connected. */
 		if (no_sync(sd) || no_signal(sd)) {
 			tc358840_reset_phy(sd);
 			tc358840_erase_bksv(sd);
@@ -1226,14 +1262,12 @@ static void tc358840_hdmi_clk_int_handler(struct v4l2_subdev *sd, bool *handled)
 				__func__);
 
 		/* TODO: Check if also true for tc358840 */
-		/*
-		 * If the source switch to a new resolution with the same pixel
+		/* If the source switch to a new resolution with the same pixel
 		 * frequency as the existing (e.g. 1080p25 -> 720p50), the
 		 * I_SYNC_CHG interrupt is not always triggered, while the
 		 * I_IN_DE_CHG interrupt seems to work fine. FMT_CHANGE
 		 * notifications are only sent when the signal is stable to
-		 * reduce the number of notifications.
-		 */
+		 * reduce the number of notifications. */
 		if (!no_signal(sd) && !no_sync(sd))
 			tc358840_format_change(sd);
 
@@ -1283,15 +1317,21 @@ static void tc358840_hdmi_sys_int_handler(struct v4l2_subdev *sd, bool *handled)
 		v4l2_dbg(1, debug, sd, "%s: HDMI->DVI change detected\n",
 				__func__);
 
-		/*
-		 * Reset the HDMI PHY to try to trigger proper lock on the
+		/* Reset the HDMI PHY to try to trigger proper lock on the
 		 * incoming video format. Erase BKSV to prevent that old keys
-		 * are used when a new source is connected.
-		 */
+		 * are used when a new source is connected. */
 		if (no_sync(sd) || no_signal(sd)) {
 			tc358840_reset_phy(sd);
 			tc358840_erase_bksv(sd);
 		}
+
+		/* CISCO HACK: User space must be notified when the source
+		 * switch from HDMI to DVI mode. If not, the video will freeze.
+		 * The video is received by the OMAP (omapconf read 0×52001070),
+		 * but the picture in the monitor app is frozen.
+		 * TODO: Investigate what goes wrong in user space.
+		 */
+		tc358840_format_change(sd);
 
 		sys_int &= ~MASK_DVI;
 		if (handled)
@@ -1324,24 +1364,25 @@ static int tc358840_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
 	u16 intstatus;
 	unsigned retry = 10;
 
+	//disable_irq_nosync(state->pdata.interrupt);
 	intstatus = i2c_rd16(sd, INTSTATUS);
 
 	v4l2_dbg(1, debug, sd, "%s: IntStatus = 0x%04X\n", __func__, intstatus);
 
 	/*
-	 * Need to figure out why these mdelays are needed, and which of these
-	 * are needed. Without mdelays the interrupts just stop.
+	 * Need to figure out why these msleeps are needed, and which of these
+	 * are needed. Without msleeps the interrupts just stop.
 	 */
-	mdelay(1);
+	msleep(1);
 	if (intstatus & MASK_HDMI_INT) {
 		u8 hdmi_int0;
 		u8 hdmi_int1;
 retry:
 		retry--;
 		hdmi_int0 = i2c_rd8(sd, HDMI_INT0);
-		mdelay(1);
+		msleep(1);
 		hdmi_int1 = i2c_rd8(sd, HDMI_INT1);
-		mdelay(1);
+		msleep(1);
 
 		if (hdmi_int0 & MASK_MISC)
 			tc358840_hdmi_misc_int_handler(sd, handled);
@@ -1354,10 +1395,10 @@ retry:
 		if (hdmi_int1 & MASK_AUD)
 			tc358840_hdmi_audio_int_handler(sd, handled);
 
-		mdelay(1);
+		msleep(1);
 		i2c_wr16(sd, INTSTATUS, MASK_HDMI_INT);
 		intstatus &= ~MASK_HDMI_INT;
-		mdelay(1);
+		msleep(1);
 
 		/* Display unhandled HDMI interrupts */
 		hdmi_int0 = i2c_rd8(sd, HDMI_INT0);
@@ -1368,7 +1409,7 @@ retry:
 			if (retry)
 				goto retry;
 		}
-		mdelay(1);
+		msleep(1);
 		hdmi_int1 = i2c_rd8(sd, HDMI_INT1);
 		if (hdmi_int1) {
 			v4l2_dbg(1, debug, sd,
@@ -1398,6 +1439,7 @@ retry:
 			"%s: Unhandled IntStatus interrupts: 0x%04x\n",
 			__func__, intstatus);
 	}
+	//enable_irq(state->pdata.interrupt);
 	return 0;
 }
 
@@ -1414,7 +1456,7 @@ static irqreturn_t tc358840_irq_handler(int irq, void *dev_id)
 /* --------------- PAD OPS --------------- */
 
 static int tc358840_get_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_fh *fh,
 		struct v4l2_subdev_format *format)
 {
 	struct tc358840_state *state = to_state(sd);
@@ -1458,11 +1500,11 @@ static int tc358840_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int tc358840_set_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_fh *fh,
 		struct v4l2_subdev_format *format)
 {
 	u32 code = format->format.code; /* is overwritten by get_fmt */
-	int ret = tc358840_get_fmt(sd, cfg, format);
+	int ret = tc358840_get_fmt(sd, fh, format);
 
 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
 
@@ -1472,8 +1514,8 @@ static int tc358840_set_fmt(struct v4l2_subdev *sd,
 		return ret;
 
 	switch (code) {
-	case MEDIA_BUS_FMT_RGB888_1X24:
-	case MEDIA_BUS_FMT_UYVY8_1X16:
+	case V4L2_MBUS_FMT_RGB888_1X24:
+	case V4L2_MBUS_FMT_UYVY8_1X16:
 		break;
 	default:
 		return -EINVAL;
@@ -1498,6 +1540,8 @@ static int tc358840_g_edid(struct v4l2_subdev *sd,
 	struct tc358840_state *state = to_state(sd);
 
 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
+
+	memset(edid->reserved, 0, sizeof(edid->reserved));
 
 	if (edid->pad != 0)
 		return -EINVAL;
@@ -1528,9 +1572,12 @@ static int tc358840_s_edid(struct v4l2_subdev *sd,
 {
 	struct tc358840_state *state = to_state(sd);
 	u16 edid_len = edid->blocks * EDID_BLOCK_SIZE;
+	int i;
 
 	v4l2_dbg(2, debug, sd, "%s, pad %d, start block %d, blocks %d\n",
 		 __func__, edid->pad, edid->start_block, edid->blocks);
+
+	memset(edid->reserved, 0, sizeof(edid->reserved));
 
 	if (edid->pad != 0)
 		return -EINVAL;
@@ -1553,7 +1600,11 @@ static int tc358840_s_edid(struct v4l2_subdev *sd,
 		return 0;
 	}
 
-	i2c_wr(sd, EDID_RAM, edid->edid, edid_len);
+	for (i = 0; i < 256; i++) {
+		unsigned int val;
+		val = edid->edid[i];
+		i2c_wr8(sd, EDID_RAM + i, val);
+	}
 
 	state->edid_blocks_written = edid->blocks;
 
@@ -1605,13 +1656,12 @@ static int tc358840_s_dv_timings(struct v4l2_subdev *sd,
 		v4l2_print_dv_timings(sd->name, "tc358840_s_dv_timings: ",
 				timings, false);
 
-	if (v4l2_match_dv_timings(&state->timings, timings, 0, false)) {
+	if (v4l2_match_dv_timings(&state->timings, timings, 0)) {
 		v4l2_dbg(1, debug, sd, "%s: no change\n", __func__);
 		return 0;
 	}
 
-	if (!v4l2_valid_dv_timings(timings, &tc358840_timings_cap,
-				   NULL, NULL)) {
+	if (!v4l2_valid_dv_timings(timings, &tc358840_timings_cap, NULL, NULL)) {
 		v4l2_dbg(1, debug, sd, "%s: timings out of range\n", __func__);
 		return -ERANGE;
 	}
@@ -1621,6 +1671,8 @@ static int tc358840_s_dv_timings(struct v4l2_subdev *sd,
 	enable_stream(sd, false);
 	tc358840_set_csi(sd);
 	tc358840_set_splitter(sd);
+	/* FIXME: temporary fix until s_stream is called again */
+	enable_stream(sd, true);
 
 	return 0;
 }
@@ -1663,8 +1715,7 @@ static int tc358840_query_dv_timings(struct v4l2_subdev *sd,
 	if (debug)
 		v4l2_print_dv_timings(sd->name, "tc358840_query_dv_timings: ",
 			timings, false);
-	if (!v4l2_valid_dv_timings(timings, &tc358840_timings_cap,
-				   NULL, NULL)) {
+	if (!v4l2_valid_dv_timings(timings, &tc358840_timings_cap, NULL, NULL)) {
 		v4l2_dbg(1, debug, sd, "%s: timings out of range\n", __func__);
 		return -ERANGE;
 	}
@@ -1719,20 +1770,8 @@ static int tc358840_g_mbus_config(struct v4l2_subdev *sd,
 }
 
 #ifdef CONFIG_VIDEO_ADV_DEBUG
-static u8 tc358840_reg_size(u32 addr)
+static int tc358840_g_register(struct v4l2_subdev *sd, struct v4l2_dbg_register *reg)
 {
-	if ((addr >= 0x100 && addr < 0x500) ||
-	    (addr >= 0x600 && addr < 0x700))
-		return 4;
-	if (addr >= 0x8000 && addr < 0xa000)
-		return 1;
-	return 2;
-}
-
-static int tc358840_g_register(struct v4l2_subdev *sd,
-			       struct v4l2_dbg_register *reg)
-{
-	reg->size = tc358840_reg_size(reg->reg);
 	switch (reg->size) {
 	case 1:
 		reg->val = i2c_rd8(sd, reg->reg);
@@ -1748,12 +1787,9 @@ static int tc358840_g_register(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int tc358840_s_register(struct v4l2_subdev *sd,
-			       const struct v4l2_dbg_register *reg)
+static int tc358840_s_register(struct v4l2_subdev *sd, const struct v4l2_dbg_register *reg)
 {
-	u8 size = tc358840_reg_size(reg->reg);
-
-	switch (size) {
+	switch (reg->size) {
 	case 1:
 		i2c_wr8(sd, reg->reg, reg->val);
 		break;
@@ -1830,11 +1866,7 @@ static int tc358840_log_status(struct v4l2_subdev *sd)
 			tc358840_num_csi_lanes_in_use(sd));
 	v4l2_info(sd, "Splitter %sabled\n",
 		  (i2c_rd16(sd, SPLITTX0_CTRL) & MASK_SPBP) ? "dis" : "en");
-#if 0
 	/*
-	 * These are no longer present on the tc358840, need to check if
-	 * there are replacements.
-	 */
 	v4l2_info(sd, "Waiting for particular sync signal: %s\n",
 			(i2c_rd16(sd, CSI_STATUS) & MASK_S_WSYNC) ?
 			"yes" : "no");
@@ -1846,8 +1878,7 @@ static int tc358840_log_status(struct v4l2_subdev *sd)
 			"yes" : "no");
 	v4l2_info(sd, "Stopped: %s\n",
 			(i2c_rd16(sd, CSI_STATUS) & MASK_S_HLT) ?
-			"yes" : "no");
-#endif
+			"yes" : "no");*/
 	v4l2_info(sd, "Color space: %s\n",
 			state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16 ?
 			"YCbCr 422 16-bit" :
@@ -1879,9 +1910,56 @@ static int tc358840_s_stream(struct v4l2_subdev *sd, int enable)
 	return enable_stream(sd, enable);
 }
 
-static int tc358840_enum_mbus_code(struct v4l2_subdev *sd,
-				   struct v4l2_subdev_pad_config *cfg,
-				   struct v4l2_subdev_mbus_code_enum *code)
+static int tc358840_s_mbus_fmt(struct v4l2_subdev *sd,
+			       struct v4l2_mbus_framefmt *fmt)
+{
+	struct v4l2_subdev_format format;
+
+	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
+
+	memcpy(&format.format, fmt, sizeof(struct v4l2_mbus_framefmt));
+	format.which = V4L2_SUBDEV_FORMAT_ACTIVE;
+	format.pad = 0;
+
+	return tc358840_set_fmt(sd, NULL, &format);
+}
+
+static int tc358840_g_mbus_fmt(struct v4l2_subdev *sd,
+			       struct v4l2_mbus_framefmt *fmt)
+{
+	struct v4l2_subdev_format format;
+	int ret;
+
+	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
+
+	format.pad = 0;
+	ret = tc358840_get_fmt(sd, NULL, &format);
+	if (ret)
+		return ret;
+
+	*fmt = format.format;
+
+	return 0;
+}
+
+static int tc358840_try_mbus_fmt(struct v4l2_subdev *sd,
+				 struct v4l2_mbus_framefmt *fmt)
+{
+	struct v4l2_subdev_format format;
+
+	v4l2_dbg(2, debug, sd,
+		"%s(): width=%d, height=%d, code=0x%04X, field=%d\n",
+		__func__, fmt->width, fmt->height, fmt->code, fmt->field);
+
+	memcpy(&format.format, fmt, sizeof(struct v4l2_mbus_framefmt));
+	format.which = V4L2_SUBDEV_FORMAT_TRY;
+	format.pad = 0;
+
+	return tc358840_set_fmt(sd, NULL, &format);
+}
+
+static int tc358840_enum_mbus_code(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
+			          struct v4l2_subdev_mbus_code_enum *code)
 {
 	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
 
@@ -1890,12 +1968,17 @@ static int tc358840_enum_mbus_code(struct v4l2_subdev *sd,
 
 	switch (code->index) {
 	case 0:
-		code->code = MEDIA_BUS_FMT_RGB888_1X24;
+		code->code = V4L2_MBUS_FMT_RGB888_1X24;
 		break;
 	case 1:
-		code->code = MEDIA_BUS_FMT_UYVY8_1X16;
+		code->code = V4L2_MBUS_FMT_UYVY8_1X16;
 		break;
 	}
+	return 0;
+}
+
+static int tc358840_s_power(struct v4l2_subdev *sd, int on)
+{
 	return 0;
 }
 
@@ -1903,12 +1986,19 @@ static struct v4l2_subdev_video_ops tc358840_subdev_video_ops = {
 	.g_input_status = tc358840_g_input_status,
 	.s_dv_timings = tc358840_s_dv_timings,
 	.g_dv_timings = tc358840_g_dv_timings,
+	.enum_dv_timings = tc358840_enum_dv_timings,
 	.query_dv_timings = tc358840_query_dv_timings,
+	.dv_timings_cap = tc358840_dv_timings_cap,
 	.g_mbus_config = tc358840_g_mbus_config,
 	.s_stream = tc358840_s_stream,
+
+	.s_mbus_fmt = tc358840_s_mbus_fmt,
+	.g_mbus_fmt = tc358840_g_mbus_fmt,
+	.try_mbus_fmt = tc358840_try_mbus_fmt,
 };
 
 static struct v4l2_subdev_core_ops tc358840_subdev_core_ops = {
+	.s_power = tc358840_s_power,
 	.log_status = tc358840_log_status,
 	.interrupt_service_routine = tc358840_isr,
 	.subscribe_event = tc358840_subscribe_event,
@@ -1925,8 +2015,6 @@ static const struct v4l2_subdev_pad_ops tc358840_pad_ops = {
 	.enum_mbus_code = tc358840_enum_mbus_code,
 	.get_edid = tc358840_g_edid,
 	.set_edid = tc358840_s_edid,
-	.enum_dv_timings = tc358840_enum_dv_timings,
-	.dv_timings_cap = tc358840_dv_timings_cap,
 };
 
 static struct v4l2_subdev_ops tc358840_ops = {
@@ -1986,10 +2074,10 @@ static bool tc358840_parse_dt(struct tc358840_platform_data *pdata,
 	pdata->reset_gpio = of_get_named_gpio(node, "reset-gpios", 0);
 	if (pdata->reset_gpio == 0)
 		return false;
-	v4l_dbg(1, debug, client, "reset_gpios = %d\n", pdata->reset_gpio);
+	v4l_dbg(1, debug, client, "reset_gpio = %d\n", pdata->reset_gpio);
 
-	if (v4l2_of_parse_endpoint(node, &pdata->endpoint))
-		return false;
+//	if (v4l2_of_parse_endpoint(node, &pdata->endpoint))
+//		return false;
 
 	property = of_get_property(node, "refclk_hz", NULL);
 	if (property == NULL)
@@ -2093,6 +2181,58 @@ static bool tc358840_parse_dt(struct tc358840_platform_data *pdata,
 }
 #endif
 
+static int tc358840_pwr_init(struct tc358840_platform_data *pdata,
+		struct i2c_client *client)
+{
+	struct device_node *node = client->dev.of_node;
+	enum of_gpio_flags flags;
+	int cam2_rst;
+	int err;
+	struct regulator *dvdd;
+	struct regulator *iovdd;
+
+	err = camera_common_regulator_get(client, &iovdd, "vif");
+	if (err < 0) {
+		dev_err(&client->dev, "cannot get regulator vif %d\n", err);
+		return -EINVAL;
+	}
+
+	err = camera_common_regulator_get(client, &dvdd, "vdig");
+	if (err < 0) {
+		dev_err(&client->dev, "cannot get regulator vdig %d\n", err);
+		return -EINVAL;
+	}
+
+	/*  cam2 rst */
+	cam2_rst = of_get_named_gpio(node, "cam2_rst", 0);
+	if (cam2_rst == 0)
+		return false;
+	err = gpio_request(cam2_rst, "cam2-rst");
+	if (err < 0)
+		dev_err(&client->dev,
+				"cam2 rst gpio request failed %d\n", err);
+
+	gpio_direction_output(cam2_rst, 1);
+
+	if (dvdd) {
+		err = regulator_enable(dvdd);
+		if (err < 0) {
+			dev_err(&client->dev, "cannot enable regulator vif %d\n", err);
+			return -EINVAL;
+		}
+	}
+	if (iovdd) {
+		err = regulator_enable(iovdd);
+		if (err < 0) {
+			dev_err(&client->dev, "cannot enable regulator vdig %d\n", err);
+			return -EINVAL;
+		}
+	}
+	gpio_direction_output(cam2_rst, 1);
+
+	return true;
+}
+
 static int tc358840_verify_chipid(struct v4l2_subdev *sd)
 {
 	u16 cid = 0;
@@ -2127,15 +2267,17 @@ static const struct media_entity_operations tc358840_media_ops = {
 #endif
 };
 
-static int tc358840_probe(struct i2c_client *client,
-			  const struct i2c_device_id *id)
+static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id *id)
 {
+	struct v4l2_subdev_edid sd_edid = {
+		.blocks = 2,
+		.edid = edid,
+	};
 	struct tc358840_state *state;
 	struct v4l2_subdev *sd;
 	int err;
 
-	state = devm_kzalloc(&client->dev,
-			     sizeof(struct tc358840_state), GFP_KERNEL);
+	state = devm_kzalloc(&client->dev, sizeof(struct tc358840_state), GFP_KERNEL);
 	if (!state)
 		return -ENOMEM;
 
@@ -2144,26 +2286,17 @@ static int tc358840_probe(struct i2c_client *client,
 			v4l_err(client, "Couldn't parse device tree\n");
 			return -ENODEV;
 		}
+		if (!tc358840_pwr_init(&state->pdata, client)) {
+			v4l_err(client, "Couldn't power init\n");
+			return -ENODEV;
+		}
 	} else {
 		if (!client->dev.platform_data) {
 			v4l_err(client, "No platform data!\n");
 			return -ENODEV;
 		}
-		state->pdata = *(struct tc358840_platform_data *)
-						client->dev.platform_data;
+		state->pdata = *(struct tc358840_platform_data *)client->dev.platform_data;
 	}
-
-	if (state->pdata.refclk_hz < 40000000 ||
-	    state->pdata.refclk_hz > 50000000) {
-		v4l_err(client, "Invalid reference clock frequency\n");
-		return -EINVAL;
-	}
-	if (state->pdata.csi_port <= CSI_TX_NONE ||
-	    state->pdata.csi_port > CSI_TX_BOTH) {
-		v4l_err(client, "Invalid CSI port\n");
-		return -EINVAL;
-	}
-
 
 	state->i2c_client = client;
 	sd = &state->sd;
@@ -2239,7 +2372,7 @@ static int tc358840_probe(struct i2c_client *client,
 			tc358840_delayed_work_enable_hotplug);
 
 	/* Initial Setup */
-	state->mbus_fmt_code = MEDIA_BUS_FMT_UYVY8_1X16;
+	state->mbus_fmt_code = V4L2_MBUS_FMT_UYVY8_1X16;
 	tc358840_initial_setup(sd);
 
 	tc358840_set_csi_mbus_config(sd);
@@ -2247,9 +2380,9 @@ static int tc358840_probe(struct i2c_client *client,
 	/* Get interrupt */
 	if (client->irq) {
 		err = devm_request_threaded_irq(&state->i2c_client->dev,
-				client->irq, NULL, tc358840_irq_handler,
-				IRQF_TRIGGER_RISING | IRQF_ONESHOT,
-				sd->name, (void *)sd);
+						client->irq, NULL, tc358840_irq_handler,
+						IRQF_TRIGGER_RISING | IRQF_ONESHOT,
+						sd->name, (void *)sd);
 		if (err) {
 			v4l2_err(sd, "Could not request interrupt %d!\n",
 				 client->irq);
@@ -2280,13 +2413,17 @@ static int tc358840_probe(struct i2c_client *client,
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	state->pad[0].flags = MEDIA_PAD_FL_SOURCE;
 	state->pad[1].flags = MEDIA_PAD_FL_SOURCE;
+	sd->entity.type = MEDIA_ENT_T_V4L2_SUBDEV_SENSOR;
 	sd->entity.ops = &tc358840_media_ops;
-	err = media_entity_pads_init(&sd->entity, 2, state->pad);
+	err = media_entity_init(&sd->entity, 2, state->pad, 0);
 	if (err < 0) {
 		dev_err(&client->dev, "unable to init media entity\n");
 		return err;
 	}
 #endif
+
+	/* Temporary EDID. Should be set by userspace */
+	tc358840_s_edid(sd, &sd_edid);
 
 	err = v4l2_async_register_subdev(sd);
 	if (err == 0)
@@ -2303,6 +2440,8 @@ static int tc358840_remove(struct i2c_client *client)
 
 	v4l_dbg(1, debug, client, "%s()\n", __func__);
 
+	// FIXME: temporary fix until s_stream is called again
+	tc358840_s_stream(sd, false);
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	media_entity_cleanup(&sd->entity);
 #endif

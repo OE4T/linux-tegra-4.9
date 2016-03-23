@@ -143,6 +143,7 @@ struct tegra_video_format {
 	enum tegra_image_format img_fmt;
 	enum tegra_image_dt img_dt;
 	u32 fourcc;
+	__u8 description[32];
 };
 
 u32 tegra_core_get_fourcc_by_idx(unsigned int index);
@@ -154,4 +155,5 @@ const struct tegra_video_format *tegra_core_get_format_by_code(unsigned int
 const struct tegra_video_format *tegra_core_get_format_by_fourcc(u32 fourcc);
 u32 tegra_core_bytes_per_line(unsigned int width, unsigned int align,
 			      const struct tegra_video_format *fmt);
+void tegra_core_get_description_by_idx(unsigned int index, __u8 *description);
 #endif

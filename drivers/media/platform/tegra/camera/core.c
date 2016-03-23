@@ -31,6 +31,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_L8,
 		TEGRA_IMAGE_DT_RAW8,
 		V4L2_PIX_FMT_SRGGB8,
+		"RGRG.. GBGB..",
 	},
 	{
 		TEGRA_VF_RAW8,
@@ -40,6 +41,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_L8,
 		TEGRA_IMAGE_DT_RAW8,
 		V4L2_PIX_FMT_SGRBG8,
+		"GRGR.. BGBG..",
 	},
 	{
 		TEGRA_VF_RAW8,
@@ -49,6 +51,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_L8,
 		TEGRA_IMAGE_DT_RAW8,
 		V4L2_PIX_FMT_SGBRG8,
+		"GBGB.. RGRG..",
 	},
 	{
 		TEGRA_VF_RAW8,
@@ -58,6 +61,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_L8,
 		TEGRA_IMAGE_DT_RAW8,
 		V4L2_PIX_FMT_SBGGR8,
+		"BGBG.. GRGR..",
 	},
 
 	/* RAW 10 */
@@ -69,6 +73,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW10,
 		V4L2_PIX_FMT_SRGGB10,
+		"RGRG.. GBGB..",
 	},
 	{
 		TEGRA_VF_RAW10,
@@ -78,6 +83,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW10,
 		V4L2_PIX_FMT_SGRBG10,
+		"GRGR.. BGBG..",
 	},
 	{
 		TEGRA_VF_RAW10,
@@ -87,6 +93,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW10,
 		V4L2_PIX_FMT_SGBRG10,
+		"GBGB.. RGRG..",
 	},
 	{
 		TEGRA_VF_RAW10,
@@ -96,6 +103,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW10,
 		V4L2_PIX_FMT_SBGGR10,
+		"BGBG.. GRGR..",
 	},
 
 	/* RAW 12 */
@@ -107,6 +115,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW12,
 		V4L2_PIX_FMT_SRGGB12,
+		"RGRG.. GBGB..",
 	},
 	{
 		TEGRA_VF_RAW12,
@@ -116,6 +125,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW12,
 		V4L2_PIX_FMT_SGRBG12,
+		"GRGR.. BGBG..",
 	},
 	{
 		TEGRA_VF_RAW12,
@@ -125,6 +135,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW12,
 		V4L2_PIX_FMT_SGBRG12,
+		"GBGB.. RGRG..",
 	},
 	{
 		TEGRA_VF_RAW12,
@@ -134,6 +145,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_R16_I,
 		TEGRA_IMAGE_DT_RAW12,
 		V4L2_PIX_FMT_SBGGR12,
+		"BGBG.. GRGR..",
 	},
 
 	/* RGB888 */
@@ -145,6 +157,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_A8R8G8B8,
 		TEGRA_IMAGE_DT_RGB888,
 		V4L2_PIX_FMT_ABGR32,
+		"BGRA-8-8-8-8",
 	},
 	{
 		TEGRA_VF_RGB888,
@@ -154,6 +167,58 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		TEGRA_IMAGE_FORMAT_T_A8B8G8R8,
 		TEGRA_IMAGE_DT_RGB888,
 		V4L2_PIX_FMT_RGB32,
+		"RGB-8-8-8-8",
+	},
+	/* YUV422 */
+	{
+		TEGRA_VF_YUV422,
+		16,
+		MEDIA_BUS_FMT_UYVY8_1X16,
+		2,
+		TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
+		TEGRA_IMAGE_DT_YUV422_8,
+		V4L2_PIX_FMT_UYVY,
+		"YUV 4:2:2",
+	},
+	{
+		TEGRA_VF_YUV422,
+		16,
+		MEDIA_BUS_FMT_UYVY8_2X8,
+		2,
+		TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
+		TEGRA_IMAGE_DT_YUV422_8,
+		V4L2_PIX_FMT_UYVY,
+		"YUV 4:2:2",
+	},
+	{
+		TEGRA_VF_YUV422,
+		16,
+		MEDIA_BUS_FMT_VYUY8_2X8,
+		2,
+		TEGRA_IMAGE_FORMAT_T_T_V8_Y8__U8_Y8,
+		TEGRA_IMAGE_DT_YUV422_8,
+		V4L2_PIX_FMT_VYUY,
+		"YUV 4:2:2",
+	},
+	{
+		TEGRA_VF_YUV422,
+		16,
+		MEDIA_BUS_FMT_YUYV8_2X8,
+		2,
+		TEGRA_IMAGE_FORMAT_T_Y8_U8__Y8_V8,
+		TEGRA_IMAGE_DT_YUV422_8,
+		V4L2_PIX_FMT_YUYV,
+		"YUV 4:2:2",
+	},
+	{
+		TEGRA_VF_YUV422,
+		16,
+		MEDIA_BUS_FMT_YVYU8_2X8,
+		2,
+		TEGRA_IMAGE_FORMAT_T_Y8_V8__Y8_U8,
+		TEGRA_IMAGE_DT_YUV422_8,
+		V4L2_PIX_FMT_YVYU,
+		"YUV 4:2:2",
 	},
 
 	/* YUV422 */
@@ -221,6 +286,21 @@ u32 tegra_core_get_fourcc_by_idx(unsigned int index)
 		return V4L2_PIX_FMT_SGRBG10;
 
 	return tegra_video_formats[index].fourcc;
+}
+
+/**
+ * tegra_core_get_description_by_idx - get description of a tegra_video format
+ * @index: array index of the tegra_video_formats
+ */
+void tegra_core_get_description_by_idx(unsigned int index, __u8 *description)
+{
+	if (index > (ARRAY_SIZE(tegra_video_formats) - 1))
+		return;
+
+	if (description)
+		strlcpy(description,
+			tegra_video_formats[index].description,
+			sizeof(tegra_video_formats[index].description));
 }
 
 /**

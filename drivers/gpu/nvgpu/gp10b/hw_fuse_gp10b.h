@@ -134,4 +134,12 @@ static inline u32 fuse_opt_feature_fuses_override_disable_r(void)
 {
 	return 0x000213f0;
 }
+static inline u32 fuse_opt_sec_debug_en_r(void)
+{
+	return 0x00021218;
+}
+static inline u32 fuse_opt_priv_sec_en_r(void)
+{
+	return 0x00021434;
+}
 #endif

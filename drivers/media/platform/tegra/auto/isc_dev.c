@@ -424,8 +424,8 @@ static const struct i2c_device_id isc_dev_id[] = {
 static const struct dev_pm_ops isc_dev_pm_ops = {
 	SET_RUNTIME_PM_OPS(isc_dev_suspend,
 			isc_dev_resume, NULL)
-	SET_SYSTEM_SLEEP_PM_OPS(isc_dev_resume,
-			NULL)
+	SET_SYSTEM_SLEEP_PM_OPS(isc_dev_suspend,
+			isc_dev_resume)
 };
 
 static struct i2c_driver isc_dev_drv = {

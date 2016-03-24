@@ -41,4 +41,24 @@
 		nvidia,phy-intr-gpio = <&tegra_gpio TEGRA_GPIO(M, 5) 0>;
 		nvidia,phy-max-frame-size = <10>;	/* size in kbytes */
         };
+
+	thermal-zones {
+		AO-therm {
+			trips {
+				MAKE_EQOS_TRIP(m40, -40000, 5000);
+				MAKE_EQOS_TRIP(m5, -5000, 5000);
+				MAKE_EQOS_TRIP(p30, 30000, 5000);
+				MAKE_EQOS_TRIP(p65, 65000, 5000);
+				MAKE_EQOS_TRIP(p100, 100000, 5000);
+			};
+
+			cooling-maps {
+				MAP_EQOS(m40, 1);
+				MAP_EQOS(m5, 2);
+				MAP_EQOS(p30, 3);
+				MAP_EQOS(p65, 4);
+				MAP_EQOS(p100, 5);
+			};
+		};
+	};
 };

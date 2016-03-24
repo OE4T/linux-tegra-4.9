@@ -446,18 +446,10 @@ static int parse_throttle_dt_data(struct device *dev)
 
 	/* Populate cap clks used for all balanced throttling cdevs */
 	for (i = 0; i < num_cap_clks; i++) {
-		struct clk *c;
 
 		of_property_read_string_index(np, "clock-names", i,
 						 &CAP_TBL_CAP_NAME(i));
-		c = of_clk_get(np, i);
-		if (IS_ERR_OR_NULL(c)) {
-			pr_err("%s: of_clk_get failed %s. idx=%d\n", __func__,
-				np->full_name, i);
-			ret = -EINVAL;
-			goto err;
-		}
-		CAP_TBL_CAP_CLK(i) = c;
+		CAP_TBL_CAP_CLK(i) = NULL;
 		CAP_TBL_CAP_FREQ(i) = NO_CAP;
 		CAP_TBL_CAP_TYPE(i) = THROT_DEFAULT;
 
@@ -469,6 +461,16 @@ static int parse_throttle_dt_data(struct device *dev)
 		else if (!strcmp("emc", CAP_TBL_CAP_NAME(i)))
 			CAP_TBL_CAP_TYPE(i) = THROT_EMC;
 
+		if (CAP_TBL_CAP_TYPE(i) == THROT_DEFAULT) {
+			CAP_TBL_CAP_CLK(i) = of_clk_get(np, i);
+			if (IS_ERR(CAP_TBL_CAP_CLK(i))) {
+				pr_err("%s: of_clk_get failed %s idx=%d|%ld\n",
+						__func__, np->full_name, i,
+						PTR_ERR(CAP_TBL_CAP_CLK(i)));
+				ret = -EINVAL;
+				goto err;
+			}
+		}
 		pr_info("%s: clk=%s type=%d\n", __func__, CAP_TBL_CAP_NAME(i),
 			CAP_TBL_CAP_TYPE(i));
 	}

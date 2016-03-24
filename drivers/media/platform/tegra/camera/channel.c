@@ -1500,6 +1500,8 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	chan->video.ctrl_handler = &chan->ctrl_handler;
 	chan->video.lock = &chan->video_lock;
 
+	set_bit(V4L2_FL_USE_FH_PRIO, &chan->video.flags);
+
 	video_set_drvdata(&chan->video, chan);
 
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)

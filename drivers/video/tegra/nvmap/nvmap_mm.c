@@ -161,6 +161,10 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 		u32 size = sizes[i] ? sizes[i] : handles[i]->size;
 		u32 offset = sizes[i] ? offsets[i] : 0;
 
+		if ((op == NVMAP_PAGES_RESERVE) || (op == NVMAP_PAGES_UNRESERVE))
+			if ((offset != 0) || (size != handles[i]->size))
+				return -EINVAL;
+
 		if (op == NVMAP_PAGES_RESERVE)
 			nvmap_handle_mkreserved(handles[i], offset, size);
 		else

@@ -1092,6 +1092,18 @@ static int __init tegra_cpufreq_init(void)
 		mutex_init(&per_cpu(pcpu_mlock, cpu));
 	}
 
+	if (of_property_read_bool(dn, "nvidia,enable-autocc3")) {
+		pr_debug("enabling autocc3\n");
+		tfreq_data.cc3.ndiv = SAFE_CC3_NDIV;
+		tfreq_data.cc3.vindex = SAFE_CC3_VINDEX;
+		tfreq_data.cc3.enable = true;
+		ret = enable_autocc3();
+		if (ret) {
+			tfreq_data.cc3.enable = false;
+			goto err_free_res;
+		}
+	}
+
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_init();
 #endif
@@ -1115,18 +1127,6 @@ static int __init tegra_cpufreq_init(void)
 	ret = create_ndiv_to_vindex_table();
 	if (ret)
 		goto err_free_res;
-
-	if (of_property_read_bool(dn, "nvidia,enable-autocc3")) {
-		pr_debug("enabling autocc3\n");
-		tfreq_data.cc3.ndiv = SAFE_CC3_NDIV;
-		tfreq_data.cc3.vindex = SAFE_CC3_VINDEX;
-		tfreq_data.cc3.enable = true;
-		ret = enable_autocc3();
-		if (ret) {
-			tfreq_data.cc3.enable = false;
-			goto err_free_res;
-		}
-	}
 
 	ret = init_freqtbls(dn);
 	if (ret)

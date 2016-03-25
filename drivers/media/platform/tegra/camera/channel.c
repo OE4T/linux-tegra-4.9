@@ -39,6 +39,8 @@
 #include "camera/mc_common.h"
 #include "vi/vi.h"
 
+extern int _vb2_fop_release(struct file *file, struct mutex *lock);
+
 void tegra_channel_write(struct tegra_channel *chan,
 			unsigned int addr, u32 val)
 {
@@ -1375,7 +1377,7 @@ static int tegra_channel_close(struct file *fp)
 
 	mutex_lock(&chan->video_lock);
 	is_singular = v4l2_fh_is_singular_file(fp);
-	ret = vb2_fop_release(fp);
+	ret = _vb2_fop_release(fp, NULL);
 
 	if (!is_singular) {
 		mutex_unlock(&chan->video_lock);

@@ -50,6 +50,10 @@
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp-hv";
 		ivc_queue = <&tegra_hv 0 14>;
+
+		bpmpthermal {
+			status = "disabled";
+		};
 	};
 
 	bpmp_i2c {
@@ -90,6 +94,8 @@
 		/delete-property/ vddio_sd_slot-supply;
 		status = "disabled";
 	};
+
+	/delete-node/ pmc-iopower;
 
 	fixed-regulators {
 		regulator@5 {
@@ -153,6 +159,10 @@
 		compatible = "nvidia,tegra-hv-wdt";
 		status = "okay";
 		ivc = <&tegra_hv 51>;
+	};
+
+	tegra_arm_wdt:watchdog@30d0000 {
+		status = "disabled";
 	};
 
 	mc_sid@2c00000 {
@@ -401,9 +411,25 @@
 		status = "disabled";
 	};
 
-	ahci-sata@3507000 {
+	rtc@c2a0000 {
 		status = "disabled";
 	};
+
+        /delete-node/ axi2apb@2390000;
+        /delete-node/ axi2apb@23a0000;
+        /delete-node/ axi2apb@23b0000;
+        /delete-node/ axi2apb@23c0000;
+        /delete-node/ axi2apb@23d0000;
+        /delete-node/ axip2p@2100000;
+        /delete-node/ axip2p@2110000;
+        /delete-node/ axip2p@2120000;
+        /delete-node/ axip2p@2130000;
+        /delete-node/ axip2p@2140000;
+        /delete-node/ axip2p@2150000;
+        /delete-node/ axip2p@2160000;
+        /delete-node/ axip2p@2170000;
+        /delete-node/ axip2p@2180000;
+        /delete-node/ axip2p@2190000;
 
 	iommu@12000000{
 
@@ -484,7 +510,17 @@
 			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@c250000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
+
+		address-space-prop {
+			ape_as: ape {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
 		};
+	};
 
 	adma: adma@2930000 {
 		dma-channels = <4>;
@@ -497,7 +533,9 @@
 		compatible = "nvidia,tegra210-virt-pcm";
 		#stream-id-cells = <1>;
 		power-domains = <&ape_pd>;
+		wakeup-disable;
 		cardname = "tegra-virt-pcm-vm1";
+		codec = <&spdif_dit0>;
 		dmas = <&adma 1>, <&adma 1>, <&adma 2>, <&adma 2>,
 			<&adma 3>, <&adma 3>, <&adma 4>, <&adma 4>;
 		dma-names = "rx1", "tx1", "rx2", "tx2",
@@ -507,20 +545,49 @@
 		admaif_ch_list = <1>, <2>, <3>, <4>;
         };
 
-        /delete-node/ axi2apb@2390000;
-        /delete-node/ axi2apb@23a0000;
-        /delete-node/ axi2apb@23b0000;
-        /delete-node/ axi2apb@23c0000;
-        /delete-node/ axi2apb@23d0000;
-        /delete-node/ axip2p@2100000;
-        /delete-node/ axip2p@2110000;
-        /delete-node/ axip2p@2120000;
-        /delete-node/ axip2p@2130000;
-        /delete-node/ axip2p@2140000;
-        /delete-node/ axip2p@2150000;
-        /delete-node/ axip2p@2160000;
-        /delete-node/ axip2p@2170000;
-        /delete-node/ axip2p@2180000;
-        /delete-node/ axip2p@2190000;
+	gpio-keys {
+		status = "disabled";
+	};
 
+	cpufreq@e070000 {
+		nvidia,debugfs-only;
+	};
+
+	trusty {
+		virtio {
+			status = "disabled";
+		};
+	};
+
+	ast@b040000 {
+		status = "disabled";
+	};
+
+	ast@b050000 {
+		status = "disabled";
+	};
+
+	ast@2994000 {
+		status = "disabled";
+	};
+
+	ast@2996000 {
+		status = "disabled";
+	};
+
+	rtcpu@b000000 {
+		status = "disabled";
+	};
+
+	rtcpu@2993000 {
+		status = "disabled";
+	};
+
+	rtcpu-echo {
+		status = "disabled";
+	};
+
+	rtcpu-vinotify {
+		status = "disabled";
+	};
 };

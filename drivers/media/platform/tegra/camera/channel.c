@@ -727,6 +727,7 @@ tegra_channel_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
 
 	cap->device_caps = V4L2_CAP_VIDEO_CAPTURE | V4L2_CAP_STREAMING;
+	cap->device_caps |= V4L2_CAP_EXT_PIX_FORMAT;
 	cap->capabilities = cap->device_caps | V4L2_CAP_DEVICE_CAPS;
 
 	strlcpy(cap->driver, "tegra-video", sizeof(cap->driver));

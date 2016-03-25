@@ -34,16 +34,16 @@
 #define IMX274_MAX_COARSE_DIFF		10
 
 #define IMX274_GAIN_SHIFT		8
-#define IMX274_MIN_GAIN		(1 << IMX274_GAIN_SHIFT)
-#define IMX274_MAX_GAIN		(16 << IMX274_GAIN_SHIFT)
-#define IMX274_MIN_FRAME_LENGTH	(0x0)
-#define IMX274_MAX_FRAME_LENGTH	(0xffff)
+#define IMX274_MIN_GAIN		(0x1)
+#define IMX274_MAX_GAIN		(0x7A5)
+#define IMX274_MIN_FRAME_LENGTH	(0x8ED)
+#define IMX274_MAX_FRAME_LENGTH	(0xB292)
 #define IMX274_MIN_EXPOSURE_COARSE	(0x0001)
 #define IMX274_MAX_EXPOSURE_COARSE	\
 	(IMX274_MAX_FRAME_LENGTH-IMX274_MAX_COARSE_DIFF)
 
 #define IMX274_DEFAULT_GAIN		IMX274_MIN_GAIN
-#define IMX274_DEFAULT_FRAME_LENGTH	(0x08AA)
+#define IMX274_DEFAULT_FRAME_LENGTH	(0x111B)
 #define IMX274_DEFAULT_EXPOSURE_COARSE	\
 	(IMX274_DEFAULT_FRAME_LENGTH-IMX274_MAX_COARSE_DIFF)
 
@@ -186,20 +186,22 @@ static struct v4l2_ctrl_config ctrl_config_list[] = {
 	},
 };
 
-static inline void imx274_get_frame_length_regs(imx274_reg *regs,
-				u32 frame_length)
+static inline void imx274_get_vmax_regs(imx274_reg *regs,
+				u32 vmax)
 {
-	regs->addr = IMX274_SVR_ADDR;
-	regs->val = (frame_length) & 0xff;
+	regs->addr = IMX274_VMAX_ADDR_MSB;
+	regs->val = (vmax >> 8) & 0xff;
+	(regs + 1)->addr = IMX274_VMAX_ADDR_LSB;
+	(regs + 1)->val = (vmax) & 0xff;
 }
 
-static inline void imx274_get_coarse_time_regs(imx274_reg *regs,
-				u32 coarse_time)
+static inline void imx274_get_shr_regs(imx274_reg *regs,
+				u32 shr)
 {
-	regs->addr = IMX274_COARSE_TIME_ADDR_MSB;
-	regs->val = (coarse_time >> 8) & 0xff;
-	(regs + 1)->addr = IMX274_COARSE_TIME_ADDR_LSB;
-	(regs + 1)->val = (coarse_time) & 0xff;
+	regs->addr = IMX274_SHR_ADDR_MSB;
+	regs->val = (shr >> 8) & 0xff;
+	(regs + 1)->addr = IMX274_SHR_ADDR_LSB;
+	(regs + 1)->val = (shr) & 0xff;
 }
 
 static inline void imx274_get_gain_reg(imx274_reg *regs,
@@ -315,6 +317,8 @@ static int imx274_power_off(struct camera_common_data *s_data)
 	int err = 0;
 	struct imx274 *priv = (struct imx274 *)s_data->priv;
 	struct camera_common_power_rail *pw = &priv->power;
+
+	return 0;
 
 	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
 
@@ -537,80 +541,16 @@ fail:
 	return err;
 }
 
-struct imx274_pgc_map {
-	u16 gain;
-	u16 pgc;
-};
-
-static const struct imx274_pgc_map imx274_pgc_maps[] = {
-	{0, 0},
-	{1, 0},
-	{2, 1021},
-	{3, 1229},
-	{4, 1365},
-	{5, 1463},
-	{6, 1536},
-	{7, 1593},
-	{8, 1638},
-	{9, 1675},
-	{10, 1706},
-	{11, 1732},
-	{12, 1755},
-	{13, 1774},
-	{14, 1792},
-	{15, 1807},
-	{16, 1820},
-	{17, 1832},
-	{18, 1843},
-	{19, 1853},
-	{20, 1861},
-	{21, 1870},
-	{22, 1877},
-	{23, 1884},
-	{24, 1890},
-	{25, 1896},
-	{26, 1901},
-	{27, 1906},
-	{28, 1911},
-	{29, 1915},
-	{30, 1920},
-};
-
-static u16 imx274_lookup_pgc(u32 gain)
-{
-	const struct imx274_pgc_map *map;
-
-	map = &imx274_pgc_maps[gain];
-
-	return map->pgc;
-}
-
-static int imx274_calculate_pgc(u32 rep)
-{
-	int gain_int;
-	int gain_fra;
-	u32 pgc;
-
-	gain_int = (int)(rep >> IMX274_GAIN_SHIFT);
-	gain_fra = (int)(rep & ~(0xffff << IMX274_GAIN_SHIFT));
-
-	pgc = imx274_lookup_pgc(((gain_int-1) << 1) + (gain_fra ? 1 : 0));
-
-	return pgc;
-}
-
 static int imx274_set_gain(struct imx274 *priv, s32 val)
 {
 	imx274_reg reg_list[2];
 	int err;
-	u32 gain = 0;
 	int i = 0;
 
-	gain = (u16)imx274_calculate_pgc(val);
 	dev_dbg(&priv->i2c_client->dev,
-		 "%s: val: %d  gain: %d\n", __func__, val, gain);
+		"%s: val: %d\n", __func__, val);
 
-	imx274_get_gain_reg(reg_list, gain);
+	imx274_get_gain_reg(reg_list, val);
 	imx274_set_group_hold(priv);
 
 	/* writing analog gain */
@@ -634,41 +574,78 @@ static int imx274_set_frame_length(struct imx274 *priv, s32 val)
 	imx274_reg reg_list[2];
 	int err;
 	u32 frame_length;
-	int fps;
+	u32 frame_rate;
 	int i = 0;
-	u32 svr = 3;
+	u8 svr;
+	u32 vmax;
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: val: %u\n", __func__, val);
 
 	frame_length = (u32)val;
 
-	fps = (u32)((u32)(72000000) / (263 * frame_length));
+	frame_rate = (u32)(IMX274_PIXEL_CLK_HZ /
+				(u32)(frame_length * IMX274_LINE_LENGTH));
 
-	if (fps >= 60)
-		svr = 0;
-	else if (fps >= 30)
-		svr = 1;
-	else if (fps >= 15)
-		svr = 2;
-	else if (fps >= 7.5)
-		svr = 3;
+	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
 
-	imx274_get_frame_length_regs(reg_list, svr);
+	vmax = (u32)(72000000 /
+			(u32)(frame_rate * IMX274_HMAX * (svr + 1)));
 
-	for (i = 0; i < 1; i++) {
+	imx274_get_vmax_regs(reg_list, vmax);
+
+	imx274_set_group_hold(priv);
+
+	for (i = 0; i < 2; i++) {
 		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
 			 reg_list[i].val);
 		if (err)
 			goto fail;
 	}
 
+	dev_dbg(&priv->i2c_client->dev,
+		"%s: frame_rate: %d vmax: %u\n", __func__, frame_rate, vmax);
 	return 0;
 
 fail:
-	dev_dbg(&priv->i2c_client->dev,
+	dev_info(&priv->i2c_client->dev,
 		 "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
+}
+
+static int imx274_calculate_shr(struct imx274 *priv, u32 rep)
+{
+	u8 svr;
+	int shr;
+	int min;
+	int max;
+	u32 vmax_l;
+	u32 vmax_m;
+	u32 vmax;
+
+	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);
+
+	imx274_read_reg(priv->s_data, IMX274_VMAX_ADDR_LSB, &vmax_l);
+	imx274_read_reg(priv->s_data, IMX274_VMAX_ADDR_MSB, &vmax_m);
+
+	vmax = ((vmax_m << 8) + vmax_l);
+
+	min = IMX274_MODE1_SHR_MIN;
+	max = ((svr + 1) * IMX274_VMAX) - 4;
+
+	shr = vmax * (svr + 1) -
+			(rep * IMX274_ET_FACTOR - IMX274_MODE1_OFFSET) /
+			IMX274_HMAX;
+
+	if (shr < min)
+		shr = min;
+
+	if (shr > max)
+		shr = max;
+
+	dev_dbg(&priv->i2c_client->dev,
+		 "%s: shr: %u vmax: %d\n", __func__, shr, vmax);
+	return shr;
 }
 
 static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
@@ -676,6 +653,7 @@ static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
 	imx274_reg reg_list[2];
 	int err;
 	u32 coarse_time;
+	u32 shr;
 	int i = 0;
 
 	coarse_time = val;
@@ -683,7 +661,10 @@ static int imx274_set_coarse_time(struct imx274 *priv, s32 val)
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: val: %d\n", __func__, coarse_time);
 
-	imx274_get_coarse_time_regs(reg_list, coarse_time);
+	shr = imx274_calculate_shr(priv, coarse_time);
+
+	imx274_get_shr_regs(reg_list, shr);
+	imx274_set_group_hold(priv);
 
 	for (i = 0; i < 2; i++) {
 		err = imx274_write_reg(priv->s_data, reg_list[i].addr,
@@ -1023,11 +1004,6 @@ static int imx274_ctrls_init(struct imx274 *priv)
 			ctrl_config_list[i].flags & V4L2_CTRL_FLAG_READ_ONLY) {
 			ctrl->string = devm_kzalloc(&client->dev,
 				ctrl_config_list[i].max + 1, GFP_KERNEL);
-			if (!ctrl->string) {
-				dev_err(&client->dev,
-					"Failed to allocate otp data\n");
-				return -ENOMEM;
-			}
 		}
 		priv->ctrls[i] = ctrl;
 	}
@@ -1192,7 +1168,9 @@ static int imx274_probe(struct i2c_client *client,
 	common_data->colorfmt		= camera_common_find_datafmt(
 					  IMX274_DEFAULT_DATAFMT);
 	common_data->power		= &priv->power;
+	common_data->ctrls		= priv->ctrls;
 	common_data->priv		= (void *)priv;
+	common_data->numctrls		= ARRAY_SIZE(ctrl_config_list);
 	common_data->numfmts		= ARRAY_SIZE(imx274_frmfmt);
 	common_data->def_mode		= IMX274_DEFAULT_MODE;
 	common_data->def_width		= IMX274_DEFAULT_WIDTH;

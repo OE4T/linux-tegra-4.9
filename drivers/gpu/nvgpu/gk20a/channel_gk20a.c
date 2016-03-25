@@ -1706,6 +1706,10 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	/* Need global lock since multiple channels can timeout at a time */
 	mutex_lock(&g->ch_wdt_lock);
 
+	gk20a_debug_dump(g->dev);
+	gk20a_gr_debug_dump(g->dev);
+
+
 	/* Get timed out job and reset the timer */
 	mutex_lock(&ch->timeout.lock);
 	job = ch->timeout.job;

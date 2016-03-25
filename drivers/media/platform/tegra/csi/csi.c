@@ -395,8 +395,6 @@ void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
 {
 	struct tegra_csi_port *port = &csi->ports[port_num];
 
-	tegra_csi_status(csi, port_num);
-
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 		 (0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 		 CSI_PP_DISABLE);

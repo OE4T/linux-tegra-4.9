@@ -167,6 +167,9 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 			nvmap_handle_mkunreserved(handles[i],offset, size);
 	}
 
+	if (op == NVMAP_PAGES_ZAP_AND_CLEAN)
+		op = NVMAP_PAGES_RESERVE;
+
 	if (op == NVMAP_PAGES_RESERVE)
 		nvmap_zap_handles(handles, offsets, sizes, nr);
 	else if (op == NVMAP_INSERT_PAGES_ON_UNRESERVE)

@@ -117,6 +117,7 @@ void nvmap_vma_open(struct vm_area_struct *vma)
 
 		vma_list->vma = vma;
 		vma_list->pid = current_pid;
+		vma_list->save_vm_flags = vma->vm_flags;
 		atomic_set(&vma_list->ref, 1);
 		list_add_tail(&vma_list->list, tmp_head);
 unlock:

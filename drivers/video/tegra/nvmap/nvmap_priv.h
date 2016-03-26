@@ -113,6 +113,7 @@ extern void __flush_dcache_page(struct address_space *, struct page *);
 struct nvmap_vma_list {
 	struct list_head list;
 	struct vm_area_struct *vma;
+	unsigned long save_vm_flags;
 	pid_t pid;
 	atomic_t ref;
 };

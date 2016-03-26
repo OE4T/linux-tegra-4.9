@@ -22,7 +22,14 @@
 
 #include <trace/events/nvmap.h>
 
+#include <asm/pgtable.h>
+
 #include "nvmap_priv.h"
+
+enum NVMAP_PROT_OP {
+	NVMAP_HANDLE_PROT_NONE = 1,
+	NVMAP_HANDLE_PROT_RESTORE = 2,
+};
 
 void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 {
@@ -68,94 +75,160 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 	mutex_unlock(&handle->lock);
 }
 
-static void nvmap_zap_handles(struct nvmap_handle **handles, u32 *offsets,
-		       u32 *sizes, u32 nr)
+static int nvmap_vm_insert_handle(struct nvmap_handle *handle,
+			struct vm_area_struct *vma, u32 vm_size)
 {
 	int i;
+	pte_t *start_pte = NULL;
+	pte_t *pte = NULL;
+	spinlock_t *ptl = NULL;
+	unsigned long curr_pmd = 0;
+	unsigned long addr = vma->vm_start;
 
-	for (i = 0; i < nr; i++)
-		nvmap_zap_handle(handles[i], offsets[i], sizes[i]);
+	vm_size >>= PAGE_SHIFT;
+	for (i = 0; i < vm_size; i++, addr += PAGE_SHIFT) {
+		if (curr_pmd != (addr & PMD_MASK)) {
+			curr_pmd = addr & PMD_MASK;
+			if (ptl && start_pte)
+				pte_unmap_unlock(start_pte, ptl);
+			else if (ptl)
+				BUG();
+			start_pte = pte = get_locked_pte(vma->vm_mm,
+							addr, &ptl);
+		} else {
+			pte++;
+		}
+		if (!pte) {
+			pr_err("nvmap: %s get_locked_pte failed\n",
+				__func__);
+			if (ptl && start_pte)
+				pte_unmap_unlock(start_pte, ptl);
+			else if (ptl)
+				BUG();
+			return -ENOMEM;
+		}
+		if (pte_none(pte)) {
+			struct page *page =
+					nvmap_to_page(handle->pgalloc.pages[i]);
+			/*
+			 * page->_map_count gets incrmented while
+			 * mapping here. If _count is not incremented,
+			 * mm code will see that page as a bad page
+			 * and hits VM_BUG_ON
+			 */
+			get_page(page);
+			do_set_pte(vma, vma->vm_start + (i << PAGE_SHIFT), page,
+					pte, true, false);
+		}
+		nvmap_page_mkdirty(&handle->pgalloc.pages[i]);
+		atomic_inc(&handle->pgalloc.ndirty);
+	}
+	if (ptl && start_pte)
+		pte_unmap_unlock(start_pte, ptl);
+	else if (ptl)
+		BUG();
+	return 0;
 }
 
-static
-void nvmap_vm_insert_handle(struct nvmap_handle *handle, u32 offset, u32 size)
+static int nvmap_prot_handle(struct nvmap_handle *handle, u32 offset,
+		u32 size, int op)
 {
 	struct list_head *vmas;
 	struct nvmap_vma_list *vma_list;
 	struct vm_area_struct *vma;
+	int err = -EINVAL;
+
+	BUG_ON(offset);
 
 	if (!handle->heap_pgalloc)
-		return;
+		return err;
 
-	if (!size) {
-		offset = 0;
+	if (!size)
 		size = handle->size;
-	}
+
+	size = PAGE_ALIGN((offset & ~PAGE_MASK) + size);
 
 	mutex_lock(&handle->lock);
 	vmas = &handle->vmas;
 	list_for_each_entry(vma_list, vmas, list) {
 		struct nvmap_vma_priv *priv;
 		u32 vm_size = size;
-		int end;
-		int i;
+		struct vm_area_struct *prev;
 
 		vma = vma_list->vma;
-		down_write(&vma->vm_mm->mmap_sem);
+		prev = vma->vm_prev;
 		priv = vma->vm_private_data;
 		if ((offset + size) > (vma->vm_end - vma->vm_start))
 			vm_size = vma->vm_end - vma->vm_start - offset;
 
-		end = PAGE_ALIGN(offset + vm_size) >> PAGE_SHIFT;
-		offset >>= PAGE_SHIFT;
-		for (i = offset; i < end; i++) {
-			struct page *page;
-			pte_t *pte;
-			spinlock_t *ptl;
-
-			page = nvmap_to_page(handle->pgalloc.pages[i]);
-			pte = get_locked_pte(vma->vm_mm,
-					vma->vm_start + (i << PAGE_SHIFT),
-					&ptl);
-			if (!pte) {
-				pr_err("nvmap: %s get_locked_pte failed\n",
-					__func__);
-				up_write(&vma->vm_mm->mmap_sem);
-				mutex_unlock(&handle->lock);
-				return;
+		if ((priv->offs || vma->vm_pgoff) ||
+		    (size > (vma->vm_end - vma->vm_start)))
+			vm_size = vma->vm_end - vma->vm_start;
+		if (vma->vm_mm != current->mm)
+			down_write(&vma->vm_mm->mmap_sem);
+		switch (op) {
+		case NVMAP_HANDLE_PROT_NONE:
+			vma->vm_flags = vma_list->save_vm_flags;
+			(void)vma_set_page_prot(vma);
+			if (nvmap_handle_track_dirty(handle) &&
+			    !atomic_read(&handle->pgalloc.ndirty)) {
+				err = 0;
+				break;
 			}
-			/*
-			 * page->_map_count gets incremented while mapping here.
-			 * If _count is not incremented, zap code will see that
-			 * page as a bad page and throws lot of warnings.
-			 */
-			atomic_inc(&page->_count);
-			do_set_pte(vma, vma->vm_start + (i << PAGE_SHIFT), page,
-					pte, true, false);
-			pte_unmap_unlock(pte, ptl);
-		}
-
-		up_write(&vma->vm_mm->mmap_sem);
+			err = mprotect_fixup(vma, &prev, vma->vm_start,
+					vma->vm_start + vm_size, VM_NONE);
+			if (err)
+				goto try_unlock;
+			vma->vm_flags = vma_list->save_vm_flags;
+			(void)vma_set_page_prot(vma);
+			break;
+		case NVMAP_HANDLE_PROT_RESTORE:
+			vma->vm_flags = VM_NONE;
+			(void)vma_set_page_prot(vma);
+			err = mprotect_fixup(vma, &prev, vma->vm_start,
+					vma->vm_start + vm_size,
+					vma_list->save_vm_flags);
+			if (err)
+				goto try_unlock;
+			err = nvmap_vm_insert_handle(handle, vma, vm_size);
+			if (err)
+				goto try_unlock;
+			break;
+		default:
+			BUG();
+		};
+try_unlock:
+		if (vma->vm_mm != current->mm)
+			up_write(&vma->vm_mm->mmap_sem);
+		if (err)
+			goto finish;
 	}
+finish:
 	mutex_unlock(&handle->lock);
+	return err;
 }
 
-static void nvmap_vm_insert_handles(struct nvmap_handle **handles, u32 *offsets,
-		       u32 *sizes, u32 nr)
+static int nvmap_prot_handles(struct nvmap_handle **handles, u32 *offsets,
+		       u32 *sizes, u32 nr, int op)
 {
-	int i;
+	int i, err = 0;
 
+	down_write(&current->mm->mmap_sem);
 	for (i = 0; i < nr; i++) {
-		nvmap_vm_insert_handle(handles[i], offsets[i], sizes[i]);
-		nvmap_handle_mkdirty(handles[i], offsets[i],
-				     sizes[i] ? sizes[i] : handles[i]->size);
+		err = nvmap_prot_handle(handles[i], offsets[i],
+				sizes[i], op);
+		if (err)
+			goto finish;
 	}
+finish:
+	up_write(&current->mm->mmap_sem);
+	return err;
 }
 
 int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 			u32 nr, u32 op)
 {
-	int i;
+	int i, err;
 
 	for (i = 0; i < nr; i++) {
 		u32 size = sizes[i] ? sizes[i] : handles[i]->size;
@@ -164,7 +237,7 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 		if ((offset != 0) || (size != handles[i]->size))
 			return -EINVAL;
 
-		if (op == NVMAP_PAGES_ZAP_AND_CLEAN)
+		if (op == NVMAP_PAGES_PROT_AND_CLEAN)
 			continue;
 
 		/*
@@ -176,13 +249,30 @@ int nvmap_reserve_pages(struct nvmap_handle **handles, u32 *offsets, u32 *sizes,
 				(op == NVMAP_PAGES_RESERVE) ? 1 : 0);
 	}
 
-	if (op == NVMAP_PAGES_ZAP_AND_CLEAN)
+	if (op == NVMAP_PAGES_PROT_AND_CLEAN)
 		op = NVMAP_PAGES_RESERVE;
 
-	if (op == NVMAP_PAGES_RESERVE)
-		nvmap_zap_handles(handles, offsets, sizes, nr);
-	else if (op == NVMAP_INSERT_PAGES_ON_UNRESERVE)
-		nvmap_vm_insert_handles(handles, offsets, sizes, nr);
+	switch (op) {
+	case NVMAP_PAGES_RESERVE:
+		err = nvmap_prot_handles(handles, offsets, sizes, nr,
+						NVMAP_HANDLE_PROT_NONE);
+		if (err)
+			return err;
+		break;
+	case NVMAP_INSERT_PAGES_ON_UNRESERVE:
+		err = nvmap_prot_handles(handles, offsets, sizes, nr,
+						NVMAP_HANDLE_PROT_RESTORE);
+		if (err)
+			return err;
+		break;
+	case NVMAP_PAGES_UNRESERVE:
+		for (i = 0; i < nr; i++)
+			if (nvmap_handle_track_dirty(handles[i]))
+				atomic_set(&handles[i]->pgalloc.ndirty, 0);
+		break;
+	default:
+		return -EINVAL;
+	}
 
 	if (!(handles[0]->userflags & NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE))
 		return 0;

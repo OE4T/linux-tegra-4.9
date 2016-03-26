@@ -292,6 +292,7 @@
 
 	xhci@3530000 {
 		status = "okay";
+		nvidia,pmc-usb-wakes-disabled;
 		extcon-cables = <&vbus_id_extcon 1>;
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;

@@ -345,6 +345,17 @@ struct tegra_dc_ext_hdr {
 };
 
 #define TEGRA_DC_EXT_N_WINDOWS	6
+/*
+ * IMP info that's exported to userspace.
+ */
+struct tegra_dc_ext_imp_user_info {
+	__u32 in_w[TEGRA_DC_EXT_N_WINDOWS]; /* in */
+	__u32 out_w[TEGRA_DC_EXT_N_WINDOWS]; /* in */
+	__u32 current_emcclk; /* out */
+	__u32 mempool_size; /* out */
+	__u32 v_taps[TEGRA_DC_EXT_N_WINDOWS]; /* out */
+};
+
 struct tegra_dc_ext_imp_head_results {
 	__u32	num_windows;
 	__u8	cursor_active;
@@ -768,6 +779,9 @@ struct tegra_dc_ext_feature {
 
 #define TEGRA_DC_EXT_SET_WINMASK \
 	_IOW('D', 0x1F, __u32)
+
+#define TEGRA_DC_EXT_GET_IMP_USER_INFO \
+	_IOW('D', 0x20, struct tegra_dc_ext_imp_user_info)
 
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,

@@ -2182,6 +2182,29 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		return ret;
 	}
 
+	case TEGRA_DC_EXT_GET_IMP_USER_INFO:
+	{
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		struct tegra_dc_ext_imp_user_info *info;
+
+		info = kzalloc(sizeof(*info), GFP_KERNEL);
+		if (!info)
+			return -ENOMEM;
+
+		if (copy_from_user(info, user_arg, sizeof(*info)))
+			return -EFAULT;
+
+		tegra_nvdisp_get_imp_user_info(user->ext->dc, info);
+
+		if (copy_to_user(user_arg, info, sizeof(*info)))
+			return -EFAULT;
+
+		return 0;
+#else
+		return -EINVAL;
+#endif
+	}
+
 #ifdef CONFIG_TEGRA_ISOMGR
 #ifdef CONFIG_COMPAT
 	case TEGRA_DC_EXT_SET_PROPOSED_BW32:

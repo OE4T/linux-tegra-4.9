@@ -590,15 +590,25 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 {
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	struct v4l2_bt_timings *bt = &timings->bt;
 	int num_sd;
 
 	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
 		struct v4l2_subdev *sd = chan->subdev[num_sd];
 		int ret = v4l2_subdev_call(sd, video, s_dv_timings, timings);
 
-		if (sd && (ret == 0 || ret != -ENOIOCTLCMD))
+		if (sd && (ret == 0 || ret != -ENOIOCTLCMD)) {
+			chan->format.width = bt->width;
+			chan->format.height = bt->height;
+			chan->format.bytesperline = bt->width *
+				chan->fmtinfo->bpp;
+			chan->format.sizeimage = chan->format.bytesperline *
+				chan->format.height;
+
 			return ret;
+		}
 	}
+
 	return -ENOIOCTLCMD;
 }
 

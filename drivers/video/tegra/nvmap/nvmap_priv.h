@@ -212,6 +212,7 @@ struct nvmap_device {
 	spinlock_t	handle_lock;
 	struct miscdevice dev_user;
 	struct nvmap_carveout_node *heaps;
+	int nr_heaps;
 	int nr_carveouts;
 #ifdef CONFIG_NVMAP_PAGE_POOLS
 	struct nvmap_page_pool pool;
@@ -222,6 +223,8 @@ struct nvmap_device {
 	struct list_head lru_handles;
 	spinlock_t	lru_lock;
 	struct dentry *handles_by_pid;
+	struct dentry *debug_root;
+	struct nvmap_platform_data *plat;
 	u32 dynamic_dma_map_mask;
 };
 

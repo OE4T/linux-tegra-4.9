@@ -1498,6 +1498,108 @@ u64 nvmap_stats_read(enum nvmap_stats_t stat)
 	return atomic64_read(&nvmap_stats.stats[stat]);
 }
 
+int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
+{
+	int err = 0;
+	struct nvmap_carveout_node *node;
+
+	if (!nvmap_dev->heaps) {
+		nvmap_dev->nr_carveouts = 0;
+		nvmap_dev->nr_heaps = nvmap_dev->plat->nr_carveouts + 1;
+		nvmap_dev->heaps = kzalloc(sizeof(struct nvmap_carveout_node) *
+				     nvmap_dev->nr_heaps, GFP_KERNEL);
+		if (!nvmap_dev->heaps) {
+			err = -ENOMEM;
+			pr_err("couldn't allocate carveout memory\n");
+			goto out;
+		}
+	} else if (nvmap_dev->nr_carveouts >= nvmap_dev->nr_heaps) {
+		err = -ENOMEM;
+		pr_err("nvmap heap array is smaller than number of carveouts\n");
+		BUG();
+		goto out;
+	}
+
+	node = &nvmap_dev->heaps[nvmap_dev->nr_carveouts];
+
+	node->base = round_up(co->base, PAGE_SIZE);
+	node->size = round_down(co->size -
+				(node->base - co->base), PAGE_SIZE);
+	if (!co->size)
+		goto out;
+
+	node->carveout = nvmap_heap_create(
+			nvmap_dev->dev_user.this_device, co,
+			node->base, node->size, node);
+
+	if (!node->carveout) {
+		err = -ENOMEM;
+		pr_err("couldn't create %s\n", co->name);
+		goto out;
+	}
+	node->index = nvmap_dev->nr_carveouts;
+	nvmap_dev->nr_carveouts++;
+	node->heap_bit = co->usage_mask;
+
+	if (!IS_ERR_OR_NULL(nvmap_dev->debug_root)) {
+		struct dentry *heap_root =
+			debugfs_create_dir(co->name, nvmap_dev->debug_root);
+		if (!IS_ERR_OR_NULL(heap_root)) {
+			debugfs_create_file("clients", S_IRUGO,
+				heap_root,
+				(void *)(uintptr_t)node->heap_bit,
+				&debug_clients_fops);
+			debugfs_create_file("allocations", S_IRUGO,
+				heap_root,
+				(void *)(uintptr_t)node->heap_bit,
+				&debug_allocations_fops);
+			debugfs_create_file("all_allocations", S_IRUGO,
+				heap_root,
+				(void *)(uintptr_t)node->heap_bit,
+				&debug_all_allocations_fops);
+			debugfs_create_file("orphan_handles", S_IRUGO,
+				heap_root,
+				(void *)(uintptr_t)node->heap_bit,
+				&debug_orphan_handles_fops);
+			debugfs_create_file("maps", S_IRUGO,
+				heap_root,
+				(void *)(uintptr_t)node->heap_bit,
+				&debug_maps_fops);
+			nvmap_heap_debugfs_init(heap_root,
+						node->carveout);
+		}
+	}
+out:
+	return err;
+}
+
+static void nvmap_iovmm_debugfs_init(void)
+{
+	if (!IS_ERR_OR_NULL(nvmap_dev->debug_root)) {
+		struct dentry *iovmm_root =
+			debugfs_create_dir("iovmm", nvmap_dev->debug_root);
+		if (!IS_ERR_OR_NULL(iovmm_root)) {
+			debugfs_create_file("clients", S_IRUGO, iovmm_root,
+				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_clients_fops);
+			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
+				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_allocations_fops);
+			debugfs_create_file("all_allocations", S_IRUGO,
+				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_all_allocations_fops);
+			debugfs_create_file("orphan_handles", S_IRUGO,
+				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_orphan_handles_fops);
+			debugfs_create_file("maps", S_IRUGO, iovmm_root,
+				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
+				&debug_maps_fops);
+			debugfs_create_file("procrank", S_IRUGO, iovmm_root,
+				nvmap_dev, &debug_iovmm_procrank_fops);
+		}
+	}
+}
+
 int __init nvmap_probe(struct platform_device *pdev)
 {
 	struct nvmap_platform_data *plat;
@@ -1527,6 +1629,7 @@ int __init nvmap_probe(struct platform_device *pdev)
 	}
 
 	nvmap_dev = dev;
+	nvmap_dev->plat = plat;
 	/*
 	 * dma_parms need to be set with desired max_segment_size to avoid
 	 * DMA map API returning multiple IOVA's for the buffer size > 64KB.
@@ -1558,16 +1661,8 @@ int __init nvmap_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	dev->nr_carveouts = 0;
-	dev->heaps = kzalloc(sizeof(struct nvmap_carveout_node) *
-			     plat->nr_carveouts, GFP_KERNEL);
-	if (!dev->heaps) {
-		e = -ENOMEM;
-		dev_err(&pdev->dev, "couldn't allocate carveout memory\n");
-		goto fail;
-	}
-
 	nvmap_debug_root = debugfs_create_dir("nvmap", NULL);
+	nvmap_dev->debug_root = nvmap_debug_root;
 	if (IS_ERR_OR_NULL(nvmap_debug_root))
 		dev_err(&pdev->dev, "couldn't create debug files\n");
 
@@ -1575,87 +1670,16 @@ int __init nvmap_probe(struct platform_device *pdev)
 			nvmap_debug_root, &nvmap_max_handle_count);
 
 	nvmap_dev->dynamic_dma_map_mask = ~0;
-	for (i = 0; i < plat->nr_carveouts; i++) {
-		struct nvmap_carveout_node *node = &dev->heaps[dev->nr_carveouts];
-		const struct nvmap_platform_carveout *co = &plat->carveouts[i];
-		node->base = round_up(co->base, PAGE_SIZE);
-		node->size = round_down(co->size -
-					(node->base - co->base), PAGE_SIZE);
-		if (!co->size)
-			continue;
+	for (i = 0; i < plat->nr_carveouts; i++)
+		(void)nvmap_create_carveout(&plat->carveouts[i]);
 
-		node->carveout = nvmap_heap_create(
-				dev->dev_user.this_device, co,
-				node->base, node->size, node);
-
-		if (!node->carveout) {
-			e = -ENOMEM;
-			dev_err(&pdev->dev, "couldn't create %s\n", co->name);
-			goto fail_heaps;
-		}
-		node->index = dev->nr_carveouts;
-		dev->nr_carveouts++;
-		node->heap_bit = co->usage_mask;
-
-		if (!IS_ERR_OR_NULL(nvmap_debug_root)) {
-			struct dentry *heap_root =
-				debugfs_create_dir(co->name, nvmap_debug_root);
-			if (!IS_ERR_OR_NULL(heap_root)) {
-				debugfs_create_file("clients", S_IRUGO,
-					heap_root,
-					(void *)(uintptr_t)node->heap_bit,
-					&debug_clients_fops);
-				debugfs_create_file("allocations", S_IRUGO,
-					heap_root,
-					(void *)(uintptr_t)node->heap_bit,
-					&debug_allocations_fops);
-				debugfs_create_file("all_allocations", S_IRUGO,
-					heap_root,
-					(void *)(uintptr_t)node->heap_bit,
-					&debug_all_allocations_fops);
-				debugfs_create_file("orphan_handles", S_IRUGO,
-					heap_root,
-					(void *)(uintptr_t)node->heap_bit,
-					&debug_orphan_handles_fops);
-				debugfs_create_file("maps", S_IRUGO,
-					heap_root,
-					(void *)(uintptr_t)node->heap_bit,
-					&debug_maps_fops);
-				nvmap_heap_debugfs_init(heap_root,
-							node->carveout);
-			}
-		}
-	}
-	if (!IS_ERR_OR_NULL(nvmap_debug_root)) {
-		struct dentry *iovmm_root =
-			debugfs_create_dir("iovmm", nvmap_debug_root);
-		if (!IS_ERR_OR_NULL(iovmm_root)) {
-			debugfs_create_file("clients", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
-				&debug_clients_fops);
-			debugfs_create_file("allocations", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
-				&debug_allocations_fops);
-			debugfs_create_file("all_allocations", S_IRUGO,
-				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
-				&debug_all_allocations_fops);
-			debugfs_create_file("orphan_handles", S_IRUGO,
-				iovmm_root, (void *)(uintptr_t)NVMAP_HEAP_IOVMM,
-				&debug_orphan_handles_fops);
-			debugfs_create_file("maps", S_IRUGO, iovmm_root,
-				(void *)(uintptr_t)NVMAP_HEAP_IOVMM,
-				&debug_maps_fops);
-			debugfs_create_file("procrank", S_IRUGO, iovmm_root,
-				dev, &debug_iovmm_procrank_fops);
-		}
+	nvmap_iovmm_debugfs_init();
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-		nvmap_page_pool_debugfs_init(nvmap_debug_root);
+	nvmap_page_pool_debugfs_init(nvmap_dev->debug_root);
 #endif
-		nvmap_cache_debugfs_init(nvmap_debug_root);
-		dev->handles_by_pid = debugfs_create_dir("handles_by_pid",
-				nvmap_debug_root);
-	}
-
+	nvmap_cache_debugfs_init(nvmap_dev->debug_root);
+	nvmap_dev->handles_by_pid = debugfs_create_dir("handles_by_pid",
+							nvmap_debug_root);
 	nvmap_stats_init(nvmap_debug_root);
 	platform_set_drvdata(pdev, dev);
 

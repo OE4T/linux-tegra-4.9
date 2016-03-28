@@ -31,6 +31,10 @@
 #include <linux/workqueue.h>
 #include <linux/console.h>
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+#include <linux/iommu.h>
+#endif
+
 #include <asm/atomic.h>
 
 #include <video/tegrafb.h>
@@ -613,6 +617,19 @@ static int tegra_fb_set_mode(struct tegra_dc *dc, int fps)
 	return -EIO;
 }
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+static int tegra_fb_mmap(struct fb_info *info,
+		struct vm_area_struct *vma)
+{
+	struct tegra_fb_info *tegra_fb = info->par;
+	int fb_size = tegra_fb->fb_mem->end - tegra_fb->fb_mem->start + 1;
+
+	return dma_mmap_writecombine(&tegra_fb->ndev->dev, vma,
+			info->screen_base, tegra_fb->phys_start,
+			fb_size);
+}
+#endif
+
 static struct fb_ops tegra_fb_ops = {
 	.owner = THIS_MODULE,
 	.fb_check_var = tegra_fb_check_var,
@@ -626,6 +643,9 @@ static struct fb_ops tegra_fb_ops = {
 	.fb_ioctl = tegra_fb_ioctl,
 #ifdef CONFIG_COMPAT
 	.fb_compat_ioctl = tegra_fb_ioctl,
+#endif
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	.fb_mmap = tegra_fb_mmap,
 #endif
 };
 

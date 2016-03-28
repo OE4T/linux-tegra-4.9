@@ -148,7 +148,7 @@ static inline u32 __emc_readl(int idx, u32 reg)
 		return 0;
 
 	if ((idx != EMC_BROADCAST_CHANNEL && idx < 0) ||
-		idx > MAX_CHANNELS)
+		idx >= MAX_CHANNELS)
 		return 0;
 
 	if (idx == EMC_BROADCAST_CHANNEL)

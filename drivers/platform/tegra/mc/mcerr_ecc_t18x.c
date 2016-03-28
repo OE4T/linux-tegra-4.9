@@ -627,7 +627,7 @@ static int mc_ecc_err_init(struct dentry *mc_parent,
 	u32 reg_index = DT_REG_INDEX_EMC_BROADCAST;
 	u32 ch = 0;
 	const void *prop;
-	u32 ecc_err_irq;
+	s32 ecc_err_irq;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, reg_index);
 	emc = devm_ioremap_resource(&pdev->dev, res);

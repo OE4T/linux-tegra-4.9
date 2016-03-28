@@ -573,6 +573,7 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 	job = nvhost_job_alloc(se_dev->channel, 1, 0, 0, 1);
 	if (!job) {
 		dev_err(se_dev->dev, "Nvhost Job allocation failed\n");
+		kfree(priv);
 		return -ENOMEM;
 	}
 
@@ -596,12 +597,14 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 				NV_SE1_CLASS_ID + se_dev->se_dev_num, iova);
 	if (err) {
 		dev_err(se_dev->dev, "Nvhost failed to add gather\n");
+		kfree(priv);
 		goto exit;
 	}
 
 	err = nvhost_channel_submit(job);
 	if (err) {
 		dev_err(se_dev->dev, "Nvhost submit failed\n");
+		kfree(priv);
 		goto exit;
 	}
 
@@ -617,6 +620,7 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 			job->sp->fence, tegra_se_complete_callback, priv);
 	if (err) {
 		dev_err(se_dev->dev, "add nvhost interrupt action failed\n");
+		kfree(priv);
 		goto exit;
 	}
 exit:

@@ -22,6 +22,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-pm.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -1569,6 +1570,60 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 }
 EXPORT_SYMBOL(tegra_nvdisp_update_cmu);
 #endif
+
+void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
+				struct tegra_dc_ext_imp_user_info *info)
+{
+	int i, j;
+	u32 ihub_capa;
+
+	info->current_emcclk = tegra_bwmgr_get_emc_rate();
+
+	ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
+	/* base entry width is 32 bytes */
+	info->mempool_size = nvdisp_ihub_capa_mempool_entries_v(ihub_capa) *
+			(32 << nvdisp_ihub_capa_mempool_width_v(ihub_capa));
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		int win_capc;
+		int win_cape;
+		int min_width;
+		struct tegra_dc *owner_dc;
+		struct tegra_dc_win *win = NULL;
+
+		for (j = 0; j < TEGRA_MAX_DC; j++) {
+			owner_dc = tegra_dc_get_dc(j);
+			if (!owner_dc)
+				continue;
+
+			if (test_bit(i, &owner_dc->valid_windows))
+				win = tegra_dc_get_window(owner_dc, i);
+		}
+
+		if (!win || !WIN_IS_ENABLED(win))
+			continue;
+
+		/*
+		 * in_w[i] has 20 bits integer (MSB) and 12 bits
+		 * fractional (LSB)
+		 */
+		win_capc = nvdisp_win_read(win, win_precomp_wgrp_capc_r());
+		win_cape = nvdisp_win_read(win, win_precomp_wgrp_cape_r());
+		min_width = ((info->in_w[i] >> 12) < info->out_w[i]) ?
+				info->in_w[i] >> 12 : info->out_w[i];
+
+		if (min_width <
+			win_precomp_wgrp_capc_max_pixels_5tap444_v(win_capc))
+			info->v_taps[i] = 5;
+		else /* IMP only accepts 2 or 5 for v taps */
+			info->v_taps[i] = 2;
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+}
+EXPORT_SYMBOL(tegra_nvdisp_get_imp_user_info);
 
 static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			struct tegra_dc_imp_head_results *imp_head_results)

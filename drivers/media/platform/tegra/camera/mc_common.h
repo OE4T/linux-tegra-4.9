@@ -29,8 +29,8 @@
 #include <media/v4l2-dev.h>
 #include <media/videobuf2-core.h>
 
-#include "core.h"
-#include "../csi/csi.h"
+#include "camera/core.h"
+#include "csi/csi.h"
 
 #define MAX_FORMAT_NUM	64
 #define MAX_SUBDEVICES 4
@@ -115,7 +115,9 @@ struct tegra_channel {
 	struct v4l2_pix_format format;
 	const struct tegra_video_format *fmtinfo;
 
-	unsigned int syncpt;
+	unsigned char gang_port[TEGRA_CSI_BLOCKS];
+	unsigned int syncpt[TEGRA_CSI_BLOCKS];
+	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];
 
 	struct task_struct *kthread_capture_start;
 	wait_queue_head_t start_wait;
@@ -128,15 +130,21 @@ struct tegra_channel {
 	struct list_head done;
 	spinlock_t done_lock;
 
-	void __iomem *csibase;
+	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int align;
 	unsigned int port;
+	unsigned int valid_ports;
 	unsigned int numlanes;
 	unsigned int io_id;
 	unsigned int num_subdevs;
 	unsigned int sequence;
 	unsigned int saved_ctx_bypass;
 	unsigned int saved_ctx_pgmode;
+	unsigned int gang_mode;
+	unsigned int gang_width;
+	unsigned int gang_height;
+	unsigned int gang_bytesperline;
+	unsigned int gang_sizeimage;
 
 	DECLARE_BITMAP(fmts_bitmap, MAX_FORMAT_NUM);
 	bool bypass;

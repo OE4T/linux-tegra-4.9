@@ -30,7 +30,8 @@
 #include <media/v4l2-of.h>
 #include <media/tegra_v4l2_camera.h>
 
-#include "mc_common.h"
+#include "camera/mc_common.h"
+#include "csi/csi.h"
 
 
 /* -----------------------------------------------------------------------------
@@ -325,7 +326,7 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 	struct device_node *ports;
 	struct device_node *port;
 	int value = 0xFFFF;
-	int ret = 0;
+	int ret = 0, i;
 
 	ports = of_get_child_by_name(node, "ports");
 	if (ports == NULL)
@@ -349,15 +350,34 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 			/* Get CSI port */
 			ret = of_property_read_u32(ep, "csi-port", &value);
 			if (ret < 0)
-				pr_info("csi port error\n");
+				dev_err(&chan->video.dev, "csi port error\n");
 			chan->port = value;
 
 			/* Get number of data lanes for the endpoint */
 			ret = of_property_read_u32(ep, "bus-width", &value);
 			if (ret < 0)
-				pr_info("num of lanes error\n");
+				dev_err(&chan->video.dev, "num lanes error\n");
 			chan->numlanes = value;
 
+			if (value > 12) {
+				dev_err(&chan->video.dev, "num lanes >12!\n");
+				return -EINVAL;
+			}
+			/*
+			 * for numlanes greater than 4 multiple CSI bricks
+			 * are needed to capture the image, the logic below
+			 * checks for numlanes > 4 and add a new CSI brick
+			 * as a valid port. Loops around the three CSI
+			 * bricks to add as many ports necessary.
+			 */
+			value -= 4;
+			for (i = 0; value > 0; i++) {
+				int next_port = chan->port + ((i + 1) * 2);
+				next_port =
+					(next_port > PORT_F) ? 0 : next_port;
+				chan->gang_port[i] = next_port;
+				value -= 4;
+			}
 		}
 	}
 

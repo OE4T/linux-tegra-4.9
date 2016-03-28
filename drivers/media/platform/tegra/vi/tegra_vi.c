@@ -31,8 +31,8 @@
 #include "nvhost_acm.h"
 #include "chip_support.h"
 #include "host1x/host1x.h"
-#include "vi.h"
-#include "vi_irq.h"
+#include "vi/vi.h"
+#include "vi/vi_irq.h"
 
 static DEFINE_MUTEX(la_lock);
 

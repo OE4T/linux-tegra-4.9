@@ -15,7 +15,7 @@
 #include <linux/of.h>
 #include <linux/platform_device.h>
 
-#include "core.h"
+#include "camera/core.h"
 
 static const struct tegra_video_format tegra_video_formats[] = {
 	/* RAW 6: TODO */

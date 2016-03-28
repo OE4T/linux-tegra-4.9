@@ -25,7 +25,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/clk/tegra.h>
 
-#include "../camera/mc_common.h"
+#include "camera/mc_common.h"
 #include "chip_support.h"
 
 #define VI_CFG_INTERRUPT_MASK_0				0x8c

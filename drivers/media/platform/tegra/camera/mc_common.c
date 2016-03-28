@@ -22,9 +22,9 @@
 #include <media/v4l2-event.h>
 
 #include "dev.h"
-#include "mc_common.h"
-#include "vi.h"
-#include "registers.h"
+#include "camera/mc_common.h"
+#include "vi/vi.h"
+#include "camera/registers.h"
 
 
 void vi_write(struct tegra_mc_vi *vi, unsigned int addr, u32 val)

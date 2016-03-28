@@ -38,8 +38,8 @@
 #include "nvhost_acm.h"
 #include "t124/t124.h"
 #include "t210/t210.h"
-#include "vi.h"
-#include "vi_irq.h"
+#include "vi/vi.h"
+#include "vi/vi_irq.h"
 
 #include "tegra_camera_dev_mfi.h"
 

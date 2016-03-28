@@ -19,7 +19,7 @@
 #include <media/v4l2-subdev.h>
 
 #include <media/camera_common.h>
-#include "../camera/registers.h"
+#include "camera/registers.h"
 
 enum tegra_csi_port_num {
 	PORT_A = 0,
@@ -58,6 +58,7 @@ struct tegra_csi_device {
 	struct tegra_csi_port *ports;
 	struct media_pad *pads;
 
+	unsigned char gang_port[TEGRA_CSI_BLOCKS];
 	unsigned int clk_freq;
 	int num_ports;
 	int pg_mode;
@@ -71,11 +72,11 @@ static inline struct tegra_csi_device *to_csi(struct v4l2_subdev *subdev)
 void set_csi_portinfo(struct tegra_csi_device *csi,
 	unsigned int port, unsigned int numlanes);
 void tegra_csi_status(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num);
+			enum tegra_csi_port_num port_num, int index);
 void tegra_csi_start_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num);
+				enum tegra_csi_port_num port_num, int index);
 void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num);
+				enum tegra_csi_port_num port_num, int index);
 int tegra_csi_channel_power(struct tegra_csi_device *csi, int port, int enable);
 #define tegra_csi_channel_power_on(csi, port) \
 	tegra_csi_channel_power(csi, port, 1)

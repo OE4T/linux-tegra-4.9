@@ -19,8 +19,8 @@
 #include <linux/nvhost.h>
 
 #include "nvhost_acm.h"
-#include "vi.h"
-#include "vi_irq.h"
+#include "vi/vi.h"
+#include "vi/vi_irq.h"
 
 static const int status_reg_table[] = {
 	VI_CFG_INTERRUPT_STATUS_0,

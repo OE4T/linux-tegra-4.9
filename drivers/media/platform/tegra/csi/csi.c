@@ -25,7 +25,7 @@
 
 #include "dev.h"
 #include "vi/vi.h"
-#include "csi.h"
+#include "csi/csi.h"
 
 #define DEBUG 0
 
@@ -137,6 +137,7 @@ static int set_csi_properties(struct tegra_csi_device *csi,
 	s_data->csi_port = 0;
 	s_data->numlanes = 12;
 	csi->clk_freq = TEGRA_CLOCK_CSI_PORT_MAX;
+	memset(&csi->gang_port[0], INVALID_CSI_PORT, TEGRA_CSI_BLOCKS);
 
 	if (!csi->ports) {
 		int port_num = (s_data->numlanes >> 1);
@@ -211,6 +212,7 @@ int tegra_csi_channel_power(struct tegra_csi_device *csi, int port_num,
 {
 	int err = 0;
 	int cil_num = port_num >> 1;
+	int i;
 
 	if (enable) {
 		err = clock_start(csi, csi->cil[cil_num], csi->clk_freq);
@@ -218,9 +220,24 @@ int tegra_csi_channel_power(struct tegra_csi_device *csi, int port_num,
 			dev_err(csi->dev, "cil clk start error\n");
 
 		camera_common_dpd_disable(&csi->s_data[port_num]);
+		for (i = 0; csi_port_is_valid(csi->gang_port[i]); i++) {
+			int port = csi->gang_port[i];
+			cil_num = port >> 1;
+			err = clock_start(csi,
+				csi->cil[cil_num], csi->clk_freq);
+			if (err)
+				dev_err(csi->dev, "cil clk start error\n");
+			camera_common_dpd_disable(&csi->s_data[port]);
+		}
 	} else {
 		camera_common_dpd_enable(&csi->s_data[port_num]);
 		clk_disable_unprepare(csi->cil[cil_num]);
+		for (i = 0; csi_port_is_valid(csi->gang_port[i]); i++) {
+			int port = csi->gang_port[i];
+			cil_num = port >> 1;
+			camera_common_dpd_enable(&csi->s_data[port]);
+			clk_disable_unprepare(csi->cil[cil_num]);
+		}
 	}
 
 	return err;
@@ -274,7 +291,7 @@ EXPORT_SYMBOL(tegra_csi_power);
  */
 
 void tegra_csi_start_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num)
+				enum tegra_csi_port_num port_num, int index)
 {
 	struct tegra_csi_port *port = &csi->ports[port_num];
 
@@ -374,11 +391,15 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 		 (0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 		 CSI_PP_SINGLE_SHOT_ENABLE | CSI_PP_ENABLE);
+
+	if (csi_port_is_valid(csi->gang_port[index]))
+		tegra_csi_start_streaming(csi,
+				csi->gang_port[index], (index+1));
 }
 EXPORT_SYMBOL(tegra_csi_start_streaming);
 
 void tegra_csi_status(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num)
+			enum tegra_csi_port_num port_num, int index)
 {
 	struct tegra_csi_port *port = &csi->ports[port_num];
 	u32 val = pp_read(port, TEGRA_CSI_PIXEL_PARSER_STATUS);
@@ -400,17 +421,23 @@ void tegra_csi_status(struct tegra_csi_device *csi,
 	val = pp_read(port, TEGRA_CSI_DEBUG_COUNTER_2);
 	dev_info(csi->dev, "TEGRA_CSI_DEBUG_COUNTER_2 0x%08x\n", val);
 #endif
+	if (csi_port_is_valid(csi->gang_port[index]))
+		tegra_csi_status(csi, csi->gang_port[index], (index+1));
 }
 EXPORT_SYMBOL(tegra_csi_status);
 
 void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num)
+				enum tegra_csi_port_num port_num, int index)
 {
 	struct tegra_csi_port *port = &csi->ports[port_num];
 
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 		 (0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 		 CSI_PP_DISABLE);
+
+	if (csi_port_is_valid(csi->gang_port[index]))
+		tegra_csi_stop_streaming(csi,
+			csi->gang_port[index], (index+1));
 }
 EXPORT_SYMBOL(tegra_csi_stop_streaming);
 
@@ -421,9 +448,9 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	enum tegra_csi_port_num port_num = chan->port;
 
 	if (enable)
-		tegra_csi_start_streaming(csi, port_num);
+		tegra_csi_start_streaming(csi, port_num, 0);
 	else
-		tegra_csi_stop_streaming(csi, port_num);
+		tegra_csi_stop_streaming(csi, port_num, 0);
 
 	return 0;
 }

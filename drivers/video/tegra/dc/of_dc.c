@@ -1034,15 +1034,47 @@ static int parse_cmu_data(struct device_node *np,
 	}
 	return 0;
 }
+
 #elif defined(CONFIG_TEGRA_DC_CMU_V2)
-static int parse_cmu_data(struct device_node *np,
-	struct tegra_dc_cmu *cmu)
+
+#if defined(CONFIG_TEGRA_CSC_V2)
+static int parse_csc_v2_data(struct device_node *np, struct tegra_dc_cmu *cmu)
+{
+	u32 u;
+	u32 *csc_coeff = &(cmu->panel_csc.r2r);
+	struct property *prop;
+	const __be32 *p;
+	int parsed_coeff_cnt = 0;
+	int req_coeff_cnt = sizeof(cmu->panel_csc) / sizeof(cmu->panel_csc.r2r);
+
+	req_coeff_cnt -= 1; /* subtract csc_enable */
+	of_property_for_each_u32(np, "nvidia,panel-csc", prop, p, u)
+		parsed_coeff_cnt++;
+
+	if (parsed_coeff_cnt != req_coeff_cnt) {
+		pr_err("invalid panel csc matrix. Coeffs req=%d, parsed=%d\n",
+			req_coeff_cnt, parsed_coeff_cnt);
+		return -EINVAL;
+	}
+
+	of_property_for_each_u32(np, "nvidia,panel-csc", prop, p, u) {
+		OF_DC_LOG("panel csc 0x%x\n", u);
+		*(csc_coeff++) = u;
+	}
+	cmu->panel_csc.csc_enable = true;
+
+	return 0;
+}
+#endif
+
+static int parse_cmu_data(struct device_node *np, struct tegra_dc_cmu *cmu)
 {
 	u64 *addr_cmu_lut;
 	struct property *prop;
 	const __be32 *p;
 	u32 u, index = 0, lut_count = 0;
 	u64 lutvalue = 0;
+	int err;
 
 	addr_cmu_lut = &(cmu->rgb[0]);
 
@@ -1078,6 +1110,14 @@ static int parse_cmu_data(struct device_node *np,
 			index += 1;
 		}
 	}
+
+#if defined(CONFIG_TEGRA_CSC_V2)
+	err = parse_csc_v2_data(np, cmu);
+	if (err) {
+		pr_err("parsing csc_v2 failed\n");
+		return err;
+	}
+#endif
 
 	return 0;
 }

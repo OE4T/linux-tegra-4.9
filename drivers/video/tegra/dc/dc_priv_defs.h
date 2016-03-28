@@ -240,6 +240,11 @@ struct tegra_dc {
 	struct tegra_dc_lut		cmu;
 #endif
 
+#if defined(CONFIG_TEGRA_CSC_V2)
+	/* either unity or panel specific */
+	struct tegra_dc_csc_v2		default_csc;
+#endif
+
 #if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
 	struct tegra_dc_cmu		cmu_shadow;
 	bool				cmu_dirty;

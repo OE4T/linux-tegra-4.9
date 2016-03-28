@@ -5558,6 +5558,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		}
 	}
 
+#if defined(CONFIG_TEGRA_CSC_V2)
+	if (dc->pdata->cmu)
+		dc->default_csc = dc->pdata->cmu->panel_csc;
+	else
+		tegra_nvdisp_init_csc_defaults(&dc->default_csc);
+#endif
+
 	platform_set_drvdata(ndev, dc);
 
 #ifdef CONFIG_SWITCH

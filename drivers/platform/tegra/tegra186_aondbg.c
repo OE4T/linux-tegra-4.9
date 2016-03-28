@@ -44,6 +44,7 @@
 #define AON_ROOT	0
 #define AON_PM		1
 #define AON_MODS	2
+#define AON_STATS	3
 
 #define IVC_DBG_CH_FRAME_SIZE 128
 #define MODS_DEFAULT_VAL 0xFFFF
@@ -71,12 +72,14 @@ struct aon_dbgfs_node {
 struct dbgfs_dir {
 	const char *name;
 	struct dentry *dir;
+	struct dbgfs_dir *parent;
 };
 
 static struct dbgfs_dir aon_dbgfs_dirs[] = {
-	{.name = "aon",},
-	{.name = "aon_pm"},
-	{.name = "aon_mods"}
+	{.name = "aon", .parent = NULL},
+	{.name = "aon_pm", .parent = &aon_dbgfs_dirs[AON_ROOT]},
+	{.name = "aon_mods", .parent = &aon_dbgfs_dirs[AON_ROOT]},
+	{.name = "stats", .parent = &aon_dbgfs_dirs[AON_PM]}
 };
 
 static const char *const pstates[] = {"idle", "standby", "dormant", "deepidle",
@@ -171,6 +174,7 @@ static struct aon_dbg_response *aon_create_ivc_dbg_req(u32 request,
 		req.data.pm_xfer.type.retention.flag = flag;
 		req.data.pm_xfer.type.retention.enable = (flag) ? data : 0;
 		break;
+	case AON_PM_SC8_COUNT:
 	case AON_PM_STATE_HISTORY:
 	case AON_PM_STATE_HISTOGRAM:
 	case AON_PING_TEST:
@@ -301,6 +305,9 @@ static int aon_pm_show(void *data, u64 *val)
 	case AON_PM_VDD_RTC_RETENTION:
 		*val = resp->data.pm_xfer.type.retention.enable;
 		break;
+	case AON_PM_SC8_COUNT:
+		*val = resp->data.pm_xfer.type.sc8_count.count;
+		break;
 	default:
 		dev_err(aondev, "Invalid pm response\n");
 		break;
@@ -331,6 +338,8 @@ DEFINE_SIMPLE_ATTRIBUTE(aon_pm_force_sleep_fops, NULL,
 			aon_pm_store, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(aon_pm_retention_fops, aon_pm_show,
 			aon_pm_store, "%lld\n");
+DEFINE_SIMPLE_ATTRIBUTE(aon_pm_sc8_count_fops, aon_pm_show,
+			NULL, "%lld\n");
 
 static int aon_pm_history_show(struct seq_file *file, void *data)
 {
@@ -503,6 +512,9 @@ static struct aon_dbgfs_node aon_nodes[] = {
 	{.name = "enable_retention", .id = AON_PM_VDD_RTC_RETENTION,
 			.pdr_id = AON_PM, .mode = S_IRUGO | S_IWUSR,
 			.fops = &aon_pm_retention_fops,},
+	{.name = "sc8_count", .id = AON_PM_SC8_COUNT,
+			.pdr_id = AON_STATS, .mode = S_IRUGO,
+			.fops = &aon_pm_sc8_count_fops,},
 	{.name = "completion_timeout", .pdr_id = AON_ROOT,
 			.mode = S_IRUGO | S_IWUSR, .fops = &aon_timeout_fops,},
 };
@@ -537,7 +549,7 @@ static int aon_pm_dbg_init(struct tegra_aondbg *aon)
 
 	for (i = 1; i < ARRAY_SIZE(aon_dbgfs_dirs); i++) {
 		d = debugfs_create_dir(aon_dbgfs_dirs[i].name,
-					aon_dbgfs_dirs[0].dir);
+					aon_dbgfs_dirs[i].parent->dir);
 		if (IS_ERR_OR_NULL(d))
 			goto clean;
 		aon_dbgfs_dirs[i].dir = d;

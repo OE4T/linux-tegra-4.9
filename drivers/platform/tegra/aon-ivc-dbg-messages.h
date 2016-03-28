@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * NVIDIA CORPORATION and its licensors retain all intellectual property
  * and proprietary rights in and to this software, related documentation
@@ -35,6 +35,8 @@ enum aon_pm_request {
 	AON_PM_STATE_HISTOGRAM = 5,
 	/* Query/set whether VDD_RTC should go to retention in deep dormant */
 	AON_PM_VDD_RTC_RETENTION = 9,
+	/* Query the number of times SPE entered SC8 */
+	AON_PM_SC8_COUNT = 10,
 };
 
 /* This enum indicates the power states of the target.
@@ -85,7 +87,7 @@ enum aon_mods {
  */
 enum aon_ping {
 	AON_PING_TEST = 8,
-	AON_REQUEST_TYPE_MAX = 9,
+	AON_REQUEST_TYPE_MAX = 10,
 };
 
 /* The following enum indicates if we are reading from or writing
@@ -191,6 +193,14 @@ struct aon_pm_vdd_rtc_retention {
 	u16 enable;
 };
 
+/* This struct is used to query the number of times SPE entered SC8.
+ * Fields:
+ * count:	sc8 count
+ */
+
+struct aon_pm_sc8_count {
+	u32 count;
+};
 /* This struct is used to send the loop count to perform the mods test
  * on the target.
  * Fields:
@@ -218,6 +228,7 @@ struct aon_pm_dbg_xfer {
 		struct aon_pm_state_histogram histogram;
 		struct aon_pm_state_history history;
 		struct aon_pm_vdd_rtc_retention retention;
+		struct aon_pm_sc8_count sc8_count;
 	} type;
 };
 

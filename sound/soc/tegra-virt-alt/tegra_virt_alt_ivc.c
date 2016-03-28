@@ -1,7 +1,7 @@
 /*
  * IVC based librabry for AUDIO server
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -144,7 +144,7 @@ struct nvaudio_ivc_ctxt *nvaudio_ivc_alloc_ctxt(struct device *dev)
 	ictxt = devm_kzalloc(dev, sizeof(struct nvaudio_ivc_ctxt),
 			GFP_KERNEL);
 	if (ictxt == NULL) {
-		ictxt = ERR_PTR(-ENOMEM);
+		dev_err(dev, "unable to allocate mem for ivc context\n");
 		return NULL;
 	}
 	saved_ivc_ctxt = ictxt;

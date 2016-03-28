@@ -275,6 +275,11 @@
 			* supported by the focuser
 			*/
 			type = "default";
+			min_focus_distance = "10.0"; /* 1.0f/0.1f */
+			hyper_focal = "0.2"; /* 1.0f/5.0f */
+			focal_length = "4.73";
+			f_number = "2.2";
+			aperture = "2.2";
 
 			ports {
 				#address-cells = <1>;
@@ -380,6 +385,11 @@
 			/* physical camera layer interface tags */
 			devnode = "video3";
 			type = "default";
+			min_focus_distance = "10.0"; /* 1.0f/0.1f */
+			hyper_focal = "0.2"; /* 1.0f/5.0f */
+			focal_length = "4.73";
+			f_number = "2.2";
+			aperture = "2.2";
 
 			ports {
 				#address-cells = <1>;

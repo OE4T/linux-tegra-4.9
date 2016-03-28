@@ -42,7 +42,7 @@
 	};
 
 	mttcan@c310000 {
-		status = "disabled";
+		status = "okay";
 		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 0) GPIO_ACTIVE_HIGH>;
 		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 1) GPIO_ACTIVE_HIGH>;
 		mram-params = <0 16 16 8 8 8 16 16 16>;
@@ -51,7 +51,7 @@
 	};
 
 	mttcan@c320000 {
-		status = "disabled";
+		status = "okay";
 		gpio_can_stb = <&tegra_gpio TEGRA_GPIO(AA, 6) GPIO_ACTIVE_HIGH>;
 		gpio_can_en = <&tegra_gpio TEGRA_GPIO(AA, 7) GPIO_ACTIVE_HIGH>;
 		mram-params = <0 16 16 8 8 8 16 16 16>;

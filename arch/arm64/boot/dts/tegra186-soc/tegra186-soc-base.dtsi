@@ -1389,6 +1389,7 @@
 	adma: adma@2930000 {
 		compatible = "nvidia,tegra210-adma";
 		power-domains = <&ape_pd>;
+		wakeup-disable;
 		interrupt-parent = <&tegra_agic>;
 		reg = <0x0 0x02930000 0x0 0x10000>,	/* GLOBAL Reg */
 		      <0x0 0x02940000 0x0 0x10000>,	/* PAGE1 */
@@ -1429,6 +1430,7 @@
 	tegra_axbar: ahub {
 		compatible = "nvidia,tegra210-axbar";
 		power-domains = <&ape_pd>;
+		wakeup-disable;
 		reg = <0x0 0x02900800 0x0 0x800>;
 		clocks = <&tegra_car TEGRA186_CLK_AHUB>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
@@ -1880,6 +1882,7 @@
 	tegra_adsp_audio: adsp_audio {
 		compatible = "nvidia,tegra210-adsp-audio";
 		power-domains = <&adsp_pd>;
+		wakeup-disable;
 		#stream-id-cells = <1>;
 		interrupt-parent = <&tegra_agic>;
 		interrupts = <GIC_SPI INT_ADMA_EOT10 IRQ_TYPE_LEVEL_HIGH
@@ -1909,6 +1912,7 @@
 		status = "disabled";
 		compatible = "nvidia,tegra18x-adsp";
 		power-domains = <&adsp_pd>;
+		wakeup-disable;
 		interrupt-parent = <&tegra_agic>;
 		reg = <0x0 0x02993000 0x0 0x1000>, /* AMC */
 			<0x0 0x02990000 0x0 0x2000>, /* AMISC */
@@ -1963,6 +1967,7 @@
 		status = "disabled";
 		compatible = "nvidia,tegra18x-eqos-ape";
 		power-domains = <&ape_pd>;
+		wakeup-disable;
 		reg = <0x0 0x02990054 0x0 0x4>, /* AMISC IDLE*/
 			<0x0 0x029900c0 0x0 0x28>;  /* AMISC EAVB*/
 		clocks = <&tegra_car TEGRA186_CLK_APE>,

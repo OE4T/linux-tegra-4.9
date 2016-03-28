@@ -215,6 +215,7 @@
 		compatible = "nvidia,tegra210-virt-pcm";
 		#stream-id-cells = <1>;
 		power-domains = <&ape_pd>;
+		wakeup-disable;
 		cardname = "tegra-virt-pcm-vm1";
 		dmas = <&adma 1>, <&adma 1>, <&adma 2>, <&adma 2>,
 			<&adma 3>, <&adma 3>, <&adma 4>, <&adma 4>;

@@ -34,9 +34,14 @@
 		};
 	};
 
-	tegra_pcie: pcie-controller@10003000 {
+	pcie-controller@10003000 {
 		pci@1,0 {
 			nvidia,rst-gpio = <&tegra_gpio TEGRA_GPIO(A, 3) 0>;
+		};
+
+		pci@2,0 {
+			status = "okay";
+			nvidia,num-lanes = <0x1>;
 		};
 	};
 };

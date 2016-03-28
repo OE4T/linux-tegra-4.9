@@ -202,10 +202,8 @@
 			nvidia,sxm-pwr-gd-gpio = <&tegra_gpio TEGRA_GPIO(B, 6) 0>;
 
 		};
-
 		pci@2,0 {
-			status = "okay";
-			nvidia,num-lanes = <0x1>;
+			status = "disabled";
 		};
 	};
 

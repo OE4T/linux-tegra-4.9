@@ -60,6 +60,7 @@ struct tegra_wdt_t18x {
 	int			active_count;
 	int			heartbeat;
 	int			shutdown_timeout;
+	int			index;
 /* Bit numbers for status flags */
 #define WDT_ENABLED		0
 #define WDT_ENABLED_ON_INIT	1
@@ -203,6 +204,12 @@ static inline int tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	u32 val;
+
+	/* Unmask IRQ. This has to be called after every WDT power gate */
+	if (!tegra_platform_is_linsim())
+		writel(TOP_TKE_TKEIE_WDT_MASK(tegra_wdt_t18x->index),
+			tegra_wdt_t18x->wdt_tke +
+			TOP_TKE_TKEIE(tegra_wdt_t18x->irq - 32));
 
 	/* Update skip configuration and active expiry count */
 	tegra_wdt_t18x->active_count = tegra_wdt_t18x->expiry_count -
@@ -456,10 +463,6 @@ static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *tegra_wdt_t18x,
 		return -ENXIO;
 	}
 
-	if (!tegra_platform_is_linsim())
-		writel(TOP_TKE_TKEIE_WDT_MASK(index), tegra_wdt_t18x->wdt_tke +
-				TOP_TKE_TKEIE(tegra_wdt_t18x->irq - 32));
-
 	ret = devm_request_threaded_irq(&pdev->dev,
 			tegra_wdt_t18x->irq,	NULL, tegra_wdt_t18x_isr,
 			IRQF_ONESHOT | IRQF_TRIGGER_HIGH,
@@ -577,7 +580,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	}
 
 	/* Watchdog index in list of wdts under top_tke */
-	index = ((res_src->start >> 16) & 0xF) - 0xc;
+	tegra_wdt_t18x->index = ((res_src->start >> 16) & 0xF) - 0xc;
 
 	/* Configure timer source and period */
 	tegra_wdt_t18x->config = (((res_wdt->start >> 16) & (0xf)) - 2 ) |

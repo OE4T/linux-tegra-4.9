@@ -199,12 +199,11 @@ struct tegra_mc_vi {
 	DECLARE_BITMAP(tpg_fmts_bitmap, MAX_FORMAT_NUM);
 
 	bool has_sensors;
+	atomic_t power_on_refcnt;
 };
 
 int tegra_vi_get_port_info(struct tegra_channel *chan,
 			struct device_node *node, unsigned int index);
-void tegra_channel_write(struct tegra_channel *chan,
-			unsigned int addr, u32 val);
 void tegra_vi_v4l2_cleanup(struct tegra_mc_vi *vi);
 int tegra_vi_v4l2_init(struct tegra_mc_vi *vi);
 int tegra_vi_tpg_graph_init(struct tegra_mc_vi *vi);
@@ -213,7 +212,7 @@ void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi);
 int tegra_vi_channels_init(struct tegra_mc_vi *vi);
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init_subdevices(struct tegra_channel *chan);
-int tegra_vi_power_on(struct tegra_channel *chan);
+int tegra_vi_power_on(struct tegra_mc_vi *vi);
 void tegra_vi_power_off(struct tegra_mc_vi *vi);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev);

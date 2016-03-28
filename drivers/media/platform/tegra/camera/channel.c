@@ -1098,24 +1098,29 @@ static int tegra_channel_open(struct file *fp)
 	int ret = 0;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
+	struct tegra_mc_vi *vi;
+	struct tegra_csi_device *csi;
 
 	if (chan->subdev[0] == NULL)
 		return -ENODEV;
 
-	if (!chan->bypass) {
-		tegra_vi_power_on(chan);
-		tegra_csi_power(chan->vi->csi, chan->port, 1);
+	vi = chan->vi;
+	csi = vi->csi;
+
+	/* The first open then turn on power */
+	if (!chan->bypass &&
+	    (atomic_add_return(1, &vi->power_on_refcnt) == 1)) {
+		tegra_vi_power_on(vi);
+		tegra_csi_power_on(csi);
 	}
 
-	if (!chan->vi->pg_mode) {
+	if (!vi->pg_mode) {
 		/* power on sensors connected in channel */
+		tegra_csi_channel_power_on(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 1);
 		if (ret < 0)
 			return ret;
 	}
-
-	chan->saved_ctx_bypass = chan->bypass;
-	chan->saved_ctx_pgmode = chan->vi->pg_mode;
 
 	return v4l2_fh_open(fp);
 }
@@ -1125,24 +1130,23 @@ static int tegra_channel_close(struct file *fp)
 	int ret = 0;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
+	struct tegra_mc_vi *vi = chan->vi;
+	struct tegra_csi_device *csi = vi->csi;
 
 	ret = vb2_fop_release(fp);
 
-	if (!chan->saved_ctx_pgmode) {
+	if (!vi->pg_mode) {
 		/* power off sensors connected in channel */
+		tegra_csi_channel_power_off(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 0);
 		if (ret < 0)
-			dev_err(chan->vi->dev,
-				"Failed to power off subdevices\n");
+			dev_err(vi->dev, "Failed to power off subdevices\n");
 	}
 
-	if (!chan->saved_ctx_bypass) {
-		int pg_mode = chan->vi->csi->pg_mode;
-		/* save TPG mode context for clean closure of CSI */
-		chan->vi->csi->pg_mode = chan->saved_ctx_pgmode;
-		tegra_csi_power(chan->vi->csi, chan->port, 0);
-		chan->vi->csi->pg_mode = pg_mode;
-		tegra_vi_power_off(chan->vi);
+	/* The last release then turn off power */
+	if (!chan->bypass && atomic_dec_and_test(&vi->power_on_refcnt)) {
+		tegra_csi_power_off(csi);
+		tegra_vi_power_off(vi);
 	}
 
 	return ret;

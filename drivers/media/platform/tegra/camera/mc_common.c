@@ -26,6 +26,12 @@
 #include "vi.h"
 #include "registers.h"
 
+
+void vi_write(struct tegra_mc_vi *vi, unsigned int addr, u32 val)
+{
+	writel(val, vi->iomem + addr);
+}
+
 /* In TPG mode, VI only support 2 formats */
 static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
 {
@@ -40,10 +46,9 @@ static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
 	bitmap_set(vi->tpg_fmts_bitmap, index, 1);
 }
 
-int tegra_vi_power_on(struct tegra_channel *chan)
+int tegra_vi_power_on(struct tegra_mc_vi *vi)
 {
 	int ret;
-	struct tegra_mc_vi *vi = chan->vi;
 
 	ret = nvhost_module_busy_ext(vi->ndev);
 	if (ret) {
@@ -60,7 +65,7 @@ int tegra_vi_power_on(struct tegra_channel *chan)
 		}
 	}
 
-	tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, 1);
+	vi_write(vi, TEGRA_VI_CFG_CG_CTRL, 1);
 
 	/* unpowergate VE */
 	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VENC);

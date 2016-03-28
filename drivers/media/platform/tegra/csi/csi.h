@@ -76,7 +76,14 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num);
-int tegra_csi_power(struct tegra_csi_device *csi, int port, int enable);
+int tegra_csi_channel_power(struct tegra_csi_device *csi, int port, int enable);
+#define tegra_csi_channel_power_on(csi, port) \
+	tegra_csi_channel_power(csi, port, 1)
+#define tegra_csi_channel_power_off(csi, port) \
+	tegra_csi_channel_power(csi, port, 0)
+int tegra_csi_power(struct tegra_csi_device *csi, int enable);
+#define tegra_csi_power_on(csi) tegra_csi_power(csi, 1)
+#define tegra_csi_power_off(csi) tegra_csi_power(csi, 0)
 int tegra_csi_init(struct tegra_csi_device *csi,
 		struct platform_device *pdev);
 int tegra_csi_media_controller_init(struct tegra_csi_device *csi,

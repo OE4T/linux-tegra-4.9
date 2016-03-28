@@ -3884,9 +3884,20 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 	gk20a_dbg_fn("");
 
-	BUG_ON(!cmd);
-	BUG_ON(!seq_desc);
-	BUG_ON(!pmu->pmu_ready);
+	if ((!cmd) || (!seq_desc) || (!pmu->pmu_ready)) {
+		if (!cmd)
+			gk20a_warn(dev_from_gk20a(g),
+			"%s(): PMU cmd buffer is NULL", __func__);
+		else if (!seq_desc)
+			gk20a_warn(dev_from_gk20a(g),
+			"%s(): Seq descriptor is NULL", __func__);
+		else
+			gk20a_warn(dev_from_gk20a(g),
+			"%s(): PMU is not ready", __func__);
+
+		WARN_ON(1);
+		return -EINVAL;
+	}
 
 	if (!pmu_validate_cmd(pmu, cmd, msg, payload, queue_id))
 		return -EINVAL;

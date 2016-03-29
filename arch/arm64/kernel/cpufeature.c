@@ -530,14 +530,6 @@ void update_cpu_features(int cpu,
 	taint |= check_update_ftr_reg(SYS_CNTFRQ_EL0, cpu,
 				      info->reg_cntfrq, boot->reg_cntfrq);
 
-	/*
-	 * The kernel uses self-hosted debug features and expects CPUs to
-	 * support identical debug features. We presently need CTX_CMPs, WRPs,
-	 * and BRPs to be identical.
-	 * ID_AA64DFR1 is currently RES0.
-	 */
-	taint |= check_update_ftr_reg(SYS_ID_AA64DFR0_EL1, cpu,
-				      info->reg_id_aa64dfr0, boot->reg_id_aa64dfr0);
 	taint |= check_update_ftr_reg(SYS_ID_AA64DFR1_EL1, cpu,
 				      info->reg_id_aa64dfr1, boot->reg_id_aa64dfr1);
 	/*
@@ -577,8 +569,6 @@ void update_cpu_features(int cpu,
 	if (id_aa64pfr0_32bit_el0(read_system_reg(SYS_ID_AA64PFR0_EL1)) &&
 		id_aa64pfr0_32bit_el0(info->reg_id_aa64pfr0)) {
 
-		taint |= check_update_ftr_reg(SYS_ID_DFR0_EL1, cpu,
-					info->reg_id_dfr0, boot->reg_id_dfr0);
 		taint |= check_update_ftr_reg(SYS_ID_ISAR0_EL1, cpu,
 					info->reg_id_isar0, boot->reg_id_isar0);
 		taint |= check_update_ftr_reg(SYS_ID_ISAR1_EL1, cpu,

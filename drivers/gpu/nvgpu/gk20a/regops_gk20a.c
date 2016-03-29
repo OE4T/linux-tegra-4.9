@@ -390,7 +390,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
-	ch = dbg_s->ch;
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 
 	/* For vgpu, the regops routines need to be handled in the
 	 * context of the server and support for that does not exist.
@@ -559,6 +559,9 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 {
 	struct gk20a *g = dbg_s->g;
 	bool valid = false;
+	struct channel_gk20a *ch;
+
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 
 	if (op->type == REGOP(TYPE_GLOBAL)) {
 		/* search global list */
@@ -570,7 +573,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 			regop_bsearch_range_cmp);
 
 		/* if debug session and channel is bound search context list */
-		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
+		if ((!valid) && (!dbg_s->is_profiler && ch)) {
 			/* binary search context list */
 			valid = g->ops.regops.get_context_whitelist_ranges &&
 				!!bsearch(&offset,
@@ -581,7 +584,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 		}
 
 		/* if debug session and channel is bound search runcontrol list */
-		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
+		if ((!valid) && (!dbg_s->is_profiler && ch)) {
 			valid = g->ops.regops.get_runcontrol_whitelist &&
 				linear_search(offset,
 				g->ops.regops.get_runcontrol_whitelist(),
@@ -589,7 +592,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 		}
 	} else if (op->type == REGOP(TYPE_GR_CTX)) {
 		/* it's a context-relative op */
-		if (!dbg_s->ch) {
+		if (!ch) {
 			gk20a_err(dbg_s->dev, "can't perform ctx regop unless bound");
 			op->status = REGOP(STATUS_UNSUPPORTED_OP);
 			return valid;
@@ -604,7 +607,7 @@ static bool check_whitelists(struct dbg_session_gk20a *dbg_s,
 			regop_bsearch_range_cmp);
 
 		/* if debug session and channel is bound search runcontrol list */
-		if ((!valid) && (!dbg_s->is_profiler && dbg_s->ch)) {
+		if ((!valid) && (!dbg_s->is_profiler && ch)) {
 			valid = g->ops.regops.get_runcontrol_whitelist &&
 				linear_search(offset,
 				g->ops.regops.get_runcontrol_whitelist(),

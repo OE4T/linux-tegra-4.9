@@ -35,6 +35,33 @@ struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a = {
 	.exec_reg_ops = exec_regops_gk20a,
 };
 
+/*
+ * API to get first channel from the list of all channels
+ * bound to the debug session
+ */
+struct channel_gk20a *
+nvgpu_dbg_gpu_get_session_channel(struct dbg_session_gk20a *dbg_s)
+{
+	struct dbg_session_channel_data *ch_data;
+	struct channel_gk20a *ch;
+	struct gk20a *g = dbg_s->g;
+
+	mutex_lock(&dbg_s->ch_list_lock);
+	if (list_empty(&dbg_s->ch_list)) {
+		mutex_unlock(&dbg_s->ch_list_lock);
+		return NULL;
+	}
+
+	ch_data = list_first_entry(&dbg_s->ch_list,
+				   struct dbg_session_channel_data,
+				   ch_entry);
+	ch = g->fifo.channel + ch_data->chid;
+
+	mutex_unlock(&dbg_s->ch_list_lock);
+
+	return ch;
+}
+
 /* silly allocator - just increment session id */
 static atomic_t session_id = ATOMIC_INIT(0);
 static int generate_session_id(void)
@@ -95,8 +122,9 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
 	if (gk20a_gpu_is_virtual(dev))
 		dbg_session->is_pg_disabled = true;
 
-	INIT_LIST_HEAD(&dbg_session->dbg_s_list_node);
 	init_waitqueue_head(&dbg_session->dbg_events.wait_queue);
+	INIT_LIST_HEAD(&dbg_session->ch_list);
+	mutex_init(&dbg_session->ch_list_lock);
 	dbg_session->dbg_events.events_enabled = false;
 	dbg_session->dbg_events.num_pending_events = 0;
 
@@ -108,18 +136,22 @@ static int gk20a_dbg_gpu_do_dev_open(struct inode *inode,
  * since it might not have an associated channel. */
 static void gk20a_dbg_session_mutex_lock(struct dbg_session_gk20a *dbg_s)
 {
-	if (dbg_s->is_profiler)
+	struct channel_gk20a *ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+
+	if (dbg_s->is_profiler || !ch)
 		mutex_lock(&dbg_s->g->dbg_sessions_lock);
 	else
-		mutex_lock(&dbg_s->ch->dbg_s_lock);
+		mutex_lock(&ch->dbg_s_lock);
 }
 
 static void gk20a_dbg_session_mutex_unlock(struct dbg_session_gk20a *dbg_s)
 {
-	if (dbg_s->is_profiler)
+	struct channel_gk20a *ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+
+	if (dbg_s->is_profiler || !ch)
 		mutex_unlock(&dbg_s->g->dbg_sessions_lock);
 	else
-		mutex_unlock(&dbg_s->ch->dbg_s_lock);
+		mutex_unlock(&ch->dbg_s_lock);
 }
 
 static void gk20a_dbg_gpu_events_enable(struct dbg_session_gk20a *dbg_s)
@@ -163,10 +195,12 @@ static int gk20a_dbg_gpu_events_ctrl(struct dbg_session_gk20a *dbg_s,
 			  struct nvgpu_dbg_gpu_events_ctrl_args *args)
 {
 	int ret = 0;
+	struct channel_gk20a *ch;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "dbg events ctrl cmd %d", args->cmd);
 
-	if (!dbg_s->ch) {
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (!ch) {
 		gk20a_err(dev_from_gk20a(dbg_s->g),
 			   "no channel bound to dbg session\n");
 		return -EINVAL;
@@ -235,6 +269,7 @@ int gk20a_prof_gpu_dev_open(struct inode *inode, struct file *filp)
 
 void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 {
+	struct dbg_session_data *session_data;
 	struct dbg_session_gk20a *dbg_s;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
@@ -242,7 +277,8 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 	/* guard against the session list being modified */
 	mutex_lock(&ch->dbg_s_lock);
 
-	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
+	list_for_each_entry(session_data, &ch->dbg_s_list, dbg_s_entry) {
+		dbg_s = session_data->dbg_s;
 		if (dbg_s->dbg_events.events_enabled) {
 			gk20a_dbg(gpu_dbg_gpu_dbg, "posting event on session id %d",
 					dbg_s->id);
@@ -260,6 +296,7 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *ch)
 
 bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch)
 {
+	struct dbg_session_data *session_data;
 	struct dbg_session_gk20a *dbg_s;
 	bool broadcast = false;
 
@@ -268,7 +305,8 @@ bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch)
 	/* guard against the session list being modified */
 	mutex_lock(&ch->dbg_s_lock);
 
-	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
+	list_for_each_entry(session_data, &ch->dbg_s_list, dbg_s_entry) {
+		dbg_s = session_data->dbg_s;
 		if (dbg_s->broadcast_stop_trigger) {
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
 					"stop trigger broadcast enabled");
@@ -284,6 +322,7 @@ bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch)
 
 int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch)
 {
+	struct dbg_session_data *session_data;
 	struct dbg_session_gk20a *dbg_s;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr, "");
@@ -291,7 +330,8 @@ int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch)
 	/* guard against the session list being modified */
 	mutex_lock(&ch->dbg_s_lock);
 
-	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
+	list_for_each_entry(session_data, &ch->dbg_s_list, dbg_s_entry) {
+		dbg_s = session_data->dbg_s;
 		if (dbg_s->broadcast_stop_trigger) {
 			gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn | gpu_dbg_intr,
 					"stop trigger broadcast disabled");
@@ -347,34 +387,85 @@ static int nvgpu_dbg_timeout_enable(struct dbg_session_gk20a *dbg_s,
 	return err;
 }
 
-static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s)
+int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
+			struct dbg_session_channel_data *ch_data)
 {
-	struct channel_gk20a *ch_gk20a = dbg_s->ch;
 	struct gk20a *g = dbg_s->g;
+	int chid;
+	struct channel_gk20a *ch;
+	struct dbg_session_data *session_data;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
-	/* wasn't bound to start with ? */
-	if (!ch_gk20a) {
-		gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "not bound already?");
-		return -ENODEV;
-	}
+	chid = ch_data->chid;
+	ch = g->fifo.channel + chid;
+
+	list_del_init(&ch_data->ch_entry);
+
+	session_data = ch_data->session_data;
+	list_del_init(&session_data->dbg_s_entry);
+	kfree(session_data);
+
+	fput(ch_data->ch_f);
+	kfree(ch_data);
+
+	return 0;
+}
+
+static int dbg_unbind_all_channels_gk20a(struct dbg_session_gk20a *dbg_s)
+{
+	struct dbg_session_channel_data *ch_data, *tmp;
+	struct gk20a *g = dbg_s->g;
 
 	mutex_lock(&g->dbg_sessions_lock);
-	mutex_lock(&ch_gk20a->dbg_s_lock);
-
-	--g->dbg_sessions;
-
-	dbg_s->ch = NULL;
-	fput(dbg_s->ch_f);
-	dbg_s->ch_f = NULL;
-
-	list_del_init(&dbg_s->dbg_s_list_node);
-
-	mutex_unlock(&ch_gk20a->dbg_s_lock);
+	mutex_lock(&dbg_s->ch_list_lock);
+	list_for_each_entry_safe(ch_data, tmp, &dbg_s->ch_list, ch_entry)
+		dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
+	mutex_unlock(&dbg_s->ch_list_lock);
 	mutex_unlock(&g->dbg_sessions_lock);
 
 	return 0;
+}
+
+static int dbg_unbind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
+			  struct nvgpu_dbg_gpu_unbind_channel_args *args)
+{
+	struct dbg_session_channel_data *ch_data;
+	struct gk20a *g = dbg_s->g;
+	bool channel_found = false;
+	struct channel_gk20a *ch;
+	int err;
+
+	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s fd=%d",
+		   dev_name(dbg_s->dev), args->channel_fd);
+
+	ch = gk20a_get_channel_from_file(args->channel_fd);
+	if (!ch) {
+		gk20a_dbg_fn("no channel found for fd");
+		return -EINVAL;
+	}
+
+	mutex_lock(&dbg_s->ch_list_lock);
+	list_for_each_entry(ch_data, &dbg_s->ch_list, ch_entry) {
+		if (ch->hw_chid == ch_data->chid) {
+			channel_found = true;
+			break;
+		}
+	}
+	mutex_unlock(&dbg_s->ch_list_lock);
+
+	if (!channel_found) {
+		gk20a_dbg_fn("channel not bounded, fd=%d\n", args->channel_fd);
+		return -EINVAL;
+	}
+
+	mutex_lock(&g->dbg_sessions_lock);
+	mutex_lock(&dbg_s->ch_list_lock);
+	err = dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
+	mutex_unlock(&dbg_s->ch_list_lock);
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return err;
 }
 
 int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
@@ -384,9 +475,8 @@ int gk20a_dbg_gpu_dev_release(struct inode *inode, struct file *filp)
 
 	gk20a_dbg(gpu_dbg_gpu_dbg | gpu_dbg_fn, "%s", dev_name(dbg_s->dev));
 
-	/* unbind if it was bound */
-	if (dbg_s->ch)
-		dbg_unbind_channel_gk20a(dbg_s);
+	/* unbind channels */
+	dbg_unbind_all_channels_gk20a(dbg_s);
 
 	/* Powergate/Timeout enable is called here as possibility of dbg_session
 	 * which called powergate/timeout disable ioctl, to be killed without
@@ -405,14 +495,28 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 			  struct nvgpu_dbg_gpu_bind_channel_args *args)
 {
 	struct file *f;
-	struct gk20a *g;
+	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch;
+	struct dbg_session_channel_data *ch_data, *tmp;
+	struct dbg_session_data *session_data;
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s fd=%d",
 		   dev_name(dbg_s->dev), args->channel_fd);
 
-	if (args->channel_fd == ~0)
-		return dbg_unbind_channel_gk20a(dbg_s);
+	if (args->channel_fd == ~0) {
+		ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+		if (!ch)
+			return -EINVAL;
+
+		mutex_lock(&dbg_s->ch_list_lock);
+		list_for_each_entry_safe(ch_data, tmp,
+					 &dbg_s->ch_list, ch_entry) {
+			if (ch_data->chid == ch->hw_chid)
+				dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
+		}
+		mutex_unlock(&dbg_s->ch_list_lock);
+		return 0;
+	}
 
 	/* even though get_file_channel is doing this it releases it as well */
 	/* by holding it here we'll keep it from disappearing while the
@@ -428,20 +532,40 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 		return -EINVAL;
 	}
 
-	g = dbg_s->g;
 	gk20a_dbg_fn("%s hwchid=%d", dev_name(dbg_s->dev), ch->hw_chid);
 
 	mutex_lock(&g->dbg_sessions_lock);
 	mutex_lock(&ch->dbg_s_lock);
 
-	dbg_s->ch_f = f;
-	dbg_s->ch = ch;
-	list_add(&dbg_s->dbg_s_list_node, &dbg_s->ch->dbg_s_list);
+	ch_data = kzalloc(sizeof(*ch_data), GFP_KERNEL);
+	if (!ch_data) {
+		fput(f);
+		return -ENOMEM;
+	}
+	ch_data->ch_f = f;
+	ch_data->channel_fd = args->channel_fd;
+	ch_data->chid = ch->hw_chid;
+	INIT_LIST_HEAD(&ch_data->ch_entry);
 
-	g->dbg_sessions++;
+	session_data = kzalloc(sizeof(*session_data), GFP_KERNEL);
+	if (!session_data) {
+		kfree(ch_data);
+		fput(f);
+		return -ENOMEM;
+	}
+	session_data->dbg_s = dbg_s;
+	INIT_LIST_HEAD(&session_data->dbg_s_entry);
+	ch_data->session_data = session_data;
+
+	list_add(&session_data->dbg_s_entry, &ch->dbg_s_list);
+
+	mutex_lock(&dbg_s->ch_list_lock);
+	list_add_tail(&ch_data->ch_entry, &dbg_s->ch_list);
+	mutex_unlock(&dbg_s->ch_list_lock);
 
 	mutex_unlock(&ch->dbg_s_lock);
 	mutex_unlock(&g->dbg_sessions_lock);
+
 	return 0;
 }
 
@@ -470,8 +594,12 @@ static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 static int gk20a_dbg_pc_sampling(struct dbg_session_gk20a *dbg_s,
 			  struct nvgpu_dbg_gpu_pc_sampling_args *args)
 {
-	struct channel_gk20a *ch = dbg_s->ch;
-	struct gk20a *g = ch->g;
+	struct channel_gk20a *ch;
+	struct gk20a *g = dbg_s->g;
+
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (!ch)
+		return -EINVAL;
 
 	gk20a_dbg_fn("");
 
@@ -571,8 +699,12 @@ static int nvgpu_dbg_gpu_ioctl_clear_single_sm_error_state(
 	struct gk20a *g = get_gk20a(dbg_s->dev);
 	struct gr_gk20a *gr = &g->gr;
 	u32 sm_id;
-	struct channel_gk20a *ch = dbg_s->ch;
+	struct channel_gk20a *ch;
 	int err = 0;
+
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (!ch)
+		return -EINVAL;
 
 	sm_id = args->sm_id;
 
@@ -598,9 +730,13 @@ static int nvgpu_dbg_gpu_ioctl_write_single_sm_error_state(
 	struct gk20a *g = get_gk20a(dbg_s->dev);
 	struct gr_gk20a *gr = &g->gr;
 	u32 sm_id;
-	struct channel_gk20a *ch = dbg_s->ch;
+	struct channel_gk20a *ch;
 	struct nvgpu_dbg_gpu_sm_error_state_record *sm_error_state;
 	int err = 0;
+
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (!ch)
+		return -EINVAL;
 
 	sm_id = args->sm_id;
 	if (sm_id >= gr->no_of_sm)
@@ -756,6 +892,11 @@ long gk20a_dbg_gpu_dev_ioctl(struct file *filp, unsigned int cmd,
 		  (struct nvgpu_dbg_gpu_write_single_sm_error_state_args *)buf);
 		break;
 
+	case NVGPU_DBG_GPU_IOCTL_UNBIND_CHANNEL:
+		err = dbg_unbind_channel_gk20a(dbg_s,
+			     (struct nvgpu_dbg_gpu_unbind_channel_args *)buf);
+		break;
+
 	default:
 		gk20a_err(dev_from_gk20a(g),
 			   "unrecognized dbg gpu ioctl cmd: 0x%x",
@@ -805,6 +946,7 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	struct device *dev = dbg_s->dev;
 	struct gk20a *g = get_gk20a(dbg_s->dev);
 	struct nvgpu_dbg_gpu_reg_op *ops;
+	struct channel_gk20a *ch;
 	u64 ops_size = sizeof(ops[0]) * args->num_ops;
 
 	gk20a_dbg_fn("%d ops, total size %llu", args->num_ops, ops_size);
@@ -814,7 +956,8 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 		return -EINVAL;
 	}
 
-	if (!dbg_s->is_profiler && !dbg_s->ch) {
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (!dbg_s->is_profiler && !ch) {
 		gk20a_err(dev, "bind a channel before regops for a debugging session");
 		return -EINVAL;
 	}
@@ -1016,8 +1159,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	/* Take the global lock, since we'll be doing global regops */
 	mutex_lock(&g->dbg_sessions_lock);
 
-	ch_gk20a = dbg_s->ch;
-
+	ch_gk20a = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch_gk20a) {
 		gk20a_err(dev_from_gk20a(g),
 			  "no bound channel for smpc ctxsw mode update\n");
@@ -1052,8 +1194,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	/* Take the global lock, since we'll be doing global regops */
 	mutex_lock(&g->dbg_sessions_lock);
 
-	ch_gk20a = dbg_s->ch;
-
+	ch_gk20a = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch_gk20a) {
 		gk20a_err(dev_from_gk20a(g),
 			  "no bound channel for pm ctxsw mode update\n");
@@ -1080,11 +1221,15 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 		struct nvgpu_dbg_gpu_suspend_resume_all_sms_args *args)
 {
 	struct gk20a *g = get_gk20a(dbg_s->dev);
-	struct channel_gk20a *ch = dbg_s->ch;
+	struct channel_gk20a *ch;
 	bool ch_is_curr_ctx;
 	int err = 0, action = args->mode;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "action: %d", args->mode);
+
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
+	if (!ch)
+		return -EINVAL;
 
 	mutex_lock(&g->dbg_sessions_lock);
 

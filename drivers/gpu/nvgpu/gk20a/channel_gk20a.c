@@ -857,6 +857,8 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	struct vm_gk20a *ch_vm = ch->vm;
 	unsigned long timeout = gk20a_get_gr_idle_timeout(g);
 	struct dbg_session_gk20a *dbg_s;
+	struct dbg_session_data *session_data, *tmp_s;
+	struct dbg_session_channel_data *ch_data, *tmp;
 	bool was_reset;
 
 	gk20a_dbg_fn("");
@@ -992,14 +994,21 @@ unbind:
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */
-	mutex_lock(&ch->dbg_s_lock);
+	mutex_lock(&g->dbg_sessions_lock);
 
-	list_for_each_entry(dbg_s, &ch->dbg_s_list, dbg_s_list_node) {
-		dbg_s->ch = NULL;
-		list_del_init(&dbg_s->dbg_s_list_node);
+	list_for_each_entry_safe(session_data, tmp_s,
+				&ch->dbg_s_list, dbg_s_entry) {
+		dbg_s = session_data->dbg_s;
+		mutex_lock(&dbg_s->ch_list_lock);
+		list_for_each_entry_safe(ch_data, tmp,
+					&dbg_s->ch_list, ch_entry) {
+			if (ch_data->chid == ch->hw_chid)
+				dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
+		}
+		mutex_unlock(&dbg_s->ch_list_lock);
 	}
 
-	mutex_unlock(&ch->dbg_s_lock);
+	mutex_unlock(&g->dbg_sessions_lock);
 
 release:
 	/* make sure we catch accesses of unopened channels in case

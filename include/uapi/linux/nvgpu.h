@@ -496,8 +496,7 @@ struct nvgpu_gpu_get_gpu_time_args {
  * Binding/attaching a debugger session to an nvgpu channel
  *
  * The 'channel_fd' given here is the fd used to allocate the
- * gpu channel context.  To detach/unbind the debugger session
- * use a channel_fd of -1.
+ * gpu channel context.
  *
  */
 struct nvgpu_dbg_gpu_bind_channel_args {
@@ -510,6 +509,8 @@ struct nvgpu_dbg_gpu_bind_channel_args {
 
 /*
  * Register operations
+ * All operations are targeted towards first channel
+ * attached to debug session
  */
 /* valid op values */
 #define NVGPU_DBG_GPU_REG_OP_READ_32                             (0x00000000)
@@ -722,9 +723,23 @@ struct nvgpu_dbg_gpu_write_single_sm_error_state_args {
 #define NVGPU_DBG_GPU_IOCTL_WRITE_SINGLE_SM_ERROR_STATE			\
 	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 16, struct nvgpu_dbg_gpu_write_single_sm_error_state_args)
 
+/*
+ * Unbinding/detaching a debugger session from a nvgpu channel
+ *
+ * The 'channel_fd' given here is the fd used to allocate the
+ * gpu channel context.
+ */
+struct nvgpu_dbg_gpu_unbind_channel_args {
+	__u32 channel_fd; /* in */
+	__u32 _pad0[1];
+};
+
+#define NVGPU_DBG_GPU_IOCTL_UNBIND_CHANNEL				\
+	_IOW(NVGPU_DBG_GPU_IOCTL_MAGIC, 17, struct nvgpu_dbg_gpu_unbind_channel_args)
+
 
 #define NVGPU_DBG_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_DBG_GPU_IOCTL_WRITE_SINGLE_SM_ERROR_STATE)
+	_IOC_NR(NVGPU_DBG_GPU_IOCTL_UNBIND_CHANNEL)
 
 #define NVGPU_DBG_GPU_IOCTL_MAX_ARG_SIZE		\
 	sizeof(struct nvgpu_dbg_gpu_perfbuf_map_args)

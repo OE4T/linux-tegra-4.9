@@ -31,6 +31,9 @@ int gk20a_prof_gpu_dev_open(struct inode *inode, struct file *filp);
 /* used by the interrupt handler to post events */
 void gk20a_dbg_gpu_post_events(struct channel_gk20a *fault_ch);
 
+struct channel_gk20a *
+nvgpu_dbg_gpu_get_session_channel(struct dbg_session_gk20a *dbg_s);
+
 struct dbg_gpu_session_ops {
 	int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
 			    struct nvgpu_dbg_gpu_reg_op *ops,
@@ -68,21 +71,36 @@ struct dbg_session_gk20a {
 	struct device             *dev;
 	struct gk20a              *g;
 
-	/* bound channel, if any */
-	struct file          *ch_f;
-	struct channel_gk20a *ch;
+	/* list of bound channels, if any */
+	struct list_head ch_list;
+	struct mutex ch_list_lock;
 
 	/* session operations */
 	struct dbg_gpu_session_ops *ops;
 
 	/* event support */
 	struct dbg_gpu_session_events dbg_events;
-	struct list_head dbg_s_list_node;
 
 	bool broadcast_stop_trigger;
 };
 
+struct dbg_session_data {
+	struct dbg_session_gk20a *dbg_s;
+	struct list_head dbg_s_entry;
+};
+
+struct dbg_session_channel_data {
+	struct file          *ch_f;
+	int channel_fd;
+	int chid;
+	struct list_head ch_entry;
+	struct dbg_session_data *session_data;
+};
+
 extern struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a;
+
+int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
+			struct dbg_session_channel_data *ch_data);
 
 bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch);
 int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch);

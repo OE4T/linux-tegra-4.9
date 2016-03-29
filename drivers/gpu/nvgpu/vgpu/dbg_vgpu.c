@@ -26,7 +26,7 @@ static int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 		      struct nvgpu_dbg_gpu_reg_op *ops,
 		      u64 num_ops)
 {
-	struct channel_gk20a *ch = dbg_s->ch;
+	struct channel_gk20a *ch;
 	struct gk20a_platform *platform = gk20a_get_platform(dbg_s->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_reg_ops_params *p = &msg.params.reg_ops;
@@ -55,6 +55,7 @@ static int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 
 	msg.cmd = TEGRA_VGPU_CMD_REG_OPS;
 	msg.handle = platform->virt_handle;
+	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	p->handle = ch ? ch->virt_ctx : 0;
 	p->num_ops = num_ops;
 	p->is_profiler = dbg_s->is_profiler;

@@ -647,7 +647,6 @@ struct gk20a {
 	/* held while manipulating # of debug/profiler sessions present */
 	/* also prevents debug sessions from attaching until released */
 	struct mutex dbg_sessions_lock;
-	int dbg_sessions; /* number attached */
 	int dbg_powergating_disabled_refcount; /*refcount for pg disable */
 	int dbg_timeout_disabled_refcount; /*refcount for timeout disable */
 

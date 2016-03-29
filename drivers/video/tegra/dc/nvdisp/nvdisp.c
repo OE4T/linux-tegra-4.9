@@ -21,6 +21,7 @@
 #include <linux/of_address.h>
 #include <linux/dma-mapping.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/tegra-pm.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>

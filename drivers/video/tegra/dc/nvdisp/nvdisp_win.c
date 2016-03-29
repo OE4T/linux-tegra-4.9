@@ -743,6 +743,11 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 
 			/* disable csc */
 			tegra_nvdisp_set_csc(win, &win->csc);
+			/*
+			 * mark csc_dirty so that next time when window is
+			 * enabled, CSC can be programmed.
+			 */
+			win->csc_dirty = true;
 
 			/* disable cde */
 			nvdisp_win_write(win, 0, win_cde_ctrl_r());
@@ -976,6 +981,9 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		tegra_nvdisp_set_scaler_coeff(win);
 		win->is_scaler_coeff_set = true;
 	}
+
+	win->csc = dc->default_csc;
+	win->csc_dirty = true;
 
 	mutex_unlock(&tegra_nvdisp_lock);
 	return 0;

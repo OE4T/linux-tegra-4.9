@@ -250,6 +250,7 @@
 			win-mask = <0x7>;
 			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/dsi";
+			nvidia,cmu-enable = <1>;
                 };
 
 		nvdisplay@15210000 {
@@ -262,6 +263,11 @@
 			win-mask = <0x38>;
 			nvidia,dc-ctrlnum = <1>;
 			nvidia,dc-or-node = "/host1x/sor1";
+			nvidia,cmu-enable = <1>;
+		};
+
+		nvdisplay@15220000 {
+			nvidia,cmu-enable = <1>;
 		};
 
 		nvdisplay@15220000 {
@@ -285,6 +291,7 @@
 				nvidia,panel-bl-en-gpio = <&tegra_gpio TEGRA_GPIO(U, 3) 1>; /* PU3 */
 				nvidia,panel-en-gpio = <&gpio_i2c_0_77 4 1>; /* tca9539 0x77 Pin 4 */
 				nvidia,en-vmm-vpp-with-i2c-config;
+				nvidia,default_color_space = <0>;
 				disp-default-out {
 					nvidia,out-rotation = <180>;
 					nvidia,out-xres = <4096>;

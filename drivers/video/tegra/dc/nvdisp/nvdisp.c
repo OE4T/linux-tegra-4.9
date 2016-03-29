@@ -290,7 +290,8 @@ int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 	tegra_dc_writel(dc,
 			tegra_dc_reg_h32(lut->phy_addr),
 			nvdisp_output_lut_base_hi_r());
-	tegra_dc_writel(dc, nvdisp_output_lut_ctl_size_1025_f(),
+	tegra_dc_writel(dc, nvdisp_output_lut_ctl_size_1025_f() |
+			    nvdisp_output_lut_ctl_mode_f(0x1), /* interpolate */
 			nvdisp_output_lut_ctl_r());
 
 	return 0;
@@ -543,9 +544,6 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 		/* allocate input LUT memory and assign to HW */
 		if (nvdisp_alloc_input_lut(dc, win, true))
 			goto INIT_ERR;
-
-		/* init default CSC */
-		tegra_nvdisp_init_csc_defaults(&win->csc);
 	}
 
 	dc->valid_windows = 0;

@@ -23,11 +23,29 @@
 
 #include "dc_priv.h"
 
+static struct tegra_dc_csc_v2 unity_matrix = {
+	.r2r = 0x10000,
+	.g2r = 0x00000,
+	.b2r = 0x00000,
+	.const2r = 0x00000,
+	.r2g = 0x00000,
+	.g2g = 0x10000,
+	.b2g = 0x00000,
+	.const2g = 0x00000,
+	.r2b = 0x00000,
+	.g2b = 0x00000,
+	.b2b = 0x10000,
+	.const2b = 0x00000,
+};
+
 void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc)
 {
-	/* Get the default init values from HW team */
+
+	memcpy(csc, &unity_matrix, sizeof(*csc) - sizeof(csc->csc_enable));
+
 	return;
 }
+EXPORT_SYMBOL(tegra_nvdisp_init_csc_defaults);
 
 int tegra_nvdisp_set_csc(struct tegra_dc_win *win, struct tegra_dc_csc_v2 *csc)
 {
@@ -74,9 +92,7 @@ int tegra_nvdisp_update_csc(struct tegra_dc *dc, int win_idx)
 		return -EFAULT;
 	}
 
-	tegra_dc_get(dc);
 	win->csc_dirty = true;
-	tegra_dc_put(dc);
 
 	mutex_unlock(&dc->lock);
 

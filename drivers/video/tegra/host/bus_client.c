@@ -1138,6 +1138,12 @@ static long nvhost_channelctl(struct file *filp,
 		struct nvhost_clk_rate_args *arg =
 				(struct nvhost_clk_rate_args *)buf;
 
+		/* if virtualized, just return 0 */
+		if (nvhost_dev_is_virtual(priv->pdev)) {
+			arg->rate = 0;
+			break;
+		}
+
 		err = nvhost_ioctl_channel_get_rate(priv,
 				arg->moduleid, &arg->rate);
 		break;

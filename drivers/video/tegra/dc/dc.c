@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/io.h>
 #include <linux/pm.h>
+#include <linux/tegra-pm.h>
 #include <linux/pm_runtime.h>
 #include <linux/clk.h>
 #include <linux/mutex.h>

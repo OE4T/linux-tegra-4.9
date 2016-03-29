@@ -124,6 +124,24 @@
 	};
 
 	pmc-iopower {
+		iopower-sys-supply = <&spmic_otp_ldo6>;
+		iopower-uart-supply = <&vdd_1v8>;
+		iopower-conn-supply = <&vdd_1v8>;
+		iopower-edp-supply = <&vdd_1v8>;
+		iopower-pex-ctrl-audio-supply = <&vdd_1v8>;
+		iopower-ufs-supply = <&spmic_otp_sd1>;
+		iopower-ddr0-supply = <&spmic_otp_sd0>;
+		iopower-ddr1-supply = <&spmic_otp_sd0>;
+		iopower-csi-dsi-supply = <&spmic_otp_sd1>;
+		iopower-cam-supply = <&vdd_1v8>;
+		iopower-sdmmc4-supply = <&vdd_1v8>;
+		iopower-audio-hv-supply = <&spmic_otp_sd3>;
+		iopower-dbg-supply = <&vdd_1v8>;
+		iopower-spi-supply = <&vdd_1v8>;
+		iopower-ao-supply = <&spmic_otp_ldo6>;
+		iopower-ao-hv-supply = <&spmic_otp_ldo2>;
+		iopower-dmic-hv-supply =  <&spmic_otp_sd3>;
+		iopower-sdmmc2-hv-supply = <&spmic_otp_sd3>;
 		iopower-sdmmc1-hv-supply = <&spmic_ldo3>;
 		iopower-sdmmc3-hv-supply =  <&spmic_ldo5>;
 	};
@@ -148,7 +166,7 @@
 		};
 
 		vdd_1v8: regulator@2 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <2>;
 			regulator-name = "vdd-1v8";
 			regulator-min-microvolt = <1800000>;
@@ -159,7 +177,7 @@
 		};
 
 		vdd_rtc: regulator@3 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <3>;
 			regulator-name = "vdd-rtc";
 			regulator-min-microvolt = <1100000>;
@@ -206,7 +224,7 @@
 		};
 
 		vdd_usb0_5v: regulator@7 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <7>;
 			regulator-name = "vdd-usb0-5v";
 			regulator-min-microvolt = <5000000>;
@@ -220,7 +238,7 @@
 		};
 
 		vdd_mdm: regulator@8 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <8>;
 			regulator-name = "vdd-mdm";
 			regulator-min-microvolt = <3300000>;
@@ -231,7 +249,7 @@
 		};
 
 		vdd_usb2_5v: regulator@9 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <9>;
 			regulator-name = "vdd-usb2-5v";
 			regulator-min-microvolt = <5000000>;
@@ -243,7 +261,7 @@
 		};
 
 		vdd_sata_3v3: regulator@10 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <10>;
 			regulator-name = "vdd-sata-3v3";
 			gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(G, 7) 0>;

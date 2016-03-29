@@ -144,7 +144,7 @@
 		};
 
 		vdd_1v8: regulator@2 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <2>;
 			regulator-name = "vdd-1v8";
 			regulator-min-microvolt = <1800000>;
@@ -155,7 +155,7 @@
 		};
 
 		vdd_rtc: regulator@3 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <3>;
 			regulator-name = "vdd-rtc";
 			regulator-min-microvolt = <1100000>;
@@ -165,7 +165,7 @@
 		};
 
 		vdd_usb2_5v: regulator@4 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <4>;
 			regulator-name = "vdd-usb2-5v";
 			regulator-min-microvolt = <5000000>;

@@ -15,7 +15,6 @@ ccflags-y += -DHWA_NV_1650337
 ccflags-y += -DHWA_FPGA_ONLY
 
 ## default build settings.
-ccflags-y += -DCONFIG_DEBUGFS_OBJ
 ccflags-y += -DCONFIG_PTPSUPPORT_OBJ
 
 obj-$(CONFIG_EQOS)  += eqos.o
@@ -28,6 +27,6 @@ eqos-y += init.o
 eqos-y += mdio.o
 eqos-y += nvidia_test.o
 eqos-y += eee.o
-eqos-y += debug_operation.o
+eqos-$(CONFIG_DEBUGFS_OBJ) += debug_operation.o
 eqos-y += ptp.o
 

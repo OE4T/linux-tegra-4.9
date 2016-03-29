@@ -34,3 +34,8 @@ config DISABLE_VLAN_FWD_TO_REAL_IF
 		to the Virtual interface.
 
 		If unsure, say n.
+
+config DEBUGFS_OBJ
+	bool "Enable DEBUGFS_OBJ"
+	depends on EQOS
+	default n

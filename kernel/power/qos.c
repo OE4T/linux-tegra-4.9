@@ -28,7 +28,7 @@
  * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * Support added for bounded constraints
- * Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  */
 
 /*#define DEBUG*/
@@ -1220,7 +1220,7 @@ void pm_qos_add_min_notifier(int pm_qos_bounded_class,
 	struct pm_qos_bounded_constraint *c;
 
 	c = pm_qos_bounded_obj_array[pm_qos_bounded_class]->bounds;
-	pm_qos_remove_notifier(c->min_class, notifier);
+	pm_qos_add_notifier(c->min_class, notifier);
 }
 EXPORT_SYMBOL_GPL(pm_qos_add_min_notifier);
 

@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,11 +21,10 @@
 
 #include <linux/devfreq.h>
 
-struct platform_device;
 struct clk;
 
 struct gk20a_scale_profile {
-	struct platform_device		*pdev;
+	struct device			*dev;
 	ktime_t				last_event_time;
 	struct devfreq_dev_profile	devfreq_profile;
 	struct devfreq_dev_status	dev_stat;
@@ -34,25 +33,25 @@ struct gk20a_scale_profile {
 };
 
 /* Initialization and de-initialization for module */
-void gk20a_scale_init(struct platform_device *);
-void gk20a_scale_exit(struct platform_device *);
-void gk20a_scale_hw_init(struct platform_device *pdev);
+void gk20a_scale_init(struct device *);
+void gk20a_scale_exit(struct device *);
+void gk20a_scale_hw_init(struct device *dev);
 
 #if defined(CONFIG_GK20A_DEVFREQ)
 /*
  * call when performing submit to notify scaling mechanism that the module is
  * in use
  */
-void gk20a_scale_notify_busy(struct platform_device *);
-void gk20a_scale_notify_idle(struct platform_device *);
+void gk20a_scale_notify_busy(struct device *);
+void gk20a_scale_notify_idle(struct device *);
 
-void gk20a_scale_suspend(struct platform_device *);
-void gk20a_scale_resume(struct platform_device *);
+void gk20a_scale_suspend(struct device *);
+void gk20a_scale_resume(struct device *);
 #else
-static inline void gk20a_scale_notify_busy(struct platform_device *pdev) {}
-static inline void gk20a_scale_notify_idle(struct platform_device *pdev) {}
-static inline void gk20a_scale_suspend(struct platform_device *pdev) {}
-static inline void gk20a_scale_resume(struct platform_device *pdev) {}
+static inline void gk20a_scale_notify_busy(struct device *dev) {}
+static inline void gk20a_scale_notify_idle(struct device *dev) {}
+static inline void gk20a_scale_suspend(struct device *dev) {}
+static inline void gk20a_scale_resume(struct device *dev) {}
 #endif
 
 #endif

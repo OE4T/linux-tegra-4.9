@@ -18,7 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <linux/platform_device.h>
+#include <linux/device.h>
 #include <linux/pm_runtime.h>
 #include <linux/kernel.h>
 #include <linux/fb.h>
@@ -34,11 +34,10 @@
 
 #define ROOTRW (S_IRWXU|S_IRGRP|S_IROTH)
 
-static ssize_t elcg_enable_store(struct device *device,
+static ssize_t elcg_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 	int err;
 
@@ -60,28 +59,26 @@ static ssize_t elcg_enable_store(struct device *device,
 	}
 	gk20a_idle(g->dev);
 
-	dev_info(device, "ELCG is %s.\n", g->elcg_enabled ? "enabled" :
+	dev_info(dev, "ELCG is %s.\n", g->elcg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
 }
 
-static ssize_t elcg_enable_read(struct device *device,
+static ssize_t elcg_enable_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d\n", g->elcg_enabled ? 1 : 0);
 }
 
 static DEVICE_ATTR(elcg_enable, ROOTRW, elcg_enable_read, elcg_enable_store);
 
-static ssize_t blcg_enable_store(struct device *device,
+static ssize_t blcg_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 	int err;
 
@@ -118,17 +115,16 @@ static ssize_t blcg_enable_store(struct device *device,
 			g->blcg_enabled);
 	gk20a_idle(g->dev);
 
-	dev_info(device, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
+	dev_info(dev, "BLCG is %s.\n", g->blcg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
 }
 
-static ssize_t blcg_enable_read(struct device *device,
+static ssize_t blcg_enable_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d\n", g->blcg_enabled ? 1 : 0);
 }
@@ -136,11 +132,10 @@ static ssize_t blcg_enable_read(struct device *device,
 
 static DEVICE_ATTR(blcg_enable, ROOTRW, blcg_enable_read, blcg_enable_store);
 
-static ssize_t slcg_enable_store(struct device *device,
+static ssize_t slcg_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 	int err;
 
@@ -185,17 +180,16 @@ static ssize_t slcg_enable_store(struct device *device,
 		g->ops.clock_gating.slcg_xbar_load_gating_prod(g, g->slcg_enabled);
 	gk20a_idle(g->dev);
 
-	dev_info(device, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :
+	dev_info(dev, "SLCG is %s.\n", g->slcg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
 }
 
-static ssize_t slcg_enable_read(struct device *device,
+static ssize_t slcg_enable_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d\n", g->slcg_enabled ? 1 : 0);
 }
@@ -203,8 +197,8 @@ static ssize_t slcg_enable_read(struct device *device,
 static DEVICE_ATTR(slcg_enable, ROOTRW, slcg_enable_read, slcg_enable_store);
 
 static ssize_t ptimer_scale_factor_show(struct device *dev,
-						struct device_attribute *attr,
-						char *buf)
+					struct device_attribute *attr,
+					char *buf)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	u32 src_freq_hz = platform->ptimer_src_freq;
@@ -240,8 +234,7 @@ static ssize_t railgate_enable_store(struct device *dev,
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct generic_pm_domain *genpd = dev_to_genpd(dev);
-	struct platform_device *ndev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long railgate_enable = 0;
 	int err;
 
@@ -255,7 +248,7 @@ static ssize_t railgate_enable_store(struct device *dev,
 		/* release extra ref count:if power domains not enabled */
 		if ((platform->railgate) && \
 				!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-			err = platform->railgate(ndev);
+			err = platform->railgate(dev);
 		mutex_unlock(&platform->railgate_lock);
 	} else if (railgate_enable == 0 && platform->can_railgate) {
 		mutex_lock(&platform->railgate_lock);
@@ -265,7 +258,7 @@ static ssize_t railgate_enable_store(struct device *dev,
 		/* take extra ref count - incase of power domains not enabled */
 		if ((platform->unrailgate) && \
 				!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-			err = platform->unrailgate(ndev);
+			err = platform->unrailgate(dev);
 		mutex_unlock(&platform->railgate_lock);
 	}
 	dev_info(dev, "railgate is %s.\n", platform->can_railgate ?
@@ -279,11 +272,10 @@ static ssize_t railgate_enable_store(struct device *dev,
 	return count;
 }
 
-static ssize_t railgate_enable_read(struct device *device,
+static ssize_t railgate_enable_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a_platform *platform = dev_get_drvdata(&ndev->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	return sprintf(buf, "%d\n", platform->can_railgate ? 1 : 0);
 }
@@ -297,9 +289,8 @@ static ssize_t railgate_delay_store(struct device *dev,
 				    const char *buf, size_t count)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct platform_device *ndev = to_platform_device(dev);
 	int railgate_delay = 0, ret = 0;
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	int err;
 
 	if (!platform->can_railgate) {
@@ -373,8 +364,7 @@ static DEVICE_ATTR(clockgate_delay, ROOTRW, clockgate_delay_show,
 static ssize_t counters_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	u32 busy_cycles, total_cycles;
 	ssize_t res;
 
@@ -390,8 +380,7 @@ static ssize_t counters_show_reset(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
 	ssize_t res = counters_show(dev, attr, buf);
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 
 	gk20a_pmu_reset_load_counters(g);
 
@@ -403,8 +392,7 @@ static ssize_t gk20a_load_show(struct device *dev,
 				     struct device_attribute *attr,
 				     char *buf)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	u32 busy_time;
 	ssize_t res;
 	int err;
@@ -427,11 +415,10 @@ static ssize_t gk20a_load_show(struct device *dev,
 }
 static DEVICE_ATTR(load, S_IRUGO, gk20a_load_show, NULL);
 
-static ssize_t elpg_enable_store(struct device *device,
+static ssize_t elpg_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 	int err;
 
@@ -455,28 +442,26 @@ static ssize_t elpg_enable_store(struct device *device,
 	}
 	gk20a_idle(g->dev);
 
-	dev_info(device, "ELPG is %s.\n", g->elpg_enabled ? "enabled" :
+	dev_info(dev, "ELPG is %s.\n", g->elpg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
 }
 
-static ssize_t elpg_enable_read(struct device *device,
+static ssize_t elpg_enable_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d\n", g->elpg_enabled ? 1 : 0);
 }
 
 static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
 
-static ssize_t aelpg_param_store(struct device *device,
+static ssize_t aelpg_param_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	int status = 0;
 	union pmu_ap_cmd ap_cmd;
 	int *paramlist = (int *)g->pmu.aelpg_param;
@@ -514,11 +499,10 @@ static ssize_t aelpg_param_store(struct device *device,
 	return count;
 }
 
-static ssize_t aelpg_param_read(struct device *device,
+static ssize_t aelpg_param_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d %d %d %d %d\n", g->pmu.aelpg_param[0],
 		g->pmu.aelpg_param[1], g->pmu.aelpg_param[2],
@@ -528,11 +512,10 @@ static ssize_t aelpg_param_read(struct device *device,
 static DEVICE_ATTR(aelpg_param, ROOTRW,
 		aelpg_param_read, aelpg_param_store);
 
-static ssize_t aelpg_enable_store(struct device *device,
+static ssize_t aelpg_enable_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 	int status = 0;
 	union pmu_ap_cmd ap_cmd;
@@ -558,21 +541,20 @@ static ssize_t aelpg_enable_store(struct device *device,
 			status = gk20a_pmu_ap_send_command(g, &ap_cmd, false);
 		}
 	} else {
-		dev_info(device, "PMU is not ready, AELPG request failed\n");
+		dev_info(dev, "PMU is not ready, AELPG request failed\n");
 	}
 	gk20a_idle(g->dev);
 
-	dev_info(device, "AELPG is %s.\n", g->aelpg_enabled ? "enabled" :
+	dev_info(dev, "AELPG is %s.\n", g->aelpg_enabled ? "enabled" :
 			"disabled");
 
 	return count;
 }
 
-static ssize_t aelpg_enable_read(struct device *device,
+static ssize_t aelpg_enable_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d\n", g->aelpg_enabled ? 1 : 0);
 }
@@ -581,19 +563,17 @@ static DEVICE_ATTR(aelpg_enable, ROOTRW,
 		aelpg_enable_read, aelpg_enable_store);
 
 
-static ssize_t allow_all_enable_read(struct device *device,
+static ssize_t allow_all_enable_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	return sprintf(buf, "%d\n", g->allow_all ? 1 : 0);
 }
 
-static ssize_t allow_all_enable_store(struct device *device,
+static ssize_t allow_all_enable_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 	int err;
 
@@ -610,11 +590,10 @@ static ssize_t allow_all_enable_store(struct device *device,
 static DEVICE_ATTR(allow_all, ROOTRW,
 		allow_all_enable_read, allow_all_enable_store);
 
-static ssize_t emc3d_ratio_store(struct device *device,
+static ssize_t emc3d_ratio_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 
 	if (kstrtoul(buf, 10, &val) < 0)
@@ -625,22 +604,20 @@ static ssize_t emc3d_ratio_store(struct device *device,
 	return count;
 }
 
-static ssize_t emc3d_ratio_read(struct device *device,
+static ssize_t emc3d_ratio_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d\n", g->emc3d_ratio);
 }
 
 static DEVICE_ATTR(emc3d_ratio, ROOTRW, emc3d_ratio_read, emc3d_ratio_store);
 
-static ssize_t fmax_at_vmin_safe_read(struct device *device,
+static ssize_t fmax_at_vmin_safe_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long gpu_fmax_at_vmin_hz = 0;
 
 	gpu_fmax_at_vmin_hz = tegra_dvfs_get_fmax_at_vmin_safe_t(
@@ -652,11 +629,10 @@ static ssize_t fmax_at_vmin_safe_read(struct device *device,
 static DEVICE_ATTR(fmax_at_vmin_safe, S_IRUGO, fmax_at_vmin_safe_read, NULL);
 
 #ifdef CONFIG_PM
-static ssize_t force_idle_store(struct device *device,
+static ssize_t force_idle_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 	int err = 0;
 
@@ -667,10 +643,10 @@ static ssize_t force_idle_store(struct device *device,
 		if (g->forced_idle)
 			return count; /* do nothing */
 		else {
-			err = __gk20a_do_idle(ndev, false);
+			err = __gk20a_do_idle(dev, false);
 			if (!err) {
 				g->forced_idle = 1;
-				dev_info(device, "gpu is idle : %d\n",
+				dev_info(dev, "gpu is idle : %d\n",
 					g->forced_idle);
 			}
 		}
@@ -678,10 +654,10 @@ static ssize_t force_idle_store(struct device *device,
 		if (!g->forced_idle)
 			return count; /* do nothing */
 		else {
-			err = __gk20a_do_unidle(ndev);
+			err = __gk20a_do_unidle(dev);
 			if (!err) {
 				g->forced_idle = 0;
-				dev_info(device, "gpu is idle : %d\n",
+				dev_info(dev, "gpu is idle : %d\n",
 					g->forced_idle);
 			}
 		}
@@ -690,11 +666,10 @@ static ssize_t force_idle_store(struct device *device,
 	return count;
 }
 
-static ssize_t force_idle_read(struct device *device,
+static ssize_t force_idle_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "%d\n", g->forced_idle ? 1 : 0);
 }
@@ -702,11 +677,10 @@ static ssize_t force_idle_read(struct device *device,
 static DEVICE_ATTR(force_idle, ROOTRW, force_idle_read, force_idle_store);
 #endif
 
-static ssize_t tpc_fs_mask_store(struct device *device,
+static ssize_t tpc_fs_mask_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	unsigned long val = 0;
 
 	if (kstrtoul(buf, 10, &val) < 0)
@@ -730,11 +704,10 @@ static ssize_t tpc_fs_mask_store(struct device *device,
 	return count;
 }
 
-static ssize_t tpc_fs_mask_read(struct device *device,
+static ssize_t tpc_fs_mask_read(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index;
 	u32 tpc_fs_mask = 0;
@@ -760,7 +733,7 @@ static DEVICE_ATTR(tpc_fs_mask, ROOTRW, tpc_fs_mask_read, tpc_fs_mask_store);
 
 void gk20a_remove_sysfs(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(to_platform_device(dev));
+	struct gk20a *g = get_gk20a(dev);
 
 	device_remove_file(dev, &dev_attr_elcg_enable);
 	device_remove_file(dev, &dev_attr_blcg_enable);
@@ -797,50 +770,50 @@ void gk20a_remove_sysfs(struct device *dev)
 	}
 }
 
-void gk20a_create_sysfs(struct platform_device *dev)
+void gk20a_create_sysfs(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(dev);
+	struct gk20a *g = gk20a_from_dev(dev);
 	int error = 0;
 
-	error |= device_create_file(&dev->dev, &dev_attr_elcg_enable);
-	error |= device_create_file(&dev->dev, &dev_attr_blcg_enable);
-	error |= device_create_file(&dev->dev, &dev_attr_slcg_enable);
-	error |= device_create_file(&dev->dev, &dev_attr_ptimer_scale_factor);
-	error |= device_create_file(&dev->dev, &dev_attr_elpg_enable);
-	error |= device_create_file(&dev->dev, &dev_attr_emc3d_ratio);
-	error |= device_create_file(&dev->dev, &dev_attr_fmax_at_vmin_safe);
-	error |= device_create_file(&dev->dev, &dev_attr_counters);
-	error |= device_create_file(&dev->dev, &dev_attr_counters_reset);
-	error |= device_create_file(&dev->dev, &dev_attr_load);
-	error |= device_create_file(&dev->dev, &dev_attr_railgate_delay);
-	error |= device_create_file(&dev->dev, &dev_attr_is_railgated);
-	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
+	error |= device_create_file(dev, &dev_attr_elcg_enable);
+	error |= device_create_file(dev, &dev_attr_blcg_enable);
+	error |= device_create_file(dev, &dev_attr_slcg_enable);
+	error |= device_create_file(dev, &dev_attr_ptimer_scale_factor);
+	error |= device_create_file(dev, &dev_attr_elpg_enable);
+	error |= device_create_file(dev, &dev_attr_emc3d_ratio);
+	error |= device_create_file(dev, &dev_attr_fmax_at_vmin_safe);
+	error |= device_create_file(dev, &dev_attr_counters);
+	error |= device_create_file(dev, &dev_attr_counters_reset);
+	error |= device_create_file(dev, &dev_attr_load);
+	error |= device_create_file(dev, &dev_attr_railgate_delay);
+	error |= device_create_file(dev, &dev_attr_is_railgated);
+	error |= device_create_file(dev, &dev_attr_clockgate_delay);
 #ifdef CONFIG_PM
-	error |= device_create_file(&dev->dev, &dev_attr_force_idle);
+	error |= device_create_file(dev, &dev_attr_force_idle);
 #if defined(CONFIG_PM_GENERIC_DOMAINS)
-	error |= device_create_file(&dev->dev, &dev_attr_railgate_enable);
+	error |= device_create_file(dev, &dev_attr_railgate_enable);
 #endif
 #endif
-	error |= device_create_file(&dev->dev, &dev_attr_aelpg_param);
-	error |= device_create_file(&dev->dev, &dev_attr_aelpg_enable);
-	error |= device_create_file(&dev->dev, &dev_attr_allow_all);
-	error |= device_create_file(&dev->dev, &dev_attr_tpc_fs_mask);
+	error |= device_create_file(dev, &dev_attr_aelpg_param);
+	error |= device_create_file(dev, &dev_attr_aelpg_enable);
+	error |= device_create_file(dev, &dev_attr_allow_all);
+	error |= device_create_file(dev, &dev_attr_tpc_fs_mask);
 
-	if (g->host1x_dev && (dev->dev.parent != &g->host1x_dev->dev)) {
+	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev)) {
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,
-					   &dev->dev.kobj,
-					   dev_name(&dev->dev));
-		if (strcmp(dev_name(&dev->dev), "gpu.0")) {
-			struct kobject *kobj = &dev->dev.kobj;
+					   &dev->kobj,
+					   dev_name(dev));
+		if (strcmp(dev_name(dev), "gpu.0")) {
+			struct kobject *kobj = &dev->kobj;
 			struct device *parent = container_of((kobj->parent),
 						struct device, kobj);
 			error |= sysfs_create_link(&parent->kobj,
-					   &dev->dev.kobj, "gpu.0");
+					   &dev->kobj, "gpu.0");
 		}
 
 	}
 
 	if (error)
-		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");
+		dev_err(dev, "Failed to create sysfs attributes!\n");
 
 }

@@ -1814,7 +1814,7 @@ int pmu_reset(struct pmu_gk20a *pmu)
 int pmu_bootstrap(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct mm_gk20a *mm = &g->mm;
 	struct pmu_ucode_desc *desc = pmu->desc;
 	u64 addr_code, addr_data, addr_load;
@@ -2955,7 +2955,7 @@ static u8 get_perfmon_id(struct pmu_gk20a *pmu)
 		break;
 #endif
 	default:
-		gk20a_err(&g->dev->dev, "no support for %x", ver);
+		gk20a_err(g->dev, "no support for %x", ver);
 		BUG();
 	}
 
@@ -4667,10 +4667,10 @@ static const struct file_operations security_fops = {
 	.release	= single_release,
 };
 
-int gk20a_pmu_debugfs_init(struct platform_device *dev)
+int gk20a_pmu_debugfs_init(struct device *dev)
 {
 	struct dentry *d;
-	struct gk20a_platform *platform = platform_get_drvdata(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 
 	d = debugfs_create_file(

@@ -18,7 +18,6 @@
 #ifndef GK20A_H
 #define GK20A_H
 
-
 struct gk20a;
 struct fifo_gk20a;
 struct channel_gk20a;
@@ -206,7 +205,7 @@ struct gpu_ops {
 			bool *post_event, struct channel_gk20a *fault_ch);
 		int (*handle_tex_exception)(struct gk20a *g, u32 gpc, u32 tpc,
 						bool *post_event);
-		void (*create_gr_sysfs)(struct platform_device *dev);
+		void (*create_gr_sysfs)(struct device *dev);
 		u32 (*get_lrf_tex_ltc_dram_override)(struct gk20a *g);
 	} gr;
 	const char *name;
@@ -517,7 +516,7 @@ struct gpu_ops {
 };
 
 struct gk20a {
-	struct platform_device *dev;
+	struct device *dev;
 	struct platform_device *host1x_dev;
 
 	struct resource *reg_mem;
@@ -602,7 +601,7 @@ struct gk20a {
 	 */
 	u64 separate_fixed_allocs;
 
-	void (*remove_support)(struct platform_device *);
+	void (*remove_support)(struct device *);
 
 	u64 pg_ingating_time_us;
 	u64 pg_ungating_time_us;
@@ -648,7 +647,6 @@ struct gk20a {
 	int client_refcount; /* open channels and ctrl nodes */
 
 	dev_t cdev_region;
-	struct class *class;
 
 	struct gpu_ops ops;
 
@@ -685,7 +683,7 @@ static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
 		g->gr_idle_timeout_default : MAX_SCHEDULE_TIMEOUT;
 }
 
-static inline struct gk20a *get_gk20a(struct platform_device *dev)
+static inline struct gk20a *get_gk20a(struct device *dev)
 {
 	return gk20a_get_platform(dev)->g;
 }
@@ -880,7 +878,11 @@ static inline u32 gk20a_bar1_readl(struct gk20a *g, u32 b)
 /* convenience */
 static inline struct device *dev_from_gk20a(struct gk20a *g)
 {
-	return &g->dev->dev;
+	return g->dev;
+}
+static inline struct gk20a *gk20a_from_dev(struct device *dev)
+{
+	return ((struct gk20a_platform *)dev_get_drvdata(dev))->g;
 }
 static inline struct gk20a *gk20a_from_as(struct gk20a_as *as)
 {
@@ -927,14 +929,14 @@ enum {
 	KEPLER_CHANNEL_GPFIFO_C   = 0xA26F,
 };
 
-static inline bool gk20a_gpu_is_virtual(struct platform_device *dev)
+static inline bool gk20a_gpu_is_virtual(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	return platform->virtual_dev;
 }
 
-static inline int support_gk20a_pmu(struct platform_device *dev)
+static inline int support_gk20a_pmu(struct device *dev)
 {
 	if (IS_ENABLED(CONFIG_GK20A_PMU)) {
 		/* gPMU is not supported for vgpu */
@@ -944,23 +946,23 @@ static inline int support_gk20a_pmu(struct platform_device *dev)
 	return 0;
 }
 
-void gk20a_create_sysfs(struct platform_device *dev);
+void gk20a_create_sysfs(struct device *dev);
 void gk20a_remove_sysfs(struct device *dev);
 
 #define GK20A_BAR0_IORESOURCE_MEM 0
 #define GK20A_BAR1_IORESOURCE_MEM 1
 #define GK20A_SIM_IORESOURCE_MEM 2
 
-void gk20a_busy_noresume(struct platform_device *pdev);
-int __must_check gk20a_busy(struct platform_device *pdev);
-void gk20a_idle(struct platform_device *pdev);
+void gk20a_busy_noresume(struct device *dev);
+int __must_check gk20a_busy(struct device *dev);
+void gk20a_idle(struct device *dev);
 void gk20a_disable(struct gk20a *g, u32 units);
 void gk20a_enable(struct gk20a *g, u32 units);
 void gk20a_reset(struct gk20a *g, u32 units);
 int gk20a_do_idle(void);
 int gk20a_do_unidle(void);
-int __gk20a_do_idle(struct platform_device *pdev, bool force_reset);
-int __gk20a_do_unidle(struct platform_device *pdev);
+int __gk20a_do_idle(struct device *dev, bool force_reset);
+int __gk20a_do_unidle(struct device *dev);
 
 const struct firmware *
 gk20a_request_firmware(struct gk20a *g, const char *fw_name);
@@ -981,10 +983,10 @@ int gk20a_init_gpu_characteristics(struct gk20a *g);
 
 void gk20a_pbus_isr(struct gk20a *g);
 
-int gk20a_user_init(struct platform_device *dev);
-void gk20a_user_deinit(struct platform_device *dev);
+int gk20a_user_init(struct device *dev, const char *interface_name);
+void gk20a_user_deinit(struct device *dev);
 
-extern void gk20a_debug_dump_device(struct platform_device *pdev);
+void gk20a_debug_dump_device(void *dev);
 
 static inline u32 ptimer_scalingfactor10x(u32 ptimer_src_freq)
 {
@@ -999,4 +1001,8 @@ static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
 }
 
 u64 gk20a_read_ptimer(struct gk20a *g);
+extern struct class nvgpu_class;
+
+#define INTERFACE_NAME "nvhost%s-gpu"
+
 #endif /* GK20A_H */

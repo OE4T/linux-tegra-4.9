@@ -3515,7 +3515,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 
 	gk20a_busy_noresume(g->dev);
 	if (!g->power_on) {
-		pm_runtime_put_noidle(&g->dev->dev);
+		pm_runtime_put_noidle(g->dev);
 		return 0;
 	}
 
@@ -3525,7 +3525,7 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 	   guarantee that writes are to DRAM. This will be a sysmembar internal
 	   to the L2. */
 
-	trace_gk20a_mm_fb_flush(g->dev->name);
+	trace_gk20a_mm_fb_flush(dev_name(g->dev));
 
 	gk20a_writel(g, flush_fb_flush_r(),
 		flush_fb_flush_pending_busy_f());
@@ -3552,11 +3552,11 @@ int gk20a_mm_fb_flush(struct gk20a *g)
 		ret = -EBUSY;
 	}
 
-	trace_gk20a_mm_fb_flush_done(g->dev->name);
+	trace_gk20a_mm_fb_flush_done(dev_name(g->dev));
 
 	mutex_unlock(&mm->l2_op_lock);
 
-	pm_runtime_put_noidle(&g->dev->dev);
+	pm_runtime_put_noidle(g->dev);
 
 	return ret;
 }
@@ -3566,7 +3566,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 	u32 data;
 	s32 retry = 200;
 
-	trace_gk20a_mm_l2_invalidate(g->dev->name);
+	trace_gk20a_mm_l2_invalidate(dev_name(g->dev));
 
 	/* Invalidate any clean lines from the L2 so subsequent reads go to
 	   DRAM. Dirty lines are not affected by this operation. */
@@ -3592,7 +3592,7 @@ static void gk20a_mm_l2_invalidate_locked(struct gk20a *g)
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_system_invalidate too many retries");
 
-	trace_gk20a_mm_l2_invalidate_done(g->dev->name);
+	trace_gk20a_mm_l2_invalidate_done(dev_name(g->dev));
 }
 
 void gk20a_mm_l2_invalidate(struct gk20a *g)
@@ -3604,7 +3604,7 @@ void gk20a_mm_l2_invalidate(struct gk20a *g)
 		gk20a_mm_l2_invalidate_locked(g);
 		mutex_unlock(&mm->l2_op_lock);
 	}
-	pm_runtime_put_noidle(&g->dev->dev);
+	pm_runtime_put_noidle(g->dev);
 }
 
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
@@ -3621,7 +3621,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 
 	mutex_lock(&mm->l2_op_lock);
 
-	trace_gk20a_mm_l2_flush(g->dev->name);
+	trace_gk20a_mm_l2_flush(dev_name(g->dev));
 
 	/* Flush all dirty lines from the L2 to DRAM. Lines are left in the L2
 	   as clean, so subsequent reads might hit in the L2. */
@@ -3646,7 +3646,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 		gk20a_warn(dev_from_gk20a(g),
 			"l2_flush_dirty too many retries");
 
-	trace_gk20a_mm_l2_flush_done(g->dev->name);
+	trace_gk20a_mm_l2_flush_done(dev_name(g->dev));
 
 	if (invalidate)
 		gk20a_mm_l2_invalidate_locked(g);
@@ -3654,7 +3654,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 	mutex_unlock(&mm->l2_op_lock);
 
 hw_was_off:
-	pm_runtime_put_noidle(&g->dev->dev);
+	pm_runtime_put_noidle(g->dev);
 }
 
 void gk20a_mm_cbc_clean(struct gk20a *g)
@@ -3696,7 +3696,7 @@ void gk20a_mm_cbc_clean(struct gk20a *g)
 	mutex_unlock(&mm->l2_op_lock);
 
 hw_was_off:
-	pm_runtime_put_noidle(&g->dev->dev);
+	pm_runtime_put_noidle(g->dev);
 }
 
 int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
@@ -3746,7 +3746,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	mutex_lock(&tlb_lock);
 
-	trace_gk20a_mm_tlb_invalidate(g->dev->name);
+	trace_gk20a_mm_tlb_invalidate(dev_name(g->dev));
 
 	do {
 		data = gk20a_readl(g, fb_mmu_ctrl_r());
@@ -3783,7 +3783,7 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 		gk20a_warn(dev_from_gk20a(g),
 			"mmu invalidate too many retries");
 
-	trace_gk20a_mm_tlb_invalidate_done(g->dev->name);
+	trace_gk20a_mm_tlb_invalidate_done(dev_name(g->dev));
 
 out:
 	mutex_unlock(&tlb_lock);
@@ -3868,11 +3868,11 @@ clean_up:
 	return err;
 }
 
-void gk20a_mm_debugfs_init(struct platform_device *pdev)
+void gk20a_mm_debugfs_init(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dentry *gpu_root = platform->debugfs;
-	struct gk20a *g = gk20a_get_platform(pdev)->g;
+	struct gk20a *g = gk20a_get_platform(dev)->g;
 
 	debugfs_create_x64("separate_fixed_allocs", 0664, gpu_root,
 			   &g->separate_fixed_allocs);

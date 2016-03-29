@@ -1,7 +1,7 @@
 /*
  * NVIDIA GPU HAL interface.
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,7 +41,7 @@ int gpu_init_hal(struct gk20a *g)
 		break;
 #endif
 	default:
-		gk20a_err(&g->dev->dev, "no support for %x", ver);
+		gk20a_err(g->dev, "no support for %x", ver);
 		return -ENODEV;
 	}
 

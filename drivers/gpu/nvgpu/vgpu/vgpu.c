@@ -140,7 +140,7 @@ static int vgpu_intr_thread(void *dev_id)
 	return 0;
 }
 
-static void vgpu_remove_support(struct platform_device *dev)
+static void vgpu_remove_support(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
@@ -174,10 +174,10 @@ static void vgpu_remove_support(struct platform_device *dev)
 	}
 }
 
-static int vgpu_init_support(struct platform_device *dev)
+static int vgpu_init_support(struct platform_device *pdev)
 {
-	struct resource *r = platform_get_resource(dev, IORESOURCE_MEM, 0);
-	struct gk20a *g = get_gk20a(dev);
+	struct resource *r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	struct gk20a *g = get_gk20a(&pdev->dev);
 	int err = 0;
 
 	if (!r) {
@@ -186,7 +186,7 @@ static int vgpu_init_support(struct platform_device *dev)
 		goto fail;
 	}
 
-	g->bar1 = devm_ioremap_resource(&dev->dev, r);
+	g->bar1 = devm_ioremap_resource(&pdev->dev, r);
 	if (IS_ERR(g->bar1)) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
 		err = PTR_ERR(g->bar1);
@@ -200,14 +200,13 @@ static int vgpu_init_support(struct platform_device *dev)
 	return 0;
 
  fail:
-	vgpu_remove_support(dev);
+	vgpu_remove_support(&pdev->dev);
 	return err;
 }
 
 int vgpu_pm_prepare_poweroff(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
 	gk20a_dbg_fn("");
@@ -284,7 +283,7 @@ static int vgpu_init_hal(struct gk20a *g)
 		break;
 #endif
 	default:
-		gk20a_err(&g->dev->dev, "no support for %x", ver);
+		gk20a_err(g->dev, "no support for %x", ver);
 		err = -ENODEV;
 		break;
 	}
@@ -294,8 +293,7 @@ static int vgpu_init_hal(struct gk20a *g)
 
 int vgpu_pm_finalize_poweron(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -342,9 +340,9 @@ done:
 	return err;
 }
 
-static int vgpu_pm_initialise_domain(struct platform_device *pdev)
+static int vgpu_pm_initialise_domain(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dev_power_governor *pm_domain_gov = NULL;
 	struct gk20a_domain_data *vgpu_pd_data;
 	struct generic_pm_domain *domain;
@@ -369,17 +367,17 @@ static int vgpu_pm_initialise_domain(struct platform_device *pdev)
 	domain->dev_ops.save_state = vgpu_pm_prepare_poweroff;
 	domain->dev_ops.restore_state = vgpu_pm_finalize_poweron;
 
-	device_set_wakeup_capable(&pdev->dev, 0);
-	return pm_genpd_add_device(domain, &pdev->dev);
+	device_set_wakeup_capable(dev, 0);
+	return pm_genpd_add_device(domain, dev);
 }
 
-static int vgpu_pm_init(struct platform_device *dev)
+static int vgpu_pm_init(struct device *dev)
 {
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
-	pm_runtime_enable(&dev->dev);
+	pm_runtime_enable(dev);
 
 	/* genpd will take care of runtime power management if it is enabled */
 	if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
@@ -388,14 +386,15 @@ static int vgpu_pm_init(struct platform_device *dev)
 	return err;
 }
 
-int vgpu_probe(struct platform_device *dev)
+int vgpu_probe(struct platform_device *pdev)
 {
 	struct gk20a *gk20a;
 	int err;
+	struct device *dev = &pdev->dev;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	if (!platform) {
-		dev_err(&dev->dev, "no platform data\n");
+		dev_err(dev, "no platform data\n");
 		return -ENODATA;
 	}
 
@@ -403,18 +402,18 @@ int vgpu_probe(struct platform_device *dev)
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {
-		dev_err(&dev->dev, "couldn't allocate gk20a support");
+		dev_err(dev, "couldn't allocate gk20a support");
 		return -ENOMEM;
 	}
 
 	platform->g = gk20a;
 	gk20a->dev = dev;
 
-	err = gk20a_user_init(dev);
+	err = gk20a_user_init(dev, INTERFACE_NAME);
 	if (err)
 		return err;
 
-	vgpu_init_support(dev);
+	vgpu_init_support(pdev);
 	vgpu_dbg_init();
 
 	init_rwsem(&gk20a->busy_lock);
@@ -424,33 +423,33 @@ int vgpu_probe(struct platform_device *dev)
 	/* Initialize the platform interface. */
 	err = platform->probe(dev);
 	if (err) {
-		dev_err(&dev->dev, "platform probe failed");
+		dev_err(dev, "platform probe failed");
 		return err;
 	}
 
 	err = vgpu_pm_init(dev);
 	if (err) {
-		dev_err(&dev->dev, "pm init failed");
+		dev_err(dev, "pm init failed");
 		return err;
 	}
 
 	if (platform->late_probe) {
 		err = platform->late_probe(dev);
 		if (err) {
-			dev_err(&dev->dev, "late probe failed");
+			dev_err(dev, "late probe failed");
 			return err;
 		}
 	}
 
-	err = vgpu_comm_init(dev);
+	err = vgpu_comm_init(pdev);
 	if (err) {
-		dev_err(&dev->dev, "failed to init comm interface\n");
+		dev_err(dev, "failed to init comm interface\n");
 		return -ENOSYS;
 	}
 
 	platform->virt_handle = vgpu_connect();
 	if (!platform->virt_handle) {
-		dev_err(&dev->dev, "failed to connect to server node\n");
+		dev_err(dev, "failed to connect to server node\n");
 		vgpu_comm_deinit();
 		return -ENOSYS;
 	}
@@ -462,8 +461,8 @@ int vgpu_probe(struct platform_device *dev)
 	gk20a_debug_init(dev);
 
 	/* Set DMA parameters to allow larger sgt lists */
-	dev->dev.dma_parms = &gk20a->dma_parms;
-	dma_set_max_seg_size(&dev->dev, UINT_MAX);
+	dev->dma_parms = &gk20a->dma_parms;
+	dma_set_max_seg_size(dev, UINT_MAX);
 
 	gk20a->gr_idle_timeout_default =
 			CONFIG_GK20A_DEFAULT_TIMEOUT;
@@ -475,8 +474,9 @@ int vgpu_probe(struct platform_device *dev)
 	return 0;
 }
 
-int vgpu_remove(struct platform_device *dev)
+int vgpu_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_domain_data *vgpu_gpd;
 	gk20a_dbg_fn("");

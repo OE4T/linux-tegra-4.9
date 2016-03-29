@@ -470,7 +470,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_busy(g->dev);
 		if (err) {
-			gk20a_err(&g->dev->dev,
+			gk20a_err(g->dev,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
@@ -483,7 +483,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_busy(g->dev);
 		if (err) {
-			gk20a_err(&g->dev->dev,
+			gk20a_err(g->dev,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
@@ -496,7 +496,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_busy(g->dev);
 		if (err) {
-			gk20a_err(&g->dev->dev,
+			gk20a_err(g->dev,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}

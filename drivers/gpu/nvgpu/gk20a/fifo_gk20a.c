@@ -348,7 +348,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	u32 mask;
 	u32 timeout;
 	int i;
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 	/* enable pmc pfifo */

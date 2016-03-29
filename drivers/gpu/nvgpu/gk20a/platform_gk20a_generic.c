@@ -31,9 +31,9 @@
  * the clock information to gk20a platform data.
  */
 
-static int gk20a_generic_get_clocks(struct platform_device *pdev)
+static int gk20a_generic_get_clocks(struct device *pdev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(pdev);
 
 	platform->clk[0] = clk_get_sys("tegra_gk20a.0",	"PLLG_ref");
 	platform->clk[1] = clk_get_sys("tegra_gk20a.0", "pwr");
@@ -65,19 +65,19 @@ err_get_clock:
 	return -ENODEV;
 }
 
-static int gk20a_generic_probe(struct platform_device *dev)
+static int gk20a_generic_probe(struct device *dev)
 {
 	gk20a_generic_get_clocks(dev);
 
 	return 0;
 }
 
-static int gk20a_generic_late_probe(struct platform_device *dev)
+static int gk20a_generic_late_probe(struct device *dev)
 {
 	return 0;
 }
 
-static int gk20a_generic_remove(struct platform_device *dev)
+static int gk20a_generic_remove(struct device *dev)
 {
 	return 0;
 }

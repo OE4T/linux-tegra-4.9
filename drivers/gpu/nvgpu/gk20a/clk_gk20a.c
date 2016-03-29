@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/clk_gk20a.c
- *
  * GK20A Clocks
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -831,7 +829,7 @@ DEFINE_SIMPLE_ATTRIBUTE(monitor_fops, monitor_get, NULL, "%llu\n");
 static int clk_gk20a_debugfs_init(struct gk20a *g)
 {
 	struct dentry *d;
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	d = debugfs_create_file(
 		"rate", S_IRUGO|S_IWUSR, platform->debugfs, g, &rate_fops);

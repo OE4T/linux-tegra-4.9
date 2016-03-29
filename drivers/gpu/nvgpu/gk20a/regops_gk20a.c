@@ -400,7 +400,7 @@ int exec_regops_gk20a(struct dbg_session_gk20a *dbg_s,
 	 * regops implementation, so we return -ENOSYS. This will allow
 	 * compute apps to run with vgpu. Tools will not work in this
 	 * configuration and are not required to work at this time. */
-	if (gk20a_gpu_is_virtual(dbg_s->pdev))
+	if (gk20a_gpu_is_virtual(dbg_s->dev))
 		return -ENOSYS;
 
 	ok = validate_reg_ops(dbg_s,

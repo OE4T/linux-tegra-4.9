@@ -1,7 +1,7 @@
 /*
  * gk20a GPU driver
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,11 +26,9 @@ struct platform_device;
 
 #ifdef CONFIG_GK20A
 int nvhost_vpr_info_fetch(void);
-void gk20a_debug_dump_device(struct platform_device *pdev);
 int gk20a_do_idle(void);
 int gk20a_do_unidle(void);
 #else
-static inline void gk20a_debug_dump_device(struct platform_device *pdev) {}
 static inline int nvhost_vpr_info_fetch(void)
 {
 	return -ENOSYS;

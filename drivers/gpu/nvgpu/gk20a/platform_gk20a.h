@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/soc/platform_gk20a.h
- *
  * GK20A Platform (SoC) Interface
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -18,7 +16,7 @@
 #ifndef _GK20A_PLATFORM_H_
 #define _GK20A_PLATFORM_H_
 
-#include <linux/platform_device.h>
+#include <linux/device.h>
 #include <linux/pm_domain.h>
 #include <linux/dma-attrs.h>
 
@@ -28,7 +26,7 @@ struct gr_ctx_buffer_desc;
 struct gk20a_scale_profile;
 
 struct secure_page_buffer {
-	void (*destroy)(struct platform_device *, struct secure_page_buffer *);
+	void (*destroy)(struct device *, struct secure_page_buffer *);
 	size_t size;
 	u64 iova;
 	struct dma_attrs attrs;
@@ -114,28 +112,28 @@ struct gk20a_platform {
 	 * After this function is finished, the driver will initialise
 	 * pm runtime and genpd based on the platform configuration.
 	 */
-	int (*probe)(struct platform_device *dev);
+	int (*probe)(struct device *dev);
 
 	/* Second stage initialisation - called once all power management
 	 * initialisations are done.
 	 */
-	int (*late_probe)(struct platform_device *dev);
+	int (*late_probe)(struct device *dev);
 
 	/* Remove device after power management has been done
 	 */
-	int (*remove)(struct platform_device *dev);
+	int (*remove)(struct device *dev);
 
 	/* Poweron platform dependencies */
-	int (*busy)(struct platform_device *dev);
+	int (*busy)(struct device *dev);
 
 	/* Powerdown platform dependencies */
-	void (*idle)(struct platform_device *dev);
+	void (*idle)(struct device *dev);
 
 	/* This function is called to allocate secure memory (memory that the
 	 * CPU cannot see). The function should fill the context buffer
 	 * descriptor (especially fields destroy, sgt, size).
 	 */
-	int (*secure_alloc)(struct platform_device *dev,
+	int (*secure_alloc)(struct device *dev,
 			    struct gr_ctx_buffer_desc *desc,
 			    size_t size);
 
@@ -143,7 +141,7 @@ struct gk20a_platform {
 	 * This is also helpful to trigger secure memory resizing
 	 * while GPU is off
 	 */
-	int (*secure_page_alloc)(struct platform_device *dev);
+	int (*secure_page_alloc)(struct device *dev);
 	struct secure_page_buffer secure_buffer;
 	bool secure_alloc_ready;
 
@@ -151,33 +149,33 @@ struct gk20a_platform {
 	int (*suspend)(struct device *);
 
 	/* Called to turn off the device */
-	int (*railgate)(struct platform_device *dev);
+	int (*railgate)(struct device *dev);
 
 	/* Called to turn on the device */
-	int (*unrailgate)(struct platform_device *dev);
+	int (*unrailgate)(struct device *dev);
 	struct mutex railgate_lock;
 
 	/* Called to check state of device */
-	bool (*is_railgated)(struct platform_device *dev);
+	bool (*is_railgated)(struct device *dev);
 
 	/* get supported frequency list */
-	int (*get_clk_freqs)(struct platform_device *pdev,
+	int (*get_clk_freqs)(struct device *pdev,
 				unsigned long **freqs, int *num_freqs);
 
 	/* clk related supported functions */
-	unsigned long (*clk_get_rate)(struct platform_device *pdev);
-	long (*clk_round_rate)(struct platform_device *pdev,
+	unsigned long (*clk_get_rate)(struct device *dev);
+	long (*clk_round_rate)(struct device *dev,
 				unsigned long rate);
-	int (*clk_set_rate)(struct platform_device *pdev,
+	int (*clk_set_rate)(struct device *dev,
 				unsigned long rate);
 
 
 	/* Postscale callback is called after frequency change */
-	void (*postscale)(struct platform_device *pdev,
+	void (*postscale)(struct device *dev,
 			  unsigned long freq);
 
 	/* Pre callback is called before frequency change */
-	void (*prescale)(struct platform_device *pdev);
+	void (*prescale)(struct device *dev);
 
 	/* Devfreq governor name. If scaling is enabled, we request
 	 * this governor to be used in scaling */
@@ -193,11 +191,11 @@ struct gk20a_platform {
 	 * hw units which may interact with the gpu without direct supervision
 	 * of the CPU.
 	 */
-	void (*dump_platform_dependencies)(struct platform_device *dev);
+	void (*dump_platform_dependencies)(struct device *dev);
 
 	/* Callbacks to assert/deassert GPU reset */
-	int (*reset_assert)(struct platform_device *pdev);
-	int (*reset_deassert)(struct platform_device *pdev);
+	int (*reset_assert)(struct device *dev);
+	int (*reset_deassert)(struct device *dev);
 	struct clk *clk_reset;
 	struct dvfs_rail *gpu_rail;
 
@@ -210,12 +208,15 @@ struct gk20a_platform {
 	u32 ptimer_src_freq;
 
 	bool has_cde;
+
+	/* soc name for finding firmware files */
+	const char *soc_name;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(
-		struct platform_device *dev)
+		struct device *dev)
 {
-	return (struct gk20a_platform *)platform_get_drvdata(dev);
+	return (struct gk20a_platform *)dev_get_drvdata(dev);
 }
 
 extern struct gk20a_platform gk20a_generic_platform;
@@ -227,14 +228,14 @@ extern struct gk20a_platform vgpu_tegra_platform;
 #endif
 #endif
 
-static inline bool gk20a_platform_has_syncpoints(struct platform_device *dev)
+static inline bool gk20a_platform_has_syncpoints(struct device *dev)
 {
-	struct gk20a_platform *p = gk20a_get_platform(dev);
+	struct gk20a_platform *p = dev_get_drvdata(dev);
 	return p->has_syncpoints;
 }
 
-int gk20a_tegra_busy(struct platform_device *dev);
-void gk20a_tegra_idle(struct platform_device *dev);
-void gk20a_tegra_debug_dump(struct platform_device *pdev);
+int gk20a_tegra_busy(struct device *dev);
+void gk20a_tegra_idle(struct device *dev);
+void gk20a_tegra_debug_dump(struct device *pdev);
 
 #endif

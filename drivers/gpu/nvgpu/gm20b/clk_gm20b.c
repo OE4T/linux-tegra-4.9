@@ -1,7 +1,7 @@
 /*
  * GM20B Clocks
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1651,7 +1651,7 @@ static const struct file_operations pll_param_fops = {
 static int clk_gm20b_debugfs_init(struct gk20a *g)
 {
 	struct dentry *d;
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	d = debugfs_create_file(
 		"rate", S_IRUGO|S_IWUSR, platform->debugfs, g, &rate_fops);

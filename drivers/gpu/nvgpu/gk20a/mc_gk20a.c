@@ -1,7 +1,7 @@
 /*
- * GK20A memory interface
+ * GK20A Master Control
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@ irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
 
-	trace_mc_gk20a_intr_stall(g->dev->name);
+	trace_mc_gk20a_intr_stall(dev_name(g->dev));
 
 	if (!g->power_on)
 		return IRQ_NONE;
@@ -42,7 +42,7 @@ irqreturn_t mc_gk20a_isr_stall(struct gk20a *g)
 
 	atomic_inc(&g->hw_irq_stall_count);
 
-	trace_mc_gk20a_intr_stall_done(g->dev->name);
+	trace_mc_gk20a_intr_stall_done(dev_name(g->dev));
 
 	return IRQ_WAKE_THREAD;
 }
@@ -77,7 +77,7 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
-	trace_mc_gk20a_intr_thread_stall(g->dev->name);
+	trace_mc_gk20a_intr_thread_stall(dev_name(g->dev));
 
 	mc_intr_0 = gk20a_readl(g, mc_intr_0_r());
 	hw_irq_count = atomic_read(&g->hw_irq_stall_count);
@@ -111,7 +111,7 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 
 	wake_up_all(&g->sw_irq_stall_last_handled_wq);
 
-	trace_mc_gk20a_intr_thread_stall_done(g->dev->name);
+	trace_mc_gk20a_intr_thread_stall_done(dev_name(g->dev));
 
 	return IRQ_HANDLED;
 }

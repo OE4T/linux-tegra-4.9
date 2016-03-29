@@ -2439,10 +2439,10 @@ static int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
 
 static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct gr_gk20a *gr = &g->gr;
 	int i, attr_buffer_size, err;
-	struct platform_device *pdev = g->dev;
+	struct device *dev = g->dev;
 
 	u32 cb_buffer_size = gr->bundle_cb_default_size *
 		gr_scc_bundle_cb_size_div_256b_byte_granularity_v();
@@ -2462,7 +2462,7 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		goto clean_up;
 
 	if (platform->secure_alloc)
-		platform->secure_alloc(pdev,
+		platform->secure_alloc(dev,
 				       &gr->global_ctx_buffer[CIRCULAR_VPR],
 				       cb_buffer_size);
 
@@ -2474,7 +2474,7 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		goto clean_up;
 
 	if (platform->secure_alloc)
-		platform->secure_alloc(pdev,
+		platform->secure_alloc(dev,
 				       &gr->global_ctx_buffer[PAGEPOOL_VPR],
 				       pagepool_buffer_size);
 
@@ -2486,12 +2486,12 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 		goto clean_up;
 
 	if (platform->secure_alloc)
-		platform->secure_alloc(pdev,
+		platform->secure_alloc(dev,
 				       &gr->global_ctx_buffer[ATTRIBUTE_VPR],
 				       attr_buffer_size);
 
 	if (platform->secure_buffer.destroy)
-		platform->secure_buffer.destroy(pdev, &platform->secure_buffer);
+		platform->secure_buffer.destroy(dev, &platform->secure_buffer);
 
 	gk20a_dbg_info("golden_image_size : %d",
 		   gr->ctx_vars.golden_image_size);
@@ -5016,7 +5016,7 @@ static int gr_gk20a_handle_sw_method(struct gk20a *g, u32 addr,
 {
 	gk20a_dbg_fn("");
 
-	trace_gr_gk20a_handle_sw_method(g->dev->name);
+	trace_gr_gk20a_handle_sw_method(dev_name(g->dev));
 
 	if (class_num == KEPLER_COMPUTE_A) {
 		switch (offset << 2) {
@@ -8113,7 +8113,7 @@ static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 #ifdef CONFIG_DEBUG_FS
 int gr_gk20a_debugfs_init(struct gk20a *g)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	g->debugfs_gr_default_attrib_cb_size =
 		debugfs_create_u32("gr_default_attrib_cb_size",

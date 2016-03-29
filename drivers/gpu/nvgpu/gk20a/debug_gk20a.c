@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/t20/debug_gk20a.c
  *
- * Copyright (C) 2011-2015 NVIDIA Corporation.  All rights reserved.
+ * Copyright (C) 2011-2016 NVIDIA Corporation.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -32,7 +32,7 @@
 #include "hw_pbdma_gk20a.h"
 
 unsigned int gk20a_debug_trace_cmdbuf;
-static struct platform_device *gk20a_device;
+static struct device *gk20a_device;
 
 struct ch_state {
 	int pid;
@@ -120,7 +120,7 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	syncpointb = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w());
 
 	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
-			g->dev->name,
+			dev_name(g->dev),
 			ch_state->pid,
 			ch_state->refs);
 	gk20a_debug_output(o, "%s in use %s %s\n",
@@ -181,7 +181,7 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 		u32 status = gk20a_readl(g, fifo_pbdma_status_r(i));
 		u32 chan_status = fifo_pbdma_status_chan_status_v(status);
 
-		gk20a_debug_output(o, "%s pbdma %d: ", g->dev->name, i);
+		gk20a_debug_output(o, "%s pbdma %d: ", dev_name(g->dev), i);
 		gk20a_debug_output(o,
 				"id: %d (%s), next_id: %d (%s) status: %s\n",
 				fifo_pbdma_status_id_v(status),
@@ -206,7 +206,7 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
 		u32 ctx_status = fifo_engine_status_ctx_status_v(status);
 
-		gk20a_debug_output(o, "%s eng %d: ", g->dev->name, i);
+		gk20a_debug_output(o, "%s eng %d: ", dev_name(g->dev), i);
 		gk20a_debug_output(o,
 				"id: %d (%s), next_id: %d (%s), ctx: %s ",
 				fifo_engine_status_id_v(status),
@@ -270,67 +270,67 @@ done:
 	gk20a_idle(g->dev);
 }
 
-static int gk20a_gr_dump_regs(struct platform_device *pdev,
+static int gk20a_gr_dump_regs(struct device *dev,
 		struct gk20a_debug_output *o)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 	int err;
 
-	err = gk20a_busy(g->dev);
+	err = gk20a_busy(dev);
 	if (err) {
-		gk20a_err(&pdev->dev, "failed to power on gpu: %d\n", err);
+		gk20a_err(dev, "failed to power on gpu: %d\n", err);
 		return -EINVAL;
 	}
 
 	gr_gk20a_elpg_protected_call(g, g->ops.gr.dump_gr_regs(g, o));
 
-	gk20a_idle(g->dev);
+	gk20a_idle(dev);
 
 	return 0;
 }
 
-int gk20a_gr_debug_dump(struct platform_device *pdev)
+int gk20a_gr_debug_dump(struct device *dev)
 {
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_printk
 	};
 
-	gk20a_gr_dump_regs(pdev, &o);
+	gk20a_gr_dump_regs(dev, &o);
 
 	return 0;
 }
 
 static int gk20a_gr_debug_show(struct seq_file *s, void *unused)
 {
-	struct platform_device *pdev = s->private;
+	struct device *dev = s->private;
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_to_seqfile,
 		.ctx = s,
 	};
 
-	gk20a_gr_dump_regs(pdev, &o);
+	gk20a_gr_dump_regs(dev, &o);
 
 	return 0;
 }
 
-void gk20a_debug_dump(struct platform_device *pdev)
+void gk20a_debug_dump(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_printk
 	};
 
 	if (platform->dump_platform_dependencies)
-		platform->dump_platform_dependencies(pdev);
+		platform->dump_platform_dependencies(dev);
 
 	/* HAL only initialized after 1st power-on */
 	if (g->ops.debug.show_dump)
 		g->ops.debug.show_dump(g, &o);
 }
 
-void gk20a_debug_dump_device(struct platform_device *pdev)
+void gk20a_debug_dump_device(void *data)
 {
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_printk
@@ -341,15 +341,7 @@ void gk20a_debug_dump_device(struct platform_device *pdev)
 	if (!tegra_platform_is_silicon())
 		return;
 
-	/* Dump the first device if no info is provided */
-	if (!pdev) {
-		if (!gk20a_device)
-			return;
-
-		pdev = gk20a_device;
-	}
-
-	g = gk20a_get_platform(pdev)->g;
+	g = gk20a_from_dev(gk20a_device);
 	/* HAL only initialized after 1st power-on */
 	if (g->ops.debug.show_dump)
 		g->ops.debug.show_dump(g, &o);
@@ -358,14 +350,14 @@ EXPORT_SYMBOL(gk20a_debug_dump_device);
 
 static int gk20a_debug_show(struct seq_file *s, void *unused)
 {
-	struct platform_device *pdev = s->private;
+	struct device *dev = s->private;
 	struct gk20a_debug_output o = {
 		.fn = gk20a_debug_write_to_seqfile,
 		.ctx = s,
 	};
 	struct gk20a *g;
 
-	g = gk20a_get_platform(pdev)->g;
+	g = gk20a_get_platform(dev)->g;
 	/* HAL only initialized after 1st power-on */
 	if (g->ops.debug.show_dump)
 		g->ops.debug.show_dump(g, &o);
@@ -401,24 +393,24 @@ void gk20a_init_debug_ops(struct gpu_ops *gops)
 	gops->debug.show_dump = gk20a_debug_show_dump;
 }
 
-void gk20a_debug_init(struct platform_device *pdev)
+void gk20a_debug_init(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	/* Store the first device */
 	if (!gk20a_device)
-		gk20a_device = pdev;
+		gk20a_device = dev;
 
-	platform->debugfs = debugfs_create_dir(pdev->name, NULL);
+	platform->debugfs = debugfs_create_dir(dev_name(dev), NULL);
 	if (platform->debugfs) {
 		platform->debugfs_alias =
-			debugfs_create_symlink("gpu.0", NULL, pdev->name);
+			debugfs_create_symlink("gpu.0", NULL, dev_name(dev));
 	}
 
 	debugfs_create_file("status", S_IRUGO, platform->debugfs,
-			pdev, &gk20a_debug_fops);
+			dev, &gk20a_debug_fops);
 	debugfs_create_file("gr_status", S_IRUGO, platform->debugfs,
-			pdev, &gk20a_gr_debug_fops);
+			dev, &gk20a_gr_debug_fops);
 	debugfs_create_u32("trace_cmdbuf", S_IRUGO|S_IWUSR, platform->debugfs,
 			&gk20a_debug_trace_cmdbuf);
 

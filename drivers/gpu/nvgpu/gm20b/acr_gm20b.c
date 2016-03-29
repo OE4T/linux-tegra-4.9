@@ -1257,7 +1257,7 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 
 	struct pmu_gk20a *pmu = &g->pmu;
 	int err;
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 

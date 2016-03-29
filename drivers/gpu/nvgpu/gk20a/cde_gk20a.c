@@ -1,7 +1,7 @@
 /*
  * Color decompression engine support
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -227,14 +227,14 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 	/* check that the file can hold the buf */
 	if (buf->data_byte_offset != 0 &&
 	    buf->data_byte_offset + buf->num_bytes > img->size) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid data section. buffer idx = %d",
+		gk20a_warn(cde_ctx->dev, "cde: invalid data section. buffer idx = %d",
 			   cde_ctx->num_bufs);
 		return -EINVAL;
 	}
 
 	/* check that we have enough buf elems available */
 	if (cde_ctx->num_bufs >= MAX_CDE_BUFS) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid data section. buffer idx = %d",
+		gk20a_warn(cde_ctx->dev, "cde: invalid data section. buffer idx = %d",
 			   cde_ctx->num_bufs);
 		return -ENOMEM;
 	}
@@ -243,7 +243,7 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 	mem = cde_ctx->mem + cde_ctx->num_bufs;
 	err = gk20a_gmmu_alloc_map(cde_ctx->vm, buf->num_bytes, mem);
 	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not allocate device memory. buffer idx = %d",
+		gk20a_warn(cde_ctx->dev, "cde: could not allocate device memory. buffer idx = %d",
 			   cde_ctx->num_bufs);
 		return -ENOMEM;
 	}
@@ -281,7 +281,7 @@ static int gk20a_replace_data(struct gk20a_cde_ctx *cde_ctx, void *target,
 		current_value = (u64)(current_value >> 32) |
 			(u64)(current_value << 32);
 	} else {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: unknown type. type=%d",
+		gk20a_warn(cde_ctx->dev, "cde: unknown type. type=%d",
 			   type);
 		return -EINVAL;
 	}
@@ -315,7 +315,7 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 
 	if (replace->target_buf >= cde_ctx->num_bufs ||
 	    replace->source_buf >= cde_ctx->num_bufs) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid buffer. target_buf=%u, source_buf=%u, num_bufs=%d",
+		gk20a_warn(cde_ctx->dev, "cde: invalid buffer. target_buf=%u, source_buf=%u, num_bufs=%d",
 			   replace->target_buf, replace->source_buf,
 			   cde_ctx->num_bufs);
 		return -EINVAL;
@@ -327,7 +327,7 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 
 	if (source_mem->size < (replace->source_byte_offset + 3) ||
 	    target_mem->size < (replace->target_byte_offset + 3)) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid buffer offsets. target_buf_offs=%lld, source_buf_offs=%lld, source_buf_size=%zu, dest_buf_size=%zu",
+		gk20a_warn(cde_ctx->dev, "cde: invalid buffer offsets. target_buf_offs=%lld, source_buf_offs=%lld, source_buf_size=%zu, dest_buf_size=%zu",
 			   replace->target_byte_offset,
 			   replace->source_byte_offset,
 			 source_mem->size,
@@ -344,7 +344,7 @@ static int gk20a_init_cde_replace(struct gk20a_cde_ctx *cde_ctx,
 				 replace->shift, replace->mask,
 				 vaddr);
 	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: replace failed. err=%d, target_buf=%u, target_buf_offs=%lld, source_buf=%u, source_buf_offs=%lld",
+		gk20a_warn(cde_ctx->dev, "cde: replace failed. err=%d, target_buf=%u, target_buf_offs=%lld, source_buf=%u, source_buf_offs=%lld",
 			   err, replace->target_buf,
 			   replace->target_byte_offset,
 			   replace->source_buf,
@@ -431,7 +431,7 @@ static int gk20a_cde_patch_params(struct gk20a_cde_ctx *cde_ctx)
 					 param->shift, param->mask, new_data);
 
 		if (err) {
-			gk20a_warn(&cde_ctx->pdev->dev, "cde: patch failed. err=%d, idx=%d, id=%d, target_buf=%u, target_buf_offs=%lld, patch_value=%llu",
+			gk20a_warn(cde_ctx->dev, "cde: patch failed. err=%d, idx=%d, id=%d, target_buf=%u, target_buf_offs=%lld, patch_value=%llu",
 				   err, i, param->id, param->target_buf,
 				   param->target_byte_offset, new_data);
 			return err;
@@ -448,7 +448,7 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 	struct mem_desc *target_mem;
 
 	if (param->target_buf >= cde_ctx->num_bufs) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid buffer parameter. param idx = %d, target_buf=%u, num_bufs=%u",
+		gk20a_warn(cde_ctx->dev, "cde: invalid buffer parameter. param idx = %d, target_buf=%u, num_bufs=%u",
 			   cde_ctx->num_params, param->target_buf,
 			   cde_ctx->num_bufs);
 		return -EINVAL;
@@ -456,7 +456,7 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 
 	target_mem = cde_ctx->mem + param->target_buf;
 	if (target_mem->size< (param->target_byte_offset + 3)) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid buffer parameter. param idx = %d, target_buf_offs=%lld, target_buf_size=%zu",
+		gk20a_warn(cde_ctx->dev, "cde: invalid buffer parameter. param idx = %d, target_buf_offs=%lld, target_buf_size=%zu",
 			   cde_ctx->num_params, param->target_byte_offset,
 			   target_mem->size);
 		return -EINVAL;
@@ -464,14 +464,14 @@ static int gk20a_init_cde_param(struct gk20a_cde_ctx *cde_ctx,
 
 	/* does this parameter fit into our parameter structure */
 	if (cde_ctx->num_params >= MAX_CDE_PARAMS) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: no room for new parameters param idx = %d",
+		gk20a_warn(cde_ctx->dev, "cde: no room for new parameters param idx = %d",
 			   cde_ctx->num_params);
 		return -ENOMEM;
 	}
 
 	/* is the given id valid? */
 	if (param->id >= NUM_RESERVED_PARAMS + MAX_CDE_USER_PARAMS) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: parameter id is not valid. param idx = %d, id=%u, max=%u",
+		gk20a_warn(cde_ctx->dev, "cde: parameter id is not valid. param idx = %d, id=%u, max=%u",
 			   param->id, cde_ctx->num_params,
 			   NUM_RESERVED_PARAMS + MAX_CDE_USER_PARAMS);
 		return -EINVAL;
@@ -498,7 +498,7 @@ static int gk20a_init_cde_required_class(struct gk20a_cde_ctx *cde_ctx,
 
 	err = gk20a_alloc_obj_ctx(cde_ctx->ch, &alloc_obj_ctx);
 	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: failed to allocate ctx. err=%d",
+		gk20a_warn(cde_ctx->dev, "cde: failed to allocate ctx. err=%d",
 			   err);
 		return err;
 	}
@@ -524,7 +524,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 		gpfifo = &cde_ctx->convert_cmd;
 		num_entries = &cde_ctx->convert_cmd_num_entries;
 	} else {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: unknown command. op=%u",
+		gk20a_warn(cde_ctx->dev, "cde: unknown command. op=%u",
 			   op);
 		return -EINVAL;
 	}
@@ -533,7 +533,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 	*gpfifo = kzalloc(sizeof(struct nvgpu_gpfifo) * num_elems,
 			  GFP_KERNEL);
 	if (!*gpfifo) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not allocate memory for gpfifo entries");
+		gk20a_warn(cde_ctx->dev, "cde: could not allocate memory for gpfifo entries");
 		return -ENOMEM;
 	}
 
@@ -543,7 +543,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 
 		/* validate the current entry */
 		if (cmd_elem->target_buf >= cde_ctx->num_bufs) {
-			gk20a_warn(&cde_ctx->pdev->dev, "cde: target buffer is not available (target=%u, num_bufs=%u)",
+			gk20a_warn(cde_ctx->dev, "cde: target buffer is not available (target=%u, num_bufs=%u)",
 				   cmd_elem->target_buf, cde_ctx->num_bufs);
 			return -EINVAL;
 		}
@@ -551,7 +551,7 @@ static int gk20a_init_cde_command(struct gk20a_cde_ctx *cde_ctx,
 		target_mem = cde_ctx->mem + cmd_elem->target_buf;
 		if (target_mem->size<
 		    cmd_elem->target_byte_offset + cmd_elem->num_bytes) {
-			gk20a_warn(&cde_ctx->pdev->dev, "cde: target buffer cannot hold all entries (target_size=%zu, target_byte_offset=%lld, num_bytes=%llu)",
+			gk20a_warn(cde_ctx->dev, "cde: target buffer cannot hold all entries (target_size=%zu, target_byte_offset=%lld, num_bytes=%llu)",
 				   target_mem->size,
 				   cmd_elem->target_byte_offset,
 				   cmd_elem->num_bytes);
@@ -585,7 +585,7 @@ static int gk20a_cde_pack_cmdbufs(struct gk20a_cde_ctx *cde_ctx)
 	/* allocate buffer that has space for both */
 	combined_cmd = kzalloc(total_bytes, GFP_KERNEL);
 	if (!combined_cmd) {
-		gk20a_warn(&cde_ctx->pdev->dev,
+		gk20a_warn(cde_ctx->dev,
 				"cde: could not allocate memory for gpfifo entries");
 		return -ENOMEM;
 	}
@@ -618,7 +618,7 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 
 	min_size += 2 * sizeof(u32);
 	if (img->size < min_size) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: invalid image header");
+		gk20a_warn(cde_ctx->dev, "cde: invalid image header");
 		return -EINVAL;
 	}
 
@@ -627,7 +627,7 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 
 	min_size += num_of_elems * sizeof(*elem);
 	if (img->size < min_size) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: bad image");
+		gk20a_warn(cde_ctx->dev, "cde: bad image");
 		return -EINVAL;
 	}
 
@@ -664,7 +664,7 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 				MAX_CDE_ARRAY_ENTRIES*sizeof(u32));
 			break;
 		default:
-			gk20a_warn(&cde_ctx->pdev->dev, "cde: unknown header element");
+			gk20a_warn(cde_ctx->dev, "cde: unknown header element");
 			err = -EINVAL;
 		}
 
@@ -675,13 +675,13 @@ static int gk20a_init_cde_img(struct gk20a_cde_ctx *cde_ctx,
 	}
 
 	if (!cde_ctx->init_convert_cmd || !cde_ctx->init_cmd_num_entries) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: convert command not defined");
+		gk20a_warn(cde_ctx->dev, "cde: convert command not defined");
 		err = -EINVAL;
 		goto deinit_image;
 	}
 
 	if (!cde_ctx->convert_cmd || !cde_ctx->convert_cmd_num_entries) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: convert command not defined");
+		gk20a_warn(cde_ctx->dev, "cde: convert command not defined");
 		err = -EINVAL;
 		goto deinit_image;
 	}
@@ -714,12 +714,12 @@ static int gk20a_cde_execute_buffer(struct gk20a_cde_ctx *cde_ctx,
 		gpfifo = cde_ctx->convert_cmd;
 		num_entries = cde_ctx->convert_cmd_num_entries;
 	} else {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: unknown buffer");
+		gk20a_warn(cde_ctx->dev, "cde: unknown buffer");
 		return -EINVAL;
 	}
 
 	if (gpfifo == NULL || num_entries == 0) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: buffer not available");
+		gk20a_warn(cde_ctx->dev, "cde: buffer not available");
 		return -ENOSYS;
 	}
 
@@ -757,7 +757,7 @@ __releases(&cde_app->mutex)
 	struct gk20a_cde_ctx *cde_ctx = container_of(delay_work,
 			struct gk20a_cde_ctx, ctx_deleter_work);
 	struct gk20a_cde_app *cde_app = &cde_ctx->g->cde_app;
-	struct platform_device *pdev = cde_ctx->pdev;
+	struct device *dev = cde_ctx->dev;
 	int err;
 
 	/* someone has just taken it? engine deletion started? */
@@ -767,11 +767,11 @@ __releases(&cde_app->mutex)
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_cde_ctx,
 			"cde: attempting to delete temporary %p", cde_ctx);
 
-	err = gk20a_busy(pdev);
+	err = gk20a_busy(dev);
 	if (err) {
 		/* this context would find new use anyway later, so not freeing
 		 * here does not leak anything */
-		gk20a_warn(&pdev->dev, "cde: cannot set gk20a on, postponing"
+		gk20a_warn(dev, "cde: cannot set gk20a on, postponing"
 				" temp ctx deletion");
 		return;
 	}
@@ -795,7 +795,7 @@ __releases(&cde_app->mutex)
 
 out:
 	mutex_unlock(&cde_app->mutex);
-	gk20a_idle(pdev);
+	gk20a_idle(dev);
 }
 
 static struct gk20a_cde_ctx *gk20a_cde_do_get_context(struct gk20a *g)
@@ -839,7 +839,7 @@ __must_hold(&cde_app->mutex)
 
 	cde_ctx = gk20a_cde_allocate_context(g);
 	if (IS_ERR(cde_ctx)) {
-		gk20a_warn(&g->dev->dev, "cde: cannot allocate context: %ld",
+		gk20a_warn(g->dev, "cde: cannot allocate context: %ld",
 				PTR_ERR(cde_ctx));
 		return cde_ctx;
 	}
@@ -888,7 +888,7 @@ static struct gk20a_cde_ctx *gk20a_cde_allocate_context(struct gk20a *g)
 		return ERR_PTR(-ENOMEM);
 
 	cde_ctx->g = g;
-	cde_ctx->pdev = g->dev;
+	cde_ctx->dev = g->dev;
 
 	ret = gk20a_cde_load(cde_ctx);
 	if (ret) {
@@ -951,7 +951,7 @@ __releases(&cde_app->mutex)
 	/* First, map the buffer to local va */
 
 	/* ensure that the compbits buffer has drvdata */
-	err = gk20a_dmabuf_alloc_drvdata(compbits_scatter_buf, &g->dev->dev);
+	err = gk20a_dmabuf_alloc_drvdata(compbits_scatter_buf, g->dev);
 	if (err)
 		goto exit_unlock;
 
@@ -1007,7 +1007,7 @@ __releases(&cde_app->mutex)
 
 		surface = dma_buf_vmap(compbits_scatter_buf);
 		if (IS_ERR(surface)) {
-			gk20a_warn(&g->dev->dev,
+			gk20a_warn(g->dev,
 				   "dma_buf_vmap failed");
 			err = -EINVAL;
 			goto exit_unlock;
@@ -1017,9 +1017,9 @@ __releases(&cde_app->mutex)
 
 		gk20a_dbg(gpu_dbg_cde, "surface=0x%p scatterBuffer=0x%p",
 			  surface, scatter_buffer);
-		sgt = gk20a_mm_pin(&g->dev->dev, compbits_scatter_buf);
+		sgt = gk20a_mm_pin(g->dev, compbits_scatter_buf);
 		if (IS_ERR(sgt)) {
-			gk20a_warn(&g->dev->dev,
+			gk20a_warn(g->dev,
 				   "mm_pin failed");
 			err = -EINVAL;
 			goto exit_unlock;
@@ -1029,7 +1029,7 @@ __releases(&cde_app->mutex)
 					scatterbuffer_size);
 			WARN_ON(err);
 
-			gk20a_mm_unpin(&g->dev->dev, compbits_scatter_buf,
+			gk20a_mm_unpin(g->dev, compbits_scatter_buf,
 				       sgt);
 			if (err)
 				goto exit_unlock;
@@ -1041,7 +1041,7 @@ __releases(&cde_app->mutex)
 	}
 
 	/* store source buffer compression tags */
-	gk20a_get_comptags(&g->dev->dev, compbits_scatter_buf, &comptags);
+	gk20a_get_comptags(g->dev, compbits_scatter_buf, &comptags);
 	cde_ctx->surf_param_offset = comptags.offset;
 	cde_ctx->surf_param_lines = comptags.lines;
 
@@ -1067,7 +1067,7 @@ __releases(&cde_app->mutex)
 		int id = param->id - NUM_RESERVED_PARAMS;
 
 		if (id < 0 || id >= MAX_CDE_USER_PARAMS) {
-			gk20a_warn(&cde_ctx->pdev->dev, "cde: unknown user parameter");
+			gk20a_warn(cde_ctx->dev, "cde: unknown user parameter");
 			err = -EINVAL;
 			goto exit_unlock;
 		}
@@ -1077,7 +1077,7 @@ __releases(&cde_app->mutex)
 	/* patch data */
 	err = gk20a_cde_patch_params(cde_ctx);
 	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: failed to patch parameters");
+		gk20a_warn(cde_ctx->dev, "cde: failed to patch parameters");
 		goto exit_unlock;
 	}
 
@@ -1140,19 +1140,19 @@ __releases(&cde_app->mutex)
 
 	if (ch->has_timedout) {
 		if (cde_ctx->is_temporary) {
-			gk20a_warn(&cde_ctx->pdev->dev,
+			gk20a_warn(cde_ctx->dev,
 					"cde: channel had timed out"
 					" (temporary channel)");
 			/* going to be deleted anyway */
 		} else {
-			gk20a_warn(&cde_ctx->pdev->dev,
+			gk20a_warn(cde_ctx->dev,
 					"cde: channel had timed out"
 					", reloading");
 			/* mark it to be deleted, replace with a new one */
 			mutex_lock(&cde_app->mutex);
 			cde_ctx->is_temporary = true;
 			if (gk20a_cde_create_context(g)) {
-				gk20a_err(&cde_ctx->pdev->dev,
+				gk20a_err(cde_ctx->dev,
 						"cde: can't replace context");
 			}
 			mutex_unlock(&cde_app->mutex);
@@ -1181,14 +1181,14 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 
 	img = gk20a_request_firmware(g, "gpu2cde.bin");
 	if (!img) {
-		dev_err(&cde_ctx->pdev->dev, "cde: could not fetch the firmware");
+		dev_err(cde_ctx->dev, "cde: could not fetch the firmware");
 		return -ENOSYS;
 	}
 
 	ch = gk20a_open_new_channel_with_cb(g, gk20a_cde_finished_ctx_cb,
 			cde_ctx);
 	if (!ch) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: gk20a channel not available");
+		gk20a_warn(cde_ctx->dev, "cde: gk20a channel not available");
 		err = -ENOMEM;
 		goto err_get_gk20a_channel;
 	}
@@ -1198,7 +1198,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	ch->vm = &g->mm.cde.vm;
 	err = channel_gk20a_commit_va(ch);
 	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: could not bind vm");
+		gk20a_warn(cde_ctx->dev, "cde: could not bind vm");
 		goto err_commit_va;
 	}
 
@@ -1206,7 +1206,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	err = gk20a_alloc_channel_gpfifo(ch,
 		&(struct nvgpu_alloc_gpfifo_args){1024, 0});
 	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: unable to allocate gpfifo");
+		gk20a_warn(cde_ctx->dev, "cde: unable to allocate gpfifo");
 		goto err_alloc_gpfifo;
 	}
 
@@ -1218,7 +1218,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 			       false);
 
 	if (!vaddr) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: cannot map compression bit backing store");
+		gk20a_warn(cde_ctx->dev, "cde: cannot map compression bit backing store");
 		err = -ENOMEM;
 		goto err_map_backingstore;
 	}
@@ -1231,7 +1231,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	/* initialise the firmware */
 	err = gk20a_init_cde_img(cde_ctx, img);
 	if (err) {
-		gk20a_warn(&cde_ctx->pdev->dev, "cde: image initialisation failed");
+		gk20a_warn(cde_ctx->dev, "cde: image initialisation failed");
 		goto err_init_cde_img;
 	}
 
@@ -1248,7 +1248,7 @@ err_alloc_gpfifo:
 err_commit_va:
 err_get_gk20a_channel:
 	release_firmware(img);
-	dev_err(&cde_ctx->pdev->dev, "cde: couldn't initialise buffer converter: %d",
+	dev_err(cde_ctx->dev, "cde: couldn't initialise buffer converter: %d",
 		err);
 	return err;
 }
@@ -1386,17 +1386,17 @@ static int gk20a_buffer_convert_gpu_to_cde_v1(
 		g->ops.cde.get_program_numbers(g, block_height_log2,
 					       &hprog, &vprog);
 	else {
-		gk20a_warn(&g->dev->dev, "cde: chip not supported");
+		gk20a_warn(g->dev, "cde: chip not supported");
 		return -ENOSYS;
 	}
 
 	if (hprog < 0 || vprog < 0) {
-		gk20a_warn(&g->dev->dev, "cde: could not determine programs");
+		gk20a_warn(g->dev, "cde: could not determine programs");
 		return -ENOSYS;
 	}
 
 	if (xtiles > 8192 / 8 || ytiles > 8192 / 8)
-		gk20a_warn(&g->dev->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
+		gk20a_warn(g->dev, "cde: surface is exceptionally large (xtiles=%d, ytiles=%d)",
 			   xtiles, ytiles);
 
 	gk20a_dbg(gpu_dbg_cde, "w=%d, h=%d, bh_log2=%d, compbits_hoffset=0x%llx, compbits_voffset=0x%llx, scatterbuffer_offset=0x%llx",
@@ -1645,9 +1645,9 @@ static const struct file_operations gk20a_cde_reload_fops = {
 	.write		= gk20a_cde_reload_write,
 };
 
-void gk20a_cde_debugfs_init(struct platform_device *dev)
+void gk20a_cde_debugfs_init(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 
 	debugfs_create_u32("cde_parameter", S_IWUSR | S_IRUGO,

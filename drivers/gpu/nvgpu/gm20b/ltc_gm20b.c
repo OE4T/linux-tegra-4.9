@@ -112,7 +112,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 
 	gk20a_dbg_fn("");
 
-	trace_gk20a_ltc_cbc_ctrl_start(g->dev->name, op, min, max);
+	trace_gk20a_ltc_cbc_ctrl_start(dev_name(g->dev), op, min, max);
 
 	if (gr->compbit_store.mem.size == 0)
 		return 0;
@@ -162,7 +162,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		}
 	}
 out:
-	trace_gk20a_ltc_cbc_ctrl_done(g->dev->name);
+	trace_gk20a_ltc_cbc_ctrl_done(dev_name(g->dev));
 	mutex_unlock(&g->mm.l2_op_lock);
 	return err;
 }
@@ -230,7 +230,7 @@ void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	trace_gk20a_mm_g_elpg_flush_locked(g->dev->name);
+	trace_gk20a_mm_g_elpg_flush_locked(dev_name(g->dev));
 
 	for (i = 0; i < g->ltc_count; i++)
 		done[i] = 0;
@@ -264,7 +264,7 @@ void gm20b_ltc_g_elpg_flush_locked(struct gk20a *g)
 		gk20a_warn(dev_from_gk20a(g),
 			    "g_elpg_flush too many retries");
 
-	trace_gk20a_mm_g_elpg_flush_locked_done(g->dev->name);
+	trace_gk20a_mm_g_elpg_flush_locked_done(dev_name(g->dev));
 }
 
 u32 gm20b_ltc_cbc_fix_config(struct gk20a *g, int base)

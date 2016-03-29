@@ -1,7 +1,7 @@
 /*
  * gk20a clock scaling profile
  *
- * Copyright (c) 2013-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,8 +47,8 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 	struct gk20a_scale_profile *profile =
 		container_of(nb, struct gk20a_scale_profile,
 			     qos_notify_block);
-	struct gk20a_platform *platform = platform_get_drvdata(profile->pdev);
-	struct gk20a *g = get_gk20a(profile->pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(profile->dev);
+	struct gk20a *g = get_gk20a(profile->dev);
 	unsigned long freq;
 
 	if (!platform->postscale)
@@ -56,7 +56,7 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 
 	/* get the frequency requirement. if devfreq is enabled, check if it
 	 * has higher demand than qos */
-	freq = platform->clk_round_rate(profile->pdev,
+	freq = platform->clk_round_rate(profile->dev,
 				pm_qos_request(platform->qos_id));
 	if (g->devfreq)
 		freq = max(g->devfreq->previous_freq, freq);
@@ -64,7 +64,7 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 	/* Update gpu load because we may scale the emc target
 	 * if the gpu load changed. */
 	gk20a_pmu_load_update(g);
-	platform->postscale(profile->pdev, freq);
+	platform->postscale(profile->dev, freq);
 
 	return NOTIFY_OK;
 }
@@ -77,12 +77,12 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 
 static int gk20a_scale_make_freq_table(struct gk20a_scale_profile *profile)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(profile->pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(profile->dev);
 	int num_freqs, err;
 	unsigned long *freqs;
 
 	/* get gpu frequency table */
-	err = platform->get_clk_freqs(profile->pdev, &freqs,
+	err = platform->get_clk_freqs(profile->dev, &freqs,
 					&num_freqs);
 	if (err)
 		return -ENOSYS;
@@ -103,22 +103,21 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
 			      u32 flags)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct platform_device *pdev = to_platform_device(dev);
 	unsigned long rounded_rate =
-		platform->clk_round_rate(pdev, *freq);
+		platform->clk_round_rate(dev, *freq);
 
-	if (platform->clk_get_rate(pdev) == rounded_rate)
+	if (platform->clk_get_rate(dev) == rounded_rate)
 		*freq = rounded_rate;
 	else {
-		platform->clk_set_rate(pdev, rounded_rate);
-		*freq = platform->clk_get_rate(pdev);
+		platform->clk_set_rate(dev, rounded_rate);
+		*freq = platform->clk_get_rate(dev);
 	}
 
 	/* postscale will only scale emc (dram clock) if evaluating
 	 * gk20a_tegra_get_emc_rate() produces a new or different emc
 	 * target because the load or_and gpufreq has changed */
 	if (platform->postscale)
-		platform->postscale(pdev, rounded_rate);
+		platform->postscale(dev, rounded_rate);
 
 	return 0;
 }
@@ -130,9 +129,9 @@ static int gk20a_scale_target(struct device *dev, unsigned long *freq,
  * based on the time it was asked last time.
  */
 
-static void update_load_estimate_gpmu(struct platform_device *pdev)
+static void update_load_estimate_gpmu(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_scale_profile *profile = g->scale_profile;
 	unsigned long dt;
 	u32 busy_time;
@@ -148,14 +147,14 @@ static void update_load_estimate_gpmu(struct platform_device *pdev)
 }
 
 /*
- * gk20a_scale_suspend(pdev)
+ * gk20a_scale_suspend(dev)
  *
  * This function informs devfreq of suspend
  */
 
-void gk20a_scale_suspend(struct platform_device *pdev)
+void gk20a_scale_suspend(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	struct devfreq *devfreq = g->devfreq;
 
 	if (!devfreq)
@@ -165,14 +164,14 @@ void gk20a_scale_suspend(struct platform_device *pdev)
 }
 
 /*
- * gk20a_scale_resume(pdev)
+ * gk20a_scale_resume(dev)
  *
  * This functions informs devfreq of resume
  */
 
-void gk20a_scale_resume(struct platform_device *pdev)
+void gk20a_scale_resume(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	struct devfreq *devfreq = g->devfreq;
 
 	if (!devfreq)
@@ -182,15 +181,15 @@ void gk20a_scale_resume(struct platform_device *pdev)
 }
 
 /*
- * gk20a_scale_notify(pdev, busy)
+ * gk20a_scale_notify(dev, busy)
  *
  * Calling this function informs that the device is idling (..or busy). This
  * data is used to estimate the current load
  */
 
-static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
+static void gk20a_scale_notify(struct device *dev, bool busy)
 {
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_scale_profile *profile = g->scale_profile;
 	struct devfreq *devfreq = g->devfreq;
 
@@ -204,15 +203,15 @@ static void gk20a_scale_notify(struct platform_device *pdev, bool busy)
 	mutex_unlock(&devfreq->lock);
 }
 
-void gk20a_scale_notify_idle(struct platform_device *pdev)
+void gk20a_scale_notify_idle(struct device *dev)
 {
-	gk20a_scale_notify(pdev, false);
+	gk20a_scale_notify(dev, false);
 
 }
 
-void gk20a_scale_notify_busy(struct platform_device *pdev)
+void gk20a_scale_notify_busy(struct device *dev)
 {
-	gk20a_scale_notify(pdev, true);
+	gk20a_scale_notify(dev, true);
 }
 
 /*
@@ -224,24 +223,23 @@ void gk20a_scale_notify_busy(struct platform_device *pdev)
 static int gk20a_scale_get_dev_status(struct device *dev,
 				      struct devfreq_dev_status *stat)
 {
-	struct gk20a *g = get_gk20a(to_platform_device(dev));
+	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_scale_profile *profile = g->scale_profile;
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	/* update the software shadow */
 	gk20a_pmu_load_update(g);
 
 	/* inform edp about new constraint */
 	if (platform->prescale)
-		platform->prescale(pdev);
+		platform->prescale(dev);
 
 	/* Make sure there are correct values for the current frequency */
 	profile->dev_stat.current_frequency =
-				platform->clk_get_rate(profile->pdev);
+				platform->clk_get_rate(profile->dev);
 
 	/* Update load estimate */
-	update_load_estimate_gpmu(to_platform_device(dev));
+	update_load_estimate_gpmu(dev);
 
 	/* Copy the contents of the current device status */
 	*stat = profile->dev_stat;
@@ -254,12 +252,12 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 }
 
 /*
- * gk20a_scale_init(pdev)
+ * gk20a_scale_init(dev)
  */
 
-void gk20a_scale_init(struct platform_device *pdev)
+void gk20a_scale_init(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
 	struct gk20a_scale_profile *profile;
 	int err;
@@ -269,7 +267,7 @@ void gk20a_scale_init(struct platform_device *pdev)
 
 	profile = kzalloc(sizeof(*profile), GFP_KERNEL);
 
-	profile->pdev = pdev;
+	profile->dev = dev;
 	profile->dev_stat.busy = false;
 
 	/* Create frequency table */
@@ -290,7 +288,7 @@ void gk20a_scale_init(struct platform_device *pdev)
 		profile->devfreq_profile.get_dev_status =
 			gk20a_scale_get_dev_status;
 
-		devfreq = devfreq_add_device(&pdev->dev,
+		devfreq = devfreq_add_device(dev,
 					&profile->devfreq_profile,
 					platform->devfreq_governor, NULL);
 
@@ -316,9 +314,9 @@ err_get_freqs:
 	kfree(profile);
 }
 
-void gk20a_scale_exit(struct platform_device *pdev)
+void gk20a_scale_exit(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = platform->g;
 	int err;
 
@@ -344,9 +342,9 @@ void gk20a_scale_exit(struct platform_device *pdev)
  * Initialize hardware portion of the device
  */
 
-void gk20a_scale_hw_init(struct platform_device *pdev)
+void gk20a_scale_hw_init(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 
 	/* make sure that scaling has bee initialised */

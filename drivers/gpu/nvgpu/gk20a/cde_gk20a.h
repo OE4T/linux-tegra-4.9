@@ -1,7 +1,7 @@
 /*
  * GK20A color decompression engine support
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -215,7 +215,7 @@ struct gk20a_cde_param {
 
 struct gk20a_cde_ctx {
 	struct gk20a *g;
-	struct platform_device *pdev;
+	struct device *dev;
 
 	/* channel related data */
 	struct channel_gk20a *ch;
@@ -288,7 +288,7 @@ int gk20a_cde_convert(struct gk20a *g,
 		struct nvgpu_fence *fence,
 		u32 __flags, struct gk20a_cde_param *params,
 		int num_params, struct gk20a_fence **fence_out);
-void gk20a_cde_debugfs_init(struct platform_device *dev);
+void gk20a_cde_debugfs_init(struct device *dev);
 
 int gk20a_prepare_compressible_read(
 		struct gk20a *g, u32 buffer_fd, u32 request, u64 offset,

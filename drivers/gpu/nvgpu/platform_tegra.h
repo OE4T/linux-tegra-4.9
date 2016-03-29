@@ -1,9 +1,7 @@
 /*
- * drivers/video/tegra/host/gk20a/soc/platform_gk20a.h
- *
  * GK20A Platform (SoC) Interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,9 +21,9 @@
 struct platform_device;
 struct gr_ctx_buffer_desc;
 
-int gk20a_tegra_secure_alloc(struct platform_device *pdev,
+int gk20a_tegra_secure_alloc(struct device *dev,
 			     struct gr_ctx_buffer_desc *desc,
 			     size_t size);
-int gk20a_tegra_secure_page_alloc(struct platform_device *pdev);
+int gk20a_tegra_secure_page_alloc(struct device *dev);
 
 #endif

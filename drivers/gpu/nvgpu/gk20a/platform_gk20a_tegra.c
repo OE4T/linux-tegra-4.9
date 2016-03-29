@@ -1,6 +1,4 @@
 /*
- * drivers/video/tegra/host/gk20a/platform_gk20a_tegra.c
- *
  * GK20A Tegra Platform Interface
  *
  * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
@@ -66,7 +64,7 @@ static inline void pmc_write(u32 val, unsigned long reg)
 #define MHZ_TO_HZ(x) ((x) * 1000000)
 #define HZ_TO_MHZ(x) ((x) / 1000000)
 
-static void gk20a_tegra_secure_page_destroy(struct platform_device *pdev,
+static void gk20a_tegra_secure_page_destroy(struct device *dev,
 				       struct secure_page_buffer *secure_buffer)
 {
 	dma_free_attrs(&tegra_vpr_dev, secure_buffer->size,
@@ -74,9 +72,9 @@ static void gk20a_tegra_secure_page_destroy(struct platform_device *pdev,
 			secure_buffer->iova, &secure_buffer->attrs);
 }
 
-int gk20a_tegra_secure_page_alloc(struct platform_device *pdev)
+int gk20a_tegra_secure_page_alloc(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct secure_page_buffer *secure_buffer = &platform->secure_buffer;
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t iova;
@@ -113,12 +111,11 @@ static void gk20a_tegra_secure_destroy(struct gk20a *g,
 	}
 }
 
-int gk20a_tegra_secure_alloc(struct platform_device *pdev,
+int gk20a_tegra_secure_alloc(struct device *dev,
 			     struct gr_ctx_buffer_desc *desc,
 			     size_t size)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
-	struct device *dev = &pdev->dev;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	DEFINE_DMA_ATTRS(attrs);
 	dma_addr_t iova;
 	struct sg_table *sgt;
@@ -198,13 +195,13 @@ static unsigned long gk20a_tegra_get_emc_rate(struct gk20a *g,
  * This function sets emc frequency based on current gpu frequency
  */
 
-static void gk20a_tegra_postscale(struct platform_device *pdev,
+static void gk20a_tegra_postscale(struct device *dev,
 				  unsigned long freq)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct gk20a_emc_params *emc_params = profile->private_data;
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	struct clk *emc_clk = platform->clk[2];
 	enum tegra_chipid chip_id = tegra_get_chip_id();
 	unsigned long emc_target;
@@ -257,9 +254,9 @@ static void gk20a_tegra_postscale(struct platform_device *pdev,
  * This function informs EDP about changed constraints.
  */
 
-static void gk20a_tegra_prescale(struct platform_device *pdev)
+static void gk20a_tegra_prescale(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	u32 avg = 0;
 
 	gk20a_pmu_load_norm(g, &avg);
@@ -271,7 +268,7 @@ static void gk20a_tegra_prescale(struct platform_device *pdev)
  *
  */
 
-static void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
+static void gk20a_tegra_calibrate_emc(struct device *dev,
 			       struct gk20a_emc_params *emc_params)
 {
 	enum tegra_chipid cid = tegra_get_chipid();
@@ -308,9 +305,9 @@ static void gk20a_tegra_calibrate_emc(struct platform_device *pdev,
  * Check status of gk20a power rail
  */
 
-static bool gk20a_tegra_is_railgated(struct platform_device *pdev)
+static bool gk20a_tegra_is_railgated(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	bool ret = false;
 
 	if (!tegra_platform_is_linsim())
@@ -325,9 +322,9 @@ static bool gk20a_tegra_is_railgated(struct platform_device *pdev)
  * Gate (disable) gk20a power rail
  */
 
-static int gk20a_tegra_railgate(struct platform_device *pdev)
+static int gk20a_tegra_railgate(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
 	if (tegra_platform_is_linsim() ||
@@ -344,7 +341,7 @@ static int gk20a_tegra_railgate(struct platform_device *pdev)
 
 	udelay(10);
 
-	platform->reset_assert(pdev);
+	platform->reset_assert(dev);
 
 	udelay(10);
 
@@ -367,7 +364,7 @@ static int gk20a_tegra_railgate(struct platform_device *pdev)
 	return 0;
 
 err_power_off:
-	gk20a_err(&pdev->dev, "Could not railgate GPU");
+	gk20a_err(dev, "Could not railgate GPU");
 	return ret;
 }
 
@@ -377,9 +374,9 @@ err_power_off:
  * Gate (disable) gm20b power rail
  */
 
-static int gm20b_tegra_railgate(struct platform_device *pdev)
+static int gm20b_tegra_railgate(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
 	if (tegra_platform_is_linsim() ||
@@ -396,7 +393,7 @@ static int gm20b_tegra_railgate(struct platform_device *pdev)
 
 	udelay(10);
 
-	platform->reset_assert(pdev);
+	platform->reset_assert(dev);
 
 	udelay(10);
 
@@ -422,7 +419,7 @@ static int gm20b_tegra_railgate(struct platform_device *pdev)
 	return 0;
 
 err_power_off:
-	gk20a_err(&pdev->dev, "Could not railgate GPU");
+	gk20a_err(dev, "Could not railgate GPU");
 	return ret;
 }
 
@@ -432,9 +429,9 @@ err_power_off:
  * Ungate (enable) gk20a power rail
  */
 
-static int gk20a_tegra_unrailgate(struct platform_device *pdev)
+static int gk20a_tegra_unrailgate(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 	bool first = false;
 
@@ -457,19 +454,19 @@ static int gk20a_tegra_unrailgate(struct platform_device *pdev)
 	if (!first) {
 		ret = clk_enable(platform->clk[0]);
 		if (ret) {
-			gk20a_err(&pdev->dev, "could not turn on gpu pll");
+			gk20a_err(dev, "could not turn on gpu pll");
 			goto err_clk_on;
 		}
 		ret = clk_enable(platform->clk[1]);
 		if (ret) {
-			gk20a_err(&pdev->dev, "could not turn on pwr clock");
+			gk20a_err(dev, "could not turn on pwr clock");
 			goto err_clk_on;
 		}
 	}
 
 	udelay(10);
 
-	platform->reset_assert(pdev);
+	platform->reset_assert(dev);
 
 	udelay(10);
 
@@ -478,7 +475,7 @@ static int gk20a_tegra_unrailgate(struct platform_device *pdev)
 
 	udelay(10);
 
-	platform->reset_deassert(pdev);
+	platform->reset_deassert(dev);
 
 	/* Flush MC after boot/railgate/SC7 */
 	tegra_mc_flush(MC_CLIENT_GPU);
@@ -503,9 +500,9 @@ err_clk_on:
  * Ungate (enable) gm20b power rail
  */
 
-static int gm20b_tegra_unrailgate(struct platform_device *pdev)
+static int gm20b_tegra_unrailgate(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 	bool first = false;
 
@@ -530,25 +527,25 @@ static int gm20b_tegra_unrailgate(struct platform_device *pdev)
 	if (!first) {
 		ret = clk_enable(platform->clk_reset);
 		if (ret) {
-			gk20a_err(&pdev->dev, "could not turn on gpu_gate");
+			gk20a_err(dev, "could not turn on gpu_gate");
 			goto err_clk_on;
 		}
 
 		ret = clk_enable(platform->clk[0]);
 		if (ret) {
-			gk20a_err(&pdev->dev, "could not turn on gpu pll");
+			gk20a_err(dev, "could not turn on gpu pll");
 			goto err_clk_on;
 		}
 		ret = clk_enable(platform->clk[1]);
 		if (ret) {
-			gk20a_err(&pdev->dev, "could not turn on pwr clock");
+			gk20a_err(dev, "could not turn on pwr clock");
 			goto err_clk_on;
 		}
 	}
 
 	udelay(10);
 
-	platform->reset_assert(pdev);
+	platform->reset_assert(dev);
 
 	udelay(10);
 
@@ -558,7 +555,7 @@ static int gm20b_tegra_unrailgate(struct platform_device *pdev)
 	udelay(10);
 
 	clk_disable(platform->clk_reset);
-	platform->reset_deassert(pdev);
+	platform->reset_deassert(dev);
 	clk_enable(platform->clk_reset);
 
 	/* Flush MC after boot/railgate/SC7 */
@@ -594,16 +591,14 @@ static struct {
  * the clock information to gk20a platform data.
  */
 
-static int gk20a_tegra_get_clocks(struct platform_device *pdev)
+static int gk20a_tegra_get_clocks(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	char devname[16];
 	int i;
 	int ret = 0;
 
-	snprintf(devname, sizeof(devname),
-		 (pdev->id <= 0) ? "tegra_%s" : "tegra_%s.%d\n",
-		 pdev->name, pdev->id);
+	snprintf(devname, sizeof(devname), "tegra_%s", dev_name(dev));
 
 	platform->num_clks = 0;
 	for (i = 0; i < ARRAY_SIZE(tegra_gk20a_clocks); i++) {
@@ -630,7 +625,7 @@ err_get_clock:
 	return ret;
 }
 
-static int gk20a_tegra_reset_assert(struct platform_device *dev)
+static int gk20a_tegra_reset_assert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
@@ -642,7 +637,7 @@ static int gk20a_tegra_reset_assert(struct platform_device *dev)
 	return 0;
 }
 
-static int gk20a_tegra_reset_deassert(struct platform_device *dev)
+static int gk20a_tegra_reset_deassert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
@@ -654,14 +649,14 @@ static int gk20a_tegra_reset_deassert(struct platform_device *dev)
 	return 0;
 }
 
-static int gm20b_tegra_reset_assert(struct platform_device *dev)
+static int gm20b_tegra_reset_assert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	if (!platform->clk_reset) {
-		platform->clk_reset = clk_get(&dev->dev, "gpu_gate");
+		platform->clk_reset = clk_get(dev, "gpu_gate");
 		if (IS_ERR(platform->clk_reset)) {
-			gk20a_err(&dev->dev, "fail to get gpu reset clk\n");
+			gk20a_err(dev, "fail to get gpu reset clk\n");
 			return PTR_ERR(platform->clk_reset);
 		}
 	}
@@ -671,9 +666,9 @@ static int gm20b_tegra_reset_assert(struct platform_device *dev)
 	return 0;
 }
 
-static void gk20a_tegra_scale_init(struct platform_device *pdev)
+static void gk20a_tegra_scale_init(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct gk20a_emc_params *emc_params;
 
@@ -685,28 +680,28 @@ static void gk20a_tegra_scale_init(struct platform_device *pdev)
 		return;
 
 	emc_params->freq_last_set = -1;
-	gk20a_tegra_calibrate_emc(pdev, emc_params);
+	gk20a_tegra_calibrate_emc(dev, emc_params);
 
 	profile->private_data = emc_params;
 }
 
-static void gk20a_tegra_scale_exit(struct platform_device *pdev)
+static void gk20a_tegra_scale_exit(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 
 	if (profile)
 		kfree(profile->private_data);
 }
 
-void gk20a_tegra_debug_dump(struct platform_device *pdev)
+void gk20a_tegra_debug_dump(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 	nvhost_debug_dump_device(g->host1x_dev);
 }
 
-int gk20a_tegra_busy(struct platform_device *dev)
+int gk20a_tegra_busy(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
@@ -716,7 +711,7 @@ int gk20a_tegra_busy(struct platform_device *dev)
 	return 0;
 }
 
-void gk20a_tegra_idle(struct platform_device *dev)
+void gk20a_tegra_idle(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
@@ -725,10 +720,10 @@ void gk20a_tegra_idle(struct platform_device *dev)
 		nvhost_module_idle_ext(g->host1x_dev);
 }
 
-static int gk20a_tegra_probe(struct platform_device *dev)
+static int gk20a_tegra_probe(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct device_node *np = dev->dev.of_node;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct device_node *np = dev->of_node;
 	const __be32 *host1x_ptr;
 	struct platform_device *host1x_pdev = NULL;
 
@@ -739,13 +734,13 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 
 		host1x_pdev = of_find_device_by_node(host1x_node);
 		if (!host1x_pdev) {
-			dev_warn(&dev->dev, "host1x device not available");
+			dev_warn(dev, "host1x device not available");
 			return -EPROBE_DEFER;
 		}
 
 	} else {
-		host1x_pdev = to_platform_device(dev->dev.parent);
-		dev_warn(&dev->dev, "host1x reference not found. assuming host1x to be parent");
+		host1x_pdev = to_platform_device(dev->parent);
+		dev_warn(dev, "host1x reference not found. assuming host1x to be parent");
 	}
 
 	platform->g->host1x_dev = host1x_pdev;
@@ -761,7 +756,7 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 		np = of_find_node_by_path("/gpu-dvfs-rework");
 		if (!(np && of_device_is_available(np))) {
 			platform->devfreq_governor = "";
-			dev_warn(&dev->dev, "board does not support scaling");
+			dev_warn(dev, "board does not support scaling");
 		}
 	}
 
@@ -770,10 +765,10 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int gk20a_tegra_late_probe(struct platform_device *dev)
+static int gk20a_tegra_late_probe(struct device *dev)
 {
 	/* Make gk20a power domain a subdomain of host1x */
-	nvhost_register_client_domain(dev_to_genpd(&dev->dev));
+	nvhost_register_client_domain(dev_to_genpd(dev));
 
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
@@ -781,15 +776,15 @@ static int gk20a_tegra_late_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int gk20a_tegra_remove(struct platform_device *dev)
+static int gk20a_tegra_remove(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	if (platform->g->host1x_dev)
 		nvhost_unregister_dump_device(platform->g->host1x_dev);
 
 	/* remove gk20a power subdomain from host1x */
-	nvhost_unregister_client_domain(dev_to_genpd(&dev->dev));
+	nvhost_unregister_client_domain(dev_to_genpd(dev));
 
 	/* deinitialise tegra specific scaling quirks */
 	gk20a_tegra_scale_exit(dev);
@@ -804,7 +799,7 @@ static int gk20a_tegra_suspend(struct device *dev)
 }
 
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK
-static unsigned long gk20a_get_clk_rate(struct platform_device *dev)
+static unsigned long gk20a_get_clk_rate(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
@@ -813,8 +808,7 @@ static unsigned long gk20a_get_clk_rate(struct platform_device *dev)
 
 }
 
-static long gk20a_round_clk_rate(struct platform_device *dev,
-						unsigned long rate)
+static long gk20a_round_clk_rate(struct device *dev, unsigned long rate)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
@@ -822,7 +816,7 @@ static long gk20a_round_clk_rate(struct platform_device *dev,
 	return gk20a_clk_round_rate(g, rate);
 }
 
-static int gk20a_set_clk_rate(struct platform_device *dev, unsigned long rate)
+static int gk20a_set_clk_rate(struct device *dev, unsigned long rate)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
@@ -830,7 +824,7 @@ static int gk20a_set_clk_rate(struct platform_device *dev, unsigned long rate)
 	return gk20a_clk_set_rate(g, rate);
 }
 
-static int gk20a_clk_get_freqs(struct platform_device *dev,
+static int gk20a_clk_get_freqs(struct device *dev,
 				unsigned long **freqs, int *num_freqs)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
@@ -900,6 +894,8 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
+
+	.soc_name = "tegra12x",
 };
 
 struct gk20a_platform gm20b_tegra_platform = {
@@ -958,4 +954,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
 	.has_cde = true,
+
+	.soc_name = "tegra21x",
 };

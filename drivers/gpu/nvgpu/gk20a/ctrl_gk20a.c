@@ -144,7 +144,7 @@ static int gk20a_ctrl_alloc_as(
 		struct gk20a *g,
 		struct nvgpu_alloc_as_args *args)
 {
-	struct platform_device *dev = g->dev;
+	struct device *dev = g->dev;
 	struct gk20a_as_share *as_share;
 	int err;
 	int fd;
@@ -157,7 +157,7 @@ static int gk20a_ctrl_alloc_as(
 	fd = err;
 
 	name = kasprintf(GFP_KERNEL, "nvhost-%s-fd%d",
-			dev_name(&dev->dev), fd);
+			dev_name(dev), fd);
 
 	file = anon_inode_getfile(name, g->as.cdev.ops, NULL, O_RDWR);
 	kfree(name);
@@ -187,7 +187,7 @@ clean_up:
 static int gk20a_ctrl_open_tsg(struct gk20a *g,
 			       struct nvgpu_gpu_open_tsg_args *args)
 {
-	struct platform_device *dev = g->dev;
+	struct device *dev = g->dev;
 	int err;
 	int fd;
 	struct file *file;
@@ -199,7 +199,7 @@ static int gk20a_ctrl_open_tsg(struct gk20a *g,
 	fd = err;
 
 	name = kasprintf(GFP_KERNEL, "nvgpu-%s-tsg%d",
-			 dev_name(&dev->dev), fd);
+			 dev_name(dev), fd);
 
 	file = anon_inode_getfile(name, g->tsg.cdev.ops, NULL, O_RDWR);
 	kfree(name);
@@ -621,7 +621,7 @@ static int nvgpu_gpu_get_cpu_time_correlation_info(
 
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
-	struct platform_device *dev = filp->private_data;
+	struct device *dev = filp->private_data;
 	struct gk20a *g = get_gk20a(dev);
 	struct nvgpu_gpu_zcull_get_ctx_size_args *get_ctx_size_args;
 	struct nvgpu_gpu_zcull_get_info_args *get_info_args;

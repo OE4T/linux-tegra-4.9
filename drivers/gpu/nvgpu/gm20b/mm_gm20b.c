@@ -1,7 +1,7 @@
 /*
  * GM20B MMU
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,7 +52,7 @@ int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g)
 
 	gk20a_busy_noresume(g->dev);
 #ifdef CONFIG_PM
-	if (!pm_runtime_active(&g->dev->dev))
+	if (!pm_runtime_active(g->dev))
 		goto fail;
 #endif
 
@@ -67,7 +67,7 @@ int gm20b_mm_mmu_vpr_info_fetch(struct gk20a *g)
 	ret = gm20b_mm_mmu_vpr_info_fetch_wait(g, VPR_INFO_FETCH_WAIT);
 
 fail:
-	pm_runtime_put(&g->dev->dev);
+	pm_runtime_put(g->dev);
 	return ret;
 }
 

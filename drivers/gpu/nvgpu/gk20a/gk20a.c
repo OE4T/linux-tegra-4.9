@@ -44,10 +44,6 @@
 
 #include <linux/sched.h>
 
-#ifdef CONFIG_TEGRA_GK20A
-#include <linux/nvhost.h>
-#endif
-
 #include "gk20a.h"
 #include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
@@ -79,7 +75,6 @@
 
 #define CLASS_NAME "nvidia-gpu"
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
-#define INTERFACE_NAME "nvhost%s-gpu"
 
 #define GK20A_NUM_CDEVS 7
 
@@ -92,12 +87,11 @@ u32 gk20a_dbg_ftrace;
 
 #define GK20A_WAIT_FOR_IDLE_MS	2000
 
-static int gk20a_pm_finalize_poweron(struct device *dev);
 static int gk20a_pm_prepare_poweroff(struct device *dev);
 
-static inline void set_gk20a(struct platform_device *dev, struct gk20a *gk20a)
+static inline void set_gk20a(struct platform_device *pdev, struct gk20a *gk20a)
 {
-	gk20a_get_platform(dev)->g = gk20a;
+	gk20a_get_platform(&pdev->dev)->g = gk20a;
 }
 
 static const struct file_operations gk20a_channel_ops = {
@@ -292,38 +286,38 @@ static void __iomem *gk20a_ioremap_resource(struct platform_device *dev, int i,
 }
 
 /* TBD: strip from released */
-static int gk20a_init_sim_support(struct platform_device *dev)
+static int gk20a_init_sim_support(struct platform_device *pdev)
 {
 	int err = 0;
+	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
-	struct device *d = &dev->dev;
 	u64 phys;
 
 	g->sim.g = g;
-	g->sim.regs = gk20a_ioremap_resource(dev, GK20A_SIM_IORESOURCE_MEM,
+	g->sim.regs = gk20a_ioremap_resource(pdev, GK20A_SIM_IORESOURCE_MEM,
 					     &g->sim.reg_mem);
 	if (IS_ERR(g->sim.regs)) {
-		dev_err(d, "failed to remap gk20a sim regs\n");
+		dev_err(dev, "failed to remap gk20a sim regs\n");
 		err = PTR_ERR(g->sim.regs);
 		goto fail;
 	}
 
 	/* allocate sim event/msg buffers */
-	err = alloc_and_kmap_iopage(d, &g->sim.send_bfr.kvaddr,
+	err = alloc_and_kmap_iopage(dev, &g->sim.send_bfr.kvaddr,
 				    &g->sim.send_bfr.phys,
 				    &g->sim.send_bfr.page);
 
-	err = err || alloc_and_kmap_iopage(d, &g->sim.recv_bfr.kvaddr,
+	err = err || alloc_and_kmap_iopage(dev, &g->sim.recv_bfr.kvaddr,
 					   &g->sim.recv_bfr.phys,
 					   &g->sim.recv_bfr.page);
 
-	err = err || alloc_and_kmap_iopage(d, &g->sim.msg_bfr.kvaddr,
+	err = err || alloc_and_kmap_iopage(dev, &g->sim.msg_bfr.kvaddr,
 					   &g->sim.msg_bfr.phys,
 					   &g->sim.msg_bfr.page);
 
 	if (!(g->sim.send_bfr.kvaddr && g->sim.recv_bfr.kvaddr &&
 	      g->sim.msg_bfr.kvaddr)) {
-		dev_err(d, "couldn't allocate all sim buffers\n");
+		dev_err(dev, "couldn't allocate all sim buffers\n");
 		goto fail;
 	}
 
@@ -566,25 +560,25 @@ void gk20a_pbus_isr(struct gk20a *g)
 		gk20a_err(dev_from_gk20a(g), "pmc_enable : 0x%x",
 			gk20a_readl(g, mc_enable_r()));
 		gk20a_err(dev_from_gk20a(g), "NV_PBUS_INTR_0 : 0x%x", val);
-		gk20a_err(&g->dev->dev,
+		gk20a_err(g->dev,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_0: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_0_r()));
-		gk20a_err(&g->dev->dev,
+		gk20a_err(g->dev,
 			"NV_PTIMER_PRI_TIMEOUT_SAVE_1: 0x%x\n",
 			gk20a_readl(g, timer_pri_timeout_save_1_r()));
 		err_code = gk20a_readl(g, timer_pri_timeout_fecs_errcode_r());
-		gk20a_err(&g->dev->dev,
+		gk20a_err(g->dev,
 			"NV_PTIMER_PRI_TIMEOUT_FECS_ERRCODE: 0x%x\n",
 			err_code);
 		if (err_code == 0xbadf13)
-			gk20a_err(&g->dev->dev,
+			gk20a_err(g->dev,
 			"NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: 0x%x\n",
 			gk20a_readl(g, gr_gpc0_fs_gpc_r()));
 
 	}
 
 	if (val)
-		gk20a_err(&g->dev->dev,
+		gk20a_err(g->dev,
 			"Unhandled pending pbus interrupt\n");
 
 	gk20a_writel(g, bus_intr_0_r(), val);
@@ -602,7 +596,7 @@ static irqreturn_t gk20a_intr_thread_nonstall(int irq, void *dev_id)
 	return g->ops.mc.isr_thread_nonstall(g);
 }
 
-static void gk20a_remove_support(struct platform_device *dev)
+static void gk20a_remove_support(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
@@ -642,7 +636,7 @@ static void gk20a_remove_support(struct platform_device *dev)
 static int gk20a_init_support(struct platform_device *dev)
 {
 	int err = 0;
-	struct gk20a *g = get_gk20a(dev);
+	struct gk20a *g = get_gk20a(&dev->dev);
 
 #ifdef CONFIG_TEGRA_COMMON
 	tegra_register_idle_unidle(gk20a_do_idle, gk20a_do_unidle);
@@ -689,14 +683,13 @@ static int gk20a_init_support(struct platform_device *dev)
 	return 0;
 
  fail:
-	gk20a_remove_support(dev);
+	gk20a_remove_support(&dev->dev);
 	return err;
 }
 
 static int gk20a_pm_prepare_poweroff(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
 	gk20a_dbg_fn("");
@@ -706,7 +699,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (!g->power_on)
 		goto done;
 
-	gk20a_scale_suspend(pdev);
+	gk20a_scale_suspend(dev);
 
 	/* cancel any pending cde work */
 	gk20a_cde_suspend(g);
@@ -767,11 +760,10 @@ static int gk20a_detect_chip(struct gk20a *g)
 	return gpu_init_hal(g);
 }
 
-static int gk20a_pm_finalize_poweron(struct device *dev)
+int gk20a_pm_finalize_poweron(struct device *dev)
 {
-	struct platform_device *pdev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(pdev);
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int err, nice_value;
 
 	gk20a_dbg_fn("");
@@ -904,7 +896,7 @@ static int gk20a_pm_finalize_poweron(struct device *dev)
 	gk20a_channel_resume(g);
 	set_user_nice(current, nice_value);
 
-	gk20a_scale_resume(pdev);
+	gk20a_scale_resume(dev);
 
 	trace_gk20a_finalize_poweron_done(dev_name(dev));
 
@@ -955,13 +947,13 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 };
 
 static int gk20a_create_device(
-	struct platform_device *pdev, int devno, const char *cdev_name,
+	struct device *dev, int devno,
+	const char *interface_name, const char *cdev_name,
 	struct cdev *cdev, struct device **out,
 	const struct file_operations *ops)
 {
-	struct device *dev;
+	struct device *subdev;
 	int err;
-	struct gk20a *g = get_gk20a(pdev);
 
 	gk20a_dbg_fn("");
 
@@ -970,127 +962,112 @@ static int gk20a_create_device(
 
 	err = cdev_add(cdev, devno, 1);
 	if (err) {
-		dev_err(&pdev->dev,
-			"failed to add %s cdev\n", cdev_name);
+		dev_err(dev, "failed to add %s cdev\n", cdev_name);
 		return err;
 	}
 
-	dev = device_create(g->class, NULL, devno, NULL,
-		(pdev->id <= 0) ? INTERFACE_NAME : INTERFACE_NAME ".%d",
-		cdev_name, pdev->id);
+	subdev = device_create(&nvgpu_class, NULL, devno, NULL,
+		interface_name, cdev_name);
 
-	if (IS_ERR(dev)) {
+	if (IS_ERR(subdev)) {
 		err = PTR_ERR(dev);
 		cdev_del(cdev);
-		dev_err(&pdev->dev,
-			"failed to create %s device for %s\n",
-			cdev_name, pdev->name);
+		dev_err(dev, "failed to create %s device for %s\n",
+			cdev_name, dev_name(dev));
 		return err;
 	}
 
-	*out = dev;
+	*out = subdev;
 	return 0;
 }
 
-void gk20a_user_deinit(struct platform_device *dev)
+void gk20a_user_deinit(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(dev);
+	struct gk20a *g = gk20a_from_dev(dev);
 
 	if (g->channel.node) {
-		device_destroy(g->class, g->channel.cdev.dev);
+		device_destroy(&nvgpu_class, g->channel.cdev.dev);
 		cdev_del(&g->channel.cdev);
 	}
 
 	if (g->as.node) {
-		device_destroy(g->class, g->as.cdev.dev);
+		device_destroy(&nvgpu_class, g->as.cdev.dev);
 		cdev_del(&g->as.cdev);
 	}
 
 	if (g->ctrl.node) {
-		device_destroy(g->class, g->ctrl.cdev.dev);
+		device_destroy(&nvgpu_class, g->ctrl.cdev.dev);
 		cdev_del(&g->ctrl.cdev);
 	}
 
 	if (g->dbg.node) {
-		device_destroy(g->class, g->dbg.cdev.dev);
+		device_destroy(&nvgpu_class, g->dbg.cdev.dev);
 		cdev_del(&g->dbg.cdev);
 	}
 
 	if (g->prof.node) {
-		device_destroy(g->class, g->prof.cdev.dev);
+		device_destroy(&nvgpu_class, g->prof.cdev.dev);
 		cdev_del(&g->prof.cdev);
 	}
 
 	if (g->tsg.node) {
-		device_destroy(g->class, g->tsg.cdev.dev);
+		device_destroy(&nvgpu_class, g->tsg.cdev.dev);
 		cdev_del(&g->tsg.cdev);
 	}
 
 	if (g->ctxsw.node) {
-		device_destroy(g->class, g->ctxsw.cdev.dev);
+		device_destroy(&nvgpu_class, g->ctxsw.cdev.dev);
 		cdev_del(&g->ctxsw.cdev);
 	}
 
 	if (g->cdev_region)
 		unregister_chrdev_region(g->cdev_region, GK20A_NUM_CDEVS);
-
-	if (g->class)
-		class_destroy(g->class);
 }
 
-int gk20a_user_init(struct platform_device *dev)
+int gk20a_user_init(struct device *dev, const char *interface_name)
 {
 	int err;
 	dev_t devno;
-	struct gk20a *g = get_gk20a(dev);
+	struct gk20a *g = gk20a_from_dev(dev);
 
-	g->class = class_create(THIS_MODULE, CLASS_NAME);
-	if (IS_ERR(g->class)) {
-		err = PTR_ERR(g->class);
-		g->class = NULL;
-		dev_err(&dev->dev,
-			"failed to create " CLASS_NAME " class\n");
-		goto fail;
-	}
-
-	err = alloc_chrdev_region(&devno, 0, GK20A_NUM_CDEVS, CLASS_NAME);
+	err = alloc_chrdev_region(&devno, 0, GK20A_NUM_CDEVS, dev_name(dev));
 	if (err) {
-		dev_err(&dev->dev, "failed to allocate devno\n");
+		dev_err(dev, "failed to allocate devno\n");
 		goto fail;
 	}
 	g->cdev_region = devno;
 
-	err = gk20a_create_device(dev, devno++, "",
+	err = gk20a_create_device(dev, devno++, interface_name, "",
 				  &g->channel.cdev, &g->channel.node,
 				  &gk20a_channel_ops);
 	if (err)
 		goto fail;
 
-	err = gk20a_create_device(dev, devno++, "-as",
+	err = gk20a_create_device(dev, devno++, interface_name, "-as",
 				  &g->as.cdev, &g->as.node,
 				  &gk20a_as_ops);
 	if (err)
 		goto fail;
 
-	err = gk20a_create_device(dev, devno++, "-ctrl",
+	err = gk20a_create_device(dev, devno++, interface_name, "-ctrl",
 				  &g->ctrl.cdev, &g->ctrl.node,
 				  &gk20a_ctrl_ops);
 	if (err)
 		goto fail;
 
-	err = gk20a_create_device(dev, devno++, "-dbg",
+	err = gk20a_create_device(dev, devno++, interface_name, "-dbg",
 				  &g->dbg.cdev, &g->dbg.node,
 				  &gk20a_dbg_ops);
 	if (err)
 		goto fail;
 
-	err = gk20a_create_device(dev, devno++, "-prof",
+	err = gk20a_create_device(dev, devno++, interface_name, "-prof",
 				  &g->prof.cdev, &g->prof.node,
 				  &gk20a_prof_ops);
 	if (err)
 		goto fail;
 
-	err = gk20a_create_device(dev, devno++, "-tsg",
+	err = gk20a_create_device(dev, devno++, interface_name, "-tsg",
 				  &g->tsg.cdev, &g->tsg.node,
 				  &gk20a_tsg_ops);
 	if (err)
@@ -1190,7 +1167,7 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 #endif
 
 	/* Be ready for rail-gate after this point */
-	if (gk20a_gpu_is_virtual(pdev))
+	if (gk20a_gpu_is_virtual(&pdev->dev))
 		vgpu_pm_prepare_poweroff(&pdev->dev);
 	else
 		gk20a_pm_prepare_poweroff(&pdev->dev);
@@ -1205,12 +1182,12 @@ static const struct dev_pm_ops gk20a_pm_ops = {
 };
 #endif
 
-static int _gk20a_pm_railgate(struct platform_device *pdev)
+static int _gk20a_pm_railgate(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 	if (platform->railgate)
-		ret = platform->railgate(pdev);
+		ret = platform->railgate(dev);
 	return ret;
 }
 
@@ -1223,14 +1200,14 @@ static int gk20a_pm_railgate(struct generic_pm_domain *domain)
 	return _gk20a_pm_railgate(g->dev);
 }
 
-static int _gk20a_pm_unrailgate(struct platform_device *pdev)
+static int _gk20a_pm_unrailgate(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
 	if (platform->unrailgate) {
 		mutex_lock(&platform->railgate_lock);
-		ret = platform->unrailgate(pdev);
+		ret = platform->unrailgate(dev);
 		mutex_unlock(&platform->railgate_lock);
 	}
 
@@ -1242,7 +1219,7 @@ static int gk20a_pm_unrailgate(struct generic_pm_domain *domain)
 	struct gk20a_domain_data *gk20a_domain = container_of(domain,
 				     struct gk20a_domain_data, gpd);
 	struct gk20a *g = gk20a_domain->gk20a;
-	trace_gk20a_pm_unrailgate(dev_name(&g->dev->dev));
+	trace_gk20a_pm_unrailgate(dev_name(g->dev));
 
 	return _gk20a_pm_unrailgate(g->dev);
 }
@@ -1273,11 +1250,14 @@ static int gk20a_pm_resume(struct device *dev)
 }
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-static int gk20a_pm_initialise_domain(struct platform_device *pdev)
+static int gk20a_pm_initialise_domain(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dev_power_governor *pm_domain_gov = NULL;
-	struct generic_pm_domain *domain = dev_to_genpd(&pdev->dev);
+	struct generic_pm_domain *domain = dev_to_genpd(dev);
+
+	if (IS_ERR(domain))
+		return 0;
 
 #ifdef CONFIG_PM
 	if (!platform->can_railgate)
@@ -1288,14 +1268,14 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 	if (platform->railgate_delay)
 		pm_genpd_set_poweroff_delay(domain, platform->railgate_delay);
 
-	device_set_wakeup_capable(&pdev->dev, 0);
+	device_set_wakeup_capable(dev, 0);
 	return 0;
 }
 
 #else
-static int gk20a_pm_initialise_domain(struct platform_device *pdev)
+static int gk20a_pm_initialise_domain(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dev_power_governor *pm_domain_gov = NULL;
 	struct generic_pm_domain *domain = NULL;
 	int ret = 0;
@@ -1326,8 +1306,8 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 	domain->dev_ops.suspend = gk20a_pm_suspend;
 	domain->dev_ops.resume = gk20a_pm_resume;
 
-	device_set_wakeup_capable(&pdev->dev, 0);
-	ret = pm_genpd_add_device(domain, &pdev->dev);
+	device_set_wakeup_capable(dev, 0);
+	ret = pm_genpd_add_device(domain, dev);
 
 	if (platform->railgate_delay)
 		pm_genpd_set_poweroff_delay(domain, platform->railgate_delay);
@@ -1336,23 +1316,23 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 }
 #endif
 
-static int gk20a_pm_init(struct platform_device *dev)
+static int gk20a_pm_init(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
 	/* Initialise pm runtime */
 	if (platform->clockgate_delay) {
-		pm_runtime_set_autosuspend_delay(&dev->dev,
+		pm_runtime_set_autosuspend_delay(dev,
 						 platform->clockgate_delay);
-		pm_runtime_use_autosuspend(&dev->dev);
+		pm_runtime_use_autosuspend(dev);
 	}
 
-	pm_runtime_enable(&dev->dev);
-	if (!pm_runtime_enabled(&dev->dev))
-		gk20a_pm_enable_clk(&dev->dev);
+	pm_runtime_enable(dev);
+	if (!pm_runtime_enabled(dev))
+		gk20a_pm_enable_clk(dev);
 
 	/* Enable runtime railgating if possible. If not,
 	 * turn on the rail now. */
@@ -1374,7 +1354,7 @@ static int gk20a_secure_page_alloc(struct platform_device *pdev)
 	int err = 0;
 
 	if (platform->secure_page_alloc) {
-		err = platform->secure_page_alloc(pdev);
+		err = platform->secure_page_alloc(&pdev->dev);
 		if (!err)
 			platform->secure_alloc_ready = true;
 	}
@@ -1418,7 +1398,7 @@ static int gk20a_probe(struct platform_device *dev)
 
 	platform_set_drvdata(dev, platform);
 
-	if (gk20a_gpu_is_virtual(dev))
+	if (gk20a_gpu_is_virtual(&dev->dev))
 		return vgpu_probe(dev);
 
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
@@ -1437,7 +1417,7 @@ static int gk20a_probe(struct platform_device *dev)
 #endif
 
 	set_gk20a(dev, gk20a);
-	gk20a->dev = dev;
+	gk20a->dev = &dev->dev;
 
 	gk20a->irq_stall = platform_get_irq(dev, 0);
 	gk20a->irq_nonstall = platform_get_irq(dev, 1);
@@ -1468,7 +1448,7 @@ static int gk20a_probe(struct platform_device *dev)
 	disable_irq(gk20a->irq_stall);
 	disable_irq(gk20a->irq_nonstall);
 
-	err = gk20a_user_init(dev);
+	err = gk20a_user_init(&dev->dev, INTERFACE_NAME);
 	if (err)
 		return err;
 
@@ -1485,10 +1465,10 @@ static int gk20a_probe(struct platform_device *dev)
 		platform->reset_control = NULL;
 #endif
 
-	gk20a_debug_init(dev);
+	gk20a_debug_init(&dev->dev);
 
 	/* Initialize the platform interface. */
-	err = platform->probe(dev);
+	err = platform->probe(&dev->dev);
 	if (err) {
 		dev_err(&dev->dev, "platform probe failed");
 		return err;
@@ -1499,7 +1479,7 @@ static int gk20a_probe(struct platform_device *dev)
 		dev_err(&dev->dev,
 			"failed to allocate secure buffer %d\n", err);
 
-	err = gk20a_pm_init(dev);
+	err = gk20a_pm_init(&dev->dev);
 	if (err) {
 		dev_err(&dev->dev, "pm init failed");
 		return err;
@@ -1509,7 +1489,7 @@ static int gk20a_probe(struct platform_device *dev)
 
 	/* Initialise scaling */
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
-		gk20a_scale_init(dev);
+		gk20a_scale_init(&dev->dev);
 
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dev.dma_parms = &gk20a->dma_parms;
@@ -1547,14 +1527,14 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->pmu.aelpg_param[4] = APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
 
 	if (platform->late_probe) {
-		err = platform->late_probe(dev);
+		err = platform->late_probe(&dev->dev);
 		if (err) {
 			dev_err(&dev->dev, "late probe failed");
 			return err;
 		}
 	}
 
-	gk20a_create_sysfs(dev);
+	gk20a_create_sysfs(&dev->dev);
 
 #ifdef CONFIG_DEBUG_FS
 	spin_lock_init(&gk20a->debugfs_lock);
@@ -1612,10 +1592,10 @@ static int gk20a_probe(struct platform_device *dev)
 					&gk20a->runlist_interleave);
 
 	gr_gk20a_debugfs_init(gk20a);
-	gk20a_pmu_debugfs_init(dev);
-	gk20a_cde_debugfs_init(dev);
+	gk20a_pmu_debugfs_init(&dev->dev);
+	gk20a_cde_debugfs_init(&dev->dev);
 	gk20a_alloc_debugfs_init(dev);
-	gk20a_mm_debugfs_init(dev);
+	gk20a_mm_debugfs_init(&dev->dev);
 #endif
 
 	gk20a_init_gr(gk20a);
@@ -1623,8 +1603,9 @@ static int gk20a_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int __exit gk20a_remove(struct platform_device *dev)
+static int __exit gk20a_remove(struct platform_device *pdev)
 {
+	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a_domain_data *gk20a_gpd;
@@ -1632,7 +1613,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	gk20a_dbg_fn("");
 
 	if (gk20a_gpu_is_virtual(dev))
-		return vgpu_remove(dev);
+		return vgpu_remove(pdev);
 
 	if (platform->has_cde)
 		gk20a_cde_destroy(g);
@@ -1650,7 +1631,7 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	debugfs_remove_recursive(platform->debugfs);
 	debugfs_remove_recursive(platform->debugfs_alias);
 
-	gk20a_remove_sysfs(&dev->dev);
+	gk20a_remove_sysfs(dev);
 
 	if (platform->secure_buffer.destroy)
 		platform->secure_buffer.destroy(dev,
@@ -1660,15 +1641,15 @@ static int __exit gk20a_remove(struct platform_device *dev)
 	gk20a_gpd->gk20a = NULL;
 	kfree(gk20a_gpd);
 
-	if (pm_runtime_enabled(&dev->dev))
-		pm_runtime_disable(&dev->dev);
+	if (pm_runtime_enabled(dev))
+		pm_runtime_disable(dev);
 	else
-		gk20a_pm_disable_clk(&dev->dev);
+		gk20a_pm_disable_clk(dev);
 
 	if (platform->remove)
 		platform->remove(dev);
 
-	set_gk20a(dev, NULL);
+	set_gk20a(pdev, NULL);
 	kfree(g);
 
 	gk20a_dbg_fn("removed");
@@ -1751,10 +1732,19 @@ static int gk20a_domain_init(struct of_device_id *matches)
 #endif
 
 
+struct class nvgpu_class = {
+	.owner = THIS_MODULE,
+	.name = CLASS_NAME,
+};
+
 static int __init gk20a_init(void)
 {
 
 	int ret;
+
+	ret = class_register(&nvgpu_class);
+	if (ret)
+		return ret;
 
 	ret = gk20a_domain_init(tegra_gpu_domain_match);
 	if (ret)
@@ -1766,50 +1756,51 @@ static int __init gk20a_init(void)
 static void __exit gk20a_exit(void)
 {
 	platform_driver_unregister(&gk20a_driver);
+	class_unregister(&nvgpu_class);
 }
 
-void gk20a_busy_noresume(struct platform_device *pdev)
+void gk20a_busy_noresume(struct device *dev)
 {
-	pm_runtime_get_noresume(&pdev->dev);
+	pm_runtime_get_noresume(dev);
 }
 
-int gk20a_busy(struct platform_device *pdev)
+int gk20a_busy(struct device *dev)
 {
 	int ret = 0;
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 #ifdef CONFIG_PM
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 #endif
 
 	down_read(&g->busy_lock);
 
 #ifdef CONFIG_PM
 	if (platform->busy) {
-		ret = platform->busy(pdev);
+		ret = platform->busy(dev);
 		if (ret < 0) {
-			dev_err(&pdev->dev, "%s: failed to poweron platform dependency\n",
+			dev_err(dev, "%s: failed to poweron platform dependency\n",
 				__func__);
 			goto fail;
 		}
 	}
 
-	ret = pm_runtime_get_sync(&pdev->dev);
+	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
-		pm_runtime_put_noidle(&pdev->dev);
+		pm_runtime_put_noidle(dev);
 		if (platform->idle)
-			platform->idle(pdev);
+			platform->idle(dev);
 		goto fail;
 	}
 #else
 	if (!g->power_on) {
 		ret = gk20a_gpu_is_virtual(pdev) ?
-			vgpu_pm_finalize_poweron(&pdev->dev)
-			: gk20a_pm_finalize_poweron(&pdev->dev);
+			vgpu_pm_finalize_poweron(dev)
+			: gk20a_pm_finalize_poweron(dev);
 		if (ret)
 			goto fail;
 	}
 #endif
-	gk20a_scale_notify_busy(pdev);
+	gk20a_scale_notify_busy(dev);
 
 fail:
 	up_read(&g->busy_lock);
@@ -1817,19 +1808,19 @@ fail:
 	return ret < 0 ? ret : 0;
 }
 
-void gk20a_idle(struct platform_device *pdev)
+void gk20a_idle(struct device *dev)
 {
 #ifdef CONFIG_PM
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
-	if (atomic_read(&pdev->dev.power.usage_count) == 1)
-		gk20a_scale_notify_idle(pdev);
-	pm_runtime_mark_last_busy(&pdev->dev);
-	pm_runtime_put_sync_autosuspend(&pdev->dev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	if (atomic_read(&dev->power.usage_count) == 1)
+		gk20a_scale_notify_idle(dev);
+	pm_runtime_mark_last_busy(dev);
+	pm_runtime_put_sync_autosuspend(dev);
 
 	if (platform->idle)
-		platform->idle(pdev);
+		platform->idle(dev);
 #else
-	gk20a_scale_notify_idle(pdev);
+	gk20a_scale_notify_idle(dev);
 #endif
 }
 
@@ -1882,10 +1873,10 @@ void gk20a_reset(struct gk20a *g, u32 units)
  * In success, we hold these locks and return
  * In failure, we release these locks and return
  */
-int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
+int __gk20a_do_idle(struct device *dev, bool force_reset)
 {
-	struct gk20a *g = get_gk20a(pdev);
-	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
+	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	unsigned long timeout = jiffies +
 		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
 	int ref_cnt;
@@ -1898,7 +1889,7 @@ int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
 	mutex_lock(&platform->railgate_lock);
 
 	/* check if it is already railgated ? */
-	if (platform->is_railgated(pdev))
+	if (platform->is_railgated(dev))
 		return 0;
 
 	/*
@@ -1906,17 +1897,17 @@ int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
 	 * re-acquire railgate_lock
 	 */
 	mutex_unlock(&platform->railgate_lock);
-	pm_runtime_get_sync(&pdev->dev);
+	pm_runtime_get_sync(dev);
 	mutex_lock(&platform->railgate_lock);
 
 	/* check and wait until GPU is idle (with a timeout) */
 	do {
 		msleep(1);
-		ref_cnt = atomic_read(&pdev->dev.power.usage_count);
+		ref_cnt = atomic_read(&dev->power.usage_count);
 	} while (ref_cnt != 1 && time_before(jiffies, timeout));
 
 	if (ref_cnt != 1) {
-		gk20a_err(&pdev->dev, "failed to idle - refcount %d != 1\n",
+		gk20a_err(dev, "failed to idle - refcount %d != 1\n",
 			ref_cnt);
 		goto fail_drop_usage_count;
 	}
@@ -1931,7 +1922,7 @@ int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
 		 * if GPU is now idle, we will have only one ref count,
 		 * drop this ref which will rail gate the GPU
 		 */
-		pm_runtime_put_sync(&pdev->dev);
+		pm_runtime_put_sync(dev);
 
 		/* add sufficient delay to allow GPU to rail gate */
 		msleep(platform->railgate_delay);
@@ -1941,13 +1932,13 @@ int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
 		/* check in loop if GPU is railgated or not */
 		do {
 			msleep(1);
-			is_railgated = platform->is_railgated(pdev);
+			is_railgated = platform->is_railgated(dev);
 		} while (!is_railgated && time_before(jiffies, timeout));
 
 		if (is_railgated) {
 			return 0;
 		} else {
-			gk20a_err(&pdev->dev, "failed to idle in timeout\n");
+			gk20a_err(dev, "failed to idle in timeout\n");
 			goto fail_timeout;
 		}
 	} else {
@@ -1964,12 +1955,12 @@ int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
 		 */
 
 		/* Save the GPU state */
-		gk20a_pm_prepare_poweroff(&pdev->dev);
+		gk20a_pm_prepare_poweroff(dev);
 
-		gk20a_pm_disable_clk(&pdev->dev);
+		gk20a_pm_disable_clk(dev);
 
 		/* railgate GPU */
-		platform->railgate(pdev);
+		platform->railgate(dev);
 
 		udelay(10);
 
@@ -1978,7 +1969,7 @@ int __gk20a_do_idle(struct platform_device *pdev, bool force_reset)
 	}
 
 fail_drop_usage_count:
-	pm_runtime_put_noidle(&pdev->dev);
+	pm_runtime_put_noidle(dev);
 fail_timeout:
 	mutex_unlock(&platform->railgate_lock);
 	up_write(&g->busy_lock);
@@ -1997,7 +1988,7 @@ int gk20a_do_idle(void)
 			of_find_matching_node(NULL, tegra_gk20a_of_match);
 	struct platform_device *pdev = of_find_device_by_node(node);
 
-	int ret =  __gk20a_do_idle(pdev, true);
+	int ret =  __gk20a_do_idle(&pdev->dev, true);
 
 	of_node_put(node);
 
@@ -2007,25 +1998,25 @@ int gk20a_do_idle(void)
 /**
  * __gk20a_do_unidle() - unblock all the tasks blocked by __gk20a_do_idle()
  */
-int __gk20a_do_unidle(struct platform_device *pdev)
+int __gk20a_do_unidle(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(pdev);
-	struct gk20a_platform *platform = dev_get_drvdata(&pdev->dev);
+	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
 	if (g->forced_reset) {
 		/*
 		 * If we did a forced-reset/railgate
 		 * then unrailgate the GPU here first
 		 */
-		platform->unrailgate(pdev);
+		platform->unrailgate(dev);
 
-		gk20a_pm_enable_clk(&pdev->dev);
+		gk20a_pm_enable_clk(dev);
 
 		/* restore the GPU state */
-		gk20a_pm_finalize_poweron(&pdev->dev);
+		gk20a_pm_finalize_poweron(dev);
 
 		/* balance GPU usage counter */
-		pm_runtime_put_sync(&pdev->dev);
+		pm_runtime_put_sync(dev);
 
 		g->forced_reset = false;
 	}
@@ -2046,7 +2037,7 @@ int gk20a_do_unidle(void)
 			of_find_matching_node(NULL, tegra_gk20a_of_match);
 	struct platform_device *pdev = of_find_device_by_node(node);
 
-	int ret = __gk20a_do_unidle(pdev);
+	int ret = __gk20a_do_unidle(&pdev->dev);
 
 	of_node_put(node);
 
@@ -2057,7 +2048,7 @@ int gk20a_do_unidle(void)
 int gk20a_init_gpu_characteristics(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-	struct gk20a_platform *platform = platform_get_drvdata(g->dev);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gpu->L2_cache_size = g->ops.ltc.determine_L2_size_bytes(g);
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
@@ -2164,7 +2155,7 @@ do_request_firmware(struct device *dev, const char *prefix, const char *fw_name)
 const struct firmware *
 gk20a_request_firmware(struct gk20a *g, const char *fw_name)
 {
-	struct device *dev = &g->dev->dev;
+	struct device *dev = g->dev;
 	const struct firmware *fw;
 
 	/* current->fs is NULL when calling from SYS_EXIT.
@@ -2177,8 +2168,10 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name)
 
 #ifdef CONFIG_TEGRA_GK20A
 	/* TO BE REMOVED - Support loading from legacy SOC specific path. */
-	if (!fw)
-		fw = nvhost_client_request_firmware(g->dev, fw_name);
+	if (!fw) {
+		struct gk20a_platform *platform = gk20a_get_platform(dev);
+		fw = do_request_firmware(dev, platform->soc_name, fw_name);
+	}
 #endif
 
 	if (!fw) {

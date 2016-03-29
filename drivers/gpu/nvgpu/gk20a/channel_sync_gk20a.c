@@ -330,13 +330,13 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 	sp->host1x_pdev = c->g->host1x_dev;
 
 	snprintf(syncpt_name, sizeof(syncpt_name),
-		"%s_%d", dev_name(&c->g->dev->dev), c->hw_chid);
+		"%s_%d", dev_name(c->g->dev), c->hw_chid);
 
 	sp->id = nvhost_get_syncpt_host_managed(sp->host1x_pdev,
 						c->hw_chid, syncpt_name);
 	if (!sp->id) {
 		kfree(sp);
-		gk20a_err(&c->g->dev->dev, "failed to get free syncpt");
+		gk20a_err(c->g->dev, "failed to get free syncpt");
 		return NULL;
 	}
 
@@ -387,7 +387,7 @@ static void gk20a_channel_semaphore_launcher(
 			fence, fence->name);
 	err = sync_fence_wait(fence, -1);
 	if (err < 0)
-		dev_err(&g->dev->dev, "error waiting pre-fence: %d\n", err);
+		dev_err(g->dev, "error waiting pre-fence: %d\n", err);
 
 	gk20a_dbg_info(
 		  "wait completed (%d) for fence %p '%s', triggering gpu work",

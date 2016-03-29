@@ -1,7 +1,7 @@
 /*
  * Tegra Virtualized GPU Platform Interface
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,10 +19,10 @@
 #include "hal_gk20a.h"
 #include "platform_gk20a.h"
 
-static int gk20a_tegra_probe(struct platform_device *dev)
+static int gk20a_tegra_probe(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct device_node *np = dev->dev.of_node;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct device_node *np = dev->of_node;
 	const __be32 *host1x_ptr;
 	struct platform_device *host1x_pdev = NULL;
 
@@ -33,13 +33,13 @@ static int gk20a_tegra_probe(struct platform_device *dev)
 
 		host1x_pdev = of_find_device_by_node(host1x_node);
 		if (!host1x_pdev) {
-			dev_warn(&dev->dev, "host1x device not available");
+			dev_warn(dev, "host1x device not available");
 			return -EPROBE_DEFER;
 		}
 
 	} else {
-		host1x_pdev = to_platform_device(dev->dev.parent);
-		dev_warn(&dev->dev, "host1x reference not found. assuming host1x to be parent");
+		host1x_pdev = to_platform_device(dev->parent);
+		dev_warn(dev, "host1x reference not found. assuming host1x to be parent");
 	}
 
 	platform->g->host1x_dev = host1x_pdev;

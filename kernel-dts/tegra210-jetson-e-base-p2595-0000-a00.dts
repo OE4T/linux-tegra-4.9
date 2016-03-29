@@ -75,6 +75,10 @@
 
 			sdmmc3 {
 				nvidia,deep-power-down-enable;
+				nvidia,enable-dynamic-pad-voltage;
+			};
+			sdmmc1 {
+				nvidia,enable-dynamic-pad-voltage;
 			};
 		};
 	};

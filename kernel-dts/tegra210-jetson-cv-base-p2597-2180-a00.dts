@@ -64,6 +64,14 @@
 
 	pmc@7000e400 {
 		nvidia,invert-interrupt;
+		io-pad-defaults {
+			sdmmc1 {
+				nvidia,enable-dynamic-pad-voltage;
+			};
+			sdmmc3 {
+				nvidia,enable-dynamic-pad-voltage;
+			};
+		};
 	};
 
 	memory@80000000 {

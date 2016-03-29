@@ -126,7 +126,7 @@ struct tegra210_adsp {
 	struct tegra210_adsp_path {
 		uint32_t fe_reg;
 		uint32_t be_reg;
-	} pcm_path[ADSP_FE_END+1][2];
+	} pcm_path[ADSP_FE_COUNT+1][2];
 };
 
 static const struct snd_pcm_hardware adsp_pcm_hardware = {

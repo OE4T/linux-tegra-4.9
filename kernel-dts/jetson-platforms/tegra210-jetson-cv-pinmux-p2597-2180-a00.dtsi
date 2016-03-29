@@ -22,6 +22,15 @@
 		pinctrl-1 = <&drive_default>;
 		pinctrl-2 = <&pinmux_unused_lowpower>;
 
+		/*
+		 * When booting with U-Boot, U-Boot will program the entire
+		 * pinmux itself, based on its own configuration tables. To
+		 * avoid the kernel performing redundant pinmux configuration,
+		 * U-Boot deletes the pinctrl-names property above. In that
+		 * scenario, all of the pinmux data below is ignored. In any
+		 * other scenario, the following pinmux data is still applied
+		 * by the kernel.
+		 */
 		pinmux_default: common {
 			/* SFIO Pin Configuration */
 			aud_mclk_pbb0 {

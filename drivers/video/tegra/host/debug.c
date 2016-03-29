@@ -284,7 +284,7 @@ void nvhost_debug_init(struct nvhost_master *master)
 
 void nvhost_register_dump_device(
 		struct platform_device *dev,
-		void (*nvgpu_debug_dump_device)(struct platform_device *))
+		void (*nvgpu_debug_dump_device)(void *))
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 

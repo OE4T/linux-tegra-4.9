@@ -338,7 +338,7 @@ struct nvhost_device_data {
 
 	/* For loadable nvgpu module, we dynamically assign function
 	 * pointer of gk20a_debug_dump_device once the module loads */
-	void (*debug_dump_device)(struct platform_device *pdev);
+	void (*debug_dump_device)(void *dev);
 
 	/* bandwidth manager client id for emc requests */
 	int bwmgr_client_id;
@@ -608,12 +608,12 @@ static inline void nvhost_unregister_dump_device(struct platform_device *dev)
 #ifdef CONFIG_DEBUG_FS
 void nvhost_register_dump_device(
 		struct platform_device *dev,
-		void (*nvgpu_debug_dump_device)(struct platform_device *));
+		void (*nvgpu_debug_dump_device)(void *));
 void nvhost_unregister_dump_device(struct platform_device *dev);
 #else
 static inline void nvhost_register_dump_device(
 		struct platform_device *dev,
-		void (*nvgpu_debug_dump_device)(struct platform_device *))
+		void (*nvgpu_debug_dump_device)(void *))
 {
 }
 

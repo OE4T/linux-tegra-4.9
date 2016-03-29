@@ -1503,6 +1503,7 @@ static int tc358840_set_fmt(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_format *format)
 {
+	struct tc358840_state *state = to_state(sd);
 	u32 code = format->format.code; /* is overwritten by get_fmt */
 	int ret = tc358840_get_fmt(sd, cfg, format);
 
@@ -1516,6 +1517,7 @@ static int tc358840_set_fmt(struct v4l2_subdev *sd,
 	switch (code) {
 	case MEDIA_BUS_FMT_RGB888_1X24:
 	case MEDIA_BUS_FMT_UYVY8_1X16:
+		state->mbus_fmt_code = code;
 		break;
 	default:
 		return -EINVAL;
@@ -2189,7 +2191,6 @@ static int tc358840_pwr_init(struct tc358840_platform_data *pdata,
 		struct i2c_client *client)
 {
 	struct device_node *node = client->dev.of_node;
-	enum of_gpio_flags flags;
 	int cam2_rst;
 	int err;
 	struct regulator *dvdd;

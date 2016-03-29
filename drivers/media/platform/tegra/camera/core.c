@@ -140,6 +140,15 @@ static const struct tegra_video_format tegra_video_formats[] = {
 	{
 		TEGRA_VF_RGB888,
 		24,
+		MEDIA_BUS_FMT_RGB888_1X24,
+		4,
+		TEGRA_IMAGE_FORMAT_T_A8R8G8B8,
+		TEGRA_IMAGE_DT_RGB888,
+		V4L2_PIX_FMT_RGB32,
+	},
+	{
+		TEGRA_VF_RGB888,
+		24,
 		MEDIA_BUS_FMT_RGB888_1X32_PADHI,
 		4,
 		TEGRA_IMAGE_FORMAT_T_A8B8G8R8,
@@ -151,7 +160,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 	{
 		TEGRA_VF_YUV422,
 		16,
-		MEDIA_BUS_FMT_UYVY8_2X8,
+		MEDIA_BUS_FMT_UYVY8_1X16,
 		2,
 		TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
 		TEGRA_IMAGE_DT_YUV422_8,
@@ -160,7 +169,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 	{
 		TEGRA_VF_YUV422,
 		16,
-		MEDIA_BUS_FMT_UYVY8_1X16,
+		MEDIA_BUS_FMT_UYVY8_2X8,
 		2,
 		TEGRA_IMAGE_FORMAT_T_U8_Y8__V8_Y8,
 		TEGRA_IMAGE_DT_YUV422_8,

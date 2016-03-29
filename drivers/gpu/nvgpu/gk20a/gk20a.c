@@ -1805,7 +1805,10 @@ void gk20a_enable(struct gk20a *g, u32 units)
 void gk20a_reset(struct gk20a *g, u32 units)
 {
 	gk20a_disable(g, units);
-	udelay(20);
+	if (units & mc_enable_ce2_enabled_f())
+		udelay(500);
+	else
+		udelay(20);
 	gk20a_enable(g, units);
 }
 

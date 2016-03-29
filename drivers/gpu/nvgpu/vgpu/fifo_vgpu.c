@@ -571,7 +571,7 @@ static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 	return err ? err : msg.ret;
 }
 
-int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
+static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg;

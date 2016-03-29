@@ -30,7 +30,6 @@
 #define IVC_MIN_FRAME_SIZE		L1_CACHE_BYTES
 
 #define SMBOX1_OFFSET			0x8000
-#define SMBOX_IVC_READY_MSG		0xAAAA5555
 
 #define SHRD_SEM_OFFSET	0x10000
 #define SHRD_SEM_SET	0x4
@@ -39,11 +38,30 @@
 
 #define IPCBUF_SIZE 8192
 
+enum smbox_msgs {
+	SMBOX_IVC_READY_MSG = 0xAAAA5555,
+	SMBOX_IVC_DBG_ENABLE = 0xAAAA6666,
+};
+
+enum ivc_tasks_dbg_enable {
+	IVC_TASKS_GLOBAL_DBG_ENABLE = 0,
+	IVC_ECHO_TASK_DBG_ENABLE = 1,
+	IVC_DBG_TASK_DBG_ENABLE = 2,
+	IVC_TASK_ENABLE_MAX = 3,
+	IVC_TASKS_MAX = 31,
+	IVC_TASKS_GLOBAL_DBG_DISABLE = 32,
+	IVC_ECHO_TASK_DBG_DISABLE = 33,
+	IVC_DBG_TASK_DBG_DISABLE = 34,
+	IVC_TASK_DISABLE_MAX = 35,
+};
+
 struct tegra_aon {
 	struct mbox_controller mbox;
 	int hsp_master;
 	int hsp_db;
 	struct work_struct ch_rx_work;
+	void __iomem *smbox_base;
+	void __iomem *shrdsem_base;
 	void *ipcbuf;
 	dma_addr_t ipcbuf_dma;
 	size_t ipcbuf_size;
@@ -287,7 +305,9 @@ static int tegra_aon_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
 	ivc_chan = (struct tegra_aon_ivc_chan *)mbox_chan->con_priv;
 	bytes = tegra_ivc_write(&ivc_chan->ivc, msg->data, msg->length);
 	ret = (bytes != msg->length) ? -EBUSY : 0;
-	ivc_chan->last_tx_done = (bytes != msg->length) ? false : true;
+	if (ret < 0)
+		pr_err("%s mbox send failed with error %d\n", __func__, ret);
+	ivc_chan->last_tx_done = (ret == 0);
 
 	return ret;
 }
@@ -332,13 +352,47 @@ static int tegra_aon_count_ivc_channels(struct device_node *dev_node)
 	return num;
 }
 
+static ssize_t store_ivc_dbg(struct device *dev, struct device_attribute *attr,
+				const char *buf, size_t count)
+{
+	struct tegra_aon *aon = dev_get_drvdata(dev);
+	u32 shrdsem_msg;
+	u32 channel;
+	u32 enable;
+	int ret;
+
+	if (count > IVC_MIN_FRAME_SIZE)
+		return -EINVAL;
+
+	ret = kstrtouint(buf, 0, &channel);
+	if (ret)
+		return -EINVAL;
+
+	if ((channel >= IVC_TASKS_GLOBAL_DBG_ENABLE &&
+		channel < IVC_TASK_ENABLE_MAX) ||
+		(channel >= IVC_TASKS_GLOBAL_DBG_DISABLE &&
+		channel < IVC_TASK_DISABLE_MAX)) {
+		enable = (channel > IVC_TASKS_MAX) ? 0 : BIT(IVC_TASKS_MAX);
+		channel = channel % (IVC_TASKS_MAX + 1);
+	} else {
+		return -EINVAL;
+	}
+
+	shrdsem_msg = BIT(channel) | enable;
+	writel(shrdsem_msg, aon->shrdsem_base + SHRD_SEM_SET);
+	writel(SMBOX_IVC_DBG_ENABLE, aon->smbox_base + SMBOX1_OFFSET);
+
+	return count;
+}
+
+
+static DEVICE_ATTR(ivc_dbg, S_IWUSR, NULL, store_ivc_dbg);
+
 static int tegra_aon_probe(struct platform_device *pdev)
 {
 	struct tegra_aon *aon;
 	struct device *dev = &pdev->dev;
 	struct device_node *dn = dev->of_node;
-	void __iomem *smbox_base;
-	void __iomem *shrdsem_base;
 	u32 hsp_data[TEGRA_AON_HSP_DATA_ARRAY_SIZE];
 	int num_chans;
 	int ret = 0;
@@ -358,16 +412,16 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
-	smbox_base = of_iomap(dn, 0);
-	if (!smbox_base) {
+	aon->smbox_base = of_iomap(dn, 0);
+	if (!aon->smbox_base) {
 		dev_err(dev, "failed to map smbox IO space.\n");
 		return -EINVAL;
 	}
 
-	shrdsem_base = of_iomap(dn, 1);
-	if (!shrdsem_base) {
+	aon->shrdsem_base = of_iomap(dn, 1);
+	if (!aon->shrdsem_base) {
 		dev_err(dev, "failed to map shrdsem IO space.\n");
-		iounmap(smbox_base);
+		iounmap(aon->smbox_base);
 		return -EINVAL;
 	}
 
@@ -434,16 +488,22 @@ static int tegra_aon_probe(struct platform_device *pdev)
 		tegra_hsp_db_del_handler(aon->hsp_master);
 		goto exit;
 	}
-	writel((u32)aon->ipcbuf_dma, shrdsem_base + SHRD_SEM_SET);
-	writel((u32)aon->ipcbuf_size, shrdsem_base + SHRD_SEM_OFFSET
+	writel((u32)aon->ipcbuf_dma, aon->shrdsem_base + SHRD_SEM_SET);
+	writel((u32)aon->ipcbuf_size, aon->shrdsem_base + SHRD_SEM_OFFSET
 					+ SHRD_SEM_SET);
-	writel(SMBOX_IVC_READY_MSG, smbox_base + SMBOX1_OFFSET);
+	writel(SMBOX_IVC_READY_MSG, aon->smbox_base + SMBOX1_OFFSET);
+	ret = device_create_file(dev, &dev_attr_ivc_dbg);
+	if (ret) {
+		dev_err(dev, "failed to create device file: %d\n", ret);
+		goto exit;
+	}
 
 	dev_dbg(&pdev->dev, "tegra aon driver probe OK\n");
+	return ret;
 
 exit:
-	iounmap(shrdsem_base);
-	iounmap(smbox_base);
+	iounmap(aon->shrdsem_base);
+	iounmap(aon->smbox_base);
 	return ret;
 }
 

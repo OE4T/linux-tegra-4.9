@@ -39,14 +39,6 @@
 #include "camera/mc_common.h"
 #include "vi/vi.h"
 
-enum camera_gang_mode {
-	CAMERA_NO_GANG_MODE = 0,
-	CAMERA_GANG_L_R = 1,
-	CAMERA_GANG_T_B,
-	CAMERA_GANG_R_L,
-	CAMERA_GANG_B_T
-};
-
 void tegra_channel_write(struct tegra_channel *chan,
 			unsigned int addr, u32 val)
 {
@@ -122,6 +114,26 @@ static void update_gang_mode_params(struct tegra_channel *chan)
 	gang_buffer_offsets(chan);
 }
 
+static void update_gang_mode(struct tegra_channel *chan)
+{
+	struct tegra_csi_device *csi = chan->vi->csi;
+	int width = chan->format.width;
+	int height = chan->format.height;
+
+	/*
+	 * At present only 720p, 1080p and 4k resolutions
+	 * are supported and only 4K requires gang mode
+	 * Update this code with CID for future extensions
+	 */
+	if ((width > 1920) && (height > 1080))
+		chan->gang_mode = CAMERA_GANG_L_R;
+	else
+		chan->gang_mode = CAMERA_NO_GANG_MODE;
+
+	csi->gang_mode = chan->gang_mode;
+	update_gang_mode_params(chan);
+}
+
 static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 {
 	int ret, pixel_format_index = 0, init_code = 0;
@@ -177,7 +189,7 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	chan->format.sizeimage = chan->format.bytesperline *
 		chan->format.height;
 	if (chan->valid_ports > 1)
-		update_gang_mode_params(chan);
+		update_gang_mode(chan);
 }
 
 /*
@@ -194,8 +206,10 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, int index)
 	u32 data_type = chan->fmtinfo->img_dt;
 	u32 word_count = tegra_core_get_word_count(width, chan->fmtinfo);
 	u32 bypass_pixel_transform = 1;
+	u32 valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
+				chan->valid_ports;
 
-	if (chan->valid_ports > 1) {
+	if (valid_ports > 1) {
 		height = chan->gang_height;
 		width = chan->gang_width;
 		word_count = tegra_core_get_word_count(width, chan->fmtinfo);
@@ -216,7 +230,7 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, int index)
 	csi_write(chan, index, TEGRA_VI_CSI_IMAGE_SIZE,
 		  (height << IMAGE_SIZE_HEIGHT_OFFSET) | width);
 
-	if (csi_port_is_valid(chan->gang_port[index]))
+	if ((valid_ports > 1) && csi_port_is_valid(chan->gang_port[index]))
 		tegra_channel_capture_setup(chan, (index + 1));
 
 	return 0;
@@ -226,10 +240,13 @@ static void tegra_channel_capture_error(struct tegra_channel *chan)
 {
 	u32 val;
 	int index = 0;
+	u32 valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
+				chan->valid_ports;
 
 	val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 	dev_err(&chan->video.dev, "TEGRA_VI_CSI_ERROR_STATUS 0x%08x\n", val);
-	while (csi_port_is_valid(chan->gang_port[index])) {
+	while ((valid_ports > 1) &&
+		csi_port_is_valid(chan->gang_port[index])) {
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		dev_err(&chan->video.dev,
 			"TEGRA_VI_CSI_ERROR_STATUS 0x%08x\n", val);
@@ -246,7 +263,8 @@ static void tegra_channel_capture_frame(struct tegra_channel *chan,
 	int bytes_per_line = chan->format.bytesperline;
 	int index = 0;
 	u32 thresh[TEGRA_CSI_BLOCKS] = { 0 };
-	int valid_ports = chan->valid_ports;
+	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
+				chan->valid_ports;
 
 	for (index = 0; index < valid_ports; index++) {
 		int port = index ? chan->gang_port[(index - 1)] :
@@ -303,7 +321,8 @@ static void tegra_channel_capture_done(struct tegra_channel *chan,
 	u32 val, mw_ack_done;
 	int index = 0;
 	u32 thresh[TEGRA_CSI_BLOCKS] = { 0 };
-	int valid_ports = chan->valid_ports;
+	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
+				chan->valid_ports;
 
 	for (index = 0; index < valid_ports; index++) {
 		int port = index ? chan->gang_port[(index - 1)] :
@@ -720,6 +739,9 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 			chan->format.sizeimage = chan->format.bytesperline *
 				chan->format.height;
 
+			if (chan->valid_ports > 1)
+				update_gang_mode(chan);
+
 			return ret;
 		}
 	}
@@ -1092,7 +1114,7 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 			chan->format = *pix;
 			chan->fmtinfo = vfmt;
 			if (chan->valid_ports > 1)
-				update_gang_mode_params(chan);
+				update_gang_mode(chan);
 
 		}
 
@@ -1325,7 +1347,7 @@ static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index)
 		numlanes = chan->numlanes - (base_index * 4);
 		numlanes = numlanes > 4 ? 4 : numlanes;
 		chan->valid_ports++;
-		chan->gang_mode = CAMERA_GANG_L_R;
+		chan->gang_mode = CAMERA_NO_GANG_MODE;
 		vi->csi->gang_port[idx] = chan->gang_port[idx];
 		chan->csibase[base_index++] = vi->iomem +
 			TEGRA_VI_CSI_BASE(chan->gang_port[idx]);

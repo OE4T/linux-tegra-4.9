@@ -393,7 +393,8 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 		 (0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 		 CSI_PP_SINGLE_SHOT_ENABLE | CSI_PP_ENABLE);
 
-	if (csi_port_is_valid(csi->gang_port[index]))
+	if ((csi->gang_mode != CAMERA_NO_GANG_MODE) &&
+		csi_port_is_valid(csi->gang_port[index]))
 		tegra_csi_start_streaming(csi,
 				csi->gang_port[index], (index+1));
 }
@@ -422,7 +423,8 @@ void tegra_csi_status(struct tegra_csi_device *csi,
 	val = pp_read(port, TEGRA_CSI_DEBUG_COUNTER_2);
 	dev_info(csi->dev, "TEGRA_CSI_DEBUG_COUNTER_2 0x%08x\n", val);
 #endif
-	if (csi_port_is_valid(csi->gang_port[index]))
+	if ((csi->gang_mode != CAMERA_NO_GANG_MODE) &&
+		csi_port_is_valid(csi->gang_port[index]))
 		tegra_csi_status(csi, csi->gang_port[index], (index+1));
 }
 EXPORT_SYMBOL(tegra_csi_status);
@@ -436,7 +438,8 @@ void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
 		 (0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 		 CSI_PP_DISABLE);
 
-	if (csi_port_is_valid(csi->gang_port[index]))
+	if ((csi->gang_mode != CAMERA_NO_GANG_MODE) &&
+		csi_port_is_valid(csi->gang_port[index]))
 		tegra_csi_stop_streaming(csi,
 			csi->gang_port[index], (index+1));
 }

@@ -33,6 +33,14 @@ enum tegra_csi_port_num {
 #define csi_port_is_valid(port) \
 	(port < PORT_A ? 0 : (port > PORT_F ? 0 : 1))
 
+enum camera_gang_mode {
+	CAMERA_NO_GANG_MODE = 0,
+	CAMERA_GANG_L_R = 1,
+	CAMERA_GANG_T_B,
+	CAMERA_GANG_R_L,
+	CAMERA_GANG_B_T
+};
+
 struct tegra_csi_port {
 	void __iomem *pixel_parser;
 	void __iomem *cil;
@@ -62,6 +70,7 @@ struct tegra_csi_device {
 	unsigned int clk_freq;
 	int num_ports;
 	int pg_mode;
+	enum camera_gang_mode gang_mode;
 };
 
 static inline struct tegra_csi_device *to_csi(struct v4l2_subdev *subdev)

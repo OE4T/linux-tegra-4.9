@@ -98,5 +98,5 @@ nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-include ../kernel-t18x/drivers/gpu/nvgpu/Makefile
+include ../kernel-nvgpu-t18x/drivers/gpu/nvgpu/Makefile
 endif

@@ -201,7 +201,7 @@ void nvhost_module_busy_noresume(struct platform_device *dev)
 	if (dev->dev.parent && (dev->dev.parent != &platform_bus))
 		nvhost_module_busy_noresume(nvhost_get_parent(dev));
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	pm_runtime_get_noresume(&dev->dev);
 #endif
 }
@@ -230,7 +230,7 @@ int nvhost_module_busy(struct platform_device *dev)
 	if (ret)
 		return ret;
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	ret = pm_runtime_get_sync(&dev->dev);
 	if (ret < 0) {
 		pm_runtime_put_noidle(&dev->dev);
@@ -316,7 +316,7 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	int original_refs = refs;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	/* call idle callback only if the device is turned on. */
 	if (atomic_read(&dev->dev.power.usage_count) == refs &&
 	    pm_runtime_active(&dev->dev)) {
@@ -772,7 +772,7 @@ int nvhost_module_init(struct platform_device *dev)
 
 	/* disable railgating if pm runtime is not available
 	 * and for linsim platform */
-	pdata->can_powergate = IS_ENABLED(CONFIG_PM_RUNTIME) &&
+	pdata->can_powergate = IS_ENABLED(CONFIG_PM) &&
 		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
 		pdata->can_powergate && !tegra_platform_is_linsim();
 
@@ -827,7 +827,7 @@ int nvhost_module_init(struct platform_device *dev)
 	/* if genpd is not available, the domain is powered already.
 	 * just ensure that we load the gating registers now */
 	if (!(IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
-	      IS_ENABLED(CONFIG_PM_RUNTIME))) {
+	      IS_ENABLED(CONFIG_PM))) {
 		nvhost_module_enable_clk(&dev->dev);
 		nvhost_module_load_regs(dev, pdata->engine_can_cg);
 		nvhost_module_disable_clk(&dev->dev);
@@ -946,7 +946,7 @@ void nvhost_module_deinit(struct platform_device *dev)
 EXPORT_SYMBOL(nvhost_module_deinit);
 
 const struct dev_pm_ops nvhost_module_pm_ops = {
-#if defined(CONFIG_PM_RUNTIME) && !defined(CONFIG_PM_GENERIC_DOMAINS)
+#if defined(CONFIG_PM) && !defined(CONFIG_PM_GENERIC_DOMAINS)
 	.runtime_suspend = nvhost_module_disable_clk,
 	.runtime_resume = nvhost_module_enable_clk,
 #endif
@@ -1126,7 +1126,7 @@ static int nvhost_module_suspend(struct device *dev)
 	 * device_prepare takes one ref, so expect usage count to
 	 * be 1 at this point.
 	 */
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (atomic_read(&dev->power.usage_count) > 1)
 		return -EBUSY;
 #endif

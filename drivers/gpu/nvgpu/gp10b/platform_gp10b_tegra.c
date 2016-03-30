@@ -407,7 +407,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.reset_assert = gp10b_tegra_reset_assert,
 	.reset_deassert = gp10b_tegra_reset_deassert,
 
-	.force_reset_in_do_idle = true,
+	.force_reset_in_do_idle = false,
 };
 
 

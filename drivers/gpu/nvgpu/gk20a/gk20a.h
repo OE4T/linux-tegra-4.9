@@ -33,6 +33,7 @@ struct acr_gm20b;
 #include <linux/nvgpu.h>
 #include <linux/irqreturn.h>
 #include <linux/tegra-soc.h>
+#include <linux/version.h>
 
 #include "../../../arch/arm/mach-tegra/iomap.h"
 
@@ -559,7 +560,11 @@ struct gk20a {
 	const struct firmware *pmu_fw;
 
 	u32 gr_idle_timeout_default;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 timeouts_enabled;
+#else
+	bool timeouts_enabled;
+#endif
 
 	struct mutex ch_wdt_lock;
 
@@ -569,7 +574,11 @@ struct gk20a {
 	u32 timeslice_low_priority_us;
 	u32 timeslice_medium_priority_us;
 	u32 timeslice_high_priority_us;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 runlist_interleave;
+#else
+	bool runlist_interleave;
+#endif
 
 	bool slcg_enabled;
 	bool blcg_enabled;

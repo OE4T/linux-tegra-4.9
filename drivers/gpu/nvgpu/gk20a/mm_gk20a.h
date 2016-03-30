@@ -24,6 +24,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/vmalloc.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 #include <asm/dma-iommu.h>
 #include <asm/cacheflush.h>
 #include "gk20a_allocator.h"
@@ -342,10 +343,19 @@ struct mm_gk20a {
 	bool use_full_comp_tag_line;
 #ifdef CONFIG_DEBUG_FS
 	u32 ltc_enabled;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 ltc_enabled_debug;
+#else
+	bool ltc_enabled_debug;
 #endif
+#endif
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 bypass_smmu;
 	u32 disable_bigpage;
+#else
+	bool bypass_smmu;
+	bool disable_bigpage;
+#endif
 	bool has_physical_mode;
 };
 

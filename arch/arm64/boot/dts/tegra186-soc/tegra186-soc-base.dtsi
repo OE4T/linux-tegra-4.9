@@ -51,6 +51,7 @@
 	#size-cells = <2>;
 
 	aliases {
+		spi4 = &aon_spi;
 		qspi6 = &qspi6;
 	};
 
@@ -2395,23 +2396,40 @@
 		#mbox-cells = <1>;
 		#stream-id-cells = <1>;
 		status = "disabled";
+
 		ivc-channels@80000000 {
 			#address-cells = <1>;
 			#size-cells = <0>;
 
 			ivc_aon_echo@0 {
-				reg = <0x0000>, <0x1000>;
+				reg = <0x0000>, <0x10000>;
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <16>;
 				nvidia,frame-size = <64>;
 			};
 			ivc_aon_aondbg@480 {
-				reg = <0x0480>, <0x1480>;
+				reg = <0x0480>, <0x10480>;
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <2>;
 				nvidia,frame-size = <128>;
 			};
+			ivc_aon_spi {
+				reg = <0x0600>, <0x10600>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <2>;
+				nvidia,frame-size = <24704>;
+			};
 		};
+	};
+
+	aon_spi: aon_spi@c260000 {
+		status = "disabled";
+		compatible = "nvidia,tegra186-aon-spi";
+		bus-number = <1>;
+		#address-cells = <1>;
+		#size-cells = <0>;
+		spi-max-frequency = <12000000>;
+		mboxes = <&aon 2>;
 	};
 
 	aondbg {

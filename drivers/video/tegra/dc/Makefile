@@ -20,8 +20,10 @@ obj-$(CONFIG_TEGRA_DSI2EDP_SN65DSI86) += sn65dsi86_dsi2edp.o
 obj-$(CONFIG_TEGRA_DSI2LVDS_SN65DSI85) += sn65dsi85_dsi2lvds.o
 obj-$(CONFIG_TEGRA_MIPI_CAL) += mipi_cal.o
 obj-$(CONFIG_TEGRA_NVHDCP) += nvhdcp.o
+#ifneq ($(CONFIG_ARCH_TEGRA_18x_SOC),y) || (ifeq($(CONFIG_ARCH_TEGRA_18x_SOC),y) && ifeq ($(CONFIG_TRUSTED_LITTLE_KERNEL),y))
 obj-$(CONFIG_TEGRA_HDMIHDCP) += hdmihdcp.o
 obj-$(CONFIG_TEGRA_HDMIHDCP) += nvhdcp_hdcp22_methods.o
+#endif
 obj-y += edid.o
 ifneq ($(CONFIG_TEGRA_NVDISPLAY),y)
 obj-$(CONFIG_TEGRA_NVSD) += nvsd.o

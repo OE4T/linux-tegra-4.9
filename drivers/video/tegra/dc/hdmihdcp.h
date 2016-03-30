@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hdmihdcp.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -73,7 +73,10 @@ struct tegra_nvhdcp {
 	struct delayed_work		fallback_work;
 };
 
-#ifdef CONFIG_TEGRA_HDMIHDCP
+#if ((!defined(CONFIG_ARCH_TEGRA_18x_SOC) \
+|| (defined(CONFIG_ARCH_TEGRA_18x_SOC) \
+&& defined(CONFIG_TRUSTED_LITTLE_KERNEL))) \
+&& defined(CONFIG_TEGRA_HDMIHDCP))
 void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd);
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol);
 void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp);
@@ -83,6 +86,15 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 					int id, int bus);
 void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp);
 void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp);
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC) \
+&& defined(CONFIG_TRUSTED_LITTLE_KERNEL))
+extern int te_launch_trusted_oper(u64 *buf_ptr,
+					u64 buflen, u32 session_id,
+				u32 *ta_uuid, u32 cmd, u32 size);
+extern u32 te_open_trusted_session(u32 *ta_uuid, u32 size);
+extern void te_close_trusted_session(u32 session_id, u32 *ta_uuid,
+							u32 size);
+#endif
 #else
 static inline void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 {
@@ -101,5 +113,4 @@ static inline struct tegra_nvhdcp *tegra_nvhdcp_create(
 }
 static inline void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp) { }
 #endif
-
 #endif

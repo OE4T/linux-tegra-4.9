@@ -75,6 +75,22 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_FALLBACK_1X                0xdeadbeef
 #define HDCP_NON_22_RX                  0x0300
 
+#define HDCP_TA_CMD_CTRL            0
+#define HDCP_TA_CMD_AKSV            1
+#define HDCP_TA_CMD_ENC             2
+#define HDCP_TA_CMD_REP             3
+#define HDCP_TA_CMD_BKSV            4
+
+#define PKT_SIZE					256
+
+#define HDCP_TA_CTRL_ENABLE			1
+#define HDCP_TA_CTRL_DISABLE		0
+
+#define HDCP_CMD_OFFSET				1
+#define HDCP_CMD_BYTE_OFFSET		8
+#define HDCP_AUTH_CMD				0x5
+#define HDCP_AUTH_UUID {0x13F616F9, 0x4A6F8572, 0xAA04F1A1, 0xFFF9059B}
+
 #ifdef VERBOSE_DEBUG
 #define nvhdcp_vdbg(...)	\
 		pr_debug("nvhdcp: " __VA_ARGS__)
@@ -95,6 +111,10 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
+
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+static int g_session_id;
+#endif
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
 {
@@ -432,7 +452,7 @@ static int get_vprime(struct tegra_nvhdcp *nvhdcp, u8 *v_prime)
 	return 0;
 }
 
-
+#if (!defined(CONFIG_ARCH_TEGRA_18x_SOC))
 /* set or clear RUN_YES */
 static void hdcp_ctrl_run(struct tegra_hdmi *hdmi, bool v)
 {
@@ -447,6 +467,7 @@ static void hdcp_ctrl_run(struct tegra_hdmi *hdmi, bool v)
 
 	nvhdcp_sor_writel(hdmi, ctrl, NV_SOR_TMDS_HDCP_CTRL);
 }
+#endif
 
 /* wait for any bits in mask to be set in NV_SOR_TMDS_HDCP_CTRL
  * sleeps up to 120mS */
@@ -1269,7 +1290,7 @@ static void nvhdcp_fallback_worker(struct work_struct *work)
 	}
 }
 
-static void nvhdcp_downstream_worker(struct work_struct *work)
+void nvhdcp_downstream_worker(struct work_struct *work)
 {
 	struct tegra_nvhdcp *nvhdcp =
 		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
@@ -1277,8 +1298,20 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	struct tegra_dc *dc = tegra_dc_hdmi_get_dc(hdmi);
 	int e;
 	u8 b_caps;
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+	int hdcp_ta_ret; /* track returns from TA */
+	uint32_t hdcp_auth_uuid[4] = HDCP_AUTH_UUID;
+	uint32_t ta_cmd = HDCP_AUTH_CMD;
+	bool enc = false;
+
+	uint64_t *pkt = kmalloc(PKT_SIZE, GFP_KERNEL);
+
+	if (!pkt)
+		goto failure;
+#else
 	u32 tmp;
 	u32 res;
+#endif
 
 	g_fallback = 0;
 
@@ -1313,11 +1346,79 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
-	nvhdcp_vdbg("kfuse loading ...\n");
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+	g_session_id = te_open_trusted_session(hdcp_auth_uuid,
+				sizeof(hdcp_auth_uuid));
+	if (!g_session_id) {
+		nvhdcp_info("Invalid session id");
+		goto failure;
+	}
 
+	/* if session successfully opened, launch operations */
 	/* repeater flag in Bskv must be configured before loading fuses */
-	set_bksv(hdmi, 0, (b_caps & BCAPS_REPEATER));
+	*pkt = HDCP_TA_CMD_REP;
+	*(pkt + 1*HDCP_CMD_OFFSET) = 0;
+	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
+				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	if (e) {
+		nvhdcp_err("te launch operation failed\n");
+		goto failure;
+	} else {
+		nvhdcp_vdbg("Loading kfuse\n");
+		e = load_kfuse(hdmi);
+		if (e) {
+			nvhdcp_err("kfuse could not be loaded\n");
+			goto failure;
+		}
+	}
+	usleep_range(20000, 25000);
+	*pkt = HDCP_TA_CMD_CTRL;
+	*(pkt + HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
+				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	if (e) {
+		nvhdcp_err("te launch operation failed\n");
+		goto failure;
+	} else {
+		nvhdcp_vdbg("wait AN_VALID ...\n");
 
+		hdcp_ta_ret = *pkt;
+		nvhdcp_vdbg("An returned %x\n", e);
+		if (hdcp_ta_ret) {
+			nvhdcp_err("An key generation timeout\n");
+			goto failure;
+		}
+
+		/* check SROM return */
+		hdcp_ta_ret = *(pkt + HDCP_CMD_BYTE_OFFSET);
+		if (hdcp_ta_ret) {
+			nvhdcp_err("SROM error\n");
+			goto failure;
+		}
+	}
+
+	msleep(25);
+	*pkt = HDCP_TA_CMD_AKSV;
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
+				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	if (e) {
+			nvhdcp_err("te launch operation failed\n");
+			goto failure;
+	} else {
+		hdcp_ta_ret = (u64)*pkt;
+		nvhdcp->a_ksv = (u64)*(pkt + 1*HDCP_CMD_BYTE_OFFSET);
+		nvhdcp->a_n = (u64)*(pkt + 2*HDCP_CMD_BYTE_OFFSET);
+		nvhdcp_vdbg("Aksv is 0x%016llx\n", nvhdcp->a_ksv);
+		nvhdcp_vdbg("An is 0x%016llx\n", nvhdcp->a_n);
+		/* check if verification of Aksv failed */
+		if (hdcp_ta_ret) {
+			nvhdcp_err("Aksv verify failure\n");
+			goto disable;
+		}
+	}
+#else
+	set_bksv(hdmi, 0, (b_caps & BCAPS_REPEATER));
 	e = load_kfuse(hdmi);
 	if (e) {
 		nvhdcp_err("kfuse could not be loaded\n");
@@ -1344,12 +1445,15 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	nvhdcp->a_ksv = get_aksv(hdmi);
 	nvhdcp->a_n = get_an(hdmi);
-	nvhdcp_vdbg("Aksv is 0x%016llx\n", nvhdcp->a_ksv);
+	nvhdcp_vdbg("Aksv is %016llx\n", nvhdcp->a_ksv);
 	nvhdcp_vdbg("An is 0x%016llx\n", nvhdcp->a_n);
+
 	if (verify_ksv(nvhdcp->a_ksv)) {
 		nvhdcp_err("Aksv verify failure! (0x%016llx)\n", nvhdcp->a_ksv);
 		goto disable;
 	}
+#endif
+
 	mutex_unlock(&nvhdcp->lock);
 
 	/* write Ainfo to receiver - set 1.1 only if b_caps supports it */
@@ -1394,24 +1498,47 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		goto failure;
 	}
 	nvhdcp_vdbg("Bksv is 0x%016llx\n", nvhdcp->b_ksv);
+
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+	*pkt = HDCP_TA_CMD_BKSV;
+	*(pkt + 1*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
+	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
+				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	if (e) {
+		nvhdcp_err("te launch operation failed\n");
+		goto failure;
+	} else {
+		/* check if Bksv verification was successful */
+		hdcp_ta_ret = (int)*pkt;
+		if (hdcp_ta_ret) {
+			nvhdcp_err("Bksv verify failure\n");
+			goto failure;
+		} else {
+			nvhdcp_vdbg("loaded Bksv into controller\n");
+			/* check if R0 read was successful */
+			hdcp_ta_ret = (int)*pkt;
+			if (hdcp_ta_ret) {
+				nvhdcp_err("R0 read failure\n");
+				goto failure;
+			}
+		}
+	}
+#else
 	if (verify_ksv(nvhdcp->b_ksv)) {
 		nvhdcp_err("Bksv verify failure!\n");
 		goto failure;
 	}
 
-	nvhdcp_vdbg("read Bksv = 0x%010llx from device\n", nvhdcp->b_ksv);
-
 	set_bksv(hdmi, nvhdcp->b_ksv, (b_caps & BCAPS_REPEATER));
-
 	nvhdcp_vdbg("loaded Bksv into controller\n");
-
 	e = wait_hdcp_ctrl(hdmi, R0_VALID, NULL);
 	if (e) {
 		nvhdcp_err("R0 read failure!\n");
 		goto failure;
 	}
-
 	nvhdcp_vdbg("R0 valid\n");
+#endif
 
 	msleep(100); /* can't read R0' within 100ms of writing Aksv */
 
@@ -1435,12 +1562,24 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 		}
 	}
 
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+	*pkt = HDCP_TA_CMD_ENC;
+	*(pkt + HDCP_CMD_OFFSET) = b_caps;
+	e = te_launch_trusted_oper(pkt, PKT_SIZE/4, g_session_id,
+				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	if (e) {
+		nvhdcp_err("te launch operation failed\n");
+		goto failure;
+	}
+	enc = true;
+#else
 	mutex_lock(&nvhdcp->lock);
 	tmp = nvhdcp_sor_readl(hdmi, NV_SOR_TMDS_HDCP_CTRL);
 	tmp |= CRYPT_ENABLED;
 	if (b_caps & BCAPS_11) /* HDCP 1.1 ? */
 		tmp |= ONEONE_ENABLED;
 	nvhdcp_sor_writel(hdmi, tmp, NV_SOR_TMDS_HDCP_CTRL);
+#endif
 
 	nvhdcp_vdbg("CRYPT enabled\n");
 
@@ -1466,9 +1605,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 			!nvhdcp_is_plugged(nvhdcp), msecs_to_jiffies(1500));
 		tegra_dc_io_start(dc);
 		mutex_lock(&nvhdcp->lock);
-
 	}
-
 failure:
 	nvhdcp->fail_count++;
 	if (nvhdcp->fail_count > nvhdcp->max_retries) {
@@ -1483,14 +1620,39 @@ failure:
 
 lost_hdmi:
 	nvhdcp->state = STATE_UNAUTHENTICATED;
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+	*pkt = HDCP_TA_CMD_CTRL;
+	*(pkt + HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
+	if (enc) {
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
+				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+		if (e) {
+			nvhdcp_err("te launch operation failed\n");
+			goto failure;
+		}
+	}
+#else
 	hdcp_ctrl_run(hdmi, 0);
+#endif
 
 err:
 	mutex_unlock(&nvhdcp->lock);
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+	kfree(pkt);
+	if (g_session_id)
+		te_close_trusted_session(g_session_id, hdcp_auth_uuid,
+					sizeof(hdcp_auth_uuid));
+#endif
 	tegra_dc_io_end(dc);
 	return;
 disable:
 	nvhdcp->state = STATE_OFF;
+#if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
+	kfree(pkt);
+	if (g_session_id)
+		te_close_trusted_session(g_session_id, hdcp_auth_uuid,
+						sizeof(hdcp_auth_uuid));
+#endif
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);
 	tegra_dc_io_end(dc);
@@ -1646,7 +1808,6 @@ static void nvhdcp2_downstream_worker(struct work_struct *work)
 	}
 
 failure:
-
 	nvhdcp->fail_count++;
 	if (nvhdcp->fail_count > nvhdcp->max_retries) {
 		nvhdcp_err("nvhdcp failure - too many failures, giving up!\n");
@@ -1684,7 +1845,7 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 		if (hdcp2version & HDCP_HDCP2_VERSION_HDCP22_YES) {
 			if (g_fallback) {
 				INIT_DELAYED_WORK(&nvhdcp->work,
-					nvhdcp_downstream_worker);
+				nvhdcp_downstream_worker);
 				nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
 			} else {
 				INIT_DELAYED_WORK(&nvhdcp->work,
@@ -1697,7 +1858,7 @@ static int tegra_nvhdcp_on(struct tegra_nvhdcp *nvhdcp)
 			nvhdcp->hdcp22 = HDCP1X_PROTOCOL;
 		}
 		queue_delayed_work(nvhdcp->downstream_wq, &nvhdcp->work,
-						msecs_to_jiffies(100));
+				msecs_to_jiffies(100));
 	}
 	return 0;
 }

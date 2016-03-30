@@ -1833,10 +1833,8 @@ static void _tegra_hdmi_clock_enable(struct tegra_hdmi *hdmi)
 
 static void _tegra_hdmi_clock_disable(struct tegra_hdmi *hdmi)
 {
-#ifndef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 	tegra_sor_clk_disable(sor);
-#endif
 }
 
 void tegra_hdmi_get(struct tegra_dc *dc)

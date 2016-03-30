@@ -580,6 +580,46 @@ static void tegra_channel_fmt_align(struct v4l2_pix_format *pix,
 	pix->sizeimage = pix->bytesperline * pix->height;
 }
 
+static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
+{
+	struct tegra_channel *chan = container_of(ctrl->handler,
+				struct tegra_channel, ctrl_handler);
+
+	switch (ctrl->id) {
+	case V4L2_CID_VI_BYPASS_MODE:
+		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON)
+			chan->bypass = true;
+		else
+			chan->bypass = false;
+		break;
+	default:
+		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static const struct v4l2_ctrl_ops channel_ctrl_ops = {
+	.s_ctrl	= tegra_channel_s_ctrl,
+};
+
+/**
+ * By default channel will be in VI mode
+ * User space can set it to 0 for working in bypass mode
+ */
+static const struct v4l2_ctrl_config bypass_mode_ctrl = {
+	.ops = &channel_ctrl_ops,
+	.id = V4L2_CID_VI_BYPASS_MODE,
+	.name = "Bypass Mode",
+	.type = V4L2_CTRL_TYPE_INTEGER_MENU,
+	.def = 1,
+	.min = 0,
+	.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
+	.menu_skip_mask = 0,
+	.qmenu_int = switch_ctrl_qmenu,
+};
+
 static int tegra_channel_setup_controls(struct tegra_channel *chan)
 {
 	int num_sd = 0;
@@ -597,12 +637,13 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 				"Failed to add sub-device controls\n");
 	}
 
-	/* Add the vi ctrl handler */
-	v4l2_ctrl_add_handler(&chan->ctrl_handler,
-			&chan->vi->ctrl_handler, NULL);
-	if (chan->ctrl_handler.error)
+	/* Add the bypass mode ctrl */
+	v4l2_ctrl_new_custom(&chan->ctrl_handler, &bypass_mode_ctrl, NULL);
+	if (chan->ctrl_handler.error) {
 		dev_err(chan->vi->dev,
-			"Failed to add vi controls\n");
+			"Failed to add bypass control\n");
+		return chan->ctrl_handler.error;
+	}
 
 	/* setup the controls */
 	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);

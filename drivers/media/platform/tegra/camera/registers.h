@@ -22,7 +22,7 @@
 #define __REGISTERS_H__
 
 /* VI registers */
-#define	TEGRA_VI_SYNCPT_WAIT_TIMEOUT			200
+#define	TEGRA_VI_SYNCPT_WAIT_TIMEOUT			2000
 #define	TEGRA_VI_CFG_VI_INCR_SYNCPT			0x000
 #define	VI_CFG_VI_INCR_SYNCPT_COND(x)			(x << 8)
 #define	VI_CSI_PP_LINE_START(port)			(4 + (port) * 4)

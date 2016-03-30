@@ -265,6 +265,14 @@ static void tegra_channel_capture_frame(struct tegra_channel *chan,
 	u32 thresh[TEGRA_CSI_BLOCKS] = { 0 };
 	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
 				chan->valid_ports;
+	bool is_hdmiin_unplug;
+
+	spin_lock(&chan->hdmiin_lock);
+	is_hdmiin_unplug = chan->is_hdmiin_unplug;
+	spin_unlock(&chan->hdmiin_lock);
+
+	if (is_hdmiin_unplug)
+		return;
 
 	for (index = 0; index < valid_ports; index++) {
 		int port = index ? chan->gang_port[(index - 1)] :
@@ -323,6 +331,14 @@ static void tegra_channel_capture_done(struct tegra_channel *chan,
 	u32 thresh[TEGRA_CSI_BLOCKS] = { 0 };
 	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
 				chan->valid_ports;
+	bool is_hdmiin_unplug;
+
+	spin_lock(&chan->hdmiin_lock);
+	is_hdmiin_unplug = chan->is_hdmiin_unplug;
+	spin_unlock(&chan->hdmiin_lock);
+
+	if (is_hdmiin_unplug)
+		return;
 
 	for (index = 0; index < valid_ports; index++) {
 		int port = index ? chan->gang_port[(index - 1)] :
@@ -419,6 +435,76 @@ static int tegra_channel_kthread_capture_done(void *data)
 
 	return 0;
 }
+
+static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
+{
+	mutex_lock(&chan->stop_kthread_lock);
+	/* Stop the kthread for capture */
+	if (chan->kthread_capture_start) {
+		kthread_stop(chan->kthread_capture_start);
+		chan->kthread_capture_start = NULL;
+	}
+	if (chan->kthread_capture_done) {
+		kthread_stop(chan->kthread_capture_done);
+		chan->kthread_capture_done = NULL;
+	}
+	mutex_unlock(&chan->stop_kthread_lock);
+}
+
+void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
+		struct v4l2_event *event)
+{
+	struct v4l2_dv_timings timings;
+	struct v4l2_bt_timings *bt;
+	struct v4l2_subdev *sd;
+	bool is_hdmiin = false;
+	int num_sd, ret, index = 0;
+	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
+				chan->valid_ports;
+
+	if (event->type != V4L2_EVENT_SOURCE_CHANGE)
+		return;
+
+	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+		struct v4l2_subdev *sd = chan->subdev[num_sd];
+		if (v4l2_subdev_has_op(sd, video, s_dv_timings))
+			is_hdmiin = true;
+	}
+
+	if (!is_hdmiin)
+		return;
+
+	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+		sd = chan->subdev[num_sd];
+		ret = v4l2_subdev_call(sd, video, query_dv_timings,
+				&timings);
+
+		/* Stop capture threads when unplug HDMI-IN */
+		if (sd && (ret == 0 || ret != -ENOIOCTLCMD)) {
+			bt = &timings.bt;
+			if (bt->width == 0 && bt->height == 0) {
+				dev_info(&chan->video.dev,
+						"Got unplug event during capture!\n");
+
+				spin_lock(&chan->hdmiin_lock);
+				chan->is_hdmiin_unplug = true;
+				spin_unlock(&chan->hdmiin_lock);
+
+				for (index = 0; index < valid_ports; index++) {
+					nvhost_syncpt_cpu_incr_ext(
+							chan->vi->ndev,
+							chan->syncpt[index]);
+					nvhost_syncpt_cpu_incr_ext(
+							chan->vi->ndev,
+							chan->syncpt[index]);
+				}
+
+				tegra_channel_stop_kthreads(chan);
+			}
+		}
+	}
+}
+EXPORT_SYMBOL(tegra_channel_query_hdmiin_unplug);
 
 /*
  * -----------------------------------------------------------------------------
@@ -549,6 +635,10 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0;
 
+	spin_lock(&chan->hdmiin_lock);
+	chan->is_hdmiin_unplug = false;
+	spin_unlock(&chan->hdmiin_lock);
+
 	if (!chan->vi->pg_mode) {
 		ret = media_entity_pipeline_start(&chan->video.entity, pipe);
 		if (ret < 0)
@@ -611,11 +701,7 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 
 	if (!chan->bypass) {
-		/* Stop the kthread for capture */
-		kthread_stop(chan->kthread_capture_start);
-		chan->kthread_capture_start = NULL;
-		kthread_stop(chan->kthread_capture_done);
-		chan->kthread_capture_done = NULL;
+		tegra_channel_stop_kthreads(chan);
 		tegra_csi_stop_streaming(chan->vi->csi, chan->port, 0);
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
 	}
@@ -1260,7 +1346,9 @@ static int tegra_channel_open(struct file *fp)
 			return ret;
 	}
 
-	return v4l2_fh_open(fp);
+	ret = v4l2_fh_open(fp);
+	chan->fh = (struct v4l2_fh *)fp->private_data;
+	return ret;
 }
 
 static int tegra_channel_close(struct file *fp)
@@ -1373,6 +1461,8 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	init_waitqueue_head(&chan->done_wait);
 	spin_lock_init(&chan->start_lock);
 	spin_lock_init(&chan->done_lock);
+	spin_lock_init(&chan->hdmiin_lock);
+	mutex_init(&chan->stop_kthread_lock);
 
 	/* Init video format */
 	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF);

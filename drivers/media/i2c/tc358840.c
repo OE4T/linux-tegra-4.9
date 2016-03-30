@@ -1100,6 +1100,9 @@ static void tc358840_format_change(struct v4l2_subdev *sd)
 		.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
 	};
 
+	if (sd->devnode)
+		v4l2_subdev_notify_event(sd, &tc358840_ev_fmt);
+
 	if (tc358840_get_detected_timings(sd, &timings)) {
 		enable_stream(sd, false);
 
@@ -1114,9 +1117,6 @@ static void tc358840_format_change(struct v4l2_subdev *sd)
 					"tc358840_format_change: New format: ",
 					&timings, false);
 	}
-
-	if (sd->devnode)
-		v4l2_subdev_notify_event(sd, &tc358840_ev_fmt);
 }
 
 static void tc358840_init_interrupts(struct v4l2_subdev *sd)

@@ -114,6 +114,7 @@ struct tegra_channel {
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_pix_format format;
 	const struct tegra_video_format *fmtinfo;
+	struct mutex stop_kthread_lock;
 
 	unsigned char gang_port[TEGRA_CSI_BLOCKS];
 	unsigned int syncpt[TEGRA_CSI_BLOCKS];
@@ -129,6 +130,7 @@ struct tegra_channel {
 	spinlock_t start_lock;
 	struct list_head done;
 	spinlock_t done_lock;
+	spinlock_t hdmiin_lock;
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int align;
@@ -148,6 +150,8 @@ struct tegra_channel {
 
 	DECLARE_BITMAP(fmts_bitmap, MAX_FORMAT_NUM);
 	bool bypass;
+	struct v4l2_fh *fh;
+	bool is_hdmiin_unplug;
 };
 
 #define to_tegra_channel(vdev) \
@@ -225,4 +229,6 @@ void tegra_vi_power_off(struct tegra_mc_vi *vi);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev);
 void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
+void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
+		struct v4l2_event *event);
 #endif

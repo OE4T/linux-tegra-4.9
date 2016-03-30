@@ -166,6 +166,8 @@ static void tegra_vi_notify(struct v4l2_subdev *sd,
 	for (ch = 0; ch < vi->num_channels; ch++) {
 		struct tegra_channel *chan = &vi->chans[ch];
 
+		tegra_channel_query_hdmiin_unplug(chan, arg);
+
 		for (i = 0; i < chan->num_subdevs; i++)
 			if (sd == chan->subdev[i])
 				v4l2_event_queue(&chan->video, arg);

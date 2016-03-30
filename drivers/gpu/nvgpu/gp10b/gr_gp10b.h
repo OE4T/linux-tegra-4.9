@@ -1,7 +1,7 @@
 /*
- * GM20B GPU GR
+ * GP10B GPU GR
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -35,7 +35,7 @@ enum {
 void gp10b_init_gr(struct gpu_ops *ops);
 int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 			struct mem_desc *mem);
-void gr_gp10b_create_sysfs(struct platform_device *dev);
+void gr_gp10b_create_sysfs(struct device *dev);
 
 struct ecc_stat {
 	char **names;

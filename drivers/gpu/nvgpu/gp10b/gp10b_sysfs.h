@@ -19,7 +19,7 @@
 /*ECC Fuse*/
 #define FUSE_OPT_ECC_EN  0x358
 
-void gp10b_create_sysfs(struct platform_device *dev);
+void gp10b_create_sysfs(struct device *dev);
 void gp10b_remove_sysfs(struct device *dev);
 
 #endif /*_GP10B_SYSFS_H_*/

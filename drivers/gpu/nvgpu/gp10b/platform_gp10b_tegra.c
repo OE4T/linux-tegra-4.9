@@ -1,7 +1,5 @@
 /*
- * drivers/video/tegra/host/gk20a/platform_gk20a_tegra.c
- *
- * GK20A Tegra Platform Interface
+ * GP10B Tegra Platform Interface
  *
  * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -62,11 +60,9 @@ static void gr_gp10b_remove_sysfs(struct device *dev);
  * the clock information to gp10b platform data.
  */
 
-static int gp10b_tegra_get_clocks(struct platform_device *pdev)
+static int gp10b_tegra_get_clocks(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
-	struct gk20a *g = get_gk20a(pdev);
-	struct device *dev = dev_from_gk20a(g);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int i;
 
 	if (tegra_platform_is_linsim())
@@ -79,7 +75,7 @@ static int gp10b_tegra_get_clocks(struct platform_device *pdev)
 
 		c = clk_get(dev, tegra_gp10b_clocks[i].name);
 		if (IS_ERR(c)) {
-			gk20a_err(&pdev->dev, "cannot get clock %s",
+			gk20a_err(dev, "cannot get clock %s",
 					tegra_gp10b_clocks[i].name);
 		} else {
 			clk_set_rate(c, rate);
@@ -91,9 +87,9 @@ static int gp10b_tegra_get_clocks(struct platform_device *pdev)
 	return 0;
 }
 
-static void gp10b_tegra_scale_init(struct platform_device *pdev)
+static void gp10b_tegra_scale_init(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct tegra_bwmgr_client *bwmgr_handle;
 
@@ -104,9 +100,9 @@ static void gp10b_tegra_scale_init(struct platform_device *pdev)
 	profile->private_data = (void *)bwmgr_handle;
 }
 
-static void gp10b_tegra_scale_exit(struct platform_device *pdev)
+static void gp10b_tegra_scale_exit(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 
 	if (profile)
@@ -114,30 +110,29 @@ static void gp10b_tegra_scale_exit(struct platform_device *pdev)
 			(struct tegra_bwmgr_client *)profile->private_data);
 }
 
-
-static int gp10b_tegra_probe(struct platform_device *pdev)
+static int gp10b_tegra_probe(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
-	struct device_node *np = pdev->dev.of_node;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct device_node *np = dev->of_node;
 	struct device_node *host1x_node;
 	struct platform_device *host1x_pdev;
 	const __be32 *host1x_ptr;
 
 	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
 	if (!host1x_ptr) {
-		gk20a_err(&pdev->dev, "host1x device not available");
+		gk20a_err(dev, "host1x device not available");
 		return -ENOSYS;
 	}
 
 	host1x_node = of_find_node_by_phandle(be32_to_cpup(host1x_ptr));
 	host1x_pdev = of_find_device_by_node(host1x_node);
 	if (!host1x_pdev) {
-		gk20a_err(&pdev->dev, "host1x device not available");
+		gk20a_err(dev, "host1x device not available");
 		return -ENOSYS;
 	}
 
 	platform->g->host1x_dev = host1x_pdev;
-	platform->bypass_smmu = !device_is_iommuable(&pdev->dev);
+	platform->bypass_smmu = !device_is_iommuable(dev);
 	platform->disable_bigpage = platform->bypass_smmu;
 
 	platform->g->gr.t18x.ctx_vars.dump_ctxsw_stats_on_channel_close
@@ -165,39 +160,39 @@ static int gp10b_tegra_probe(struct platform_device *pdev)
 			&platform->g->gr.t18x.
 				ctx_vars.dump_ctxsw_stats_on_channel_close);
 
-	gp10b_tegra_get_clocks(pdev);
+	gp10b_tegra_get_clocks(dev);
 
 	return 0;
 }
 
-static int gp10b_tegra_late_probe(struct platform_device *pdev)
+static int gp10b_tegra_late_probe(struct device *dev)
 {
 	/* Make gk20a power domain a subdomain of host1x */
-	nvhost_register_client_domain(dev_to_genpd(&pdev->dev));
+	nvhost_register_client_domain(dev_to_genpd(dev));
 	/*Create GP10B specific sysfs*/
-	gp10b_create_sysfs(pdev);
+	gp10b_create_sysfs(dev);
 
 	/* Initialise tegra specific scaling quirks */
-	gp10b_tegra_scale_init(pdev);
+	gp10b_tegra_scale_init(dev);
 	return 0;
 }
 
-static int gp10b_tegra_remove(struct platform_device *pdev)
+static int gp10b_tegra_remove(struct device *dev)
 {
 	/* remove gk20a power subdomain from host1x */
-	nvhost_unregister_client_domain(dev_to_genpd(&pdev->dev));
-	gr_gp10b_remove_sysfs(&pdev->dev);
+	nvhost_unregister_client_domain(dev_to_genpd(dev));
+	gr_gp10b_remove_sysfs(dev);
 	/*Remove GP10B specific sysfs*/
-	gp10b_remove_sysfs(&pdev->dev);
+	gp10b_remove_sysfs(dev);
 
 	/* deinitialise tegra specific scaling quirks */
-	gp10b_tegra_scale_exit(pdev);
+	gp10b_tegra_scale_exit(dev);
 
 	return 0;
 
 }
 
-static bool gp10b_tegra_is_railgated(struct platform_device *pdev)
+static bool gp10b_tegra_is_railgated(struct device *dev)
 {
 	bool ret = false;
 
@@ -207,9 +202,9 @@ static bool gp10b_tegra_is_railgated(struct platform_device *pdev)
 	return ret;
 }
 
-static int gp10b_tegra_railgate(struct platform_device *pdev)
+static int gp10b_tegra_railgate(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	if (tegra_bpmp_running() &&
 	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU)) {
@@ -223,10 +218,10 @@ static int gp10b_tegra_railgate(struct platform_device *pdev)
 	return 0;
 }
 
-static int gp10b_tegra_unrailgate(struct platform_device *pdev)
+static int gp10b_tegra_unrailgate(struct device *dev)
 {
 	int ret = 0;
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	if (tegra_bpmp_running()) {
 		int i;
@@ -244,7 +239,7 @@ static int gp10b_tegra_suspend(struct device *dev)
 	return 0;
 }
 
-static int gp10b_tegra_reset_assert(struct platform_device *dev)
+static int gp10b_tegra_reset_assert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int ret = 0;
@@ -257,7 +252,7 @@ static int gp10b_tegra_reset_assert(struct platform_device *dev)
 	return ret;
 }
 
-static int gp10b_tegra_reset_deassert(struct platform_device *dev)
+static int gp10b_tegra_reset_deassert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	int ret = 0;
@@ -270,9 +265,9 @@ static int gp10b_tegra_reset_deassert(struct platform_device *dev)
 	return ret;
 }
 
-static void gp10b_tegra_prescale(struct platform_device *pdev)
+static void gp10b_tegra_prescale(struct device *dev)
 {
-	struct gk20a *g = get_gk20a(pdev);
+	struct gk20a *g = get_gk20a(dev);
 	u32 avg = 0;
 
 	gk20a_dbg_fn("");
@@ -282,7 +277,7 @@ static void gp10b_tegra_prescale(struct platform_device *pdev)
 	gk20a_dbg_fn("done");
 }
 
-static void gp10b_tegra_postscale(struct platform_device *pdev,
+static void gp10b_tegra_postscale(struct device *pdev,
 					unsigned long freq)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(pdev);
@@ -304,7 +299,7 @@ static void gp10b_tegra_postscale(struct platform_device *pdev,
 	gk20a_dbg_fn("done");
 }
 
-static unsigned long gp10b_get_clk_rate(struct platform_device *dev)
+static unsigned long gp10b_get_clk_rate(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
@@ -312,25 +307,24 @@ static unsigned long gp10b_get_clk_rate(struct platform_device *dev)
 
 }
 
-static long gp10b_round_clk_rate(struct platform_device *dev,
-						unsigned long rate)
+static long gp10b_round_clk_rate(struct device *dev, unsigned long rate)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	return clk_round_rate(platform->clk[0], rate);
 }
 
-static int gp10b_set_clk_rate(struct platform_device *dev, unsigned long rate)
+static int gp10b_set_clk_rate(struct device *dev, unsigned long rate)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	return clk_set_rate(platform->clk[0], rate);
 }
 
-static int gp10b_clk_get_freqs(struct platform_device *pdev,
+static int gp10b_clk_get_freqs(struct device *dev,
 				unsigned long **freqs, int *num_freqs)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(pdev);
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	unsigned long min_rate, max_rate, freq_step, rate;
 	int i;
 
@@ -408,6 +402,8 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.reset_deassert = gp10b_tegra_reset_deassert,
 
 	.force_reset_in_do_idle = false,
+
+	.soc_name = "tegra18x",
 };
 
 
@@ -481,7 +477,7 @@ static ssize_t ecc_stat_show(struct device *dev,
 	return snprintf(buf, PAGE_SIZE, "Error: No ECC stat found!\n");
 }
 
-static int ecc_stat_create(struct platform_device *dev,
+static int ecc_stat_create(struct device *dev,
 				int is_l2,
 				char *ecc_stat_name,
 				struct ecc_stat *ecc_stat,
@@ -526,8 +522,7 @@ static int ecc_stat_create(struct platform_device *dev,
 		dev_attr_array[hw_unit].store = NULL;
 
 		/* Create sysfs file */
-		error |= device_create_file(&dev->dev,
-				&dev_attr_array[hw_unit]);
+		error |= device_create_file(dev, &dev_attr_array[hw_unit]);
 	}
 
 	/* Add hash table entry */
@@ -544,8 +539,7 @@ static void ecc_stat_remove(struct device *dev,
 				struct ecc_stat *ecc_stat,
 				struct device_attribute *dev_attr_array)
 {
-	struct platform_device *ndev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	int num_hw_units = 0;
 	int hw_unit = 0;
 
@@ -571,7 +565,7 @@ static void ecc_stat_remove(struct device *dev,
 	kfree(dev_attr_array);
 }
 
-void gr_gp10b_create_sysfs(struct platform_device *dev)
+void gr_gp10b_create_sysfs(struct device *dev)
 {
 	int error = 0;
 	struct gk20a *g = get_gk20a(dev);
@@ -663,13 +657,12 @@ void gr_gp10b_create_sysfs(struct platform_device *dev)
 				dev_attr_l2_ecc_ded_count_array);
 
 	if (error)
-		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");
+		dev_err(dev, "Failed to create sysfs attributes!\n");
 }
 
 static void gr_gp10b_remove_sysfs(struct device *dev)
 {
-	struct platform_device *ndev = to_platform_device(dev);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	ecc_stat_remove(dev,
 			0,

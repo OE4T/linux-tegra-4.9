@@ -1,7 +1,7 @@
 /*
  * GP10B CDE
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,7 +46,7 @@ static void gp10b_cde_get_program_numbers(struct gk20a *g,
 		}
 		if (g->mm.bypass_smmu) {
 			if (!g->mm.disable_bigpage) {
-				gk20a_warn(&g->dev->dev,
+				gk20a_warn(g->dev,
 					   "when bypass_smmu is 1, disable_bigpage must be 1 too");
 			}
 			hprog |= 1;

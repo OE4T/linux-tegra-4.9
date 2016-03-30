@@ -20,11 +20,10 @@
 
 #define ROOTRW (S_IRWXU|S_IRGRP|S_IROTH)
 
-static ssize_t ecc_enable_store(struct device *device,
+static ssize_t ecc_enable_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 	u32 ecc_mask;
 	u32 err = 0;
 
@@ -33,17 +32,16 @@ static ssize_t ecc_enable_store(struct device *device,
 		err = g->ops.pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd
 			(g, ecc_mask);
 		if (err)
-			dev_err(device, "ECC override did not happen\n");
+			dev_err(dev, "ECC override did not happen\n");
 	} else
 		return -EINVAL;
 	return count;
 }
 
-static ssize_t ecc_enable_read(struct device *device,
+static ssize_t ecc_enable_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
-	struct platform_device *ndev = to_platform_device(device);
-	struct gk20a *g = get_gk20a(ndev);
+	struct gk20a *g = get_gk20a(dev);
 
 	return sprintf(buf, "ecc override =0x%x\n",
 			g->ops.gr.get_lrf_tex_ltc_dram_override(g));
@@ -51,13 +49,13 @@ static ssize_t ecc_enable_read(struct device *device,
 
 static DEVICE_ATTR(ecc_enable, ROOTRW, ecc_enable_read, ecc_enable_store);
 
-void gp10b_create_sysfs(struct platform_device *dev)
+void gp10b_create_sysfs(struct device *dev)
 {
 	int error = 0;
 
-	error |= device_create_file(&dev->dev, &dev_attr_ecc_enable);
+	error |= device_create_file(dev, &dev_attr_ecc_enable);
 	if (error)
-		dev_err(&dev->dev, "Failed to create sysfs attributes!\n");
+		dev_err(dev, "Failed to create sysfs attributes!\n");
 }
 
 void gp10b_remove_sysfs(struct device *dev)

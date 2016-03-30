@@ -58,5 +58,8 @@
 		};
 	};
 
+	sdhci@3440000 { /* SDMMC_C  4-bit*/
+		status = "disabled";
+	};
 
 };

@@ -53,15 +53,11 @@
 					pins = "gpio2";
 					function = "fps-out";
 					maxim,fps-source = <FPS_SRC_1>;
-					maxim,fps-power-down-slot = <1>;
 				};
 
 				pin_gpio3 {
 					pins = "gpio3";
 					function = "fps-out";
-					maxim,fps-power-up-slot = <1>;
-					maxim,fps-power-down-slot = <6>;
-					maxim,suspend-fps-power-down-slot = <7>;
 				};
 			};
 
@@ -70,14 +66,12 @@
 				#size-cells = <0>;
 				fps@0 {
 					reg = <0>;
-					maxim,active-fps-time-period = <2560>;
-					maxim,suspend-fps-time-period = <640>;
+					maxim,active-fps-time-period = <640>;
 				};
 
 				fps@1 {
 					reg = <1>;
-					maxim,active-fps-time-period = <2560>;
-					maxim,suspend-fps-time-period = <640>;
+					maxim,active-fps-time-period = <640>;
 				};
 			};
 

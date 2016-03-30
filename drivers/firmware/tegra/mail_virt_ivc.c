@@ -15,6 +15,7 @@
 #include <linux/interrupt.h>
 #include <linux/slab.h>
 #include <linux/of_address.h>
+#include <linux/of_platform.h>
 #include <linux/tegra-ivc.h>
 #include "bpmp.h"
 #include "mail_t186.h"
@@ -37,6 +38,34 @@ static irqreturn_t hv_bpmp_irq_handler(int irq, void *dev_id)
 {
 	bpmp_handle_irq(BPMP_TO_CPU_CH);
 	return IRQ_HANDLED;
+}
+
+struct tegra_hv_ivm_cookie *virt_get_mempool(uint32_t *mempool)
+{
+	struct device_node *of_node;
+	struct tegra_hv_ivm_cookie *ivm;
+	int err;
+
+	of_node = of_find_compatible_node(NULL, NULL, VIRT_BPMP_COMPAT);
+	if (!of_node)
+		return ERR_PTR(-ENODEV);
+
+	if (!of_device_is_available(of_node)) {
+		of_node_put(of_node);
+		return ERR_PTR(-ENODEV);
+	}
+
+	err = of_property_read_u32_index(of_node, "mempool", 0, mempool);
+	if (err != 0) {
+		pr_err("%s: Failed to read mempool id\n", __func__);
+		of_node_put(of_node);
+		return NULL;
+	}
+
+	ivm = tegra_hv_mempool_reserve(of_node, *mempool);
+	of_node_put(of_node);
+
+	return ivm;
 }
 
 static int virt_init_io(void)

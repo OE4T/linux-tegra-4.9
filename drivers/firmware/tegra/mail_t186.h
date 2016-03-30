@@ -48,6 +48,7 @@ struct mail_ops *native_mail_ops(void);
 
 #ifdef CONFIG_TEGRA_HV_MANAGER
 struct mail_ops *virt_mail_ops(void);
+struct tegra_hv_ivm_cookie *virt_get_mempool(uint32_t *mempool);
 #else
 static inline struct mail_ops *virt_mail_ops(void) { return NULL; }
 #endif

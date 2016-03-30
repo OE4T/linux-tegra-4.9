@@ -18,4 +18,5 @@ subdir-ccflags-y		+= -Werror
 
 obj-y				+= mail_t186.o
 obj-y				+= mail_native_ivc.o
+obj-$(CONFIG_TEGRA_HV_MANAGER)	+= bpmp_virt.o
 obj-$(CONFIG_TEGRA_HV_MANAGER)	+= mail_virt_ivc.o

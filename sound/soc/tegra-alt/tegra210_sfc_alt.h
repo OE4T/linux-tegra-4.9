@@ -1,7 +1,7 @@
 /*
  * tegra210_sfc_alt.h - Definitions for Tegra210 SFC driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -121,6 +121,18 @@ static u32 coef_8to16[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00000002 /* output gain */
 };
 
+static u32 coef_8to24[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x0000a105, /* header */
+	0x000005e1, /* input gain */
+	0x00dca92f, 0xff45647a, 0x0046b59c,
+	0x00429d1e, 0xff4fec62, 0x00516d30,
+	0xffdea779, 0xff5e08ba, 0x0060185e,
+	0xffafbab2, 0xff698d5a, 0x006ce3ae,
+	0xff9a82d2, 0xff704674, 0x007633c5,
+	0xff923433, 0xff721128, 0x007cff42,
+	0x00000003 /* output gain */
+};
+
 static u32 coef_8to44[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x0156105, /* interpolation + IIR filter */
 	0x0000d649, /* input gain */
@@ -221,6 +233,27 @@ static u32 coef_16to8[TEGRA210_SFC_COEF_RAM_DEPTH] = {
 	0x00fc2fc7, 0xff9bb27b, 0x001c564c,
 	0x00e55557, 0xffcadd5b, 0x003d80ba,
 	0x00d13397, 0xfff232f8, 0x00683337,
+	0x00000001 /* output gain */
+};
+
+static u32 coef_16to24[TEGRA210_SFC_COEF_RAM_DEPTH] = {
+	0x0015a105, /* header */
+	0x00000292, /* input gain */
+	0x00e4320a, 0xff41d2d9, 0x004911ac,
+	0x005dd9e3, 0xff4c7d80, 0x0052103e,
+	0xfff8ebef, 0xff5b6fab, 0x005f0a0d,
+	0xffc4b414, 0xff68582c, 0x006b38e5,
+	0xffabb861, 0xff704bec, 0x0074de52,
+	0xffa19f4c, 0xff729059, 0x007c7e90,
+	0x00000003, /* output gain */
+	0x00005105, /* header */
+	0x00000292, /* input gain */
+	0x00e4320a, 0xff41d2d9, 0x004911ac,
+	0x005dd9e3, 0xff4c7d80, 0x0052103e,
+	0xfff8ebef, 0xff5b6fab, 0x005f0a0d,
+	0xffc4b414, 0xff68582c, 0x006b38e5,
+	0xffabb861, 0xff704bec, 0x0074de52,
+	0xffa19f4c, 0xff729059, 0x007c7e90,
 	0x00000001 /* output gain */
 };
 

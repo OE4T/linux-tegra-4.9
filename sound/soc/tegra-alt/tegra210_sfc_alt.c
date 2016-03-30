@@ -167,6 +167,8 @@ static int tegra210_sfc_write_coeff_ram(struct tegra210_sfc *sfc)
 			coeff_ram = coef_8to48;
 		else if (sfc->srate_out == TEGRA210_SFC_FS44_1)
 			coeff_ram = coef_8to44;
+		else if (sfc->srate_out == TEGRA210_SFC_FS24)
+			coeff_ram = coef_8to24;
 		else if (sfc->srate_out == TEGRA210_SFC_FS16)
 			coeff_ram = coef_8to16;
 		break;
@@ -176,6 +178,8 @@ static int tegra210_sfc_write_coeff_ram(struct tegra210_sfc *sfc)
 			coeff_ram = coef_16to48;
 		else if (sfc->srate_out == TEGRA210_SFC_FS44_1)
 			coeff_ram = coef_16to44;
+		else if (sfc->srate_out == TEGRA210_SFC_FS24)
+			coeff_ram = coef_16to24;
 		else if (sfc->srate_out == TEGRA210_SFC_FS8)
 			coeff_ram = coef_16to8;
 		break;

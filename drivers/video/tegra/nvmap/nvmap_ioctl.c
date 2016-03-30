@@ -62,13 +62,6 @@ struct nvmap_handle *nvmap_handle_get_from_fd(int fd)
 	return NULL;
 }
 
-struct nvmap_handle *__nvmap_ref_to_handle(struct nvmap_handle_ref *ref)
-{
-	if (!virt_addr_valid(ref))
-		return NULL;
-	return ref->handle;
-}
-
 int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 {
 	struct nvmap_handle *handle;
@@ -201,8 +194,8 @@ static int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
 
 	fd = __nvmap_dmabuf_fd(client, h->dmabuf, O_CLOEXEC);
 	BUG_ON(fd == 0);
-	if (fd < 0) {
-		pr_err("Out of file descriptors");
+	if (IS_ERR_VALUE(fd)) {
+		pr_err("fd creation error %d\n", fd);
 		return fd;
 	}
 	/* __nvmap_dmabuf_fd() associates fd with dma_buf->file *.
@@ -219,7 +212,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	struct nvmap_handle_ref *ref = NULL;
 	struct nvmap_client *client = filp->private_data;
 	int err = 0;
-	int fd = 0;
+	int fd;
 
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
@@ -241,14 +234,14 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 		return PTR_ERR(ref);
 
 	fd = nvmap_create_fd(client, ref->handle);
-	if (fd < 0)
+	if (IS_ERR_VALUE(fd))
 		err = fd;
 
 	op.handle = fd;
 
 	if (copy_to_user(arg, &op, sizeof(op))) {
 		err = -EFAULT;
-		nvmap_free_handle(client, __nvmap_ref_to_handle(ref));
+		nvmap_free_handle(client, ref->handle);
 	}
 
 	if (err && fd > 0)
@@ -484,7 +477,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	struct nvmap_handle_ref *ref = NULL;
 	struct nvmap_client *client = filp->private_data;
 	int err = 0;
-	int fd = 0;
+	int fd;
 	phys_addr_t offs;
 	size_t size = 0;
 	int peer;
@@ -523,7 +516,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		block = nvmap_carveout_alloc(client, ref->handle,
 				NVMAP_HEAP_CARVEOUT_IVM, &offs);
 		if (!block) {
-			nvmap_free_handle(client, __nvmap_ref_to_handle(ref));
+			nvmap_free_handle(client, ref->handle);
 			return -ENOMEM;
 		}
 
@@ -551,15 +544,18 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	}
 
 	fd = nvmap_create_fd(client, ref->handle);
-	if (fd < 0)
+	if (IS_ERR_VALUE(fd))
 		err = fd;
 
 	op.handle = fd;
 
 	if (copy_to_user(arg, &op, sizeof(op))) {
-		nvmap_free_handle_fd(client, fd);
-		return -EFAULT;
+		err = -EFAULT;
+		nvmap_free_handle(client, ref->handle);
 	}
+
+	if (err && fd > 0)
+		sys_close(fd);
 
 	return err;
 }

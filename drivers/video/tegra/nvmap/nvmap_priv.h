@@ -418,7 +418,6 @@ int __nvmap_do_cache_maint(struct nvmap_client *client, struct nvmap_handle *h,
 			   unsigned int op, bool clean_only_dirty);
 struct nvmap_client *__nvmap_create_client(struct nvmap_device *dev,
 					   const char *name);
-struct nvmap_handle *__nvmap_ref_to_handle(struct nvmap_handle_ref *ref);
 int __nvmap_dmabuf_fd(struct nvmap_client *client,
 		      struct dma_buf *dmabuf, int flags);
 

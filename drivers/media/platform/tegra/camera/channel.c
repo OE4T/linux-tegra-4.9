@@ -417,11 +417,11 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0;
 
-	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
-	if (ret < 0)
-		goto error_pipeline_start;
-
 	if (!chan->vi->pg_mode) {
+		ret = media_entity_pipeline_start(&chan->video.entity, pipe);
+		if (ret < 0)
+			goto error_pipeline_start;
+
 		/* Start the pipeline. */
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
@@ -462,9 +462,11 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	return 0;
 
 error_capture_setup:
-	tegra_channel_set_stream(chan, false);
+	if (!chan->vi->pg_mode)
+		tegra_channel_set_stream(chan, false);
 error_set_stream:
-	media_entity_pipeline_stop(&chan->video.entity);
+	if (!chan->vi->pg_mode)
+		media_entity_pipeline_stop(&chan->video.entity);
 error_pipeline_start:
 	vq->start_streaming_called = 0;
 	tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_QUEUED);
@@ -482,17 +484,16 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 		chan->kthread_capture_start = NULL;
 		kthread_stop(chan->kthread_capture_done);
 		chan->kthread_capture_done = NULL;
-	}
-
-	if (!chan->vi->pg_mode)
-		tegra_channel_set_stream(chan, false);
-
-	if (!chan->bypass) {
 		tegra_csi_stop_streaming(chan->vi->csi, chan->port);
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
 	}
 
-	media_entity_pipeline_stop(&chan->video.entity);
+	if (!chan->vi->pg_mode) {
+		tegra_channel_set_stream(chan, false);
+		media_entity_pipeline_stop(&chan->video.entity);
+	}
+
+	return 0;
 }
 
 static const struct vb2_ops tegra_channel_queue_qops = {

@@ -135,6 +135,7 @@ static struct tegra_dc_mode override_disp_mode[TEGRA_DC_OUT_NULL + 1];
 static void _tegra_dc_controller_disable(struct tegra_dc *dc);
 static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq);
 static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type);
+static int _tegra_dc_config_frame_end_intr(struct tegra_dc *dc, bool enable);
 
 static int tegra_dc_set_out(struct tegra_dc *dc, struct tegra_dc_out *out);
 #ifdef PM
@@ -2064,6 +2065,80 @@ static const struct file_operations cmu_lut2_fops = {
 	.release	= single_release,
 };
 
+static int dbg_measure_refresh_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc *dc = m->private;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	seq_puts(m, "Write capture time in seconds to this node.\n");
+	seq_puts(m, "Results will show up in dmesg.\n");
+
+	return 0;
+}
+
+static ssize_t dbg_measure_refresh_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_dc *dc = m->private;
+	s32 seconds;
+	u32 fe_count;
+	int ret;
+	fixed20_12 refresh_rate;
+	fixed20_12 seconds_fixed;
+
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	ret = kstrtoint_from_user(addr, len, 10, &seconds);
+	if (ret < 0 || seconds < 1) {
+		dev_info(&dc->ndev->dev,
+				"specify integer number of seconds greater than 0\n");
+		return -EINVAL;
+	}
+
+	dev_info(&dc->ndev->dev, "measuring for %d seconds\n", seconds);
+
+	mutex_lock(&dc->lock);
+	_tegra_dc_config_frame_end_intr(dc, true);
+	dc->dbg_fe_count = 0;
+	mutex_unlock(&dc->lock);
+
+	msleep(1000 * seconds);
+
+	mutex_lock(&dc->lock);
+	_tegra_dc_config_frame_end_intr(dc, false);
+	fe_count = dc->dbg_fe_count;
+	mutex_unlock(&dc->lock);
+
+	refresh_rate.full = dfixed_const(fe_count);
+	seconds_fixed.full = dfixed_const(seconds);
+	refresh_rate.full = dfixed_div(refresh_rate, seconds_fixed);
+
+	/* Print fixed point 20.12 in decimal, truncating the 12-bit fractional
+	   part to 2 decimal points */
+	dev_info(&dc->ndev->dev, "refresh rate: %d.%dHz\n",
+		dfixed_trunc(refresh_rate),
+		dfixed_frac(refresh_rate) * 100 / 4096);
+
+	return len;
+}
+
+static int dbg_measure_refresh_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_measure_refresh_show, inode->i_private);
+}
+
+static const struct file_operations dbg_measure_refresh_ops = {
+	.open = dbg_measure_refresh_open,
+	.read = seq_read,
+	.write = dbg_measure_refresh_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -2271,6 +2346,11 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 
 	retval = debugfs_create_file("cmu_lut2", S_IRUGO, dc->debugdir, dc,
 		&cmu_lut2_fops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("measure_refresh", S_IRUGO, dc->debugdir,
+				dc, &dbg_measure_refresh_ops);
 	if (!retval)
 		goto remove_out;
 
@@ -4097,6 +4177,7 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 			need_disable = 1; /* force display off on error */
 
 	if (status & FRAME_END_INT)
+		dc->dbg_fe_count++;
 		if (dc->disp_active_dirty) {
 			tegra_dc_writel(dc, dc->mode.h_active |
 				(dc->mode.v_active << 16), DC_DISP_DISP_ACTIVE);

@@ -372,5 +372,7 @@ struct tegra_dc {
 	/* user call-back for shared ISR */
 	int  (*isr_usr_cb)(int dcid, unsigned long irq_sts, void *usr_pdt);
 	void  *isr_usr_pdt;
+
+	u32 dbg_fe_count;
 };
 #endif

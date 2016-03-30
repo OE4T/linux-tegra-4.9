@@ -1986,9 +1986,7 @@ static struct v4l2_subdev_video_ops tc358840_subdev_video_ops = {
 	.g_input_status = tc358840_g_input_status,
 	.s_dv_timings = tc358840_s_dv_timings,
 	.g_dv_timings = tc358840_g_dv_timings,
-	.enum_dv_timings = tc358840_enum_dv_timings,
 	.query_dv_timings = tc358840_query_dv_timings,
-	.dv_timings_cap = tc358840_dv_timings_cap,
 	.g_mbus_config = tc358840_g_mbus_config,
 	.s_stream = tc358840_s_stream,
 
@@ -2015,6 +2013,8 @@ static const struct v4l2_subdev_pad_ops tc358840_pad_ops = {
 	.enum_mbus_code = tc358840_enum_mbus_code,
 	.get_edid = tc358840_g_edid,
 	.set_edid = tc358840_s_edid,
+	.dv_timings_cap = tc358840_dv_timings_cap,
+	.enum_dv_timings = tc358840_enum_dv_timings,
 };
 
 static struct v4l2_subdev_ops tc358840_ops = {

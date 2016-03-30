@@ -760,6 +760,44 @@ tegra_channel_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
 }
 
 static int
+tegra_channel_enum_framesizes(struct file *file, void *fh,
+			      struct v4l2_frmsizeenum *sizes)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	int num_sd;
+
+	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+		struct v4l2_subdev *sd = chan->subdev[num_sd];
+		int ret = v4l2_subdev_call(sd, video, enum_framesizes, sizes);
+
+		if (sd && (ret == 0 || ret != -ENOIOCTLCMD))
+			return ret;
+	}
+	return -ENOIOCTLCMD;
+}
+
+static int
+tegra_channel_enum_frameintervals(struct file *file, void *fh,
+			      struct v4l2_frmivalenum *intervals)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	int num_sd;
+
+	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+		struct v4l2_subdev *sd = chan->subdev[num_sd];
+		int ret = v4l2_subdev_call(sd, video, enum_frameintervals,
+					   intervals);
+
+		if (sd && (ret == 0 || ret != -ENOIOCTLCMD))
+			return ret;
+	}
+	return -ENOIOCTLCMD;
+}
+
+
+static int
 tegra_channel_enum_format(struct file *file, void *fh, struct v4l2_fmtdesc *f)
 {
 	struct v4l2_fh *vfh = file->private_data;
@@ -1332,6 +1370,8 @@ static int tegra_channel_s_input(struct file *file, void *priv, unsigned int i)
 
 static const struct v4l2_ioctl_ops tegra_channel_ioctl_ops = {
 	.vidioc_querycap		= tegra_channel_querycap,
+	.vidioc_enum_framesizes		= tegra_channel_enum_framesizes,
+	.vidioc_enum_frameintervals	= tegra_channel_enum_frameintervals,
 	.vidioc_enum_fmt_vid_cap	= tegra_channel_enum_format,
 	.vidioc_g_fmt_vid_cap		= tegra_channel_get_format,
 	.vidioc_s_fmt_vid_cap		= tegra_channel_set_format,

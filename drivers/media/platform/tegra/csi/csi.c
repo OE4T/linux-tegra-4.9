@@ -471,21 +471,104 @@ static struct v4l2_mbus_framefmt tegra_csi_tpg_fmts[] = {
 
 };
 
+static struct v4l2_frmsize_discrete tegra_csi_tpg_sizes[] = {
+	{1280, 720},
+	{1920, 1080},
+	{3840, 2160}
+};
+
+static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
+				     struct v4l2_frmsizeenum *sizes)
+{
+	int i;
+	struct tegra_csi_device *csi = to_csi(sd);
+
+	if (!csi->pg_mode) {
+		dev_err(csi->dev, "CSI is not in TPG mode\n");
+		return -EINVAL;
+	}
+
+	if (sizes->index >= ARRAY_SIZE(tegra_csi_tpg_sizes))
+		return -EINVAL;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
+		const struct tegra_video_format *format =
+		      tegra_core_get_format_by_code(tegra_csi_tpg_fmts[i].code);
+		if (format && format->fourcc == sizes->pixel_format)
+			break;
+	}
+	if (i == ARRAY_SIZE(tegra_csi_tpg_fmts))
+		return -EINVAL;
+
+	sizes->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	sizes->discrete = tegra_csi_tpg_sizes[sizes->index];
+	return 0;
+}
+
+#define TPG_PIXEL_OUTPUT_RATE 182476800
+
+static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
+				     struct v4l2_frmivalenum *intervals)
+{
+	int i;
+	struct tegra_csi_device *csi = to_csi(sd);
+
+	if (!csi->pg_mode) {
+		dev_err(csi->dev, "CSI is not in TPG mode\n");
+		return -EINVAL;
+	}
+
+	/* One resolution just one framerate */
+	if (intervals->index > 0)
+		return -EINVAL;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
+		const struct tegra_video_format *format =
+		      tegra_core_get_format_by_code(tegra_csi_tpg_fmts[i].code);
+		if (format && format->fourcc == intervals->pixel_format)
+			break;
+	}
+	if (i == ARRAY_SIZE(tegra_csi_tpg_fmts))
+		return -EINVAL;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_sizes); i++) {
+		if (tegra_csi_tpg_sizes[i].width == intervals->width &&
+		    tegra_csi_tpg_sizes[i].height == intervals->height)
+			break;
+	}
+	if (i == ARRAY_SIZE(tegra_csi_tpg_sizes))
+		return -EINVAL;
+
+	intervals->type = V4L2_FRMIVAL_TYPE_DISCRETE;
+	intervals->discrete.numerator = 1;
+	intervals->discrete.denominator = TPG_PIXEL_OUTPUT_RATE /
+		   (intervals->width * intervals->height);
+	return 0;
+}
+
 static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
 				  struct v4l2_mbus_framefmt *mf)
 {
-	int i;
+	int i, j;
+	struct tegra_csi_device *csi = to_csi(sd);
+	static struct v4l2_frmsize_discrete *sizes;
+
+	if (!csi->pg_mode) {
+		dev_err(csi->dev, "CSI is not in TPG mode\n");
+		return -EINVAL;
+	}
 
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
 		struct v4l2_mbus_framefmt *fmt = &tegra_csi_tpg_fmts[i];
-
 		if (mf->code == fmt->code && mf->field == fmt->field &&
-		    mf->colorspace == fmt->colorspace &&
-		    mf->width >= TEGRA_MIN_WIDTH &&
-		    mf->width <= TEGRA_MAX_WIDTH &&
-		    mf->height >= TEGRA_MIN_HEIGHT &&
-		    mf->height <= TEGRA_MAX_HEIGHT)
-			return 0;
+		    mf->colorspace == fmt->colorspace) {
+			for (j = 0; j < ARRAY_SIZE(tegra_csi_tpg_sizes); j++) {
+				sizes = &tegra_csi_tpg_sizes[j];
+				if (mf->width == sizes->width &&
+				    mf->height == sizes->height)
+					return 0;
+			}
+		}
 	}
 
 	memcpy(mf, tegra_csi_tpg_fmts, sizeof(struct v4l2_mbus_framefmt));
@@ -498,6 +581,11 @@ static int tegra_csi_s_mbus_fmt(struct v4l2_subdev *sd,
 {
 	int i;
 	struct tegra_csi_device *csi = to_csi(sd);
+
+	if (!csi->pg_mode) {
+		dev_err(csi->dev, "CSI is not in TPG mode\n");
+		return -EINVAL;
+	}
 
 	tegra_csi_try_mbus_fmt(sd, fmt);
 
@@ -572,6 +660,8 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 	.s_stream	= tegra_csi_s_stream,
 	.g_input_status = tegra_csi_g_input_status,
+	.enum_framesizes = tegra_csi_enum_framesizes,
+	.enum_frameintervals = tegra_csi_enum_frameintervals,
 };
 
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {

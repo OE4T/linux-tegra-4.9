@@ -234,7 +234,7 @@ static DEVICE_ATTR(ptimer_scale_factor,
 			ptimer_scale_factor_show,
 			NULL);
 
-#if defined(CONFIG_PM_RUNTIME) && defined(CONFIG_PM_GENERIC_DOMAINS)
+#if defined(CONFIG_PM) && defined(CONFIG_PM_GENERIC_DOMAINS)
 static ssize_t railgate_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -651,7 +651,7 @@ static ssize_t fmax_at_vmin_safe_read(struct device *device,
 
 static DEVICE_ATTR(fmax_at_vmin_safe, S_IRUGO, fmax_at_vmin_safe_read, NULL);
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 static ssize_t force_idle_store(struct device *device,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
@@ -775,7 +775,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_railgate_delay);
 	device_remove_file(dev, &dev_attr_is_railgated);
 	device_remove_file(dev, &dev_attr_clockgate_delay);
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	device_remove_file(dev, &dev_attr_force_idle);
 #if defined(CONFIG_PM_GENERIC_DOMAINS)
 	device_remove_file(dev, &dev_attr_railgate_enable);
@@ -815,7 +815,7 @@ void gk20a_create_sysfs(struct platform_device *dev)
 	error |= device_create_file(&dev->dev, &dev_attr_railgate_delay);
 	error |= device_create_file(&dev->dev, &dev_attr_is_railgated);
 	error |= device_create_file(&dev->dev, &dev_attr_clockgate_delay);
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	error |= device_create_file(&dev->dev, &dev_attr_force_idle);
 #if defined(CONFIG_PM_GENERIC_DOMAINS)
 	error |= device_create_file(&dev->dev, &dev_attr_railgate_enable);

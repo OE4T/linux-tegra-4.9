@@ -2646,6 +2646,7 @@ static struct nvhost_device_data nvhost_se1_info = {
 	.private_data = &tegra18_se_chipdata,
 	.serialize = 1,
 	.push_work_done = 1,
+	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 };
 
 static struct nvhost_device_data nvhost_se2_info = {
@@ -2660,6 +2661,7 @@ static struct nvhost_device_data nvhost_se2_info = {
 	.private_data = &tegra18_se_chipdata,
 	.serialize = 1,
 	.push_work_done = 1,
+	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 };
 
 static struct nvhost_device_data nvhost_se3_info = {
@@ -2674,6 +2676,7 @@ static struct nvhost_device_data nvhost_se3_info = {
 	.private_data = &tegra18_se_chipdata,
 	.serialize = 1,
 	.push_work_done = 1,
+	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 };
 
 static struct nvhost_device_data nvhost_se4_info = {
@@ -2688,6 +2691,7 @@ static struct nvhost_device_data nvhost_se4_info = {
 	.private_data = &tegra18_se_chipdata,
 	.serialize = 1,
 	.push_work_done = 1,
+	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 };
 
 static struct of_device_id tegra_se_of_match[] = {

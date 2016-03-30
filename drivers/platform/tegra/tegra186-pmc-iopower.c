@@ -218,16 +218,26 @@ static int tegra186_pmc_iopower_probe(struct platform_device *pdev)
 	int i, ret;
 	bool rails_found = true;
 	bool enable_pad_volt_config = false;
+	bool allow_partial_supply;
 	unsigned long io_power_status;
+	char supply_name[32];
 
 	if (!pdev->dev.of_node)
 		return -ENODEV;
 
 	enable_pad_volt_config = of_property_read_bool(dev->of_node,
 					"nvidia,auto-pad-voltage-config");
+	allow_partial_supply = of_property_read_bool(dev->of_node,
+					"nvidia,allow-partial-supply");
 
 	for (i = 0; i < ARRAY_SIZE(tegra186_io_power_cells); i++) {
 		cell = &tegra186_io_power_cells[i];
+
+		if (allow_partial_supply) {
+			snprintf(supply_name, 32, "%s-supply", cell->reg_id);
+			if (!of_property_read_bool(dev->of_node, supply_name))
+				continue;
+		}
 
 		ret = tegra186_io_power_cell_init_one(dev, cell,
 				&pwrio_disabled_mask, enable_pad_volt_config);

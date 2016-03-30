@@ -255,7 +255,8 @@ int tegra_csi_power(struct tegra_csi_device *csi, int enable)
 			dev_err(csi->dev, "csi clk enable error\n");
 
 		if (csi->pg_mode) {
-			err = clock_start(csi, csi->tpg_clk, 927000000);
+			err = clock_start(csi, csi->tpg_clk,
+						TEGRA_CLOCK_TPG_MAX);
 			if (err)
 				dev_err(csi->dev, "tpg clk start error\n");
 			else {

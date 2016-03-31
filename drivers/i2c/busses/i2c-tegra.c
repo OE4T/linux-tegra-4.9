@@ -889,6 +889,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct clk *div_clk;
 	struct clk *fast_clk;
+	struct clk *parent_clk;
 	void __iomem *base;
 	int irq;
 	int ret = 0;
@@ -910,6 +911,17 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	if (IS_ERR(div_clk)) {
 		dev_err(&pdev->dev, "missing controller clock\n");
 		return PTR_ERR(div_clk);
+	}
+
+	parent_clk = devm_clk_get(&pdev->dev, "parent");
+	if (IS_ERR(parent_clk)) {
+		dev_err(&pdev->dev, "Unable to get parent_clk err:%ld\n",
+				PTR_ERR(parent_clk));
+	} else {
+		ret = clk_set_parent(div_clk, parent_clk);
+		if (ret < 0)
+			dev_warn(&pdev->dev, "Couldn't set parent clock : %d\n",
+				ret);
 	}
 
 	i2c_dev = devm_kzalloc(&pdev->dev, sizeof(*i2c_dev), GFP_KERNEL);

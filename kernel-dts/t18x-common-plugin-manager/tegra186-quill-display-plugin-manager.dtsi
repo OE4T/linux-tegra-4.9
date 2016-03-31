@@ -30,6 +30,7 @@
 				};
 			};
 		};
+
 		fragment-e3320-a01@1 {
 			ids = "3320-1000-100";
 			overrides@0 {
@@ -51,6 +52,38 @@
 				target = <&en_vdd_disp_1v8>;
 				_overlay_ {
 					gpio = <&gpio_i2c_0_21 0 0>;
+				};
+			};
+		};
+
+		fragment-e1639-sharp-25x16@2 {
+			ids = "1639-1000-001";
+			overrides@0 {
+				target = <&{/i2c@c240000/lp8556-backlight-s-wqxga-10-1@2c}>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			overrides@1 {
+				target = <&vdd_bl_en>;
+				_overlay_ {
+					gpio = <&tegra_gpio TEGRA_GPIO(U, 3) 1>;
+					enable-active-high;
+					regulator-boot-on;
+					regulator-always-on;
+				};
+			};
+			overrides@2 {
+				target = <&{/host1x/dsi/panel-s-wuxga-8-0}>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+
+			overrides@3 {
+				target = <&{/host1x/dsi/panel-s-wqxga-10-1}>;
+				_overlay_ {
+					status = "okay";
 				};
 			};
 		};

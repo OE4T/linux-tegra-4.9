@@ -1991,17 +1991,24 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 		val = PIN_OUTPUT_LSPI_OUTPUT_DIS;
 		tegra_dc_writel(dc, val, DC_COM_PIN_OUTPUT_ENABLE3);
 
-		/* enable MSF & set MSF polarity */
-		val = MSF_ENABLE | MSF_LSPI;
-		if (!dsi->info.te_polarity_low)
-			val |= MSF_POLARITY_HIGH;
-		else
-			val |= MSF_POLARITY_LOW;
-		tegra_dc_writel(dc, val, DC_CMD_DISPLAY_COMMAND_OPTION0);
+
+		if (dsi->info.te_gpio) {
+			/* enable MSF & set MSF polarity */
+			val = MSF_ENABLE | MSF_LSPI;
+			if (!dsi->info.te_polarity_low)
+				val |= MSF_POLARITY_HIGH;
+			else
+				val |= MSF_POLARITY_LOW;
+			tegra_dc_writel(dc, val, DC_CMD_DISPLAY_COMMAND_OPTION0);
+		}
 
 		/* set non-continuous mode */
 		tegra_dc_writel(dc, DISP_CTRL_MODE_NC_DISPLAY,
 						DC_CMD_DISPLAY_COMMAND);
+
+		val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
+		val |= NC_HOST_TRIG;
+		tegra_dc_writel(dc, val, DC_CMD_STATE_CONTROL);
 
 		tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
 

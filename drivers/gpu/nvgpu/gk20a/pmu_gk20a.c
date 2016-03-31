@@ -1107,6 +1107,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 		g->ops.pmu_ver.get_pmu_seq_out_a_ptr =
 			get_pmu_sequence_out_alloc_ptr_v1;
 		break;
+	case APP_VERSION_GM20B_5:
 	case APP_VERSION_GM20B_4:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =
 				pg_cmd_eng_buf_load_size_v0;

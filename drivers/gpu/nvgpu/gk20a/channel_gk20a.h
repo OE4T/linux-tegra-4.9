@@ -74,10 +74,16 @@ struct channel_gk20a_timeout {
 	struct channel_gk20a_job *job;
 };
 
-struct channel_gk20a_poll_events {
+struct gk20a_event_id_data {
+	struct gk20a *g;
+
+	int id; /* ch or tsg */
+	bool is_tsg;
+	u32 event_id;
+
+	wait_queue_head_t event_id_wq;
 	struct mutex lock;
-	bool events_enabled;
-	int num_pending_events;
+	struct list_head event_id_node;
 };
 
 struct channel_gk20a_clean_up {
@@ -163,6 +169,9 @@ struct channel_gk20a {
 	struct mutex dbg_s_lock;
 	struct list_head dbg_s_list;
 
+	struct list_head event_id_list;
+	struct mutex event_id_list_lock;
+
 	bool has_timedout;
 	u32 timeout_ms_max;
 	bool timeout_debug_dump;
@@ -177,9 +186,6 @@ struct channel_gk20a {
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	u64 virt_ctx;
 #endif
-
-	/* event support */
-	struct channel_gk20a_poll_events poll_events;
 
 	/* signal channel owner via a callback, if set, in gk20a_channel_update
 	 * via schedule_work */
@@ -227,9 +233,6 @@ long gk20a_channel_ioctl(struct file *filp,
 int gk20a_channel_release(struct inode *inode, struct file *filp);
 struct channel_gk20a *gk20a_get_channel_from_file(int fd);
 void gk20a_channel_update(struct channel_gk20a *c, int nr_completed);
-unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait);
-void gk20a_channel_event(struct channel_gk20a *ch);
-void gk20a_channel_post_event(struct channel_gk20a *ch);
 
 void gk20a_init_channel(struct gpu_ops *gops);
 

@@ -825,17 +825,6 @@ struct nvgpu_notification {
 #define	NVGPU_CHANNEL_SUBMIT_TIMEOUT		1
 };
 
-/* Enable/disable/clear event notifications */
-struct nvgpu_channel_events_ctrl_args {
-	__u32 cmd; /* in */
-	__u32 _pad0[1];
-};
-
-/* valid event ctrl values */
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_DISABLE 0
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_ENABLE  1
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_CLEAR   2
-
 /* cycle stats snapshot buffer support for mode E */
 struct nvgpu_cycle_stats_snapshot_args {
 	__u32 cmd;		/* in: command to handle     */
@@ -886,6 +875,20 @@ struct nvgpu_timeslice_args {
 	__u32 reserved;
 };
 
+struct nvgpu_event_id_ctrl_args {
+	__u32 cmd; /* in */
+	__u32 event_id; /* in */
+	__s32 event_fd; /* out */
+	__u32 padding;
+};
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT		0
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE		1
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC	2
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX		5
+
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_CMD_ENABLE		1
+
+
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMEOUT	\
@@ -922,8 +925,8 @@ struct nvgpu_timeslice_args {
 	_IO(NVGPU_IOCTL_MAGIC,  115)
 #define NVGPU_IOCTL_CHANNEL_FORCE_RESET	\
 	_IO(NVGPU_IOCTL_MAGIC,  116)
-#define NVGPU_IOCTL_CHANNEL_EVENTS_CTRL	\
-	_IOW(NVGPU_IOCTL_MAGIC,  117, struct nvgpu_channel_events_ctrl_args)
+#define NVGPU_IOCTL_CHANNEL_EVENT_ID_CTRL \
+	_IOWR(NVGPU_IOCTL_MAGIC, 117, struct nvgpu_event_id_ctrl_args)
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT	\
 	_IOWR(NVGPU_IOCTL_MAGIC, 118, struct nvgpu_cycle_stats_snapshot_args)
 #define NVGPU_IOCTL_CHANNEL_WDT \

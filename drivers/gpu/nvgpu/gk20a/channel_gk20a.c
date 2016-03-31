@@ -1167,10 +1167,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	init_waitqueue_head(&ch->semaphore_wq);
 	init_waitqueue_head(&ch->submit_wq);
 
-	mutex_init(&ch->poll_events.lock);
-	ch->poll_events.events_enabled = false;
-	ch->poll_events.num_pending_events = 0;
-
 	ch->update_fn = NULL;
 	ch->update_fn_data = NULL;
 	spin_lock_init(&ch->update_fn_lock);
@@ -2322,6 +2318,8 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	mutex_init(&c->cs_client_mutex);
 #endif
 	INIT_LIST_HEAD(&c->dbg_s_list);
+	INIT_LIST_HEAD(&c->event_id_list);
+	mutex_init(&c->event_id_list_lock);
 	mutex_init(&c->dbg_s_lock);
 	list_add(&c->free_chs, &g->fifo.free_chs);
 
@@ -2495,123 +2493,176 @@ notif_clean_up:
 	return ret;
 }
 
-/* poll events for semaphores */
-
-static void gk20a_channel_events_enable(struct channel_gk20a_poll_events *ev)
+unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 {
-	gk20a_dbg_fn("");
+	unsigned int mask = 0;
+	struct gk20a_event_id_data *event_id_data = filep->private_data;
+	struct gk20a *g = event_id_data->g;
+	u32 event_id = event_id_data->event_id;
 
-	mutex_lock(&ev->lock);
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info, "");
 
-	ev->events_enabled = true;
-	ev->num_pending_events = 0;
+	poll_wait(filep, &event_id_data->event_id_wq, wait);
 
-	mutex_unlock(&ev->lock);
+	mutex_lock(&event_id_data->lock);
+
+	if (!event_id_data->is_tsg) {
+		struct channel_gk20a *ch = g->fifo.channel
+					   + event_id_data->id;
+
+		gk20a_dbg_info(
+			"found pending event_id=%d on chid=%d\n",
+			event_id, ch->hw_chid);
+	}
+	mask = (POLLPRI | POLLIN);
+
+	mutex_unlock(&event_id_data->lock);
+
+	return mask;
 }
 
-static void gk20a_channel_events_disable(struct channel_gk20a_poll_events *ev)
+int gk20a_event_id_release(struct inode *inode, struct file *filp)
 {
-	gk20a_dbg_fn("");
+	struct gk20a_event_id_data *event_id_data = filp->private_data;
+	struct gk20a *g = event_id_data->g;
 
-	mutex_lock(&ev->lock);
+	if (!event_id_data->is_tsg) {
+		struct channel_gk20a *ch = g->fifo.channel + event_id_data->id;
 
-	ev->events_enabled = false;
-	ev->num_pending_events = 0;
+		mutex_lock(&ch->event_id_list_lock);
+		list_del_init(&event_id_data->event_id_node);
+		mutex_unlock(&ch->event_id_list_lock);
+	}
 
-	mutex_unlock(&ev->lock);
+	kfree(event_id_data);
+	filp->private_data = NULL;
+
+	return 0;
 }
 
-static void gk20a_channel_events_clear(struct channel_gk20a_poll_events *ev)
+static const struct file_operations gk20a_event_id_ops = {
+	.owner = THIS_MODULE,
+	.poll = gk20a_event_id_poll,
+	.release = gk20a_event_id_release,
+};
+
+static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
+				int event_id,
+				struct gk20a_event_id_data **event_id_data)
 {
-	gk20a_dbg_fn("");
+	struct gk20a_event_id_data *local_event_id_data;
+	bool event_found = false;
 
-	mutex_lock(&ev->lock);
+	mutex_lock(&ch->event_id_list_lock);
+	list_for_each_entry(local_event_id_data, &ch->event_id_list,
+						 event_id_node) {
+		if (local_event_id_data->event_id == event_id) {
+			event_found = true;
+			break;
+		}
+	}
+	mutex_unlock(&ch->event_id_list_lock);
 
-	if (ev->events_enabled &&
-			ev->num_pending_events > 0)
-		ev->num_pending_events--;
-
-	mutex_unlock(&ev->lock);
+	if (event_found) {
+		*event_id_data = local_event_id_data;
+		return 0;
+	} else {
+		return -1;
+	}
 }
 
-static int gk20a_channel_events_ctrl(struct channel_gk20a *ch,
-			  struct nvgpu_channel_events_ctrl_args *args)
+static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
+					 int event_id,
+					 int *fd)
 {
-	int ret = 0;
+	int err = 0;
+	int local_fd;
+	struct file *file;
+	char *name;
+	struct gk20a_event_id_data *event_id_data;
 
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info,
-			"channel events ctrl cmd %d", args->cmd);
+	err = gk20a_channel_get_event_data_from_id(ch,
+				event_id, &event_id_data);
+	if (err == 0) /* We already have event enabled */
+		return -EINVAL;
+
+	err = get_unused_fd_flags(O_RDWR);
+	if (err < 0)
+		return err;
+	local_fd = err;
+
+	name = kasprintf(GFP_KERNEL, "nvgpu-event%d-fd%d",
+			event_id, local_fd);
+
+	file = anon_inode_getfile(name, &gk20a_event_id_ops,
+				  NULL, O_RDWR);
+	kfree(name);
+	if (IS_ERR(file)) {
+		err = PTR_ERR(file);
+		goto clean_up;
+	}
+
+	event_id_data = kzalloc(sizeof(*event_id_data), GFP_KERNEL);
+	if (!event_id_data) {
+		err = -ENOMEM;
+		goto clean_up_file;
+	}
+	event_id_data->g = ch->g;
+	event_id_data->id = ch->hw_chid;
+	event_id_data->is_tsg = false;
+	event_id_data->event_id = event_id;
+
+	init_waitqueue_head(&event_id_data->event_id_wq);
+	mutex_init(&event_id_data->lock);
+	INIT_LIST_HEAD(&event_id_data->event_id_node);
+
+	mutex_lock(&ch->event_id_list_lock);
+	list_add_tail(&event_id_data->event_id_node, &ch->event_id_list);
+	mutex_unlock(&ch->event_id_list_lock);
+
+	fd_install(local_fd, file);
+	file->private_data = event_id_data;
+
+	*fd = local_fd;
+
+	return 0;
+
+clean_up_file:
+	fput(file);
+clean_up:
+	put_unused_fd(local_fd);
+	return err;
+}
+
+static int gk20a_channel_event_id_ctrl(struct channel_gk20a *ch,
+		struct nvgpu_event_id_ctrl_args *args)
+{
+	int err = 0;
+	int fd = -1;
+
+	if (args->event_id < 0 ||
+	    args->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX)
+		return -EINVAL;
+
+	if (gk20a_is_channel_marked_as_tsg(ch))
+		return -EINVAL;
 
 	switch (args->cmd) {
-	case NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_ENABLE:
-		gk20a_channel_events_enable(&ch->poll_events);
-		break;
-
-	case NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_DISABLE:
-		gk20a_channel_events_disable(&ch->poll_events);
-		break;
-
-	case NVGPU_IOCTL_CHANNEL_EVENTS_CTRL_CMD_CLEAR:
-		gk20a_channel_events_clear(&ch->poll_events);
+	case NVGPU_IOCTL_CHANNEL_EVENT_ID_CMD_ENABLE:
+		err = gk20a_channel_event_id_enable(ch, args->event_id, &fd);
+		if (!err)
+			args->event_fd = fd;
 		break;
 
 	default:
 		gk20a_err(dev_from_gk20a(ch->g),
-			   "unrecognized channel events ctrl cmd: 0x%x",
+			   "unrecognized channel event id cmd: 0x%x",
 			   args->cmd);
-		ret = -EINVAL;
+		err = -EINVAL;
 		break;
 	}
 
-	return ret;
-}
-
-void gk20a_channel_event(struct channel_gk20a *ch)
-{
-	mutex_lock(&ch->poll_events.lock);
-
-	if (ch->poll_events.events_enabled) {
-		gk20a_dbg_info("posting event on channel id %d",
-				ch->hw_chid);
-		gk20a_dbg_info("%d channel events pending",
-				ch->poll_events.num_pending_events);
-
-		ch->poll_events.num_pending_events++;
-		/* not waking up here, caller does that */
-	}
-
-	mutex_unlock(&ch->poll_events.lock);
-}
-
-void gk20a_channel_post_event(struct channel_gk20a *ch)
-{
-	gk20a_channel_event(ch);
-	wake_up_interruptible_all(&ch->semaphore_wq);
-}
-
-unsigned int gk20a_channel_poll(struct file *filep, poll_table *wait)
-{
-	unsigned int mask = 0;
-	struct channel_gk20a *ch = filep->private_data;
-
-	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info, "");
-
-	poll_wait(filep, &ch->semaphore_wq, wait);
-
-	mutex_lock(&ch->poll_events.lock);
-
-	if (ch->poll_events.events_enabled &&
-			ch->poll_events.num_pending_events > 0) {
-		gk20a_dbg_info("found pending event on channel id %d",
-				ch->hw_chid);
-		gk20a_dbg_info("%d channel events pending",
-				ch->poll_events.num_pending_events);
-		mask = (POLLPRI | POLLIN);
-	}
-
-	mutex_unlock(&ch->poll_events.lock);
-
-	return mask;
+	return err;
 }
 
 int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority)
@@ -2756,7 +2807,7 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g)
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *c = g->fifo.channel+chid;
 		if (gk20a_channel_get(c)) {
-			gk20a_channel_post_event(c);
+			wake_up_interruptible_all(&c->semaphore_wq);
 			gk20a_channel_update(c, 0);
 			gk20a_channel_put(c);
 		}
@@ -3040,9 +3091,9 @@ long gk20a_channel_ioctl(struct file *filp,
 		err = gk20a_fifo_force_reset_ch(ch, true);
 		gk20a_idle(dev);
 		break;
-	case NVGPU_IOCTL_CHANNEL_EVENTS_CTRL:
-		err = gk20a_channel_events_ctrl(ch,
-			   (struct nvgpu_channel_events_ctrl_args *)buf);
+	case NVGPU_IOCTL_CHANNEL_EVENT_ID_CTRL:
+		err = gk20a_channel_event_id_ctrl(ch,
+			      (struct nvgpu_event_id_ctrl_args *)buf);
 		break;
 #ifdef CONFIG_GK20A_CYCLE_STATS
 	case NVGPU_IOCTL_CHANNEL_CYCLE_STATS_SNAPSHOT:

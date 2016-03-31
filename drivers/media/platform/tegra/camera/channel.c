@@ -1109,8 +1109,7 @@ static int tegra_channel_open(struct file *fp)
 	csi = vi->csi;
 
 	/* The first open then turn on power */
-	if (!chan->bypass &&
-	    (atomic_add_return(1, &vi->power_on_refcnt) == 1)) {
+	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
 		tegra_vi_power_on(vi);
 		tegra_csi_power_on(csi);
 	}
@@ -1145,7 +1144,7 @@ static int tegra_channel_close(struct file *fp)
 	}
 
 	/* The last release then turn off power */
-	if (!chan->bypass && atomic_dec_and_test(&vi->power_on_refcnt)) {
+	if (atomic_dec_and_test(&vi->power_on_refcnt)) {
 		tegra_csi_power_off(csi);
 		tegra_vi_power_off(vi);
 	}

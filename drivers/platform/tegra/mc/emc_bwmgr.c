@@ -43,6 +43,8 @@ static struct {
 	bool status;
 } bwmgr;
 
+static bool clk_update_disabled;
+
 static void bwmgr_debugfs_init(void);
 
 static inline void bwmgr_lock(void)
@@ -268,7 +270,7 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 		break;
 	}
 
-	if (update_clk)
+	if (update_clk && !clk_update_disabled)
 		ret = bwmgr_update_clk();
 
 	bwmgr_unlock();
@@ -559,6 +561,9 @@ static void bwmgr_debugfs_init(void)
 
 	debugfs_dir = debugfs_create_dir("tegra_bwmgr", NULL);
 	if (debugfs_dir) {
+		debugfs_create_bool(
+			"clk_update_disabled", S_IRWXU, debugfs_dir,
+			&clk_update_disabled);
 		debugfs_node_emc_min = debugfs_create_u64(
 			"emc_min_rate", S_IRUSR, debugfs_dir,
 			(u64 *) &bwmgr.emc_min_rate);

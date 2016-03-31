@@ -33,6 +33,7 @@
 #include "board-panel.h"
 #include "dc_priv.h"
 #include "panel-s-wuxga-8-0.c"
+#include "panel-s-wqxga-10-1.c"
 #include "panel-s-edp-uhdtv-15-6.c"
 #include <linux/platform_data/lp855x.h>
 
@@ -326,9 +327,13 @@ struct device_node *tegra_primary_panel_get_dt_node(
 			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_primary,
 					"panel-dsi-1080p-p2382");
-			if (!of_device_is_available(np_panel))
+			if (!of_device_is_available(np_panel)) {
 				np_panel = of_get_child_by_name(np_primary,
 					"panel-s-wqxga-10-1");
+				if (of_device_is_available(np_panel) && dc_out)
+					tegra_panel_register_ops(dc_out,
+						&dsi_s_wqxga_10_1_ops);
+			}
 
 			/* HDMI */
 			if (!of_device_is_available(np_panel))

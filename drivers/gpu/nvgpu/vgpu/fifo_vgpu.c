@@ -410,6 +410,30 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 	return err;
 }
 
+static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_tsg_preempt_params *p =
+			&msg.params.tsg_preempt;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_TSG_PREEMPT;
+	msg.handle = platform->virt_handle;
+	p->tsg_id = tsgid;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"preempt tsg %u failed\n", tsgid);
+	}
+
+	return err;
+}
+
 static int vgpu_submit_runlist(u64 handle, u8 runlist_id, u16 *runlist,
 			u32 num_entries)
 {
@@ -680,6 +704,7 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 	gops->fifo.free_inst = vgpu_channel_free_inst;
 	gops->fifo.setup_ramfc = vgpu_channel_setup_ramfc;
 	gops->fifo.preempt_channel = vgpu_fifo_preempt_channel;
+	gops->fifo.preempt_tsg = vgpu_fifo_preempt_tsg;
 	gops->fifo.update_runlist = vgpu_fifo_update_runlist;
 	gops->fifo.wait_engine_idle = vgpu_fifo_wait_engine_idle;
 	gops->fifo.channel_set_priority = vgpu_channel_set_priority;

@@ -445,6 +445,26 @@ static int vgpu_gr_ch_bind_gr_ctx(struct channel_gk20a *c)
 	return err;
 }
 
+static int vgpu_gr_tsg_bind_gr_ctx(struct tsg_gk20a *tsg)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(tsg->g->dev);
+	struct gr_ctx_desc *gr_ctx = tsg->tsg_gr_ctx;
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_tsg_bind_gr_ctx_params *p =
+					&msg.params.tsg_bind_gr_ctx;
+	int err;
+
+	msg.cmd = TEGRA_VGPU_CMD_TSG_BIND_GR_CTX;
+	msg.handle = platform->virt_handle;
+	p->tsg_id = tsg->tsgid;
+	p->gr_ctx_handle = gr_ctx->virt_ctx;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	WARN_ON(err);
+
+	return err;
+}
+
 static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 				struct nvgpu_alloc_obj_ctx_args *args)
 {
@@ -472,32 +492,58 @@ static int vgpu_gr_alloc_obj_ctx(struct channel_gk20a  *c,
 	}
 	c->obj_class = args->class_num;
 
-	/* FIXME: add TSG support */
 	if (gk20a_is_channel_marked_as_tsg(c))
 		tsg = &f->tsg[c->tsgid];
 
-	/* allocate gr ctx buffer */
-	if (!ch_ctx->gr_ctx) {
-		err = g->ops.gr.alloc_gr_ctx(g, &c->ch_ctx.gr_ctx,
-					c->vm,
-					args->class_num,
-					args->flags);
-		if (!err)
-			err = vgpu_gr_ch_bind_gr_ctx(c);
-
-		if (err) {
+	if (!tsg) {
+		/* allocate gr ctx buffer */
+		if (!ch_ctx->gr_ctx) {
+			err = g->ops.gr.alloc_gr_ctx(g, &c->ch_ctx.gr_ctx,
+						c->vm,
+						args->class_num,
+						args->flags);
+			if (!err)
+				err = vgpu_gr_ch_bind_gr_ctx(c);
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+					"fail to allocate gr ctx buffer");
+				goto out;
+			}
+		} else {
+			/*TBD: needs to be more subtle about which is
+			 * being allocated as some are allowed to be
+			 * allocated along same channel */
 			gk20a_err(dev_from_gk20a(g),
-				"fail to allocate gr ctx buffer");
+				"too many classes alloc'd on same channel");
+			err = -EINVAL;
 			goto out;
 		}
 	} else {
-		/*TBD: needs to be more subtle about which is
-		 * being allocated as some are allowed to be
-		 * allocated along same channel */
-		gk20a_err(dev_from_gk20a(g),
-			"too many classes alloc'd on same channel");
-		err = -EINVAL;
-		goto out;
+		if (!tsg->tsg_gr_ctx) {
+			tsg->vm = c->vm;
+			gk20a_vm_get(tsg->vm);
+			err = g->ops.gr.alloc_gr_ctx(g, &tsg->tsg_gr_ctx,
+						c->vm,
+						args->class_num,
+						args->flags);
+			if (!err)
+				err = vgpu_gr_tsg_bind_gr_ctx(tsg);
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+					"fail to allocate TSG gr ctx buffer, err=%d", err);
+				gk20a_vm_put(tsg->vm);
+				tsg->vm = NULL;
+				goto out;
+			}
+		}
+
+		ch_ctx->gr_ctx = tsg->tsg_gr_ctx;
+		err = vgpu_gr_ch_bind_gr_ctx(c);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				"fail to bind gr ctx buffer");
+			goto out;
+		}
 	}
 
 	/* commit gr ctx buffer */

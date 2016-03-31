@@ -2015,7 +2015,7 @@ int gk20a_fifo_preempt(struct gk20a *g, struct channel_gk20a *ch)
 	int err;
 
 	if (gk20a_is_channel_marked_as_tsg(ch))
-		err = gk20a_fifo_preempt_tsg(ch->g, ch->tsgid);
+		err = g->ops.fifo.preempt_tsg(ch->g, ch->tsgid);
 	else
 		err = g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
 
@@ -2754,6 +2754,7 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);
 	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;
+	gops->fifo.preempt_tsg = gk20a_fifo_preempt_tsg;
 	gops->fifo.update_runlist = gk20a_fifo_update_runlist;
 	gops->fifo.trigger_mmu_fault = gk20a_fifo_trigger_mmu_fault;
 	gops->fifo.apply_pb_timeout = gk20a_fifo_apply_pb_timeout;

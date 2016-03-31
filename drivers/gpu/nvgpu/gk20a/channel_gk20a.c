@@ -952,7 +952,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 
 unbind:
 	if (gk20a_is_channel_marked_as_tsg(ch))
-		gk20a_tsg_unbind_channel(ch);
+		g->ops.fifo.tsg_unbind_channel(ch);
 
 	g->ops.fifo.unbind_channel(ch);
 	g->ops.fifo.free_inst(g, ch);

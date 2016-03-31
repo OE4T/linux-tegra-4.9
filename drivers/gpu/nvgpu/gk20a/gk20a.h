@@ -324,6 +324,7 @@ struct gpu_ops {
 				u32 gpfifo_entries, u32 flags);
 		int (*resetup_ramfc)(struct channel_gk20a *c);
 		int (*preempt_channel)(struct gk20a *g, u32 hw_chid);
+		int (*preempt_tsg)(struct gk20a *g, u32 tsgid);
 		int (*update_runlist)(struct gk20a *g, u32 runlist_id,
 				u32 hw_chid, bool add,
 				bool wait_for_finish);
@@ -345,6 +346,9 @@ struct gpu_ops {
 		void (*device_info_data_parse)(struct gk20a *g,
 					u32 table_entry, u32 *inst_id,
 					u32 *pri_base, u32 *fault_id);
+		int (*tsg_bind_channel)(struct tsg_gk20a *tsg,
+				struct channel_gk20a *ch);
+		int (*tsg_unbind_channel)(struct channel_gk20a *ch);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

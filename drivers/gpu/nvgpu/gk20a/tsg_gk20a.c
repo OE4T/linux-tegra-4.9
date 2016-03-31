@@ -37,13 +37,12 @@ bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 {
+	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
 	mutex_lock(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-			gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid))
-			| ccsr_channel_enable_set_true_f());
+		g->ops.fifo.enable_channel(ch);
 	}
 	mutex_unlock(&tsg->ch_list_lock);
 
@@ -52,13 +51,12 @@ int gk20a_enable_tsg(struct tsg_gk20a *tsg)
 
 int gk20a_disable_tsg(struct tsg_gk20a *tsg)
 {
+	struct gk20a *g = tsg->g;
 	struct channel_gk20a *ch;
 
 	mutex_lock(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
-		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-			gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid))
-			| ccsr_channel_enable_clr_true_f());
+		g->ops.fifo.disable_channel(ch);
 	}
 	mutex_unlock(&tsg->ch_list_lock);
 
@@ -80,31 +78,37 @@ static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
 	return false;
 }
 
+static int gk20a_tsg_bind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
+{
+	struct file *f = fget(ch_fd);
+	struct channel_gk20a *ch;
+	int err;
+
+	ch = gk20a_get_channel_from_file(ch_fd);
+	if (!ch)
+		return -EINVAL;
+	err = ch->g->ops.fifo.tsg_bind_channel(tsg, ch);
+	fput(f);
+	return err;
+}
+
 /*
  * API to mark channel as part of TSG
  *
  * Note that channel is not runnable when we bind it to TSG
  */
-static int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg, int ch_fd)
+int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
+			struct channel_gk20a *ch)
 {
-	struct file *f = fget(ch_fd);
-	struct channel_gk20a *ch;
-
 	gk20a_dbg_fn("");
-
-	ch = gk20a_get_channel_from_file(ch_fd);
-	if (!ch)
-		return -EINVAL;
 
 	/* check if channel is already bound to some TSG */
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		fput(f);
 		return -EINVAL;
 	}
 
 	/* channel cannot be bound to TSG if it is already active */
 	if (gk20a_is_channel_active(tsg->g, ch)) {
-		fput(f);
 		return -EINVAL;
 	}
 
@@ -118,8 +122,6 @@ static int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg, int ch_fd)
 
 	gk20a_dbg(gpu_dbg_fn, "BIND tsg:%d channel:%d\n",
 					tsg->tsgid, ch->hw_chid);
-
-	fput(f);
 
 	gk20a_dbg_fn("done");
 	return 0;
@@ -494,7 +496,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			err = -EINVAL;
 			break;
 		}
-		err = gk20a_tsg_bind_channel(tsg, ch_fd);
+		err = gk20a_tsg_bind_channel_fd(tsg, ch_fd);
 		break;
 		}
 
@@ -539,7 +541,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			return err;
 		}
 		/* preempt TSG */
-		err = gk20a_fifo_preempt_tsg(g, tsg->tsgid);
+		err = g->ops.fifo.preempt_tsg(g, tsg->tsgid);
 		gk20a_idle(g->dev);
 		break;
 		}
@@ -599,4 +601,10 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 				   buf, _IOC_SIZE(cmd));
 
 	return err;
+}
+
+void gk20a_init_tsg_ops(struct gpu_ops *gops)
+{
+	gops->fifo.tsg_bind_channel = gk20a_tsg_bind_channel;
+	gops->fifo.tsg_unbind_channel = gk20a_tsg_unbind_channel;
 }

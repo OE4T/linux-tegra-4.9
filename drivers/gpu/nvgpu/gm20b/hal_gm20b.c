@@ -211,6 +211,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_debug_ops(gops);
 	gm20b_init_cde_ops(gops);
 	gm20b_init_therm_ops(gops);
+	gk20a_init_tsg_ops(gops);
 	gops->name = "gm20b";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gm20b_get_litter_value;

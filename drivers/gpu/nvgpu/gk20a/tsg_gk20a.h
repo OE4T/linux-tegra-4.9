@@ -28,8 +28,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp,
 			 unsigned int cmd, unsigned long arg);
 
 int gk20a_init_tsg_support(struct gk20a *g, u32 tsgid);
-
-int gk20a_tsg_unbind_channel(struct channel_gk20a *ch);
+void gk20a_init_tsg_ops(struct gpu_ops *gops);
 
 struct tsg_gk20a {
 	struct gk20a *g;
@@ -59,6 +58,9 @@ struct tsg_gk20a {
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);
 int gk20a_disable_tsg(struct tsg_gk20a *tsg);
+int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
+			struct channel_gk20a *ch);
+int gk20a_tsg_unbind_channel(struct channel_gk20a *ch);
 
 void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 				       int event_id);

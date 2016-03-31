@@ -268,6 +268,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_mm_ops(gops);
 	vgpu_init_debug_ops(gops);
 	vgpu_init_fecs_trace_ops(gops);
+	vgpu_init_tsg_ops(gops);
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 }
 
@@ -339,8 +340,6 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 		gk20a_err(dev, "failed to init gk20a gpu characteristics");
 		goto done;
 	}
-
-	g->gpu_characteristics.flags &= ~NVGPU_GPU_FLAGS_SUPPORT_TSG;
 
 	gk20a_ctxsw_trace_init(g);
 	gk20a_channel_resume(g);

@@ -30,6 +30,7 @@
 #include "regops_gk20a.h"
 #include "therm_gk20a.h"
 #include "hw_proj_gk20a.h"
+#include "tsg_gk20a.h"
 
 static struct gpu_ops gk20a_ops = {
 	.clock_gating = {
@@ -142,6 +143,7 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_regops(gops);
 	gk20a_init_debug_ops(gops);
 	gk20a_init_therm_ops(gops);
+	gk20a_init_tsg_ops(gops);
 	gops->name = "gk20a";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gk20a_get_litter_value;

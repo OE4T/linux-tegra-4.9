@@ -1,5 +1,5 @@
 GCOV_PROFILE := y
-EXTRA_CFLAGS += -Idrivers/video/tegra/host
+EXTRA_CFLAGS += -I../kernel-nvhost/drivers/video/tegra/host
 ccflags-y += -Idrivers/media/platform/tegra/vi
 
 # camera*.c and camera*.h are legacy code no longer in use

@@ -52,7 +52,7 @@
 #define NV_SE2_CLASS_ID		0x3B
 #define NV_SE3_CLASS_ID		0x3C
 #define NV_SE4_CLASS_ID		0x3D
-#include "../video/tegra/host/t186/hardware_t186.h"
+#include "t186/hardware_t186.h"
 #include "nvhost_job.h"
 #include "nvhost_channel.h"
 #include "nvhost_acm.h"

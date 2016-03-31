@@ -421,6 +421,11 @@ int __nvmap_do_cache_maint(struct nvmap_client *client,
 	if (!h)
 		return -EFAULT;
 
+	if (!(h->heap_type & nvmap_dev->cpu_access_mask)) {
+		nvmap_handle_put(h);
+		return -EPERM;
+	}
+
 	nvmap_kmaps_inc(h);
 	if (op == NVMAP_CACHE_OP_INV)
 		op = NVMAP_CACHE_OP_WB_INV;

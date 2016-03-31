@@ -237,6 +237,7 @@ struct nvmap_device {
 	struct rb_root	tags;
 	struct mutex	tags_lock;
 	u32 dynamic_dma_map_mask;
+	u32 cpu_access_mask;
 };
 
 enum nvmap_stats_t {

@@ -403,6 +403,9 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	void *addr;
 	int ret = 0;
 
+	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
+		return -EPERM;
+
 	if (!elem_size || !count)
 		return -EINVAL;
 
@@ -657,6 +660,11 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 			err = -EINVAL;
 			goto free_mem;
 		}
+		if (!(refs[i]->heap_type & nvmap_dev->cpu_access_mask)) {
+			err = -EPERM;
+			goto free_mem;
+		}
+
 		n_unmarshal_handles++;
 	}
 

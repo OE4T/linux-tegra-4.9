@@ -60,6 +60,9 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 	if (!h)
 		return NULL;
 
+	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
+		goto put_handle;
+
 	nvmap_kmaps_inc(h);
 	if (pagenum >= h->size >> PAGE_SHIFT)
 		goto out;
@@ -78,6 +81,7 @@ void *__nvmap_kmap(struct nvmap_handle *h, unsigned int pagenum)
 	return (void *)kaddr;
 out:
 	nvmap_kmaps_dec(h);
+put_handle:
 	nvmap_handle_put(h);
 	return NULL;
 }
@@ -90,7 +94,8 @@ void __nvmap_kunmap(struct nvmap_handle *h, unsigned int pagenum,
 
 	if (!h ||
 	    WARN_ON(!virt_addr_valid(h)) ||
-	    WARN_ON(!addr))
+	    WARN_ON(!addr) ||
+	    !(h->heap_type & nvmap_dev->cpu_access_mask))
 		return;
 
 	if (WARN_ON(pagenum >= h->size >> PAGE_SHIFT))
@@ -130,6 +135,9 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	h = nvmap_handle_get(h);
 	if (!h)
 		return NULL;
+
+	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
+		goto put_handle;
 
 	if (h->vaddr)
 		return h->vaddr;
@@ -183,6 +191,7 @@ void *__nvmap_mmap(struct nvmap_handle *h)
 	return h->vaddr;
 out:
 	nvmap_kmaps_dec(h);
+put_handle:
 	nvmap_handle_put(h);
 	return NULL;
 }
@@ -191,7 +200,8 @@ void __nvmap_munmap(struct nvmap_handle *h, void *addr)
 {
 	if (!h ||
 	    WARN_ON(!virt_addr_valid(h)) ||
-	    WARN_ON(!addr))
+	    WARN_ON(!addr) ||
+	    !(h->heap_type & nvmap_dev->cpu_access_mask))
 		return;
 
 	nvmap_handle_put(h);

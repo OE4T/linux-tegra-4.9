@@ -306,7 +306,7 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	/* Force mapping to uncached for VPR memory. */
-	if (heap_mask & NVMAP_HEAP_CARVEOUT_VPR)
+	if (heap_mask & (NVMAP_HEAP_CARVEOUT_VPR | ~nvmap_dev->cpu_access_mask))
 		h->flags = NVMAP_HANDLE_UNCACHEABLE;
 	else
 		h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);

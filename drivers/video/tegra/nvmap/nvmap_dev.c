@@ -511,6 +511,11 @@ int __nvmap_map(struct nvmap_handle *h, struct vm_area_struct *vma)
 	if (!h)
 		return -EINVAL;
 
+	if (!(h->heap_type & nvmap_dev->cpu_access_mask)) {
+		nvmap_handle_put(h);
+		return -EPERM;
+	}
+
 	/*
 	 * Don't allow mmap on VPR memory as it would be mapped
 	 * as device memory. User space shouldn't be accessing
@@ -1693,6 +1698,7 @@ int __init nvmap_probe(struct platform_device *pdev)
 			nvmap_debug_root, &nvmap_max_handle_count);
 
 	nvmap_dev->dynamic_dma_map_mask = ~0;
+	nvmap_dev->cpu_access_mask = ~0;
 	for (i = 0; i < plat->nr_carveouts; i++)
 		(void)nvmap_create_carveout(&plat->carveouts[i]);
 

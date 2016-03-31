@@ -377,7 +377,8 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->vm_id = co->vmid;
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
-	if (nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
+	if (!co->no_cpu_access &&
+		nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
 				base, base + len, true, true)) {
 		dev_err(parent, "cache flush failed\n");
 		goto fail;
@@ -397,6 +398,9 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 finish:
 	if (co->disable_dynamic_dma_map)
 		nvmap_dev->dynamic_dma_map_mask &= ~co->usage_mask;
+
+	if (co->no_cpu_access)
+		nvmap_dev->cpu_access_mask &= ~co->usage_mask;
 
 	dev_info(parent, "created heap %s base 0x%p size (%zuKiB)\n",
 		co->name, (void *)(uintptr_t)base, len/1024);

@@ -87,6 +87,7 @@ struct nvmap_platform_carveout {
 	int can_alloc;
 	bool enable_static_dma_map;
 	bool disable_dynamic_dma_map;
+	bool no_cpu_access; /* carveout can't be accessed from cpu at all */
 	bool init_done;	/* FIXME: remove once all caveouts use reserved-memory */
 };
 

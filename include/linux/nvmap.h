@@ -135,6 +135,13 @@ struct nvmap_create_handle {
 	__u32 handle;		/* returns nvmap handle */
 };
 
+struct nvmap_create_handle_from_va {
+	__u64 va;		/* FromVA*/
+	__u32 size;		/* non-zero for partial memory VMA. zero for end of VMA */
+	__u32 flags;		/* wb/wc/uc/iwb, tag etc. */
+	__u32 handle;		/* returns nvmap handle */
+};
+
 struct nvmap_alloc_handle {
 	__u32 handle;		/* nvmap handle */
 	__u32 heap_mask;	/* heaps to allocate from */
@@ -343,6 +350,9 @@ struct nvmap_debugfs_handles_entry {
 #define NVMAP_IOC_FROM_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 19, struct nvmap_create_handle)
 #define NVMAP_IOC_GET_IVC_ID _IOWR(NVMAP_IOC_MAGIC, 20, struct nvmap_create_handle)
 #define NVMAP_IOC_GET_IVM_HEAPS _IOR(NVMAP_IOC_MAGIC, 21, unsigned int)
+
+/* Create a new memory handle from VA passed */
+#define NVMAP_IOC_FROM_VA _IOWR(NVMAP_IOC_MAGIC, 22, struct nvmap_create_handle_from_va)
 
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */

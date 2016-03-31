@@ -249,6 +249,51 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	return err;
 }
 
+int nvmap_ioctl_create_from_va(struct file *filp, unsigned int cmd, void __user *arg)
+{
+	int fd;
+	int err;
+	struct nvmap_create_handle_from_va op;
+	struct nvmap_handle_ref *ref = NULL;
+	struct nvmap_client *client = filp->private_data;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	if (!client)
+		return -ENODEV;
+
+	ref = nvmap_create_handle_from_va(client, op.va, op.size);
+	if (IS_ERR(ref))
+		return PTR_ERR(ref);
+
+	err = nvmap_alloc_handle_from_va(client, ref->handle,
+					 op.va, op.flags);
+	if (err)
+		goto alloc_fail;
+
+	fd = nvmap_create_fd(client, ref->handle);
+	op.handle = fd;
+
+	if (IS_ERR_VALUE(fd)) {
+		err = fd;
+		goto fd_fail;
+	}
+
+	if (copy_to_user(arg, &op, sizeof(op))) {
+		err = -EFAULT;
+		goto copy_fail;
+	}
+
+	return err;
+copy_fail:
+	sys_close(fd);
+fd_fail:
+alloc_fail:
+	nvmap_free_handle(client, ref->handle);
+	return err;
+}
+
 int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 			  bool is32)
 {

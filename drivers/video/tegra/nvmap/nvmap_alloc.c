@@ -216,6 +216,42 @@ static void alloc_handle(struct nvmap_client *client,
 	}
 }
 
+static int alloc_handle_from_va(struct nvmap_client *client,
+				 struct nvmap_handle *h,
+				 ulong vaddr)
+{
+	int nr_page = h->size >> PAGE_SHIFT;
+	int user_pages;
+	struct page **pages;
+
+	pages = nvmap_altalloc(nr_page * sizeof(*pages));
+	if (!pages)
+		return -ENOMEM;
+
+	user_pages = get_user_pages(current, current->mm,
+				      vaddr & PAGE_MASK, nr_page,
+					 1/*write*/, 1, /* force */
+					 pages, NULL);
+	if (user_pages != nr_page)
+		goto fail_get_user_pages;
+
+	h->pgalloc.pages = pages;
+	atomic_set(&h->pgalloc.ndirty, 0);
+	h->heap_type = NVMAP_HEAP_IOVMM;
+	h->heap_pgalloc = true;
+	h->from_va = true;
+	mb();
+	h->alloc = true;
+	return 0;
+
+fail_get_user_pages:
+	pr_debug("get_user_pages requested/got: %d/%d]\n", nr_page, user_pages);
+	while (--user_pages >= 0)
+		put_page(pages[user_pages]);
+	nvmap_altfree(pages, nr_page * sizeof(*pages));
+	return -ENOMEM;
+}
+
 /* small allocations will try to allocate from generic OS memory before
  * any of the limited heaps, to increase the effective memory for graphics
  * allocations, and to reduce fragmentation of the graphics heaps with
@@ -346,6 +382,47 @@ out:
 	return err;
 }
 
+int nvmap_alloc_handle_from_va(struct nvmap_client *client,
+			       struct nvmap_handle *h,
+			       ulong addr,
+			       unsigned int flags)
+{
+	int err = -ENOMEM;
+	int tag;
+
+	h = nvmap_handle_get(h);
+	if (!h)
+		return -EINVAL;
+
+	if (h->alloc) {
+		nvmap_handle_put(h);
+		return -EEXIST;
+	}
+
+	h->userflags = flags;
+	h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
+	h->align = PAGE_SIZE;
+	tag = flags >> 16;
+
+	if (!tag && client && !client->tag_warned) {
+		char task_comm[TASK_COMM_LEN];
+		client->tag_warned = 1;
+		get_task_comm(task_comm, client->task);
+		pr_err("PID %d: %s: WARNING: "
+			"All NvMap Allocations must have a tag "
+			"to identify the subsystem allocating memory."
+			"Please pass the tag to the API call"
+			" NvRmMemHanldeAllocAttr() or relevant. \n",
+			client->task->pid, task_comm);
+	}
+
+	(void)alloc_handle_from_va(client, h, addr);
+
+	err = (h->alloc) ? 0 : err;
+	nvmap_handle_put(h);
+	return err;
+}
+
 void _nvmap_handle_free(struct nvmap_handle *h)
 {
 	unsigned int i, nr_page, page_index = 0;
@@ -391,12 +468,17 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 		h->pgalloc.pages[i] = nvmap_to_page(h->pgalloc.pages[i]);
 
 #ifdef CONFIG_NVMAP_PAGE_POOLS
-	page_index = nvmap_page_pool_fill_lots(&nvmap_dev->pool,
-				h->pgalloc.pages, nr_page);
+	if (!h->from_va)
+		page_index = nvmap_page_pool_fill_lots(&nvmap_dev->pool,
+					h->pgalloc.pages, nr_page);
 #endif
 
-	for (i = page_index; i < nr_page; i++)
-		__free_page(h->pgalloc.pages[i]);
+	for (i = page_index; i < nr_page; i++) {
+		if (h->from_va)
+			put_page(h->pgalloc.pages[i]);
+		else
+			__free_page(h->pgalloc.pages[i]);
+	}
 
 	nvmap_altfree(h->pgalloc.pages, nr_page * sizeof(struct page *));
 

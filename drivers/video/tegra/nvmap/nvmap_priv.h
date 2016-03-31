@@ -123,6 +123,7 @@ struct nvmap_handle {
 	};
 	bool heap_pgalloc;	/* handle is page allocated (sysmem / iovmm) */
 	bool alloc;		/* handle has memory allocated */
+	bool from_va;		/* handle memory is from VA */
 	u32 heap_type;		/* handle heap is allocated from */
 	u32 userflags;		/* flags passed from userspace */
 	void *vaddr;		/* mapping used inside kernel */
@@ -335,6 +336,9 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *h);
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 					     size_t size);
 
+struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client,
+						     ulong addr, size_t size);
+
 struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 					struct nvmap_handle *h, bool skip_val);
 
@@ -351,6 +355,11 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 		       struct nvmap_handle *h, unsigned int heap_mask,
 		       size_t align, u8 kind,
 		       unsigned int flags, int peer);
+
+int nvmap_alloc_handle_from_va(struct nvmap_client *client,
+			       struct nvmap_handle *h,
+			       ulong addr,
+			       unsigned int flags);
 
 void nvmap_free_handle(struct nvmap_client *c, struct nvmap_handle *h);
 

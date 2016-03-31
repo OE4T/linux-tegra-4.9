@@ -65,6 +65,32 @@ static void add_handle_ref(struct nvmap_client *client,
 	nvmap_ref_unlock(client);
 }
 
+struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client,
+						     ulong vaddr, size_t size)
+{
+	struct vm_area_struct *vma;
+	struct nvmap_handle_ref *ref;
+
+	/* don't allow non-page aligned addresses. */
+	if (vaddr & ~PAGE_MASK)
+		return ERR_PTR(-EINVAL);
+
+	vma = find_vma(current->mm, vaddr);
+
+	if (unlikely(!vma) || (unlikely(vaddr < vma->vm_start )) ||
+	    unlikely(vaddr >= vma->vm_end) ||
+	    unlikely(size > vma->vm_start - vma->vm_end)) {
+		return ERR_PTR(-EINVAL);
+	}
+
+	if (!size)
+		size = vma->vm_end - vaddr;
+	ref = nvmap_create_handle(client, PAGE_ALIGN(size));
+	if (!IS_ERR(ref))
+		ref->handle->orig_size = size;
+	return ref;
+}
+
 struct nvmap_handle_ref *nvmap_create_handle(struct nvmap_client *client,
 					     size_t size)
 {

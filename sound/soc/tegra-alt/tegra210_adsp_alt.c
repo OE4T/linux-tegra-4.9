@@ -684,6 +684,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		apm_out->info = app->info;
 		apm_out->plugin = app->plugin;
 		apm_out->apm = app->apm;
+		apm_out->adsp = app->adsp;
 		apm_out->apm_mbox = app->apm_mbox;
 		apm_out->msg_complete = app->msg_complete;
 	} else if (IS_ADMA(app->reg)) {

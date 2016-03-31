@@ -144,7 +144,7 @@ static const struct tegra_video_format tegra_video_formats[] = {
 		4,
 		TEGRA_IMAGE_FORMAT_T_A8R8G8B8,
 		TEGRA_IMAGE_DT_RGB888,
-		V4L2_PIX_FMT_RGB32,
+		V4L2_PIX_FMT_ABGR32,
 	},
 	{
 		TEGRA_VF_RGB888,

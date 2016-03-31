@@ -34,7 +34,9 @@ static void channel_gm20b_bind(struct channel_gk20a *c)
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
-		ccsr_channel_inst_target_vid_mem_f() |
+		(g->mm.vidmem_is_vidmem ?
+		 ccsr_channel_inst_target_sys_mem_ncoh_f() :
+		 ccsr_channel_inst_target_vid_mem_f()) |
 		ccsr_channel_inst_bind_true_f());
 
 	gk20a_writel(g, ccsr_channel_r(c->hw_chid),

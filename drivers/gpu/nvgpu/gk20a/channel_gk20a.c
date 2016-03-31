@@ -130,6 +130,7 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 	u32 addr_lo;
 	u32 addr_hi;
 	void *inst_ptr;
+	struct gk20a *g = c->g;
 
 	gk20a_dbg_fn("");
 
@@ -144,12 +145,13 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 		c->hw_chid, (u64)c->userd_iova);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_w(),
-		 pbdma_userd_target_vid_mem_f() |
-		 pbdma_userd_addr_f(addr_lo));
+		       (g->mm.vidmem_is_vidmem ?
+			pbdma_userd_target_sys_mem_ncoh_f() :
+			pbdma_userd_target_vid_mem_f()) |
+		       pbdma_userd_addr_f(addr_lo));
 
 	gk20a_mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_hi_w(),
-		 pbdma_userd_target_vid_mem_f() |
-		 pbdma_userd_hi_addr_f(addr_hi));
+		       pbdma_userd_hi_addr_f(addr_hi));
 
 	return 0;
 }
@@ -354,7 +356,9 @@ static void channel_gk20a_bind(struct channel_gk20a *c)
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
-		ccsr_channel_inst_target_vid_mem_f() |
+		(g->mm.vidmem_is_vidmem ?
+		 ccsr_channel_inst_target_sys_mem_ncoh_f() :
+		 ccsr_channel_inst_target_vid_mem_f()) |
 		ccsr_channel_inst_bind_true_f());
 
 	gk20a_writel(g, ccsr_channel_r(c->hw_chid),

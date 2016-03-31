@@ -357,6 +357,8 @@ struct mm_gk20a {
 	bool disable_bigpage;
 #endif
 	bool has_physical_mode;
+	/* false if vidmem aperture actually points to sysmem */
+	bool vidmem_is_vidmem;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

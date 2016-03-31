@@ -497,7 +497,9 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
 
 	gk20a_writel(g, bus_bar1_block_r(),
-		     bus_bar1_block_target_vid_mem_f() |
+		     (g->mm.vidmem_is_vidmem ?
+		       bus_bar1_block_target_sys_mem_ncoh_f() :
+		       bus_bar1_block_target_vid_mem_f()) |
 		     bus_bar1_block_mode_virtual_f() |
 		     bus_bar1_block_ptr_f(inst_pa));
 
@@ -2271,19 +2273,23 @@ u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 }
 
 /* for gk20a the "video memory" apertures here are misnomers. */
-static inline u32 big_valid_pde0_bits(u64 pte_addr)
+static inline u32 big_valid_pde0_bits(struct gk20a *g, u64 pte_addr)
 {
 	u32 pde0_bits =
-		gmmu_pde_aperture_big_video_memory_f() |
+		(g->mm.vidmem_is_vidmem ?
+		  gmmu_pde_aperture_big_sys_mem_ncoh_f() :
+		  gmmu_pde_aperture_big_video_memory_f()) |
 		gmmu_pde_address_big_sys_f(
 			   (u32)(pte_addr >> gmmu_pde_address_shift_v()));
 	return  pde0_bits;
 }
 
-static inline u32 small_valid_pde1_bits(u64 pte_addr)
+static inline u32 small_valid_pde1_bits(struct gk20a *g, u64 pte_addr)
 {
 	u32 pde1_bits =
-		gmmu_pde_aperture_small_video_memory_f() |
+		(g->mm.vidmem_is_vidmem ?
+		  gmmu_pde_aperture_small_sys_mem_ncoh_f() :
+		  gmmu_pde_aperture_small_video_memory_f()) |
 		gmmu_pde_vol_small_true_f() | /* tbd: why? */
 		gmmu_pde_address_small_sys_f(
 			   (u32)(pte_addr >> gmmu_pde_address_shift_v()));
@@ -2325,11 +2331,11 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 		pte_addr_big = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0);
 
 	pde_v[0] = gmmu_pde_size_full_f();
-	pde_v[0] |= big_valid ? big_valid_pde0_bits(pte_addr_big) :
+	pde_v[0] |= big_valid ? big_valid_pde0_bits(g, pte_addr_big) :
 		(gmmu_pde_aperture_big_invalid_f());
 
 	pde_v[1] |= (small_valid ?
-		     small_valid_pde1_bits(pte_addr_small) :
+		     small_valid_pde1_bits(g, pte_addr_small) :
 		     (gmmu_pde_aperture_small_invalid_f() |
 		      gmmu_pde_vol_small_false_f()))
 		    |
@@ -2374,7 +2380,9 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		if (priv)
 			pte_w[0] |= gmmu_pte_privilege_true_f();
 
-		pte_w[1] = gmmu_pte_aperture_video_memory_f() |
+		pte_w[1] = (g->mm.vidmem_is_vidmem ?
+			  gmmu_pte_aperture_sys_mem_ncoh_f() :
+			  gmmu_pte_aperture_video_memory_f()) |
 			gmmu_pte_kind_f(kind_v) |
 			gmmu_pte_comptagline_f((u32)(*ctag >> ctag_shift));
 
@@ -3482,7 +3490,9 @@ void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
-		ram_in_page_dir_base_target_vid_mem_f() |
+		(g->mm.vidmem_is_vidmem ?
+		  ram_in_page_dir_base_target_sys_mem_ncoh_f() :
+		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |
 		ram_in_page_dir_base_lo_f(pdb_addr_lo));
 
@@ -3774,7 +3784,9 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
 		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
-		fb_mmu_invalidate_pdb_aperture_vid_mem_f());
+		(g->mm.vidmem_is_vidmem ?
+		  fb_mmu_invalidate_pdb_aperture_sys_mem_f() :
+		  fb_mmu_invalidate_pdb_aperture_vid_mem_f()));
 
 	gk20a_writel(g, fb_mmu_invalidate_r(),
 		fb_mmu_invalidate_all_va_true_f() |

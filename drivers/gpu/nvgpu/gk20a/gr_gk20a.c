@@ -739,7 +739,9 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 		     (struct fecs_method_op_gk20a) {
 		     .method.addr = gr_fecs_method_push_adr_bind_pointer_v(),
 		     .method.data = (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-				     gr_fecs_current_ctx_target_vid_mem_f() |
+				     (g->mm.vidmem_is_vidmem ?
+				       gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
+				       gr_fecs_current_ctx_target_vid_mem_f()) |
 				     gr_fecs_current_ctx_valid_f(1)),
 		     .mailbox = { .id = 0, .data = 0,
 				  .clr = 0x30,
@@ -1421,7 +1423,9 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 		(struct fecs_method_op_gk20a) {
 		.method.addr = save_type,
 		.method.data = (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-				gr_fecs_current_ctx_target_vid_mem_f() |
+				(g->mm.vidmem_is_vidmem ?
+				  gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
+				  gr_fecs_current_ctx_target_vid_mem_f()) |
 				gr_fecs_current_ctx_valid_f(1)),
 		.mailbox = {.id = 0, .data = 0, .clr = 3, .ret = NULL,
 			.ok = 1, .fail = 2,
@@ -1885,7 +1889,9 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 			  (struct fecs_method_op_gk20a) {
 				  .method.data =
 					  (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-					   gr_fecs_current_ctx_target_vid_mem_f() |
+					   (g->mm.vidmem_is_vidmem ?
+					     gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
+					     gr_fecs_current_ctx_target_vid_mem_f()) |
 					   gr_fecs_current_ctx_valid_f(1)),
 				  .method.addr =
 					  gr_fecs_method_push_adr_restore_golden_v(),
@@ -4291,7 +4297,9 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	addr >>= fb_mmu_debug_wr_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
-		     fb_mmu_debug_wr_aperture_vid_mem_f() |
+		     (g->mm.vidmem_is_vidmem ?
+		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f() :
+		       fb_mmu_debug_wr_aperture_vid_mem_f()) |
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_f(addr));
 
@@ -4299,7 +4307,9 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	addr >>= fb_mmu_debug_rd_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),
-		     fb_mmu_debug_rd_aperture_vid_mem_f() |
+		     (g->mm.vidmem_is_vidmem ?
+		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f() :
+		       fb_mmu_debug_rd_aperture_vid_mem_f()) |
 		     fb_mmu_debug_rd_vol_false_f() |
 		     fb_mmu_debug_rd_addr_f(addr));
 
@@ -5967,7 +5977,9 @@ int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
 			   .mailbox.id = 4,
 			   .mailbox.data = (gr_fecs_current_ctx_ptr_f(addr >> 12) |
 					    gr_fecs_current_ctx_valid_f(1) |
-					    gr_fecs_current_ctx_target_vid_mem_f()),
+					    (g->mm.vidmem_is_vidmem ?
+					      gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
+					      gr_fecs_current_ctx_target_vid_mem_f())),
 			   .mailbox.clr = ~0,
 			   .method.data = 1,
 			   .method.addr = gr_fecs_method_push_adr_set_reglist_bind_instance_v(),

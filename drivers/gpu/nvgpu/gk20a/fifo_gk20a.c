@@ -2405,7 +2405,9 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	if (count != 0) {
 		gk20a_writel(g, fifo_runlist_base_r(),
 			fifo_runlist_base_ptr_f(u64_lo32(runlist_iova >> 12)) |
-			fifo_runlist_base_target_vid_mem_f());
+			(g->mm.vidmem_is_vidmem ?
+			  fifo_runlist_base_target_sys_mem_ncoh_f() :
+			  fifo_runlist_base_target_vid_mem_f()));
 	}
 
 	gk20a_writel(g, fifo_runlist_r(),

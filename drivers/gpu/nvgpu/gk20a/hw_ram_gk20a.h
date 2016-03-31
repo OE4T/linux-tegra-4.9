@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,6 +69,14 @@ static inline u32 ram_in_page_dir_base_target_w(void)
 static inline u32 ram_in_page_dir_base_target_vid_mem_f(void)
 {
 	return 0x0;
+}
+static inline u32 ram_in_page_dir_base_target_sys_mem_coh_f(void)
+{
+	return 0x2;
+}
+static inline u32 ram_in_page_dir_base_target_sys_mem_ncoh_f(void)
+{
+	return 0x3;
 }
 static inline u32 ram_in_page_dir_base_vol_w(void)
 {

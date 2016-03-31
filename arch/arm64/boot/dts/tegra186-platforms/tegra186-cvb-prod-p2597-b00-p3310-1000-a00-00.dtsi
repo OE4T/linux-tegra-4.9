@@ -301,6 +301,14 @@
 			gpio = <&gpio_i2c_0_74 0 0>;
 		};
 
+		vdd_bl_en: regulator@18 {
+			compatible = "regulator-fixed-sync";
+			reg = <18>;
+			regulator-name = "vdd-sys-bl";
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+		};
+
 		en_vdd_sys: regulator@118 {
 			compatible = "regulator-fixed-sync";
 			reg = <118>;

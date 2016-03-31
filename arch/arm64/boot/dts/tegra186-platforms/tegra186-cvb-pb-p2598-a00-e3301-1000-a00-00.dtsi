@@ -267,6 +267,14 @@
 			regulator-max-microvol = <1200000>;
 			gpio = <&gpio_i2c_0_77 3 1>;
 		};
+
+		vdd_bl_en: regulator@119 {
+			compatible = "regulator-fixed-sync";
+			reg = <119>;
+			regulator-name = "vdd-sys-bl";
+			regulator-min-microvol = <3300000>;
+			regulator-max-microvol = <3300000>;
+		};
 	};
 
 	gpio-keys {

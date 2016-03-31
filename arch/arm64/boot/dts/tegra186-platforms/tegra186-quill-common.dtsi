@@ -22,6 +22,7 @@
 #include "tegra186-soc/tegra186-soc-cvm.dtsi"
 #include "tegra186-platforms-simple-bus.dtsi"
 #include "panel-s-wuxga-8-0.dtsi"
+#include "panel-s-wqxga-10-1.dtsi"
 #include "tegra186-platforms/tegra186-quill-eqos.dtsi"
 #include "tegra186-hdmi.dtsi"
 #include "tegra186-dp.dtsi"
@@ -158,6 +159,58 @@
 				rom-val = /bits/ 8 <0x05>;
 			};
 		};
+	};
+
+	i2c@c240000 {
+		status = "okay";
+		lp8556-backlight-s-wqxga-10-1@2c {
+			status = "disabled";
+			disable-on-kernel-charging;
+			compatible = "ti,lp8556";
+			reg = <0x2C>;
+
+			bl-name = "pwm-backlight"; /* Match liblights naming expectations */
+			init-brt = /bits/ 8 <0xFF>; /* Max brightness */
+			dev-ctrl = /bits/ 8 <0x80>; /* PWM, enable standby mode */
+			pwm-period = <40161>;
+
+			pwm-names = "lp8556";
+			pwms = <&tegra_pwm1 0 40161>;
+
+			bl-measured = < 0 1 2 3 4 5 5 6
+					7 8 9 10 11 11 12 13
+					14 15 15 16 17 18 19 20
+					21 22 22 23 24 25 26 27
+					28 29 30 31 31 32 33 34
+					35 36 37 37 38 39 40 41
+					41 42 43 44 45 46 47 48
+					48 49 50 51 52 53 54 54
+					55 56 57 58 58 59 60 61
+					62 63 64 65 66 67 68 69
+					70 71 72 73 74 75 75 76
+					77 78 79 80 81 82 83 84
+					85 86 87 88 89 90 91 92
+					93 94 94 95 96 97 98 99
+					100 101 102 104 105 106 107 108
+					109 110 111 112 113 114 115 116
+					117 118 119 120 121 122 123 125
+					126 127 128 129 130 131 132 133
+					134 135 136 137 138 139 140 141
+					142 143 144 146 147 148 149 150
+					151 152 153 154 155 156 157 158
+					159 160 161 162 163 164 165 167
+					168 169 170 171 172 173 174 175
+					176 178 179 180 181 182 183 184
+					185 186 187 188 189 190 191 192
+					193 194 195 196 197 199 200 201
+					202 203 204 205 206 207 208 210
+					211 212 213 214 215 216 217 219
+					220 221 222 223 225 226 227 228
+					229 230 231 233 234 235 236 237
+					238 239 240 241 242 244 245 246
+					247 248 249 250 251 253 254 255 >;
+		};
+
 	};
 
 	vi-bypass@15700000{
@@ -448,6 +501,25 @@
 					>;
 				};
 			};
+			panel-s-wqxga-10-1 {
+				status = "disabled";
+				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
+				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
+				disp-default-out {
+					nvidia,out-rotation = <180>;
+				};
+				smartdimmer {
+					status = "disabled";
+					nvidia,turn-off-brightness = <0>;
+					nvidia,turn-on-brightness = <255>;
+					nvidia,sw-update-delay = <0>;
+					nvidia,aggressiveness = <5>;
+					nvidia,phase-in-settings = <0>;
+					nvidia,phase-in-adjustments = <0>;
+					nvidia,sd-window-enable = <0>;
+					nvidia,bl-device-name = "pwm-backlight";
+				};
+			};
 		};
 
 		sor{
@@ -651,6 +723,9 @@
 		status = "okay";
 		panel-s-wuxga-8-0-bl {
 			pwms = <&tegra_pwm1 0 40161>;
+		};
+		panel-s-wqxga-10-1-bl {
+			pwms = <&tegra_pwm1 0 1000000>;
 		};
                 panel-s-edp-uhdtv-15-6-bl {
                         pwms = <&tegra_pwm3 0 5000000>;

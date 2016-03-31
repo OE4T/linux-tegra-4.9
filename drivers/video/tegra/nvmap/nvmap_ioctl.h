@@ -62,4 +62,6 @@ int nvmap_ioctl_rw_handle(struct file *filp, int is_read, void __user *arg,
 int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 	bool is_rsrv_op);
 
+int nvmap_ioctl_gup_test(struct file *filp, void __user *arg);
+
 #endif	/*  __VIDEO_TEGRA_NVMAP_IOCTL_H */

@@ -645,6 +645,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 						   cmd == NVMAP_IOC_RESERVE);
 		break;
 
+	case NVMAP_IOC_GUP_TEST:
+		err = nvmap_ioctl_gup_test(filp, uarg);
+		break;
+
 	/* Depreacted IOCTL's */
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_MMAP_32:

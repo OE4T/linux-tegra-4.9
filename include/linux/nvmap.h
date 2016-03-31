@@ -142,6 +142,12 @@ struct nvmap_create_handle_from_va {
 	__u32 handle;		/* returns nvmap handle */
 };
 
+struct nvmap_gup_test {
+	__u64 va;		/* FromVA*/
+	__u32 handle;		/* returns nvmap handle */
+	__u32 result;		/* result=1 for pass, result=-err for failure */
+};
+
 struct nvmap_alloc_handle {
 	__u32 handle;		/* nvmap handle */
 	__u32 heap_mask;	/* heaps to allocate from */
@@ -353,6 +359,8 @@ struct nvmap_debugfs_handles_entry {
 
 /* Create a new memory handle from VA passed */
 #define NVMAP_IOC_FROM_VA _IOWR(NVMAP_IOC_MAGIC, 22, struct nvmap_create_handle_from_va)
+
+#define NVMAP_IOC_GUP_TEST _IOWR(NVMAP_IOC_MAGIC, 23, struct nvmap_gup_test)
 
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */

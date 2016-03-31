@@ -702,3 +702,70 @@ free_mem:
 	return err;
 }
 
+int nvmap_ioctl_gup_test(struct file *filp, void __user *arg)
+{
+	int i, err = -EINVAL;
+	struct nvmap_gup_test op;
+	struct vm_area_struct *vma;
+	struct nvmap_handle *handle;
+	int nr_page;
+	int user_pages;
+	struct page **pages;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	op.result = 1;
+	vma = find_vma(current->mm, op.va);
+	if (unlikely(!vma) || (unlikely(op.va < vma->vm_start )) ||
+	    unlikely(op.va >= vma->vm_end))
+		goto exit;
+
+	handle = nvmap_handle_get_from_fd(op.handle);
+	if (!handle)
+		goto exit;
+
+	if (vma->vm_end - vma->vm_start != handle->size) {
+		pr_err("handle size(0x%zx) and vma size(0x%lx) don't match\n",
+			 handle->size, vma->vm_end - vma->vm_start);
+		goto put_handle;
+	}
+
+	err = -ENOMEM;
+	nr_page = handle->size >> PAGE_SHIFT;
+	pages = nvmap_altalloc(nr_page * sizeof(*pages));
+	if (!pages)
+		goto put_handle;
+
+	user_pages = get_user_pages(current, current->mm,
+					op.va & PAGE_MASK, nr_page,
+					1 /*write*/, 1 /* force */,
+					pages, NULL);
+	if (user_pages != nr_page)
+		goto put_user_pages;
+
+	for (i = 0; i < nr_page; i++) {
+		if (handle->pgalloc.pages[i] != pages[i]) {
+			pr_err("page pointers don't match, %p %p\n",
+			       handle->pgalloc.pages[i], pages[i]);
+			op.result = 0;
+		}
+	}
+
+	if (op.result)
+		err = 0;
+
+	if (copy_to_user(arg, &op, sizeof(op)))
+		err = -EFAULT;
+
+put_user_pages:
+	pr_info("get_user_pages requested/got: %d/%d]\n", nr_page, user_pages);
+	while (--user_pages >= 0)
+		put_page(pages[user_pages]);
+	nvmap_altfree(pages, nr_page * sizeof(*pages));
+put_handle:
+	nvmap_handle_put(handle);
+exit:
+	pr_info("GUP Test %s\n", err ? "failed" : "passed");
+	return err;
+}

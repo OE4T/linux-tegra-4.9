@@ -20,25 +20,25 @@
 #include "hw_ram_gm20b.h"
 #include "hw_fifo_gm20b.h"
 
-static void channel_gm20b_bind(struct channel_gk20a *ch_gk20a)
+static void channel_gm20b_bind(struct channel_gk20a *c)
 {
-	struct gk20a *g = ch_gk20a->g;
+	struct gk20a *g = c->g;
 
-	u32 inst_ptr = gk20a_mem_phys(&ch_gk20a->inst_block)
+	u32 inst_ptr = gk20a_mm_inst_block_addr(g, &c->inst_block)
 		>> ram_in_base_shift_v();
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
-		ch_gk20a->hw_chid, inst_ptr);
+		c->hw_chid, inst_ptr);
 
-	ch_gk20a->bound = true;
+	c->bound = true;
 
-	gk20a_writel(g, ccsr_channel_inst_r(ch_gk20a->hw_chid),
+	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
 		ccsr_channel_inst_target_vid_mem_f() |
 		ccsr_channel_inst_bind_true_f());
 
-	gk20a_writel(g, ccsr_channel_r(ch_gk20a->hw_chid),
-		(gk20a_readl(g, ccsr_channel_r(ch_gk20a->hw_chid)) &
+	gk20a_writel(g, ccsr_channel_r(c->hw_chid),
+		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
 		 ~ccsr_channel_enable_set_f(~0)) |
 		 ccsr_channel_enable_set_true_f());
 }

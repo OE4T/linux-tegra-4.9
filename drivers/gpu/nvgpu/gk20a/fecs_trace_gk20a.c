@@ -624,12 +624,13 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
 			"hw_chid=%d context_ptr=%x inst_block=%llx",
-			ch->hw_chid, context_ptr, gk20a_mem_phys(&ch->inst_block));
+			ch->hw_chid, context_ptr,
+			gk20a_mm_inst_block_addr(g, &ch->inst_block));
 
 	if (!trace)
 		return -ENOMEM;
 
-	pa = gk20a_mem_phys(&trace->trace_buf);
+	pa = gk20a_mm_inst_block_addr(g, &trace->trace_buf);
 	if (!pa)
 		return -ENOMEM;
 

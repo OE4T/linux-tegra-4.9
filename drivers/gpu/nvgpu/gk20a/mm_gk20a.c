@@ -482,7 +482,7 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct mem_desc *inst_block = &mm->bar1.inst_block;
-	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
+	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -2249,7 +2249,7 @@ void gk20a_free_sgtable(struct sg_table **sgt)
 
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
 {
-	if (!device_is_iommuable(dev_from_gk20a(g)))
+	if (!device_is_iommuable(dev_from_gk20a(g)) || !g->mm.has_physical_mode)
 		return iova;
 	else
 		return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
@@ -3382,6 +3382,17 @@ void gk20a_free_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 		gk20a_gmmu_free(g, inst_block);
 }
 
+u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct mem_desc *inst_block)
+{
+	u64 addr;
+	if (g->mm.has_physical_mode)
+		addr = gk20a_mem_phys(inst_block);
+	else
+		addr = gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(inst_block->sgt->sgl));
+
+	return addr;
+}
+
 static int gk20a_init_bar1_vm(struct mm_gk20a *mm)
 {
 	int err;
@@ -3484,11 +3495,10 @@ void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 pde_addr = g->ops.mm.get_iova_addr(g, vm->pdb.sgt->sgl, 0);
-	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
 	void *inst_ptr = inst_block->cpu_va;
 
 	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
-		(u64)inst_pa, inst_ptr);
+		gk20a_mm_inst_block_addr(g, inst_block), inst_ptr);
 
 	gk20a_dbg_info("pde pa=0x%llx", (u64)pde_addr);
 

@@ -346,6 +346,7 @@ struct mm_gk20a {
 #endif
 	u32 bypass_smmu;
 	u32 disable_bigpage;
+	bool has_physical_mode;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);
@@ -420,6 +421,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block);
 void gk20a_free_inst_block(struct gk20a *g, struct mem_desc *inst_block);
 void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 		u32 big_page_size);
+u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct mem_desc *mem);
 
 void gk20a_mm_dump_vm(struct vm_gk20a *vm,
 		u64 va_begin, u64 va_end, char *label);

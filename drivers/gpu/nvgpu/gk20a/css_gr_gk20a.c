@@ -281,7 +281,7 @@ static int css_hw_enable_snapshot(struct gr_gk20a *gr, u32 snapshot_size)
 	gk20a_writel(g, perf_pmasys_outsize_r(), snapshot_size);
 
 	/* this field is aligned to 4K */
-	inst_pa_page = gk20a_mem_phys(&g->mm.hwpm.inst_block) >> 12;
+	inst_pa_page = gk20a_mm_inst_block_addr(g, &g->mm.hwpm.inst_block) >> 12;
 
 	/* A write to MEM_BLOCK triggers the block bind operation. MEM_BLOCK
 	 * should be written last */

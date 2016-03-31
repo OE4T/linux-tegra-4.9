@@ -729,7 +729,7 @@ int gr_gk20a_ctx_patch_write(struct gk20a *g,
 static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	u32 inst_base_ptr = u64_lo32(gk20a_mem_phys(&c->inst_block)
+	u32 inst_base_ptr = u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)
 				     >> ram_in_base_shift_v());
 	u32 ret;
 
@@ -1408,7 +1408,7 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	int ret;
 
 	u32 inst_base_ptr =
-		u64_lo32(gk20a_mem_phys(&c->inst_block)
+		u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)
 		>> ram_in_base_shift_v());
 
 
@@ -1875,7 +1875,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
-			u64_lo32(gk20a_mem_phys(&c->inst_block)
+			u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)
 			>> ram_in_base_shift_v());
 
 		ret = gr_gk20a_submit_fecs_method_op(g,
@@ -2103,7 +2103,7 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 
 	gk20a_writel(g, gr_fecs_arb_ctx_adr_r(), 0x0);
 
-	inst_ptr = gk20a_mem_phys(&ucode_info->inst_blk_desc);
+	inst_ptr = gk20a_mm_inst_block_addr(g, &ucode_info->inst_blk_desc);
 	gk20a_writel(g, gr_fecs_new_ctx_r(),
 			gr_fecs_new_ctx_ptr_f(inst_ptr >> 12) |
 			gr_fecs_new_ctx_target_m() |
@@ -4712,7 +4712,7 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 
 
 	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
-			gk20a_mem_phys(&mm->pmu.inst_block));
+			gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block));
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");
@@ -4991,7 +4991,7 @@ int gk20a_gr_reset(struct gk20a *g)
 	}
 
 	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
-			gk20a_mem_phys(&g->mm.pmu.inst_block));
+			gk20a_mm_inst_block_addr(g, &g->mm.pmu.inst_block));
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");
@@ -5372,7 +5372,7 @@ static struct channel_gk20a *gk20a_gr_get_channel_from_ctx(
 		if (!gk20a_channel_get(ch))
 			continue;
 
-		if ((u32)(gk20a_mem_phys(&ch->inst_block) >>
+		if ((u32)(gk20a_mm_inst_block_addr(g, &ch->inst_block) >>
 					ram_in_base_shift_v()) ==
 				gr_fecs_current_ctx_ptr_v(curr_ctx)) {
 			tsgid = ch->tsgid;

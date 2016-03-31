@@ -275,6 +275,7 @@ static const unsigned int heap_policy_large[] = {
 
 static const unsigned int heap_policy_excl[] = {
 	NVMAP_HEAP_CARVEOUT_IVM,
+	NVMAP_HEAP_CARVEOUT_VIDMEM,
 	0,
 };
 

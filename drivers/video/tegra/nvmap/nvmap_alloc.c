@@ -260,7 +260,6 @@ fail_get_user_pages:
 static const unsigned int heap_policy_small[] = {
 	NVMAP_HEAP_CARVEOUT_VPR,
 	NVMAP_HEAP_CARVEOUT_IRAM,
-	NVMAP_HEAP_CARVEOUT_IVM,
 	NVMAP_HEAP_CARVEOUT_MASK,
 	NVMAP_HEAP_IOVMM,
 	0,
@@ -270,8 +269,12 @@ static const unsigned int heap_policy_large[] = {
 	NVMAP_HEAP_CARVEOUT_VPR,
 	NVMAP_HEAP_CARVEOUT_IRAM,
 	NVMAP_HEAP_IOVMM,
-	NVMAP_HEAP_CARVEOUT_IVM,
 	NVMAP_HEAP_CARVEOUT_MASK,
+	0,
+};
+
+static const unsigned int heap_policy_excl[] = {
+	NVMAP_HEAP_CARVEOUT_IVM,
 	0,
 };
 
@@ -285,7 +288,8 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	const unsigned int *alloc_policy;
 	int nr_page;
 	int err = -ENOMEM;
-	int tag;
+	int tag, i;
+	bool alloc_from_excl = false;
 
 	h = nvmap_handle_get(h);
 
@@ -327,23 +331,30 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 			client->task->pid, task_comm);
 	}
 
-	/* If user specifies IVM carveout, allocation from no other heap should
-	 * be allowed.
+	/*
+	 * If user specifies one of the exclusive carveouts, allocation
+	 * from no other heap should be allowed.
 	 */
-	if (heap_mask & NVMAP_HEAP_CARVEOUT_IVM)
-		if (heap_mask & ~(NVMAP_HEAP_CARVEOUT_IVM)) {
-			pr_err("%s alloc mixes IVM and other heaps\n",
-			       current->group_leader->comm);
+	for (i = 0; i < ARRAY_SIZE(heap_policy_excl); i++) {
+		if (!(heap_mask & heap_policy_excl[i]))
+			continue;
+
+		if (heap_mask & ~(heap_policy_excl[i])) {
+			pr_err("%s alloc mixes exclusive heap %d and other heaps\n",
+			       current->group_leader->comm, heap_policy_excl[i]);
 			err = -EINVAL;
 			goto out;
 		}
+		alloc_from_excl = true;
+	}
 
 	if (!heap_mask) {
 		err = -EINVAL;
 		goto out;
 	}
 
-	alloc_policy = (nr_page == 1) ? heap_policy_small : heap_policy_large;
+	alloc_policy = alloc_from_excl ? heap_policy_excl :
+			(nr_page == 1) ? heap_policy_small : heap_policy_large;
 
 	while (!h->alloc && *alloc_policy) {
 		unsigned int heap_type;

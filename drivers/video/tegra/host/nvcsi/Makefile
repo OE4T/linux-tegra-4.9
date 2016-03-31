@@ -1,8 +1,8 @@
 GCOV_PROFILE := y
-ccflags-y += -Idrivers/video/tegra/host
+ccflags-y += -I../kernel-nvhost/drivers/video/tegra/host
 ccflags-y += -Idrivers/video/tegra/camera
 ccflags-y += -Idrivers/media/platform/tegra/
-ccflags-y += -I../kernel-t18x/drivers/video/tegra/host
+ccflags-y += -I../kernel-nvhost-t18x/drivers/video/tegra/host
 ccflags-y += -Werror
 
 nvhost-nvcsi-objs  = \

@@ -44,7 +44,7 @@
 #include <linux/nvhost.h>
 #include <linux/nvmap.h>
 
-#include "host/dev.h"
+#include "dev.h"
 #include "dc/dc_priv.h"
 #include "dc/edid.h"
 #include "dc/dc_config.h"

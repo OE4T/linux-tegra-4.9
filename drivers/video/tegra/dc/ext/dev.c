@@ -37,12 +37,12 @@
 #include "../dc_priv.h"
 #include "../dc_config.h"
 /* XXX ew 2 */
-#include "../../host/dev.h"
+#include "dev.h"
 /* XXX ew 3 */
 #include "tegra_dc_ext_priv.h"
 /* XXX ew 4 */
 #ifdef CONFIG_TEGRA_GRHOST_SYNC
-#include "../../../staging/android/sync.h"
+#include "../drivers/staging/android/sync.h"
 #endif
 
 #define TEGRA_DC_TS_MAX_DELAY_US 1000000

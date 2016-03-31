@@ -567,6 +567,19 @@ static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
 	return 0;
 }
 
+static u32 vgpu_gr_get_gpc_tpc_count(struct gk20a *g, u32 gpc_index)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 data;
+
+	WARN_ON(gpc_index > 0);
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_GPC0_TPC_COUNT, &data))
+		gk20a_err(dev_from_gk20a(g), "failed to retrieve gpc0_tpc_count");
+	return data;
+}
+
 static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
@@ -593,13 +606,23 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 			&gr->tpc_count))
 		return -ENOMEM;
 
+	gr->gpc_tpc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
+	if (!gr->gpc_tpc_count)
+		goto cleanup;
+
 	gr->gpc_tpc_mask = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	if (!gr->gpc_tpc_mask) {
-		gk20a_err(dev_from_gk20a(g), "%s: out of memory\n", __func__);
-		return -ENOMEM;
-	}
+	if (!gr->gpc_tpc_mask)
+		goto cleanup;
+
+	gr->sm_to_cluster = kzalloc(gr->gpc_count * gr->max_tpc_per_gpc_count *
+				sizeof(struct sm_info), GFP_KERNEL);
+	if (!gr->sm_to_cluster)
+		goto cleanup;
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
+		gr->gpc_tpc_count[gpc_index] =
+			vgpu_gr_get_gpc_tpc_count(g, gpc_index);
+
 		if (g->ops.gr.get_gpc_tpc_mask)
 			gr->gpc_tpc_mask[gpc_index] =
 				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
@@ -608,7 +631,18 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	g->ops.gr.bundle_cb_defaults(g);
 	g->ops.gr.cb_size_default(g);
 	g->ops.gr.calc_global_ctx_buffer_size(g);
+	g->ops.gr.init_fs_state(g);
 	return 0;
+cleanup:
+	gk20a_err(dev_from_gk20a(g), "%s: out of memory\n", __func__);
+
+	kfree(gr->gpc_tpc_count);
+	gr->gpc_tpc_count = NULL;
+
+	kfree(gr->gpc_tpc_mask);
+	gr->gpc_tpc_mask = NULL;
+
+	return -ENOMEM;
 }
 
 static int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
@@ -823,6 +857,12 @@ static void vgpu_remove_gr_support(struct gr_gk20a *gr)
 
 	kfree(gr->gpc_tpc_mask);
 	gr->gpc_tpc_mask = NULL;
+
+	kfree(gr->sm_to_cluster);
+	gr->sm_to_cluster = NULL;
+
+	kfree(gr->gpc_tpc_count);
+	gr->gpc_tpc_count = NULL;
 }
 
 static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)

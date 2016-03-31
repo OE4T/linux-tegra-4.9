@@ -14,7 +14,7 @@
  *
  */
 
-#include "../../dc/tsec_drv.h"
+#include "tsec_drv.h"
 
 #define NV_PSEC_THI_METHOD1                  0x00000044      /* RW-4R */
 #define NV_PSEC_THI_METHOD0                  0x00000040      /* RW-4R */

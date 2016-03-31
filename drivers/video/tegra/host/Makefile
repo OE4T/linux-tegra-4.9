@@ -1,5 +1,5 @@
 GCOV_PROFILE := y
-ccflags-y += -Idrivers/video/tegra/host
+ccflags-y += -I../kernel-nvhost/drivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 
@@ -30,7 +30,7 @@ obj-$(CONFIG_TEGRA_GRHOST) += flcn/
 obj-$(CONFIG_TEGRA_GRHOST) += t210/
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../kernel-t18x/drivers/video/tegra/host/
+obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../kernel-nvhost-t18x/drivers/video/tegra/host/
 endif
 
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o

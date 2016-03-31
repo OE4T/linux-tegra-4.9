@@ -1,0 +1,20 @@
+config TEGRA_GRHOST
+        tristate "Tegra graphics host driver"
+        help
+          Driver for the Tegra graphics host hardware.
+
+config TEGRA_GRHOST_ISP
+        depends on TEGRA_GRHOST
+        tristate "Tegra image processing pipeline support"
+        default y
+        help
+          Driver for the Tegra image processing pipeline (ISP)
+          To compile this driver as a module, choose M here:
+          the  module will be called nvhost-isp.
+
+config TEGRA_GRHOST_DEFAULT_TIMEOUT
+        depends on TEGRA_GRHOST
+        int "Default timeout for submits"
+        default 10000
+        help
+          Default timeout for jobs in milliseconds. Set to zero for no timeout.

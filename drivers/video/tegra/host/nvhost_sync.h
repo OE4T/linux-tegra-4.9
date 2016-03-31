@@ -23,7 +23,7 @@
 
 #ifdef __KERNEL__
 
-#include "../../../staging/android/sync.h"
+#include "../drivers/staging/android/sync.h"
 
 struct nvhost_syncpt;
 struct nvhost_ctrl_sync_fence_info;

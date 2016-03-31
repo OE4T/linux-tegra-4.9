@@ -2583,6 +2583,28 @@ static int gk20a_channel_get_event_data_from_id(struct channel_gk20a *ch,
 	}
 }
 
+void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
+				       int event_id)
+{
+	struct gk20a_event_id_data *event_id_data;
+	int err = 0;
+
+	err = gk20a_channel_get_event_data_from_id(ch, event_id,
+						&event_id_data);
+	if (err)
+		return;
+
+	mutex_lock(&event_id_data->lock);
+
+	gk20a_dbg_info(
+		"posting event for event_id=%d on ch=%d\n",
+		event_id, ch->hw_chid);
+
+	wake_up_interruptible_all(&event_id_data->event_id_wq);
+
+	mutex_unlock(&event_id_data->lock);
+}
+
 static int gk20a_channel_event_id_enable(struct channel_gk20a *ch,
 					 int event_id,
 					 int *fd)

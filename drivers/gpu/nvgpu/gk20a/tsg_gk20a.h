@@ -59,4 +59,7 @@ struct tsg_gk20a {
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);
 int gk20a_disable_tsg(struct tsg_gk20a *tsg);
 
+void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
+				       int event_id);
+
 #endif /* __TSG_GK20A_H_ */

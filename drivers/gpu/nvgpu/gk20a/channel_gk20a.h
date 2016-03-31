@@ -281,5 +281,7 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int *__timeslice_timeout, int *__timeslice_scale);
 int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority);
 int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice);
+void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
+				       int event_id);
 
 #endif /* CHANNEL_GK20A_H */

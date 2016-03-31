@@ -1517,7 +1517,6 @@ static int tc358840_set_fmt(struct v4l2_subdev *sd,
 	switch (code) {
 	case MEDIA_BUS_FMT_RGB888_1X24:
 	case MEDIA_BUS_FMT_UYVY8_1X16:
-		state->mbus_fmt_code = code;
 		break;
 	default:
 		return -EINVAL;
@@ -1529,6 +1528,7 @@ static int tc358840_set_fmt(struct v4l2_subdev *sd,
 	v4l2_dbg(3, debug, sd, "%s(): format->which=%d\n",
 		__func__, format->which);
 
+	state->mbus_fmt_code = format->format.code;
 	enable_stream(sd, false);
 	tc358840_set_csi(sd);
 	tc358840_set_csi_mbus_config(sd);

@@ -969,6 +969,14 @@
 		status = "disabled";
 	};
 
+	ast@b040000 {
+		status = "disabled";
+	};
+
+	ast@b050000 {
+		status = "disabled";
+	};
+
 	ast@2994000 {
 		status = "disabled";
 	};

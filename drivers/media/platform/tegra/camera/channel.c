@@ -1068,14 +1068,23 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 	struct tegra_video_format const *vfmt;
 	struct v4l2_subdev_format fmt;
 	int ret = 0;
+	struct v4l2_subdev *sd = chan->subdev[0];
 	int num_sd = 0;
-	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
-		struct v4l2_subdev *sd = chan->subdev[num_sd];
+
+	while (sd != NULL) {
 		memset(&fmt, 0x0, sizeof(fmt));
 		fmt.pad = 0;
 		ret = v4l2_subdev_call(sd, pad, get_fmt, NULL, &fmt);
-		if (ret < 0 && ret != -ENOIOCTLCMD)
-			return ret;
+		if (ret) {
+			if (ret == -ENOIOCTLCMD) {
+				num_sd++;
+				if (num_sd < chan->num_subdevs) {
+					sd = chan->subdev[num_sd];
+					continue;
+				} else
+					break;
+			}
+		}
 
 		v4l2_fill_pix_format(pix, &fmt.format);
 		vfmt = tegra_core_get_format_by_code(fmt.format.code);
@@ -1084,10 +1093,22 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 			pix->bytesperline = pix->width * vfmt->bpp;
 			pix->sizeimage = pix->height * pix->bytesperline;
 		}
-		return 0;
+		return ret;
+
 	}
 
-	return -ENOIOCTLCMD;
+	return -ENOTTY;
+}
+
+static int
+tegra_channel_get_format(struct file *file, void *fh,
+			struct v4l2_format *format)
+{
+	struct v4l2_fh *vfh = file->private_data;
+	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	struct v4l2_pix_format *pix = &format->fmt.pix;
+
+	return  __tegra_channel_get_format(chan, pix);
 }
 
 static int
@@ -1107,28 +1128,21 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 {
 	const struct tegra_video_format *vfmt;
 	struct v4l2_subdev_format fmt;
-	int ret = 0;
 	int num_sd = 0;
-	struct v4l2_subdev *sd = chan->subdev[num_sd];
+	struct v4l2_subdev *sd = chan->subdev[0];
+	int ret = 0;
 
-	/* Retrieve format information and select the default format if the
-	 * requested format isn't supported.
-	 */
+	/* Use the channel format if pixformat is not supported */
 	vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
 	if (!vfmt) {
 		pix->pixelformat = chan->format.pixelformat;
 		vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
 	}
 
-	pix->pixelformat = vfmt->fourcc;
-	/* Change this when start adding interlace format support */
-	pix->field = V4L2_FIELD_NONE;
-	pix->colorspace = chan->format.colorspace;
-
 	tegra_channel_fmt_align(pix, chan->align, vfmt->bpp);
+
 	fmt.which = V4L2_SUBDEV_FORMAT_TRY;
 	fmt.pad = 0;
-	/* verify with subdevice the format supported */
 	v4l2_fill_mbus_format(&fmt.format, pix, vfmt->code);
 
 	while (sd != NULL) {

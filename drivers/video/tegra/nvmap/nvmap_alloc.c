@@ -235,6 +235,7 @@ static int alloc_handle_from_va(struct nvmap_client *client,
 	if (user_pages != nr_page)
 		goto fail_get_user_pages;
 
+	nvmap_clean_cache(&pages[0], nr_page);
 	h->pgalloc.pages = pages;
 	atomic_set(&h->pgalloc.ndirty, 0);
 	h->heap_type = NVMAP_HEAP_IOVMM;

@@ -79,7 +79,7 @@ struct nvmap_handle_ref *nvmap_create_handle_from_va(struct nvmap_client *client
 
 	if (unlikely(!vma) || (unlikely(vaddr < vma->vm_start )) ||
 	    unlikely(vaddr >= vma->vm_end) ||
-	    unlikely(size > vma->vm_start - vma->vm_end)) {
+	    unlikely(size > vma->vm_end - vma->vm_start)) {
 		return ERR_PTR(-EINVAL);
 	}
 

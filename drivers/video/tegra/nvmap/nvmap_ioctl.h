@@ -46,7 +46,7 @@ int nvmap_ioctl_free(struct file *filp, unsigned long arg);
 
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg);
 
-int nvmap_ioctl_create_from_va(struct file *filp, unsigned int cmd, void __user *arg);
+int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg);
 
 int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg);
 

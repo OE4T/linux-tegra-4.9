@@ -575,6 +575,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_create(filp, cmd, uarg);
 		break;
 
+	case NVMAP_IOC_FROM_VA:
+		err = nvmap_ioctl_create_from_va(filp, uarg);
+		break;
+
 	case NVMAP_IOC_GET_FD:
 		err = nvmap_ioctl_getfd(filp, uarg);
 		break;

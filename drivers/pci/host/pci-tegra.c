@@ -2707,7 +2707,7 @@ static void tegra_pcie_enable_ltr_support(struct tegra_pcie *pcie)
 	}
 }
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 port)
+static void tegra_pcie_config_bi_dir_clkreq(struct tegra_pcie *pcie)
 {
 	static struct pinctrl_dev *pctl_dev = NULL;
 	unsigned long od_conf, tr_conf;
@@ -2718,29 +2718,21 @@ static void tegra_pcie_config_clkreq(struct tegra_pcie *pcie, u32 port)
 		pctl_dev = pinctrl_get_dev_from_of_compatible(
 				pinctrl_compatible);
 	if (!pctl_dev) {
-		dev_err(pcie->dev,
-			"%s(): tegra pincontrol is not found\n", __func__);
+		dev_err(pcie->dev, "invalid tegra clkreq pinctrl\n");
 		return;
 	}
-
 	od_conf = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_OPEN_DRAIN,
 				TEGRA_PIN_ENABLE);
 	tr_conf = TEGRA_PINCONF_PACK(TEGRA_PINCONF_PARAM_TRISTATE,
 				TEGRA_PIN_DISABLE);
 
-	/* Make CLKREQ# bi-directional if L1PM SS are enabled */
-	if (port) {
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l1_clkreq, tr_conf);
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l1_clkreq, od_conf);
-	} else {
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l0_clkreq, tr_conf);
-		pinctrl_set_config_for_group_name(pctl_dev,
-				pin_pex_l0_clkreq, od_conf);
-	}
+	/* Make CLKREQ# bi-directional only if L1SS are enabled */
+	pinctrl_set_config_for_group_name(pctl_dev, pin_pex_l0_clkreq, tr_conf);
+	pinctrl_set_config_for_group_name(pctl_dev, pin_pex_l0_clkreq, od_conf);
+	pinctrl_set_config_for_group_name(pctl_dev, pin_pex_l1_clkreq, tr_conf);
+	pinctrl_set_config_for_group_name(pctl_dev, pin_pex_l1_clkreq, od_conf);
 }
+
 #endif
 
 struct dev_ids {
@@ -2811,7 +2803,7 @@ static void tegra_pcie_enable_aspm(struct tegra_pcie *pcie)
 		pci_read_config_dword(pdev, data + PCI_L1SS_CAP, &val);
 		if ((val & PCI_L1SS_CAP_L1PMS) ||
 			(val & PCI_L1SS_CAP_L1PM_MASK))
-			tegra_pcie_config_clkreq(pcie, port->index);
+			tegra_pcie_config_bi_dir_clkreq(pcie);
 #endif
 	}
 	/* L1.2 specific common configuration */

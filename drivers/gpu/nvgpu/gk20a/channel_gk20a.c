@@ -1862,23 +1862,33 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 	struct channel_gk20a *c = container_of(to_delayed_work(work),
 			struct channel_gk20a, clean_up.wq);
 	struct vm_gk20a *vm;
-	struct channel_gk20a_job *job, *n;
+	struct channel_gk20a_job *job;
 	struct gk20a_platform *platform;
+	struct gk20a *g;
 
 	c = gk20a_channel_get(c);
 	if (!c)
 		return;
 
 	vm = c->vm;
-	platform = gk20a_get_platform(c->g->dev);
+	g = c->g;
+	platform = gk20a_get_platform(g->dev);
 
 	gk20a_channel_cancel_job_clean_up(c, false);
 
-	mutex_lock(&c->jobs_lock);
-	list_for_each_entry_safe(job, n, &c->jobs, list) {
-		struct gk20a *g = c->g;
+	while (1) {
+		bool completed;
 
-		bool completed = gk20a_fence_is_expired(job->post_fence);
+		mutex_lock(&c->jobs_lock);
+		if (list_empty(&c->jobs)) {
+			mutex_unlock(&c->jobs_lock);
+			break;
+		}
+		job = list_first_entry(&c->jobs,
+				       struct channel_gk20a_job, list);
+		mutex_unlock(&c->jobs_lock);
+
+		completed = gk20a_fence_is_expired(job->post_fence);
 		if (!completed) {
 			gk20a_channel_timeout_start(c, job);
 			break;
@@ -1919,12 +1929,14 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 		 * so this wouldn't get freed here. */
 		gk20a_channel_put(c);
 
+		mutex_lock(&c->jobs_lock);
 		list_del_init(&job->list);
+		mutex_unlock(&c->jobs_lock);
+
 		kfree(job);
+
 		gk20a_idle(g->dev);
 	}
-
-	mutex_unlock(&c->jobs_lock);
 
 	if (c->update_fn)
 		schedule_work(&c->update_fn_work);

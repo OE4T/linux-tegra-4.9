@@ -45,8 +45,8 @@
 			};
 		};
 
-		e3301-a02-slt-char@0 {
-			ids = "3301-1080-200", "3301-1099-200";
+		e3301-a02-char@0 {
+			ids = "3301-1080-200";
 			override@0 {
 				target = <&spmic_ldo8>;
 				_overlay_ {
@@ -64,13 +64,17 @@
 					iopower-audio-hv-supply = <&spmic_ldo8>;
 				};
 			};
-			override@2 {
+		};
+
+		e3301-a02-slt-char@0 {
+			ids = "3301-1080-200", "3301-1099-200";
+			override@0 {
 				target = <&enable_fan_tach>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@3 {
+			override@1 {
 				target = <&tegra_pwm5>;
 				_overlay_ {
 					status = "okay";

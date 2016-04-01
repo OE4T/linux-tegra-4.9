@@ -644,7 +644,11 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0, i;
 
-	if (!chan->vi->pg_mode) {
+	if (chan->vi->pg_mode)
+		for (i = 0; i < chan->valid_ports; i++)
+			tegra_csi_tpg_start_streaming(chan->vi->csi,
+						      chan->port[i]);
+	else {
 		ret = media_entity_pipeline_start(&chan->video.entity, pipe);
 		if (ret < 0)
 			goto error_pipeline_start;

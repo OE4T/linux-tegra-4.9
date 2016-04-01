@@ -282,6 +282,30 @@ EXPORT_SYMBOL(tegra_csi_power);
  * -----------------------------------------------------------------------------
  */
 
+/* Test Pattern Generator setup */
+void tegra_csi_tpg_start_streaming(struct tegra_csi_device *csi,
+				   enum tegra_csi_port_num port_num)
+{
+	struct tegra_csi_port *port = &csi->ports[port_num];
+
+	tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL,
+			((csi->pg_mode - 1) << PG_MODE_OFFSET) |
+			PG_ENABLE);
+	tpg_write(port, TEGRA_CSI_PG_PHASE, 0x0);
+	tpg_write(port, TEGRA_CSI_PG_RED_FREQ,
+			(0x10 << PG_RED_VERT_INIT_FREQ_OFFSET) |
+			(0x10 << PG_RED_HOR_INIT_FREQ_OFFSET));
+	tpg_write(port, TEGRA_CSI_PG_RED_FREQ_RATE, 0x0);
+	tpg_write(port, TEGRA_CSI_PG_GREEN_FREQ,
+			(0x10 << PG_GREEN_VERT_INIT_FREQ_OFFSET) |
+			(0x10 << PG_GREEN_HOR_INIT_FREQ_OFFSET));
+	tpg_write(port, TEGRA_CSI_PG_GREEN_FREQ_RATE, 0x0);
+	tpg_write(port, TEGRA_CSI_PG_BLUE_FREQ,
+			(0x10 << PG_BLUE_VERT_INIT_FREQ_OFFSET) |
+			(0x10 << PG_BLUE_HOR_INIT_FREQ_OFFSET));
+	tpg_write(port, TEGRA_CSI_PG_BLUE_FREQ_RATE, 0x0);
+}
+
 void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num)
 {
@@ -355,26 +379,6 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 	pp_write(port, TEGRA_CSI_INPUT_STREAM_CONTROL,
 		 (0x3f << CSI_SKIP_PACKET_THRESHOLD_OFFSET) |
 		 (port->lanes - 1));
-
-	/* Test Pattern Generator setup */
-	if (csi->pg_mode) {
-		tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL,
-			  ((csi->pg_mode - 1) << PG_MODE_OFFSET) |
-			  PG_ENABLE);
-		tpg_write(port, TEGRA_CSI_PG_PHASE, 0x0);
-		tpg_write(port, TEGRA_CSI_PG_RED_FREQ,
-			  (0x10 << PG_RED_VERT_INIT_FREQ_OFFSET) |
-			  (0x10 << PG_RED_HOR_INIT_FREQ_OFFSET));
-		tpg_write(port, TEGRA_CSI_PG_RED_FREQ_RATE, 0x0);
-		tpg_write(port, TEGRA_CSI_PG_GREEN_FREQ,
-			  (0x10 << PG_GREEN_VERT_INIT_FREQ_OFFSET) |
-			  (0x10 << PG_GREEN_HOR_INIT_FREQ_OFFSET));
-		tpg_write(port, TEGRA_CSI_PG_GREEN_FREQ_RATE, 0x0);
-		tpg_write(port, TEGRA_CSI_PG_BLUE_FREQ,
-			  (0x10 << PG_BLUE_VERT_INIT_FREQ_OFFSET) |
-			  (0x10 << PG_BLUE_HOR_INIT_FREQ_OFFSET));
-		tpg_write(port, TEGRA_CSI_PG_BLUE_FREQ_RATE, 0x0);
-	}
 
 #if DEBUG
 	/* 0x454140E1 - register setting for line counter */

@@ -80,6 +80,8 @@ void set_csi_portinfo(struct tegra_csi_device *csi,
 	unsigned int port, unsigned int numlanes);
 void tegra_csi_status(struct tegra_csi_device *csi,
 			enum tegra_csi_port_num port_num);
+void tegra_csi_tpg_start_streaming(struct tegra_csi_device *csi,
+				enum tegra_csi_port_num port_num);
 void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_stop_streaming(struct tegra_csi_device *csi,

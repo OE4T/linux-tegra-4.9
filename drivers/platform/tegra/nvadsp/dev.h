@@ -36,6 +36,12 @@
 #include "amc.h"
 #include "os.h"
 
+enum adsp_evp_dt {
+	ADSP_EVP_BASE,
+	ADSP_EVP_SIZE,
+	ADSP_EVP_END,
+};
+
 enum adsp_unit_fpga_reset {
 	ADSP_ASSERT,
 	ADSP_DEASSERT,
@@ -71,7 +77,7 @@ struct nvadsp_pm_state {
 	u32 aram[AMC_ARAM_WSIZE];
 	uint32_t amc_regs[AMC_REGS];
 	uint32_t amisc_regs[AMISC_REGS];
-	u32 evp[AMC_EVP_WSIZE];
+	u32 *evp;
 	void *evp_ptr;
 };
 
@@ -140,6 +146,7 @@ struct nvadsp_drv_data {
 	int agic_irqs[NVADSP_VIRQ_MAX];
 
 	struct tegra_bwmgr_client *bwmgr;
+	u32 evp_base[ADSP_EVP_END];
 };
 
 #define ADSP_CONFIG	0x04

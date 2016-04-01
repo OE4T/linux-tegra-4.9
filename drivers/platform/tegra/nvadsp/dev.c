@@ -159,6 +159,15 @@ static int __init nvadsp_parse_dt(struct platform_device *pdev)
 		}
 	}
 
+	for (iter = 0; iter < ADSP_EVP_END; iter++) {
+		if (of_property_read_u32_index(dev->of_node,
+			"nvidia,adsp-evp-base",
+			iter, &drv_data->evp_base[iter])) {
+			dev_err(dev, "adsp memory dt %d not found\n", iter);
+			return -EINVAL;
+		}
+	}
+
 	drv_data->adsp_unit_fpga = of_property_read_bool(dev->of_node,
 				"nvidia,adsp_unit_fpga");
 
@@ -177,6 +186,11 @@ static int __init nvadsp_parse_dt(struct platform_device *pdev)
 		}
 	}
 	nvadsp_parse_clk_entries(pdev);
+
+	drv_data->state.evp = devm_kzalloc(dev,
+			drv_data->evp_base[ADSP_EVP_SIZE], GFP_KERNEL);
+	if (!drv_data->state.evp)
+		return -ENOMEM;
 
 	return 0;
 }

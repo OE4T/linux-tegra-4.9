@@ -519,6 +519,21 @@
         /delete-node/ axip2p@2180000;
         /delete-node/ axip2p@2190000;
 
+	/* the virtual storage device node */
+	tegra_hv_storage {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <0>;
+		ivc = <&tegra_hv 66>;
+	};
+
+	tegra_hv_storage1 {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <1>;
+		ivc = <&tegra_hv 67>;
+	};
+
 	gpio-keys {
 		status = "disabled";
 	};

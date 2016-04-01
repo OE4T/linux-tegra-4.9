@@ -154,6 +154,8 @@ struct tegra_channel {
 	struct v4l2_fh *fh;
 	bool bypass;
 	atomic_t is_hdmiin_unplug;
+	int requested_kbyteps;
+	unsigned long requested_hz;
 };
 
 #define to_tegra_channel(vdev) \
@@ -216,6 +218,9 @@ struct tegra_mc_vi {
 	atomic_t power_on_refcnt;
 	unsigned int link_status;
 	unsigned int subdevs_bound;
+	struct mutex bw_update_lock;
+	unsigned long aggregated_kbyteps;
+	unsigned long max_requested_hz;
 };
 
 int tegra_vi_get_port_info(struct tegra_channel *chan,

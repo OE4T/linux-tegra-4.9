@@ -32,12 +32,16 @@
 #include <media/videobuf2-core.h>
 #include <media/videobuf2-dma-contig.h>
 #include <media/camera_common.h>
+#include <media/tegra_camera_platform.h>
 
 #include <mach/clk.h>
 #include <mach/io_dpd.h>
 
 #include "camera/mc_common.h"
 #include "vi/vi.h"
+
+#define FRAMERATE	30
+#define BPP_MEM		2
 
 extern int _vb2_fop_release(struct file *file, struct mutex *lock);
 
@@ -637,6 +641,34 @@ static int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 	return 0;
 }
 
+static int update_clk(struct tegra_mc_vi *vi)
+{
+	unsigned int i;
+	unsigned long max_clk = 0;
+
+	for (i = 0; i < vi->num_channels; i++) {
+		max_clk = max_clk > vi->chans[i].requested_hz ?
+			max_clk : vi->chans[i].requested_hz;
+	}
+	return clk_set_rate(vi->clk, max_clk);
+}
+
+static void tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
+{
+	/* width * height * fps * KBytes write to memory
+	 * WAR: Using fix fps until we have a way to set it
+	 */
+	chan->requested_kbyteps = (on > 0 ? 1 : -1) * ((chan->format.width
+				* chan->format.height
+				* FRAMERATE * BPP_MEM) / 1000);
+	chan->requested_hz = on > 0 ? chan->format.width * chan->format.height
+				* FRAMERATE : 0;
+	mutex_lock(&chan->vi->bw_update_lock);
+	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
+	vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
+	update_clk(chan->vi);
+	mutex_unlock(&chan->vi->bw_update_lock);
+}
 
 static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
@@ -692,6 +724,7 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		ret = PTR_ERR(chan->kthread_capture_done);
 		goto error_capture_setup;
 	}
+	tegra_channel_update_clknbw(chan, 1);
 
 	return 0;
 
@@ -718,6 +751,7 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 		for (index = 0; index < chan->valid_ports; index++)
 			tegra_csi_stop_streaming(chan->vi->csi,
 							chan->port[index]);
+		tegra_channel_update_clknbw(chan, 0);
 	}
 
 	if (!chan->vi->pg_mode) {

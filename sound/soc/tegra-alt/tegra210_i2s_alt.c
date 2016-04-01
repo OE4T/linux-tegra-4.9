@@ -85,8 +85,17 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &val);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-		if ((val & TEGRA210_I2S_CTRL_MASTER_EN_MASK) ==
-				TEGRA210_I2S_CTRL_MASTER_EN) {
+#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
+		ret = clk_set_parent(i2s->clk_audio_sync,
+				i2s->clk_i2s_sync);
+		if (ret) {
+			dev_err(dev,
+				"Can't set parent of i2s audio sync clock\n");
+			return ret;
+		}
+#endif
+		if (((val & TEGRA210_I2S_CTRL_MASTER_EN_MASK) ==
+				TEGRA210_I2S_CTRL_MASTER_EN)) {
 			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_pll_a_out0);
 			if (ret) {
 				dev_err(dev, "Can't set parent of I2S clock\n");
@@ -105,16 +114,6 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 				dev_err(dev, "Can't set I2S sync clock rate\n");
 				return ret;
 			}
-
-#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
-			ret = clk_set_parent(i2s->clk_audio_sync,
-						i2s->clk_i2s_sync);
-			if (ret) {
-				dev_err(dev,
-				"Can't set parent of i2s audio sync clock\n");
-				return ret;
-			}
-#endif
 			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_audio_sync);
 			if (ret) {
 				dev_err(dev, "Can't set parent of i2s clock\n");

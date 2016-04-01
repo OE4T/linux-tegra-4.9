@@ -1317,7 +1317,6 @@ static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 	val |= AFI_PLLE_CONTROL_PCIE2PLLE_CONTROL_EN;
 	list_for_each_entry_safe(port, tmp, &pcie->ports, list) {
 		if (port->disable_clock_request) {
-			val |= AFI_PLLE_CONTROL_BYPASS_PADS2PLLE_CONTROL;
 			val &= ~AFI_PLLE_CONTROL_PADS2PLLE_CONTROL_EN;
 			break;
 		}
@@ -2247,6 +2246,21 @@ static void tegra_pcie_update_lane_width(struct tegra_pcie_port *port)
 		RP_LINK_CONTROL_STATUS_NEG_LINK_WIDTH) >> 20;
 }
 
+static void tegra_pcie_update_pads2plle(struct tegra_pcie_port *port)
+{
+	unsigned long ctrl = 0;
+	u32 val = 0;
+
+	ctrl = tegra_pcie_port_get_pex_ctrl(port);
+	/* AFI_PEX_STATUS is AFI_PEX_CTRL + 4 */
+	val = afi_readl(port->pcie, ctrl + 4);
+	if (val & 0x1) {
+		val = afi_readl(port->pcie, AFI_PLLE_CONTROL);
+		val &= ~AFI_PLLE_CONTROL_PADS2PLLE_CONTROL_EN;
+		afi_writel(port->pcie, val, AFI_PLLE_CONTROL);
+	}
+}
+
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static void mbist_war(struct tegra_pcie *pcie, bool apply)
 {
@@ -2346,6 +2360,7 @@ static void tegra_pcie_check_ports(struct tegra_pcie *pcie)
 			port->ep_status = 1;
 			pcie->num_ports++;
 			tegra_pcie_update_lane_width(port);
+			tegra_pcie_update_pads2plle(port);
 			continue;
 		}
 		port->ep_status = 0;

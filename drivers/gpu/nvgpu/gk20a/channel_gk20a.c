@@ -985,12 +985,12 @@ unbind:
 	ch->vpr = false;
 	ch->vm = NULL;
 
-	mutex_lock(&ch->submit_lock);
+	mutex_lock(&ch->last_submit.fence_lock);
 	gk20a_fence_put(ch->last_submit.pre_fence);
 	gk20a_fence_put(ch->last_submit.post_fence);
 	ch->last_submit.pre_fence = NULL;
 	ch->last_submit.post_fence = NULL;
-	mutex_unlock(&ch->submit_lock);
+	mutex_unlock(&ch->last_submit.fence_lock);
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */
@@ -1424,12 +1424,12 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	ch_vm = c->vm;
 
 	c->cmds_pending = false;
-	mutex_lock(&c->submit_lock);
+	mutex_lock(&c->last_submit.fence_lock);
 	gk20a_fence_put(c->last_submit.pre_fence);
 	gk20a_fence_put(c->last_submit.post_fence);
 	c->last_submit.pre_fence = NULL;
 	c->last_submit.post_fence = NULL;
-	mutex_unlock(&c->submit_lock);
+	mutex_unlock(&c->last_submit.fence_lock);
 
 	c->ramfc.offset = 0;
 	c->ramfc.size = ram_in_ramfc_s() / 8;
@@ -1958,11 +1958,13 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 	 */
 	if (list_empty(&c->jobs)) {
 		mutex_lock(&c->sync_lock);
+		mutex_lock(&c->last_submit.fence_lock);
 		if (c->sync && platform->aggressive_sync_destroy &&
 			  gk20a_fence_is_expired(c->last_submit.post_fence)) {
 			c->sync->destroy(c->sync);
 			c->sync = NULL;
 		}
+		mutex_unlock(&c->last_submit.fence_lock);
 		mutex_unlock(&c->sync_lock);
 	}
 	mutex_unlock(&c->jobs_lock);
@@ -2270,12 +2272,14 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		incr_cmd->gp_put = c->gpfifo.put;
 	}
 
+	mutex_lock(&c->last_submit.fence_lock);
 	gk20a_fence_put(c->last_submit.pre_fence);
 	gk20a_fence_put(c->last_submit.post_fence);
 	c->last_submit.pre_fence = pre_fence;
 	c->last_submit.post_fence = post_fence;
 	if (fence_out)
 		*fence_out = gk20a_fence_get(post_fence);
+	mutex_unlock(&c->last_submit.fence_lock);
 
 	/* TODO! Check for errors... */
 	gk20a_channel_add_job(c, pre_fence, post_fence,
@@ -2325,6 +2329,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	mutex_init(&c->ioctl_lock);
 	mutex_init(&c->jobs_lock);
 	mutex_init(&c->submit_lock);
+	mutex_init(&c->last_submit.fence_lock);
 	mutex_init(&c->timeout.lock);
 	mutex_init(&c->sync_lock);
 	INIT_DELAYED_WORK(&c->timeout.wq, gk20a_channel_timeout_handler);
@@ -2347,10 +2352,18 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
 {
 	int err = 0;
-	struct gk20a_fence *fence = ch->last_submit.post_fence;
+	struct gk20a_fence *fence;
 
 	if (!ch->cmds_pending)
 		return 0;
+
+	mutex_lock(&ch->last_submit.fence_lock);
+	fence = ch->last_submit.post_fence;
+	if (!fence) {
+		mutex_unlock(&ch->last_submit.fence_lock);
+		return -EINVAL;
+	}
+	mutex_unlock(&ch->last_submit.fence_lock);
 
 	/* Do not wait for a timedout channel */
 	if (ch->has_timedout)

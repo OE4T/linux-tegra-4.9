@@ -152,9 +152,9 @@ struct channel_gk20a {
 
 	bool cmds_pending;
 	struct {
-		/* These fences should be accessed with submit_lock held. */
 		struct gk20a_fence *pre_fence;
 		struct gk20a_fence *post_fence;
+		struct mutex fence_lock;
 	} last_submit;
 
 	void (*remove_support)(struct channel_gk20a *);

@@ -559,12 +559,20 @@ static int nvadsp_os_elf_load(const struct firmware *fw)
 
 		/* put the segment where the remote processor expects it */
 		if (filesz) {
-			if (!is_adsp_dram_addr(da)) {
+			if (is_adsp_dram_addr(da))
+				memcpy(va, elf_data + offset, filesz);
+			else if ((da == drv_data->evp_base[ADSP_EVP_BASE]) &&
+				(filesz == drv_data->evp_base[ADSP_EVP_SIZE])) {
+
 				drv_data->state.evp_ptr = va;
 				memcpy(drv_data->state.evp,
-				       elf_data + offset, filesz);
-			} else
-				memcpy(va, elf_data + offset, filesz);
+					elf_data + offset, filesz);
+			} else {
+				dev_err(dev, "can't load mem pa:0x%x va:%p\n",
+						da, va);
+				ret = -EINVAL;
+				break;
+			}
 		}
 	}
 

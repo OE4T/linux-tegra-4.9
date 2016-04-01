@@ -261,6 +261,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_mm_ops(gops);
 	vgpu_init_debug_ops(gops);
 	vgpu_init_fecs_trace_ops(gops);
+	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 }
 
 static int vgpu_init_hal(struct gk20a *g)

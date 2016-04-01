@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU L2
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -82,4 +82,5 @@ void vgpu_init_ltc_ops(struct gpu_ops *gops)
 	gops->ltc.determine_L2_size_bytes = vgpu_determine_L2_size_bytes;
 	gops->ltc.init_comptags = vgpu_ltc_init_comptags;
 	gops->ltc.init_fs_state = vgpu_ltc_init_fs_state;
+	gops->ltc.cbc_ctrl = NULL;
 }

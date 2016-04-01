@@ -18,7 +18,6 @@
 #include <linux/platform_device.h>
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/pinmux.h>
-#include <linux/tegra-pmc.h>
 
 #include "pinctrl-tegra.h"
 

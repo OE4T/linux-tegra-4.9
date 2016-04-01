@@ -108,6 +108,20 @@ struct nvmap_pgalloc {
 	atomic_t ndirty;	/* count number of dirty pages */
 };
 
+/* bit 31-29: IVM peer
+ * bit 28-21: offset (aligned to 1M)
+ * bit 20-00: len (aligned to page_size)
+ */
+#define NVMAP_IVM_LENGTH_SHIFT (0)
+#define NVMAP_IVM_LENGTH_WIDTH (21)
+#define NVMAP_IVM_LENGTH_MASK  ((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)
+#define NVMAP_IVM_OFFSET_SHIFT (NVMAP_IVM_LENGTH_SHIFT + NVMAP_IVM_LENGTH_WIDTH)
+#define NVMAP_IVM_OFFSET_WIDTH (8)
+#define NVMAP_IVM_OFFSET_MASK  ((1 << NVMAP_IVM_OFFSET_WIDTH) - 1)
+#define NVMAP_IVM_IVMID_SHIFT  (NVMAP_IVM_OFFSET_SHIFT + NVMAP_IVM_OFFSET_WIDTH)
+#define NVMAP_IVM_IVMID_WIDTH  (3)
+#define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
+#define NVMAP_IVM_ALIGNMENT    (SZ_32K)
 struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */

@@ -546,12 +546,14 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 			return -ENOMEM;
 	} else {
 		/*
-		 * offset is SZ_1M aligned.
 		 * See nvmap_heap_alloc() for encoding details.
 		 */
-		offs = ((op.id & ~(0x7 << 29)) >> 21) << 20;
-		size = (op.id & ((1 << 21) - 1)) << PAGE_SHIFT;
-		peer = (op.id >> 29);
+		offs = ((op.id &
+			~(NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
+			NVMAP_IVM_LENGTH_WIDTH) << ffs(NVMAP_IVM_ALIGNMENT);
+		size = (op.id &
+			((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
+		peer = (op.id >> NVMAP_IVM_IVMID_SHIFT);
 
 		ref = nvmap_create_handle(client, PAGE_ALIGN(size));
 		if (!IS_ERR(ref))

@@ -184,7 +184,7 @@ struct nvmap_heap_block *do_nvmap_carveout_alloc(struct nvmap_client *client,
 			continue;
 
 		if (type & NVMAP_HEAP_CARVEOUT_IVM)
-			handle->size = ALIGN(handle->size, SZ_1M);
+			handle->size = ALIGN(handle->size, NVMAP_IVM_ALIGNMENT);
 
 		block = nvmap_heap_alloc(co_heap->carveout, handle, start);
 		if (block)

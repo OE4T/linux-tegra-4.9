@@ -904,7 +904,8 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		gk20a_init_cde_support(g);
 
 	enable_irq(g->irq_stall);
-	enable_irq(g->irq_nonstall);
+	if (g->irq_stall != g->irq_nonstall)
+		enable_irq(g->irq_nonstall);
 
 done:
 	return err;
@@ -1446,7 +1447,8 @@ static int gk20a_probe(struct platform_device *dev)
 		return err;
 	}
 	disable_irq(gk20a->irq_stall);
-	disable_irq(gk20a->irq_nonstall);
+	if (gk20a->irq_stall != gk20a->irq_nonstall)
+		disable_irq(gk20a->irq_nonstall);
 
 	err = gk20a_user_init(&dev->dev, INTERFACE_NAME);
 	if (err)

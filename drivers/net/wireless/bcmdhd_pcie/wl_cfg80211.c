@@ -5985,8 +5985,7 @@ static s32 wl_cfg80211_suspend(struct wiphy *wiphy)
 	struct net_device *ndev = bcmcfg_to_prmry_ndev(cfg);
 	unsigned long flags;
 	if (unlikely(!wl_get_drv_status(cfg, READY, ndev))) {
-		WL_INFORM(("device is not ready : status (%d)\n",
-			(int)cfg->status));
+		WL_INFORM(("device is not ready\n"));
 		return err;
 	}
 	for_each_ndev(cfg, iter, next) {
@@ -5994,9 +5993,20 @@ static s32 wl_cfg80211_suspend(struct wiphy *wiphy)
 		if (iter->ndev)
 			wl_set_drv_status(cfg, SCAN_ABORTING, iter->ndev);
 		}
+
+	if (timer_pending(&cfg->scan_timeout))
+		del_timer_sync(&cfg->scan_timeout);
+
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+		struct cfg80211_scan_info info = {
+			.aborted = true
+		};
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, true);
+#endif
 		cfg->scan_request = NULL;
 	}
 	for_each_ndev(cfg, iter, next) {
@@ -11777,7 +11787,14 @@ scan_done_out:
 	del_timer_sync(&cfg->scan_timeout);
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
+		struct cfg80211_scan_info info = {
+			.aborted = false
+		};
+		cfg80211_scan_done(cfg->scan_request, &info);
+#else
 		cfg80211_scan_done(cfg->scan_request, false);
+#endif
 		cfg->scan_request = NULL;
 	}
 	spin_unlock_irqrestore(&cfg->cfgdrv_lock, flags);
@@ -12559,14 +12576,14 @@ static void wl_scan_timeout(unsigned long data)
 
 	bss_list = wl_escan_get_buf(cfg, FALSE);
 	if (!bss_list) {
-		WL_ERR(("bss_list is null. Didn't receive any partial scan results\n"));
+		WL_INFORM(("bss_list is null. Didn't receive any partial scan results\n"));
 	} else {
-		WL_ERR(("scanned AP count (%d)\n", bss_list->count));
+		WL_INFORM(("scanned AP count (%d)\n", bss_list->count));
 
 		bi = next_bss(bss_list, bi);
 		for_each_bss(bss_list, bi, i) {
 			channel = wf_chspec_ctlchan(wl_chspec_driver_to_host(bi->chanspec));
-			WL_ERR(("SSID :%s  Channel :%d\n", bi->SSID, channel));
+			WL_INFORM(("SSID :%s  Channel :%d\n", bi->SSID, channel));
 		}
 	}
 
@@ -14749,6 +14766,10 @@ _Pragma("GCC diagnostic pop")
 	wl_cfg80211_p2plo_deinit(cfg);
 #endif /* P2P_LISTEN_OFFLOADING */
 
+	if (timer_pending(&cfg->scan_timeout)) {
+		del_timer_sync(&cfg->scan_timeout);
+	}
+
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 	if (cfg->scan_request) {
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 8, 0)
@@ -14801,10 +14822,6 @@ _Pragma("GCC diagnostic pop")
 		if (timer_pending(&cfg->p2p->listen_timer))
 			del_timer_sync(&cfg->p2p->listen_timer);
 		wl_cfgp2p_down(cfg);
-	}
-
-	if (timer_pending(&cfg->scan_timeout)) {
-		del_timer_sync(&cfg->scan_timeout);
 	}
 
 	DHD_OS_SCAN_WAKE_UNLOCK((dhd_pub_t *)(cfg->pub));
@@ -16766,6 +16783,8 @@ int wl_cfg80211_scan_stop(bcm_struct_cfgdev *cfgdev)
 
 	ndev = cfgdev_to_wlc_ndev(cfgdev, cfg);
 
+	if (timer_pending(&cfg->scan_timeout))
+		del_timer_sync(&cfg->scan_timeout);
 	spin_lock_irqsave(&cfg->cfgdrv_lock, flags);
 #ifdef WL_CFG80211_P2P_DEV_IF
 	if (cfg->scan_request && cfg->scan_request->wdev == cfgdev) {

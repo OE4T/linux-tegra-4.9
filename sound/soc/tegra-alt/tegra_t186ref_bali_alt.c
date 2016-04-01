@@ -131,7 +131,7 @@ static const struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
 };
 static const struct snd_soc_pcm_stream tegra_t186ref_arad_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S24_LE, 2),
@@ -375,9 +375,13 @@ static const struct snd_soc_dapm_widget tegra_bali_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-x", NULL),
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
 	SND_SOC_DAPM_HP("Headphone-d", NULL),
+	SND_SOC_DAPM_HP("Headphone-z", NULL),
+	SND_SOC_DAPM_HP("Headphone-w", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
 	SND_SOC_DAPM_LINE("LineIn-d", NULL),
+	SND_SOC_DAPM_LINE("LineIn-z", NULL),
+	SND_SOC_DAPM_LINE("LineIn-w", NULL),
 };
 
 static int tegra_t186ref_bali_suspend_pre(struct snd_soc_card *card)

@@ -317,6 +317,18 @@
 		arad@290e400 {
 			status = "okay";
 		};
+		i2s@2901400 {
+			clocks = <&tegra_car TEGRA186_CLK_I2S5>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S5>,
+				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S5>;
+		};
+		i2s@2901500 {
+			clocks = <&tegra_car TEGRA186_CLK_I2S6>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S6>,
+				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S6>;
+		};
 	};
 
 	sound_ref {
@@ -342,7 +354,7 @@
 			"extern1";
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
-		nvidia,num-codec-link = <3>;
+		nvidia,num-codec-link = <5>;
 		nvidia,num-amx = <4>;
 		nvidia,num-adx = <4>;
 		nvidia,amx-slot-size = <64 16 16 64>;
@@ -586,7 +598,11 @@
 			"Headphone-y", "y OUT",
 			"y IN", "LineIn-y",
 			"Headphone-d", "d OUT",
-			"d IN", "LineIn-d";
+			"d IN", "LineIn-d",
+			"Headphone-z", "z OUT",
+			"z IN", "LineIn-z",
+			"Headphone-w", "w OUT",
+			"w IN", "LineIn-w";
 
 		nvidia,xbar = <&tegra_axbar>;
 
@@ -648,6 +664,39 @@
 			srate = <16000>;
 			num-channel = <1>;
 			name-prefix = "d";
+		};
+
+		nvidia,dai-link-4 {
+			link-name = "bali-avb-dummy-1";
+			cpu-dai = <&tegra_i2s5>;
+			codec-dai = <&spdif_dit3>;
+			cpu-dai-name = "I2S5";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bit-format = "s32_le";
+			bclk_ratio = <8>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "z";
+		};
+
+
+		nvidia,dai-link-5 {
+			link-name = "bali-avb-dummy-2";
+			cpu-dai = <&tegra_i2s6>;
+			codec-dai = <&spdif_dit4>;
+			cpu-dai-name = "I2S6";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bit-format = "s32_le";
+			bclk_ratio = <8>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "w";
 		};
 	};
 

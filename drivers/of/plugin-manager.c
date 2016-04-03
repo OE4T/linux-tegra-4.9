@@ -21,6 +21,12 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 
+enum plugin_manager_match_type {
+	PLUGIN_MANAGER_MATCH_EXACT,
+	PLUGIN_MANAGER_MATCH_PARTIAL,
+	PLUGIN_MANAGER_MATCH_GE,
+};
+
 static struct property *__of_copy_property(const struct property *prop,
 		gfp_t flags)
 {
@@ -106,6 +112,102 @@ static int __init update_target_node_from_overlay(
 	return 0;
 }
 
+static int plugin_manager_get_fabid(const char *id_str)
+{
+	int fabid = 0;
+	int i;
+
+	if (strlen(id_str) < 13)
+		return -EINVAL;
+
+	for (i = 0; i < 3; ++i) {
+		if ((id_str[10 + i] >= '0') && (id_str[10 + i] <= '9'))
+			fabid = fabid * 10 + id_str[10 + i] - '0';
+		else
+			return -EINVAL;
+	}
+
+	return fabid;
+}
+
+static bool plugin_manager_match_id(struct device_node *np, const char *id_name)
+{
+	struct property *prop;
+	const char *in_str = id_name;
+	int match_type = PLUGIN_MANAGER_MATCH_EXACT;
+	int valid_str_len = strlen(id_name);
+	int fabid = 0, prop_fabid;
+	int i;
+
+	if ((valid_str_len > 2) && (in_str[0] == '>') && (in_str[1] == '=')) {
+		in_str += 2;
+		valid_str_len -= 2;
+		match_type = PLUGIN_MANAGER_MATCH_GE;
+		goto match_type_done;
+	}
+
+	if ((valid_str_len > 1) && (in_str[0] == '^')) {
+		in_str += 1;
+		valid_str_len -= 1;
+		match_type = PLUGIN_MANAGER_MATCH_PARTIAL;
+		goto match_type_done;
+	}
+
+	for (i = 0; i < valid_str_len; ++i) {
+		if (in_str[i] == '*') {
+			valid_str_len = i;
+			match_type = PLUGIN_MANAGER_MATCH_PARTIAL;
+			break;
+		}
+	}
+
+match_type_done:
+	if (match_type == PLUGIN_MANAGER_MATCH_GE) {
+		fabid = plugin_manager_get_fabid(in_str);
+		if (fabid < 0)
+			return false;
+	}
+
+	for_each_property_of_node(np, prop) {
+		/* Skip those we do not want to proceed */
+		if (!strcmp(prop->name, "name") ||
+			!strcmp(prop->name, "phandle") ||
+			!strcmp(prop->name, "linux,phandle"))
+				continue;
+		switch (match_type) {
+		case PLUGIN_MANAGER_MATCH_EXACT:
+			if (strlen(prop->name) != valid_str_len)
+				break;
+			if (!memcmp(in_str, prop->name, valid_str_len))
+				return true;
+			break;
+
+		case PLUGIN_MANAGER_MATCH_PARTIAL:
+			if (strlen(prop->name) < valid_str_len)
+				break;
+			if (!memcmp(in_str, prop->name, valid_str_len))
+				return true;
+			break;
+
+		case PLUGIN_MANAGER_MATCH_GE:
+			if (strlen(prop->name) < 13)
+				break;
+			if (memcmp(in_str, prop->name, 10))
+				break;
+			prop_fabid = plugin_manager_get_fabid(prop->name);
+			if (prop_fabid < 0)
+				break;
+			if (prop_fabid >= fabid)
+				return true;
+			break;
+		default:
+			break;
+		}
+	}
+
+	return false;
+}
+
 static int __init update_target_node(struct device_node *target,
 	struct device_node *overlay)
 {
@@ -151,7 +253,7 @@ static int __init parse_fragment(struct device_node *np)
 	int ret;
 
 	cname_count = of_property_count_strings(np, "config-names");
-	cval_count = of_property_count_u32(np, "configs");
+	cval_count = of_property_count_u32_elems(np, "configs");
 	if (cname_count != cval_count) {
 		pr_err("Node %s does not have config-names and configs\n",
 			np->name);
@@ -183,7 +285,7 @@ static int __init parse_fragment(struct device_node *np)
 
 	if ((board_count > 0) && board_np) {
 		of_property_for_each_string(np, "ids", prop, bname) {
-			found = of_property_read_bool(board_np, bname);
+			found = plugin_manager_match_id(board_np, bname);
 			if (found) {
 				pr_info("node %s match with board %s\n",
 					np->full_name, bname);

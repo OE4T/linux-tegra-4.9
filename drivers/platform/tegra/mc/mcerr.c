@@ -49,7 +49,7 @@
 
 static bool mcerr_throttle_enabled = true;
 static u32  mcerr_silenced;
-static u32  mcerr_print_spurious_irq; /* debug */
+static bool mcerr_print_spurious_irq; /* debug */
 
 static int arb_intr_mma_set(const char *arg, const struct kernel_param *kp);
 static int arb_intr_mma_get(char *buff, const struct kernel_param *kp);

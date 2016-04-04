@@ -280,6 +280,13 @@ struct nvmap_debugfs_handles_entry {
 	__u64 mapped_size;
 };
 
+struct nvmap_set_tag_label {
+	__u32 tag;
+	__u32 len;		/* in: label length
+				   out: number of characters copied */
+	__u64 addr;		/* in: pointer to label or NULL to remove */
+};
+
 #define NVMAP_IOC_MAGIC 'N'
 
 /* Creates a new memory handle. On input, the argument is the size of the new
@@ -361,6 +368,9 @@ struct nvmap_debugfs_handles_entry {
 #define NVMAP_IOC_FROM_VA _IOWR(NVMAP_IOC_MAGIC, 22, struct nvmap_create_handle_from_va)
 
 #define NVMAP_IOC_GUP_TEST _IOWR(NVMAP_IOC_MAGIC, 23, struct nvmap_gup_test)
+
+/* Define a label for allocation tag */
+#define NVMAP_IOC_SET_TAG_LABEL	_IOW(NVMAP_IOC_MAGIC, 24, struct nvmap_set_tag_label)
 
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */

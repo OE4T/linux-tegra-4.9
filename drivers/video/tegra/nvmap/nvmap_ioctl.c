@@ -770,3 +770,24 @@ exit:
 	pr_info("GUP Test %s\n", err ? "failed" : "passed");
 	return err;
 }
+
+int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg)
+{
+	struct nvmap_set_tag_label op;
+	struct nvmap_device *dev = nvmap_dev;
+	int err;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	if (op.len > NVMAP_TAG_LABEL_MAXLEN)
+		op.len = NVMAP_TAG_LABEL_MAXLEN;
+
+	if (op.len)
+		err = nvmap_define_tag(dev, op.tag,
+			(const char __user *)op.addr, op.len);
+	else
+		err = nvmap_remove_tag(dev, op.tag);
+
+	return err;
+}

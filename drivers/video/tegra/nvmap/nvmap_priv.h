@@ -49,6 +49,8 @@
 #endif
 #include "nvmap_heap.h"
 
+#define NVMAP_TAG_LABEL_MAXLEN	(63 - sizeof(struct nvmap_tag_entry))
+
 #ifdef CONFIG_NVMAP_HIGHMEM_ONLY
 #define __GFP_NVMAP     __GFP_HIGHMEM
 #else
@@ -139,6 +141,12 @@ struct nvmap_handle {
 	int peer;		/* Peer VM number */
 };
 
+struct nvmap_tag_entry {
+	struct rb_node node;
+	atomic_t ref;		/* reference count (i.e., # of duplications) */
+	u32 tag;
+};
+
 /* handle_ref objects are client-local references to an nvmap_handle;
  * they are distinct objects so that handles can be unpinned and
  * unreferenced the correct number of times when a client abnormally
@@ -226,6 +234,8 @@ struct nvmap_device {
 	struct dentry *handles_by_pid;
 	struct dentry *debug_root;
 	struct nvmap_platform_data *plat;
+	struct rb_root	tags;
+	struct mutex	tags_lock;
 	u32 dynamic_dma_map_mask;
 };
 
@@ -629,6 +639,18 @@ static inline bool nvmap_handle_track_dirty(struct nvmap_handle *h)
 
 	return h->userflags & (NVMAP_HANDLE_CACHE_SYNC |
 			       NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE);
+}
+
+struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag);
+
+int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
+	const char __user *name, u32 len);
+
+int nvmap_remove_tag(struct nvmap_device *dev, u32 tag);
+
+static inline char *nvmap_tag_name(struct nvmap_tag_entry *entry)
+{
+	return entry ? (char *)(entry + 1) : NULL;
 }
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

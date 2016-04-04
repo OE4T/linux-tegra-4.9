@@ -684,6 +684,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		pr_warn("NVMAP_IOC_SHARE is deprecated. Use NVMAP_IOC_GET_FD.\n");
 		break;
 
+	case NVMAP_IOC_SET_TAG_LABEL:
+		err = nvmap_ioctl_set_tag_label(filp, uarg);
+		break;
+
 	default:
 		pr_warn("Unknown NVMAP_IOC = 0x%x\n", cmd);
 	}
@@ -724,6 +728,7 @@ static void allocations_stringify(struct nvmap_client *client,
 {
 	struct rb_node *n;
 	unsigned int pin_count = 0;
+	struct nvmap_device *dev = nvmap_dev;
 
 	nvmap_ref_lock(client);
 	n = rb_first(&client->handle_refs);
@@ -734,8 +739,13 @@ static void allocations_stringify(struct nvmap_client *client,
 		if (handle->alloc && handle->heap_type == heap_type) {
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   (handle->carveout->base);
+			struct nvmap_tag_entry *entry;
+
+			mutex_lock(&dev->tags_lock);
+			entry = nvmap_search_tag_entry(&dev->tags,
+					(handle->userflags >> 16));
 			seq_printf(s,
-				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8p\n",
+				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8p %s\n",
 				"", "",
 				(unsigned long long)base, K(handle->size),
 				handle->userflags,
@@ -745,7 +755,9 @@ static void allocations_stringify(struct nvmap_client *client,
 				atomic_read(&handle->kmap_count),
 				atomic_read(&handle->umap_count),
 				atomic_read(&handle->share_count),
-				handle);
+				handle,
+				entry ? nvmap_tag_name(entry) : "");
+			mutex_unlock(&dev->tags_lock);
 		}
 	}
 	nvmap_ref_unlock(client);
@@ -1662,6 +1674,8 @@ int __init nvmap_probe(struct platform_device *pdev)
 	mutex_init(&dev->clients_lock);
 	INIT_LIST_HEAD(&dev->lru_handles);
 	spin_lock_init(&dev->lru_lock);
+	dev->tags = RB_ROOT;
+	mutex_init(&dev->tags_lock);
 
 	e = misc_register(&dev->dev_user);
 	if (e) {

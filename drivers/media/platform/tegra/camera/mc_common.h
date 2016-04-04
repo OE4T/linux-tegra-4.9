@@ -187,6 +187,7 @@ enum tegra_vi_pg_mode {
  * @has_sensors: a flag to indicate whether is a real sensor connecting
  */
 struct tegra_mc_vi {
+	struct vi *vi;
 	struct platform_device *ndev;
 	struct v4l2_device v4l2_dev;
 	struct media_device media_dev;

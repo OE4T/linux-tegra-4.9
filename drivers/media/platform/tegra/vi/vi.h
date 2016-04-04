@@ -104,6 +104,8 @@ struct vi {
 	uint vi_bw;
 	uint max_bw;
 	bool master_deinitialized;
+	bool tpg_opened;
+	bool sensor_opened;
 };
 
 extern const struct file_operations tegra_vi_ctrl_ops;

@@ -1363,6 +1363,7 @@ static int tegra_channel_open(struct file *fp)
 	int ret;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
+	struct vi *tegra_vi;
 	struct tegra_mc_vi *vi;
 	struct tegra_csi_device *csi;
 
@@ -1377,12 +1378,25 @@ static int tegra_channel_open(struct file *fp)
 	}
 
 	vi = chan->vi;
+	tegra_vi = vi->vi;
 	csi = vi->csi;
+
+	/* TPG mode and a real sensor is open, return busy */
+	if (vi->pg_mode && tegra_vi->sensor_opened)
+		return -EBUSY;
+
+	/* None TPG mode and a TPG channel is opened, return busy */
+	if (!vi->pg_mode && tegra_vi->tpg_opened)
+		return -EBUSY;
 
 	/* The first open then turn on power */
 	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
 		tegra_vi_power_on(vi);
 		tegra_csi_power_on(csi);
+		if (vi->pg_mode)
+			tegra_vi->tpg_opened = true;
+		else
+			tegra_vi->sensor_opened = true;
 	}
 
 	if (!vi->pg_mode &&
@@ -1407,6 +1421,7 @@ static int tegra_channel_close(struct file *fp)
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
 	struct tegra_mc_vi *vi = chan->vi;
+	struct vi *tegra_vi = vi->vi;
 	struct tegra_csi_device *csi = vi->csi;
 	bool is_singular;
 
@@ -1432,6 +1447,10 @@ static int tegra_channel_close(struct file *fp)
 	if (atomic_dec_and_test(&vi->power_on_refcnt)) {
 		tegra_csi_power_off(csi);
 		tegra_vi_power_off(vi);
+		if (vi->pg_mode)
+			tegra_vi->tpg_opened = false;
+		else
+			tegra_vi->sensor_opened = false;
 	}
 
 	mutex_unlock(&chan->video_lock);

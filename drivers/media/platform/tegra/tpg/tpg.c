@@ -45,6 +45,7 @@ static int tpg_probe(struct vi *tegra_vi)
 		return ret;
 
 	/* Init Tegra VI TPG channels */
+	mc_vi->vi = tegra_vi;
 	mc_vi->csi = csi;
 	mc_vi->reg = tegra_vi->reg;
 	mc_vi->pg_mode = TEGRA_VI_PG_PATCH;

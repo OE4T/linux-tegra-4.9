@@ -482,6 +482,7 @@ static int vi_probe(struct platform_device *dev)
 	if (err)
 		goto vi_mc_init_error;
 
+	tegra_vi->mc_vi.vi = tegra_vi;
 	tegra_vi->mc_vi.csi = &tegra_vi->csi;
 	tegra_vi->mc_vi.reg = tegra_vi->reg;
 	err = tegra_vi_media_controller_init(&tegra_vi->mc_vi, dev);

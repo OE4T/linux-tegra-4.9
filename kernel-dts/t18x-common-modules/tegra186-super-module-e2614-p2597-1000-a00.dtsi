@@ -277,7 +277,7 @@
 
 	plugin-manager {
 		fragment-e2614-common@0 {
-			ids = "2614-0000-000", "2614-0000-100";
+			ids = "2614-0000-*";
 			overrides@0 {
 				target = <&e2614_i2c_mux>;
 				_overlay_ {

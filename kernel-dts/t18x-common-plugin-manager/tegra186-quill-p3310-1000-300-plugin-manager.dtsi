@@ -49,7 +49,7 @@
 
 	plugin-manager {
 		fragment-sdwake-p3310-1000-300 {
-			ids = "3310-1000-300";
+			ids = ">=3310-1000-300";
 
 			override@100 {
 				target = <&pinmux_default>;
@@ -86,7 +86,7 @@
 		};
 
 		fragement-power-monitor-p3310-1000-300 {
-			ids = "3310-1000-300", "3310-1000-200-F";
+			ids = ">=3310-1000-300", "3310-1000-200-F";
 			override@0 {
 				target = <&ina3221x_40>;
 				_overlay_ {

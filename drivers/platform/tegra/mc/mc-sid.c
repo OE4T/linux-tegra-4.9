@@ -26,6 +26,7 @@
 #include <linux/of_device.h>
 #include <linux/tegra-soc.h>
 #include <linux/platform_device.h>
+#include <asm/io.h>
 
 #include <linux/platform/tegra/tegra-mc-sid.h>
 

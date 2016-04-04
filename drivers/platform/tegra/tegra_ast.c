@@ -24,6 +24,7 @@
 #include <linux/of_address.h>
 #include <linux/of_platform.h>
 #include <linux/tegra_ast.h>
+#include <asm/io.h>
 
 #define TEGRA_APS_AST_STREAMID_CTL		0x20
 #define TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO	0x100

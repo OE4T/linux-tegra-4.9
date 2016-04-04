@@ -21,6 +21,7 @@
 #include <linux/slab.h>
 #include <linux/reset.h>
 #include <linux/of_device.h>
+#include <asm/io.h>
 
 /* Since oscillator clock (38.4MHz) serves as a clock source for
  * the tach input controller, 1.0105263MHz (i.e. 38.4/38) has to be

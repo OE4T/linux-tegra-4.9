@@ -264,10 +264,6 @@
 	};
 
 
-	mc_sid@2c00000 {
-		status = "disabled";
-	};
-
 	usb_cd@7009f000 {
 		status = "disabled";
 	};

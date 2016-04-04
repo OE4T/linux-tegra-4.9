@@ -121,7 +121,7 @@
 		reg = <0x0 0x31b0000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C6 0x04>;
 		status = "disabled";
-		clock-frequency = <400000>;
+		clock-frequency = <100000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C6
 			&tegra_car TEGRA186_CLK_PLLP_OUT0>;
 		clock-names = "div-clk", "parent";

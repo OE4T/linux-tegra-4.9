@@ -5230,21 +5230,25 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 		phy_set_drvdata(phy, uphy);
 	}
 
-	phy = devm_phy_create(dev, NULL, &sata_phy_ops, NULL);
-	if (IS_ERR(phy)) {
-		err = PTR_ERR(phy);
-		goto uphy_pll_deinit;
+	if (uphy->sata_lanes) {
+		phy = devm_phy_create(dev, NULL, &sata_phy_ops, NULL);
+		if (IS_ERR(phy)) {
+			err = PTR_ERR(phy);
+			goto uphy_pll_deinit;
+		}
+		uphy->sata_phys[0] = phy;
+		phy_set_drvdata(phy, uphy);
 	}
-	uphy->sata_phys[0] = phy;
-	phy_set_drvdata(phy, uphy);
 
-	phy = devm_phy_create(dev, NULL, &ufs_phy_ops, NULL);
-	if (IS_ERR(phy)) {
-		err = PTR_ERR(phy);
-		goto uphy_pll_deinit;
+	if (uphy->ufs_lanes) {
+		phy = devm_phy_create(dev, NULL, &ufs_phy_ops, NULL);
+		if (IS_ERR(phy)) {
+			err = PTR_ERR(phy);
+			goto uphy_pll_deinit;
+		}
+		uphy->ufs_phys[0] = phy;
+		phy_set_drvdata(phy, uphy);
 	}
-	uphy->ufs_phys[0] = phy;
-	phy_set_drvdata(phy, uphy);
 
 	INIT_WORK(&uphy->otg_vbus_work, tegra_xusb_otg_vbus_work);
 	INIT_WORK(&uphy->mbox_req_work, tegra_xusb_phy_mbox_work);

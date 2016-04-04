@@ -2497,9 +2497,12 @@ static struct tegra_dc_cmu *tegra_dc_get_cmu(struct tegra_dc *dc)
 		return dc->pdata->cmu;
 	else if (dc->pdata->cmu_adbRGB && dc->pdata->default_clr_space)
 		return dc->pdata->cmu_adbRGB;
-	else if (dc->out->type == TEGRA_DC_OUT_HDMI)
+	else if (dc->out->type == TEGRA_DC_OUT_HDMI) {
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+		tegra_nvdisp_get_default_cmu(&default_limited_cmu);
+#endif
 		return &default_limited_cmu;
-	else{
+	} else {
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 		tegra_nvdisp_get_default_cmu(&default_cmu);
 #endif

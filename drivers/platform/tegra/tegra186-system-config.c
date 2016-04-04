@@ -52,7 +52,7 @@ static int system_config_init_register(struct device *dev,
 		if (!of_device_is_available(child))
 			continue;
 
-		count = of_property_count_u32(child, "nvidia,reg-update");
+		count = of_property_count_u32_elems(child, "nvidia,reg-update");
 		if ((count < 4) || (count % 4 != 0)) {
 			dev_err(dev, "Node %s is not having proper data\n",
 				child->full_name);

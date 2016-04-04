@@ -186,6 +186,8 @@ extern void __iomem *ioremap_cache(phys_addr_t phys_addr, size_t size);
 
 #include <asm-generic/io.h>
 
+#define IOMEM(x)        ((void __force __iomem *)(x))
+
 /*
  * More restrictive address range checking than the default implementation
  * (PHYS_OFFSET and PHYS_MASK taken into account).

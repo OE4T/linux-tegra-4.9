@@ -66,11 +66,9 @@ struct tegra_csi_device {
 	struct tegra_csi_port *ports;
 	struct media_pad *pads;
 
-	unsigned char gang_port[TEGRA_CSI_BLOCKS];
 	unsigned int clk_freq;
 	int num_ports;
 	int pg_mode;
-	enum camera_gang_mode gang_mode;
 };
 
 static inline struct tegra_csi_device *to_csi(struct v4l2_subdev *subdev)
@@ -81,12 +79,13 @@ static inline struct tegra_csi_device *to_csi(struct v4l2_subdev *subdev)
 void set_csi_portinfo(struct tegra_csi_device *csi,
 	unsigned int port, unsigned int numlanes);
 void tegra_csi_status(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num, int index);
+			enum tegra_csi_port_num port_num);
 void tegra_csi_start_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num, int index);
+				enum tegra_csi_port_num port_num);
 void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num, int index);
-int tegra_csi_channel_power(struct tegra_csi_device *csi, int port, int enable);
+				enum tegra_csi_port_num port_num);
+int tegra_csi_channel_power(struct tegra_csi_device *csi,
+				unsigned char *port, int enable);
 #define tegra_csi_channel_power_on(csi, port) \
 	tegra_csi_channel_power(csi, port, 1)
 #define tegra_csi_channel_power_off(csi, port) \

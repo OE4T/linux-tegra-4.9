@@ -61,23 +61,25 @@ static u32 csi_read(struct tegra_channel *chan, unsigned int index,
 static void gang_buffer_offsets(struct tegra_channel *chan)
 {
 	int i;
+	u32 offset = 0;
 
-	for (i = 0; i < chan->valid_ports; i++) {
+	for (i = 0; i < chan->total_ports; i++) {
 		switch (chan->gang_mode) {
 		case CAMERA_NO_GANG_MODE:
 		case CAMERA_GANG_L_R:
 		case CAMERA_GANG_R_L:
-			chan->buffer_offset[i] =
-				i * chan->gang_bytesperline;
+			offset = chan->gang_bytesperline;
 			break;
 		case CAMERA_GANG_T_B:
 		case CAMERA_GANG_B_T:
-			chan->buffer_offset[i] =
-				i * chan->gang_sizeimage;
+			offset = chan->gang_sizeimage;
 			break;
 		default:
-			chan->buffer_offset[i] = 0;
+			offset = 0;
 		}
+		offset = ((offset + TEGRA_SURFACE_ALIGNMENT - 1) &
+					~(TEGRA_SURFACE_ALIGNMENT - 1));
+		chan->buffer_offset[i] = i * offset;
 	}
 }
 
@@ -116,7 +118,6 @@ static void update_gang_mode_params(struct tegra_channel *chan)
 
 static void update_gang_mode(struct tegra_channel *chan)
 {
-	struct tegra_csi_device *csi = chan->vi->csi;
 	int width = chan->format.width;
 	int height = chan->format.height;
 
@@ -124,13 +125,17 @@ static void update_gang_mode(struct tegra_channel *chan)
 	 * At present only 720p, 1080p and 4k resolutions
 	 * are supported and only 4K requires gang mode
 	 * Update this code with CID for future extensions
+	 * Also, validate width and height of images based
+	 * on gang mode and surface stride alignment
 	 */
-	if ((width > 1920) && (height > 1080))
+	if ((width > 1920) && (height > 1080)) {
 		chan->gang_mode = CAMERA_GANG_L_R;
-	else
+		chan->valid_ports = chan->total_ports;
+	} else {
 		chan->gang_mode = CAMERA_NO_GANG_MODE;
+		chan->valid_ports = 1;
+	}
 
-	csi->gang_mode = chan->gang_mode;
 	update_gang_mode_params(chan);
 }
 
@@ -188,7 +193,7 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 					chan->fmtinfo->bpp;
 	chan->format.sizeimage = chan->format.bytesperline *
 		chan->format.height;
-	if (chan->valid_ports > 1)
+	if (chan->total_ports > 1)
 		update_gang_mode(chan);
 }
 
@@ -198,7 +203,7 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
  * -----------------------------------------------------------------------------
  */
 
-static int tegra_channel_capture_setup(struct tegra_channel *chan, int index)
+static int tegra_channel_capture_setup(struct tegra_channel *chan)
 {
 	u32 height = chan->format.height;
 	u32 width = chan->format.width;
@@ -206,10 +211,9 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, int index)
 	u32 data_type = chan->fmtinfo->img_dt;
 	u32 word_count = tegra_core_get_word_count(width, chan->fmtinfo);
 	u32 bypass_pixel_transform = 1;
-	u32 valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
-				chan->valid_ports;
+	int index;
 
-	if (valid_ports > 1) {
+	if (chan->valid_ports > 1) {
 		height = chan->gang_height;
 		width = chan->gang_width;
 		word_count = tegra_core_get_word_count(width, chan->fmtinfo);
@@ -220,18 +224,17 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan, int index)
 	   (chan->fmtinfo->vf_code == TEGRA_VF_RGB888))
 		bypass_pixel_transform = 0;
 
-	csi_write(chan, index, TEGRA_VI_CSI_ERROR_STATUS, 0xFFFFFFFF);
-	csi_write(chan, index, TEGRA_VI_CSI_IMAGE_DEF,
+	for (index = 0; index < chan->valid_ports; index++) {
+		csi_write(chan, index, TEGRA_VI_CSI_ERROR_STATUS, 0xFFFFFFFF);
+		csi_write(chan, index, TEGRA_VI_CSI_IMAGE_DEF,
 		  (bypass_pixel_transform << BYPASS_PXL_TRANSFORM_OFFSET) |
 		  (format << IMAGE_DEF_FORMAT_OFFSET) |
 		  IMAGE_DEF_DEST_MEM);
-	csi_write(chan, index, TEGRA_VI_CSI_IMAGE_DT, data_type);
-	csi_write(chan, index, TEGRA_VI_CSI_IMAGE_SIZE_WC, word_count);
-	csi_write(chan, index, TEGRA_VI_CSI_IMAGE_SIZE,
-		  (height << IMAGE_SIZE_HEIGHT_OFFSET) | width);
-
-	if ((valid_ports > 1) && csi_port_is_valid(chan->gang_port[index]))
-		tegra_channel_capture_setup(chan, (index + 1));
+		csi_write(chan, index, TEGRA_VI_CSI_IMAGE_DT, data_type);
+		csi_write(chan, index, TEGRA_VI_CSI_IMAGE_SIZE_WC, word_count);
+		csi_write(chan, index, TEGRA_VI_CSI_IMAGE_SIZE,
+			  (height << IMAGE_SIZE_HEIGHT_OFFSET) | width);
+	}
 
 	return 0;
 }
@@ -240,19 +243,13 @@ static void tegra_channel_capture_error(struct tegra_channel *chan)
 {
 	u32 val;
 	int index = 0;
-	u32 valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
-				chan->valid_ports;
 
-	val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
-	dev_err(&chan->video.dev, "TEGRA_VI_CSI_ERROR_STATUS 0x%08x\n", val);
-	while ((valid_ports > 1) &&
-		csi_port_is_valid(chan->gang_port[index])) {
+	for (index = 0; index < chan->valid_ports; index++) {
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		dev_err(&chan->video.dev,
 			"TEGRA_VI_CSI_ERROR_STATUS 0x%08x\n", val);
-		index++;
+		tegra_csi_status(chan->vi->csi, chan->port[index]);
 	}
-	tegra_csi_status(chan->vi->csi, chan->port, 0);
 }
 
 static void tegra_channel_capture_frame(struct tegra_channel *chan,
@@ -263,8 +260,7 @@ static void tegra_channel_capture_frame(struct tegra_channel *chan,
 	int bytes_per_line = chan->format.bytesperline;
 	int index = 0;
 	u32 thresh[TEGRA_CSI_BLOCKS] = { 0 };
-	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
-				chan->valid_ports;
+	int valid_ports = chan->valid_ports;
 	bool is_hdmiin_unplug;
 
 	spin_lock(&chan->hdmiin_lock);
@@ -275,9 +271,6 @@ static void tegra_channel_capture_frame(struct tegra_channel *chan,
 		return;
 
 	for (index = 0; index < valid_ports; index++) {
-		int port = index ? chan->gang_port[(index - 1)] :
-				chan->port;
-
 		/* Program buffer address by using surface 0 */
 		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB, 0x0);
 		csi_write(chan, index,
@@ -289,7 +282,7 @@ static void tegra_channel_capture_frame(struct tegra_channel *chan,
 		/* Program syncpoint */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
 					chan->syncpt[index], 1);
-		frame_start = VI_CSI_PP_FRAME_START(port);
+		frame_start = VI_CSI_PP_FRAME_START(chan->port[index]);
 		val = VI_CFG_VI_INCR_SYNCPT_COND(frame_start) |
 				chan->syncpt[index];
 		tegra_channel_write(chan, TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
@@ -329,8 +322,7 @@ static void tegra_channel_capture_done(struct tegra_channel *chan,
 	u32 val, mw_ack_done;
 	int index = 0;
 	u32 thresh[TEGRA_CSI_BLOCKS] = { 0 };
-	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
-				chan->valid_ports;
+	int valid_ports = chan->valid_ports;
 	bool is_hdmiin_unplug;
 
 	spin_lock(&chan->hdmiin_lock);
@@ -341,13 +333,11 @@ static void tegra_channel_capture_done(struct tegra_channel *chan,
 		return;
 
 	for (index = 0; index < valid_ports; index++) {
-		int port = index ? chan->gang_port[(index - 1)] :
-				chan->port;
 		/* Program syncpoint */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
 				chan->syncpt[index], 1);
 
-		mw_ack_done = VI_CSI_MW_ACK_DONE(port);
+		mw_ack_done = VI_CSI_MW_ACK_DONE(chan->port[index]);
 		val = VI_CFG_VI_INCR_SYNCPT_COND(mw_ack_done) |
 				chan->syncpt[index];
 		tegra_channel_write(chan, TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
@@ -459,8 +449,7 @@ void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
 	struct v4l2_subdev *sd;
 	bool is_hdmiin = false;
 	int num_sd, ret, index = 0;
-	int valid_ports = (chan->gang_mode == CAMERA_NO_GANG_MODE) ? 1 :
-				chan->valid_ports;
+	int valid_ports = chan->valid_ports;
 
 	if (event->type != V4L2_EVENT_SOURCE_CHANGE)
 		return;
@@ -633,7 +622,7 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct media_pipeline *pipe = chan->video.entity.pipe;
-	int ret = 0;
+	int ret = 0, i;
 
 	spin_lock(&chan->hdmiin_lock);
 	chan->is_hdmiin_unplug = false;
@@ -653,9 +642,10 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	if (chan->bypass)
 		return ret;
 
-	tegra_csi_start_streaming(chan->vi->csi, chan->port, 0);
+	for (i = 0; i < chan->valid_ports; i++)
+		tegra_csi_start_streaming(chan->vi->csi, chan->port[i]);
 	/* Note: Program VI registers after TPG, sensors and CSI streaming */
-	ret = tegra_channel_capture_setup(chan, 0);
+	ret = tegra_channel_capture_setup(chan);
 	if (ret < 0)
 		goto error_capture_setup;
 
@@ -699,10 +689,13 @@ error_pipeline_start:
 static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
+	int index;
 
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);
-		tegra_csi_stop_streaming(chan->vi->csi, chan->port, 0);
+		for (index = 0; index < chan->valid_ports; index++)
+			tegra_csi_stop_streaming(chan->vi->csi,
+							chan->port[index]);
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
 	}
 
@@ -739,7 +732,7 @@ tegra_channel_querycap(struct file *file, void *fh, struct v4l2_capability *cap)
 	strlcpy(cap->driver, "tegra-video", sizeof(cap->driver));
 	strlcpy(cap->card, chan->video.name, sizeof(cap->card));
 	snprintf(cap->bus_info, sizeof(cap->bus_info), "platform:%s:%u",
-		 dev_name(chan->vi->dev), chan->port);
+		 dev_name(chan->vi->dev), chan->port[0]);
 
 	return 0;
 }
@@ -824,7 +817,7 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 			chan->format.sizeimage = chan->format.bytesperline *
 				chan->format.height;
 
-			if (chan->valid_ports > 1)
+			if (chan->total_ports > 1)
 				update_gang_mode(chan);
 
 			return ret;
@@ -1207,7 +1200,7 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 		if (!ret) {
 			chan->format = *pix;
 			chan->fmtinfo = vfmt;
-			if (chan->valid_ports > 1)
+			if (chan->total_ports > 1)
 				update_gang_mode(chan);
 
 		}
@@ -1272,11 +1265,11 @@ tegra_channel_enum_input(struct file *file, void *fh, struct v4l2_input *inp)
 			if (inp->capabilities == V4L2_IN_CAP_DV_TIMINGS)
 				snprintf(inp->name,
 					sizeof(inp->name), "HDMI %u",
-					chan->port);
+					chan->port[0]);
 			else
 				snprintf(inp->name,
 					sizeof(inp->name), "Camera %u",
-					chan->port);
+					chan->port[0]);
 
 			return ret;
 		}
@@ -1403,7 +1396,7 @@ static void vi_channel_syncpt_init(struct tegra_channel *chan)
 {
 	int i;
 
-	for (i = 0; i < chan->valid_ports; i++)
+	for (i = 0; i < chan->total_ports; i++)
 		chan->syncpt[i] =
 			nvhost_get_syncpt_client_managed(chan->vi->ndev, "vi");
 }
@@ -1412,44 +1405,36 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 {
 	int i;
 
-	for (i = 0; i < chan->valid_ports; i++)
+	for (i = 0; i < chan->total_ports; i++)
 		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i]);
 }
 
 static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index)
 {
 	int numlanes = 0;
-	int idx = 0, base_index = 0;
+	int idx = 0;
 	struct tegra_channel *chan  = &vi->chans[index];
 
-	chan->valid_ports = 0;
-	memset(&chan->gang_port[0], INVALID_CSI_PORT, TEGRA_CSI_BLOCKS);
+	chan->gang_mode = CAMERA_NO_GANG_MODE;
+	chan->total_ports = 0;
+	memset(&chan->port[0], INVALID_CSI_PORT, TEGRA_CSI_BLOCKS);
 	if (vi->pg_mode) {
-		chan->port = index;
+		chan->port[0] = index;
 		chan->numlanes = 2;
 	} else
 		tegra_vi_get_port_info(chan, vi->dev->of_node, index);
 
-	if (csi_port_is_valid(chan->port)) {
-		chan->valid_ports++;
-		/* maximum of 4 lanes are present per CSI block */
-		numlanes = chan->numlanes > 4 ? 4 : chan->numlanes;
-		chan->csibase[base_index++] = vi->iomem +
-					TEGRA_VI_CSI_BASE(chan->port);
-		set_csi_portinfo(vi->csi, chan->port, numlanes);
-	}
-
-	while (csi_port_is_valid(chan->gang_port[idx])) {
-		numlanes = chan->numlanes - (base_index * 4);
+	for (idx = 0; csi_port_is_valid(chan->port[idx]); idx++) {
+		chan->total_ports++;
+		numlanes = chan->numlanes - (idx * 4);
 		numlanes = numlanes > 4 ? 4 : numlanes;
-		chan->valid_ports++;
-		chan->gang_mode = CAMERA_NO_GANG_MODE;
-		vi->csi->gang_port[idx] = chan->gang_port[idx];
-		chan->csibase[base_index++] = vi->iomem +
-			TEGRA_VI_CSI_BASE(chan->gang_port[idx]);
-		set_csi_portinfo(vi->csi, chan->gang_port[idx], numlanes);
-		idx++;
+		/* maximum of 4 lanes are present per CSI block */
+		chan->csibase[idx] = vi->iomem +
+					TEGRA_VI_CSI_BASE(chan->port[idx]);
+		set_csi_portinfo(vi->csi, chan->port[idx], numlanes);
 	}
+	/* based on gang mode valid ports will be updated - set default to 1 */
+	chan->valid_ports = chan->total_ports ? 1 : 0;
 }
 
 static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
@@ -1503,7 +1488,8 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	chan->video.v4l2_dev = &vi->v4l2_dev;
 	chan->video.queue = &chan->queue;
 	snprintf(chan->video.name, sizeof(chan->video.name), "%s-%s-%u",
-		 dev_name(vi->dev), vi->pg_mode ? "tpg" : "output", chan->port);
+		dev_name(vi->dev), vi->pg_mode ? "tpg" : "output",
+		chan->port[0]);
 	chan->video.vfl_type = VFL_TYPE_GRABBER;
 	chan->video.vfl_dir = VFL_DIR_RX;
 	chan->video.release = video_device_release_empty;

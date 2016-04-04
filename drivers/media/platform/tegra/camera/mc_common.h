@@ -116,7 +116,7 @@ struct tegra_channel {
 	const struct tegra_video_format *fmtinfo;
 	struct mutex stop_kthread_lock;
 
-	unsigned char gang_port[TEGRA_CSI_BLOCKS];
+	unsigned char port[TEGRA_CSI_BLOCKS];
 	unsigned int syncpt[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];
 
@@ -134,8 +134,8 @@ struct tegra_channel {
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int align;
-	unsigned int port;
 	unsigned int valid_ports;
+	unsigned int total_ports;
 	unsigned int numlanes;
 	unsigned int io_id;
 	unsigned int num_subdevs;

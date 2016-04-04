@@ -351,7 +351,7 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 			ret = of_property_read_u32(ep, "csi-port", &value);
 			if (ret < 0)
 				dev_err(&chan->video.dev, "csi port error\n");
-			chan->port = value;
+			chan->port[0] = value;
 
 			/* Get number of data lanes for the endpoint */
 			ret = of_property_read_u32(ep, "bus-width", &value);
@@ -371,12 +371,10 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 			 * bricks to add as many ports necessary.
 			 */
 			value -= 4;
-			for (i = 0; value > 0; i++) {
-				int next_port = chan->port + ((i + 1) * 2);
-				next_port =
-					(next_port > PORT_F) ? 0 : next_port;
-				chan->gang_port[i] = next_port;
-				value -= 4;
+			for (i = 1; value > 0; i++, value -= 4) {
+				int next_port = chan->port[i-1] + 2;
+				next_port = (next_port % (PORT_F + 1));
+				chan->port[i] = next_port;
 			}
 		}
 	}

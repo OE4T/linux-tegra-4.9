@@ -586,6 +586,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		ref->handle->ivm_id = op.id;
 		mb();
 		ref->handle->alloc = true;
+		trace_nvmap_alloc_from_ivc(client, ref->handle, ref);
 	}
 
 	fd = nvmap_create_fd(client, ref->handle);

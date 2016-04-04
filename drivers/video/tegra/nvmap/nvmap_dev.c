@@ -47,11 +47,12 @@
 
 #include <asm/cputype.h>
 
+#include "nvmap_priv.h"
+#include "nvmap_ioctl.h"
+
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvmap.h>
 
-#include "nvmap_priv.h"
-#include "nvmap_ioctl.h"
 
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
 

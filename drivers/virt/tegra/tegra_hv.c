@@ -224,7 +224,7 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 	}
 
 	BUG_ON(qd->offset >= ivc->givci->length);
-	BUG_ON(qd->offset + qd->size * 2 >= ivc->givci->length);
+	BUG_ON(qd->offset + qd->size * 2 > ivc->givci->length);
 
 	if (rx_first) {
 		rx_base = ivc->givci->shmem + qd->offset;

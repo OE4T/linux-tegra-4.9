@@ -122,7 +122,7 @@ static int tegra186_io_rail_change_notify_cb(struct notifier_block *nb,
 
 	if (!(event &
 		(REGULATOR_EVENT_POST_ENABLE | REGULATOR_EVENT_PRE_DISABLE |
-		 REGULATOR_EVENT_PRE_ENABLE | REGULATOR_EVENT_POST_DISABLE)))
+		 REGULATOR_EVENT_PRE_ENABLE | REGULATOR_EVENT_DISABLE)))
 			return NOTIFY_OK;
 
 	cell = container_of(nb, struct tegra186_io_power_cell, regulator_nb);
@@ -133,7 +133,7 @@ static int tegra186_io_rail_change_notify_cb(struct notifier_block *nb,
 		if (event & REGULATOR_EVENT_PRE_ENABLE)
 			pmc_iopower_enable(cell);
 
-		if (event & REGULATOR_EVENT_POST_DISABLE)
+		if (event & REGULATOR_EVENT_DISABLE)
 			pmc_iopower_disable(cell);
 	} else {
 		if (event & REGULATOR_EVENT_POST_ENABLE)

@@ -616,14 +616,14 @@
 		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
 		nvidia,num-codec-link = <4>;
 		nvidia,num-clk = <8>;
-		nvidia,clk-rates = < 282240000	/* PLLA_x11025_RATE */
+		nvidia,clk-rates = < 270950400	/* PLLA_x11025_RATE */
 				     11289600	/* AUD_MCLK_x11025_RATE */
 				     45158400	/* PLLA_OUT0_x11025_RATE */
 				     45158400	/* AHUB_x11025_RATE */
-				     368640000  /* PLLA_x8000_RATE */
+				     344063944  /* PLLA_x8000_RATE */
 				     12288000	/* AUD_MCLK_x8000_RATE */
 				     49152000	/* PLLA_OUT0_x8000_RATE */
-				     36864000 >;/* AHUB_x8000_RATE */
+				     49152000 >;/* AHUB_x8000_RATE */
 		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_PLLA>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,

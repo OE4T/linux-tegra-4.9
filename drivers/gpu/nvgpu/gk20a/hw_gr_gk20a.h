@@ -918,6 +918,10 @@ static inline u32 gr_fecs_host_int_status_r(void)
 {
 	return 0x00409c18;
 }
+static inline u32 gr_fecs_host_int_status_fault_during_ctxsw_f(u32 v)
+{
+	return (v & 0x1) << 16;
+}
 static inline u32 gr_fecs_host_int_status_umimp_firmware_method_f(u32 v)
 {
 	return (v & 0x1) << 17;
@@ -3114,6 +3118,14 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_disable_f(void)
 {
 	return 0x0;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_stop_on_any_warp_disable_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_on_any_sm_stop_on_any_sm_disable_v(void)
+{
+	return 0x00000000;
+}
 static inline u32 gr_gpc0_tpc0_sm_warp_valid_mask_r(void)
 {
 	return 0x00504614;
@@ -3129,14 +3141,6 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_r(void)
 static inline u32 gr_gpcs_tpcs_sm_dbgr_bpt_pause_mask_r(void)
 {
 	return 0x00419e24;
-}
-static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_stop_on_any_warp_disable_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 gr_gpc0_tpc0_sm_dbgr_bpt_trap_mask_stop_on_any_sm_disable_v(void)
-{
-	return 0x00000000;
 }
 static inline u32 gr_gpc0_tpc0_sm_dbgr_status0_r(void)
 {

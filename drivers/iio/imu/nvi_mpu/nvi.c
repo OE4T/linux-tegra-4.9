@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(320)
+#define NVI_DRIVER_VERSION		(321)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -53,6 +53,12 @@
 #define NVI_HW_ID_ICM20632		(0xAD)
 /* NVI_FW_CRC_CHECK used only during development to confirm valid FW */
 #define NVI_FW_CRC_CHECK		(0)
+
+struct nvi_pdata {
+	struct nvi_state st;
+	struct work_struct fw_load_work;
+	struct i2c_dev_id *i2c_dev_id;
+};
 
 struct nvi_id_hal {
 	u8 hw_id;
@@ -3931,11 +3937,27 @@ static int nvi_init(struct nvi_state *st,
 	return 0;
 }
 
+static void nvi_dmp_fw_load_worker(struct work_struct *work)
+{
+	int ret;
+
+	struct nvi_pdata *pd = container_of(work,
+					struct nvi_pdata, fw_load_work);
+	struct nvi_state *st = &pd->st;
+
+	ret = nvi_init(st, pd->i2c_dev_id);
+	if (ret) {
+		dev_err(&st->i2c->dev, "%s ERR %d\n", __func__, ret);
+		nvi_remove(st->i2c);
+	}
+	dev_info(&st->i2c->dev, "%s done\n", __func__);
+}
+
 static int nvi_probe(struct i2c_client *client,
 		     const struct i2c_device_id *i2c_dev_id)
 {
+	struct nvi_pdata *pd;
 	struct nvi_state *st;
-	int ret;
 
 	dev_info(&client->dev, "%s %s\n", __func__, i2c_dev_id->name);
 	if (!client->irq) {
@@ -3943,19 +3965,19 @@ static int nvi_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	st = devm_kzalloc(&client->dev, sizeof(*st), GFP_KERNEL);
-	if (st == NULL)
+	pd = devm_kzalloc(&client->dev, sizeof(*pd), GFP_KERNEL);
+	if (pd == NULL)
 		return -ENOMEM;
-
-	i2c_set_clientdata(client, st);
+	st = &pd->st;
+	i2c_set_clientdata(client, pd);
 	st->i2c = client;
-	ret = nvi_init(st, i2c_dev_id);
-	if (ret) {
-		dev_err(&st->i2c->dev, "%s ERR %d\n", __func__, ret);
-		nvi_remove(client);
-	}
-	dev_info(&st->i2c->dev, "%s done\n", __func__);
-	return ret;
+	pd->i2c_dev_id = i2c_dev_id;
+
+	/* Init fw load worker thread */
+	INIT_WORK(&pd->fw_load_work, nvi_dmp_fw_load_worker);
+	schedule_work(&pd->fw_load_work);
+
+	return 0;
 }
 
 MODULE_DEVICE_TABLE(i2c, nvi_i2c_device_id);

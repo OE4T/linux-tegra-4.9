@@ -42,6 +42,7 @@
 #include "dc_priv.h"
 #include "edid.h"
 #include "dp_lt.h"
+#include "dp_auto.h"
 
 #ifdef CONFIG_MODS
 #include <linux/ctype.h>
@@ -1825,12 +1826,30 @@ static void tegra_dp_irq_evt_worker(struct work_struct *work)
 				INTERLANE_ALIGN_MASK);
 	}
 
+	if (dpcd_200h_205h[1] &
+		NV_DPCD_DEVICE_SERVICE_IRQ_VECTOR_AUTO_TEST_YES) {
+		enum auto_test_requests test_rq;
+
+		test_rq = tegra_dp_auto_get_test_rq(dp);
+
+		tegra_dp_auto_is_test_supported(test_rq) ?
+			tegra_dp_auto_ack_test_rq(dp) :
+			tegra_dp_auto_nack_test_rq(dp);
+
+		if (test_rq == TEST_LINK_TRAINING) {
+			dp->lt_data.force_trigger = true;
+			tegra_dp_lt_set_pending_evt(&dp->lt_data);
+		}
+
+		goto done;
+	}
+
 	if (!link_stable)
 		tegra_dp_lt_set_pending_evt(&dp->lt_data);
 	else
 		dev_info(&dp->dc->ndev->dev,
 			"dp: link stable, ignore irq event\n");
-
+done:
 	tegra_dc_io_end(dp->dc);
 
 #undef LANE0_1_CR_CE_SL_MASK
@@ -2333,6 +2352,19 @@ static void tegra_dp_hpd_op_edid_ready(void *drv_data)
 	tegra_dc_io_start(dc);
 	tegra_dc_dp_dpcd_read(dp, NV_DPCD_SINK_COUNT,
 				&dp->sink_cnt_cp_ready);
+
+	if (tegra_dp_auto_is_rq(dp)) {
+		enum auto_test_requests test_rq;
+
+		test_rq = tegra_dp_auto_get_test_rq(dp);
+
+		tegra_dp_auto_is_test_supported(test_rq) ?
+			tegra_dp_auto_ack_test_rq(dp) :
+			tegra_dp_auto_nack_test_rq(dp);
+
+		if (test_rq == TEST_EDID_READ)
+			tegra_dp_auto_set_edid_checksum(dp);
+	}
 	tegra_dc_io_end(dc);
 }
 

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dp_lt.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  *
  * This software is licensed under the terms of the GNU General Public
@@ -52,6 +52,7 @@ struct tegra_dp_lt_data {
 	struct mutex lock;
 	struct delayed_work dwork;
 	bool force_disable; /* not sticky */
+	bool force_trigger; /* not sticky */
 	struct completion lt_complete;
 
 	u8 no_aux_handshake;

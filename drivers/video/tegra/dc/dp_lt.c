@@ -537,18 +537,22 @@ static void lt_reset_state(struct tegra_dp_lt_data *lt_data)
 			!!dp->link_cfg.is_valid, !!lt_data->force_disable);
 		lt_failed(lt_data);
 		lt_data->force_disable = false;
+		lt_data->force_trigger = false;
 		tgt_state = STATE_DONE_FAIL;
 		timeout = -1;
 		goto done;
 	}
 
-	if (lt_data->lt_config_valid && get_lt_status(lt_data)) {
+	if (!lt_data->force_trigger &&
+		lt_data->lt_config_valid &&
+		get_lt_status(lt_data)) {
 		pr_info("dp_lt: link stable, do nothing\n");
 		lt_passed(lt_data);
 		tgt_state = STATE_DONE_PASS;
 		timeout = -1;
 		goto done;
 	}
+	lt_data->force_trigger = false;
 
 	/*
 	 * detach SOR early.

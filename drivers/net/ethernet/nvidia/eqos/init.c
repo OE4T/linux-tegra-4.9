@@ -581,7 +581,11 @@ static int tegra_eqos_max_state(struct thermal_cooling_device *tcd,
 				   unsigned long *state)
 {
 	struct eqos_prv_data *pdata = tcd->devdata;
-
+	/*
+	 * NOTE: There is no locking here. Therefore any HW manipulation code
+	 * added in the future will need to employ concurrency control just
+	 * like tegra_eqos_set_state()
+	 */
 	pr_info("%s state=%d\n", __func__, pdata->therm_state.counter);
 	*state = TEGRA_EQOS_THERM_MAX_STATE;
 
@@ -593,6 +597,11 @@ static int tegra_eqos_cur_state(struct thermal_cooling_device *tcd,
 {
 	struct eqos_prv_data *pdata = tcd->devdata;
 
+	/*
+	 * NOTE: There is no locking here. Therefore any HW manipulation code
+	 * added in the future will need to employ concurrency control just
+	 * like tegra_eqos_set_state()
+	 */
 	pr_info("%s state=%d\n", __func__, pdata->therm_state.counter);
 	*state = (unsigned long)atomic_read(&pdata->therm_state);
 
@@ -604,6 +613,17 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 {
 	struct eqos_prv_data *pdata = tcd->devdata;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
+	int hw_chg_count;
+
+	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+	    hw_chg_count--)
+		usleep_range(20000, 40000);
+
+	if (pdata->suspended || hw_chg_count == 0) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+		return -ENODEV;
+	}
 
 	pr_info("%s cur state=%d new state=%ld, recalibrating eqos pads\n",
 		__func__, pdata->therm_state.counter, state);
@@ -620,6 +640,8 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 
 	/* read-to-clear error counters */
 	hw_if->read_err_counter(pdata, false);
+
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
 	return 0;
 }
@@ -1247,27 +1269,6 @@ static void eqos_shutdown(struct platform_device *pdev)
 	return;
 }
 
-#if 0
-static INT eqos_suspend_late(struct platform_device *pdev, pm_message_t state)
-{
-	pr_err("-->eqos_suspend_late\n");
-	pr_err("Handle the suspend_late\n");
-	pr_err("<--eqos_suspend_late\n");
-
-	return 0;
-}
-
-static INT eqos_resume_early(struct platform_device *pdev)
-{
-	pr_err("-->eqos_resume_early\n");
-	pr_err("Handle the resume_early\n");
-	pr_err("<--eqos_resume_early\n");
-
-	return 0;
-}
-
-#endif
-
 #ifdef CONFIG_PM
 
 /*!
@@ -1289,24 +1290,27 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs))
+		usleep_range(1000, 2000);
+
 	if (pdata->suspended) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 		pr_err("eqos already suspended\n");
 		return -EINVAL;
 	}
-	pdata->suspended = 1;
 
+	pdata->suspended = 1;
 	if (netif_running(dev)) {
-		while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs))
-			usleep_range(1000, 2000);
 		eqos_stop_dev(pdata);
 		pdata->hw_state_flgs |= (1 << HW_STOPPED);
-		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 	}
 
 	/* disable clocks */
 	eqos_clock_deinit(pdata);
 	/* disable regulators */
 	eqos_regulator_deinit(pdata);
+
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
 	return 0;
 }
@@ -1330,7 +1334,10 @@ static INT eqos_resume(struct platform_device *pdev)
 	struct net_device *dev = platform_get_drvdata(pdev);
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs))
+		usleep_range(1000, 2000);
 	if (!pdata->suspended) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 		pr_err("eqos already resumed\n");
 		return -EINVAL;
 	}
@@ -1345,6 +1352,8 @@ static INT eqos_resume(struct platform_device *pdev)
 		eqos_start_dev(pdata);
 	pdata->suspended = 0;
 	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);
+
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
 	return 0;
 }

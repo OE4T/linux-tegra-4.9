@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -70,10 +70,19 @@ INT eqos_mdio_read_direct(struct eqos_prv_data *pdata,
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phy_reg_read_status;
+	int hw_chg_count;
 
 	DBGPR_MDIO("--> eqos_mdio_read_direct\n");
-	if (pdata->suspended)
+
+	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+	    hw_chg_count--)
+		usleep_range(20000, 40000);
+
+	if (pdata->suspended || hw_chg_count == 0) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 		return -ENODEV;
+	}
 
 	if (hw_if->read_phy_regs) {
 		phy_reg_read_status =
@@ -83,8 +92,8 @@ INT eqos_mdio_read_direct(struct eqos_prv_data *pdata,
 		pr_err("%s: hw_if->read_phy_regs not defined", DEV_NAME);
 	}
 
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 	DBGPR_MDIO("<-- eqos_mdio_read_direct\n");
-
 	return phy_reg_read_status;
 }
 
@@ -111,9 +120,17 @@ INT eqos_mdio_write_direct(struct eqos_prv_data *pdata,
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phy_reg_write_status;
+	int hw_chg_count;
 
-	if (pdata->suspended)
+	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+	    hw_chg_count--)
+		usleep_range(20000, 40000);
+
+	if (pdata->suspended || hw_chg_count == 0) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 		return -ENODEV;
+	}
 
 	DBGPR_MDIO("--> eqos_mdio_write_direct\n");
 
@@ -125,8 +142,8 @@ INT eqos_mdio_write_direct(struct eqos_prv_data *pdata,
 		pr_err("%s: hw_if->write_phy_regs not defined", DEV_NAME);
 	}
 
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 	DBGPR_MDIO("<-- eqos_mdio_write_direct\n");
-
 	return phy_reg_write_status;
 }
 
@@ -151,9 +168,19 @@ static INT eqos_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	int phydata = 0;
+	int hw_chg_count;
 
 	DBGPR_MDIO("--> eqos_mdio_read: phyaddr = %d, phyreg = %d\n",
 		   phyaddr, phyreg);
+
+	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
+	if (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs))
+		return -ENODEV;
+
+	if (pdata->suspended) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+		return -ENODEV;
+	}
 
 	if (hw_if->read_phy_regs)
 		hw_if->read_phy_regs(phyaddr, phyreg, &phydata);
@@ -162,6 +189,7 @@ static INT eqos_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 
 	DBGPR_MDIO("<-- eqos_mdio_read: phydata = %#x\n", phydata);
 
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 	return phydata;
 }
 
@@ -187,8 +215,18 @@ static INT eqos_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	INT ret = Y_SUCCESS;
+	int hw_chg_count;
 
 	DBGPR_MDIO("--> eqos_mdio_write\n");
+	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+	    hw_chg_count--)
+		usleep_range(20000, 40000);
+
+	if (pdata->suspended || hw_chg_count == 0) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+		return -ENODEV;
+	}
 
 	if (hw_if->write_phy_regs) {
 		hw_if->write_phy_regs(phyaddr, phyreg, phydata);
@@ -199,6 +237,7 @@ static INT eqos_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 
 	DBGPR_MDIO("<-- eqos_mdio_write\n");
 
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 	return ret;
 }
 

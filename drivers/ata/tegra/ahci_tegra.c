@@ -76,7 +76,13 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 	u32 port_status = 0;
 	enum tegra_ahci_port_runtime_status lpm_state;
 	int i;
-	u32 val, mask;
+
+	lpm_state = TEGRA_AHCI_PORT_RUNTIME_ACTIVE;
+	tegra->skip_rtpm = false;
+
+	port_status = tegra_ahci_bar5_readl(hpriv, T_AHCI_PORT_PXSSTS);
+	port_status = (port_status & T_AHCI_PORT_PXSSTS_IPM_MASK) >>
+					T_AHCI_PORT_PXSSTS_IPM_SHIFT;
 
 	ata_for_each_link(link, ap, PMP_FIRST) {
 		if (link->flags & ATA_LFLAG_NO_LPM) {
@@ -99,8 +105,6 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 						TEGRA_AHCI_PORT_RUNTIME_SLUMBER;
 			} else if (ap->target_lpm_policy == ATA_LPM_MED_POWER) {
 				lpm_state = TEGRA_AHCI_PORT_RUNTIME_PARTIAL;
-			} else {
-				lpm_state = TEGRA_AHCI_PORT_RUNTIME_ACTIVE;
 			}
 
 			if (hipm || dipm) {
@@ -120,11 +124,13 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 				if (port_status < lpm_state) {
 					ata_link_err(link,
 						"Link didn't enter LPM\n");
-					ret = -EBUSY;
+					if (ap->pm_mesg.event & PM_EVENT_AUTO)
+						ret = -EBUSY;
 				} else {
-					port_status = 0;
-					ata_link_info(link,
-						"Link entered LPM\n");
+					if (!(port_status ==
+						TEGRA_AHCI_PORT_RUNTIME_ACTIVE))
+						ata_link_info(link,
+							"Link entered LPM\n");
 				}
 			} else {
 				ata_dev_info(dev,
@@ -133,19 +139,15 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 		}
 	}
 
-	if (tegra->host_naking_war_applied) {
-		/* Revert HOST NAKing WAR once link enters low power mode */
-		mask = val = T_SATA0_AHCI_HBA_CTL_0_PSM2LL_DENY_PMREQ;
-		tegra_ahci_scfg_update(hpriv, val, mask,
-				T_SATA0_AHCI_HBA_CTL_0);
-
-		mask = val = T_SATA0_CFG_LINK_0_WAIT_FOR_PSM_FOR_PMOFF;
-		tegra_ahci_scfg_update(hpriv, val, mask,
-				T_SATA0_CFG_LINK_0);
-		tegra->host_naking_war_applied = false;
+	if (lpm_state == TEGRA_AHCI_PORT_RUNTIME_ACTIVE &&
+		port_status == TEGRA_AHCI_PORT_RUNTIME_ACTIVE) {
+		if (ap->pm_mesg.event & PM_EVENT_AUTO) {
+			tegra->skip_rtpm = true;
+			return 0;
+		}
 	}
 
-	if (!ret) {
+	if (!ret && !(ap->pflags & ATA_PFLAG_SUSPENDED)) {
 		ret = ahci_ops.port_suspend(ap, mesg);
 		if (ret == 0) {
 			pm_runtime_mark_last_busy(&tegra->pdev->dev);
@@ -166,6 +168,12 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 	struct scsi_device *sdev = NULL;
 #endif
 	int ret = 0;
+
+	if (tegra->skip_rtpm) {
+		tegra->skip_rtpm = false;
+		if (ap->pm_mesg.event & PM_EVENT_AUTO)
+			return 0;
+	}
 
 	ret = pm_runtime_get_sync(&tegra->pdev->dev);
 	if (ret < 0) {
@@ -203,28 +211,8 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 static unsigned int tegra_ahci_qc_issue(struct ata_queued_cmd *qc)
 {
 
-	if (qc->tf.command == ATA_CMD_STANDBYNOW1) {
-		struct scsi_device *sdev = qc->scsicmd->device;
-		struct ata_port *ap = ata_shost_to_port(sdev->host);
-		struct ata_host *host = ap->host;
-		struct ahci_host_priv *hpriv =  host->private_data;
-		struct tegra_ahci_priv *tegra = hpriv->plat_data;
-		u32 val = 0;
-		u32 mask = T_SATA0_AHCI_HBA_CTL_0_PSM2LL_DENY_PMREQ;
-
-		/* Apply HOST NAKing WAR */
-		val = ~mask;
-		tegra_ahci_scfg_update(hpriv, val, mask,
-				T_SATA0_AHCI_HBA_CTL_0);
-
-		mask = T_SATA0_CFG_LINK_0_WAIT_FOR_PSM_FOR_PMOFF;
-		val = ~mask;
-		tegra_ahci_scfg_update(hpriv, val, mask,
-						T_SATA0_CFG_LINK_0);
-
-		tegra->host_naking_war_applied = true;
-	} else if (qc->tf.command == ATA_CMD_SET_FEATURES &&
-				qc->tf.feature ==  SATA_FPDMA_OFFSET) {
+	if (qc->tf.command == ATA_CMD_SET_FEATURES &&
+			qc->tf.feature ==  SATA_FPDMA_OFFSET) {
 		WARN(1, "SATA_FPDMA_OFFSET Feature is not supported");
 		return AC_ERR_INVALID;
 	} else if (qc->tf.command == ATA_CMD_READ_LOG_EXT &&

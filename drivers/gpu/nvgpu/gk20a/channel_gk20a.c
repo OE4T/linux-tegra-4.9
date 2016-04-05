@@ -2778,11 +2778,10 @@ int gk20a_channel_suspend(struct gk20a *g)
 			g->ops.fifo.disable_channel(ch);
 			/* preempt the channel */
 			g->ops.fifo.preempt_channel(g, chid);
-			/* wait for channel update notifiers */
-			if (ch->update_fn &&
-					work_pending(&ch->update_fn_work))
-				flush_work(&ch->update_fn_work);
 			gk20a_channel_cancel_job_clean_up(ch, true);
+			/* wait for channel update notifiers */
+			if (ch->update_fn)
+				cancel_work_sync(&ch->update_fn_work);
 
 			channels_in_use = true;
 

@@ -29,10 +29,10 @@ enum aon_pm_request {
 	AON_PM_WAKE_TIMEOUT = 2,
 	/* Force AON to sleep */
 	AON_PM_FORCE_SLEEP = 3,
-	/* Extract the power state history of AON */
-	AON_PM_STATE_HISTORY = 4,
-	/* Extract the power states histogram of AON */
-	AON_PM_STATE_HISTOGRAM = 5,
+	/* Extract the number of times each power state of AON in entered */
+	AON_PM_STATE_COUNT = 4,
+	/* Extract the amount of time spent in each power state of AON */
+	AON_PM_STATE_TIME = 5,
 	/* Query/set whether VDD_RTC should go to retention in deep dormant */
 	AON_PM_VDD_RTC_RETENTION = 9,
 	/* Query the number of times SPE entered SC8 */
@@ -143,42 +143,21 @@ struct aon_pm_force_sleep {
 	u32 force_entry;
 };
 
-/* This struct is used to extract the power state histogram of the target.
- * example: idle -> 20% standby -> 30% dormant -> 70%
+/* This struct is used to extract the time spent in each power state.
  * Fields:
  * state_durations:		duration of shallow/deep/active states indexed
- *				by enum aon_pm_states
+ *				by enum	aon_pm_states, in ms
  */
-struct aon_pm_state_histogram {
-	u32 state_durations[7];
+struct aon_pm_state_time {
+	u64 state_durations[6];
 };
 
-/* This struct can be used to store floats. Useful for storing time stamps.
- * example : 325.41 (ival = 325, fval = 41)
- */
-struct aon_float {
-	u32 ival;
-	u32 fval;
-};
-
-/* This struct is used to capture the power state entries/exits.
+/* This struct is used to extract the power state entry counts for the target.
  * Fields:
- * state:	indicates the power state
- * action:	indicates entry/exit
- * timestamp:	inidcates the timestamp
+ * state_counts:		number of times each power state is entered
  */
-struct aon_pstate_capture {
-	u16 state;
-	u16 action;
-	struct aon_float timestamp;
-};
-
-/* This struct is used to extract the power state history for the target.
- * Fields:
- * buffer:	used to store power states history.
- */
-struct aon_pm_state_history {
-	struct aon_pstate_capture buffer[8];
+struct aon_pm_state_count {
+	u32 state_entry_counts[6];
 };
 
 /* This struct is used to query or set whether VDD_RTC will be lowered to
@@ -225,8 +204,8 @@ struct aon_pm_dbg_xfer {
 		struct aon_pm_target_pstate pstate;
 		struct aon_pm_wake_timeout wake_tout;
 		struct aon_pm_force_sleep force_sleep;
-		struct aon_pm_state_histogram histogram;
-		struct aon_pm_state_history history;
+		struct aon_pm_state_time state_times;
+		struct aon_pm_state_count state_counts;
 		struct aon_pm_vdd_rtc_retention retention;
 		struct aon_pm_sc8_count sc8_count;
 	} type;

@@ -85,8 +85,6 @@ static struct dbgfs_dir aon_dbgfs_dirs[] = {
 static const char *const pstates[] = {"idle", "standby", "dormant", "deepidle",
 				"deepstandby", "deepdormant", "active"};
 
-static const char *const pstate_actions[] = {"entry", "exit"};
-
 static u32 thresholds[AON_PSTATES_TOTAL];
 
 static u32 mods_result = MODS_DEFAULT_VAL;
@@ -175,8 +173,8 @@ static struct aon_dbg_response *aon_create_ivc_dbg_req(u32 request,
 		req.data.pm_xfer.type.retention.enable = (flag) ? data : 0;
 		break;
 	case AON_PM_SC8_COUNT:
-	case AON_PM_STATE_HISTORY:
-	case AON_PM_STATE_HISTOGRAM:
+	case AON_PM_STATE_TIME:
+	case AON_PM_STATE_COUNT:
 	case AON_PING_TEST:
 		break;
 	default:
@@ -341,11 +339,11 @@ DEFINE_SIMPLE_ATTRIBUTE(aon_pm_retention_fops, aon_pm_show,
 DEFINE_SIMPLE_ATTRIBUTE(aon_pm_sc8_count_fops, aon_pm_show,
 			NULL, "%lld\n");
 
-static int aon_pm_history_show(struct seq_file *file, void *data)
+static int aon_pm_state_times_show(struct seq_file *file, void *data)
 {
 	struct aon_dbg_response *resp;
 	int i, len;
-	struct aon_pstate_capture *history;
+	u64 *arr;
 
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)file->private, READ, 0);
@@ -353,37 +351,32 @@ static int aon_pm_history_show(struct seq_file *file, void *data)
 		mutex_unlock(&aon_mutex);
 		return PTR_ERR(resp);
 	}
-	len = ARRAY_SIZE(resp->data.pm_xfer.type.history.buffer);
-	history = resp->data.pm_xfer.type.history.buffer;
-	for (i = 0; i < len; i++) {
-		seq_printf(file, "%s : %s : %u.%u\n",
-			pstates[history[i].state],
-			pstate_actions[history[i].action],
-			history[i].timestamp.ival,
-			history[i].timestamp.fval);
-	}
+	len = ARRAY_SIZE(resp->data.pm_xfer.type.state_times.state_durations);
+	arr = resp->data.pm_xfer.type.state_times.state_durations;
+	for (i = 0; i < len; i++)
+		seq_printf(file, "%s: %llu\n", pstates[i], arr[i]);
 	mutex_unlock(&aon_mutex);
 
 	return 0;
 }
 
-static int aon_pm_history_open(struct inode *inode, struct file *file)
+static int aon_pm_state_times_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, aon_pm_history_show, inode->i_private);
+	return single_open(file, aon_pm_state_times_show, inode->i_private);
 }
 
-static const struct file_operations aon_pm_history_fops = {
-	.open = aon_pm_history_open,
+static const struct file_operations aon_pm_state_times_fops = {
+	.open = aon_pm_state_times_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release
 };
 
-static int aon_pm_histogram_show(struct seq_file *file, void *data)
+static int aon_pm_state_counts_show(struct seq_file *file, void *data)
 {
 	struct aon_dbg_response *resp;
 	int i, len;
-	u32 *histogram;
+	u32 *arr;
 
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)file->private, READ, 0);
@@ -391,22 +384,22 @@ static int aon_pm_histogram_show(struct seq_file *file, void *data)
 		mutex_unlock(&aon_mutex);
 		return PTR_ERR(resp);
 	}
-	len = ARRAY_SIZE(resp->data.pm_xfer.type.histogram.state_durations);
-	histogram = resp->data.pm_xfer.type.histogram.state_durations;
+	len = ARRAY_SIZE(resp->data.pm_xfer.type.state_counts.state_entry_counts);
+	arr = resp->data.pm_xfer.type.state_counts.state_entry_counts;
 	for (i = 0; i < len; i++)
-		seq_printf(file, "%s : %u%%\n", pstates[i], histogram[i]);
+		seq_printf(file, "%s: %u\n", pstates[i], arr[i]);
 	mutex_unlock(&aon_mutex);
 
 	return 0;
 }
 
-static int aon_pm_histogram_open(struct inode *inode, struct file *file)
+static int aon_pm_state_counts_open(struct inode *inode, struct file *file)
 {
-	return single_open(file, aon_pm_histogram_show, inode->i_private);
+	return single_open(file, aon_pm_state_counts_show, inode->i_private);
 }
 
-static const struct file_operations aon_pm_histogram_fops = {
-	.open = aon_pm_histogram_open,
+static const struct file_operations aon_pm_state_counts_fops = {
+	.open = aon_pm_state_counts_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release
@@ -497,12 +490,12 @@ static struct aon_dbgfs_node aon_nodes[] = {
 	{.name = "force_sleep", .id = AON_PM_FORCE_SLEEP, .pdr_id = AON_PM,
 			.mode = S_IRUGO | S_IWUSR,
 			.fops = &aon_pm_force_sleep_fops,},
-	{.name = "pstates_history", .id = AON_PM_STATE_HISTORY,
-			.pdr_id = AON_PM, .mode = S_IRUGO | S_IWUSR,
-			.fops = &aon_pm_history_fops,},
-	{.name = "pstates_histogram", .id = AON_PM_STATE_HISTOGRAM,
-			.pdr_id = AON_PM, .mode = S_IRUGO | S_IWUSR,
-			.fops = &aon_pm_histogram_fops,},
+	{.name = "state_times", .id = AON_PM_STATE_TIME,
+			.pdr_id = AON_STATS, .mode = S_IRUGO,
+			.fops = &aon_pm_state_times_fops,},
+	{.name = "state_counts", .id = AON_PM_STATE_COUNT,
+			.pdr_id = AON_STATS, .mode = S_IRUGO,
+			.fops = &aon_pm_state_counts_fops,},
 	{.name = "loops", .id = AON_MODS_LOOPS_TEST, .pdr_id = AON_MODS,
 			.mode = S_IWUSR, .fops = &aon_mods_loops_fops, },
 	{.name = "result", .id = AON_MODS_RESULT, .pdr_id = AON_MODS,

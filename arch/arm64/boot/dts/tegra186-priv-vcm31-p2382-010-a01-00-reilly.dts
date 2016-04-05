@@ -16,6 +16,7 @@
 
 #include "tegra186-platforms/tegra186-vcm31-p2382-common.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-p2382-disp.dtsi"
+#include <dt-bindings/soc/gm20b-fuse.h>
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -61,5 +62,8 @@
 		};
 	};
 
+	gp10b {
+		fuse-overrides= <GM20B_FUSE_OPT_TPC_DISABLE 0x2>;
+	};
 
 };

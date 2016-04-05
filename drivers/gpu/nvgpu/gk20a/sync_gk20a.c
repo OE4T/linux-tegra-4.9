@@ -23,7 +23,7 @@
 #include <linux/slab.h>
 #include <linux/spinlock.h>
 #include <uapi/linux/nvgpu.h>
-#include "../../../staging/android/sync.h"
+#include "../drivers/staging/android/sync.h"
 #include "semaphore_gk20a.h"
 
 static const struct sync_timeline_ops gk20a_sync_timeline_ops;

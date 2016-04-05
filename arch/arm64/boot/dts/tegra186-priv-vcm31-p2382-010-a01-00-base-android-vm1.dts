@@ -427,6 +427,10 @@
 		status = "disabled";
 	};
 
+	rtc@c2a0000 {
+		status = "disabled";
+	};
+
 	iommu@12000000{
 
 		mmu-masters = <&host1x				TEGRA_SID_HC

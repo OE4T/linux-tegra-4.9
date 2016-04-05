@@ -210,7 +210,7 @@ struct tegra_ahci_priv {
 	int			   devslp_gpio;
 	bool			   devslp_override;
 	bool			   devslp_pinmux_override;
-	bool			   host_naking_war_applied;
+	bool			   skip_rtpm;
 };
 
 struct tegra_ahci_ops {

@@ -39,7 +39,7 @@
 #define OV23850_MAX_GAIN		(16 << OV23850_GAIN_SHIFT)
 #define OV23850_MIN_FRAME_LENGTH	(0x0)
 #define OV23850_MAX_FRAME_LENGTH	(0x7fff)
-#define OV23850_MIN_EXPOSURE_COARSE	(0x0001)
+#define OV23850_MIN_EXPOSURE_COARSE	(0x0002)
 #define OV23850_MAX_EXPOSURE_COARSE	\
 	(OV23850_MAX_FRAME_LENGTH-OV23850_MAX_COARSE_DIFF)
 
@@ -67,6 +67,7 @@ struct ov23850 {
 	struct v4l2_subdev		*subdev;
 	struct media_pad		pad;
 
+	u32				frame_length;
 	s32				group_hold_prev;
 	bool				group_hold_en;
 	struct regmap			*regmap;
@@ -317,6 +318,8 @@ static int ov23850_power_on(struct camera_common_data *s_data)
 		return err;
 	}
 
+	if (pw->reset_gpio)
+		gpio_set_value(pw->reset_gpio, 0);
 	if (pw->pwdn_gpio)
 		gpio_set_value(pw->pwdn_gpio, 0);
 	usleep_range(10, 20);
@@ -341,10 +344,10 @@ static int ov23850_power_on(struct camera_common_data *s_data)
 	if (err)
 		goto ov23850_vcmvdd_fail;
 
-	if (pw->reset_gpio)
-		gpio_set_value(pw->reset_gpio, 1);
 	if (pw->pwdn_gpio)
 		gpio_set_value(pw->pwdn_gpio, 1);
+	if (pw->reset_gpio)
+		gpio_set_value(pw->reset_gpio, 1);
 
 	usleep_range(5350, 5360);	/* 5ms + 8192 EXTCLK cycles */
 
@@ -487,9 +490,21 @@ static int ov23850_s_stream(struct v4l2_subdev *sd, int enable)
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
 
-	if (!enable)
-		return ov23850_write_table(priv,
+	if (!enable) {
+		err = ov23850_write_table(priv,
 			mode_table[OV23850_MODE_STOP_STREAM]);
+		if (err)
+			return err;
+
+		/* Wait for one frame to make sure sensor is set to
+		 * software standby in V-blank
+		 *
+		 * delay = frame length rows * Tline (10 us)
+		 */
+		usleep_range(priv->frame_length * 10,
+			priv->frame_length * 10 + 1000);
+		return 0;
+	}
 
 	err = ov23850_write_table(priv, mode_table[OV23850_MODE_COMMON]);
 	if (err)
@@ -686,6 +701,8 @@ static int ov23850_set_frame_length(struct ov23850 *priv, s32 val)
 		if (err)
 			goto fail;
 	}
+
+	priv->frame_length = frame_length;
 
 	return 0;
 

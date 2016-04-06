@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(321)
+#define NVI_DRIVER_VERSION		(322)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -57,7 +57,7 @@
 struct nvi_pdata {
 	struct nvi_state st;
 	struct work_struct fw_load_work;
-	struct i2c_dev_id *i2c_dev_id;
+	const struct i2c_device_id *i2c_dev_id;
 };
 
 struct nvi_id_hal {
@@ -3809,12 +3809,6 @@ static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
 	u32 tmp;
 	char str[64];
 	unsigned int i;
-	int ret;
-
-	/* just test if global disable */
-	ret = nvs_of_dt(dn, NULL, NULL);
-	if (ret == -ENODEV)
-		return -ENODEV;
 
 	for (i = 0; i < ARRAY_SIZE(nvi_cfg_dflt); i++)
 		memcpy(&st->snsr[i].cfg, &nvi_cfg_dflt[i],
@@ -3825,9 +3819,6 @@ static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
 	if (!dn)
 		return -EINVAL;
 
-	/* sensor specific parameters */
-	for (i = 0; i < DEV_N; i++)
-		nvs_of_dt(dn, &st->snsr[i].cfg, NULL);
 	/* driver specific parameters */
 	if (!of_property_read_u32(dn, "standby_en", &tmp)) {
 		if (tmp)
@@ -3841,6 +3832,7 @@ static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
 		of_property_read_u32(dn, str,
 				     (u32 *)&st->snsr[i].push_delay_ns);
 	}
+
 	return 0;
 }
 
@@ -3853,11 +3845,19 @@ static int nvi_init(struct nvi_state *st,
 	unsigned int n;
 	int ret;
 
-	ret = nvi_of_dt(st, st->i2c->dev.of_node);
-	if (ret == -ENODEV) {
-		dev_info(&st->i2c->dev, "%s DT disabled\n", __func__);
+	/* since this is the first field, cast works fine */
+	nvi_of_dt(st, st->i2c->dev.of_node);
+	nvi_pm_init(st);
+	ret = nvi_id_dev(st, i2c_dev_id);
+	if (ret)
 		return ret;
-	} else if (st->i2c->dev.of_node == NULL) {
+
+	if (st->i2c->dev.of_node) {
+		/* sensor specific parameters */
+		for (i = 0; i < DEV_N; i++)
+			nvs_of_dt(st->i2c->dev.of_node,
+				  &st->snsr[i].cfg, NULL);
+	} else {
 		pdata = dev_get_platdata(&st->i2c->dev);
 		if (pdata) {
 			memcpy(&st->snsr[DEV_ACC].cfg.matrix,
@@ -3872,14 +3872,11 @@ static int nvi_init(struct nvi_state *st,
 			return -ENODEV;
 		}
 	}
+
+	/* copy matrix to other sensors that may need it */
 	for (i = DEV_STP; i < DEV_N; i++)
 		memcpy(&st->snsr[i].cfg.matrix, &st->snsr[DEV_GYR].cfg.matrix,
 		       sizeof(st->snsr[i].cfg.matrix));
-
-	nvi_pm_init(st);
-	ret = nvi_id_dev(st, i2c_dev_id);
-	if (ret)
-		return ret;
 
 	if (st->en_msk & (1 << FW_LOADED))
 		ret = 0;
@@ -3899,6 +3896,7 @@ static int nvi_init(struct nvi_state *st,
 				st->snsr[i].cfg.snsr_id = -1;
 		}
 	}
+
 	nvi_nvs_fn.sts = &st->sts;
 	nvi_nvs_fn.errs = &st->errs;
 	st->nvs = nvs_iio();
@@ -3939,11 +3937,10 @@ static int nvi_init(struct nvi_state *st,
 
 static void nvi_dmp_fw_load_worker(struct work_struct *work)
 {
-	int ret;
-
-	struct nvi_pdata *pd = container_of(work,
-					struct nvi_pdata, fw_load_work);
+	struct nvi_pdata *pd = container_of(work, struct nvi_pdata,
+					    fw_load_work);
 	struct nvi_state *st = &pd->st;
+	int ret;
 
 	ret = nvi_init(st, pd->i2c_dev_id);
 	if (ret) {
@@ -3958,6 +3955,7 @@ static int nvi_probe(struct i2c_client *client,
 {
 	struct nvi_pdata *pd;
 	struct nvi_state *st;
+	int ret;
 
 	dev_info(&client->dev, "%s %s\n", __func__, i2c_dev_id->name);
 	if (!client->irq) {
@@ -3965,18 +3963,24 @@ static int nvi_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
+	/* just test if global disable */
+	ret = nvs_of_dt(client->dev.of_node, NULL, NULL);
+	if (ret == -ENODEV) {
+		dev_info(&client->dev, "%s DT disabled\n", __func__);
+		return -ENODEV;
+	}
+
 	pd = devm_kzalloc(&client->dev, sizeof(*pd), GFP_KERNEL);
 	if (pd == NULL)
 		return -ENOMEM;
+
 	st = &pd->st;
 	i2c_set_clientdata(client, pd);
 	st->i2c = client;
 	pd->i2c_dev_id = i2c_dev_id;
-
 	/* Init fw load worker thread */
 	INIT_WORK(&pd->fw_load_work, nvi_dmp_fw_load_worker);
 	schedule_work(&pd->fw_load_work);
-
 	return 0;
 }
 

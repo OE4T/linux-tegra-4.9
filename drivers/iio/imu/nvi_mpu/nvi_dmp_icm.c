@@ -974,26 +974,28 @@ static int nvi_dmp_en(struct nvi_state *st)
 				en = true;
 		}
 		if (en) {
-			if (dd->fn_init)
+			if (dd->fn_init) {
 				ret = dd->fn_init(st, en_msk, &out_ctl);
-			else
-				ret = 0;
-			if (ret > 0) {
-				/* disable without error */
-				if (dd->dev == DEV_AUX)
-					en_msk &= ~(1 << (dd->aux_port +
-							  DEV_N_AUX));
-				else if (dd->dev < DEV_AUX)
-					en_msk &= ~(1 << dd->dev);
-			} else if (ret < 0) {
-				return ret;
-			} else {
-				if (dd->out_ctl)
-					out_ctl |= dd->out_ctl;
-				st->snsr[dd->dev].matrix = dd->matrix;
-				st->snsr[dd->dev].buf_n = dd->buf_n;
-				st->snsr[dd->dev].buf_shft = dd->buf_shft;
+				if (ret < 0)
+					return ret;
+
+				if (ret > 0) {
+					/* disable without error */
+					if (dd->dev == DEV_AUX)
+						en_msk &= ~(1 <<
+							    (dd->aux_port +
+							     DEV_N_AUX));
+					else if (dd->dev < DEV_AUX)
+						en_msk &= ~(1 << dd->dev);
+					continue;
+				}
 			}
+
+			if (dd->out_ctl)
+				out_ctl |= dd->out_ctl;
+			st->snsr[dd->dev].matrix = dd->matrix;
+			st->snsr[dd->dev].buf_n = dd->buf_n;
+			st->snsr[dd->dev].buf_shft = dd->buf_shft;
 		}
 	}
 
@@ -1012,10 +1014,9 @@ static int nvi_dmp_en(struct nvi_state *st)
 	if (ret) {
 		st->en_msk &= ~(en_msk & ((1 << DEV_N_AUX) - 1));
 		return ret;
-	} else {
-		st->en_msk |= (en_msk & ((1 << DEV_N_AUX) - 1));
 	}
 
+	st->en_msk |= (en_msk & ((1 << DEV_N_AUX) - 1));
 	/* inv_enable_accel_cal_V3 */
 	/* inv_enable_gyro_cal_V3 */
 	if (en_msk & (1 << DEV_ACC))

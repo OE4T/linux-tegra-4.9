@@ -302,6 +302,7 @@
 		dsi {   /* dsi@15300000 */
 			status = "okay";
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
+			nvidia,enable-hs-clk-in-lp-mode = <0>;
 			panel-s-wuxga-8-0 {
 				status = "disabled";
 			};

@@ -1253,8 +1253,9 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 		}
 	}
 
-	if (of_property_read_bool(np_dsi, "nvidia,enable-hs-clk-in-lp-mode")) {
-		dsi->enable_hs_clock_on_lp_cmd_mode = true;
+	if (!of_property_read_u32(np_dsi,
+			"nvidia,enable-hs-clk-in-lp-mode", &temp)) {
+		dsi->enable_hs_clock_on_lp_cmd_mode = (u8)temp;
 		OF_DC_LOG("Enable hs clock in lp mode %d\n",
 			dsi->enable_hs_clock_on_lp_cmd_mode);
 	}

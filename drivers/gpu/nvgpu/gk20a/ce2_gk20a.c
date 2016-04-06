@@ -32,7 +32,6 @@
 #include "hw_pbdma_gk20a.h"
 #include "hw_ccsr_gk20a.h"
 #include "hw_ram_gk20a.h"
-#include "hw_proj_gk20a.h"
 #include "hw_top_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_gr_gk20a.h"

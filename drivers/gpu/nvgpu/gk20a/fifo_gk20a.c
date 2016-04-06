@@ -31,7 +31,6 @@
 #include "hw_pbdma_gk20a.h"
 #include "hw_ccsr_gk20a.h"
 #include "hw_ram_gk20a.h"
-#include "hw_proj_gk20a.h"
 #include "hw_top_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_gr_gk20a.h"
@@ -349,6 +348,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 	u32 timeout;
 	int i;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
 
 	gk20a_dbg_fn("");
 	/* enable pmc pfifo */
@@ -367,7 +367,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	/* enable pbdma */
 	mask = 0;
-	for (i = 0; i < proj_host_num_pbdma_v(); ++i)
+	for (i = 0; i < host_num_pbdma; ++i)
 		mask |= mc_enable_pb_sel_f(mc_enable_pb_0_enabled_v(), i);
 	gk20a_writel(g, mc_enable_pb_r(), mask);
 
@@ -378,7 +378,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	/* enable pbdma interrupt */
 	mask = 0;
-	for (i = 0; i < proj_host_num_pbdma_v(); i++) {
+	for (i = 0; i < host_num_pbdma; i++) {
 		intr_stall = gk20a_readl(g, pbdma_intr_stall_r(i));
 		intr_stall &= ~pbdma_intr_stall_lbreq_enabled_f();
 		gk20a_writel(g, pbdma_intr_stall_r(i), intr_stall);
@@ -487,7 +487,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->num_channels = g->ops.fifo.get_num_fifos(g);
 	f->num_runlist_entries = fifo_eng_runlist_length_max_v();
-	f->num_pbdma = proj_host_num_pbdma_v();
+	f->num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
 	f->max_engines = ENGINE_INVAL_GK20A;
 
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();

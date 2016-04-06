@@ -72,6 +72,32 @@ enum gk20a_cbc_op {
 #define MC_INTR_UNIT_DISABLE	false
 #define MC_INTR_UNIT_ENABLE		true
 
+enum nvgpu_litter_value {
+	GPU_LIT_NUM_GPCS,
+	GPU_LIT_NUM_PES_PER_GPC,
+	GPU_LIT_NUM_ZCULL_BANKS,
+	GPU_LIT_NUM_TPC_PER_GPC,
+	GPU_LIT_NUM_FBPS,
+	GPU_LIT_GPC_BASE,
+	GPU_LIT_GPC_STRIDE,
+	GPU_LIT_GPC_SHARED_BASE,
+	GPU_LIT_TPC_IN_GPC_BASE,
+	GPU_LIT_TPC_IN_GPC_STRIDE,
+	GPU_LIT_TPC_IN_GPC_SHARED_BASE,
+	GPU_LIT_PPC_IN_GPC_BASE,
+	GPU_LIT_PPC_IN_GPC_STRIDE,
+	GPU_LIT_ROP_BASE,
+	GPU_LIT_ROP_STRIDE,
+	GPU_LIT_ROP_SHARED_BASE,
+	GPU_LIT_HOST_NUM_PBDMA,
+	GPU_LIT_LTC_STRIDE,
+	GPU_LIT_LTS_STRIDE,
+	GPU_LIT_NUM_FBPAS,
+	GPU_LIT_FBPA_STRIDE,
+};
+
+#define nvgpu_get_litter_value(g, v) (g)->ops.get_litter_value((g), v)
+
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
@@ -151,8 +177,8 @@ struct gpu_ops {
 				u32 mode);
 		int (*get_zcull_info)(struct gk20a *g, struct gr_gk20a *gr,
 				struct gr_zcull_info *zcull_params);
-		bool (*is_tpc_addr)(u32 addr);
-		u32 (*get_tpc_num)(u32 addr);
+		bool (*is_tpc_addr)(struct gk20a *g, u32 addr);
+		u32 (*get_tpc_num)(struct gk20a *g, u32 addr);
 		void (*detect_sm_arch)(struct gk20a *g);
 		int (*add_zbc_color)(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index);
@@ -526,6 +552,7 @@ struct gpu_ops {
 					       size_t scatter_buffer_size);
 	} cde;
 
+	int (*get_litter_value)(struct gk20a *g, enum nvgpu_litter_value value);
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);
 };
 

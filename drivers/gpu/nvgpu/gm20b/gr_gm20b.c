@@ -27,7 +27,6 @@
 #include "hw_fifo_gm20b.h"
 #include "hw_fb_gm20b.h"
 #include "hw_top_gm20b.h"
-#include "hw_proj_gm20b.h"
 #include "hw_ctxsw_prog_gm20b.h"
 #include "hw_fuse_gm20b.h"
 #include "pmu_gm20b.h"
@@ -178,6 +177,8 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 	u32 gpc_index, ppc_index;
 	u32 temp;
 	u32 cbm_cfg_size1, cbm_cfg_size2;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
 	gk20a_dbg_fn("");
 
@@ -198,7 +199,7 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 		gr->tpc_count * gr->attrib_cb_size;
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		temp = proj_gpc_stride_v() * gpc_index;
+		temp = gpc_stride * gpc_index;
 		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
 		     ppc_index++) {
 			cbm_cfg_size1 = gr->attrib_cb_default_size *
@@ -208,12 +209,12 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				cbm_cfg_size1, patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_cb_offset_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				attrib_offset_in_chunk, patch);
 
 			attrib_offset_in_chunk += gr->attrib_cb_size *
@@ -221,12 +222,12 @@ static int gr_gm20b_commit_global_cb_manager(struct gk20a *g,
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_alpha_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				cbm_cfg_size2, patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_alpha_cb_offset_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				alpha_offset_in_chunk, patch);
 
 			alpha_offset_in_chunk += gr->alpha_cb_size *
@@ -297,6 +298,8 @@ static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_index, ppc_index, stride, val;
 	u32 pd_ab_max_output;
 	u32 alpha_cb_size = data * 4;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
 	gk20a_dbg_fn("");
 	/* if (NO_ALPHA_BETA_TIMESLICE_SUPPORT_DEF)
@@ -319,14 +322,14 @@ static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 		gr_pd_ab_dist_cfg1_max_batches_init_f());
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		stride = proj_gpc_stride_v() * gpc_index;
+		stride = gpc_stride * gpc_index;
 
 		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
 			ppc_index++) {
 
 			val = gk20a_readl(g, gr_gpc0_ppc0_cbm_alpha_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index);
+				ppc_in_gpc_stride * ppc_index);
 
 			val = set_field(val, gr_gpc0_ppc0_cbm_alpha_cb_size_v_m(),
 					gr_gpc0_ppc0_cbm_alpha_cb_size_v_f(alpha_cb_size *
@@ -334,7 +337,7 @@ static void gr_gm20b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 
 			gk20a_writel(g, gr_gpc0_ppc0_cbm_alpha_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index, val);
+				ppc_in_gpc_stride * ppc_index, val);
 		}
 	}
 }
@@ -344,6 +347,8 @@ static void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
 	u32 cb_size = data * 4;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
 	gk20a_dbg_fn("");
 
@@ -356,14 +361,14 @@ static void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 		 gr_ds_tga_constraintlogic_beta_cbsize_f(cb_size));
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		stride = proj_gpc_stride_v() * gpc_index;
+		stride = gpc_stride * gpc_index;
 
 		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
 			ppc_index++) {
 
 			val = gk20a_readl(g, gr_gpc0_ppc0_cbm_beta_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index);
+				ppc_in_gpc_stride * ppc_index);
 
 			val = set_field(val,
 				gr_gpc0_ppc0_cbm_beta_cb_size_v_m(),
@@ -372,7 +377,7 @@ static void gr_gm20b_set_circular_buffer_size(struct gk20a *g, u32 data)
 
 			gk20a_writel(g, gr_gpc0_ppc0_cbm_beta_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index, val);
+				ppc_in_gpc_stride * ppc_index, val);
 
 			val = gk20a_readl(g, gr_gpcs_swdx_tc_beta_cb_size_r(
 						ppc_index + gpc_index));
@@ -527,14 +532,16 @@ int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	u32 tpc_per_gpc = 0;
 	u32 tpc_sm_id = 0, gpc_tpc_id = 0;
 	u32 pes_tpc_mask = 0, pes_index;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
 	gk20a_dbg_fn("");
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		gpc_offset = proj_gpc_stride_v() * gpc_index;
+		gpc_offset = gpc_stride * gpc_index;
 		for (tpc_index = 0; tpc_index < gr->gpc_tpc_count[gpc_index];
 								tpc_index++) {
-			tpc_offset = proj_tpc_in_gpc_stride_v() * tpc_index;
+			tpc_offset = tpc_in_gpc_stride * tpc_index;
 
 			gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r()
 					+ gpc_offset + tpc_offset,
@@ -640,32 +647,37 @@ static int gr_gm20b_load_ctxsw_ucode_segments(struct gk20a *g, u64 addr_base,
 	return 0;
 }
 
-static bool gr_gm20b_is_tpc_addr_shared(u32 addr)
+static bool gr_gm20b_is_tpc_addr_shared(struct gk20a *g, u32 addr)
 {
-	return (addr >= proj_tpc_in_gpc_shared_base_v()) &&
-		(addr < (proj_tpc_in_gpc_shared_base_v() +
-			 proj_tpc_in_gpc_stride_v()));
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 tpc_in_gpc_shared_base = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_SHARED_BASE);
+	return (addr >= tpc_in_gpc_shared_base) &&
+		(addr < (tpc_in_gpc_shared_base +
+			 tpc_in_gpc_stride));
 }
 
-static bool gr_gm20b_is_tpc_addr(u32 addr)
+static bool gr_gm20b_is_tpc_addr(struct gk20a *g, u32 addr)
 {
-	return ((addr >= proj_tpc_in_gpc_base_v()) &&
-		(addr < proj_tpc_in_gpc_base_v() +
-		 (proj_scal_litter_num_tpc_per_gpc_v() *
-		  proj_tpc_in_gpc_stride_v())))
-		|| gr_gm20b_is_tpc_addr_shared(addr);
+	u32 tpc_in_gpc_base = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_BASE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
+	return ((addr >= tpc_in_gpc_base) &&
+		(addr < tpc_in_gpc_base +
+		 (num_tpc_per_gpc * tpc_in_gpc_stride)))
+		|| gr_gm20b_is_tpc_addr_shared(g, addr);
 }
 
-static u32 gr_gm20b_get_tpc_num(u32 addr)
+static u32 gr_gm20b_get_tpc_num(struct gk20a *g, u32 addr)
 {
 	u32 i, start;
-	u32 num_tpcs = proj_scal_litter_num_tpc_per_gpc_v();
+	u32 num_tpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
+	u32 tpc_in_gpc_base = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_BASE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
 	for (i = 0; i < num_tpcs; i++) {
-		start = proj_tpc_in_gpc_base_v() +
-			(i * proj_tpc_in_gpc_stride_v());
+		start = tpc_in_gpc_base + (i * tpc_in_gpc_stride);
 		if ((addr >= start) &&
-		    (addr < (start + proj_tpc_in_gpc_stride_v())))
+		    (addr < (start + tpc_in_gpc_stride)))
 			return i;
 	}
 	return 0;
@@ -1066,6 +1078,8 @@ static void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 	u32 gpc, tpc, sm_id;
 	u32  tpc_offset, gpc_offset, reg_offset;
 	u64 warps_valid = 0, warps_paused = 0, warps_trapped = 0;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
 	/* for maxwell & kepler */
 	u32 numSmPerTpc = 1;
@@ -1075,8 +1089,8 @@ static void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)
 		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
 		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
 
-		tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
-		gpc_offset = proj_gpc_stride_v() * gpc;
+		tpc_offset = tpc_in_gpc_stride * tpc;
+		gpc_offset = gpc_stride * gpc;
 		reg_offset = tpc_offset + gpc_offset;
 
 		/* 64 bit read */

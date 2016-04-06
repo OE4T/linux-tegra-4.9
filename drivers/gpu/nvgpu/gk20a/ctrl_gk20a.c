@@ -28,7 +28,6 @@
 #include "regops_gk20a.h"
 #include "hw_gr_gk20a.h"
 #include "hw_fb_gk20a.h"
-#include "hw_proj_gk20a.h"
 #include "hw_timer_gk20a.h"
 
 int gk20a_ctrl_dev_open(struct inode *inode, struct file *filp)
@@ -451,15 +450,17 @@ static int nvgpu_gpu_ioctl_clear_sm_errors(struct gk20a *g)
 	u32 gpc_offset, tpc_offset, gpc, tpc;
 	struct gr_gk20a *gr = &g->gr;
 	u32 global_esr;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
 	for (gpc = 0; gpc < gr->gpc_count; gpc++) {
 
-		gpc_offset = proj_gpc_stride_v() * gpc;
+		gpc_offset = gpc_stride * gpc;
 
 		/* check if any tpc has an exception */
 		for (tpc = 0; tpc < gr->tpc_count; tpc++) {
 
-			tpc_offset = proj_tpc_in_gpc_stride_v() * tpc;
+			tpc_offset = tpc_in_gpc_stride * tpc;
 
 			global_esr = gk20a_readl(g,
 					gr_gpc0_tpc0_sm_hww_global_esr_r() +
@@ -482,13 +483,15 @@ static int nvgpu_gpu_ioctl_has_any_exception(
 	struct gr_gk20a *gr = &g->gr;
 	u32 sm_id, tpc_exception_en = 0;
 	u32 offset, regval, tpc_offset, gpc_offset;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
 	mutex_lock(&g->dbg_sessions_lock);
 
 	for (sm_id = 0; sm_id < gr->no_of_sm; sm_id++) {
 
-		tpc_offset = proj_tpc_in_gpc_stride_v() * g->gr.sm_to_cluster[sm_id].tpc_index;
-		gpc_offset = proj_gpc_stride_v() * g->gr.sm_to_cluster[sm_id].gpc_index;
+		tpc_offset = tpc_in_gpc_stride * g->gr.sm_to_cluster[sm_id].tpc_index;
+		gpc_offset = gpc_stride * g->gr.sm_to_cluster[sm_id].gpc_index;
 		offset = tpc_offset + gpc_offset;
 
 		regval = gk20a_readl(g,	gr_gpc0_tpc0_tpccs_tpc_exception_en_r() +

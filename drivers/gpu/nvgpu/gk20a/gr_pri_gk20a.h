@@ -34,30 +34,37 @@ static inline u32 pri_gpccs_addr_mask(u32 addr)
 {
 	return addr & ((1 << pri_gpccs_addr_width()) - 1);
 }
-static inline u32 pri_gpc_addr(u32 addr, u32 gpc)
+static inline u32 pri_gpc_addr(struct gk20a *g, u32 addr, u32 gpc)
 {
-	return proj_gpc_base_v() + (gpc * proj_gpc_stride_v()) + addr;
+	u32 gpc_base = nvgpu_get_litter_value(g, GPU_LIT_GPC_BASE);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	return gpc_base + (gpc * gpc_stride) + addr;
 }
-static inline bool pri_is_gpc_addr_shared(u32 addr)
+static inline bool pri_is_gpc_addr_shared(struct gk20a *g, u32 addr)
 {
-	return (addr >= proj_gpc_shared_base_v()) &&
-		(addr < proj_gpc_shared_base_v() + proj_gpc_stride_v());
+	u32 gpc_shared_base = nvgpu_get_litter_value(g, GPU_LIT_GPC_SHARED_BASE);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	return (addr >= gpc_shared_base) &&
+		(addr < gpc_shared_base + gpc_stride);
 }
-static inline bool pri_is_gpc_addr(u32 addr)
+static inline bool pri_is_gpc_addr(struct gk20a *g, u32 addr)
 {
-	return	((addr >= proj_gpc_base_v()) &&
-		 (addr < proj_gpc_base_v() +
-		  proj_scal_litter_num_gpcs_v() * proj_gpc_stride_v())) ||
-		pri_is_gpc_addr_shared(addr);
+	u32 gpc_base = nvgpu_get_litter_value(g, GPU_LIT_GPC_BASE);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+	return	((addr >= gpc_base) &&
+		 (addr < gpc_base) + num_gpcs * gpc_stride) ||
+		pri_is_gpc_addr_shared(g, addr);
 }
-static inline u32 pri_get_gpc_num(u32 addr)
+static inline u32 pri_get_gpc_num(struct gk20a *g, u32 addr)
 {
 	u32 i, start;
-	u32 num_gpcs = proj_scal_litter_num_gpcs_v();
-
+	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+	u32 gpc_base = nvgpu_get_litter_value(g, GPU_LIT_GPC_BASE);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	for (i = 0; i < num_gpcs; i++) {
-		start = proj_gpc_base_v() + (i * proj_gpc_stride_v());
-		if ((addr >= start) && (addr < (start + proj_gpc_stride_v())))
+		start = gpc_base + (i * gpc_stride);
+		if ((addr >= start) && (addr < (start + gpc_stride)))
 			return i;
 	}
 	return 0;
@@ -73,17 +80,23 @@ static inline u32 pri_tpccs_addr_mask(u32 addr)
 {
 	return addr & ((1 << pri_tpccs_addr_width()) - 1);
 }
-static inline u32 pri_tpc_addr(u32 addr, u32 gpc, u32 tpc)
+static inline u32 pri_tpc_addr(struct gk20a *g, u32 addr, u32 gpc, u32 tpc)
 {
-	return proj_gpc_base_v() + (gpc * proj_gpc_stride_v()) +
-		proj_tpc_in_gpc_base_v() + (tpc * proj_tpc_in_gpc_stride_v()) +
+	u32 gpc_base = nvgpu_get_litter_value(g, GPU_LIT_GPC_BASE);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_base = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_BASE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	return gpc_base + (gpc * gpc_stride) +
+		tpc_in_gpc_base + (tpc * tpc_in_gpc_stride) +
 		addr;
 }
-static inline bool pri_is_tpc_addr_shared(u32 addr)
+static inline bool pri_is_tpc_addr_shared(struct gk20a *g, u32 addr)
 {
-	return (addr >= proj_tpc_in_gpc_shared_base_v()) &&
-		(addr < (proj_tpc_in_gpc_shared_base_v() +
-			 proj_tpc_in_gpc_stride_v()));
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 tpc_in_gpc_shared_base = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_SHARED_BASE);
+	return (addr >= tpc_in_gpc_shared_base) &&
+		(addr < (tpc_in_gpc_shared_base +
+			 tpc_in_gpc_stride));
 }
 
 /*
@@ -97,29 +110,37 @@ static inline u32 pri_becs_addr_mask(u32 addr)
 {
 	return addr & ((1 << pri_becs_addr_width()) - 1);
 }
-static inline bool pri_is_be_addr_shared(u32 addr)
+static inline bool pri_is_be_addr_shared(struct gk20a *g, u32 addr)
 {
-	return (addr >= proj_rop_shared_base_v()) &&
-		(addr < proj_rop_shared_base_v() + proj_rop_stride_v());
+	u32 rop_shared_base = nvgpu_get_litter_value(g, GPU_LIT_ROP_SHARED_BASE);
+	u32 rop_stride = nvgpu_get_litter_value(g, GPU_LIT_ROP_STRIDE);
+	return (addr >= rop_shared_base) &&
+		(addr < rop_shared_base + rop_stride);
 }
-static inline u32 pri_be_shared_addr(u32 addr)
+static inline u32 pri_be_shared_addr(struct gk20a *g, u32 addr)
 {
-	return proj_rop_shared_base_v() + pri_becs_addr_mask(addr);
+	u32 rop_shared_base = nvgpu_get_litter_value(g, GPU_LIT_ROP_SHARED_BASE);
+	return rop_shared_base + pri_becs_addr_mask(addr);
 }
-static inline bool pri_is_be_addr(u32 addr)
+static inline bool pri_is_be_addr(struct gk20a *g, u32 addr)
 {
-	return	((addr >= proj_rop_base_v()) &&
-		 (addr < proj_rop_base_v()+proj_scal_litter_num_fbps_v() * proj_rop_stride_v())) ||
-		pri_is_be_addr_shared(addr);
+	u32 num_fbps = nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPS);
+	u32 rop_base = nvgpu_get_litter_value(g, GPU_LIT_ROP_BASE);
+	u32 rop_stride = nvgpu_get_litter_value(g, GPU_LIT_ROP_STRIDE);
+	return	((addr >= rop_base) &&
+		 (addr < rop_base + num_fbps * rop_stride)) ||
+		pri_is_be_addr_shared(g, addr);
 }
 
-static inline u32 pri_get_be_num(u32 addr)
+static inline u32 pri_get_be_num(struct gk20a *g, u32 addr)
 {
 	u32 i, start;
-	u32 num_fbps = proj_scal_litter_num_fbps_v();
+	u32 num_fbps = nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPS);
+	u32 rop_base = nvgpu_get_litter_value(g, GPU_LIT_ROP_BASE);
+	u32 rop_stride = nvgpu_get_litter_value(g, GPU_LIT_ROP_STRIDE);
 	for (i = 0; i < num_fbps; i++) {
-		start = proj_rop_base_v() + (i * proj_rop_stride_v());
-		if ((addr >= start) && (addr < (start + proj_rop_stride_v())))
+		start = rop_base + (i * rop_stride);
+		if ((addr >= start) && (addr < (start + rop_stride)))
 			return i;
 	}
 	return 0;
@@ -136,10 +157,14 @@ static inline u32 pri_ppccs_addr_mask(u32 addr)
 {
 	return addr & ((1 << pri_ppccs_addr_width()) - 1);
 }
-static inline u32 pri_ppc_addr(u32 addr, u32 gpc, u32 ppc)
+static inline u32 pri_ppc_addr(struct gk20a *g, u32 addr, u32 gpc, u32 ppc)
 {
-	return proj_gpc_base_v() + (gpc * proj_gpc_stride_v()) +
-		proj_ppc_in_gpc_base_v() + (ppc * proj_ppc_in_gpc_stride_v()) + addr;
+	u32 gpc_base = nvgpu_get_litter_value(g, GPU_LIT_GPC_BASE);
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 ppc_in_gpc_base = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_BASE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
+	return gpc_base + (gpc * gpc_stride) +
+		ppc_in_gpc_base + (ppc * ppc_in_gpc_stride) + addr;
 }
 
 enum ctxsw_addr_type {

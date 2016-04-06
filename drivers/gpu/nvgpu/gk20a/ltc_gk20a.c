@@ -20,7 +20,6 @@
 #include <trace/events/gk20a.h>
 
 #include "hw_ltc_gk20a.h"
-#include "hw_proj_gk20a.h"
 
 #include "ltc_common.c"
 
@@ -108,6 +107,8 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	u32 slices_per_fbp =
 		ltc_ltcs_ltss_cbc_param_slices_per_fbp_v(
 			gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
 	gk20a_dbg_fn("");
 
@@ -140,8 +141,8 @@ static int gk20a_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 
 
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
-				fbp * proj_ltc_stride_v() +
-				slice * proj_lts_stride_v();
+				fbp * ltc_stride +
+				slice * lts_stride;
 
 			retry = 200;
 			do {

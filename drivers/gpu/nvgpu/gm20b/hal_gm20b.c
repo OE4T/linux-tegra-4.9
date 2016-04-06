@@ -34,6 +34,7 @@
 #include "debug_gm20b.h"
 #include "cde_gm20b.h"
 #include "therm_gm20b.h"
+#include "hw_proj_gm20b.h"
 
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
 #define PRIV_SECURITY_DISABLE 0x01
@@ -89,6 +90,78 @@ static struct gpu_ops gm20b_ops = {
 	},
 };
 
+static int gm20b_get_litter_value(struct gk20a *g,
+		enum nvgpu_litter_value value)
+{
+	int ret = EINVAL;
+	switch (value) {
+	case GPU_LIT_NUM_GPCS:
+		ret = proj_scal_litter_num_gpcs_v();
+		break;
+	case GPU_LIT_NUM_PES_PER_GPC:
+		ret = proj_scal_litter_num_pes_per_gpc_v();
+		break;
+	case GPU_LIT_NUM_ZCULL_BANKS:
+		ret = proj_scal_litter_num_zcull_banks_v();
+		break;
+	case GPU_LIT_NUM_TPC_PER_GPC:
+		ret = proj_scal_litter_num_tpc_per_gpc_v();
+		break;
+	case GPU_LIT_NUM_FBPS:
+		ret = proj_scal_litter_num_fbps_v();
+		break;
+	case GPU_LIT_GPC_BASE:
+		ret = proj_gpc_base_v();
+		break;
+	case GPU_LIT_GPC_STRIDE:
+		ret = proj_gpc_stride_v();
+		break;
+	case GPU_LIT_GPC_SHARED_BASE:
+		ret = proj_gpc_shared_base_v();
+		break;
+	case GPU_LIT_TPC_IN_GPC_BASE:
+		ret = proj_tpc_in_gpc_base_v();
+		break;
+	case GPU_LIT_TPC_IN_GPC_STRIDE:
+		ret = proj_tpc_in_gpc_stride_v();
+		break;
+	case GPU_LIT_TPC_IN_GPC_SHARED_BASE:
+		ret = proj_tpc_in_gpc_shared_base_v();
+		break;
+	case GPU_LIT_PPC_IN_GPC_STRIDE:
+		ret = proj_ppc_in_gpc_stride_v();
+		break;
+	case GPU_LIT_ROP_BASE:
+		ret = proj_rop_base_v();
+		break;
+	case GPU_LIT_ROP_STRIDE:
+		ret = proj_rop_stride_v();
+		break;
+	case GPU_LIT_ROP_SHARED_BASE:
+		ret = proj_rop_shared_base_v();
+		break;
+	case GPU_LIT_HOST_NUM_PBDMA:
+		ret = proj_host_num_pbdma_v();
+		break;
+	case GPU_LIT_LTC_STRIDE:
+		ret = proj_ltc_stride_v();
+		break;
+	case GPU_LIT_LTS_STRIDE:
+		ret = proj_lts_stride_v();
+		break;
+	case GPU_LIT_NUM_FBPAS:
+		ret = proj_scal_litter_num_fbpas_v();
+		break;
+	case GPU_LIT_FBPA_STRIDE:
+		ret = proj_fbpa_stride_v();
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
+
 int gm20b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -140,6 +213,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_therm_ops(gops);
 	gops->name = "gm20b";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
+	gops->get_litter_value = gm20b_get_litter_value;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = MAXWELL_B;

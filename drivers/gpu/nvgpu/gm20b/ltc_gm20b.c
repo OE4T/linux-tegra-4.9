@@ -20,7 +20,6 @@
 #include "hw_mc_gm20b.h"
 #include "hw_ltc_gm20b.h"
 #include "hw_top_gm20b.h"
-#include "hw_proj_gm20b.h"
 #include "hw_pri_ringmaster_gm20b.h"
 
 #include "gk20a/ltc_common.c"
@@ -109,6 +108,8 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 	s32 retry = 200;
 	u32 slices_per_ltc = ltc_ltcs_ltss_cbc_param_slices_per_ltc_v(
 				gk20a_readl(g, ltc_ltcs_ltss_cbc_param_r()));
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
 	gk20a_dbg_fn("");
 
@@ -139,8 +140,7 @@ int gm20b_ltc_cbc_ctrl(struct gk20a *g, enum gk20a_cbc_op op,
 		for (slice = 0; slice < slices_per_ltc; slice++) {
 
 			ctrl1 = ltc_ltc0_lts0_cbc_ctrl1_r() +
-				ltc * proj_ltc_stride_v() +
-				slice * proj_lts_stride_v();
+				ltc * ltc_stride + slice * lts_stride;
 
 			retry = 200;
 			do {
@@ -198,6 +198,8 @@ void gm20b_ltc_isr(struct gk20a *g)
 {
 	u32 mc_intr, ltc_intr;
 	int ltc, slice;
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	gk20a_err(dev_from_gk20a(g), "mc_ltc_intr: %08x",
@@ -207,13 +209,13 @@ void gm20b_ltc_isr(struct gk20a *g)
 			continue;
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
 			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() +
-					   proj_ltc_stride_v() * ltc +
-					   proj_lts_stride_v() * slice);
+					   ltc_stride * ltc +
+					   lts_stride * slice);
 			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",
 				  ltc, slice, ltc_intr);
 			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
-					   proj_ltc_stride_v() * ltc +
-					   proj_lts_stride_v() * slice,
+					   ltc_stride * ltc +
+					   lts_stride * slice,
 				     ltc_intr);
 		}
 	}
@@ -287,6 +289,7 @@ void gm20b_flush_ltc(struct gk20a *g)
 {
 	unsigned long timeout;
 	int ltc;
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 
 #define __timeout_init()				\
 	do {						\
@@ -317,7 +320,7 @@ void gm20b_flush_ltc(struct gk20a *g)
 		__timeout_init();
 		do {
 			int cmgmt1 = ltc_ltc0_ltss_tstg_cmgmt1_r() +
-				     ltc * proj_ltc_stride_v();
+				     ltc * ltc_stride;
 			op_pending = gk20a_readl(g, cmgmt1);
 			__timeout_check();
 		} while (op_pending &
@@ -338,7 +341,7 @@ void gm20b_flush_ltc(struct gk20a *g)
 		__timeout_init();
 		do {
 			int cmgmt0 = ltc_ltc0_ltss_tstg_cmgmt0_r() +
-				     ltc * proj_ltc_stride_v();
+				     ltc * ltc_stride;
 			op_pending = gk20a_readl(g, cmgmt0);
 			__timeout_check();
 		} while (op_pending &

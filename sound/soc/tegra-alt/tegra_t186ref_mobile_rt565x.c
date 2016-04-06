@@ -440,76 +440,50 @@ static int tegra_t186ref_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int tegra_t186ref_set_bias_level(struct snd_soc_card *card,
-					struct snd_soc_dapm_context *dapm,
-					enum snd_soc_bias_level level)
+static int tegra_t186ref_compr_startup(struct snd_compr_stream *cstream)
 {
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
-	struct snd_soc_dai *codec_dai;
-	int idx;
 
-	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
+	tegra_alt_asoc_utils_clk_enable(&machine->audio_clock);
 
-	if (idx != -EINVAL) {
-		codec_dai = card->rtd[idx].codec_dai;
-
-		if (dapm->dev != codec_dai->dev)
-			return 0;
-
-		switch (level) {
-		case SND_SOC_BIAS_PREPARE:
-			if (dapm->bias_level == SND_SOC_BIAS_STANDBY) {
-				if (!data->clk_cdev1_state)
-					tegra_alt_asoc_utils_clk_enable(
-							&machine->audio_clock);
-			}
-			break;
-		default:
-			break;
-		}
-	}
 	return 0;
 }
 
-static int tegra_t186ref_set_bias_level_post(struct snd_soc_card *card,
-					struct snd_soc_dapm_context *dapm,
-					enum snd_soc_bias_level level)
+static void tegra_t186ref_compr_shutdown(struct snd_compr_stream *cstream)
 {
+	struct snd_soc_pcm_runtime *rtd = cstream->private_data;
+	struct snd_soc_card *card = rtd->card;
 	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
-	struct tegra_asoc_audio_clock_info *data = &machine->audio_clock;
-	struct snd_soc_dai *codec_dai;
-	int idx;
 
-	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
+	tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
 
-	if (idx != -EINVAL) {
-		codec_dai = card->rtd[idx].codec_dai;
-
-		if (dapm->dev != codec_dai->dev)
-			return 0;
-
-		switch (level) {
-		case SND_SOC_BIAS_STANDBY:
-			if (data->clk_cdev1_state)
-				tegra_alt_asoc_utils_clk_disable(
-						&machine->audio_clock);
-			break;
-		default:
-			break;
-		}
-	dapm->bias_level = level;
-	}
-	return 0;
+	return;
 }
-
 static int tegra_t186ref_startup(struct snd_pcm_substream *substream)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->component.card;
+	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+
+	tegra_alt_asoc_utils_clk_enable(&machine->audio_clock);
+
 	return 0;
 }
 
 static void tegra_t186ref_shutdown(struct snd_pcm_substream *substream)
 {
+	struct snd_soc_pcm_runtime *rtd = substream->private_data;
+	struct snd_soc_dai *codec_dai = rtd->codec_dai;
+	struct snd_soc_codec *codec = codec_dai->codec;
+	struct snd_soc_card *card = codec->component.card;
+	struct tegra_t186ref *machine = snd_soc_card_get_drvdata(card);
+
+	tegra_alt_asoc_utils_clk_disable(&machine->audio_clock);
+
 	return;
 }
 
@@ -743,6 +717,8 @@ static struct snd_soc_ops tegra_t186ref_ops = {
 
 static struct snd_soc_compr_ops tegra_t186ref_compr_ops = {
 	.set_params = tegra_t186ref_compr_set_params,
+	.startup = tegra_t186ref_compr_startup,
+	.shutdown = tegra_t186ref_compr_shutdown,
 };
 
 static const struct snd_soc_dapm_widget tegra_t186ref_dapm_widgets[] = {
@@ -949,8 +925,6 @@ static struct snd_soc_card snd_soc_tegra_t186ref = {
 	.suspend_post = tegra_t186ref_suspend_post,
 	.suspend_pre = tegra_t186ref_suspend_pre,
 	.resume_pre = tegra_t186ref_resume_pre,
-	.set_bias_level = tegra_t186ref_set_bias_level,
-	.set_bias_level_post = tegra_t186ref_set_bias_level_post,
 	.controls = tegra_t186ref_controls,
 	.num_controls = ARRAY_SIZE(tegra_t186ref_controls),
 	.dapm_widgets = tegra_t186ref_dapm_widgets,

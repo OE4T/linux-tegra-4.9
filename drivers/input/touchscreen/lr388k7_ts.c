@@ -30,6 +30,7 @@
 #include <linux/sysfs.h>
 #include <linux/clk.h>
 #include <linux/regulator/consumer.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/uaccess.h>
 #include <linux/workqueue.h>
 #include <linux/jiffies.h>

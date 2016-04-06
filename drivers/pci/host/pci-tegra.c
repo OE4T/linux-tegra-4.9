@@ -4753,6 +4753,13 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 		afi_writel(pcie, val, AFI_PCIE_PME);
 
 		/* by this time, link would have gone into L2/L3 ready */
+		/* assert reset to EP */
+		pr_debug("---> asserting EP reset through AFI\n");
+		ctrl = tegra_pcie_port_get_pex_ctrl(port);
+		val = afi_readl(port->pcie, ctrl);
+		val &= ~AFI_PEX_CTRL_RST;
+		afi_writel(port->pcie, val, ctrl);
+		msleep(20);
 		break;
 
 	case TEGRA_PCIE_RESUME_PRE:
@@ -4768,14 +4775,6 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 		val_16 &= ~PCI_BRIDGE_CTL_BUS_RESET;
 		pci_write_config_word(rpdev, PCI_BRIDGE_CONTROL, val_16);
 		msleep(100);
-
-		/* assert reset to EP */
-		pr_debug("---> asserting EP reset through AFI\n");
-		ctrl = tegra_pcie_port_get_pex_ctrl(port);
-		val = afi_readl(port->pcie, ctrl);
-		val &= ~AFI_PEX_CTRL_RST;
-		afi_writel(port->pcie, val, ctrl);
-
 		break;
 
 	case TEGRA_PCIE_RESUME_POST:

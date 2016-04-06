@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -109,6 +109,10 @@ static inline u32 fifo_eng_runlist__size_1_v(void)
 static inline u32 fifo_eng_runlist_length_f(u32 v)
 {
 	return (v & 0xffff) << 0;
+}
+static inline u32 fifo_eng_runlist_length_max_v(void)
+{
+	return 0x0000ffff;
 }
 static inline u32 fifo_eng_runlist_pending_true_f(void)
 {

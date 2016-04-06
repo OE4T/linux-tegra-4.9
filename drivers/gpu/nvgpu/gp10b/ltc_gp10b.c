@@ -19,7 +19,6 @@
 
 #include "gk20a/gk20a.h"
 #include "gm20b/ltc_gm20b.h"
-#include "hw_proj_gp10b.h"
 #include "hw_mc_gp10b.h"
 #include "hw_ltc_gp10b.h"
 
@@ -125,6 +124,8 @@ static void gp10b_ltc_isr(struct gk20a *g)
 {
 	u32 mc_intr, ltc_intr;
 	int ltc, slice;
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
 
 	mc_intr = gk20a_readl(g, mc_intr_ltc_r());
 	gk20a_err(dev_from_gk20a(g), "mc_ltc_intr: %08x",
@@ -133,8 +134,7 @@ static void gp10b_ltc_isr(struct gk20a *g)
 		if ((mc_intr & 1 << ltc) == 0)
 			continue;
 		for (slice = 0; slice < g->gr.slices_per_ltc; slice++) {
-			u32 offset = proj_ltc_stride_v() * ltc +
-					proj_lts_stride_v() * slice;
+			u32 offset = ltc_stride * ltc + lts_stride * slice;
 			ltc_intr = gk20a_readl(g, ltc_ltc0_lts0_intr_r() + offset);
 
 			/* Detect and handle ECC errors */
@@ -180,8 +180,7 @@ static void gp10b_ltc_isr(struct gk20a *g)
 			gk20a_err(dev_from_gk20a(g), "ltc%d, slice %d: %08x",
 				  ltc, slice, ltc_intr);
 			gk20a_writel(g, ltc_ltc0_lts0_intr_r() +
-					   proj_ltc_stride_v() * ltc +
-					   proj_lts_stride_v() * slice,
+					   ltc_stride * ltc + lts_stride * slice,
 				     ltc_intr);
 		}
 	}

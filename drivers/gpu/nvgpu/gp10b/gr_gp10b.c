@@ -25,7 +25,6 @@
 #include "gp10b/gr_gp10b.h"
 #include "hw_gr_gp10b.h"
 #include "hw_fifo_gp10b.h"
-#include "hw_proj_gp10b.h"
 #include "hw_ctxsw_prog_gp10b.h"
 #include "hw_mc_gp10b.h"
 #include "gp10b_sysfs.h"
@@ -61,8 +60,9 @@ static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch)
 {
 	int ret = 0;
-	u32 offset = proj_gpc_stride_v() * gpc +
-			proj_tpc_in_gpc_stride_v() * tpc;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 	u32 lrf_ecc_status, shm_ecc_status;
 
 	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch);
@@ -170,8 +170,9 @@ static int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		bool *post_event)
 {
 	int ret = 0;
-	u32 offset = proj_gpc_stride_v() * gpc +
-		     proj_tpc_in_gpc_stride_v() * tpc;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 	u32 esr;
 	u32 ecc_stats_reg_val;
 
@@ -314,6 +315,9 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 	u32 temp, temp2;
 	u32 cbm_cfg_size_beta, cbm_cfg_size_alpha, cbm_cfg_size_steadystate;
 	u32 attrib_size_in_chunk, cb_attrib_cache_size_init;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
+	u32 num_pes_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_PES_PER_GPC);
 
 	gk20a_dbg_fn("");
 
@@ -346,8 +350,8 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 		gr->tpc_count * gr->alpha_cb_size;
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		temp = proj_gpc_stride_v() * gpc_index;
-		temp2 = proj_scal_litter_num_pes_per_gpc_v() * gpc_index;
+		temp = gpc_stride * gpc_index;
+		temp2 = num_pes_per_gpc * gpc_index;
 		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
 		     ppc_index++) {
 			cbm_cfg_size_beta = cb_attrib_cache_size_init *
@@ -359,17 +363,17 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				cbm_cfg_size_beta, patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_cb_offset_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				attrib_offset_in_chunk, patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				cbm_cfg_size_steadystate,
 				patch);
 
@@ -378,12 +382,12 @@ static int gr_gp10b_commit_global_cb_manager(struct gk20a *g,
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_alpha_cb_size_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				cbm_cfg_size_alpha, patch);
 
 			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpc0_ppc0_cbm_alpha_cb_offset_r() + temp +
-				proj_ppc_in_gpc_stride_v() * ppc_index,
+				ppc_in_gpc_stride * ppc_index,
 				alpha_offset_in_chunk, patch);
 
 			alpha_offset_in_chunk += gr->alpha_cb_size *
@@ -618,6 +622,8 @@ static void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 	u32 gpc_index, ppc_index, stride, val;
 	u32 pd_ab_max_output;
 	u32 alpha_cb_size = data * 4;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
 	gk20a_dbg_fn("");
 
@@ -638,14 +644,14 @@ static void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 		gr_pd_ab_dist_cfg1_max_batches_init_f());
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		stride = proj_gpc_stride_v() * gpc_index;
+		stride = gpc_stride * gpc_index;
 
 		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
 			ppc_index++) {
 
 			val = gk20a_readl(g, gr_gpc0_ppc0_cbm_alpha_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index);
+				ppc_in_gpc_stride * ppc_index);
 
 			val = set_field(val, gr_gpc0_ppc0_cbm_alpha_cb_size_v_m(),
 					gr_gpc0_ppc0_cbm_alpha_cb_size_v_f(alpha_cb_size *
@@ -653,7 +659,7 @@ static void gr_gp10b_set_alpha_circular_buffer_size(struct gk20a *g, u32 data)
 
 			gk20a_writel(g, gr_gpc0_ppc0_cbm_alpha_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index, val);
+				ppc_in_gpc_stride * ppc_index, val);
 		}
 	}
 }
@@ -663,6 +669,8 @@ static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 	struct gr_gk20a *gr = &g->gr;
 	u32 gpc_index, ppc_index, stride, val;
 	u32 cb_size_steady = data * 4, cb_size;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_PPC_IN_GPC_STRIDE);
 
 	gk20a_dbg_fn("");
 
@@ -684,14 +692,14 @@ static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 		 gr_ds_tga_constraintlogic_beta_cbsize_f(cb_size_steady));
 
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		stride = proj_gpc_stride_v() * gpc_index;
+		stride = gpc_stride * gpc_index;
 
 		for (ppc_index = 0; ppc_index < gr->gpc_ppc_count[gpc_index];
 			ppc_index++) {
 
 			val = gk20a_readl(g, gr_gpc0_ppc0_cbm_beta_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index);
+				ppc_in_gpc_stride * ppc_index);
 
 			val = set_field(val,
 				gr_gpc0_ppc0_cbm_beta_cb_size_v_m(),
@@ -700,9 +708,9 @@ static void gr_gp10b_set_circular_buffer_size(struct gk20a *g, u32 data)
 
 			gk20a_writel(g, gr_gpc0_ppc0_cbm_beta_cb_size_r() +
 				stride +
-				proj_ppc_in_gpc_stride_v() * ppc_index, val);
+				ppc_in_gpc_stride * ppc_index, val);
 
-			gk20a_writel(g, proj_ppc_in_gpc_stride_v() * ppc_index +
+			gk20a_writel(g, ppc_in_gpc_stride * ppc_index +
 				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_r() +
 				stride,
 				gr_gpc0_ppc0_cbm_beta_steady_state_cb_size_v_f(
@@ -1542,8 +1550,9 @@ static int gr_gp10b_pre_process_sm_exception(struct gk20a *g,
 	bool cilp_enabled = (fault_ch->ch_ctx.gr_ctx->preempt_mode ==
 			NVGPU_GR_PREEMPTION_MODE_CILP) ;
 	u32 global_mask = 0, dbgr_control0, global_esr_copy;
-	u32 offset = proj_gpc_stride_v() * gpc +
-		     proj_tpc_in_gpc_stride_v() * tpc;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 
 	*early_exit = false;
 	*ignore_debugger = false;

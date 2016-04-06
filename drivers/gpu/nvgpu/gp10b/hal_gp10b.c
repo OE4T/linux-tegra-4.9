@@ -42,6 +42,7 @@
 #include <linux/tegra-fuse.h>
 
 #include "gp10b.h"
+#include "hw_proj_gp10b.h"
 
 #define FUSE_OPT_PRIV_SEC_EN_0 0x264
 #define PRIV_SECURITY_ENABLED 0x01
@@ -98,6 +99,78 @@ static struct gpu_ops gp10b_ops = {
 			gr_gp10b_pg_gr_load_gating_prod,
 	}
 };
+
+static int gp10b_get_litter_value(struct gk20a *g,
+		enum nvgpu_litter_value value)
+{
+	int ret = EINVAL;
+	switch (value) {
+	case GPU_LIT_NUM_GPCS:
+		ret = proj_scal_litter_num_gpcs_v();
+		break;
+	case GPU_LIT_NUM_PES_PER_GPC:
+		ret = proj_scal_litter_num_pes_per_gpc_v();
+		break;
+	case GPU_LIT_NUM_ZCULL_BANKS:
+		ret = proj_scal_litter_num_zcull_banks_v();
+		break;
+	case GPU_LIT_NUM_TPC_PER_GPC:
+		ret = proj_scal_litter_num_tpc_per_gpc_v();
+		break;
+	case GPU_LIT_NUM_FBPS:
+		ret = proj_scal_litter_num_fbps_v();
+		break;
+	case GPU_LIT_GPC_BASE:
+		ret = proj_gpc_base_v();
+		break;
+	case GPU_LIT_GPC_STRIDE:
+		ret = proj_gpc_stride_v();
+		break;
+	case GPU_LIT_GPC_SHARED_BASE:
+		ret = proj_gpc_shared_base_v();
+		break;
+	case GPU_LIT_TPC_IN_GPC_BASE:
+		ret = proj_tpc_in_gpc_base_v();
+		break;
+	case GPU_LIT_TPC_IN_GPC_STRIDE:
+		ret = proj_tpc_in_gpc_stride_v();
+		break;
+	case GPU_LIT_TPC_IN_GPC_SHARED_BASE:
+		ret = proj_tpc_in_gpc_shared_base_v();
+		break;
+	case GPU_LIT_PPC_IN_GPC_STRIDE:
+		ret = proj_ppc_in_gpc_stride_v();
+		break;
+	case GPU_LIT_ROP_BASE:
+		ret = proj_rop_base_v();
+		break;
+	case GPU_LIT_ROP_STRIDE:
+		ret = proj_rop_stride_v();
+		break;
+	case GPU_LIT_ROP_SHARED_BASE:
+		ret = proj_rop_shared_base_v();
+		break;
+	case GPU_LIT_HOST_NUM_PBDMA:
+		ret = proj_host_num_pbdma_v();
+		break;
+	case GPU_LIT_LTC_STRIDE:
+		ret = proj_ltc_stride_v();
+		break;
+	case GPU_LIT_LTS_STRIDE:
+		ret = proj_lts_stride_v();
+		break;
+	case GPU_LIT_NUM_FBPAS:
+		ret = proj_scal_litter_num_fbpas_v();
+		break;
+	case GPU_LIT_FBPA_STRIDE:
+		ret = proj_fbpa_stride_v();
+		break;
+	default:
+		break;
+	}
+
+	return ret;
+}
 
 int gp10b_init_hal(struct gk20a *g)
 {
@@ -156,6 +229,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_therm_ops(gops);
 	gops->name = "gp10b";
 	gops->chip_init_gpu_characteristics = gp10b_init_gpu_characteristics;
+	gops->get_litter_value = gp10b_get_litter_value;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_A;

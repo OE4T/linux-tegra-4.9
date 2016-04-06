@@ -15,6 +15,7 @@
 
 #include "sync_gk20a.h"
 
+#include <linux/version.h>
 #include <linux/kernel.h>
 #include <linux/file.h>
 #include <linux/fs.h>
@@ -149,7 +150,11 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 
 	/* Store the dependency fence for this pt. */
 	if (dependency) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+		if (dependency->status == 0) {
+#else
 		if (!atomic_read(&dependency->status)) {
+#endif
 			shared->dep = dependency;
 		} else {
 			shared->dep_timestamp = ktime_get();
@@ -214,6 +219,9 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 {
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	struct gk20a_sync_timeline *obj = pt->obj;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	struct sync_pt *pos;
+#endif
 	bool signaled = true;
 
 	spin_lock(&pt->lock);
@@ -233,6 +241,12 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 		 * first.*/
 		if (pt->dep) {
 			s64 ns = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+			struct list_head *dep_pts = &pt->dep->pt_list_head;
+			list_for_each_entry(pos, dep_pts, pt_list) {
+				ns = max(ns, ktime_to_ns(pos->timestamp));
+			}
+#else
 			struct fence *fence;
 			int i;
 
@@ -240,6 +254,7 @@ static int gk20a_sync_pt_has_signaled(struct sync_pt *sync_pt)
 				fence = pt->dep->cbs[i].sync_pt;
 				ns = max(ns, ktime_to_ns(fence->timestamp));
 			}
+#endif
 			pt->dep_timestamp = ns_to_ktime(ns);
 			sync_fence_put(pt->dep);
 			pt->dep = NULL;
@@ -260,7 +275,11 @@ static inline ktime_t gk20a_sync_pt_duration(struct sync_pt *sync_pt)
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	if (!gk20a_sync_pt_has_signaled(sync_pt) || !pt->dep_timestamp.tv64)
 		return ns_to_ktime(0);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	return ktime_sub(sync_pt->timestamp, pt->dep_timestamp);
+#else
 	return ktime_sub(sync_pt->base.timestamp, pt->dep_timestamp);
+#endif
 }
 
 static int gk20a_sync_pt_compare(struct sync_pt *a, struct sync_pt *b)

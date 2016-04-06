@@ -16,6 +16,7 @@
  */
 
 #include <linux/gk20a.h>
+#include <linux/version.h>
 
 #include "channel_sync_gk20a.h"
 #include "gk20a.h"
@@ -93,10 +94,12 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	int i;
 	int num_wait_cmds;
 	struct sync_fence *sync_fence;
+	struct sync_pt *pt;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
+	u32 wait_id;
 	int err = 0;
 
 	sync_fence = nvhost_sync_fdget(fd);
@@ -104,9 +107,13 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		return -EINVAL;
 
 	/* validate syncpt ids */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
+#else
 	for (i = 0; i < sync_fence->num_fences; i++) {
-		struct sync_pt *pt = sync_pt_from_fence(sync_fence->cbs[i].sync_pt);
-		u32 wait_id = nvhost_sync_pt_id(pt);
+		pt = sync_pt_from_fence(sync_fence->cbs[i].sync_pt);
+#endif
+		wait_id = nvhost_sync_pt_id(pt);
 		if (!wait_id || !nvhost_syncpt_is_valid_pt_ext(sp->host1x_pdev,
 					wait_id)) {
 			sync_fence_put(sync_fence);
@@ -129,9 +136,13 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	}
 
 	i = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	list_for_each_entry(pt, &sync_fence->pt_list_head, pt_list) {
+#else
 	for (i = 0; i < sync_fence->num_fences; i++) {
 		struct fence *f = sync_fence->cbs[i].sync_pt;
 		struct sync_pt *pt = sync_pt_from_fence(f);
+#endif
 		u32 wait_id = nvhost_sync_pt_id(pt);
 		u32 wait_value = nvhost_sync_pt_thresh(pt);
 
@@ -144,6 +155,9 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		} else
 			add_wait_cmd(&wait_cmd->ptr[i * 4], wait_id,
 					wait_value);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+		i++;
+#endif
 	}
 	WARN_ON(i != num_wait_cmds);
 	sync_fence_put(sync_fence);

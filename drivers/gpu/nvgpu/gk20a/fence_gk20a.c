@@ -15,6 +15,7 @@
 
 #include <linux/gk20a.h>
 #include <linux/file.h>
+#include <linux/version.h>
 
 #include "gk20a.h"
 #include "semaphore_gk20a.h"
@@ -153,10 +154,17 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 	struct sync_fence *sync_fence = NULL;
 
 #ifdef CONFIG_SYNC
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	sync_fence = gk20a_sync_fence_create(timeline, semaphore,
+					     dependency, "f-gk20a-0x%04llx",
+					     ((uintptr_t)(void *)semaphore->value) &
+					     0xffff);
+#else
 	sync_fence = gk20a_sync_fence_create(timeline, semaphore,
 					     dependency, "f-gk20a-0x%04llx",
 					     ((u64)(void *)semaphore->value) &
 					     0xffff);
+#endif
 	if (!sync_fence)
 		return NULL;
 #endif

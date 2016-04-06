@@ -770,6 +770,9 @@ static int gk20a_tegra_probe(struct device *dev)
 		}
 	}
 
+	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13)
+		platform->soc_name = "tegra13x";
+
 	gk20a_tegra_get_clocks(dev);
 
 	return 0;

@@ -3482,6 +3482,7 @@ static inline bool vma_is_accessible(struct vm_area_struct *vma)
 static int handle_pte_fault(struct fault_env *fe)
 {
 	pte_t entry;
+	bool fix_prot = false;
 
 	if (unlikely(pmd_none(*fe->pmd))) {
 		/*
@@ -3530,13 +3531,30 @@ static int handle_pte_fault(struct fault_env *fe)
 	if (!pte_present(entry))
 		return do_swap_page(fe, entry);
 
-	if (pte_protnone(entry) && vma_is_accessible(fe->vma))
-		return do_numa_page(fe, entry);
+	if (pte_protnone(entry) && vma_is_accessible(fe->vma)) {
+		if (fe->vma->vm_ops && fe->vma->vm_ops->fixup_prot &&
+			fe->vma->vm_ops->fault) {
+			pgoff_t pgoff = (((fe->address & PAGE_MASK)
+					- fe->vma->vm_start) >> PAGE_SHIFT) +
+					fe->vma->vm_pgoff;
+			if (!fe->vma->vm_ops->fixup_prot(fe->vma,
+					fe->address & PAGE_MASK, pgoff))
+				return VM_FAULT_SIGSEGV; /* access not granted */
+			fix_prot = true;
+		} else {
+			return do_numa_page(fe, entry);
+		}
+	}
 
 	fe->ptl = pte_lockptr(fe->vma->vm_mm, fe->pmd);
 	spin_lock(fe->ptl);
 	if (unlikely(!pte_same(*fe->pte, entry)))
 		goto unlock;
+	if (fix_prot) {
+		entry = pte_modify(entry, fe->vma->vm_page_prot);
+		vm_stat_account(fe->vma->vm_mm, VM_NONE, -1);
+		vm_stat_account(fe->vma->vm_mm, fe->vma->vm_flags, 1);
+	}
 	if (fe->flags & FAULT_FLAG_WRITE) {
 		if (!pte_write(entry))
 			return do_wp_page(fe, entry);

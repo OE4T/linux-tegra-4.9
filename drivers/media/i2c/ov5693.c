@@ -825,19 +825,9 @@ static int ov5693_eeprom_device_init(struct ov5693 *priv)
 	};
 	int i;
 	int err;
-	struct v4l2_ctrl *ctrl;
 
-	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_EEPROM_DATA);
-	if (!ctrl) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
+	if (!priv->pdata->has_eeprom)
 		return -EINVAL;
-	}
-
-	if (priv->pdata && !priv->pdata->has_eeprom) {
-		ctrl->flags = V4L2_CTRL_FLAG_DISABLED;
-		return 0;
-	}
 
 	for (i = 0; i < OV5693_EEPROM_NUM_BLOCKS; i++) {
 		priv->eeprom[i].adap = i2c_get_adapter(
@@ -854,7 +844,6 @@ static int ov5693_eeprom_device_init(struct ov5693 *priv)
 		if (IS_ERR(priv->eeprom[i].regmap)) {
 			err = PTR_ERR(priv->eeprom[i].regmap);
 			ov5693_eeprom_device_release(priv);
-			ctrl->flags = V4L2_CTRL_FLAG_DISABLED;
 			return err;
 		}
 	}
@@ -1110,9 +1099,10 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 	return err;
 }
 
-static int ov5693_ctrls_init(struct ov5693 *priv)
+static int ov5693_ctrls_init(struct ov5693 *priv, bool eeprom_ctrl)
 {
 	struct i2c_client *client = priv->i2c_client;
+	struct camera_common_data *common_data = priv->s_data;
 	struct v4l2_ctrl *ctrl;
 	int numctrls;
 	int err;
@@ -1124,6 +1114,14 @@ static int ov5693_ctrls_init(struct ov5693 *priv)
 	v4l2_ctrl_handler_init(&priv->ctrl_handler, numctrls);
 
 	for (i = 0; i < numctrls; i++) {
+		/* Skip control 'V4L2_CID_EEPROM_DATA' if eeprom inint err */
+		if (ctrl_config_list[i].id == V4L2_CID_EEPROM_DATA) {
+			if (!eeprom_ctrl) {
+				common_data->numctrls -= 1;
+				continue;
+			}
+		}
+
 		ctrl = v4l2_ctrl_new_custom(&priv->ctrl_handler,
 			&ctrl_config_list[i], NULL);
 		if (ctrl == NULL) {
@@ -1344,15 +1342,15 @@ static int ov5693_probe(struct i2c_client *client,
 
 	v4l2_i2c_subdev_init(priv->subdev, client, &ov5693_subdev_ops);
 
-	err = ov5693_ctrls_init(priv);
-	if (err)
-		return err;
-
 	/* eeprom interface */
 	err = ov5693_eeprom_device_init(priv);
-	if (err)
+	if (err && priv->pdata->has_eeprom)
 		dev_err(&client->dev,
 			"Failed to allocate eeprom reg map: %d\n", err);
+
+	err = ov5693_ctrls_init(priv, !err);
+	if (err)
+		return err;
 
 	priv->subdev->internal_ops = &ov5693_subdev_internal_ops;
 	priv->subdev->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |

@@ -1339,7 +1339,8 @@ static int tegra_channel_open(struct file *fp)
 		tegra_csi_power_on(csi);
 	}
 
-	if (!vi->pg_mode) {
+	if (!vi->pg_mode &&
+		(atomic_add_return(1, &chan->power_on_refcnt) == 1)) {
 		/* power on sensors connected in channel */
 		tegra_csi_channel_power_on(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 1);
@@ -1362,7 +1363,8 @@ static int tegra_channel_close(struct file *fp)
 
 	ret = vb2_fop_release(fp);
 
-	if (!vi->pg_mode) {
+	if (!vi->pg_mode &&
+		atomic_dec_and_test(&chan->power_on_refcnt)) {
 		/* power off sensors connected in channel */
 		tegra_csi_channel_power_off(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 0);

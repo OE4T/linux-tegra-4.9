@@ -149,8 +149,9 @@ struct tegra_channel {
 	unsigned int gang_sizeimage;
 
 	DECLARE_BITMAP(fmts_bitmap, MAX_FORMAT_NUM);
-	bool bypass;
+	atomic_t power_on_refcnt;
 	struct v4l2_fh *fh;
+	bool bypass;
 	bool is_hdmiin_unplug;
 };
 

@@ -1968,10 +1968,10 @@ static int tc358840_enum_mbus_code(struct v4l2_subdev *sd, struct v4l2_subdev_fh
 
 	switch (code->index) {
 	case 0:
-		code->code = V4L2_MBUS_FMT_RGB888_1X24;
+		code->code = V4L2_MBUS_FMT_UYVY8_1X16;
 		break;
 	case 1:
-		code->code = V4L2_MBUS_FMT_UYVY8_1X16;
+		code->code = V4L2_MBUS_FMT_RGB888_1X24;
 		break;
 	}
 	return 0;

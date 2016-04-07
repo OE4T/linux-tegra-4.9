@@ -15,6 +15,12 @@ ccflags-y += -I$(srctree)/../kernel-nvgpu-t18x/include
 ccflags-y += -I$(srctree)/../kernel-nvgpu-t18x/include/uapi
 endif
 
+ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+ccflags-y += -I$(srctree)/../kernel-nvgpu-t19x/drivers/gpu/nvgpu
+ccflags-y += -I$(srctree)/../kernel-nvgpu-t19x/include
+ccflags-y += -I$(srctree)/../kernel-nvgpu-t19x/include/uapi
+endif
+
 obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
@@ -99,4 +105,8 @@ nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 include ../kernel-nvgpu-t18x/drivers/gpu/nvgpu/Makefile
+endif
+
+ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+include ../kernel-nvgpu-t19x/drivers/gpu/nvgpu/Makefile
 endif

@@ -1871,6 +1871,11 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 	if (!c)
 		return;
 
+	if (!c->g->power_on) { /* shutdown case */
+		gk20a_channel_put(c);
+		return;
+	}
+
 	vm = c->vm;
 	g = c->g;
 	platform = gk20a_get_platform(g->dev);
@@ -1950,6 +1955,11 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 	c = gk20a_channel_get(c);
 	if (!c)
 		return;
+
+	if (!c->g->power_on) { /* shutdown case */
+		gk20a_channel_put(c);
+		return;
+	}
 
 	update_gp_get(c->g, c);
 	wake_up(&c->submit_wq);

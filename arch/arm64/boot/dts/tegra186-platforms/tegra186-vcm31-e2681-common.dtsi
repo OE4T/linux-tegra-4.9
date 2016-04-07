@@ -327,16 +327,32 @@
 		status = "okay";
 	};
 
+	ahub {
+		arad@290e400 {
+			status = "okay";
+		};
+	};
+
 	sound_ref {
 		status = "okay";
 		compatible = "nvidia,tegra-audio-t186ref-p2382";
 		nvidia,model = "tegra186-snd-p2382";
+		nvidia,num-clk = <8>;
+		nvidia,clk-rates = < 282240000  /* PLLA_x11025_RATE */
+				     11289600   /* AUD_MCLK_x11025_RATE */
+				     45158400   /* PLLA_OUT0_x11025_RATE */
+				     45158400   /* AHUB_x11025_RATE */
+				     368640000  /* PLLA_x8000_RATE */
+				     12288000   /* AUD_MCLK_x8000_RATE */
+				     184319970  /* PLLA_OUT0_x8000_RATE */
+				     49151992 >;/* AHUB_x8000_RATE */
 		clocks =<&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_PLLA>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA186_CLK_AHUB>,
 			<&tegra_car TEGRA186_CLK_CLK_M>,
 			<&tegra_car TEGRA186_CLK_AUD_MCLK>;
-		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "clk_m",
+		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub", "clk_m",
 			"extern1";
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
@@ -346,91 +362,80 @@
 		nvidia,amx-slot-size = <32 32 32 32>;
 		nvidia,adx-slot-size = <32 32 32 32>;
 		nvidia,amx1-slot-map = <
-			/* slot 0 - Hi */
+			/* jack 0 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 1, 0)
 			TDM_SLOT_MAP(0, 1, 1)
-			/* slot 1 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 2, 0)
 			TDM_SLOT_MAP(0, 2, 1)
-			/* slot 2 - Hi */
+			/* jack 1 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(1, 1, 0)
 			TDM_SLOT_MAP(1, 1, 1)
-			/* slot 3 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(1, 2, 0)
 			TDM_SLOT_MAP(1, 2, 1)
-			/* slot 4 - Hi */
+			/* jack 2 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(2, 1, 0)
 			TDM_SLOT_MAP(2, 1, 1)
-			/* slot 5 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(2, 2, 0)
 			TDM_SLOT_MAP(2, 2, 1)
-			/* slot 6 - Hi */
+			/* jack 3 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(3, 1, 0)
 			TDM_SLOT_MAP(3, 1, 1)
-			/* slot 7 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(3, 2, 0)
-			TDM_SLOT_MAP(3, 2, 1)
-			/* slot 0 to 7 - Low */
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)>;
+			TDM_SLOT_MAP(3, 2, 1)>;
 
 		nvidia,adx1-slot-map = <
-			/* slot 0 - Hi */
+			/* jack 0 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 1, 0)
 			TDM_SLOT_MAP(0, 1, 1)
-			/* slot 1 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 2, 0)
 			TDM_SLOT_MAP(0, 2, 1)
-			/* slot 2 - Hi */
+			/* jack 1 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(1, 1, 0)
 			TDM_SLOT_MAP(1, 1, 1)
-			/* slot 3 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(1, 2, 0)
 			TDM_SLOT_MAP(1, 2, 1)
-			/* slot 4 - Hi */
+			/* jack 2 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(2, 1, 0)
 			TDM_SLOT_MAP(2, 1, 1)
-			/* slot 5 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(2, 2, 0)
 			TDM_SLOT_MAP(2, 2, 1)
-			/* slot 6 - Hi */
+			/* jack 3 */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(3, 1, 0)
 			TDM_SLOT_MAP(3, 1, 1)
-			/* slot 7 - Hi */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(3, 2, 0)
-			TDM_SLOT_MAP(3, 2, 1)
-			/* slot 0 to 7 - Low */
-			/* slot 0 to 7 - Low */
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)>;
+			TDM_SLOT_MAP(3, 2, 1)>;
 
 		nvidia,audio-routing =
 			"Headphone-x", "x OUT",
@@ -491,8 +496,8 @@
 			tx-mask = <0xFF>;
 			rx-mask = <0xFF>;
 			format = "dsp_a";
-			bitclock-slave;
-			frame-slave;
+			bitclock-master;
+			frame-master;
 			bitclock-noninversion;
 			frame-noninversion;
 			bit-format = "s32_le";
@@ -501,6 +506,10 @@
 			num-channel = <8>;
 			name-prefix = "d";
 		};
+	};
+
+	adsp_audio {
+		status = "okay";
 	};
 };
 

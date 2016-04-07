@@ -313,10 +313,6 @@
 		};
 	};
 
-	adsp_audio {
-		status = "disabled";
-	};
-
 	watchdog@30c0000 {
 		status = "disabled";
 	};

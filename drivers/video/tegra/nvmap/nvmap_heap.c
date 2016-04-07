@@ -268,14 +268,11 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 		/* Generate IVM for partition that can alloc */
 		if (h->is_ivm && h->can_alloc) {
 			unsigned int offs = (b->base - h->base);
-			/* 13 bits reserved for offset; must be 32K aligned */
 			BUG_ON(offs & (NVMAP_IVM_ALIGNMENT - 1));
 			BUG_ON((offs >> ffs(NVMAP_IVM_ALIGNMENT)) &
 				~((1 << NVMAP_IVM_OFFSET_WIDTH) - 1));
-			/* 3 bits reserved for VM_ID */
 			BUG_ON(h->vm_id & ~(NVMAP_IVM_IVMID_MASK));
-			/* We have 16 bits for the length.
-			 * So, page alignment is sufficient check.
+			/* So, page alignment is sufficient check.
 			 */
 			BUG_ON(len & ~(PAGE_MASK));
 			handle->ivm_id = (h->vm_id << NVMAP_IVM_IVMID_SHIFT);

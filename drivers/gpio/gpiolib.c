@@ -1055,7 +1055,7 @@ static int gpiochip_setup_dev(struct gpio_device *gdev)
 
 	/* From this point, the .release() function cleans up gpio_device */
 	gdev->dev.release = gpiodevice_release;
-	pr_debug("%s: registered GPIOs %d to %d on device: %s (%s)\n",
+	pr_info("%s: registered GPIOs %d to %d on device: %s (%s)\n",
 		 __func__, gdev->base, gdev->base + gdev->ngpio - 1,
 		 dev_name(&gdev->dev), gdev->chip->label ? : "generic");
 

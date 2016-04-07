@@ -665,7 +665,7 @@ static int validate_reg_op_offset(struct dbg_session_gk20a *dbg_s,
 				return -EINVAL;
 			}
 		}
-		if (!buf_offset_lo) {
+		if (!num_offsets) {
 			op->status |= REGOP(STATUS_INVALID_OFFSET);
 			return -EINVAL;
 		}

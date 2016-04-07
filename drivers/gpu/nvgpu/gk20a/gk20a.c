@@ -1310,7 +1310,7 @@ static int gk20a_pm_initialise_domain(struct platform_device *pdev)
 
 	domain->name = "gpu";
 
-#ifdef CONFIG_PM_RUNTIME
+#ifdef CONFIG_PM
 	if (!platform->can_railgate)
 		pm_domain_gov = &pm_domain_always_on_gov;
 #endif

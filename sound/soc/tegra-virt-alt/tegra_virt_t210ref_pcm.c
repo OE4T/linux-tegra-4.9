@@ -35,6 +35,7 @@
 #define PLATFORM_NAME LINK_CPU_NAME
 
 #define TEGRA210_XBAR_RX_STRIDE	0x4
+#define MIXER_CONFIG_SHIFT_VALUE	16
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #define CODEC_NAME		NULL
@@ -419,6 +420,8 @@ static int tegra_virt_t210ref_put_route(struct snd_kcontrol *kcontrol,
 	msg.params.xbar_info.tx_value =
 	tegra_virt_t210ref_source_value
 		[ucontrol->value.integer.value[0]];
+	msg.params.xbar_info.tx_idx =
+		ucontrol->value.integer.value[0] - 1;
 
 	err = nvaudio_ivc_send(hivc_client,
 			&msg,
@@ -428,6 +431,157 @@ static int tegra_virt_t210ref_put_route(struct snd_kcontrol *kcontrol,
 
 	return 0;
 }
+
+static int tegra_virt_t210mixer_get_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	return 0;
+}
+
+static int tegra_virt_t210mixer_set_gain(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_SET_RX_GAIN;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.rx_idx = (int) reg;
+	msg.params.amixer_info.gain =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("error on ivc_send\n");
+
+	return 0;
+}
+
+static int tegra_virt_t210mixer_get_adder_config(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_GET_TX_ADDER_CONFIG;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.adder_idx = (((int) reg) >>
+				MIXER_CONFIG_SHIFT_VALUE) & 0xFFFF;
+	msg.params.amixer_info.adder_rx_idx = ((int) reg) & 0xFFFF;
+
+	err = nvaudio_ivc_send(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("error on ivc_send\n");
+
+	ucontrol->value.integer.value[0] =
+		msg.params.amixer_info.adder_rx_idx_enable;
+
+	return 0;
+}
+
+static int tegra_virt_t210mixer_set_adder_config(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_SET_TX_ADDER_CONFIG;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.adder_idx = (((int) reg) >>
+				MIXER_CONFIG_SHIFT_VALUE) & 0xFFFF;
+	msg.params.amixer_info.adder_rx_idx = ((int) reg) & 0xFFFF;
+	msg.params.amixer_info.adder_rx_idx_enable =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("error on ivc_send\n");
+
+	return 0;
+}
+
+static int tegra_virt_t210mixer_get_enable(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_GET_ENABLE;
+	msg.params.amixer_info.id = 0;
+
+	err = nvaudio_ivc_send(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("error on ivc_send\n");
+
+	ucontrol->value.integer.value[0] = msg.params.amixer_info.enable;
+	return 0;
+}
+
+static int tegra_virt_t210mixer_set_enable(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_AMIXER_SET_ENABLE;
+	msg.params.amixer_info.id = 0;
+	msg.params.amixer_info.enable =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0)
+		pr_err("error on ivc_send\n");
+
+	return 0;
+}
+
 static const struct soc_enum tegra_virt_t210ref_source =
 	SOC_ENUM_SINGLE_EXT(NUM_MUX_INPUT, tegra_virt_t210ref_source_text);
 
@@ -446,6 +600,24 @@ static const struct soc_enum tegra_virt_t210ref_source =
 	tegra_virt_t210ref_get_route,	\
 	tegra_virt_t210ref_put_route)
 
+#define MIXER_GAIN_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 0x20000, 0,	\
+	tegra_virt_t210mixer_get_gain,	\
+	tegra_virt_t210mixer_set_gain)
+
+#define REG_PACK(id1, id2) ((id1 << MIXER_CONFIG_SHIFT_VALUE) | id2)
+#define MIXER_ADDER_CTRL_DECL(ename, reg1, reg2) \
+	SOC_SINGLE_EXT(ename, REG_PACK(reg1, reg2),  \
+	0, 1, 0,	\
+	tegra_virt_t210mixer_get_adder_config,	\
+	tegra_virt_t210mixer_set_adder_config)
+
+#define MIXER_ENABLE_CTRL_DECL(ename, reg) \
+	SOC_SINGLE_EXT(ename, reg,	\
+	0, 1, 0,	\
+	tegra_virt_t210mixer_get_enable,	\
+	tegra_virt_t210mixer_set_enable)
 
 static const struct snd_kcontrol_new tegra_virt_t210ref_controls[] = {
 MUX_ENUM_CTRL_DECL("ADMAIF1 Mux", 0x00),
@@ -531,6 +703,73 @@ MUX_ENUM_CTRL_DECL("ASRC1-7 Mux", 0x72),
 MUX_ENUM_CTRL_DECL("DSPK1 Mux", 0x30),
 MUX_ENUM_CTRL_DECL("DSPK2 Mux", 0x31),
 #endif
+MIXER_GAIN_CTRL_DECL("RX1 Gain", 0x00),
+MIXER_GAIN_CTRL_DECL("RX2 Gain", 0x01),
+MIXER_GAIN_CTRL_DECL("RX3 Gain", 0x02),
+MIXER_GAIN_CTRL_DECL("RX4 Gain", 0x03),
+MIXER_GAIN_CTRL_DECL("RX5 Gain", 0x04),
+MIXER_GAIN_CTRL_DECL("RX6 Gain", 0x05),
+MIXER_GAIN_CTRL_DECL("RX7 Gain", 0x06),
+MIXER_GAIN_CTRL_DECL("RX8 Gain", 0x07),
+MIXER_GAIN_CTRL_DECL("RX9 Gain", 0x08),
+MIXER_GAIN_CTRL_DECL("RX10 Gain", 0x09),
+
+MIXER_ADDER_CTRL_DECL("Adder1 RX1", 0x00, 0x01),
+MIXER_ADDER_CTRL_DECL("Adder1 RX2", 0x00, 0x02),
+MIXER_ADDER_CTRL_DECL("Adder1 RX3", 0x00, 0x03),
+MIXER_ADDER_CTRL_DECL("Adder1 RX4", 0x00, 0x04),
+MIXER_ADDER_CTRL_DECL("Adder1 RX5", 0x00, 0x05),
+MIXER_ADDER_CTRL_DECL("Adder1 RX6", 0x00, 0x06),
+MIXER_ADDER_CTRL_DECL("Adder1 RX7", 0x00, 0x07),
+MIXER_ADDER_CTRL_DECL("Adder1 RX8", 0x00, 0x08),
+MIXER_ADDER_CTRL_DECL("Adder1 RX9", 0x00, 0x09),
+MIXER_ADDER_CTRL_DECL("Adder1 RX10", 0x00, 0x0a),
+
+MIXER_ADDER_CTRL_DECL("Adder2 RX1", 0x01, 0x01),
+MIXER_ADDER_CTRL_DECL("Adder2 RX2", 0x01, 0x02),
+MIXER_ADDER_CTRL_DECL("Adder2 RX3", 0x01, 0x03),
+MIXER_ADDER_CTRL_DECL("Adder2 RX4", 0x01, 0x04),
+MIXER_ADDER_CTRL_DECL("Adder2 RX5", 0x01, 0x05),
+MIXER_ADDER_CTRL_DECL("Adder2 RX6", 0x01, 0x06),
+MIXER_ADDER_CTRL_DECL("Adder2 RX7", 0x01, 0x07),
+MIXER_ADDER_CTRL_DECL("Adder2 RX8", 0x01, 0x08),
+MIXER_ADDER_CTRL_DECL("Adder2 RX9", 0x01, 0x09),
+MIXER_ADDER_CTRL_DECL("Adder2 RX10", 0x01, 0x0a),
+
+MIXER_ADDER_CTRL_DECL("Adder3 RX1", 0x02, 0x01),
+MIXER_ADDER_CTRL_DECL("Adder3 RX2", 0x02, 0x02),
+MIXER_ADDER_CTRL_DECL("Adder3 RX3", 0x02, 0x03),
+MIXER_ADDER_CTRL_DECL("Adder3 RX4", 0x02, 0x04),
+MIXER_ADDER_CTRL_DECL("Adder3 RX5", 0x02, 0x05),
+MIXER_ADDER_CTRL_DECL("Adder3 RX6", 0x02, 0x06),
+MIXER_ADDER_CTRL_DECL("Adder3 RX7", 0x02, 0x07),
+MIXER_ADDER_CTRL_DECL("Adder3 RX8", 0x02, 0x08),
+MIXER_ADDER_CTRL_DECL("Adder3 RX9", 0x02, 0x09),
+MIXER_ADDER_CTRL_DECL("Adder3 RX10", 0x02, 0x0a),
+
+MIXER_ADDER_CTRL_DECL("Adder4 RX1", 0x03, 0x01),
+MIXER_ADDER_CTRL_DECL("Adder4 RX2", 0x03, 0x02),
+MIXER_ADDER_CTRL_DECL("Adder4 RX3", 0x03, 0x03),
+MIXER_ADDER_CTRL_DECL("Adder4 RX4", 0x03, 0x04),
+MIXER_ADDER_CTRL_DECL("Adder4 RX5", 0x03, 0x05),
+MIXER_ADDER_CTRL_DECL("Adder4 RX6", 0x03, 0x06),
+MIXER_ADDER_CTRL_DECL("Adder4 RX7", 0x03, 0x07),
+MIXER_ADDER_CTRL_DECL("Adder4 RX8", 0x03, 0x08),
+MIXER_ADDER_CTRL_DECL("Adder4 RX9", 0x03, 0x09),
+MIXER_ADDER_CTRL_DECL("Adder4 RX10", 0x03, 0x0a),
+
+MIXER_ADDER_CTRL_DECL("Adder5 RX1", 0x04, 0x01),
+MIXER_ADDER_CTRL_DECL("Adder5 RX2", 0x04, 0x02),
+MIXER_ADDER_CTRL_DECL("Adder5 RX3", 0x04, 0x03),
+MIXER_ADDER_CTRL_DECL("Adder5 RX4", 0x04, 0x04),
+MIXER_ADDER_CTRL_DECL("Adder5 RX5", 0x04, 0x05),
+MIXER_ADDER_CTRL_DECL("Adder5 RX6", 0x04, 0x06),
+MIXER_ADDER_CTRL_DECL("Adder5 RX7", 0x04, 0x07),
+MIXER_ADDER_CTRL_DECL("Adder5 RX8", 0x04, 0x08),
+MIXER_ADDER_CTRL_DECL("Adder5 RX9", 0x04, 0x09),
+MIXER_ADDER_CTRL_DECL("Adder5 RX10", 0x04, 0x0a),
+
+MIXER_ENABLE_CTRL_DECL("Mixer Enable", 0x00),
 };
 
 static const struct of_device_id tegra_virt_t210ref_pcm_of_match[] = {

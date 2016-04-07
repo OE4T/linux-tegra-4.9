@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -49,6 +49,11 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_T124_DAM_CHANNEL_GET_GAIN,
 	NVAUDIO_XBAR_SET_ROUTE,
 	NVAUDIO_XBAR_GET_ROUTE,
+	NVAUDIO_AMIXER_SET_RX_GAIN,
+	NVAUDIO_AMIXER_SET_TX_ADDER_CONFIG,
+	NVAUDIO_AMIXER_SET_ENABLE,
+	NVAUDIO_AMIXER_GET_TX_ADDER_CONFIG,
+	NVAUDIO_AMIXER_GET_ENABLE,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -60,9 +65,20 @@ struct nvaudio_ivc_t124_dam_info {
 	uint32_t	gain;
 };
 
+struct nvaudio_ivc_t210_amixer_info {
+	int32_t		id;
+	uint32_t	rx_idx;
+	uint32_t	gain;
+	uint32_t	adder_idx;
+	uint32_t	adder_rx_idx;
+	uint32_t	adder_rx_idx_enable;
+	uint32_t	enable;
+};
+
 struct nvaudio_ivc_xbar_link {
 	uint32_t	rx_reg;
 	uint32_t	tx_value;
+	uint32_t	tx_idx;
 	uint32_t	bit_pos;
 };
 
@@ -77,6 +93,7 @@ struct nvaudio_ivc_msg {
 	union {
 		struct nvaudio_ivc_dmaif_info		dmaif_info;
 		struct nvaudio_ivc_t124_dam_info	dam_info;
+		struct nvaudio_ivc_t210_amixer_info	amixer_info;
 		struct nvaudio_ivc_xbar_link		xbar_info;
 	} params;
 	bool			ack_required;

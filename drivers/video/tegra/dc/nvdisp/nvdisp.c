@@ -1099,15 +1099,19 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 */
 	dc->out->flags &= ~TEGRA_DC_OUT_INITIALIZED_MODE;
 
+	i = -1;
 	/* Assign windows to this head */
 	for_each_set_bit(idx, &dc->pdata->win_mask, DC_N_WINDOWS) {
 		if (tegra_nvdisp_assign_win(dc, idx))
 			dev_err(&dc->ndev->dev,
 				"failed to assign window %d\n", idx);
-		else
-			dev_dbg(&dc->ndev->dev,
+		else {
+			dev_err(&dc->ndev->dev,
 				"Window %d assigned to head %d\n", idx,
 				dc->ctrl_num);
+			if (i == -1)
+				i = idx;
+		}
 	}
 
 	/* Set the fb_index on changing from a zero win_mask to
@@ -1115,7 +1119,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 */
 	if ((dc->pdata->fb->win == -1) && dc->pdata->win_mask) {
 		tegra_fb_set_win_index(dc, dc->pdata->win_mask);
-		dc->pdata->fb->win = dc->pdata->win_mask;
+		dc->pdata->fb->win = i;
 	}
 
 	/* Enable RG underflow logging */

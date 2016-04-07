@@ -44,6 +44,8 @@ struct nvdisp_compclk_client {
 
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);
 int tegra_nvdisp_detach_win(struct tegra_dc *dc, unsigned idx);
+int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
+	struct tegra_dc_win *win);
 
 int tegra_nvdisp_set_csc(struct tegra_dc_win *win, struct tegra_dc_csc_v2 *csc);
 void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);

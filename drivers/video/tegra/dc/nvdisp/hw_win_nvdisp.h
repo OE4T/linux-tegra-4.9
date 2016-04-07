@@ -562,6 +562,10 @@ static inline u32 win_win_set_params_degamma_range_yuv12_f(void)
 {
 	return 0x6000;
 }
+static inline u32 win_win_set_params_degamma_range_mask_f(void)
+{
+	return 0x6000;
+}
 static inline u32 win_win_set_params_clamp_before_blend_enable_f(void)
 {
 	return 0x8000;

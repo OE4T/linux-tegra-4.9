@@ -368,6 +368,36 @@ static inline u32 tegra_nvdisp_win_swap_uv(struct tegra_dc_win *win)
 	return swap_uv;
 }
 
+int tegra_nvdisp_get_degamma_config(struct tegra_dc *dc,
+	struct tegra_dc_win *win)
+{
+	int ret = 0;
+
+	if (!dc->cmu_enabled)
+		return win_win_set_params_degamma_range_none_f();
+
+	if (tegra_dc_is_yuv(win->fmt)) {
+		/* yuv8_10 for rec601/709/2020-10 and
+		 * yuv12 for rec2020-12 yuv inputs
+		 */
+		if (tegra_dc_is_yuv_12bpc(win->fmt))
+			ret |=
+				win_win_set_params_degamma_range_yuv12_f();
+		else
+			ret |=
+				win_win_set_params_degamma_range_yuv8_10_f();
+	} else {
+		/* srgb for rgb, none for I8 */
+		if (win->fmt == TEGRA_WIN_FMT_P8)
+			ret |=
+				win_win_set_params_degamma_range_none_f();
+		else
+			ret |=
+				win_win_set_params_degamma_range_srgb_f();
+	}
+
+	return ret;
+}
 
 static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 				      bool wait_for_vblank)
@@ -494,18 +524,10 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 	else if (win->flags & TEGRA_WIN_FLAG_INPUT_RANGE_LIMITED)
 		win_params = win_win_set_params_in_range_limited_f();
 
-	if (yuv) {
-		/* yuv8_10 for rec601/709/2020-10 and
-		 * yuv12 for rec2020-12 yuv inputs
-		 */
-		if (tegra_dc_is_yuv_12bpc(win->fmt))
-			win_params |=
-				win_win_set_params_degamma_range_yuv12_f();
-		else
-			win_params |=
-				win_win_set_params_degamma_range_yuv8_10_f();
+	win_params |= tegra_nvdisp_get_degamma_config(dc, win);
 
-		/* color_space settings */
+	/* color_space settings */
+	if (yuv) {
 		if (win->flags & TEGRA_WIN_FLAG_CS_REC601)
 			win_params |= win_win_set_params_cs_range_yuv_601_f();
 		else if (win->flags & TEGRA_WIN_FLAG_CS_REC2020)
@@ -514,14 +536,6 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 			win_params |= win_win_set_params_cs_range_yuv_709_f();
 
 	} else {
-		/* srgb for rgb, none for I8 */
-		if (win->fmt == TEGRA_WIN_FMT_P8)
-			win_params |=
-				win_win_set_params_degamma_range_none_f();
-		else
-			win_params |=
-				win_win_set_params_degamma_range_srgb_f();
-
 		win_params |= win_win_set_params_cs_range_rgb_f();
 	}
 
@@ -727,6 +741,9 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				win_scaler_usage_use422_disable_f(),
 				win_scaler_usage_r());
 
+			/* disable csc */
+			tegra_nvdisp_set_csc(win, &win->csc);
+
 			/* disable cde */
 			nvdisp_win_write(win, 0, win_cde_ctrl_r());
 
@@ -776,7 +793,8 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 				return -EINVAL;
 			}
 
-			if (dc_win->csc_dirty) {
+			/* skip updating csc if cmu is disabled */
+			if (dc->cmu_enabled && dc_win->csc_dirty) {
 				tegra_nvdisp_set_csc(win, &dc_win->csc);
 				dc_win->csc_dirty = false;
 			}
@@ -945,8 +963,9 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		nvdisp_cmd_state_ctrl_a_act_req_enable_f() << win->idx,
 		nvdisp_cmd_state_ctrl_r());
 	/* wait for COMMON_ACT_REQ to complete or time out */
-	if (tegra_dc_poll_register(dc, DC_CMD_STATE_CONTROL,
-			COMMON_ACT_REQ, 0, 1, NVDISP_TEGRA_POLL_TIMEOUT_MS))
+	if (tegra_dc_poll_register(dc, nvdisp_cmd_state_ctrl_r(),
+			nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
+			0, 1, NVDISP_TEGRA_POLL_TIMEOUT_MS))
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for DC to stop\n");
 

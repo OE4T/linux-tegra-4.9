@@ -33,7 +33,7 @@ int tegra_nvdisp_set_csc(struct tegra_dc_win *win, struct tegra_dc_csc_v2 *csc)
 {
 	u32 csc_enable = win_window_set_control_csc_disable_f();
 
-	if (csc->csc_enable) {
+	if (WIN_IS_ENABLED(win) && csc->csc_enable) {
 		nvdisp_win_write(win, win_r2r_coeff_f(csc->r2r), win_r2r_r());
 		nvdisp_win_write(win, win_g2r_coeff_f(csc->g2r), win_g2r_r());
 		nvdisp_win_write(win, win_b2r_coeff_f(csc->b2r), win_b2r_r());

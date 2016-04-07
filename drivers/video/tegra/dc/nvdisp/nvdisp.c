@@ -946,11 +946,11 @@ static int tegra_nvdisp_postcomp_init(struct tegra_dc *dc)
 	 */
 	struct tegra_dc_lut *lut = &dc->cmu;
 
-	dc->pdata->cmu_enable = dc->cmu_enabled = true;
-
-	tegra_nvdisp_set_output_lut(dc, lut);
-	tegra_nvdisp_set_color_control(dc);
-	tegra_dc_enable_general_act(dc);
+	if (dc->cmu_enabled) {
+		tegra_nvdisp_set_output_lut(dc, lut);
+		tegra_nvdisp_set_color_control(dc);
+		tegra_dc_enable_general_act(dc);
+	}
 
 	return 0;
 }
@@ -1551,7 +1551,7 @@ static int tegra_nvdisp_set_color_control(struct tegra_dc *dc)
 void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu)
 {
 	/* copy the data to DC lut */
-	memcpy(dc->cmu.rgb, src_cmu->rgb, sizeof(*src_cmu));
+	memcpy(dc->cmu.rgb, src_cmu->rgb, dc->cmu.size);
 	dc->cmu_dirty = true;
 }
 
@@ -1572,6 +1572,10 @@ static void _tegra_nvdisp_update_cmu(struct tegra_dc *dc,
 
 int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 {
+	int i;
+	u32 reg_val, mask;
+	u32 act_req_mask = nvdisp_cmd_state_ctrl_general_act_req_enable_f();
+
 	mutex_lock(&dc->lock);
 	if (!dc->enabled) {
 		mutex_unlock(&dc->lock);
@@ -1582,9 +1586,56 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 
 	_tegra_nvdisp_update_cmu(dc, cmu);
 	tegra_nvdisp_set_color_control(dc);
-	tegra_dc_writel(dc,
-			nvdisp_cmd_state_ctrl_general_act_req_enable_f(),
-			nvdisp_cmd_state_ctrl_r());
+
+	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
+
+		BUG_ON(!win);
+
+		if (!WIN_IS_ENABLED(win))
+			continue;
+		mask = win_win_set_params_degamma_range_mask_f();
+		reg_val = nvdisp_win_read(win, win_win_set_params_r());
+		reg_val &= ~mask;
+
+		if (dc->cmu_enabled) {
+			/* enable degamma */
+			reg_val |= tegra_nvdisp_get_degamma_config(dc, win);
+			nvdisp_win_write(win, reg_val, win_win_set_params_r());
+
+			/* enable csc if csc_enable is true */
+			if (win->csc.csc_enable)
+				tegra_nvdisp_set_csc(win, &win->csc);
+		} else {
+			/* disable degamma */
+			nvdisp_win_write(win, reg_val, win_win_set_params_r());
+
+			/* disable csc */
+			if (win->csc.csc_enable) {
+				reg_val =
+					win_window_set_control_csc_disable_f();
+				nvdisp_win_write(win, reg_val,
+					win_window_set_control_r());
+			}
+		}
+
+		act_req_mask |=
+			nvdisp_cmd_state_ctrl_a_act_req_enable_f()
+			<< win->idx;
+	}
+
+	tegra_dc_writel(dc, act_req_mask, nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r());
+
+	if (dc->out->flags & TEGRA_DC_OUT_CONTINUOUS_MODE) {
+		/* wait for ACT_REQ to complete or time out */
+		if (tegra_dc_poll_register(dc, nvdisp_cmd_state_ctrl_r(),
+					   act_req_mask, 0, 1,
+					   NVDISP_TEGRA_POLL_TIMEOUT_MS))
+			dev_err(&dc->ndev->dev,
+				"dc timeout waiting to clear ACT_REQ, mask:0x%x\n",
+				act_req_mask);
+	}
 
 	tegra_dc_put(dc);
 	mutex_unlock(&dc->lock);

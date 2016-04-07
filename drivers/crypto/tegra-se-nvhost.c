@@ -218,6 +218,10 @@ static struct tegra_se_slot srk_slot = {
 	.available = false,
 };
 
+static struct tegra_se_slot pre_allocated_slot = {
+	.slot_num = 0,
+	.available = false,
+};
 static LIST_HEAD(key_slot);
 static LIST_HEAD(rsa_key_slot);
 static DEFINE_SPINLOCK(rsa_key_slot_lock);
@@ -285,7 +289,8 @@ static struct tegra_se_slot *tegra_se_alloc_key_slot(void)
 
 	spin_lock(&key_slot_lock);
 	list_for_each_entry(slot, &key_slot, node) {
-		if (slot->available) {
+		if (slot->available &&
+			(slot->slot_num != pre_allocated_slot.slot_num)) {
 			slot->available = false;
 			found = true;
 			break;
@@ -1356,9 +1361,9 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 	}
 	ctx->se_dev = se_dev;
 
-	if ((keylen != TEGRA_SE_KEY_128_SIZE) &&
-		(keylen != TEGRA_SE_KEY_192_SIZE) &&
-		(keylen != TEGRA_SE_KEY_256_SIZE)) {
+	if (((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_128_SIZE) &&
+		((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_192_SIZE) &&
+		((keylen & SE_KEY_LEN_MASK) != TEGRA_SE_KEY_256_SIZE)) {
 		dev_err(se_dev->dev, "invalid key size");
 		return -EINVAL;
 	}
@@ -1376,15 +1381,25 @@ static int tegra_se_aes_setkey(struct crypto_ablkcipher *tfm,
 			ctx->slot = pslot;
 		}
 		ctx->keylen = keylen;
+	} else if ((keylen >> SE_MAGIC_PATTERN_OFFSET) == SE_MAGIC_PATTERN) {
+		ctx->slot = &pre_allocated_slot;
+		spin_lock(&key_slot_lock);
+		pre_allocated_slot.slot_num =
+			((keylen & SE_SLOT_NUM_MASK) >> SE_SLOT_POSITION);
+		spin_unlock(&key_slot_lock);
+		ctx->keylen = (keylen & SE_KEY_LEN_MASK);
+		goto out;
 	} else {
 		tegra_se_free_key_slot(ctx->slot);
 		ctx->slot = &ssk_slot;
 		ctx->keylen = AES_KEYSIZE_128;
+		goto out;
 	}
 	/* load the key */
 	ret = tegra_se_send_key_data(se_dev, pdata, keylen,
 			ctx->slot->slot_num, SE_KEY_TABLE_TYPE_KEY,
 			SE2_AES1_CONFIG_REG_OFFSET, cpuvaddr, iova);
+out:
 	mutex_unlock(&se_dev->mtx);
 	return 0;
 }

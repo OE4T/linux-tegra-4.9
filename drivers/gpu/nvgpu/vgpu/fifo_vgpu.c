@@ -233,6 +233,7 @@ clean_up:
 static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct resource *r = platform_get_resource(g->dev, IORESOURCE_MEM, 0);
 	struct fifo_gk20a *f = &g->fifo;
 	struct device *d = dev_from_gk20a(g);
 	int chid, err = 0;
@@ -269,6 +270,11 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 		dev_err(d, "gmmu mapping failed\n");
 		goto clean_up;
 	}
+
+	/* if reduced BAR1 range is specified, use offset of 0
+	   (server returns offset assuming full BAR1 range) */
+	if (resource_size(r) == (resource_size_t)f->userd.size)
+		f->userd.gpu_va = 0;
 
 	gk20a_dbg(gpu_dbg_map, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 

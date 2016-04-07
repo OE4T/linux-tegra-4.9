@@ -33,6 +33,10 @@ ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../kernel-nvhost-t18x/drivers/video/tegra/host/
 endif
 
+ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../kernel-nvhost-t19x/drivers/video/tegra/host/
+endif
+
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += vhost/

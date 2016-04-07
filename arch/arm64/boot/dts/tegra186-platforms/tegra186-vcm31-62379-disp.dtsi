@@ -303,16 +303,5 @@
 		status = "okay";
 	};
 
-	backlight {
-		pwms = <&tegra_pwm1 0 40161>;
-		panel-s-wuxga-8-0-bl {
-			pwms = <&tegra_pwm1 0 40161>;
-		};
-		panel-s-wqxga-10-1-bl {
-			pwms = <&tegra_pwm1 0 40161>;
-		};
-	};
-	tegra_pwm1: pwm@3280000 {
-		status = "okay";
-	};
+	/delete-node/ backlight;
 };

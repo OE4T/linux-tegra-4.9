@@ -21,13 +21,12 @@
 		active_rru = <40 2 1 1 1 1 1 1 1 1>;
 		active_rrd = <40 2 1 1 1 1 1 1 1 1>;
 		state_cap_lookup = <2 2 2 2 3 3 3 4 4 4>;
-		/* WAR: 12V fan spec is 37KHz, but use 15KHz */
-		/* PWM freq = 1/ pwm_period = 15KHz*/
-		pwm_period = <66500>; /* nanoseconds */
+		/* PWM freq = 1/ pwm_period = 37KHz*/
+		pwm_period = <27027>; /* nanoseconds */
 		pwm_id = <0>;
 		step_time = <100>; /* milliseconds */
-		state_cap = <2>; /* Cap pwm max to 256 = active_pwm[2] */
-		active_pwm_max = <256>;
+		state_cap = <4>; /* Cap pwm max to 204 = active_pwm[4] */
+		active_pwm_max = <255>;
 		/* Not use Tachometer pin */
 		/* tach_gpio =  <TEGRA_GPIO(FF, 2)>; */
 		pwm_gpio = <TEGRA_GPIO(V, 6)>; /* TEGRA_GPIO_PV6 */
@@ -37,10 +36,8 @@
 	pwm-fan {
 		compatible = "pwm-fan";
 		shared_data = <&pwm_fan_shared_data>;
-		/* WAR: 12V fan PWM wave is not square.
-		 * Use duty 86% to set 60% speed of max */
-		/* Duty = <86 100 ... */
-		active_pwm = <220 256 256 256 256 256 256 256 256 256>;
+		/* duty =    <0 30  45  60  80 100 100 100 100 100>; */
+		active_pwm = <0 77 115 153 204 255 255 255 255 255>;
 		status = "okay";
 	};
 };

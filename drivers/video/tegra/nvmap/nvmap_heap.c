@@ -118,7 +118,7 @@ static phys_addr_t nvmap_alloc_mem(struct nvmap_heap *h, size_t len,
 	if (start && h->is_ivm) {
 		void *ret;
 		pa = h->base + (*start);
-		ret = dma_mark_declared_memory_occupied(dev, pa, len);
+		ret = dma_mark_declared_memory_occupied(dev, pa, len, &attrs);
 		if (IS_ERR(ret)) {
 			dev_err(dev, "Failed to reserve (%pa) len(%zu)\n",
 					&pa, len);
@@ -146,14 +146,14 @@ static void nvmap_free_mem(struct nvmap_heap *h, phys_addr_t base,
 	struct device *dev = h->dma_dev;
 	DEFINE_DMA_ATTRS(attrs);
 
+	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
 	dev_dbg(dev, "Free base (%pa) size (%zu)\n", &base, len);
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 	if (h->is_ivm && !h->can_alloc) {
-		dma_mark_declared_memory_unoccupied(dev, base, len);
+		dma_mark_declared_memory_unoccupied(dev, base, len, &attrs);
 	} else
 #endif
 	{
-		dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
 		dma_free_attrs(dev, len,
 				(void *)(uintptr_t)base,
 				(dma_addr_t)base, &attrs);

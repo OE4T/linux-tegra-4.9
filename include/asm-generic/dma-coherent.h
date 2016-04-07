@@ -36,12 +36,6 @@ int dma_declare_coherent_memory(struct device *dev, phys_addr_t phys_addr,
 
 void dma_release_declared_memory(struct device *dev);
 
-void *dma_mark_declared_memory_occupied(struct device *dev,
-					dma_addr_t device_addr, size_t size);
-
-void dma_mark_declared_memory_unoccupied(struct device *dev,
-					 dma_addr_t device_addr, size_t size);
-
 #else
 #define dma_alloc_from_coherent_attr(dev, size, handle, ret, attr) (0)
 #define dma_release_from_coherent_attr(dev, size, vaddr, attr) (0)

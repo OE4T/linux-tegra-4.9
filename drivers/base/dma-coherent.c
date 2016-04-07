@@ -904,37 +904,63 @@ void dma_release_declared_memory(struct device *dev)
 EXPORT_SYMBOL(dma_release_declared_memory);
 
 void *dma_mark_declared_memory_occupied(struct device *dev,
-					dma_addr_t device_addr, size_t size)
+					dma_addr_t device_addr, size_t size,
+					unsigned long attrs)
 {
 	struct dma_coherent_mem *mem = dev->dma_mem;
-	int pos, err;
+	int order = get_order(size);
+	int pos, freepage;
+	unsigned int count;
+	unsigned long align;
 
 	size += device_addr & ~PAGE_MASK;
 
 	if (!mem)
 		return ERR_PTR(-EINVAL);
 
+	if (order > DMA_BUF_ALIGNMENT)
+		align = (1 << DMA_BUF_ALIGNMENT) - 1;
+	else
+		align = (1 << order) - 1;
+
+	if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
+		count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+	else
+		count = 1 << order;
+
 	pos = (device_addr - mem->device_base) >> PAGE_SHIFT;
-	err = bitmap_allocate_region(mem->bitmap, pos, get_order(size));
-	if (err != 0)
-		return ERR_PTR(err);
+
+	freepage = bitmap_find_next_zero_area(mem->bitmap, mem->size,
+			pos, count, align);
+
+	if (pos >= mem->size || freepage != pos)
+		return ERR_PTR(-EBUSY);
+
+	bitmap_set(mem->bitmap, pos, count);
+
 	return mem->virt_base + (pos << PAGE_SHIFT);
 }
 EXPORT_SYMBOL(dma_mark_declared_memory_occupied);
 
 void dma_mark_declared_memory_unoccupied(struct device *dev,
-					 dma_addr_t device_addr, size_t size)
+					 dma_addr_t device_addr, size_t size,
+					 unsigned long attrs)
 {
 	struct dma_coherent_mem *mem = dev->dma_mem;
 	int pos;
+	int count;
 
 	if (!mem)
 		return;
 
 	size += device_addr & ~PAGE_MASK;
 
+	if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
+		count = PAGE_ALIGN(size) >> PAGE_SHIFT;
+	else
+		count = 1 << get_order(size);
 	pos = (device_addr - mem->device_base) >> PAGE_SHIFT;
-	bitmap_release_region(mem->bitmap, pos, get_order(size));
+	bitmap_clear(mem->bitmap, pos, count);
 }
 EXPORT_SYMBOL(dma_mark_declared_memory_unoccupied);
 

@@ -396,7 +396,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	struct v4l2_control hdr_control;
 	const struct camera_common_frmfmt *frmfmt = s_data->frmfmt;
 	int hdr_en;
-	int err;
+	int err = 0;
 	int i;
 
 	dev_dbg(&client->dev, "%s: size %i x %i\n", __func__,
@@ -428,25 +428,31 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		}
 	}
 
-	if (i == s_data->numfmts)
+	if (i == s_data->numfmts) {
+		mf->width = s_data->fmt_width;
+		mf->height = s_data->fmt_height;
 		dev_dbg(&client->dev,
 			"%s: invalid resolution supplied to set mode %d %d\n",
 			__func__, mf->width, mf->height);
+	}
 
 	if (mf->code != MEDIA_BUS_FMT_SRGGB8_1X8 &&
-		mf->code != MEDIA_BUS_FMT_SRGGB10_1X10)
+		mf->code != MEDIA_BUS_FMT_SRGGB10_1X10) {
 		mf->code = MEDIA_BUS_FMT_SRGGB10_1X10;
+		err = -EINVAL;
+	}
 
 	mf->field = V4L2_FIELD_NONE;
 	mf->colorspace = V4L2_COLORSPACE_SRGB;
 
-	return 0;
+	return err;
 }
 
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(client);
+	int ret;
 
 	dev_dbg(&client->dev, "%s(%u) size %i x %i\n", __func__,
 			mf->code, mf->width, mf->height);
@@ -455,11 +461,11 @@ int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	if (!camera_common_find_datafmt(mf->code))
 		return -EINVAL;
 
-	camera_common_try_fmt(sd, mf);
+	ret = camera_common_try_fmt(sd, mf);
 
 	s_data->colorfmt = camera_common_find_datafmt(mf->code);
 
-	return 0;
+	return ret;
 }
 
 int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)

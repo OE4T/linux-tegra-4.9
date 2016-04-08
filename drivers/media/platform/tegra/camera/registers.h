@@ -159,6 +159,7 @@
 #define TEGRA_CSI_PATTERN_GENERATOR_CTRL		0x000
 #define PG_MODE_OFFSET					2
 #define PG_ENABLE					0x1
+#define PG_DISABLE					0x0
 
 #define TEGRA_CSI_PG_BLANK				0x004
 #define TEGRA_CSI_PG_PHASE				0x008

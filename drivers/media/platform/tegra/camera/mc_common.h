@@ -130,7 +130,8 @@ struct tegra_channel {
 	spinlock_t start_lock;
 	struct list_head done;
 	spinlock_t done_lock;
-	spinlock_t hdmiin_lock;
+	struct completion capture_comp;
+	struct completion done_comp;
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int align;
@@ -152,7 +153,7 @@ struct tegra_channel {
 	atomic_t power_on_refcnt;
 	struct v4l2_fh *fh;
 	bool bypass;
-	bool is_hdmiin_unplug;
+	atomic_t is_hdmiin_unplug;
 };
 
 #define to_tegra_channel(vdev) \

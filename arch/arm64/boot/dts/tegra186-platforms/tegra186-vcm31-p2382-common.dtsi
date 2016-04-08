@@ -738,6 +738,7 @@
 			gpios = <&tmpm32xi2c_61 TMPM32X_GPIO(K, 1) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
+			debounce-interval = <0>;
 		};
 	};
 };

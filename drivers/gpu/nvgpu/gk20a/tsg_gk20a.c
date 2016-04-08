@@ -325,6 +325,26 @@ static int gk20a_tsg_event_id_ctrl(struct gk20a *g, struct tsg_gk20a *tsg,
 	return err;
 }
 
+static int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
+{
+	struct gk20a *g = tsg->g;
+	int ret;
+
+	switch (level) {
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_LOW:
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_MEDIUM:
+	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
+		ret = g->ops.fifo.set_runlist_interleave(g, tsg->tsgid,
+							true, 0, level);
+		break;
+	default:
+		ret = -EINVAL;
+		break;
+	}
+
+	return ret ? ret : g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+}
+
 static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
 {
 	mutex_lock(&f->tsg_inuse_mutex);
@@ -517,6 +537,20 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		{
 		err = gk20a_tsg_event_id_ctrl(g, tsg,
 			(struct nvgpu_event_id_ctrl_args *)buf);
+		break;
+		}
+
+	case NVGPU_IOCTL_TSG_SET_RUNLIST_INTERLEAVE:
+		{
+		err = gk20a_busy(g->dev);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
+			return err;
+		}
+		err = gk20a_tsg_set_runlist_interleave(tsg,
+			((struct nvgpu_runlist_interleave_args *)buf)->level);
+		gk20a_idle(g->dev);
 		break;
 		}
 

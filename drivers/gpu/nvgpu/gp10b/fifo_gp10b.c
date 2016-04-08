@@ -53,6 +53,7 @@ static int channel_gp10b_commit_userd(struct channel_gk20a *c)
 	u32 addr_lo;
 	u32 addr_hi;
 	void *inst_ptr;
+	struct gk20a *g = c->g;
 
 	gk20a_dbg_fn("");
 
@@ -67,12 +68,13 @@ static int channel_gp10b_commit_userd(struct channel_gk20a *c)
 		c->hw_chid, (u64)c->userd_iova);
 
 	gk20a_mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_w(),
-		 pbdma_userd_target_vid_mem_f() |
-		 pbdma_userd_addr_f(addr_lo));
+		       (g->mm.vidmem_is_vidmem ?
+			pbdma_userd_target_sys_mem_ncoh_f() :
+			pbdma_userd_target_vid_mem_f()) |
+		       pbdma_userd_addr_f(addr_lo));
 
 	gk20a_mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_hi_w(),
-		 pbdma_userd_target_vid_mem_f() |
-		 pbdma_userd_hi_addr_f(addr_hi));
+		       pbdma_userd_hi_addr_f(addr_hi));
 
 	return 0;
 }

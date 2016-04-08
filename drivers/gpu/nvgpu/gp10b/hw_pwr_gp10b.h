@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -541,6 +541,10 @@ static inline u32 pwr_pmu_new_instblk_target_fb_f(void)
 static inline u32 pwr_pmu_new_instblk_target_sys_coh_f(void)
 {
 	return 0x20000000;
+}
+static inline u32 pwr_pmu_new_instblk_target_sys_ncoh_f(void)
+{
+	return 0x30000000;
 }
 static inline u32 pwr_pmu_new_instblk_valid_f(u32 v)
 {

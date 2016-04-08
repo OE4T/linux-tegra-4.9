@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,6 +65,14 @@ static inline u32 ccsr_channel_inst_ptr_f(u32 v)
 static inline u32 ccsr_channel_inst_target_vid_mem_f(void)
 {
 	return 0x0;
+}
+static inline u32 ccsr_channel_inst_target_sys_mem_coh_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 ccsr_channel_inst_target_sys_mem_ncoh_f(void)
+{
+	return 0x30000000;
 }
 static inline u32 ccsr_channel_inst_bind_false_f(void)
 {

@@ -1,6 +1,6 @@
 GCOV_PROFILE := y
 ccflags-y += -I../kernel-nvhost/drivers/video/tegra/host
-ccflags-y += -Idrivers/video/tegra/dc
+ccflags-y += -I../kernel-display/drivers/video/tegra/dc
 ccflags-y += -Werror
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)

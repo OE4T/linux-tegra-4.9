@@ -32,7 +32,6 @@
 #include "hw_pbdma_gk20a.h"
 
 unsigned int gk20a_debug_trace_cmdbuf;
-static struct device *gk20a_device;
 
 struct ch_state {
 	int pid;
@@ -336,12 +335,13 @@ void gk20a_debug_dump_device(void *data)
 		.fn = gk20a_debug_write_printk
 	};
 	struct gk20a *g;
+	struct device *dev = data;
 
 	/* In pre-silicon we don't need full spew on stuck syncpoint */
 	if (!tegra_platform_is_silicon())
 		return;
 
-	g = gk20a_from_dev(gk20a_device);
+	g = gk20a_from_dev(dev);
 	/* HAL only initialized after 1st power-on */
 	if (g->ops.debug.show_dump)
 		g->ops.debug.show_dump(g, &o);
@@ -396,10 +396,6 @@ void gk20a_init_debug_ops(struct gpu_ops *gops)
 void gk20a_debug_init(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-
-	/* Store the first device */
-	if (!gk20a_device)
-		gk20a_device = dev;
 
 	platform->debugfs = debugfs_create_dir(dev_name(dev), NULL);
 	if (platform->debugfs) {

@@ -653,13 +653,10 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 		if (err)
 			return err;
 
-		camera_common_dpd_disable(s_data);
-
 		err = call_s_op(s_data, power_on);
 		if (err) {
 			dev_err(s_data->dev,
 				"%s: error power on\n", __func__);
-			camera_common_dpd_enable(s_data);
 			camera_common_mclk_disable(s_data);
 		}
 	} else {

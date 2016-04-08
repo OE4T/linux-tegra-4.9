@@ -78,24 +78,6 @@ int nvhost_vi_finalize_poweron(struct platform_device *dev)
 		host1x_writel(dev, T12_VI_CFG_CG_CTRL, T12_CG_2ND_LEVEL_EN);
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_21x_SOC
-	{
-		void __iomem *reset_reg[3];
-		struct nvhost_device_data *pdata = dev->dev.platform_data;
-
-		reset_reg[0] = pdata->aperture[0] +
-			       T21_CSI_CILA_PAD_CONFIG0;
-		reset_reg[1] = pdata->aperture[0] +
-			       T21_CSI1_CILA_PAD_CONFIG0;
-		reset_reg[2] = pdata->aperture[0] +
-			       T21_CSI2_CILA_PAD_CONFIG0;
-
-		writel(readl(reset_reg[0]) & 0xfffcffff, reset_reg[0]);
-		writel(readl(reset_reg[1]) & 0xfffcffff, reset_reg[1]);
-		writel(readl(reset_reg[2]) & 0xfffcffff, reset_reg[2]);
-	}
-#endif
-
 	ret = vi_enable_irq(tegra_vi);
 	if (ret)
 		dev_err(&tegra_vi->ndev->dev, "%s: vi_enable_irq failed\n",

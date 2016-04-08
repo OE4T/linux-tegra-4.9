@@ -1,7 +1,7 @@
 /*
  * GP10B MMU
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -32,7 +32,7 @@ static int gp10b_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct mem_desc *inst_block = &mm->bar1.inst_block;
-	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
+	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -97,7 +97,7 @@ static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct mem_desc *inst_block = &mm->bar2.inst_block;
-	phys_addr_t inst_pa = gk20a_mem_phys(inst_block);
+	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
 
 	gk20a_dbg_fn("");
 
@@ -146,6 +146,17 @@ static u32 *pde3_from_index(struct gk20a_mm_entry *entry, u32 i)
 	return (u32 *) (((u8 *)entry->cpu_va) + i*gmmu_new_pde__size_v());
 }
 
+static u64 entry_addr(struct gk20a *g, struct gk20a_mm_entry *entry)
+{
+	u64 addr;
+	if (g->mm.has_physical_mode)
+		addr = sg_phys(entry->sgt->sgl);
+	else
+		addr = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0);
+
+	return addr;
+}
+
 static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 			   struct gk20a_mm_entry *parent,
 			   u32 i, u32 gmmu_pgsz_idx,
@@ -156,6 +167,7 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, bool priv)
 {
+	struct gk20a *g = gk20a_from_vm(vm);
 	u64 pte_addr = 0;
 	u64 pde_addr = 0;
 	struct gk20a_mm_entry *pte = parent->entries + i;
@@ -164,8 +176,8 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 
 	gk20a_dbg_fn("");
 
-	pte_addr = sg_phys(pte->sgt->sgl) >> gmmu_new_pde_address_shift_v();
-	pde_addr = sg_phys(parent->sgt->sgl);
+	pte_addr = entry_addr(g, pte) >> gmmu_new_pde_address_shift_v();
+	pde_addr = entry_addr(g, parent);
 
 	pde_v[0] |= gmmu_new_pde_aperture_video_memory_f();
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
@@ -197,6 +209,7 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 			   bool cacheable, bool unmapped_pte,
 			   int rw_flag, bool sparse, bool priv)
 {
+	struct gk20a *g = gk20a_from_vm(vm);
 	bool small_valid, big_valid;
 	u32 pte_addr_small = 0, pte_addr_big = 0;
 	struct gk20a_mm_entry *entry = pte->entries + i;
@@ -208,12 +221,13 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	small_valid = entry->size && entry->pgsz == gmmu_page_size_small;
 	big_valid = entry->size && entry->pgsz == gmmu_page_size_big;
 
-	if (small_valid)
-		pte_addr_small = sg_phys(entry->sgt->sgl)
+	if (small_valid) {
+		pte_addr_small = entry_addr(g, entry)
 				 >> gmmu_new_dual_pde_address_shift_v();
+	}
 
 	if (big_valid)
-		pte_addr_big = sg_phys(entry->sgt->sgl)
+		pte_addr_big = entry_addr(g, entry)
 			       >> gmmu_new_dual_pde_address_big_shift_v();
 
 	if (small_valid) {

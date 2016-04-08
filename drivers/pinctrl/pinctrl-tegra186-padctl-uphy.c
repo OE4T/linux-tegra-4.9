@@ -4819,7 +4819,7 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 			(uphy->usb3_ports[i].port_cap == HOST_ONLY))
 			continue; /* no mailbox support */
 
-		phy = devm_phy_create(uphy->dev, NULL, &usb3_phy_ops, NULL);
+		phy = devm_phy_create(uphy->dev, NULL, &usb3_phy_ops);
 		if (IS_ERR(phy))
 			return PTR_ERR(phy);
 
@@ -4846,7 +4846,7 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 			uphy->vbus[i] = NULL;
 		}
 
-		phy = devm_phy_create(uphy->dev, NULL, &utmi_phy_ops, NULL);
+		phy = devm_phy_create(uphy->dev, NULL, &utmi_phy_ops);
 		if (IS_ERR(phy))
 			return PTR_ERR(phy);
 
@@ -4862,7 +4862,7 @@ static int tegra_xusb_setup_usb(struct tegra_padctl_uphy *uphy)
 		return PTR_ERR(uphy->vddio_hsic);
 
 	for (i = 0; i < TEGRA_HSIC_PHYS; i++) {
-		phy = devm_phy_create(uphy->dev, NULL, &hsic_phy_ops, NULL);
+		phy = devm_phy_create(uphy->dev, NULL, &hsic_phy_ops);
 		if (IS_ERR(phy))
 			return PTR_ERR(phy);
 
@@ -5221,7 +5221,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	}
 
 	for (i = 0; i < TEGRA_PCIE_PHYS; i++) {
-		phy = devm_phy_create(dev, NULL, &pcie_phy_ops, NULL);
+		phy = devm_phy_create(dev, NULL, &pcie_phy_ops);
 		if (IS_ERR(phy)) {
 			err = PTR_ERR(phy);
 			goto uphy_pll_deinit;
@@ -5231,7 +5231,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	}
 
 	if (uphy->sata_lanes) {
-		phy = devm_phy_create(dev, NULL, &sata_phy_ops, NULL);
+		phy = devm_phy_create(dev, NULL, &sata_phy_ops);
 		if (IS_ERR(phy)) {
 			err = PTR_ERR(phy);
 			goto uphy_pll_deinit;
@@ -5241,7 +5241,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	}
 
 	if (uphy->ufs_lanes) {
-		phy = devm_phy_create(dev, NULL, &ufs_phy_ops, NULL);
+		phy = devm_phy_create(dev, NULL, &ufs_phy_ops);
 		if (IS_ERR(phy)) {
 			err = PTR_ERR(phy);
 			goto uphy_pll_deinit;

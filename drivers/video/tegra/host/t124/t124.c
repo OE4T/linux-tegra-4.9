@@ -33,7 +33,9 @@
 #include "syncpt_t124.h"
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
+#if defined(CONFIG_VIDEO_TEGRA_VI)
 #include "vi.h"
+#endif
 #include "isp/isp.h"
 #include "isp/isp_isr_v1.h"
 #include "scale_emc.h"
@@ -248,6 +250,7 @@ static struct platform_device tegra_vi01_device = {
 
 #endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 static struct resource msenc_resources[] = {
 	{
 		.name = "regs",
@@ -290,7 +293,9 @@ static struct platform_device tegra_msenc03_device = {
 		.platform_data = &t124_msenc_info,
 	},
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 static struct resource tsec_resources[] = {
 	{
 		.name = "regs",
@@ -331,6 +336,7 @@ static struct platform_device tegra_tsec01_device = {
 		.platform_data = &t124_tsec_info,
 	},
 };
+#endif
 
 #ifdef CONFIG_ARCH_TEGRA_VIC
 static struct resource vic03_resources[] = {
@@ -395,6 +401,7 @@ static struct platform_device tegra_vic03_device = {
  * T132 overrides for platform data.
  */
 
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 static struct nvhost_device_data t132_msenc_info = {
 	.num_channels	= 1,
 	.devfs_name     = "msenc",
@@ -414,12 +421,15 @@ static struct nvhost_device_data t132_msenc_info = {
 	.resource_policy = RESOURCE_PER_CHANNEL_INSTANCE,
 	.serialize	= true,
 };
+#endif
 
 static struct {
 	struct nvhost_device_data *from;
 	struct nvhost_device_data *to;
 } t132_override[] = {
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{&t124_msenc_info, &t132_msenc_info},
+#endif
 };
 
 static struct platform_device *t124_devices[] = {
@@ -430,8 +440,12 @@ static struct platform_device *t124_devices[] = {
 #if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 	&tegra_vi01_device,
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	&tegra_msenc03_device,
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 	&tegra_tsec01_device,
+#endif
 #ifdef CONFIG_ARCH_TEGRA_VIC
 	&tegra_vic03_device,
 #endif

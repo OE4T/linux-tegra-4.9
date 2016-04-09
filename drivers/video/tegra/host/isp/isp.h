@@ -19,7 +19,10 @@
 #ifndef __NVHOST_ISP_H__
 #define __NVHOST_ISP_H__
 
+#if defined(CONFIG_TEGRA_CAMERA)
 #include "camera_priv_defs.h"
+#endif
+#include <linux/platform/tegra/isomgr.h>
 
 typedef void (*callback)(void *);
 

@@ -24,7 +24,6 @@
 #include <linux/slab.h>
 #include <linux/clk.h>
 #include <linux/clk/tegra.h>
-#include <linux/platform_data/tegra_edp.h>
 #include <linux/tegra-soc.h>
 #include <linux/pm_qos.h>
 #include <trace/events/nvhost.h>
@@ -244,7 +243,9 @@ static void nvhost_scale_notify(struct platform_device *pdev, bool busy)
 
 	mutex_lock(&devfreq->lock);
 	profile->dev_stat.busy = busy;
+#if defined(CONFIG_PM_DEVFREQ)
 	update_devfreq(devfreq);
+#endif
 	mutex_unlock(&devfreq->lock);
 }
 

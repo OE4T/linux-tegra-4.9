@@ -24,6 +24,8 @@
 #include <linux/of_platform.h>
 #include <linux/irq.h>
 #include <linux/workqueue.h>
+#include <linux/slab.h>
+#include <linux/module.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-fuse.h>
 

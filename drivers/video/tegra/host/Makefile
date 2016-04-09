@@ -22,9 +22,9 @@ nvhost-objs = \
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost.o
 obj-$(CONFIG_TEGRA_GRHOST) += host1x/
-obj-$(CONFIG_TEGRA_GRHOST) += tsec/
-obj-$(CONFIG_TEGRA_GRHOST) += nvdec/
-obj-$(CONFIG_TEGRA_GRHOST) += isp/
+obj-$(CONFIG_TEGRA_GRHOST_TSEC) += tsec/
+obj-$(CONFIG_TEGRA_GRHOST_NVDEC) += nvdec/
+obj-$(CONFIG_TEGRA_GRHOST_ISP) += isp/
 obj-$(CONFIG_TEGRA_GRHOST) += t124/
 obj-$(CONFIG_TEGRA_GRHOST) += flcn/
 obj-$(CONFIG_TEGRA_GRHOST) += t210/

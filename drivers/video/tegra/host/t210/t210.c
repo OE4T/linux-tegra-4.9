@@ -36,7 +36,9 @@
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #include "tsec/tsec.h"
+#if defined(CONFIG_VIDEO_TEGRA_VI)
 #include "vi.h"
+#endif
 #include "isp/isp.h"
 #include "isp/isp_isr_v1.h"
 
@@ -158,6 +160,7 @@ struct nvhost_device_data t21_vi_info = {
 EXPORT_SYMBOL(t21_vi_info);
 #endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 struct nvhost_device_data t21_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(5, 0),
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
@@ -187,7 +190,9 @@ struct nvhost_device_data t21_msenc_info = {
 	.serialize		= true,
 	.bond_out_id		= BOND_OUT_NVENC
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 struct nvhost_device_data t21_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(2, 0),
 	.class			= NV_NVDEC_CLASS_ID,
@@ -218,7 +223,9 @@ struct nvhost_device_data t21_nvdec_info = {
 	.serialize		= true,
 	.bond_out_id		= BOND_OUT_NVDEC,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 struct nvhost_device_data t21_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 0),
 	.class			= NV_NVJPG_CLASS_ID,
@@ -248,7 +255,10 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.serialize		= true,
 	.firmware_name		= "nvhost_nvjpg010.fw",
 };
+#endif
 
+
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 struct nvhost_device_data t21_tsec_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NVMODMUTEX_TSECA},
@@ -297,8 +307,9 @@ struct nvhost_device_data t21_tsecb_info = {
 	.serialize		= true,
 	.bond_out_id		= BOND_OUT_TSEC,
 };
-#ifdef CONFIG_ARCH_TEGRA_VIC
+#endif
 
+#ifdef CONFIG_ARCH_TEGRA_VIC
 struct nvhost_device_data t21_vic_info = {
 	.num_channels		= 1,
 	.modulemutexes		= {NVMODMUTEX_VIC},

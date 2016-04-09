@@ -34,7 +34,6 @@
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-soc.h>
 #include <trace/events/nvhost.h>
-#include <linux/platform_data/tegra_edp.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/nvhost_ioctl.h>
 
@@ -686,8 +685,10 @@ int nvhost_module_init(struct platform_device *dev)
 	int i = 0, err = 0;
 	struct kobj_attribute *attr = NULL;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+#if defined(CONFIG_PM_GENERIC_DOMAINS)
 	struct device_node *dn;
 	struct generic_pm_domain *gpd;
+#endif
 
 	/* initialize clocks to known state (=enabled) */
 	pdata->num_clks = 0;
@@ -776,7 +777,7 @@ int nvhost_module_init(struct platform_device *dev)
 		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
 		pdata->can_powergate && !tegra_platform_is_linsim();
 
-
+#if defined(CONFIG_PM_GENERIC_DOMAINS)
 	gpd = dev_to_genpd(&dev->dev);
 	if (IS_ERR(gpd))
 		return PTR_ERR(gpd);
@@ -786,6 +787,7 @@ int nvhost_module_init(struct platform_device *dev)
 	/* Update partition-id from DT and for failure case assign -1 id */
 	if (of_property_read_u32(dn, "partition-id", &pdata->powergate_id))
 		pdata->powergate_id = -1;
+#endif
 
 	/* needed to WAR MBIST issue */
 	if (pdata->poweron_toggle_slcg) {

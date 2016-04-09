@@ -28,6 +28,7 @@
 #include <linux/tegra-powergate.h>
 #include <linux/tegra-soc.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/module.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -504,15 +505,19 @@ static struct of_device_id tegra_flcn_of_match[] = {
 	{ .compatible = "nvidia,tegra124-vic",
 		.data = (struct nvhost_device_data *)&t124_vic_info },
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra124-msenc",
 		.data = (struct nvhost_device_data *)&t124_msenc_info },
+#endif
 #ifdef CONFIG_ARCH_TEGRA_VIC
 	{ .compatible = "nvidia,tegra210-vic",
 		.data = (struct nvhost_device_data *)&t21_vic_info },
 #endif
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra210-nvenc",
 		.data = (struct nvhost_device_data *)&t21_msenc_info },
+#endif
 #endif
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
 	{ .compatible = "nvidia,tegra210-nvjpg",
@@ -521,14 +526,14 @@ static struct of_device_id tegra_flcn_of_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = "nvidia,tegra186-vic",
 		.data = (struct nvhost_device_data *)&t18_vic_info },
-#endif
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 	{ .compatible = "nvidia,tegra186-nvjpg",
 		.data = (struct nvhost_device_data *)&t18_nvjpg_info },
 #endif
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra186-nvenc",
 		.data = (struct nvhost_device_data *)&t18_msenc_info },
+#endif
 #endif
 	{ },
 };
@@ -621,25 +626,35 @@ static struct of_device_id tegra_flcn_domain_match[] = {
 	{.compatible = "nvidia,tegra132-vic03-pd",
 	.data = (struct nvhost_device_data *)&t124_vic_info},
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{.compatible = "nvidia,tegra132-msenc-pd",
 	.data = (struct nvhost_device_data *)&t124_msenc_info},
+#endif
 #ifdef CONFIG_ARCH_TEGRA_VIC
 	{.compatible = "nvidia,tegra210-vic03-pd",
 	 .data = (struct nvhost_device_data *)&t21_vic_info},
 #endif
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{.compatible = "nvidia,tegra210-msenc-pd",
 	 .data = (struct nvhost_device_data *)&t21_msenc_info},
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 	{.compatible = "nvidia,tegra210-nvjpg-pd",
 	 .data = (struct nvhost_device_data *)&t21_nvjpg_info},
+#endif
 #endif
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{.compatible = "nvidia,tegra186-vic03-pd",
 	 .data = (struct nvhost_device_data *)&t18_vic_info},
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{.compatible = "nvidia,tegra186-msenc-pd",
 	 .data = (struct nvhost_device_data *)&t18_msenc_info},
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 	{.compatible = "nvidia,tegra186-nvjpg-pd",
 	 .data = (struct nvhost_device_data *)&t18_nvjpg_info},
+#endif
 #endif
 	{},
 };

@@ -20,6 +20,7 @@
 #include <linux/of_device.h>
 #include <linux/of_platform.h>
 #include <linux/tegra-soc.h>
+#include <linux/module.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -57,29 +58,49 @@ static struct of_device_id tegra_client_of_match[] = {
 	{ .compatible = "nvidia,tegra210-vhost-isp",
 		.data = (struct nvhost_device_data *)&t21_isp_info },
 #endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra124-vhost-msenc",
 		.data = (struct nvhost_device_data *)&t124_msenc_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra210-vhost-nvenc",
 		.data = (struct nvhost_device_data *)&t21_msenc_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 	{ .compatible = "nvidia,tegra210-vhost-nvdec",
 		.data = (struct nvhost_device_data *)&t21_nvdec_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 	{ .compatible = "nvidia,tegra210-vhost-nvjpg",
 		.data = (struct nvhost_device_data *)&t21_nvjpg_info },
+#endif
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = "nvidia,tegra186-vhost-vic",
 		.data = (struct nvhost_device_data *)&t18_vic_info },
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 	{ .compatible = "nvidia,tegra186-vhost-vi",
 		.data = (struct nvhost_device_data *)&t18_vi_info },
+#endif
+#ifdef CONFIG_TEGRA_GRHOST_ISP
 	{ .compatible = "nvidia,tegra186-vhost-isp",
 		.data = (struct nvhost_device_data *)&t18_isp_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 	{ .compatible = "nvidia,tegra186-vhost-nvenc",
 		.data = (struct nvhost_device_data *)&t18_msenc_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 	{ .compatible = "nvidia,tegra186-vhost-nvdec",
 		.data = (struct nvhost_device_data *)&t18_nvdec_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 	{ .compatible = "nvidia,tegra186-vhost-nvjpg",
 		.data = (struct nvhost_device_data *)&t18_nvjpg_info },
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
 	{ .compatible = "nvidia,tegra186-vhost-nvcsi",
 		.data = (struct nvhost_device_data *)&t18_nvcsi_info },
+#endif
 #endif
 	{ },
 };

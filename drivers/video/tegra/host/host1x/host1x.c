@@ -19,6 +19,7 @@
  */
 
 #include <linux/slab.h>
+#include <linux/delay.h>
 #include <linux/fs.h>
 #include <linux/cdev.h>
 #include <linux/uaccess.h>

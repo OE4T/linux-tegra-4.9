@@ -22,6 +22,7 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 
 #include <linux/platform/tegra/tegra18_kfuse.h>
+#include <linux/platform/tegra/mc.h>
 
 #include "dev.h"
 #include "class_ids.h"
@@ -34,7 +35,9 @@
 #include "isp/isp.h"
 #include "isp/isp_isr_v2.h"
 #include "nvcsi/nvcsi.h"
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 #include "vi/vi4.h"
+#endif
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
 #include "host1x/host1x_actmon_t186.h"
@@ -67,6 +70,7 @@ static inline u32 flcn_thi_sec_ch_lock(void)
 	return (1 << 8);
 }
 
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 static int nvhost_tsec_t186_finalize_poweron(struct platform_device *dev)
 {
 	/* Disable access to non-THI registers through channel */
@@ -74,7 +78,10 @@ static int nvhost_tsec_t186_finalize_poweron(struct platform_device *dev)
 
 	return nvhost_tsec_finalize_poweron(dev);
 }
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVENC) || defined(CONFIG_TEGRA_GRHOST_NVJPG) \
+	    || defined(CONFIG_TEGRA_GRHOST_VIC)
 static int nvhost_flcn_t186_finalize_poweron(struct platform_device *dev)
 {
 	/* Disable access to non-THI registers through channel */
@@ -82,7 +89,9 @@ static int nvhost_flcn_t186_finalize_poweron(struct platform_device *dev)
 
 	return nvhost_flcn_finalize_poweron(dev);
 }
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 static int nvhost_nvdec_t186_finalize_poweron(struct platform_device *dev)
 {
 	int ret;
@@ -107,6 +116,7 @@ static int nvhost_nvdec_t186_prepare_poweroff(struct platform_device *dev)
 
 	return 0;
 }
+#endif
 
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T186_NVHOST_NUMCHANNELS,
@@ -245,6 +255,7 @@ struct nvhost_device_data t18_vi_info = {
 };
 #endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 struct nvhost_device_data t18_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),
 	.devfs_name		= "msenc",
@@ -275,7 +286,9 @@ struct nvhost_device_data t18_msenc_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
 	.isolate_contexts	= true,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 struct nvhost_device_data t18_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(3, 0),
 	.devfs_name		= "nvdec",
@@ -308,7 +321,9 @@ struct nvhost_device_data t18_nvdec_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
 	.isolate_contexts	= true,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 struct nvhost_device_data t18_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 1),
 	.devfs_name		= "nvjpg",
@@ -339,7 +354,9 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
 	.isolate_contexts	= true,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 struct nvhost_device_data t18_tsec_info = {
 	.num_channels		= 1,
 	.devfs_name		= "tsec",
@@ -402,7 +419,9 @@ struct nvhost_device_data t18_tsecb_info = {
 	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_VIC)
 struct nvhost_device_data t18_vic_info = {
 	.num_channels		= 1,
 	.devfs_name		= "vic",
@@ -442,7 +461,9 @@ struct nvhost_device_data t18_vic_info = {
 					400000000, 500000000, 600000000},
 	.isolate_contexts	= true,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
 struct nvhost_device_data t18_nvcsi_info = {
 	.num_channels		= 1,
 	.clocks			= {
@@ -463,6 +484,7 @@ struct nvhost_device_data t18_nvcsi_info = {
 	.serialize		= 1,
 	.push_work_done		= 1,
 };
+#endif
 
 #include "host1x/host1x_channel_t186.c"
 

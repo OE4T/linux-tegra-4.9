@@ -25,15 +25,31 @@
 extern struct nvhost_device_data t18_host1x_info;
 extern struct nvhost_device_data t18_host1x_hv_info;
 extern struct nvhost_device_data t18_host1xb_info;
+#if defined(CONFIG_TEGRA_GRHOST_VIC)
 extern struct nvhost_device_data t18_vic_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 extern struct nvhost_device_data t18_nvdec_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 extern struct nvhost_device_data t18_nvjpg_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 extern struct nvhost_device_data t18_msenc_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_ISP)
 extern struct nvhost_device_data t18_isp_info;
+#endif
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 extern struct nvhost_device_data t18_vi_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 extern struct nvhost_device_data t18_tsec_info;
 extern struct nvhost_device_data t18_tsecb_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVCSI)
 extern struct nvhost_device_data t18_nvcsi_info;
+#endif
 
 int nvhost_init_t186_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op);

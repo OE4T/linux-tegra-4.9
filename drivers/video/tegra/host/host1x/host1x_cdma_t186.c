@@ -18,6 +18,8 @@
 
 #include <linux/slab.h>
 #include <linux/scatterlist.h>
+#include <linux/delay.h>
+
 #include "nvhost_acm.h"
 #include "nvhost_cdma.h"
 #include "nvhost_channel.h"

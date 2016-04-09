@@ -170,7 +170,9 @@ static int nvcsi_probe(struct platform_device *dev)
 
 err_mediacontroller_init:
 err_client_device_init:
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 err_add_domain:
+#endif
 	nvhost_module_deinit(dev);
 err_module_init:
 err_get_resources:
@@ -205,11 +207,13 @@ static struct platform_driver nvcsi_driver = {
 	},
 };
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 static struct of_device_id tegra_nvcsi_domain_match[] = {
 	{.compatible = "nvidia,tegra186-ve-pd",
 	.data = (struct nvhost_device_data *)&t18_nvcsi_info},
 	{},
 };
+#endif
 
 static long nvcsi_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
@@ -280,9 +284,11 @@ static int __init nvcsi_init(void)
 {
 	int ret;
 
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 	ret = nvhost_domain_init(tegra_nvcsi_domain_match);
 	if (ret)
 		return ret;
+#endif
 
 	return platform_driver_register(&nvcsi_driver);
 }

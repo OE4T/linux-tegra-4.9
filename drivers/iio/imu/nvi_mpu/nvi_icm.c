@@ -483,7 +483,7 @@ static int inv_icm_st_gyr_do(struct nvi_state *st,
 	return 0;
 }
 
-static int inv_icm_st_gyr(struct nvi_state *st)
+static int inv_st_gyr_icm(struct nvi_state *st)
 {
 	int ret;
 	int gyr_bias_st[AXIS_N];
@@ -526,7 +526,7 @@ static int inv_icm_st_gyr(struct nvi_state *st)
 	return gyro_result;
 }
 
-static int inv_icm_st_acc(struct nvi_state *st)
+static int inv_st_acc_icm(struct nvi_state *st)
 {
 	int ret;
 	int acc_bias_st[AXIS_N];
@@ -581,7 +581,7 @@ static int nvi_pm_icm(struct nvi_state *st, u8 pm1, u8 pm2, u8 lp)
 	return ret;
 }
 
-static int nvi_en_gyr(struct nvi_state *st)
+static int nvi_en_gyr_icm(struct nvi_state *st)
 {
 	u8 val;
 	int i;
@@ -601,7 +601,7 @@ static int nvi_en_gyr(struct nvi_state *st)
 	return ret;
 }
 
-static int nvi_en_acc(struct nvi_state *st)
+static int nvi_en_acc_icm(struct nvi_state *st)
 {
 	u8 val;
 	int i;
@@ -622,7 +622,7 @@ static int nvi_en_acc(struct nvi_state *st)
 	return ret;
 }
 
-static int nvi_init(struct nvi_state *st)
+static int nvi_init_icm(struct nvi_state *st)
 {
 	u8 val;
 	s8 t;
@@ -630,6 +630,9 @@ static int nvi_init(struct nvi_state *st)
 	int ret;
 
 	st->snsr[DEV_ACC].cfg.thresh_hi = 0; /* no ACC LP on ICM */
+#if ICM_DMP_FW_VER == 1
+	st->snsr[DEV_SM].cfg.thresh_hi = ICM_SMD_TIMER_THLD_INIT;
+#endif /* ICM_DMP_FW_VER */
 	ret = nvi_i2c_rd(st, &st->hal->reg->tbc_pll, &val);
 	if (ret)
 		return ret;
@@ -644,10 +647,12 @@ static int nvi_init(struct nvi_state *st)
 	for (src = 0; src < st->hal->src_n; src++)
 		st->src[src].base_t /= ICM_BASE_SAMPLE_RATE;
 
+	nvi_en_gyr_icm(st);
+	nvi_en_acc_icm(st);
 	return 0;
 }
 
-static void nvi_por2rc(struct nvi_state *st)
+static void nvi_por2rc_icm(struct nvi_state *st)
 {
 	st->rc.lp_config = 0x40;
 	st->rc.pm1 = 0x41;
@@ -656,13 +661,13 @@ static void nvi_por2rc(struct nvi_state *st)
 }
 
 struct nvi_fn nvi_fn_icm = {
-	.por2rc				= nvi_por2rc,
+	.por2rc				= nvi_por2rc_icm,
 	.pm				= nvi_pm_icm,
-	.init				= nvi_init,
-	.st_acc				= inv_icm_st_acc,
-	.st_gyr				= inv_icm_st_gyr,
-	.en_acc				= nvi_en_acc,
-	.en_gyr				= nvi_en_gyr,
+	.init				= nvi_init_icm,
+	.st_acc				= inv_st_acc_icm,
+	.st_gyr				= inv_st_gyr_icm,
+	.en_acc				= nvi_en_acc_icm,
+	.en_gyr				= nvi_en_gyr_icm,
 };
 
 

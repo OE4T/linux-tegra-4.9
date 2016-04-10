@@ -1007,7 +1007,7 @@ static int nvi_pm_6500(struct nvi_state *st, u8 pm1, u8 pm2, u8 lp)
 	return ret;
 }
 
-static int nvi_en_acc(struct nvi_state *st)
+static int nvi_en_acc_mpu(struct nvi_state *st)
 {
 	u8 val;
 	int ret = 0;
@@ -1022,7 +1022,7 @@ static int nvi_en_acc(struct nvi_state *st)
 	return ret;
 }
 
-static int nvi_en_gyr(struct nvi_state *st)
+static int nvi_en_gyr_mpu(struct nvi_state *st)
 {
 	u8 val = st->snsr[DEV_GYR].usr_cfg << 3;
 
@@ -1037,8 +1037,8 @@ struct nvi_fn nvi_fn_6050 = {
 	.init				= inv_init_6050, /* INV crappy code */
 	.st_acc				= nvi_st_acc_6050,
 	.st_gyr				= nvi_st_gyr_6050,
-	.en_acc				= nvi_en_acc,
-	.en_gyr				= nvi_en_gyr,
+	.en_acc				= nvi_en_acc_mpu,
+	.en_gyr				= nvi_en_gyr_mpu,
 };
 
 struct nvi_fn nvi_fn_6500 = {
@@ -1046,8 +1046,8 @@ struct nvi_fn nvi_fn_6500 = {
 	.init				= nvi_init_6500,
 	.st_acc				= nvi_st_acc_6500,
 	.st_gyr				= nvi_st_gyr_6500,
-	.en_acc				= nvi_en_acc,
-	.en_gyr				= nvi_en_gyr,
+	.en_acc				= nvi_en_acc_mpu,
+	.en_gyr				= nvi_en_gyr_mpu,
 };
 
 

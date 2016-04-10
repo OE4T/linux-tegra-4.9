@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(322)
+#define NVI_DRIVER_VERSION		(323)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -1735,7 +1735,8 @@ static int nvi_aux_port_enable(struct nvi_state *st, int port, bool en)
 	ret = nvi_aux_port_en(st, port, en);
 	ret |= nvi_aux_enable(st, __func__, true, false);
 	nvi_period_aux(st);
-	ret |= nvi_en(st);
+	if (port != AUX_PORT_IO)
+		ret |= nvi_en(st);
 	return ret;
 }
 
@@ -1887,6 +1888,7 @@ static int nvi_aux_dev_valid(struct nvi_state *st,
 	st->aux.port[AUX_PORT_IO].period_us =
 			st->hal->src[st->hal->dev[DEV_AUX]->src].period_us_min;
 	ret = nvi_aux_port_enable(st, AUX_PORT_IO, true);
+	ret |= nvi_user_ctrl_en(st, __func__, false, false, true, false);
 	if (ret) {
 		nvi_aux_port_free(st, AUX_PORT_IO);
 		nvi_aux_bypass_release(st);
@@ -1912,7 +1914,7 @@ static int nvi_aux_dev_valid(struct nvi_state *st,
 	/* these will restore all previously disabled ports */
 	nvi_aux_bypass_release(st);
 	nvi_aux_port_free(st, AUX_PORT_IO);
-	if (i == AUX_DEV_VALID_READ_LOOP_MAX)
+	if (i >= AUX_DEV_VALID_READ_LOOP_MAX)
 		return -ENODEV;
 
 	if (val & 0x10) /* NACK */
@@ -3294,6 +3296,8 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 					     st->snsr[i].push_delay_ns);
 		}
 		if (st->en_msk & (1 << FW_LOADED))
+			t += sprintf(buf + t, "DMP FW v. %u\n",
+				     st->hal->dmp->fw_ver);
 			t += sprintf(buf + t, "DMP enabled=%u\n",
 				     !!(st->en_msk & (1 << DEV_DMP)));
 		return t;
@@ -3304,8 +3308,6 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 		t += sprintf(buf + t, "pm=%d\n", st->pm);
 		t += sprintf(buf + t, "bm_timeout_us=%u\n", st->bm_timeout_us);
 		t += sprintf(buf + t, "fifo_src=%d\n", st->fifo_src);
-		t += sprintf(buf + t, "ts_irq=%lld\n",
-			     atomic64_read(&st->ts_irq));
 		for (i = 0; i < DEV_N_AUX; i++) {
 			t += sprintf(buf + t, "snsr[%u] %s:\n",
 				     i, st->snsr[i].cfg.name);
@@ -3692,16 +3694,16 @@ static int nvi_id_dev(struct nvi_state *st,
 	if (ret < 0)
 		/* regulators aren't supported so manually do master reset */
 		nvi_wr_pm1(st, __func__, BIT_H_RESET);
-	if (st->hal->fn->init)
-		ret = st->hal->fn->init(st);
-	else
-		ret = 0;
 	for (i = 0; i < AXIS_N; i++) {
 		st->rom_offset[DEV_ACC][i] = (s16)st->rc.accel_offset[i];
 		st->rom_offset[DEV_GYR][i] = (s16)st->rc.gyro_offset[i];
 		st->dev_offset[DEV_ACC][i] = 0;
 		st->dev_offset[DEV_GYR][i] = 0;
 	}
+	if (st->hal->fn->init)
+		ret = st->hal->fn->init(st);
+	else
+		ret = 0;
 	if (hw_id == NVI_HW_ID_AUTO)
 		dev_info(&st->i2c->dev, "%s: USING DEVICE TREE: %s\n",
 			 __func__, i2c_dev_id->name);
@@ -3845,7 +3847,6 @@ static int nvi_init(struct nvi_state *st,
 	unsigned int n;
 	int ret;
 
-	/* since this is the first field, cast works fine */
 	nvi_of_dt(st, st->i2c->dev.of_node);
 	nvi_pm_init(st);
 	ret = nvi_id_dev(st, i2c_dev_id);

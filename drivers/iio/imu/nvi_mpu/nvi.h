@@ -301,6 +301,7 @@ struct nvi_mc_icm {
 	u32 smd_mot_thld;
 	u32 smd_delay_thld;
 	u32 smd_delay2_thld;
+	u32 smd_timer_thld;
 	u32 wom_enable;
 };
 
@@ -320,6 +321,7 @@ struct nvi_mc {
 
 struct nvi_dmp {
 	const u8 const *fw;
+	unsigned int fw_ver;
 	unsigned int fw_len;
 	unsigned int fw_crc32;
 	unsigned int fw_mem_addr;
@@ -452,6 +454,7 @@ struct nvi_state {
 	bool mc_dis;
 	bool irq_dis;
 	bool irq_set_irq_wake;
+	bool icm_dmp_war;
 	int pm;
 	u32 dmp_clk_n;
 	s64 ts_now;

@@ -13,10 +13,23 @@
 #ifndef _NVI_DMP_ICM_H_
 #define _NVI_DMP_ICM_H_
 
+/* Invensense doesn't label their DMP FW with a version so we use
+ * ICM_DMP_FW_VER sequentially starting at 0.
+ * Currently a version 0 or 1 is the option here as both are included in this
+ * driver.  Typically version 0 would be used although 1 is the latest.
+ */
+#define ICM_DMP_FW_VER			(0)
+#if ICM_DMP_FW_VER == 0
+#define ICM_DMP_FW_CRC32		(0x12F362A6)
+#else
+#define ICM_DMP_FW_CRC32		(0xFEF1270D)
+#endif /* ICM_DMP_FW_VER */
+
 #define ICM_DMP_FREQ			(102)
 #define ICM_DMP_PERIOD_US		(9804)
 #define ICM_BASE_SAMPLE_RATE		(1125)
 #define ICM_DMP_DIVIDER			(ICM_BASE_SAMPLE_RATE / ICM_DMP_FREQ)
+#define ICM_SMD_TIMER_THLD_INIT		(0x0000015E)
 
 #define DATA_OUT_CTL1			(4 * 16)	/* 0x0040 */
 #define DATA_OUT_CTL2			(4 * 16 + 2)	/* 0x0042 */
@@ -62,7 +75,7 @@
 
 #define GYRO_SF				(19 * 16)	/* 0x0130 */
 #define ACCEL_FB_GAIN			(34 * 16)
-#define ACCEL_ONLY_GAIN			(16 * 16 + 12)
+#define ACCEL_ONLY_GAIN			(16 * 16 + 12)	/* 0x010C */
 
 #define GYRO_BIAS_X			(139 * 16 +  4)
 #define GYRO_BIAS_Y			(139 * 16 +  8)
@@ -84,7 +97,7 @@
 #define ACCEL_PRE_SENSOR_DATA		(97 * 16 + 4)
 #define ACCEL_COVARIANCE		(101 * 16 + 8)
 #define ACCEL_ALPHA_VAR			(91 * 16)	/* 0x05B0 */
-#define ACCEL_A_VAR			(92 * 16)
+#define ACCEL_A_VAR			(92 * 16)	/* 0x05C0 */
 
 #define CPASS_BIAS_X			(126 * 16 +  4)
 #define CPASS_BIAS_Y			(126 * 16 +  8)
@@ -123,16 +136,18 @@
 #define PEDSTD_SB2			(60 * 16 + 14)
 #define STPDET_TIMESTAMP		(18 * 16 +  8)
 #define PEDSTD_DRIVE_STATE		(43 * 16 + 10)
-#define PED_RATE			(58 * 16 +  4)
+#define PED_RATE			(58 * 16 +  4)	/* 0x03A4 */
 
 #define SMD_MOT_THLD			(72 * 16 + 12)	/* 0x048C */
 #define SMD_DELAY_THLD			(76 * 16 + 8)	/* 0x04C8 */
 #define SMD_DELAY2_THLD			(76 * 16 + 12)	/* 0x04CC */
 
+#define SMD_TIMER_THLD			(26 * 16)	/* 0x01A0 */
+
 #define WOM_ENABLE			(64 * 16 + 14)	/* 0x040E */
-#define WOM_STATUS			(64 * 16 + 6)
-#define WOM_THRESHOLD			(64 * 16)
-#define WOM_CNTR_TH			(64 * 16 + 12)
+#define WOM_STATUS			(64 * 16 + 6)	/* 0x0406 */
+#define WOM_THRESHOLD			(64 * 16)	/* 0x0400 */
+#define WOM_CNTR_TH			(64 * 16 + 12)	/* 0x040C */
 
 #define TILT_ENABLE			(68 * 16 + 12)
 #define BAC_STATE			(147 * 16)

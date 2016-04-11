@@ -64,6 +64,8 @@
 #define NV_PERF_PMM_FBP_ROUTER_STRIDE 0x0200
 #define NV_PERF_PMMGPC_CHIPLET_OFFSET	0x1000
 #define NV_PERF_PMMGPCROUTER_STRIDE	0x0200
+#define NV_PCFG_BASE		0x00088000
+#define NV_XBAR_MXBAR_PRI_GPC_GNIC_STRIDE	0x0020
 #define FE_PWR_MODE_TIMEOUT_MAX 2000
 #define FE_PWR_MODE_TIMEOUT_DEFAULT 10
 #define CTXSW_MEM_SCRUBBING_TIMEOUT_MAX 1000
@@ -6446,6 +6448,13 @@ static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 		} else
 			*gpc_num = pri_get_gpc_num(g, addr);
 
+		if (pri_is_ppc_addr(g, gpc_addr)) {
+			*addr_type = CTXSW_ADDR_TYPE_PPC;
+			if (pri_is_ppc_addr_shared(g, gpc_addr)) {
+				*broadcast_flags |= PRI_BROADCAST_FLAGS_PPC;
+				return 0;
+			}
+		}
 		if (g->ops.gr.is_tpc_addr(g, gpc_addr)) {
 			*addr_type = CTXSW_ADDR_TYPE_TPC;
 			if (pri_is_tpc_addr_shared(g, gpc_addr)) {
@@ -7490,6 +7499,72 @@ static int map_cmp(const void *a, const void *b)
 	return 0;
 }
 
+static int add_ctxsw_buffer_map_entries_pmsys(struct ctxsw_buf_offset_map_entry *map,
+						struct aiv_list_gk20a *regs,
+						u32 *count, u32 *offset,
+						u32 max_cnt, u32 base, u32 mask)
+{
+	u32 idx;
+	u32 cnt = *count;
+	u32 off = *offset;
+
+	if ((cnt + regs->count) > max_cnt)
+		return -EINVAL;
+
+	for (idx = 0; idx < regs->count; idx++) {
+		if ((base + (regs->l[idx].addr & mask)) < 0xFFF)
+			map[cnt].addr = base + (regs->l[idx].addr & mask)
+					+ NV_PCFG_BASE;
+		else
+			map[cnt].addr = base + (regs->l[idx].addr & mask);
+		map[cnt++].offset = off;
+		off += 4;
+	}
+	*count = cnt;
+	*offset = off;
+	return 0;
+}
+
+static int add_ctxsw_buffer_map_entries_pmgpc(struct gk20a *g,
+					struct ctxsw_buf_offset_map_entry *map,
+					struct aiv_list_gk20a *regs,
+					u32 *count, u32 *offset,
+					u32 max_cnt, u32 base, u32 mask)
+{
+	u32 idx;
+	u32 cnt = *count;
+	u32 off = *offset;
+
+	if ((cnt + regs->count) > max_cnt)
+		return -EINVAL;
+
+	/* NOTE: The PPC offsets get added to the pm_gpc list if numPpc <= 1
+	 * To handle the case of PPC registers getting added into GPC, the below
+	 * code specifically checks for any PPC offsets and adds them using
+	 * proper mask
+	 */
+	for (idx = 0; idx < regs->count; idx++) {
+		/* Check if the address is PPC address */
+		if (pri_is_ppc_addr_shared(g, regs->l[idx].addr & mask)) {
+			u32 ppc_in_gpc_base = nvgpu_get_litter_value(g,
+						GPU_LIT_PPC_IN_GPC_BASE);
+			u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g,
+						GPU_LIT_PPC_IN_GPC_STRIDE);
+			/* Use PPC mask instead of the GPC mask provided */
+			u32 ppcmask = ppc_in_gpc_stride - 1;
+
+			map[cnt].addr = base + ppc_in_gpc_base
+					+ (regs->l[idx].addr & ppcmask);
+		} else
+			map[cnt].addr = base + (regs->l[idx].addr & mask);
+		map[cnt++].offset = off;
+		off += 4;
+	}
+	*count = cnt;
+	*offset = off;
+	return 0;
+}
+
 static int add_ctxsw_buffer_map_entries(struct ctxsw_buf_offset_map_entry *map,
 					struct aiv_list_gk20a *regs,
 					u32 *count, u32 *offset,
@@ -7577,10 +7652,16 @@ static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
 			return -EINVAL;
 
 		base = gpc_base + (gpc_stride * gpc_num);
-		if (add_ctxsw_buffer_map_entries(map,
+		if (add_ctxsw_buffer_map_entries_pmgpc(g, map,
 					&g->gr.ctx_vars.ctxsw_regs.pm_gpc,
 					count, offset, max_cnt, base,
 					(gpc_stride - 1)))
+			return -EINVAL;
+
+		base = NV_XBAR_MXBAR_PRI_GPC_GNIC_STRIDE * gpc_num;
+		if (add_ctxsw_buffer_map_entries(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_ucgpc,
+					count, offset, max_cnt, base, ~0))
 			return -EINVAL;
 
 		base = (NV_PERF_PMMGPC_CHIPLET_OFFSET * gpc_num);
@@ -7609,6 +7690,12 @@ static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
  *|                                             |
  *|    LIST_compressed_nv_perf_ctx_reg_SYS      |Space allocated: numRegs words
  *|---------------------------------------------|
+ *|                                             |
+ *|    LIST_compressed_nv_perf_ctx_reg_sysrouter|Space allocated: numRegs words
+ *|---------------------------------------------|
+ *|                                             |
+ *|    LIST_compressed_nv_perf_ctx_reg_PMA      |Space allocated: numRegs words
+ *|---------------------------------------------|
  *|        PADDING for 256 byte alignment       |
  *|---------------------------------------------|<----256 byte aligned
  *|    LIST_compressed_nv_perf_fbp_ctx_regs     |
@@ -7619,6 +7706,8 @@ static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
  *|---------------------------------------------|
  *|    LIST_compressed_pm_fbpa_ctx_regs         |
  *|                                             |Space allocated: numRegs * n words (for n FB units)
+ *|---------------------------------------------|
+ *|    LIST_compressed_pm_rop_ctx_regs          |
  *|---------------------------------------------|
  *|    LIST_compressed_pm_ltc_ctx_regs          |
  *|                                  LTC0 LTS0  |
@@ -7641,7 +7730,8 @@ static int add_ctxsw_buffer_map_entries_gpcs(struct gk20a *g,
  *|  LIST_pm_ctx_reg_PPC             REG1 TPCn  |
  *|             * numPpcs            REGn TPC0  |
  *|  LIST_pm_ctx_reg_GPC             REGn TPC1  |
- *|  LIST_nv_perf_ctx_reg_GPC        REGn TPCn  |
+ *|  List_pm_ctx_reg_uc_GPC          REGn TPCn  |
+ *|  LIST_nv_perf_ctx_reg_GPC                   |
  *|                                       ----  |--
  *|                            GPC1         .   |
  *|                                         .   |<----
@@ -7679,12 +7769,22 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 		return -ENOMEM;
 
 	/* Add entries from _LIST_pm_ctx_reg_SYS */
-	if (add_ctxsw_buffer_map_entries(map, &g->gr.ctx_vars.ctxsw_regs.pm_sys,
+	if (add_ctxsw_buffer_map_entries_pmsys(map, &g->gr.ctx_vars.ctxsw_regs.pm_sys,
 				&count, &offset, hwpm_ctxsw_reg_count_max, 0, ~0))
 		goto cleanup;
 
 	/* Add entries from _LIST_nv_perf_ctx_reg_SYS */
 	if (add_ctxsw_buffer_map_entries(map, &g->gr.ctx_vars.ctxsw_regs.perf_sys,
+				&count, &offset, hwpm_ctxsw_reg_count_max, 0, ~0))
+		goto cleanup;
+
+	/* Add entries from _LIST_nv_perf_sysrouter_ctx_reg*/
+	if (add_ctxsw_buffer_map_entries(map, &g->gr.ctx_vars.ctxsw_regs.perf_sys_router,
+				&count, &offset, hwpm_ctxsw_reg_count_max, 0, ~0))
+		goto cleanup;
+
+	/* Add entries from _LIST_nv_perf_pma_ctx_reg*/
+	if (add_ctxsw_buffer_map_entries(map, &g->gr.ctx_vars.ctxsw_regs.perf_pma,
 				&count, &offset, hwpm_ctxsw_reg_count_max, 0, ~0))
 		goto cleanup;
 
@@ -7712,6 +7812,13 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 					&count, &offset,
 					hwpm_ctxsw_reg_count_max, 0,
 					num_fbpas, fbpa_stride, ~0))
+		goto cleanup;
+
+	/* Add entries from _LIST_nv_pm_rop_ctx_regs */
+	if (add_ctxsw_buffer_map_entries(map,
+					&g->gr.ctx_vars.ctxsw_regs.pm_rop,
+					&count, &offset,
+					hwpm_ctxsw_reg_count_max, 0, ~0))
 		goto cleanup;
 
 	/* Add entries from _LIST_compressed_nv_pm_ltc_ctx_regs */

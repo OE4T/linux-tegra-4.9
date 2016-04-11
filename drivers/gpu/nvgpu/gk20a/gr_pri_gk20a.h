@@ -69,6 +69,35 @@ static inline u32 pri_get_gpc_num(struct gk20a *g, u32 addr)
 	}
 	return 0;
 }
+
+/*
+ * PPC pri addressing
+ */
+static inline bool pri_is_ppc_addr_shared(struct gk20a *g, u32 addr)
+{
+	u32 ppc_in_gpc_shared_base = nvgpu_get_litter_value(g,
+						GPU_LIT_PPC_IN_GPC_SHARED_BASE);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g,
+						GPU_LIT_PPC_IN_GPC_STRIDE);
+
+	return ((addr >= ppc_in_gpc_shared_base) &&
+		(addr < (ppc_in_gpc_shared_base + ppc_in_gpc_stride)));
+}
+
+static inline bool pri_is_ppc_addr(struct gk20a *g, u32 addr)
+{
+	u32 ppc_in_gpc_base = nvgpu_get_litter_value(g,
+						GPU_LIT_PPC_IN_GPC_BASE);
+	u32 num_pes_per_gpc = nvgpu_get_litter_value(g,
+						GPU_LIT_NUM_PES_PER_GPC);
+	u32 ppc_in_gpc_stride = nvgpu_get_litter_value(g,
+						GPU_LIT_PPC_IN_GPC_STRIDE);
+
+	return ((addr >= ppc_in_gpc_base) &&
+		(addr < ppc_in_gpc_base + num_pes_per_gpc * ppc_in_gpc_stride))
+		|| pri_is_ppc_addr_shared(g, addr);
+}
+
 /*
  * TPC pri addressing
  */

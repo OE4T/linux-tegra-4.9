@@ -248,6 +248,10 @@ struct gr_gk20a {
 			struct aiv_list_gk20a gpc_router;
 			struct aiv_list_gk20a pm_ltc;
 			struct aiv_list_gk20a pm_fbpa;
+			struct aiv_list_gk20a perf_sys_router;
+			struct aiv_list_gk20a perf_pma;
+			struct aiv_list_gk20a pm_rop;
+			struct aiv_list_gk20a pm_ucgpc;
 		} ctxsw_regs;
 		int regs_base_index;
 		bool valid;

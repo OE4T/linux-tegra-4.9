@@ -336,6 +336,34 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				if (err)
 					goto clean_up;
 				break;
+			case NETLIST_REGIONID_NVPERF_SYS_ROUTER:
+				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_SYS_ROUTER");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_sys_router);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_NVPERF_PMA:
+				gk20a_dbg_info("NETLIST_REGIONID_NVPERF_PMA");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.perf_pma);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_CTXREG_PMROP:
+				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMROP");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_rop);
+				if (err)
+					goto clean_up;
+				break;
+			case NETLIST_REGIONID_CTXREG_PMUCGPC:
+				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_PMUCGPC");
+				err = gr_gk20a_alloc_load_netlist_aiv(
+					src, size, &g->gr.ctx_vars.ctxsw_regs.pm_ucgpc);
+				if (err)
+					goto clean_up;
+				break;
 			default:
 				gk20a_dbg_info("unrecognized region %d skipped", i);
 				break;
@@ -381,6 +409,11 @@ clean_up:
 		kfree(g->gr.ctx_vars.ctxsw_regs.gpc_router.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ltc.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.pm_fbpa.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.pm_fbpa.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.perf_sys_router.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.perf_pma.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.pm_rop.l);
+		kfree(g->gr.ctx_vars.ctxsw_regs.pm_ucgpc.l);
 		release_firmware(netlist_fw);
 		err = -ENOENT;
 	}

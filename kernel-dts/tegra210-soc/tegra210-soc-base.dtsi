@@ -233,7 +233,6 @@
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC2A)
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC3A)
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC4A)
-			   &common_as TEGRA_SWGROUP_CELLS(HC)
 			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
 
 		address-space-prop {

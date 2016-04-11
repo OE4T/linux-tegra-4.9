@@ -45,6 +45,7 @@
 #include <asm/suspend.h>
 #include <asm/cputype.h> /* cpuid */
 #include <asm/cpu.h>
+#include <asm/arch_timer.h>
 #include "../../drivers/cpuidle/dt_idle_states.h"
 #include "../../kernel/time/tick-internal.h"
 
@@ -52,9 +53,6 @@
 #define PSCI_STATE_ID_WKTIM_MASK        (~0xf000000f)
 #define PSCI_STATE_TYPE_SHIFT           3
 #define CORE_WAKE_MASK			0x180C
-#define TSC_PER_SEC			32768
-#define NSEC_PER_TSC_TICK		30518
-#define USEC_PER_TSC_TICK		30
 #define TEGRA186_DENVER_CPUIDLE_C7	2
 #define TEGRA186_DENVER_CPUIDLE_C6	1
 #define TEGRA186_A57_CPUIDLE_C7		1
@@ -76,6 +74,7 @@ static struct cpuidle_driver t18x_denver_idle_driver;
 static struct cpuidle_driver t18x_a57_idle_driver;
 static int crossover_init(void);
 static void program_cluster_state(void *data);
+static u32 tsc_per_sec, nsec_per_tsc_tick;
 
 #ifdef CPUIDLE_FLAG_TIME_VALID
 #define DRIVER_FLAGS		CPUIDLE_FLAG_TIME_VALID
@@ -130,7 +129,7 @@ static int t18x_denver_enter_state(
 	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
 
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;
+	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	/* Todo: Based on the Latency number reprogram deepest */
 	/*       CC state allowed if needed*/
@@ -179,7 +178,7 @@ static int t18x_a57_enter_state(
 	/* int latency_req = pm_qos_request(PM_QOS_CPU_DMA_LATENCY);*/
 
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;
+	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
 
 	/* Todo: Based on the Latency number reprogram deepest */
 	/*       CC state allowed if needed*/
@@ -219,7 +218,8 @@ static u32 t18x_make_power_state(u32 state)
 	struct timespec t;
 
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
-	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;
+	wake_time = t.tv_sec * tsc_per_sec + t.tv_nsec / nsec_per_tsc_tick;
+
 	if (denver_testmode || a57_testmode)
 		wake_time = 0xFFFFEEEE;
 	state = state | ((wake_time << 4) & PSCI_STATE_ID_WKTIM_MASK);
@@ -327,7 +327,10 @@ static int denver_idle_write(void *data, u64 val)
 	u32 pmstate;
 	u32 wake_time;
 
-	wake_time = (u32) (val / USEC_PER_TSC_TICK);
+	val = (val * 1000) / nsec_per_tsc_tick;
+	if (val > 0xffffffff)
+		val = 0xffffffff;
+	wake_time = val;
 
         if (denver_idle_state >= t18x_denver_idle_driver.state_count) {
                 pr_err("%s: Requested invalid forced idle state\n", __func__);
@@ -378,7 +381,10 @@ static int a57_idle_write(void *data, u64 val)
 	u32 pmstate;
 	u32 wake_time;
 
-	wake_time = (u32) (val / USEC_PER_TSC_TICK);
+	val = (val * 1000) / nsec_per_tsc_tick;
+	if (val > 0xffffffff)
+		val = 0xffffffff;
+	wake_time = val;
 
         if (a57_idle_state >= t18x_a57_idle_driver.state_count) {
                 pr_err("%s: Requested invalid forced idle state\n", __func__);
@@ -840,6 +846,9 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 			" Incompatible MCE version.\n");
 		return -ENODEV;
 	}
+
+	tsc_per_sec = arch_timer_get_cntfrq();
+	nsec_per_tsc_tick = 1000000000/tsc_per_sec;
 
 	cpumask_clear(&denver_cpumask);
 	cpumask_clear(&a57_cpumask);

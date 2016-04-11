@@ -69,7 +69,7 @@ static struct dma_declare_info vpr_dma_info = {
 	.notifier.ops = &vpr_dev_ops,
 };
 
-static struct nvmap_platform_carveout nvmap_carveouts[4] = {
+static struct nvmap_platform_carveout nvmap_carveouts[] = {
 	[0] = {
 		.name		= "iram",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IRAM,
@@ -96,6 +96,10 @@ static struct nvmap_platform_carveout nvmap_carveouts[4] = {
 		.cma_dev	= &tegra_vpr_cma_dev,
 		.dma_info	= &vpr_dma_info,
 		.enable_static_dma_map = true,
+	},
+	/* Need one uninitialized entry for IVM carveout */
+	[3] = {
+		.name		= NULL,
 	},
 };
 

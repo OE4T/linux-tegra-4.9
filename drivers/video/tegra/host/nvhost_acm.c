@@ -100,9 +100,8 @@ static void dump_clock_status(struct platform_device *dev)
 	for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
 		if (!pdata->clocks[i].name)
 			break;
-		pr_info("%s: clock %s: enabled=%d, rate = %lu\n",
+		pr_info("%s: clock %s: rate = %lu\n",
 			__func__, pdata->clocks[i].name,
-			!!tegra_is_clk_enabled(pdata->clk[i]),
 			clk_get_rate(pdata->clk[i]));
 	}
 }

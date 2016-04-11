@@ -794,7 +794,7 @@ static void tegra_dma_reset_client(struct tegra_dma_channel *tdc)
 	tdc_write(tdc, TEGRA_GPCDMA_CHAN_CSR, csr);
 }
 
-static void tegra_dma_terminate_all(struct dma_chan *dc)
+static int tegra_dma_terminate_all(struct dma_chan *dc)
 {
 	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
 	struct tegra_dma_sg_req *sgreq;
@@ -807,7 +807,7 @@ static void tegra_dma_terminate_all(struct dma_chan *dc)
 	spin_lock_irqsave(&tdc->lock, flags);
 	if (list_empty(&tdc->pending_sg_req)) {
 		spin_unlock_irqrestore(&tdc->lock, flags);
-		return;
+		return 0;
 	}
 
 	if (!tdc->busy)
@@ -871,6 +871,7 @@ skip_dma_stop:
 		dma_desc->cb_count = 0;
 	}
 	spin_unlock_irqrestore(&tdc->lock, flags);
+	return 0;
 }
 
 static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
@@ -927,6 +928,7 @@ static enum dma_status tegra_dma_tx_status(struct dma_chan *dc,
 	return ret;
 }
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 static int tegra_dma_device_control(struct dma_chan *dc, enum dma_ctrl_cmd cmd,
 			unsigned long arg)
 {
@@ -945,6 +947,7 @@ static int tegra_dma_device_control(struct dma_chan *dc, enum dma_ctrl_cmd cmd,
 
 	return -ENXIO;
 }
+#endif
 
 static inline int get_bus_width(struct tegra_dma_channel *tdc,
 		enum dma_slave_buswidth slave_bw)
@@ -1823,7 +1826,12 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	tdma->dma_dev.device_prep_dma_cyclic = tegra_dma_prep_dma_cyclic;
 	tdma->dma_dev.device_prep_dma_memcpy = tegra_dma_prep_dma_memcpy;
 	tdma->dma_dev.device_prep_dma_memset = tegra_dma_prep_dma_memset;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	tdma->dma_dev.device_control = tegra_dma_device_control;
+#else
+	tdma->dma_dev.device_config = tegra_dma_slave_config;
+	tdma->dma_dev.device_terminate_all = tegra_dma_terminate_all;
+#endif
 	tdma->dma_dev.device_tx_status = tegra_dma_tx_status;
 	tdma->dma_dev.device_issue_pending = tegra_dma_issue_pending;
 

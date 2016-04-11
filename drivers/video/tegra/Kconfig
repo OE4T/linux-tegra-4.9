@@ -12,6 +12,14 @@ config TEGRA_GRHOST_ISP
           To compile this driver as a module, choose M here:
           the  module will be called nvhost-isp.
 
+config TEGRA_GRHOST_VIC
+        depends on TEGRA_GRHOST && ARCH_TEGRA_18x_SOC
+        tristate "Tegra VIC support"
+        default y
+        help
+          Driver for the Tegra Video Image Compositor is an falcon
+          based engine used image composition.
+
 config TEGRA_GRHOST_NVDEC
         depends on TEGRA_GRHOST
         tristate "Tegra NVDEC support"

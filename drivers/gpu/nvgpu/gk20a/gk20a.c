@@ -1076,7 +1076,7 @@ int gk20a_user_init(struct device *dev, const char *interface_name)
 		goto fail;
 
 #ifdef CONFIG_GK20A_CTXSW_TRACE
-	err = gk20a_create_device(dev, devno++, "-ctxsw",
+	err = gk20a_create_device(dev, devno++, interface_name, "-ctxsw",
 				  &g->ctxsw.cdev, &g->ctxsw.node,
 				  &gk20a_ctxsw_ops);
 	if (err)

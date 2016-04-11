@@ -386,6 +386,7 @@ void tegra_pmc_fuse_enable_mirroring(void)
 				PMC_FUSE_CTRL);
 }
 EXPORT_SYMBOL(tegra_pmc_fuse_enable_mirroring);
+static struct device tegra186_pmc_dev = { };
 
 bool tegra_pmc_is_halt_in_fiq(void)
 {
@@ -398,6 +399,166 @@ static const struct of_device_id tegra186_pmc[] __initconst = {
 	{ .compatible = "nvidia,tegra186-pmc" },
 	{ }
 };
+
+#ifdef CONFIG_DEBUG_FS
+
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+#include <linux/uaccess.h>
+#include <linux/slab.h>
+
+void __iomem *tegra186_pmc_scratch_base;
+
+struct t186_pmc_pdata {
+	const char **reg_names;
+	u32 *reg_offset;
+	int cnt_reg_offset;
+	int cnt_reg_names;
+};
+static struct t186_pmc_pdata pmc_pdata;
+static struct dentry *dbgfs_root;
+
+static inline u32 tegra186_pmc_scratch_readl(u32 reg)
+{
+	return readl(tegra186_pmc_scratch_base + reg);
+}
+
+static inline void tegra186_pmc_scratch_writel(u32 val, u32 reg)
+{
+	writel(val, tegra186_pmc_scratch_base + reg);
+}
+
+static ssize_t pmc_debugfs_read(struct file *file,
+			char __user *user_buf, size_t count, loff_t *ppos)
+{
+	char buf[64] = { 0, };
+	unsigned char *dfsname;
+	ssize_t ret = 10;
+	int id = 0;
+	u32 value = 0;
+
+	dfsname = file->f_path.dentry->d_iname;
+
+	for (id = 0; id < pmc_pdata.cnt_reg_offset; id++) {
+		if (!strcmp(dfsname, pmc_pdata.reg_names[id]))
+			break;
+	}
+	if (id == pmc_pdata.cnt_reg_offset)
+		return -EINVAL;
+
+	value = tegra186_pmc_scratch_readl(pmc_pdata.reg_offset[id]);
+	ret = snprintf(buf, sizeof(buf), "Reg: 0x%x : Value: 0x%x\n",
+				pmc_pdata.reg_offset[id], value);
+
+	return simple_read_from_buffer(user_buf, count, ppos, buf, ret);
+}
+
+static ssize_t pmc_debugfs_write(struct file *file,
+			const char __user *user_buf, size_t count, loff_t *ppos)
+{
+	char buf[64] = { 0, };
+	unsigned char *dfsname;
+	ssize_t buf_size;
+	u32 value = 0;
+	int id;
+
+	dfsname = file->f_path.dentry->d_iname;
+
+	for (id = 0; id < pmc_pdata.cnt_reg_offset; id++) {
+		if (!strcmp(dfsname, pmc_pdata.reg_names[id]))
+			break;
+	}
+	if (id == pmc_pdata.cnt_reg_offset)
+		return -EINVAL;
+
+	buf_size = min(count, (sizeof(buf)-1));
+	if (copy_from_user(buf, user_buf, buf_size))
+		return -EFAULT;
+
+	if (!sscanf(buf, "%x\n", &value))
+		return -EINVAL;
+	pr_info("PMC reg: 0x%x Value: 0x%x\n", pmc_pdata.reg_offset[id], value);
+	tegra186_pmc_scratch_writel(value, pmc_pdata.reg_offset[id]);
+
+	return count;
+}
+
+static const struct file_operations pmc_debugfs_fops = {
+	.open		= simple_open,
+	.write		= pmc_debugfs_write,
+	.read		= pmc_debugfs_read,
+};
+
+static int tegra186_pmc_debugfs_init(struct device_node *np)
+{
+	const char *srname;
+	struct property *prop;
+	int count, i;
+	int ret;
+	int cnt_reg_names, cnt_reg_offset;
+
+	tegra186_pmc_scratch_base = of_iomap(np, 1);
+
+	cnt_reg_offset = of_property_count_u32(np,
+				"export-pmc-scratch-reg-offset");
+	if (cnt_reg_offset < 0) {
+		pr_err("scratch reg offset data not present\n");
+		return -EINVAL;
+	}
+	pmc_pdata.cnt_reg_offset = cnt_reg_offset;
+
+	cnt_reg_names = of_property_count_strings(np,
+				"export-pmc-scratch-reg-name");
+	if (cnt_reg_names < 0 || (cnt_reg_offset != cnt_reg_names)) {
+		pr_err("reg offset and reg names count not matching\n");
+		return -EINVAL;
+	}
+	pmc_pdata.cnt_reg_names = cnt_reg_names;
+
+	pmc_pdata.reg_names = devm_kzalloc(&tegra186_pmc_dev,
+		(cnt_reg_offset + 1) * sizeof(*pmc_pdata.reg_names),
+		GFP_KERNEL);
+	if (!pmc_pdata.reg_names)
+		return -ENOMEM;
+
+	count = 0;
+	of_property_for_each_string(np, "export-pmc-scratch-reg-name",
+					prop, srname)
+		pmc_pdata.reg_names[count++] = srname;
+	pmc_pdata.reg_names[count] = NULL;
+
+	pmc_pdata.reg_offset = devm_kzalloc(&tegra186_pmc_dev,
+			sizeof(u32) * cnt_reg_offset, GFP_KERNEL);
+	if (!pmc_pdata.reg_offset)
+		return -ENOMEM;
+
+	ret = of_property_read_u32_array(np, "export-pmc-scratch-reg-offset",
+				pmc_pdata.reg_offset, cnt_reg_offset);
+	if (ret < 0)
+		return -ENODEV;
+
+	dbgfs_root = debugfs_create_dir("PMC", NULL);
+	if (!dbgfs_root) {
+		pr_err("PMC:Failed to create debugfs dir\n");
+		return -ENOMEM;
+	}
+
+	for (i = 0; i < cnt_reg_offset; i++) {
+		debugfs_create_file(pmc_pdata.reg_names[i], S_IRUGO | S_IWUSR,
+			dbgfs_root, NULL, &pmc_debugfs_fops);
+		pr_info("create /sys/kernel/debug/%s/%s\n",
+			dbgfs_root->d_name.name, pmc_pdata.reg_names[i]);
+	}
+
+	return 0;
+}
+
+#else
+static int tegra186_pmc_debugfs_init(struct device_node *np)
+{
+	return 0;
+}
+#endif
 
 static int tegra186_pmc_parse_dt(struct device_node *np)
 {
@@ -453,7 +614,6 @@ static void tegra186_pmc_rst_status(void)
 	return;
 }
 
-static struct device tegra186_pmc_dev = { };
 static struct tegra_prod_list *prod_list;
 
 static int __init tegra186_pmc_init(void)
@@ -490,6 +650,10 @@ static int __init tegra186_pmc_init(void)
 	} else {
 		pr_info("tegra186-pmc device create success\n");
 	}
+
+	ret = tegra186_pmc_debugfs_init(np);
+	if (ret < 0)
+		pr_err("Failed to create PMC debugfs :%d\n", ret);
 
 	/* Prod setting like platform specific rails */
 	prod_list = tegra_prod_get(&tegra186_pmc_dev, NULL);

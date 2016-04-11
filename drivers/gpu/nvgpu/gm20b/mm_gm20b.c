@@ -14,12 +14,14 @@
  */
 
 #include <linux/pm_runtime.h>
+#include <linux/delay.h>
 #include "gk20a/gk20a.h"
 #include "mm_gm20b.h"
 #include "hw_gmmu_gm20b.h"
 #include "hw_fb_gm20b.h"
 #include "hw_gr_gm20b.h"
 #include "hw_ram_gm20b.h"
+#include "hw_bus_gm20b.h"
 
 static int gm20b_mm_mmu_vpr_info_fetch_wait(struct gk20a *g,
 		const unsigned int msec)
@@ -133,6 +135,32 @@ static bool gm20b_mm_support_sparse(struct gk20a *g)
 	return true;
 }
 
+static int gm20b_mm_bar1_bind(struct gk20a *g, u64 bar1_iova)
+{
+	int retry = 1000;
+	u64 inst_pa = (u32)(bar1_iova >> bar1_instance_block_shift_gk20a());
+	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
+
+	gk20a_writel(g, bus_bar1_block_r(),
+		     (g->mm.vidmem_is_vidmem ?
+		       bus_bar1_block_target_sys_mem_ncoh_f() :
+		       bus_bar1_block_target_vid_mem_f()) |
+		     bus_bar1_block_mode_virtual_f() |
+		     bus_bar1_block_ptr_f(inst_pa));
+	do {
+		u32 val = gk20a_readl(g, bus_bind_status_r());
+		u32 pending = bus_bind_status_bar1_pending_v(val);
+		u32 outstanding = bus_bind_status_bar1_outstanding_v(val);
+		if (!pending && !outstanding)
+			break;
+
+		udelay(5);
+		retry--;
+	} while (retry >= 0 || !tegra_platform_is_silicon());
+
+	return retry ? -EINVAL : 0;
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.support_sparse = gm20b_mm_support_sparse;
@@ -155,4 +183,5 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
+	gops->mm.bar1_bind = gm20b_mm_bar1_bind;
 }

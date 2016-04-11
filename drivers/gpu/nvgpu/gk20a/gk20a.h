@@ -475,6 +475,7 @@ struct gpu_ops {
 		void (*init_pdb)(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
 		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
 					 u32 flags);
+		int (*bar1_bind)(struct gk20a *g, u64 bar1_iova);
 	} mm;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);

@@ -106,6 +106,58 @@ static inline u32 bus_bar2_block_ptr_shift_v(void)
 {
 	return 0x0000000c;
 }
+static inline u32 bus_bind_status_r(void)
+{
+	return 0x00001710;
+}
+static inline u32 bus_bind_status_bar1_pending_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 bus_bind_status_bar1_pending_empty_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar1_pending_busy_f(void)
+{
+	return 0x1;
+}
+static inline u32 bus_bind_status_bar1_outstanding_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 bus_bind_status_bar1_outstanding_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar1_outstanding_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 bus_bind_status_bar2_pending_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 bus_bind_status_bar2_pending_empty_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar2_pending_busy_f(void)
+{
+	return 0x4;
+}
+static inline u32 bus_bind_status_bar2_outstanding_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 bus_bind_status_bar2_outstanding_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar2_outstanding_true_f(void)
+{
+	return 0x8;
+}
 static inline u32 bus_intr_0_r(void)
 {
 	return 0x00001100;

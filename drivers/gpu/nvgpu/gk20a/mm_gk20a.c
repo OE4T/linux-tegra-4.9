@@ -493,15 +493,7 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 			g->ops.fb.set_use_full_comp_tag_line(g);
 
 
-	inst_pa = (u32)(inst_pa >> bar1_instance_block_shift_gk20a());
-	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
-
-	gk20a_writel(g, bus_bar1_block_r(),
-		     (g->mm.vidmem_is_vidmem ?
-		       bus_bar1_block_target_sys_mem_ncoh_f() :
-		       bus_bar1_block_target_vid_mem_f()) |
-		     bus_bar1_block_mode_virtual_f() |
-		     bus_bar1_block_ptr_f(inst_pa));
+	g->ops.mm.bar1_bind(g, inst_pa);
 
 	if (g->ops.mm.init_bar2_mm_hw_setup) {
 		err = g->ops.mm.init_bar2_mm_hw_setup(g);
@@ -513,6 +505,21 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 		return -EBUSY;
 
 	gk20a_dbg_fn("done");
+	return 0;
+}
+
+static int gk20a_mm_bar1_bind(struct gk20a *g, u64 bar1_iova)
+{
+	u64 inst_pa = (u32)(bar1_iova >> bar1_instance_block_shift_gk20a());
+	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
+
+	gk20a_writel(g, bus_bar1_block_r(),
+		     (g->mm.vidmem_is_vidmem ?
+		       bus_bar1_block_target_sys_mem_ncoh_f() :
+		       bus_bar1_block_target_vid_mem_f()) |
+		     bus_bar1_block_mode_virtual_f() |
+		     bus_bar1_block_ptr_f(inst_pa));
+
 	return 0;
 }
 
@@ -3919,4 +3926,5 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.get_mmu_levels = gk20a_mm_get_mmu_levels;
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
+	gops->mm.bar1_bind = gk20a_mm_bar1_bind;
 }

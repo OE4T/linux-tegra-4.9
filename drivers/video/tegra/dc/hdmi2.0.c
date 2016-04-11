@@ -724,7 +724,6 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 	}
 
 	if ((!connected && orig_state == TEGRA_HDMI_MONITOR_DISABLE)) {
-		dev_dbg(&hdmi->dc->ndev->dev, "hdmi: spurious interrupt\n");
 		mutex_unlock(&hdmi->hpd_lock);
 		return;
 	}
@@ -2343,6 +2342,8 @@ static void tegra_dc_hdmi_suspend(struct tegra_dc *dc)
 		}
 	}
 
+	tegra_hdmi_disable(hdmi);
+	hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
 	atomic_set(&hdmi->suspended, 1);
 }
 

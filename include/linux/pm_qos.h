@@ -31,6 +31,10 @@ enum {
 	PM_QOS_EMC_FREQ_MIN,
 	PM_QOS_MAX_CPU_POWER,
 	PM_QOS_MAX_GPU_POWER,
+	PM_QOS_CLUSTER0_FREQ_MIN,
+	PM_QOS_CLUSTER0_FREQ_MAX,
+	PM_QOS_CLUSTER1_FREQ_MIN,
+	PM_QOS_CLUSTER1_FREQ_MAX,
 
 	/* insert new class ID */
 	PM_QOS_NUM_CLASSES,
@@ -47,6 +51,8 @@ enum pm_qos_bounded_classes {
 	PM_QOS_CPU_FREQ_BOUNDS,	/* requests should be in KHz to not exceed s32*/
 	PM_QOS_GPU_FREQ_BOUNDS,	/* requests should be in KHz to not exceed s32*/
 	PM_QOS_ONLINE_CPUS_BOUNDS,
+	PM_QOS_CLUSTER0_FREQ_BOUNDS,
+	PM_QOS_CLUSTER1_FREQ_BOUNDS,
 	/* insert new bounded class ids here */
 	PM_QOS_NUM_BOUNDED_CLASSES,
 };

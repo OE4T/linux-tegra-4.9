@@ -71,10 +71,7 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (!tegra_platform_is_silicon() || !tegra_bpmp_running())
-		return 1;
-	else
-		return __clk_is_enabled(clk);
+	return __clk_get_enable_count(clk);
 #else
 	return tegra_is_clk_enabled(clk);
 #endif

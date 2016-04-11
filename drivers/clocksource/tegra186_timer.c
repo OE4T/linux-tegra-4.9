@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -26,6 +26,7 @@
 #include <linux/tick.h>
 #include <linux/vmalloc.h>
 #include <linux/syscore_ops.h>
+#include <linux/version.h>
 
 #define TMRCR	0x000
 #define TMRSR	0x004
@@ -63,30 +64,50 @@ static int tegra186_timer_set_next_event(unsigned long cycles,
 	return 0;
 }
 
+static inline void _shutdown(struct tegra186_tmr *tmr)
+{
+	__raw_writel(0 << 31, /* EN=0, disable timer */
+		     tmr->reg_base + TMRCR);
+}
+
+static int tegra186_timer_shutdown(struct clock_event_device *evt)
+{
+	struct tegra186_tmr *tmr;
+	tmr = container_of(evt, struct tegra186_tmr, evt);
+
+	_shutdown(tmr);
+	return 0;
+}
+
+static int tegra186_timer_set_periodic(struct clock_event_device *evt)
+{
+	struct tegra186_tmr *tmr  = container_of(evt, struct tegra186_tmr, evt);
+
+	_shutdown(tmr);
+	__raw_writel((1 << 31) /* EN=1, enable timer */
+		     | (1 << 30) /* PER=1, periodic mode */
+		     | ((tmr->freq / HZ) - 1), /* PTV, preset value*/
+		     tmr->reg_base + TMRCR);
+	return 0;
+}
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
 static void tegra186_timer_set_mode(enum clock_event_mode mode,
 				    struct clock_event_device *evt)
 {
-	struct tegra186_tmr *tmr;
-
-	tmr = container_of(evt, struct tegra186_tmr, evt);
-	__raw_writel(0, tmr->reg_base + TMRCR);
-
 	switch (mode) {
 	case CLOCK_EVT_MODE_PERIODIC:
-		__raw_writel((1 << 31) /* EN=1, enable timer */
-			     | (1 << 30) /* PER=1, periodic mode */
-			     | ((tmr->freq / HZ) - 1), /* PTV, preset value*/
-			     tmr->reg_base + TMRCR);
+		tegra186_timer_set_periodic(evt);
 		break;
 	case CLOCK_EVT_MODE_ONESHOT:
 	case CLOCK_EVT_MODE_UNUSED:
 	case CLOCK_EVT_MODE_SHUTDOWN:
 	case CLOCK_EVT_MODE_RESUME:
-		__raw_writel(0 << 31, /* EN=0, disable timer */
-			     tmr->reg_base + TMRCR);
+		tegra186_timer_shutdown(evt);
 		break;
 	}
 }
+#endif
 
 static irqreturn_t tegra186_timer_isr(int irq, void *dev_id)
 {
@@ -120,7 +141,7 @@ static void tegra186_timer_setup(struct tegra186_tmr *tmr)
 
 static void tegra186_timer_stop(struct tegra186_tmr *tmr)
 {
-	tmr->evt.set_mode(CLOCK_EVT_MODE_UNUSED, &tmr->evt);
+	_shutdown(tmr);
 	disable_irq_nosync(tmr->evt.irq);
 }
 
@@ -217,11 +238,17 @@ static void __init tegra186_timer_init(struct device_node *np)
 		snprintf(tmr->name, sizeof(tmr->name), "tegra186_timer%d", cpu);
 		tmr->evt.name = tmr->name;
 		tmr->evt.cpumask = cpumask_of(cpu);
-		tmr->evt.set_next_event = tegra186_timer_set_next_event;
-		tmr->evt.set_mode = tegra186_timer_set_mode;
 		tmr->evt.features = CLOCK_EVT_FEAT_PERIODIC |
 			CLOCK_EVT_FEAT_ONESHOT;
-
+		tmr->evt.set_next_event     = tegra186_timer_set_next_event;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
+		tmr->evt.set_mode = tegra186_timer_set_mode;
+#else
+		tmr->evt.set_state_shutdown = tegra186_timer_shutdown;
+		tmr->evt.set_state_periodic = tegra186_timer_set_periodic;
+		tmr->evt.set_state_oneshot  = tegra186_timer_shutdown;
+		tmr->evt.tick_resume        = tegra186_timer_shutdown;
+#endif
 		/* want to be preferred over arch timers */
 		tmr->evt.rating = 460;
 		irq_set_status_flags(tmr->evt.irq, IRQ_NOAUTOEN | IRQ_PER_CPU);

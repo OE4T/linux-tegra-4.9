@@ -407,7 +407,7 @@ int nvhost_sync_create_fence_fd(struct platform_device *pdev,
 	if (IS_ERR(fence))
 		return -EINVAL;
 
-	fd = get_unused_fd();
+	fd = get_unused_fd_flags(O_CLOEXEC);
 	if (fd < 0) {
 		sync_fence_put(fence);
 		return fd;

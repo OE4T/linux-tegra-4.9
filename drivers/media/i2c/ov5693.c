@@ -681,6 +681,43 @@ fail:
 	return err;
 }
 
+static void ov5693_update_ctrl_range(struct ov5693 *priv, s32 frame_length)
+{
+	struct v4l2_ctrl *ctrl = NULL;
+	int ctrl_ids[2] = {V4L2_CID_COARSE_TIME,
+			V4L2_CID_COARSE_TIME_SHORT};
+	s32 max, min, def;
+	int i, j;
+
+	for (i = 0; i < ARRAY_SIZE(ctrl_ids); i++) {
+		for (j = 0; j < priv->numctrls; j++) {
+			if (priv->ctrls[j]->id == ctrl_ids[i]) {
+				ctrl = priv->ctrls[j];
+				break;
+			}
+		}
+
+		if (j == priv->numctrls) {
+			dev_err(&priv->i2c_client->dev,
+				"could not find ctrl %x\n",
+				ctrl_ids[i]);
+			continue;
+		}
+
+		max = frame_length - OV5693_MAX_COARSE_DIFF;
+		/* clamp the value in case above is negative */
+		max = clamp_val(max, OV5693_MIN_EXPOSURE_COARSE,
+			OV5693_MAX_EXPOSURE_COARSE);
+		min = OV5693_MIN_EXPOSURE_COARSE;
+		def = clamp_val(OV5693_DEFAULT_EXPOSURE_COARSE, min, max);
+		if (__v4l2_ctrl_modify_range(ctrl, min, max, 1, def))
+			dev_err(&priv->i2c_client->dev,
+				"ctrl %x: range update failed\n",
+				ctrl_ids[i]);
+	}
+
+}
+
 static int ov5693_set_frame_length(struct ov5693 *priv, s32 val)
 {
 	ov5693_reg reg_list[2];
@@ -704,36 +741,13 @@ static int ov5693_set_frame_length(struct ov5693 *priv, s32 val)
 			goto fail;
 	}
 
+	ov5693_update_ctrl_range(priv, val);
 	return 0;
 
 fail:
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: FRAME_LENGTH control error\n", __func__);
 	return err;
-}
-
-static int ov5693_clamp_coarse_time(struct ov5693 *priv, s32 *val)
-{
-	struct v4l2_control fl_control;
-	int err;
-
-	fl_control.id = V4L2_CID_FRAME_LENGTH;
-
-	err = camera_common_g_ctrl(priv->s_data, &fl_control);
-	if (err < 0) {
-		dev_err(&priv->i2c_client->dev,
-			"could not find device ctrl.\n");
-		return err;
-	}
-
-	if (*val > (fl_control.value - OV5693_MAX_COARSE_DIFF)) {
-		dev_dbg(&priv->i2c_client->dev,
-			 "%s: %d to %d\n", __func__, *val,
-			 fl_control.value - OV5693_MAX_COARSE_DIFF);
-		*val = fl_control.value - OV5693_MAX_COARSE_DIFF;
-	}
-
-	return 0;
 }
 
 static int ov5693_set_coarse_time(struct ov5693 *priv, s32 val)
@@ -1052,7 +1066,6 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct ov5693 *priv =
 		container_of(ctrl->handler, struct ov5693, ctrl_handler);
-	s32 clamp_val = ctrl->val;
 	int err = 0;
 
 	if (priv->power.state == SWITCH_OFF)
@@ -1066,20 +1079,10 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 		err = ov5693_set_frame_length(priv, ctrl->val);
 		break;
 	case V4L2_CID_COARSE_TIME:
-		err = ov5693_clamp_coarse_time(priv, &clamp_val);
-		if (err)
-			return err;
-
-		if (clamp_val != ctrl->cur.val)
-			err = ov5693_set_coarse_time(priv, clamp_val);
+		err = ov5693_set_coarse_time(priv, ctrl->val);
 		break;
 	case V4L2_CID_COARSE_TIME_SHORT:
-		err = ov5693_clamp_coarse_time(priv, &clamp_val);
-		if (err)
-			return err;
-
-		if (clamp_val != ctrl->cur.val)
-			err = ov5693_set_coarse_time_short(priv, clamp_val);
+		err = ov5693_set_coarse_time_short(priv, ctrl->val);
 		break;
 	case V4L2_CID_GROUP_HOLD:
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {
@@ -1100,11 +1103,6 @@ static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl)
 		break;
 	default:
 		pr_err("%s: unknown ctrl id.\n", __func__);
-		return -EINVAL;
-	}
-
-	if (clamp_val != ctrl->val)  {
-		ctrl->val = clamp_val;
 		return -EINVAL;
 	}
 

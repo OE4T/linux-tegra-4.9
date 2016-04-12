@@ -370,12 +370,6 @@ static int pwm_fan_set_cur_state(struct thermal_cooling_device *cdev,
 		return -EINVAL;
 
 	mutex_lock(&fan_data->fan_state_lock);
-
-	if (!fan_data->fan_temp_control_flag) {
-		mutex_unlock(&fan_data->fan_state_lock);
-		return 0;
-	}
-
 	fan_data->next_state = cur_state;
 
 	if (fan_data->next_state <= 0)
@@ -481,7 +475,13 @@ static void fan_ramping_work_func(struct work_struct *work)
 		dev_err(fan_data->dev, "Fan data is null\n");
 		return;
 	}
+
 	mutex_lock(&fan_data->fan_state_lock);
+	if (!fan_data->fan_temp_control_flag) {
+		mutex_unlock(&fan_data->fan_state_lock);
+		return;
+	}
+
 	cur_pwm = fan_data->fan_cur_pwm;
 	rru = fan_get_rru(cur_pwm, fan_data);
 	rrd = fan_get_rrd(cur_pwm, fan_data);
@@ -1016,9 +1016,6 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 
 	mutex_lock(&fan_data->fan_state_lock);
 	cancel_delayed_work(&fan_data->fan_ramp_work);
-	/*Turn the fan off*/
-	fan_data->fan_cur_pwm = 0;
-	fan_data->next_target_pwm = 0;
 
 	set_pwm_duty_cycle(0, fan_data);
 	pwm_disable(fan_data->pwm_dev);
@@ -1050,10 +1047,21 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 
 static int pwm_fan_resume(struct platform_device *pdev)
 {
+	int err;
 	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
 
-	/*Sanity check, want to make sure fan is off when the driver resumes*/
 	mutex_lock(&fan_data->fan_state_lock);
+
+	err = regulator_enable(fan_data->fan_reg);
+	if (err < 0) {
+		dev_err(fan_data->dev,
+				"failed to enable vdd-fan, control is off\n");
+		mutex_unlock(&fan_data->fan_state_lock);
+		return err;
+	}
+
+	dev_info(fan_data->dev, "Enabled vdd-fan\n");
+	fan_data->is_fan_reg_enabled = true;
 
 	gpio_free(fan_data->pwm_gpio);
 	fan_data->pwm_dev = pwm_request(fan_data->pwm_id, dev_name(&pdev->dev));
@@ -1066,10 +1074,10 @@ static int pwm_fan_resume(struct platform_device *pdev)
 		dev_info(&pdev->dev, " %s, got pwm for fan\n", __func__);
 	}
 
-	set_pwm_duty_cycle(0, fan_data);
-	/*Start thermal control*/
+	queue_delayed_work(fan_data->workqueue,
+			&fan_data->fan_ramp_work,
+			msecs_to_jiffies(fan_data->step_time));
 	fan_data->fan_temp_control_flag = 1;
-
 	mutex_unlock(&fan_data->fan_state_lock);
 	return 0;
 }

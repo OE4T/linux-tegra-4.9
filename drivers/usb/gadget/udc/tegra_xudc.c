@@ -673,7 +673,7 @@ static void tegra_xudc_device_mode_off(struct tegra_xudc *xudc)
 
 static void tegra_xudc_update_data_role(struct tegra_xudc *xudc)
 {
-	if (extcon_get_cable_state(xudc->data_role_extcon, "USB"))
+	if (extcon_get_cable_state_(xudc->data_role_extcon, EXTCON_USB))
 		tegra_xudc_device_mode_on(xudc);
 	else
 		tegra_xudc_device_mode_off(xudc);
@@ -1853,8 +1853,7 @@ unlock:
 	return ret;
 }
 
-static int tegra_xudc_gadget_stop(struct usb_gadget *gadget,
-				  struct usb_gadget_driver *driver)
+static int tegra_xudc_gadget_stop(struct usb_gadget *gadget)
 {
 	struct tegra_xudc *xudc = to_xudc(gadget);
 	unsigned long flags;
@@ -2798,12 +2797,21 @@ static int tegra_xudc_alloc_ep(struct tegra_xudc *xudc, unsigned int index)
 		usb_ep_set_maxpacket_limit(&ep->usb_ep, 1024);
 		ep->usb_ep.max_streams = 16;
 		ep->usb_ep.ops = &tegra_xudc_ep_ops;
+		ep->usb_ep.caps.type_bulk = true;
+		ep->usb_ep.caps.type_int = true;
+		if (index & 1)
+			ep->usb_ep.caps.dir_in = true;
+		else
+			ep->usb_ep.caps.dir_out = true;
 		list_add_tail(&ep->usb_ep.ep_list, &xudc->gadget.ep_list);
 	} else {
 		strcpy(ep->name, "ep0");
 		ep->usb_ep.name = ep->name;
 		usb_ep_set_maxpacket_limit(&ep->usb_ep, 64);
 		ep->usb_ep.ops = &tegra_xudc_ep0_ops;
+		ep->usb_ep.caps.type_control = true;
+		ep->usb_ep.caps.dir_in = true;
+		ep->usb_ep.caps.dir_out = true;
 	}
 
 	return 0;
@@ -3197,7 +3205,7 @@ static struct of_device_id tegra_xudc_of_match[] = {
 		.data = &tegra210_xudc_soc_data
 	},
 	{
-		.compatible = "nvidia,tegra186-xudc-new",
+		.compatible = "nvidia,tegra186-xudc",
 		.data = &tegra186_xudc_soc_data
 	},
 	{ }
@@ -3311,8 +3319,7 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
-	xudc->data_role_extcon = extcon_get_extcon_dev_by_cable(&pdev->dev,
-								"vbus");
+	xudc->data_role_extcon = extcon_get_edev_by_phandle(&pdev->dev, 0);
 	if (IS_ERR(xudc->data_role_extcon)) {
 		err = PTR_ERR(xudc->data_role_extcon);
 		dev_err(xudc->dev, "extcon_get_extcon_dev_by_cable failed %d\n",
@@ -3380,7 +3387,8 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 
 	INIT_WORK(&xudc->data_role_work, tegra_xudc_data_role_work);
 	xudc->data_role_nb.notifier_call = tegra_xudc_data_role_notifier;
-	extcon_register_notifier(xudc->data_role_extcon, &xudc->data_role_nb);
+	extcon_register_notifier(xudc->data_role_extcon, EXTCON_USB,
+				 &xudc->data_role_nb);
 
 	tegra_xudc_update_data_role(xudc);
 
@@ -3414,7 +3422,8 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 
 	pm_runtime_get_sync(xudc->dev);
 
-	extcon_unregister_notifier(xudc->data_role_extcon, &xudc->data_role_nb);
+	extcon_unregister_notifier(xudc->data_role_extcon, EXTCON_USB,
+				   &xudc->data_role_nb);
 	cancel_work_sync(&xudc->data_role_work);
 	usb_del_gadget_udc(&xudc->gadget);
 	tegra_xudc_free_eps(xudc);

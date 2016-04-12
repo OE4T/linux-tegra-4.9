@@ -270,7 +270,8 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 	get_dma_buf(h->dmabuf);
 
 out:
-	trace_nvmap_duplicate_handle(client, h, ref);
+	NVMAP_TAG_TRACE(trace_nvmap_duplicate_handle,
+		NVMAP_TP_ARGS_CHR(client, h, ref));
 	return ref;
 }
 

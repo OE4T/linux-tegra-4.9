@@ -52,12 +52,11 @@
 
 #include <asm/cputype.h>
 
-#include "nvmap_priv.h"
-#include "nvmap_ioctl.h"
-
 #define CREATE_TRACE_POINTS
 #include <trace/events/nvmap.h>
 
+#include "nvmap_priv.h"
+#include "nvmap_ioctl.h"
 
 #define NVMAP_CARVEOUT_KILLER_RETRY_TIME 100 /* msecs */
 
@@ -291,11 +290,6 @@ struct nvmap_handle *nvmap_validate_get(struct nvmap_handle *id)
 }
 
 static const struct file_operations debug_handles_by_pid_fops;
-
-static inline pid_t nvmap_client_pid(struct nvmap_client *client)
-{
-	return client->task ? client->task->pid : 0;
-}
 
 struct nvmap_pid_data {
 	struct rb_node node;
@@ -755,6 +749,7 @@ static void allocations_stringify(struct nvmap_client *client,
 	struct nvmap_device *dev = nvmap_dev;
 
 	nvmap_ref_lock(client);
+	mutex_lock(&dev->tags_lock);
 	n = rb_first(&client->handle_refs);
 	for (; n != NULL; n = rb_next(n)) {
 		struct nvmap_handle_ref *ref =
@@ -763,11 +758,6 @@ static void allocations_stringify(struct nvmap_client *client,
 		if (handle->alloc && handle->heap_type == heap_type) {
 			phys_addr_t base = heap_type == NVMAP_HEAP_IOVMM ? 0 :
 					   (handle->carveout->base);
-			struct nvmap_tag_entry *entry;
-
-			mutex_lock(&dev->tags_lock);
-			entry = nvmap_search_tag_entry(&dev->tags,
-					(handle->userflags >> 16));
 			seq_printf(s,
 				"%-18s %-18s %8llx %10zuK %8x %6u %6u %6u %6u %6u %6u %8p %s\n",
 				"", "",
@@ -780,10 +770,10 @@ static void allocations_stringify(struct nvmap_client *client,
 				atomic_read(&handle->umap_count),
 				atomic_read(&handle->share_count),
 				handle,
-				entry ? nvmap_tag_name(entry) : "");
-			mutex_unlock(&dev->tags_lock);
+				__nvmap_tag_name(dev, handle->userflags >> 16));
 		}
 	}
+	mutex_unlock(&dev->tags_lock);
 	nvmap_ref_unlock(client);
 }
 

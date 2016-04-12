@@ -51,6 +51,31 @@
 
 #define NVMAP_TAG_LABEL_MAXLEN	(63 - sizeof(struct nvmap_tag_entry))
 
+#define NVMAP_TP_ARGS_H(handle)					      	      \
+	handle,								      \
+	atomic_read(&handle->share_count),				      \
+	handle->heap_type == NVMAP_HEAP_IOVMM ? 0 : 			      \
+			(handle->carveout ? handle->carveout->base : 0),      \
+	handle->size,							      \
+	(handle->userflags & 0xFFFF),                                         \
+	(handle->userflags >> 16),					      \
+	__nvmap_tag_name(nvmap_dev, handle->userflags >> 16)
+
+#define NVMAP_TP_ARGS_CHR(client, handle, ref)			      	      \
+	client,                                                               \
+	client ? nvmap_client_pid((struct nvmap_client *)client) : 0,         \
+	(ref) ? atomic_read(&((struct nvmap_handle_ref *)ref)->dupes) : 1,    \
+	NVMAP_TP_ARGS_H(handle)
+
+#define NVMAP_TAG_TRACE(x, ...) 			\
+do {                                                    \
+	if (x##_enabled()) {                            \
+		mutex_lock(&nvmap_dev->tags_lock);      \
+		x(__VA_ARGS__);                         \
+		mutex_unlock(&nvmap_dev->tags_lock);    \
+	}                                               \
+} while (0)
+
 #ifdef CONFIG_NVMAP_HIGHMEM_ONLY
 #define __GFP_NVMAP     __GFP_HIGHMEM
 #else
@@ -634,9 +659,16 @@ int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
 
 int nvmap_remove_tag(struct nvmap_device *dev, u32 tag);
 
-static inline char *nvmap_tag_name(struct nvmap_tag_entry *entry)
+/* must hold tag_lock */
+static inline char *__nvmap_tag_name(struct nvmap_device *dev, u32 tag)
 {
-	return entry ? (char *)(entry + 1) : NULL;
-}
+	struct nvmap_tag_entry *entry;
 
+	entry = nvmap_search_tag_entry(&dev->tags, tag);
+	return entry ? (char *)(entry + 1) : "";
+}
+static inline pid_t nvmap_client_pid(struct nvmap_client *client)
+{
+	return client->task ? client->task->pid : 0;
+}
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

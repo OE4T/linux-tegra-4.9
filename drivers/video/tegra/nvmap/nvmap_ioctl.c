@@ -573,7 +573,8 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		block->handle = ref->handle;
 		mb();
 		ref->handle->alloc = true;
-		trace_nvmap_alloc_from_ivc(client, ref->handle, ref);
+		NVMAP_TAG_TRACE(trace_nvmap_alloc_handle_done,
+			NVMAP_TP_ARGS_CHR(client, ref->handle, ref));
 	}
 
 	fd = nvmap_create_fd(client, ref->handle);

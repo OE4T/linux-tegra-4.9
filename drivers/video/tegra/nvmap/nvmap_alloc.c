@@ -385,7 +385,8 @@ out:
 			nvmap_stats_inc(NS_KALLOC, h->size);
 		else
 			nvmap_stats_inc(NS_UALLOC, h->size);
-		trace_nvmap_alloced_handle(client, h);
+		NVMAP_TAG_TRACE(trace_nvmap_alloc_handle_done,
+			NVMAP_TP_ARGS_CHR(client, h, NULL));
 		err = 0;
 	} else {
 		nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
@@ -432,7 +433,8 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 	(void)alloc_handle_from_va(client, h, addr);
 
 	if (h->alloc) {
-		trace_nvmap_alloced_handle_from_va(client, h);
+		NVMAP_TAG_TRACE(trace_nvmap_alloc_handle_done,
+			NVMAP_TP_ARGS_CHR(client, h, NULL));
 		err = 0;
 	}
 	nvmap_handle_put(h);
@@ -499,7 +501,8 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	nvmap_altfree(h->pgalloc.pages, nr_page * sizeof(struct page *));
 
 out:
-	trace_nvmap_destroy_handle(h);
+	NVMAP_TAG_TRACE(trace_nvmap_destroy_handle,
+		NULL, get_current()->pid, 0, NVMAP_TP_ARGS_H(h));
 	kfree(h);
 }
 
@@ -521,7 +524,8 @@ void nvmap_free_handle(struct nvmap_client *client,
 	h = ref->handle;
 
 	if (atomic_dec_return(&ref->dupes)) {
-		trace_nvmap_free_handle(client, h, ref);
+		NVMAP_TAG_TRACE(trace_nvmap_free_handle,
+			NVMAP_TP_ARGS_CHR(client, h, ref));
 		nvmap_ref_unlock(client);
 		goto out;
 	}
@@ -537,7 +541,8 @@ void nvmap_free_handle(struct nvmap_client *client,
 		h->owner = NULL;
 
 	dma_buf_put(ref->handle->dmabuf);
-	trace_nvmap_free_handle(client, h, ref);
+	NVMAP_TAG_TRACE(trace_nvmap_free_handle,
+		NVMAP_TP_ARGS_CHR(client, h, ref));
 	kfree(ref);
 
 out:

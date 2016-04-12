@@ -228,7 +228,7 @@ struct nvhost_device_data t18_vi_info = {
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", 408000000},
-		{"nvcsi", 102000000},
+		{"nvcsi", 204000000},
 		{"nvcsilp", 204000000},
 		{"emc", HOST_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,

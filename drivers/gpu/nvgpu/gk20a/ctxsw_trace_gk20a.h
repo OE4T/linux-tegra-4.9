@@ -23,6 +23,7 @@ struct channel_gk20a;
 struct channel_ctx_gk20a;
 struct gk20a_ctxsw_dev;
 struct gk20a_fecs_trace;
+struct tsg_gk20a;
 
 
 int gk20a_ctxsw_dev_release(struct inode *inode, struct file *filp);
@@ -39,5 +40,9 @@ void gk20a_ctxsw_trace_cleanup(struct gk20a *);
 int gk20a_ctxsw_trace_write(struct gk20a *, struct nvgpu_ctxsw_trace_entry *);
 void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid);
 void gk20a_ctxsw_trace_init_ops(struct gpu_ops *ops);
+
+void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch);
+void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg);
+
 
 #endif /* __CTXSW_TRACE_GK20A_H */

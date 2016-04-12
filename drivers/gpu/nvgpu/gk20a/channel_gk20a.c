@@ -886,7 +886,7 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 		/* if lock is already taken, a reset is taking place
 		so no need to repeat */
 		if (!was_reset) {
-			trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);
+			gk20a_ctxsw_trace_channel_reset(g, ch);
 			gk20a_fifo_reset_engine(g,
 				g->fifo.deferred_fault_engines);
 		}

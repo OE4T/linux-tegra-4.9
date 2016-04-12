@@ -17,6 +17,7 @@
 #include <trace/events/gk20a.h>
 
 #include "vgpu/vgpu.h"
+#include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/hw_fifo_gk20a.h"
 #include "gk20a/hw_ram_gk20a.h"
 
@@ -629,7 +630,7 @@ int vgpu_fifo_isr(struct gk20a *g, struct tegra_vgpu_fifo_intr_info *info)
 	gk20a_err(dev_from_gk20a(g), "fifo intr (%d) on ch %u",
 		info->type, info->chid);
 
-	trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);
+	gk20a_ctxsw_trace_channel_reset(g, ch);
 
 	switch (info->type) {
 	case TEGRA_VGPU_FIFO_INTR_PBDMA:

@@ -23,6 +23,7 @@
 #include <linux/hashtable.h>
 #include <linux/debugfs.h>
 #include <linux/log2.h>
+#include <trace/events/gk20a.h>
 #include <uapi/linux/nvgpu.h>
 #include "ctxsw_trace_gk20a.h"
 #include "gk20a.h"
@@ -618,6 +619,47 @@ void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid)
 	struct gk20a_ctxsw_dev *dev = &g->ctxsw_trace->devs[vmid];
 
 	wake_up_interruptible(&dev->readout_wq);
+}
+
+void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
+{
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	struct nvgpu_ctxsw_trace_entry entry = {
+		.vmid = 0,
+		.tag = NVGPU_CTXSW_TAG_RESET,
+		.timestamp = gk20a_read_ptimer(g),
+		.context_id = 0,
+		.pid = ch->pid,
+	};
+
+	gk20a_ctxsw_trace_write(g, &entry);
+#endif
+	trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);
+	gk20a_ctxsw_trace_wake_up(g, 0);
+}
+
+void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
+{
+#ifdef CONFIG_GK20A_CTXSW_TRACE
+	struct nvgpu_ctxsw_trace_entry entry = {
+		.vmid = 0,
+		.tag = NVGPU_CTXSW_TAG_RESET,
+		.timestamp = gk20a_read_ptimer(g),
+		.context_id = 0,
+		.pid = 0,
+	};
+	struct channel_gk20a *ch;
+
+	mutex_lock(&tsg->ch_list_lock);
+	ch = list_entry(&tsg->ch_list, struct channel_gk20a, ch_entry);
+	mutex_unlock(&tsg->ch_list_lock);
+
+	entry.pid = ch->pid;
+
+	gk20a_ctxsw_trace_write(g, &entry);
+#endif
+	trace_gk20a_channel_reset(~0, tsg->tsgid);
+	gk20a_ctxsw_trace_wake_up(g, 0);
 }
 
 void gk20a_ctxsw_trace_init_ops(struct gpu_ops *ops)

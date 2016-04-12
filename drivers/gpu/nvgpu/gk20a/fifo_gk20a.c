@@ -1083,10 +1083,10 @@ static bool gk20a_fifo_handle_mmu_fault(
 			/* if lock is already taken, a reset is taking place
 			so no need to repeat */
 			if (!was_reset) {
-				trace_gk20a_channel_reset(
-					ch ? ch->hw_chid : ~0,
-					tsg ? tsg->tsgid :
-						NVGPU_INVALID_TSG_ID);
+				if (ch)
+					gk20a_ctxsw_trace_channel_reset(g, ch);
+				else
+					gk20a_ctxsw_trace_tsg_reset(g, tsg);
 				gk20a_fifo_reset_engine(g, engine_id);
 			}
 			mutex_unlock(&g->fifo.gr_reset_mutex);

@@ -511,5 +511,17 @@
 	adsp_audio {
 		status = "okay";
 	};
+
+	sdhci@3420000 {
+		status = "disabled";
+	};
+	sdhci@3400000 {
+		status = "disabled";
+	};
+	sdhci@3460000 {
+		status = "disabled";
+	};
+
+
 };
 

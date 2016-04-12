@@ -14,10 +14,6 @@
  */
 
 / {
-	sdhci@3420000 {
-		status = "disabled";
-	};
-
 	ufshci@2450000 {
 		status = "disabled";
 	};

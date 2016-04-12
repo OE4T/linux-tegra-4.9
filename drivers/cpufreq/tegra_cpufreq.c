@@ -31,6 +31,7 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <linux/tegra-mce.h>
+#include <linux/pm_qos.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
 #define MAX_VINDEX		80 /* No of voltage index */
@@ -74,6 +75,7 @@
 #define logical_to_phys_cluster(cl)	(cl == B_CLUSTER ? \
 					ARM_CPU_IMP_ARM : \
 					ARM_CPU_IMP_NVIDIA)
+
 enum cluster {
 	M_CLUSTER, /* Denver cluster */
 	B_CLUSTER, /* A57 cluster */
@@ -804,6 +806,73 @@ static struct cpufreq_driver tegra_cpufreq_driver = {
 	.active_cycle_cnt = get_coreclk_count,
 };
 
+static int cluster0_freq_notify(struct notifier_block *b,
+			unsigned long l, void *v)
+{
+	struct cpufreq_policy *policy;
+	u32 qmin, qmax, cpu;
+
+	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
+	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
+
+	for_each_cpu(cpu, &tfreq_data.pcluster[M_CLUSTER].cpu_mask) {
+		if (cpu_online(cpu)) {
+			policy = cpufreq_cpu_get(cpu);
+			if (!policy)
+				return -EINVAL;
+			policy->user_policy.min = qmin;
+			policy->user_policy.max = qmax;
+			cpufreq_update_policy(policy->cpu);
+			cpufreq_cpu_put(policy);
+			}
+		}
+	return NOTIFY_OK;
+}
+
+static int cluster1_freq_notify(struct notifier_block *b,
+			unsigned long l, void *v)
+{
+	struct cpufreq_policy *policy;
+	u32 qmin, qmax, cpu;
+
+	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
+	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
+
+	for_each_cpu(cpu, &tfreq_data.pcluster[B_CLUSTER].cpu_mask) {
+		if (cpu_online(cpu)) {
+			policy = cpufreq_cpu_get(cpu);
+			if (!policy)
+				return -EINVAL;
+			policy->user_policy.min = qmin;
+			policy->user_policy.max = qmax;
+			cpufreq_update_policy(policy->cpu);
+			cpufreq_cpu_put(policy);
+			}
+		}
+	return NOTIFY_OK;
+}
+
+static struct notifier_block cluster0_freq_nb = {
+	.notifier_call = cluster0_freq_notify,
+};
+
+static struct notifier_block cluster1_freq_nb = {
+	.notifier_call = cluster1_freq_notify,
+};
+
+static void pm_qos_register_notifier(void)
+{
+	pm_qos_add_min_notifier(PM_QOS_CLUSTER0_FREQ_BOUNDS,
+		&cluster0_freq_nb);
+	pm_qos_add_max_notifier(PM_QOS_CLUSTER0_FREQ_BOUNDS,
+		&cluster0_freq_nb);
+
+	pm_qos_add_min_notifier(PM_QOS_CLUSTER1_FREQ_BOUNDS,
+		&cluster1_freq_nb);
+	pm_qos_add_max_notifier(PM_QOS_CLUSTER1_FREQ_BOUNDS,
+		&cluster1_freq_nb);
+}
+
 /* Free lut space shared beteen CPU and BPMP */
 static void __init free_shared_lut(void)
 {
@@ -1146,6 +1215,8 @@ static int __init tegra_cpufreq_init(void)
 	ret = cpufreq_register_driver(&tegra_cpufreq_driver);
 	if (ret)
 		goto err_free_res;
+
+	pm_qos_register_notifier();
 
 	goto exit_out;
 err_free_res:

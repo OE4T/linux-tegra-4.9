@@ -1926,10 +1926,10 @@
 			<0x0 0x029B0000 0x0 0x90000>, /* AHSP */
 			<0x0 0x40000000 0x0 0xC0000000>, /* DRAM MAP1 */
 			<0x0 0x0 0x0 0x1>; /* DRAM MAP2 */
-		nvidia,adsp_mem = <0x40300000 0x01000000>, /* ADSP OS */
-			<0x40B00000 0x00800000>, /* ADSP APP */
+		nvidia,adsp_mem = <0x5EF00000 0x01000000>, /* ADSP OS */
+			<0x5F700000 0x00800000>, /* ADSP APP */
 			<0x3F813000 0x5000>, /* ARAM ALIAS 0 */
-			<0x4E000000 0x200000>; /* ACSR */
+			<0x5FD00000 0x200000>; /* ACSR */
 		nvidia,adsp_unit_fpga_reset = <0x07F00040 0x00000040>;
 		interrupts = <GIC_SPI INT_AMISC_MBOX_EMPTY1 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_HOST_INTF0>, /* MBOX SEND */

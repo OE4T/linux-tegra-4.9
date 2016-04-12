@@ -18,6 +18,7 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/bridge_mca.h>
+#include <linux/io.h>
 #include <linux/ioport.h>
 #include <linux/tegra-soc.h>
 

@@ -23,6 +23,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/delay.h>
+#include <asm/io.h>
 #include "i2c-t18x-slave.h"
 
 static struct i2cslv_cntlr *i2cslv;

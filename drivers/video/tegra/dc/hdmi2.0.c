@@ -1420,6 +1420,8 @@ static u32 tegra_hdmi_get_rgb_ycc(struct tegra_hdmi *hdmi)
 		return HDMI_AVI_YCC_420;
 	else if (yuv_flag & FB_VMODE_Y422)
 		return HDMI_AVI_YCC_422;
+	else if (yuv_flag & FB_VMODE_Y444)
+		return HDMI_AVI_YCC_444;
 
 	return HDMI_AVI_RGB;
 }

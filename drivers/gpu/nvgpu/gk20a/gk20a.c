@@ -1796,7 +1796,7 @@ int gk20a_busy(struct device *dev)
 	}
 #else
 	if (!g->power_on) {
-		ret = gk20a_gpu_is_virtual(pdev) ?
+		ret = gk20a_gpu_is_virtual(dev) ?
 			vgpu_pm_finalize_poweron(dev)
 			: gk20a_pm_finalize_poweron(dev);
 		if (ret)

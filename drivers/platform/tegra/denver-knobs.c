@@ -668,7 +668,8 @@ early_initcall(denver_knobs_init_early);
 
 static int mts_version_show(struct seq_file *m, void *v)
 {
-	return seq_printf(m, "%u\n", mts_version);
+	seq_printf(m, "%u\n", mts_version);
+	return 0;
 }
 
 static int mts_version_open(struct inode *inode, struct file *file)

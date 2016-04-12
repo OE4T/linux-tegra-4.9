@@ -441,37 +441,99 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	return 0;
 }
 
+/*
+ * Only use this subdevice media bus ops for test pattern generator,
+ * because CSI device is an separated subdevice which has 6 source
+ * pads to generate test pattern.
+ */
+static struct v4l2_mbus_framefmt tegra_csi_tpg_fmts[] = {
+	{
+		TEGRA_DEF_WIDTH,
+		TEGRA_DEF_HEIGHT,
+		MEDIA_BUS_FMT_SRGGB10_1X10,
+		V4L2_FIELD_NONE,
+		V4L2_COLORSPACE_SRGB
+	},
+	{
+		TEGRA_DEF_WIDTH,
+		TEGRA_DEF_HEIGHT,
+		V4L2_MBUS_FMT_RGBA8888_4X8_LE,
+		V4L2_FIELD_NONE,
+		V4L2_COLORSPACE_SRGB
+	}
+
+};
+
+static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
+				  struct v4l2_mbus_framefmt *mf)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
+		struct v4l2_mbus_framefmt *fmt = &tegra_csi_tpg_fmts[i];
+
+		if (mf->code == fmt->code && mf->field == fmt->field &&
+		    mf->colorspace == fmt->colorspace &&
+		    mf->width >= TEGRA_MIN_WIDTH &&
+		    mf->width <= TEGRA_MAX_WIDTH &&
+		    mf->height >= TEGRA_MIN_HEIGHT &&
+		    mf->height <= TEGRA_MAX_HEIGHT)
+			return 0;
+	}
+
+	memcpy(mf, tegra_csi_tpg_fmts, sizeof(struct v4l2_mbus_framefmt));
+
+	return 0;
+}
+
+static int tegra_csi_s_mbus_fmt(struct v4l2_subdev *sd,
+				struct v4l2_mbus_framefmt *fmt)
+{
+	int i;
+	struct tegra_csi_device *csi = to_csi(sd);
+
+	tegra_csi_try_mbus_fmt(sd, fmt);
+
+	for (i = 0; i < csi->num_ports; i++) {
+		struct v4l2_mbus_framefmt *format = &csi->ports[i].format;
+		memcpy(format, fmt, sizeof(struct v4l2_mbus_framefmt));
+	}
+
+	return 0;
+}
+
+static int tegra_csi_g_mbus_fmt(struct v4l2_subdev *sd,
+				struct v4l2_mbus_framefmt *fmt)
+{
+	return tegra_csi_try_mbus_fmt(sd, fmt);
+}
+
+static int tegra_csi_g_input_status(struct v4l2_subdev *sd, u32 *status)
+{
+	struct tegra_csi_device *csi = to_csi(sd);
+
+	*status = !!csi->pg_mode;
+
+	return 0;
+}
+
 /* -----------------------------------------------------------------------------
  * V4L2 Subdevice Pad Operations
  */
 
-static struct v4l2_mbus_framefmt *
-__tegra_csi_get_pad_format(struct tegra_csi_device *csi,
-		      struct v4l2_subdev_pad_config *cfg,
-		      unsigned int pad, u32 which)
-{
-	enum tegra_csi_port_num port_num = (pad >> 1);
-
-	switch (which) {
-	case V4L2_SUBDEV_FORMAT_TRY:
-#if defined(CONFIG_VIDEO_V4L2_SUBDEV_API)
-		return v4l2_subdev_get_try_format(&csi->subdev, cfg, pad);
-#endif
-	case V4L2_SUBDEV_FORMAT_ACTIVE:
-		return &csi->ports[port_num].format;
-	default:
-		return NULL;
-	}
-}
-
 static int tegra_csi_get_format(struct v4l2_subdev *subdev,
-			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_fh *cfg,
 			   struct v4l2_subdev_format *fmt)
 {
-	struct tegra_csi_device *csi = to_csi(subdev);
+	struct v4l2_mbus_framefmt mbus_fmt;
+	int ret;
 
-	fmt->format = *__tegra_csi_get_pad_format(csi, cfg,
-					fmt->pad, fmt->which);
+	ret = tegra_csi_g_mbus_fmt(subdev, &mbus_fmt);
+	if (ret)
+		return ret;
+
+	fmt->format = mbus_fmt;
+
 	return 0;
 }
 
@@ -479,14 +541,20 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 			   struct v4l2_subdev_pad_config *cfg,
 			   struct v4l2_subdev_format *fmt)
 {
+	int i, ret;
 	struct tegra_csi_device *csi = to_csi(subdev);
-	struct v4l2_mbus_framefmt *__format;
-	enum tegra_csi_port_num port_num = (fmt->pad >> 1);
 
-	__format = __tegra_csi_get_pad_format(csi, cfg,
-					fmt->pad, fmt->which);
-	if (__format)
-		csi->ports[port_num].format = *__format;
+	ret = tegra_csi_try_mbus_fmt(subdev, &fmt->format);
+	if (ret)
+		return ret;
+
+	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
+		return 0;
+
+	for (i = 0; i < csi->num_ports; i++) {
+		struct v4l2_mbus_framefmt *format = &csi->ports[i].format;
+		memcpy(format, &fmt->format, sizeof(struct v4l2_mbus_framefmt));
+	}
 
 	return 0;
 }
@@ -496,6 +564,7 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
  */
 static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 	.s_stream	= tegra_csi_s_stream,
+	.g_input_status = tegra_csi_g_input_status,
 };
 
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {

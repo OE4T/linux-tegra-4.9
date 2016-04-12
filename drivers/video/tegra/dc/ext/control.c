@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/control.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -42,9 +42,9 @@ struct tegra_dc_ext_control_output_edid32 {
 
 static struct tegra_dc_ext_control g_control;
 
-int tegra_dc_ext_process_hotplug(int output, bool connected)
+int tegra_dc_ext_process_hotplug(int output)
 {
-	return tegra_dc_ext_queue_hotplug(&g_control, output, connected);
+	return tegra_dc_ext_queue_hotplug(&g_control, output);
 }
 
 int tegra_dc_ext_process_vblank(int output, ktime_t timestamp)

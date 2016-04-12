@@ -1086,10 +1086,8 @@ static ssize_t dbg_dc_event_inject_write(struct file *file,
 	}
 #endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	if (event == 0x0) /* TEGRA_DC_EXT_EVENT_HOTPLUG (Connected) */
-		tegra_dc_ext_process_hotplug(dc->ndev->id, true);
-	else if (event == 0x1) /* TEGRA_DC_EXT_EVENT_HOTPLUG (Disconnected) */
-		tegra_dc_ext_process_hotplug(dc->ndev->id, false);
+	if (event == 0x0 || event == 0x1) /* TEGRA_DC_EXT_EVENT_HOTPLUG */
+		tegra_dc_ext_process_hotplug(dc->ndev->id);
 	else if (event == 0x2) /* TEGRA_DC_EXT_EVENT_BANDWIDTH_DEC */
 		tegra_dc_ext_process_bandwidth_renegotiate(
 				dc->ndev->id, NULL);

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/tegra_dc_ext_priv.h
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -150,7 +150,7 @@ extern int tegra_dc_ext_cursor_clip(struct tegra_dc_ext_user *user,
 extern int tegra_dc_ext_control_init(void);
 
 extern int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *,
-				      int output, bool connected);
+				      int output);
 extern int tegra_dc_ext_queue_vblank(struct tegra_dc_ext_control *,
 				      int output, ktime_t timestamp);
 extern int tegra_dc_ext_queue_bandwidth_renegotiate(

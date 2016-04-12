@@ -4,7 +4,7 @@
  * HDMI library support functions for Nvidia Tegra processors.
  *
  * Copyright (C) 2012-2013 Google - http://www.google.com/
- * Copyright (C) 2013-2015 NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2013-2016 NVIDIA CORPORATION. All rights reserved.
  * Authors:	John Grossman <johngro@google.com>
  * Authors:	Mike J. Chen <mjchen@google.com>
  *
@@ -193,7 +193,7 @@ static void hdmi_disable_l(struct tegra_dc_hdmi_data *hdmi)
 	tegra_fb_update_monspecs(hdmi->dc->fb, NULL, NULL, NULL);
 #endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id, false);
+	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 #endif
 }
 
@@ -296,7 +296,7 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 	hdmi->dc->connected = true;
 
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
-	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id, true);
+	tegra_dc_ext_process_hotplug(hdmi->dc->ndev->id);
 #endif
 
 	if (unlikely(tegra_dc_is_clk_enabled(hdmi->clk))) {

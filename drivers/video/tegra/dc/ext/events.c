@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/events.c
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -181,8 +181,7 @@ static int tegra_dc_ext_queue_event(struct tegra_dc_ext_control *control,
 	return retval;
 }
 
-int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *control, int output,
-				bool connected)
+int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *control, int output)
 {
 	struct {
 		struct tegra_dc_ext_event event;
@@ -193,7 +192,6 @@ int tegra_dc_ext_queue_hotplug(struct tegra_dc_ext_control *control, int output,
 	pack.event.data_size = sizeof(pack.hotplug);
 
 	pack.hotplug.handle = output;
-	pack.hotplug.connected = connected;
 
 	tegra_dc_ext_queue_event(control, &pack.event);
 

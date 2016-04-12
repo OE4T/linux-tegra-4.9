@@ -839,7 +839,6 @@ struct tegra_dc_ext_event {
 #define TEGRA_DC_EXT_EVENT_HOTPLUG			(1 << 0)
 struct tegra_dc_ext_control_event_hotplug {
 	__u32 handle;
-	__u32 connected;
 };
 
 #define TEGRA_DC_EXT_EVENT_VBLANK			(1 << 1)

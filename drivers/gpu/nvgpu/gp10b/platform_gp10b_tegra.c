@@ -93,6 +93,9 @@ static void gp10b_tegra_scale_init(struct device *dev)
 	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 	struct tegra_bwmgr_client *bwmgr_handle;
 
+	if (!profile)
+		return;
+
 	bwmgr_handle = tegra_bwmgr_register(TEGRA_BWMGR_CLIENT_GPU);
 	if (!bwmgr_handle)
 		return;

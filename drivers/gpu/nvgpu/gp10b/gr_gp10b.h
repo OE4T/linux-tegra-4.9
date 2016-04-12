@@ -16,6 +16,8 @@
 #ifndef _NVGPU_GR_GP10B_H_
 #define _NVGPU_GR_GP10B_H_
 
+#include <linux/version.h>
+
 struct gpu_ops;
 
 enum {
@@ -46,9 +48,15 @@ struct ecc_stat {
 struct gr_t18x {
 	struct {
 		u32 preempt_image_size;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 		u32 force_preemption_gfxp;
 		u32 force_preemption_cilp;
 		u32 dump_ctxsw_stats_on_channel_close;
+#else
+		bool force_preemption_gfxp;
+		bool force_preemption_cilp;
+		bool dump_ctxsw_stats_on_channel_close;
+#endif
 		struct dentry *debugfs_force_preemption_cilp;
 		struct dentry *debugfs_force_preemption_gfxp;
 		struct dentry *debugfs_dump_ctxsw_stats;

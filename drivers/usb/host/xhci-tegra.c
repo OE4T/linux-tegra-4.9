@@ -3322,6 +3322,44 @@ static int tegra_xhci_hub_status_data(struct usb_hcd *hcd, char *buf)
 	return xhci_hub_status_data(hcd, buf);
 }
 
+static bool device_has_isoch_ep_and_interval_one(struct usb_device *udev)
+{
+	struct usb_host_config *config;
+	struct usb_host_interface *alt;
+	struct usb_endpoint_descriptor *desc;
+	int i, j;
+
+	config = udev->actconfig;
+	if (!config)
+		return false;
+
+	for (i = 0; i < config->desc.bNumInterfaces; i++) {
+		alt = config->interface[i]->cur_altsetting;
+
+		if (!alt)
+			continue;
+
+		for (j = 0; j < alt->desc.bNumEndpoints; j++) {
+			desc = &alt->endpoint[j].desc;
+			if (usb_endpoint_xfer_isoc(desc) &&
+				desc->bInterval == 1)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+static int tegra_xhci_enable_usb3_lpm_timeout(struct usb_hcd *hcd,
+			struct usb_device *udev, enum usb3_link_state state)
+{
+	if (state == USB3_LPM_U1 &&
+		device_has_isoch_ep_and_interval_one(udev))
+		return USB3_LPM_DISABLED;
+
+	return xhci_enable_usb3_lpm_timeout(hcd, udev, state);
+}
+
 static int __init tegra_xusb_init(void)
 {
 	xhci_init_driver(&tegra_xhci_hc_driver, &tegra_xhci_overrides);
@@ -3330,6 +3368,8 @@ static int __init tegra_xusb_init(void)
 	tegra_xhci_hc_driver.free_dev = tegra_xhci_free_dev;
 	tegra_xhci_hc_driver.hub_control = tegra_xhci_hub_control;
 	tegra_xhci_hc_driver.hub_status_data = tegra_xhci_hub_status_data;
+	tegra_xhci_hc_driver.enable_usb3_lpm_timeout =
+		tegra_xhci_enable_usb3_lpm_timeout;
 
 	return platform_driver_register(&tegra_xusb_driver);
 }

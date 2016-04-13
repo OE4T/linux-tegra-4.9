@@ -393,6 +393,7 @@ struct tegra_xusb {
 
 static struct hc_driver __read_mostly tegra_xhci_hc_driver;
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static const struct of_device_id tegra_xusba_pd[] = {
 	{ .compatible = "nvidia,tegra186-xusba-pd", },
 	{},
@@ -402,6 +403,7 @@ static const struct of_device_id tegra_xusbc_pd[] = {
 	{ .compatible = "nvidia,tegra186-xusbc-pd", },
 	{},
 };
+#endif
 
 static inline u32 fpci_readl(struct tegra_xusb *tegra, unsigned int offset)
 {
@@ -1800,13 +1802,21 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 			return PTR_ERR(tegra->ipfs_base);
 	}
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	tegra->pgid_ss = tegra_pd_get_powergate_id(tegra_xusba_pd);
+#else
+	tegra->pgid_ss = TEGRA_POWERGATE_XUSBA;
+#endif
 	if (tegra->pgid_ss < 0) {
 		dev_err(&pdev->dev, "failed to get SS powergate id\n");
 		return tegra->pgid_ss;
 	}
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	tegra->pgid_host = tegra_pd_get_powergate_id(tegra_xusbc_pd);
+#else
+	tegra->pgid_host = TEGRA_POWERGATE_XUSBC
+#endif
 	if (tegra->pgid_host < 0) {
 		dev_err(&pdev->dev, "failed to get Host powergate id\n");
 		return tegra->pgid_host;

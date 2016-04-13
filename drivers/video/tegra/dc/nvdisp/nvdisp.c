@@ -1714,6 +1714,13 @@ int tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
 
 	mutex_lock(&tegra_nvdisp_lock);
 
+	/*
+	 * If this HEAD has already reserved the COMMON channel,
+	 * let it through.
+	 */
+	if (dc->common_channel_reserved)
+		goto unlock_and_ret;
+
 	ret = ___wait_event(tegra_nvdisp_common_channel_wq,
 		___wait_cond_timeout(tegra_nvdisp_common_channel_is_free()),
 		TASK_INTERRUPTIBLE, 0, HZ,
@@ -1723,8 +1730,8 @@ int tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
 
 	dc->common_channel_reserved = true;
 
+unlock_and_ret:
 	mutex_unlock(&tegra_nvdisp_lock);
-
 	return ret;
 }
 

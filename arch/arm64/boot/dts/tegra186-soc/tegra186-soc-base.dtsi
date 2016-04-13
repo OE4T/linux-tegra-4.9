@@ -707,7 +707,7 @@
 				 <&tegra_car TEGRA186_CLK_PLLD>,
 				 <&tegra_car TEGRA186_CLK_PLLD_OUT1>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
+				 <&tegra_car TEGRA186_CLK_CLK_M>;
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p0",
 				      "pllp_display", "plld2", "plld3",
@@ -739,7 +739,7 @@
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
 				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
+				 <&tegra_car TEGRA186_CLK_CLK_M>;
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p1",
 				      "pllp_display", "plld2", "plld3",
@@ -771,7 +771,7 @@
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
 				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_EMC_LATENCY>;
+				 <&tegra_car TEGRA186_CLK_CLK_M>;
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p2",
 				      "pllp_display", "plld2", "plld3",

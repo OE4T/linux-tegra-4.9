@@ -57,19 +57,19 @@
 				pin_gpio1 {
 					pins = "gpio1";
 					function = "fps-out";
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 				};
 
 				pin_gpio2 {
 					pins = "gpio2";
 					function = "fps-out";
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 				};
 
 				pin_gpio3 {
 					pins = "gpio3";
 					function = "fps-out";
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 				};
 
 				pin_gpio4 {
@@ -98,22 +98,22 @@
 			fps {
 				#address-cells = <1>;
 				#size-cells = <0>;
-				fps@0 {
+				fps0 {
 					reg = <0>;
-					maxim,fps-time-period = <2560>;
-					maxim,fps-enable-input = <FPS_EN_SRC_EN0>;
+					maxim,shutdown-fps-time-period-us = <2560>;
+					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN0>;
 				};
 
-				fps@1 {
+				fps1 {
 					reg = <1>;
-					maxim,fps-time-period = <2560>;
-					maxim,fps-enable-input = <FPS_EN_SRC_EN1>;
-					maxim,enable-sleep;
+					maxim,shutdown-fps-time-period-us = <2560>;
+					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN1>;
+					maxim,device-state-on-disabled-event = <0>;
 				};
 
-				fps@2 {
+				fps2 {
 					reg = <2>;
-					maxim,fps-enable-input = <FPS_EN_SRC_EN0>;
+					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN0>;
 				};
 			};
 
@@ -139,7 +139,7 @@
 					regulator-always-on;
 					regulator-boot-on;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_sd1: sd1 {
@@ -147,7 +147,7 @@
 					regulator-min-microvolt = <1200000>;
 					regulator-max-microvolt = <1200000>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_sd2: sd2 {
@@ -157,7 +157,7 @@
 					regulator-always-on;
 					regulator-boot-on;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_sd3: sd3 {
@@ -166,24 +166,24 @@
 					regulator-max-microvolt = <3300000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_sd4: sd4 {
 					regulator-name = "spmic-sd4";
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo0: ldo0 {
 					regulator-name = "vdd-1v8-pll";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <1800000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo1: ldo1 {
 					regulator-name = "spmic-ldo1";
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo2: ldo2 {
@@ -192,14 +192,14 @@
 					regulator-max-microvolt = <3300000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo3: ldo3 {
 					regulator-name = "vddio-sdmmc1";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo4: ldo4 {
@@ -208,14 +208,14 @@
 					regulator-max-microvolt = <800000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo5: ldo5 {
 					regulator-name = "vddio-sdmmc3";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo6: ldo6 {
@@ -224,19 +224,19 @@
 					regulator-max-microvolt = <1800000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo7: ldo7 {
 					regulator-name = "vdd-pex-1v05";
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 
 				spmic_ldo8: ldo8 {
 					regulator-name = "spmic-ldo8";
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 				};
 			};
 		};

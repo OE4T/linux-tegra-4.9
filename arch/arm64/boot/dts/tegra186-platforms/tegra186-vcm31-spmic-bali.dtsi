@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@
 					regulator-name = "vddio-sdmmc1";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 					regulator-enable-ramp-delay = <50>;
 					regulator-disable-ramp-delay = <1110>;
 					regulator-ramp-delay = <100000>;
@@ -64,7 +64,7 @@
 					regulator-name = "vddio-sdmmc3";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 					regulator-enable-ramp-delay = <50>;
 					regulator-disable-ramp-delay = <1110>;
 					regulator-ramp-delay = <100000>;

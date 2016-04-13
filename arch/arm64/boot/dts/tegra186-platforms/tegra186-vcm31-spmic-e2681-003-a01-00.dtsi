@@ -50,7 +50,7 @@
 					regulator-name = "vddio-sdmmc1";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 					regulator-enable-ramp-delay = <50>;
 					regulator-disable-ramp-delay = <1110>;
 					regulator-ramp-delay = <100000>;
@@ -62,7 +62,7 @@
 					regulator-name = "vddio-sdmmc3";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_DEF>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_DEF>;
 					regulator-enable-ramp-delay = <50>;
 					regulator-disable-ramp-delay = <1110>;
 					regulator-ramp-delay = <100000>;

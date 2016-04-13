@@ -146,27 +146,27 @@
 
 			pinmux@0 {
 				pin_gpio1 {
-					maxim,fps-power-up-slot = <7>;
-					maxim,fps-power-down-slot = <0>;
+					maxim,active-fps-power-up-slot = <7>;
+					maxim,active-fps-power-down-slot = <0>;
 				};
 
 				pin_gpio2 {
-					maxim,fps-power-up-slot = <0>;
-					maxim,fps-power-down-slot = <7>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 				};
 
 				pin_gpio3 {
-					maxim,fps-power-up-slot = <1>;
-					maxim,fps-power-down-slot = <6>;
+					maxim,active-fps-power-up-slot = <1>;
+					maxim,active-fps-power-down-slot = <6>;
 					maxim,suspend-fps-power-down-slot = <7>;
 				};
 			};
 
 			regulators {
 				sd0 {
-					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <5>;
-					maxim,fps-power-down-slot = <2>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <5>;
+					maxim,active-fps-power-down-slot = <2>;
 					regulator-enable-ramp-delay = <321000>;
 					regulator-disable-ramp-delay = <100000>;
 					regulator-ramp-delay = <27500>;
@@ -174,9 +174,9 @@
 				};
 
 				sd1 {
-					maxim,fps-source = <FPS_SRC_1>;
-					maxim,fps-power-up-slot = <2>;
-					maxim,fps-power-down-slot = <5>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
+					maxim,active-fps-power-up-slot = <2>;
+					maxim,active-fps-power-down-slot = <5>;
 					regulator-enable-ramp-delay = <216>;
 					regulator-disable-ramp-delay = <17700>;
 					regulator-ramp-delay = <27500>;
@@ -184,9 +184,9 @@
 				};
 
 				sd2 {
-					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <3>;
-					maxim,fps-power-down-slot = <4>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <3>;
+					maxim,active-fps-power-down-slot = <4>;
 					regulator-enable-ramp-delay = <351>;
 					regulator-disable-ramp-delay = <49500>;
 					regulator-ramp-delay = <27500>;
@@ -194,10 +194,10 @@
 				};
 
 				sd3 {
-					maxim,fps-source = <FPS_SRC_1>;
-					maxim,suspend-fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <5>;
-					maxim,fps-power-down-slot = <2>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
+					maxim,suspend-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <5>;
+					maxim,active-fps-power-down-slot = <2>;
 					regulator-enable-ramp-delay = <570>;
 					regulator-disable-ramp-delay = <40200>;
 					regulator-ramp-delay = <27500>;
@@ -205,9 +205,9 @@
 				};
 
 				ldo0 {
-					maxim,fps-source = <FPS_SRC_1>;
-					maxim,fps-power-up-slot = <3>;
-					maxim,fps-power-down-slot = <4>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
+					maxim,active-fps-power-up-slot = <3>;
+					maxim,active-fps-power-down-slot = <4>;
 					regulator-enable-ramp-delay = <1200>;
 					regulator-disable-ramp-delay = <13800>;
 					regulator-ramp-delay = <5000>;
@@ -215,16 +215,16 @@
 				};
 
 				ldo1 {
-					maxim,fps-source = <FPS_SRC_NONE>;
-					maxim,fps-power-up-slot = <0>;
-					maxim,fps-power-down-slot = <7>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-ramp-delay = <5000>;
 				};
 
 				ldo2 {
-					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <5>;
-					maxim,fps-power-down-slot = <2>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <5>;
+					maxim,active-fps-power-down-slot = <2>;
 					regulator-enable-ramp-delay = <1700>;
 					regulator-disable-ramp-delay = <7800>;
 					regulator-ramp-delay = <5000>;
@@ -232,9 +232,9 @@
 				};
 
 				ldo3 {
-					maxim,fps-source = <FPS_SRC_NONE>;
-					maxim,fps-power-up-slot = <7>;
-					maxim,fps-power-down-slot = <0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+					maxim,active-fps-power-up-slot = <7>;
+					maxim,active-fps-power-down-slot = <0>;
 					regulator-enable-ramp-delay = <1900>;
 					regulator-disable-ramp-delay = <11000>;
 					regulator-ramp-delay = <5000>;
@@ -242,9 +242,9 @@
 				};
 
 				ldo4 {
-					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <0>;
-					maxim,fps-power-down-slot = <7>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-enable-ramp-delay = <26>;
 					regulator-disable-ramp-delay = <4800>;
 					regulator-ramp-delay = <100000>;
@@ -252,9 +252,9 @@
 				};
 
 				ldo5 {
-					maxim,fps-source = <FPS_SRC_NONE>;
-					maxim,fps-power-up-slot = <7>;
-					maxim,fps-power-down-slot = <0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+					maxim,active-fps-power-up-slot = <7>;
+					maxim,active-fps-power-down-slot = <0>;
 					regulator-enable-ramp-delay = <1800>;
 					regulator-disable-ramp-delay = <11000>;
 					regulator-ramp-delay = <5000>;
@@ -262,9 +262,9 @@
 				};
 
 				ldo6 {
-					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-slot = <2>;
-					maxim,fps-power-down-slot = <5>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <2>;
+					maxim,active-fps-power-down-slot = <5>;
 					regulator-enable-ramp-delay = <1150>;
 					regulator-disable-ramp-delay = <16500>;
 					regulator-ramp-delay = <5000>;
@@ -272,9 +272,9 @@
 				};
 
 				ldo7 {
-					maxim,fps-source = <FPS_SRC_1>;
-					maxim,fps-power-up-slot = <4>;
-					maxim,fps-power-down-slot = <3>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
+					maxim,active-fps-power-up-slot = <4>;
+					maxim,active-fps-power-down-slot = <3>;
 					regulator-enable-ramp-delay = <594>;
 					regulator-disable-ramp-delay = <10200>;
 					regulator-ramp-delay = <5000>;
@@ -282,9 +282,9 @@
 				};
 
 				ldo8 {
-					maxim,fps-source = <FPS_SRC_NONE>;
-					maxim,fps-power-up-slot = <0>;
-					maxim,fps-power-down-slot = <7>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
+					maxim,active-fps-power-up-slot = <0>;
+					maxim,active-fps-power-down-slot = <7>;
 					regulator-ramp-delay = <5000>;
 				};
 			};

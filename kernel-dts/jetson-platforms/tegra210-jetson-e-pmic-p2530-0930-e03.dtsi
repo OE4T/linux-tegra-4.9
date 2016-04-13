@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -55,16 +55,16 @@
 					pins = "gpio1";
 					function = "fps-out";
 					drive-push-pull = <1>;
-					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-period = <7>;
-					maxim,fps-power-down-period = <0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <7>;
+					maxim,active-fps-power-down-slot = <0>;
 				};
 
 				pin_gpio2_3 {
 					pins = "gpio2", "gpio3";
 					function = "fps-out";
 					drive-open-drain = <1>;
-					maxim,fps-source = <FPS_SRC_0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 				};
 
 				pin_gpio4 {
@@ -93,22 +93,22 @@
 			fps {
 				#address-cells = <1>;
 				#size-cells = <0>;
-				fps@0 {
+				fps0 {
 					reg = <0>;
-					maxim,fps-time-period = <2560>;
-					maxim,fps-enable-input = <FPS_EN_SRC_EN0>;
+					maxim,shutdown-fps-time-period-us = <2560>;
+					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN0>;
 				};
 
-				fps@1 {
+				fps1 {
 					reg = <1>;
-					maxim,fps-time-period = <2560>;
-					maxim,fps-enable-input = <FPS_EN_SRC_EN1>;
-					maxim,enable-sleep;
+					maxim,shutdown-fps-time-period-us = <2560>;
+					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN1>;
+					maxim,device-state-on-disabled-event = <0>;
 				};
 
-				fps@2 {
+				fps2 {
 					reg = <2>;
-					maxim,fps-enable-input = <FPS_EN_SRC_EN0>;
+					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN0>;
 				};
 			};
 
@@ -128,7 +128,7 @@
 					regulator-max-microvolt = <1400000>;
 					regulator-boot-on;
 					regulator-always-on;
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 				};
 
@@ -137,14 +137,14 @@
 					regulator-always-on;
 					regulator-boot-on;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
-					maxim,fps-source = <FPS_SRC_0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 				};
 
 				max77620_sd2: sd2 {
 					regulator-name = "vdd-pre-reg";
 					regulator-min-microvolt = <1350000>;
 					regulator-max-microvolt = <1350000>;
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 				};
 
 				max77620_sd3: sd3 {
@@ -153,7 +153,7 @@
 					regulator-max-microvolt = <1800000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 					regulator-init-mode = <REGULATOR_MODE_NORMAL>;
 					consumers {
 						c7 {
@@ -185,7 +185,7 @@
 					regulator-max-microvolt = <1200000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 					consumers {
 						c0 {
 							regulator-consumer-supply = "vddio_hsic";
@@ -206,21 +206,21 @@
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					regulator-always-on;
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 				};
 
 				max77620_ldo2: ldo2 {
 					regulator-name = "vddio-sdmmc3";
 					regulator-min-microvolt = <1800000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 				};
 
 				max77620_ldo3: ldo3 {
 					regulator-name = "vdd-cam-hv";
 					regulator-min-microvolt = <2800000>;
 					regulator-max-microvolt = <2800000>;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 					consumers {
 						c0 {
 							regulator-consumer-supply = "vana";
@@ -234,14 +234,14 @@
 					regulator-max-microvolt = <850000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
 				};
 
 				max77620_ldo5: ldo5 {
 					regulator-name = "avdd-ts-hv";
 					regulator-min-microvolt = <3300000>;
 					regulator-max-microvolt = <3300000>;
-					maxim,fps-source = <FPS_SRC_NONE>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_NONE>;
 				};
 
 				max77620_ldo6: ldo6 {
@@ -250,9 +250,9 @@
 					regulator-max-microvolt = <1800000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_0>;
-					maxim,fps-power-up-period = <7>;
-					maxim,fps-power-down-period = <0>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_0>;
+					maxim,active-fps-power-up-slot = <7>;
+					maxim,active-fps-power-down-slot = <0>;
 				};
 
 				max77620_ldo7: ldo7 {
@@ -261,7 +261,7 @@
 					regulator-max-microvolt = <1050000>;
 					regulator-always-on;
 					regulator-boot-on;
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 				};
 
 				max77620_ldo8: ldo8 {
@@ -269,7 +269,7 @@
 					regulator-min-microvolt = <1050000>;
 					regulator-max-microvolt = <1050000>;
 					regulator-always-on;
-					maxim,fps-source = <FPS_SRC_1>;
+					maxim,active-fps-source = <MAX77620_FPS_SRC_1>;
 				};
 			};
 		};

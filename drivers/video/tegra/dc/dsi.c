@@ -4593,8 +4593,9 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
-
+#ifdef CONFIG_SYSEDP_FRAMEWORK
 	sysedp_set_state(dsi->sysedpc, 1);
+#endif
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
@@ -5614,8 +5615,9 @@ static void tegra_dc_dsi_disable(struct tegra_dc *dc)
 
 	if (dsi->host_suspended)
 		tegra_dsi_host_resume(dc);
-
+#ifdef CONFIG_SYSEDP_FRAMEWORK
 	sysedp_set_state(dsi->sysedpc, 0);
+#endif
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
 
@@ -5764,8 +5766,9 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 	}
 #endif
 	sprintf(sysedp_name, "dsi_%d", dsi->dc->ndev->id);
+#ifdef CONFIG_SYSEDP_FRAMEWORK
 	dsi->sysedpc = sysedp_create_consumer(sysedp_name, sysedp_name);
-
+#endif
 	return 0;
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 err_padctrl:

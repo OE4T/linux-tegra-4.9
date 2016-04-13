@@ -22,7 +22,6 @@
 
 / {
         ether_qos@2490000 {
-		nvidia,use_multi_queues;
 		/* PTP_ref clock speed in MHz */
 		nvidia,ptp_ref_clock_speed = <125>;
 		/* rxq_enable_ctrl = <rx0 rx1 rx2 rx3>

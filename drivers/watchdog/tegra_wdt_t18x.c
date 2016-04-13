@@ -53,6 +53,7 @@ struct tegra_wdt_t18x {
 	void __iomem		*wdt_tke;
 	u32			config;
 	int			irq;
+	int			hwirq;
 	unsigned long		status;
 	int			cluster_id;
 	bool			enable_on_init;
@@ -209,7 +210,7 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	if (!tegra_platform_is_linsim())
 		writel(TOP_TKE_TKEIE_WDT_MASK(tegra_wdt_t18x->index),
 			tegra_wdt_t18x->wdt_tke +
-			TOP_TKE_TKEIE(tegra_wdt_t18x->irq - 32));
+			TOP_TKE_TKEIE(tegra_wdt_t18x->hwirq));
 
 	/* Update skip configuration and active expiry count */
 	tegra_wdt_t18x->active_count = tegra_wdt_t18x->expiry_count -
@@ -488,6 +489,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	struct resource *res_src, *res_wdt, *res_tke;
 	struct tegra_wdt_t18x *tegra_wdt_t18x;
 	struct device_node *np = pdev->dev.of_node;
+	struct of_phandle_args oirq;
 	u32 pval = 0;
 	int ret = 0, index;
 
@@ -533,6 +535,16 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 			tegra_wdt_t18x->heartbeat, &pdev->dev);
 
 	tegra_wdt_t18x->irq = irq_of_parse_and_map(np, 0);
+	/* Find the IRQ number from the perspective of the interrupt controller.
+	   This is different than Linux's IRQ number */
+	ret = of_irq_parse_one(np, 0, &oirq);
+	if (ret) {
+		dev_err(&pdev->dev, "Could not parse IRQ\n");
+		return -EINVAL;
+	}
+	/* The second entry is the IRQ */
+	tegra_wdt_t18x->hwirq = oirq.args[1];
+
 	tegra_wdt_t18x->enable_on_init =
 			of_property_read_bool(np, "nvidia,enable-on-init");
 

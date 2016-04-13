@@ -213,6 +213,7 @@
 		dsi {   /* dsi@15300000 */
 			status = "okay";
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
+			nvidia,enable-hs-clk-in-lp-mode = <0>;
 			panel-dsi-1080p-p2382 {  /* p2393 DSI2DP 1920x1080@60 */
 				status = "okay";
 				nvidia,dsi-video-burst-mode = <TEGRA_DSI_VIDEO_NONE_BURST_MODE>;
@@ -268,14 +269,6 @@
 			reg = <0x40>;
 			status = "okay";
 			maxim,enable-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>;
-		};
-	};
-
-	i2c@3160000 { /* Tegra I2C0 - VCM I2CA */
-		ds1050-backlight@2f {
-			 compatible = "maxim,ds1050";
-			 reg = <0x2f>;
-			 status = "okay";
 		};
 
 		/* DSI to LVDS bridge */

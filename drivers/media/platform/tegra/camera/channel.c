@@ -499,6 +499,10 @@ void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
 				dev_info(&chan->video.dev,
 					 "Got unplug event during capture!\n");
 
+				/* required to block immediate unplug event */
+				if (atomic_read(&chan->is_hdmiin_unplug))
+					return;
+
 				atomic_set(&chan->is_hdmiin_unplug, 1);
 				for (index = 0; index < valid_ports; index++) {
 					nvhost_syncpt_cpu_incr_ext(
@@ -695,8 +699,13 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	if (chan->bypass)
 		return ret;
 
-	for (i = 0; i < chan->valid_ports; i++)
+	for (i = 0; i < chan->valid_ports; i++) {
 		tegra_csi_start_streaming(chan->vi->csi, chan->port[i]);
+		/* ensure sync point state is clean */
+		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
+							chan->syncpt[i]);
+	}
+
 	/* Note: Program VI registers after TPG, sensors and CSI streaming */
 	ret = tegra_channel_capture_setup(chan);
 	if (ret < 0)

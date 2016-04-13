@@ -356,6 +356,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 		goto done;
 
 clean_up:
+		g->gr.ctx_vars.valid = false;
 		kfree(g->gr.ctx_vars.ucode.fecs.inst.l);
 		kfree(g->gr.ctx_vars.ucode.fecs.data.l);
 		kfree(g->gr.ctx_vars.ucode.gpccs.inst.l);

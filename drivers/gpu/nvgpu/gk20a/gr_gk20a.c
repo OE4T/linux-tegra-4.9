@@ -3140,6 +3140,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	gr->gpc_skip_mask = NULL;
 	gr->map_tiles = NULL;
 
+	gr->ctx_vars.valid = false;
 	kfree(gr->ctx_vars.ucode.fecs.inst.l);
 	kfree(gr->ctx_vars.ucode.fecs.data.l);
 	kfree(gr->ctx_vars.ucode.gpccs.inst.l);
@@ -3156,6 +3157,14 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	kfree(gr->ctx_vars.ctxsw_regs.pm_sys.l);
 	kfree(gr->ctx_vars.ctxsw_regs.pm_gpc.l);
 	kfree(gr->ctx_vars.ctxsw_regs.pm_tpc.l);
+	kfree(gr->ctx_vars.ctxsw_regs.pm_ppc.l);
+	kfree(gr->ctx_vars.ctxsw_regs.perf_sys.l);
+	kfree(gr->ctx_vars.ctxsw_regs.fbp.l);
+	kfree(gr->ctx_vars.ctxsw_regs.perf_gpc.l);
+	kfree(gr->ctx_vars.ctxsw_regs.fbp_router.l);
+	kfree(gr->ctx_vars.ctxsw_regs.gpc_router.l);
+	kfree(gr->ctx_vars.ctxsw_regs.pm_ltc.l);
+	kfree(gr->ctx_vars.ctxsw_regs.pm_fbpa.l);
 
 	kfree(gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;

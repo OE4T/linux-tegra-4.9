@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Host Actmon support for T186
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -82,11 +82,9 @@ static void host1x_actmon_dump_regs(struct host1x_actmon *actmon)
 		actmon_readl(actmon, actmon_local_cumulative_r()));
 }
 
-static void host1x_actmon_event_fn(struct work_struct *work)
+static void host1x_actmon_event_fn(struct host1x_actmon *actmon,
+	enum wmark_type_e type)
 {
-	struct host1x_actmon_worker *worker =
-		container_of(work, struct host1x_actmon_worker, work);
-	struct host1x_actmon *actmon = worker->actmon;
 	struct platform_device *pdev = actmon->pdev;
 	struct nvhost_device_data *engine_pdata = platform_get_drvdata(pdev);
 
@@ -94,13 +92,13 @@ static void host1x_actmon_event_fn(struct work_struct *work)
 	nvhost_module_busy_noresume(pdev);
 	if (pm_runtime_active(&pdev->dev)) {
 		/* first, handle scaling */
-		nvhost_scale_actmon_irq(pdev, worker->type);
+		nvhost_scale_actmon_irq(pdev, type);
 
 		/* then, rewire the actmon IRQ */
 		nvhost_intr_enable_host_irq(&nvhost_get_host(pdev)->intr,
 					    engine_pdata->actmon_irq,
 					    host1x_actmon_process_isr,
-					    worker->actmon);
+					    actmon);
 	}
 	host1x_actmon_dump_regs(actmon);
 	nvhost_module_idle(pdev);
@@ -125,9 +123,9 @@ static void host1x_actmon_process_isr(u32 hintstat, void *priv)
 	actmon_writel(actmon, val, actmon_local_intr_status_r());
 
 	if (actmon_local_intr_status_avg_above_wmark_v(val))
-		schedule_work(&actmon->above_wmark_worker.work);
+		host1x_actmon_event_fn(actmon, ACTMON_INTR_ABOVE_WMARK);
 	else if (actmon_local_intr_status_avg_below_wmark_v(val))
-		schedule_work(&actmon->below_wmark_worker.work);
+		host1x_actmon_event_fn(actmon, ACTMON_INTR_BELOW_WMARK);
 }
 
 /*
@@ -229,20 +227,9 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 	val |= actmon_local_ctrl_enb_cumulative_f(1);
 	actmon_writel(actmon, val, actmon_local_ctrl_r());
 
-	/* setup watermark workers */
-	if (engine_pdata->actmon_irq) {
-		actmon->below_wmark_worker.actmon = actmon;
-		actmon->below_wmark_worker.type = ACTMON_INTR_BELOW_WMARK;
-		INIT_WORK(&actmon->below_wmark_worker.work,
-			  host1x_actmon_event_fn);
-		actmon->above_wmark_worker.actmon = actmon;
-		actmon->above_wmark_worker.type = ACTMON_INTR_ABOVE_WMARK;
-		INIT_WORK(&actmon->above_wmark_worker.work,
-			  host1x_actmon_event_fn);
-
-		/* Enable global interrupt */
+	/* Enable global interrupt */
+	if (engine_pdata->actmon_irq)
 		actmon_writel(actmon, 0x1, actmon_glb_intr_en_r());
-	}
 
 	nvhost_intr_enable_host_irq(&nvhost_get_host(host_pdev)->intr,
 				    engine_pdata->actmon_irq,
@@ -278,12 +265,6 @@ static void host1x_actmon_deinit(struct host1x_actmon *actmon)
 	/* Disable actmon */
 	actmon_writel(actmon, 0x0, actmon_local_ctrl_r());
 	actmon_writel(actmon, 0x0, actmon_glb_ctrl_r());
-
-	/* wait for work to finish and then cancel*/
-	if (engine_pdata->actmon_irq) {
-		cancel_work_sync(&actmon->above_wmark_worker.work);
-		cancel_work_sync(&actmon->below_wmark_worker.work);
-	}
 
 	actmon->init = ACTMON_SLEEP;
 

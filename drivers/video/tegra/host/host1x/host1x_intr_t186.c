@@ -273,8 +273,9 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intgmask_r(), 0);
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), 0);
 
-	err = request_irq(intr->general_irq, intr_host1x_isr,
-			0, "host_status", intr);
+	err = request_threaded_irq(intr->general_irq, NULL,
+				intr_host1x_isr,
+				IRQF_ONESHOT, "host_status", intr);
 	if (err)
 		return err;
 

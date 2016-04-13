@@ -19,6 +19,25 @@
 / {
 
 	fixed-regulators {
+		battery_reg: regulator@0 {
+			compatible = "regulator-fixed";
+			reg = <0>;
+			regulator-name = "vdd-ac-bat";
+			regulator-min-microvolt = <5000000>;
+			regulator-max-microvolt = <5000000>;
+			regulator-always-on;
+		};
+
+		vdd_1v8_ap: regulator@1 {
+			compatible = "regulator-fixed";
+			reg = <101>;
+			regulator-name = "vdd-1v8-ap";
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
+			regulator-boot-on;
+		};
+
 		vdd_usb1_5v_con: regulator@113 {
 			compatible = "regulator-fixed";
 			reg = <113>;
@@ -112,4 +131,11 @@
 		hvdd-pex-supply = <&spmic_sd2>;
 		vddio-pexctl-aud-supply = <&spmic_sd2>;
 	};
+
+	i2c@c250000 {
+		onsemi,nct72@4c {
+			vdd-supply = <&vdd_1v8_ap>;
+		};
+	};
+
 };

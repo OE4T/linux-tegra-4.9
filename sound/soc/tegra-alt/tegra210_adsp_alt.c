@@ -2269,6 +2269,7 @@ static struct snd_soc_dai_driver tegra210_adsp_codec_dai[] = {
 	ADSP_FE_CODEC_DAI(3),
 	ADSP_FE_CODEC_DAI(4),
 	ADSP_FE_CODEC_DAI(5),
+	ADSP_EAVB_CODEC_DAI(),
 	ADSP_ADMAIF_CODEC_DAI(1),
 	ADSP_ADMAIF_CODEC_DAI(2),
 	ADSP_ADMAIF_CODEC_DAI(3),
@@ -2289,10 +2290,9 @@ static struct snd_soc_dai_driver tegra210_adsp_codec_dai[] = {
 	ADSP_ADMAIF_CODEC_DAI(18),
 	ADSP_ADMAIF_CODEC_DAI(19),
 	ADSP_ADMAIF_CODEC_DAI(20),
-	ADSP_EAVB_CODEC_DAI(),
 };
 
-/* This array is linked with tegra210_adsp_virt_widgets enum defines. Any thing
+/* This array is linked with tegra210_adsp_virt_regs enum defines. Any thing
    changed in enum define should be also reflected here and vice-versa */
 static const char * const tegra210_adsp_mux_texts[] = {
 	"None",
@@ -2301,6 +2301,7 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADSP-FE3",
 	"ADSP-FE4",
 	"ADSP-FE5",
+	"ADSP-EAVB",
 	"ADSP-ADMAIF1",
 	"ADSP-ADMAIF2",
 	"ADSP-ADMAIF3",
@@ -2321,7 +2322,6 @@ static const char * const tegra210_adsp_mux_texts[] = {
 	"ADSP-ADMAIF18",
 	"ADSP-ADMAIF19",
 	"ADSP-ADMAIF20",
-	"ADSP-EAVB",
 	"APM-IN1",
 	"APM-IN2",
 	"APM-IN3",
@@ -2373,6 +2373,7 @@ static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe2, TEGRA210_ADSP_FRONT_END2);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe3, TEGRA210_ADSP_FRONT_END3);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe4, TEGRA210_ADSP_FRONT_END4);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_fe5, TEGRA210_ADSP_FRONT_END5);
+static ADSP_MUX_ENUM_CTRL_DECL(adsp_eavb, TEGRA210_ADSP_EAVB);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif1, TEGRA210_ADSP_ADMAIF1);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif2, TEGRA210_ADSP_ADMAIF2);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif3, TEGRA210_ADSP_ADMAIF3);
@@ -2393,7 +2394,6 @@ static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif17, TEGRA210_ADSP_ADMAIF17);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif18, TEGRA210_ADSP_ADMAIF18);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif19, TEGRA210_ADSP_ADMAIF19);
 static ADSP_MUX_ENUM_CTRL_DECL(adsp_admaif20, TEGRA210_ADSP_ADMAIF20);
-static ADSP_MUX_ENUM_CTRL_DECL(adsp_eavb, TEGRA210_ADSP_EAVB);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in1, TEGRA210_ADSP_APM_IN1);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in2, TEGRA210_ADSP_APM_IN2);
 static ADSP_MUX_ENUM_CTRL_DECL(apm_in3, TEGRA210_ADSP_APM_IN3);
@@ -2448,6 +2448,7 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-FE3", adsp_fe3),
 	ADSP_EP_WIDGETS("ADSP-FE4", adsp_fe4),
 	ADSP_EP_WIDGETS("ADSP-FE5", adsp_fe5),
+	ADSP_EP_WIDGETS("ADSP-EAVB", adsp_eavb),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF1", adsp_admaif1),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF2", adsp_admaif2),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF3", adsp_admaif3),
@@ -2468,7 +2469,6 @@ static const struct snd_soc_dapm_widget tegra210_adsp_widgets[] = {
 	ADSP_EP_WIDGETS("ADSP-ADMAIF18", adsp_admaif18),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF19", adsp_admaif19),
 	ADSP_EP_WIDGETS("ADSP-ADMAIF20", adsp_admaif20),
-	ADSP_EP_WIDGETS("ADSP-EAVB", adsp_eavb),
 	ADSP_WIDGETS("APM-IN1", apm_in1, TEGRA210_ADSP_APM_IN1),
 	ADSP_WIDGETS("APM-IN2", apm_in2, TEGRA210_ADSP_APM_IN2),
 	ADSP_WIDGETS("APM-IN3", apm_in3, TEGRA210_ADSP_APM_IN3),

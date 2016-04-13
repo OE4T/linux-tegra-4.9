@@ -122,7 +122,6 @@
 		uhs-mask = <0x40>;
 		nvidia,is-emmc;
 		built-in;
-		pll_source = "pll_p", "pll_c4_out2";
 		power-off-rail;
 	};
 

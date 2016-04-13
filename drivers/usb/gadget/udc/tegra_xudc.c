@@ -207,6 +207,7 @@
 #define XUDC_IS_T186(t) \
 	(t->soc ? (t->soc->device_id == XUDC_DEVICE_ID_T186) : false)
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static struct of_device_id tegra_xusba_pd[] = {
 	{ .compatible = "nvidia,tegra186-xusba-pd", },
 	{ .compatible = "nvidia,tegra210-xusba-pd", },
@@ -220,6 +221,7 @@ static struct of_device_id tegra_xusbb_pd[] = {
 	{ .compatible = "nvidia,tegra132-xusbb-pd", },
 	{},
 };
+#endif
 
 struct tegra_xudc_ep_context {
 	__le32 info0;
@@ -3327,7 +3329,11 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id_xusba = tegra_pd_get_powergate_id(tegra_xusba_pd);
+#else
+	partition_id_xusba = TEGRA_POWERGATE_XUSBA;
+#endif
 	if (partition_id_xusba < 0) {
 		err = -EINVAL;
 		goto disable_regulator;
@@ -3338,7 +3344,11 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id_xusbb = tegra_pd_get_powergate_id(tegra_xusbb_pd);
+#else
+	partition_id_xusbb = TEGRA_POWERGATE_XUSBB;
+#endif
 	if (partition_id_xusbb < 0) {
 		err = -EINVAL;
 		goto powergate_xusba;
@@ -3430,10 +3440,18 @@ static int tegra_xudc_remove(struct platform_device *pdev)
 	tegra_xudc_free_event_ring(xudc);
 	tegra_xudc_phy_power_off(xudc);
 	tegra_xudc_clk_disable(xudc);
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id_xusbb = tegra_pd_get_powergate_id(tegra_xusbb_pd);
+#else
+	partition_id_xusbb = TEGRA_POWERGATE_XUSBB;
+#endif
 	if (partition_id_xusbb < 0)
 		return -EINVAL;
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id_xusba = tegra_pd_get_powergate_id(tegra_xusba_pd);
+#else
+	partition_id_xusba = TEGRA_POWERGATE_XUSBA;
+#endif
 	if (partition_id_xusba < 0)
 		return -EINVAL;
 	tegra_powergate_partition_with_clk_off(partition_id_xusbb);
@@ -3465,11 +3483,19 @@ static int tegra_xudc_powergate(struct tegra_xudc *xudc)
 
 	tegra_xudc_clk_disable(xudc);
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusba_pd);
+#else
+	partition_id = TEGRA_POWERGATE_XUSBA;
+#endif
 	if (partition_id < 0)
 		return -EINVAL;
 	tegra_powergate_partition_with_clk_off(partition_id);
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);
+#else
+	partition_id = TEGRA_POWERGATE_XUSBB;
+#endif
 	if (partition_id < 0)
 		return -EINVAL;
 	tegra_powergate_partition_with_clk_off(partition_id);
@@ -3498,13 +3524,21 @@ static int tegra_xudc_unpowergate(struct tegra_xudc *xudc)
 	phy_init(xudc->usb3_phy);
 	phy_init(xudc->utmi_phy);
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusbb_pd);
+#else
+	partition_id = TEGRA_POWERGATE_XUSBB;
+#endif
 	if (partition_id < 0)
 		return -EINVAL;
 	err = tegra_unpowergate_partition_with_clk_on(partition_id);
 	if (err < 0)
 		return err;
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 	partition_id = tegra_pd_get_powergate_id(tegra_xusba_pd);
+#else
+	partition_id = TEGRA_POWERGATE_XUSBA;
+#endif
 	if (partition_id < 0)
 		return -EINVAL;
 	err = tegra_unpowergate_partition_with_clk_on(partition_id);

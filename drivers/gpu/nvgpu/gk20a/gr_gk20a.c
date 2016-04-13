@@ -2419,6 +2419,7 @@ static void gk20a_gr_destroy_ctx_buffer(struct gk20a *g,
 	if (!desc)
 		return;
 	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &desc->mem);
+	desc->destroy = NULL;
 }
 
 static int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
@@ -2437,11 +2438,27 @@ static int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
 	return err;
 }
 
+static void gr_gk20a_free_global_ctx_buffers(struct gk20a *g)
+{
+	struct gr_gk20a *gr = &g->gr;
+	u32 i;
+
+	for (i = 0; i < NR_GLOBAL_CTX_BUF; i++) {
+		/* destroy exists iff buffer is allocated */
+		if (gr->global_ctx_buffer[i].destroy) {
+			gr->global_ctx_buffer[i].destroy(g,
+					&gr->global_ctx_buffer[i]);
+		}
+	}
+
+	gk20a_dbg_fn("done");
+}
+
 static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct gr_gk20a *gr = &g->gr;
-	int i, attr_buffer_size, err;
+	int attr_buffer_size, err;
 	struct device *dev = g->dev;
 
 	u32 cb_buffer_size = gr->bundle_cb_default_size *
@@ -2517,29 +2534,8 @@ static int gr_gk20a_alloc_global_ctx_buffers(struct gk20a *g)
 
  clean_up:
 	gk20a_err(dev_from_gk20a(g), "fail");
-	for (i = 0; i < NR_GLOBAL_CTX_BUF; i++) {
-		if (gr->global_ctx_buffer[i].destroy) {
-			gr->global_ctx_buffer[i].destroy(g,
-					&gr->global_ctx_buffer[i]);
-		}
-	}
+	gr_gk20a_free_global_ctx_buffers(g);
 	return -ENOMEM;
-}
-
-static void gr_gk20a_free_global_ctx_buffers(struct gk20a *g)
-{
-	struct gr_gk20a *gr = &g->gr;
-	DEFINE_DMA_ATTRS(attrs);
-	u32 i;
-
-	dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-
-	for (i = 0; i < NR_GLOBAL_CTX_BUF; i++) {
-		gr->global_ctx_buffer[i].destroy(g,
-				&gr->global_ctx_buffer[i]);
-	}
-
-	gk20a_dbg_fn("done");
 }
 
 static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,

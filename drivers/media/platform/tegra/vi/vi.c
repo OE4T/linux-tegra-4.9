@@ -430,6 +430,7 @@ static int vi_probe(struct platform_device *dev)
 
 	i2c_ctrl = pdata->private_data;
 	pdata->private_data = tegra_vi;
+	mutex_init(&tegra_vi->update_la_lock);
 
 	/* Create I2C Devices according to settings from board file */
 	if (i2c_ctrl && i2c_ctrl->new_devices)

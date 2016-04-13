@@ -101,8 +101,9 @@ struct vi {
 	tegra_isomgr_handle isomgr_handle;
 #endif
 	int vi_irq;
-	uint vi_bw;
+	uint vi_bypass_bw;
 	uint max_bw;
+	struct mutex update_la_lock;
 	bool master_deinitialized;
 	bool tpg_opened;
 	bool sensor_opened;
@@ -114,6 +115,7 @@ int nvhost_vi_finalize_poweron(struct platform_device *);
 
 void nvhost_vi_reset_all(struct platform_device *);
 struct vi *tegra_vi_get(void);
+int vi_v4l2_set_la(struct vi *tegra_vi, u32 vi_bypass_bw, bool is_ioctl);
 
 int tegra_vi_register_mfi_cb(callback cb, void *cb_arg);
 int tegra_vi_unregister_mfi_cb(void);

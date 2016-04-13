@@ -666,6 +666,7 @@ static void tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 	mutex_lock(&chan->vi->bw_update_lock);
 	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
 	vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
+	vi_v4l2_set_la(tegra_vi_get(), 0, 0);
 	update_clk(chan->vi);
 	mutex_unlock(&chan->vi->bw_update_lock);
 }

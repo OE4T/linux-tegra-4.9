@@ -235,6 +235,21 @@ static int vi_set_la(u32 vi_bw)
 	return ret;
 }
 
+int vi_v4l2_set_la(struct vi *tegra_vi, u32 vi_bypass_bw, bool is_ioctl)
+{
+	int ret = 0;
+	unsigned long total_bw;
+
+	mutex_lock(&tegra_vi->update_la_lock);
+	if (is_ioctl)
+		tegra_vi->vi_bypass_bw = vi_bypass_bw;
+	total_bw = tegra_vi->mc_vi.aggregated_kbyteps + tegra_vi->vi_bypass_bw;
+	ret = vi_set_la(total_bw);
+	mutex_unlock(&tegra_vi->update_la_lock);
+	return ret;
+}
+EXPORT_SYMBOL(vi_v4l2_set_la);
+
 static long vi_ioctl(struct file *file,
 		unsigned int cmd, unsigned long arg)
 {
@@ -306,7 +321,7 @@ static long vi_ioctl(struct file *file,
 			}
 
 		/* Set latency allowance for VI, BW is in MBps */
-		ret = vi_set_la(vi_la_bw);
+		ret = vi_v4l2_set_la(tegra_vi, vi_la_bw, 1);
 		if (ret) {
 			dev_err(&tegra_vi->ndev->dev,
 			"%s: failed to set la vi_bw %u MBps\n",

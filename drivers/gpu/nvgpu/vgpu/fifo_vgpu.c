@@ -270,6 +270,11 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 		goto clean_up;
 	}
 
+       /* if reduced BAR1 range is specified, use offset of 0
+          (server returns offset assuming full BAR1 range) */
+       if (resource_size(g->bar1_mem) == (resource_size_t)f->userd.size)
+		f->userd.gpu_va = 0;
+
 	gk20a_dbg(gpu_dbg_map, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
 	f->channel = kzalloc(f->num_channels * sizeof(*f->channel),

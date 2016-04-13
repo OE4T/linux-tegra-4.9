@@ -199,6 +199,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 		err = PTR_ERR(g->bar1);
 		goto fail;
 	}
+	g->bar1_mem = r;
 
 	mutex_init(&g->dbg_sessions_lock);
 	mutex_init(&g->client_lock);

@@ -502,7 +502,7 @@ static int tegra186_pmc_debugfs_init(struct device_node *np)
 	cnt_reg_offset = of_property_count_u32(np,
 				"export-pmc-scratch-reg-offset");
 	if (cnt_reg_offset < 0) {
-		pr_err("scratch reg offset data not present\n");
+		pr_info("scratch reg offset data not present\n");
 		return -EINVAL;
 	}
 	pmc_pdata.cnt_reg_offset = cnt_reg_offset;
@@ -510,7 +510,7 @@ static int tegra186_pmc_debugfs_init(struct device_node *np)
 	cnt_reg_names = of_property_count_strings(np,
 				"export-pmc-scratch-reg-name");
 	if (cnt_reg_names < 0 || (cnt_reg_offset != cnt_reg_names)) {
-		pr_err("reg offset and reg names count not matching\n");
+		pr_info("reg offset and reg names count not matching\n");
 		return -EINVAL;
 	}
 	pmc_pdata.cnt_reg_names = cnt_reg_names;
@@ -539,7 +539,7 @@ static int tegra186_pmc_debugfs_init(struct device_node *np)
 
 	dbgfs_root = debugfs_create_dir("PMC", NULL);
 	if (!dbgfs_root) {
-		pr_err("PMC:Failed to create debugfs dir\n");
+		pr_info("PMC:Failed to create debugfs dir\n");
 		return -ENOMEM;
 	}
 
@@ -653,7 +653,7 @@ static int __init tegra186_pmc_init(void)
 
 	ret = tegra186_pmc_debugfs_init(np);
 	if (ret < 0)
-		pr_err("Failed to create PMC debugfs :%d\n", ret);
+		pr_info("Failed to create PMC debugfs :%d\n", ret);
 
 	/* Prod setting like platform specific rails */
 	prod_list = tegra_prod_get(&tegra186_pmc_dev, NULL);

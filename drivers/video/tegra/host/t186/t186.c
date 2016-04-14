@@ -562,7 +562,7 @@ int nvhost_init_t186_support(struct nvhost_master *host,
 	 * it has been created with different name */
 
 	if ((host->dev->dev.parent != &platform_bus) ||
-	    !strcmp(dev_name(&host->dev->dev), "host1x")) {
+	    strcmp(dev_name(&host->dev->dev), "host1x")) {
 		err = sysfs_create_link_nowarn(&platform_bus.kobj,
 					&host->dev->dev.kobj,
 					"host1x");

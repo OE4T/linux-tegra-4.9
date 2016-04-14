@@ -34,4 +34,11 @@
 			hardware = "p2379c01_t186b";
 		};
 	};
+
+	pcie-controller@10003000 {
+		nvidia,boot-detect-delay = <2000>;
+                pci@1,0 {
+                        status = "okay";
+                };
+        };
 };

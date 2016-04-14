@@ -49,6 +49,8 @@
 #endif
 #include "nvmap_heap.h"
 
+#define NVMAP_TAG_LABEL_MAXLEN	(63 - sizeof(struct nvmap_tag_entry))
+
 #ifdef CONFIG_NVMAP_HIGHMEM_ONLY
 #define __GFP_NVMAP     __GFP_HIGHMEM
 #else
@@ -106,6 +108,20 @@ struct nvmap_pgalloc {
 	atomic_t ndirty;	/* count number of dirty pages */
 };
 
+/* bit 31-29: IVM peer
+ * bit 28-16: offset (aligned to 32K)
+ * bit 15-00: len (aligned to page_size)
+ */
+#define NVMAP_IVM_LENGTH_SHIFT (0)
+#define NVMAP_IVM_LENGTH_WIDTH (16)
+#define NVMAP_IVM_LENGTH_MASK  ((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)
+#define NVMAP_IVM_OFFSET_SHIFT (NVMAP_IVM_LENGTH_SHIFT + NVMAP_IVM_LENGTH_WIDTH)
+#define NVMAP_IVM_OFFSET_WIDTH (13)
+#define NVMAP_IVM_OFFSET_MASK  ((1 << NVMAP_IVM_OFFSET_WIDTH) - 1)
+#define NVMAP_IVM_IVMID_SHIFT  (NVMAP_IVM_OFFSET_SHIFT + NVMAP_IVM_OFFSET_WIDTH)
+#define NVMAP_IVM_IVMID_WIDTH  (3)
+#define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
+#define NVMAP_IVM_ALIGNMENT    (SZ_32K)
 struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
@@ -137,6 +153,12 @@ struct nvmap_handle {
 	void (*nvhost_priv_delete)(void *priv);
 	unsigned int ivm_id;
 	int peer;		/* Peer VM number */
+};
+
+struct nvmap_tag_entry {
+	struct rb_node node;
+	atomic_t ref;		/* reference count (i.e., # of duplications) */
+	u32 tag;
 };
 
 /* handle_ref objects are client-local references to an nvmap_handle;
@@ -226,7 +248,10 @@ struct nvmap_device {
 	struct dentry *handles_by_pid;
 	struct dentry *debug_root;
 	struct nvmap_platform_data *plat;
+	struct rb_root	tags;
+	struct mutex	tags_lock;
 	u32 dynamic_dma_map_mask;
+	u32 cpu_access_mask;
 };
 
 enum nvmap_stats_t {
@@ -315,6 +340,8 @@ static inline pgprot_t nvmap_pgprot(struct nvmap_handle *h, pgprot_t prot)
 int nvmap_probe(struct platform_device *pdev);
 int nvmap_remove(struct platform_device *pdev);
 int nvmap_init(struct platform_device *pdev);
+
+int nvmap_create_carveout(const struct nvmap_platform_carveout *co);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,
@@ -629,6 +656,18 @@ static inline bool nvmap_handle_track_dirty(struct nvmap_handle *h)
 
 	return h->userflags & (NVMAP_HANDLE_CACHE_SYNC |
 			       NVMAP_HANDLE_CACHE_SYNC_AT_RESERVE);
+}
+
+struct nvmap_tag_entry *nvmap_search_tag_entry(struct rb_root *root, u32 tag);
+
+int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
+	const char __user *name, u32 len);
+
+int nvmap_remove_tag(struct nvmap_device *dev, u32 tag);
+
+static inline char *nvmap_tag_name(struct nvmap_tag_entry *entry)
+{
+	return entry ? (char *)(entry + 1) : NULL;
 }
 
 #endif /* __VIDEO_TEGRA_NVMAP_NVMAP_H */

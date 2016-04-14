@@ -38,6 +38,7 @@
 #define NVMAP_HEAP_CARVEOUT_IRAM    (1ul<<29)
 #define NVMAP_HEAP_CARVEOUT_VPR     (1ul<<28)
 #define NVMAP_HEAP_CARVEOUT_TSEC    (1ul<<27)
+#define NVMAP_HEAP_CARVEOUT_VIDMEM  (1ul<<26)
 #define NVMAP_HEAP_CARVEOUT_IVM     (1ul<<1)
 #define NVMAP_HEAP_CARVEOUT_GENERIC (1ul<<0)
 
@@ -70,6 +71,7 @@ static inline ulong nvmap_page_pool_get_unused_pages(void)
 #endif
 
 ulong nvmap_iovmm_get_used_pages(void);
+int nvmap_register_vidmem_carveout(phys_addr_t base, size_t size);
 
 struct nvmap_platform_carveout {
 	const char *name;
@@ -87,6 +89,7 @@ struct nvmap_platform_carveout {
 	int can_alloc;
 	bool enable_static_dma_map;
 	bool disable_dynamic_dma_map;
+	bool no_cpu_access; /* carveout can't be accessed from cpu at all */
 	bool init_done;	/* FIXME: remove once all caveouts use reserved-memory */
 };
 
@@ -280,6 +283,13 @@ struct nvmap_debugfs_handles_entry {
 	__u64 mapped_size;
 };
 
+struct nvmap_set_tag_label {
+	__u32 tag;
+	__u32 len;		/* in: label length
+				   out: number of characters copied */
+	__u64 addr;		/* in: pointer to label or NULL to remove */
+};
+
 #define NVMAP_IOC_MAGIC 'N'
 
 /* Creates a new memory handle. On input, the argument is the size of the new
@@ -361,6 +371,9 @@ struct nvmap_debugfs_handles_entry {
 #define NVMAP_IOC_FROM_VA _IOWR(NVMAP_IOC_MAGIC, 22, struct nvmap_create_handle_from_va)
 
 #define NVMAP_IOC_GUP_TEST _IOWR(NVMAP_IOC_MAGIC, 23, struct nvmap_gup_test)
+
+/* Define a label for allocation tag */
+#define NVMAP_IOC_SET_TAG_LABEL	_IOW(NVMAP_IOC_MAGIC, 24, struct nvmap_set_tag_label)
 
 /* START of T124 IOCTLS */
 /* Actually allocates memory for the specified handle, with kind */

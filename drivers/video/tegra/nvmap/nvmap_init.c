@@ -69,7 +69,7 @@ static struct dma_declare_info vpr_dma_info = {
 	.notifier.ops = &vpr_dev_ops,
 };
 
-static struct nvmap_platform_carveout nvmap_carveouts[4] = {
+static struct nvmap_platform_carveout nvmap_carveouts[] = {
 	[0] = {
 		.name		= "iram",
 		.usage_mask	= NVMAP_HEAP_CARVEOUT_IRAM,
@@ -97,11 +97,23 @@ static struct nvmap_platform_carveout nvmap_carveouts[4] = {
 		.dma_info	= &vpr_dma_info,
 		.enable_static_dma_map = true,
 	},
+	[3] = {
+		.name		= "vidmem",
+		.usage_mask	= NVMAP_HEAP_CARVEOUT_VIDMEM,
+		.base		= 0,
+		.size		= 0,
+		.disable_dynamic_dma_map = true,
+		.no_cpu_access = true,
+	},
+	/* Need one uninitialized entry for IVM carveout */
+	[4] = {
+		.name		= NULL,
+	},
 };
 
 static struct nvmap_platform_data nvmap_data = {
 	.carveouts	= nvmap_carveouts,
-	.nr_carveouts	= 3,
+	.nr_carveouts	= 4,
 };
 
 static struct nvmap_platform_carveout *nvmap_get_carveout_pdata(const char *name)
@@ -123,6 +135,24 @@ found:
 	pr_err("not enough space for all nvmap carveouts\n");
 	return NULL;
 }
+
+int nvmap_register_vidmem_carveout(phys_addr_t base, size_t size)
+{
+	struct nvmap_platform_carveout *vidmem_co;
+
+	/* vidmem is outside DRAM. So, pfn should be invalid */
+	if (!base || !size || (base != PAGE_ALIGN(base)) || (size != PAGE_ALIGN(size)))
+		return -EINVAL;
+
+	vidmem_co = nvmap_get_carveout_pdata("vidmem");
+	if (!vidmem_co)
+		return -ENODEV;
+
+	vidmem_co->base = base;
+	vidmem_co->size = size;
+	return nvmap_create_carveout(vidmem_co);
+}
+EXPORT_SYMBOL(nvmap_register_vidmem_carveout);
 
 #ifdef CONFIG_TEGRA_VIRTUALIZATION
 int __init nvmap_populate_ivm_carveout(struct reserved_mem *rmem)

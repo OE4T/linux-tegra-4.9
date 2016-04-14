@@ -260,7 +260,6 @@ fail_get_user_pages:
 static const unsigned int heap_policy_small[] = {
 	NVMAP_HEAP_CARVEOUT_VPR,
 	NVMAP_HEAP_CARVEOUT_IRAM,
-	NVMAP_HEAP_CARVEOUT_IVM,
 	NVMAP_HEAP_CARVEOUT_MASK,
 	NVMAP_HEAP_IOVMM,
 	0,
@@ -270,8 +269,13 @@ static const unsigned int heap_policy_large[] = {
 	NVMAP_HEAP_CARVEOUT_VPR,
 	NVMAP_HEAP_CARVEOUT_IRAM,
 	NVMAP_HEAP_IOVMM,
-	NVMAP_HEAP_CARVEOUT_IVM,
 	NVMAP_HEAP_CARVEOUT_MASK,
+	0,
+};
+
+static const unsigned int heap_policy_excl[] = {
+	NVMAP_HEAP_CARVEOUT_IVM,
+	NVMAP_HEAP_CARVEOUT_VIDMEM,
 	0,
 };
 
@@ -285,7 +289,8 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	const unsigned int *alloc_policy;
 	int nr_page;
 	int err = -ENOMEM;
-	int tag;
+	int tag, i;
+	bool alloc_from_excl = false;
 
 	h = nvmap_handle_get(h);
 
@@ -306,7 +311,7 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	h->userflags = flags;
 	nr_page = ((h->size + PAGE_SIZE - 1) >> PAGE_SHIFT);
 	/* Force mapping to uncached for VPR memory. */
-	if (heap_mask & NVMAP_HEAP_CARVEOUT_VPR)
+	if (heap_mask & (NVMAP_HEAP_CARVEOUT_VPR | ~nvmap_dev->cpu_access_mask))
 		h->flags = NVMAP_HANDLE_UNCACHEABLE;
 	else
 		h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
@@ -327,23 +332,30 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 			client->task->pid, task_comm);
 	}
 
-	/* If user specifies IVM carveout, allocation from no other heap should
-	 * be allowed.
+	/*
+	 * If user specifies one of the exclusive carveouts, allocation
+	 * from no other heap should be allowed.
 	 */
-	if (heap_mask & NVMAP_HEAP_CARVEOUT_IVM)
-		if (heap_mask & ~(NVMAP_HEAP_CARVEOUT_IVM)) {
-			pr_err("%s alloc mixes IVM and other heaps\n",
-			       current->group_leader->comm);
+	for (i = 0; i < ARRAY_SIZE(heap_policy_excl); i++) {
+		if (!(heap_mask & heap_policy_excl[i]))
+			continue;
+
+		if (heap_mask & ~(heap_policy_excl[i])) {
+			pr_err("%s alloc mixes exclusive heap %d and other heaps\n",
+			       current->group_leader->comm, heap_policy_excl[i]);
 			err = -EINVAL;
 			goto out;
 		}
+		alloc_from_excl = true;
+	}
 
 	if (!heap_mask) {
 		err = -EINVAL;
 		goto out;
 	}
 
-	alloc_policy = (nr_page == 1) ? heap_policy_small : heap_policy_large;
+	alloc_policy = alloc_from_excl ? heap_policy_excl :
+			(nr_page == 1) ? heap_policy_small : heap_policy_large;
 
 	while (!h->alloc && *alloc_policy) {
 		unsigned int heap_type;
@@ -373,12 +385,12 @@ out:
 			nvmap_stats_inc(NS_KALLOC, h->size);
 		else
 			nvmap_stats_inc(NS_UALLOC, h->size);
+		trace_nvmap_alloced_handle(client, h);
+		err = 0;
 	} else {
 		nvmap_stats_dec(NS_TOTAL, PAGE_ALIGN(h->orig_size));
 		nvmap_stats_dec(NS_ALLOC, PAGE_ALIGN(h->orig_size));
 	}
-
-	err = (h->alloc) ? 0 : err;
 	nvmap_handle_put(h);
 	return err;
 }
@@ -419,7 +431,10 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 
 	(void)alloc_handle_from_va(client, h, addr);
 
-	err = (h->alloc) ? 0 : err;
+	if (h->alloc) {
+		trace_nvmap_alloced_handle_from_va(client, h);
+		err = 0;
+	}
 	nvmap_handle_put(h);
 	return err;
 }
@@ -484,6 +499,7 @@ void _nvmap_handle_free(struct nvmap_handle *h)
 	nvmap_altfree(h->pgalloc.pages, nr_page * sizeof(struct page *));
 
 out:
+	trace_nvmap_destroy_handle(h);
 	kfree(h);
 }
 
@@ -501,11 +517,11 @@ void nvmap_free_handle(struct nvmap_client *client,
 		return;
 	}
 
-	trace_nvmap_free_handle(client, handle);
 	BUG_ON(!ref->handle);
 	h = ref->handle;
 
 	if (atomic_dec_return(&ref->dupes)) {
+		trace_nvmap_free_handle(client, h, ref);
 		nvmap_ref_unlock(client);
 		goto out;
 	}
@@ -521,6 +537,7 @@ void nvmap_free_handle(struct nvmap_client *client,
 		h->owner = NULL;
 
 	dma_buf_put(ref->handle->dmabuf);
+	trace_nvmap_free_handle(client, h, ref);
 	kfree(ref);
 
 out:

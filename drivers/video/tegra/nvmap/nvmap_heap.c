@@ -179,9 +179,8 @@ static struct nvmap_heap_block *do_heap_alloc(struct nvmap_heap *heap,
 		len = PAGE_ALIGN(len);
 	}
 
-	/* Force alignment of 1M for IV mempool */
 	if (heap->is_ivm)
-		align = max_t(size_t, align, SZ_1M);
+		align = max_t(size_t, align, NVMAP_IVM_ALIGNMENT);
 
 	heap_block = kmem_cache_zalloc(heap_block_cache, GFP_KERNEL);
 	if (!heap_block) {
@@ -263,29 +262,23 @@ struct nvmap_heap_block *nvmap_heap_alloc(struct nvmap_heap *h,
 
 	align = max_t(size_t, align, L1_CACHE_BYTES);
 	b = do_heap_alloc(h, len, align, prot, 0, start);
-
 	if (b) {
 		b->handle = handle;
 		handle->carveout = b;
 		/* Generate IVM for partition that can alloc */
 		if (h->is_ivm && h->can_alloc) {
 			unsigned int offs = (b->base - h->base);
-			/* 8 bits reserved for offset; must be 1M aligned */
-			BUG_ON(offs & (SZ_1M - 1));
-			BUG_ON((offs >> 20) & ~((1 << 8) - 1));
-			/* 3 bits reserved for VM_ID */
-			BUG_ON(h->vm_id & ~(0x7));
-			/* We have 20 bits for the length.
-			 * So, page alignment is sufficient check.
+			BUG_ON(offs & (NVMAP_IVM_ALIGNMENT - 1));
+			BUG_ON((offs >> ffs(NVMAP_IVM_ALIGNMENT)) &
+				~((1 << NVMAP_IVM_OFFSET_WIDTH) - 1));
+			BUG_ON(h->vm_id & ~(NVMAP_IVM_IVMID_MASK));
+			/* So, page alignment is sufficient check.
 			 */
 			BUG_ON(len & ~(PAGE_MASK));
-			/* bit 31-29: IVM peer.
-			 * bit 28-21: Offset (aligned to SZ_1M)
-			 * bit 00-20: Length (Aligned to PAGE_SIZE)
-			 */
-			handle->ivm_id = (h->vm_id << 29);
-			handle->ivm_id |= (((offs >> 20)
-					     & ((1 << 8) - 1)) << 21);
+			handle->ivm_id = (h->vm_id << NVMAP_IVM_IVMID_SHIFT);
+			handle->ivm_id |= (((offs >> ffs(NVMAP_IVM_ALIGNMENT)) &
+					 ((1 << NVMAP_IVM_OFFSET_WIDTH) - 1)) <<
+					  NVMAP_IVM_OFFSET_SHIFT);
 			handle->ivm_id |= (len >> PAGE_SHIFT);
 		}
 	}
@@ -377,7 +370,8 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 	h->vm_id = co->vmid;
 	INIT_LIST_HEAD(&h->all_list);
 	mutex_init(&h->lock);
-	if (nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
+	if (!co->no_cpu_access &&
+		nvmap_cache_maint_phys_range(NVMAP_CACHE_OP_WB_INV,
 				base, base + len, true, true)) {
 		dev_err(parent, "cache flush failed\n");
 		goto fail;
@@ -397,6 +391,9 @@ struct nvmap_heap *nvmap_heap_create(struct device *parent,
 finish:
 	if (co->disable_dynamic_dma_map)
 		nvmap_dev->dynamic_dma_map_mask &= ~co->usage_mask;
+
+	if (co->no_cpu_access)
+		nvmap_dev->cpu_access_mask &= ~co->usage_mask;
 
 	dev_info(parent, "created heap %s base 0x%p size (%zuKiB)\n",
 		co->name, (void *)(uintptr_t)base, len/1024);

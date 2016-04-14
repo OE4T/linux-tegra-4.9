@@ -133,7 +133,7 @@ TRACE_EVENT(nvmap_alloc_handle,
 		(unsigned long long)__entry->alloc)
 );
 
-TRACE_EVENT(nvmap_free_handle,
+DECLARE_EVENT_CLASS(nvmap_handle_alloc_summary,
 	TP_PROTO(struct nvmap_client *client,
 		 struct nvmap_handle *handle
 	),
@@ -143,18 +143,59 @@ TRACE_EVENT(nvmap_free_handle,
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
 		__field(struct nvmap_handle *, handle)
+		__field(u64, base)
+		__field(size_t, size)
+		__field(u32, userflags)
+		__field(u32, ref)
+		__field(u32, pin_count)
+		__field(u32, kmap_count)
+		__field(u32, umap_count)
+		__field(u32, share_count)
 	),
 
 	TP_fast_assign(
 		__entry->client = client;
 		__entry->handle = handle;
+		__entry->base = handle->heap_type == NVMAP_HEAP_IOVMM ? 0 :
+					(handle->carveout->base);
+		__entry->size = handle->size;
+		__entry->userflags = handle->userflags;
+		__entry->ref = atomic_read(&handle->ref);
+		__entry->pin_count = atomic_read(&handle->pin);
+		__entry->kmap_count = atomic_read(&handle->kmap_count);
+		__entry->umap_count = atomic_read(&handle->umap_count);
+		__entry->share_count = atomic_read(&handle->share_count);
 	),
 
-	TP_printk("client=%p, handle=%p",
-		__entry->client, __entry->handle)
+	TP_printk("client=%p, handle=0x%p, ref=%u, pin=%u, kmap=%u, umap=%u, share=%u "
+		"base=%llx, size=%zu, userflags=0x%x",
+		__entry->client,
+		__entry->handle,
+		__entry->ref,
+		__entry->pin_count,
+		__entry->kmap_count,
+		__entry->umap_count,
+		__entry->share_count,
+		__entry->base,
+		__entry->size,
+		__entry->userflags)
 );
 
-TRACE_EVENT(nvmap_duplicate_handle,
+DEFINE_EVENT(nvmap_handle_alloc_summary, nvmap_alloced_handle,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *handle),
+	TP_ARGS(client, handle)
+);
+
+DEFINE_EVENT(nvmap_handle_alloc_summary, nvmap_alloced_handle_from_va,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *handle),
+	TP_ARGS(client, handle)
+);
+
+
+
+DECLARE_EVENT_CLASS(nvmap_handle_summary,
 	TP_PROTO(struct nvmap_client *client,
 		 struct nvmap_handle *handle,
 		 struct nvmap_handle_ref *ref
@@ -164,18 +205,65 @@ TRACE_EVENT(nvmap_duplicate_handle,
 
 	TP_STRUCT__entry(
 		__field(struct nvmap_client *, client)
+		__field(u32, dupes)
 		__field(struct nvmap_handle *, handle)
-		__field(struct nvmap_handle_ref *, ref)
+		__field(u32, ref)
+		__field(u32, pin_count)
+		__field(u32, kmap_count)
+		__field(u32, umap_count)
+		__field(u32, share_count)
 	),
 
 	TP_fast_assign(
 		__entry->client = client;
+		__entry->dupes = ref ? atomic_read(&ref->dupes) : 1;
 		__entry->handle = handle;
-		__entry->ref = ref;
+		__entry->ref = atomic_read(&handle->ref);
+		__entry->pin_count = atomic_read(&handle->pin);
+		__entry->kmap_count = atomic_read(&handle->kmap_count);
+		__entry->umap_count = atomic_read(&handle->umap_count);
+		__entry->share_count = atomic_read(&handle->share_count);
 	),
 
-	TP_printk("client=%p, id=%p, ref=%p",
-		__entry->client, __entry->handle, __entry->ref)
+	TP_printk("client=%p, dupes=%u, handle=%p, ref=%u, pin=%u, kmap=%u, umap=%u, share=%u",
+		__entry->client,
+		__entry->dupes,
+		__entry->handle,
+		__entry->ref,
+		__entry->pin_count,
+		__entry->kmap_count,
+		__entry->umap_count,
+		__entry->share_count
+	)
+);
+
+DEFINE_EVENT(nvmap_handle_summary, nvmap_duplicate_handle,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *handle,
+		 struct nvmap_handle_ref *ref),
+	TP_ARGS(client, handle, ref)
+);
+
+DEFINE_EVENT(nvmap_handle_summary, nvmap_free_handle,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *handle,
+		 struct nvmap_handle_ref *ref),
+	TP_ARGS(client, handle, ref)
+);
+
+DEFINE_EVENT(nvmap_handle_summary, nvmap_alloc_from_ivc,
+	TP_PROTO(struct nvmap_client *client,
+		 struct nvmap_handle *handle,
+		 struct nvmap_handle_ref *ref),
+	TP_ARGS(client, handle, ref)
+);
+
+TRACE_EVENT(nvmap_destroy_handle,
+	TP_PROTO(struct nvmap_handle *handle),
+	TP_ARGS(handle),
+	TP_STRUCT__entry(__field(struct nvmap_handle *, handle)),
+	TP_fast_assign(__entry->handle = handle;),
+	TP_printk("handle=%p", __entry->handle)
 );
 
 TRACE_EVENT(nvmap_cache_maint,
@@ -349,6 +437,53 @@ TRACE_EVENT(nvmap_ioctl_pinop,
 		__entry->client, __entry->is_pin, __entry->count,
 		__print_hex(__get_dynamic_array(ids), __entry->ids ?
 			    sizeof(struct nvmap_handle *) * __entry->count : 0))
+);
+
+TRACE_EVENT(nvmap_func,
+	TP_PROTO(const char *name),
+	TP_ARGS(name),
+
+	TP_STRUCT__entry(
+		__field(const char *, name)
+	),
+
+	TP_fast_assign(
+		__entry->name = name;
+	),
+
+	TP_printk("name=%s", __entry->name)
+);
+
+
+DECLARE_EVENT_CLASS(handle_get_put,
+	TP_PROTO(struct nvmap_handle *handle),
+
+	TP_ARGS(handle),
+
+	TP_STRUCT__entry(
+		__field(struct nvmap_handle *, handle)
+		__field(u32, ref)
+	),
+
+	TP_fast_assign(
+		__entry->handle = handle;
+		__entry->ref = atomic_read(&handle->ref);
+	),
+
+	TP_printk("ref=%u handle=%p",
+		__entry->ref,
+		__entry->handle
+	)
+);
+
+DEFINE_EVENT(handle_get_put, nvmap_handle_get,
+	TP_PROTO(struct nvmap_handle *handle),
+	TP_ARGS(handle)
+);
+
+DEFINE_EVENT(handle_get_put, nvmap_handle_put,
+	TP_PROTO(struct nvmap_handle *handle),
+	TP_ARGS(handle)
 );
 
 DECLARE_EVENT_CLASS(pin_unpin,

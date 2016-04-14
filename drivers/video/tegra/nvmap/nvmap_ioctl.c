@@ -403,6 +403,9 @@ static ssize_t rw_handle(struct nvmap_client *client, struct nvmap_handle *h,
 	void *addr;
 	int ret = 0;
 
+	if (!(h->heap_type & nvmap_dev->cpu_access_mask))
+		return -EPERM;
+
 	if (!elem_size || !count)
 		return -EINVAL;
 
@@ -543,12 +546,14 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 			return -ENOMEM;
 	} else {
 		/*
-		 * offset is SZ_1M aligned.
 		 * See nvmap_heap_alloc() for encoding details.
 		 */
-		offs = ((op.id & ~(0x7 << 29)) >> 21) << 20;
-		size = (op.id & ((1 << 21) - 1)) << PAGE_SHIFT;
-		peer = (op.id >> 29);
+		offs = ((op.id &
+			~(NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
+			NVMAP_IVM_LENGTH_WIDTH) << ffs(NVMAP_IVM_ALIGNMENT);
+		size = (op.id &
+			((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
+		peer = (op.id >> NVMAP_IVM_IVMID_SHIFT);
 
 		ref = nvmap_create_handle(client, PAGE_ALIGN(size));
 		if (!IS_ERR(ref))
@@ -586,6 +591,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		ref->handle->ivm_id = op.id;
 		mb();
 		ref->handle->alloc = true;
+		trace_nvmap_alloc_from_ivc(client, ref->handle, ref);
 	}
 
 	fd = nvmap_create_fd(client, ref->handle);
@@ -656,6 +662,11 @@ int nvmap_ioctl_cache_maint_list(struct file *filp, void __user *arg,
 			err = -EINVAL;
 			goto free_mem;
 		}
+		if (!(refs[i]->heap_type & nvmap_dev->cpu_access_mask)) {
+			err = -EPERM;
+			goto free_mem;
+		}
+
 		n_unmarshal_handles++;
 	}
 
@@ -767,5 +778,26 @@ put_handle:
 	nvmap_handle_put(handle);
 exit:
 	pr_info("GUP Test %s\n", err ? "failed" : "passed");
+	return err;
+}
+
+int nvmap_ioctl_set_tag_label(struct file *filp, void __user *arg)
+{
+	struct nvmap_set_tag_label op;
+	struct nvmap_device *dev = nvmap_dev;
+	int err;
+
+	if (copy_from_user(&op, arg, sizeof(op)))
+		return -EFAULT;
+
+	if (op.len > NVMAP_TAG_LABEL_MAXLEN)
+		op.len = NVMAP_TAG_LABEL_MAXLEN;
+
+	if (op.len)
+		err = nvmap_define_tag(dev, op.tag,
+			(const char __user *)op.addr, op.len);
+	else
+		err = nvmap_remove_tag(dev, op.tag);
+
 	return err;
 }

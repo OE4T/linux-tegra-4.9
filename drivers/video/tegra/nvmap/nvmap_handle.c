@@ -208,7 +208,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 		 * the reference count rather than re-duplicating it */
 		atomic_inc(&ref->dupes);
 		nvmap_ref_unlock(client);
-		return ref;
+		goto out;
 	}
 
 	nvmap_ref_unlock(client);
@@ -231,6 +231,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 	 */
 	get_dma_buf(h->dmabuf);
 
+out:
 	trace_nvmap_duplicate_handle(client, h, ref);
 	return ref;
 }

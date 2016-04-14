@@ -4759,6 +4759,11 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 		val = afi_readl(port->pcie, ctrl);
 		val &= ~AFI_PEX_CTRL_RST;
 		afi_writel(port->pcie, val, ctrl);
+
+		val = afi_readl(port->pcie, ctrl);
+		val &= ~AFI_PEX_CTRL_REFCLK_EN;
+		afi_writel(port->pcie, val, ctrl);
+
 		msleep(20);
 		break;
 
@@ -4786,6 +4791,11 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user)
 		val = afi_readl(port->pcie, ctrl);
 		val |= AFI_PEX_CTRL_RST;
 		afi_writel(port->pcie, val, ctrl);
+
+		val = afi_readl(port->pcie, ctrl);
+		val |= AFI_PEX_CTRL_REFCLK_EN;
+		afi_writel(port->pcie, val, ctrl);
+
 		msleep(100);
 
 		/* make sure that link is up before doing anything */

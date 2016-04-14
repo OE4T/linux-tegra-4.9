@@ -65,12 +65,15 @@ struct tegra_dc_dsi2edp_data {
 #define  SN65DSI86_COLOR_BAR_CFG		0x3c
 #define  SN65DSI86_FRAMING_CFG			0x5a
 #define  SN65DSI86_DP_18BPP_EN			0x5b
+#define  SN65DSI86_REG_0x5c			0x5c
 #define  SN65DSI86_GPIO_CTRL_CFG		0x5f
 #define  SN65DSI86_DP_SSC_CFG			0x93
 #define  SN65DSI86_DP_CFG			0x94
 #define  SN65DSI86_TRAINING_CFG			0x95
 #define  SN65DSI86_ML_TX_MODE			0x96
 
-#define RETRYLOOP 60
+#define RETRY_PLL  45   /* 2mSec */
+#define RETRY_HPD  25   /* 5mSec */
+#define RETRY_LT   300  /* 5mSec */
 #endif
 

@@ -108,6 +108,7 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	struct tegra_dc_dsi2edp_data *dsi2edp = tegra_dsi_get_outdata(dsi);
 	unsigned val = 0;
 	unsigned retry = 0;
+	int      hpd;
 
 	if (dsi2edp && dsi2edp->dsi2edp_enabled)
 		return;
@@ -168,27 +169,45 @@ static void sn65dsi86_dsi2edp_enable(struct tegra_dc_dsi_data *dsi)
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_PLL_EN, (1 << 0));
 	retry = 0;
 	do {
-		usleep_range(1000, 1100);
+		usleep_range(2000, 2200);
 		/* DP_PLL_LOCK */
 		sn65dsi86_reg_read(dsi2edp, SN65DSI86_PLL_REFCLK_CFG, &val);
-	} while (((val & (1 << 7)) == 0) && (retry++ < RETRYLOOP));
+	} while (((val & (1 << 7)) == 0) && (retry++ < RETRY_PLL));
 	if ((val & (1 << 7)) == 0)
 		pr_err("SN65DSI86: DP_PLL not locked\n");
 	usleep_range(1000, 1100);
 
 	/* reg.0x95 POST2 0dB */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_TRAINING_CFG, 0x00);
-	/* reg.0x96 Semi-Auto Link-training (takes about 45mSec) */
-	retry = 0;
-	do {
-		sn65dsi86_reg_write(dsi2edp, SN65DSI86_ML_TX_MODE, 0x0a);
+
+	/* reg.0x5c HPD detection may take up to 100mSec */
+	for (retry = 0; retry < RETRY_HPD; retry++) {
+		sn65dsi86_reg_read(dsi2edp, SN65DSI86_REG_0x5c, &hpd);
+		if (hpd & (1 << 4))  break;
+		usleep_range(5000, 5500);
+	}
+	if (hpd & (1 << 0))  /* HPD disable makes it on */
+		pr_info("SN65DSI86: DP HPD is not used\n");
+	else
+		pr_info("SN65DSI86: DP HPD%s detected\n",
+			(hpd & (1 << 4)) ? "" : " not");
+	hpd = (hpd & (1 << 4)) ? 1 : 0;
+
+	/* reg.0x96 Semi-Auto Link-training
+	   takes about 15~90mSec. some monitor takes up to 900mSec */
+	if (hpd) {
+		retry = 0;
+		do {
+			sn65dsi86_reg_write(dsi2edp,
+				SN65DSI86_ML_TX_MODE, 0x0a);
+			usleep_range(5000, 5500);
+			sn65dsi86_reg_read(dsi2edp,
+				SN65DSI86_ML_TX_MODE, &val);
+		} while ((val != 0x1) && (retry++ < RETRY_LT));
+		if (val != 0x1)
+			pr_err("SN65DSI86: semi-auto link training failed\n");
 		usleep_range(1000, 1100);
-		sn65dsi86_reg_read(dsi2edp, SN65DSI86_ML_TX_MODE, &val);
-	} while ((val != 0x1) && (retry++ < RETRYLOOP));
-	/* 0x1 = normal mode (idle pattern or active video) */
-	if (val != 0x1)
-		pr_err("SN65DSI86: semi-auto link training failed\n");
-	usleep_range(1000, 1100);
+	}
 
 	/* reg.0x20-0x21 ch.a h-active */
 	sn65dsi86_reg_write(dsi2edp, SN65DSI86_VIDEO_CHA_LINE_LOW,

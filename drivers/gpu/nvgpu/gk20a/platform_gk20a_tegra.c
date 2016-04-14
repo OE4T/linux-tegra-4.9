@@ -748,7 +748,8 @@ static int gk20a_tegra_probe(struct device *dev)
 
 	if (platform->g->host1x_dev)
 		nvhost_register_dump_device(platform->g->host1x_dev,
-					gk20a_debug_dump_device);
+					gk20a_debug_dump_device,
+					platform->g->dev);
 #ifdef CONFIG_OF
 	joint_xpu_rail = of_property_read_bool(of_chosen,
 				"nvidia,tegra-joint_xpu_rail");

@@ -50,6 +50,12 @@
 		};
 	};
 
+	usb_cd {
+		status = "okay";
+		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phy-names = "otg-phy";
+	};
+
 	xudc@3550000 {
 		status = "okay";
 		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,

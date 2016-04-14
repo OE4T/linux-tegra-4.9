@@ -524,6 +524,8 @@ static struct v4l2_subdev_video_ops imx274_subdev_video_ops = {
 	.enum_mbus_fmt	= camera_common_enum_fmt,
 	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status	= imx274_g_input_status,
+	.enum_framesizes	= camera_common_enum_framesizes,
+	.enum_frameintervals	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops imx274_subdev_core_ops = {
@@ -662,8 +664,8 @@ static int imx274_calculate_shr(struct imx274 *priv, u32 rep)
 	int shr;
 	int min;
 	int max;
-	u32 vmax_l;
-	u32 vmax_m;
+	u8 vmax_l;
+	u8 vmax_m;
 	u32 vmax;
 
 	imx274_read_reg(priv->s_data, IMX274_SVR_ADDR, &svr);

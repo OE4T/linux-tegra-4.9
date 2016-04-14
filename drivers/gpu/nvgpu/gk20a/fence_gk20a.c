@@ -85,7 +85,7 @@ int gk20a_fence_install_fd(struct gk20a_fence *f)
 	if (!f->sync_fence)
 		return -EINVAL;
 
-	fd = get_unused_fd();
+	fd = get_unused_fd_flags(O_RDWR);
 	if (fd < 0)
 		return fd;
 

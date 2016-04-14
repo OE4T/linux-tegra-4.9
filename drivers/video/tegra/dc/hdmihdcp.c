@@ -113,7 +113,7 @@ static u8 g_seq_num_m_retries;
 static u8 g_fallback;
 
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
-static int g_session_id;
+static u32 g_session_id;
 #endif
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
@@ -1290,7 +1290,7 @@ static void nvhdcp_fallback_worker(struct work_struct *work)
 	}
 }
 
-void nvhdcp_downstream_worker(struct work_struct *work)
+static void nvhdcp_downstream_worker(struct work_struct *work)
 {
 	struct tegra_nvhdcp *nvhdcp =
 		container_of(to_delayed_work(work), struct tegra_nvhdcp, work);
@@ -1347,9 +1347,9 @@ void nvhdcp_downstream_worker(struct work_struct *work)
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
-	g_session_id = te_open_trusted_session(hdcp_auth_uuid,
-				sizeof(hdcp_auth_uuid));
-	if (!g_session_id) {
+	e = te_open_trusted_session(hdcp_auth_uuid,
+		sizeof(hdcp_auth_uuid), &g_session_id);
+	if (e) {
 		nvhdcp_info("Invalid session id");
 		goto failure;
 	}

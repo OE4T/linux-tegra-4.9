@@ -91,7 +91,7 @@ void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp);
 extern int te_launch_trusted_oper(u64 *buf_ptr,
 					u64 buflen, u32 session_id,
 				u32 *ta_uuid, u32 cmd, u32 size);
-extern u32 te_open_trusted_session(u32 *ta_uuid, u32 size);
+extern int te_open_trusted_session(u32 *ta_uuid, u32 size, u32 *session_id);
 extern void te_close_trusted_session(u32 session_id, u32 *ta_uuid,
 							u32 size);
 #endif

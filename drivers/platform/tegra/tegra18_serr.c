@@ -22,6 +22,8 @@
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/denver_mca.h>
+#include <linux/tegra-mce.h>
+#include <linux/mce_ari.h>
 
 /* Denver MCA */
 
@@ -79,8 +81,26 @@ static void tegra18_unregister_denver_mca_banks(void)
 		unregister_denver_mca_bank(&denver_mca_banks[i]);
 }
 
+/*
+ * Without this enable set, Denver cores will halt on serrors
+ * instead of continuing (if possible) to the kernel serror
+ * handler
+ */
+static void tegra18_denver_serr_enable(void)
+{
+	mca_cmd_t cmd;
+	u32 error;
+	cmd.data = 0;
+	cmd.cmd = MCE_ARI_MCA_WRITE_SERR;
+	cmd.idx = MCE_ARI_MCA_RD_WR_GLOBAL_CONFIG_REGISTER;
+	tegra_mce_write_uncore_mca(cmd, 1, &error);
+}
+
+
 static int __init tegra18_serr_init(void)
 {
+
+	tegra18_denver_serr_enable();
 	tegra18_register_denver_mca_banks();
 	return 0;
 }

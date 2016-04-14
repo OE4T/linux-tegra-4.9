@@ -218,6 +218,7 @@ typedef enum {
 	MCE_ARI_MCA_RD_BANK_INFO = 0x0f,
 	MCE_ARI_MCA_RD_BANK_TEMPLATE = 0x10,
 	MCE_ARI_MCA_RD_WR_SECURE_ACCESS_REGISTER = 0x11,
+	MCE_ARI_MCA_RD_WR_GLOBAL_CONFIG_REGISTER = 0x12,
 } dmce_ari_mca_read_indexes_t;
 
 typedef enum {

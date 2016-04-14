@@ -284,7 +284,8 @@ void nvhost_debug_init(struct nvhost_master *master)
 
 void nvhost_register_dump_device(
 		struct platform_device *dev,
-		void (*nvgpu_debug_dump_device)(void *))
+		void (*nvgpu_debug_dump_device)(void *),
+		void *data)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
@@ -293,6 +294,7 @@ void nvhost_register_dump_device(
 		return;
 	}
 
+	pdata->debug_dump_data = data;
 	pdata->debug_dump_device = nvgpu_debug_dump_device;
 }
 EXPORT_SYMBOL(nvhost_register_dump_device);
@@ -306,6 +308,7 @@ void nvhost_unregister_dump_device(struct platform_device *dev)
 		return;
 	}
 
+	pdata->debug_dump_data = NULL;
 	pdata->debug_dump_device = NULL;
 }
 EXPORT_SYMBOL(nvhost_unregister_dump_device);
@@ -320,7 +323,7 @@ void nvhost_debug_dump_locked(struct nvhost_master *master, int locked_id)
 	show_all_no_fifo(master, &o, locked_id);
 
 	if (pdata->debug_dump_device)
-		pdata->debug_dump_device(NULL);
+		pdata->debug_dump_device(pdata->debug_dump_data);
 }
 
 void nvhost_debug_dump(struct nvhost_master *master)
@@ -333,7 +336,7 @@ void nvhost_debug_dump(struct nvhost_master *master)
 	show_all_no_fifo(master, &o, -1);
 
 	if (pdata->debug_dump_device)
-		pdata->debug_dump_device(NULL);
+		pdata->debug_dump_device(pdata->debug_dump_data);
 }
 
 void nvhost_debug_dump_device(struct platform_device *pdev)

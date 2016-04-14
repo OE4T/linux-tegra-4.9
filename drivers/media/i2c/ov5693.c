@@ -85,6 +85,7 @@ static struct regmap_config ov5693_regmap_config = {
 
 static int ov5693_g_volatile_ctrl(struct v4l2_ctrl *ctrl);
 static int ov5693_s_ctrl(struct v4l2_ctrl *ctrl);
+static void ov5693_update_ctrl_range(struct ov5693 *priv, s32 frame_length);
 
 static const struct v4l2_ctrl_ops ov5693_ctrl_ops = {
 	.g_volatile_ctrl = ov5693_g_volatile_ctrl,
@@ -463,9 +464,12 @@ static int ov5693_s_stream(struct v4l2_subdev *sd, int enable)
 
 	dev_dbg(&client->dev, "%s++\n", __func__);
 
-	if (!enable)
+	if (!enable) {
+		ov5693_update_ctrl_range(priv, OV5693_MAX_FRAME_LENGTH);
+
 		return ov5693_write_table(priv,
 			mode_table[OV5693_MODE_STOP_STREAM]);
+	}
 
 	err = ov5693_write_table(priv, mode_table[s_data->mode]);
 	if (err)

@@ -764,8 +764,29 @@
 	thermal-zones {
 		Tboard_tegra {
 			status = "disabled";
+		};
 
-			thermal-zone-params {
+		BCPU-therm {
+			trips {
+				trip_bthrot {
+					temperature = <127000>; /*<88500>;*/
+				};
+			};
+		};
+
+		MCPU-therm {
+			trips {
+				trip_bthrot {
+					temperature = <127000>; /*<88500>;*/
+				};
+			};
+		};
+
+		AO-therm {
+			trips {
+				trip_bthrot {
+					temperature = <127000>; /*<89500>;*/
+				};
 			};
 		};
 	};

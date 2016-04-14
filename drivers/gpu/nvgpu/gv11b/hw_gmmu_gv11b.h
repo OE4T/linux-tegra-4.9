@@ -1074,6 +1074,14 @@ static inline u32 gmmu_pte_kind_c32_ms2_2c_v(void)
 {
 	return 0x000000dd;
 }
+static inline u32 gmmu_pte_kind_c32_ms2_2cbr_v(void)
+{
+	return 0x000000de;
+}
+static inline u32 gmmu_pte_kind_c32_ms2_4cbra_v(void)
+{
+	return 0x000000cc;
+}
 static inline u32 gmmu_pte_kind_c32_ms4_2c_v(void)
 {
 	return 0x000000df;
@@ -1133,6 +1141,10 @@ static inline u32 gmmu_pte_kind_c64_ms2_2c_v(void)
 static inline u32 gmmu_pte_kind_c64_ms2_2cbr_v(void)
 {
 	return 0x000000ec;
+}
+static inline u32 gmmu_pte_kind_c64_ms2_2cbra_v(void)
+{
+	return 0x000000cd;
 }
 static inline u32 gmmu_pte_kind_c64_ms4_2c_v(void)
 {

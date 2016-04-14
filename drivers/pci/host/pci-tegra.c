@@ -4624,7 +4624,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 		unsigned long delay =
 			msecs_to_jiffies(pcie->plat_data->boot_detect_delay);
 		schedule_delayed_work(&pcie->detect_delay, delay);
-		goto release_regulators;
+		return ret;
 	}
 
 	ret = tegra_pcie_probe_complete(pcie);

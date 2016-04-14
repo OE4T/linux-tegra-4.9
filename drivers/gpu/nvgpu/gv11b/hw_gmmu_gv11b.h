@@ -72,7 +72,7 @@ static inline u32 gmmu_new_pde_aperture_video_memory_f(void)
 }
 static inline u32 gmmu_new_pde_address_sys_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xfffffff) << 8;
 }
 static inline u32 gmmu_new_pde_address_sys_w(void)
 {
@@ -164,7 +164,7 @@ static inline u32 gmmu_new_dual_pde_vol_big_false_f(void)
 }
 static inline u32 gmmu_new_dual_pde_address_small_sys_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xfffffff) << 8;
 }
 static inline u32 gmmu_new_dual_pde_address_small_sys_w(void)
 {
@@ -212,7 +212,7 @@ static inline u32 gmmu_new_pte_privilege_false_f(void)
 }
 static inline u32 gmmu_new_pte_address_sys_f(u32 v)
 {
-	return (v & 0xffffff) << 8;
+	return (v & 0xfffffff) << 8;
 }
 static inline u32 gmmu_new_pte_address_sys_w(void)
 {

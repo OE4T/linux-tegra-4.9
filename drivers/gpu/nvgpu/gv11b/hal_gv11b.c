@@ -22,6 +22,14 @@
 
 #include "gv11b/gr_gv11b.h"
 #include "gv11b/mc_gv11b.h"
+#include "gv11b/ltc_gv11b.h"
+#include "gv11b/fecs_trace_gv11b.h"
+#include "gv11b/gv11b.h"
+#include "gv11b/ce2_gv11b.h"
+#include "gv11b/gr_ctx_gv11b.h"
+#include "gv11b/mm_gv11b.h"
+#include "gv11b/pmu_gv11b.h"
+#include "gv11b/therm_gv11b.h"
 
 #include "gm20b/gr_gm20b.h"
 
@@ -30,9 +38,22 @@ int gv11b_init_hal(struct gk20a *g)
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 
+	/* boot in non-secure modes for time beeing */
+	gops->privsecurity = 0;
+	gops->securegpccs = 0;
+
 	gv11b_init_mc(gops);
+	gv11b_init_ltc(gops);
 	gv11b_init_gr(gops);
+	gv11b_init_fecs_trace_ops(gops);
+	gv11b_init_ce2(gops);
+	gv11b_init_mm(gops);
+	gv11b_init_gr_ctx(gops);
+	gv11b_init_pmu_ops(gops);
+        gk20a_init_debug_ops(gops);
+	gv11b_init_therm_ops(gops);
 	gops->name = "gv11b";
+	gops->chip_init_gpu_characteristics = gv11b_init_gpu_characteristics;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = VOLTA_A;

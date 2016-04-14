@@ -431,10 +431,8 @@
 		channels   = <4>;
         };
 
-	usb_cd: usb_cd@7009f000 {
-		compatible = "nvidia,tegra210-usb-cd";
-		reg = <0x0 0x03520000 0x0 0x1000>;
-		#extcon-cells = <1>;
+	tegra_usb_cd: usb_cd {
+		compatible = "nvidia,tegra186-usb-cd";
 		status = "disabled";
 	};
 
@@ -485,6 +483,7 @@
 		interrupts = <0 166 0x4>;
 		#stream-id-cells = <1>;
 		status = "disabled";
+		charger-detector = <&tegra_usb_cd>;
 	};
 
 	tegra_padctl: pinctrl@3520000 {

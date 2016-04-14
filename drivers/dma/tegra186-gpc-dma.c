@@ -1453,7 +1453,7 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_cyclic(
 		return NULL;
 
 	/* Enable once or continuous mode */
-	csr |= TEGRA_GPCDMA_CSR_ONCE;
+	csr &= ~TEGRA_GPCDMA_CSR_ONCE;
 	/* Program the slave id in requestor select */
 	csr |= tdc->slave_id << TEGRA_GPCDMA_CSR_REQ_SEL_SHIFT;
 	/* Enable IRQ mask */
@@ -1465,17 +1465,19 @@ static struct dma_async_tx_descriptor *tegra_dma_prep_dma_cyclic(
 	if (flags & DMA_PREP_INTERRUPT)
 		csr |= TEGRA_GPCDMA_CSR_IE_EOC;
 
+	mmio_seq |= (1 << TEGRA_GPCDMA_MMIOSEQ_WRAP_WORD_SHIFT);
 
+	mc_seq =  tdc_read(tdc, TEGRA_GPCDMA_CHAN_MCSEQ);
+	/* retain stream-id and clean rest */
+	mc_seq &= (TEGRA_GPCDMA_MCSEQ_STREAM_ID_MASK <<
+			TEGRA_GPCDMA_MCSEQ_STREAM_ID0_SHIFT);
 	/* Set the address wrapping on both MC and MMIO side */
-	mc_seq = TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
+	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP0_SHIFT;
 	mc_seq |= TEGRA_GPCDMA_MCSEQ_WRAP_NONE <<
 			TEGRA_GPCDMA_MCSEQ_WRAP1_SHIFT;
-	mmio_seq |= (1 << TEGRA_GPCDMA_MMIOSEQ_WRAP_WORD_SHIFT);
-
 	/* Program 2 MC outstanding requests by default. */
 	mc_seq |= (1 << TEGRA_GPCDMA_MCSEQ_REQ_COUNT_SHIFT);
-
 	/* Setting MC burst size depending on MMIO burst size */
 	if (burst_size == 64)
 		mc_seq |= TEGRA_GPCDMA_MCSEQ_BURST_16;

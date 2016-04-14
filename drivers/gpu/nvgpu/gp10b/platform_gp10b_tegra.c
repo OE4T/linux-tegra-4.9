@@ -135,6 +135,11 @@ static int gp10b_tegra_probe(struct device *dev)
 	}
 
 	platform->g->host1x_dev = host1x_pdev;
+	if (platform->g->host1x_dev)
+		nvhost_register_dump_device(platform->g->host1x_dev,
+					gk20a_debug_dump_device,
+					platform->g->dev);
+
 	platform->bypass_smmu = !device_is_iommuable(dev);
 	platform->disable_bigpage = platform->bypass_smmu;
 
@@ -182,6 +187,11 @@ static int gp10b_tegra_late_probe(struct device *dev)
 
 static int gp10b_tegra_remove(struct device *dev)
 {
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+
+	if (platform->g->host1x_dev)
+		nvhost_unregister_dump_device(platform->g->host1x_dev);
+
 	/* remove gk20a power subdomain from host1x */
 	nvhost_unregister_client_domain(dev_to_genpd(dev));
 	gr_gp10b_remove_sysfs(dev);

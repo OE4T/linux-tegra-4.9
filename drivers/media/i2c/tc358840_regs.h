@@ -2,6 +2,7 @@
  * tc358840_regs.h - Toshiba UH2C/D HDMI-CSI bridge registers
  *
  * Copyright (c) 2015, Armin Weiss <weii@zhaw.ch>
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -15,6 +16,11 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
+
+#ifndef __TC358840_TABLES__
+#define __TC358840_TABLES__
+
+#include <media/camera_common.h>
 
 /**************************************************
  * Register Addresses
@@ -724,3 +730,25 @@
 #define CB_VACT					0x7012
 #define CB_HSTART				0x7014
 #define CB_VSTART				0x7016
+
+enum {
+	TC358840_MODE_3840X2160,
+	TC358840_MODE_1920X1080,
+	TC358840_MODE_1280X720,
+};
+
+static const int tc358840_30fps[] = {
+	30,
+};
+
+static const int tc358840_30_60fps[] = {
+	30,
+	60,
+};
+
+static const struct camera_common_frmfmt tc358840_frmfmt[] = {
+	{{3840, 2160},	tc358840_30fps, 1, 1, TC358840_MODE_3840X2160},
+	{{1920, 1080},	tc358840_30_60fps, 2, 1, TC358840_MODE_1920X1080},
+	{{1280, 720},	tc358840_30_60fps, 2, 1, TC358840_MODE_1280X720},
+};
+#endif  /* __TC358840_TABLES__ */

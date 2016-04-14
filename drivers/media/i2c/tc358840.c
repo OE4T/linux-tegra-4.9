@@ -1977,6 +1977,59 @@ static int tc358840_enum_mbus_code(struct v4l2_subdev *sd, struct v4l2_subdev_fh
 	return 0;
 }
 
+static int tc358840_enum_framesizes(struct v4l2_subdev *sd,
+				    struct v4l2_frmsizeenum *fsizes)
+{
+	const struct camera_common_frmfmt *frmfmt = tc358840_frmfmt;
+	int num_frmfmt = ARRAY_SIZE(tc358840_frmfmt);
+
+	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
+
+	if (fsizes->pixel_format != V4L2_PIX_FMT_UYVY &&
+	    fsizes->pixel_format != V4L2_PIX_FMT_ABGR32)
+		return -EINVAL;
+
+	if (fsizes->index >= num_frmfmt)
+		return -EINVAL;
+
+	fsizes->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	fsizes->discrete = frmfmt[fsizes->index].size;
+
+	return 0;
+}
+
+static int tc358840_enum_frameintervals(struct v4l2_subdev *sd,
+				      struct v4l2_frmivalenum *fintervals)
+{
+	const struct camera_common_frmfmt *frmfmt = tc358840_frmfmt;
+	int num_frmfmt = ARRAY_SIZE(tc358840_frmfmt);
+	int i;
+
+	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
+
+	if (fintervals->pixel_format != V4L2_PIX_FMT_UYVY &&
+	    fintervals->pixel_format != V4L2_PIX_FMT_ABGR32)
+		return -EINVAL;
+
+	for (i = 0; i < num_frmfmt; i++) {
+		if (frmfmt[i].size.width == fintervals->width &&
+		    frmfmt[i].size.height == fintervals->height)
+			break;
+	}
+	if (i >= num_frmfmt)
+		return -EINVAL;
+
+	if (fintervals->index >= frmfmt[i].num_framerates)
+		return -EINVAL;
+
+	fintervals->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	fintervals->discrete.numerator = 1;
+	fintervals->discrete.denominator =
+		frmfmt[i].framerates[fintervals->index];
+
+	return 0;
+}
+
 static int tc358840_s_power(struct v4l2_subdev *sd, int on)
 {
 	return 0;
@@ -1993,6 +2046,9 @@ static struct v4l2_subdev_video_ops tc358840_subdev_video_ops = {
 	.s_mbus_fmt = tc358840_s_mbus_fmt,
 	.g_mbus_fmt = tc358840_g_mbus_fmt,
 	.try_mbus_fmt = tc358840_try_mbus_fmt,
+
+	.enum_framesizes = tc358840_enum_framesizes,
+	.enum_frameintervals = tc358840_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops tc358840_subdev_core_ops = {

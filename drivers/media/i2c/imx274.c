@@ -34,8 +34,8 @@
 #define IMX274_MAX_COARSE_DIFF		10
 
 #define IMX274_GAIN_SHIFT		8
-#define IMX274_MIN_GAIN		(0x1)
-#define IMX274_MAX_GAIN		(0x7A5)
+#define IMX274_MIN_GAIN		(1 << IMX274_GAIN_SHIFT)
+#define IMX274_MAX_GAIN		(16 << IMX274_GAIN_SHIFT)
 #define IMX274_MIN_FRAME_LENGTH	(0x8ED)
 #define IMX274_MAX_FRAME_LENGTH	(0xB292)
 #define IMX274_MIN_EXPOSURE_COARSE	(0x0001)
@@ -574,11 +574,14 @@ static int imx274_set_gain(struct imx274 *priv, s32 val)
 	imx274_reg reg_list[2];
 	int err;
 	int i = 0;
+	u16 gain;
 
 	dev_dbg(&priv->i2c_client->dev,
 		"%s: val: %d\n", __func__, val);
 
-	imx274_get_gain_reg(reg_list, val);
+	gain = 2048 - (2048 * IMX274_MIN_GAIN / val);
+
+	imx274_get_gain_reg(reg_list, gain);
 	imx274_set_group_hold(priv);
 
 	/* writing analog gain */

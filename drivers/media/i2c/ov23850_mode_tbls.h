@@ -4053,7 +4053,11 @@ static ov23850_reg mode_table_common[] = {
 
 enum {
 	OV23850_MODE_5632X4224,
+	OV23850_MODE_5632X4224_8FPS,
+	OV23850_MODE_5632X4224_8FPS_DPCM,
+	OV23850_MODE_5632X4224_24FPS_DPCM,
 	OV23850_MODE_5632X3168,
+	OV23850_MODE_5632X3168_30FPS_DPCM,
 
 	OV23850_MODE_COMMON,
 	OV23850_MODE_START_STREAM,
@@ -4063,7 +4067,11 @@ enum {
 
 static ov23850_reg *mode_table[] = {
 	[OV23850_MODE_5632X4224] = mode_5632x4224_20fps,
+	[OV23850_MODE_5632X4224_8FPS] = mode_5632x4224_8fps,
+	[OV23850_MODE_5632X4224_8FPS_DPCM] = mode_5632x4224_8fps_dpcm,
+	[OV23850_MODE_5632X4224_24FPS_DPCM] = mode_5632x4224_24fps_dpcm,
 	[OV23850_MODE_5632X3168] = mode_5632x3168_30fps,
+	[OV23850_MODE_5632X3168_30FPS_DPCM] = mode_5632x3168_30fps_dpcm,
 
 	[OV23850_MODE_COMMON] = mode_table_common,
 	[OV23850_MODE_START_STREAM] = ov23850_start,
@@ -4071,8 +4079,16 @@ static ov23850_reg *mode_table[] = {
 	[OV23850_MODE_TEST_PATTERN] = tp_colorbars,
 };
 
+static const int ov23850_20fps[] = {
+	20,
+};
+
+static const int ov23850_30fps[] = {
+	30,
+};
+
 static const struct camera_common_frmfmt ov23850_frmfmt[] = {
-	{{5632, 4224},	0, OV23850_MODE_5632X4224},
-	{{5632, 3168},	0, OV23850_MODE_5632X3168},
+	{{5632, 4224}, ov23850_20fps, 1, 0, OV23850_MODE_5632X4224},
+	{{5632, 3168}, ov23850_30fps, 1, 0, OV23850_MODE_5632X3168},
 };
 #endif  /* __OV23850_I2C_TABLES__ */

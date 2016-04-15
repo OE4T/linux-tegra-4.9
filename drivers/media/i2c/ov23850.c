@@ -434,7 +434,6 @@ static int ov23850_power_get(struct ov23850 *priv)
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
 	const char *mclk_name;
-	struct clk *parent;
 	int err = 0;
 
 	mclk_name = priv->pdata->mclk_name ?
@@ -1279,7 +1278,6 @@ static int ov23850_probe(struct i2c_client *client,
 {
 	struct camera_common_data *common_data;
 	struct ov23850 *priv;
-	struct device_node *node = client->dev.of_node;
 	char debugfs_name[10];
 	int err;
 	u32 port = 0;

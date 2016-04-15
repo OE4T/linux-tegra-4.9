@@ -1070,4 +1070,8 @@ extern struct class nvgpu_class;
 
 #define INTERFACE_NAME "nvhost%s-gpu"
 
+int gk20a_pm_init(struct device *dev);
+int gk20a_pm_finalize_poweron(struct device *dev);
+void gk20a_remove_support(struct device *dev);
+
 #endif /* GK20A_H */

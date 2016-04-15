@@ -91,3 +91,11 @@ config TEGRA_USE_NA_GPCPLL
 	  Enable noise aware (NA) mode of GM20b GPCPLL. In this mode PLL output
 	  frequency is automatically adjusted when GM20b voltage is fluctuating
 	  because of transient PMIC or power distribution tree noise.
+
+config GK20A_PCI
+	bool "Support PCIe NVIDIA GPUs on nvgpu"
+	depends on PCI && GK20A
+	default y if ARM64
+	default n
+	help
+	  Enable support for GPUs on PCIe bus.

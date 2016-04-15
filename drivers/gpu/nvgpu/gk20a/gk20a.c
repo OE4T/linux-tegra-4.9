@@ -62,6 +62,7 @@
 #include "gk20a_allocator.h"
 #include "hal.h"
 #include "vgpu/vgpu.h"
+#include "pci.h"
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
@@ -601,7 +602,7 @@ static irqreturn_t gk20a_intr_thread_nonstall(int irq, void *dev_id)
 	return g->ops.mc.isr_thread_nonstall(g);
 }
 
-static void gk20a_remove_support(struct device *dev)
+void gk20a_remove_support(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 
@@ -765,7 +766,7 @@ static int gk20a_detect_chip(struct gk20a *g)
 	return gpu_init_hal(g);
 }
 
-static int gk20a_pm_finalize_poweron(struct device *dev)
+int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
@@ -1326,7 +1327,7 @@ static int gk20a_pm_initialise_domain(struct device *dev)
 }
 #endif
 
-static int gk20a_pm_init(struct device *dev)
+int gk20a_pm_init(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err = 0;
@@ -1764,11 +1765,16 @@ static int __init gk20a_init(void)
 	if (ret)
 		return ret;
 
+	ret = nvgpu_pci_init();
+	if (ret)
+		return ret;
+
 	return platform_driver_register(&gk20a_driver);
 }
 
 static void __exit gk20a_exit(void)
 {
+	nvgpu_pci_exit();
 	platform_driver_unregister(&gk20a_driver);
 	class_unregister(&nvgpu_class);
 }

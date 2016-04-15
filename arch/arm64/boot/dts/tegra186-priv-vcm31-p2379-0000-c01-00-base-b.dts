@@ -41,4 +41,76 @@
                         status = "okay";
                 };
         };
+
+	isc-mgr.0 {
+		/* This node is to control the aggregator connected to Tegra A on Tegra B */
+		aggregator_ta@48 {
+			addr = <0x48>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		aggregator@6a {
+			addr = <0x6a>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		serializer0@40 {
+			addr = <0x40>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		sensor0@30 {
+			addr = <0x30>;  /* 7 bit slave address */
+			reg_len = <16>; /* 16 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+	};
+
+	isc-mgr.1 {
+		/* This node is to control the aggregator connected to Tegra A on Tegra B */
+		aggregator_ta@48 {
+			addr = <0x48>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		aggregator@6a {
+			addr = <0x6a>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		serializer0@40 {
+			addr = <0x40>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		sensor0@30 {
+			addr = <0x30>;  /* 7 bit slave address */
+			reg_len = <16>; /* 16 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+	};
+
+	isc-mgr.2 {
+		/* This node is to control the aggregator connected to Tegra A on Tegra B */
+		aggregator_ta@48 {
+			addr = <0x48>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		aggregator@6a {
+			addr = <0x6a>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		serializer0@40 {
+			addr = <0x40>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		sensor0@30 {
+			addr = <0x30>;  /* 7 bit slave address */
+			reg_len = <16>; /* 16 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+	};
 };

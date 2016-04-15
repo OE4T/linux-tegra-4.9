@@ -694,8 +694,8 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		for (j = 0; j < 4; j++)
 			spin_lock_init(&tg_cont->lvl_lock[j]);
 
-		irq_set_handler_data(tg_cont->irq, tg_cont);
-		irq_set_chained_handler(tg_cont->irq, tegra_gpio_irq_handler);
+		irq_set_chained_handler_and_data(tg_cont->irq,
+					tegra_gpio_irq_handler, tg_cont);
 	}
 
 	ret = gpiochip_add(&tegra_gpio_chip);

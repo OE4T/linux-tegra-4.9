@@ -33,6 +33,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
 #include <linux/irqchip/tegra.h>
+#include <linux/version.h>
 
 #define GPIO_ENB_CONFIG_REG	0x00
 #define GPIO_ENB_BIT		BIT(0)
@@ -462,7 +463,7 @@ static struct irq_chip tegra_gpio_irq_chip = {
 	.irq_disable	= tegra_gpio_irq_mask,
 };
 
-static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
+static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct tegra_gpio_controller *tg_cont = irq_desc_get_handler_data(desc);
@@ -490,6 +491,18 @@ static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 
 	chained_irq_exit(chip, desc);
 }
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
+{
+	tegra_gpio_irq_handler_desc(desc);
+}
+#else
+static void tegra_gpio_irq_handler(struct irq_desc *desc)
+{
+	tegra_gpio_irq_handler_desc(desc);
+}
+#endif
 
 static struct of_device_id tegra_gpio_of_match[] = {
 	{ .compatible = "nvidia,tegra186-gpio", NULL },

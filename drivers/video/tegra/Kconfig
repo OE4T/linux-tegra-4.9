@@ -192,7 +192,6 @@ config ADF_TEGRA
 	default ADF
 	select ADF_FBDEV
 	select ADF_MEMBLOCK
-	select VIDEOBUF2_DMA_CONTIG
 	help
 	  ADF device support for the Tegra display controller.
 

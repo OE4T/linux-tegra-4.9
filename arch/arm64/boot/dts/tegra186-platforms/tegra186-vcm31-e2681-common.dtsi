@@ -23,6 +23,10 @@
 #include "tegra186-platforms/tegra186-vcm31.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-power-tree-e2681-003-a01-00.dtsi"
 
+#define EXTCON_NONE		0
+#define EXTCON_USB             1
+#define EXTCON_USB_Host        2
+
 / {
         model = "t186-vcm31-e2681";
         compatible = "nvidia,t186-vcm31-e2681", "nvidia,tegra186";
@@ -263,7 +267,8 @@
 						0x2 0x1>;
 			/* C.00 is an unused GPIO in our reference platform */
 			gpios = <&tegra_gpio TEGRA_GPIO(C, 0) 0 &spmic 0 0>;
-			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			extcon-gpio,out-cable-name-strings = "USB", "USB-Host";
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			#extcon-cells = <1>;
 		};
 	};

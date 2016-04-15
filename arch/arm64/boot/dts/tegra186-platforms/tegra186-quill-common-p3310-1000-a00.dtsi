@@ -17,6 +17,10 @@
 #include "tegra186-quill-p3310-1000-a00-powermon.dtsi"
 #include "tegra186-quill-thermal.dtsi"
 
+#define EXTCON_NONE		0
+#define EXTCON_USB             1
+#define EXTCON_USB_Host        2
+
 / {
         model = "quill-3310";
         compatible = "nvidia,quill-3310", "nvidia,tegra186";
@@ -79,7 +83,8 @@
 						    0x1 0x2
 						    0x2 0x1>;
 			gpios = <&tegra_gpio TEGRA_GPIO(X, 7) 0 &spmic 0 0>;
-			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			extcon-gpio,out-cable-name-strings = "USB", "USB-Host";
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			wakeup-source;
 			#extcon-cells = <1>;
 		};

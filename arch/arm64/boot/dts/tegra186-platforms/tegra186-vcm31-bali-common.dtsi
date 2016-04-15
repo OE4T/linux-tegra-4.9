@@ -23,6 +23,10 @@
 #include "tegra186-vcm31-bali-disp.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-power-tree-bali.dtsi"
 
+#define EXTCON_NONE		0
+#define EXTCON_USB             1
+#define EXTCON_USB_Host        2
+
 / {
         model = "t186-vcm31-bali";
         compatible = "nvidia,t186-vcm31-bali", "nvidia,tegra186";
@@ -243,7 +247,8 @@
 						0x0 0x2>;
 			/* PMIC GPIO 0 */
 			gpios = <&spmic 0 0>;
-			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			extcon-gpio,out-cable-name-strings = "USB", "USB-Host";
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			#extcon-cells = <1>;
 		};
 	};

@@ -25,6 +25,10 @@
 #include "tegra186-platforms/tegra186-vcm31.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-power-tree-p2382-010-a01-00.dtsi"
 
+#define EXTCON_NONE		0
+#define EXTCON_USB             1
+#define EXTCON_USB_Host        2
+
 / {
         model = "p2382_t186";
         compatible = "nvidia,p2382_t186", "nvidia,tegra186";
@@ -271,7 +275,8 @@
 			extcon-gpio,cable-states = <0x1 0x1
 						0x0 0x2>;
 			gpios = <&spmic 0 0>;
-			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			extcon-gpio,out-cable-name-strings = "USB", "USB-Host";
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			#extcon-cells = <1>;
 		};
 	};

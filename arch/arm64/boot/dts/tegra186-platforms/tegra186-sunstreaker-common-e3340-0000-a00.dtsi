@@ -28,6 +28,10 @@
 #include "tegra186-dp.dtsi"
 #include "tegra186-platforms/tegra186-sunstreaker-thermal.dtsi"
 
+#define EXTCON_NONE		0
+#define EXTCON_USB             1
+#define EXTCON_USB_Host        2
+
 / {
         model = "sunstreaker-3340";
         compatible = "nvidia,sunstreaker-3340", "nvidia,tegra186";
@@ -310,7 +314,8 @@
 			compatible = "extcon-gpio-states";
 			reg = <0x1>;
 			extcon-gpio,name = "VBUS";
-			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			extcon-gpio,out-cable-name-strings = "USB", "USB-Host";
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			extcon-gpio,cable-states = <0x3 0x0
 						    0x0 0x2
 						    0x1 0x2

@@ -573,7 +573,7 @@ static void read_gpio_mapping_data(struct platform_device *pdev)
 
 	if (!np)
 		return;
-	nstates = of_property_count_u32(np, "nvidia,gpio_mapping");
+	nstates = of_property_count_u32_elems(np, "nvidia,gpio_mapping");
 	nstates = nstates / 2;
 	for (i = 0; i < nstates; i++) {
 		of_property_read_u32_index(np, "nvidia,gpio_mapping",

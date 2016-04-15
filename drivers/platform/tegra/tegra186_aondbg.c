@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -177,7 +177,7 @@ static struct aon_dbg_response *aon_create_ivc_dbg_req(u32 request,
 		break;
 	default:
 		dev_err(aondev, "Invalid aon dbg request\n");
-		return NULL;
+		return ERR_PTR(-EINVAL);
 	}
 
 	msg.length = sizeof(struct aon_dbg_request);
@@ -185,17 +185,23 @@ static struct aon_dbg_response *aon_create_ivc_dbg_req(u32 request,
 	ret = mbox_send_message(aondbg->mbox, (void *)&msg);
 	if (ret < 0) {
 		dev_err(aondev, "mbox_send_message failed\n");
-		return NULL;
+		return ERR_PTR(ret);
 	}
 	timeout = get_completion_timeout();
 	ret = wait_for_completion_timeout(aon_nodes[req.req_type].wait_on,
 				msecs_to_jiffies(timeout));
-	if (!ret)
-		return NULL;
+	if (!ret) {
+		dev_err(aondev, "No response\n");
+		return ERR_PTR(-ETIMEDOUT);
+	}
 	resp = (void *)aon_nodes[req.req_type].data;
 	if (resp->resp_type > AON_REQUEST_TYPE_MAX) {
 		dev_err(aondev, "Invalid aon dbg response\n");
-		return NULL;
+		return ERR_PTR(-EIO);
+	}
+	if (resp->status != AON_DBG_STATUS_OK) {
+		dev_err(aondev, "Request failed\n");
+		return ERR_PTR(-EIO);
 	}
 
 	return resp;
@@ -231,8 +237,8 @@ static ssize_t aon_pm_target_power_state_write(struct file *file,
 	resp = aon_create_ivc_dbg_req(AON_PM_TARGET_POWER_STATE,
 					WRITE, i);
 	mutex_unlock(&aon_mutex);
-	if (!resp)
-		return -ETIMEDOUT;
+	if (IS_ERR(resp))
+		return PTR_ERR(resp);
 
 	return count;
 }
@@ -244,9 +250,9 @@ static int aon_pm_target_power_state_show(struct seq_file *file, void *data)
 
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)file->private, READ, 0);
-	if (!resp) {
+	if (IS_ERR(resp)) {
 		mutex_unlock(&aon_mutex);
-		return -ETIMEDOUT;
+		return PTR_ERR(resp);
 	}
 	pstate_index = resp->data.pm_xfer.type.pstate.state;
 	if (pstate_index < AON_PSTATES_TOTAL) {
@@ -281,9 +287,9 @@ static int aon_pm_show(void *data, u64 *val)
 
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)data, READ, 0);
-	if (!resp) {
+	if (IS_ERR(resp)) {
 		mutex_unlock(&aon_mutex);
-		return -ETIMEDOUT;
+		return PTR_ERR(resp);
 	}
 	switch (resp->resp_type) {
 	case AON_PM_WAKE_TIMEOUT:
@@ -311,8 +317,8 @@ static int aon_pm_store(void *data, u64 val)
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)data, WRITE, val);
 	mutex_unlock(&aon_mutex);
-	if (!resp)
-		return -ETIMEDOUT;
+	if (IS_ERR(resp))
+		return PTR_ERR(resp);
 
 	return 0;
 }
@@ -334,9 +340,9 @@ static int aon_pm_history_show(struct seq_file *file, void *data)
 
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)file->private, READ, 0);
-	if (!resp) {
+	if (IS_ERR(resp)) {
 		mutex_unlock(&aon_mutex);
-		return -ETIMEDOUT;
+		return PTR_ERR(resp);
 	}
 	len = ARRAY_SIZE(resp->data.pm_xfer.type.history.buffer);
 	history = resp->data.pm_xfer.type.history.buffer;
@@ -372,9 +378,9 @@ static int aon_pm_histogram_show(struct seq_file *file, void *data)
 
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)file->private, READ, 0);
-	if (!resp) {
+	if (IS_ERR(resp)) {
 		mutex_unlock(&aon_mutex);
-		return -ETIMEDOUT;
+		return PTR_ERR(resp);
 	}
 	len = ARRAY_SIZE(resp->data.pm_xfer.type.histogram.state_durations);
 	histogram = resp->data.pm_xfer.type.histogram.state_durations;
@@ -404,10 +410,10 @@ static int aon_ping_show(struct seq_file *file, void *data)
 
 	mutex_lock(&aon_mutex);
 	resp = aon_create_ivc_dbg_req(*(u32 *)file->private, READ, 0);
-	if (resp)
-		seq_printf(file, "%s\n", resp->data.ping_xfer.data);
+	if (IS_ERR(resp))
+		ret = PTR_ERR(resp);
 	else
-		ret = -ETIMEDOUT;
+		seq_printf(file, "%s\n", resp->data.ping_xfer.data);
 	mutex_unlock(&aon_mutex);
 
 	return ret;
@@ -433,10 +439,10 @@ static int aon_mods_loops_store(void *data, u64 val)
 	mutex_lock(&aon_mutex);
 	set_mods_result(MODS_DEFAULT_VAL);
 	resp = aon_create_ivc_dbg_req(*(u32 *)data, WRITE, val);
-	if (resp)
-		set_mods_result(resp->status);
+	if (IS_ERR(resp))
+		ret = PTR_ERR(resp);
 	else
-		ret = -ETIMEDOUT;
+		set_mods_result(resp->status);
 	mutex_unlock(&aon_mutex);
 
 	return ret;

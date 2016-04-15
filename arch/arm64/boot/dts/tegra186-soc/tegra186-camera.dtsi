@@ -119,7 +119,14 @@
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <1>;
 				nvidia,frame-size = <64>;
-		       };
+			};
+			dbg@3380 {
+				compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
+				reg = <0x3380>, <0xB380>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <1>;
+				nvidia,frame-size = <128>;
+			};
 		};
 	};
 
@@ -222,7 +229,14 @@
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <1>;
 				nvidia,frame-size = <64>;
-		       };
+			};
+			dbg@3380 {
+				compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
+				reg = <0x3380>, <0xB380>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <1>;
+				nvidia,frame-size = <128>;
+			};
 		};
 	};
 
@@ -243,5 +257,11 @@
 		compatible = "nvidia,tegra186-sysfs-mbox";
 		status = "disabled";
 		mboxes = <&tegra_sce 5>;
+	};
+
+	rtcpu-dbg {
+		compatible = "nvidia,tegra186-sysfs-mbox";
+		status = "disabled";
+		mboxes = <&tegra_sce 6>;
 	};
 };

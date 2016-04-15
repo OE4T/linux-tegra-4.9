@@ -48,6 +48,7 @@ MODULE_LICENSE("GPL v2");
 #define MSBC_AUDIO3_REPORT_ID 0xFB
 
 #define INPUT_REPORT_ID 2
+#define INPUT_EVT_INTR_DATA_ID 10
 
 #define KEYCODE_PRESENT_IN_AUDIO_PACKET_FLAG 0x80
 
@@ -1509,6 +1510,7 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
 	struct snd_card *shdr_card = shdr_dev->shdr_card;
 	struct snd_atvr *atvr_snd;
+	void *debug_info;
 
 	if (shdr_card == NULL)
 		return 0;
@@ -1575,6 +1577,18 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 		audio_dec(hdev, &data[1], PACKET_TYPE_MSBC, size - 1);
 		/* we've handled the event */
 		return 1;
+	} else if (report->id == INPUT_EVT_INTR_DATA_ID) {
+		/*Debug infor sent by device*/
+		debug_info = kmalloc(sizeof(u8) * size + 1, GFP_ATOMIC);
+		if (!debug_info) {
+			pr_err("%s, Kmalloc failed!", __func__);
+			return -ENOMEM;
+		}
+		*((char *)(debug_info + size)) = '\0';
+		memcpy(debug_info, data, size);
+		pr_info("Report ID 10: PID: %d, report %s", hdev->product,
+			(char *)debug_info);
+		kfree(debug_info);
 	}
 	/* let the event through for regular input processing */
 	return 0;

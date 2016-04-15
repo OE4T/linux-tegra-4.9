@@ -858,4 +858,8 @@
 	sce-mods {
 		status = "okay";
 	};
+
+	rtcpu-dbg {
+		status = "okay";
+	};
 };

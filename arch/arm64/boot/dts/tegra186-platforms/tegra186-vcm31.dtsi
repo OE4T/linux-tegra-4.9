@@ -179,6 +179,13 @@
 		status = "disabled";
 	};
 
+	pmc@c360000 {
+		/*export: SCRATCH_99*/
+		export-pmc-scratch-reg-offset = <0xadc>;
+		export-pmc-scratch-reg-name = "boot-chain-type";
+		status = "okay";
+	};
+
 	pmc@c370000 {
 		nvidia,invert-pmic-interrupt-polarity;
 	};

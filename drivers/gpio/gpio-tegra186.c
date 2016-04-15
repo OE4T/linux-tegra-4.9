@@ -64,8 +64,6 @@
 #define GPIO_SCR_SEC_G1R	BIT(1)
 #define GPIO_SCR_SEC_G1W	BIT(9)
 
-#define DEFAULT_IRQ_OFFSET	32
-
 #define GPIO_INT_LVL_NO_TRIGGER			0x0
 #define GPIO_INT_LVL_LEVEL_TRIGGER		0x1
 #define GPIO_INT_LVL_SINGLE_EDGE_TRIGGER	0x2
@@ -86,33 +84,6 @@
 
 #define MAX_PORTS			32
 #define MAX_PINS_PER_PORT		8
-
-#define GPIO0_0_INTR_ID			45
-#define GPIO0_1_INTR_ID			46
-#define GPIO0_2_INTR_ID			47
-
-#define GPIO1_0_INTR_ID			48
-#define GPIO1_1_INTR_ID			49
-#define GPIO1_2_INTR_ID			50
-
-#define GPIO2_0_INTR_ID			51
-#define GPIO2_1_INTR_ID			52
-#define GPIO2_2_INTR_ID			53
-
-#define GPIO3_0_INTR_ID			54
-#define GPIO3_1_INTR_ID			55
-#define GPIO3_2_INTR_ID			56
-
-#define GPIO4_0_INTR_ID			57
-#define GPIO4_1_INTR_ID			58
-#define GPIO4_2_INTR_ID			59
-
-#define GPIO5_0_INTR_ID			178
-#define GPIO5_1_INTR_ID			179
-#define GPIO5_2_INTR_ID			180
-
-#define AON_GPIO_0_INTR_ID			60
-#define AON_GPIO_1_INTR_ID			61
 
 #define GPIO_PORT(g)			((g) >> 3)
 #define GPIO_PIN(g)			((g) & 0x7)
@@ -495,52 +466,14 @@ static struct irq_chip tegra_gpio_irq_chip = {
 static void tegra_gpio_irq_handler(unsigned int irq, struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
-	int map_index;
+	struct tegra_gpio_controller *tg_cont = irq_desc_get_handler_data(desc);
+	int map_index = tg_cont->controller;
 	int pin;
 	u32 i;
 	unsigned long val;
 	u32 gpio;
 	u32 temp;
 	u32 reg;
-
-	switch (irq) {
-	case DEFAULT_IRQ_OFFSET + GPIO0_0_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO0_1_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO0_2_INTR_ID:
-		map_index = 0;
-		break;
-	case DEFAULT_IRQ_OFFSET + GPIO1_0_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO1_1_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO1_2_INTR_ID:
-		map_index = 1;
-		break;
-	case DEFAULT_IRQ_OFFSET + GPIO2_0_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO2_1_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO2_2_INTR_ID:
-		map_index = 2;
-		break;
-	case DEFAULT_IRQ_OFFSET + GPIO3_0_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO3_1_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO3_2_INTR_ID:
-		map_index = 3;
-		break;
-	case DEFAULT_IRQ_OFFSET + GPIO4_0_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO4_1_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO4_2_INTR_ID:
-		map_index = 4;
-		break;
-	case DEFAULT_IRQ_OFFSET + AON_GPIO_0_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + AON_GPIO_1_INTR_ID:
-		map_index = 6;
-		break;
-	case DEFAULT_IRQ_OFFSET + GPIO5_0_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO5_1_INTR_ID:
-	case DEFAULT_IRQ_OFFSET + GPIO5_2_INTR_ID:
-		map_index = 5;
-		break;
-	default:
-		return;
-	}
 
 	chained_irq_enter(chip, desc);
 	for (i = 0; i < MAX_GPIO_PORTS; i++) {

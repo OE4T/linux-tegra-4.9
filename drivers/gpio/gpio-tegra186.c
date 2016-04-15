@@ -18,11 +18,11 @@
 
 #include <linux/err.h>
 #include <linux/init.h>
-#include <linux/platform_data/gpio-tegra.h>
 #include <linux/irq.h>
 #include <linux/interrupt.h>
 #include <linux/io.h>
 #include <linux/gpio.h>
+#include <linux/gpio/gpio-tegra.h>
 #include <linux/of_device.h>
 #include <linux/of_gpio.h>
 #include <linux/platform_device.h>
@@ -32,7 +32,6 @@
 #include <linux/irqchip/chained_irq.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm.h>
-#include <linux/tegra-soc.h>
 #include <linux/irqchip/tegra.h>
 
 #define GPIO_ENB_CONFIG_REG	0x00

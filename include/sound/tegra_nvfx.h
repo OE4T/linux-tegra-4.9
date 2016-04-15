@@ -2,7 +2,7 @@
  * tegra_nvfx.h - Shared NVFX interface between Tegra ADSP ALSA driver and
  *                ADSP side user space code.
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -102,7 +102,6 @@ typedef struct {
  */
 #define NVFX_MAX_INPUT_PINS         6
 #define NVFX_MAX_OUTPUT_PINS        2
-#define NVFX_MAX_RAW_DATA_WSIZE		1024
 
 /**
  * nvfx_shared_state_t - Required shared state information

@@ -18,6 +18,7 @@
 #include <linux/clk-provider.h>
 #include <linux/clkdev.h>
 #include <linux/export.h>
+#include <linux/mutex.h>
 #include <linux/slab.h>
 #include <linux/err.h>
 #include <soc/tegra/tegra_bpmp.h>
@@ -25,6 +26,12 @@
 
 #include "clk.h"
 #include "clk-mrq.h"
+
+/**
+ * Mutex to prevent concurrent invocations
+ * to register a clock.
+ */
+static DEFINE_MUTEX(clk_reg_lock);
 
 struct bpmp_clk_req {
 	u32	cmd;
@@ -432,42 +439,55 @@ static int clk_bpmp_init(int clk_num)
 	return 0;
 }
 
+static struct clk *tegra_of_clk_src_onecell_get(struct of_phandle_args *clkspec,
+	void *data)
+{
+	struct clk_onecell_data *clk_data = data;
+	unsigned int idx = clkspec->args[0];
+	int err;
+
+	if (idx >= clk_data->clk_num) {
+		pr_err("%s: invalid clock index %d\n", __func__, idx);
+		return ERR_PTR(-EINVAL);
+	}
+
+	BUG_ON(clk_data->clks != clks);
+	mutex_lock(&clk_reg_lock);
+	if (!clks[idx]) {
+		err = clk_bpmp_init(idx);
+		if (err < 0) {
+			pr_err("clk-bpmp: failed to initialize clk %d\n", idx);
+			clks[idx] = ERR_PTR(-EINVAL);
+		}
+	}
+	mutex_unlock(&clk_reg_lock);
+
+	return clks[idx];
+}
+
 struct clk **tegra_bpmp_clk_init(struct device_node *np)
 {
-	int i, err;
-
 	if (clk_bpmp_get_max_clk_id(&max_clk_id) || max_clk_id < 0) {
 		pr_err("clk-bpmp: unable to retrieve clk data\n");
 		return ERR_PTR(-ENODEV);
 	}
 
-	clks = kmalloc((max_clk_id + 1) * sizeof(struct clk *), GFP_KERNEL);
+	clks = kzalloc((max_clk_id + 1) * sizeof(struct clk *), GFP_KERNEL);
 	if (!clks) {
 		WARN_ON(1);
 		return ERR_PTR(-ENOMEM);
 	}
 
-	clk_names = kmalloc((max_clk_id + 1) * sizeof(char *), GFP_KERNEL);
+	clk_names = kzalloc((max_clk_id + 1) * sizeof(char *), GFP_KERNEL);
 	if (!clk_names) {
 		WARN_ON(1);
 		kfree(clks);
 		return ERR_PTR(-ENOMEM);
 	}
 
-	for (i = 0; i < max_clk_id + 1; i++) {
-		clks[i] = ERR_PTR(-EINVAL);
-		clk_names[i] = NULL;
-	}
-
-	for (i = 0; i < max_clk_id + 1; ++i) {
-		err = clk_bpmp_init(i);
-		if (err < 0)
-			pr_err("clk-bpmp: failed to initialize clk %d\n", i);
-	}
-
 	clk_data.clks = clks;
 	clk_data.clk_num = max_clk_id + 1;
-	of_clk_add_provider(np, of_clk_src_onecell_get, &clk_data);
+	of_clk_add_provider(np, tegra_of_clk_src_onecell_get, &clk_data);
 
 	return clks;
 }

@@ -31,6 +31,7 @@ struct pwm_bl_data {
 	unsigned int		scale;
 	bool			legacy;
 	unsigned int		pwm_gpio;
+	u8			*bl_measured;
 	int			(*notify)(struct device *,
 					  int brightness);
 	void			(*notify_after)(struct device *,

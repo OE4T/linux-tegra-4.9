@@ -39,7 +39,8 @@
 #define AST_MAX_REGION			7
 #define AST_ADDR_MASK			0xfffff000
 
-/* TEGRA_APS_AST_REGION_<x>_CONTROL register fieds */
+/* TEGRA_APS_AST_REGION_<x>_CONTROL register fields */
+#define AST_RGN_CTRL_VM_INDEX		15
 #define AST_RGN_CTRL_NON_SECURE		0x8
 #define AST_RGN_CTRL_SNOOP		0x4
 
@@ -96,38 +97,13 @@ int tegra_ast_del_ref(void)
 }
 EXPORT_SYMBOL(tegra_ast_del_ref);
 
-int tegra_ast_set_streamid(struct tegra_ast *ast,
-				u32 vmindex, u32 stream_id)
-{
-	if (!ast)
-		return -EINVAL;
-
-	if (vmindex > AST_MAX_VMINDEX) {
-		dev_err(ast->dev,
-			"%s: Invalid VM index %u\n",
-			__func__, vmindex);
-		return -EINVAL;
-	}
-
-	if (stream_id > AST_MAX_STREAMID) {
-		dev_err(ast->dev,
-			"%s: Invalid streamID %u\n",
-			__func__, stream_id);
-		return -EINVAL;
-	}
-
-	writel(AST_STREAMID(stream_id) | AST_STREAMID_CTL_ENABLE,
-		ast->ast_base + TEGRA_APS_AST_STREAMID_CTL + (vmindex * 4));
-
-	return 0;
-}
-EXPORT_SYMBOL(tegra_ast_set_streamid);
-
 int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
-			u32 slave_base, u32 mask, u64 master_base)
+			u32 slave_base, u32 mask, u64 master_base,
+			u32 stream_id)
 {
 	u32 roffset;
 	void __iomem *ast_base;
+	u32 vmidx;
 
 	if (!ast)
 		return -EINVAL;
@@ -142,6 +118,28 @@ int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
 	roffset = tegra_ast_region_offset(region);
 	ast_base = ast->ast_base;
 
+	for (vmidx = 0; vmidx <= AST_MAX_VMINDEX; vmidx++) {
+		if ((readl(ast_base + TEGRA_APS_AST_STREAMID_CTL +
+			(4 * vmidx)) & 0x0000ff00) != (AST_STREAMID(stream_id)))
+			continue;
+		else
+			break;
+	}
+
+	if (vmidx > AST_MAX_VMINDEX) {
+		/*
+		 * TBD: will be replaced with return error once mb1 sets
+		 * stream_id at least one of vmidx table
+		 */
+		for (vmidx = 0; vmidx <= AST_MAX_VMINDEX; vmidx++)
+			if (!(readl(ast_base + TEGRA_APS_AST_STREAMID_CTL +
+				(4 * vmidx)) & 0x0000ff00))
+				break;
+
+		writel(AST_STREAMID(stream_id) | AST_STREAMID_CTL_ENABLE,
+			ast_base + TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
+	}
+
 	writel(0, ast_base + TEGRA_APS_AST_REGION_0_MASK_HI + roffset);
 
 	writel(mask & AST_ADDR_MASK,
@@ -152,7 +150,8 @@ int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
 	writel(master_base & AST_ADDR_MASK,
 		ast_base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO + roffset);
 
-	writel(AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP,
+	writel(AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP |
+			(vmidx << AST_RGN_CTRL_VM_INDEX),
 		ast_base + TEGRA_APS_AST_REGION_0_CONTROL + roffset);
 
 	writel(0, ast_base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI + roffset);

@@ -388,10 +388,6 @@ static int tegra_cam_rtcpu_parse_channels(struct device *dev)
 
 	i = 0;
 
-	/* Use AST vmindex 0 for all regions, set default stream ID */
-	ret = tegra_ast_set_streamid(ast0, 0, cam_rtcpu->rtcpu_pdata->sid);
-	ret = tegra_ast_set_streamid(ast1, 0, cam_rtcpu->rtcpu_pdata->sid);
-
 	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
 	region = 2;
 
@@ -420,12 +416,14 @@ static int tegra_cam_rtcpu_parse_channels(struct device *dev)
 			return -ENOMEM;
 
 		ret = tegra_ast_region_enable(ast0, region,
-				ivc.va, ivc.size - 1, ivc_dma);
+				ivc.va, ivc.size - 1, ivc_dma,
+				cam_rtcpu->rtcpu_pdata->sid);
 		if (ret)
 			return ret;
 
 		ret = tegra_ast_region_enable(ast1, region,
-				ivc.va, ivc.size - 1, ivc_dma);
+				ivc.va, ivc.size - 1, ivc_dma,
+				cam_rtcpu->rtcpu_pdata->sid);
 		if (ret)
 			return ret;
 

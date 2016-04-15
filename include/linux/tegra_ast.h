@@ -24,11 +24,9 @@ struct tegra_ast *tegra_ast_add_ref(const struct device_node *client_np,
 
 int tegra_ast_del_ref(void);
 
-int tegra_ast_set_streamid(struct tegra_ast *ast,
-		u32 vmindex, u32 stream_id);
-
 int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
-		u32 slave_base, u32 mask, u64 master_base);
+		u32 slave_base, u32 mask, u64 master_base,
+		u32 stream_id);
 
 int tegra_ast_region_disable(struct tegra_ast *ast, u32 region);
 

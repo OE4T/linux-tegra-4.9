@@ -225,6 +225,7 @@ static int eqos_ape_ioctl_open(struct inode *inp, struct file *filep)
 #endif
 	dev_dbg(&eqos_ape_drv_data->pdev->dev, "eqos ape opened\n");
 	amisc_clk_init();
+	amisc_idle_enable();
 	return ret;
 }
 
@@ -232,7 +233,8 @@ static int eqos_ape_ioctl_release(struct inode *inp, struct file *filep)
 {
 	int ret = 0;
 
-#ifdef CONFIG_PM_RUNTIME
+	amisc_idle_disable();
+#ifdef CONFIG_PM
 	ret = pm_runtime_put_sync(&eqos_ape_drv_data->pdev->dev);
 	if (ret < 0) {
 		dev_err(&eqos_ape_drv_data->pdev->dev, "pm_runtime_put_sync failed\n");
@@ -358,7 +360,6 @@ static int eqos_ape_probe(struct platform_device *pdev)
 	}
 	eqos_ape_drv_data = drv_data;
 	eqos_ape_init();
-	amisc_idle_enable();
 
 #ifdef CONFIG_PM_RUNTIME
 	tegra_ape_pd_add_device(&eqos_ape_drv_data->pdev->dev);
@@ -404,3 +405,7 @@ static void __exit eqos_ape_modexit(void)
 	platform_driver_unregister(&eqos_ape_driver);
 }
 module_exit(eqos_ape_modexit);
+
+MODULE_AUTHOR("Sidharth R V <svarier@nvidia.com>");
+MODULE_DESCRIPTION("EQOS APE driver IO control of AMISC");
+MODULE_LICENSE("GPL");

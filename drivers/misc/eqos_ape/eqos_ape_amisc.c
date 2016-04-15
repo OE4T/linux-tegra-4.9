@@ -18,6 +18,8 @@
 
 
 #include "eqos_ape_global.h"
+#include <linux/module.h>
+
 extern struct eqos_drvdata *eqos_ape_drv_data;
 
 u32 amisc_readl(u32 reg)
@@ -133,3 +135,7 @@ void amisc_plla_set_rate(int rate)
 
 	err = clk_set_rate(eqos_ape_drv_data->pll_a_clk, rate);
 }
+
+MODULE_AUTHOR("Sidharth R V <svarier@nvidia.com>");
+MODULE_DESCRIPTION("EQOS APE driver IO control of AMISC");
+MODULE_LICENSE("GPL");

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,7 +18,7 @@
 
 #define pr_fmt(fmt) "%s: " fmt, __func__
 
-#include <linux/kernel.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
@@ -26,6 +26,10 @@
 #include <linux/nvmap.h>
 #include <linux/tegra-ivc.h>
 #include <linux/dma-contiguous.h>
+#include <linux/version.h>
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+#include <linux/cma.h>
+#endif
 
 #include <asm/dma-contiguous.h>
 
@@ -33,7 +37,9 @@
 #include "iomap.h"
 #include "board.h"
 #include <linux/platform/tegra/common.h>
+#ifdef CONFIG_TEGRA_VIRTUALIZATION
 #include "../../../drivers/virt/tegra/syscalls.h"
+#endif
 
 phys_addr_t __weak tegra_carveout_start;
 phys_addr_t __weak tegra_carveout_size;

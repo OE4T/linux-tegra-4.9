@@ -33,6 +33,7 @@
 #include <linux/seq_file.h>
 #include <linux/stringify.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #include <trace/events/nvmap.h>
 
@@ -596,6 +597,25 @@ bool dmabuf_is_nvmap(struct dma_buf *dmabuf)
 }
 EXPORT_SYMBOL(dmabuf_is_nvmap);
 
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+static struct dma_buf *__dma_buf_export(struct nvmap_handle_info *info,
+					size_t size)
+{
+	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
+
+	exp_info.priv = info;
+	exp_info.ops = &nvmap_dma_buf_ops;
+	exp_info.size = size;
+	exp_info.flags = O_RDWR;
+
+	return dma_buf_export(&exp_info);
+}
+#else
+#define __dma_buf_export(info, size) \
+	dma_buf_export(info, &nvmap_dma_buf_ops, size, O_RDWR, NULL)
+#endif
+
 /*
  * Make a dmabuf object for an nvmap handle.
  */
@@ -615,8 +635,7 @@ struct dma_buf *__nvmap_make_dmabuf(struct nvmap_client *client,
 	INIT_LIST_HEAD(&info->maps);
 	mutex_init(&info->maps_lock);
 
-	dmabuf = dma_buf_export(info, &nvmap_dma_buf_ops, handle->size,
-				O_RDWR, NULL);
+	dmabuf = __dma_buf_export(info, handle->size);
 	if (IS_ERR(dmabuf)) {
 		err = PTR_ERR(dmabuf);
 		goto err_export;

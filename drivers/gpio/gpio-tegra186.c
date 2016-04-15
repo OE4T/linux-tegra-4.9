@@ -616,7 +616,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		irq_set_chip_data(irq, tg_cont);
 		irq_set_chip_and_handler(irq, &tegra_gpio_irq_chip,
 					 handle_simple_irq);
-		set_irq_flags(irq, IRQF_VALID);
 	}
 
 	local_irq_save(flags);

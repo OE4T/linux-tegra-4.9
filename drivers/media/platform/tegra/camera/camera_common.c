@@ -31,8 +31,16 @@
 	 master->ops->op(master, __VA_ARGS__) : 0)
 
 static const struct camera_common_colorfmt camera_common_color_fmts[] = {
-	{MEDIA_BUS_FMT_SRGGB10_1X10, V4L2_COLORSPACE_SRGB},
-	{MEDIA_BUS_FMT_SRGGB8_1X8, V4L2_COLORSPACE_SRGB},
+	{
+		MEDIA_BUS_FMT_SRGGB10_1X10,
+		V4L2_COLORSPACE_SRGB,
+		V4L2_PIX_FMT_SRGGB10,
+	},
+	{
+		MEDIA_BUS_FMT_SRGGB8_1X8,
+		V4L2_COLORSPACE_SRGB,
+		V4L2_PIX_FMT_SRGGB8,
+	},
 };
 
 static struct tegra_io_dpd camera_common_csi_io[] = {
@@ -341,14 +349,43 @@ const struct camera_common_colorfmt *camera_common_find_datafmt(
 
 	return NULL;
 }
+EXPORT_SYMBOL(camera_common_find_datafmt);
+
 int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_mbus_code_enum *code)
 {
-	if (code->pad || code->index >= ARRAY_SIZE(camera_common_color_fmts))
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+
+	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
+		s_data->color_fmts = camera_common_color_fmts;
+		s_data->num_color_fmts = ARRAY_SIZE(camera_common_color_fmts);
+	}
+
+	if ((unsigned int)code->index >= s_data->num_color_fmts)
 		return -EINVAL;
 
-	code->code = camera_common_color_fmts[code->index].code;
+	code->code = s_data->color_fmts[code->index].code;
+	return 0;
+}
+EXPORT_SYMBOL(camera_common_enum_mbus_code);
+
+int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
+			 enum v4l2_mbus_pixelcode *code)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+
+	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
+		s_data->color_fmts = camera_common_color_fmts;
+		s_data->num_color_fmts = ARRAY_SIZE(camera_common_color_fmts);
+	}
+
+	if ((unsigned int)index >= s_data->num_color_fmts)
+		return -EINVAL;
+
+	*code = s_data->color_fmts[index].code;
 	return 0;
 }
 
@@ -441,6 +478,93 @@ int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 
 	return 0;
 }
+
+static int camera_common_evaluate_color_format(struct v4l2_subdev *sd,
+					       int pixelformat)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+	int i;
+
+	if (!s_data)
+		return -EINVAL;
+
+	if (s_data->num_color_fmts < 1 || !s_data->color_fmts) {
+		s_data->color_fmts = camera_common_color_fmts;
+		s_data->num_color_fmts = ARRAY_SIZE(camera_common_color_fmts);
+	}
+
+	for (i = 0; i < s_data->num_color_fmts; i++) {
+		if (s_data->color_fmts[i].pix_fmt == pixelformat)
+			break;
+	}
+
+	if (i >= s_data->num_color_fmts)
+		return -EINVAL;
+
+	return 0;
+}
+
+int camera_common_enum_framesizes(struct v4l2_subdev *sd,
+				  struct v4l2_frmsizeenum *fsizes)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+	int ret;
+
+	if (!s_data || !s_data->frmfmt)
+		return -EINVAL;
+
+	if (fsizes->index >= s_data->numfmts)
+		return -EINVAL;
+
+	ret = camera_common_evaluate_color_format(sd, fsizes->pixel_format);
+	if (ret)
+		return ret;
+
+	fsizes->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	fsizes->discrete = s_data->frmfmt[fsizes->index].size;
+
+	return 0;
+}
+EXPORT_SYMBOL(camera_common_enum_framesizes);
+
+int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
+				      struct v4l2_frmivalenum *fintervals)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+	int i, ret;
+
+	if (!s_data || !s_data->frmfmt)
+		return -EINVAL;
+
+	/* Check color format */
+	ret = camera_common_evaluate_color_format(sd, fintervals->pixel_format);
+	if (ret)
+		return ret;
+
+	/* Check resolution sizes */
+	for (i = 0; i < s_data->numfmts; i++) {
+		if (s_data->frmfmt[i].size.width == fintervals->width &&
+		    s_data->frmfmt[i].size.height == fintervals->height)
+			break;
+	}
+	if (i >= s_data->numfmts)
+		return -EINVAL;
+
+	/* Check index is in the rage of framerates array index */
+	if (fintervals->index >= s_data->frmfmt[i].num_framerates)
+		return -EINVAL;
+
+	fintervals->type = V4L2_FRMSIZE_TYPE_DISCRETE;
+	fintervals->discrete.numerator = 1;
+	fintervals->discrete.denominator =
+		s_data->frmfmt[i].framerates[fintervals->index];
+
+	return 0;
+}
+EXPORT_SYMBOL(camera_common_enum_frameintervals);
 
 static void camera_common_mclk_disable(struct camera_common_data *s_data)
 {

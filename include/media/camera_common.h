@@ -130,6 +130,8 @@ static const s64 switch_ctrl_qmenu[] = {
 
 struct camera_common_frmfmt {
 	struct v4l2_frmsize_discrete	size;
+	const int	*framerates;
+	int	num_framerates;
 	bool	hdr_en;
 	int	mode;
 };
@@ -137,6 +139,7 @@ struct camera_common_frmfmt {
 struct camera_common_colorfmt {
 	unsigned int			code;
 	enum v4l2_colorspace		colorspace;
+	int				pix_fmt;
 };
 
 struct camera_common_data;
@@ -157,6 +160,7 @@ struct camera_common_data {
 	struct device				*dev;
 	const struct camera_common_frmfmt	*frmfmt;
 	const struct camera_common_colorfmt	*colorfmt;
+	const struct camera_common_colorfmt	*color_fmts;
 	struct dentry				*debugdir;
 	struct camera_common_power_rail		*power;
 
@@ -165,10 +169,11 @@ struct camera_common_data {
 
 	void	*priv;
 	int	numctrls;
-	int csi_port;
-	int numlanes;
+	int	csi_port;
+	int	numlanes;
 	int	mode;
 	int	numfmts;
+	int	num_color_fmts;
 	int	def_mode, def_width, def_height;
 	int	def_clk_freq;
 	int	fmt_width, fmt_height;
@@ -245,6 +250,14 @@ int camera_common_try_fmt(struct v4l2_subdev *sd,
 			   struct v4l2_mbus_framefmt *mf);
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
 int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
+int camera_common_enum_framesizes(struct v4l2_subdev *sd,
+		struct v4l2_frmsizeenum *fsizes);
+int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
+		struct v4l2_frmivalenum *fintervals);
+
+int camera_common_g_chip_ident(struct v4l2_subdev *sd,
+			     struct v4l2_dbg_chip_ident *id);
+int camera_common_set_power(struct camera_common_data *data, int on);
 int camera_common_s_power(struct v4l2_subdev *sd, int on);
 void camera_common_dpd_disable(struct camera_common_data *s_data);
 void camera_common_dpd_enable(struct camera_common_data *s_data);

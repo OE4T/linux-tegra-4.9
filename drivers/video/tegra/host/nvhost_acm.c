@@ -747,7 +747,7 @@ int nvhost_module_init(struct platform_device *dev)
 		    !nvhost_module_emc_clock(&pdata->clocks[i]))
 			clk_set_rate(c, rate);
 		else if (pdata->bwmgr_handle)
-			tegra_bwmgr_set_emc(pdata->bwmgr_handle, rate,
+			tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
 					bwmgr_request_type);
 
 		pdata->clk[pdata->num_clks++] = c;
@@ -769,6 +769,7 @@ int nvhost_module_init(struct platform_device *dev)
 	/* disable the clocks */
 	for (i = 0; i < pdata->num_clks; ++i)
 		clk_disable_unprepare(pdata->clk[i]);
+
 
 	/* disable railgating if pm runtime is not available
 	 * and for linsim platform */
@@ -1173,6 +1174,7 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 static int nvhost_module_prepare_poweroff(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
+	int i;
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
@@ -1180,6 +1182,17 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 
 	devfreq_suspend_device(pdata->power_manager);
 	nvhost_scale_hw_deinit(to_platform_device(dev));
+
+	/* set EMC rate to zero */
+	if (pdata->bwmgr_handle) {
+		for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
+			if (nvhost_module_emc_clock(&pdata->clocks[i])) {
+				tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
+					pdata->clocks[i].bwmgr_request_type);
+				break;
+			}
+		}
+	}
 
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));
@@ -1191,7 +1204,7 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_device_data *pdata;
-	int retry_count, ret = 0;
+	int retry_count, ret = 0, i;
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
@@ -1232,6 +1245,16 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 		/* Exit loop if we pass module specific initialization */
 		if (!ret)
 			break;
+	}
+
+	/* set default EMC rate to zero */
+	if (pdata->bwmgr_handle) {
+		for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
+			if (nvhost_module_emc_clock(&pdata->clocks[i])) {
+				nvhost_module_update_rate(pdev, i);
+				break;
+			}
+		}
 	}
 
 	nvhost_scale_hw_init(to_platform_device(dev));

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -20,6 +20,7 @@
 #include <linux/of_device.h>
 #include <linux/of_address.h>
 #include <linux/tegra-soc.h>
+#include <linux/platform/tegra/common.h>
 
 #define MISCREG_HIDREV		0x4
 
@@ -36,6 +37,8 @@ void tegra_get_tegraid_from_hw(void)
 	struct resource r;
 	void __iomem *chipid_base;
 	u32 offset = MISCREG_HIDREV;
+	u32 opt_subrevision;
+	char prime;
 
 	np = of_find_matching_node(NULL, tegra_chipid_of_match);
 	BUG_ON(!np);
@@ -53,6 +56,19 @@ void tegra_get_tegraid_from_hw(void)
 	cid = readl(chipid_base + offset);
 
 	pr_info("tegra-id: chipid=%x.\n", cid);
+
+	opt_subrevision = tegra_get_fuse_opt_subrevision();
+	if (opt_subrevision == 1) {
+		prime = 'p';
+		priv = &prime;
+	} else if (opt_subrevision == 2) {
+		prime = 'q';
+		priv = &prime;
+	} else if (opt_subrevision == 3) {
+		prime = 'r';
+		priv = &prime;
+	}
+	pr_info("tegra-id: opt_subrevision=%x.\n", opt_subrevision);
 
 	tegra_set_tegraid((cid >> 8) & 0xff,
 					  (cid >> 4) & 0xf,

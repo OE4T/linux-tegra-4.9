@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * this program is free software; you can redistribute it and/or modify
  * it under the terms of the gnu general public license as published by
@@ -143,6 +143,9 @@
 #define FUSE_OVERRIDE_LSB16_MASK	0x0000FFFF
 #define FUSE_OVERRIDE_MSB16_SHIFT	16
 #define FUSE_TOT_WORDS				192
+
+#define FUSE_OPT_SUBREVISION		0x248
+#define FUSE_OPT_SUBREVISION_MASK	0xF
 
 extern void tegra_pmc_fuse_disable_mirroring(void);
 extern void tegra_pmc_fuse_enable_mirroring(void);

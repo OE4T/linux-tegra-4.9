@@ -394,7 +394,8 @@ static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
 
 	if (value == 0) {
 		_tegra_hdmi_ddc_disable(dc_hdmi);
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
+	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		tegra_powergate_partition(partition_id);
 #else
 		/* No specific powerdomain for SORs */
@@ -403,7 +404,8 @@ static void tegra_hdmi_ddc_power_toggle(struct tegra_hdmi *dc_hdmi, int value)
 
 
 	} else if (value == 1) {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC) && \
+	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		tegra_unpowergate_partition(partition_id);
 #else
 		/* No specific powerdomain for SORs */

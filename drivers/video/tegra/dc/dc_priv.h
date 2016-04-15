@@ -444,7 +444,8 @@ static inline void tegra_disp_clk_disable_unprepare(struct clk *clk)
 		clk_disable_unprepare(clk);
 }
 
-#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC)
+#if !defined(CONFIG_ARCH_TEGRA_2x_SOC) && !defined(CONFIG_ARCH_TEGRA_3x_SOC) \
+	&& IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 static inline void tegra_dc_powergate_locked(struct tegra_dc *dc)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
@@ -476,12 +477,6 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 	return tegra_powergate_is_powered(dc->powergate_id);
 }
 
-static inline void tegra_dc_set_edid(struct tegra_dc *dc,
-	struct tegra_edid *edid)
-{
-	dc->edid = edid;
-}
-
 void tegra_dc_powergate_locked(struct tegra_dc *dc);
 void tegra_dc_unpowergate_locked(struct tegra_dc *dc);
 #else
@@ -492,6 +487,13 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 	return true;
 }
 #endif
+
+static inline void tegra_dc_set_edid(struct tegra_dc *dc,
+	struct tegra_edid *edid)
+{
+	dc->edid = edid;
+}
+
 
 #ifdef CONFIG_ARCH_DMA_ADDR_T_64BIT
 static inline u32 tegra_dc_reg_l32(dma_addr_t v)

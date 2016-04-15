@@ -5135,6 +5135,7 @@ int tegra_dc_ddc_enable(struct tegra_dc *dc, bool enabled)
 	return ret;
 }
 
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 int tegra_dc_slgc_disp0(struct notifier_block *nb,
 	unsigned long unused0, void *unused1)
 {
@@ -5156,6 +5157,7 @@ int tegra_dc_slgc_disp0(struct notifier_block *nb,
 #endif
 	return NOTIFY_OK;
 }
+#endif
 
 int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
 {
@@ -5282,7 +5284,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	void __iomem *base;
 	int irq;
 	int i;
-#ifndef CONFIG_TEGRA_NVDISPLAY
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) && !IS_ENABLED(CONFIG_TEGRA_NVDISPLAY)
 	int partition_id_disa, partition_id_disb;
 #endif
 
@@ -5410,6 +5412,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			nvhost_get_syncpt_client_managed(ndev, "disp0_d");
 		dc->valid_windows |= 0x08;
 #endif
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		partition_id_disa = tegra_pd_get_powergate_id(tegra_disa_pd);
 		if (partition_id_disa < 0)
 			return -EINVAL;
@@ -5421,6 +5424,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		dc->slgc_notifier.notifier_call = tegra_dc_slgc_disp0;
 		slcg_register_notifier(dc->powergate_id,
 			&dc->slgc_notifier);
+#endif
 	} else if (TEGRA_DISPLAY2_BASE == res->start) {
 		dc->vblank_syncpt = NVSYNCPT_VBLANK1;
 		dc->windows[0].syncpt.id =
@@ -5435,11 +5439,13 @@ static int tegra_dc_probe(struct platform_device *ndev)
 			nvhost_get_syncpt_client_managed(ndev, "disp1_h");
 		dc->valid_windows |= 0x10;
 #endif
+#if IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		partition_id_disb = tegra_pd_get_powergate_id(tegra_disb_pd);
 		if (partition_id_disb < 0)
 			return -EINVAL;
 
 		dc->powergate_id = partition_id_disb;
+#endif
 #ifdef CONFIG_TEGRA_ISOMGR
 		isomgr_client_id = TEGRA_ISO_CLIENT_DISP_1;
 #endif
@@ -5780,7 +5786,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 #if !defined(CONFIG_ARCH_TEGRA_11x_SOC) && \
 	!defined(CONFIG_ARCH_TEGRA_14x_SOC) && \
-	!defined(CONFIG_TEGRA_NVDISPLAY)
+	!defined(CONFIG_TEGRA_NVDISPLAY) && \
+	IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS)
 		/* BL or PG init will keep DISA unpowergated after booting.
 		 * Adding an extra powergate to balance the refcount
 		 * since _tegra_dc_enable() increases the refcount.

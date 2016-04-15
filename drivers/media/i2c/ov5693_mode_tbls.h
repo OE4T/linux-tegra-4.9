@@ -1841,6 +1841,18 @@ static const ov5693_reg *mode_table[] = {
 	[OV5693_MODE_TEST_PATTERN]		= tp_colorbars,
 };
 
+static const int ov5693_24fps[] = {
+	24,
+};
+
+static const int ov5693_30fps[] = {
+	30,
+};
+
+static const int ov5693_120fps[] = {
+	120,
+};
+
 static const struct camera_common_frmfmt ov5693_frmfmt[] = {
 	{{2592, 1944},	ov5693_30fps,	1, 0,	OV5693_MODE_2592X1944},
 	{{2592, 1458},	ov5693_30fps,	1, 0,	OV5693_MODE_2592X1458},

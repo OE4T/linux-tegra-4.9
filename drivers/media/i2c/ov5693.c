@@ -539,6 +539,8 @@ static struct v4l2_subdev_video_ops ov5693_subdev_video_ops = {
 	.s_stream	= ov5693_s_stream,
 	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status = ov5693_g_input_status,
+	.enum_framesizes	= camera_common_enum_framesizes,
+	.enum_frameintervals	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops ov5693_subdev_core_ops = {
@@ -1320,7 +1322,7 @@ static int ov5693_probe(struct i2c_client *client,
 	common_data->ops		= &ov5693_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;
 	common_data->i2c_client		= client;
-	common_data->frmfmt		= &ov5693_frmfmt[0];
+	common_data->frmfmt		= ov5693_frmfmt;
 	common_data->colorfmt		= camera_common_find_datafmt(
 					  OV5693_DEFAULT_DATAFMT);
 	common_data->power		= &priv->power;

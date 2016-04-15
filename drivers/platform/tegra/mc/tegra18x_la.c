@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2015, NVIDIA CORPORATION. All rights reserved.
+ * Copyright (C) 2015-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -457,7 +457,7 @@ static int t18x_check_disp_la(enum tegra_la_id id,
 	.la_ref_clk_mhz = clk				\
 }
 
-#define T18X_MC_SET_INIT_PTSA(p, client, tt, min, max)			\
+#define T18X_MC_SET_INIT_PTSA_MIN_MAX(p, client, tt, min, max)		\
 	do {								\
 		(p)->client ## _traffic_type = TEGRA_LA_ ## tt;		\
 		(p)->client ## _ptsa_min = (unsigned int)(min) &	\
@@ -466,6 +466,16 @@ static int t18x_check_disp_la(enum tegra_la_id id,
 			MC_PTSA_MAX_DEFAULT_MASK;			\
 	} while (0)
 
+#define T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, client, tt, min, max, rate) \
+	do {								\
+		(p)->client ## _traffic_type = TEGRA_LA_ ## tt;		\
+		(p)->client ## _ptsa_min = (unsigned int)(min) &	\
+			MC_PTSA_MIN_DEFAULT_MASK;			\
+		(p)->client ## _ptsa_max = (unsigned int)(max) &	\
+			MC_PTSA_MAX_DEFAULT_MASK;			\
+		(p)->client ## _ptsa_rate = (unsigned int)(rate) &	\
+			MC_PTSA_RATE_DEFAULT_MASK;			\
+	} while (0)
 
 static struct la_chip_specific *cs;
 static unsigned int dram_type;
@@ -509,7 +519,7 @@ static struct la_client_info t18x_la_info_array[] = {
 	T18X_LA(GPU2_0, 23 : 16, GPUSWR2, WRITE, 0, 128, 0),
 	T18X_LA(HDA_0, 7 : 0, HDAR, CONSTANT_READ, 0, 36, 0),
 	T18X_LA(HDA_0, 23 : 16, HDAW, WRITE, 0, 128, 0),
-	T18X_LA(HC_0, 7 : 0, HOST1X_DMAR, DYNAMIC_READ, 1, 80, 102),
+	T18X_LA(HC_0, 7 : 0, HOST1X_DMAR, DYNAMIC_READ, 1, 189, 102),
 	T18X_LA(ISP2_0, 7 : 0, ISP_RA, DYNAMIC_READ, 0, 83, 307),
 	T18X_LA(ISP2_1, 7 : 0, ISP_WA, WRITE, 0, 128, 0),
 	T18X_LA(ISP2_1, 23 : 16, ISP_WB, WRITE, 0, 128, 0),
@@ -627,35 +637,36 @@ static void program_ptsa(void)
 	WRITE_PTSA_MIN_MAX_RATE(p, smmu, SMMU_SMMU);
 	WRITE_PTSA_MIN_MAX_RATE(p, bpmpdmapc, BPMPDMAPC);
 
-	WRITE_PTSA_MIN_MAX(p, aondmapc, AONDMAPC);
-	WRITE_PTSA_MIN_MAX(p, aonpc, AONPC);
-	WRITE_PTSA_MIN_MAX(p, apb, APB);
-	WRITE_PTSA_MIN_MAX(p, aud, AUD);
-	WRITE_PTSA_MIN_MAX(p, bpmppc, BPMPPC);
-	WRITE_PTSA_MIN_MAX(p, dfd, DFD);
-	WRITE_PTSA_MIN_MAX(p, ftop, FTOP);
-	WRITE_PTSA_MIN_MAX(p, gk, GK);
-	WRITE_PTSA_MIN_MAX(p, gk2, GK2);
-	WRITE_PTSA_MIN_MAX(p, hdapc, HDAPC);
-	WRITE_PTSA_MIN_MAX(p, host, HOST);
-	WRITE_PTSA_MIN_MAX(p, jpg, JPG);
-	WRITE_PTSA_MIN_MAX(p, mse, MSE);
-	WRITE_PTSA_MIN_MAX(p, mse2, MSE2);
-	WRITE_PTSA_MIN_MAX(p, nic, NIC);
-	WRITE_PTSA_MIN_MAX(p, nvd, NVD);
-	WRITE_PTSA_MIN_MAX(p, nvd3, NVD3);
-	WRITE_PTSA_MIN_MAX(p, pcx, PCX);
-	WRITE_PTSA_MIN_MAX(p, sax, SAX);
-	WRITE_PTSA_MIN_MAX(p, scedmapc, SCEDMAPC);
-	WRITE_PTSA_MIN_MAX(p, scepc, SCEPC);
-	WRITE_PTSA_MIN_MAX(p, sd, SD);
-	WRITE_PTSA_MIN_MAX(p, sdm, SDM);
-	WRITE_PTSA_MIN_MAX(p, sdm1, SDM1);
-	WRITE_PTSA_MIN_MAX(p, ufshcpc, UFSHCPC);
-	WRITE_PTSA_MIN_MAX(p, usbd, USBD);
-	WRITE_PTSA_MIN_MAX(p, usbx, USBX);
-	WRITE_PTSA_MIN_MAX(p, vicpc, VICPC);
-	WRITE_PTSA_MIN_MAX(p, vicpc3, VICPC3);
+	WRITE_PTSA_MIN_MAX_RATE(p, aondmapc, AONDMAPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, aonpc, AONPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, apb, APB);
+	WRITE_PTSA_MIN_MAX_RATE(p, aud, AUD);
+	WRITE_PTSA_MIN_MAX_RATE(p, bpmppc, BPMPPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, dfd, DFD);
+	WRITE_PTSA_MIN_MAX_RATE(p, ftop, FTOP);
+	WRITE_PTSA_MIN_MAX_RATE(p, gk, GK);
+	WRITE_PTSA_MIN_MAX_RATE(p, gk2, GK2);
+	WRITE_PTSA_MIN_MAX_RATE(p, hdapc, HDAPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, host, HOST);
+	WRITE_PTSA_MIN_MAX_RATE(p, jpg, JPG);
+	WRITE_PTSA_MIN_MAX_RATE(p, mse, MSE);
+	WRITE_PTSA_MIN_MAX_RATE(p, mse2, MSE2);
+	WRITE_PTSA_MIN_MAX_RATE(p, nic, NIC);
+	WRITE_PTSA_MIN_MAX_RATE(p, nvd, NVD);
+	WRITE_PTSA_MIN_MAX_RATE(p, nvd3, NVD3);
+	WRITE_PTSA_MIN_MAX_RATE(p, pcx, PCX);
+	WRITE_PTSA_MIN_MAX_RATE(p, roc_dma_r, ROC_DMA_R);
+	WRITE_PTSA_MIN_MAX_RATE(p, sax, SAX);
+	WRITE_PTSA_MIN_MAX_RATE(p, scedmapc, SCEDMAPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, scepc, SCEPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, sd, SD);
+	WRITE_PTSA_MIN_MAX_RATE(p, sdm, SDM);
+	WRITE_PTSA_MIN_MAX_RATE(p, sdm1, SDM1);
+	WRITE_PTSA_MIN_MAX_RATE(p, ufshcpc, UFSHCPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, usbd, USBD);
+	WRITE_PTSA_MIN_MAX_RATE(p, usbx, USBX);
+	WRITE_PTSA_MIN_MAX_RATE(p, vicpc, VICPC);
+	WRITE_PTSA_MIN_MAX_RATE(p, vicpc3, VICPC3);
 
 	/* update shadowed registers */
 	mc_writel(1, MC_TIMING_CONTROL);
@@ -681,35 +692,36 @@ static void save_ptsa(void)
 	READ_PTSA_MIN_MAX_RATE(p, smmu, SMMU_SMMU);
 	READ_PTSA_MIN_MAX_RATE(p, bpmpdmapc, BPMPDMAPC);
 
-	READ_PTSA_MIN_MAX(p, aondmapc, AONDMAPC);
-	READ_PTSA_MIN_MAX(p, aonpc, AONPC);
-	READ_PTSA_MIN_MAX(p, apb, APB);
-	READ_PTSA_MIN_MAX(p, aud, AUD);
-	READ_PTSA_MIN_MAX(p, bpmppc, BPMPPC);
-	READ_PTSA_MIN_MAX(p, dfd, DFD);
-	READ_PTSA_MIN_MAX(p, ftop, FTOP);
-	READ_PTSA_MIN_MAX(p, gk, GK);
-	READ_PTSA_MIN_MAX(p, gk2, GK2);
-	READ_PTSA_MIN_MAX(p, hdapc, HDAPC);
-	READ_PTSA_MIN_MAX(p, host, HOST);
-	READ_PTSA_MIN_MAX(p, jpg, JPG);
-	READ_PTSA_MIN_MAX(p, mse, MSE);
-	READ_PTSA_MIN_MAX(p, mse2, MSE2);
-	READ_PTSA_MIN_MAX(p, nic, NIC);
-	READ_PTSA_MIN_MAX(p, nvd, NVD);
-	READ_PTSA_MIN_MAX(p, nvd3, NVD3);
-	READ_PTSA_MIN_MAX(p, pcx, PCX);
-	READ_PTSA_MIN_MAX(p, sax, SAX);
-	READ_PTSA_MIN_MAX(p, scedmapc, SCEDMAPC);
-	READ_PTSA_MIN_MAX(p, scepc, SCEPC);
-	READ_PTSA_MIN_MAX(p, sd, SD);
-	READ_PTSA_MIN_MAX(p, sdm, SDM);
-	READ_PTSA_MIN_MAX(p, sdm1, SDM1);
-	READ_PTSA_MIN_MAX(p, ufshcpc, UFSHCPC);
-	READ_PTSA_MIN_MAX(p, usbd, USBD);
-	READ_PTSA_MIN_MAX(p, usbx, USBX);
-	READ_PTSA_MIN_MAX(p, vicpc, VICPC);
-	READ_PTSA_MIN_MAX(p, vicpc3, VICPC3);
+	READ_PTSA_MIN_MAX_RATE(p, aondmapc, AONDMAPC);
+	READ_PTSA_MIN_MAX_RATE(p, aonpc, AONPC);
+	READ_PTSA_MIN_MAX_RATE(p, apb, APB);
+	READ_PTSA_MIN_MAX_RATE(p, aud, AUD);
+	READ_PTSA_MIN_MAX_RATE(p, bpmppc, BPMPPC);
+	READ_PTSA_MIN_MAX_RATE(p, dfd, DFD);
+	READ_PTSA_MIN_MAX_RATE(p, ftop, FTOP);
+	READ_PTSA_MIN_MAX_RATE(p, gk, GK);
+	READ_PTSA_MIN_MAX_RATE(p, gk2, GK2);
+	READ_PTSA_MIN_MAX_RATE(p, hdapc, HDAPC);
+	READ_PTSA_MIN_MAX_RATE(p, host, HOST);
+	READ_PTSA_MIN_MAX_RATE(p, jpg, JPG);
+	READ_PTSA_MIN_MAX_RATE(p, mse, MSE);
+	READ_PTSA_MIN_MAX_RATE(p, mse2, MSE2);
+	READ_PTSA_MIN_MAX_RATE(p, nic, NIC);
+	READ_PTSA_MIN_MAX_RATE(p, nvd, NVD);
+	READ_PTSA_MIN_MAX_RATE(p, nvd3, NVD3);
+	READ_PTSA_MIN_MAX_RATE(p, pcx, PCX);
+	READ_PTSA_MIN_MAX_RATE(p, roc_dma_r, ROC_DMA_R);
+	READ_PTSA_MIN_MAX_RATE(p, sax, SAX);
+	READ_PTSA_MIN_MAX_RATE(p, scedmapc, SCEDMAPC);
+	READ_PTSA_MIN_MAX_RATE(p, scepc, SCEPC);
+	READ_PTSA_MIN_MAX_RATE(p, sd, SD);
+	READ_PTSA_MIN_MAX_RATE(p, sdm, SDM);
+	READ_PTSA_MIN_MAX_RATE(p, sdm1, SDM1);
+	READ_PTSA_MIN_MAX_RATE(p, ufshcpc, UFSHCPC);
+	READ_PTSA_MIN_MAX_RATE(p, usbd, USBD);
+	READ_PTSA_MIN_MAX_RATE(p, usbx, USBX);
+	READ_PTSA_MIN_MAX_RATE(p, vicpc, VICPC);
+	READ_PTSA_MIN_MAX_RATE(p, vicpc3, VICPC3);
 }
 
 static void t18x_init_ptsa(void)
@@ -739,47 +751,49 @@ static void t18x_init_ptsa(void)
 	p->ptsa_grant_dec = (gd_int << 12) | gd_frac;
 
 	/* initialize PTSA min/max values */
-	T18X_MC_SET_INIT_PTSA(p, aondmapc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, aonpc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, apb, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, apedmapc, HISO, -5, 31);
-	T18X_MC_SET_INIT_PTSA(p, aud, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, bpmpdmapc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, bpmppc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, dis, HISO, -5, 31);
-	T18X_MC_SET_INIT_PTSA(p, eqospc, HISO, -5, 31);
-	T18X_MC_SET_INIT_PTSA(p, ftop, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, gk, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, gk2, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, hdapc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, host, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, isp, HISO, 1, 1);
-	T18X_MC_SET_INIT_PTSA(p, jpg, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, mll_mpcorer, NISO, -4, 4);
-	T18X_MC_SET_INIT_PTSA(p, mse, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, mse2, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, nic, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, nvd, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, nvd3, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, pcx, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, ring1_rd_b, NISO, 62, 0);
-	T18X_MC_SET_INIT_PTSA(p, ring1_rd_nb, HISO, -5, 31);
-	T18X_MC_SET_INIT_PTSA(p, ring1_wr_b, NISO, 62, 0);
-	T18X_MC_SET_INIT_PTSA(p, ring1_wr_nb, HISO, -5, 31);
-	T18X_MC_SET_INIT_PTSA(p, ring2, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, sax, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, scedmapc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, scepc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, sd, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, sdm, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, sdm1, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, smmu, NISO, 1, 1);
-	T18X_MC_SET_INIT_PTSA(p, ufshcpc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, usbd, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, usbx, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, ve, HISO, 1, 1);
-	T18X_MC_SET_INIT_PTSA(p, vicpc, NISO, -2, 0);
-	T18X_MC_SET_INIT_PTSA(p, vicpc3, NISO, -2, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, aondmapc, SISO, 1, 1, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, aonpc, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, apb, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, apedmapc, HISO, -5, 31);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, aud, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, bpmpdmapc, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, bpmppc, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, dfd, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, dis, HISO, -5, 31);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, eqospc, HISO, -5, 31);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, ftop, NISO, -2, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, gk, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, gk2, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, hdapc, SISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, host, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, isp, SISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, jpg, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, mll_mpcorer, NISO, -4, 4);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, mse, SISO, 1, 1, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, mse2, SISO, 1, 1, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, nic, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, nvd, SISO, 1, 1, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, nvd3, SISO, 1, 1, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, pcx, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, roc_dma_r, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, ring1_rd_b, NISO, 62, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, ring1_rd_nb, HISO, -5, 31);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, ring1_wr_b, NISO, 62, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, ring1_wr_nb, HISO, -5, 31);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, ring2, NISO, -2, 0, 12);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, sax, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, scedmapc, SISO, 1, 1, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, scepc, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, sd, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, sdm, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, sdm1, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, smmu, NISO, 1, 1, 0);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, ufshcpc, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, usbd, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, usbx, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX(p, ve, HISO, 1, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, vicpc, NISO, -2, 0, 1);
+	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, vicpc3, NISO, -2, 0, 1);
 
 
 	ring1_nb_bw = emc_freq_mhz * 2 * dram_width_bytes * 70 / 100;
@@ -1064,9 +1078,17 @@ void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 	else
 		iso_dda_factor_fp = 1200;
 
-	/* Make ISPWA and ISPWB non-blocking clients */
+	/* Make ISPWA and ISPWB blocking clients */
 	client_traffic_type_config_2 =
 				mc_readl(MC_CLIENT_TRAFFIC_TYPE_CONFIG_2);
-	mc_writel((client_traffic_type_config_2 & 0xffffff3f),
+	mc_writel(client_traffic_type_config_2 | 0xc0,
 			MC_CLIENT_TRAFFIC_TYPE_CONFIG_2);
+
+	/* Set arbiter iso client types */
+	mc_writel(0x1, MC_EMEM_ARB_ISOCHRONOUS_0);
+	mc_writel(0x0, MC_EMEM_ARB_ISOCHRONOUS_1);
+	mc_writel(0x0, MC_EMEM_ARB_ISOCHRONOUS_2);
+	mc_writel(0x0, MC_EMEM_ARB_ISOCHRONOUS_3);
+	mc_writel(0x80044000, MC_EMEM_ARB_ISOCHRONOUS_4);
+	mc_writel(0x2, MC_EMEM_ARB_ISOCHRONOUS_5);
 }

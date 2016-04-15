@@ -337,7 +337,7 @@ static int tegra_gpio_direction_input(struct gpio_chip *chip, unsigned offset)
 	tegra_gpio_enable(offset);
 	ret = pinctrl_gpio_direction_input(chip->base + offset);
 	if (ret < 0)
-		dev_err(chip->dev,
+		dev_err(chip->parent,
 			"Tegra gpio input: pinctrl input failed: %d\n", ret);
 	return 0;
 }
@@ -352,7 +352,7 @@ static int tegra_gpio_direction_output(struct gpio_chip *chip, unsigned offset,
 	tegra_gpio_enable(offset);
 	ret = pinctrl_gpio_direction_output(chip->base + offset);
 	if (ret < 0)
-		dev_err(chip->dev,
+		dev_err(chip->parent,
 			"Tegra gpio output: pinctrl output failed: %d\n", ret);
 	return 0;
 }
@@ -667,7 +667,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		tg_cont->irq = res->start;
 	}
 
-	tegra_gpio_chip.dev = &pdev->dev;
+	tegra_gpio_chip.parent = &pdev->dev;
 	tegra_gpio_chip.of_node = pdev->dev.of_node;
 	tegra_gpio_chip.ngpio = MAX_PORTS * MAX_PINS_PER_PORT;
 

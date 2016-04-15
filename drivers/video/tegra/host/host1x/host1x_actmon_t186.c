@@ -24,7 +24,7 @@
 
 #include "dev.h"
 #include "chip_support.h"
-#include "host1x/host1x_actmon_t186.h"
+#include "host1x/host1x_actmon.h"
 #include "bus_client_t186.h"
 #include "nvhost_scale.h"
 
@@ -82,8 +82,7 @@ static void host1x_actmon_dump_regs(struct host1x_actmon *actmon)
 		actmon_readl(actmon, actmon_local_cumulative_r()));
 }
 
-static void host1x_actmon_event_fn(struct host1x_actmon *actmon,
-	enum wmark_type_e type)
+static void host1x_actmon_event_fn(struct host1x_actmon *actmon, int type)
 {
 	struct platform_device *pdev = actmon->pdev;
 	struct nvhost_device_data *engine_pdata = platform_get_drvdata(pdev);

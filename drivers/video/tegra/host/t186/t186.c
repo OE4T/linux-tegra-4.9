@@ -40,7 +40,6 @@
 #endif
 #include "nvdec/nvdec.h"
 #include "hardware_t186.h"
-#include "host1x/host1x_actmon_t186.h"
 
 #include "nvhost_scale.h"
 #include "scale_emc.h"

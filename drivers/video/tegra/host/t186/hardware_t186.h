@@ -44,6 +44,11 @@
 #define NV_HOST1X_MLOCK_ID_TSEC		21
 #define NV_HOST1X_MLOCK_ID_TSECB	22
 
+#define HOST1X_THOST_ACTMON_NVENC	0x00000
+#define HOST1X_THOST_ACTMON_VIC		0x10000
+#define HOST1X_THOST_ACTMON_NVDEC	0x20000
+#define HOST1X_THOST_ACTMON_NVJPG	0x30000
+
 /* Generic support */
 static inline u32 nvhost_class_host_wait_syncpt(
 	unsigned indx, unsigned threshold)

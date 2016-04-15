@@ -350,6 +350,11 @@
 				sid-list = <TEGRA_SID_SMMU_TEST>;
 				sid-list-len = <1>;
 			};
+			ufshci_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_UFSHC>;
+				sid-list-len = <1>;
+			};
 		};
 
 		address-space-prop {

@@ -12,6 +12,9 @@
  *
  */
 
+#ifndef __I2C_T18X_SLAVE_H__
+#define __I2C_T18X_SLAVE_H__
+
 #define I2C_SLV_CNFG					0X20
 
 #define I2C_SLV_CNFG_ENABLE_SL				(1<<3)
@@ -62,14 +65,6 @@
 #define I2C_7BIT_ADDR_MASK				0x7F
 #define I2C_10BIT_ADDR_MASK				0x3FF
 
-struct i2cslv_client_ops {
-	void (*slv_read)(unsigned char);
-	unsigned char (*slv_write)(void);
-	void (*slv_read_end)(void);
-	void (*slv_write_end)(void);
-	void (*slv_stop)(void);
-};
-
 struct i2cslv_cntlr {
 	struct device *dev;
 	struct clk *clk;
@@ -98,33 +93,36 @@ static inline void tegra_i2cslv_writel(struct i2cslv_cntlr *i2cslv,
 	writel(val, i2cslv->base + reg);
 }
 
-static inline void tegra_i2cslv_sendbyte(struct i2cslv_cntlr *i2cslv,
+static inline void tegra_i2cslv_sendbyte_to_client(struct i2cslv_cntlr *i2cslv,
 					    unsigned char wd)
 {
-	if (i2cslv->i2c_clnt_ops)
-		if (i2cslv->i2c_clnt_ops->slv_read)
-			i2cslv->i2c_clnt_ops->slv_read(wd);
+	if (i2cslv->i2c_clnt_ops &&
+			i2cslv->i2c_clnt_ops->slv_sendbyte_to_client)
+		i2cslv->i2c_clnt_ops->slv_sendbyte_to_client(wd);
 }
 
-static inline unsigned char tegra_i2cslv_getbyte(struct i2cslv_cntlr
+static inline unsigned char tegra_i2cslv_getbyte_from_client(struct i2cslv_cntlr
 						      *i2cslv)
 {
-	if (i2cslv->i2c_clnt_ops)
-		if (i2cslv->i2c_clnt_ops->slv_write)
-			return i2cslv->i2c_clnt_ops->slv_write();
+	if (i2cslv->i2c_clnt_ops &&
+			i2cslv->i2c_clnt_ops->slv_getbyte_from_client)
+		return i2cslv->i2c_clnt_ops->slv_getbyte_from_client();
 	return 0;
 }
 
-static inline void tegra_i2cslv_sendbyte_end(struct i2cslv_cntlr *i2cslv)
+static inline void tegra_i2cslv_sendbyte_end_to_client(
+					struct i2cslv_cntlr *i2cslv)
 {
-	if (i2cslv->i2c_clnt_ops)
-		if (i2cslv->i2c_clnt_ops->slv_read_end)
-			i2cslv->i2c_clnt_ops->slv_read_end();
+	if (i2cslv->i2c_clnt_ops &&
+			i2cslv->i2c_clnt_ops->slv_sendbyte_end_to_client)
+		i2cslv->i2c_clnt_ops->slv_sendbyte_end_to_client();
 }
 
-static inline void tegra_i2cslv_getbyte_end(struct i2cslv_cntlr *i2cslv)
+static inline void tegra_i2cslv_getbyte_end_from_client(
+					struct i2cslv_cntlr *i2cslv)
 {
-	if (i2cslv->i2c_clnt_ops)
-		if (i2cslv->i2c_clnt_ops->slv_write_end)
-			i2cslv->i2c_clnt_ops->slv_write_end();
+	if (i2cslv->i2c_clnt_ops &&
+			i2cslv->i2c_clnt_ops->slv_getbyte_end_from_client)
+		i2cslv->i2c_clnt_ops->slv_getbyte_end_from_client();
 }
+#endif /* __I2C_T18X_SLAVE_H__ */

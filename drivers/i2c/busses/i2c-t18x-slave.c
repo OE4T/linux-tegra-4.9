@@ -24,6 +24,7 @@
 #include <linux/of_device.h>
 #include <linux/delay.h>
 #include <asm/io.h>
+#include "i2c-t18x-slv-common.h"
 #include "i2c-t18x-slave.h"
 
 static struct i2cslv_cntlr *i2cslv;
@@ -51,6 +52,13 @@ void debug_reg(void)
 EXPORT_SYMBOL(debug_reg);
 #endif
 
+/* i2cslv_load_config - To activate the i2c slave configuration
+ *
+ * After configuring I2C slave controller, To activate the configuration,
+ * We need to set I2C_CONFIG_LOAD_SLV bit in I2C_CONFIG_LOAD reg. Once the
+ * configuration is active, HW will clear the bit.
+ * This needs to call after doing all required slave registers configuration.
+ */
 static int i2cslv_load_config(void)
 {
 	int ret = 0;
@@ -78,6 +86,13 @@ static int i2cslv_load_config(void)
 	return ret;
 }
 
+/* handle_slave_rx - To get the data byte fron bus and provide the data to
+ *                   client driver
+ * After receving master tx event, This function reads the data from bus and
+ * pass it to client driver for processing.
+ * In case of I2C_SLV_END_TRANS interrupt, It clears the interrupts and
+ * notifies the client driver.All this happens in interrupt context only.
+ */
 static void handle_slave_rx(const unsigned long i2c_int_src,
 			    const unsigned long i2c_slv_src)
 {
@@ -86,21 +101,32 @@ static void handle_slave_rx(const unsigned long i2c_int_src,
 	if (i2c_slv_src & I2C_SLV_END_TRANS) {
 		dev_dbg(i2cslv->dev, "End of Transfer\n");
 
+		/* clear the interrupts to release the SCL line */
 		tegra_i2cslv_writel(i2cslv, I2C_SLV_END_TRANS, I2C_SLV_STATUS);
 		tegra_i2cslv_writel(i2cslv, I2C_SLV_SL_IRQ, I2C_SLV_STATUS);
 		goto end_trnsfr;
 	}
 
 	udata = (unsigned char)tegra_i2cslv_readl(i2cslv, I2C_SLV_SLV_RCVD);
-	tegra_i2cslv_sendbyte(i2cslv, udata);
+	/* Send the received data to client driver */
+	tegra_i2cslv_sendbyte_to_client(i2cslv, udata);
+	/* clear the interrupt to release the SCL line */
 	tegra_i2cslv_writel(i2cslv, I2C_SLV_SL_IRQ, I2C_SLV_STATUS);
 
 	return;
 
 end_trnsfr:
 	i2cslv->slave_rx_in_progress = false;
-	tegra_i2cslv_sendbyte_end(i2cslv);
+	tegra_i2cslv_sendbyte_end_to_client(i2cslv);
 }
+
+/* handle_slave_tx - To get the data byte fron client driver and send it to
+ *                   master over bus.
+ * After receving master rx event, This function reads the data from client
+ * driver and pass it to master driver.
+ * In case of I2C_SLV_END_TRANS interrupt, It clears the interrupts and
+ * notifies the client driver.All this happens in interrupt context only.
+ */
 
 static void handle_slave_tx(const unsigned long i2c_int_src,
 			    const unsigned long i2c_slv_src)
@@ -110,23 +136,31 @@ static void handle_slave_tx(const unsigned long i2c_int_src,
 	if (i2c_slv_src & I2C_SLV_END_TRANS) {
 		dev_dbg(i2cslv->dev, "End of Transfer\n");
 
+		/* clear the interrupt to release the SCL line */
 		tegra_i2cslv_writel(i2cslv, I2C_SLV_END_TRANS, I2C_SLV_STATUS);
 		tegra_i2cslv_writel(i2cslv, I2C_SLV_SL_IRQ, I2C_SLV_STATUS);
 
 		goto end_trnsfr;
 	}
 
+	/* clear the interrupt to release the SCL line */
 	tegra_i2cslv_writel(i2cslv, I2C_SLV_SL_IRQ, I2C_SLV_STATUS);
-	udata = tegra_i2cslv_getbyte(i2cslv);
+	/* Get the data byte fron client driver */
+	udata = tegra_i2cslv_getbyte_from_client(i2cslv);
 	tegra_i2cslv_writel(i2cslv, udata, I2C_SLV_SLV_RCVD);
 
 	return;
 
 end_trnsfr:
 	i2cslv->slave_tx_in_progress = false;
-	tegra_i2cslv_getbyte_end(i2cslv);
+	tegra_i2cslv_getbyte_end_from_client(i2cslv);
 }
 
+/* tegra_i2cslv_isr - Interrupt handler for slave controller
+ *
+ * This is the core part of slave driver. It maintain the state machine of
+ * i2c slave controller.
+ */
 static irqreturn_t tegra_i2cslv_isr(int irq, void *context_data)
 {
 	unsigned char udata;
@@ -170,9 +204,9 @@ static irqreturn_t tegra_i2cslv_isr(int irq, void *context_data)
 
 		if (i2cslv->slave_rx_in_progress) {
 			i2cslv->slave_rx_in_progress = false;
-			tegra_i2cslv_sendbyte_end(i2cslv);
+			tegra_i2cslv_sendbyte_end_to_client(i2cslv);
 
-			udata = tegra_i2cslv_getbyte(i2cslv);
+			udata = tegra_i2cslv_getbyte_from_client(i2cslv);
 			i2cslv->slave_tx_in_progress = true;
 			tegra_i2cslv_writel(i2cslv, udata, I2C_SLV_SLV_RCVD);
 		}
@@ -207,7 +241,11 @@ static irqreturn_t tegra_i2cslv_isr(int irq, void *context_data)
 
 	if (i2cslv->slave_tx_in_progress)
 		handle_slave_tx(i2c_int_src, i2c_slv_int_src);
-	else if (i2cslv->slave_rx_in_progress)
+	else if (i2cslv->slave_rx_in_progress &&
+					!(i2c_slv_int_src & I2C_SLV_RCVD))
+		/* In case of master wr2rd xfer, I2C_SLV_RCVD new xfer bit check
+		 * is required to identify the xfer direction change.
+		 */
 		handle_slave_rx(i2c_int_src, i2c_slv_int_src);
 
 	/*
@@ -230,7 +268,7 @@ static irqreturn_t tegra_i2cslv_isr(int irq, void *context_data)
 		if (i2c_slv_sts & I2C_SLV_STATUS_RNW) {
 			i2cslv->slave_rx_in_progress = false;
 			i2cslv->slave_tx_in_progress = true;
-			udata = tegra_i2cslv_getbyte(i2cslv);
+			udata = tegra_i2cslv_getbyte_from_client(i2cslv);
 			tegra_i2cslv_writel(i2cslv, udata, I2C_SLV_SLV_RCVD);
 		} else {
 			i2cslv->slave_rx_in_progress = true;
@@ -272,7 +310,8 @@ err:
 	return IRQ_HANDLED;
 }
 
-
+/* i2cslv_init_config - To set the default configuration.
+ */
 static void i2cslv_init_config(void)
 {
 	unsigned long reg = 0;
@@ -365,8 +404,10 @@ int i2cslv_register_client(struct i2cslv_client_ops *i2c_ops,
 		return -EINVAL;
 	}
 
-	if (!(i2c_ops->slv_read) || !(i2c_ops->slv_write) ||
-	    !(i2c_ops->slv_read_end) || !(i2c_ops->slv_write_end)) {
+	if (!(i2c_ops->slv_sendbyte_to_client) ||
+			!(i2c_ops->slv_getbyte_from_client) ||
+			!(i2c_ops->slv_sendbyte_end_to_client) ||
+			!(i2c_ops->slv_getbyte_end_from_client)) {
 		dev_err(i2cslv->dev, "i2c ops incomplete\n");
 		return -EINVAL;
 	}

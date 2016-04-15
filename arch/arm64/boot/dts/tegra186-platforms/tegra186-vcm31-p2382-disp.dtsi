@@ -316,7 +316,6 @@
 				/*
 				 * for 1920x1080@60Hz@148.5MHz / DSI 4 lanes 445.5MHz HS clk
 				 */
-				/*
 				nvidia,dsi-n-data-lanes = <4>;
 				disp-default-out {
 					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
@@ -330,12 +329,12 @@
 						clock-frequency = <148500000>;
 					};
 				};
-				*/
 
 				/*
 				 * for 1920x1200@60Hz@193.2MHz / DSI 8 lanes 290MHz HS clk
 				 * (closest to Quill DSI config. this works without BPMP pll_d preset)
 				 */
+				/*
 				nvidia,dsi-n-data-lanes = <8>;
 				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
 				nvidia,dsi-ganged-swap-links = <0>;
@@ -362,6 +361,7 @@
 						nvidia,v-ref-to-sync = <1>;
 					};
 				};
+				*/
 
 			};
 			panel-s-wqxga-10-1 {  /* p2393 DSI2DP 2560x1600@60 */

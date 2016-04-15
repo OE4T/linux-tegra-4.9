@@ -42,6 +42,7 @@
 			interrupts = <TEGRA_GPIO(X, 2) 0x01>;
 			accelerometer_matrix = [00 ff 00 01 00 00 00 00 01];
 			gyroscope_matrix = [00 ff 00 01 00 00 00 00 01];
+			gyroscope_delay_us_max = <100000>;
 			status = "disabled";
 		};
 
@@ -57,6 +58,7 @@
 			compatible = "bmp,bmpX80";
 			reg = <0x77>;
 			pressure_delay_us_min = <16666>;
+			pressure_disable = <1>;
 			status = "disabled";
 		};
 

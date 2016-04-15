@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,6 +25,8 @@
 #include <linux/irqchip/arm-gic.h>
 #include <linux/irqchip/tegra.h>
 #include <linux/tegra-pmc.h>
+#include <linux/tegra-soc.h>
+#include <linux/tegra-fuse.h>
 
 #include "tegra186-aowake.h"
 
@@ -280,6 +282,7 @@ static int tegra_pm_irq_suspend(void)
 	u32 lvl[WAKE_NR_VECTORS];
 	u32 wake_level[WAKE_NR_VECTORS];
 	u32 wake_enb[WAKE_NR_VECTORS];
+	enum tegra_revision revision;
 	int i;
 
 	wke_clear_sw_wake_status();
@@ -302,6 +305,9 @@ static int tegra_pm_irq_suspend(void)
 
 	/* Clear PMC Wake Status registers while going to suspend */
 	wke_clear_wake_status();
+	revision = tegra_chip_get_revision();
+	if (revision < TEGRA_REVISION_A02p)
+		wake_enb[2] &= ~(7 << 12);
 
 	wke_write_wake_levels(wake_level);
 	wke_write_wake_masks(wake_enb);

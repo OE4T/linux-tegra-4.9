@@ -29,6 +29,7 @@
 #include "hw_fifo_gm20b.h"
 #include "hw_fb_gm20b.h"
 #include "hw_top_gm20b.h"
+#include "hw_ltc_gm20b.h"
 #include "hw_ctxsw_prog_gm20b.h"
 #include "hw_fuse_gm20b.h"
 #include "pmu_gm20b.h"
@@ -1402,6 +1403,79 @@ static int gm20b_gr_fuse_override(struct gk20a *g)
 	return 0;
 }
 
+static bool gr_gm20b_is_ltcs_ltss_addr(struct gk20a *g, u32 addr)
+{
+	u32 ltc_shared_base = ltc_ltcs_ltss_v();
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
+
+	return (addr >= ltc_shared_base) &&
+		(addr < (ltc_shared_base + lts_stride));
+}
+
+static bool gr_gm20b_is_ltcn_ltss_addr(struct gk20a *g, u32 addr)
+{
+	u32 lts_shared_base = ltc_ltc0_ltss_v();
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
+	u32 addr_mask = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE) - 1;
+	u32 base_offset = lts_shared_base & addr_mask;
+	u32 end_offset = base_offset + lts_stride;
+
+	return (!gr_gm20b_is_ltcs_ltss_addr(g, addr)) &&
+		((addr & addr_mask) >= base_offset) &&
+		((addr & addr_mask) < end_offset);
+}
+
+static void gr_gm20b_update_ltc_lts_addr(struct gk20a *g, u32 addr, u32 ltc_num,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index)
+{
+	u32 num_ltc_slices = g->ops.gr.get_max_lts_per_ltc(g);
+	u32 index = *priv_addr_table_index;
+	u32 lts_num;
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+	u32 lts_stride = nvgpu_get_litter_value(g, GPU_LIT_LTS_STRIDE);
+
+	for (lts_num = 0; lts_num < num_ltc_slices; lts_num++)
+		priv_addr_table[index++] = ltc_ltc0_lts0_v() +
+						ltc_num * ltc_stride +
+						lts_num * lts_stride +
+						(addr & (lts_stride - 1));
+
+	*priv_addr_table_index = index;
+}
+
+static void gr_gm20b_split_lts_broadcast_addr(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index)
+{
+	u32 num_ltc = g->ltc_count;
+	u32 i, start, ltc_num = 0;
+	u32 pltcg_base = ltc_pltcg_base_v();
+	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
+
+	for (i = 0; i < num_ltc; i++) {
+		start = pltcg_base + i * ltc_stride;
+		if ((addr >= start) && (addr < (start + ltc_stride))) {
+			ltc_num = i;
+			break;
+		}
+	}
+	gr_gm20b_update_ltc_lts_addr(g, addr, ltc_num, priv_addr_table,
+				priv_addr_table_index);
+}
+
+static void gr_gm20b_split_ltc_broadcast_addr(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index)
+{
+	u32 num_ltc = g->ltc_count;
+	u32 ltc_num;
+
+	for (ltc_num = 0; ltc_num < num_ltc; ltc_num++)
+		gr_gm20b_update_ltc_lts_addr(g, addr, ltc_num,
+					priv_addr_table, priv_addr_table_index);
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1478,4 +1552,8 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.fuse_override = gm20b_gr_fuse_override;
 	gops->gr.load_smid_config = gr_gm20b_load_smid_config;
 	gops->gr.program_sm_id_numbering = gr_gm20b_program_sm_id_numbering;
+	gops->gr.is_ltcs_ltss_addr = gr_gm20b_is_ltcs_ltss_addr;
+	gops->gr.is_ltcn_ltss_addr = gr_gm20b_is_ltcn_ltss_addr;
+	gops->gr.split_lts_broadcast_addr = gr_gm20b_split_lts_broadcast_addr;
+	gops->gr.split_ltc_broadcast_addr = gr_gm20b_split_ltc_broadcast_addr;
 }

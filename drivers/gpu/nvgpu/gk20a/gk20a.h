@@ -178,6 +178,15 @@ struct gpu_ops {
 				struct gr_zcull_info *zcull_params);
 		bool (*is_tpc_addr)(struct gk20a *g, u32 addr);
 		u32 (*get_tpc_num)(struct gk20a *g, u32 addr);
+		bool (*is_ltcs_ltss_addr)(struct gk20a *g, u32 addr);
+		bool (*is_ltcn_ltss_addr)(struct gk20a *g, u32 addr);
+		bool (*get_lts_in_ltc_shared_base)(void);
+		void (*split_lts_broadcast_addr)(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index);
+		void (*split_ltc_broadcast_addr)(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index);
 		void (*detect_sm_arch)(struct gk20a *g);
 		int (*add_zbc_color)(struct gk20a *g, struct gr_gk20a *gr,
 				  struct zbc_entry *color_val, u32 index);

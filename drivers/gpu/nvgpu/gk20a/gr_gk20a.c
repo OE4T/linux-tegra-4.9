@@ -6318,6 +6318,13 @@ static int gr_gk20a_decode_priv_addr(struct gk20a *g, u32 addr,
 		}
 		*be_num = pri_get_be_num(g, addr);
 		return 0;
+	} else if (pri_is_ltc_addr(addr)) {
+		*addr_type = CTXSW_ADDR_TYPE_LTCS;
+		if (g->ops.gr.is_ltcs_ltss_addr(g, addr))
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_LTCS;
+		else if (g->ops.gr.is_ltcn_ltss_addr(g, addr))
+			*broadcast_flags |= PRI_BROADCAST_FLAGS_LTSS;
+		return 0;
 	} else {
 		*addr_type = CTXSW_ADDR_TYPE_SYS;
 		return 0;
@@ -6412,7 +6419,15 @@ static int gr_gk20a_create_priv_addr_table(struct gk20a *g,
 					pri_gpc_addr(g, pri_gpccs_addr_mask(addr),
 						     gpc_num);
 		}
-	} else {
+	}
+
+	if (broadcast_flags & PRI_BROADCAST_FLAGS_LTSS) {
+		g->ops.gr.split_lts_broadcast_addr(g, addr,
+							priv_addr_table, &t);
+	} else if (broadcast_flags & PRI_BROADCAST_FLAGS_LTCS) {
+		g->ops.gr.split_ltc_broadcast_addr(g, addr,
+							priv_addr_table, &t);
+	} else if (!(broadcast_flags & PRI_BROADCAST_FLAGS_GPC)) {
 		if (broadcast_flags & PRI_BROADCAST_FLAGS_TPC)
 			for (tpc_num = 0;
 			     tpc_num < g->gr.gpc_tpc_count[gpc_num];
@@ -7296,8 +7311,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 						  num_tpcs) << 2);
 				}
 			} else {
-				gk20a_err(dev_from_gk20a(g),
-					   " Unknown address type.\n");
+				gk20a_dbg_fn("Unknown address type.");
 				return -EINVAL;
 			}
 			err = gr_gk20a_process_context_buffer_priv_segment(g,
@@ -8653,6 +8667,28 @@ static int gr_gk20a_get_preemption_mode_flags(struct gk20a *g,
 	return 0;
 }
 
+static bool gr_gk20a_is_ltcs_ltss_addr_stub(struct gk20a *g, u32 addr)
+{
+	return false;
+}
+
+static bool gr_gk20a_is_ltcn_ltss_addr_stub(struct gk20a *g, u32 addr)
+{
+	return false;
+}
+
+static void gr_gk20a_split_lts_broadcast_addr_stub(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index)
+{
+}
+
+static void gr_gk20a_split_ltc_broadcast_addr_stub(struct gk20a *g, u32 addr,
+					u32 *priv_addr_table,
+					u32 *priv_addr_table_index)
+{
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -8723,4 +8759,10 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_preemption_mode_flags = gr_gk20a_get_preemption_mode_flags;
 	gops->gr.program_active_tpc_counts = gr_gk20a_program_active_tpc_counts;
 	gops->gr.program_sm_id_numbering = gr_gk20a_program_sm_id_numbering;
+	gops->gr.is_ltcs_ltss_addr = gr_gk20a_is_ltcs_ltss_addr_stub;
+	gops->gr.is_ltcn_ltss_addr = gr_gk20a_is_ltcn_ltss_addr_stub;
+	gops->gr.split_lts_broadcast_addr =
+					gr_gk20a_split_lts_broadcast_addr_stub;
+	gops->gr.split_ltc_broadcast_addr =
+					gr_gk20a_split_ltc_broadcast_addr_stub;
 }

@@ -50,6 +50,14 @@
 #ifndef _hw_ltc_gk20a_h_
 #define _hw_ltc_gk20a_h_
 
+static inline u32 ltc_pltcg_base_v(void)
+{
+	return 0x00140000;
+}
+static inline u32 ltc_pltcg_extent_v(void)
+{
+	return 0x0017ffff;
+}
 static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x001410c8;

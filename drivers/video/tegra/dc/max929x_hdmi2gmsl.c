@@ -66,6 +66,8 @@ static void max929x_hdmi2gmsl_en_gpio(struct tegra_dc_hdmi2gmsl_data *hdmi2gmsl,
 	if (enable) {
 		gpio_direction_output(hdmi2gmsl->en_gpio,
 			!(hdmi2gmsl->en_gpio_flags & OF_GPIO_ACTIVE_LOW));
+		/* Per data sheet, power-up time can be up to 8 ms */
+		usleep_range(8000, 8100);
 	} else
 		gpio_direction_output(hdmi2gmsl->en_gpio,
 			hdmi2gmsl->en_gpio_flags & OF_GPIO_ACTIVE_LOW);
@@ -84,11 +86,8 @@ static int max929x_hdmi2gmsl_init(struct tegra_hdmi *hdmi)
 
 	if (gpio_is_valid(hdmi2gmsl->en_gpio)) {
 		err = gpio_request(hdmi2gmsl->en_gpio, "hdmi2gmsl");
-		pr_info("%s: gpio is valid, gpio_request returned %d\n", __func__, err);
 		if (err < 0)
 			pr_err("%s: gpio_request returned %d\n", __func__, err);
-		else
-			max929x_hdmi2gmsl_en_gpio(hdmi2gmsl, true);
 	}
 	return 0;
 }

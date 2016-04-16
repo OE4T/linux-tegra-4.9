@@ -397,8 +397,10 @@ static void pcibios_init_hw(struct device *parent, struct hw_pci *hw,
 			break;
 
 		sys->busnr   = busnr;
+		sys->nr      = nr;
 		sys->swizzle = hw->swizzle;
 		sys->map_irq = hw->map_irq;
+		sys->teardown = hw->teardown;
 		INIT_LIST_HEAD(&sys->resources);
 
 		if (hw->private_data)
@@ -444,18 +446,24 @@ static void pcibios_init_hw(struct device *parent, struct hw_pci *hw,
 void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
 {
 	struct pci_sys_data *sys;
-	LIST_HEAD(head);
+	struct list_head *head;
+	LIST_HEAD(list);
+
+	if (hw->sys)
+		head = hw->sys;
+	else
+		head = &list;
 
 	pci_add_flags(PCI_REASSIGN_ALL_RSRC);
 	if (hw->preinit)
 		hw->preinit();
-	pcibios_init_hw(parent, hw, &head);
+	pcibios_init_hw(parent, hw, head);
 	if (hw->postinit)
 		hw->postinit();
 
 	pci_fixup_irqs(pcibios_swizzle, pcibios_map_irq);
 
-	list_for_each_entry(sys, &head, node) {
+	list_for_each_entry(sys, head, node) {
 		struct pci_bus *bus = sys->bus;
 
 		if (!pci_has_flag(PCI_PROBE_ONLY)) {
@@ -478,6 +486,24 @@ void pci_common_init_dev(struct device *parent, struct hw_pci *hw)
 		 * Tell drivers about devices found.
 		 */
 		pci_bus_add_devices(bus);
+	}
+}
+
+void pci_common_exit(struct list_head *head)
+{
+	struct pci_sys_data *sys, *tmp;
+
+	list_for_each_entry_safe(sys, tmp, head, node) {
+		pci_stop_root_bus(sys->bus);
+		pci_remove_root_bus(sys->bus);
+		list_del(&sys->node);
+
+		release_resource(&sys->io_res);
+
+		if (sys->teardown)
+			sys->teardown(sys->nr, sys);
+
+		kfree(sys);
 	}
 }
 

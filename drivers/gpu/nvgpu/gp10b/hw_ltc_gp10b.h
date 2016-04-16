@@ -50,6 +50,26 @@
 #ifndef _hw_ltc_gp10b_h_
 #define _hw_ltc_gp10b_h_
 
+static inline u32 ltc_pltcg_base_v(void)
+{
+	return 0x00140000;
+}
+static inline u32 ltc_pltcg_extent_v(void)
+{
+	return 0x0017ffff;
+}
+static inline u32 ltc_ltc0_ltss_v(void)
+{
+	return 0x00140200;
+}
+static inline u32 ltc_ltc0_lts0_v(void)
+{
+	return 0x00140400;
+}
+static inline u32 ltc_ltcs_ltss_v(void)
+{
+	return 0x0017e200;
+}
 static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x0014046c;

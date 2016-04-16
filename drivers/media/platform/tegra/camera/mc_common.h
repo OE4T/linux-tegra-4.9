@@ -34,6 +34,7 @@
 
 #define MAX_FORMAT_NUM	64
 #define MAX_SUBDEVICES 4
+#define QUEUED_BUFFERS 4
 
 /**
  * struct tegra_channel_buffer - video channel buffer
@@ -118,20 +119,21 @@ struct tegra_channel {
 
 	unsigned char port[TEGRA_CSI_BLOCKS];
 	unsigned int syncpt[TEGRA_CSI_BLOCKS];
+	unsigned int thresh[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];
+	unsigned int buffer_state[QUEUED_BUFFERS];
+	struct vb2_buffer *buffers[QUEUED_BUFFERS];
+	unsigned int save_index;
+	unsigned int free_index;
+	unsigned int num_buffers;
 
 	struct task_struct *kthread_capture_start;
 	wait_queue_head_t start_wait;
-	struct task_struct *kthread_capture_done;
-	wait_queue_head_t done_wait;
 	struct vb2_queue queue;
 	void *alloc_ctx;
 	struct list_head capture;
 	spinlock_t start_lock;
-	struct list_head done;
-	spinlock_t done_lock;
 	struct completion capture_comp;
-	struct completion done_comp;
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
 	unsigned int align;

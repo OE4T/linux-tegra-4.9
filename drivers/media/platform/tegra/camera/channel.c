@@ -758,9 +758,27 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);
-		for (index = 0; index < chan->valid_ports; index++)
-			tegra_csi_stop_streaming(chan->vi->csi,
-							chan->port[index]);
+
+		if (atomic_read(&chan->is_hdmiin_unplug)) {
+			tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, 0);
+
+			for (index = 0; index < chan->valid_ports; index++) {
+				tegra_csi_stop_streaming(chan->vi->csi,
+							 chan->port[index]);
+				csi_write(chan, index,
+					TEGRA_VI_CSI_ERROR_STATUS, 0xFFFFFFFF);
+				csi_write(chan, index,
+						TEGRA_VI_CSI_IMAGE_DEF, 0);
+				csi_write(chan, index,
+						TEGRA_VI_CSI_SW_RESET, 0xF);
+				csi_write(chan, index,
+						TEGRA_VI_CSI_SW_RESET, 0x0);
+			}
+		} else
+			for (index = 0; index < chan->valid_ports; index++)
+				tegra_csi_stop_streaming(chan->vi->csi,
+							 chan->port[index]);
+
 		tegra_channel_update_clknbw(chan, 0);
 	}
 

@@ -70,6 +70,14 @@ static inline u32 ram_in_page_dir_base_target_vid_mem_f(void)
 {
 	return 0x0;
 }
+static inline u32 ram_in_page_dir_base_target_sys_mem_coh_f(void)
+{
+	return 0x2;
+}
+static inline u32 ram_in_page_dir_base_target_sys_mem_ncoh_f(void)
+{
+	return 0x3;
+}
 static inline u32 ram_in_page_dir_base_vol_w(void)
 {
 	return 128;

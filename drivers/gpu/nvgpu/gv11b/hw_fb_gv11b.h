@@ -106,6 +106,10 @@ static inline u32 fb_mmu_invalidate_pdb_aperture_vid_mem_f(void)
 {
 	return 0x0;
 }
+static inline u32 fb_mmu_invalidate_pdb_aperture_sys_mem_f(void)
+{
+	return 0x2;
+}
 static inline u32 fb_mmu_invalidate_pdb_addr_f(u32 v)
 {
 	return (v & 0xfffffff) << 4;
@@ -374,6 +378,14 @@ static inline u32 fb_mmu_debug_wr_aperture_vid_mem_f(void)
 {
 	return 0x0;
 }
+static inline u32 fb_mmu_debug_wr_aperture_sys_mem_coh_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(void)
+{
+	return 0x3;
+}
 static inline u32 fb_mmu_debug_wr_vol_false_f(void)
 {
 	return 0x0;
@@ -401,6 +413,14 @@ static inline u32 fb_mmu_debug_rd_r(void)
 static inline u32 fb_mmu_debug_rd_aperture_vid_mem_f(void)
 {
 	return 0x0;
+}
+static inline u32 fb_mmu_debug_rd_aperture_sys_mem_coh_f(void)
+{
+	return 0x2;
+}
+static inline u32 fb_mmu_debug_rd_aperture_sys_mem_ncoh_f(void)
+{
+	return 0x3;
 }
 static inline u32 fb_mmu_debug_rd_vol_false_f(void)
 {

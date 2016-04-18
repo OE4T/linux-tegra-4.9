@@ -82,6 +82,14 @@ static inline u32 fifo_runlist_base_target_vid_mem_f(void)
 {
 	return 0x0;
 }
+static inline u32 fifo_runlist_base_target_sys_mem_coh_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 fifo_runlist_base_target_sys_mem_ncoh_f(void)
+{
+	return 0x30000000;
+}
 static inline u32 fifo_runlist_r(void)
 {
 	return 0x00002274;

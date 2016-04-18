@@ -62,6 +62,14 @@ static inline u32 bus_bar1_block_target_vid_mem_f(void)
 {
 	return 0x0;
 }
+static inline u32 bus_bar1_block_target_sys_mem_coh_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 bus_bar1_block_target_sys_mem_ncoh_f(void)
+{
+	return 0x30000000;
+}
 static inline u32 bus_bar1_block_mode_virtual_f(void)
 {
 	return 0x80000000;
@@ -77,6 +85,14 @@ static inline u32 bus_bar2_block_ptr_f(u32 v)
 static inline u32 bus_bar2_block_target_vid_mem_f(void)
 {
 	return 0x0;
+}
+static inline u32 bus_bar2_block_target_sys_mem_coh_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 bus_bar2_block_target_sys_mem_ncoh_f(void)
+{
+	return 0x30000000;
 }
 static inline u32 bus_bar2_block_mode_virtual_f(void)
 {

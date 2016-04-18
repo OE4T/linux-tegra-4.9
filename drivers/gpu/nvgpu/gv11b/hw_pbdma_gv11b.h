@@ -322,6 +322,14 @@ static inline u32 pbdma_userd_target_vid_mem_f(void)
 {
 	return 0x0;
 }
+static inline u32 pbdma_userd_target_sys_mem_coh_f(void)
+{
+	return 0x2;
+}
+static inline u32 pbdma_userd_target_sys_mem_ncoh_f(void)
+{
+	return 0x3;
+}
 static inline u32 pbdma_userd_addr_f(u32 v)
 {
 	return (v & 0x7fffff) << 9;

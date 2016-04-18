@@ -495,7 +495,7 @@
 	/* the virtual storage device node */
 	tegra_hv_storage {
 		compatible = "nvidia,tegra-hv-storage";
-		status = "disabled";
+		status = "okay";
 		instance = <0>;
 		ivc = <&tegra_hv 35>;
 	};

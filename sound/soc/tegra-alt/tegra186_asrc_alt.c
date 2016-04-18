@@ -441,11 +441,11 @@ static int tegra186_asrc_put_ratio_int(struct snd_kcontrol *kcontrol,
 static int tegra186_asrc_get_ratio_frac(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct soc_mixer_control *asrc_private =
-		(struct soc_mixer_control *)kcontrol->private_value;
+	struct soc_mreg_control *asrc_private =
+		(struct soc_mreg_control *)kcontrol->private_value;
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
-	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+	unsigned int id = asrc_private->regbase / TEGRA186_ASRC_STREAM_STRIDE;
 
 	regmap_read(asrc->regmap,
 		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART, id),
@@ -458,11 +458,11 @@ static int tegra186_asrc_get_ratio_frac(struct snd_kcontrol *kcontrol,
 static int tegra186_asrc_put_ratio_frac(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
-	struct soc_mixer_control *asrc_private =
-		(struct soc_mixer_control *)kcontrol->private_value;
+	struct soc_mreg_control *asrc_private =
+		(struct soc_mreg_control *)kcontrol->private_value;
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
-	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+	unsigned int id = asrc_private->regbase / TEGRA186_ASRC_STREAM_STRIDE;
 
 	asrc->lane[id].frac_part = ucontrol->value.integer.value[0];
 	regmap_write(asrc->regmap,
@@ -645,42 +645,57 @@ ASRC_SOURCE_DECL(src_select4, 3);
 ASRC_SOURCE_DECL(src_select5, 4);
 ASRC_SOURCE_DECL(src_select6, 5);
 
+#define SOC_SINGLE_EXT_FRAC(xname, xregbase, \
+	xmax, xget, xput) \
+{       .iface = SNDRV_CTL_ELEM_IFACE_MIXER, .name = (xname), \
+	.info = snd_soc_info_xr_sx, .get = xget, \
+	.put = xput, \
+	.private_value = (unsigned long)&(struct soc_mreg_control) \
+		{.regbase = xregbase, .regcount = 1, .nbits = 32, \
+		.invert = 0, .min = 0, .max = xmax} }
+
 static const struct snd_kcontrol_new tegra186_asrc_controls[] = {
 	SOC_SINGLE_EXT("Ratio1 Int", TEGRA186_ASRC_STREAM1_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
-	SOC_SINGLE_EXT("Ratio1 Frac", TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
+	SOC_SINGLE_EXT_FRAC("Ratio1 Frac",
+		TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART,
+		TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio2 Int", TEGRA186_ASRC_STREAM2_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
-	SOC_SINGLE_EXT("Ratio2 Frac", TEGRA186_ASRC_STREAM2_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
+	SOC_SINGLE_EXT_FRAC("Ratio2 Frac",
+		TEGRA186_ASRC_STREAM2_RATIO_FRAC_PART,
+		TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio3 Int", TEGRA186_ASRC_STREAM3_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
-	SOC_SINGLE_EXT("Ratio3 Frac", TEGRA186_ASRC_STREAM3_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
+	SOC_SINGLE_EXT_FRAC("Ratio3 Frac",
+		TEGRA186_ASRC_STREAM3_RATIO_FRAC_PART,
+		TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio4 Int", TEGRA186_ASRC_STREAM4_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
-	SOC_SINGLE_EXT("Ratio4 Frac", TEGRA186_ASRC_STREAM4_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
+	SOC_SINGLE_EXT_FRAC("Ratio4 Frac",
+		TEGRA186_ASRC_STREAM4_RATIO_FRAC_PART,
+		TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio5 Int", TEGRA186_ASRC_STREAM5_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
-	SOC_SINGLE_EXT("Ratio5 Frac", TEGRA186_ASRC_STREAM5_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
+	SOC_SINGLE_EXT_FRAC("Ratio5 Frac",
+		TEGRA186_ASRC_STREAM5_RATIO_FRAC_PART,
+		TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 	SOC_SINGLE_EXT("Ratio6 Int", TEGRA186_ASRC_STREAM6_RATIO_INTEGER_PART,
 		0, TEGRA186_ASRC_STREAM_RATIO_INTEGER_PART_MASK, 0,
 		tegra186_asrc_get_ratio_int, tegra186_asrc_put_ratio_int),
-	SOC_SINGLE_EXT("Ratio6 Frac", TEGRA186_ASRC_STREAM6_RATIO_FRAC_PART,
-		0, TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MAX, 0,
+	SOC_SINGLE_EXT_FRAC("Ratio6 Frac",
+		TEGRA186_ASRC_STREAM6_RATIO_FRAC_PART,
+		TEGRA186_ASRC_STREAM_RATIO_FRAC_PART_MASK,
 		tegra186_asrc_get_ratio_frac, tegra186_asrc_put_ratio_frac),
 
 	SOC_ENUM_EXT("Ratio1 SRC", src_select1,

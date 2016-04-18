@@ -25,6 +25,7 @@
 #include <linux/poll.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/sched.h>
 
 #include "vi_notify.h"
 

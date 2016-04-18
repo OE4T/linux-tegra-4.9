@@ -56,21 +56,6 @@ err_fail_name:
 	return NULL;
 }
 
-static const char *get_addressed_name_from_full_name(struct device_node *np)
-{
-	const char *path = np->full_name;
-	const char *prev_path = path;
-
-	while (*path == '/') {
-		path = strchrnul(path + 1, '/');
-		if (*path != '/')
-			break;
-		prev_path = path + 1;
-	}
-
-	return prev_path;
-}
-
 struct device_node *of_get_child_by_addressed_name(
 		const struct device_node *node, const char *name)
 {
@@ -78,7 +63,7 @@ struct device_node *of_get_child_by_addressed_name(
 	const char *address_node_name;
 
 	for_each_child_of_node(node, child) {
-		address_node_name =  get_addressed_name_from_full_name(child);
+		address_node_name =  strrchr(child->full_name, '/');
 		if (!strcmp(name, address_node_name))
 			return child;
 	}
@@ -255,7 +240,7 @@ static int __init update_target_node(struct device_node *target,
 	}
 
 	for_each_child_of_node(overlay, ochild) {
-		address_name = get_addressed_name_from_full_name(ochild);
+		address_name = strrchr(ochild->full_name, '/');
 		tchild = of_get_child_by_addressed_name(target, address_name);
 		if (!tchild) {
 			pr_err("Overlay node %s not found in target node %s\n",

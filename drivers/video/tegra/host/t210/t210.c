@@ -36,7 +36,7 @@
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #include "tsec/tsec.h"
-#if defined(CONFIG_VIDEO_TEGRA_VI)
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 #include "vi.h"
 #endif
 #include "isp/isp.h"

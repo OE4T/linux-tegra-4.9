@@ -58,3 +58,12 @@ config TEGRA_GRHOST_DEFAULT_TIMEOUT
         default 10000
         help
           Default timeout for jobs in milliseconds. Set to zero for no timeout.
+
+config TEGRA_GRHOST_SYNC
+        depends on TEGRA_GRHOST || TEGRA_HOST1X
+        bool "Tegra host synchronization objects"
+        default y
+        select SYNC
+        help
+          Add tegra host backend for the cross driver synchronization framework.
+          Allows creating sync fence file descriptors from Tegra host syncpoints.

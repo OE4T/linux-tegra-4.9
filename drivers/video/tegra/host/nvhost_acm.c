@@ -38,7 +38,9 @@
 #include <linux/nvhost_ioctl.h>
 
 #include <linux/platform/tegra/mc.h>
+#if defined(CONFIG_TEGRA_BWMGR)
 #include <linux/platform/tegra/emc_bwmgr.h>
+#endif
 
 #include "nvhost_acm.h"
 #include "nvhost_vm.h"
@@ -117,10 +119,13 @@ static void dump_clock_status(struct platform_device *dev)
 		if (!pdata->clocks[i].name)
 			break;
 
+#if defined(CONFIG_TEGRA_BWMGR)
 		if (nvhost_is_bwmgr_clk(pdata, i))
 			rate = tegra_bwmgr_get_emc_rate();
-		else if (pdata->clk[i])
-			rate = clk_get_rate(pdata->clk[i]);
+		else
+#endif
+			if (pdata->clk[i])
+				rate = clk_get_rate(pdata->clk[i]);
 
 		pr_info("%s: clock %s: rate = %lu\n",
 			__func__, pdata->clocks[i].name,
@@ -372,14 +377,15 @@ int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 	if (err)
 		return err;
 
+#if defined(CONFIG_TEGRA_BWMGR)
 	if (nvhost_is_bwmgr_clk(pdata, index))
 		*rate = tegra_bwmgr_get_emc_rate();
-	else {
+	else
+#endif
 		if (pdata->clk[index])
 			*rate = clk_get_rate(pdata->clk[index]);
 		else
 			err = -EINVAL;
-	}
 
 	nvhost_module_idle(dev);
 	return err;
@@ -441,10 +447,12 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	trace_nvhost_module_update_rate(dev->name, pdata->clocks[index].name,
 					rate);
 
+#if defined(CONFIG_TEGRA_BWMGR)
 	if (nvhost_is_bwmgr_clk(pdata, index))
 		ret = tegra_bwmgr_set_emc(pdata->bwmgr_handle, rate,
 			pdata->clocks[index].bwmgr_request_type);
 	else
+#endif
 		ret = clk_set_rate(pdata->clk[index], rate);
 
 	return ret;
@@ -713,16 +721,19 @@ int nvhost_module_init(struct platform_device *dev)
 		return err;
 	}
 
+#if defined(CONFIG_TEGRA_BWMGR)
 	/* get bandwidth manager handle if needed */
 	if (pdata->bwmgr_client_id)
 		pdata->bwmgr_handle =
 			tegra_bwmgr_register(pdata->bwmgr_client_id);
+#endif
 
 	while (i < NVHOST_MODULE_MAX_CLOCKS && pdata->clocks[i].name) {
 		char devname[MAX_DEVID_LENGTH];
 		long rate = pdata->clocks[i].default_rate;
 		struct clk *c;
 
+#if defined(CONFIG_TEGRA_BWMGR)
 		if (nvhost_is_bwmgr_clk(pdata, i)) {
 			tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
 				pdata->clocks[i].bwmgr_request_type);
@@ -730,6 +741,7 @@ int nvhost_module_init(struct platform_device *dev)
 			i++;
 			continue;
 		}
+#endif
 
 		snprintf(devname, MAX_DEVID_LENGTH,
 			 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
@@ -948,8 +960,10 @@ void nvhost_module_deinit(struct platform_device *dev)
 		do_powergate_locked(pdata->powergate_id);
 	}
 
+#if defined(CONFIG_TEGRA_BWMGR)
 	if (pdata->bwmgr_handle)
 		tegra_bwmgr_unregister(pdata->bwmgr_handle);
+#endif
 
 	if (!IS_ENABLED(CONFIG_COMMON_CLK))
 		for (i = 0; i < pdata->num_clks; i++) {
@@ -1201,7 +1215,6 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 static int nvhost_module_prepare_poweroff(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
-	int i;
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
@@ -1210,8 +1223,11 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 	devfreq_suspend_device(pdata->power_manager);
 	nvhost_scale_hw_deinit(to_platform_device(dev));
 
+#if defined(CONFIG_TEGRA_BWMGR)
 	/* set EMC rate to zero */
 	if (pdata->bwmgr_handle) {
+		int i;
+
 		for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
 			if (nvhost_module_emc_clock(&pdata->clocks[i])) {
 				tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
@@ -1220,6 +1236,7 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 			}
 		}
 	}
+#endif
 
 	if (pdata->prepare_poweroff)
 		pdata->prepare_poweroff(to_platform_device(dev));

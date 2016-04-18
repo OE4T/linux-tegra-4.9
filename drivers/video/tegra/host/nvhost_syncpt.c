@@ -18,6 +18,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/nvhost.h>
 #include <linux/nvhost_ioctl.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>

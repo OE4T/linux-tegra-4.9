@@ -18,6 +18,7 @@
 
 #include <linux/slab.h>
 #include <linux/uaccess.h>
+#include <linux/tegra_vhost.h>
 
 #include "vhost.h"
 #include "../host1x/host1x.h"

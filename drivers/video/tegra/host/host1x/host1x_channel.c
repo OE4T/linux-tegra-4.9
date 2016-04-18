@@ -18,18 +18,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/slab.h>
+#include <linux/version.h>
+
+#include <trace/events/nvhost.h>
+
 #include "nvhost_channel.h"
-#include "dev.h"
-#include "class_ids.h"
 #include "nvhost_acm.h"
 #include "nvhost_job.h"
-#include <trace/events/nvhost.h>
-#include <linux/slab.h>
 #include "nvhost_sync.h"
-
 #include "nvhost_intr.h"
 #include "class_ids.h"
 #include "debug.h"
+#include "dev.h"
 
 #define NVHOST_CHANNEL_LOW_PRIO_MAX_WAIT 50
 
@@ -124,6 +125,7 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	struct sync_fence *fence;
 	struct sync_pt *pt;
 	int i;
+	u32 id, thresh;
 
 	if (fd < 0)
 		return;
@@ -132,10 +134,14 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	if (!fence)
 		return;
 
+	i = id = thresh = 0;
 	/* validate syncpt ids */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
+	list_for_each_entry(pt, &fence->pt_list_head, pt_list) {
+#else
 	for (i = 0; i < fence->num_fences; i++) {
-		u32 id;
 		pt = sync_pt_from_fence(fence->cbs[i].sync_pt);
+#endif
 		id = nvhost_sync_pt_id(pt);
 		if (!id || !nvhost_syncpt_is_valid_hw_pt(sp, id)) {
 			sync_fence_put(fence);
@@ -152,11 +158,12 @@ static void add_sync_waits(struct nvhost_channel *ch, int fd)
 	 * buffer.
 	 */
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
+	list_for_each_entry(pt, &fence->pt_list_head, pt_list) {
+#else
 	for (i = 0; i < fence->num_fences; i++) {
-		u32 id;
-		u32 thresh;
-
 		pt = sync_pt_from_fence(fence->cbs[i].sync_pt);
+#endif
 		id = nvhost_sync_pt_id(pt);
 		thresh = nvhost_sync_pt_thresh(pt);
 

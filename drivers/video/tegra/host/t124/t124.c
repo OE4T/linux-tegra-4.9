@@ -33,7 +33,7 @@
 #include "syncpt_t124.h"
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
-#if defined(CONFIG_VIDEO_TEGRA_VI)
+#if defined(CONFIG_VIDEO_TEGRA_VI) || defined(CONFIG_VIDEO_TEGRA_VI_MODULE)
 #include "vi.h"
 #endif
 #include "isp/isp.h"

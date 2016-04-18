@@ -23,6 +23,7 @@
 #include <linux/fs.h>
 #include <linux/module.h>
 #include <linux/slab.h>
+#include <linux/version.h>
 
 #include <linux/nvhost_ioctl.h>
 
@@ -291,6 +292,46 @@ static const struct sync_timeline_ops nvhost_sync_timeline_ops = {
 	.platform_debug_dump = nvhost_sync_platform_debug_dump
 };
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
+struct sync_fence *nvhost_sync_fdget(int fd)
+{
+	struct sync_fence *fence = sync_fence_fdget(fd);
+	struct sync_pt *spt;
+	struct sync_timeline *t;
+
+	if (!fence)
+		return fence;
+
+	list_for_each_entry(spt, &fence->pt_list_head, pt_list) {
+		if (spt == NULL) {
+			sync_fence_put(fence);
+			return NULL;
+		}
+
+		t = spt->parent;
+		if (t->ops != &nvhost_sync_timeline_ops) {
+			sync_fence_put(fence);
+			return NULL;
+		}
+	}
+
+	return fence;
+}
+EXPORT_SYMBOL(nvhost_sync_fdget);
+
+int nvhost_sync_num_pts(struct sync_fence *fence)
+{
+	int num = 0;
+	struct list_head *pos;
+
+	list_for_each(pos, &fence->pt_list_head) {
+		num++;
+	}
+	return num;
+}
+EXPORT_SYMBOL(nvhost_sync_num_pts);
+
+#else /* LINUX_VERSION_CODE */
 struct sync_fence *nvhost_sync_fdget(int fd)
 {
 	struct sync_fence *fence = sync_fence_fdget(fd);
@@ -325,6 +366,7 @@ int nvhost_sync_num_pts(struct sync_fence *fence)
 	return fence->num_fences;
 }
 EXPORT_SYMBOL(nvhost_sync_num_pts);
+#endif /* end if LINUX_VERSION_CODE */
 
 u32 nvhost_sync_pt_id(struct sync_pt *__pt)
 {

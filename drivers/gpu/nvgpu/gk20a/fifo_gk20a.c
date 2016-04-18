@@ -167,14 +167,8 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 
 	gk20a_dbg_fn("");
 
-	if (f->channel) {
-		int c;
-		for (c = 0; c < f->num_channels; c++) {
-			if (f->channel[c].remove_support)
-				f->channel[c].remove_support(f->channel+c);
-		}
-		kfree(f->channel);
-	}
+	vfree(f->channel);
+	vfree(f->tsg);
 	gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
 
 	engine_info = f->engine_info + ENGINE_GR_GK20A;
@@ -502,10 +496,8 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_map, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
-	f->channel = kzalloc(f->num_channels * sizeof(*f->channel),
-				GFP_KERNEL);
-	f->tsg = kzalloc(f->num_channels * sizeof(*f->tsg),
-				GFP_KERNEL);
+	f->channel = vzalloc(f->num_channels * sizeof(*f->channel));
+	f->tsg = vzalloc(f->num_channels * sizeof(*f->tsg));
 	f->pbdma_map = kzalloc(f->num_pbdma * sizeof(*f->pbdma_map),
 				GFP_KERNEL);
 	f->engine_info = kzalloc(f->max_engines * sizeof(*f->engine_info),
@@ -555,8 +547,10 @@ clean_up:
 	gk20a_dbg_fn("fail");
 	gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
 
-	kfree(f->channel);
+	vfree(f->channel);
 	f->channel = NULL;
+	vfree(f->tsg);
+	f->tsg = NULL;
 	kfree(f->pbdma_map);
 	f->pbdma_map = NULL;
 	kfree(f->engine_info);

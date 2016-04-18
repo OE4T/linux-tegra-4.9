@@ -267,10 +267,8 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_map, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
-	f->channel = kzalloc(f->num_channels * sizeof(*f->channel),
-				GFP_KERNEL);
-	f->tsg = kzalloc(f->num_channels * sizeof(*f->tsg),
-				GFP_KERNEL);
+	f->channel = vzalloc(f->num_channels * sizeof(*f->channel));
+	f->tsg = vzalloc(f->num_channels * sizeof(*f->tsg));
 	f->engine_info = kzalloc(f->max_engines * sizeof(*f->engine_info),
 				GFP_KERNEL);
 
@@ -315,9 +313,9 @@ clean_up:
 
 	memset(&f->userd, 0, sizeof(f->userd));
 
-	kfree(f->channel);
+	vfree(f->channel);
 	f->channel = NULL;
-	kfree(f->tsg);
+	vfree(f->tsg);
 	f->tsg = NULL;
 	kfree(f->engine_info);
 	f->engine_info = NULL;

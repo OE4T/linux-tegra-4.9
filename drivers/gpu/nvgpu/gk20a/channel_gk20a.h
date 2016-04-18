@@ -156,7 +156,6 @@ struct channel_gk20a {
 		struct mutex fence_lock;
 	} last_submit;
 
-	void (*remove_support)(struct channel_gk20a *);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
 	void *cyclestate_buffer;

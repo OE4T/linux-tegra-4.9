@@ -305,8 +305,10 @@ static int tegra_aon_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
 	ivc_chan = (struct tegra_aon_ivc_chan *)mbox_chan->con_priv;
 	bytes = tegra_ivc_write(&ivc_chan->ivc, msg->data, msg->length);
 	ret = (bytes != msg->length) ? -EBUSY : 0;
-	if (ret < 0)
+	if (bytes < 0) {
 		pr_err("%s mbox send failed with error %d\n", __func__, ret);
+		ret = bytes;
+	}
 	ivc_chan->last_tx_done = (ret == 0);
 
 	return ret;
@@ -511,6 +513,8 @@ static int tegra_aon_remove(struct platform_device *pdev)
 {
 	struct tegra_aon *aon = platform_get_drvdata(pdev);
 
+	iounmap(aon->shrdsem_base);
+	iounmap(aon->smbox_base);
 	mbox_controller_unregister(&aon->mbox);
 	tegra_hsp_db_del_handler(aon->hsp_master);
 

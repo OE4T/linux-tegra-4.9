@@ -70,6 +70,10 @@
 #include "nvgpu_gpuid_t18x.h"
 #endif
 
+#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#include "nvgpu_gpuid_t19x.h"
+#endif
+
 #ifdef CONFIG_ARM64
 #define __cpuc_flush_dcache_area __flush_dcache_area
 #endif
@@ -921,6 +925,10 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	{ .compatible = TEGRA_18x_GPU_COMPAT_TEGRA,
 		.data = &t18x_gpu_tegra_platform },
+#endif
+#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+	{ .compatible = TEGRA_19x_GPU_COMPAT_TEGRA,
+		.data = &t19x_gpu_tegra_platform },
 #endif
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
 	{ .compatible = "nvidia,tegra124-gk20a-vgpu",

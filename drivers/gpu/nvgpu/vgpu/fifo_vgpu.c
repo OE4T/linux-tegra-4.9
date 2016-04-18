@@ -59,16 +59,6 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 	}
 
 	ch->bound = false;
-
-	/*
-	 * if we are agrressive then we can destroy the syncpt
-	 * resource at this point
-	 * if not, then it will be destroyed at channel_free()
-	 */
-	if (ch->sync && platform->aggressive_sync_destroy) {
-		ch->sync->destroy(ch->sync);
-		ch->sync = NULL;
-	}
 }
 
 static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)

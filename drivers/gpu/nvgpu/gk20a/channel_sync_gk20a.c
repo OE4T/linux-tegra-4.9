@@ -356,6 +356,7 @@ gk20a_channel_syncpt_create(struct channel_gk20a *c)
 
 	nvhost_syncpt_set_min_eq_max_ext(sp->host1x_pdev, sp->id);
 
+	atomic_set(&sp->ops.refcount, 0);
 	sp->ops.wait_syncpt		= gk20a_channel_syncpt_wait_syncpt;
 	sp->ops.wait_fd			= gk20a_channel_syncpt_wait_fd;
 	sp->ops.incr			= gk20a_channel_syncpt_incr;
@@ -711,6 +712,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	if (!sema->timeline)
 		goto clean_up;
 #endif
+	atomic_set(&sema->ops.refcount, 0);
 	sema->ops.wait_syncpt	= gk20a_channel_semaphore_wait_syncpt;
 	sema->ops.wait_fd	= gk20a_channel_semaphore_wait_fd;
 	sema->ops.incr		= gk20a_channel_semaphore_incr;
@@ -725,6 +727,11 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 clean_up:
 	gk20a_channel_semaphore_destroy(&sema->ops);
 	return NULL;
+}
+
+void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync)
+{
+	sync->destroy(sync);
 }
 
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c)

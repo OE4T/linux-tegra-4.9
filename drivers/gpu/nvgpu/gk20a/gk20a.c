@@ -765,7 +765,7 @@ static int gk20a_detect_chip(struct gk20a *g)
 	return gpu_init_hal(g);
 }
 
-int gk20a_pm_finalize_poweron(struct device *dev)
+static int gk20a_pm_finalize_poweron(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);

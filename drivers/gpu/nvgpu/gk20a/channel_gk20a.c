@@ -2480,7 +2480,7 @@ notif_clean_up:
 	return ret;
 }
 
-unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
+static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 {
 	unsigned int mask = 0;
 	struct gk20a_event_id_data *event_id_data = filep->private_data;
@@ -2514,7 +2514,7 @@ unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 	return mask;
 }
 
-int gk20a_event_id_release(struct inode *inode, struct file *filp)
+static int gk20a_event_id_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_event_id_data *event_id_data = filp->private_data;
 	struct gk20a *g = event_id_data->g;

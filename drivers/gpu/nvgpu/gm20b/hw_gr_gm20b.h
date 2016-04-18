@@ -954,9 +954,21 @@ static inline u32 gr_fecs_host_int_status_umimp_illegal_method_f(u32 v)
 {
 	return (v & 0x1) << 18;
 }
+static inline u32 gr_fecs_host_int_status_ctxsw_intr_f(u32 v)
+{
+	return (v & 0xffff) << 0;
+}
 static inline u32 gr_fecs_host_int_clear_r(void)
 {
 	return 0x00409c20;
+}
+static inline u32 gr_fecs_host_int_clear_ctxsw_intr1_f(u32 v)
+{
+	return (v & 0x1) << 1;
+}
+static inline u32 gr_fecs_host_int_clear_ctxsw_intr1_clear_f(void)
+{
+	return 0x2;
 }
 static inline u32 gr_fecs_host_int_enable_r(void)
 {
@@ -3138,6 +3150,14 @@ static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_stop_trigger_disable_f(void)
 {
 	return 0x0;
 }
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_single_step_mode_enable_f(void)
+{
+	return 0x8;
+}
+static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_single_step_mode_disable_f(void)
+{
+	return 0x0;
+}
 static inline u32 gr_gpc0_tpc0_sm_dbgr_control0_run_trigger_task_f(void)
 {
 	return 0x40000000;
@@ -3234,6 +3254,26 @@ static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_single_step_complete_pending_f(
 {
 	return 0x40;
 }
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_sm_to_sm_fault_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_l1_error_pending_f(void)
+{
+	return 0x2;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_multiple_warp_errors_pending_f(void)
+{
+	return 0x4;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_physical_stack_overflow_error_pending_f(void)
+{
+	return 0x8;
+}
+static inline u32 gr_gpcs_tpcs_sm_hww_global_esr_timeout_error_pending_f(void)
+{
+	return 0x80000000;
+}
 static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_r(void)
 {
 	return 0x00504650;
@@ -3249,6 +3289,26 @@ static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f(void)
 static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f(void)
 {
 	return 0x40;
+}
+static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_sm_to_sm_fault_pending_f(void)
+{
+	return 0x1;
+}
+static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_l1_error_pending_f(void)
+{
+	return 0x2;
+}
+static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_multiple_warp_errors_pending_f(void)
+{
+	return 0x4;
+}
+static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_physical_stack_overflow_error_pending_f(void)
+{
+	return 0x8;
+}
+static inline u32 gr_gpc0_tpc0_sm_hww_global_esr_timeout_error_pending_f(void)
+{
+	return 0x80000000;
 }
 static inline u32 gr_gpc0_tpc0_tex_m_hww_esr_r(void)
 {
@@ -3691,6 +3751,18 @@ static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_enable_f(void)
 	return 0x80000000;
 }
 static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_stop_trigger_disable_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_m(void)
+{
+	return 0x1 << 3;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_enable_f(void)
+{
+	return 0x8;
+}
+static inline u32 gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_disable_f(void)
 {
 	return 0x0;
 }

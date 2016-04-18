@@ -74,6 +74,10 @@ static inline u32 ctxsw_prog_main_image_patch_count_o(void)
 {
 	return 0x00000010;
 }
+static inline u32 ctxsw_prog_main_image_context_id_o(void)
+{
+	return 0x000000f0;
+}
 static inline u32 ctxsw_prog_main_image_patch_adr_lo_o(void)
 {
 	return 0x00000014;
@@ -457,9 +461,5 @@ static inline u32 ctxsw_prog_main_image_preemption_options_control_f(u32 v)
 static inline u32 ctxsw_prog_main_image_preemption_options_control_cta_enabled_f(void)
 {
 	return 0x1;
-}
-static inline u32 ctxsw_prog_main_image_context_id_o(void)
-{
-	return 0x000000f0;
 }
 #endif

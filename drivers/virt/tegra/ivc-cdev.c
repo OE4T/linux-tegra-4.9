@@ -19,6 +19,7 @@
 #include <linux/interrupt.h>
 #include <linux/device.h>
 #include <linux/slab.h>
+#include <linux/sched.h>
 
 #include "tegra_hv.h"
 

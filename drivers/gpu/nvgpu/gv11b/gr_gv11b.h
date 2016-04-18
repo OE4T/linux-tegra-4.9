@@ -26,5 +26,8 @@ enum {
 };
 
 void gv11b_init_gr(struct gpu_ops *ops);
+int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
+                        struct mem_desc *mem);
+
 
 #endif

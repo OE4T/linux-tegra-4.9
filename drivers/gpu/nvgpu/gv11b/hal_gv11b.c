@@ -20,6 +20,7 @@
 
 #include "gk20a/gk20a.h"
 
+#include "gv11b/hal_gv11b.h"
 #include "gv11b/gr_gv11b.h"
 #include "gv11b/mc_gv11b.h"
 #include "gv11b/ltc_gv11b.h"

@@ -424,6 +424,11 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	gk20a_vm_remove_support_nofree(&mm->cde.vm);
 }
 
+static int gk20a_alloc_sysmem_flush(struct gk20a *g)
+{
+	return gk20a_gmmu_alloc(g, SZ_4K, &g->mm.sysmem_flush);
+}
+
 int gk20a_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -446,6 +451,10 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	gk20a_dbg_info("channel vm size: user %dMB  kernel %dMB",
 		       (int)(mm->channel.user_size >> 20),
 		       (int)(mm->channel.kernel_size >> 20));
+
+	err = gk20a_alloc_sysmem_flush(g);
+	if (err)
+		return err;
 
 	err = gk20a_init_bar1_vm(mm);
 	if (err)
@@ -492,6 +501,9 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 		mm->use_full_comp_tag_line =
 			g->ops.fb.set_use_full_comp_tag_line(g);
 
+	gk20a_writel(g, fb_niso_flush_sysmem_addr_r(),
+		     g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
+		     >> 8);
 
 	g->ops.mm.bar1_bind(g, inst_pa);
 

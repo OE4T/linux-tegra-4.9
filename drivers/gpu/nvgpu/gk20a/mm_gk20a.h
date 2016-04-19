@@ -359,6 +359,8 @@ struct mm_gk20a {
 	bool has_physical_mode;
 	/* false if vidmem aperture actually points to sysmem */
 	bool vidmem_is_vidmem;
+
+	struct mem_desc sysmem_flush;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

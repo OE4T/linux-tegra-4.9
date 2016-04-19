@@ -250,4 +250,8 @@ static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
 {
 	return 0x00000001;
 }
+static inline u32 fb_niso_flush_sysmem_addr_r(void)
+{
+	return 0x00100c10;
+}
 #endif

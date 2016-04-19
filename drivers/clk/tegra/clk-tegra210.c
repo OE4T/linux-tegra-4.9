@@ -24,6 +24,7 @@
 #include <linux/export.h>
 #include <linux/clk/tegra.h>
 #include <dt-bindings/clock/tegra210-car.h>
+#include <dt-bindings/reset/tegra210-car.h>
 
 #include "clk.h"
 #include "clk-id.h"
@@ -38,6 +39,9 @@
 
 #define CLK_SOURCE_CSITE 0x1d4
 #define CLK_SOURCE_EMC 0x19c
+
+#define RST_DFLL_DVCO 0x2f4
+#define DVFS_DFLL_RESET_SHIFT 0
 
 #define PLLC_BASE 0x80
 #define PLLC_OUT 0x84
@@ -2679,6 +2683,68 @@ static void __init tegra210_clock_apply_init_table(void)
 }
 
 /**
+ * tegra210_car_barrier - wait for pending writes to the CAR to complete
+ *
+ * Wait for any outstanding writes to the CAR MMIO space from this CPU
+ * to complete before continuing execution.  No return value.
+ */
+static void tegra210_car_barrier(void)
+{
+	readl_relaxed(clk_base + RST_DFLL_DVCO);
+}
+
+/**
+ * tegra210_clock_assert_dfll_dvco_reset - assert the DFLL's DVCO reset
+ *
+ * Assert the reset line of the DFLL's DVCO.  No return value.
+ */
+static void tegra210_clock_assert_dfll_dvco_reset(void)
+{
+	u32 v;
+
+	v = readl_relaxed(clk_base + RST_DFLL_DVCO);
+	v |= (1 << DVFS_DFLL_RESET_SHIFT);
+	writel_relaxed(v, clk_base + RST_DFLL_DVCO);
+	tegra210_car_barrier();
+}
+
+/**
+ * tegra210_clock_deassert_dfll_dvco_reset - deassert the DFLL's DVCO reset
+ *
+ * Deassert the reset line of the DFLL's DVCO, allowing the DVCO to
+ * operate.  No return value.
+ */
+static void tegra210_clock_deassert_dfll_dvco_reset(void)
+{
+	u32 v;
+
+	v = readl_relaxed(clk_base + RST_DFLL_DVCO);
+	v &= ~(1 << DVFS_DFLL_RESET_SHIFT);
+	writel_relaxed(v, clk_base + RST_DFLL_DVCO);
+	tegra210_car_barrier();
+}
+
+static int tegra210_reset_assert(unsigned long id)
+{
+	if (id == TEGRA210_RST_DFLL_DVCO)
+		tegra210_clock_assert_dfll_dvco_reset();
+	else
+		return -EINVAL;
+
+	return 0;
+}
+
+static int tegra210_reset_deassert(unsigned long id)
+{
+	if (id == TEGRA210_RST_DFLL_DVCO)
+		tegra210_clock_deassert_dfll_dvco_reset();
+	else
+		return -EINVAL;
+
+	return 0;
+}
+
+/**
  * tegra210_clock_init - Tegra210-specific clock initialization
  * @np: struct device_node * of the DT node for the SoC CAR IP block
  *
@@ -2742,6 +2808,8 @@ static void __init tegra210_clock_init(struct device_node *np)
 
 	tegra_super_clk_gen5_init(clk_base, pmc_base, tegra210_clks,
 				  &pll_x_params);
+	tegra_init_special_resets(1, tegra210_reset_assert,
+				tegra210_reset_deassert);
 	tegra_add_of_provider(np);
 	tegra_register_devclks(devclks, ARRAY_SIZE(devclks));
 

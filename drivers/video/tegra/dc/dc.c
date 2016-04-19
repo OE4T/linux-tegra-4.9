@@ -3991,6 +3991,10 @@ static irqreturn_t tegra_dc_irq(int irq, void *ptr)
 			dc->disp_active_dirty = false;
 		}
 
+	if (status & V_BLANK_INT)
+		trace_display_vblank(dc->ctrl_num,
+			tegra_dc_readl(dc, DC_COM_RG_DPCA) >> 16);
+
 	tegra_dc_put(dc);
 
 #ifdef TEGRA_DC_USR_SHARED_IRQ

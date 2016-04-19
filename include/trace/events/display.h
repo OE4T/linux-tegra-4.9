@@ -3,7 +3,7 @@
  *
  * Display event logging to ftrace.
  *
- * Copyright (c) 2012-2013, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -359,6 +359,21 @@ TRACE_EVENT(function_frame,
 		__entry->prefix = trace_prefix;
 	),
 	TP_printk("%c|%s\n", __entry->prefix, __entry->name)
+);
+
+TRACE_EVENT(display_vblank,
+	TP_PROTO(u32 ctrl_num, u16 vblank_count),
+	TP_ARGS(ctrl_num, vblank_count),
+	TP_STRUCT__entry(
+		__field(u32, ctrl_num)
+		__field(u16, vblank_count)
+	),
+	TP_fast_assign(
+		__entry->ctrl_num = ctrl_num;
+		__entry->vblank_count = vblank_count;
+	),
+	TP_printk("ctrl_num=%u vblank_count=%u",
+		__entry->ctrl_num, __entry->vblank_count)
 );
 
 #endif /* _TRACE_DISPLAY_H */

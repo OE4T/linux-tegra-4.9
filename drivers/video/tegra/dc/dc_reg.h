@@ -4,7 +4,7 @@
  * Copyright (C) 2010 Google, Inc.
  * Author: Erik Gilling <konkers@android.com>
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -352,6 +352,8 @@
 #define DC_COM_DSC_STATUS_2			0x359
 #define DSC_STATUS_BUSY			BIT(16)
 #define DSC_VALID_STATUS_VINDEX(x)	((x) & 0xffff)
+
+#define DC_COM_RG_DPCA				0x366
 
 #define DC_DISP_DISP_SIGNAL_OPTIONS0		0x400
 #define  H_PULSE_0_ENABLE		(1 << 8)

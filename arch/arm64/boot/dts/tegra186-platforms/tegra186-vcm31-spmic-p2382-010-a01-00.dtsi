@@ -36,7 +36,6 @@
 			maxim,system-pmic-power-off;
 			maxim,device-state-on-disabled-event = <MAX77620_FPS_INACTIVE_STATE_SLEEP>;
 
-			maxim,disable-rtc;
 			maxim,avoid-rtc-bulk-register-write;
 
 			watchdog {

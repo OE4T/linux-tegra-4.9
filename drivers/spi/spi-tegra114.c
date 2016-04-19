@@ -889,11 +889,10 @@ static irqreturn_t handle_cpu_based_xfer(struct tegra_spi_data *tspi)
 			tspi->status_reg);
 		dev_err(tspi->dev, "CpuXfer 0x%08x:0x%08x\n",
 			tspi->command1_reg, tspi->dma_control_reg);
-		reset_control_assert(tspi->rst);
-		udelay(2);
-		reset_control_deassert(tspi->rst);
 		complete(&tspi->xfer_completion);
-		goto exit;
+		spin_unlock_irqrestore(&tspi->lock, flags);
+		reset_control_reset(tspi->rst);
+		return IRQ_HANDLED;
 	}
 
 	if (tspi->cur_direction & DATA_DIR_RX)
@@ -961,11 +960,9 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_spi_data *tspi)
 			tspi->status_reg);
 		dev_err(tspi->dev, "DmaXfer 0x%08x:0x%08x\n",
 			tspi->command1_reg, tspi->dma_control_reg);
-		reset_control_assert(tspi->rst);
-		udelay(2);
-		reset_control_deassert(tspi->rst);
 		complete(&tspi->xfer_completion);
 		spin_unlock_irqrestore(&tspi->lock, flags);
+		reset_control_reset(tspi->rst);
 		return IRQ_HANDLED;
 	}
 

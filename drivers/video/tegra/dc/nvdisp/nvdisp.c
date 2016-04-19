@@ -38,7 +38,7 @@
 
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
-DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_common_channel_wq);
+static DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_common_channel_wq);
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025

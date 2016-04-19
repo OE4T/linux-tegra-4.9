@@ -119,7 +119,7 @@
 					reg = <1>;
 					maxim,shutdown-fps-time-period-us = <640>;
 					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN1>;
-					maxim,device-state-on-disabled-event = <0>;
+					maxim,device-state-on-disabled-event = <MAX77620_FPS_INACTIVE_STATE_SLEEP>;
 				};
 
 				fps2 {

@@ -32,6 +32,7 @@
 #include <linux/mfd/core.h>
 #include <linux/mfd/max77620.h>
 #include <linux/init.h>
+#include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/regmap.h>
@@ -491,6 +492,7 @@ static int max77620_probe(struct i2c_client *client,
 		return ret;
 	}
 
+	dev_info(chip->dev, "max77620 probe successful");
 	return 0;
 }
 
@@ -618,4 +620,22 @@ static struct i2c_driver max77620_driver = {
 	.probe = max77620_probe,
 	.id_table = max77620_id,
 };
-builtin_i2c_driver(max77620_driver);
+
+static int __init max77620_init(void)
+{
+	return i2c_add_driver(&max77620_driver);
+}
+subsys_initcall(max77620_init);
+
+static void __exit max77620_exit(void)
+{
+	i2c_del_driver(&max77620_driver);
+}
+module_exit(max77620_exit);
+
+MODULE_DESCRIPTION("MAX77620/MAX20024 Multi Function Device Core Driver");
+MODULE_AUTHOR("Laxman Dewangan <ldewangan@nvidia.com>");
+MODULE_AUTHOR("Chaitanya Bandi <bandik@nvidia.com>");
+MODULE_AUTHOR("Mallikarjun Kasoju <mkasoju@nvidia.com>");
+MODULE_ALIAS("i2c:max77620");
+MODULE_LICENSE("GPL v2");

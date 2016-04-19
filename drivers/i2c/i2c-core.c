@@ -1579,10 +1579,34 @@ i2c_sysfs_delete_device(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR_IGNORE_LOCKDEP(delete_device, S_IWUSR, NULL,
 				   i2c_sysfs_delete_device);
 
+static ssize_t show_bus_clk_rate(struct device *dev,
+		struct device_attribute *attr, char *buf)
+{
+	struct i2c_adapter *adap = to_i2c_adapter(dev);
+
+	return sprintf(buf, "%ld\n", adap->bus_clk_rate);
+}
+
+static ssize_t set_bus_clk_rate(struct device *dev,
+		struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct i2c_adapter *adap = to_i2c_adapter(dev);
+	char *p = (char *)buf;
+	int bus_clk_rate;
+
+	bus_clk_rate = memparse(p, &p);
+	dev_info(dev, "Setting clock rate %d on next transfer\n", bus_clk_rate);
+	adap->bus_clk_rate = bus_clk_rate;
+	return count;
+}
+static DEVICE_ATTR(bus_clk_rate, S_IRUGO | S_IWUSR, show_bus_clk_rate,
+		   set_bus_clk_rate);
+
 static struct attribute *i2c_adapter_attrs[] = {
 	&dev_attr_name.attr,
 	&dev_attr_new_device.attr,
 	&dev_attr_delete_device.attr,
+	&dev_attr_bus_clk_rate.attr,
 	NULL
 };
 ATTRIBUTE_GROUPS(i2c_adapter);

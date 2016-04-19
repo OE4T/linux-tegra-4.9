@@ -774,6 +774,8 @@ static int gk20a_tegra_probe(struct device *dev)
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13)
 		platform->soc_name = "tegra13x";
 
+	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
+
 	gk20a_tegra_get_clocks(dev);
 
 	return 0;
@@ -910,6 +912,8 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
 	.soc_name = "tegra12x",
+
+	.vidmem_is_vidmem = false,
 };
 
 struct gk20a_platform gm20b_tegra_platform = {
@@ -970,4 +974,6 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.has_cde = true,
 
 	.soc_name = "tegra21x",
+
+	.vidmem_is_vidmem = false,
 };

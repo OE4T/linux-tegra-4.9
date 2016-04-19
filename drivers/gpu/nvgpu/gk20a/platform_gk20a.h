@@ -211,6 +211,10 @@ struct gk20a_platform {
 
 	/* soc name for finding firmware files */
 	const char *soc_name;
+
+	/* if vidmem aperture actually points to vidmem*/
+	bool vidmem_is_vidmem;
+
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

@@ -1,7 +1,7 @@
 /*
  * drivers/ata/ahci_tegra.c
  *
- * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -286,6 +286,10 @@ static struct ata_port_info ahci_tegra_port_info = {
 	.pio_mask	= ATA_PIO4,
 	.udma_mask	= ATA_UDMA6,
 	.port_ops	= &ahci_tegra_port_ops,
+};
+
+static struct scsi_host_template ahci_platform_sht = {
+	AHCI_SHT(DRV_NAME),
 };
 
 #if defined(CONFIG_PM_SLEEP) || defined(CONFIG_PM)
@@ -1138,6 +1142,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	struct phy *phy = NULL;
 	int ret = -ENOMEM;
 	int i;
+	int sz;
 
 	hpriv = devm_kzalloc(dev, sizeof(*hpriv), GFP_KERNEL);
 	if (!hpriv) {
@@ -1179,12 +1184,19 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 	else
 		hpriv->mmio = tegra->base_list[TEGRA_SATA_AHCI];
 
-	hpriv->target_pwr = devm_regulator_get_optional(dev, "target-3v3");
-	if (IS_ERR(hpriv->target_pwr)) {
-		ret = PTR_ERR(hpriv->target_pwr);
+	sz = sizeof(*hpriv->target_pwrs);
+	hpriv->target_pwrs = kzalloc(sz, GFP_KERNEL);
+	if (!hpriv->target_pwrs) {
+		ret = -ENOMEM;
+		goto err_out;
+	}
+
+	hpriv->target_pwrs[0] = devm_regulator_get_optional(dev, "target-3v3");
+	if (IS_ERR(hpriv->target_pwrs[0])) {
+		ret = PTR_ERR(hpriv->target_pwrs[0]);
 		if (ret == -EPROBE_DEFER)
 			goto err_out;
-		hpriv->target_pwr = NULL;
+		hpriv->target_pwrs[0] = NULL;
 	}
 
 	ret = tegra_ahci_platform_get_clks_resets(tegra);
@@ -1421,7 +1433,8 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	}
 
 
-	ret = ahci_platform_init_host(pdev, hpriv, &ahci_tegra_port_info);
+	ret = ahci_platform_init_host(pdev, hpriv, &ahci_tegra_port_info,
+							&ahci_platform_sht);
 	if (ret)
 		goto poweroff_controller;
 

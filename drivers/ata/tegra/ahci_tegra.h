@@ -37,6 +37,8 @@
 
 #include "../ahci.h"
 
+#define DRV_NAME "tegra_ahci"
+
 /* AUX Registers */
 #define SATA_AUX_RX_STAT_INT_0				0xc
 #define SATA_DEVSLP					BIT(7)

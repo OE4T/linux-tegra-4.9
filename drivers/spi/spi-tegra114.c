@@ -859,6 +859,7 @@ static int tegra_spi_transfer_one_message(struct spi_master *master,
 			dev_err(tspi->dev,
 				"spi trasfer timeout, err %d\n", ret);
 			ret = -EIO;
+			reset_control_reset(tspi->rst);
 			goto complete_xfer;
 		}
 

@@ -96,7 +96,4 @@ struct gr_ctx_desc_t18x {
 	bool cilp_preempt_pending;
 };
 
-#define NVGPU_GR_PREEMPTION_MODE_GFXP		1
-#define NVGPU_GR_PREEMPTION_MODE_CILP		3
-
 #endif

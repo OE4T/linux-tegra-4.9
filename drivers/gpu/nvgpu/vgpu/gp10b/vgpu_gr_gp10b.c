@@ -144,21 +144,21 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 			desc->gpu_va;
 		p->size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_BETACB] = desc->size;
 
-		gr_ctx->preempt_mode = NVGPU_GR_PREEMPTION_MODE_GFXP;
+		gr_ctx->graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
 		p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_GFX_GFXP;
 	}
 
 	if (class == PASCAL_COMPUTE_A) {
 		if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP) {
-			gr_ctx->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CILP;
+			gr_ctx->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
 			p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CILP;
 		} else {
-			gr_ctx->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CTA;
+			gr_ctx->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
 			p->mode = TEGRA_VGPU_GR_CTXSW_PREEMPTION_MODE_COMPUTE_CTA;
 		}
 	}
 
-	if (gr_ctx->preempt_mode) {
+	if (gr_ctx->graphics_preempt_mode || gr_ctx->compute_preempt_mode) {
 		msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS;
 		msg.handle = platform->virt_handle;
 		p->handle = gr_ctx->virt_ctx;

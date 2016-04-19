@@ -33,7 +33,7 @@
 
 			maxim,enable-clock32k-out;
 
-			maxim,enable-sleep;
+			maxim,device-state-on-disabled-event = <MAX77620_FPS_INACTIVE_STATE_SLEEP>;
 
 			maxim,system-pmic-power-off;
 
@@ -108,7 +108,7 @@
 					reg = <1>;
 					maxim,shutdown-fps-time-period-us = <2560>;
 					maxim,fps-event-source = <MAX77620_FPS_EVENT_SRC_EN1>;
-					maxim,device-state-on-disabled-event = <0>;
+					maxim,device-state-on-disabled-event = <MAX77620_FPS_INACTIVE_STATE_SLEEP>;
 				};
 
 				fps2 {

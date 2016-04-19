@@ -33,7 +33,7 @@
 
 			maxim,enable-clock32k-out;
 
-			maxim,enable-sleep;
+			maxim,device-state-on-disabled-event = <MAX77620_FPS_INACTIVE_STATE_SLEEP>;
 
 			maxim,system-pmic-power-off;
 

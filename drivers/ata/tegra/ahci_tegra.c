@@ -835,6 +835,7 @@ static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv)
 
 static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv)
 {
+#ifdef CONFIG_PM
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
 	struct platform_device *pdev = tegra->pdev;
 	struct device *dev = &pdev->dev;
@@ -842,6 +843,7 @@ static void tegra_ahci_controller_deinit(struct ahci_host_priv *hpriv)
 	if (tegra_platform_is_silicon())
 		tegra_ahci_runtime_suspend(dev);
 	pm_runtime_disable(dev);
+#endif
 }
 
 static void tegra_ahci_disable_devslp(struct ahci_host_priv *hpriv)

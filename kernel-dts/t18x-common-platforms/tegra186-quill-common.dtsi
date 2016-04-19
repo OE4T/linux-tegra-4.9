@@ -271,7 +271,7 @@
 		};
 
 		nvdisplay@15220000 {
-			status = "disabled";
+			status = "okay";
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */

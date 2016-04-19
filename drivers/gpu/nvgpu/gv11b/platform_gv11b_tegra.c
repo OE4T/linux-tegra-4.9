@@ -76,6 +76,8 @@ static int gv11b_tegra_probe(struct device *dev)
 	platform->g->gr.t18x.ctx_vars.force_preemption_gfxp = false;
 	platform->g->gr.t18x.ctx_vars.force_preemption_cilp = false;
 
+	/* soc memory accessed as system memory aperture */
+	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
 	gv11b_tegra_get_clocks(dev);
 
@@ -145,5 +147,9 @@ struct gk20a_platform t19x_gpu_tegra_platform = {
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
 	.default_big_page_size	= SZ_64K,
+
+	.soc_name = "tegra19x",
+
+	.vidmem_is_vidmem = true,
 
 };

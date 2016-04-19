@@ -192,9 +192,11 @@ DEFINE_EVENT(gk20a_channel_getput, gk20a_channel_put_nofree,
 
 DECLARE_EVENT_CLASS(gk20a_channel_sched_params,
 	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
-		u32 timeout, const char *interleave, const char *preempt_mode),
+		u32 timeout, const char *interleave,
+		const char *graphics_preempt_mode,
+		const char *compute_preempt_mode),
 	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
-		interleave, preempt_mode),
+		interleave, graphics_preempt_mode, compute_preempt_mode),
 	TP_STRUCT__entry(
 		__field(int, chid)
 		__field(int, tsgid)
@@ -202,7 +204,8 @@ DECLARE_EVENT_CLASS(gk20a_channel_sched_params,
 		__field(u32, timeslice)
 		__field(u32, timeout)
 		__field(const char *, interleave)	/* no need to copy */
-		__field(const char *, preempt_mode)	/* no need to copy */
+		__field(const char *, graphics_preempt_mode)	/* no need to copy */
+		__field(const char *, compute_preempt_mode)	/* no need to copy */
 	),
 	TP_fast_assign(
 		__entry->chid = chid;
@@ -211,47 +214,59 @@ DECLARE_EVENT_CLASS(gk20a_channel_sched_params,
 		__entry->timeslice = timeslice;
 		__entry->timeout = timeout;
 		__entry->interleave = interleave;
-		__entry->preempt_mode = preempt_mode;
+		__entry->graphics_preempt_mode = graphics_preempt_mode;
+		__entry->compute_preempt_mode = compute_preempt_mode;
 	),
-	TP_printk("chid=%d tsgid=%d pid=%d timeslice=%u timeout=%u interleave=%s preempt=%s",
+	TP_printk("chid=%d tsgid=%d pid=%d timeslice=%u timeout=%u interleave=%s graphics_preempt=%s compute_preempt=%s",
 		__entry->chid, __entry->tsgid, __entry->pid,
 		__entry->timeslice, __entry->timeout,
-		__entry->interleave, __entry->preempt_mode)
+		__entry->interleave, __entry->graphics_preempt_mode,
+		__entry->compute_preempt_mode)
 );
 
 DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_sched_defaults,
 	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
-		u32 timeout, const char *interleave, const char *preempt_mode),
+		u32 timeout, const char *interleave,
+		const char *graphics_preempt_mode,
+		const char *compute_preempt_mode),
 	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
-		interleave, preempt_mode)
+		interleave, graphics_preempt_mode, compute_preempt_mode)
 );
 
 DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_priority,
 	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
-		u32 timeout, const char *interleave, const char *preempt_mode),
+		u32 timeout, const char *interleave,
+		const char *graphics_preempt_mode,
+		const char *compute_preempt_mode),
 	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
-		interleave, preempt_mode)
+		interleave, graphics_preempt_mode, compute_preempt_mode)
 );
 
 DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_runlist_interleave,
 	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
-		u32 timeout, const char *interleave, const char *preempt_mode),
+		u32 timeout, const char *interleave,
+		const char *graphics_preempt_mode,
+		const char *compute_preempt_mode),
 	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
-		interleave, preempt_mode)
+		interleave, graphics_preempt_mode, compute_preempt_mode)
 );
 
 DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_timeslice,
 	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
-		u32 timeout, const char *interleave, const char *preempt_mode),
+		u32 timeout, const char *interleave,
+		const char *graphics_preempt_mode,
+		const char *compute_preempt_mode),
 	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
-		interleave, preempt_mode)
+		interleave, graphics_preempt_mode, compute_preempt_mode)
 );
 
 DEFINE_EVENT(gk20a_channel_sched_params, gk20a_channel_set_timeout,
 	TP_PROTO(int chid, int tsgid, pid_t pid, u32 timeslice,
-		u32 timeout, const char *interleave, const char *preempt_mode),
+		u32 timeout, const char *interleave,
+		const char *graphics_preempt_mode,
+		const char *compute_preempt_mode),
 	TP_ARGS(chid, tsgid, pid, timeslice, timeout,
-		interleave, preempt_mode)
+		interleave, graphics_preempt_mode, compute_preempt_mode)
 );
 
 TRACE_EVENT(gk20a_push_cmdbuf,

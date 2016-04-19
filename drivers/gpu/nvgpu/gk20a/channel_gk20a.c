@@ -3208,6 +3208,23 @@ long gk20a_channel_ioctl(struct file *filp,
 
 		trace_gk20a_channel_set_timeslice(GK20A_TP_ARGS_SCHED(ch));
 		break;
+	case NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE:
+		if (ch->g->ops.gr.set_preemption_mode) {
+			err = gk20a_busy(dev);
+			if (err) {
+				dev_err(dev,
+					"%s: failed to host gk20a for ioctl cmd: 0x%x",
+					__func__, cmd);
+				break;
+			}
+			err = ch->g->ops.gr.set_preemption_mode(ch,
+			     ((struct nvgpu_preemption_mode_args *)buf)->graphics_preempt_mode,
+			     ((struct nvgpu_preemption_mode_args *)buf)->compute_preempt_mode);
+			gk20a_idle(dev);
+		} else {
+			err = -EINVAL;
+		}
+		break;
 	default:
 		dev_dbg(dev, "unrecognized ioctl cmd: 0x%x", cmd);
 		err = -ENOTTY;

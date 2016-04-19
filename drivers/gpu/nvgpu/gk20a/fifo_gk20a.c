@@ -2599,7 +2599,7 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 	runlist = &f->runlist_info[runlist_id];
 
 	if (ch == f->channel) {
-		seq_puts(s, "chid     tsgid    pid      timeslice  timeout  interleave preempt\n");
+		seq_puts(s, "chid     tsgid    pid      timeslice  timeout  interleave graphics_preempt compute_preempt\n");
 		seq_puts(s, "                            (usecs)   (msecs)\n");
 		ret = 0;
 	}
@@ -2611,15 +2611,15 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 		if (gk20a_is_channel_marked_as_tsg(ch))
 			tsg = &f->tsg[ch->tsgid];
 
-		seq_printf(s, "%-8d %-8d %-8d %-9d %-8d %-10d %-8d\n",
+		seq_printf(s, "%-8d %-8d %-8d %-9d %-8d %-10d %-8d %-8d\n",
 				ch->hw_chid,
 				ch->tsgid,
 				ch->pid,
 				tsg ? tsg->timeslice_us : ch->timeslice_us,
 				ch->timeout_ms_max,
 				ch->interleave_level,
-				ch->ch_ctx.gr_ctx ?
-					ch->ch_ctx.gr_ctx->preempt_mode : -1);
+				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->graphics_preempt_mode : -1,
+				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->compute_preempt_mode : -1);
 		gk20a_channel_put(ch);
 	}
 	return 0;

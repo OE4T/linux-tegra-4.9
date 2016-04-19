@@ -254,6 +254,9 @@ struct gpu_ops {
 		int (*suspend_contexts)(struct gk20a *g,
 				struct dbg_session_gk20a *dbg_s,
 				int *ctx_resident_ch_fd);
+		int (*set_preemption_mode)(struct channel_gk20a *ch,
+				u32 graphics_preempt_mode,
+				u32 compute_preempt_mode);
 	} gr;
 	const char *name;
 	struct {
@@ -1098,7 +1101,9 @@ static inline struct tsg_gk20a *tsg_gk20a_from_ch(struct channel_gk20a *ch)
 		tsg_gk20a_from_ch(ch)->timeslice_us : ch->timeslice_us, \
 	ch->timeout_ms_max,                                             \
 	gk20a_fifo_interleave_level_name(ch->interleave_level),         \
-	gr_gk20a_preempt_mode_name(ch->ch_ctx.gr_ctx ? 			\
-		ch->ch_ctx.gr_ctx->preempt_mode : 0)
+	gr_gk20a_graphics_preempt_mode_name(ch->ch_ctx.gr_ctx ?		\
+		ch->ch_ctx.gr_ctx->graphics_preempt_mode : 0),		\
+	gr_gk20a_compute_preempt_mode_name(ch->ch_ctx.gr_ctx ? 		\
+		ch->ch_ctx.gr_ctx->compute_preempt_mode : 0)
 
 #endif /* GK20A_H */

@@ -999,6 +999,16 @@ struct nvgpu_event_id_ctrl_args {
 
 #define NVGPU_IOCTL_CHANNEL_EVENT_ID_CMD_ENABLE		1
 
+struct nvgpu_preemption_mode_args {
+/* only one should be enabled at a time */
+#define NVGPU_GRAPHICS_PREEMPTION_MODE_WFI		BIT(0)
+	__u32 graphics_preempt_mode; /* in */
+
+/* only one should be enabled at a time */
+#define NVGPU_COMPUTE_PREEMPTION_MODE_WFI		BIT(0)
+#define NVGPU_COMPUTE_PREEMPTION_MODE_CTA		BIT(1)
+	__u32 compute_preempt_mode; /* in */
+};
 
 #define NVGPU_IOCTL_CHANNEL_SET_NVMAP_FD	\
 	_IOW(NVGPU_IOCTL_MAGIC, 5, struct nvgpu_set_nvmap_fd_args)
@@ -1046,9 +1056,11 @@ struct nvgpu_event_id_ctrl_args {
 	_IOW(NVGPU_IOCTL_MAGIC, 120, struct nvgpu_runlist_interleave_args)
 #define NVGPU_IOCTL_CHANNEL_SET_TIMESLICE \
 	_IOW(NVGPU_IOCTL_MAGIC, 121, struct nvgpu_timeslice_args)
+#define NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE \
+	_IOW(NVGPU_IOCTL_MAGIC, 122, struct nvgpu_preemption_mode_args)
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
-	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_TIMESLICE)
+	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE)
 #define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
 
 /*

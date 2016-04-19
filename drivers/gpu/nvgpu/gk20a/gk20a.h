@@ -188,6 +188,9 @@ struct gpu_ops {
 				struct zbc_entry *zbc_val);
 		int (*zbc_query_table)(struct gk20a *g, struct gr_gk20a *gr,
 				struct zbc_query_params *query_params);
+		void (*pmu_save_zbc)(struct gk20a *g, u32 entries);
+		int (*add_zbc)(struct gk20a *g, struct gr_gk20a *gr,
+				struct zbc_entry *zbc_val);
 		u32 (*pagepool_default_size)(struct gk20a *g);
 		int (*init_ctx_state)(struct gk20a *g);
 		int (*alloc_gr_ctx)(struct gk20a *g,

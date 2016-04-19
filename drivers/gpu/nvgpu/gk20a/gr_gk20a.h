@@ -553,6 +553,9 @@ int gr_gk20a_add_zbc_color(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *color_val, u32 index);
 int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *depth_val, u32 index);
+int _gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
+			struct zbc_entry *zbc_val);
+void gr_gk20a_pmu_save_zbc(struct gk20a *g, u32 entries);
 int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 		       u32 expect_delay);
 int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,

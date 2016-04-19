@@ -168,6 +168,8 @@ static int gp10b_tegra_probe(struct device *dev)
 			&platform->g->gr.t18x.
 				ctx_vars.dump_ctxsw_stats_on_channel_close);
 
+	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
+
 	gp10b_tegra_get_clocks(dev);
 
 	return 0;
@@ -417,6 +419,8 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.force_reset_in_do_idle = false,
 
 	.soc_name = "tegra18x",
+
+	.vidmem_is_vidmem = false,
 };
 
 

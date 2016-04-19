@@ -407,7 +407,7 @@ static const struct of_device_id tegra186_pmc[] __initconst = {
 #include <linux/uaccess.h>
 #include <linux/slab.h>
 
-void __iomem *tegra186_pmc_scratch_base;
+static void __iomem *tegra186_pmc_scratch_base;
 
 struct t186_pmc_pdata {
 	const char **reg_names;

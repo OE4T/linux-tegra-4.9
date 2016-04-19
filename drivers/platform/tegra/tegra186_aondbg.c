@@ -173,6 +173,7 @@ static struct aon_dbg_response *aon_create_ivc_dbg_req(u32 request,
 		req.data.pm_xfer.type.retention.enable = (flag) ? data : 0;
 		break;
 	case AON_PM_SC8_COUNT:
+	case AON_MODS_CRC:
 	case AON_PM_STATE_TIME:
 	case AON_PM_STATE_COUNT:
 	case AON_PING_TEST:
@@ -462,6 +463,25 @@ static int aon_mods_result_show(void *data, u64 *val)
 DEFINE_SIMPLE_ATTRIBUTE(aon_mods_result_fops, aon_mods_result_show,
 			NULL, "%lld\n");
 
+static int aon_mods_crc_show(void *data, u64 *val)
+{
+	struct aon_dbg_response *resp;
+	int ret = 0;
+
+	mutex_lock(&aon_mutex);
+	resp = aon_create_ivc_dbg_req(*(u32 *)data, READ, 0);
+	if (IS_ERR(resp))
+		ret = PTR_ERR(resp);
+	else
+		*val = resp->data.crc_xfer.crc;
+	mutex_unlock(&aon_mutex);
+
+	return ret;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(aon_mods_crc_fops, aon_mods_crc_show,
+			NULL, "%llx\n");
+
 static int aon_timeout_show(void *data, u64 *val)
 {
 	*val = get_completion_timeout();
@@ -500,6 +520,8 @@ static struct aon_dbgfs_node aon_nodes[] = {
 			.mode = S_IWUSR, .fops = &aon_mods_loops_fops, },
 	{.name = "result", .id = AON_MODS_RESULT, .pdr_id = AON_MODS,
 			.mode = S_IRUGO , .fops = &aon_mods_result_fops,},
+	{.name = "crc", .id = AON_MODS_CRC, .pdr_id = AON_MODS,
+			.mode = S_IRUGO , .fops = &aon_mods_crc_fops,},
 	{.name = "ping", .id = AON_PING_TEST, .pdr_id = AON_ROOT,
 			.mode = S_IRUGO | S_IWUSR, .fops = &aon_ping_fops,},
 	{.name = "enable_retention", .id = AON_PM_VDD_RTC_RETENTION,

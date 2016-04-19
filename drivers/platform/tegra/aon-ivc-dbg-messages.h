@@ -77,6 +77,7 @@ enum aon_dbg_status {
 enum aon_mods {
 	AON_MODS_LOOPS_TEST = 6,
 	AON_MODS_RESULT = 7,
+	AON_MODS_CRC = 11,
 	AON_MODS_STATUS_OK = 0,
 	AON_MODS_STATUS_ERROR = 1,
 };
@@ -87,7 +88,7 @@ enum aon_mods {
  */
 enum aon_ping {
 	AON_PING_TEST = 8,
-	AON_REQUEST_TYPE_MAX = 10,
+	AON_REQUEST_TYPE_MAX = 11,
 };
 
 /* The following enum indicates if we are reading from or writing
@@ -189,6 +190,14 @@ struct aon_mods_xfer {
 	u32 loops;
 };
 
+/* This struct is used to send the CRC32 of the SPE text section to the target.
+ * Fields:
+ * crc:		CRC32 of the text section.
+ */
+struct aon_mods_crc_xfer {
+	uint32_t crc;
+};
+
 /* This struct is used to extract the firmware version of the SPE.
  * Fields:
  * data:	buffer to store the version string. Uses u8
@@ -244,6 +253,7 @@ struct aon_dbg_response {
 	union {
 		struct aon_pm_dbg_xfer pm_xfer;
 		struct aon_ping_xfer ping_xfer;
+		struct aon_mods_crc_xfer crc_xfer;
 	} data;
 };
 

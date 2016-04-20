@@ -285,10 +285,9 @@ static void cdma_stop(struct nvhost_cdma *cdma)
  * Stops both channel's command processor and CDMA immediately.
  * Also, tears down the channel and resets corresponding module.
  */
-static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
+static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma, bool skip_reset)
 {
 	struct nvhost_channel *ch = cdma_to_channel(cdma);
-	struct nvhost_device_data *pdata = platform_get_drvdata(ch->dev);
 	struct nvhost_master *dev;
 	u32 cmdproc_stop;
 
@@ -317,26 +316,8 @@ static void cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
 
 	host1x_channel_writel(ch, host1x_sync_ch_teardown_r(), BIT(0));
 
-	/* if resources are allocated per channel instance, the channel does
-	 * not necessaryly hold the mlock */
-	if (pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) {
-		struct nvhost_syncpt *syncpt = &dev->syncpt;
-		unsigned int owner;
-		bool ch_own, cpu_own;
-
-		/* check the owner */
-		syncpt_op().mutex_owner(syncpt, pdata->modulemutexes[0],
-					&cpu_own, &ch_own, &owner);
-
-		/* if this channel owns the lock, we need to reset the engine */
-		if (ch_own && owner == ch->chid)
-			nvhost_module_reset(ch->dev, true);
-
-	} else {
-		/* if we allocate the resource per channel, the module is always
-		 * contamined */
+	if (!skip_reset && nvhost_channel_is_reset_required(ch))
 		nvhost_module_reset(ch->dev, true);
-	}
 
 	cdma->running = false;
 	cdma->torndown = true;
@@ -489,14 +470,8 @@ err_alloc_buffer:
 	nvhost_putchannel(ch, 1);
 }
 
-/**
- * If this timeout fires, it indicates the current sync_queue entry has
- * exceeded its TTL and the userctx should be timed out and remaining
- * submits already issued cleaned up (future submits return an error).
- */
-static void cdma_timeout_handler(struct work_struct *work)
+static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 {
-	struct nvhost_cdma *cdma;
 	struct nvhost_master *dev;
 	struct nvhost_syncpt *sp;
 	struct nvhost_channel *ch;
@@ -508,8 +483,6 @@ static void cdma_timeout_handler(struct work_struct *work)
 
 	u32 prev_cmdproc, cmdproc_stop;
 
-	cdma = container_of(to_delayed_work(work), struct nvhost_cdma,
-			    timeout.wq);
 	ch = cdma_to_channel(cdma);
 	if (!ch || !ch->dev) {
 		pr_warn("%s: Channel un-mapped\n", __func__);
@@ -527,10 +500,6 @@ static void cdma_timeout_handler(struct work_struct *work)
 		mutex_unlock(&dev->timeout_mutex);
 		return;
 	}
-
-	if (nvhost_debug_force_timeout_dump ||
-		cdma->timeout.timeout_debug_dump)
-		nvhost_debug_dump_locked(cdma_to_dev(cdma), ch->chid);
 
 	if (!cdma->timeout.clientid) {
 		dev_dbg(&dev->dev->dev,
@@ -582,8 +551,12 @@ static void cdma_timeout_handler(struct work_struct *work)
 			cdma->timeout.sp[i].fence);
 	}
 
+	if (nvhost_debug_force_timeout_dump ||
+			cdma->timeout.timeout_debug_dump)
+		nvhost_debug_dump_locked(cdma_to_dev(cdma), ch->chid);
+
 	/* stop HW, resetting channel/module */
-	cdma_op().timeout_teardown_begin(cdma);
+	cdma_op().timeout_teardown_begin(cdma, skip_reset);
 
 	nvhost_cdma_update_sync_queue(cdma, sp, ch->dev);
 	mutex_unlock(&cdma->lock);
@@ -591,6 +564,20 @@ static void cdma_timeout_handler(struct work_struct *work)
 
 	/* ensure that mlocks get released */
 	cdma_timeout_release_mlock(cdma);
+}
+
+/**
+ * If this timeout fires, it indicates the current sync_queue entry has
+ * exceeded its TTL and the userctx should be timed out and remaining
+ * submits already issued cleaned up (future submits return an error).
+ */
+static void cdma_timeout_handler(struct work_struct *work)
+{
+	struct nvhost_cdma *cdma;
+
+	cdma = container_of(to_delayed_work(work), struct nvhost_cdma,
+			    timeout.wq);
+	cdma_op().handle_timeout(cdma, false);
 }
 
 static const struct nvhost_cdma_ops host1x_cdma_ops = {
@@ -603,6 +590,7 @@ static const struct nvhost_cdma_ops host1x_cdma_ops = {
 	.timeout_teardown_begin = cdma_timeout_teardown_begin,
 	.timeout_teardown_end = cdma_timeout_teardown_end,
 	.timeout_pb_cleanup = cdma_timeout_pb_cleanup,
+	.handle_timeout = cdma_handle_timeout,
 	.make_adjacent_space = cdma_make_adjacent_space,
 };
 

@@ -67,7 +67,7 @@ s32 ixgbe_init_ops_X550(struct ixgbe_hw *hw)
 	eeprom->ops.write = ixgbe_write_ee_hostif_X550;
 	eeprom->ops.write_buffer = ixgbe_write_ee_hostif_buffer_X550;
 	eeprom->ops.update_checksum = ixgbe_update_eeprom_checksum_X550;
-	eeprom->ops.validate_checksum = ixgbe_validate_eeprom_checksum_X550;
+	eeprom->ops.validate_checksum = NULL;
 
 	mac->ops.disable_mdd = ixgbe_disable_mdd_X550;
 	mac->ops.enable_mdd = ixgbe_enable_mdd_X550;
@@ -755,7 +755,7 @@ s32 ixgbe_init_ops_X550EM(struct ixgbe_hw *hw)
 	eeprom->ops.write = ixgbe_write_ee_hostif_X550;
 	eeprom->ops.write_buffer = ixgbe_write_ee_hostif_buffer_X550;
 	eeprom->ops.update_checksum = ixgbe_update_eeprom_checksum_X550;
-	eeprom->ops.validate_checksum = ixgbe_validate_eeprom_checksum_X550;
+	eeprom->ops.validate_checksum = NULL;
 	eeprom->ops.calc_checksum = ixgbe_calc_eeprom_checksum_X550;
 
 	return ret_val;

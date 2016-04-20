@@ -845,6 +845,25 @@ static int imx274_read_otp_page(struct imx274 *priv,
 	return 0;
 }
 
+static int imx274_verify_streaming(struct imx274 *priv)
+{
+	int err = 0;
+
+	err = camera_common_s_power(priv->subdev, true);
+	if (err)
+		return err;
+
+	err = imx274_s_stream(priv->subdev, true);
+	if (err)
+		goto error;
+
+error:
+	imx274_s_stream(priv->subdev, false);
+	camera_common_s_power(priv->subdev, false);
+
+	return err;
+}
+
 static int imx274_otp_setup(struct imx274 *priv)
 {
 	int err;
@@ -1232,6 +1251,10 @@ static int imx274_probe(struct i2c_client *client,
 	v4l2_i2c_subdev_init(priv->subdev, client, &imx274_subdev_ops);
 
 	err = imx274_ctrls_init(priv);
+	if (err)
+		return err;
+
+	err = imx274_verify_streaming(priv);
 	if (err)
 		return err;
 

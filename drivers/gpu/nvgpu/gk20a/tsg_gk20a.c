@@ -25,6 +25,9 @@
 #include "gk20a.h"
 #include "hw_ccsr_gk20a.h"
 
+#define NVGPU_TSG_MIN_TIMESLICE_US 1000
+#define NVGPU_TSG_MAX_TIMESLICE_US 50000
+
 static void gk20a_tsg_release(struct kref *ref);
 
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
@@ -345,6 +348,20 @@ static int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	return ret ? ret : g->ops.fifo.update_runlist(g, 0, ~0, true, true);
 }
 
+static int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
+{
+	struct gk20a *g = tsg->g;
+
+	if (timeslice < NVGPU_TSG_MIN_TIMESLICE_US ||
+		timeslice > NVGPU_TSG_MAX_TIMESLICE_US)
+		return -EINVAL;
+
+	gk20a_channel_get_timescale_from_timeslice(g, timeslice,
+			&tsg->timeslice_timeout, &tsg->timeslice_scale);
+
+	return g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+}
+
 static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
 {
 	mutex_lock(&f->tsg_inuse_mutex);
@@ -550,6 +567,20 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		}
 		err = gk20a_tsg_set_runlist_interleave(tsg,
 			((struct nvgpu_runlist_interleave_args *)buf)->level);
+		gk20a_idle(g->dev);
+		break;
+		}
+
+	case NVGPU_IOCTL_TSG_SET_TIMESLICE:
+		{
+		err = gk20a_busy(g->dev);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
+			return err;
+		}
+		err = gk20a_tsg_set_timeslice(tsg,
+			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
 		gk20a_idle(g->dev);
 		break;
 		}

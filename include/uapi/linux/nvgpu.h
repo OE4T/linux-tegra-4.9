@@ -467,11 +467,13 @@ struct nvgpu_gpu_get_gpu_time_args {
 	_IOWR(NVGPU_TSG_IOCTL_MAGIC, 7, struct nvgpu_event_id_ctrl_args)
 #define NVGPU_IOCTL_TSG_SET_RUNLIST_INTERLEAVE \
 	_IOW(NVGPU_TSG_IOCTL_MAGIC, 8, struct nvgpu_runlist_interleave_args)
+#define NVGPU_IOCTL_TSG_SET_TIMESLICE \
+	_IOW(NVGPU_TSG_IOCTL_MAGIC, 9, struct nvgpu_timeslice_args)
 
 #define NVGPU_TSG_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_event_id_ctrl_args)
 #define NVGPU_TSG_IOCTL_LAST		\
-	_IOC_NR(NVGPU_IOCTL_TSG_SET_RUNLIST_INTERLEAVE)
+	_IOC_NR(NVGPU_IOCTL_TSG_SET_TIMESLICE)
 
 
 /*

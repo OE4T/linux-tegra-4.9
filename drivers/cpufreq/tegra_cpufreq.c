@@ -17,6 +17,7 @@
 #include <asm/cputype.h>
 #include <asm/smp_plat.h>
 #include <asm/cpu.h>
+#include <linux/io.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>

@@ -50,7 +50,9 @@
 			override@1 {
 				target = <&tegra_xudc>;
 				_overlay_ {
-					status = "disabled";
+					phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+					phy-names = "usb2";
+					status = "okay";
 				};
 			};
 

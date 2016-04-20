@@ -33,4 +33,13 @@
 			hardware = "p2382_t186";
 		};
 	};
+
+#ifdef CONFIG_ANDROID
+	/* TBD : once runtime PM is implemented in rtcpu driver, it will be removed
+	Bug 200191464, 1614189
+	*/
+	rtcpu-vinotify {
+		status = "disable";
+	};
+#endif
 };

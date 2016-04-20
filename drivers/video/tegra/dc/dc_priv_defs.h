@@ -315,6 +315,9 @@ struct tegra_dc {
 	struct delayed_work		one_shot_work;
 	s64				frame_end_timestamp;
 	atomic_t			frame_end_ref;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	struct delayed_work		vrr_work;
+#endif
 
 	bool				mode_dirty;
 	bool				yuv_bypass;

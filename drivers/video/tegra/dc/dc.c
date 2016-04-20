@@ -3425,6 +3425,10 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 	if (!vrr || (!vrr->enable && !vrr->fe_intr_req))
 		return;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	cancel_delayed_work_sync(&dc->vrr_work);
+#endif
+
 	/* Decrement frame end interrupt refcount previously
 	   requested by secure library */
 	if (vrr->fe_intr_req) {
@@ -3439,6 +3443,12 @@ static void tegra_dc_vrr_sec(struct tegra_dc *dc)
 	   by secure library */
 	if (vrr->fe_intr_req)
 		_tegra_dc_config_frame_end_intr(dc, true);
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (vrr->insert_frame)
+		schedule_delayed_work(&dc->vrr_work,
+			msecs_to_jiffies(vrr->insert_frame/1000));
+#endif
 }
 
 static void tegra_dc_vblank(struct work_struct *work)
@@ -5545,7 +5555,9 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	dc->vpulse2_ref_count = 0;
 	INIT_DELAYED_WORK(&dc->underflow_work, tegra_dc_underflow_worker);
 	INIT_DELAYED_WORK(&dc->one_shot_work, tegra_dc_one_shot_worker);
-
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	INIT_DELAYED_WORK(&dc->vrr_work, tegra_nvdisp_vrr_work);
+#endif
 	tegra_dc_init_lut_defaults(&dc->fb_lut);
 
 	dc->n_windows = DC_N_WINDOWS;

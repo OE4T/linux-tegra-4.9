@@ -3321,7 +3321,7 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 		goto disable_regulator;
 	}
 
-	xudc->data_role_extcon = extcon_get_edev_by_phandle(&pdev->dev, 0);
+	xudc->data_role_extcon = extcon_get_extcon_dev_by_cable(&pdev->dev, "vbus");
 	if (IS_ERR(xudc->data_role_extcon)) {
 		err = PTR_ERR(xudc->data_role_extcon);
 		dev_err(xudc->dev, "extcon_get_extcon_dev_by_cable failed %d\n",

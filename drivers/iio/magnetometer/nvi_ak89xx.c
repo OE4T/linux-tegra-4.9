@@ -907,29 +907,34 @@ static int akm_selftest(void *client, int snsr_id, char *buf)
 	}
 	if (buf) {
 		if (ret < 0) {
-			t = sprintf(buf, "ERR: %d\n", ret);
+			t = snprintf(buf, PAGE_SIZE, "ERR: %d\n", ret);
 		} else {
 			if (ret > 0)
-				t = sprintf(buf, "%d FAIL", ret);
+				t = snprintf(buf, PAGE_SIZE, "%d FAIL", ret);
 			else
-				t = sprintf(buf, "%d PASS", ret);
-			t += sprintf(buf + t, "   xyz: %hd %hd %hd   ",
-				     st->magn[AXIS_X],
-				     st->magn[AXIS_Y],
-				     st->magn[AXIS_Z]);
-			t += sprintf(buf + t, "uncalibrated: %hd %hd %hd   ",
-				    st->magn_uc[AXIS_X],
-				    st->magn_uc[AXIS_Y],
-				    st->magn_uc[AXIS_Z]);
+				t = snprintf(buf, PAGE_SIZE, "%d PASS", ret);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "   xyz: %hd %hd %hd   ",
+				      st->magn[AXIS_X],
+				      st->magn[AXIS_Y],
+				      st->magn[AXIS_Z]);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "uncalibrated: %hd %hd %hd   ",
+				      st->magn_uc[AXIS_X],
+				      st->magn_uc[AXIS_Y],
+				      st->magn_uc[AXIS_Z]);
 			if (ret > 0) {
 				if (ret & (1 << AXIS_X))
-					t += sprintf(buf + t, "X ");
+					t += snprintf(buf + t, PAGE_SIZE - t,
+						      "X ");
 				if (ret & (1 << AXIS_Y))
-					t += sprintf(buf + t, "Y ");
+					t += snprintf(buf + t, PAGE_SIZE - t,
+						      "Y ");
 				if (ret & (1 << AXIS_Z))
-					t += sprintf(buf + t, "Z ");
+					t += snprintf(buf + t, PAGE_SIZE - t,
+						      "Z ");
 			}
-			t += sprintf(buf + t, "\n");
+			t += snprintf(buf + t, PAGE_SIZE - t, "\n");
 		}
 	}
 	akm_enable(st, 0, enabled);
@@ -949,12 +954,14 @@ static int akm_regs(void *client, int snsr_id, char *buf)
 	int ret;
 
 	if (!st->initd)
-		t = sprintf(buf, "calibration: NEED ENABLE\n");
+		t = snprintf(buf, PAGE_SIZE,
+			     "calibration: NEED ENABLE\n");
 	else
-		t = sprintf(buf, "calibration: x=%#2x y=%#2x z=%#2x\n",
-			    st->asa[AXIS_X],
-			    st->asa[AXIS_Y],
-			    st->asa[AXIS_Z]);
+		t = snprintf(buf, PAGE_SIZE,
+			     "calibration: x=%#2x y=%#2x z=%#2x\n",
+			     st->asa[AXIS_X],
+			     st->asa[AXIS_Y],
+			     st->asa[AXIS_Z]);
 	ret = akm_nvi_mpu_bypass_request(st);
 	if (!ret) {
 		ret = akm_i2c_rd(st, AKM_REG_WIA,
@@ -963,16 +970,20 @@ static int akm_regs(void *client, int snsr_id, char *buf)
 		akm_nvi_mpu_bypass_release(st);
 	}
 	if (ret) {
-		t += sprintf(buf + t, "registers: ERR %d\n", ret);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "registers: ERR %d\n", ret);
 	} else {
-		t += sprintf(buf + t, "registers:\n");
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "registers:\n");
 		for (i = 0; i <= st->hal->reg_st2; i++)
-			t += sprintf(buf + t, "%#2x=%#2x\n",
-				     AKM_REG_WIA + i, data1[i]);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "%#2x=%#2x\n",
+				      AKM_REG_WIA + i, data1[i]);
 		for (i = 0; i < 3; i++)
-			t += sprintf(buf + t, "%#2x=%#2x\n",
-				     st->hal->reg_cntl1 + i,
-				     data2[i]);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "%#2x=%#2x\n",
+				      st->hal->reg_cntl1 + i,
+				      data2[i]);
 	}
 	return t;
 }
@@ -982,13 +993,17 @@ static int akm_nvs_read(void *client, int snsr_id, char *buf)
 	struct akm_state *st = (struct akm_state *)client;
 	ssize_t t;
 
-	t = sprintf(buf, "driver v.%u\n", AKM_DRIVER_VERSION);
-	t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
-	t += sprintf(buf + t, "mpu_en=%x\n", st->mpu_en);
-	t += sprintf(buf + t, "nvi_config=%hhu\n", st->nvi_config);
-	t += sprintf(buf + t, "asa_q30_x=%llu\n", st->asa_q30[AXIS_X]);
-	t += sprintf(buf + t, "asa_q30_y=%llu\n", st->asa_q30[AXIS_Y]);
-	t += sprintf(buf + t, "asa_q30_z=%llu\n", st->asa_q30[AXIS_Z]);
+	t = snprintf(buf, PAGE_SIZE, "driver v.%u\n", AKM_DRIVER_VERSION);
+	t += snprintf(buf + t, PAGE_SIZE - t, "irq=%d\n", st->i2c->irq);
+	t += snprintf(buf + t, PAGE_SIZE - t, "mpu_en=%x\n", st->mpu_en);
+	t += snprintf(buf + t, PAGE_SIZE - t, "nvi_config=%hhu\n",
+		      st->nvi_config);
+	t += snprintf(buf + t, PAGE_SIZE - t, "asa_q30_x=%llu\n",
+		      st->asa_q30[AXIS_X]);
+	t += snprintf(buf + t, PAGE_SIZE - t, "asa_q30_y=%llu\n",
+		      st->asa_q30[AXIS_Y]);
+	t += snprintf(buf + t, PAGE_SIZE - t, "asa_q30_z=%llu\n",
+		      st->asa_q30[AXIS_Z]);
 	return t;
 }
 

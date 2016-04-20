@@ -11,6 +11,10 @@
  * more details.
  */
 
+#define EXTCON_NONE             0
+#define EXTCON_USB              1
+#define EXTCON_USB_Host         2
+
 / {
 	extcon {
 		vbus_gpio_extcon: extcon@1 {
@@ -22,7 +26,8 @@
 						    0x1 0x2
 						    0x2 0x1>;
 			gpios = <&gpio TEGRA_GPIO(Z, 0) 0 &max77620 0 0>;
-			extcon-gpio,out-cable-names = "USB", "USB-Host";
+			extcon-gpio,out-cable-name-strings = "USB", "USB-Host";
+			extcon-gpio,out-cable-names = <EXTCON_USB EXTCON_USB_Host EXTCON_NONE>;
 			wakeup-source;
 			#extcon-cells = <1>;
 		};

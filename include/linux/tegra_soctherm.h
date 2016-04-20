@@ -194,7 +194,7 @@ static inline void tegra_soctherm_adjust_cpu_zone(bool high_voltage_range)
 { }
 static inline void tegra_soctherm_adjust_core_zone(bool high_voltage_range)
 { }
-static int tegra_soctherm_gpu_tsens_invalidate(bool control)
+static __maybe_unused int tegra_soctherm_gpu_tsens_invalidate(bool control)
 { return 0; }
 #endif
 

@@ -968,22 +968,21 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
-		of_node_put(np_hdmi);
-		return -ENOMEM;
+		err = -ENOMEM;
+		goto fail_np_hdmi;
 	}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	err = tegra_hdmi_dpaux_init(dc);
 	if (err) {
-		of_node_put(np_hdmi);
-		return err;
+		goto fail_hdmi;
 	}
 #endif
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);
 	if (IS_ERR_OR_NULL(hdmi->sor)) {
 		err = PTR_ERR(hdmi->sor);
-		goto fail;
+		goto fail_tegra_hdmi_dpaux_init;
 	}
 
 	if (np) {
@@ -998,8 +997,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			}
 		} else {
 			err = -EINVAL;
-			of_node_put(np_panel);
-			goto fail;
+			goto fail_tegra_hdmi_dpaux_init;
 		}
 	}
 
@@ -1024,7 +1022,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			dc->out->ddc_bus);
 	if (IS_ERR_OR_NULL(hdmi->nvhdcp)) {
 		err = PTR_ERR(hdmi->nvhdcp);
-		goto fail;
+		goto fail_np_panel;
 	}
 	tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
 #endif
@@ -1098,15 +1096,18 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi_ddc_array[sor_num] = kobject_create_and_add
 		(hdmi_ddc_name_array[sor_num], kernel_kobj);
 	if (!hdmi_ddc_array[sor_num]) {
-		pr_warn("kobject create_and_add \"%s\" failed\n",
-			hdmi_ddc_name_array[sor_num]);
-		return 0;
+		pr_warn("%s: kobject create_and_add \"%s\" failed\n",
+			__func__, hdmi_ddc_name_array[sor_num]);
+		err = -ENOMEM;
+		goto fail_np_panel;
 	}
 	err = sysfs_create_file(hdmi_ddc_array[sor_num],
 		&hdmi_ddc_power_config_array[sor_num].attr);
 	if (err) {
-		pr_warn("sysfs create file hdmi_ddc_power_toggle failed\n");
-		return 0;
+		pr_warn("%s: sysfs create file hdmi_ddc_power_toggle failed\n",
+			__func__);
+		err = -ENOENT;
+		goto fail_hdmi_ddc_array;
 	}
 	if (0 == s_hdmi_init_count) {
 		err = sysfs_create_link(hdmi->hpd_switch.dev->kobj.parent,
@@ -1118,16 +1119,21 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	s_hdmi_init_count++;
 	of_node_put(np_hdmi);
 	return 0;
-fail:
+
+fail_hdmi_ddc_array:
+	kobject_put(hdmi_ddc_array[sor_num]);
+fail_np_panel:
+	of_node_put(np_panel);
+fail_tegra_hdmi_dpaux_init:
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	devm_iounmap(&dc->ndev->dev, hdmi_dpaux_base[sor_num]);
-
 	devm_release_mem_region(&dc->ndev->dev,
 		hdmi_dpaux_res[sor_num]->start,
 		resource_size(hdmi_dpaux_res[sor_num]));
+fail_hdmi:
 #endif
-
 	devm_kfree(&dc->ndev->dev, hdmi);
+fail_np_hdmi:
 	of_node_put(np_hdmi);
 	return err;
 }

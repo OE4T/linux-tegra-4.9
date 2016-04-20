@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/hda_dc.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  * Author: Animesh Kishore <ankishore@nvidia.com>
  * Author: Rahul Mittal <rmittal@nvidia.com>
  *
@@ -374,19 +374,19 @@ static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 	hda->hda_rst = of_reset_control_get(np_sor, "hda_rst");
 	if (IS_ERR_OR_NULL(hda->hda_rst)) {
 		dev_err(&dc->ndev->dev, "hda: can't get hda rst\n");
-		goto err_get_clk;
+		goto err_hda_rst;
 	}
 
 	hda->hda2codec_rst = of_reset_control_get(np_sor, "hda2codec_2x_rst");
 	if (IS_ERR_OR_NULL(hda->hda2codec_rst)) {
 		dev_err(&dc->ndev->dev, "hda: can't get hda2codec rst\n");
-		goto err_get_clk;
+		goto err_hda2codec_rst;
 	}
 
 	hda->hda2hdmi_rst = of_reset_control_get(np_sor, "hda2hdmi_rst");
 	if (IS_ERR_OR_NULL(hda->hda2hdmi_rst)) {
 		dev_err(&dc->ndev->dev, "hda: can't get hda2hdmi rst\n");
-		goto err_get_clk;
+		goto err_hda2hdmi_rst;
 	}
 #endif
 
@@ -474,6 +474,15 @@ err_get_clk:
 		if (!IS_ERR_OR_NULL(hda->maud_clk))
 			clk_put(hda->maud_clk);
 	}
+#if defined(CONFIG_COMMON_CLK)
+	reset_control_put(hda->hda2hdmi_rst);
+err_hda2hdmi_rst:
+	reset_control_put(hda->hda2codec_rst);
+err_hda2codec_rst:
+	reset_control_put(hda->hda_rst);
+err_hda_rst:
+	return;
+#endif	/*defined(CONFIG_COMMON_CLK)*/
 }
 
 static void tegra_dc_hda_put_clocks(struct tegra_dc *dc,

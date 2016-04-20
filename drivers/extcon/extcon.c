@@ -1346,6 +1346,80 @@ struct extcon_dev *extcon_get_edev_by_phandle(struct device *dev, int index)
 
 	return ERR_PTR(-EPROBE_DEFER);
 }
+
+static struct extcon_dev *of_extcon_dev_get_by_cable_name(
+		struct device_node *np, const char *cable_name,
+		int *cable_index)
+{
+	struct extcon_dev *edev = NULL;
+	struct of_phandle_args npspec;
+	int ret;
+	int index = 0;
+	int cindex = -1;
+
+	/*
+	 * For named cable, first look up the name in the "extcon-names"
+	 * property.  If it cannot be found, the index will be an error
+	 * code, and of_extcon_dev_get_by_name() will fail.
+	 */
+	if (cable_name)
+		index = of_property_match_string(np, "extcon-cable-names",
+					cable_name);
+
+	ret = of_parse_phandle_with_args(np, "extcon-cables", "#extcon-cells",
+						index, &npspec);
+	if (ret < 0)
+		return ERR_PTR(ret);
+
+	mutex_lock(&extcon_dev_list_lock);
+	list_for_each_entry(edev, &extcon_dev_list, entry) {
+		if (edev->dev.parent && edev->dev.parent->of_node == npspec.np) {
+			cindex = npspec.args_count ? npspec.args[0] : 0;
+			goto out;
+		}
+	}
+	edev = NULL;
+out:
+	mutex_unlock(&extcon_dev_list_lock);
+
+	of_node_put(npspec.np);
+	if (!edev) {
+		if (cable_name && index >= 0) {
+			pr_err("ERROR: could not get extcon-dev %s:%s(%i)\n",
+					np->full_name,
+					cable_name ? cable_name : "", index);
+			return ERR_PTR(-EPROBE_DEFER);
+		}
+	}
+
+	if (cindex >= edev->max_supported) {
+		pr_err("ERROR: Cable %s Index %d is not supported\n",
+				cable_name ? cable_name : "", cindex);
+		return ERR_PTR(-EINVAL);
+	}
+
+	*cable_index = cindex;
+	return edev;
+}
+
+struct extcon_dev *extcon_get_extcon_dev_by_cable(struct device *dev,
+			const char *cable_name)
+{
+	struct extcon_dev *edev;
+	int index = -1;
+
+	if (!dev || !dev->of_node || !cable_name)
+		return ERR_PTR(-EINVAL);
+
+	edev = of_extcon_dev_get_by_cable_name(dev->of_node,
+					cable_name, &index);
+
+	if (IS_ERR(edev) || index < 0)
+		return ERR_PTR(-EPROBE_DEFER);
+	return edev;
+}
+EXPORT_SYMBOL_GPL(extcon_get_extcon_dev_by_cable);
+
 #else
 struct extcon_dev *extcon_get_edev_by_phandle(struct device *dev, int index)
 {

@@ -555,6 +555,39 @@ static void tegra_xusb_boost_cpu_deinit(struct tegra_xusb *tegra)
 	mutex_destroy(&tegra->boost_cpufreq_lock);
 }
 
+static bool xhci_err_init;
+static ssize_t show_xhci_stats(struct device *dev,
+		struct device_attribute *attr, char *buf) {
+	struct tegra_xusb *tegra = NULL;
+	struct xhci_hcd *xhci = NULL;
+	ssize_t ret;
+
+	if (dev != NULL)
+		tegra = dev_get_drvdata(dev);
+
+	if (tegra != NULL) {
+		xhci = hcd_to_xhci(tegra->hcd);
+		ret =  snprintf(buf, PAGE_SIZE, "comp_tx_err:%u\nversion:%u\n",
+			xhci->xhci_ereport.comp_tx_err,
+			xhci->xhci_ereport.version);
+	} else
+		ret = snprintf(buf, PAGE_SIZE, "comp_tx_err:0\nversion:0\n");
+
+	return ret;
+}
+
+static DEVICE_ATTR(xhci_stats, 0444, show_xhci_stats, NULL);
+
+static struct attribute *tegra_sysfs_entries_errs[] = {
+	&dev_attr_xhci_stats.attr,
+	NULL,
+};
+
+static struct attribute_group tegra_sysfs_group_errors = {
+	.name = "xhci-stats",
+	.attrs = tegra_sysfs_entries_errs,
+};
+
 static inline u32 fpci_readl(struct tegra_xusb *tegra, unsigned int offset)
 {
 	return readl(tegra->fpci_base + offset);
@@ -2418,6 +2451,27 @@ static void tegra_xhci_oc_work(struct work_struct *work)
 	tegra_xusb_padctl_handle_overcurrent(tegra->padctl);
 }
 
+static int tegra_sysfs_register(struct platform_device *pdev)
+{
+	int ret = 0;
+	struct device *dev = NULL;
+
+	if (pdev != NULL)
+		dev = &pdev->dev;
+
+	if (!xhci_err_init && dev != NULL) {
+		ret = sysfs_create_group(&dev->kobj, &tegra_sysfs_group_errors);
+		xhci_err_init = true;
+	}
+
+	if (ret) {
+		pr_err("%s: failed to create tegra sysfs group %s\n",
+			__func__, tegra_sysfs_group_errors.name);
+	}
+
+	return ret;
+}
+
 static int tegra_xusb_probe(struct platform_device *pdev)
 {
 	struct resource *res, *regs;
@@ -2646,6 +2700,7 @@ static int tegra_xusb_probe(struct platform_device *pdev)
 		tegra_xusb_config(tegra);
 
 	tegra_xusb_debugfs_init(tegra);
+	tegra_sysfs_register(pdev);
 
 	if (tegra_platform_is_silicon() && !tegra->soc->is_xhci_vf) {
 		INIT_WORK(&tegra->id_extcon_work, tegra_xhci_id_extcon_work);
@@ -2721,6 +2776,13 @@ put_padctl:
 static int tegra_xusb_remove(struct platform_device *pdev)
 {
 	struct tegra_xusb *tegra = platform_get_drvdata(pdev);
+	struct device *dev = &pdev->dev;
+
+
+	if (xhci_err_init && dev != NULL) {
+		sysfs_remove_group(&dev->kobj, &tegra_sysfs_group_errors);
+		xhci_err_init = false;
+	}
 
 	if (tegra->soc->handle_oc)
 		cancel_work_sync(&tegra->oc_work);

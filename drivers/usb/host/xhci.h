@@ -1523,6 +1523,11 @@ struct xhci_hub {
 	u8	psi_uid_count;
 };
 
+struct xhci_err_cnt {
+	unsigned int version;
+	unsigned int comp_tx_err;
+};
+
 /* There is one xhci_hcd structure per controller */
 struct xhci_hcd {
 	struct usb_hcd *main_hcd;
@@ -1696,6 +1701,8 @@ struct xhci_hcd {
 	struct platform_device *pdev;
 	/* platform-specific data -- must come last */
 	unsigned long		priv[0] __aligned(sizeof(s64));
+	/* Error collecting struct for sysfs */
+	struct xhci_err_cnt xhci_ereport;
 };
 
 /* Platform specific overrides to generic XHCI hc_driver ops */

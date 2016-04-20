@@ -25,6 +25,8 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/uaccess.h>
 #include <linux/platform/tegra/isomgr.h>
+#include <linux/debugfs.h>
+#include <linux/ktime.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -44,6 +46,7 @@ static DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_common_channel_wq);
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
 #define NSEC_PER_MICROSEC 1000
+#define MIN_FRAME_INTERVAL 1000
 
 /* Global variables provided for clocks
  * common to all heads
@@ -1493,7 +1496,8 @@ failed_enable:
 	return -EINVAL;
 }
 
-void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc) {
+void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc)
+{
 	tegra_dc_writel(dc,
 		nvdisp_display_rate_min_refresh_enable_f(1) |
 		nvdisp_display_rate_min_refresh_interval_f(
@@ -1505,6 +1509,40 @@ void tegra_nvdisp_set_vrr_mode(struct tegra_dc *dc) {
 		, nvdisp_cmd_state_ctrl_r());
 }
 EXPORT_SYMBOL(tegra_nvdisp_set_vrr_mode);
+
+void tegra_nvdisp_vrr_work(struct work_struct *work)
+{
+	int reg_val;
+	int frame_time_elapsed;
+	struct timespec time_now;
+	s64 time_now_us;
+
+	struct tegra_dc *dc = container_of(
+		to_delayed_work(work), struct tegra_dc, vrr_work);
+	struct tegra_vrr *vrr = dc->out->vrr;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+	getnstimeofday(&time_now);
+	time_now_us = (s64)time_now.tv_sec * 1000000 +
+		time_now.tv_nsec / 1000;
+
+	frame_time_elapsed = time_now_us - vrr->curr_frame_us;
+
+	if (frame_time_elapsed < (vrr->frame_len_max - MIN_FRAME_INTERVAL)) {
+		reg_val = tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r());
+		reg_val |= nvdisp_cmd_state_ctrl_host_trig_enable_f();
+		reg_val |= nvdisp_cmd_state_ctrl_general_act_req_enable_f();
+		tegra_dc_writel(dc, reg_val, nvdisp_cmd_state_ctrl_r());
+		tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	}
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+	return;
+}
+EXPORT_SYMBOL(tegra_nvdisp_vrr_work);
 
 u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_number,
 				int ihub_switch)

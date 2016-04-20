@@ -31,7 +31,6 @@
 #include "hw_fuse_gm20b.h"
 #include "pmu_gm20b.h"
 #include "acr_gm20b.h"
-#include "hw_proj_gm20b.h"
 
 static void gr_gm20b_init_gpc_mmu(struct gk20a *g)
 {
@@ -1195,8 +1194,10 @@ static int gm20b_gr_record_sm_error_state(struct gk20a *g, u32 gpc, u32 tpc)
 {
 	int sm_id;
 	struct gr_gk20a *gr = &g->gr;
-	u32 offset = proj_gpc_stride_v() * gpc +
-		     proj_tpc_in_gpc_stride_v() * tpc;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
+					       GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 
 	mutex_lock(&g->dbg_sessions_lock);
 
@@ -1226,6 +1227,9 @@ static int gm20b_gr_update_sm_error_state(struct gk20a *g,
 	u32 gpc, tpc, offset;
 	struct gr_gk20a *gr = &g->gr;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
+					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	int err = 0;
 
 	mutex_lock(&g->dbg_sessions_lock);
@@ -1250,8 +1254,7 @@ static int gm20b_gr_update_sm_error_state(struct gk20a *g,
 	gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
 	tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
 
-	offset = proj_gpc_stride_v() * gpc +
-		     proj_tpc_in_gpc_stride_v() * tpc;
+	offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 
 	if (gk20a_is_channel_ctx_resident(ch)) {
 		gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
@@ -1295,6 +1298,9 @@ static int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 	u32 gpc, tpc, offset;
 	u32 val;
 	struct gr_gk20a *gr = &g->gr;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
+					       GPU_LIT_TPC_IN_GPC_STRIDE);
 	int err = 0;
 
 	mutex_lock(&g->dbg_sessions_lock);
@@ -1311,8 +1317,7 @@ static int gm20b_gr_clear_sm_error_state(struct gk20a *g,
 		gpc = g->gr.sm_to_cluster[sm_id].gpc_index;
 		tpc = g->gr.sm_to_cluster[sm_id].tpc_index;
 
-		offset = proj_gpc_stride_v() * gpc +
-			     proj_tpc_in_gpc_stride_v() * tpc;
+		offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
 
 		val = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
 		gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,

@@ -110,7 +110,7 @@ void tegra_bpmp_mail_return_data(int ch, int code, void *data, int sz)
 	}
 
 	frame->code = code;
-	memcpy(frame->data, data, sz);
+	memcpy_toio(frame->data, data, sz);
 	r = tegra_ivc_write_advance(ivc);
 	WARN_ON(r);
 

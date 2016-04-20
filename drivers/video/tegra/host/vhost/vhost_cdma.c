@@ -189,7 +189,7 @@ static void vhost_cdma_timeout_pb_cleanup(struct nvhost_cdma *cdma, u32 getptr,
 {
 }
 
-static void vhost_cdma_timeout_teardown_begin(struct nvhost_cdma *cdma)
+static void vhost_cdma_timeout_teardown_begin(struct nvhost_cdma *cdma, bool skip_reset)
 {
 }
 

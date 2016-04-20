@@ -55,11 +55,12 @@ struct nvhost_cdma_ops {
 	int (*timeout_init)(struct nvhost_cdma *,
 			    u32 syncpt_id);
 	void (*timeout_destroy)(struct nvhost_cdma *);
-	void (*timeout_teardown_begin)(struct nvhost_cdma *);
+	void (*timeout_teardown_begin)(struct nvhost_cdma *, bool skip_reset);
 	void (*timeout_teardown_end)(struct nvhost_cdma *,
 				     u32 getptr);
 	void (*timeout_pb_cleanup)(struct nvhost_cdma *,
 				 u32 getptr, u32 nr_slots);
+	void (*handle_timeout)(struct nvhost_cdma *, bool skip_reset);
 	void (*make_adjacent_space)(struct nvhost_cdma *, u32 words);
 };
 

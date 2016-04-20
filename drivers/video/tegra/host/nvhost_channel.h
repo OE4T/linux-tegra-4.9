@@ -90,6 +90,8 @@ struct nvhost_channel *nvhost_alloc_channel_internal(int chindex,
 void nvhost_channel_init_gather_filter(struct platform_device *pdev,
 	struct nvhost_channel *ch);
 
+bool nvhost_channel_is_reset_required(struct nvhost_channel *ch);
+
 int nvhost_channel_nb_channels(struct nvhost_master *host);
 int nvhost_channel_ch_base(struct nvhost_master *host);
 int nvhost_channel_ch_limit(struct nvhost_master *host);

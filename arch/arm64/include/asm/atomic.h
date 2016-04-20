@@ -55,150 +55,68 @@
 
 #define atomic_read(v)			READ_ONCE((v)->counter)
 #define atomic_set(v, i)		WRITE_ONCE(((v)->counter), (i))
-
-static inline u64 ldx64(volatile u64 *p)
-{
-	u64 ret;
-	asm volatile("ldxr %x0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
+/*
+ * Macros for generating inline functions to use special load and store
+ * instructions (exlusive and  aquire/release).
+ */
+#define _LD(_name, _type, _inst, _reg)					       \
+static inline _type _name (volatile _type *p)				       \
+{									       \
+	_type ret;							       \
+	asm volatile(							       \
+		_inst " %" _reg "0, %1": "=&r" (ret) : "Q" (*p) : "memory");   \
+	return ret;							       \
 }
 
-static inline int stx64(volatile u64 *p, u64 v)
-{
-	int ret;
-	asm volatile(
-		 "stxr %x0, %x1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
+#define _STX(_name, _type, _inst, _reg)					       \
+static inline int _name (volatile _type *p, _type v)			       \
+{									       \
+	int ret;							       \
+	asm volatile(							       \
+		 _inst " %" _reg "0, %" _reg "1, %2"			       \
+		: "=&r" (ret)						       \
+		: "r" (v), "Q" (*p)					       \
+		: "memory");						       \
+	return ret;							       \
 }
 
-static inline u32 ldx32(volatile u32 *p)
-{
-	u32 ret;
-	asm volatile("ldxr %w0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
+#define _STL(_name, _type, _inst, _reg)					       \
+static inline void _name (volatile _type *p, _type v)			       \
+{									       \
+	asm volatile(							       \
+		 _inst " %" _reg "0, %1"				       \
+		:							       \
+		: "r" (v), "Q" (*p)					       \
+		: "memory");						       \
 }
 
-static inline int stx32(volatile u32 *p, u32 v)
-{
-	int ret;
-	asm volatile(
-		 "stxr %w0, %w1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
-}
+_LD(  ldx64, u64,   "ldxr", "x")
+_STX( stx64, u64,   "stxr", "x")
+_LD( ldax64, u64,  "ldaxr", "x")
+_STX(stlx64, u64,  "stlxr", "x")
+_LD(  lda64, u64,   "ldar", "x")
+_STL( stl64, u64,   "stlr", "x")
 
-static inline u16 ldx16(volatile u16 *p)
-{
-	u16 ret;
-	asm volatile("ldxrh %w0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
-}
+_LD(  ldx32, u32,   "ldxr", "w")
+_STX( stx32, u32,   "stxr", "w")
+_LD( ldax32, u32,  "ldaxr", "w")
+_STX(stlx32, u32,  "stlxr", "w")
+_LD(  lda32, u32,   "ldar", "w")
+_STL( stl32, u32,   "stlr", "w")
 
-static inline int stx16(volatile u16 *p, u16 v)
-{
-	int ret;
-	asm volatile(
-		 "stxrh %w0, %w1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
-}
+_LD(  ldx16, u16,  "ldxrh", "w")
+_STX( stx16, u16,  "stxrh", "w")
+_LD( ldax16, u16, "ldaxrh", "w")
+_STX(stlx16, u16, "stlxrh", "w")
+_LD(  lda16, u16,  "ldarh", "w")
+_STL( stl16, u16,  "stlrh", "w")
 
-static inline u8 ldx8(volatile u8 *p)
-{
-	u8 ret;
-	asm volatile("ldxrb %w0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
-}
-
-static inline int stx8(volatile u8 *p, u8 v)
-{
-	int ret;
-	asm volatile(
-		 "stxrb %w0, %w1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
-}
-
-static inline u64 ldax64(volatile u64 *p)
-{
-	u64 ret;
-	asm volatile("ldaxr %x0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
-}
-
-static inline int stlx64(volatile u64 *p, u64 v)
-{
-	int ret;
-	asm volatile(
-		 "stlxr %x0, %x1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
-}
-
-static inline u32 ldax32(volatile u32 *p)
-{
-	u32 ret;
-	asm volatile("ldaxr %w0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
-}
-
-static inline int stlx32(volatile u32 *p, u32 v)
-{
-	int ret;
-	asm volatile(
-		 "stlxr %w0, %w1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
-}
-
-static inline u16 ldax16(volatile u16 *p)
-{
-	u16 ret;
-	asm volatile("ldaxrh %w0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
-}
-
-static inline int stlx16(volatile u16 *p, u16 v)
-{
-	int ret;
-	asm volatile(
-		 "stlxrh %w0, %w1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
-}
-
-static inline u8 ldax8(volatile u8 *p)
-{
-	u8 ret;
-	asm volatile("ldaxrb %w0, %1" : "=&r" (ret) : "Q" (*p) : "memory");
-	return ret;
-}
-
-static inline int stlx8(volatile u8 *p, u8 v)
-{
-	int ret;
-	asm volatile(
-		 "stlxrb %w0, %w1, %2"
-		: "=&r" (ret)
-		: "r" (v), "Q" (*p)
-		: "memory");
-	return ret;
-}
+_LD(   ldx8,  u8,  "ldxrb", "w")
+_STX(  stx8,  u8,  "stxrb", "w")
+_LD(  ldax8,  u8, "ldaxrb", "w")
+_STX( stlx8,  u8, "stlxrb", "w")
+_LD(   lda8,  u8,  "ldarb", "w")
+_STL(  stl8,  u8,  "stlrb", "w")
 
 #define atomic_add_return_relaxed	atomic_add_return_relaxed
 #define atomic_add_return_acquire	atomic_add_return_acquire

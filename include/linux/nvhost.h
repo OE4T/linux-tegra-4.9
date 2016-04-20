@@ -180,6 +180,9 @@ struct nvhost_device_data {
 	bool		virtual_dev;	/* True if virtualized device */
 	char		*devfs_name;	/* Name in devfs */
 
+	/* Support aborting the channel with close(channel_fd) */
+	bool		support_abort_on_close;
+
 	char		*firmware_name;	/* Name of firmware */
 
 	int		powergate_id;

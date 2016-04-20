@@ -92,6 +92,9 @@ void nvhost_channel_init_gather_filter(struct platform_device *pdev,
 
 bool nvhost_channel_is_reset_required(struct nvhost_channel *ch);
 
+int nvhost_channel_abort(struct nvhost_device_data *pdata,
+			void *identifier);
+
 int nvhost_channel_nb_channels(struct nvhost_master *host);
 int nvhost_channel_ch_base(struct nvhost_master *host);
 int nvhost_channel_ch_limit(struct nvhost_master *host);

@@ -265,6 +265,10 @@ static int nvhost_channelrelease(struct inode *inode, struct file *filp)
 	if (priv->error_notifier_ref)
 		dma_buf_put(priv->error_notifier_ref);
 
+	/* Abort the channel */
+	if (pdata->support_abort_on_close)
+		nvhost_channel_abort(pdata, (void *)priv);
+
 	/* Clear the identifier */
 	if ((pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) ||
 			(pdata->resource_policy == RESOURCE_PER_DEVICE &&

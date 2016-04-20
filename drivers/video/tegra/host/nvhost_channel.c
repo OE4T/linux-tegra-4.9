@@ -296,6 +296,41 @@ int nvhost_channel_list_free(struct nvhost_master *host)
 	return 0;
 }
 
+int nvhost_channel_abort(struct nvhost_device_data *pdata,
+			void *identifier)
+{
+	int index;
+	int max_channels;
+	struct nvhost_master *host = NULL;
+	struct nvhost_channel *ch = NULL;
+
+	host = nvhost_get_host(pdata->pdev);
+	max_channels = nvhost_channel_nb_channels(host);
+
+	mutex_lock(&host->ch_alloc_mutex);
+	mutex_lock(&host->chlist_mutex);
+
+	/* first check if channel is mapped */
+	for (index = 0; index < max_channels; index++) {
+		ch = host->chlist[index];
+		if (ch->identifier == identifier
+				&& kref_get_unless_zero(&ch->refcount))
+			break;
+	}
+
+	mutex_unlock(&host->chlist_mutex);
+	mutex_unlock(&host->ch_alloc_mutex);
+
+	if (index == max_channels) /* no channel mapped */
+		return 0;
+
+	cdma_op().handle_timeout(&ch->cdma, true);
+
+	kref_put(&ch->refcount, nvhost_channel_unmap_locked);
+
+	return 0;
+}
+
 bool nvhost_channel_is_reset_required(struct nvhost_channel *ch)
 {
 	bool reset_required = false;

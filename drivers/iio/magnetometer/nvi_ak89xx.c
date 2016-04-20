@@ -1536,6 +1536,7 @@ static int akm_of_dt(struct akm_state *st, struct device_node *dn)
 	char const *pchar;
 	u8 cfg;
 	int ret;
+	u32 axis;
 
 	/* just test if global disable */
 	ret = nvs_of_dt(dn, NULL, NULL);
@@ -1560,9 +1561,12 @@ static int akm_of_dt(struct akm_state *st, struct device_node *dn)
 	else
 		st->matrix_en = false;
 	/* axis sensitivity adjustment overrides */
-	of_property_read_u32(dn, "ara_q30_x", (u32 *)&st->asa_q30[AXIS_X]);
-	of_property_read_u32(dn, "ara_q30_y", (u32 *)&st->asa_q30[AXIS_Y]);
-	of_property_read_u32(dn, "ara_q30_z", (u32 *)&st->asa_q30[AXIS_Z]);
+	if (!of_property_read_u32(dn, "ara_q30_x", &axis))
+		st->asa_q30[AXIS_X] = (u64)axis;
+	if (!of_property_read_u32(dn, "ara_q30_y", &axis))
+		st->asa_q30[AXIS_Y] = (u64)axis;
+	if (!of_property_read_u32(dn, "ara_q30_z", &axis))
+		st->asa_q30[AXIS_Z] = (u64)axis;
 	return 0;
 }
 

@@ -161,7 +161,7 @@
 		};
 
 		en_vdd_sdcard1: regulator@110 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <110>;
 			regulator-name = "vdd-sdcard1-sw";
 			regulator-min-microvolt = <3300000>;
@@ -171,7 +171,7 @@
 		};
 
 		vdd_sdcard3_sw: regulator@111 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <111>;
 			regulator-name = "vdd-sdcard3-sw";
 			regulator-min-microvolt = <3300000>;

@@ -109,7 +109,7 @@
 		};
 
 		vdd_3v3_sata: regulator@3 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <3>;
 			regulator-name = "vdd-3v3-sata";
 			regulator-min-microvolt = <3300000>;
@@ -120,7 +120,7 @@
 		};
 
 		vdd_usb0_5v: regulator@4 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <4>;
 			regulator-name = "vdd-usb0-5v";
 			regulator-min-microvolt = <5000000>;
@@ -131,7 +131,7 @@
 		};
 
 		vdd_usb1_5v: regulator@5 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <5>;
 			regulator-name = "vdd-usb1-5v";
 			regulator-min-microvolt = <5000000>;
@@ -142,7 +142,7 @@
 		};
 
 		vdd_usb2_5v: regulator@6 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <6>;
 			regulator-name = "vdd-usb2-5v";
 			regulator-min-microvolt = <5000000>;
@@ -153,7 +153,7 @@
 		};
 
 		vdd_sdcard1_3v3: regulator@7 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <7>;
 			regulator-name = "vdd-sdcard1";
 			regulator-min-microvolt = <3300000>;
@@ -164,7 +164,7 @@
 		};
 
 		vdd_sdcard3_3v3: regulator@8 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <8>;
 			regulator-name = "vdd-sdcard3";
 			regulator-min-microvolt = <3300000>;
@@ -175,7 +175,7 @@
 		};
 
 		vdd_3v3_hv: regulator@9 {
-			compatible = "regulator-fixed";
+			compatible = "regulator-fixed-sync";
 			reg = <9>;
 			regulator-name = "vdd-3v3-hv";
 			regulator-min-microvolt = <3300000>;

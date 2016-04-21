@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2010-2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -39,6 +39,11 @@
 #define RSA_KEY_SIZE		512
 #define TEGRA_CRYPTO_IV_SIZE	AES_BLOCK_SIZE
 #define DEFAULT_RNG_BLK_SZ	16
+#define TEGRA_CRYPTO_KEY_256_SIZE	32
+#define TEGRA_CRYPTO_KEY_192_SIZE	24
+#define TEGRA_CRYPTO_KEY_128_SIZE	16
+
+#define CRYPTO_KEY_LEN_MASK	0x3FF
 
 /* the seed consists of 16 bytes of key + 16 bytes of init vector */
 #define TEGRA_CRYPTO_RNG_SEED_SIZE	AES_KEYSIZE_128 + DEFAULT_RNG_BLK_SZ

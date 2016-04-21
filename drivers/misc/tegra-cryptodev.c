@@ -173,7 +173,12 @@ static int process_crypt_req(struct file *filp, struct tegra_crypto_ctx *ctx,
 		goto free_tfm;
 	}
 
-	if ((crypt_req->keylen < 0) || (crypt_req->keylen > AES_MAX_KEY_SIZE)) {
+	if (((crypt_req->keylen &
+		CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_128_SIZE) &&
+		((crypt_req->keylen &
+		CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_192_SIZE) &&
+		((crypt_req->keylen &
+		CRYPTO_KEY_LEN_MASK) != TEGRA_CRYPTO_KEY_256_SIZE)) {
 		ret = -EINVAL;
 		pr_err("crypt_req keylen invalid");
 		goto process_req_out;

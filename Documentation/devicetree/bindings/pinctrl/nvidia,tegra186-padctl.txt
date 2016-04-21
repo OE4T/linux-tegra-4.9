@@ -74,6 +74,13 @@ divided into four groups:
     Do not set function for this group.
     nvidia,port-cap is required.
 
+  - cdp-0, cdp-1, cdp-2:
+
+    Valid functions for this group is: "xusb". No other property is required.
+    This type of lane is an abstraction of Tegra CDP (charging downstream port)
+    which can be turned on by host controller driver using generic phy API to
+    declare a UTMI host port as CDP.
+
 Example:
 ========
 
@@ -94,12 +101,14 @@ SoC file extract:
 Board file extract:
 -------------------
 
-	# XUSB host mode takes UTMI pad#2 and SuperSpeed pad#2 for a USB 3.0 host port
+	# XUSB host mode takes UTMI pad#2 and SuperSpeed pad#2 for a USB 3.0 host
+	#  port. Also add CDP support for that UTMI pad#2.
 	xhci@0x03530000 {
 		...
 		phys = 	<&board-padctl TEGRA_PADCTL_PHY_UTMI_P(2)>,
 			<&board-padctl TEGRA_PADCTL_PHY_USB3_P(2)>,
-		phy-names = "utmi-2", "usb3-2";
+			<&board-padctl TEGRA_PADCTL_PHY_CDP_P(2)>;
+		phy-names = "utmi-2", "usb3-2", "cdp-2";
 
 		...
 	}

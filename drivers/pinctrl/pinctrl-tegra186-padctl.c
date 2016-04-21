@@ -54,6 +54,7 @@
 #define TEGRA_USB3_PHYS		(3)
 #define TEGRA_UTMI_PHYS		(3)
 #define TEGRA_HSIC_PHYS		(1)
+#define TEGRA_CDP_PHYS		(3)
 
 /* FUSE USB_CALIB registers */
 /* FUSE_USB_CALIB_0 */
@@ -396,6 +397,7 @@ struct tegra_padctl {
 	struct phy *usb3_phys[TEGRA_USB3_PHYS];
 	struct phy *utmi_phys[TEGRA_UTMI_PHYS];
 	struct phy *hsic_phys[TEGRA_HSIC_PHYS];
+	struct phy *cdp_phys[TEGRA_CDP_PHYS];
 	struct tegra_xusb_hsic_port hsic_ports[TEGRA_HSIC_PHYS];
 	struct tegra_xusb_utmi_port utmi_ports[TEGRA_UTMI_PHYS];
 	int utmi_otg_port_base_1; /* one based utmi port number */
@@ -420,6 +422,8 @@ struct tegra_padctl {
 
 	struct regulator_bulk_data *supplies;
 	struct padctl_context padctl_context;
+
+	bool cdp_used;
 };
 
 #ifdef VERBOSE_DEBUG
@@ -524,6 +528,9 @@ struct tegra_padctl *mbox_work_to_padctl(struct work_struct *work)
 #define PIN_USB3_0	4
 #define PIN_USB3_1	5
 #define PIN_USB3_2	6
+#define PIN_CDP_0	7
+#define PIN_CDP_1	8
+#define PIN_CDP_2	9
 
 static inline bool pad_is_otg(unsigned int pad)
 {
@@ -538,6 +545,11 @@ static inline bool pad_is_hsic(unsigned int pad)
 static inline bool pad_is_usb3(unsigned int pad)
 {
 	return pad >= PIN_USB3_0 && pad <= PIN_USB3_2;
+}
+
+static inline bool pad_is_cdp(unsigned int pad)
+{
+	return pad >= PIN_CDP_0 && pad <= PIN_CDP_2;
 }
 
 static int tegra_padctl_get_groups_count(struct pinctrl_dev *pinctrl)
@@ -783,6 +795,10 @@ static int tegra186_padctl_pinmux_set(struct pinctrl_dev *pinctrl,
 		value &= ~(pad->mask << pad->shift);
 		value |= (PORT_HSIC << pad->shift);
 		padctl_writel(padctl, value, pad->offset);
+	} else if (pad_is_cdp(group)) {
+		if (function != TEGRA186_FUNC_XUSB)
+			dev_warn(padctl->dev, "group %s isn't for xusb!",
+				 pad->name);
 	} else
 		return -EINVAL;
 
@@ -1188,6 +1204,20 @@ static int utmi_phy_to_port(struct phy *phy)
 	return -EINVAL;
 }
 
+static int cdp_phy_to_port(struct phy *phy)
+{
+	struct tegra_padctl *padctl = phy_get_drvdata(phy);
+	unsigned int i;
+
+	for (i = 0; i < TEGRA_CDP_PHYS; i++) {
+		if (phy == padctl->cdp_phys[i])
+			return i;
+	}
+	WARN_ON(1);
+
+	return -EINVAL;
+}
+
 static int tegra186_utmi_phy_enable_sleepwalk(struct tegra_padctl *padctl,
 				       int port, enum usb_device_speed speed)
 {
@@ -1383,10 +1413,12 @@ static void tegra186_utmi_bias_pad_power_off(struct tegra_padctl *padctl)
 	if (--padctl->bias_pad_enable > 0)
 		return;
 
-	/* BIAS pad */
-	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
-	reg |= BIAS_PAD_PD;
-	padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+	if (!padctl->cdp_used) {
+		/* only turn BIAS pad off when host CDP isn't enabled */
+		reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+		reg |= BIAS_PAD_PD;
+		padctl_writel(padctl, reg, XUSB_PADCTL_USB2_BIAS_PAD_CTL0);
+	}
 
 	reg = padctl_readl(padctl, XUSB_PADCTL_USB2_BIAS_PAD_CTL1);
 	reg |= USB2_PD_TRK;
@@ -1603,6 +1635,71 @@ static const struct phy_ops utmi_phy_ops = {
 	.exit = tegra186_utmi_phy_exit,
 	.power_on = tegra186_utmi_phy_power_on,
 	.power_off = tegra186_utmi_phy_power_off,
+	.owner = THIS_MODULE,
+};
+
+static int tegra186_cdp_phy_set_cdp(struct phy *phy, bool enable)
+{
+	struct tegra_padctl *padctl = phy_get_drvdata(phy);
+	int port = cdp_phy_to_port(phy);
+	u32 reg;
+
+	dev_info(padctl->dev, "%sable UTMI port %d Tegra CDP\n",
+		 enable ? "en" : "dis", port);
+	if (enable) {
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+		reg &= ~PD_CHG;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+
+		reg = padctl_readl(padctl,
+				   XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
+		reg |= (USB2_OTG_PD2 | USB2_OTG_PD2_OVRD_EN);
+		padctl_writel(padctl, reg,
+			      XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
+
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+		reg |= ON_SRC_EN;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+	} else {
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+		reg |= PD_CHG;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+
+		reg = padctl_readl(padctl,
+				   XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
+		reg &= ~USB2_OTG_PD2_OVRD_EN;
+		padctl_writel(padctl, reg,
+			      XUSB_PADCTL_USB2_OTG_PADX_CTL0(port));
+
+		reg = padctl_readl(padctl,
+				   USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+		reg &= ~ON_SRC_EN;
+		padctl_writel(padctl, reg,
+			      USB2_BATTERY_CHRG_OTGPADX_CTL0(port));
+	}
+
+	return 0;
+}
+
+static int tegra186_cdp_phy_power_on(struct phy *phy)
+{
+	return tegra186_cdp_phy_set_cdp(phy, true);
+}
+
+static int tegra186_cdp_phy_power_off(struct phy *phy)
+{
+	return tegra186_cdp_phy_set_cdp(phy, false);
+}
+
+static const struct phy_ops cdp_phy_ops = {
+	.power_on = tegra186_cdp_phy_power_on,
+	.power_off = tegra186_cdp_phy_power_off,
 	.owner = THIS_MODULE,
 };
 
@@ -2148,6 +2245,13 @@ static struct phy *tegra186_padctl_xlate(struct device *dev,
 		if (phy_index < TEGRA_HSIC_PHYS)
 			phy = padctl->hsic_phys[phy_index];
 
+	} else if ((index >= TEGRA_PADCTL_PHY_CDP_BASE) &&
+		(index < TEGRA_PADCTL_PHY_CDP_BASE + 16)) {
+
+		phy_index = index -  TEGRA_PADCTL_PHY_CDP_BASE;
+		if (phy_index < TEGRA_CDP_PHYS)
+			phy = padctl->cdp_phys[phy_index];
+		padctl->cdp_used = true;
 	}
 
 	return (phy) ? phy : ERR_PTR(-EINVAL);
@@ -2161,6 +2265,9 @@ static const struct pinctrl_pin_desc tegra186_pins[] = {
 	PINCTRL_PIN(PIN_USB3_0, "usb3-0"),
 	PINCTRL_PIN(PIN_USB3_1, "usb3-1"),
 	PINCTRL_PIN(PIN_USB3_2, "usb3-2"),
+	PINCTRL_PIN(PIN_CDP_0,  "cdp-0"),
+	PINCTRL_PIN(PIN_CDP_1,  "cdp-1"),
+	PINCTRL_PIN(PIN_CDP_2,  "cdp-2"),
 };
 
 
@@ -2172,6 +2279,9 @@ static const char * const tegra186_xusb_groups[] = {
 	"otg-0",
 	"otg-1",
 	"otg-2",
+	"cdp-0",
+	"cdp-1",
+	"cdp-2",
 };
 
 #define TEGRA186_FUNCTION(_name)					\
@@ -2357,6 +2467,15 @@ static int tegra_xusb_setup_usb(struct tegra_padctl *padctl)
 			return PTR_ERR(phy);
 
 		padctl->hsic_phys[i] = phy;
+		phy_set_drvdata(phy, padctl);
+	}
+
+	for (i = 0; i < TEGRA_CDP_PHYS; i++) {
+		phy = devm_phy_create(padctl->dev, NULL, &cdp_phy_ops);
+		if (IS_ERR(phy))
+			return PTR_ERR(phy);
+
+		padctl->cdp_phys[i] = phy;
 		phy_set_drvdata(phy, padctl);
 	}
 
@@ -2649,6 +2768,8 @@ static int tegra186_padctl_remove(struct platform_device *pdev)
 	clk_disable_unprepare(padctl->xusb_clk);
 
 	regulator_bulk_disable(padctl->soc->num_supplies, padctl->supplies);
+	padctl->cdp_used = false;
+
 	return 0;
 }
 

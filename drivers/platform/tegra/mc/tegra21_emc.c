@@ -1,7 +1,7 @@
 /*
  * drivers/platform/tegra/tegra21_emc.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
@@ -1285,7 +1285,7 @@ static int tegra21_pasr_enable(const char *arg, const struct kernel_param *kp)
 		device_size = SZ_384M;
 		break;
 	default:
-		device_size = 1 << (device_size + 22);
+		device_size = 1ULL << (device_size + 22);
 	}
 
 	/* device size per channel */
@@ -1690,7 +1690,7 @@ static ssize_t emc_table_entry_array_write(struct file *filp,
 	if (copy_from_user(kbuff, buff, buff_size))
 		return -EFAULT;
 
-	ret = sscanf(kbuff, "%u %x", &offs, &value);
+	ret = sscanf(kbuff, "%10u %8x", &offs, &value);
 	if (ret != 2)
 		return -EINVAL;
 

@@ -1467,24 +1467,29 @@ end_loop:
 	seq_puts(s, "compression algo: \tlzo\n");
 	seq_printf(s, "uncompressed bytes: \t%lld\n", total_uncompressed_mem);
 	seq_printf(s, "compressed bytes: \t%lld\n", total_compressed_mem);
-	seq_printf(s, "compression %%: \t%d\n",
-		(u32)((total_uncompressed_mem - total_compressed_mem) >>
-		      PAGE_SHIFT) * 100 / num_pages);
+	if (num_pages)
+		seq_printf(s, "compression %%: \t%d\n",
+			(u32)((total_uncompressed_mem - total_compressed_mem) >>
+			      PAGE_SHIFT) * 100 / num_pages);
 	seq_printf(s, "uncompressed non-zero bytes: \t%lld\n",
 		total_uncompressed_non_zero_mem);
 	seq_printf(s, "compressed non-zero bytes: \t%lld\n",
 		total_compressed_non_zero_mem);
-	seq_printf(s, "compression non-zero bytes %%: \t%d\n",
-		(u32)((total_uncompressed_non_zero_mem -
-		       total_compressed_non_zero_mem) >>
-		      PAGE_SHIFT) * 100 / num_non_zero_pages);
+	if (num_non_zero_pages)
+		seq_printf(s, "compression non-zero bytes %%: \t%d\n",
+			(u32)((total_uncompressed_non_zero_mem -
+			       total_compressed_non_zero_mem) >>
+			      PAGE_SHIFT) * 100 / num_non_zero_pages);
 	seq_printf(s, "zero filled page bytes: \t%d\n",
 		zero_filled_pages << PAGE_SHIFT);
-	seq_printf(s, "zero filled bytes %%: \t%d\n",
-		zero_filled_pages * 100 / num_pages);
+	if (num_pages)
+		seq_printf(s, "zero filled bytes %%: \t%d\n",
+			zero_filled_pages * 100 / num_pages);
 	seq_printf(s, "min compress bytes: \t%zu\n", min_clen);
 	seq_printf(s, "max compress bytes: \t%zu\n", max_clen);
-	seq_printf(s, "average compress bytes: \t%d\n", all_clen / num_pages);
+	if (num_pages)
+		seq_printf(s, "average compress bytes: \t%d\n",
+			all_clen / num_pages);
 	return 0;
 }
 

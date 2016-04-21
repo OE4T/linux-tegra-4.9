@@ -31,6 +31,7 @@
 #include <soc/tegra/xusb.h>
 #include <linux/tegra_prod.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h>
+#include <linux/tegra-powergate.h>
 
 #define VERBOSE_DEBUG
 #ifdef TRACE
@@ -4867,6 +4868,9 @@ static int tegra186_uphy_pll_init(struct tegra_padctl_uphy *uphy)
 	}
 
 	if (uphy->ufs_lanes) {
+		/* WAR: keep PCIE, SATA partition powered to keep uphy plls ON for UFS */
+		tegra_unpowergate_partition_with_clk_on(TEGRA_POWERGATE_PCIE);
+		tegra_unpowergate_partition_with_clk_on(TEGRA_POWERGATE_SATA);
 		rc = tegra186_ufs_uphy_pll_init(uphy);
 		if (rc)
 			return rc;
@@ -4901,6 +4905,8 @@ static int tegra186_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
 		rc = tegra186_ufs_uphy_pll_deinit(uphy);
 		if (rc)
 			return rc;
+		tegra_powergate_partition_with_clk_off(TEGRA_POWERGATE_SATA);
+		tegra_powergate_partition_with_clk_off(TEGRA_POWERGATE_PCIE);
 	}
 
 	return 0;

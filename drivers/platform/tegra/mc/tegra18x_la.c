@@ -247,19 +247,17 @@ static void program_ptsa(void)
 {
 	struct ptsa_info *p = &cs->ptsa_info;
 
-	mc_writel(p->ptsa_grant_dec, MC_PTSA_GRANT_DECREMENT);
-
 	WRITE_PTSA_MIN_MAX_RATE(p, dis, DIS);
 	WRITE_PTSA_MIN_MAX_RATE(p, ve, VE);
 	WRITE_PTSA_MIN_MAX_RATE(p, isp, ISP);
 	WRITE_PTSA_MIN_MAX_RATE(p, apedmapc, APEDMAPC);
 	WRITE_PTSA_MIN_MAX_RATE(p, eqospc, EQOSPC);
-	WRITE_PTSA_MIN_MAX_RATE(p, ring1_rd_nb, RING1_RD_NB);
-	WRITE_PTSA_MIN_MAX_RATE(p, ring1_wr_nb, RING1_WR_NB);
+	WRITE_PTSA_MIN_MAX(p, ring1_rd_nb, RING1_RD_NB);
+	WRITE_PTSA_MIN_MAX(p, ring1_wr_nb, RING1_WR_NB);
 	WRITE_PTSA_MIN_MAX_RATE(p, ring1_rd_b, RING1_RD_B);
 	WRITE_PTSA_MIN_MAX_RATE(p, ring1_wr_b, RING1_WR_B);
 	WRITE_PTSA_MIN_MAX_RATE(p, ring2, RING2);
-	WRITE_PTSA_MIN_MAX_RATE(p, mll_mpcorer, MLL_MPCORER);
+	WRITE_PTSA_MIN_MAX(p, mll_mpcorer, MLL_MPCORER);
 	WRITE_PTSA_MIN_MAX_RATE(p, smmu, SMMU_SMMU);
 	WRITE_PTSA_MIN_MAX_RATE(p, bpmpdmapc, BPMPDMAPC);
 
@@ -302,19 +300,17 @@ static void save_ptsa(void)
 {
 	struct ptsa_info *p = &cs->ptsa_info;
 
-	p->ptsa_grant_dec = mc_readl(MC_PTSA_GRANT_DECREMENT);
-
 	READ_PTSA_MIN_MAX_RATE(p, dis, DIS);
 	READ_PTSA_MIN_MAX_RATE(p, ve, VE);
 	READ_PTSA_MIN_MAX_RATE(p, isp, ISP);
 	READ_PTSA_MIN_MAX_RATE(p, apedmapc, APEDMAPC);
 	READ_PTSA_MIN_MAX_RATE(p, eqospc, EQOSPC);
-	READ_PTSA_MIN_MAX_RATE(p, ring1_rd_nb, RING1_RD_NB);
-	READ_PTSA_MIN_MAX_RATE(p, ring1_wr_nb, RING1_WR_NB);
+	READ_PTSA_MIN_MAX(p, ring1_rd_nb, RING1_RD_NB);
+	READ_PTSA_MIN_MAX(p, ring1_wr_nb, RING1_WR_NB);
 	READ_PTSA_MIN_MAX_RATE(p, ring1_rd_b, RING1_RD_B);
 	READ_PTSA_MIN_MAX_RATE(p, ring1_wr_b, RING1_WR_B);
 	READ_PTSA_MIN_MAX_RATE(p, ring2, RING2);
-	READ_PTSA_MIN_MAX_RATE(p, mll_mpcorer, MLL_MPCORER);
+	READ_PTSA_MIN_MAX(p, mll_mpcorer, MLL_MPCORER);
 	READ_PTSA_MIN_MAX_RATE(p, smmu, SMMU_SMMU);
 	READ_PTSA_MIN_MAX_RATE(p, bpmpdmapc, BPMPDMAPC);
 
@@ -352,29 +348,8 @@ static void save_ptsa(void)
 
 static void t18x_init_ptsa(void)
 {
-	unsigned int dram_freq_mhz = tegra_bwmgr_get_emc_rate() /
-					LA_HZ_TO_MHZ_FACTOR;
-	unsigned int emc_freq_mhz = dram_freq_mhz / dram_emc_freq_factor;
-	unsigned int gd_fp5 = (lo_gd_fp5 * T18X_LA_REAL_TO_FP2(dram_freq_mhz)) /
-				(T18X_LA_FP_TO_FP2(lo_freq_fp));
-	unsigned int gd_fpa = T18X_LA_FP5_TO_FPA(gd_fp5);
-	unsigned int gd_int, gd_frac;
 	struct ptsa_info *p = &cs->ptsa_info;
-	unsigned int ring1_nb_bw;
-	unsigned int cpu_rd_bw;
 	unsigned int eqos_bw;
-
-	if (gd_fpa >= LA_REAL_TO_FPA(1)) {
-		gd_int = 1;
-		gd_fpa -= LA_REAL_TO_FPA(1);
-	} else {
-		gd_int = 0;
-	}
-	gd_frac = __t18x_fraction2dda_fp(gd_fpa,
-					 1,
-					 MC_PTSA_RATE_DEFAULT_MASK,
-					 TEGRA_LA_HISO);
-	p->ptsa_grant_dec = (gd_int << 12) | gd_frac;
 
 	/* initialize PTSA min/max values */
 	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, aondmapc, SISO, 1, 1, 0);
@@ -422,31 +397,10 @@ static void t18x_init_ptsa(void)
 	T18X_MC_SET_INIT_PTSA_MIN_MAX_RATE(p, vicpc3, NISO, -2, 0, 1);
 
 
-	ring1_nb_bw = emc_freq_mhz * 2 * dram_width_bytes * 70 / 100;
-	p->ring1_rd_nb_ptsa_rate =
-		__t18x_fraction2dda_fp(t18x_bw_to_fractionfpa(ring1_nb_bw),
-					r0_dda_div,
-					MC_PTSA_RATE_DEFAULT_MASK,
-					p->ring1_rd_nb_traffic_type);
-	p->ring1_rd_nb_ptsa_rate = max((unsigned int)(1),
-					p->ring1_rd_nb_ptsa_rate) &
-					MC_PTSA_RATE_DEFAULT_MASK;
-	p->ring1_wr_nb_ptsa_rate = p->ring1_rd_nb_ptsa_rate;
-
 	p->ring1_rd_b_ptsa_rate = (unsigned int)(1) & MC_PTSA_RATE_DEFAULT_MASK;
 	p->ring1_wr_b_ptsa_rate = (unsigned int)(1) & MC_PTSA_RATE_DEFAULT_MASK;
 
 	p->ring2_ptsa_rate = (unsigned int)(12) & MC_PTSA_RATE_DEFAULT_MASK;
-
-	cpu_rd_bw = emc_freq_mhz * 2 * dram_width_bytes * 10 / 100;
-	p->mll_mpcorer_ptsa_rate =
-		__t18x_fraction2dda_fp(t18x_bw_to_fractionfpa(cpu_rd_bw),
-					r0_dda_div,
-					MC_PTSA_RATE_DEFAULT_MASK,
-					p->mll_mpcorer_traffic_type);
-	p->mll_mpcorer_ptsa_rate = max((unsigned int)(1),
-					p->mll_mpcorer_ptsa_rate) &
-					MC_PTSA_RATE_DEFAULT_MASK;
 
 	p->bpmpdmapc_ptsa_rate = (unsigned int)(1) & MC_PTSA_RATE_DEFAULT_MASK;
 
@@ -523,58 +477,13 @@ static int t18x_set_init_la(enum tegra_la_id id,
 {
 	int idx = cs->id_to_index[id];
 	struct la_client_info *ci = &cs->la_info_array[idx];
-	unsigned int emc_freq_mhz = tegra_bwmgr_get_emc_rate() /
-					LA_HZ_TO_MHZ_FACTOR /
-					dram_emc_freq_factor;
-	unsigned int la_to_set_fp = 0, la_to_set = 0;
+	unsigned int la_to_set = 0;
 
-	if (ci->client_type == TEGRA_LA_DYNAMIC_READ_CLIENT) {
-		if (id == ID(NVENCSRD)) {
-			la_to_set_fp =
-				max(LA_REAL_TO_FP(35),
-					(33900 * 535) / emc_freq_mhz);
-			la_to_set_fp = min(LA_REAL_TO_FP(MC_LA_MAX_VALUE),
-						la_to_set_fp);
-			la_to_set = LA_FP_TO_REAL(la_to_set_fp);
-		} else if (id == ID(NVDECR)) {
-			la_to_set_fp =
-				max(LA_REAL_TO_FP(35),
-					(LA_REAL_TO_FP(58) * 203) /
-					emc_freq_mhz);
-			la_to_set_fp = min(LA_REAL_TO_FP(MC_LA_MAX_VALUE),
-						la_to_set_fp);
-			la_to_set = LA_FP_TO_REAL(la_to_set_fp);
-		} else {
-			la_to_set_fp =
-				max(LA_REAL_TO_FP(ci->min_scaling_ratio),
-					LA_REAL_TO_FP(ci->la_ref_clk_mhz) /
-					emc_freq_mhz);
-			la_to_set_fp =
-				min(LA_REAL_TO_FP(MC_LA_MAX_VALUE),
-					ci->init_la * la_to_set_fp);
-			/* rounding */
-			la_to_set_fp += 500;
-			la_to_set = LA_FP_TO_REAL(la_to_set_fp);
-		}
-	} else if (ci->client_type == TEGRA_LA_CONSTANT_READ_CLIENT) {
+	/* We only have to program init LA values for constant read
+	   clients. All other clients will either be handled by BPMP or
+	   t18x_handle_disp_la(). */
+	if (ci->client_type == TEGRA_LA_CONSTANT_READ_CLIENT) {
 		la_to_set = ci->init_la;
-	} else if (ci->client_type == TEGRA_LA_DISPLAY_READ_CLIENT) {
-		/* Display clients should be handled by
-		   t18x_handle_disp_la(...). */
-		return -1;
-	} else if (ci->client_type == TEGRA_LA_WRITE_CLIENT) {
-		unsigned int emc_period_ns_fp = LA_REAL_TO_FP(1000) /
-						emc_freq_mhz;
-
-		la_to_set_fp = min(LA_REAL_TO_FP(MC_LA_MAX_VALUE),
-					LA_REAL_TO_FP(128) * emc_period_ns_fp /
-					1250);
-		la_to_set = LA_FP_TO_REAL(la_to_set_fp);
-	} else {
-		/* error */
-		pr_err("%s: Unknown client type\n",
-			__func__);
-		return -1;
 	}
 
 	program_la(ci, la_to_set);

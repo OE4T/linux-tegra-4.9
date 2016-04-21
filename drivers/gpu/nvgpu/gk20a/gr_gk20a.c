@@ -1518,6 +1518,12 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	struct mem_desc *gold_mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
 	struct mem_desc *gr_mem = &ch_ctx->gr_ctx->mem;
 	u32 err = 0;
+	struct aiv_list_gk20a *sw_ctx_load = &g->gr.ctx_vars.sw_ctx_load;
+	struct av_list_gk20a *sw_method_init = &g->gr.ctx_vars.sw_method_init;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+	u32 last_method_data = 0;
+	int retries = 200;
 
 	gk20a_dbg_fn("");
 
@@ -1529,18 +1535,149 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (gr->ctx_vars.golden_image_initialized)
 		goto clean_up;
 
+	if (!tegra_platform_is_linsim()) {
+		gk20a_writel(g, gr_fe_pwr_mode_r(),
+			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_force_on_f());
+		do {
+			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
+			if (req == gr_fe_pwr_mode_req_done_v())
+				break;
+			udelay(GR_IDLE_CHECK_DEFAULT);
+		} while (--retries || !tegra_platform_is_silicon());
+	}
+
+	if (!retries)
+		gk20a_err(g->dev, "timeout forcing FE on");
+
+	gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
+			gr_fecs_ctxsw_reset_ctl_sys_halt_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_gpc_halt_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_be_halt_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_sys_engine_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_gpc_engine_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_be_engine_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_sys_context_reset_enabled_f() |
+			gr_fecs_ctxsw_reset_ctl_gpc_context_reset_enabled_f() |
+			gr_fecs_ctxsw_reset_ctl_be_context_reset_enabled_f());
+	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
+	udelay(10);
+
+	gk20a_writel(g, gr_fecs_ctxsw_reset_ctl_r(),
+			gr_fecs_ctxsw_reset_ctl_sys_halt_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_gpc_halt_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_be_halt_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_sys_engine_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_gpc_engine_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_be_engine_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_sys_context_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_gpc_context_reset_disabled_f() |
+			gr_fecs_ctxsw_reset_ctl_be_context_reset_disabled_f());
+	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
+	udelay(10);
+
+	if (!tegra_platform_is_linsim()) {
+		gk20a_writel(g, gr_fe_pwr_mode_r(),
+			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_auto_f());
+
+		retries = 200;
+		do {
+			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
+			if (req == gr_fe_pwr_mode_req_done_v())
+				break;
+			udelay(GR_IDLE_CHECK_DEFAULT);
+		} while (--retries || !tegra_platform_is_silicon());
+
+		if (!retries)
+			gk20a_err(g->dev, "timeout setting FE power to auto");
+	}
+
+	/* clear scc ram */
+	gk20a_writel(g, gr_scc_init_r(),
+		gr_scc_init_ram_trigger_f());
+
 	err = gr_gk20a_fecs_ctx_bind_channel(g, c);
 	if (err)
 		goto clean_up;
+
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+
+	/* load ctx init */
+	for (i = 0; i < sw_ctx_load->count; i++)
+		gk20a_writel(g, sw_ctx_load->l[i].addr,
+			     sw_ctx_load->l[i].value);
+
+	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
+
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	if (err)
+		goto clean_up;
+
+	/* disable fe_go_idle */
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
+		gr_fe_go_idle_timeout_count_disabled_f());
+
+	err = gr_gk20a_commit_global_ctx_buffers(g, c, false);
+	if (err)
+		goto clean_up;
+
+	/* override a few ctx state registers */
+	gr_gk20a_commit_global_timeslice(g, c, false);
+
+	/* floorsweep anything left */
+	g->ops.gr.init_fs_state(g);
+
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
+	if (err)
+		goto restore_fe_go_idle;
 
 	err = gk20a_init_sw_bundle(g);
 	if (err)
 		goto clean_up;
 
-	err = gr_gk20a_elpg_protected_call(g,
-			gr_gk20a_commit_global_ctx_buffers(g, c, false));
+restore_fe_go_idle:
+	/* restore fe_go_idle */
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
+		     gr_fe_go_idle_timeout_count_prod_f());
+
+	if (err || gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT))
+		goto clean_up;
+
+	/* load method init */
+	if (sw_method_init->count) {
+		gk20a_writel(g, gr_pri_mme_shadow_raw_data_r(),
+			     sw_method_init->l[0].value);
+		gk20a_writel(g, gr_pri_mme_shadow_raw_index_r(),
+			     gr_pri_mme_shadow_raw_index_write_trigger_f() |
+			     sw_method_init->l[0].addr);
+		last_method_data = sw_method_init->l[0].value;
+	}
+	for (i = 1; i < sw_method_init->count; i++) {
+		if (sw_method_init->l[i].value != last_method_data) {
+			gk20a_writel(g, gr_pri_mme_shadow_raw_data_r(),
+				sw_method_init->l[i].value);
+			last_method_data = sw_method_init->l[i].value;
+		}
+		gk20a_writel(g, gr_pri_mme_shadow_raw_index_r(),
+			gr_pri_mme_shadow_raw_index_write_trigger_f() |
+			sw_method_init->l[i].addr);
+	}
+
+	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
 		goto clean_up;
+
+	kfree(gr->sm_error_states);
+
+	/* we need to allocate this after g->ops.gr.init_fs_state() since
+	 * we initialize gr->no_of_sm in this function
+	 */
+	gr->sm_error_states = kzalloc(
+			sizeof(struct nvgpu_dbg_gpu_sm_error_state_record)
+			* gr->no_of_sm, GFP_KERNEL);
+	if (!gr->sm_error_states) {
+		err = -ENOMEM;
+		goto restore_fe_go_idle;
+	}
 
 	if (gk20a_mem_begin(g, gold_mem))
 		goto clean_up;
@@ -4665,10 +4802,6 @@ static int gk20a_init_gr_reset_enable_hw(struct gk20a *g)
 	/* enable interrupts */
 	gk20a_writel(g, gr_intr_r(), ~0);
 	gk20a_writel(g, gr_intr_en_r(), ~0);
-
-	/* clear scc ram */
-	gk20a_writel(g, gr_scc_init_r(),
-		gr_scc_init_ram_trigger_f());
 
 	/* load non_ctx init */
 	for (i = 0; i < sw_non_ctx_load->count; i++)

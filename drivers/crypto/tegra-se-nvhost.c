@@ -1448,9 +1448,14 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 	return 0;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
 static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
-				const u8 *src, unsigned int slen,
-				u8 *rdata, unsigned int dlen)
+		const u8 *src, unsigned int slen,
+		u8 *rdata, unsigned int dlen)
+#else
+static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
+		u8 *rdata, u32 dlen)
+#endif
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
 	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
@@ -1514,7 +1519,11 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	return dlen;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
 static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, const u8 *seed, unsigned int slen)
+#else
+static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
+#endif
 {
 	return 0;
 }

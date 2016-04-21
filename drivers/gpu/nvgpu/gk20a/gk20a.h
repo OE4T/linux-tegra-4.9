@@ -319,6 +319,7 @@ struct gpu_ops {
 					u32 new_level);
 		int (*channel_set_timeslice)(struct channel_gk20a *ch,
 					u32 timeslice);
+		int (*force_reset_ch)(struct channel_gk20a *ch, bool verbose);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

@@ -585,6 +585,17 @@ static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 	return err ? err : msg.ret;
 }
 
+static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
+{
+	gk20a_dbg_fn("");
+
+	if (verbose)
+		gk20a_warn(dev_from_gk20a(ch->g),
+			"channel force reset is not supported");
+
+	return -ENOSYS;
+}
+
 static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,
 		struct channel_gk20a *ch)
 {
@@ -664,6 +675,7 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = vgpu_channel_bind;
 	gops->fifo.unbind_channel = vgpu_channel_unbind;
+	gops->fifo.enable_channel = NULL;
 	gops->fifo.disable_channel = vgpu_channel_disable;
 	gops->fifo.alloc_inst = vgpu_channel_alloc_inst;
 	gops->fifo.free_inst = vgpu_channel_free_inst;
@@ -674,4 +686,5 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 	gops->fifo.channel_set_priority = vgpu_channel_set_priority;
 	gops->fifo.set_runlist_interleave = vgpu_fifo_set_runlist_interleave;
 	gops->fifo.channel_set_timeslice = vgpu_channel_set_timeslice;
+	gops->fifo.force_reset_ch = vgpu_fifo_force_reset_ch;
 }

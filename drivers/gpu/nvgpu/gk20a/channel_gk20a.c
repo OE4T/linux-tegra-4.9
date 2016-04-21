@@ -3114,10 +3114,10 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		/* enable channel */
-		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-			gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid)) |
-			ccsr_channel_enable_set_true_f());
+		if (ch->g->ops.fifo.enable_channel)
+			ch->g->ops.fifo.enable_channel(ch);
+		else
+			err = -ENOSYS;
 		gk20a_idle(dev);
 		break;
 	case NVGPU_IOCTL_CHANNEL_DISABLE:
@@ -3128,10 +3128,10 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		/* disable channel */
-		gk20a_writel(ch->g, ccsr_channel_r(ch->hw_chid),
-			gk20a_readl(ch->g, ccsr_channel_r(ch->hw_chid)) |
-			ccsr_channel_enable_clr_true_f());
+		if (ch->g->ops.fifo.disable_channel)
+			ch->g->ops.fifo.disable_channel(ch);
+		else
+			err = -ENOSYS;
 		gk20a_idle(dev);
 		break;
 	case NVGPU_IOCTL_CHANNEL_PREEMPT:
@@ -3153,7 +3153,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		err = gk20a_fifo_force_reset_ch(ch, true);
+		err = ch->g->ops.fifo.force_reset_ch(ch, true);
 		gk20a_idle(dev);
 		break;
 	case NVGPU_IOCTL_CHANNEL_EVENT_ID_CTRL:

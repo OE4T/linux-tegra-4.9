@@ -125,4 +125,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.get_num_fifos = gm20b_fifo_get_num_fifos;
 	gops->fifo.get_pbdma_signature = gk20a_fifo_get_pbdma_signature;
 	gops->fifo.set_runlist_interleave = gk20a_fifo_set_runlist_interleave;
+	gops->fifo.force_reset_ch = gk20a_fifo_force_reset_ch;
 }

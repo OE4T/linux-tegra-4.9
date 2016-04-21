@@ -214,15 +214,6 @@ static unsigned long clk_bpmp_get_rate(struct clk_hw *hw,
 	return clk_bpmp_get_rate_clk_num(bpmp_clk->clk_num);
 }
 
-static int clk_bpmp_reset_refcount(void)
-{
-	struct bpmp_clk_req req;
-
-	req.cmd = BPMP_CLK_CMD(MRQ_CLK_RESET_REFCOUNTS, 0);
-
-	return  bpmp_send_clk_message(&req, sizeof(req), NULL, 0);
-}
-
 static int clk_bpmp_get_max_clk_id(u32 *max_id)
 {
 	struct bpmp_clk_req req;
@@ -444,9 +435,6 @@ static int clk_bpmp_init(int clk_num)
 struct clk **tegra_bpmp_clk_init(struct device_node *np)
 {
 	int i, err;
-
-	if (clk_bpmp_reset_refcount() < 0)
-		pr_warn("clk-bpmp: unable to reset refcounts!\n");
 
 	if (clk_bpmp_get_max_clk_id(&max_clk_id) || max_clk_id < 0) {
 		pr_err("clk-bpmp: unable to retrieve clk data\n");

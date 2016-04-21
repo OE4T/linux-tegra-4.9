@@ -1619,7 +1619,6 @@ static int nvs_remove(void *handle)
 		iio_trigger_free(st->trig);
 	}
 	if (indio_dev->buffer != NULL) {
-		iio_buffer_unregister(indio_dev);
 		iio_kfifo_free(indio_dev->buffer);
 	}
 	if (st->ch)
@@ -1652,7 +1651,11 @@ static int nvs_init(struct iio_dev *indio_dev, struct nvs_state *st)
 		return ret;
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 0, 0)
 	indio_dev->buffer = iio_kfifo_allocate(indio_dev);
+#else
+	indio_dev->buffer = iio_kfifo_allocate();
+#endif
 	if (!indio_dev->buffer) {
 		dev_err(st->dev, "%s iio_kfifo_allocate ERR\n", __func__);
 		return -ENOMEM;
@@ -1669,13 +1672,6 @@ static int nvs_init(struct iio_dev *indio_dev, struct nvs_state *st)
 	st->info.write_raw = &nvs_write_raw;
 	indio_dev->info = &st->info;
 	indio_dev->setup_ops = &nvs_buffer_setup_ops;
-	ret = iio_buffer_register(indio_dev, indio_dev->channels,
-				  indio_dev->num_channels);
-	if (ret) {
-		dev_err(st->dev, "%s iio_buffer_register ERR\n", __func__);
-		return ret;
-	}
-
 	if (st->cfg->kbuf_sz) {
 		indio_dev->buffer->access->set_length(indio_dev->buffer,
 						      st->cfg->kbuf_sz);

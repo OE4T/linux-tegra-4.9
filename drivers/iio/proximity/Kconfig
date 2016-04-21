@@ -44,10 +44,6 @@ config SX9500
 
 	  To compile this driver as a module, choose M here: the
 	  module will be called sx9500.
-#
-# proximity sensors
-#
-menu "Proximity sensors"
 
 config NVS_IQS2X3
 	tristate "Azoteq IQS253/IQS263 SAR proximity"

@@ -1,7 +1,7 @@
 /* The industrial I/O core
  *
  * Copyright (c) 2008 Jonathan Cameron
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms of the GNU General Public License version 2 as published by
@@ -1597,6 +1597,8 @@ int iio_device_register(struct iio_dev *indio_dev)
 	}
 
 	return 0;
+error_del_device:
+	device_del(&indio_dev->dev);
 error_cdev_del:
 	cdev_del(&indio_dev->chrdev);
 error_unreg_eventset:
@@ -1634,8 +1636,8 @@ void iio_device_unregister(struct iio_dev *indio_dev)
 
 	mutex_unlock(&indio_dev->info_exist_lock);
 
-	iio_buffer_free_sysfs_and_mask(indio_dev);
 	kfree(indio_dev->link_name);
+	iio_buffer_free_sysfs_and_mask(indio_dev);
 }
 EXPORT_SYMBOL(iio_device_unregister);
 
@@ -1741,3 +1743,4 @@ module_exit(iio_exit);
 MODULE_AUTHOR("Jonathan Cameron <jic23@kernel.org>");
 MODULE_DESCRIPTION("Industrial I/O core");
 MODULE_LICENSE("GPL");
+

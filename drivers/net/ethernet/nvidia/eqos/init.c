@@ -950,7 +950,7 @@ int eqos_probe(struct platform_device *pdev)
 	if (ret < 0) {
 		pr_err("ether-mac read from DT failed %d\n", ret);
 	} else {
-		pr_err("Setting local MAC: %x %x %x %x %x %x\n",
+		dev_info(&pdev->dev, "Setting local MAC: %x %x %x %x %x %x\n",
 			mac_addr[0], mac_addr[1], mac_addr[2], mac_addr[3],
 			mac_addr[4], mac_addr[5]);
 		/* Set up MAC address */

@@ -2887,6 +2887,9 @@ static bool tegra_dc_dp_hpd_state(struct tegra_dc *dc)
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 	u32 val;
 
+	if (dp->suspended)
+		return false;
+
 	if (WARN_ON(!dc || !dc->out))
 		return false;
 

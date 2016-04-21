@@ -43,9 +43,30 @@
 
 #define MPHY_TX_APB_TX_VENDOR0_0	0x100
 
+
+#define MPHY_RX_APB_CAPABILITY_88_8B_0		0x88
+#define RX_HS_G1_SYNC_LENGTH_CAPABILITY(x)	(((x) & 0x3f) << 24)
+#define RX_HS_SYNC_LENGTH			0xf
+
+#define MPHY_RX_APB_CAPABILITY_94_97_0		0x94
+#define RX_HS_G2_SYNC_LENGTH_CAPABILITY(x)	(((x) & 0x3f) << 0)
+#define RX_HS_G3_SYNC_LENGTH_CAPABILITY(x)	(((x) & 0x3f) << 8)
+
+#define MPHY_RX_APB_CAPABILITY_8C_8F_0		0x8c
+#define RX_MIN_ACTIVATETIME_CAP(x)		(((x) & 0xf) << 24)
+#define RX_MIN_ACTIVATETIME			0x5
+
+#define	MPHY_RX_APB_CAPABILITY_98_9B_0		0x98
+#define RX_ADVANCED_FINE_GRANULARITY(x)		(((x) & 0x1) << 0)
+#define	RX_ADVANCED_GRANULARITY(x)		(((x) & 0x3) << 1)
+#define	RX_ADVANCED_MIN_ACTIVATETIME(x)		(((x) & 0xf) << 16)
+#define RX_ADVANCED_MIN_AT			0xa
+
+
 #define MPHY_RX_APB_VENDOR2_0		0x184
 #define MPHY_RX_APB_VENDOR2_0_RX_CAL_EN		(1 << 15)
 #define MPHY_RX_APB_VENDOR2_0_RX_CAL_DONE	(1 << 19)
+
 
 #define MPHY_ADDR_RANGE		0x1fc
 #define UFS_AUX_ADDR_RANGE	0x18
@@ -222,6 +243,12 @@ struct ufs_tegra_host {
 	struct phy *u_phy;
 	bool is_lane_clks_enabled;
 	bool x2config;
+	bool enable_mphy_rx_calib;
+	bool enable_hs_mode;
+	u32 max_hs_gear;
+	bool mask_fast_auto_mode;
+	bool mask_hs_mode_b;
+	u32 max_pwm_gear;
 	enum ufs_state ufshc_state;
 	void *mphy_context;
 	void __iomem *mphy_l0_base;

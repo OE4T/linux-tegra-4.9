@@ -32,6 +32,7 @@
 #include <linux/debugfs.h>
 #endif
 
+#include "ufshcd-pltfrm.h"
 #include "ufshcd.h"
 #include "unipro.h"
 #include "ufs-tegra.h"
@@ -1297,5 +1298,43 @@ struct ufs_hba_variant_ops ufs_hba_tegra_vops = {
 	.pwr_change_notify      = ufs_tegra_pwr_change_notify,
 };
 
+static int ufs_tegra_probe(struct platform_device *pdev)
+{
+	int err;
+	struct device *dev = &pdev->dev;
+
+	/* Perform generic probe */
+	err = ufshcd_pltfrm_init(pdev, &ufs_hba_tegra_vops);
+	if (err)
+		dev_err(dev, "ufshcd_pltfrm_init() failed %d\n", err);
+
+	return err;
+}
+
+static int ufs_tegra_remove(struct platform_device *pdev)
+{
+	struct ufs_hba *hba =  platform_get_drvdata(pdev);
+
+	pm_runtime_get_sync(&(pdev)->dev);
+	ufshcd_remove(hba);
+	return 0;
+
+}
+
+static const struct of_device_id ufs_tegra_of_match[] = {
+	{ .compatible = "tegra,ufs_variant"},
+	{},
+};
+
+static struct platform_driver ufs_tegra_platform = {
+	.probe = ufs_tegra_probe,
+	.remove = ufs_tegra_remove,
+	.driver = {
+		.name = "ufs_tegra",
+		.owner = THIS_MODULE,
+		.of_match_table = of_match_ptr(ufs_tegra_of_match),
+	},
+};
+module_platform_driver(ufs_tegra_platform);
 MODULE_AUTHOR("Naveen Kumar Arepalli <naveenk@nvidia.com>");
 MODULE_AUTHOR("Venkata Jagadish <vjagadish@nvidia.com>");

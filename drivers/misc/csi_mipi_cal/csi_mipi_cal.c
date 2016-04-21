@@ -93,13 +93,16 @@ static int tegra186_csi_mipical_platform_probe(struct platform_device *pdev)
 		goto err;
 	}
 
+	/* Don't return in the error condition since the same memory area can be
+		requested by nvdisplay's mipi_cal driver before
+		csi_mipical driver probe function called.
+		TDB : This csi_mipical driver is temporal driver
+		before the common mipi driver
+		developed(Tracking : Bug 1686313) */
 	memregion = devm_request_mem_region(&pdev->dev, mem->start,
-						resource_size(mem), pdev->name);
-	if (!memregion) {
-		dev_err(&pdev->dev, "Memory region already claimed\n");
-		ret = -EBUSY;
-		goto err;
-	}
+					resource_size(mem), pdev->name);
+	if (!memregion)
+		dev_info(&pdev->dev, "Memory region already claimed\n");
 
 	regs = devm_ioremap(&pdev->dev, mem->start, resource_size(mem));
 	if (!regs) {
@@ -178,9 +181,12 @@ static int tegra186_csi_mipical_platform_probe(struct platform_device *pdev)
 	}
 #endif
 
-	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG0_0, 1);
-	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG1_0, 0);
-	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG2_0, 0);
+	regmap_update_bits(csi_mipical->regmap,
+		MIPI_CAL_MIPI_BIAS_PAD_CFG0_0, 1, 1);
+	regmap_update_bits(csi_mipical->regmap,
+		MIPI_CAL_MIPI_BIAS_PAD_CFG1_0, 1, 0);
+	regmap_update_bits(csi_mipical->regmap,
+		MIPI_CAL_MIPI_BIAS_PAD_CFG2_0, 1, 0);
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) && defined(CONFIG_TEGRA_POWERGATE)
 	if (powergate)
@@ -220,9 +226,12 @@ static int tegra186_csi_mipical_resume(struct platform_device *pdev)
 
 	csi_mipical = dev_get_drvdata(&pdev->dev);
 	tegra_nvdisp_unpowergate_partition(TEGRA186_POWER_DOMAIN_DISP);
-	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG0_0, 1);
-	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG1_0, 0);
-	regmap_write(csi_mipical->regmap, MIPI_CAL_MIPI_BIAS_PAD_CFG2_0, 0);
+	regmap_update_bits(csi_mipical->regmap,
+		MIPI_CAL_MIPI_BIAS_PAD_CFG0_0, 1, 1);
+	regmap_update_bits(csi_mipical->regmap,
+		MIPI_CAL_MIPI_BIAS_PAD_CFG1_0, 1, 0);
+	regmap_update_bits(csi_mipical->regmap,
+		MIPI_CAL_MIPI_BIAS_PAD_CFG2_0, 1, 0);
 #endif
 	return 0;
 }

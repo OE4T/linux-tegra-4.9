@@ -281,36 +281,6 @@ err_out:
 	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }
 
-/* Denver cluster cpu_to_emc freq */
-static unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
-{
-	unsigned long emc_rate;
-
-	if (cpu_rate > 1020000)
-		emc_rate = 600000000;	/* cpu > 1.02GHz, emc 600MHz */
-	else
-		emc_rate = 300000000;	/* 300MHz floor always */
-
-	return emc_rate;
-}
-
-/* Arm cluster cpu_to_emc freq */
-static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
-{
-	if (cpu_rate >= 1300000)
-		return tfreq_data.emc_max_rate;	/* cpu >= 1.3GHz, emc max */
-	else if (cpu_rate >= 975000)
-		return 400000000;	/* cpu >= 975 MHz, emc 400 MHz */
-	else if (cpu_rate >= 725000)
-		return  200000000;	/* cpu >= 725 MHz, emc 200 MHz */
-	else if (cpu_rate >= 500000)
-		return  100000000;	/* cpu >= 500 MHz, emc 100 MHz */
-	else if (cpu_rate >= 275000)
-		return  50000000;	/* cpu >= 275 MHz, emc 50 MHz */
-	else
-		return 0;		/* emc min */
-}
-
 /**
  * get_cluster_freq - returns max freq among all the cpus in a cluster.
  *
@@ -341,20 +311,15 @@ static void set_cpufreq_to_emcfreq(enum cluster cl,
 	struct cpufreq_policy *policy)
 {
 	unsigned long emc_freq;
-	uint32_t cluster_freq;
+	u32 cluster_freq = get_cluster_freq(cl, policy->cur);
 
-	tfreq_data.emc_max_rate = tegra_bwmgr_get_max_emc_rate();
-	cluster_freq = get_cluster_freq(cl, policy->cur);
-
-	if (M_CLUSTER == cl)
-		emc_freq = m_cluster_cpu_to_emc_freq(cluster_freq);
-	else
-		emc_freq = b_cluster_cpu_to_emc_freq(cluster_freq);
+	emc_freq =  (cluster_freq * tfreq_data.emc_max_rate) /
+		 policy->cpuinfo.max_freq;
 
 	tegra_bwmgr_set_emc(tfreq_data.pcluster[cl].bwmgr, emc_freq,
 		TEGRA_BWMGR_SET_EMC_FLOOR);
-	pr_debug("cpu: %d, cluster %s, emc freq(KHz): %lu cluster_freq(kHz): %u\n",
-		policy->cpu, CLUSTER_STR(cl), emc_freq / 1000, cluster_freq);
+	pr_debug("cpu: %d cluster %s  cluster_freq(KHz): %u emc freq(KHz): %lu\n",
+		policy->cpu, CLUSTER_STR(cl), cluster_freq, emc_freq / 1000);
 }
 
 static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
@@ -1135,6 +1100,7 @@ static int __init register_with_emc_bwmgr(void)
 		tfreq_data.pcluster[cl].bwmgr = bwmgr;
 		bw_id = TEGRA_BWMGR_CLIENT_CPU_1;
 	}
+	tfreq_data.emc_max_rate = tegra_bwmgr_get_max_emc_rate();
 err_out:
 	return ret;
 }

@@ -626,16 +626,16 @@ void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 	struct nvgpu_ctxsw_trace_entry entry = {
 		.vmid = 0,
-		.tag = NVGPU_CTXSW_TAG_RESET,
+		.tag = NVGPU_CTXSW_TAG_ENGINE_RESET,
 		.timestamp = gk20a_read_ptimer(g),
 		.context_id = 0,
 		.pid = ch->pid,
 	};
 
 	gk20a_ctxsw_trace_write(g, &entry);
+	gk20a_ctxsw_trace_wake_up(g, 0);
 #endif
 	trace_gk20a_channel_reset(ch->hw_chid, ch->tsgid);
-	gk20a_ctxsw_trace_wake_up(g, 0);
 }
 
 void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
@@ -643,7 +643,7 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 #ifdef CONFIG_GK20A_CTXSW_TRACE
 	struct nvgpu_ctxsw_trace_entry entry = {
 		.vmid = 0,
-		.tag = NVGPU_CTXSW_TAG_RESET,
+		.tag = NVGPU_CTXSW_TAG_ENGINE_RESET,
 		.timestamp = gk20a_read_ptimer(g),
 		.context_id = 0,
 		.pid = 0,
@@ -657,9 +657,9 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 	entry.pid = ch->pid;
 
 	gk20a_ctxsw_trace_write(g, &entry);
+	gk20a_ctxsw_trace_wake_up(g, 0);
 #endif
 	trace_gk20a_channel_reset(~0, tsg->tsgid);
-	gk20a_ctxsw_trace_wake_up(g, 0);
 }
 
 void gk20a_ctxsw_trace_init_ops(struct gpu_ops *ops)

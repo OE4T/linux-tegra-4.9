@@ -78,8 +78,10 @@ int nvmap_define_tag(struct nvmap_device *dev, u32 tag,
 	if (!new)
 		return -ENOMEM;
 
-	if (copy_from_user(new + 1, name, len))
+	if (copy_from_user(new + 1, name, len)) {
+		kfree(new);
 		return -EFAULT;
+	}
 
 	new->tag = tag;
 

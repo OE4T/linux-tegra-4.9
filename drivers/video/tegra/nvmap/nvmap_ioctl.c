@@ -543,7 +543,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 		/*
 		 * See nvmap_heap_alloc() for encoding details.
 		 */
-		offs = ((op.id &
+		offs = (((unsigned long)op.id &
 			~(NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
 			NVMAP_IVM_LENGTH_WIDTH) << ffs(NVMAP_IVM_ALIGNMENT);
 		size = (op.id &

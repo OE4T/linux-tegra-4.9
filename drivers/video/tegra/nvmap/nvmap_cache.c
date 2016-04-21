@@ -606,7 +606,7 @@ static ssize_t cache_inner_threshold_write(struct file *file,
 		return -EINVAL;
 
 	mutex_lock(&p->lock);
-	ret = sscanf(str, "%zu", &cache_maint_inner_threshold);
+	ret = sscanf(str, "%16zu", &cache_maint_inner_threshold);
 	mutex_unlock(&p->lock);
 	if (ret != 1)
 		return -EINVAL;
@@ -654,7 +654,7 @@ static ssize_t cache_outer_threshold_write(struct file *file,
 		return -EINVAL;
 
 	mutex_lock(&p->lock);
-	ret = sscanf(str, "%zu", &cache_maint_outer_threshold);
+	ret = sscanf(str, "%16zu", &cache_maint_outer_threshold);
 	mutex_unlock(&p->lock);
 	if (ret != 1)
 		return -EINVAL;

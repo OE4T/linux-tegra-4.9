@@ -501,7 +501,7 @@
 	};
 
 	gpio-keys {
-		status = "disabled";
+		status = "okay";
 	};
 
 	ast@b040000 {

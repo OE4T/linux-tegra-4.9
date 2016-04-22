@@ -1,7 +1,7 @@
 /*
  * drivers/misc/bluedroid_pm.c
  *
- # Copyright (c) 2013-2015, NVIDIA CORPORATION. All rights reserved.
+ # Copyright (c) 2013-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -461,12 +461,11 @@ static int bluedroid_pm_remove(struct platform_device *pdev)
 	struct bluedroid_pm_data *bluedroid_pm = platform_get_drvdata(pdev);
 
 	cancel_work_sync(&bluedroid_pm->work);
-
-	if (bluedroid_pm->host_wake)
+	if (bluedroid_pm->host_wake_irq > -1)
+		free_irq(bluedroid_pm->host_wake_irq, bluedroid_pm);
+	if (gpio_is_valid(bluedroid_pm->host_wake))
 		gpio_free(bluedroid_pm->host_wake);
-	if (bluedroid_pm->host_wake_irq)
-		free_irq(bluedroid_pm->host_wake_irq, NULL);
-	if (bluedroid_pm->ext_wake) {
+	if (gpio_is_valid(bluedroid_pm->ext_wake)) {
 		wake_lock_destroy(&bluedroid_pm->wake_lock);
 		gpio_free(bluedroid_pm->ext_wake);
 		remove_bt_proc_interface();
@@ -478,9 +477,9 @@ static int bluedroid_pm_remove(struct platform_device *pdev)
 		rfkill_unregister(bluedroid_pm->rfkill);
 		rfkill_destroy(bluedroid_pm->rfkill);
 	}
-	if (bluedroid_pm->gpio_shutdown)
+	if (gpio_is_valid(bluedroid_pm->gpio_shutdown))
 		gpio_free(bluedroid_pm->gpio_shutdown);
-	if (bluedroid_pm->gpio_reset)
+	if (gpio_is_valid(bluedroid_pm->gpio_reset))
 		gpio_free(bluedroid_pm->gpio_reset);
 	if (bluedroid_pm->vdd_3v3)
 		regulator_put(bluedroid_pm->vdd_3v3);

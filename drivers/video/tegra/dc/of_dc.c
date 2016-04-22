@@ -535,7 +535,6 @@ static int parse_vrr_settings(struct platform_device *ndev,
 		struct device_node *np,
 		struct tegra_vrr *vrr)
 {
-#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	u32 temp;
 
 	if (!of_property_read_u32(np, "nvidia,vrr_min_fps", &temp)) {
@@ -561,13 +560,18 @@ static int parse_vrr_settings(struct platform_device *ndev,
 	} else
 		vrr->db_hist_cap = 0;
 
+	if (!of_property_read_u32(np, "nvidia,nvdisp_direct_drive", &temp)) {
+		vrr->nvdisp_direct_drive = temp;
+		OF_DC_LOG("nvdisp_direct_drive %u\n", temp);
+	} else
+		vrr->nvdisp_direct_drive = 0;
+
 	/*
 	 * VRR capability is set when we have vrr_settings section in DT
 	 * vrr_settings, vrr_min_fps, and vrr_max_fps should always be
 	 * set at the same time in DT.
 	 */
 	vrr->capability = 1;
-#endif
 	return 0;
 }
 
@@ -2443,6 +2447,9 @@ struct tegra_dc_platform_data
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	const char *dc_or_node;
 #endif
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+	int check_val;
+#endif
 	/*
 	 * Memory for pdata, pdata->default_out, pdata->fb
 	 * need to be allocated in default
@@ -2807,6 +2814,14 @@ struct tegra_dc_platform_data
 				goto fail_parse;
 			}
 			OF_DC_LOG("nvidia,hdmi-vrr-caps: %d\n", temp);
+#ifdef CONFIG_TRUSTED_LITTLE_KERNEL
+			check_val = te_vrr_set_buf(virt_to_phys(
+				pdata->default_out->vrr));
+			if (check_val) {
+				dev_err(&ndev->dev, "failed to set buffer\n");
+				goto fail_parse;
+			}
+#endif /* CONFIG_TRUSTED_LITTLE_KERNEL */
 		}
 	} else
 		pr_info("%s: nvidia,hdmi-vrr-caps not present\n", __func__);

@@ -27,12 +27,15 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/of_irq.h>
+#include <linux/ctype.h>
 #ifdef CONFIG_SWITCH
 #include <linux/switch.h>
 #endif
 
 #include <mach/dc.h>
 #include <mach/fb.h>
+
+#include <asm/uaccess.h>
 
 #include "dp.h"
 #include "sor.h"
@@ -43,11 +46,6 @@
 #include "edid.h"
 #include "dp_lt.h"
 #include "dp_auto.h"
-
-#ifdef CONFIG_MODS
-#include <linux/ctype.h>
-#include <asm/uaccess.h>
-#endif
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #include "hda_dc.h"
@@ -1126,14 +1124,11 @@ static const struct file_operations bits_per_pixel_fops = {
 	.release	= single_release,
 };
 
-#ifdef CONFIG_MODS
-static u16 dp_i2c_addr;
-static u32 dp_i2c_num_bytes;
-
 static int dpaux_i2c_data_show(struct seq_file *s, void *unused)
 {
 	struct tegra_dc_dp_data *dp = s->private;
-	u32 size = dp_i2c_num_bytes;
+	u32 addr = dp->dpaux_i2c_dbg_addr;
+	u32 size = dp->dpaux_i2c_dbg_num_bytes;
 	u32 i, j, aux_stat;
 	u8 row_size = 16;
 	u8 *data;
@@ -1142,7 +1137,7 @@ static int dpaux_i2c_data_show(struct seq_file *s, void *unused)
 	if (!data)
 		return -ENOMEM;
 
-	tegra_dc_dp_i2c_read(dp, dp_i2c_addr, data, &size, &aux_stat);
+	tegra_dc_dp_i2c_read(dp, addr, data, &size, &aux_stat);
 	for (i = 0; i < size; i += row_size) {
 		for (j = i; j < i + row_size && j < size; j++)
 			seq_printf(s, "%02x ", data[j]);
@@ -1160,6 +1155,7 @@ static ssize_t dpaux_i2c_data_set(struct file *file,
 	struct tegra_dc_dp_data *dp = s->private;
 	u32 i = 0, size = 0;
 	u32 aux_stat;
+	u32 addr = dp->dpaux_i2c_dbg_addr;
 	u8 *data;
 	char tmp[3];
 	char *buf;
@@ -1201,7 +1197,7 @@ static ssize_t dpaux_i2c_data_set(struct file *file,
 		i += 2;
 	}
 
-	tegra_dc_dp_i2c_write(dp, dp_i2c_addr, data, &size, &aux_stat);
+	tegra_dc_dp_i2c_write(dp, addr, data, &size, &aux_stat);
 
 free_mem:
 	kfree(buf);
@@ -1233,11 +1229,11 @@ static struct dentry *tegra_dpaux_i2c_dir_create(struct tegra_dc_dp_data *dp,
 	if (!dpaux_i2c_dir)
 		return retval;
 	retval = debugfs_create_u16("addr", S_IRUGO | S_IWUGO, dpaux_i2c_dir,
-			&dp_i2c_addr);
+			&dp->dpaux_i2c_dbg_addr);
 	if (!retval)
 		goto free_out;
 	retval = debugfs_create_u32("num_bytes", S_IRUGO | S_IWUGO,
-			dpaux_i2c_dir, &dp_i2c_num_bytes);
+			dpaux_i2c_dir, &dp->dpaux_i2c_dbg_num_bytes);
 	if (!retval)
 		goto free_out;
 	retval = debugfs_create_file("data", S_IRUGO, dpaux_i2c_dir, dp,
@@ -1250,7 +1246,6 @@ free_out:
 	debugfs_remove_recursive(dpaux_i2c_dir);
 	return retval;
 }
-#endif
 
 static struct dentry *dpdir;
 
@@ -1280,6 +1275,9 @@ static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 		&test_settings_fops);
 	if (!retval)
 		goto free_out;
+	retval = tegra_dpaux_i2c_dir_create(dp, dpdir);
+	if (!retval)
+		goto free_out;
 
 	/* hotplug not allowed for eDP */
 	if (is_hotplug_supported(dp)) {
@@ -1288,12 +1286,6 @@ static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 		if (!retval)
 			goto free_out;
 	}
-
-#ifdef CONFIG_MODS
-	retval = tegra_dpaux_i2c_dir_create(dp, dpdir);
-	if (!retval)
-		goto free_out;
-#endif
 
 	return;
 free_out:

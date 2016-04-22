@@ -114,6 +114,9 @@ struct tegra_dc_dp_data {
 	bool sink_cap_valid;
 	u8 sink_cnt_cp_ready;
 
+	u16 dpaux_i2c_dbg_addr;
+	u32 dpaux_i2c_dbg_num_bytes;
+
 #ifdef CONFIG_DEBUG_FS
 	struct tegra_dp_test_settings test_settings;
 };

@@ -2667,7 +2667,7 @@ static struct tegra_se_chipdata tegra18_se_chipdata = {
 };
 
 static struct nvhost_device_data nvhost_se1_info = {
-	.clocks = {{"se", UINT_MAX},
+	.clocks = {{"se", 600000000},
 		   {"emc", UINT_MAX},
 		   {"entropy", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
@@ -2683,7 +2683,7 @@ static struct nvhost_device_data nvhost_se1_info = {
 };
 
 static struct nvhost_device_data nvhost_se2_info = {
-	.clocks = {{"se", UINT_MAX},
+	.clocks = {{"se", 600000000},
 		   {"emc", UINT_MAX},
 		   {"entropy", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
@@ -2699,7 +2699,7 @@ static struct nvhost_device_data nvhost_se2_info = {
 };
 
 static struct nvhost_device_data nvhost_se3_info = {
-	.clocks = {{"se", UINT_MAX},
+	.clocks = {{"se", 600000000},
 		   {"emc", UINT_MAX},
 		   {"entropy", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
@@ -2715,7 +2715,7 @@ static struct nvhost_device_data nvhost_se3_info = {
 };
 
 static struct nvhost_device_data nvhost_se4_info = {
-	.clocks = {{"se", UINT_MAX},
+	.clocks = {{"se", 600000000},
 		   {"emc", UINT_MAX},
 		   {"entropy", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,

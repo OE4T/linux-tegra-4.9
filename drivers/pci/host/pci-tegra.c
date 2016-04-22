@@ -404,7 +404,7 @@ static u32 lane_map_configs[] = {
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 static u32 rp_to_lane_map[2][4] = { {1, 2, 3, 4}, {0} };
 #else
-static u32 rp_to_lane_map[3][3] = { {4, 2, 1}, {3}, {0} };
+static u32 rp_to_lane_map[3][3] = { {4}, {3}, {0} };
 #endif
 
 struct tegra_pcie_soc_data {

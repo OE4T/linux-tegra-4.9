@@ -100,6 +100,8 @@
 #define K7_REMOTE_WAKEUP_CODE (0xEA)
 #define K7_DEFAULT_MODE (3)
 
+#define U8_SNPRINTF_SIZE 4
+
 enum K7_SCAN_STATE_OPTIONS {
 	K7_SCAN_STATE_IDLE = 0,
 	K7_SCAN_STATE_ACTIVE,
@@ -803,7 +805,7 @@ static ssize_t lr388k7_ts_force_cap_show(struct device *dev,
 					 struct device_attribute *attr,
 					 char *buf)
 {
-	return sprintf(buf, "%d\n", g_st_dbg.u8ForceCap);
+	return snprintf(buf, U8_SNPRINTF_SIZE, "%d\n", g_st_dbg.u8ForceCap);
 }
 
 static ssize_t lr388k7_ts_force_cap_store(struct device *dev,
@@ -835,7 +837,7 @@ static ssize_t lr388k7_ts_dump_show(struct device *dev,
 				    struct device_attribute *attr,
 				    char *buf)
 {
-	return sprintf(buf, "%d\n", g_st_dbg.u8Dump);
+	return snprintf(buf, U8_SNPRINTF_SIZE, "%d\n", g_st_dbg.u8Dump);
 }
 
 static ssize_t lr388k7_ts_dump_store(struct device *dev,
@@ -867,7 +869,7 @@ static ssize_t lr388k7_ts_report_mode_show(struct device *dev,
 				    struct device_attribute *attr,
 				    char *buf)
 {
-	return sprintf(buf, "%d\n", g_u8_mode);
+	return snprintf(buf, U8_SNPRINTF_SIZE, "%d\n", g_u8_mode);
 }
 
 static ssize_t lr388k7_ts_report_mode_store(struct device *dev,
@@ -897,7 +899,7 @@ static ssize_t lr388k7_ts_version_show(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-	return sprintf(buf, "FW %d, Driver %d, Module %d\n",
+	return snprintf(buf, PAGE_SIZE, "FW %d, Driver %d, Module %d\n",
 		       g_st_state.u16fw_ver,
 		       K7_DRIVER_VERSION,
 		       g_st_state.u16module_ver
@@ -968,12 +970,12 @@ static ssize_t lr388k7_ts_slowscan_enable_show(struct device *dev,
 	char *buf)
 {
 #ifdef ENABLE_SLOW_SCAN
-	return sprintf(buf, "Slow Scan:%s Scan Rate:%dHz\n",
+	return snprintf(buf, PAGE_SIZE, "Slow Scan:%s Scan Rate:%dHz\n",
 		       g_st_dbg.slowscan.enable ?
 		       "Enabled" : "Disabled",
 		       g_st_dbg.slowscan.scan_rate);
 #else
-	return sprintf(buf, "Not implemented yet\n");
+	return snprintf(buf, PAGE_SIZE, "Not implemented yet\n");
 #endif
 }
 
@@ -1022,7 +1024,8 @@ static ssize_t lr388k7_ts_wakeup_enable_show(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-	return sprintf(buf, "wakeup_enable:%s(%d) Number of taps:%d\n",
+	return snprintf(buf, PAGE_SIZE,
+			"wakeup_enable:%s(%d) Number of taps:%d\n",
 		       g_st_dbg.wakeup.enable == 1 ?
 		       "Enabled" : "Disabled",
 		       g_st_dbg.wakeup.enable,
@@ -1057,7 +1060,7 @@ static ssize_t lr388k7_ts_test_show(struct device *dev,
 	struct device_attribute *attr,
 	char *buf)
 {
-	return sprintf(buf, "%s\n", g_st_dbg.u8Test == 1 ?
+	return snprintf(buf, PAGE_SIZE, "%s\n", g_st_dbg.u8Test == 1 ?
 		       "Enabled" : "Disabled");
 }
 
@@ -1093,7 +1096,8 @@ static ssize_t lr388k7_ts_check_state_show(struct device *dev,
 	if (lr388k7_spi_read(u8_tx_buf, u8_rx_buf, count)) {
 		u8Ret = u8_rx_buf[K7_RD_HEADER_SIZE];
 	} else {
-		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		return snprintf(buf, PAGE_SIZE,
+			"status :IRQ(%s) Failed to read\n",
 		       gpio_get_value(ts->gpio_irq) ?
 		       "High" : "Low"
 		       );
@@ -1110,7 +1114,8 @@ static ssize_t lr388k7_ts_check_state_show(struct device *dev,
 		u8HWR = u8_rx_buf[K7_RD_HEADER_SIZE];
 	} else {
 		g_st_state.u32SCK = g_spi->max_speed_hz;
-		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		return snprintf(buf, PAGE_SIZE,
+			"status :IRQ(%s) Failed to read\n",
 		       gpio_get_value(ts->gpio_irq) ?
 		       "High" : "Low"
 		       );
@@ -1133,7 +1138,8 @@ static ssize_t lr388k7_ts_check_state_show(struct device *dev,
 			u8_rx_buf[K7_RD_HEADER_SIZE + 3] << 24;
 	} else {
 		g_st_state.u32SCK = g_spi->max_speed_hz;
-		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		return snprintf(buf, PAGE_SIZE,
+			"status :IRQ(%s) Failed to read\n",
 		       gpio_get_value(ts->gpio_irq) ?
 		       "High" : "Low"
 		       );
@@ -1156,7 +1162,8 @@ static ssize_t lr388k7_ts_check_state_show(struct device *dev,
 			u8_rx_buf[K7_RD_HEADER_SIZE + 3] << 24;
 	} else {
 		g_st_state.u32SCK = g_spi->max_speed_hz;
-		return sprintf(buf, "status :IRQ(%s) Failed to read\n",
+		return snprintf(buf, PAGE_SIZE,
+			"status :IRQ(%s) Failed to read\n",
 		       gpio_get_value(ts->gpio_irq) ?
 		       "High" : "Low"
 		       );
@@ -1164,8 +1171,8 @@ static ssize_t lr388k7_ts_check_state_show(struct device *dev,
 
 	g_st_state.u32SCK = g_spi->max_speed_hz;
 
-	return sprintf(
-		       buf,
+	return snprintf(
+		       buf, PAGE_SIZE,
 		       "IRQ(%s) status=0x%02X, HWRev=%d, FWRev=0x%0X, Res=0x%04X\n",
 		       gpio_get_value(ts->gpio_irq) ?
 		       "High" : "Low",
@@ -1241,7 +1248,7 @@ static ssize_t lr388k7_ts_log_show(struct device *dev,
 
 	s = buf;
 
-	sprintf(s,
+	snprintf(s, PAGE_SIZE,
 		"FW %d, Driver %d, Module %d\n",
 		g_st_state.u16fw_ver,
 		K7_DRIVER_VERSION,
@@ -1264,7 +1271,7 @@ static ssize_t lr388k7_ts_log_show(struct device *dev,
 		log = glog[g_log_front];
 		spin_unlock_irqrestore(&lr388k7log_lock, flags);
 
-		sprintf(s, "[%08lx|%08lx] %s",
+		snprintf(s, PAGE_SIZE, "[%08lx|%08lx] %s",
 			log.seq_num,
 			log.time,
 			log.data);
@@ -1561,94 +1568,83 @@ static void lr388k7_touch_report(void *p)
 #else /* PROTOCOL_B */
 static void lr388k7_touch_report(void *p)
 {
-	u8 u8_num, i;
-	struct lr388k7_touch_report *p_touch_report;
+	int num, i;
+	struct lr388k7_touch_report touch_report;
 	struct lr388k7 *ts = spi_get_drvdata(g_spi);
 	struct input_dev *input_dev = ts->idev;
 
 	if (!p)
 		return;
 
-	/*
-	 * Memory Allocation
-	 */
-	p_touch_report = kmalloc(
-				 sizeof(struct lr388k7_touch_report),
-				 GFP_KERNEL);
-	if (!p_touch_report)
-		return;
-
-	if (copy_from_user(p_touch_report,
+	if (copy_from_user((void *)&touch_report,
 			   p,
 			   sizeof(struct lr388k7_touch_report))) {
-		kfree(p_touch_report);
 		return;
 	}
 
-	u8_num = p_touch_report->u8_num_of_touch;
+	num = touch_report.u8_num_of_touch > K7_MAX_TOUCH_NUM ?
+		K7_MAX_TOUCH_NUM : touch_report.u8_num_of_touch;
 
-	for (i = 0; i < u8_num; i++) {
+	for (i = 0; i < num; i++) {
 
 #if defined(DEBUG_LR388K7_REPORT)
 		dev_info(&g_spi->dev, "ID=%2d, status=%02d, x=%5d, y=%5d, w=%d, h=%d, z=%5d, num=%2d\n",
-			 p_touch_report->tc[i] . id,
-			 p_touch_report->tc[i] . status,
-			 p_touch_report->tc[i] . x,
-			 p_touch_report->tc[i] . y,
-			 p_touch_report->tc[i] . width,
-			 p_touch_report->tc[i] . height,
-			 p_touch_report->tc[i] . z,
-			 u8_num
+			 touch_report.tc[i] . id,
+			 touch_report.tc[i] . status,
+			 touch_report.tc[i] . x,
+			 touch_report.tc[i] . y,
+			 touch_report.tc[i] . width,
+			 touch_report.tc[i] . height,
+			 touch_report.tc[i] . z,
+			 num
 			 );
 #endif
 		input_mt_slot(input_dev,
-			      p_touch_report->tc[i] . id);
-		if (((p_touch_report->tc[i] . status & 0x7F) == 8) ||
-		    ((p_touch_report->tc[i] . status & 0x7F) == 12) ||
-		    ((p_touch_report->tc[i] . status & 0x7F) == 14)) {
+			      touch_report.tc[i] . id);
+		if (((touch_report.tc[i] . status & 0x7F) == 8) ||
+		    ((touch_report.tc[i] . status & 0x7F) == 12) ||
+		    ((touch_report.tc[i] . status & 0x7F) == 14)) {
 			input_mt_report_slot_state(input_dev,
 						   MT_TOOL_FINGER,
 						   false);
 			continue;
 		}
 
-		if ((p_touch_report->tc[i] . status & 0x7F) <= 3)
+		if ((touch_report.tc[i] . status & 0x7F) <= 3)
 			input_report_abs(input_dev,
 					 ABS_MT_TOOL_TYPE, MT_TOOL_FINGER);
-		else if (((p_touch_report->tc[i] . status & 0x7F) <= 7) ||
-			 ((p_touch_report->tc[i] . status & 0x7F) > 12))
+		else if (((touch_report.tc[i] . status & 0x7F) <= 7) ||
+			 ((touch_report.tc[i] . status & 0x7F) > 12))
 			input_report_abs(input_dev,
 					 ABS_MT_TOOL_TYPE, MT_TOOL_PEN);
 
 		if (ts->flip_x)
-			p_touch_report->tc[i].x =
-				__negchk((ts->max_x - p_touch_report->tc[i].x));
+			touch_report.tc[i].x =
+				__negchk((ts->max_x - touch_report.tc[i].x));
 		if (ts->flip_y)
-			p_touch_report->tc[i].y =
-				__negchk((ts->max_y - p_touch_report->tc[i].y));
+			touch_report.tc[i].y =
+				__negchk((ts->max_y - touch_report.tc[i].y));
 		if (ts->swap_xy) {
 			u16 tmp;
-			tmp = p_touch_report->tc[i].x;
-			p_touch_report->tc[i].x = p_touch_report->tc[i].y;
-			p_touch_report->tc[i].y = tmp;
+			tmp = touch_report.tc[i].x;
+			touch_report.tc[i].x = touch_report.tc[i].y;
+			touch_report.tc[i].y = tmp;
 		}
 
 		input_report_abs(input_dev,
 				 ABS_MT_TRACKING_ID,
-				 p_touch_report->tc[i] .id);
+				 touch_report.tc[i] .id);
 		input_report_abs(input_dev,
 				 ABS_MT_POSITION_X,
-				 p_touch_report->tc[i].x);
+				 touch_report.tc[i].x);
 		input_report_abs(input_dev,
 				 ABS_MT_POSITION_Y,
-				 p_touch_report->tc[i].y);
+				 touch_report.tc[i].y);
 		input_report_abs(input_dev,
 				 ABS_MT_PRESSURE,
-				 p_touch_report->tc[i] . z);
+				 touch_report.tc[i] . z);
 	}
 	input_sync(input_dev);
-
-	kfree(p_touch_report);
 }
 #endif /* #if defined(PROTOCOL_A) */
 

@@ -19,6 +19,7 @@
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <linux/platform/tegra/isomgr.h>
+#include <linux/platform/tegra/latency_allowance.h>
 #include "tegra_isomgr_bw_alt.h"
 
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC) && defined(CONFIG_TEGRA_ISOMGR)
@@ -47,13 +48,13 @@ static long tegra_adma_calc_min_bandwidth(void)
 	return min_bw;
 }
 
-static void adma_isomgr_request(uint adma_bw, uint lt)
+static int adma_isomgr_request(uint adma_bw, uint lt)
 {
-	int ret = 0;
+	int ret;
 
 	if (!adma->isomgr_handle) {
 		pr_err("%s: adma iso handle not initialized\n", __func__);
-		return;
+		return -1;
 	}
 
 	/* return value of tegra_isomgr_reserve is dvfs latency in usec */
@@ -62,21 +63,24 @@ static void adma_isomgr_request(uint adma_bw, uint lt)
 				lt);	/* usec */
 	if (!ret) {
 		pr_err("%s: failed to reserve %u KBps\n", __func__, adma_bw);
-		return;
+		return -1;
 	}
 
 	/* return value of tegra_isomgr_realize is dvfs latency in usec */
 	ret = tegra_isomgr_realize(adma->isomgr_handle);
 	if (!ret) {
 		pr_err("%s: failed to realize %u KBps\n", __func__, adma_bw);
-		return;
+		return -1;
 	}
+
+	return 0;
 }
 
 void tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 				bool is_playback)
 {
 	int bandwidth, sample_bytes;
+	int ret;
 	struct snd_pcm_runtime *runtime = substream->runtime;
 
 	if (!adma || !runtime)
@@ -108,7 +112,15 @@ void tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 
 	mutex_unlock(&adma->mutex);
 
-	adma_isomgr_request(adma->current_bandwidth, 1000);
+	ret = adma_isomgr_request(adma->current_bandwidth, 1000);
+	if (!ret) {
+		/* Call LA/PTSA driver which will configure the Memory
+		controller to support APEDMA's new BW requirement in MBps*/
+		ret = tegra_set_latency_allowance(TEGRA_LA_APEDMAW,
+				((adma->current_bandwidth + 999)/1000));
+		if (ret)
+			pr_err("%s: LA/PTSA setting Failed\n", __func__);
+	}
 }
 EXPORT_SYMBOL(tegra_isomgr_adma_setbw);
 

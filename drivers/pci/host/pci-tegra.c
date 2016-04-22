@@ -1587,9 +1587,14 @@ static int tegra_pcie_power_off(struct tegra_pcie *pcie, bool all)
 
 	if (!tegra_platform_is_fpga()) {
 		/* put PEX pads into DPD mode to save additional power */
+	/*
+	 * Please revove below protection once config is enabled.
+	 */
+#ifdef CONFIG_TEGRA3_PM
 		tegra_io_dpd_enable(&pexbias_io);
 		tegra_io_dpd_enable(&pexclk1_io);
 		tegra_io_dpd_enable(&pexclk2_io);
+#endif
 	}
 	pm_runtime_put(pcie->dev);
 

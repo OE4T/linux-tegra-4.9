@@ -1144,7 +1144,7 @@ struct tegra_dc_out_info {
 
 static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
 /* array for saving the out_type for each head */
-static int  boot_out_type[] = {-1, -1};
+static int  boot_out_type[] = {-1, -1, -1};
 
 static int is_invalid_dc_out(struct tegra_dc *dc, long dc_outtype)
 {
@@ -1245,6 +1245,8 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		dev_err(&dc->ndev->dev, "Unknown out_type 0x%lx\n", out_type);
 		return -EINVAL;
 	}
+
+	WARN_ON((sizeof(boot_out_type) / sizeof(int)) != TEGRA_MAX_DC);
 
 	if (boot_out_type[dc->ndev->id] == -1)
 		boot_out_type[dc->ndev->id] = dc->pdata->default_out->type;

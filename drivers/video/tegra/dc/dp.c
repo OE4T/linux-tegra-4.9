@@ -76,8 +76,19 @@ MODULE_PARM_DESC(no_lt_at_unblank, "DP enabled but link not trained");
 
 static struct tegra_hpd_ops hpd_ops;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+/* DP/SOR0 is the primary config for DP on T18x. */
 static char *audio_switch_name_array[TEGRA_MAX_DC]
-	= {"dp0_audio", "dp1_audio"};
+	= {"dp_audio", "dp_audio1"};
+static char *hpd_switch_name_array[TEGRA_MAX_DC]
+	= {"dp", "dp1"};
+#else
+/* DP/SOR1 is the primary config for DP on T210. */
+static char *audio_switch_name_array[TEGRA_MAX_DC]
+	= {"dp_audio1", "dp_audio"};
+static char *hpd_switch_name_array[TEGRA_MAX_DC]
+	= {"dp1", "dp"};
+#endif
 
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp);
 static inline void tegra_dp_default_int(struct tegra_dc_dp_data *dp,
@@ -2162,13 +2173,15 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_SWITCH
-	if (dp->sor->audio_switch_name == NULL)
-		dp->audio_switch.name = audio_switch_name_array[dp_num];
-	else
-		dp->audio_switch.name = dp->sor->audio_switch_name;
+	if (tegra_dc_is_ext_dp_panel(dc)) {
+		if (dp->sor->audio_switch_name == NULL)
+			dp->audio_switch.name = audio_switch_name_array[dp_num];
+		else
+			dp->audio_switch.name = dp->sor->audio_switch_name;
 
-	err = switch_dev_register(&dp->audio_switch);
-	BUG_ON(err);
+		err = switch_dev_register(&dp->audio_switch);
+		BUG_ON(err);
+	}
 #endif
 
 	tegra_dc_dp_debug_create(dp);
@@ -3086,10 +3099,11 @@ static bool tegra_dp_hpd_op_get_hpd_state(void *drv_data)
 static void tegra_dp_hpd_op_init(void *drv_data)
 {
 	struct tegra_dc_dp_data *dp = drv_data;
+	int dp_num = tegra_dc_which_sor(dp->dc);
 
 #ifdef CONFIG_SWITCH
 	if (tegra_dc_is_ext_dp_panel(dp->dc)) {
-		dp->hpd_data.hpd_switch_name = "dp";
+		dp->hpd_data.hpd_switch_name = hpd_switch_name_array[dp_num];
 	}
 #endif
 }

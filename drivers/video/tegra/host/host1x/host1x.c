@@ -33,6 +33,7 @@
 #include <linux/of_platform.h>
 #include <linux/tegra-soc.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/vmalloc.h>
 
 #include "dev.h"
 #include <trace/events/nvhost.h>
@@ -303,81 +304,86 @@ static int nvhost_ioctl_ctrl_module_regrdwr(struct nvhost_ctrl_userctx *ctx,
 	u32 __user *offsets = (u32 __user *)(uintptr_t)args->offsets;
 	u32 __user *values = (u32 __user *)(uintptr_t)args->values;
 	u32 *vals;
-	u32 *p1;
-	int remaining;
+	u32 count;
 	int err;
 
 	struct platform_device *ndev;
 	trace_nvhost_ioctl_ctrl_module_regrdwr(args->id,
 			args->num_offsets, args->write);
 
-	/* Check that there is something to read and that block size is
-	 * u32 aligned */
-	if (num_offsets == 0 || args->block_size & 3)
+	/* Check that there is something to read */
+	if (num_offsets == 0)
 		return -EINVAL;
 
 	ndev = nvhost_device_list_match_by_id(args->id);
 	if (!ndev)
 		return -ENODEV;
 
+	err = validate_max_size(ndev, args->block_size);
+	if (err)
+		return err;
+
+	count = args->block_size >> 2;
+
 	if (nvhost_dev_is_virtual(ndev))
 		return vhost_rdwr_module_regs(ndev, num_offsets,
 				args->block_size, offsets, values, args->write);
 
-	remaining = args->block_size >> 2;
-
-	vals = kmalloc(num_offsets * args->block_size,
-				GFP_KERNEL);
-	if (!vals)
-		return -ENOMEM;
-	p1 = vals;
+	vals = kmalloc(args->block_size, GFP_KERNEL);
+	if (!vals) {
+		vals = vmalloc(args->block_size);
+		if (!vals)
+			return -ENOMEM;
+	}
 
 	if (args->write) {
-		if (copy_from_user((char *)vals, (char __user *)values,
-				num_offsets * args->block_size)) {
-			kfree(vals);
-			return -EFAULT;
-		}
 		while (num_offsets--) {
 			u32 offs;
-			if (get_user(offs, offsets)) {
-				kfree(vals);
+
+			if (copy_from_user((char *)vals,
+					(char __user *)values,
+					args->block_size)) {
+				kvfree(vals);
 				return -EFAULT;
 			}
-			offsets++;
+			if (get_user(offs, offsets)) {
+				kvfree(vals);
+				return -EFAULT;
+			}
 			err = nvhost_write_module_regs(ndev,
-					offs, remaining, p1);
+					offs, count, vals);
 			if (err) {
-				kfree(vals);
+				kvfree(vals);
 				return err;
 			}
-			p1 += remaining;
+			offsets++;
+			values += count;
 		}
-		kfree(vals);
 	} else {
 		while (num_offsets--) {
 			u32 offs;
 			if (get_user(offs, offsets)) {
-				kfree(vals);
+				kvfree(vals);
+				return -EFAULT;
+			}
+			err = nvhost_read_module_regs(ndev,
+					offs, count, vals);
+			if (err) {
+				kvfree(vals);
+				return err;
+			}
+			if (copy_to_user((void __user *)values,
+					(void const *)vals,
+					args->block_size)) {
+				kvfree(vals);
 				return -EFAULT;
 			}
 			offsets++;
-			err = nvhost_read_module_regs(ndev,
-					offs, remaining, p1);
-			if (err) {
-				kfree(vals);
-				return err;
-			}
-			p1 += remaining;
+			values += count;
 		}
-
-		if (copy_to_user((void __user *)values, (void const *)vals,
-				args->num_offsets * args->block_size)) {
-			kfree(vals);
-			return -EFAULT;
-		}
-		kfree(vals);
 	}
+
+	kvfree(vals);
 	return 0;
 }
 

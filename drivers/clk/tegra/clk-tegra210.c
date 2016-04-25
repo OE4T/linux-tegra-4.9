@@ -26,6 +26,7 @@
 #include <dt-bindings/clock/tegra210-car.h>
 #include <dt-bindings/reset/tegra210-car.h>
 #include <linux/iopoll.h>
+#include <soc/tegra/tegra_emc.h>
 
 #include "clk.h"
 #include "clk-id.h"
@@ -2278,7 +2279,6 @@ static struct tegra_clk tegra210_clks[tegra_clk_max] __initdata = {
 	[tegra_clk_i2c2] = { .dt_id = TEGRA210_CLK_I2C2, .present = true },
 	[tegra_clk_uartc_8] = { .dt_id = TEGRA210_CLK_UARTC, .present = true },
 	[tegra_clk_mipi_cal] = { .dt_id = TEGRA210_CLK_MIPI_CAL, .present = true },
-	[tegra_clk_emc] = { .dt_id = TEGRA210_CLK_EMC, .present = true },
 	[tegra_clk_usb2] = { .dt_id = TEGRA210_CLK_USB2, .present = true },
 	[tegra_clk_bsev] = { .dt_id = TEGRA210_CLK_BSEV, .present = true },
 	[tegra_clk_uartd_8] = { .dt_id = TEGRA210_CLK_UARTD, .present = true },
@@ -2900,6 +2900,26 @@ static int tegra210_init_pllu(void)
 	return 0;
 }
 
+static struct tegra_clk_periph tegra_emc_periph =
+	TEGRA_CLK_PERIPH(29, 7, 0, 0, 8, 1, 0, TEGRA210_CLK_EMC, 0, NULL, NULL);
+
+static __init void tegra210_emc_clk_init(void __iomem *clk_base)
+{
+	struct clk *clk;
+	const struct emc_clk_ops *emc_ops;
+
+	emc_ops = tegra210_emc_get_ops();
+	clk = tegra_clk_register_emc_t210("emc", mux_pllmcp_clkm,
+		ARRAY_SIZE(mux_pllmcp_clkm), &tegra_emc_periph, clk_base,
+		CLK_SOURCE_EMC, CLK_IGNORE_UNUSED | CLK_GET_RATE_NOCACHE,
+		emc_ops);
+	clks[TEGRA210_CLK_EMC] = clk;
+
+	clk = tegra_clk_register_mc("mc", "emc", clk_base + CLK_SOURCE_EMC,
+		&emc_lock);
+	clks[TEGRA210_CLK_MC] = clk;
+}
+
 static __init void tegra210_periph_clk_init(void __iomem *clk_base,
 					    void __iomem *pmc_base)
 {
@@ -2934,15 +2954,7 @@ static __init void tegra210_periph_clk_init(void __iomem *clk_base,
 					     periph_clk_enb_refcnt);
 	clks[TEGRA210_CLK_DSIB] = clk;
 
-	/* emc mux */
-	clk = clk_register_mux(NULL, "emc_mux", mux_pllmcp_clkm,
-			       ARRAY_SIZE(mux_pllmcp_clkm), 0,
-			       clk_base + CLK_SOURCE_EMC,
-			       29, 3, 0, &emc_lock);
-
-	clk = tegra_clk_register_mc("mc", "emc_mux", clk_base + CLK_SOURCE_EMC,
-				    &emc_lock);
-	clks[TEGRA210_CLK_MC] = clk;
+	tegra210_emc_clk_init(clk_base);
 
 	/* cml0 */
 	clk = clk_register_gate(NULL, "cml0", "pll_e", 0, clk_base + PLLE_AUX,

@@ -17,6 +17,7 @@ obj-y					+= clk-tegra-pmc.o
 obj-y					+= clk-tegra-fixed.o
 obj-y					+= clk-tegra-super-gen4.o
 obj-$(CONFIG_TEGRA_CLK_EMC)		+= clk-emc.o
+obj-$(CONFIG_ARCH_TEGRA_210_SOC)	+= clk-emc-t210.o
 obj-y					+= clk-fake.o
 obj-y					+= clk-cbus-shared.o
 obj-y					+= clk-tegra-shared.o

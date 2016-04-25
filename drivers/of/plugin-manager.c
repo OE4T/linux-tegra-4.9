@@ -56,6 +56,56 @@ err_fail_name:
 	return NULL;
 }
 
+static struct property *__of_string_append(struct device_node *target,
+					   struct property *prop)
+{
+	struct property *new_prop, *tprop;
+	const char *tprop_name, *curr_str;
+	int slen, tlen, lenp;
+
+	tprop_name = of_prop_next_string(prop, NULL);
+	if (!tprop_name)
+		return NULL;
+
+	new_prop = kzalloc(sizeof(*new_prop), GFP_KERNEL);
+	if (!new_prop)
+		return NULL;
+
+	new_prop->name = kstrdup(tprop_name, GFP_KERNEL);
+	if (!new_prop->name)
+		goto err_fail_name;
+
+	curr_str = of_prop_next_string(prop, tprop_name);
+	for (slen = 0; curr_str; curr_str = of_prop_next_string(prop, curr_str))
+		slen += strlen(curr_str);
+
+	tprop = of_find_property(target, tprop_name, &lenp);
+	tlen = (tprop) ? tprop->length : 0;
+
+	new_prop->value = kmalloc(slen + tlen, GFP_KERNEL);
+	if (!new_prop->value)
+		goto err_fail_value;
+
+	if (tlen)
+		memcpy(new_prop->value, tprop->value, tlen);
+
+	if (slen) {
+		curr_str = of_prop_next_string(prop, tprop_name);
+		memcpy(new_prop->value + tlen, curr_str, slen);
+	}
+
+	new_prop->length = slen + tlen;
+
+	return new_prop;
+
+err_fail_value:
+	kfree(new_prop->name);
+err_fail_name:
+	kfree(new_prop);
+
+	return NULL;
+}
+
 struct device_node *of_get_child_by_addressed_name(
 		const struct device_node *node, const char *name)
 {
@@ -102,6 +152,19 @@ static int __init update_target_node_from_overlay(
 			continue;
 		}
 
+		if (!strcmp(prop->name, "append-string-property")) {
+			if (prop->length <= 0)
+				continue;
+
+			new_prop = __of_string_append(target, prop);
+			if (!new_prop) {
+				pr_err("Prop %s can not be appended\n",
+					of_prop_next_string(prop, NULL));
+				return -EINVAL;
+			}
+			goto add_prop;
+		}
+
 		new_prop = __of_copy_property(prop, GFP_KERNEL);
 		if (!new_prop) {
 			pr_err("Prop %s can not be duplicated\n",
@@ -109,7 +172,8 @@ static int __init update_target_node_from_overlay(
 			return -EINVAL;
 		}
 
-		tprop = of_find_property(target, prop->name, &lenp);
+add_prop:
+		tprop = of_find_property(target, new_prop->name, &lenp);
 		if (!tprop) {
 			ret = of_add_property(target, new_prop);
 			if (ret < 0) {

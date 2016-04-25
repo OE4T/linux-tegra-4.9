@@ -8820,7 +8820,7 @@ static s32 wl_setup_wiphy(struct wireless_dev *wdev, struct device *sdiofunc_dev
 	wiphy_apply_custom_regulatory(wdev->wiphy, &brcm_regdom);
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)) || defined(WL_VENDOR_EXT_SUPPORT)
-	WL_ERR(("Registering Vendor80211\n"));
+	WL_DBG(("Registering Vendor80211\n"));
 	err = wl_cfgvendor_attach(wdev->wiphy, dhd);
 	if (unlikely(err < 0)) {
 		WL_ERR(("Couldn not attach vendor commands (%d)\n", err));
@@ -13486,6 +13486,7 @@ s32 wl_cfg80211_up(void *para)
 int wl_cfg80211_hang(struct net_device *dev, u16 reason)
 {
 	struct bcm_cfg80211 *cfg;
+	u32 driver_status = 0;
 #if defined(SOFTAP_SEND_HANGEVT)
 	/* specifc mac address used for hang event */
 	uint8 hang_mac[ETHER_ADDR_LEN] = {0x11, 0x11, 0x11, 0x11, 0x11, 0x11};
@@ -13507,6 +13508,8 @@ int wl_cfg80211_hang(struct net_device *dev, u16 reason)
 	{
 		CFG80211_DISCONNECTED(dev, reason, NULL, 0, false, GFP_KERNEL);
 	}
+	wl_cfgvendor_send_async_event(bcmcfg_to_wiphy(cfg), dev,
+			BRCM_VENDOR_EVENT_DRIVER_HANG, &driver_status, sizeof(u32));
 	if (cfg != NULL) {
 		wl_link_down(cfg);
 	}

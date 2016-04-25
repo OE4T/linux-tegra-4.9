@@ -79,6 +79,42 @@
 #endif
 
 #if (LINUX_VERSION_CODE > KERNEL_VERSION(3, 13, 0)) || defined(WL_VENDOR_EXT_SUPPORT)
+/*
+ * This API is to be used for asynchronous vendor events. This
+ * shouldn't be used in response to a vendor command from its
+ * do_it handler context (instead wl_cfgvendor_send_cmd_reply should
+ * be used).
+ */
+int wl_cfgvendor_send_async_event(struct wiphy *wiphy,
+	struct net_device *dev, int event_id, const void  *data, int len)
+{
+	u16 kflags;
+	struct sk_buff *skb;
+
+	kflags = in_atomic() ? GFP_ATOMIC : GFP_KERNEL;
+
+	/* Alloc the SKB for vendor_event */
+#ifdef VENDOR_NET_SKB_ALLOC
+	skb = cfg80211_vendor_event_skb_alloc(dev, wiphy, len, event_id, kflags);
+#else
+#if defined(CONFIG_ARCH_MSM) && defined(SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC)
+	skb = cfg80211_vendor_event_alloc(wiphy, NULL, len, event_id, kflags);
+#else
+	skb = cfg80211_vendor_event_alloc(wiphy, len, event_id, kflags);
+#endif /* CONFIG_ARCH_MSM && SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC */
+#endif /* VENDOR_NET_SKB_ALLOC */
+	if (!skb) {
+		WL_ERR(("skb alloc failed"));
+		return -ENOMEM;
+	}
+
+	/* Push the data to the skb */
+	nla_put_nohdr(skb, len, data);
+
+	cfg80211_vendor_event(skb, kflags);
+
+	return 0;
+}
 
 static int wl_cfgvendor_send_cmd_reply(struct wiphy *wiphy,
 	struct net_device *dev, const void  *data, int len)
@@ -526,7 +562,9 @@ static const struct  nl80211_vendor_cmd_info wl_vendor_events [] = {
 		{ OUI_GOOGLE, GOOGLE_FW_DUMP_EVENT },
 		{ OUI_GOOGLE, GOOGLE_PNO_HOTSPOT_FOUND_EVENT },
 		{ OUI_GOOGLE, GOOGLE_RSSI_MONITOR_EVENT },
-		{ OUI_GOOGLE, GOOGLE_MKEEP_ALIVE_EVENT }
+		{ OUI_GOOGLE, GOOGLE_MKEEP_ALIVE_EVENT },
+		{ OUI_BRCM, BRCM_VENDOR_EVENT_IDSUP_STATUS },
+		{ OUI_BRCM, BRCM_VENDOR_EVENT_DRIVER_HANG }
 };
 
 int wl_cfgvendor_attach(struct wiphy *wiphy, dhd_pub_t *dhd)

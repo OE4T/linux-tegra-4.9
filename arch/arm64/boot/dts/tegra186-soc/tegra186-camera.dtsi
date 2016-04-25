@@ -120,12 +120,19 @@
 				nvidia,frame-count = <1>;
 				nvidia,frame-size = <64>;
 			};
-			dbg@3380 {
+			dbg@7c00 {
 				compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
-				reg = <0x3380>, <0xB380>;
+				reg = <0x7C00>, <0xFC00>;
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <1>;
-				nvidia,frame-size = <128>;
+				nvidia,frame-size = <384>;
+			};
+			dbg@7e00 {
+				compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
+				reg = <0x7E00>, <0xFE00>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <1>;
+				nvidia,frame-size = <384>;
 			};
 		};
 	};
@@ -230,12 +237,19 @@
 				nvidia,frame-count = <1>;
 				nvidia,frame-size = <64>;
 			};
-			dbg@3380 {
+			dbg@7c00 {
 				compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
-				reg = <0x3380>, <0xB380>;
+				reg = <0x7C00>, <0xFC00>;
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <1>;
-				nvidia,frame-size = <128>;
+				nvidia,frame-size = <384>;
+			};
+			dbg@7e00 {
+				compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
+				reg = <0x7E00>, <0xFE00>;
+				reg-names = "rx", "tx";
+				nvidia,frame-count = <1>;
+				nvidia,frame-size = <384>;
 			};
 		};
 	};

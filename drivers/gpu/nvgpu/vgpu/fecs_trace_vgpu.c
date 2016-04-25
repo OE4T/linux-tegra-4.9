@@ -58,6 +58,7 @@ static int vgpu_fecs_trace_init(struct gk20a *g)
 	if (IS_ERR(vcst->cookie)) {
 		dev_info(dev_from_gk20a(g),
 			"mempool  %u reserve failed\n", mempool);
+		vcst->cookie = NULL;
 		err = -EINVAL;
 		goto fail;
 	}
@@ -85,7 +86,7 @@ static int vgpu_fecs_trace_init(struct gk20a *g)
 	return 0;
 fail:
 	iounmap(vcst->buf);
-	if (!IS_ERR(vcst->cookie))
+	if (vcst->cookie)
 		tegra_hv_mempool_unreserve(vcst->cookie);
 	kfree(vcst);
 	return err;

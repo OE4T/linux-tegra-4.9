@@ -259,6 +259,7 @@ struct gpu_ops {
 				u32 compute_preempt_mode);
 		int (*get_preemption_mode_flags)(struct gk20a *g,
 		       struct nvgpu_preemption_modes_rec *preemption_modes_rec);
+		int (*fuse_override)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {

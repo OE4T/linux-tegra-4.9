@@ -19,6 +19,8 @@
 #include <linux/tegra-fuse.h>
 #include <linux/vmalloc.h>
 
+#include <dt-bindings/soc/gm20b-fuse.h>
+
 #include "gk20a/gk20a.h"
 #include "gk20a/gr_gk20a.h"
 
@@ -527,7 +529,7 @@ static void gr_gm20b_set_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 
 static void gr_gm20b_load_tpc_mask(struct gk20a *g)
 {
-	u32 pes_tpc_mask = 0;
+	u32 pes_tpc_mask = 0, fuse_tpc_mask;
 	u32 gpc, pes;
 	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
 
@@ -537,10 +539,13 @@ static void gr_gm20b_load_tpc_mask(struct gk20a *g)
 					num_tpc_per_gpc * gpc;
 		}
 
-	if (g->tpc_fs_mask_user && g->ops.gr.get_gpc_tpc_mask(g, 0) ==
-				(0x1 << g->gr.max_tpc_count) - 1) {
+	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
+	if (g->tpc_fs_mask_user && g->tpc_fs_mask_user != fuse_tpc_mask &&
+		fuse_tpc_mask == (0x1 << g->gr.max_tpc_count) - 1) {
 		u32 val = g->tpc_fs_mask_user;
 		val &= (0x1 << g->gr.max_tpc_count) - 1;
+		/* skip tpc to disable the other tpc cause channel timeout */
+		val = (0x1 << hweight32(val)) - 1;
 		gk20a_writel(g, gr_fe_tpc_fs_r(), val);
 	} else {
 		gk20a_writel(g, gr_fe_tpc_fs_r(), pes_tpc_mask);
@@ -557,6 +562,7 @@ int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	u32 tpc_sm_id = 0, gpc_tpc_id = 0;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 fuse_tpc_mask;
 
 	gk20a_dbg_fn("");
 
@@ -605,9 +611,19 @@ int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 			     gr_pd_dist_skip_table_gpc_4n3_mask_f(gr->gpc_skip_mask[gpc_index + 3]));
 	}
 
-	gk20a_writel(g, gr_cwd_fs_r(),
-		     gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
-		     gr_cwd_fs_num_tpcs_f(gr->tpc_count));
+	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
+	if (g->tpc_fs_mask_user &&
+		fuse_tpc_mask == (0x1 << gr->max_tpc_count) - 1) {
+		u32 val = g->tpc_fs_mask_user;
+		val &= (0x1 << gr->max_tpc_count) - 1;
+		gk20a_writel(g, gr_cwd_fs_r(),
+			gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
+			gr_cwd_fs_num_tpcs_f(hweight32(val)));
+	} else {
+		gk20a_writel(g, gr_cwd_fs_r(),
+			gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
+			gr_cwd_fs_num_tpcs_f(gr->tpc_count));
+	}
 
 	gr_gm20b_load_tpc_mask(g);
 
@@ -1362,6 +1378,53 @@ static int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
 	return 0;
 }
 
+static int gm20b_gr_tpc_disable_override(struct gk20a *g, u32 mask)
+{
+	if (!mask)
+		return 0;
+
+	g->tpc_fs_mask_user = ~mask;
+
+	return 0;
+}
+
+static int gm20b_gr_fuse_override(struct gk20a *g)
+{
+	struct device_node *np = g->dev->of_node;
+	u32 *fuses;
+	int count, i;
+
+	if (!np) /* may be pcie device */
+		return 0;
+
+	count = of_property_count_elems_of_size(np, "fuse-overrides", 8);
+	if (count <= 0)
+		return count;
+
+	fuses = kmalloc(sizeof(u32) * count * 2, GFP_KERNEL);
+	if (!fuses)
+		return -ENOMEM;
+	of_property_read_u32_array(np, "fuse-overrides", fuses, count * 2);
+	for (i = 0; i < count; i++) {
+		u32 fuse, value;
+
+		fuse = fuses[2 * i];
+		value = fuses[2 * i + 1];
+		switch (fuse) {
+		case GM20B_FUSE_OPT_TPC_DISABLE:
+			gm20b_gr_tpc_disable_override(g, value);
+			break;
+		default:
+			gk20a_err(dev_from_gk20a(g),
+				"ignore unknown fuse override %08x", fuse);
+			break;
+		}
+	}
+
+	kfree(fuses);
+	return 0;
+}
+
 void gm20b_init_gr(struct gpu_ops *gops)
 {
 	gops->gr.init_gpc_mmu = gr_gm20b_init_gpc_mmu;
@@ -1435,4 +1498,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.clear_sm_error_state = gm20b_gr_clear_sm_error_state;
 	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
 	gops->gr.get_preemption_mode_flags = gr_gm20b_get_preemption_mode_flags;
+	gops->gr.fuse_override = gm20b_gr_fuse_override;
 }

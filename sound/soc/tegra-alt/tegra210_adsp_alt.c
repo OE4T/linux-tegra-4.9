@@ -2843,7 +2843,7 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 	return ret;
 }
 
-int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
+static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 	int op_flag, unsigned int size, unsigned int __user *tlv)
 {
 	struct soc_bytes *params = (void *)kcontrol->private_value;

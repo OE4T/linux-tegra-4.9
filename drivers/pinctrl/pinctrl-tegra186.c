@@ -3152,7 +3152,7 @@ static const char * const ufs0_groups[] = {
 		.ngroups = ARRAY_SIZE(fname##_groups),	\
 	}						\
 
-static const struct tegra_function tegra186_functions[] = {
+static struct tegra_function tegra186_functions[] = {
 	FUNCTION(rsvd0),
 	FUNCTION(rsvd1),
 	FUNCTION(rsvd2),

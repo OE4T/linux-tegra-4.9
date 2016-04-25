@@ -393,7 +393,6 @@ static int pm_qos_dbg_show_requests(struct seq_file *s, void *unused)
 	struct pm_qos_constraints *c;
 	struct pm_qos_request *req;
 	char *type;
-	unsigned long flags;
 	int tot_reqs = 0;
 	int active_reqs = 0;
 
@@ -408,7 +407,7 @@ static int pm_qos_dbg_show_requests(struct seq_file *s, void *unused)
 	}
 
 	/* Lock to ensure we have a snapshot */
-	spin_lock_irqsave(&pm_qos_lock, flags);
+	mutex_lock(&pm_qos_lock);
 	if (plist_head_empty(&c->list)) {
 		seq_puts(s, "Empty!\n");
 		goto out;
@@ -444,7 +443,7 @@ static int pm_qos_dbg_show_requests(struct seq_file *s, void *unused)
 		   type, pm_qos_get_value(c), active_reqs, tot_reqs);
 
 out:
-	spin_unlock_irqrestore(&pm_qos_lock, flags);
+	mutex_unlock(&pm_qos_lock);
 	return 0;
 }
 

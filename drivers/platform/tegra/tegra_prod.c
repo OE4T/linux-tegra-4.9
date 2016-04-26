@@ -24,6 +24,20 @@
 
 #define TEGRA_PROD_SETTING "prod-settings"
 
+struct prod_tuple {
+	u32 index; /* Address base index */
+	u32 addr;  /* offset address*/
+	u32 mask;  /* mask */
+	u32 val;   /* value */
+};
+
+struct tegra_prod {
+	const char *name;
+	struct prod_tuple *prod_tuple;
+	int count; /* number of prod_tuple*/
+	bool boot_init;
+};
+
 /**
  * tegra_prod_parse_dt - Read the prod setting form Device tree.
  * @np:		device node from which the property value is to be read.
@@ -182,6 +196,9 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 	}
 	tegra_prod_list->n_prod_cells = n_tupple;
 
+	tegra_prod_list->mask_ones = of_property_read_bool(prod_child,
+							   "mask-one-style");
+
 	n_child = 0;
 	for_each_child_of_node(prod_child, child) {
 		/* Check whether child is enabled or not */
@@ -262,7 +279,9 @@ err_parsing:
  *
  * Returns 0 on success.
  */
-int tegra_prod_set_tuple(void __iomem **base, struct prod_tuple *prod_tuple)
+static int tegra_prod_set_tuple(void __iomem **base,
+				struct prod_tuple *prod_tuple,
+				bool mask_ones)
 {
 	u32 reg;
 
@@ -270,13 +289,17 @@ int tegra_prod_set_tuple(void __iomem **base, struct prod_tuple *prod_tuple)
 		return -EINVAL;
 
 	reg = readl(base[prod_tuple->index] + prod_tuple->addr);
-	reg = ((reg & prod_tuple->mask) |
-		(prod_tuple->val & ~prod_tuple->mask));
+	if (mask_ones)
+		reg = ((reg & ~prod_tuple->mask) |
+			(prod_tuple->val & prod_tuple->mask));
+	else
+		reg = ((reg & prod_tuple->mask) |
+			(prod_tuple->val & ~prod_tuple->mask));
+
 	writel(reg, base[prod_tuple->index] + prod_tuple->addr);
 
 	return 0;
 }
-EXPORT_SYMBOL(tegra_prod_set_tuple);
 
 /**
  * tegra_prod_set - Set one prod setting.
@@ -286,7 +309,9 @@ EXPORT_SYMBOL(tegra_prod_set_tuple);
  * Set all the tuples in one tegra_prod.
  * Returns 0 on success.
  */
-int tegra_prod_set(void __iomem **base, struct tegra_prod *tegra_prod)
+static int tegra_prod_set(void __iomem **base,
+			  struct tegra_prod *tegra_prod,
+			  bool mask_ones)
 {
 	int i;
 	int ret;
@@ -295,14 +320,14 @@ int tegra_prod_set(void __iomem **base, struct tegra_prod *tegra_prod)
 		return -EINVAL;
 
 	for (i = 0; i < tegra_prod->count; i++) {
-		ret = tegra_prod_set_tuple(base, &tegra_prod->prod_tuple[i]);
+		ret = tegra_prod_set_tuple(base, &tegra_prod->prod_tuple[i],
+					   mask_ones);
 		if (ret)
 			return ret;
 	}
 
 	return 0;
 }
-EXPORT_SYMBOL(tegra_prod_set);
 
 /**
  * tegra_prod_set_list - Set all the prod settings of the list in sequence.
@@ -321,7 +346,8 @@ int tegra_prod_set_list(void __iomem **base,
 		return -EINVAL;
 
 	for (i = 0; i < tegra_prod_list->num; i++) {
-		ret = tegra_prod_set(base, &tegra_prod_list->tegra_prod[i]);
+		ret = tegra_prod_set(base, &tegra_prod_list->tegra_prod[i],
+				     tegra_prod_list->mask_ones);
 		if (ret)
 			return ret;
 	}
@@ -350,7 +376,8 @@ int tegra_prod_set_boot_init(void __iomem **base,
 	for (i = 0; i < tegra_prod_list->num; i++) {
 		if (!tegra_prod_list->tegra_prod[i].boot_init)
 			continue;
-		ret = tegra_prod_set(base, &tegra_prod_list->tegra_prod[i]);
+		ret = tegra_prod_set(base, &tegra_prod_list->tegra_prod[i],
+				     tegra_prod_list->mask_ones);
 		if (ret)
 			return ret;
 	}
@@ -384,7 +411,8 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 		if (!t_prod)
 			return -EINVAL;
 		if (!strcmp(t_prod->name, name))
-			return tegra_prod_set(base, t_prod);
+			return tegra_prod_set(base, t_prod,
+					      tegra_prod_list->mask_ones);
 	}
 
 	return -ENODEV;

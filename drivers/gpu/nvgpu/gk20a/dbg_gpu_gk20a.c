@@ -975,6 +975,9 @@ static int nvgpu_ioctl_channel_reg_ops(struct dbg_session_gk20a *dbg_s,
 	struct channel_gk20a *ch;
 	u64 ops_size = sizeof(ops[0]) * args->num_ops;
 
+	if (args->num_ops > SZ_4K / sizeof(ops[0]))
+		return -EINVAL;
+
 	gk20a_dbg_fn("%d ops, total size %llu", args->num_ops, ops_size);
 
 	if (!dbg_s->ops) {

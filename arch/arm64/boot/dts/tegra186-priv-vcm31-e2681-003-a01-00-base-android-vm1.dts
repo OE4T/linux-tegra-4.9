@@ -533,7 +533,17 @@
 			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@c250000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_0>;
+
+		address-space-prop {
+			ape_as: ape {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
 		};
+	};
 
 	ahci-sata@3507000 {
 		status = "disabled";
@@ -579,6 +589,7 @@
 		power-domains = <&ape_pd>;
 		wakeup-disable;
 		cardname = "tegra-virt-pcm-vm1";
+		codec = <&spdif_dit0>;
 		dmas = <&adma 1>, <&adma 1>, <&adma 2>, <&adma 2>,
 			<&adma 3>, <&adma 3>, <&adma 4>, <&adma 4>;
 		dma-names = "rx1", "tx1", "rx2", "tx2",
@@ -587,6 +598,16 @@
 		admaif_ch_num = <4>;
 		admaif_ch_list = <1>, <2>, <3>, <4>;
         };
+
+	trusty {
+		virtio {
+			status = "disabled";
+		};
+        };
+
+	cpufreq@e070000 {
+		nvidia,debugfs-only;
+	};
 
         /delete-node/ axi2apb@2390000;
         /delete-node/ axi2apb@23a0000;

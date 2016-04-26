@@ -1,4 +1,5 @@
 source "../kernel-nvhost-t18x/drivers/video/tegra/host/Kconfig"
+source "../kernel-nvhost-t19x/drivers/video/tegra/host/Kconfig"
 
 config TEGRA_VI_NOTIFY
 	bool "Tegra VI Notify FIFO driver"

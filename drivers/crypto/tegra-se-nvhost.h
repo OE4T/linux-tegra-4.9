@@ -201,8 +201,14 @@
 #define SE_ADDR_HI_SZ(x)		(x << SE_ADDR_HI_SZ_SHIFT)
 
 #define SE_MAX_TASKS_PER_SUBMIT		32
-#define SE_MAX_SUBMIT_CHAIN_SZ		40
+#define SE_MAX_SUBMIT_CHAIN_SZ		10
 #define SE_WORD_SIZE_BYTES		4
+
+/* FIXME: The below 2 macros should fine tuned
+ * based on discussions with CPU team */
+
+#define SE_MAX_CMDBUF_TIMEOUT		(20 * SE_MAX_SUBMIT_CHAIN_SZ)
+#define SE_WAIT_UDELAY			500 /* micro seconds */
 
 #define SE_INT_ENABLE_REG_OFFSET	0x88
 #define SE1_INT_ENABLE_SHIFT		1

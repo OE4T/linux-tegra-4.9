@@ -85,38 +85,26 @@ static int tegra210_i2s_set_clock_rate(struct device *dev, int clock_rate)
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &val);
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
-#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		ret = clk_set_parent(i2s->clk_audio_sync,
-				i2s->clk_i2s_sync);
-		if (ret) {
-			dev_err(dev,
-				"Can't set parent of i2s audio sync clock\n");
-			return ret;
-		}
-#endif
 		if (((val & TEGRA210_I2S_CTRL_MASTER_EN_MASK) ==
 				TEGRA210_I2S_CTRL_MASTER_EN)) {
-			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_pll_a_out0);
-			if (ret) {
-				dev_err(dev, "Can't set parent of I2S clock\n");
-				return ret;
-			}
 
-			ret = clk_set_rate(i2s->clk_i2s, clock_rate);
-			if (ret) {
-				dev_err(dev,
-					"Can't set I2S clock rate: %d\n", ret);
-				return ret;
-			}
-		} else {
 			ret = clk_set_rate(i2s->clk_i2s_sync, clock_rate);
 			if (ret) {
 				dev_err(dev, "Can't set I2S sync clock rate\n");
 				return ret;
 			}
-			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_audio_sync);
+#if !defined(CONFIG_ARCH_TEGRA_21x_SOC)
+			ret = clk_set_parent(i2s->clk_audio_sync,
+					i2s->clk_i2s_sync);
 			if (ret) {
-				dev_err(dev, "Can't set parent of i2s clock\n");
+				dev_err(dev,
+					"Can't set parent of i2s audio sync clock\n");
+				return ret;
+			}
+#endif
+			ret = clk_set_parent(i2s->clk_i2s, i2s->clk_i2s_source);
+			if (ret) {
+				dev_err(dev, "Can't set parent of I2S clock\n");
 				return ret;
 			}
 
@@ -953,13 +941,13 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 		}
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		i2s->clk_pll_a_out0 = clk_get_sys(NULL, "pll_a_out0");
+		i2s->clk_i2s_source = clk_get_sys(NULL, "pll_a_out0");
 #else
-		i2s->clk_pll_a_out0 = devm_clk_get(&pdev->dev, "pll_a_out0");
+		i2s->clk_i2s_source = devm_clk_get(&pdev->dev, "pll_a_out0");
 #endif
-		if (IS_ERR(i2s->clk_pll_a_out0)) {
+		if (IS_ERR(i2s->clk_i2s_source)) {
 			dev_err(&pdev->dev, "Can't retrieve pll_a_out0 clock\n");
-			ret = PTR_ERR(i2s->clk_pll_a_out0);
+			ret = PTR_ERR(i2s->clk_i2s_source);
 			goto err_audio_sync_clk_put;
 		}
 	}
@@ -1108,9 +1096,9 @@ err_pm_disable:
 err_pll_a_out0_clk_put:
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-		clk_put(i2s->clk_pll_a_out0);
+		clk_put(i2s->clk_i2s_source);
 #else
-		devm_clk_put(&pdev->dev, i2s->clk_pll_a_out0);
+		devm_clk_put(&pdev->dev, i2s->clk_i2s_source);
 #endif
 err_audio_sync_clk_put:
 	devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
@@ -1136,7 +1124,7 @@ static int tegra210_i2s_platform_remove(struct platform_device *pdev)
 		devm_clk_put(&pdev->dev, i2s->clk_i2s);
 		devm_clk_put(&pdev->dev, i2s->clk_audio_sync);
 		devm_clk_put(&pdev->dev, i2s->clk_i2s_sync);
-		clk_put(i2s->clk_pll_a_out0);
+		clk_put(i2s->clk_i2s_source);
 	}
 
 	return 0;

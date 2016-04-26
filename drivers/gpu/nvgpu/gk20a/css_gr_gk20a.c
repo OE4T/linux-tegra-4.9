@@ -662,6 +662,10 @@ int gr_gk20a_css_attach(struct gk20a *g,
 	if (!cs_client)
 		return -EINVAL;
 
+	if (!perfmon_count ||
+	    perfmon_count > CSS_MAX_PERFMON_IDS - CSS_FIRST_PERFMON_ID)
+		return -EINVAL;
+
 	gr = &g->gr;
 	*cs_client = NULL;
 

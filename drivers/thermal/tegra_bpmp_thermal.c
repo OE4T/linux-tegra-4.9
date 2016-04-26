@@ -31,6 +31,7 @@
 #include <linux/thermal.h>
 #include <linux/version.h>
 #include <linux/workqueue.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
@@ -380,3 +381,4 @@ module_platform_driver(tegra_bpmp_thermal_driver);
 MODULE_AUTHOR("Aapo Vienamo <avienamo@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra BPMP thermal management driver");
 MODULE_LICENSE("GPL v2");
+#endif

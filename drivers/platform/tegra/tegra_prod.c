@@ -21,6 +21,7 @@
 #include <linux/of_device.h>
 #include <linux/io.h>
 #include <linux/tegra_prod.h>
+#include <linux/kmemleak.h>
 
 #define TEGRA_PROD_SETTING "prod-settings"
 
@@ -239,6 +240,7 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 			ret = -ENOMEM;
 			goto err_parsing;
 		}
+		kmemleak_not_leak(t_prod->prod_tuple);
 
 		t_prod->boot_init = of_property_read_bool(child,
 						"nvidia,prod-boot-init");
@@ -456,12 +458,15 @@ struct tegra_prod_list *tegra_prod_init(const struct device_node *np)
 	if (!tegra_prod_list)
 		return  ERR_PTR(-ENOMEM);
 
+	kmemleak_not_leak(tegra_prod_list);
+
 	tegra_prod_list->tegra_prod = kzalloc(prod_num *
 				sizeof(struct tegra_prod), GFP_KERNEL);
 	if (!tegra_prod_list->tegra_prod) {
 		ret = -ENOMEM;
 		goto err_prod_alloc;
 	}
+	kmemleak_not_leak(tegra_prod_list->tegra_prod);
 	tegra_prod_list->num = prod_num;
 
 	ret = tegra_prod_parse_dt(np, child, tegra_prod_list);

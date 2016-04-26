@@ -16,6 +16,7 @@
 
 #include "tegra186-platforms/tegra186-vcm31-p2382-common.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-p2382-disp.dtsi"
+#include "tegra186-prod/tegra186-priv-vcm31-p2382-010-a01-00-prod.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

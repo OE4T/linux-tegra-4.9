@@ -131,28 +131,12 @@ struct gk20a_cs_snapshot_client {
 /* should correlate with size of gk20a_cs_snapshot_fifo_entry::perfmon_id */
 #define CSS_MAX_PERFMON_IDS	256
 
-
-/* this type is used for storing bits in perfmon mask */
-typedef u32 css_perfmon_t;
-
 /* local definitions to avoid hardcodes sizes and shifts */
-#define PM_BITS		(sizeof(css_perfmon_t) * BITS_PER_BYTE)
-#define PM_BITS_MASK	(PM_BITS - 1)
-
-#define PM_BITMAP_SIZE	((CSS_MAX_PERFMON_IDS + PM_BITS - 1) / PM_BITS)
-
-#define PM_SLOT(i)	((i) / PM_BITS)
-#define PM_SHIFT(i)	((i) & PM_BITS_MASK)
-#define PM_BIT(i)	(1u << PM_SHIFT(i))
-
-#define CSS_PERFMON_GET(p, i)	(1 == ((p[PM_SLOT(i)] >> PM_SHIFT(i)) & 1))
-#define CSS_PERFMON_USE(p, i)	(p[PM_SLOT(i)] |= PM_BIT(i))
-#define CSS_PERFMON_REL(p, i)	(p[PM_SLOT(i)] &= ~PM_BIT(i))
-
+#define PM_BITMAP_SIZE	DIV_ROUND_UP(CSS_MAX_PERFMON_IDS, BITS_PER_LONG)
 
 /* cycle stats snapshot control structure for one HW entry and many clients */
 struct gk20a_cs_snapshot {
-	css_perfmon_t		perfmon_ids[PM_BITMAP_SIZE];
+	unsigned long perfmon_ids[PM_BITMAP_SIZE];
 	struct list_head	clients;
 	struct mem_desc		hw_memdesc;
 	/* pointer to allocated cpu_va memory where GPU place data */
@@ -497,59 +481,30 @@ next_hw_fifo_entry:
 static u32 css_gr_allocate_perfmon_ids(struct gk20a_cs_snapshot *data,
 				       u32 count)
 {
-	u32 *pids = data->perfmon_ids;
-	u32  f;
-	u32  e = CSS_MAX_PERFMON_IDS - count;
+	unsigned long *pids = data->perfmon_ids;
+	unsigned int f;
 
-	if (!count || count > CSS_MAX_PERFMON_IDS - CSS_FIRST_PERFMON_ID)
-		return 0;
+	f = bitmap_find_next_zero_area(pids, CSS_MAX_PERFMON_IDS,
+				       CSS_FIRST_PERFMON_ID, count, 0);
+	if (f > CSS_MAX_PERFMON_IDS)
+		f = 0;
+	else
+		bitmap_set(pids, f, count);
 
-	for (f = CSS_FIRST_PERFMON_ID; f <= e; f++) {
-		u32 slots;
-		u32 cur;
-		u32 end;
-
-		if (CSS_PERFMON_GET(pids, f))
-			continue;
-
-		/* lookup for continuous hole [f, f+count) of unused bits */
-		slots = 0;
-		end = f + count;
-		for (cur = f; cur < end; cur++) {
-			if (CSS_PERFMON_GET(pids, cur))
-				break;
-			slots++;
-		}
-
-		if (count == slots) {
-			/* we found of hole of unused bits with required */
-			/* length -> can occupy it for our perfmon IDs   */
-			for (cur = f; cur < end; cur++)
-				CSS_PERFMON_USE(pids, cur);
-
-			return f;
-		}
-	}
-
-	return 0;
+	return f;
 }
 
 static u32 css_gr_release_perfmon_ids(struct gk20a_cs_snapshot *data,
 				      u32 start,
 				      u32 count)
 {
-	u32 *pids = data->perfmon_ids;
+	unsigned long *pids = data->perfmon_ids;
 	u32  end = start + count;
 	u32  cnt = 0;
 
 	if (start >= CSS_FIRST_PERFMON_ID && end <= CSS_MAX_PERFMON_IDS) {
-		u32  i;
-		for (i = start; i < end; i++) {
-			if (CSS_PERFMON_GET(pids, i)) {
-				CSS_PERFMON_REL(pids, i);
-				cnt++;
-			}
-		}
+		bitmap_clear(pids, start, count);
+		cnt = count;
 	}
 
 	return cnt;

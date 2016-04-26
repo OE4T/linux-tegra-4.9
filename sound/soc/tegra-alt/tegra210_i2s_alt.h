@@ -1,7 +1,7 @@
 /*
  * tegra210_i2s_alt.h - Definitions for Tegra210 I2S driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -204,7 +204,7 @@ struct tegra210_i2s {
 	struct clk *clk_i2s;
 	struct clk *clk_i2s_sync;
 	struct clk *clk_audio_sync;
-	struct clk *clk_pll_a_out0;
+	struct clk *clk_i2s_source;
 	struct regmap *regmap;
 	struct pinctrl *pinctrl;
 	struct pinctrl_state *pin_default_state;

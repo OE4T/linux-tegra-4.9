@@ -1,6 +1,7 @@
 KBUILD_CFLAGS += -I$(srctree)/arch/arm/mach-tegra \
 		 -I$(srctree)/arch/arm/mach-tegra/include/ \
-		 -I$(srctree)/drivers/platform/tegra/
+		 -I$(srctree)/drivers/platform/tegra/ \
+		 -I$(srctree)/../kernel-display/drivers/video/tegra/dc/panel/
 
 ccflags-y += -Werror
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-platform-common.o

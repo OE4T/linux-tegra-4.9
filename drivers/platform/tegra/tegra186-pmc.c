@@ -499,7 +499,7 @@ static int tegra186_pmc_debugfs_init(struct device_node *np)
 
 	tegra186_pmc_scratch_base = of_iomap(np, 1);
 
-	cnt_reg_offset = of_property_count_u32(np,
+	cnt_reg_offset = of_property_count_u32_elems(np,
 				"export-pmc-scratch-reg-offset");
 	if (cnt_reg_offset < 0) {
 		pr_info("scratch reg offset data not present\n");

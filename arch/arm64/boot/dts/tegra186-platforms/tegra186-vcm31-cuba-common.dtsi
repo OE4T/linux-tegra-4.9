@@ -337,6 +337,18 @@
 		arad@290e400 {
 			status = "okay";
 		};
+		i2s@2901400 {
+			clocks = <&tegra_car TEGRA186_CLK_I2S5>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S5>,
+				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S5>;
+		};
+		i2s@2901500 {
+			clocks = <&tegra_car TEGRA186_CLK_I2S6>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S6>,
+				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S6>;
+		};
 	};
 
 	sound_ref {
@@ -362,11 +374,11 @@
 			"extern1";
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
-		nvidia,num-codec-link = <3>;
+		nvidia,num-codec-link = <6>;
 		nvidia,num-amx = <4>;
 		nvidia,num-adx = <4>;
 		nvidia,amx-slot-size = <64 16 16 64>;
-		nvidia,adx-slot-size = <8 32 4 32>;
+		nvidia,adx-slot-size = <28 64 4 32>;
 		nvidia,amx1-slot-map = <
 			/* Ent1 */
 			TDM_SLOT_MAP(0, 1, 0)
@@ -378,52 +390,6 @@
 			TDM_SLOT_MAP(0, 2, 2)
 			TDM_SLOT_MAP(0, 2, 3)
 
-			/* Multi-channel */
-			TDM_SLOT_MAP(1, 1, 0)
-			TDM_SLOT_MAP(1, 1, 1)
-			TDM_SLOT_MAP(1, 1, 2)
-			TDM_SLOT_MAP(1, 1, 3)
-			TDM_SLOT_MAP(1, 2, 0)
-			TDM_SLOT_MAP(1, 2, 1)
-			TDM_SLOT_MAP(1, 2, 2)
-			TDM_SLOT_MAP(1, 2, 3)
-			TDM_SLOT_MAP(1, 3, 0)
-			TDM_SLOT_MAP(1, 3, 1)
-			TDM_SLOT_MAP(1, 3, 2)
-			TDM_SLOT_MAP(1, 3, 3)
-			TDM_SLOT_MAP(1, 4, 0)
-			TDM_SLOT_MAP(1, 4, 1)
-			TDM_SLOT_MAP(1, 4, 2)
-			TDM_SLOT_MAP(1, 4, 3)
-			TDM_SLOT_MAP(1, 5, 0)
-			TDM_SLOT_MAP(1, 5, 1)
-			TDM_SLOT_MAP(1, 5, 2)
-			TDM_SLOT_MAP(1, 5, 3)
-			TDM_SLOT_MAP(1, 6, 0)
-			TDM_SLOT_MAP(1, 6, 1)
-			TDM_SLOT_MAP(1, 6, 2)
-			TDM_SLOT_MAP(1, 6, 3)
-			TDM_SLOT_MAP(1, 7, 0)
-			TDM_SLOT_MAP(1, 7, 1)
-			TDM_SLOT_MAP(1, 7, 2)
-			TDM_SLOT_MAP(1, 7, 3)
-			TDM_SLOT_MAP(1, 8, 0)
-			TDM_SLOT_MAP(1, 8, 1)
-			TDM_SLOT_MAP(1, 8, 2)
-			TDM_SLOT_MAP(1, 8, 3)
-
-			/* MC Down mix */
-			TDM_SLOT_MAP(2, 1, 0)
-			TDM_SLOT_MAP(2, 1, 1)
-			TDM_SLOT_MAP(2, 2, 0)
-			TDM_SLOT_MAP(2, 2, 1)
-
-			/* blank */
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-
 			/* Ent2 */
 			TDM_SLOT_MAP(3, 1, 0)
 			TDM_SLOT_MAP(3, 1, 1)
@@ -434,13 +400,55 @@
 			TDM_SLOT_MAP(3, 2, 2)
 			TDM_SLOT_MAP(3, 2, 3)
 
-			/* blank */
+			/* Multi-channel */
+			TDM_SLOT_MAP(1, 1, 0)
+			TDM_SLOT_MAP(1, 1, 1)
 			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 2, 0)
+			TDM_SLOT_MAP(1, 2, 1)
 			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 3, 0)
+			TDM_SLOT_MAP(1, 3, 1)
 			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 4, 0)
+			TDM_SLOT_MAP(1, 4, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 5, 0)
+			TDM_SLOT_MAP(1, 5, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 6, 0)
+			TDM_SLOT_MAP(1, 6, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 7, 0)
+			TDM_SLOT_MAP(1, 7, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 8, 0)
+			TDM_SLOT_MAP(1, 8, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 9, 0)
+			TDM_SLOT_MAP(1, 9, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(1, 10, 0)
+			TDM_SLOT_MAP(1, 10, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+
+			/* MC Down mix */
+			TDM_SLOT_MAP(2, 1, 0)
+			TDM_SLOT_MAP(2, 1, 1)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(2, 2, 0)
+			TDM_SLOT_MAP(2, 2, 1)
 			TDM_SLOT_MAP(0, 0, 0)
 			TDM_SLOT_MAP(0, 0, 0)>;
 
@@ -503,7 +511,142 @@
 			TDM_SLOT_MAP(0, 2, 2)
 			TDM_SLOT_MAP(0, 2, 3)
 
-			/* bytes 8-39 multi-channel */
+			/* bytes 8-15 Ent2 */
+			TDM_SLOT_MAP(0, 3, 0)
+			TDM_SLOT_MAP(0, 3, 1)
+			TDM_SLOT_MAP(0, 3, 2)
+			TDM_SLOT_MAP(0, 3, 3)
+			TDM_SLOT_MAP(0, 4, 0)
+			TDM_SLOT_MAP(0, 4, 1)
+			TDM_SLOT_MAP(0, 4, 2)
+			TDM_SLOT_MAP(0, 4, 3)
+
+			/* I2S3 is configured for 32 bit data
+			   So we need to take care of byte ordering
+			   for 16 bit sources */
+
+			/* bytes 18-19 TTS */
+			TDM_SLOT_MAP(1, 2, 0)
+			TDM_SLOT_MAP(1, 2, 1)
+
+			/* bytes 16-17 CE audio */
+			TDM_SLOT_MAP(1, 1, 0)
+			TDM_SLOT_MAP(1, 1, 1)
+
+			/* bytes 22-23 Ringtone */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+
+			/* bytes 20-21 Touch */
+			TDM_SLOT_MAP(1, 3, 0)
+			TDM_SLOT_MAP(1, 3, 1)
+
+			/* bytes 26-27 Navi */
+			TDM_SLOT_MAP(1, 4, 0)
+			TDM_SLOT_MAP(1, 4, 1)
+
+			/* bytes 24-25 AcousticSignal */
+			TDM_SLOT_MAP(3, 1, 0)
+			TDM_SLOT_MAP(3, 1, 1)
+
+			/* bytes 30-31 Tel DL */
+			TDM_SLOT_MAP(2, 1, 0)
+			TDM_SLOT_MAP(2, 1, 1)
+
+			/* bytes 28-29 BrowserInfotainment */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+
+			/* bytes 32-47 Multichannel */
+			TDM_SLOT_MAP(0, 6, 0)
+			TDM_SLOT_MAP(0, 6, 1)
+			TDM_SLOT_MAP(0, 5, 0)
+			TDM_SLOT_MAP(0, 5, 1)
+			TDM_SLOT_MAP(0, 8, 0)
+			TDM_SLOT_MAP(0, 8, 1)
+			TDM_SLOT_MAP(0, 7, 0)
+			TDM_SLOT_MAP(0, 7, 1)
+			TDM_SLOT_MAP(0, 10, 0)
+			TDM_SLOT_MAP(0, 10, 1)
+			TDM_SLOT_MAP(0, 9, 0)
+			TDM_SLOT_MAP(0, 9, 1)
+			TDM_SLOT_MAP(0, 12, 0)
+			TDM_SLOT_MAP(0, 12, 1)
+			TDM_SLOT_MAP(0, 11, 0)
+			TDM_SLOT_MAP(0, 11, 1)
+			TDM_SLOT_MAP(0, 14, 0)
+			TDM_SLOT_MAP(0, 14, 1)
+			TDM_SLOT_MAP(0, 13, 0)
+			TDM_SLOT_MAP(0, 13, 1)
+
+			/* bytes 48-51 MC down mix */
+			TDM_SLOT_MAP(0, 16, 0)
+			TDM_SLOT_MAP(0, 16, 1)
+			TDM_SLOT_MAP(0, 15, 0)
+			TDM_SLOT_MAP(0, 15, 1)
+
+			/* bytes 52-63 zeros */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)>;
+
+		nvidia,adx1-slot-map = <
+			/* bytes 2-3 Mic2 */
+			TDM_SLOT_MAP(0, 2, 0)
+			TDM_SLOT_MAP(0, 2, 1)
+
+			/* bytes 0-1 Mic1 */
+			TDM_SLOT_MAP(0, 1, 0)
+			TDM_SLOT_MAP(0, 1, 1)
+
+			/* bytes 4-23 Mic3, Mic4 and RefSpeech */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+
+			/* bytes 26-27 zeros */
+			TDM_SLOT_MAP(0, 0, 0)
+			TDM_SLOT_MAP(0, 0, 0)
+
+			/* bytes 24-25 RefHandsfree */
+			TDM_SLOT_MAP(0, 3, 0)
+			TDM_SLOT_MAP(0, 3, 1)>;
+
+		nvidia,adx2-slot-map = <
+			TDM_SLOT_MAP(0, 1, 0)
+			TDM_SLOT_MAP(0, 1, 1)
+			TDM_SLOT_MAP(0, 1, 2)
+			TDM_SLOT_MAP(0, 1, 3)
+			TDM_SLOT_MAP(0, 2, 0)
+			TDM_SLOT_MAP(0, 2, 1)
+			TDM_SLOT_MAP(0, 2, 2)
+			TDM_SLOT_MAP(0, 2, 3)
 			TDM_SLOT_MAP(0, 3, 0)
 			TDM_SLOT_MAP(0, 3, 1)
 			TDM_SLOT_MAP(0, 3, 2)
@@ -528,71 +671,39 @@
 			TDM_SLOT_MAP(0, 8, 1)
 			TDM_SLOT_MAP(0, 8, 2)
 			TDM_SLOT_MAP(0, 8, 3)
-			TDM_SLOT_MAP(0, 9, 0)
-			TDM_SLOT_MAP(0, 9, 1)
-			TDM_SLOT_MAP(0, 9, 2)
-			TDM_SLOT_MAP(0, 9, 3)
-			TDM_SLOT_MAP(0, 10, 0)
-			TDM_SLOT_MAP(0, 10, 1)
-			TDM_SLOT_MAP(0, 10, 2)
-			TDM_SLOT_MAP(0, 10, 3)
 
-			/* bytes 40-43 MC down mix */
-			TDM_SLOT_MAP(0, 11, 2)
-			TDM_SLOT_MAP(0, 11, 3)
-			TDM_SLOT_MAP(0, 11, 0)
-			TDM_SLOT_MAP(0, 11, 1)
-
-			/* I2S3 is configured for 32 bit data
-			   So we need to take care of byte ordering
-			   for 16 bit sources */
-
-			/* bytes 46-47 TTS */
-			TDM_SLOT_MAP(1, 2, 0)
-			TDM_SLOT_MAP(1, 2, 1)
-
-			/* bytes 44-45 CE audio */
 			TDM_SLOT_MAP(1, 1, 0)
 			TDM_SLOT_MAP(1, 1, 1)
-
-			/* bytes 50-51 Navi */
-			TDM_SLOT_MAP(1, 4, 0)
-			TDM_SLOT_MAP(1, 4, 1)
-
-			/* bytes 48-49 Touch */
+			TDM_SLOT_MAP(1, 1, 2)
+			TDM_SLOT_MAP(1, 1, 3)
+			TDM_SLOT_MAP(1, 2, 0)
+			TDM_SLOT_MAP(1, 2, 1)
+			TDM_SLOT_MAP(1, 2, 2)
+			TDM_SLOT_MAP(1, 2, 3)
 			TDM_SLOT_MAP(1, 3, 0)
 			TDM_SLOT_MAP(1, 3, 1)
-
-			/* bytes 52-53 Tel */
-			TDM_SLOT_MAP(0, 13, 2)
-			TDM_SLOT_MAP(0, 13, 3)
-
-			/* bytes 54-61 Ent2 */
-			TDM_SLOT_MAP(2, 1, 0)
-			TDM_SLOT_MAP(2, 1, 1)
-			TDM_SLOT_MAP(0, 14, 2)
-			TDM_SLOT_MAP(0, 14, 3)
-			TDM_SLOT_MAP(0, 13, 0)
-			TDM_SLOT_MAP(0, 13, 1)
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-
-			/* bytes 62-63 zeros */
-			TDM_SLOT_MAP(0, 14, 0)
-			TDM_SLOT_MAP(0, 14, 1)>;
-
-		nvidia,adx1-slot-map = <
-			TDM_SLOT_MAP(0, 2, 0)
-			TDM_SLOT_MAP(0, 2, 1)
-
-			TDM_SLOT_MAP(0, 1, 0)
-			TDM_SLOT_MAP(0, 1, 1)
-
-			TDM_SLOT_MAP(0, 0, 0)
-			TDM_SLOT_MAP(0, 0, 0)
-
-			TDM_SLOT_MAP(0, 3, 0)
-			TDM_SLOT_MAP(0, 3, 1)>;
+			TDM_SLOT_MAP(1, 3, 2)
+			TDM_SLOT_MAP(1, 3, 3)
+			TDM_SLOT_MAP(1, 4, 0)
+			TDM_SLOT_MAP(1, 4, 1)
+			TDM_SLOT_MAP(1, 4, 2)
+			TDM_SLOT_MAP(1, 4, 3)
+			TDM_SLOT_MAP(1, 5, 0)
+			TDM_SLOT_MAP(1, 5, 1)
+			TDM_SLOT_MAP(1, 5, 2)
+			TDM_SLOT_MAP(1, 5, 3)
+			TDM_SLOT_MAP(1, 6, 0)
+			TDM_SLOT_MAP(1, 6, 1)
+			TDM_SLOT_MAP(1, 6, 2)
+			TDM_SLOT_MAP(1, 6, 3)
+			TDM_SLOT_MAP(1, 7, 0)
+			TDM_SLOT_MAP(1, 7, 1)
+			TDM_SLOT_MAP(1, 7, 2)
+			TDM_SLOT_MAP(1, 7, 3)
+			TDM_SLOT_MAP(1, 8, 0)
+			TDM_SLOT_MAP(1, 8, 1)
+			TDM_SLOT_MAP(1, 8, 2)
+			TDM_SLOT_MAP(1, 8, 3)>;
 
 		nvidia,adx3-slot-map = <
 			TDM_SLOT_MAP(0, 1, 0)
@@ -603,10 +714,16 @@
 		nvidia,audio-routing =
 			"Headphone-x", "x OUT",
 			"x IN", "LineIn-x",
+			"Headphone-v", "v OUT",
+			"v IN", "LineIn-v",
 			"Headphone-y", "y OUT",
 			"y IN", "LineIn-y",
 			"Headphone-d", "d OUT",
-			"d IN", "LineIn-d";
+			"d IN", "LineIn-d",
+			"Headphone-z", "z OUT",
+			"z IN", "LineIn-z",
+			"Headphone-w", "w OUT",
+			"w IN", "LineIn-w";
 
 		nvidia,xbar = <&tegra_axbar>;
 
@@ -616,8 +733,8 @@
 			codec-dai = <&spdif_dit0>;
 			cpu-dai-name = "I2S3";
 			codec-dai-name = "dit-hifi";
-			tx-mask = <0xFFFF>;
-			rx-mask = <0xFFFF>;
+			tx-mask = <0xFF>;
+			rx-mask = <0xFF>;
 			format = "dsp_b";
 			bitclock-master;
 			frame-master;
@@ -626,15 +743,34 @@
 			bit-format = "s32_le";
 			bclk_ratio = <1>;
 			srate = <48000>;
-			num-channel = <16>;
+			num-channel = <8>;
 			name-prefix = "x";
-			codec = "0.spdif-dit.0";
 		};
 
 		nvidia,dai-link-2 {
+			link-name = "bali-audio-dsp-tdm1-3";
+			cpu-dai = <&tegra_i2s4>;
+			codec-dai = <&spdif_dit1>;
+			cpu-dai-name = "I2S4";
+			codec-dai-name = "dit-hifi";
+			tx-mask = <0xFF>;
+			rx-mask = <0xFF>;
+			format = "dsp_b";
+			bitclock-master;
+			frame-master;
+			bitclock-inversion;
+			frame-inversion;
+			bit-format = "s32_le";
+			bclk_ratio = <1>;
+			srate = <48000>;
+			num-channel = <8>;
+			name-prefix = "v";
+		};
+
+		nvidia,dai-link-3 {
 			link-name = "bali-audio-dsp-tdm1-2";
 			cpu-dai = <&tegra_i2s1>;
-			codec-dai = <&spdif_dit1>;
+			codec-dai = <&spdif_dit2>;
 			cpu-dai-name = "I2S1";
 			codec-dai-name = "dit-hifi";
 			tx-mask = <0xFF>;
@@ -649,13 +785,12 @@
 			srate = <48000>;
 			num-channel = <8>;
 			name-prefix = "y";
-			codec = "1.spdif-dit.1";
 		};
 
-		nvidia,dai-link-3 {
+		nvidia,dai-link-4 {
 			link-name = "bt-playback";
 			cpu-dai = <&tegra_i2s2>;
-			codec-dai = <&spdif_dit2>;
+			codec-dai = <&spdif_dit3>;
 			cpu-dai-name = "I2S2";
 			codec-dai-name = "dit-hifi";
 			tx-mask = <0x1>;
@@ -670,7 +805,39 @@
 			srate = <16000>;
 			num-channel = <1>;
 			name-prefix = "d";
-			codec = "2.spdif-dit.2";
+		};
+
+		nvidia,dai-link-5 {
+			link-name = "cuba-avb-dummy-1";
+			cpu-dai = <&tegra_i2s5>;
+			codec-dai = <&spdif_dit4>;
+			cpu-dai-name = "I2S5";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bit-format = "s32_le";
+			bclk_ratio = <8>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "z";
+		};
+
+
+		nvidia,dai-link-6 {
+			link-name = "cuba-avb-dummy-2";
+			cpu-dai = <&tegra_i2s6>;
+			codec-dai = <&spdif_dit5>;
+			cpu-dai-name = "I2S6";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bit-format = "s32_le";
+			bclk_ratio = <8>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "w";
 		};
 	};
 

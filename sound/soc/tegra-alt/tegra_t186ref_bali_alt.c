@@ -60,7 +60,12 @@ struct tegra_t186ref_bali {
 	unsigned int num_codec_links;
 };
 
-static struct snd_soc_pcm_stream tegra_t186ref_bali_amx_input_params[][4] = {
+static const struct snd_soc_pcm_stream (*amx_input_params)[4];
+static const struct snd_soc_pcm_stream *amx_output_params;
+static const struct snd_soc_pcm_stream (*adx_output_params)[4];
+static const struct snd_soc_pcm_stream *adx_input_params;
+
+static const struct snd_soc_pcm_stream tegra_t186ref_bali_amx_input_params[][4] = {
 	{
 		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
 		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
@@ -86,13 +91,13 @@ static struct snd_soc_pcm_stream tegra_t186ref_bali_amx_input_params[][4] = {
 		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
 	},
 };
-static struct snd_soc_pcm_stream tegra_t186ref_bali_amx_output_params[] = {
+static const struct snd_soc_pcm_stream tegra_t186ref_bali_amx_output_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 4),
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 };
-static struct snd_soc_pcm_stream tegra_t186ref_bali_adx_output_params[][4] = {
+static const struct snd_soc_pcm_stream tegra_t186ref_bali_adx_output_params[][4] = {
 	{
 		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
 		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
@@ -118,12 +123,78 @@ static struct snd_soc_pcm_stream tegra_t186ref_bali_adx_output_params[][4] = {
 		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	},
 };
-static struct snd_soc_pcm_stream tegra_t186ref_bali_adx_input_params[] = {
+static const struct snd_soc_pcm_stream tegra_t186ref_bali_adx_input_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 1),
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
 };
+
+static const struct snd_soc_pcm_stream tegra_t186ref_cuba_amx_input_params[][4] = {
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 10),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 2),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+	},
+};
+static const struct snd_soc_pcm_stream tegra_t186ref_cuba_amx_output_params[] = {
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
+	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 4),
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+};
+static const struct snd_soc_pcm_stream tegra_t186ref_cuba_adx_output_params[][4] = {
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 3),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 1),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+		PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	},
+};
+static const struct snd_soc_pcm_stream tegra_t186ref_cuba_adx_input_params[] = {
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 1),
+	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 16),
+};
+
 static const struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
@@ -373,11 +444,13 @@ static struct snd_soc_ops tegra_t186ref_bali_spdif_ops = {
 
 static const struct snd_soc_dapm_widget tegra_bali_dapm_widgets[] = {
 	SND_SOC_DAPM_HP("Headphone-x", NULL),
+	SND_SOC_DAPM_HP("Headphone-v", NULL),
 	SND_SOC_DAPM_HP("Headphone-y", NULL),
 	SND_SOC_DAPM_HP("Headphone-d", NULL),
 	SND_SOC_DAPM_HP("Headphone-z", NULL),
 	SND_SOC_DAPM_HP("Headphone-w", NULL),
 	SND_SOC_DAPM_LINE("LineIn-x", NULL),
+	SND_SOC_DAPM_LINE("LineIn-v", NULL),
 	SND_SOC_DAPM_LINE("LineIn-y", NULL),
 	SND_SOC_DAPM_LINE("LineIn-d", NULL),
 	SND_SOC_DAPM_LINE("LineIn-z", NULL),
@@ -488,6 +561,7 @@ static struct snd_soc_card snd_soc_tegra_t186ref_bali = {
 static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 {
 	struct device_node *np = pdev->dev.of_node;
+	struct device_node *root;
 	struct snd_soc_card *card = &snd_soc_tegra_t186ref_bali;
 	struct tegra_t186ref_bali *machine;
 	struct snd_soc_dai_link *tegra_machine_dai_links = NULL;
@@ -495,6 +569,7 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 	struct snd_soc_codec_conf *tegra_machine_codec_conf = NULL;
 	struct snd_soc_codec_conf *tegra_t186ref_bali_codec_conf = NULL;
 	int ret = 0, i, j;
+	const char *model;
 
 	machine = devm_kzalloc(&pdev->dev, sizeof(struct tegra_t186ref_bali),
 					GFP_KERNEL);
@@ -509,6 +584,31 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 	snd_soc_card_set_drvdata(card, machine);
 	machine->rate_via_kcontrol = 0;
 	if (np) {
+		root = np;
+		while (root->parent)
+			root = root->parent;
+		if (of_property_read_string(root, "model", &model)) {
+			dev_err(&pdev->dev,
+					"Cannot read board model\n");
+			ret = -ENODEV;
+			goto err;
+		}
+		if (!strcmp(model, "t186-vcm31-bali")) {
+			amx_input_params = tegra_t186ref_bali_amx_input_params;
+			amx_output_params = tegra_t186ref_bali_amx_output_params;
+			adx_input_params = tegra_t186ref_bali_adx_input_params;
+			adx_output_params = tegra_t186ref_bali_adx_output_params;
+		} else if (!strcmp(model, "t186-vcm31-cuba")) {
+			amx_input_params = tegra_t186ref_cuba_amx_input_params;
+			amx_output_params = tegra_t186ref_cuba_amx_output_params;
+			adx_input_params = tegra_t186ref_cuba_adx_input_params;
+			adx_output_params = tegra_t186ref_cuba_adx_output_params;
+		} else {
+			dev_err(&pdev->dev,
+					"Unsupported board model\n");
+			ret = -ENODEV;
+			goto err;
+		}
 		ret = snd_soc_of_parse_card_name(card, "nvidia,model");
 		if (ret)
 			goto err;
@@ -604,19 +704,19 @@ static int tegra_t186ref_bali_driver_probe(struct platform_device *pdev)
 			tegra_machine_set_dai_params
 				(TEGRA186_DAI_LINK_AMX1_1 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_bali_amx_input_params[i][0]);
+				&amx_input_params[i][0]);
 			tegra_machine_set_dai_params
 				(TEGRA186_DAI_LINK_AMX1_2 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_bali_amx_input_params[i][1]);
+				&amx_input_params[i][1]);
 			tegra_machine_set_dai_params
 				(TEGRA186_DAI_LINK_AMX1_3 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_bali_amx_input_params[i][2]);
+				&amx_input_params[i][2]);
 			tegra_machine_set_dai_params
 				(TEGRA186_DAI_LINK_AMX1_4 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_bali_amx_input_params[i][3]);
+				&amx_input_params[i][3]);
 			tegra_machine_set_dai_params
 				(TEGRA186_DAI_LINK_AMX1 + (5*i),
 				(struct snd_soc_pcm_stream *)

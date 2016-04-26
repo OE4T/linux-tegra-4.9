@@ -202,6 +202,10 @@
 		spdif-dit.4@4 {
 			status = "okay";
 		};
+
+		spdif-dit.5@5 {
+			status = "okay";
+		};
 	};
 
 	adma@2930000{

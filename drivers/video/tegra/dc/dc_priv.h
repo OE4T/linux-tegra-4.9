@@ -741,5 +741,6 @@ void tegra_nvdisp_isomgr_unregister(void);
 #if defined(CONFIG_TEGRA_CSC_V2)
 void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 #endif
+#endif
 
 #endif

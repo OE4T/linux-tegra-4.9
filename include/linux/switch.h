@@ -18,11 +18,19 @@
 #ifndef __LINUX_SWITCH_H__
 #define __LINUX_SWITCH_H__
 
+#include <linux/notifier.h>
+
 struct switch_dev {
 	const char	*name;
 	struct device	*dev;
 	int		index;
 	int		state;
+
+	spinlock_t	lock;
+	int		last_state_in_suspend;
+	bool		uevent_in_suspend;
+	bool		is_suspend;
+	struct notifier_block pm_nb;
 
 	ssize_t	(*print_name)(struct switch_dev *sdev, char *buf);
 	ssize_t	(*print_state)(struct switch_dev *sdev, char *buf);

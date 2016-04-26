@@ -22,6 +22,7 @@
 #include <linux/fs.h>
 #include <linux/err.h>
 #include <linux/switch.h>
+#include <linux/suspend.h>
 
 struct class *switch_class;
 static atomic_t device_count;
@@ -57,6 +58,35 @@ static ssize_t name_show(struct device *dev, struct device_attribute *attr,
 static DEVICE_ATTR(state, S_IRUGO, state_show, NULL);
 static DEVICE_ATTR(name, S_IRUGO, name_show, NULL);
 
+static ssize_t uevent_in_suspend_show(struct device *dev,
+				      struct device_attribute *attr, char *buf)
+{
+	struct switch_dev *sdev = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%c\n", sdev->uevent_in_suspend ? 'Y' : 'N');
+}
+
+static ssize_t uevent_in_suspend_store(struct device *dev,
+				       struct device_attribute *attr,
+				       const char *buf, size_t count)
+{
+	struct switch_dev *sdev = dev_get_drvdata(dev);
+	bool uevent_in_suspend;
+	int ret;
+	unsigned long flags;
+
+	ret = strtobool(buf, &uevent_in_suspend);
+	if (ret)
+		return ret;
+
+	spin_lock_irqsave(&sdev->lock, flags);
+	sdev->uevent_in_suspend = uevent_in_suspend;
+	spin_unlock_irqrestore(&sdev->lock, flags);
+
+	return count;
+}
+static DEVICE_ATTR_RW(uevent_in_suspend);
+
 void switch_set_state(struct switch_dev *sdev, int state)
 {
 	char name_buf[120];
@@ -65,6 +95,20 @@ void switch_set_state(struct switch_dev *sdev, int state)
 	char *envp[3];
 	int env_offset = 0;
 	int length;
+	unsigned long flags;
+
+	/* Store a new state in the last_state_in_suspend while suspending.
+	 * It will be handled after resume. */
+	spin_lock_irqsave(&sdev->lock, flags);
+	if (sdev->is_suspend && !sdev->uevent_in_suspend) {
+		sdev->last_state_in_suspend = state;
+		spin_unlock_irqrestore(&sdev->lock, flags);
+		dev_dbg(sdev->dev,
+			"%s: didn't send uevent (%d %d) due to suspending\n",
+			__func__, state, sdev->state);
+		return;
+	}
+	spin_unlock_irqrestore(&sdev->lock, flags);
 
 	if (sdev->state != state) {
 		sdev->state = state;
@@ -110,6 +154,34 @@ static int create_switch_class(void)
 	return 0;
 }
 
+static int switch_pm_notify(struct notifier_block *nb,
+			    unsigned long event, void *data)
+{
+	struct switch_dev *sdev = container_of(nb, struct switch_dev, pm_nb);
+	unsigned long flags;
+
+	if (event == PM_SUSPEND_PREPARE) {
+		spin_lock_irqsave(&sdev->lock, flags);
+		sdev->is_suspend = true;
+		if (!sdev->uevent_in_suspend)
+			sdev->last_state_in_suspend = sdev->state;
+		spin_unlock_irqrestore(&sdev->lock, flags);
+	} else if (event == PM_POST_SUSPEND) {
+		spin_lock_irqsave(&sdev->lock, flags);
+		sdev->is_suspend = false;
+		spin_unlock_irqrestore(&sdev->lock, flags);
+		if (!sdev->uevent_in_suspend)
+			switch_set_state(sdev, sdev->last_state_in_suspend);
+	}
+
+	return NOTIFY_OK;
+}
+
+static struct notifier_block switch_pm_nb = {
+	.notifier_call = switch_pm_notify,
+	.priority = -1,
+};
+
 int switch_dev_register(struct switch_dev *sdev)
 {
 	int ret;
@@ -133,10 +205,27 @@ int switch_dev_register(struct switch_dev *sdev)
 	if (ret < 0)
 		goto err_create_file_2;
 
+	ret = device_create_file(sdev->dev, &dev_attr_uevent_in_suspend);
+	if (ret < 0)
+		goto err_create_file_3;
+
 	dev_set_drvdata(sdev->dev, sdev);
 	sdev->state = 0;
+
+	spin_lock_init(&sdev->lock);
+	sdev->uevent_in_suspend = true;
+	sdev->is_suspend = false;
+	sdev->pm_nb = switch_pm_nb;
+	ret = register_pm_notifier(&sdev->pm_nb);
+	if (ret < 0)
+		goto err_register_pm_notifier;
+
 	return 0;
 
+err_register_pm_notifier:
+	device_remove_file(sdev->dev, &dev_attr_uevent_in_suspend);
+err_create_file_3:
+	device_remove_file(sdev->dev, &dev_attr_name);
 err_create_file_2:
 	device_remove_file(sdev->dev, &dev_attr_state);
 err_create_file_1:
@@ -149,6 +238,8 @@ EXPORT_SYMBOL_GPL(switch_dev_register);
 
 void switch_dev_unregister(struct switch_dev *sdev)
 {
+	unregister_pm_notifier(&sdev->pm_nb);
+	device_remove_file(sdev->dev, &dev_attr_uevent_in_suspend);
 	device_remove_file(sdev->dev, &dev_attr_name);
 	device_remove_file(sdev->dev, &dev_attr_state);
 	device_destroy(switch_class, MKDEV(0, sdev->index));

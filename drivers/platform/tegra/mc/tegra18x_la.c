@@ -18,7 +18,8 @@
 #include <linux/of.h>
 #include <linux/resource.h>
 #include <linux/of_address.h>
-
+#include <linux/version.h>
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 #include <asm/io.h>
 
 #include <linux/platform/tegra/tegra_emc.h>
@@ -717,3 +718,4 @@ void tegra_la_get_t18x_specific(struct la_chip_specific *cs_la)
 	mc_writel(0x80044000, MC_EMEM_ARB_ISOCHRONOUS_4);
 	mc_writel(0x2, MC_EMEM_ARB_ISOCHRONOUS_5);
 }
+#endif

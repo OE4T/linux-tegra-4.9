@@ -31,7 +31,6 @@
 #include <linux/thermal.h>
 #include <linux/version.h>
 #include <linux/workqueue.h>
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
@@ -53,7 +52,27 @@ struct tegra_bpmp_thermal {
 	struct work_struct tz_device_update_work;
 };
 
-static int tegra_bpmp_thermal_get_temp(void *data, long *out_temp)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,3,0)
+typedef long temp_t;
+#else
+typedef int temp_t;
+#endif
+
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+typedef struct thermal_of_sensor_ops sensor_ops_t;
+typedef struct thermal_zone_device *(*tz_of_sensor_register_fn)
+				(struct device *, int, void *,
+				 const struct thermal_of_sensor_ops*);
+tz_of_sensor_register_fn of_sensor_register = &thermal_zone_of_sensor_register2;
+#else
+typedef struct thermal_zone_of_device_ops sensor_ops_t;
+typedef struct thermal_zone_device * (*tz_of_sensor_register_fn)
+				(struct device *, int, void *,
+				 const struct thermal_zone_of_device_ops*);
+tz_of_sensor_register_fn of_sensor_register = thermal_zone_of_sensor_register;
+#endif
+
+static int tegra_bpmp_thermal_get_temp(void *data, temp_t *out_temp)
 {
 	struct tegra_bpmp_thermal_zone *zone = data;
 	struct mrq_thermal_host_to_bpmp_request req;
@@ -94,8 +113,8 @@ tegra_bpmp_thermal_calculate_trips(struct tegra_bpmp_thermal_zone *zone,
 				   int *low, int *high)
 {
 	struct thermal_zone_device *tzd = zone->tzd;
-	long trip_temp, hysteresis;
-	long temp;
+	temp_t trip_temp, hysteresis;
+	temp_t temp;
 	int i, err;
 
 	err = tegra_bpmp_thermal_get_temp(zone, &temp);
@@ -256,7 +275,7 @@ static int tegra_bpmp_thermal_abi_probe(void)
 	return 0;
 }
 
-static struct thermal_of_sensor_ops tegra_of_thermal_ops = {
+static sensor_ops_t tegra_of_thermal_ops = {
 	.get_temp = tegra_bpmp_thermal_get_temp,
 	.trip_update = tegra_bpmp_thermal_trip_update,
 };
@@ -311,9 +330,8 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 	}
 
 	/* Initialize thermal zones */
-
 	for (i = 0; i < tegra->zone_count; ++i) {
-		long temp;
+		temp_t temp;
 		tegra->zones[i].idx = i;
 		tegra->zones[i].tegra = tegra;
 		atomic_set(&tegra->zones[i].needs_update, false);
@@ -322,9 +340,9 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 		if (err == -BPMP_EINVAL || err == -BPMP_ENOENT)
 			continue;
 
-		tzd = thermal_zone_of_sensor_register2(tegra->dev, i,
-						       &tegra->zones[i],
-						       &tegra_of_thermal_ops);
+		tzd = of_sensor_register(tegra->dev, i, &tegra->zones[i],
+				&tegra_of_thermal_ops);
+
 		if (IS_ERR(tzd)) {
 			err = PTR_ERR(tzd);
 			dev_notice(tegra->dev, "zone %d not supported\n", i);
@@ -381,4 +399,3 @@ module_platform_driver(tegra_bpmp_thermal_driver);
 MODULE_AUTHOR("Aapo Vienamo <avienamo@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra BPMP thermal management driver");
 MODULE_LICENSE("GPL v2");
-#endif

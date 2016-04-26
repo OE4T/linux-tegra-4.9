@@ -115,6 +115,8 @@
 
 #define I2C_CONFIG_LOAD_TIMEOUT			1000000
 
+#define I2C_MASTER_RESET_CONTROL		0x0A8
+
 /*
  * msg_end_type: The bus control which need to be send at end of transfer.
  * @MSG_END_STOP: Send stop pulse at end of transfer.
@@ -154,6 +156,7 @@ struct tegra_i2c_hw_feature {
 	u16 clk_divisor_fast_plus_mode;
 	bool has_multi_master_mode;
 	bool has_slcg_override_reg;
+	bool has_sw_reset_reg;
 };
 
 /**
@@ -197,6 +200,7 @@ struct tegra_i2c_dev {
 	bool is_suspended;
 	bool is_multimaster_mode;
 	spinlock_t xfer_lock;
+	bool is_periph_reset_done;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val,
@@ -486,11 +490,22 @@ static int tegra_i2c_init(struct tegra_i2c_dev *i2c_dev)
 		dev_err(i2c_dev->dev, "runtime resume failed %d\n", err);
 		return err;
 	}
-
+	if (i2c_dev->hw->has_sw_reset_reg) {
+		if (i2c_dev->is_periph_reset_done) {
+			/* If already controller reset is done through */
+			/* clock reset control register, then use SW reset */
+			i2c_writel(i2c_dev, 1, I2C_MASTER_RESET_CONTROL);
+			udelay(2);
+			i2c_writel(i2c_dev, 0, I2C_MASTER_RESET_CONTROL);
+			goto skip_periph_reset;
+		}
+	}
 	reset_control_assert(i2c_dev->rst);
 	udelay(2);
 	reset_control_deassert(i2c_dev->rst);
+	i2c_dev->is_periph_reset_done = true;
 
+skip_periph_reset:
 	if (i2c_dev->is_dvc)
 		tegra_dvc_init(i2c_dev);
 
@@ -808,6 +823,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_config_load_reg = false,
 	.has_multi_master_mode = false,
 	.has_slcg_override_reg = false,
+	.has_sw_reset_reg = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -820,6 +836,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.has_config_load_reg = false,
 	.has_multi_master_mode = false,
 	.has_slcg_override_reg = false,
+	.has_sw_reset_reg = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -832,6 +849,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.has_config_load_reg = false,
 	.has_multi_master_mode = false,
 	.has_slcg_override_reg = false,
+	.has_sw_reset_reg = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -844,6 +862,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.has_config_load_reg = true,
 	.has_multi_master_mode = false,
 	.has_slcg_override_reg = true,
+	.has_sw_reset_reg = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -856,6 +875,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.has_config_load_reg = true,
 	.has_multi_master_mode = true,
 	.has_slcg_override_reg = true,
+	.has_sw_reset_reg = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -868,6 +888,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.has_config_load_reg = true,
 	.has_multi_master_mode = true,
 	.has_slcg_override_reg = true,
+	.has_sw_reset_reg = true,
 };
 
 /* Match table for of_platform binding */

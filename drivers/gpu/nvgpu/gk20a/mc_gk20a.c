@@ -147,7 +147,7 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 	/* flush previous write */
 	gk20a_readl(g, mc_intr_en_1_r());
 
-	wake_up_all(&g->sw_irq_stall_last_handled_wq);
+	wake_up_all(&g->sw_irq_nonstall_last_handled_wq);
 
 	return IRQ_HANDLED;
 }

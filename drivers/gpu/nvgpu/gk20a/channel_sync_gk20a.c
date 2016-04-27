@@ -424,28 +424,52 @@ static void gk20a_channel_semaphore_launcher(
 }
 #endif
 
-static int add_sema_cmd(struct gk20a *g, struct priv_cmd_entry *cmd,
-		u64 sema, u32 payload, bool acquire, bool wfi)
+static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
+			 struct gk20a_semaphore *s, struct priv_cmd_entry *cmd,
+			 int cmd_size, bool acquire, bool wfi)
 {
 	u32 off = cmd->off;
+	u64 va;
+
+	/*
+	 * RO for acquire (since we just need to read the mem) and RW for
+	 * release since we will need to write back to the semaphore memory.
+	 */
+	va = acquire ? gk20a_semaphore_gpu_ro_va(s) :
+		       gk20a_semaphore_gpu_rw_va(s);
+
+	/*
+	 * If the op is not an acquire (so therefor a release) we should
+	 * incr the underlying sema next_value.
+	 */
+	if (!acquire)
+		gk20a_semaphore_incr(s);
+
 	/* semaphore_a */
 	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010004);
 	/* offset_upper */
-	gk20a_mem_wr32(g, cmd->mem, off++, (sema >> 32) & 0xff);
+	gk20a_mem_wr32(g, cmd->mem, off++, (va >> 32) & 0xff);
 	/* semaphore_b */
 	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010005);
 	/* offset */
-	gk20a_mem_wr32(g, cmd->mem, off++, sema & 0xffffffff);
-	/* semaphore_c */
-	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010006);
-	/* payload */
-	gk20a_mem_wr32(g, cmd->mem, off++, payload);
+	gk20a_mem_wr32(g, cmd->mem, off++, va & 0xffffffff);
+
 	if (acquire) {
+		/* semaphore_c */
+		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010006);
+		/* payload */
+		gk20a_mem_wr32(g, cmd->mem, off++,
+			       gk20a_semaphore_get_value(s));
 		/* semaphore_d */
 		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010007);
 		/* operation: acq_geq, switch_en */
 		gk20a_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
 	} else {
+		/* semaphore_c */
+		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010006);
+		/* payload */
+		gk20a_mem_wr32(g, cmd->mem, off++,
+			       gk20a_semaphore_get_value(s));
 		/* semaphore_d */
 		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010007);
 		/* operation: release, wfi */
@@ -456,7 +480,6 @@ static int add_sema_cmd(struct gk20a *g, struct priv_cmd_entry *cmd,
 		/* ignored */
 		gk20a_mem_wr32(g, cmd->mem, off++, 0);
 	}
-	return off - cmd->off;
 }
 
 static int gk20a_channel_semaphore_wait_syncpt(
@@ -471,6 +494,76 @@ static int gk20a_channel_semaphore_wait_syncpt(
 	return -ENODEV;
 }
 
+/*
+ * UGHHH - the sync_fence underlying implementation changes from 3.10 to 3.18.
+ * But since there's no API for getting the underlying sync_pts we have to do
+ * some conditional compilation.
+ */
+#ifdef CONFIG_SYNC
+static struct gk20a_semaphore *sema_from_sync_fence(struct sync_fence *f)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	struct sync_pt *pt;
+
+	pt = list_first_entry(&f->pt_list_head, struct sync_pt, pt_list);
+	return gk20a_sync_pt_inst_get_sema(pt);
+#else
+	return gk20a_sync_pt_inst_get_sema(f->cbs[0].sync_pt);
+#endif
+}
+
+/*
+ * Attempt a fast path for waiting on a sync_fence. Basically if the passed
+ * sync_fence is backed by a gk20a_semaphore then there's no reason to go
+ * through the rigmarole of setting up a separate semaphore which waits on an
+ * interrupt from the GPU and then triggers a worker thread to execute a SW
+ * based semaphore release. Instead just have the GPU wait on the same semaphore
+ * that is going to be incremented by the GPU.
+ *
+ * This function returns 2 possible values: -ENODEV or 0 on success. In the case
+ * of -ENODEV the fastpath cannot be taken due to the fence not being backed by
+ * a GPU semaphore.
+ */
+static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
+					 struct sync_fence *fence,
+					 struct priv_cmd_entry **wait_cmd,
+					 struct gk20a_semaphore **fp_sema)
+{
+	struct gk20a_semaphore *sema;
+	int err;
+
+	if (!gk20a_is_sema_backed_sync_fence(fence))
+		return -ENODEV;
+
+	sema = sema_from_sync_fence(fence);
+
+	/*
+	 * If there's no underlying sema then that means the underlying sema has
+	 * already signaled.
+	 */
+	if (!sema) {
+		*fp_sema = NULL;
+		return 0;
+	}
+
+	err = gk20a_channel_alloc_priv_cmdbuf(c, 8, wait_cmd);
+	if (err)
+		return err;
+
+	gk20a_semaphore_get(sema);
+	BUG_ON(!atomic_read(&sema->value));
+	add_sema_cmd(c->g, c, sema, *wait_cmd, 8, true, false);
+
+	/*
+	 * Make sure that gk20a_channel_semaphore_wait_fd() can create another
+	 * fence with the underlying semaphore.
+	 */
+	*fp_sema = sema;
+
+	return 0;
+}
+#endif
+
 static int gk20a_channel_semaphore_wait_fd(
 		struct gk20a_channel_sync *s, int fd,
 		struct priv_cmd_entry **entry,
@@ -480,69 +573,107 @@ static int gk20a_channel_semaphore_wait_fd(
 		container_of(s, struct gk20a_channel_semaphore, ops);
 	struct channel_gk20a *c = sema->c;
 #ifdef CONFIG_SYNC
+	struct gk20a_semaphore *fp_sema;
 	struct sync_fence *sync_fence;
 	struct priv_cmd_entry *wait_cmd = NULL;
-	struct wait_fence_work *w;
-	int written;
-	int err, ret;
-	u64 va;
+	struct wait_fence_work *w = NULL;
+	int err, ret, status;
 
 	sync_fence = gk20a_sync_fence_fdget(fd);
 	if (!sync_fence)
 		return -EINVAL;
 
-	w = kzalloc(sizeof(*w), GFP_KERNEL);
-	if (!w) {
-		err = -ENOMEM;
-		goto fail;
-	}
-	sync_fence_waiter_init(&w->waiter, gk20a_channel_semaphore_launcher);
-	w->ch = c;
-	w->sema = gk20a_semaphore_alloc(sema->pool);
-	if (!w->sema) {
-		gk20a_err(dev_from_gk20a(c->g), "ran out of semaphores");
-		err = -ENOMEM;
-		goto fail;
+	ret = __semaphore_wait_fd_fast_path(c, sync_fence, &wait_cmd, &fp_sema);
+	if (ret == 0) {
+		if (fp_sema)
+			*fence = gk20a_fence_from_semaphore(sema->timeline,
+							    fp_sema,
+							    &c->semaphore_wq,
+							    NULL, false);
+		else
+			/*
+			 * Allocate an empty fence. It will instantly return
+			 * from gk20a_fence_wait().
+			 */
+			*fence = gk20a_alloc_fence(NULL, NULL, false);
+
+		sync_fence_put(sync_fence);
+		goto skip_slow_path;
 	}
 
-	/* worker takes one reference */
-	gk20a_semaphore_get(w->sema);
+	/* If the fence has signaled there is no reason to wait on it. */
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	status = sync_fence->status;
+#else
+	status = atomic_read(&sync_fence->status);
+#endif
+	if (status) {
+		sync_fence_put(sync_fence);
+		goto skip_slow_path;
+	}
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c, 8, &wait_cmd);
 	if (err) {
 		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
-		goto fail;
+		sync_fence_put(sync_fence);
+		return -ENOMEM;
 	}
 
-	va = gk20a_semaphore_gpu_va(w->sema, c->vm);
-	/* GPU unblocked when when the semaphore value becomes 1. */
-	written = add_sema_cmd(c->g, wait_cmd, va, 1, true, false);
+	w = kzalloc(sizeof(*w), GFP_KERNEL);
+	if (!w) {
+		err = -ENOMEM;
+		goto fail_free_cmdbuf;
+	}
 
-	WARN_ON(written != wait_cmd->size);
+	sync_fence_waiter_init(&w->waiter, gk20a_channel_semaphore_launcher);
+	w->ch = c;
+	w->sema = gk20a_semaphore_alloc(c);
+	if (!w->sema) {
+		gk20a_err(dev_from_gk20a(c->g), "ran out of semaphores");
+		err = -ENOMEM;
+		goto fail_free_worker;
+	}
+
+	/* worker takes one reference */
+	gk20a_semaphore_get(w->sema);
+	gk20a_semaphore_incr(w->sema);
+
+	/* GPU unblocked when the semaphore value increments. */
+	add_sema_cmd(c->g, c, w->sema, wait_cmd, 8, true, false);
+
 	ret = sync_fence_wait_async(sync_fence, &w->waiter);
 
 	/*
 	 * If the sync_fence has already signaled then the above async_wait
 	 * will never trigger. This causes the semaphore release op to never
 	 * happen which, in turn, hangs the GPU. That's bad. So let's just
-	 * do the semaphore_release right now.
+	 * do the gk20a_semaphore_release() right now.
 	 */
-	if (ret == 1)
+	if (ret == 1) {
+		sync_fence_put(sync_fence);
 		gk20a_semaphore_release(w->sema);
+		gk20a_semaphore_put(w->sema);
+	}
 
 	/* XXX - this fixes an actual bug, we need to hold a ref to this
 	   semaphore while the job is in flight. */
 	*fence = gk20a_fence_from_semaphore(sema->timeline, w->sema,
 					    &c->semaphore_wq,
 					    NULL, false);
+
+skip_slow_path:
 	*entry = wait_cmd;
 	return 0;
-fail:
+
+fail_free_worker:
 	if (w && w->sema)
 		gk20a_semaphore_put(w->sema);
 	kfree(w);
 	sync_fence_put(sync_fence);
+fail_free_cmdbuf:
+	if (wait_cmd)
+		gk20a_free_priv_cmdbuf(c, wait_cmd);
 	return err;
 #else
 	gk20a_err(dev_from_gk20a(c->g),
@@ -558,9 +689,7 @@ static int __gk20a_channel_semaphore_incr(
 		struct gk20a_fence **fence,
 		bool need_sync_fence)
 {
-	u64 va;
 	int incr_cmd_size;
-	int written;
 	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_channel_semaphore *sp =
 		container_of(s, struct gk20a_channel_semaphore, ops);
@@ -568,7 +697,7 @@ static int __gk20a_channel_semaphore_incr(
 	struct gk20a_semaphore *semaphore;
 	int err = 0;
 
-	semaphore = gk20a_semaphore_alloc(sp->pool);
+	semaphore = gk20a_semaphore_alloc(c);
 	if (!semaphore) {
 		gk20a_err(dev_from_gk20a(c->g),
 				"ran out of semaphores");
@@ -585,9 +714,7 @@ static int __gk20a_channel_semaphore_incr(
 	}
 
 	/* Release the completion semaphore. */
-	va = gk20a_semaphore_gpu_va(semaphore, c->vm);
-	written = add_sema_cmd(c->g, incr_cmd, va, 1, false, wfi_cmd);
-	WARN_ON(written != incr_cmd_size);
+	add_sema_cmd(c->g, c, semaphore, incr_cmd, 14, false, wfi_cmd);
 
 	*fence = gk20a_fence_from_semaphore(sp->timeline, semaphore,
 					    &c->semaphore_wq,
@@ -615,8 +742,10 @@ static int gk20a_channel_semaphore_incr(
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
-	return __gk20a_channel_semaphore_incr(s, false /* no wfi */,
-				      NULL, entry, fence, need_sync_fence);
+	return __gk20a_channel_semaphore_incr(s,
+			false /* no wfi */,
+			NULL,
+			entry, fence, need_sync_fence);
 }
 
 static int gk20a_channel_semaphore_incr_user(
@@ -679,17 +808,16 @@ static void gk20a_channel_semaphore_destroy(struct gk20a_channel_sync *s)
 		container_of(s, struct gk20a_channel_semaphore, ops);
 	if (sema->timeline)
 		gk20a_sync_timeline_destroy(sema->timeline);
-	if (sema->pool) {
-		gk20a_semaphore_pool_unmap(sema->pool, sema->c->vm);
-		gk20a_semaphore_pool_put(sema->pool);
-	}
+
+	/* The sema pool is cleaned up by the VM destroy. */
+	sema->pool = NULL;
+
 	kfree(sema);
 }
 
 static struct gk20a_channel_sync *
 gk20a_channel_semaphore_create(struct channel_gk20a *c)
 {
-	int err;
 	int asid = -1;
 	struct gk20a_channel_semaphore *sema;
 	char pool_name[20];
@@ -706,21 +834,15 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 		asid = c->vm->as_share->id;
 
 	sprintf(pool_name, "semaphore_pool-%d", c->hw_chid);
-	sema->pool = gk20a_semaphore_pool_alloc(c->g, pool_name, 1024);
-	if (!sema->pool)
-		goto clean_up;
-
-	/* Map the semaphore pool to the channel vm. Map as read-write to the
-	 * owner channel (all other channels should map as read only!). */
-	err = gk20a_semaphore_pool_map(sema->pool, c->vm, gk20a_mem_flag_none);
-	if (err)
-		goto clean_up;
+	sema->pool = c->vm->sema_pool;
 
 #ifdef CONFIG_SYNC
 	sema->timeline = gk20a_sync_timeline_create(
 			"gk20a_ch%d_as%d", c->hw_chid, asid);
-	if (!sema->timeline)
-		goto clean_up;
+	if (!sema->timeline) {
+		gk20a_channel_semaphore_destroy(&sema->ops);
+		return NULL;
+	}
 #endif
 	atomic_set(&sema->ops.refcount, 0);
 	sema->ops.wait_syncpt	= gk20a_channel_semaphore_wait_syncpt;
@@ -734,9 +856,6 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 	sema->ops.destroy	= gk20a_channel_semaphore_destroy;
 
 	return &sema->ops;
-clean_up:
-	gk20a_channel_semaphore_destroy(&sema->ops);
-	return NULL;
 }
 
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync)

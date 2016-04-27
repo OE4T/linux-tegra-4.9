@@ -738,6 +738,11 @@ struct gk20a {
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 
+	/*
+	 * A group of semaphore pools. One for each channel.
+	 */
+	struct gk20a_semaphore_sea *sema_sea;
+
 	/* held while manipulating # of debug/profiler sessions present */
 	/* also prevents debug sessions from attaching until released */
 	struct mutex dbg_sessions_lock;

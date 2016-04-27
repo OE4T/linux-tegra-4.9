@@ -287,6 +287,11 @@ struct vm_gk20a {
 	/* if non-NULL, kref_put will use this batch when
 	   unmapping. Must hold vm->update_gmmu_lock. */
 	struct vm_gk20a_mapping_batch *kref_put_batch;
+
+	/*
+	 * Each address space needs to have a semaphore pool.
+	 */
+	struct gk20a_semaphore_pool *sema_pool;
 };
 
 struct gk20a;

@@ -15,63 +15,284 @@
  * more details.
  */
 
-#include "semaphore_gk20a.h"
+#define pr_fmt(fmt) "gpu_sema: " fmt
+
 #include <linux/dma-mapping.h>
+#include <linux/highmem.h>
 #include <linux/slab.h>
+
+#include <asm/pgtable.h>
+
 #include "gk20a.h"
 #include "mm_gk20a.h"
+#include "semaphore_gk20a.h"
 
-static const int SEMAPHORE_SIZE = 16;
+#define __lock_sema_sea(s)						\
+	do {								\
+		mutex_lock(&s->sea_lock);				\
+	} while (0)
 
-struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(struct gk20a *g,
-		const char *unique_name, size_t capacity)
+#define __unlock_sema_sea(s)						\
+	do {								\
+		mutex_unlock(&s->sea_lock);				\
+	} while (0)
+
+/*
+ * Return the sema_sea pointer.
+ */
+struct gk20a_semaphore_sea *gk20a_semaphore_get_sea(struct gk20a *g)
 {
-	struct gk20a_semaphore_pool *p;
-	p = kzalloc(sizeof(*p), GFP_KERNEL);
-	if (!p)
+	return g->sema_sea;
+}
+
+static int __gk20a_semaphore_sea_grow(struct gk20a_semaphore_sea *sea)
+{
+	int ret = 0;
+	struct gk20a *gk20a = sea->gk20a;
+
+	__lock_sema_sea(sea);
+
+	ret = gk20a_gmmu_alloc_attr(gk20a, DMA_ATTR_NO_KERNEL_MAPPING,
+				    PAGE_SIZE * SEMAPHORE_POOL_COUNT,
+				    &sea->sea_mem);
+	if (ret)
+		goto out;
+
+	sea->ro_sg_table = sea->sea_mem.sgt;
+	sea->size = SEMAPHORE_POOL_COUNT;
+	sea->map_size = SEMAPHORE_POOL_COUNT * PAGE_SIZE;
+
+out:
+	__unlock_sema_sea(sea);
+	return ret;
+}
+
+/*
+ * Create the semaphore sea. Only create it once - subsequent calls to this will
+ * return the originally created sea pointer.
+ */
+struct gk20a_semaphore_sea *gk20a_semaphore_sea_create(struct gk20a *g)
+{
+	if (g->sema_sea)
+		return g->sema_sea;
+
+	g->sema_sea = kzalloc(sizeof(*g->sema_sea), GFP_KERNEL);
+	if (!g->sema_sea)
 		return NULL;
 
-	kref_init(&p->ref);
-	INIT_LIST_HEAD(&p->maps);
-	mutex_init(&p->maps_mutex);
-	p->g = g;
+	g->sema_sea->size = 0;
+	g->sema_sea->page_count = 0;
+	g->sema_sea->gk20a = g;
+	INIT_LIST_HEAD(&g->sema_sea->pool_list);
+	mutex_init(&g->sema_sea->sea_lock);
 
-	/* Alloc one 4k page of semaphore per channel. */
-	if (gk20a_gmmu_alloc(g, roundup(capacity * SEMAPHORE_SIZE, PAGE_SIZE),
-				&p->mem))
-		goto clean_up;
+	if (__gk20a_semaphore_sea_grow(g->sema_sea))
+		goto cleanup;
 
-	/* Sacrifice one semaphore in the name of returning error codes. */
-	if (gk20a_allocator_init(&p->alloc, unique_name,
-				 SEMAPHORE_SIZE, p->mem.size - SEMAPHORE_SIZE,
-				 SEMAPHORE_SIZE))
-		goto clean_up;
+	return g->sema_sea;
 
-	gk20a_dbg_info("cpuva=%p iova=%llx phys=%llx", p->mem.cpu_va,
-		(u64)sg_dma_address(p->mem.sgt->sgl),
-		(u64)sg_phys(p->mem.sgt->sgl));
-	return p;
-
-clean_up:
-	if (p->mem.size)
-		gk20a_gmmu_free(p->g, &p->mem);
-	kfree(p);
+cleanup:
+	kfree(g->sema_sea);
+	g->sema_sea = NULL;
 	return NULL;
 }
 
+static int __semaphore_bitmap_alloc(unsigned long *bitmap, unsigned long len)
+{
+	unsigned long idx = find_first_zero_bit(bitmap, len);
+
+	if (idx == len)
+		return -ENOSPC;
+
+	set_bit(idx, bitmap);
+
+	return (int)idx;
+}
+
+/*
+ * Allocate a pool from the sea.
+ */
+struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(
+				struct gk20a_semaphore_sea *sea)
+{
+	struct gk20a_semaphore_pool *p;
+	unsigned long page_idx;
+	int err = 0;
+
+	p = kzalloc(sizeof(*p), GFP_KERNEL);
+	if (!p)
+		return ERR_PTR(-ENOMEM);
+
+	__lock_sema_sea(sea);
+
+	page_idx = __semaphore_bitmap_alloc(sea->pools_alloced,
+					    SEMAPHORE_POOL_COUNT);
+	if (page_idx < 0) {
+		err = page_idx;
+		goto fail;
+	}
+
+	p->page = sea->sea_mem.pages[page_idx];
+	p->ro_sg_table = sea->ro_sg_table;
+	p->page_idx = page_idx;
+	p->sema_sea = sea;
+	INIT_LIST_HEAD(&p->hw_semas);
+	kref_init(&p->ref);
+	mutex_init(&p->pool_lock);
+
+	sea->page_count++;
+	list_add(&p->pool_list_entry, &sea->pool_list);
+	__unlock_sema_sea(sea);
+
+	return p;
+
+fail:
+	__unlock_sema_sea(sea);
+	kfree(p);
+	return ERR_PTR(err);
+}
+
+/*
+ * Map a pool into the passed vm's address space. This handles both the fixed
+ * global RO mapping and the non-fixed private RW mapping.
+ */
+int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
+			     struct vm_gk20a *vm)
+{
+	int ents, err = 0;
+	u64 addr;
+
+	p->cpu_va = vmap(&p->page, 1, 0,
+			 pgprot_writecombine(PAGE_KERNEL));
+
+	/* First do the RW mapping. */
+	p->rw_sg_table = kzalloc(sizeof(*p->rw_sg_table), GFP_KERNEL);
+	if (!p->rw_sg_table)
+		return -ENOMEM;
+
+	err = sg_alloc_table_from_pages(p->rw_sg_table, &p->page, 1, 0,
+					PAGE_SIZE, GFP_KERNEL);
+	if (err) {
+		err = -ENOMEM;
+		goto fail;
+	}
+
+	/* Add IOMMU mapping... */
+	ents = dma_map_sg(dev_from_vm(vm), p->rw_sg_table->sgl, 1,
+			  DMA_BIDIRECTIONAL);
+	if (ents != 1) {
+		err = -ENOMEM;
+		goto fail_free_sgt;
+	}
+
+	/* Map into the GPU... Doesn't need to be fixed. */
+	p->gpu_va = gk20a_gmmu_map(vm, &p->rw_sg_table, PAGE_SIZE,
+				   0, gk20a_mem_flag_none, false);
+	if (!p->gpu_va) {
+		err = -ENOMEM;
+		goto fail_unmap_sgt;
+	}
+
+	/*
+	 * And now the global mapping. Take the sea lock so that we don't race
+	 * with a concurrent remap.
+	 */
+	__lock_sema_sea(p->sema_sea);
+
+	BUG_ON(p->mapped);
+	addr = gk20a_gmmu_fixed_map(vm, &p->sema_sea->ro_sg_table,
+				    p->sema_sea->gpu_va, p->sema_sea->map_size,
+				    0,
+				    gk20a_mem_flag_read_only,
+				    false);
+	if (!addr) {
+		err = -ENOMEM;
+		BUG();
+		goto fail_unlock;
+	}
+	p->gpu_va_ro = addr;
+	p->mapped = 1;
+
+	__unlock_sema_sea(p->sema_sea);
+
+	return 0;
+
+fail_unlock:
+	__unlock_sema_sea(p->sema_sea);
+fail_unmap_sgt:
+	dma_unmap_sg(dev_from_vm(vm), p->rw_sg_table->sgl, 1,
+		     DMA_BIDIRECTIONAL);
+fail_free_sgt:
+	sg_free_table(p->rw_sg_table);
+fail:
+	kfree(p->rw_sg_table);
+	p->rw_sg_table = NULL;
+	return err;
+}
+
+/*
+ * Unmap a semaphore_pool.
+ */
+void gk20a_semaphore_pool_unmap(struct gk20a_semaphore_pool *p,
+				struct vm_gk20a *vm)
+{
+	struct gk20a_semaphore_int *hw_sema;
+
+	kunmap(p->cpu_va);
+
+	/* First the global RO mapping... */
+	__lock_sema_sea(p->sema_sea);
+	gk20a_gmmu_unmap(vm, p->gpu_va_ro,
+			 p->sema_sea->map_size, gk20a_mem_flag_none);
+	p->ro_sg_table = NULL;
+	__unlock_sema_sea(p->sema_sea);
+
+	/* And now the private RW mapping. */
+	gk20a_gmmu_unmap(vm, p->gpu_va, PAGE_SIZE, gk20a_mem_flag_none);
+	p->gpu_va = 0;
+
+	dma_unmap_sg(dev_from_vm(vm), p->rw_sg_table->sgl, 1,
+		     DMA_BIDIRECTIONAL);
+
+	sg_free_table(p->rw_sg_table);
+	kfree(p->rw_sg_table);
+	p->rw_sg_table = NULL;
+
+	gk20a_dbg_info("Unmapped sema-pool: idx = %d", p->page_idx);
+	list_for_each_entry(hw_sema, &p->hw_semas, hw_sema_list)
+		/*
+		 * Make sure the mem addresses are all NULL so if this gets
+		 * reused we will fault.
+		 */
+		hw_sema->value = NULL;
+}
+
+/*
+ * Completely free a sempahore_pool. You should make sure this pool is not
+ * mapped otherwise there's going to be a memory leak.
+ */
 static void gk20a_semaphore_pool_free(struct kref *ref)
 {
 	struct gk20a_semaphore_pool *p =
 		container_of(ref, struct gk20a_semaphore_pool, ref);
-	mutex_lock(&p->maps_mutex);
-	WARN_ON(!list_empty(&p->maps));
-	mutex_unlock(&p->maps_mutex);
-	gk20a_gmmu_free(p->g, &p->mem);
-	gk20a_allocator_destroy(&p->alloc);
+	struct gk20a_semaphore_sea *s = p->sema_sea;
+	struct gk20a_semaphore_int *hw_sema, *tmp;
+
+	WARN_ON(p->gpu_va || p->rw_sg_table || p->ro_sg_table);
+
+	__lock_sema_sea(s);
+	list_del(&p->pool_list_entry);
+	clear_bit(p->page_idx, s->pools_alloced);
+	s->page_count--;
+	__unlock_sema_sea(s);
+
+	list_for_each_entry_safe(hw_sema, tmp, &p->hw_semas, hw_sema_list)
+		kfree(hw_sema);
+
 	kfree(p);
 }
 
-static void gk20a_semaphore_pool_get(struct gk20a_semaphore_pool *p)
+void gk20a_semaphore_pool_get(struct gk20a_semaphore_pool *p)
 {
 	kref_get(&p->ref);
 }
@@ -81,104 +302,96 @@ void gk20a_semaphore_pool_put(struct gk20a_semaphore_pool *p)
 	kref_put(&p->ref, gk20a_semaphore_pool_free);
 }
 
-static struct gk20a_semaphore_pool_map *
-gk20a_semaphore_pool_find_map_locked(struct gk20a_semaphore_pool *p,
-				     struct vm_gk20a *vm)
+/*
+ * Get the address for a semaphore_pool - if global is true then return the
+ * global RO address instead of the RW address owned by the semaphore's VM.
+ */
+u64 __gk20a_semaphore_pool_gpu_va(struct gk20a_semaphore_pool *p, bool global)
 {
-	struct gk20a_semaphore_pool_map *map, *found = NULL;
-	list_for_each_entry(map, &p->maps, list) {
-		if (map->vm == vm) {
-			found = map;
-			break;
-		}
-	}
-	return found;
+	if (!global)
+		return p->gpu_va;
+
+	return p->gpu_va_ro + (PAGE_SIZE * p->page_idx);
 }
 
-int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
-			     struct vm_gk20a *vm,
-			     enum gk20a_mem_rw_flag rw_flag)
+static int __gk20a_init_hw_sema(struct channel_gk20a *ch)
 {
-	struct gk20a_semaphore_pool_map *map;
+	int hw_sema_idx;
+	int ret = 0;
+	struct gk20a_semaphore_int *hw_sema;
+	struct gk20a_semaphore_pool *p = ch->vm->sema_pool;
 
-	map = kzalloc(sizeof(*map), GFP_KERNEL);
-	if (!map)
-		return -ENOMEM;
-	map->vm = vm;
-	map->rw_flag = rw_flag;
-	map->gpu_va = gk20a_gmmu_map(vm, &p->mem.sgt, p->mem.size,
-				     0/*uncached*/, rw_flag,
-				     false);
-	if (!map->gpu_va) {
-		kfree(map);
-		return -ENOMEM;
+	BUG_ON(!p);
+
+	mutex_lock(&p->pool_lock);
+
+	/* Find an available HW semaphore. */
+	hw_sema_idx = __semaphore_bitmap_alloc(p->semas_alloced,
+					       PAGE_SIZE / SEMAPHORE_SIZE);
+	if (hw_sema_idx < 0) {
+		ret = hw_sema_idx;
+		goto fail;
 	}
-	gk20a_vm_get(vm);
 
-	mutex_lock(&p->maps_mutex);
-	WARN_ON(gk20a_semaphore_pool_find_map_locked(p, vm));
-	list_add(&map->list, &p->maps);
-	mutex_unlock(&p->maps_mutex);
+	hw_sema = kzalloc(sizeof(struct gk20a_semaphore_int), GFP_KERNEL);
+	if (!hw_sema) {
+		ret = -ENOMEM;
+		goto fail_free_idx;
+	}
+
+	ch->hw_sema = hw_sema;
+	hw_sema->ch = ch;
+	hw_sema->p = p;
+	hw_sema->idx = hw_sema_idx;
+	hw_sema->offset = SEMAPHORE_SIZE * hw_sema_idx;
+	atomic_set(&hw_sema->next_value, 0);
+	hw_sema->value = p->cpu_va + hw_sema->offset;
+	writel(0, hw_sema->value);
+
+	list_add(&hw_sema->hw_sema_list, &p->hw_semas);
+
+	mutex_unlock(&p->pool_lock);
+
 	return 0;
+
+fail_free_idx:
+	clear_bit(hw_sema_idx, p->semas_alloced);
+fail:
+	mutex_unlock(&p->pool_lock);
+	return ret;
 }
 
-void gk20a_semaphore_pool_unmap(struct gk20a_semaphore_pool *p,
-		struct vm_gk20a *vm)
-{
-	struct gk20a_semaphore_pool_map *map;
-	WARN_ON(!vm);
-
-	mutex_lock(&p->maps_mutex);
-	map = gk20a_semaphore_pool_find_map_locked(p, vm);
-	if (map) {
-		gk20a_gmmu_unmap(vm, map->gpu_va, p->mem.size, map->rw_flag);
-		gk20a_vm_put(vm);
-		list_del(&map->list);
-		kfree(map);
-	}
-	mutex_unlock(&p->maps_mutex);
-}
-
-u64 gk20a_semaphore_pool_gpu_va(struct gk20a_semaphore_pool *p,
-		struct vm_gk20a *vm)
-{
-	struct gk20a_semaphore_pool_map *map;
-	u64 gpu_va = 0;
-
-	mutex_lock(&p->maps_mutex);
-	map = gk20a_semaphore_pool_find_map_locked(p, vm);
-	if (map)
-		gpu_va = map->gpu_va;
-	mutex_unlock(&p->maps_mutex);
-
-	return gpu_va;
-}
-
-struct gk20a_semaphore *gk20a_semaphore_alloc(struct gk20a_semaphore_pool *pool)
+/*
+ * Allocate a semaphore from the passed pool.
+ *
+ * Since semaphores are ref-counted there's no explicit free for external code
+ * to use. When the ref-count hits 0 the internal free will happen.
+ */
+struct gk20a_semaphore *gk20a_semaphore_alloc(struct channel_gk20a *ch)
 {
 	struct gk20a_semaphore *s;
+	int ret;
+
+	if (!ch->hw_sema) {
+		ret = __gk20a_init_hw_sema(ch);
+		if (ret)
+			return ERR_PTR(ret);
+	}
 
 	s = kzalloc(sizeof(*s), GFP_KERNEL);
 	if (!s)
 		return NULL;
 
-	s->offset = gk20a_balloc(&pool->alloc, SEMAPHORE_SIZE);
-	if (!s->offset) {
-		gk20a_err(dev_from_gk20a(pool->g),
-				"failed to allocate semaphore");
-		kfree(s);
-		return NULL;
-	}
-
-	gk20a_semaphore_pool_get(pool);
-	s->pool = pool;
-
 	kref_init(&s->ref);
-	/* Initially acquired. */
-	gk20a_mem_wr(s->pool->g, &s->pool->mem, s->offset, 0);
-	gk20a_dbg_info("created semaphore offset=%d, value=%d",
-			s->offset,
-			gk20a_mem_rd(s->pool->g, &s->pool->mem, s->offset));
+	s->hw_sema = ch->hw_sema;
+	atomic_set(&s->value, 0);
+
+	/*
+	 * Take a ref on the pool so that we can keep this pool alive for
+	 * as long as this semaphore is alive.
+	 */
+	gk20a_semaphore_pool_get(s->hw_sema->p);
+
 	return s;
 }
 
@@ -187,8 +400,8 @@ static void gk20a_semaphore_free(struct kref *ref)
 	struct gk20a_semaphore *s =
 		container_of(ref, struct gk20a_semaphore, ref);
 
-	gk20a_bfree(&s->pool->alloc, s->offset);
-	gk20a_semaphore_pool_put(s->pool);
+	gk20a_semaphore_pool_put(s->hw_sema->p);
+
 	kfree(s);
 }
 

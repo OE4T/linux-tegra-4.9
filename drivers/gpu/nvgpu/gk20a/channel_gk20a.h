@@ -108,6 +108,8 @@ struct channel_gk20a {
 	atomic_t ref_count;
 	wait_queue_head_t ref_count_dec_wq;
 
+	struct gk20a_semaphore_int *hw_sema;
+
 	int hw_chid;
 	bool wdt_enabled;
 	bool bound;

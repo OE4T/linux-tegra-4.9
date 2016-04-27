@@ -3213,6 +3213,17 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	struct rb_node *node;
 
 	gk20a_dbg_fn("");
+
+	/*
+	 * Do this outside of the update_gmmu_lock since unmapping the semaphore
+	 * pool involves unmapping a GMMU mapping which means aquiring the
+	 * update_gmmu_lock.
+	 */
+	if (!gk20a_platform_has_syncpoints(gk20a_from_vm(vm)->dev)) {
+		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
+		gk20a_semaphore_pool_put(vm->sema_pool);
+	}
+
 	mutex_lock(&vm->update_gmmu_lock);
 
 	/* TBD: add a flag here for the unmap code to recognize teardown
@@ -3286,6 +3297,64 @@ const struct gk20a_mmu_level gk20a_mm_levels_128k[] = {
 	{.update_entry = NULL}
 };
 
+/*
+ * Initialize a semaphore pool. Just return successfully if we do not need
+ * semaphores (i.e when sync-pts are active).
+ */
+int gk20a_init_sema_pool(struct vm_gk20a *vm)
+{
+	struct gk20a_semaphore_sea *sema_sea;
+	struct mm_gk20a *mm = vm->mm;
+	struct gk20a *g = mm->g;
+	int err;
+
+	/*
+	 * Don't waste the memory on semaphores if we don't need them.
+	 */
+	if (gk20a_platform_has_syncpoints(g->dev))
+		return 0;
+
+	if (vm->sema_pool)
+		return 0;
+
+	sema_sea = gk20a_semaphore_sea_create(g);
+	if (!sema_sea)
+		return -ENOMEM;
+
+	vm->sema_pool = gk20a_semaphore_pool_alloc(sema_sea);
+	if (!vm->sema_pool) {
+		gk20a_vm_put(vm);
+		return -ENOMEM;
+	}
+
+	/*
+	 * Allocate a chunk of GPU VA space for mapping the semaphores. We will
+	 * do a fixed alloc in the kernel VM so that all channels have the same
+	 * RO address range for the semaphores.
+	 *
+	 * !!! TODO: cleanup.
+	 */
+	sema_sea->gpu_va = gk20a_balloc_fixed(&vm->vma[gmmu_page_size_kernel],
+					      vm->va_limit -
+					      mm->channel.kernel_size,
+					      512 * PAGE_SIZE);
+	if (!sema_sea->gpu_va) {
+		gk20a_bfree(&vm->vma[gmmu_page_size_small], sema_sea->gpu_va);
+		gk20a_vm_put(vm);
+		return -ENOMEM;
+	}
+
+	err = gk20a_semaphore_pool_map(vm->sema_pool, vm);
+	if (err) {
+		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
+		gk20a_bfree(&vm->vma[gmmu_page_size_small],
+			    vm->sema_pool->gpu_va);
+		gk20a_vm_put(vm);
+	}
+
+	return 0;
+}
+
 int gk20a_init_vm(struct mm_gk20a *mm,
 		struct vm_gk20a *vm,
 		u32 big_page_size,
@@ -3317,9 +3386,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	vm->big_pages = big_pages;
 
 	vm->big_page_size = gmmu_page_sizes[gmmu_page_size_big];
-
 	vm->userspace_managed = userspace_managed;
-
 	vm->mmu_levels = vm->mm->g->ops.mm.get_mmu_levels(vm->mm->g,
 			vm->big_page_size);
 
@@ -3464,6 +3531,17 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	mutex_init(&vm->update_gmmu_lock);
 	kref_init(&vm->ref);
 	INIT_LIST_HEAD(&vm->reserved_va_list);
+
+	/*
+	 * This is only necessary for channel address spaces. The best way to
+	 * distinguish channel address spaces from other address spaces is by
+	 * size - if the address space is 4GB or less, it's not a channel.
+	 */
+	if (vm->va_limit > SZ_4G) {
+		err = gk20a_init_sema_pool(vm);
+		if (err)
+			goto clean_up_big_allocator;
+	}
 
 	return 0;
 

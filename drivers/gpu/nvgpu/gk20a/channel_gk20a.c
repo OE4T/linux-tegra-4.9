@@ -1002,6 +1002,9 @@ unbind:
 
 	mutex_unlock(&g->dbg_sessions_lock);
 
+	/* Make sure that when the ch is re-opened it will get a new HW sema. */
+	ch->hw_sema = NULL;
+
 	/* make sure we catch accesses of unopened channels in case
 	 * there's non-refcounted channel pointers hanging around */
 	ch->g = NULL;

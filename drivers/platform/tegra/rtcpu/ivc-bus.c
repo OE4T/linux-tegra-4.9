@@ -302,17 +302,14 @@ static int tegra_ivc_bus_validate_channels(struct tegra_ivc_bus *bus)
 static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus, u32 sid)
 {
 	struct device_node *dev_node = bus->dev.of_node, *reg_node;
-	struct tegra_ast *ast[2];
-	int ret, i, channel = 0, region = 2;
+	void __iomem *ast[2];
+	int ret, channel = 0, region = 2;
 
-	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
 	/* Get AST handles */
-	for (i = 0; i < 2; i++) {
-		ast[i] = tegra_ast_add_ref(dev_node, NV(ast), i);
-		if (IS_ERR(ast[i])) {
-			dev_err(&bus->dev, "AST %d not found\n", i);
-			return PTR_ERR(ast[i]);
-		}
+	ret = tegra_ast_map(bus->dev.parent, NV(ast), 2, ast);
+	if (ret) {
+		dev_err(&bus->dev, "ASTs not found: %d\n", ret);
+		return ret;
 	}
 
 	/* Parse out all nodes with a region */
@@ -350,16 +347,8 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus, u32 sid)
 			goto error;
 		}
 
-		ret = tegra_ast_region_enable(ast[0], region, ivc.va,
-						ivc.size - 1, ivc_dma, sid);
-		if (ret)
-			goto error;
-
-		ret = tegra_ast_region_enable(ast[1], region, ivc.va,
-						ivc.size - 1, ivc_dma, sid);
-		if (ret)
-			goto error;
-
+		tegra_ast_region_enable(2, ast, region, ivc.va, ivc.size,
+					ivc_dma, sid);
 		region++;
 
 		for_each_child_of_node(reg_node, ch_node) {
@@ -463,10 +452,7 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 
 	ret = tegra_ivc_bus_parse_channels(bus, sid);
 	if (ret) {
-		if (ret != -EPROBE_DEFER)
-			dev_err(dev, "ivc-channels set up failed: %d\n", ret);
-		else
-			dev_err(dev, "ivc-channels set up deferred\n");
+		dev_err(&bus->dev, "IVC channels setup failed: %d\n", ret);
 		goto error;
 	}
 

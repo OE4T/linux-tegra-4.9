@@ -17,17 +17,17 @@
 #ifndef _LINUX_TEGRA_AST_H
 #define _LINUX_TEGRA_AST_H
 
-struct tegra_ast;
+struct device;
+struct device_node;
 
-struct tegra_ast *tegra_ast_add_ref(const struct device_node *client_np,
-			const char *ast_prop_name, u32 ast_prop_index);
+int tegra_ast_map(struct device *, const char *name, unsigned count,
+			void __iomem *[]);
+void tegra_ast_unmap(struct device *, unsigned count, void __iomem *const []);
 
-int tegra_ast_del_ref(void);
-
-int tegra_ast_region_enable(struct tegra_ast *ast, u32 region,
-		u32 slave_base, u32 mask, u64 master_base,
-		u32 stream_id);
-
-int tegra_ast_region_disable(struct tegra_ast *ast, u32 region);
+int tegra_ast_region_enable(unsigned count, void __iomem *const [],
+				u32 region, u32 slave_base, u32 mask,
+				u64 master_base, u32 stream_id);
+void tegra_ast_region_disable(unsigned count, void __iomem *const [],
+				u32 region);
 
 #endif

@@ -8659,6 +8659,22 @@ clean_up:
 	return err;
 }
 
+static int gr_gk20a_get_preemption_mode_flags(struct gk20a *g,
+		struct nvgpu_preemption_modes_rec *preemption_modes_rec)
+{
+	preemption_modes_rec->graphics_preemption_mode_flags =
+			NVGPU_GRAPHICS_PREEMPTION_MODE_WFI;
+	preemption_modes_rec->compute_preemption_mode_flags =
+			NVGPU_COMPUTE_PREEMPTION_MODE_WFI;
+
+	preemption_modes_rec->default_graphics_preempt_mode =
+			NVGPU_GRAPHICS_PREEMPTION_MODE_WFI;
+	preemption_modes_rec->default_compute_preempt_mode =
+			NVGPU_COMPUTE_PREEMPTION_MODE_WFI;
+
+	return 0;
+}
+
 void gk20a_init_gr_ops(struct gpu_ops *gops)
 {
 	gops->gr.access_smpc_reg = gr_gk20a_access_smpc_reg;
@@ -8726,4 +8742,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.update_sm_error_state = gk20a_gr_update_sm_error_state;
 	gops->gr.clear_sm_error_state = gk20a_gr_clear_sm_error_state;
 	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
+	gops->gr.get_preemption_mode_flags = gr_gk20a_get_preemption_mode_flags;
 }

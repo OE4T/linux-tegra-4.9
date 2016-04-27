@@ -2142,6 +2142,17 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	if (platform->clk_round_rate)
 		gpu->max_freq = platform->clk_round_rate(g->dev, UINT_MAX);
 
+	g->ops.gr.get_preemption_mode_flags(g, &g->gr.preemption_mode_rec);
+	gpu->graphics_preemption_mode_flags =
+		g->gr.preemption_mode_rec.graphics_preemption_mode_flags;
+	gpu->compute_preemption_mode_flags =
+		g->gr.preemption_mode_rec.compute_preemption_mode_flags;
+	gpu->default_graphics_preempt_mode =
+		g->gr.preemption_mode_rec.default_graphics_preempt_mode;
+	gpu->default_compute_preempt_mode =
+		g->gr.preemption_mode_rec.default_compute_preempt_mode;
+
+
 	return 0;
 }
 

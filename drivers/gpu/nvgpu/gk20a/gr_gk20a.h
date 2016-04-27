@@ -188,6 +188,14 @@ struct gr_gk20a_isr_data {
 	u32 class_num;
 };
 
+struct nvgpu_preemption_modes_rec {
+	u32 graphics_preemption_mode_flags; /* supported preemption modes */
+	u32 compute_preemption_mode_flags; /* supported preemption modes */
+
+	u32 default_graphics_preempt_mode; /* default mode */
+	u32 default_compute_preempt_mode; /* default mode */
+};
+
 struct gr_gk20a {
 	struct gk20a *g;
 	struct {
@@ -325,6 +333,7 @@ struct gr_gk20a {
 	bool sw_ready;
 	bool skip_ucode_init;
 
+	struct nvgpu_preemption_modes_rec preemption_mode_rec;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct gr_t18x t18x;
 #endif

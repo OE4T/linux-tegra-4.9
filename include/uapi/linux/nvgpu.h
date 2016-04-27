@@ -187,6 +187,13 @@ struct nvgpu_gpu_characteristics {
 
 	__u64 max_freq;
 
+	/* supported preemption modes */
+	__u32 graphics_preemption_mode_flags; /* NVGPU_GRAPHICS_PREEMPTION_MODE_* */
+	__u32 compute_preemption_mode_flags; /* NVGPU_COMPUTE_PREEMPTION_MODE_* */
+	/* default preemption modes */
+	__u32 default_graphics_preempt_mode; /* NVGPU_GRAPHICS_PREEMPTION_MODE_* */
+	__u32 default_compute_preempt_mode; /* NVGPU_COMPUTE_PREEMPTION_MODE_* */
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary

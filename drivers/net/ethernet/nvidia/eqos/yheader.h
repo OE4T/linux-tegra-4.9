@@ -1369,7 +1369,6 @@ struct eqos_prv_data {
 
 	struct eqos_cfg dt_cfg;
 	struct chan_data chinfo[MAX_CHANS];
-	uint	napi_quota_all_chans;
 	uint	num_chans;
 
 	uint rx_irq_alloc_mask;

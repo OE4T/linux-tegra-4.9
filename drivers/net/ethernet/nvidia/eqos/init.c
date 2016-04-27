@@ -933,9 +933,6 @@ int eqos_probe(struct platform_device *pdev)
 		pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
 	}
 
-	for (i = 0; i < num_chans; i++)
-		pdata->napi_quota_all_chans += pdt_cfg->chan_napi_quota[i];
-
 	/* csr_clock_speed is axi_cbb_clk rate */
 	pdata->csr_clock_speed = clk_get_rate(pdata->axi_cbb_clk) / 1000000;
 	if (pdata->csr_clock_speed <= 0) {
@@ -972,7 +969,7 @@ int eqos_probe(struct platform_device *pdev)
 		struct eqos_rx_queue *rx_queue = GET_RX_QUEUE_PTR(i);
 
 		netif_napi_add(ndev, &rx_queue->napi,
-			       eqos_napi_mq, pdata->napi_quota_all_chans);
+			       eqos_napi_mq, pdt_cfg->chan_napi_quota[i]);
 		rx_queue->chan_num = i;
 	}
 

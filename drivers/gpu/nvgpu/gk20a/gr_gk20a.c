@@ -7524,6 +7524,7 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 	u32 ltc_stride = nvgpu_get_litter_value(g, GPU_LIT_LTC_STRIDE);
 	u32 num_fbpas = nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPAS);
 	u32 fbpa_stride = nvgpu_get_litter_value(g, GPU_LIT_FBPA_STRIDE);
+	u32 num_ltc = g->ops.gr.get_max_ltc_per_fbp(g) * g->gr.num_fbps;
 
 	if (hwpm_ctxsw_buffer_size == 0) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
@@ -7579,7 +7580,7 @@ static int gr_gk20a_create_hwpm_ctxsw_buffer_offset_map(struct gk20a *g)
 					&g->gr.ctx_vars.ctxsw_regs.pm_ltc,
 					&count, &offset,
 					hwpm_ctxsw_reg_count_max, 0,
-					g->ltc_count, ltc_stride, ~0))
+					num_ltc, ltc_stride, ~0))
 		goto cleanup;
 
 	offset = ALIGN(offset, 256);

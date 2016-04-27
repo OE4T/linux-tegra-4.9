@@ -102,7 +102,7 @@ struct tegra_crypt_req {
 	int op; /* e.g. TEGRA_CRYPTO_ECB */
 	bool encrypt;
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
-	int keylen;
+	unsigned int keylen;
 	char iv[TEGRA_CRYPTO_IV_SIZE];
 	int ivlen;
 	u8 *plaintext;
@@ -119,7 +119,7 @@ struct tegra_crypt_req_32 {
 	int op; /* e.g. TEGRA_CRYPTO_ECB */
 	bool encrypt;
 	char key[TEGRA_CRYPTO_MAX_KEY_SIZE];
-	int keylen;
+	unsigned int keylen;
 	char iv[TEGRA_CRYPTO_IV_SIZE];
 	int ivlen;
 	__u32 plaintext;

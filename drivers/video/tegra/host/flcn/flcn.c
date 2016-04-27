@@ -625,10 +625,14 @@ static struct platform_driver flcn_driver = {
 
 static struct of_device_id tegra_flcn_domain_match[] = {
 #ifdef CONFIG_ARCH_TEGRA_VIC
+	{.compatible = "nvidia,tegra124-vic03-pd",
+	.data = (struct nvhost_device_data *)&t124_vic_info},
 	{.compatible = "nvidia,tegra132-vic03-pd",
 	.data = (struct nvhost_device_data *)&t124_vic_info},
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
+	{.compatible = "nvidia,tegra124-msenc-pd",
+	.data = (struct nvhost_device_data *)&t124_msenc_info},
 	{.compatible = "nvidia,tegra132-msenc-pd",
 	.data = (struct nvhost_device_data *)&t124_msenc_info},
 #endif

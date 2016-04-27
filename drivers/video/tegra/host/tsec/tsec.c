@@ -908,6 +908,8 @@ static int __init tsec_key_setup(char *line)
 __setup("otf_key=", tsec_key_setup);
 
 static struct of_device_id tegra_tsec_domain_match[] = {
+	{.compatible = "nvidia,tegra124-tsec-pd",
+	 .data = (struct nvhost_device_data *)&t124_tsec_info},
 	{.compatible = "nvidia,tegra132-tsec-pd",
 	 .data = (struct nvhost_device_data *)&t124_tsec_info},
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG

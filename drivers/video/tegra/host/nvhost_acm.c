@@ -810,8 +810,10 @@ int nvhost_module_init(struct platform_device *dev)
 
 #if defined(CONFIG_PM_GENERIC_DOMAINS)
 	gpd = dev_to_genpd(&dev->dev);
-	if (IS_ERR(gpd))
+	if (IS_ERR(gpd)) {
+		dev_err(&dev->dev, "dev_to_genpd failed.\n");
 		return PTR_ERR(gpd);
+	}
 
 	dn = gpd->of_node;
 

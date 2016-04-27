@@ -1128,6 +1128,8 @@ static struct platform_driver platform_driver = {
 };
 
 static struct of_device_id tegra_host1x_domain_match[] = {
+	{.compatible = "nvidia,tegra124-host1x-pd",
+	 .data = (struct nvhost_device_data *)&t124_host1x_info},
 	{.compatible = "nvidia,tegra132-host1x-pd",
 	 .data = (struct nvhost_device_data *)&t124_host1x_info},
 #ifdef TEGRA_21X_OR_HIGHER_CONFIG

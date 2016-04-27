@@ -2435,10 +2435,9 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			gmmu_pte_kind_f(kind_v) |
 			gmmu_pte_comptagline_f((u32)(*ctag >> ctag_shift));
 
-		if (vm->mm->use_full_comp_tag_line && *iova & 0x10000) {
+		if (*ctag && vm->mm->use_full_comp_tag_line && *iova & 0x10000)
 			pte_w[1] |= gmmu_pte_comptagline_f(
 					1 << (gmmu_pte_comptagline_s() - 1));
-		}
 
 		if (rw_flag == gk20a_mem_flag_read_only) {
 			pte_w[0] |= gmmu_pte_read_only_true_f();

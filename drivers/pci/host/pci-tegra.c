@@ -1966,7 +1966,7 @@ static bool get_rdet_status(struct tegra_pcie *pcie, u32 index)
 	bool flag = 0;
 
 	for (i = 0; i < ARRAY_SIZE(rp_to_lane_map[index]); i++)
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
 		flag |= tegra_phy_get_lane_rdet(pcie->u_phy,
 					rp_to_lane_map[index][i]);
 #else

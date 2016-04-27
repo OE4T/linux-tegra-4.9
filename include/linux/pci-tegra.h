@@ -44,7 +44,7 @@ int tegra_pcie_pm_control(enum tegra_pcie_pm_opt pm_opt, void *user);
 void tegra_pcie_port_enable_per_pdev(struct pci_dev *pdev);
 void tegra_pcie_port_disable_per_pdev(struct pci_dev *pdev);
 
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
 bool tegra_phy_get_lane_rdet(struct phy *phy, u8 lane_num);
 #endif
 

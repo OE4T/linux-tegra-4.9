@@ -412,18 +412,15 @@ static int hda_tegra_dev_free(struct snd_device *device)
 	return 0;
 }
 
-static int hda_tegra_init_chip(struct azx *chip, struct platform_device *pdev)
+static int hda_tegra_init_clk(struct azx *chip, struct platform_device *pdev)
 {
 	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
-	struct hdac_bus *bus = azx_bus(chip);
 	struct device *dev = hda->dev;
-	struct resource *res;
-	int err;
 
 #if defined(CONFIG_COMMON_CLK)
 	hda->hda_rst = devm_reset_control_get(&pdev->dev, "hda_rst");
 	if (IS_ERR(hda->hda_rst)) {
-		dev_err(dev, "Reset control is not found, err: %ld\n",
+		dev_err(dev, "hda_rst reset control not found, err: %ld\n",
 				PTR_ERR(hda->hda_rst));
 		return PTR_ERR(hda->hda_rst);
 	}
@@ -431,49 +428,58 @@ static int hda_tegra_init_chip(struct azx *chip, struct platform_device *pdev)
 	hda->hda2codec_2x_rst =
 		devm_reset_control_get(&pdev->dev, "hda2codec_2x_rst");
 	if (IS_ERR(hda->hda2codec_2x_rst)) {
-		dev_err(dev, "Reset control is not found, err: %ld\n",
-				PTR_ERR(hda->hda2codec_2x_rst));
+		dev_err(dev,
+			"hda2codec_2x reset control not found, err: %ld\n",
+			PTR_ERR(hda->hda2codec_2x_rst));
 		return PTR_ERR(hda->hda2codec_2x_rst);
 	}
 
 	hda->hda2hdmi_rst =
 		devm_reset_control_get(&pdev->dev, "hda2hdmi_rst");
 	if (IS_ERR(hda->hda2hdmi_rst)) {
-		dev_err(dev, "Reset control is not found, err: %ld\n",
-				PTR_ERR(hda->hda2hdmi_rst));
+		dev_err(dev,
+			"hda2hdmi_rst reset control not found, err: %ld\n",
+			PTR_ERR(hda->hda2hdmi_rst));
 		return PTR_ERR(hda->hda2hdmi_rst);
 	}
 #endif
 
 	hda->hda_clk = devm_clk_get(dev, "hda");
 	if (IS_ERR(hda->hda_clk)) {
-		dev_err(dev, "failed to get hda clock\n");
+		dev_err(dev, "hda clock handle not found\n");
 		return PTR_ERR(hda->hda_clk);
 	}
+
 	hda->hda2codec_2x_clk = devm_clk_get(dev, "hda2codec_2x");
 	if (IS_ERR(hda->hda2codec_2x_clk)) {
-		dev_err(dev, "failed to get hda2codec_2x clock\n");
+		dev_err(dev, "hda2codec_2x clock handle not found\n");
 		return PTR_ERR(hda->hda2codec_2x_clk);
 	}
+
 	hda->hda2hdmi_clk = devm_clk_get(dev, "hda2hdmi");
 	if (IS_ERR(hda->hda2hdmi_clk)) {
-		dev_err(dev, "failed to get hda2hdmi clock\n");
+		dev_err(dev, "hda2hdmi clock handle not found\n");
 		return PTR_ERR(hda->hda2hdmi_clk);
 	}
 
+	return 0;
+}
+
+static int hda_tegra_init_chip(struct azx *chip, struct platform_device *pdev)
+{
+	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
+	struct device *dev = hda->dev;
+	struct hdac_bus *bus = azx_bus(chip);
+	struct resource *res;
+
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+
 	hda->regs = devm_ioremap_resource(dev, res);
 	if (IS_ERR(hda->regs))
 		return PTR_ERR(hda->regs);
 
 	bus->remap_addr = hda->regs + HDA_BAR0;
 	bus->addr = res->start + HDA_BAR0;
-
-	err = hda_tegra_enable_clocks(hda);
-	if (err) {
-		dev_err(dev, "failed to get enable clocks\n");
-		return err;
-	}
 
 	hda_tegra_init(hda);
 
@@ -570,14 +576,6 @@ static int hda_tegra_create(struct snd_card *card,
 	struct azx *chip;
 	int err;
 
-	if (hda->dev) {
-		err = pm_runtime_set_active(hda->dev);
-		if (err < 0)
-			return err;
-		pm_runtime_get_noresume(hda->dev);
-		pm_runtime_enable(hda->dev);
-	}
-
 	chip = &hda->chip;
 
 	mutex_init(&chip->open_mutex);
@@ -643,9 +641,29 @@ static int hda_tegra_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	err = hda_tegra_create(card, driver_flags, hda);
+	if (hda->dev) {
+		err = pm_runtime_set_active(hda->dev);
+		if (err < 0)
+			goto out_free;
+		pm_runtime_get_noresume(hda->dev);
+		pm_runtime_enable(hda->dev);
+	}
+
+	err = hda_tegra_init_clk(chip, pdev);
 	if (err < 0)
 		goto out_free;
+
+	err = hda_tegra_enable_clocks(hda);
+	if (err)
+		goto out_free;
+
+	err = hda_tegra_create(card, driver_flags, hda);
+	if (err < 0) {
+		pm_runtime_disable(hda->dev);
+		hda_tegra_disable_clocks(hda);
+		goto out_free;
+	}
+
 	card->private_data = chip;
 
 	dev_set_drvdata(&pdev->dev, card);
@@ -695,7 +713,7 @@ static void hda_tegra_probe_work(struct work_struct *work)
 
 	pm_runtime_put(hda->dev);
 
- out_free:
+out_free:
 	return; /* no error return from async probe */
 }
 

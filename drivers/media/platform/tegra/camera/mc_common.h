@@ -157,6 +157,7 @@ struct tegra_channel {
 	atomic_t power_on_refcnt;
 	struct v4l2_fh *fh;
 	bool bypass;
+	atomic_t is_streaming;
 	atomic_t is_hdmiin_unplug;
 	int requested_kbyteps;
 	unsigned long requested_hz;

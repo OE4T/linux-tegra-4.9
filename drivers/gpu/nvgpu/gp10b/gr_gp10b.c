@@ -1971,6 +1971,25 @@ unmap_ctx:
 	return err;
 }
 
+static int gr_gp10b_get_preemption_mode_flags(struct gk20a *g,
+	struct nvgpu_preemption_modes_rec *preemption_modes_rec)
+{
+	preemption_modes_rec->graphics_preemption_mode_flags = (
+			NVGPU_GRAPHICS_PREEMPTION_MODE_WFI |
+			NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP);
+	preemption_modes_rec->compute_preemption_mode_flags = (
+			NVGPU_COMPUTE_PREEMPTION_MODE_WFI |
+			NVGPU_COMPUTE_PREEMPTION_MODE_CTA |
+			NVGPU_COMPUTE_PREEMPTION_MODE_CILP);
+
+	preemption_modes_rec->default_graphics_preempt_mode =
+			NVGPU_GRAPHICS_PREEMPTION_MODE_WFI;
+	preemption_modes_rec->default_compute_preempt_mode =
+			NVGPU_COMPUTE_PREEMPTION_MODE_WFI;
+
+	return 0;
+}
+
 void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
@@ -2011,4 +2030,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_lrf_tex_ltc_dram_override = get_ecc_override_val;
 	gops->gr.suspend_contexts = gr_gp10b_suspend_contexts;
 	gops->gr.set_preemption_mode = gr_gp10b_set_preemption_mode;
+	gops->gr.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags;
 }

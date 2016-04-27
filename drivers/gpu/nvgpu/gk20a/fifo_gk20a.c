@@ -1738,13 +1738,6 @@ static u32 gk20a_fifo_handle_pbdma_intr(struct device *dev,
 	return handled;
 }
 
-static u32 fifo_channel_isr(struct gk20a *g, u32 fifo_intr)
-{
-	gk20a_channel_semaphore_wakeup(g, false);
-	return fifo_intr_0_channel_intr_pending_f();
-}
-
-
 static u32 fifo_pbdma_isr(struct gk20a *g, u32 fifo_intr)
 {
 	struct device *dev = dev_from_gk20a(g);
@@ -1810,9 +1803,11 @@ void gk20a_fifo_nonstall_isr(struct gk20a *g)
 	gk20a_dbg(gpu_dbg_intr, "fifo nonstall isr %08x\n", fifo_intr);
 
 	if (fifo_intr & fifo_intr_0_channel_intr_pending_f())
-		clear_intr |= fifo_channel_isr(g, fifo_intr);
+		clear_intr = fifo_intr_0_channel_intr_pending_f();
 
 	gk20a_writel(g, fifo_intr_0_r(), clear_intr);
+
+	gk20a_channel_semaphore_wakeup(g, false);
 
 	return;
 }

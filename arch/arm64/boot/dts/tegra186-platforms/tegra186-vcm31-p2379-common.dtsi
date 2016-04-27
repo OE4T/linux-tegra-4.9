@@ -103,6 +103,11 @@
 		status = "okay";
 	};
 
+	i2c@31e0000 {
+		clock-frequency = <400000>;
+		status = "okay";
+	};
+
         sdhci@3460000 { /* SDMMC_D: Used for eMMc */
                         status = "okay";
                         uhs-mask = <0x00>;

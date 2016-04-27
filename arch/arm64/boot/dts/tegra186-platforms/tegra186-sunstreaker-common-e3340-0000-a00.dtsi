@@ -33,8 +33,8 @@
 #define EXTCON_USB_Host        2
 
 / {
-        model = "sunstreaker-3340";
-        compatible = "nvidia,sunstreaker-3340", "nvidia,tegra186";
+        model = "sunstreaker_3340";
+        compatible = "nvidia,sunstreaker_3340", "nvidia,tegra186";
 
         nvidia,dtbbuildtime = __DATE__, __TIME__;
         #address-cells = <2>;

@@ -1865,6 +1865,7 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 	struct channel_gk20a_job *job;
 	struct gk20a_platform *platform;
 	struct gk20a *g;
+	int job_finished = 0;
 
 	c = gk20a_channel_get(c);
 	if (!c)
@@ -1934,11 +1935,11 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 		mutex_unlock(&c->jobs_lock);
 
 		kfree(job);
-
+		job_finished = 1;
 		gk20a_idle(g->dev);
 	}
 
-	if (c->update_fn)
+	if (job_finished && c->update_fn)
 		schedule_work(&c->update_fn_work);
 
 	gk20a_channel_put(c);

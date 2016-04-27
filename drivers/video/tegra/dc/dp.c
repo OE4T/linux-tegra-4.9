@@ -1264,7 +1264,8 @@ static void tegra_dc_dp_debug_create(struct tegra_dc_dp_data *dp)
 {
 	struct dentry *retval;
 
-	dpdir = debugfs_create_dir("tegra_dp", NULL);
+	dp->debug_dir_name = tegra_dc_update_base_name(dp->dc, "tegra_dp");
+	dpdir = debugfs_create_dir(dp->debug_dir_name, NULL);
 	if (!dpdir)
 		return;
 	retval = debugfs_create_file("regs", S_IRUGO, dpdir, dp, &dbg_fops);
@@ -2757,6 +2758,7 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&dp->audio_switch);
 #endif
+	kfree(dp->debug_dir_name);
 	of_node_put(np_dp);
 }
 

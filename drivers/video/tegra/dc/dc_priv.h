@@ -178,6 +178,26 @@ static inline int tegra_dc_which_sor(struct tegra_dc *dc)
 #endif
 }
 
+#define BUF_SIZE	256
+static inline char *tegra_dc_update_base_name(struct tegra_dc *dc,
+						const char *base_name)
+{
+	char *buf;
+	int head_num;
+
+	if (!dc || !base_name)
+		return NULL;
+
+	head_num = dc->ctrl_num;
+	buf = kzalloc(BUF_SIZE, GFP_KERNEL);
+	if (!buf)
+		return NULL;
+
+	snprintf(buf, BUF_SIZE, "%s%d", base_name, head_num);
+	return buf;
+}
+#undef BUF_SIZE
+
 static inline int tegra_dc_fmt_bpp(int fmt)
 {
 	switch (tegra_dc_fmt(fmt)) {

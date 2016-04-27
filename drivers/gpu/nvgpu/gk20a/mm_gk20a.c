@@ -1990,18 +1990,24 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 	return 0;
 }
 
-u64 gk20a_gmmu_map(struct vm_gk20a *vm,
-		struct sg_table **sgt,
-		u64 size,
-		u32 flags,
-		int rw_flag,
-		bool priv)
+/*
+ * Core GMMU map function for the kernel to use. If @addr is 0 then the GPU
+ * VA will be allocated for you. If addr is non-zero then the buffer will be
+ * mapped at @addr.
+ */
+static u64 __gk20a_gmmu_map(struct vm_gk20a *vm,
+			    struct sg_table **sgt,
+			    u64 addr,
+			    u64 size,
+			    u32 flags,
+			    int rw_flag,
+			    bool priv)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 vaddr;
 
 	mutex_lock(&vm->update_gmmu_lock);
-	vaddr = g->ops.mm.gmmu_map(vm, 0, /* already mapped? - No */
+	vaddr = g->ops.mm.gmmu_map(vm, addr,
 				*sgt, /* sg table */
 				0, /* sg offset */
 				size,
@@ -2020,6 +2026,30 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 	}
 
 	return vaddr;
+}
+
+u64 gk20a_gmmu_map(struct vm_gk20a *vm,
+		   struct sg_table **sgt,
+		   u64 size,
+		   u32 flags,
+		   int rw_flag,
+		   bool priv)
+{
+	return __gk20a_gmmu_map(vm, sgt, 0, size, flags, rw_flag, priv);
+}
+
+/*
+ * Like gk20a_gmmu_map() except it works on a fixed address instead.
+ */
+u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
+			 struct sg_table **sgt,
+			 u64 addr,
+			 u64 size,
+			 u32 flags,
+			 int rw_flag,
+			 bool priv)
+{
+	return __gk20a_gmmu_map(vm, sgt, addr, size, flags, rw_flag, priv);
 }
 
 int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem)

@@ -471,6 +471,13 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		u32 flags,
 		int rw_flag,
 		bool priv);
+u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
+		struct sg_table **sgt,
+		u64 addr,
+		u64 size,
+		u32 flags,
+		int rw_flag,
+		bool priv);
 
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm,
 		size_t size,

@@ -23,7 +23,6 @@
 #include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/tegra_pm_domains.h>
-#include <linux/tegra-soc.h>
 #include <linux/uaccess.h>
 
 #include "dev.h"
@@ -98,7 +97,8 @@ int nvhost_vi4_prepare_poweroff(struct platform_device *pdev)
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
 	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0, 0x00000000);
-	disable_irq(vi->error_irq);
+	if (!IS_ERR_VALUE(vi->error_irq))
+		disable_irq(vi->error_irq);
 	return 0;
 }
 
@@ -113,7 +113,8 @@ int nvhost_vi4_finalize_poweron(struct platform_device *pdev)
 			VI_FMLITE_BUF_OVFL_ERR_MASK |
 			VI_NOTIFY_FIFO_OVFL_ERR_MASK |
 			VI_ISPBUFA_ERR_MASK);
-	enable_irq(vi->error_irq);
+	if (!IS_ERR_VALUE(vi->error_irq))
+		enable_irq(vi->error_irq);
 	return 0;
 }
 
@@ -279,10 +280,6 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		return err;
 	}
 
-	host1x_writel(pdev, VI_CFG_INTERRUPT_MASK_0, 0);
-	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_0, 0);
-	host1x_writel(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_TEST_0, 0);
-
 	vi->error_irq = platform_get_irq(pdev, 0);
 	if (!IS_ERR_VALUE(vi->error_irq)) {
 		err = devm_request_threaded_irq(&pdev->dev, vi->error_irq,
@@ -292,16 +289,13 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		if (err) {
 			dev_err(&pdev->dev, "cannot get master IRQ %d: %d\n",
 				vi->error_irq, err);
-			nvhost_client_device_release(pdev);
-		}
-		disable_irq(vi->error_irq);
+			vi->error_irq = -ENXIO;
+		} else
+			disable_irq(vi->error_irq);
 	} else
 		dev_warn(&pdev->dev, "missing master IRQ\n");
 
 #ifdef CONFIG_TEGRA_VI_NOTIFY
-	if (tegra_platform_is_unit_fpga())
-		return 0;
-
 	err = vi_notify_register(&nvhost_vi_notify_driver, &pdev->dev, 12);
 	if (IS_ERR_VALUE(err)) {
 		nvhost_client_device_release(pdev);
@@ -310,6 +304,9 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 #endif
 	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);
 	if (err) {
+#ifdef CONFIG_TEGRA_VI_NOTIFY
+		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
+#endif
 		nvhost_client_device_release(pdev);
 		return err;
 	}
@@ -317,31 +314,26 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static int __exit tegra_vi4_remove(struct platform_device *pdev)
+static int tegra_vi4_remove(struct platform_device *pdev)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
-	debugfs_remove_recursive(vi->debug_dir);
-
-#ifdef CONFIG_TEGRA_VI_NOTIFY
-	if (!tegra_platform_is_unit_fpga())
-		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
-#endif
-
 	tegra_vi_media_controller_cleanup(&vi->mc_vi);
-
+#ifdef CONFIG_TEGRA_VI_NOTIFY
+	vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
+#endif
 	nvhost_client_device_release(pdev);
 	/* ^ includes call to nvhost_module_deinit() */
-
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	tegra_pd_remove_device(&pdev->dev);
 #endif
+	debugfs_remove_recursive(vi->debug_dir);
 	return 0;
 }
 
 static struct platform_driver tegra_vi4_driver = {
 	.probe = tegra_vi4_probe,
-	.remove = __exit_p(tegra_vi4_remove),
+	.remove = tegra_vi4_remove,
 	.driver = {
 		.name = "tegra-vi4",
 		.owner = THIS_MODULE,

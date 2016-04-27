@@ -320,7 +320,7 @@ static int gr_gv11b_commit_global_cb_manager(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_GFXP) {
+	if (gr_ctx->graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) {
 		attrib_size_in_chunk = gr->attrib_cb_default_size +
 				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
 				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
@@ -869,14 +869,14 @@ static int gr_gv11b_alloc_gr_ctx(struct gk20a *g,
 			goto fail_free_betacb;
 		}
 
-		(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_GFXP;
+		(*gr_ctx)->graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
 	}
 
 	if (class == PASCAL_COMPUTE_A) {
 		if (flags & NVGPU_ALLOC_OBJ_FLAGS_CILP)
-			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CILP;
+			(*gr_ctx)->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
 		else
-			(*gr_ctx)->preempt_mode = NVGPU_GR_PREEMPTION_MODE_CTA;
+			(*gr_ctx)->compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CTA;
 	}
 
 	gk20a_dbg_fn("done");
@@ -978,13 +978,13 @@ static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_GFXP) {
+	if (gr_ctx->graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) {
 		gk20a_dbg_info("GfxP: %x", gfxp_preempt_option);
 		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_graphics_preemption_options_o(), 0,
 				gfxp_preempt_option);
 	}
 
-	if (gr_ctx->preempt_mode == NVGPU_GR_PREEMPTION_MODE_CILP) {
+	if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP) {
 		gk20a_dbg_info("CILP: %x", cilp_preempt_option);
 		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_compute_preemption_options_o(), 0,
 				cilp_preempt_option);
@@ -1542,8 +1542,8 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 		bool *early_exit, bool *ignore_debugger)
 {
 	int ret;
-	bool cilp_enabled = (fault_ch->ch_ctx.gr_ctx->preempt_mode ==
-			NVGPU_GR_PREEMPTION_MODE_CILP) ;
+	bool cilp_enabled = (fault_ch->ch_ctx.gr_ctx->compute_preempt_mode ==
+			NVGPU_COMPUTE_PREEMPTION_MODE_CILP) ;
 	u32 global_mask = 0, dbgr_control0, global_esr_copy;
 	u32 offset = proj_gpc_stride_v() * gpc +
 		     proj_tpc_in_gpc_stride_v() * tpc;

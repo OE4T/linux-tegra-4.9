@@ -16,6 +16,7 @@
 
 #include <linux/platform_device.h>
 #include <linux/io.h>
+#include "dev-t18x.h"
 
 #define AST_CONTROL					0x000
 #define AST_STREAMID_CTL_0				0x020

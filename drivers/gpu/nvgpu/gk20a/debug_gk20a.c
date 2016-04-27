@@ -25,6 +25,7 @@
 
 #include "gk20a.h"
 #include "debug_gk20a.h"
+#include "semaphore_gk20a.h"
 
 #include "hw_ram_gk20a.h"
 #include "hw_fifo_gk20a.h"
@@ -109,6 +110,11 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	u32 status = ccsr_channel_status_v(channel);
 	u32 syncpointa, syncpointb;
 	u32 *inst_mem;
+	struct channel_gk20a *c = g->fifo.channel + hw_chid;
+	struct gk20a_semaphore_int *hw_sema = NULL;
+
+	if (c->hw_sema)
+		hw_sema = c->hw_sema;
 
 	if (!ch_state)
 		return;
@@ -145,6 +151,12 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 		inst_mem[ram_fc_semaphoreb_w()],
 		inst_mem[ram_fc_semaphorec_w()],
 		inst_mem[ram_fc_semaphored_w()]);
+	if (hw_sema)
+		gk20a_debug_output(o, "SEMA STATE: value: 0x%08x "
+				   "next_val: 0x%08x addr: 0x%010llx\n",
+				   readl(hw_sema->value),
+				   atomic_read(&hw_sema->next_value),
+				   gk20a_hw_sema_addr(hw_sema));
 
 #ifdef CONFIG_TEGRA_GK20A
 	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())

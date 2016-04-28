@@ -39,12 +39,14 @@
 #include <linux/cpu_pm.h>
 #include <linux/psci.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
+#include <linux/version.h>
 
 #include <asm/cpuidle.h>
 #include <asm/suspend.h>
 #include <asm/cputype.h> /* cpuid */
 #include <asm/cpu.h>
 #include "../../drivers/cpuidle/dt_idle_states.h"
+#include "../../kernel/time/tick-internal.h"
 
 #define PSCI_STATE_ID_STATE_MASK        (0xf)
 #define PSCI_STATE_ID_WKTIM_MASK        (~0xf000000f)
@@ -64,6 +66,12 @@ static struct cpumask a57_cpumask;
 static void cluster_state_init(void *data);
 static u32 deepest_denver_cluster_state;
 static u32 deepest_a57_cluster_state;
+
+#ifdef CPUIDLE_FLAG_TIME_VALID
+#define DRIVER_FLAGS		CPUIDLE_FLAG_TIME_VALID
+#else
+#define DRIVER_FLAGS		0
+#endif
 
 static bool check_mce_version(void)
 {
@@ -196,7 +204,7 @@ static struct cpuidle_driver t18x_denver_idle_driver = {
 		.exit_latency		= 1,
 		.target_residency	= 1,
 		.power_usage		= UINT_MAX,
-		.flags			= CPUIDLE_FLAG_TIME_VALID,
+		.flags			= DRIVER_FLAGS,
 		.name			= "C1",
 		.desc			= "c1-cpu-clockgated",
 	}
@@ -210,7 +218,7 @@ static struct cpuidle_driver t18x_a57_idle_driver = {
                 .exit_latency           = 1,
                 .target_residency       = 1,
                 .power_usage            = UINT_MAX,
-                .flags                  = CPUIDLE_FLAG_TIME_VALID,
+		.flags			= DRIVER_FLAGS,
                 .name                   = "C1",
                 .desc                   = "c1-cpu-clockgated",
         }
@@ -234,7 +242,11 @@ static void suspend_all_device_irqs(void)
                         continue;
 
                 raw_spin_lock_irqsave(&desc->lock, flags);
-                __disable_irq(desc, irq);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
+		__disable_irq(desc, irq);
+#else
+		__disable_irq(desc);
+#endif
                 raw_spin_unlock_irqrestore(&desc->lock, flags);
         }
 
@@ -258,7 +270,11 @@ static void resume_all_device_irqs(void)
                         continue;
 
                 raw_spin_lock_irqsave(&desc->lock, flags);
-                __enable_irq(desc, irq);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 3, 0)
+		__enable_irq(desc, irq);
+#else
+		__enable_irq(desc);
+#endif
                 raw_spin_unlock_irqrestore(&desc->lock, flags);
         }
 }

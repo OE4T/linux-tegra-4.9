@@ -122,6 +122,7 @@ struct tegra_channel {
 
 	struct tegra_mc_vi *vi;
 	struct v4l2_subdev *subdev[MAX_SUBDEVICES];
+	struct v4l2_subdev *subdev_on_csi;
 
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_pix_format format;
@@ -177,6 +178,7 @@ struct tegra_channel {
 
 	struct vi_notify_channel *vnc;
 	int vnc_id;
+	int grp_id;
 };
 
 #define to_tegra_channel(vdev) \

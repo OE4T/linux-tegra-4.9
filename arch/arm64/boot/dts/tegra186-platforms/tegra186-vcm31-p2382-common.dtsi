@@ -111,6 +111,8 @@
 			compatible = "nvidia,tmpm32xi2c";
 			gpio-controller;
 			#gpio-cells = <2>;
+			interrupt-controller;
+			#interrupt-cells = <2>;
 			reg = <0x61>;
 			interrupt-parent = <&tegra_gpio>;
 			interrupts = <TEGRA_GPIO(FF, 2) 0x0>;
@@ -740,10 +742,12 @@
 
 		power {
 			label = "Power";
+			interrupt-parent = <&tmpm32xi2c_61>;
+			interrupts = <TMPM32X_GPIO(K, 1) 0x0>;
 			gpios = <&tmpm32xi2c_61 TMPM32X_GPIO(K, 1) GPIO_ACTIVE_LOW>;
 			linux,code = <KEY_POWER>;
 			gpio-key,wakeup;
-			debounce-interval = <0>;
+			debounce-interval = <5>;
 		};
 	};
 };

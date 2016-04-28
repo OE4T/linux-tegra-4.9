@@ -23,7 +23,6 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/hrtimer.h>
-#include <linux/pasr.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
 #include <linux/platform_device.h>
@@ -31,6 +30,10 @@
 #include <linux/platform_data/tegra_emc_pdata.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/tegra_pasr.h>
+
+#ifdef CONFIG_PASR
+#include <linux/pasr.h>
+#endif
 
 #include <asm/cputime.h>
 #include <asm/uaccess.h>

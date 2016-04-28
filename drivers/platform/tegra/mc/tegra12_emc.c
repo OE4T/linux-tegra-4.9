@@ -28,10 +28,13 @@
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <linux/hrtimer.h>
-#include <linux/pasr.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/platform_data/tegra_emc_pdata.h>
+
+#ifdef CONFIG_PASR
+#include <linux/pasr.h>
+#endif
 
 #include <asm/cputime.h>
 

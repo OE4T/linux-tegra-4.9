@@ -22,7 +22,7 @@ obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += tegra21_emc_cc_r21015.o
 obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += tegra21_emc_cc_r21021.o
 
 # Latency allowance
-obj-y                                   += latency_allowance.o
+# obj-y                                   += latency_allowance.o
 obj-$(CONFIG_ARCH_TEGRA_12x_SOC)        += tegra12x_la.o
 obj-$(CONFIG_ARCH_TEGRA_21x_SOC)        += tegra21x_la.o
 

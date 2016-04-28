@@ -155,6 +155,25 @@ int tegra_hsp_db_get_enabled_masters(void)
 }
 EXPORT_SYMBOL(tegra_hsp_db_get_enabled_masters);
 
+static int tegra_hsp_db_set_master(enum tegra_hsp_master master, bool enabled)
+{
+	u32 reg;
+	unsigned long flags;
+
+	if (!hsp_ready() || !is_master_valid(master))
+		return -EINVAL;
+
+	spin_lock_irqsave(&hsp_top.lock, flags);
+	reg = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
+	if (enabled)
+		reg |= BIT(master);
+	else
+		reg &= ~BIT(master);
+	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE, reg);
+	spin_unlock_irqrestore(&hsp_top.lock, flags);
+	return 0;
+}
+
 /**
  * tegra_hsp_db_enable_master: allow <master> to ring CCPLEX
  * @master:	 HSP master
@@ -163,18 +182,21 @@ EXPORT_SYMBOL(tegra_hsp_db_get_enabled_masters);
  */
 int tegra_hsp_db_enable_master(enum tegra_hsp_master master)
 {
-	u32 reg;
-	unsigned long flags;
-	if (!hsp_ready() || !is_master_valid(master))
-		return -EINVAL;
-	spin_lock_irqsave(&hsp_top.lock, flags);
-	reg = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
-	reg |= BIT(master);
-	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE, reg);
-	spin_unlock_irqrestore(&hsp_top.lock, flags);
-	return 0;
+	return tegra_hsp_db_set_master(master, true);
 }
 EXPORT_SYMBOL(tegra_hsp_db_enable_master);
+
+/**
+ * tegra_hsp_db_disable_master: disallow <master> from ringing CCPLEX
+ * @master:	HSP master
+ *
+ * Returns 0 if successful.
+ */
+int tegra_hsp_db_disable_master(enum tegra_hsp_master master)
+{
+	return tegra_hsp_db_set_master(master, false);
+}
+EXPORT_SYMBOL(tegra_hsp_db_disable_master);
 
 /**
  * tegra_hsp_db_ring: ring the <dbell>

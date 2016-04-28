@@ -68,6 +68,8 @@ int tegra_hsp_init(void);
 
 int tegra_hsp_db_enable_master(enum tegra_hsp_master master);
 
+int tegra_hsp_db_disable_master(enum tegra_hsp_master master);
+
 int tegra_hsp_db_get_enabled_masters(void);
 
 int tegra_hsp_db_ring(enum tegra_hsp_doorbell dbell);

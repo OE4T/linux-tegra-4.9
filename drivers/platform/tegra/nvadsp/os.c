@@ -1491,7 +1491,7 @@ int nvadsp_os_start(void)
 #endif
 
 #ifdef CONFIG_TEGRA_ADSP_LPTHREAD
-	if (drv_data->adsp_os_suspended == false) {
+	if (!drv_data->lpthread_initialized) {
 		ret = adsp_lpthread_debugfs_init(priv.pdev);
 		if (ret)
 			dev_err(dev, "adsp_lpthread_debugfs_init failed ret = %d\n", ret);

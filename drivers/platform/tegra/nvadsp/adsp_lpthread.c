@@ -11,31 +11,34 @@
  * more details.
  */
 
-#include <linux/fs.h>
 #include <asm/segment.h>
 #include <asm/uaccess.h>
 
+#include <linux/fs.h>
 #include <linux/slab.h>
 #include <linux/workqueue.h>
 #include <linux/debugfs.h>
 #include <linux/platform_device.h>
-
 #include <linux/tegra_nvadsp.h>
 
 #include "dev.h"
 
 #define RW_MODE (S_IWUSR | S_IRUGO)
 
-/* #define VERBOSE_OUTPUT_LPTHREAD */
+enum adsp_lpthread_state {
+	ADSP_LPTHREAD_STOP,
+	ADSP_LPTHREAD_START,
+	ADSP_LPTHREAD_PAUSE,
+};
 
 struct adsp_lpthread_shared_state_t {
 	uint16_t mbox_id;
 };
 
 enum adsp_lpthread_mbx_cmd {
-	adsp_lpthread_cmd_resume = 0,
-	adsp_lpthread_cmd_pause,
-	adsp_lpthread_cmd_close,
+	ADSP_LPTHREAD_CMD_RESUME = 0,
+	ADSP_LPTHREAD_CMD_PAUSE,
+	ADSP_LPTHREAD_CMD_CLOSE,
 };
 
 struct adsp_lpthread {
@@ -44,6 +47,8 @@ struct adsp_lpthread {
 	bool lpthread_paused;
 	bool lpthread_resumed;
 	bool lpthread_closed;
+	nvadsp_app_handle_t app_handle;
+	nvadsp_app_info_t *app_info;
 };
 
 static struct adsp_lpthread lpthread_obj;
@@ -52,15 +57,12 @@ static struct adsp_lpthread *lpthread;
 static struct nvadsp_mbox mbox;
 static struct adsp_lpthread_shared_state_t *adsp_lpthread;
 
+/* Initialize adsp_lpthread app and mailbox */
 int adsp_lpthread_init(bool is_adsp_suspended)
 {
 	nvadsp_app_handle_t handle;
 	nvadsp_app_info_t *app_info;
 	int ret;
-
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-	pr_info("ADSP_LPTHREAD_INIT(): %d\n", (int)is_adsp_suspended);
-#endif
 
 	handle = nvadsp_app_load("adsp_lpthread", "adsp_lpthread.elf");
 	if (!handle)
@@ -68,28 +70,31 @@ int adsp_lpthread_init(bool is_adsp_suspended)
 
 	app_info = nvadsp_app_init(handle, NULL);
 	if (!app_info) {
-		pr_info("unable to init app adsp_lpthread\n");
-		return -2;
+		pr_err("unable to init app adsp_lpthread\n");
+		return -1;
 	}
 
 	ret = nvadsp_app_start(app_info);
 	if (ret) {
-		pr_info("unable to start app adsp_lpthread\n");
-		return -3;
+		pr_err("unable to start app adsp_lpthread\n");
+		return -1;
 	}
 
-	adsp_lpthread = (struct adsp_lpthread_shared_state_t *)app_info->mem.shared;
-	ret = nvadsp_mbox_open(&mbox, &adsp_lpthread->mbox_id, "adsp_lpthread", NULL, NULL);
+	lpthread->app_info = app_info;
+	lpthread->app_handle = handle;
+
+	adsp_lpthread =
+		(struct adsp_lpthread_shared_state_t *)app_info->mem.shared;
+	ret = nvadsp_mbox_open(&mbox, &adsp_lpthread->mbox_id,
+		"adsp_lpthread", NULL, NULL);
 	if (ret) {
-		pr_info("Failed to open mbox %d", adsp_lpthread->mbox_id);
-		return -4;
+		pr_err("Failed to open mbox %d for adsp_lpthread app",
+			adsp_lpthread->mbox_id);
+		return -1;
 	}
 
 	/* Start timer is adsp is not in suspended state */
 	if (!is_adsp_suspended) {
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-		pr_info("Attempting resume() from init()\n");
-#endif
 		ret = adsp_lpthread_resume();
 		return ret;
 	}
@@ -101,12 +106,12 @@ int adsp_lpthread_resume(void)
 {
 	int ret;
 
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-	pr_info("ADSP_LPTHREAD_RESUME()\n");
-#endif
-	ret = nvadsp_mbox_send(&mbox, adsp_lpthread_cmd_resume, NVADSP_MBOX_SMSG, 0, 0);
+	ret = nvadsp_mbox_send(&mbox, ADSP_LPTHREAD_CMD_RESUME,
+		NVADSP_MBOX_SMSG, 0, 0);
 	if (ret)
-		pr_info("nvadsp_mbox_send() in adsp_lpthread_resume() failed: %d, ret = %d\n", adsp_lpthread->mbox_id, ret);
+		pr_err("%s: nvadsp_mbox_send() failed: %d, ret = %d\n",
+			__func__, adsp_lpthread->mbox_id, ret);
+
 	return ret;
 }
 
@@ -114,12 +119,12 @@ int adsp_lpthread_pause(void)
 {
 	int ret;
 
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-	pr_info("ADSP_LPTHREAD_PAUSE()\n");
-#endif
-	ret = nvadsp_mbox_send(&mbox, adsp_lpthread_cmd_pause, NVADSP_MBOX_SMSG, 0, 0);
+	ret = nvadsp_mbox_send(&mbox, ADSP_LPTHREAD_CMD_PAUSE,
+		NVADSP_MBOX_SMSG, 0, 0);
 	if (ret)
-		pr_info("nvadsp_mbox_send() in adsp_lpthread_pause() failed: %d, ret = %d\n", adsp_lpthread->mbox_id, ret);
+		pr_err("%s: nvadsp_mbox_send() failed: %d, ret = %d\n",
+			__func__, adsp_lpthread->mbox_id, ret);
+
 	return ret;
 }
 
@@ -127,31 +132,42 @@ int adsp_lpthread_exit(void)
 {
 	int ret;
 
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-	pr_info("ADSP_LPTHREAD_EXIT()\n");
-#endif
-	ret = nvadsp_mbox_send(&mbox, adsp_lpthread_cmd_close, NVADSP_MBOX_SMSG, 0, 0);
+	ret = nvadsp_mbox_send(&mbox, ADSP_LPTHREAD_CMD_CLOSE,
+		NVADSP_MBOX_SMSG, 0, 0);
 	if (ret)
-		pr_info("nvadsp_mbox_send() in adsp_lpthread_exit() failed: %d, ret = %d\n", adsp_lpthread->mbox_id, ret);
+		pr_err("%s: nvadsp_mbox_send() failed: %d, ret = %d\n",
+			__func__, adsp_lpthread->mbox_id, ret);
+
 	nvadsp_mbox_close(&mbox);
+
+	nvadsp_exit_app((nvadsp_app_info_t *)lpthread->app_info, false);
+
+	nvadsp_app_unload((const void *)lpthread->app_handle);
+
 	return ret;
 }
 
 static int adsp_usage_set(void *data, u64 val)
 {
 	int ret = 0;
+
 	switch (val) {
-	case 1:
-		if (lpthread->lpthread_initialized && lpthread->lpthread_resumed) {
-			pr_info("App already running\n");
-			pr_info("echo 2 > adsp_usage to pause\n");
-			pr_info("echo 0 > adsp_usage to stop\n");
+
+	case ADSP_LPTHREAD_START:
+		if (lpthread->lpthread_initialized &&
+				lpthread->lpthread_resumed) {
+			pr_info("ADSP Usage App already running\n");
+			pr_info("echo %d > adsp_usage to pause\n",
+				ADSP_LPTHREAD_PAUSE);
+			pr_info("echo %d > adsp_usage to stop\n",
+				ADSP_LPTHREAD_STOP);
 			break;
 		}
-		if (lpthread->adsp_os_suspended && !lpthread->lpthread_initialized) {
+		if (lpthread->adsp_os_suspended &&
+				!lpthread->lpthread_initialized) {
 			pr_info("Starting ADSP OS\n");
 			if (nvadsp_os_start()) {
-				pr_info("Unable to start OS\n");
+				pr_err("Unable to start OS\n");
 				break;
 			}
 			lpthread->adsp_os_suspended = false;
@@ -170,32 +186,44 @@ static int adsp_usage_set(void *data, u64 val)
 		lpthread->lpthread_paused = false;
 		lpthread->lpthread_closed = false;
 		break;
-	case 2:
+
+	case ADSP_LPTHREAD_PAUSE:
 		if (!lpthread->lpthread_initialized) {
-			pr_info("App not initialized. echo 1 > adsp_usage to init\n");
+			pr_info("ADSP Usage App not initialized\n");
+			pr_info("echo %d > adsp_usage to init\n",
+				ADSP_LPTHREAD_START);
 			break;
 		}
+		pr_info("Pausing lpthread\n");
 		ret = adsp_lpthread_pause();
 		lpthread->lpthread_resumed = false;
 		lpthread->lpthread_paused = true;
 		lpthread->lpthread_closed = false;
 		break;
-	case 0:
+
+	case ADSP_LPTHREAD_STOP:
 		if (!lpthread->lpthread_initialized) {
-			pr_info("App not initialized. echo 1 > adsp_usage to init\n");
+			pr_info("ADSP Usage App not initialized\n");
+			pr_info("echo %d > adsp_usage to init\n",
+				ADSP_LPTHREAD_START);
 			break;
 		}
+		pr_info("Exiting lpthread\n");
 		ret = adsp_lpthread_exit();
 		lpthread->lpthread_resumed = false;
 		lpthread->lpthread_paused = false;
 		lpthread->lpthread_closed = true;
 		lpthread->lpthread_initialized = false;
 		break;
+
 	default:
-		pr_info("Invalid input\n");
-		pr_info("echo 1 > adsp_usage to init/resume\n");
-		pr_info("echo 2 > adsp_usage to pause\n");
-		pr_info("echo 0 > adsp_usage to stop\n");
+		pr_err("ADSP Usage App: Invalid input\n");
+		pr_err("echo %d > adsp_usage to init/resume\n",
+			ADSP_LPTHREAD_START);
+		pr_err("echo %d > adsp_usage to pause\n",
+			ADSP_LPTHREAD_PAUSE);
+		pr_err("echo %d > adsp_usage to stop\n",
+			ADSP_LPTHREAD_STOP);
 		ret = 0;
 	}
 	return ret;
@@ -204,14 +232,16 @@ static int adsp_usage_set(void *data, u64 val)
 static int adsp_usage_get(void *data, u64 *val)
 {
 	if (lpthread->lpthread_initialized && lpthread->lpthread_resumed)
-		return 1;
-	else if (lpthread->lpthread_initialized && lpthread->lpthread_paused)
-		return 2;
-	else
-		return 0;
+		return ADSP_LPTHREAD_START;
+
+	if (lpthread->lpthread_initialized && lpthread->lpthread_paused)
+		return ADSP_LPTHREAD_PAUSE;
+
+	return ADSP_LPTHREAD_STOP;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(adsp_usage_fops, adsp_usage_get, adsp_usage_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(adsp_usage_fops,
+	adsp_usage_get, adsp_usage_set, "%llu\n");
 
 static int lpthread_debugfs_init(struct nvadsp_drv_data *drv)
 {
@@ -220,16 +250,23 @@ static int lpthread_debugfs_init(struct nvadsp_drv_data *drv)
 
 	if (!drv->adsp_debugfs_root)
 		return ret;
-	dir = debugfs_create_dir("adsp_lpthread", drv->adsp_debugfs_root);
+
+	dir = debugfs_create_dir("adsp_lpthread",
+		drv->adsp_debugfs_root);
 	if (!dir)
 		return ret;
 
 	d = debugfs_create_file(
 			"adsp_usage", RW_MODE, dir, NULL, &adsp_usage_fops);
 	if (!d)
-		return ret;
+		goto err;
 
 	return 0;
+
+err:
+	debugfs_remove_recursive(dir);
+	pr_err("unable to create adsp lpthread debug file\n");
+	return -ENOMEM;
 }
 
 int adsp_lpthread_debugfs_init(struct platform_device *pdev)
@@ -240,8 +277,8 @@ int adsp_lpthread_debugfs_init(struct platform_device *pdev)
 	lpthread = &lpthread_obj;
 
 	ret = lpthread_debugfs_init(drv);
-	if (!ret)
-		pr_info(" lpthread_debugfs_init() ret = %d\n", ret);
+	if (ret)
+		pr_err("lpthread_debugfs_init() ret = %d\n", ret);
 
 	drv->lpthread_initialized = true;
 	lpthread->adsp_os_suspended = false;
@@ -264,9 +301,6 @@ int adsp_lpthread_debugfs_exit(struct platform_device *pdev)
 int adsp_lpthread_debugfs_set_suspend(bool is_suspended)
 {
 	lpthread->adsp_os_suspended = is_suspended;
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-	pr_info("ADSP_OS_SUSPENDED = %d\n", (int)is_suspended);
-#endif
 	return 0;
 }
 

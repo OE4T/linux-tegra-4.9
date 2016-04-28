@@ -47,6 +47,7 @@
 #define CLK_SOURCE_SOR0 0x414
 #define CLK_SOURCE_SOR1 0x410
 #define CLK_SOURCE_APE 0x6c0
+#define CLK_SOURCE_VI 0x148
 
 #define CLK_OUT_ENB_Y 0x298
 #define CLK_ENB_PLLP_OUT_CPU BIT(31)
@@ -306,6 +307,7 @@ static DEFINE_SPINLOCK(pll_re_lock);
 static DEFINE_SPINLOCK(pll_u_lock);
 static DEFINE_SPINLOCK(emc_lock);
 static DEFINE_SPINLOCK(sor1_lock);
+static DEFINE_SPINLOCK(vi_lock);
 
 /* possible OSC frequencies in Hz */
 static unsigned long tegra210_input_freq[] = {
@@ -3021,6 +3023,9 @@ static __init void tegra210_emc_clk_init(void __iomem *clk_base)
 static const char *mux_sorsafe_plldp[] = { "sor_safe", "pll_dp" };
 static const char *mux_sorsafe_sor1brick_sor1mux[] = { "sor_safe", "sor1_brick", "sor1_mux"};
 
+static const char *mux_vi_visensor_pd2vi[] = { "vi", "pd2vi", "vi_sensor" };
+static u32 mux_vi_visensor_pd2vi_idx[] = {  [0] = 0, [1] = 1, [2] = 3 };
+
 static const char *mux_sor1[] = { "pll_p", "pll_d_out0", "pll_d2_out0", "clk_m" };
 static u32 mux_sor1_idx[] = { [0] = 0, [1] = 2, [2] = 5, [3] = 6 };
 
@@ -3049,6 +3054,8 @@ static __init void tegra210_periph_clk_init(
 	struct tegra_clk_pll_params *pllp_params)
 {
 	struct clk *clk;
+	struct clk_hw *hw;
+	struct tegra_clk_periph *periph_clk;
 
 	/* xusb_ss_div2 */
 	clk = clk_register_fixed_factor(NULL, "xusb_ss_div2", "xusb_ss_src", 0,
@@ -3079,6 +3086,20 @@ static __init void tegra210_periph_clk_init(
 
 	clk = tegra_clk_register_sync_source("sor1_brick", 0, ULONG_MAX);
 	clks[TEGRA210_CLK_SOR1_BRICK] = clk;
+
+	clk = tegra_clk_register_sync_source("pd2vi", 0, ULONG_MAX);
+	clks[TEGRA210_CLK_PD2VI] = clk;
+
+	clk = clk_register_mux_table(NULL, "vi_output", mux_vi_visensor_pd2vi,
+				ARRAY_SIZE(mux_vi_visensor_pd2vi), 0,
+				clk_base + CLK_SOURCE_VI, 24, 2, 0,
+				mux_vi_visensor_pd2vi_idx, &vi_lock);
+	clks[TEGRA210_CLK_VI_OUTPUT] = clk;
+
+	/* pll_d_dsi_out */
+	clk = clk_register_gate(NULL, "pll_d_dsi_out", "pll_d_out0", 0,
+				clk_base + PLLD_MISC0, 21, 0, &pll_d_lock);
+	clks[TEGRA210_CLK_PLL_D_DSI_OUT] = clk;
 
 	/* dsia */
 	clk = tegra_clk_register_periph_gate("dsia", "pll_d_dsi_out", 0,
@@ -3121,6 +3142,10 @@ static __init void tegra210_periph_clk_init(
 	clk = tegra_clk_register_periph("ape", mux_ape, ARRAY_SIZE(mux_ape),
 				&tegra_ape, clk_base, CLK_SOURCE_APE, 0);
 	clks[TEGRA210_CLK_APE] = clk;
+
+	hw = __clk_get_hw(clks[TEGRA210_CLK_VI]);
+	periph_clk = to_clk_periph(hw);
+	periph_clk->mux.lock = &vi_lock;
 }
 
 static void __init tegra210_pll_init(void __iomem *clk_base,

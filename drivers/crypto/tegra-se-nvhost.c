@@ -1400,7 +1400,6 @@ static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
 				struct ablkcipher_request *req)
 {
 	unsigned long flags;
-	bool idle = true;
 	int err = 0;
 	int chained;
 
@@ -1409,15 +1408,13 @@ static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
 
 	spin_lock_irqsave(&se_dev->lock, flags);
 	err = ablkcipher_enqueue_request(&se_dev->queue, req);
-	if (se_dev->work_q_busy)
-		idle = false;
-	spin_unlock_irqrestore(&se_dev->lock, flags);
 
-	if (idle) {
-		spin_lock_irqsave(&se_dev->lock, flags);
+	if (!se_dev->work_q_busy) {
 		se_dev->work_q_busy = true;
 		spin_unlock_irqrestore(&se_dev->lock, flags);
 		queue_work(se_dev->se_work_q, &se_dev->se_work);
+	} else {
+		spin_unlock_irqrestore(&se_dev->lock, flags);
 	}
 
 	return err;

@@ -62,9 +62,6 @@ struct gk20a_fecs_trace {
 	DECLARE_HASHTABLE(pid_hash_table, GK20A_FECS_TRACE_HASH_BITS);
 	struct mutex hash_lock;
 	struct mutex poll_lock;
-	u64 sof;
-	u32 sof_mask; /* did we already send a SOF for this VM */
-
 	struct task_struct *poll_task;
 };
 
@@ -271,18 +268,6 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 	entry.context_id = r->context_id;
 	entry.vmid = vmid;
 
-	/* insert SOF event if needed */
-	if (!(trace->sof_mask & BIT(vmid))) {
-		entry.tag = NVGPU_CTXSW_TAG_SOF;
-		entry.timestamp = trace->sof;
-		entry.context_id = 0;
-		entry.pid = 0;
-
-		gk20a_dbg(gpu_dbg_ctxsw, "SOF time=%llx", entry.timestamp);
-		gk20a_ctxsw_trace_write(g, &entry);
-		trace->sof_mask |= BIT(vmid);
-	}
-
 	/* break out FECS record into trace events */
 	for (i = 0; i < gk20a_fecs_trace_num_ts(); i++) {
 
@@ -364,9 +349,6 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 		"circular buffer: read=%d (mailbox=%d) write=%d cnt=%d",
 		read, gk20a_fecs_trace_get_read_index(g), write, cnt);
 
-	/* we did not send any SOF yet */
-	trace->sof_mask = 0;
-
 	/* consume all records */
 	while (read != write) {
 		gk20a_fecs_trace_ring_read(g, read);
@@ -377,13 +359,6 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 	}
 
 done:
-	/*
-	 * OK, we read out all the entries... a new "frame" starts here.
-	 * We remember the Start Of Frame time and insert it on the next
-	 * iteration.
-	 */
-	trace->sof = gk20a_read_ptimer(g);
-
 	mutex_unlock(&trace->poll_lock);
 	gk20a_idle(g->dev);
 	return err;

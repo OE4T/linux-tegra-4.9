@@ -61,6 +61,8 @@
 #define PMC_IO_DPD_REQ			0x74
 #define PMC_IO_DPD_CSIA_MASK	BIT(0)
 #define PMC_IO_DPD_CSIB_MASK	BIT(1)
+#define PMC_IO_DPD_CODE_DPD_OFF		BIT(30)
+#define PMC_IO_DPD_CODE_DPD_ON		BIT(31)
 
 #define PMC_IO_DPD_STATUS		0x78
 #define PMC_IO_DPD2_REQ			0x7C
@@ -153,7 +155,7 @@ int tegra186_pmc_io_dpd_enable(int reg, int bit_pos)
 
 	spin_lock(&tegra186_pmc_access_lock);
 	tegra186_pmc_writel(0x10, PMC_IO_SEL_DPD_TIM);
-	enable_mask = (1 << bit_pos);
+	enable_mask = ((1 << bit_pos) | PMC_IO_DPD_CODE_DPD_ON);
 
 	tegra186_pmc_writel(enable_mask, (PMC_IO_DPD_REQ + reg * 8));
 	udelay(7);
@@ -174,7 +176,7 @@ int tegra186_pmc_io_dpd_disable(int reg, int bit_pos)
 	unsigned int dpd_status;
 
 	spin_lock(&tegra186_pmc_access_lock);
-	enable_mask = (1 << bit_pos);
+	enable_mask = ((1 << bit_pos) | PMC_IO_DPD_CODE_DPD_OFF);
 
 	tegra186_pmc_writel(enable_mask, PMC_IO_DPD_REQ + reg * 8);
 	udelay(7);

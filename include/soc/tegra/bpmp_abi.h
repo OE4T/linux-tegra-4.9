@@ -40,24 +40,21 @@
  * @file
  */
 
-/**
- * @mainpage
- * This documentation describes the Application Binary Interface (ABI)
- * of the T186 BPMP firmware. The ABI can be divided into several
- * chunks
- * - boot-time configuration of the firmware
- *   - @subpage dt
- * - runtime communication with the firmware
- *   - shared memory regions
- *   - doorbells and shared semaphores for notification
- *   - the IVC protocol
- *   - the @ref MRQ
- */
 
 /**
  * @defgroup MRQ MRQ Messages
+ * @brief Messages sent to/from BPMP via IPC
  * @{
- *
+ *   @defgroup MRQ_Format Message Format
+ *   @defgroup MRQ_Codes Message Request (MRQ) Codes
+ *   @defgroup MRQ_Payloads Message Payloads
+ *   @defgroup Error_Codes Error Codes
+ * @}
+ */
+
+/**
+ * @addtogroup MRQ_Format Message Format
+ * @{
  * The CPU requests the BPMP to perform a particular service by
  * sending it an IVC frame containing a single MRQ message. An MRQ
  * message consists of a @ref mrq_request followed by a payload whose
@@ -74,9 +71,11 @@
  * a thermal trip point, the BPMP may eventually send a single
  * #MRQ_THERMAL message of its own to the CPU indicating that the trip
  * point has been crossed.
+ * @}
  */
 
 /**
+ * @ingroup MRQ_Format
  * @brief header for an MRQ message
  *
  * Provides the MRQ number for the MRQ message: #mrq. The remainder of
@@ -93,6 +92,7 @@ struct mrq_request {
 } __ABI_PACKED;
 
 /**
+ * @ingroup MRQ_Format
  * @brief header for an MRQ response
  *
  *  Provides an error code for the associated MRQ message. The
@@ -109,15 +109,22 @@ struct mrq_response {
 	uint32_t flags;
 } __ABI_PACKED;
 
-/** Minimum needed size for an IPC message buffer */
+/**
+ * @ingroup MRQ_Format
+ * Minimum needed size for an IPC message buffer
+ */
 #define MSG_MIN_SZ	128
-/** Minimum size guaranteed for data in an IPC message buffer */
+/**
+ * @ingroup MRQ_Format
+ *  Minimum size guaranteed for data in an IPC message buffer
+ */
 #define MSG_DATA_MIN_SZ	120
 
 /**
- * @name Message Request (MRQ) codes
+ * @ingroup MRQ_Codes
+ * @name Legal MRQ codes
+ * These are the legal values for mrq_request::mrq
  * @{
- *  These are the legal values for mrq_request::mrq
  */
 
 #define MRQ_PING		0
@@ -158,12 +165,36 @@ struct mrq_response {
 /** @endcond */
 /** @} */
 
-/** @brief Maximum MRQ code to be sent by CPU software to
+/**
+ * @ingroup MRQ_Codes
+ * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future */
 #define MAX_CPU_MRQ_ID		64
 
+/**
+ * @addtogroup MRQ_Payloads Message Payloads
+ * @{
+ *   @defgroup Ping
+ *   @defgroup Query_Tag Query Tag
+ *   @defgroup Module Loadable Modules
+ *   @defgroup Trace
+ *   @defgroup Debugfs
+ *   @defgroup Reset
+ *   @defgroup I2C
+ *   @defgroup Clocks
+ *   @defgroup ABI_info ABI Info
+ *   @defgroup MC_Flush MC Flush
+ *   @defgroup Powergating
+ *   @defgroup Thermal
+ *   @defgroup Vhint CPU Voltage hint
+ *   @defgroup MRQ_Deprecated Deprecated MRQ messages
+ *   @defgroup EMC
+ * @}
+ */
+
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_PING
  * @brief A simple ping
  *
@@ -173,6 +204,7 @@ struct mrq_response {
  * * Request Payload: @ref mrq_ping_request
  * * Response Payload: @ref mrq_ping_response
  *
+ * @ingroup MRQ_Codes
  * @def MRQ_THREADED_PING
  * @brief A deeper ping
  *
@@ -186,11 +218,10 @@ struct mrq_response {
  * responds from a thread context (providing a slightly more robust
  * sign of life).
  *
- * @defgroup Ping
- * @{
  */
 
 /**
+ * @ingroup Ping
  * @brief request with #MRQ_PING
  *
  * Used by the sender of an #MRQ_PING message to request a pong from
@@ -204,6 +235,7 @@ struct mrq_ping_request
 } __ABI_PACKED;
 
 /**
+ * @ingroup Ping
  * @brief response to #MRQ_PING
  *
  * Sent in response to an #MRQ_PING message. #reply should be the
@@ -216,9 +248,9 @@ struct mrq_ping_response
 	/** @brief response to the MRQ_PING challege */
 	uint32_t reply;
 } __ABI_PACKED;
-/** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_QUERY_TAG
  * @brief Query BPMP firmware's tag (i.e. version information)
  *
@@ -228,13 +260,12 @@ struct mrq_ping_response
  * * Request Payload: @ref mrq_query_tag_request
  * * Response Payload: N/A
  *
- * @defgroup Query_Tag Query Tag
- * @{
  */
 
 /**
+ * @ingroup Query_Tag
  * @brief request with #MRQ_QUERY_TAG
-
+ *
  * Used by #MRQ_QUERY_TAG call to ask BPMP to fill in the memory
  * pointed by #addr with BPMP firmware header.
  *
@@ -246,9 +277,9 @@ struct mrq_query_tag_request
   /** @brief base address to store the firmware header */
 	uint32_t addr;
 } __ABI_PACKED;
-/** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_MODULE_LOAD
  * @brief dynamically load a BPMP code module
  *
@@ -260,11 +291,10 @@ struct mrq_query_tag_request
  *
  * @note This MRQ is disabled on production systems
  *
- * @defgroup Module Loadable Modules
- * @{
  */
 
 /**
+ * @ingroup Module
  * @brief request with #MRQ_MODULE_LOAD
  *
  * Used by #MRQ_MODULE_LOAD calls to ask the recipient to dynamically
@@ -290,6 +320,7 @@ struct mrq_module_load_request
 } __ABI_PACKED;
 
 /**
+ * @ingroup Module
  * @brief response to #MRQ_MODULE_LOAD
  *
  * @todo document mrq_response::err
@@ -299,9 +330,9 @@ struct mrq_module_load_response
 	/** @brief handle to the loaded module */
 	uint32_t base;
 } __ABI_PACKED;
-/** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_MODULE_UNLOAD
  * @brief unload a previously loaded code module
  *
@@ -310,12 +341,10 @@ struct mrq_module_load_response
  * * Targets: BPMP
  * * Request Payload: @ref mrq_module_unload_request
  * * Response Payload: N/A
- *
- * @addtogroup Module
- * @{
  */
 
 /**
+ * @ingroup Module
  * @brief request with #MRQ_MODULE_UNLOAD
  *
  * Used by #MRQ_MODULE_UNLOAD calls to request that a previously loaded
@@ -326,9 +355,9 @@ struct mrq_module_unload_request
 	/** @brief handle of the module to unload */
 	uint32_t base;
 } __ABI_PACKED;
-/** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_TRACE_MODIFY
  * @brief modify the set of enabled trace events
  *
@@ -337,12 +366,10 @@ struct mrq_module_unload_request
  * * Targets: BPMP
  * * Request Payload: @ref mrq_trace_modify_request
  * * Response Payload: @ref mrq_trace_modify_response
- *
- * @defgroup Trace
- * @{
-*/
+ */
 
 /**
+ * @ingroup Trace
  * @brief request with #MRQ_TRACE_MODIFY
  *
  * Used by %MRQ_TRACE_MODIFY calls to enable or disable specify trace
@@ -358,6 +385,7 @@ struct mrq_trace_modify_request
 } __ABI_PACKED;
 
 /**
+ * @ingroup Trace
  * @brief response to #MRQ_TRACE_MODIFY
  *
  * Sent in repsonse to an #MRQ_TRACE_MODIFY message. #mask reflects the
@@ -370,9 +398,9 @@ struct mrq_trace_modify_response
 	/** @brief bit mask of trace event enable states */
 	uint32_t mask;
 } __ABI_PACKED;
-/** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_WRITE_TRACE
  * @brief Write trace data to a buffer
  *
@@ -386,12 +414,10 @@ struct mrq_trace_modify_response
  * values. err is -#BPMP_EINVAL if size is zero or area is NULL or
  * area is in an illegal range. A positive value for err indicates the
  * number of bytes written to area.
- *
- * @addtogroup Trace
- * @{
  */
 
 /**
+ * @ingroup Trace
  * @brief request with #MRQ_WRITE_TRACE
  *
  * Used by MRQ_WRITE_TRACE calls to ask the recipient to copy trace
@@ -413,6 +439,7 @@ struct mrq_write_trace_request
 } __ABI_PACKED;
 
 /**
+ * @ingroup Trace
  * @brief response to #MRQ_WRITE_TRACE
  *
  * Once this response is sent, the respondent will not access the
@@ -420,14 +447,14 @@ struct mrq_write_trace_request
  */
 struct mrq_write_trace_response
 {
-	/** @brief flag whether more data remains in local buffer
+	/**
+	 * @brief flag whether more data remains in local buffer
 	 *
 	 * Value is 1 if the entire local trace buffer has been
 	 * drained to the outputbuffer. Value is 0 otherwise.
 	 */
 	uint32_t eof;
 } __ABI_PACKED;
-/** @} */
 
 /** @private */
 struct mrq_threaded_ping_request
@@ -442,6 +469,7 @@ struct mrq_threaded_ping_response
 } __ABI_PACKED;
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_MODULE_MAIL
  * @brief send a message to a loadable module
  *
@@ -450,12 +478,10 @@ struct mrq_threaded_ping_response
  * * Targets: BPMP
  * * Request Payload: @ref mrq_module_mail_request
  * * Response Payload: @ref mrq_module_mail_response
- *
- * @addtogroup Module
- * @{
  */
 
 /**
+ * @ingroup Module
  * @brief request with #MRQ_MODULE_MAIL
  */
 struct mrq_module_mail_request
@@ -471,6 +497,7 @@ struct mrq_module_mail_request
 } __ABI_PACKED;
 
 /**
+ * @ingroup Module
  * @brief response to #MRQ_MODULE_MAIL
  */
 struct mrq_module_mail_response
@@ -483,7 +510,6 @@ struct mrq_module_mail_response
 	uint8_t data[EMPTY_ARRAY];
 } __ABI_PACKED;
 
-/** @} */
 
 /** @cond */
 
@@ -533,6 +559,7 @@ struct mrq_heap_usage_response
 /** @endcond*/
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_DEBUGFS
  * @brief Interact with BPMP's debugfs file nodes
  *
@@ -541,8 +568,10 @@ struct mrq_heap_usage_response
  * * Targets: BPMP
  * * Request Payload: @ref mrq_debugfs_request
  * * Response Payload: @ref mrq_debugfs_response
- *
- * @defgroup Debugfs
+ */
+
+/**
+ * @addtogroup Debugfs
  * @{
  *
  * The BPMP firmware implements a pseudo-filesystem called
@@ -561,7 +590,9 @@ struct mrq_heap_usage_response
  * file are consistent from version to version but even that is not
  * guaranteed.
  *
+ * @}
  */
+/** @ingroup Debugfs */
 enum mrq_debugfs_commands {
 	CMD_DEBUGFS_READ = 1,
 	CMD_DEBUGFS_WRITE = 2,
@@ -570,6 +601,7 @@ enum mrq_debugfs_commands {
 };
 
 /**
+ * @ingroup Debugfs
  * @brief parameters for CMD_DEBUGFS_READ/WRITE command
  */
 struct cmd_debugfs_fileop_request {
@@ -584,6 +616,7 @@ struct cmd_debugfs_fileop_request {
 } __ABI_PACKED;
 
 /**
+ * @ingroup Debugfs
  * @brief parameters for CMD_DEBUGFS_READ/WRITE command
  */
 struct cmd_debugfs_dumpdir_request {
@@ -594,6 +627,7 @@ struct cmd_debugfs_dumpdir_request {
 } __ABI_PACKED;
 
 /**
+ * @ingroup Debugfs
  * @brief response data for CMD_DEBUGFS_READ/WRITE command
  */
 struct cmd_debugfs_fileop_response {
@@ -605,6 +639,7 @@ struct cmd_debugfs_fileop_response {
 } __ABI_PACKED;
 
 /**
+ * @ingroup Debugfs
  * @brief response data for CMD_DEBUGFS_DUMPDIR command
  */
 struct cmd_debugfs_dumpdir_response {
@@ -616,6 +651,7 @@ struct cmd_debugfs_dumpdir_response {
 } __ABI_PACKED;
 
 /**
+ * @ingroup Debugfs
  * @brief request with #MRQ_DEBUGFS.
  *
  * The sender of an MRQ_DEBUGFS message uses #cmd to specify a debugfs
@@ -637,6 +673,9 @@ struct mrq_debugfs_request {
 	} __UNION_ANON;
 } __ABI_PACKED;
 
+/**
+ * @ingroup Debugfs
+ */
 struct mrq_debugfs_response {
 	/** @brief always 0 */
 	int32_t reserved;
@@ -650,17 +689,18 @@ struct mrq_debugfs_response {
 	} __UNION_ANON;
 } __ABI_PACKED;
 
-/*
- * Debugfs enumerations
+/**
+ * @addtogroup Debugfs
+ * @{
  */
 #define DEBUGFS_S_ISDIR	(1 << 9)
 #define DEBUGFS_S_IRUSR	(1 << 8)
 #define DEBUGFS_S_IWUSR	(1 << 7)
-
 /** @} */
 
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_RESET
  * @brief reset an IP block
  *
@@ -669,9 +709,10 @@ struct mrq_debugfs_response {
  * * Targets: BPMP
  * * Request Payload: @ref mrq_reset_request
  * * Response Payload: N/A
- *
- * @defgroup Reset
- * @{
+ */
+
+/**
+ * @ingroup Reset
  */
 enum mrq_reset_commands {
 	CMD_RESET_ASSERT = 1,
@@ -681,6 +722,7 @@ enum mrq_reset_commands {
 };
 
 /**
+ * @ingroup Reset
  * @brief request with MRQ_RESET
  *
  * Used by the sender of an #MRQ_RESET message to request BPMP to
@@ -694,9 +736,8 @@ struct mrq_reset_request {
 	uint32_t reset_id;
 } __ABI_PACKED;
 
-/** @} */
-
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_I2C
  * @brief issue an i2c transaction
  *
@@ -705,15 +746,18 @@ struct mrq_reset_request {
  * * Targets: BPMP
  * * Request Payload: @ref mrq_i2c_request
  * * Response Payload: @ref mrq_i2c_response
- *
- * @defgroup I2C
- * @{
  */
 
+/**
+ * @addtogroup I2C
+ * @{
+ */
 #define TEGRA_I2C_IPC_MAX_IN_BUF_SIZE	(MSG_DATA_MIN_SZ - 12)
 #define TEGRA_I2C_IPC_MAX_OUT_BUF_SIZE	(MSG_DATA_MIN_SZ - 4)
+/** @} */
 
 /**
+ * @ingroup I2C
  * @name Serial I2C flags
  * Use these flags with serial_i2c_request::flags
  * @{
@@ -727,11 +771,14 @@ struct mrq_reset_request {
 #define SERIALI2C_NO_RD_ACK     0x0800
 #define SERIALI2C_RECV_LEN      0x0400
 /** @} */
+/** @ingroup I2C */
 enum {
 	CMD_I2C_XFER = 1
 };
 
-/** @brief serializable i2c request
+/**
+ * @ingroup I2C
+ * @brief serializable i2c request
  *
  * Instances of this structure are packed (little-endian) into
  * cmd_i2c_xfer_request::data_buf. Each instance represents a single
@@ -757,6 +804,7 @@ struct serial_i2c_request {
 } __ABI_PACKED;
 
 /**
+ * @ingroup I2C
  * @brief trigger one or more i2c transactions
  */
 struct cmd_i2c_xfer_request {
@@ -772,6 +820,7 @@ struct cmd_i2c_xfer_request {
 	__ABI_PACKED;
 
 /**
+ * @ingroup I2C
  * @brief container for data read from the i2c bus
  *
  * Processing an cmd_i2c_xfer_request::data_buf causes BPMP to execute
@@ -786,6 +835,7 @@ struct cmd_i2c_xfer_response {
 } __ABI_PACKED;
 
 /**
+ * @ingroup I2C
  * @brief request with #MRQ_I2C
  */
 struct mrq_i2c_request
@@ -797,15 +847,16 @@ struct mrq_i2c_request
 } __ABI_PACKED;
 
 /**
+ * @ingroup I2C
  * @brief response to #MRQ_I2C
  */
 struct mrq_i2c_response
 {
 	struct cmd_i2c_xfer_response xfer;
 } __ABI_PACKED;
-/** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_CLK
  *
  * * Platforms: T186
@@ -813,10 +864,12 @@ struct mrq_i2c_response
  * * Targets: BPMP
  * * Request Payload: @ref mrq_clk_request
  * * Response Payload: @ref mrq_clk_response
- * @defgroup Clocks
+ * @addtogroup Clocks
  * @{
  */
-/** @name MRQ_CLK sub-commands
+
+/**
+ * @name MRQ_CLK sub-commands
  * @{
  */
 enum {
@@ -979,9 +1032,10 @@ struct cmd_clk_get_max_clk_id_request {
 struct cmd_clk_get_max_clk_id_response {
 	uint32_t max_id;
 } __ABI_PACKED;
-
+/** @} */
 
 /**
+ * @ingroup Clocks
  * @brief request with #MRQ_CLK
  *
  * Used by the sender of an #MRQ_CLK message to control clocks. The
@@ -1044,6 +1098,7 @@ struct mrq_clk_request {
 } __ABI_PACKED;
 
 /**
+ * @ingroup Clocks
  * @brief response to MRQ_CLK
  *
  * Each sub-command supported by @ref mrq_clk_request may return
@@ -1090,9 +1145,8 @@ struct mrq_clk_response {
 	} __UNION_ANON;
 } __ABI_PACKED;
 
-/** @} */
-
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_QUERY_ABI
  * @brief check if an MRQ is implemented
  *
@@ -1101,11 +1155,10 @@ struct mrq_clk_response {
  * * Targets: Any
  * * Request Payload: @ref mrq_query_abi_request
  * * Response Payload: @ref mrq_query_abi_response
- * @defgroup ABI_info ABI Info
- * @{
  */
 
 /**
+ * @ingroup ABI_info
  * @brief request with MRQ_QUERY_ABI
  *
  * Used by #MRQ_QUERY_ABI call to check if MRQ code #mrq is supported
@@ -1117,6 +1170,7 @@ struct mrq_query_abi_request {
 } __ABI_PACKED;
 
 /**
+ * @ingroup ABI_info
  * @brief response to MRQ_QUERY_ABI
  */
 struct mrq_query_abi_response {
@@ -1125,9 +1179,8 @@ struct mrq_query_abi_response {
 	int32_t status;
 } __ABI_PACKED;
 
-/** @} */
-
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_MC_FLUSH
  * @brief start or finish flushing an MC client
  *
@@ -1137,7 +1190,7 @@ struct mrq_query_abi_response {
  * * Request Payload: @ref mrq_mc_flush_request
  * * Response Payload: N/A
  *
- * @defgroup MC_Flush
+ * @addtogroup MC_Flush
  * @{
  */
 
@@ -1154,6 +1207,7 @@ enum mc_flush_req {
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_PG_READ_STATE
  * @brief read the power-gating state of a partition
  *
@@ -1162,7 +1216,7 @@ enum mc_flush_req {
  * * Targets: BPMP
  * * Request Payload: @ref mrq_pg_read_state_request
  * * Response Payload: @ref mrq_pg_read_state_response
- * @defgroup Powergating
+ * @addtogroup Powergating
  * @{
  */
 
@@ -1182,15 +1236,19 @@ struct mrq_pg_read_state_request {
  * @todo define possible errors.
  */
 struct mrq_pg_read_state_response {
-	/** @brief 0x1 : SD, 0x2 -> SLP, 0x4 -> DSLP */
+	/** @brief read as don't care */
 	uint32_t sram_state;
-	/** @brief 0 : powered off, 1 : powered on */
+	/** @brief state of power partition
+	 * * 0 : off
+	 * * 1 : on
+	 */
 	uint32_t logic_state;
 } __ABI_PACKED;
 
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_PG_UPDATE_STATE
  * @brief modify the power-gating state of a partition
  *
@@ -1212,28 +1270,30 @@ struct mrq_pg_read_state_response {
 struct mrq_pg_update_state_request {
 	/** @brief ID of partition */
 	uint32_t partition_id;
-	/** @brief whether and how to change logic power
-	 *
-	 * BIT[0] = 0 : do not change SRAM state, 1 : change SRAM state\n
-	 * BIT[3:1] = 0 : Active, 1 : SD, 2 : SLP, 4 : DSLP
+	/** @brief secondary control of power partition
+	 *  @details Ignored by many versions of the BPMP
+	 *  firmware. For maximum compatibility, set the value
+	 *  according to @logic_state
+	 * *  0x1: power ON partition (@ref logic_state == 0x3)
+	 * *  0x3: power OFF partition (@ref logic_state == 0x1)
 	 */
 	uint32_t sram_state;
-	/** @brief whether and how to change logic power
-	 *
-	 *  BIT[0] = 0 : do not change logic state, 1 : change logic state
-	 *  BIT[1] = 0 : Power off, 1 : Power on
+	/** @brief controls state of power partition, legal values are
+	 * *  0x1 : power OFF partition
+	 * *  0x3 : power ON partition
 	 */
 	uint32_t logic_state;
-	/** @brief whether and how to change clock enables
-	 *
-	 * BIT[0] = 0 : do not change clock state, 1 : change clock state
-	 * BIT[1] = 0 : Turn off clocks, 1 : Leave clocks on
+	/** @brief change state of clocks of the power partition, legal values
+	 * *  0x0 : do not change clock state
+	 * *  0x1 : disable partition clocks (only applicable when @ref logic_state == 0x1)
+	 * *  0x3 : enable partition clocks (only applicable when @ref logic_state == 0x3)
 	 */
 	uint32_t clock_state;
 } __ABI_PACKED;
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_THERMAL
  * @brief interact with BPMP thermal framework
  *
@@ -1243,7 +1303,7 @@ struct mrq_pg_update_state_request {
  * * Request Payload: TODO
  * * Response Payload: TODO
  *
- * @defgroup Thermal
+ * @addtogroup Thermal
  *
  * The BPMP firmware includes a thermal framework. Drivers within the
  * bpmp firmware register with the framework to provide thermal
@@ -1443,6 +1503,7 @@ union mrq_thermal_bpmp_to_host_response {
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_CPU_VHINT
  * @brief Query CPU voltage hint data
  *
@@ -1452,7 +1513,7 @@ union mrq_thermal_bpmp_to_host_response {
  * * Request Payload: @ref mrq_cpu_vhint_request
  * * Response Payload: N/A
  *
- * @defgroup Vhint CPU Voltage hint
+ * @addtogroup Vhint CPU Voltage hint
  * @{
  */
 
@@ -1501,6 +1562,7 @@ struct cpu_vhint_data {
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_ABI_RATCHET
  * @brief ABI ratchet value query
  *
@@ -1567,6 +1629,7 @@ struct mrq_abi_ratchet_response {
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_IPC_RESET
  * @brief deprecated. reset the IPC channel
  *
@@ -1576,7 +1639,7 @@ struct mrq_abi_ratchet_response {
  * * Request Payload: @ref mrq_ipc_reset
  * * Response Payload: N/A
  * @deprecated in favor of the native IVC channel reset mechanism
- * @defgroup MRQ_Deprecated Deprecated MRQ messages
+ * @addtogroup MRQ_Deprecated Deprecated MRQ messages
  * @{
  */
 
@@ -1597,6 +1660,7 @@ struct mrq_ipc_reset {
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_EMC_DVFS_LATENCY
  * @brief query frequency dependent EMC DVFS latency
  *
@@ -1605,7 +1669,7 @@ struct mrq_ipc_reset {
  * * Targets: BPMP
  * * Request Payload: N/A
  * * Response Payload: @ref mrq_emc_dvfs_latency_response
- * @defgroup EMC
+ * @addtogroup EMC
  * @{
  */
 
@@ -1633,6 +1697,7 @@ struct mrq_emc_dvfs_latency_response {
 /** @} */
 
 /**
+ * @ingroup MRQ_Codes
  * @def MRQ_TRACE_ITER
  * @brief manage the trace iterator
  *
@@ -1698,7 +1763,7 @@ struct mrq_trace_iter_request {
  */
 
 /**
- * @name Error_Codes
+ * @defgroup Error_Codes
  * Negative values for mrq_response::err generally indicate some
  * error. The ABI defines the following error codes. Negating these
  * defines is an exercise left to the user.

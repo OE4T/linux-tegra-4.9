@@ -61,6 +61,8 @@ static struct gk20a_platform nvgpu_pci_device = {
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
 
 	.default_big_page_size	= SZ_64K,
+
+	.ch_wdt_timeout_ms = 7000,
 };
 
 static struct pci_device_id nvgpu_pci_table[] = {

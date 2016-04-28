@@ -2997,11 +2997,7 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 				struct fb_videomode *mode)
 {
 	struct tegra_dc_dp_data *dp = dc->out_data;
-	u32 max_link_bw_rate = 2700;
-	unsigned long total_max_link_bw;
-	unsigned long mode_bw;
 	u8 max_link_bw;
-	u32 bits_per_pixel;
 	int capability = 1;
 
 	struct tegra_vrr *vrr;
@@ -3026,31 +3022,37 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 			&max_link_bw))
 		return false;
 
-	bits_per_pixel = (18 < dp->dc->out->depth) ? 24 : 18;
+	if (NULL != dc->out->dp_out) {
+		u32 bits_per_pixel;
+		u32 max_link_bw_rate = 2700;
+		unsigned long total_max_link_bw;
+		unsigned long mode_bw;
 
-	switch (max_link_bw) {
-	case SOR_LINK_SPEED_G1_62:
-		max_link_bw_rate = 1620;
-		break;
-	case SOR_LINK_SPEED_G2_7:
-		max_link_bw_rate = 2700;
-		break;
-	case SOR_LINK_SPEED_G5_4:
-		max_link_bw_rate = 5400;
-		break;
-	default:
-		dev_info(&dc->ndev->dev, "invalid link bw\n");
-		break;
+		bits_per_pixel = (18 < dp->dc->out->depth) ? 24 : 18;
+
+		switch (max_link_bw) {
+		case SOR_LINK_SPEED_G1_62:
+			max_link_bw_rate = 1620;
+			break;
+		case SOR_LINK_SPEED_G2_7:
+			max_link_bw_rate = 2700;
+			break;
+		case SOR_LINK_SPEED_G5_4:
+			max_link_bw_rate = 5400;
+			break;
+		default:
+			dev_info(&dc->ndev->dev, "invalid link bw\n");
+			break;
+		}
+
+		/* max link bandwidth = lane_freq * lanes * 8 / 10 */
+		total_max_link_bw = (unsigned long)max_link_bw_rate
+				* 1000 * 1000 * 8 / 10 * dc->out->dp_out->lanes;
+		mode_bw = (unsigned long)mode->xres * (unsigned long)mode->yres
+				* mode->refresh * bits_per_pixel;
+		if (total_max_link_bw < mode_bw)
+			return false;
 	}
-
-	/* max link bandwidth = lane_freq * lanes * 8 / 10 */
-	total_max_link_bw = (unsigned long)max_link_bw_rate
-			* 1000 * 1000 * 8 / 10 * dc->out->dp_out->lanes;
-	mode_bw = (unsigned long)mode->xres * (unsigned long)mode->yres
-			* mode->refresh * bits_per_pixel;
-
-	if (total_max_link_bw < mode_bw)
-		return false;
 
 	if (!mode->pixclock)
 		return false;
@@ -3148,6 +3150,7 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.detect    = tegra_dc_dp_detect,
 	.setup_clk = tegra_dc_dp_setup_clk,
 	.modeset_notifier = tegra_dc_dp_modeset_notifier,
+	.mode_filter = tegra_dp_mode_filter,
 	.hpd_state = tegra_dc_dp_hpd_state,
 	.suspend = tegra_dc_dp_suspend,
 	.resume = tegra_dc_dp_resume,

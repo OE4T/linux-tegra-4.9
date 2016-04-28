@@ -38,6 +38,7 @@
 #include <linux/pm_qos.h>
 #include <linux/cpu_pm.h>
 #include <linux/psci.h>
+#include <linux/platform/tegra/tegra18_cpu_map.h>
 
 #include <asm/cpuidle.h>
 #include <asm/suspend.h>
@@ -57,6 +58,9 @@
 #define TEGRA186_A57_CPUIDLE_C7		1
 #define DENVER_CLUSTER			0
 #define A57_CLUSTER			1
+
+static struct cpumask denver_cpumask;
+static struct cpumask a57_cpumask;
 
 static bool check_mce_version(void)
 {
@@ -378,22 +382,7 @@ static void program_single_crossover(void *data)
 
 static int setup_crossover(int cluster, int index, int value)
 {
-	struct cpumask denver_cpumask;
-	struct cpumask a57_cpumask;
-	int cpu_number;
 	struct xover_smp_call_data xover_data;
-
-	cpumask_clear(&denver_cpumask);
-	cpumask_clear(&a57_cpumask);
-
-	for_each_online_cpu(cpu_number) {
-		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu_number);
-		u32 midr = cpuinfo->reg_midr;
-		if (MIDR_IMPLEMENTOR(midr) == ARM_CPU_IMP_ARM)
-			cpumask_set_cpu(cpu_number, &a57_cpumask);
-		else
-			cpumask_set_cpu(cpu_number, &denver_cpumask);
-	}
 
 	xover_data.index = index;
 	xover_data.value = value;
@@ -605,8 +594,7 @@ static void send_crossover(void *data)
 	}
 }
 
-static int crossover_init(struct cpumask *denver_cpumask,
-			struct cpumask *a57_cpumask)
+static int crossover_init(void)
 {
 	struct device_node *denver_xover;
 	struct device_node *a57_xover;
@@ -626,14 +614,14 @@ static int crossover_init(struct cpumask *denver_cpumask,
 		pr_err("WARNING: cpuidle: %s: DT entry missing for A57"
 			" thresholds\n", __func__);
 	else
-		on_each_cpu_mask(a57_cpumask, send_crossover,
+		on_each_cpu_mask(&a57_cpumask, send_crossover,
 			a57_xover, 1);
 
 	if (!denver_xover)
 		pr_err("WARNING: cpuidle: %s: DT entry missing for Denver"
 			" thresholds\n", __func__);
 	else
-		on_each_cpu_mask(denver_cpumask, send_crossover,
+		on_each_cpu_mask(&denver_cpumask, send_crossover,
 			denver_xover, 1);
 
 	return 0;
@@ -642,8 +630,6 @@ static int crossover_init(struct cpumask *denver_cpumask,
 static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 {
 	int cpu_number;
-	struct cpumask denver_cpumask;
-	struct cpumask a57_cpumask;
 	struct device_node *a57_cluster_states;
 	struct device_node *denver_cluster_states;
 	int err;
@@ -658,9 +644,7 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 	cpumask_clear(&a57_cpumask);
 
 	for_each_online_cpu(cpu_number) {
-		struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu_number);
-		u32 midr = cpuinfo->reg_midr;
-		if (MIDR_IMPLEMENTOR(midr) == ARM_CPU_IMP_ARM)
+		if (tegra18_is_cpu_arm(cpu_number))
 			cpumask_set_cpu(cpu_number, &a57_cpumask);
 		else
 			cpumask_set_cpu(cpu_number, &denver_cpumask);
@@ -672,7 +656,7 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 		}
 	}
 
-	crossover_init(&denver_cpumask, &a57_cpumask);
+	crossover_init();
 
 	a57_cluster_states =
 		of_find_node_by_name(NULL, "a57_cluster_power_states");

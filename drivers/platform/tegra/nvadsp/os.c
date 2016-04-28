@@ -1489,10 +1489,27 @@ int nvadsp_os_start(void)
 			drv_data->adspff_init = true;
 	}
 #endif
+
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+	if (drv_data->adsp_os_suspended == false) {
+	    ret = adsp_lpthread_debugfs_init(priv.pdev);
+	    if (ret)
+		dev_err(dev, "adsp_lpthread_debugfs_init() failed with ret = %d\n", ret);
+	    else
+		dev_err(dev, "adsp_lpthread_debugfs_init() success with ret = %d\n", ret);
+	}
+#endif
+
 	drv_data->adsp_os_suspended = false;
 #ifdef CONFIG_DEBUG_FS
 	wake_up(&priv.logger.wait_queue);
 #endif
+
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+	adsp_lpthread_debugfs_set_suspend(drv_data->adsp_os_suspended);
+	adsp_lpthread_debugfs_callback();
+#endif
+
 unlock:
 	mutex_unlock(&priv.os_run_lock);
 end:
@@ -1539,6 +1556,10 @@ static int __nvadsp_os_suspend(void)
 	dev_dbg(dev, "ADSP OS suspended!\n");
 
 	drv_data->adsp_os_suspended = true;
+
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+	adsp_lpthread_debugfs_set_suspend(drv_data->adsp_os_suspended);
+#endif
 
 	nvadsp_assert_adsp(drv_data);
 

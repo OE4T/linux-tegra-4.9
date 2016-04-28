@@ -53,6 +53,17 @@ config TEGRA_ADSP_FILEIO
 
 	  If unsure, say N
 
+config TEGRA_ADSP_LPTHREAD
+	bool "Enable ADSP usage calc by lpthread"
+	depends on DEBUG_FS
+	default n
+	help
+	  Enable calculation of ADSP usage by running a low priority
+	  thread in background whenever OS is not suspended. Can be
+	  enable or disabled by echo to adsp_usage file.
+
+	  If unsure, say N
+
 config TEGRA_EMC_APE_DFS
 	bool "Enable emc dfs due to APE"
 	default n

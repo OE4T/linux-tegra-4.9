@@ -76,7 +76,6 @@ enum adsp_unit_fpga_reset {
 	ADSP_UNIT_FPGA_RESET_END,
 };
 
-
 #define AMISC_REGS	0x2000
 
 #define AMISC_ADSP_L2_REGFILEBASE	0x10
@@ -201,6 +200,10 @@ struct nvadsp_drv_data {
 	bool adspff_init;
 #endif
 
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+	bool lpthread_initialized;
+#endif
+
 	wait_queue_head_t adsp_health_waitq;
 	bool adsp_crashed;
 
@@ -270,5 +273,17 @@ static inline int __init nvadsp_reset_init(struct platform_device *pdev)
 
 	return -EINVAL;
 }
+
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+int adsp_lpthread_init(bool is_adsp_suspended);
+int adsp_lpthread_resume(void);
+int adsp_lpthread_pause(void);
+int adsp_lpthread_exit(void);
+
+int adsp_lpthread_debugfs_init(struct platform_device *pdev);
+int adsp_lpthread_debugfs_exit(struct platform_device *pdev);
+int adsp_lpthread_debugfs_set_suspend(bool is_suspended);
+int adsp_lpthread_debugfs_callback(void);
+#endif
 
 #endif /* __TEGRA_NVADSP_DEV_H */

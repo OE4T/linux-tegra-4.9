@@ -33,3 +33,8 @@ endif
 ifeq ($(CONFIG_TEGRA_ADSP_FILEIO),y)
 nvadsp-objs += adspff.o
 endif
+
+ifeq ($(CONFIG_TEGRA_ADSP_LPTHREAD),y)
+nvadsp-objs += adsp_lpthread.o
+nvadsp-objs += adsp_lpthread_proc.o
+endif

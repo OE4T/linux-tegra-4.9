@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -108,7 +108,6 @@ struct vblk_dev {
 	uint8_t total_frame;
 	struct req_iterator iter;
 	uint max_sectors_per_frame;
-	struct ivc_blk_request cur_ivc_req;
 	struct request *req;
 	struct timer_list ivc_timer;
 	bool initialized;
@@ -224,10 +223,6 @@ static int next_transfer(struct vblk_dev *vblkdev)
 	ivc_blk_req->serial_number = vblkdev->serial_number;
 	ivc_blk_req->total_frame = vblkdev->total_frame;
 
-	memcpy((void *)&(vblkdev->cur_ivc_req),
-		(void *)ivc_blk_req,
-		sizeof(struct ivc_blk_request));
-
 	if (vblkdev->cur_transfer_cmd == W_TRANSFER) {
 		rq_for_each_segment(bvec, vblkdev->req, vblkdev->iter) {
 			size = bvec.bv_len;
@@ -289,7 +284,7 @@ static int get_data_from_io_server(struct vblk_dev *vblkdev)
 		status = -EIO;
 	}
 	if (!status) {
-		if (vblkdev->cur_ivc_req.cmd == R_TRANSFER) {
+		if (vblkdev->cur_transfer_cmd == R_TRANSFER) {
 			rq_for_each_segment(bvec, vblkdev->req, vblkdev->iter) {
 				size = bvec.bv_len;
 				vblkdev->cur_buffer =
@@ -449,9 +444,6 @@ void ivc_timeout_func(unsigned long ldev)
 	vblkdev->cur_nsect = 0;
 	vblkdev->cur_buffer = NULL;
 	vblkdev->cur_transfer_cmd = UNKNOWN_CMD;
-	vblkdev->cur_ivc_req.cmd = UNKNOWN_CMD;
-	vblkdev->cur_ivc_req.sector_offset = 0;
-	vblkdev->cur_ivc_req.sector_number = 0;
 	vblkdev->req = NULL;
 }
 

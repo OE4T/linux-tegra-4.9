@@ -43,6 +43,7 @@ struct gk20a_ctxsw_dev {
 	bool write_enabled;
 	wait_queue_head_t readout_wq;
 	size_t size;
+	u32 num_ents;
 
 	atomic_t vma_ref;
 
@@ -165,6 +166,7 @@ static int gk20a_ctxsw_dev_alloc_buffer(struct gk20a_ctxsw_dev *dev,
 	dev->hdr = buf;
 	dev->ents = (struct nvgpu_ctxsw_trace_entry *) (dev->hdr + 1);
 	dev->size = size;
+	dev->num_ents = dev->hdr->num_ents;
 
 	gk20a_dbg(gpu_dbg_ctxsw, "size=%zu hdr=%p ents=%p num_ents=%d",
 		dev->size, dev->hdr, dev->ents, dev->hdr->num_ents);
@@ -553,6 +555,7 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 	struct gk20a_ctxsw_dev *dev;
 	int ret = 0;
 	const char *reason;
+	u32 write_idx;
 
 	if (unlikely(entry->vmid >= GK20A_CTXSW_TRACE_NUM_DEVS))
 		return -ENODEV;
@@ -569,6 +572,16 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 		/* device has been released */
 		ret = -ENODEV;
 		goto done;
+	}
+
+	write_idx = hdr->write_idx;
+	if (write_idx >= dev->num_ents) {
+		gk20a_err(dev_from_gk20a(dev->g),
+			"write_idx=%u out of range [0..%u]",
+			write_idx, dev->num_ents);
+		ret = -ENOSPC;
+		reason = "write_idx out of range";
+		goto disable;
 	}
 
 	entry->seqno = hdr->write_seqno++;
@@ -595,19 +608,23 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 		entry->seqno, entry->context_id, entry->pid,
 		entry->tag, entry->timestamp);
 
-	dev->ents[hdr->write_idx] = *entry;
+	dev->ents[write_idx] = *entry;
 
 	/* ensure record is written before updating write index */
 	smp_wmb();
 
-	hdr->write_idx++;
-	if (unlikely(hdr->write_idx >= hdr->num_ents))
-		hdr->write_idx = 0;
+	write_idx++;
+	if (unlikely(write_idx >= hdr->num_ents))
+		write_idx = 0;
+	hdr->write_idx = write_idx;
 	gk20a_dbg(gpu_dbg_ctxsw, "added: read=%d write=%d len=%d",
 		hdr->read_idx, hdr->write_idx, ring_len(hdr));
 
 	mutex_unlock(&dev->write_lock);
 	return ret;
+
+disable:
+	g->ops.fecs_trace.disable(g);
 
 drop:
 	hdr->drop_count++;

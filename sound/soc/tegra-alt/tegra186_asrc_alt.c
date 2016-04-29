@@ -270,12 +270,13 @@ static int tegra186_asrc_in_hw_params(struct snd_pcm_substream *substream,
 {
 	struct device *dev = dai->dev;
 	struct tegra186_asrc *asrc = snd_soc_dai_get_drvdata(dai);
-	int ret;
+	int ret, lane_id = dai->id;
 
 	/* set threshold */
 	regmap_write(asrc->regmap,
 		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_RX_THRESHOLD, dai->id),
-		0x00201002);
+		asrc->lane[lane_id].input_thresh);
+
 	ret = tegra186_asrc_set_audio_cif(asrc, params,
 		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_RX_CIF_CTRL, dai->id));
 	if (ret) {
@@ -306,14 +307,22 @@ static int tegra186_asrc_out_hw_params(struct snd_pcm_substream *substream,
 	}
 
 	/* set ENABLE_HW_RATIO_COMP */
-	regmap_update_bits(asrc->regmap,
-		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, lane_id),
-		TEGRA186_ASRC_STREAM_ENABLE_HW_RATIO_COMP_MASK,
-		TEGRA186_ASRC_STREAM_ENABLE_HW_RATIO_COMP_ENABLE);
-	regmap_write(asrc->regmap,
-		ASRC_STREAM_REG(
+	if (asrc->lane[lane_id].hwcomp_disable) {
+		regmap_update_bits(asrc->regmap,
+			ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, lane_id),
+			TEGRA186_ASRC_STREAM_ENABLE_HW_RATIO_COMP_MASK,
+			TEGRA186_ASRC_STREAM_ENABLE_HW_RATIO_COMP_DISABLE);
+	} else {
+		regmap_update_bits(asrc->regmap,
+			ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, lane_id),
+			TEGRA186_ASRC_STREAM_ENABLE_HW_RATIO_COMP_MASK,
+			TEGRA186_ASRC_STREAM_ENABLE_HW_RATIO_COMP_ENABLE);
+
+		regmap_write(asrc->regmap,
+			ASRC_STREAM_REG(
 			TEGRA186_ASRC_STREAM1_RATIO_COMP, lane_id),
-		0xaaaa);
+			TEGRA186_ASRC_STREAM_DEFAULT_HW_COMP_BIAS_VALUE);
+	}
 
 	/* set lock */
 	if (asrc->lane[lane_id].ratio_source == RATIO_SW) {
@@ -332,10 +341,10 @@ static int tegra186_asrc_out_hw_params(struct snd_pcm_substream *substream,
 			dcnt--)
 			udelay(100);
 
-	/* set threshold */
+	 /* set threshold */
 	regmap_write(asrc->regmap,
 		ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_TX_THRESHOLD, lane_id),
-		0x00201002);
+		asrc->lane[lane_id].output_thresh);
 
 	return ret;
 }
@@ -473,6 +482,90 @@ static int tegra186_asrc_put_ratio_frac(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra186_asrc_get_hwcomp_disable(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *asrc_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
+	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+
+	ucontrol->value.integer.value[0] = asrc->lane[id].hwcomp_disable;
+
+	return 0;
+}
+
+static int tegra186_asrc_put_hwcomp_disable(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *asrc_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
+	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+
+	asrc->lane[id].hwcomp_disable = ucontrol->value.integer.value[0];
+
+	return 0;
+}
+
+static int tegra186_asrc_get_input_threshold(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *asrc_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
+	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+
+	ucontrol->value.integer.value[0] = (asrc->lane[id].input_thresh & 0x3);
+
+	return 0;
+}
+
+static int tegra186_asrc_put_input_threshold(struct snd_kcontrol *kcontrol,
+    struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *asrc_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
+	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+
+	asrc->lane[id].input_thresh = (asrc->lane[id].input_thresh & ~(0x3))
+				| ucontrol->value.integer.value[0];
+    return 0;
+}
+
+static int tegra186_asrc_get_output_threshold(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *asrc_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
+	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+
+	ucontrol->value.integer.value[0] = (asrc->lane[id].output_thresh & 0x3);
+
+	return 0;
+}
+
+static int tegra186_asrc_put_output_threshold(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *asrc_private =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct tegra186_asrc *asrc = snd_soc_codec_get_drvdata(codec);
+	unsigned int id = asrc_private->reg / TEGRA186_ASRC_STREAM_STRIDE;
+
+	asrc->lane[id].output_thresh = (asrc->lane[id].output_thresh & ~(0x3))
+				| ucontrol->value.integer.value[0];
+
+	return 0;
+}
 static int tegra186_asrc_req_arad_ratio(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
@@ -729,6 +822,78 @@ static const struct snd_kcontrol_new tegra186_asrc_controls[] = {
 	SOC_SINGLE_EXT("Stream6 Enable",
 		TEGRA186_ASRC_STREAM6_ENABLE, 0, 1, 0,
 		tegra186_asrc_get_enable_stream, tegra186_asrc_put_enable_stream),
+	SOC_SINGLE_EXT("Stream1 Hwcomp Disable",
+		TEGRA186_ASRC_STREAM1_CONFIG,
+		0, 1, 0,
+		tegra186_asrc_get_hwcomp_disable, tegra186_asrc_put_hwcomp_disable),
+	SOC_SINGLE_EXT("Stream2 Hwcomp Disable",
+		TEGRA186_ASRC_STREAM2_CONFIG,
+		0, 1, 0,
+		tegra186_asrc_get_hwcomp_disable, tegra186_asrc_put_hwcomp_disable),
+	SOC_SINGLE_EXT("Stream3 Hwcomp Disable",
+		TEGRA186_ASRC_STREAM3_CONFIG,
+		0, 1, 0,
+		tegra186_asrc_get_hwcomp_disable, tegra186_asrc_put_hwcomp_disable),
+	SOC_SINGLE_EXT("Stream4 Hwcomp Disable",
+		TEGRA186_ASRC_STREAM4_CONFIG,
+		0, 1, 0,
+		tegra186_asrc_get_hwcomp_disable, tegra186_asrc_put_hwcomp_disable),
+	SOC_SINGLE_EXT("Stream5 Hwcomp Disable",
+		TEGRA186_ASRC_STREAM5_CONFIG,
+		0, 1, 0,
+		tegra186_asrc_get_hwcomp_disable, tegra186_asrc_put_hwcomp_disable),
+	SOC_SINGLE_EXT("Stream6 Hwcomp Disable",
+		TEGRA186_ASRC_STREAM6_CONFIG,
+		0, 1, 0,
+		tegra186_asrc_get_hwcomp_disable, tegra186_asrc_put_hwcomp_disable),
+	SOC_SINGLE_EXT("Stream1 Input Thresh",
+		TEGRA186_ASRC_STREAM1_RX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_input_threshold, tegra186_asrc_put_input_threshold),
+	SOC_SINGLE_EXT("Stream2 Input Thresh",
+		TEGRA186_ASRC_STREAM2_RX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_input_threshold, tegra186_asrc_put_input_threshold),
+	SOC_SINGLE_EXT("Stream3 Input Thresh",
+		TEGRA186_ASRC_STREAM3_RX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_input_threshold, tegra186_asrc_put_input_threshold),
+	SOC_SINGLE_EXT("Stream4 Input Thresh",
+		TEGRA186_ASRC_STREAM4_RX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_input_threshold, tegra186_asrc_put_input_threshold),
+	SOC_SINGLE_EXT("Stream5 Input Thresh",
+		TEGRA186_ASRC_STREAM5_RX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_input_threshold, tegra186_asrc_put_input_threshold),
+	SOC_SINGLE_EXT("Stream6 Input Thresh",
+		TEGRA186_ASRC_STREAM6_RX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_input_threshold, tegra186_asrc_put_input_threshold),
+	SOC_SINGLE_EXT("Stream1 Output Thresh",
+		TEGRA186_ASRC_STREAM1_TX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_output_threshold, tegra186_asrc_put_output_threshold),
+	SOC_SINGLE_EXT("Stream2 Output Thresh",
+		TEGRA186_ASRC_STREAM2_TX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_output_threshold, tegra186_asrc_put_output_threshold),
+	SOC_SINGLE_EXT("Stream3 Output Thresh",
+		TEGRA186_ASRC_STREAM3_TX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_output_threshold, tegra186_asrc_put_output_threshold),
+	SOC_SINGLE_EXT("Stream4 Output Thresh",
+		TEGRA186_ASRC_STREAM4_TX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_output_threshold, tegra186_asrc_put_output_threshold),
+	SOC_SINGLE_EXT("Stream5 Output Thresh",
+		TEGRA186_ASRC_STREAM5_TX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_output_threshold, tegra186_asrc_put_output_threshold),
+	SOC_SINGLE_EXT("Stream6 Output Thresh",
+		TEGRA186_ASRC_STREAM6_TX_THRESHOLD,
+		0, 3, 0,
+		tegra186_asrc_get_output_threshold, tegra186_asrc_put_output_threshold),
 };
 
 static struct snd_soc_codec_driver tegra186_asrc_codec = {
@@ -751,6 +916,8 @@ static bool tegra186_asrc_wr_reg(struct device *dev, unsigned int reg)
 	case TEGRA186_ASRC_STREAM1_CONFIG:
 	case TEGRA186_ASRC_STREAM1_RATIO_INTEGER_PART:
 	case TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART:
+	case TEGRA186_ASRC_STREAM1_RX_THRESHOLD:
+	case TEGRA186_ASRC_STREAM1_TX_THRESHOLD:
 	case TEGRA186_ASRC_STREAM1_RATIO_LOCK_STATUS:
 	case TEGRA186_ASRC_STREAM1_MUTE_UNMUTE_DURATION:
 	case TEGRA186_ASRC_STREAM1_RATIO_COMP:
@@ -798,6 +965,8 @@ static bool tegra186_asrc_rd_reg(struct device *dev, unsigned int reg)
 	case TEGRA186_ASRC_STREAM1_CONFIG:
 	case TEGRA186_ASRC_STREAM1_RATIO_INTEGER_PART:
 	case TEGRA186_ASRC_STREAM1_RATIO_FRAC_PART:
+	case TEGRA186_ASRC_STREAM1_RX_THRESHOLD:
+	case TEGRA186_ASRC_STREAM1_TX_THRESHOLD:
 	case TEGRA186_ASRC_STREAM1_RATIO_LOCK_STATUS:
 	case TEGRA186_ASRC_STREAM1_MUTE_UNMUTE_DURATION:
 	case TEGRA186_ASRC_STREAM1_RATIO_COMP:
@@ -1012,6 +1181,11 @@ static int tegra186_asrc_platform_probe(struct platform_device *pdev)
 		asrc->lane[i].int_part = 1;
 		asrc->lane[i].frac_part = 0;
 		asrc->lane[i].ratio_source = RATIO_SW;
+		asrc->lane[i].hwcomp_disable = 0;
+		asrc->lane[i].input_thresh =
+			TEGRA186_ASRC_STREAM_DEFAULT_INPUT_HW_COMP_THRESH_CONFIG;
+		asrc->lane[i].output_thresh =
+			TEGRA186_ASRC_STREAM_DEFAULT_OUTPUT_HW_COMP_THRESH_CONFIG;
 		regmap_update_bits(asrc->regmap,
 			ASRC_STREAM_REG(TEGRA186_ASRC_STREAM1_CONFIG, i), 1, 1);
 	}

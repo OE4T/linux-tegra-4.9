@@ -17,7 +17,6 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/slab.h>
-#include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-instance.h>
 #include <linux/mailbox_controller.h>
@@ -26,23 +25,36 @@
 
 #define NV(p) "nvidia," #p
 
-#define TEGRA_IVC_BUS_HSP_DATA_ARRAY_SIZE	3
-
 static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 {
-	return 0;
+	struct tegra_ivc_driver *ivcdrv = to_tegra_ivc_driver(drv);
+
+	return ivcdrv->dev_type == dev->type;
 }
 
 static int tegra_ivc_bus_probe(struct device *dev)
 {
-	WARN_ON(1);
-	return -ENXIO;
+	int ret = -ENXIO;
 
+	if (dev->type == &tegra_hsp_type) {
+		const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+
+		BUG_ON(ops == NULL || ops->probe == NULL);
+		ret = ops->probe(dev);
+	}
+
+	return ret;
 }
 
 static int tegra_ivc_bus_remove(struct device *dev)
 {
-	WARN_ON(1);
+	if (dev->type == &tegra_hsp_type) {
+		const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+
+		if (ops->remove != NULL)
+			ops->remove(dev);
+	}
+
 	return 0;
 }
 
@@ -54,6 +66,18 @@ struct bus_type tegra_ivc_bus_type = {
 };
 EXPORT_SYMBOL(tegra_ivc_bus_type);
 
+int tegra_ivc_driver_register(struct tegra_ivc_driver *drv)
+{
+	return driver_register(&drv->driver);
+}
+EXPORT_SYMBOL(tegra_ivc_driver_register);
+
+void tegra_ivc_driver_unregister(struct tegra_ivc_driver *drv)
+{
+	return driver_unregister(&drv->driver);
+}
+EXPORT_SYMBOL(tegra_ivc_driver_unregister);
+
 struct tegra_ivc_bus {
 	struct device dev;
 	struct mbox_controller mbox;
@@ -62,6 +86,45 @@ struct tegra_ivc_bus {
 	struct work_struct rx_work;
 	struct mbox_chan chans[];
 };
+
+static void tegra_hsp_ring(struct device *dev)
+{
+	const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+
+	BUG_ON(ops == NULL || ops->ring == NULL);
+	ops->ring(dev);
+}
+
+static int tegra_hsp_enable(struct device *dev)
+{
+	const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+
+	if (ops == NULL || ops->enable == NULL)
+		return -ENXIO;
+	return ops->enable(dev);
+}
+
+static void tegra_hsp_disable(struct device *dev)
+{
+	const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+
+	if (ops != NULL && ops->disable != NULL)
+		ops->disable(dev);
+}
+
+struct device_type tegra_hsp_type = {
+	.name = "tegra-hsp",
+};
+EXPORT_SYMBOL(tegra_hsp_type);
+
+void tegra_hsp_notify(struct device *dev)
+{
+	struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
+
+	schedule_work(&bus->rx_work);
+}
+EXPORT_SYMBOL(tegra_hsp_notify);
 
 struct tegra_ivc_channel {
 	struct device dev;
@@ -94,9 +157,7 @@ static void tegra_ivc_channel_tx_notify(struct ivc *ivc)
 	struct tegra_ivc_bus *bus =
 		container_of(chan->dev.parent, struct tegra_ivc_bus, dev);
 
-	int ret = tegra_hsp_db_ring(bus->hsp_db);
-	if (ret)
-		dev_err(&chan->dev, "IVC notify error: %d\n", ret);
+	tegra_hsp_ring(&bus->dev);
 }
 
 static int tegra_ivc_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
@@ -155,13 +216,6 @@ static void tegra_ivc_bus_rx_worker(struct work_struct *work)
 			tegra_ivc_read_advance(ivc);
 		}
 	}
-}
-
-static void tegra_ivc_bus_rx_notify(void *data)
-{
-	struct tegra_ivc_bus *bus = data;
-
-	schedule_work(&bus->rx_work);
 }
 
 static int tegra_ivc_bus_parse_channel(struct device *dev, int idx,
@@ -402,12 +456,9 @@ static unsigned tegra_ivc_bus_count_channels(struct device_node *dev_node)
 	return num;
 }
 
-static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus);
-
 struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 {
 	struct tegra_ivc_bus *bus;
-	u32 hsp_data[TEGRA_IVC_BUS_HSP_DATA_ARRAY_SIZE];
 	unsigned count;
 	int ret;
 
@@ -417,19 +468,13 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 		return ERR_PTR(-EINVAL);
 	}
 
-	ret = of_property_read_u32_array(dev->of_node, NV(hsp-notifications),
-					hsp_data, ARRAY_SIZE(hsp_data));
-	if (ret) {
-		dev_err(dev, "missing <%s> property\n", NV(hsp-notifications));
-		return ERR_PTR(ret);
-	}
-
 	bus = kzalloc(sizeof(*bus) + count * sizeof(bus->chans[0]),
 			GFP_KERNEL);
 	if (unlikely(bus == NULL))
 		return ERR_PTR(-ENOMEM);
 
 	bus->dev.parent = dev;
+	bus->dev.type = &tegra_hsp_type;
 	bus->dev.bus = &tegra_ivc_bus_type;
 	bus->dev.of_node = of_node_get(dev->of_node);
 	bus->dev.release = tegra_ivc_bus_release;
@@ -443,10 +488,6 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 	bus->mbox.ops = &tegra_ivc_mbox_chan_ops;
 	bus->mbox.txdone_poll = true;
 	bus->mbox.txpoll_period = 1;
-
-	/* hsp_data[0] is HSP phandle */
-	bus->hsp_master = hsp_data[1];
-	bus->hsp_db = hsp_data[2];
 
 	device_initialize(&bus->dev);
 
@@ -462,10 +503,6 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 		tegra_ivc_bus_destroy_channels(bus);
 		goto error;
 	}
-
-	ret = tegra_ivc_bus_start(bus);
-	if (ret)
-		goto error;
 
 	return bus;
 
@@ -497,22 +534,12 @@ static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus)
 	}
 
 	/* Listen to the remote's notification */
-	ret = tegra_hsp_db_add_handler(bus->hsp_master,
-					tegra_ivc_bus_rx_notify, bus);
-	if (ret) {
-		dev_err(&bus->dev, "HSP doorbell handler error: %d\n", ret);
-		goto error_mbox;
-	}
-
-	/* Allow remote to ring CCPLEX's doorbell */
-	ret = tegra_hsp_db_enable_master(bus->hsp_master);
+	ret = tegra_hsp_enable(&bus->dev);
 	if (ret) {
 		dev_err(&bus->dev, "HSP doorbell master error: %d\n", ret);
-		tegra_hsp_db_del_handler(bus->hsp_master);
 		flush_scheduled_work();
 		goto error_mbox;
 	}
-
 	return 0;
 
 error_mbox:
@@ -531,8 +558,7 @@ static void tegra_ivc_bus_stop(struct tegra_ivc_bus *bus)
 {
 	int i;
 
-	tegra_hsp_db_disable_master(bus->hsp_master);
-	tegra_hsp_db_del_handler(bus->hsp_master);
+	tegra_hsp_disable(&bus->dev);
 	flush_scheduled_work();
 	mbox_controller_unregister(&bus->mbox);
 
@@ -546,19 +572,62 @@ static void tegra_ivc_bus_stop(struct tegra_ivc_bus *bus)
 
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {
-	tegra_ivc_bus_stop(bus);
 	tegra_ivc_bus_destroy_channels(bus);
 	device_unregister(&bus->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_destroy);
 
+static int tegra_ivc_bus_notify(struct notifier_block *nb,
+				unsigned long action, void *data)
+{
+	struct device *dev = data;
+
+	switch (action) {
+	case BUS_NOTIFY_BOUND_DRIVER:
+		if (dev->type == &tegra_hsp_type) {
+			struct tegra_ivc_bus *bus =
+				container_of(dev, struct tegra_ivc_bus, dev);
+			int ret;
+
+			ret = tegra_ivc_bus_start(bus);
+			WARN_ON(ret);
+		}
+		break;
+
+	case BUS_NOTIFY_UNBIND_DRIVER:
+		if (dev->type == &tegra_hsp_type) {
+			struct tegra_ivc_bus *bus =
+				container_of(dev, struct tegra_ivc_bus, dev);
+
+			tegra_ivc_bus_stop(bus);
+		}
+		break;
+	}
+
+	return 0;
+}
+
+static struct notifier_block tegra_ivc_bus_nb = {
+	.notifier_call = tegra_ivc_bus_notify,
+};
+
 static __init int tegra_ivc_bus_init(void)
 {
-	return bus_register(&tegra_ivc_bus_type);
+	int ret;
+
+	ret = bus_register(&tegra_ivc_bus_type);
+	if (ret)
+		return ret;
+
+	ret = bus_register_notifier(&tegra_ivc_bus_type, &tegra_ivc_bus_nb);
+	if (ret)
+		bus_unregister(&tegra_ivc_bus_type);
+	return ret;
 }
 
 static __exit void tegra_ivc_bus_exit(void)
 {
+	bus_unregister_notifier(&tegra_ivc_bus_type, &tegra_ivc_bus_nb);
 	bus_unregister(&tegra_ivc_bus_type);
 }
 

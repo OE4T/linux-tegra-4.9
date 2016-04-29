@@ -46,6 +46,7 @@
 #include <crypto/internal/hash.h>
 #include <crypto/sha.h>
 #include <linux/tegra_pm_domains.h>
+#include <linux/version.h>
 
 #include "tegra-se-nvhost.h"
 #define NV_SE1_CLASS_ID		0x3A
@@ -528,7 +529,7 @@ static void tegra_unmap_sg(struct device *dev, struct scatterlist *sg,
 {
 	while (sg) {
 		dma_unmap_sg(dev, sg, 1, dir);
-			sg = scatterwalk_sg_next(sg);
+			sg = sg_next(sg);
 	}
 }
 
@@ -543,7 +544,7 @@ static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes, int *chained)
 		nbytes -= min(sl->length, nbytes);
 		if (!sg_is_last(sg) && (sg + 1)->length == 0)
 			*chained = 1;
-		sg = scatterwalk_sg_next(sg);
+		sg = sg_next(sg);
 	}
 
 	return sg_nents;
@@ -1099,7 +1100,7 @@ static int tegra_map_sg(struct device *dev, struct scatterlist *sg,
 		se_ll->addr = sg_dma_address(sg);
 		se_ll->data_len = min(sg->length, total_loop);
 		total_loop -= min(sg->length, total_loop);
-		sg = scatterwalk_sg_next(sg);
+		sg = sg_next(sg);
 		se_ll++;
 	}
 	return nents;
@@ -1424,7 +1425,6 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 	struct tegra_se_rng_context *rng_ctx = crypto_tfm_ctx(tfm);
 	struct tegra_se_dev *se_dev = sg_tegra_se_dev[0];
 	mutex_lock(&se_dev->mtx);
-
 	rng_ctx->se_dev = se_dev;
 	rng_ctx->dt_buf = dma_alloc_coherent(se_dev->dev, TEGRA_SE_RNG_DT_SIZE,
 		&rng_ctx->dt_buf_adr, GFP_KERNEL);
@@ -1449,7 +1449,8 @@ static int tegra_se_rng_drbg_init(struct crypto_tfm *tfm)
 }
 
 static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
-	u8 *rdata, u32 dlen)
+				const u8 *src, unsigned int slen,
+				u8 *rdata, unsigned int dlen)
 {
 	struct tegra_se_rng_context *rng_ctx = crypto_rng_ctx(tfm);
 	struct tegra_se_dev *se_dev = rng_ctx->se_dev;
@@ -1513,7 +1514,7 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	return dlen;
 }
 
-static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
+static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, const u8 *seed, unsigned int slen)
 {
 	return 0;
 }
@@ -2323,6 +2324,24 @@ static void tegra_se_rsa_cra_exit(struct crypto_tfm *tfm)
 	ctx->slot = NULL;
 }
 
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
+static struct rng_alg rng_algs[] = { {
+		.generate	= tegra_se_rng_drbg_get_random,
+		.seed		= tegra_se_rng_drbg_reset,
+		.seedsize	= TEGRA_SE_RNG_SEED_SIZE,
+		.base 		= {
+			.cra_name = "rng_drbg",
+			.cra_driver_name = "rng_drbg-aes-tegra",
+			.cra_priority = 100,
+			.cra_flags = CRYPTO_ALG_TYPE_RNG,
+			.cra_ctxsize = sizeof(struct tegra_se_rng_context),
+			.cra_module = THIS_MODULE,
+			.cra_init = tegra_se_rng_drbg_init,
+			.cra_exit = tegra_se_rng_drbg_exit,
+		}
+}};
+#endif
+
 static struct crypto_alg aes_algs[] = {
 	{
 		.cra_name = "cbc(aes)",
@@ -2344,7 +2363,9 @@ static struct crypto_alg aes_algs[] = {
 			.encrypt = tegra_se_aes_cbc_encrypt,
 			.decrypt = tegra_se_aes_cbc_decrypt,
 		}
-	}, {
+	},
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
+{
 		.cra_name = "rng_drbg",
 		.cra_driver_name = "rng_drbg-aes-tegra",
 		.cra_priority = 100,
@@ -2361,7 +2382,9 @@ static struct crypto_alg aes_algs[] = {
 				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
 			}
 		}
-	}, {
+	},
+#endif
+ {
 		.cra_name = "ecb(aes)",
 		.cra_driver_name = "ecb-aes-tegra",
 		.cra_priority = 300,
@@ -2826,7 +2849,11 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	if (se_num == 0) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 		for (i = 0; i < 2; i++) {
+#else
+		for (i = 0; i < 1; i++) {
+#endif
 			if (is_algo_supported(se_dev, aes_algs[i].cra_name)) {
 				INIT_LIST_HEAD(&aes_algs[i].cra_list);
 				err = crypto_register_alg(&aes_algs[i]);
@@ -2838,10 +2865,25 @@ static int tegra_se_probe(struct platform_device *pdev)
 				}
 			}
 		}
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
+		if (is_algo_supported(se_dev, rng_algs[0].base.cra_name)) {
+			INIT_LIST_HEAD(&rng_algs[0].base.cra_list);
+			err = crypto_register_rng(&rng_algs[0]);
+			if (err) {
+				dev_err(se_dev->dev,
+				"crypto_register_rng failed\n");
+				goto reg_fail;
+			}
+		}
+#endif
 	}
 
 	if (se_num == 1) {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
 		for (i = 2; i < ARRAY_SIZE(aes_algs); i++) {
+#else
+		for (i = 1; i < ARRAY_SIZE(aes_algs); i++) {
+#endif
 			if (is_algo_supported(se_dev, aes_algs[i].cra_name)) {
 				INIT_LIST_HEAD(&aes_algs[i].cra_list);
 				err = crypto_register_alg(&aes_algs[i]);
@@ -2853,7 +2895,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 				}
 			}
 		}
-
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 		if (is_algo_supported(se_dev,
 				hash_algs[0].halg.base.cra_name)) {
 			err = crypto_register_ahash(&hash_algs[0]);
@@ -2863,8 +2905,10 @@ static int tegra_se_probe(struct platform_device *pdev)
 				goto reg_fail;
 			}
 		}
+#endif
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	if (se_num == 3) {
 		for (i = 1; i < 6; i++) {
 			if (is_algo_supported(se_dev,
@@ -2894,6 +2938,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 			}
 		}
 	}
+#endif
 
 	/* Make sure engine is powered ON with clk enabled */
 	err = nvhost_module_busy(pdev);
@@ -2972,6 +3017,10 @@ static int tegra_se_remove(struct platform_device *pdev)
 		destroy_workqueue(se_dev->se_work_q);
 
 	tegra_se_free_ll_buf(se_dev);
+
+#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
+	crypto_unregister_rng(&rng_algs[0]);
+#endif
 
 	for (i = 0; i < ARRAY_SIZE(aes_algs); i++)
 		crypto_unregister_alg(&aes_algs[i]);

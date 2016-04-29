@@ -164,10 +164,16 @@
 		status = "disabled";
 	};
 
-	tegra_hv_net {
+	tegra_hv_net@0 {
 		compatible = "nvidia,tegra-hv-net";
 		status = "okay";
 		ivc = <&tegra_hv 42>;
+	};
+
+	tegra_hv_net@1 {
+		compatible = "nvidia,tegra-hv-net";
+		status = "okay";
+		ivc = <&tegra_hv 80>;
 	};
 
 	tegra_hv_wdt {

@@ -146,10 +146,12 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 		}
 	}
 
-	if (lpm_state == TEGRA_AHCI_PORT_RUNTIME_ACTIVE &&
-		port_status == TEGRA_AHCI_PORT_RUNTIME_ACTIVE) {
+	if (!ret && (lpm_state == TEGRA_AHCI_PORT_RUNTIME_ACTIVE ||
+		port_status == TEGRA_AHCI_PORT_RUNTIME_ACTIVE)) {
 		if (ap->pm_mesg.event & PM_EVENT_AUTO) {
 			tegra->skip_rtpm = true;
+			dev_info(&tegra->pdev->dev,
+					"Skip powergating SATA Controller\n");
 			return 0;
 		}
 	}
@@ -175,8 +177,13 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 
 	if (tegra->skip_rtpm) {
 		tegra->skip_rtpm = false;
-		if (ap->pm_mesg.event & PM_EVENT_AUTO)
+		if (ap->pm_mesg.event & PM_EVENT_AUTO) {
+			ata_for_each_link(link, ap, HOST_FIRST) {
+				link->eh_info.action &= ~ATA_EH_RESET;
+			}
+			ata_eh_thaw_port(ap);
 			return 0;
+		}
 	}
 
 	if (ap->pm_mesg.event & PM_EVENT_RESUME) {

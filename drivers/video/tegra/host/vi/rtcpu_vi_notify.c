@@ -228,8 +228,15 @@ static struct platform_device *mbox_get_vi(struct platform_device *pdev)
 	}
 
 	vi_pdev = of_find_device_by_node(vi_node);
+	of_node_put(vi_node);
+
 	if (vi_pdev == NULL)
 		return ERR_PTR(-EPROBE_DEFER);
+
+	if (&vi_pdev->dev.driver == NULL) {
+		platform_device_put(vi_pdev);
+		return ERR_PTR(-EPROBE_DEFER);
+	}
 
 	return vi_pdev;
 }

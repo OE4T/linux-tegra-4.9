@@ -805,10 +805,8 @@ static int tegra_dma_terminate_all(struct dma_chan *dc)
 	bool was_busy;
 
 	spin_lock_irqsave(&tdc->lock, flags);
-	if (list_empty(&tdc->pending_sg_req)) {
-		spin_unlock_irqrestore(&tdc->lock, flags);
-		return 0;
-	}
+	if (list_empty(&tdc->pending_sg_req))
+		goto empty_cblist;
 
 	if (!tdc->busy)
 		goto skip_dma_stop;
@@ -863,7 +861,7 @@ static int tegra_dma_terminate_all(struct dma_chan *dc)
 
 skip_dma_stop:
 	tegra_dma_abort_all(tdc);
-
+empty_cblist:
 	while (!list_empty(&tdc->cb_desc)) {
 		dma_desc  = list_first_entry(&tdc->cb_desc,
 					typeof(*dma_desc), cb_node);

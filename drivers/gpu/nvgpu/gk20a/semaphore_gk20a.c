@@ -29,12 +29,15 @@
 
 #define __lock_sema_sea(s)						\
 	do {								\
+		gpu_sema_verbose_dbg("Acquiring sema lock...");		\
 		mutex_lock(&s->sea_lock);				\
+		gpu_sema_verbose_dbg("Sema lock aquried!");		\
 	} while (0)
 
 #define __unlock_sema_sea(s)						\
 	do {								\
 		mutex_unlock(&s->sea_lock);				\
+		gpu_sema_verbose_dbg("Released sema lock");		\
 	} while (0)
 
 /*
@@ -89,11 +92,13 @@ struct gk20a_semaphore_sea *gk20a_semaphore_sea_create(struct gk20a *g)
 	if (__gk20a_semaphore_sea_grow(g->sema_sea))
 		goto cleanup;
 
+	gpu_sema_dbg("Created semaphore sea!");
 	return g->sema_sea;
 
 cleanup:
 	kfree(g->sema_sea);
 	g->sema_sea = NULL;
+	gpu_sema_dbg("Failed to creat semaphore sea!");
 	return NULL;
 }
 
@@ -144,11 +149,14 @@ struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(
 	list_add(&p->pool_list_entry, &sea->pool_list);
 	__unlock_sema_sea(sea);
 
+	gpu_sema_dbg("Allocated semaphore pool: page-idx=%d", p->page_idx);
+
 	return p;
 
 fail:
 	__unlock_sema_sea(sea);
 	kfree(p);
+	gpu_sema_dbg("Failed to allocate semaphore pool!");
 	return ERR_PTR(err);
 }
 
@@ -162,8 +170,12 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 	int ents, err = 0;
 	u64 addr;
 
+	gpu_sema_dbg("Mapping sempahore pool! (idx=%d)", p->page_idx);
+
 	p->cpu_va = vmap(&p->page, 1, 0,
 			 pgprot_writecombine(PAGE_KERNEL));
+
+	gpu_sema_dbg("  %d: CPU VA = 0x%p!", p->page_idx, p->cpu_va);
 
 	/* First do the RW mapping. */
 	p->rw_sg_table = kzalloc(sizeof(*p->rw_sg_table), GFP_KERNEL);
@@ -185,6 +197,9 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 		goto fail_free_sgt;
 	}
 
+	gpu_sema_dbg("  %d: DMA addr = 0x%pad", p->page_idx,
+		     &sg_dma_address(p->rw_sg_table->sgl));
+
 	/* Map into the GPU... Doesn't need to be fixed. */
 	p->gpu_va = gk20a_gmmu_map(vm, &p->rw_sg_table, PAGE_SIZE,
 				   0, gk20a_mem_flag_none, false,
@@ -193,6 +208,9 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 		err = -ENOMEM;
 		goto fail_unmap_sgt;
 	}
+
+	gpu_sema_dbg("  %d: GPU read-write VA = 0x%llx", p->page_idx,
+		     p->gpu_va);
 
 	/*
 	 * And now the global mapping. Take the sea lock so that we don't race
@@ -215,6 +233,9 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 	p->gpu_va_ro = addr;
 	p->mapped = 1;
 
+	gpu_sema_dbg("  %d: GPU read-only  VA = 0x%llx", p->page_idx,
+		     p->gpu_va_ro);
+
 	__unlock_sema_sea(p->sema_sea);
 
 	return 0;
@@ -229,6 +250,7 @@ fail_free_sgt:
 fail:
 	kfree(p->rw_sg_table);
 	p->rw_sg_table = NULL;
+	gpu_sema_dbg("  %d: Failed to map semaphore pool!", p->page_idx);
 	return err;
 }
 
@@ -260,13 +282,14 @@ void gk20a_semaphore_pool_unmap(struct gk20a_semaphore_pool *p,
 	kfree(p->rw_sg_table);
 	p->rw_sg_table = NULL;
 
-	gk20a_dbg_info("Unmapped sema-pool: idx = %d", p->page_idx);
 	list_for_each_entry(hw_sema, &p->hw_semas, hw_sema_list)
 		/*
 		 * Make sure the mem addresses are all NULL so if this gets
 		 * reused we will fault.
 		 */
 		hw_sema->value = NULL;
+
+	gpu_sema_dbg("Unmapped semaphore pool! (idx=%d)", p->page_idx);
 }
 
 /*
@@ -291,6 +314,7 @@ static void gk20a_semaphore_pool_free(struct kref *ref)
 	list_for_each_entry_safe(hw_sema, tmp, &p->hw_semas, hw_sema_list)
 		kfree(hw_sema);
 
+	gpu_sema_dbg("Freed semaphore pool! (idx=%d)", p->page_idx);
 	kfree(p);
 }
 
@@ -414,6 +438,8 @@ struct gk20a_semaphore *gk20a_semaphore_alloc(struct channel_gk20a *ch)
 	 * as long as this semaphore is alive.
 	 */
 	gk20a_semaphore_pool_get(s->hw_sema->p);
+
+	gpu_sema_dbg("Allocated semaphore (c=%d)", ch->hw_chid);
 
 	return s;
 }

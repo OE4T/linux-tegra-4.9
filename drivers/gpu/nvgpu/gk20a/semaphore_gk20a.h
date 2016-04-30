@@ -21,6 +21,12 @@
 #include "gk20a.h"
 #include "mm_gk20a.h"
 #include "channel_gk20a.h"
+#include "gk20a_allocator.h"
+
+#define gpu_sema_dbg(fmt, args...)		\
+	gk20a_dbg(gpu_dbg_sema, fmt, ##args)
+#define gpu_sema_verbose_dbg(fmt, args...)	\
+	gk20a_dbg(gpu_dbg_sema_v, fmt, ##args)
 
 /*
  * Max number of channels that can be used is 512. This of course needs to be
@@ -274,6 +280,9 @@ static inline void gk20a_semaphore_release(struct gk20a_semaphore *s)
 		return;
 
 	writel(val, s->hw_sema->value);
+
+	gpu_sema_verbose_dbg("(c=%d) WRITE %u",
+			     s->hw_sema->ch->hw_chid, val);
 }
 
 /*
@@ -291,5 +300,9 @@ static inline void gk20a_semaphore_incr(struct gk20a_semaphore *s)
 
 	atomic_set(&s->value, atomic_add_return(1, &s->hw_sema->next_value));
 	s->incremented = 1;
+
+	gpu_sema_verbose_dbg("INCR sema for c=%d (%u)",
+			     s->hw_sema->ch->hw_chid,
+			     gk20a_semaphore_next_value(s));
 }
 #endif

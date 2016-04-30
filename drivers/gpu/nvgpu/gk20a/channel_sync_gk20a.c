@@ -428,8 +428,11 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 			 struct gk20a_semaphore *s, struct priv_cmd_entry *cmd,
 			 int cmd_size, bool acquire, bool wfi)
 {
-	u32 off = cmd->off;
+	int ch = c->hw_chid;
+	u32 ob, off = cmd->off;
 	u64 va;
+
+	ob = off;
 
 	/*
 	 * RO for acquire (since we just need to read the mem) and RW for
@@ -480,6 +483,19 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 		/* ignored */
 		gk20a_mem_wr32(g, cmd->mem, off++, 0);
 	}
+
+	if (acquire)
+		gpu_sema_verbose_dbg("(A) c=%d ACQ_GE %-4u owner=%-3d"
+				     "va=0x%llx cmd_mem=0x%llx b=0x%llx off=%u",
+				     ch, gk20a_semaphore_get_value(s),
+				     s->hw_sema->ch->hw_chid, va, cmd->gva,
+				     cmd->mem->gpu_va, ob);
+	else
+		gpu_sema_verbose_dbg("(R) c=%d INCR %u (%u) va=0x%llx "
+				     "cmd_mem=0x%llx b=0x%llx off=%u",
+				     ch, gk20a_semaphore_get_value(s),
+				     readl(s->hw_sema->value), va, cmd->gva,
+				     cmd->mem->gpu_va, ob);
 }
 
 static int gk20a_channel_semaphore_wait_syncpt(

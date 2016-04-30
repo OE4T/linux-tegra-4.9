@@ -953,6 +953,8 @@ enum gk20a_dbg_categories {
 	gpu_dbg_ctxsw   = BIT(12), /* ctxsw tracing */
 	gpu_dbg_sched   = BIT(13), /* sched control tracing */
 	gpu_dbg_map_v   = BIT(14), /* verbose mem mappings */
+	gpu_dbg_sema	= BIT(15), /* semaphore debugging */
+	gpu_dbg_sema_v	= BIT(16), /* verbose semaphore debugging */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

@@ -36,7 +36,7 @@
 
 #define TEGRA_AON_HSP_DATA_ARRAY_SIZE	3
 
-#define IPCBUF_SIZE 8192
+#define IPCBUF_SIZE 2097152
 
 enum smbox_msgs {
 	SMBOX_IVC_READY_MSG = 0xAAAA5555,

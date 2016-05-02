@@ -2403,13 +2403,6 @@ static int lr388k7_probe(struct spi_device *spi)
 		 "%s/input-ts",
 		 dev_name(dev));
 
-	/* misc */
-	if (misc_register(&lr388k7_ts_miscdev) != 0) {
-		dev_err(dev, "cannot register miscdev\n");
-		error = -ENOMEM;
-		goto err_free_mem;
-	}
-
 #if defined(DEBUG_LR388K7)
 	dev_info(&spi->dev, "Success register miscdev\n");
 #endif
@@ -2441,7 +2434,8 @@ static int lr388k7_probe(struct spi_device *spi)
 		dev_err(dev,
 			"LR388K7 TS: regulator_get failed: %ld\n",
 			PTR_ERR(ts->regulator_3v3));
-		return -ENODEV;
+		error = -ENODEV;
+		goto err_free_mem;
 	}
 
 	ts->regulator_1v8 = devm_regulator_get(&g_spi->dev, "dvdd");
@@ -2449,7 +2443,8 @@ static int lr388k7_probe(struct spi_device *spi)
 		dev_err(dev,
 			"LR388K7 TS: regulator_get failed: %ld\n",
 			PTR_ERR(ts->regulator_1v8));
-		return -ENODEV;
+		error = -ENODEV;
+		goto err_free_mem;
 	}
 
 	/* Enable 1v8 first*/
@@ -2605,14 +2600,6 @@ static int lr388k7_probe(struct spi_device *spi)
 
 	spi_set_drvdata(spi, ts);
 
-	error = sysfs_create_link(&dev->kobj,
-				  &lr388k7_ts_miscdev.this_device->kobj,
-				  "touch");
-	if (error) {
-		dev_err(dev, "failed to create sysfs group\n");
-		goto err_clear_drvdata;
-	}
-
 	error = input_register_device(ts->idev);
 	if (error) {
 		dev_err(dev,
@@ -2629,6 +2616,22 @@ static int lr388k7_probe(struct spi_device *spi)
 		goto err_clear_drvdata;
 	}
 #endif
+	/* misc */
+	if (misc_register(&lr388k7_ts_miscdev) != 0) {
+		dev_err(dev, "cannot register miscdev\n");
+		error = -ENOMEM;
+		goto err_clear_drvdata;
+	}
+
+	error = sysfs_create_link(&dev->kobj,
+				  &lr388k7_ts_miscdev.this_device->kobj,
+				  "touch");
+	if (error) {
+		dev_err(dev, "failed to create sysfs group\n");
+		goto err_clear_drvdata;
+	}
+
+
 
 	error = sysfs_create_group(&lr388k7_ts_miscdev.this_device->kobj,
 				   &lr388k7_ts_attr_group);

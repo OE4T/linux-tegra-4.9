@@ -336,6 +336,19 @@ static bool tegra_hdmi_fb_mode_filter(const struct tegra_dc *dc,
 	if (mode->xres > 4096)
 		return false;
 
+#if defined(CONFIG_TEGRA_YUV_BYPASS_MODE_FILTER)
+#if !defined(CONFIG_TEGRA_NVDISPLAY)
+	/* No support for YUV modes on T210 hardware. Filter them out */
+	if (mode->vmode & FB_VMODE_YUV_MASK)
+		return false;
+#else
+	/* T186 hardware supports only YUV422. Filter out YUV420 modes */
+	if ((mode->vmode & FB_VMODE_Y420_ONLY) ||
+		(mode->vmode & FB_VMODE_Y420))
+		return false;
+#endif
+#endif
+
 	/* some non-compliant edids list 420vdb modes in vdb */
 	if ((mode->vmode & FB_VMODE_Y420) &&
 		!(tegra_edid_is_hfvsdb_present(hdmi->edid) &&

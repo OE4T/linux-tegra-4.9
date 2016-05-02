@@ -21,6 +21,7 @@
 #define _UFS_TEGRA_H
 
 #include <linux/io.h>
+#include <linux/padctrl/padctrl.h>
 
 #define NV_ADDRESS_MAP_MPHY_L0_BASE	0x02470000
 #define NV_ADDRESS_MAP_MPHY_L1_BASE	0x02480000
@@ -106,19 +107,6 @@ enum {
 };
 
 
-
-/*
- * UFS PWR_CNTRL Masks and Values.
- */
-#define UFSHC_PWR_CNTRL_0_LP_ISOL_EN_MASK	0x1
-#define UFSHC_PWR_CNTRL_0_LP_ISOL_EN_DISABLE	0x0
-#define UFSHC_PWR_CNTRL_0_LP_ISOL_EN_ENABLE	0x1
-
-#define UFSHC_PWR_CNTRL_0_LP_PWR_RDY_MASK	0x2
-#define UFSHC_PWR_CNTRL_0_LP_PWR_RDY_DISABLE	0x0
-#define UFSHC_PWR_CNTRL_0_LP_PWR_RDY_ENABLE	0x2
-
-
 /*
  * UFS AUX Registers
  */
@@ -153,7 +141,6 @@ static u16 mphy_rx_apb[] = {
 0x0a0, /* MPHY_RX_APB_ATTRIBUTE_A0_A3_0  */
 0x0a4, /* MPHY_RX_APB_ATTRIBUTE_A4_A7_0  */
 0x0a8, /* MPHY_RX_APB_ATTRIBUTE_A8_AB_0  */
-0x0c0, /* MPHY_RX_APB_RX_STATUS_C0_0     */
 0x0d0, /* MPHY_RX_APB_MC_STATUS_D0_D3_0  */
 0x0d4, /* MPHY_RX_APB_MC_STATUS_D4_D7_0  */
 0x0d8, /* MPHY_RX_APB_MC_STATUS_D8_DB_0  */
@@ -211,7 +198,6 @@ static u16 mphy_tx_apb[] = {
 0x030, /* MPHY_TX_APB_TX_ATTRIBUTE_30_33_0  */
 0x034, /* MPHY_TX_APB_TX_ATTRIBUTE_34_37_0  */
 0x038, /* MPHY_TX_APB_TX_ATTRIBUTE_38_3B_0  */
-0x040, /* MPHY_TX_APB_TX_STATUS_40_44_0     */
 0x060, /* MPHY_TX_APB_MC_ATTRIBUTE_60_63_0  */
 0x064, /* MPHY_TX_APB_MC_ATTRIBUTE_64_67_0  */
 0x100, /* MPHY_TX_APB_TX_VENDOR0_0          */
@@ -250,7 +236,6 @@ static u16 mphy_tx_apb[] = {
 
 struct ufs_tegra_host {
 	struct ufs_hba *hba;
-	struct phy *u_phy;
 	bool is_lane_clks_enabled;
 	bool x2config;
 	bool enable_mphy_rx_calib;
@@ -286,6 +271,7 @@ struct ufs_tegra_host {
 	struct clk *ufsdev_ref_clk;
 	struct regulator *vddio_ufs;
 	struct regulator *vddio_ufs_ap;
+	struct padctrl *ufs_padctrl;
 
 };
 
@@ -348,28 +334,24 @@ static inline void ufs_aux_clear_bits(void __iomem *ufs_aux_base, u32 val,
 	ufs_aux_writel(ufs_aux_base, update_val, offset);
 }
 
-static void ufs_save_regs(void __iomem *reg_base, u32 **save_addr,
+static void ufs_save_regs(void __iomem *reg_base, u32 *save_addr,
 				u16 reg_array[], u32 no_of_regs)
 {
 	u32 regs;
-	u32 *dest = *save_addr;
+	u32 *dest = save_addr;
 
 	for (regs = 0; regs < no_of_regs; ++regs, ++dest)
 		*dest = readl(reg_base + (u32)reg_array[regs]);
-
-	*save_addr = dest;
 }
 
-static void ufs_restore_regs(void __iomem *reg_base, u32 **save_addr,
+static void ufs_restore_regs(void __iomem *reg_base, u32 *save_addr,
 				u16 reg_array[], u32 no_of_regs)
 {
 	u32 regs;
-	u32 *src = *save_addr;
+	u32 *src = save_addr;
 
 	for (regs = 0; regs < no_of_regs; ++regs, ++src)
 		writel(*src, reg_base + (u32)reg_array[regs]);
-
-	*save_addr = src;
 }
 
 #endif

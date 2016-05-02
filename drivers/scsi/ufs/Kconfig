@@ -112,3 +112,14 @@ config SCSI_UFSHCD_TEGRA
 
 	Select this if you have UFS controller on Tegra chipset.
 	If unsure, say N.
+
+config SCSI_UFSHCD_PLATFORM_PM
+	tristate "Platform bus based UFS Controller support"
+	depends on SCSI_UFSHCD
+	---help---
+	This enables UFS Suspend/Resume and RTPM functionality. Select this if
+	you have an UFS controller on Platform bus.
+
+	If you have a controller with this interface, say Y or M here.
+
+	  If unsure, say N.

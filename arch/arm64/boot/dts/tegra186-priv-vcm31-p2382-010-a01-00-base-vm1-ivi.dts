@@ -573,4 +573,23 @@
 	rtcpu-vinotify {
 		status = "disabled";
 	};
+
+	sdhci@3460000 { /* Used for VSC_SERVER */
+		status = "disabled";
+	};
+
+	/* the virtual storage device node */
+	tegra_hv_storage {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <0>;
+		ivc = <&tegra_hv 66>;
+	};
+
+	tegra_hv_storage1 {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <1>;
+		ivc = <&tegra_hv 67>;
+	};
 };

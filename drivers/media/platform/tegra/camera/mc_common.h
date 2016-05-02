@@ -33,9 +33,17 @@
 #include "../csi/csi.h"
 
 #define MAX_FORMAT_NUM	64
-#define MAX_SUBDEVICES 4
-#define QUEUED_BUFFERS 4
+#define	MAX_SUBDEVICES	4
+#define	QUEUED_BUFFERS	4
+#define	ENABLE		1
+#define	DISABLE		0
 
+enum channel_capture_state {
+	CAPTURE_IDLE = 0,
+	CAPTURE_GOOD,
+	CAPTURE_TIMEOUT,
+	CAPTURE_ERROR,
+};
 /**
  * struct tegra_channel_buffer - video channel buffer
  * @buf: vb2 buffer base object
@@ -120,10 +128,11 @@ struct tegra_channel {
 
 	unsigned char port[TEGRA_CSI_BLOCKS];
 	unsigned int syncpt[TEGRA_CSI_BLOCKS];
-	unsigned int thresh[TEGRA_CSI_BLOCKS];
+	unsigned int syncpoint_fifo[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_state[QUEUED_BUFFERS];
 	struct vb2_buffer *buffers[QUEUED_BUFFERS];
+	unsigned int timeout;
 	unsigned int save_index;
 	unsigned int free_index;
 	unsigned int num_buffers;
@@ -157,8 +166,9 @@ struct tegra_channel {
 	atomic_t power_on_refcnt;
 	struct v4l2_fh *fh;
 	bool bypass;
+	bool bfirst_fstart;
+	enum channel_capture_state capture_state;
 	atomic_t is_streaming;
-	atomic_t is_hdmiin_unplug;
 	int requested_kbyteps;
 	unsigned long requested_hz;
 };

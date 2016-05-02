@@ -22,7 +22,7 @@
 #define __REGISTERS_H__
 
 /* VI registers */
-#define	TEGRA_VI_SYNCPT_WAIT_TIMEOUT			1000
+#define	TEGRA_VI_SYNCPT_WAIT_TIMEOUT			200
 #define	TEGRA_VI_CFG_VI_INCR_SYNCPT			0x000
 #define	VI_CFG_VI_INCR_SYNCPT_COND(x)			(x << 8)
 #define	VI_CSI_PP_LINE_START(port)			(4 + (port) * 4)
@@ -67,6 +67,7 @@
 #define	TEGRA_VI_CSI_SW_RESET				0x000
 #define	TEGRA_VI_CSI_SINGLE_SHOT			0x004
 #define	SINGLE_SHOT_CAPTURE				0x1
+#define	CAPTURE_GOOD_FRAME				0x1
 #define	TEGRA_VI_CSI_SINGLE_SHOT_STATE_UPDATE		0x008
 #define	TEGRA_VI_CSI_IMAGE_DEF				0x00c
 #define	BYPASS_PXL_TRANSFORM_OFFSET			24
@@ -111,6 +112,7 @@
 #define CSI_PP_CRC_CHECK_ENABLE				(0x1 << 7)
 #define CSI_PP_WC_CHECK					(0x1 << 8)
 #define CSI_PP_OUTPUT_FORMAT_STORE			(0x3 << 16)
+#define CSI_PPA_PAD_LINE_NOPAD				(0x2 << 24)
 #define CSI_PP_HEADER_EC_DISABLE			(0x1 << 27)
 #define CSI_PPA_PAD_FRAME_NOPAD				(0x2 << 28)
 
@@ -207,6 +209,7 @@
 
 #define INVALID_CSI_PORT				0xFF
 #define TEGRA_CSI_BLOCKS				3
+#define	SYNCPT_FIFO_DEPTH				2
 
 #define	TEGRA_CLOCK_VI_MAX				793600000
 #define	TEGRA_CLOCK_TPG_MAX				927000000

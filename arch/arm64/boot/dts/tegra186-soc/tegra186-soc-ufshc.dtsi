@@ -56,6 +56,8 @@
 		nvidia,mask-fast-auto-mode;
 		nvidia,max-hs-gear = <3>;
 		nvidia,max-pwm-gear = <4>;
+		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_UFS>;
+		pad-names = "ufs";
 		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UFS_P(0)>;
 		phy-names = "uphy";
 		status = "disabled";

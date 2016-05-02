@@ -152,10 +152,7 @@ struct gk20a_comptags {
 
 struct gk20a_mm_entry {
 	/* backing for */
-	void *cpu_va;
-	struct sg_table *sgt;
-	struct page **pages;
-	size_t size;
+	struct mem_desc mem;
 	int pgsz;
 	struct gk20a_mm_entry *entries;
 	int num_entries;

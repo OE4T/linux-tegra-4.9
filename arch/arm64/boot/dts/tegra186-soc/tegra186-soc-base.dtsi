@@ -665,7 +665,7 @@
 			num-ports = <6>;
 		};
 
-		vi@15700000 {
+		tegra_vi: vi@15700000 {
 			compatible = "nvidia,tegra186-vi";
 			power-domains = <&ve_pd>;
                         reg = <0x0 0x15700000 0x0 0x00100000>;

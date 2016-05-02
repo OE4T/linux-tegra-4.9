@@ -112,6 +112,7 @@
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <63>;
 				nvidia,frame-size = <128>;
+				device = <&tegra_vi>;
 			};
 			mods@32c0 {
 				compatible = "nvidia,tegra186-camera-ivc-protocol-mods";
@@ -229,6 +230,7 @@
 				reg-names = "rx", "tx";
 				nvidia,frame-count = <63>;
 				nvidia,frame-size = <128>;
+				device = <&tegra_vi>;
 			};
 			mods@32c0 {
 				compatible = "nvidia,tegra186-camera-ivc-protocol-mods";

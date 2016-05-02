@@ -220,7 +220,7 @@ static int nct1008_read_reg(struct i2c_client *client, u8 reg)
 
 static int nct1008_get_temp_common(int sensor,
 					struct nct1008_data *data,
-					long *temp)
+					int *temp)
 {
 	struct i2c_client *client = data->client;
 	struct nct1008_platform_data *pdata = client->dev.platform_data;
@@ -354,7 +354,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 	long int num;
 	int err;
 	u8 temp;
-	long curr_temp;
+	int curr_temp;
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_data *data = i2c_get_clientdata(client);
 	char bufTemp[MAX_STR_PRINT];
@@ -383,7 +383,7 @@ static ssize_t nct1008_set_temp_overheat(struct device *dev,
 		ret = nct1008_show_temp_overheat(dev, attr, bufOverheat);
 		dev_err(dev, "\nCurrent temp: %s ", bufTemp);
 		dev_err(dev, "\nOld overheat limit: %s ", bufOverheat);
-		dev_err(dev, "\nReset from overheat: curr temp=%ld, new overheat temp=%d\n\n",
+		dev_err(dev, "\nReset from overheat: curr temp=%d, new overheat temp=%d\n\n",
 			curr_temp, (int)num);
 	}
 
@@ -684,7 +684,7 @@ static int nct1008_shutdown_warning_get_cur_state(
 {
 	struct nct1008_data *data = cdev->devdata;
 	long limit = data->plat_data.sensors[EXT].shutdown_limit * 1000;
-	long temp;
+	int temp;
 
 	if (nct1008_get_temp_common(EXT, data, &temp))
 		return -1;
@@ -703,7 +703,7 @@ static int nct1008_shutdown_warning_set_cur_state(
 {
 	struct nct1008_data *data = cdev->devdata;
 	long limit = data->plat_data.sensors[EXT].shutdown_limit * 1000;
-	long temp;
+	int temp;
 
 	if (nct1008_get_temp_common(EXT, data, &temp))
 		return -1;
@@ -712,7 +712,7 @@ static int nct1008_shutdown_warning_set_cur_state(
 
 	if ((temp >= (limit - THERM_WARN_RANGE_HIGH_OFFSET)) &&
 		(temp != shutdown_warn_saved_temp)) {
-		pr_warn("NCT%s: Warning: chip temperature (%ld.%02ldC) is %s SHUTDOWN limit (%c%ldC).\n",
+		pr_warn("NCT%s: Warning: chip temperature (%d.%02dC) is %s SHUTDOWN limit (%c%ldC).\n",
 			(data->chip == NCT72) ? "72" : "1008",
 			temp / 1000, (temp % 1000) / 10,
 			temp > limit ? "above" :
@@ -781,7 +781,7 @@ static void nct1008_update(int sensor, struct nct1008_data *data)
 	struct thermal_zone_device *thz;
 	long low_temp, high_temp;
 	struct thermal_trip_info *trip_state;
-	long temp, trip_temp, hysteresis_temp;
+	int temp, trip_temp, hysteresis_temp;
 	int count;
 	enum thermal_trip_type trip_type;
 	low_temp = 0, high_temp = NCT1008_MAX_TEMP * 1000;
@@ -814,15 +814,14 @@ static void nct1008_update(int sensor, struct nct1008_data *data)
 	nct1008_thermal_set_limits(sensor, data, low_temp, high_temp);
 }
 
-static int nct1008_ext_get_temp(struct thermal_zone_device *thz,
-					unsigned long *temp)
+static int nct1008_ext_get_temp(struct thermal_zone_device *thz, int *temp)
 {
 	struct nct1008_data *data = thz->devdata;
 
 	return nct1008_get_temp_common(EXT, data, temp);
 }
 
-static int nct1008_ext_get_temp_as_sensor(void *data, long *temp)
+static int nct1008_ext_get_temp_as_sensor(void *data, int *temp)
 {
 	return nct1008_get_temp_common(EXT, (struct nct1008_data *) data, temp);
 }
@@ -840,7 +839,8 @@ static int nct1008_ext_bind(struct thermal_zone_device *thz,
 		if (!strcmp(sensor->trips[i].cdev_type, cdev->type))
 			thermal_zone_bind_cooling_device(thz, i, cdev,
 					sensor->trips[i].upper,
-					sensor->trips[i].lower);
+					sensor->trips[i].lower,
+					THERMAL_WEIGHT_DEFAULT);
 	}
 
 	return 0;
@@ -882,10 +882,8 @@ static inline int nct1008_loc_unbind(struct thermal_zone_device *thz,
 }
 
 /* This function reads the temperature value set for the given trip point. */
-static int nct1008_get_trip_temp(int sensor,
-					struct thermal_zone_device *thz,
-					int trip,
-					unsigned long *temp)
+static int nct1008_get_trip_temp(int sensor, struct thermal_zone_device *thz,
+					int trip, int *temp)
 {
 	struct nct1008_data *data = thz->devdata;
 	struct thermal_trip_info *trip_state =
@@ -910,8 +908,7 @@ static int nct1008_get_trip_temp(int sensor,
 /* This function reads the temperature value set for the given trip point for
    the local sensor. */
 static inline int nct1008_loc_get_trip_temp(struct thermal_zone_device *thz,
-						int trip,
-						unsigned long *temp)
+						int trip, int *temp)
 {
 	return nct1008_get_trip_temp(LOC, thz, trip, temp);
 }
@@ -919,18 +916,15 @@ static inline int nct1008_loc_get_trip_temp(struct thermal_zone_device *thz,
 /* This function reads the temperature value set for the given trip point for
 	the remote sensor. */
 static inline int nct1008_ext_get_trip_temp(struct thermal_zone_device *thz,
-						int trip,
-						unsigned long *temp)
+						int trip, int *temp)
 {
 	return nct1008_get_trip_temp(EXT, thz, trip, temp);
 }
 
 /* This function allows setting trip point temperature for the sensor
    specified. */
-static int nct1008_set_trip_temp(int sensor,
-					struct thermal_zone_device *thz,
-					int trip,
-					unsigned long temp)
+static int nct1008_set_trip_temp(int sensor, struct thermal_zone_device *thz,
+					int trip, int temp)
 {
 	struct nct1008_data *data = thz->devdata;
 
@@ -941,8 +935,7 @@ static int nct1008_set_trip_temp(int sensor,
 
 /* This function allows setting trip point temperature for the local sensor. */
 static inline int nct1008_loc_set_trip_temp(struct thermal_zone_device *thz,
-						int trip,
-						unsigned long temp)
+						int trip, int temp)
 {
 	return nct1008_set_trip_temp(LOC, thz, trip, temp);
 }
@@ -950,8 +943,7 @@ static inline int nct1008_loc_set_trip_temp(struct thermal_zone_device *thz,
 /* This function allows setting trip point temperature for the external
  * sensor. */
 static inline int nct1008_ext_set_trip_temp(struct thermal_zone_device *thz,
-						int trip,
-						unsigned long temp)
+						int trip, int temp)
 {
 	return nct1008_set_trip_temp(EXT, thz, trip, temp);
 }
@@ -1003,8 +995,7 @@ static inline int nct1008_ext_get_trip_type(struct thermal_zone_device *thz,
 }
 
 static int nct1008_get_trip_hyst(int sensor, struct thermal_zone_device *thz,
-						int trip,
-						long *hyst)
+						int trip, int *hyst)
 {
 	struct nct1008_data *data = thz->devdata;
 
@@ -1013,15 +1004,13 @@ static int nct1008_get_trip_hyst(int sensor, struct thermal_zone_device *thz,
 }
 
 static inline int  nct1008_loc_get_trip_hyst(struct thermal_zone_device *thz,
-						int trip,
-						long *hyst)
+						int trip, int *hyst)
 {
 	return nct1008_get_trip_hyst(LOC, thz, trip, hyst);
 }
 
 static inline int  nct1008_ext_get_trip_hyst(struct thermal_zone_device *thz,
-						int trip,
-						long *hyst)
+						int trip, int *hyst)
 {
 	return nct1008_get_trip_hyst(EXT, thz, trip, hyst);
 }
@@ -1032,7 +1021,7 @@ static int nct1008_get_trend(struct thermal_zone_device *thz,
 				int trip,
 				enum thermal_trend *trend)
 {
-	long trip_temp, trip_hyst;
+	int trip_temp, trip_hyst;
 	enum thermal_trip_type trip_type;
 
 	thz->ops->get_trip_temp(thz, trip, &trip_temp);
@@ -1087,15 +1076,14 @@ static inline int nct1008_ext_get_trend_as_sensor(void *data,
 
 
 /* Helper function to get temperature of the local sensor. */
-static int nct1008_loc_get_temp(struct thermal_zone_device *thz,
-					unsigned long *temp)
+static int nct1008_loc_get_temp(struct thermal_zone_device *thz, int *temp)
 {
 	struct nct1008_data *data = thz->devdata;
 
 	return nct1008_get_temp_common(LOC, data, temp);
 }
 
-static int nct1008_loc_get_temp_as_sensor(void *data, long *temp)
+static int nct1008_loc_get_temp_as_sensor(void *data, int *temp)
 {
 	return nct1008_get_temp_common(LOC, (struct nct1008_data *) data, temp);
 }
@@ -1116,7 +1104,8 @@ static int nct1008_loc_bind(struct thermal_zone_device *thz,
 		if (!strcmp(sensor_data->trips[i].cdev_type, cdev->type)) {
 			thermal_zone_bind_cooling_device(thz, i, cdev,
 				sensor_data->trips[i].upper,
-				sensor_data->trips[i].lower);
+				sensor_data->trips[i].lower,
+				THERMAL_WEIGHT_DEFAULT);
 			break;
 		}
 	}
@@ -1416,7 +1405,7 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 
 	/* Remote channel offset fraction (quarters) */
 	ret = nct1008_write_reg(client, OFFSET_QUARTER_WR,
-					(pdata->offset % 4) << 6);
+				(pdata->offset % 4) << 6);
 	if (ret < 0)
 		goto error;
 
@@ -1837,7 +1826,7 @@ static int nct1008_suspend_wakeup(struct device *dev)
 	struct i2c_client *client = to_i2c_client(dev);
 	int err;
 	struct nct1008_data *data = i2c_get_clientdata(client);
-	long temp;
+	int temp;
 	int sensor_nr;
 	struct nct1008_sensor_platform_data *sensor_data;
 

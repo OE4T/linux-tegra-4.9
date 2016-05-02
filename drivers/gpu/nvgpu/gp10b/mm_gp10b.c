@@ -147,16 +147,16 @@ static u64 gp10b_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 
 static u32 *pde3_from_index(struct gk20a_mm_entry *entry, u32 i)
 {
-	return (u32 *) (((u8 *)entry->cpu_va) + i*gmmu_new_pde__size_v());
+	return (u32 *) (((u8 *)entry->mem.cpu_va) + i*gmmu_new_pde__size_v());
 }
 
 static u64 entry_addr(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
 	u64 addr;
 	if (g->mm.has_physical_mode)
-		addr = sg_phys(entry->sgt->sgl);
+		addr = sg_phys(entry->mem.sgt->sgl);
 	else
-		addr = g->ops.mm.get_iova_addr(g, entry->sgt->sgl, 0);
+		addr = g->ops.mm.get_iova_addr(g, entry->mem.sgt->sgl, 0);
 
 	return addr;
 }
@@ -202,7 +202,7 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 
 static u32 *pde0_from_index(struct gk20a_mm_entry *entry, u32 i)
 {
-	return (u32 *) (((u8 *)entry->cpu_va) + i*gmmu_new_dual_pde__size_v());
+	return (u32 *) (((u8 *)entry->mem.cpu_va) + i*gmmu_new_dual_pde__size_v());
 }
 
 static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
@@ -224,8 +224,8 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 
 	gk20a_dbg_fn("");
 
-	small_valid = entry->size && entry->pgsz == gmmu_page_size_small;
-	big_valid = entry->size && entry->pgsz == gmmu_page_size_big;
+	small_valid = entry->mem.size && entry->pgsz == gmmu_page_size_small;
+	big_valid = entry->mem.size && entry->pgsz == gmmu_page_size_big;
 
 	if (small_valid) {
 		pte_addr_small = entry_addr(g, entry)
@@ -325,8 +325,8 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		gk20a_dbg(gpu_dbg_pte, "pte_cur=%d [0x0,0x0]", i);
 	}
 
-	gk20a_mem_wr32(pte->cpu_va + i*8, 0, pte_w[0]);
-	gk20a_mem_wr32(pte->cpu_va + i*8, 1, pte_w[1]);
+	gk20a_mem_wr32(pte->mem.cpu_va + i*8, 0, pte_w[0]);
+	gk20a_mem_wr32(pte->mem.cpu_va + i*8, 1, pte_w[1]);
 
 	if (*iova) {
 		*iova += page_size;

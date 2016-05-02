@@ -14,6 +14,8 @@
 #ifndef _LINUX_TEGRA_IVC_BUS_H
 #define _LINUX_TEGRA_IVC_BUS_H
 
+#include <linux/tegra-ivc-instance.h>
+
 extern struct bus_type tegra_ivc_bus_type;
 struct tegra_ivc_bus;
 struct tegra_hsp_ops;
@@ -24,7 +26,10 @@ void tegra_ivc_bus_destroy(struct tegra_ivc_bus *ibus);
 struct tegra_ivc_driver {
 	struct device_driver driver;
 	struct device_type *dev_type;
-	const struct tegra_hsp_ops *ops;
+	union {
+		const struct tegra_hsp_ops *hsp;
+		const struct tegra_ivc_channel_ops *channel;
+	} ops;
 };
 
 static inline struct tegra_ivc_driver *to_tegra_ivc_driver(
@@ -59,9 +64,52 @@ static inline const struct tegra_hsp_ops *tegra_hsp_dev_ops(struct device *dev)
 	const struct tegra_hsp_ops *ops = NULL;
 
 	if (drv != NULL && drv->dev_type == &tegra_hsp_type)
-		ops = drv->ops;
+		ops = drv->ops.hsp;
 	return ops;
 }
+
+/* IVC channel driver support */
+extern struct device_type tegra_ivc_channel_type;
+
+struct tegra_ivc_channel {
+	struct ivc ivc;
+	struct device dev;
+};
+
+static inline void *tegra_ivc_channel_get_drvdata(
+		struct tegra_ivc_channel *chan)
+{
+	return dev_get_drvdata(&chan->dev);
+}
+
+static inline void tegra_ivc_channel_set_drvdata(
+		struct tegra_ivc_channel *chan, void *data)
+{
+	dev_set_drvdata(&chan->dev, data);
+}
+
+static inline struct tegra_ivc_channel *to_tegra_ivc_channel(
+		struct device *dev)
+{
+	return container_of(dev, struct tegra_ivc_channel, dev);
+}
+
+static inline const struct tegra_ivc_channel_ops *tegra_ivc_channel_ops(
+		struct device *dev)
+{
+	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
+	const struct tegra_ivc_channel_ops *ops = NULL;
+
+	if (drv != NULL && drv->dev_type == &tegra_ivc_channel_type)
+		ops = drv->ops.channel;
+	return ops;
+}
+
+struct tegra_ivc_channel_ops {
+	int (*probe)(struct tegra_ivc_channel *);
+	void (*remove)(struct tegra_ivc_channel *);
+	void (*rx_notify)(struct tegra_ivc_channel *);
+};
 
 /* Legacy mailbox support */
 struct tegra_ivc_mbox_msg {

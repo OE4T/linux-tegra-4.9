@@ -16,9 +16,9 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
+#include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/tegra-ivc.h>
-#include <linux/tegra-ivc-instance.h>
 #include <linux/mailbox_controller.h>
 #include <linux/tegra_ast.h>
 #include <linux/tegra-ivc-bus.h>
@@ -29,14 +29,28 @@ static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 {
 	struct tegra_ivc_driver *ivcdrv = to_tegra_ivc_driver(drv);
 
-	return ivcdrv->dev_type == dev->type;
+	if (dev->type != ivcdrv->dev_type)
+		return 0;
+
+	if (dev->type == &tegra_ivc_channel_type)
+		return of_driver_match_device(dev, drv);
+
+	return 1;
 }
 
 static int tegra_ivc_bus_probe(struct device *dev)
 {
 	int ret = -ENXIO;
 
-	if (dev->type == &tegra_hsp_type) {
+	if (dev->type == &tegra_ivc_channel_type) {
+		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+		const struct tegra_ivc_channel_ops *ops =
+			tegra_ivc_channel_ops(dev);
+
+		BUG_ON(ops == NULL);
+		ret = (ops->probe != NULL) ? ops->probe(chan) : 0;
+
+	} else if (dev->type == &tegra_hsp_type) {
 		const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
 
 		BUG_ON(ops == NULL || ops->probe == NULL);
@@ -48,7 +62,15 @@ static int tegra_ivc_bus_probe(struct device *dev)
 
 static int tegra_ivc_bus_remove(struct device *dev)
 {
-	if (dev->type == &tegra_hsp_type) {
+	if (dev->type == &tegra_ivc_channel_type) {
+		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+		const struct tegra_ivc_channel_ops *ops =
+			tegra_ivc_channel_ops(dev);
+
+		if (ops->remove != NULL)
+			ops->remove(chan);
+
+	} else if (dev->type == &tegra_hsp_type) {
 		const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
 
 		if (ops->remove != NULL)
@@ -126,12 +148,6 @@ void tegra_hsp_notify(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_hsp_notify);
 
-struct tegra_ivc_channel {
-	struct device dev;
-	struct ivc ivc;
-	bool last_tx_done;
-};
-
 static void tegra_ivc_channel_release(struct device *dev)
 {
 	struct tegra_ivc_channel *chan =
@@ -160,6 +176,39 @@ static void tegra_ivc_channel_tx_notify(struct ivc *ivc)
 	tegra_hsp_ring(&bus->dev);
 }
 
+static void tegra_ivc_channel_rx_notify(struct tegra_ivc_channel *chan)
+{
+	struct ivc *ivc = &chan->ivc;
+	const struct tegra_ivc_channel_ops *ops =
+		tegra_ivc_channel_ops(&chan->dev);
+
+	if (ops == NULL) {
+		struct mbox_chan *mbox_chan =
+			tegra_ivc_channel_get_drvdata(chan);
+
+		do {
+			struct tegra_ivc_mbox_msg msg = {
+				.data = tegra_ivc_read_get_next_frame(ivc),
+				.length = ivc->frame_size,
+			};
+
+			WARN_ON(chan != mbox_chan->con_priv);
+			mbox_chan_received_data(mbox_chan, &msg);
+			tegra_ivc_read_advance(ivc);
+		} while (tegra_ivc_can_read(ivc));
+
+		return;
+	}
+
+	if (ops->rx_notify != NULL)
+		ops->rx_notify(chan);
+}
+
+struct device_type tegra_ivc_channel_type = {
+	.name = "tegra-ivc-channel",
+};
+EXPORT_SYMBOL(tegra_ivc_channel_type);
+
 static int tegra_ivc_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
 {
 	struct tegra_ivc_channel *chan = mbox_chan->con_priv;
@@ -168,25 +217,31 @@ static int tegra_ivc_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
 
 	if (tegra_ivc_write(&chan->ivc, msg->data, msg->length) != msg->length)
 		ret = -EBUSY;
-
-	chan->last_tx_done = ret == 0;
 	return ret;
 }
 
 static int tegra_ivc_mbox_startup(struct mbox_chan *mbox_chan)
 {
+	struct tegra_ivc_channel *chan = mbox_chan->con_priv;
+
+	if (chan->dev.driver != NULL)
+		return -EBUSY;
+
+	tegra_ivc_channel_set_drvdata(chan, mbox_chan);
 	return 0;
 }
 
 static void tegra_ivc_mbox_shutdown(struct mbox_chan *mbox_chan)
 {
+	struct tegra_ivc_channel *chan = mbox_chan->con_priv;
+
+	WARN_ON(chan->dev.driver != NULL);
+	tegra_ivc_channel_set_drvdata(chan, NULL);
 }
 
 static bool tegra_ivc_mbox_last_tx_done(struct mbox_chan *mbox_chan)
 {
-	struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
-	return chan->last_tx_done;
+	return true;
 }
 
 static struct mbox_chan_ops tegra_ivc_mbox_chan_ops = {
@@ -205,16 +260,9 @@ static void tegra_ivc_bus_rx_worker(struct work_struct *work)
 	for (i = 0; i < bus->mbox.num_chans; i++) {
 		struct mbox_chan *mbox_chan = &bus->mbox.chans[i];
 		struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-		struct ivc *ivc = &chan->ivc;
 
-		while (tegra_ivc_can_read(ivc)) {
-			struct tegra_ivc_mbox_msg msg;
-
-			msg.data = tegra_ivc_read_get_next_frame(ivc);
-			msg.length = ivc->frame_size;
-			mbox_chan_received_data(mbox_chan, &msg);
-			tegra_ivc_read_advance(ivc);
-		}
+		if (tegra_ivc_can_read(&chan->ivc))
+			tegra_ivc_channel_rx_notify(chan);
 	}
 }
 
@@ -276,6 +324,7 @@ static int tegra_ivc_bus_parse_channel(struct device *dev, int idx,
 		return -ENOMEM;
 
 	chan->dev.parent = dev;
+	chan->dev.type = &tegra_ivc_channel_type;
 	chan->dev.bus = &tegra_ivc_bus_type;
 	chan->dev.of_node = of_node_get(ch_node);
 	chan->dev.release = tegra_ivc_channel_release;

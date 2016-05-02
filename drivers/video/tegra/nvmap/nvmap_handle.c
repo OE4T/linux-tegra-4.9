@@ -166,7 +166,14 @@ struct nvmap_handle_ref *nvmap_try_duplicate_by_ivmid(
 	for (n = rb_first(&nvmap_dev->handles); n; n = rb_next(n)) {
 		h = rb_entry(n, struct nvmap_handle, node);
 		if (h->ivm_id == ivm_id) {
-			h = nvmap_handle_get(h);
+			BUG_ON(!virt_addr_valid(h));
+			/* get handle's ref only if non-zero */
+			if (atomic_inc_not_zero(&h->ref) == 0) {
+				*block = h->carveout;
+				/* strip handle's block and fail duplication */
+				h->carveout = NULL;
+				break;
+			}
 			spin_unlock(&nvmap_dev->handle_lock);
 			goto found;
 		}

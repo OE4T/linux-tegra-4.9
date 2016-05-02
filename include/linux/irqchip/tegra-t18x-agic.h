@@ -33,6 +33,7 @@ enum tegra_agic_cpu {
 };
 
 /* INT_ADMA Channel End of Transfer Interrupt */
+#define INT_AGIC_START			32
 #define INT_ADMA_EOT0			32
 #define INT_ADMA_EOT1			33
 #define INT_ADMA_EOT2			34
@@ -166,5 +167,7 @@ enum tegra_agic_cpu {
 
 /* UART interrupt to AGIC (In FPGA platform only) */
 #define INT_UART_FPGA			117
+
+#define INT_AGIC_END			117
 
 #endif /* _TEGRA_T18X_AGIC_H_ */

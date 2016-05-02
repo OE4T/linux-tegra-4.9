@@ -138,7 +138,8 @@
 
 		hsp {
 			compatible = "nvidia,tegra186-hsp-mailbox";
-			nvidia,hsp-shared-mailbox = <&sce_hsp 1>;
+			nvidia,hsp-shared-mailbox = <&sce_hsp 1 &sce_hsp 6>;
+			nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
 		};
 	};
 

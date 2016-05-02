@@ -1222,12 +1222,13 @@ static int tegra_se_setup_ablk_req(struct tegra_se_dev *se_dev)
 
 	for (i = 0; i < se_dev->req_cnt; i++) {
 		req = se_dev->reqs[i];
+
 		num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
+
 		if (num_sgs == 1)
 			memcpy(buf, sg_virt(req->src), req->nbytes);
 		else
 			sg_copy_to_buffer(req->src, num_sgs, buf, req->nbytes);
-
 		buf += req->nbytes;
 	}
 
@@ -1309,24 +1310,15 @@ static int tegra_se_get_free_cmdbuf(struct tegra_se_dev *se_dev)
 	return (i == SE_MAX_CMDBUF_TIMEOUT) ? -ENOMEM : index;
 }
 
-static void tegra_se_process_new_req(struct crypto_async_request *async_req)
+static void tegra_se_process_new_req(struct tegra_se_dev *se_dev)
 {
-	struct tegra_se_dev *se_dev;
-	struct ablkcipher_request *req = ablkcipher_request_cast(async_req);
-	struct tegra_se_req_context *req_ctx = ablkcipher_request_ctx(req);
+	struct ablkcipher_request *req;
 	u32 *cpuvaddr = NULL;
 	dma_addr_t iova = 0;
 	int index = 0;
 	int err = 0;
 	int i = 0;
 
-	se_dev = req_ctx->se_dev;
-	se_dev->reqs[se_dev->req_cnt++] = req;
-	se_dev->gather_buf_sz += req->nbytes;
-
-	if (se_dev->queue.qlen &&
-		(se_dev->req_cnt < SE_MAX_TASKS_PER_SUBMIT))
-		return;
 	tegra_se_boost_cpu_freq(se_dev);
 
 	err = tegra_se_setup_ablk_req(se_dev);
@@ -1376,25 +1368,39 @@ static void tegra_se_work_handler(struct work_struct *work)
 					struct tegra_se_dev, se_work);
 	struct crypto_async_request *async_req = NULL;
 	struct crypto_async_request *backlog = NULL;
+	struct ablkcipher_request *req;
+	bool process_requests;
 
 	mutex_lock(&se_dev->mtx);
 	do {
+		process_requests = false;
 		mutex_lock(&se_dev->lock);
-		backlog = crypto_get_backlog(&se_dev->queue);
-		async_req = crypto_dequeue_request(&se_dev->queue);
-		if (!async_req)
-			se_dev->work_q_busy = false;
+		do {
+			backlog = crypto_get_backlog(&se_dev->queue);
+			async_req = crypto_dequeue_request(&se_dev->queue);
+			if (!async_req)
+				se_dev->work_q_busy = false;
+
+			if (backlog) {
+				backlog->complete(backlog, -EINPROGRESS);
+				backlog = NULL;
+			}
+
+			if (async_req) {
+				req = ablkcipher_request_cast(async_req);
+				se_dev->reqs[se_dev->req_cnt] = req;
+				se_dev->gather_buf_sz += req->nbytes;
+				se_dev->req_cnt++;
+				process_requests = true;
+			} else {
+				break;
+			}
+		} while (se_dev->queue.qlen &&
+				(se_dev->req_cnt < SE_MAX_TASKS_PER_SUBMIT));
 		mutex_unlock(&se_dev->lock);
 
-		if (backlog) {
-			backlog->complete(backlog, -EINPROGRESS);
-			backlog = NULL;
-		}
-
-		if (async_req) {
-			tegra_se_process_new_req(async_req);
-			async_req = NULL;
-		}
+		if (process_requests)
+			tegra_se_process_new_req(se_dev);
 	} while (se_dev->work_q_busy);
 	mutex_unlock(&se_dev->mtx);
 }
@@ -2989,7 +2995,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	int err = 0, i = 0;
 	char se_nvhost_name[15];
-
 
 	se_dev = kzalloc(sizeof(struct tegra_se_dev), GFP_KERNEL);
 	if (!se_dev) {

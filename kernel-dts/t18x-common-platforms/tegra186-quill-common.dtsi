@@ -839,6 +839,10 @@
 		status = "okay";
 	};
 
+	tegra-hsp@3c00000 {
+		status = "okay";
+	};
+
 	ast@b040000 {
 		status = "okay";
 	};

@@ -563,9 +563,11 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 
 	gk20a_dbg_fn("");
 
+	/* note: mem_desc slightly abused (wrt. alloc_gmmu_pages) */
+
 	pages = alloc_pages(GFP_KERNEL, order);
 	if (!pages) {
-		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed\n");
+		gk20a_dbg(gpu_dbg_pte, "alloc_pages failed");
 		goto err_out;
 	}
 	entry->mem.sgt = kzalloc(sizeof(*entry->mem.sgt), GFP_KERNEL);
@@ -575,7 +577,7 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 	}
 	err = sg_alloc_table(entry->mem.sgt, 1, GFP_KERNEL);
 	if (err) {
-		gk20a_dbg(gpu_dbg_pte, "sg_alloc_table failed\n");
+		gk20a_dbg(gpu_dbg_pte, "sg_alloc_table failed");
 		goto err_sg_table;
 	}
 	sg_set_page(entry->mem.sgt->sgl, pages, len, 0);
@@ -598,12 +600,16 @@ static void free_gmmu_phys_pages(struct vm_gk20a *vm,
 			    struct gk20a_mm_entry *entry)
 {
 	gk20a_dbg_fn("");
+
+	/* note: mem_desc slightly abused (wrt. free_gmmu_pages) */
+
 	free_pages((unsigned long)entry->mem.cpu_va, get_order(entry->mem.size));
 	entry->mem.cpu_va = NULL;
 
 	sg_free_table(entry->mem.sgt);
 	kfree(entry->mem.sgt);
 	entry->mem.sgt = NULL;
+	entry->mem.size = 0;
 }
 
 static int map_gmmu_phys_pages(struct gk20a_mm_entry *entry)
@@ -625,83 +631,43 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 			    struct gk20a_mm_entry *entry)
 {
 	struct device *d = dev_from_vm(vm);
+	struct gk20a *g = gk20a_from_vm(vm);
 	u32 num_pages = 1 << order;
 	u32 len = num_pages * PAGE_SIZE;
-	dma_addr_t iova;
-	DEFINE_DMA_ATTRS(attrs);
-	void *cpuva;
-	int err = 0;
+	int err;
 
 	gk20a_dbg_fn("");
 
 	if (tegra_platform_is_linsim())
 		return alloc_gmmu_phys_pages(vm, order, entry);
 
-	entry->mem.size = len;
-
 	/*
 	 * On arm32 we're limited by vmalloc space, so we do not map pages by
 	 * default.
 	 */
-	if (IS_ENABLED(CONFIG_ARM64)) {
-		cpuva = dma_zalloc_coherent(d, len, &iova, GFP_KERNEL);
-		if (!cpuva) {
-			gk20a_err(d, "memory allocation failed\n");
-			goto err_out;
-		}
+	if (IS_ENABLED(CONFIG_ARM64))
+		err = gk20a_gmmu_alloc(g, len, &entry->mem);
+	else
+		err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+				len, &entry->mem);
 
-		err = gk20a_get_sgtable(d, &entry->mem.sgt, cpuva, iova, len);
-		if (err) {
-			gk20a_err(d, "sgt allocation failed\n");
-			goto err_free;
-		}
 
-		entry->mem.cpu_va = cpuva;
-	} else {
-		struct page **pages;
-
-		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-		pages = dma_alloc_attrs(d, len, &iova, GFP_KERNEL, &attrs);
-		if (!pages) {
-			gk20a_err(d, "memory allocation failed\n");
-			goto err_out;
-		}
-
-		err = gk20a_get_sgtable_from_pages(d, &entry->mem.sgt, pages,
-					iova, len);
-		if (err) {
-			gk20a_err(d, "sgt allocation failed\n");
-			goto err_free;
-		}
-
-		entry->mem.pages = pages;
+	if (err) {
+		gk20a_err(d, "memory allocation failed");
+		return -ENOMEM;
 	}
 
 	return 0;
-
-err_free:
-	if (IS_ENABLED(CONFIG_ARM64)) {
-		dma_free_coherent(d, len, entry->mem.cpu_va, iova);
-		cpuva = NULL;
-	} else {
-		dma_free_attrs(d, len, entry->mem.pages, iova, &attrs);
-		entry->mem.pages = NULL;
-	}
-	iova = 0;
-err_out:
-	return -ENOMEM;
 }
 
 void free_gmmu_pages(struct vm_gk20a *vm,
 		     struct gk20a_mm_entry *entry)
 {
-	struct device *d = dev_from_vm(vm);
-	u64 iova;
-	DEFINE_DMA_ATTRS(attrs);
+	struct gk20a *g = gk20a_from_vm(vm);
 
 	gk20a_dbg_fn("");
 
-	if (!entry->mem.sgt)
+	if (!entry->mem.size)
 		return;
 
 	if (tegra_platform_is_linsim()) {
@@ -709,24 +675,15 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 		return;
 	}
 
-	iova = sg_dma_address(entry->mem.sgt->sgl);
-
-	gk20a_free_sgtable(&entry->mem.sgt);
-
 	/*
 	 * On arm32 we're limited by vmalloc space, so we do not map pages by
 	 * default.
 	 */
-	if (IS_ENABLED(CONFIG_ARM64)) {
-		dma_free_coherent(d, entry->mem.size, entry->mem.cpu_va, iova);
-		entry->mem.cpu_va = NULL;
-	} else {
-		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-		dma_free_attrs(d, entry->mem.size, entry->mem.pages, iova, &attrs);
-		entry->mem.pages = NULL;
-	}
-	entry->mem.size = 0;
-	entry->mem.sgt = NULL;
+	if (IS_ENABLED(CONFIG_ARM64))
+		gk20a_gmmu_free(g, &entry->mem);
+	else
+		gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+				&entry->mem);
 }
 
 int map_gmmu_pages(struct gk20a_mm_entry *entry)
@@ -2140,6 +2097,8 @@ void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
 
 	if (mem->sgt)
 		gk20a_free_sgtable(&mem->sgt);
+
+	mem->size = 0;
 }
 
 void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)

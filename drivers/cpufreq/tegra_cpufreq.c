@@ -555,6 +555,9 @@ static int set_hint(void *data, u64 val)
 
 	if (!val)
 		goto end;
+
+	/* Take hotplug lock before taking tegra cpufreq lock */
+	get_online_cpus();
 	if (cpu_online(cpu)) {
 		slock = &per_cpu(pcpu_slock, cpu);
 		spin_lock_irqsave(slock, flags);
@@ -566,6 +569,7 @@ static int set_hint(void *data, u64 val)
 
 		spin_unlock_irqrestore(slock, flags);
 	}
+	put_online_cpus();
 end:
 	return 0;
 }
@@ -578,6 +582,10 @@ static int get_hint(void *data, u64 *hint)
 	unsigned long flags;
 	spinlock_t *slock;
 
+	*hint = 0;
+
+	/* Take hotplug lock before taking tegra cpufreq lock */
+	get_online_cpus();
 	if (cpu_online(cpu)) {
 		slock = &per_cpu(pcpu_slock, cpu);
 		spin_lock_irqsave(slock, flags);
@@ -589,6 +597,7 @@ static int get_hint(void *data, u64 *hint)
 
 		spin_unlock_irqrestore(slock, flags);
 	}
+	put_online_cpus();
 	return 0;
 }
 

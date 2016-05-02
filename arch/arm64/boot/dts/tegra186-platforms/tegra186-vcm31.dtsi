@@ -187,6 +187,10 @@
 		freq_table_step_size = /bits/ 16 <1>;
 	};
 
+	tegra-hsp@3c00000 {
+		status = "okay";
+	};
+
 	csi_mipical {
 		compatible = "nvidia, tegra186_csi_mipical";
 		reg = <0x0 0x03990000 0x0 0x100>;

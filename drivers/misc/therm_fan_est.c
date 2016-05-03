@@ -126,7 +126,8 @@ static int therm_fan_est_bind(struct thermal_zone_device *thz,
 	struct therm_fan_estimator *est = thz->devdata;
 	if (!strcmp(cdev->type, est->cdev_type)) {
 		for (i = 0; i < MAX_ACTIVE_STATES; i++)
-			thermal_zone_bind_cooling_device(thz, i, cdev, i, i);
+			thermal_zone_bind_cooling_device(thz, i, cdev, i, i,
+					THERMAL_WEIGHT_DEFAULT);
 	}
 
 	return 0;
@@ -154,7 +155,7 @@ static int therm_fan_est_get_trip_type(struct thermal_zone_device *thz,
 }
 
 static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
-					int trip, long *temp)
+					int trip, int *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -170,7 +171,7 @@ static int therm_fan_est_get_trip_temp(struct thermal_zone_device *thz,
 }
 
 static int therm_fan_est_set_trip_temp(struct thermal_zone_device *thz,
-					int trip, long temp)
+					int trip, int temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -182,7 +183,7 @@ static int therm_fan_est_set_trip_temp(struct thermal_zone_device *thz,
 	return 0;
 }
 
-static int therm_fan_est_get_temp(struct thermal_zone_device *thz, long *temp)
+static int therm_fan_est_get_temp(struct thermal_zone_device *thz, int *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -191,7 +192,7 @@ static int therm_fan_est_get_temp(struct thermal_zone_device *thz, long *temp)
 }
 
 static int therm_fan_est_set_trip_hyst(struct thermal_zone_device *thz,
-				int trip, long hyst_temp)
+				int trip, int hyst_temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 
@@ -205,7 +206,7 @@ static int therm_fan_est_set_trip_hyst(struct thermal_zone_device *thz,
 }
 
 static int therm_fan_est_get_trip_hyst(struct thermal_zone_device *thz,
-				int trip, long *temp)
+				int trip, int *temp)
 {
 	struct therm_fan_estimator *est = thz->devdata;
 

@@ -910,11 +910,12 @@ static int pwm_fan_probe(struct platform_device *pdev)
 			goto tach_request_irq_fail;
 		}
 
-		err = gpio_sysfs_set_active_low(fan_data->tach_gpio, 1);
-		if (err < 0) {
-			dev_err(&pdev->dev, "fan tach set gpio active low failed\n");
-			goto tach_request_irq_fail;
-		}
+		/* TODO: Find a workaround for using the deprecated
+		 * gpio_sysfs_set_active_low API which has been deprecated on
+		 * the 4.4 kernel version. The calls to change the poliarity of
+		 * the tach_gpio has been temporarily disabled as it is not
+		 * needed for regular operation of the fan cooling device.
+		 */
 
 		err = request_irq(fan_data->tach_irq, fan_tach_isr,
 			IRQF_TRIGGER_FALLING | IRQF_TRIGGER_RISING,
@@ -1050,7 +1051,6 @@ static int pwm_fan_suspend(struct platform_device *pdev, pm_message_t state)
 static int pwm_fan_resume(struct platform_device *pdev)
 {
 	struct fan_dev_data *fan_data = platform_get_drvdata(pdev);
-	int err;
 
 	/*Sanity check, want to make sure fan is off when the driver resumes*/
 	mutex_lock(&fan_data->fan_state_lock);

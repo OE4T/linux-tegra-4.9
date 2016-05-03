@@ -110,11 +110,8 @@ static void *tegra_emc_dt_parse_pdata_comp(const char *emc_mode,
 						iter->full_name);
 				continue;
 			}
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-			strncpy(tables[i].src_name, source_name, 16);
-#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
-			strncpy(tables[i].src_name, source_name, 32);
-#endif
+			strlcpy(tables[i].src_name, source_name,
+					sizeof(tables[i].src_name));
 
 			ret = of_property_read_string(iter,
 					"nvidia,dvfs-version", &dvfs_ver);

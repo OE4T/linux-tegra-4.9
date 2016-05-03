@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Automatic Clock Management
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -72,6 +72,20 @@ struct nvhost_module_client {
 	void *priv;
 };
 
+static bool nvhost_module_emc_clock(struct nvhost_clock *clock)
+{
+	return (clock->moduleid ==
+		NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER) ||
+	       (clock->moduleid == NVHOST_MODULE_ID_EMC_SHARED);
+}
+
+static bool nvhost_is_bwmgr_clk(struct nvhost_device_data *pdata, int index)
+{
+
+	return (nvhost_module_emc_clock(&pdata->clocks[index]) &&
+		pdata->bwmgr_handle);
+}
+
 static void do_powergate_locked(int id)
 {
 	nvhost_dbg_fn("%d", id);
@@ -93,6 +107,8 @@ static void do_unpowergate_locked(int id)
 static void dump_clock_status(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+	unsigned long rate = 0;
+
 	int i;
 
 	pr_info("\n%s: %s status:\n", __func__, dev_name(&dev->dev));
@@ -100,9 +116,15 @@ static void dump_clock_status(struct platform_device *dev)
 	for (i = 0; i < NVHOST_MODULE_MAX_CLOCKS; i++) {
 		if (!pdata->clocks[i].name)
 			break;
+
+		if (nvhost_is_bwmgr_clk(pdata, i))
+			rate = tegra_bwmgr_get_emc_rate();
+		else if (pdata->clk[i])
+			rate = clk_get_rate(pdata->clk[i]);
+
 		pr_info("%s: clock %s: rate = %lu\n",
 			__func__, pdata->clocks[i].name,
-			clk_get_rate(pdata->clk[i]));
+			rate);
 	}
 }
 
@@ -131,7 +153,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 		tegra_periph_reset_assert(pdata->clk[0]);
 	}
 
-	if (pdata->clocks[1].reset) {
+	if (pdata->clk[1] && pdata->clocks[1].reset) {
 		ret = tegra_mc_flush(pdata->clocks[1].reset);
 		if (ret) {
 			dump_clock_status(nvhost_get_host(dev)->dev);
@@ -148,7 +170,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 		tegra_mc_flush_done(pdata->clocks[0].reset);
 	}
 
-	if (pdata->clocks[1].reset) {
+	if (pdata->clk[1] && pdata->clocks[1].reset) {
 		tegra_periph_reset_deassert(pdata->clk[1]);
 		tegra_mc_flush_done(pdata->clocks[1].reset);
 	}
@@ -342,29 +364,25 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 int nvhost_module_get_rate(struct platform_device *dev, unsigned long *rate,
 		int index)
 {
-	struct clk *c;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	int err = 0;
-
-	c = pdata->clk[index];
-	if (!c)
-		return -EINVAL;
 
 	/* Need to enable client to get correct rate */
 	err = nvhost_module_busy(dev);
 	if (err)
 		return err;
 
-	*rate = clk_get_rate(c);
-	nvhost_module_idle(dev);
-	return 0;
-}
+	if (nvhost_is_bwmgr_clk(pdata, index))
+		*rate = tegra_bwmgr_get_emc_rate();
+	else {
+		if (pdata->clk[index])
+			*rate = clk_get_rate(pdata->clk[index]);
+		else
+			err = -EINVAL;
+	}
 
-static bool nvhost_module_emc_clock(struct nvhost_clock *clock)
-{
-	return (clock->moduleid ==
-		NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER) ||
-	       (clock->moduleid == NVHOST_MODULE_ID_EMC_SHARED);
+	nvhost_module_idle(dev);
+	return err;
 }
 
 static int nvhost_module_update_rate(struct platform_device *dev, int index)
@@ -375,7 +393,7 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	struct nvhost_module_client *m;
 	int ret = -EINVAL;
 
-	if (!pdata->clk[index])
+	if (!nvhost_is_bwmgr_clk(pdata, index) && !pdata->clk[index])
 		return -EINVAL;
 
 	/* aggregate client constraints */
@@ -423,14 +441,11 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 	trace_nvhost_module_update_rate(dev->name, pdata->clocks[index].name,
 					rate);
 
-	if (IS_ENABLED(CONFIG_COMMON_CLK) &&
-	    nvhost_module_emc_clock(&pdata->clocks[index])) {
-		if (pdata->bwmgr_handle)
-			ret = tegra_bwmgr_set_emc(pdata->bwmgr_handle, rate,
-				pdata->clocks[index].bwmgr_request_type);
-	} else {
+	if (nvhost_is_bwmgr_clk(pdata, index))
+		ret = tegra_bwmgr_set_emc(pdata->bwmgr_handle, rate,
+			pdata->clocks[index].bwmgr_request_type);
+	else
 		ret = clk_set_rate(pdata->clk[index], rate);
-	}
 
 	return ret;
 
@@ -707,7 +722,14 @@ int nvhost_module_init(struct platform_device *dev)
 		char devname[MAX_DEVID_LENGTH];
 		long rate = pdata->clocks[i].default_rate;
 		struct clk *c;
-		int bwmgr_request_type = pdata->clocks[i].bwmgr_request_type;
+
+		if (nvhost_is_bwmgr_clk(pdata, i)) {
+			tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
+				pdata->clocks[i].bwmgr_request_type);
+			pdata->clk[pdata->num_clks++] = NULL;
+			i++;
+			continue;
+		}
 
 		snprintf(devname, MAX_DEVID_LENGTH,
 			 (dev->id <= 0) ? "tegra_%s" : "tegra_%s.%d",
@@ -743,12 +765,7 @@ int nvhost_module_init(struct platform_device *dev)
 		rate = clk_round_rate(c, rate);
 		clk_prepare_enable(c);
 
-		if (!IS_ENABLED(CONFIG_COMMON_CLK) ||
-		    !nvhost_module_emc_clock(&pdata->clocks[i]))
-			clk_set_rate(c, rate);
-		else if (pdata->bwmgr_handle)
-			tegra_bwmgr_set_emc(pdata->bwmgr_handle, 0,
-					bwmgr_request_type);
+		clk_set_rate(c, rate);
 
 		pdata->clk[pdata->num_clks++] = c;
 		i++;
@@ -767,8 +784,10 @@ int nvhost_module_init(struct platform_device *dev)
 	mutex_unlock(&pdata->lock);
 
 	/* disable the clocks */
-	for (i = 0; i < pdata->num_clks; ++i)
-		clk_disable_unprepare(pdata->clk[i]);
+	for (i = 0; i < pdata->num_clks; ++i) {
+		if (pdata->clk[i])
+			clk_disable_unprepare(pdata->clk[i]);
+	}
 
 
 	/* disable railgating if pm runtime is not available
@@ -933,8 +952,10 @@ void nvhost_module_deinit(struct platform_device *dev)
 		tegra_bwmgr_unregister(pdata->bwmgr_handle);
 
 	if (!IS_ENABLED(CONFIG_COMMON_CLK))
-		for (i = 0; i < pdata->num_clks; i++)
-			clk_put(pdata->clk[i]);
+		for (i = 0; i < pdata->num_clks; i++) {
+			if (pdata->clk[i])
+				clk_put(pdata->clk[i]);
+	}
 
 	if (pdata->power_kobj) {
 		for (i = 0; i < NVHOST_POWER_SYSFS_ATTRIB_MAX; i++) {
@@ -1068,7 +1089,12 @@ int nvhost_module_enable_clk(struct device *dev)
 		return -EINVAL;
 
 	for (index = 0; index < pdata->num_clks; index++) {
-		int err = clk_prepare_enable(pdata->clk[index]);
+		int err;
+
+		if (!pdata->clk[index])
+			continue;
+
+		err = clk_prepare_enable(pdata->clk[index]);
 		if (err) {
 			dev_err(dev, "Cannot turn on clock %s",
 				pdata->clocks[index].name);
@@ -1095,7 +1121,8 @@ int nvhost_module_disable_clk(struct device *dev)
 					pdata->num_clks);
 
 	for (index = 0; index < pdata->num_clks; index++)
-		clk_disable_unprepare(pdata->clk[index]);
+		if (pdata->clk[index])
+			clk_disable_unprepare(pdata->clk[index]);
 
 	/* disable parent's clock if required */
 	if (dev->parent && dev->parent != &platform_bus)

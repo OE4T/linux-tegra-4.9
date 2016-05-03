@@ -548,15 +548,17 @@ void __devexit pgdrv_remove(struct pci_dev *pdev)
 	mydev = pci_get_drvdata(pdev);
 	DbgFunPrint("mydev=%p",mydev);
 
-	mydev->base_phyaddr = 0;
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);
 
-	cdev_del(&mydev->cdev);
-	spin_lock(&module_lock);
-	dev_info[mydev->index].bUsed = FALSE;
-	spin_unlock(&module_lock);
-	kfree(mydev);
+	if (mydev) {
+		mydev->base_phyaddr = 0;
+		cdev_del(&mydev->cdev);
+		spin_lock(&module_lock);
+		dev_info[mydev->index].bUsed = FALSE;
+		spin_unlock(&module_lock);
+		kfree(mydev);
+	}
 	pci_set_drvdata(pdev, NULL);
 	atomic_dec(&dev_num);
 }

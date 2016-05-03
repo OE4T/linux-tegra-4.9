@@ -4,7 +4,7 @@
 # r8168 is the Linux device driver released for Realtek Gigabit Ethernet
 # controllers with PCI-Express interface.
 #
-# Copyright(c) 2017 Realtek Semiconductor Corp. All rights reserved.
+# Copyright(c) 2017-2018 Realtek Semiconductor Corp. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -24929,8 +24929,11 @@ rtl8168_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
                        MODULENAME, RTL8168_VERSION);
 
         rc = rtl8168_init_board(pdev, &dev, &ioaddr);
-        if (rc)
-                goto out;
+        if (rc) {
+            dev_err(&pdev->dev, "%s: failed to initialize. Error: %d\n",
+                MODULENAME, rc);
+            goto out;
+        }
 
         tp = netdev_priv(dev);
         assert(ioaddr != NULL);
@@ -25056,8 +25059,11 @@ rtl8168_init_one(struct pci_dev *pdev, const struct pci_device_id *ent)
         pci_set_drvdata(pdev, dev);
 
         rc = register_netdev(dev);
-        if (rc)
-                goto err_out;
+        if (rc) {
+            dev_err(&pdev->dev, "%s: failed to register netdev. Error %d\n",
+                MODULENAME, rc);
+            goto err_out;
+        }
 
         printk(KERN_INFO "%s: This product is covered by one or more of the following patents: US6,570,884, US6,115,776, and US6,327,625.\n", MODULENAME);
 
@@ -28082,14 +28088,19 @@ rtl8168_probe(struct pci_dev *pdev, const struct pci_device_id *id)
 	int ret;
 
 	ret = pgdrv_prob(pdev, id);
-	if (ret)
+	if (ret) {
+		dev_err(&pdev->dev, "%s: Unable to probe pgdrv.\n",
+				MODULENAME);
 		goto exit_probe;
+	}
 
 	mydev = pci_get_drvdata(pdev);
 	pci_set_drvdata(pdev, NULL);
 
 	ret = rtl8168_init_one(pdev, id);
 	if (ret) {
+		dev_err(&pdev->dev, "%s: Unable to initialize rtl8168.\n",
+				MODULENAME);
 		pgdrv_remove(pdev);
 		goto exit_probe;
 	}

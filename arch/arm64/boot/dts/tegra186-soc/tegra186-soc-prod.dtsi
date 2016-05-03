@@ -34,14 +34,15 @@
 	sdhci@3460000 {
 		prod-settings {
 			#prod-cells = <3>;
+			mask-one-style;
 			prod-hs533-1v8 {
-				prod = <0x00001E4 0xFFFF8080 0x0505>;
+				prod = <0x00001E4 0x00007F7F 0x0505>;
 			};
 			prod-default-1v8 {
-				prod = <0x00001E4 0xFFFF8080 0x0000>;
+				prod = <0x00001E4 0x00007F7F 0x0000>;
 			};
 			prod-default-3v3 {
-				prod = <0x00001E4 0xFFFF8080 0x0000>;
+				prod = <0x00001E4 0x00007F7F 0x0000>;
 			};
 		};
 	};
@@ -49,11 +50,12 @@
 	sdhci@3440000 {
 		prod-settings {
 			#prod-cells = <3>;
+			mask-one-style;
 			prod-default-3v3 {
-				prod = <0x00001E4 0xFFFF8080 0x7A00>;
+				prod = <0x00001E4 0x00007F7F 0x7A00>;
 			};
 			prod-default-1v8 {
-				prod = <0x00001E4 0xFFFF8080 0x7A00>;
+				prod = <0x00001E4 0x00007F7F 0x7A00>;
 			};
 		};
 	};
@@ -61,14 +63,15 @@
 	sdhci@3400000 {
 		prod-settings {
 			#prod-cells = <3>;
+			mask-one-style;
 			prod-default-3v3 {
-				prod = <0x00001E4 0xFFFF8080 0x0000>;
+				prod = <0x00001E4 0x00007F7F 0x0000>;
 			};
 			prod-default-1v8 {
-				prod = <0x00001E4 0xFFFF8080 0x0000>;
+				prod = <0x00001E4 0x00007F7F 0x0000>;
 			};
 			prod-sdr104-1v8 {
-				prod = <0x00001E4 0xFFFF8080 0x0503>;
+				prod = <0x00001E4 0x00007F7F 0x0503>;
 			};
 		};
 	};

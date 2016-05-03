@@ -1697,9 +1697,8 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	/* Need global lock since multiple channels can timeout at a time */
 	mutex_lock(&g->ch_wdt_lock);
 
-	gk20a_debug_dump(g->dev);
-	gk20a_gr_debug_dump(g->dev);
-
+	gk20a_err(dev_from_gk20a(g), "Possible job timeout on ch=%d",
+		  ch->hw_chid);
 
 	/* Get timed out job and reset the timer */
 	mutex_lock(&ch->timeout.lock);
@@ -1707,14 +1706,23 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	ch->timeout.initialized = false;
 	mutex_unlock(&ch->timeout.lock);
 
-	if (gr_gk20a_disable_ctxsw(g))
+	if (gr_gk20a_disable_ctxsw(g)) {
+		gk20a_err(dev_from_gk20a(g), "Unable to disable ctxsw!");
 		goto fail_unlock;
+	}
 
-	if (gk20a_fence_is_expired(job->post_fence))
+	if (gk20a_fence_is_expired(job->post_fence)) {
+		gk20a_err(dev_from_gk20a(g),
+			  "Timed out fence is expired on c=%d!",
+			  ch->hw_chid);
 		goto fail_enable_ctxsw;
+	}
 
-	gk20a_err(dev_from_gk20a(g), "Job on channel %d timed out\n",
-		ch->hw_chid);
+	gk20a_err(dev_from_gk20a(g), "Confirmed: job on channel %d timed out",
+		  ch->hw_chid);
+
+	gk20a_debug_dump(g->dev);
+	gk20a_gr_debug_dump(g->dev);
 
 	/* Get failing engine data */
 	engine_id = gk20a_fifo_get_failing_engine_data(g, &id, &is_tsg);

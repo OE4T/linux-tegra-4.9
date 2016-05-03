@@ -122,7 +122,11 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 			sync_fence_put(sync_fence);
 			return -EINVAL;
 		}
+#if !(LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0))
 	}
+#else
+	}
+#endif
 
 	num_wait_cmds = nvhost_sync_num_pts(sync_fence);
 	if (num_wait_cmds == 0) {
@@ -160,8 +164,11 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 					wait_value);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 		i++;
-#endif
 	}
+#else
+	}
+#endif
+
 	WARN_ON(i != num_wait_cmds);
 	sync_fence_put(sync_fence);
 

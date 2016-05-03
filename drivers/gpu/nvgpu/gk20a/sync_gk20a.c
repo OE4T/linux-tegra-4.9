@@ -151,12 +151,12 @@ static struct gk20a_sync_pt *gk20a_sync_pt_create_shared(
 	/* Store the dependency fence for this pt. */
 	if (dependency) {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-		if (dependency->status == 0) {
+		if (dependency->status == 0)
 #else
-		if (!atomic_read(&dependency->status)) {
+		if (!atomic_read(&dependency->status))
 #endif
 			shared->dep = dependency;
-		} else {
+		else {
 			shared->dep_timestamp = ktime_get();
 			sync_fence_put(dependency);
 		}

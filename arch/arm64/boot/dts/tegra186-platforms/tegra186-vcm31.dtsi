@@ -123,6 +123,7 @@
 		uhs-mask = <0x40>;
 		nvidia,is-emmc;
 		built-in;
+		full-pwr-cycle;
 		power-off-rail;
 	};
 

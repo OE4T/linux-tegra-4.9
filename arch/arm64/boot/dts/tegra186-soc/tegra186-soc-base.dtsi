@@ -829,9 +829,8 @@
 			power-domains = <&vic03_pd>;
 			reg = <0x0 0x15340000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_VIC>;
-			clocks = <&tegra_car TEGRA186_CLK_VIC>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "vic", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_VIC>;
+			clock-names = "vic";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -841,9 +840,8 @@
 			power-domains = <&msenc_pd>;
 			reg = <0x0 0x154c0000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVENC>;
-			clocks = <&tegra_car TEGRA186_CLK_NVENC>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "nvenc", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_NVENC>;
+			clock-names = "nvenc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -854,9 +852,8 @@
 			reg = <0x0 0x15480000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVDEC>;
 			clocks = <&tegra_car TEGRA186_CLK_NVDEC>,
-				 <&tegra_car TEGRA186_CLK_KFUSE>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "nvdec", "kfuse", "emc";
+				 <&tegra_car TEGRA186_CLK_KFUSE>;
+			clock-names = "nvdec", "kfuse";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -866,9 +863,8 @@
 			power-domains = <&nvjpg_pd>;
 			reg = <0x0 0x15380000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_NVJPG>;
-			clocks = <&tegra_car TEGRA186_CLK_NVJPG>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "nvjpg", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_NVJPG>;
+			clock-names = "nvjpg";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -878,9 +874,8 @@
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x15500000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_TSEC>;
-			clocks = <&tegra_car TEGRA186_CLK_TSEC>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "tsec", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_TSEC>;
+			clock-names = "tsec";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -890,9 +885,8 @@
 			power-domains = <&tsec_pd>;
 			reg = <0x0 0x15100000 0x0 0x00040000>;
 			resets = <&tegra_car TEGRA186_RESET_TSECB>;
-			clocks = <&tegra_car TEGRA186_CLK_TSECB>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "tsecb", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_TSECB>;
+			clock-names = "tsecb";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};

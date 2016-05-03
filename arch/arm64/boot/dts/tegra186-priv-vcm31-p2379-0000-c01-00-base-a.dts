@@ -22,6 +22,7 @@
 	nvidia,dtsfilename = __FILE__;
 	nvidia,boardids = "p2379:0000:C01";
 	nvidia,proc-boardid = "p2379:0000:C01";
+	model = "drive-px2-a";
 
 	memory@80000000 {
 		device_type = "memory";

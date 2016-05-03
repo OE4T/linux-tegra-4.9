@@ -35,13 +35,6 @@
 		};
 	};
 
-	pcie-controller@10003000 {
-		nvidia,boot-detect-delay = <500>;
-                pci@1,0 {
-                        status = "okay";
-                };
-        };
-
 	isc-mgr.0 {
 		aggregator@48 {
 			addr = <0x48>;  /* 7 bit slave address */

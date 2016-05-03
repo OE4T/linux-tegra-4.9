@@ -4,7 +4,7 @@
 # r8168 is the Linux device driver released for Realtek Gigabit Ethernet
 # controllers with PCI-Express interface.
 #
-# Copyright(c) 2014 Realtek Semiconductor Corp. All rights reserved.
+# Copyright(c) 2014-2016, Realtek Semiconductor Corp. All rights reserved.
 #
 # This program is free software; you can redistribute it and/or modify it
 # under the terms of the GNU General Public License as published by the Free
@@ -548,15 +548,17 @@ void __devexit pgdrv_remove(struct pci_dev *pdev)
 	mydev = pci_get_drvdata(pdev);
 	DbgFunPrint("mydev=%p",mydev);
 
-	mydev->base_phyaddr = 0;
 	pci_release_regions(pdev);
 	pci_disable_device(pdev);
 
-	cdev_del(&mydev->cdev);
-	spin_lock(&module_lock);
-	dev_info[mydev->index].bUsed = FALSE;
-	spin_unlock(&module_lock);
-	kfree(mydev);
+	if (mydev) {
+		mydev->base_phyaddr = 0;
+		cdev_del(&mydev->cdev);
+		spin_lock(&module_lock);
+		dev_info[mydev->index].bUsed = FALSE;
+		spin_unlock(&module_lock);
+		kfree(mydev);
+	}
 	pci_set_drvdata(pdev, NULL);
 	atomic_dec(&dev_num);
 }

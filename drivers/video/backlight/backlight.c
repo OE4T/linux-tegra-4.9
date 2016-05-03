@@ -38,6 +38,9 @@ struct backlight_device *get_backlight_device_by_name(char *name)
 	struct list_head *ptr;
 	struct backlight_device *entry = NULL;
 
+	if (!name)
+		return NULL;
+
 	mutex_lock(&backlight_dev_list_mutex);
 	list_for_each(ptr, &backlight_dev_list) {
 		entry = list_entry(ptr, struct backlight_device, entry);

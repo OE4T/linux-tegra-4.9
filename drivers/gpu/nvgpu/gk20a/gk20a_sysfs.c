@@ -228,6 +228,55 @@ static DEVICE_ATTR(ptimer_scale_factor,
 			ptimer_scale_factor_show,
 			NULL);
 
+static ssize_t ptimer_ref_freq_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	u32 src_freq_hz = platform->ptimer_src_freq;
+	ssize_t res;
+
+	if (!src_freq_hz) {
+		dev_err(dev, "reference clk_m rate is not set correctly\n");
+		return -EINVAL;
+	}
+
+	res = sprintf(buf, "%u\n", PTIMER_REF_FREQ_HZ);
+
+	return res;
+
+}
+
+static DEVICE_ATTR(ptimer_ref_freq,
+			S_IRUGO,
+			ptimer_ref_freq_show,
+			NULL);
+
+static ssize_t ptimer_src_freq_show(struct device *dev,
+					struct device_attribute *attr,
+					char *buf)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	u32 src_freq_hz = platform->ptimer_src_freq;
+	ssize_t res;
+
+	if (!src_freq_hz) {
+		dev_err(dev, "reference clk_m rate is not set correctly\n");
+		return -EINVAL;
+	}
+
+	res = sprintf(buf, "%u\n", src_freq_hz);
+
+	return res;
+
+}
+
+static DEVICE_ATTR(ptimer_src_freq,
+			S_IRUGO,
+			ptimer_src_freq_show,
+			NULL);
+
+
 #if defined(CONFIG_PM) && defined(CONFIG_PM_GENERIC_DOMAINS)
 static ssize_t railgate_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
@@ -742,6 +791,8 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_blcg_enable);
 	device_remove_file(dev, &dev_attr_slcg_enable);
 	device_remove_file(dev, &dev_attr_ptimer_scale_factor);
+	device_remove_file(dev, &dev_attr_ptimer_ref_freq);
+	device_remove_file(dev, &dev_attr_ptimer_src_freq);
 	device_remove_file(dev, &dev_attr_elpg_enable);
 	device_remove_file(dev, &dev_attr_emc3d_ratio);
 	device_remove_file(dev, &dev_attr_fmax_at_vmin_safe);
@@ -782,6 +833,8 @@ void gk20a_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_blcg_enable);
 	error |= device_create_file(dev, &dev_attr_slcg_enable);
 	error |= device_create_file(dev, &dev_attr_ptimer_scale_factor);
+	error |= device_create_file(dev, &dev_attr_ptimer_ref_freq);
+	error |= device_create_file(dev, &dev_attr_ptimer_src_freq);
 	error |= device_create_file(dev, &dev_attr_elpg_enable);
 	error |= device_create_file(dev, &dev_attr_emc3d_ratio);
 	error |= device_create_file(dev, &dev_attr_fmax_at_vmin_safe);

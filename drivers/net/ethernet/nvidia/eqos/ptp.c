@@ -252,8 +252,13 @@ static struct ptp_clock_info eqos_ptp_clock_ops = {
 	.pps = 0,	/* indicates whether the clk supports a PPS callback */
 	.adjfreq = eqos_adjust_freq,
 	.adjtime = eqos_adjust_time,
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	.gettime = eqos_get_time,
 	.settime = eqos_set_time,
+#else
+	.gettime64 = eqos_get_time,
+	.settime64 = eqos_set_time,
+#endif
 	.enable = eqos_enable,
 };
 

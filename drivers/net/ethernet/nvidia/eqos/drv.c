@@ -1712,9 +1712,13 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 #ifdef EQOS_ENABLE_VLAN_TAG
 	ptx_ring->vlan_tag_present = 0;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	if (vlan_tx_tag_present(skb)) {
 		USHORT vlan_tag = vlan_tx_tag_get(skb);
-
+#else
+	if (skb_vlan_tag_present(skb)) {
+		USHORT vlan_tag = skb_vlan_tag_get(skb);
+#endif
 		vlan_tag |= (skb->priority << 13);
 		ptx_ring->vlan_tag_present = 1;
 		if (vlan_tag != ptx_ring->vlan_tag_id ||

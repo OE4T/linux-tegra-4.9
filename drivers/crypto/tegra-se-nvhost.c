@@ -2696,16 +2696,16 @@ static struct nvhost_device_data nvhost_se4_info = {
 
 static struct of_device_id tegra_se_of_match[] = {
 	{
-		.compatible = "nvidia,tegra186-se-nvhost",
+		.compatible = "nvidia,tegra186-se1-nvhost",
 		.data = &nvhost_se1_info,
 	}, {
-		.compatible = "nvidia,tegra186-se-nvhost",
+		.compatible = "nvidia,tegra186-se2-nvhost",
 		.data = &nvhost_se2_info,
 	}, {
-		.compatible = "nvidia,tegra186-se-nvhost",
+		.compatible = "nvidia,tegra186-se3-nvhost",
 		.data = &nvhost_se3_info,
 	}, {
-		.compatible = "nvidia,tegra186-se-nvhost",
+		.compatible = "nvidia,tegra186-se4-nvhost",
 		.data = &nvhost_se4_info,
 	},
 };

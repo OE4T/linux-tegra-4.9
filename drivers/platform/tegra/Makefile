@@ -33,7 +33,6 @@ obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-hsp.o
 obj-$(CONFIG_TEGRA_AON) += tegra186_aondbg.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += rtcpu/ivc-bus.o
 obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += rtcpu/hsp-doorbell.o
-obj-$(CONFIG_TEGRA_CAMERA_RTCPU) += tegra-sysfs-mbox.o
 obj-$(CONFIG_TEGRA_NVADSP) += nvadsp/
 obj-$(CONFIG_TEGRA_ARI_MCA) += ari_mca.o
 obj-$(CONFIG_TEGRA_18X_SERROR) += tegra18_serr.o

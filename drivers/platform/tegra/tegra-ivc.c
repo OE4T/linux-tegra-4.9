@@ -722,11 +722,34 @@ int tegra_ivc_channel_notified(struct ivc *ivc)
 		 */
 		ivc->notify(ivc);
 
-	} else if (ivc->tx_channel->state == ivc_state_ack) {
+	} else if (ivc->tx_channel->state == ivc_state_ack &&
+			peer_state == ivc_state_established) {
 		/*
 		 * At this point, we have observed the peer to be in either
 		 * the ACK or ESTABLISHED state. Next, order observation of
 		 * peer state before storing to tx_channel.
+		 */
+		ivc_rmb();
+
+		/*
+		 * Move to ESTABLISHED state. We know that we have previously
+		 * cleared our counters, and we know that the remote end has
+		 * cleared its counters, so it is safe to start writing/reading
+		 * on this channel.
+		 */
+		ivc->tx_channel->state = ivc_state_established;
+		ivc_flush_counter(ivc, ivc->tx_handle +
+				offsetof(struct ivc_channel_header, w_count));
+
+		/*
+		 * There is no need to notify the remote end. The peer is
+		 * already in the ESTABLISHED state.
+		 */
+
+	} else if (ivc->tx_channel->state == ivc_state_ack &&
+			peer_state == ivc_state_ack) {
+		/*
+		 * Order observation of peer state before storing to tx_channel.
 		 */
 		ivc_rmb();
 

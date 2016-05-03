@@ -979,7 +979,7 @@
 		};
 
 		se@15810000 {
-			compatible = "nvidia,tegra186-se-nvhost";
+			compatible = "nvidia,tegra186-se1-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15810000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
@@ -992,7 +992,7 @@
 		};
 
 		se@15820000 {
-			compatible = "nvidia,tegra186-se-nvhost";
+			compatible = "nvidia,tegra186-se2-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15820000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
@@ -1005,7 +1005,7 @@
 		};
 
 		se@15830000 {
-			compatible = "nvidia,tegra186-se-nvhost";
+			compatible = "nvidia,tegra186-se3-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15830000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
@@ -1018,7 +1018,7 @@
 		};
 
 		se@15840000 {
-			compatible = "nvidia,tegra186-se-nvhost";
+			compatible = "nvidia,tegra186-se4-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15840000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;

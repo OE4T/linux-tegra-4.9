@@ -21,7 +21,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 
-#define PCI_INTERFACE_NAME "nvgpu-pci%s"
+#define PCI_INTERFACE_NAME "nvgpu-pci-%s%%s"
 
 static int nvgpu_pci_tegra_probe(struct device *dev)
 {
@@ -138,6 +138,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	struct gk20a_platform *platform = &nvgpu_pci_device;
 	struct gk20a *g;
 	int err;
+	char *nodefmt;
 
 	pci_set_drvdata(pdev, platform);
 
@@ -174,7 +175,18 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 	disable_irq(g->irq_stall);
 
-	err = gk20a_user_init(&pdev->dev, PCI_INTERFACE_NAME);
+	if (strchr(dev_name(&pdev->dev), '%')) {
+		gk20a_err(&pdev->dev, "illegal character in device name");
+		return -EINVAL;
+	}
+
+	nodefmt = kasprintf(GFP_KERNEL, PCI_INTERFACE_NAME, dev_name(&pdev->dev));
+	if (!nodefmt)
+		return -ENOMEM;
+
+	err = gk20a_user_init(&pdev->dev, nodefmt);
+	kfree(nodefmt);
+	nodefmt = NULL;
 	if (err)
 		return err;
 

@@ -63,7 +63,7 @@ static int therm_est_subdev_match(struct thermal_zone_device *thz, void *data)
 }
 
 static int therm_est_subdev_get_temp(struct thermal_zone_device *thz,
-					long *temp)
+					int *temp)
 {
 	if (!thz || !thz->ops->get_temp || thz->ops->get_temp(thz, temp))
 		*temp = 25000;
@@ -75,9 +75,9 @@ static void therm_est_update_limits(struct therm_estimator *est)
 {
 	const int MAX_HIGH_TEMP = 128000;
 	long low_temp = 0, high_temp = MAX_HIGH_TEMP;
-	long trip_temp, passive_low_temp = MAX_HIGH_TEMP;
+	int trip_temp, passive_low_temp = MAX_HIGH_TEMP;
 	enum thermal_trip_type trip_type;
-	long hysteresis, zone_temp;
+	int hysteresis, zone_temp;
 	int i;
 
 	zone_temp = est->thz->temperature;

@@ -79,21 +79,23 @@ static inline unsigned long arch_local_save_flags(void)
 	return flags;
 }
 
+static inline int arch_irqs_disabled_flags(unsigned long flags)
+{
+	return flags & PSR_I_BIT;
+}
+
 /*
  * restore saved IRQ state
  */
 static inline void arch_local_irq_restore(unsigned long flags)
 {
-	asm volatile(
-		"msr	daif, %0		// arch_local_irq_restore"
-	:
-	: "r" (flags)
-	: "memory");
-}
+	if (!arch_irqs_disabled_flags(flags))
+		asm volatile(
+			"msr	daifclr, #2		// arch_local_irq_restore"
+		:
+		:
+		: "memory");
 
-static inline int arch_irqs_disabled_flags(unsigned long flags)
-{
-	return flags & PSR_I_BIT;
 }
 
 /*

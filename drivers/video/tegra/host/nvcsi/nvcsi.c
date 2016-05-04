@@ -282,9 +282,9 @@ const struct file_operations tegra_nvcsi_ctrl_ops = {
 
 static int __init nvcsi_init(void)
 {
-	int ret;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
+	int ret;
 	ret = nvhost_domain_init(tegra_nvcsi_domain_match);
 	if (ret)
 		return ret;

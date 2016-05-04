@@ -51,33 +51,33 @@
 		};
 
 		vic@15340000 {
-			clocks = <&clk32k_in>, <&clk32k_in>;
-			clock-names = "vic", "emc";
+			clocks = <&clk32k_in>;
+			clock-names = "vic";
 		};
 
 		nvenc@154c0000 {
-			clocks = <&clk32k_in>, <&clk32k_in>;
-			clock-names = "nvenc", "emc";
+			clocks = <&clk32k_in>;
+			clock-names = "nvenc";
 		};
 
 		nvdec@15480000 {
-			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
-			clock-names = "nvdec", "kfuse", "emc";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "nvdec", "kfuse";
 		};
 
 		nvjpg@15380000 {
-			clocks = <&clk32k_in>, <&clk32k_in>;
-			clock-names = "nvjpg", "emc";
+			clocks = <&clk32k_in>;
+			clock-names = "nvjpg";
 		};
 
 		tsec@15500000 {
-			clocks = <&clk32k_in>, <&clk32k_in>;
-			clock-names = "tsec", "emc";
+			clocks = <&clk32k_in>;
+			clock-names = "tsec";
 		};
 
 		tsecb@15100000 {
-			clocks = <&clk32k_in>, <&clk32k_in>;
-			clock-names = "tsecb", "emc";
+			clocks = <&clk32k_in>;
+			clock-names = "tsecb";
 		};
 
 		se@15810000 {

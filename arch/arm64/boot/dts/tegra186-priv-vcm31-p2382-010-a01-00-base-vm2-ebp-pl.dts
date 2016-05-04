@@ -20,4 +20,11 @@
 	spi@3270000 {
 		status = "okay";
 	};
+
+	host1x: host1x {
+		nvidia,ch-base = <28>;
+		nvidia,nb-channels = <27>;
+		nvidia,pts-base = <284>;
+		nvidia,nb-pts = <284>;
+	};
 };

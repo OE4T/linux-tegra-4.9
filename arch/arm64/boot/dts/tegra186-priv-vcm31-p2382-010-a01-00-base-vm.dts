@@ -155,11 +155,11 @@
 		nvidia,vmid = <1>;
 
 		nvidia,ch-base = <0>;
-		nvidia,nb-channels = <63>;
+		nvidia,nb-channels = <55>;
 
 		nvidia,nb-hw-pts = <576>;
 		nvidia,pts-base = <0>;
-		nvidia,nb-pts = <576>;
+		nvidia,nb-pts = <568>;
 
 		vmserver-owns-engines = <1>;
 
@@ -215,6 +215,14 @@
 
 		ctx7 {
 			status = "okay";
+		};
+
+		se@15830000 {
+			status = "disabled";
+		};
+
+		se@15840000 {
+			status = "disabled";
 		};
 	};
 

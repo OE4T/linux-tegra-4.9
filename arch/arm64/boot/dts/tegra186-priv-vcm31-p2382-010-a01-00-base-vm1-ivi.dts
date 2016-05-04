@@ -173,11 +173,11 @@
 		nvidia,vmid = <1>;
 
 		nvidia,ch-base = <0>;
-		nvidia,nb-channels = <32>;
+		nvidia,nb-channels = <28>;
 
 		nvidia,nb-hw-pts = <576>;
 		nvidia,pts-base = <0>;
-		nvidia,nb-pts = <288>;
+		nvidia,nb-pts = <284>;
 
 		vmserver-owns-engines = <1>;
 
@@ -267,6 +267,13 @@
 			status = "disabled";
 		};
 
+		se@15830000 {
+			status = "disabled";
+		};
+
+		se@15840000 {
+			status = "disabled";
+		};
 	};
 
 	generic-system-config {

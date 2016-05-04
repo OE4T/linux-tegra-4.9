@@ -83,6 +83,8 @@ struct gr_t18x {
 		struct ecc_stat l2_ded_count;
 	} ecc_stats;
 
+	u32 fecs_feature_override_ecc_val;
+
 	int cilp_preempt_pending_chid;
 };
 

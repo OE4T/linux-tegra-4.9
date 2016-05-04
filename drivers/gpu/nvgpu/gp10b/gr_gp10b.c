@@ -17,6 +17,8 @@
 #include <linux/delay.h>
 #include <linux/tegra-fuse.h>
 
+#include <dt-bindings/soc/gp10b-fuse.h>
+
 #include "gk20a/gr_gk20a.h"
 #include "gk20a/semaphore_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
@@ -1390,6 +1392,12 @@ static int gr_gp10b_init_fs_state(struct gk20a *g)
 			 gr_gpcs_tpcs_sm_disp_ctrl_re_suppress_disable_f());
 	gk20a_writel(g, gr_gpcs_tpcs_sm_disp_ctrl_r(), data);
 
+	if (g->gr.t18x.fecs_feature_override_ecc_val != 0) {
+		gk20a_writel(g,
+			gr_fecs_feature_override_ecc_r(),
+			g->gr.t18x.fecs_feature_override_ecc_val);
+	}
+
 	return gr_gm20b_ctx_state_floorsweep(g);
 }
 
@@ -1989,6 +1997,42 @@ static int gr_gp10b_get_preemption_mode_flags(struct gk20a *g,
 
 	return 0;
 }
+static int gp10b_gr_fuse_override(struct gk20a *g)
+{
+	struct device_node *np = g->dev->of_node;
+	u32 *fuses;
+	int count, i;
+
+	if (!np) /* may be pcie device */
+		return 0;
+
+	count = of_property_count_elems_of_size(np, "fuse-overrides", 8);
+	if (count <= 0)
+		return count;
+
+	fuses = kmalloc(sizeof(u32) * count * 2, GFP_KERNEL);
+	if (!fuses)
+		return -ENOMEM;
+	of_property_read_u32_array(np, "fuse-overrides", fuses, count * 2);
+	for (i = 0; i < count; i++) {
+		u32 fuse, value;
+
+		fuse = fuses[2 * i];
+		value = fuses[2 * i + 1];
+		switch (fuse) {
+		case GP10B_FUSE_OPT_ECC_EN:
+			g->gr.t18x.fecs_feature_override_ecc_val = value;
+			break;
+		default:
+			gk20a_err(dev_from_gk20a(g),
+				"ignore unknown fuse override %08x", fuse);
+			break;
+		}
+	}
+
+	kfree(fuses);
+	return 0;
+}
 
 void gp10b_init_gr(struct gpu_ops *gops)
 {
@@ -2031,4 +2075,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.suspend_contexts = gr_gp10b_suspend_contexts;
 	gops->gr.set_preemption_mode = gr_gp10b_set_preemption_mode;
 	gops->gr.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags;
+	gops->gr.fuse_override = gp10b_gr_fuse_override;
 }

@@ -68,6 +68,9 @@ in HS400 mode.
 - nvidia,adma3-enable: boolean property to enable ADMA3 for the sdhci controller instance if supported by the Tegra chip.
 - nvidia,en-32bit-bc: Enables 32 bit block count support on sdhci controller, if HW supports.
 
+- nvidia,en-periodic-cflush: Enables periodic cache flush for sdmmc device to improve performance. This check is not required for
+ SD and SDIO devices since they do not have volatile cache memory. So, set it only for eMMC device when required.
+- nvidia,periodic-cflush-to: Sets the periodic cache flush timeout value.
 
 Example:
 

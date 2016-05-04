@@ -22,8 +22,9 @@
 		status = "okay";
 		spi-max-frequency = <12000000>;
 		prod-settings {
+			mask-one-style;
 			prod_c_cs0 {
-			    prod = <0x04 0xfffff03f 0x00000400>;
+			    prod = <0x04 0x00000fc0 0x00000400>;
 			};
 		};
 		spi-touch-sharp19x12@0 {

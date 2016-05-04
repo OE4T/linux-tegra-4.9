@@ -138,7 +138,7 @@ static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
 
 static bool debug_fs_only;
 
-static enum cluster get_cpu_cluster(uint8_t cpu)
+static enum cluster notrace get_cpu_cluster(uint8_t cpu)
 {
 	struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu);
 	u32 midr = cpuinfo->reg_midr;
@@ -147,7 +147,7 @@ static enum cluster get_cpu_cluster(uint8_t cpu)
 		: M_CLUSTER);
 }
 
-static uint32_t get_coreclk_count(uint8_t cpu)
+static uint32_t notrace get_coreclk_count(uint8_t cpu)
 {
 	enum cluster cur_cluster = get_cpu_cluster(cpu);
 	void __iomem *reg_base;
@@ -160,7 +160,7 @@ static uint32_t get_coreclk_count(uint8_t cpu)
 	return tcpufreq_readl(reg_base, phy_cpu);
 }
 
-static uint32_t get_refclk_count(uint8_t cpu)
+static uint32_t notrace get_refclk_count(uint8_t cpu)
 {
 	enum cluster cur_cl = get_cpu_cluster(cpu);
 	void __iomem *reg_base;
@@ -177,6 +177,15 @@ struct tegra_cpu_ctr {
 	uint32_t coreclk_cnt, last_coreclk_cnt;
 	uint32_t refclk_cnt, last_refclk_cnt;
 };
+
+static inline void busyloop_udelay(unsigned long usecs)
+{
+	unsigned long v = (usecs * 0x10C7ul * loops_per_jiffy * HZ) >> 32;
+	cycles_t start = get_cycles();
+
+	while ((get_cycles() - start) < v)
+		continue;
+}
 
 static void tegra_cpu_spin(void *arg)
 {
@@ -217,7 +226,7 @@ retry:
 
 	c->last_coreclk_cnt = get_coreclk_count(c->cpu);
 	c->last_refclk_cnt = get_refclk_count(c->cpu);
-	udelay(tfreq_data.freq_compute_delay);
+	busyloop_udelay(tfreq_data.freq_compute_delay);
 	c->coreclk_cnt = get_coreclk_count(c->cpu);
 	c->refclk_cnt = get_refclk_count(c->cpu);
 
@@ -248,7 +257,7 @@ retry:
  * @cpu - logical cpu whose freq to be updated
  * Returns freq in KHz on success, 0 if cpu is offline
  */
-static unsigned int tegra_get_speed(uint32_t cpu)
+static unsigned int notrace tegra_get_speed(uint32_t cpu)
 {
 	uint32_t delta_ccnt = 0;
 	uint32_t delta_refcnt = 0;

@@ -7,3 +7,4 @@ ccflags-y += -Wno-multichar
 subdir-ccflags-y := -Werror
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
+obj-$(CONFIG_TEGRA_GRHOST) += pva/

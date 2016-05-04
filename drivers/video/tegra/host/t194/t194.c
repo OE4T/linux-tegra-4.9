@@ -33,6 +33,7 @@
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
+#include "pva/pva.h"
 #include "hardware_t194.h"
 
 #include "chip_support.h"
@@ -284,6 +285,39 @@ struct nvhost_device_data t19_vic_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
 };
 
+struct nvhost_device_data t19_pvab_info = {
+	.num_channels		= true,
+	.clocks			= {
+		{"pva"},
+	},
+	.devfs_name		= "pvab",
+	.class			= NV_PVA1_CLASS_ID,
+	.powergate_delay        = 500,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.finalize_poweron	= pva_finalize_poweron,
+	.prepare_poweroff	= pva_prepare_poweroff,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.poweron_reset		= true,
+	.serialize		= true,
+	.push_work_done		= true,
+};
+
+struct nvhost_device_data t19_pvaa_info = {
+	.num_channels		= true,
+	.clocks			= {
+		{"pva"},
+	},
+	.devfs_name		= "pvaa",
+	.class			= NV_PVA0_CLASS_ID,
+	.powergate_delay        = 500,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.finalize_poweron	= pva_finalize_poweron,
+	.prepare_poweroff	= pva_prepare_poweroff,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.poweron_reset		= true,
+	.serialize		= true,
+	.push_work_done		= true,
+};
 #include "host1x/host1x_channel_t186.c"
 
 static void t194_set_nvhost_chanops(struct nvhost_channel *ch)

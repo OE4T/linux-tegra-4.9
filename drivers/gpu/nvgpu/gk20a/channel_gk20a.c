@@ -1278,17 +1278,25 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	u32 size;
 	int err = 0;
 
-	/* Kernel can insert gpfifos before and after user gpfifos.
-	   Before user gpfifos, kernel inserts fence_wait, which takes
-	   syncpoint_a (2 dwords) + syncpoint_b (2 dwords) = 4 dwords.
-	   After user gpfifos, kernel inserts fence_get, which takes
-	   wfi (2 dwords) + syncpoint_a (2 dwords) + syncpoint_b (2 dwords)
-	   = 6 dwords.
-	   Worse case if kernel adds both of them for every user gpfifo,
-	   max size of priv_cmdbuf is :
-	   (gpfifo entry number * (2 / 3) * (4 + 6) * 4 bytes */
-	size = roundup_pow_of_two(
-		c->gpfifo.entry_num * 2 * 12 * sizeof(u32) / 3);
+	/*
+	 * Compute the amount of priv_cmdbuf space we need. In general the worst
+	 * case is the kernel inserts both a semaphore pre-fence and post-fence.
+	 * Any sync-pt fences will take less memory so we can ignore them for
+	 * now.
+	 *
+	 * A semaphore ACQ (fence-wait) is 8 dwords: semaphore_a, semaphore_b,
+	 * semaphore_c, and semaphore_d. A semaphore INCR (fence-get) will be 10
+	 * dwords: all the same as an ACQ plus a non-stalling intr which is
+	 * another 2 dwords.
+	 *
+	 * Lastly the number of gpfifo entries per channel is fixed so at most
+	 * we can use 2/3rds of the gpfifo entries (1 pre-fence entry, one
+	 * userspace entry, and one post-fence entry). Thus the computation is:
+	 *
+	 *   (gpfifo entry number * (2 / 3) * (8 + 10) * 4 bytes.
+	 */
+	size = roundup_pow_of_two(c->gpfifo.entry_num *
+				  2 * 18 * sizeof(u32) / 3);
 
 	err = gk20a_gmmu_alloc_map(ch_vm, size, &q->mem);
 	if (err) {

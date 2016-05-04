@@ -112,7 +112,7 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 			  pci_resource_len(pdev, 1));
 	if (IS_ERR(g->bar1)) {
 		gk20a_err(dev_from_gk20a(g), "failed to remap gk20a bar1");
-		err = PTR_ERR(g->regs);
+		err = PTR_ERR(g->bar1);
 		goto fail;
 	}
 

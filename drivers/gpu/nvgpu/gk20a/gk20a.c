@@ -660,7 +660,7 @@ static int gk20a_init_support(struct platform_device *dev)
 					 &g->bar1_mem);
 	if (IS_ERR(g->bar1)) {
 		dev_err(dev_from_gk20a(g), "failed to remap gk20a bar1\n");
-		err = PTR_ERR(g->regs);
+		err = PTR_ERR(g->bar1);
 		goto fail;
 	}
 

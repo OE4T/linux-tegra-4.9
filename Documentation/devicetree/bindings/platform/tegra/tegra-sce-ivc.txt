@@ -44,13 +44,6 @@ Required properties:
 - #size-cells: Number of size cells in each subnode (ivc-channels).
   Must be set to <1>.
 
-Mailbox properties:
-- #mbox-cells
-  Should be set to <1>.
-
-The IVC channels are represented as mailbox channels.
-Hence, this binding makes use of the mailbox binding at ../mailbox/mailbox.txt.
-
 == SCE sub nodes ==
 
 * ivc-channels
@@ -119,7 +112,6 @@ tegra_sce: rtcpu@b000000 {
 		"sce-gte",
 		"sce-cfg";
 	nvidia,ast = <&sce_ast0>, <&sce_ast1>;
-	#mbox-cells = <1>;
 	#address-cells = <1>;
 	#size-cells = <1>;
 	ivc-channels@90000000 {

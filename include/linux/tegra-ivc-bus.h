@@ -73,6 +73,7 @@ struct tegra_ivc_channel {
 	struct ivc ivc;
 	struct device dev;
 	const struct tegra_ivc_channel_ops __rcu *ops;
+	struct tegra_ivc_channel *next;
 };
 
 static inline void *tegra_ivc_channel_get_drvdata(

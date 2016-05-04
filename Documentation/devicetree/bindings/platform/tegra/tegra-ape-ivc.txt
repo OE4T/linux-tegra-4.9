@@ -43,13 +43,6 @@ Required properties:
   - ape
   - adsp
 
-Mailbox properties:
-- #mbox-cells
-  Should be set to <1>.
-
-The IVC channels are represented as mailbox channels.
-Hence, this binding uses the mailbox binding at ../mailbox/mailbox.txt.
-
 == APE sub nodes ==
 
 * ivc-channels
@@ -117,7 +110,6 @@ tegra_ape: rtcpu@2993000 {
 		"ape",
 		"adsp";
 
-	#mbox-cells = <1>;
 	#address-cells = <1>;
 	#size-cells = <1>;
 	ivc-channels@0 {

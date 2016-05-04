@@ -19,7 +19,6 @@
 #include <linux/of_device.h>
 #include <linux/slab.h>
 #include <linux/tegra-ivc.h>
-#include <linux/mailbox_controller.h>
 #include <linux/tegra_ast.h>
 #include <linux/tegra-ivc-bus.h>
 
@@ -122,11 +121,10 @@ EXPORT_SYMBOL(tegra_ivc_driver_unregister);
 
 struct tegra_ivc_bus {
 	struct device dev;
-	struct mbox_controller mbox;
 	int hsp_master;
 	int hsp_db;
 	struct work_struct work;
-	struct mbox_chan chans[];
+	struct tegra_ivc_channel *chans;
 };
 
 static void tegra_hsp_ring(struct device *dev)
@@ -181,29 +179,13 @@ static void tegra_ivc_channel_ring(struct ivc *ivc)
 
 static void tegra_ivc_channel_notify(struct tegra_ivc_channel *chan)
 {
-	struct ivc *ivc = &chan->ivc;
 	const struct tegra_ivc_channel_ops *ops;
 
 	rcu_read_lock();
 	ops = rcu_dereference(chan->ops);
 
-	if (ops == NULL) {
-		struct mbox_chan *mbox_chan =
-			tegra_ivc_channel_get_drvdata(chan);
-
-		while (tegra_ivc_can_read(ivc)) {
-			struct tegra_ivc_mbox_msg msg = {
-				.data = tegra_ivc_read_get_next_frame(ivc),
-				.length = ivc->frame_size,
-			};
-
-			WARN_ON(chan != mbox_chan->con_priv);
-			mbox_chan_received_data(mbox_chan, &msg);
-			tegra_ivc_read_advance(ivc);
-		}
-	} else if (ops->notify != NULL) {
+	if (ops != NULL && ops->notify != NULL)
 		ops->notify(chan);
-	}
 	rcu_read_unlock();
 }
 
@@ -212,67 +194,20 @@ struct device_type tegra_ivc_channel_type = {
 };
 EXPORT_SYMBOL(tegra_ivc_channel_type);
 
-static int tegra_ivc_mbox_send_data(struct mbox_chan *mbox_chan, void *data)
-{
-	struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-	struct tegra_ivc_mbox_msg *msg = data;
-	int ret = 0;
-
-	if (tegra_ivc_write(&chan->ivc, msg->data, msg->length) != msg->length)
-		ret = -EBUSY;
-	return ret;
-}
-
-static int tegra_ivc_mbox_startup(struct mbox_chan *mbox_chan)
-{
-	struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
-	if (chan->dev.driver != NULL)
-		return -EBUSY;
-
-	tegra_ivc_channel_set_drvdata(chan, mbox_chan);
-	return 0;
-}
-
-static void tegra_ivc_mbox_shutdown(struct mbox_chan *mbox_chan)
-{
-	struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
-	WARN_ON(chan->dev.driver != NULL);
-	tegra_ivc_channel_set_drvdata(chan, NULL);
-}
-
-static bool tegra_ivc_mbox_last_tx_done(struct mbox_chan *mbox_chan)
-{
-	return true;
-}
-
-static struct mbox_chan_ops tegra_ivc_mbox_chan_ops = {
-	.send_data = tegra_ivc_mbox_send_data,
-	.startup = tegra_ivc_mbox_startup,
-	.shutdown = tegra_ivc_mbox_shutdown,
-	.last_tx_done = tegra_ivc_mbox_last_tx_done,
-};
-
 static void tegra_ivc_bus_worker(struct work_struct *work)
 {
 	struct tegra_ivc_bus *bus =
 			container_of(work, struct tegra_ivc_bus, work);
-	int i;
+	struct tegra_ivc_channel *chan;
 
-	for (i = 0; i < bus->mbox.num_chans; i++) {
-		struct mbox_chan *mbox_chan = &bus->mbox.chans[i];
-		struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
+	for (chan = bus->chans; chan != NULL; chan = chan->next)
 		tegra_ivc_channel_notify(chan);
-	}
 }
 
-static int tegra_ivc_bus_parse_channel(struct device *dev, int idx,
-		uintptr_t ivc_base, dma_addr_t ivc_dma, u32 ivc_size,
-		struct mbox_chan *mbox_chan, struct device_node *ch_node)
+static struct tegra_ivc_channel *tegra_ivc_bus_parse_channel(
+		struct device_node *ch_node, struct device *parent,
+		uintptr_t ivc_base, dma_addr_t ivc_dma, u32 ivc_size)
 {
-	struct tegra_ivc_channel *chan;
 	int ret;
 	u32 nframes, frame_size;
 	union {
@@ -283,74 +218,76 @@ static int tegra_ivc_bus_parse_channel(struct device *dev, int idx,
 		};
 	} start, end;
 
-	ret = of_property_read_u32_array(ch_node, "reg", start.tab,
-						ARRAY_SIZE(start.tab));
-	if (ret) {
-		dev_err(dev, "missing <%s> property\n", "reg");
-		return ret;
-	}
-
-	ret = of_property_read_u32(ch_node, NV(frame-count), &nframes);
-	if (ret) {
-		dev_err(dev, "missing <%s> property\n", NV(frame-count));
-		return ret;
-	}
-
-	ret = of_property_read_u32(ch_node, NV(frame-size), &frame_size);
-	if (ret) {
-		dev_err(dev, "missing <%s> property\n", NV(frame-size));
-		return ret;
-	}
-
-	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
-	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
-
-	if (end.rx > ivc_size) {
-		dev_err(dev, "%s buffer exceeds IVC size\n", "RX");
-		return -ENOMEM;
-	}
-
-	if (end.tx > ivc_size) {
-		dev_err(dev, "%s buffer exceeds IVC size\n", "TX");
-		return -ENOMEM;
-	}
-
-	if (start.tx < start.rx ? end.tx > start.rx : end.rx > start.tx) {
-		dev_err(dev, "RX and TX buffers overlap on channel %s\n",
-			ch_node->name);
-		return -ENOMEM;
-	}
-
-	chan = kzalloc(sizeof(*chan), GFP_KERNEL);
+	struct tegra_ivc_channel *chan = kzalloc(sizeof(*chan), GFP_KERNEL);
 	if (unlikely(chan == NULL))
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 
-	chan->dev.parent = dev;
+	chan->dev.parent = parent;
 	chan->dev.type = &tegra_ivc_channel_type;
 	chan->dev.bus = &tegra_ivc_bus_type;
 	chan->dev.of_node = of_node_get(ch_node);
 	chan->dev.release = tegra_ivc_channel_release;
-	dev_set_name(&chan->dev, "%s:%d", dev_name(dev), idx);
+	dev_set_name(&chan->dev, "%s:%s", dev_name(parent),
+			kbasename(ch_node->full_name));
 	device_initialize(&chan->dev);
 
-	mbox_chan->con_priv = chan;
+	ret = of_property_read_u32_array(ch_node, "reg", start.tab,
+						ARRAY_SIZE(start.tab));
+	if (ret) {
+		dev_err(&chan->dev, "missing <%s> property\n", "reg");
+		goto error;
+	}
+
+	ret = of_property_read_u32(ch_node, NV(frame-count), &nframes);
+	if (ret) {
+		dev_err(&chan->dev, "missing <%s> property\n",
+			NV(frame-count));
+		goto error;
+	}
+
+	ret = of_property_read_u32(ch_node, NV(frame-size), &frame_size);
+	if (ret) {
+		dev_err(&chan->dev, "missing <%s> property\n", NV(frame-size));
+		goto error;
+	}
+
+	ret = -EINVAL;
+	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
+	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
+
+	if (end.rx > ivc_size) {
+		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "RX");
+		goto error;
+	}
+
+	if (end.tx > ivc_size) {
+		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "TX");
+		goto error;
+	}
+
+	if (start.tx < start.rx ? end.tx > start.rx : end.rx > start.tx) {
+		dev_err(&chan->dev, "RX and TX buffers overlap\n");
+		goto error;
+	}
 
 	/* FIXME: revisit if dev->parent actually needed */
 	/* Init IVC */
 	ret = tegra_ivc_init_with_dma_handle(&chan->ivc,
 			ivc_base + start.rx, (u64)ivc_dma + start.rx,
 			ivc_base + start.tx, (u64)ivc_dma + start.tx,
-			nframes, frame_size, dev->parent,
+			nframes, frame_size, parent->parent,
 			tegra_ivc_channel_ring);
 	if (ret) {
 		dev_err(&chan->dev, "IVC initialization error: %d\n", ret);
-		put_device(&chan->dev);
-		return ret;
+		goto error;
 	}
 
 	dev_dbg(&chan->dev, "%s: RX: 0x%x-0x%x TX: 0x%x-0x%x\n",
 		ch_node->name, start.rx, end.rx, start.tx, end.tx);
-	return 0;
+	return chan;
+error:
+	put_device(&chan->dev);
+	return ERR_PTR(ret);
 }
 
 static int tegra_ivc_bus_check_overlap(struct device *dev,
@@ -387,14 +324,13 @@ static int tegra_ivc_bus_check_overlap(struct device *dev,
 
 static int tegra_ivc_bus_validate_channels(struct tegra_ivc_bus *bus)
 {
-	int i, j, ret;
+	struct tegra_ivc_channel *ch0;
 
-	for (i = 0; i < bus->mbox.num_chans; i++) {
-		struct tegra_ivc_channel *ch0 = bus->mbox.chans[i].con_priv;
+	for (ch0 = bus->chans; ch0 != NULL; ch0 = ch0->next) {
+		struct tegra_ivc_channel *ch1;
 
-		for (j = i + 1; j < bus->mbox.num_chans; j++) {
-			struct tegra_ivc_channel *ch1 =
-						bus->mbox.chans[j].con_priv;
+		for (ch1 = ch0->next; ch1 != NULL; ch1 = ch1->next) {
+			int ret;
 
 			ret = tegra_ivc_bus_check_overlap(&bus->dev, ch0, ch1);
 			if (ret)
@@ -405,12 +341,22 @@ static int tegra_ivc_bus_validate_channels(struct tegra_ivc_bus *bus)
 	return 0;
 }
 
+static void tegra_ivc_bus_destroy_channels(struct tegra_ivc_bus *bus)
+{
+	while (bus->chans != NULL) {
+		struct tegra_ivc_channel *chan = bus->chans;
+
+		bus->chans = chan->next;
+		put_device(&chan->dev);
+	}
+}
+
 static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 					struct device_node *dev_node, u32 sid)
 {
 	struct device_node *reg_node;
 	void __iomem *ast[2];
-	int ret, channel = 0, region = 2;
+	int ret, region = 2;
 
 	/* Get AST handles */
 	ret = tegra_ast_map(bus->dev.parent, NV(ast), 2, ast);
@@ -459,15 +405,18 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 		region++;
 
 		for_each_child_of_node(reg_node, ch_node) {
-			ret = tegra_ivc_bus_parse_channel(&bus->dev, channel,
-					base, ivc_dma, ivc.size,
-					&bus->mbox.chans[channel], ch_node);
-			if (ret) {
+			struct tegra_ivc_channel *chan;
+
+			chan = tegra_ivc_bus_parse_channel(ch_node, &bus->dev,
+						base, ivc_dma, ivc.size);
+			if (IS_ERR(chan)) {
+				ret = PTR_ERR(chan);
 				of_node_put(ch_node);
 				goto error;
 			}
 
-			channel++;
+			chan->next = bus->chans;
+			bus->chans = chan;
 		}
 	}
 
@@ -475,58 +424,15 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 
 error:
 	of_node_put(reg_node);
-
-	while (channel > 0) {
-		struct mbox_chan *mbox_chan = &bus->mbox.chans[--channel];
-		struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
-		put_device(&chan->dev);
-	}
+	tegra_ivc_bus_destroy_channels(bus);
 	return ret;
-}
-
-static void tegra_ivc_bus_destroy_channels(struct tegra_ivc_bus *bus)
-{
-	int i;
-
-	for (i = 0; i < bus->mbox.num_chans; i++) {
-		struct mbox_chan *mbox_chan = &bus->mbox.chans[i];
-		struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
-		put_device(&chan->dev);
-	}
-}
-
-static unsigned tegra_ivc_bus_count_channels(struct device_node *dev_node)
-{
-	struct device_node *bus_node;
-	unsigned num = 0;
-
-	for_each_child_of_node(dev_node, bus_node)
-		if (of_node_cmp(bus_node->name, "ivc-channels") == 0) {
-			struct device_node *ch_node;
-
-			for_each_child_of_node(bus_node, ch_node)
-				num++;
-		}
-
-	return num;
 }
 
 struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 {
-	struct tegra_ivc_bus *bus;
-	unsigned count;
 	int ret;
 
-	count = tegra_ivc_bus_count_channels(dev->of_node);
-	if (count == 0) {
-		dev_err(dev, "no IVC channels\n");
-		return ERR_PTR(-EINVAL);
-	}
-
-	bus = kzalloc(sizeof(*bus) + count * sizeof(bus->chans[0]),
-			GFP_KERNEL);
+	struct tegra_ivc_bus *bus = kzalloc(sizeof(*bus), GFP_KERNEL);
 	if (unlikely(bus == NULL))
 		return ERR_PTR(-ENOMEM);
 
@@ -538,13 +444,6 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 	dev_set_name(&bus->dev, "ivc-%s", dev_name(dev));
 
 	INIT_WORK(&bus->work, tegra_ivc_bus_worker);
-
-	bus->mbox.dev = dev; /* must be platform_device */
-	bus->mbox.chans = bus->chans;
-	bus->mbox.num_chans = count;
-	bus->mbox.ops = &tegra_ivc_mbox_chan_ops;
-	bus->mbox.txdone_poll = true;
-	bus->mbox.txpoll_period = 1;
 
 	device_initialize(&bus->dev);
 
@@ -573,50 +472,32 @@ static int tegra_ivc_bus_start(struct device *dev)
 {
 	struct tegra_ivc_bus *bus =
 		container_of(dev, struct tegra_ivc_bus, dev);
-	int ret, i;
+	struct tegra_ivc_channel *chan;
 
-	for (i = 0; i < bus->mbox.num_chans; i++) {
-		struct mbox_chan *mbox_chan = &bus->mbox.chans[i];
-		struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
-		ret = device_add(&chan->dev);
+	for (chan = bus->chans; chan != NULL; chan = chan->next) {
+		int ret = device_add(&chan->dev);
 		if (ret) {
-			dev_err(dev, "channel device error: %d\n", ret);
-			goto error;
+			struct tegra_ivc_channel *cd;
+
+			dev_err(&chan->dev, "channel device error: %d\n", ret);
+
+			for (cd = bus->chans; cd != chan; cd = cd->next)
+				device_del(&cd->dev);
+			return ret;
 		}
 	}
 
-	ret = mbox_controller_register(&bus->mbox);
-	if (ret) {
-		dev_err(dev, "mailbox controller error: %d\n", ret);
-		goto error;
-	}
 	return 0;
-
-error:
-	while (i > 0) {
-		struct mbox_chan *mbox_chan = &bus->mbox.chans[--i];
-		struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
-		device_del(&chan->dev);
-	}
-	return ret;
 }
 
 static void tegra_ivc_bus_stop(struct device *dev)
 {
 	struct tegra_ivc_bus *bus =
 		container_of(dev, struct tegra_ivc_bus, dev);
-	int i;
+	struct tegra_ivc_channel *chan;
 
-	mbox_controller_unregister(&bus->mbox);
-
-	for (i = 0; i < bus->mbox.num_chans; i++) {
-		struct mbox_chan *mbox_chan = &bus->mbox.chans[i];
-		struct tegra_ivc_channel *chan = mbox_chan->con_priv;
-
+	for (chan = bus->chans; chan != NULL; chan = chan->next)
 		device_del(&chan->dev);
-	}
 }
 
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)

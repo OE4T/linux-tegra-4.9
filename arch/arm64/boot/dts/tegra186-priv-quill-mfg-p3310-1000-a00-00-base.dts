@@ -148,44 +148,48 @@
 
 	spi@3210000 {
 		prod-settings {
+			mask-one-style;
 			prod_c_cs0 {
 			/* enabled for spi flash rom */
-			    prod = <0x04 0xfffff03f 0x0000043f>;
+			    prod = <0x04 0x00000fc0 0x0000043f>;
 			/* enabled for spi loopback mode */
-			    /*prod = <0x04 0xfffff03f 0x0000043f>;*/
+			    /*prod = <0x04 0x00000fc0 0x0000043f>;*/
 			};
 		};
 	};
 
 	spi@c260000 {
 		prod-settings {
+			mask-one-style;
 			prod_c_cs0 {
 			/* enabled for spi flash rom */
-			    prod = <0x04 0xfffff03f 0x0000043f>;
+			    prod = <0x04 0x00000fc0 0x0000043f>;
 			/* enabled for spi loopback mode */
-			    /*prod = <0x04 0xfffff03f 0x0000043f>;*/
+			    /*prod = <0x04 0x00000fc0 0x0000043f>;*/
 			};
 		};
 	};
 
 	spi@3230000 {
 		prod-settings {
+			mask-one-style;
 			prod_c_cs0 {
 			/* enabled for spi flash rom only */
-			    prod = <0x04 0xffffffc0 0x00000008>;
+			    prod = <0x04 0x0000003f 0x00000008>;
 			/* enabled for spi loopback mode */
-			    /*prod = <0x04 0xfffff03f 0x0000043f>;*/
+			    /*prod = <0x04 0x00000fc0 0x0000043f>;*/
 			};
 		};
 	};
 
 	spi@3240000 {
 		prod-settings {
+			mask-one-style;
 			prod_c_cs0 {
 			/* enabled for spi flash rom only */
-			    prod = <0x04 0xffffffc0 0x00000008>;
+			    prod = <0x04 0x0000003f 0x00000008>;
 			/* enabled for spi loopback mode */
-			    /*prod = <0x04 0xfffff03f 0x0000043f>;*/
+			    /*prod = <0x04 0x00000fc0 0x0000043f>;*/
 			};
 		};
 	};

@@ -43,6 +43,7 @@
 #include "tegra186-soc/tegra186-soc-thermal.dtsi"
 #include "tegra186-soc/tegra186-camera.dtsi"
 #include "tegra186-soc/tegra186-soc-actmon.dtsi"
+#include <../../../../include/dt-bindings/soc/gp10b-fuse.h>
 
 / {
 	compatible = "nvidia,tegra186";
@@ -1054,6 +1055,7 @@
 		clocks = <&tegra_car TEGRA186_CLK_GPCCLK>,
 			<&tegra_car TEGRA186_CLK_GPU>;
 		clock-names = "gpu", "gpu_sys";
+		fuse-overrides = <GP10B_FUSE_OPT_ECC_EN 0x9999>;
 	};
 
 	psci {

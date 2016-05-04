@@ -1,7 +1,7 @@
 /*
  * tegra186-quill-e3301-1080-a00-00-base.dts Quill-CHAR A00 Board
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -40,6 +40,10 @@
 		reg = <0x0 0x80000000 0x0 0x70000000>;
 	};
 
+	ufshci@2450000 {
+		status = "disabled";
+	};
+
 	pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;
@@ -75,6 +79,10 @@
 			sata {
 				nvidia,lanes = "uphy-lane-5";
 				nvidia,function = "sata";
+			};
+			ufs {
+				nvidia,function = "mphy";
+				status = "disabled";
 			};
 		};
 	};

@@ -38,7 +38,7 @@
 		};
 	};
 
-	ahci-sata@3507000 {
+	tegra_sata: ahci-sata@3507000 {
 		compatible = "nvidia,tegra186-ahci-sata";
 		reg = <0x0 0x03507000 0x0 0x00002000>, /* SATA AHCI */
 			<0x0 0x03501000 0x0 0x00006000>, /* SATA Config */

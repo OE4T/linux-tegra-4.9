@@ -17,7 +17,7 @@
 
 / {
 
-	ufshci@2450000 {
+	tegra_ufs: ufshci@2450000 {
 		compatible = "jedec,ufs-1.1";
 		reg = <0x0 0x02450000 0x0 0x4000>;
 		interrupts = < 0 TEGRA186_IRQ_UFSHC 0x04 >;

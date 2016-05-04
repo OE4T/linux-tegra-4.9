@@ -185,5 +185,98 @@
 				};
 			};
 		};
+		fragement@9 {
+			odm-data = "enable-ufs-on-uphy-lane5";
+			override@0 {
+				target = <&tegra_ufs>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&tegra_sata>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@2 {
+				target = <&tegra_padctl_uphy>;
+				_overlay_ {
+					pinmux {
+						ufs {
+							nvidia,lanes = "uphy-lane-5";
+							status = "okay";
+						};
+						sata {
+							status = "disabled";
+						};
+					};
+				};
+			};
+			override@3 {
+				target = <&gen1_i2c>;
+				_overlay_ {
+					gpio@76 {
+						ufs_lane5_mux {
+							status = "okay";
+						};
+						sata_lane5_mux {
+							status = "disabled";
+						};
+					};
+				};
+			};
+		};
+		fragement@10 {
+			odm-data = "enable-ufs-on-uphy-lane4";
+			override@0 {
+				target = <&tegra_ufs>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&tegra_sata>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+			override@2 {
+				target = <&tegra_padctl_uphy>;
+				_overlay_ {
+					pinmux {
+						pcie {
+							nvidia,lanes = "uphy-lane-0", "uphy-lane-3";
+						};
+						sata {
+							status = "disabled";
+						};
+						ufs {
+							nvidia,lanes = "uphy-lane-4", "uphy-lane-5";
+							status = "okay";
+						};
+					};
+				};
+			};
+			override@3 {
+				target = <&gen1_i2c>;
+				_overlay_ {
+					gpio@76 {
+						pcie0_lane4_mux {
+							status = "disabled";
+						};
+						ufs_lane4_mux {
+							status = "okay";
+						};
+						sata_lane5_mux {
+							status = "disabled";
+						};
+						ufs_lane5_mux {
+							status = "okay";
+						};
+					};
+				};
+			};
+		};
 	};
 };

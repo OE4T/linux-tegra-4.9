@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,6 +47,7 @@ DUMP_REG(nvdisp_head_loadv_cntr_r());
 DUMP_REG(nvdisp_rg_status_r());
 DUMP_REG(nvdisp_rg_dclk_r());
 DUMP_REG(nvdisp_rg_underflow_r());
+DUMP_REG(nvdisp_rg_dpca_r());
 DUMP_REG(nvdisp_rg_underflow_pixel_r());
 DUMP_REG(nvdisp_rg_region_crc_r());
 DUMP_REG(nvdisp_rg_region_crc_ctl_r());

@@ -598,6 +598,10 @@ static inline u32 nvdisp_rg_underflow_frames_uflowed_rst_trigger_f(void)
 {
 	return 0x1000000;
 }
+static inline u32 nvdisp_rg_dpca_r(void)
+{
+	return 0x00000366;
+}
 static inline u32 nvdisp_rg_underflow_pixel_r(void)
 {
 	return 0x0000036d;

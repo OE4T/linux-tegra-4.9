@@ -197,7 +197,7 @@ struct nvhost_device_data t18_isp_info = {
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.poweron_reset		= true,
 	.clocks			= {
-		{"isp", 408000000},
+		{"isp", 768000000},
 		{"emc", HOST_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}

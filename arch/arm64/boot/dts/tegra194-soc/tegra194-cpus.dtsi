@@ -1,5 +1,5 @@
 /*
- * arch/arm64/boot/dts/tegra194-sim-private.dts
+ * arch/arm64/boot/dts/tegra194-cpus.dtsi
  *
  * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,23 +14,16 @@
  *
  */
 
-/dts-v1/;
-
-/memreserve/ 0x80000000 0x00010000;
-
-#include "tegra194-soc/tegra194-soc-base.dtsi"
-#include "tegra194-soc/tegra194-cpus.dtsi"
 / {
-	model = "t186ref";
-	compatible = "nvidia,tegra186";
+	cpus {
+		#address-cells = <2>;
+		#size-cells = <0>;
 
-	chosen {
-		bootargs ="mem=1024M@2048M console=ttyS0,115200 earlyprintk=uart8250-32bit,0x03100000";
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,cortex-a57-64bit", "arm,armv8";
+			reg = <0x0 0x0>;
+			enable-method = "psci";
+		};
 	};
-
-	memory@80000000 {
-		device_type = "memory";
-		reg = < 0x0 0x80000000 0x0 0xc0000000 >;
-	};
-
 };

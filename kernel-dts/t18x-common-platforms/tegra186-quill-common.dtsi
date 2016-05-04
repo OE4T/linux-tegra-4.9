@@ -581,6 +581,8 @@
 	sdhci@3460000 {
 		uhs-mask = <0x0>; /*enable HS400 mode*/
 		nvidia,enable-strobe-mode;
+		nvidia,en-periodic-cflush;
+		nvidia,periodic-cflush-to = <100>;
 		status = "okay";
 	};
 

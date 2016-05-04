@@ -1,0 +1,139 @@
+/*
+ * tegra186-soc-base.dtsi: SoC Base DTSI file.
+ *
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License along
+ * with this program; if not, write to the Free Software Foundation, Inc.,
+ * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
+ *
+ */
+
+/ {
+	compatible = "nvidia,tegra186";
+	interrupt-parent = <&intc>;
+	#address-cells = <2>;
+	#size-cells = <2>;
+
+	reserved-memory {
+		#address-cells = <2>;
+		#size-cells = <2>;
+		ranges;
+
+		generic_reserved: generic_carveout {
+			compatible = "nvidia,generic_carveout";
+			size = <0 0>;
+			alignment = <0 0x100000>;
+			alloc-ranges = <0 0 0x1 0>;
+			no-map;
+			status = "disabled";
+		};
+	};
+
+	timer {
+		compatible = "arm,armv8-timer";
+		interrupts = <1 11 0xf01
+			      1 14 0xf01
+			      1 11 0xf01
+			      1 10 0xf01>;
+		status = "disabled";
+	};
+
+	rtc@c2a0000 {
+		compatible = "nvidia,tegra18-rtc";
+		reg = <0x0 0x0c2a0000 0x0 0x100>;
+		interrupts = <0 10 0x04>;
+		status = "disabled";
+	};
+
+	mc_sid@2c00000 {
+		compatible = "nvidia,tegra-mc-sid";
+ 		reg = <0x0 0x02c00000 0x0 0x00010000>, /* MC_SID_BASE */
+ 		      <0x0 0x02c10000 0x0 0x00010000>; /* MC_BASE */
+		status = "disabled";
+	};
+
+	/* HACK: Populate earlier than other device */
+	smmu: iommu@12000000{
+		compatible = "arm,mmu-500";
+		reg = <0x0 0x12000000 0x0 0x01000000>; /* 16MB */
+		#global-interrupts = <2>;
+		interrupts = <0 170 4>,
+			     <0 171 4>;
+		status = "disabled";
+
+		address-space-prop {
+			common_as: common {
+				iova-start = <0x0 0x80000000>;
+				iova-size = <0x0 0x7FF00000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			gpu_as: gpu {
+				iova-start = <0x0 0x00100000>;
+				iova-size = <0x3 0xFFEFFFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <0>;
+			};
+			ape_as: ape {
+				iova-start = <0x0 0x40000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+		};
+	};
+
+
+	intc: interrupt-controller@3881000 {
+		compatible = "arm,cortex-a15-gic";
+		#interrupt-cells = <3>;
+		interrupt-controller;
+		reg = <0x0 0x03881000 0x0 0x00001000
+		       0x0 0x03882000 0x0 0x00002000>;
+		status = "disabled";
+	};
+
+	lic: interrupt-controller@3000000 {
+		compatible = "nvidia,tegra-gic";
+		interrupt-controller;
+		reg = <0x0 0x03000000 0x0 0x00000800
+			0x0 0x03000800 0x0 0x00000800
+			0x0 0x03001000 0x0 0x00000800
+			0x0 0x03001800 0x0 0x00000800
+			0x0 0x03002000 0x0 0x00000800
+			0x0 0x03002800 0x0 0x00000800
+			0x0 0x03003000 0x0 0x00000800
+			0x0 0x03003800 0x0 0x00000800
+			0x0 0x0300f800 0x0 0x00000800>;
+		status = "disabled";
+	};
+
+	chipid@100000 {
+		compatible = "nvidia,tegra186-chipid";
+		reg = <0x0 0x00100000 0x0 0x10000>;
+		status = "disabled";
+	};
+
+	bpmp {
+		compatible = "nvidia,tegra186-bpmp";
+		#stream-id-cells = <1>;
+		reg = <0x0 0x0d000000 0x0 0x00800000>,
+		      <0x0 0x3004e000 0x0 0x00001000>,
+		      <0x0 0x3004f000 0x0 0x00001000>;
+		status = "disabled";
+	};
+
+};

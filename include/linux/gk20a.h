@@ -24,16 +24,12 @@
 struct channel_gk20a;
 struct platform_device;
 
-#ifdef CONFIG_GK20A
-int nvhost_vpr_info_fetch(void);
+#if defined(CONFIG_GK20A) && defined(CONFIG_PM)
 int gk20a_do_idle(void);
 int gk20a_do_unidle(void);
 #else
-static inline int nvhost_vpr_info_fetch(void)
-{
-	return -ENOSYS;
-}
 static inline int gk20a_do_idle(void) { return -ENOSYS; }
 static inline int gk20a_do_unidle(void) { return -ENOSYS; }
 #endif
+
 #endif

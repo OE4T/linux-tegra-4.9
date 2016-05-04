@@ -14,6 +14,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/tegra-camera-rtcpu.h>
+
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
@@ -229,10 +231,70 @@ static int tegra_cam_rtcpu_apply_resets(struct device *dev,
 	return 0;
 }
 
-static void tegra_cam_rtcpu_boot(struct device *dev)
+int tegra_camrtc_reset(struct device *dev)
+{
+	return tegra_cam_rtcpu_apply_resets(dev, reset_control_reset);
+}
+EXPORT_SYMBOL(tegra_camrtc_reset);
+
+int tegra_camrtc_set_halt(struct device *dev, bool halt)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 	u32 reg_val;
+
+	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
+		reg_val = readl(cam_rtcpu->rtcpu_sce.sce_pm_base +
+				TEGRA_SCEPM_R5_CTRL_0);
+
+		if (halt) {
+			reg_val &= ~TEGRA_SCE_FWLOADDONE;
+		} else {
+			/* Set FW load done bit to unhalt */
+			reg_val |= TEGRA_SCE_FWLOADDONE;
+		}
+
+		dev_info(dev, "sce gets %s", halt ? "halted" : "unhalted");
+
+		writel(reg_val, cam_rtcpu->rtcpu_sce.sce_pm_base +
+		       TEGRA_SCEPM_R5_CTRL_0);
+
+		return 0;
+	} else {
+		dev_emerg(dev, "don't know how to halt/unhalt APE");
+
+		return -ENOSYS;
+	}
+}
+EXPORT_SYMBOL(tegra_camrtc_set_halt);
+
+int tegra_camrtc_get_halt(struct device *dev, bool *halt)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+	u32 reg_val;
+
+	if (dev == NULL)
+		return -EINVAL;
+
+	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
+		reg_val = readl(cam_rtcpu->rtcpu_sce.sce_pm_base +
+				TEGRA_SCEPM_R5_CTRL_0);
+
+		*halt = (reg_val & TEGRA_SCE_FWLOADDONE) == 0;
+
+		dev_info(dev, "sce is %s", *halt ? "halted" : "unhalted");
+
+		return 0;
+	} else {
+		dev_emerg(dev, "don't know how to halt/unhalt APE");
+
+		return -ENOSYS;
+	}
+}
+EXPORT_SYMBOL(tegra_camrtc_get_halt);
+
+void tegra_camrtc_ready(struct device *dev)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 
 	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
 		/* Disable SCE R5R and smartcomp in camera mode */
@@ -244,16 +306,24 @@ static void tegra_cam_rtcpu_boot(struct device *dev)
 		writel(TEGRA_SCE_FN_MODEIN,
 			cam_rtcpu->rtcpu_sce.sce_cfg_base +
 					TEGRA_SCE_APS_FRSC_SC_MODEIN_0);
+	}
+}
+EXPORT_SYMBOL(tegra_camrtc_ready);
 
-		/* Set FW load done bit */
-		reg_val = readl(cam_rtcpu->rtcpu_sce.sce_pm_base +
-				TEGRA_SCEPM_R5_CTRL_0);
-		writel(TEGRA_SCE_FWLOADDONE | reg_val,
-			cam_rtcpu->rtcpu_sce.sce_pm_base +
-			TEGRA_SCEPM_R5_CTRL_0);
+static void tegra_cam_rtcpu_boot(struct device *dev)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 
-		dev_info(dev, "booting sce");
-	} /* else the rtcpu is ape. */
+	tegra_camrtc_ready(dev);
+
+	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
+		/* Unhalt SCE */
+		tegra_camrtc_set_halt(dev, false);
+
+		dev_info(dev, "booting SCE with Camera RTCPU FW");
+	} else {
+		dev_info(dev, "booting APE with Camera RTCPU FW");
+	}
 }
 
 static int tegra_cam_rtcpu_remove(struct platform_device *pdev);

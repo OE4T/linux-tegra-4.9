@@ -136,10 +136,11 @@
 	ahci-sata@3507000 {
 		prod-settings {
 			#prod-cells = <4>;
+			mask-one-style;
 			prod {
 				prod = <
-					1 0x0000052C 0x00000000 0x00031CE0	// T_SATA0_SPARE_3		31:0
-					1 0x00000338 0xEFFFFFFF 0x10000000	// T_SATA0_AHCI_HBA_CYA_1_0     BIT(28)
+					1 0x0000052C 0xFFFFFFFF 0x00031CE0	// T_SATA0_SPARE_3		31:0
+					1 0x00000338 0x10000000 0x10000000	// T_SATA0_AHCI_HBA_CYA_1_0     BIT(28)
 				>;
 			};
 		};

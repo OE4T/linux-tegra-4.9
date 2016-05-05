@@ -6,7 +6,8 @@ ccflags-y += -I../kernel-nvhost-t19x/include/linux
 ccflags-y += -Werror
 
 nvhost-pva-objs  = \
-		pva.o
+		pva.o \
+		pva_cluster.o
 
 
 obj-$(CONFIG_TEGRA_GRHOST) += nvhost-pva.o

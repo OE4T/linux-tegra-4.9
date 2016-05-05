@@ -35,6 +35,7 @@
 #include "nvhost_acm.h"
 #include "t194/t194.h"
 #include "pva.h"
+#include "pva_cluster.h"
 
 /* Map PVA-A and PVA-B to respective configuration items in nvhost */
 static struct of_device_id tegra_pva_of_match[] = {
@@ -125,8 +126,14 @@ static int pva_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_client_device_init;
 
+	err = pva_cluster_add(pdev);
+	if (err < 0)
+		goto err_pva_cluster_add;
+
 	return 0;
 
+err_pva_cluster_add:
+	nvhost_client_device_release(pdev);
 err_client_device_init:
 err_add_domain:
 	nvhost_module_deinit(pdev);
@@ -139,9 +146,15 @@ err_alloc_pva:
 
 static int __exit pva_remove(struct platform_device *pdev)
 {
+	int err = 0;
+
+	err = pva_cluster_remove(pdev);
+	if (err < 0)
+		return err;
+
 	nvhost_client_device_release(pdev);
 
-	return 0;
+	return err;
 }
 
 static struct platform_driver pva_driver = {

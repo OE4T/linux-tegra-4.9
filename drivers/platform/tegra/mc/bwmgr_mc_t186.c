@@ -84,7 +84,7 @@ static struct mrq_emc_dvfs_latency_response bwmgr_emc_dvfs;
 #define MC_ECC_CONTROL_0 0x1880
 #define EMC_FBIO_CFG5_0 0x104
 
-#define CH_MASK 0xf
+#define CH_MASK 0xf /* Change bit counting if this mask changes */
 #define CH4 0xf
 #define CH2 0x3
 
@@ -98,7 +98,7 @@ static struct mrq_emc_dvfs_latency_response bwmgr_emc_dvfs;
 
 void bwmgr_eff_init(void)
 {
-	int i;
+	int i, ch_num;
 	u32 dram, ch, ecc;
 	void *mc_base, *emc_base;
 
@@ -112,31 +112,41 @@ void bwmgr_eff_init(void)
 	iounmap(emc_base);
 	iounmap(mc_base);
 
+	ch_num = ((ch >> 3) & 1) + ((ch >> 2) & 1) + ((ch >> 1) & 1) + (ch & 1);
+
 	/* T186 platforms should only have LPDDR4 */
 	switch (dram) {
 	case DRAM_LPDDR4:
 		if (ecc) {
-			if (ch == CH4) {
+			if (ch_num == 4) {
 				bwmgr_dram_type =
 					DRAM_TYPE_LPDDR4_4CH_ECC;
 				bwmgr_dram_iso_eff_table =
 				bwmgr_t186_lpddr4_4ch_ecc_iso_eff;
-			} else if (ch == CH2) {
+			} else if (ch_num == 2) {
 				bwmgr_dram_type =
 					DRAM_TYPE_LPDDR4_2CH_ECC;
 				bwmgr_dram_iso_eff_table =
 				bwmgr_t186_lpddr4_2ch_ecc_iso_eff;
 			}
 		} else {
-			if (ch == CH4) {
+			if (ch_num == 4) {
 				bwmgr_dram_type = DRAM_TYPE_LPDDR4_4CH;
 				bwmgr_dram_iso_eff_table =
 				bwmgr_t186_lpddr4_4ch_iso_eff;
-			} else if (ch == CH2) {
+			} else if (ch_num == 2) {
 				bwmgr_dram_type = DRAM_TYPE_LPDDR4_2CH;
 				bwmgr_dram_iso_eff_table =
 				bwmgr_t186_lpddr4_2ch_iso_eff;
 			}
+		}
+
+		if ((ch_num == 0) || (ch_num == 1) || (ch_num == 3)) {
+			pr_err("bwmgr: Unknown memory channel configuration\n");
+			bwmgr_dram_type =
+				DRAM_TYPE_LPDDR4_2CH_ECC;
+			bwmgr_dram_iso_eff_table =
+				bwmgr_t186_lpddr4_2ch_ecc_iso_eff;
 		}
 
 		bwmgr_dram_efficiency = 70;

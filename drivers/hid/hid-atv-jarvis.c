@@ -211,6 +211,9 @@ static struct switch_dev shdr_mic_switch = {
 /* Debug feature to trace audio packets being received */
 #define DEBUG_AUDIO_RECEPTION 1
 
+/* Debug feature to trace tx audio packets */
+#define DEBUG_AUDIO_TX 0
+
 /* Debug feature to trace HID reports we see */
 #define DEBUG_HID_RAW_INPUT 0
 
@@ -1052,7 +1055,9 @@ static int snd_atvr_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
 	case SNDRV_PCM_TRIGGER_RESUME:
+#if (DEBUG_AUDIO_TX == 1)
 		snd_atvr_log("%s starting audio\n", __func__);
+#endif
 
 #if (DEBUG_WITH_MISC_DEVICE == 1)
 		large_pcm_index = 0;
@@ -1080,10 +1085,11 @@ static int snd_atvr_pcm_trigger(struct snd_pcm_substream *substream, int cmd)
 
 	case SNDRV_PCM_TRIGGER_STOP:
 	case SNDRV_PCM_TRIGGER_SUSPEND:
+#if (DEBUG_AUDIO_TX == 1)
 		snd_atvr_log("%s stopping audio, peak = %d, # packets = %d\n",
 			__func__, atvr_snd->peak_level,
 			atvr_snd->packet_counter);
-
+#endif
 		atvr_snd->pcm_stopped = true;
 		smp_wmb(); /* so other thread will see s_substream_for_btle */
 		snd_atvr_timer_stop(substream);
@@ -1096,11 +1102,12 @@ static int snd_atvr_pcm_prepare(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
 	struct snd_pcm_runtime *runtime = substream->runtime;
+#if (DEBUG_AUDIO_TX == 1)
 	snd_atvr_log("%s, rate = %d, period_size = %d, buffer_size = %d\n",
 		__func__, (int) runtime->rate,
 		(int) runtime->period_size,
 		(int) runtime->buffer_size);
-
+#endif
 	if (runtime->buffer_size > MAX_FRAMES_PER_BUFFER)
 		return -EINVAL;
 

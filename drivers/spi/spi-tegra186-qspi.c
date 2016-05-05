@@ -1100,9 +1100,9 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 
 	if (tqspi->prod_list) {
 		sprintf(prod_name, "prod_c_cs%d", spi->chip_select);
-		if (tegra_prod_set_by_name(&tqspi->base,
-					prod_name, tqspi->prod_list))
-			tegra_prod_set_by_name(&tqspi->base,
+		tegra_prod_set_by_name(&tqspi->base,
+					prod_name, tqspi->prod_list);
+		tegra_prod_set_by_name(&tqspi->base,
 					"prod", tqspi->prod_list);
 	} else {
 		/* Set Default values for Command 2 registers */

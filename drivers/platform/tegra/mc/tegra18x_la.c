@@ -233,14 +233,26 @@ static inline unsigned int t18x_fraction2dda_fp(unsigned int fraction_fp,
 
 static inline unsigned int t18x_bw_to_fractionfpa(unsigned int bw_mbps)
 {
-	return (lo_gd_fpa * T18X_LA_REAL_TO_FP2(bw_mbps)) /
-		(T18X_LA_FP_TO_FP2(lo_freq_fp) * dram_width_bytes);
+	unsigned int ret_val =
+			(lo_gd_fpa * T18X_LA_REAL_TO_FP2(bw_mbps)) /
+			(T18X_LA_FP_TO_FP2(lo_freq_fp) * dram_width_bytes);
+
+	if (bw_mbps == 0)
+		return 0;
+	else
+		return max((unsigned int)1, ret_val);
 }
 
 static inline unsigned int t18x_bwfp_to_fractionfpa(unsigned int bw_mbps_fp)
 {
-	return (lo_gd_fpa * T18X_LA_FP_TO_FP2(bw_mbps_fp)) /
-		(T18X_LA_FP_TO_FP2(lo_freq_fp) * dram_width_bytes);
+	unsigned int ret_val =
+			(lo_gd_fpa * T18X_LA_FP_TO_FP2(bw_mbps_fp)) /
+			(T18X_LA_FP_TO_FP2(lo_freq_fp) * dram_width_bytes);
+
+	if (bw_mbps_fp == 0)
+		return 0;
+	else
+		return max((unsigned int)1, ret_val);
 }
 
 static void program_ptsa(void)

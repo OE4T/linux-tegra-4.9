@@ -225,10 +225,6 @@ else
   DHDCFLAGS += -DSDIO_ISR_THREAD
 endif
 
-ifneq ($(CONFIG_BCMDHD_PCIE),)
-  DHDCFLAGS += -DPCIE_FULL_DONGLE -DBCMPCIE -DCUSTOM_DPC_PRIO_SETTING=-1
-endif
-
 #EXTRA_LDFLAGS += --strip-debug
 
 EXTRA_CFLAGS += -Wno-date-time
@@ -247,11 +243,6 @@ DHDOFILES := dhd_pno.o dhd_common.o dhd_ip.o dhd_custom_gpio.o \
 ifneq ($(CONFIG_BCMDHD_SDIO),)
   DHDOFILES += bcmsdh.o bcmsdh_linux.o bcmsdh_sdmmc.o bcmsdh_sdmmc_linux.o
   DHDOFILES += dhd_cdc.o dhd_wlfc.o dhd_sdio.o dhd_qmon.o
-endif
-
-ifneq ($(CONFIG_BCMDHD_PCIE),)
-  DHDOFILES += dhd_pcie.o dhd_pcie_linux.o dhd_msgbuf.o dhd_flowring.o
-  DHDOFILES += pcie_core.o
 endif
 
 ifneq ($(CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA),)

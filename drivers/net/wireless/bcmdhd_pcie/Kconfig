@@ -9,7 +9,7 @@ config BCMDHD
 
 config BCMDHD_PCIE
 	bool "PCIe bus interface support"
-	depends on BCMDHD && PCI && !BCMDHD_SDIO
+	depends on BCMDHD && PCI
 
 config BCM4359
 	tristate "BCM4359 support"

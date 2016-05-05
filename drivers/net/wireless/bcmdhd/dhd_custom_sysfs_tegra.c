@@ -16,6 +16,7 @@
  *
  */
 
+#include <linux/errno.h>
 #include <linux/system-wakeup.h>
 #include "dhd_custom_sysfs_tegra.h"
 #include "dhd_custom_sysfs_tegra_scan.h"

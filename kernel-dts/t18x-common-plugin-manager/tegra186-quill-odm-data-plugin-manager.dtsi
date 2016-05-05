@@ -205,6 +205,7 @@
 					pinmux {
 						ufs {
 							nvidia,lanes = "uphy-lane-5";
+							nvidia,function = "mphy";
 							status = "okay";
 						};
 						sata {
@@ -253,6 +254,7 @@
 						};
 						ufs {
 							nvidia,lanes = "uphy-lane-4", "uphy-lane-5";
+							nvidia,function = "mphy";
 							status = "okay";
 						};
 					};

@@ -42,8 +42,8 @@
 		interrupts = <TEGRA_GPIO(FF, 4) 0x01>;
 	};
 
-	bcmdhd_wlan {
-		compatible = "android,bcmdhd_wlan";
+	bcmdhd_pcie_wlan {
+		compatible = "android,bcmdhd_pcie_wlan";
 		interrupt-parent = <&tegra_gpio>;
 		interrupts = <TEGRA_GPIO(FF, 3) 0x14>;
 		wlan-pwr-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;

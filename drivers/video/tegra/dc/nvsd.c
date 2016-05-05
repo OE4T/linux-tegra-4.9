@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvsd.c
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -119,6 +119,19 @@ static atomic_t *_sd_brightness;
 static atomic_t man_k_until_blank = ATOMIC_INIT(0);
 
 static u16 smooth_k_frames_left;
+
+/* HW bug 1155091:
+   The field DC_DISP_SD_BL_CONTROL[BRIGHTNESS] will never reach 0xff
+   (indicating to SW to keep brightness at 100%). The field's max value is
+   influenced by the field DC_DISP_SD_CONTROL[BIAS0]. The following table is
+   used to scale BRIGHTNESS by the correct max value expected from HW. */
+u8 bias0_to_max_bl[4] = {
+	0xfb, /* BIAS0 */
+	0xfd, /* BIAS1 */
+	0xfb, /* BIAS_HALF */
+	0xfd  /* BIAS_MBS */
+};
+
 static u16 smooth_k_duration_frames;
 
 static u8 nvsd_get_bw_idx(struct tegra_dc_sd_settings *settings)
@@ -181,6 +194,9 @@ static bool nvsd_phase_in_adjustments(struct tegra_dc *dc,
 	/* read brightness value */
 	val = tegra_dc_readl(dc, DC_DISP_SD_BL_CONTROL);
 	val = SD_BLC_BRIGHTNESS(val);
+	val = min(val * BRIGHTNESS_THEORETICAL_MAX /
+		bias0_to_max_bl[settings->bias0],
+		BRIGHTNESS_THEORETICAL_MAX);
 
 	step = settings->phase_adj_step;
 	if (cur_sd_brightness != val || target_k != cur_k) {
@@ -575,6 +591,7 @@ void nvsd_init(struct tegra_dc *dc, struct tegra_dc_sd_settings *settings)
 	val |= (settings->smooth_k_enable) ? SD_SMOOTH_K_ENABLE : 0;
 	/* SD proc control */
 	val |= (settings->use_vpulse2) ? SD_VPULSE2 : SD_VSYNC;
+	val |= settings->bias0 ? SD_BIAS0(settings->bias0) : 0;
 #endif
 	/* Finally, Write SD Control */
 	tegra_dc_writel(dc, val, DC_DISP_SD_CONTROL);
@@ -739,6 +756,9 @@ bool nvsd_update_brightness(struct tegra_dc *dc)
 		/* read brightness value */
 		val = tegra_dc_readl(dc, DC_DISP_SD_BL_CONTROL);
 		val = SD_BLC_BRIGHTNESS(val);
+		val = min(val * BRIGHTNESS_THEORETICAL_MAX /
+			bias0_to_max_bl[settings->bias0],
+			BRIGHTNESS_THEORETICAL_MAX);
 
 		/* PRISM is updated by hw or sw algorithm. Brightness is
 		 * compensated according to histogram for soft-clipping

@@ -880,6 +880,15 @@ static int parse_sd_settings(struct device_node *np,
 			}
 		}
 	}
+
+	if (!of_property_read_u32(np, "nvidia,bias0", &temp)) {
+		sd_settings->bias0 = (u8) temp;
+		OF_DC_LOG("nvidia,bias0 %d\n", temp);
+	} else {
+		sd_settings->bias0 = 3; /* BIAS_MSB */
+		OF_DC_LOG("nvidia,bias0 default\n");
+	}
+
 	return 0;
 }
 

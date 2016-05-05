@@ -96,6 +96,8 @@ static struct regulator *of_dp_hdmi_5v0;
 char dc_or_node_names[TEGRA_MAX_DC][14];
 #endif
 
+static int first_fb_console_map = -1;
+
 #ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu default_cmu = {
 	/* lut1 maps sRGB to linear space. */
@@ -3001,3 +3003,51 @@ struct tegra_dc_platform_data
 	return NULL;
 }
 #endif
+
+#ifndef MODULE
+static int __init check_fb_console_map(char *this_opt)
+{
+	char *options;
+
+	if (!this_opt || !*this_opt)
+		return 1;
+
+	while ((options = strsep(&this_opt, ",")) != NULL) {
+		if (!strncmp(options, "map:", 4)) {
+			options += 4;
+			if (*options)
+				first_fb_console_map = (*options - '0') % FB_MAX;
+			break;
+		}
+	}
+	pr_info("The first frame buffer console map is %d.\n", first_fb_console_map);
+
+	return 1;
+}
+
+__setup("fbcon=", check_fb_console_map);
+#endif
+
+static int __init check_fb_console_map_default(void)
+{
+	struct device_node *np_l4t = NULL;
+	struct property *pp_l4t = NULL;
+	int len, res = 0;
+
+	np_l4t = of_find_node_by_path("/chosen/plugin-manager/odm-data");
+	if (np_l4t) {
+		pp_l4t = of_find_property(np_l4t, "l4t", &len);
+		if (pp_l4t) {
+			first_fb_console_map = 0;
+			res = 1;
+		}
+		pr_info("OS set in device tree is%s L4T.\n", pp_l4t ? "":" not");
+	}
+	return res;
+}
+core_initcall(check_fb_console_map_default);
+
+bool fb_console_mapped(void)
+{
+	return first_fb_console_map != -1;
+}

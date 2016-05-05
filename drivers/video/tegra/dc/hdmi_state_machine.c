@@ -234,10 +234,10 @@ static void handle_check_edid_l(struct tegra_dc_hdmi_data *hdmi)
 #endif
 
 	memset(&specs, 0, sizeof(specs));
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-	/* Set default videomode on dc before enabling it*/
-	tegra_dc_set_default_videomode(hdmi->dc);
-#endif
+	if (fb_console_mapped()) {
+		/* Set default videomode on dc before enabling it*/
+		tegra_dc_set_default_videomode(hdmi->dc);
+	}
 
 	if (!tegra_dc_hpd(work_state.hdmi->dc)) {
 		/* hpd dropped - stop EDID read */

@@ -228,10 +228,10 @@ static void edid_check_state(struct tegra_hpd_data *data)
 {
 	memset(&data->mon_spec, 0, sizeof(data->mon_spec));
 
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-	/* Set default videomode on dc before enabling it */
-	tegra_dc_set_default_videomode(data->dc);
-#endif
+	if (fb_console_mapped()) {
+		/* Set default videomode on dc before enabling it */
+		tegra_dc_set_default_videomode(data->dc);
+	}
 
 	if (!data->ops->get_hpd_state(data->drv_data)) {
 		/* hpd dropped - stop EDID read */

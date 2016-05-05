@@ -1270,7 +1270,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	 * In case there is no hotplug we are falling back
 	 * to default VGA mode.
 	 */
-	if ((config_enabled(CONFIG_FRAMEBUFFER_CONSOLE) ||
+	if (((fb_console_mapped()) ||
 			((dc->pdata->flags & TEGRA_DC_FLAG_ENABLED) &&
 			 (dc->pdata->flags & TEGRA_DC_FLAG_SET_EARLY_MODE))) &&
 			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {

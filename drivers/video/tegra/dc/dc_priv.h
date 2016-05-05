@@ -766,4 +766,6 @@ void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 void tegra_nvdisp_vrr_work(struct work_struct *work);
 #endif
 
+bool fb_console_mapped(void);
+
 #endif

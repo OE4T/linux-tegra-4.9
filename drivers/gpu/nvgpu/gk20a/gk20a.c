@@ -2074,7 +2074,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->on_board_video_memory_size = 0; /* integrated GPU */
 
 	gpu->num_gpc = g->gr.gpc_count;
-	gpu->max_gpc_count = g->gr.gpc_count;
+	gpu->max_gpc_count = g->gr.max_gpc_count;
 
 	gpu->num_tpc_per_gpc = g->gr.max_tpc_per_gpc_count;
 
@@ -2107,7 +2107,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_USERSPACE_MANAGED_AS;
 	gpu->flags |= NVGPU_GPU_FLAGS_SUPPORT_TSG;
 
-	gpu->gpc_mask = 1;
+	gpu->gpc_mask = (1 << g->gr.gpc_count)-1;
 
 	g->ops.gr.detect_sm_arch(g);
 

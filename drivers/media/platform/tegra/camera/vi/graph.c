@@ -271,9 +271,11 @@ static int tegra_vi_graph_notify_complete(struct v4l2_async_notifier *notifier)
 
 	/* Create links for every entity. */
 	list_for_each_entry(entity, &vi->entities, list) {
-		ret = tegra_vi_graph_build_one(vi, entity);
-		if (ret < 0)
-			return ret;
+		if (entity->entity != NULL) {
+			ret = tegra_vi_graph_build_one(vi, entity);
+			if (ret < 0)
+				return ret;
+		}
 	}
 
 	/* Create links for channels */

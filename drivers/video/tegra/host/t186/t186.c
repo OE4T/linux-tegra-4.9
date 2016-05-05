@@ -220,7 +220,7 @@ struct nvhost_device_data t18_vi_info = {
 		{"nvcsi", 204000000},
 		{"nvcsilp", 204000000},
 	},
-	.num_channels		= 12,
+	.num_channels		= 15,
 	.ctrl_ops               = &nvhost_vi4_ctrl_ops,
 	.prepare_poweroff	= nvhost_vi4_prepare_poweroff,
 	.finalize_poweron	= nvhost_vi4_finalize_poweron,

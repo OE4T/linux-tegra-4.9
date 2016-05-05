@@ -225,6 +225,7 @@ struct nvhost_device_data t18_vi_info = {
 	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.poweron_reset		= true,
+	.support_abort_on_close	= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
 		{"vi", 408000000},

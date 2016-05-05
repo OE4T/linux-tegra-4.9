@@ -454,7 +454,7 @@
 		status = "okay";
 	};
 
-	bcmdhd_wlan {
+	bcmdhd_pcie_wlan {
 		status = "okay";
 	};
 

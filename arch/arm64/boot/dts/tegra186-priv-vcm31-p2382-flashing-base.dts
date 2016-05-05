@@ -201,7 +201,7 @@
 		status = "disabled";
 	};
 
-	bcmdhd_wlan {
+	bcmdhd_pcie_wlan {
 		status = "disabled";
 	};
 

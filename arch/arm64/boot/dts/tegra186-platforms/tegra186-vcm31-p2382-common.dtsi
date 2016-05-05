@@ -172,8 +172,8 @@
 		dvdd-supply = <&dvdd_wl_bt>;
 	};
 
-	bcmdhd_wlan {
-		compatible = "android,bcmdhd_wlan";
+	bcmdhd_pcie_wlan {
+		compatible = "android,bcmdhd_pcie_wlan";
 		wlan-pwr-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(C, 0) GPIO_ACTIVE_HIGH>;
 		wlreg_on-supply = <&vdd_wlreg_on>;
 		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";

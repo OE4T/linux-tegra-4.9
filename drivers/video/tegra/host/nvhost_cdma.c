@@ -222,8 +222,9 @@ static void cdma_start_timer_locked(struct nvhost_cdma *cdma,
 	cdma->timeout.timeout = job->timeout;
 	cdma->timeout.allow_dependency = true;
 
-	schedule_delayed_work(&cdma->timeout.wq,
-			msecs_to_jiffies(cdma->timeout.timeout));
+	if (job->timeout)
+		schedule_delayed_work(&cdma->timeout.wq,
+				msecs_to_jiffies(cdma->timeout.timeout));
 }
 
 /**
@@ -276,8 +277,7 @@ static void update_cdma_locked(struct nvhost_cdma *cdma)
 
 		if (!completed) {
 			/* Start timer on next pending syncpt */
-			if (job->timeout)
-				cdma_start_timer_locked(cdma, job);
+			cdma_start_timer_locked(cdma, job);
 			break;
 		}
 
@@ -570,7 +570,7 @@ void nvhost_cdma_end(struct nvhost_cdma *cdma,
 	cdma_op().kick(cdma);
 
 	/* start timer on idle -> active transitions */
-	if (job->timeout && was_idle)
+	if (was_idle)
 		cdma_start_timer_locked(cdma, job);
 
 	trace_nvhost_cdma_end(job->ch->dev->name);

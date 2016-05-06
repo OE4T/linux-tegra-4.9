@@ -1381,9 +1381,56 @@ static void gr_gp10b_commit_global_bundle_cb(struct gk20a *g,
 		gr_pd_ab_dist_cfg2_state_limit_f(data), patch);
 }
 
-static int gr_gp10b_init_fs_state(struct gk20a *g)
+static int gr_gp10b_load_smid_config(struct gk20a *g)
+{
+	u32 *tpc_sm_id;
+	u32 i, j;
+	u32 tpc_index, gpc_index;
+	u32 max_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+
+	tpc_sm_id = kcalloc(gr_cwd_sm_id__size_1_v(), sizeof(u32), GFP_KERNEL);
+	if (!tpc_sm_id)
+		return -ENOMEM;
+
+	/* Each NV_PGRAPH_PRI_CWD_GPC_TPC_ID can store 4 TPCs.*/
+	for (i = 0; i <= ((g->gr.tpc_count-1) / 4); i++) {
+		u32 reg = 0;
+		u32 bit_stride = gr_cwd_gpc_tpc_id_gpc0_s() +
+				 gr_cwd_gpc_tpc_id_tpc0_s();
+
+		for (j = 0; j < 4; j++) {
+			u32 sm_id = (i / 4) + j;
+			u32 bits;
+
+			if (sm_id >= g->gr.tpc_count)
+				break;
+
+			gpc_index = g->gr.sm_to_cluster[sm_id].gpc_index;
+			tpc_index = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+			bits = gr_cwd_gpc_tpc_id_gpc0_f(gpc_index) |
+			       gr_cwd_gpc_tpc_id_tpc0_f(tpc_index);
+			reg |= bits << (j * bit_stride);
+
+			tpc_sm_id[gpc_index + max_gpcs * ((tpc_index & 4) >> 2)]
+				|= sm_id << (bit_stride * (tpc_index & 3));
+		}
+		gk20a_writel(g, gr_cwd_gpc_tpc_id_r(i), reg);
+	}
+
+	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
+		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
+
+	kfree(tpc_sm_id);
+
+	return 0;
+}
+
+int gr_gp10b_init_fs_state(struct gk20a *g)
 {
 	u32 data;
+
+	gk20a_dbg_fn("");
 
 	data = gk20a_readl(g, gr_gpcs_tpcs_sm_texio_control_r());
 	data = set_field(data, gr_gpcs_tpcs_sm_texio_control_oor_addr_check_mode_m(),
@@ -1401,7 +1448,7 @@ static int gr_gp10b_init_fs_state(struct gk20a *g)
 			g->gr.t18x.fecs_feature_override_ecc_val);
 	}
 
-	return gr_gm20b_ctx_state_floorsweep(g);
+	return gr_gm20b_init_fs_state(g);
 }
 
 static void gr_gp10b_init_cyclestats(struct gk20a *g)
@@ -2076,4 +2123,5 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.set_preemption_mode = gr_gp10b_set_preemption_mode;
 	gops->gr.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags;
 	gops->gr.fuse_override = gp10b_gr_fuse_override;
+	gops->gr.load_smid_config = gr_gp10b_load_smid_config;
 }

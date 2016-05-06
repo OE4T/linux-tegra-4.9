@@ -2170,9 +2170,21 @@ static inline u32 gr_cwd_gpc_tpc_id_r(u32 i)
 {
 	return 0x00405b60 + i*4;
 }
+static inline u32 gr_cwd_gpc_tpc_id_tpc0_s(void)
+{
+	return 4;
+}
 static inline u32 gr_cwd_gpc_tpc_id_tpc0_f(u32 v)
 {
 	return (v & 0xf) << 0;
+}
+static inline u32 gr_cwd_gpc_tpc_id_gpc0_s(void)
+{
+	return 4;
+}
+static inline u32 gr_cwd_gpc_tpc_id_gpc0_f(u32 v)
+{
+	return (v & 0xf) << 4;
 }
 static inline u32 gr_cwd_gpc_tpc_id_tpc1_f(u32 v)
 {
@@ -2181,6 +2193,10 @@ static inline u32 gr_cwd_gpc_tpc_id_tpc1_f(u32 v)
 static inline u32 gr_cwd_sm_id_r(u32 i)
 {
 	return 0x00405ba0 + i*4;
+}
+static inline u32 gr_cwd_sm_id__size_1_v(void)
+{
+	return 0x00000010;
 }
 static inline u32 gr_cwd_sm_id_tpc0_f(u32 v)
 {

@@ -39,6 +39,8 @@
 
 #include "tegra_cec.h"
 
+#include <linux/tegra-powergate.h>
+
 static ssize_t cec_logical_addr_store(struct device *dev,
 		struct device_attribute *attr, const char *buf, size_t count);
 
@@ -287,6 +289,8 @@ static const struct file_operations tegra_cec_fops = {
 
 static void tegra_cec_init(struct tegra_cec *cec)
 {
+	int power_tmp = 0, is_tegra186 = 0, ret;
+
 	cec->rx_wake = 0;
 	cec->tx_wake = 1;
 	cec->tx_buf_cnt = 0;
@@ -294,6 +298,17 @@ static void tegra_cec_init(struct tegra_cec *cec)
 	cec->tx_error = 0;
 
 	dev_notice(cec->dev, "%s started\n", __func__);
+
+	is_tegra186 = of_device_is_compatible(cec->dev->of_node, "nvidia,tegra186-cec");
+	if (is_tegra186 && !tegra_powergate_is_powered(TEGRA_POWERGATE_DISA)) {
+		ret  = tegra_unpowergate_partition_with_clk_on(TEGRA_POWERGATE_DISA);
+		if (ret) {
+			dev_err(cec->dev, "Fail to unpowergate DISP.\n");
+			return;
+		}
+		power_tmp = 1;
+		dev_warn(cec->dev, "Unpowergate DISP temporarily.\n");
+	}
 
 	writel(0x00, cec->cec_base + TEGRA_CEC_HW_CONTROL);
 	writel(0x00, cec->cec_base + TEGRA_CEC_INT_MASK);
@@ -361,6 +376,16 @@ static void tegra_cec_init(struct tegra_cec *cec)
 
 	atomic_set(&cec->init_done, 1);
 	wake_up_interruptible(&cec->init_waitq);
+
+	if (is_tegra186 && power_tmp == 1) {
+		ret = tegra_powergate_partition_with_clk_off(TEGRA_POWERGATE_DISA);
+		if (ret) {
+			dev_err(cec->dev, "Fail to powergate DISP.\n");
+			return;
+		}
+		power_tmp = 0;
+		dev_warn(cec->dev, "Powergate DISP.\n");
+	}
 
 	dev_notice(cec->dev, "%s Done.\n", __func__);
 }
@@ -483,7 +508,8 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		goto clk_error;
 	}
 
-	clk_prepare_enable(cec->clk);
+	ret = clk_prepare_enable(cec->clk);
+	dev_info(&pdev->dev, "Enable clock result: %d.\n", ret);
 
 	/* set context info. */
 	cec->dev = &pdev->dev;

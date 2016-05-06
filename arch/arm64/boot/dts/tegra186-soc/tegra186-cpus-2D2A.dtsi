@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-2D2A.dtsi
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -52,7 +52,7 @@
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
-			cpu-capacity = <592>;
+			cpu-capacity = <752>;
 		};
 
 		cpu@3 {
@@ -61,7 +61,7 @@
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
-			cpu-capacity = <592>;
+			cpu-capacity = <752>;
 		};
 	};
 

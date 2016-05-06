@@ -49,7 +49,7 @@ static int nvgpu_pci_busy(struct device *dev)
 	return err;
 }
 
-struct gk20a_platform nvgpu_pci_device = {
+static struct gk20a_platform nvgpu_pci_device = {
 	/* ptimer src frequency in hz */
 	.ptimer_src_freq	= 31250000,
 

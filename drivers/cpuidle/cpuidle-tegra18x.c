@@ -66,6 +66,16 @@ static struct cpumask a57_cpumask;
 static void cluster_state_init(void *data);
 static u32 deepest_denver_cluster_state;
 static u32 deepest_a57_cluster_state;
+static u64 denver_idle_state;
+static u64 a57_idle_state;
+static u64 denver_cluster_idle_state;
+static u64 a57_cluster_idle_state;
+static u32 denver_testmode;
+static u32 a57_testmode;
+static struct cpuidle_driver t18x_denver_idle_driver;
+static struct cpuidle_driver t18x_a57_idle_driver;
+static int crossover_init(void);
+static void program_cluster_state(void *data);
 
 #ifdef CPUIDLE_FLAG_TIME_VALID
 #define DRIVER_FLAGS		CPUIDLE_FLAG_TIME_VALID
@@ -133,6 +143,19 @@ static int t18x_denver_enter_state(
 		return index;
 	}
 
+	if (denver_testmode) {
+		tegra_mce_update_cstate_info(denver_cluster_idle_state,
+				0, 0, 0, 0, 0);
+		if (denver_idle_state >= t18x_denver_idle_driver.state_count) {
+			pr_err("%s: Requested invalid forced idle state\n",
+				__func__);
+			index = t18x_denver_idle_driver.state_count;
+		} else
+			index = denver_idle_state;
+
+		wake_time = 0xFFFFEEEE;
+	}
+
 	if (index == TEGRA186_DENVER_CPUIDLE_C7)
 		tegra186_denver_enter_c7(wake_time);
 	else if (index == TEGRA186_DENVER_CPUIDLE_C6)
@@ -169,6 +192,19 @@ static int t18x_a57_enter_state(
 		return index;
 	}
 
+	if (a57_testmode) {
+		tegra_mce_update_cstate_info(a57_cluster_idle_state,
+				0, 0, 0, 0, 0);
+		if (a57_idle_state >= t18x_a57_idle_driver.state_count) {
+			pr_err("%s: Requested invalid forced idle state\n",
+				__func__);
+			index = t18x_a57_idle_driver.state_count;
+		} else
+			index = denver_idle_state;
+
+		wake_time = 0xFFFFEEEE;
+	}
+
 	if (index == TEGRA186_A57_CPUIDLE_C7) {
 		tegra186_a57_enter_c7(wake_time);
 	} else
@@ -184,6 +220,8 @@ static u32 t18x_make_power_state(u32 state)
 
 	t = ktime_to_timespec(tick_nohz_get_sleep_length());
 	wake_time = t.tv_sec * TSC_PER_SEC + t.tv_nsec / NSEC_PER_TSC_TICK;
+	if (denver_testmode || a57_testmode)
+		wake_time = 0xFFFFEEEE;
 	state = state | ((wake_time << 4) & PSCI_STATE_ID_WKTIM_MASK);
 
 	return state;
@@ -281,10 +319,6 @@ static void resume_all_device_irqs(void)
 
 static struct dentry *cpuidle_debugfs_denver;
 static struct dentry *cpuidle_debugfs_a57;
-static u64 denver_idle_state;
-static u64 a57_idle_state;
-static u64 denver_cluster_idle_state;
-static u64 a57_cluster_idle_state;
 
 static int denver_idle_write(void *data, u64 val)
 {
@@ -443,6 +477,41 @@ static int denver_cc7_write(void *data, u64 val)
 		(u32) val);
 }
 
+static int denver_set_testmode(void *data, u64 val)
+{
+	denver_testmode = (u32)val;
+	if (denver_testmode) {
+		setup_crossover(DENVER_CLUSTER, TEGRA_MCE_XOVER_C1_C6, 0);
+		setup_crossover(DENVER_CLUSTER, TEGRA_MCE_XOVER_CC1_CC6, 0);
+		setup_crossover(DENVER_CLUSTER, TEGRA_MCE_XOVER_CC1_CC7, 0);
+	} else {
+		/* Restore the cluster state */
+		smp_call_function_any(&denver_cpumask,
+			program_cluster_state,
+			&deepest_denver_cluster_state, 1);
+		/* Restore the crossover values */
+		crossover_init();
+	}
+	return 0;
+}
+
+static int a57_set_testmode(void *data, u64 val)
+{
+	a57_testmode = (u32)val;
+	if (a57_testmode) {
+		setup_crossover(A57_CLUSTER, TEGRA_MCE_XOVER_CC1_CC6, 0);
+		setup_crossover(A57_CLUSTER, TEGRA_MCE_XOVER_CC1_CC7, 0);
+	} else {
+		/* Restore the cluster state */
+		smp_call_function_any(&a57_cpumask,
+			program_cluster_state,
+			&deepest_a57_cluster_state, 1);
+		/* Restore the crossover values */
+		crossover_init();
+	}
+	return 0;
+}
+
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_denver_fops, NULL,
 						denver_idle_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_a57_fops, NULL, a57_idle_write, "%llu\n");
@@ -454,6 +523,10 @@ DEFINE_SIMPLE_ATTRIBUTE(denver_xover_cc7_fops, NULL,
 						denver_cc7_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(a57_xover_cc6_fops, NULL, a57_cc6_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(a57_xover_cc7_fops, NULL, a57_cc7_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(denver_testmode_fops, NULL,
+					denver_set_testmode, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(a57_testmode_fops, NULL,
+					a57_set_testmode, "%llu\n");
 
 static int cpuidle_debugfs_init(void)
 {
@@ -481,6 +554,11 @@ static int cpuidle_debugfs_init(void)
 	if (!dfs_file)
 		goto err_out;
 
+	dfs_file = debugfs_create_file("testmode", 0644,
+		cpuidle_debugfs_denver, NULL, &denver_testmode_fops);
+	if (!dfs_file)
+		goto err_out;
+
 	dfs_file = debugfs_create_file("crossover_c1_c6", 0644,
 		cpuidle_debugfs_denver, NULL, &denver_xover_c6_fops);
 	if (!dfs_file)
@@ -504,6 +582,11 @@ static int cpuidle_debugfs_init(void)
 	dfs_file = debugfs_create_u64("forced_idle_state", 0644,
 		cpuidle_debugfs_a57, &a57_idle_state);
 
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_file("testmode", 0644,
+		cpuidle_debugfs_a57, NULL, &a57_testmode_fops);
 	if (!dfs_file)
 		goto err_out;
 

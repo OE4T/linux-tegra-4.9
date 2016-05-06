@@ -60,3 +60,9 @@ S:	Supported
 F:	drivers/video/tegra/host/pva
 F:	include/linux/nvhost_pva_ioctl.h
 
+DLA
+M:	Shridhar Rasal <srasal@nvidia.com>
+M:	Prashant Gaikwad <pgaikwad@nvidia.com>
+L:	SW-Mobile-DLA-Dev <SW-Mobile-DLA-Dev@exchange.nvidia.com>
+S:	Supported
+F:	drivers/video/tegra/host/nvdla

@@ -20,6 +20,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/padctrl/tegra210-pads.h>
+#include <dt-bindings/clock/tegra210-car.h>
 #include "tegra210-platforms/tegra210-prods.dtsi"
 #include "tegra210-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi"
 #include "tegra210-platforms/tegra210-modem-common.dtsi"
@@ -33,6 +34,8 @@
 		sqa-automation-port;
 		enable-rx-poll-timer;
 		status = "okay";
+		clocks = <&tegra_car TEGRA210_CLK_UARTA>;
+		clock-names = "serial";
 	};
 
 	serial@70006200 {
@@ -164,4 +167,11 @@
 		device-method = <0x1 0x00000002>;  /* type (0x1 = ioctl), argument */
 		status = "disabled";
 	};
+
+        apbmisc@70000800 {
+                compatible = "nvidia,tegra210-apbmisc", "nvidia,tegra20-apbmisc";
+                reg = <0x0 0x70000800 0x0 0x64>,   /* Chip revision */
+                      <0x0 0x7000e864 0x0 0x04>;   /* Strapping options */
+        };
+
 };

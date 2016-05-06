@@ -41,10 +41,9 @@ enum adsp_lpthread_mbx_cmd {
 struct adsp_lpthread {
 	bool lpthread_initialized;
 	bool adsp_os_suspended;
-	bool lpthread_to_be_paused;
-	bool lpthread_to_be_resumed;
-	bool lpthread_to_be_closed;
-	bool lpthread_init_and_closed;
+	bool lpthread_paused;
+	bool lpthread_resumed;
+	bool lpthread_closed;
 };
 
 static struct adsp_lpthread lpthread_obj;
@@ -101,6 +100,7 @@ int adsp_lpthread_init(bool is_adsp_suspended)
 int adsp_lpthread_resume(void)
 {
 	int ret;
+
 #ifdef VERBOSE_OUTPUT_LPTHREAD
 	pr_info("ADSP_LPTHREAD_RESUME()\n");
 #endif
@@ -113,6 +113,7 @@ int adsp_lpthread_resume(void)
 int adsp_lpthread_pause(void)
 {
 	int ret;
+
 #ifdef VERBOSE_OUTPUT_LPTHREAD
 	pr_info("ADSP_LPTHREAD_PAUSE()\n");
 #endif
@@ -125,6 +126,7 @@ int adsp_lpthread_pause(void)
 int adsp_lpthread_exit(void)
 {
 	int ret;
+
 #ifdef VERBOSE_OUTPUT_LPTHREAD
 	pr_info("ADSP_LPTHREAD_EXIT()\n");
 #endif
@@ -140,84 +142,54 @@ static int adsp_usage_set(void *data, u64 val)
 	int ret = 0;
 	switch (val) {
 	case 1:
+		if (lpthread->lpthread_initialized && lpthread->lpthread_resumed) {
+			pr_info("App already running\n");
+			pr_info("echo 2 > adsp_usage to pause\n");
+			pr_info("echo 0 > adsp_usage to stop\n");
+			break;
+		}
 		if (lpthread->adsp_os_suspended && !lpthread->lpthread_initialized) {
-			if (lpthread->lpthread_init_and_closed)  {
-				lpthread->lpthread_init_and_closed = false;
-				lpthread->lpthread_initialized = true;
-				lpthread->lpthread_to_be_resumed = true;
-				pr_info("App already initialized\n");
-				break;
-			}
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-			pr_info("Starting os\n");
-#endif
+			pr_info("Starting ADSP OS\n");
 			if (nvadsp_os_start()) {
-				pr_info("Unable to restart os\n");
+				pr_info("Unable to start OS\n");
 				break;
 			}
-			ret = adsp_lpthread_init(true);
-			lpthread->lpthread_initialized = true;
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-			pr_info("Initialized lpthread. Suspending OS\n");
-#endif
-			if (nvadsp_os_suspend()) {
-				pr_info("Unable to restart os\n");
-				break;
-			}
-			lpthread->lpthread_to_be_resumed = true;
-		} else if (!lpthread->lpthread_initialized) {
-			if (lpthread->lpthread_init_and_closed)  {
-				lpthread->lpthread_init_and_closed = false;
-				lpthread->lpthread_initialized = true;
-				lpthread->lpthread_to_be_resumed = true;
-				pr_info("App already initialized\n");
-				break;
-			}
+			lpthread->adsp_os_suspended = false;
 			ret = adsp_lpthread_init(lpthread->adsp_os_suspended);
+			pr_info("Initializing lpthread\n");
 			lpthread->lpthread_initialized = true;
-		} else if (lpthread->adsp_os_suspended) {
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-			pr_info("App to be resumed\n");
-#endif
-			lpthread->lpthread_to_be_resumed = true;
-			lpthread->lpthread_to_be_paused = false;
-			ret = 0;
+		} else if (!lpthread->lpthread_initialized) {
+			ret = adsp_lpthread_init(lpthread->adsp_os_suspended);
+			pr_info("Initializing lpthread\n");
+			lpthread->lpthread_initialized = true;
 		} else {
 			ret = adsp_lpthread_resume();
+			pr_info("Resuming lpthread\n");
 		}
+		lpthread->lpthread_resumed = true;
+		lpthread->lpthread_paused = false;
+		lpthread->lpthread_closed = false;
 		break;
 	case 2:
-		if (lpthread->adsp_os_suspended && lpthread->lpthread_initialized) {
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-			pr_info("App to be paused\n");
-#endif
-			lpthread->lpthread_to_be_resumed = false;
-			lpthread->lpthread_to_be_paused = true;
-			ret = 0;
-		} else if (lpthread->lpthread_initialized) {
-			ret = adsp_lpthread_pause();
-		} else {
+		if (!lpthread->lpthread_initialized) {
 			pr_info("App not initialized. echo 1 > adsp_usage to init\n");
-			ret = 0;
+			break;
 		}
+		ret = adsp_lpthread_pause();
+		lpthread->lpthread_resumed = false;
+		lpthread->lpthread_paused = true;
+		lpthread->lpthread_closed = false;
 		break;
 	case 0:
-			if (lpthread->adsp_os_suspended && lpthread->lpthread_initialized) {
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-			pr_info("App to be closed\n");
-#endif
-			lpthread->lpthread_to_be_closed = true;
-			lpthread->lpthread_init_and_closed = true;
-			lpthread->lpthread_initialized = false;
-			lpthread->lpthread_to_be_resumed = false;
-			ret = 0;
-		} else if (lpthread->lpthread_initialized) {
-			ret = adsp_lpthread_exit();
-			lpthread->lpthread_initialized = false;
-		} else {
+		if (!lpthread->lpthread_initialized) {
 			pr_info("App not initialized. echo 1 > adsp_usage to init\n");
-			ret = 0;
+			break;
 		}
+		ret = adsp_lpthread_exit();
+		lpthread->lpthread_resumed = false;
+		lpthread->lpthread_paused = false;
+		lpthread->lpthread_closed = true;
+		lpthread->lpthread_initialized = false;
 		break;
 	default:
 		pr_info("Invalid input\n");
@@ -231,7 +203,12 @@ static int adsp_usage_set(void *data, u64 val)
 
 static int adsp_usage_get(void *data, u64 *val)
 {
-	return 0;
+	if (lpthread->lpthread_initialized && lpthread->lpthread_resumed)
+		return 1;
+	else if (lpthread->lpthread_initialized && lpthread->lpthread_paused)
+		return 2;
+	else
+		return 0;
 }
 
 DEFINE_SIMPLE_ATTRIBUTE(adsp_usage_fops, adsp_usage_get, adsp_usage_set, "%llu\n");
@@ -293,35 +270,10 @@ int adsp_lpthread_debugfs_set_suspend(bool is_suspended)
 	return 0;
 }
 
-int adsp_lpthread_debugfs_callback(void)
+int adsp_lpthread_get_state(void)
 {
-	int ret = 0;
-
-	if (lpthread->lpthread_initialized) {
-		if (lpthread->lpthread_to_be_resumed) {
-			lpthread->lpthread_to_be_resumed = false;
-			ret = adsp_lpthread_resume();
-		} else if (lpthread->lpthread_to_be_paused) {
-			lpthread->lpthread_to_be_paused = false;
-			ret = adsp_lpthread_pause();
-		}
-		return ret;
-	}
-
-	if (lpthread->lpthread_to_be_closed) {
-		lpthread->lpthread_to_be_closed = false;
-		lpthread->lpthread_init_and_closed = false;
-		ret = adsp_lpthread_exit();
-		return ret;
-	}
-
-#ifdef VERBOSE_OUTPUT_LPTHREAD
-	pr_info("to_be_paused = %d\n", (int)lpthread->lpthread_to_be_paused);
-	pr_info("to_be_resumed = %d\n", (int)lpthread->lpthread_to_be_resumed);
-	pr_info("to_be_closed = %d\n", (int)lpthread->lpthread_to_be_closed);
-	pr_info("init_and_closed = %d\n", (int)lpthread->lpthread_init_and_closed);
-	pr_info("initialized = %d\n", (int)lpthread->lpthread_initialized);
-#endif
-
-	return ret;
+	if (lpthread->lpthread_initialized && lpthread->lpthread_resumed)
+		return 1;
+	else
+		return 0;
 }

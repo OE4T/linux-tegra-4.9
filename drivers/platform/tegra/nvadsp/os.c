@@ -1507,7 +1507,6 @@ int nvadsp_os_start(void)
 
 #ifdef CONFIG_TEGRA_ADSP_LPTHREAD
 	adsp_lpthread_debugfs_set_suspend(drv_data->adsp_os_suspended);
-	adsp_lpthread_debugfs_callback();
 #endif
 
 unlock:
@@ -1684,6 +1683,14 @@ int nvadsp_os_suspend(void)
 		pr_err("ADSP Driver is not initialized\n");
 		goto end;
 	}
+
+#ifdef CONFIG_TEGRA_ADSP_LPTHREAD
+	if (adsp_lpthread_get_state()) {
+		dev_err(&priv.pdev->dev, "Adsp usage being calculated. Not suspending adsp\n");
+		ret = 0;
+		goto end;
+	}
+#endif
 
 	drv_data = platform_get_drvdata(priv.pdev);
 

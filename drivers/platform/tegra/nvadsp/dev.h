@@ -279,11 +279,11 @@ int adsp_lpthread_init(bool is_adsp_suspended);
 int adsp_lpthread_resume(void);
 int adsp_lpthread_pause(void);
 int adsp_lpthread_exit(void);
+int adsp_lpthread_get_state(void);
 
 int adsp_lpthread_debugfs_init(struct platform_device *pdev);
 int adsp_lpthread_debugfs_exit(struct platform_device *pdev);
 int adsp_lpthread_debugfs_set_suspend(bool is_suspended);
-int adsp_lpthread_debugfs_callback(void);
 #endif
 
 #endif /* __TEGRA_NVADSP_DEV_H */

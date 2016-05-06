@@ -2625,7 +2625,7 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 	return 0;
 }
 
-const struct seq_operations gk20a_fifo_sched_debugfs_seq_ops = {
+static const struct seq_operations gk20a_fifo_sched_debugfs_seq_ops = {
 	.start = gk20a_fifo_sched_debugfs_seq_start,
 	.next = gk20a_fifo_sched_debugfs_seq_next,
 	.stop = gk20a_fifo_sched_debugfs_seq_stop,
@@ -2654,7 +2654,7 @@ static int gk20a_fifo_sched_debugfs_open(struct inode *inode,
  * The file operations structure contains our open function along with
  * set of the canned seq_ ops.
  */
-const struct file_operations gk20a_fifo_sched_debugfs_fops = {
+static const struct file_operations gk20a_fifo_sched_debugfs_fops = {
 	.owner = THIS_MODULE,
 	.open = gk20a_fifo_sched_debugfs_open,
 	.read = seq_read,

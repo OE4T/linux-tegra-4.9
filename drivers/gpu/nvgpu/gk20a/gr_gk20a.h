@@ -36,6 +36,8 @@
 #define GK20A_FECS_UCODE_IMAGE	"fecs.bin"
 #define GK20A_GPCCS_UCODE_IMAGE	"gpccs.bin"
 
+#define GK20A_GR_MAX_PES_PER_GPC 3
+
 enum /* global_ctx_buffer */ {
 	CIRCULAR		= 0,
 	PAGEPOOL		= 1,
@@ -270,8 +272,8 @@ struct gr_gk20a {
 	u32 *gpc_tpc_mask;
 	u32 zcb_count;
 	u32 *gpc_zcb_count;
-	u32 *pes_tpc_count[2];
-	u32 *pes_tpc_mask[2];
+	u32 *pes_tpc_count[GK20A_GR_MAX_PES_PER_GPC];
+	u32 *pes_tpc_mask[GK20A_GR_MAX_PES_PER_GPC];
 	u32 *gpc_skip_mask;
 
 	u32 bundle_cb_default_size;

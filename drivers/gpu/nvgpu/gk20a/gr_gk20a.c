@@ -3231,6 +3231,10 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	gr->gpc_count = pri_ringmaster_enum_gpc_count_v(tmp);
 
 	gr->pe_count_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_PES_PER_GPC);
+	if (WARN(gr->pe_count_per_gpc > GK20A_GR_MAX_PES_PER_GPC,
+		 "too many pes per gpc\n"))
+		goto clean_up;
+
 	gr->max_zcull_per_gpc_count = nvgpu_get_litter_value(g, GPU_LIT_NUM_ZCULL_BANKS);
 
 	if (!gr->gpc_count) {
@@ -3242,25 +3246,21 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	gr->gpc_tpc_mask = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	gr->gpc_zcb_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	gr->gpc_ppc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	gr->pes_tpc_count[0] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	gr->pes_tpc_count[1] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	gr->pes_tpc_mask[0] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
-	gr->pes_tpc_mask[1] = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 
 	gr->gpc_skip_mask =
 		kzalloc(gr_pd_dist_skip_table__size_1_v() * 4 * sizeof(u32),
 			GFP_KERNEL);
 
-	if (!gr->gpc_tpc_count || !gr->gpc_zcb_count || !gr->gpc_ppc_count ||
-	    !gr->pes_tpc_count[0] || !gr->pes_tpc_count[1] ||
-	    !gr->pes_tpc_mask[0] || !gr->pes_tpc_mask[1] || !gr->gpc_skip_mask)
+	if (!gr->gpc_tpc_count || !gr->gpc_tpc_mask || !gr->gpc_zcb_count ||
+	    !gr->gpc_ppc_count || !gr->gpc_skip_mask)
 		goto clean_up;
 
 	gr->ppc_count = 0;
 	gr->tpc_count = 0;
 	gr->zcb_count = 0;
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		tmp = gk20a_readl(g, gr_gpc0_fs_gpc_r());
+		tmp = gk20a_readl(g, gr_gpc0_fs_gpc_r() +
+				     gpc_stride * gpc_index);
 
 		gr->gpc_tpc_count[gpc_index] =
 			gr_gpc0_fs_gpc_num_available_tpcs_v(tmp);
@@ -3278,6 +3278,15 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
 
 		for (pes_index = 0; pes_index < gr->pe_count_per_gpc; pes_index++) {
+			gr->pes_tpc_count[pes_index] =
+				kzalloc(gr->gpc_count * sizeof(u32),
+					GFP_KERNEL);
+			gr->pes_tpc_mask[pes_index] =
+				kzalloc(gr->gpc_count * sizeof(u32),
+					GFP_KERNEL);
+			if (!gr->pes_tpc_count[pes_index] ||
+			    !gr->pes_tpc_mask[pes_index])
+				goto clean_up;
 
 			tmp = gk20a_readl(g,
 				gr_gpc0_gpm_pd_pes_tpc_id_mask_r(pes_index) +
@@ -3291,7 +3300,8 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 		}
 
 		gpc_new_skip_mask = 0;
-		if (gr->pes_tpc_count[0][gpc_index] +
+		if (gr->pe_count_per_gpc > 1 &&
+		    gr->pes_tpc_count[0][gpc_index] +
 		    gr->pes_tpc_count[1][gpc_index] == 5) {
 			pes_heavy_index =
 				gr->pes_tpc_count[0][gpc_index] >
@@ -3302,7 +3312,8 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 				   (gr->pes_tpc_mask[pes_heavy_index][gpc_index] &
 				   (gr->pes_tpc_mask[pes_heavy_index][gpc_index] - 1));
 
-		} else if ((gr->pes_tpc_count[0][gpc_index] +
+		} else if (gr->pe_count_per_gpc > 1 &&
+			   (gr->pes_tpc_count[0][gpc_index] +
 			    gr->pes_tpc_count[1][gpc_index] == 4) &&
 			   (gr->pes_tpc_count[0][gpc_index] !=
 			    gr->pes_tpc_count[1][gpc_index])) {

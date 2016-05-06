@@ -55,6 +55,8 @@ Maintainers List (try to look for most precise areas first)
 PVA
 M:	Arto Merilainen <amerilainen@nvidia.com>
 M:	Vinod Gopalakrishnakurup <vinodg@nvidia.com>
+L:	SW-Mobile-PVA-Dev@exchange.nvidia.com
 S:	Supported
 F:	drivers/video/tegra/host/pva
+F:	include/linux/nvhost_pva_ioctl.h
 

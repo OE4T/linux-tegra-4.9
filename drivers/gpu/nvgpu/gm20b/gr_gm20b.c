@@ -552,78 +552,70 @@ static void gr_gm20b_load_tpc_mask(struct gk20a *g)
 	}
 }
 
-int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
+static void gr_gm20b_program_sm_id_numbering(struct gk20a *g,
+					     u32 gpc, u32 tpc, u32 smid)
 {
-	struct gr_gk20a *gr = &g->gr;
-	u32 tpc_index, gpc_index;
-	u32 tpc_offset, gpc_offset;
-	u32 sm_id = 0;
-	u32 tpc_per_gpc = 0;
-	u32 tpc_sm_id = 0, gpc_tpc_id = 0;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
-	u32 fuse_tpc_mask;
+	u32 gpc_offset = gpc_stride * gpc;
+	u32 tpc_offset = tpc_in_gpc_stride * tpc;
 
+	gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r() + gpc_offset + tpc_offset,
+			gr_gpc0_tpc0_sm_cfg_sm_id_f(smid));
+	gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc) + gpc_offset,
+			gr_gpc0_gpm_pd_sm_id_id_f(smid));
+	gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r() + gpc_offset + tpc_offset,
+			gr_gpc0_tpc0_pe_cfg_smid_value_f(smid));
+}
+
+static int gr_gm20b_load_smid_config(struct gk20a *g)
+{
+	u32 *tpc_sm_id;
+	u32 i, j;
+	u32 tpc_index, gpc_index;
+
+	tpc_sm_id = kcalloc(gr_cwd_sm_id__size_1_v(), sizeof(u32), GFP_KERNEL);
+	if (!tpc_sm_id)
+		return -ENOMEM;
+
+	/* Each NV_PGRAPH_PRI_CWD_GPC_TPC_ID can store 4 TPCs.*/
+	for (i = 0; i <= ((g->gr.tpc_count-1) / 4); i++) {
+		u32 reg = 0;
+		u32 bit_stride = gr_cwd_gpc_tpc_id_gpc0_s() +
+				 gr_cwd_gpc_tpc_id_tpc0_s();
+
+		for (j = 0; j < 4; j++) {
+			u32 sm_id = (i / 4) + j;
+			u32 bits;
+
+			if (sm_id >= g->gr.tpc_count)
+				break;
+
+			gpc_index = g->gr.sm_to_cluster[sm_id].gpc_index;
+			tpc_index = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+			bits = gr_cwd_gpc_tpc_id_gpc0_f(gpc_index) |
+			       gr_cwd_gpc_tpc_id_tpc0_f(tpc_index);
+			reg |= bits << (j * bit_stride);
+
+			tpc_sm_id[gpc_index] |= sm_id << tpc_index * bit_stride;
+		}
+		gk20a_writel(g, gr_cwd_gpc_tpc_id_r(i), reg);
+	}
+
+	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
+		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
+
+	kfree(tpc_sm_id);
+
+	return 0;
+}
+
+int gr_gm20b_init_fs_state(struct gk20a *g)
+{
 	gk20a_dbg_fn("");
 
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-		gpc_offset = gpc_stride * gpc_index;
-		for (tpc_index = 0; tpc_index < gr->gpc_tpc_count[gpc_index];
-								tpc_index++) {
-			tpc_offset = tpc_in_gpc_stride * tpc_index;
-
-			gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r()
-					+ gpc_offset + tpc_offset,
-				gr_gpc0_tpc0_sm_cfg_sm_id_f(sm_id));
-			gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc_index)
-					+ gpc_offset,
-				gr_gpc0_gpm_pd_sm_id_id_f(sm_id));
-			gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r()
-					+ gpc_offset + tpc_offset,
-				gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
-
-			g->gr.sm_to_cluster[sm_id].tpc_index = tpc_index;
-			g->gr.sm_to_cluster[sm_id].gpc_index = gpc_index;
-
-			sm_id++;
-		}
-	}
-
-	gr->no_of_sm = sm_id;
-
-	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++)
-		tpc_per_gpc |= gr->gpc_tpc_count[gpc_index]
-			     << (gr_pd_num_tpc_per_gpc__size_1_v() * gpc_index);
-	gk20a_writel(g, gr_pd_num_tpc_per_gpc_r(0), tpc_per_gpc);
-	gk20a_writel(g, gr_ds_num_tpc_per_gpc_r(0), tpc_per_gpc);
-
-	/* gr__setup_pd_mapping stubbed for gk20a */
-	gr_gk20a_setup_rop_mapping(g, gr);
-
-	for (gpc_index = 0;
-	     gpc_index < gr_pd_dist_skip_table__size_1_v() * 4;
-	     gpc_index += 4) {
-
-		gk20a_writel(g, gr_pd_dist_skip_table_r(gpc_index/4),
-			     gr_pd_dist_skip_table_gpc_4n0_mask_f(gr->gpc_skip_mask[gpc_index]) |
-			     gr_pd_dist_skip_table_gpc_4n1_mask_f(gr->gpc_skip_mask[gpc_index + 1]) |
-			     gr_pd_dist_skip_table_gpc_4n2_mask_f(gr->gpc_skip_mask[gpc_index + 2]) |
-			     gr_pd_dist_skip_table_gpc_4n3_mask_f(gr->gpc_skip_mask[gpc_index + 3]));
-	}
-
-	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
-	if (g->tpc_fs_mask_user &&
-		fuse_tpc_mask == (0x1 << gr->max_tpc_count) - 1) {
-		u32 val = g->tpc_fs_mask_user;
-		val &= (0x1 << gr->max_tpc_count) - 1;
-		gk20a_writel(g, gr_cwd_fs_r(),
-			gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
-			gr_cwd_fs_num_tpcs_f(hweight32(val)));
-	} else {
-		gk20a_writel(g, gr_cwd_fs_r(),
-			gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
-			gr_cwd_fs_num_tpcs_f(gr->tpc_count));
-	}
+	gr_gk20a_init_fs_state(g);
 
 	gr_gm20b_load_tpc_mask(g);
 
@@ -636,22 +628,7 @@ int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 		     gk20a_readl(g, gr_be0_crop_debug3_r()) |
 		     gr_bes_crop_debug3_comp_vdc_4to2_disable_m());
 
-	for (tpc_index = 0; tpc_index < gr->tpc_count; tpc_index++) {
-		if (tpc_index == 0) {
-			gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc0_f(tpc_index);
-			tpc_sm_id |= gr_cwd_sm_id_tpc0_f(tpc_index);
-		} else if (tpc_index == 1) {
-			gpc_tpc_id |= gr_cwd_gpc_tpc_id_tpc1_f(tpc_index);
-			tpc_sm_id |= gr_cwd_sm_id_tpc1_f(tpc_index);
-		}
-	}
-
-	/* Each NV_PGRAPH_PRI_CWD_GPC_TPC_ID can store 4 TPCs.
-	 * Since we know TPC number is less than 5. We select
-	 * index 0 directly. */
-	gk20a_writel(g, gr_cwd_gpc_tpc_id_r(0), gpc_tpc_id);
-
-	gk20a_writel(g, gr_cwd_sm_id_r(0), tpc_sm_id);
+	g->ops.gr.load_smid_config(g);
 
 	return 0;
 }
@@ -1443,7 +1420,7 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.is_valid_class = gr_gm20b_is_valid_class;
 	gops->gr.get_sm_dsm_perf_regs = gr_gm20b_get_sm_dsm_perf_regs;
 	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gm20b_get_sm_dsm_perf_ctrl_regs;
-	gops->gr.init_fs_state = gr_gm20b_ctx_state_floorsweep;
+	gops->gr.init_fs_state = gr_gm20b_init_fs_state;
 	gops->gr.set_hww_esr_report_mask = gr_gm20b_set_hww_esr_report_mask;
 	gops->gr.falcon_load_ucode = gr_gm20b_load_ctxsw_ucode_segments;
 	if (gops->privsecurity)
@@ -1499,4 +1476,6 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
 	gops->gr.get_preemption_mode_flags = gr_gm20b_get_preemption_mode_flags;
 	gops->gr.fuse_override = gm20b_gr_fuse_override;
+	gops->gr.load_smid_config = gr_gm20b_load_smid_config;
+	gops->gr.program_sm_id_numbering = gr_gm20b_program_sm_id_numbering;
 }

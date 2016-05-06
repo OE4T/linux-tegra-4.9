@@ -260,6 +260,10 @@ struct gpu_ops {
 		int (*get_preemption_mode_flags)(struct gk20a *g,
 		       struct nvgpu_preemption_modes_rec *preemption_modes_rec);
 		int (*fuse_override)(struct gk20a *g);
+		int (*load_smid_config)(struct gk20a *g);
+		void (*program_sm_id_numbering)(struct gk20a *g,
+						u32 gpc, u32 tpc, u32 smid);
+		void (*program_active_tpc_counts)(struct gk20a *g, u32 gpc);
 	} gr;
 	const char *name;
 	struct {

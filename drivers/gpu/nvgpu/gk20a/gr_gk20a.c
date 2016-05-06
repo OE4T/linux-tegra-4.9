@@ -1286,54 +1286,82 @@ static u32 gr_gk20a_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 	return 0x1;
 }
 
-static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
+static void gr_gk20a_program_active_tpc_counts(struct gk20a *g, u32 gpc_index)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 gpc_offset = gpc_stride * gpc_index;
+	struct gr_gk20a *gr = &g->gr;
+
+	gk20a_writel(g, gr_gpc0_gpm_pd_active_tpcs_r() + gpc_offset,
+		gr_gpc0_gpm_pd_active_tpcs_num_f(gr->gpc_tpc_count[gpc_index]));
+	gk20a_writel(g, gr_gpc0_gpm_sd_active_tpcs_r() + gpc_offset,
+		gr_gpc0_gpm_sd_active_tpcs_num_f(gr->gpc_tpc_count[gpc_index]));
+}
+
+static void gr_gk20a_init_sm_id_table(struct gk20a *g)
+{
+	u32 gpc, tpc;
+	u32 sm_id = 0;
+
+	for (tpc = 0; tpc < g->gr.max_tpc_per_gpc_count; tpc++) {
+		for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+
+			if (tpc < g->gr.gpc_tpc_count[gpc]) {
+				g->gr.sm_to_cluster[sm_id].tpc_index = tpc;
+				g->gr.sm_to_cluster[sm_id].gpc_index = gpc;
+				sm_id++;
+			}
+		}
+	}
+	g->gr.no_of_sm = sm_id;
+}
+
+static void gr_gk20a_program_sm_id_numbering(struct gk20a *g,
+					     u32 gpc, u32 tpc, u32 sm_id)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 gpc_offset = gpc_stride * gpc;
+	u32 tpc_offset = tpc_in_gpc_stride * tpc;
+
+	gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r() + gpc_offset + tpc_offset,
+			gr_gpc0_tpc0_sm_cfg_sm_id_f(sm_id));
+	gk20a_writel(g, gr_gpc0_tpc0_l1c_cfg_smid_r() + gpc_offset + tpc_offset,
+			gr_gpc0_tpc0_l1c_cfg_smid_value_f(sm_id));
+	gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc) + gpc_offset,
+			gr_gpc0_gpm_pd_sm_id_id_f(sm_id));
+	gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r() + gpc_offset + tpc_offset,
+			gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
+}
+
+int gr_gk20a_init_fs_state(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
 	u32 tpc_index, gpc_index;
-	u32 tpc_offset, gpc_offset;
 	u32 sm_id = 0, gpc_id = 0;
 	u32 tpc_per_gpc;
-	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 fuse_tpc_mask;
 
 	gk20a_dbg_fn("");
 
-	for (tpc_index = 0; tpc_index < gr->max_tpc_per_gpc_count; tpc_index++) {
-		for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
-			gpc_offset = gpc_stride * gpc_index;
-			if (tpc_index < gr->gpc_tpc_count[gpc_index]) {
-				tpc_offset = tpc_in_gpc_stride * tpc_index;
+	gr_gk20a_init_sm_id_table(g);
 
-				gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r() + gpc_offset + tpc_offset,
-					     gr_gpc0_tpc0_sm_cfg_sm_id_f(sm_id));
-				gk20a_writel(g, gr_gpc0_tpc0_l1c_cfg_smid_r() + gpc_offset + tpc_offset,
-					     gr_gpc0_tpc0_l1c_cfg_smid_value_f(sm_id));
-				gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc_index) + gpc_offset,
-					     gr_gpc0_gpm_pd_sm_id_id_f(sm_id));
-				gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r() + gpc_offset + tpc_offset,
-					     gr_gpc0_tpc0_pe_cfg_smid_value_f(sm_id));
+	for (sm_id = 0; sm_id < gr->tpc_count; sm_id++) {
+		tpc_index = g->gr.sm_to_cluster[sm_id].tpc_index;
+		gpc_index = g->gr.sm_to_cluster[sm_id].gpc_index;
 
-				g->gr.sm_to_cluster[sm_id].tpc_index = tpc_index;
-				g->gr.sm_to_cluster[sm_id].gpc_index = gpc_index;
+		g->ops.gr.program_sm_id_numbering(g, gpc_index, tpc_index, sm_id);
 
-				sm_id++;
-			}
-
-			gk20a_writel(g, gr_gpc0_gpm_pd_active_tpcs_r() + gpc_offset,
-				     gr_gpc0_gpm_pd_active_tpcs_num_f(gr->gpc_tpc_count[gpc_index]));
-			gk20a_writel(g, gr_gpc0_gpm_sd_active_tpcs_r() + gpc_offset,
-				     gr_gpc0_gpm_sd_active_tpcs_num_f(gr->gpc_tpc_count[gpc_index]));
-		}
+		if (g->ops.gr.program_active_tpc_counts)
+			g->ops.gr.program_active_tpc_counts(g, gpc_index);
 	}
-
-	gr->no_of_sm = sm_id;
 
 	for (tpc_index = 0, gpc_id = 0;
 	     tpc_index < gr_pd_num_tpc_per_gpc__size_1_v();
 	     tpc_index++, gpc_id += 8) {
 
 		if (gpc_id >= gr->gpc_count)
-			gpc_id = 0;
+			continue;
 
 		tpc_per_gpc =
 			gr_pd_num_tpc_per_gpc_count0_f(gr->gpc_tpc_count[gpc_id + 0]) |
@@ -1365,9 +1393,19 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 			     gr_pd_dist_skip_table_gpc_4n3_mask_f(gr->gpc_skip_mask[gpc_index + 3]));
 	}
 
-	gk20a_writel(g, gr_cwd_fs_r(),
-		     gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
-		     gr_cwd_fs_num_tpcs_f(gr->tpc_count));
+	fuse_tpc_mask = g->ops.gr.get_gpc_tpc_mask(g, 0);
+	if (g->tpc_fs_mask_user &&
+		fuse_tpc_mask == (0x1 << gr->max_tpc_count) - 1) {
+		u32 val = g->tpc_fs_mask_user;
+		val &= (0x1 << gr->max_tpc_count) - 1;
+		gk20a_writel(g, gr_cwd_fs_r(),
+			gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
+			gr_cwd_fs_num_tpcs_f(hweight32(val)));
+	} else {
+		gk20a_writel(g, gr_cwd_fs_r(),
+			gr_cwd_fs_num_gpcs_f(gr->gpc_count) |
+			gr_cwd_fs_num_tpcs_f(gr->tpc_count));
+	}
 
 	gk20a_writel(g, gr_bes_zrop_settings_r(),
 		     gr_bes_zrop_settings_num_active_fbps_f(gr->num_fbps));
@@ -4413,7 +4451,9 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	gr_gk20a_commit_global_timeslice(g, NULL, false);
 
 	/* floorsweep anything left */
-	g->ops.gr.init_fs_state(g);
+	err = g->ops.gr.init_fs_state(g);
+	if (err)
+		goto out;
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)
@@ -4466,7 +4506,7 @@ restore_fe_go_idle:
 
 out:
 	gk20a_dbg_fn("done");
-	return 0;
+	return err;
 }
 
 static void gr_gk20a_load_gating_prod(struct gk20a *g)
@@ -8633,7 +8673,7 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.is_valid_class = gr_gk20a_is_valid_class;
 	gops->gr.get_sm_dsm_perf_regs = gr_gk20a_get_sm_dsm_perf_regs;
 	gops->gr.get_sm_dsm_perf_ctrl_regs = gr_gk20a_get_sm_dsm_perf_ctrl_regs;
-	gops->gr.init_fs_state = gr_gk20a_ctx_state_floorsweep;
+	gops->gr.init_fs_state = gr_gk20a_init_fs_state;
 	gops->gr.set_hww_esr_report_mask = gr_gk20a_set_hww_esr_report_mask;
 	gops->gr.setup_alpha_beta_tables = gr_gk20a_setup_alpha_beta_tables;
 	gops->gr.falcon_load_ucode = gr_gk20a_load_ctxsw_ucode_segments;
@@ -8681,4 +8721,6 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.clear_sm_error_state = gk20a_gr_clear_sm_error_state;
 	gops->gr.suspend_contexts = gr_gk20a_suspend_contexts;
 	gops->gr.get_preemption_mode_flags = gr_gk20a_get_preemption_mode_flags;
+	gops->gr.program_active_tpc_counts = gr_gk20a_program_active_tpc_counts;
+	gops->gr.program_sm_id_numbering = gr_gk20a_program_sm_id_numbering;
 }

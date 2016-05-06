@@ -512,6 +512,34 @@ static int a57_set_testmode(void *data, u64 val)
 	return 0;
 }
 
+static int denver_cc_set(void *data, u64 val)
+{
+	deepest_denver_cluster_state = (u32)val;
+	smp_call_function_any(&denver_cpumask, program_cluster_state,
+			&deepest_denver_cluster_state, 1);
+	return 0;
+}
+
+static int denver_cc_get(void *data, u64 *val)
+{
+	*val = (u64) deepest_denver_cluster_state;
+	return 0;
+}
+
+static int a57_cc_set(void *data, u64 val)
+{
+	deepest_a57_cluster_state = (u32)val;
+	smp_call_function_any(&a57_cpumask, program_cluster_state,
+			&deepest_a57_cluster_state, 1);
+	return 0;
+}
+
+static int a57_cc_get(void *data, u64 *val)
+{
+	*val = (u64) deepest_a57_cluster_state;
+	return 0;
+}
+
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_denver_fops, NULL,
 						denver_idle_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(duration_us_a57_fops, NULL, a57_idle_write, "%llu\n");
@@ -521,12 +549,16 @@ DEFINE_SIMPLE_ATTRIBUTE(denver_xover_cc6_fops, NULL,
 						denver_cc6_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(denver_xover_cc7_fops, NULL,
 						denver_cc7_write, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(denver_cc_state_fops, denver_cc_get,
+						denver_cc_set, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(a57_xover_cc6_fops, NULL, a57_cc6_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(a57_xover_cc7_fops, NULL, a57_cc7_write, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(denver_testmode_fops, NULL,
 					denver_set_testmode, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(a57_testmode_fops, NULL,
 					a57_set_testmode, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(a57_cc_state_fops, a57_cc_get,
+						a57_cc_set, "%llu\n");
 
 static int cpuidle_debugfs_init(void)
 {
@@ -574,6 +606,10 @@ static int cpuidle_debugfs_init(void)
 	if (!dfs_file)
 		goto err_out;
 
+	dfs_file = debugfs_create_file("deepest_cc_state", 0644,
+		cpuidle_debugfs_denver, NULL, &denver_cc_state_fops);
+	if (!dfs_file)
+		goto err_out;
 
 	cpuidle_debugfs_a57 = debugfs_create_dir("cpuidle_a57", NULL);
 	if (!cpuidle_debugfs_a57)
@@ -609,6 +645,11 @@ static int cpuidle_debugfs_init(void)
 
 	dfs_file = debugfs_create_file("crossover_cc1_cc7", 0644,
 		cpuidle_debugfs_a57, NULL, &a57_xover_cc7_fops);
+	if (!dfs_file)
+		goto err_out;
+
+	dfs_file = debugfs_create_file("deepest_cc_state", 0644,
+		cpuidle_debugfs_a57, NULL, &a57_cc_state_fops);
 	if (!dfs_file)
 		goto err_out;
 

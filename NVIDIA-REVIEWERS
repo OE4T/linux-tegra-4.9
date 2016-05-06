@@ -58,21 +58,181 @@ L:	sw-mobile-platform@exchange.nvidia.com
 S:	Supported
 F:	arch/arm64/boot/dts/
 
-GPU
-M:	Terje Bergstrom <tbergstrom@nvidia.com>
-L:	sw-mobile-host1x@exchange.nvidia.com
+ADSP
+M:	Nitin Kumbhar <nkumbhar@nvidia.com>
+M:	Sachin Nikam <snikam@nvidia.com>
+L:	adsp_os@exchange.nvidia.com
 S:	Supported
-F:	drivers/gpu/nvgpu/gp10b/
+F:	drivers/platform/tegra/nvadsp/*
+
+AUDIO
+M:	Niranjan Wartikar <nwartikar@nvidia.com>
+L:	sw-mobile-audio-arch@exchange.nvidia.com
+S:	Supported
+F:	sound/soc/tegra-alt/*
+
+AUDIO_AUTO
+M:	Nitin Pai <npai@nvidia.com>
+M:	Dipesh Gandhi <dipeshg@nvidia.com>
+S:	Supported
+F:	drivers/misc/tegra186-ahc/*
+F:	drivers/net/ethernet/nvidia/eqos/*
+
+BPMP
+M:	Matthew Longnecker <mlongnecker@nvidia.com>
+M:	Timo Alho <talho@nvidia.com>
+L:	sw-mobile-bpmp-dev@exchange.nvidia.com
+S:	Supported
+F:	drivers/firmware/tegra/*
+F:	drivers/reset/tegra/*
+
+BUS
+M:	Laxman Dewangan <ldewangan@nvidia.com>
+L:	sw-mobile-kernel-bus@exchange.nvidia.com
+S:	Supported
+F:	drivers/i2c/busses/*
+F:	drivers/spi/*
+
+CAMERA
+M:	Nicholas Haemel <nhaemel@nvidia.com>
+M:	Jihoon Bang <jbang@nvidia.com>
+M:	Shantanu Nath <snath@nvidia.com>
+L:	sw-mobile-camera@exchange.nvidia.com
+S:	Supported
+F:	drivers/video/tegra/host/vi/*
+
+CPU
+M:	Guy Sotomayor <gsotomayor@nvidia.com>
+M:	Alexander Van Brunt <avanbrunt@nvidia.com>
+L:	sw-mobile-cpu@exchange.nvidia.com
+S:	Supported
+F:	drivers/clocksource/tegra186-timer.c
+F:	drivers/cpuidle/cpuidle-tegra18x.c
+F:	drivers/platform/tegra/ari_mca.c
+F:	drivers/platform/tegra/bridge_mca.c
+F:	drivers/platform/tegra/tegra-mce.c
+F:	drivers/platform/tegra/tegra-sysfs-mbox.c
+
+DISPLAY
+M:	Mitch Luban <mluban@nvidia.com>
+M:	Venu Byravarasu <vbyravarasu@nvidia.com>
+M:	Jon Mayo <jmayo@nvidia.com>
+L:	tegra-display-core@exchange.nvidia.com
+S:	Supported
+F:	drivers/platform/tegra/panel-simulator.c
+F:	drivers/video/tegra/dc/*
+F:	drivers/misc/csi_mipi_cal/*
+
+DEVICE-TREE
+M:	Laxman Dewangan <ldewangan@nvidia.com>
+M:	Alexander Van Brunt <avanbrunt@nvidia.com>
+L:	sw-mobile-platform@exchange.nvidia.com
+S:	Supported
+F:	arch/arm64/boot/dts/
 
 HOST
 M:	Arto Merilainen <amerilainen@nvidia.com>
 L:	sw-mobile-host1x@exchange.nvidia.com
 S:	Supported
-F:	drivers/video/tegra/host/
+F:	drivers/gpu/drm/*
+F:	drivers/gpu/host1x/*
 
-USB
-M:	Ashu Jha <ajha@nvidia.com>
-L:	usb3-sweng@exchange.nvidia.com
+HSP
+M:	Pend Du <pdu@nvidia.com>
 S:	Supported
-F:	drivers/pinctrl/pinctrl-tegra186-padctl-uphy.c
+F:	drivers/platform/tegra/tegra-hsp.c
+
+MEMORY
+M:	Krishna Reddy <vdumpa@nvidia.com>
+M:	Sri Krishna Chowdary <schowdary@nvidia.com>
+L:	sw-mobile-memory@exchange.nvidia.com
+S:	Supported
+F:	drivers/dma/*
+F:	drivers/video/tegra/nvmap/*
+F:	drivers/platform/tegra/iomap_t18x.h
+F:	drivers/platform/tegra/mc/*
+
+MTTCAN
+M:	Manoj Chourasia <mchourasia@nvidia.com>
+S:	Supported
+F:	drivers/staging/mttcan/*
+
+PLATFORM
+M:	Mallikarjun Kasoju <mkasoju@nvidia.com>
+M:	Laxman Dewangan <ldewangan@nvidia.com>
+L:	sw-mobile-kernel-platform@exchange.nvidia.com
+S:	Supported
+F:	drivers/gpio/*
+F:	drivers/misc/tegra-fuse/tegra18x_fuse_offsets.h
+F:	drivers/padctrl/*
+F:	drivers/pinctrl/pinctrl-*.c
+F:	drivers/platform/tegra/tegra18_kfuse.c
+F:	drivers/platform/tegra/tegra18_kfuse_priv.h
+
+POWER: CLOCKS AND VOLTAGE
+M:	Matthew Longnecker <mlongnecker@nvidia.com>
+M:	Aleksandr Frid <afrid@nvidia.com>
+L:	sw-mobile-clocks@exchange.nvidia.com
+F:	drivers/clk/tegra/*
+F:	drivers/platform/tegra/cactmon_t18x.c
+
+POWER: CPU
+M:	Matthew Longnecker <mlongnecker@nvidia.com>
+L:	sw-mobile-cpu-power@exchange.nvidia.com
+S:	Supported
+F:	drivers/cpufreq/*
+F:	drivers/cpuidle/*
+F:	drivers/platform/tegra/tegra18_a57_serr.c
+F:	drivers/platform/tegra/tegra18_cpu_debugfs.c
+F:	drivers/platform/tegra/tegra18_serr.c
+F:	drivers/platform/tegra/tegra18_speedo.c
+F:	drivers/platform/tegra/chipid.c
+
+POWER: THERMAL
+M:	Matthew Longnecker <mlongnecker@nvidia.com>
+L:	sw-mobile-therm@exchange.nvidia.com
+S:	Supported
+F:	drivers/thermal/*
+F:	drivers/platform/tegra/tegra18_throttle.c
+
+POWER: GATING AND STATES
+M:	Matthew Longnecker <mlongnecker@nvidia.com>
+M:	Laxman Dewangan <ldewangan@nvidia.com>
+L:	sw-mobile-power@exchange.nvidia.com
+S:	Supported
+F:	drivers/platform/tegra/pm-*.c
+F:	drivers/platform/tegra/aon-ivc-dbg-messages.h
+F:	drivers/platform/tegra/powergate/*
+F:	drivers/platform/tegra/reboot-t18x.c
+F:	drivers/platform/tegra/tegra-aon.c
+F:	drivers/platform/tegra/tegra186-aowoke.*
+F:	drivers/platform/tegra/tegra186-aondbg.c
+F:	drivers/platform/tegra/tegra186-platform-common.c
+F:	drivers/platform/tegra/tegra186-pmc*.c
+F:	drivers/platform/tegra/wakeups-t18x.c
+
+RTCPU
+M:	Remi Denis-Courmont <remid@nvidia.com>
+S:	Supported
+F:	drivers/platform/tegra/rtcpu/
+F:	drivers/platform/tegra/tegra-camera-rtcpu.c
+F:	drivers/platform/tegra/tegra_ast.c
+
+SECURITY
+M:	Vincent Chen <vinchen@nvidia.com>
+L:	sw-mobile-security@exchange.nvidia.com
+S:	Supported
+F:	drivers/crypto/*
+
+SENSORS
+M:	R Raj Kumar <rrajk@nvidia.com>
+S:	Supported
+F:	drivers/tachometer/*
+
+SYSTEM
+M:	Laxman Dewangan <ldewangan@nvidia.com>
+L:	sw-mobile-system@exchange.nvidia.com
+S:	Supported
+F:	drivers/platform/tegra/tegra186-system-config.c
+F:	drivers/watchdog/*
 

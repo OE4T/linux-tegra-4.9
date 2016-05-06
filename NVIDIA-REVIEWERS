@@ -51,6 +51,12 @@ so much easier [Ed]
 Maintainers List (try to look for most precise areas first)
 
 		-----------------------------------
+DEVICE-TREE
+M:	Laxman Dewangan <ldewangan@nvidia.com>
+M:	Alexander Van Brunt <avanbrunt@nvidia.com>
+L:	sw-mobile-platform@exchange.nvidia.com
+S:	Supported
+F:	arch/arm64/boot/dts/
 
 GPU
 M:	Terje Bergstrom <tbergstrom@nvidia.com>

@@ -90,4 +90,18 @@ int tegra_hsp_db_clr_raw(u32 mask);
 
 #define tegra_hsp_find_master(mask, master)	((mask) & (1 << (master)))
 
+struct device;
+
+struct tegra_hsp_sm_pair {
+	struct device *dev;
+	u32 index;
+	u32 (*notify_full)(struct tegra_hsp_sm_pair *, u32);
+	struct hlist_node node;
+};
+
+int of_tegra_hsp_sm_pair_request(struct device *dev, u32 index,
+					struct tegra_hsp_sm_pair *);
+void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *);
+void tegra_hsp_sm_pair_write(struct tegra_hsp_sm_pair *, u32 value);
+
 #endif

@@ -59,7 +59,7 @@
 static struct nvdisp_isoclient_bw_info ihub_bw_info;
 
 /* Protects access to ihub_bw_info */
-DEFINE_MUTEX(tegra_nvdisp_bw_lock);
+static DEFINE_MUTEX(tegra_nvdisp_bw_lock);
 
 
 static void tegra_dc_set_latency_allowance(u32 bw)

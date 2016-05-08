@@ -93,7 +93,9 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 #define HDCP_CMD_OFFSET			1
 #define HDCP_CMD_BYTE_OFFSET		8
 #define HDCP_AUTH_CMD			0x5
-
+#define HDCP_CMD_GEN_CMAC		0xB
+#define HDCP_CMAC_OFFSET		6
+#define HDCP_TSEC_ADDR_OFFSET		22
 #ifdef VERBOSE_DEBUG
 #define nvhdcp_vdbg(...)	\
 		pr_debug("nvhdcp: " __VA_ARGS__)
@@ -1050,6 +1052,25 @@ static int nvhdcp_poll_ready(struct tegra_nvhdcp *nvhdcp, int timeout)
 	return e;
 }
 
+/* validate srm signature for hdcp 2.2 */
+static int get_srm_signature(struct hdcp_context_t *hdcp_context,
+			char *nonce, uint64_t *pkt, void *ta_ctx)
+{
+	int err = 0;
+	/* generate nonce in the ucode */
+	err = tsec_hdcp_generate_nonce(hdcp_context, nonce);
+	if (err) {
+		nvhdcp_err("Error generating nonce!\n");
+		return err;
+	}
+	/* pass the nonce to hdcp TA and get the signature back */
+	memcpy(pkt, nonce, HDCP_NONCE_SIZE);
+	err = te_launch_trusted_oper(pkt, PKT_SIZE, HDCP_CMD_GEN_CMAC, ta_ctx);
+	if (err)
+		nvhdcp_err("te launch operation failed with error %d\n", err);
+	return err;
+}
+
 static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 				struct hdcp_context_t *hdcp_context)
 {
@@ -1057,6 +1078,14 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 	u8 version = 2;
 	u16 caps = 0;
 	u16 txcaps = 0x0;
+	uint64_t *pkt = NULL;
+	unsigned char nonce[HDCP_NONCE_SIZE];
+
+	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
+
+	if (!pkt)
+		goto exit;
+
 	err =  tsec_hdcp_readcaps(hdcp_context);
 	if (err)
 		goto exit;
@@ -1114,7 +1143,23 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 		&hdcp_context->msg.rxcaps_capmask);
 	if (err)
 		goto exit;
-	err =  tsec_hdcp_revocation_check(hdcp_context);
+	if (tegra_dc_is_t18x()) {
+		ta_ctx = NULL;
+		/* Open a trusted sesion with HDCP TA */
+		err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+		if (err) {
+			nvhdcp_err("Error opening trusted session\n");
+			goto exit;
+		}
+		err = get_srm_signature(hdcp_context, nonce, pkt, ta_ctx);
+		if (err) {
+			nvhdcp_err("Error getting srm signature!\n");
+			goto exit;
+		}
+	}
+	err =  tsec_hdcp_revocation_check(hdcp_context,
+		(unsigned char *)(pkt + HDCP_CMAC_OFFSET),
+		*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)));
 	if (err)
 		goto exit;
 	err = nvhdcp_poll_ready(nvhdcp, 1000);
@@ -1203,8 +1248,18 @@ static int tsec_hdcp_authentication(struct tegra_nvhdcp *nvhdcp,
 			g_fallback = 1;
 			goto exit;
 		}
+		if (tegra_dc_is_t18x()) {
+			err = get_srm_signature(hdcp_context, nonce,
+				pkt, ta_ctx);
+			if (err) {
+				nvhdcp_err("Error getting srm signature!\n");
+				goto exit;
+			}
+		}
+		err =  tsec_hdcp_verify_vprime(hdcp_context,
+		(char *)(pkt + HDCP_CMAC_OFFSET),
+		*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)));
 
-		err =  tsec_hdcp_verify_vprime(hdcp_context);
 		if (err)
 			goto exit;
 		hdcp_context->msg.rptr_send_ack_msg_id = ID_SEND_RPTR_ACK;
@@ -1265,6 +1320,13 @@ stream_manage_send:
 exit:
 	if (err)
 		nvhdcp_err("HDCP authentication failed with err %d\n", err);
+	kfree(pkt);
+	 if (tegra_dc_is_t18x()) {
+		if (ta_ctx) {
+			te_close_trusted_session(ta_ctx);
+			ta_ctx = NULL;
+		}
+	}
 	return err;
 }
 
@@ -1311,7 +1373,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	uint32_t ta_cmd = HDCP_AUTH_CMD;
 	bool enc = false;
 
-	uint64_t *pkt = kmalloc(PKT_SIZE, GFP_KERNEL);
+	uint64_t *pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
 
 	if (!pkt) {
 		nvhdcp_err("Memory allocation failed\n");
@@ -1360,7 +1422,7 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	ta_ctx = NULL;
 	e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
 	if (e) {
-		nvhdcp_info("Invalid session id");
+		nvhdcp_err("Error opening trusted session\n");
 		goto failure;
 	}
 
@@ -1684,7 +1746,14 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 			struct hdcp_context_t *hdcp_context)
 {
 	u16 rx_status = 0;
+	uint64_t *pkt = NULL;
 	int err = 0;
+	unsigned char nonce[HDCP_NONCE_SIZE];
+
+	pkt = kzalloc(PKT_SIZE, GFP_KERNEL);
+
+	if (!pkt)
+		goto exit;
 
 	nvhdcp_i2c_read16(nvhdcp, HDCP_RX_STATUS, &rx_status);
 	if (nvhdcp->repeater && (rx_status & HDCP_RX_STATUS_MSG_READY_YES)) {
@@ -1711,7 +1780,24 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 							msecs_to_jiffies(10));
 			goto exit;
 		}
-		err =  tsec_hdcp_verify_vprime(hdcp_context);
+		 if (tegra_dc_is_t18x()) {
+			ta_ctx = NULL;
+			/* Open a trusted sesion with HDCP TA */
+			err = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
+			if (err) {
+				nvhdcp_err("Error opening trusted session\n");
+				goto exit;
+			}
+			err = get_srm_signature(hdcp_context, nonce,
+						pkt, ta_ctx);
+			if (err) {
+				nvhdcp_err("Error getting srm signature!\n");
+				goto exit;
+			}
+		}
+		err =  tsec_hdcp_verify_vprime(hdcp_context,
+			(char *)(pkt + HDCP_CMAC_OFFSET),
+			*((unsigned int *)(pkt + HDCP_TSEC_ADDR_OFFSET)));
 		if (err)
 			goto exit;
 		hdcp_context->msg.rptr_send_ack_msg_id = ID_SEND_RPTR_ACK;
@@ -1719,11 +1805,17 @@ static int link_integrity_check(struct tegra_nvhdcp *nvhdcp,
 			&hdcp_context->msg.rptr_send_ack_msg_id);
 		if (err)
 			goto exit;
-		return 0;
 	} else
-		return rx_status & HDCP_RX_STATUS_MSG_REAUTH_REQ;
+		err = (rx_status & HDCP_RX_STATUS_MSG_REAUTH_REQ);
 exit:
-		return 1;
+		kfree(pkt);
+		if (tegra_dc_is_t18x()) {
+			if (ta_ctx) {
+				te_close_trusted_session(ta_ctx);
+				ta_ctx = NULL;
+			}
+		}
+		return err;
 }
 
 static void nvhdcp2_downstream_worker(struct work_struct *work)

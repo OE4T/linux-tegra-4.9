@@ -18,6 +18,8 @@
 #define HDCP_22_SUPPORTED               (1 << 2)
 #define HDCP_22_REPEATER                (0x0100)
 #define HDCP_STATUS_READY               (0x200)
+#define HDCP_NONCE_SIZE			16
+#define HDCP_CMAC_SIZE			16
 
 int tsec_hdcp_readcaps(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_init(struct hdcp_context_t *hdcp_context);
@@ -29,7 +31,8 @@ int tsec_hdcp_encrypt_pairing_info(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_generate_lc_init(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_verify_lprime(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_ske_init(struct hdcp_context_t *hdcp_context);
-int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context);
+int tsec_hdcp_verify_vprime(struct hdcp_context_t *hdcp_context,
+		unsigned char *cmac, unsigned int tsec_address);
 int tsec_hdcp_exchange_info(struct hdcp_context_t *hdcp_context,
 		u32 method_flag,
 		u8 *version,
@@ -37,6 +40,9 @@ int tsec_hdcp_exchange_info(struct hdcp_context_t *hdcp_context,
 int tsec_hdcp_update_rrx(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_rptr_stream_ready(struct hdcp_context_t *hdcp_context);
 int tsec_hdcp_session_ctrl(struct hdcp_context_t *hdcp_context, int flag);
-int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context);
+int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context,
+		unsigned char *cmac, unsigned int tsec_address);
 int tsec_hdcp_rptr_stream_manage(struct hdcp_context_t *hdcp_context);
 int tsec_dp_hdcp_revocation_check(struct hdcp_context_t *hdcp_context);
+int tsec_hdcp_generate_nonce(struct hdcp_context_t *hdcp_context,
+		unsigned char *nonce);

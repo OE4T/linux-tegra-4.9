@@ -345,6 +345,10 @@ struct hdcp_revocation_check_param {
 	unsigned char   reserved[3];
 	unsigned int  srm_size;                     /* <<in */
 	unsigned int  ret_code;                     /* >>out */
+	unsigned int srm_ver;                       /* >>out */
+	unsigned int tsec_gsc_address;              /* <<in */
+	unsigned char nonce[16];                    /* <<in */
+	unsigned char srm_cmac[16];                 /* <<in */
 };
 #define HDCP_REVOCATION_CHECK_ERROR_NONE                 HDCP_ERROR_NONE
 #define HDCP_REVOCATION_CHECK_ERROR_INVALID_SESSION\
@@ -358,6 +362,8 @@ struct hdcp_revocation_check_param {
 #define HDCP_REVOCATION_CHECK_ERROR_RCV_ID_REVOKED       (0x00000007)
 #define HDCP_REVOCATION_CHECK_ERROR_SRM_NOT_SET          (0x00000008)
 #define HDCP_REVOCATION_CHECK_ERROR_DCP_KPUB_NOT_SET     (0x00000009)
+#define HDCP_REVOCATION_CHECK_ERROR_CMAC_MISMATCH        (0x0000000A)
+#define HDCP_REVOCATION_CHECK_ERROR_INVALID_GSC          (0x0000000B)
 /*
  * VERIFY_HPRIME
  *
@@ -598,7 +604,12 @@ struct hdcp_verify_vprime_param {
 	unsigned long long  v128l[HDCP_SIZE_VPRIME_2X_64/2];        /* >>out */
 	unsigned int    ret_code;                                   /* >>out */
 	unsigned char   reserved2[4];
-	unsigned short  rxinfo;
+	unsigned short  rxinfo;                                     /* <<in */
+	unsigned char   reserved3[2];
+	unsigned int    srm_ver;                                    /* >>out */
+	unsigned int    tsec_gsc_address;                           /* <<in */
+	unsigned char   srm_cmac[16];                               /* >>out */
+	unsigned char   nonce[16];                                  /* <<in */
 };
 #define HDCP_VERIFY_VPRIME_ERROR_NONE                    HDCP_ERROR_NONE
 #define HDCP_VERIFY_VPRIME_ERROR_INVALID_SESSION\
@@ -615,6 +626,35 @@ struct hdcp_verify_vprime_param {
 #define HDCP_VERIFY_VPRIME_ERROR_RCVD_ID_LIST_NOT_SET    (0x0000000B)
 #define HDCP_VERIFY_VPRIME_ERROR_SEQ_NUM_V_ROLLOVER      (0x0000000C)
 #define HDCP_VERIFY_VPRIME_ERROR_ATTEMPT_MAX             (0x0000000D)
+#define HDCP_VERIFY_VPRIME_ERROR_CMAC_MISMATCH           (0x0000000E)
+
+/*
+ * GET_CURRENT_NONCE
+ *
+ * This method generates a nonce in ucode for hdcp 2.2
+ *
+ * Depends on: [SET_SCRATCH_BUFFER]
+ *
+ * INVALID_SESSION    - Session not found
+ * SB_NOT_SET         - Scratch Buffer not set
+ * NOT_INIT           - HDCP app not initialized yet
+ *
+ */
+struct hdcp_get_current_nonce_param {
+	unsigned int session_id;                           /* <<in */
+	unsigned char nonce[16];                           /* <<in */
+	unsigned int ret_code;                             /* >>out */
+};
+#define NV95A1_HDCP_GET_CURRENT_NONCE_ERROR_NONE\
+	NV95A1_HDCP_ERROR_NONE
+#define NV95A1_HDCP_GET_CURRENT_NONCE_ERROR_INVALID_SESSION\
+	NV95A1_HDCP_ERROR_INVALID_SESSION
+#define NV95A1_HDCP_GET_CURRENT_NONCE_ERROR_SB_NOT_SET\
+	NV95A1_HDCP_ERROR_SB_NOT_SET
+#define NV95A1_HDCP_GET_CURRENT_NONCE_NOT_INIT\
+	NV95A1_HDCP_ERROR_NOT_INIT
+#define NV95A1_HDCP_GET_CURRENT_NONCE_FAILED      (0x00000005)
+
 /*
  * ENCRYPTION_RUN_CTRL
  *

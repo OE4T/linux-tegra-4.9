@@ -1159,15 +1159,94 @@
 		status = "disabled";
 	};
 
+	sce_hsp: tegra-hsp@b150000 {
+		compatible = "nvidia,tegra186-hsp";
+		reg = <0x0 0x0b150000 0x0 0x00090000>;
+		interrupts =	<0 141 0x4>,
+				<0 142 0x4>,
+				<0 143 0x4>,
+				<0 144 0x4>;
+		interrupt-names = "shared1", "shared2", "shared3", "shared4";
+		status = "disabled";
+	};
+
+	ape_hsp: tegra-hsp@29a0000 {
+		compatible = "nvidia,tegra186-hsp";
+		reg = <0x0 0x029a0000 0x0 0x00090000>;
+		interrupt-parent = <&tegra_agic>;
+		interrupts =
+			<GIC_SPI INT_AMISC_MBOX_FULL0
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_FULL1
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_FULL2
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_FULL3
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_FULL4
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_FULL5
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_FULL6
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_FULL7
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY0
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY1
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY2
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY3
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY4
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY5
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY6
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AMISC_MBOX_EMPTY7
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AHSP_SHRD0
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AHSP_SHRD1
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AHSP_SHRD2
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AHSP_SHRD3
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>,
+			<GIC_SPI INT_AHSP_SHRD4
+				IRQ_TYPE_LEVEL_HIGH ROUTE_TO_HOST_INTF0>;
+		interrupt-names = "full0", "full1", "full2", "full3",
+				"full4", "full5", "full6", "full7",
+				"empty0", "empty1", "empty2", "empty3",
+				"empty4", "empty5", "empty6", "empty7",
+				"shared0", "shared1", "shared2", "shared3",
+				"shared4";
+		status = "disabled";
+	};
+
 	hsp_top: tegra-hsp@3c00000 {
 		compatible = "nvidia,tegra186-hsp";
 		reg = <0x0 0x03c00000 0x0 0x000a0000>;
-		interrupts = <0 176 0x4>;
+		/* NOTE: Doorbell IRQ 1st for backward compatibility. */
+		interrupts =	<0 176 0x4>,
+				<0 120 0x4>,
+				<0 121 0x4>,
+				<0 122 0x4>,
+				<0 123 0x4>,
+				<0 124 0x4>,
+				<0 125 0x4>,
+				<0 126 0x4>,
+				<0 127 0x4>;
+		interrupt-names = "doorbell",
+				"shared0", "shared1", "shared2", "shared3",
+				"shared4", "shared5", "shared6", "shared7";
+		/* NOTE: num-* properties for backward compatibility.
+		 * TODO: Remove them. */
 		nvidia,num-SM = <0x8>;
 		nvidia,num-AS = <0x2>;
 		nvidia,num-SS = <0x2>;
-		nvidia,num-DB = <0x7>;
-		nvidia,num-SI = <0x8>;
 		status = "disabled";
 	};
 

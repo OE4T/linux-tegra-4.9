@@ -783,6 +783,16 @@ config GPS_HWGEOFENCING
 	---help---
 	This driver provides gps enable, hw geofencing and host wake capability.
 
+config BLUEDROID_PM
+	tristate "Bluedroid_pm driver support"
+	help
+	  Bluetooth Bluedroid power management Driver.
+	  This driver provides power control and dynamic active power saving
+	  mechanism for bluetooth radio devices.
+
+	  Say Y here to compile support for bluedroid_pm support into the kernel
+	  or say M to compile it as module (bluedroid_pm).
+
 source "drivers/misc/c2port/Kconfig"
 source "drivers/misc/eeprom/Kconfig"
 source "drivers/misc/cb710/Kconfig"

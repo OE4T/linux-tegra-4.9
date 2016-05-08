@@ -92,4 +92,14 @@ source "drivers/misc/tegra-profiler/Kconfig"
 source "drivers/misc/eventlib/Kconfig"
 endif
 
+config BLUEDROID_PM
+	tristate "Bluedroid_pm driver support"
+	help
+	  Bluetooth Bluedroid power management Driver.
+	  This driver provides power control and dynamic active power saving
+	  mechanism for bluetooth radio devices.
+
+	  Say Y here to compile support for bluedroid_pm support into the kernel
+	  or say M to compile it as module (bluedroid_pm).
+
 endmenu

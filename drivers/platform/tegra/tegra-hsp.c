@@ -21,8 +21,6 @@
 #include <linux/interrupt.h>
 #include <linux/module.h>
 #include <linux/slab.h>
-#include <linux/platform_device.h>
-#include <linux/device.h>
 #include <linux/debugfs.h>
 
 #include <linux/tegra-hsp.h>
@@ -547,11 +545,6 @@ late_initcall(debugfs_init);
 
 #define NV(prop) "nvidia," prop
 
-static const struct of_device_id tegra_hsp_of_match[] = {
-	{ .compatible = "nvidia,tegra186-hsp", },
-	{},
-};
-
 int tegra_hsp_init(void)
 {
 	int i;
@@ -615,23 +608,3 @@ out:
 	of_node_put(np);
 	return ret;
 }
-
-static int tegra_hsp_probe(struct platform_device *pdev)
-{
-	return tegra_hsp_init();
-}
-
-static struct platform_driver tegra_hsp_driver = {
-	.probe	= tegra_hsp_probe,
-	.driver = {
-		.owner	= THIS_MODULE,
-		.name	= "tegra_hsp",
-		.of_match_table = of_match_ptr(tegra_hsp_of_match),
-	},
-};
-
-static int __init tegra_hsp_initcall(void)
-{
-	return platform_driver_register(&tegra_hsp_driver);
-}
-core_initcall(tegra_hsp_initcall);

@@ -137,10 +137,8 @@
 		};
 
 		hsp {
-			compatible = "nvidia,tegra186-hsp-doorbell";
-			nvidia,hsp-doorbell = <&hsp_top
-						TEGRA_HSP_PROC_SCE
-						TEGRA_HSP_DB_SCE>;
+			compatible = "nvidia,tegra186-hsp-mailbox";
+			nvidia,hsp-shared-mailbox = <&sce_hsp 1>;
 		};
 	};
 
@@ -257,10 +255,8 @@
 		};
 
 		hsp {
-			compatible = "nvidia,tegra186-hsp-doorbell";
-			nvidia,hsp-doorbell = <&hsp_top
-						TEGRA_HSP_PROC_APE
-						TEGRA_HSP_DB_APE>;
+			compatible = "nvidia,tegra186-hsp-mailbox";
+			nvidia,hsp-shared-mailbox = <&ape_hsp 1>;
 		};
 	};
 };

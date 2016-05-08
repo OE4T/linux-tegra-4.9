@@ -27,6 +27,8 @@
 
 #include <linux/tegra-hsp.h>
 
+#define HSP_DIMENSIONING		0x380
+
 #define HSP_DB_REG_TRIGGER		0x0
 #define HSP_DB_REG_ENABLE		0x4
 #define HSP_DB_REG_RAW			0x8
@@ -39,11 +41,6 @@ enum tegra_hsp_init_status {
 };
 
 struct hsp_top {
-	int nr_sm;
-	int nr_as;
-	int nr_ss;
-	int nr_db;
-	int nr_si;
 	int status;
 	void __iomem *base;
 };
@@ -102,9 +99,6 @@ static inline int next_valid_master(int m)
 	for (m = HSP_FIRST_MASTER; \
 		 m <= HSP_LAST_MASTER; \
 		 m = next_valid_master(m))
-
-#define hsp_db_offset(i, d) \
-	(d.base + ((1 + (d.nr_sm>>1) + d.nr_ss + d.nr_as)<<16) + (i) * 0x100)
 
 #define hsp_ready() (hsp_top.status == HSP_INIT_OKAY)
 
@@ -562,59 +556,64 @@ int tegra_hsp_init(void)
 {
 	int i;
 	int irq;
-	struct device_node *np;
-	int ret = 0;
+	struct device_node *np = NULL;
+	void __iomem *base;
+	int ret = -EINVAL;
+	u32 reg;
 
 	if (hsp_ready())
 		return 0;
 
-	np = of_find_compatible_node(NULL, NULL,
-		tegra_hsp_of_match[0].compatible);
-	if (!np) {
-		WARN_ON(1);
-		pr_err("tegra-hsp: NV data required.\n");
-		return -EINVAL;
-	}
+	/* Look for TOP0 HSP (the one with the doorbells) */
+	do {
+		np = of_find_compatible_node(np, NULL, NV("tegra186-hsp"));
+		if (np == NULL) {
+			WARN_ON(1);
+			pr_err("tegra-hsp: NV data required.\n");
+			return -ENODEV;
+		}
 
-	ret |= of_property_read_u32(np, NV("num-SM"), &hsp_top.nr_sm);
-	ret |= of_property_read_u32(np, NV("num-AS"), &hsp_top.nr_as);
-	ret |= of_property_read_u32(np, NV("num-SS"), &hsp_top.nr_ss);
-	ret |= of_property_read_u32(np, NV("num-DB"), &hsp_top.nr_db);
-	ret |= of_property_read_u32(np, NV("num-SI"), &hsp_top.nr_si);
+		irq = of_irq_get_byname(np, "doorbell");
+	} while (irq <= 0);
 
-	if (ret) {
-		pr_err("tegra-hsp: failed to parse HSP config.\n");
-		return -EINVAL;
-	}
-
-	hsp_top.base = of_iomap(np, 0);
-	if (!hsp_top.base) {
+	base = of_iomap(np, 0);
+	if (base == NULL) {
 		pr_err("tegra-hsp: failed to map HSP IO space.\n");
-		return -EINVAL;
+		goto out;
 	}
+
+	reg = readl(base + HSP_DIMENSIONING);
+	hsp_top.base = base;
+
+	base += 0x10000; /* skip common regs */
+	base += (reg & 0x000f) << 15; /* skip shared mailboxes */
+	base += ((reg & 0x00f0) >> 4) << 16; /* skip shared semaphores */
+	base += ((reg & 0x0f00) >> 8) << 16; /* skip arbitrated semaphores */
 
 	for (i = HSP_FIRST_DB; i <= HSP_LAST_DB; i++) {
-		db_bases[i] = hsp_db_offset(i, hsp_top);
+		db_bases[i] = base;
+		base += 0x100;
 		pr_debug("tegra-hsp: db[%d]: %p\n", i, db_bases[i]);
 	}
 
 	irq = irq_of_parse_and_map(np, 0);
 	if (!irq) {
 		pr_err("tegra-hsp: failed to parse doorbell irq\n");
-		return -EINVAL;
+		goto out;
 	}
 
 	ret = request_irq(irq, dbell_irq, IRQF_NO_SUSPEND, "hsp", NULL);
 	if (ret) {
 		pr_err("tegra-hsp: request_irq() failed (%d)\n", ret);
-		return -EINVAL;
+		goto out;
 	}
-
-	of_node_put(np);
 
 	db_irq = irq;
 	hsp_top.status = HSP_INIT_OKAY;
-	return 0;
+	ret = 0;
+out:
+	of_node_put(np);
+	return ret;
 }
 
 static int tegra_hsp_probe(struct platform_device *pdev)

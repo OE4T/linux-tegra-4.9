@@ -2052,6 +2052,8 @@ struct snd_soc_dai_link *tegra_machine_new_codec_links(
 			}
 
 			tegra_codec_links[i].stream_name = "Playback";
+			tegra_codec_links[i].ignore_suspend =
+				of_property_read_bool(subnp, "ignore_suspend");
 
 #ifdef CONFIG_SND_SOC_TEGRA186_DSPK_ALT
 			/* special case to handle specifically for dspk, connected to

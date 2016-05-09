@@ -490,6 +490,10 @@ int gk20a_ctxsw_trace_init(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "g=%p trace=%p", g, trace);
 
+	/* if tracing is not supported, skip this */
+	if (!g->ops.fecs_trace.init)
+		return 0;
+
 	if (likely(trace))
 		return 0;
 

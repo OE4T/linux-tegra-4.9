@@ -17,15 +17,19 @@
 #include <linux/tegra-camera-rtcpu.h>
 
 #include <linux/kernel.h>
+#include <linux/bitops.h>
+#include <linux/clk.h>
 #include <linux/module.h>
+#include <linux/mutex.h>
 #include <linux/of.h>
-#include <linux/platform_device.h>
-#include <linux/slab.h>
 #include <linux/of_platform.h>
 #include <linux/of_address.h>
-#include <linux/clk.h>
+#include <linux/platform_device.h>
 #include <linux/reset.h>
+#include <linux/slab.h>
+#include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
+#include <linux/wait.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
@@ -39,6 +43,19 @@
 #define TEGRA_SCE_R5R_SC_DISABLE		0x5
 #define TEGRA_SCE_FN_MODEIN			0x29527
 #define TEGRA_SCE_FWLOADDONE			0x2
+
+enum {
+	RTCPU_CMD_INIT = 0,
+	RTCPU_CMD_FW_VERSION = 1,
+	RTCPU_CMD_IVC_READY,
+	RTCPU_CMD_ERROR = 0x7f,
+};
+
+#define RTCPU_COMMAND(id, value)	((RTCPU_CMD_ ## id << 24) | value)
+#define RTCPU_GET_COMMAND_ID(value)	(((value) >> 24) & 0x7f)
+#define RTCPU_GET_COMMAND_VALUE(value)	((value) & 0xffffff)
+
+#define RTCPU_FW_VERSION (1)
 
 static const char * const sce_clock_names[] = {
 	"sce-apb",
@@ -139,10 +156,17 @@ MODULE_DEVICE_TABLE(of, tegra_cam_rtcpu_of_match);
 
 struct tegra_cam_rtcpu {
 	struct tegra_ivc_bus *ivc;
+	struct {
+		struct mutex mutex;
+		struct tegra_hsp_sm_pair pair;
+		wait_queue_head_t response_waitq;
+		wait_queue_head_t empty_waitq;
+		atomic_t response;
+		atomic_t emptied;
+	} cmd;
 	union {
 		struct {
 			void __iomem *sce_cfg_base;
-			void __iomem *sce_arsce_evp;
 			void __iomem *sce_pm_base;
 		} __packed rtcpu_sce;
 	};
@@ -310,9 +334,99 @@ void tegra_camrtc_ready(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_ready);
 
-static void tegra_cam_rtcpu_boot(struct device *dev)
+static u32 tegra_camrtc_full_notify(struct tegra_hsp_sm_pair *pair,
+				u32 response)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu;
+
+	cam_rtcpu = container_of(pair, struct tegra_cam_rtcpu, cmd.pair);
+
+	atomic_set(&cam_rtcpu->cmd.response, response);
+
+	wake_up(&cam_rtcpu->cmd.response_waitq);
+
+	return 0;
+}
+
+static void tegra_camrtc_empty_notify(struct tegra_hsp_sm_pair *pair,
+				u32 empty_value)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu;
+
+	cam_rtcpu = container_of(pair, struct tegra_cam_rtcpu, cmd.pair);
+
+	atomic_set(&cam_rtcpu->cmd.emptied, 1);
+
+	wake_up(&cam_rtcpu->cmd.empty_waitq);
+}
+
+static long tegra_camrtc_wait_for_empty(struct device *dev,
+				long timeout)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+
+	if (timeout == 0)
+		timeout = 2 * HZ;
+
+	timeout = wait_event_interruptible_timeout(
+		cam_rtcpu->cmd.empty_waitq,
+		/* Make sure IRQ has been handled */
+		atomic_read(&cam_rtcpu->cmd.emptied) != 0 &&
+		tegra_hsp_sm_pair_is_empty(&cam_rtcpu->cmd.pair),
+		timeout);
+
+	if (timeout > 0)
+		atomic_set(&cam_rtcpu->cmd.emptied, 0);
+
+	return timeout;
+}
+
+static int tegra_camrtc_command(struct device *dev, u32 command,
+				long timeout)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+	int response;
+
+#define INVALID_RESPONSE (0x80000000U)
+
+	if (timeout == 0)
+		timeout = 2 * HZ;
+
+	mutex_lock(&cam_rtcpu->cmd.mutex);
+
+	timeout = tegra_camrtc_wait_for_empty(dev, timeout);
+	if (timeout <= 0) {
+		dev_err(dev, "Timed out waiting for empty mailbox");
+		response = -ETIMEDOUT;
+		goto done;
+	}
+
+	atomic_set(&cam_rtcpu->cmd.response, INVALID_RESPONSE);
+
+	tegra_hsp_sm_pair_write(&cam_rtcpu->cmd.pair, command);
+
+	timeout = wait_event_interruptible_timeout(
+		cam_rtcpu->cmd.response_waitq,
+		atomic_read(&cam_rtcpu->cmd.response) != INVALID_RESPONSE,
+		timeout);
+	if (timeout <= 0) {
+		dev_err(dev, "Timed out waiting for response");
+		response = -ETIMEDOUT;
+		goto done;
+	}
+
+	response = (int)atomic_read(&cam_rtcpu->cmd.response);
+
+done:
+	mutex_unlock(&cam_rtcpu->cmd.mutex);
+
+	return response;
+}
+
+int tegra_camrtc_boot(struct device *dev)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+	int ret;
 
 	tegra_camrtc_ready(dev);
 
@@ -324,15 +438,58 @@ static void tegra_cam_rtcpu_boot(struct device *dev)
 	} else {
 		dev_info(dev, "booting APE with Camera RTCPU FW");
 	}
-}
 
-static int tegra_cam_rtcpu_remove(struct platform_device *pdev);
+	/*
+	 * Handshake FW version before continueing with the boot
+	 */
+	ret = tegra_camrtc_command(dev,
+		RTCPU_COMMAND(INIT, 0), 0);
+	if (ret < 0)
+		return ret;
+
+	if (ret != RTCPU_COMMAND(INIT, 0)) {
+		dev_err(dev, "RTCPU sync problem (response=0x%08x)", ret);
+		return -EIO;
+	}
+
+	ret = tegra_camrtc_command(dev,
+		RTCPU_COMMAND(FW_VERSION, RTCPU_FW_VERSION), 0);
+	if (ret < 0)
+		return ret;
+
+	if (ret != RTCPU_COMMAND(FW_VERSION, RTCPU_FW_VERSION)) {
+		dev_err(dev, "RTCPU version mismatch (response=0x%08x)", ret);
+		return -EIO;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_camrtc_boot);
+
+int tegra_camrtc_ivc_setup_ready(struct device *dev)
+{
+	u32 command = RTCPU_COMMAND(IVC_READY, RTCPU_FW_VERSION);
+	int ret;
+
+	ret = tegra_camrtc_command(dev, command, 0);
+	if (ret < 0)
+		return ret;
+
+	if (ret != command) {
+		dev_err(dev, "IVC setup problem (response=0x%08x)", ret);
+		return -EIO;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_camrtc_ivc_setup_ready);
 
 static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu;
 	struct device *dev = &pdev->dev;
 	struct device_node *dev_node = dev->of_node;
+	struct device_node *hsp_node;
 	int ret;
 	const struct of_device_id *match;
 
@@ -352,12 +509,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	cam_rtcpu->rtcpu_pdata = match->data;
 
 	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
-		/* RTCPU base addr / SCE EVP addr */
-		cam_rtcpu->rtcpu_sce.sce_arsce_evp = of_iomap(dev_node, 0);
-		if (!cam_rtcpu->rtcpu_sce.sce_arsce_evp) {
-			dev_err(dev, "failed to map SCE EVP space.\n");
-			return -EINVAL;
-		}
+		/* EVP addresses are needed to set up the reset vector */
+		/* EVP should be mapped if the (APE) FW is reloaded by kernel */
 
 		/* SCE PM addr */
 		cam_rtcpu->rtcpu_sce.sce_pm_base = of_iomap(dev_node, 1);
@@ -388,26 +541,55 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
 
+	mutex_init(&cam_rtcpu->cmd.mutex);
+	init_waitqueue_head(&cam_rtcpu->cmd.response_waitq);
+	init_waitqueue_head(&cam_rtcpu->cmd.empty_waitq);
+	cam_rtcpu->cmd.pair.notify_full = tegra_camrtc_full_notify;
+	cam_rtcpu->cmd.pair.notify_empty = tegra_camrtc_empty_notify;
+	hsp_node = of_get_child_by_name(dev->of_node, "hsp");
+	ret = of_tegra_hsp_sm_pair_by_name(hsp_node, "cmd-pair",
+					&cam_rtcpu->cmd.pair);
+	of_node_put(hsp_node);
+	if (ret) {
+		if (ret != -EPROBE_DEFER)
+			dev_err(dev, "failed to obtain mbox pair: %d\n", ret);
+		return ret;
+	}
+
+	ret = tegra_camrtc_boot(dev);
+	if (ret)
+		goto fail;
+
 	cam_rtcpu->ivc = tegra_ivc_bus_create(dev,
 						cam_rtcpu->rtcpu_pdata->sid);
-	if (IS_ERR(cam_rtcpu->ivc))
-		return PTR_ERR(cam_rtcpu->ivc);
+	if (IS_ERR(cam_rtcpu->ivc)) {
+		ret = PTR_ERR(cam_rtcpu->ivc);
+		goto fail;
+	}
 
-	tegra_cam_rtcpu_boot(dev);
+	ret = tegra_camrtc_ivc_setup_ready(dev);
+	if (ret)
+		goto fail;
 
 	dev_dbg(dev, "probe successful\n");
-
 	return 0;
+
+fail:
+	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
+	tegra_hsp_sm_pair_free(&cam_rtcpu->cmd.pair);
+	return ret;
 }
+
 
 static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu = platform_get_drvdata(pdev);
 
 	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
+	tegra_hsp_sm_pair_free(&cam_rtcpu->cmd.pair);
+
 	return 0;
 }
-
 
 static int tegra_cam_rtcpu_resume(struct device *dev)
 {

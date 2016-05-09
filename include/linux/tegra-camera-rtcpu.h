@@ -22,5 +22,7 @@ void tegra_camrtc_ready(struct device *dev);
 int tegra_camrtc_set_halt(struct device *dev, bool halt);
 int tegra_camrtc_get_halt(struct device *dev, bool *halt);
 int tegra_camrtc_reset(struct device *dev);
+int tegra_camrtc_boot(struct device *dev);
+int tegra_camrtc_ivc_setup_ready(struct device *dev);
 
 #endif

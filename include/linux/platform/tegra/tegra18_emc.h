@@ -99,7 +99,7 @@
 #define ECC_DERR_SYNDROME_MASK                0x3FF
 #define ECC_DERR_SYNDROME_SHIFT                   6
 
-#define EMC_ECC_ERR_ADDR                      0xad4
+#define EMC_ECC_ERR_ADDR                      0xad0
 
 #define ECC_ERR_ROW_MASK                     0xFFFF
 #define ECC_ERR_ROW_SHIFT                         8

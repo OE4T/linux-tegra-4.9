@@ -1434,6 +1434,9 @@ int nvhost_client_user_init(struct platform_device *dev)
 	int err;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
+	if (pdata->kernel_only)
+		return 0;
+
 	/* reserve 3 minor #s for <dev>, and ctrl-<dev> */
 
 	err = alloc_chrdev_region(&devno, 0, NVHOST_NUM_CDEV, IFACE_NAME);
@@ -1465,6 +1468,9 @@ static void nvhost_client_user_deinit(struct platform_device *dev)
 {
 	struct nvhost_master *nvhost_master = nvhost_get_host(dev);
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
+
+	if (pdata->kernel_only)
+		return;
 
 	if (!IS_ERR_OR_NULL(pdata->node)) {
 		device_destroy(nvhost_master->nvhost_class, pdata->cdev.dev);

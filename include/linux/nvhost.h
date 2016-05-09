@@ -241,6 +241,9 @@ struct nvhost_device_data {
 	/* Marks if the device is booted when pm runtime is disabled */
 	bool				booted;
 
+	/* Should be marked as true if nvhost shouldn't create device nodes */
+	bool				kernel_only;
+
 	void *private_data;		/* private platform data */
 	struct platform_device *pdev;	/* owner platform_device */
 	void *virt_priv;		/* private data for virtualized dev */

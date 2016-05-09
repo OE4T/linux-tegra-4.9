@@ -2679,6 +2679,7 @@ static struct nvhost_device_data nvhost_se1_info = {
 	.serialize = 1,
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
+	.kernel_only = true,
 };
 
 static struct nvhost_device_data nvhost_se2_info = {
@@ -2694,6 +2695,7 @@ static struct nvhost_device_data nvhost_se2_info = {
 	.serialize = 1,
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
+	.kernel_only = true,
 };
 
 static struct nvhost_device_data nvhost_se3_info = {
@@ -2709,6 +2711,7 @@ static struct nvhost_device_data nvhost_se3_info = {
 	.serialize = 1,
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
+	.kernel_only = true,
 };
 
 static struct nvhost_device_data nvhost_se4_info = {
@@ -2724,6 +2727,7 @@ static struct nvhost_device_data nvhost_se4_info = {
 	.serialize = 1,
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
+	.kernel_only = true,
 };
 
 static struct of_device_id tegra_se_of_match[] = {

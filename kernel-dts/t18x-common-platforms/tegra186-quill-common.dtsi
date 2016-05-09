@@ -690,6 +690,7 @@
 			bclk_ratio = <4>;
 			srate = <8000>;
 			num-channel = <1>;
+			ignore_suspend;
 			name-prefix = "y";
 		};
 		nvidia,dai-link-2 {
@@ -707,6 +708,7 @@
 			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
+			ignore_suspend;
 			name-prefix = "z";
 		};
 		nvidia,dai-link-3 {
@@ -724,6 +726,7 @@
 			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
+			ignore_suspend;
 			name-prefix = "m";
 		};
 		e2614_rt565x_dai_link: nvidia,dai-link-4 {
@@ -741,6 +744,7 @@
 			bclk_ratio = <0>;
 			srate = <48000>;
 			num-channel = <2>;
+			ignore_suspend;
 			name-prefix = "x";
 		};
 	};

@@ -54,8 +54,8 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_DISABLE,
 	TEGRA_VGPU_CMD_CHANNEL_PREEMPT,
 	TEGRA_VGPU_CMD_CHANNEL_SETUP_RAMFC,
-	TEGRA_VGPU_CMD_CHANNEL_ALLOC_GR_CTX,
-	TEGRA_VGPU_CMD_CHANNEL_FREE_GR_CTX,
+	TEGRA_VGPU_CMD_CHANNEL_ALLOC_GR_CTX,	/* deprecated */
+	TEGRA_VGPU_CMD_CHANNEL_FREE_GR_CTX,	/* deprecated */
 	TEGRA_VGPU_CMD_CHANNEL_COMMIT_GR_CTX,
 	TEGRA_VGPU_CMD_CHANNEL_ALLOC_GR_PATCH_CTX,
 	TEGRA_VGPU_CMD_CHANNEL_FREE_GR_PATCH_CTX,
@@ -84,6 +84,10 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_SET_SMPC_CTXSW_MODE,
 	TEGRA_VGPU_CMD_CHANNEL_SET_HWPM_CTXSW_MODE,
 	TEGRA_VGPU_CMD_CHANNEL_FREE_HWPM_CTX,
+	TEGRA_VGPU_CMD_GR_CTX_ALLOC,
+	TEGRA_VGPU_CMD_GR_CTX_FREE,
+	TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTX,
+	TEGRA_VGPU_CMD_TSG_BIND_GR_CTX,
 };
 
 struct tegra_vgpu_connect_params {
@@ -192,7 +196,7 @@ struct tegra_vgpu_ramfc_params {
 	u8 iova;
 };
 
-struct tegra_vgpu_gr_ctx_params {
+struct tegra_vgpu_ch_ctx_params {
 	u64 handle;
 	u64 gr_ctx_va;
 	u64 patch_ctx_va;
@@ -268,10 +272,11 @@ struct tegra_vgpu_zbc_query_table_params {
 #define TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX 4
 
 struct tegra_vgpu_gr_bind_ctxsw_buffers_params {
-	u64 handle;
+	u64 handle;	/* deprecated */
 	u64 gpu_va[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX];
 	u64 size[TEGRA_VGPU_GR_BIND_CTXSW_BUFFER_MAX];
 	u32 mode;
+	u64 gr_ctx_handle;
 };
 
 struct tegra_vgpu_mmu_debug_mode {
@@ -339,6 +344,23 @@ struct tegra_vgpu_channel_free_hwpm_ctx {
 	u64 handle;
 };
 
+struct tegra_vgpu_gr_ctx_params {
+	u64 gr_ctx_handle;
+	u64 as_handle;
+	u64 gr_ctx_va;
+	u32 class_num;
+};
+
+struct tegra_vgpu_channel_bind_gr_ctx_params {
+	u64 ch_handle;
+	u64 gr_ctx_handle;
+};
+
+struct tegra_vgpu_tsg_bind_gr_ctx_params {
+	u32 tsg_id;
+	u64 gr_ctx_handle;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -354,7 +376,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_as_invalidate_params as_invalidate;
 		struct tegra_vgpu_channel_config_params channel_config;
 		struct tegra_vgpu_ramfc_params ramfc;
-		struct tegra_vgpu_gr_ctx_params gr_ctx;
+		struct tegra_vgpu_ch_ctx_params ch_ctx;
 		struct tegra_vgpu_zcull_bind_params zcull_bind;
 		struct tegra_vgpu_cache_maint_params cache_maint;
 		struct tegra_vgpu_runlist_params runlist;
@@ -372,6 +394,9 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_fecs_trace_filter fecs_trace_filter;
 		struct tegra_vgpu_channel_set_ctxsw_mode set_ctxsw_mode;
 		struct tegra_vgpu_channel_free_hwpm_ctx free_hwpm_ctx;
+		struct tegra_vgpu_gr_ctx_params gr_ctx;
+		struct tegra_vgpu_channel_bind_gr_ctx_params ch_bind_gr_ctx;
+		struct tegra_vgpu_tsg_bind_gr_ctx_params tsg_bind_gr_ctx;
 		char padding[192];
 	} params;
 };

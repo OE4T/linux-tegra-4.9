@@ -79,6 +79,8 @@ static void mbox_vi_notify_rx(struct mbox_client *cl, void *data)
 
 	/* Receive VI Notify events */
 	while (len >= sizeof(*entries)) {
+		if (!entries->tag)
+			break;
 		if (VI_NOTIFY_TAG_VALID(entries->tag))
 			vi_notify_dev_recv(mvi->vi_notify, entries);
 		else
@@ -117,10 +119,10 @@ static int mbox_vi_notify_send(struct device *dev,
 	if (ret <= 0) {
 		dev_err(dev, "no reply from camera processor\n");
 		WARN_ON(1);
-		ret = -EIO;
+		return -EIO;
 	}
 
-	return ret;
+	return 0;
 }
 
 static int mbox_vi_notify_probe(struct device *dev, struct vi_notify_dev *vnd)
@@ -154,7 +156,7 @@ static int mbox_vi_notify_classify(struct device *dev, u32 mask)
 	struct mbox_vi_notify *mvi = dev_get_drvdata(dev);
 	struct mbox_vi_notify_msg msg = {
 		.type = TEGRA_IVC_VI_CLASSIFY,
-		.mask = ~mask,
+		.mask = mask,
 	};
 	int err;
 

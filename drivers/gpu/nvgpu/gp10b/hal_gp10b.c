@@ -227,6 +227,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_regops(gops);
 	gp10b_init_cde_ops(gops);
 	gp10b_init_therm_ops(gops);
+	gk20a_init_tsg_ops(gops);
 	gops->name = "gp10b";
 	gops->chip_init_gpu_characteristics = gp10b_init_gpu_characteristics;
 	gops->get_litter_value = gp10b_get_litter_value;

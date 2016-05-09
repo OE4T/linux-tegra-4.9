@@ -1,4 +1,4 @@
-nvgpu-t19x := ../../../../kernel-nvgpu-t19x/drivers/gpu/nvgpu
+nvgpu-t19x := ../../../../nvgpu-t19x/drivers/gpu/nvgpu
 
 nvgpu-y += \
 	$(nvgpu-t19x)/gv11b/gv11b.o  \

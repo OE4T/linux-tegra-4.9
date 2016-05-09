@@ -23,5 +23,5 @@ obj-y += nvmap_mm.o
 obj-$(CONFIG_NVMAP_PAGE_POOLS) += nvmap_pp.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-obj-y += ../../../../../kernel-nvmap-t18x/drivers/video/tegra/nvmap/
+obj-y += ../../../../../nvmap-t18x/drivers/video/tegra/nvmap/
 endif

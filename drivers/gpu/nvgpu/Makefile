@@ -3,23 +3,23 @@ GCOV_PROFILE := y
 ccflags-y += -Idrivers/gpu/nvgpu
 ccflags-y += -Idrivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
-ccflags-y += -I../kernel-nvgpu/include
-ccflags-y += -I../kernel-nvgpu/include/uapi
+ccflags-y += -I../nvgpu/include
+ccflags-y += -I../nvgpu/include/uapi
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 ccflags-y += -Wno-error=cpp
 ccflags-y += -Wno-duplicate-decl-specifier
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-ccflags-y += -I$(srctree)/../kernel-nvgpu-t18x/drivers/gpu/nvgpu
-ccflags-y += -I$(srctree)/../kernel-nvgpu-t18x/include
-ccflags-y += -I$(srctree)/../kernel-nvgpu-t18x/include/uapi
+ccflags-y += -I$(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu
+ccflags-y += -I$(srctree)/../nvgpu-t18x/include
+ccflags-y += -I$(srctree)/../nvgpu-t18x/include/uapi
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
-ccflags-y += -I$(srctree)/../kernel-nvgpu-t19x/drivers/gpu/nvgpu
-ccflags-y += -I$(srctree)/../kernel-nvgpu-t19x/include
-ccflags-y += -I$(srctree)/../kernel-nvgpu-t19x/include/uapi
+ccflags-y += -I$(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu
+ccflags-y += -I$(srctree)/../nvgpu-t19x/include
+ccflags-y += -I$(srctree)/../nvgpu-t19x/include/uapi
 endif
 
 obj-$(CONFIG_GK20A) := nvgpu.o
@@ -111,9 +111,9 @@ nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-include ../kernel-nvgpu-t18x/drivers/gpu/nvgpu/Makefile
+include ../nvgpu-t18x/drivers/gpu/nvgpu/Makefile
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
-include ../kernel-nvgpu-t19x/drivers/gpu/nvgpu/Makefile
+include ../nvgpu-t19x/drivers/gpu/nvgpu/Makefile
 endif

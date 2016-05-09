@@ -1,4 +1,4 @@
-nvgpu-t18x := ../../../../kernel-nvgpu-t18x/drivers/gpu/nvgpu
+nvgpu-t18x := ../../../../nvgpu-t18x/drivers/gpu/nvgpu
 
 nvgpu-y += \
 	$(nvgpu-t18x)/gp10b/gr_gp10b.o  \

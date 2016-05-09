@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,7 +21,7 @@ static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 				struct gr_ctx_desc *gr_ctx)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
-	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
 	int err;
 
@@ -30,9 +30,9 @@ static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	if (!gr_ctx || !gr_ctx->mem.gpu_va)
 		return;
 
-	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_GR_CTX;
+	msg.cmd = TEGRA_VGPU_CMD_GR_CTX_FREE;
 	msg.handle = platform->virt_handle;
-	p->handle = gr_ctx->virt_ctx;
+	p->gr_ctx_handle = gr_ctx->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
 
@@ -53,10 +53,10 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 				u32 flags)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
-	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_gr_bind_ctxsw_buffers_params *p =
 			&msg.params.gr_bind_ctxsw_buffers;
-	struct gr_ctx_desc *gr_ctx = *__gr_ctx;
+	struct gr_ctx_desc *gr_ctx;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -67,6 +67,8 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	err = vgpu_gr_alloc_gr_ctx(g, __gr_ctx, vm, class, flags);
 	if (err)
 		return err;
+
+	gr_ctx = *__gr_ctx;
 
 	if (class == PASCAL_A && g->gr.t18x.ctx_vars.force_preemption_gfxp)
 		flags |= NVGPU_ALLOC_OBJ_FLAGS_GFXP;
@@ -161,7 +163,7 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 	if (gr_ctx->graphics_preempt_mode || gr_ctx->compute_preempt_mode) {
 		msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS;
 		msg.handle = platform->virt_handle;
-		p->handle = gr_ctx->virt_ctx;
+		p->gr_ctx_handle = gr_ctx->virt_ctx;
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		if (err || msg.ret) {
 			err = -ENOMEM;

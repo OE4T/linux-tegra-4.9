@@ -1,8 +1,8 @@
 GCOV_PROFILE := y
-ccflags-y += -I../kernel-nvhost/drivers/video/tegra/host
+ccflags-y += -I../nvhost/drivers/video/tegra/host
 ccflags-y += -Idrivers/video/tegra/camera
 ccflags-y += -Idrivers/media/platform/tegra/vi
-ccflags-y += -I../kernel-nvhost/drivers/video/tegra/host/t124
+ccflags-y += -I../nvhost/drivers/video/tegra/host/t124
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 

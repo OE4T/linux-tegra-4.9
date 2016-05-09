@@ -72,22 +72,6 @@
 			iovdd-reg = "vif";
 
 			/**
-			* Generic formula to calculate different parameters.
-			* Please add the formula in proper parenthesis.
-			* Formula must contain only these operators '*' '/' '+' '-' '(' ')'
-			* Formula containing both numbers and variables is supported. Refer example #3.
-			* There must be atleast one operator inside the parenthesis. Refer example #4.
-			* Don't use spaces. Refer example #5.
-			*
-			* Examples -
-			* 1. formula = "(powerx+powery)+(exposure*2)"; /// correct example
-			* 2. formula = "((2*(6-1))/2)*4";          /// correct example
-			* 3. formula = "((powerx*(6-1))/2)*4";     /// correct example
-			* 4. formula = "((2*(6-1))*2)/(2)";        /// incorrect example - extra use of parenthesis
-			* 5. formula = "((2*(6-1)) / 2)*4";        /// incorrect example - use of spaces
-			*/
-
-			/**
 			* A modeX node is required to support v4l2 driver
 			* implementation with NVIDIA camera software stack
 			*

@@ -139,5 +139,9 @@ tegra_padctl_uphy_pinmux_default: pinmux {
 			status = "disabled";
 			nvidia,dc-or-node = "/host1x/dsi";
 		};
+		nvdisplay@15220000 {
+			status = "disabled";
+			nvidia,dc-or-node = "/host1x/sor";
+		};
 	};
 };

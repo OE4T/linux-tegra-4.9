@@ -13,7 +13,7 @@
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 ccflags-y			+= -Idrivers/firmware/tegra
-ccflags-y			+= -I../kernel-t18x/include
+ccflags-y			+= -I../t18x/include
 subdir-ccflags-y		+= -Werror
 
 obj-y				+= mail_t186.o

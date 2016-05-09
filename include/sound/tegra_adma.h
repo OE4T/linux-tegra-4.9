@@ -19,5 +19,5 @@
 #ifndef __TEGRA_ADMA_H__
 #define __TEGRA_ADMA_H__
 
-#include "../../../../kernel-t18x/drivers/dma/tegra186-adma.h"
+#include "../../../../t18x/drivers/dma/tegra186-adma.h"
 #endif

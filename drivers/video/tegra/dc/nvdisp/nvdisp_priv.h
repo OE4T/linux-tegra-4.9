@@ -1,5 +1,5 @@
 /*
- * kernel-t18x/drivers/video/tegra/nvdisp/nvdisp_priv.h
+ * t18x/drivers/video/tegra/nvdisp/nvdisp_priv.h
  *
  * Copyright (c) 2014 - 2015, NVIDIA CORPORATION, All rights reserved.
  *

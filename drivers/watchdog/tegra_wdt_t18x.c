@@ -79,6 +79,10 @@ struct tegra_wdt_t18x {
  */
 static struct tegra_wdt_t18x *t18x_wdt_array[WDT_CLUSTER_ID_COUNT];
 
+static bool nowayout = WATCHDOG_NOWAYOUT;
+module_param(nowayout, bool, 0);
+MODULE_PARM_DESC(nowayout, "Disable watchdog shutdown on close");
+
 /*
  * The total expiry count of Tegra WDTs is limited to HW design and depends
  * on skip configuration if supported. To be safe, we set the default expiry
@@ -161,22 +165,6 @@ static irqreturn_t tegra_wdt_t18x_isr(int irq, void *data)
 	__tegra_wdt_t18x_ping(tegra_wdt_t18x);
 
 	return IRQ_HANDLED;
-}
-
-static void tegra_wdt_t18x_ref(struct watchdog_device *wdt)
-{
-	struct tegra_wdt_t18x *tegra_wdt = to_tegra_wdt_t18x(wdt);
-
-	if (tegra_wdt->irq <= 0)
-		return;
-
-	/*
-	 * Remove the interrupt handler if userspace is taking over WDT.
-	 */
-	if (!test_and_set_bit(WDT_ENABLED_USERSPACE, &tegra_wdt->status) &&
-			test_bit(WDT_ENABLED_ON_INIT, &tegra_wdt->status))
-		devm_free_irq(&tegra_wdt->pdev->dev, tegra_wdt->irq,
-				tegra_wdt);
 }
 
 static inline int tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
@@ -292,7 +280,6 @@ static const struct watchdog_ops tegra_wdt_t18x_ops = {
 	.stop  = tegra_wdt_t18x_disable,
 	.ping  = tegra_wdt_t18x_ping,
 	.set_timeout = tegra_wdt_t18x_set_timeout,
-	.ref   = tegra_wdt_t18x_ref,
 };
 
 static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
@@ -533,6 +520,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 					tegra_wdt_t18x->expiry_count;
 	watchdog_init_timeout(&tegra_wdt_t18x->wdt,
 			tegra_wdt_t18x->heartbeat, &pdev->dev);
+	watchdog_set_nowayout(&tegra_wdt_t18x->wdt, nowayout);
 
 	tegra_wdt_t18x->irq = irq_of_parse_and_map(np, 0);
 	/* Find the IRQ number from the perspective of the interrupt controller.

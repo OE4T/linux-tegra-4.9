@@ -73,16 +73,6 @@
 		};
 	};
 
-	gpio@2200000 {
-		camera-control {
-			gpio-output-low = <
-				CAM0_RST_L
-				CAM0_PWDN
-				CAM1_RST_L
-				CAM1_PWDN>;
-		};
-	};
-
 	fixed-regulators {
 		en_vdd_sys: regulator@118 {
 			enable-active-high;

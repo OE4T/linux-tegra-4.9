@@ -243,6 +243,7 @@
 			bit-format = "s16_le";
 			srate = <48000>;
 			num-channel = <2>;
+			ignore_suspend;
 			name-prefix = "d1";
 			status = "disabled";
 		};
@@ -257,6 +258,7 @@
 			bit-format = "s16_le";
 			srate = <48000>;
 			num-channel = <2>;
+			ignore_suspend;
 			name-prefix = "d2";
 			status = "disabled";
                 };
@@ -271,6 +273,7 @@
 			bit-format = "s16_le";
 			srate = <48000>;
 			num-channel = <2>;
+			ignore_suspend;
 			name-prefix = "s";
 			status = "disabled";
 		};

@@ -281,6 +281,7 @@
 			bclk_ratio = <4>;
 			srate = <48000>;
 			num-channel = <1>;
+			ignore_suspend;
 			name-prefix = "y";
 		};
 		nvidia,dai-link-2 {
@@ -298,6 +299,7 @@
 			bclk_ratio = <1>;
 			srate = <48000>;
 			num-channel = <2>;
+			ignore_suspend;
 			name-prefix = "z";
 		};
 	};

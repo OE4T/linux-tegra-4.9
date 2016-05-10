@@ -14,6 +14,7 @@
  */
 
 #include <dt-bindings/interrupt-controller/arm-gic.h>
+#include <dt-bindings/clock/tegra210-car.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include "tegra210-platforms/tegra210-thermal.dtsi"
 #include <dt-bindings/gpio/tegra-gpio.h>
@@ -1308,6 +1309,10 @@
 		clock-frequency = <400000>;
 		dmas = <&apbdma 21>, <&apbdma 21>;
 		dma-names = "rx", "tx";
+		clocks = <&tegra_car TEGRA210_CLK_I2C1>, <&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "div-clk", "parent";
+		resets = <&tegra_car 12>;
+		reset-names = "i2c";
 	};
 
 	i2c2: i2c@7000c400 {
@@ -1321,6 +1326,10 @@
 		clock-frequency = <100000>;
 		dmas = <&apbdma 22>, <&apbdma 22>;
 		dma-names = "rx", "tx";
+                clocks = <&tegra_car TEGRA210_CLK_I2C2>, <&tegra_car TEGRA210_CLK_PLL_P>;
+		clock-names = "div-clk", "parent";
+                resets = <&tegra_car 54>;
+                reset-names = "i2c";
 	};
 
 	i2c3: i2c@7000c500 {
@@ -1334,6 +1343,10 @@
 		clock-frequency = <400000>;
 		dmas = <&apbdma 23>, <&apbdma 23>;
 		dma-names = "rx", "tx";
+                clocks = <&tegra_car TEGRA210_CLK_I2C3>, <&tegra_car TEGRA210_CLK_PLL_P>;
+                clock-names = "div-clk", "parent";
+                resets = <&tegra_car 67>;
+                reset-names = "i2c";
 	};
 
 	i2c4: i2c@7000c700 {
@@ -1347,6 +1360,10 @@
 		clock-frequency = <100000>;
 		dmas = <&apbdma 26>, <&apbdma 26>;
 		dma-names = "rx", "tx";
+                clocks = <&tegra_car TEGRA210_CLK_I2C4>, <&tegra_car TEGRA210_CLK_PLL_P>;
+                clock-names = "div-clk", "parent";
+                resets = <&tegra_car 103>;
+                reset-names = "i2c";
 	};
 
 	i2c5: i2c@7000d000 {
@@ -1363,6 +1380,10 @@
 		clock-frequency = <400000>;
 		dmas = <&apbdma 24>, <&apbdma 24>;
 		dma-names = "rx", "tx";
+                clocks = <&tegra_car TEGRA210_CLK_I2C5>, <&tegra_car TEGRA210_CLK_PLL_P>;
+                clock-names = "div-clk", "parent";
+                resets = <&tegra_car 47>;
+                reset-names = "i2c";
 	};
 
 	i2c6: i2c@7000d100 {
@@ -1376,6 +1397,10 @@
 		clock-frequency = <400000>;
 		dmas = <&apbdma 30>, <&apbdma 30>;
 		dma-names = "rx", "tx";
+                clocks = <&tegra_car TEGRA210_CLK_I2C6>, <&tegra_car TEGRA210_CLK_PLL_P>;
+                clock-names = "div-clk", "parent";
+                resets = <&tegra_car 166>;
+                reset-names = "i2c";
 	};
 
 	sdhci@700b0600 {

@@ -73,10 +73,7 @@ struct tegra_nvhdcp {
 	struct delayed_work		fallback_work;
 };
 
-#if ((!defined(CONFIG_ARCH_TEGRA_18x_SOC) \
-|| (defined(CONFIG_ARCH_TEGRA_18x_SOC) \
-&& defined(CONFIG_TRUSTED_LITTLE_KERNEL))) \
-&& defined(CONFIG_TEGRA_HDMIHDCP))
+#ifdef CONFIG_HDCP
 void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd);
 int tegra_nvhdcp_set_policy(struct tegra_nvhdcp *nvhdcp, int pol);
 void tegra_nvhdcp_suspend(struct tegra_nvhdcp *nvhdcp);

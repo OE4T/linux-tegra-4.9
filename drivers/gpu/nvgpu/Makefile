@@ -26,6 +26,7 @@ obj-$(CONFIG_GK20A) := nvgpu.o
 
 nvgpu-y := \
 	gk20a/gk20a.o \
+	gk20a/sched_gk20a.o \
 	gk20a/as_gk20a.o \
 	gk20a/ctrl_gk20a.o \
 	gk20a/ce2_gk20a.o \

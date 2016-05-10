@@ -596,6 +596,7 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(ch);
+	pid_t pid;
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
 			"hw_chid=%d context_ptr=%x inst_block=%llx",
@@ -630,7 +631,11 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 			GK20A_FECS_TRACE_NUM_RECORDS));
 
 	gk20a_mem_end(g, mem);
-	gk20a_fecs_trace_hash_add(g, context_ptr, ch->pid);
+	if (gk20a_is_channel_marked_as_tsg(ch))
+		pid = tsg_gk20a_from_ch(ch)->tgid;
+	else
+		pid = ch->pid;
+	gk20a_fecs_trace_hash_add(g, context_ptr, pid);
 
 	return 0;
 }

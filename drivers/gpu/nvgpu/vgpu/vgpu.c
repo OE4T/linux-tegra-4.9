@@ -427,6 +427,7 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 	}
 
 	gk20a_ctxsw_trace_init(g);
+	gk20a_sched_ctrl_init(g);
 	gk20a_channel_resume(g);
 
 done:
@@ -600,6 +601,7 @@ int vgpu_remove(struct platform_device *pdev)
 		g->remove_support(dev);
 
 	vgpu_comm_deinit();
+	gk20a_sched_ctrl_cleanup(g);
 	gk20a_user_deinit(dev, &nvgpu_class);
 	gk20a_get_platform(dev)->g = NULL;
 	kfree(g);

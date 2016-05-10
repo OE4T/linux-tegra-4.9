@@ -677,22 +677,13 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 		.vmid = 0,
 		.tag = NVGPU_CTXSW_TAG_ENGINE_RESET,
 		.context_id = 0,
-		.pid = 0,
+		.pid = tsg->tgid,
 	};
-	struct channel_gk20a *ch;
 
 	if (!g->ctxsw_trace)
 		return;
 
 	g->ops.read_ptimer(g, &entry.timestamp);
-	mutex_lock(&tsg->ch_list_lock);
-	if (!list_empty(&tsg->ch_list)) {
-		ch = list_entry(tsg->ch_list.next,
-				struct channel_gk20a, ch_entry);
-		entry.pid = ch->pid;
-	}
-	mutex_unlock(&tsg->ch_list_lock);
-
 	gk20a_ctxsw_trace_write(g, &entry);
 	gk20a_ctxsw_trace_wake_up(g, 0);
 #endif

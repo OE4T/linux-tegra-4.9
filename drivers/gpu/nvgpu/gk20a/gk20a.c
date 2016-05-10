@@ -246,6 +246,18 @@ static const struct file_operations gk20a_ctxsw_ops = {
 	.mmap = gk20a_ctxsw_dev_mmap,
 };
 
+static const struct file_operations gk20a_sched_ops = {
+	.owner = THIS_MODULE,
+	.release = gk20a_sched_dev_release,
+	.open = gk20a_sched_dev_open,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = gk20a_sched_dev_ioctl,
+#endif
+	.unlocked_ioctl = gk20a_sched_dev_ioctl,
+	.poll = gk20a_sched_dev_poll,
+	.read = gk20a_sched_dev_read,
+};
+
 static inline void sim_writel(struct gk20a *g, u32 r, u32 v)
 {
 	writel(v, g->sim.regs+r);
@@ -965,6 +977,12 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (err)
 		gk20a_warn(dev, "could not initialize ctxsw tracing");
 
+	err = gk20a_sched_ctrl_init(g);
+	if (err) {
+		gk20a_err(dev, "failed to init sched control");
+		goto done;
+	}
+
 	/* Restore the debug setting */
 	g->ops.mm.set_debug_mode(g, g->mmu_debug_ctrl);
 
@@ -1101,6 +1119,11 @@ void gk20a_user_deinit(struct device *dev, struct class *class)
 		cdev_del(&g->ctxsw.cdev);
 	}
 
+	if (g->sched.node) {
+		device_destroy(&nvgpu_class, g->sched.cdev.dev);
+		cdev_del(&g->sched.cdev);
+	}
+
 	if (g->cdev_region)
 		unregister_chrdev_region(g->cdev_region, GK20A_NUM_CDEVS);
 }
@@ -1170,6 +1193,12 @@ int gk20a_user_init(struct device *dev, const char *interface_name,
 		goto fail;
 #endif
 
+	err = gk20a_create_device(dev, devno++, interface_name, "-sched",
+				  &g->sched.cdev, &g->sched.node,
+				  &gk20a_sched_ops,
+				  class);
+	if (err)
+		goto fail;
 
 	return 0;
 fail:
@@ -1632,6 +1661,7 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a_alloc_debugfs_init(dev);
 	gk20a_mm_debugfs_init(&dev->dev);
 	gk20a_fifo_debugfs_init(&dev->dev);
+	gk20a_sched_debugfs_init(&dev->dev);
 #endif
 
 	gk20a_init_gr(gk20a);
@@ -1654,6 +1684,8 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 		gk20a_cde_destroy(g);
 
 	gk20a_ctxsw_trace_cleanup(g);
+
+	gk20a_sched_ctrl_cleanup(g);
 
 	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
 		gk20a_scale_exit(dev);

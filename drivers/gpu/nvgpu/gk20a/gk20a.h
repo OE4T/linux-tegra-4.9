@@ -52,6 +52,7 @@ struct acr_desc;
 #include "acr.h"
 #include "cde_gk20a.h"
 #include "debug_gk20a.h"
+#include "sched_gk20a.h"
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
     32 ns is the resolution of ptimer. */
@@ -817,6 +818,11 @@ struct gk20a {
 		struct device *node;
 	} ctxsw;
 
+	struct {
+		struct cdev cdev;
+		struct device *node;
+	} sched;
+
 	struct mutex client_lock;
 	int client_refcount; /* open channels and ctrl nodes */
 
@@ -846,6 +852,8 @@ struct gk20a {
 
 	struct gk20a_ctxsw_trace *ctxsw_trace;
 	struct gk20a_fecs_trace *fecs_trace;
+
+	struct gk20a_sched_ctrl sched_ctrl;
 
 	struct device_dma_parameters dma_parms;
 
@@ -925,6 +933,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_cde     = BIT(10), /* cde info messages */
 	gpu_dbg_cde_ctx = BIT(11), /* cde context usage messages */
 	gpu_dbg_ctxsw   = BIT(12), /* ctxsw tracing */
+	gpu_dbg_sched   = BIT(13), /* sched control tracing */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

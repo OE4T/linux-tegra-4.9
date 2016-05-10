@@ -338,7 +338,7 @@ static int gk20a_tsg_event_id_ctrl(struct gk20a *g, struct tsg_gk20a *tsg,
 	return err;
 }
 
-static int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
+int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 {
 	struct gk20a *g = tsg->g;
 	int ret;
@@ -349,6 +349,8 @@ static int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	case NVGPU_RUNLIST_INTERLEAVE_LEVEL_HIGH:
 		ret = g->ops.fifo.set_runlist_interleave(g, tsg->tsgid,
 							true, 0, level);
+		if (!ret)
+			tsg->interleave_level = level;
 		break;
 	default:
 		ret = -EINVAL;
@@ -358,7 +360,7 @@ static int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 	return ret ? ret : g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
 }
 
-static int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
+int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 {
 	struct gk20a *g = tsg->g;
 
@@ -368,6 +370,8 @@ static int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 
 	gk20a_channel_get_timescale_from_timeslice(g, timeslice,
 			&tsg->timeslice_timeout, &tsg->timeslice_scale);
+
+	tsg->timeslice_us = timeslice;
 
 	return g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
 }
@@ -421,10 +425,13 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 	tsg->timeslice_timeout = 0;
 	tsg->timeslice_scale = 0;
 	tsg->runlist_id = ~0;
+	tsg->tgid = current->tgid;
 
 	filp->private_data = tsg;
 
 	gk20a_dbg(gpu_dbg_fn, "tsg opened %d\n", tsg->tsgid);
+
+	gk20a_sched_ctrl_tsg_added(g, tsg);
 
 	return 0;
 }
@@ -456,6 +463,7 @@ static void gk20a_tsg_release(struct kref *ref)
 		tsg->vm = NULL;
 	}
 
+	gk20a_sched_ctrl_tsg_removed(g, tsg);
 	release_used_tsg(&g->fifo, tsg);
 
 	tsg->runlist_id = ~0;
@@ -469,6 +477,81 @@ int gk20a_tsg_dev_release(struct inode *inode, struct file *filp)
 	kref_put(&tsg->refcount, gk20a_tsg_release);
 	return 0;
 }
+
+static int gk20a_tsg_ioctl_set_priority(struct gk20a *g,
+	struct tsg_gk20a *tsg, struct nvgpu_set_priority_args *arg)
+{
+	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	int err;
+
+	mutex_lock(&sched->control_lock);
+	if (sched->control_locked) {
+		err = -EPERM;
+		goto done;
+	}
+
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
+		goto done;
+	}
+
+	err = gk20a_tsg_set_priority(g, tsg, arg->priority);
+
+	gk20a_idle(g->dev);
+done:
+	mutex_unlock(&sched->control_lock);
+	return err;
+}
+
+static int gk20a_tsg_ioctl_set_runlist_interleave(struct gk20a *g,
+	struct tsg_gk20a *tsg, struct nvgpu_runlist_interleave_args *arg)
+{
+	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	int err;
+
+	mutex_lock(&sched->control_lock);
+	if (sched->control_locked) {
+		err = -EPERM;
+		goto done;
+	}
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
+		goto done;
+	}
+
+	err = gk20a_tsg_set_runlist_interleave(tsg, arg->level);
+
+	gk20a_idle(g->dev);
+done:
+	mutex_unlock(&sched->control_lock);
+	return err;
+}
+
+static int gk20a_tsg_ioctl_set_timeslice(struct gk20a *g,
+	struct tsg_gk20a *tsg, struct nvgpu_timeslice_args *arg)
+{
+	struct gk20a_sched_ctrl *sched = &g->sched_ctrl;
+	int err;
+
+	mutex_lock(&sched->control_lock);
+	if (sched->control_locked) {
+		err = -EPERM;
+		goto done;
+	}
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to power on gpu");
+		goto done;
+	}
+	err = gk20a_tsg_set_timeslice(tsg, arg->timeslice_us);
+	gk20a_idle(g->dev);
+done:
+	mutex_unlock(&sched->control_lock);
+	return err;
+}
+
 
 long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			     unsigned long arg)
@@ -561,8 +644,8 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 
 	case NVGPU_IOCTL_TSG_SET_PRIORITY:
 		{
-		err = gk20a_tsg_set_priority(g, tsg,
-			((struct nvgpu_set_priority_args *)buf)->priority);
+		err = gk20a_tsg_ioctl_set_priority(g, tsg,
+			(struct nvgpu_set_priority_args *)buf);
 		break;
 		}
 
@@ -574,30 +657,14 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 		}
 
 	case NVGPU_IOCTL_TSG_SET_RUNLIST_INTERLEAVE:
-		{
-		err = gk20a_busy(g->dev);
-		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
-			return err;
-		}
-		err = gk20a_tsg_set_runlist_interleave(tsg,
-			((struct nvgpu_runlist_interleave_args *)buf)->level);
-		gk20a_idle(g->dev);
+		err = gk20a_tsg_ioctl_set_runlist_interleave(g, tsg,
+			(struct nvgpu_runlist_interleave_args *)buf);
 		break;
-		}
 
 	case NVGPU_IOCTL_TSG_SET_TIMESLICE:
 		{
-		err = gk20a_busy(g->dev);
-		if (err) {
-			gk20a_err(dev_from_gk20a(g),
-			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
-			return err;
-		}
-		err = g->ops.fifo.tsg_set_timeslice(tsg,
-			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
-		gk20a_idle(g->dev);
+		err = gk20a_tsg_ioctl_set_timeslice(g, tsg,
+			(struct nvgpu_timeslice_args *)buf);
 		break;
 		}
 

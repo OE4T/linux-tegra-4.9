@@ -56,6 +56,7 @@ struct tsg_gk20a {
 	struct mutex event_id_list_lock;
 
 	u32 runlist_id;
+	pid_t tgid;
 };
 
 int gk20a_enable_tsg(struct tsg_gk20a *tsg);
@@ -66,5 +67,8 @@ int gk20a_tsg_unbind_channel(struct channel_gk20a *ch);
 
 void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 				       int event_id);
+int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level);
+int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice);
+
 
 #endif /* __TSG_GK20A_H_ */

@@ -1497,4 +1497,127 @@ struct nvgpu_ctxsw_trace_filter_args {
 #define NVGPU_CTXSW_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_ctxsw_trace_filter_args)
 
+/*
+ * /dev/nvhost-sched-gpu device
+ *
+ * Opening a '/dev/nvhost-sched-gpu' device node creates a way to control
+ * GPU scheduling parameters.
+ */
+
+#define NVGPU_SCHED_IOCTL_MAGIC 'S'
+
+/*
+ * When the app manager receives a NVGPU_SCHED_STATUS_TSG_OPEN notification,
+ * it is expected to query the list of recently opened TSGs using
+ * NVGPU_SCHED_IOCTL_GET_RECENT_TSGS. The kernel driver maintains a bitmap
+ * of recently opened TSGs. When the app manager queries the list, it
+ * atomically clears the bitmap. This way, at each invocation of
+ * NVGPU_SCHED_IOCTL_GET_RECENT_TSGS, app manager only receives the list of
+ * TSGs that have been opened since last invocation.
+ *
+ * If the app manager needs to re-synchronize with the driver, it can use
+ * NVGPU_SCHED_IOCTL_GET_TSGS to retrieve the complete list of TSGs. The
+ * recent TSG bitmap will be cleared in that case too.
+ */
+struct nvgpu_sched_get_tsgs_args {
+	/* in: size of buffer in bytes */
+	/* out: actual size of size of TSG bitmap. if user-provided size is too
+	 * small, ioctl will return -ENOSPC, and update this field, allowing
+	 * application to discover required number of bytes and allocate
+	 * a buffer accordingly.
+	 */
+	__u32 size;
+
+	/* in: address of 64-bit aligned buffer */
+	/* out: buffer contains a TSG bitmap.
+	 * Bit #n will be set in the bitmap if TSG #n is present.
+	 * When using NVGPU_SCHED_IOCTL_GET_RECENT_TSGS, the first time you use
+	 * this command, it will return the opened TSGs and subsequent calls
+	 * will only return the delta (ie. each invocation clears bitmap)
+	 */
+	__u64 buffer;
+};
+
+struct nvgpu_sched_get_tsgs_by_pid_args {
+	/* in: process id for which we want to retrieve TSGs */
+	__u64 pid;
+
+	/* in: size of buffer in bytes */
+	/* out: actual size of size of TSG bitmap. if user-provided size is too
+	 * small, ioctl will return -ENOSPC, and update this field, allowing
+	 * application to discover required number of bytes and allocate
+	 * a buffer accordingly.
+	 */
+	__u32 size;
+
+	/* in: address of 64-bit aligned buffer */
+	/* out: buffer contains a TSG bitmap. */
+	__u64 buffer;
+};
+
+struct nvgpu_sched_tsg_get_params_args {
+	__u32 tsgid;		/* in: TSG identifier */
+	__u32 timeslice;	/* out: timeslice in usecs */
+	__u32 runlist_interleave;
+	__u32 graphics_preempt_mode;
+	__u32 compute_preempt_mode;
+	__u64 pid;		/* out: process identifier of TSG owner */
+};
+
+struct nvgpu_sched_tsg_timeslice_args {
+	__u32 tsgid;                    /* in: TSG identifier */
+	__u32 timeslice;                /* in: timeslice in usecs */
+};
+
+struct nvgpu_sched_tsg_runlist_interleave_args {
+	__u32 tsgid;			/* in: TSG identifier */
+
+		/* in: see NVGPU_RUNLIST_INTERLEAVE_LEVEL_ */
+	__u32 runlist_interleave;
+};
+
+#define NVGPU_SCHED_IOCTL_GET_TSGS					\
+	_IOWR(NVGPU_SCHED_IOCTL_MAGIC, 1,				\
+		struct nvgpu_sched_get_tsgs_args)
+#define NVGPU_SCHED_IOCTL_GET_RECENT_TSGS				\
+	_IOWR(NVGPU_SCHED_IOCTL_MAGIC, 2,				\
+		struct nvgpu_sched_get_tsgs_args)
+#define NVGPU_SCHED_IOCTL_GET_TSGS_BY_PID				\
+	_IOWR(NVGPU_SCHED_IOCTL_MAGIC, 3,				\
+		struct nvgpu_sched_get_tsgs_by_pid_args)
+#define NVGPU_SCHED_IOCTL_TSG_GET_PARAMS				\
+	_IOWR(NVGPU_SCHED_IOCTL_MAGIC, 4,				\
+		struct nvgpu_sched_tsg_get_params_args)
+#define NVGPU_SCHED_IOCTL_TSG_SET_TIMESLICE				\
+	_IOW(NVGPU_SCHED_IOCTL_MAGIC, 5,				\
+		struct nvgpu_sched_tsg_timeslice_args)
+#define NVGPU_SCHED_IOCTL_TSG_SET_RUNLIST_INTERLEAVE			\
+	_IOW(NVGPU_SCHED_IOCTL_MAGIC, 6,				\
+		struct nvgpu_sched_tsg_runlist_interleave_args)
+#define NVGPU_SCHED_IOCTL_LOCK_CONTROL					\
+	_IO(NVGPU_SCHED_IOCTL_MAGIC, 7)
+#define NVGPU_SCHED_IOCTL_UNLOCK_CONTROL				\
+	_IO(NVGPU_SCHED_IOCTL_MAGIC, 8)
+
+#define NVGPU_SCHED_IOCTL_LAST						\
+	_IOC_NR(NVGPU_SCHED_IOCTL_UNLOCK_CONTROL)
+
+#define NVGPU_SCHED_IOCTL_MAX_ARG_SIZE					\
+	sizeof(struct nvgpu_sched_tsg_get_params_args)
+
+
+#define NVGPU_SCHED_SET(n, bitmap)	\
+	(((__u64 *)(bitmap))[(n) / 64] |=  (1ULL << (((__u64)n) & 63)))
+#define NVGPU_SCHED_CLR(n, bitmap)	\
+	(((__u64 *)(bitmap))[(n) / 64] &= ~(1ULL << (((__u64)n) & 63)))
+#define NVGPU_SCHED_ISSET(n, bitmap)	\
+	(((__u64 *)(bitmap))[(n) / 64] & (1ULL << (((__u64)n) & 63)))
+
+#define NVGPU_SCHED_STATUS_TSG_OPEN	(1ULL << 0)
+
+struct nvgpu_sched_event_arg {
+	__u64 reserved;
+	__u64 status;
+};
+
 #endif

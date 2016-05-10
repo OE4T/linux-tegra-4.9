@@ -32,9 +32,6 @@
 #include "board.h"
 #include "board-panel.h"
 #include "dc_priv.h"
-#include "panel-s-wuxga-8-0.c"
-#include "panel-s-wqxga-10-1.c"
-#include "panel-s-edp-uhdtv-15-6.c"
 #include <linux/platform_data/lp855x.h>
 
 const struct disp_client *tegra_la_disp_clients_info;

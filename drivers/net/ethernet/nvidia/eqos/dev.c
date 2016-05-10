@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2868,6 +2868,9 @@ static void rx_descriptor_init(struct eqos_prv_data *pdata, UINT qinx)
 	DMA_RDTP_RPDR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, last_index));
 	/* update the starting address of desc chain/ring */
 	DMA_RDLAR_WR(qinx, GET_RX_DESC_DMA_ADDR(qinx, start_index));
+
+	prx_ring->hw_last_rx_desc_addr =
+		GET_RX_DESC_DMA_ADDR(qinx, start_index);
 
 	DBGPR("<--rx_descriptor_init\n");
 }

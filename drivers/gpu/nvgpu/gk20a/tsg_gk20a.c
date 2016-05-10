@@ -582,7 +582,7 @@ long gk20a_tsg_dev_ioctl(struct file *filp, unsigned int cmd,
 			   "failed to host gk20a for ioctl cmd: 0x%x", cmd);
 			return err;
 		}
-		err = gk20a_tsg_set_timeslice(tsg,
+		err = g->ops.fifo.tsg_set_timeslice(tsg,
 			((struct nvgpu_timeslice_args *)buf)->timeslice_us);
 		gk20a_idle(g->dev);
 		break;
@@ -607,4 +607,5 @@ void gk20a_init_tsg_ops(struct gpu_ops *gops)
 {
 	gops->fifo.tsg_bind_channel = gk20a_tsg_bind_channel;
 	gops->fifo.tsg_unbind_channel = gk20a_tsg_unbind_channel;
+	gops->fifo.tsg_set_timeslice = gk20a_tsg_set_timeslice;
 }

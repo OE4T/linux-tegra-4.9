@@ -91,6 +91,7 @@ enum {
 	TEGRA_VGPU_CMD_TSG_BIND_CHANNEL,
 	TEGRA_VGPU_CMD_TSG_UNBIND_CHANNEL,
 	TEGRA_VGPU_CMD_TSG_PREEMPT,
+	TEGRA_VGPU_CMD_TSG_SET_TIMESLICE,
 };
 
 struct tegra_vgpu_connect_params {
@@ -373,6 +374,11 @@ struct tegra_vgpu_tsg_preempt_params {
 	u32 tsg_id;
 };
 
+struct tegra_vgpu_tsg_timeslice_params {
+	u32 tsg_id;
+	u32 timeslice_us;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -411,6 +417,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_tsg_bind_gr_ctx_params tsg_bind_gr_ctx;
 		struct tegra_vgpu_tsg_bind_unbind_channel_params tsg_bind_unbind_channel;
 		struct tegra_vgpu_tsg_preempt_params tsg_preempt;
+		struct tegra_vgpu_tsg_timeslice_params tsg_timeslice;
 		char padding[192];
 	} params;
 };

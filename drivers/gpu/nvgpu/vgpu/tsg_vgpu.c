@@ -78,8 +78,30 @@ static int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
 	return err;
 }
 
+static int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(tsg->g->dev);
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_tsg_timeslice_params *p =
+				&msg.params.tsg_timeslice;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_TSG_SET_TIMESLICE;
+	msg.handle = platform->virt_handle;
+	p->tsg_id = tsg->tsgid;
+	p->timeslice_us = timeslice;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	WARN_ON(err);
+
+	return err;
+}
+
 void vgpu_init_tsg_ops(struct gpu_ops *gops)
 {
 	gops->fifo.tsg_bind_channel = vgpu_tsg_bind_channel;
 	gops->fifo.tsg_unbind_channel = vgpu_tsg_unbind_channel;
+	gops->fifo.tsg_set_timeslice = vgpu_tsg_set_timeslice;
 }

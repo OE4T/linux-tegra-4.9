@@ -331,7 +331,6 @@ static struct serr_hook hook = {
 static int __init tegra18_a57_serr_init(void)
 {
 	int cpu;
-	int rc;
 	u32 ecc_settings;
 	unsigned long flags;
 	struct cpuinfo_arm64 *cpuinfo;
@@ -359,11 +358,9 @@ static int __init tegra18_a57_serr_init(void)
 	pr_info("%s: on CPU %d a %s Core\n", __func__, cpu, core_type);
 
 	register_serr_hook(&hook);
-
-	rc = a57_serr_dbgfs_init();
-
 	raw_spin_unlock_irqrestore(&a57_mca_lock, flags);
-	return rc;
+
+	return a57_serr_dbgfs_init();
 }
 module_init(tegra18_a57_serr_init);
 

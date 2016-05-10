@@ -245,6 +245,7 @@ put_sched_sample(struct task_struct *task, int is_sched_in)
 	s->sched_in = is_sched_in ? 1 : 0;
 	s->time = quadd_get_time();
 	s->pid = task->pid;
+	s->tgid = task->tgid;
 
 	s->reserved = 0;
 
@@ -278,6 +279,7 @@ static int get_sample_data(struct quadd_sample_data *sample,
 	sample->time = quadd_get_time();
 	sample->reserved = 0;
 	sample->pid = task->pid;
+	sample->tgid = task->tgid;
 	sample->in_interrupt = in_interrupt() ? 1 : 0;
 
 	return 0;
@@ -495,7 +497,7 @@ read_all_sources(struct pt_regs *regs, struct task_struct *task)
 }
 
 static inline int
-is_profile_process(struct task_struct *task)
+is_sample_process(struct task_struct *task)
 {
 	int i;
 	pid_t pid, profile_pid;
@@ -512,6 +514,32 @@ is_profile_process(struct task_struct *task)
 			return 1;
 	}
 	return 0;
+}
+
+static inline int
+is_swapper_task(struct task_struct *task)
+{
+	if (task->pid == 0)
+		return 1;
+
+	return 0;
+}
+
+static inline int
+is_trace_process(struct task_struct *task)
+{
+	struct quadd_ctx *ctx = hrt.quadd_ctx;
+
+	if (!task)
+		return 0;
+
+	if (is_swapper_task(task))
+		return 0;
+
+	if (ctx->param.trace_all_tasks)
+		return 1;
+
+	return is_sample_process(task);
 }
 
 static int
@@ -565,9 +593,10 @@ void __quadd_task_sched_in(struct task_struct *prev,
 			(unsigned int)task->tgid);
 */
 
-	if (is_profile_process(task)) {
+	if (is_trace_process(task))
 		put_sched_sample(task, 1);
 
+	if (is_sample_process(task)) {
 		add_active_thread(cpu_ctx, task->pid, task->tgid);
 		atomic_inc(&cpu_ctx->nr_active);
 
@@ -603,7 +632,7 @@ void __quadd_task_sched_out(struct task_struct *prev,
 			(unsigned int)next->tgid);
 */
 
-	if (is_profile_process(prev)) {
+	if (is_sample_process(prev)) {
 		user_regs = task_pt_regs(prev);
 		if (user_regs)
 			read_all_sources(user_regs, prev);
@@ -618,9 +647,10 @@ void __quadd_task_sched_out(struct task_struct *prev,
 			if (ctx->pmu)
 				ctx->pmu->stop();
 		}
-
-		put_sched_sample(prev, 0);
 	}
+
+	if (is_trace_process(prev))
+		put_sched_sample(prev, 0);
 }
 
 void __quadd_event_mmap(struct vm_area_struct *vma)
@@ -630,7 +660,7 @@ void __quadd_event_mmap(struct vm_area_struct *vma)
 	if (likely(!atomic_read(&hrt.active)))
 		return;
 
-	if (!is_profile_process(current))
+	if (!is_sample_process(current))
 		return;
 
 	param = &hrt.quadd_ctx->param;

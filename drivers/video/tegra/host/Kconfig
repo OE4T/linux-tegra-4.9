@@ -1,0 +1,6 @@
+config TEGRA_GRHOST_NVDLA
+	bool "Tegra NVDLA support"
+	depends on TEGRA_GRHOST && ARCH_TEGRA_19x_SOC
+	help
+	  Enables Deep Learning Accelerator engine support under nvhost
+	  Say N here if not sure.

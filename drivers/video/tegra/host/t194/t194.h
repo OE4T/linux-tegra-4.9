@@ -36,6 +36,10 @@ extern struct nvhost_device_data t19_tsecb_info;
 extern struct nvhost_device_data t19_nvcsi_info;
 extern struct nvhost_device_data t19_pvaa_info;
 extern struct nvhost_device_data t19_pvab_info;
+#if defined(CONFIG_TEGRA_GRHOST_NVDLA)
+extern struct nvhost_device_data t19_nvdla0_info;
+extern struct nvhost_device_data t19_nvdla1_info;
+#endif
 
 int nvhost_init_t194_support(struct nvhost_master *host,
 			     struct nvhost_chip_support *op);

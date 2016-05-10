@@ -35,6 +35,9 @@
 #include "nvdec/nvdec.h"
 #include "pva/pva.h"
 #include "hardware_t194.h"
+#if defined(CONFIG_TEGRA_GRHOST_NVDLA)
+#include "nvdla/nvdla.h"
+#endif
 
 #include "chip_support.h"
 
@@ -318,6 +321,49 @@ struct nvhost_device_data t19_pvaa_info = {
 	.serialize		= true,
 	.push_work_done		= true,
 };
+
+#if defined(CONFIG_TEGRA_GRHOST_NVDLA)
+struct nvhost_device_data t19_nvdla0_info = {
+	.devfs_name		= "nvdla0",
+	.class			= NV_DLA0_CLASS_ID,
+	.clocks			= {
+		{"nvdla", UINT_MAX},
+		{"emc", HOST_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
+	},
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
+	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay        = 500,
+	.keepalive		= true,
+	.poweron_reset		= true,
+	.serialize		= true,
+	.push_work_done		= true,
+};
+
+struct nvhost_device_data t19_nvdla1_info = {
+	.devfs_name		= "nvdla1",
+	.class			= NV_DLA1_CLASS_ID,
+	.clocks			= {
+		{"nvdla", UINT_MAX},
+		{"emc", HOST_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
+	},
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
+	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.powergate_delay        = 500,
+	.keepalive		= true,
+	.poweron_reset		= true,
+	.serialize		= true,
+	.push_work_done		= true,
+};
+#endif
+
 #include "host1x/host1x_channel_t186.c"
 
 static void t194_set_nvhost_chanops(struct nvhost_channel *ch)

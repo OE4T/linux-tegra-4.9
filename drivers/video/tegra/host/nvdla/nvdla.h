@@ -1,7 +1,9 @@
 /*
- * Tegra Host Module Class IDs for T194
+ * drivers/video/tegra/host/nvdla/nvdla.h
  *
- * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
+ * Tegra Graphics Host NVDLA
+ *
+ * Copyright (c) 2016 NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -16,15 +18,10 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_CLASS_IDS_T194_H
-#define __NVHOST_CLASS_IDS_T194_H
+#ifndef __NVHOST_NVDLA_H__
+#define __NVHOST_NVDLA_H__
 
-enum {
-	NV_PVA0_CLASS_ID	= 0xF1,
-	NV_PVA1_CLASS_ID	= 0xF2,
+int nvhost_nvdla_finalize_poweron(struct platform_device *pdev);
+int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev);
 
-	NV_DLA0_CLASS_ID	= 0xF3,
-	NV_DLA1_CLASS_ID	= 0xF4,
-};
-
-#endif /*__NVHOST_CLASS_IDS_T194_H */
+#endif

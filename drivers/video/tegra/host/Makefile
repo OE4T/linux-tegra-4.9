@@ -8,3 +8,4 @@ subdir-ccflags-y := -Werror
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
 obj-$(CONFIG_TEGRA_GRHOST) += pva/
+obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvdla/

@@ -282,8 +282,6 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 	u64 ctag_granularity = g->ops.fb.compression_page_size(g);
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 
-	gk20a_dbg_fn("");
-
 	if (*iova) {
 		if (unmapped_pte)
 			pte_w[0] = gmmu_new_pte_valid_false_f();
@@ -345,7 +343,6 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			}
 		}
 	}
-	gk20a_dbg_fn("done");
 	return 0;
 }
 

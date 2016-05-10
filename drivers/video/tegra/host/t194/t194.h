@@ -25,17 +25,26 @@
 extern struct nvhost_device_data t19_host1x_info;
 extern struct nvhost_device_data t19_host1x_hv_info;
 extern struct nvhost_device_data t19_host1xb_info;
+#if defined(CONFIG_TEGRA_GRHOST_VIC)
 extern struct nvhost_device_data t19_vic_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 extern struct nvhost_device_data t19_nvdec_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 extern struct nvhost_device_data t19_nvjpg_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 extern struct nvhost_device_data t19_msenc_info;
-extern struct nvhost_device_data t19_isp_info;
-extern struct nvhost_device_data t19_vi_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 extern struct nvhost_device_data t19_tsec_info;
 extern struct nvhost_device_data t19_tsecb_info;
-extern struct nvhost_device_data t19_nvcsi_info;
+#endif
+#if defined(CONFIG_TEGRA_GRHOST_PVA)
 extern struct nvhost_device_data t19_pvaa_info;
 extern struct nvhost_device_data t19_pvab_info;
+#endif
 #if defined(CONFIG_TEGRA_GRHOST_NVDLA)
 extern struct nvhost_device_data t19_nvdla0_info;
 extern struct nvhost_device_data t19_nvdla1_info;

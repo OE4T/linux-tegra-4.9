@@ -4,3 +4,11 @@ config TEGRA_GRHOST_NVDLA
 	help
 	  Enables Deep Learning Accelerator engine support under nvhost
 	  Say N here if not sure.
+
+config TEGRA_GRHOST_PVA
+	bool "Tegra PVA support"
+	depends on TEGRA_GRHOST && ARCH_TEGRA_19x_SOC
+	default y
+	help
+	  Enables Programmable Vision Accelerator engine support under nvhost
+	  Say Y here if not sure.

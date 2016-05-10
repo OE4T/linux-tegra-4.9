@@ -33,7 +33,9 @@
 #include "tsec/tsec.h"
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
+#if defined(CONFIG_TEGRA_GRHOST_PVA)
 #include "pva/pva.h"
+#endif
 #include "hardware_t194.h"
 #if defined(CONFIG_TEGRA_GRHOST_NVDLA)
 #include "nvdla/nvdla.h"
@@ -117,7 +119,7 @@ static struct host1x_device_info host1x04_info = {
 	.syncpt_policy	= SYNCPT_PER_CHANNEL_INSTANCE,
 	.channel_policy	= MAP_CHANNEL_ON_SUBMIT,
 	.firmware_area_size = SZ_1M,
-	.nb_actmons = true,
+	.nb_actmons	= 1,
 };
 
 struct nvhost_device_data t19_host1x_info = {
@@ -128,8 +130,8 @@ struct nvhost_device_data t19_host1x_info = {
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.powergate_delay        = 50,
 	.private_data		= &host1x04_info,
-	.finalize_poweron = nvhost_host1x_finalize_poweron,
-	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
+	.finalize_poweron	= nvhost_host1x_finalize_poweron,
+	.prepare_poweroff	= nvhost_host1x_prepare_poweroff,
 	.isolate_contexts	= true,
 };
 
@@ -156,6 +158,7 @@ struct nvhost_device_data t19_host1xb_info = {
 	.private_data		= &host1xb04_info,
 };
 
+#if defined(CONFIG_TEGRA_GRHOST_NVENC)
 struct nvhost_device_data t19_msenc_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),
 	.devfs_name		= "msenc",
@@ -172,17 +175,17 @@ struct nvhost_device_data t19_msenc_info = {
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_flcn_t194_finalize_poweron,
 	.moduleid		= NVHOST_MODULE_MSENC,
-	.num_channels		= true,
+	.num_channels		= 1,
 	.firmware_name		= "nvhost_nvenc061.fw",
 	.serialize		= true,
 	.push_work_done		= true,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
-	.transcfg_addr		= 0x1844,
-	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 struct nvhost_device_data t19_nvdec_info = {
 	.version		= NVHOST_ENCODE_NVDEC_VER(3, 0),
 	.devfs_name		= "nvdec",
@@ -202,21 +205,56 @@ struct nvhost_device_data t19_nvdec_info = {
 	.prepare_poweroff	= nvhost_nvdec_t194_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_NVDEC,
 	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
-	.num_channels		= true,
+	.num_channels		= 1,
 	.serialize		= true,
 	.push_work_done		= true,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
-	.transcfg_addr		= 0x2c44,
-	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVDEC,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 struct nvhost_device_data t19_nvjpg_info = {
 	.version		= NVHOST_ENCODE_FLCN_VER(1, 1),
 	.devfs_name		= "nvjpg",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVJPG},
 	.class			= NV_NVJPG_CLASS_ID,
+	.powergate_delay        = 500,
+	NVHOST_DEFAULT_CLOCKGATE_DELAY,
+	.clocks			= {
+		{"nvjpg", UINT_MAX},
+		{"emc", HOST_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW}
+	},
+	.poweron_reset		= true,
+	.finalize_poweron	= nvhost_flcn_t194_finalize_poweron,
+	.moduleid		= NVHOST_MODULE_NVJPG,
+	.num_channels		= 1,
+	.firmware_name		= "nvhost_nvjpg011.fw",
+	.serialize		= true,
+	.push_work_done		= true,
+	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {{0x30, true}, {0x34, false} },
+	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
+};
+#endif
+
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
+struct nvhost_device_data t19_tsec_info = {
+	.num_channels		= 1,
+	.devfs_name		= "tsec",
+	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
+	.modulemutexes		= {NV_HOST1X_MLOCK_ID_TSEC},
+	.class			= NV_TSEC_CLASS_ID,
+	.clocks			= {
+		{"tsec", UINT_MAX},
+		{"emc", HOST_EMC_FLOOR,
+		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
+	},
+	NVHOST_MODULE_NO_POWERGATE_ID,
 	.powergate_delay        = 500,
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.keepalive		= true,
@@ -228,13 +266,11 @@ struct nvhost_device_data t19_nvjpg_info = {
 	.push_work_done		= true,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
-	.transcfg_addr		= 0x1644,
-	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSEC,
 };
 
 struct nvhost_device_data t19_tsecb_info = {
-	.num_channels		= true,
+	.num_channels		= 1,
 	.devfs_name		= "tsecb",
 	.version		= NVHOST_ENCODE_TSEC_VER(1, 0),
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_TSECB},
@@ -256,13 +292,13 @@ struct nvhost_device_data t19_tsecb_info = {
 	.push_work_done		= true,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
-	.transcfg_addr		= 0x1644,
-	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_TSECB,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_VIC)
 struct nvhost_device_data t19_vic_info = {
-	.num_channels		= true,
+	.num_channels		= 1,
 	.devfs_name		= "vic",
 	.clocks			= {
 		{"vic", UINT_MAX, 0},
@@ -283,13 +319,13 @@ struct nvhost_device_data t19_vic_info = {
 	.push_work_done		= true,
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
-	.transcfg_addr		= 0x2044,
-	.transcfg_val		= 0x20,
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
 };
+#endif
 
+#if defined(CONFIG_TEGRA_GRHOST_PVA)
 struct nvhost_device_data t19_pvab_info = {
-	.num_channels		= true,
+	.num_channels		= 1,
 	.clocks			= {
 		{"pva"},
 	},
@@ -306,7 +342,7 @@ struct nvhost_device_data t19_pvab_info = {
 };
 
 struct nvhost_device_data t19_pvaa_info = {
-	.num_channels		= true,
+	.num_channels		= 1,
 	.clocks			= {
 		{"pva"},
 	},
@@ -321,6 +357,7 @@ struct nvhost_device_data t19_pvaa_info = {
 	.serialize		= true,
 	.push_work_done		= true,
 };
+#endif
 
 #if defined(CONFIG_TEGRA_GRHOST_NVDLA)
 struct nvhost_device_data t19_nvdla0_info = {

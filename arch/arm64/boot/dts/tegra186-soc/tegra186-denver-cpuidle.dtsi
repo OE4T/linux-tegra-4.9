@@ -33,8 +33,8 @@
 			DENVER_C6: c6 {
 				compatible = "nvidia,tegra186-cpuidle-denver";
 				state-name = "Virtual core powergate";
-				wakeup-latency-us = <3000>;
-				min-residency-us = <50>;
+				wakeup-latency-us = <190>;
+				min-residency-us = <1000>;
 				power = <60>;
 				pmstate = <0x6>;
 				arm,psci-suspend-param= <0x6>;
@@ -43,8 +43,8 @@
 			DENVER_C7: c7 {
 				compatible = "nvidia,tegra186-cpuidle-denver";
 				state-name = "Core powergate";
-				wakeup-latency-us = <5000>;
-				min-residency-us = <50>;
+				wakeup-latency-us = <560>;
+				min-residency-us = <1000>;
 				power = <60>;
 				pmstate = <0x7>;
 				arm,psci-suspend-param= <0x40000007>;
@@ -84,7 +84,7 @@
 			compatible = "nvidia,tegra186-cpuidle-denver-thresholds";
 
 			thresholds {
-				crossover_c1_c6         = <100>;
+				crossover_c1_c6         = <1000>;
 				crossover_cc1_cc6       = <15000>;
 				crossover_cc1_cc7       = <20000>;
 				crossover_ccp1_ccp3     = <50000000>;

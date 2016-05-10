@@ -75,6 +75,7 @@ static struct cpuidle_driver t18x_a57_idle_driver;
 static int crossover_init(void);
 static void program_cluster_state(void *data);
 static u32 tsc_per_sec, nsec_per_tsc_tick;
+static u32 tsc_per_usec;
 
 #ifdef CPUIDLE_FLAG_TIME_VALID
 #define DRIVER_FLAGS		CPUIDLE_FLAG_TIME_VALID
@@ -436,7 +437,8 @@ static void program_single_crossover(void *data)
 {
 	struct xover_smp_call_data *xover_data =
 		(struct xover_smp_call_data *)data;
-	tegra_mce_update_crossover_time(xover_data->index, xover_data->value);
+	tegra_mce_update_crossover_time(xover_data->index,
+					xover_data->value * tsc_per_usec);
 }
 
 static int setup_crossover(int cluster, int index, int value)
@@ -745,7 +747,7 @@ static void send_crossover(void *data)
 			if (of_property_read_u32(child,
 				table1[i].name, &value) == 0)
 				tegra_mce_update_crossover_time
-					(table1[i].index, value);
+					(table1[i].index, value * tsc_per_usec);
 	}
 }
 
@@ -849,6 +851,7 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 
 	tsc_per_sec = arch_timer_get_cntfrq();
 	nsec_per_tsc_tick = 1000000000/tsc_per_sec;
+	tsc_per_usec = tsc_per_sec / 1000000;
 
 	cpumask_clear(&denver_cpumask);
 	cpumask_clear(&a57_cpumask);

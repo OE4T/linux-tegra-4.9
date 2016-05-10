@@ -92,6 +92,7 @@ enum {
 	TEGRA_VGPU_CMD_TSG_UNBIND_CHANNEL,
 	TEGRA_VGPU_CMD_TSG_PREEMPT,
 	TEGRA_VGPU_CMD_TSG_SET_TIMESLICE,
+	TEGRA_VGPU_CMD_TSG_SET_RUNLIST_INTERLEAVE,
 };
 
 struct tegra_vgpu_connect_params {
@@ -379,6 +380,12 @@ struct tegra_vgpu_tsg_timeslice_params {
 	u32 timeslice_us;
 };
 
+/* level follows nvgpu.h definitions */
+struct tegra_vgpu_tsg_runlist_interleave_params {
+	u32 tsg_id;
+	u32 level;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -418,6 +425,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_tsg_bind_unbind_channel_params tsg_bind_unbind_channel;
 		struct tegra_vgpu_tsg_preempt_params tsg_preempt;
 		struct tegra_vgpu_tsg_timeslice_params tsg_timeslice;
+		struct tegra_vgpu_tsg_runlist_interleave_params tsg_interleave;
 		char padding[192];
 	} params;
 };

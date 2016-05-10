@@ -560,6 +560,28 @@ static int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 	return err ? err : msg.ret;
 }
 
+static int vgpu_fifo_tsg_set_runlist_interleave(struct gk20a *g,
+					u32 tsgid,
+					u32 runlist_id,
+					u32 new_level)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_tsg_runlist_interleave_params *p =
+			&msg.params.tsg_interleave;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_TSG_SET_RUNLIST_INTERLEAVE;
+	msg.handle = platform->virt_handle;
+	p->tsg_id = tsgid;
+	p->level = new_level;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+	return err ? err : msg.ret;
+}
+
 static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 					u32 id,
 					bool is_tsg,
@@ -575,9 +597,9 @@ static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	/* FIXME: add support for TSGs */
 	if (is_tsg)
-		return -ENOSYS;
+		return vgpu_fifo_tsg_set_runlist_interleave(g, id,
+						runlist_id, new_level);
 
 	ch = &g->fifo.channel[id];
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE;

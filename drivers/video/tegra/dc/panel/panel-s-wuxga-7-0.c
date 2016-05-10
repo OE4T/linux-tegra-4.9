@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-s-wuxga-7-0.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -224,9 +224,17 @@ static int dsi_s_wuxga_7_0_bl_notify(struct device *dev, int brightness)
 
 	if (dc_dev) {
 		if (brightness <= PRISM_THRESHOLD)
+#ifdef CONFIG_TEGRA_NVDISPLAY
+			tegra_sd_enbl_dsbl_prism(dc_dev, false);
+#else
 			nvsd_enbl_dsbl_prism(dc_dev, false);
+#endif
 		else if (brightness > PRISM_THRESHOLD + HYST_VAL)
+#ifdef CONFIG_TEGRA_NVDISPLAY
+			tegra_sd_enbl_dsbl_prism(dc_dev, true);
+#else
 			nvsd_enbl_dsbl_prism(dc_dev, true);
+#endif
 	}
 
 	cur_sd_brightness = atomic_read(&sd_brightness);

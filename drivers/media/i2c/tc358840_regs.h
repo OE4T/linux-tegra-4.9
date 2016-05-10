@@ -289,6 +289,7 @@
 #define MASK_INIT_INT_EN			(1 << 22)
 #define MASK_DEBUG_MODE_EN			(1 << 31)
 
+#if 0
 #define CSI_TATO_COUNT				0x0130	/* Not in Ref. v1.5 */
 #define CSI_PRESP_BTA_COUNT			0x0134	/* Not in Ref. v1.5 */
 #define CSI_PRESP_LPR_COUNT			0x0138	/* Not in Ref. v1.5 */
@@ -298,11 +299,13 @@
 #define HSWRITECNT				0x0144	/* Not in Ref. v1.5 */
 #define PERIRSTCNT				0x0148	/* Not in Ref. v1.5 */
 #define LRXHTOCNT				0x014C	/* Not in Ref. v1.5 */
+#endif
 
 #define FUNCMODE				0x0150
 #define MASK_CONTCLKMODE			(1 << 5)
 #define MASK_FORCESTOP				(1 << 10)
 
+#if 0
 #define RX_VC_EN				0x0154	/* Not in Ref. v1.5 */
 #define MASK_RX_VC0				(1 << 0)
 #define MASK_RX_VC1				(1 << 1)
@@ -318,6 +321,8 @@
 #define APPERRMASK				0x0214	/* Not in Ref. v1.5 */
 #define RX_ERR_INT_MASK				0x021C	/* Not in Ref. v1.5 */
 #define LPTX_INT_MASK				0x0224	/* Not in Ref. v1.5 */
+#endif
+#define CSITX_INTERNAL_STAT			0x01B0
 
 #define LPTXTIMECNT				0x0254
 #define TCLK_HEADERCNT				0x0258
@@ -335,8 +340,10 @@
 #define MASK_D0M_HSTXVREGEN			0x0002
 #define MASK_CLM_HSTXVREGEN			0x0001
 
+#if 0
 #define BTA_COUNT				0x0278	/* Not in Ref. v1.5 */
 #define DPHY_TX_ADJUST				0x027C	/* Not in Ref. v1.5 */
+#endif
 
 #define MIPICLKEN				0x02A0
 #define MASK_MP_ENABLE				0x00000001
@@ -350,11 +357,11 @@
 #define MASK_MPLBW_50				(2 << 16)
 #define MASK_MPLBW_MAX				(3 << 16)
 #define MASK_PLL_FBD				0x000000FF
-#define SET_PLL_FBD(fbd)			(((fbd) - 1) & MASK_PLL_FBD)
+#define SET_PLL_FBD(fbd)			((fbd) & MASK_PLL_FBD)
 #define MASK_PLL_FRS				0x00000C00
 #define SET_PLL_FRS(frs)			(((frs) << 10) & MASK_PLL_FRS)
 #define MASK_PLL_PRD				0x0000F000
-#define SET_PLL_PRD(prd)			((((prd) - 1) << 12) & \
+#define SET_PLL_PRD(prd)			(((prd) << 12) & \
 						  MASK_PLL_PRD)
 #define MASK_PLL_LBW				0x00030000
 #define SET_PLL_LBW(lbw)			((((lbw) - 1) << 16) & \
@@ -387,6 +394,9 @@
 #define MASK_POWERCTL				(1 << 0)
 /* TODO: Check name of mask */
 #define MASK_48_MHZ				(1 << 1)
+
+#define PHY_CTL2				0x8412
+#define MASK_PHY_FREE_RUN			(1 << 5)
 
 #define PHY_ENB					0x8413
 #define MASK_ENABLE_PHY				0x01

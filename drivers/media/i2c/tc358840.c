@@ -111,6 +111,7 @@ struct tc358840_state {
 	struct v4l2_ctrl_handler hdl;
 	struct i2c_client *i2c_client;
 	bool enabled;
+	bool format_changed;
 
 	/* controls */
 	struct v4l2_ctrl *detect_tx_5v_ctrl;
@@ -121,6 +122,8 @@ struct tc358840_state {
 	/* work queues */
 	struct workqueue_struct *work_queues;
 	struct delayed_work delayed_work_enable_hotplug;
+	struct work_struct process_isr;
+	struct mutex isr_lock;
 
 	/* edid  */
 	u8 edid_blocks_written;
@@ -142,6 +145,8 @@ static int tc358840_s_ctrl_detect_tx_5v(struct v4l2_subdev *sd);
 static void tc358840_init_interrupts(struct v4l2_subdev *sd);
 static int tc358840_s_dv_timings(
 	struct v4l2_subdev *sd, struct v4l2_dv_timings *timings);
+static void tc358840_set_csi(struct v4l2_subdev *sd);
+static void tc358840_set_splitter(struct v4l2_subdev *sd);
 
 /* --------------- I2C --------------- */
 
@@ -171,6 +176,27 @@ static void i2c_rd(struct v4l2_subdev *sd, u16 reg, u8 *values, u32 n)
 		v4l2_err(sd, "%s: reading register 0x%x from 0x%x failed\n",
 			__func__, reg, client->addr);
 	}
+
+	if (debug < 3)
+		return;
+
+	switch (n) {
+	case 1:
+		v4l2_info(sd, "I2C read 0x%04X = 0x%02X\n", reg, values[0]);
+		break;
+	case 2:
+		v4l2_info(sd, "I2C read 0x%04X = 0x%02X%02X\n",
+			reg, values[1], values[0]);
+		break;
+	case 4:
+		v4l2_info(sd, "I2C read 0x%04X = 0x%02X%02X%02X%02X\n",
+			reg, values[3], values[2], values[1], values[0]);
+		break;
+	default:
+		v4l2_info(sd, "I2C read %d bytes from address 0x%04X\n",
+			n, reg);
+	}
+
 }
 
 static void i2c_wr(struct v4l2_subdev *sd, u16 reg, u8 *values, u32 n)
@@ -572,6 +598,9 @@ static int enable_stream(struct v4l2_subdev *sd, bool enable)
 
 	v4l2_dbg(2, debug, sd, "%s: %sable\n", __func__, enable ? "en" : "dis");
 
+	if (enable == state->enabled)
+		return;
+
 	if (enable) {
 #if 0		/* Wait until we can use the clock-noncontinuous property */
 		if (pdata->endpoint.bus.mipi_csi2.flags &
@@ -602,6 +631,8 @@ static int enable_stream(struct v4l2_subdev *sd, bool enable)
 		 * No data is output to CSI Tx block. */
 
 		i2c_wr8(sd, VI_MUTE, MASK_AUTO_MUTE | MASK_VI_MUTE);
+		tc358840_set_csi(sd);
+		tc358840_set_splitter(sd);
 	}
 
 	/* Wait for HDMI input to become stable */
@@ -629,6 +660,7 @@ static int enable_stream(struct v4l2_subdev *sd, bool enable)
 		MASK_ABUFEN | MASK_TX_MSEL | MASK_AUTOINDEX) :
 		(MASK_TX_MSEL | MASK_AUTOINDEX));
 	state->enabled = enable;
+
 	return 0;
 }
 
@@ -653,12 +685,13 @@ static void tc358840_set_splitter(struct v4l2_subdev *sd)
 	}
 }
 
-static void tc358840_set_pll(struct v4l2_subdev *sd)
+static void tc358840_set_pll(struct v4l2_subdev *sd,
+				enum tc358840_csi_port port)
 {
 	struct tc358840_state *state = to_state(sd);
 	struct tc358840_platform_data *pdata = &state->pdata;
-	enum tc358840_csi_port port;
 	u16 base_addr;
+	u16 pll_frs;
 	u32 pllconf;
 	u32 pllconf_new;
 	u32 hsck;
@@ -673,43 +706,29 @@ static void tc358840_set_pll(struct v4l2_subdev *sd)
 		return;
 	}
 
-	for (port = CSI_TX_0; port <= CSI_TX_1; port++) {
-		u16 pll_frs;
+	base_addr = (port == CSI_TX_0) ? CSITX0_BASE_ADDR :
+					CSITX1_BASE_ADDR;
+	pllconf = i2c_rd32(sd, base_addr+PLLCONF);
+	pllconf_new = SET_PLL_PRD(pdata->pll_prd) |
+	SET_PLL_FBD(pdata->pll_fbd);
 
-		base_addr = (port == CSI_TX_0) ? CSITX0_BASE_ADDR :
-						 CSITX1_BASE_ADDR;
-		if (pdata->csi_port != CSI_TX_BOTH && pdata->csi_port != port)
-			continue;
-
-		pllconf = i2c_rd32(sd, base_addr+PLLCONF);
-		pllconf_new = SET_PLL_PRD(pdata->pll_prd) |
-			SET_PLL_FBD(pdata->pll_fbd);
-
-		hsck = (pdata->refclk_hz / pdata->pll_prd) *
+	hsck = (pdata->refclk_hz / pdata->pll_prd) *
 			pdata->pll_fbd;
 
-		/* Only rewrite when needed, since rewriting triggers
-		 * another format change event.
-		 */
-		if (pllconf == pllconf_new)
-			continue;
+	if (hsck > 500000000)
+		pll_frs = 0x0;
+	else if (hsck > 250000000)
+		pll_frs = 0x1;
+	else if (hsck > 125000000)
+		pll_frs = 0x2;
+	else
+		pll_frs = 0x3;
 
-		if (hsck > 500000000)
-			pll_frs = 0x0;
-		else if (hsck > 250000000)
-			pll_frs = 0x1;
-		else if (hsck > 125000000)
-			pll_frs = 0x2;
-		else
-			pll_frs = 0x3;
-
-		v4l2_dbg(1, debug, sd, "%s: Updating PLL clock of CSI TX%d\n",
+	v4l2_dbg(1, debug, sd, "%s: Updating PLL clock of CSI TX%d\n",
 			__func__, port-1);
 
-		i2c_wr32(sd, base_addr+PLLCONF,
+	i2c_wr32(sd, base_addr+PLLCONF,
 			pllconf_new | SET_PLL_FRS(pll_frs));
-
-	}
 }
 
 static void tc358840_set_ref_clk(struct v4l2_subdev *sd)
@@ -806,17 +825,10 @@ static unsigned tc358840_num_csi_lanes_needed(struct v4l2_subdev *sd)
 	u32 bps = bt->width * bt->height * fps(bt) * bits_pr_pixel;
 	u32 bps_pr_lane = (pdata->refclk_hz / pdata->pll_prd) * pdata->pll_fbd;
 
-	/* CISCO HACK: Use all lanes and lower clock speed for 1080p60 to
-	 * reduce number of CSI resets */
-	if (bt->width == 1920 && bt->height == 1080 && fps(bt) == 60 &&
-			state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16) {
-		return 4;
-	}
-
 	return DIV_ROUND_UP(bps, bps_pr_lane);
 #endif
 
-	/* FIXME : ALWAYS USE 4 LANES FOR TESTING*/
+	/* Always use 4 lanes for one CSI */
 	return 4;
 }
 
@@ -856,20 +868,20 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 
 		/* (0x0108) */
 		i2c_wr32(sd, base_addr+CSITX_CLKEN, MASK_CSITX_EN);
-		/* (0x010C) */
-		i2c_wr32(sd, base_addr+PPICLKEN, MASK_HSTXCLKEN);
-		/* (0x02A0) */
-		i2c_wr32_and_or(sd, base_addr+MIPICLKEN,
-			~(MASK_MP_CKEN), MASK_MP_ENABLE);
 		/*
 		 * PLL has to be enabled between CSITX_CLKEN and
 		 * LANEEN (0x02AC)
 		 */
-		tc358840_set_pll(sd);
+		tc358840_set_pll(sd, port);
+		/* (0x02A0) */
+		i2c_wr32_and_or(sd, base_addr+MIPICLKEN,
+			~(MASK_MP_CKEN), MASK_MP_ENABLE);
+		msleep(10);
 		/* (0x02A0) */
 		i2c_wr32(sd, base_addr+MIPICLKEN,
 			MASK_MP_CKEN | MASK_MP_ENABLE);
-
+		/* (0x010C) */
+		i2c_wr32(sd, base_addr+PPICLKEN, MASK_HSTXCLKEN);
 		/* (0x0118) */
 		i2c_wr32(sd, base_addr+LANEEN,
 			(lanes & MASK_LANES) | MASK_CLANEEN);
@@ -877,6 +889,7 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 		/* (0x0120) */
 		i2c_wr32(sd, base_addr+LINEINITCNT, pdata->lineinitcnt);
 
+#if 0 /* Not in Ref. v1.5 */
 		/* TODO: Check if necessary (0x0124) */
 		i2c_wr32(sd, base_addr+HSTOCNT, 0x00000000);
 		/* TODO: Check if INTEN is necessary (0x0128) */
@@ -914,19 +927,26 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 		i2c_wr32(sd, base_addr+PERIRSTCNT, 0x00001000);
 		/* TODO: Check if LRXHTOCNT is necessary (0x014C) */
 		i2c_wr32(sd, base_addr+LRXHTOCNT, 0x00010000);
+#endif
 
 		/*
 		 * TODO: Check if this is the correct register
 		 * (0x0150)
 		 */
-		//i2c_wr32(sd, base_addr+FUNCMODE, MASK_CONTCLKMODE);
-		/* TODO: Check if RX_VC_EN is necessary (0x0154) */
-		i2c_wr32(sd, base_addr+RX_VC_EN, MASK_RX_VC0);
+		i2c_rd32(sd, base_addr+FUNCMODE);
+#if 0 /* Not in Ref. v1.5 */
+		i2c_wr32(sd, base_addr+FUNCMODE, MASK_CONTCLKMODE);
+		/* TODO: Check if RX_VC_EN is necessary (0x0154) *
+		i2c_wr32(sd, base_addr+RX_VC_EN, MASK_RX_VC0);*/
 		/* TODO: Check if INPUTTOCNT is necessary (0x0158) */
 		i2c_wr32(sd, base_addr+INPUTTOCNT, 0x000000C8);
 		/* TODO: Check if HSYNCSTOPCNT is necessary (0x0168) */
 		i2c_wr32(sd, base_addr+HSYNCSTOPCNT, 0x0000002A);
+		/* set delay between HDMI input to CSI output */
+		i2c_wr32(sd, base_addr+0x170, 0x5F4);
+#endif
 
+#if 0 /* Not in Ref. v1.5 */
 		/* NOTE: Probably not necessary */
 		/* (0x01A4) */
 		i2c_wr32(sd, base_addr+RX_STATE_INT_MASK, 0x0);
@@ -941,6 +961,7 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 		i2c_wr32(sd, base_addr+RX_ERR_INT_MASK, 0x00000080);
 		/* (0x0224) */
 		i2c_wr32(sd, base_addr+LPTX_INT_MASK, 0x00000000);
+#endif
 
 		/* (0x0254) */
 		i2c_wr32(sd, base_addr+LPTXTIMECNT, pdata->lptxtimecnt);
@@ -973,17 +994,20 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 			((lanes > 2) ? MASK_D2M_HSTXVREGEN : 0x0) |
 			((lanes > 3) ? MASK_D3M_HSTXVREGEN : 0x0));
 
+#if 0 /* Not in Ref. v1.5 */
 		/* NOTE: Probably not necessary */
 		/* (0x0278) */
 		i2c_wr32(sd, base_addr+BTA_COUNT, 0x00040003);
 		/* (0x027C) */
 		i2c_wr32(sd, base_addr+DPHY_TX_ADJUST, 0x00000002);
-
+#endif
 		/*
 		 * Finishing configuration by setting CSITX to start
 		 * (0X011C)
 		 */
 		i2c_wr32(sd, base_addr+CSITX_START, 0x00000001);
+
+		i2c_rd32(sd, base_addr+CSITX_INTERNAL_STAT);
 	}
 }
 
@@ -1100,23 +1124,22 @@ static void tc358840_format_change(struct v4l2_subdev *sd)
 		.u.src_change.changes = V4L2_EVENT_SRC_CH_RESOLUTION,
 	};
 
-	if (sd->devnode)
-		v4l2_subdev_notify_event(sd, &tc358840_ev_fmt);
-
 	if (tc358840_get_detected_timings(sd, &timings)) {
 		enable_stream(sd, false);
 
-		v4l2_dbg(1, debug, sd, "%s: No signal\n",
-				__func__);
+		v4l2_info(sd, "%s: No Signal\n", __func__);
 	} else {
 		if (!v4l2_match_dv_timings(&state->timings, &timings, 0))
 			enable_stream(sd, false);
 
-		if (debug)
-			v4l2_print_dv_timings(sd->name,
-					"tc358840_format_change: New format: ",
-					&timings, false);
+		v4l2_print_dv_timings(sd->name,
+				"tc358840_format_change: New format: ",
+				&timings, false);
 	}
+
+	/* Application gets notified after CSI Tx's are reset */
+	if (sd->devnode)
+		v4l2_subdev_notify_event(sd, &tc358840_ev_fmt);
 }
 
 static void tc358840_init_interrupts(struct v4l2_subdev *sd)
@@ -1148,6 +1171,7 @@ static void tc358840_enable_interrupts(struct v4l2_subdev *sd,
 	if (cable_connected) {
 		i2c_wr8(sd, SYS_INTM, ~(MASK_DDC | MASK_DVI |
 					MASK_HDMI) & 0xFF);
+		i2c_wr8(sd, SYS_INTM, ~(MASK_DDC) & 0xFF);
 		i2c_wr8(sd, CLK_INTM, ~MASK_IN_DE_CHG);
 		i2c_wr8(sd, CBIT_INTM, ~(MASK_CBIT_FS | MASK_AF_LOCK |
 					MASK_AF_UNLOCK) & 0xFF);
@@ -1179,6 +1203,7 @@ static void tc358840_hdmi_audio_int_handler(struct v4l2_subdev *sd,
 static void tc358840_hdmi_misc_int_handler(struct v4l2_subdev *sd,
 		bool *handled)
 {
+	struct tc358840_state *state = to_state(sd);
 	u8 misc_int_mask = i2c_rd8(sd, MISC_INTM);
 	u8 misc_int = i2c_rd8(sd, MISC_INT) & ~misc_int_mask;
 
@@ -1190,12 +1215,8 @@ static void tc358840_hdmi_misc_int_handler(struct v4l2_subdev *sd,
 		/* Reset the HDMI PHY to try to trigger proper lock on the
 		 * incoming video format. Erase BKSV to prevent that old keys
 		 * are used when a new source is connected. */
-		if (no_sync(sd) || no_signal(sd)) {
-			tc358840_reset_phy(sd);
-			tc358840_erase_bksv(sd);
-		}
 
-		tc358840_format_change(sd);
+		state->format_changed = true;
 
 		misc_int &= ~MASK_SYNC_CHG;
 		if (handled)
@@ -1248,6 +1269,7 @@ static void tc358840_hdmi_cbit_int_handler(struct v4l2_subdev *sd,
 
 static void tc358840_hdmi_clk_int_handler(struct v4l2_subdev *sd, bool *handled)
 {
+	struct tc358840_state *state = to_state(sd);
 	u8 clk_int_mask = i2c_rd8(sd, CLK_INTM);
 	u8 clk_int = i2c_rd8(sd, CLK_INT) & ~clk_int_mask;
 
@@ -1269,7 +1291,7 @@ static void tc358840_hdmi_clk_int_handler(struct v4l2_subdev *sd, bool *handled)
 		 * notifications are only sent when the signal is stable to
 		 * reduce the number of notifications. */
 		if (!no_signal(sd) && !no_sync(sd))
-			tc358840_format_change(sd);
+			state->format_changed = true;
 
 		clk_int &= ~MASK_IN_DE_CHG;
 		if (handled)
@@ -1320,18 +1342,8 @@ static void tc358840_hdmi_sys_int_handler(struct v4l2_subdev *sd, bool *handled)
 		/* Reset the HDMI PHY to try to trigger proper lock on the
 		 * incoming video format. Erase BKSV to prevent that old keys
 		 * are used when a new source is connected. */
-		if (no_sync(sd) || no_signal(sd)) {
-			tc358840_reset_phy(sd);
-			tc358840_erase_bksv(sd);
-		}
-
-		/* CISCO HACK: User space must be notified when the source
-		 * switch from HDMI to DVI mode. If not, the video will freeze.
-		 * The video is received by the OMAP (omapconf read 0×52001070),
-		 * but the picture in the monitor app is frozen.
-		 * TODO: Investigate what goes wrong in user space.
-		 */
-		tc358840_format_change(sd);
+		if (no_sync(sd) || no_signal(sd))
+			state->format_changed = true;
 
 		sys_int &= ~MASK_DVI;
 		if (handled)
@@ -1361,6 +1373,7 @@ static void tc358840_hdmi_sys_int_handler(struct v4l2_subdev *sd, bool *handled)
 
 static int tc358840_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
 {
+	struct tc358840_state *state = to_state(sd);
 	u16 intstatus;
 	unsigned retry = 10;
 
@@ -1374,6 +1387,7 @@ static int tc358840_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
 	 * are needed. Without msleeps the interrupts just stop.
 	 */
 	msleep(1);
+	state->format_changed = false;
 	if (intstatus & MASK_HDMI_INT) {
 		u8 hdmi_int0;
 		u8 hdmi_int1;
@@ -1420,6 +1434,14 @@ retry:
 		}
 	}
 
+	if (handled && state->format_changed) {
+		tc358840_format_change(sd);
+		if (no_sync(sd) || no_signal(sd)) {
+			tc358840_reset_phy(sd);
+			tc358840_erase_bksv(sd);
+		}
+	}
+
 	if (intstatus & MASK_CSITX0_INT) {
 		v4l2_dbg(3, debug, sd, "%s: MASK_CSITX0_INT\n", __func__);
 
@@ -1443,14 +1465,28 @@ retry:
 	return 0;
 }
 
+static void tc358840_process_isr(struct work_struct *work)
+{
+	struct tc358840_state *state = container_of(work,
+		struct tc358840_state, process_isr);
+	struct v4l2_subdev *sd = &state->sd;
+	bool handled;
+
+	v4l2_dbg(2, debug, sd, "%s:\n", __func__);
+
+	mutex_lock(&state->isr_lock);
+	tc358840_isr(sd, 0, &handled);
+	mutex_unlock(&state->isr_lock);
+}
+
 static irqreturn_t tc358840_irq_handler(int irq, void *dev_id)
 {
 	struct v4l2_subdev *sd = dev_id;
-	bool handled = false;
+	struct tc358840_state *state = to_state(sd);
 
-	tc358840_isr(sd, 0, &handled);
+	queue_work(state->work_queues, &state->process_isr);
 
-	return handled ? IRQ_HANDLED : IRQ_NONE;
+	return IRQ_HANDLED;
 }
 
 /* --------------- PAD OPS --------------- */
@@ -1673,8 +1709,6 @@ static int tc358840_s_dv_timings(struct v4l2_subdev *sd,
 	enable_stream(sd, false);
 	tc358840_set_csi(sd);
 	tc358840_set_splitter(sd);
-	/* FIXME: temporary fix until s_stream is called again */
-	enable_stream(sd, true);
 
 	return 0;
 }
@@ -2375,6 +2409,8 @@ static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id 
 	}
 	INIT_DELAYED_WORK(&state->delayed_work_enable_hotplug,
 			tc358840_delayed_work_enable_hotplug);
+	INIT_WORK(&state->process_isr, tc358840_process_isr);
+	mutex_init(&state->isr_lock);
 
 	/* Initial Setup */
 	state->mbus_fmt_code = MEDIA_BUS_FMT_UYVY8_1X16;
@@ -2445,8 +2481,6 @@ static int tc358840_remove(struct i2c_client *client)
 
 	v4l_dbg(1, debug, client, "%s()\n", __func__);
 
-	// FIXME: temporary fix until s_stream is called again
-	tc358840_s_stream(sd, false);
 #if defined(CONFIG_MEDIA_CONTROLLER)
 	media_entity_cleanup(&sd->entity);
 #endif

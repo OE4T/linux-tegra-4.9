@@ -1,7 +1,7 @@
 /*
  * include/linux/tegra_profiler.h
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,8 +19,8 @@
 
 #include <linux/ioctl.h>
 
-#define QUADD_SAMPLES_VERSION	35
-#define QUADD_IO_VERSION	19
+#define QUADD_SAMPLES_VERSION	36
+#define QUADD_IO_VERSION	20
 
 #define QUADD_IO_VERSION_DYNAMIC_RB		5
 #define QUADD_IO_VERSION_RB_MAX_FILL_COUNT	6
@@ -37,6 +37,7 @@
 #define QUADD_IO_VERSION_SECTIONS_INFO		17
 #define QUADD_IO_VERSION_UNW_METHODS_OPT	18
 #define QUADD_IO_VERSION_PER_CPU_SETUP          19
+#define QUADD_IO_VERSION_TRACE_ALL_TASKS        20
 
 #define QUADD_SAMPLE_VERSION_THUMB_MODE_FLAG	17
 #define QUADD_SAMPLE_VERSION_GROUP_SAMPLES	18
@@ -55,6 +56,7 @@
 #define QUADD_SAMPLE_VERSION_URCS		33
 #define QUADD_SAMPLE_VERSION_HOTPLUG		34
 #define QUADD_SAMPLE_VERSION_PER_CPU_SETUP      35
+#define QUADD_SAMPLE_VERSION_REPORT_TGID        36
 
 #define QUADD_MMAP_HEADER_VERSION		1
 
@@ -233,6 +235,7 @@ enum {
 struct quadd_sample_data {
 	u64 ip;
 	u32 pid;
+	u32 tgid;
 	u64 time;
 
 	u16	cpu:6,
@@ -298,6 +301,7 @@ enum {
 
 struct quadd_sched_data {
 	u32 pid;
+	u32 tgid;
 	u64 time;
 
 	u32	cpu:6,
@@ -414,7 +418,8 @@ struct quadd_parameters {
 	u64	backtrace:1,
 		use_freq:1,
 		system_wide:1,
-		debug_samples:1;
+		debug_samples:1,
+		trace_all_tasks:1;
 
 	u32 pids[QUADD_MAX_PROCESS];
 	u32 nr_pids;

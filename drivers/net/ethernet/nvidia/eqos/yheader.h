@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1019,6 +1019,8 @@ struct rx_ring {
 	/* for rx vlan stripping */
 	u32 rx_inner_vlan_strip;
 	u32 rx_outer_vlan_strip;
+
+	u32 hw_last_rx_desc_addr;
 };
 
 struct eqos_rx_queue {

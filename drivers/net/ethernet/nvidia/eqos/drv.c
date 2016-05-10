@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2338,18 +2338,33 @@ static int process_rx_completions(struct eqos_prv_data *pdata,
 	struct s_rx_desc *prx_desc = NULL;
 	UINT pkt_len;
 	UINT err_bits = EQOS_RDESC3_ES_BITS;
+	u32 sw_cur_rx_desc_addr = 0;
+	u32 hw_cur_rx_desc_addr = 0;
 
 	int ret;
 
 	DBGPR("-->%s(): qinx = %u, quota = %d\n", __func__, qinx, quota);
 
+	hw_cur_rx_desc_addr = prx_ring->hw_last_rx_desc_addr;
 	while (received < quota) {
 		prx_swcx_desc = GET_RX_BUF_PTR(qinx, prx_ring->cur_rx);
 		prx_desc = GET_RX_DESC_PTR(qinx, prx_ring->cur_rx);
 
+		sw_cur_rx_desc_addr =
+			GET_RX_DESC_DMA_ADDR(qinx, prx_ring->cur_rx);
+
 		/* check for data availability */
 		if (!(prx_desc->rdes3 & EQOS_RDESC3_OWN) &&
-			prx_swcx_desc->skb) {
+		    prx_swcx_desc->skb) {
+			if (hw_cur_rx_desc_addr == sw_cur_rx_desc_addr) {
+				DMA_CHRDR_RD(qinx,
+					     prx_ring->hw_last_rx_desc_addr);
+				if (prx_ring->hw_last_rx_desc_addr ==
+				    hw_cur_rx_desc_addr)
+					break;
+				hw_cur_rx_desc_addr =
+					prx_ring->hw_last_rx_desc_addr;
+			}
 #ifdef EQOS_ENABLE_RX_DESC_DUMP
 			dump_rx_desc(qinx, prx_desc, prx_ring->cur_rx);
 #endif

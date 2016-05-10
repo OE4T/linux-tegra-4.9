@@ -382,6 +382,7 @@ static int eqos_ape_remove(struct platform_device *pdev)
 
 static const struct of_device_id eqos_ape_of_match[] = {
 	{ .compatible = "nvidia,tegra18x-eqos-ape", .data = NULL, },
+	{},
 };
 
 static struct platform_driver eqos_ape_driver = {

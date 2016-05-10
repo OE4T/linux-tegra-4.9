@@ -23,7 +23,6 @@
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/device.h>
-#include <linux/spinlock.h>
 #include <linux/debugfs.h>
 
 #include <linux/tegra-hsp.h>
@@ -47,8 +46,9 @@ struct hsp_top {
 	int nr_si;
 	int status;
 	void __iomem *base;
-	spinlock_t lock;
 };
+
+static DEFINE_MUTEX(hsp_top_lock);
 
 struct db_handler_info {
 	db_handler_t	handler;
@@ -158,19 +158,18 @@ EXPORT_SYMBOL(tegra_hsp_db_get_enabled_masters);
 static int tegra_hsp_db_set_master(enum tegra_hsp_master master, bool enabled)
 {
 	u32 reg;
-	unsigned long flags;
 
 	if (!hsp_ready() || !is_master_valid(master))
 		return -EINVAL;
 
-	spin_lock_irqsave(&hsp_top.lock, flags);
+	mutex_lock(&hsp_top_lock);
 	reg = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
 	if (enabled)
 		reg |= BIT(master);
 	else
 		reg &= ~BIT(master);
 	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE, reg);
-	spin_unlock_irqrestore(&hsp_top.lock, flags);
+	mutex_unlock(&hsp_top_lock);
 	return 0;
 }
 
@@ -383,14 +382,15 @@ static int hsp_dbg_can_ring_store(void *data, u64 val)
 {
 	int reg;
 	enum tegra_hsp_doorbell dbell = (int)val;
-	unsigned long flags;
+
 	if (!hsp_ready() || dbell >= HSP_NR_DBS)
 		return -EINVAL;
-	spin_lock_irqsave(&hsp_top.lock, flags);
+
+	mutex_lock(&hsp_top_lock);
 	reg = hsp_readl(db_bases[dbell], HSP_DB_REG_ENABLE);
 	reg |= BIT(HSP_MASTER_CCPLEX);
 	hsp_writel(db_bases[dbell], HSP_DB_REG_ENABLE, reg);
-	spin_unlock_irqrestore(&hsp_top.lock, flags);
+	mutex_unlock(&hsp_top_lock);
 	return 0;
 }
 

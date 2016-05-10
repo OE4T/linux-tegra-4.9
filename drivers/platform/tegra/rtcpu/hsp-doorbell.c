@@ -35,10 +35,16 @@ struct tegra_hsp_doorbell_priv {
 	enum tegra_hsp_doorbell doorbell;
 };
 
+static void tegra_hsp_doorbell_notify(void *data)
+{
+	struct device *dev = data;
+
+	tegra_hsp_notify(dev);
+}
+
 static int tegra_hsp_doorbell_probe(struct device *dev)
 {
 	struct tegra_hsp_doorbell_priv *db;
-	struct platform_device *hsp;
 	struct of_phandle_args dbspec;
 	int ret;
 
@@ -50,28 +56,45 @@ static int tegra_hsp_doorbell_probe(struct device *dev)
 
 	db = devm_kmalloc(dev, sizeof(*db), GFP_KERNEL);
 	if (unlikely(db == NULL)) {
-		ret = -ENOMEM;
-		goto out;
+		of_node_put(dbspec.np);
+		return -ENOMEM;
 	}
 
-	hsp = of_find_device_by_node(dbspec.np);
-	if (hsp == NULL) {
-		ret = -EPROBE_DEFER;
-		goto out;
-	}
-
-	ret = sysfs_create_link(&dev->kobj, &hsp->dev.kobj, "hsp");
-	if (ret) {
-		platform_device_put(hsp);
-		goto out;
-	}
-
-	db->hsp = hsp;
+	dev_set_drvdata(dev, db);
+	db->hsp = of_find_device_by_node(dbspec.np);
 	db->master = dbspec.args[0];
 	db->doorbell = dbspec.args[1];
-	dev_set_drvdata(dev, db);
-out:
 	of_node_put(dbspec.np);
+
+	if (db->hsp == NULL)
+		return -EPROBE_DEFER;
+
+	ret = sysfs_create_link(&dev->kobj, &db->hsp->dev.kobj, "hsp");
+	if (ret)
+		goto error;
+
+	/* Register for notifications from remote processor */
+	ret = tegra_hsp_db_add_handler(db->master, tegra_hsp_doorbell_notify,
+					dev);
+	if (ret) {
+		dev_err(dev, "HSP doorbell %s error: %d\n", "register", ret);
+		goto error2;
+	}
+
+	/* Allow remote processor to ring */
+	ret = tegra_hsp_db_enable_master(db->master);
+	if (ret) {
+		dev_err(dev, "HSP doorbell %s error: %d\n", "enable", ret);
+		goto error3;
+	}
+
+	return ret;
+error3:
+	tegra_hsp_db_del_handler(db->master);
+error2:
+	sysfs_delete_link(&dev->kobj, &db->hsp->dev.kobj, "hsp");
+error:
+	platform_device_put(db->hsp);
 	return ret;
 }
 
@@ -79,50 +102,10 @@ static void tegra_hsp_doorbell_remove(struct device *dev)
 {
 	struct tegra_hsp_doorbell_priv *db = dev_get_drvdata(dev);
 
+	tegra_hsp_db_disable_master(db->master);
+	tegra_hsp_db_del_handler(db->master);
 	sysfs_delete_link(&dev->kobj, &db->hsp->dev.kobj, "hsp");
 	platform_device_put(db->hsp);
-}
-
-static void tegra_hsp_doorbell_notify(void *data)
-{
-	struct device *dev = data;
-
-	tegra_hsp_notify(dev);
-}
-
-static int tegra_hsp_doorbell_enable(struct device *dev)
-{
-	struct tegra_hsp_doorbell_priv *db = dev_get_drvdata(dev);
-	int ret;
-
-	/* Register for notifications from remote processor */
-	ret = tegra_hsp_db_add_handler(db->master, tegra_hsp_doorbell_notify,
-					dev);
-	if (ret)
-		dev_err(dev, "HSP doorbell %s error: %d\n", "register", ret);
-
-	/* Allow remote processor to ring */
-	ret = tegra_hsp_db_enable_master(db->master);
-	if (ret)
-		dev_err(dev, "HSP doorbell %s error: %d\n", "enable", ret);
-
-	return ret;
-}
-
-static void tegra_hsp_doorbell_disable(struct device *dev)
-{
-	struct tegra_hsp_doorbell_priv *db = dev_get_drvdata(dev);
-	int ret;
-
-	ret = tegra_hsp_db_disable_master(db->master);
-	if (ret)
-		dev_err(dev, "HSP doorbell %s error: %d\n", "disable", ret);
-
-	ret = tegra_hsp_db_del_handler(db->master);
-	if (ret) {
-		WARN_ON(1);
-		dev_err(dev, "HSP doorbell %s error: %d\n", "deregister", ret);
-	}
 }
 
 static void tegra_hsp_doorbell_ring(struct device *dev)
@@ -136,8 +119,6 @@ static void tegra_hsp_doorbell_ring(struct device *dev)
 static const struct tegra_hsp_ops tegra_hsp_doorbell_ops = {
 	.probe		= tegra_hsp_doorbell_probe,
 	.remove		= tegra_hsp_doorbell_remove,
-	.enable		= tegra_hsp_doorbell_enable,
-	.disable	= tegra_hsp_doorbell_disable,
 	.ring		= tegra_hsp_doorbell_ring,
 };
 
@@ -151,5 +132,6 @@ static struct tegra_ivc_driver tegra_hsp_doorbell_driver = {
 	.ops.hsp	= &tegra_hsp_doorbell_ops,
 };
 tegra_ivc_module_driver(tegra_hsp_doorbell_driver);
+MODULE_AUTHOR("Remi Denis-Courmont <remid@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra HSP doorbell driver");
 MODULE_LICENSE("GPL");

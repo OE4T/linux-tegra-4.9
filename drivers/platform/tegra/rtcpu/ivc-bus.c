@@ -128,23 +128,6 @@ static void tegra_hsp_ring(struct device *dev)
 	ops->ring(dev);
 }
 
-static int tegra_hsp_enable(struct device *dev)
-{
-	const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
-
-	if (ops == NULL || ops->enable == NULL)
-		return -ENXIO;
-	return ops->enable(dev);
-}
-
-static void tegra_hsp_disable(struct device *dev)
-{
-	const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
-
-	if (ops != NULL && ops->disable != NULL)
-		ops->disable(dev);
-}
-
 struct device_type tegra_hsp_type = {
 	.name = "tegra-hsp",
 };
@@ -594,18 +577,8 @@ static int tegra_ivc_bus_start(struct device *dev)
 		dev_err(dev, "mailbox controller error: %d\n", ret);
 		goto error;
 	}
-
-	/* Listen to the remote's notification */
-	ret = tegra_hsp_enable(&bus->dev);
-	if (ret) {
-		dev_err(dev, "HSP doorbell master error: %d\n", ret);
-		flush_scheduled_work();
-		goto error_mbox;
-	}
 	return 0;
 
-error_mbox:
-	mbox_controller_unregister(&bus->mbox);
 error:
 	while (i > 0) {
 		struct mbox_chan *mbox_chan = &bus->mbox.chans[--i];
@@ -622,8 +595,6 @@ static void tegra_ivc_bus_stop(struct device *dev)
 		container_of(dev, struct tegra_ivc_bus, dev);
 	int i;
 
-	tegra_hsp_disable(dev);
-	flush_scheduled_work();
 	mbox_controller_unregister(&bus->mbox);
 
 	for (i = 0; i < bus->mbox.num_chans; i++) {
@@ -637,7 +608,9 @@ static void tegra_ivc_bus_stop(struct device *dev)
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {
 	tegra_ivc_bus_destroy_channels(bus);
-	device_unregister(&bus->dev);
+	device_del(&bus->dev);
+	flush_scheduled_work();
+	put_device(&bus->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_destroy);
 

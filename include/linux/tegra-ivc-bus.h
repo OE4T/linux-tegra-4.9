@@ -52,8 +52,6 @@ extern struct device_type tegra_hsp_type;
 struct tegra_hsp_ops {
 	int (*probe)(struct device *);
 	void (*remove)(struct device *);
-	int (*enable)(struct device *);
-	void (*disable)(struct device *);
 	void (*ring)(struct device *);
 };
 void tegra_hsp_notify(struct device *);

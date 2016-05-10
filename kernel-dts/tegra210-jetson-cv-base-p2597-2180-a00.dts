@@ -91,10 +91,16 @@
 	};
 
 	sdhci@700b0600 { /* SDMMC4 for EMMC */
-		uhs-mask = <0x0>;
+		uhs-mask = <0x68>;
 		built-in;
 		power-off-rail;
 		status = "okay";
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>;
+		clock-names = "sdmmc";
+		resets = <&tegra_car 15>;
+		reset-names = "sdmmc";
+		bus-width = <8>;
+		non-removable;
 	};
 
 	sdhci@700b0200 { /* SDMMC2 for Wifi */

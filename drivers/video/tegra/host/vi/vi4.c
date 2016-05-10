@@ -24,6 +24,7 @@
 #include <linux/slab.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/uaccess.h>
+#include <linux/module.h>
 
 #include "dev.h"
 #include "nvhost_acm.h"

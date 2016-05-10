@@ -628,9 +628,9 @@ int gr_gm20b_ctx_state_floorsweep(struct gk20a *g)
 	gr_gm20b_load_tpc_mask(g);
 
 	gk20a_writel(g, gr_bes_zrop_settings_r(),
-		     gr_bes_zrop_settings_num_active_ltcs_f(gr->num_fbps));
+		     gr_bes_zrop_settings_num_active_ltcs_f(g->ltc_count));
 	gk20a_writel(g, gr_bes_crop_settings_r(),
-		     gr_bes_crop_settings_num_active_ltcs_f(gr->num_fbps));
+		     gr_bes_crop_settings_num_active_ltcs_f(g->ltc_count));
 
 	gk20a_writel(g, gr_bes_crop_debug3_r(),
 		     gk20a_readl(g, gr_be0_crop_debug3_r()) |

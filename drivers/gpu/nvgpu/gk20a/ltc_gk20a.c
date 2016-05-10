@@ -276,7 +276,6 @@ static int gk20a_determine_L2_size_bytes(struct gk20a *g)
 void gk20a_init_ltc(struct gpu_ops *gops)
 {
 	gops->ltc.determine_L2_size_bytes = gk20a_determine_L2_size_bytes;
-	gops->ltc.set_max_ways_evict_last = gk20a_ltc_set_max_ways_evict_last;
 	gops->ltc.init_comptags = gk20a_ltc_init_comptags;
 	gops->ltc.cbc_ctrl = gk20a_ltc_cbc_ctrl;
 	gops->ltc.set_zbc_color_entry = gk20a_ltc_set_zbc_color_entry;

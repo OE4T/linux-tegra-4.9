@@ -101,7 +101,6 @@ enum nvgpu_litter_value {
 struct gpu_ops {
 	struct {
 		int (*determine_L2_size_bytes)(struct gk20a *gk20a);
-		void (*set_max_ways_evict_last)(struct gk20a *g, u32 max_ways);
 		int (*init_comptags)(struct gk20a *g, struct gr_gk20a *gr);
 		int (*cbc_ctrl)(struct gk20a *g, enum gk20a_cbc_op op,
 				u32 min, u32 max);

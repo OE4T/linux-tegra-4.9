@@ -1293,7 +1293,6 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 	u32 tpc_offset, gpc_offset;
 	u32 sm_id = 0, gpc_id = 0;
 	u32 tpc_per_gpc;
-	u32 max_ways_evict = INVALID_MAX_WAYS;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
@@ -1354,12 +1353,6 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 	gr_gk20a_setup_rop_mapping(g, gr);
 	if (g->ops.gr.setup_alpha_beta_tables)
 		g->ops.gr.setup_alpha_beta_tables(g, gr);
-
-	if (gr->num_fbps == 1)
-		max_ways_evict = 9;
-
-	if (max_ways_evict != INVALID_MAX_WAYS)
-		g->ops.ltc.set_max_ways_evict_last(g, max_ways_evict);
 
 	for (gpc_index = 0;
 	     gpc_index < gr_pd_dist_skip_table__size_1_v() * 4;

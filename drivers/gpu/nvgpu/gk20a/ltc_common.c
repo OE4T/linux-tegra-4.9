@@ -25,20 +25,6 @@
 #include "gr_gk20a.h"
 
 /*
- * Set the maximum number of ways that can have the "EVIST_LAST" class.
- */
-static void gk20a_ltc_set_max_ways_evict_last(struct gk20a *g, u32 max_ways)
-{
-	u32 mgmt_reg;
-
-	mgmt_reg = gk20a_readl(g, ltc_ltcs_ltss_tstg_set_mgmt_r()) &
-		~ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_f(~0);
-	mgmt_reg |= ltc_ltcs_ltss_tstg_set_mgmt_max_ways_evict_last_f(max_ways);
-
-	gk20a_writel(g, ltc_ltcs_ltss_tstg_set_mgmt_r(), mgmt_reg);
-}
-
-/*
  * Sets the ZBC color for the passed index.
  */
 static void gk20a_ltc_set_zbc_color_entry(struct gk20a *g,

@@ -380,28 +380,24 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
+	if (ret) {
+		dev_err(dev, "failed to turn on clocks: %d\n", ret);
+		return ret;
+	}
+
+	tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
+
 	cam_rtcpu->ivc = tegra_ivc_bus_create(dev,
 						cam_rtcpu->rtcpu_pdata->sid);
 	if (IS_ERR(cam_rtcpu->ivc))
 		return PTR_ERR(cam_rtcpu->ivc);
-
-	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
-	if (ret) {
-		dev_err(dev, "failed to turn on clocks: %d\n", ret);
-		goto fail;
-	}
-
-	tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
 
 	tegra_cam_rtcpu_boot(dev);
 
 	dev_dbg(dev, "probe successful\n");
 
 	return 0;
-
-fail:
-	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
-	return ret;
 }
 
 static int tegra_cam_rtcpu_remove(struct platform_device *pdev)

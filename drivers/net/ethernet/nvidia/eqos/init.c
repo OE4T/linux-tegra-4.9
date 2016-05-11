@@ -605,6 +605,18 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 	struct eqos_prv_data *pdata = tcd->devdata;
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 
+	int hw_chg_count;
+
+	hw_chg_count = EQOS_HW_CHG_MAX_COUNT;
+	while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs) &&
+		hw_chg_count--)
+			usleep_range(20000, 40000);
+
+	if (pdata->suspended || hw_chg_count == 0) {
+		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
+		return -ENODEV;
+	}
+
 	pr_info("%s cur state=%d new state=%ld, recalibrating eqos pads\n",
 		__func__, pdata->therm_state.counter, state);
 	atomic_set(&pdata->therm_state, state);
@@ -620,6 +632,8 @@ static int tegra_eqos_set_state(struct thermal_cooling_device *tcd,
 
 	/* read-to-clear error counters */
 	hw_if->read_err_counter(pdata, false);
+
+	clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
 
 	return 0;
 }

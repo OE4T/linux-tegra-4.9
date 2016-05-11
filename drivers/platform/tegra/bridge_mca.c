@@ -12,11 +12,13 @@
  */
 
 #include <asm/traps.h>
+#include <linux/clk.h>
 #include <linux/debugfs.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/device.h>
 #include <linux/platform/tegra/bridge_mca.h>
 #include <linux/io.h>
 #include <linux/ioport.h>
@@ -416,6 +418,7 @@ clean:
 static int bridge_mca_dbgfs_init(void) { return 0; }
 #endif
 
+#define AXIAPB_TIMEOUT_TIMER	0x2c8
 #define AXI2APB_ERROR_STATUS	0x2ec
 #define AXI2APB_FIFO_STATUS3	0x2f8
 #define AXI2APB_FIFO_ERROR_SHIFT	13
@@ -442,14 +445,51 @@ static unsigned int axi2apb_error_fifo_count(void __iomem *addr)
 	return fifo_status;
 }
 
+static unsigned int axi2apb_setup_timeout(void __iomem *addr, u32 timeout,
+			struct device *dev)
+{
+	unsigned long rate;
+	struct clk *clk;
+	u32 value = 0;
+
+	clk = devm_clk_get(dev, "axi_cbb");
+	if (IS_ERR(clk)) {
+		dev_info(dev, "can not get axi_cbb clock\n");
+		return PTR_ERR(clk);
+	}
+	rate = clk_get_rate(clk);
+	/*get rate in MHz*/
+	rate = rate / 1000000;
+	dev_info(dev, "axi_cbb clk rate = %lu MHZ, timeout = %u useconds\n",
+		 rate, timeout);
+
+	/*get timeout val for programming timer reg*/
+	if (rate < 0x1000 && timeout < 0x100000 && rate > 0 && timeout > 0) {
+		value = (u32)(rate * timeout);
+		/* set timeout. By default, timeout config is enabled*/
+		writel(value, addr + AXIAPB_TIMEOUT_TIMER);
+		dev_info(dev, "enabled timeout = %u\n", value);
+	} else
+		dev_err(dev, "error enabling timeout = %u: rate=%lu, timeout=%u\n",
+		 value, rate, timeout);
+
+	return 0;
+}
+
 static struct tegra_bridge_data axi2apb_data = {
 	.name = "AXI2APB",
 	.error_status = axi2apb_error_status,
 	.error_fifo_count = axi2apb_error_fifo_count,
+	.setup_timeout = axi2apb_setup_timeout,
 	.errors = t18x_axi_errors,
 	.max_error = ARRAY_SIZE(t18x_axi_errors)
 };
 
+
+#define AXIP2P_SLV_RD_RESP_TIMER 0xf8
+#define AXIP2P_SLV_WR_RESP_TIMER 0xfc
+#define AXIP2P_TIMEOUT_CONFIG	0x104
+#define AXIP2P_TIMEOUT_CONFIG_EN 0x00000001
 #define AXIP2P_ERROR_STATUS	0x11c
 #define AXIP2P_FIFO_STATUS	0x120
 #define AXIP2P_FIFO_ERROR_SHIFT 26
@@ -476,10 +516,47 @@ static unsigned int axip2p_error_fifo_count(void __iomem *addr)
 	return fifo_status;
 }
 
+static unsigned int axip2p_setup_timeout(void __iomem *addr, u32 timeout,
+			struct device *dev)
+{
+	unsigned long rate;
+	struct clk *clk;
+	u32 value = 0, tc_value = 0;
+
+	clk = devm_clk_get(dev, "axi_cbb");
+	if (IS_ERR(clk)) {
+		dev_info(dev, "can not get axi_cbb clock\n");
+		return PTR_ERR(clk);
+	}
+	rate = clk_get_rate(clk);
+	/*get rate in MHz*/
+	rate = rate / 1000000;
+	dev_info(dev, "axi_cbb clk rate = %lu MHZ, timeout = %u useconds\n",
+		 rate, timeout);
+
+	/*get timeout val for programming timer reg*/
+	if (rate < 0x1000 && timeout < 0x100000 && rate > 0 && timeout > 0) {
+		value = (u32)(rate * timeout);
+		/*Program timeout*/
+		writel(value, addr + AXIP2P_SLV_RD_RESP_TIMER);
+		writel(value, addr + AXIP2P_SLV_WR_RESP_TIMER);
+		/* Enable timeout */
+		tc_value = readl(addr + AXIP2P_TIMEOUT_CONFIG);
+		writel(tc_value | AXIP2P_TIMEOUT_CONFIG_EN, addr +
+			 AXIP2P_TIMEOUT_CONFIG);
+		dev_info(dev, "enabled timeout = %u\n", value);
+	} else
+		dev_err(dev, "error enabling timeout = %u: rate=%lu, timeout=%u\n",
+			value, rate, timeout);
+
+	return 0;
+}
+
 static struct tegra_bridge_data axip2p_data = {
 	.name = "AXIP2P",
 	.error_status = axip2p_error_status,
 	.error_fifo_count = axip2p_error_fifo_count,
+	.setup_timeout = axip2p_setup_timeout,
 	.errors = t18x_axi_errors,
 	.max_error = ARRAY_SIZE(t18x_axi_errors)
 };
@@ -503,6 +580,7 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	unsigned long flags;
 	int rc;
+	u32 timeout;
 
 	/*
 	 * Bridges don't exist on the simulator
@@ -541,6 +619,7 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 	bank->error_fifo_count = bdata->error_fifo_count;
 	bank->errors = bdata->errors;
 	bank->max_error = bdata->max_error;
+	bank->setup_timeout = bdata->setup_timeout;
 	bank->seen_error = 0;
 
 	hook = devm_kzalloc(&pdev->dev, sizeof(*hook), GFP_KERNEL);
@@ -558,6 +637,16 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 	 * Flush out (and report) any early bridge errors.
 	 */
 	print_bank_info(NULL, bank);
+
+	if (of_property_read_u32(pdev->dev.of_node, "timeout", &timeout) == 0) {
+		if (timeout > 0 && timeout < 100000)
+			bank->setup_timeout(bank->vaddr, timeout, &pdev->dev);
+		else
+			dev_err(&pdev->dev, "error setting up timeout = %u\n",
+				 timeout);
+	}
+
+	dev_info(&pdev->dev, "bridge probed OK\n");
 
 	return 0;
 }

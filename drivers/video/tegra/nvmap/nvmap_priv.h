@@ -156,7 +156,6 @@ struct nvmap_handle {
 	size_t size;		/* padded (as-allocated) size */
 	size_t orig_size;	/* original (as-requested) size */
 	size_t align;
-	u8 kind;                /* memory kind (0=pitch, !0 -> blocklinear) */
 	struct nvmap_client *owner;
 	struct dma_buf *dmabuf;
 	union {

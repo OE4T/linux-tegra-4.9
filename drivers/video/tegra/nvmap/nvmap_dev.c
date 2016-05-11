@@ -618,10 +618,6 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		err = nvmap_ioctl_alloc(filp, uarg);
 		break;
 
-	case NVMAP_IOC_ALLOC_KIND:
-		err = nvmap_ioctl_alloc_kind(filp, uarg);
-		break;
-
 	case NVMAP_IOC_ALLOC_IVM:
 		err = nvmap_ioctl_alloc_ivm(filp, uarg);
 		break;
@@ -669,6 +665,10 @@ static long nvmap_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 		break;
 
 	/* Depreacted IOCTL's */
+	case NVMAP_IOC_ALLOC_KIND:
+		pr_warn("NVMAP_IOC_ALLOC_KIND is deprecated. Use NVMAP_IOC_ALLOC.\n");
+		break;
+
 #ifdef CONFIG_COMPAT
 	case NVMAP_IOC_MMAP_32:
 #endif

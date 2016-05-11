@@ -116,37 +116,6 @@ int nvmap_ioctl_alloc(struct file *filp, void __user *arg)
 	return err;
 }
 
-int nvmap_ioctl_alloc_kind(struct file *filp, void __user *arg)
-{
-	struct nvmap_alloc_kind_handle op;
-	struct nvmap_client *client = filp->private_data;
-	struct nvmap_handle *handle;
-	int err;
-
-	if (copy_from_user(&op, arg, sizeof(op)))
-		return -EFAULT;
-
-	if (op.align & (op.align - 1))
-		return -EINVAL;
-
-	handle = nvmap_handle_get_from_fd(op.handle);
-	if (!handle)
-		return -EINVAL;
-
-	/* user-space handles are aligned to page boundaries, to prevent
-	 * data leakage. */
-	op.align = max_t(size_t, op.align, PAGE_SIZE);
-
-	err = nvmap_alloc_handle(client, handle,
-				  op.heap_mask,
-				  op.align,
-				  op.kind,
-				  op.flags,
-				  NVMAP_IVM_INVALID_PEER);
-	nvmap_handle_put(handle);
-	return err;
-}
-
 int nvmap_ioctl_alloc_ivm(struct file *filp, void __user *arg)
 {
 	struct nvmap_alloc_ivm_handle op;

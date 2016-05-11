@@ -316,7 +316,6 @@ int nvmap_alloc_handle(struct nvmap_client *client,
 	else
 		h->flags = (flags & NVMAP_HANDLE_CACHE_FLAG);
 	h->align = max_t(size_t, align, L1_CACHE_BYTES);
-	h->kind = kind;
 	h->peer = peer;
 	tag = flags >> 16;
 

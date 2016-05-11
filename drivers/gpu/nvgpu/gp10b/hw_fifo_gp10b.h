@@ -326,6 +326,10 @@ static inline u32 fifo_intr_pbdma_id_status_f(u32 v, u32 i)
 {
 	return (v & 0x1) << (0 + i*1);
 }
+static inline u32 fifo_intr_pbdma_id_status_v(u32 r, u32 i)
+{
+	return (r >> (0 + i*1)) & 0x1;
+}
 static inline u32 fifo_intr_pbdma_id_status__size_1_v(void)
 {
 	return 0x00000001;

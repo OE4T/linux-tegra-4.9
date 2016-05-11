@@ -533,6 +533,8 @@ static int ecc_stat_create(struct device *dev,
 				"gpc0_tpc%d_%s",
 				hw_unit,
 				ecc_stat_name);
+
+		sysfs_attr_init(&dev_attr_array[hw_unit].attr);
 		dev_attr_array[hw_unit].attr.name = ecc_stat->names[hw_unit];
 		dev_attr_array[hw_unit].attr.mode = VERIFY_OCTAL_PERMISSIONS(S_IRUGO);
 		dev_attr_array[hw_unit].show = ecc_stat_show;

@@ -876,7 +876,7 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 		/* (0x02A0) */
 		i2c_wr32_and_or(sd, base_addr+MIPICLKEN,
 			~(MASK_MP_CKEN), MASK_MP_ENABLE);
-		msleep(10);
+		usleep_range(10000, 11000);
 		/* (0x02A0) */
 		i2c_wr32(sd, base_addr+MIPICLKEN,
 			MASK_MP_CKEN | MASK_MP_ENABLE);
@@ -1310,7 +1310,7 @@ static int tc358840_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
 	 * Need to figure out why these msleeps are needed, and which of these
 	 * are needed. Without msleeps the interrupts just stop.
 	 */
-	msleep(1);
+	usleep_range(500, 1000);
 	state->format_changed = false;
 	if (intstatus & MASK_HDMI_INT) {
 		u8 hdmi_int0;
@@ -1318,9 +1318,9 @@ static int tc358840_isr(struct v4l2_subdev *sd, u32 status, bool *handled)
 retry:
 		retry--;
 		hdmi_int0 = i2c_rd8(sd, HDMI_INT0);
-		msleep(1);
+		usleep_range(500, 1000);
 		hdmi_int1 = i2c_rd8(sd, HDMI_INT1);
-		msleep(1);
+		usleep_range(500, 1000);
 
 		if (hdmi_int0 & MASK_MISC)
 			tc358840_hdmi_misc_int_handler(sd, handled);
@@ -1333,10 +1333,10 @@ retry:
 		if (hdmi_int1 & MASK_AUD)
 			tc358840_hdmi_audio_int_handler(sd, handled);
 
-		msleep(1);
+		usleep_range(500, 1000);
 		i2c_wr16(sd, INTSTATUS, MASK_HDMI_INT);
 		intstatus &= ~MASK_HDMI_INT;
-		msleep(1);
+		usleep_range(500, 1000);
 
 		/* Display unhandled HDMI interrupts */
 		hdmi_int0 = i2c_rd8(sd, HDMI_INT0);
@@ -1347,7 +1347,7 @@ retry:
 			if (retry)
 				goto retry;
 		}
-		msleep(1);
+		usleep_range(500, 1000);
 		hdmi_int1 = i2c_rd8(sd, HDMI_INT1);
 		if (hdmi_int1) {
 			v4l2_dbg(1, debug, sd,

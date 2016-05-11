@@ -490,8 +490,7 @@ struct nvgpu_gpu_get_gpu_time_args {
  * session.  nvgpu channels (for the same module) can then be bound to such a
  * session.
  *
- * Once a nvgpu channel has been bound to a debugger session it cannot be
- * bound to another.
+ * One nvgpu channel can also be bound to multiple debug sessions
  *
  * As long as there is an open device file to the session, or any bound
  * nvgpu channels it will be valid.  Once all references to the session

@@ -42,16 +42,18 @@ struct gk20a_channel_syncpt {
 	u32 id;
 };
 
-static void add_wait_cmd(u32 *ptr, u32 id, u32 thresh)
+static void add_wait_cmd(struct gk20a *g, struct priv_cmd_entry *cmd, u32 off,
+		u32 id, u32 thresh)
 {
+	off = cmd->off + off;
 	/* syncpoint_a */
-	ptr[0] = 0x2001001C;
+	gk20a_mem_wr32(g, cmd->mem, off++, 0x2001001C);
 	/* payload */
-	ptr[1] = thresh;
+	gk20a_mem_wr32(g, cmd->mem, off++, thresh);
 	/* syncpoint_b */
-	ptr[2] = 0x2001001D;
+	gk20a_mem_wr32(g, cmd->mem, off++, 0x2001001D);
 	/* syncpt_id, switch_en, wait */
-	ptr[3] = (id << 8) | 0x10;
+	gk20a_mem_wr32(g, cmd->mem, off++, (id << 8) | 0x10);
 }
 
 static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
@@ -61,10 +63,11 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct priv_cmd_entry *wait_cmd = NULL;
+	struct channel_gk20a *c = sp->c;
 	int err = 0;
 
 	if (!nvhost_syncpt_is_valid_pt_ext(sp->host1x_pdev, id)) {
-		dev_warn(dev_from_gk20a(sp->c->g),
+		dev_warn(dev_from_gk20a(c->g),
 				"invalid wait id in gpfifo submit, elided");
 		return 0;
 	}
@@ -72,14 +75,14 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev, id, thresh))
 		return 0;
 
-	err = gk20a_channel_alloc_priv_cmdbuf(sp->c, 4, &wait_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c, 4, &wait_cmd);
 	if (err) {
-		gk20a_err(dev_from_gk20a(sp->c->g),
+		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
 		return err;
 	}
 
-	add_wait_cmd(&wait_cmd->ptr[0], id, thresh);
+	add_wait_cmd(c->g, wait_cmd, 0, id, thresh);
 
 	*entry = wait_cmd;
 	*fence = NULL;
@@ -148,12 +151,12 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 
 		if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev,
 				wait_id, wait_value)) {
-			wait_cmd->ptr[i * 4 + 0] = 0;
-			wait_cmd->ptr[i * 4 + 1] = 0;
-			wait_cmd->ptr[i * 4 + 2] = 0;
-			wait_cmd->ptr[i * 4 + 3] = 0;
+			/* each wait_cmd is 4 u32s */
+			gk20a_memset(c->g, wait_cmd->mem,
+					(wait_cmd->off + i * 4) * sizeof(u32),
+					0, 4 * sizeof(u32));
 		} else
-			add_wait_cmd(&wait_cmd->ptr[i * 4], wait_id,
+			add_wait_cmd(c->g, wait_cmd, i * 4, wait_id,
 					wait_value);
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
 		i++;
@@ -189,7 +192,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 {
 	u32 thresh;
 	int incr_cmd_size;
-	int j = 0;
+	int off;
 	int err;
 	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_channel_syncpt *sp =
@@ -207,27 +210,30 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		return err;
 	}
 
+	off = incr_cmd->off;
+
 	/* WAR for hw bug 1491360: syncpt needs to be incremented twice */
 
 	if (wfi_cmd) {
 		/* wfi */
-		incr_cmd->ptr[j++] = 0x2001001E;
+		gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001E);
 		/* handle, ignored */
-		incr_cmd->ptr[j++] = 0x00000000;
+		gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x00000000);
 	}
 	/* syncpoint_a */
-	incr_cmd->ptr[j++] = 0x2001001C;
+	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001C);
 	/* payload, ignored */
-	incr_cmd->ptr[j++] = 0;
+	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0);
 	/* syncpoint_b */
-	incr_cmd->ptr[j++] = 0x2001001D;
+	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
 	/* syncpt_id, incr */
-	incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
+	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
 	/* syncpoint_b */
-	incr_cmd->ptr[j++] = 0x2001001D;
+	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, 0x2001001D);
 	/* syncpt_id, incr */
-	incr_cmd->ptr[j++] = (sp->id << 8) | 0x1;
-	WARN_ON(j != incr_cmd_size);
+	gk20a_mem_wr32(c->g, incr_cmd->mem, off++, (sp->id << 8) | 0x1);
+
+	WARN_ON(off - incr_cmd->off != incr_cmd_size);
 
 	thresh = nvhost_syncpt_incr_max_ext(sp->host1x_pdev, sp->id, 2);
 
@@ -414,38 +420,39 @@ static void gk20a_channel_semaphore_launcher(
 }
 #endif
 
-static int add_sema_cmd(u32 *ptr, u64 sema, u32 payload,
-			bool acquire, bool wfi)
+static int add_sema_cmd(struct gk20a *g, struct priv_cmd_entry *cmd,
+		u64 sema, u32 payload, bool acquire, bool wfi)
 {
-	int i = 0;
+	u32 off = cmd->off;
 	/* semaphore_a */
-	ptr[i++] = 0x20010004;
+	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010004);
 	/* offset_upper */
-	ptr[i++] = (sema >> 32) & 0xff;
+	gk20a_mem_wr32(g, cmd->mem, off++, (sema >> 32) & 0xff);
 	/* semaphore_b */
-	ptr[i++] = 0x20010005;
+	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010005);
 	/* offset */
-	ptr[i++] = sema & 0xffffffff;
+	gk20a_mem_wr32(g, cmd->mem, off++, sema & 0xffffffff);
 	/* semaphore_c */
-	ptr[i++] = 0x20010006;
+	gk20a_mem_wr32(g, cmd->mem, off++, 0x20010006);
 	/* payload */
-	ptr[i++] = payload;
+	gk20a_mem_wr32(g, cmd->mem, off++, payload);
 	if (acquire) {
 		/* semaphore_d */
-		ptr[i++] = 0x20010007;
+		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010007);
 		/* operation: acq_geq, switch_en */
-		ptr[i++] = 0x4 | (0x1 << 12);
+		gk20a_mem_wr32(g, cmd->mem, off++, 0x4 | (0x1 << 12));
 	} else {
 		/* semaphore_d */
-		ptr[i++] = 0x20010007;
+		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010007);
 		/* operation: release, wfi */
-		ptr[i++] = 0x2 | ((wfi ? 0x0 : 0x1) << 20);
+		gk20a_mem_wr32(g, cmd->mem, off++,
+				0x2 | ((wfi ? 0x0 : 0x1) << 20));
 		/* non_stall_int */
-		ptr[i++] = 0x20010008;
+		gk20a_mem_wr32(g, cmd->mem, off++, 0x20010008);
 		/* ignored */
-		ptr[i++] = 0;
+		gk20a_mem_wr32(g, cmd->mem, off++, 0);
 	}
-	return i;
+	return off - cmd->off;
 }
 
 static int gk20a_channel_semaphore_wait_syncpt(
@@ -506,7 +513,7 @@ static int gk20a_channel_semaphore_wait_fd(
 
 	va = gk20a_semaphore_gpu_va(w->sema, c->vm);
 	/* GPU unblocked when when the semaphore value becomes 1. */
-	written = add_sema_cmd(wait_cmd->ptr, va, 1, true, false);
+	written = add_sema_cmd(c->g, wait_cmd, va, 1, true, false);
 
 	WARN_ON(written != wait_cmd->size);
 	ret = sync_fence_wait_async(sync_fence, &w->waiter);
@@ -575,7 +582,7 @@ static int __gk20a_channel_semaphore_incr(
 
 	/* Release the completion semaphore. */
 	va = gk20a_semaphore_gpu_va(semaphore, c->vm);
-	written = add_sema_cmd(incr_cmd->ptr, va, 1, false, wfi_cmd);
+	written = add_sema_cmd(c->g, incr_cmd, va, 1, false, wfi_cmd);
 	WARN_ON(written != incr_cmd_size);
 
 	*fence = gk20a_fence_from_semaphore(sp->timeline, semaphore,

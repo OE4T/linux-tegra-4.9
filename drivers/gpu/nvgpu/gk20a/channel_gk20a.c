@@ -1355,15 +1355,16 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	e->gp_get = c->gpfifo.get;
 	e->gp_put = c->gpfifo.put;
 	e->gp_wrap = c->gpfifo.wrap;
+	e->mem = &q->mem;
 
 	/* if we have increased size to skip free space in the end, set put
 	   to beginning of cmd buffer (0) + size */
 	if (size != orig_size) {
-		e->ptr = (u32 *)q->mem.cpu_va;
+		e->off = 0;
 		e->gva = q->mem.gpu_va;
 		q->put = orig_size;
 	} else {
-		e->ptr = (u32 *)q->mem.cpu_va + q->put;
+		e->off = q->put;
 		e->gva = q->mem.gpu_va + q->put * sizeof(u32);
 		q->put = (q->put + orig_size) & (q->size - 1);
 	}
@@ -1755,17 +1756,15 @@ static int gk20a_free_priv_cmdbuf(struct channel_gk20a *c,
 					struct priv_cmd_entry *e)
 {
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	u32 cmd_entry_start;
 	struct device *d = dev_from_gk20a(c->g);
 
 	if (!e)
 		return 0;
 
-	cmd_entry_start = (u32)(e->ptr - (u32 *)q->mem.cpu_va);
-	if ((q->get != cmd_entry_start) && cmd_entry_start != 0)
+	if ((q->get != e->off) && e->off != 0)
 		gk20a_err(d, "requests out-of-order, ch=%d\n", c->hw_chid);
 
-	q->get = (e->ptr - (u32 *)q->mem.cpu_va) + e->size;
+	q->get = e->off + e->size;
 	free_priv_cmdbuf(c, e);
 
 	return 0;
@@ -2150,7 +2149,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		gpfifo_mem[c->gpfifo.put].entry1 = u64_hi32(wait_cmd->gva) |
 			pbdma_gp_entry1_length_f(wait_cmd->size);
 		trace_gk20a_push_cmdbuf(dev_name(c->g->dev),
-			0, wait_cmd->size, 0, wait_cmd->ptr);
+				0, wait_cmd->size, 0,
+				wait_cmd->mem->cpu_va + wait_cmd->off *
+				sizeof(u32));
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
@@ -2235,7 +2236,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		gpfifo_mem[c->gpfifo.put].entry1 = u64_hi32(incr_cmd->gva) |
 			pbdma_gp_entry1_length_f(incr_cmd->size);
 		trace_gk20a_push_cmdbuf(dev_name(c->g->dev),
-			0, incr_cmd->size, 0, incr_cmd->ptr);
+				0, incr_cmd->size, 0,
+				incr_cmd->mem->cpu_va + incr_cmd->off *
+				sizeof(u32));
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);

@@ -164,7 +164,8 @@ struct priv_cmd_queue {
 };
 
 struct priv_cmd_entry {
-	u32 *ptr;
+	struct mem_desc *mem;
+	u32 off;	/* offset in mem, in u32 entries */
 	u64 gva;
 	u32 get;	/* start of entry in queue */
 	u32 size;	/* in words */

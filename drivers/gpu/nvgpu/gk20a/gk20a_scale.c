@@ -252,6 +252,20 @@ static int gk20a_scale_get_dev_status(struct device *dev,
 }
 
 /*
+ * get_cur_freq(struct device *dev, unsigned long *freq)
+ *
+ * This function gets the current GPU clock rate.
+ */
+
+static int get_cur_freq(struct device *dev, unsigned long *freq)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	*freq = platform->clk_get_rate(dev);
+	return 0;
+}
+
+
+/*
  * gk20a_scale_init(dev)
  */
 
@@ -287,6 +301,7 @@ void gk20a_scale_init(struct device *dev)
 		profile->devfreq_profile.target = gk20a_scale_target;
 		profile->devfreq_profile.get_dev_status =
 			gk20a_scale_get_dev_status;
+		profile->devfreq_profile.get_cur_freq = get_cur_freq;
 
 		devfreq = devfreq_add_device(dev,
 					&profile->devfreq_profile,

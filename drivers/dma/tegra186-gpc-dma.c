@@ -664,25 +664,33 @@ static void tegra_dma_chan_decode_error(struct tegra_dma_channel *tdc, unsigned 
 {
 	switch(TEGRA_GPCDMA_CHAN_ERR_TYPE(err_status)) {
 		case TEGRA_DMA_BM_FIFO_FULL_ERR:
-			dev_info(tdc2dev(tdc), "bm fifo full\n");
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d bm fifo full\n", tdc->id);
 		break;
 		case TEGRA_DMA_PERIPH_FIFO_FULL_ERR:
-			dev_info(tdc2dev(tdc), "peripheral fifo full\n");
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d peripheral fifo full\n", tdc->id);
 		break;
 		case TEGRA_DMA_PERIPH_ID_ERR:
-			dev_info(tdc2dev(tdc), "illegal peripheral id\n");
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d illegal peripheral id\n", tdc->id);
 		break;
 		case TEGRA_DMA_STREAM_ID_ERR:
-			dev_info(tdc2dev(tdc), "illegal stream id\n");
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d illegal stream id\n", tdc->id);
 		break;
 		case TEGRA_DMA_MC_SLAVE_ERR:
-			dev_info(tdc2dev(tdc), "mc slave error\n");
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d mc slave error\n", tdc->id);
 		break;
 		case TEGRA_DMA_MMIO_SLAVE_ERR:
-			dev_info(tdc2dev(tdc), "mmio slave error\n");
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d mmio slave error\n", tdc->id);
 		break;
 		default:
-			dev_info(tdc2dev(tdc), "security violation %x\n", err_status);
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d security violation %x\n", tdc->id,
+				err_status);
 	}
 }
 
@@ -700,20 +708,26 @@ static irqreturn_t tegra_dma_isr(int irq, void *dev_id)
 
 	if (err_status) {
 		tegra_dma_chan_decode_error(tdc, err_status);
+		tegra_dma_dump_chan_regs(tdc);
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_ERR_STATUS, 0xFFFFFFFF);
 	}
 
 	if (status & TEGRA_GPCDMA_STATUS_ISE_EOC) {
 		tdc_write(tdc, TEGRA_GPCDMA_CHAN_STATUS, TEGRA_GPCDMA_STATUS_ISE_EOC);
-		tdc->isr_handler(tdc, false);
+		if (tdc->isr_handler)
+			tdc->isr_handler(tdc, false);
+		else {
+			dev_err(tdc->tdma->dev,
+				"GPCDMA CH%d: status %lx ISR handler absent!\n",
+				tdc->id, status);
+			tegra_dma_dump_chan_regs(tdc);
+		}
 		tasklet_schedule(&tdc->tasklet);
 		spin_unlock_irqrestore(&tdc->lock, flags);
 		return IRQ_HANDLED;
 	}
 
 	spin_unlock_irqrestore(&tdc->lock, flags);
-	dev_info(tdc2dev(tdc),
-		"Interrupt already served status 0x%08lx\n", status);
 	return IRQ_NONE;
 }
 
@@ -1764,15 +1778,6 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		}
 		tdc->irq = res->start;
 		snprintf(tdc->name, sizeof(tdc->name), "gpcdma.%d", i);
-		ret = devm_request_irq(&pdev->dev, tdc->irq,
-				tegra_dma_isr, 0, tdc->name, tdc);
-		if (ret) {
-			dev_err(&pdev->dev,
-				"request_irq failed with err %d channel %d\n",
-				i, ret);
-			goto err_irq;
-		}
-
 
 		tdc->dma_chan.device = &tdma->dma_dev;
 		dma_cookie_init(&tdc->dma_chan);
@@ -1824,6 +1829,20 @@ static int tegra_dma_probe(struct platform_device *pdev)
 #endif
 	tdma->dma_dev.device_tx_status = tegra_dma_tx_status;
 	tdma->dma_dev.device_issue_pending = tegra_dma_issue_pending;
+
+	/* Register DMA channel interrupt handlers after everything is setup */
+	for (i = 0; i < cdata->nr_channels; i++) {
+		struct tegra_dma_channel *tdc = &tdma->channels[i];
+
+		ret = devm_request_irq(&pdev->dev, tdc->irq,
+				tegra_dma_isr, 0, tdc->name, tdc);
+		if (ret) {
+			dev_err(&pdev->dev,
+				"request_irq failed with err %d channel %d\n",
+				i, ret);
+			goto err_irq;
+		}
+	}
 
 	ret = dma_async_device_register(&tdma->dma_dev);
 	if (ret < 0) {

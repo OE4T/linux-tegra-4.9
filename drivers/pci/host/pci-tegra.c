@@ -127,7 +127,6 @@
 
 #define AFI_CONFIGURATION						0xac
 #define AFI_CONFIGURATION_EN_FPCI				(1 << 0)
-#define AFI_CONFIGURATION_PW_NO_DEVSEL_ERR_CYA	(1 << 19)
 
 #define AFI_FPCI_ERROR_MASKS						0xb0
 
@@ -1342,7 +1341,6 @@ static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 	/* Finally enable PCIe */
 	val = afi_readl(pcie, AFI_CONFIGURATION);
 	val |=  AFI_CONFIGURATION_EN_FPCI;
-	val &= ~AFI_CONFIGURATION_PW_NO_DEVSEL_ERR_CYA;
 	afi_writel(pcie, val, AFI_CONFIGURATION);
 
 	val = (AFI_INTR_EN_INI_SLVERR | AFI_INTR_EN_INI_DECERR |

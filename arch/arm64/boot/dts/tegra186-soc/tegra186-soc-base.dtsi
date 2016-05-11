@@ -980,9 +980,8 @@
 			reg = <0x0 0x15810000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_ENTROPY>;
-			clock-names = "se", "emc", "entropy";
+				 <&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "se", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -993,9 +992,8 @@
 			reg = <0x0 0x15820000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_ENTROPY>;
-			clock-names = "se", "emc", "entropy";
+				 <&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "se", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -1006,9 +1004,8 @@
 			reg = <0x0 0x15830000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_ENTROPY>;
-			clock-names = "se", "emc", "entropy";
+				 <&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "se", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -1019,9 +1016,8 @@
 			reg = <0x0 0x15840000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>,
-				 <&tegra_car TEGRA186_CLK_ENTROPY>;
-			clock-names = "se", "emc", "entropy";
+				 <&tegra_car TEGRA186_CLK_EMC>;
+			clock-names = "se", "emc";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};

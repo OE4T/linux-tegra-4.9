@@ -1293,11 +1293,14 @@ static INT eqos_suspend(struct platform_device *pdev, pm_message_t state)
 		pr_err("eqos already suspended\n");
 		return -EINVAL;
 	}
+
 	pdata->suspended = 1;
 
 	if (netif_running(dev)) {
 		while (test_and_set_bit(HW_CHANGING, &pdata->hw_state_flgs))
 			usleep_range(1000, 2000);
+		/* Disable PHY interrupts */
+		phy_stop_interrupts(pdata->phydev);
 		eqos_stop_dev(pdata);
 		pdata->hw_state_flgs |= (1 << HW_STOPPED);
 		clear_bit(HW_CHANGING, &pdata->hw_state_flgs);
@@ -1341,8 +1344,14 @@ static INT eqos_resume(struct platform_device *pdev)
 	/* enable clocks */
 	eqos_clock_init(pdata);
 
-	if (netif_running(dev))
+	if (netif_running(dev)) {
+		/* Enable PHY interrupts */
+		phy_start_interrupts(pdata->phydev);
+
+		/* Init the PHY */
+		pdata->phydev->drv->config_init(pdata->phydev);
 		eqos_start_dev(pdata);
+	}
 	pdata->suspended = 0;
 	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);
 

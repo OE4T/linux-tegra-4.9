@@ -14,6 +14,7 @@
 #include <linux/types.h>
 #include <linux/mutex.h>
 #include <linux/err.h>
+#include <linux/module.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/platform/tegra/bwmgr_mc.h>

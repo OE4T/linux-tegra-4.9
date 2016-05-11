@@ -263,15 +263,14 @@ error:
 	return irq;
 }
 
-int of_tegra_hsp_sm_pair_request(struct device *dev, u32 index,
+int of_tegra_hsp_sm_pair_request(const struct device_node *np, u32 index,
 					struct tegra_hsp_sm_pair *pair)
 {
 	struct platform_device *pdev;
 	struct of_phandle_args smspec;
 	int ret;
 
-	ret = of_parse_phandle_with_fixed_args(dev->of_node,
-						NV(hsp-shared-mailbox), 1,
+	ret = of_parse_phandle_with_fixed_args(np, NV(hsp-shared-mailbox), 1,
 						index, &smspec);
 	if (ret)
 		return ret;
@@ -288,6 +287,21 @@ int of_tegra_hsp_sm_pair_request(struct device *dev, u32 index,
 	return ret;
 }
 EXPORT_SYMBOL(of_tegra_hsp_sm_pair_request);
+
+int of_tegra_hsp_sm_pair_by_name(const struct device_node *np, char const *name,
+					struct tegra_hsp_sm_pair *pair)
+{
+	int index;
+
+	/* The of_property_match_string() prototype will be fixed in _next */
+	/* Until then, we have to cast to non-const */
+	/* If match fails, index will be -1 and parse_phandles fails */
+	index = of_property_match_string((struct device_node *)np,
+			NV(hsp-shared-mailbox-names), name);
+
+	return of_tegra_hsp_sm_pair_request(np, index, pair);
+}
+EXPORT_SYMBOL(of_tegra_hsp_sm_pair_by_name);
 
 void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *pair)
 {

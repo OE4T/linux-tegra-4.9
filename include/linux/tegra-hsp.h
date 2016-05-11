@@ -17,6 +17,8 @@
 #ifndef _LINUX_TEGRA_HSP_H
 #define _LINUX_TEGRA_HSP_H
 
+#include <linux/types.h>
+
 enum tegra_hsp_master {
 	HSP_FIRST_MASTER = 1,
 
@@ -103,8 +105,10 @@ struct tegra_hsp_sm_pair {
 	struct hlist_node node;
 };
 
-int of_tegra_hsp_sm_pair_request(struct device *dev, u32 index,
+int of_tegra_hsp_sm_pair_request(const struct device_node *np, u32 index,
 					struct tegra_hsp_sm_pair *);
+int of_tegra_hsp_sm_pair_by_name(const struct device_node *np, char const *name,
+					struct tegra_hsp_sm_pair *pair);
 void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *);
 void tegra_hsp_sm_pair_write(const struct tegra_hsp_sm_pair *, u32 value);
 bool tegra_hsp_sm_pair_is_empty(const struct tegra_hsp_sm_pair *);

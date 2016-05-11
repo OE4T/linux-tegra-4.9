@@ -20,8 +20,6 @@
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
 
-#define NV(p) "nvidia," #p
-
 struct tegra_hsp_mailbox {
 	struct device *dev;
 	struct tegra_hsp_sm_pair pair;
@@ -49,7 +47,8 @@ static int tegra_hsp_mailbox_probe(struct device *dev)
 	mbox->dev = dev;
 	mbox->pair.notify_full = tegra_hsp_mailbox_notify;
 
-	ret = of_tegra_hsp_sm_pair_request(dev, 0, &mbox->pair);
+	ret = of_tegra_hsp_sm_pair_by_name(dev->of_node,
+				"ivc-pair", &mbox->pair);
 	if (ret)
 		return ret;
 

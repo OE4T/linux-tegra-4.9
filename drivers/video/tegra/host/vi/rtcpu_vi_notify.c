@@ -184,9 +184,10 @@ static int mbox_vi_notify_set_syncpts(struct device *dev, u8 ch,
 	int err;
 
 	memcpy(msg.syncpt_ids, ids, sizeof(msg.syncpt_ids));
-	mvi->channels |= 1u << ch;
-
 	err = mbox_vi_notify_send(dev, &msg);
+	if (likely(err == 0))
+		mvi->channels |= 1u << ch;
+
 	if (mvi->tags == 0 && mvi->channels == 0)
 		nvhost_module_idle(mvi->vi);
 

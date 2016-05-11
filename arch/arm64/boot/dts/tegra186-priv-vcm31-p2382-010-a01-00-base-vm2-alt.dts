@@ -49,4 +49,8 @@
 	pinctrl@3520000 {
 		vbus-1-supply = <&vdd_1v8>;
 	};
+
+	sdhci@3460000 {
+		status = "okay";
+	};
 };

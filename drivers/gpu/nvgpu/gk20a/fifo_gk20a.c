@@ -397,7 +397,8 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 			fifo_fb_timeout_period_max_f());
 	gk20a_writel(g, fifo_fb_timeout_r(), timeout);
 
-	for (i = 0; i < pbdma_timeout__size_1_v(); i++) {
+	/* write pbdma timeout value */
+	for (i = 0; i < host_num_pbdma; i++) {
 		timeout = gk20a_readl(g, pbdma_timeout_r(i));
 		timeout = set_field(timeout, pbdma_timeout_period_m(),
 				    pbdma_timeout_period_max_f());
@@ -1741,10 +1742,11 @@ static u32 fifo_pbdma_isr(struct gk20a *g, u32 fifo_intr)
 	struct device *dev = dev_from_gk20a(g);
 	struct fifo_gk20a *f = &g->fifo;
 	u32 clear_intr = 0, i;
+	u32 host_num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
 	u32 pbdma_pending = gk20a_readl(g, fifo_intr_pbdma_id_r());
 
-	for (i = 0; i < fifo_intr_pbdma_id_status__size_1_v(); i++) {
-		if (fifo_intr_pbdma_id_status_f(pbdma_pending, i)) {
+	for (i = 0; i < host_num_pbdma; i++) {
+		if (fifo_intr_pbdma_id_status_v(pbdma_pending, i)) {
 			gk20a_dbg(gpu_dbg_intr, "pbdma id %d intr pending", i);
 			clear_intr |=
 				gk20a_fifo_handle_pbdma_intr(dev, g, f, i);

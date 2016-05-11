@@ -1294,7 +1294,6 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 	u32 sm_id = 0, gpc_id = 0;
 	u32 tpc_per_gpc;
 	u32 max_ways_evict = INVALID_MAX_WAYS;
-	u32 l1c_dbg_reg_val;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 
@@ -1381,11 +1380,6 @@ static int gr_gk20a_ctx_state_floorsweep(struct gk20a *g)
 		     gr_bes_zrop_settings_num_active_fbps_f(gr->num_fbps));
 	gk20a_writel(g, gr_bes_crop_settings_r(),
 		     gr_bes_crop_settings_num_active_fbps_f(gr->num_fbps));
-
-	/* turn on cya15 bit for a default val that missed the cut */
-	l1c_dbg_reg_val = gk20a_readl(g, gr_gpc0_tpc0_l1c_dbg_r());
-	l1c_dbg_reg_val |= gr_gpc0_tpc0_l1c_dbg_cya15_en_f();
-	gk20a_writel(g, gr_gpc0_tpc0_l1c_dbg_r(), l1c_dbg_reg_val);
 
 	return 0;
 }

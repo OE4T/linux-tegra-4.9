@@ -490,6 +490,8 @@ static void tegra_ivc_bus_stop(struct device *dev)
 
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {
+	if (IS_ERR_OR_NULL(bus))
+		return;
 	tegra_ivc_bus_destroy_channels(bus);
 	device_unregister(&bus->dev);
 }

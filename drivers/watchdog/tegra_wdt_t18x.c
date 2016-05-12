@@ -588,6 +588,13 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	/* Enable local interrupt for WDT petting */
 	tegra_wdt_t18x->config |= WDT_CFG_INT_EN;
 
+	/* 'ErrorThreshold' field @ TKE_TOP_WDT1_WDTCR_0 decides the
+	 * indication to HSM. The WDT logic asserts an error signal to HSM when
+	 * ExpirationLevel >= ErrorThreshold. Retain the POR value to avoid
+	 * nuisance trigger to HSM.
+	 */
+	tegra_wdt_t18x->config |= WDT_CFG_ERR_THRESHOLD;
+
 	/* Enable local FIQ and remote interrupt for debug dump */
 	if (tegra_wdt_t18x->cluster_id == WDT_CLUSTER_ID_DENVER)
 		tegra_wdt_t18x->config |= WDT_CFG_FINT_EN;

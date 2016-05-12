@@ -62,14 +62,16 @@ typedef int temp_t;
 typedef struct thermal_of_sensor_ops sensor_ops_t;
 typedef struct thermal_zone_device *(*tz_of_sensor_register_fn)
 				(struct device *, int, void *,
-				 const struct thermal_of_sensor_ops*);
-tz_of_sensor_register_fn of_sensor_register = &thermal_zone_of_sensor_register2;
+				 struct thermal_of_sensor_ops*);
+static tz_of_sensor_register_fn of_sensor_register =
+				thermal_zone_of_sensor_register2;
 #else
 typedef struct thermal_zone_of_device_ops sensor_ops_t;
 typedef struct thermal_zone_device * (*tz_of_sensor_register_fn)
 				(struct device *, int, void *,
 				 const struct thermal_zone_of_device_ops*);
-tz_of_sensor_register_fn of_sensor_register = thermal_zone_of_sensor_register;
+static tz_of_sensor_register_fn of_sensor_register =
+				thermal_zone_of_sensor_register;
 #endif
 
 static int tegra_bpmp_thermal_get_temp(void *data, temp_t *out_temp)

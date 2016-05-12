@@ -145,9 +145,14 @@ static u64 gp10b_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 	return gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(sgl));
 }
 
-static u32 *pde3_from_index(struct gk20a_mm_entry *entry, u32 i)
+static u32 pde3_from_index(u32 i)
 {
-	return (u32 *) (((u8 *)entry->mem.cpu_va) + i*gmmu_new_pde__size_v());
+	return i * gmmu_new_pde__size_v() / sizeof(u32);
+}
+
+static u32 pte3_from_index(u32 i)
+{
+	return i * gmmu_new_pte__size_v() / sizeof(u32);
 }
 
 static u64 entry_addr(struct gk20a *g, struct gk20a_mm_entry *entry)
@@ -176,7 +181,7 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	u64 pde_addr = 0;
 	struct gk20a_mm_entry *pte = parent->entries + i;
 	u32 pde_v[2] = {0, 0};
-	u32 *pde;
+	u32 pde;
 
 	gk20a_dbg_fn("");
 
@@ -189,10 +194,10 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
 	pde_v[0] |= gmmu_new_pde_vol_true_f();
 	pde_v[1] |= pte_addr >> 24;
-	pde = pde3_from_index(parent, i);
+	pde = pde3_from_index(i);
 
-	gk20a_mem_wr32(pde, 0, pde_v[0]);
-	gk20a_mem_wr32(pde, 1, pde_v[1]);
+	gk20a_mem_wr32(g, &parent->mem, pde + 0, pde_v[0]);
+	gk20a_mem_wr32(g, &parent->mem, pde + 1, pde_v[1]);
 
 	gk20a_dbg(gpu_dbg_pte, "pde:%d,sz=%d = 0x%x,0x%08x",
 		  i, gmmu_pgsz_idx, pde_v[1], pde_v[0]);
@@ -200,9 +205,9 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	return 0;
 }
 
-static u32 *pde0_from_index(struct gk20a_mm_entry *entry, u32 i)
+static u32 pde0_from_index(u32 i)
 {
-	return (u32 *) (((u8 *)entry->mem.cpu_va) + i*gmmu_new_dual_pde__size_v());
+	return i * gmmu_new_dual_pde__size_v() / sizeof(u32);
 }
 
 static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
@@ -220,7 +225,7 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	u32 pte_addr_small = 0, pte_addr_big = 0;
 	struct gk20a_mm_entry *entry = pte->entries + i;
 	u32 pde_v[4] = {0, 0, 0, 0};
-	u32 *pde;
+	u32 pde;
 
 	gk20a_dbg_fn("");
 
@@ -254,12 +259,12 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 		pde_v[1] |= pte_addr_big >> 28;
 	}
 
-	pde = pde0_from_index(pte, i);
+	pde = pde0_from_index(i);
 
-	gk20a_mem_wr32(pde, 0, pde_v[0]);
-	gk20a_mem_wr32(pde, 1, pde_v[1]);
-	gk20a_mem_wr32(pde, 2, pde_v[2]);
-	gk20a_mem_wr32(pde, 3, pde_v[3]);
+	gk20a_mem_wr32(g, &pte->mem, pde + 0, pde_v[0]);
+	gk20a_mem_wr32(g, &pte->mem, pde + 1, pde_v[1]);
+	gk20a_mem_wr32(g, &pte->mem, pde + 2, pde_v[2]);
+	gk20a_mem_wr32(g, &pte->mem, pde + 3, pde_v[3]);
 
 	gk20a_dbg(gpu_dbg_pte, "pde:%d,sz=%d [0x%08x, 0x%08x, 0x%x, 0x%08x]",
 		  i, gmmu_pgsz_idx, pde_v[3], pde_v[2], pde_v[1], pde_v[0]);
@@ -323,8 +328,8 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		gk20a_dbg(gpu_dbg_pte, "pte_cur=%d [0x0,0x0]", i);
 	}
 
-	gk20a_mem_wr32(pte->mem.cpu_va + i*8, 0, pte_w[0]);
-	gk20a_mem_wr32(pte->mem.cpu_va + i*8, 1, pte_w[1]);
+	gk20a_mem_wr32(g, &pte->mem, pte3_from_index(i) + 0, pte_w[0]);
+	gk20a_mem_wr32(g, &pte->mem, pte3_from_index(i) + 1, pte_w[1]);
 
 	if (*iova) {
 		*iova += page_size;
@@ -376,12 +381,13 @@ static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 	return gp10b_mm_levels;
 }
 
-static void gp10b_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)
+static void gp10b_mm_init_pdb(struct gk20a *g, struct mem_desc *mem,
+		u64 pdb_addr)
 {
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
+	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_lo_w(),
 		(g->mm.vidmem_is_vidmem ?
 		  ram_in_page_dir_base_target_sys_mem_ncoh_f() :
 		  ram_in_page_dir_base_target_vid_mem_f()) |
@@ -389,7 +395,7 @@ static void gp10b_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)
 		ram_in_page_dir_base_lo_f(pdb_addr_lo) |
 		1 << 10);
 
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_hi_w(),
+	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_hi_w(),
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 

@@ -55,11 +55,9 @@ static void __iomem *tegra_hsp_reg(struct device *dev, u32 offset)
 	return hsp->base + offset;
 }
 
-static void tegra_hsp_ie_writel(struct device *dev, u32 value)
+static void tegra_hsp_ie_writel(struct device *dev, u8 si, u32 value)
 {
-	struct tegra_hsp *hsp = dev_get_drvdata(dev);
-
-	writel(value, tegra_hsp_reg(dev, TEGRA_HSP_IE(hsp->si_index)));
+	writel(value, tegra_hsp_reg(dev, TEGRA_HSP_IE(si)));
 }
 
 static void __iomem *tegra_hsp_sm_reg(struct device *dev, u32 sm)
@@ -92,6 +90,18 @@ static irqreturn_t tegra_hsp_isr(int irq, void *data)
 	}
 	rcu_read_unlock();
 
+	return IRQ_HANDLED;
+}
+
+static irqreturn_t tegra_hsp_empty_isr(int irq, void *data)
+{
+	struct tegra_hsp_sm_pair *pair = data;
+	struct device *dev = pair->dev;
+	void __iomem *reg = tegra_hsp_sm_reg(dev, pair->index ^ 1);
+	u32 value = readl(reg);
+
+	pair->notify_empty(pair, value);
+	disable_irq_nosync(irq);
 	return IRQ_HANDLED;
 }
 
@@ -142,7 +152,7 @@ static void tegra_hsp_update_ie(struct device *dev)
 	hlist_for_each_entry(pair, &hsp->sm_pairs, node)
 		ie |= TEGRA_HSP_IE_SM_FULL(pair->index);
 
-	tegra_hsp_ie_writel(dev, ie);
+	tegra_hsp_ie_writel(dev, hsp->si_index, ie);
 }
 
 static int tegra_hsp_sm_pair_request(struct device *dev, u32 index,
@@ -157,6 +167,22 @@ static int tegra_hsp_sm_pair_request(struct device *dev, u32 index,
 
 	pair->dev = get_device(dev);
 	pair->index = index;
+
+	if (pair->notify_empty != NULL) {
+		int irq;
+
+		irq = tegra_hsp_get_shared_irq(dev, &pair->si_index_empty,
+						tegra_hsp_empty_isr, pair);
+		if (irq < 0) {
+			put_device(pair->dev);
+			pair->dev = NULL;
+			return irq;
+		}
+
+		pair->irq_empty = irq;
+		tegra_hsp_ie_writel(dev, pair->si_index_empty,
+				TEGRA_HSP_IE_SM_EMPTY(pair->index ^ 1));
+	}
 
 	mutex_lock(&hsp->lock);
 	hlist_add_head_rcu(&pair->node, &hsp->sm_pairs);
@@ -201,6 +227,11 @@ void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *pair)
 
 	hsp = dev_get_drvdata(dev);
 
+	if (pair->notify_empty != NULL) {
+		tegra_hsp_ie_writel(dev, pair->si_index_empty, 0);
+		devm_free_irq(dev, pair->irq_empty, pair);
+	}
+
 	mutex_lock(&hsp->lock);
 	hlist_del_rcu(&pair->node);
 	tegra_hsp_update_ie(dev);
@@ -220,6 +251,9 @@ void tegra_hsp_sm_pair_write(struct tegra_hsp_sm_pair *pair,
 	void __iomem *reg = tegra_hsp_sm_reg(dev, pair->index ^ 1);
 
 	writel(TEGRA_HSP_SM_FULL | value, reg);
+
+	if (pair->notify_empty != NULL)
+		enable_irq(pair->irq_empty);
 }
 EXPORT_SYMBOL(tegra_hsp_sm_pair_write);
 

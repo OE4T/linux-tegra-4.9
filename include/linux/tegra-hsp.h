@@ -96,6 +96,9 @@ struct tegra_hsp_sm_pair {
 	struct device *dev;
 	u32 index;
 	u32 (*notify_full)(struct tegra_hsp_sm_pair *, u32);
+	void (*notify_empty)(struct tegra_hsp_sm_pair *, u32);
+	int irq_empty;
+	u8 si_index_empty;
 	struct hlist_node node;
 };
 

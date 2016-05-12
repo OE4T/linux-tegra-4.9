@@ -43,18 +43,26 @@ static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 
 static int tegra_ivc_bus_probe(struct device *dev)
 {
+	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
 	int ret = -ENXIO;
 
 	if (dev->type == &tegra_ivc_channel_type) {
 		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
-		const struct tegra_ivc_channel_ops *ops =
-			tegra_ivc_channel_ops(dev);
+		const struct tegra_ivc_channel_ops *ops = drv->ops.channel;
 
 		BUG_ON(ops == NULL);
-		ret = (ops->probe != NULL) ? ops->probe(chan) : 0;
+		if (ops->probe != NULL)
+			ret = ops->probe(chan);
+		else
+			ret = 0;
+
+		rcu_assign_pointer(chan->ops, ops);
+
+		/* Drain any already pending inbound IVC message */
+		tegra_hsp_notify(dev->parent);
 
 	} else if (dev->type == &tegra_hsp_type) {
-		const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+		const struct tegra_hsp_ops *ops = drv->ops.hsp;
 
 		BUG_ON(ops == NULL || ops->probe == NULL);
 		ret = ops->probe(dev);
@@ -71,16 +79,21 @@ static int tegra_ivc_bus_probe(struct device *dev)
 
 static int tegra_ivc_bus_remove(struct device *dev)
 {
+	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
+
 	if (dev->type == &tegra_ivc_channel_type) {
 		struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
-		const struct tegra_ivc_channel_ops *ops =
-			tegra_ivc_channel_ops(dev);
+		const struct tegra_ivc_channel_ops *ops = drv->ops.channel;
+
+		WARN_ON(rcu_access_pointer(chan->ops) != ops);
+		RCU_INIT_POINTER(chan->ops, NULL);
+		synchronize_rcu();
 
 		if (ops->remove != NULL)
 			ops->remove(chan);
 
 	} else if (dev->type == &tegra_hsp_type) {
-		const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+		const struct tegra_hsp_ops *ops = drv->ops.hsp;
 
 		tegra_ivc_bus_stop(dev);
 
@@ -173,8 +186,10 @@ static void tegra_ivc_channel_tx_notify(struct ivc *ivc)
 static void tegra_ivc_channel_rx_notify(struct tegra_ivc_channel *chan)
 {
 	struct ivc *ivc = &chan->ivc;
-	const struct tegra_ivc_channel_ops *ops =
-		tegra_ivc_channel_ops(&chan->dev);
+	const struct tegra_ivc_channel_ops *ops;
+
+	rcu_read_lock();
+	ops = rcu_dereference(chan->ops);
 
 	if (ops == NULL) {
 		struct mbox_chan *mbox_chan =
@@ -190,12 +205,10 @@ static void tegra_ivc_channel_rx_notify(struct tegra_ivc_channel *chan)
 			mbox_chan_received_data(mbox_chan, &msg);
 			tegra_ivc_read_advance(ivc);
 		} while (tegra_ivc_can_read(ivc));
-
-		return;
-	}
-
-	if (ops->rx_notify != NULL)
+	} else if (ops->rx_notify != NULL) {
 		ops->rx_notify(chan);
+	}
+	rcu_read_unlock();
 }
 
 struct device_type tegra_ivc_channel_type = {

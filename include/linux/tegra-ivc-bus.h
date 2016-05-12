@@ -72,6 +72,7 @@ extern struct device_type tegra_ivc_channel_type;
 struct tegra_ivc_channel {
 	struct ivc ivc;
 	struct device dev;
+	const struct tegra_ivc_channel_ops __rcu *ops;
 };
 
 static inline void *tegra_ivc_channel_get_drvdata(
@@ -90,17 +91,6 @@ static inline struct tegra_ivc_channel *to_tegra_ivc_channel(
 		struct device *dev)
 {
 	return container_of(dev, struct tegra_ivc_channel, dev);
-}
-
-static inline const struct tegra_ivc_channel_ops *tegra_ivc_channel_ops(
-		struct device *dev)
-{
-	struct tegra_ivc_driver *drv = to_tegra_ivc_driver(dev->driver);
-	const struct tegra_ivc_channel_ops *ops = NULL;
-
-	if (drv != NULL && drv->dev_type == &tegra_ivc_channel_type)
-		ops = drv->ops.channel;
-	return ops;
 }
 
 struct tegra_ivc_channel_ops {

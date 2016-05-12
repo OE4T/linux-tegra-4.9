@@ -136,6 +136,7 @@ struct tegra_channel {
 	unsigned int save_index;
 	unsigned int free_index;
 	unsigned int num_buffers;
+	unsigned int released_bufs;
 
 	struct task_struct *kthread_capture_start;
 	wait_queue_head_t start_wait;

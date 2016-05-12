@@ -255,10 +255,27 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan)
 	return 0;
 }
 
-static void tegra_channel_pad_power(struct tegra_channel *chan)
+static int tegra_channel_enable_stream(struct tegra_channel *chan)
 {
+	int ret = 0, i;
+
+	/*
+	 * enable pad power and perform calibration before arming
+	 * single shot for first frame after the HW setup is complete
+	 */
 	/* enable pad power */
 	tegra_csi_pad_control(chan->vi->csi, chan->port, ENABLE);
+	/* start streaming */
+	if (chan->vi->pg_mode) {
+		for (i = 0; i < chan->valid_ports; i++)
+			tegra_csi_tpg_start_streaming(chan->vi->csi,
+						      chan->port[i]);
+		atomic_set(&chan->is_streaming, ENABLE);
+	} else {
+		ret = tegra_channel_set_stream(chan, true);
+		if (ret < 0)
+			return ret;
+	}
 	/* perform calibration as sensor started streaming */
 	tegra_mipi_bias_pad_enable();
 	if (!chan->vi->pg_mode) {
@@ -266,6 +283,8 @@ static void tegra_channel_pad_power(struct tegra_channel *chan)
 		tegra_channel_mipi_cal(chan, 0);
 		mutex_unlock(&chan->vi->mipical_lock);
 	}
+
+	return ret;
 }
 
 static int tegra_channel_error_status(struct tegra_channel *chan)
@@ -302,6 +321,7 @@ static void tegra_channel_capture_error(struct tegra_channel *chan)
 
 static void tegra_channel_init_ring_buffer(struct tegra_channel *chan)
 {
+	chan->released_bufs = 0;
 	chan->num_buffers = 0;
 	chan->save_index = 0;
 	chan->free_index = 0;
@@ -320,8 +340,14 @@ static void free_ring_buffers(struct tegra_channel *chan, int frames)
 		vb->v4l2_buf.field = V4L2_FIELD_NONE;
 		vb2_set_plane_payload(vb, 0, chan->format.sizeimage);
 
-		/* this is WAR but ideally not required */
-		if (chan->capture_state != CAPTURE_GOOD)
+		/*
+		 * WAR to force buffer state if capture state is not good
+		 * WAR - After sync point timeout or error frame capture
+		 * the second buffer is intermittently frame of zeros
+		 * with no error status or padding.
+		 */
+		if (chan->capture_state != CAPTURE_GOOD ||
+			chan->released_bufs < 2)
 			chan->buffer_state[chan->free_index] =
 						VB2_BUF_STATE_ERROR;
 
@@ -330,6 +356,7 @@ static void free_ring_buffers(struct tegra_channel *chan, int frames)
 		if (chan->free_index >= QUEUED_BUFFERS)
 			chan->free_index = 0;
 		chan->num_buffers--;
+		chan->released_bufs++;
 		frames--;
 	}
 }
@@ -348,8 +375,9 @@ static void add_buffer_to_ring(struct tegra_channel *chan,
 
 static void update_state_to_buffer(struct tegra_channel *chan, int state)
 {
-	int save_index = (chan->save_index - 1);
+	int save_index = (chan->save_index - PREVIOUS_BUFFER_DEC_INDEX);
 
+	/* save index decrements by 2 as 3 bufs are added in ring buffer */
 	if (save_index < 0)
 		save_index += QUEUED_BUFFERS;
 	/* update state for the previous buffer */
@@ -404,6 +432,14 @@ static void tegra_channel_ec_init(struct tegra_channel *chan)
 	tegra_channel_write(chan, TEGRA_VI_CFG_VI_INCR_SYNCPT_CNTRL, 0x100);
 }
 
+static void tegra_channel_clear_singleshot(struct tegra_channel *chan,
+						int index)
+{
+	/* clear single shot */
+	csi_write(chan, index, TEGRA_VI_CSI_SW_RESET, 0xF);
+	csi_write(chan, index, TEGRA_VI_CSI_SW_RESET, 0x0);
+}
+
 static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 {
 	u32 error_val = tegra_channel_read(chan,
@@ -420,9 +456,7 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 		tegra_csi_error_recover(chan->vi->csi, chan->port[index]);
 		csi_write(chan, index,
 				TEGRA_VI_CSI_IMAGE_DEF, 0);
-		/* clear single shot */
-		csi_write(chan, index, TEGRA_VI_CSI_SW_RESET, 0xF);
-		csi_write(chan, index, TEGRA_VI_CSI_SW_RESET, 0x0);
+		tegra_channel_clear_singleshot(chan, index);
 	}
 
 	/* clear VI errors */
@@ -469,14 +503,6 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	int valid_ports = chan->valid_ports;
 	int state = VB2_BUF_STATE_DONE;
 
-	/* If streaming is off after start_stream, return error */
-	if (!atomic_read(&chan->is_streaming)) {
-		state = VB2_BUF_STATE_ERROR;
-		chan->capture_state = CAPTURE_ERROR;
-		tegra_channel_ring_buffer(chan, vb, &ts, state);
-		return -1;
-	}
-
 	for (index = 0; index < valid_ports; index++) {
 		/* Program buffer address by using surface 0 */
 		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB, 0x0);
@@ -500,12 +526,15 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 			chan->syncpoint_fifo[index]--;
 	}
 
-	/*
-	 * enable pad power and perform calibration before arming
-	 * single shot for first frame after the HW setup is complete
-	 */
+	/* enable input stream once the VI registers are configured */
 	if (!chan->bfirst_fstart) {
-		tegra_channel_pad_power(chan);
+		err = tegra_channel_enable_stream(chan);
+		if (err) {
+			state = VB2_BUF_STATE_ERROR;
+			chan->capture_state = CAPTURE_ERROR;
+			tegra_channel_ring_buffer(chan, vb, &ts, state);
+			return err;
+		}
 		/* Bit controls VI memory write, enable after all regs */
 		for (index = 0; index < valid_ports; index++) {
 			val = csi_read(chan, index, TEGRA_VI_CSI_IMAGE_DEF);
@@ -514,7 +543,7 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 		}
 	}
 
-	/* Timing to ensure HW is ready when two ports are active */
+	/* Ensure all CSI ports are ready with setup to avoid timing issue */
 	for (index = 0; index < valid_ports; index++)
 		csi_write(chan, index,
 			TEGRA_VI_CSI_SINGLE_SHOT, SINGLE_SHOT_CAPTURE);
@@ -542,7 +571,8 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 		if (err) {
 			state = VB2_BUF_STATE_ERROR;
 			chan->capture_state = CAPTURE_ERROR;
-			/* do we have to run recover again ?? */
+			/* do we have to run recover here ?? */
+			/* tegra_channel_ec_recover(chan); */
 		}
 	}
 
@@ -765,6 +795,9 @@ static int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 	int ret = 0;
 	struct v4l2_subdev *subdev = chan->subdev[num_sd];
 
+	if (atomic_read(&chan->is_streaming) == on)
+		return 0;
+
 	while (subdev != NULL) {
 		ret = v4l2_subdev_call(subdev, video, s_stream, on);
 		if (ret < 0 && ret != -ENOIOCTLCMD)
@@ -841,24 +874,25 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 
 	tegra_channel_ec_init(chan);
 
-	if (chan->vi->pg_mode) {
-		for (i = 0; i < chan->valid_ports; i++)
-			tegra_csi_tpg_start_streaming(chan->vi->csi,
-						      chan->port[i]);
-		atomic_set(&chan->is_streaming, ENABLE);
-	} else {
+	if (!chan->vi->pg_mode) {
+		/* Start the pipeline. */
 		ret = media_entity_pipeline_start(&chan->video.entity, pipe);
 		if (ret < 0)
 			goto error_pipeline_start;
+	}
 
-		/* Start the pipeline. */
+	if (chan->bypass) {
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
 			goto error_set_stream;
-	}
-
-	if (chan->bypass)
+		nvhost_module_enable_clk(chan->vi->dev);
+		tegra_mipi_bias_pad_enable();
+		mutex_lock(&chan->vi->mipical_lock);
+		tegra_channel_mipi_cal(chan, 1);
+		mutex_unlock(&chan->vi->mipical_lock);
+		nvhost_module_disable_clk(chan->vi->dev);
 		return ret;
+	}
 
 	chan->capture_state = CAPTURE_IDLE;
 	for (i = 0; i < chan->valid_ports; i++) {
@@ -921,9 +955,17 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 		/* dequeue buffers back to app which are in capture queue */
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
 
-		for (index = 0; index < chan->valid_ports; index++)
+		/* Disable clock gating to enable continuous clock */
+		tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, DISABLE);
+		for (index = 0; index < chan->valid_ports; index++) {
 			tegra_csi_stop_streaming(chan->vi->csi,
 						chan->port[index]);
+			/* Always clear single shot if armed at close */
+			if (csi_read(chan, index, TEGRA_VI_CSI_SINGLE_SHOT))
+				tegra_channel_clear_singleshot(chan, index);
+		}
+		/* Enable clock gating so VI can be clock gated if necessary */
+		tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, ENABLE);
 		tegra_csi_pad_control(chan->vi->csi, chan->port, DISABLE);
 	}
 

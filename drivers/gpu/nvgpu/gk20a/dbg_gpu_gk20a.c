@@ -497,26 +497,11 @@ static int dbg_bind_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 	struct file *f;
 	struct gk20a *g = dbg_s->g;
 	struct channel_gk20a *ch;
-	struct dbg_session_channel_data *ch_data, *tmp;
+	struct dbg_session_channel_data *ch_data;
 	struct dbg_session_data *session_data;
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_gpu_dbg, "%s fd=%d",
 		   dev_name(dbg_s->dev), args->channel_fd);
-
-	if (args->channel_fd == ~0) {
-		ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
-		if (!ch)
-			return -EINVAL;
-
-		mutex_lock(&dbg_s->ch_list_lock);
-		list_for_each_entry_safe(ch_data, tmp,
-					 &dbg_s->ch_list, ch_entry) {
-			if (ch_data->chid == ch->hw_chid)
-				dbg_unbind_single_channel_gk20a(dbg_s, ch_data);
-		}
-		mutex_unlock(&dbg_s->ch_list_lock);
-		return 0;
-	}
 
 	/* even though get_file_channel is doing this it releases it as well */
 	/* by holding it here we'll keep it from disappearing while the

@@ -181,6 +181,7 @@ static struct pm_qos_constraints gpu_freq_min_constraints = {
 	.default_value = PM_QOS_GPU_FREQ_MIN_DEFAULT_VALUE,
 	.type = PM_QOS_MAX,
 	.notifiers = &gpu_freq_min_notifier,
+	.parent_class = PM_QOS_GPU_FREQ_BOUNDS,
 };
 static struct pm_qos_object gpu_freq_min_pm_qos = {
 	.constraints = &gpu_freq_min_constraints,
@@ -194,6 +195,7 @@ static struct pm_qos_constraints gpu_freq_max_constraints = {
 	.default_value = PM_QOS_GPU_FREQ_MAX_DEFAULT_VALUE,
 	.type = PM_QOS_MIN,
 	.notifiers = &gpu_freq_max_notifier,
+	.parent_class = PM_QOS_GPU_FREQ_BOUNDS,
 };
 static struct pm_qos_object gpu_freq_max_pm_qos = {
 	.constraints = &gpu_freq_max_constraints,

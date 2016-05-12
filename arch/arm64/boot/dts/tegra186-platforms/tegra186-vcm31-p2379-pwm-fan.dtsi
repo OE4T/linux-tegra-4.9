@@ -28,7 +28,8 @@
 		state_cap = <4>; /* Cap pwm max to 256 = active_pwm[4] */
 		active_pwm_max = <256>;
 		/* Not use Tachometer pin */
-		/* tach_gpio =  <TEGRA_GPIO(FF, 2)>; */
+		tach_gpio =  <TEGRA_GPIO(FF, 2)>;
+		tach_period = <400>;
 		pwm_gpio = <TEGRA_GPIO(V, 6)>; /* TEGRA_GPIO_PV6 */
 		status = "okay";
 	};

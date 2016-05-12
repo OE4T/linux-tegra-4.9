@@ -631,6 +631,17 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 					 handle_simple_irq);
 	}
 
+	ret = gpiochip_add(&tegra_gpio_chip);
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Could not register gpiochip, %d\n", ret);
+		for (gpio = 0; gpio < tegra_gpio_chip.ngpio; gpio++) {
+			int irq = irq_find_mapping(irq_domain, gpio);
+			if (irq)
+				irq_dispose_mapping(irq);
+		}
+		irq_domain_remove(irq_domain);
+		return ret;
+	}
 	local_irq_save(flags);
 	for (i = 0; i < tegra_gpio_bank_count; i++) {
 		tg_cont = &tegra_gpio_controllers[i];
@@ -640,19 +651,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 		irq_set_chained_handler_and_data(tg_cont->irq,
 					tegra_gpio_irq_handler, tg_cont);
-	}
-
-	ret = gpiochip_add(&tegra_gpio_chip);
-	if (ret < 0) {
-		local_irq_restore(flags);
-		dev_err(&pdev->dev, "Could not register gpiochip, %d\n", ret);
-		for (gpio = 0; gpio < tegra_gpio_chip.ngpio; gpio++) {
-			int irq = irq_find_mapping(irq_domain, gpio);
-			if (irq)
-				irq_dispose_mapping(irq);
-		}
-		irq_domain_remove(irq_domain);
-		return ret;
 	}
 	local_irq_restore(flags);
 	return 0;

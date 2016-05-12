@@ -36,6 +36,7 @@
 
 #define YUV_MASK (FB_VMODE_Y420 | FB_VMODE_Y420_ONLY | \
 				FB_VMODE_Y422 | FB_VMODE_Y444)
+#define IS_RGB(yuv_flag) (!(yuv_flag & YUV_MASK))
 
 enum {
 	HDMI_INFOFRAME_TYPE_VENDOR = 0x81,

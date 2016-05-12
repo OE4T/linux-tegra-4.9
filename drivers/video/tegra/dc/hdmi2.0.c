@@ -1934,7 +1934,8 @@ static u32 tegra_hdmi_gcp_packing_phase(struct tegra_hdmi *hdmi)
 	if (!tegra_hdmi_gcp_color_depth(hdmi))
 		return 0;
 
-	if (!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36))
+	if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
+			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36)))
 		return 2;
 	else
 		return 0;
@@ -1948,7 +1949,8 @@ static bool tegra_hdmi_gcp_default_phase_en(struct tegra_hdmi *hdmi)
 		return false;
 
 	if ((yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30)) ||
-			(!(yuv_flag & YUV_MASK) && (yuv_flag == FB_VMODE_Y36)))
+			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36)) ||
+			(IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)))
 		return true;
 	else
 		return false;
@@ -2199,6 +2201,9 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 	struct tegra_dc_sor_data *sor = hdmi->sor;
+	long parent_clk_rate;
+	long rate;
+	int yuv_flag = hdmi->dc->mode.vmode & FB_VMODE_YUV_MASK;
 
 	if (!dc->out->parent_clk) {
 		dev_err(&dc->ndev->dev,
@@ -2215,8 +2220,15 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	}
 
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
+
 	/* Set rate on PARENT */
-	clk_set_rate(parent_clk, dc->mode.pclk);
+	if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
+			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
+		parent_clk_rate = 6 * dc->mode.pclk;
+		clk_set_rate(parent_clk, parent_clk_rate);
+	} else {
+		clk_set_rate(parent_clk, dc->mode.pclk);
+	}
 
 	if (clk == dc->clk)
 		clk_set_rate(clk, dc->mode.pclk);
@@ -2225,11 +2237,17 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	tegra_sor_safe_clk_enable(sor);
 	/* Set Parent to SOR_CLK*/
 	clk_set_parent(sor->sor_clk, parent_clk);
-	/* Set Rate to SOR_CLK*/
-	clk_set_rate(sor->sor_clk, dc->mode.pclk);
 
-	if (clk_get_rate(parent_clk) != dc->mode.pclk)
-		clk_set_rate(parent_clk, dc->mode.pclk);
+	/* Set Rate to SOR_CLK*/
+	if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
+			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
+		rate = dc->mode.pclk;
+		rate = rate >> 1;
+		rate = rate * 3;
+		clk_set_rate(sor->sor_clk, rate);
+	} else {
+		clk_set_rate(sor->sor_clk, dc->mode.pclk);
+	}
 
 	/* Enable SOR_CLK*/
 	tegra_sor_clk_enable(sor);

@@ -45,6 +45,8 @@
 #define MIN_WDT_PERIOD	5
 #define MAX_WDT_PERIOD	256
 
+static bool default_disable;
+
 struct tegra_wdt_t18x {
 	struct platform_device *pdev;
 	struct watchdog_device	wdt;
@@ -653,6 +655,9 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, tegra_wdt_t18x);
 
+	if (default_disable)
+		disable_por_reset_store(tegra_wdt_t18x, 1);
+
 	tegra_wdt_t18x_debugfs_init(tegra_wdt_t18x);
 
 	if (tegra_wdt_t18x->extended_suspend)
@@ -787,6 +792,8 @@ static void __exit tegra_wdt_t18x_exit(void)
 
 subsys_initcall(tegra_wdt_t18x_init);
 module_exit(tegra_wdt_t18x_exit);
+
+module_param(default_disable, bool, 0644);
 
 MODULE_AUTHOR("NVIDIA Corporation");
 MODULE_DESCRIPTION("Tegra Watchdog Driver");

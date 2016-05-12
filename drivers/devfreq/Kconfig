@@ -30,6 +30,16 @@ if PM_DEVFREQ
 
 comment "DEVFREQ Governors"
 
+config DEVFREQ_GOV_POD_SCALING
+        tristate "Power On Demand Scaling"
+        help
+          Sets the frequency based on two properties:
+            (1) The governor receives activity throughput hints that
+            indicate whether scaling up or down is required
+            (2) the load of the devices is estimated using busy times
+            from device profile to determine if the frequency should
+            be altered.
+
 config DEVFREQ_GOV_SIMPLE_ONDEMAND
 	tristate "Simple Ondemand"
 	help

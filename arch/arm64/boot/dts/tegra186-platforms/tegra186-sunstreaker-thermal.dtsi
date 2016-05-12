@@ -88,6 +88,11 @@
 
 		BCPU-therm {
 			status = "okay";
+
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+			};
+
 			trips {
 				trip_critical {
 					temperature = <100000>;
@@ -113,6 +118,11 @@
 
 		MCPU-therm {
 			status = "okay";
+
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+			};
+
 			trips {
 				trip_critical {
 					temperature = <100000>;
@@ -138,6 +148,11 @@
 
 		GPU-therm {
 			status = "okay";
+
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+			};
+
 			trips {
 				trip_bthrot {
 					temperature = <127000>;

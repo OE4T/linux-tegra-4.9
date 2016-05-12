@@ -25,6 +25,9 @@
 
 #define NV(p) "nvidia," #p
 
+static int tegra_ivc_bus_start(struct device *);
+static void tegra_ivc_bus_stop(struct device *);
+
 static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 {
 	struct tegra_ivc_driver *ivcdrv = to_tegra_ivc_driver(drv);
@@ -55,6 +58,12 @@ static int tegra_ivc_bus_probe(struct device *dev)
 
 		BUG_ON(ops == NULL || ops->probe == NULL);
 		ret = ops->probe(dev);
+		if (ret)
+			return ret;
+
+		ret = tegra_ivc_bus_start(dev);
+		if (ret && ops->remove != NULL)
+			ops->remove(dev);
 	}
 
 	return ret;
@@ -72,6 +81,8 @@ static int tegra_ivc_bus_remove(struct device *dev)
 
 	} else if (dev->type == &tegra_hsp_type) {
 		const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+
+		tegra_ivc_bus_stop(dev);
 
 		if (ops->remove != NULL)
 			ops->remove(dev);
@@ -561,8 +572,10 @@ error:
 }
 EXPORT_SYMBOL(tegra_ivc_bus_create);
 
-static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus)
+static int tegra_ivc_bus_start(struct device *dev)
 {
+	struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
 	int ret, i;
 
 	for (i = 0; i < bus->mbox.num_chans; i++) {
@@ -571,21 +584,21 @@ static int tegra_ivc_bus_start(struct tegra_ivc_bus *bus)
 
 		ret = device_add(&chan->dev);
 		if (ret) {
-			dev_err(&bus->dev, "channel device error: %d\n", ret);
+			dev_err(dev, "channel device error: %d\n", ret);
 			goto error;
 		}
 	}
 
 	ret = mbox_controller_register(&bus->mbox);
 	if (ret) {
-		dev_err(&bus->dev, "mailbox controller error: %d\n", ret);
+		dev_err(dev, "mailbox controller error: %d\n", ret);
 		goto error;
 	}
 
 	/* Listen to the remote's notification */
 	ret = tegra_hsp_enable(&bus->dev);
 	if (ret) {
-		dev_err(&bus->dev, "HSP doorbell master error: %d\n", ret);
+		dev_err(dev, "HSP doorbell master error: %d\n", ret);
 		flush_scheduled_work();
 		goto error_mbox;
 	}
@@ -603,11 +616,13 @@ error:
 	return ret;
 }
 
-static void tegra_ivc_bus_stop(struct tegra_ivc_bus *bus)
+static void tegra_ivc_bus_stop(struct device *dev)
 {
+	struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
 	int i;
 
-	tegra_hsp_disable(&bus->dev);
+	tegra_hsp_disable(dev);
 	flush_scheduled_work();
 	mbox_controller_unregister(&bus->mbox);
 
@@ -626,61 +641,18 @@ void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 }
 EXPORT_SYMBOL(tegra_ivc_bus_destroy);
 
-static int tegra_ivc_bus_notify(struct notifier_block *nb,
-				unsigned long action, void *data)
-{
-	struct device *dev = data;
-
-	switch (action) {
-	case BUS_NOTIFY_BOUND_DRIVER:
-		if (dev->type == &tegra_hsp_type) {
-			struct tegra_ivc_bus *bus =
-				container_of(dev, struct tegra_ivc_bus, dev);
-			int ret;
-
-			ret = tegra_ivc_bus_start(bus);
-			WARN_ON(ret);
-		}
-		break;
-
-	case BUS_NOTIFY_UNBIND_DRIVER:
-		if (dev->type == &tegra_hsp_type) {
-			struct tegra_ivc_bus *bus =
-				container_of(dev, struct tegra_ivc_bus, dev);
-
-			tegra_ivc_bus_stop(bus);
-		}
-		break;
-	}
-
-	return 0;
-}
-
-static struct notifier_block tegra_ivc_bus_nb = {
-	.notifier_call = tegra_ivc_bus_notify,
-};
-
 static __init int tegra_ivc_bus_init(void)
 {
-	int ret;
-
-	ret = bus_register(&tegra_ivc_bus_type);
-	if (ret)
-		return ret;
-
-	ret = bus_register_notifier(&tegra_ivc_bus_type, &tegra_ivc_bus_nb);
-	if (ret)
-		bus_unregister(&tegra_ivc_bus_type);
-	return ret;
+	return bus_register(&tegra_ivc_bus_type);
 }
 
 static __exit void tegra_ivc_bus_exit(void)
 {
-	bus_unregister_notifier(&tegra_ivc_bus_type, &tegra_ivc_bus_nb);
 	bus_unregister(&tegra_ivc_bus_type);
 }
 
 subsys_initcall(tegra_ivc_bus_init);
 module_exit(tegra_ivc_bus_exit);
+MODULE_AUTHOR("Remi Denis-Courmont <remid@nvidia.com>");
 MODULE_DESCRIPTION("NVIDIA Tegra IVC generic bus driver");
 MODULE_LICENSE("GPL");

@@ -5122,11 +5122,21 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi_fixed_clk = NULL;
 #endif
 
-	/* TO DO - check out which clock is needed here for T186
-	 * Temporarily passing the nvdisplay head0 clock
-	 */
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	dc_clk = tegra_disp_clk_get(&dc->ndev->dev, "nvdisplay_p0");
+	{
+		#define	CLK_NAME_MAX_LEN	13
+		char disp_clk_name[CLK_NAME_MAX_LEN];
+		int	ctrl_num;
+
+		ctrl_num = tegra_dc_get_head(dc);
+		if (0 > ctrl_num)
+			ctrl_num = 0;
+		snprintf(disp_clk_name, CLK_NAME_MAX_LEN, "nvdisplay_p%c",
+			'0' + ctrl_num);
+		dc_clk = tegra_disp_clk_get(&dc->ndev->dev, disp_clk_name);
+
+		#undef	CLK_NAME_MAX_LEN
+	}
 #else
 	dc_clk = clk_get_sys(dev_name(&dc->ndev->dev), NULL);
 #endif
@@ -5826,7 +5836,7 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	if (clk == dc->clk) {
 		base_clk = tegra_disp_clk_get(&dc->ndev->dev,
-				"pll_d");
+			dc->out->parent_clk ? dc->out->parent_clk : "pll_d");
 	} else {
 		if (dc->pdata->default_out->dsi->dsi_instance) {
 			parent_clk = tegra_disp_clk_get(&dc->ndev->dev,

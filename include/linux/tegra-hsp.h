@@ -106,6 +106,7 @@ struct tegra_hsp_sm_pair {
 int of_tegra_hsp_sm_pair_request(struct device *dev, u32 index,
 					struct tegra_hsp_sm_pair *);
 void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *);
-void tegra_hsp_sm_pair_write(struct tegra_hsp_sm_pair *, u32 value);
+void tegra_hsp_sm_pair_write(const struct tegra_hsp_sm_pair *, u32 value);
+bool tegra_hsp_sm_pair_is_empty(const struct tegra_hsp_sm_pair *);
 
 #endif

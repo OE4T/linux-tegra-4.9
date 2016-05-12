@@ -320,7 +320,7 @@ void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *pair)
 }
 EXPORT_SYMBOL(tegra_hsp_sm_pair_free);
 
-void tegra_hsp_sm_pair_write(struct tegra_hsp_sm_pair *pair,
+void tegra_hsp_sm_pair_write(const struct tegra_hsp_sm_pair *pair,
 				u32 value)
 {
 	struct device *dev = pair->dev;
@@ -332,6 +332,17 @@ void tegra_hsp_sm_pair_write(struct tegra_hsp_sm_pair *pair,
 		enable_irq(pair->irq_empty);
 }
 EXPORT_SYMBOL(tegra_hsp_sm_pair_write);
+
+bool tegra_hsp_sm_pair_is_empty(const struct tegra_hsp_sm_pair *pair)
+{
+	struct device *dev = pair->dev;
+	u32 wvalue = readl(tegra_hsp_sm_reg(dev, pair->index ^ 1));
+	u32 rvalue = readl(tegra_hsp_sm_reg(dev, pair->index));
+
+	return (rvalue & TEGRA_HSP_SM_FULL) == 0 &&
+		(wvalue & TEGRA_HSP_SM_FULL) == 0;
+}
+EXPORT_SYMBOL(tegra_hsp_sm_pair_is_empty);
 
 static const struct of_device_id tegra_hsp_of_match[] = {
 	{ .compatible = NV(tegra186-hsp), },

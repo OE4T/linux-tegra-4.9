@@ -51,9 +51,9 @@ extern void dhdsdio_isr(void * args);
 
 #ifdef	CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 #include "dhd_custom_sysfs_tegra.h"
+extern int bcmdhd_irq_number;
 #endif
 
-extern int bcmdhd_irq_number;
 
 /* driver info, initialized when bcmsdh_register is called */
 static bcmsdh_driver_t drvinfo = {NULL, NULL, NULL, NULL};
@@ -369,7 +369,10 @@ int bcmsdh_oob_intr_register(bcmsdh_info_t *bcmsdh, bcmsdh_cb_fn_t oob_irq_handl
 		SDLX_MSG(("%s: request_irq failed with %d\n", __FUNCTION__, err));
 		return err;
 	}
+
+#ifdef	CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
 	bcmdhd_irq_number = (int)bcmsdh_osinfo->oob_irq_num;
+#endif
 
 	err = enable_irq_wake(bcmsdh_osinfo->oob_irq_num);
 	if (!err)

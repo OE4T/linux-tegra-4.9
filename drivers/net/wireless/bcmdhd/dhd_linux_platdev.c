@@ -59,7 +59,11 @@ struct wifi_platform_data {
 	int (*set_carddetect)(int val);
 	void *(*mem_prealloc)(int section, unsigned long size);
 	int (*get_mac_addr)(unsigned char *buf);
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 58))
+	void *(*get_country_code)(char *ccode, u32 flags);
+#else
 	void *(*get_country_code)(char *ccode);
+#endif
 };
 #endif /* CONFIG_WIFI_CONTROL_FUNC */
 
@@ -174,9 +178,10 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 	}
 #endif /* ENABLE_4335BT_WAR */
 
+#ifdef CONFIG_EDP
 	if (on)
 		sysedp_set_state(adapter->sysedpc, on);
-
+#endif
 	if (plat_data && plat_data->set_power)
 		err = plat_data->set_power(on);
 	else {
@@ -186,9 +191,10 @@ int wifi_platform_set_power(wifi_adapter_info_t *adapter, bool on, unsigned long
 			gpio_set_value_cansleep(adapter->wlan_rst, on);
 	}
 
+#ifdef CONFIG_EDP
 	if (!on)
 		sysedp_set_state(adapter->sysedpc, on);
-
+#endif
 	if (msec && !err)
 		OSL_SLEEP(msec);
 
@@ -270,9 +276,15 @@ void *wifi_platform_get_country_code(wifi_adapter_info_t *adapter, char *ccode)
 	plat_data = adapter->wifi_plat_data;
 
 	DHD_TRACE(("%s\n", __FUNCTION__));
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 58))
+	if (plat_data && plat_data->get_country_code) {
+		return plat_data->get_country_code(ccode,0);
+	}
+#else
 	if (plat_data && plat_data->get_country_code) {
 		return plat_data->get_country_code(ccode);
-	}
+
+#endif  /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 10, 58)) */
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(2, 6, 39)) */
 
 	return NULL;
@@ -398,7 +410,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 			irq_flags = irqd_get_trigger_type(irq_data);
 			adapter->intr_flags = irq_flags & IRQF_TRIGGER_MASK;
 		}
-
+#ifdef CONFIG_EDP
 		if (of_property_read_string(node, "edp-consumer-name", &adapter->edp_name)) {
 			adapter->sysedpc = NULL;
 			DHD_ERROR(("%s: property 'edp-consumer-name' missing or invalid\n",
@@ -406,6 +418,7 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 		} else {
 			adapter->sysedpc = sysedp_create_consumer("primary-wifi", adapter->edp_name);
 		}
+#endif
 #ifdef NV_COUNTRY_CODE
 		if (wifi_platform_get_country_code_map(node, adapter))
 			DHD_ERROR(("%s:platform country code map is not available\n", __func__));
@@ -418,7 +431,9 @@ static int wifi_plat_dev_drv_probe(struct platform_device *pdev)
 			adapter->irq_num = resource->start;
 			adapter->intr_flags = resource->flags & IRQF_TRIGGER_MASK;
 		}
+#ifdef CONFIG_EDP
 		adapter->sysedpc = sysedp_create_consumer("wifi", "wifi");
+#endif
 	}
 
 	wifi_plat_dev_probe_ret = dhd_wifi_platform_load();
@@ -448,8 +463,10 @@ static int wifi_plat_dev_drv_remove(struct platform_device *pdev)
 #ifdef NV_COUNTRY_CODE
 	wifi_platform_free_country_code_map(adapter);
 #endif
+#ifdef CONFIG_EDP
 	sysedp_free_consumer(adapter->sysedpc);
 	adapter->sysedpc = NULL;
+#endif
 
 	return 0;
 }

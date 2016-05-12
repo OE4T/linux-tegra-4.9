@@ -239,6 +239,14 @@ extern int osl_error(int bcmerror);
 #include <linuxver.h>           /* use current 2.4.x calling conventions */
 #include <linux/kernel.h>       /* for vsn/printf's */
 #include <linux/string.h>       /* for mem*, str* */
+
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+#define brcm_strnicmp strncasecmp
+#else
+#define brcm_strnicmp strnicmp
+#endif
+
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(2, 4, 29)
 #define OSL_SYSUPTIME()		((uint32)jiffies_to_msecs(jiffies))
 #else

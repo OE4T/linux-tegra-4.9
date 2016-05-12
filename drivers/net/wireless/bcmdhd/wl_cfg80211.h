@@ -671,14 +671,17 @@ wl_remove_netinfo(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 	struct net_info *_net_info, *next;
 	bool dealloc_needed = false;
 
+	if (down_interruptible(&cfg->net_wdev_sema) < 0) {
+		WL_ERR(("%s: cannot lock semaphore\n", __func__));
+		return;
+	}
+
 	list_for_each_entry_safe(_net_info, next, &cfg->net_list, list) {
 		if (ndev && (_net_info->ndev == ndev)) {
 			list_del(&_net_info->list);
 			cfg->iface_cnt--;
 			if (_net_info->wdev) {
-				down_interruptible(&cfg->net_wdev_sema);
 				ndev->ieee80211_ptr = NULL;
-				up(&cfg->net_wdev_sema);
 			}
 			INIT_LIST_HEAD(&_net_info->list);
 			list_add(&_net_info->list, &cfg->dealloc_list);
@@ -688,12 +691,16 @@ wl_remove_netinfo(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 
 	if (dealloc_needed)
 		schedule_work(&cfg->dealloc_work);
+	up(&cfg->net_wdev_sema);
 }
 static inline void
 wl_delete_all_netinfo(struct bcm_cfg80211 *cfg)
 {
 	struct net_info *_net_info, *next;
-	down_interruptible(&cfg->net_wdev_sema);
+	if (down_interruptible(&cfg->net_wdev_sema) < 0) {
+		WL_ERR(("%s: cannot lock semaphore\n", __func__));
+		return;
+	}
 	down_write(&cfg->netif_sem);
 	list_for_each_entry_safe(_net_info, next, &cfg->net_list, list) {
 		list_del(&_net_info->list);
@@ -924,6 +931,13 @@ wl_get_netinfo_by_netdev(struct bcm_cfg80211 *cfg, struct net_device *ndev)
 	((wl_cfgp2p_find_wpsie((u8 *)_sme->ie, _sme->ie_len) != NULL) && \
 	 (!_sme->crypto.n_ciphers_pairwise) && \
 	 (!_sme->crypto.cipher_group))
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0))
+#define STA_INFO_BIT(info) (1ul << NL80211_STA_ ## info)
+#define strnicmp(str1, str2, len) strncasecmp((str1), (str2), (len))
+#else
+#define STA_INFO_BIT(info) (STATION_ ## info)
+#endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 0, 0)) */
 extern s32 wl_cfg80211_attach(struct net_device *ndev, void *context);
 extern s32 wl_cfg80211_attach_post(struct net_device *ndev);
 extern void wl_cfg80211_detach(void *para);

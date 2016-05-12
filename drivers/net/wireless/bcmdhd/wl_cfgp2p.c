@@ -2949,7 +2949,9 @@ wl_cfgp2p_del_p2p_disc_if(struct wireless_dev *wdev, struct bcm_cfg80211 *cfg)
 	}
 
 	cfg80211_unregister_wdev(wdev);
+#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 11, 0))
 	cancel_work_sync(&wdev->cleanup_work);
+#endif
 
 	if (rollback_lock)
 		rtnl_unlock();

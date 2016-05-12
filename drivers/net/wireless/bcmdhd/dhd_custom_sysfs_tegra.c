@@ -29,23 +29,23 @@ const char string_dpc_pkt[] = "dpc called";
 const char dummy_inf[] = "dummy:";
 int bcmdhd_irq_number;
 
-static DEVICE_ATTR(ping, S_IRUGO | S_IWUGO,
+static DEVICE_ATTR(ping, S_IRUGO | S_IWUSR,
 	tegra_sysfs_histogram_ping_show,
 	tegra_sysfs_histogram_ping_store);
 
-static DEVICE_ATTR(rssi, S_IRUGO | S_IWUGO,
+static DEVICE_ATTR(rssi, S_IRUGO | S_IWUSR,
 	tegra_sysfs_histogram_rssi_show,
 	tegra_sysfs_histogram_rssi_store);
 
-static DEVICE_ATTR(scan, S_IRUGO | S_IWUGO,
+static DEVICE_ATTR(scan, S_IRUGO | S_IWUSR,
 	tegra_sysfs_histogram_scan_show,
 	tegra_sysfs_histogram_scan_store);
 
-static DEVICE_ATTR(stat, S_IRUGO | S_IWUGO,
+static DEVICE_ATTR(stat, S_IRUGO | S_IWUSR,
 	tegra_sysfs_histogram_stat_show,
 	tegra_sysfs_histogram_stat_store);
 
-static DEVICE_ATTR(tcpdump, S_IRUGO | S_IWUGO,
+static DEVICE_ATTR(tcpdump, S_IRUGO | S_IWUSR,
 	tegra_sysfs_histogram_tcpdump_show,
 	tegra_sysfs_histogram_tcpdump_store);
 
@@ -64,7 +64,7 @@ static struct attribute_group tegra_sysfs_group_histogram = {
 };
 
 /* RF test attributes */
-static DEVICE_ATTR(state, S_IRUGO | S_IWUGO,
+static DEVICE_ATTR(state, S_IRUGO | S_IWUSR,
 	tegra_sysfs_rf_test_state_show,
 	tegra_sysfs_rf_test_state_store);
 
@@ -116,10 +116,10 @@ tegra_sysfs_register(struct device *dev)
 	/* create debugfs */
 	tegra_debugfs_root = debugfs_create_dir("bcmdhd_histogram", NULL);
 	if (tegra_debugfs_root) {
-		debugfs_create_file("scan", S_IRUGO | S_IWUGO,
+		debugfs_create_file("scan", S_IRUGO | S_IWUSR,
 			tegra_debugfs_root, (void *) 0,
 			&tegra_debugfs_histogram_scan_fops);
-		debugfs_create_file("tcpdump", S_IRUGO | S_IWUGO,
+		debugfs_create_file("tcpdump", S_IRUGO | S_IWUSR,
 			tegra_debugfs_root, (void *) 0,
 			&tegra_debugfs_histogram_tcpdump_fops);
 	}

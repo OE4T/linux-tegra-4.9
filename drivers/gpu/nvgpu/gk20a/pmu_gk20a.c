@@ -2421,11 +2421,10 @@ static int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
 static int gk20a_prepare_ucode(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
-	int i, err = 0;
+	int err = 0;
 	struct device *d = dev_from_gk20a(g);
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	void *ucode_ptr;
 
 	if (g->pmu_fw) {
 		gk20a_init_pmu(pmu);
@@ -2449,11 +2448,8 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	if (err)
 		goto err_release_fw;
 
-	ucode_ptr = pmu->ucode.cpu_va;
-
-	for (i = 0; i < (pmu->desc->app_start_offset +
-			pmu->desc->app_size) >> 2; i++)
-		gk20a_mem_wr32(ucode_ptr, i, pmu->ucode_image[i]);
+	gk20a_mem_wr_n(g, &pmu->ucode, 0, pmu->ucode_image,
+			pmu->desc->app_start_offset + pmu->desc->app_size);
 
 	gk20a_init_pmu(pmu);
 

@@ -129,14 +129,9 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 {
 	u32 addr_lo;
 	u32 addr_hi;
-	void *inst_ptr;
 	struct gk20a *g = c->g;
 
 	gk20a_dbg_fn("");
-
-	inst_ptr = c->inst_block.cpu_va;
-	if (!inst_ptr)
-		return -ENOMEM;
 
 	addr_lo = u64_lo32(c->userd_iova >> ram_userd_base_shift_v());
 	addr_hi = u64_hi32(c->userd_iova);
@@ -144,13 +139,15 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 	gk20a_dbg_info("channel %d : set ramfc userd 0x%16llx",
 		c->hw_chid, (u64)c->userd_iova);
 
-	gk20a_mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_w(),
+	gk20a_mem_wr32(g, &c->inst_block,
+		       ram_in_ramfc_w() + ram_fc_userd_w(),
 		       (g->mm.vidmem_is_vidmem ?
 			pbdma_userd_target_sys_mem_ncoh_f() :
 			pbdma_userd_target_vid_mem_f()) |
 		       pbdma_userd_addr_f(addr_lo));
 
-	gk20a_mem_wr32(inst_ptr, ram_in_ramfc_w() + ram_fc_userd_hi_w(),
+	gk20a_mem_wr32(g, &c->inst_block,
+		       ram_in_ramfc_w() + ram_fc_userd_hi_w(),
 		       pbdma_userd_hi_addr_f(addr_hi));
 
 	return 0;
@@ -186,12 +183,7 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 
 static int channel_gk20a_set_schedule_params(struct channel_gk20a *c)
 {
-	void *inst_ptr;
 	int shift = 0, value = 0;
-
-	inst_ptr = c->inst_block.cpu_va;
-	if (!inst_ptr)
-		return -ENOMEM;
 
 	gk20a_channel_get_timescale_from_timeslice(c->g,
 		c->timeslice_us, &value, &shift);
@@ -203,7 +195,7 @@ static int channel_gk20a_set_schedule_params(struct channel_gk20a *c)
 	WARN_ON(c->g->ops.fifo.preempt_channel(c->g, c->hw_chid));
 
 	/* set new timeslice */
-	gk20a_mem_wr32(inst_ptr, ram_fc_runlist_timeslice_w(),
+	gk20a_mem_wr32(c->g, &c->inst_block, ram_fc_runlist_timeslice_w(),
 		value | (shift << 12) |
 		fifo_runlist_timeslice_enable_true_f());
 
@@ -255,33 +247,30 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
 {
-	void *inst_ptr;
+	struct gk20a *g = c->g;
+	struct mem_desc *mem = &c->inst_block;
 
 	gk20a_dbg_fn("");
 
-	inst_ptr = c->inst_block.cpu_va;
-	if (!inst_ptr)
-		return -ENOMEM;
+	gk20a_memset(g, mem, 0, 0, ram_fc_size_val_v());
 
-	memset(inst_ptr, 0, ram_fc_size_val_v());
-
-	gk20a_mem_wr32(inst_ptr, ram_fc_gp_base_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_gp_base_w(),
 		pbdma_gp_base_offset_f(
 		u64_lo32(gpfifo_base >> pbdma_gp_base_rsvd_s())));
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_gp_base_hi_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_gp_base_hi_w(),
 		pbdma_gp_base_hi_offset_f(u64_hi32(gpfifo_base)) |
 		pbdma_gp_base_hi_limit2_f(ilog2(gpfifo_entries)));
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_signature_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_signature_w(),
 		 c->g->ops.fifo.get_pbdma_signature(c->g));
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_formats_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_formats_w(),
 		pbdma_formats_gp_fermi0_f() |
 		pbdma_formats_pb_fermi1_f() |
 		pbdma_formats_mp_fermi0_f());
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_pb_header_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_pb_header_w(),
 		pbdma_pb_header_priv_user_f() |
 		pbdma_pb_header_method_zero_f() |
 		pbdma_pb_header_subchannel_zero_f() |
@@ -289,47 +278,49 @@ int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 		pbdma_pb_header_first_true_f() |
 		pbdma_pb_header_type_inc_f());
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_subdevice_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_subdevice_w(),
 		pbdma_subdevice_id_f(1) |
 		pbdma_subdevice_status_active_f() |
 		pbdma_subdevice_channel_dma_enable_f());
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_target_w(), pbdma_target_engine_sw_f());
+	gk20a_mem_wr32(g, mem, ram_fc_target_w(), pbdma_target_engine_sw_f());
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_acquire_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_acquire_w(),
 		channel_gk20a_pbdma_acquire_val(c));
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_runlist_timeslice_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_runlist_timeslice_w(),
 		fifo_runlist_timeslice_timeout_128_f() |
 		fifo_runlist_timeslice_timescale_3_f() |
 		fifo_runlist_timeslice_enable_true_f());
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_pb_timeslice_w(),
+	gk20a_mem_wr32(g, mem, ram_fc_pb_timeslice_w(),
 		fifo_pb_timeslice_timeout_16_f() |
 		fifo_pb_timeslice_timescale_0_f() |
 		fifo_pb_timeslice_enable_true_f());
 
-	gk20a_mem_wr32(inst_ptr, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
+	gk20a_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
 
 	return channel_gk20a_commit_userd(c);
 }
 
 static int channel_gk20a_setup_userd(struct channel_gk20a *c)
 {
-	BUG_ON(!c->userd_cpu_va);
+	struct gk20a *g = c->g;
+	struct mem_desc *mem = &g->fifo.userd;
+	u32 offset = c->hw_chid * g->fifo.userd_entry_size / sizeof(u32);
 
 	gk20a_dbg_fn("");
 
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_put_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_get_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_ref_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_put_hi_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_ref_threshold_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_gp_top_level_get_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_gp_top_level_get_hi_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_get_hi_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_gp_get_w(), 0);
-	gk20a_mem_wr32(c->userd_cpu_va, ram_userd_gp_put_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_put_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_get_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_ref_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_put_hi_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_ref_threshold_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_top_level_get_hi_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_get_hi_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_get_w(), 0);
+	gk20a_mem_wr32(g, mem, offset + ram_userd_gp_put_w(), 0);
 
 	return 0;
 }

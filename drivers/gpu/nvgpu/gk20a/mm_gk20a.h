@@ -419,6 +419,34 @@ static inline enum gmmu_pgsz_gk20a __get_pte_size(struct vm_gk20a *vm,
 		return gmmu_page_size_small;
 }
 
+/*
+ * Buffer accessors - wrap between begin() and end() if there is no permanent
+ * kernel mapping for this buffer.
+ */
+
+int gk20a_mem_begin(struct gk20a *g, struct mem_desc *mem);
+/* nop for null mem, like with free() or vunmap() */
+void gk20a_mem_end(struct gk20a *g, struct mem_desc *mem);
+
+/* word-indexed offset */
+u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w);
+/* byte offset (32b-aligned) */
+u32 gk20a_mem_rd(struct gk20a *g, struct mem_desc *mem, u32 offset);
+/* memcpy to cpu, offset and size in bytes (32b-aligned) */
+void gk20a_mem_rd_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
+		void *dest, u32 size);
+
+/* word-indexed offset */
+void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data);
+/* byte offset (32b-aligned) */
+void gk20a_mem_wr(struct gk20a *g, struct mem_desc *mem, u32 offset, u32 data);
+/* memcpy from cpu, offset and size in bytes (32b-aligned) */
+void gk20a_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
+		void *src, u32 size);
+/* size and offset in bytes (32b-aligned), filled with u32s */
+void gk20a_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
+		u32 value, u32 size);
+
 #if 0 /*related to addr bits above, concern below TBD on which is accurate */
 #define bar1_instance_block_shift_gk20a() (max_physaddr_bits_gk20a() -\
 					   bus_bar1_block_ptr_s())
@@ -673,7 +701,6 @@ void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi);
 int gk20a_mm_pde_coverage_bit_count(struct vm_gk20a *vm);
-u32 *pde_from_index(struct vm_gk20a *vm, u32 i);
 u32 pte_index_from_vaddr(struct vm_gk20a *vm,
 			       u64 addr, enum gmmu_pgsz_gk20a pgsz_idx);
 void free_gmmu_pages(struct vm_gk20a *vm,
@@ -685,7 +712,7 @@ struct gpu_ops;
 void gk20a_init_mm(struct gpu_ops *gops);
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 						      u32 big_page_size);
-void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
+void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *mem, u64 pdb_addr);
 
 void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block);
 

@@ -201,7 +201,7 @@ struct gpu_ops {
 			  struct gr_ctx_desc *gr_ctx);
 		void (*update_ctxsw_preemption_mode)(struct gk20a *g,
 				struct channel_ctx_gk20a *ch_ctx,
-				void *ctx_ptr);
+				struct mem_desc *mem);
 		int (*update_smpc_ctxsw_mode)(struct gk20a *g,
 				struct channel_gk20a *c,
 				bool enable);
@@ -221,7 +221,8 @@ struct gpu_ops {
 		int (*wait_empty)(struct gk20a *g, unsigned long end_jiffies,
 		       u32 expect_delay);
 		void (*init_cyclestats)(struct gk20a *g);
-		void (*enable_cde_in_fecs)(void *ctx_ptr);
+		void (*enable_cde_in_fecs)(struct gk20a *g,
+				struct mem_desc *mem);
 		int (*set_sm_debug_mode)(struct gk20a *g, struct channel_gk20a *ch,
 					u64 sms, bool enable);
 		void (*bpt_reg_info)(struct gk20a *g,
@@ -484,7 +485,7 @@ struct gpu_ops {
 		void (*cbc_clean)(struct gk20a *g);
 		void (*tlb_invalidate)(struct vm_gk20a *vm);
 		void (*set_big_page_size)(struct gk20a *g,
-					  void *inst_ptr, int size);
+					  struct mem_desc *mem, int size);
 		u32 (*get_big_page_sizes)(void);
 		u32 (*get_physical_addr_bits)(struct gk20a *g);
 		int (*init_mm_setup_hw)(struct gk20a *g);
@@ -493,7 +494,8 @@ struct gpu_ops {
 		void (*remove_bar2_vm)(struct gk20a *g);
 		const struct gk20a_mmu_level *
 			(*get_mmu_levels)(struct gk20a *g, u32 big_page_size);
-		void (*init_pdb)(struct gk20a *g, void *inst_ptr, u64 pdb_addr);
+		void (*init_pdb)(struct gk20a *g, struct mem_desc *mem,
+				u64 pdb_addr);
 		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
 					 u32 flags);
 		int (*bar1_bind)(struct gk20a *g, u64 bar1_iova);
@@ -858,53 +860,6 @@ do {									\
 
 #define gk20a_dbg_info(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_info, fmt, ##arg)
-
-/* mem access with dbg_mem logging */
-static inline u8 gk20a_mem_rd08(void *ptr, int b)
-{
-	u8 _b = ((const u8 *)ptr)[b];
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr+sizeof(u8)*b, _b);
-#endif
-	return _b;
-}
-static inline u16 gk20a_mem_rd16(void *ptr, int s)
-{
-	u16 _s = ((const u16 *)ptr)[s];
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr+sizeof(u16)*s, _s);
-#endif
-	return _s;
-}
-static inline u32 gk20a_mem_rd32(void *ptr, int w)
-{
-	u32 _w = ((const u32 *)ptr)[w];
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + sizeof(u32)*w, _w);
-#endif
-	return _w;
-}
-static inline void gk20a_mem_wr08(void *ptr, int b, u8 data)
-{
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr+sizeof(u8)*b, data);
-#endif
-	((u8 *)ptr)[b] = data;
-}
-static inline void gk20a_mem_wr16(void *ptr, int s, u16 data)
-{
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr+sizeof(u16)*s, data);
-#endif
-	((u16 *)ptr)[s] = data;
-}
-static inline void gk20a_mem_wr32(void *ptr, int w, u32 data)
-{
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr+sizeof(u32)*w, data);
-#endif
-	((u32 *)ptr)[w] = data;
-}
 
 void gk20a_init_clk_ops(struct gpu_ops *gops);
 

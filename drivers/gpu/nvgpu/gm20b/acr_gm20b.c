@@ -43,8 +43,8 @@ static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 static void lsfm_free_ucode_img_res(struct flcn_ucode_img *p_img);
 static void lsfm_free_nonpmu_ucode_img_res(struct flcn_ucode_img *p_img);
 static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm);
-static int lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
-	void *nonwpr_addr);
+static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
+	struct mem_desc *nonwpr);
 static int acr_ucode_patch_sig(struct gk20a *g,
 		unsigned int *p_img,
 		unsigned int *p_prod_sig,
@@ -355,7 +355,7 @@ int prepare_ucode_blob(struct gk20a *g)
 
 		gm20b_dbg_pmu("managed LS falcon %d, WPR size %d bytes.\n",
 			plsfm->managed_flcn_cnt, plsfm->wpr_size);
-		lsfm_init_wpr_contents(g, plsfm, g->acr.ucode_blob.cpu_va);
+		lsfm_init_wpr_contents(g, plsfm, &g->acr.ucode_blob);
 	} else {
 		gm20b_dbg_pmu("LSFM is managing no falcons.\n");
 	}
@@ -613,120 +613,91 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 }
 
 /* Initialize WPR contents */
-static int lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
-	void *nonwpr_addr)
+static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
+	struct mem_desc *ucode)
 {
+	struct lsfm_managed_ucode_img *pnode = plsfm->ucode_img_list;
+	u32 i;
 
-	int status = 0;
-	union flcn_bl_generic_desc *nonwpr_bl_gen_desc;
-	if (nonwpr_addr == NULL) {
-		status = -ENOMEM;
-	} else {
-		struct lsfm_managed_ucode_img *pnode = plsfm->ucode_img_list;
-		struct lsf_wpr_header *wpr_hdr;
-		struct lsf_lsb_header *lsb_hdr;
-		void *ucode_off;
-		u32 i;
+	/* The WPR array is at the base of the WPR */
+	pnode = plsfm->ucode_img_list;
+	i = 0;
 
-		/* The WPR array is at the base of the WPR */
-		wpr_hdr = (struct lsf_wpr_header *)nonwpr_addr;
-		pnode = plsfm->ucode_img_list;
-		i = 0;
+	/*
+	 * Walk the managed falcons, flush WPR and LSB headers to FB.
+	 * flush any bl args to the storage area relative to the
+	 * ucode image (appended on the end as a DMEM area).
+	 */
+	while (pnode) {
+		/* Flush WPR header to memory*/
+		gk20a_mem_wr_n(g, ucode, i * sizeof(pnode->wpr_header),
+				&pnode->wpr_header, sizeof(pnode->wpr_header));
 
-		/*
-		 * Walk the managed falcons, flush WPR and LSB headers to FB.
-		 * flush any bl args to the storage area relative to the
-		 * ucode image (appended on the end as a DMEM area).
-		 */
-		while (pnode) {
-			/* Flush WPR header to memory*/
-			memcpy(&wpr_hdr[i], &pnode->wpr_header,
-					sizeof(struct lsf_wpr_header));
-			gm20b_dbg_pmu("wpr header as in memory and pnode\n");
-			gm20b_dbg_pmu("falconid :%d %d\n",
-				pnode->wpr_header.falcon_id,
-				wpr_hdr[i].falcon_id);
-			gm20b_dbg_pmu("lsb_offset :%x %x\n",
-				pnode->wpr_header.lsb_offset,
-				wpr_hdr[i].lsb_offset);
-			gm20b_dbg_pmu("bootstrap_owner :%d %d\n",
-				pnode->wpr_header.bootstrap_owner,
-				wpr_hdr[i].bootstrap_owner);
-			gm20b_dbg_pmu("lazy_bootstrap :%d %d\n",
-				pnode->wpr_header.lazy_bootstrap,
-				wpr_hdr[i].lazy_bootstrap);
-			gm20b_dbg_pmu("status :%d %d\n",
-				pnode->wpr_header.status, wpr_hdr[i].status);
+		gm20b_dbg_pmu("wpr header");
+		gm20b_dbg_pmu("falconid :%d",
+				pnode->wpr_header.falcon_id);
+		gm20b_dbg_pmu("lsb_offset :%x",
+				pnode->wpr_header.lsb_offset);
+		gm20b_dbg_pmu("bootstrap_owner :%d",
+			pnode->wpr_header.bootstrap_owner);
+		gm20b_dbg_pmu("lazy_bootstrap :%d",
+				pnode->wpr_header.lazy_bootstrap);
+		gm20b_dbg_pmu("status :%d",
+				pnode->wpr_header.status);
 
-			/*Flush LSB header to memory*/
-			lsb_hdr = (struct lsf_lsb_header *)((u8 *)nonwpr_addr +
-					pnode->wpr_header.lsb_offset);
-			memcpy(lsb_hdr, &pnode->lsb_header,
-					sizeof(struct lsf_lsb_header));
-			gm20b_dbg_pmu("lsb header as in memory and pnode\n");
-			gm20b_dbg_pmu("ucode_off :%x %x\n",
-				pnode->lsb_header.ucode_off,
-				lsb_hdr->ucode_off);
-			gm20b_dbg_pmu("ucode_size :%x %x\n",
-				pnode->lsb_header.ucode_size,
-				lsb_hdr->ucode_size);
-			gm20b_dbg_pmu("data_size :%x %x\n",
-				pnode->lsb_header.data_size,
-				lsb_hdr->data_size);
-			gm20b_dbg_pmu("bl_code_size :%x %x\n",
-				pnode->lsb_header.bl_code_size,
-				lsb_hdr->bl_code_size);
-			gm20b_dbg_pmu("bl_imem_off :%x %x\n",
-				pnode->lsb_header.bl_imem_off,
-				lsb_hdr->bl_imem_off);
-			gm20b_dbg_pmu("bl_data_off :%x %x\n",
-				pnode->lsb_header.bl_data_off,
-				lsb_hdr->bl_data_off);
-			gm20b_dbg_pmu("bl_data_size :%x %x\n",
-				pnode->lsb_header.bl_data_size,
-				lsb_hdr->bl_data_size);
-			gm20b_dbg_pmu("app_code_off :%x %x\n",
-				pnode->lsb_header.app_code_off,
-				lsb_hdr->app_code_off);
-			gm20b_dbg_pmu("app_code_size :%x %x\n",
-				pnode->lsb_header.app_code_size,
-				lsb_hdr->app_code_size);
-			gm20b_dbg_pmu("app_data_off :%x %x\n",
-				pnode->lsb_header.app_data_off,
-				lsb_hdr->app_data_off);
-			gm20b_dbg_pmu("app_data_size :%x %x\n",
-				pnode->lsb_header.app_data_size,
-				lsb_hdr->app_data_size);
-			gm20b_dbg_pmu("flags :%x %x\n",
-				pnode->lsb_header.flags, lsb_hdr->flags);
+		/*Flush LSB header to memory*/
+		gk20a_mem_wr_n(g, ucode, pnode->wpr_header.lsb_offset,
+				&pnode->lsb_header, sizeof(pnode->lsb_header));
 
-			/*If this falcon has a boot loader and related args,
-			 * flush them.*/
-			if (!pnode->ucode_img.header) {
-				nonwpr_bl_gen_desc =
-					(union flcn_bl_generic_desc *)
-					((u8 *)nonwpr_addr +
-					pnode->lsb_header.bl_data_off);
+		gm20b_dbg_pmu("lsb header");
+		gm20b_dbg_pmu("ucode_off :%x",
+				pnode->lsb_header.ucode_off);
+		gm20b_dbg_pmu("ucode_size :%x",
+				pnode->lsb_header.ucode_size);
+		gm20b_dbg_pmu("data_size :%x",
+				pnode->lsb_header.data_size);
+		gm20b_dbg_pmu("bl_code_size :%x",
+				pnode->lsb_header.bl_code_size);
+		gm20b_dbg_pmu("bl_imem_off :%x",
+				pnode->lsb_header.bl_imem_off);
+		gm20b_dbg_pmu("bl_data_off :%x",
+				pnode->lsb_header.bl_data_off);
+		gm20b_dbg_pmu("bl_data_size :%x",
+				pnode->lsb_header.bl_data_size);
+		gm20b_dbg_pmu("app_code_off :%x",
+				pnode->lsb_header.app_code_off);
+		gm20b_dbg_pmu("app_code_size :%x",
+				pnode->lsb_header.app_code_size);
+		gm20b_dbg_pmu("app_data_off :%x",
+				pnode->lsb_header.app_data_off);
+		gm20b_dbg_pmu("app_data_size :%x",
+				pnode->lsb_header.app_data_size);
+		gm20b_dbg_pmu("flags :%x",
+				pnode->lsb_header.flags);
 
-				/*Populate gen bl and flush to memory*/
-				lsfm_fill_flcn_bl_gen_desc(g, pnode);
-				memcpy(nonwpr_bl_gen_desc, &pnode->bl_gen_desc,
+		/*If this falcon has a boot loader and related args,
+		 * flush them.*/
+		if (!pnode->ucode_img.header) {
+			/*Populate gen bl and flush to memory*/
+			lsfm_fill_flcn_bl_gen_desc(g, pnode);
+			gk20a_mem_wr_n(g, ucode,
+					pnode->lsb_header.bl_data_off,
+					&pnode->bl_gen_desc,
 					pnode->bl_gen_desc_size);
-			}
-			ucode_off = (void *)(pnode->lsb_header.ucode_off +
-				(u8 *)nonwpr_addr);
-			/*Copying of ucode*/
-			memcpy(ucode_off, pnode->ucode_img.data,
-				pnode->ucode_img.data_size);
-			pnode = pnode->next;
-			i++;
 		}
-
-		/* Tag the terminator WPR header with an invalid falcon ID. */
-		gk20a_mem_wr32(&wpr_hdr[plsfm->managed_flcn_cnt].falcon_id,
-			0, LSF_FALCON_ID_INVALID);
+		/*Copying of ucode*/
+		gk20a_mem_wr_n(g, ucode, pnode->lsb_header.ucode_off,
+				pnode->ucode_img.data,
+				pnode->ucode_img.data_size);
+		pnode = pnode->next;
+		i++;
 	}
-	return status;
+
+	/* Tag the terminator WPR header with an invalid falcon ID. */
+	gk20a_mem_wr32(g, ucode,
+			plsfm->managed_flcn_cnt * sizeof(struct lsf_wpr_header) +
+			offsetof(struct lsf_wpr_header, falcon_id),
+			LSF_FALCON_ID_INVALID);
 }
 
 /*!
@@ -1000,7 +971,7 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	int i, err = 0;
+	int err = 0;
 	u64 *acr_dmem;
 	u32 img_size_in_bytes = 0;
 	u32 status, size;
@@ -1066,10 +1037,8 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 		((struct flcn_acr_desc *)acr_dmem)->regions.no_regions = 2;
 		((struct flcn_acr_desc *)acr_dmem)->wpr_offset = 0;
 
-		for (i = 0; i < (img_size_in_bytes/4); i++) {
-			gk20a_mem_wr32(acr->acr_ucode.cpu_va, i,
-					acr_ucode_data_t210_load[i]);
-		}
+		gk20a_mem_wr_n(g, &acr->acr_ucode, 0,
+				acr_ucode_data_t210_load, img_size_in_bytes);
 		/*
 		 * In order to execute this binary, we will be using
 		 * a bootloader which will load this image into PMU IMEM/DMEM.
@@ -1323,7 +1292,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 	struct device *d = dev_from_gk20a(g);
-	int i, err = 0;
+	int err = 0;
 	u32 bl_sz;
 	struct acr_gm20b *acr = &g->acr;
 	const struct firmware *hsbl_fw = acr->hsbl_fw;
@@ -1369,8 +1338,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 			goto err_free_ucode;
 		}
 
-		for (i = 0; i < (bl_sz) >> 2; i++)
-			gk20a_mem_wr32(acr->hsbl_ucode.cpu_va, i, pmu_bl_gm10x[i]);
+		gk20a_mem_wr_n(g, &acr->hsbl_ucode, 0, pmu_bl_gm10x, bl_sz);
 		gm20b_dbg_pmu("Copied bl ucode to bl_cpuva\n");
 	}
 	/*

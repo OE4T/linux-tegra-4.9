@@ -130,7 +130,6 @@ struct channel_gk20a {
 	struct mem_desc inst_block;
 	struct mem_desc_sub ramfc;
 
-	void *userd_cpu_va;
 	u64 userd_iova;
 	u64 userd_gpu_va;
 

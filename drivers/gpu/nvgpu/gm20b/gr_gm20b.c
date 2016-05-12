@@ -849,7 +849,7 @@ static int gr_gm20b_alloc_gr_ctx(struct gk20a *g,
 
 static void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx,
-		void *ctx_ptr)
+		struct mem_desc *mem)
 {
 	struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
 	u32 cta_preempt_option =
@@ -859,7 +859,8 @@ static void gr_gm20b_update_ctxsw_preemption_mode(struct gk20a *g,
 
 	if (gr_ctx->compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CTA) {
 		gk20a_dbg_info("CTA: %x", cta_preempt_option);
-		gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_preemption_options_o(), 0,
+		gk20a_mem_wr(g, mem,
+				ctxsw_prog_main_image_preemption_options_o(),
 				cta_preempt_option);
 	}
 
@@ -1005,7 +1006,7 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 				       bool enable)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	void *ctx_ptr = NULL;
+	struct mem_desc *mem;
 	u32 v;
 
 	gk20a_dbg_fn("");
@@ -1013,18 +1014,17 @@ static int gr_gm20b_update_pc_sampling(struct channel_gk20a *c,
 	if (!ch_ctx || !ch_ctx->gr_ctx || c->vpr)
 		return -EINVAL;
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr)
+	mem = &ch_ctx->gr_ctx->mem;
+
+	if (gk20a_mem_begin(c->g, mem))
 		return -ENOMEM;
 
-	v = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	v = gk20a_mem_rd(c->g, mem, ctxsw_prog_main_image_pm_o());
 	v &= ~ctxsw_prog_main_image_pm_pc_sampling_m();
 	v |= ctxsw_prog_main_image_pm_pc_sampling_f(enable);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0, v);
+	gk20a_mem_wr(c->g, mem, ctxsw_prog_main_image_pm_o(), v);
 
-	vunmap(ctx_ptr);
+	gk20a_mem_end(c->g, mem);
 
 	gk20a_dbg_fn("done");
 
@@ -1089,13 +1089,13 @@ static void gr_gm20b_init_cyclestats(struct gk20a *g)
 #endif
 }
 
-static void gr_gm20b_enable_cde_in_fecs(void *ctx_ptr)
+static void gr_gm20b_enable_cde_in_fecs(struct gk20a *g, struct mem_desc *mem)
 {
 	u32 cde_v;
 
-	cde_v = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0);
+	cde_v = gk20a_mem_rd(g, mem, ctxsw_prog_main_image_ctl_o());
 	cde_v |=  ctxsw_prog_main_image_ctl_cde_enabled_f();
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_ctl_o(), 0, cde_v);
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_ctl_o(), cde_v);
 }
 
 static void gr_gm20b_bpt_reg_info(struct gk20a *g, struct warpstate *w_state)

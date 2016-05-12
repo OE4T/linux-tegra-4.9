@@ -44,6 +44,112 @@
 #include "kind_gk20a.h"
 #include "semaphore_gk20a.h"
 
+int gk20a_mem_begin(struct gk20a *g, struct mem_desc *mem)
+{
+	void *cpu_va;
+
+	if (WARN_ON(mem->cpu_va)) {
+		gk20a_warn(dev_from_gk20a(g), "nested %s", __func__);
+		return -EBUSY;
+	}
+
+	cpu_va = vmap(mem->pages,
+			PAGE_ALIGN(mem->size) >> PAGE_SHIFT,
+			0, pgprot_writecombine(PAGE_KERNEL));
+
+	if (WARN_ON(!cpu_va))
+		return -ENOMEM;
+
+	mem->cpu_va = cpu_va;
+	return 0;
+}
+
+void gk20a_mem_end(struct gk20a *g, struct mem_desc *mem)
+{
+	vunmap(mem->cpu_va);
+	mem->cpu_va = NULL;
+}
+
+u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
+{
+	u32 *ptr = mem->cpu_va;
+	u32 data;
+
+	WARN_ON(!ptr);
+	data = ptr[w];
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
+#endif
+	return data;
+}
+
+u32 gk20a_mem_rd(struct gk20a *g, struct mem_desc *mem, u32 offset)
+{
+	WARN_ON(offset & 3);
+	return gk20a_mem_rd32(g, mem, offset / sizeof(u32));
+}
+
+void gk20a_mem_rd_n(struct gk20a *g, struct mem_desc *mem,
+		u32 offset, void *dest, u32 size)
+{
+	u32 i;
+	u32 *dest_u32 = dest;
+
+	WARN_ON(offset & 3);
+	WARN_ON(size & 3);
+	offset /= sizeof(u32);
+	size /= sizeof(u32);
+
+	for (i = 0; i < size; i++)
+		dest_u32[i] = gk20a_mem_rd32(g, mem, offset + i);
+}
+
+void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
+{
+	u32 *ptr = mem->cpu_va;
+
+	WARN_ON(!ptr);
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
+#endif
+	ptr[w] = data;
+}
+
+void gk20a_mem_wr(struct gk20a *g, struct mem_desc *mem, u32 offset, u32 data)
+{
+	WARN_ON(offset & 3);
+	gk20a_mem_wr32(g, mem, offset / sizeof(u32), data);
+}
+
+void gk20a_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
+		void *src, u32 size)
+{
+	u32 i;
+	u32 *src_u32 = src;
+
+	WARN_ON(offset & 3);
+	WARN_ON(size & 3);
+	offset /= sizeof(u32);
+	size /= sizeof(u32);
+
+	for (i = 0; i < size; i++)
+		gk20a_mem_wr32(g, mem, offset + i, src_u32[i]);
+}
+
+void gk20a_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
+		u32 value, u32 size)
+{
+	u32 i;
+
+	WARN_ON(offset & 3);
+	WARN_ON(size & 3);
+	offset /= sizeof(u32);
+	size /= sizeof(u32);
+
+	for (i = 0; i < size; i++)
+		gk20a_mem_wr32(g, mem, offset + i, value);
+}
+
 /*
  * GPU mapping life cycle
  * ======================
@@ -780,9 +886,14 @@ void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 		   *pde_lo, *pde_hi);
 }
 
-u32 *pde_from_index(struct vm_gk20a *vm, u32 i)
+static u32 pde_from_index(u32 i)
 {
-	return (u32 *) (((u8 *)vm->pdb.mem.cpu_va) + i*gmmu_pde__size_v());
+	return i * gmmu_pde__size_v() / sizeof(u32);
+}
+
+static u32 pte_from_index(u32 i)
+{
+	return i * gmmu_pte__size_v() / sizeof(u32);
 }
 
 u32 pte_index_from_vaddr(struct vm_gk20a *vm,
@@ -2323,7 +2434,7 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 	u64 pte_addr_small = 0, pte_addr_big = 0;
 	struct gk20a_mm_entry *entry = vm->pdb.entries + i;
 	u32 pde_v[2] = {0, 0};
-	u32 *pde;
+	u32 pde;
 
 	gk20a_dbg_fn("");
 
@@ -2348,10 +2459,10 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 		    (big_valid ? (gmmu_pde_vol_big_true_f()) :
 		     gmmu_pde_vol_big_false_f());
 
-	pde = pde_from_index(vm, i);
+	pde = pde_from_index(i);
 
-	gk20a_mem_wr32(pde, 0, pde_v[0]);
-	gk20a_mem_wr32(pde, 1, pde_v[1]);
+	gk20a_mem_wr32(g, &vm->pdb.mem, pde + 0, pde_v[0]);
+	gk20a_mem_wr32(g, &vm->pdb.mem, pde + 1, pde_v[1]);
 
 	gk20a_dbg(gpu_dbg_pte, "pde:%d,sz=%d = 0x%x,0x%08x",
 		  i, gmmu_pgsz_idx, pde_v[1], pde_v[0]);
@@ -2432,8 +2543,8 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 		gk20a_dbg(gpu_dbg_pte, "pte_cur=%d [0x0,0x0]", i);
 	}
 
-	gk20a_mem_wr32(pte->mem.cpu_va + i*8, 0, pte_w[0]);
-	gk20a_mem_wr32(pte->mem.cpu_va + i*8, 1, pte_w[1]);
+	gk20a_mem_wr32(g, &pte->mem, pte_from_index(i) + 0, pte_w[0]);
+	gk20a_mem_wr32(g, &pte->mem, pte_from_index(i) + 1, pte_w[1]);
 
 	if (*iova) {
 		*iova += page_size;
@@ -3489,19 +3600,19 @@ static int gk20a_init_cde_vm(struct mm_gk20a *mm)
 			false, false, "cde");
 }
 
-void gk20a_mm_init_pdb(struct gk20a *g, void *inst_ptr, u64 pdb_addr)
+void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *mem, u64 pdb_addr)
 {
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_lo_w(),
+	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_lo_w(),
 		(g->mm.vidmem_is_vidmem ?
 		  ram_in_page_dir_base_target_sys_mem_ncoh_f() :
 		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |
 		ram_in_page_dir_base_lo_f(pdb_addr_lo));
 
-	gk20a_mem_wr32(inst_ptr, ram_in_page_dir_base_hi_w(),
+	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_hi_w(),
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 
@@ -3510,23 +3621,22 @@ void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 pde_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.sgt->sgl, 0);
-	void *inst_ptr = inst_block->cpu_va;
 
 	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
-		gk20a_mm_inst_block_addr(g, inst_block), inst_ptr);
+		gk20a_mm_inst_block_addr(g, inst_block), inst_block->cpu_va);
 
 	gk20a_dbg_info("pde pa=0x%llx", (u64)pde_addr);
 
-	g->ops.mm.init_pdb(g, inst_ptr, pde_addr);
+	g->ops.mm.init_pdb(g, inst_block, pde_addr);
 
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_lo_w(),
+	gk20a_mem_wr32(g, inst_block, ram_in_adr_limit_lo_w(),
 		u64_lo32(vm->va_limit - 1) & ~0xfff);
 
-	gk20a_mem_wr32(inst_ptr, ram_in_adr_limit_hi_w(),
+	gk20a_mem_wr32(g, inst_block, ram_in_adr_limit_hi_w(),
 		ram_in_adr_limit_hi_f(u64_hi32(vm->va_limit - 1)));
 
 	if (big_page_size && g->ops.mm.set_big_page_size)
-		g->ops.mm.set_big_page_size(g, inst_ptr, big_page_size);
+		g->ops.mm.set_big_page_size(g, inst_block, big_page_size);
 }
 
 int gk20a_mm_fb_flush(struct gk20a *g)

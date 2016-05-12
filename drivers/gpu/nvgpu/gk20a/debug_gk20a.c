@@ -36,7 +36,7 @@ unsigned int gk20a_debug_trace_cmdbuf;
 struct ch_state {
 	int pid;
 	int refs;
-	u8 inst_block[0];
+	u32 inst_block[0];
 };
 
 static const char * const ccsr_chan_status_str[] = {
@@ -108,15 +108,15 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	u32 channel = gk20a_readl(g, ccsr_channel_r(hw_chid));
 	u32 status = ccsr_channel_status_v(channel);
 	u32 syncpointa, syncpointb;
-	void *inst_ptr;
+	u32 *inst_mem;
 
 	if (!ch_state)
 		return;
 
-	inst_ptr = &ch_state->inst_block[0];
+	inst_mem = &ch_state->inst_block[0];
 
-	syncpointa = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointa_w());
-	syncpointb = gk20a_mem_rd32(inst_ptr, ram_fc_syncpointb_w());
+	syncpointa = inst_mem[ram_fc_syncpointa_w()];
+	syncpointb = inst_mem[ram_fc_syncpointb_w()];
 
 	gk20a_debug_output(o, "%d-%s, pid %d, refs: %d: ", hw_chid,
 			dev_name(g->dev),
@@ -129,23 +129,22 @@ static void gk20a_debug_show_channel(struct gk20a *g,
 	gk20a_debug_output(o, "TOP: %016llx PUT: %016llx GET: %016llx "
 			"FETCH: %016llx\nHEADER: %08x COUNT: %08x\n"
 			"SYNCPOINT %08x %08x SEMAPHORE %08x %08x %08x %08x\n",
-		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_top_level_get_w()) +
-		((u64)gk20a_mem_rd32(inst_ptr,
-			ram_fc_pb_top_level_get_hi_w()) << 32ULL),
-		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_put_w()) +
-		((u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_put_hi_w()) << 32ULL),
-		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_get_w()) +
-		((u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_get_hi_w()) << 32ULL),
-		(u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_fetch_w()) +
-		((u64)gk20a_mem_rd32(inst_ptr, ram_fc_pb_fetch_hi_w()) << 32ULL),
-		gk20a_mem_rd32(inst_ptr, ram_fc_pb_header_w()),
-		gk20a_mem_rd32(inst_ptr, ram_fc_pb_count_w()),
+		(u64)inst_mem[ram_fc_pb_top_level_get_w()] +
+		((u64)inst_mem[ram_fc_pb_top_level_get_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_put_w()] +
+		((u64)inst_mem[ram_fc_pb_put_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_get_w()] +
+		((u64)inst_mem[ram_fc_pb_get_hi_w()] << 32ULL),
+		(u64)inst_mem[ram_fc_pb_fetch_w()] +
+		((u64)inst_mem[ram_fc_pb_fetch_hi_w()] << 32ULL),
+		inst_mem[ram_fc_pb_header_w()],
+		inst_mem[ram_fc_pb_count_w()],
 		syncpointa,
 		syncpointb,
-		gk20a_mem_rd32(inst_ptr, ram_fc_semaphorea_w()),
-		gk20a_mem_rd32(inst_ptr, ram_fc_semaphoreb_w()),
-		gk20a_mem_rd32(inst_ptr, ram_fc_semaphorec_w()),
-		gk20a_mem_rd32(inst_ptr, ram_fc_semaphored_w()));
+		inst_mem[ram_fc_semaphorea_w()],
+		inst_mem[ram_fc_semaphoreb_w()],
+		inst_mem[ram_fc_semaphorec_w()],
+		inst_mem[ram_fc_semaphored_w()]);
 
 #ifdef CONFIG_TEGRA_GK20A
 	if ((pbdma_syncpointb_op_v(syncpointb) == pbdma_syncpointb_op_wait_v())
@@ -246,17 +245,15 @@ void gk20a_debug_show_dump(struct gk20a *g, struct gk20a_debug_output *o)
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];
-		if (ch_state[chid]) {
-			if (ch->inst_block.cpu_va) {
-				ch_state[chid]->pid = ch->pid;
-				ch_state[chid]->refs =
-					atomic_read(&ch->ref_count);
-				memcpy(&ch_state[chid]->inst_block[0],
-						ch->inst_block.cpu_va,
-						ram_in_alloc_size_v());
-			}
-			gk20a_channel_put(ch);
-		}
+		if (!ch_state[chid])
+			continue;
+
+		ch_state[chid]->pid = ch->pid;
+		ch_state[chid]->refs = atomic_read(&ch->ref_count);
+		gk20a_mem_rd_n(g, &ch->inst_block, 0,
+				&ch_state[chid]->inst_block[0],
+				ram_in_alloc_size_v());
+		gk20a_channel_put(ch);
 	}
 	for (chid = 0; chid < f->num_channels; chid++) {
 		if (ch_state[chid]) {

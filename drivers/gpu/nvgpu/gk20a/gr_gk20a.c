@@ -97,22 +97,18 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 		u32 *ctx_id)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	void *ctx_ptr = NULL;
 
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr)
+	if (gk20a_mem_begin(g, &ch_ctx->gr_ctx->mem))
 		return -ENOMEM;
 
-	*ctx_id = gk20a_mem_rd32(ctx_ptr +
-				 ctxsw_prog_main_image_context_id_o(), 0);
+	*ctx_id = gk20a_mem_rd(g, &ch_ctx->gr_ctx->mem,
+			ctxsw_prog_main_image_context_id_o());
 
-	vunmap(ctx_ptr);
+	gk20a_mem_end(g, &ch_ctx->gr_ctx->mem);
 
 	return 0;
 }
@@ -619,22 +615,17 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	u32 addr_lo;
 	u32 addr_hi;
-	void *inst_ptr = NULL;
 
 	gk20a_dbg_fn("");
-
-	inst_ptr = c->inst_block.cpu_va;
-	if (!inst_ptr)
-		return -ENOMEM;
 
 	addr_lo = u64_lo32(gpu_va) >> 12;
 	addr_hi = u64_hi32(gpu_va);
 
-	gk20a_mem_wr32(inst_ptr, ram_in_gr_wfi_target_w(),
+	gk20a_mem_wr32(c->g, &c->inst_block, ram_in_gr_wfi_target_w(),
 		 ram_in_gr_cs_wfi_f() | ram_in_gr_wfi_mode_virtual_f() |
 		 ram_in_gr_wfi_ptr_lo_f(addr_lo));
 
-	gk20a_mem_wr32(inst_ptr, ram_in_gr_wfi_ptr_hi_w(),
+	gk20a_mem_wr32(c->g, &c->inst_block, ram_in_gr_wfi_ptr_hi_w(),
 		 ram_in_gr_wfi_ptr_hi_f(addr_hi));
 
 	return 0;
@@ -658,11 +649,7 @@ int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 		return -EBUSY;
 	}
 
-	ch_ctx->patch_ctx.mem.cpu_va = vmap(ch_ctx->patch_ctx.mem.pages,
-			PAGE_ALIGN(ch_ctx->patch_ctx.mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-
-	if (!ch_ctx->patch_ctx.mem.cpu_va)
+	if (gk20a_mem_begin(g, &ch_ctx->patch_ctx.mem))
 		return -ENOMEM;
 
 	return 0;
@@ -677,8 +664,7 @@ int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 		return -EINVAL;
 	}
 
-	vunmap(ch_ctx->patch_ctx.mem.cpu_va);
-	ch_ctx->patch_ctx.mem.cpu_va = NULL;
+	gk20a_mem_end(g, &ch_ctx->patch_ctx.mem);
 	return 0;
 }
 
@@ -687,7 +673,6 @@ int gr_gk20a_ctx_patch_write(struct gk20a *g,
 				    u32 addr, u32 data, bool patch)
 {
 	u32 patch_slot = 0;
-	void *patch_ptr = NULL;
 	bool mapped_here = false;
 
 	BUG_ON(patch != 0 && ch_ctx == NULL);
@@ -708,11 +693,10 @@ int gr_gk20a_ctx_patch_write(struct gk20a *g,
 		} else
 			mapped_here = false;
 
-		patch_ptr = ch_ctx->patch_ctx.mem.cpu_va;
 		patch_slot = ch_ctx->patch_ctx.data_count * 2;
 
-		gk20a_mem_wr32(patch_ptr, patch_slot++, addr);
-		gk20a_mem_wr32(patch_ptr, patch_slot++, data);
+		gk20a_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot++, addr);
+		gk20a_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot++, data);
 
 		ch_ctx->patch_ctx.data_count++;
 
@@ -760,16 +744,13 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
+	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
 	u32 va_lo, va_hi, va;
 	int ret = 0;
-	void *ctx_ptr = NULL;
 
 	gk20a_dbg_fn("");
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr)
+	if (gk20a_mem_begin(g, mem))
 		return -ENOMEM;
 
 	if (ch_ctx->zcull_ctx.gpu_va == 0 &&
@@ -792,15 +773,17 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 		goto clean_up;
 	}
 
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_o(), 0,
+	gk20a_mem_wr(g, mem,
+			ctxsw_prog_main_image_zcull_o(),
 		 ch_ctx->zcull_ctx.ctx_sw_mode);
 
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_zcull_ptr_o(), 0, va);
+	gk20a_mem_wr(g, mem,
+			ctxsw_prog_main_image_zcull_ptr_o(), va);
 
 	c->g->ops.fifo.enable_channel(c);
 
 clean_up:
-	vunmap(ctx_ptr);
+	gk20a_mem_end(g, mem);
 
 	return ret;
 }
@@ -1500,8 +1483,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	u32 ctx_header_words;
 	u32 i;
 	u32 data;
-	void *ctx_ptr = NULL;
-	void *gold_ptr = NULL;
+	struct mem_desc *gold_mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
+	struct mem_desc *gr_mem = &ch_ctx->gr_ctx->mem;
 	u32 err = 0;
 
 	gk20a_dbg_fn("");
@@ -1527,16 +1510,10 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (err)
 		goto clean_up;
 
-	gold_ptr = vmap(gr->global_ctx_buffer[GOLDEN_CTX].mem.pages,
-			PAGE_ALIGN(gr->global_ctx_buffer[GOLDEN_CTX].mem.size) >>
-			PAGE_SHIFT, 0, pgprot_writecombine(PAGE_KERNEL));
-	if (!gold_ptr)
+	if (gk20a_mem_begin(g, gold_mem))
 		goto clean_up;
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr)
+	if (gk20a_mem_begin(g, gr_mem))
 		goto clean_up;
 
 	ctx_header_words =  roundup(ctx_header_bytes, sizeof(u32));
@@ -1545,14 +1522,14 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	g->ops.mm.l2_flush(g, true);
 
 	for (i = 0; i < ctx_header_words; i++) {
-		data = gk20a_mem_rd32(ctx_ptr, i);
-		gk20a_mem_wr32(gold_ptr, i, data);
+		data = gk20a_mem_rd32(g, gr_mem, i);
+		gk20a_mem_wr32(g, gold_mem, i, data);
 	}
 
-	gk20a_mem_wr32(gold_ptr + ctxsw_prog_main_image_zcull_o(), 0,
+	gk20a_mem_wr(g, gold_mem, ctxsw_prog_main_image_zcull_o(),
 		 ctxsw_prog_main_image_zcull_mode_no_ctxsw_v());
 
-	gk20a_mem_wr32(gold_ptr + ctxsw_prog_main_image_zcull_ptr_o(), 0, 0);
+	gk20a_mem_wr(g, gold_mem, ctxsw_prog_main_image_zcull_ptr_o(), 0);
 
 	gr_gk20a_commit_inst(c, ch_ctx->global_ctx_buffer_va[GOLDEN_CTX_VA]);
 
@@ -1568,12 +1545,12 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			goto clean_up;
 		}
 
-		for (i = 0; i < gr->ctx_vars.golden_image_size / 4; i++)
-			gr->ctx_vars.local_golden_image[i] =
-				gk20a_mem_rd32(gold_ptr, i);
+		gk20a_mem_rd_n(g, gold_mem, 0,
+				gr->ctx_vars.local_golden_image,
+				gr->ctx_vars.golden_image_size);
 	}
 
-	gr_gk20a_commit_inst(c, ch_ctx->gr_ctx->mem.gpu_va);
+	gr_gk20a_commit_inst(c, gr_mem->gpu_va);
 
 	gr->ctx_vars.golden_image_initialized = true;
 
@@ -1586,10 +1563,8 @@ clean_up:
 	else
 		gk20a_dbg_fn("done");
 
-	if (gold_ptr)
-		vunmap(gold_ptr);
-	if (ctx_ptr)
-		vunmap(ctx_ptr);
+	gk20a_mem_end(g, gold_mem);
+	gk20a_mem_end(g, gr_mem);
 
 	mutex_unlock(&gr->ctx_mutex);
 	return err;
@@ -1600,7 +1575,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 				    bool enable_smpc_ctxsw)
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
-	void *ctx_ptr = NULL;
+	struct mem_desc *mem;
 	u32 data;
 	int ret;
 
@@ -1611,46 +1586,39 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 		return -EFAULT;
 	}
 
+	mem = &ch_ctx->gr_ctx->mem;
+
 	c->g->ops.fifo.disable_channel(c);
 	ret = c->g->ops.fifo.preempt_channel(c->g, c->hw_chid);
 	if (ret) {
-		c->g->ops.fifo.enable_channel(c);
-		gk20a_err(dev_from_gk20a(g),
-			"failed to preempt channel\n");
-		return ret;
+		gk20a_err(dev_from_gk20a(g), "failed to preempt channel");
+		goto out;
 	}
 
 	/* Channel gr_ctx buffer is gpu cacheable.
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
 
-	if (!ch_ctx->gr_ctx) {
-		gk20a_err(dev_from_gk20a(g), "no graphics context allocated");
-		return -EFAULT;
+	if (gk20a_mem_begin(g, mem)) {
+		ret = -ENOMEM;
+		goto out;
 	}
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr) {
-		c->g->ops.fifo.enable_channel(c);
-		return -ENOMEM;
-	}
-
-	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	data = gk20a_mem_rd(g, mem,
+			ctxsw_prog_main_image_pm_o());
 	data = data & ~ctxsw_prog_main_image_pm_smpc_mode_m();
 	data |= enable_smpc_ctxsw ?
 		ctxsw_prog_main_image_pm_smpc_mode_ctxsw_f() :
 		ctxsw_prog_main_image_pm_smpc_mode_no_ctxsw_f();
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0,
-		 data);
+	gk20a_mem_wr(g, mem,
+			ctxsw_prog_main_image_pm_o(),
+			data);
 
-	vunmap(ctx_ptr);
+	gk20a_mem_end(g, mem);
 
-	/* enable channel */
+out:
 	c->g->ops.fifo.enable_channel(c);
-
-	return 0;
+	return ret;
 }
 
 int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
@@ -1659,8 +1627,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 {
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
 	struct pm_ctx_desc *pm_ctx = &ch_ctx->pm_ctx;
-	void *ctx_ptr = NULL;
-	void *pm_ctx_ptr;
+	struct mem_desc *gr_mem;
 	u32 data, virt_addr;
 	int ret;
 
@@ -1670,6 +1637,8 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 		gk20a_err(dev_from_gk20a(g), "no graphics context allocated");
 		return -EFAULT;
 	}
+
+	gr_mem = &ch_ctx->gr_ctx->mem;
 
 	if (enable_hwpm_ctxsw) {
 		if (pm_ctx->pm_mode == ctxsw_prog_main_image_pm_mode_ctxsw_f())
@@ -1721,29 +1690,22 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 		}
 
 		/* Now clear the buffer */
-		pm_ctx_ptr = vmap(pm_ctx->mem.pages,
-				PAGE_ALIGN(pm_ctx->mem.size) >> PAGE_SHIFT,
-				0, pgprot_writecombine(PAGE_KERNEL));
-
-		if (!pm_ctx_ptr) {
+		if (gk20a_mem_begin(g, &pm_ctx->mem)) {
 			ret = -ENOMEM;
 			goto cleanup_pm_buf;
 		}
 
-		memset(pm_ctx_ptr, 0, pm_ctx->mem.size);
+		gk20a_memset(g, &pm_ctx->mem, 0, 0, pm_ctx->mem.size);
 
-		vunmap(pm_ctx_ptr);
+		gk20a_mem_end(g, &pm_ctx->mem);
 	}
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr) {
+	if (gk20a_mem_begin(g, gr_mem)) {
 		ret = -ENOMEM;
 		goto cleanup_pm_buf;
 	}
 
-	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	data = gk20a_mem_rd(g, gr_mem, ctxsw_prog_main_image_pm_o());
 	data = data & ~ctxsw_prog_main_image_pm_mode_m();
 
 	if (enable_hwpm_ctxsw) {
@@ -1760,10 +1722,10 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 
 	data |= pm_ctx->pm_mode;
 
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0, data);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, virt_addr);
+	gk20a_mem_wr(g, gr_mem, ctxsw_prog_main_image_pm_o(), data);
+	gk20a_mem_wr(g, gr_mem, ctxsw_prog_main_image_pm_ptr_o(), virt_addr);
 
-	vunmap(ctx_ptr);
+	gk20a_mem_end(g, gr_mem);
 
 	/* enable channel */
 	c->g->ops.fifo.enable_channel(c);
@@ -1788,9 +1750,9 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	u32 virt_addr_lo;
 	u32 virt_addr_hi;
 	u32 virt_addr = 0;
-	u32 i, v, data;
+	u32 v, data;
 	int ret = 0;
-	void *ctx_ptr = NULL;
+	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
 
 	gk20a_dbg_fn("");
 
@@ -1801,20 +1763,18 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	   Flush and invalidate before cpu update. */
 	g->ops.mm.l2_flush(g, true);
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-			PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-			0, pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr)
+	if (gk20a_mem_begin(g, mem))
 		return -ENOMEM;
 
-	for (i = 0; i < gr->ctx_vars.golden_image_size / 4; i++)
-		gk20a_mem_wr32(ctx_ptr, i, gr->ctx_vars.local_golden_image[i]);
+	gk20a_mem_wr_n(g, mem, 0,
+			gr->ctx_vars.local_golden_image,
+			gr->ctx_vars.golden_image_size);
 
 	if (g->ops.gr.enable_cde_in_fecs && c->cde)
-		g->ops.gr.enable_cde_in_fecs(ctx_ptr);
+		g->ops.gr.enable_cde_in_fecs(g, mem);
 
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_save_ops_o(), 0, 0);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_num_restore_ops_o(), 0, 0);
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_num_save_ops_o(), 0);
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_num_restore_ops_o(), 0);
 
 	/* set priv access map */
 	virt_addr_lo =
@@ -1827,29 +1787,29 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	else
 		data = ctxsw_prog_main_image_priv_access_map_config_mode_use_map_f();
 
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_config_o(), 0,
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_priv_access_map_config_o(),
 		 data);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_addr_lo_o(), 0,
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_priv_access_map_addr_lo_o(),
 		 virt_addr_lo);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_priv_access_map_addr_hi_o(), 0,
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_priv_access_map_addr_hi_o(),
 		 virt_addr_hi);
 	/* disable verif features */
-	v = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_misc_options_o(), 0);
+	v = gk20a_mem_rd(g, mem, ctxsw_prog_main_image_misc_options_o());
 	v = v & ~(ctxsw_prog_main_image_misc_options_verif_features_m());
 	v = v | ctxsw_prog_main_image_misc_options_verif_features_disabled_f();
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_misc_options_o(), 0, v);
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_misc_options_o(), v);
 
 	if (g->ops.gr.update_ctxsw_preemption_mode)
-		g->ops.gr.update_ctxsw_preemption_mode(g, ch_ctx, ctx_ptr);
+		g->ops.gr.update_ctxsw_preemption_mode(g, ch_ctx, mem);
 
 	virt_addr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
 	virt_addr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
 
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_count_o(), 0,
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_patch_count_o(),
 		 ch_ctx->patch_ctx.data_count);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_lo_o(), 0,
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_patch_adr_lo_o(),
 		 virt_addr_lo);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_patch_adr_hi_o(), 0,
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_patch_adr_hi_o(),
 		 virt_addr_hi);
 
 	/* Update main header region of the context buffer with the info needed
@@ -1860,7 +1820,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 		if (ch_ctx->pm_ctx.mem.gpu_va == 0) {
 			gk20a_err(dev_from_gk20a(g),
 				"context switched pm with no pm buffer!");
-			vunmap(ctx_ptr);
+			gk20a_mem_end(g, mem);
 			return -EFAULT;
 		}
 
@@ -1871,14 +1831,14 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	} else
 		virt_addr = 0;
 
-	data = gk20a_mem_rd32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0);
+	data = gk20a_mem_rd(g, mem, ctxsw_prog_main_image_pm_o());
 	data = data & ~ctxsw_prog_main_image_pm_mode_m();
 	data |= ch_ctx->pm_ctx.pm_mode;
 
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_o(), 0, data);
-	gk20a_mem_wr32(ctx_ptr + ctxsw_prog_main_image_pm_ptr_o(), 0, virt_addr);
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_pm_o(), data);
+	gk20a_mem_wr(g, mem, ctxsw_prog_main_image_pm_ptr_o(), virt_addr);
 
-	vunmap(ctx_ptr);
+	gk20a_mem_end(g, mem);
 
 	if (tegra_platform_is_linsim()) {
 		u32 inst_base_ptr =
@@ -1978,16 +1938,20 @@ static void gr_gk20a_init_ctxsw_ucode_segments(
 }
 
 static int gr_gk20a_copy_ctxsw_ucode_segments(
-	u8 *buf,
+	struct gk20a *g,
+	struct mem_desc *dst,
 	struct gk20a_ctxsw_ucode_segments *segments,
 	u32 *bootimage,
 	u32 *code, u32 *data)
 {
 	int i;
 
-	memcpy(buf + segments->boot.offset, bootimage, segments->boot.size);
-	memcpy(buf + segments->code.offset, code,      segments->code.size);
-	memcpy(buf + segments->data.offset, data,      segments->data.size);
+	gk20a_mem_wr_n(g, dst, segments->boot.offset, bootimage,
+			segments->boot.size);
+	gk20a_mem_wr_n(g, dst, segments->code.offset, code,
+			segments->code.size);
+	gk20a_mem_wr_n(g, dst, segments->data.offset, data,
+			segments->data.size);
 
 	/* compute a "checksum" for the boot binary to detect its version */
 	segments->boot_signature = 0;
@@ -2009,7 +1973,6 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	u32 *fecs_boot_image;
 	u32 *gpccs_boot_image;
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
-	u8 *buf;
 	u32 ucode_size;
 	int err = 0;
 
@@ -2049,14 +2012,8 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	if (err)
 		goto clean_up;
 
-	buf = (u8 *)ucode_info->surface_desc.cpu_va;
-	if (!buf) {
-		gk20a_err(d, "failed to map surface desc buffer");
-		err = -ENOMEM;
-		goto clean_up;
-	}
-
-	gr_gk20a_copy_ctxsw_ucode_segments(buf, &ucode_info->fecs,
+	gr_gk20a_copy_ctxsw_ucode_segments(g, &ucode_info->surface_desc,
+		&ucode_info->fecs,
 		fecs_boot_image,
 		g->gr.ctx_vars.ucode.fecs.inst.l,
 		g->gr.ctx_vars.ucode.fecs.data.l);
@@ -2064,7 +2021,8 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	release_firmware(fecs_fw);
 	fecs_fw = NULL;
 
-	gr_gk20a_copy_ctxsw_ucode_segments(buf, &ucode_info->gpccs,
+	gr_gk20a_copy_ctxsw_ucode_segments(g, &ucode_info->surface_desc,
+		&ucode_info->gpccs,
 		gpccs_boot_image,
 		g->gr.ctx_vars.ucode.gpccs.inst.l,
 		g->gr.ctx_vars.ucode.gpccs.data.l);
@@ -4690,41 +4648,38 @@ out:
 static int gr_gk20a_init_access_map(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
-	void *data;
-	int err = 0;
+	struct mem_desc *mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
 	u32 w, nr_pages =
 		DIV_ROUND_UP(gr->ctx_vars.priv_access_map_size,
 			     PAGE_SIZE);
 	u32 *whitelist = NULL;
 	int num_entries = 0;
 
-	data = vmap(gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.pages,
-		    PAGE_ALIGN(gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.size) >>
-		    PAGE_SHIFT, 0, pgprot_writecombine(PAGE_KERNEL));
-	if (!data) {
+	if (gk20a_mem_begin(g, mem)) {
 		gk20a_err(dev_from_gk20a(g),
 			  "failed to map priv access map memory");
-		err = -ENOMEM;
-		goto clean_up;
+		return -ENOMEM;
 	}
 
-	memset(data, 0x0, PAGE_SIZE * nr_pages);
+	gk20a_memset(g, mem, 0, 0, PAGE_SIZE * nr_pages);
 
 	g->ops.gr.get_access_map(g, &whitelist, &num_entries);
 
 	for (w = 0; w < num_entries; w++) {
-		u32 map_bit, map_byte, map_shift;
+		u32 map_bit, map_byte, map_shift, x;
 		map_bit = whitelist[w] >> 2;
 		map_byte = map_bit >> 3;
 		map_shift = map_bit & 0x7; /* i.e. 0-7 */
 		gk20a_dbg_info("access map addr:0x%x byte:0x%x bit:%d",
 			       whitelist[w], map_byte, map_shift);
-		((u8 *)data)[map_byte] |= 1 << map_shift;
+		x = gk20a_mem_rd32(g, mem, map_byte / sizeof(u32));
+		x |= 1 << (
+			   (map_byte % sizeof(u32) * BITS_PER_BYTE)
+			  + map_shift);
+		gk20a_mem_wr32(g, mem, map_byte / sizeof(u32), x);
 	}
 
-clean_up:
-	if (data)
-		vunmap(data);
+	gk20a_mem_end(g, mem);
 	return 0;
 }
 
@@ -6659,7 +6614,7 @@ static void gr_gk20a_init_sm_dsm_reg_info(void)
 static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 			    struct channel_ctx_gk20a *ch_ctx,
 			    u32 addr, u32 data,
-			    u8 *context)
+			    struct mem_desc *mem)
 {
 	u32 num_gpc = g->gr.gpc_count;
 	u32 num_tpc;
@@ -6688,8 +6643,8 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 				/* reset the patch count from previous
 				   runs,if ucode has already processed
 				   it */
-				tmp = gk20a_mem_rd32(context +
-				       ctxsw_prog_main_image_patch_count_o(), 0);
+				tmp = gk20a_mem_rd(g, mem,
+				       ctxsw_prog_main_image_patch_count_o());
 
 				if (!tmp)
 					ch_ctx->patch_ctx.data_count = 0;
@@ -6700,15 +6655,15 @@ static int gr_gk20a_ctx_patch_smpc(struct gk20a *g,
 				vaddr_lo = u64_lo32(ch_ctx->patch_ctx.mem.gpu_va);
 				vaddr_hi = u64_hi32(ch_ctx->patch_ctx.mem.gpu_va);
 
-				gk20a_mem_wr32(context +
+				gk20a_mem_wr(g, mem,
 					 ctxsw_prog_main_image_patch_count_o(),
-					 0, ch_ctx->patch_ctx.data_count);
-				gk20a_mem_wr32(context +
+					 ch_ctx->patch_ctx.data_count);
+				gk20a_mem_wr(g, mem,
 					 ctxsw_prog_main_image_patch_adr_lo_o(),
-					 0, vaddr_lo);
-				gk20a_mem_wr32(context +
+					 vaddr_lo);
+				gk20a_mem_wr(g, mem,
 					 ctxsw_prog_main_image_patch_adr_hi_o(),
-					 0, vaddr_hi);
+					 vaddr_hi);
 
 				/* we're not caching these on cpu side,
 				   but later watch for it */
@@ -6760,17 +6715,15 @@ static void gr_gk20a_access_smpc_reg(struct gk20a *g, u32 quad, u32 offset)
 
 #define ILLEGAL_ID (~0)
 
-static inline bool check_main_image_header_magic(void *context)
+static inline bool check_main_image_header_magic(u8 *context)
 {
-	u32 magic = gk20a_mem_rd32(context +
-			     ctxsw_prog_main_image_magic_value_o(), 0);
+	u32 magic = *(u32 *)(context + ctxsw_prog_main_image_magic_value_o());
 	gk20a_dbg(gpu_dbg_gpu_dbg, "main image magic=0x%x", magic);
 	return magic == ctxsw_prog_main_image_magic_value_v_value_v();
 }
-static inline bool check_local_header_magic(void *context)
+static inline bool check_local_header_magic(u8 *context)
 {
-	u32 magic = gk20a_mem_rd32(context +
-			     ctxsw_prog_local_magic_value_o(), 0);
+	u32 magic = *(u32 *)(context + ctxsw_prog_local_magic_value_o());
 	gk20a_dbg(gpu_dbg_gpu_dbg, "local magic=0x%x",  magic);
 	return magic == ctxsw_prog_local_magic_value_v_value_v();
 
@@ -6814,7 +6767,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	u32 num_gpcs, num_tpcs;
 	u32 chk_addr;
 	u32 ext_priv_offset, ext_priv_size;
-	void *context;
+	u8 *context;
 	u32 offset_to_segment, offset_to_segment_end;
 	u32 sm_dsm_perf_reg_id = ILLEGAL_ID;
 	u32 sm_dsm_perf_ctrl_reg_id = ILLEGAL_ID;
@@ -6856,14 +6809,14 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 	/* note below is in words/num_registers */
 	marker_size = ctxsw_prog_extended_marker_size_in_bytes_v() >> 2;
 
-	context = context_buffer;
+	context = (u8 *)context_buffer;
 	/* sanity check main header */
 	if (!check_main_image_header_magic(context)) {
 		gk20a_err(dev_from_gk20a(g),
 			   "Invalid main header: magic value");
 		return -EINVAL;
 	}
-	num_gpcs = gk20a_mem_rd32(context + ctxsw_prog_main_image_num_gpcs_o(), 0);
+	num_gpcs = *(u32 *)(context + ctxsw_prog_main_image_num_gpcs_o());
 	if (gpc_num >= num_gpcs) {
 		gk20a_err(dev_from_gk20a(g),
 		   "GPC 0x%08x is greater than total count 0x%08x!\n",
@@ -6871,7 +6824,7 @@ static int gr_gk20a_find_priv_offset_in_ext_buffer(struct gk20a *g,
 		return -EINVAL;
 	}
 
-	data32 = gk20a_mem_rd32(context + ctxsw_prog_main_extended_buffer_ctl_o(), 0);
+	data32 = *(u32 *)(context + ctxsw_prog_main_extended_buffer_ctl_o());
 	ext_priv_size   = ctxsw_prog_main_extended_buffer_ctl_size_v(data32);
 	if (0 == ext_priv_size) {
 		gk20a_dbg_info(" No extended memory in context buffer");
@@ -7149,7 +7102,7 @@ gr_gk20a_process_context_buffer_priv_segment(struct gk20a *g,
 }
 
 static int gr_gk20a_determine_ppc_configuration(struct gk20a *g,
-					       void *context,
+					       u8 *context,
 					       u32 *num_ppcs, u32 *ppc_mask,
 					       u32 *reg_ppc_count)
 {
@@ -7165,7 +7118,7 @@ static int gr_gk20a_determine_ppc_configuration(struct gk20a *g,
 	     (num_pes_per_gpc > 1)))
 		return -EINVAL;
 
-	data32 = gk20a_mem_rd32(context + ctxsw_prog_local_image_ppc_info_o(), 0);
+	data32 = *(u32 *)(context + ctxsw_prog_local_image_ppc_info_o());
 
 	*num_ppcs = ctxsw_prog_local_image_ppc_info_num_ppcs_v(data32);
 	*ppc_mask = ctxsw_prog_local_image_ppc_info_ppc_mask_v(data32);
@@ -7177,7 +7130,7 @@ static int gr_gk20a_determine_ppc_configuration(struct gk20a *g,
 
 /*
  *  This function will return the 32 bit offset for a priv register if it is
- *  present in the context buffer.
+ *  present in the context buffer. The context buffer is in CPU memory.
  */
 static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 					       u32 addr,
@@ -7196,7 +7149,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	u32 offset;
 	u32 sys_priv_offset, gpc_priv_offset;
 	u32 ppc_mask, reg_list_ppc_count;
-	void *context;
+	u8 *context;
 	u32 offset_to_segment;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "addr=0x%x", addr);
@@ -7207,13 +7160,13 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 	if (err)
 		return err;
 
-	context = context_buffer;
+	context = (u8 *)context_buffer;
 	if (!check_main_image_header_magic(context)) {
 		gk20a_err(dev_from_gk20a(g),
 			   "Invalid main header: magic value");
 		return -EINVAL;
 	}
-	num_gpcs = gk20a_mem_rd32(context + ctxsw_prog_main_image_num_gpcs_o(), 0);
+	num_gpcs = *(u32 *)(context + ctxsw_prog_main_image_num_gpcs_o());
 
 	/* Parse the FECS local header. */
 	context += ctxsw_prog_ucode_header_size_in_bytes();
@@ -7222,7 +7175,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 			   "Invalid FECS local header: magic value\n");
 		return -EINVAL;
 	}
-	data32 = gk20a_mem_rd32(context + ctxsw_prog_local_priv_register_ctl_o(), 0);
+	data32 = *(u32 *)(context + ctxsw_prog_local_priv_register_ctl_o());
 	sys_priv_offset = ctxsw_prog_local_priv_register_ctl_offset_v(data32);
 
 	/* If found in Ext buffer, ok.
@@ -7268,7 +7221,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 			return -EINVAL;
 
 		}
-		data32 = gk20a_mem_rd32(context + ctxsw_prog_local_priv_register_ctl_o(), 0);
+		data32 = *(u32 *)(context + ctxsw_prog_local_priv_register_ctl_o());
 		gpc_priv_offset = ctxsw_prog_local_priv_register_ctl_offset_v(data32);
 
 		err = gr_gk20a_determine_ppc_configuration(g, context,
@@ -7277,7 +7230,7 @@ static int gr_gk20a_find_priv_offset_in_buffer(struct gk20a *g,
 		if (err)
 			return err;
 
-		num_tpcs = gk20a_mem_rd32(context + ctxsw_prog_local_image_num_tpcs_o(), 0);
+		num_tpcs = *(u32 *)(context + ctxsw_prog_local_image_num_tpcs_o());
 
 		if ((i == gpc_num) && ((tpc_num + 1) > num_tpcs)) {
 			gk20a_err(dev_from_gk20a(g),
@@ -7689,9 +7642,9 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 {
 	struct gk20a *g = ch->g;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
-	void *ctx_ptr = NULL;
-	void *pm_ctx_ptr = NULL;
-	void *base_ptr = NULL;
+	bool gr_ctx_ready = false;
+	bool pm_ctx_ready = false;
+	struct mem_desc *current_mem = NULL;
 	bool ch_is_curr_ctx, restart_gr_ctxsw = false;
 	u32 i, j, offset, v;
 	struct gr_gk20a *gr = &g->gr;
@@ -7821,20 +7774,18 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 						ctx_ops[i].type == REGOP(TYPE_GR_CTX_QUAD),
 						ctx_ops[i].quad);
 			if (!err) {
-				if (!ctx_ptr) {
+				if (!gr_ctx_ready) {
 					/* would have been a variant of
 					 * gr_gk20a_apply_instmem_overrides,
 					 * recoded in-place instead.
 					 */
-					ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-						PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT,
-						0, pgprot_writecombine(PAGE_KERNEL));
-					if (!ctx_ptr) {
+					if (gk20a_mem_begin(g, &ch_ctx->gr_ctx->mem)) {
 						err = -ENOMEM;
 						goto cleanup;
 					}
+					gr_ctx_ready = true;
 				}
-				base_ptr = ctx_ptr;
+				current_mem = &ch_ctx->gr_ctx->mem;
 			} else {
 				err = gr_gk20a_get_pm_ctx_buffer_offsets(g,
 							ctx_ops[i].offset,
@@ -7849,7 +7800,7 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 						NVGPU_DBG_GPU_REG_OP_STATUS_INVALID_OFFSET;
 					continue;
 				}
-				if (!pm_ctx_ptr) {
+				if (!pm_ctx_ready) {
 					/* Make sure ctx buffer was initialized */
 					if (!ch_ctx->pm_ctx.mem.pages) {
 						gk20a_err(dev_from_gk20a(g),
@@ -7857,15 +7808,13 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 						err = -EINVAL;
 						goto cleanup;
 					}
-					pm_ctx_ptr = vmap(ch_ctx->pm_ctx.mem.pages,
-						PAGE_ALIGN(ch_ctx->pm_ctx.mem.size) >> PAGE_SHIFT,
-						0, pgprot_writecombine(PAGE_KERNEL));
-					if (!pm_ctx_ptr) {
+					if (gk20a_mem_begin(g, &ch_ctx->pm_ctx.mem)) {
 						err = -ENOMEM;
 						goto cleanup;
 					}
+					pm_ctx_ready = true;
 				}
-				base_ptr = pm_ctx_ptr;
+				current_mem = &ch_ctx->pm_ctx.mem;
 			}
 
 			/* if this is a quad access, setup for special access*/
@@ -7878,24 +7827,24 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 				/* sanity check gr ctxt offsets,
 				 * don't write outside, worst case
 				 */
-				if ((base_ptr == ctx_ptr) &&
+				if ((current_mem == &ch_ctx->gr_ctx->mem) &&
 					(offsets[j] >= g->gr.ctx_vars.golden_image_size))
 					continue;
 				if (pass == 0) { /* write pass */
-					v = gk20a_mem_rd32(base_ptr + offsets[j], 0);
+					v = gk20a_mem_rd(g, current_mem, offsets[j]);
 					v &= ~ctx_ops[i].and_n_mask_lo;
 					v |= ctx_ops[i].value_lo;
-					gk20a_mem_wr32(base_ptr + offsets[j], 0, v);
+					gk20a_mem_wr(g, current_mem, offsets[j], v);
 
 					gk20a_dbg(gpu_dbg_gpu_dbg,
 						   "context wr: offset=0x%x v=0x%x",
 						   offsets[j], v);
 
 					if (ctx_ops[i].op == REGOP(WRITE_64)) {
-						v = gk20a_mem_rd32(base_ptr + offsets[j] + 4, 0);
+						v = gk20a_mem_rd(g, current_mem, offsets[j] + 4);
 						v &= ~ctx_ops[i].and_n_mask_hi;
 						v |= ctx_ops[i].value_hi;
-						gk20a_mem_wr32(base_ptr + offsets[j] + 4, 0, v);
+						gk20a_mem_wr(g, current_mem, offsets[j] + 4, v);
 
 						gk20a_dbg(gpu_dbg_gpu_dbg,
 							   "context wr: offset=0x%x v=0x%x",
@@ -7905,18 +7854,18 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 					/* check to see if we need to add a special WAR
 					   for some of the SMPC perf regs */
 					gr_gk20a_ctx_patch_smpc(g, ch_ctx, offset_addrs[j],
-							v, base_ptr);
+							v, current_mem);
 
 				} else { /* read pass */
 					ctx_ops[i].value_lo =
-						gk20a_mem_rd32(base_ptr + offsets[0], 0);
+						gk20a_mem_rd(g, current_mem, offsets[0]);
 
 					gk20a_dbg(gpu_dbg_gpu_dbg, "context rd: offset=0x%x v=0x%x",
 						   offsets[0], ctx_ops[i].value_lo);
 
 					if (ctx_ops[i].op == REGOP(READ_64)) {
 						ctx_ops[i].value_hi =
-							gk20a_mem_rd32(base_ptr + offsets[0] + 4, 0);
+							gk20a_mem_rd(g, current_mem, offsets[0] + 4);
 
 						gk20a_dbg(gpu_dbg_gpu_dbg,
 							   "context rd: offset=0x%x v=0x%x",
@@ -7943,12 +7892,10 @@ int gr_gk20a_exec_ctx_ops(struct channel_gk20a *ch,
 
 	if (ch_ctx->patch_ctx.mem.cpu_va)
 		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
-
-	if (ctx_ptr)
-		vunmap(ctx_ptr);
-
-	if (pm_ctx_ptr)
-		vunmap(pm_ctx_ptr);
+	if (gr_ctx_ready)
+		gk20a_mem_end(g, &ch_ctx->gr_ctx->mem);
+	if (pm_ctx_ready)
+		gk20a_mem_end(g, &ch_ctx->pm_ctx.mem);
 
 	if (restart_gr_ctxsw) {
 		int tmp_err = gr_gk20a_enable_ctxsw(g);

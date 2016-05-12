@@ -619,7 +619,7 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	phys_addr_t pa;
 	struct channel_ctx_gk20a *ch_ctx = &ch->ch_ctx;
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
-	void *ctx_ptr;
+	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(ch);
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
@@ -634,10 +634,7 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	if (!pa)
 		return -ENOMEM;
 
-	ctx_ptr = vmap(ch_ctx->gr_ctx->mem.pages,
-		PAGE_ALIGN(ch_ctx->gr_ctx->mem.size) >> PAGE_SHIFT, 0,
-		pgprot_writecombine(PAGE_KERNEL));
-	if (!ctx_ptr)
+	if (gk20a_mem_begin(g, mem))
 		return -ENOMEM;
 
 	lo = u64_lo32(pa);
@@ -646,18 +643,18 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	gk20a_dbg(gpu_dbg_ctxsw, "addr_hi=%x addr_lo=%x count=%d", hi,
 		lo, GK20A_FECS_TRACE_NUM_RECORDS);
 
-	gk20a_mem_wr32(ctx_ptr
-		+ ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(),
-		0, lo);
-	gk20a_mem_wr32(ctx_ptr
-		+ ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(),
-		0, ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(hi));
-	gk20a_mem_wr32(ctx_ptr
-		+ ctxsw_prog_main_image_context_timestamp_buffer_control_o(),
-		0, ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_context_timestamp_buffer_ptr_o(),
+		lo);
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(),
+		ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(hi));
+	gk20a_mem_wr(g, mem,
+		ctxsw_prog_main_image_context_timestamp_buffer_control_o(),
+		ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(
 			GK20A_FECS_TRACE_NUM_RECORDS));
 
-	vunmap(ctx_ptr);
+	gk20a_mem_end(g, mem);
 	gk20a_fecs_trace_hash_add(g, context_ptr, ch->pid);
 
 	return 0;

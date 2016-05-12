@@ -40,6 +40,7 @@
 #include <linux/slab.h>
 #include <linux/clk/tegra.h>
 #include <linux/tegra-soc.h>
+#include <linux/module.h>
 
 #include <linux/notifier.h>
 #include <linux/tegra-throughput.h>
@@ -1029,9 +1030,10 @@ static int __init podgov_init(void)
 static void __exit podgov_exit(void)
 {
 	devfreq_remove_governor(&nvhost_podgov);
+	return;
 }
 
 /* governor must be registered before initialising client devices */
 rootfs_initcall(podgov_init);
 module_exit(podgov_exit);
-
+MODULE_LICENSE("GPL");

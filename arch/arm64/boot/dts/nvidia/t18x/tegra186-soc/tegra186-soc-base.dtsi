@@ -718,14 +718,16 @@
 				 <&tegra_car TEGRA186_CLK_NVDISPLAYHUB>,
 				 <&tegra_car TEGRA186_CLK_NVDISPLAY_P1>,
 				 <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+				 <&tegra_car TEGRA186_CLK_PLLD>,
+				 <&tegra_car TEGRA186_CLK_PLLD_OUT1>,
 				 <&tegra_car TEGRA186_CLK_PLLD2>,
 				 <&tegra_car TEGRA186_CLK_PLLD3>,
 				 <&tegra_car TEGRA186_CLK_EMC>,
 				 <&tegra_car TEGRA186_CLK_CLK_M>;
 			clock-names = "clk32k_in", "nvdisplay_disp",
 				      "nvdisplayhub", "nvdisplay_p1",
-				      "pllp_display", "plld2", "plld3",
-				      "emc", "emc_latency";
+				      "pllp_display", "pll_d", "pll_d_out1",
+				      "plld2", "plld3", "emc", "emc_latency";
 			resets = <&tegra_car TEGRA186_RESET_NVDISPLAY0_MISC>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP0>,
 				 <&tegra_car TEGRA186_RESET_NVDISPLAY0_WGRP1>,

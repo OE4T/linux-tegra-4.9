@@ -65,6 +65,26 @@ static void __iomem *tegra_hsp_sm_reg(struct device *dev, u32 sm)
 	return tegra_hsp_reg(dev, TEGRA_HSP_SM(sm));
 }
 
+static irqreturn_t tegra_hsp_full_isr(int irq, void *data)
+{
+	struct tegra_hsp_sm_pair *pair = data;
+	struct device *dev = pair->dev;
+	void __iomem *reg = tegra_hsp_sm_reg(dev, pair->index);
+	u32 value = readl(reg);
+
+	if (!(value & TEGRA_HSP_SM_FULL))
+		return IRQ_HANDLED;
+
+	if (pair->notify_full != NULL)
+		value = pair->notify_full(pair, value & ~TEGRA_HSP_SM_FULL);
+	else
+		value = 0;
+
+	/* Write new value to empty the mailbox and clear the interrupt */
+	writel(value & ~TEGRA_HSP_SM_FULL, reg);
+	return IRQ_HANDLED;
+}
+
 static irqreturn_t tegra_hsp_isr(int irq, void *data)
 {
 	struct device *dev = data;
@@ -72,22 +92,8 @@ static irqreturn_t tegra_hsp_isr(int irq, void *data)
 	struct tegra_hsp_sm_pair *pair;
 
 	rcu_read_lock();
-	hlist_for_each_entry_rcu(pair, &hsp->sm_pairs, node) {
-		void __iomem *reg = tegra_hsp_sm_reg(dev, pair->index);
-		u32 value = readl(reg);
-
-		if (!(value & TEGRA_HSP_SM_FULL))
-			continue;
-
-		if (pair->notify_full != NULL) {
-			value &= ~TEGRA_HSP_SM_FULL;
-			value = pair->notify_full(pair, value);
-			value &= ~TEGRA_HSP_SM_FULL;
-		} else
-			value = 0;
-
-		writel(value, reg);
-	}
+	hlist_for_each_entry_rcu(pair, &hsp->sm_pairs, node)
+		tegra_hsp_full_isr(irq, pair);
 	rcu_read_unlock();
 
 	return IRQ_HANDLED;
@@ -141,6 +147,57 @@ static int tegra_hsp_get_shared_irq(struct device *dev, u8 *offset,
 	return ret;
 }
 
+static int tegra_hsp_get_full_irq(struct device *dev, u8 sm, void *data)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	int irq, err;
+	char name[6];
+
+	/* Look for dedicated internal full IRQ */
+	sprintf(name, "full%X", sm);
+	irq = platform_get_irq_byname(pdev, name);
+	if (IS_ERR_VALUE(irq))
+		return irq;
+
+	err = devm_request_threaded_irq(dev, irq, NULL, tegra_hsp_full_isr,
+					IRQF_ONESHOT, dev_name(dev), data);
+	return err ? err : irq;
+}
+
+static int tegra_hsp_get_empty_irq(struct device *dev, u8 *idx, u8 sm,
+					void *data)
+{
+	struct platform_device *pdev = to_platform_device(dev);
+	int irq;
+	char name[7];
+
+	/* Look for dedicated internal empty IRQ */
+	sprintf(name, "empty%X", sm);
+	irq = platform_get_irq_byname(pdev, name);
+	if (!IS_ERR_VALUE(irq) &&
+		devm_request_threaded_irq(dev, irq, NULL, tegra_hsp_empty_isr,
+						IRQF_ONESHOT, dev_name(dev),
+						data) == 0) {
+		*idx = 0xff;
+		return irq;
+	}
+
+	/* Dedicate a shared IRQ to the internal empty interrupt */
+	irq = tegra_hsp_get_shared_irq(dev, idx, tegra_hsp_empty_isr, data);
+	if (!IS_ERR_VALUE(irq))
+		tegra_hsp_ie_writel(dev, *idx, TEGRA_HSP_IE_SM_EMPTY(sm));
+
+	return irq;
+}
+
+static void tegra_hsp_free_sm_irq(struct device *dev, int irq,
+					u8 idx, void *data)
+{
+	if (idx != 0xff)
+		tegra_hsp_ie_writel(dev, idx, 0);
+	devm_free_irq(dev, irq, data);
+}
+
 static void tegra_hsp_update_ie(struct device *dev)
 {
 	struct tegra_hsp *hsp = dev_get_drvdata(dev);
@@ -150,7 +207,8 @@ static void tegra_hsp_update_ie(struct device *dev)
 	WARN_ON(!mutex_is_locked(&hsp->lock));
 
 	hlist_for_each_entry(pair, &hsp->sm_pairs, node)
-		ie |= TEGRA_HSP_IE_SM_FULL(pair->index);
+		if (IS_ERR_VALUE(pair->irq_full))
+			ie |= TEGRA_HSP_IE_SM_FULL(pair->index);
 
 	tegra_hsp_ie_writel(dev, hsp->si_index, ie);
 }
@@ -159,29 +217,38 @@ static int tegra_hsp_sm_pair_request(struct device *dev, u32 index,
 					struct tegra_hsp_sm_pair *pair)
 {
 	struct tegra_hsp *hsp = dev_get_drvdata(dev);
+	int irq;
 
 	if (hsp == NULL)
 		return -EPROBE_DEFER;
 	if (index >= hsp->n_sm)
 		return -ENODEV;
 
+	WARN_ON(pair->dev != NULL);
 	pair->dev = get_device(dev);
 	pair->index = index;
 
 	if (pair->notify_empty != NULL) {
-		int irq;
-
-		irq = tegra_hsp_get_shared_irq(dev, &pair->si_index_empty,
-						tegra_hsp_empty_isr, pair);
-		if (irq < 0) {
-			put_device(pair->dev);
-			pair->dev = NULL;
-			return irq;
-		}
+		irq = tegra_hsp_get_empty_irq(dev, &pair->si_index_empty,
+						pair->index ^ 1, pair);
+		if (IS_ERR_VALUE(irq))
+			goto error;
 
 		pair->irq_empty = irq;
-		tegra_hsp_ie_writel(dev, pair->si_index_empty,
-				TEGRA_HSP_IE_SM_EMPTY(pair->index ^ 1));
+	}
+
+	/* Get full interrupt if available */
+	irq = tegra_hsp_get_full_irq(dev, pair->index, pair);
+	pair->irq_full = irq;
+	if (!IS_ERR_VALUE(irq))
+		return 0;
+
+	/* Fall back to common shared interrupt */
+	if (hsp->si_index == 0xff) {
+		if (pair->notify_empty != NULL)
+			tegra_hsp_free_sm_irq(dev, pair->irq_empty,
+						pair->si_index_empty, pair);
+		goto error;
 	}
 
 	mutex_lock(&hsp->lock);
@@ -189,6 +256,11 @@ static int tegra_hsp_sm_pair_request(struct device *dev, u32 index,
 	tegra_hsp_update_ie(dev);
 	mutex_unlock(&hsp->lock);
 	return 0;
+
+error:
+	put_device(pair->dev);
+	pair->dev = NULL;
+	return irq;
 }
 
 int of_tegra_hsp_sm_pair_request(struct device *dev, u32 index,
@@ -227,20 +299,24 @@ void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *pair)
 
 	hsp = dev_get_drvdata(dev);
 
-	if (pair->notify_empty != NULL) {
-		tegra_hsp_ie_writel(dev, pair->si_index_empty, 0);
-		devm_free_irq(dev, pair->irq_empty, pair);
-	}
+	if (IS_ERR_VALUE(pair->irq_full)) {
+		mutex_lock(&hsp->lock);
+		hlist_del_rcu(&pair->node);
+		tegra_hsp_update_ie(dev);
+		mutex_unlock(&hsp->lock);
 
-	mutex_lock(&hsp->lock);
-	hlist_del_rcu(&pair->node);
-	tegra_hsp_update_ie(dev);
-	mutex_unlock(&hsp->lock);
+		/* Make sure that the structure is no longer referenced.
+		 * This also implies that callbacks are no longer pending. */
+		synchronize_rcu();
+	} else
+		devm_free_irq(dev, pair->irq_full, pair);
 
-	/* Make sure that the structure is no longer referenced.
-	 * This also implies that callbacks are no longer pending. */
-	synchronize_rcu();
+	if (pair->notify_empty != NULL)
+		tegra_hsp_free_sm_irq(dev, pair->irq_empty,
+						pair->si_index_empty, pair);
+
 	put_device(dev);
+	pair->dev = NULL;
 }
 EXPORT_SYMBOL(tegra_hsp_sm_pair_free);
 
@@ -310,9 +386,11 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 	ret = tegra_hsp_get_shared_irq(&pdev->dev, &hsp->si_index,
 					tegra_hsp_isr, &pdev->dev);
 	if (ret < 0) {
-		if (ret != -EPROBE_DEFER)
-			dev_err(&pdev->dev, "no shared interrupts\n");
-		return ret;
+		if (ret == -EPROBE_DEFER)
+			return -EPROBE_DEFER;
+
+		dev_dbg(&pdev->dev, "no shared interrupts\n");
+		hsp->si_index = 0xff;
 	}
 
 	return 0;

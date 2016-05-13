@@ -71,7 +71,8 @@ static inline ulong nvmap_page_pool_get_unused_pages(void)
 #endif
 
 ulong nvmap_iovmm_get_used_pages(void);
-int nvmap_register_vidmem_carveout(phys_addr_t base, size_t size);
+int nvmap_register_vidmem_carveout(struct device *dma_dev,
+		phys_addr_t base, size_t size);
 
 struct nvmap_platform_carveout {
 	const char *name;

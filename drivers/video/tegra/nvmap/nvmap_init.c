@@ -142,12 +142,14 @@ found:
 	return NULL;
 }
 
-int nvmap_register_vidmem_carveout(phys_addr_t base, size_t size)
+int nvmap_register_vidmem_carveout(struct device *dma_dev,
+				phys_addr_t base, size_t size)
 {
 	struct nvmap_platform_carveout *vidmem_co;
 
 	/* vidmem is outside DRAM. So, pfn should be invalid */
-	if (!base || !size || (base != PAGE_ALIGN(base)) || (size != PAGE_ALIGN(size)))
+	if (!base || !size || (base != PAGE_ALIGN(base)) ||
+	    (size != PAGE_ALIGN(size)))
 		return -EINVAL;
 
 	vidmem_co = nvmap_get_carveout_pdata("vidmem");
@@ -156,6 +158,8 @@ int nvmap_register_vidmem_carveout(phys_addr_t base, size_t size)
 
 	vidmem_co->base = base;
 	vidmem_co->size = size;
+	if (dma_dev)
+		vidmem_co->dma_dev = dma_dev;
 	return nvmap_create_carveout(vidmem_co);
 }
 EXPORT_SYMBOL(nvmap_register_vidmem_carveout);

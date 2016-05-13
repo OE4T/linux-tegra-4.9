@@ -21,6 +21,7 @@
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/padctrl/tegra210-pads.h>
 #include <dt-bindings/clock/tegra210-car.h>
+#include <dt-bindings/reset/tegra210-car.h>
 #include "tegra210-platforms/tegra210-prods.dtsi"
 #include "tegra210-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi"
 #include "tegra210-platforms/tegra210-modem-common.dtsi"
@@ -174,4 +175,69 @@
                       <0x0 0x7000e864 0x0 0x04>;   /* Strapping options */
         };
 
+	pwm_dfll: pwm@70110000 {
+		compatible = "nvidia,tegra210-dfll-pwm";
+		reg = <0x0 0x70110000 0x0 0x400>;
+		clocks = <&tegra_car TEGRA210_CLK_DFLL_REF>;
+		clock-names = "ref";
+		#pwm-cells = <2>;
+		pwm-regulator = <&cpu_ovr_reg>;
+		status = "disable";
+	};
+
+	pwm_regulators {
+		compatible = "simple-bus";
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		cpu_ovr_reg: pwm-regulator@0 {
+			status = "okay";
+			reg = <0>;
+			compatible = "pwm-regulator";
+			pwms = <&pwm_dfll 0 2500>;
+			regulator-name = "vdd_cpu";
+			regulator-min-microvolt = <708000>;
+			regulator-max-microvolt = <1322400>;
+			regulator-always-on;
+			regulator-boot-on;
+			voltage-table =
+				<708000 0>, <727200 1>, <746400 2>,
+				<765600 3>, <784800 4>, <804000 5>,
+				<823200 6>, <842400 7>, <861600 8>,
+				<880800 9>, <900000 10>, <919200 11>,
+				<938400 12>, <957600 13>, <976800 14>,
+				<996000 15>, <1015200 16>, <1034400 17>,
+				<1053600 18>, <1072800 19>, <1092000 20>,
+				<1111200 21>, <1130400 22>, <1149600 23>,
+				<1168800 24>, <1188000 25>, <1207200 26>,
+				<1226400 27>, <1245600 28>, <1264800 29>,
+				<1284000 30>, <1303200 31>, <1322400 32>;
+		};
+	};
+
+	dfll: clock@70110000 {
+		compatible = "nvidia,tegra210-dfll";
+		interrupts = <GIC_SPI 62 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&tegra_car TEGRA210_CLK_DFLL_SOC>,
+				<&tegra_car TEGRA210_CLK_DFLL_REF>,
+				<&tegra_car TEGRA210_CLK_I2C5>;
+		clock-names = "soc", "ref", "i2c";
+		resets = <&tegra_car TEGRA210_RST_DFLL_DVCO>;
+		reset-names = "dvco";
+		#clock-cells = <0>;
+		clock-output-names = "dfllCPU_out";
+		status = "disabled";
+	};
+
+	cpus {
+		cpu@0 {
+			clocks = <&tegra_car TEGRA210_CLK_CCLK_G>,
+				 <&tegra_car TEGRA210_CLK_CCLK_LP>,
+				 <&tegra_car TEGRA210_CLK_PLL_X>,
+				 <&tegra_car TEGRA210_CLK_PLL_P_OUT4>,
+				 <&dfll>;
+			clock-names = "cpu_g", "cpu_lp", "pll_x", "pll_p", "dfll";
+			clock-latency = <300000>;
+		};
+	};
 };

@@ -905,4 +905,19 @@
 			pllx-offset-min = <2000>;
 		};
 	};
+	dfll: clock@70110000 {
+		status = "okay";
+
+		reg = <0x0 0x70110000 0x0 0x400>;
+		vdd-cpu-supply = <&cpu_ovr_reg>;
+		nvidia,pwm-to-pmic;
+		nvidia,init-uv = <1000000>;
+		nvidia,align-step-uv = <19200>; /* 19.2mv */
+		nvidia,sample-rate = <25000>;
+		nvidia,droop-ctrl = <0x00000f00>;
+		nvidia,force-mode = <1>;
+		nvidia,cf = <6>;
+		nvidia,ci = <0>;
+		nvidia,cg = <2>;
+	};
 };

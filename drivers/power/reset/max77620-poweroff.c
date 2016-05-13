@@ -128,6 +128,9 @@ static void _max77620_prepare_system_power_off(
 static void max77620_prepare_system_power_off(
 		struct max77620_poweroff *max77620_poff)
 {
+	if (!max77620_poff->ngpio_states)
+		return;
+
 	max77620_allow_atomic_xfer(max77620_poff);
 	_max77620_prepare_system_power_off(max77620_poff);
 }
@@ -250,7 +253,7 @@ static struct system_pmic_ops max77620_pm_ops = {
 };
 
 static int max77620_poweroff_probe(struct platform_device *pdev)
-{ 
+{
 	struct max77620_poweroff *max77620_poweroff;
 	struct device_node *np = pdev->dev.parent->of_node;
 	struct max77620_chip *max77620 = dev_get_drvdata(pdev->dev.parent);

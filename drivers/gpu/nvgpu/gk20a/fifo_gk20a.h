@@ -79,8 +79,8 @@ struct fifo_mmu_fault_info_gk20a {
 struct fifo_engine_info_gk20a {
 	u32 engine_id;
 	u32 runlist_id;
-	u32 intr_id;
-	u32 reset_id;
+	u32 intr_mask;
+	u32 reset_mask;
 	u32 pbdma_id;
 	struct fifo_pbdma_exception_info_gk20a pbdma_exception_info;
 	struct fifo_engine_exception_info_gk20a engine_exception_info;
@@ -222,5 +222,6 @@ void gk20a_fifo_debugfs_init(struct device *dev);
 
 const char *gk20a_fifo_interleave_level_name(u32 interleave_level);
 
+int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type);
 
 #endif /*__GR_GK20A_H__*/

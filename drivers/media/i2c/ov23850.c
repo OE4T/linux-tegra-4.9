@@ -1322,6 +1322,8 @@ static int ov23850_probe(struct i2c_client *client,
 	common_data->def_mode		= OV23850_DEFAULT_MODE;
 	common_data->def_width		= OV23850_DEFAULT_WIDTH;
 	common_data->def_height		= OV23850_DEFAULT_HEIGHT;
+	common_data->fmt_width		= common_data->def_width;
+	common_data->fmt_height		= common_data->def_height;
 	common_data->def_clk_freq	= OV23850_DEFAULT_CLK_FREQ;
 
 	priv->i2c_client		= client;

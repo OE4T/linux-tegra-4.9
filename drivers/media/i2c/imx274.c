@@ -51,7 +51,7 @@
 
 #define IMX274_DEFAULT_WIDTH	3840
 #define IMX274_DEFAULT_HEIGHT	2160
-#define IMX274_DEFAULT_DATAFMT	V4L2_MBUS_FMT_SRGGB10_1X10
+#define IMX274_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX274_DEFAULT_CLK_FREQ	24000000
 
 struct imx274 {
@@ -485,14 +485,14 @@ exit:
 }
 
 static int imx274_get_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_fh *fh,
+		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_format *format)
 {
 	return camera_common_g_fmt(sd, &format->format);
 }
 
 static int imx274_set_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_fh *fh,
+		struct v4l2_subdev_pad_config *cfg,
 	struct v4l2_subdev_format *format)
 {
 	int ret;
@@ -518,14 +518,8 @@ static int imx274_g_input_status(struct v4l2_subdev *sd, u32 *status)
 
 static struct v4l2_subdev_video_ops imx274_subdev_video_ops = {
 	.s_stream	= imx274_s_stream,
-	.s_mbus_fmt	= camera_common_s_fmt,
-	.g_mbus_fmt	= camera_common_g_fmt,
-	.try_mbus_fmt	= camera_common_try_fmt,
-	.enum_mbus_fmt	= camera_common_enum_fmt,
 	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status	= imx274_g_input_status,
-	.enum_framesizes	= camera_common_enum_framesizes,
-	.enum_frameintervals	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops imx274_subdev_core_ops = {
@@ -788,7 +782,7 @@ static int imx274_read_eeprom(struct imx274 *priv,
 	}
 
 	for (i = 0; i < IMX274_EEPROM_SIZE; i++)
-		sprintf(&ctrl->string[i*2], "%02x",
+		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
 			priv->eeprom_buf[i]);
 	return 0;
 }
@@ -916,9 +910,9 @@ static int imx274_otp_setup(struct imx274 *priv)
 	}
 
 	for (i = 0; i < IMX274_OTP_SIZE; i++)
-		sprintf(&ctrl->string[i*2], "%02x",
+		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
 			otp_buf[i]);
-	ctrl->cur.string = ctrl->string;
+	ctrl->p_cur.p_char = ctrl->p_new.p_char;
 
 	err = camera_common_s_power(priv->subdev, false);
 	if (err)
@@ -961,9 +955,9 @@ static int imx274_fuse_id_setup(struct imx274 *priv)
 	}
 
 	for (i = 0; i < IMX274_FUSE_ID_SIZE; i++)
-		sprintf(&ctrl->string[i*2], "%02x",
+		sprintf(&ctrl->p_new.p_char[i*2], "%02x",
 			fuse_id[i]);
-	ctrl->cur.string = ctrl->string;
+	ctrl->p_cur.p_char = ctrl->p_new.p_char;
 
 	err = camera_common_s_power(priv->subdev, false);
 	if (err)
@@ -1026,9 +1020,9 @@ static int imx274_s_ctrl(struct v4l2_ctrl *ctrl)
 		}
 		break;
 	case V4L2_CID_EEPROM_DATA:
-		if (!ctrl->string[0])
+		if (!ctrl->p_new.p_char[0])
 			break;
-		err = imx274_write_eeprom(priv, ctrl->string);
+		err = imx274_write_eeprom(priv, ctrl->p_new.p_char);
 		if (err)
 			return err;
 		break;
@@ -1066,7 +1060,7 @@ static int imx274_ctrls_init(struct imx274 *priv)
 
 		if (ctrl_config_list[i].type == V4L2_CTRL_TYPE_STRING &&
 			ctrl_config_list[i].flags & V4L2_CTRL_FLAG_READ_ONLY) {
-			ctrl->string = devm_kzalloc(&client->dev,
+			ctrl->p_new.p_char = devm_kzalloc(&client->dev,
 				ctrl_config_list[i].max + 1, GFP_KERNEL);
 		}
 		priv->ctrls[i] = ctrl;

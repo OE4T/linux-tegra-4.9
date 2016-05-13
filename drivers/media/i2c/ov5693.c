@@ -1319,6 +1319,8 @@ static int ov5693_probe(struct i2c_client *client,
 	common_data->def_mode		= OV5693_DEFAULT_MODE;
 	common_data->def_width		= OV5693_DEFAULT_WIDTH;
 	common_data->def_height		= OV5693_DEFAULT_HEIGHT;
+	common_data->fmt_width		= common_data->def_width;
+	common_data->fmt_height		= common_data->def_height;
 	common_data->def_clk_freq	= OV5693_DEFAULT_CLK_FREQ;
 
 	priv->i2c_client = client;

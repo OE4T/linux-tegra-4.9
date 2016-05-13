@@ -341,7 +341,6 @@ const struct camera_common_colorfmt *camera_common_find_datafmt(
 
 	return NULL;
 }
-
 int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 				struct v4l2_subdev_pad_config *cfg,
 				struct v4l2_subdev_mbus_code_enum *code)

@@ -507,9 +507,14 @@ static struct v4l2_subdev_core_ops imx214_subdev_core_ops = {
 	.s_power	= camera_common_s_power,
 };
 
+static struct v4l2_subdev_pad_ops imx214_subdev_pad_ops = {
+	.enum_mbus_code = camera_common_enum_mbus_code,
+};
+
 static struct v4l2_subdev_ops imx214_subdev_ops = {
 	.core	= &imx214_subdev_core_ops,
 	.video	= &imx214_subdev_video_ops,
+	.pad	= &imx214_subdev_pad_ops,
 };
 
 static struct of_device_id imx214_of_match[] = {
@@ -1183,6 +1188,8 @@ static int imx214_probe(struct i2c_client *client,
 	common_data->def_mode		= IMX214_DEFAULT_MODE;
 	common_data->def_width		= IMX214_DEFAULT_WIDTH;
 	common_data->def_height		= IMX214_DEFAULT_HEIGHT;
+	common_data->fmt_width		= common_data->def_width;
+	common_data->fmt_height		= common_data->def_height;
 	common_data->def_clk_freq	= IMX214_DEFAULT_CLK_FREQ;
 
 	priv->i2c_client		= client;

@@ -414,8 +414,8 @@ static const int imx274_framerates[] = {
 };
 
 static const struct camera_common_frmfmt imx274_frmfmt[] = {
-	{{3840, 2160},	imx274_framerates, 2, 0, IMX274_MODE_3840X2160},
-	{{1920, 1080},	imx274_framerates, 2, 0, IMX274_MODE_1920X1080},
-	{{1280, 720},	imx274_framerates, 2, 0, IMX274_MODE_1280X720},
+	{{3840, 2160},  0, IMX274_MODE_3840X2160},
+	{{1920, 1080},  0, IMX274_MODE_1920X1080},
+	{{1280, 720},   0, IMX274_MODE_1280X720},
 };
 #endif  /* __IMX274_I2C_TABLES__ */

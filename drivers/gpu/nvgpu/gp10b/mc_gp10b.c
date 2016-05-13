@@ -108,9 +108,9 @@ irqreturn_t mc_gp10b_intr_thread_stall(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
-	if (mc_intr_0 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
+	if (mc_intr_0 & g->fifo.engine_info[ENGINE_GR_GK20A].intr_mask)
 		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
-	if (mc_intr_0 & BIT(g->fifo.engine_info[ENGINE_CE2_GK20A].intr_id)
+	if (mc_intr_0 & g->fifo.engine_info[ENGINE_CE2_GK20A].intr_mask
 		&& g->ops.ce2.isr_stall)
 		g->ops.ce2.isr_stall(g);
 	if (mc_intr_0 & mc_intr_pfifo_pending_f())
@@ -142,9 +142,9 @@ irqreturn_t mc_gp10b_intr_thread_nonstall(struct gk20a *g)
 
 	if (mc_intr_1 & mc_intr_pfifo_pending_f())
 		gk20a_fifo_nonstall_isr(g);
-	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_GR_GK20A].intr_id))
+	if (mc_intr_1 & g->fifo.engine_info[ENGINE_GR_GK20A].intr_mask)
 		gk20a_gr_nonstall_isr(g);
-	if (mc_intr_1 & BIT(g->fifo.engine_info[ENGINE_CE2_GK20A].intr_id)
+	if (mc_intr_1 & g->fifo.engine_info[ENGINE_CE2_GK20A].intr_mask
 		&& g->ops.ce2.isr_nonstall)
 		g->ops.ce2.isr_nonstall(g);
 

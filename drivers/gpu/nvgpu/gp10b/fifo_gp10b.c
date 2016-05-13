@@ -23,6 +23,7 @@
 #include "hw_ccsr_gp10b.h"
 #include "hw_fifo_gp10b.h"
 #include "hw_ram_gp10b.h"
+#include "hw_top_gp10b.h"
 
 static void gp10b_set_pdb_fault_replay_flags(struct gk20a *g,
 				struct mem_desc *mem)
@@ -181,10 +182,26 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 	return 0;
 }
 
+static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type)
+{
+	int ret = ENGINE_INVAL_GK20A;
+
+	gk20a_dbg_info("engine type %d", engine_type);
+	if (engine_type == top_device_info_type_enum_graphics_v())
+		ret = ENGINE_GR_GK20A;
+	else if (engine_type == top_device_info_type_enum_lce_v())
+		ret = ENGINE_CE2_GK20A;
+	else
+		gk20a_err(g->dev, "unknown engine %d", engine_type);
+
+	return ret;
+}
+
 void gp10b_init_fifo(struct gpu_ops *gops)
 {
 	gm20b_init_fifo(gops);
 	gops->fifo.setup_ramfc = channel_gp10b_setup_ramfc;
 	gops->fifo.get_pbdma_signature = gp10b_fifo_get_pbdma_signature;
 	gops->fifo.resetup_ramfc = gp10b_fifo_resetup_ramfc;
+	gops->fifo.engine_enum_from_type = gp10b_fifo_engine_enum_from_type;
 }

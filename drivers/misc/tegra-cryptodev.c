@@ -34,6 +34,7 @@
 #include <linux/tegra-fuse.h>
 #include <crypto/rng.h>
 #include <crypto/hash.h>
+#include <soc/tegra/fuse.h>
 
 #include "tegra-cryptodev.h"
 
@@ -584,8 +585,8 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 		memcpy(ctx->seed, rng_req.seed, TEGRA_CRYPTO_RNG_SEED_SIZE);
 
 		if (rng_req.type == RNG_DRBG) {
-			if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA2 ||
-				tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
+			if (tegra_get_chip_id() == TEGRA20 ||
+				tegra_get_chip_id() == TEGRA30) {
 				return -EINVAL;
 			}
 			ctx->rng_drbg = crypto_alloc_rng("rng_drbg-aes-tegra",
@@ -656,8 +657,8 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 		}
 
 		if (rng_req.type == RNG_DRBG) {
-			if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA2 ||
-				tegra_get_chipid() == TEGRA_CHIPID_TEGRA3) {
+			if (tegra_get_chip_id() == TEGRA20 ||
+				tegra_get_chip_id() == TEGRA30) {
 				ret = -EINVAL;
 				goto rng_out;
 			}
@@ -735,7 +736,7 @@ rng_out:
 #endif
 
 	case TEGRA_CRYPTO_IOCTL_GET_SHA:
-		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA2)
+		if (tegra_get_chip_id() == TEGRA20)
 			return -EINVAL;
 		if (copy_from_user(&sha_req, (void __user *)arg,
 				sizeof(sha_req))) {

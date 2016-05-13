@@ -23,7 +23,7 @@
 #include "iomap.h"
 
 #define NV_ADDRESS_MAP_SCRATCH_BASE	0x0c390000
-#define SCRATCH_SECURE_BL_SCRATCH_0	(NV_ADDRESS_MAP_SCRATCH_BASE + 0x0)
+#define SCRATCH_SCRATCH0_0		(NV_ADDRESS_MAP_SCRATCH_BASE + 0x2000)
 
 #define RECOVERY_MODE		BIT(31)
 #define BOOTLOADER_MODE		BIT(30)
@@ -31,7 +31,7 @@
 
 static void program_reboot_reason(const char *cmd)
 {
-	void __iomem *scratch = ioremap(SCRATCH_SECURE_BL_SCRATCH_0, 0x1000);
+	void __iomem *scratch = ioremap(SCRATCH_SCRATCH0_0, 4);
 	u32 reg;
 
 	/* clean up */

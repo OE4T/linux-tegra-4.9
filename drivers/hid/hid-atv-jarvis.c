@@ -665,7 +665,7 @@ static int snd_atvr_decode_msbc_packet(
 
 				snd_atvr_log(
 				"sequence_num err, 0x%02x != 0x%02x\n",
-				sbc_input[1],
+				sbc_input[0],
 				msbc_sequence_table[atvr_snd->seq_index]);
 
 				return 0;

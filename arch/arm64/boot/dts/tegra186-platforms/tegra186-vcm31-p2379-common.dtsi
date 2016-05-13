@@ -24,7 +24,6 @@
 #include "tegra186-platforms/tegra186-vcm31-power-tree-p2379-0000-c00-00.dtsi"
 #include "tegra186-vcm31-p2379-pwm-fan.dtsi"
 #include "tegra186-vcm31-p2379-thermal-fan-est.dtsi"
-#include "tegra186-platforms/tegra186-vcm31-camera-ape.dtsi"
 
 / {
         model = "p2379_t186";

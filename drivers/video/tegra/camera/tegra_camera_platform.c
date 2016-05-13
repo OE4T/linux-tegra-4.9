@@ -188,12 +188,6 @@ static int tegra_camera_isomgr_release(struct tegra_camera_info *info)
 
 static int tegra_camera_open(struct inode *inode, struct file *file)
 {
-	return 0;
-}
-
-#if 0
-static int tegra_camera_open(struct inode *inode, struct file *file)
-{
 	struct tegra_camera_info *info;
 	struct miscdevice *mdev;
 #if !defined(CONFIG_TEGRA_BWMGR)
@@ -259,13 +253,7 @@ err_get_clk:
 	return -ENOENT;
 #endif
 }
-#endif
 
-static int tegra_camera_release(struct inode *inode, struct file *file)
-{
-	return 0;
-}
-#if 0
 static int tegra_camera_release(struct inode *inode, struct file *file)
 {
 
@@ -299,14 +287,7 @@ static int tegra_camera_release(struct inode *inode, struct file *file)
 
 	return 0;
 }
-#endif
 
-static long tegra_camera_ioctl(struct file *file,
-	unsigned int cmd, unsigned long arg)
-{
-	return 0;
-}
-#if 0
 static long tegra_camera_ioctl(struct file *file,
 	unsigned int cmd, unsigned long arg)
 {
@@ -376,7 +357,6 @@ static long tegra_camera_ioctl(struct file *file,
 
 	return 0;
 }
-#endif
 
 static const struct file_operations tegra_camera_ops = {
 	.owner = THIS_MODULE,

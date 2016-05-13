@@ -97,44 +97,6 @@
 		status = "disabled";
 	};
 
-	host1x {
-		dsi {
-			panel-s-wuxga-8-0 {
-				smartdimmer {
-					status = "disabled";
-				};
-			};
-		};
-
-		sor {
-			status = "disabled";
-			hdmi-display {
-				status = "disabled";
-				disp-default-out {
-					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
-				};
-			};
-
-			panel-s-edp-uhdtv-15-6 {
-				smartdimmer {
-					status = "disabled";
-				};
-			};
-		};
-
-		sor1 {
-			hdmi-display {
-				disp-default-out {
-					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
-				};
-			};
-		};
-	};
-
-	hda@3510000 {
-		status = "disabled";
-	};
-
 	pwm-fan {
 		status = "disabled";
 	};

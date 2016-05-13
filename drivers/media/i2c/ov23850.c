@@ -555,9 +555,21 @@ exit:
 	return err;
 }
 
+static int ov23850_g_input_status(struct v4l2_subdev *sd, u32 *status)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct ov23850 *priv = (struct ov23850 *)s_data->priv;
+	struct camera_common_power_rail *pw = &priv->power;
+
+	*status = pw->state == SWITCH_ON;
+	return 0;
+}
+
 static struct v4l2_subdev_video_ops ov23850_subdev_video_ops = {
 	.s_stream	= ov23850_s_stream,
 	.g_mbus_config	= camera_common_g_mbus_config,
+	.g_input_status	= ov23850_g_input_status,
 };
 
 static struct v4l2_subdev_core_ops ov23850_subdev_core_ops = {

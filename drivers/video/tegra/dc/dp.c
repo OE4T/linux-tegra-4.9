@@ -2708,7 +2708,8 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 	tegra_dc_io_end(dc);
 
 #ifdef CONFIG_SWITCH
-	if (tegra_edid_audio_supported(dp->hpd_data.edid)) {
+	if (tegra_edid_audio_supported(dp->hpd_data.edid)
+				&& tegra_dc_is_ext_dp_panel(dc)) {
 		pr_info("dp_audio switch 1\n");
 		switch_set_state(&dp->audio_switch, 1);
 	}
@@ -2814,7 +2815,8 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 #endif
 
 #ifdef CONFIG_SWITCH
-	if (tegra_edid_audio_supported(dp->hpd_data.edid)) {
+	if (tegra_edid_audio_supported(dp->hpd_data.edid)
+				&& tegra_dc_is_ext_dp_panel(dc)) {
 		pr_info("dp_audio switch 0\n");
 		switch_set_state(&dp->audio_switch, 0);
 	}

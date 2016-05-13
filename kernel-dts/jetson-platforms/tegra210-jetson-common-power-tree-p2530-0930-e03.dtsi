@@ -17,7 +17,6 @@
 
 #include "tegra210-jetson-e-pmic-p2530-0930-e03.dtsi"
 #include "tegra210-jetson-e-power-fixed-p2530-0930-e03.dtsi"
-#include "tegra210-ers-power-dvfs-e2174-1101-a00.dtsi"
 
 / {
 	dvfs_rails {

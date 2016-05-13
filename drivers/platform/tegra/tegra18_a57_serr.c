@@ -356,9 +356,9 @@ static int __init tegra18_a57_serr_init(void)
 	}
 
 	pr_info("%s: on CPU %d a %s Core\n", __func__, cpu, core_type);
+	raw_spin_unlock_irqrestore(&a57_mca_lock, flags);
 
 	register_serr_hook(&hook);
-	raw_spin_unlock_irqrestore(&a57_mca_lock, flags);
 
 	return a57_serr_dbgfs_init();
 }

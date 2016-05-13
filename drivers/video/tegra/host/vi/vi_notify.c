@@ -115,6 +115,7 @@ static bool vi_notify_is_broadcast(u8 tag)
 		(1u <<  1) /* CSI mux frame end */ |
 		(1u <<  2) /* CSI mux frame fault */ |
 		(1u <<  3) /* CSI mux stream fault */ |
+		(1u << 10) /* Frame end fault */ |
 		(1u << 11) /* No match fault */ |
 		(1u << 12) /* Match collision fault */ |
 		(1u << 13) /* Short frame fault */ |

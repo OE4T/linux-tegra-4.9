@@ -15,6 +15,7 @@ obj-$(CONFIG_EQOS_APE_HWDEP) += eqos_ape/
 obj-$(CONFIG_TEGRA_SKIN)	+= tegra-skin.o
 obj-$(CONFIG_TEGRA186_AHC) += tegra186-ahc/
 obj-$(CONFIG_EVENTLIB)		+= eventlib/
+obj-$(CONFIG_TEGRA_PROC_POWER_MODEL) += tegra_ppm.o
 
 ifdef CONFIG_ARCH_TEGRA_19x_SOC
 

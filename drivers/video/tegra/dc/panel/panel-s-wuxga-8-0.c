@@ -57,7 +57,7 @@ static int dsi_s_wuxga_8_0_regulator_get(struct device *dev)
 		pr_err("dvdd_lcd_1v8 regulator get failed\n");
 		err = PTR_ERR(dvdd_lcd_1v8);
 		dvdd_lcd_1v8 = NULL;
-		goto fail;
+		goto dvdd_lcd_fail;
 	}
 
 	vpp_lcd = regulator_get(dev, "outp");
@@ -65,7 +65,7 @@ static int dsi_s_wuxga_8_0_regulator_get(struct device *dev)
 		pr_err("vpp_lcd regulator get failed\n");
 		err = PTR_ERR(vpp_lcd);
 		vpp_lcd = NULL;
-		goto fail;
+		goto vpp_lcd_fail;
 	}
 
 	vmm_lcd = regulator_get(dev, "outn");
@@ -73,11 +73,26 @@ static int dsi_s_wuxga_8_0_regulator_get(struct device *dev)
 		pr_err("vmm_lcd regulator get failed\n");
 		err = PTR_ERR(vmm_lcd);
 		vmm_lcd = NULL;
-		goto fail;
+		goto vmm_lcd_fail;
 	}
 
 	reg_requested = true;
 	return 0;
+vmm_lcd_fail:
+	if (vpp_lcd) {
+		regulator_put(vpp_lcd);
+		vpp_lcd = NULL;
+	}
+vpp_lcd_fail:
+	if (dvdd_lcd_1v8) {
+		regulator_put(dvdd_lcd_1v8);
+		dvdd_lcd_1v8 = NULL;
+	}
+dvdd_lcd_fail:
+	if (avdd_lcd_3v0) {
+		regulator_put(avdd_lcd_3v0);
+		avdd_lcd_3v0 = NULL;
+	}
 fail:
 	return err;
 }

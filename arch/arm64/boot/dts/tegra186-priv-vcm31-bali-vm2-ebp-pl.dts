@@ -17,6 +17,13 @@
 #include "tegra186-priv-vcm31-bali-vm2-ebp.dts"
 
 / {
+	host1x: host1x {
+		nvidia,ch-base = <28>;
+		nvidia,nb-channels = <27>;
+		nvidia,pts-base = <284>;
+		nvidia,nb-pts = <284>;
+	};
+
 	spi@3270000 {
 		status = "okay";
 	};

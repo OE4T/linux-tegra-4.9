@@ -18,6 +18,21 @@
 
 
 / {
+	host1x: host1x {
+		nvidia,ch-base = <0>;
+		nvidia,nb-channels = <28>;
+		nvidia,pts-base = <0>;
+		nvidia,nb-pts = <284>;
+
+		se@15830000 {
+			status = "disabled";
+		};
+
+		se@15840000 {
+			status = "disabled";
+		};
+	};
+
 	spi@3270000 {
 		status = "disabled";
 	};

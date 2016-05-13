@@ -803,7 +803,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 		goto clean_up;
 	}
 
-	gk20a_dbg(gpu_dbg_map, "userd bar1 va = 0x%llx", f->userd.gpu_va);
+	gk20a_dbg(gpu_dbg_map_v, "userd bar1 va = 0x%llx", f->userd.gpu_va);
 
 	f->channel = vzalloc(f->num_channels * sizeof(*f->channel));
 	f->tsg = vzalloc(f->num_channels * sizeof(*f->tsg));

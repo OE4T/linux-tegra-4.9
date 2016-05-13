@@ -120,7 +120,7 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_writel(g, ltc_ltcs_ltss_cbc_base_r(),
 		compbit_base_post_divide);
 
-	gk20a_dbg(gpu_dbg_info | gpu_dbg_map | gpu_dbg_pte,
+	gk20a_dbg(gpu_dbg_info | gpu_dbg_map_v | gpu_dbg_pte,
 		   "compbit base.pa: 0x%x,%08x cbc_base:0x%08x\n",
 		   (u32)(compbit_store_iova >> 32),
 		   (u32)(compbit_store_iova & 0xffffffff),

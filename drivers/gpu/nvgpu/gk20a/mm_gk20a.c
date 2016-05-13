@@ -1685,20 +1685,18 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	}
 
 	gk20a_dbg(gpu_dbg_map,
-	   "as=%d pgsz=%d "
-	   "kind=0x%x flags=0x%x "
-	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x + %llx size=%lld aperture=%s",
-	   vm_aspace_id(vm), pgsz_idx,
-	   kind_v, flags,
-	   ctag_lines, ctag_offset,
-	   hi32(map_offset), lo32(map_offset),
-	   hi32((u64)sg_dma_address(sgt->sgl)),
-	   lo32((u64)sg_dma_address(sgt->sgl)),
-	   hi32((u64)sg_phys(sgt->sgl)),
-	   lo32((u64)sg_phys(sgt->sgl)),
-	   buffer_offset,
-	   size,
-	   gk20a_aperture_str(aperture));
+		  "gv: 0x%04x_%08x + 0x%-7llx "
+		  "[dma: 0x%02x_%08x, pa: 0x%02x_%08x] "
+		  "pgsz=%-3dKb as=%-2d ctags=%d start=%d "
+		  "kind=0x%x flags=0x%x apt=%s",
+		  hi32(map_offset), lo32(map_offset), size,
+		  sgt ? hi32((u64)sg_dma_address(sgt->sgl)) : 0,
+		  sgt ? lo32((u64)sg_dma_address(sgt->sgl)) : 0,
+		  sgt ? hi32((u64)sg_phys(sgt->sgl)) : 0,
+		  sgt ? lo32((u64)sg_phys(sgt->sgl)) : 0,
+		  vm->gmmu_page_sizes[pgsz_idx] >> 10, vm_aspace_id(vm),
+		  ctag_lines, ctag_offset,
+		  kind_v, flags, gk20a_aperture_str(aperture));
 
 	err = update_gmmu_ptes_locked(vm, pgsz_idx,
 				      sgt,
@@ -1857,21 +1855,21 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	kref_get(&mapped_buffer->ref);
 
 	gk20a_dbg(gpu_dbg_map,
-		   "reusing as=%d pgsz=%d flags=0x%x ctags=%d "
-		   "start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x "
-		   "own_mem_ref=%d user_mapped=%d size=%zu aperture=%s",
-		   vm_aspace_id(vm), mapped_buffer->pgsz_idx,
-		   mapped_buffer->flags,
-		   mapped_buffer->ctag_lines,
-		   mapped_buffer->ctag_offset,
-		   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
-		   hi32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
-		   lo32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
-		   hi32((u64)sg_phys(mapped_buffer->sgt->sgl)),
-		   lo32((u64)sg_phys(mapped_buffer->sgt->sgl)),
-		   mapped_buffer->own_mem_ref, user_mapped,
-		   dmabuf->size,
-		   gk20a_aperture_str(gk20a_dmabuf_aperture(g, dmabuf)));
+		  "gv: 0x%04x_%08x + 0x%-7zu "
+		  "[dma: 0x%02x_%08x, pa: 0x%02x_%08x] "
+		  "pgsz=%-3dKb as=%-2d ctags=%d start=%d "
+		  "flags=0x%x apt=%s (reused)",
+		  hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
+		  dmabuf->size,
+		  hi32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
+		  lo32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
+		  hi32((u64)sg_phys(mapped_buffer->sgt->sgl)),
+		  lo32((u64)sg_phys(mapped_buffer->sgt->sgl)),
+		  vm->gmmu_page_sizes[mapped_buffer->pgsz_idx] >> 10,
+		  vm_aspace_id(vm),
+		  mapped_buffer->ctag_lines, mapped_buffer->ctag_offset,
+		  mapped_buffer->flags,
+		  gk20a_aperture_str(gk20a_dmabuf_aperture(g, dmabuf)));
 
 	if (sgt)
 		*sgt = mapped_buffer->sgt;
@@ -2259,22 +2257,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 					aperture);
 	if (!map_offset)
 		goto clean_up;
-
-	gk20a_dbg(gpu_dbg_map,
-	   "as=%d pgsz=%d "
-	   "kind=0x%x kind_uc=0x%x flags=0x%x "
-	   "ctags=%d start=%d ctags_allocated=%d ctags_mappable=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x size=%lld/%lld aperture=%s",
-	   vm_aspace_id(vm), gmmu_page_size,
-	   bfr.kind_v, bfr.uc_kind_v, flags,
-	   bfr.ctag_lines, bfr.ctag_offset,
-	   bfr.ctag_allocated_lines, bfr.ctag_user_mappable,
-	   hi32(map_offset), lo32(map_offset),
-	   hi32((u64)sg_dma_address(bfr.sgt->sgl)),
-	   lo32((u64)sg_dma_address(bfr.sgt->sgl)),
-	   hi32((u64)sg_phys(bfr.sgt->sgl)),
-	   lo32((u64)sg_phys(bfr.sgt->sgl)),
-	   bfr.size, mapping_size,
-	   gk20a_aperture_str(aperture));
 
 #if defined(NVHOST_DEBUG)
 	{
@@ -3437,7 +3419,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 		}
 	}
 
-	gk20a_dbg(gpu_dbg_map, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx",
+	gk20a_dbg(gpu_dbg_map_v, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx",
 			pgsz_idx, gpu_va, gpu_end-1, iova);
 	err = map_gmmu_pages(g, &vm->pdb);
 	if (err) {
@@ -3493,11 +3475,12 @@ void gk20a_vm_unmap_locked(struct mapped_buffer_node *mapped_buffer,
 		  mapped_buffer->va_node->sparse : false,
 		batch);
 
-	gk20a_dbg(gpu_dbg_map, "as=%d pgsz=%d gv=0x%x,%08x own_mem_ref=%d",
-		   vm_aspace_id(vm),
-		   vm->gmmu_page_sizes[mapped_buffer->pgsz_idx],
-		   hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
-		   mapped_buffer->own_mem_ref);
+	gk20a_dbg(gpu_dbg_map,
+		  "gv: 0x%04x_%08x pgsz=%-3dKb as=%-2d own_mem_ref=%d",
+		  hi32(mapped_buffer->addr), lo32(mapped_buffer->addr),
+		  vm->gmmu_page_sizes[mapped_buffer->pgsz_idx] >> 10,
+		  vm_aspace_id(vm),
+		  mapped_buffer->own_mem_ref);
 
 	gk20a_mm_unpin(dev_from_vm(vm), mapped_buffer->dmabuf,
 		       mapped_buffer->sgt);

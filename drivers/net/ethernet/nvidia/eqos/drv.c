@@ -519,10 +519,14 @@ irqreturn_t eqos_ch_isr(int irq, void *device_id)
 
 	i = smp_processor_id();
 
-	if (irq < pdata->rx_irqs[0])
-		qinx = irq - pdata->tx_irqs[0];
-	else
-		qinx = irq - pdata->rx_irqs[0];
+	if ((irq == pdata->rx_irqs[0]) || (irq == pdata->tx_irqs[0]))
+		qinx = 0;
+	else if ((irq == pdata->rx_irqs[1]) || (irq == pdata->tx_irqs[1]))
+		qinx = 1;
+	else if ((irq == pdata->rx_irqs[2]) || (irq == pdata->tx_irqs[2]))
+		qinx = 2;
+	else if ((irq == pdata->rx_irqs[3]) || (irq == pdata->tx_irqs[3]))
+		qinx = 3;
 
 	DBGPR("-->%s(): cpu=%d, chan=%d\n", __func__, i, qinx);
 

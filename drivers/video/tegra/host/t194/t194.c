@@ -378,6 +378,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.finalize_poweron	= nvhost_nvdla_finalize_poweron,
 	.prepare_poweroff	= nvhost_nvdla_prepare_poweroff,
+	.firmware_name		= "nvdla.bin",
 	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.powergate_delay        = 500,
 	.keepalive		= true,

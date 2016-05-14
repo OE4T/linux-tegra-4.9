@@ -27,6 +27,7 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
+#include "flcn/flcn.h"
 #include "t194/t194.h"
 #include "nvhost_nvdla_ioctl.h"
 
@@ -38,7 +39,7 @@ struct nvdla {
 /* power management API */
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
-	return 0;
+	return nvhost_flcn_finalize_poweron(pdev);
 }
 
 int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)

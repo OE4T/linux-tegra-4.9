@@ -48,6 +48,7 @@ enum {
 	MCE_SMC_ROC_FLUSH_CACHE_ONLY,
 	MCE_SMC_ROC_CLEAN_CACHE_ONLY,
 	MCE_SMC_ENABLE_LATIC,
+	MCE_SMC_UNCORE_PERFMON_REQ,
 	MCE_SMC_ENUM_MAX = 0xFF,	/* enums cannot exceed this value */
 };
 
@@ -371,6 +372,48 @@ int tegra_mce_enable_latic(void)
 	return send_smc(MCE_SMC_ENABLE_LATIC, &regs);
 }
 EXPORT_SYMBOL(tegra_mce_enable_latic);
+
+/**
+ * Query PMU for uncore perfmon counter
+ *
+ * @req input command and counter index
+ * @data output counter value
+ *
+ * Returns status of read request.
+ */
+int tegra_mce_read_uncore_perfmon(u32 req, u32 *data)
+{
+	struct mce_regs regs;
+	u32 status;
+
+	if (data == NULL)
+		return -EINVAL;
+
+	regs.args[0] = req;
+	status = send_smc(MCE_SMC_UNCORE_PERFMON_REQ, &regs);
+	*data = (u32)regs.args[1];
+	return status;
+}
+EXPORT_SYMBOL(tegra_mce_read_uncore_perfmon);
+
+/**
+ * Write PMU reg for uncore perfmon counter
+ *
+ * @req input command and counter index
+ * @data data to be written
+ *
+ * Returns status of write request.
+ */
+int tegra_mce_write_uncore_perfmon(u32 req, u32 data)
+{
+	struct mce_regs regs;
+	u32 status = 0;
+	regs.args[0] = req;
+	regs.args[1] = data;
+	status = send_smc(MCE_SMC_UNCORE_PERFMON_REQ, &regs);
+	return status;
+}
+EXPORT_SYMBOL(tegra_mce_write_uncore_perfmon);
 
 #ifdef CONFIG_DEBUG_FS
 

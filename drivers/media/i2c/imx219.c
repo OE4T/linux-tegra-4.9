@@ -372,6 +372,27 @@ static int imx219_g_input_status(struct v4l2_subdev *sd, u32 *status)
 	return 0;
 }
 
+static int imx219_get_fmt(struct v4l2_subdev *sd,
+		struct v4l2_subdev_fh *fh,
+		struct v4l2_subdev_format *format)
+{
+	return camera_common_g_fmt(sd, &format->format);
+}
+
+static int imx219_set_fmt(struct v4l2_subdev *sd,
+		struct v4l2_subdev_fh *fh,
+	struct v4l2_subdev_format *format)
+{
+	int ret;
+
+	if (format->which == V4L2_SUBDEV_FORMAT_TRY)
+		ret = camera_common_try_fmt(sd, &format->format);
+	else
+		ret = camera_common_s_fmt(sd, &format->format);
+
+	return ret;
+}
+
 static struct v4l2_subdev_video_ops imx219_subdev_video_ops = {
 	.s_stream	= imx219_s_stream,
 	.s_mbus_fmt	= camera_common_s_fmt,
@@ -388,6 +409,8 @@ static struct v4l2_subdev_core_ops imx219_subdev_core_ops = {
 
 static struct v4l2_subdev_pad_ops imx219_subdev_pad_ops = {
 	.enum_mbus_code = camera_common_enum_mbus_code,
+	.set_fmt = imx219_set_fmt,
+	.get_fmt = imx219_get_fmt,
 };
 
 static struct v4l2_subdev_ops imx219_subdev_ops = {

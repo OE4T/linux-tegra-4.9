@@ -361,6 +361,17 @@ exit:
 	return err;
 }
 
+static int imx219_g_input_status(struct v4l2_subdev *sd, u32 *status)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct imx219 *priv = (struct imx219 *)s_data->priv;
+	struct camera_common_power_rail *pw = &priv->power;
+
+	*status = pw->state == SWITCH_ON;
+	return 0;
+}
+
 static struct v4l2_subdev_video_ops imx219_subdev_video_ops = {
 	.s_stream	= imx219_s_stream,
 	.s_mbus_fmt	= camera_common_s_fmt,
@@ -368,6 +379,7 @@ static struct v4l2_subdev_video_ops imx219_subdev_video_ops = {
 	.try_mbus_fmt	= camera_common_try_fmt,
 	.enum_mbus_fmt	= camera_common_enum_fmt,
 	.g_mbus_config	= camera_common_g_mbus_config,
+	.g_input_status	= imx219_g_input_status,
 };
 
 static struct v4l2_subdev_core_ops imx219_subdev_core_ops = {

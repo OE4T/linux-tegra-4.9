@@ -35,4 +35,24 @@
 			status = "disabled";
 		};
 	};
+
+	vse@15810000 {
+		ivc = <76>;
+		status = "disabled";
+	};
+
+	vse@15820000 {
+		ivc = <76>;
+		status = "disabled";
+	};
+
+	vse@15830000 {
+		ivc = <76>;
+		status = "disabled";
+	};
+
+	vse@15840000 {
+		ivc = <76>;
+		status = "disabled";
+	};
 };

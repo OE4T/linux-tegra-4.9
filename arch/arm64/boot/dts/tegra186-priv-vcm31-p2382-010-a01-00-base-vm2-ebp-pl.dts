@@ -27,4 +27,24 @@
 		nvidia,pts-base = <284>;
 		nvidia,nb-pts = <284>;
 	};
+
+	vse@15810000 {
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15820000 {
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15830000 {
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15840000 {
+		ivc = <77>;
+		status = "disabled";
+	};
 };

@@ -915,7 +915,12 @@
 			      <&{/i2c@31b0000}		TEGRA_SID_GPCDMA_1>,
 			      <&{/i2c@31c0000}		TEGRA_SID_GPCDMA_1>,
 			      <&{/i2c@c250000}		TEGRA_SID_GPCDMA_1>,
-			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_1>;
+			      <&{/i2c@31e0000}		TEGRA_SID_GPCDMA_1>,
+			      <&{/vse@15810000}		TEGRA_SID_SE_VM1>,
+			      <&{/vse@15820000}		TEGRA_SID_SE_VM1>,
+			      <&{/vse@15830000}		TEGRA_SID_SE_VM1>,
+			      <&{/vse@15840000}		TEGRA_SID_SE_VM1>;
+
 		domains {
 			ape_domain {
 				address-space = <&ape_as>;
@@ -926,6 +931,12 @@
 			gpcdma_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_GPCDMA_1>;
+				sid-list-len = <1>;
+			};
+
+			vse_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_SE_VM1>;
 				sid-list-len = <1>;
 			};
 		};
@@ -1016,6 +1027,34 @@
 	};
 
 	gpio-keys {
+		status = "disabled";
+	};
+
+	vse@15810000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15820000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15830000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15840000 {
+		compatible = "nvidia,tegra186-hv-vse";
+		#stream-id-cells = <1>;
+		ivc = <77>;
 		status = "disabled";
 	};
 };

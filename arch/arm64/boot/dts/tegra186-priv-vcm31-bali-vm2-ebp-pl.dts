@@ -27,4 +27,24 @@
 	spi@3270000 {
 		status = "okay";
 	};
+
+	vse@15810000 {
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15820000 {
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15830000 {
+		ivc = <77>;
+		status = "disabled";
+	};
+
+	vse@15840000 {
+		ivc = <77>;
+		status = "disabled";
+	};
 };

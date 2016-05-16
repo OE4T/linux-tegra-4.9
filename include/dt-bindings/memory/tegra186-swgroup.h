@@ -39,3 +39,13 @@
 #define TEGRA_SID_HC_VM5	0x45
 #define TEGRA_SID_HC_VM6	0x46
 #define TEGRA_SID_HC_VM7	0x47
+
+/* SE data buffers */
+#define TEGRA_SID_SE_VM0	0x48
+#define TEGRA_SID_SE_VM1	0x49
+#define TEGRA_SID_SE_VM2	0x4a
+#define TEGRA_SID_SE_VM3	0x4b
+#define TEGRA_SID_SE_VM4	0x4c
+#define TEGRA_SID_SE_VM5	0x4d
+#define TEGRA_SID_SE_VM6	0x4e
+#define TEGRA_SID_SE_VM7	0x4f

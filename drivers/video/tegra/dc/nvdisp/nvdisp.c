@@ -909,7 +909,7 @@ INIT_EXIT:
 
 }
 
-static int _tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
+int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc)
 {
 	/* if color fmt is yuv_422 and postcomp support yuv422
 	 * enable chroma lpf by default
@@ -955,7 +955,7 @@ static int _tegra_nvdisp_set_ec_output_lut(struct tegra_dc *dc,
 	return 0;
 }
 
-static int _tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
+int tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
 			struct tegra_dc_mode *mode)
 {
 	u32 csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
@@ -998,6 +998,17 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 
 	if (!dc->mode.pclk)
 		return 0;
+
+	/* Bypass flag is officially set during flips, but we need to initialize
+	 * it here so that the output CSC and chroma LPF blocks are correctly
+	 * programmed during modeset for YUV bypass modes. Otherwise, momentary
+	 * screen corruption can be observed during the modeset.
+	 *
+	 * Also, T186 HW supports YUV422 8/12 bpc and YUV444 8bpc, but
+	 * userspace is still doing the pixel packing for these modes. Keep
+	 * using FB_VMODE_YUV_MASK until that changes.
+	 */
+	dc->yuv_bypass = mode->vmode & FB_VMODE_YUV_MASK;
 
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;
@@ -1075,15 +1086,15 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 #endif
 
 	/* TODO: MIPI/CRT/HDMI clock cals */
-	/* TODO: confirm shift clock still exists in Parker */
+	/* TODO: confirm shift clock still exists in T186 */
 	if (dc->mode.pclk != mode->pclk)
 		pr_info("Redo Clock pclk 0x%x != dc-pclk 0x%x\n",
 				mode->pclk, dc->mode.pclk);
 
-	_tegra_nvdisp_set_ocsc(dc, mode);
+	tegra_nvdisp_set_ocsc(dc, mode);
 	_tegra_nvdisp_set_ec_output_lut(dc, mode);
 
-	_tegra_nvdisp_set_chroma_lpf(dc);
+	tegra_nvdisp_set_chroma_lpf(dc);
 
 	/* general-update */
 	tegra_dc_writel(dc, nvdisp_cmd_state_ctrl_general_update_enable_f(),

@@ -2036,8 +2036,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		g->gr.ctx_vars.ucode.gpccs.inst.count * sizeof(u32),
 		g->gr.ctx_vars.ucode.gpccs.data.count * sizeof(u32));
 
-	err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_READ_ONLY, ucode_size,
-			&ucode_info->surface_desc);
+	err = gk20a_gmmu_alloc(g, ucode_size, &ucode_info->surface_desc);
 	if (err)
 		goto clean_up;
 

@@ -2443,8 +2443,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
 			pmu->desc->descriptor_size);
 
-	err = gk20a_gmmu_alloc_map_attr(vm, DMA_ATTR_READ_ONLY,
-			       GK20A_PMU_UCODE_SIZE_MAX, &pmu->ucode);
+	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_UCODE_SIZE_MAX, &pmu->ucode);
 	if (err)
 		goto err_release_fw;
 

@@ -40,10 +40,17 @@
 		outer_flush_range(pa, pa + (size_t)(size));		\
 	} while (0)
 
+enum gk20a_aperture {
+	APERTURE_INVALID, /* e.g., unallocated */
+	APERTURE_SYSMEM,
+	APERTURE_VIDMEM
+};
+
 struct mem_desc {
 	void *cpu_va;
 	struct page **pages;
 	struct sg_table *sgt;
+	enum gk20a_aperture aperture;
 	size_t size;
 	u64 gpu_va;
 };
@@ -357,6 +364,14 @@ struct mm_gk20a {
 	bool vidmem_is_vidmem;
 
 	struct mem_desc sysmem_flush;
+
+	u32 pramin_base;
+	spinlock_t pramin_base_lock;
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
+	u32 force_pramin; /* via debugfs */
+#else
+	bool force_pramin; /* via debugfs */
+#endif
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

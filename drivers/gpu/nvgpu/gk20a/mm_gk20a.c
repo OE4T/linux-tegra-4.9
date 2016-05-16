@@ -37,6 +37,7 @@
 #include "hw_fb_gk20a.h"
 #include "hw_bus_gk20a.h"
 #include "hw_ram_gk20a.h"
+#include "hw_pram_gk20a.h"
 #include "hw_mc_gk20a.h"
 #include "hw_flush_gk20a.h"
 #include "hw_ltc_gk20a.h"
@@ -44,9 +45,19 @@
 #include "kind_gk20a.h"
 #include "semaphore_gk20a.h"
 
+/*
+ * Flip this to force all gk20a_mem* accesses via PRAMIN from the start of the
+ * boot, even for buffers that would work via cpu_va. In runtime, the flag is
+ * in debugfs, called "force_pramin".
+ */
+#define GK20A_FORCE_PRAMIN_DEFAULT false
+
 int gk20a_mem_begin(struct gk20a *g, struct mem_desc *mem)
 {
 	void *cpu_va;
+
+	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
+		return 0;
 
 	if (WARN_ON(mem->cpu_va)) {
 		gk20a_warn(dev_from_gk20a(g), "nested %s", __func__);
@@ -66,20 +77,66 @@ int gk20a_mem_begin(struct gk20a *g, struct mem_desc *mem)
 
 void gk20a_mem_end(struct gk20a *g, struct mem_desc *mem)
 {
+	if (mem->aperture != APERTURE_SYSMEM || g->mm.force_pramin)
+		return;
+
 	vunmap(mem->cpu_va);
 	mem->cpu_va = NULL;
 }
 
+/* WARNING: returns pramin_base_lock taken, complement with pramin_exit() */
+static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
+{
+	u64 bufbase = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
+	u64 addr = bufbase + w * sizeof(u32);
+	u32 hi = (u32)((addr & ~(u64)0xfffff)
+		>> bus_bar0_window_target_bar0_window_base_shift_v());
+	u32 lo = (addr & 0xfffff);
+
+	gk20a_dbg(gpu_dbg_mem, "0x%08x:%08x begin for %p", hi, lo, mem);
+
+	WARN_ON(!bufbase);
+	spin_lock(&g->mm.pramin_base_lock);
+	if (g->mm.pramin_base != hi) {
+		gk20a_writel(g, bus_bar0_window_r(),
+				(g->mm.vidmem_is_vidmem
+				 && mem->aperture == APERTURE_SYSMEM ?
+				 bus_bar0_window_target_sys_mem_noncoherent_f() :
+				 bus_bar0_window_target_vid_mem_f()) |
+				bus_bar0_window_base_f(hi));
+		gk20a_readl(g, bus_bar0_window_r());
+		g->mm.pramin_base = hi;
+	}
+
+	return lo;
+}
+
+static void gk20a_pramin_exit(struct gk20a *g, struct mem_desc *mem)
+{
+	gk20a_dbg(gpu_dbg_mem, "end for %p", mem);
+	spin_unlock(&g->mm.pramin_base_lock);
+}
+
 u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
 {
-	u32 *ptr = mem->cpu_va;
-	u32 data;
+	u32 data = 0;
 
-	WARN_ON(!ptr);
-	data = ptr[w];
+	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+		u32 *ptr = mem->cpu_va;
+
+		WARN_ON(!ptr);
+		data = ptr[w];
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
+		gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
 #endif
+	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+		u32 addr = gk20a_pramin_enter(g, mem, w);
+		data = gk20a_readl(g, pram_data032_r(addr / sizeof(u32)));
+		gk20a_pramin_exit(g, mem);
+	} else {
+		WARN_ON("Accessing unallocated mem_desc");
+	}
+
 	return data;
 }
 
@@ -106,13 +163,23 @@ void gk20a_mem_rd_n(struct gk20a *g, struct mem_desc *mem,
 
 void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
 {
-	u32 *ptr = mem->cpu_va;
+	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+		u32 *ptr = mem->cpu_va;
 
-	WARN_ON(!ptr);
+		WARN_ON(!ptr);
 #ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-	gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
+		gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
 #endif
-	ptr[w] = data;
+		ptr[w] = data;
+	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+		u32 addr = gk20a_pramin_enter(g, mem, w);
+		gk20a_writel(g, pram_data032_r(addr / sizeof(u32)), data);
+		/* read back to synchronize accesses*/
+		gk20a_readl(g, pram_data032_r(addr / sizeof(u32)));
+		gk20a_pramin_exit(g, mem);
+	} else {
+		WARN_ON("Accessing unallocated mem_desc");
+	}
 }
 
 void gk20a_mem_wr(struct gk20a *g, struct mem_desc *mem, u32 offset, u32 data)
@@ -535,6 +602,13 @@ static int gk20a_alloc_sysmem_flush(struct gk20a *g)
 	return gk20a_gmmu_alloc(g, SZ_4K, &g->mm.sysmem_flush);
 }
 
+static void gk20a_init_pramin(struct mm_gk20a *mm)
+{
+	mm->pramin_base = 0;
+	spin_lock_init(&mm->pramin_base_lock);
+	mm->force_pramin = GK20A_FORCE_PRAMIN_DEFAULT;
+}
+
 int gk20a_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -557,6 +631,8 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	gk20a_dbg_info("channel vm size: user %dMB  kernel %dMB",
 		       (int)(mm->channel.user_size >> 20),
 		       (int)(mm->channel.kernel_size >> 20));
+
+	gk20a_init_pramin(mm);
 
 	err = gk20a_alloc_sysmem_flush(g);
 	if (err)
@@ -586,6 +662,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	/* set vm_alloc_share op here as gk20a_as_alloc_share needs it */
 	g->ops.mm.vm_alloc_share = gk20a_vm_alloc_share;
 	mm->remove_support = gk20a_remove_mm_support;
+
 	mm->sw_ready = true;
 
 	gk20a_dbg_fn("done");
@@ -690,6 +767,7 @@ static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
 	entry->mem.cpu_va = page_address(pages);
 	memset(entry->mem.cpu_va, 0, len);
 	entry->mem.size = len;
+	entry->mem.aperture = APERTURE_SYSMEM;
 	FLUSH_CPU_DCACHE(entry->mem.cpu_va, sg_phys(entry->mem.sgt->sgl), len);
 
 	return 0;
@@ -716,6 +794,7 @@ static void free_gmmu_phys_pages(struct vm_gk20a *vm,
 	kfree(entry->mem.sgt);
 	entry->mem.sgt = NULL;
 	entry->mem.size = 0;
+	entry->mem.aperture = APERTURE_INVALID;
 }
 
 static int map_gmmu_phys_pages(struct gk20a_mm_entry *entry)
@@ -2164,6 +2243,7 @@ int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size, stru
 		goto fail_free;
 
 	mem->size = size;
+	mem->aperture = APERTURE_SYSMEM;
 
 	gk20a_dbg_fn("done");
 
@@ -2210,6 +2290,7 @@ void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
 		gk20a_free_sgtable(&mem->sgt);
 
 	mem->size = 0;
+	mem->aperture = APERTURE_INVALID;
 }
 
 void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
@@ -4015,6 +4096,9 @@ void gk20a_mm_debugfs_init(struct device *dev)
 
 	debugfs_create_x64("separate_fixed_allocs", 0664, gpu_root,
 			   &g->separate_fixed_allocs);
+
+	debugfs_create_bool("force_pramin", 0664, gpu_root,
+			   &g->mm.force_pramin);
 }
 
 void gk20a_init_mm(struct gpu_ops *gops)

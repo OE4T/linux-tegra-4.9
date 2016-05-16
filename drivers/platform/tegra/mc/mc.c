@@ -33,7 +33,10 @@
 
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/mcerr.h>
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #include <linux/platform/tegra/tegra_emc.h>
+#endif
 
 #define MC_CLIENT_HOTRESET_CTRL		0x200
 #define MC_CLIENT_HOTRESET_STAT		0x204

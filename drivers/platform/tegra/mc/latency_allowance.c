@@ -27,6 +27,7 @@
 #include <linux/clk.h>
 #include <linux/clk/tegra.h>
 #include <linux/syscore_ops.h>
+#include <soc/tegra/fuse.h>
 #include <linux/tegra-soc.h>
 #include <asm/bug.h>
 #include <asm/io.h>
@@ -53,7 +54,7 @@ module_param_named(disable_bbc_ptsa,
 
 static void init_chip_specific(void)
 {
-	enum tegra_chipid cid;
+	int cid;
 
 	if (!tegra_platform_is_silicon())
 		return;
@@ -62,22 +63,22 @@ static void init_chip_specific(void)
 	memset(&cs.id_to_index[0], 0xFF, sizeof(cs.id_to_index));
 	spin_lock_init(&cs.lock);
 
-	cid = tegra_get_chipid();
+	cid = tegra_get_chip_id();
 
 	switch (cid) {
 #if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	case TEGRA_CHIPID_TEGRA12:
-	case TEGRA_CHIPID_TEGRA13:
+	case TEGRA124:
+	case TEGRA132:
 		tegra_la_get_t12x_specific(&cs);
 		break;
 #endif
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	case TEGRA_CHIPID_TEGRA18:
+	case TEGRA186:
 		tegra_la_get_t18x_specific(&cs);
 		break;
 #endif
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
-	case TEGRA_CHIPID_TEGRA21:
+	case TEGRA210:
 		tegra_la_get_t21x_specific(&cs);
 		break;
 #endif

@@ -20,8 +20,8 @@
 #include <linux/module.h>
 #include <linux/miscdevice.h>
 #include <linux/clk.h>
-#include <linux/platform/tegra/mc.h>
 #include <linux/of.h>
+#include <soc/tegra/tegra_emc.h>
 
 #include "vi.h"
 #include "tegra_camera_dev_mfi.h"

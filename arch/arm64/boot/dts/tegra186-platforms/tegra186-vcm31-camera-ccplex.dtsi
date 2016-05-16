@@ -46,10 +46,6 @@
 		status = "disabled";
 	};
 
-	rtcpu-echo {
-		status = "disabled";
-	};
-
 	rtcpu-vinotify {
 		status = "disabled";
 	};

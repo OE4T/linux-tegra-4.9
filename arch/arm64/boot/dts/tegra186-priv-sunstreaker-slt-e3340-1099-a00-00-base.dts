@@ -132,7 +132,4 @@
 	rtcpu@b000000 {
 		status = "okay";
 	};
-	sce-mods {
-		status = "okay";
-	};
 };

@@ -865,14 +865,6 @@
 		status = "okay";
 	};
 
-	rtcpu-echo {
-		status = "okay";
-	};
-
-	sce-mods {
-		status = "okay";
-	};
-
 	rtcpu-dbg {
 		status = "okay";
 	};

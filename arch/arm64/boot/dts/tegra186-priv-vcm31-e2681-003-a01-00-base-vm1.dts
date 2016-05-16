@@ -16,6 +16,7 @@
 
 #include "tegra186-platforms/tegra186-vcm31-e2681-common.dtsi"
 #include "t186-status-override/tegra186-vcm31-e2681-0003-a01-dt-status-override.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-camera-ccplex.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -119,37 +120,5 @@
 	intc: interrupt-controller@3881000 {
 		reg = <0x0 0x03881000 0x0 0x00001000
 		       0x0 0x03892000 0x0 0x00002000>;
-	};
-
-	ast@b040000 {
-		status = "disabled";
-	};
-
-	ast@b050000 {
-		status = "disabled";
-	};
-
-	ast@2994000 {
-		status = "disabled";
-	};
-
-	ast@2996000 {
-		status = "disabled";
-	};
-
-	rtcpu@b000000 {
-		status = "disabled";
-	};
-
-	rtcpu@2993000 {
-		status = "disabled";
-	};
-
-	rtcpu-echo {
-		status = "disabled";
-	};
-
-	rtcpu-vinotify {
-		status = "disabled";
 	};
 };

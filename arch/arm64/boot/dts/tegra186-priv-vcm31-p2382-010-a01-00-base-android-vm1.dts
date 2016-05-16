@@ -15,6 +15,7 @@
  */
 
 #include "tegra186-platforms/tegra186-vcm31-p2382-common.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-camera-ccplex.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -569,37 +570,6 @@
         /delete-node/ axip2p@2190000;
 
 	gpio-keys {
-		status = "disabled";
-	};
-	ast@b040000 {
-		status = "disabled";
-	};
-
-	ast@b050000 {
-		status = "disabled";
-	};
-
-	ast@2994000 {
-		status = "disabled";
-	};
-
-	ast@2996000 {
-		status = "disabled";
-	};
-
-	rtcpu@b000000 {
-		status = "disabled";
-	};
-
-	rtcpu@2993000 {
-		status = "disabled";
-	};
-
-	rtcpu-echo {
-		status = "disabled";
-	};
-
-	rtcpu-vinotify {
 		status = "disabled";
 	};
 };

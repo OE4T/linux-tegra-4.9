@@ -321,6 +321,7 @@ struct tegra_dc {
 
 	bool				mode_dirty;
 	bool				yuv_bypass;
+	bool				yuv_bypass_dirty;
 	atomic_t			holding;
 
 	struct tegra_dc_win		tmp_wins[DC_N_WINDOWS];

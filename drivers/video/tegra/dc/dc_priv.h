@@ -764,6 +764,9 @@ void tegra_nvdisp_isomgr_unregister(void);
 void tegra_nvdisp_init_csc_defaults(struct tegra_dc_csc_v2 *csc);
 #endif
 void tegra_nvdisp_vrr_work(struct work_struct *work);
+
+int tegra_nvdisp_set_chroma_lpf(struct tegra_dc *dc);
+int tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 #endif
 
 bool fb_console_mapped(void);

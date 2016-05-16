@@ -802,8 +802,28 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			reg_val &= ~CMU_ENABLE;
 			tegra_dc_writel(dc, reg_val,
 				DC_DISP_DISP_COLOR_CONTROL);
+		}
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		/* If we're transitioning between a bypass and a non-bypass
+		 * mode, update the output CSC and chroma LPF during this flip.
+		 */
+		if (dc->yuv_bypass_dirty) {
+			tegra_nvdisp_set_ocsc(dc, &dc->mode);
+			tegra_nvdisp_set_chroma_lpf(dc);
+		}
+#endif
+
+		if (dc->yuv_bypass || dc->yuv_bypass_dirty) {
+			reg_val = GENERAL_UPDATE;
+			tegra_dc_writel(dc, reg_val, DC_CMD_STATE_CONTROL);
+			tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+
 			reg_val = GENERAL_ACT_REQ;
 			tegra_dc_writel(dc, reg_val, DC_CMD_STATE_CONTROL);
+			tegra_dc_readl(dc, DC_CMD_STATE_CONTROL); /* flush */
+
+			dc->yuv_bypass_dirty = false;
 		}
 
 		if (flip_win->attr.swap_interval && !no_vsync)
@@ -2011,6 +2031,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		    bypass)
 			return -EINVAL;
 
+		if (bypass != user->ext->dc->yuv_bypass)
+			user->ext->dc->yuv_bypass_dirty = true;
 		user->ext->dc->yuv_bypass = bypass;
 		win_num = args.win_num;
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
@@ -2065,6 +2087,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		    bypass)
 			return -EINVAL;
 
+		if (bypass != user->ext->dc->yuv_bypass)
+			user->ext->dc->yuv_bypass_dirty = true;
 		user->ext->dc->yuv_bypass = bypass;
 		win_num = args.win_num;
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);

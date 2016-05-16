@@ -401,6 +401,8 @@ static struct v4l2_subdev_video_ops imx219_subdev_video_ops = {
 	.enum_mbus_fmt	= camera_common_enum_fmt,
 	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status	= imx219_g_input_status,
+	.enum_framesizes	= camera_common_enum_framesizes,
+	.enum_frameintervals	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops imx219_subdev_core_ops = {

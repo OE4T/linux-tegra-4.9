@@ -50,6 +50,30 @@
 #ifndef _hw_bus_gp10b_h_
 #define _hw_bus_gp10b_h_
 
+static inline u32 bus_bar0_window_r(void)
+{
+	return 0x00001700;
+}
+static inline u32 bus_bar0_window_base_f(u32 v)
+{
+	return (v & 0xffffff) << 0;
+}
+static inline u32 bus_bar0_window_target_vid_mem_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bar0_window_target_sys_mem_coherent_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 bus_bar0_window_target_sys_mem_noncoherent_f(void)
+{
+	return 0x3000000;
+}
+static inline u32 bus_bar0_window_target_bar0_window_base_shift_v(void)
+{
+	return 0x00000010;
+}
 static inline u32 bus_bar1_block_r(void)
 {
 	return 0x00001704;

@@ -249,10 +249,6 @@
 		status = "disabled";
 	};
 
-	rtcpu-vinotify {
-		status = "disabled";
-	};
-
 	ether_qos@2490000 {
 		status = "disabled";
 	};

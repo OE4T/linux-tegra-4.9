@@ -45,8 +45,4 @@
 	rtcpu@2993000 {	/* use APE as camera-rtcpu */
 		status = "disabled";
 	};
-
-	rtcpu-vinotify {
-		status = "disabled";
-	};
 };

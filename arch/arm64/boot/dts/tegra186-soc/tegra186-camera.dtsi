@@ -268,13 +268,6 @@
 		};
 	};
 
-	rtcpu-vinotify {
-		compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
-		status = "disabled";
-		mboxes = <&tegra_sce 4>;
-		device = <&{/host1x/vi@15700000}>;
-	};
-
 	rtcpu-dbg {
 		compatible = "nvidia,tegra186-sysfs-mbox";
 		status = "disabled";

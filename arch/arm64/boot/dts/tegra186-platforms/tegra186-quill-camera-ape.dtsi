@@ -45,9 +45,4 @@
 	adsp@2993000 {	/* Do not use APE as adsp */
 		status = "disabled";
 	};
-
-	rtcpu-vinotify {
-		mboxes = <&tegra_ape 4>;
-		status = "okay";
-	};
 };

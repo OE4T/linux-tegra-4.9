@@ -18,7 +18,6 @@
 #include <asm/io.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
-#include <linux/platform/tegra/tegra_emc.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/platform/tegra/clock.h>
 

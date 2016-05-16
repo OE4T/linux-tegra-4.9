@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -42,6 +42,10 @@ void nvaudio_ivc_free_ctxt(struct device *dev,
 					struct nvaudio_ivc_ctxt *ictxt);
 
 int nvaudio_ivc_send(struct nvaudio_ivc_ctxt *ictxt,
+				struct nvaudio_ivc_msg *msg,
+				int size);
+
+int nvaudio_ivc_send_retry(struct nvaudio_ivc_ctxt *ictxt,
 				struct nvaudio_ivc_msg *msg,
 				int size);
 

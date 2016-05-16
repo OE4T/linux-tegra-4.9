@@ -381,15 +381,20 @@ static int tegra_virt_t210ref_get_route(struct snd_kcontrol *kcontrol,
 	msg.cmd = NVAUDIO_XBAR_GET_ROUTE;
 	msg.params.xbar_info.rx_reg = (int) reg;
 
-	err = nvaudio_ivc_send(hivc_client,
+	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
 
 	err = nvaudio_ivc_receive(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_receive\n", __func__);
 
 	for (i = 0; i < NUM_MUX_INPUT; i++) {
 		if (msg.params.xbar_info.bit_pos ==
@@ -401,6 +406,10 @@ static int tegra_virt_t210ref_get_route(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = 0;
 
 	ucontrol->value.integer.value[0] = i;
+
+	if (err < 0)
+		return err;
+
 	return 0;
 }
 
@@ -423,11 +432,13 @@ static int tegra_virt_t210ref_put_route(struct snd_kcontrol *kcontrol,
 	msg.params.xbar_info.tx_idx =
 		ucontrol->value.integer.value[0] - 1;
 
-	err = nvaudio_ivc_send(hivc_client,
+	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
-		pr_err("error on ivc_send\n");
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
 
 	return 0;
 }
@@ -457,11 +468,13 @@ static int tegra_virt_t210mixer_set_gain(struct snd_kcontrol *kcontrol,
 	msg.params.amixer_info.gain =
 		ucontrol->value.integer.value[0];
 
-	err = nvaudio_ivc_send(hivc_client,
+	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
-		pr_err("error on ivc_send\n");
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
 
 	return 0;
 }
@@ -485,18 +498,26 @@ static int tegra_virt_t210mixer_get_adder_config(struct snd_kcontrol *kcontrol,
 				MIXER_CONFIG_SHIFT_VALUE) & 0xFFFF;
 	msg.params.amixer_info.adder_rx_idx = ((int) reg) & 0xFFFF;
 
-	err = nvaudio_ivc_send(hivc_client,
+	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
 
 	err = nvaudio_ivc_receive(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_receive\n", __func__);
 
 	ucontrol->value.integer.value[0] =
 		msg.params.amixer_info.adder_rx_idx_enable;
+
+	if (err < 0)
+		return err;
 
 	return 0;
 }
@@ -522,11 +543,13 @@ static int tegra_virt_t210mixer_set_adder_config(struct snd_kcontrol *kcontrol,
 	msg.params.amixer_info.adder_rx_idx_enable =
 		ucontrol->value.integer.value[0];
 
-	err = nvaudio_ivc_send(hivc_client,
+	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
-		pr_err("error on ivc_send\n");
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
 
 	return 0;
 }
@@ -544,17 +567,26 @@ static int tegra_virt_t210mixer_get_enable(struct snd_kcontrol *kcontrol,
 	msg.cmd = NVAUDIO_AMIXER_GET_ENABLE;
 	msg.params.amixer_info.id = 0;
 
-	err = nvaudio_ivc_send(hivc_client,
+	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
+
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
 
 	err = nvaudio_ivc_receive(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_receive\n", __func__);
 
 	ucontrol->value.integer.value[0] = msg.params.amixer_info.enable;
+
+	if (err < 0)
+		return err;
+
 	return 0;
 }
 
@@ -573,11 +605,13 @@ static int tegra_virt_t210mixer_set_enable(struct snd_kcontrol *kcontrol,
 	msg.params.amixer_info.enable =
 		ucontrol->value.integer.value[0];
 
-	err = nvaudio_ivc_send(hivc_client,
+	err = nvaudio_ivc_send_retry(hivc_client,
 			&msg,
 			sizeof(struct nvaudio_ivc_msg));
-	if (err < 0)
-		pr_err("error on ivc_send\n");
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
 
 	return 0;
 }

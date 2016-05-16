@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.c - Tegra ADMAIF component driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -98,7 +98,7 @@ static int tegra210_admaif_hw_params(struct snd_pcm_substream *substream,
 				sizeof(struct nvaudio_ivc_msg));
 
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_send\n", __func__);
 
 	return 0;
 }
@@ -118,7 +118,7 @@ static void tegra210_admaif_start_playback(struct snd_soc_dai *dai)
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_send\n", __func__);
 }
 
 static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
@@ -136,7 +136,7 @@ static void tegra210_admaif_stop_playback(struct snd_soc_dai *dai)
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_send\n", __func__);
 }
 
 static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
@@ -154,7 +154,7 @@ static void tegra210_admaif_start_capture(struct snd_soc_dai *dai)
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_send\n", __func__);
 }
 
 static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
@@ -172,7 +172,7 @@ static void tegra210_admaif_stop_capture(struct snd_soc_dai *dai)
 				&msg,
 				sizeof(struct nvaudio_ivc_msg));
 	if (err < 0)
-		pr_err("error on ivc_send\n");
+		pr_err("%s: error on ivc_send\n", __func__);
 }
 
 static int tegra210_admaif_trigger(struct snd_pcm_substream *substream, int cmd,

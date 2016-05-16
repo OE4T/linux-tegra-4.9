@@ -17,6 +17,7 @@
 #include <linux/of.h>
 #include <linux/sched.h>
 #include <linux/wait.h>
+#include <linux/delay.h>
 #include <linux/tegra-ivc.h>
 #include <linux/spinlock.h>
 #include <linux/hardirq.h>
@@ -29,6 +30,26 @@ static struct nvaudio_ivc_ctxt *saved_ivc_ctxt;
 
 static void nvaudio_ivc_deinit(struct nvaudio_ivc_ctxt *ictxt);
 static int nvaudio_ivc_init(struct nvaudio_ivc_ctxt *ictxt);
+
+int nvaudio_ivc_send_retry(struct nvaudio_ivc_ctxt *ictxt,
+		struct nvaudio_ivc_msg *msg, int size)
+{
+	int err = 0;
+	int dcnt = 50;
+
+	if (!ictxt || !ictxt->ivck || !msg || !size)
+		return -EINVAL;
+
+	err = nvaudio_ivc_send(ictxt, msg, size);
+
+	while (err < 0 && dcnt--) {
+		udelay(100);
+		err = nvaudio_ivc_send(ictxt, msg, size);
+	}
+	return (dcnt < 0) ? -ETIMEDOUT : err;
+
+}
+EXPORT_SYMBOL_GPL(nvaudio_ivc_send_retry);
 
 int nvaudio_ivc_send(struct nvaudio_ivc_ctxt *ictxt,
 		struct nvaudio_ivc_msg *msg, int size)
@@ -52,6 +73,7 @@ int nvaudio_ivc_send(struct nvaudio_ivc_ctxt *ictxt,
 
 	len = tegra_hv_ivc_write(ictxt->ivck, msg, size);
 	if (len != size) {
+		pr_err("%s: write Error\n", __func__);
 		err = -EIO;
 		goto fail;
 	}

@@ -46,11 +46,6 @@
 		status = "disabled";
 	};
 
-	rtcpu-echo {
-		mboxes = <&tegra_ape 0>;
-		status = "okay";
-	};
-
 	rtcpu-vinotify {
 		mboxes = <&tegra_ape 4>;
 		status = "okay";

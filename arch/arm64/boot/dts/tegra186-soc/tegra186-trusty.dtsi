@@ -25,6 +25,7 @@
 
 		irq {
 			compatible = "android,trusty-irq-v1";
+			interrupts = <1 13 0xf01>;
 		};
 
 		fiq {

@@ -47,6 +47,7 @@
 		};
 		lc898212_2: lc898212@2_0072 {
 			vvcm-supply = <&en_vdd_vcm_2v8>;
+			support_mfi = "true";
 		};
 	};
 
@@ -68,6 +69,7 @@
 		};
 		lc898212_1: lc898212@1_0072 {
 			vvcm-supply = <&en_vdd_vcm_2v8>;
+			support_mfi = "true";
 		};
 	};
 

@@ -19,6 +19,10 @@
  */
 
 / {
+	aliases { /* SCE is the default Camera RTCPU */
+		tegra-camera-rtcpu = &tegra_sce;
+	};
+
 	tegra_sce: rtcpu@b000000 {
 		compatible = "nvidia,tegra186-sce-ivc";
 		status = "disabled";

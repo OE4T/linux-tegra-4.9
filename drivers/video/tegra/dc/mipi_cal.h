@@ -16,7 +16,7 @@
 
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_H__
-
+#ifndef COMMON_MIPICAL_SUPPORTED
 #include <linux/reset.h>
 #include <linux/tegra_prod.h>
 #include "mipi_cal_regs.h"
@@ -133,5 +133,6 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 {
 	/* dummy */
 }
+#endif
 #endif
 #endif

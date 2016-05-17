@@ -52,6 +52,10 @@
 #include "dsi.h"
 #include "mipi_cal.h"
 
+#if defined(COMMON_MIPICAL_SUPPORTED)
+#include "mipical/mipi_cal.h"
+#endif
+
 /* HACK! This needs to come from DT */
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -462,6 +466,11 @@ void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 		}
 		udelay(800);
 	}
+#if defined(COMMON_MIPICAL_SUPPORTED)
+	i = tegra_mipi_bias_pad_enable();
+	if (i)
+		pr_err("%s: fail to power up mipi\n", __func__);
+#endif
 }
 
 void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
@@ -471,6 +480,11 @@ void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 		tegra_disp_clk_disable_unprepare(dsi->dsi_clk[i]);
 		udelay(800);
 	}
+#if defined(COMMON_MIPICAL_SUPPORTED)
+	i = tegra_mipi_bias_pad_disable();
+	if (i)
+		pr_err("%s: fail to power down mipi\n", __func__);
+#endif
 }
 
 static inline void tegra_dsi_lp_clk_enable(struct tegra_dc_dsi_data *dsi)
@@ -2319,6 +2333,7 @@ static void tegra_dsi_pad_enable(struct tegra_dc_dsi_data *dsi)
 static void __maybe_unused
 tegra_dsi_mipi_calibration_status(struct tegra_dc_dsi_data *dsi)
 {
+#ifndef COMMON_MIPICAL_SUPPORTED
 	u32 val = 0;
 	u32 timeout = 0;
 	/* Start calibration */
@@ -2341,6 +2356,7 @@ tegra_dsi_mipi_calibration_status(struct tegra_dc_dsi_data *dsi)
 	}
 	if (timeout <= 0)
 		dev_info(&dsi->dc->ndev->dev, "DSI calibration timed out\n");
+#endif
 }
 
 #if defined(CONFIG_ARCH_TEGRA_13x_SOC)
@@ -2480,7 +2496,6 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
-	int err;
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	struct clk *clk72mhz = NULL;
 	clk72mhz = clk_get_sys("clk72mhz", NULL);
@@ -2491,19 +2506,6 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 	tegra_disp_clk_prepare_enable(clk72mhz);
 #endif
 	/* Calibration settings begin */
-	val = tegra_mipi_cal_read(dsi->mipi_cal,
-			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
-	val &= ~(PAD_VCLAMP_LEVEL(0x7) | PAD_VAUXP_LEVEL(0x7));
-	val |= (PAD_VCLAMP_LEVEL(0x1) | PAD_VAUXP_LEVEL(0x1));
-	tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
-
-	val = tegra_mipi_cal_read(dsi->mipi_cal,
-			MIPI_CAL_MIPI_BIAS_PAD_CFG1_0);
-	val &= ~(PAD_DRIV_UP_REF(0x7) | PAD_DRIV_DN_REF(0x7));
-	val |= (PAD_DRIV_UP_REF(0x3) | PAD_DRIV_DN_REF(0x0));
-	tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_MIPI_BIAS_PAD_CFG1_0);
 
 	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_1_VS1);
 	tegra_dsi_writel(dsi, 0, DSI_PAD_CONTROL_2_VS1);
@@ -2518,84 +2520,12 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 	/* Calibrate DSI 0 */
 	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
 		dsi->info.dsi_instance == DSI_INSTANCE_0) {
-		val = MIPI_CAL_OVERIDEDSIA(0x0) |
-			MIPI_CAL_SELDSIA(0x1) |
-			MIPI_CAL_HSPDOSDSIA(0x0) |
-			MIPI_CAL_HSPUOSDSIA(0x2) |
-			MIPI_CAL_TERMOSDSIA(0x0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSIB_MIPI_CAL_CONFIG_0);
-
-		val = (MIPI_CAL_CLKSELDSIA(0x1) |
-				MIPI_CAL_HSCLKPDOSDSIA(0x0) |
-				MIPI_CAL_HSCLKPUOSDSIA(0x2));
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSIA_MIPI_CAL_CONFIG_2_0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSIB_MIPI_CAL_CONFIG_2_0);
-
-		val = MIPI_CAL_NOISE_FLT(0xa) |
-			  MIPI_CAL_PRESCALE(0x2) |
-			  MIPI_CAL_CLKEN_OVR(0x0) |
-			  MIPI_CAL_AUTOCAL_EN(0x0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_MIPI_CAL_CTRL_0);
-
-		if (!IS_ERR(dsi->mipi_cal->prod_list)) {
-			err = tegra_prod_set_by_name(
-				&dsi->mipi_cal->base,
-				"prod_c_dsi",
-				dsi->mipi_cal->prod_list);
-			if (err) {
-				dev_warn(&dsi->mipi_cal->dc->ndev->dev,
-					"mipi_cal: DSI prod set failed\n");
-			}
-		}
-
-		tegra_dsi_mipi_calibration_status(dsi);
+		tegra_mipi_calibration(DSIA|DSIB);
 	}
 	/* Calibrate DSI 1 */
 	if (dsi->info.ganged_type || dsi->info.dsi_csi_loopback ||
 		dsi->info.dsi_instance == DSI_INSTANCE_1) {
-		val = MIPI_CAL_OVERIDEDSIC(0x0) |
-			MIPI_CAL_SELDSIC(0x1) |
-			MIPI_CAL_HSPDOSDSIC(0x0) |
-			MIPI_CAL_HSPUOSDSIC(0x2) |
-			MIPI_CAL_TERMOSDSIC(0x0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSID_MIPI_CAL_CONFIG_0);
-
-		val = (MIPI_CAL_CLKSELDSIC(0x1) |
-				MIPI_CAL_HSCLKPDOSDSIC(0x0) |
-				MIPI_CAL_HSCLKPUOSDSIC(0x2));
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSIC_MIPI_CAL_CONFIG_2_0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_DSID_MIPI_CAL_CONFIG_2_0);
-
-		val = MIPI_CAL_NOISE_FLT(0xa) |
-			  MIPI_CAL_PRESCALE(0x2) |
-			  MIPI_CAL_CLKEN_OVR(0x0) |
-			  MIPI_CAL_AUTOCAL_EN(0x0);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-			MIPI_CAL_MIPI_CAL_CTRL_0);
-
-		if (!IS_ERR(dsi->mipi_cal->prod_list)) {
-			err = tegra_prod_set_by_name(
-				&dsi->mipi_cal->base,
-				"prod_c_dsi",
-				dsi->mipi_cal->prod_list);
-			if (err) {
-				dev_warn(&dsi->mipi_cal->dc->ndev->dev,
-					"mipi_cal: DSI prod set failed\n");
-			}
-		}
-
-		tegra_dsi_mipi_calibration_status(dsi);
+		tegra_mipi_calibration(DSIC|DSID);
 	}
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	tegra_disp_clk_disable_unprepare(clk72mhz);
@@ -2893,15 +2823,19 @@ static void tegra_dsi_mipi_calibration_11x(struct tegra_dc_dsi_data *dsi)
 #endif
 static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 {
+#ifndef COMMON_MIPICAL_SUPPORTED
 	u32 val = 0, reg;
-
+#endif
 	if (!dsi->ulpm)
 		tegra_dsi_pad_enable(dsi);
 	else
 		tegra_dsi_pad_disable(dsi);
 
 	if (dsi->info.controller_vs == DSI_VS_1) {
-
+#if defined(COMMON_MIPICAL_SUPPORTED)
+		tegra_dsi_mipi_calibration_21x(dsi);
+		return;
+#else
 		tegra_mipi_cal_init_hw(dsi->mipi_cal);
 
 		tegra_mipi_cal_clk_enable(dsi->mipi_cal);
@@ -2940,9 +2874,6 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		tegra_dsi_mipi_calibration_13x(dsi);
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		tegra_dsi_mipi_calibration_12x(dsi);
-#elif defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_ARCH_TEGRA_18x_SOC)
-/* Temporarily reusing T210 mipi configuration for T186 */
-		tegra_dsi_mipi_calibration_21x(dsi);
 #endif
 		/* disable mipi bias pad */
 		val = tegra_mipi_cal_read(dsi->mipi_cal,
@@ -2959,6 +2890,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
 
 		tegra_mipi_cal_clk_disable(dsi->mipi_cal);
+#endif
 	} else {
 #ifdef CONFIG_ARCH_TEGRA_3x_SOC
 		u32 val = 0;
@@ -5820,14 +5752,14 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 		dsi->avdd_dsi_csi = NULL;
 	}
 #endif
-
+#ifndef COMMON_MIPICAL_SUPPORTED
 	dsi->mipi_cal = tegra_mipi_cal_init_sw(dc);
 	if (IS_ERR(dsi->mipi_cal)) {
 		dev_err(&dc->ndev->dev, "dsi: mipi_cal sw init failed\n");
 		err = PTR_ERR(dsi->mipi_cal);
 		goto err_mipi;
 	}
-
+#endif
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
 	if (IS_ERR(dsi->pad_ctrl)) {
@@ -5843,11 +5775,15 @@ static int tegra_dc_dsi_init(struct tegra_dc *dc)
 	return 0;
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 err_padctrl:
+#ifndef COMMON_MIPICAL_SUPPORTED
 	tegra_mipi_cal_destroy(dc);
 #endif
+#endif
+#ifndef COMMON_MIPICAL_SUPPORTED
 err_mipi:
 	if (dsi->avdd_dsi_csi)
 		regulator_put(dsi->avdd_dsi_csi);
+#endif
 err_reg:
 	_tegra_dc_dsi_destroy(dc);
 	tegra_dc_set_outdata(dc, NULL);
@@ -5867,7 +5803,9 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 #endif
 	_tegra_dc_dsi_destroy(dc);
 	regulator_put(avdd_dsi_csi);
+#ifndef COMMON_MIPICAL_SUPPORTED
 	tegra_mipi_cal_destroy(dc);
+#endif
 }
 
 /*

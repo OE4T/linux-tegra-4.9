@@ -49,15 +49,6 @@ config TEGRA_DC_WIN_H
 	  It is useful to enable for environments that need to blend multiple windows.
 	  For environments that are mouse oriented, the mouse cursor is the preferred mode.
 
-config TEGRA_MIPI_CAL
-	bool "Enable MIPI Cal driver"
-	default y
-	help
-	  Provides an interfaces to do MIPI calibration for both DSI and CSI blocks.
-	  You will always want this enabled if you are using either Camera or Display.
-	  Disabling this can cause issues for drivers that depend on it being present.
-	  Leaving this on is harmless even if no drivers that need it are enabled.
-
 config TEGRA_DC_SCAN_COLUMN
 	bool
 	depends on TEGRA_DC && (ARCH_TEGRA_11x_SOC || ARCH_TEGRA_12x_SOC || ARCH_TEGRA_21x_SOC || TEGRA_NVDISPLAY)

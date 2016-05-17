@@ -16,7 +16,7 @@
 
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_REG_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_MIPI_CAL_REG_H__
-
+#ifndef COMMON_MIPICAL_SUPPORTED
 #define MIPI_DSI_AUTOCAL_TIMEOUT_USEC 2000
 
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
@@ -226,4 +226,5 @@
 #define MIPI_CAL_TERMADJ(x)		(((x) & 0xf) << 4)
 #define MIPI_CAL_ACTIVE(x)		(((x) & 0x1) << 0)
 
+#endif
 #endif

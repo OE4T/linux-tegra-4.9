@@ -385,9 +385,10 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		regulator_put(dsi->avdd_dsi_csi);
 		dsi->avdd_dsi_csi = NULL;
 	}
-
+#ifndef COMMON_MIPICAL_SUPPORTED
 	if (dsi->mipi_cal)
 		tegra_mipi_cal_destroy(dc);
+#endif
 
 #if defined (CONFIG_ARCH_TEGRA_18x_SOC)
 	if (dsi->pad_ctrl)
@@ -488,14 +489,14 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 		err = -ENODEV;
 		goto err_release_regs;
 	}
-
+#ifndef COMMON_MIPICAL_SUPPORTED
 	dsi->mipi_cal = tegra_mipi_cal_init_sw(dc);
 	if (IS_ERR(dsi->mipi_cal)) {
 		dev_err(&dc->ndev->dev, "dsi: mipi_cal sw init failed\n");
 		err = PTR_ERR(dsi->mipi_cal);
 		goto err_release_regs;
 	}
-
+#endif
 #if defined (CONFIG_ARCH_TEGRA_18x_SOC)
 	dsi->pad_ctrl = tegra_dsi_padctrl_init(dc);
 	if (IS_ERR(dsi->pad_ctrl)) {
@@ -512,8 +513,10 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 
 #if defined (CONFIG_ARCH_TEGRA_18x_SOC)
 err_mipical_dest:
+#ifndef COMMON_MIPICAL_SUPPORTED
 	if(dsi->mipi_cal)
 		tegra_mipi_cal_destroy(dc);
+#endif
 #endif
 err_release_regs:
 	if (dsi->avdd_dsi_csi)

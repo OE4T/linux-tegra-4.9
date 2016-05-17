@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-j-720p-5.c
  *
- * Copyright (c) 2013-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -642,7 +642,7 @@ static void dsi_j_720p_5_cmu_init(struct tegra_dc_platform_data *pdata)
 }
 #endif
 
-struct pwm_bl_data_dt_ops dsi_j_720p_5_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops dsi_j_720p_5_pwm_bl_ops = {
 	.notify = dsi_j_720p_5_bl_notify,
 	.check_fb = dsi_j_720p_5_check_fb,
 	.blnode_compatible = "j,720p-5-0-bl",

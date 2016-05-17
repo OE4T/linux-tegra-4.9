@@ -1,7 +1,7 @@
 /*
  * arch/arm/mach-tegra/panel-l-720p-5-loki.c
  *
- * Copyright (c) 2011-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -722,7 +722,7 @@ static void dsi_l_720p_5_loki_cmu_init(struct tegra_dc_platform_data *pdata)
 }
 #endif
 
-struct pwm_bl_data_dt_ops dsi_l_720p_5_loki_pwm_bl_ops = {
+static struct pwm_bl_data_dt_ops dsi_l_720p_5_loki_pwm_bl_ops = {
 	.notify = dsi_l_720p_5_loki_bl_notify,
 	.check_fb = dsi_l_720p_5_loki_check_fb,
 	.blnode_compatible = "l,720p-5-0-bl",

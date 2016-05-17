@@ -230,6 +230,15 @@ static struct of_device_id tegra_vi4_of_match[] = {
 	{ },
 };
 
+static bool tegra_camera_rtcpu_available(void)
+{
+	struct device_node *dn;
+
+	dn = of_find_node_by_path("tegra-camera-rtcpu");
+	/* Note: false if dn is NULL */
+	return of_device_is_available(dn);
+}
+
 static int tegra_vi4_probe(struct platform_device *pdev)
 {
 	const struct of_device_id *match;
@@ -294,15 +303,20 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	} else
 		dev_warn(&pdev->dev, "missing master IRQ\n");
 
-	err = vi_notify_register(&nvhost_vi_notify_driver, &pdev->dev, 12);
-	if (IS_ERR_VALUE(err)) {
-		nvhost_client_device_release(pdev);
-		return err;
+	if (!tegra_camera_rtcpu_available()) {
+		err = vi_notify_register(&nvhost_vi_notify_driver, &pdev->dev,
+						12);
+		if (err) {
+			nvhost_client_device_release(pdev);
+			return err;
+		}
 	}
 
 	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);
 	if (err) {
-		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
+		if (vi->notify.vnd != NULL)
+			vi_notify_unregister(&nvhost_vi_notify_driver,
+						&pdev->dev);
 		nvhost_client_device_release(pdev);
 		return err;
 	}
@@ -315,7 +329,8 @@ static int tegra_vi4_remove(struct platform_device *pdev)
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
 	tegra_vi_media_controller_cleanup(&vi->mc_vi);
-	vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
+	if (vi->notify.vnd != NULL)
+		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
 	nvhost_client_device_release(pdev);
 	/* ^ includes call to nvhost_module_deinit() */
 #ifdef CONFIG_PM_GENERIC_DOMAINS

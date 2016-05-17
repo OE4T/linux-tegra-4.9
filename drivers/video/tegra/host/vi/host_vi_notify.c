@@ -207,32 +207,29 @@ static int nvhost_vi_notify_probe(struct device *dev,
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
-	unsigned i;
-	struct device_node *rtcpu_node;
-
-	rtcpu_node = of_find_node_by_name(NULL, "rtcpu-vinotify");
-	if (of_device_is_available(rtcpu_node))
-		/* in this case, shouldn't return error because vi4
-		   probe should finish successfully */
-		return 1;
+	int ret;
 
 	hvnd->vnd = vnd;
 	hvnd->mask = 0;
 	hvnd->classify_mask = 0;
 	hvnd->ld_mask = 0;
+	memset(hvnd->incr, 0xff, sizeof(hvnd->incr));
 
-	for (i = 0; i < ARRAY_SIZE(hvnd->incr); i++)
-		memset(hvnd->incr, 0xff, sizeof(hvnd->incr));
+	ret = nvhost_vi_get_irq(pdev, 1, nvhost_vi_prio_isr);
+	if (IS_ERR_VALUE(ret))
+		goto error;
+	hvnd->prio_irq = ret;
 
-	hvnd->prio_irq = nvhost_vi_get_irq(pdev, 1, nvhost_vi_prio_isr);
-	if (IS_ERR_VALUE(hvnd->prio_irq))
-		return hvnd->prio_irq;
-
-	hvnd->norm_irq = nvhost_vi_get_irq(pdev, 2, nvhost_vi_notify_isr);
-	if (IS_ERR_VALUE(hvnd->norm_irq))
-		return hvnd->norm_irq;
-
+	ret = nvhost_vi_get_irq(pdev, 2, nvhost_vi_notify_isr);
+	if (IS_ERR_VALUE(ret)) {
+		devm_free_irq(&pdev->dev, hvnd->prio_irq, pdev);
+		goto error;
+	}
+	hvnd->norm_irq = ret;
 	return 0;
+error:
+	hvnd->vnd = NULL;
+	return ret;
 }
 
 static void nvhost_vi_notify_dump_classify(struct platform_device *pdev)

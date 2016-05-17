@@ -392,7 +392,12 @@ int vi_notify_register(struct vi_notify_driver *drv, struct device *dev,
 		goto error;
 
 	mutex_lock(&vnd_lock);
-	WARN_ON(vnd_ != NULL);
+	if (vnd_ != NULL) {
+		mutex_unlock(&vnd_lock);
+		WARN_ON(1);
+		err = -EBUSY;
+		goto error;
+	}
 	vnd_ = vnd;
 	mutex_unlock(&vnd_lock);
 

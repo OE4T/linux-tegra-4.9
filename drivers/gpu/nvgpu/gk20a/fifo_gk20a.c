@@ -379,8 +379,7 @@ int gk20a_init_fifo_reset_enable_hw(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 	/* enable pmc pfifo */
-	gk20a_reset(g, mc_enable_pfifo_enabled_f()
-			| mc_enable_ce2_enabled_f());
+	gk20a_reset(g, mc_enable_pfifo_enabled_f());
 
 	if (g->ops.clock_gating.slcg_ce2_load_gating_prod)
 		g->ops.clock_gating.slcg_ce2_load_gating_prod(g,

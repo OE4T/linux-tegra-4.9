@@ -4550,6 +4550,8 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 {
 	u32 gpfifo_ctrl, pmc_en;
 	u32 err = 0;
+	struct fifo_engine_info_gk20a *ce_info =
+		g->fifo.engine_info + ENGINE_CE2_GK20A;
 
 	/* disable fifo access */
 	pmc_en = gk20a_readl(g, mc_enable_r());
@@ -4562,7 +4564,8 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	/* reset gr engine */
 	gk20a_reset(g, mc_enable_pgraph_enabled_f()
 			| mc_enable_blg_enabled_f()
-			| mc_enable_perfmon_enabled_f());
+			| mc_enable_perfmon_enabled_f()
+			| ce_info->reset_mask);
 
 	gr_gk20a_load_gating_prod(g);
 	/* Disable elcg until it gets enabled later in the init*/

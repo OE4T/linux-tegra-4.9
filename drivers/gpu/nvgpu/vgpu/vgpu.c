@@ -258,6 +258,26 @@ static void vgpu_detect_chip(struct gk20a *g)
 			g->gpu_characteristics.rev);
 }
 
+static int vgpu_init_gpu_characteristics(struct gk20a *g)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 max_freq;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	err = gk20a_init_gpu_characteristics(g);
+	if (err)
+		return err;
+
+	if (vgpu_get_attribute(platform->virt_handle,
+			TEGRA_VGPU_ATTRIB_MAX_FREQ, &max_freq))
+		return -ENOMEM;
+
+	g->gpu_characteristics.max_freq = max_freq;
+	return 0;
+}
+
 void vgpu_init_hal_common(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -269,7 +289,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_debug_ops(gops);
 	vgpu_init_fecs_trace_ops(gops);
 	vgpu_init_tsg_ops(gops);
-	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
+	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
 }
 
 static int vgpu_init_hal(struct gk20a *g)

@@ -425,23 +425,25 @@ static ssize_t elpg_enable_store(struct device *dev,
 	if (kstrtoul(buf, 10, &val) < 0)
 		return -EINVAL;
 
-	/*
-	 * Since elpg is refcounted, we should not unnecessarily call
-	 * enable/disable if it is already so.
-	 */
-	err = gk20a_busy(g->dev);
-	if (err)
-		return -EAGAIN;
-
-	if (val && !g->elpg_enabled) {
-		g->elpg_enabled = true;
-		gk20a_pmu_enable_elpg(g);
-	} else if (!val && g->elpg_enabled) {
-		g->elpg_enabled = false;
-		gk20a_pmu_disable_elpg(g);
+	if (!g->power_on) {
+		g->elpg_enabled = val ? true : false;
+	} else {
+		err = gk20a_busy(g->dev);
+		if (err)
+			return -EAGAIN;
+		/*
+		 * Since elpg is refcounted, we should not unnecessarily call
+		 * enable/disable if it is already so.
+		 */
+		if (val && !g->elpg_enabled) {
+			g->elpg_enabled = true;
+			gk20a_pmu_enable_elpg(g);
+		} else if (!val && g->elpg_enabled) {
+			g->elpg_enabled = false;
+			gk20a_pmu_disable_elpg(g);
+		}
+		gk20a_idle(g->dev);
 	}
-	gk20a_idle(g->dev);
-
 	dev_info(dev, "ELPG is %s.\n", g->elpg_enabled ? "enabled" :
 			"disabled");
 

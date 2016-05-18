@@ -26,6 +26,8 @@
 #define MAX_ACTIVE_STATES	10
 #define MAX_TIMER_TRIPS		10
 
+#define MAX_SUBDEVICE_GROUP	2
+
 struct therm_est_sub_thz {
 	struct thermal_zone_device *thz;
 	long hist[HIST_LEN];
@@ -97,6 +99,7 @@ struct therm_est_data {
 struct therm_fan_est_subdevice {
 	const char *dev_data;
 	int (*get_temp)(const char *, long *);
+	int group;
 	long coeffs[HIST_LEN];
 	int hist[HIST_LEN];
 };

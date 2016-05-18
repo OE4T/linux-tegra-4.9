@@ -666,7 +666,6 @@ config PANEL_LCD_PIN_E
 	---help---
 	  This describes the number of the parallel port pin to which the LCD 'E'
 	  signal has been connected. It can be :
-
 	          0 : no connection (eg: connected to ground)
 	      1..17 : directly connected to any of these pins on the DB25 plug
 	    -1..-17 : connected to the same pin through an inverter (eg: transistor).
@@ -821,7 +820,7 @@ config THERM_EST
 	Thermal driver which estimates temperature based of other sensors.
 
 config FAN_THERM_EST
-	bool "Fan driving temp estimator"
+	tristate "Fan driving temp estimator"
 	---help---
 	Thermal driver that estimates the fan driving temperature based on
 	other sensors.

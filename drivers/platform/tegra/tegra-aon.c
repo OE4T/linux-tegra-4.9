@@ -27,7 +27,10 @@
 #include <asm/cache.h>
 
 /* This has to be a multiple of the cache line size */
-#define IVC_MIN_FRAME_SIZE		L1_CACHE_BYTES
+static inline int ivc_min_frame_size(void)
+{
+	return cache_line_size();
+}
 
 #define SMBOX1_OFFSET			0x8000
 
@@ -154,7 +157,7 @@ static int tegra_aon_parse_channel(struct device *dev,
 		return -EINVAL;
 	}
 
-	if (frame_size < IVC_MIN_FRAME_SIZE) {
+	if (frame_size < ivc_min_frame_size()) {
 		dev_err(dev, "Invalid <frame-size> property\n");
 		return -EINVAL;
 	}
@@ -363,7 +366,7 @@ static ssize_t store_ivc_dbg(struct device *dev, struct device_attribute *attr,
 	u32 enable;
 	int ret;
 
-	if (count > IVC_MIN_FRAME_SIZE)
+	if (count > ivc_min_frame_size())
 		return -EINVAL;
 
 	ret = kstrtouint(buf, 0, &channel);

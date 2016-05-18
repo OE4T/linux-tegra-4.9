@@ -1987,6 +1987,10 @@
 				ROUTE_TO_ADSP>,
 			     <GIC_SPI INT_ADMA_EOT19 IRQ_TYPE_LEVEL_HIGH
 				ROUTE_TO_ADSP>;
+		clocks = <&tegra_car TEGRA186_CLK_AHUB>,
+			<&tegra_car TEGRA186_CLK_APE>,
+			<&tegra_car TEGRA186_CLK_APB2APE>;
+		clock-names = "ahub", "ape", "apb2ape";
 		status = "disabled";
         };
 

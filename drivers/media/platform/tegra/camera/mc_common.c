@@ -128,9 +128,7 @@ static int vi_s_ctrl(struct v4l2_ctrl *ctrl)
 				 ctrl->val);
 			vi->pg_mode = ctrl->val;
 			vi->csi->pg_mode = vi->pg_mode;
-		} else
-			dev_warn(&vi->ndev->dev,
-				 "TPG mode can't be disabled for TPG driver\n");
+		}
 		break;
 	default:
 		dev_err(vi->dev, "%s:Not valid ctrl\n", __func__);
@@ -212,26 +210,29 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 		goto register_error;
 	}
 
-	v4l2_ctrl_handler_init(&vi->ctrl_handler, 1);
-	vi->pattern = v4l2_ctrl_new_std_menu_items(&vi->ctrl_handler,
+	if (vi->pg_mode) {
+		/* only for TPG driver initialize VI ctrl handler */
+		v4l2_ctrl_handler_init(&vi->ctrl_handler, 1);
+		vi->pattern = v4l2_ctrl_new_std_menu_items(&vi->ctrl_handler,
 				&vi_ctrl_ops, V4L2_CID_TEST_PATTERN,
 				ARRAY_SIZE(vi_pattern_strings) - 1,
 				0, vi->pg_mode, vi_pattern_strings);
 
-	if (vi->ctrl_handler.error) {
-		dev_err(vi->dev, "failed to add controls\n");
-		ret = vi->ctrl_handler.error;
-		goto ctrl_error;
-	}
-	vi->v4l2_dev.ctrl_handler = &vi->ctrl_handler;
+		if (vi->ctrl_handler.error) {
+			dev_err(vi->dev, "failed to add controls\n");
+			ret = vi->ctrl_handler.error;
+			goto ctrl_error;
+		}
+		vi->v4l2_dev.ctrl_handler = &vi->ctrl_handler;
 
-	ret = v4l2_ctrl_handler_setup(&vi->ctrl_handler);
-	if (ret < 0) {
-		dev_err(vi->dev, "failed to set controls\n");
-		goto ctrl_error;
+		ret = v4l2_ctrl_handler_setup(&vi->ctrl_handler);
+		if (ret < 0) {
+			dev_err(vi->dev, "failed to set controls\n");
+			goto ctrl_error;
+		}
 	}
+
 	return 0;
-
 
 ctrl_error:
 	v4l2_ctrl_handler_free(&vi->ctrl_handler);

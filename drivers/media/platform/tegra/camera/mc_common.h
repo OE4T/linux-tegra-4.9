@@ -206,7 +206,6 @@ struct tegra_mc_vi {
 
 	struct v4l2_ctrl_handler ctrl_handler;
 	struct v4l2_ctrl *pattern;
-	struct v4l2_ctrl *bypass;
 	enum tegra_vi_pg_mode pg_mode;
 	DECLARE_BITMAP(tpg_fmts_bitmap, MAX_FORMAT_NUM);
 

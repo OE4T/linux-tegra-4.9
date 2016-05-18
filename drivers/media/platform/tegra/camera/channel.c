@@ -1008,6 +1008,15 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 		return chan->ctrl_handler.error;
 	}
 
+	if (chan->vi->pg_mode) {
+		/* Add VI control handler for TPG control */
+		v4l2_ctrl_add_handler(&chan->ctrl_handler,
+					&chan->vi->ctrl_handler, NULL);
+		if (chan->ctrl_handler.error)
+			dev_err(chan->vi->dev,
+				"Failed to add VI controls\n");
+	}
+
 	/* setup the controls */
 	return v4l2_ctrl_handler_setup(&chan->ctrl_handler);
 }

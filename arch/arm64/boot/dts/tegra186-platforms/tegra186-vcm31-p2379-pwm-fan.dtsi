@@ -17,16 +17,16 @@
 		num_resources = <0>;
 		secret = <47>;
 		active_steps = <10>;
-		active_rpm = <1386 2310 2310 2310 2310 2310 2310 2310 2310 2310>;
-		active_rru = <40 2 1 1 1 1 1 1 1 1>;
-		active_rrd = <40 2 1 1 1 1 1 1 1 1>;
+		active_rpm = <1400 2300 3700 4500 4900 4900 4900 4900 4900 4900>;
+		active_rru = <20 20 10 10 10 1 1 1 1 1>;
+		active_rrd = <20 20 10 10 10 1 1 1 1 1>;
 		state_cap_lookup = <2 2 2 2 3 3 3 4 4 4>;
 		/* PWM freq = 1/ pwm_period = 37KHz*/
 		pwm_period = <27027>; /* nanoseconds */
 		pwm_id = <0>;
 		step_time = <100>; /* milliseconds */
-		state_cap = <4>; /* Cap pwm max to 204 = active_pwm[4] */
-		active_pwm_max = <255>;
+		state_cap = <4>; /* Cap pwm max to 256 = active_pwm[4] */
+		active_pwm_max = <256>;
 		/* Not use Tachometer pin */
 		/* tach_gpio =  <TEGRA_GPIO(FF, 2)>; */
 		pwm_gpio = <TEGRA_GPIO(V, 6)>; /* TEGRA_GPIO_PV6 */
@@ -36,8 +36,8 @@
 	pwm-fan {
 		compatible = "pwm-fan";
 		shared_data = <&pwm_fan_shared_data>;
-		/* duty =    <0 30  45  60  80 100 100 100 100 100>; */
-		active_pwm = <0 77 115 153 204 255 255 255 255 255>;
+		/* duty =    <0 20 55  80  100 100 100 100 100 100>; */
+		active_pwm = <0 51 141 205 256 256 256 256 256 256>;
 		status = "okay";
 	};
 };

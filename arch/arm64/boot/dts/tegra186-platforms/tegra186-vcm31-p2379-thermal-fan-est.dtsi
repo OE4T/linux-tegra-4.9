@@ -39,10 +39,10 @@
 		 * Ex, set active_pwm[1] when temp is over 55C,
 		 * back to active_pwm[0] when temp cooldown to 35C.
 		 */
-		active_trip_temps = <0 55000 65000 75000 85000
-				90000 150000 160000 170000 180000>;
-		active_hysteresis = <0 20000 5000 5000 5000
-				0 0 0 0 0>;
+		active_trip_temps = <0 80000 90000 95000 100000
+				110000 150000 160000 170000 180000>;
+		active_hysteresis = <0 15000 10000 5000 5000
+				10000 0 0 0 0>;
 		status = "okay";
 	};
 };

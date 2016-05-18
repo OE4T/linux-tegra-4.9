@@ -147,7 +147,6 @@ int nvmap_register_vidmem_carveout(struct device *dma_dev,
 {
 	struct nvmap_platform_carveout *vidmem_co;
 
-	/* vidmem is outside DRAM. So, pfn should be invalid */
 	if (!base || !size || (base != PAGE_ALIGN(base)) ||
 	    (size != PAGE_ALIGN(size)))
 		return -EINVAL;
@@ -155,6 +154,9 @@ int nvmap_register_vidmem_carveout(struct device *dma_dev,
 	vidmem_co = nvmap_get_carveout_pdata("vidmem");
 	if (!vidmem_co)
 		return -ENODEV;
+
+	if (vidmem_co->base || vidmem_co->size)
+		return -EEXIST;
 
 	vidmem_co->base = base;
 	vidmem_co->size = size;

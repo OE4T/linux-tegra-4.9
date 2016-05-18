@@ -1158,6 +1158,7 @@ static struct init_data usb3_lane_g1_init_data[] = {
 	{.cfg_addr = 0x56, .cfg_wdata = 0xC00F},
 	{.cfg_addr = 0x5D, .cfg_wdata = 0xFF07},
 	{.cfg_addr = 0x5E, .cfg_wdata = 0x141A},
+	{.cfg_addr = 0x97, .cfg_wdata = 0x0080},
 };
 
 static struct init_data sata_lane_g1_g2_init_data[] = {
@@ -1199,6 +1200,7 @@ static struct init_data ufs_lane_g1_g2_g3_init_data[] = {
 	{.cfg_addr = 0x55, .cfg_wdata = 0x0C00},
 	{.cfg_addr = 0x58, .cfg_wdata = 0xC000},
 	{.cfg_addr = 0x96, .cfg_wdata = 0x0001},
+	{.cfg_addr = 0x97, .cfg_wdata = 0x0080},
 };
 
 static void uphy_lane_defaults(struct tegra_padctl_uphy *uphy, int lane,

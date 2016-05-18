@@ -1843,6 +1843,10 @@ static int tegra_uart_remove(struct platform_device *pdev)
 	struct uart_port *u = &tup->uport;
 
 	tegra_uart_debugfs_deinit(tup);
+	if (tup->enable_rx_buffer_throttle)
+		del_timer_sync(&tup->timer);
+	del_timer_sync(&tup->error_timer);
+
 	uart_remove_one_port(&tegra_uart_driver, u);
 	return 0;
 }

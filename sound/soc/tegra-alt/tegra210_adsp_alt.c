@@ -44,6 +44,7 @@
 #include <sound/core.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
+#include <linux/tegra-soc.h>
 #include <sound/compress_driver.h>
 #include <sound/dmaengine_pcm.h>
 #include <sound/tegra_nvfx.h>
@@ -51,6 +52,7 @@
 #include <sound/tegra_nvfx_plugin.h>
 #include "tegra_isomgr_bw_alt.h"
 
+#include "tegra_asoc_utils_alt.h"
 #include "tegra210_adsp_alt.h"
 
 #define DRV_NAME "tegra210-adsp"
@@ -124,6 +126,9 @@ struct tegra210_adsp {
 	struct tegra210_adsp_app apps[TEGRA210_ADSP_VIRT_REG_MAX];
 	atomic_t reg_val[TEGRA210_ADSP_VIRT_REG_MAX];
 	DECLARE_BITMAP(adma_usage, TEGRA210_ADSP_ADMA_CHANNEL_COUNT);
+	struct clk *ahub_clk;
+	struct clk *ape_clk;
+	struct clk *apb2ape_clk;
 	uint32_t i2s_rate;
 	struct mutex mutex;
 	int init_done;
@@ -1889,6 +1894,13 @@ static int tegra210_adsp_runtime_suspend(struct device *dev)
 
 	adsp->adsp_started = 0;
 
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC))
+			clk_disable_unprepare(adsp->apb2ape_clk);
+		clk_disable_unprepare(adsp->ahub_clk);
+		clk_disable_unprepare(adsp->ape_clk);
+	}
+
 	return ret;
 }
 
@@ -1901,7 +1913,28 @@ static int tegra210_adsp_runtime_resume(struct device *dev)
 
 	if (!adsp->init_done)
 		return 0;
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		ret = clk_prepare_enable(adsp->ahub_clk);
+		if (ret < 0) {
+			dev_err(dev, "ahub clk_enable failed: %d\n", ret);
+			return ret;
+		}
 
+		ret = clk_prepare_enable(adsp->ape_clk);
+		if (ret < 0) {
+			dev_err(dev, "ape clk_enable failed: %d\n", ret);
+			return ret;
+		}
+
+		if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
+			ret = clk_prepare_enable(adsp->apb2ape_clk);
+			if (ret < 0) {
+				dev_err(dev, "apb2ape clk_enable failed: %d\n"
+					, ret);
+				return ret;
+			}
+		}
+	}
 	ret = nvadsp_os_start();
 	if (ret) {
 		dev_err(adsp->dev, "Failed to start ADSP OS ret 0x%x", ret);
@@ -3212,6 +3245,45 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 	dev_set_drvdata(&pdev->dev, adsp);
 	adsp->dev = &pdev->dev;
 
+
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (IS_ENABLED(CONFIG_ARCH_TEGRA_21x_SOC)) {
+			adsp->ahub_clk = clk_get_sys("tegra210-adsp", "ahub");
+			if (IS_ERR(adsp->ahub_clk)) {
+				dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
+				ret = PTR_ERR(adsp->ahub_clk);
+				goto err;
+			}
+			adsp->ape_clk = clk_get_sys(NULL, "adsp.ape");
+			if (IS_ERR(adsp->ape_clk)) {
+				dev_err(&pdev->dev, "Error: Missing APE clock\n");
+				ret = PTR_ERR(adsp->ape_clk);
+				goto err;
+			}
+		} else {
+			adsp->ahub_clk = devm_clk_get(&pdev->dev, "ahub");
+			if (IS_ERR(adsp->ahub_clk)) {
+				dev_err(&pdev->dev, "Error: Missing AHUB clock\n");
+				ret = PTR_ERR(adsp->ahub_clk);
+				goto err;
+			}
+
+			adsp->ape_clk = devm_clk_get(&pdev->dev, "ape");
+			if (IS_ERR(adsp->ape_clk)) {
+				dev_err(&pdev->dev, "Error: Missing APE clock\n");
+				ret = PTR_ERR(adsp->ape_clk);
+				goto err;
+			}
+
+			adsp->apb2ape_clk = devm_clk_get(&pdev->dev, "apb2ape");
+			if (IS_ERR(adsp->apb2ape_clk)) {
+				dev_err(&pdev->dev, "Error: Missing APB2APE clock\n");
+				ret = PTR_ERR(adsp->apb2ape_clk);
+				goto err;
+			}
+		}
+	}
+
 	/* TODO: Add mixer control to set I2S playback rate */
 	adsp->i2s_rate = 48000;
 	mutex_init(&adsp->mutex);
@@ -3371,12 +3443,39 @@ err_unregister_platform:
 	snd_soc_unregister_platform(&pdev->dev);
 err_pm_disable:
 	pm_runtime_disable(&pdev->dev);
+err:
+	if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC))
+		if (!IS_ERR_OR_NULL(adsp->apb2ape_clk))
+			tegra_alt_asoc_utils_clk_put
+				(&pdev->dev, adsp->apb2ape_clk);
+
+	if (!IS_ERR_OR_NULL(adsp->ape_clk))
+		tegra_alt_asoc_utils_clk_put
+			(&pdev->dev, adsp->ape_clk);
+	if (!IS_ERR_OR_NULL(adsp->ahub_clk))
+		tegra_alt_asoc_utils_clk_put
+			(&pdev->dev, adsp->ahub_clk);
 	return ret;
 }
 
 static int tegra210_adsp_audio_platform_remove(struct platform_device *pdev)
 {
+	struct tegra210_adsp *adsp = dev_get_drvdata(&pdev->dev);
+
 	pm_runtime_disable(&pdev->dev);
+	if (IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC))
+		if (!IS_ERR_OR_NULL(adsp->apb2ape_clk))
+			tegra_alt_asoc_utils_clk_put
+				(&pdev->dev, adsp->apb2ape_clk);
+
+	if (!IS_ERR_OR_NULL(adsp->ape_clk))
+		tegra_alt_asoc_utils_clk_put
+			(&pdev->dev, adsp->ape_clk);
+
+	if (!IS_ERR_OR_NULL(adsp->ahub_clk))
+		tegra_alt_asoc_utils_clk_put
+			(&pdev->dev, adsp->ahub_clk);
+
 	tegra_pd_remove_device(&pdev->dev);
 	snd_soc_unregister_platform(&pdev->dev);
 	return 0;

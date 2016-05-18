@@ -72,7 +72,9 @@ static void fan_set_trip_temp_hyst(struct therm_fan_estimator *est, int trip,
 
 static void therm_fan_est_work_func(struct work_struct *work)
 {
-	int i, j, index, trip_index, sum = 0;
+	int i, j, group, index, trip_index;
+	int sum[MAX_SUBDEVICE_GROUP] = {0, };
+	int sum_max = 0;
 	long temp = 0;
 	struct delayed_work *dwork = container_of(work,
 					struct delayed_work, work);
@@ -87,14 +89,19 @@ static void therm_fan_est_work_func(struct work_struct *work)
 	}
 
 	for (i = 0; i < est->ndevs; i++) {
+		group = est->devs[i].group;
 		for (j = 0; j < HIST_LEN; j++) {
 			index = (est->ntemp - j + HIST_LEN) % HIST_LEN;
-			sum += est->devs[i].hist[index] *
+			sum[group] += est->devs[i].hist[index] *
 				est->devs[i].coeffs[j];
 		}
 	}
+
 #if !DEBUG
-	est->cur_temp = sum / 100 + est->toffset;
+	for (i = 0; i < MAX_SUBDEVICE_GROUP; i++)
+		sum_max = max(sum_max, sum[i]);
+
+	est->cur_temp = sum_max / 100 + est->toffset;
 #else
 	est->cur_temp = est->cur_temp_debug;
 #endif
@@ -474,6 +481,19 @@ static int therm_fan_est_probe(struct platform_device *pdev)
 
 		subdevs[j].get_temp = &fan_est_get_temp_func;
 
+		if (of_property_read_u32(child, "group", &value)) {
+			pr_debug("Set %s to group 0 as default\n",
+				(char *)subdevs[j].dev_data);
+			subdevs[j].group = 0;
+		} else {
+			if (value >= MAX_SUBDEVICE_GROUP) {
+				pr_err("THERMAL EST: group limit exceed\n");
+				err = -ENXIO;
+				goto free_subdevs;
+			} else
+				subdevs[j].group = (int)value;
+		}
+
 		of_err |= of_property_read_u32_array(child, "coeffs",
 			subdevs[j].coeffs, est_data->trip_length);
 		for (i = 0; i < est_data->trip_length; i++)
@@ -614,9 +634,14 @@ free_est:
 static int therm_fan_est_remove(struct platform_device *pdev)
 {
 	struct therm_fan_estimator *est = platform_get_drvdata(pdev);
+	int i;
 
 	if (!est)
 		return -EINVAL;
+
+	for (i = 0; i < ARRAY_SIZE(therm_fan_est_nodes); i++)
+		device_remove_file(&pdev->dev,
+					&therm_fan_est_nodes[i].dev_attr);
 
 	cancel_delayed_work(&est->therm_fan_est_work);
 	destroy_workqueue(est->workqueue);

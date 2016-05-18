@@ -63,16 +63,6 @@
 struct nvmap_device *nvmap_dev;
 struct nvmap_stats nvmap_stats;
 
-static struct backing_dev_info nvmap_bdi = {
-	.ra_pages	= 0,
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
-	.capabilities	= (BDI_CAP_NO_ACCT_AND_WRITEBACK
-			   | BDI_CAP_READ_MAP | BDI_CAP_WRITE_MAP),
-#else
-	.capabilities	= BDI_CAP_NO_ACCT_AND_WRITEBACK,
-#endif
-};
-
 static struct device_dma_parameters nvmap_dma_parameters = {
 	.max_segment_size = UINT_MAX,
 };
@@ -496,12 +486,6 @@ static int nvmap_open(struct inode *inode, struct file *filp)
 	trace_nvmap_open(priv, priv->name);
 
 	priv->kernel_client = false;
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
-	filp->f_mapping->backing_dev_info = &nvmap_bdi;
-#else
-	inode->i_sb->s_bdi = &nvmap_bdi;
-#endif
 
 	filp->private_data = priv;
 	return 0;

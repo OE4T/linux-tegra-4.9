@@ -34,6 +34,7 @@
 #include <linux/tegra-fuse.h>
 #include <crypto/rng.h>
 #include <crypto/hash.h>
+#include <linux/platform/tegra/common.h>
 #include <soc/tegra/fuse.h>
 
 #include "tegra-cryptodev.h"

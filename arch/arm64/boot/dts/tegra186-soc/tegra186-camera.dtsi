@@ -27,9 +27,6 @@
 			<0 0xb1f0000 0 0x40000>,  /* SCE PM */
 			<0 0xb230000 0 0x10000>;  /* APS_FRSC (SCE_CFG) */
 
-		nvidia,hsp-notifications = <&hsp_top
-					TEGRA_HSP_PROC_SCE
-					TEGRA_HSP_DB_SCE>;
 		#stream-id-cells = <1>;
 
 		#mbox-cells = <1>;			 /* This is mbox controller device */
@@ -136,6 +133,13 @@
 				nvidia,frame-size = <384>;
 			};
 		};
+
+		hsp {
+			compatible = "nvidia,tegra186-hsp-doorbell";
+			nvidia,hsp-doorbell = <&hsp_top
+						TEGRA_HSP_PROC_SCE
+						TEGRA_HSP_DB_SCE>;
+		};
 	};
 
 	tegra_ape: rtcpu@2993000 {
@@ -146,9 +150,6 @@
 
 		reg = <0x0 0x02993000 0x0 0x1000>; /* APE EVP */
 
-		nvidia,hsp-notifications = <&hsp_top
-					TEGRA_HSP_PROC_APE
-					TEGRA_HSP_DB_APE>;
 		#stream-id-cells = <1>;
 
 		#mbox-cells = <1>;
@@ -253,6 +254,13 @@
 				nvidia,frame-count = <1>;
 				nvidia,frame-size = <384>;
 			};
+		};
+
+		hsp {
+			compatible = "nvidia,tegra186-hsp-doorbell";
+			nvidia,hsp-doorbell = <&hsp_top
+						TEGRA_HSP_PROC_APE
+						TEGRA_HSP_DB_APE>;
 		};
 	};
 

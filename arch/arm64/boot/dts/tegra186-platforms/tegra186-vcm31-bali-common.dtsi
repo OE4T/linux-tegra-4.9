@@ -322,6 +322,12 @@
 		arad@290e400 {
 			status = "okay";
 		};
+		i2s@2901000 {
+			clocks = <&tegra_car TEGRA186_CLK_I2S1>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S1>,
+				<&tegra_car TEGRA186_CLK_I2S3_SYNC_INPUT>,
+				<&tegra_car TEGRA186_CLK_SYNC_I2S1>;
+		};
 		i2s@2901400 {
 			clocks = <&tegra_car TEGRA186_CLK_I2S5>,
 				<&tegra_car TEGRA186_CLK_SYNC_I2S5>,
@@ -637,17 +643,17 @@
 			codec-dai = <&spdif_dit1>;
 			cpu-dai-name = "I2S1";
 			codec-dai-name = "dit-hifi";
-			tx-mask = <0xFF>;
-			rx-mask = <0xFF>;
-			format = "dsp_a";
+			tx-mask = <0xFFFF>;
+			rx-mask = <0xFFFF>;
+			format = "dsp_b";
 			bitclock-slave;
 			frame-slave;
-			bitclock-noninversion;
-			frame-noninversion;
+			bitclock-inversion;
+			frame-inversion;
 			bit-format = "s32_le";
 			bclk_ratio = <1>;
 			srate = <48000>;
-			num-channel = <8>;
+			num-channel = <16>;
 			name-prefix = "y";
 		};
 

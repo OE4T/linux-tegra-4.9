@@ -27,6 +27,7 @@
 #include <linux/clk.h>
 #include <linux/clk/tegra.h>
 #include <linux/syscore_ops.h>
+#include <linux/platform/tegra/common.h>
 #include <soc/tegra/fuse.h>
 #include <linux/tegra-soc.h>
 #include <asm/bug.h>

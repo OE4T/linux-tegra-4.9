@@ -702,8 +702,7 @@ gk20a_channel_semaphore_create(struct channel_gk20a *c)
 		asid = c->vm->as_share->id;
 
 	sprintf(pool_name, "semaphore_pool-%d", c->hw_chid);
-	sema->pool = gk20a_semaphore_pool_alloc(dev_from_gk20a(c->g),
-						pool_name, 1024);
+	sema->pool = gk20a_semaphore_pool_alloc(c->g, pool_name, 1024);
 	if (!sema->pool)
 		goto clean_up;
 

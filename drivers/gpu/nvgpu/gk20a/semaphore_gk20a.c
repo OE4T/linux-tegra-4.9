@@ -23,7 +23,7 @@
 
 static const int SEMAPHORE_SIZE = 16;
 
-struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(struct device *d,
+struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(struct gk20a *g,
 		const char *unique_name, size_t capacity)
 {
 	struct gk20a_semaphore_pool *p;
@@ -34,30 +34,27 @@ struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(struct device *d,
 	kref_init(&p->ref);
 	INIT_LIST_HEAD(&p->maps);
 	mutex_init(&p->maps_mutex);
-	p->dev = d;
+	p->g = g;
 
 	/* Alloc one 4k page of semaphore per channel. */
-	p->size = roundup(capacity * SEMAPHORE_SIZE, PAGE_SIZE);
-	p->cpu_va = dma_alloc_coherent(d, p->size, &p->iova, GFP_KERNEL);
-	if (!p->cpu_va)
-		goto clean_up;
-	if (gk20a_get_sgtable(d, &p->sgt, p->cpu_va, p->iova, p->size))
+	if (gk20a_gmmu_alloc(g, roundup(capacity * SEMAPHORE_SIZE, PAGE_SIZE),
+				&p->mem))
 		goto clean_up;
 
 	/* Sacrifice one semaphore in the name of returning error codes. */
 	if (gk20a_allocator_init(&p->alloc, unique_name,
-				 SEMAPHORE_SIZE, p->size - SEMAPHORE_SIZE,
+				 SEMAPHORE_SIZE, p->mem.size - SEMAPHORE_SIZE,
 				 SEMAPHORE_SIZE))
 		goto clean_up;
 
-	gk20a_dbg_info("cpuva=%p iova=%llx phys=%llx", p->cpu_va,
-		(u64)sg_dma_address(p->sgt->sgl), (u64)sg_phys(p->sgt->sgl));
+	gk20a_dbg_info("cpuva=%p iova=%llx phys=%llx", p->mem.cpu_va,
+		(u64)sg_dma_address(p->mem.sgt->sgl),
+		(u64)sg_phys(p->mem.sgt->sgl));
 	return p;
+
 clean_up:
-	if (p->cpu_va)
-		dma_free_coherent(d, p->size, p->cpu_va, p->iova);
-	if (p->sgt)
-		gk20a_free_sgtable(&p->sgt);
+	if (p->mem.size)
+		gk20a_gmmu_free(p->g, &p->mem);
 	kfree(p);
 	return NULL;
 }
@@ -69,8 +66,7 @@ static void gk20a_semaphore_pool_free(struct kref *ref)
 	mutex_lock(&p->maps_mutex);
 	WARN_ON(!list_empty(&p->maps));
 	mutex_unlock(&p->maps_mutex);
-	gk20a_free_sgtable(&p->sgt);
-	dma_free_coherent(p->dev, p->size, p->cpu_va, p->iova);
+	gk20a_gmmu_free(p->g, &p->mem);
 	gk20a_allocator_destroy(&p->alloc);
 	kfree(p);
 }
@@ -110,7 +106,7 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 		return -ENOMEM;
 	map->vm = vm;
 	map->rw_flag = rw_flag;
-	map->gpu_va = gk20a_gmmu_map(vm, &p->sgt, p->size,
+	map->gpu_va = gk20a_gmmu_map(vm, &p->mem.sgt, p->mem.size,
 				     0/*uncached*/, rw_flag,
 				     false);
 	if (!map->gpu_va) {
@@ -135,7 +131,7 @@ void gk20a_semaphore_pool_unmap(struct gk20a_semaphore_pool *p,
 	mutex_lock(&p->maps_mutex);
 	map = gk20a_semaphore_pool_find_map_locked(p, vm);
 	if (map) {
-		gk20a_gmmu_unmap(vm, map->gpu_va, p->size, map->rw_flag);
+		gk20a_gmmu_unmap(vm, map->gpu_va, p->mem.size, map->rw_flag);
 		gk20a_vm_put(vm);
 		list_del(&map->list);
 		kfree(map);
@@ -168,7 +164,8 @@ struct gk20a_semaphore *gk20a_semaphore_alloc(struct gk20a_semaphore_pool *pool)
 
 	s->offset = gk20a_balloc(&pool->alloc, SEMAPHORE_SIZE);
 	if (!s->offset) {
-		gk20a_err(pool->dev, "failed to allocate semaphore");
+		gk20a_err(dev_from_gk20a(pool->g),
+				"failed to allocate semaphore");
 		kfree(s);
 		return NULL;
 	}
@@ -177,10 +174,11 @@ struct gk20a_semaphore *gk20a_semaphore_alloc(struct gk20a_semaphore_pool *pool)
 	s->pool = pool;
 
 	kref_init(&s->ref);
-	s->value = (volatile u32 *)((uintptr_t)pool->cpu_va + s->offset);
-	*s->value = 0; /* Initially acquired. */
-	gk20a_dbg_info("created semaphore offset=%d, value_cpu=%p, value=%d",
-			s->offset, s->value, *s->value);
+	/* Initially acquired. */
+	gk20a_mem_wr(s->pool->g, &s->pool->mem, s->offset, 0);
+	gk20a_dbg_info("created semaphore offset=%d, value=%d",
+			s->offset,
+			gk20a_mem_rd(s->pool->g, &s->pool->mem, s->offset));
 	return s;
 }
 

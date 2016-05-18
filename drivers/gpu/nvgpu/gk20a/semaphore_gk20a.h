@@ -20,11 +20,8 @@
 
 /* A memory pool for holding semaphores. */
 struct gk20a_semaphore_pool {
-	void *cpu_va;
-	dma_addr_t iova;
-	size_t size;
-	struct device *dev;
-	struct sg_table *sgt;
+	struct mem_desc mem;
+	struct gk20a *g;
 	struct list_head maps;
 	struct mutex maps_mutex;
 	struct kref ref;
@@ -48,16 +45,17 @@ struct gk20a_semaphore_pool_map {
 /* A semaphore that lives inside a semaphore pool. */
 struct gk20a_semaphore {
 	struct gk20a_semaphore_pool *pool;
+	/*
+	 * value exists within the pool's memory at the specified offset.
+	 * 0=acquired, 1=released.
+	 */
 	u32 offset; /* byte offset within pool */
 	struct kref ref;
-	/* value is a pointer within the pool's coherent cpu_va.
-	 * It is shared between CPU and GPU, hence volatile. */
-	volatile u32 *value; /* 0=acquired, 1=released */
 };
 
 /* Create a semaphore pool that can hold at most 'capacity' semaphores. */
 struct gk20a_semaphore_pool *
-gk20a_semaphore_pool_alloc(struct device *, const char *unique_name,
+gk20a_semaphore_pool_alloc(struct gk20a *, const char *unique_name,
 			   size_t capacity);
 void gk20a_semaphore_pool_put(struct gk20a_semaphore_pool *);
 int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *,
@@ -83,7 +81,7 @@ static inline u64 gk20a_semaphore_gpu_va(struct gk20a_semaphore *s,
 
 static inline bool gk20a_semaphore_is_acquired(struct gk20a_semaphore *s)
 {
-	u32 v = *s->value;
+	u32 v = gk20a_mem_rd(s->pool->g, &s->pool->mem, s->offset);
 
 	/* When often block on value reaching a certain threshold. We must make
 	 * sure that if we get unblocked, we haven't read anything too early. */
@@ -94,6 +92,6 @@ static inline bool gk20a_semaphore_is_acquired(struct gk20a_semaphore *s)
 static inline void gk20a_semaphore_release(struct gk20a_semaphore *s)
 {
 	smp_wmb();
-	*s->value = 1;
+	gk20a_mem_wr(s->pool->g, &s->pool->mem, s->offset, 1);
 }
 #endif

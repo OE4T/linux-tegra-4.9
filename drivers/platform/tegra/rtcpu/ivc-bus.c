@@ -462,8 +462,10 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 			ret = tegra_ivc_bus_parse_channel(&bus->dev, channel,
 					base, ivc_dma, ivc.size,
 					&bus->mbox.chans[channel], ch_node);
-			if (ret)
+			if (ret) {
+				of_node_put(ch_node);
 				goto error;
+			}
 
 			channel++;
 		}
@@ -472,6 +474,8 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 	return tegra_ivc_bus_validate_channels(bus);
 
 error:
+	of_node_put(reg_node);
+
 	while (channel > 0) {
 		struct mbox_chan *mbox_chan = &bus->mbox.chans[--channel];
 		struct tegra_ivc_channel *chan = mbox_chan->con_priv;

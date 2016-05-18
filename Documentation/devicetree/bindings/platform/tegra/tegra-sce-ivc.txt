@@ -2,7 +2,7 @@ NVIDIA Tegra SCE aux CPU, with communication via the "IVC" IPC protocol.
 
 SCE is an aux CPU which talks to CCPLEX over IVC.
 
-The SCE FW implements IVC, and uses HSP DB IRQs as part of IVC.  The
+The SCE FW implements IVC, and uses HSP IRQs as part of IVC.  The
 SCE FW expects AST regions 0/1/2 are already set up for the SCE to
 access FW in DRAM, SYSRAM if applicable, and the IVC memory.
 
@@ -13,15 +13,6 @@ such as clocks, resets etc.
 
 Required properties:
 - compatible: Should be "nvidia,tegra186-sce-ivc" for T18x.
-- nvidia,hsp-notifications: <HSP-phandle HSP-ID HSP-DB>
-  * HSP is a set of HW synchronization primitives used in Tegra to allow
-    multiple processors to share resources and communicate together.
-  * HSP-ID is NVIDIA Tegra HSP unique source ID for SCE, used in IPC.
-  * HSP-DB is NVIDIA Tegra HSP unique doorbell number allotted to SCE.
-    A HSP doorbell allows a set of source agents in Tegra to request the
-    attention of specified target agent. In general the agents are processors
-    and doorbell used as part of an IPC protocol.
-  * For more HSP details, refer: ../tegra-hsp.txt.
 - reg: Address entries (SCE BASE, SCE CFG BASE, SCE_EVP, SCEPM)
   Formatted as per standard rules for this property.
 - nvidia,ast: SCE AST0 and AST1 phandles
@@ -67,16 +58,36 @@ Hence, this binding makes use of the mailbox binding at ../mailbox/mailbox.txt.
 Contains a sub-node for each IVC channel implemented by the SCE.
 For IVC channel details, please refer: ./tegra-ivc-channel.txt
 
-Possible example:
+* hsp
+
+Describes the hardware synchronization primitive(s) used between CCPLEX
+and SCE to signal incoming IVC messages or IVC write room.
+
+Required property:
+- compatible: Should match with the device driver implementing the
+    cross-processor synchronization primitive.
+
+If the HSP doorbell is used:
+
+- compatible: "nvidia,tegra186-hsp-doorbell"
+
+- nvidia,hsp-doorbell: <HSP-phandle HSP-ID HSP-DB>
+  * HSP is a set of HW synchronization primitives used in Tegra to allow
+    multiple processors to share resources and communicate together.
+  * HSP-ID is NVIDIA Tegra HSP unique source ID for SCE, used in IPC.
+  * HSP-DB is NVIDIA Tegra HSP unique doorbell number allotted to SCE.
+    A HSP doorbell allows a set of source agents in Tegra to request the
+    attention of specified target agent. In general the agents are processors
+    and doorbell used as part of an IPC protocol.
+  * For more HSP details, refer: ./tegra-hsp.txt.
+
+== Possible example ==
 
 tegra_sce: rtcpu@b000000 {
 	compatible = "nvidia,tegra186-sce-ivc";
 	reg =	<0 0xb000000 0 0x1000>,	  /* SCE EVP (SCE_ATCM_EVP) */
 		<0 0xb1f0000 0 0x40000>,  /* SCE PM */
 		<0 0xb230000 0 0x10000>;  /* APS_FRSC (SCE_CFG) */
-	nvidia,hsp-notifications = <&hsp_top
-				TEGRA_HSP_PROC_SCE
-				TEGRA_HSP_DB_SCE>;
 	clocks = <&tegra_car TEGRA186_CLK_SCE_APB>;
 	clock-names = "sce-apb";
 	resets =
@@ -122,5 +133,11 @@ tegra_sce: rtcpu@b000000 {
 			nvidia,frame-size = <64>;
 			nvidia,frame-count = <16>;
 		};
+	};
+	hsp {
+		compatible = "nvidia,tegra186-hsp-doorbell";
+		nvidia,hsp-doorbell = <&hsp_top
+					TEGRA_HSP_PROC_SCE
+					TEGRA_HSP_DB_SCE>;
 	};
 };

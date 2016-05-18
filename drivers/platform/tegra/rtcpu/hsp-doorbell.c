@@ -48,9 +48,8 @@ static int tegra_hsp_doorbell_probe(struct device *dev)
 	struct of_phandle_args dbspec;
 	int ret;
 
-	ret = of_parse_phandle_with_fixed_args(dev->of_node,
-						NV(hsp-notifications), 2, 0,
-						&dbspec);
+	ret = of_parse_phandle_with_fixed_args(dev->of_node, NV(hsp-doorbell),
+						2, 0, &dbspec);
 	if (ret)
 		return ret;
 
@@ -116,6 +115,11 @@ static void tegra_hsp_doorbell_ring(struct device *dev)
 		dev_err(dev, "HSP doorbell %s error: %d\n", "ring", ret);
 }
 
+static const struct of_device_id tegra_hsp_doorbell_of_match[] = {
+	{ .compatible = "nvidia,tegra186-hsp-doorbell" },
+	{ },
+};
+
 static const struct tegra_hsp_ops tegra_hsp_doorbell_ops = {
 	.probe		= tegra_hsp_doorbell_probe,
 	.remove		= tegra_hsp_doorbell_remove,
@@ -127,6 +131,7 @@ static struct tegra_ivc_driver tegra_hsp_doorbell_driver = {
 		.name		= "tegra-hsp-doorbell",
 		.bus		= &tegra_ivc_bus_type,
 		.owner		= THIS_MODULE,
+		.of_match_table	= tegra_hsp_doorbell_of_match,
 	},
 	.dev_type	= &tegra_hsp_type,
 	.ops.hsp	= &tegra_hsp_doorbell_ops,

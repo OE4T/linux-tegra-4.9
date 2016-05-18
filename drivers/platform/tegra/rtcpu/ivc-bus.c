@@ -34,11 +34,7 @@ static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 
 	if (dev->type != ivcdrv->dev_type)
 		return 0;
-
-	if (dev->type == &tegra_ivc_channel_type)
-		return of_driver_match_device(dev, drv);
-
-	return 1;
+	return of_driver_match_device(dev, drv);
 }
 
 static int tegra_ivc_bus_probe(struct device *dev)
@@ -409,9 +405,10 @@ static int tegra_ivc_bus_validate_channels(struct tegra_ivc_bus *bus)
 	return 0;
 }
 
-static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus, u32 sid)
+static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
+					struct device_node *dev_node, u32 sid)
 {
-	struct device_node *dev_node = bus->dev.of_node, *reg_node;
+	struct device_node *reg_node;
 	void __iomem *ast[2];
 	int ret, channel = 0, region = 2;
 
@@ -532,7 +529,7 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 	bus->dev.parent = dev;
 	bus->dev.type = &tegra_hsp_type;
 	bus->dev.bus = &tegra_ivc_bus_type;
-	bus->dev.of_node = of_node_get(dev->of_node);
+	bus->dev.of_node = of_get_child_by_name(dev->of_node, "hsp");
 	bus->dev.release = tegra_ivc_bus_release;
 	dev_set_name(&bus->dev, "ivc-%s", dev_name(dev));
 
@@ -547,7 +544,7 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 
 	device_initialize(&bus->dev);
 
-	ret = tegra_ivc_bus_parse_channels(bus, sid);
+	ret = tegra_ivc_bus_parse_channels(bus, dev->of_node, sid);
 	if (ret) {
 		dev_err(&bus->dev, "IVC channels setup failed: %d\n", ret);
 		goto error;

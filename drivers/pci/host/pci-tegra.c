@@ -4204,10 +4204,10 @@ DEFINE_ENTRY(dump_ltssm_trace)
 static int tegra_pcie_port_debugfs_init(struct tegra_pcie_port *port)
 {
 	struct dentry *d;
-	char port_name;
+	char port_name[2] = {0};
 
-	sprintf(&port_name, "%d", port->index);
-	port->port_debugfs = debugfs_create_dir(&port_name,
+	snprintf(port_name, sizeof(port_name), "%d", port->index);
+	port->port_debugfs = debugfs_create_dir(port_name,
 							port->pcie->debugfs);
 	if (!port->port_debugfs)
 		return -ENOMEM;

@@ -1,7 +1,7 @@
 /*
  * Tegra GK20A GPU Debugger Driver Register Ops
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -52,8 +52,10 @@ static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x0008e00c,   1},
 	{ 0x00100c18,   3},
 	{ 0x00100c84,   1},
+	{ 0x00104038,   1},
 	{ 0x0010a0a8,   1},
 	{ 0x0010a4f0,   1},
+	{ 0x0010e490,   1},
 	{ 0x0013cc14,   1},
 	{ 0x00140028,   1},
 	{ 0x00140280,   1},
@@ -237,9 +239,11 @@ static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x0041a8a0,   3},
 	{ 0x0041a8b0,   2},
 	{ 0x0041b014,   1},
+	{ 0x0041b0a0,   1},
 	{ 0x0041b0cc,   1},
 	{ 0x0041b1dc,   1},
 	{ 0x0041be0c,   3},
+	{ 0x0041bea0,   1},
 	{ 0x0041becc,   1},
 	{ 0x0041bfdc,   1},
 	{ 0x0041c054,   1},
@@ -326,9 +330,11 @@ static const struct regop_offset_range gp10b_global_whitelist_ranges[] = {
 	{ 0x005028a0,   3},
 	{ 0x005028b0,   2},
 	{ 0x00503014,   1},
+	{ 0x005030a0,   1},
 	{ 0x005030cc,   1},
 	{ 0x005031dc,   1},
 	{ 0x00503e14,   1},
+	{ 0x00503ea0,   1},
 	{ 0x00503ecc,   1},
 	{ 0x00503fdc,   1},
 	{ 0x00504054,   1},

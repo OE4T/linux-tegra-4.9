@@ -1,7 +1,7 @@
 /*
  * ahub_unit_fpga_clock_t18x.h - Additional defines for T186
  *
- * Copyright (c) 2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -16,7 +16,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#ifndef __AHUB_UNIT_FPGA_CLOCK_H_T18X__
+#ifndef __AHUB_UNIT_FPGA_CLOCK_H_T18X_
 #define __AHUB_UNIT_FPGA_CLOCK_H_T18X_
 
 #define NV_ADDRESS_MAP_APE_AHUB_FPGA_MISC_BASE		0x0290C800

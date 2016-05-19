@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics ISP
  *
- * Copyright (c) 2012-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -218,7 +218,7 @@ static inline void tegra_isp_write(struct isp *tegra_isp, u32 offset, u32 data)
 	writel(data, tegra_isp->base + offset);
 }
 
-int tegra_isp_register_mfi_cb(callback cb, void *cb_arg)
+int tegra_isp_register_mfi_cb(isp_callback cb, void *cb_arg)
 {
 	if (mfi_callback || mfi_callback_arg) {
 		pr_err("cb already registered\n");

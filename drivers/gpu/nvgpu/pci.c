@@ -63,6 +63,7 @@ static struct gk20a_platform nvgpu_pci_device = {
 	.default_big_page_size	= SZ_64K,
 
 	.ch_wdt_timeout_ms = 7000,
+	.disable_bigpage = true,
 };
 
 static struct pci_device_id nvgpu_pci_table[] = {

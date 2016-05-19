@@ -20,7 +20,7 @@
  *
  */
 
-#ifndef __TEGRA_ASOC_UTILS_ALT_H__
+#ifndef __TEGRA_ASOC_UTILS_ALT_H_
 #define __TEGRA_ASOC_UTILS_ALT_H_
 
 #ifdef CONFIG_SWITCH

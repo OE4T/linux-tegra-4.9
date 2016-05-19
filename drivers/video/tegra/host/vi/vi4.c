@@ -64,9 +64,7 @@ static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
 		host1x_writel(pdev, VI_NOTIFY_ERROR_0, 1);
 		dev_err(&pdev->dev, "notify buffer overflow\n");
 		atomic_inc(&vi->notify_overflow);
-#ifdef CONFIG_TEGRA_VI_NOTIFY
 		vi_notify_dev_error(vi->notify.vnd);
-#endif
 	}
 
 	r = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);
@@ -296,18 +294,15 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	} else
 		dev_warn(&pdev->dev, "missing master IRQ\n");
 
-#ifdef CONFIG_TEGRA_VI_NOTIFY
 	err = vi_notify_register(&nvhost_vi_notify_driver, &pdev->dev, 12);
 	if (IS_ERR_VALUE(err)) {
 		nvhost_client_device_release(pdev);
 		return err;
 	}
-#endif
+
 	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);
 	if (err) {
-#ifdef CONFIG_TEGRA_VI_NOTIFY
 		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
-#endif
 		nvhost_client_device_release(pdev);
 		return err;
 	}
@@ -320,9 +315,7 @@ static int tegra_vi4_remove(struct platform_device *pdev)
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
 	tegra_vi_media_controller_cleanup(&vi->mc_vi);
-#ifdef CONFIG_TEGRA_VI_NOTIFY
 	vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
-#endif
 	nvhost_client_device_release(pdev);
 	/* ^ includes call to nvhost_module_deinit() */
 #ifdef CONFIG_PM_GENERIC_DOMAINS

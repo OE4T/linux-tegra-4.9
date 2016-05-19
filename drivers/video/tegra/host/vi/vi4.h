@@ -42,9 +42,7 @@ struct reset_control;
 extern struct vi_notify_driver nvhost_vi_notify_driver;
 
 struct nvhost_vi_dev {
-#ifdef CONFIG_TEGRA_VI_NOTIFY
 	struct nvhost_vi_notify_dev notify;
-#endif
 	struct reset_control *vi_reset;
 	struct reset_control *vi_tsc_reset;
 	struct dentry *debug_dir;

@@ -1,10 +1,2 @@
 source "../kernel-nvhost-t18x/drivers/video/tegra/host/Kconfig"
 source "../kernel-nvhost-t19x/drivers/video/tegra/host/Kconfig"
-
-config TEGRA_VI_NOTIFY
-	bool "Tegra VI Notify FIFO driver"
-	depends on VIDEO_TEGRA_VI && ARCH_TEGRA_18x_SOC
-	default y
-	help
-	  Enables support for draining the Tegra Video Input block Notify FIFO.
-	  Say N here if either SCE or APE drains the FIFO instead.

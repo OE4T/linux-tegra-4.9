@@ -63,6 +63,7 @@
 #define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
 
 static int nvhost_nvdec_init_sw(struct platform_device *dev);
+static unsigned int tegra_nvdec_bootloader_enabled;
 
 /* caller is responsible for freeing */
 enum {
@@ -84,7 +85,7 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 		return NULL;
 
 	decode_nvdec_ver(pdata->version, &maj, &min);
-	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)) {
+	if (tegra_nvdec_bootloader_enabled) {
 		if (debug_mode) {
 			if (fw == host_nvdec_fw_bl) {
 				if (tegra_platform_is_qt() ||
@@ -238,7 +239,7 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	if (pdata->transcfg_addr)
 		host1x_writel(dev, pdata->transcfg_addr, pdata->transcfg_val);
 
-	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)) {
+	if (tegra_nvdec_bootloader_enabled) {
 
 		u32 fb_data_offset = 0;
 		u32 initial_dmem_offset = 0;
@@ -479,7 +480,7 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 		err = -EINVAL;
 		goto error_fw_name;
 	}
-	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)) {
+	if (tegra_nvdec_bootloader_enabled) {
 		fw_name[1] = nvdec_get_fw_name(dev, host_nvdec_fw_ls);
 		if (!fw_name[1]) {
 			dev_err(&dev->dev, "couldn't determine LS fw name");
@@ -488,7 +489,7 @@ static int nvhost_nvdec_init_sw(struct platform_device *dev)
 		}
 	}
 
-	for (i = 0; i < (1 + IS_ENABLED(CONFIG_NVDEC_BOOTLOADER)); i++) {
+	for (i = 0; i < (1 + tegra_nvdec_bootloader_enabled); i++) {
 		m[i] = kzalloc(sizeof(struct nvdec), GFP_KERNEL);
 		if (!m[i]) {
 			dev_err(&dev->dev, "couldn't alloc ucode");
@@ -703,9 +704,23 @@ static struct of_device_id tegra_nvdec_domain_match[] = {
 	{},
 };
 
+static int __init tegra_nvdec_bootloader_enabled_arg(char *options)
+{
+	char *p = options;
+
+	tegra_nvdec_bootloader_enabled = memparse(p, &p);
+
+	return 0;
+}
+early_param("nvdec_enabled", tegra_nvdec_bootloader_enabled_arg);
+
 static int __init nvdec_init(void)
 {
 	int ret;
+
+	/* Below kernel config check is for T210 */
+	if (IS_ENABLED(CONFIG_NVDEC_BOOTLOADER))
+		tegra_nvdec_bootloader_enabled = 1;
 
 	ret = nvhost_domain_init(tegra_nvdec_domain_match);
 	if (ret)

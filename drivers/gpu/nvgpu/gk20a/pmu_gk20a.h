@@ -1426,5 +1426,6 @@ void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 				void *param, u32 handle, u32 status);
 void gk20a_pmu_elpg_statistics(struct gk20a *g,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
+int gk20a_pmu_reset(struct gk20a *g);
 
 #endif /*__PMU_GK20A_H__*/

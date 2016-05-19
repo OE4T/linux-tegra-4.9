@@ -533,6 +533,7 @@ struct gpu_ops {
 		int (*send_lrf_tex_ltc_dram_overide_en_dis_cmd)
 			(struct gk20a *g, u32 mask);
 		void (*dump_secure_fuses)(struct gk20a *g);
+		int (*reset)(struct gk20a *g);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;

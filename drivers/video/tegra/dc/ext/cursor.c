@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/ext/cursor.c
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Robert Morell <rmorell@nvidia.com>
  *
@@ -76,7 +76,7 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	unsigned extsize = TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE(args->flags);
 	enum tegra_dc_cursor_size size;
 	enum tegra_dc_cursor_blend_format blendfmt;
-	enum tegra_dc_cursor_color_format colorfmt;
+	enum CURSOR_COLOR_FORMAT colorfmt;
 
 	switch (extsize) {
 	case TEGRA_DC_EXT_CURSOR_IMAGE_FLAGS_SIZE_32x32:

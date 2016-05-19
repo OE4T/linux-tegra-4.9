@@ -271,7 +271,7 @@ static long vi_ioctl(struct file *file,
 			return -EFAULT;
 		}
 
-		clk = clk_get(&tegra_vi->ndev->dev, "pll_d");
+		clk = clk_get(NULL, "pll_d");
 		if (IS_ERR(clk))
 			return -EINVAL;
 

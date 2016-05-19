@@ -316,7 +316,7 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 	if (tegra_vi->mc_vi.pg_mode)
 		return NOTIFY_OK;
 
-	clk = clk_get(&pdata->pdev->dev, "pll_d");
+	clk = clk_get(NULL, "pll_d");
 	if (IS_ERR(clk))
 		return -EINVAL;
 

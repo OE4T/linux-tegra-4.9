@@ -819,11 +819,11 @@ static int nvi_dmp_period(struct nvi_state *st, unsigned int en_msk)
 	return ret_t;
 }
 
-static int nvi_dmp_irq(struct nvi_state *st)
+static int nvi_dmp_irq(struct nvi_state *st, unsigned int en_msk)
 {
 	u32 able;
 
-	if ((st->en_msk & MSK_DEV_ALL) & ~((1 << DEV_SM) | (1 << DEV_STP)))
+	if ((en_msk & MSK_DEV_ALL) & ~((1 << DEV_SM) | (1 << DEV_STP)))
 		/* DMP requires FIFO IRQ */
 		able = 0;
 	else
@@ -910,8 +910,7 @@ static int nvi_dmp_init_gmf(struct nvi_state *st)
 	}
 
 	for (i = 0; i < 9; i++) {
-		adj[i] = nmp->matrix[i] * (nmp->q30[i % AXIS_N] >>
-					   DMP_MULTI_SHIFT);
+		adj[i] = nmp->matrix[i] * nmp->q30[i % AXIS_N];
 		mtx[i] = 0;
 	}
 
@@ -983,6 +982,7 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 	unsigned int i;
 	int ret;
 
+	st->en_msk &= ~MSK_DEV_SNSR;
 #ifdef MPL520
 	/* hack for MPL520 */
 	st->snsr[DEV_GYU].period_us = st->snsr[DEV_GYR].period_us;
@@ -1010,23 +1010,23 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 				if (ret < 0)
 					return ret;
 
-				if (ret > 0) {
+				if (ret > 0)
 					/* disable without error */
-					if (dd->dev == DEV_AUX)
-						en_msk &= ~(1 <<
-							    (dd->aux_port +
-							     DEV_N_AUX));
-					else if (dd->dev < DEV_AUX)
-						en_msk &= ~(1 << dd->dev);
-					continue;
-				}
+					en = false;
 			}
+		}
 
+		if (en) {
 			if (dd->out_ctl)
 				out_ctl |= dd->out_ctl;
 			st->snsr[dd->dev].matrix = dd->matrix;
 			st->snsr[dd->dev].buf_n = dd->buf_n;
 			st->snsr[dd->dev].buf_shft = dd->buf_shft;
+		} else {
+			if (dd->dev == DEV_AUX)
+				en_msk &= ~(1 << (dd->aux_port + DEV_N_AUX));
+			else if (dd->dev < DEV_AUX)
+				en_msk &= ~(1 << dd->dev);
 		}
 	}
 
@@ -1042,12 +1042,9 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 		out_ctl |= DMP_DATA_OUT_CTL_HDR2_BIT;
 	ret = nvi_mem_wr_be_mc(st, DATA_OUT_CTL1, 4, out_ctl,
 			       &st->mc.icm.data_out_ctl);
-	if (ret) {
-		st->en_msk &= ~(en_msk & ((1 << DEV_N_AUX) - 1));
+	if (ret)
 		return ret;
-	}
 
-	st->en_msk |= (en_msk & ((1 << DEV_N_AUX) - 1));
 	/* inv_enable_accel_cal_V3 */
 	/* inv_enable_gyro_cal_V3 */
 	if (en_msk & (1 << DEV_ACC))
@@ -1068,7 +1065,9 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 	/* SMD_EN is self-clearing so we don't want it in the cache */
 	st->mc.icm.motion_event_ctl &= ~SMD_EN;
 	/* inv_set_wom */
-	ret |= nvi_dmp_irq(st);
+	ret |= nvi_dmp_irq(st, en_msk);
+	if (!ret)
+		st->en_msk |= (en_msk & ((1 << DEV_N_AUX) - 1));
 	return ret;
 }
 

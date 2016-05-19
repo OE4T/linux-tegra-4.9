@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(323)
+#define NVI_DRIVER_VERSION		(324)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -1450,6 +1450,7 @@ static int nvi_en(struct nvi_state *st)
 
 		if (dmp_en) {
 			ret_t |= st->hal->dmp->fn_en(st); /* nvi_dmp_en */
+			st->en_msk |= (1 << DEV_DMP);
 			if (ret_t) {
 				/* reprogram for non-DMP mode below */
 				dmp_en = false;
@@ -1467,8 +1468,8 @@ static int nvi_en(struct nvi_state *st)
 		}
 	}
 	if (!dmp_en) {
-		if (st->hal->dmp) {
-			st->en_msk &= ~(st->hal->dmp->en_msk | (1 << DEV_DMP));
+		if (st->en_msk & (1 << DEV_DMP)) {
+			st->en_msk &= ~(MSK_DEV_SNSR | (1 << DEV_DMP));
 			if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
 				dev_info(&st->i2c->dev,
 					 "%s DMP disabled\n", __func__);

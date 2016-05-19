@@ -293,7 +293,7 @@ u64 mc_addr_translate(u32 device, u32 ch, u32 row, u32 bank, u32 col, u32 subp,
 							col, subp, lsb);
 	addr = mc_addr_translate_device(addr, col, device, ch);
 
-	addr = ((addr >> (10 + 2)) << 10) | (addr & ~(-1 << 10));
+	addr = ((addr >> (10 + 2)) << 10) | (addr & ((1 << 10) - 1));
 	bank = mc_reverse_masked_bank(addr, bank, 10, 3);
 
 	addr = 0;

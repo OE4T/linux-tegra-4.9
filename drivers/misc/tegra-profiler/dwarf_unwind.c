@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/dwarf_unwind.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -110,18 +110,6 @@ struct regs_state {
 
 #define DW_MAX_RS_STACK_DEPTH	8
 
-struct dwarf_cpu_context {
-	struct regs_state rs_stack[DW_MAX_RS_STACK_DEPTH];
-	int depth;
-
-	int dw_ptr_size;
-};
-
-struct quadd_dwarf_context {
-	struct dwarf_cpu_context __percpu *cpu_ctx;
-	atomic_t started;
-};
-
 struct stackframe {
 	unsigned long pc;
 	unsigned long vregs[QUADD_NUM_REGS];
@@ -132,6 +120,19 @@ struct stackframe {
 	unsigned long cfa;
 
 	int mode;
+};
+
+struct dwarf_cpu_context {
+	struct regs_state rs_stack[DW_MAX_RS_STACK_DEPTH];
+	int depth;
+
+	struct stackframe sf;
+	int dw_ptr_size;
+};
+
+struct quadd_dwarf_context {
+	struct dwarf_cpu_context __percpu *cpu_ctx;
+	atomic_t started;
 };
 
 struct dw_cie {
@@ -2051,7 +2052,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 	struct vm_area_struct *vma, *vma_sp;
 	struct mm_struct *mm = task->mm;
 	struct ex_region_info ri;
-	struct stackframe sf;
+	struct stackframe *sf;
 	struct dwarf_cpu_context *cpu_ctx = this_cpu_ptr(ctx.cpu_ctx);
 
 	if (!regs || !mm)
@@ -2098,20 +2099,22 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 	pr_debug("%s: sp: %#lx, fp: %#lx, fp_thumb: %#lx\n",
 		 __func__, sp, fp, fp_thumb);
 
-	sf.vregs[regnum_lr(mode)] = lr;
-	sf.pc = ip;
+	sf = &cpu_ctx->sf;
 
-	sf.vregs[regnum_sp(mode)] = sp;
-	sf.vregs[regnum_fp(mode)] = fp;
+	sf->vregs[regnum_lr(mode)] = lr;
+	sf->pc = ip;
+
+	sf->vregs[regnum_sp(mode)] = sp;
+	sf->vregs[regnum_fp(mode)] = fp;
 
 	if (mode == DW_MODE_ARM32)
-		sf.vregs[ARM32_FP_THUMB] = fp_thumb;
+		sf->vregs[ARM32_FP_THUMB] = fp_thumb;
 
 	cpu_ctx->dw_ptr_size = (mode == DW_MODE_ARM32) ?
 				sizeof(u32) : sizeof(u64);
 
-	sf.mode = mode;
-	sf.cfa = 0;
+	sf->mode = mode;
+	sf->cfa = 0;
 
 	vma = find_vma(mm, ip);
 	if (!vma)
@@ -2127,7 +2130,7 @@ quadd_get_user_cc_dwarf(struct pt_regs *regs,
 		return 0;
 	}
 
-	unwind_backtrace(cc, &ri, &sf, vma_sp, task);
+	unwind_backtrace(cc, &ri, sf, vma_sp, task);
 
 	pr_debug("%s: mode: %s, cc->nr: %d --> %d\n", __func__,
 		 (mode == DW_MODE_ARM32) ? "arm32" : "arm64",

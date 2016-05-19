@@ -221,16 +221,6 @@ static inline unsigned int __t18x_fraction2dda_fp(unsigned int fraction_fpa,
 	return min(dda, (unsigned int)MAX_DDA_RATE);
 }
 
-static inline unsigned int t18x_fraction2dda_fp(unsigned int fraction_fp,
-					unsigned int div,
-					unsigned int mask,
-					enum la_traffic_type traffic_type)
-{
-	unsigned int fraction_fpa = LA_FP_TO_FPA(fraction_fp);
-
-	return __t18x_fraction2dda_fp(fraction_fpa, div, mask, traffic_type);
-}
-
 static inline unsigned int t18x_bw_to_fractionfpa(unsigned int bw_mbps)
 {
 	unsigned int ret_val =

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -41,12 +41,6 @@ static inline u32 tachometer_readl(struct tegra_tachometer_device *tach,
 		int reg)
 {
 	return readl(tach->mmio_base + reg);
-}
-
-static inline void tachometer_writel(struct tegra_tachometer_device *tach,
-		u32 val, int reg)
-{
-	writel(val, tach->mmio_base + reg);
 }
 
 static inline void tachometer_writeb(struct tegra_tachometer_device *tach,

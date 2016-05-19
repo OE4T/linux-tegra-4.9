@@ -1399,7 +1399,7 @@ static int gr_gp10b_load_smid_config(struct gk20a *g)
 				 gr_cwd_gpc_tpc_id_tpc0_s();
 
 		for (j = 0; j < 4; j++) {
-			u32 sm_id = (i / 4) + j;
+			u32 sm_id = (i * 4) + j;
 			u32 bits;
 
 			if (sm_id >= g->gr.tpc_count)

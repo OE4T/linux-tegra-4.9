@@ -734,29 +734,39 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 	connected = tegra_dc_hpd(hdmi->dc);
 	orig_state = hdmi->plug_state;
 
-	if ((connected && orig_state == TEGRA_HDMI_MONITOR_ENABLE)) {
-		if (hdmi_recheck_edid(hdmi, &match)) {
-			dev_info(&hdmi->dc->ndev->dev, "hdmi: unable to read EDID\n");
-			goto fail;
-		} else {
-			if (match) {
-				dev_info(&hdmi->dc->ndev->dev, "hdmi: No EDID change after HPD bounce, taking no action.\n");
+	if (connected) {
+		switch (orig_state) {
+		case TEGRA_HDMI_MONITOR_ENABLE:
+			if (hdmi_recheck_edid(hdmi, &match)) {
+				dev_info(&hdmi->dc->ndev->dev, "hdmi: unable to read EDID\n");
 				goto fail;
-			} else
-				dev_info(&hdmi->dc->ndev->dev, "hdmi: EDID change after HPD bounce, resetting\n");
-		}
+			} else {
+				if (match) {
+					dev_info(&hdmi->dc->ndev->dev, "hdmi: No EDID change after HPD bounce, taking no action.\n");
+					goto fail;
+				} else {
+					dev_info(&hdmi->dc->ndev->dev, "hdmi: EDID change after HPD bounce, resetting\n");
+					hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
+				}
+			}
+			break;
+		case TEGRA_HDMI_MONITOR_DISABLE:
+			hdmi->plug_state = TEGRA_HDMI_MONITOR_ENABLE;
+			break;
+		default:
+			break;
+		};
+	} else {
+		switch (orig_state) {
+		case TEGRA_HDMI_MONITOR_ENABLE:
+			hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
+			break;
+		case TEGRA_HDMI_MONITOR_DISABLE:
+			goto fail;
+		default:
+			break;
+		};
 	}
-
-	if ((!connected && orig_state == TEGRA_HDMI_MONITOR_DISABLE)) {
-		dev_dbg(&hdmi->dc->ndev->dev, "hdmi: spurious interrupt\n");
-		mutex_unlock(&hdmi->hpd_lock);
-		return;
-	}
-
-	if (connected)
-		hdmi->plug_state = TEGRA_HDMI_MONITOR_ENABLE;
-	else
-		hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
 
 	err = tegra_hdmi_state_func[hdmi->plug_state](hdmi);
 
@@ -765,14 +775,25 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 				"hdmi state %d failed during %splug\n",
 				hdmi->plug_state, connected ? "" : "un");
 			hdmi->plug_state = orig_state;
+			goto fail;
 		} else {
 			dev_info(&hdmi->dc->ndev->dev, "hdmi: %splugged\n",
 					connected ? "" : "un");
 		}
 
+	if (connected && hdmi->plug_state == TEGRA_HDMI_MONITOR_DISABLE)
+		goto reschedule_worker;
+
 fail:
 	mutex_unlock(&hdmi->hpd_lock);
 	return;
+
+reschedule_worker:
+	mutex_unlock(&hdmi->hpd_lock);
+	cancel_delayed_work_sync(&hdmi->hpd_worker);
+	schedule_delayed_work(&hdmi->hpd_worker, 0);
+	return;
+
 }
 
 static irqreturn_t tegra_hdmi_hpd_irq_handler(int irq, void *ptr)

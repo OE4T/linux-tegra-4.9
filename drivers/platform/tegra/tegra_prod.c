@@ -23,8 +23,6 @@
 #include <linux/tegra_prod.h>
 #include <linux/kmemleak.h>
 
-#define TEGRA_PROD_SETTING "prod-settings"
-
 struct prod_tuple {
 	u32 index; /* Address base index */
 	u32 addr;  /* offset address*/
@@ -38,18 +36,6 @@ struct tegra_prod {
 	int count; /* number of prod_tuple*/
 	bool boot_init;
 };
-
-/**
- * tegra_prod_parse_dt - Read the prod setting form Device tree.
- * @np:		device node from which the property value is to be read.
- * @tegra_prod_list:	the list of tegra prods.
- *
- * Read the prod setting form DT according the prod name in tegra prod list.
- * prod tuple will be allocated dynamically according to the tuple number of
- * each prod in DT.
- *
- * Returns 0 on success.
- */
 
 static int tegra_prod_get_child_tupple_count(const struct device_node *np,
 		int n_tupple)
@@ -180,8 +166,21 @@ static int tegra_prod_read_node_tupple(const struct device_node *np,
 	return sindex;
 }
 
+/**
+ * tegra_prod_parse_dt - Read the prod setting form Device tree.
+ * @np:			device node from which the property value is to be read.
+ * @np_prod:		Prod setting node.
+ * @tegra_prod_list:	The list of tegra prods.
+ *
+ * Read the prod setting form DT according the prod name in tegra prod list.
+ * prod tuple will be allocated dynamically according to the tuple number of
+ * each prod in DT.
+ *
+ * Returns 0 on success.
+ */
+
 static int tegra_prod_parse_dt(const struct device_node *np,
-		const struct device_node *prod_child,
+		const struct device_node *np_prod,
 		struct tegra_prod_list *tegra_prod_list)
 {
 	struct device_node *child;
@@ -198,7 +197,7 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 		return -EINVAL;
 	};
 
-	ret = of_property_read_u32(prod_child, "#prod-cells", &pval);
+	ret = of_property_read_u32(np_prod, "#prod-cells", &pval);
 	if (!ret)
 		n_tupple = pval;
 	if ((n_tupple != 3) && (n_tupple != 4)) {
@@ -207,11 +206,11 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 	}
 	tegra_prod_list->n_prod_cells = n_tupple;
 
-	tegra_prod_list->mask_ones = of_property_read_bool(prod_child,
+	tegra_prod_list->mask_ones = of_property_read_bool(np_prod,
 							   "mask-one-style");
 
 	n_child = 0;
-	for_each_child_of_node(prod_child, child) {
+	for_each_child_of_node(np_prod, child) {
 		/* Check whether child is enabled or not */
 		if (!of_device_is_available(child))
 			continue;
@@ -435,23 +434,24 @@ EXPORT_SYMBOL(tegra_prod_set_by_name);
 struct tegra_prod_list *tegra_prod_init(const struct device_node *np)
 {
 	struct tegra_prod_list *tegra_prod_list;
-	struct device_node *child;
+	struct device_node *np_prod;
 	int prod_num = 0;
 	int ret;
 
-	child = of_get_child_by_name(np, TEGRA_PROD_SETTING);
-	if (!child)
+	np_prod = of_get_child_by_name(np, "prod-settings");
+	if (!np_prod)
 		return ERR_PTR(-ENODEV);
 
 	/* Check whether child is enabled or not */
-	if (!of_device_is_available(child)) {
-		pr_err("Node %s: Node is not enabled\n", np->name);
+	if (!of_device_is_available(np_prod)) {
+		pr_err("Node %s: Node is not enabled\n", np_prod->name);
 		return ERR_PTR(-ENODEV);
 	}
 
-	prod_num = of_get_child_count(child);
+	prod_num = of_get_child_count(np_prod);
 	if (prod_num <= 0) {
-		pr_err("Node %s: No child node for prod settings\n", np->name);
+		pr_err("Node %s: No child node for prod settings\n",
+			np_prod->name);
 		return  ERR_PTR(-ENODEV);
 	}
 
@@ -470,13 +470,13 @@ struct tegra_prod_list *tegra_prod_init(const struct device_node *np)
 	kmemleak_not_leak(tegra_prod_list->tegra_prod);
 	tegra_prod_list->num = prod_num;
 
-	ret = tegra_prod_parse_dt(np, child, tegra_prod_list);
+	ret = tegra_prod_parse_dt(np, np_prod, tegra_prod_list);
 	if (ret) {
 		pr_err("Node %s: Faild to read the Prod Setting.\n", np->name);
 		goto err_get;
 	}
 
-	of_node_put(child);
+	of_node_put(np_prod);
 	return tegra_prod_list;
 
 err_get:

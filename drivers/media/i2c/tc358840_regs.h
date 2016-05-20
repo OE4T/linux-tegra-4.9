@@ -289,39 +289,10 @@
 #define MASK_INIT_INT_EN			(1 << 22)
 #define MASK_DEBUG_MODE_EN			(1 << 31)
 
-#if 0
-#define CSI_TATO_COUNT				0x0130	/* Not in Ref. v1.5 */
-#define CSI_PRESP_BTA_COUNT			0x0134	/* Not in Ref. v1.5 */
-#define CSI_PRESP_LPR_COUNT			0x0138	/* Not in Ref. v1.5 */
-#define CSI_PRESP_LPW_COUNT			0x013C	/* Not in Ref. v1.5 */
-
-#define HSREADCNT				0x0140	/* Not in Ref. v1.5 */
-#define HSWRITECNT				0x0144	/* Not in Ref. v1.5 */
-#define PERIRSTCNT				0x0148	/* Not in Ref. v1.5 */
-#define LRXHTOCNT				0x014C	/* Not in Ref. v1.5 */
-#endif
-
 #define FUNCMODE				0x0150
 #define MASK_CONTCLKMODE			(1 << 5)
 #define MASK_FORCESTOP				(1 << 10)
 
-#if 0
-#define RX_VC_EN				0x0154	/* Not in Ref. v1.5 */
-#define MASK_RX_VC0				(1 << 0)
-#define MASK_RX_VC1				(1 << 1)
-#define MASK_RX_VC2				(1 << 2)
-#define MASK_RX_VC3				(1 << 3)
-
-#define INPUTTOCNT				0x0158	/* Not in Ref. v1.5 */
-
-#define HSYNCSTOPCNT				0x0168	/* Not in Ref. v1.5 */
-#define VHDELAY					0x0170	/* Not in Ref. v1.5 */
-#define RX_STATE_INT_MASK			0x01A4	/* Not in Ref. v1.5 */
-#define LPRX_THRESH_COUNT			0x010C	/* Not in Ref. v1.5 */
-#define APPERRMASK				0x0214	/* Not in Ref. v1.5 */
-#define RX_ERR_INT_MASK				0x021C	/* Not in Ref. v1.5 */
-#define LPTX_INT_MASK				0x0224	/* Not in Ref. v1.5 */
-#endif
 #define CSITX_INTERNAL_STAT			0x01B0
 
 #define LPTXTIMECNT				0x0254
@@ -339,11 +310,6 @@
 #define MASK_D1M_HSTXVREGEN			0x0004
 #define MASK_D0M_HSTXVREGEN			0x0002
 #define MASK_CLM_HSTXVREGEN			0x0001
-
-#if 0
-#define BTA_COUNT				0x0278	/* Not in Ref. v1.5 */
-#define DPHY_TX_ADJUST				0x027C	/* Not in Ref. v1.5 */
-#endif
 
 #define MIPICLKEN				0x02A0
 #define MASK_MP_ENABLE				0x00000001

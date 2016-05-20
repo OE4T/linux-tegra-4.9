@@ -889,80 +889,11 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 		/* (0x0120) */
 		i2c_wr32(sd, base_addr+LINEINITCNT, pdata->lineinitcnt);
 
-#if 0 /* Not in Ref. v1.5 */
-		/* TODO: Check if necessary (0x0124) */
-		i2c_wr32(sd, base_addr+HSTOCNT, 0x00000000);
-		/* TODO: Check if INTEN is necessary (0x0128) */
-		i2c_wr32(sd, base_addr+INTEN, 0x007F0101);
-
-		/*
-		 * TODO: Check if CSI_TATO_COUNT is necessary
-		 * (0x0130)
-		 */
-		i2c_wr32(sd, base_addr+CSI_TATO_COUNT, 0x00010000);
-
-		/*
-		 * TODO: Check if CSI_PRESP_BTA_COUNT is necessary
-		 * (0x0134)
-		 */
-		i2c_wr32(sd, base_addr+CSI_PRESP_BTA_COUNT, 0x00005000);
-
-		/*
-		 * TODO: Check if CSI_PRESP_LPR_COUNT is necessary
-		 * (0x0138)
-		 */
-		i2c_wr32(sd, base_addr+CSI_PRESP_LPR_COUNT, 0x00010000);
-
-		/*
-		 * TODO: Check if CSI_PRESP_LPW_COUNT is necessary
-		 * (0x013C)
-		 */
-		i2c_wr32(sd, base_addr+CSI_PRESP_LPW_COUNT, 0x00010000);
-
-		/* TODO: Check if HSREADCNT is necessary  (0x0140) */
-		i2c_wr32(sd, base_addr+HSREADCNT, 0x00010000);
-		/* TODO: Check if HSWRITECNT is necessary (0x0144) */
-		i2c_wr32(sd, base_addr+HSWRITECNT, 0x00010000);
-		/* TODO: Check if PERIRSTCNT is necessary (0x0148) */
-		i2c_wr32(sd, base_addr+PERIRSTCNT, 0x00001000);
-		/* TODO: Check if LRXHTOCNT is necessary (0x014C) */
-		i2c_wr32(sd, base_addr+LRXHTOCNT, 0x00010000);
-#endif
-
 		/*
 		 * TODO: Check if this is the correct register
 		 * (0x0150)
 		 */
 		i2c_rd32(sd, base_addr+FUNCMODE);
-#if 0 /* Not in Ref. v1.5 */
-		i2c_wr32(sd, base_addr+FUNCMODE, MASK_CONTCLKMODE);
-		/* TODO: Check if RX_VC_EN is necessary (0x0154) *
-		i2c_wr32(sd, base_addr+RX_VC_EN, MASK_RX_VC0);*/
-		/* TODO: Check if INPUTTOCNT is necessary (0x0158) */
-		i2c_wr32(sd, base_addr+INPUTTOCNT, 0x000000C8);
-		/* TODO: Check if HSYNCSTOPCNT is necessary (0x0168) */
-		i2c_wr32(sd, base_addr+HSYNCSTOPCNT, 0x0000002A);
-		/* set delay between HDMI input to CSI output */
-		i2c_wr32(sd, base_addr+0x170, 0x5F4);
-#endif
-
-#if 0 /* Not in Ref. v1.5 */
-		/* NOTE: Probably not necessary */
-		/* (0x01A4) */
-		i2c_wr32(sd, base_addr+RX_STATE_INT_MASK, 0x0);
-		/* (0x01C0) */
-		i2c_wr32(sd, base_addr+LPRX_THRESH_COUNT, 0x00000015);
-
-		/* TODO: Check if APPERRMASK is necessary (0x0214) */
-		i2c_wr32(sd, base_addr+APPERRMASK, 0x00000000);
-
-		/* NOTE: Probably not necessary */
-		/* (0x021C) */
-		i2c_wr32(sd, base_addr+RX_ERR_INT_MASK, 0x00000080);
-		/* (0x0224) */
-		i2c_wr32(sd, base_addr+LPTX_INT_MASK, 0x00000000);
-#endif
-
 		/* (0x0254) */
 		i2c_wr32(sd, base_addr+LPTXTIMECNT, pdata->lptxtimecnt);
 		/* (0x0258) */
@@ -994,13 +925,6 @@ static void tc358840_set_csi(struct v4l2_subdev *sd)
 			((lanes > 2) ? MASK_D2M_HSTXVREGEN : 0x0) |
 			((lanes > 3) ? MASK_D3M_HSTXVREGEN : 0x0));
 
-#if 0 /* Not in Ref. v1.5 */
-		/* NOTE: Probably not necessary */
-		/* (0x0278) */
-		i2c_wr32(sd, base_addr+BTA_COUNT, 0x00040003);
-		/* (0x027C) */
-		i2c_wr32(sd, base_addr+DPHY_TX_ADJUST, 0x00000002);
-#endif
 		/*
 		 * Finishing configuration by setting CSITX to start
 		 * (0X011C)

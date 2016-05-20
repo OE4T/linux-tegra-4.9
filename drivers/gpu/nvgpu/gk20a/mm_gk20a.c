@@ -613,6 +613,20 @@ static void gk20a_init_pramin(struct mm_gk20a *mm)
 	mm->force_pramin = GK20A_FORCE_PRAMIN_DEFAULT;
 }
 
+static int gk20a_init_vidmem(struct mm_gk20a *mm)
+{
+	struct gk20a *g = mm->g;
+	size_t size = g->ops.mm.get_vidmem_size ?
+		g->ops.mm.get_vidmem_size(g) : 0;
+
+	if (!size)
+		return 0;
+
+	mm->vidmem_size = size;
+
+	return 0;
+}
+
 int gk20a_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
@@ -637,6 +651,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 		       (int)(mm->channel.kernel_size >> 20));
 
 	gk20a_init_pramin(mm);
+	gk20a_init_vidmem(mm);
 
 	err = gk20a_alloc_sysmem_flush(g);
 	if (err)

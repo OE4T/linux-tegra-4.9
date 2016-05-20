@@ -372,6 +372,8 @@ struct mm_gk20a {
 #else
 	bool force_pramin; /* via debugfs */
 #endif
+
+	size_t vidmem_size;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

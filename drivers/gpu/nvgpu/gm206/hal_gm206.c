@@ -21,6 +21,7 @@
 #include "gm20b/mc_gm20b.h"
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/mm_gm20b.h"
+#include "gm206/mm_gm206.h"
 #include "ce_gm206.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
@@ -188,7 +189,7 @@ int gm206_init_hal(struct gk20a *g)
 	gm206_init_fifo(gops);
 	gm206_init_ce(gops);
 	gm20b_init_gr_ctx(gops);
-	gm20b_init_mm(gops);
+	gm206_init_mm(gops);
 	gm206_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);

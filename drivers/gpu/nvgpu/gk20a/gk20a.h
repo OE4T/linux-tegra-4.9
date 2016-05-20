@@ -524,6 +524,7 @@ struct gpu_ops {
 		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
 					 u32 flags);
 		int (*bar1_bind)(struct gk20a *g, u64 bar1_iova);
+		size_t (*get_vidmem_size)(struct gk20a *g);
 	} mm;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);

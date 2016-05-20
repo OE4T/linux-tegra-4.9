@@ -80,6 +80,7 @@ nvgpu-y := \
 	gm206/hal_gm206.o \
 	gm206/gr_gm206.o \
 	gm206/acr_gm206.o \
+	gm206/mm_gm206.o \
 	gm206/pmu_gm206.o \
 	gm206/ce_gm206.o
 

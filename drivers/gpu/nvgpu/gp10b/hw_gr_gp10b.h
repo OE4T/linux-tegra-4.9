@@ -470,6 +470,10 @@ static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r(void)
 {
 	return 0x005046b8;
 }
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_b(void)
+{
+	return 4;
+}
 static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_pending_f(void)
 {
 	return 0x10;
@@ -485,6 +489,10 @@ static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp2_
 static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp3_pending_f(void)
 {
 	return 0x80;
+}
+static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_b(void)
+{
+	return 8;
 }
 static inline u32 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_pending_f(void)
 {

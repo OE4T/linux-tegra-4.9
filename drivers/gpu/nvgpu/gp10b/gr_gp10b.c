@@ -58,6 +58,41 @@ static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 	return valid;
 }
 
+static void gr_gp10b_sm_lrf_ecc_overcount_war(int single_err,
+						u32 sed_status,
+						u32 ded_status,
+						u32 *count_to_adjust,
+						u32 opposite_count)
+{
+	u32 over_count = 0;
+
+	sed_status >>= gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_b();
+	ded_status >>= gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_b();
+
+	/* One overcount for each partition on which a SBE occurred but not a
+	   DBE (or vice-versa) */
+	if (single_err) {
+		over_count =
+			hweight32(sed_status & ~ded_status);
+	} else {
+		over_count =
+			hweight32(ded_status & ~sed_status);
+	}
+
+	/* If both a SBE and a DBE occur on the same partition, then we have an
+	   overcount for the subpartition if the opposite error counts are
+	   zero. */
+	if ((sed_status & ded_status) && (opposite_count == 0)) {
+		over_count +=
+			hweight32(sed_status & ded_status);
+	}
+
+	if (*count_to_adjust > over_count)
+		*count_to_adjust -= over_count;
+	else
+		*count_to_adjust = 0;
+}
+
 static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			bool *post_event, struct channel_gk20a *fault_ch)
 {
@@ -65,50 +100,62 @@ static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_TPC_IN_GPC_STRIDE);
 	u32 offset = gpc_stride * gpc + tpc_in_gpc_stride * tpc;
-	u32 lrf_ecc_status, shm_ecc_status;
+	u32 lrf_ecc_status, lrf_ecc_sed_status, lrf_ecc_ded_status;
+	u32 lrf_single_count_delta, lrf_double_count_delta;
+	u32 shm_ecc_status;
 
 	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch);
 
 	/* Check for LRF ECC errors. */
         lrf_ecc_status = gk20a_readl(g,
 			gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset);
-	if ( (lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp1_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp2_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp3_pending_f()) ) {
-
+	lrf_ecc_sed_status = lrf_ecc_status &
+				(gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_pending_f() |
+				 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp1_pending_f() |
+				 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp2_pending_f() |
+				 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp3_pending_f());
+	lrf_ecc_ded_status = lrf_ecc_status &
+				(gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_pending_f() |
+				 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp1_pending_f() |
+				 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp2_pending_f() |
+				 gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp3_pending_f());
+	lrf_single_count_delta =
+		gk20a_readl(g,
+			gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r() +
+			offset);
+	lrf_double_count_delta =
+		gk20a_readl(g,
+			gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() +
+			offset);
+	gk20a_writel(g,
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r() + offset,
+		0);
+	gk20a_writel(g,
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset,
+		0);
+	if (lrf_ecc_sed_status) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
 			"Single bit error detected in SM LRF!");
 
+		gr_gp10b_sm_lrf_ecc_overcount_war(1,
+						lrf_ecc_sed_status,
+						lrf_ecc_ded_status,
+						&lrf_single_count_delta,
+						lrf_double_count_delta);
 		g->gr.t18x.ecc_stats.sm_lrf_single_err_count.counters[tpc] +=
-			gk20a_readl(g,
-				gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r() + offset);
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r() + offset,
-			0);
+							lrf_single_count_delta;
 	}
-	if ( (lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp1_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp2_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp3_pending_f()) ) {
-
+	if (lrf_ecc_ded_status) {
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
 			"Double bit error detected in SM LRF!");
 
+		gr_gp10b_sm_lrf_ecc_overcount_war(0,
+						lrf_ecc_sed_status,
+						lrf_ecc_ded_status,
+						&lrf_double_count_delta,
+						lrf_single_count_delta);
 		g->gr.t18x.ecc_stats.sm_lrf_double_err_count.counters[tpc] +=
-			gk20a_readl(g,
-				gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset);
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset,
-			0);
+							lrf_double_count_delta;
 	}
 	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
 			lrf_ecc_status);

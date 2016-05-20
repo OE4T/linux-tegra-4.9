@@ -378,62 +378,8 @@
 #define TEGRA186_CLK_PLLC_OUT_VE 12
 /** @brief output branch of PLL_C for AON domain, controlled by gate CLK_ENB_PLLC_OUT_AON */
 #define TEGRA186_CLK_PLLC_OUT_AON 13
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_OUT_CPU 14
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_PLL_REF 15
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_XUSB 16
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_VIC 17
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_NVENC 18
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_NVDEC 19
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_MC1 20
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_MC0 21
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_ISP 22
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTTB 23
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTTA 24
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTLB 25
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTLA 26
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTCBB 27
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTCBA 28
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTCAB 29
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTCAA 30
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTBB 31
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_GRTBA 32
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_DISPLAY 33
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_BOOT 34
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_BB 35
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_AUDIO 36
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_AON 37
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_UPHY 38
 /** @brief output of gate CLK_ENB_SOR_SAFE */
 #define TEGRA186_CLK_SOR_SAFE 39
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_CAR 40
-/** @deprecated */
-#define TEGRA186_CLK_PLLD_OUT_CPU 41
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S2 */
 #define TEGRA186_CLK_I2S2 42
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S3 */
@@ -475,10 +421,6 @@
  * throughput and memory controller power.
  */
 #define TEGRA186_CLK_EMC 58
-/** @private */
-#define TEGRA186_CLK_EMC_LATENCY 65
-/** @deprecated */
-#define TEGRA186_CLK_MC1 67
 /* @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_EXTPERIPH4 */
 #define TEGRA186_CLK_EXTPERIPH4 73
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPI4 */
@@ -575,8 +517,6 @@
 #define TEGRA186_CLK_DSIB_LP 119
 /** @deprecated */
 #define TEGRA186_CLK_ENTROPY 120
-/** @deprecated */
-#define TEGRA186_CLK_DVFS 121
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC1 */
 #define TEGRA186_CLK_DMIC1 122
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC2 */
@@ -661,8 +601,6 @@
 #define TEGRA186_CLK_EQOS_AXI 167
 /** @brief output of gate CLK_ENB_EQOS_RX */
 #define TEGRA186_CLK_EQOS_RX 168
-/** @deprecated */
-#define TEGRA186_CLK_MC3 176
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UFSHC_CG_SYS */
 #define TEGRA186_CLK_UFSHC 178
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UFSDEV_REF */
@@ -705,12 +643,8 @@
 #define TEGRA186_CLK_BPMP_CPU_NIC 197
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_BPMP_APB */
 #define TEGRA186_CLK_BPMP_APB 199
-/** @deprecated */
-#define TEGRA186_CLK_SOC_THERM 200
 /** @brief output of mux controlled by TEGRA186_CLK_SOC_ACTMON */
 #define TEGRA186_CLK_ACTMON 201
-/** @deprecated */
-#define TEGRA186_CLK_TSENSOR 202
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_AON_CPU_NIC */
 #define TEGRA186_CLK_AON_CPU_NIC 208
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_CAN1 */
@@ -761,8 +695,6 @@
 #define TEGRA186_CLK_DSID 233
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSID_LP */
 #define TEGRA186_CLK_DSID_LP 234
-/** @deprecated */
-#define TEGRA186_CLK_GPIO_CTL5 235
 /** @brief output of the divider CLK_RST_CONTROLLER_CLK_SOURCE_PEX_SATA_USB_RX_BYP */
 #define TEGRA186_CLK_PEX_SATA_USB_RX_BYP 236
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_SPDIF_OUT */
@@ -816,10 +748,6 @@
   *      * VCO/2 defined by TEGRA186_CLK_PLLREFE_OUT
   */
 #define TEGRA186_CLK_PLLREFE_OUT1 262
-/** @deprecated */
-#define TEGRA186_CLK_PLLP_UD 265
-/** @deprecated */
-#define TEGRA186_CLK_PLLC_UD 266
 #define TEGRA186_CLK_PLLD_OUT1 267
 /** @brief output of the divider PLLP_DIVP in CLK_RST_CONTROLLER_PLLP_BASE */
 #define TEGRA186_CLK_PLLP_OUT0 269
@@ -899,8 +827,6 @@
  * TEGRA186_CLK_GPC2CLK/2. The frequency of this clock is the
  * frequency at which the GPU graphics engine runs. */
 #define TEGRA186_CLK_GPCCLK 310
-/** @deprecated */
-#define TEGRA186_CLK_TSCMUX 311
 /** @brief output of divider CLK_RST_CONTROLLER_AON_NIC_RATE */
 #define TEGRA186_CLK_AON_NIC 450
 /** @brief output of divider CLK_RST_CONTROLLER_SCE_NIC_RATE */
@@ -988,8 +914,6 @@
 #define TEGRA186_CLK_CLK_M 609
 /** @brief output of divider PLL_REF_DIV in CLK_RST_CONTROLLER_OSC_CTRL */
 #define TEGRA186_CLK_PLL_REF 610
-/** @deprecated */
-#define TEGRA186_CLK_EXT_VIMCLK 611
 /** @brief input from Tegra's XTAL_IN */
 #define TEGRA186_CLK_OSC 612
 /** @brief clock recovered from EAVB input */

@@ -140,35 +140,21 @@ struct mrq_response {
 #define MRQ_I2C			21
 #define MRQ_CLK			22
 #define MRQ_QUERY_ABI		23
-#define MRQ_MC_FLUSH		24
 #define MRQ_PG_READ_STATE	25
 #define MRQ_PG_UPDATE_STATE	26
 #define MRQ_THERMAL		27
 #define MRQ_CPU_VHINT		28
 #define MRQ_ABI_RATCHET		29
-#define MRQ_IPC_RESET		30
 #define MRQ_EMC_DVFS_LATENCY	31
 #define MRQ_TRACE_ITER		64
 
-/** @cond */
-#define MRQ_RESERVED_2		2
-#define MRQ_RESERVED_3		3
-#define MRQ_RESERVED_6		6
-#define MRQ_CPUIDLE_USAGE	10
-#define MRQ_RESERVED_12		12
-#define MRQ_RESERVED_13		13
-#define MRQ_BPMPIDLE_USAGE	14
-#define MRQ_HEAP_USAGE		15
-#define MRQ_RESERVED_16		16
-#define MRQ_RESERVED_17		17
-#define MRQ_RESERVED_18		18
-/** @endcond */
 /** @} */
 
 /**
  * @ingroup MRQ_Codes
  * @brief Maximum MRQ code to be sent by CPU software to
- * BPMP. Subject to change in future */
+ * BPMP. Subject to change in future
+ */
 #define MAX_CPU_MRQ_ID		64
 
 /**
@@ -228,8 +214,7 @@ struct mrq_response {
  * recipient. The response from the recipient is computed based on
  * #challenge.
  */
-struct mrq_ping_request
-{
+struct mrq_ping_request {
 /** @brief arbitrarily chosen value */
 	uint32_t challenge;
 } __ABI_PACKED;
@@ -243,8 +228,7 @@ struct mrq_ping_request
  * dropped.
  *
  */
-struct mrq_ping_response
-{
+struct mrq_ping_response {
 	/** @brief response to the MRQ_PING challege */
 	uint32_t reply;
 } __ABI_PACKED;
@@ -272,8 +256,7 @@ struct mrq_ping_response
  * The sender is reponsible for ensuring that #addr is mapped in to
  * the recipient's address map.
  */
-struct mrq_query_tag_request
-{
+struct mrq_query_tag_request {
   /** @brief base address to store the firmware header */
 	uint32_t addr;
 } __ABI_PACKED;
@@ -310,11 +293,9 @@ struct mrq_query_tag_request
  * the recipient's address map.
  *
  */
-struct mrq_module_load_request
-{
-	/** @brief base address of the code to load. Treated as
-	 * (void*) */
-	uint32_t phys_addr;/* (void *) */
+struct mrq_module_load_request {
+	/** @brief base address of the code to load. Treated as (void *) */
+	uint32_t phys_addr; /* (void *) */
 	/** @brief size in bytes of code to load */
 	uint32_t size;
 } __ABI_PACKED;
@@ -325,8 +306,7 @@ struct mrq_module_load_request
  *
  * @todo document mrq_response::err
  */
-struct mrq_module_load_response
-{
+struct mrq_module_load_response {
 	/** @brief handle to the loaded module */
 	uint32_t base;
 } __ABI_PACKED;
@@ -341,6 +321,8 @@ struct mrq_module_load_response
  * * Targets: BPMP
  * * Request Payload: @ref mrq_module_unload_request
  * * Response Payload: N/A
+ *
+ * @note This MRQ is disabled on production systems
  */
 
 /**
@@ -350,8 +332,7 @@ struct mrq_module_load_response
  * Used by #MRQ_MODULE_UNLOAD calls to request that a previously loaded
  * module be unloaded.
  */
-struct mrq_module_unload_request
-{
+struct mrq_module_unload_request {
 	/** @brief handle of the module to unload */
 	uint32_t base;
 } __ABI_PACKED;
@@ -366,6 +347,8 @@ struct mrq_module_unload_request
  * * Targets: BPMP
  * * Request Payload: @ref mrq_trace_modify_request
  * * Response Payload: @ref mrq_trace_modify_response
+ *
+ * @note This MRQ is disabled on production systems
  */
 
 /**
@@ -376,8 +359,7 @@ struct mrq_module_unload_request
  * events.  #set takes precedence for any bit set in both #set and
  * #clr.
  */
-struct mrq_trace_modify_request
-{
+struct mrq_trace_modify_request {
 	/** @brief bit mask of trace events to disable */
 	uint32_t clr;
 	/** @brief bit mask of trace events to enable */
@@ -393,8 +375,7 @@ struct mrq_trace_modify_request
  * message.
  *
  */
-struct mrq_trace_modify_response
-{
+struct mrq_trace_modify_response {
 	/** @brief bit mask of trace event enable states */
 	uint32_t mask;
 } __ABI_PACKED;
@@ -414,6 +395,8 @@ struct mrq_trace_modify_response
  * values. err is -#BPMP_EINVAL if size is zero or area is NULL or
  * area is in an illegal range. A positive value for err indicates the
  * number of bytes written to area.
+ *
+ * @note This MRQ is disabled on production systems
  */
 
 /**
@@ -430,8 +413,7 @@ struct mrq_trace_modify_response
  * responsible for protecting its own code and data from accidental
  * overwrites.
  */
-struct mrq_write_trace_request
-{
+struct mrq_write_trace_request {
 	/** @brief base address of output buffer */
 	uint32_t area;
 	/** @brief size in bytes of the output buffer */
@@ -445,8 +427,7 @@ struct mrq_write_trace_request
  * Once this response is sent, the respondent will not access the
  * output buffer further.
  */
-struct mrq_write_trace_response
-{
+struct mrq_write_trace_response {
 	/**
 	 * @brief flag whether more data remains in local buffer
 	 *
@@ -457,14 +438,12 @@ struct mrq_write_trace_response
 } __ABI_PACKED;
 
 /** @private */
-struct mrq_threaded_ping_request
-{
+struct mrq_threaded_ping_request {
 	uint32_t challenge;
 } __ABI_PACKED;
 
 /** @private */
-struct mrq_threaded_ping_response
-{
+struct mrq_threaded_ping_response {
 	uint32_t reply;
 } __ABI_PACKED;
 
@@ -478,14 +457,15 @@ struct mrq_threaded_ping_response
  * * Targets: BPMP
  * * Request Payload: @ref mrq_module_mail_request
  * * Response Payload: @ref mrq_module_mail_response
+ *
+ * @note This MRQ is disabled on production systems
  */
 
 /**
  * @ingroup Module
  * @brief request with #MRQ_MODULE_MAIL
  */
-struct mrq_module_mail_request
-{
+struct mrq_module_mail_request {
 	/** @brief handle to the previously loaded module */
 	uint32_t base;
 	/** @brief module-specific mail payload
@@ -500,8 +480,7 @@ struct mrq_module_mail_request
  * @ingroup Module
  * @brief response to #MRQ_MODULE_MAIL
  */
-struct mrq_module_mail_response
-{
+struct mrq_module_mail_response {
 	/** @brief module-specific mail payload
 	 *
 	 * The length of data[ ] is unknown to the BPMP core firmware
@@ -509,54 +488,6 @@ struct mrq_module_mail_response
 	 */
 	uint8_t data[EMPTY_ARRAY];
 } __ABI_PACKED;
-
-
-/** @cond */
-
-/*
- * 3.14 BPMP idle usage (MRQ_BPMPIDLE_USAGE)
- *
- * Platforms: All
- * Initiators: Any
- * Targets: BPMP
- *
- * Reserved MRQ for internal use.
- */
-
-struct mrq_bpmpidle_usage_request
-{
-	uint32_t state;
-} __ABI_PACKED;
-
-struct mrq_bpmpidle_usage_response
-{
-	uint64_t count;
-	uint64_t time;
-} __ABI_PACKED;
-
-/**
- * 3.15 Heap usage (MRQ_HEAP_USAGE)
- *
- * Platforms: All
- * Initiators: Any
- * Targets: BPMP
- */
-
-struct mrq_heap_usage_request
-{
-	EMPTY
-} __ABI_PACKED;
-
-struct mrq_heap_usage_response
-{
-	uint32_t heap_start; /* void * */
-	uint32_t heap_len;
-	uint32_t heap_free;
-	uint32_t heap_max_chunk;
-	uint32_t heap_low_watermark;
-} __ABI_PACKED;
-
-/** @endcond*/
 
 /**
  * @ingroup MRQ_Codes
@@ -633,8 +564,7 @@ struct cmd_debugfs_dumpdir_request {
 struct cmd_debugfs_fileop_response {
 	/** @brief always 0 */
 	uint32_t reserved;
-	/** @brief number of bytes read from or written to data
-	 * buffer */
+	/** @brief number of bytes read from or written to data buffer */
 	uint32_t nbytes;
 } __ABI_PACKED;
 
@@ -645,8 +575,7 @@ struct cmd_debugfs_fileop_response {
 struct cmd_debugfs_dumpdir_response {
 	/** @brief always 0 */
 	uint32_t reserved;
-	/** @brief number of bytes read from or written to data
-	 * buffer */
+	/** @brief number of bytes read from or written to data buffer */
 	uint32_t nbytes;
 } __ABI_PACKED;
 
@@ -681,10 +610,10 @@ struct mrq_debugfs_response {
 	int32_t reserved;
 	union {
 		/** @brief response data for CMD_DEBUGFS_READ OR
-		 * CMD_DEBUGFS_WRITE command */
+		 * CMD_DEBUGFS_WRITE command
+		 */
 		struct cmd_debugfs_fileop_response fop;
-		/** @brief response data for CMD_DEBUGFS_DUMPDIR
-		 * command */
+		/** @brief response data for CMD_DEBUGFS_DUMPDIR command */
 		struct cmd_debugfs_dumpdir_response dumpdir;
 	} __UNION_ANON;
 } __ABI_PACKED;
@@ -729,8 +658,7 @@ enum mrq_reset_commands {
  * assert or or deassert a given reset line.
  */
 struct mrq_reset_request {
-	/** @brief reset action to perform (@enum
-	 * mrq_reset_commands) */
+	/** @brief reset action to perform (@enum mrq_reset_commands) */
 	uint32_t cmd;
 	/** @brief id of the reset to affected */
 	uint32_t reset_id;
@@ -814,10 +742,9 @@ struct cmd_i2c_xfer_request {
 	/** @brief count of valid bytes in #data_buf*/
 	uint32_t data_size;
 
-	/** @brief serialized packed instances of @ref
-	 * serial_i2c_request*/
-	uint8_t data_buf[TEGRA_I2C_IPC_MAX_IN_BUF_SIZE]; }
-	__ABI_PACKED;
+	/** @brief serialized packed instances of @ref serial_i2c_request*/
+	uint8_t data_buf[TEGRA_I2C_IPC_MAX_IN_BUF_SIZE];
+} __ABI_PACKED;
 
 /**
  * @ingroup I2C
@@ -838,8 +765,7 @@ struct cmd_i2c_xfer_response {
  * @ingroup I2C
  * @brief request with #MRQ_I2C
  */
-struct mrq_i2c_request
-{
+struct mrq_i2c_request {
 	/** @brief always CMD_I2C_XFER (i.e. 1) */
 	uint32_t cmd;
 	/** @brief parameters of the transfer request */
@@ -850,8 +776,7 @@ struct mrq_i2c_request
  * @ingroup I2C
  * @brief response to #MRQ_I2C
  */
-struct mrq_i2c_response
-{
+struct mrq_i2c_response {
 	struct cmd_i2c_xfer_response xfer;
 } __ABI_PACKED;
 
@@ -873,22 +798,17 @@ struct mrq_i2c_response
  * @{
  */
 enum {
-        CMD_CLK_GET_RATE = 1,
-        CMD_CLK_SET_RATE = 2,
-        CMD_CLK_ROUND_RATE = 3,
-        CMD_CLK_GET_PARENT = 4,
-        CMD_CLK_SET_PARENT = 5,
-        CMD_CLK_IS_ENABLED = 6,
-        CMD_CLK_ENABLE = 7,
-        CMD_CLK_DISABLE = 8,
-        CMD_CLK_PROPERTIES = 9,
-        CMD_CLK_POSSIBLE_PARENTS = 10,
-        CMD_CLK_NUM_POSSIBLE_PARENTS = 11,
-        CMD_CLK_GET_POSSIBLE_PARENT = 12,
-	CMD_CLK_RESET_REFCOUNTS = 13,
+	CMD_CLK_GET_RATE = 1,
+	CMD_CLK_SET_RATE = 2,
+	CMD_CLK_ROUND_RATE = 3,
+	CMD_CLK_GET_PARENT = 4,
+	CMD_CLK_SET_PARENT = 5,
+	CMD_CLK_IS_ENABLED = 6,
+	CMD_CLK_ENABLE = 7,
+	CMD_CLK_DISABLE = 8,
 	CMD_CLK_GET_ALL_INFO = 14,
 	CMD_CLK_GET_MAX_CLK_ID = 15,
-        CMD_CLK_MAX,
+	CMD_CLK_MAX,
 };
 /** @} */
 
@@ -969,49 +889,6 @@ struct cmd_clk_disable_response {
 } __ABI_PACKED;
 
 /** @private */
-struct cmd_clk_properties_request {
-	EMPTY
-} __ABI_PACKED;
-
-/** @todo flags need to be spelled out here */
-struct cmd_clk_properties_response {
-	uint32_t flags;
-} __ABI_PACKED;
-
-/** @private */
-struct cmd_clk_possible_parents_request {
-	EMPTY
-} __ABI_PACKED;
-
-struct cmd_clk_possible_parents_response {
-	uint8_t num_parents;
-	uint8_t reserved[3];
-	uint32_t parent_id[MRQ_CLK_MAX_PARENTS];
-} __ABI_PACKED;
-
-/** @private */
-struct cmd_clk_num_possible_parents_request {
-	EMPTY
-} __ABI_PACKED;
-
-struct cmd_clk_num_possible_parents_response {
-	uint8_t num_parents;
-} __ABI_PACKED;
-
-struct cmd_clk_get_possible_parent_request {
-	uint8_t parent_idx;
-} __ABI_PACKED;
-
-struct cmd_clk_get_possible_parent_response {
-	uint32_t parent_id;
-} __ABI_PACKED;
-
-/** @private */
-struct cmd_clk_reset_refcounts {
-	EMPTY
-} __ABI_PACKED;
-
-/** @private */
 struct cmd_clk_get_all_info_request {
 	EMPTY
 } __ABI_PACKED;
@@ -1053,15 +930,11 @@ struct cmd_clk_get_max_clk_id_response {
  * |CMD_CLK_IS_ENABLED          |-                      |
  * |CMD_CLK_ENABLE              |-                      |
  * |CMD_CLK_DISABLE             |-                      |
- * |CMD_CLK_PROPERTIES          |-                      |
- * |CMD_CLK_POSSIBLE_PARENTS    |-                      |
- * |CMD_CLK_NUM_POSSIBLE_PARENTS|-                      |
- * |CMD_CLK_GET_POSSIBLE_PARENT |clk_get_possible_parent|
- * |CMD_CLK_RESET_REFCOUNTS     |-                      |
  * |CMD_CLK_GET_ALL_INFO        |-                      |
  * |CMD_CLK_GET_MAX_CLK_ID      |-                      |
  *
  */
+
 struct mrq_clk_request {
 	/** @brief sub-command and clock id concatenated to 32-bit word.
 	 * - bits[31..24] is the sub-cmd.
@@ -1083,13 +956,6 @@ struct mrq_clk_request {
 		struct cmd_clk_disable_request clk_disable;
 		/** @private */
 		struct cmd_clk_is_enabled_request clk_is_enabled;
-		/** @private */
-		struct cmd_clk_properties_request clk_properties;
-		/** @private */
-		struct cmd_clk_possible_parents_request clk_possible_parents;
-		/** @private */
-		struct cmd_clk_num_possible_parents_request clk_num_possible_parents;
-		struct cmd_clk_get_possible_parent_request clk_get_possible_parent;
 		/** @private */
 		struct cmd_clk_get_all_info_request clk_get_all_info;
 		/** @private */
@@ -1115,15 +981,11 @@ struct mrq_clk_request {
  * |CMD_CLK_IS_ENABLED          |clk_is_enabled          |
  * |CMD_CLK_ENABLE              |-                       |
  * |CMD_CLK_DISABLE             |-                       |
- * |CMD_CLK_PROPERTIES          |clk_properties          |
- * |CMD_CLK_POSSIBLE_PARENTS    |clk_possible_parents    |
- * |CMD_CLK_NUM_POSSIBLE_PARENTS|clk_num_possible_parents|
- * |CMD_CLK_GET_POSSIBLE_PARENT |clk_get_possible_parents|
- * |CMD_CLK_RESET_REFCOUNTS     |-                       |
  * |CMD_CLK_GET_ALL_INFO        |clk_get_all_info        |
  * |CMD_CLK_GET_MAX_CLK_ID      |clk_get_max_id          |
  *
  */
+
 struct mrq_clk_response {
 	union {
 		struct cmd_clk_get_rate_response clk_get_rate;
@@ -1136,10 +998,6 @@ struct mrq_clk_response {
 		/** @private */
 		struct cmd_clk_disable_response clk_disable;
 		struct cmd_clk_is_enabled_response clk_is_enabled;
-		struct cmd_clk_properties_response clk_properties;
-		struct cmd_clk_possible_parents_response clk_possible_parents;
-		struct cmd_clk_num_possible_parents_response clk_num_possible_parents;
-		struct cmd_clk_get_possible_parent_response clk_get_possible_parent;
 		struct cmd_clk_get_all_info_response clk_get_all_info;
 		struct cmd_clk_get_max_clk_id_response clk_get_max_clk_id;
 	} __UNION_ANON;
@@ -1174,37 +1032,9 @@ struct mrq_query_abi_request {
  * @brief response to MRQ_QUERY_ABI
  */
 struct mrq_query_abi_response {
-	/** @brief 0 if queried MRQ is supported.
-	 * Else, -#BPMP_ENODEV */
+	/** @brief 0 if queried MRQ is supported. Else, -#BPMP_ENODEV */
 	int32_t status;
 } __ABI_PACKED;
-
-/**
- * @ingroup MRQ_Codes
- * @def MRQ_MC_FLUSH
- * @brief start or finish flushing an MC client
- *
- * * Platforms: T186
- * * Initiators: Any
- * * Targets: BPMP
- * * Request Payload: @ref mrq_mc_flush_request
- * * Response Payload: N/A
- *
- * @addtogroup MC_Flush
- * @{
- */
-
-struct mrq_mc_flush_request
-{
-	uint32_t mc_client_id;
-	uint32_t request; /**< @brief @enum mc_flush_req */
-};
-
-enum mc_flush_req {
-	REQ_MC_FLUSH_START = 1,
-	REQ_MC_FLUSH_DONE = 2,
-};
-/** @} */
 
 /**
  * @ingroup MRQ_Codes
@@ -1285,8 +1115,10 @@ struct mrq_pg_update_state_request {
 	uint32_t logic_state;
 	/** @brief change state of clocks of the power partition, legal values
 	 * *  0x0 : do not change clock state
-	 * *  0x1 : disable partition clocks (only applicable when @ref logic_state == 0x1)
-	 * *  0x3 : enable partition clocks (only applicable when @ref logic_state == 0x3)
+	 * *  0x1 : disable partition clocks (only applicable when
+	 *          @ref logic_state == 0x1)
+	 * *  0x3 : enable partition clocks (only applicable when
+	 *          @ref logic_state == 0x3)
 	 */
 	uint32_t clock_state;
 } __ABI_PACKED;
@@ -1361,7 +1193,7 @@ enum mrq_thermal_host_to_bpmp_cmd {
 	 * type=CMD_THERMAL_HOST_TRIP_REACHED
 	 *
 	 * mrq_response::err is
-	 * *  0: Trip succesfully set.
+	 * *  0: Trip successfully set.
 	 * *  -#BPMP_EINVAL: Invalid request parameters.
 	 * *  -#BPMP_ENOENT: No driver registered for thermal zone.
 	 * *  -#BPMP_EFAULT: Problem setting trip point.
@@ -1378,7 +1210,8 @@ enum mrq_thermal_host_to_bpmp_cmd {
 	CMD_THERMAL_GET_NUM_ZONES = 3,
 
 	/** @brief: number of supported host-to-bpmp commands. May
-	 * increase in future */
+	 * increase in future
+	 */
 	CMD_THERMAL_HOST_TO_BPMP_NUM
 };
 
@@ -1394,7 +1227,8 @@ enum mrq_thermal_bpmp_to_host_cmd {
 	CMD_THERMAL_HOST_TRIP_REACHED = 100,
 
 	/** @brief: number of supported bpmp-to-host commands. May
-	 * increase in future */
+	 * increase in future
+	 */
 	CMD_THERMAL_BPMP_TO_HOST_NUM
 };
 
@@ -1626,37 +1460,6 @@ struct mrq_abi_ratchet_response {
 	/** @brief BPMP's ratchet value */
 	uint16_t ratchet;
 };
-/** @} */
-
-/**
- * @ingroup MRQ_Codes
- * @def MRQ_IPC_RESET
- * @brief deprecated. reset the IPC channel
- *
- * * Platforms: T186 onwards
- * * Initiators: Anyone except BPMP
- * * Targets: BPMP
- * * Request Payload: @ref mrq_ipc_reset
- * * Response Payload: N/A
- * @deprecated in favor of the native IVC channel reset mechanism
- * @addtogroup MRQ_Deprecated Deprecated MRQ messages
- * @{
- */
-
-/**
- * @brief request with #MRQ_IPC_RESET
- *
- * @deprecated in favor of the native IVC channel reset mechanism.
- *
- * Resets all IPC channels between the initiator and BPMP.  This MRQ is
- * intended to be used when the peer entity is going through a role
- * transition (such as when CCPLEX is finishing execution of bootloader
- * and starting Kernel).
- */
-struct mrq_ipc_reset {
-	/** @brief placeholder for extention; must be set to -1*/
-	int32_t channel;
-} __ABI_PACKED;
 /** @} */
 
 /**

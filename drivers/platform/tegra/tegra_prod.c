@@ -58,6 +58,16 @@ static int tegra_prod_get_child_tupple_count(const struct device_node *np,
 	int count;
 	int total_tupple = 0;
 
+	count = of_property_count_u32_elems(np, "prod");
+	if (count > 0) {
+		if ((count < n_tupple) || (count % n_tupple != 0)) {
+			pr_err("Node %s: Not found proper setting in %s\n",
+				np->name, np->name);
+			return -EINVAL;
+		}
+		total_tupple = count / n_tupple;
+	}
+
 	for_each_child_of_node(np, child) {
 		/* Check whether child is enabled or not */
 		if (!of_device_is_available(child))
@@ -93,9 +103,9 @@ static int tegra_prod_read_prod_data(const struct device_node *np,
 		return 0;
 
 	count = of_property_count_u32_elems(np, "prod");
-	if (count < 0) {
-		pr_err("Node %s: prod prop not found\n", np->name);
-		return -EINVAL;
+	if (count <= 0) {
+		pr_debug("Node %s: prod prop not found\n", np->name);
+		return 0;
 	}
 
 	t_count = count / n_tupple;
@@ -161,7 +171,7 @@ static int tegra_prod_read_node_tupple(const struct device_node *np,
 	p_tuple += ret;
 
 	for_each_child_of_node(np, child) {
-		ret = tegra_prod_read_prod_data(np, p_tuple, n_tupple);
+		ret = tegra_prod_read_prod_data(child, p_tuple, n_tupple);
 		if (ret < 0)
 			return -EINVAL;
 		sindex += ret;
@@ -216,23 +226,14 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 			ret = -EINVAL;
 			goto err_parsing;
 		}
-		t_prod->count = count;
 
-		count = of_property_count_u32_elems(child, "prod");
-		if ((count < 0) || (count < n_tupple) ||
-				(count % n_tupple != 0)) {
-			pr_err("Node %s: Not found proper setting in %s\n",
-				child->name, t_prod->name);
-			ret = -EINVAL;
-			goto err_parsing;
-		}
-		t_prod->count = count / n_tupple;
-
-		if (!t_prod->count) {
+		if (!count) {
 			pr_err("Node %s: prod prop not found\n", child->name);
 			ret = -EINVAL;
 			goto err_parsing;
 		}
+
+		t_prod->count = count;
 
 		t_prod->prod_tuple = kzalloc(sizeof(*p_tuple) * t_prod->count,
 						GFP_KERNEL);

@@ -1953,8 +1953,6 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 				struct dbg_session_gk20a *dbg_s,
 				int *ctx_resident_ch_fd)
 {
-	unsigned long end_jiffies = jiffies +
-		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 delay = GR_IDLE_CHECK_DEFAULT;
 	bool cilp_preempt_pending = false;
 	struct channel_gk20a *cilp_preempt_pending_ch = NULL;
@@ -2000,6 +1998,12 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 		struct channel_ctx_gk20a *ch_ctx =
 				&cilp_preempt_pending_ch->ch_ctx;
 		struct gr_ctx_desc *gr_ctx = ch_ctx->gr_ctx;
+		unsigned long end_jiffies = jiffies +
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+
+		gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg | gpu_dbg_intr,
+			"CILP preempt pending, waiting %lu msecs for preemption",
+			gk20a_get_gr_idle_timeout(g));
 
 		do {
 			if (!gr_ctx->t18x.cilp_preempt_pending)
@@ -2010,7 +2014,9 @@ static int gr_gp10b_suspend_contexts(struct gk20a *g,
 		} while (time_before(jiffies, end_jiffies)
 			|| !tegra_platform_is_silicon());
 
-		err = -ETIMEDOUT;
+		/* If cilp is still pending at this point, timeout */
+		if (gr_ctx->t18x.cilp_preempt_pending)
+			err = -ETIMEDOUT;
 	}
 
 	*ctx_resident_ch_fd = local_ctx_resident_ch_fd;

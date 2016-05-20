@@ -172,17 +172,9 @@ out:
 
 static void gk20a_ltc_init_fs_state(struct gk20a *g)
 {
-	u32 reg;
-
 	gk20a_dbg_info("initialize gk20a L2");
 
 	g->max_ltc_count = g->ltc_count = 1;
-
-	/* Disable LTC interrupts */
-	reg = gk20a_readl(g, ltc_ltcs_ltss_intr_r());
-	reg &= ~ltc_ltcs_ltss_intr_en_evicted_cb_m();
-	reg &= ~ltc_ltcs_ltss_intr_en_illegal_compstat_m();
-	gk20a_writel(g, ltc_ltcs_ltss_intr_r(), reg);
 }
 
 static void gk20a_ltc_isr(struct gk20a *g)

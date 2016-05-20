@@ -214,15 +214,16 @@ static void tegra_hdmi_audio_acr(u32 audio_freq, struct tegra_dc_hda_data *hda)
 	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0320, 4096);
 	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0320,
 			GET_AVAL(4096, audio_freq));
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0441, 6272);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0441,
-			GET_AVAL(6272, audio_freq));
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0882, 12544);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0882,
-			GET_AVAL(12544, audio_freq));
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_1764, 25088);
-	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_1764,
-			GET_AVAL(25088, audio_freq));
+	/*For Multiple of 44.1khz source some receiver cannot handle CTS value
+	  which is a little far away with golden value,So for the
+	  TMDS_clk=148.5Mhz case, we should keep AVAL as default value(20000),
+	  and set N= 4704*2 and 4704*4 for the 88.2 and 176.4khz audio case */
+	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0441, 4704);
+	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0441, 20000);
+	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0882, 9408);
+	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0882, 20000);
+	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_1764, 18816);
+	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_1764, 20000);
 	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_NVAL_0480, 6144);
 	tegra_sor_writel(hda->sor, NV_SOR_AUDIO_AVAL_0480,
 			GET_AVAL(6144, audio_freq));

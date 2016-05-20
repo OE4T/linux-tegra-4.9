@@ -38,6 +38,8 @@ static struct page *no_page_table(struct vm_area_struct *vma,
 	return NULL;
 }
 
+#define FOLL_CMA 0x10000000
+
 static int follow_pfn_pte(struct vm_area_struct *vma, unsigned long address,
 		pte_t *pte, unsigned int flags)
 {
@@ -80,6 +82,7 @@ static struct page *follow_page_pte(struct vm_area_struct *vma,
 	struct page *page;
 	spinlock_t *ptl;
 	pte_t *ptep, pte;
+	bool replace_page = false;
 
 retry:
 	if (unlikely(pmd_bad(*pmd)))
@@ -154,7 +157,14 @@ retry:
 		goto retry;
 	}
 
-	if (flags & FOLL_GET) {
+	if ((flags & FOLL_CMA) && (flags & FOLL_GET) &&
+		dma_contiguous_should_replace_page(page)) {
+		/*
+		 * Don't get ref on page.
+		 * Let __get_user_pages replace the CMA page with non-CMA.
+		 */
+		replace_page = true;
+	} else if (flags & FOLL_GET) {
 		get_page(page);
 
 		/* drop the pgmap reference now that we hold the page */
@@ -202,6 +212,8 @@ retry:
 	}
 out:
 	pte_unmap_unlock(ptep, ptl);
+	if (replace_page && !IS_ERR(page))
+		return (struct page *)((ulong)page + 1);
 	return page;
 no_page:
 	pte_unmap_unlock(ptep, ptl);
@@ -627,13 +639,12 @@ retry:
 		if (unlikely(fatal_signal_pending(current)))
 			return i ? i : -ERESTARTSYS;
 		cond_resched();
-		mutex_lock(&s_follow_page_lock);
-		page = follow_page_mask(vma, start, foll_flags, &page_mask);
+		page = follow_page_mask(vma, start,
+				foll_flags | FOLL_CMA, &page_mask);
 		if (!page) {
 			int ret;
 			ret = faultin_page(tsk, vma, start, &foll_flags,
 					nonblocking);
-			mutex_unlock(&s_follow_page_lock);
 			switch (ret) {
 			case 0:
 				goto retry;
@@ -657,12 +668,14 @@ retry:
 			return i ? i : PTR_ERR(page);
 		}
 
-		if (dma_contiguous_should_replace_page(page) &&
-			(foll_flags & FOLL_GET)) {
-			struct page *old_page = page;
+		/* Page would have lsb set when CMA page need replacement. */
+		if (((ulong)page & 0x1) == 0x1) {
+			struct page *old_page;
 			unsigned int fault_flags = 0;
 
-			put_page(page);
+			mutex_lock(&s_follow_page_lock);
+			page = (struct page *)((ulong)page & ~0x1);
+			old_page = page;
 			wait_on_page_locked_timeout(page);
 			page = migrate_replace_cma_page(page);
 			/* migration might be successful. vma mapping
@@ -696,7 +709,6 @@ retry:
 			goto retry;
 		}
 
-		mutex_unlock(&s_follow_page_lock);
 		BUG_ON(dma_contiguous_should_replace_page(page) &&
 			(foll_flags & FOLL_GET));
 

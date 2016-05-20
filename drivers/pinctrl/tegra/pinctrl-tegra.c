@@ -28,6 +28,7 @@
 #include <linux/pinctrl/pinctrl.h>
 #include <linux/pinctrl/pinmux.h>
 #include <linux/pinctrl/pinconf.h>
+#include <linux/pinctrl/pinconf-tegra.h>
 #include <linux/slab.h>
 #include <linux/tegra_prod.h>
 

@@ -4,6 +4,7 @@
  * Copyright (C) 2005 Phil Chang <pchang23@sbcglobal.net>
  * Copyright (C) 2006 James Painter <jamie.painter@iname.com>
  * Copyright (c) 2002-2003 TiVo Inc.
+ * Copyright (c) 2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -284,6 +285,12 @@ static int ax88172_bind(struct usbnet *dev, struct usb_interface *intf)
 	asix_mdio_write(dev->net, dev->mii.phy_id, MII_ADVERTISE,
 		ADVERTISE_ALL | ADVERTISE_CSMA | ADVERTISE_PAUSE_CAP);
 	mii_nway_restart(&dev->mii);
+
+	dev->driver_priv = kzalloc(
+		sizeof(*(struct asix_common_private *)dev->driver_priv),
+		GFP_KERNEL);
+	if (!dev->driver_priv)
+		return -ENOMEM;
 
 	return 0;
 

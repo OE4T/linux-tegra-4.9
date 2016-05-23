@@ -14,16 +14,10 @@
 #include "nvi.h"
 #include "nvi_dmp_icm.h"
 
-#ifdef MPL520
-#define ICM_DMP_DEV_MSK			((1 << DEV_SM) | \
-					 (1 << DEV_QTN))
-#else /* MPL520 */
 #define ICM_DMP_DEV_MSK			((1 << DEV_SM) | \
 					 (1 << DEV_QTN) | \
 					 (1 << DEV_GMR) | \
 					 (1 << DEV_GYU))
-#endif /* MPL520 */
-
 #define DEFAULT_ACCEL_GAIN		(0x02000000)
 #define PED_ACCEL_GAIN			(0x04000000)
 #define DMP_ACC_PERIOD_US_PED		(19608)
@@ -318,11 +312,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	{
 		.dev			= DEV_GYR,
 		.depend_msk		= (1 << DEV_GYU),
-#ifdef MPL520
-		.buf_n			= 6,
-#else /* MPL520 */
 		.buf_n			= 12,
-#endif /* MPL520 */
 		.matrix			= true,
 		.out_ctl		= 0x00402000,
 		.int_ctl		= GYRO_CALIBR_SET,
@@ -434,19 +424,11 @@ static struct nvi_dmp_hdr nvi_dmp_hdr1s[] = {
 		.data_n			= 12,
 		.hdr_msk		= 0x8000,
 	},
-#ifdef MPL520
-	{
-		.dev			= DEV_GYR,
-		.data_n			= 6,
-		.hdr_msk		= 0x4000,
-	},
-#else /* MPL520 */
 	{
 		.dev			= DEV_GYU,
 		.data_n			= 6,
 		.hdr_msk		= 0x4000,
 	},
-#endif /* MPL520 */
 	{
 		.dev			= DEV_AUX,
 		.aux_port		= 0,
@@ -480,19 +462,11 @@ static struct nvi_dmp_hdr nvi_dmp_hdr1s[] = {
 		.data_n			= 6,
 		.hdr_msk		= 0x0080,
 	},
-#ifdef MPL520
-	{
-		.dev			= -1, /* disable for 520 */
-		.data_n			= 12,
-		.hdr_msk		= 0x0040,
-	},
-#else /* MPL520 */
 	{
 		.dev			= DEV_GYR,
 		.data_n			= 12,
 		.hdr_msk		= 0x0040,
 	},
-#endif /* MPL520 */
 	{
 		.dev			= -1, /* CPASS_CALIBR */
 		.data_n			= 12,
@@ -1008,10 +982,6 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 	int ret;
 
 	st->en_msk &= ~MSK_DEV_SNSR;
-#ifdef MPL520
-	/* hack for MPL520 */
-	st->snsr[DEV_GYU].period_us = st->snsr[DEV_GYR].period_us;
-#endif /* MPL520 */
 	ret = nvi_dmp_period(st, en_msk);
 	if (ret)
 		return ret;

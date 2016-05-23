@@ -65,6 +65,7 @@
 #define MSK_DEV_MPU			((1 << DEV_ACC) | \
 					 (1 << DEV_GYR) | \
 					 (1 << DEV_TMP))
+#define MSK_DEV_MPU_AUX			(MSK_DEV_MPU | (1 << DEV_AUX))
 #define MSK_DEV_DMP			((1 << DEV_SM) | \
 					 (1 << DEV_STP) | \
 					 (1 << DEV_QTN) | \
@@ -446,6 +447,8 @@ struct nvi_state {
 	unsigned int errs;
 	unsigned int info;
 	unsigned int en_msk;
+	unsigned int dmp_en_msk;
+	unsigned int dmp_dev_msk;
 	unsigned int bm_timeout_us;
 	struct nvi_snsr snsr[DEV_N_AUX];
 	struct nvi_src src[SRC_N];

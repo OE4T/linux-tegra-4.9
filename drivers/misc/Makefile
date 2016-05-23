@@ -86,3 +86,4 @@ obj-$(CONFIG_SENSORS_NCT1008)	+= nct1008.o
 obj-$(CONFIG_THERM_EST)		+= therm_est.o
 obj-$(CONFIG_FAN_THERM_EST)	+= therm_fan_est.o
 obj-$(CONFIG_CPULOAD_MONITOR)	+= cpuload.o
+obj-y				+= inter-tegra/

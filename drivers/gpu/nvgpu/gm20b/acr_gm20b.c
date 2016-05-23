@@ -36,6 +36,14 @@ typedef int (*get_ucode_details)(struct gk20a *g, struct flcn_ucode_img *udata);
 /*Externs*/
 
 /*Forwards*/
+static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
+static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
+static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
+static int gm20b_bootstrap_hs_flcn(struct gk20a *g);
+static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout);
+static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
+static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
+		struct flcn_bl_dmem_desc *desc, u32 bl_sz);
 static int lsfm_discover_ucode_images(struct gk20a *g,
 	struct ls_flcn_mgr *plsfm);
 static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr *plsfm,
@@ -45,13 +53,18 @@ static void lsfm_free_nonpmu_ucode_img_res(struct flcn_ucode_img *p_img);
 static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm);
 static void lsfm_init_wpr_contents(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	struct mem_desc *nonwpr);
-static int acr_ucode_patch_sig(struct gk20a *g,
-		unsigned int *p_img,
-		unsigned int *p_prod_sig,
-		unsigned int *p_dbg_sig,
-		unsigned int *p_patch_loc,
-		unsigned int *p_patch_ind);
 static void free_acr_resources(struct gk20a *g, struct ls_flcn_mgr *plsfm);
+static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
+	struct lsfm_managed_ucode_img *lsfm,
+	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size);
+static int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
+	struct lsfm_managed_ucode_img *lsfm,
+	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size,
+	u32 falconid);
+static int gm20b_alloc_blob_space(struct gk20a *g,
+		size_t size, struct mem_desc *mem);
+static bool gm20b_is_priv_load(u32 falcon_id);
+static bool gm20b_is_lazy_bootstrap(u32 falcon_id);
 
 /*Globals*/
 static get_ucode_details pmu_acr_supp_ucode_list[] = {
@@ -72,14 +85,33 @@ static void start_gm20b_pmu(struct gk20a *g)
 		pwr_falcon_cpuctl_startcpu_f(1));
 }
 
+void gm20b_wpr_info(struct gk20a *g, u64 *base, u64 *size)
+{
+	struct mc_carveout_info inf;
+
+	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
+	*base = inf.base;
+	*size = inf.size;
+}
+
 void gm20b_init_secure_pmu(struct gpu_ops *gops)
 {
 	gops->pmu.prepare_ucode = prepare_ucode_blob;
 	gops->pmu.pmu_setup_hw_and_bootstrap = gm20b_bootstrap_hs_flcn;
+	gops->pmu.is_lazy_bootstrap = gm20b_is_lazy_bootstrap;
+	gops->pmu.is_priv_load = gm20b_is_priv_load;
+	gops->pmu.get_wpr = gm20b_wpr_info;
+	gops->pmu.alloc_blob_space = gm20b_alloc_blob_space;
+	gops->pmu.pmu_populate_loader_cfg = gm20b_pmu_populate_loader_cfg;
+	gops->pmu.flcn_populate_bl_dmem_desc = gm20b_flcn_populate_bl_dmem_desc;
+	gops->pmu.falcon_wait_for_halt = pmu_wait_for_halt;
+	gops->pmu.falcon_clear_halt_interrupt_status =
+			clear_halt_interrupt_status;
+	gops->pmu.init_falcon_setup_hw = gm20b_init_pmu_setup_hw1;
 }
 /* TODO - check if any free blob res needed*/
 
-int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
+static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
 	const struct firmware *pmu_fw, *pmu_desc, *pmu_sig;
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -143,7 +175,7 @@ release_img_fw:
 	return err;
 }
 
-int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
+static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
 	struct lsf_ucode_desc *lsf_desc;
 	const struct firmware *fecs_sig;
@@ -210,7 +242,7 @@ rel_sig:
 	release_firmware(fecs_sig);
 	return err;
 }
-int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
+static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 {
 	struct lsf_ucode_desc *lsf_desc;
 	const struct firmware *gpccs_sig;
@@ -282,6 +314,52 @@ rel_sig:
 	return err;
 }
 
+static bool gm20b_is_lazy_bootstrap(u32 falcon_id)
+{
+	bool enable_status = false;
+
+	switch (falcon_id) {
+	case LSF_FALCON_ID_FECS:
+		enable_status = false;
+		break;
+	case LSF_FALCON_ID_GPCCS:
+		enable_status = false;
+		break;
+	default:
+		break;
+	}
+
+	return enable_status;
+}
+
+static bool gm20b_is_priv_load(u32 falcon_id)
+{
+	bool enable_status = false;
+
+	switch (falcon_id) {
+	case LSF_FALCON_ID_FECS:
+		enable_status = false;
+		break;
+	case LSF_FALCON_ID_GPCCS:
+		enable_status = false;
+		break;
+	default:
+		break;
+	}
+
+	return enable_status;
+}
+
+static int gm20b_alloc_blob_space(struct gk20a *g,
+		size_t size, struct mem_desc *mem)
+{
+	int err;
+
+	err = gk20a_gmmu_alloc(g, size, mem);
+
+	return err;
+}
+
 int prepare_ucode_blob(struct gk20a *g)
 {
 
@@ -312,11 +390,12 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_mm_mmu_vpr_info_fetch(g);
 	gr_gk20a_init_ctxsw_ucode(g);
 
-	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
-	gm20b_dbg_pmu("wpr carveout base:%llx\n", inf.base);
+	g->ops.pmu.get_wpr(g, &inf.base, &inf.size);
 	wpr_addr = (phys_addr_t)inf.base;
-	gm20b_dbg_pmu("wpr carveout size :%llx\n", inf.size);
 	wprsize = (u32)inf.size;
+	gm20b_dbg_pmu("wpr carveout base:%llx\n", inf.base);
+	gm20b_dbg_pmu("wpr carveout size :%x\n", wprsize);
+
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
 	if (!sgt) {
 		gk20a_err(dev_from_gk20a(g), "failed to allocate memory\n");
@@ -349,7 +428,8 @@ int prepare_ucode_blob(struct gk20a *g)
 			goto free_sgt;
 
 		/*Alloc memory to hold ucode blob contents*/
-		err = gk20a_gmmu_alloc(g, plsfm->wpr_size, &g->acr.ucode_blob);
+		err = g->ops.pmu.alloc_blob_space(g, plsfm->wpr_size
+				, &g->acr.ucode_blob);
 		if (err)
 			goto free_sgt;
 
@@ -458,7 +538,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 }
 
 
-static int pmu_populate_loader_cfg(struct gk20a *g,
+static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	struct lsfm_managed_ucode_img *lsfm,
 	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size)
 {
@@ -485,7 +565,7 @@ static int pmu_populate_loader_cfg(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = lsfm->lsb_header.ucode_off;
-	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
+	g->ops.pmu.get_wpr(g, &inf.base, &inf.size);
 	addr_base += inf.base;
 	gm20b_dbg_pmu("pmu loader cfg u32 addrbase %x\n", (u32)addr_base);
 	/*From linux*/
@@ -530,7 +610,7 @@ static int pmu_populate_loader_cfg(struct gk20a *g,
 	return 0;
 }
 
-static int flcn_populate_bl_dmem_desc(struct gk20a *g,
+static int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	struct lsfm_managed_ucode_img *lsfm,
 	union flcn_bl_generic_desc *p_bl_gen_desc, u32 *p_bl_gen_desc_size,
 	u32 falconid)
@@ -557,13 +637,13 @@ static int flcn_populate_bl_dmem_desc(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = lsfm->lsb_header.ucode_off;
-	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
+	g->ops.pmu.get_wpr(g, &inf.base, &inf.size);
 	if (falconid == LSF_FALCON_ID_GPCCS)
 		addr_base += g->pmu.wpr_buf.gpu_va;
 	else
 		addr_base += inf.base;
 	gm20b_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
-		lsfm->wpr_header.falcon_id);
+			lsfm->wpr_header.falcon_id);
 	addr_code = u64_lo32((addr_base +
 				desc->app_start_offset +
 				desc->app_resident_code_offset) >> 8);
@@ -595,16 +675,17 @@ static int lsfm_fill_flcn_bl_gen_desc(struct gk20a *g,
 	struct pmu_gk20a *pmu = &g->pmu;
 	if (pnode->wpr_header.falcon_id != pmu->falcon_id) {
 		gm20b_dbg_pmu("non pmu. write flcn bl gen desc\n");
-		flcn_populate_bl_dmem_desc(g, pnode, &pnode->bl_gen_desc,
-					&pnode->bl_gen_desc_size,
-					pnode->wpr_header.falcon_id);
+		g->ops.pmu.flcn_populate_bl_dmem_desc(g,
+				pnode, &pnode->bl_gen_desc,
+				&pnode->bl_gen_desc_size,
+				pnode->wpr_header.falcon_id);
 		return 0;
 	}
 
 	if (pmu->pmu_mode & PMU_LSFM_MANAGED) {
 		gm20b_dbg_pmu("pmu write flcn bl gen desc\n");
 		if (pnode->wpr_header.falcon_id == pmu->falcon_id)
-			return pmu_populate_loader_cfg(g, pnode,
+			return g->ops.pmu.pmu_populate_loader_cfg(g, pnode,
 				&pnode->bl_gen_desc, &pnode->bl_gen_desc_size);
 	}
 
@@ -808,7 +889,8 @@ static void lsfm_fill_static_lsb_hdr_info(struct gk20a *g,
 			data = NV_FLCN_ACR_LSF_FLAG_DMACTL_REQ_CTX_TRUE;
 			pnode->lsb_header.flags = data;
 		}
-		if (falcon_id == LSF_FALCON_ID_GPCCS) {
+
+		if (g->ops.pmu.is_priv_load(falcon_id)) {
 			pnode->lsb_header.flags |=
 				NV_FLCN_ACR_LSF_FLAG_FORCE_PRIV_LOAD_TRUE;
 		}
@@ -833,8 +915,8 @@ static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr *plsfm,
 	pnode->wpr_header.bootstrap_owner = LSF_BOOTSTRAP_OWNER_DEFAULT;
 	pnode->wpr_header.status = LSF_IMAGE_STATUS_COPY;
 
-	if (falcon_id == LSF_FALCON_ID_GPCCS)
-		pnode->wpr_header.lazy_bootstrap = 1;
+	pnode->wpr_header.lazy_bootstrap =
+			g->ops.pmu.is_lazy_bootstrap(falcon_id);
 
 	/*TODO to check if PDB_PROP_FLCN_LAZY_BOOTSTRAP is to be supported by
 	Android */
@@ -1090,8 +1172,7 @@ static u8 pmu_is_debug_mode_en(struct gk20a *g)
 /*
  * @brief Patch signatures into ucode image
  */
-static int
-acr_ucode_patch_sig(struct gk20a *g,
+int acr_ucode_patch_sig(struct gk20a *g,
 		unsigned int *p_img,
 		unsigned int *p_prod_sig,
 		unsigned int *p_dbg_sig,
@@ -1231,7 +1312,7 @@ static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	mutex_lock(&pmu->isr_mutex);
-	pmu_reset(pmu);
+	g->ops.pmu.reset(g);
 	pmu->isr_enabled = true;
 	mutex_unlock(&pmu->isr_mutex);
 
@@ -1346,20 +1427,24 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	 * to PMU halt
 	 */
 
-	if (clear_halt_interrupt_status(g, gk20a_get_gr_idle_timeout(g)))
+	if (g->ops.pmu.falcon_clear_halt_interrupt_status(g,
+			gk20a_get_gr_idle_timeout(g)))
 		goto err_unmap_bl;
 
 	gm20b_dbg_pmu("phys sec reg %x\n", gk20a_readl(g,
 		pwr_falcon_mmu_phys_sec_r()));
 	gm20b_dbg_pmu("sctl reg %x\n", gk20a_readl(g, pwr_falcon_sctl_r()));
 
-	gm20b_init_pmu_setup_hw1(g, desc, acr->hsbl_ucode.size);
+	g->ops.pmu.init_falcon_setup_hw(g, desc, acr->hsbl_ucode.size);
+
 	/* Poll for HALT */
 	if (b_wait_for_halt) {
-		err = pmu_wait_for_halt(g, ACR_COMPLETION_TIMEOUT_MS);
+		err = g->ops.pmu.falcon_wait_for_halt(g,
+				ACR_COMPLETION_TIMEOUT_MS);
 		if (err == 0) {
 			/* Clear the HALT interrupt */
-		  if (clear_halt_interrupt_status(g, gk20a_get_gr_idle_timeout(g)))
+		  if (g->ops.pmu.falcon_clear_halt_interrupt_status(g,
+				  gk20a_get_gr_idle_timeout(g)))
 			goto err_unmap_bl;
 		}
 		else
@@ -1387,7 +1472,7 @@ err_done:
 *	@param[in]	timeout		Timeout in msec for PMU to halt
 *	@return '0' if PMU halts
 */
-int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
+static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
 	int completion = -EBUSY;
@@ -1424,7 +1509,7 @@ int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout)
 *	@param[in]	timeout_us	Timeout in msec for halt to clear
 *	@return '0' if PMU halt irq status is clear
 */
-int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
+static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout)
 {
 	u32 data = 0;
 	unsigned long end_jiffies = jiffies + msecs_to_jiffies(timeout);

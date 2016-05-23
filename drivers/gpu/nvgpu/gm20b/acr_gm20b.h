@@ -406,13 +406,13 @@ struct acr_gm20b {
 
 void gm20b_init_secure_pmu(struct gpu_ops *gops);
 int prepare_ucode_blob(struct gk20a *g);
-int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
-int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
-int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img);
-int gm20b_bootstrap_hs_flcn(struct gk20a *g);
 int gm20b_pmu_setup_sw(struct gk20a *g);
 int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt);
-int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout_us);
-int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
 int gm20b_init_nspmu_setup_hw1(struct gk20a *g);
+int acr_ucode_patch_sig(struct gk20a *g,
+		unsigned int *p_img,
+		unsigned int *p_prod_sig,
+		unsigned int *p_dbg_sig,
+		unsigned int *p_patch_loc,
+		unsigned int *p_patch_ind);
 #endif /*__ACR_GM20B_H_*/

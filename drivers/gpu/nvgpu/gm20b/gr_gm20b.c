@@ -708,6 +708,7 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 	u32 err, flags;
 	u32 reg_offset = gr_gpcs_gpccs_falcon_hwcfg_r() -
 	  gr_fecs_falcon_hwcfg_r();
+	u8 falcon_id_mask = 0;
 
 	gk20a_dbg_fn("");
 
@@ -747,8 +748,13 @@ static int gr_gm20b_load_ctxsw_ucode(struct gk20a *g)
 		} else {
 			/* bind WPR VA inst block */
 			gr_gk20a_load_falcon_bind_instblk(g);
-			err = g->ops.pmu.load_lsfalcon_ucode(g,
-					(1 << LSF_FALCON_ID_GPCCS));
+			if (g->ops.pmu.is_lazy_bootstrap(LSF_FALCON_ID_FECS))
+				falcon_id_mask |= (1 << LSF_FALCON_ID_FECS);
+			if (g->ops.pmu.is_lazy_bootstrap(LSF_FALCON_ID_GPCCS))
+				falcon_id_mask |= (1 << LSF_FALCON_ID_GPCCS);
+
+			err = g->ops.pmu.load_lsfalcon_ucode(g, falcon_id_mask);
+
 			if (err) {
 				gk20a_err(dev_from_gk20a(g),
 						"Unable to boot GPCCS\n");

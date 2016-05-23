@@ -2758,9 +2758,12 @@ static void gk20a_write_dmatrfbase(struct gk20a *g, u32 addr)
 
 int gk20a_pmu_reset(struct gk20a *g)
 {
-	gk20a_reset(g, mc_enable_pwr_enabled_f());
+	int err;
+	struct pmu_gk20a *pmu = &g->pmu;
 
-	return 0;
+	err = pmu_reset(pmu);
+
+	return err;
 }
 
 void gk20a_init_pmu_ops(struct gpu_ops *gops)
@@ -2776,6 +2779,12 @@ void gk20a_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.pmu_pg_grinit_param = NULL;
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
+	gops->pmu.is_lazy_bootstrap = NULL;
+	gops->pmu.is_priv_load = NULL;
+	gops->pmu.get_wpr = NULL;
+	gops->pmu.alloc_blob_space = NULL;
+	gops->pmu.pmu_populate_loader_cfg = NULL;
+	gops->pmu.flcn_populate_bl_dmem_desc = NULL;
 	gops->pmu.reset = gk20a_pmu_reset;
 }
 

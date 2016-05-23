@@ -534,6 +534,25 @@ struct gpu_ops {
 			(struct gk20a *g, u32 mask);
 		void (*dump_secure_fuses)(struct gk20a *g);
 		int (*reset)(struct gk20a *g);
+		int (*falcon_wait_for_halt)(struct gk20a *g,
+			unsigned int timeout);
+		int (*falcon_clear_halt_interrupt_status)(struct gk20a *g,
+			unsigned int timeout);
+		int (*init_falcon_setup_hw)(struct gk20a *g,
+			struct flcn_bl_dmem_desc *desc, u32 bl_sz);
+		bool (*is_lazy_bootstrap)(u32 falcon_id);
+		bool (*is_priv_load)(u32 falcon_id);
+		void (*get_wpr)(struct gk20a *g, u64 *base, u64 *size);
+		int (*alloc_blob_space)(struct gk20a *g,
+				size_t size, struct mem_desc *mem);
+		int (*pmu_populate_loader_cfg)(struct gk20a *g,
+			struct lsfm_managed_ucode_img *lsfm,
+			union flcn_bl_generic_desc *p_bl_gen_desc,
+			u32 *p_bl_gen_desc_size);
+		int (*flcn_populate_bl_dmem_desc)(struct gk20a *g,
+			struct lsfm_managed_ucode_img *lsfm,
+			union flcn_bl_generic_desc *p_bl_gen_desc,
+			u32 *p_bl_gen_desc_size, u32 falconid);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;

@@ -414,11 +414,16 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 
 	mutex_lock(&dev->timeout_mutex);
 
-	ret = mutex_trylock(&cdma->lock);
-	if (!ret) {
-		schedule_delayed_work(&cdma->timeout.wq, msecs_to_jiffies(10));
-		mutex_unlock(&dev->timeout_mutex);
-		return;
+	if (skip_reset) { /* channel_abort() path */
+		mutex_lock(&cdma->lock);
+	} else {
+		ret = mutex_trylock(&cdma->lock);
+		if (!ret) {
+			schedule_delayed_work(&cdma->timeout.wq,
+					      msecs_to_jiffies(10));
+			mutex_unlock(&dev->timeout_mutex);
+			return;
+		}
 	}
 
 	/* is this submit dependent with submits on other channels? */

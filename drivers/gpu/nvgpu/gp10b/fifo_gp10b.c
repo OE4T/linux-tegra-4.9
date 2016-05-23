@@ -182,7 +182,8 @@ static int gp10b_fifo_resetup_ramfc(struct channel_gk20a *c)
 	return 0;
 }
 
-static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type)
+static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
+					u32 *inst_id)
 {
 	int ret = ENGINE_INVAL_GK20A;
 
@@ -197,6 +198,28 @@ static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type)
 	return ret;
 }
 
+void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
+				u32 *inst_id, u32 *pri_base, u32 *fault_id)
+{
+	if (top_device_info_data_type_v(table_entry) ==
+	    top_device_info_data_type_enum2_v()) {
+		if (inst_id)
+			*inst_id = top_device_info_data_inst_id_v(table_entry);
+		if (pri_base) {
+			*pri_base =
+			    (top_device_info_data_pri_base_v(table_entry)
+			    << top_device_info_data_pri_base_align_v());
+		}
+		if (fault_id && (top_device_info_data_fault_id_v(table_entry) ==
+		    top_device_info_data_fault_id_valid_v())) {
+			*fault_id =
+			     top_device_info_data_fault_id_enum_v(table_entry);
+		}
+	} else
+		gk20a_err(g->dev, "unknown device_info_data %d",
+			top_device_info_data_type_v(table_entry));
+}
+
 void gp10b_init_fifo(struct gpu_ops *gops)
 {
 	gm20b_init_fifo(gops);
@@ -204,4 +227,5 @@ void gp10b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.get_pbdma_signature = gp10b_fifo_get_pbdma_signature;
 	gops->fifo.resetup_ramfc = gp10b_fifo_resetup_ramfc;
 	gops->fifo.engine_enum_from_type = gp10b_fifo_engine_enum_from_type;
+	gops->fifo.device_info_data_parse = gp10b_device_info_data_parse;
 }

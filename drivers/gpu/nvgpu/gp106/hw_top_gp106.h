@@ -158,6 +158,42 @@ static inline u32 top_device_info_entry_enum_v(void)
 {
 	return 0x00000002;
 }
+static inline u32 top_device_info_entry_data_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 top_device_info_data_type_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
+static inline u32 top_device_info_data_type_enum2_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 top_device_info_data_inst_id_v(u32 r)
+{
+	return (r >> 26) & 0xf;
+}
+static inline u32 top_device_info_data_pri_base_v(u32 r)
+{
+	return (r >> 12) & 0xfff;
+}
+static inline u32 top_device_info_data_pri_base_align_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 top_device_info_data_fault_id_enum_v(u32 r)
+{
+	return (r >> 3) & 0x1f;
+}
+static inline u32 top_device_info_data_fault_id_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 top_device_info_data_fault_id_valid_v(void)
+{
+	return 0x00000001;
+}
 static inline u32 top_scratch1_r(void)
 {
 	return 0x0002240c;

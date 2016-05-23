@@ -51,10 +51,15 @@
 
 	spi@3210000 { /* Tegra SPI1 <-> VCM SPIB: Inter Tegra Master */
 		status = "okay";
-		spi@0 {
-			compatible = "spidev";
+		inter_tegra_spi_master: spi@0 {
+			#thermal-sensor-cells = <0>;
+			compatible = "inter-tegra-spi";
 			reg = <0>;
-			spi-max-frequency = <25000000>;
+			spi-cpha;
+			spi-max-frequency = <5000000>;
+			is-master;
+			send_period_ms = <5000>;
+			send_tz_type = "Tdiode_tegra";
 		};
 	};
 
@@ -71,10 +76,39 @@
 	spi@3230000 { /* Tegra SPI3 <-> VCM SPID: Inter Tegra slave*/
 		status = "okay";
 		compatible = "nvidia,tegra186-spi-slave";
-		spi@0 {
-			compatible = "spidev";
+		inter_tegra_spi_slave: spi@0 {
+			#thermal-sensor-cells = <0>;
+			compatible = "inter-tegra-spi";
 			reg = <0>;
-			spi-max-frequency = <25000000>;
+			spi-cpha;
+			spi-max-frequency = <5000000>;
+			receive_timeout_ms = <10000>;
+		};
+	};
+
+	thermal-zones {
+		Tegra_tx {
+			status = "okay";
+			polling-delay = <0>;
+			polling-delay-passive = <0>;
+			thermal-sensors = <&inter_tegra_spi_master>;
+
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+			};
+
+		};
+
+		Tegra_rx {
+			status = "okay";
+			polling-delay = <0>;
+			polling-delay-passive = <0>;
+			thermal-sensors = <&inter_tegra_spi_slave>;
+
+			thermal-zone-params {
+				governor-name = "pid_thermal_gov";
+			};
+
 		};
 	};
 

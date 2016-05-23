@@ -470,8 +470,6 @@ static int nvi_dmp_en(struct nvi_state *st)
 	int ret = 0;
 
 	st->en_msk |= (1 << DEV_DMP);
-	st->snsr[DEV_ACC].matrix = true;
-	st->snsr[DEV_GYR].matrix = true;
 	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
 		dd = &nvi_dmp_devs[i];
 		if (dd->dev == DEV_AUX) {

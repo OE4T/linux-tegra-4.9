@@ -587,7 +587,6 @@ static int nvi_en_gyr_icm(struct nvi_state *st)
 	int i;
 	int ret = 0;
 
-	st->snsr[DEV_GYR].matrix = true;
 	st->snsr[DEV_GYR].buf_n = 6;
 	for (i = 0; i < AXIS_N; i++)
 		ret |= nvi_wr_gyro_offset(st, i,
@@ -607,7 +606,6 @@ static int nvi_en_acc_icm(struct nvi_state *st)
 	int i;
 	int ret = 0;
 
-	st->snsr[DEV_ACC].matrix = true;
 	st->snsr[DEV_ACC].buf_n = 6;
 	st->snsr[DEV_ACC].buf_shft = 0;
 	for (i = 0; i < AXIS_N; i++)

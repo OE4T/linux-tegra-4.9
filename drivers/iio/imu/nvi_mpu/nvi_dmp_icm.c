@@ -38,7 +38,6 @@ struct nvi_dmp_dev {
 	unsigned int period_us_dflt;
 	unsigned int buf_n;
 	int buf_shft;
-	bool matrix;
 	u32 out_ctl;
 	u16 int_ctl;
 	u16 odr_cfg;
@@ -302,7 +301,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.dev			= DEV_ACC,
 		.buf_n			= 12,
 		.buf_shft		= -11,
-		.matrix			= true,
 		.out_ctl		= 0x80004000,
 		.int_ctl		= ACCEL_SET,
 		.odr_cfg		= ODR_ACCEL,
@@ -313,7 +311,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.dev			= DEV_GYR,
 		.depend_msk		= (1 << DEV_GYU),
 		.buf_n			= 12,
-		.matrix			= true,
 		.out_ctl		= 0x00402000,
 		.int_ctl		= GYRO_CALIBR_SET,
 		.odr_cfg		= ODR_GYRO_CALIBR,
@@ -324,7 +321,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.dev			= DEV_GYU,
 		.depend_msk		= (1 << DEV_GYR),
 		.buf_n			= 6,
-		.matrix			= true,
 		.out_ctl		= 0x40000000,
 		.int_ctl		= GYRO_SET,
 		.odr_cfg		= ODR_GYRO,
@@ -340,7 +336,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 					  (1 << SRC_AUX),
 		.period_us_dflt		= ICM_DMP_PERIOD_US,
 		.buf_n			= 12,
-		.matrix			= true,
 		.out_ctl		= 0x08000000,
 		.int_ctl		= QUAT6_SET,
 		.odr_cfg		= ODR_QUAT6,
@@ -1014,7 +1009,6 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 		if (en) {
 			if (dd->out_ctl)
 				out_ctl |= dd->out_ctl;
-			st->snsr[dd->dev].matrix = dd->matrix;
 			st->snsr[dd->dev].buf_n = dd->buf_n;
 			st->snsr[dd->dev].buf_shft = dd->buf_shft;
 		} else {

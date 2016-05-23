@@ -276,6 +276,8 @@ int inv_init_6050(struct nvi_state *st)
 	short index;
 	struct inv_chip_info_s *chip_info = &st->chip_info;
 
+	st->snsr[DEV_ACC].matrix = true;
+	st->snsr[DEV_GYR].matrix = true;
 	if (st->snsr[DEV_ACC].cfg.thresh_hi > 0)
 		st->en_msk |= (1 << EN_LP);
 	else
@@ -343,6 +345,8 @@ int inv_init_6050(struct nvi_state *st)
 
 static int nvi_init_6500(struct nvi_state *st)
 {
+	st->snsr[DEV_ACC].matrix = true;
+	st->snsr[DEV_GYR].matrix = true;
 	if (st->snsr[DEV_ACC].cfg.thresh_hi > 0)
 		st->en_msk |= (1 << EN_LP);
 	else
@@ -1012,7 +1016,6 @@ static int nvi_en_acc_mpu(struct nvi_state *st)
 	u8 val;
 	int ret = 0;
 
-	st->snsr[DEV_ACC].matrix = true;
 	st->snsr[DEV_ACC].buf_n = 6;
 	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->accel_config2, 0,
 			     __func__, &st->rc.accel_config2);
@@ -1026,7 +1029,6 @@ static int nvi_en_gyr_mpu(struct nvi_state *st)
 {
 	u8 val = st->snsr[DEV_GYR].usr_cfg << 3;
 
-	st->snsr[DEV_GYR].matrix = true;
 	st->snsr[DEV_GYR].buf_n = 6;
 	return nvi_i2c_wr_rc(st, &st->hal->reg->gyro_config2, val,
 			     __func__, &st->rc.gyro_config2);

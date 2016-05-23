@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(326)
+#define NVI_DRIVER_VERSION		(327)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -3893,10 +3893,30 @@ static void nvi_of_dt_post(struct nvi_state *st, struct device_node *dn)
 	char str[64];
 	unsigned int msk;
 	unsigned int i;
+	unsigned int j;
 
 	/* sensor specific parameters */
 	for (i = 0; i < DEV_N; i++)
 		nvs_of_dt(dn, &st->snsr[i].cfg, NULL);
+
+	for (i = 0; i < DEV_N; i++) {
+		tmp = 0;
+		for (j = 0; j < 9; j++)
+			tmp |= st->snsr[i].cfg.matrix[j];
+		if (tmp) {
+			/* sensor has a matrix */
+			sprintf(str, "%s_matrix_enable", st->snsr[i].cfg.name);
+			if (!of_property_read_u32(dn, str, &tmp)) {
+				/* matrix override */
+				if (tmp)
+					/* apply matrix within kernel */
+					st->snsr[i].matrix = true;
+				else
+					/* HAL/fusion will handle matrix */
+					st->snsr[i].matrix = false;
+			}
+		}
+	}
 
 	/* sensor overrides that enable the DMP.
 	 * If the sensor is specific to the DMP and this override is
@@ -3958,11 +3978,6 @@ static int nvi_init(struct nvi_state *st,
 		}
 	}
 
-	/* copy matrix to other sensors that may need it */
-	for (i = DEV_STP; i < DEV_N; i++)
-		memcpy(&st->snsr[i].cfg.matrix, &st->snsr[DEV_GYR].cfg.matrix,
-		       sizeof(st->snsr[i].cfg.matrix));
-
 	if (st->en_msk & (1 << FW_LOADED))
 		ret = 0;
 	else
@@ -3990,16 +4005,19 @@ static int nvi_init(struct nvi_state *st,
 
 	n = 0;
 	for (i = 0; i < DEV_N; i++) {
-		/* Due to DMP, matrix handled at kernel so remove from NVS */
-		memcpy(matrix, st->snsr[i].cfg.matrix, sizeof(matrix));
-		memset(st->snsr[i].cfg.matrix, 0,
-		       sizeof(st->snsr[i].cfg.matrix));
+		if (st->snsr[i].matrix) {
+			/* matrix handled at kernel so remove from NVS */
+			memcpy(matrix, st->snsr[i].cfg.matrix, sizeof(matrix));
+			memset(st->snsr[i].cfg.matrix, 0,
+			       sizeof(st->snsr[i].cfg.matrix));
+		}
 		ret = st->nvs->probe(&st->snsr[i].nvs_st, st, &st->i2c->dev,
 				     &nvi_nvs_fn, &st->snsr[i].cfg);
 		if (!ret) {
 			st->snsr[i].cfg.snsr_id = i;
-			memcpy(st->snsr[i].cfg.matrix, matrix,
-			       sizeof(st->snsr[i].cfg.matrix));
+			if (st->snsr[i].matrix)
+				memcpy(st->snsr[i].cfg.matrix, matrix,
+				       sizeof(st->snsr[i].cfg.matrix));
 			nvi_max_range(st, i, st->snsr[i].cfg.max_range.ival);
 			n++;
 		}

@@ -38,7 +38,7 @@ static inline void adast_write(void __iomem *adast, u32 reg, u32 val)
 	writel(val, adast + reg);
 }
 
-static inline u32 adast_read(void __iomem *adast, u32 reg)
+static inline u32 __maybe_unused adast_read(void __iomem *adast, u32 reg)
 {
 	return readl(adast + reg);
 }

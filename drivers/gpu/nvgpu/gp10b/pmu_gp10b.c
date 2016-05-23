@@ -156,7 +156,8 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 		cmd.cmd.acr.boot_falcons.flags = flags;
 		cmd.cmd.acr.boot_falcons.falconidmask =
 				falconidmask;
-		cmd.cmd.acr.boot_falcons.usevamask = 0;
+		cmd.cmd.acr.boot_falcons.usevamask =
+				1 << LSF_FALCON_ID_GPCCS;
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.lo =
 				u64_lo32(g->pmu.wpr_buf.gpu_va);
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.hi =
@@ -171,7 +172,7 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 	return;
 }
 
-static int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
+int gp10b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 {
 	u32 flags = PMU_ACR_CMD_BOOTSTRAP_FALCON_FLAGS_RESET_YES;
 
@@ -221,7 +222,7 @@ static void pmu_handle_gr_param_msg(struct gk20a *g, struct pmu_msg *msg,
 	return;
 }
 
-static int gp10b_pg_gr_init(struct gk20a *g, u8 grfeaturemask)
+int gp10b_pg_gr_init(struct gk20a *g, u8 grfeaturemask)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
@@ -280,7 +281,7 @@ static int gp10b_pmu_setup_elpg(struct gk20a *g)
 	return ret;
 }
 
-static void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr)
+void gp10b_write_dmatrfbase(struct gk20a *g, u32 addr)
 {
 	gk20a_writel(g, pwr_falcon_dmatrfbase_r(),
 				addr);
@@ -396,12 +397,50 @@ static int send_ecc_overide_en_dis_cmd(struct gk20a *g, u32 bitmask)
 	return status;
 }
 
+static bool gp10b_is_lazy_bootstrap(u32 falcon_id)
+{
+	bool enable_status = false;
+
+	switch (falcon_id) {
+	case LSF_FALCON_ID_FECS:
+		enable_status = false;
+		break;
+	case LSF_FALCON_ID_GPCCS:
+		enable_status = true;
+		break;
+	default:
+		break;
+	}
+
+	return enable_status;
+}
+
+static bool gp10b_is_priv_load(u32 falcon_id)
+{
+	bool enable_status = false;
+
+	switch (falcon_id) {
+	case LSF_FALCON_ID_FECS:
+		enable_status = false;
+		break;
+	case LSF_FALCON_ID_GPCCS:
+		enable_status = false;
+		break;
+	default:
+		break;
+	}
+
+	return enable_status;
+}
+
 void gp10b_init_pmu_ops(struct gpu_ops *gops)
 {
 	if (gops->privsecurity) {
 		gm20b_init_secure_pmu(gops);
 		gops->pmu.init_wpr_region = gm20b_pmu_init_acr;
 		gops->pmu.load_lsfalcon_ucode = gp10b_load_falcon_ucode;
+		gops->pmu.is_lazy_bootstrap = gp10b_is_lazy_bootstrap;
+		gops->pmu.is_priv_load = gp10b_is_priv_load;
 	} else {
 		gk20a_init_pmu_ops(gops);
 		gops->pmu.load_lsfalcon_ucode = NULL;

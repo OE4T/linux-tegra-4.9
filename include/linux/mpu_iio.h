@@ -248,7 +248,7 @@ struct nvi_mpu_port {
  *           - reg
  *           - ctrl
  *           - data_out if a write transaction
- * @param *val: pointer for read data.  Can be NULL if write.
+ * @param *data: pointer for read data.  Can be NULL if write.
  * @return int error
  *            Possible return value or errors are:
  *            - 0: device is connected to MPU.
@@ -281,7 +281,15 @@ int nvi_mpu_dev_valid(struct nvi_mpu_port *nmp, u8 *data);
  *           - ext_driver: this pointer is passed in handler for
  *                use by external driver.  This should be NULL
  *                if the port is configured for writes.
- * @return int error/port id
+ * @param port: request a specific port (0 to 3).
+ *            If port is -1 then the returned port ID will be
+ *            automatically selected.
+ *            Requesting a specific port is used when the device
+ *            is expected to work with the Invensense DMP, since
+ *            the DMP FW is pathetically designed and has strict
+ *            limitations of how it will work with auxiliary
+ *            devices.
+ * @return int error/port ID
  *            if return >= 0 then this is the port ID.  The ID
  *            will have a value of 0 to 3 (HW has 4 ports).
  *            Possible errors are:
@@ -294,7 +302,7 @@ int nvi_mpu_dev_valid(struct nvi_mpu_port *nmp, u8 *data);
  *                 freed.
  *            - -EINVAL: Problem with input parameters.
  */
-int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp);
+int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp, int port);
 
 /**
  * Remove a port.
@@ -310,8 +318,9 @@ int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp);
 int nvi_mpu_port_free(int port);
 
 /**
- * Enable/disable a port.
- * @param port
+ * Enable/disable ports.  Use of a port mask (port_mask) allows
+ * enabling/disabling multiple ports at the same time.
+ * @param port_mask
  * @param enable
  * @return int error
  *            Possible errors are:
@@ -321,7 +330,7 @@ int nvi_mpu_port_free(int port);
  *            - -EBUSY: MPU is busy with another request.
  *            - -EINVAL: Problem with input parameters.
  */
-int nvi_mpu_enable(int port, bool enable);
+int nvi_mpu_enable(unsigned int port_mask, bool enable);
 
 /**
  * Use to change the ports polling delay in milliseconds.

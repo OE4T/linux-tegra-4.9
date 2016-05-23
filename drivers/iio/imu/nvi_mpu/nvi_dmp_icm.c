@@ -14,7 +14,6 @@
 #include "nvi.h"
 #include "nvi_dmp_icm.h"
 
-#define MPL520				(1)
 #ifdef MPL520
 #define ICM_DMP_DEV_MSK			((1 << DEV_SM) | \
 					 (1 << DEV_QTN))
@@ -310,7 +309,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.buf_n			= 12,
 		.buf_shft		= -11,
 		.matrix			= true,
-		.out_ctl		= 0x80000000,
+		.out_ctl		= 0x80004000,
 		.int_ctl		= ACCEL_SET,
 		.odr_cfg		= ODR_ACCEL,
 		.odr_cntr		= ODR_CNTR_ACCEL,
@@ -325,7 +324,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.buf_n			= 12,
 #endif /* MPL520 */
 		.matrix			= true,
-		.out_ctl		= 0x00400000,
+		.out_ctl		= 0x00402000,
 		.int_ctl		= GYRO_CALIBR_SET,
 		.odr_cfg		= ODR_GYRO_CALIBR,
 		.odr_cntr		= ODR_CNTR_GYRO_CALIBR,
@@ -384,7 +383,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.aux_port		= 0,
 		.depend_msk		= (0x03 << DEV_N_AUX),
 		.buf_n			= 6,
-		.out_ctl		= 0x20000000,
+		.out_ctl		= 0x20001000,
 		.int_ctl		= CPASS_SET,
 		.odr_cfg		= ODR_CPASS,
 		.odr_cntr		= ODR_CNTR_CPASS,
@@ -530,15 +529,63 @@ static unsigned int nvi_dmp_dbg(struct nvi_state *st, unsigned int n)
 	return n;
 }
 
+static void nvi_dmp_rd_aux(struct nvi_state *st, struct nvi_dmp_hdr *dh,
+			   unsigned int buf_i, s64 ts)
+{
+	struct aux_port *ap;
+
+	if (dh->aux_port >= AUX_PORT_IO)
+		return;
+
+	if (!(st->snsr[DEV_AUX].enable & (1 << dh->aux_port)))
+		return;
+
+	ap = &st->aux.port[dh->aux_port];
+	if (!ap->nmp.ext_driver)
+		return;
+
+	ap->nmp.handler(&st->buf[buf_i], dh->data_n,
+			nvi_ts_dev(st, 0, dh->dev, dh->aux_port),
+			ap->nmp.ext_driver);
+}
+
+static void nvi_dmp_rd_hdr2(struct nvi_state *st, struct nvi_dmp_hdr *dh,
+			    unsigned int buf_i, s64 ts)
+{
+	unsigned int i;
+
+	if (dh->dev == DEV_AUX) {
+		nvi_dmp_rd_aux(st, dh, buf_i, ts);
+	} else if (dh->dev < DEV_N) {
+		st->snsr[dh->dev].sts = 0;
+		for (i = 0; i < dh->data_n; i++) {
+			st->snsr[dh->dev].sts <<= 8;
+			st->snsr[dh->dev].sts |= st->buf[buf_i + i];
+		}
+	}
+}
+
+static void nvi_dmp_rd_hdr1(struct nvi_state *st, struct nvi_dmp_hdr *dh,
+			    unsigned int buf_i, s64 ts)
+{
+	if (dh->dev == DEV_AUX) {
+		nvi_dmp_rd_aux(st, dh, buf_i, ts);
+	} else if (dh->dev < DEV_N) {
+		if (!st->snsr[dh->dev].enable)
+			return;
+
+		nvi_push(st, dh->dev, &st->buf[buf_i],
+			 nvi_ts_dev(st, ts, dh->dev, 0));
+	}
+}
+
 static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 {
 	struct nvi_dmp_hdr *dh;
-	struct aux_port *ap;
 	unsigned int data_n;
 	unsigned int hdr1_i;
 	unsigned int hdr2_i;
 	unsigned int i;
-	unsigned int j;
 	u16 hdr1;
 	u16 hdr2;
 
@@ -579,24 +626,17 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 			return 0;
 
 		/* we process header2 accuracy data first so that it becomes
-		 * part of the header1 status data when pushed.
+		 * part of the header1 data + status when pushed.
+		 * if status is for an AUX device then it is sent separate
+		 * as-is to the AUX device's driver.
 		 */
-		for (i = 0; i < ARRAY_SIZE(nvi_dmp_hdr2s) && hdr2; i++) {
+		for (i = 0; hdr2 && i < ARRAY_SIZE(nvi_dmp_hdr2s); i++) {
 			dh = &nvi_dmp_hdr2s[i];
 			if (hdr2 & dh->hdr_msk) {
 				hdr2 &= ~dh->hdr_msk;
-				if (dh->dev < DEV_N) {
-					st->snsr[dh->dev].sts = 0;
-					for (j = 0; j < dh->data_n; j++) {
-						st->snsr[dh->dev].sts <<= 8;
-						st->snsr[dh->dev].sts |=
-							    st->buf[st->buf_i +
-								    hdr2_i];
-						hdr2_i++;
-					}
-				} else {
-					hdr2_i += dh->data_n;
-				}
+				nvi_dmp_rd_hdr2(st, dh,
+						st->buf_i + hdr2_i, ts);
+				hdr2_i += dh->data_n;
 			}
 		}
 
@@ -610,29 +650,14 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 			return -1;
 		}
 
-		/* process push data */
+		/* push data for enabled sensors */
 		hdr1 &= DMP_HDR1_PUSH_MSK;
-		for (i = 0; i < ARRAY_SIZE(nvi_dmp_hdr1s) && hdr1; i++) {
+		for (i = 0; hdr1 && i < ARRAY_SIZE(nvi_dmp_hdr1s); i++) {
 			dh = &nvi_dmp_hdr1s[i];
 			if (hdr1 & dh->hdr_msk) {
 				hdr1 &= ~dh->hdr_msk;
-				if (dh->dev == DEV_AUX &&
-						 dh->aux_port < AUX_PORT_MAX &&
-				      st->aux.port[dh->aux_port].nmp.handler) {
-					ap = &st->aux.port[dh->aux_port];
-					ap->nmp.handler(&st->buf[st->buf_i +
-								 hdr1_i],
-							dh->data_n,
-							nvi_ts_dev(st, 0,
-								   dh->dev,
-								 dh->aux_port),
-							ap->nmp.ext_driver);
-				} else if (dh->dev < DEV_N) {
-					nvi_push(st, dh->dev,
-						 &st->buf[st->buf_i + hdr1_i],
-						 nvi_ts_dev(st, ts,
-							    dh->dev, 0));
-				}
+				nvi_dmp_rd_hdr1(st, dh,
+						st->buf_i + hdr1_i, ts);
 				hdr1_i += dh->data_n;
 			}
 		}
@@ -1053,7 +1078,7 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 	if (en_msk & (0x03 << DEV_N_AUX))
 		evnt_ctl |= COMPASS_CAL_EN;
 	/* inv_enable_9axes_V3 */
-	if (en_msk & (1 << DEV_GMR))
+	if (out_ctl & CPASS_ACCURACY_MASK || en_msk & (1 << DEV_GMR))
 		evnt_ctl |= NINE_AXIS_EN;
 	/* inv_setup_events */
 	if (en_msk & (1 << DEV_STP))

@@ -157,17 +157,17 @@ static int store_timeout(void *data, u64 val)
 
 DEFINE_SIMPLE_ATTRIBUTE(fops_timeout, show_timeout, store_timeout, "%lld\n");
 
-static void camrtc_debug_rx(struct tegra_ivc_channel *ch)
+static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	const struct camrtc_dbg_response *resp;
 	bool received = false;
 
-	dev_info(&ch->dev, "rx msg\n");
-
 	mutex_lock(&crd->lock_pending);
 
 	while (tegra_ivc_can_read(&ch->ivc)) {
+		dev_info(&ch->dev, "rx msg\n");
+
 		resp = tegra_ivc_read_get_next_frame(&ch->ivc);
 
 		if (IS_ERR_OR_NULL(resp))
@@ -421,9 +421,9 @@ static void camrtc_debug_remove(struct tegra_ivc_channel *ch)
 }
 
 static const struct tegra_ivc_channel_ops tegra_ivc_channel_debug_ops = {
-	.probe		= camrtc_debug_probe,
-	.remove		= camrtc_debug_remove,
-	.rx_notify	= camrtc_debug_rx,
+	.probe	= camrtc_debug_probe,
+	.remove	= camrtc_debug_remove,
+	.notify	= camrtc_debug_notify,
 };
 
 static const struct of_device_id camrtc_debug_of_match[] = {

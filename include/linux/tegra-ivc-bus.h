@@ -96,7 +96,7 @@ static inline struct tegra_ivc_channel *to_tegra_ivc_channel(
 struct tegra_ivc_channel_ops {
 	int (*probe)(struct tegra_ivc_channel *);
 	void (*remove)(struct tegra_ivc_channel *);
-	void (*rx_notify)(struct tegra_ivc_channel *);
+	void (*notify)(struct tegra_ivc_channel *);
 };
 
 /* Legacy mailbox support */

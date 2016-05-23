@@ -72,7 +72,7 @@ static inline void acast_write(void __iomem *acast, u32 reg, u32 val)
 	writel(val, acast + reg);
 }
 
-static inline u32 acast_read(void __iomem *acast, u32 reg)
+static inline u32 __maybe_unused acast_read(void __iomem *acast, u32 reg)
 {
 	return readl(acast + reg);
 }

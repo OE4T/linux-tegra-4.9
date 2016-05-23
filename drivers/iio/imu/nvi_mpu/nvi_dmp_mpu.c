@@ -26,7 +26,7 @@ struct nvi_dmp_dev {
 	unsigned int dev;
 	unsigned int aux_port;
 	unsigned int depend_msk;	/* sensor dependencies */
-	unsigned int data_n;
+	unsigned int buf_n;
 	unsigned int hdr_n;
 	u8 hdr[DMP_HDR_LEN_MAX];
 	u8 hdr_msk[DMP_HDR_LEN_MAX];
@@ -75,7 +75,7 @@ static int nvi_dmp_sm_init(struct nvi_state *st)
 static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	{
 		.dev			= DEV_ACC,
-		.data_n			= 6,
+		.buf_n			= 6,
 		.hdr_n			= 2,
 		.hdr			= { 0x40, 0x00 },
 		.hdr_msk		= { 0xFF, 0xF0 },
@@ -88,7 +88,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	},
 	{
 		.dev			= DEV_GYR,
-		.data_n			= 6,
+		.buf_n			= 6,
 		.hdr_n			= 2,
 		.hdr			= { 0x20, 0x00 },
 		.hdr_msk		= { 0xFF, 0xF0 },
@@ -103,7 +103,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.dev			= DEV_QTN,
 		.depend_msk		= (1 << DEV_ACC) |
 					  (1 << DEV_GYR),
-		.data_n			= 12,
+		.buf_n			= 12,
 		.hdr_n			= 4,
 		.hdr			= { 0x04, 0x00, 0x04, 0x00 },
 		.hdr_msk		= { 0xFF, 0xF0, 0xFF, 0xF0 },
@@ -117,7 +117,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	{
 		.dev			= DEV_SM,
 		.depend_msk		= (1 << DEV_ACC),
-		.data_n			= 1,
+		.buf_n			= 1,
 		.hdr_n			= 0,
 		.fn_init		= &nvi_dmp_sm_init,
 		.en_addr		= D_SMD_ENABLE,
@@ -129,7 +129,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.dev			= DEV_AUX,
 		.aux_port		= 0,
 		.depend_msk		= (0x03 << DEV_N_AUX),
-		.data_n			= 6,
+		.buf_n			= 6,
 		.hdr_n			= 2,
 		.hdr			= { 0x10, 0x00 },
 		.hdr_msk		= { 0xFF, 0xF0 },
@@ -145,7 +145,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.dev			= DEV_AUX,
 		.aux_port		= 2,
 		.depend_msk		= (0x0C << DEV_N_AUX),
-		.data_n			= 6,
+		.buf_n			= 6,
 		.hdr_n			= 2,
 		.hdr			= { 0x80, 0x00 },
 		.hdr_msk		= { 0xFF, 0xF0 },
@@ -198,7 +198,7 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 			return -1;
 		}
 
-		if (n > dd->data_n + i) {
+		if (n > dd->buf_n + i) {
 			if (dd->dev == DEV_AUX) {
 				if (st->sts & NVI_DBG_SPEW_FIFO)
 					dev_info(&st->i2c->dev,
@@ -206,7 +206,7 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 						 __func__, dd->aux_port);
 				ap = &st->aux.port[dd->aux_port];
 				ap->nmp.handler(&st->buf[st->buf_i + i],
-						dd->data_n,
+						dd->buf_n,
 						nvi_ts_dev(st, ts, dd->dev,
 							   dd->aux_port),
 						ap->nmp.ext_driver);
@@ -218,7 +218,7 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 				nvi_push(st, dd->dev, &st->buf[st->buf_i + i],
 					 nvi_ts_dev(st, ts, dd->dev, 0));
 			}
-			i += dd->data_n;
+			i += dd->buf_n;
 			st->buf_i += i;
 			n -= i;
 		} else {
@@ -303,7 +303,7 @@ static int nvi_dd_able(struct nvi_state *st, struct nvi_dmp_dev *dd, bool en)
 				st->en_msk &= ~(1 << dd->dev);
 			} else {
 				st->en_msk |= (1 << dd->dev);
-				st->snsr[dd->dev].buf_n = dd->data_n;
+				st->snsr[dd->dev].buf_n = dd->buf_n;
 			}
 		}
 	} else {

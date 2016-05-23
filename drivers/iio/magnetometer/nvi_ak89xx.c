@@ -69,7 +69,7 @@
 #include <linux/mpu_iio.h>
 #endif /* AKM_NVI_MPU_SUPPORT */
 
-#define AKM_DRIVER_VERSION		(304)
+#define AKM_DRIVER_VERSION		(325)
 #define AKM_VENDOR			"AsahiKASEI"
 #define AKM_NAME			"ak89xx"
 #define AKM_NAME_AK8963			"ak8963"
@@ -104,6 +104,7 @@
 
 #define WR				(0)
 #define RD				(1)
+#define PORT_N				(2)
 #define AXIS_X				(0)
 #define AXIS_Y				(1)
 #define AXIS_Z				(2)
@@ -132,8 +133,8 @@ static unsigned short akm_i2c_addrs[] = {
 struct akm_rr {
 	struct nvs_float max_range;
 	struct nvs_float resolution;
-	s16 range_lo[3];
-	s16 range_hi[3];
+	s16 range_lo[AXIS_N];
+	s16 range_hi[AXIS_N];
 };
 
 struct akm_cmode {
@@ -162,11 +163,11 @@ struct akm_state {
 	bool initd;			/* set if initialized */
 	bool matrix_en;			/* handle matrix internally */
 	bool mpu_en;			/* if device behind MPU */
-	bool port_en[2];		/* enable status of MPU write port */
-	int port_id[2];			/* MPU port ID */
+	bool port_en[PORT_N];		/* enable status of MPU write port */
+	int port_id[PORT_N];		/* MPU port ID */
 	u8 data_out;			/* write value to trigger a sample */
 	s16 magn_uc[AXIS_N];		/* uncalibrated sample data */
-	s16 magn[AXIS_N];		/* sample data after calibration */
+	s16 magn[AXIS_N + 1];		/* data after calibration + status */
 	u8 nvi_config;			/* NVI configuration */
 };
 
@@ -404,26 +405,30 @@ static int akm_pm_init(struct akm_state *st)
 	return ret;
 }
 
-static int akm_port_enable(struct akm_state *st, int port, bool enable)
-{
-	int ret = 0;
-
-#if AKM_NVI_MPU_SUPPORT
-	if ((enable != st->port_en[port]) && (st->port_id[port] >= 0)) {
-		ret = nvi_mpu_enable(st->port_id[port], enable);
-		if (!ret)
-			st->port_en[port] = enable;
-	}
-#endif /* AKM_NVI_MPU_SUPPORT */
-	return ret;
-}
-
 static int akm_ports_enable(struct akm_state *st, bool enable)
 {
-	int ret;
+	int ret = 0;
+#if AKM_NVI_MPU_SUPPORT
+	unsigned int port_mask = 0;
+	unsigned int i;
 
-	ret = akm_port_enable(st, RD, enable);
-	ret |= akm_port_enable(st, WR, enable);
+	for (i = 0; i < PORT_N; i++) {
+		if (enable != st->port_en[i] && st->port_id[i] >= 0)
+			port_mask |= (1 << st->port_id[i]);
+	}
+
+	if (port_mask) {
+		ret = nvi_mpu_enable(port_mask, enable);
+		if (!ret) {
+			for (i = 0; i < PORT_N; i++) {
+				if (st->port_id[i] >= 0 &&
+					     port_mask & (1 << st->port_id[i]))
+					st->port_en[i] = enable;
+			}
+		}
+	}
+#endif /* AKM_NVI_MPU_SUPPORT */
+
 	return ret;
 }
 
@@ -589,12 +594,19 @@ static void akm_mpu_handler(u8 *data, unsigned int len, s64 ts, void *p_val)
 	}
 
 	if (st->enabled) {
+		if (len == 2) {
+			/* status from the DMP in big endian */
+			st->magn[AXIS_N] = be16_to_cpup((s16 *)data);
+			return;
+		}
+
 		if (len == 6) {
-			/* this data is from the DMP */
-			i = 0;
+			/* this data is from the DMP in big endian */
 			be = true;
+			i = 0;
 			ret = 1;
 		} else {
+			/* data in little endian */
 			i = st->hal->reg_st1 - st->hal->reg_start_rd + 1;
 			ret = akm_read_sts(st, data);
 		}
@@ -1293,7 +1305,8 @@ static int akm_id_hal(struct akm_state *st, u8 dev_id)
 	st->rr_i = st->hal->rr_i_max;
 	st->cfg.name = "magnetic_field";
 	st->cfg.kbuf_sz = AKM_KBUF_SIZE;
-	st->cfg.ch_n = 3;
+	st->cfg.snsr_data_n = 8; /* two bytes for status */
+	st->cfg.ch_n = AXIS_N;
 	st->cfg.ch_sz = -2;
 	st->cfg.part = st->hal->part;
 	st->cfg.vendor = AKM_VENDOR;
@@ -1440,7 +1453,7 @@ static int akm_id_dev(struct akm_state *st, const char *name)
 					       NVS_FLOAT_SIGNIFICANCE_MICRO);
 				nmp.q30[i] = q30;
 			}
-			ret = nvi_mpu_port_alloc(&nmp);
+			ret = nvi_mpu_port_alloc(&nmp, 0);
 			dev_dbg(&st->i2c->dev, "%s MPU port/ret=%d\n",
 				__func__, ret);
 			if (ret < 0)
@@ -1460,7 +1473,7 @@ static int akm_id_dev(struct akm_state *st, const char *name)
 				nmp.handler = NULL;
 				nmp.ext_driver = NULL;
 				nmp.type = SECONDARY_SLAVE_TYPE_COMPASS;
-				ret = nvi_mpu_port_alloc(&nmp);
+				ret = nvi_mpu_port_alloc(&nmp, 1);
 				dev_dbg(&st->i2c->dev, "%s MPU port/ret=%d\n",
 					__func__, ret);
 				if (ret < 0) {
@@ -1554,8 +1567,8 @@ static int akm_of_dt(struct akm_state *st, struct device_node *dn)
 	}
 
 	/* option to handle matrix internally */
-	cfg = 0;
-	of_property_read_u8(dn, "internal_matrix_enable", &cfg);
+	cfg = 0; /* default to disable */
+	of_property_read_u8(dn, "magnetic_field_matrix_enable", &cfg);
 	if (cfg)
 		st->matrix_en = true;
 	else

@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(324)
+#define NVI_DRIVER_VERSION		(325)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -1712,31 +1712,41 @@ int nvi_aux_enable(struct nvi_state *st, const char *fn,
 	return ret;
 }
 
-static int nvi_aux_port_enable(struct nvi_state *st, int port, bool en)
+static int nvi_aux_port_enable(struct nvi_state *st,
+			       unsigned int port_mask, bool en)
 {
 	unsigned int enabled;
+	unsigned int i;
 	int ret;
 
 	enabled = st->snsr[DEV_AUX].enable;
 	if (en)
-		st->snsr[DEV_AUX].enable |= (1 << port);
+		st->snsr[DEV_AUX].enable |= port_mask;
 	else
-		st->snsr[DEV_AUX].enable &= ~(1 << port);
+		st->snsr[DEV_AUX].enable &= ~port_mask;
 	if (enabled == st->snsr[DEV_AUX].enable)
 		return 0;
 
 	if (st->hal->dev[DEV_AUX]->fifo_en_msk) {
 		/* AUX uses FIFO */
-		if (st->aux.port[port].nmp.addr & BIT_I2C_READ)
-			st->aux.reset_fifo = true;
+		for (i = 0; i < AUX_PORT_IO; i++) {
+			if (port_mask & (1 << i)) {
+				if (st->aux.port[i].nmp.addr & BIT_I2C_READ)
+					st->aux.reset_fifo = true;
+			}
+		}
 	}
 	if (en && (st->rc.int_pin_cfg & BIT_BYPASS_EN))
 		return 0;
 
-	ret = nvi_aux_port_en(st, port, en);
+	ret = 0;
+	for (i = 0; i < AUX_PORT_MAX; i++) {
+		if (port_mask & (1 << i))
+			ret |= nvi_aux_port_en(st, i, en);
+	}
 	ret |= nvi_aux_enable(st, __func__, true, false);
 	nvi_period_aux(st);
-	if (port != AUX_PORT_IO)
+	if (port_mask & ((1 << AUX_PORT_IO) - 1))
 		ret |= nvi_en(st);
 	return ret;
 }
@@ -1888,7 +1898,8 @@ static int nvi_aux_dev_valid(struct nvi_state *st,
 	st->aux.port[AUX_PORT_IO].nmp.delay_ms = 0;
 	st->aux.port[AUX_PORT_IO].period_us =
 			st->hal->src[st->hal->dev[DEV_AUX]->src].period_us_min;
-	ret = nvi_aux_port_enable(st, AUX_PORT_IO, true);
+	ret = nvi_user_ctrl_en(st, __func__, false, false, false, false);
+	ret |= nvi_aux_port_enable(st, 1 << AUX_PORT_IO, true);
 	ret |= nvi_user_ctrl_en(st, __func__, false, false, true, false);
 	if (ret) {
 		nvi_aux_port_free(st, AUX_PORT_IO);
@@ -1992,7 +2003,7 @@ int nvi_mpu_dev_valid(struct nvi_mpu_port *nmp, u8 *data)
 }
 EXPORT_SYMBOL(nvi_mpu_dev_valid);
 
-int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp)
+int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp, int port)
 {
 	struct nvi_state *st = nvi_state_local;
 	int ret = -EPERM;
@@ -2005,16 +2016,19 @@ int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp)
 		return -EAGAIN;
 	}
 
-	if (nmp == NULL)
+	if (nmp == NULL || !(nmp->ctrl & BITS_I2C_SLV_CTRL_LEN))
 		return -EINVAL;
 
-	if (!(nmp->ctrl & BITS_I2C_SLV_CTRL_LEN))
+	if (port >= AUX_PORT_IO)
 		return -EINVAL;
 
 	nvi_mutex_lock(st);
 	if (!(st->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))) {
 		nvi_pm(st, __func__, NVI_PM_ON);
-		ret = nvi_aux_port_alloc(st, nmp, -1);
+		ret = nvi_aux_port_alloc(st, nmp, port);
+		if (ret >= 0 && st->hal->dmp)
+			/* need to reinitialize DMP for new device */
+			st->hal->dmp->fn_init(st);
 		nvi_pm(st, __func__, NVI_PM_AUTO);
 		ret = nvi_aux_mpu_call_post(st, "nvi_mpu_port_alloc=", ret);
 	}
@@ -2049,25 +2063,38 @@ int nvi_mpu_port_free(int port)
 }
 EXPORT_SYMBOL(nvi_mpu_port_free);
 
-int nvi_mpu_enable(int port, bool enable)
+int nvi_mpu_enable(unsigned int port_mask, bool enable)
 {
 	struct nvi_state *st = nvi_state_local;
+	unsigned int i;
 	int ret;
 
 	if (st != NULL) {
 		if (st->sts & NVI_DBG_SPEW_AUX)
-			pr_info("%s port %d: %x\n", __func__, port, enable);
+			pr_info("%s port_mask %x: %x\n",
+				__func__, port_mask, enable);
 	} else {
-		pr_debug("%s port %d: %x ERR -EAGAIN\n",
-			 __func__, port, enable);
+		pr_debug("%s port_mask %x: %x ERR -EAGAIN\n",
+			 __func__, port_mask, enable);
 		return -EAGAIN;
 	}
 
+	if (port_mask >= (1 << AUX_PORT_IO) || !port_mask)
+		return -EINVAL;
+
+	for (i = 0; i < AUX_PORT_IO; i++) {
+		if (port_mask & (1 << i)) {
+			if (!st->aux.port[i].nmp.addr)
+				return -EINVAL;
+		}
+	}
+
 	nvi_mutex_lock(st);
-	ret = nvi_aux_mpu_call_pre(st, port);
-	if (!ret) {
+	if (st->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND)) {
+		ret = -EPERM;
+	} else {
 		nvi_pm(st, __func__, NVI_PM_ON);
-		ret = nvi_aux_port_enable(st, port, enable);
+		ret = nvi_aux_port_enable(st, port_mask, enable);
 		ret = nvi_aux_mpu_call_post(st, "nvi_mpu_enable=", ret);
 	}
 	nvi_mutex_unlock(st);
@@ -3816,7 +3843,7 @@ static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
 	for (i = 0; i < ARRAY_SIZE(nvi_cfg_dflt); i++)
 		memcpy(&st->snsr[i].cfg, &nvi_cfg_dflt[i],
 		       sizeof(st->snsr[i].cfg));
-	st->snsr[DEV_AUX].cfg.name = "Auxiliary";
+	st->snsr[DEV_AUX].cfg.name = "auxiliary";
 	st->en_msk = (1 << EN_STDBY);
 	st->bypass_timeout_ms = NVI_BYPASS_TIMEOUT_MS;
 	if (!dn)

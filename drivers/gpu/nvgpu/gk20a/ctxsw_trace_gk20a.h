@@ -35,7 +35,6 @@ unsigned int gk20a_ctxsw_dev_poll(struct file *, struct poll_table_struct *);
 int gk20a_ctxsw_dev_mmap(struct file *, struct vm_area_struct *);
 
 int gk20a_ctxsw_trace_init(struct gk20a *);
-int gk20a_ctxsw_trace_setup(struct gk20a *, void *ctx_ptr);
 void gk20a_ctxsw_trace_cleanup(struct gk20a *);
 int gk20a_ctxsw_trace_write(struct gk20a *, struct nvgpu_ctxsw_trace_entry *);
 void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid);

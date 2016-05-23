@@ -557,6 +557,9 @@ int gk20a_ctxsw_trace_write(struct gk20a *g,
 	const char *reason;
 	u32 write_idx;
 
+	if (!g->ctxsw_trace)
+		return 0;
+
 	if (unlikely(entry->vmid >= GK20A_CTXSW_TRACE_NUM_DEVS))
 		return -ENODEV;
 
@@ -643,8 +646,12 @@ done:
 
 void gk20a_ctxsw_trace_wake_up(struct gk20a *g, int vmid)
 {
-	struct gk20a_ctxsw_dev *dev = &g->ctxsw_trace->devs[vmid];
+	struct gk20a_ctxsw_dev *dev;
 
+	if (!g->ctxsw_trace)
+		return;
+
+	dev = &g->ctxsw_trace->devs[vmid];
 	wake_up_interruptible(&dev->readout_wq);
 }
 
@@ -658,6 +665,9 @@ void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
 		.context_id = 0,
 		.pid = ch->pid,
 	};
+
+	if (!g->ctxsw_trace)
+		return;
 
 	gk20a_ctxsw_trace_write(g, &entry);
 	gk20a_ctxsw_trace_wake_up(g, 0);
@@ -676,6 +686,9 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 		.pid = 0,
 	};
 	struct channel_gk20a *ch;
+
+	if (!g->ctxsw_trace)
+		return;
 
 	mutex_lock(&tsg->ch_list_lock);
 	ch = list_entry(&tsg->ch_list, struct channel_gk20a, ch_entry);

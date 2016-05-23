@@ -60,7 +60,7 @@
 #include <linux/mpu_iio.h>
 #endif /* BMP_NVI_MPU_SUPPORT */
 
-#define BMP_DRIVER_VERSION		(301)
+#define BMP_DRIVER_VERSION		(325)
 #define BMP_VENDOR			"Bosch"
 #define BMP_NAME			"bmpX80"
 #define BMP180_NAME			"bmp180"
@@ -142,6 +142,7 @@
 #define BATCH_WAKE_UPON_FIFO_FULL	(0x2)
 #define WR				(0)
 #define RD				(1)
+#define PORT_N				(2)
 /* _buf_push expects this scan order */
 #define BMP_DEV_PRES			(0)
 #define BMP_DEV_TEMP			(1)
@@ -242,8 +243,8 @@ struct bmp_state {
 	u8 dev_id;			/* device ID */
 	bool initd;			/* set if initialized */
 	bool mpu_en;			/* if device behind MPU */
-	bool port_en[2];		/* enable status of MPU write port */
-	int port_id[2];			/* MPU port ID */
+	bool port_en[PORT_N];		/* enable status of MPU write port */
+	int port_id[PORT_N];		/* MPU port ID */
 	u8 data_out;			/* write value to mode register */
 	s32 ut;				/* uncompensated temperature */
 	s32 up;				/* uncompensated pressure */
@@ -467,26 +468,30 @@ static int bmp_pm_init(struct bmp_state *st)
 	return ret;
 }
 
-static int bmp_port_enable(struct bmp_state *st, int port, bool enable)
-{
-	int ret = 0;
-
-#if BMP_NVI_MPU_SUPPORT
-	if ((enable != st->port_en[port]) && (st->port_id[port] >= 0)) {
-		ret = nvi_mpu_enable(st->port_id[port], enable);
-		if (!ret)
-			st->port_en[port] = enable;
-	}
-#endif /* BMP_NVI_MPU_SUPPORT */
-	return ret;
-}
-
 static int bmp_ports_enable(struct bmp_state *st, bool enable)
 {
-	int ret;
+	int ret = 0;
+#if BMP_NVI_MPU_SUPPORT
+	unsigned int port_mask = 0;
+	unsigned int i;
 
-	ret = bmp_port_enable(st, WR, enable);
-	ret |= bmp_port_enable(st, RD, enable);
+	for (i = 0; i < PORT_N; i++) {
+		if (enable != st->port_en[i] && st->port_id[i] >= 0)
+			port_mask |= (1 << st->port_id[i]);
+	}
+
+	if (port_mask) {
+		ret = nvi_mpu_enable(port_mask, enable);
+		if (!ret) {
+			for (i = 0; i < PORT_N; i++) {
+				if (st->port_id[i] >= 0 &&
+					     port_mask & (1 << st->port_id[i]))
+					st->port_en[i] = enable;
+			}
+		}
+	}
+#endif /* BMP_NVI_MPU_SUPPORT */
+
 	return ret;
 }
 
@@ -702,28 +707,40 @@ static int bmp_calc_pres_280(struct bmp_state *st)
 	return 1;
 }
 
-static int bmp_read_sts_280(struct bmp_state *st, u8 *data, s64 ts)
+static int bmp_push_280(struct bmp_state *st, u8 *data, s64 ts)
 {
 	s32 val;
 	int ret;
 
-	if (data[0] & (1 << BMP280_REG_STATUS_IM_UPDATE))
-		/* registers are updating */
-		return 0;
-
-	val = (data[4] << 16) | (data[5] << 8) | data[6];
+	val = (data[0] << 16) | (data[1] << 8) | data[2];
 	val = le32_to_cpup(&val);
 	val >>= 4;
 	st->up = val;
-	val = (data[7] << 16) | (data[8] << 8) | data[9];
+	val = (data[3] << 16) | (data[4] << 8) | data[5];
 	val = le32_to_cpup(&val);
 	val >>= 4;
 	st->ut = val;
 	bmp_calc_temp_280(st);
 	ret = bmp_calc_pres_280(st);
-	if (ret > 0)
+	if (ret > 0) {
 		st->ts = ts;
+		if (st->nvs_st[BMP_DEV_PRES])
+			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
+					 &st->pressure, ts);
+		if (st->nvs_st[BMP_DEV_TEMP])
+			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
+					 &st->temp, ts);
+	}
 	return ret;
+}
+
+static int bmp_read_sts_280(struct bmp_state *st, u8 *data)
+{
+	if (data[0] & (1 << BMP280_REG_STATUS_IM_UPDATE))
+		/* registers are updating */
+		return 0;
+
+	return 1;
 }
 
 static int bmp_read_280(struct bmp_state *st)
@@ -737,15 +754,11 @@ static int bmp_read_280(struct bmp_state *st)
 		return ret;
 
 	ts = nvs_timestamp();
-	ret = bmp_read_sts_280(st, data, ts);
+	ret = bmp_read_sts_280(st, data);
 	if (ret > 0) {
-		if (st->nvs_st[BMP_DEV_PRES])
-			st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
-					 &st->pressure, ts);
-		if (st->nvs_st[BMP_DEV_TEMP])
-			st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
-					 &st->temp, ts);
-		bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
+		ret = bmp_push_280(st, &data[4], ts);
+		if (ret > 0)
+			bmp_i2c_wr(st, BMP_REG_CTRL, st->data_out);
 	}
 	return 0;
 }
@@ -771,15 +784,16 @@ static void bmp_mpu_handler_280(u8 *data, unsigned int len, s64 ts, void *p_val)
 	}
 
 	if (st->enabled) {
-		ret = bmp_read_sts_280(st, data, ts);
-		if (ret > 0) {
-			if (st->nvs_st[BMP_DEV_PRES])
-				st->nvs->handler(st->nvs_st[BMP_DEV_PRES],
-						 &st->pressure, ts);
-			if (st->nvs_st[BMP_DEV_TEMP])
-				st->nvs->handler(st->nvs_st[BMP_DEV_TEMP],
-						 &st->temp, ts);
+		if (len == 6) {
+			/* this data is from the DMP */
+			i = 0;
+			ret = 1;
+		} else {
+			i = 4;
+			ret = bmp_read_sts_280(st, data);
 		}
+		if (ret > 0)
+			bmp_push_280(st, &data[i], ts);
 	}
 }
 
@@ -1724,6 +1738,24 @@ static int bmp_id_dev(struct bmp_state *st, const char *name)
 	if (config_boot == NVI_CONFIG_BOOT_MPU) {
 		st->mpu_en = true;
 		bmp_id_hal(st);
+		if (st->hal->cmode_tbl == NULL || !st->i2c->irq) {
+			nmp.addr = st->i2c_addr;
+			nmp.reg = BMP_REG_CTRL;
+			nmp.ctrl = 1;
+			nmp.data_out = st->data_out;
+			nmp.delay_ms = st->hal->p->scale[st->scale_i].delay_ms;
+			nmp.delay_us = 0;
+			nmp.shutdown_bypass = false;
+			nmp.handler = NULL;
+			nmp.ext_driver = NULL;
+			ret = nvi_mpu_port_alloc(&nmp, 2);
+			dev_dbg(&st->i2c->dev, "%s MPU port/ret=%d\n",
+				__func__, ret);
+			if (ret < 0)
+				return ret;
+
+			st->port_id[WR] = ret;
+		}
 		nmp.addr = st->i2c_addr | 0x80;
 		nmp.data_out = 0;
 		nmp.delay_ms = 0;
@@ -1742,39 +1774,19 @@ static int bmp_id_dev(struct bmp_state *st, const char *name)
 			nmp.ctrl = 10; /* MPU FIFO can't handle odd size */
 			nmp.handler = &bmp_mpu_handler_280;
 		}
-		ret = nvi_mpu_port_alloc(&nmp);
+		nmp.type = SECONDARY_SLAVE_TYPE_PRESSURE;
+		nmp.id = st->hal->mpu_id;
+		ret = nvi_mpu_port_alloc(&nmp, 3);
 		dev_dbg(&st->i2c->dev, "%s MPU port/ret=%d\n",
 			__func__, ret);
-		if (ret < 0)
+		if (ret < 0) {
+			bmp_ports_free(st);
+			dev_err(&st->i2c->dev, "%s ERR %d\n",
+				__func__, ret);
 			return ret;
+		}
 
 		st->port_id[RD] = ret;
-		ret = 0;
-		if ((st->hal->cmode_tbl == NULL) || !st->i2c->irq) {
-			st->i2c->irq = 0;
-			nmp.addr = st->i2c_addr;
-			nmp.reg = BMP_REG_CTRL;
-			nmp.ctrl = 1;
-			nmp.data_out = st->data_out;
-			nmp.delay_ms = st->hal->p->scale[st->scale_i].delay_ms;
-			nmp.delay_us = 0;
-			nmp.shutdown_bypass = false;
-			nmp.handler = NULL;
-			nmp.ext_driver = NULL;
-			nmp.type = SECONDARY_SLAVE_TYPE_PRESSURE;
-			nmp.id = st->hal->mpu_id;
-			ret = nvi_mpu_port_alloc(&nmp);
-			dev_dbg(&st->i2c->dev, "%s MPU port/ret=%d\n",
-				__func__, ret);
-			if (ret < 0) {
-				bmp_ports_free(st);
-				dev_err(&st->i2c->dev, "%s ERR %d\n",
-					__func__, ret);
-			} else {
-				st->port_id[WR] = ret;
-				ret = 0;
-			}
-		}
 		nvi_mpu_fifo(st->port_id[RD],
 			     &st->cfg[BMP_DEV_PRES].fifo_rsrv_evnt_cnt,
 			     &st->cfg[BMP_DEV_PRES].fifo_max_evnt_cnt);
@@ -1782,7 +1794,7 @@ static int bmp_id_dev(struct bmp_state *st, const char *name)
 				      st->cfg[BMP_DEV_PRES].fifo_rsrv_evnt_cnt;
 		st->cfg[BMP_DEV_TEMP].fifo_max_evnt_cnt =
 				       st->cfg[BMP_DEV_PRES].fifo_max_evnt_cnt;
-		return ret;
+		return 0;
 	}
 #endif /* BMP_NVI_MPU_SUPPORT */
 	/* NVI_CONFIG_BOOT_HOST */

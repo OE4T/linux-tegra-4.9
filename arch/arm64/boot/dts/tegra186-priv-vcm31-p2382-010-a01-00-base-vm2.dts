@@ -519,6 +519,7 @@
 	};
 
 	adma@2930000 {
+		compatible = "nvidia,tegra210-adma-hv";
 		interrupt-parent = <&tegra_agic_1>;
 		dma-start-index = <4>;
 		dma-channels = <4>;

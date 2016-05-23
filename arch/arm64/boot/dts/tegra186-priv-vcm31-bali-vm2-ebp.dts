@@ -540,6 +540,7 @@
 	};
 
 	adma@2930000 {
+		compatible = "nvidia,tegra210-adma-hv";
 		status = "disabled";
 	};
 

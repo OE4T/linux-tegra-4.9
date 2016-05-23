@@ -550,6 +550,7 @@
 		status = "disabled";
 	};
 	adma: adma@2930000 {
+		compatible = "nvidia,tegra210-adma-hv";
 		dma-channels = <4>;
 		adma-page = <1>;
 		power-domains = <>;

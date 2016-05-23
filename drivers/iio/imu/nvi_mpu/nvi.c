@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(325)
+#define NVI_DRIVER_VERSION		(326)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -105,7 +105,8 @@ enum NVI_INFO {
 	NVI_INFO_REG_WR = 0xC6, /* use 0xD0 on cmd line */
 	NVI_INFO_MEM_RD,
 	NVI_INFO_MEM_WR,
-	NVI_INFO_DMP_FW
+	NVI_INFO_DMP_FW,
+	NVI_INFO_DMP_EN_MSK
 };
 
 /* regulator names in order of powering on */
@@ -1439,7 +1440,7 @@ static int nvi_en(struct nvi_state *st)
 		} else {
 			/* batch disabled - test if a DMP sensor is enabled */
 			for (i = 0; i < DEV_N_AUX; i++) {
-				if (st->hal->dmp->en_msk & (1 << i)) {
+				if (st->dmp_en_msk & (1 << i)) {
 					if (st->snsr[i].enable) {
 						dmp_en = true;
 						break;
@@ -2890,7 +2891,7 @@ static int nvi_rd(struct nvi_state *st)
 			if (val & (1 << st->hal->bit->dmp_int_stp))
 				nvi_push_event(st, DEV_STP);
 		}
-		if (st->en_msk & st->hal->dmp->en_msk)
+		if (st->en_msk & st->dmp_en_msk)
 			/* nvi_dmp_rd */
 			return nvi_fifo_rd(st, -1, 0, st->hal->dmp->fn_rd);
 
@@ -3026,7 +3027,7 @@ static int nvi_enable(void *client, int snsr_id, int enable)
 
 	if (st->en_msk & (1 << DEV_DMP)) {
 		/* DMP is currently on */
-		if (!(st->en_msk & st->hal->dmp->en_msk))
+		if (!(st->en_msk & st->dmp_en_msk))
 			/* DMP may get turned off (may stay on due to batch) so
 			 * we update timings that may have changed while DMP
 			 * was on.
@@ -3266,6 +3267,7 @@ static int nvi_nvs_write(void *client, int snsr_id, unsigned int nvs)
 	case NVI_INFO_MEM_RD:
 	case NVI_INFO_MEM_WR:
 	case NVI_INFO_DMP_FW:
+	case NVI_INFO_DMP_EN_MSK:
 		break;
 
 	case NVI_INFO_DBG_SPEW:
@@ -3312,22 +3314,35 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 	switch (info & 0xFF) {
 	case NVI_INFO_VER:
 		t = sprintf(buf, "NVI driver v. %u\n", NVI_DRIVER_VERSION);
+		if (st->en_msk & (1 << FW_LOADED)) {
+			t += sprintf(buf + t, "DMP FW v. %u\n",
+				     st->hal->dmp->fw_ver);
+			t += sprintf(buf + t, "DMP enabled=%u\n",
+				     !!(st->en_msk & (1 << DEV_DMP)));
+		}
 		t += sprintf(buf + t, "standby_en=%x\n",
 			     !!(st->en_msk & (1 << EN_STDBY)));
 		t += sprintf(buf + t, "bypass_timeout_ms=%u\n",
 			     st->bypass_timeout_ms);
-		for (i = 0; i < DEV_MPU_N; i++) {
+		for (i = 0; i < DEV_N_AUX; i++) {
 			if (st->snsr[i].push_delay_ns)
 				t += sprintf(buf + t,
 					     "%s_push_delay_ns=%lld\n",
 					     st->snsr[i].cfg.name,
 					     st->snsr[i].push_delay_ns);
 		}
-		if (st->en_msk & (1 << FW_LOADED))
-			t += sprintf(buf + t, "DMP FW v. %u\n",
-				     st->hal->dmp->fw_ver);
-			t += sprintf(buf + t, "DMP enabled=%u\n",
-				     !!(st->en_msk & (1 << DEV_DMP)));
+
+		for (i = 0; i < DEV_N_AUX; i++) {
+			if ((st->dmp_dev_msk | MSK_DEV_MPU_AUX) & (1 << i)) {
+				if (st->dmp_en_msk & (1 << i))
+					t += sprintf(buf + t, "%s_dmp_en=1\n",
+						     st->snsr[i].cfg.name);
+				else
+					t += sprintf(buf + t, "%s_dmp_en=0\n",
+						     st->snsr[i].cfg.name);
+			}
+		}
+
 		return t;
 
 	case NVI_INFO_DBG:
@@ -3447,6 +3462,10 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 	case NVI_INFO_DMP_FW:
 		ret = nvi_dmp_fw(st);
 		return sprintf(buf, "DMP FW: ERR=%d\n", ret);
+
+	case NVI_INFO_DMP_EN_MSK:
+		st->dmp_en_msk = (info >> 8) & MSK_DEV_ALL;
+		return sprintf(buf, "st->dmp_en_msk=%x\n", st->dmp_en_msk);
 
 	default:
 		i = info - NVI_INFO_SNSR_SPEW;
@@ -3834,7 +3853,8 @@ static struct sensor_cfg nvi_cfg_dflt[] = {
 	},
 };
 
-static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
+/* device tree parameters before HAL initialized */
+static int nvi_of_dt_pre(struct nvi_state *st, struct device_node *dn)
 {
 	u32 tmp;
 	char str[64];
@@ -3857,13 +3877,52 @@ static int nvi_of_dt(struct nvi_state *st, struct device_node *dn)
 			st->en_msk &= ~(1 << EN_STDBY);
 	}
 	of_property_read_u32(dn, "bypass_timeout_ms", &st->bypass_timeout_ms);
-	for (i = 0; i < DEV_MPU_N; i++) {
+	for (i = 0; i < DEV_N_AUX; i++) {
 		sprintf(str, "%s_push_delay_ns", st->snsr[i].cfg.name);
 		of_property_read_u32(dn, str,
 				     (u32 *)&st->snsr[i].push_delay_ns);
 	}
 
 	return 0;
+}
+
+/* device tree parameters after HAL initialized */
+static void nvi_of_dt_post(struct nvi_state *st, struct device_node *dn)
+{
+	u32 tmp;
+	char str[64];
+	unsigned int msk;
+	unsigned int i;
+
+	/* sensor specific parameters */
+	for (i = 0; i < DEV_N; i++)
+		nvs_of_dt(dn, &st->snsr[i].cfg, NULL);
+
+	/* sensor overrides that enable the DMP.
+	 * If the sensor is specific to the DMP and this override is
+	 * disable, then the virtual sensor is removed.
+	 */
+	if (st->hal->dmp) {
+		st->dmp_dev_msk = st->hal->dmp->dev_msk;
+		st->dmp_en_msk = st->hal->dmp->en_msk;
+		for (i = 0; i < DEV_N_AUX; i++) {
+			sprintf(str, "%s_dmp_en",
+				st->snsr[i].cfg.name);
+			if (!of_property_read_u32(dn, str, &tmp)) {
+				if (tmp) {
+					msk = 1 << i;
+					if (MSK_DEV_DMP & msk)
+						st->dmp_dev_msk |= msk;
+					st->dmp_en_msk |= msk;
+				} else {
+					msk = ~(1 << i);
+					if (MSK_DEV_DMP & (1 << i))
+						st->dmp_dev_msk &= msk;
+					st->dmp_en_msk &= msk;
+				}
+			}
+		}
+	}
 }
 
 static int nvi_init(struct nvi_state *st,
@@ -3875,17 +3934,14 @@ static int nvi_init(struct nvi_state *st,
 	unsigned int n;
 	int ret;
 
-	nvi_of_dt(st, st->i2c->dev.of_node);
+	nvi_of_dt_pre(st, st->i2c->dev.of_node);
 	nvi_pm_init(st);
 	ret = nvi_id_dev(st, i2c_dev_id);
 	if (ret)
 		return ret;
 
 	if (st->i2c->dev.of_node) {
-		/* sensor specific parameters */
-		for (i = 0; i < DEV_N; i++)
-			nvs_of_dt(st->i2c->dev.of_node,
-				  &st->snsr[i].cfg, NULL);
+		nvi_of_dt_post(st, st->i2c->dev.of_node);
 	} else {
 		pdata = dev_get_platdata(&st->i2c->dev);
 		if (pdata) {
@@ -3917,7 +3973,7 @@ static int nvi_init(struct nvi_state *st,
 	} else {
 		dev_info(&st->i2c->dev, "%s DMP FW loaded\n", __func__);
 		/* remove DMP dependent sensors not supported by this DMP */
-		n = MSK_DEV_DMP ^ st->hal->dmp->dev_msk;
+		n = MSK_DEV_DMP ^ st->dmp_dev_msk;
 	}
 	if (n) {
 		for (i = 0; i < DEV_N; i++) {

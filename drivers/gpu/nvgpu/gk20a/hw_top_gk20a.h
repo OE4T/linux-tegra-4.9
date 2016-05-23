@@ -158,6 +158,10 @@ static inline u32 top_device_info_entry_engine_type_v(void)
 {
 	return 0x00000003;
 }
+static inline u32 top_device_info_entry_data_v(void)
+{
+	return 0x00000001;
+}
 static inline u32 top_fs_status_fbp_r(void)
 {
 	return 0x00022548;

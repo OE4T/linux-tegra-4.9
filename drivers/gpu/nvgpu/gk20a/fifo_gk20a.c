@@ -44,39 +44,49 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
  * Link engine IDs to MMU IDs and vice versa.
  */
 
-static inline u32 gk20a_engine_id_to_mmu_id(u32 engine_id)
+static inline u32 gk20a_engine_id_to_mmu_id(struct gk20a *g, u32 engine_id)
 {
-	switch (engine_id) {
-	case ENGINE_GR_GK20A:
-		return 0x00;
-	case ENGINE_CE2_GK20A:
-		return 0x1b;
-	default:
-		return ~0;
+	u32 fault_id = ~0;
+
+	if (engine_id < ENGINE_INVAL_GK20A) {
+		struct fifo_engine_info_gk20a *info =
+			&g->fifo.engine_info[engine_id];
+
+		fault_id = info->fault_id;
 	}
+	return fault_id;
 }
 
-static inline u32 gk20a_mmu_id_to_engine_id(u32 engine_id)
+static inline u32 gk20a_mmu_id_to_engine_id(struct gk20a *g, u32 fault_id)
 {
-	switch (engine_id) {
-	case 0x00:
-		return ENGINE_GR_GK20A;
-	case 0x1b:
-		return ENGINE_CE2_GK20A;
-	default:
-		return ~0;
+	u32 engine_id;
+	u32 return_engine_id = ~0;
+
+	for (engine_id = 0; engine_id < ENGINE_INVAL_GK20A; engine_id++) {
+		struct fifo_engine_info_gk20a *info =
+			&g->fifo.engine_info[engine_id];
+
+		if (info->fault_id == fault_id) {
+			return_engine_id = engine_id;
+			break;
+		}
 	}
+	return return_engine_id;
 }
 
-int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type)
+int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
+					u32 *inst_id)
 {
 	int ret = ENGINE_INVAL_GK20A;
 
 	gk20a_dbg_info("engine type %d", engine_type);
 	if (engine_type == top_device_info_type_enum_graphics_v())
 		ret = ENGINE_GR_GK20A;
-	else if (engine_type == top_device_info_type_enum_copy2_v())
+	else if (engine_type == top_device_info_type_enum_copy2_v()) {
 		ret = ENGINE_CE2_GK20A;
+		if (inst_id)
+			*inst_id = 0x2;
+	}
 	else
 		gk20a_err(g->dev, "unknown engine %d", engine_type);
 
@@ -95,6 +105,9 @@ static int init_engine_info(struct fifo_gk20a *f)
 	u32 pbdma_id = ~0;
 	u32 intr_id = ~0;
 	u32 reset_id = ~0;
+	u32 inst_id  = 0;
+	u32 pri_base = 0;
+	u32 fault_id = 0;
 
 	gk20a_dbg_fn("");
 
@@ -152,7 +165,15 @@ static int init_engine_info(struct fifo_gk20a *f)
 			u32 engine_type =
 				top_device_info_type_enum_v(table_entry);
 			engine_enum =
-				g->ops.fifo.engine_enum_from_type(g, engine_type);
+				g->ops.fifo.engine_enum_from_type(g,
+						engine_type, &inst_id);
+		} else if (entry == top_device_info_entry_data_v()) {
+			/* gk20a don't support device_info_data
+			   packet parsing */
+			if (g->ops.fifo.device_info_data_parse)
+				g->ops.fifo.device_info_data_parse(g,
+					table_entry, &inst_id, &pri_base,
+					&fault_id);
 		}
 
 		if (!top_device_info_chain_v(table_entry)) {
@@ -164,6 +185,13 @@ static int init_engine_info(struct fifo_gk20a *f)
 				info->reset_mask |= BIT(reset_id);
 				info->runlist_id = runlist_id;
 				info->pbdma_id = pbdma_id;
+				info->inst_id  = inst_id;
+				info->pri_base = pri_base;
+
+				if (!fault_id &&
+				(engine_enum == ENGINE_CE2_GK20A))
+					fault_id = 0x1b;
+				info->fault_id = fault_id;
 
 				engine_enum = ENGINE_INVAL_GK20A;
 			}
@@ -948,7 +976,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 {
 	bool fake_fault;
 	unsigned long fault_id;
-	unsigned long engine_mmu_id;
+	unsigned long engine_mmu_fault_id;
 	bool verbose = true;
 	u32 grfifo_ctl;
 
@@ -988,10 +1016,11 @@ static bool gk20a_fifo_handle_mmu_fault(
 
 
 	/* go through all faulted engines */
-	for_each_set_bit(engine_mmu_id, &fault_id, 32) {
+	for_each_set_bit(engine_mmu_fault_id, &fault_id, 32) {
 		/* bits in fifo_intr_mmu_fault_id_r do not correspond 1:1 to
 		 * engines. Convert engine_mmu_id to engine_id */
-		u32 engine_id = gk20a_mmu_id_to_engine_id(engine_mmu_id);
+		u32 engine_id = gk20a_mmu_id_to_engine_id(g,
+					engine_mmu_fault_id);
 		struct fifo_mmu_fault_info_gk20a f;
 		struct channel_gk20a *ch = NULL;
 		struct tsg_gk20a *tsg = NULL;
@@ -1007,7 +1036,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 				|| ctx_status ==
 				fifo_engine_status_ctx_status_ctxsw_load_v());
 
-		get_exception_mmu_fault_info(g, engine_mmu_id, &f);
+		get_exception_mmu_fault_info(g, engine_mmu_fault_id, &f);
 		trace_gk20a_mmu_fault(f.fault_hi_v,
 				      f.fault_lo_v,
 				      f.fault_info_v,
@@ -1189,7 +1218,7 @@ static void gk20a_fifo_trigger_mmu_fault(struct gk20a *g,
 
 		gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id),
 			     fifo_trigger_mmu_fault_id_f(
-			     gk20a_engine_id_to_mmu_id(engine_id)) |
+			     gk20a_engine_id_to_mmu_id(g, engine_id)) |
 			     fifo_trigger_mmu_fault_enable_f(1));
 	}
 
@@ -1332,7 +1361,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 		engine_ids |= __engine_ids;
 		for_each_set_bit(engine_id, &engine_ids, 32) {
 			mmu_fault_engines |=
-				BIT(gk20a_engine_id_to_mmu_id(engine_id));
+				BIT(gk20a_engine_id_to_mmu_id(g, engine_id));
 		}
 	} else {
 		/* store faulted engines in advance */
@@ -1353,7 +1382,7 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 				if (ref_type == type && ref_id == id) {
 					engine_ids |= BIT(i);
 					mmu_fault_engines |=
-					BIT(gk20a_engine_id_to_mmu_id(i));
+					BIT(gk20a_engine_id_to_mmu_id(g, i));
 				}
 			}
 		}
@@ -2728,4 +2757,6 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.set_runlist_interleave = gk20a_fifo_set_runlist_interleave;
 	gops->fifo.force_reset_ch = gk20a_fifo_force_reset_ch;
 	gops->fifo.engine_enum_from_type = gk20a_fifo_engine_enum_from_type;
+	/* gk20a don't support device_info_data packet parsing */
+	gops->fifo.device_info_data_parse = NULL;
 }

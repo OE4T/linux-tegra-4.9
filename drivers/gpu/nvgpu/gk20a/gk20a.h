@@ -340,7 +340,11 @@ struct gpu_ops {
 		int (*channel_set_timeslice)(struct channel_gk20a *ch,
 					u32 timeslice);
 		int (*force_reset_ch)(struct channel_gk20a *ch, bool verbose);
-		int (*engine_enum_from_type)(struct gk20a *g, u32 engine_type);
+		int (*engine_enum_from_type)(struct gk20a *g, u32 engine_type,
+					u32 *inst_id);
+		void (*device_info_data_parse)(struct gk20a *g,
+					u32 table_entry, u32 *inst_id,
+					u32 *pri_base, u32 *fault_id);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

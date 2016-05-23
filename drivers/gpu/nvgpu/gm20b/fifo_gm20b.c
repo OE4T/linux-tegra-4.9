@@ -19,6 +19,7 @@
 #include "hw_ccsr_gm20b.h"
 #include "hw_ram_gm20b.h"
 #include "hw_fifo_gm20b.h"
+#include "hw_top_gm20b.h"
 
 static void channel_gm20b_bind(struct channel_gk20a *c)
 {
@@ -45,16 +46,17 @@ static void channel_gm20b_bind(struct channel_gk20a *c)
 		 ccsr_channel_enable_set_true_f());
 }
 
-static inline u32 gm20b_engine_id_to_mmu_id(u32 engine_id)
+static inline u32 gm20b_engine_id_to_mmu_id(struct gk20a *g, u32 engine_id)
 {
-	switch (engine_id) {
-	case ENGINE_GR_GK20A:
-		return 0;
-	case ENGINE_CE2_GK20A:
-		return 1;
-	default:
-		return ~0;
+	u32 fault_id = ~0;
+
+	if (engine_id < ENGINE_INVAL_GK20A) {
+		struct fifo_engine_info_gk20a *info =
+			&g->fifo.engine_info[engine_id];
+
+		fault_id = info->fault_id;
 	}
+	return fault_id;
 }
 
 static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
@@ -68,14 +70,15 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 
 	/* trigger faults for all bad engines */
 	for_each_set_bit(engine_id, &engine_ids, 32) {
-		u32 engine_mmu_id;
+		u32 engine_mmu_fault_id;
 
 		if (engine_id > g->fifo.max_engines) {
 			gk20a_err(dev_from_gk20a(g),
 				  "faulting unknown engine %ld", engine_id);
 		} else {
-			engine_mmu_id = gm20b_engine_id_to_mmu_id(engine_id);
-			gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_mmu_id),
+			engine_mmu_fault_id = gm20b_engine_id_to_mmu_id(g,
+								engine_id);
+			gk20a_writel(g, fifo_trigger_mmu_fault_r(engine_id),
 				     fifo_trigger_mmu_fault_enable_f(1));
 		}
 	}
@@ -106,6 +109,26 @@ static u32 gm20b_fifo_get_num_fifos(struct gk20a *g)
 	return ccsr_channel__size_1_v();
 }
 
+void gm20b_device_info_data_parse(struct gk20a *g,
+						u32 table_entry, u32 *inst_id,
+						u32 *pri_base, u32 *fault_id)
+{
+	if (top_device_info_data_type_v(table_entry) ==
+	    top_device_info_data_type_enum2_v()) {
+		if (pri_base) {
+			*pri_base =
+				(top_device_info_data_pri_base_v(table_entry)
+				<< top_device_info_data_pri_base_align_v());
+		}
+		if (fault_id && (top_device_info_data_fault_id_v(table_entry) ==
+			top_device_info_data_fault_id_valid_v())) {
+			*fault_id =
+			    top_device_info_data_fault_id_enum_v(table_entry);
+		}
+	} else
+		gk20a_err(g->dev, "unknown device_info_data %d",
+				top_device_info_data_type_v(table_entry));
+}
 void gm20b_init_fifo(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = channel_gm20b_bind;
@@ -127,4 +150,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.set_runlist_interleave = gk20a_fifo_set_runlist_interleave;
 	gops->fifo.force_reset_ch = gk20a_fifo_force_reset_ch;
 	gops->fifo.engine_enum_from_type = gk20a_fifo_engine_enum_from_type;
+	gops->fifo.device_info_data_parse = gm20b_device_info_data_parse;
 }

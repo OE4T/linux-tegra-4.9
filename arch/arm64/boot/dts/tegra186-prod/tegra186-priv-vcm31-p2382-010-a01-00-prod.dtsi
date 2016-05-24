@@ -12,4 +12,21 @@
 #include "tegra186-soc/tegra186-soc-vcm-prod.dtsi"
 
 / {
+
+	pinctrl@3520000 {
+		prod-settings {
+			#prod-cells = <4>;
+			mask-one-style;
+			prod_c_utmi0 {
+				board {
+					prod = <0 0x94 0x000001cf 0x00000000>;
+				};
+			};
+			prod_c_utmi2 {
+				board {
+					prod = <0 0x114 0x000001cf 0x00000000>;
+				};
+			};
+		};
+	};
 };

@@ -50,7 +50,8 @@ enum waitlist_state {
 	WLS_HANDLED
 };
 
-static inline bool nvhost_intr_is_virtual_dev(struct nvhost_intr_syncpt *sp)
+static inline bool __maybe_unused
+nvhost_intr_is_virtual_dev(struct nvhost_intr_syncpt *sp)
 {
 	struct nvhost_intr *intr = intr_syncpt_to_intr(sp);
 	struct nvhost_master *host = intr_to_dev(intr);

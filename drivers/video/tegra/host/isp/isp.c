@@ -208,12 +208,14 @@ static int isp_isomgr_release(struct isp *tegra_isp)
 }
 #endif
 
-static inline u32 tegra_isp_read(struct isp *tegra_isp, u32 offset)
+static inline u32 __maybe_unused
+tegra_isp_read(struct isp *tegra_isp, u32 offset)
 {
 	return readl(tegra_isp->base + offset);
 }
 
-static inline void tegra_isp_write(struct isp *tegra_isp, u32 offset, u32 data)
+static inline void __maybe_unused
+tegra_isp_write(struct isp *tegra_isp, u32 offset, u32 data)
 {
 	writel(data, tegra_isp->base + offset);
 }

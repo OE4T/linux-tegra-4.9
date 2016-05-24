@@ -42,6 +42,7 @@
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
 static DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_common_channel_wq);
+static DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_mempool_wq);
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
@@ -2155,14 +2156,193 @@ static int tegra_nvdisp_parse_imp_results(struct tegra_dc *dc,
 	return 0;
 }
 
+static bool tegra_nvdisp_any_new_mempool_needed(void)
+{
+	int i;
+
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		struct tegra_dc *dc = tegra_dc_get_dc(i);
+		if (dc && dc->new_mempool_needed)
+			return true;
+	}
+
+	return false;
+}
+
+int tegra_nvdisp_wait_for_mempool_to_promote(struct tegra_dc *dc)
+{
+	int ret = 0;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	ret = ___wait_event(tegra_nvdisp_mempool_wq,
+		___wait_cond_timeout(!dc->new_mempool_pending),
+		TASK_INTERRUPTIBLE, 0, HZ,
+		mutex_unlock(&tegra_nvdisp_lock);
+		__ret = schedule_timeout(__ret);
+		mutex_lock(&tegra_nvdisp_lock));
+
+	mutex_unlock(&tegra_nvdisp_lock);
+	return ret;
+}
+
+void tegra_nvdisp_notify_mempool_promoted(struct tegra_dc *dc)
+{
+	dc->new_mempool_needed = false;
+	dc->new_mempool_pending = false;
+	wake_up(&tegra_nvdisp_mempool_wq);
+}
+
+static void tegra_nvdisp_program_mempool(struct tegra_dc *dc,
+	struct tegra_dc_imp_head_results *res)
+{
+	u32 entries;
+	int j;
+
+	/* program cursor mempool */
+	entries = res->pool_config_entries_cursor;
+	tegra_dc_writel(dc,
+		nvdisp_ihub_cursor_pool_config_entries_f(entries),
+		nvdisp_ihub_cursor_pool_config_r());
+
+	for (j = 0; j < res->num_windows; j++) {
+		struct tegra_dc_win *win;
+
+		win = tegra_dc_get_window(dc, res->win_ids[j]);
+		if (!win)
+			continue;
+
+		/* program wgrp mempool */
+		entries = res->pool_config_entries_win[j];
+		nvdisp_win_write(win,
+			win_ihub_pool_config_entries_f(entries),
+			win_ihub_pool_config_r());
+	}
+
+	tegra_dc_writel(dc,
+		nvdisp_cmd_state_ctrl_common_act_update_enable_f(),
+		nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+	tegra_dc_writel(dc,
+		nvdisp_cmd_state_ctrl_common_act_req_enable_f(),
+		nvdisp_cmd_state_ctrl_r());
+	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
+
+	dc->new_mempool_pending = true;
+	tegra_nvdisp_wait_for_mempool_to_promote(dc);
+}
+
+void tegra_nvdisp_phase_in_mempool(struct tegra_dc *dc)
+{
+	int i;
+
+	if (!dc->common_channel_reserved)
+		return;
+
+	/* Make sure there's no pending mempool change on the current head. */
+	tegra_nvdisp_wait_for_mempool_to_promote(dc);
+
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
+		if (other_dc && other_dc->new_mempool_needed)
+			tegra_nvdisp_program_mempool(other_dc,
+				&dc->imp_results[other_dc->ctrl_num]);
+	}
+}
+EXPORT_SYMBOL(tegra_nvdisp_phase_in_mempool);
+
+static void tegra_nvdisp_handle_mempool_allocation(struct tegra_dc *dc)
+{
+	/*
+	 * Per the register manual, SW must follow these rules in order to
+	 * dynamically adjust mempool in a safe manner:
+	 *
+	 * "1. at no time can the sum of the entries allocated to the wgrps
+	 *     exceed the number of available entries in the latency buffer
+	 *     (IHUB_COMMON_CAPA_MEMPOOL_ENTRIES).
+	 *  2. when changing allocations, all allocation decreases must be
+	 *     done first, then once the decreases are all effective, the
+	 *     increases can be done lest an intermediate state occur which
+	 *     violates the first rule above."
+	 *
+	 * For the following scenario, assume that the state of a head refers to
+	 * its head-specific state and the state of any windows that it owns.
+	 * Suppose we have three active heads - H0, H1, H2 - and the state of H0
+	 * is changing in a manner that affects the mempool allocation for some
+	 * subset of the windows on all three heads. Only one PROPOSE can be
+	 * active at any given time, which means that the state of H1 and H2
+	 * cannot be updated during this period.
+	 *
+	 * Since the state of H1 and H2 isn't being updated, the mempool for
+	 * their windows will either all decrease or all increase:
+	 * - In the first case, we will promote the mempool for these windows
+	 *   during PROPOSE, before the new window and common channel state for
+	 *   H0 is updated in the subsequent flip.
+	 * - In the second case, we will phase in the mempool for these windows
+	 *   during the flip worker's cleanup, after the new window and common
+	 *   channel state for H0 has already been activated.
+	 *
+	 * Note that it doesn't matter if we're reducing the mempool for some of
+	 * H0's windows while increasing the mempool for its other windows since
+	 * these updates are all contained to H0 and will be promoted together
+	 * on its next vblank.
+	 */
+	bool mempool_all_decreasing = true;
+	int i, j;
+
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		struct tegra_dc_imp_head_results *new_result;
+		struct tegra_dc *other_dc;
+		u32 old_val, new_val;
+
+		other_dc = tegra_dc_get_dc(i);
+		if (!other_dc || !other_dc->enabled || other_dc == dc)
+			continue;
+
+		new_result = &dc->imp_results[other_dc->ctrl_num];
+		old_val = nvdisp_ihub_cursor_pool_config_entries_f(
+				tegra_dc_readl(other_dc,
+				nvdisp_ihub_cursor_pool_config_r()));
+		new_val = new_result->pool_config_entries_cursor;
+
+		if (new_val != old_val) {
+			other_dc->new_mempool_needed = true;
+			mempool_all_decreasing = (new_val < old_val);
+			continue;
+		}
+
+		for (j = 0; j < new_result->num_windows; j++) {
+			struct tegra_dc_win *win;
+			int win_id;
+
+			win_id = new_result->win_ids[j];
+			win = tegra_dc_get_window(other_dc, win_id);
+			if (!win)
+				continue;
+
+			old_val = win_ihub_pool_config_entries_f(
+					nvdisp_win_read(win,
+					win_ihub_pool_config_r()));
+			new_val = new_result->pool_config_entries_win[j];
+			if (new_val != old_val) {
+				other_dc->new_mempool_needed = true;
+				mempool_all_decreasing = (new_val < old_val);
+				break;
+			}
+		}
+	}
+
+	if (mempool_all_decreasing)
+		tegra_nvdisp_phase_in_mempool(dc);
+}
+
 static bool tegra_nvdisp_common_channel_is_free(void)
 {
 	int i;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
 		struct tegra_dc *dc = tegra_dc_get_dc(i);
-
-		if (dc && (dc->common_channel_reserved || dc->new_bw_pending))
+		if (dc && dc->common_channel_reserved)
 			return false;
 	}
 
@@ -2190,7 +2370,6 @@ int tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
 		mutex_lock(&tegra_nvdisp_lock));
 
 	dc->common_channel_reserved = true;
-
 unlock_and_ret:
 	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
@@ -2200,9 +2379,47 @@ void tegra_nvdisp_release_common_channel(struct tegra_dc *dc)
 {
 	dc->common_channel_reserved = false;
 	dc->common_channel_programmed = false;
-
 	wake_up(&tegra_nvdisp_common_channel_wq);
 }
+
+void tegra_nvdisp_handle_common_state_promotion(struct tegra_dc *dc)
+{
+	mutex_lock(&tegra_nvdisp_lock);
+
+	/* Return immediately if COMMON_ACT_REQ is still pending. */
+	if (tegra_dc_readl(dc, DC_CMD_STATE_CONTROL) & COMMON_ACT_REQ) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		return;
+	}
+
+	if (dc->new_mempool_pending)
+		tegra_nvdisp_notify_mempool_promoted(dc);
+
+	/*
+	 * Release the COMMON channel if the following conditions are met:
+	 * - This HEAD has programmed some COMMON channel state and
+	 *   COMMON_ACT_REQ has cleared.
+	 * - This HEAD has no pending bandwidth that needs to take effect.
+	 * - Any new mempool allocations have taken effect for the wgrps on each
+	 *   head.
+	 *
+	 * Also re-enable ihub latency events before releasing the COMMON
+	 * channel.
+	 */
+	if (dc->common_channel_programmed &&
+		!dc->new_bw_pending &&
+		!tegra_nvdisp_any_new_mempool_needed()) {
+		tegra_dc_writel(dc,
+			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
+			nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+			nvdisp_ihub_misc_ctl_r());
+
+		tegra_nvdisp_release_common_channel(dc);
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+}
+EXPORT_SYMBOL(tegra_nvdisp_handle_common_state_promotion);
 
 int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data)
@@ -2220,36 +2437,14 @@ int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
 	if (ret)
 		tegra_nvdisp_release_common_channel(dc);
 
+	tegra_nvdisp_handle_mempool_allocation(dc);
 	return ret;
 }
 EXPORT_SYMBOL(tegra_nvdisp_process_imp_results);
 
-void tegra_nvdisp_signal_common_channel(struct tegra_dc *dc)
-{
-	mutex_lock(&tegra_nvdisp_lock);
-
-	/*
-	 * Release the common channel if COMMON_ACT_REQ has been cleared
-	 * for this HEAD.
-	 */
-	if (dc->common_channel_reserved &&
-		dc->common_channel_programmed &&
-		!(tegra_dc_readl(dc, DC_CMD_STATE_CONTROL) & COMMON_ACT_REQ)) {
-		/* Re-enable ihub latency events. */
-		tegra_dc_writel(dc,
-			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
-			nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-			nvdisp_ihub_misc_ctl_r());
-
-		tegra_nvdisp_release_common_channel(dc);
-	}
-
-	mutex_unlock(&tegra_nvdisp_lock);
-}
-EXPORT_SYMBOL(tegra_nvdisp_signal_common_channel);
-
 static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
-			struct tegra_dc_imp_head_results *imp_head_results)
+			struct tegra_dc_imp_head_results *imp_head_results,
+			int owner_head)
 {
 	struct tegra_dc_win *win = NULL;
 	u32 val;
@@ -2294,6 +2489,18 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 		nvdisp_win_write(win,
 			win_precomp_pipe_meter_val_f(val),
 			win_precomp_pipe_meter_r());
+
+		/*
+		 * Only program wgrp mempool for the head whose window state is
+		 * changing. Mempool changes on other heads will be taken care
+		 * of separately.
+		 */
+		if (dc->ctrl_num == owner_head) {
+			val = imp_head_results->pool_config_entries_win[i];
+			nvdisp_win_write(win,
+				win_ihub_pool_config_entries_f(val),
+				win_ihub_pool_config_r());
+		}
 	}
 
 	/* program cursor fetch meter slots */
@@ -2307,6 +2514,17 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 	tegra_dc_writel(dc,
 			nvdisp_cursor_pipe_meter_val_f(val),
 			nvdisp_cursor_pipe_meter_r());
+
+	/*
+	 * Only program cursor mempool for this head. See comment for wgrp
+	 * mempool above.
+	 */
+	if (dc->ctrl_num == owner_head) {
+		val = imp_head_results->pool_config_entries_cursor;
+		tegra_dc_writel(dc,
+				nvdisp_ihub_cursor_pool_config_entries_f(val),
+				nvdisp_ihub_cursor_pool_config_r());
+	}
 }
 
 void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
@@ -2318,7 +2536,8 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
 		if (other_dc && other_dc->enabled)
 			tegra_nvdisp_program_imp_head_results(other_dc,
-					&dc->imp_results[other_dc->ctrl_num]);
+					&dc->imp_results[other_dc->ctrl_num],
+					dc->ctrl_num);
 	}
 
 	/* program common win and cursor fetch meter slots */
@@ -2326,6 +2545,7 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 		(dc->imp_results[dc->ctrl_num].cursor_slots_value << 8);
 	tegra_dc_writel(dc, val, nvdisp_ihub_common_fetch_meter_r());
 
+	dc->new_mempool_pending = true;
 	dc->common_channel_programmed = true;
 }
 

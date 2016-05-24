@@ -220,6 +220,13 @@ static bool gp10b_tegra_is_railgated(struct device *dev)
 static int gp10b_tegra_railgate(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
+
+	/* remove emc frequency floor */
+	if (profile)
+		tegra_bwmgr_set_emc(
+			(struct tegra_bwmgr_client *)profile->private_data,
+			0, TEGRA_BWMGR_SET_EMC_FLOOR);
 
 	if (tegra_bpmp_running() &&
 	    tegra_powergate_is_powered(TEGRA_POWERGATE_GPU)) {
@@ -237,6 +244,7 @@ static int gp10b_tegra_unrailgate(struct device *dev)
 {
 	int ret = 0;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct gk20a_scale_profile *profile = platform->g->scale_profile;
 
 	if (tegra_bpmp_running()) {
 		int i;
@@ -246,6 +254,13 @@ static int gp10b_tegra_unrailgate(struct device *dev)
 				clk_prepare_enable(platform->clk[i]);
 		}
 	}
+
+	/* to start with set emc frequency floor to max rate*/
+	if (profile)
+		tegra_bwmgr_set_emc(
+			(struct tegra_bwmgr_client *)profile->private_data,
+			tegra_bwmgr_get_max_emc_rate(),
+			TEGRA_BWMGR_SET_EMC_FLOOR);
 	return ret;
 }
 
@@ -407,7 +422,6 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	/* frequency scaling configuration */
 	.prescale = gp10b_tegra_prescale,
 	.postscale = gp10b_tegra_postscale,
-
 	.devfreq_governor = "nvhost_podgov",
 	.qos_id = PM_QOS_GPU_FREQ_MIN,
 

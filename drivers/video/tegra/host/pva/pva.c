@@ -33,6 +33,7 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t194/t194.h"
+#include "pva_queue.h"
 #include "pva.h"
 
 /* Map PVA-A and PVA-B to respective configuration items in nvhost */
@@ -46,17 +47,6 @@ static struct of_device_id tegra_pva_of_match[] = {
 		.compatible = "nvidia,tegra194-pva",
 		.data = (struct nvhost_device_data *)&t19_pvab_info },
 	{ },
-};
-
-/**
- * struct pva - Driver private data, shared with all applications
- *
- * @mutex:	Mutex to ensure exclusive access to the mutable entries
- * @pdev:	Pointer to the PVA device
- */
-struct pva {
-	struct mutex mutex;
-	struct platform_device *pdev;
 };
 
 int pva_finalize_poweron(struct platform_device *pdev)
@@ -83,6 +73,13 @@ static int pva_probe(struct platform_device *pdev)
 	match = of_match_device(tegra_pva_of_match, dev);
 	pdata = (struct nvhost_device_data *)match->data;
 
+	WARN_ON(!pdata);
+	if (!pdata) {
+		dev_info(dev, "no platform data\n");
+		err = -ENODATA;
+		goto err_get_pdata;
+	}
+
 	pva = devm_kzalloc(dev, sizeof(*pva), GFP_KERNEL);
 	if (!pva) {
 		err = -ENOMEM;
@@ -90,7 +87,7 @@ static int pva_probe(struct platform_device *pdev)
 	}
 
 	/* Initialize PVA private data */
-	mutex_init(&pva->mutex);
+	mutex_init(&pva->allocated_queues_mutex);
 	pva->pdev = pdev;
 
 	/* Initialize nvhost specific data */
@@ -124,14 +121,20 @@ static int pva_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_client_device_init;
 
+	pva_queue_init(pva);
+
 	return 0;
 
 err_client_device_init:
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 err_add_domain:
+#endif
 	nvhost_module_deinit(pdev);
 err_module_init:
 err_get_resources:
+	devm_kfree(dev, pva);
 err_alloc_pva:
+err_get_pdata:
 
 	return err;
 }

@@ -750,7 +750,8 @@ void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu);
 void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu);
 int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data);
-void tegra_nvdisp_signal_common_channel(struct tegra_dc *dc);
+void tegra_nvdisp_handle_common_state_promotion(struct tegra_dc *dc);
+void tegra_nvdisp_phase_in_mempool(struct tegra_dc *dc);
 void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 				struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);

@@ -232,6 +232,8 @@ struct tegra_dc {
 	bool					common_channel_reserved;
 	bool					common_channel_programmed;
 	bool					new_bw_pending;
+	bool					new_mempool_needed;
+	bool					new_mempool_pending;
 #endif
 
 #if defined(CONFIG_TEGRA_DC_CMU)

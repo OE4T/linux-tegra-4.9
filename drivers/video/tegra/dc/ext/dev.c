@@ -874,6 +874,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		tegra_dc_program_bandwidth(dc, true);
 		if (!tegra_dc_has_multiple_dc())
 			tegra_dc_call_flip_callback();
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		tegra_nvdisp_phase_in_mempool(dc);
+#endif
 	}
 
 	if (!skip_flip) {

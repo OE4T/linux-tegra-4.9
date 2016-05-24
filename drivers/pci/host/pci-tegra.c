@@ -533,13 +533,13 @@ static inline u32 afi_readl(struct tegra_pcie *pcie, unsigned long offset)
 	return readl(offset + pcie->afi);
 }
 
-static inline void pads_writel(struct tegra_pcie *pcie, u32 value,
+static inline void __maybe_unused pads_writel(struct tegra_pcie *pcie, u32 value,
 							   unsigned long offset)
 {
 	writel(value, offset + pcie->pads);
 }
 
-static inline u32 pads_readl(struct tegra_pcie *pcie, unsigned long offset)
+static inline u32 __maybe_unused pads_readl(struct tegra_pcie *pcie, unsigned long offset)
 {
 	return readl(offset + pcie->pads);
 }

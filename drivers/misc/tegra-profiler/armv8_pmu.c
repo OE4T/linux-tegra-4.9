@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/armv8_pmu.c
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -232,7 +232,7 @@ armv8_pmu_pmxevtyper_write(u32 event)
 		     "r" (event & QUADD_ARMV8_EVTSEL_MASK));
 }
 
-static inline u32
+static inline u32 __maybe_unused
 armv8_pmu_pmintenset_read(void)
 {
 	u32 val;
@@ -242,21 +242,21 @@ armv8_pmu_pmintenset_read(void)
 	return val;
 }
 
-static inline void
+static inline void __maybe_unused
 armv8_pmu_pmintenset_write(u32 val)
 {
 	/* Write Performance Monitors Interrupt Enable Set Register */
 	asm volatile("msr pmintenset_el1, %0" : : "r" (val));
 }
 
-static inline void
+static inline void __maybe_unused
 armv8_pmu_pmintenclr_write(u32 val)
 {
 	/* Write Performance Monitors Interrupt Enable Clear Register */
 	asm volatile("msr pmintenclr_el1, %0" : : "r" (val));
 }
 
-static inline u32
+static inline u32 __maybe_unused
 armv8_pmu_pmovsclr_read(void)
 {
 	u32 val;

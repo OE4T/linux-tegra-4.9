@@ -369,6 +369,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	/* power management configuration */
 	.can_railgate           = true,
 	.enable_elpg            = true,
+	.can_elpg               = true,
 	.enable_blcg		= true,
 	.enable_slcg		= true,
 	.enable_elcg		= true,

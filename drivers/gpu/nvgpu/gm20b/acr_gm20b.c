@@ -1058,7 +1058,7 @@ int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 	u32 img_size_in_bytes = 0;
 	u32 status, size;
 	u64 start;
-	struct acr_gm20b *acr = &g->acr;
+	struct acr_desc *acr = &g->acr;
 	const struct firmware *acr_fw = acr->acr_fw;
 	struct flcn_bl_dmem_desc *bl_dmem_desc = &acr->bl_dmem_desc;
 	u32 *acr_ucode_header_t210_load;
@@ -1204,7 +1204,7 @@ static int bl_bootstrap(struct pmu_gk20a *pmu,
 	struct flcn_bl_dmem_desc *pbl_desc, u32 bl_sz)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
-	struct acr_gm20b *acr = &g->acr;
+	struct acr_desc *acr = &g->acr;
 	struct mm_gk20a *mm = &g->mm;
 	u32 imem_dst_blk = 0;
 	u32 virt_addr = 0;
@@ -1375,7 +1375,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	struct device *d = dev_from_gk20a(g);
 	int err = 0;
 	u32 bl_sz;
-	struct acr_gm20b *acr = &g->acr;
+	struct acr_desc *acr = &g->acr;
 	const struct firmware *hsbl_fw = acr->hsbl_fw;
 	struct hsflcn_bl_desc *pmu_bl_gm10x_desc;
 	u32 *pmu_bl_gm10x = NULL;

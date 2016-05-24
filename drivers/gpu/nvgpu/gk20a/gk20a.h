@@ -26,7 +26,7 @@ struct sim_gk20a;
 struct gk20a_ctxsw_ucode_segments;
 struct gk20a_fecs_trace;
 struct gk20a_ctxsw_trace;
-struct acr_gm20b;
+struct acr_desc;
 
 #include <linux/sched.h>
 #include <linux/spinlock.h>
@@ -49,6 +49,7 @@ struct acr_gm20b;
 #include "therm_gk20a.h"
 #include "platform_gk20a.h"
 #include "gm20b/acr_gm20b.h"
+#include "acr.h"
 #include "cde_gk20a.h"
 #include "debug_gk20a.h"
 
@@ -669,7 +670,7 @@ struct gk20a {
 	struct sim_gk20a sim;
 	struct mm_gk20a mm;
 	struct pmu_gk20a pmu;
-	struct acr_gm20b acr;
+	struct acr_desc acr;
 	struct cooling_device_gk20a gk20a_cdev;
 
 	/* Save pmu fw here so that it lives cross suspend/resume.

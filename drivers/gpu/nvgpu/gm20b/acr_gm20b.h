@@ -386,24 +386,6 @@ struct acr_fw_header {
 	u32 hdr_size; /*size of above header*/
 };
 
-struct acr_gm20b {
-	struct mem_desc ucode_blob;
-	struct bin_hdr *bl_bin_hdr;
-	struct hsflcn_bl_desc *pmu_hsbl_desc;
-	struct bin_hdr *hsbin_hdr;
-	struct acr_fw_header *fw_hdr;
-	u32 pmu_args;
-	const struct firmware *acr_fw;
-	struct flcn_acr_desc *acr_dmem_desc;
-	struct mem_desc acr_ucode;
-	const struct firmware *hsbl_fw;
-	struct mem_desc hsbl_ucode;
-	struct flcn_bl_dmem_desc bl_dmem_desc;
-	const struct firmware *pmu_fw;
-	const struct firmware *pmu_desc;
-	u32 capabilities;
-};
-
 void gm20b_init_secure_pmu(struct gpu_ops *gops);
 int prepare_ucode_blob(struct gk20a *g);
 int gm20b_pmu_setup_sw(struct gk20a *g);

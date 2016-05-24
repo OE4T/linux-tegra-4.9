@@ -52,12 +52,12 @@ struct gk20a_emc_params {
 };
 
 static void __iomem *pmc = IO_ADDRESS(TEGRA_PMC_BASE);
-static inline u32 pmc_read(unsigned long reg)
+static inline u32 __maybe_unused pmc_read(unsigned long reg)
 {
 	return readl(pmc + reg);
 }
 
-static inline void pmc_write(u32 val, unsigned long reg)
+static inline void __maybe_unused pmc_write(u32 val, unsigned long reg)
 {
 	writel_relaxed(val, pmc + reg);
 }

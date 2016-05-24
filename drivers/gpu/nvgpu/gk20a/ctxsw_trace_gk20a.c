@@ -70,11 +70,6 @@ static inline int ring_len(struct nvgpu_ctxsw_ring_header *hdr)
 	return (hdr->write_idx - hdr->read_idx) % hdr->num_ents;
 }
 
-static inline int ring_space(struct nvgpu_ctxsw_ring_header *hdr)
-{
-	return (hdr->read_idx - hdr->write_idx - 1) % hdr->num_ents;
-}
-
 ssize_t gk20a_ctxsw_dev_read(struct file *filp, char __user *buf, size_t size,
 	loff_t *off)
 {

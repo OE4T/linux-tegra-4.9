@@ -8,6 +8,7 @@ ccflags-y += -I../kernel-nvgpu/include/uapi
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 ccflags-y += -Wno-error=cpp
+ccflags-y += -Wno-duplicate-decl-specifier
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I$(srctree)/../kernel-nvgpu-t18x/drivers/gpu/nvgpu

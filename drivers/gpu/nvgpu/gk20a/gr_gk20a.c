@@ -1203,15 +1203,18 @@ static int gr_gk20a_setup_alpha_beta_tables(struct gk20a *g,
 	u32 reg_offset;
 	bool assign_alpha;
 
-	u32 map_alpha[gr_pd_alpha_ratio_table__size_1_v()];
-	u32 map_beta[gr_pd_alpha_ratio_table__size_1_v()];
-	u32 map_reg_used[gr_pd_alpha_ratio_table__size_1_v()];
+	u32 *map_alpha;
+	u32 *map_beta;
+	u32 *map_reg_used;
 
 	gk20a_dbg_fn("");
 
-	memset(map_alpha, 0, gr_pd_alpha_ratio_table__size_1_v() * sizeof(u32));
-	memset(map_beta, 0, gr_pd_alpha_ratio_table__size_1_v() * sizeof(u32));
-	memset(map_reg_used, 0, gr_pd_alpha_ratio_table__size_1_v() * sizeof(u32));
+	map_alpha = kzalloc(3 * gr_pd_alpha_ratio_table__size_1_v() *
+				sizeof(u32), GFP_KERNEL);
+	if (!map_alpha)
+		return -ENOMEM;
+	map_beta = map_alpha + gr_pd_alpha_ratio_table__size_1_v();
+	map_reg_used = map_beta + gr_pd_alpha_ratio_table__size_1_v();
 
 	for (row = 0; row < rows; ++row) {
 		alpha_target = max_t(u32, gr->tpc_count * row / rows, 1);
@@ -1277,6 +1280,7 @@ static int gr_gk20a_setup_alpha_beta_tables(struct gk20a *g,
 		}
 	}
 
+	kfree(map_alpha);
 	return 0;
 }
 

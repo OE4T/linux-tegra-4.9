@@ -357,5 +357,10 @@
 		status = "okay";
 	};
 
+	i2c@3160000 {
+		tegra_nct72: onsemi,nct72@4c {
+			offset = <(-12)>; /* -3C */
+		};
+	};
 };
 

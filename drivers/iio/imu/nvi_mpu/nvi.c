@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(327)
+#define NVI_DRIVER_VERSION		(328)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -701,7 +701,6 @@ int nvi_int_able(struct nvi_state *st, const char *fn, bool en)
 	if (en) {
 		if (st->en_msk & (1 << DEV_DMP)) {
 			int_en |= 1 << st->hal->bit->int_dmp;
-			int_en |= 1 << st->hal->bit->int_fifo_ovrflw_0;
 		} else if (st->en_msk & MSK_DEV_ALL) {
 			int_msk = 1 << st->hal->bit->int_data_rdy_0;
 			if (st->rc.fifo_cfg & 0x01) {

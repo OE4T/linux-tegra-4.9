@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/exh_tables.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -178,7 +178,7 @@ mmap_addr_to_ex_addr(unsigned long addr,
 	return ti->addr + offset;
 }
 
-static inline u32
+static inline u32 __maybe_unused
 prel31_to_addr(const u32 *ptr)
 {
 	u32 value;

@@ -439,20 +439,6 @@ set_rule_offset(struct regs_state *rs, int regnum, int where, long offset)
 }
 
 static inline void
-set_rule_reg(struct regs_state *rs, int regnum, int where, unsigned long reg)
-{
-	struct reg_info *r;
-
-	if (!validate_regnum(rs, regnum))
-		return;
-
-	r = &rs->reg[regnum];
-
-	r->where = where;
-	r->loc.reg = reg;
-}
-
-static inline void
 set_rule_exp(struct regs_state *rs, int regnum,
 	     int where, const unsigned char *exp)
 {

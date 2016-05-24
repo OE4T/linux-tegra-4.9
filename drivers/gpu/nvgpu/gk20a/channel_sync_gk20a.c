@@ -204,11 +204,8 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		incr_cmd_size += 2;
 
 	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, &incr_cmd);
-	if (err) {
-		gk20a_err(dev_from_gk20a(c->g),
-				"not enough priv cmd buffer space");
+	if (err)
 		return err;
-	}
 
 	off = incr_cmd->off;
 

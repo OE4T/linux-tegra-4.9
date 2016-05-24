@@ -2081,7 +2081,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (err) {
-		gk20a_err(d, "timeout waiting for gpfifo space");
 		err = -ENOSPC;
 		goto clean_up;
 	}
@@ -2279,7 +2278,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	return err;
 
 clean_up:
-	gk20a_err(d, "fail");
+	gk20a_dbg_fn("fail");
 	free_priv_cmdbuf(c, wait_cmd);
 	free_priv_cmdbuf(c, incr_cmd);
 	gk20a_fence_put(pre_fence);

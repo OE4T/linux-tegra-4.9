@@ -967,7 +967,8 @@ static int nvi_dmp_init(struct nvi_state *st)
 	return ret;
 }
 
-static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
+static int nvi_dd_able(struct nvi_state *st,
+		       unsigned int en_msk, unsigned int irq_msk)
 {
 	u16 evnt_ctl = 0;
 	u32 out_ctl = 0;
@@ -1007,7 +1008,7 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 		}
 
 		if (en) {
-			if (dd->out_ctl)
+			if (dd->out_ctl && (irq_msk & (1 << dd->dev)))
 				out_ctl |= dd->out_ctl;
 			st->snsr[dd->dev].buf_n = dd->buf_n;
 			st->snsr[dd->dev].buf_shft = dd->buf_shft;
@@ -1054,7 +1055,7 @@ static int nvi_dd_able(struct nvi_state *st, unsigned int en_msk)
 	/* SMD_EN is self-clearing so we don't want it in the cache */
 	st->mc.icm.motion_event_ctl &= ~SMD_EN;
 	/* inv_set_wom */
-	ret |= nvi_dmp_irq(st, en_msk);
+	ret |= nvi_dmp_irq(st, irq_msk & en_msk);
 	if (!ret)
 		st->en_msk |= (en_msk & ((1 << DEV_N_AUX) - 1));
 	return ret;
@@ -1064,6 +1065,7 @@ static int nvi_dmp_en(struct nvi_state *st)
 {
 	struct nvi_dmp_dev *dd;
 	unsigned int i;
+	unsigned int irq_msk = 0;
 	unsigned int en_msk = 0;
 	int ret = 0;
 
@@ -1071,12 +1073,14 @@ static int nvi_dmp_en(struct nvi_state *st)
 		dd = &nvi_dmp_devs[i];
 		if (dd->dev == DEV_AUX) {
 			if (st->snsr[DEV_AUX].enable & (1 << dd->aux_port)) {
+				irq_msk |= (1 << DEV_AUX);
 				en_msk |= (1 << DEV_AUX);
 				en_msk |= (1 << (dd->aux_port + DEV_N_AUX));
 				en_msk |= dd->depend_msk;
 			}
 		} else if (dd->dev < DEV_AUX) {
 			if (st->snsr[dd->dev].enable) {
+				irq_msk |= (1 << dd->dev);
 				en_msk |= (1 << dd->dev);
 				en_msk |= dd->depend_msk;
 			}
@@ -1085,9 +1089,9 @@ static int nvi_dmp_en(struct nvi_state *st)
 
 	if (!st->icm_dmp_war) {
 		st->icm_dmp_war = true;
-		ret = nvi_dd_able(st, ICM_DMP_DEV_MSK | MSK_DEV_MPU);
+		ret = nvi_dd_able(st, ICM_DMP_DEV_MSK | MSK_DEV_MPU, irq_msk);
 	}
-	ret |= nvi_dd_able(st, en_msk);
+	ret |= nvi_dd_able(st, en_msk, irq_msk);
 	if (!ret) {
 		st->en_msk |= (1 << DEV_DMP);
 		ret = nvi_i2c_wr(st, &st->hal->reg->pm2, 0, __func__);

@@ -52,6 +52,8 @@
 #define WAKE_AOWAKE_SW_STATUS_31_0_0	0x4a0
 #define WAKE_AOWAKE_TIER2_ROUTING_31_0_0	0x4cc
 
+#define WAKE_AOWAKE_SW_STATUS_W_0	0x49c
+
 /* Regular registers */
 #define WAKE_LATCH_SW		0x498
 
@@ -91,7 +93,7 @@ static void print_vals(char *name, u32 *vals)
 	int i;
 	for (i = 0; i < WAKE_NR_VECTORS; i++)
 		pr_info("Wake[%d-%d]  %s=%#x\n",
-			(i + 1) * 32, i * 32, name, vals[i]);
+			(i + 1) * 32 - 1, i * 32, name, vals[i]);
 }
 
 static void wke_write_wake_masks(u32 *enb)
@@ -122,9 +124,9 @@ static void wke_read_wake_levels(u32 *lvl)
 	u32 val;
 	u32 reg = WAKE_AOWAKE_CNTRL_0;
 
-	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4) {
+	for (i = 0; i < WAKE_NR_VECTORS; i++) {
 		lvl[i] = 0;
-		for (j = 0; j < 32; j++) {
+		for (j = 0; j < 32; j++, reg += 4) {
 			val = tegra_aowake_read(reg);
 			lvl[i] |= (((val >> 3) & 0x1) << j);
 		}
@@ -139,7 +141,10 @@ static void wke_write_wake_levels(u32 *lvl)
 
 	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4) {
 		val = tegra_aowake_read(reg);
-		val |= test_bit(i, (ulong *)lvl) << 3;
+		if (test_bit(i, (ulong *)lvl))
+			val |= (1 << 3);
+		else
+			val &= ~(1 << 3);
 		tegra_aowake_write(val, reg);
 	}
 	print_vals("level", lvl);
@@ -173,11 +178,7 @@ static void wke_read_sw_wake_status(u32 *status)
 
 static void wke_clear_sw_wake_status(void)
 {
-	int i;
-	u32 reg = WAKE_AOWAKE_STATUS_W_0;
-
-	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4)
-		wke_32kwritel(0, reg);
+	wke_32kwritel(1, WAKE_AOWAKE_SW_STATUS_W_0);
 }
 
 static void wke_clear_wake_status(void)
@@ -191,7 +192,7 @@ static void wke_clear_wake_status(void)
 
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
 		status = tegra_aowake_read(reg);
-		status = status & tegra_aowake_read(reg);
+		status = status & tegra_aowake_read(mask);
 		ulong_status = (unsigned long)status;
 		regw = WAKE_AOWAKE_STATUS_W_0 + i * 32 * 4;
 		for_each_set_bit(wake, &ulong_status, 32)

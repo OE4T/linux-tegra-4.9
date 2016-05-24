@@ -483,6 +483,12 @@ struct tegra_vgpu_fecs_trace_event_info {
 	u32 type;
 };
 
+struct tegra_vgpu_general_event_info {
+	u32 event_id;
+	u32 is_tsg;
+	u32 id; /* channel id or tsg id */
+};
+
 enum {
 
 	TEGRA_VGPU_INTR_GR = 0,
@@ -496,7 +502,8 @@ enum {
 enum {
 	TEGRA_VGPU_EVENT_INTR = 0,
 	TEGRA_VGPU_EVENT_ABORT,
-	TEGRA_VGPU_EVENT_FECS_TRACE
+	TEGRA_VGPU_EVENT_FECS_TRACE,
+	TEGRA_VGPU_EVENT_CHANNEL,
 };
 
 struct tegra_vgpu_intr_msg {
@@ -509,6 +516,7 @@ struct tegra_vgpu_intr_msg {
 		struct tegra_vgpu_fifo_nonstall_intr_info fifo_nonstall_intr;
 		struct tegra_vgpu_ce2_nonstall_intr_info ce2_nonstall_intr;
 		struct tegra_vgpu_fecs_trace_event_info fecs_trace;
+		struct tegra_vgpu_general_event_info general_event;
 		char padding[32];
 	} info;
 };

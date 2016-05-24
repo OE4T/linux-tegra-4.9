@@ -23,6 +23,8 @@
 #include "gk20a/hal_gk20a.h"
 #include "gk20a/hw_mc_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
+#include "gk20a/tsg_gk20a.h"
+#include "gk20a/channel_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -97,6 +99,32 @@ int vgpu_get_attribute(u64 handle, u32 attrib, u32 *value)
 	return 0;
 }
 
+static void vgpu_handle_general_event(struct gk20a *g,
+			struct tegra_vgpu_general_event_info *info)
+{
+	if (info->id >= g->fifo.num_channels ||
+		info->event_id >= NVGPU_IOCTL_CHANNEL_EVENT_ID_MAX) {
+		gk20a_err(g->dev, "invalid general event");
+		return;
+	}
+
+	if (info->is_tsg) {
+		struct tsg_gk20a *tsg = &g->fifo.tsg[info->id];
+
+		gk20a_tsg_event_id_post_event(tsg, info->event_id);
+	} else {
+		struct channel_gk20a *ch = &g->fifo.channel[info->id];
+
+		if (!gk20a_channel_get(ch)) {
+			gk20a_err(g->dev, "invalid channel %d for event %d",
+					(int)info->id, (int)info->event_id);
+			return;
+		}
+		gk20a_channel_event_id_post_event(ch, info->event_id);
+		gk20a_channel_put(ch);
+	}
+}
+
 static int vgpu_intr_thread(void *dev_id)
 {
 	struct gk20a *g = dev_id;
@@ -123,6 +151,12 @@ static int vgpu_intr_thread(void *dev_id)
 
 		if (msg->event == TEGRA_VGPU_EVENT_FECS_TRACE) {
 			vgpu_fecs_trace_data_update(g);
+			tegra_gr_comm_release(handle);
+			continue;
+		}
+
+		if (msg->event == TEGRA_VGPU_EVENT_CHANNEL) {
+			vgpu_handle_general_event(g, &msg->info.general_event);
 			tegra_gr_comm_release(handle);
 			continue;
 		}

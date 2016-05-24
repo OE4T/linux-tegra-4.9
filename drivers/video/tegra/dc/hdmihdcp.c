@@ -319,7 +319,7 @@ static int nvhdcp_i2c_write64(struct tegra_nvhdcp *nvhdcp, u8 reg, u64 val)
 }
 
 /* 64-bit link encryption session random number */
-static inline u64 get_an(struct tegra_hdmi *hdmi)
+static inline u64 __maybe_unused get_an(struct tegra_hdmi *hdmi)
 {
 	u64 r;
 	r = (u64)nvhdcp_sor_readl(hdmi, NV_SOR_TMDS_HDCP_AN_MSB) << 32;
@@ -328,7 +328,8 @@ static inline u64 get_an(struct tegra_hdmi *hdmi)
 }
 
 /* 64-bit upstream exchange random number */
-static inline void set_cn(struct tegra_hdmi *hdmi, u64 c_n)
+static inline void __maybe_unused set_cn(struct tegra_hdmi *hdmi,
+					 u64 c_n)
 {
 	nvhdcp_sor_writel(hdmi, (u32)c_n, NV_SOR_TMDS_HDCP_CN_LSB);
 	nvhdcp_sor_writel(hdmi, c_n >> 32, NV_SOR_TMDS_HDCP_CN_MSB);
@@ -336,7 +337,7 @@ static inline void set_cn(struct tegra_hdmi *hdmi, u64 c_n)
 
 
 /* 40-bit transmitter's key selection vector */
-static inline u64 get_aksv(struct tegra_hdmi *hdmi)
+static inline u64 __maybe_unused get_aksv(struct tegra_hdmi *hdmi)
 {
 	u64 r;
 	r = (u64)nvhdcp_sor_readl(hdmi, NV_SOR_TMDS_HDCP_AKSV_MSB) << 32;
@@ -345,7 +346,8 @@ static inline u64 get_aksv(struct tegra_hdmi *hdmi)
 }
 
 /* 40-bit receiver's key selection vector */
-static inline void set_bksv(struct tegra_hdmi *hdmi, u64 b_ksv, bool repeater)
+static inline void __maybe_unused set_bksv(struct tegra_hdmi *hdmi,
+						u64 b_ksv, bool repeater)
 {
 	if (repeater)
 		b_ksv |= (u64)REPEATER << 32;

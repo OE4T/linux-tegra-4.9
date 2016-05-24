@@ -129,7 +129,8 @@ static inline bool tegra_hdmi_is_connected(struct tegra_hdmi *hdmi)
 		(hdmi->mon_spec.misc & FB_MISC_HDMI_FORUM);
 }
 
-static inline void tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
+static inline void __maybe_unused
+tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
 {
 	if (tegra_platform_is_fpga())
 		return;
@@ -137,7 +138,8 @@ static inline void tegra_hdmi_irq_enable(struct tegra_hdmi *hdmi)
 	enable_irq(hdmi->irq);
 }
 
-static inline void tegra_hdmi_irq_disable(struct tegra_hdmi *hdmi)
+static inline void __maybe_unused
+tegra_hdmi_irq_disable(struct tegra_hdmi *hdmi)
 {
 	if (tegra_platform_is_fpga())
 		return;
@@ -145,7 +147,8 @@ static inline void tegra_hdmi_irq_disable(struct tegra_hdmi *hdmi)
 	disable_irq(hdmi->irq);
 }
 
-static inline bool tegra_hdmi_hpd_asserted(struct tegra_hdmi *hdmi)
+static inline bool __maybe_unused
+tegra_hdmi_hpd_asserted(struct tegra_hdmi *hdmi)
 {
 	return tegra_dc_hpd(hdmi->dc);
 }
@@ -2055,7 +2058,8 @@ static void tegra_dc_hdmi_enable(struct tegra_dc *dc)
 #endif
 }
 
-static inline u32 tegra_hdmi_get_shift_clk_div(struct tegra_hdmi *hdmi)
+static inline u32 __maybe_unused
+tegra_hdmi_get_shift_clk_div(struct tegra_hdmi *hdmi)
 {
 	/*
 	 * HW does not support deep color yet

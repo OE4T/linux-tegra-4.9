@@ -3222,7 +3222,8 @@ bool tegra_dc_windows_are_dirty(struct tegra_dc *dc, u32 win_act_req_mask)
 	return false;
 }
 
-static inline void enable_dc_irq(const struct tegra_dc *dc)
+static inline void __maybe_unused
+enable_dc_irq(const struct tegra_dc *dc)
 {
 	if (tegra_platform_is_fpga())
 		/* Always disable DC interrupts on FPGA. */

@@ -347,7 +347,8 @@ static inline u32 compute_initial_dda(fixed20_12 in)
 	return dfixed_frac(in);
 }
 
-static inline void tegra_dc_update_scaling(struct tegra_dc *dc,
+static inline void __maybe_unused tegra_dc_update_scaling(
+				struct tegra_dc *dc,
 				struct tegra_dc_win *win, unsigned Bpp,
 				unsigned Bpp_bw, bool scan_column)
 {

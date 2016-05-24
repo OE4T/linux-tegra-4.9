@@ -72,6 +72,7 @@ struct tegra_ivc_vi_notify {
 	struct platform_device *vi;
 	u32 tags;
 	u16 channels;
+	wait_queue_head_t write_q;
 	struct completion ack;
 };
 
@@ -128,6 +129,10 @@ static void tegra_ivc_vi_notify_recv(struct tegra_ivc_channel *chan,
 
 static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
 {
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+
+	wake_up(&ivn->write_q);
+
 	while (tegra_ivc_can_read(&chan->ivc)) {
 		const void *data = tegra_ivc_read_get_next_frame(&chan->ivc);
 		size_t length = chan->ivc.frame_size;
@@ -170,11 +175,29 @@ static int tegra_ivc_vi_notify_send(struct tegra_ivc_channel *chan,
 	int ret;
 
 	ret = tegra_ivc_vi_notify_prepare(chan);
-	if (ret)
-		return ret;
 
-	if (tegra_ivc_write(&chan->ivc, req, sizeof(*req)) != sizeof(*req))
-		ret = -EBUSY;
+	while (ret == 0) {
+		DEFINE_WAIT(wait);
+
+		prepare_to_wait(&ivn->write_q, &wait, TASK_INTERRUPTIBLE);
+
+		ret = tegra_ivc_write(&chan->ivc, req, sizeof(*req));
+		if (ret >= 0)
+			;
+		else if (ret != -ENOMEM)
+			dev_err(&chan->dev, "cannot send request: %d\n", ret);
+		else if (signal_pending(current))
+			ret = -ERESTARTSYS;
+		else {
+			ret = 0;
+			schedule();
+		}
+
+		finish_wait(&ivn->write_q, &wait);
+	}
+
+	if (ret < 0)
+		return ret;
 
 	/* Wait for RTCPU to acknowledge the request. This fixes races such as:
 	 * - RTCPU attempting to use a powered-off VI,
@@ -185,7 +208,7 @@ static int tegra_ivc_vi_notify_send(struct tegra_ivc_channel *chan,
 #ifndef BUG_200219206
 		WARN_ON(1);
 #endif
-		return -EIO;
+		return -ETIMEDOUT;
 	}
 
 	return 0;
@@ -330,6 +353,7 @@ static int tegra_ivc_channel_vi_notify_probe(struct tegra_ivc_channel *chan)
 
 	ivn->tags = 0;
 	ivn->channels = 0;
+	init_waitqueue_head(&ivn->write_q);
 	init_completion(&ivn->ack);
 
 	tegra_ivc_channel_set_drvdata(chan, ivn);

@@ -3264,15 +3264,17 @@ static int gr_gk20a_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 				g->ops.gr.get_gpc_tpc_mask(g, gpc_index);
 
 		for (pes_index = 0; pes_index < gr->pe_count_per_gpc; pes_index++) {
-			gr->pes_tpc_count[pes_index] =
-				kzalloc(gr->gpc_count * sizeof(u32),
-					GFP_KERNEL);
-			gr->pes_tpc_mask[pes_index] =
-				kzalloc(gr->gpc_count * sizeof(u32),
-					GFP_KERNEL);
-			if (!gr->pes_tpc_count[pes_index] ||
-			    !gr->pes_tpc_mask[pes_index])
-				goto clean_up;
+			if (!gr->pes_tpc_count[pes_index]) {
+				gr->pes_tpc_count[pes_index] =
+					kzalloc(gr->gpc_count * sizeof(u32),
+						GFP_KERNEL);
+				gr->pes_tpc_mask[pes_index] =
+					kzalloc(gr->gpc_count * sizeof(u32),
+						GFP_KERNEL);
+				if (!gr->pes_tpc_count[pes_index] ||
+				    !gr->pes_tpc_mask[pes_index])
+					goto clean_up;
+			}
 
 			tmp = gk20a_readl(g,
 				gr_gpc0_gpm_pd_pes_tpc_id_mask_r(pes_index) +

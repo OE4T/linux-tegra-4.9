@@ -289,17 +289,32 @@
 	};
 
 	i2c@c240000 {
-		nvidia,high-clock-count = <3>;
-		nvidia,clk-div-std-fast-mode = <0x16>;
+		prod-settings {
+			mask-one-style;
+			prod_i2c_sm {
+				prod = <0x00000094 0x00003F00 0x00000300
+					0x0000006c 0xFFFF0000 0x00160000>;
+			};
+		};
 	};
 
 	i2c@3190000 {
-		nvidia,high-clock-count = <3>;
-		nvidia,clk-div-std-fast-mode = <0x16>;
+		prod-settings {
+			mask-one-style;
+			prod_i2c_sm {
+				prod = <0x00000094 0x00003F00 0x00000300
+					0x0000006c 0xFFFF0000 0x00160000>;
+			};
+		};
 	};
 
 	i2c@31b0000 {
-		nvidia,high-clock-count = <3>;
-		nvidia,clk-div-std-fast-mode = <0x16>;
+		prod-settings {
+			mask-one-style;
+			prod_i2c_sm {
+				prod = <0x00000094 0x00003F00 0x00000300
+					0x0000006c 0xFFFF0000 0x00160000>;
+			};
+		};
 	};
 };

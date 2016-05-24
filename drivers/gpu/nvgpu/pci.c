@@ -21,7 +21,7 @@
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 
-#define PCI_INTERFACE_NAME "nvgpu-pci-%s%%s"
+#define PCI_INTERFACE_NAME "card-%s%%s"
 
 static int nvgpu_pci_tegra_probe(struct device *dev)
 {
@@ -135,6 +135,17 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 	return err;
 }
 
+static char *nvgpu_pci_devnode(struct device *dev, umode_t *mode)
+{
+	return kasprintf(GFP_KERNEL, "nvgpu-pci/%s", dev_name(dev));
+}
+
+struct class nvgpu_pci_class = {
+	.owner = THIS_MODULE,
+	.name = "nvidia-pci-gpu",
+	.devnode = nvgpu_pci_devnode,
+};
+
 static int nvgpu_pci_probe(struct pci_dev *pdev,
 			   const struct pci_device_id *pent)
 {
@@ -187,7 +198,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	if (!nodefmt)
 		return -ENOMEM;
 
-	err = gk20a_user_init(&pdev->dev, nodefmt);
+	err = gk20a_user_init(&pdev->dev, nodefmt, &nvgpu_pci_class);
 	kfree(nodefmt);
 	nodefmt = NULL;
 	if (err)
@@ -248,7 +259,7 @@ static void nvgpu_pci_remove(struct pci_dev *pdev)
 	if (g->remove_support)
 		g->remove_support(g->dev);
 
-	gk20a_user_deinit(g->dev);
+	gk20a_user_deinit(g->dev, &nvgpu_pci_class);
 
 	debugfs_remove_recursive(platform->debugfs);
 	debugfs_remove_recursive(platform->debugfs_alias);
@@ -270,10 +281,17 @@ static struct pci_driver nvgpu_pci_driver = {
 
 int __init nvgpu_pci_init(void)
 {
+	int ret;
+
+	ret = class_register(&nvgpu_pci_class);
+	if (ret)
+		return ret;
+
 	return pci_register_driver(&nvgpu_pci_driver);
 }
 
 void __exit nvgpu_pci_exit(void)
 {
 	pci_unregister_driver(&nvgpu_pci_driver);
+	class_unregister(&nvgpu_pci_class);
 }

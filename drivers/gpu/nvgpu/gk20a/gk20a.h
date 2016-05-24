@@ -1067,8 +1067,9 @@ int gk20a_init_gpu_characteristics(struct gk20a *g);
 
 void gk20a_pbus_isr(struct gk20a *g);
 
-int gk20a_user_init(struct device *dev, const char *interface_name);
-void gk20a_user_deinit(struct device *dev);
+int gk20a_user_init(struct device *dev, const char *interface_name,
+		    struct class *class);
+void gk20a_user_deinit(struct device *dev, struct class *class);
 
 void gk20a_debug_dump_device(void *dev);
 

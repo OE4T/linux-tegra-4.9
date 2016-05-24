@@ -418,7 +418,7 @@ int vgpu_probe(struct platform_device *pdev)
 	platform->g = gk20a;
 	gk20a->dev = dev;
 
-	err = gk20a_user_init(dev, INTERFACE_NAME);
+	err = gk20a_user_init(dev, INTERFACE_NAME, &nvgpu_class);
 	if (err)
 		return err;
 
@@ -498,7 +498,7 @@ int vgpu_remove(struct platform_device *pdev)
 	kfree(vgpu_gpd);
 
 	vgpu_comm_deinit();
-	gk20a_user_deinit(dev);
+	gk20a_user_deinit(dev, &nvgpu_class);
 	gk20a_get_platform(dev)->g = NULL;
 	kfree(g);
 	return 0;

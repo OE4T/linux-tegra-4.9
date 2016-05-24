@@ -21,6 +21,8 @@
 #ifndef __NVHOST_PVA_H__
 #define __NVHOST_PVA_H__
 
+extern const struct file_operations tegra_pva_ctrl_ops;
+
 /**
  * pva_finalize_poweron() - Finalize the PVA Power-on-Sequence.
  *

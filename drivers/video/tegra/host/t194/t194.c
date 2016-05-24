@@ -333,6 +333,7 @@ struct nvhost_device_data t19_pvab_info = {
 	.clocks			= {
 		{"pva"},
 	},
+	.ctrl_ops		= &tegra_pva_ctrl_ops,
 	.devfs_name		= "pvab",
 	.class			= NV_PVA1_CLASS_ID,
 	.powergate_delay        = 500,
@@ -350,6 +351,7 @@ struct nvhost_device_data t19_pvaa_info = {
 	.clocks			= {
 		{"pva"},
 	},
+	.ctrl_ops		= &tegra_pva_ctrl_ops,
 	.devfs_name		= "pvaa",
 	.class			= NV_PVA0_CLASS_ID,
 	.powergate_delay        = 500,

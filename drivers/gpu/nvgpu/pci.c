@@ -57,6 +57,8 @@ static struct gk20a_platform nvgpu_pci_device = {
 	.remove = nvgpu_pci_tegra_remove,
 	.busy = nvgpu_pci_busy,
 
+	.can_elpg = false,
+
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
 

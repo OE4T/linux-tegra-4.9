@@ -2462,6 +2462,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 
 static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
@@ -2514,7 +2515,8 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu_seq_init(pmu);
 
-	INIT_WORK(&pmu->pg_init, pmu_setup_hw);
+	if (platform->can_elpg)
+		INIT_WORK(&pmu->pg_init, pmu_setup_hw);
 
 	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_SEQ_BUF_SIZE, &pmu->seq_buf);
 	if (err) {

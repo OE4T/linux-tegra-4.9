@@ -43,6 +43,9 @@ struct gk20a_platform {
 	bool can_railgate;
 
 	/* Should be populated at probe. */
+	bool can_elpg;
+
+	/* Should be populated at probe. */
 	bool has_syncpoints;
 
 	/* flag to set sync destroy aggressiveness */

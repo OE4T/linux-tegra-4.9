@@ -89,6 +89,7 @@ extern void sdioh_sdmmc_devintr_on(sdioh_info_t *sd);
 extern void* bcmsdh_probe(osl_t *osh, void *dev, void *sdioh, void *adapter_info, uint bus_type,
 	uint bus_num, uint slot_num);
 extern int bcmsdh_remove(bcmsdh_info_t *bcmsdh);
+extern int wifi_platform_bus_enumerate(wifi_adapter_info_t *adapter, bool device_present);
 
 int sdio_function_init(void);
 void sdio_function_cleanup(void);
@@ -123,23 +124,13 @@ static int sdioh_probe(struct sdio_func *func)
 	adapter = dhd_wifi_platform_get_adapter(SDIO_BUS, host_idx, rca);
 	if (adapter  != NULL) {
 		sd_err(("found adapter info '%s'\n", adapter->name));
-#if defined(CONFIG_WIFI_CONTROL_FUNC)
-		if (adapter->wifi_plat_data) {
-			plat_data = adapter->wifi_plat_data;
-			/* sdio card detection is completed,
-			 * so stop card detection here */
-			if (plat_data->set_carddetect) {
-				sd_debug(("stopping card detection\n"));
-				plat_data->set_carddetect(0);
-			}
-			else
-				sd_err(("set_carddetect is not registered\n"));
-		}
-		else
-			sd_err(("platform data is NULL\n"));
-#endif
-	} else
+		/* SDIO card detection is completed
+		 * so stop card detection here
+		 */
+		wifi_platform_bus_enumerate(adapter, 0);
+	} else {
 		sd_err(("can't find adapter info for this chip\n"));
+	}
 
 #ifdef WL_CFG80211
 	wl_cfg80211_set_parent_dev(&func->dev);

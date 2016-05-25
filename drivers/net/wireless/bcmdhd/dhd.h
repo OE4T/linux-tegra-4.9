@@ -121,8 +121,9 @@ enum dhd_op_flags {
 #define DHD_SCAN_UNASSOC_ACTIVE_TIME 65 /* ms: Embedded def. Unassoc Active setting from DHD */
 #define DHD_SCAN_PASSIVE_TIME		130 /* ms: Embedded default Passive setting from DHD */
 
+/* Controlling number of retries from DT */
 #ifndef POWERUP_MAX_RETRY
-#define POWERUP_MAX_RETRY	3 /* how many times we retry to power up the chip */
+#define POWERUP_MAX_RETRY	0 /* how many times we retry to power up the chip */
 #endif
 #ifndef POWERUP_WAIT_MS
 #define POWERUP_WAIT_MS		2000 /* ms: time out in waiting wifi to come up */

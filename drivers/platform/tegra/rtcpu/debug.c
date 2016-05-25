@@ -28,7 +28,7 @@
 struct camrtc_debug {
 	struct mutex mutex;
 	struct dentry *root;
-	struct mutex lock_pending;
+	spinlock_t lock_pending;
 	struct camrtc_dbg_response *pending;
 	struct completion wait_for_response;
 	struct {
@@ -123,18 +123,17 @@ DEFINE_SEQ_FOPS(fops_reset, camrtc_show_reset);
 static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
-	const struct camrtc_dbg_response *resp;
-	bool received = false;
-
-	mutex_lock(&crd->lock_pending);
 
 	while (tegra_ivc_can_read(&ch->ivc)) {
+		const struct camrtc_dbg_response *resp;
+
 		dev_info(&ch->dev, "rx msg\n");
 
 		resp = tegra_ivc_read_get_next_frame(&ch->ivc);
-
 		if (IS_ERR_OR_NULL(resp))
 			break;
+
+		spin_lock(&crd->lock_pending);
 
 		if (crd->pending == NULL) {
 			dev_err(&ch->dev, "no pending request\n");
@@ -143,16 +142,12 @@ static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 		} else {
 			*crd->pending = *resp;
 			crd->pending = NULL;
-			received = true;
+			complete(&crd->wait_for_response);
 		}
 
+		spin_unlock(&crd->lock_pending);
 		tegra_ivc_read_advance(&ch->ivc);
 	}
-
-	mutex_unlock(&crd->lock_pending);
-
-	if (received)
-		complete(&crd->wait_for_response);
 }
 
 static int camrtc_ivc_dbg_xact(
@@ -173,9 +168,9 @@ static int camrtc_ivc_dbg_xact(
 	if (ret)
 		return ret;
 
-	mutex_lock(&crd->lock_pending);
+	spin_lock_bh(&crd->lock_pending);
 	crd->pending = resp;
-	mutex_unlock(&crd->lock_pending);
+	spin_unlock_bh(&crd->lock_pending);
 
 	ret = tegra_ivc_write(&ch->ivc, req, sizeof(*req));
 	if (ret < 0) {
@@ -193,9 +188,9 @@ static int camrtc_ivc_dbg_xact(
 	ret = 0;
 
 done:
-	mutex_lock(&crd->lock_pending);
+	spin_lock_bh(&crd->lock_pending);
 	crd->pending = NULL;
-	mutex_unlock(&crd->lock_pending);
+	spin_unlock_bh(&crd->lock_pending);
 
 	mutex_unlock(&crd->mutex);
 
@@ -342,7 +337,7 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	crd->parameters.mods_loops = 20;
 
 	mutex_init(&crd->mutex);
-	mutex_init(&crd->lock_pending);
+	spin_lock_init(&crd->lock_pending);
 	init_completion(&crd->wait_for_response);
 
 	tegra_ivc_channel_set_drvdata(ch, crd);

@@ -675,7 +675,7 @@ static int tsec_read_ucode(struct platform_device *dev, const char *fw_name)
 		return err;
 	}
 
-	m->size = ucode_fw->size;
+	m->size = ucode_fw->size + TSEC_RESERVE;
 	dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
 
 	m->mapped = dma_alloc_attrs(&dev->dev,

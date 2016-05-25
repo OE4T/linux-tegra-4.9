@@ -172,6 +172,21 @@ static irqreturn_t tegra_wdt_t18x_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static void tegra_wdt_t18x_ref(struct watchdog_device *wdt)
+{
+	struct tegra_wdt_t18x *tegra_wdt = to_tegra_wdt_t18x(wdt);
+
+	if (tegra_wdt->irq <= 0)
+		return;
+
+	/*
+	 * Remove the interrupt handler if userspace is taking over WDT.
+	 */
+	if (!test_and_set_bit(WDT_ENABLED_USERSPACE, &tegra_wdt->status) &&
+	    test_bit(WDT_ENABLED_ON_INIT, &tegra_wdt->status))
+		disable_irq(tegra_wdt->irq);
+}
+
 static inline int tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	u32 val = 0;
@@ -285,6 +300,7 @@ static const struct watchdog_ops tegra_wdt_t18x_ops = {
 	.stop  = tegra_wdt_t18x_disable,
 	.ping  = tegra_wdt_t18x_ping,
 	.set_timeout = tegra_wdt_t18x_set_timeout,
+	.ref   = tegra_wdt_t18x_ref,
 };
 
 static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x

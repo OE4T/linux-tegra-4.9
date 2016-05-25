@@ -428,6 +428,21 @@ int tegra_camrtc_boot(struct device *dev)
 	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 	int ret;
 
+	if (tegra_camrtc_wait_for_empty(dev, 0) <= 0) {
+		dev_err(dev, "Timeout for HSP SM empty interrupt");
+		return -ETIMEDOUT;
+	}
+
+	/*
+	 * Intermediate firmware skips negotiation unless there is a
+	 * command in mailbox when RTCPU gets unhalted.
+	 *
+	 * Insert a random command (INIT 16) to mailbox before
+	 * unhalting.
+	 */
+	tegra_hsp_sm_pair_write(&cam_rtcpu->cmd.pair,
+		RTCPU_COMMAND(INIT, 16));
+
 	tegra_camrtc_ready(dev);
 
 	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {

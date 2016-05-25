@@ -32,33 +32,10 @@ struct camrtc_debug {
 	struct camrtc_dbg_response *pending;
 	struct completion wait_for_response;
 	struct {
-		struct mutex lock;
-		unsigned long completion_timeout;
+		u32 completion_timeout;
 		u32 mods_loops;
 	} parameters;
 };
-
-#define CAMRTC_DEBUG_PARAMETER(_type, _name) \
-static _type camrtc_debug_get_ ## _name(struct tegra_ivc_channel *ch) \
-{ \
-	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch); \
-	_type _value; \
-	mutex_lock(&crd->parameters.lock); \
-	_value = crd->parameters._name; \
-	mutex_unlock(&crd->parameters.lock); \
-	return _value; \
-} \
-static void camrtc_debug_set_ ## _name(struct tegra_ivc_channel *ch, \
-				_type _value) \
-{ \
-	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch); \
-	mutex_lock(&crd->parameters.lock); \
-	crd->parameters._name = _value; \
-	mutex_unlock(&crd->parameters.lock); \
-}
-
-CAMRTC_DEBUG_PARAMETER(unsigned long, completion_timeout);
-CAMRTC_DEBUG_PARAMETER(u32, mods_loops);
 
 /* Get a camera-rtcpu device */
 static struct device *camrtc_get_device(struct tegra_ivc_channel *ch)
@@ -143,20 +120,6 @@ static int camrtc_show_reset(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(fops_reset, camrtc_show_reset);
 
-static int show_timeout(void *data, u64 *val)
-{
-	*val = camrtc_debug_get_completion_timeout(data);
-	return 0;
-}
-
-static int store_timeout(void *data, u64 val)
-{
-	camrtc_debug_set_completion_timeout(data, val);
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(fops_timeout, show_timeout, store_timeout, "%lld\n");
-
 static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
@@ -204,9 +167,11 @@ static int camrtc_ivc_dbg_xact(
 	resp->resp_type = req->req_type;
 
 	if (timeout == 0)
-		timeout = camrtc_debug_get_completion_timeout(ch);
+		timeout = crd->parameters.completion_timeout;
 
-	mutex_lock(&crd->mutex);
+	ret = mutex_lock_interruptible(&crd->mutex);
+	if (ret)
+		return ret;
 
 	mutex_lock(&crd->lock_pending);
 	crd->pending = resp;
@@ -218,10 +183,10 @@ static int camrtc_ivc_dbg_xact(
 		goto done;
 	}
 
-	timeout = wait_for_completion_timeout(&crd->wait_for_response,
+	timeout = wait_for_completion_killable_timeout(&crd->wait_for_response,
 					msecs_to_jiffies(timeout));
-	if (timeout == 0) {
-		ret = -ETIMEDOUT;
+	if (timeout <= 0) {
+		ret = timeout ? timeout : -ETIMEDOUT;
 		goto done;
 	}
 
@@ -261,34 +226,17 @@ static int camrtc_show_ping(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(fops_ping, camrtc_show_ping);
 
-static int show_mods_loops(void *data, u64 *val)
-{
-	*val = camrtc_debug_get_mods_loops(data);
-	return 0;
-}
-
-static int store_mods_loops(void *data, u64 val)
-{
-	if (val > 0xffffFFFF)
-		return -EINVAL;
-
-	camrtc_debug_set_mods_loops(data, val);
-	return 0;
-}
-
-DEFINE_SIMPLE_ATTRIBUTE(fops_mods_loops, show_mods_loops, store_mods_loops,
-			"%lld\n");
-
 static int camrtc_show_mods_result(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
+	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	struct camrtc_dbg_request req = {
 		.req_type = CAMRTC_REQ_MODS_TEST,
 	};
 	struct camrtc_dbg_response resp;
 	int ret = 0;
-	unsigned long timeout = camrtc_debug_get_completion_timeout(ch);
-	u32 loops = camrtc_debug_get_mods_loops(ch);
+	unsigned long timeout = crd->parameters.completion_timeout;
+	u32 loops = crd->parameters.mods_loops;
 
 	req.data.mods_data.mods_loops = loops;
 
@@ -319,11 +267,6 @@ static const struct camrtc_dbgfs_node rce_nodes[] = {
 		.fops = &fops_reset,
 	},
 	{
-		.name = "timeout",
-		.mode = S_IRUGO | S_IWUSR,
-		.fops = &fops_timeout,
-	},
-	{
 		.name = "halt",
 		.mode = S_IRUGO | S_IWUSR,
 		.fops = &fops_halt,
@@ -341,28 +284,25 @@ static const struct camrtc_dbgfs_node rce_nodes[] = {
 		.mode = S_IRUGO,
 		.fops = &fops_mods_result,
 	},
-	{
-		.name = "loops",
-		.mode = S_IRUGO | S_IWUSR,
-		.fops = &fops_mods_loops,
-	},
 };
 
 static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 {
-	struct camrtc_debug *crd;
+	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 	struct dentry *dir;
-	struct dentry *d;
 	int i;
 
-	crd = tegra_ivc_channel_get_drvdata(ch);
-
 	crd->root = dir = debugfs_create_dir("camrtc", NULL);
-	if (IS_ERR_OR_NULL(crd->root))
-		return PTR_ERR(crd->root);
+	if (dir == NULL)
+		return -ENOMEM;
+
+	if (!debugfs_create_u32("timeout", S_IRUGO|S_IWUSR, dir,
+				&crd->parameters.completion_timeout))
+		goto error;
 
 	for (i = 0; i < ARRAY_SIZE(rce_nodes); i++) {
 		const struct camrtc_dbgfs_node *n = &rce_nodes[i];
+		struct dentry *d;
 
 		if (n->fops == NULL)
 			d = dir = debugfs_create_dir(n->name, crd->root);
@@ -374,14 +314,20 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 			return PTR_ERR(d);
 	}
 
+	if (!debugfs_create_u32("loops", S_IRUGO|S_IWUSR, dir,
+				&crd->parameters.mods_loops))
+		goto error;
+
 	return 0;
+error:
+	debugfs_remove_recursive(crd->root);
+	return -ENOMEM;
 }
 
 static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 {
 	struct device *dev = &ch->dev;
 	struct camrtc_debug *crd;
-	int err;
 
 	dev_info(dev, "probing");
 
@@ -397,16 +343,12 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 
 	mutex_init(&crd->mutex);
 	mutex_init(&crd->lock_pending);
-	mutex_init(&crd->parameters.lock);
 	init_completion(&crd->wait_for_response);
 
 	tegra_ivc_channel_set_drvdata(ch, crd);
 
-	err = camrtc_debug_populate(ch);
-	if (unlikely(err != 0)) {
-		debugfs_remove_recursive(crd->root);
-		return err;
-	}
+	if (camrtc_debug_populate(ch))
+		return -ENOMEM;
 
 	dev_info(dev, "probed OK");
 

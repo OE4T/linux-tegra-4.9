@@ -2234,8 +2234,15 @@ void tegra_nvdisp_signal_common_channel(struct tegra_dc *dc)
 	 */
 	if (dc->common_channel_reserved &&
 		dc->common_channel_programmed &&
-		!(tegra_dc_readl(dc, DC_CMD_STATE_CONTROL) & COMMON_ACT_REQ))
+		!(tegra_dc_readl(dc, DC_CMD_STATE_CONTROL) & COMMON_ACT_REQ)) {
+		/* Re-enable ihub latency events. */
+		tegra_dc_writel(dc,
+			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
+			nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+			nvdisp_ihub_misc_ctl_r());
+
 		tegra_nvdisp_release_common_channel(dc);
+	}
 
 	mutex_unlock(&tegra_nvdisp_lock);
 }
@@ -2263,17 +2270,15 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			win_ihub_fetch_meter_r());
 
 		/*
-		 * Don't program these registers for now since they take effect
-		 * immediately. Once LA/PTSA is done for display, will move this
-		 * section there.
+		 * Since these wgrp latency registers take effect immediately,
+		 * re-enable latency events after the rest of the window channel
+		 * state for this flip has promoted.
 		 */
-		/* program wgrp latency registers */
-		/*val = imp_head_results->thresh_lwm_dvfs_win[i];
+		val = imp_head_results->thresh_lwm_dvfs_win[i];
 		tegra_dc_writel(dc,
 			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) &
 			~nvdisp_ihub_misc_ctl_latency_event_enable_f(),
 			nvdisp_ihub_misc_ctl_r());
-
 		if (val) {
 			nvdisp_win_write(win,
 				win_ihub_latency_ctla_ctl_mode_enable_f() |
@@ -2282,10 +2287,7 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			nvdisp_win_write(win,
 				win_ihub_latency_ctlb_watermark_f(val),
 				win_ihub_latency_ctlb_r());
-			tegra_dc_writel(dc,
-				nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-				nvdisp_ihub_misc_ctl_r());
-		}*/
+		}
 
 		/* program wgrp pipe meter value */
 		val = imp_head_results->pipe_meter_value_win[i];

@@ -530,11 +530,11 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 				  bool enable_hwpm_ctxsw);
 
 struct channel_ctx_gk20a;
-int gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
+void gr_gk20a_ctx_patch_write(struct gk20a *g, struct channel_ctx_gk20a *ch_ctx,
 				    u32 addr, u32 data, bool patch);
 int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 					  struct channel_ctx_gk20a *ch_ctx);
-int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
+void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 					struct channel_ctx_gk20a *ch_ctx);
 void gr_gk20a_commit_global_pagepool(struct gk20a *g,
 				     struct channel_ctx_gk20a *ch_ctx,

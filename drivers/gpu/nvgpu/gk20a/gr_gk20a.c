@@ -641,81 +641,37 @@ static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 }
 
 /*
- * Context state can be written directly or "patched" at times.
- * So that code can be used in either situation it is written
- * using a series _ctx_patch_write(..., patch) statements.
- * However any necessary cpu map/unmap and gpu l2 invalidates
- * should be minimized (to avoid doing it once per patch write).
- * Before a sequence of these set up with "_ctx_patch_write_begin"
- * and close with "_ctx_patch_write_end."
+ * Context state can be written directly, or "patched" at times. So that code
+ * can be used in either situation it is written using a series of
+ * _ctx_patch_write(..., patch) statements. However any necessary map overhead
+ * should be minimized; thus, bundle the sequence of these writes together, and
+ * set them up and close with _ctx_patch_write_begin/_ctx_patch_write_end.
  */
+
 int gr_gk20a_ctx_patch_write_begin(struct gk20a *g,
 					  struct channel_ctx_gk20a *ch_ctx)
 {
-	/* being defensive still... */
-	if (WARN_ON(ch_ctx->patch_ctx.mem.cpu_va)) {
-		gk20a_err(dev_from_gk20a(g), "nested ctx patch begin?");
-		return -EBUSY;
-	}
-
-	if (gk20a_mem_begin(g, &ch_ctx->patch_ctx.mem))
-		return -ENOMEM;
-
-	return 0;
+	return gk20a_mem_begin(g, &ch_ctx->patch_ctx.mem);
 }
 
-int gr_gk20a_ctx_patch_write_end(struct gk20a *g,
+void gr_gk20a_ctx_patch_write_end(struct gk20a *g,
 					struct channel_ctx_gk20a *ch_ctx)
 {
-	/* being defensive still... */
-	if (!ch_ctx->patch_ctx.mem.cpu_va) {
-		gk20a_err(dev_from_gk20a(g), "dangling ctx patch end?");
-		return -EINVAL;
-	}
-
 	gk20a_mem_end(g, &ch_ctx->patch_ctx.mem);
-	return 0;
 }
 
-int gr_gk20a_ctx_patch_write(struct gk20a *g,
+void gr_gk20a_ctx_patch_write(struct gk20a *g,
 				    struct channel_ctx_gk20a *ch_ctx,
 				    u32 addr, u32 data, bool patch)
 {
-	u32 patch_slot = 0;
-	bool mapped_here = false;
-
-	BUG_ON(patch != 0 && ch_ctx == NULL);
-
 	if (patch) {
-		if (!ch_ctx)
-			return -EINVAL;
-		/* we added an optimization prolog, epilog
-		 * to get rid of unnecessary maps and l2 invals.
-		 * but be defensive still... */
-		if (!ch_ctx->patch_ctx.mem.cpu_va) {
-			int err;
-			gk20a_dbg_info("per-write ctx patch begin?");
-			err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
-			if (err)
-				return err;
-			mapped_here = true;
-		} else
-			mapped_here = false;
-
-		patch_slot = ch_ctx->patch_ctx.data_count * 2;
-
-		gk20a_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot++, addr);
-		gk20a_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot++, data);
-
+		u32 patch_slot = ch_ctx->patch_ctx.data_count * 2;
+		gk20a_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot, addr);
+		gk20a_mem_wr32(g, &ch_ctx->patch_ctx.mem, patch_slot + 1, data);
 		ch_ctx->patch_ctx.data_count++;
-
-		if (mapped_here)
-			gr_gk20a_ctx_patch_write_end(g, ch_ctx);
-
-	} else
+	} else {
 		gk20a_writel(g, addr, data);
-
-	return 0;
+	}
 }
 
 static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
@@ -3105,7 +3061,6 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 
 	/* tweak any perf parameters per-context here */
 	if (args->class_num == KEPLER_COMPUTE_A) {
-		int begin_err;
 		u32 tex_lock_disable_mask;
 		u32 texlock;
 		u32 lockboost_mask;
@@ -3144,24 +3099,20 @@ int gk20a_alloc_obj_ctx(struct channel_gk20a  *c,
 		lockboost = (lockboost & ~lockboost_mask) |
 			gr_gpcs_tpcs_sm_sch_macro_sched_lockboost_size_f(0);
 
-		begin_err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
 
-		if (!begin_err) {
-			err = gr_gk20a_ctx_patch_write(g, ch_ctx,
+		if (!err) {
+			gr_gk20a_ctx_patch_write(g, ch_ctx,
 				gr_gpcs_tpcs_sm_sch_texlock_r(),
 				texlock, true);
-
-			if (!err)
-				err = gr_gk20a_ctx_patch_write(g, ch_ctx,
-					gr_gpcs_tpcs_sm_sch_macro_sched_r(),
-					lockboost, true);
-		}
-		if ((begin_err || err)) {
+			gr_gk20a_ctx_patch_write(g, ch_ctx,
+				gr_gpcs_tpcs_sm_sch_macro_sched_r(),
+				lockboost, true);
+			gr_gk20a_ctx_patch_write_end(g, ch_ctx);
+		} else {
 			gk20a_err(dev_from_gk20a(g),
 				   "failed to set texlock for compute class");
 		}
-		if (!begin_err)
-			gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 
 		args->flags |= NVGPU_ALLOC_OBJ_FLAGS_LOCKBOOST_ZERO;
 

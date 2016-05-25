@@ -998,6 +998,11 @@ static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 				gr_ctx->t18x.preempt_ctxsw_buffer.gpu_va >> 8);
 
 		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+					"can't map patch context");
+			goto out;
+		}
 
 		addr = (u64_lo32(gr_ctx->t18x.betacb_ctxsw_buffer.gpu_va) >>
 			gr_gpcs_setup_attrib_cb_base_addr_39_12_align_bits_v()) |
@@ -1049,6 +1054,7 @@ static void gr_gv11b_update_ctxsw_preemption_mode(struct gk20a *g,
 		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 	}
 
+out:
 	gk20a_dbg_fn("done");
 }
 

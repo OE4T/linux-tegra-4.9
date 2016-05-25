@@ -647,6 +647,11 @@ static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 	apm_msg.msg.call_params.method = nvfx_method_set_state;
 	apm_msg.msg.state_params.state = state;
 
+	/* Spike ADSP freq to max when app transitions to active */
+	/* state; DFS will thereafter find appropriate rate      */
+	if (state == nvfx_state_active)
+		adsp_override_freq(INT_MAX);
+
 	return tegra210_adsp_send_msg(app, &apm_msg, flags);
 }
 

@@ -2069,6 +2069,7 @@
 		nvidia,wdt-cluster-id = <0>; /* M/Denver cluster */
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
+		nvidia,extend-watchdog-suspend;
 		nvidia,heartbeat-init = <120>;
 		nvidia,disable-debug-reset;
 		status = "disabled";
@@ -2083,6 +2084,7 @@
 		nvidia,wdt-cluster-id = <1>; /* B/ARM cluster */
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
+		nvidia,extend-watchdog-suspend;
 		nvidia,heartbeat-init = <120>;
 		nvidia,disable-debug-reset;
 		status = "disabled";

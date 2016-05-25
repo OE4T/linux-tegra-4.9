@@ -172,6 +172,7 @@ struct tegra_i2c_hw_feature {
 	bool has_slcg_override_reg;
 	bool has_sw_reset_reg;
 	bool has_bus_clr_support;
+	bool has_reg_write_buffering;
 };
 
 /**
@@ -247,8 +248,10 @@ static void i2c_writel(struct tegra_i2c_dev *i2c_dev, u32 val,
 	writel(val, i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg));
 
 	/* Read back register to make sure that register writes completed */
-	if (reg != I2C_TX_FIFO)
-		readl(i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg));
+	if (i2c_dev->hw->has_reg_write_buffering) {
+		if (reg != I2C_TX_FIFO)
+			readl(i2c_dev->base + tegra_i2c_reg_addr(i2c_dev, reg));
+	}
 }
 
 static u32 i2c_readl(struct tegra_i2c_dev *i2c_dev, unsigned long reg)
@@ -921,6 +924,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_slcg_override_reg = false,
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = false,
+	.has_reg_write_buffering = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -935,6 +939,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.has_slcg_override_reg = false,
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = false,
+	.has_reg_write_buffering = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -949,6 +954,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.has_slcg_override_reg = false,
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = true,
+	.has_reg_write_buffering = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -963,6 +969,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.has_slcg_override_reg = true,
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = true,
+	.has_reg_write_buffering = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -977,6 +984,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.has_slcg_override_reg = true,
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = true,
+	.has_reg_write_buffering = true,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -991,6 +999,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.has_slcg_override_reg = true,
 	.has_sw_reset_reg = true,
 	.has_bus_clr_support = true,
+	.has_reg_write_buffering = false,
 };
 
 /* Match table for of_platform binding */

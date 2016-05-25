@@ -86,4 +86,3 @@ trysource "../t18x/sound/soc/tegra-alt/Kconfig.t18x"
 trysource "sound/soc/tegra-alt/Kconfig.t18x"
 
 endif	# SND_SOC
-

@@ -25,11 +25,14 @@
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC) && defined(CONFIG_TEGRA_ISOMGR)
 
 #define MAX_BW	393216 /*Maximum KiloByte*/
+#define MAX_DEV_NUM 256
 
 static long tegra_adma_calc_min_bandwidth(void);
 
 static struct adma_isomgr {
 	int current_bandwidth;
+	bool device_number[MAX_DEV_NUM];
+	int bw_per_device[MAX_DEV_NUM];
 	struct mutex mutex;
 	/* iso manager handle */
 	tegra_isomgr_handle isomgr_handle;
@@ -77,29 +80,48 @@ static int adma_isomgr_request(uint adma_bw, uint lt)
 }
 
 void tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
-				bool is_playback)
+				bool is_running)
 {
 	int bandwidth, sample_bytes;
 	int ret;
 	struct snd_pcm_runtime *runtime = substream->runtime;
+	struct snd_pcm *pcm = substream->pcm;
 
 	if (!adma || !runtime)
 		return;
 
+	if (pcm->device >= MAX_DEV_NUM) {
+		pr_err("%s: PCM device number is greater than %d\n", __func__,
+			MAX_DEV_NUM);
+		return;
+	}
+
+	if (((adma->device_number[pcm->device] == true) && is_running) ||
+		((adma->device_number[pcm->device] == false) && !is_running)
+		)
+		return;
+
 	mutex_lock(&adma->mutex);
 
-	sample_bytes = snd_pcm_format_width(runtime->format)/8;
-	if (sample_bytes < 0)
-		sample_bytes = 0;
+	if (is_running) {
+		sample_bytes = snd_pcm_format_width(runtime->format)/8;
+		if (sample_bytes < 0)
+			sample_bytes = 0;
 
-	/* KB/s kilo bytes per sec */
-	bandwidth = runtime->channels * (runtime->rate/1000) *
-			sample_bytes;
+		/* KB/s kilo bytes per sec */
+		bandwidth = runtime->channels * (runtime->rate/1000) *
+				sample_bytes;
 
-	if (is_playback)
+		adma->device_number[pcm->device] = true;
 		adma->current_bandwidth += bandwidth;
-	else
-		adma->current_bandwidth -= bandwidth;
+		adma->bw_per_device[pcm->device] = bandwidth;
+	} else {
+		adma->device_number[pcm->device] = false;
+		adma->current_bandwidth -= adma->bw_per_device[pcm->device];
+		adma->bw_per_device[pcm->device] = 0;
+	}
+
+	mutex_unlock(&adma->mutex);
 
 	if (adma->current_bandwidth < 0) {
 		pr_err("%s: ADMA ISO BW can't be less than zero\n", __func__);
@@ -109,8 +131,6 @@ void tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 			MAX_BW);
 		adma->current_bandwidth = MAX_BW;
 	}
-
-	mutex_unlock(&adma->mutex);
 
 	ret = adma_isomgr_request(adma->current_bandwidth, 1000);
 	if (!ret) {
@@ -142,6 +162,8 @@ void tegra_isomgr_adma_register(void)
 	}
 
 	adma->current_bandwidth = 0;
+	memset(&adma->device_number, 0, sizeof(bool) * MAX_DEV_NUM);
+	memset(&adma->bw_per_device, 0, sizeof(int) * MAX_DEV_NUM);
 
 	mutex_init(&adma->mutex);
 

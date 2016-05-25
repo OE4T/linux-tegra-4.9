@@ -389,11 +389,24 @@ static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
 		};
 	int ret;
 	int report_size = JAR_HOSTCMD_REPORT_SIZE;
-	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
-		report_size = TS_HOSTCMD_REPORT_SIZE;
 
 	report[3] = enable ? 0x01 : 0x00;
 	hid_info(hdev, "%s remote mic\n", enable ? "enable" : "disable");
+
+	/* for pepper, send the message to userspace so that
+	** gattservice can be used to send message to pepper.
+	** this is to prevent concurrent mic ctrl msgs */
+
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_PEPPER) {
+		report[0] = 0x03;
+		report[4] = 0x01;
+		return hid_report_raw_event(hdev, 0, &report[0],
+			report_size, 0);
+	}
+
+	if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE)
+		report_size = TS_HOSTCMD_REPORT_SIZE;
+
 	ret =  hdev->hid_output_raw_report(hdev, report, report_size,
 					HID_OUTPUT_REPORT);
 	if (ret < 0)

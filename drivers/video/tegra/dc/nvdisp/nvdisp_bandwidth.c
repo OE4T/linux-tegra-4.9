@@ -23,12 +23,14 @@
 #include <mach/tegra_dc_ext.h>
 
 #include "dc_priv.h"
+#include "nvdisp.h"
 
 #ifdef CONFIG_TEGRA_ISOMGR
 
 /*
- * NVDISP_BW_DEDI_KBPS and NVDISP_BW_TOTAL_MC_LATENCY were calculated with
- * these settings (both values were rounded up to the nearest unit):
+ * NVDISP_BW_DEDI_KBPS, NVDISP_BW_TOTAL_MC_LATENCY, and
+ * NVDISP_BW_REQUIRED_HUBCLK_HZ were calculated with these settings
+ * (all values were rounded up to the nearest unit):
  *	- 3 active heads
  *	- 2 active windows on each head:
  *		- 4096x2160@60p
@@ -51,6 +53,9 @@
 
 /* Total MC request latency that display can tolerate (usec) */
 #define NVDISP_BW_TOTAL_MC_LATENCY	1
+
+/* Required hubclk rate for the given display config (Hz) */
+#define NVDISP_BW_REQUIRED_HUBCLK_HZ	358000000
 
 /* Output id that we pass to tegra_dc_ext_process_bandwidth_negotiate */
 #define NVDISP_BW_OUTPUT_ID		0
@@ -145,9 +150,12 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 
 	mutex_lock(&tegra_nvdisp_bw_lock);
 
+	if (use_new && dc->new_bw_pending)
+		clk_set_rate(hubclk, dc->imp_results[dc->ctrl_num].hubclk);
+
 	tegra_nvdisp_program_bandwidth(ihub_bw_info.new_bw_kbps,
-			(u32)dc->imp_results[dc->ctrl_num].total_latency,
-			use_new & dc->new_bw_pending,
+			dc->imp_results[dc->ctrl_num].total_latency,
+			use_new && dc->new_bw_pending,
 			dc->la_dirty);
 
 	dc->la_dirty = false;
@@ -194,12 +202,14 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 	 * A) If the available bw is less than the proposed bw, fail the ioctl.
 	 * B) If the proposed bw is equal to the reserved bw, just return.
 	 * C) If the proposed bw is less than the reserved bw, the bw will be
-	 *    adjusted in the next flip.
-	 * D) If the proposed bw is larger than the reserved bw, make it in
-	 *    effect immediately.
+	 *    adjusted in the next flip. If necessary, the hubclk rate will be
+	 *    decreased before the new bw takes effect.
+	 * D) If the proposed bw is larger than the reserved bw, the bw will
+	 *    take effect immediately. If necessary, the hubclk rate will be
+	 *    increased after the new bw takes effect.
 	 *
 	 * dc->new_bw_pending will be set for C and D to stall other PROPOSE
-	 * cals until the new bandwidth takes effect at the end of the next
+	 * calls until the new bandwidth takes effect at the end of the next
 	 * flip.
 	 *
 	 * We're also skipping the LA check here since IMP already validates the
@@ -242,6 +252,8 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 		ret = -EINVAL;
 		goto unlock_and_ret;
 	}
+
+	clk_set_rate(hubclk, dc->imp_results[dc->ctrl_num].hubclk);
 
 	/*
 	 * Since we just reserved more bw, the LA settings need to be
@@ -296,11 +308,13 @@ void tegra_nvdisp_isomgr_attach(struct tegra_dc *dc)
 
 	dc->ihub_bw_info = &ihub_bw_info;
 
-	/* Set defaults for total required bw and MC latency. */
+	/* Set defaults for total required bw, MC latency, and hubclk rate. */
 	dc->imp_results[dc->ctrl_num].required_total_bw_kbps =
 						NVDISP_BW_DEDI_KBPS;
 	dc->imp_results[dc->ctrl_num].total_latency =
 						NVDISP_BW_TOTAL_MC_LATENCY;
+	dc->imp_results[dc->ctrl_num].hubclk =
+						NVDISP_BW_REQUIRED_HUBCLK_HZ;
 }
 
 /*

@@ -51,7 +51,7 @@ static DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_common_channel_wq);
 /* Global variables provided for clocks
  * common to all heads
  */
-static struct clk *hubclk;
+struct clk *hubclk;
 static struct clk *compclk;
 
 static struct reset_control *nvdisp_common_rst[DC_N_WINDOWS+1];

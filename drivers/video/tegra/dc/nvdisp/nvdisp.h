@@ -18,6 +18,7 @@
 #define __DRIVER_VIDEO_TEGRA_DC_NVDISP_H
 
 extern struct mutex tegra_nvdisp_lock;
+extern struct clk *hubclk;
 
 #define NVDISP_TEGRA_POLL_TIMEOUT_MS	50
 

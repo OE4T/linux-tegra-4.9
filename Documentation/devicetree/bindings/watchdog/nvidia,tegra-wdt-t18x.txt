@@ -16,6 +16,10 @@ Optional properties for recovery mode:
 			reset occurs. same as heartbeat if not specified.
 - nvidia,expiry-count: total expiration levels supported by the watchdog.
        Should be 1 if not specified.
+- nvidia,extend-watchdog-suspend: Boolean. Extend the disable of watchdog
+	timer to syscore suspend and re-eanble on syscore resume. If this
+	is selected then do not disable watchdog timer in device suspend
+	otherwise disable in device suspend.
 
 Optional properties for debug purpose:
 

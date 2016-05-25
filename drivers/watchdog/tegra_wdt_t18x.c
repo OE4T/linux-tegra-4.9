@@ -34,6 +34,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/spinlock.h>
+#include <linux/syscore_ops.h>
 #include <linux/uaccess.h>
 #include <linux/watchdog.h>
 #include <linux/tegra-soc.h>
@@ -62,6 +63,7 @@ struct tegra_wdt_t18x {
 	int			heartbeat;
 	int			shutdown_timeout;
 	int			index;
+	bool			extended_suspend;
 /* Bit numbers for status flags */
 #define WDT_ENABLED		0
 #define WDT_ENABLED_ON_INIT	1
@@ -97,6 +99,9 @@ MODULE_PARM_DESC(nowayout, "Disable watchdog shutdown on close");
  * expiry_count*MAX_WDT_PERIOD.
  */
 #define HEARTBEAT	120
+
+
+static struct syscore_ops tegra_wdt_t18x_syscore_ops;
 
 /* Watchdog configured to this time before reset during shutdown */
 #define SHUTDOWN_TIMEOUT	150
@@ -536,6 +541,9 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	tegra_wdt_t18x->enable_on_init =
 			of_property_read_bool(np, "nvidia,enable-on-init");
 
+	tegra_wdt_t18x->extended_suspend = of_property_read_bool(np,
+				"nvidia,extend-watchdog-suspend");
+
 	ret = of_property_read_u32(np, "nvidia,wdt-cluster-id", &pval);
 	if (ret) {
 		dev_err(&pdev->dev, "no WDT cluster ID provided!\n");
@@ -631,6 +639,9 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 
 	tegra_wdt_t18x_debugfs_init(tegra_wdt_t18x);
 
+	if (tegra_wdt_t18x->extended_suspend)
+		register_syscore_ops(&tegra_wdt_t18x_syscore_ops);
+
 	dev_info(&pdev->dev, "%s done\n", __func__);
 	return 0;
 }
@@ -661,7 +672,11 @@ static int tegra_wdt_t18x_suspend(struct device *dev)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x = dev_get_drvdata(dev);
 
-	__tegra_wdt_t18x_disable(tegra_wdt_t18x);
+	if (!tegra_wdt_t18x->extended_suspend)
+		__tegra_wdt_t18x_disable(tegra_wdt_t18x);
+	else
+		__tegra_wdt_t18x_ping(tegra_wdt_t18x);
+
 	return 0;
 }
 
@@ -669,12 +684,58 @@ static int tegra_wdt_t18x_resume(struct device *dev)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x = dev_get_drvdata(dev);
 
-	if (watchdog_active(&tegra_wdt_t18x->wdt))
-		__tegra_wdt_t18x_enable(tegra_wdt_t18x);
+	if (watchdog_active(&tegra_wdt_t18x->wdt)) {
+		if (!tegra_wdt_t18x->extended_suspend)
+			__tegra_wdt_t18x_ping(tegra_wdt_t18x);
+		else
+			__tegra_wdt_t18x_enable(tegra_wdt_t18x);
+	} else {
+		if (!tegra_wdt_t18x->extended_suspend)
+			__tegra_wdt_t18x_disable(tegra_wdt_t18x);
+	}
 
 	return 0;
 }
+
+static int tegra_wdt_t18x_syscore_suspend(void)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x;
+	int i;
+
+	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
+		tegra_wdt_t18x = t18x_wdt_array[i];
+		if (tegra_wdt_t18x && tegra_wdt_t18x->extended_suspend)
+			__tegra_wdt_t18x_disable(tegra_wdt_t18x);
+	}
+
+	return 0;
+}
+
+static void tegra_wdt_t18x_syscore_resume(void)
+{
+	struct tegra_wdt_t18x *tegra_wdt_t18x;
+	int i;
+
+	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
+		tegra_wdt_t18x = t18x_wdt_array[i];
+		if (tegra_wdt_t18x && tegra_wdt_t18x->extended_suspend)
+			__tegra_wdt_t18x_enable(tegra_wdt_t18x);
+	}
+}
+
+#else
+static int tegra_wdt_t18x_syscore_suspend(void)
+{
+	return 0;
+}
+
+static void tegra_wdt_t18x_syscore_resume(void) { }
 #endif
+
+static struct syscore_ops tegra_wdt_t18x_syscore_ops = {
+	.suspend =	tegra_wdt_t18x_syscore_suspend,
+	.resume =	tegra_wdt_t18x_syscore_resume,
+};
 
 static const struct dev_pm_ops tegra_wdt_t18x_pm_ops = {
 	SET_SYSTEM_SLEEP_PM_OPS(tegra_wdt_t18x_suspend, tegra_wdt_t18x_resume)

@@ -2762,17 +2762,14 @@ static const struct phy_ops pcie_phy_ops = {
 static int tegra186_sata_fuse_calibration(struct tegra_padctl_uphy *uphy,
 						int lane)
 {
-	void __iomem *base;
 	u32 reg;
 	int idx, err;
 
 	if (uphy->sata_bypass_fuse && uphy->prod_list) {
-		base = uphy->uphy_lane_regs[lane];
-		err = tegra_prod_set_by_name(&base,
-					"prod_c_sata", uphy->prod_list);
+		err = tegra_prod_set_by_name(uphy->uphy_lane_regs,
+				"prod_c_sata", uphy->prod_list);
 		if (!err)
 			return 0;
-
 		/* In case of err update setting based on fuse */
 		dev_warn(uphy->dev,
 			"Failed to set sata prod settings, err %d", err);
@@ -5018,6 +5015,14 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 	uphy->uphy_lane_regs[5] = uphy->uphy_regs + 0x70000;
 	uphy->uphy_pll_regs[1] = uphy->uphy_regs + 0x80000;
 
+	uphy->sata_bypass_fuse =
+		of_property_read_bool(np, "nvidia,sata-use-prods");
+	uphy->prod_list = tegra_prod_init(pdev->dev.of_node);
+	if (IS_ERR(uphy->prod_list)) {
+		dev_warn(&pdev->dev, "Prod-settings not available\n");
+		uphy->prod_list = NULL;
+	}
+
 	if (tegra_platform_is_silicon()) {
 		err = tegra_xusb_read_fuse_calibration(uphy);
 		if (err < 0)
@@ -5274,15 +5279,6 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "cannot create sysfs group: %d\n", err);
 		goto free_mailbox;
 	}
-
-	uphy->prod_list = tegra_prod_init(pdev->dev.of_node);
-	if (IS_ERR(uphy->prod_list)) {
-		dev_warn(&pdev->dev, "Prod-settings not available\n");
-		uphy->prod_list = NULL;
-	}
-
-	uphy->sata_bypass_fuse =
-		of_property_read_bool(np, "nvidia,sata-use-prods");
 
 	return 0;
 

@@ -2077,7 +2077,15 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 
 	if (g->ops.gr.update_ctxsw_preemption_mode) {
 		g->ops.gr.update_ctxsw_preemption_mode(ch->g, ch_ctx, mem);
+
+		err = gr_gk20a_ctx_patch_write_begin(g, ch_ctx);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+					"can't map patch context");
+			goto enable_ch;
+		}
 		g->ops.gr.commit_global_cb_manager(g, ch, true);
+		gr_gk20a_ctx_patch_write_end(g, ch_ctx);
 	}
 
 enable_ch:

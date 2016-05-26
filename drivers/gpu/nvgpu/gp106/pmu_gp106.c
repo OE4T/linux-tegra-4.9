@@ -19,7 +19,7 @@
 #include "hw_mc_gp106.h"
 #include "hw_pwr_gp106.h"
 
-int gp106_pmu_reset(struct gk20a *g)
+static int gp106_pmu_reset(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 

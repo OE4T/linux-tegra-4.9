@@ -498,6 +498,7 @@ static struct snd_soc_dai_link
 		.params = &default_link_params,
 		.ignore_suspend = 1,
 	},
+#if defined(CONFIG_SND_SOC_TEGRA210_ADSP_ALT)
 	[TEGRA186_DAI_LINK_ADSP_ADMAIF1] = {
 		.name = "ADSP ADMAIF1",
 		.stream_name = "ADSP ADMAIF1",
@@ -742,6 +743,7 @@ static struct snd_soc_dai_link
 		.ignore_pmdown_time = 1,
 		.ignore_suspend = 1,
 	},
+#endif
 	[TEGRA186_DAI_LINK_AMX1_1] = {
 		.name = "AMX1 IN1",
 		.stream_name = "AMX1 IN",

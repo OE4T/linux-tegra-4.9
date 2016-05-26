@@ -103,7 +103,11 @@ int wl_cfgvendor_send_async_event(struct wiphy *wiphy,
 #if defined(CONFIG_ARCH_MSM) && defined(SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC)
 	skb = cfg80211_vendor_event_alloc(wiphy, NULL, len, event_id, kflags);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	skb = cfg80211_vendor_event_alloc(wiphy, dev->ieee80211_ptr, len, event_id, kflags);
+#else
 	skb = cfg80211_vendor_event_alloc(wiphy, len, event_id, kflags);
+#endif
 #endif /* CONFIG_ARCH_MSM && SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC */
 #endif /* VENDOR_NET_SKB_ALLOC */
 	if (!skb) {
@@ -273,7 +277,11 @@ wl_cfgvendor_send_hotlist_event(struct wiphy *wiphy,
 #if defined(CONFIG_ARCH_MSM) && defined(SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC)
 		skb = cfg80211_vendor_event_alloc(wiphy, NULL, malloc_len, event, kflags);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+		skb = cfg80211_vendor_event_alloc(wiphy, dev->ieee80211_ptr, malloc_len, event, kflags);
+#else
 		skb = cfg80211_vendor_event_alloc(wiphy, malloc_len, event, kflags);
+#endif
 #endif /* CONFIG_ARCH_MSM && SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC */
 		if (!skb) {
 			WL_ERR(("skb alloc failed"));
@@ -855,7 +863,11 @@ wl_cfgvendor_rtt_evt(void *ctx, void *rtt_data)
 #if defined(CONFIG_ARCH_MSM) && defined(SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC)
 	skb = cfg80211_vendor_event_alloc(wiphy, NULL, tot_len, GOOGLE_RTT_COMPLETE_EVENT, kflags);
 #else
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	skb = cfg80211_vendor_event_alloc(wiphy, wdev, tot_len, GOOGLE_RTT_COMPLETE_EVENT, kflags);
+#else
 	skb = cfg80211_vendor_event_alloc(wiphy, tot_len, GOOGLE_RTT_COMPLETE_EVENT, kflags);
+#endif
 #endif /* CONFIG_ARCH_MSM && SUPPORT_WDEV_CFG80211_VENDOR_EVENT_ALLOC */
 	if (!skb) {
 		WL_ERR(("skb alloc failed"));

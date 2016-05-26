@@ -16,7 +16,9 @@
  *
  */
 
+#ifdef CONFIG_PM_SLEEP
 #include <linux/system-wakeup.h>
+#endif
 #include "dhd_custom_sysfs_tegra.h"
 
 int lp0_logs_enable = 1;
@@ -236,6 +238,7 @@ tegra_sysfs_resume(void)
 void
 tegra_sysfs_resume_capture(void)
 {
+#ifdef CONFIG_PM_SLEEP
 	if (lp0_logs_enable) {
 		if (get_wakeup_reason_irq() != bcmdhd_irq_number)
 			return;
@@ -243,6 +246,7 @@ tegra_sysfs_resume_capture(void)
 			__func__, __LINE__, string_resume,
 			sizeof(string_resume), 0);
 	}
+#endif
 }
 
 void

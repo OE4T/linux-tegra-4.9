@@ -77,6 +77,7 @@ tegra_sysfs_rf_test_disable()
 	extern struct net_device *dhd_custom_sysfs_tegra_histogram_stat_netdev;
 	struct net_device *net = dhd_custom_sysfs_tegra_histogram_stat_netdev;
 	int i;
+	int arg;
 
 	pr_info("%s\n", __func__);
 	if (atomic_read(&rf_test)) {
@@ -88,7 +89,8 @@ tegra_sysfs_rf_test_disable()
 				pr_err("%s: Failed to restore %s val\n", __func__, rf_test_params[i].var);
 			}
 		}
-		if (wldev_ioctl(net, WLC_SET_PM, (void *)&atomic_read(&cur_power_mode),
+		arg = atomic_read(&cur_power_mode);
+		if (wldev_ioctl(net, WLC_SET_PM, (void *)&arg,
 				sizeof(cur_power_mode), true)) {
 			pr_err("%s: Failed to restore power mode state\n", __func__);
 		}

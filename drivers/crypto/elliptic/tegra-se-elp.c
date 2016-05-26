@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1520,9 +1520,11 @@ int tegra_se_elp_rng_op(struct tegra_se_elp_rng_request *req)
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 	int ret = 0;
 
+	clk_prepare_enable(se_dev->c);
 	ret = tegra_se_acquire_rng_mutex(se_dev);
 	if (ret) {
 		dev_err(se_dev->dev, "\n RNG Mutex acquire failed\n");
+		clk_disable_unprepare(se_dev->c);
 		return ret;
 	}
 
@@ -1535,6 +1537,7 @@ int tegra_se_elp_rng_op(struct tegra_se_elp_rng_request *req)
 	ret = tegra_se_elp_rng_do(se_dev, req);
 rel_mutex:
 	tegra_se_release_rng_mutex(se_dev);
+	clk_disable_unprepare(se_dev->c);
 	return ret;
 }
 EXPORT_SYMBOL(tegra_se_elp_rng_op);
@@ -1544,9 +1547,11 @@ int tegra_se_elp_pka_op(struct tegra_se_elp_pka_request *req)
 	struct tegra_se_elp_dev *se_dev = elp_dev;
 	int ret = 0;
 
+	clk_prepare_enable(se_dev->c);
 	ret = tegra_se_acquire_pka_mutex(se_dev);
 	if (ret) {
 		dev_err(se_dev->dev, "\nPKA Mutex acquire failed\n");
+		clk_disable_unprepare(se_dev->c);
 		return ret;
 	}
 
@@ -1584,6 +1589,7 @@ exit:
 	tegra_se_elp_pka_exit(req);
 mutex_rel:
 	tegra_se_release_pka_mutex(se_dev);
+	clk_disable_unprepare(se_dev->c);
 	return ret;
 }
 EXPORT_SYMBOL(tegra_se_elp_pka_op);
@@ -1680,6 +1686,8 @@ static int tegra_se_elp_probe(struct platform_device *pdev)
 		goto kslt_fail;
 	}
 
+	clk_disable_unprepare(se_dev->c);
+
 	dev_info(se_dev->dev, "%s: complete", __func__);
 	return 0;
 
@@ -1716,6 +1724,31 @@ static int tegra_se_elp_remove(struct platform_device *pdev)
 	return 0;
 }
 
+#ifdef CONFIG_PM
+static int tegra_se_elp_suspend(struct device *dev)
+{
+	struct tegra_se_elp_dev *se_dev = dev_get_drvdata(dev);
+
+	clk_prepare_enable(se_dev->c);
+
+	return 0;
+}
+
+static int tegra_se_elp_resume(struct device *dev)
+{
+	struct tegra_se_elp_dev *se_dev = dev_get_drvdata(dev);
+
+	clk_disable_unprepare(se_dev->c);
+
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_se_elp_pm_ops = {
+        .suspend = tegra_se_elp_suspend,
+        .resume = tegra_se_elp_resume,
+};
+#endif /* CONFIG_PM */
+
 static struct platform_device_id tegra_dev_se_elp_devtype[] = {
 	{
 		.name = "tegra-se-elp",
@@ -1731,6 +1764,9 @@ static struct platform_driver tegra_se_elp_driver = {
 		.name   = "tegra-se-elp",
 		.owner  = THIS_MODULE,
 		.of_match_table = of_match_ptr(tegra_se_elp_of_match),
+#ifdef CONFIG_PM
+		.pm = &tegra_se_elp_pm_ops,
+#endif
 	},
 };
 

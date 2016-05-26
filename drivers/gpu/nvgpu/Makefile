@@ -112,9 +112,13 @@ nvgpu-$(CONFIG_GK20A_CYCLE_STATS) += \
 	gk20a/css_gr_gk20a.o
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
-include ../nvgpu-t18x/drivers/gpu/nvgpu/Makefile
+ifneq ($(wildcard $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile),)
+include $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile
+endif
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
-include ../nvgpu-t19x/drivers/gpu/nvgpu/Makefile
+ifneq ($(wildcard $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile),)
+include $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile
+endif
 endif

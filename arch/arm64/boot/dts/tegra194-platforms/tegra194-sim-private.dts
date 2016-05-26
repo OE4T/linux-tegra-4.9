@@ -24,6 +24,13 @@
 	model = "t186ref";
 	compatible = "nvidia,tegra186";
 
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "t186ref";
+		};
+	};
+
 	chosen {
 		bootargs ="mem=1024M@2048M console=ttyS0,115200 earlyprintk=uart8250-32bit,0x03100000";
 	};
@@ -33,4 +40,28 @@
 		reg = < 0x0 0x80000000 0x0 0xc0000000 >;
 	};
 
+	interrupt-controller@3881000 {
+		status = "okay";
+	};
+
+	interrupt-controller@3000000 {
+		status = "okay";
+	};
+
+	timer {
+		status = "okay";
+	};
+
+	serial@3100000 {
+		status = "okay";
+		clock-frequency = <408000000>;
+	};
+
+	chipid@100000 {
+		status = "okay";
+	};
+
+	iommu@12000000 {
+		status = "okay";
+	};
 };

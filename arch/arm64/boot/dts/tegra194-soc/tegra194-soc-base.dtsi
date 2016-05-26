@@ -18,6 +18,10 @@
  *
  */
 
+#include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
+#include "../../../../include/dt-bindings/clock/tegra186-clock.h"
+#include "../../../../include/dt-bindings/reset/tegra186-reset.h"
+
 / {
 	compatible = "nvidia,tegra186";
 	interrupt-parent = <&intc>;
@@ -136,4 +140,16 @@
 		status = "disabled";
 	};
 
+	uarta: serial@3100000 {
+		compatible = "nvidia,tegra210-uart";
+		#stream-id-cells = <1>;
+		reg = <0x0 0x03100000 0x0 0x40>;
+		reg-shift = <2>;
+		interrupts = <0 TEGRA186_IRQ_UARTA 0x04>;
+		nvidia,memory-clients = <14>;
+		dma-names = "rx", "tx";
+		clock-names = "serial", "parent";
+		reset-names = "serial";
+		status = "disabled";
+	};
 };

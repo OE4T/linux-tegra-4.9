@@ -324,11 +324,11 @@ static int __init update_target_node(struct device_node *target,
 static int __init parse_fragment(struct device_node *np)
 {
 	struct device_node *board_np, *nct_np, *odm_np, *overlay, *target, *cnp;
-	struct device_node *config_np;
+	struct device_node *config_np, *chip_np;
 	const char *bname;
 	struct property *prop;
 	int board_count;
-	int odm_count, nct_count;
+	int odm_count, nct_count, chip_id_count;
 	int cname_count, cval_count;
 	int nchild;
 	bool found = false;
@@ -345,8 +345,9 @@ static int __init parse_fragment(struct device_node *np)
 	board_count = of_property_count_strings(np, "ids");
 	odm_count = of_property_count_strings(np, "odm-data");
 	nct_count = of_property_count_strings(np, "nct-data");
+	chip_id_count = of_property_count_strings(np, "chip-id");
 	if ((board_count <= 0) && (odm_count <= 0) && (cname_count <= 0) &&
-	    (nct_count <= 0)) {
+	    (nct_count <= 0) && (chip_id_count <= 0)) {
 		pr_err("Node %s does not have property ids, nct and odm data\n",
 			np->name);
 		return -EINVAL;
@@ -362,8 +363,9 @@ static int __init parse_fragment(struct device_node *np)
 	board_np = of_find_node_by_path("/chosen/plugin-manager/ids");
 	odm_np = of_find_node_by_path("/chosen/plugin-manager/odm-data");
 	nct_np = of_find_node_by_path("/chosen/plugin-manager/nct-data");
+	chip_np = of_find_node_by_path("/chosen/plugin-manager/chip-id");
 	config_np = of_find_node_by_path("/chosen/plugin-manager/configs");
-	if (!board_np && !odm_np && !config_np && !nct_np) {
+	if (!board_np && !odm_np && !config_np && !nct_np && !chip_np) {
 		pr_err("chosen/plugin-manager does'nt have ids, nct and odm-data\n");
 		return -EINVAL;
 	}
@@ -395,6 +397,17 @@ static int __init parse_fragment(struct device_node *np)
 			found = of_property_read_bool(nct_np, bname);
 			if (found) {
 				pr_info("node %s match with nct-data %s\n",
+					np->full_name, bname);
+				goto search_done;
+			}
+		}
+	}
+
+	if ((chip_id_count > 0) && chip_np) {
+		of_property_for_each_string(np, "chip-id", prop, bname) {
+			found = of_property_read_bool(chip_np, bname);
+			if (found) {
+				pr_info("node %s match with chip-id %s\n",
 					np->full_name, bname);
 				goto search_done;
 			}

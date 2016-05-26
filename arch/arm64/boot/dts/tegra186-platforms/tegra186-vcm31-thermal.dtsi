@@ -85,5 +85,9 @@
 		PLL-therm {
 			status = "okay";
 		};
+
+		AO-therm {
+			status = "okay";
+		};
 	};
 };

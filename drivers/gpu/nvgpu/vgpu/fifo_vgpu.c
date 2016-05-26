@@ -102,6 +102,23 @@ static void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 	WARN_ON(err || msg.ret);
 }
 
+static void vgpu_channel_enable(struct channel_gk20a *ch)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_channel_config_params *p =
+			&msg.params.channel_config;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ENABLE;
+	msg.handle = platform->virt_handle;
+	p->handle = ch->virt_ctx;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+}
+
 static void vgpu_channel_disable(struct channel_gk20a *ch)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
@@ -741,7 +758,7 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 {
 	gops->fifo.bind_channel = vgpu_channel_bind;
 	gops->fifo.unbind_channel = vgpu_channel_unbind;
-	gops->fifo.enable_channel = NULL;
+	gops->fifo.enable_channel = vgpu_channel_enable;
 	gops->fifo.disable_channel = vgpu_channel_disable;
 	gops->fifo.alloc_inst = vgpu_channel_alloc_inst;
 	gops->fifo.free_inst = vgpu_channel_free_inst;

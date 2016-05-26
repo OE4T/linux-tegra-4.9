@@ -2105,7 +2105,8 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 			DIV_ROUND_UP(S_TO_MS(1), dsi->info.refresh_rate);
 
 	tegra_dsi_setup_clk(dc, dsi);
-	tegra_dsi_reset_deassert(dsi);
+	if (tegra_bpmp_running())
+		tegra_dsi_reset_deassert(dsi);
 
 	dsi->current_dsi_clk_khz =
 			clk_get_rate(dsi->dsi_clk[0]) / 1000;

@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/dsi_padctrl.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -204,15 +204,17 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 		goto fail;
 	}
 
-	dsi_padctrl->reset = of_reset_control_get(np_dsi, "dsi_padctrl");
-	if (IS_ERR_OR_NULL(dsi_padctrl->reset)) {
-		dev_err(&dc->ndev->dev, "dsi padctl: Failed to get reset\n");
-		err = PTR_ERR(dsi_padctrl->reset);
-		goto fail;
-	}
+	if (tegra_bpmp_running()) {
+		dsi_padctrl->reset = of_reset_control_get(np_dsi, "dsi_padctrl");
+		if (IS_ERR_OR_NULL(dsi_padctrl->reset)) {
+			dev_err(&dc->ndev->dev, "dsi padctl: Failed to get reset\n");
+			err = PTR_ERR(dsi_padctrl->reset);
+			goto fail;
+		}
 
-	/* Reset dsi padctrl module */
-	tegra_dsi_padctrl_reset(dsi_padctrl);
+		/* Reset dsi padctrl module */
+		tegra_dsi_padctrl_reset(dsi_padctrl);
+	}
 
 	/* Set up active data and clock lanes mask */
 	tegra_dsi_padctrl_setup_pwr_down_mask(dsi, dsi_padctrl);

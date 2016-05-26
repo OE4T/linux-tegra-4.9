@@ -894,9 +894,6 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	}
 	mutex_unlock(&f->deferred_reset_mutex);
 
-	if (!ch->bound)
-		goto release;
-
 	if (!gk20a_channel_as_bound(ch))
 		goto unbind;
 
@@ -985,7 +982,6 @@ unbind:
 
 	mutex_unlock(&g->dbg_sessions_lock);
 
-release:
 	/* make sure we catch accesses of unopened channels in case
 	 * there's non-refcounted channel pointers hanging around */
 	ch->g = NULL;

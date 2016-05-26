@@ -5301,7 +5301,7 @@ static inline bool is_valid_cyclestats_bar0_offset_gk20a(struct gk20a *g,
 	/* resource size check in case there was a problem
 	 * with allocating the assumed size of bar0 */
 	valid = valid &&
-		offset < resource_size(g->reg_mem);
+		offset < resource_size(g->regs);
 	return valid;
 }
 #endif

@@ -44,6 +44,33 @@
 			prod-default-3v3 {
 				prod = <0x00001E4 0x00007F7F 0x0000>;
 			};
+			comp-vref-default {
+				prod = <0x00001E0 0x0000000F 0x7>;
+			};
+			comp-vref-3v3 {
+				prod = <0x00001E0 0x0000000F 0x7>;
+			};
+			comp-vref-1v8 {
+				prod = <0x00001E0 0x0000000F 0x7>;
+			};
+			en-pad-ein-pwrd {
+				prod = <0x00001E0 0x80000000 0x80000000>;
+			};
+			dis-pad-ein-pwrd {
+				prod = <0x00001E0 0x80000000 0x0>;
+			};
+			tap-delay-ddr {
+				prod = <0x0000100 0x00FF0000 0x90000>;
+			};
+			trim-delay-ddr {
+				prod = <0x0000100 0x1F000000 0x5000000>;
+			};
+			tap-delay-default {
+				prod = <0x0000100 0x00FF0000 0x90000>;
+			};
+			trim-delay-default {
+				prod = <0x0000100 0x1F000000 0x5000000>;
+			};
 		};
 	};
 
@@ -56,6 +83,33 @@
 			};
 			prod-default-1v8 {
 				prod = <0x00001E4 0x00007F7F 0x7A00>;
+			};
+			comp-vref-default {
+				prod = <0x00001E0 0x0000000F 0x7>;
+			};
+			comp-vref-3v3 {
+				prod = <0x00001E0 0x0000000F 0x1>;
+			};
+			comp-vref-1v8 {
+				prod = <0x00001E0 0x0000000F 0x2>;
+			};
+			en-pad-ein-pwrd {
+				prod = <0x00001E0 0x80000000 0x80000000>;
+			};
+			dis-pad-ein-pwrd {
+				prod = <0x00001E0 0x80000000 0x0>;
+			};
+			tap-delay-ddr {
+				prod = <0x0000100 0x00FF0000 0xB0000>;
+			};
+			trim-delay-ddr {
+				prod = <0x0000100 0x1F000000 0x5000000>;
+			};
+			tap-delay-default {
+				prod = <0x0000100 0x00FF0000 0xB0000>;
+			};
+			trim-delay-default {
+				prod = <0x0000100 0x1F000000 0x5000000>;
 			};
 		};
 	};
@@ -72,6 +126,33 @@
 			};
 			prod-sdr104-1v8 {
 				prod = <0x00001E4 0x00007F7F 0x0503>;
+			};
+			comp-vref-default {
+				prod = <0x00001E0 0x0000000F 0x7>;
+			};
+			comp-vref-3v3 {
+				prod = <0x00001E0 0x0000000F 0x1>;
+			};
+			comp-vref-1v8 {
+				prod = <0x00001E0 0x0000000F 0x2>;
+			};
+			en-pad-ein-pwrd {
+				prod = <0x00001E0 0x80000000 0x80000000>;
+			};
+			dis-pad-ein-pwrd {
+				prod = <0x00001E0 0x80000000 0x0>;
+			};
+			tap-delay-ddr {
+				prod = <0x0000100 0x00FF0000 0xB0000>;
+			};
+			trim-delay-ddr {
+				prod = <0x0000100 0x1F000000 0x5000000>;
+			};
+			tap-delay-default {
+				prod = <0x0000100 0x00FF0000 0xB0000>;
+			};
+			trim-delay-default {
+				prod = <0x0000100 0x1F000000 0x5000000>;
 			};
 		};
 	};

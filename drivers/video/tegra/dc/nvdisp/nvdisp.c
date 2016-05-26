@@ -1416,14 +1416,16 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	tegra_dc_get(dc);
 
 	/* Deassert the dc reset */
-	res = reset_control_deassert(dc->rst);
-	if (res) {
-		dev_err(&dc->ndev->dev, "Unable to deassert dc %d\n",
-				dc->ctrl_num);
-		return res;
-	}
+	if (tegra_bpmp_running()) {
+		res = reset_control_deassert(dc->rst);
+		if (res) {
+			dev_err(&dc->ndev->dev, "Unable to deassert dc %d\n",
+					dc->ctrl_num);
+			return res;
+		}
 
-	tegra_nvdisp_wgrp_reset_deassert(dc);
+		tegra_nvdisp_wgrp_reset_deassert(dc);
+	}
 
 	/* Mask interrupts during init */
 	tegra_dc_writel(dc, 0, DC_CMD_INT_MASK);
@@ -1666,7 +1668,7 @@ u32 tegra_nvdisp_read_rg_crc(struct tegra_dc *dc)
 	}
 
 	/* If gated quitely return */
-	if (!tegra_dc_is_powered(dc))
+	if (tegra_bpmp_running() && !tegra_dc_is_powered(dc))
 		return 0;
 
 #ifdef INIT_COMPLETION

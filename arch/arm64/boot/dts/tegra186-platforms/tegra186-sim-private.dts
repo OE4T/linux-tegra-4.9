@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-sim-private.dts
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -349,12 +349,12 @@
 
 	host1x {
 		nvdisplay@15200000 {
-			status = "disabled";
+			status = "okay";
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,fb-win = <0>;
 			nvidia,dc-ctrlnum = <0>;
-			nvidia,dc-or-node = "/host1x/sor";
+			nvidia,dc-or-node = "/host1x/dsi";
 		};
 
 		nvdisplay@15210000 {
@@ -372,6 +372,13 @@
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,fb-win = <3>;
 			nvidia,dc-ctrlnum = <2>;
+		};
+
+		dsi { /* dsi@15300000 */
+			status = "okay";
+			panel-s-wuxga-8-0 {
+				status = "okay";
+			};
 		};
 
 		sor {

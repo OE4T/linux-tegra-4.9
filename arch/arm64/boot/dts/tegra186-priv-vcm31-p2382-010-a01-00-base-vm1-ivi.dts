@@ -104,12 +104,6 @@
 
 	/delete-node/ pmc-iopower;
 
-	fixed-regulators {
-		regulator@5 {
-			status = "disabled";
-		};
-	};
-
 	i2c@3160000 {
 		compatible = "nvidia,tegra186-i2c-hv";
 		ivc_queue = <&tegra_hv 53>;

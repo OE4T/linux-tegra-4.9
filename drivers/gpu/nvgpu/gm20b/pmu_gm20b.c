@@ -248,7 +248,7 @@ static int gm20b_load_falcon_ucode(struct gk20a *g, u32 falconidmask)
 	return err;
 }
 
-static void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr)
+void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr)
 {
 	gk20a_writel(g, pwr_falcon_dmatrfbase_r(), addr);
 }

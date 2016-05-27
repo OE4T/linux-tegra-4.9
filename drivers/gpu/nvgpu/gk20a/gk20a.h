@@ -556,13 +556,9 @@ struct gpu_ops {
 		int (*alloc_blob_space)(struct gk20a *g,
 				size_t size, struct mem_desc *mem);
 		int (*pmu_populate_loader_cfg)(struct gk20a *g,
-			struct lsfm_managed_ucode_img *lsfm,
-			union flcn_bl_generic_desc *p_bl_gen_desc,
-			u32 *p_bl_gen_desc_size);
+			void *lsfm,	u32 *p_bl_gen_desc_size);
 		int (*flcn_populate_bl_dmem_desc)(struct gk20a *g,
-			struct lsfm_managed_ucode_img *lsfm,
-			union flcn_bl_generic_desc *p_bl_gen_desc,
-			u32 *p_bl_gen_desc_size, u32 falconid);
+			void *lsfm,	u32 *p_bl_gen_desc_size, u32 falconid);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;

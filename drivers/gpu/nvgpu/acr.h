@@ -16,6 +16,7 @@
 
 #include "gm20b/mm_gm20b.h"
 #include "gm20b/acr_gm20b.h"
+#include "gm206/acr_gm206.h"
 
 struct acr_desc {
 	struct mem_desc ucode_blob;
@@ -29,7 +30,10 @@ struct acr_desc {
 	struct mem_desc acr_ucode;
 	const struct firmware *hsbl_fw;
 	struct mem_desc hsbl_ucode;
-	struct flcn_bl_dmem_desc bl_dmem_desc;
+	union {
+		struct flcn_bl_dmem_desc bl_dmem_desc;
+		struct flcn_bl_dmem_desc_v1 bl_dmem_desc_v1;
+	};
 	const struct firmware *pmu_fw;
 	const struct firmware *pmu_desc;
 	u32 capabilities;

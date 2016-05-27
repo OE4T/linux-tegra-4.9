@@ -156,8 +156,7 @@ static void gp10b_pmu_load_multiple_falcons(struct gk20a *g, u32 falconidmask,
 		cmd.cmd.acr.boot_falcons.flags = flags;
 		cmd.cmd.acr.boot_falcons.falconidmask =
 				falconidmask;
-		cmd.cmd.acr.boot_falcons.usevamask =
-				1 << LSF_FALCON_ID_GPCCS;
+		cmd.cmd.acr.boot_falcons.usevamask = 0;
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.lo =
 				u64_lo32(g->pmu.wpr_buf.gpu_va);
 		cmd.cmd.acr.boot_falcons.wprvirtualbase.hi =
@@ -424,7 +423,7 @@ static bool gp10b_is_priv_load(u32 falcon_id)
 		enable_status = false;
 		break;
 	case LSF_FALCON_ID_GPCCS:
-		enable_status = false;
+		enable_status = true;
 		break;
 	default:
 		break;

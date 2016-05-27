@@ -1419,7 +1419,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 	struct gk20a *g = ch->g;
 
 	if (gk20a_is_channel_marked_as_tsg(ch)) {
-		tsg = &g->fifo.tsg[ch->hw_chid];
+		tsg = &g->fifo.tsg[ch->tsgid];
 
 		mutex_lock(&tsg->ch_list_lock);
 

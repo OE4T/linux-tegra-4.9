@@ -5947,6 +5947,9 @@ static void tegra_dc_dsi_modeset_notifier(struct tegra_dc *dc)
 struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.init = tegra_dc_dsi_init,
 	.destroy = tegra_dc_dsi_destroy,
+#if defined(CONFIG_TEGRA_DSI2LVDS_SN65DSI85) && defined(CONFIG_DS90UB947)
+	.detect = ds90ub947_lvds2fpdlink3_detect,
+#endif /*defined(CONFIG_TEGRA_DSI2LVDS_SN65DSI85) && defined(CONFIG_DS90UB947)*/
 	.enable = tegra_dc_dsi_enable,
 	.postpoweron = tegra_dc_dsi_postpoweron,
 	.disable = tegra_dc_dsi_disable,

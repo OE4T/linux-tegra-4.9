@@ -25,8 +25,10 @@
 #include <linux/debugfs.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
+#include "../../../display/drivers/video/tegra/dc/dsi.h"
 
 #define DEV_NAME "ds90ub947-q1"
+#define	DS90UB947_GENERAL_STATUS	0x0C
 
 struct ds90ub947_data {
 	/* app device */
@@ -39,6 +41,9 @@ struct ds90ub947_data {
 	int en_gpio; /* GPIO */
 	int en_gpio_flags;
 };
+
+/* TODO: support multiple instances */
+struct ds90ub947_data	 *g_ds90ub947_data;
 
 static void ds90ub947_lvds2fpdl_en_gpio(struct ds90ub947_data *lvds2fpdl,
 	bool enable)
@@ -56,6 +61,17 @@ static void ds90ub947_lvds2fpdl_en_gpio(struct ds90ub947_data *lvds2fpdl,
 		gpio_direction_output(lvds2fpdl->en_gpio,
 			lvds2fpdl->en_gpio_flags & OF_GPIO_ACTIVE_LOW);
 	}
+}
+
+bool ds90ub947_lvds2fpdlink3_detect(struct tegra_dc *dc)
+{
+	int ret, val;
+
+	ret = regmap_read(g_ds90ub947_data->regmap, DS90UB947_GENERAL_STATUS,
+		&val);
+	if (0 == ret && (val & 0x01))
+		return true;
+	return false;
 }
 
 static int ds90ub947_init(struct ds90ub947_data *data)
@@ -236,7 +252,7 @@ static int ds90ub947_probe(struct i2c_client *client,
 		ret = -ENOMEM;
 		goto err1;
 	}
-
+	g_ds90ub947_data = data;
 	data->client = client;
 
 	ret = of_ds90ub947_parse_pdata(client, data);

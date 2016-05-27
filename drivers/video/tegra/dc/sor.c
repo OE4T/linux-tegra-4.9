@@ -187,6 +187,9 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_PLL1);
 	DUMP_REG(NV_SOR_PLL2);
 	DUMP_REG(NV_SOR_PLL3);
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	DUMP_REG(NV_SOR_PLL4);
+#endif
 	DUMP_REG(NV_SOR_CSTM);
 	DUMP_REG(NV_SOR_LVDS);
 	DUMP_REG(NV_SOR_CRCA);
@@ -221,6 +224,9 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_MN(1));
 	DUMP_REG(NV_SOR_DP_PADCTL(0));
 	DUMP_REG(NV_SOR_DP_PADCTL(1));
+#if defined(CONFIG_TEGRA_NVDISPLAY)
+	DUMP_REG(NV_SOR_DP_PADCTL(2));
+#endif
 	DUMP_REG(NV_SOR_DP_DEBUG(0));
 	DUMP_REG(NV_SOR_DP_DEBUG(1));
 	DUMP_REG(NV_SOR_DP_SPARE(0));

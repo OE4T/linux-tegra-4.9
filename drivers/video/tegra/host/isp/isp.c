@@ -435,10 +435,15 @@ static int isp_set_la(struct isp *tegra_isp, u32 isp_bw, u32 la_client)
 
 	ret = tegra_set_camera_ptsa(la_id, isp_bw, la_client);
 	if (!ret) {
+#if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		/* T186 ISP/VI LA programming is changed.
+		 * Check tegra18x_la.c
+		 */
 		ret = tegra_set_latency_allowance(la_id, isp_bw);
 		if (ret)
 			pr_err("%s: set latency failed for ISP %d: %d\n",
 				__func__, tegra_isp->dev_id, ret);
+#endif
 	} else {
 		pr_err("%s: set ptsa failed for ISP %d: %d\n", __func__,
 			tegra_isp->dev_id, ret);

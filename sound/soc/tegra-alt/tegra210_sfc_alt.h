@@ -102,6 +102,7 @@ struct tegra210_sfc {
 	int srate_in;
 	int srate_out;
 	int format_in;
+	int format_out;
 	struct regmap *regmap;
 	struct snd_pcm_hw_params in_hw_params;
 	struct snd_pcm_hw_params out_hw_params;

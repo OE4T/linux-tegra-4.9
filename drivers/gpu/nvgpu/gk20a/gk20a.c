@@ -71,7 +71,7 @@
 #include "nvgpu_gpuid_t18x.h"
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
 
@@ -933,7 +933,7 @@ static struct of_device_id tegra_gk20a_of_match[] = {
 	{ .compatible = TEGRA_18x_GPU_COMPAT_TEGRA,
 		.data = &t18x_gpu_tegra_platform },
 #endif
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_19x_GPU
 	{ .compatible = TEGRA_19x_GPU_COMPAT_TEGRA,
 		.data = &t19x_gpu_tegra_platform },
 #endif

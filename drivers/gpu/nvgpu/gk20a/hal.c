@@ -22,7 +22,7 @@
 #include "nvgpu_gpuid_t18x.h"
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_19x_GPU
 #include "nvgpu_gpuid_t19x.h"
 #endif
 
@@ -55,7 +55,7 @@ int gpu_init_hal(struct gk20a *g)
 			return -ENODEV;
 		break;
 #endif
-#if defined(CONFIG_ARCH_TEGRA_19x_SOC)
+#ifdef CONFIG_TEGRA_19x_GPU
 	case TEGRA_19x_GPUID:
 		if (TEGRA_19x_GPUID_HAL(g))
 			return -ENODEV;

@@ -96,6 +96,10 @@ static struct tmds_prod_pair tmds_config_modes[] = {
 	.clk = 150000000,
 	.name = "prod_c_150M"
 	},
+	{ /* 200 MHz */
+	.clk = 200000000,
+	.name = "prod_c_200M"
+	},
 	{ /* 300 MHz */
 	.clk = 300000000,
 	.name = "prod_c_300M"

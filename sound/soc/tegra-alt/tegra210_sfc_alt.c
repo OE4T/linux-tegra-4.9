@@ -331,6 +331,8 @@ static int tegra210_sfc_set_audio_cif(struct tegra210_sfc *sfc,
 	cif_conf.audio_bits = audio_bits;
 	if (sfc->format_in && (reg == TEGRA210_SFC_AXBAR_RX_CIF_CTRL))
 		cif_conf.audio_bits = tegra210_sfc_fmt_values[sfc->format_in];
+	if (sfc->format_out && (reg == TEGRA210_SFC_AXBAR_TX_CIF_CTRL))
+		cif_conf.audio_bits = tegra210_sfc_fmt_values[sfc->format_out];
 	cif_conf.client_bits = TEGRA210_AUDIOCIF_BITS_32;
 
 	sfc->soc_data->set_audio_cif(sfc->regmap, reg, &cif_conf);
@@ -472,6 +474,9 @@ static int tegra210_sfc_get_format(struct snd_kcontrol *kcontrol,
 	if (strstr(kcontrol->id.name, "input"))
 		ucontrol->value.integer.value[0] = sfc->format_in;
 
+	if (strstr(kcontrol->id.name, "output"))
+		ucontrol->value.integer.value[0] = sfc->format_out;
+
 	return 0;
 }
 
@@ -484,6 +489,9 @@ static int tegra210_sfc_put_format(struct snd_kcontrol *kcontrol,
 	/* set the format control flag */
 	if (strstr(kcontrol->id.name, "input"))
 		sfc->format_in = ucontrol->value.integer.value[0];
+
+	if (strstr(kcontrol->id.name, "output"))
+		sfc->format_out = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -708,6 +716,8 @@ static const struct snd_kcontrol_new tegra210_sfc_controls[] = {
 	SOC_SINGLE_EXT("output rate", 0, 0, 192000, 0,
 		tegra210_sfc_get_srate, tegra210_sfc_put_srate),
 	SOC_ENUM_EXT("input bit format", tegra210_sfc_format_enum,
+		tegra210_sfc_get_format, tegra210_sfc_put_format),
+	SOC_ENUM_EXT("output bit format", tegra210_sfc_format_enum,
 		tegra210_sfc_get_format, tegra210_sfc_put_format),
 	SOC_SINGLE_EXT("init", 0, 0, 1, 0,
 		tegra210_sfc_init_get, tegra210_sfc_init_put),

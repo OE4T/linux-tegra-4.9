@@ -624,13 +624,42 @@ static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 
 static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 {
+	struct tsg_gk20a *tsg = NULL;
+	struct channel_gk20a *ch_tsg = NULL;
+	struct gk20a *g = ch->g;
+	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_channel_config_params *p =
+			&msg.params.channel_config;
+	int err;
+
 	gk20a_dbg_fn("");
 
-	if (verbose)
-		gk20a_warn(dev_from_gk20a(ch->g),
-			"channel force reset is not supported");
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		tsg = &g->fifo.tsg[ch->tsgid];
 
-	return -ENOSYS;
+		mutex_lock(&tsg->ch_list_lock);
+
+		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
+			if (gk20a_channel_get(ch_tsg)) {
+				gk20a_set_error_notifier(ch_tsg,
+				       NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+				gk20a_channel_put(ch_tsg);
+			}
+		}
+
+		mutex_unlock(&tsg->ch_list_lock);
+	} else {
+		gk20a_set_error_notifier(ch,
+			NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+	}
+
+	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FORCE_RESET;
+	msg.handle = platform->virt_handle;
+	p->handle = ch->virt_ctx;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	WARN_ON(err || msg.ret);
+	return err ? err : msg.ret;
 }
 
 static void vgpu_fifo_set_ctx_mmu_error(struct gk20a *g,

@@ -382,7 +382,7 @@ static int bluedroid_pm_probe(struct platform_device *pdev)
 		BDP_DBG("found host_wake irq\n");
 		ret = request_irq(bluedroid_pm->host_wake_irq,
 					bluedroid_pm_hostwake_isr,
-					IRQF_DISABLED | IRQF_TRIGGER_RISING,
+					IRQF_TRIGGER_RISING,
 					"bluetooth hostwake", bluedroid_pm);
 		if (ret) {
 			BDP_ERR("Failed to get host_wake irq\n");

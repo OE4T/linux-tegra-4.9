@@ -960,13 +960,13 @@ static void pg_cmd_eng_buf_load_set_buf_size_v1(struct pmu_pg_cmd *pg,
 static void pg_cmd_eng_buf_load_set_dma_base_v0(struct pmu_pg_cmd *pg,
 	u32 value)
 {
-	pg->eng_buf_load_v0.dma_base = value;
+	pg->eng_buf_load_v0.dma_base = (value >> 8);
 }
 static void pg_cmd_eng_buf_load_set_dma_base_v1(struct pmu_pg_cmd *pg,
 	u32 value)
 {
-	pg->eng_buf_load_v1.dma_desc.dma_addr.lo |= u64_lo32(value << 8);
-	pg->eng_buf_load_v1.dma_desc.dma_addr.hi |= u64_hi32(value << 8);
+	pg->eng_buf_load_v1.dma_desc.dma_addr.lo |= u64_lo32(value);
+	pg->eng_buf_load_v1.dma_desc.dma_addr.hi |= u64_hi32(value);
 }
 
 static void pg_cmd_eng_buf_load_set_dma_offset_v0(struct pmu_pg_cmd *pg,
@@ -2672,7 +2672,7 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_size(&cmd.cmd.pg,
 			pmu->pg_buf.size);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_base(&cmd.cmd.pg,
-			u64_lo32(pmu->pg_buf.gpu_va >> 8));
+			u64_lo32(pmu->pg_buf.gpu_va));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_offset(&cmd.cmd.pg,
 			(u8)(pmu->pg_buf.gpu_va & 0xFF));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx(&cmd.cmd.pg,
@@ -2705,7 +2705,7 @@ static void pmu_setup_hw_load_zbc(struct gk20a *g)
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_size(&cmd.cmd.pg,
 			pmu->seq_buf.size);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_base(&cmd.cmd.pg,
-			u64_lo32(pmu->seq_buf.gpu_va >> 8));
+			u64_lo32(pmu->seq_buf.gpu_va));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_offset(&cmd.cmd.pg,
 			(u8)(pmu->seq_buf.gpu_va & 0xFF));
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_dma_idx(&cmd.cmd.pg,

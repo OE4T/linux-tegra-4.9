@@ -686,10 +686,12 @@ void gk20a_ctxsw_trace_tsg_reset(struct gk20a *g, struct tsg_gk20a *tsg)
 		return;
 
 	mutex_lock(&tsg->ch_list_lock);
-	ch = list_entry(&tsg->ch_list, struct channel_gk20a, ch_entry);
+	if (!list_empty(&tsg->ch_list)) {
+		ch = list_entry(tsg->ch_list.next,
+				struct channel_gk20a, ch_entry);
+		entry.pid = ch->pid;
+	}
 	mutex_unlock(&tsg->ch_list_lock);
-
-	entry.pid = ch->pid;
 
 	gk20a_ctxsw_trace_write(g, &entry);
 	gk20a_ctxsw_trace_wake_up(g, 0);

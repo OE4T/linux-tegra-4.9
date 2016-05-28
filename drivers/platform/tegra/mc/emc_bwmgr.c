@@ -404,6 +404,11 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"pcie",
 	"bbc_0",
 	"eqos",
+	"se0",
+	"se1",
+	"se2",
+	"se3",
+	"se4",
 	"debug",
 	"null",
 };

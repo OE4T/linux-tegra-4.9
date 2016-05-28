@@ -49,6 +49,7 @@
 #include <linux/version.h>
 #include <linux/pm_qos.h>
 #include <linux/jiffies.h>
+#include <linux/platform/tegra/emc_bwmgr.h>
 
 #include "tegra-se-nvhost.h"
 #define NV_SE1_CLASS_ID		0x3A
@@ -2895,7 +2896,9 @@ static struct tegra_se_chipdata tegra18_se_chipdata = {
 
 static struct nvhost_device_data nvhost_se1_info = {
 	.clocks = {{"se", 600000000},
-		   {"emc", UINT_MAX}, {} },
+		   {"emc", UINT_MAX,
+		   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		   0, TEGRA_BWMGR_SET_EMC_FLOOR}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = true,
 	.powergate_delay        = 500,
@@ -2906,11 +2909,14 @@ static struct nvhost_device_data nvhost_se1_info = {
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
+	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE1,
 };
 
 static struct nvhost_device_data nvhost_se2_info = {
 	.clocks = {{"se", 600000000},
-		   {"emc", UINT_MAX}, {} },
+		   {"emc", UINT_MAX,
+		   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		   0, TEGRA_BWMGR_SET_EMC_FLOOR}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = true,
 	.powergate_delay        = 500,
@@ -2921,11 +2927,14 @@ static struct nvhost_device_data nvhost_se2_info = {
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
+	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE2,
 };
 
 static struct nvhost_device_data nvhost_se3_info = {
 	.clocks = {{"se", 600000000},
-		   {"emc", UINT_MAX}, {} },
+		   {"emc", UINT_MAX,
+		   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		   0, TEGRA_BWMGR_SET_EMC_FLOOR}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = true,
 	.powergate_delay        = 500,
@@ -2936,11 +2945,14 @@ static struct nvhost_device_data nvhost_se3_info = {
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
+	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE3,
 };
 
 static struct nvhost_device_data nvhost_se4_info = {
 	.clocks = {{"se", 600000000},
-		   {"emc", UINT_MAX}, {} },
+		   {"emc", UINT_MAX,
+		   NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
+		   0, TEGRA_BWMGR_SET_EMC_FLOOR}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate          = true,
 	.powergate_delay        = 500,
@@ -2951,6 +2963,7 @@ static struct nvhost_device_data nvhost_se4_info = {
 	.push_work_done = 1,
 	.vm_regs		= {{SE_STREAMID_REG_OFFSET, true} },
 	.kernel_only = true,
+	.bwmgr_client_id = TEGRA_BWMGR_CLIENT_SE4,
 };
 
 static struct of_device_id tegra_se_of_match[] = {

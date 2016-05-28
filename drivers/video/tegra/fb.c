@@ -326,8 +326,7 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 	case FB_BLANK_UNBLANK:
 		dev_info(&tegra_fb->ndev->dev, "unblank\n");
 		tegra_dc_enable(dc);
-		if (fb_console_mapped())
-			tegra_dc_cursor_resume(dc);
+
 		if (!dc->suspended && dc->blanked &&
 		    !tegra_dc_restore(dc)) {
 			struct tegra_dc_win *win = &tegra_fb->win;

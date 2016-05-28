@@ -4972,6 +4972,9 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 	tegra_dc_blank(dc, BLANK_ALL);
 #endif
 
+	if (dc->cursor.enabled)
+		tegra_dc_cursor_suspend(dc);
+
 	/* it's important that new underflow work isn't scheduled before the
 	 * lock is acquired. */
 	cancel_delayed_work_sync(&dc->underflow_work);

@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(328)
+#define NVI_DRIVER_VERSION		(329)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -3051,21 +3051,30 @@ static int nvi_batch(void *client, int snsr_id, int flags,
 	if (snsr_id == DEV_TMP)
 		return 0;
 
+	if (period == st->snsr[snsr_id].period_us &&
+				       timeout == st->snsr[snsr_id].timeout_us)
+		return 0;
+
 	st->snsr[snsr_id].period_us = period;
 	st->snsr[snsr_id].timeout_us = timeout;
-	if (st->snsr[snsr_id].enable) {
-		ret = nvi_timeout(st);
-		if (st->en_msk & (1 << DEV_DMP) && st->hal->dmp->fn_dev_batch)
+	if (!st->snsr[snsr_id].enable)
+		return 0;
+
+	ret = nvi_timeout(st);
+	if (st->en_msk & (1 << DEV_DMP)) {
+		if (st->hal->dmp->fn_dev_batch)
 			/* batch can be done in real-time with the DMP on */
 			/* nvi_dd_batch */
-			return st->hal->dmp->fn_dev_batch(st, snsr_id, -1);
-
+			ret = st->hal->dmp->fn_dev_batch(st, snsr_id, -1);
+		else
+			ret = nvi_en(st);
+	} else {
 		ret |= nvi_period_src(st, st->hal->dev[snsr_id]->src);
 		if (ret > 0)
-			nvi_en(st);
+			ret = nvi_en(st);
 	}
 
-	return 0;
+	return ret;
 }
 
 static int nvi_flush(void *client, int snsr_id)

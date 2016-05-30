@@ -3568,6 +3568,72 @@ bool tegra_phy_xusb_utmi_pad_secondary_charger_detect(struct phy *phy)
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_secondary_charger_detect);
 
+int tegra_phy_xusb_utmi_vbus_power_on(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	int port;
+	int rc;
+	int status;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+	port = utmi_phy_to_port(phy);
+
+	status = regulator_is_enabled(padctl->vbus[port]);
+	mutex_lock(&padctl->lock);
+	if (padctl->vbus[port]) {
+		rc = regulator_enable(padctl->vbus[port]);
+		if (rc) {
+			dev_err(padctl->dev, "enable port %d vbus failed %d\n",
+				port, rc);
+			mutex_unlock(&padctl->lock);
+			return rc;
+		}
+	}
+	mutex_unlock(&padctl->lock);
+	dev_info(padctl->dev, "%s: port %d regulator status: %d->%d\n",
+		 __func__, port, status,
+		 regulator_is_enabled(padctl->vbus[port]));
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_vbus_power_on);
+
+int tegra_phy_xusb_utmi_vbus_power_off(struct phy *phy)
+{
+	struct tegra_padctl *padctl;
+	int port;
+	int rc;
+	int status;
+
+	if (!phy)
+		return -EINVAL;
+
+	padctl = phy_get_drvdata(phy);
+	port = utmi_phy_to_port(phy);
+
+	status = regulator_is_enabled(padctl->vbus[port]);
+	mutex_lock(&padctl->lock);
+	if (padctl->vbus[port]) {
+		rc = regulator_disable(padctl->vbus[port]);
+		if (rc) {
+			dev_err(padctl->dev, "disable port %d vbus failed %d\n",
+				port, rc);
+			mutex_unlock(&padctl->lock);
+			return rc;
+		}
+	}
+	mutex_unlock(&padctl->lock);
+	dev_info(padctl->dev, "%s: port %d regulator status: %d->%d\n",
+		 __func__, port, status,
+		 regulator_is_enabled(padctl->vbus[port]));
+
+	return 0;
+}
+EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_vbus_power_off);
+
 MODULE_AUTHOR("JC Kuo <jckuo@nvidia.com>");
 MODULE_DESCRIPTION("Tegra 186 XUSB PADCTL driver");
 MODULE_LICENSE("GPL v2");

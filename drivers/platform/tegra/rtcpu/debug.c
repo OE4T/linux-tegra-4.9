@@ -157,6 +157,7 @@ static int camrtc_ivc_dbg_xact(
 	unsigned long timeout)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
+	unsigned long flags;
 	int ret;
 
 	resp->resp_type = req->req_type;
@@ -168,9 +169,9 @@ static int camrtc_ivc_dbg_xact(
 	if (ret)
 		return ret;
 
-	spin_lock_bh(&crd->lock_pending);
+	spin_lock_irqsave(&crd->lock_pending, flags);
 	crd->pending = resp;
-	spin_unlock_bh(&crd->lock_pending);
+	spin_unlock_irqrestore(&crd->lock_pending, flags);
 
 	ret = tegra_ivc_write(&ch->ivc, req, sizeof(*req));
 	if (ret < 0) {
@@ -188,9 +189,9 @@ static int camrtc_ivc_dbg_xact(
 	ret = 0;
 
 done:
-	spin_lock_bh(&crd->lock_pending);
+	spin_lock_irqsave(&crd->lock_pending, flags);
 	crd->pending = NULL;
-	spin_unlock_bh(&crd->lock_pending);
+	spin_unlock_irqrestore(&crd->lock_pending, flags);
 
 	mutex_unlock(&crd->mutex);
 

@@ -123,7 +123,6 @@ struct tegra_ivc_bus {
 	struct device dev;
 	int hsp_master;
 	int hsp_db;
-	struct work_struct work;
 	struct tegra_ivc_channel *chans;
 };
 
@@ -139,15 +138,6 @@ struct device_type tegra_hsp_type = {
 	.name = "tegra-hsp",
 };
 EXPORT_SYMBOL(tegra_hsp_type);
-
-void tegra_hsp_notify(struct device *dev)
-{
-	struct tegra_ivc_bus *bus =
-		container_of(dev, struct tegra_ivc_bus, dev);
-
-	schedule_work(&bus->work);
-}
-EXPORT_SYMBOL(tegra_hsp_notify);
 
 static void tegra_ivc_channel_release(struct device *dev)
 {
@@ -194,15 +184,16 @@ struct device_type tegra_ivc_channel_type = {
 };
 EXPORT_SYMBOL(tegra_ivc_channel_type);
 
-static void tegra_ivc_bus_worker(struct work_struct *work)
+void tegra_hsp_notify(struct device *dev)
 {
 	struct tegra_ivc_bus *bus =
-			container_of(work, struct tegra_ivc_bus, work);
+		container_of(dev, struct tegra_ivc_bus, dev);
 	struct tegra_ivc_channel *chan;
 
 	for (chan = bus->chans; chan != NULL; chan = chan->next)
 		tegra_ivc_channel_notify(chan);
 }
+EXPORT_SYMBOL(tegra_hsp_notify);
 
 static struct tegra_ivc_channel *tegra_ivc_bus_parse_channel(
 		struct device_node *ch_node, struct device *parent,
@@ -443,8 +434,6 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 	bus->dev.release = tegra_ivc_bus_release;
 	dev_set_name(&bus->dev, "ivc-%s", dev_name(dev));
 
-	INIT_WORK(&bus->work, tegra_ivc_bus_worker);
-
 	device_initialize(&bus->dev);
 
 	ret = tegra_ivc_bus_parse_channels(bus, dev->of_node, sid);
@@ -503,9 +492,7 @@ static void tegra_ivc_bus_stop(struct device *dev)
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {
 	tegra_ivc_bus_destroy_channels(bus);
-	device_del(&bus->dev);
-	flush_scheduled_work();
-	put_device(&bus->dev);
+	device_unregister(&bus->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_destroy);
 

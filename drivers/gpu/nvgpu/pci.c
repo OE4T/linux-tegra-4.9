@@ -142,7 +142,7 @@ static char *nvgpu_pci_devnode(struct device *dev, umode_t *mode)
 	return kasprintf(GFP_KERNEL, "nvgpu-pci/%s", dev_name(dev));
 }
 
-struct class nvgpu_pci_class = {
+static struct class nvgpu_pci_class = {
 	.owner = THIS_MODULE,
 	.name = "nvidia-pci-gpu",
 	.devnode = nvgpu_pci_devnode,

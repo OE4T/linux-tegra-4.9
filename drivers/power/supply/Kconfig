@@ -527,4 +527,11 @@ config AXP20X_POWER
 	  This driver provides support for the power supply features of
 	  AXP20x PMIC.
 
+config BATTERY_CHARGER_GAUGE_COMM
+	bool "Battery charger and Fuel gauge interface layer"
+	help
+	  This driver is to communicate from charger driver to fuel
+	  gauge driver and vice versa.this interface needed to pass battery
+	  status information.
+
 endif # POWER_SUPPLY

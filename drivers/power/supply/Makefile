@@ -33,6 +33,7 @@ obj-$(CONFIG_BATTERY_WM97XX)	+= wm97xx_battery.o
 obj-$(CONFIG_BATTERY_SBS)	+= sbs-battery.o
 obj-$(CONFIG_CHARGER_BQ2419X)   += bq2419x-charger.o
 obj-$(CONFIG_BATTERY_BQ27441)	+= bq27441_battery.o
+obj-$(CONFIG_BATTERY_CHARGER_GAUGE_COMM) += battery-charger-gauge-comm.o
 obj-$(CONFIG_BATTERY_BQ27XXX)	+= bq27xxx_battery.o
 obj-$(CONFIG_BATTERY_BQ27XXX_I2C) += bq27xxx_battery_i2c.o
 obj-$(CONFIG_BATTERY_DA9030)	+= da9030_battery.o

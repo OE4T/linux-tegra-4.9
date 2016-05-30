@@ -1677,12 +1677,16 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 			return 0;
 	}
 
-	c->g->ops.fifo.disable_channel(c);
-	ret = c->g->ops.fifo.preempt_channel(c->g, c->hw_chid);
+	ret = gk20a_disable_channel_tsg(g, c);
 	if (ret) {
-		c->g->ops.fifo.enable_channel(c);
-		gk20a_err(dev_from_gk20a(g),
-			"failed to preempt channel\n");
+		gk20a_err(dev_from_gk20a(g), "failed to disable channel/TSG\n");
+		return ret;
+	}
+
+	ret = gk20a_fifo_preempt(g, c);
+	if (ret) {
+		gk20a_enable_channel_tsg(g, c);
+		gk20a_err(dev_from_gk20a(g), "failed to preempt channel/TSG\n");
 		return ret;
 	}
 
@@ -1757,7 +1761,7 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	gk20a_mem_end(g, gr_mem);
 
 	/* enable channel */
-	c->g->ops.fifo.enable_channel(c);
+	gk20a_enable_channel_tsg(g, c);
 
 	return 0;
 cleanup_pm_buf:
@@ -1766,7 +1770,7 @@ cleanup_pm_buf:
 	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, &pm_ctx->mem);
 	memset(&pm_ctx->mem, 0, sizeof(struct mem_desc));
 
-	c->g->ops.fifo.enable_channel(c);
+	gk20a_enable_channel_tsg(g, c);
 	return ret;
 }
 

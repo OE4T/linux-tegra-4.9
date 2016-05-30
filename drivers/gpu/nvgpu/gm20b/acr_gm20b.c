@@ -65,6 +65,7 @@ static int gm20b_alloc_blob_space(struct gk20a *g,
 		size_t size, struct mem_desc *mem);
 static bool gm20b_is_priv_load(u32 falcon_id);
 static bool gm20b_is_lazy_bootstrap(u32 falcon_id);
+static void gm20b_wpr_info(struct gk20a *g, u64 *base, u64 *size);
 
 /*Globals*/
 static get_ucode_details pmu_acr_supp_ucode_list[] = {
@@ -85,7 +86,7 @@ static void start_gm20b_pmu(struct gk20a *g)
 		pwr_falcon_cpuctl_startcpu_f(1));
 }
 
-void gm20b_wpr_info(struct gk20a *g, u64 *base, u64 *size)
+static void gm20b_wpr_info(struct gk20a *g, u64 *base, u64 *size)
 {
 	struct mc_carveout_info inf;
 
@@ -1049,7 +1050,7 @@ static int lsf_gen_wpr_requirements(struct gk20a *g, struct ls_flcn_mgr *plsfm)
 
 /*Loads ACR bin to FB mem and bootstraps PMU with bootloader code
  * start and end are addresses of ucode blob in non-WPR region*/
-int gm20b_bootstrap_hs_flcn(struct gk20a *g)
+static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;

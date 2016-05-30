@@ -70,7 +70,7 @@
 				};
 				/* default display timing for test
 				 * (only the first entry is effective) */
-/*
+#ifdef CONFIG_ANDROID
 				display-timings {
 					1920x1080-32 {
 						clock-frequency = <148500000>;
@@ -86,7 +86,7 @@
 						nvidia,v-ref-to-sync = <1>;
 					};
 				};
-*/
+#endif
                                 lt-data {
 					tegra-dp-vs-regs {
 						/* postcursor2 L0 */

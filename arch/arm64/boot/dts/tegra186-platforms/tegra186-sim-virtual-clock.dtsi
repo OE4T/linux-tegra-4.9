@@ -81,23 +81,23 @@
 		};
 
 		se@15810000 {
-			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
-			clock-names = "se", "emc", "entropy";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "entropy";
 		};
 
 		se@15820000 {
-			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
-			clock-names = "se", "emc", "entropy";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "entropy";
 		};
 
 		se@15830000 {
-			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
-			clock-names = "se", "emc", "entropy";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "entropy";
 		};
 
 		se@15840000 {
-			clocks = <&clk32k_in>, <&clk32k_in>, <&clk32k_in>;
-			clock-names = "se", "emc", "entropy";
+			clocks = <&clk32k_in>, <&clk32k_in>;
+			clock-names = "se", "entropy";
 		};
 	};
 };

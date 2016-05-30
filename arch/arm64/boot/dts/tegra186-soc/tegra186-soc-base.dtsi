@@ -981,9 +981,8 @@
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15810000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
-			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "se", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_SE>;
+			clock-names = "se";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -993,9 +992,8 @@
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15820000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
-			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "se", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_SE>;
+			clock-names = "se";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -1005,9 +1003,8 @@
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15830000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
-			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "se", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_SE>;
+			clock-names = "se";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -1017,9 +1014,8 @@
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15840000 0x0 0x10000>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
-			clocks = <&tegra_car TEGRA186_CLK_SE>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "se", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_SE>;
+			clock-names = "se";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};

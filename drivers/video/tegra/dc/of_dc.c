@@ -491,13 +491,13 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 	if (default_out->type == TEGRA_DC_OUT_HDMI) {
 		default_out->depth = 0;
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-		if (!of_property_read_u32(np,
-			"nvidia,out-depth", &temp)) {
-			default_out->depth = (unsigned) temp;
-			OF_DC_LOG("out-depth for HDMI FB console %d\n", temp);
+		if (fb_console_mapped()) {
+			if (!of_property_read_u32(np,
+				"nvidia,out-depth", &temp)) {
+				default_out->depth = (unsigned) temp;
+				OF_DC_LOG("out-depth for HDMI FB console %d\n", temp);
+			}
 		}
-#endif
 	} else {
 		/* default_out->type == TEGRA_DC_OUT_DSI or
 		 * default_out->type == TEGRA_DC_OUT_DP or
@@ -2764,13 +2764,13 @@ struct tegra_dc_platform_data
 				goto fail_parse;
 			}
 		} else {
-#ifdef CONFIG_FRAMEBUFFER_CONSOLE
-			/*
-			 * Should never happen !
-			 */
-			dev_err(&ndev->dev, "no timing provided\n");
-			goto fail_parse;
-#endif
+			if (fb_console_mapped()) {
+				/*
+				 * Should never happen !
+				 */
+				dev_err(&ndev->dev, "no timing provided\n");
+				goto fail_parse;
+			}
 		}
 	}
 

@@ -51,6 +51,7 @@
 
 #define APP_VERSION_NC_1	20313802
 #define APP_VERSION_NC_0	20360931
+#define APP_VERSION_GM206	20652057
 #define APP_VERSION_GM20B_5 20490253
 #define APP_VERSION_GM20B_4 19008461
 #define APP_VERSION_GM20B_3 18935575
@@ -383,6 +384,16 @@ struct pmu_cmdline_args_v1 {
 	struct pmu_mem_v1 gc6_ctx;		/* dmem offset of gc6 context */
 };
 
+struct flcn_u64 {
+	u32 lo;
+	u32 hi;
+};
+
+struct flcn_mem_desc_v0 {
+	struct flcn_u64 address;
+	u32 params;
+};
+
 struct pmu_cmdline_args_v2 {
 	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
 	u32 falc_trace_size;		/* falctrace buffer size (bytes) */
@@ -417,6 +428,16 @@ struct pmu_cmdline_args_v4 {
 					registers*/
 	struct pmu_mem_desc_v0 gc6_ctx;		/* dmem offset of gc6 context */
 	u8 pad;
+};
+
+struct pmu_cmdline_args_v5 {
+	u32 cpu_freq_hz;		/* Frequency of the clock driving PMU */
+	struct flcn_mem_desc_v0 trace_buf;
+	u8 secure_mode;
+	u8 raise_priv_sec;
+	struct flcn_mem_desc_v0 gc6_ctx;
+	struct flcn_mem_desc_v0 init_data_dma_info;
+	u32 dummy;
 };
 
 
@@ -537,6 +558,13 @@ struct pmu_allocation_v2 {
 	} alloc;
 };
 
+struct pmu_allocation_v3 {
+	struct {
+		struct pmu_dmem dmem;
+		struct flcn_mem_desc_v0 fb;
+	} alloc;
+};
+
 enum {
 	PMU_INIT_MSG_TYPE_PMU_INIT = 0,
 };
@@ -571,10 +599,27 @@ struct pmu_init_msg_pmu_v1 {
 	u16 sw_managed_area_offset;
 	u16 sw_managed_area_size;
 };
+struct pmu_init_msg_pmu_v2 {
+	u8 msg_type;
+	u8 pad;
+	u16  os_debug_entry_point;
+
+	struct {
+		u16 size;
+		u16 offset;
+		u8  index;
+		u8  pad;
+	} queue_info[PMU_QUEUE_COUNT];
+
+	u16 sw_managed_area_offset;
+	u16 sw_managed_area_size;
+	u8 dummy[18];
+};
 
 union pmu_init_msg_pmu {
 	struct pmu_init_msg_pmu_v0 v0;
 	struct pmu_init_msg_pmu_v1 v1;
+	struct pmu_init_msg_pmu_v2 v2;
 };
 
 struct pmu_init_msg {
@@ -582,6 +627,7 @@ struct pmu_init_msg {
 		u8 msg_type;
 		struct pmu_init_msg_pmu_v1 pmu_init_v1;
 		struct pmu_init_msg_pmu_v0 pmu_init_v0;
+		struct pmu_init_msg_pmu_v2 pmu_init_v2;
 	};
 };
 
@@ -709,6 +755,14 @@ struct pmu_pg_cmd_eng_buf_load_v1 {
 	} dma_desc;
 };
 
+struct pmu_pg_cmd_eng_buf_load_v2 {
+	u8 cmd_type;
+	u8 engine_id;
+	u8 buf_idx;
+	u8 pad;
+	struct flcn_mem_desc_v0 dma_desc;
+};
+
 enum {
 	PMU_PG_STAT_CMD_ALLOC_DMEM = 0,
 };
@@ -737,6 +791,7 @@ struct pmu_pg_cmd {
 		struct pmu_pg_cmd_elpg_cmd elpg_cmd;
 		struct pmu_pg_cmd_eng_buf_load_v0 eng_buf_load_v0;
 		struct pmu_pg_cmd_eng_buf_load_v1 eng_buf_load_v1;
+		struct pmu_pg_cmd_eng_buf_load_v2 eng_buf_load_v2;
 		struct pmu_pg_cmd_stat stat;
 		struct pmu_pg_cmd_gr_init_param gr_init_param;
 		/* TBD: other pg commands */
@@ -922,6 +977,14 @@ enum {
 	PMU_PERFMON_CMD_ID_INIT  = 2
 };
 
+struct pmu_perfmon_cmd_start_v3 {
+	u8 cmd_type;
+	u8 group_id;
+	u8 state_id;
+	u8 flags;
+	struct pmu_allocation_v3 counter_alloc;
+};
+
 struct pmu_perfmon_cmd_start_v2 {
 	u8 cmd_type;
 	u8 group_id;
@@ -948,6 +1011,17 @@ struct pmu_perfmon_cmd_start_v0 {
 
 struct pmu_perfmon_cmd_stop {
 	u8 cmd_type;
+};
+
+struct pmu_perfmon_cmd_init_v3 {
+	u8 cmd_type;
+	u8 to_decrease_count;
+	u8 base_counter_id;
+	u32 sample_period_us;
+	struct pmu_allocation_v3 counter_alloc;
+	u8 num_counters;
+	u8 samples_in_moving_avg;
+	u16 sample_buffer;
 };
 
 struct pmu_perfmon_cmd_init_v2 {
@@ -989,10 +1063,12 @@ struct pmu_perfmon_cmd {
 		struct pmu_perfmon_cmd_start_v0 start_v0;
 		struct pmu_perfmon_cmd_start_v1 start_v1;
 		struct pmu_perfmon_cmd_start_v2 start_v2;
+		struct pmu_perfmon_cmd_start_v3 start_v3;
 		struct pmu_perfmon_cmd_stop stop;
 		struct pmu_perfmon_cmd_init_v0 init_v0;
 		struct pmu_perfmon_cmd_init_v1 init_v1;
 		struct pmu_perfmon_cmd_init_v2 init_v2;
+		struct pmu_perfmon_cmd_init_v3 init_v3;
 	};
 };
 
@@ -1201,11 +1277,13 @@ struct pmu_sequence {
 		struct pmu_allocation_v0 in_v0;
 		struct pmu_allocation_v1 in_v1;
 		struct pmu_allocation_v2 in_v2;
+		struct pmu_allocation_v3 in_v3;
 	};
 	union {
 		struct pmu_allocation_v0 out_v0;
 		struct pmu_allocation_v1 out_v1;
 		struct pmu_allocation_v2 out_v2;
+		struct pmu_allocation_v3 out_v3;
 	};
 	u8 *out_payload;
 	pmu_callback callback;
@@ -1391,6 +1469,7 @@ struct pmu_gk20a {
 		struct pmu_cmdline_args_v2 args_v2;
 		struct pmu_cmdline_args_v3 args_v3;
 		struct pmu_cmdline_args_v4 args_v4;
+		struct pmu_cmdline_args_v5 args_v5;
 	};
 	unsigned long perfmon_events_cnt;
 	bool perfmon_sampling_enabled;

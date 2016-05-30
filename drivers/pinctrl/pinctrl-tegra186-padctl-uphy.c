@@ -635,6 +635,9 @@ static const char * const source_pll_states[] = {
 
 struct padctl_context {
 	u32 vbus_id;
+	u32 usb2_pad_mux;
+	u32 usb2_port_cap;
+	u32 ss_port_cap;
 };
 
 struct tegra_padctl_uphy {
@@ -4917,10 +4920,22 @@ static int tegra186_uphy_pll_deinit(struct tegra_padctl_uphy *uphy)
 static void tegra186_padctl_save(struct tegra_padctl_uphy *uphy)
 {
 	uphy->padctl_context.vbus_id = padctl_readl(uphy, USB2_VBUS_ID);
+	uphy->padctl_context.usb2_pad_mux =
+				padctl_readl(uphy, XUSB_PADCTL_USB2_PAD_MUX);
+	uphy->padctl_context.usb2_port_cap =
+				padctl_readl(uphy, XUSB_PADCTL_USB2_PORT_CAP);
+	uphy->padctl_context.ss_port_cap =
+				padctl_readl(uphy, XUSB_PADCTL_SS_PORT_CAP);
 }
 
 static void tegra186_padctl_restore(struct tegra_padctl_uphy *uphy)
 {
+	padctl_writel(uphy, uphy->padctl_context.usb2_pad_mux,
+			    XUSB_PADCTL_USB2_PAD_MUX);
+	padctl_writel(uphy, uphy->padctl_context.usb2_port_cap,
+			    XUSB_PADCTL_USB2_PORT_CAP);
+	padctl_writel(uphy, uphy->padctl_context.ss_port_cap,
+			    XUSB_PADCTL_SS_PORT_CAP);
 	padctl_writel(uphy, uphy->padctl_context.vbus_id, USB2_VBUS_ID);
 }
 
@@ -5528,12 +5543,6 @@ static int tegra186_usb3_phy_set_wake(struct tegra_padctl_uphy *uphy,
 		reg &= ~ALL_WAKE_EVENTS;
 		reg |= SS_PORT_WAKE_INTERRUPT_ENABLE(port);
 		padctl_writel(uphy, reg, XUSB_PADCTL_ELPG_PROGRAM);
-
-		usleep_range(10, 20);
-
-		reg = padctl_readl(uphy, XUSB_PADCTL_ELPG_PROGRAM_1);
-		reg |= SSPX_ELPG_VCORE_DOWN(port);
-		padctl_writel(uphy, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
 	} else {
 		dev_dbg(uphy->dev, "disable USB3 port %d wake\n", port);
 
@@ -5548,12 +5557,6 @@ static int tegra186_usb3_phy_set_wake(struct tegra_padctl_uphy *uphy,
 		reg &= ~ALL_WAKE_EVENTS;
 		reg |= SS_PORT_WAKEUP_EVENT(port);
 		padctl_writel(uphy, reg, XUSB_PADCTL_ELPG_PROGRAM);
-
-		usleep_range(10, 20);
-
-		reg = padctl_readl(uphy, XUSB_PADCTL_ELPG_PROGRAM_1);
-		reg &= ~SSPX_ELPG_VCORE_DOWN(port);
-		padctl_writel(uphy, reg, XUSB_PADCTL_ELPG_PROGRAM_1);
 	}
 	mutex_unlock(&uphy->lock);
 

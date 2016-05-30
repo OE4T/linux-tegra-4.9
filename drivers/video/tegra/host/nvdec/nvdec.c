@@ -323,16 +323,10 @@ int nvhost_nvdec_finalize_poweron(struct platform_device *dev)
 	}
 	dev_dbg(&dev->dev, "nvdec_boot: success\n");
 
-#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
 	if (te_is_secos_dev_enabled())
 		te_restore_keyslots();
 #endif
-#else /* else LINUX_VERSION_CODE */
-#if defined(CONFIG_TRUSTED_LITTLE_KERNEL)
-	te_restore_keyslots();
-#endif
-#endif /* end of LINUX_VERSION_CODE */
 
 	return 0;
 }

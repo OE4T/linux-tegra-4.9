@@ -2772,9 +2772,9 @@ int gk20a_channel_suspend(struct gk20a *g)
 		if (gk20a_channel_get(ch)) {
 			gk20a_dbg_info("suspend channel %d", chid);
 			/* disable channel */
-			g->ops.fifo.disable_channel(ch);
+			gk20a_disable_channel_tsg(g, ch);
 			/* preempt the channel */
-			g->ops.fifo.preempt_channel(g, chid);
+			gk20a_fifo_preempt(g, ch);
 			gk20a_channel_cancel_job_clean_up(ch, true);
 			/* wait for channel update notifiers */
 			if (ch->update_fn)

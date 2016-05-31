@@ -764,12 +764,15 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 	va_hi = u64_hi32(ch_ctx->zcull_ctx.gpu_va);
 	va = ((va_lo >> 8) & 0x00FFFFFF) | ((va_hi << 24) & 0xFF000000);
 
-	c->g->ops.fifo.disable_channel(c);
-	ret = c->g->ops.fifo.preempt_channel(c->g, c->hw_chid);
+	ret = gk20a_disable_channel_tsg(g, c);
 	if (ret) {
-		c->g->ops.fifo.enable_channel(c);
-		gk20a_err(dev_from_gk20a(g),
-			"failed to disable gr engine activity\n");
+		gk20a_err(dev_from_gk20a(g), "failed to disable channel/TSG\n");
+		goto clean_up;
+	}
+	ret = gk20a_fifo_preempt(g, c);
+	if (ret) {
+		gk20a_enable_channel_tsg(g, c);
+		gk20a_err(dev_from_gk20a(g), "failed to preempt channel/TSG\n");
 		goto clean_up;
 	}
 
@@ -780,7 +783,7 @@ static int gr_gk20a_ctx_zcull_setup(struct gk20a *g, struct channel_gk20a *c)
 	gk20a_mem_wr(g, mem,
 			ctxsw_prog_main_image_zcull_ptr_o(), va);
 
-	c->g->ops.fifo.enable_channel(c);
+	gk20a_enable_channel_tsg(g, c);
 
 clean_up:
 	gk20a_mem_end(g, mem);
@@ -1617,10 +1620,15 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 
 	mem = &ch_ctx->gr_ctx->mem;
 
-	c->g->ops.fifo.disable_channel(c);
-	ret = c->g->ops.fifo.preempt_channel(c->g, c->hw_chid);
+	ret = gk20a_disable_channel_tsg(g, c);
 	if (ret) {
-		gk20a_err(dev_from_gk20a(g), "failed to preempt channel");
+		gk20a_err(dev_from_gk20a(g), "failed to disable channel/TSG\n");
+		goto out;
+	}
+	ret = gk20a_fifo_preempt(g, c);
+	if (ret) {
+		gk20a_enable_channel_tsg(g, c);
+		gk20a_err(dev_from_gk20a(g), "failed to preempt channel/TSG\n");
 		goto out;
 	}
 
@@ -1646,7 +1654,7 @@ int gr_gk20a_update_smpc_ctxsw_mode(struct gk20a *g,
 	gk20a_mem_end(g, mem);
 
 out:
-	c->g->ops.fifo.enable_channel(c);
+	gk20a_enable_channel_tsg(g, c);
 	return ret;
 }
 

@@ -153,7 +153,6 @@ static int nvdla_probe(struct platform_device *dev)
 	pdata->pdev = dev;
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
-	pdata->private_data = nvdla;
 
 	err = nvhost_client_device_get_resources(dev);
 	if (err)

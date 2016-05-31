@@ -378,7 +378,6 @@ struct nvhost_device_data t124_vic_info = {
 	.actmon_regs		= HOST1X_CHANNEL_ACTMON2_REG_BASE,
 	.actmon_enabled		= true,
 	.linear_emc		= true,
-	.serialize		= true,
 	.push_work_done		= true,
 	.firmware_name		= "vic03_ucode.bin",
 	.aggregate_constraints	= nvhost_vic_aggregate_constraints,

@@ -25,6 +25,8 @@
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/gr_gm20b.h"
+#include "gm206/pmu_gm206.h"
+#include "gm206/acr_gm206.h"
 #include "gm20b/gr_ctx_gm20b.h"
 #include "gm20b/gm20b_gating_reglist.h"
 #include "gm20b/regops_gm20b.h"
@@ -167,11 +169,12 @@ int gm206_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
+	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 
 	*gops = gm206_ops;
 
-	gops->privsecurity = 0;
-	gops->securegpccs = 0;
+	gops->privsecurity = 1;
+	gops->securegpccs = 1;
 
 	gm20b_init_mc(gops);
 	gm20b_init_ltc(gops);
@@ -183,17 +186,27 @@ int gm206_init_hal(struct gk20a *g)
 	gm20b_init_ce2(gops);
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
-	gm20b_init_pmu_ops(gops);
+	gm206_init_pmu_ops(gops);
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
 	gm20b_init_debug_ops(gops);
 	gm20b_init_cde_ops(gops);
 	gm20b_init_therm_ops(gops);
 	gm206_init_bios(gops);
-	gops->name = "gm206";
+	switch(ver){
+	case GK20A_GPUID_GM206:
+		gops->name = "gm206";
+		break;
+	case GK20A_GPUID_GM204:
+		gops->name = "gm204";
+		break;
+	default:
+		gk20a_err(g->dev, "no support for %x", ver);
+		BUG();
+	}
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gm206_get_litter_value;
-	gops->gr_ctx.use_dma_for_fw_bootstrap = false;
+	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = MAXWELL_B;

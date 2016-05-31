@@ -1524,7 +1524,7 @@ u64 nvmap_stats_read(enum nvmap_stats_t stat)
 
 int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 {
-	int err = 0;
+	int i, err = 0;
 	struct nvmap_carveout_node *node;
 
 	if (!nvmap_dev->heaps) {
@@ -1544,6 +1544,11 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 		goto out;
 	}
 
+	for (i = 0; i < nvmap_dev->nr_heaps; i++)
+		if (nvmap_dev->heaps[i].heap_bit & co->usage_mask) {
+			pr_err("carveout %s already exists\n", co->name);
+			return -EEXIST;
+		}
 	node = &nvmap_dev->heaps[nvmap_dev->nr_carveouts];
 
 	node->base = round_up(co->base, PAGE_SIZE);

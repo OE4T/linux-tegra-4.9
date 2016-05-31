@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -156,8 +156,8 @@ static struct sensor_cfg stm_cfg_dflt = {
 		.ival		= 0,
 		.fval		= 130499,
 	},
-	.delay_us_min		= 1000,
-	.delay_us_max		= 2000000,
+	.delay_us_min		= 1250,
+	.delay_us_max		= 10000,
 	/* default matrix to get the attribute */
 	.matrix[0]		= 1,
 	.matrix[4]		= 1,

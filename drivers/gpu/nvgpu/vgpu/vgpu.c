@@ -309,6 +309,7 @@ static int vgpu_init_gpu_characteristics(struct gk20a *g)
 		return -ENOMEM;
 
 	g->gpu_characteristics.max_freq = max_freq;
+	g->gpu_characteristics.map_buffer_batch_limit = 0;
 	return 0;
 }
 

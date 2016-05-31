@@ -27,6 +27,7 @@
 #include <linux/slab.h>
 #include <linux/of.h>
 #include <linux/module.h>
+#include <linux/pm_qos.h>
 #include <linux/platform_device.h>
 #include <asm/cpu.h>
 #include <asm/cputype.h>
@@ -44,6 +45,7 @@ enum throttle_type {
 	THROT_MCPU,
 	THROT_BCPU,
 	THROT_EMC,
+	THROT_GPU,
 };
 
 /* Tracks the final throttle freq. for the given clk */
@@ -69,6 +71,7 @@ struct balanced_throttle {
 };
 
 static struct tegra_bwmgr_client *emc_throt_handle;
+static struct pm_qos_request gpu_cap;
 
 #define CAP_TBL_CAP_NAME(index)	(cap_freqs_table[index].cap_name)
 #define CAP_TBL_CAP_CLK(index)	(cap_freqs_table[index].cap_clk)
@@ -223,6 +226,12 @@ static void tegra_throttle_set_cap_clk(unsigned long cap_rate,
 						TEGRA_BWMGR_SET_EMC_CAP);
 			CAP_TBL_CAP_FREQ(cap_clk_index) = max_rate;
 		}
+		break;
+	case THROT_GPU:
+		if (cap_rate == NO_CAP)
+			cap_rate = PM_QOS_GPU_FREQ_MAX_DEFAULT_VALUE;
+		pm_qos_update_request(&gpu_cap, cap_rate);
+		CAP_TBL_CAP_FREQ(cap_clk_index) = max_rate;
 		break;
 	default:
 		break;
@@ -460,6 +469,11 @@ static int parse_throttle_dt_data(struct device *dev)
 			CAP_TBL_CAP_TYPE(i) = THROT_BCPU;
 		else if (!strcmp("emc", CAP_TBL_CAP_NAME(i)))
 			CAP_TBL_CAP_TYPE(i) = THROT_EMC;
+		else if (!strcmp("gpu", CAP_TBL_CAP_NAME(i))) {
+			CAP_TBL_CAP_TYPE(i) = THROT_GPU;
+			pm_qos_add_request(&gpu_cap, PM_QOS_GPU_FREQ_MAX,
+					   PM_QOS_GPU_FREQ_MAX_DEFAULT_VALUE);
+		}
 
 		if (CAP_TBL_CAP_TYPE(i) == THROT_DEFAULT) {
 			CAP_TBL_CAP_CLK(i) = of_clk_get(np, i);

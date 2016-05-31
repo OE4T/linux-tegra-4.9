@@ -1538,10 +1538,16 @@ int nvmap_create_carveout(const struct nvmap_platform_carveout *co)
 			goto out;
 		}
 	} else if (nvmap_dev->nr_carveouts >= nvmap_dev->nr_heaps) {
-		err = -ENOMEM;
-		pr_err("nvmap heap array is smaller than number of carveouts\n");
-		BUG();
-		goto out;
+		node = krealloc(nvmap_dev->heaps,
+				sizeof(*node) * (nvmap_dev->nr_carveouts + 1),
+				GFP_KERNEL);
+		if (!node) {
+			err = -ENOMEM;
+			pr_err("nvmap heap array resize failed\n");
+			goto out;
+		}
+		nvmap_dev->heaps = node;
+		nvmap_dev->nr_heaps = nvmap_dev->nr_carveouts + 1;
 	}
 
 	for (i = 0; i < nvmap_dev->nr_heaps; i++)

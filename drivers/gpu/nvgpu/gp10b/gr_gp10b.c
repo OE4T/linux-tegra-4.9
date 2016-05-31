@@ -2061,18 +2061,21 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 	if (gk20a_mem_begin(g, mem))
 		return -ENOMEM;
 
-	g->ops.fifo.disable_channel(ch);
-	err = g->ops.fifo.preempt_channel(g, ch->hw_chid);
+	err = gk20a_disable_channel_tsg(g, ch);
 	if (err)
 		goto unmap_ctx;
+
+	err = gk20a_fifo_preempt(g, ch);
+	if (err)
+		goto enable_ch;
 
 	if (g->ops.gr.update_ctxsw_preemption_mode) {
 		g->ops.gr.update_ctxsw_preemption_mode(ch->g, ch_ctx, mem);
 		g->ops.gr.commit_global_cb_manager(g, ch, true);
 	}
 
-	g->ops.fifo.enable_channel(ch);
-
+enable_ch:
+	gk20a_enable_channel_tsg(g, ch);
 unmap_ctx:
 	gk20a_mem_end(g, mem);
 

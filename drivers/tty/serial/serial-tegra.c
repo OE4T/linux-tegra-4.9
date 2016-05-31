@@ -428,16 +428,21 @@ static char tegra_uart_decode_rx_error(struct tegra_uart_port *tup,
 			tup->uport.icount.frame++;
 			dev_err(tup->uport.dev, "Got frame errors\n");
 		} else if (lsr & UART_LSR_BI) {
-			dev_err(tup->uport.dev, "Got Break\n");
 			tup->uport.icount.brk++;
 			/* If FIFO read error without any data, reset Rx FIFO */
 			if (!(lsr & UART_LSR_DR) && (lsr & UART_LSR_FIFOE))
 				tegra_uart_fifo_reset(tup, UART_FCR_CLEAR_RCVR);
+
 			flag = TTY_BREAK;
+			if (tup->uport.ignore_status_mask & UART_LSR_BI)
+				goto exit;
+
+			dev_err(tup->uport.dev, "Got Break\n");
 		}
 		uart_insert_char(&tup->uport, lsr, UART_LSR_OE, 0, flag);
 	}
 
+exit:
 	return flag;
 }
 
@@ -1419,6 +1424,8 @@ static void tegra_uart_set_termios(struct uart_port *u,
 	/* Ignore all characters if CREAD is not set */
 	if ((termios->c_cflag & CREAD) == 0)
 		tup->uport.ignore_status_mask |= UART_LSR_DR;
+	if (termios->c_iflag & IGNBRK)
+		tup->uport.ignore_status_mask |= UART_LSR_BI;
 
 	spin_unlock_irqrestore(&u->lock, flags);
 }

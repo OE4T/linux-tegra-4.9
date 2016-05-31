@@ -566,6 +566,15 @@ struct tegra_xudc_soc_data {
 	bool invalid_seq_num;
 };
 
+static bool u1_enable;
+module_param(u1_enable, bool, 0644);
+
+static bool u2_enable;
+module_param(u2_enable, bool, 0644);
+
+static bool lpm_enable;
+module_param(lpm_enable, bool, 0644);
+
 static inline u32 fpci_readl(struct tegra_xudc *xudc, u32 addr)
 {
 	return readl(xudc->fpci + addr);
@@ -2189,15 +2198,13 @@ static int tegra_xudc_ep0_set_feature(struct tegra_xudc *xudc,
 				return -EINVAL;
 
 			val = xudc_readl(xudc, PORTPM);
-			if ((feature == USB_DEVICE_U1_ENABLE) &&
-			    xudc->soc->u1_enable) {
+			if ((feature == USB_DEVICE_U1_ENABLE) && u1_enable) {
 				if (set)
 					val |= PORTPM_U1E;
 				else
 					val &= ~PORTPM_U1E;
 			}
-			if ((feature == USB_DEVICE_U2_ENABLE) &&
-			    xudc->soc->u2_enable) {
+			if ((feature == USB_DEVICE_U2_ENABLE) && u2_enable) {
 				if (set)
 					val |= PORTPM_U2E;
 				else
@@ -2755,12 +2762,12 @@ static void tegra_xudc_port_connect(struct tegra_xudc *xudc)
 	tegra_xudc_ep0_desc.wMaxPacketSize = cpu_to_le16(maxpacket);
 	usb_ep_set_maxpacket_limit(&ep0->usb_ep, maxpacket);
 
-	if (!xudc->soc->u1_enable) {
+	if (!u1_enable) {
 		val = xudc_readl(xudc, PORTPM);
 		val &= ~(PORTPM_U1TIMEOUT_MASK << PORTPM_U1TIMEOUT_SHIFT);
 		xudc_writel(xudc, val, PORTPM);
 	}
-	if (!xudc->soc->u2_enable) {
+	if (!u2_enable) {
 		val = xudc_readl(xudc, PORTPM);
 		val &= ~(PORTPM_U2TIMEOUT_MASK << PORTPM_U2TIMEOUT_SHIFT);
 		xudc_writel(xudc, val, PORTPM);
@@ -2768,7 +2775,7 @@ static void tegra_xudc_port_connect(struct tegra_xudc *xudc)
 	if (xudc->gadget.speed <= USB_SPEED_HIGH) {
 		val = xudc_readl(xudc, PORTPM);
 		val &= ~(PORTPM_L1S_MASK << PORTPM_L1S_SHIFT);
-		if (xudc->soc->lpm_enable)
+		if (lpm_enable)
 			val |= PORTPM_L1S_ACCEPT << PORTPM_L1S_SHIFT;
 		else
 			val |= PORTPM_L1S_NYET << PORTPM_L1S_SHIFT;
@@ -3473,6 +3480,11 @@ static int tegra_xudc_probe(struct platform_device *pdev)
 	if (!match)
 		return -ENODEV;
 	xudc->soc = match->data;
+
+	/* set module parameter default values from soc data */
+	u1_enable = xudc->soc->u1_enable;
+	u2_enable = xudc->soc->u2_enable;
+	lpm_enable = xudc->soc->lpm_enable;
 
 	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	xudc->base = devm_ioremap_resource(&pdev->dev, res);

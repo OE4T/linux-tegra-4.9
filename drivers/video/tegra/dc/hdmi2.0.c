@@ -1460,7 +1460,7 @@ static void tegra_hdmi_avi_infoframe_update(struct tegra_hdmi *hdmi)
 
 	avi->scan = HDMI_AVI_UNDERSCAN;
 	avi->bar_valid = HDMI_AVI_BAR_INVALID;
-	avi->act_fmt_valid = HDMI_AVI_ACTIVE_FORMAT_VALID;
+	avi->act_fmt_valid = HDMI_AVI_ACTIVE_FORMAT_INVALID;
 	avi->rgb_ycc = tegra_hdmi_get_rgb_ycc(hdmi);
 
 	avi->act_format = HDMI_AVI_ACTIVE_FORMAT_SAME;

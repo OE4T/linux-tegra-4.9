@@ -1361,9 +1361,6 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	}
 
 	e->size = orig_size;
-	e->gp_get = c->gpfifo.get;
-	e->gp_put = c->gpfifo.put;
-	e->gp_wrap = c->gpfifo.wrap;
 	e->mem = &q->mem;
 
 	/* if we have increased size to skip free space in the end, set put
@@ -2163,9 +2160,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
-
-		/* save gp_put */
-		wait_cmd->gp_put = c->gpfifo.put;
 	}
 
 	/*
@@ -2250,9 +2244,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 		c->gpfifo.put = (c->gpfifo.put + 1) &
 			(c->gpfifo.entry_num - 1);
-
-		/* save gp_put */
-		incr_cmd->gp_put = c->gpfifo.put;
 	}
 
 	mutex_lock(&c->last_submit.fence_lock);

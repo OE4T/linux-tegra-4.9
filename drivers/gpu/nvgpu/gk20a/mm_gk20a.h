@@ -176,9 +176,6 @@ struct priv_cmd_entry {
 	u64 gva;
 	u32 get;	/* start of entry in queue */
 	u32 size;	/* in words */
-	u32 gp_get;	/* gp_get when submitting last priv cmd */
-	u32 gp_put;	/* gp_put when submitting last priv cmd */
-	u32 gp_wrap;	/* wrap when submitting last priv cmd */
 	struct list_head list;	/* node for lists */
 };
 

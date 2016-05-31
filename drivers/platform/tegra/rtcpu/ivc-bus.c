@@ -46,15 +46,17 @@ static int tegra_ivc_bus_probe(struct device *dev)
 		const struct tegra_ivc_channel_ops *ops = drv->ops.channel;
 
 		BUG_ON(ops == NULL);
-		if (ops->probe != NULL)
+		if (ops->probe != NULL) {
 			ret = ops->probe(chan);
-		else
-			ret = 0;
+			if (ret)
+				return ret;
+		}
 
 		rcu_assign_pointer(chan->ops, ops);
 
 		/* Drain any already pending inbound IVC message */
 		tegra_hsp_notify(dev->parent);
+		ret = 0;
 
 	} else if (dev->type == &tegra_hsp_type) {
 		const struct tegra_hsp_ops *ops = drv->ops.hsp;

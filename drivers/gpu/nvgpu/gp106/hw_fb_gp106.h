@@ -486,4 +486,20 @@ static inline u32 fb_niso_flush_sysmem_addr_r(void)
 {
 	return 0x00100c10;
 }
+static inline u32 fb_mmu_local_memory_range_r(void)
+{
+	return 0x00100ce0;
+}
+static inline u32 fb_mmu_local_memory_range_lower_scale_v(u32 r)
+{
+	return (r >> 0) & 0xf;
+}
+static inline u32 fb_mmu_local_memory_range_lower_mag_v(u32 r)
+{
+	return (r >> 4) & 0x3f;
+}
+static inline u32 fb_mmu_local_memory_range_ecc_mode_v(u32 r)
+{
+	return (r >> 30) & 0x1;
+}
 #endif

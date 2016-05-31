@@ -20,6 +20,7 @@ nvgpu-y += \
 	$(nvgpu-t18x)/gp10b/gp10b_sysfs.o \
 	$(nvgpu-t18x)/gp10b/gp10b.o \
 	$(nvgpu-t18x)/gp106/hal_gp106.o \
+	$(nvgpu-t18x)/gp106/mm_gp106.o \
 	$(nvgpu-t18x)/gp106/pmu_gp106.o \
 	$(nvgpu-t18x)/gp106/gr_gp106.o \
 	$(nvgpu-t18x)/gp106/gr_ctx_gp106.o

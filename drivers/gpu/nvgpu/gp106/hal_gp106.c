@@ -39,6 +39,7 @@
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/clk_gm20b.h"
 
+#include "gp106/mm_gp106.h"
 #include "gp106/pmu_gp106.h"
 #include "gp106/gr_ctx_gp106.h"
 #include "gp106/gr_gp106.h"
@@ -194,7 +195,7 @@ int gp106_init_hal(struct gk20a *g)
 	gp10b_init_fifo(gops);
 	gp10b_init_ce(gops);
 	gp106_init_gr_ctx(gops);
-	gp10b_init_mm(gops);
+	gp106_init_mm(gops);
 	gp106_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
 	gp10b_init_regops(gops);

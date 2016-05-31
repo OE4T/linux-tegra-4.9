@@ -433,8 +433,11 @@ static char tegra_uart_decode_rx_error(struct tegra_uart_port *tup,
 			/* If FIFO read error without any data, reset Rx FIFO */
 			if (!(lsr & UART_LSR_DR) && (lsr & UART_LSR_FIFOE))
 				tegra_uart_fifo_reset(tup, UART_FCR_CLEAR_RCVR);
+			flag = TTY_BREAK;
 		}
+		uart_insert_char(&tup->uport, lsr, UART_LSR_OE, 0, flag);
 	}
+
 	return flag;
 }
 
@@ -614,6 +617,9 @@ static void tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
 			break;
 
 		flag = tegra_uart_decode_rx_error(tup, lsr);
+		if (flag != TTY_NORMAL)
+			continue;
+
 		ch = (unsigned char) tegra_uart_read(tup, UART_RX);
 		tup->uport.icount.rx++;
 

@@ -99,3 +99,5 @@ config GK20A_PCI
 	default n
 	help
 	  Enable support for GPUs on PCIe bus.
+
+trysource "../nvgpu-t19x/drivers/gpu/nvgpu/Kconfig"

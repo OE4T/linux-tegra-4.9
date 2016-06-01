@@ -42,7 +42,7 @@
 		interrupts = <TEGRA_GPIO(FF, 4) 0x01>;
 	};
 
-	bcmdhd_pcie_wlan {
+	bcm4359: bcmdhd_pcie_wlan {
 		compatible = "android,bcmdhd_pcie_wlan";
 		interrupt-parent = <&tegra_gpio>;
 		interrupts = <TEGRA_GPIO(FF, 3) 0x14>;
@@ -50,5 +50,15 @@
 		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
 		nv_path = "/system/etc/nvram_4359_b1.txt";
 		status = "okay";
+	};
+
+	bcm4354: bcmdhd_wlan {
+		compatible = "android,bcmdhd_wlan";
+		interrupt-parent = <&tegra_gpio>;
+		interrupts = <TEGRA_GPIO(FF, 3) 0x14>;
+		wlan-pwr-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
+		fw_path = "/system/vendor/firmware/fw_bcmdhd_4354.bin";
+		nv_path = "/system/etc/nvram_quill_4354.txt";
+		status = "disabled";
 	};
 };

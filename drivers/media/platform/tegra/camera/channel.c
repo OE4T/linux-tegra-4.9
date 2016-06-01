@@ -999,7 +999,7 @@ tegra_channel_dv_timings_cap(struct file *file, void *fh,
 }
 
 static void tegra_channel_fmt_align(struct v4l2_pix_format *pix,
-			unsigned int channel_align, unsigned int bpp)
+				struct tegra_channel *chan, unsigned int bpp)
 {
 	unsigned int min_width;
 	unsigned int max_width;
@@ -1013,7 +1013,7 @@ static void tegra_channel_fmt_align(struct v4l2_pix_format *pix,
 	 * the minimum and maximum values, clamp the requested width and convert
 	 * it back to pixels.
 	 */
-	align = lcm(channel_align, bpp);
+	align = lcm(chan->width_align, bpp);
 	min_width = roundup(TEGRA_MIN_WIDTH, align);
 	max_width = rounddown(TEGRA_MAX_WIDTH, align);
 	width = roundup(pix->width * bpp, align);
@@ -1026,8 +1026,8 @@ static void tegra_channel_fmt_align(struct v4l2_pix_format *pix,
 	 * sizes. Override the requested value with the minimum in that case.
 	 */
 	min_bpl = pix->width * bpp;
-	max_bpl = rounddown(TEGRA_MAX_WIDTH, channel_align);
-	bpl = roundup(pix->bytesperline, channel_align);
+	max_bpl = rounddown(TEGRA_MAX_WIDTH, chan->stride_align);
+	bpl = roundup(pix->bytesperline, chan->stride_align);
 
 	pix->bytesperline = clamp(bpl, min_bpl, max_bpl);
 	pix->sizeimage = pix->bytesperline * pix->height;
@@ -1222,7 +1222,7 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 		vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
 	}
 
-	tegra_channel_fmt_align(pix, chan->align, vfmt->bpp);
+	tegra_channel_fmt_align(pix, chan, vfmt->bpp);
 
 	fmt.which = V4L2_SUBDEV_FORMAT_TRY;
 	fmt.pad = 0;
@@ -1587,7 +1587,8 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	chan->vi = vi;
 	tegra_channel_csi_init(vi, index);
 
-	chan->align = 64;
+	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
+	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;
 	chan->num_subdevs = 0;
 	mutex_init(&chan->video_lock);
 	INIT_LIST_HEAD(&chan->capture);

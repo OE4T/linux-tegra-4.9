@@ -95,7 +95,8 @@ struct tegra_vi_graph_entity {
  * @queued_lock: protects the buf_queued list
  *
  * @csi: CSI register bases
- * @align: channel buffer alignment, default is 64
+ * @stride_align: channel buffer stride alignment, default is 64
+ * @width_align: image width alignment, default is 4
  * @port: CSI port of this video channel
  * @io_id: Tegra IO rail ID of this video channel
  *
@@ -136,7 +137,8 @@ struct tegra_channel {
 	struct completion capture_comp;
 
 	void __iomem *csibase[TEGRA_CSI_BLOCKS];
-	unsigned int align;
+	unsigned int stride_align;
+	unsigned int width_align;
 	unsigned int valid_ports;
 	unsigned int total_ports;
 	unsigned int numlanes;

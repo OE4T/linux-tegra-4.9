@@ -1240,15 +1240,18 @@ static void tegra_hdmi_config(struct tegra_hdmi *hdmi)
 			NV_SOR_REFCLK_DIV_INT(dispclk_div_8_2 >> 2) |
 			NV_SOR_REFCLK_DIV_FRAC(dispclk_div_8_2));
 
-	rekey = NV_SOR_HDMI_CTRL_REKEY_DEFAULT;
+	/*
+	 * The rekey register and corresponding eq want to operate
+	 * on "-2" of the desired rekey value
+	 */
+	rekey = NV_SOR_HDMI_CTRL_REKEY_DEFAULT - 2;
 	hblank = dc->mode.h_sync_width + dc->mode.h_back_porch +
 			dc->mode.h_front_porch;
 	max_ac = (hblank - rekey - 18) / 32;
 
 	val = 0;
 	val |= hdmi->dvi ? 0x0 : NV_SOR_HDMI_CTRL_ENABLE;
-	/* The register wants "-2" of the required rekey val */
-	val |= NV_SOR_HDMI_CTRL_REKEY(rekey - 2);
+	val |= NV_SOR_HDMI_CTRL_REKEY(rekey);
 	val |= NV_SOR_HDMI_CTRL_MAX_AC_PACKET(max_ac);
 	val |= NV_SOR_HDMI_CTRL_AUDIO_LAYOUT_SELECT;
 	tegra_sor_writel(sor, NV_SOR_HDMI_CTRL, val);

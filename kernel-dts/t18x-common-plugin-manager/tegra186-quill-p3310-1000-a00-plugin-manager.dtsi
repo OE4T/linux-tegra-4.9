@@ -90,5 +90,23 @@
 				};
 			};
 		};
+		fragment-b00-pcie-config {
+			ids = ">=3310-1000-500";
+			override@0 {
+				target = <&tegra_pcie>;
+				_overlay_ {
+					nvidia,lane-map = <0x401>;
+					pci@1,0 {
+						status = "disabled";
+					};
+					pci@2,0 {
+						status = "okay";
+					};
+					pci@3,0 {
+						status = "disabled";
+					};
+				};
+			};
+		};
 	};
 };

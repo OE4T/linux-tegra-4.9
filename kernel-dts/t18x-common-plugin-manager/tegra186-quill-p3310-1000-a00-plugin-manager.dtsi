@@ -108,5 +108,20 @@
 				};
 			};
 		};
+		fragment-comms-chip {
+			ids = ">=3310-1000-500";
+			override@0 {
+				target = <&bcm4354>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@1 {
+				target = <&bcm4359>;
+				_overlay_ {
+					status = "disabled";
+				};
+			};
+		};
 	};
 };

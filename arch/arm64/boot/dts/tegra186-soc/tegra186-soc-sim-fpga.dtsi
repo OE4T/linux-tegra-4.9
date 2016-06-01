@@ -25,6 +25,10 @@
 		};
 	};
 
+	arm-pmu {
+		status = "disabled";
+	};
+
 	tegra-carveouts {
 		status = "okay";
 	};

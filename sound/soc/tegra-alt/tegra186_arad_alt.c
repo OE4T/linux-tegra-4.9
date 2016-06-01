@@ -328,7 +328,7 @@ static int tegra186_arad_put_enable_lane(struct snd_kcontrol *kcontrol,
 static int tegra186_arad_tx_stop(struct snd_soc_dapm_widget *w,
 			struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct device *dev = codec->dev;
 	struct tegra186_arad *arad = dev_get_drvdata(dev);
 

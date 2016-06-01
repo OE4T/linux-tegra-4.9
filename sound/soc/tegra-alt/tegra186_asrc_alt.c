@@ -569,7 +569,7 @@ static int tegra186_asrc_put_output_threshold(struct snd_kcontrol *kcontrol,
 static int tegra186_asrc_req_arad_ratio(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct device *dev = codec->dev;
 	struct tegra186_asrc *asrc = dev_get_drvdata(dev);
 	int ret = 0;

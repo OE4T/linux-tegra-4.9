@@ -120,7 +120,7 @@ static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 			dev_err(vi->dev, "no entity found for %s\n",
 				link.remote_node->full_name);
 			v4l2_of_put_link(&link);
-			ret = -ENODEV;
+			ret = -EINVAL;
 			break;
 		}
 
@@ -213,8 +213,14 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 			dev_err(vi->dev, "no entity found for %s\n",
 				link.remote_node->full_name);
 			v4l2_of_put_link(&link);
-			ret = -ENODEV;
+			ret = -EINVAL;
 			break;
+		}
+
+		if (NULL == ent->entity) {
+			dev_dbg(vi->dev, "entity not bounded %s\n",
+				link.remote_node->full_name);
+			continue;
 		}
 
 		source = ent->entity;

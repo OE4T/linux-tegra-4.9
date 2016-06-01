@@ -443,20 +443,10 @@ int gk20a_disable_channel_tsg(struct gk20a *g, struct channel_gk20a *ch)
 	return 0;
 }
 
-void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
+void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 {
 	struct channel_gk20a_job *job, *n;
 	bool released_job_semaphore = false;
-
-	gk20a_dbg_fn("");
-
-	/* make sure new kickoffs are prevented */
-	ch->has_timedout = true;
-
-	ch->g->ops.fifo.disable_channel(ch);
-
-	if (channel_preempt)
-		gk20a_fifo_preempt(ch->g, ch);
 
 	/* ensure no fences are pending */
 	mutex_lock(&ch->sync_lock);
@@ -479,6 +469,24 @@ void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
 		wake_up_interruptible_all(&ch->semaphore_wq);
 
 	gk20a_channel_update(ch, 0);
+}
+
+void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt)
+{
+	gk20a_dbg_fn("");
+
+	if (gk20a_is_channel_marked_as_tsg(ch))
+		return gk20a_fifo_abort_tsg(ch->g, ch->tsgid, channel_preempt);
+
+	/* make sure new kickoffs are prevented */
+	ch->has_timedout = true;
+
+	ch->g->ops.fifo.disable_channel(ch);
+
+	if (channel_preempt)
+		ch->g->ops.fifo.preempt_channel(ch->g, ch->hw_chid);
+
+	gk20a_channel_abort_clean_up(ch);
 }
 
 int gk20a_wait_channel_idle(struct channel_gk20a *ch)
@@ -1714,7 +1722,7 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
 
 			gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
-			gk20a_fifo_abort_tsg(g, ch->tsgid);
+			gk20a_fifo_abort_tsg(g, ch->tsgid, false);
 		} else {
 			gk20a_fifo_set_ctx_mmu_error_ch(g, ch);
 			gk20a_channel_abort(ch, false);

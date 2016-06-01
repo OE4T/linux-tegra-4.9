@@ -953,15 +953,23 @@ bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 	return ret;
 }
 
-void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid)
+void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 {
 	struct tsg_gk20a *tsg = &g->fifo.tsg[tsgid];
 	struct channel_gk20a *ch;
 
+	gk20a_dbg_fn("");
+
+	gk20a_disable_tsg(tsg);
+
+	if (preempt)
+		g->ops.fifo.preempt_tsg(g, tsgid);
+
 	mutex_lock(&tsg->ch_list_lock);
 	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
 		if (gk20a_channel_get(ch)) {
-			gk20a_channel_abort(ch, false);
+			ch->has_timedout = true;
+			gk20a_channel_abort_clean_up(ch);
 			gk20a_channel_put(ch);
 		}
 	}
@@ -1129,7 +1137,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 				verbose =
 				       gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
 
-			gk20a_fifo_abort_tsg(g, tsg->tsgid);
+			gk20a_fifo_abort_tsg(g, tsg->tsgid, false);
 
 			/* put back the ref taken early above */
 			if (referenced_channel)
@@ -1324,7 +1332,7 @@ void gk20a_fifo_recover_tsg(struct gk20a *g, u32 tsgid, bool verbose)
 		if (gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg))
 			gk20a_debug_dump(g->dev);
 
-		gk20a_fifo_abort_tsg(g, tsgid);
+		gk20a_fifo_abort_tsg(g, tsgid, false);
 	}
 
 	gr_gk20a_enable_ctxsw(g);

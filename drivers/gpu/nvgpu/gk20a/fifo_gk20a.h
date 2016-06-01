@@ -207,7 +207,7 @@ u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 		int *__id, bool *__is_tsg);
 bool gk20a_fifo_set_ctx_mmu_error_tsg(struct gk20a *g,
 		struct tsg_gk20a *tsg);
-void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid);
+void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt);
 bool gk20a_fifo_set_ctx_mmu_error_ch(struct gk20a *g,
 		struct channel_gk20a *ch);
 

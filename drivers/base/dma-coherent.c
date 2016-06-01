@@ -61,7 +61,7 @@ struct dma_coherent_mem {
 	void		*virt_base;
 	dma_addr_t	device_base;
 	unsigned long	pfn_base;
-	int		size;
+	size_t		size;
 	int		flags;
 	unsigned long	*bitmap;
 	spinlock_t	spinlock;

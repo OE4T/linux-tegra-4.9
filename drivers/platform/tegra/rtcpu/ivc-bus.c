@@ -53,9 +53,6 @@ static int tegra_ivc_bus_probe(struct device *dev)
 		}
 
 		rcu_assign_pointer(chan->ops, ops);
-
-		/* Drain any already pending inbound IVC message */
-		tegra_hsp_notify(dev->parent);
 		ret = 0;
 
 	} else if (dev->type == &tegra_hsp_type) {

@@ -911,17 +911,19 @@ void *dma_mark_declared_memory_occupied(struct device *dev,
 	int order = get_order(size);
 	int pos, freepage;
 	unsigned int count;
-	unsigned long align;
+	unsigned long align = 0;
 
 	size += device_addr & ~PAGE_MASK;
 
 	if (!mem)
 		return ERR_PTR(-EINVAL);
 
-	if (order > DMA_BUF_ALIGNMENT)
-		align = (1 << DMA_BUF_ALIGNMENT) - 1;
-	else
-		align = (1 << order) - 1;
+	if (!(DMA_ATTR_ALLOC_EXACT_SIZE & attrs)) {
+		if (order > DMA_BUF_ALIGNMENT)
+			align = (1 << DMA_BUF_ALIGNMENT) - 1;
+		else
+			align = (1 << order) - 1;
+	}
 
 	if (DMA_ATTR_ALLOC_EXACT_SIZE & attrs)
 		count = PAGE_ALIGN(size) >> PAGE_SHIFT;

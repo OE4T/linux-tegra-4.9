@@ -11,6 +11,7 @@
  * more details.
  */
 
+#include "dt-bindings/sound/tegra-asoc-alt.h"
 #include "tegra186-quill-p3310-1000-a00-00-base.dts"
 #include "tegra186-modules/tegra186-super-module-e2614-p2597-1000-a00.dtsi"
 #include "tegra186-modules/tegra186-df-camera.dtsi"
@@ -59,6 +60,18 @@
 			gpio = "";
 			regulator-always-on;
 			regulator-boot-on;
+		};
+
+		cs53l30_vp: regulator@14 {
+			regulator-min-microvolt = <3300000>;
+			regulator-max-microvolt = <3300000>;
+			regulator-always-on;
+		};
+
+		cs53l30_va: regulator@101 {
+			regulator-min-microvolt = <1800000>;
+			regulator-max-microvolt = <1800000>;
+			regulator-always-on;
 		};
 	};
 
@@ -153,4 +166,165 @@
 	sound {
 		status = "disabled";
 	};
+
+	sound_ref {
+		compatible = "nvidia,tegra186-p4573-audio";
+		nvidia,model = "t186-p4573-audio";
+		status = "okay";
+
+		nvidia,xbar = <&tegra_axbar>;
+		nvidia,audio-routing =
+			"AMIC1", "x MIC1 Bias",
+			"x IN1_DMIC1", "AMIC1",
+			"AMIC2", "x MIC2 Bias",
+			"x IN2", "AMIC2",
+			"AMIC3", "x MIC3 Bias",
+			"x IN3_DMIC2", "AMIC3",
+			"AMIC4", "x MIC4 Bias",
+			"x IN4", "AMIC4",
+			"AMIC5", "y MIC1 Bias",
+			"y IN1_DMIC1", "AMIC5",
+			"AMIC6", "y MIC2 Bias",
+			"y IN2", "AMIC6",
+			"AMIC7", "y MIC3 Bias",
+			"y IN3_DMIC2", "AMIC7",
+			"AMIC8", "y MIC4 Bias",
+			"y IN4", "AMIC8",
+			"Headset Stereo", "z HPOL",
+			"Headset Stereo", "z HPOR",
+			"Headset Mic", "z MICBIAS1",
+			"z IN1P", "Headset Mic";
+
+		nvidia,num-codec-link = <3>;
+
+		nvidia,num-clk = <8>;
+		nvidia,clk-rates = < 270950400	/* PLLA_x11025_RATE */
+				     11289600	/* AUD_MCLK_x11025_RATE */
+				     45158400	/* PLLA_OUT0_x11025_RATE */
+				     45158400	/* AHUB_x11025_RATE */
+				     245760000	/* PLLA_x8000_RATE */
+				     12288000	/* AUD_MCLK_x8000_RATE */
+				     49152000	/* PLLA_OUT0_x8000_RATE */
+				     49152000 >;/* AHUB_x8000_RATE */
+		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
+			<&tegra_car TEGRA186_CLK_PLLA>,
+			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
+			<&tegra_car TEGRA186_CLK_AHUB>,
+			<&tegra_car TEGRA186_CLK_CLK_M>,
+			<&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		clock-names = "pll_p_out1", "pll_a", "pll_a_out0", "ahub",
+				"clk_m", "extern1";
+		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
+		reset-names = "extern1_rst";
+
+		nvidia,dai-link-1 {
+			link-name = "cs53l30-link1";
+			cpu-dai = <&tegra_i2s1>;
+			codec-dai = <&cs53l30_1>;
+			cpu-dai-name = "I2S1";
+			codec-dai-name = "cs53l30";
+			format = "dsp_a";
+			bitclock-slave;
+			frame-slave;
+			/* NB_IF: rising edge of bclk + frame sync at high */
+			bitclock-noninversion;
+			frame-inversion;
+			bit-format = "s32_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <4>;
+			name-prefix = "x";
+		};
+
+		nvidia,dai-link-2 {
+			link-name = "cs53l30-link2";
+			cpu-dai = <&tegra_i2s2>;
+			codec-dai = <&cs53l30_2>;
+			cpu-dai-name = "I2S2";
+			codec-dai-name = "cs53l30";
+			format = "dsp_a";
+			bitclock-slave;
+			frame-slave;
+			/* NB_IF: rising edge of bclk + frame sync at high */
+			bitclock-noninversion;
+			frame-inversion;
+			bit-format = "s32_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <4>;
+			name-prefix = "y";
+		};
+
+		nvidia,dai-link-3 {
+			link-name = "rt5658-link";
+			cpu-dai = <&tegra_i2s3>;
+			codec-dai = <&rt5658_codec>;
+			cpu-dai-name = "I2S3";
+			codec-dai-name = "rt5659-aif1";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bitclock-noninversion;
+			frame-noninversion;
+			bit-format = "s32_le";
+			bclk_ratio = <0>;
+			srate = <48000>;
+			num-channel = <2>;
+			name-prefix = "z";
+		};
+	};
+};
+
+&gen2_i2c {
+	status = "okay";
+
+	cs53l30_1: cs53l30@48 {
+		compatible = "cirrus,cs53l30";
+		reg = <0x48>;
+		clocks = <&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		clock-names = "mclk";
+		reset-gpios = <&tegra_gpio 78 0>;
+		mute-gpios = <&tegra_gpio 12 0>;
+		micbias-lvl = <1>;
+		VA-supply = <&cs53l30_va>;
+		VP-supply = <&cs53l30_vp>;
+	};
+
+	cs53l30_2: cs53l30@4A {
+		compatible = "cirrus,cs53l30";
+		reg = <0x4A>;
+		clocks = <&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		clock-names = "mclk";
+		reset-gpios = <&tegra_gpio 71 0>;
+		micbias-lvl = <1>;
+		VA-supply = <&cs53l30_va>;
+		VP-supply = <&cs53l30_vp>;
+	};
+
+	rt5658_codec: rt5658@1A {
+		compatible = "realtek,rt5658";
+		reg = <0x1A>;
+		clocks = <&tegra_car TEGRA186_CLK_AUD_MCLK>;
+		clock-names = "mclk";
+		realtek,dmic1-data-pin = <2>;
+		realtek,jd-src = <1>;
+	};
+};
+
+&tegra_i2s1 {
+	/* 32 bits per slot */
+	fsync-width = <31>;
+	status = "okay";
+};
+
+&tegra_i2s2 {
+	/* 32 bits per slot */
+	fsync-width = <31>;
+	status = "okay";
+};
+
+&tegra_i2s3 {
+	/* 32 bits per slot */
+	fsync-width = <31>;
+	status = "okay";
 };

@@ -613,7 +613,7 @@ static int tas2552_codec_probe(struct snd_soc_codec *codec)
 					    TAS2552_LIM_EN);
 
 	if (tas2552->edge_select)
-		snd_soc_write(codec, TAS2552_PDM_CFG, TAS2552_PDM_IV_CLK_SEL |
+		snd_soc_write(codec, TAS2552_PDM_CFG, TAS2552_PDM_CLK_SEL_IVCLKIN |
 			TAS2552_PDM_DATA_ES);
 
 	return 0;

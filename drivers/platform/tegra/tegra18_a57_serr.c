@@ -13,7 +13,6 @@
 
 #include <asm/traps.h>
 #include <linux/debugfs.h>
-#include <linux/debugfs.h>
 #include <linux/cpu_pm.h>
 #include <linux/cpu.h>
 #include <asm/cputype.h>
@@ -28,6 +27,7 @@
 #include <linux/platform/tegra/ari_mca.h>
 #include <linux/platform/tegra/tegra18_a57_mca.h>
 #include <linux/tegra-soc.h>
+#include <linux/tegra-cpu.h>
 
 static u64 read_cpumerrsr(void)
 {
@@ -259,7 +259,7 @@ static int a57_serr_hook(struct pt_regs *regs, int reason,
 static DEFINE_MUTEX(a57_serr_mutex);
 static struct dentry *a57_serr_root;
 
-static int a57_serr_show(struct seq_file *file, void *data)
+static int a57_merrsr_show(struct seq_file *file, void *data)
 {
 	u64 cpu_syndrome;
 	u64 l2_syndrome;
@@ -293,13 +293,84 @@ static int a57_serr_show(struct seq_file *file, void *data)
 	return 0;
 }
 
-static int a57_serr_open(struct inode *inode, struct file *file)
+static u32 cpu_ecc_errs;
+static DEFINE_RAW_SPINLOCK(cpu_ecc_lock);
+
+static void a57_cpu_ecc_err(void *info)
 {
-	return single_open(file, a57_serr_show, inode->i_private);
+	int cpu;
+	struct cpuinfo_arm64 *cpuinfo;
+	u64 cpu_syndrome;
+	u64 l2_syndrome;
+	unsigned long flags;
+
+	raw_spin_lock_irqsave(&cpu_ecc_lock, flags);
+
+	cpu = smp_processor_id();
+	cpuinfo = &per_cpu(cpu_data, cpu);
+
+	cpu_syndrome = read_cpumerrsr();
+	l2_syndrome = read_l2merrsr();
+	if (cpu_syndrome & A57_CPUMERRSR_VALID) {
+		if ((cpu_syndrome & A57_CPUMERRSR_FATAL)
+		    || (get_a57_cpumerrsr_repeat(cpu_syndrome) != 0ULL)
+		    || (get_a57_cpumerrsr_other(cpu_syndrome) != 0ULL))
+			cpu_ecc_errs |= 1U << cpu;
+
+		write_cpumerrsr(0x0ULL);
+	}
+
+	if (l2_syndrome & A57_L2MERRSR_VALID) {
+		if ((l2_syndrome & A57_L2MERRSR_FATAL)
+		    || (get_a57_l2merrsr_repeat(l2_syndrome) != 0ULL)
+		    || (get_a57_l2merrsr_other(l2_syndrome) != 0ULL))
+			cpu_ecc_errs |= 1U << cpu;
+
+		write_l2merrsr(0x0ULL);
+	}
+
+	raw_spin_unlock_irqrestore(&cpu_ecc_lock, flags);
 }
 
-static const struct file_operations tegra18_a57_serr_fops = {
-	.open = a57_serr_open,
+static int a57_ecc_show(struct seq_file *file, void *data)
+{
+	int cpu;
+	struct cpuinfo_arm64 *cpuinfo;
+
+	cpu_ecc_errs = 0;
+
+	for_each_online_cpu(cpu) {
+		cpuinfo = &per_cpu(cpu_data, cpu);
+		if (MIDR_PARTNUM(cpuinfo->reg_midr) == ARM_CPU_PART_CORTEX_A57) {
+			smp_call_function_single(cpu, a57_cpu_ecc_err,
+						 NULL, true);
+		}
+	}
+
+	print_a57_serr(file, "0x%08x\n", cpu_ecc_errs);
+
+	return 0;
+}
+
+static int a57_merrsr_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, a57_merrsr_show, inode->i_private);
+}
+
+static const struct file_operations tegra18_a57_merrsr_fops = {
+	.open = a57_merrsr_open,
+	.read = seq_read,
+	.llseek = seq_lseek,
+	.release = single_release
+};
+
+static int a57_ecc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, a57_ecc_show, inode->i_private);
+}
+
+static const struct file_operations tegra18_a57_ecc_fops = {
+	.open = a57_ecc_open,
 	.read = seq_read,
 	.llseek = seq_lseek,
 	.release = single_release
@@ -309,19 +380,39 @@ static int a57_serr_dbgfs_init(void)
 {
 	struct dentry *d;
 
-	d = debugfs_create_file("a57-merrsr",
-				S_IRUGO, NULL,
-				NULL,
-				&tegra18_a57_serr_fops);
+	d = debugfs_create_dir("a57-serr", NULL);
 	if (IS_ERR_OR_NULL(d)) {
-		pr_err("%s: could not create '%s' node\n",
-		       __func__, "a57_merrsr");
-		return PTR_ERR(d);
+		pr_err("%s: could not create 'a57-serr' node\n", __func__);
+		goto clean;
 	}
 
 	a57_serr_root = d;
 
+	d = debugfs_create_file("a57-merrsr",
+				S_IRUGO, a57_serr_root,
+				NULL,
+				&tegra18_a57_merrsr_fops);
+	if (IS_ERR_OR_NULL(d)) {
+		pr_err("%s: could not create '%s' node\n",
+		       __func__, "a57-merrsr");
+		goto clean;
+	}
+
+	d = debugfs_create_file("a57-ecc",
+				S_IRUGO, a57_serr_root,
+				NULL,
+				&tegra18_a57_ecc_fops);
+	if (IS_ERR_OR_NULL(d)) {
+		pr_err("%s: could not create '%s' node\n",
+		       __func__, "a57-ecc");
+		goto clean;
+	}
+
 	return 0;
+
+  clean:
+	debugfs_remove_recursive(a57_serr_root);
+	return PTR_ERR(d);
 }
 
 static struct serr_hook hook = {

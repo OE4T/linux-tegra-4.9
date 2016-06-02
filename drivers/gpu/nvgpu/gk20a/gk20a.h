@@ -90,6 +90,7 @@ enum nvgpu_litter_value {
 	GPU_LIT_ROP_BASE,
 	GPU_LIT_ROP_STRIDE,
 	GPU_LIT_ROP_SHARED_BASE,
+	GPU_LIT_HOST_NUM_ENGINES,
 	GPU_LIT_HOST_NUM_PBDMA,
 	GPU_LIT_LTC_STRIDE,
 	GPU_LIT_LTS_STRIDE,
@@ -120,8 +121,8 @@ struct gpu_ops {
 		void (*flush)(struct gk20a *g);
 	} ltc;
 	struct {
-		void (*isr_stall)(struct gk20a *g);
-		void (*isr_nonstall)(struct gk20a *g);
+		void (*isr_stall)(struct gk20a *g, u32 inst_id, u32 pri_base);
+		void (*isr_nonstall)(struct gk20a *g, u32 inst_id, u32 pri_base);
 	} ce2;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);
@@ -350,6 +351,7 @@ struct gpu_ops {
 		int (*tsg_bind_channel)(struct tsg_gk20a *tsg,
 				struct channel_gk20a *ch);
 		int (*tsg_unbind_channel)(struct channel_gk20a *ch);
+		u32 (*eng_runlist_base_size)(void);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

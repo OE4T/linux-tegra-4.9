@@ -1,7 +1,7 @@
 /*
  * GK20A Graphics Copy Engine  (gr host)
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -57,7 +57,7 @@ static u32 ce2_launcherr_isr(struct gk20a *g, u32 fifo_intr)
 	return ce2_intr_status_launcherr_pending_f();
 }
 
-void gk20a_ce2_isr(struct gk20a *g)
+void gk20a_ce2_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r());
 	u32 clear_intr = 0;
@@ -75,7 +75,7 @@ void gk20a_ce2_isr(struct gk20a *g)
 	return;
 }
 
-void gk20a_ce2_nonstall_isr(struct gk20a *g)
+void gk20a_ce2_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	u32 ce2_intr = gk20a_readl(g, ce2_intr_status_r());
 

@@ -3061,7 +3061,11 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 	struct pmu_cmd cmd;
 	u32 desc;
 	int err = 0;
+	u32 gr_engine_id;
+
 	gk20a_dbg_fn("");
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
@@ -3070,7 +3074,7 @@ int gk20a_init_pmu_bind_fecs(struct gk20a *g)
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type(&cmd.cmd.pg,
 			PMU_PG_CMD_ID_ENG_BUF_LOAD);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_engine_id(&cmd.cmd.pg,
-			ENGINE_GR_GK20A);
+			gr_engine_id);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_idx(&cmd.cmd.pg,
 			PMU_PGENG_GR_BUFFER_IDX_FECS);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_size(&cmd.cmd.pg,
@@ -3095,6 +3099,9 @@ static void pmu_setup_hw_load_zbc(struct gk20a *g)
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 desc;
+	u32 gr_engine_id;
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
@@ -3103,7 +3110,7 @@ static void pmu_setup_hw_load_zbc(struct gk20a *g)
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type(&cmd.cmd.pg,
 			PMU_PG_CMD_ID_ENG_BUF_LOAD);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_engine_id(&cmd.cmd.pg,
-			ENGINE_GR_GK20A);
+			gr_engine_id);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_idx(&cmd.cmd.pg,
 			PMU_PGENG_GR_BUFFER_IDX_ZBC);
 	g->ops.pmu_ver.pg_cmd_eng_buf_load_set_buf_size(&cmd.cmd.pg,
@@ -3288,20 +3295,23 @@ static int pmu_init_powergating(struct gk20a *g)
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq;
+	u32 gr_engine_id;
 
 	gk20a_dbg_fn("");
 
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
+
 	if (tegra_cpu_is_asim()) {
 		/* TBD: calculate threshold for silicon */
-		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(ENGINE_GR_GK20A),
+		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(gr_engine_id),
 				PMU_PG_IDLE_THRESHOLD_SIM);
-		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(ENGINE_GR_GK20A),
+		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(gr_engine_id),
 				PMU_PG_POST_POWERUP_IDLE_THRESHOLD_SIM);
 	} else {
 		/* TBD: calculate threshold for silicon */
-		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(ENGINE_GR_GK20A),
+		gk20a_writel(g, pwr_pmu_pg_idlefilth_r(gr_engine_id),
 				PMU_PG_IDLE_THRESHOLD);
-		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(ENGINE_GR_GK20A),
+		gk20a_writel(g, pwr_pmu_pg_ppuidlefilth_r(gr_engine_id),
 				PMU_PG_POST_POWERUP_IDLE_THRESHOLD);
 	}
 
@@ -3316,7 +3326,7 @@ static int pmu_init_powergating(struct gk20a *g)
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
 	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
+	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_INIT;
 
 	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_INIT");
@@ -3329,7 +3339,7 @@ static int pmu_init_powergating(struct gk20a *g)
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_stat);
 	cmd.cmd.pg.stat.cmd_type = PMU_PG_CMD_ID_PG_STAT;
-	cmd.cmd.pg.stat.engine_id = ENGINE_GR_GK20A;
+	cmd.cmd.pg.stat.engine_id = gr_engine_id;
 	cmd.cmd.pg.stat.sub_cmd_id = PMU_PG_STAT_CMD_ALLOC_DMEM;
 	cmd.cmd.pg.stat.data = 0;
 
@@ -3344,7 +3354,7 @@ static int pmu_init_powergating(struct gk20a *g)
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
 	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
+	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
 	gk20a_dbg_pmu("cmd post PMU_PG_ELPG_CMD_DISALLOW");
@@ -4429,14 +4439,17 @@ static int gk20a_pmu_enable_elpg_locked(struct gk20a *g)
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct pmu_cmd cmd;
 	u32 seq, status;
+	u32 gr_engine_id;
 
 	gk20a_dbg_fn("");
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
 	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
+	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_ALLOW;
 
 	/* no need to wait ack for ELPG enable but set pending to sync
@@ -4503,8 +4516,11 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	struct pmu_cmd cmd;
 	u32 seq;
 	int ret = 0;
+	u32 gr_engine_id;
 
 	gk20a_dbg_fn("");
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
 	if (!support_gk20a_pmu(g->dev))
 		return ret;
@@ -4553,7 +4569,7 @@ int gk20a_pmu_disable_elpg(struct gk20a *g)
 	cmd.hdr.unit_id = PMU_UNIT_PG;
 	cmd.hdr.size = PMU_CMD_HDR_SIZE + sizeof(struct pmu_pg_cmd_elpg_cmd);
 	cmd.cmd.pg.elpg_cmd.cmd_type = PMU_PG_CMD_ID_ELPG_CMD;
-	cmd.cmd.pg.elpg_cmd.engine_id = ENGINE_GR_GK20A;
+	cmd.cmd.pg.elpg_cmd.engine_id = gr_engine_id;
 	cmd.cmd.pg.elpg_cmd.cmd = PMU_PG_ELPG_CMD_DISALLOW;
 
 	pmu->elpg_stat = PMU_ELPG_STAT_OFF_PENDING;

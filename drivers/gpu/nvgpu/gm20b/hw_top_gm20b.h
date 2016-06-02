@@ -138,6 +138,22 @@ static inline u32 top_device_info_type_enum_graphics_f(void)
 {
 	return 0x0;
 }
+static inline u32 top_device_info_type_enum_copy0_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 top_device_info_type_enum_copy0_f(void)
+{
+	return 0x4;
+}
+static inline u32 top_device_info_type_enum_copy1_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 top_device_info_type_enum_copy1_f(void)
+{
+	return 0x8;
+}
 static inline u32 top_device_info_type_enum_copy2_v(void)
 {
 	return 0x00000003;

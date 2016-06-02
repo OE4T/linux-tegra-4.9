@@ -326,8 +326,11 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 	bool gr_enabled;
 	bool ctxsw_active;
 	bool gr_busy;
+	u32 gr_engine_id;
 
 	gk20a_dbg_fn("");
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
 	do {
 		/* fmodel: host gets fifo_engine_status(gr) from gr
@@ -338,7 +341,7 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 			mc_enable_pgraph_enabled_f();
 
 		ctxsw_active = gk20a_readl(g,
-			fifo_engine_status_r(ENGINE_GR_GK20A)) &
+			fifo_engine_status_r(gr_engine_id)) &
 			fifo_engine_status_ctxsw_in_progress_f();
 
 		gr_busy = gk20a_readl(g, gr_engine_status_r()) &
@@ -3905,11 +3908,14 @@ int gr_gk20a_add_zbc_depth(struct gk20a *g, struct gr_gk20a *gr,
 void gr_gk20a_pmu_save_zbc(struct gk20a *g, u32 entries)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info =
-		f->engine_info + ENGINE_GR_GK20A;
+	struct fifo_engine_info_gk20a *gr_info = NULL;
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 ret;
+	u32 engine_id;
+
+	engine_id = gk20a_fifo_get_gr_engine_id(g);
+	gr_info = (f->engine_info + engine_id);
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
 	if (ret) {
@@ -4187,9 +4193,13 @@ int _gk20a_gr_zbc_set_table(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_entry *zbc_val)
 {
 	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *gr_info = f->engine_info + ENGINE_GR_GK20A;
+	struct fifo_engine_info_gk20a *gr_info = NULL;
 	unsigned long end_jiffies;
 	int ret;
+	u32 engine_id;
+
+	engine_id = gk20a_fifo_get_gr_engine_id(g);
+	gr_info = (f->engine_info + engine_id);
 
 	ret = gk20a_fifo_disable_engine_activity(g, gr_info, true);
 	if (ret) {
@@ -4306,6 +4316,29 @@ void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 	idle_filter = gk20a_readl(g, therm_hubmmu_idle_filter_r());
 	idle_filter &= ~therm_hubmmu_idle_filter_value_m();
 	gk20a_writel(g, therm_hubmmu_idle_filter_r(), idle_filter);
+}
+
+void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config)
+{
+	u32 engine_idx;
+	u32 active_engine_id = 0;
+	struct fifo_engine_info_gk20a *engine_info = NULL;
+	struct fifo_gk20a *f = &g->fifo;
+
+	for (engine_idx = 0; engine_idx < f->num_engines; ++engine_idx) {
+		active_engine_id = f->active_engines_list[engine_idx];
+		engine_info = &f->engine_info[active_engine_id];
+
+		/* gr_engine supports both BLCG and ELCG */
+		if ((cgmode == BLCG_MODE) &&
+			(engine_info->engine_enum == ENGINE_GR_GK20A)) {
+				gr_gk20a_init_blcg_mode(g, mode_config, active_engine_id);
+				break;
+		} else if (cgmode == ELCG_MODE)
+			gr_gk20a_init_elcg_mode(g, mode_config, active_engine_id);
+		else
+			gk20a_err(dev_from_gk20a(g), "invalid cg mode %d %d", cgmode, mode_config);
+	}
 }
 
 static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
@@ -4710,8 +4743,9 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 {
 	u32 gpfifo_ctrl, pmc_en;
 	u32 err = 0;
-	struct fifo_engine_info_gk20a *ce_info =
-		g->fifo.engine_info + ENGINE_CE2_GK20A;
+	u32 ce_reset_mask;
+
+	ce_reset_mask = gk20a_fifo_get_all_ce_engine_reset_mask(g);
 
 	/* disable fifo access */
 	pmc_en = gk20a_readl(g, mc_enable_r());
@@ -4725,12 +4759,12 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 	gk20a_reset(g, mc_enable_pgraph_enabled_f()
 			| mc_enable_blg_enabled_f()
 			| mc_enable_perfmon_enabled_f()
-			| ce_info->reset_mask);
+			| ce_reset_mask);
 
 	gr_gk20a_load_gating_prod(g);
+
 	/* Disable elcg until it gets enabled later in the init*/
-	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-	gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+	gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 
 	/* enable fifo access */
 	gk20a_writel(g, gr_gpfifo_ctl_r(),
@@ -5210,11 +5244,9 @@ int gk20a_enable_gr_hw(struct gk20a *g)
 static void gr_gk20a_enable_elcg(struct gk20a *g)
 {
 	if (g->elcg_enabled) {
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+		gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_AUTO);
 	} else {
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+		gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 	}
 }
 
@@ -6106,12 +6138,15 @@ int gk20a_gr_isr(struct gk20a *g)
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 	struct channel_gk20a *ch = NULL;
 	int tsgid = NVGPU_INVALID_TSG_ID;
+	u32 gr_engine_id;
 
 	gk20a_dbg_fn("");
 	gk20a_dbg(gpu_dbg_intr, "pgraph intr %08x", gr_intr);
 
 	if (!gr_intr)
 		return 0;
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
 	grfifo_ctl = gk20a_readl(g, gr_gpfifo_ctl_r());
 	grfifo_ctl &= ~gr_gpfifo_ctl_semaphore_access_f(1);
@@ -6283,13 +6318,13 @@ int gk20a_gr_isr(struct gk20a *g)
 
 	if (need_reset) {
 		if (tsgid != NVGPU_INVALID_TSG_ID)
-			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
+			gk20a_fifo_recover(g, BIT(gr_engine_id),
 					   tsgid, true, true, true);
 		else if (ch)
-			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
+			gk20a_fifo_recover(g, BIT(gr_engine_id),
 					   ch->hw_chid, false, true, true);
 		else
-			gk20a_fifo_recover(g, BIT(ENGINE_GR_GK20A),
+			gk20a_fifo_recover(g, BIT(gr_engine_id),
 					   0, false, false, true);
 	}
 
@@ -8441,6 +8476,10 @@ static u32 *gr_gk20a_rop_l2_en_mask(struct gk20a *g)
 static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
 {
+	u32 gr_engine_id;
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
+
 	gk20a_debug_output(o, "NV_PGRAPH_STATUS: 0x%x\n",
 		gk20a_readl(g, gr_status_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_STATUS1: 0x%x\n",
@@ -8460,7 +8499,7 @@ static int gr_gk20a_dump_gr_status_regs(struct gk20a *g,
 	gk20a_debug_output(o, "NV_PGRAPH_FECS_INTR  : 0x%x\n",
 		gk20a_readl(g, gr_fecs_intr_r()));
 	gk20a_debug_output(o, "NV_PFIFO_ENGINE_STATUS(GR) : 0x%x\n",
-		gk20a_readl(g, fifo_engine_status_r(ENGINE_GR_GK20A)));
+		gk20a_readl(g, fifo_engine_status_r(gr_engine_id)));
 	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY0: 0x%x\n",
 		gk20a_readl(g, gr_activity_0_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY1: 0x%x\n",

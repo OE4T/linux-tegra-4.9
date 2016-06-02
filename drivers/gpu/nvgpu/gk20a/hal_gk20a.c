@@ -99,6 +99,9 @@ static int gk20a_get_litter_value(struct gk20a *g,
 	case GPU_LIT_ROP_SHARED_BASE:
 		ret = proj_rop_shared_base_v();
 		break;
+	case GPU_LIT_HOST_NUM_ENGINES:
+		ret = proj_host_num_engines_v();
+		break;
 	case GPU_LIT_HOST_NUM_PBDMA:
 		ret = proj_host_num_pbdma_v();
 		break;

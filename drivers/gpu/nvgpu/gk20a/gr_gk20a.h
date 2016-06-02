@@ -82,6 +82,12 @@ enum {
 };
 
 enum {
+	ELCG_MODE = (1 << 0),
+	BLCG_MODE = (1 << 1),
+	INVALID_MODE = (1 << 2)
+};
+
+enum {
 	ELCG_RUN,	/* clk always run, i.e. disable elcg */
 	ELCG_STOP,	/* clk is stopped */
 	ELCG_AUTO	/* clk will run when non-idle, standard elcg mode */
@@ -475,6 +481,8 @@ int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va);
 
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);
 void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine);
+
+void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config);
 
 /* sm */
 bool gk20a_gr_sm_debugger_attached(struct gk20a *g);

@@ -74,6 +74,9 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 {
 	u32 mc_intr_0;
 	int hw_irq_count;
+	u32 engine_id_idx;
+	u32 active_engine_id = 0;
+	u32 engine_enum = ENGINE_INVAL_GK20A;
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
@@ -84,11 +87,26 @@ irqreturn_t mc_gk20a_intr_thread_stall(struct gk20a *g)
 
 	gk20a_dbg(gpu_dbg_intr, "stall intr %08x\n", mc_intr_0);
 
-	if (mc_intr_0 & g->fifo.engine_info[ENGINE_GR_GK20A].intr_mask)
-		gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
-	if (mc_intr_0 & g->fifo.engine_info[ENGINE_CE2_GK20A].intr_mask
-		&& g->ops.ce2.isr_stall)
-		g->ops.ce2.isr_stall(g);
+	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
+		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
+
+		if (mc_intr_0 & g->fifo.engine_info[active_engine_id].intr_mask) {
+			engine_enum = g->fifo.engine_info[active_engine_id].engine_enum;
+			/* GR Engine */
+			if (engine_enum == ENGINE_GR_GK20A) {
+				gr_gk20a_elpg_protected_call(g, gk20a_gr_isr(g));
+			}
+
+			/* CE Engine */
+			if (((engine_enum == ENGINE_GRCE_GK20A) ||
+				(engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
+				g->ops.ce2.isr_stall){
+					g->ops.ce2.isr_stall(g,
+					g->fifo.engine_info[active_engine_id].inst_id,
+					g->fifo.engine_info[active_engine_id].pri_base);
+			}
+		}
+	}
 	if (mc_intr_0 & mc_intr_0_pfifo_pending_f())
 		gk20a_fifo_isr(g);
 	if (mc_intr_0 & mc_intr_0_pmu_pending_f())
@@ -120,6 +138,9 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 {
 	u32 mc_intr_1;
 	int hw_irq_count;
+	u32 engine_id_idx;
+	u32 active_engine_id = 0;
+	u32 engine_enum = ENGINE_INVAL_GK20A;
 
 	gk20a_dbg(gpu_dbg_intr, "interrupt thread launched");
 
@@ -132,11 +153,27 @@ irqreturn_t mc_gk20a_intr_thread_nonstall(struct gk20a *g)
 		gk20a_fifo_nonstall_isr(g);
 	if (mc_intr_1 & mc_intr_0_priv_ring_pending_f())
 		gk20a_priv_ring_isr(g);
-	if (mc_intr_1 & g->fifo.engine_info[ENGINE_GR_GK20A].intr_mask)
-		gk20a_gr_nonstall_isr(g);
-	if (mc_intr_1 & g->fifo.engine_info[ENGINE_CE2_GK20A].intr_mask
-		&& g->ops.ce2.isr_nonstall)
-		g->ops.ce2.isr_nonstall(g);
+
+	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines; engine_id_idx++) {
+		active_engine_id = g->fifo.active_engines_list[engine_id_idx];
+
+		if (mc_intr_1 & g->fifo.engine_info[active_engine_id].intr_mask) {
+			engine_enum = g->fifo.engine_info[active_engine_id].engine_enum;
+			/* GR Engine */
+			if (engine_enum == ENGINE_GR_GK20A) {
+				gk20a_gr_nonstall_isr(g);
+			}
+
+			/* CE Engine */
+			if (((engine_enum == ENGINE_GRCE_GK20A) ||
+				(engine_enum == ENGINE_ASYNC_CE_GK20A)) &&
+				g->ops.ce2.isr_nonstall) {
+					g->ops.ce2.isr_nonstall(g,
+					g->fifo.engine_info[active_engine_id].inst_id,
+					g->fifo.engine_info[active_engine_id].pri_base);
+			}
+		}
+	}
 
 	/* sync handled irq counter before re-enabling interrupts */
 	atomic_set(&g->sw_irq_nonstall_last_handled, hw_irq_count);

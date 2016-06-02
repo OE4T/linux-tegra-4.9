@@ -50,13 +50,12 @@ static ssize_t elcg_enable_store(struct device *dev,
 
 	if (val) {
 		g->elcg_enabled = true;
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
+		gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_AUTO);
 	} else {
 		g->elcg_enabled = false;
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-		gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+		gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 	}
+
 	gk20a_idle(g->dev);
 
 	dev_info(dev, "ELCG is %s.\n", g->elcg_enabled ? "enabled" :

@@ -26,6 +26,8 @@
 
 #define MAX_RUNLIST_BUFFERS	2
 
+#define FIFO_INVAL_ENGINE_ID	~0
+
 /* generally corresponds to the "pbdma" engine */
 
 struct fifo_runlist_info_gk20a {
@@ -40,10 +42,10 @@ struct fifo_runlist_info_gk20a {
 	struct mutex mutex; /* protect channel preempt and runlist upate */
 };
 
-/* so far gk20a has two engines: gr and ce2(gr_copy) */
 enum {
 	ENGINE_GR_GK20A	    = 0,
-	ENGINE_CE2_GK20A    = 1,
+	ENGINE_GRCE_GK20A    = 1,
+	ENGINE_ASYNC_CE_GK20A  = 2,
 	ENGINE_INVAL_GK20A
 };
 
@@ -85,6 +87,7 @@ struct fifo_engine_info_gk20a {
 	u32 inst_id;
 	u32 pri_base;
 	u32 fault_id;
+	u32 engine_enum;
 	struct fifo_pbdma_exception_info_gk20a pbdma_exception_info;
 	struct fifo_engine_exception_info_gk20a engine_exception_info;
 	struct fifo_mmu_fault_info_gk20a mmu_fault_info;
@@ -102,6 +105,7 @@ struct fifo_gk20a {
 	struct fifo_engine_info_gk20a *engine_info;
 	u32 max_engines;
 	u32 num_engines;
+	u32 *active_engines_list;
 
 	struct fifo_runlist_info_gk20a *runlist_info;
 	u32 max_runlists;
@@ -228,4 +232,15 @@ const char *gk20a_fifo_interleave_level_name(u32 interleave_level);
 int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 		u32 *inst_id);
 
+u32 gk20a_fifo_get_engine_ids(struct gk20a *g, u32 engine_id[], u32 engine_id_sz, u32 engine_enum);
+
+void gk20a_fifo_delete_runlist(struct fifo_gk20a *f);
+
+struct fifo_engine_info_gk20a *gk20a_fifo_get_engine_info(struct gk20a *g, u32 engine_id);
+
+bool gk20a_fifo_is_valid_engine_id(struct gk20a *g, u32 engine_id);
+
+u32 gk20a_fifo_get_gr_engine_id(struct gk20a *g);
+
+u32 gk20a_fifo_get_all_ce_engine_reset_mask(struct gk20a *g);
 #endif /*__GR_GK20A_H__*/

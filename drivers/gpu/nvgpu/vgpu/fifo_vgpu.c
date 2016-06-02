@@ -163,60 +163,52 @@ static int init_engine_info(struct fifo_gk20a *f)
 
 static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 {
-	struct fifo_engine_info_gk20a *engine_info;
 	struct fifo_runlist_info_gk20a *runlist;
 	struct device *d = dev_from_gk20a(g);
-	u32 runlist_id;
+	s32 runlist_id = -1;
 	u32 i;
 	u64 runlist_size;
 
 	gk20a_dbg_fn("");
 
-	f->max_runlists = fifo_eng_runlist_base__size_1_v();
+	f->max_runlists = g->ops.fifo.eng_runlist_base_size();
 	f->runlist_info = kzalloc(sizeof(struct fifo_runlist_info_gk20a) *
 				  f->max_runlists, GFP_KERNEL);
 	if (!f->runlist_info)
-		goto clean_up;
+		goto clean_up_runlist;
 
-	engine_info = f->engine_info + ENGINE_GR_GK20A;
-	runlist_id = engine_info->runlist_id;
-	runlist = &f->runlist_info[runlist_id];
+	memset(f->runlist_info, 0, (sizeof(struct fifo_runlist_info_gk20a) *
+		f->max_runlists));
 
-	runlist->active_channels =
-		kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
-			GFP_KERNEL);
-	if (!runlist->active_channels)
-		goto clean_up_runlist_info;
+	for (runlist_id = 0; runlist_id < f->max_runlists; runlist_id++) {
+		runlist = &f->runlist_info[runlist_id];
 
-	runlist_size  = sizeof(u16) * f->num_channels;
-	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
-		int err = gk20a_gmmu_alloc(g, runlist_size, &runlist->mem[i]);
-		if (err) {
-			dev_err(d, "memory allocation failed\n");
+		runlist->active_channels =
+			kzalloc(DIV_ROUND_UP(f->num_channels, BITS_PER_BYTE),
+				GFP_KERNEL);
+		if (!runlist->active_channels)
 			goto clean_up_runlist;
-		}
-	}
-	mutex_init(&runlist->mutex);
 
-	/* None of buffers is pinned if this value doesn't change.
-	    Otherwise, one of them (cur_buffer) must have been pinned. */
-	runlist->cur_buffer = MAX_RUNLIST_BUFFERS;
+			runlist_size  = sizeof(u16) * f->num_channels;
+			for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
+				int err = gk20a_gmmu_alloc(g, runlist_size, &runlist->mem[i]);
+				if (err) {
+					dev_err(d, "memory allocation failed\n");
+					goto clean_up_runlist;
+				}
+			}
+		mutex_init(&runlist->mutex);
+
+		/* None of buffers is pinned if this value doesn't change.
+		    Otherwise, one of them (cur_buffer) must have been pinned. */
+		runlist->cur_buffer = MAX_RUNLIST_BUFFERS;
+	}
 
 	gk20a_dbg_fn("done");
 	return 0;
 
 clean_up_runlist:
-	for (i = 0; i < MAX_RUNLIST_BUFFERS; i++)
-		gk20a_gmmu_free(g, &runlist->mem[i]);
-
-clean_up_runlist_info:
-	kfree(runlist->active_channels);
-	runlist->active_channels = NULL;
-
-	kfree(f->runlist_info);
-	f->runlist_info = NULL;
-
-clean_up:
+	gk20a_fifo_delete_runlist(f);
 	gk20a_dbg_fn("fail");
 	return -ENOMEM;
 }
@@ -243,7 +235,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	if (err)
 		return -ENXIO;
 
-	f->max_engines = ENGINE_INVAL_GK20A;
+	f->max_engines = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
 
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
 

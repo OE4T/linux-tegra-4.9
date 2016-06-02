@@ -21,7 +21,7 @@
 #include "gm20b/mc_gm20b.h"
 #include "gm20b/ltc_gm20b.h"
 #include "gm20b/mm_gm20b.h"
-#include "gm20b/ce2_gm20b.h"
+#include "ce_gm206.h"
 #include "gm20b/fb_gm20b.h"
 #include "gm20b/pmu_gm20b.h"
 #include "gm20b/gr_gm20b.h"
@@ -142,6 +142,9 @@ static int gm206_get_litter_value(struct gk20a *g,
 	case GPU_LIT_ROP_SHARED_BASE:
 		ret = proj_rop_shared_base_v();
 		break;
+	case GPU_LIT_HOST_NUM_ENGINES:
+		ret = proj_host_num_engines_v();
+		break;
 	case GPU_LIT_HOST_NUM_PBDMA:
 		ret = proj_host_num_pbdma_v();
 		break;
@@ -183,7 +186,7 @@ int gm206_init_hal(struct gk20a *g)
 	gm20b_init_fb(gops);
 	g->ops.fb.set_use_full_comp_tag_line = NULL;
 	gm206_init_fifo(gops);
-	gm20b_init_ce2(gops);
+	gm206_init_ce(gops);
 	gm20b_init_gr_ctx(gops);
 	gm20b_init_mm(gops);
 	gm206_init_pmu_ops(gops);

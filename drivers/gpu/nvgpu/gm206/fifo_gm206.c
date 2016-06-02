@@ -18,6 +18,7 @@
 #include "gm20b/fifo_gm20b.h"
 #include "fifo_gm206.h"
 #include "hw_ccsr_gm206.h"
+#include "hw_fifo_gm206.h"
 
 static u32 gm206_fifo_get_num_fifos(struct gk20a *g)
 {
@@ -28,4 +29,5 @@ void gm206_init_fifo(struct gpu_ops *gops)
 {
 	gm20b_init_fifo(gops);
 	gops->fifo.get_num_fifos = gm206_fifo_get_num_fifos;
+	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 }

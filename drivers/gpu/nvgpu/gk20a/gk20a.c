@@ -1890,7 +1890,7 @@ void gk20a_enable(struct gk20a *g, u32 units)
 void gk20a_reset(struct gk20a *g, u32 units)
 {
 	gk20a_disable(g, units);
-	if (units & mc_enable_ce2_enabled_f())
+	if (units & gk20a_fifo_get_all_ce_engine_reset_mask(g))
 		udelay(500);
 	else
 		udelay(20);

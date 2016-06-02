@@ -1102,11 +1102,10 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 					false);
 			g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
 					false);
-			gr_gk20a_init_blcg_mode(g, BLCG_RUN, ENGINE_GR_GK20A);
 
+			gr_gk20a_init_cg_mode(g, BLCG_MODE, BLCG_RUN);
 			g->elcg_enabled = false;
-			gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_GR_GK20A);
-			gr_gk20a_init_elcg_mode(g, ELCG_RUN, ENGINE_CE2_GK20A);
+			gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 
 		}
 
@@ -1126,9 +1125,8 @@ static int dbg_set_powergate(struct dbg_session_gk20a *dbg_s,
 		    --g->dbg_powergating_disabled_refcount == 0) {
 
 			g->elcg_enabled = true;
-			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_CE2_GK20A);
-			gr_gk20a_init_elcg_mode(g, ELCG_AUTO, ENGINE_GR_GK20A);
-			gr_gk20a_init_blcg_mode(g, BLCG_AUTO, ENGINE_GR_GK20A);
+			gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_AUTO);
+			gr_gk20a_init_cg_mode(g, BLCG_MODE, BLCG_AUTO);
 
 			g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
 					g->slcg_enabled);

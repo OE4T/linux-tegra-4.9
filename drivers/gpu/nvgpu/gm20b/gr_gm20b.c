@@ -855,6 +855,9 @@ static int gr_gm20b_dump_gr_status_regs(struct gk20a *g,
 			   struct gk20a_debug_output *o)
 {
 	struct gr_gk20a *gr = &g->gr;
+	u32 gr_engine_id;
+
+	gr_engine_id = gk20a_fifo_get_gr_engine_id(g);
 
 	gk20a_debug_output(o, "NV_PGRAPH_STATUS: 0x%x\n",
 		gk20a_readl(g, gr_status_r()));
@@ -875,7 +878,7 @@ static int gr_gm20b_dump_gr_status_regs(struct gk20a *g,
 	gk20a_debug_output(o, "NV_PGRAPH_FECS_INTR  : 0x%x\n",
 		gk20a_readl(g, gr_fecs_intr_r()));
 	gk20a_debug_output(o, "NV_PFIFO_ENGINE_STATUS(GR) : 0x%x\n",
-		gk20a_readl(g, fifo_engine_status_r(ENGINE_GR_GK20A)));
+		gk20a_readl(g, fifo_engine_status_r(gr_engine_id)));
 	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY0: 0x%x\n",
 		gk20a_readl(g, gr_activity_0_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_ACTIVITY1: 0x%x\n",

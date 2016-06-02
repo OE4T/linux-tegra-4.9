@@ -49,12 +49,14 @@ static void channel_gm20b_bind(struct channel_gk20a *c)
 static inline u32 gm20b_engine_id_to_mmu_id(struct gk20a *g, u32 engine_id)
 {
 	u32 fault_id = ~0;
+	struct fifo_engine_info_gk20a *engine_info;
 
-	if (engine_id < ENGINE_INVAL_GK20A) {
-		struct fifo_engine_info_gk20a *info =
-			&g->fifo.engine_info[engine_id];
+	engine_info = gk20a_fifo_get_engine_info(g, engine_id);
 
-		fault_id = info->fault_id;
+	if (engine_info) {
+		fault_id = engine_info->fault_id;
+	} else {
+		gk20a_err(g->dev, "engine_id is not in active list/invalid %d", engine_id);
 	}
 	return fault_id;
 }
@@ -72,7 +74,7 @@ static void gm20b_fifo_trigger_mmu_fault(struct gk20a *g,
 	for_each_set_bit(engine_id, &engine_ids, 32) {
 		u32 engine_mmu_fault_id;
 
-		if (engine_id > g->fifo.max_engines) {
+		if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
 			gk20a_err(dev_from_gk20a(g),
 				  "faulting unknown engine %ld", engine_id);
 		} else {
@@ -109,7 +111,7 @@ static u32 gm20b_fifo_get_num_fifos(struct gk20a *g)
 	return ccsr_channel__size_1_v();
 }
 
-void gm20b_device_info_data_parse(struct gk20a *g,
+static void gm20b_device_info_data_parse(struct gk20a *g,
 						u32 table_entry, u32 *inst_id,
 						u32 *pri_base, u32 *fault_id)
 {
@@ -152,4 +154,5 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.force_reset_ch = gk20a_fifo_force_reset_ch;
 	gops->fifo.engine_enum_from_type = gk20a_fifo_engine_enum_from_type;
 	gops->fifo.device_info_data_parse = gm20b_device_info_data_parse;
+	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 }

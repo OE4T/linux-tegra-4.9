@@ -329,10 +329,16 @@ static void channel_gk20a_bind(struct channel_gk20a *c)
 {
 	struct gk20a *g = c->g;
 	struct fifo_gk20a *f = &g->fifo;
-	struct fifo_engine_info_gk20a *engine_info =
-		f->engine_info + ENGINE_GR_GK20A;
+	u32 engine_id;
+	struct fifo_engine_info_gk20a *engine_info = NULL;
 	u32 inst_ptr = gk20a_mm_inst_block_addr(g, &c->inst_block)
 		>> ram_in_base_shift_v();
+
+	/* TODO:Need to handle non GR engine channel bind path */
+	engine_id = gk20a_fifo_get_gr_engine_id(g);
+
+	/* Consider 1st available GR engine */
+	engine_info = (f->engine_info + engine_id);
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
 		c->hw_chid, inst_ptr);
@@ -1716,7 +1722,7 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	/* Get failing engine data */
 	engine_id = gk20a_fifo_get_failing_engine_data(g, &id, &is_tsg);
 
-	if (engine_id >= g->fifo.max_engines) {
+	if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
 		/* If no failing engine, abort the channels */
 		if (gk20a_is_channel_marked_as_tsg(ch)) {
 			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];

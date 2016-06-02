@@ -80,7 +80,8 @@ nvgpu-y := \
 	gm206/hal_gm206.o \
 	gm206/gr_gm206.o \
 	gm206/acr_gm206.o \
-	gm206/pmu_gm206.o
+	gm206/pmu_gm206.o \
+	gm206/ce_gm206.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += gk20a/platform_gk20a_tegra.o
 nvgpu-$(CONFIG_SYNC) += gk20a/sync_gk20a.o

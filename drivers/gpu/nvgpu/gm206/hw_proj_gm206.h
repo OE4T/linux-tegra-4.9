@@ -106,6 +106,10 @@ static inline u32 proj_tpc_in_gpc_shared_base_v(void)
 {
 	return 0x00001800;
 }
+static inline u32 proj_host_num_engines_v(void)
+{
+	return 0x00000008;
+}
 static inline u32 proj_host_num_pbdma_v(void)
 {
 	return 0x00000003;

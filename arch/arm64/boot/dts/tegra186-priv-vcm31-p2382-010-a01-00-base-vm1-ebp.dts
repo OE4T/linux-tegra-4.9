@@ -81,6 +81,10 @@
 		};
 	};
 
+	spi@3270000 {
+		status = "disabled";
+	};
+
 	aon@c160000 {
 		status = "disabled";
 	};
@@ -189,11 +193,11 @@
 		nvidia,vmid = <1>;
 
 		nvidia,ch-base = <0>;
-		nvidia,nb-channels = <32>;
+		nvidia,nb-channels = <28>;
 
 		nvidia,nb-hw-pts = <576>;
 		nvidia,pts-base = <0>;
-		nvidia,nb-pts = <288>;
+		nvidia,nb-pts = <284>;
 
 		vmserver-owns-engines = <1>;
 
@@ -283,6 +287,21 @@
 			status = "disabled";
 		};
 
+		se@15810000 {
+			status = "disabled";
+		};
+
+		se@15820000 {
+			status = "disabled";
+		};
+
+		se@15830000 {
+			status = "disabled";
+		};
+
+		se@15840000 {
+			status = "disabled";
+		};
 	};
 
 	generic-system-config {
@@ -557,6 +576,7 @@
 		#stream-id-cells = <1>;
 		ivc = <76>;
 		status = "disabled";
+		se-engine-id = <0>;
 	};
 
 	vse@15820000 {
@@ -564,6 +584,7 @@
 		#stream-id-cells = <1>;
 		ivc = <76>;
 		status = "disabled";
+		se-engine-id = <1>;
 	};
 
 	vse@15830000 {
@@ -571,6 +592,7 @@
 		#stream-id-cells = <1>;
 		ivc = <76>;
 		status = "disabled";
+		se-engine-id = <2>;
 	};
 
 	vse@15840000 {
@@ -578,5 +600,6 @@
 		#stream-id-cells = <1>;
 		ivc = <76>;
 		status = "disabled";
+		se-engine-id = <3>;
 	};
 };

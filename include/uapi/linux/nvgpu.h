@@ -94,7 +94,7 @@ struct nvgpu_gpu_zbc_query_table_args {
 #include <linux/nvgpu-t18x.h>
 #endif
 
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_19x_GPU
 #include <linux/nvgpu-t19x.h>
 #endif
 

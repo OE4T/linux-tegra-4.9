@@ -16,7 +16,7 @@ ccflags-y += -I$(srctree)/../nvgpu-t18x/include
 ccflags-y += -I$(srctree)/../nvgpu-t18x/include/uapi
 endif
 
-ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+ifeq ($(CONFIG_TEGRA_19x_GPU),y)
 ccflags-y += -I$(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu
 ccflags-y += -I$(srctree)/../nvgpu-t19x/include
 ccflags-y += -I$(srctree)/../nvgpu-t19x/include/uapi
@@ -117,7 +117,7 @@ include $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile
 endif
 endif
 
-ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+ifeq ($(CONFIG_TEGRA_19x_GPU),y)
 ifneq ($(wildcard $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile),)
 include $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile
 endif

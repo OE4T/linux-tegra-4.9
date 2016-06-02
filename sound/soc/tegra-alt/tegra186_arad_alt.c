@@ -293,11 +293,22 @@ static int tegra186_arad_put_enable_lane(struct snd_kcontrol *kcontrol,
 	struct soc_mixer_control *arad_private =
 		(struct soc_mixer_control *)kcontrol->private_value;
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
+	struct device *dev = codec->dev;
 	struct tegra186_arad *arad = snd_soc_codec_get_drvdata(codec);
-	unsigned int enable = 0, lane_id = arad_private->shift;
+	unsigned int enable = 0, lane_id = arad_private->shift, state;
 	int dcnt = 10;
 
+	pm_runtime_get_sync(dev);
+
+	regmap_read(arad->regmap,
+		TEGRA186_ARAD_LANE_STATUS, &state);
 	enable = ucontrol->value.integer.value[0];
+
+	/* Return, if current state and requested state of lane is disable */
+	if (!enable && !((state >> lane_id) & 1)) {
+		pm_runtime_put_sync(dev);
+		return 0;
+	}
 
 	regmap_update_bits(arad->regmap,
 		arad_private->reg, 1<<arad_private->shift,
@@ -306,7 +317,7 @@ static int tegra186_arad_put_enable_lane(struct snd_kcontrol *kcontrol,
 	if (enable)
 		while (!tegra186_arad_get_lane_lock_status(arad, lane_id) &&
 			dcnt--)
-			udelay(100);
+			udelay(10000);
 	else {
 		regmap_update_bits(arad->regmap,
 			TEGRA186_ARAD_LANE_SOFT_RESET, 1<<arad_private->shift,
@@ -315,6 +326,7 @@ static int tegra186_arad_put_enable_lane(struct snd_kcontrol *kcontrol,
 			dcnt--)
 			udelay(100);
 	}
+	pm_runtime_put_sync(dev);
 
 	if (dcnt < 0) {
 		if (enable)
@@ -656,6 +668,7 @@ static bool tegra186_arad_volatile_reg(struct device *dev, unsigned int reg)
 	}
 
 	switch (reg) {
+	case TEGRA186_ARAD_LANE_ENABLE:
 	case TEGRA186_ARAD_LANE_STATUS:
 	case TEGRA186_ARAD_LANE_INT_STATUS:
 	case TEGRA186_ARAD_STATUS:

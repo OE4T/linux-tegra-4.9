@@ -549,10 +549,10 @@ struct gpu_ops {
 		int (*falcon_clear_halt_interrupt_status)(struct gk20a *g,
 			unsigned int timeout);
 		int (*init_falcon_setup_hw)(struct gk20a *g,
-			struct flcn_bl_dmem_desc *desc, u32 bl_sz);
+			void *desc, u32 bl_sz);
 		bool (*is_lazy_bootstrap)(u32 falcon_id);
 		bool (*is_priv_load)(u32 falcon_id);
-		void (*get_wpr)(struct gk20a *g, u64 *base, u64 *size);
+		void (*get_wpr)(struct gk20a *g, struct wpr_carveout_info *inf);
 		int (*alloc_blob_space)(struct gk20a *g,
 				size_t size, struct mem_desc *mem);
 		int (*pmu_populate_loader_cfg)(struct gk20a *g,

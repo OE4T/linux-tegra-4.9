@@ -450,6 +450,31 @@ struct pmu_ucode_desc {
 	u32 compressed;
 };
 
+struct pmu_ucode_desc_v1 {
+	u32 descriptor_size;
+	u32 image_size;
+	u32 tools_version;
+	u32 app_version;
+	char date[GK20A_PMU_UCODE_NB_MAX_DATE_LENGTH];
+	u32 bootloader_start_offset;
+	u32 bootloader_size;
+	u32 bootloader_imem_offset;
+	u32 bootloader_entry_point;
+	u32 app_start_offset;
+	u32 app_size;
+	u32 app_imem_offset;
+	u32 app_imem_entry;
+	u32 app_dmem_offset;
+	u32 app_resident_code_offset;
+	u32 app_resident_code_size;
+	u32 app_resident_data_offset;
+	u32 app_resident_data_size;
+	u32 nb_imem_overlays;
+	u32 nb_dmem_overlays;
+	struct {u32 start; u32 size; } load_ovl[64];
+	u32 compressed;
+};
+
 #define PMU_UNIT_REWIND		(0x00)
 #define PMU_UNIT_PG			(0x03)
 #define PMU_UNIT_INIT		(0x07)
@@ -1295,7 +1320,10 @@ struct pmu_pg_stats {
 
 struct pmu_gk20a {
 
-	struct pmu_ucode_desc *desc;
+	union {
+		struct pmu_ucode_desc *desc;
+		struct pmu_ucode_desc_v1 *desc_v1;
+	};
 	struct mem_desc ucode;
 
 	struct mem_desc pg_buf;
@@ -1427,5 +1455,7 @@ void pmu_handle_fecs_boot_acr_msg(struct gk20a *g, struct pmu_msg *msg,
 void gk20a_pmu_elpg_statistics(struct gk20a *g,
 		u32 *ingating_time, u32 *ungating_time, u32 *gating_cnt);
 int gk20a_pmu_reset(struct gk20a *g);
+int pmu_idle(struct pmu_gk20a *pmu);
+int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable);
 
 #endif /*__PMU_GK20A_H__*/

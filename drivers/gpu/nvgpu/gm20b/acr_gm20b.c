@@ -43,7 +43,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g);
 static int pmu_wait_for_halt(struct gk20a *g, unsigned int timeout);
 static int clear_halt_interrupt_status(struct gk20a *g, unsigned int timeout);
 static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
-		struct flcn_bl_dmem_desc *desc, u32 bl_sz);
+		void *desc, u32 bl_sz);
 static int lsfm_discover_ucode_images(struct gk20a *g,
 	struct ls_flcn_mgr *plsfm);
 static int lsfm_add_ucode_img(struct gk20a *g, struct ls_flcn_mgr *plsfm,
@@ -62,7 +62,7 @@ static int gm20b_alloc_blob_space(struct gk20a *g,
 		size_t size, struct mem_desc *mem);
 static bool gm20b_is_priv_load(u32 falcon_id);
 static bool gm20b_is_lazy_bootstrap(u32 falcon_id);
-static void gm20b_wpr_info(struct gk20a *g, u64 *base, u64 *size);
+static void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf);
 
 /*Globals*/
 static get_ucode_details pmu_acr_supp_ucode_list[] = {
@@ -83,13 +83,15 @@ static void start_gm20b_pmu(struct gk20a *g)
 		pwr_falcon_cpuctl_startcpu_f(1));
 }
 
-static void gm20b_wpr_info(struct gk20a *g, u64 *base, u64 *size)
+static void gm20b_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 {
-	struct mc_carveout_info inf;
+	struct mc_carveout_info mem_inf;
 
-	mc_get_carveout_info(&inf, NULL, MC_SECURITY_CARVEOUT2);
-	*base = inf.base;
-	*size = inf.size;
+	mc_get_carveout_info(&mem_inf, NULL, MC_SECURITY_CARVEOUT2);
+
+	inf->wpr_base = mem_inf.base;
+	inf->nonwpr_base = 0;
+	inf->size = mem_inf.size;
 }
 
 void gm20b_init_secure_pmu(struct gpu_ops *gops)
@@ -368,7 +370,7 @@ int prepare_ucode_blob(struct gk20a *g)
 	u32 wprsize;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
-	struct mc_carveout_info inf;
+	struct wpr_carveout_info wpr_inf;
 	struct sg_table *sgt;
 	struct page *page;
 
@@ -388,10 +390,10 @@ int prepare_ucode_blob(struct gk20a *g)
 	gm20b_mm_mmu_vpr_info_fetch(g);
 	gr_gk20a_init_ctxsw_ucode(g);
 
-	g->ops.pmu.get_wpr(g, &inf.base, &inf.size);
-	wpr_addr = (phys_addr_t)inf.base;
-	wprsize = (u32)inf.size;
-	gm20b_dbg_pmu("wpr carveout base:%llx\n", inf.base);
+	g->ops.pmu.get_wpr(g, &wpr_inf);
+	wpr_addr = (phys_addr_t)wpr_inf.wpr_base;
+	wprsize = (u32)wpr_inf.size;
+	gm20b_dbg_pmu("wpr carveout base:%llx\n", wpr_inf.wpr_base);
 	gm20b_dbg_pmu("wpr carveout size :%x\n", wprsize);
 
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
@@ -539,7 +541,7 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size)
 {
-	struct mc_carveout_info inf;
+	struct wpr_carveout_info wpr_inf;
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct lsfm_managed_ucode_img *p_lsfm =
 			(struct lsfm_managed_ucode_img *)lsfm;
@@ -563,8 +565,8 @@ static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = p_lsfm->lsb_header.ucode_off;
-	g->ops.pmu.get_wpr(g, &inf.base, &inf.size);
-	addr_base += inf.base;
+	g->ops.pmu.get_wpr(g, &wpr_inf);
+	addr_base += wpr_inf.wpr_base;
 	gm20b_dbg_pmu("pmu loader cfg u32 addrbase %x\n", (u32)addr_base);
 	/*From linux*/
 	addr_code = u64_lo32((addr_base +
@@ -611,7 +613,7 @@ static int gm20b_pmu_populate_loader_cfg(struct gk20a *g,
 static int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size, u32 falconid)
 {
-	struct mc_carveout_info inf;
+	struct wpr_carveout_info wpr_inf;
 	struct lsfm_managed_ucode_img *p_lsfm =
 			(struct lsfm_managed_ucode_img *)lsfm;
 	struct flcn_ucode_img *p_img = &(p_lsfm->ucode_img);
@@ -635,11 +637,11 @@ static int gm20b_flcn_populate_bl_dmem_desc(struct gk20a *g,
 	 physical addresses of each respective segment.
 	*/
 	addr_base = p_lsfm->lsb_header.ucode_off;
-	g->ops.pmu.get_wpr(g, &inf.base, &inf.size);
+	g->ops.pmu.get_wpr(g, &wpr_inf);
 	if (falconid == LSF_FALCON_ID_GPCCS)
 		addr_base += g->pmu.wpr_buf.gpu_va;
 	else
-		addr_base += inf.base;
+		addr_base += wpr_inf.wpr_base;
 	gm20b_dbg_pmu("gen loader cfg %x u32 addrbase %x ID\n", (u32)addr_base,
 			p_lsfm->wpr_header.falcon_id);
 	addr_code = u64_lo32((addr_base +
@@ -1299,7 +1301,7 @@ int gm20b_init_nspmu_setup_hw1(struct gk20a *g)
 }
 
 static int gm20b_init_pmu_setup_hw1(struct gk20a *g,
-		struct flcn_bl_dmem_desc *desc, u32 bl_sz)
+		void *desc, u32 bl_sz)
 {
 
 	struct pmu_gk20a *pmu = &g->pmu;

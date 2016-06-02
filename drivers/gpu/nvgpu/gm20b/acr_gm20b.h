@@ -386,6 +386,12 @@ struct acr_fw_header {
 	u32 hdr_size; /*size of above header*/
 };
 
+struct wpr_carveout_info {
+	u64 wpr_base;
+	u64 nonwpr_base;
+	u64 size;
+};
+
 void gm20b_init_secure_pmu(struct gpu_ops *gops);
 int prepare_ucode_blob(struct gk20a *g);
 int gm20b_pmu_setup_sw(struct gk20a *g);

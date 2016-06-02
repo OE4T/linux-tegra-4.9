@@ -1623,7 +1623,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 	return;
 }
 
-static int pmu_idle(struct pmu_gk20a *pmu)
+int pmu_idle(struct pmu_gk20a *pmu)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 	unsigned long end_jiffies = jiffies +
@@ -1714,7 +1714,7 @@ void pmu_enable_irq(struct pmu_gk20a *pmu, bool enable)
 	gk20a_dbg_fn("done");
 }
 
-static int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
+int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 

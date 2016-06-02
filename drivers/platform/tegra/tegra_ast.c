@@ -29,10 +29,12 @@
 #define TEGRA_APS_AST_REGION_0_MASTER_BASE_LO	0x110
 #define TEGRA_APS_AST_REGION_0_MASTER_BASE_HI	0x114
 #define TEGRA_APS_AST_REGION_0_CONTROL		0x118
-#define TEGRA_APS_AST_REGION_1_MASK_LO		0x128
+
+#define TEGRA_APS_AST_REGION_STRIDE		0x20
 
 #define AST_MAX_REGION			7
 #define AST_ADDR_MASK			0xfffff000
+#define AST_ADDR_MASK64			(~0xfffULL)
 
 /* TEGRA_APS_AST_REGION_<x>_CONTROL register fields */
 #define AST_RGN_CTRL_VM_INDEX		15
@@ -46,9 +48,6 @@
 
 /* TEGRA_APS_AST_REGION_<x>_SLAVE_BASE_LO register fields */
 #define AST_SLV_BASE_LO_ENABLE		1
-
-static const u32 region_stride =
-	TEGRA_APS_AST_REGION_1_MASK_LO - TEGRA_APS_AST_REGION_0_MASK_LO;
 
 int tegra_ast_map(struct device *dev, const char *name,
 			unsigned count, void __iomem *bases[])
@@ -102,7 +101,7 @@ int tegra_ast_region_enable(unsigned count, void __iomem *const bases[],
 				u32 region, u32 slave_base, u32 size,
 				u64 master_base, u32 stream_id)
 {
-	u32 offset = region * region_stride;
+	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
 	u32 mask = size - 1;
 	u32 ast_sid = AST_STREAMID(stream_id);
 	u32 vmidx;
@@ -171,10 +170,55 @@ EXPORT_SYMBOL(tegra_ast_region_enable);
 void tegra_ast_region_disable(unsigned count, void __iomem *const bases[],
 				u32 region)
 {
-	u32 offset = region * region_stride;
+	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
 
 	while (count > 0)
 		writel(0, bases[--count] +
 			TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO + offset);
 }
 EXPORT_SYMBOL(tegra_ast_region_disable);
+
+void tegra_ast_get_region_info(void __iomem *base,
+			u32 region,
+			struct tegra_ast_region_info *info)
+{
+	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
+	u32 vmidx, stream_id, control;
+	u64 lo, hi;
+
+	control = readl(base + TEGRA_APS_AST_REGION_0_CONTROL + offset);
+	info->control = control;
+
+	info->lock = (control & BIT(0)) != 0;
+	info->snoop = (control & BIT(2)) != 0;
+	info->non_secure = (control & BIT(3)) != 0;
+	info->ns_passthru = (control & BIT(4)) != 0;
+	info->carveout_id = (control >> 5) & (0x1f);
+	info->carveout_al = (control >> 10) & 0x3;
+	info->vpr_rd = (control & BIT(12)) != 0;
+	info->vpr_wr = (control & BIT(13)) != 0;
+	info->vpr_passthru = (control & BIT(14)) != 0;
+	vmidx = (control >> AST_RGN_CTRL_VM_INDEX) & 0xf;
+	info->vm_index = vmidx;
+	info->physical = (control & BIT(19)) != 0;
+	stream_id = readl(base + TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
+	info->stream_id = stream_id >> 8;
+	info->stream_id_enabled = (stream_id & BIT(0)) != 0;
+
+	lo = readl(base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO + offset);
+	hi = readl(base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI + offset);
+
+	info->slave = ((hi << 32U) + lo) & AST_ADDR_MASK64;
+	info->enabled = (lo & BIT(0)) != 0;
+
+	hi = readl(base + TEGRA_APS_AST_REGION_0_MASK_HI + offset);
+	lo = readl(base + TEGRA_APS_AST_REGION_0_MASK_LO + offset);
+
+	info->mask = ((hi << 32) + lo) | ~AST_ADDR_MASK64;
+
+	hi = readl(base + TEGRA_APS_AST_REGION_0_MASTER_BASE_HI + offset);
+	lo = readl(base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO + offset);
+
+	info->master = ((hi << 32U) + lo) & AST_ADDR_MASK64;
+}
+EXPORT_SYMBOL(tegra_ast_get_region_info);

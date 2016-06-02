@@ -177,6 +177,9 @@
 #define  BLCG_FE BIT(2)
 #define  BLCG_COREPLL_PWRDN BIT(8)
 #define  BLCG_ALL 0x1ff
+#define CFG_DEV_SSPI_XFER 0x858
+#define  CFG_DEV_SSPI_XFER_ACKTIMEOUT_SHIFT 0
+#define  CFG_DEV_SSPI_XFER_ACKTIMEOUT_MASK 0xffffffff
 #define CFG_DEV_FE 0x85c
 #define  CFG_DEV_FE_PORTREGSEL_SHIFT 0
 #define  CFG_DEV_FE_PORTREGSEL_MASK 0x3
@@ -3316,6 +3319,14 @@ static void tegra_xudc_device_params_init(struct tegra_xudc *xudc)
 		 (RT_IMOD_IMODC_MASK << RT_IMOD_IMODC_SHIFT));
 	val |= (imod << RT_IMOD_IMODI_SHIFT) | (imod << RT_IMOD_IMODC_SHIFT);
 	xudc_writel(xudc, val, RT_IMOD);
+
+	/* increase SSPI transaction timeout from 32us to 512us */
+	val = xudc_readl(xudc, CFG_DEV_SSPI_XFER);
+	val &= ~(CFG_DEV_SSPI_XFER_ACKTIMEOUT_MASK <<
+		CFG_DEV_SSPI_XFER_ACKTIMEOUT_SHIFT);
+	val |= (0xf000 & CFG_DEV_SSPI_XFER_ACKTIMEOUT_MASK) <<
+		CFG_DEV_SSPI_XFER_ACKTIMEOUT_SHIFT;
+	xudc_writel(xudc, val, CFG_DEV_SSPI_XFER);
 }
 
 static int tegra_xudc_phy_power_on(struct tegra_xudc *xudc)

@@ -1,5 +1,5 @@
 /*
- * GV11B Graphics Copy Engine  (gr host)
+ * Volta GPU series Copy Engine.
  *
  * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -13,16 +13,15 @@
  * more details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * this program.
  */
 
 #include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
-#include "hw_ce2_gv11b.h"
-#include "gp10b/ce2_gp10b.h"
-#include "ce2_gv11b.h"
+#include "hw_ce_gv11b.h"
+#include "gp10b/ce_gp10b.h"
+#include "ce_gv11b.h"
 
-void gv11b_init_ce2(struct gpu_ops *gops)
+void gv11b_init_ce(struct gpu_ops *gops)
 {
-	gp10b_init_ce2(gops);
+	gp10b_init_ce(gops);
 }

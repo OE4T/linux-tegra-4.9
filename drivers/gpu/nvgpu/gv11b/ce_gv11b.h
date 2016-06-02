@@ -1,6 +1,6 @@
 /*
  *
- * GV11B graphics copy engine
+ * Volta GPU series copy engine
  *
  * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
@@ -14,14 +14,13 @@
  * more details.
  *
  * You should have received a copy of the GNU General Public License along with
- * this program; if not, write to the Free Software Foundation, Inc.,
- * 51 Franklin St - Fifth Floor, Boston, MA 02110-1301 USA.
+ * this program.
  */
-#ifndef __CE2_GV11B_H__
-#define __CE2_GV11B_H__
+#ifndef __CE_GV11B_H__
+#define __CE_GV11B_H__
 
 struct gpu_ops;
 
-void gv11b_init_ce2(struct gpu_ops *gops);
+void gv11b_init_ce(struct gpu_ops *gops);
 
 #endif /*__CE2_GV11B_H__*/

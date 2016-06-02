@@ -26,7 +26,7 @@
 #include "gv11b/ltc_gv11b.h"
 #include "gv11b/fecs_trace_gv11b.h"
 #include "gv11b/gv11b.h"
-#include "gv11b/ce2_gv11b.h"
+#include "gv11b/ce_gv11b.h"
 #include "gv11b/gr_ctx_gv11b.h"
 #include "gv11b/mm_gv11b.h"
 #include "gv11b/pmu_gv11b.h"
@@ -47,7 +47,7 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_ltc(gops);
 	gv11b_init_gr(gops);
 	gv11b_init_fecs_trace_ops(gops);
-	gv11b_init_ce2(gops);
+	gv11b_init_ce(gops);
 	gv11b_init_mm(gops);
 	gv11b_init_gr_ctx(gops);
 	gv11b_init_pmu_ops(gops);

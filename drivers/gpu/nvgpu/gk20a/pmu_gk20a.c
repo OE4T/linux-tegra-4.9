@@ -37,6 +37,9 @@
 
 #define GK20A_PMU_UCODE_IMAGE	"gpmu_ucode.bin"
 
+#define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
+#define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
+
 #define gk20a_dbg_pmu(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_pmu, fmt, ##arg)
 
@@ -2119,7 +2122,8 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 	gk20a_dbg_fn("");
 
 	if (enable) {
-		int retries = GR_IDLE_CHECK_MAX / GR_IDLE_CHECK_DEFAULT;
+		int retries = PMU_MEM_SCRUBBING_TIMEOUT_MAX /
+			      PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT;
 		gk20a_enable(g, mc_enable_pwr_enabled_f());
 
 		if (g->ops.clock_gating.slcg_pmu_load_gating_prod)
@@ -2138,7 +2142,7 @@ int pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 				gk20a_dbg_fn("done");
 				return 0;
 			}
-			udelay(GR_IDLE_CHECK_DEFAULT);
+			udelay(PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT);
 		} while (--retries || !tegra_platform_is_silicon());
 
 		gk20a_disable(g, mc_enable_pwr_enabled_f());

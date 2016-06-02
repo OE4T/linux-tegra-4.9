@@ -64,6 +64,12 @@
 #define NV_PERF_PMM_FBP_ROUTER_STRIDE 0x0200
 #define NV_PERF_PMMGPC_CHIPLET_OFFSET	0x1000
 #define NV_PERF_PMMGPCROUTER_STRIDE	0x0200
+#define FE_PWR_MODE_TIMEOUT_MAX 2000
+#define FE_PWR_MODE_TIMEOUT_DEFAULT 10
+#define CTXSW_MEM_SCRUBBING_TIMEOUT_MAX 1000
+#define CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
+#define FECS_ARB_CMD_TIMEOUT_MAX 40
+#define FECS_ARB_CMD_TIMEOUT_DEFAULT 2
 
 static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g);
 static int gr_gk20a_commit_inst(struct channel_gk20a *c, u64 gpu_va);
@@ -1523,7 +1529,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	unsigned long end_jiffies = jiffies +
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 last_method_data = 0;
-	int retries = 200;
+	int retries = FE_PWR_MODE_TIMEOUT_MAX / FE_PWR_MODE_TIMEOUT_DEFAULT;
 
 	gk20a_dbg_fn("");
 
@@ -1542,7 +1548,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
 			if (req == gr_fe_pwr_mode_req_done_v())
 				break;
-			udelay(GR_IDLE_CHECK_DEFAULT);
+			udelay(FE_PWR_MODE_TIMEOUT_MAX);
 		} while (--retries || !tegra_platform_is_silicon());
 	}
 
@@ -1579,12 +1585,12 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		gk20a_writel(g, gr_fe_pwr_mode_r(),
 			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_auto_f());
 
-		retries = 200;
+		retries = FE_PWR_MODE_TIMEOUT_MAX / FE_PWR_MODE_TIMEOUT_DEFAULT;
 		do {
 			u32 req = gr_fe_pwr_mode_req_v(gk20a_readl(g, gr_fe_pwr_mode_r()));
 			if (req == gr_fe_pwr_mode_req_done_v())
 				break;
-			udelay(GR_IDLE_CHECK_DEFAULT);
+			udelay(FE_PWR_MODE_TIMEOUT_DEFAULT);
 		} while (--retries || !tegra_platform_is_silicon());
 
 		if (!retries)
@@ -2230,13 +2236,13 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 {
 	struct gk20a_ctxsw_ucode_info *ucode_info = &g->ctxsw_ucode_info;
-	int retries = 20;
+	int retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
 	phys_addr_t inst_ptr;
 	u32 val;
 
 	while ((gk20a_readl(g, gr_fecs_ctxsw_status_1_r()) &
 			gr_fecs_ctxsw_status_1_arb_busy_m()) && retries) {
-		udelay(2);
+		udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 	}
 	if (!retries) {
@@ -2260,10 +2266,10 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	gk20a_writel(g, gr_fecs_arb_ctx_cmd_r(), 0x7);
 
 	/* Wait for arbiter command to complete */
-	retries = 20;
+	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
 	val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
 	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
-		udelay(2);
+		udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
 	}
@@ -2277,10 +2283,10 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	/* Send command to arbiter to flush */
 	gk20a_writel(g, gr_fecs_arb_ctx_cmd_r(), gr_fecs_arb_ctx_cmd_cmd_s());
 
-	retries = 20;
+	retries = FECS_ARB_CMD_TIMEOUT_MAX / FECS_ARB_CMD_TIMEOUT_DEFAULT;
 	val = (gk20a_readl(g, gr_fecs_arb_ctx_cmd_r()));
 	while (gr_fecs_arb_ctx_cmd_cmd_v(val) && retries) {
-		udelay(2);
+		udelay(FECS_ARB_CMD_TIMEOUT_DEFAULT);
 		retries--;
 		val = gk20a_readl(g, gr_fecs_arb_ctx_cmd_r());
 	}
@@ -4742,7 +4748,8 @@ static int gk20a_init_gr_prepare(struct gk20a *g)
 
 static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 {
-	int retries = GR_IDLE_CHECK_MAX / GR_IDLE_CHECK_DEFAULT;
+	int retries = CTXSW_MEM_SCRUBBING_TIMEOUT_MAX /
+		      CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT;
 	bool fecs_scrubbing;
 	bool gpccs_scrubbing;
 
@@ -4762,7 +4769,7 @@ static int gr_gk20a_wait_mem_scrubbing(struct gk20a *g)
 			return 0;
 		}
 
-		udelay(GR_IDLE_CHECK_DEFAULT);
+		udelay(CTXSW_MEM_SCRUBBING_TIMEOUT_DEFAULT);
 	} while (--retries || !tegra_platform_is_silicon());
 
 	gk20a_err(dev_from_gk20a(g), "Falcon mem scrubbing timeout");

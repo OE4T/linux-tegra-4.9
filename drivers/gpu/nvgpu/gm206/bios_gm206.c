@@ -594,7 +594,7 @@ static int gm206_bios_devinit(struct gk20a *g)
 
 static int gm206_bios_preos(struct gk20a *g)
 {
-	int retries = GR_IDLE_CHECK_MAX / GR_IDLE_CHECK_DEFAULT;
+	int retries = PMU_BOOT_TIMEOUT_MAX / PMU_BOOT_TIMEOUT_DEFAULT;
 	int err = 0;
 	int val;
 
@@ -610,7 +610,7 @@ static int gm206_bios_preos(struct gk20a *g)
 			gk20a_dbg_fn("done");
 			break;
 		}
-		udelay(GR_IDLE_CHECK_DEFAULT);
+		udelay(PMU_BOOT_TIMEOUT_DEFAULT);
 	} while (--retries || !tegra_platform_is_silicon());
 
 	/*  todo check retries */

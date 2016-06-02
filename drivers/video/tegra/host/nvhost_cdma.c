@@ -367,7 +367,9 @@ void nvhost_cdma_update_sync_queue(struct nvhost_cdma *cdma,
 				goto out;
 		}
 
-		nvhost_job_dump(&dev->dev, job);
+		if (nvhost_debug_force_timeout_dump ||
+				cdma->timeout.timeout_debug_dump)
+			nvhost_job_dump(&dev->dev, job);
 	}
 out:
 	/*
@@ -401,7 +403,9 @@ out:
 		if (job->clientid != cdma->timeout.clientid)
 			break;
 
-		nvhost_job_dump(&dev->dev, job);
+		if (nvhost_debug_force_timeout_dump ||
+				cdma->timeout.timeout_debug_dump)
+			nvhost_job_dump(&dev->dev, job);
 
 		/* won't need a timeout when replayed */
 		job->timeout = 0;

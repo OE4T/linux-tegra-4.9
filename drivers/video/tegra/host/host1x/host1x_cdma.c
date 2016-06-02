@@ -477,20 +477,21 @@ static void cdma_handle_timeout(struct nvhost_cdma *cdma, bool skip_reset)
 		return;
 	}
 
-	for (i = 0; i < cdma->timeout.num_syncpts; ++i) {
-		syncpt_val = nvhost_syncpt_read_min(&dev->syncpt,
-				cdma->timeout.sp[i].id);
-		dev_warn(&dev->dev->dev,
-			"%s: timeout: %d (%s) client %d, HW thresh %d, done %d\n",
-			__func__, cdma->timeout.sp[i].id,
-			syncpt_op().name(sp, cdma->timeout.sp[i].id),
-			cdma->timeout.clientid, syncpt_val,
-			cdma->timeout.sp[i].fence);
-	}
-
 	if (nvhost_debug_force_timeout_dump ||
-			cdma->timeout.timeout_debug_dump)
+			cdma->timeout.timeout_debug_dump) {
+		for (i = 0; i < cdma->timeout.num_syncpts; ++i) {
+			syncpt_val = nvhost_syncpt_read_min(&dev->syncpt,
+					cdma->timeout.sp[i].id);
+			dev_warn(&dev->dev->dev,
+				"%s: timeout: %d (%s) client %d, HW thresh %d, done %d\n",
+				__func__, cdma->timeout.sp[i].id,
+				syncpt_op().name(sp, cdma->timeout.sp[i].id),
+				cdma->timeout.clientid, syncpt_val,
+				cdma->timeout.sp[i].fence);
+		}
+
 		nvhost_debug_dump_locked(cdma_to_dev(cdma), ch->chid);
+	}
 
 	/* stop HW, resetting channel/module */
 	cdma_op().timeout_teardown_begin(cdma, skip_reset);

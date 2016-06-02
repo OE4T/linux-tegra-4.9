@@ -146,6 +146,14 @@ static inline u32 top_device_info_type_enum_copy0_f(void)
 {
 	return 0x4;
 }
+static inline u32 top_device_info_type_enum_lce_v(void)
+{
+	return 0x00000013;
+}
+static inline u32 top_device_info_type_enum_lce_f(void)
+{
+	return 0x4c;
+}
 static inline u32 top_device_info_entry_v(u32 r)
 {
 	return (r >> 0) & 0x3;

@@ -188,15 +188,17 @@ static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 	gk20a_dbg_info("engine type %d", engine_type);
 	if (engine_type == top_device_info_type_enum_graphics_v())
 		ret = ENGINE_GR_GK20A;
-	else if (engine_type == top_device_info_type_enum_lce_v())
-		ret = ENGINE_CE2_GK20A;
+	else if (engine_type == top_device_info_type_enum_lce_v()) {
+		/* Default assumptions - all the CE engine have separate runlist */
+		ret = ENGINE_ASYNC_CE_GK20A;
+	}
 	else
 		gk20a_err(g->dev, "unknown engine %d", engine_type);
 
 	return ret;
 }
 
-void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
+static void gp10b_device_info_data_parse(struct gk20a *g, u32 table_entry,
 				u32 *inst_id, u32 *pri_base, u32 *fault_id)
 {
 	if (top_device_info_data_type_v(table_entry) ==
@@ -226,4 +228,5 @@ void gp10b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.resetup_ramfc = gp10b_fifo_resetup_ramfc;
 	gops->fifo.engine_enum_from_type = gp10b_fifo_engine_enum_from_type;
 	gops->fifo.device_info_data_parse = gp10b_device_info_data_parse;
+	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 }

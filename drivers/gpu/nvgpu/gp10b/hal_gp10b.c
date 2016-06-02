@@ -25,7 +25,7 @@
 #include "gp10b/mc_gp10b.h"
 #include "gp10b/ltc_gp10b.h"
 #include "gp10b/mm_gp10b.h"
-#include "gp10b/ce2_gp10b.h"
+#include "gp10b/ce_gp10b.h"
 #include "gp10b/fb_gp10b.h"
 #include "gp10b/pmu_gp10b.h"
 #include "gp10b/gr_ctx_gp10b.h"
@@ -150,6 +150,9 @@ static int gp10b_get_litter_value(struct gk20a *g,
 	case GPU_LIT_ROP_SHARED_BASE:
 		ret = proj_rop_shared_base_v();
 		break;
+	case GPU_LIT_HOST_NUM_ENGINES:
+		ret = proj_host_num_engines_v();
+		break;
 	case GPU_LIT_HOST_NUM_PBDMA:
 		ret = proj_host_num_pbdma_v();
 		break;
@@ -219,7 +222,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_ltc(gops);
 	gp10b_init_fb(gops);
 	gp10b_init_fifo(gops);
-	gp10b_init_ce2(gops);
+	gp10b_init_ce(gops);
 	gp10b_init_gr_ctx(gops);
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);

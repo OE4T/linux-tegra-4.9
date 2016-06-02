@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -47,34 +47,34 @@
  *         comparison with unshifted values appropriate for use in field <y>
  *         of register <x>.
  */
-#ifndef _hw_ce2_gp10b_h_
-#define _hw_ce2_gp10b_h_
+#ifndef _hw_ce_gp106_h_
+#define _hw_ce_gp106_h_
 
-static inline u32 ce2_intr_status_r(u32 i)
+static inline u32 ce_intr_status_r(u32 i)
 {
 	return 0x00104410 + i*128;
 }
-static inline u32 ce2_intr_status_blockpipe_pending_f(void)
+static inline u32 ce_intr_status_blockpipe_pending_f(void)
 {
 	return 0x1;
 }
-static inline u32 ce2_intr_status_blockpipe_reset_f(void)
+static inline u32 ce_intr_status_blockpipe_reset_f(void)
 {
 	return 0x1;
 }
-static inline u32 ce2_intr_status_nonblockpipe_pending_f(void)
+static inline u32 ce_intr_status_nonblockpipe_pending_f(void)
 {
 	return 0x2;
 }
-static inline u32 ce2_intr_status_nonblockpipe_reset_f(void)
+static inline u32 ce_intr_status_nonblockpipe_reset_f(void)
 {
 	return 0x2;
 }
-static inline u32 ce2_intr_status_launcherr_pending_f(void)
+static inline u32 ce_intr_status_launcherr_pending_f(void)
 {
 	return 0x4;
 }
-static inline u32 ce2_intr_status_launcherr_reset_f(void)
+static inline u32 ce_intr_status_launcherr_reset_f(void)
 {
 	return 0x4;
 }

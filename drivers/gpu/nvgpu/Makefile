@@ -3,7 +3,7 @@ nvgpu-t18x := ../../../../nvgpu-t18x/drivers/gpu/nvgpu
 nvgpu-y += \
 	$(nvgpu-t18x)/gp10b/gr_gp10b.o  \
 	$(nvgpu-t18x)/gp10b/gr_ctx_gp10b.o  \
-	$(nvgpu-t18x)/gp10b/ce2_gp10b.o \
+	$(nvgpu-t18x)/gp10b/ce_gp10b.o \
 	$(nvgpu-t18x)/gp10b/mc_gp10b.o  \
 	$(nvgpu-t18x)/gp10b/fifo_gp10b.o  \
 	$(nvgpu-t18x)/gp10b/ltc_gp10b.o \

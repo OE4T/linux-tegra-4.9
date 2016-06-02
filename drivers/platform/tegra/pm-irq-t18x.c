@@ -330,6 +330,7 @@ static int tegra_pm_irq_init(void)
 }
 subsys_initcall(tegra_pm_irq_init);
 
+#ifndef CONFIG_IRQ_DOMAIN_HIERARCHY
 static int pm_irq_set_type(struct irq_data *d, unsigned int flow_type)
 {
 	int i;
@@ -377,6 +378,7 @@ static int pm_irq_set_wake(struct irq_data *d, unsigned int enable)
 
 	return err;
 }
+#endif /* CONFIG_IRQ_DOMAIN_HIERARCHY  */
 
 int tegra_pm_irq_set_wake_type(int wake, int flow_type)
 {
@@ -392,7 +394,9 @@ int __init pm_irq_init(void)
 {
 	tegra_wakeup_table_init();
 	/* Hook into GIC ops */
+#ifndef CONFIG_IRQ_DOMAIN_HIERARCHY
 	gic_arch_extn.irq_set_type = pm_irq_set_type;
 	gic_arch_extn.irq_set_wake = pm_irq_set_wake;
+#endif
 	return 0;
 }

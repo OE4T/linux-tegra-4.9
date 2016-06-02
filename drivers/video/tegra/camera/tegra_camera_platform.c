@@ -66,7 +66,8 @@ static const struct of_device_id tegra_camera_of_ids[] = {
 
 static struct miscdevice tegra_camera_misc;
 
-static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
+static int tegra_camera_isomgr_register(struct tegra_camera_info *info,
+					struct device *dev)
 {
 #if defined(CONFIG_TEGRA_ISOMGR)
 	int ret = 0;
@@ -80,7 +81,7 @@ static int tegra_camera_isomgr_register(struct tegra_camera_info *info)
 	u32 isp_bpp = 0;
 	u64 isp_iso_bw = 0;
 	u32 isp_margin_pct = 0;
-	struct device_node *np = info->dev->of_node;
+	struct device_node *np = dev->of_node;
 
 	dev_dbg(info->dev, "%s++\n", __func__);
 
@@ -480,7 +481,8 @@ static int tegra_camera_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	strcpy(info->devname, tegra_camera_misc.name);
-	info->dev = &pdev->dev;
+	info->dev = tegra_camera_misc.this_device;
+
 #if !defined(CONFIG_TEGRA_BWMGR)
 	info->emc = devm_clk_get(info->dev, "emc");
 	if (IS_ERR(info->emc)) {
@@ -497,7 +499,7 @@ static int tegra_camera_probe(struct platform_device *pdev)
 #endif
 	mutex_init(&info->update_bw_lock);
 	/* Register Camera as isomgr client. */
-	ret = tegra_camera_isomgr_register(info);
+	ret = tegra_camera_isomgr_register(info, &pdev->dev);
 	if (ret) {
 		dev_err(info->dev,
 		"%s: failed to register CAMERA as isomgr client\n",

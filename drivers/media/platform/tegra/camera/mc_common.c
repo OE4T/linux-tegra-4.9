@@ -76,7 +76,12 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 	}
 
 	/* clock settings */
-	clk_prepare_enable(vi->clk);
+	ret = clk_prepare_enable(vi->clk);
+	if (ret) {
+		dev_err(vi->dev, "failed to enable vi clock\n");
+		goto error_clk_enable;
+	}
+
 	ret = clk_set_rate(vi->clk, 0);
 	if (ret) {
 		dev_err(vi->dev, "failed to set vi clock\n");
@@ -89,8 +94,9 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 
 	return 0;
 err_emc_enable:
-	clk_disable_unprepare(vi->clk);
 error_clk_set_rate:
+	clk_disable_unprepare(vi->clk);
+error_clk_enable:
 	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
 error_unpowergate:
 	regulator_disable(vi->reg);

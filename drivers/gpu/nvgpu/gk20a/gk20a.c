@@ -2227,18 +2227,45 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name)
 	return fw;
 }
 
-
-u64 gk20a_read_ptimer(struct gk20a *g)
+int gk20a_read_ptimer(struct gk20a *g, u64 *value)
 {
-	u32 time_hi0 = gk20a_readl(g, timer_time_1_r());
-	u32 time_lo = gk20a_readl(g, timer_time_0_r());
-	u32 time_hi1 = gk20a_readl(g, timer_time_1_r());
-	u32 time_hi = (time_lo & (1L << 31)) ? time_hi0 : time_hi1;
-	u64 time = ((u64)time_hi << 32) | time_lo;
+	const unsigned int max_iterations = 3;
+	unsigned int i = 0;
+	u32 gpu_timestamp_hi_prev = 0;
 
-	return time;
+	if (!value)
+		return -EINVAL;
+
+	/* Note. The GPU nanosecond timer consists of two 32-bit
+	 * registers (high & low). To detect a possible low register
+	 * wrap-around between the reads, we need to read the high
+	 * register before and after low. The wraparound happens
+	 * approximately once per 4 secs. */
+
+	/* get initial gpu_timestamp_hi value */
+	gpu_timestamp_hi_prev = gk20a_readl(g, timer_time_1_r());
+
+	for (i = 0; i < max_iterations; ++i) {
+		u32 gpu_timestamp_hi = 0;
+		u32 gpu_timestamp_lo = 0;
+
+		gpu_timestamp_lo = gk20a_readl(g, timer_time_0_r());
+		gpu_timestamp_hi = gk20a_readl(g, timer_time_1_r());
+
+		if (gpu_timestamp_hi == gpu_timestamp_hi_prev) {
+			*value = (((u64)gpu_timestamp_hi) << 32) |
+				gpu_timestamp_lo;
+			return 0;
+		}
+
+		/* wrap-around detected, retry */
+		gpu_timestamp_hi_prev = gpu_timestamp_hi;
+	}
+
+	/* too many iterations, bail out */
+	gk20a_err(dev_from_gk20a(g), "failed to read ptimer");
+	return -EBUSY;
 }
-
 
 MODULE_LICENSE("GPL v2");
 module_init(gk20a_init);

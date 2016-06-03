@@ -620,6 +620,7 @@ struct gpu_ops {
 
 	int (*get_litter_value)(struct gk20a *g, enum nvgpu_litter_value value);
 	int (*chip_init_gpu_characteristics)(struct gk20a *g);
+	int (*read_ptimer)(struct gk20a *g, u64 *value);
 
 	struct {
 		int (*init)(struct gk20a *g);
@@ -1111,7 +1112,7 @@ static inline u32 scale_ptimer(u32 timeout , u32 scale10x)
 		return (timeout * 10) / scale10x;
 }
 
-u64 gk20a_read_ptimer(struct gk20a *g);
+int gk20a_read_ptimer(struct gk20a *g, u64 *value);
 extern struct class nvgpu_class;
 
 #define INTERFACE_NAME "nvhost%s-gpu"

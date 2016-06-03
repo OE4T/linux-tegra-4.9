@@ -626,50 +626,17 @@ static int nvgpu_gpu_get_gpu_time(
 	struct gk20a *g,
 	struct nvgpu_gpu_get_gpu_time_args *args)
 {
-	int err = 0;
-	const unsigned int max_iterations = 3;
-	unsigned int i = 0;
-	u32 gpu_timestamp_hi_prev = 0;
+	u64 time;
+	int err;
 
 	err = gk20a_busy(g->dev);
 	if (err)
 		return err;
 
-	/* Note. The GPU nanosecond timer consists of two 32-bit
-	 * registers (high & low). To detect a possible low register
-	 * wrap-around between the reads, we need to read the high
-	 * register before and after low. The wraparound happens
-	 * approximately once per 4 secs. */
+	err = g->ops.read_ptimer(g, &time);
+	if (!err)
+		args->gpu_timestamp = time;
 
-	/* get initial gpu_timestamp_hi value */
-	gpu_timestamp_hi_prev = gk20a_readl(g, timer_time_1_r());
-
-	for (i = 0; i < max_iterations; ++i) {
-		u32 gpu_timestamp_hi = 0;
-		u32 gpu_timestamp_lo = 0;
-
-		rmb(); /* maintain read order */
-		gpu_timestamp_lo = gk20a_readl(g, timer_time_0_r());
-		rmb(); /* maintain read order */
-		gpu_timestamp_hi = gk20a_readl(g, timer_time_1_r());
-
-		if (gpu_timestamp_hi == gpu_timestamp_hi_prev) {
-			args->gpu_timestamp =
-				(((u64)gpu_timestamp_hi) << 32) |
-				gpu_timestamp_lo;
-			goto clean_up;
-		}
-
-		/* wrap-around detected, retry */
-		gpu_timestamp_hi_prev = gpu_timestamp_hi;
-	}
-
-	/* too many iterations, bail out */
-	gk20a_err(dev_from_gk20a(g),
-		  "Failed to read GPU time. Clock or bus unstable?\n");
-	err = -EBUSY;
-
-clean_up:
 	gk20a_idle(g->dev);
 	return err;
 }

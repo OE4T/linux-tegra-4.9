@@ -65,4 +65,13 @@
 	iommu@12000000 {
 		status = "okay";
 	};
+
+	generic_carveout {
+		size = <0 0x30000000>;
+		status = "okay";
+	};
+
+	tegra-carveouts {
+		status = "okay";
+	};
 };

@@ -362,5 +362,9 @@
 			offset = <(-12)>; /* -3C */
 		};
 	};
+
+	tegra_arm_wdt:watchdog@30d0000 {
+		status = "okay";
+	};
 };
 

@@ -1,7 +1,7 @@
 /*
  * tegra186-soc-uart.dtsi: Tegra186 soc dtsi file for UART instances
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -138,5 +138,12 @@
 		resets = <&tegra_car TEGRA186_RESET_UARTG>;
 		reset-names = "serial";
 		status = "disabled";
+	};
+
+	combined-uart {
+		compatible = "nvidia,tegra186-combined-uart";
+		reg = <0x0 0x3c10000 0x0 0x4   /* TOP0_HSP_SM_0_1_BASE */
+		       0x0 0xc170000 0x0 0x4>; /* AON_HSP_SM_2_3_BASE */
+		status = "okay";
 	};
 };

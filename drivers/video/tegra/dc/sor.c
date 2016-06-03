@@ -324,6 +324,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_SPARE(0));
 	DUMP_REG(NV_SOR_DP_SPARE(1));
 	DUMP_REG(NV_SOR_DP_TPG);
+	DUMP_REG(NV_SOR_HDMI_GENERIC_CTRL);
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC) || defined(CONFIG_TEGRA_NVDISPLAY)
 	DUMP_REG(NV_SOR_HDMI_CTRL);
 #endif

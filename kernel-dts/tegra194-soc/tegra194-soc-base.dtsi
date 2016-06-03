@@ -43,6 +43,11 @@
 		};
 	};
 
+	tegra-carveouts {
+		compatible = "nvidia,carveouts";
+		memory-region = <&generic_reserved>;
+	};
+
 	timer {
 		compatible = "arm,armv8-timer";
 		interrupts = <1 11 0xf01

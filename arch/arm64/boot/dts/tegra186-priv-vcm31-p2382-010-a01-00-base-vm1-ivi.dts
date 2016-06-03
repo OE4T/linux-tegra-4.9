@@ -57,7 +57,7 @@
 		ivc_queue = <&tegra_hv 0 14>;
 
 		bpmpthermal {
-			status = "disabled";
+			status = "okay";
 		};
 	};
 
@@ -307,26 +307,6 @@
 	};
 
 	thermal-zones {
-		BCPU-therm {
-			status = "disabled";
-		};
-
-		MCPU-therm {
-			status = "disabled";
-		};
-
-		GPU-therm {
-			status = "disabled";
-		};
-
-		PLL-therm {
-			status = "disabled";
-		};
-
-		AO-therm {
-			status = "disabled";
-		};
-
 		Tboard_tegra {
 			status = "disabled";
 		};

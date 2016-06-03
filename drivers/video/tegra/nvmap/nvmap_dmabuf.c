@@ -370,7 +370,7 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 	struct dma_buf_attachment *attach, enum dma_data_direction dir)
 {
 	struct nvmap_handle_info *info = attach->dmabuf->priv;
-	int err, ents;
+	int ents = 0;
 	struct sg_table *sgt;
 	DEFINE_DMA_ATTRS(attrs);
 
@@ -405,15 +405,12 @@ static struct sg_table *nvmap_dmabuf_map_dma_buf(
 		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
 		ents = dma_map_sg_attrs(attach->dev, sgt->sgl,
 					sgt->nents, dir, &attrs);
-		if (ents <= 0) {
-			err = -ENOMEM;
+		if (ents <= 0)
 			goto err_map;
-		}
 	}
 
 	if (__nvmap_dmabuf_prep_sgt_locked(attach, dir, sgt)) {
 		WARN(1, "No mem to prep sgt.\n");
-		err = -ENOMEM;
 		goto err_prep;
 	}
 
@@ -431,7 +428,7 @@ err_map:
 	__nvmap_free_sg_table(NULL, info->handle, sgt);
 	atomic_dec(&info->handle->pin);
 	mutex_unlock(&info->maps_lock);
-	return ERR_PTR(err);
+	return ERR_PTR(-ENOMEM);
 }
 
 static void nvmap_dmabuf_unmap_dma_buf(struct dma_buf_attachment *attach,

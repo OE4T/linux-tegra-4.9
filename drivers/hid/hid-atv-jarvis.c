@@ -867,6 +867,13 @@ static uint snd_atvr_decode_from_fifo(struct snd_pcm_substream *substream)
 {
 	uint i;
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
+
+	if (!spin_trylock(&atvr_snd->s_substream_lock)) {
+		pr_info("%s: trylock fail\n", __func__);
+		return 0;
+
+	}
+
 	uint readable = atomic_fifo_available_to_read(
 		&atvr_snd->fifo_controller);
 	for (i = 0; i < readable; i++) {
@@ -888,6 +895,8 @@ static uint snd_atvr_decode_from_fifo(struct snd_pcm_substream *substream)
 
 		atomic_fifo_advance_read(&atvr_snd->fifo_controller, 1);
 	}
+	spin_unlock(&atvr_snd->s_substream_lock);
+
 	return readable;
 }
 

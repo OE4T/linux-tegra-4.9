@@ -234,6 +234,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gops->name = "gp10b";
 	gops->chip_init_gpu_characteristics = gp10b_init_gpu_characteristics;
 	gops->get_litter_value = gp10b_get_litter_value;
+	gops->read_ptimer = gk20a_read_ptimer;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_A;

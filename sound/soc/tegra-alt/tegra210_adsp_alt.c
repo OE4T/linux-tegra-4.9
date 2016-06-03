@@ -2161,7 +2161,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 	},
 	{
 		.name = "ADSP COMPR1",
-		.compress_dai = 1,
+		.compress_new = snd_soc_new_compress,
 		.playback = {
 			.stream_name = "ADSP COMPR1 Receive",
 			.channels_min = 1,
@@ -2172,7 +2172,7 @@ static struct snd_soc_dai_driver tegra210_adsp_dai[] = {
 	},
 	{
 		.name = "ADSP COMPR2",
-		.compress_dai = 1,
+		.compress_new = snd_soc_new_compress,
 		.playback = {
 			.stream_name = "ADSP COMPR2 Receive",
 			.channels_min = 1,

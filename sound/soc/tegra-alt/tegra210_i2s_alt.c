@@ -183,7 +183,7 @@ static int tegra210_i2s_get_status(struct tegra210_i2s *i2s,
 static int tegra210_i2s_rx_stop(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct device *dev = codec->dev;
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
 	int dcnt = 10, ret;
@@ -206,7 +206,7 @@ static int tegra210_i2s_rx_stop(struct snd_soc_dapm_widget *w,
 static int tegra210_i2s_tx_stop(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct device *dev = codec->dev;
 	struct tegra210_i2s *i2s = dev_get_drvdata(dev);
 	int dcnt = 10, ret;

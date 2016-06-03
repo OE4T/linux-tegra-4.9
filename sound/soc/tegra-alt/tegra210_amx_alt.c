@@ -217,7 +217,7 @@ static int tegra210_amx_get_status(struct tegra210_amx *amx)
 static int tegra210_amx_stop(struct snd_soc_dapm_widget *w,
 				struct snd_kcontrol *kcontrol, int event)
 {
-	struct snd_soc_codec *codec = w->codec;
+	struct snd_soc_codec *codec = snd_soc_dapm_to_codec(w->dapm);
 	struct device *dev = codec->dev;
 	struct tegra210_amx *amx = dev_get_drvdata(dev);
 	int dcnt = 10, ret = 0;

@@ -78,6 +78,10 @@ static inline u32 proj_ppc_in_gpc_base_v(void)
 {
 	return 0x00003000;
 }
+static inline u32 proj_ppc_in_gpc_shared_base_v(void)
+{
+	return 0x00003e00;
+}
 static inline u32 proj_ppc_in_gpc_stride_v(void)
 {
 	return 0x00000200;

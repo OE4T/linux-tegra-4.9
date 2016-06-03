@@ -570,7 +570,7 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_sor_hdmi_pad_power_down(sor);
 	tegra_hdmi_reset(hdmi);
 	tegra_hdmi_put(dc);
-	cancel_delayed_work(&hdmi->hdr_worker);
+	cancel_delayed_work_sync(&hdmi->hdr_worker);
 	tegra_dc_put(dc);
 
 	return 0;
@@ -2518,6 +2518,11 @@ static int tegra_dc_hdmi_set_hdr(struct tegra_dc *dc)
 	ret = tegra_edid_get_ex_hdr_cap(hdmi->edid);
 	if (!ret)
 		return 0;
+
+	/* Cancel any pending hdr-exit work */
+	if (dc->hdr.enabled)
+		cancel_delayed_work_sync(&hdmi->hdr_worker);
+
 	tegra_hdmi_hdr_infoframe(hdmi);
 
 	/*
@@ -2535,18 +2540,24 @@ static int tegra_dc_hdmi_set_hdr(struct tegra_dc *dc)
 
 static void tegra_hdmi_hdr_worker(struct work_struct *work)
 {
+	u32 val = 0;
 	struct tegra_hdmi *hdmi = container_of(to_delayed_work(work),
 				struct tegra_hdmi, hdr_worker);
-	/* TODO:Add null check */
 
-	/* Read the current regsiter value to restore the bits */
-	u32 val = tegra_sor_readl(hdmi->sor, NV_SOR_HDMI_GENERIC_CTRL);
+	if (hdmi && hdmi->enabled) {
+		/* If hdr re-enabled within 2s, return.
+		 * Note this an extra safety check since
+		 * we should have already cancelled this work */
+		if (hdmi->dc->hdr.enabled)
+			return;
+		/* Read the current regsiter value to restore the bits */
+		val = tegra_sor_readl(hdmi->sor, NV_SOR_HDMI_GENERIC_CTRL);
 
-	/* Set val to disable generic infoframe */
-	val &= ~NV_SOR_HDMI_GENERIC_CTRL_ENABLE_YES;
+		/* Set val to disable generic infoframe */
+		val &= ~NV_SOR_HDMI_GENERIC_CTRL_ENABLE_YES;
 
-	tegra_sor_writel(hdmi->sor, NV_SOR_HDMI_GENERIC_CTRL, val);
-
+		tegra_sor_writel(hdmi->sor, NV_SOR_HDMI_GENERIC_CTRL, val);
+	}
 	return;
 }
 

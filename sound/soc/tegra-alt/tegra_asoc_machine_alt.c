@@ -2180,7 +2180,7 @@ struct snd_soc_codec_conf *tegra_machine_new_codec_conf(
 {
 	unsigned int i, num_codec_links;
 	struct device_node *np = pdev->dev.of_node, *subnp;
-	const struct device_node *of_node;
+	struct device_node *of_node;
 	char dai_link_name[MAX_STR_SIZE];
 
 	if (tegra_codec_conf)

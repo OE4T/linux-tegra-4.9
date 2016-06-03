@@ -3,6 +3,7 @@ config SND_SOC_TEGRA_ALT
 	depends on ARCH_TEGRA || PLATFORM_TEGRA
 	select REGMAP_MMIO
 	select SND_DMAENGINE_PCM
+	select SND_DYNAMIC_MINORS
 	help
 	  Say Y or M here if you want support for SoC audio on Tegra, using the
 	  alternative driver that exposes to user-space the full routing capabilities

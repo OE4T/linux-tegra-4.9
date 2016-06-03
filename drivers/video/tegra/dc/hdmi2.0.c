@@ -830,6 +830,9 @@ static irqreturn_t tegra_hdmi_hpd_irq_handler(int irq, void *ptr)
 	struct tegra_dc *dc = ptr;
 	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
 
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return IRQ_HANDLED;
+
 	if (atomic_read(&hdmi->suspended))
 		return IRQ_HANDLED;
 
@@ -964,7 +967,6 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 
 static int tegra_hdmi_dpaux_init(struct tegra_hdmi *hdmi)
 {
-	struct resource *base_res;
 	struct resource of_dpaux_res;
 	int err = 0;
 	struct reset_control *dpaux_rst;
@@ -989,11 +991,12 @@ static int tegra_hdmi_dpaux_init(struct tegra_hdmi *hdmi)
 		goto err_free_dpaux;
 	}
 
-	base_res = devm_request_mem_region(&hdmi->dc->ndev->dev,
-		hdmi->hdmi_dpaux_res[sor_num]->start,
-		resource_size(hdmi->hdmi_dpaux_res[sor_num]),
-		hdmi->dc->ndev->name);
-	if (!base_res) {
+	hdmi->hdmi_dpaux_base_res[sor_num] = devm_request_mem_region(
+				&hdmi->dc->ndev->dev,
+				hdmi->hdmi_dpaux_res[sor_num]->start,
+				resource_size(hdmi->hdmi_dpaux_res[sor_num]),
+				hdmi->dc->ndev->name);
+	if (!hdmi->hdmi_dpaux_base_res[sor_num]) {
 		dev_err(&hdmi->dc->ndev->dev, "hdmi: request_mem_region failed\n");
 		err = -EFAULT;
 		goto err_free_dpaux;
@@ -1079,6 +1082,10 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	if (err) {
 		goto fail_hdmi;
 	}
+
+	hdmi->res          = hdmi->hdmi_dpaux_res[sor_num];
+	hdmi->aux_base_res = hdmi->hdmi_dpaux_base_res[sor_num];
+	hdmi->aux_base     = hdmi->hdmi_dpaux_base[sor_num];
 #endif
 
 	hdmi->sor = tegra_dc_sor_init(dc, NULL);

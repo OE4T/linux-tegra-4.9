@@ -584,12 +584,14 @@ static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 {
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	/* check the dc_or_node to set the instance */
-	/* Fake dp always take SOR0 */
-	if ((!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor")) ||
-		(out_type == TEGRA_DC_OUT_FAKE_DP))
+	if (!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor"))
 		dc->sor_instance = 0;
 	else if (!strcmp(dc_or_node_names[dc->ndev->id], "/host1x/sor1"))
 		dc->sor_instance = 1;
+	else if (out_type == TEGRA_DC_OUT_FAKE_DP)
+		/* Assign default instance to fake DP if
+		SOR instance is not available */
+		dc->sor_instance = 0;
 	else
 		dc->sor_instance = -1;
 #else
@@ -1151,9 +1153,11 @@ struct tegra_dc_out_info {
 	struct tegra_dc_out out;
 	struct tegra_dc_mode mode;
 	int fblistindex;
+	struct tegra_edid *edid;
 };
 
-static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX];
+static struct tegra_dc_out_info dbg_dc_out_info[TEGRA_DC_OUT_MAX]
+						[TEGRA_DC_OUT_MAX];
 /* array for saving the out_type for each head */
 static int  boot_out_type[] = {-1, -1, -1};
 
@@ -1208,7 +1212,7 @@ static int set_avdd(struct tegra_dc *dc, long cur_out, long new_out)
 	 */
 	bool is_enable = false;
 	struct tegra_dc_out *dc_out =
-		&dbg_dc_out_info[boot_out_type[dc->ndev->id]].out;
+		&dbg_dc_out_info[boot_out_type[dc->ndev->id]][new_out].out;
 
 	/* cur is fake and new is fake - skip */
 	if (is_valid_fake_support(dc, cur_out) &&
@@ -1276,35 +1280,37 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 	/* If output is already created - save it */
 	if (dc->out_data) {
-		dbg_dc_out_info[cur_dc_out].out_data = dc->out_data;
-		dbg_dc_out_info[cur_dc_out].out_ops  = dc->out_ops;
-		memcpy(&dbg_dc_out_info[cur_dc_out].out, dc->out,
+		dbg_dc_out_info[cur_dc_out][out_type].out_data = dc->out_data;
+		dbg_dc_out_info[cur_dc_out][out_type].out_ops  = dc->out_ops;
+		memcpy(&dbg_dc_out_info[cur_dc_out][out_type].out, dc->out,
 					sizeof(struct tegra_dc_out));
-		dbg_dc_out_info[cur_dc_out].mode = dc->mode;
+		dbg_dc_out_info[cur_dc_out][out_type].mode = dc->mode;
+		dbg_dc_out_info[cur_dc_out][out_type].edid = dc->edid;
 
 		if (is_valid_dsi_out(dc, cur_dc_out) &&
-			dbg_dc_out_info[cur_dc_out].out_data)
+			dbg_dc_out_info[cur_dc_out][out_type].out_data)
 			tegra_dc_destroy_dsi_resources(dc, cur_dc_out);
 
 		if (!is_valid_fake_support(dc, cur_dc_out))
-			dbg_dc_out_info[cur_dc_out].fblistindex =
+			dbg_dc_out_info[cur_dc_out][out_type].fblistindex =
 						tegra_fb_update_modelist(dc, 0);
 
 		set_avdd(dc, cur_dc_out, out_type);
 	}
 
 	/* If output already created - reuse it */
-	if (dbg_dc_out_info[out_type].out_data) {
+	if (dbg_dc_out_info[out_type][cur_dc_out].out_data) {
 		mutex_lock(&dc->lp_lock);
 		mutex_lock(&dc->lock);
 
 		/* Change the out type */
 		dc->pdata->default_out->type = out_type;
-		dc->out_ops = dbg_dc_out_info[out_type].out_ops;
-		dc->out_data = dbg_dc_out_info[out_type].out_data;
-		memcpy(dc->out, &dbg_dc_out_info[out_type].out,
+		dc->out_ops = dbg_dc_out_info[out_type][cur_dc_out].out_ops;
+		dc->out_data = dbg_dc_out_info[out_type][cur_dc_out].out_data;
+		memcpy(dc->out, &dbg_dc_out_info[out_type][cur_dc_out].out,
 						sizeof(struct tegra_dc_out));
-		dc->mode = dbg_dc_out_info[out_type].mode;
+		dc->mode = dbg_dc_out_info[out_type][cur_dc_out].mode;
+		dc->edid = dbg_dc_out_info[out_type][cur_dc_out].edid;
 
 		/* Re-init the resources that are destroyed for dsi */
 		if (is_valid_dsi_out(dc, out_type))
@@ -1312,7 +1318,8 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 
 		if (!is_valid_fake_support(dc, out_type))
 			tegra_fb_update_modelist(dc,
-					dbg_dc_out_info[out_type].fblistindex);
+					dbg_dc_out_info[out_type]
+					[cur_dc_out].fblistindex);
 
 		mutex_unlock(&dc->lock);
 		mutex_unlock(&dc->lp_lock);
@@ -1333,11 +1340,10 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 			if (!dc->pdata->default_out->depth)
 				dc->pdata->default_out->depth = 24;
 
-			/* DP and Fake_Dp use same data
-			*  Reuse if already created */
-			if (!dbg_dc_out_info[TEGRA_DC_OUT_DP].out_data) {
+			/* DP and Fake_DP use same data
+			*  Reuse DP data for fake_DP */
+			if (cur_dc_out != TEGRA_DC_OUT_DP) {
 				allocate = true;
-				tegra_dc_init_fakedp_panel(dc);
 			}
 		} else if ((out_type >= TEGRA_DC_OUT_FAKE_DSIA) &&
 				(out_type <= TEGRA_DC_OUT_FAKE_DSI_GANGED)) {
@@ -1351,7 +1357,8 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 			tegra_dc_init_fakedsi_panel(dc, out_type);
 
 		} else if (out_type == TEGRA_DC_OUT_NULL) {
-			if (!dbg_dc_out_info[TEGRA_DC_OUT_NULL].out_data) {
+			if (!dbg_dc_out_info[TEGRA_DC_OUT_NULL]
+						[cur_dc_out].out_data) {
 				allocate = true;
 				tegra_dc_init_null_or(dc);
 			}
@@ -1371,10 +1378,12 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 				}
 		}
 
-		dbg_dc_out_info[out_type].out_ops = dc->out_ops;
-		dbg_dc_out_info[out_type].out_data = dc->out_data;
-		memcpy(&dbg_dc_out_info[out_type].out, dc->out,
+		dbg_dc_out_info[out_type][cur_dc_out].out_ops = dc->out_ops;
+		dbg_dc_out_info[out_type][cur_dc_out].out_data = dc->out_data;
+		memcpy(&dbg_dc_out_info[out_type][cur_dc_out].out, dc->out,
 						sizeof(struct tegra_dc_out));
+		dbg_dc_out_info[out_type][cur_dc_out].mode = dc->mode;
+		dbg_dc_out_info[out_type][cur_dc_out].edid = dc->edid;
 
 	}
 

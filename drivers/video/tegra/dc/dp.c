@@ -2088,20 +2088,34 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 		goto err_free_dp;
 	}
 
-	base_res = devm_request_mem_region(&dc->ndev->dev,
-		res->start, resource_size(res),
-		dc->ndev->name);
-	if (!base_res) {
-		dev_err(&dc->ndev->dev, "dp: request_mem_region failed\n");
-		err = -EFAULT;
-		goto err_free_dp;
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
+		((struct tegra_dc_dp_data *)dc->out_data)->aux_base_res) {
+		base_res = ((struct tegra_dc_dp_data *)dc->out_data)->
+								aux_base_res;
+	} else {
+		base_res = devm_request_mem_region(&dc->ndev->dev,
+			res->start, resource_size(res),
+			dc->ndev->name);
+		if (!base_res) {
+			dev_err(&dc->ndev->dev,
+				"dp: request_mem_region failed\n");
+			err = -EFAULT;
+			goto err_free_dp;
+		}
 	}
 
-	base = devm_ioremap(&dc->ndev->dev, res->start, resource_size(res));
-	if (!base) {
-		dev_err(&dc->ndev->dev, "dp: registers can't be mapped\n");
-		err = -EFAULT;
-		goto err_release_resource_reg;
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
+		 ((struct tegra_dc_dp_data *)dc->out_data)->aux_base) {
+		base = ((struct tegra_dc_dp_data *)dc->out_data)->aux_base;
+	} else {
+		base = devm_ioremap(&dc->ndev->dev,
+			res->start, resource_size(res));
+		if (!base) {
+			dev_err(&dc->ndev->dev,
+				"dp: registers can't be mapped\n");
+			err = -EFAULT;
+			goto err_release_resource_reg;
+		}
 	}
 
 
@@ -2167,7 +2181,13 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	dp->dpaux_clk = clk;
 	dp->parent_clk = parent_clk;
 	dp->mode = &dc->mode;
-	dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
+
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP && dc->out_data &&
+		 ((struct tegra_dc_dp_data *)dc->out_data)->sor) {
+		dp->sor = ((struct tegra_dc_dp_data *)dc->out_data)->sor;
+	} else {
+		dp->sor = tegra_dc_sor_init(dc, &dp->link_cfg);
+	}
 	dp->irq = irq;
 	dp->pdata = dc->pdata->default_out->dp_out;
 	dp->suspended = false;
@@ -2202,13 +2222,13 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 	tegra_dp_lt_init(&dp->lt_data, dp);
 
 	INIT_DELAYED_WORK(&dp->irq_evt_dwork, tegra_dp_irq_evt_worker);
-
 #ifdef CONFIG_DEBUG_FS
 	dp->test_settings = default_dp_test_settings;
 #endif
 
 #ifdef CONFIG_SWITCH
-	if (tegra_dc_is_ext_dp_panel(dc)) {
+	if (tegra_dc_is_ext_dp_panel(dc) &&
+		dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		if (dp->sor->audio_switch_name == NULL)
 			dp->audio_switch.name = audio_switch_name_array[dp_num];
 		else

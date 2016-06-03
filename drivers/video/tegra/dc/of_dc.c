@@ -2391,6 +2391,9 @@ struct device_node *tegra_get_panel_node_out_type_check
 	u32 temp;
 	int ret = 0;
 
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		return NULL;
+
 	if (dc->ndev->id == 0)
 		np_panel = tegra_primary_panel_get_dt_node(NULL);
 	else if (dc->ndev->id == 1)

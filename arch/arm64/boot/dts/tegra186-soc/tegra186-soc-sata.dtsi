@@ -25,7 +25,7 @@
 				nvidia,function = "sata";
 				nvidia,pull = <TEGRA_PIN_PULL_NONE>;
 				nvidia,enable-input = <TEGRA_PIN_DISABLE>;
-				nvidia,io-high-voltage = <TEGRA_PIN_DISABLE>;
+				nvidia,io-high-voltage = <TEGRA_PIN_ENABLE>;
 				nvidia,lpdr = <TEGRA_PIN_ENABLE>;
 			};
 		};

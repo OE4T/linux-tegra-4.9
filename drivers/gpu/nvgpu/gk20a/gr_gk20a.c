@@ -5375,6 +5375,9 @@ int gk20a_gr_handle_fecs_error(struct gk20a *g, struct channel_gk20a *ch,
 
 	gk20a_dbg_fn("");
 
+	if (!gr_fecs_intr)
+		return 0;
+
 	gk20a_err(dev_from_gk20a(g),
 		   "unhandled fecs error interrupt 0x%08x for channel %u",
 		   gr_fecs_intr, isr_data->chid);

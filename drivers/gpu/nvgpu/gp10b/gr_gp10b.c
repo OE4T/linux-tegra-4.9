@@ -346,7 +346,7 @@ static int gr_gp10b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 	gk20a_writel(g,
 		     gr_gpc0_tpc0_tex_m_hww_esr_r() + offset,
-		     esr);
+		     esr | gr_gpc0_tpc0_tex_m_hww_esr_reset_active_f());
 
 	return ret;
 }

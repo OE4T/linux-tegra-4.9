@@ -3694,6 +3694,10 @@ static inline u32 gr_gpc0_tpc0_tex_m_hww_esr_ecc_ded_pending_f(void)
 {
 	return 0x100;
 }
+static inline u32 gr_gpc0_tpc0_tex_m_hww_esr_reset_active_f(void)
+{
+	return 0x40000000;
+}
 static inline u32 gr_gpc0_tpc0_sm_hww_warp_esr_r(void)
 {
 	return 0x00504648;

@@ -181,7 +181,8 @@ struct nvhost_vm *nvhost_vm_allocate(struct platform_device *pdev,
 
 	if (identifier) {
 		list_for_each_entry(vm, &host->vm_list, vm_list) {
-			if (vm->identifier == identifier) {
+			if (vm->identifier == identifier &&
+			    vm->enable_hw == pdata->isolate_contexts) {
 				/* skip entries that are going to be removed */
 				if (!kref_get_unless_zero(&vm->kref))
 					continue;

@@ -41,7 +41,7 @@
 
 extern int _vb2_fop_release(struct file *file, struct mutex *lock);
 
-void tegra_channel_write(struct tegra_channel *chan,
+static void tegra_channel_write(struct tegra_channel *chan,
 			unsigned int addr, u32 val)
 {
 	writel(val, chan->vi->iomem + addr);

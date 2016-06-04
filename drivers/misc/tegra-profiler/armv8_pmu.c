@@ -342,15 +342,17 @@ get_free_counters(unsigned long *bitmap, int nbits, int *ccntr)
 {
 	int cc;
 	u32 cntens;
+	unsigned long cntens_bitmap;
 
 	struct quadd_pmu_ctx *local_pmu_ctx = &__get_cpu_var(pmu_ctx);
 
 	cntens = armv8_pmu_pmcntenset_read();
 	cntens = ~cntens & (local_pmu_ctx->counters_mask | QUADD_ARMV8_CCNT);
 
+	cntens_bitmap = cntens;
+
 	bitmap_zero(bitmap, nbits);
-	bitmap_copy(bitmap, (unsigned long *)&cntens,
-		    BITS_PER_BYTE * sizeof(u32));
+	bitmap_copy(bitmap, &cntens_bitmap, BITS_PER_BYTE * sizeof(u32));
 
 	cc = (cntens & QUADD_ARMV8_CCNT) ? 1 : 0;
 

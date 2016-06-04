@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/comm.c
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -311,7 +311,7 @@ static int
 init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 	      struct quadd_mmap_area *mmap)
 {
-	int cpu_id;
+	unsigned int cpu_id;
 	size_t size;
 	unsigned long flags;
 	struct vm_area_struct *vma;
@@ -324,6 +324,10 @@ init_mmap_hdr(struct quadd_mmap_rb_info *mmap_rb,
 		return -EIO;
 
 	cpu_id = mmap_rb->cpu_id;
+
+	if (cpu_id >= nr_cpu_ids)
+		return -EIO;
+
 	cc = &per_cpu(cpu_ctx, cpu_id);
 
 	rb = &cc->rb;

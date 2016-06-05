@@ -411,7 +411,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	tgt_freq = ftbl[index].frequency;
 	freqs.old = tfreq_data.cpu_freq[policy->cpu];
 
-	if (freqs.old == tgt_freq)
+	if (policy->cur == tgt_freq)
 		goto out;
 
 	freqs.new = tgt_freq;
@@ -419,15 +419,18 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	cpufreq_freq_transition_begin(policy, &freqs);
 
 	cl = get_cpu_cluster(policy->cpu);
-	for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask) {
-		tegra_update_cpu_speed(tgt_freq, cpu);
-		tfreq_data.cpu_freq[cpu] = tgt_freq;
-	}
+
+	if (freqs.old != tgt_freq)
+		for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask) {
+			tegra_update_cpu_speed(tgt_freq, cpu);
+			tfreq_data.cpu_freq[cpu] = tgt_freq;
+		}
 
 	policy->cur = tgt_freq;
 	freqs.new = policy->cur;
 
-	set_cpufreq_to_emcfreq(cl, policy);
+	if (freqs.old != tgt_freq)
+		set_cpufreq_to_emcfreq(cl, policy);
 
 	cpufreq_freq_transition_end(policy, &freqs, ret);
 out:

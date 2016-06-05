@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/mmap.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,6 +27,8 @@
 #include "mmap.h"
 #include "comm.h"
 #include "hrt.h"
+
+#define TMP_BUFFER_SIZE	(PATH_MAX + sizeof(u64))
 
 static void
 put_mmap_sample(struct quadd_mmap_data *s, char *filename,
@@ -76,7 +78,7 @@ void quadd_process_mmap(struct vm_area_struct *vma, pid_t pid)
 	if (!(vma->vm_flags & VM_EXEC))
 		return;
 
-	tmp_buf = kzalloc(PATH_MAX + sizeof(u64), GFP_ATOMIC);
+	tmp_buf = kzalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
 	if (!tmp_buf)
 		return;
 
@@ -109,10 +111,10 @@ void quadd_process_mmap(struct vm_area_struct *vma, pid_t pid)
 		}
 
 		if (name)
-			strcpy(tmp_buf, name);
+			strlcpy(tmp_buf, name, TMP_BUFFER_SIZE);
 		else
-			sprintf(tmp_buf, "[vma:%08lx-%08lx]",
-				vma->vm_start, vma->vm_end);
+			snprintf(tmp_buf, TMP_BUFFER_SIZE, "[vma:%08lx-%08lx]",
+				 vma->vm_start, vma->vm_end);
 
 		file_name = tmp_buf;
 		length = strlen(file_name) + 1;
@@ -164,7 +166,7 @@ int quadd_get_current_mmap(pid_t pid)
 
 	pr_info("Get mapped memory objects\n");
 
-	tmp_buf = kzalloc(PATH_MAX + sizeof(u64), GFP_ATOMIC);
+	tmp_buf = kzalloc(TMP_BUFFER_SIZE, GFP_ATOMIC);
 	if (!tmp_buf)
 		return -ENOMEM;
 
@@ -201,10 +203,11 @@ int quadd_get_current_mmap(pid_t pid)
 			}
 
 			if (name)
-				strcpy(tmp_buf, name);
+				strlcpy(tmp_buf, name, TMP_BUFFER_SIZE);
 			else
-				sprintf(tmp_buf, "[vma:%08lx-%08lx]",
-					vma->vm_start, vma->vm_end);
+				snprintf(tmp_buf, TMP_BUFFER_SIZE,
+					 "[vma:%08lx-%08lx]",
+					 vma->vm_start, vma->vm_end);
 
 			file_name = tmp_buf;
 			length = strlen(file_name) + 1;

@@ -129,7 +129,8 @@ auth_read(struct file *filp,
 	((u32 *)buf)[2] = QUADD_SECURITY_REQUEST_CMD_TEST_DEBUG_FLAG;
 	((u32 *)buf)[3] = strlen(data->package_name);
 
-	strcpy(buf + 4 * sizeof(u32), data->package_name);
+	strlcpy(buf + 4 * sizeof(u32), data->package_name,
+		QUADD_MAX_PACKAGE_NAME);
 	msg_length = strlen(data->package_name) + 4 * sizeof(u32);
 
 	mutex_unlock(&auth_ctx.lock);

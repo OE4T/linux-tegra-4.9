@@ -604,8 +604,10 @@ device_ioctl(struct file *file,
 		break;
 
 	case IOCTL_GET_VERSION:
-		strcpy((char *)versions.branch, QUADD_MODULE_BRANCH);
-		strcpy((char *)versions.version, QUADD_MODULE_VERSION);
+		strlcpy((char *)versions.branch, QUADD_MODULE_BRANCH,
+			sizeof(versions.branch));
+		strlcpy((char *)versions.version, QUADD_MODULE_VERSION,
+			sizeof(versions.version));
 
 		versions.samples_version = QUADD_SAMPLES_VERSION;
 		versions.io_version = QUADD_IO_VERSION;

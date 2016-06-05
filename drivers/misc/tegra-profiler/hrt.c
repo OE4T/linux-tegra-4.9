@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/hrt.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -729,9 +729,9 @@ void quadd_hrt_stop(void)
 {
 	struct quadd_ctx *ctx = hrt.quadd_ctx;
 
-	pr_info("Stop hrt, samples all/skipped: %ld/%ld\n",
-		atomic64_read(&hrt.counter_samples),
-		atomic64_read(&hrt.skipped_samples));
+	pr_info("Stop hrt, samples all/skipped: %lld/%lld\n",
+		(long long)atomic64_read(&hrt.counter_samples),
+		(long long)atomic64_read(&hrt.skipped_samples));
 
 	if (ctx->pl310)
 		ctx->pl310->stop();

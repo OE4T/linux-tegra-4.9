@@ -150,19 +150,101 @@ u32 gk20a_mem_rd(struct gk20a *g, struct mem_desc *mem, u32 offset)
 	return gk20a_mem_rd32(g, mem, offset / sizeof(u32));
 }
 
+/*
+ * Batch innerloop for the function below once per each PRAMIN range (some
+ * 4B..1MB at a time). "start" reg goes as-is to gk20a_{readl,writel}.
+ */
+typedef void (*pramin_access_batch_fn)(struct gk20a *g, u32 start, u32 words,
+		u32 **arg);
+
+/*
+ * The PRAMIN range is 1 MB, must change base addr if a buffer crosses that.
+ * This same loop is used for read/write/memset. Offset and size in bytes.
+ * One call to "loop" is done per range, with "arg" supplied.
+ */
+static inline void pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
+		u32 offset, u32 size, pramin_access_batch_fn loop, u32 **arg)
+{
+	offset /= sizeof(u32);
+
+	while (size) {
+		u32 byteoff = gk20a_pramin_enter(g, mem, offset);
+		u32 start_reg = pram_data032_r(byteoff / sizeof(u32));
+		u32 until_end = SZ_1M - (byteoff & (SZ_1M - 1));
+		u32 n = min(size, until_end);
+
+		loop(g, start_reg, n / sizeof(u32), arg);
+
+		/* read back to synchronize accesses */
+		gk20a_readl(g, start_reg);
+		gk20a_pramin_exit(g, mem);
+
+		offset += n / sizeof(u32);
+		size -= n;
+	}
+}
+
+static inline void pramin_access_batch_rd_n(struct gk20a *g, u32 start,
+	u32 words, u32 **arg)
+{
+	u32 r = start, *dest_u32 = *arg;
+
+	while (words--) {
+		*dest_u32++ = gk20a_readl(g, r);
+		r += sizeof(u32);
+	}
+
+	*arg = dest_u32;
+}
+
+static inline void pramin_access_batch_wr_n(struct gk20a *g, u32 start,
+		u32 words, u32 **arg)
+{
+	u32 r = start, *src_u32 = *arg;
+
+	while (words--) {
+		gk20a_writel(g, r, *src_u32++);
+		r += sizeof(u32);
+	}
+
+	*arg = src_u32;
+}
+
+static inline void pramin_access_batch_set(struct gk20a *g, u32 start,
+		u32 words, u32 **arg)
+{
+	u32 r = start, repeat = **arg;
+
+	while (words--) {
+		gk20a_writel(g, r, repeat);
+		r += sizeof(u32);
+	}
+}
+
 void gk20a_mem_rd_n(struct gk20a *g, struct mem_desc *mem,
 		u32 offset, void *dest, u32 size)
 {
-	u32 i;
-	u32 *dest_u32 = dest;
-
 	WARN_ON(offset & 3);
 	WARN_ON(size & 3);
-	offset /= sizeof(u32);
-	size /= sizeof(u32);
 
-	for (i = 0; i < size; i++)
-		dest_u32[i] = gk20a_mem_rd32(g, mem, offset + i);
+	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+		u8 *src = (u8 *)mem->cpu_va + offset;
+
+		WARN_ON(!mem->cpu_va);
+		memcpy(dest, src, size);
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+		if (size)
+			gk20a_dbg(gpu_dbg_mem, " %p = 0x%x ... [%d bytes]",
+					src, *dest, size);
+#endif
+	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+		u32 *dest_u32 = dest;
+
+		pramin_access_batched(g, mem, offset, size,
+				pramin_access_batch_rd_n, &dest_u32);
+	} else {
+		WARN_ON("Accessing unallocated mem_desc");
+	}
 }
 
 void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
@@ -195,30 +277,57 @@ void gk20a_mem_wr(struct gk20a *g, struct mem_desc *mem, u32 offset, u32 data)
 void gk20a_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
 		void *src, u32 size)
 {
-	u32 i;
-	u32 *src_u32 = src;
-
 	WARN_ON(offset & 3);
 	WARN_ON(size & 3);
-	offset /= sizeof(u32);
-	size /= sizeof(u32);
 
-	for (i = 0; i < size; i++)
-		gk20a_mem_wr32(g, mem, offset + i, src_u32[i]);
+	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+		u8 *dest = (u8 *)mem->cpu_va + offset;
+
+		WARN_ON(!mem->cpu_va);
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+		if (size)
+			gk20a_dbg(gpu_dbg_mem, " %p = 0x%x ... [%d bytes]",
+					dest, *src, size);
+#endif
+		memcpy(dest, src, size);
+	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+		u32 *src_u32 = src;
+
+		pramin_access_batched(g, mem, offset, size,
+				pramin_access_batch_wr_n, &src_u32);
+	} else {
+		WARN_ON("Accessing unallocated mem_desc");
+	}
 }
 
 void gk20a_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
-		u32 value, u32 size)
+		u32 c, u32 size)
 {
-	u32 i;
-
 	WARN_ON(offset & 3);
 	WARN_ON(size & 3);
-	offset /= sizeof(u32);
-	size /= sizeof(u32);
+	WARN_ON(c & ~0xff);
 
-	for (i = 0; i < size; i++)
-		gk20a_mem_wr32(g, mem, offset + i, value);
+	c &= 0xff;
+
+	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+		u8 *dest = (u8 *)mem->cpu_va + offset;
+
+		WARN_ON(!mem->cpu_va);
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+		if (size)
+			gk20a_dbg(gpu_dbg_mem, " %p = 0x%x [times %d]",
+				dest, c, size);
+#endif
+		memset(dest, c, size);
+	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+		u32 repeat_value = c | (c << 8) | (c << 16) | (c << 24);
+		u32 *p = &repeat_value;
+
+		pramin_access_batched(g, mem, offset, size,
+				pramin_access_batch_set, &p);
+	} else {
+		WARN_ON("Accessing unallocated mem_desc");
+	}
 }
 
 /*

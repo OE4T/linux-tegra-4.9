@@ -458,9 +458,9 @@ void gk20a_mem_wr(struct gk20a *g, struct mem_desc *mem, u32 offset, u32 data);
 /* memcpy from cpu, offset and size in bytes (32b-aligned) */
 void gk20a_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
 		void *src, u32 size);
-/* size and offset in bytes (32b-aligned), filled with u32s */
+/* size and offset in bytes (32b-aligned), filled with the constant byte c */
 void gk20a_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
-		u32 value, u32 size);
+		u32 c, u32 size);
 
 #if 0 /*related to addr bits above, concern below TBD on which is accurate */
 #define bar1_instance_block_shift_gk20a() (max_physaddr_bits_gk20a() -\

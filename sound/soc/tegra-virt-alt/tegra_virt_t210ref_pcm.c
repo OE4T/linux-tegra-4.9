@@ -45,12 +45,24 @@
 #define NUM_MUX_INPUT		54
 #endif
 
+#define LAST_ADMAIF_DAI_LINK 11
+#define LAST_ADSP_ADMAIF_DAI_LINK 31
+
 static struct snd_soc_pcm_stream default_params = {
 	.rate_min = 48000,
 	.rate_max = 48000,
 	.channels_min = 2,
 	.channels_max = 2,
 };
+
+static struct snd_soc_pcm_stream adsp_default_params = {
+	.formats = SNDRV_PCM_FMTBIT_S16_LE,
+	.rate_min = 48000,
+	.rate_max = 48000,
+	.channels_min = 2,
+	.channels_max = 2,
+};
+
 
 static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 	{
@@ -184,6 +196,226 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+	},
+	{
+		/* 12 */
+		.name = "ADSP ADMAIF1",
+		.stream_name = "ADSP AFMAIF1",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF1",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 13 */
+		.name = "ADSP ADMAIF2",
+		.stream_name = "ADSP AFMAIF2",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF2",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 14 */
+		.name = "ADSP ADMAIF3",
+		.stream_name = "ADSP AFMAIF3",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF3",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 15 */
+		.name = "ADSP ADMAIF4",
+		.stream_name = "ADSP AFMAIF4",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF4",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 16 */
+		.name = "ADSP ADMAIF5",
+		.stream_name = "ADSP AFMAIF5",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF5",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 17 */
+		.name = "ADSP ADMAIF6",
+		.stream_name = "ADSP AFMAIF6",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF6",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 18 */
+		.name = "ADSP ADMAIF7",
+		.stream_name = "ADSP AFMAIF7",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF7",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 19 */
+		.name = "ADSP ADMAIF8",
+		.stream_name = "ADSP AFMAIF8",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF8",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 20 */
+		.name = "ADSP ADMAIF9",
+		.stream_name = "ADSP AFMAIF9",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF9",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 21 */
+		.name = "ADSP ADMAIF10",
+		.stream_name = "ADSP AFMAIF10",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF10",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 22 */
+		.name = "ADSP ADMAIF11",
+		.stream_name = "ADSP AFMAIF11",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF11",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 23 */
+		.name = "ADSP ADMAIF12",
+		.stream_name = "ADSP AFMAIF12",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF12",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 24 */
+		.name = "ADSP ADMAIF13",
+		.stream_name = "ADSP AFMAIF13",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF13",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 25 */
+		.name = "ADSP ADMAIF14",
+		.stream_name = "ADSP AFMAIF14",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF14",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 26 */
+		.name = "ADSP ADMAIF15",
+		.stream_name = "ADSP AFMAIF15",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF15",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 27 */
+		.name = "ADSP ADMAIF16",
+		.stream_name = "ADSP AFMAIF16",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF16",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 28 */
+		.name = "ADSP ADMAIF17",
+		.stream_name = "ADSP AFMAIF17",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF17",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 29 */
+		.name = "ADSP ADMAIF18",
+		.stream_name = "ADSP AFMAIF18",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF18",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 30 */
+		.name = "ADSP ADMAIF19",
+		.stream_name = "ADSP AFMAIF19",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF19",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 31 */
+		.name = "ADSP ADMAIF20",
+		.stream_name = "ADSP AFMAIF20",
+		.codec_name = CODEC_NAME,
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP-ADMAIF20",
+		.codec_dai_name = CODEC_DAI_NAME,
+		.params = &adsp_default_params,
+	},
+	{
+		/* 32 */
+		.name = "ADSP PCM1",
+		.stream_name = "ADSP PCM1",
+		.codec_name = "adsp_audio",
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP PCM1",
+		.codec_dai_name = "ADSP-FE1",
+		.platform_name = "adsp_audio",
+	},
+	{
+		/* 33 */
+		.name = "ADSP PCM2",
+		.stream_name = "ADSP PCM2",
+		.codec_name = "adsp_audio",
+		.cpu_name = "adsp_audio",
+		.cpu_dai_name = "ADSP PCM2",
+		.codec_dai_name = "ADSP-FE2",
+		.platform_name = "adsp_audio",
 	},
 };
 
@@ -833,11 +1065,25 @@ static const struct of_device_id tegra_virt_t210ref_pcm_of_match[] = {
 	{},
 };
 
-static struct snd_soc_card snd_soc_tegra_virt_t210ref_pcm = {
+static const struct snd_soc_dapm_widget tegra_virt_t210ref_dapm_widgets[] = {
+	SND_SOC_DAPM_HP("Headphone", NULL),
+	SND_SOC_DAPM_LINE("LineIn", NULL),
+};
+
+static const struct snd_soc_dapm_route tegra_virt_t210ref_dapm_routes[] = {
+	{"Headphone", NULL, "OUT"},
+	{"IN", NULL, "LineIn"},
+};
+
+static struct snd_soc_card tegra_virt_t210ref_pcm = {
 	.name = "t210ref-virt-pcm",
 	.owner = THIS_MODULE,
 	.dai_link = tegra_virt_t210ref_pcm_links,
 	.num_links = ARRAY_SIZE(tegra_virt_t210ref_pcm_links),
+	.dapm_widgets = tegra_virt_t210ref_dapm_widgets,
+	.num_dapm_widgets = ARRAY_SIZE(tegra_virt_t210ref_dapm_widgets),
+	.dapm_routes = tegra_virt_t210ref_dapm_routes,
+	.num_dapm_routes = ARRAY_SIZE(tegra_virt_t210ref_dapm_routes),
 	.controls = tegra_virt_t210ref_controls,
 	.num_controls = ARRAY_SIZE(tegra_virt_t210ref_controls),
 	.fully_routed = true,
@@ -853,18 +1099,34 @@ static void tegra_virt_t210ref_pcm_set_dai_params(
 
 static int tegra_virt_t210ref_pcm_driver_probe(struct platform_device *pdev)
 {
-	struct snd_soc_card *card = &snd_soc_tegra_virt_t210ref_pcm;
+	struct snd_soc_card *card = &tegra_virt_t210ref_pcm;
 	int i, ret = 0;
 	int admaif_ch_num = 0;
+	bool adsp_enabled = false;
 	unsigned int admaif_ch_list[MAX_ADMAIF_IDS];
 
 	card->dev = &pdev->dev;
 
+
+	adsp_enabled = of_property_read_bool(pdev->dev.of_node,
+		"adsp_enabled");
+
+	if (!adsp_enabled)
+		dev_info(&pdev->dev, "adsp config is not set\n");
+
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	if (!adsp_enabled)
+		tegra_virt_t210ref_pcm.num_links = LAST_ADMAIF_DAI_LINK + 1;
+
 	for (i = 0; i < card->num_links; i++) {
-		card->dai_link[i].codec_of_node =
+		if (i < (LAST_ADSP_ADMAIF_DAI_LINK+1)) {
+			card->dai_link[i].codec_of_node =
 			of_parse_phandle(pdev->dev.of_node, "codec", 0);
-		strcpy((char *)card->dai_link[i].cpu_name, DRV_NAME_T186);
+		}
+		if (i < (LAST_ADMAIF_DAI_LINK+1)) {
+			strcpy((char *)card->dai_link[i].cpu_name,
+					DRV_NAME_T186);
+		}
 	}
 #endif
 
@@ -893,7 +1155,6 @@ static int tegra_virt_t210ref_pcm_driver_probe(struct platform_device *pdev)
 			dev_err(&pdev->dev, "admaif_ch_list os not populated\n");
 			return -EINVAL;
 		}
-
 		for (i = 0; i < admaif_ch_num; i++) {
 			tegra_virt_t210ref_pcm_set_dai_params(
 						tegra_virt_t210ref_pcm_links,

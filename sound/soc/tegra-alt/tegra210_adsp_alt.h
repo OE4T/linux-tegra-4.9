@@ -154,6 +154,8 @@ enum tegra210_adsp_virt_regs {
 #define TEGRA210_ADSP_ADMA_CHANNEL_START	10
 #define TEGRA210_ADSP_ADMA_CHANNEL_COUNT	10
 
+#define TEGRA210_ADSP_ADMA_CHANNEL_START_HV  16
+
 /* ADSP base index for widget name update */
 #define TEGRA210_ADSP_ROUTE_BASE	((TEGRA210_ADSP_ADMAIF20 * 11) + \
 					(8 * TEGRA210_ADSP_APM_OUT1))

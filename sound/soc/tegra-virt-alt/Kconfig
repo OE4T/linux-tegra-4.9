@@ -11,6 +11,7 @@ config SND_SOC_TEGRA_VIRT_T210REF_PCM
 	tristate "Tegra210 virt PCM driver"
 	select SND_SOC_TEGRA_VIRT_ALT
 	select SND_SOC_TEGRA_ALT
+	select SND_SOC_TEGRA210_ADSP_ALT
 	help
 	  Say Y or M if you want to add support for Tegra210 para-virtualized PCM audio.
 	  The pcm driver exposes a number of playback and capture pcm interfaces. It uses

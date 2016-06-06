@@ -149,6 +149,15 @@
 
 #define SPI_TX_FIFO				0x108
 #define SPI_RX_FIFO				0x188
+
+#define SPI_INTR_MASK				0x18c
+#define SPI_INTR_RX_FIFO_UNF_MASK		BIT(25)
+#define SPI_INTR_RX_FIFO_OVF_MASK		BIT(26)
+#define SPI_INTR_TX_FIFO_UNF_MASK		BIT(27)
+#define SPI_INTR_TX_FIFO_OVF_MASK		BIT(28)
+#define SPI_INTR_RDY_MASK			BIT(29)
+#define SPI_INTR_ALL_MASK			(0x1fUL << 25)
+
 #define MAX_CHIP_SELECT				4
 #define SPI_FIFO_DEPTH				64
 #define DATA_DIR_TX				(1 << 0)
@@ -160,6 +169,10 @@
 #define RX_FIFO_FULL_COUNT_ZERO			SPI_RX_FIFO_FULL_COUNT(0)
 #define MAX_HOLD_CYCLES				16
 #define SPI_DEFAULT_SPEED			25000000
+
+struct tegra_spi_chip_data {
+	bool intr_mask_reg;
+};
 
 struct tegra_spi_data {
 	struct device				*dev;
@@ -211,6 +224,7 @@ struct tegra_spi_data {
 	u32					*tx_dma_buf;
 	dma_addr_t				tx_dma_phys;
 	struct dma_async_tx_descriptor		*tx_dma_desc;
+	const struct tegra_spi_chip_data	*chip_data;
 };
 
 static int tegra_spi_runtime_suspend(struct device *dev);
@@ -230,6 +244,21 @@ static inline void tegra_spi_writel(struct tegra_spi_data *tspi,
 	/* Read back register to make sure that register writes completed */
 	if (reg != SPI_TX_FIFO)
 		readl(tspi->base + SPI_COMMAND1);
+}
+
+static void tegra_spi_set_intr_mask(struct tegra_spi_data *tspi)
+{
+	unsigned long intr_mask;
+
+	if (tspi->chip_data->intr_mask_reg) {
+		intr_mask = tegra_spi_readl(tspi, SPI_INTR_MASK);
+		intr_mask &= ~(SPI_INTR_ALL_MASK);
+		tegra_spi_writel(tspi, intr_mask, SPI_INTR_MASK);
+	} else {
+		intr_mask = tegra_spi_readl(tspi, SPI_DMA_CTL);
+		intr_mask |= SPI_IE_TX | SPI_IE_RX;
+		tegra_spi_writel(tspi, intr_mask, SPI_DMA_CTL);
+	}
 }
 
 static void tegra_spi_clear_status(struct tegra_spi_data *tspi)
@@ -514,11 +543,12 @@ static int tegra_spi_start_dma_based_transfer(
 		maxburst = 8;
 	}
 
-	if (tspi->cur_direction & DATA_DIR_TX)
-		val |= SPI_IE_TX;
-
-	if (tspi->cur_direction & DATA_DIR_RX)
-		val |= SPI_IE_RX;
+	if (!tspi->chip_data->intr_mask_reg) {
+		if (tspi->cur_direction & DATA_DIR_TX)
+			val |= SPI_IE_TX;
+		if (tspi->cur_direction & DATA_DIR_RX)
+			val |= SPI_IE_RX;
+	}
 
 	tegra_spi_writel(tspi, val, SPI_DMA_CTL);
 	tspi->dma_control_reg = val;
@@ -579,13 +609,13 @@ static int tegra_spi_start_cpu_based_transfer(
 	tegra_spi_writel(tspi, val, SPI_DMA_BLK);
 
 	val = 0;
-	if (tspi->cur_direction & DATA_DIR_TX)
-		val |= SPI_IE_TX;
-
-	if (tspi->cur_direction & DATA_DIR_RX)
-		val |= SPI_IE_RX;
-
-	tegra_spi_writel(tspi, val, SPI_DMA_CTL);
+	if (!tspi->chip_data->intr_mask_reg) {
+		if (tspi->cur_direction & DATA_DIR_TX)
+			val |= SPI_IE_TX;
+		if (tspi->cur_direction & DATA_DIR_RX)
+			val |= SPI_IE_RX;
+		tegra_spi_writel(tspi, val, SPI_DMA_CTL);
+	}
 	tspi->dma_control_reg = val;
 
 	tspi->is_curr_dma_xfer = false;
@@ -793,7 +823,7 @@ static int tegra_spi_setup(struct spi_device *spi)
 		dev_err(tspi->dev, "pm runtime failed, e = %d\n", ret);
 		return ret;
 	}
-
+	tegra_spi_set_intr_mask(tspi);
 	spin_lock_irqsave(&tspi->lock, flags);
 	val = tspi->def_command1_reg;
 	if (spi->mode & SPI_CS_HIGH)
@@ -860,6 +890,7 @@ static int tegra_spi_transfer_one_message(struct spi_master *master,
 				"spi trasfer timeout, err %d\n", ret);
 			ret = -EIO;
 			reset_control_reset(tspi->rst);
+			tegra_spi_set_intr_mask(tspi);
 			goto complete_xfer;
 		}
 
@@ -913,6 +944,7 @@ static irqreturn_t handle_cpu_based_xfer(struct tegra_spi_data *tspi)
 		complete(&tspi->xfer_completion);
 		spin_unlock_irqrestore(&tspi->lock, flags);
 		reset_control_reset(tspi->rst);
+		tegra_spi_set_intr_mask(tspi);
 		return IRQ_HANDLED;
 	}
 
@@ -984,6 +1016,7 @@ static irqreturn_t handle_dma_based_xfer(struct tegra_spi_data *tspi)
 		complete(&tspi->xfer_completion);
 		spin_unlock_irqrestore(&tspi->lock, flags);
 		reset_control_reset(tspi->rst);
+		tegra_spi_set_intr_mask(tspi);
 		return IRQ_HANDLED;
 	}
 
@@ -1039,8 +1072,36 @@ static irqreturn_t tegra_spi_isr(int irq, void *context_data)
 	return IRQ_WAKE_THREAD;
 }
 
+static struct tegra_spi_chip_data tegra114_spi_chip_data = {
+	.intr_mask_reg = false,
+};
+
+static struct tegra_spi_chip_data tegra124_spi_chip_data = {
+	.intr_mask_reg = false,
+};
+
+static struct tegra_spi_chip_data tegra210_spi_chip_data = {
+	.intr_mask_reg = true,
+};
+
+static struct tegra_spi_chip_data tegra186_spi_chip_data = {
+	.intr_mask_reg = true,
+};
+
 static const struct of_device_id tegra_spi_of_match[] = {
-	{ .compatible = "nvidia,tegra114-spi", },
+	{
+		.compatible = "nvidia,tegra114-spi",
+		.data       = &tegra114_spi_chip_data,
+	}, {
+		.compatible = "nvidia,tegra124-spi",
+		.data       = &tegra124_spi_chip_data,
+	}, {
+		.compatible = "nvidia,tegra210-spi",
+		.data       = &tegra210_spi_chip_data,
+	}, {
+		.compatible = "nvidia,tegra186-spi",
+		.data       = &tegra186_spi_chip_data,
+	},
 	{}
 };
 MODULE_DEVICE_TABLE(of, tegra_spi_of_match);
@@ -1078,6 +1139,12 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	tspi->master = master;
 	tspi->dev = &pdev->dev;
 	spin_lock_init(&tspi->lock);
+	tspi->chip_data = of_device_get_match_data(&pdev->dev);
+	if (!tspi->chip_data) {
+		dev_err(&pdev->dev, "Unsupported chip. Exiting\n");
+		ret = -ENODEV;
+		goto exit_free_master;
+	}
 
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	tspi->base = devm_ioremap_resource(&pdev->dev, r);
@@ -1209,6 +1276,7 @@ static int tegra_spi_resume(struct device *dev)
 		return ret;
 	}
 	tegra_spi_writel(tspi, tspi->command1_reg, SPI_COMMAND1);
+	tegra_spi_set_intr_mask(tspi);
 	pm_runtime_put(dev);
 
 	return spi_master_resume(master);
@@ -1258,6 +1326,6 @@ static struct platform_driver tegra_spi_driver = {
 module_platform_driver(tegra_spi_driver);
 
 MODULE_ALIAS("platform:spi-tegra114");
-MODULE_DESCRIPTION("NVIDIA Tegra114 SPI Controller Driver");
+MODULE_DESCRIPTION("NVIDIA T114/T124/T210/T186 SPI Controller Driver");
 MODULE_AUTHOR("Laxman Dewangan <ldewangan@nvidia.com>");
 MODULE_LICENSE("GPL v2");

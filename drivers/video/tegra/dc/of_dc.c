@@ -95,6 +95,7 @@ char dc_or_node_names[TEGRA_MAX_DC][14];
 #endif
 
 static int first_fb_console_map = -1;
+static bool os_l4t;
 
 #ifdef CONFIG_TEGRA_DC_CMU
 static struct tegra_dc_cmu default_cmu = {
@@ -3048,6 +3049,7 @@ static int __init check_fb_console_map_default(void)
 		pp_l4t = of_find_property(np_l4t, "l4t", &len);
 		if (pp_l4t) {
 			first_fb_console_map = 0;
+			os_l4t = true;
 			res = 1;
 		}
 		pr_info("OS set in device tree is%s L4T.\n", pp_l4t ? "":" not");
@@ -3059,4 +3061,8 @@ core_initcall(check_fb_console_map_default);
 bool fb_console_mapped(void)
 {
 	return first_fb_console_map != -1;
+}
+bool is_os_l4t(void)
+{
+	return os_l4t;
 }

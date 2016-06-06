@@ -50,4 +50,5 @@ static inline int tegra_hdmi_setup_hda_presence(int sor_num) { return -ENODEV; }
 #endif
 int tegra_hdmi_audio_null_sample_inject(bool on, int sor_num);
 
+bool is_os_l4t(void);
 #endif /* __MACH_TEGRA_HDMI_AUDIO_H */

@@ -138,12 +138,9 @@ static int vi_set_la(u32 vi_bw, struct platform_device *pdev)
 		return ret;
 	}
 
-	ret = tegra_set_latency_allowance(TEGRA_LA_VI_W, vi_bw);
-	if (ret) {
-		dev_err(&pdev->dev, "%s: set latency failed: %d\n",
-			__func__, ret);
-		return ret;
-	}
+	/*  T186 ISP/VI LA programming is changed.
+	 *  Check tegra18x_la.c
+	 */
 
 	return ret;
 }

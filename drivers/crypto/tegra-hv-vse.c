@@ -45,6 +45,8 @@
 #include <linux/iommu.h>
 
 #define TEGRA_HV_VSE_SHA_MAX_LL_NUM 26
+#define TEGRA_HV_VSE_AES_MAX_LL_NUM 17
+#define TEGRA_HV_VSE_CRYPTO_QUEUE_LENGTH 50
 
 /* Security Engine Linked List */
 struct tegra_virtual_se_ll {
@@ -55,6 +57,15 @@ struct tegra_virtual_se_ll {
 struct tegra_virtual_se_dev {
 	struct device *dev;
 	u32 stream_id;
+	/* lock for Crypto queue access*/
+	spinlock_t lock;
+	/* Security Engine crypto queue */
+	struct crypto_queue queue;
+	/* Work queue busy status */
+	bool work_q_busy;
+	struct work_struct se_work;
+	struct workqueue_struct *vse_work_q;
+	struct mutex mtx;
 };
 
 struct tegra_virtual_se_addr {
@@ -65,6 +76,52 @@ struct tegra_virtual_se_addr {
 struct tegra_virtual_se_linklist {
 	u8 number;
 	struct tegra_virtual_se_addr addr[TEGRA_HV_VSE_SHA_MAX_LL_NUM];
+};
+
+struct tegra_virtual_se_aes_linklist {
+	u8 number;
+	struct tegra_virtual_se_addr addr[TEGRA_HV_VSE_AES_MAX_LL_NUM];
+};
+
+union tegra_virtual_se_aes_args {
+	struct keyiv {
+		u8 slot;
+		u8 length;
+		u8 type;
+		u8 data[32];
+		u8 oiv[16];
+		u8 uiv[16];
+	} key;
+	struct aes_encdec {
+		u8 streamid;
+		u8 keyslot;
+		u8 key_length;
+		u8 mode;
+		u8 ivsel;
+		u8 lctr[16];
+		u8 ctr_cntn;
+		u32 data_length;
+		u8 src_ll_num;
+		struct tegra_virtual_se_addr
+			src_addr[TEGRA_HV_VSE_AES_MAX_LL_NUM];
+		u8 dst_ll_num;
+		struct tegra_virtual_se_addr
+			dst_addr[TEGRA_HV_VSE_AES_MAX_LL_NUM];
+	} op;
+	struct aes_cmac {
+		u8 streamid;
+		u8 keyslot;
+		u8 key_length;
+		u8 ivsel;
+		u32 data_length;
+		u64 dst;
+		struct tegra_virtual_se_aes_linklist src;
+	} op_cmac;
+	struct aes_rng {
+		u8 streamid;
+		u32 data_length;
+		u64 dst;
+	} op_rng;
 };
 
 union tegra_virtual_se_rsa_args {
@@ -106,6 +163,7 @@ struct tegra_virtual_se_ivc_tx_msg_t {
 	u8 tag;
 	u8 cmd;
 	union {
+		union tegra_virtual_se_aes_args aes;
 		struct tegra_virtual_se_sha_args sha;
 		union tegra_virtual_se_rsa_args rsa;
 	} args;
@@ -133,7 +191,41 @@ enum tegra_virtual_se_op_mode {
 	/* Secure Hash Algorithm-384  (SHA384) mode */
 	VIRTUAL_SE_OP_MODE_SHA384,
 	/* Secure Hash Algorithm-512  (SHA512) mode */
-	VIRTUAL_SE_OP_MODE_SHA512
+	VIRTUAL_SE_OP_MODE_SHA512,
+};
+
+/* Security Engine AES context */
+struct tegra_virtual_se_aes_context {
+	/* Security Engine device */
+	struct tegra_virtual_se_dev *se_dev;
+	struct ablkcipher_request *req;
+	/* Security Engine key slot */
+	u32 aes_keyslot;
+	/* key length in bytes */
+	u32 keylen;
+	/* AES operation mode */
+	u32 op_mode;
+	/* Is key slot */
+	bool is_key_slot_allocated;
+};
+
+enum tegra_virtual_se_aes_op_mode {
+	AES_CBC,
+	AES_ECB,
+	AES_CTR,
+	AES_OFB,
+};
+
+/* Security Engine request context */
+struct tegra_virtual_se_aes_req_context {
+	/* Security Engine device */
+	struct tegra_virtual_se_dev *se_dev;
+	/* Security Engine operation mode */
+	enum tegra_virtual_se_aes_op_mode op_mode;
+	/* Operation type */
+	bool encrypt;
+	/* Engine id */
+	u8 engine_id;
 };
 
 enum se_engine_id {
@@ -145,6 +237,22 @@ enum se_engine_id {
 };
 
 #define VIRTUAL_SE_CMD_SHA_HASH 1
+
+enum tegra_virual_se_aes_iv_type {
+	AES_ORIGINAL_IV,
+	AES_UPDATED_IV,
+};
+
+#define VIRTUAL_SE_AES_BLOCK_SIZE 16
+#define VIRTUAL_SE_AES_MIN_KEY_SIZE 16
+#define VIRTUAL_SE_AES_MAX_KEY_SIZE 32
+#define VIRTUAL_SE_AES_IV_SIZE 16
+#define VIRTUAL_SE_CMD_AES_ALLOC_KEY 1
+#define VIRTUAL_SE_CMD_AES_RELEASE_KEY 2
+#define VIRTUAL_SE_CMD_AES_SET_KEY 3
+#define VIRTUAL_SE_CMD_AES_ENCRYPT 4
+#define VIRTUAL_SE_CMD_AES_DECRYPT 5
+
 #define VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_512BIT (512 / 8)
 #define VIRTUAL_SE_SHA_HASH_BLOCK_SIZE_1024BIT (1024 / 8)
 
@@ -162,6 +270,12 @@ enum se_engine_id {
 #define TEGRA_VIRTUAL_SE_RSA2048_DIGEST_SIZE   256
 
 #define TEGRA_VIRTUAL_SE_SHA_MAX_BUFFER_SIZE 0x1000000
+
+#define AES_KEYTBL_TYPE_KEY 1
+#define AES_KEYTBL_TYPE_OIV 2
+#define AES_KEYTBL_TYPE_UIV 4
+
+#define TEGRA_VIRTUAL_SE_AES_IV_SIZE 16
 
 /* Security Engine RSA context */
 struct tegra_virtual_se_rsa_context {
@@ -681,6 +795,386 @@ static void tegra_hv_vse_rsa_cra_exit(struct crypto_tfm *tfm)
 	}
 }
 
+static int tegra_hv_vse_aes_set_keyiv(struct tegra_virtual_se_dev *se_dev,
+	u8 *data, u32 keylen, u8 keyslot, u8 type)
+{
+	struct tegra_virtual_se_ivc_tx_msg_t ivc_tx;
+	struct tegra_virtual_se_ivc_resp_msg_t ivc_rx;
+	struct tegra_hv_ivc_cookie *pivck = g_ivck;
+	int err;
+
+	ivc_tx.engine = VIRTUAL_SE_AES1;
+	ivc_tx.cmd = VIRTUAL_SE_CMD_AES_SET_KEY;
+	ivc_tx.args.aes.key.slot = keyslot;
+	ivc_tx.args.aes.key.type = type;
+
+	if (type & AES_KEYTBL_TYPE_KEY) {
+		ivc_tx.args.aes.key.length = keylen;
+		memcpy(ivc_tx.args.aes.key.data, data, keylen);
+	}
+
+	if (type & AES_KEYTBL_TYPE_OIV)
+		memcpy(ivc_tx.args.aes.key.oiv, data,
+			TEGRA_VIRTUAL_SE_AES_IV_SIZE);
+
+	if (type & AES_KEYTBL_TYPE_UIV)
+		memcpy(ivc_tx.args.aes.key.uiv, data,
+			TEGRA_VIRTUAL_SE_AES_IV_SIZE);
+
+	err = tegra_hv_vse_send_ivc(se_dev, pivck, &ivc_tx, sizeof(ivc_tx));
+	if (err)
+		return err;
+
+	err = tegra_hv_vse_read_ivc(se_dev, pivck, &ivc_rx, sizeof(ivc_rx));
+	if (err)
+		return err;
+
+	if (ivc_rx.status) {
+		dev_err(se_dev->dev, "Error from Read IVC %d\n", ivc_rx.status);
+		return err;
+	}
+
+	return 0;
+}
+
+static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
+{
+	struct tegra_virtual_se_dev *se_dev;
+	struct ablkcipher_request *req = ablkcipher_request_cast(async_req);
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+			ablkcipher_request_ctx(req);
+	struct tegra_virtual_se_aes_context *aes_ctx =
+			crypto_ablkcipher_ctx(crypto_ablkcipher_reqtfm(req));
+	struct tegra_virtual_se_ivc_tx_msg_t ivc_tx;
+	struct tegra_virtual_se_ivc_resp_msg_t ivc_rx;
+	struct tegra_hv_ivc_cookie *pivck = g_ivck;
+	struct scatterlist *src_sg, *dst_sg;
+	int src_sg_count = 0, dst_sg_count = 0;
+	int err = 0;
+	u32 total_len;
+	int i;
+
+	se_dev = req_ctx->se_dev;
+	if (!aes_ctx->is_key_slot_allocated) {
+		dev_err(se_dev->dev, "AES Key slot not allocated\n");
+		err = -EINVAL;
+		goto err_exit;
+	}
+
+	ivc_tx.engine = req_ctx->engine_id;
+
+	if (req_ctx->encrypt == true)
+		ivc_tx.cmd = VIRTUAL_SE_CMD_AES_ENCRYPT;
+	else
+		ivc_tx.cmd = VIRTUAL_SE_CMD_AES_DECRYPT;
+
+	if (req->info) {
+		err = tegra_hv_vse_aes_set_keyiv(se_dev, req->info,
+			aes_ctx->keylen,
+			aes_ctx->aes_keyslot,
+			AES_KEYTBL_TYPE_OIV);
+	}
+
+	ivc_tx.args.aes.op.keyslot = aes_ctx->aes_keyslot;
+	ivc_tx.args.aes.op.key_length = aes_ctx->keylen;
+	ivc_tx.args.aes.op.streamid = se_dev->stream_id;
+	ivc_tx.args.aes.op.mode = req_ctx->op_mode;
+
+	ivc_tx.args.aes.op.ivsel = AES_ORIGINAL_IV;
+	src_sg = req->src;
+	dst_sg = req->dst;
+
+	i = 0;
+	total_len = req->nbytes;
+	while (src_sg && total_len) {
+		dma_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
+		ivc_tx.args.aes.op.src_addr[i].lo = sg_dma_address(src_sg);
+		ivc_tx.args.aes.op.src_addr[i++].hi =
+				min(src_sg->length, total_len);
+		total_len -= min(src_sg->length, total_len);
+		src_sg_count++;
+		src_sg = scatterwalk_sg_next(src_sg);
+	}
+	ivc_tx.args.aes.op.src_ll_num = i;
+
+	i = 0;
+	total_len = req->nbytes;
+	while (dst_sg && total_len) {
+		dma_map_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE);
+		ivc_tx.args.aes.op.dst_addr[i].lo = sg_dma_address(dst_sg);
+		ivc_tx.args.aes.op.dst_addr[i++].hi =
+				min(dst_sg->length, total_len);
+		total_len -= min(dst_sg->length, total_len);
+		dst_sg_count++;
+		dst_sg = scatterwalk_sg_next(dst_sg);
+	}
+	ivc_tx.args.aes.op.dst_ll_num = i;
+	ivc_tx.args.aes.op.data_length = req->nbytes;
+
+	err = tegra_hv_vse_send_ivc(se_dev, pivck, &ivc_tx, sizeof(ivc_tx));
+	if (err)
+		goto exit;
+
+	err = tegra_hv_vse_read_ivc(se_dev, pivck, &ivc_rx, sizeof(ivc_rx));
+	if (err)
+		goto exit;
+
+	if (ivc_rx.status)
+		err = ivc_rx.status;
+
+exit:
+	src_sg = req->src;
+	while (src_sg && src_sg_count--) {
+		dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
+		src_sg = scatterwalk_sg_next(src_sg);
+	}
+
+	dst_sg = req->dst;
+	while (dst_sg && dst_sg_count--) {
+		dma_unmap_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE);
+		src_sg = scatterwalk_sg_next(dst_sg);
+	}
+
+err_exit:
+	if (req->base.complete)
+		req->base.complete(&req->base, err);
+}
+
+static void tegra_hv_vse_work_handler(struct work_struct *work)
+{
+	struct tegra_virtual_se_dev *se_dev = container_of(work,
+					struct tegra_virtual_se_dev, se_work);
+	struct crypto_async_request *async_req = NULL;
+	struct crypto_async_request *backlog = NULL;
+	unsigned long flags;
+
+	mutex_lock(&se_dev->mtx);
+	do {
+		spin_lock_irqsave(&se_dev->lock, flags);
+		backlog = crypto_get_backlog(&se_dev->queue);
+		async_req = crypto_dequeue_request(&se_dev->queue);
+		if (!async_req)
+			se_dev->work_q_busy = false;
+		spin_unlock_irqrestore(&se_dev->lock, flags);
+
+		if (backlog) {
+			backlog->complete(backlog, -EINPROGRESS);
+			backlog = NULL;
+		}
+
+		if (async_req) {
+			tegra_hv_vse_process_new_req(async_req);
+			async_req = NULL;
+		}
+	} while (se_dev->work_q_busy);
+	mutex_unlock(&se_dev->mtx);
+}
+
+static int tegra_hv_vse_aes_queue_req(struct tegra_virtual_se_dev *se_dev,
+				struct ablkcipher_request *req)
+{
+	unsigned long flags;
+	bool idle = true;
+	int err = 0;
+
+	if (!tegra_hv_vse_count_sgs(req->src, req->nbytes))
+		return -EINVAL;
+
+	spin_lock_irqsave(&se_dev->lock, flags);
+	err = ablkcipher_enqueue_request(&se_dev->queue, req);
+	if (se_dev->work_q_busy)
+		idle = false;
+	spin_unlock_irqrestore(&se_dev->lock, flags);
+
+	if (idle) {
+		spin_lock_irqsave(&se_dev->lock, flags);
+		se_dev->work_q_busy = true;
+		spin_unlock_irqrestore(&se_dev->lock, flags);
+		queue_work(se_dev->vse_work_q, &se_dev->se_work);
+	}
+
+	return err;
+}
+
+static int tegra_hv_vse_aes_cra_init(struct crypto_tfm *tfm)
+{
+	tfm->crt_ablkcipher.reqsize =
+		sizeof(struct tegra_virtual_se_aes_req_context);
+
+	return 0;
+}
+
+static void tegra_hv_vse_aes_cra_exit(struct crypto_tfm *tfm)
+{
+	struct tegra_virtual_se_aes_context *ctx = crypto_tfm_ctx(tfm);
+	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	struct tegra_virtual_se_ivc_tx_msg_t ivc_tx;
+	struct tegra_virtual_se_ivc_resp_msg_t ivc_rx;
+	struct tegra_hv_ivc_cookie *pivck = g_ivck;
+	int err;
+
+	if (!ctx)
+		return;
+
+	if (!ctx->is_key_slot_allocated)
+		return;
+
+	/* Allocate AES key slot */
+	ivc_tx.engine = VIRTUAL_SE_AES1;
+	ivc_tx.cmd = VIRTUAL_SE_CMD_AES_RELEASE_KEY;
+	ivc_tx.args.aes.key.slot = ctx->aes_keyslot;
+
+	err = tegra_hv_vse_send_ivc(se_dev, pivck, &ivc_tx, sizeof(ivc_tx));
+	if (err)
+		return;
+
+	err = tegra_hv_vse_read_ivc(se_dev, pivck, &ivc_rx, sizeof(ivc_rx));
+	if (err)
+		return;
+
+	if (ivc_rx.status) {
+		dev_err(se_dev->dev, "Error from Read IVC %d\n", ivc_rx.status);
+		return;
+	}
+
+}
+
+static int tegra_hv_vse_aes_cbc_encrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+		ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = true;
+	req_ctx->op_mode = AES_CBC;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_hv_vse_aes_cbc_decrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+			ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = false;
+	req_ctx->op_mode = AES_CBC;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_hv_vse_aes_ecb_encrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+		ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = true;
+	req_ctx->op_mode = AES_ECB;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_hv_vse_aes_ecb_decrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+			ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = false;
+	req_ctx->op_mode = AES_ECB;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
+	const u8 *key, u32 keylen)
+{
+	struct tegra_virtual_se_aes_context *ctx = crypto_ablkcipher_ctx(tfm);
+	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	struct tegra_virtual_se_ivc_tx_msg_t ivc_tx;
+	struct tegra_virtual_se_ivc_resp_msg_t ivc_rx;
+	struct tegra_hv_ivc_cookie *pivck = g_ivck;
+	int err;
+
+	if (!ctx)
+		return -EINVAL;
+
+	if (!ctx->is_key_slot_allocated) {
+		/* Allocate AES key slot */
+		ivc_tx.engine = VIRTUAL_SE_AES1;
+		ivc_tx.cmd = VIRTUAL_SE_CMD_AES_ALLOC_KEY;
+
+		err = tegra_hv_vse_send_ivc(se_dev, pivck, &ivc_tx,
+				sizeof(ivc_tx));
+		if (err)
+			return err;
+
+		err = tegra_hv_vse_read_ivc(se_dev, pivck, &ivc_rx,
+				sizeof(ivc_rx));
+		if (err)
+			return err;
+
+		if (ivc_rx.status) {
+			dev_err(se_dev->dev, "Error from Read IVC %d\n",
+				ivc_rx.status);
+			return ivc_rx.status;
+		}
+		ctx->aes_keyslot = ivc_rx.keyslot;
+		ctx->is_key_slot_allocated = true;
+	}
+
+	ctx->keylen = keylen;
+	err = tegra_hv_vse_aes_set_keyiv(se_dev, (u8 *)key, keylen,
+			ctx->aes_keyslot, AES_KEYTBL_TYPE_KEY);
+
+	return err;
+}
+
+static struct crypto_alg aes_algs[] = {
+	{
+		.cra_name = "cbc(aes)",
+		.cra_driver_name = "cbc-aes-tegra",
+		.cra_priority = 300,
+		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
+		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
+		.cra_ctxsize  = sizeof(struct tegra_virtual_se_aes_context),
+		.cra_alignmask = 0,
+		.cra_type = &crypto_ablkcipher_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_hv_vse_aes_cra_init,
+		.cra_exit = tegra_hv_vse_aes_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize = VIRTUAL_SE_AES_MIN_KEY_SIZE,
+			.max_keysize = VIRTUAL_SE_AES_MAX_KEY_SIZE,
+			.ivsize = VIRTUAL_SE_AES_IV_SIZE,
+			.setkey = tegra_hv_vse_aes_setkey,
+			.encrypt = tegra_hv_vse_aes_cbc_encrypt,
+			.decrypt = tegra_hv_vse_aes_cbc_decrypt,
+		}
+	}, {
+		.cra_name = "ecb(aes)",
+		.cra_driver_name = "ecb-aes-tegra",
+		.cra_priority = 300,
+		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
+		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
+		.cra_ctxsize  = sizeof(struct tegra_virtual_se_aes_context),
+		.cra_alignmask = 0,
+		.cra_type = &crypto_ablkcipher_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_hv_vse_aes_cra_init,
+		.cra_exit = tegra_hv_vse_aes_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize = VIRTUAL_SE_AES_MIN_KEY_SIZE,
+			.max_keysize = VIRTUAL_SE_AES_MAX_KEY_SIZE,
+			.ivsize = VIRTUAL_SE_AES_IV_SIZE,
+			.setkey = tegra_hv_vse_aes_setkey,
+			.encrypt = tegra_hv_vse_aes_ecb_encrypt,
+			.decrypt = tegra_hv_vse_aes_ecb_decrypt,
+		}
+	}
+};
+
 static struct ahash_alg sha_algs[] = {
 	{
 		.init =  tegra_hv_vse_sha_init,
@@ -924,6 +1418,29 @@ static int tegra_hv_vse_probe(struct platform_device *pdev)
 		tegra_hv_ivc_channel_reset(g_ivck);
 	}
 	g_virtual_se_dev[engine_id] = se_dev;
+
+	if (engine_id == VIRTUAL_SE_AES1) {
+		INIT_WORK(&se_dev->se_work, tegra_hv_vse_work_handler);
+		crypto_init_queue(&se_dev->queue,
+			TEGRA_HV_VSE_CRYPTO_QUEUE_LENGTH);
+		spin_lock_init(&se_dev->lock);
+		mutex_init(&se_dev->mtx);
+		se_dev->vse_work_q = alloc_workqueue("vse_work_q",
+					WQ_HIGHPRI | WQ_UNBOUND, 16);
+		if (!se_dev->vse_work_q) {
+			err = -ENOMEM;
+			dev_err(se_dev->dev, "alloc_workqueue failed\n");
+			goto exit;
+		}
+		for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
+			err = crypto_register_alg(&aes_algs[i]);
+			if (err) {
+				dev_err(&pdev->dev,
+					"aes alg register failed idx[%d]\n", i);
+				goto exit;
+			}
+		}
+	}
 
 	if (engine_id == VIRTUAL_SE_SHA) {
 		for (i = 0; i < ARRAY_SIZE(sha_algs); i++) {

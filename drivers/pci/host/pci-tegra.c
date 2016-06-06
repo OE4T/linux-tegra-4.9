@@ -2779,13 +2779,8 @@ static void tegra_pcie_enable_aspm(struct tegra_pcie *pcie)
 		ctrl = tegra_pcie_port_get_pex_ctrl(port);
 		/* AFI_PEX_STATUS is AFI_PEX_CTRL + 4 */
 		val = afi_readl(port->pcie, ctrl + 4);
-		if (val & 0x1) {
+		if (val & 0x1)
 			data |= PCIE_LINK_STATE_CLKPM;
-			/* disalbe PADS2PLLE control */
-			val = afi_readl(port->pcie, AFI_PLLE_CONTROL);
-			val &= ~AFI_PLLE_CONTROL_PADS2PLLE_CONTROL_EN;
-			afi_writel(port->pcie, val, AFI_PLLE_CONTROL);
-		}
 
 		/* Disable ASPM-l0s for blacklisted devices */
 		if (pci_match_id(aspm_l0s_blacklist, pdev))

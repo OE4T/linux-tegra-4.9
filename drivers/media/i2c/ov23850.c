@@ -993,10 +993,12 @@ static int ov23850_otp_setup(struct ov23850 *priv)
 	if (err)
 		return -ENODEV;
 
-	ov23850_read_otp_manual(priv,
+	err = ov23850_read_otp_manual(priv,
 				otp_buf,
 				OV23850_OTP_START_ADDR,
 				OV23850_OTP_END_ADDR);
+	if (err)
+		return -ENODEV;
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_OTP_DATA);
 	if (!ctrl) {
@@ -1028,10 +1030,12 @@ static int ov23850_fuse_id_setup(struct ov23850 *priv)
 	if (err)
 		return -ENODEV;
 
-	ov23850_read_otp_manual(priv,
+	err = ov23850_read_otp_manual(priv,
 				fuse_id,
 				OV23850_FUSE_ID_OTP_START_ADDR,
 				OV23850_FUSE_ID_OTP_END_ADDR);
+	if (err)
+		return -ENODEV;
 
 	ctrl = v4l2_ctrl_find(&priv->ctrl_handler, V4L2_CID_FUSE_ID);
 	if (!ctrl) {

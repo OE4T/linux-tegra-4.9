@@ -365,8 +365,8 @@ struct mm_gk20a {
 
 	struct mem_desc sysmem_flush;
 
-	u32 pramin_base;
-	spinlock_t pramin_base_lock;
+	u32 pramin_window;
+	spinlock_t pramin_window_lock;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 force_pramin; /* via debugfs */
 #else

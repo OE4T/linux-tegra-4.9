@@ -84,28 +84,31 @@ void gk20a_mem_end(struct gk20a *g, struct mem_desc *mem)
 	mem->cpu_va = NULL;
 }
 
-/* WARNING: returns pramin_base_lock taken, complement with pramin_exit() */
+/* WARNING: returns pramin_window_lock taken, complement with pramin_exit() */
 static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
 {
 	u64 bufbase = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
 	u64 addr = bufbase + w * sizeof(u32);
 	u32 hi = (u32)((addr & ~(u64)0xfffff)
 		>> bus_bar0_window_target_bar0_window_base_shift_v());
-	u32 lo = (addr & 0xfffff);
+	u32 lo = (u32)(addr & 0xfffff);
+	u32 win = (g->mm.vidmem_is_vidmem && mem->aperture == APERTURE_SYSMEM ?
+		  bus_bar0_window_target_sys_mem_noncoherent_f() :
+		 bus_bar0_window_target_vid_mem_f()) |
+		 bus_bar0_window_base_f(hi);
 
-	gk20a_dbg(gpu_dbg_mem, "0x%08x:%08x begin for %p", hi, lo, mem);
+	gk20a_dbg(gpu_dbg_mem,
+			"0x%08x:%08x begin for %p at [%llx,%llx] (sz %zu)",
+			hi, lo, mem, bufbase, bufbase + mem->size, mem->size);
 
 	WARN_ON(!bufbase);
-	spin_lock(&g->mm.pramin_base_lock);
-	if (g->mm.pramin_base != hi) {
-		gk20a_writel(g, bus_bar0_window_r(),
-				(g->mm.vidmem_is_vidmem
-				 && mem->aperture == APERTURE_SYSMEM ?
-				 bus_bar0_window_target_sys_mem_noncoherent_f() :
-				 bus_bar0_window_target_vid_mem_f()) |
-				bus_bar0_window_base_f(hi));
+
+	spin_lock(&g->mm.pramin_window_lock);
+
+	if (g->mm.pramin_window != win) {
+		gk20a_writel(g, bus_bar0_window_r(), win);
 		gk20a_readl(g, bus_bar0_window_r());
-		g->mm.pramin_base = hi;
+		g->mm.pramin_window = win;
 	}
 
 	return lo;
@@ -114,7 +117,8 @@ static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
 static void gk20a_pramin_exit(struct gk20a *g, struct mem_desc *mem)
 {
 	gk20a_dbg(gpu_dbg_mem, "end for %p", mem);
-	spin_unlock(&g->mm.pramin_base_lock);
+
+	spin_unlock(&g->mm.pramin_window_lock);
 }
 
 u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
@@ -174,7 +178,7 @@ void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
 	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
 		u32 addr = gk20a_pramin_enter(g, mem, w);
 		gk20a_writel(g, pram_data032_r(addr / sizeof(u32)), data);
-		/* read back to synchronize accesses*/
+		/* read back to synchronize accesses */
 		gk20a_readl(g, pram_data032_r(addr / sizeof(u32)));
 		gk20a_pramin_exit(g, mem);
 	} else {
@@ -604,8 +608,8 @@ static int gk20a_alloc_sysmem_flush(struct gk20a *g)
 
 static void gk20a_init_pramin(struct mm_gk20a *mm)
 {
-	mm->pramin_base = 0;
-	spin_lock_init(&mm->pramin_base_lock);
+	mm->pramin_window = 0;
+	spin_lock_init(&mm->pramin_window_lock);
 	mm->force_pramin = GK20A_FORCE_PRAMIN_DEFAULT;
 }
 

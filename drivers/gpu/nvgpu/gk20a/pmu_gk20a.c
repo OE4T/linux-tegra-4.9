@@ -1717,6 +1717,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	case APP_VERSION_GM20B:
 	case APP_VERSION_1:
 	case APP_VERSION_2:
+	case APP_VERSION_3:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =
 				pg_cmd_eng_buf_load_size_v0;
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type =

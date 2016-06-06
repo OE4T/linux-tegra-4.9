@@ -339,7 +339,7 @@ static int tegra_bpmp_thermal_probe(struct platform_device *pdev)
 		atomic_set(&tegra->zones[i].needs_update, false);
 
 		err = tegra_bpmp_thermal_get_temp(&tegra->zones[i], &temp);
-		if (err == -BPMP_EINVAL || err == -BPMP_ENOENT)
+		if (err < 0)
 			continue;
 
 		tzd = of_sensor_register(tegra->dev, i, &tegra->zones[i],

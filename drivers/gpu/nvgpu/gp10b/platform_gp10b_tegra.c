@@ -379,7 +379,6 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 
 	/* power management configuration */
 	.railgate_delay		= 500,
-	.clockgate_delay	= 50,
 
 	/* power management configuration */
 	.can_railgate           = true,

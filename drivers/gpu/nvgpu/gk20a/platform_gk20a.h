@@ -68,9 +68,6 @@ struct gk20a_platform {
 	/* Delay before rail gated */
 	int railgate_delay;
 
-	/* Delay before clock gated */
-	int clockgate_delay;
-
 	/* Second Level Clock Gating: true = enable false = disable */
 	bool enable_slcg;
 

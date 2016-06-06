@@ -1349,9 +1349,9 @@ int gk20a_pm_init(struct device *dev)
 	gk20a_dbg_fn("");
 
 	/* Initialise pm runtime */
-	if (platform->clockgate_delay) {
+	if (platform->railgate_delay) {
 		pm_runtime_set_autosuspend_delay(dev,
-						 platform->clockgate_delay);
+						 platform->railgate_delay);
 		pm_runtime_use_autosuspend(dev);
 	}
 

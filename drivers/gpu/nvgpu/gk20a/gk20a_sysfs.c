@@ -384,32 +384,6 @@ static ssize_t is_railgated_show(struct device *dev,
 }
 static DEVICE_ATTR(is_railgated, S_IRUGO, is_railgated_show, NULL);
 
-static ssize_t clockgate_delay_store(struct device *dev,
-				     struct device_attribute *attr,
-				     const char *buf, size_t count)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	int clockgate_delay = 0, ret = 0;
-
-	ret = sscanf(buf, "%d", &clockgate_delay);
-	if (ret == 1 && clockgate_delay >= 0) {
-		platform->clockgate_delay = clockgate_delay;
-		pm_runtime_set_autosuspend_delay(dev,
-						 platform->clockgate_delay);
-	} else
-		dev_err(dev, "Invalid clockgate delay\n");
-
-	return count;
-}
-static ssize_t clockgate_delay_show(struct device *dev,
-				    struct device_attribute *attr, char *buf)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	return snprintf(buf, PAGE_SIZE, "%d\n", platform->clockgate_delay);
-}
-static DEVICE_ATTR(clockgate_delay, ROOTRW, clockgate_delay_show,
-		   clockgate_delay_store);
-
 static ssize_t counters_show(struct device *dev,
 			     struct device_attribute *attr, char *buf)
 {
@@ -801,7 +775,6 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_load);
 	device_remove_file(dev, &dev_attr_railgate_delay);
 	device_remove_file(dev, &dev_attr_is_railgated);
-	device_remove_file(dev, &dev_attr_clockgate_delay);
 #ifdef CONFIG_PM
 	device_remove_file(dev, &dev_attr_force_idle);
 #if defined(CONFIG_PM_GENERIC_DOMAINS)
@@ -843,7 +816,6 @@ void gk20a_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_load);
 	error |= device_create_file(dev, &dev_attr_railgate_delay);
 	error |= device_create_file(dev, &dev_attr_is_railgated);
-	error |= device_create_file(dev, &dev_attr_clockgate_delay);
 #ifdef CONFIG_PM
 	error |= device_create_file(dev, &dev_attr_force_idle);
 #if defined(CONFIG_PM_GENERIC_DOMAINS)

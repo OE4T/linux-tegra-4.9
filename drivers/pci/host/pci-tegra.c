@@ -374,6 +374,8 @@
 
 #define INT_PCI_MSI_NR			(32 * 8)
 
+#define LINK_RETRAIN_TIMEOUT HZ
+
 #define DEBUG 0
 #if DEBUG || defined(CONFIG_PCI_DEBUG)
 #define PR_FUNC_LINE	pr_info("PCIE: %s(%d)\n", __func__, __LINE__)
@@ -2554,6 +2556,7 @@ static void tegra_pcie_change_link_speed(struct tegra_pcie *pcie,
 	u16 val, link_sts_up_spd, link_sts_dn_spd;
 	u16 link_cap_up_spd, link_cap_dn_spd;
 	u32 rp = 0;
+	unsigned long start_jiffies;
 	struct tegra_pcie_port *port = NULL;
 	struct pci_dev *up_dev, *dn_dev;
 
@@ -2622,6 +2625,19 @@ change:
 	pcie_capability_read_word(dn_dev, PCI_EXP_LNKCTL, &val);
 	val |= PCI_EXP_LNKCTL_RL;
 	pcie_capability_write_word(dn_dev, PCI_EXP_LNKCTL, val);
+
+	/* Wait for link training end. Break out after waiting for timeout */
+	start_jiffies = jiffies;
+	for (;;) {
+		pcie_capability_read_word(dn_dev, PCI_EXP_LNKSTA, &val);
+		if (!(val & PCI_EXP_LNKSTA_LT))
+			break;
+		if (time_after(jiffies, start_jiffies + LINK_RETRAIN_TIMEOUT))
+			break;
+		usleep_range(1000, 1100);
+	}
+	if (val & PCI_EXP_LNKSTA_LT)
+		dev_err(pcie->dev, "Link Re-training failed after speed change\n");
 
 skip:
 	return;

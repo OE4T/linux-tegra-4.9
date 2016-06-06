@@ -22,6 +22,7 @@
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
+#include <linux/rculist.h>
 
 #include <linux/tegra-hsp.h>
 

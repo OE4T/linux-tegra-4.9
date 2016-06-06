@@ -82,7 +82,7 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 {
 	DEFINE_DMA_ATTRS(attrs);
 	const struct dma_map_ops *ops = get_dma_ops(&pdev->dev);
-	int num_pages = DIV_ROUND_UP(mapping->size, SZ_4K);
+	int num_pages = DIV_ROUND_UP(mapping->size, PAGE_SIZE);
 	dma_addr_t base_iova = mapping->paddr;
 	int i, err;
 
@@ -90,7 +90,7 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 
 	/* allocate the area first */
 	base_iova = ops->iova_alloc_at(&pdev->dev, &mapping->paddr,
-				       num_pages * SZ_4K, &attrs);
+				       num_pages * PAGE_SIZE, &attrs);
 	err = dma_mapping_error(&pdev->dev, base_iova);
 	if (err) {
 		dev_warn(&pdev->dev, "failed to allocate space\n");
@@ -99,8 +99,8 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 
 	/* map each page of the buffer to this ctx dev */
 	for (i = 0; i < num_pages; i++) {
-		dma_addr_t iova = mapping->paddr + SZ_4K * i;
-		void *va = mapping->vaddr + SZ_4K * i;
+		dma_addr_t iova = mapping->paddr + PAGE_SIZE * i;
+		void *va = mapping->vaddr + PAGE_SIZE * i;
 		struct page *page;
 
 		/* hack: the memory may be allocated from vmalloc
@@ -111,7 +111,7 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 			vmalloc_to_page(va);
 
 		iova = ops->map_page_at(&pdev->dev, page, iova,
-			     (unsigned long)va & ~PAGE_MASK, SZ_4K,
+			     (unsigned long)va & ~PAGE_MASK, PAGE_SIZE,
 			     DMA_BIDIRECTIONAL, NULL);
 		err = dma_mapping_error(&pdev->dev, iova);
 		if (err) {

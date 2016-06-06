@@ -54,8 +54,12 @@
 
 #include "tegra_asoc_utils_alt.h"
 #include "tegra210_adsp_alt.h"
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+#include "tegra210_virt_alt_admaif.h"
+#include "tegra_virt_alt_ivc.h"
+#endif
 
-#define DRV_NAME "tegra210-adsp"
+#define DRV_NAME_ADSP "tegra210-adsp"
 
 /* Flag to enable/disable loading of ADSP firmware */
 #define ENABLE_ADSP 1
@@ -142,6 +146,10 @@ struct tegra210_adsp {
 		uint32_t fe_reg;
 		uint32_t be_reg;
 	} pcm_path[ADSP_FE_COUNT+1][2];
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+	struct nvaudio_ivc_ctxt *hivc_client;
+	uint32_t fe_to_admaif_map[ADSP_FE_END - ADSP_FE_START + 1][2];
+#endif
 };
 
 static const struct snd_pcm_hardware adsp_pcm_hardware = {
@@ -711,6 +719,10 @@ static int tegra210_adsp_send_data_request_msg(struct tegra210_adsp_app *app,
 static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 				struct tegra210_adsp_app *app)
 {
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+	struct device *dev = adsp->dev;
+	struct device_node *node = dev->of_node;
+#endif
 	int ret = 0;
 
 	/* If app is already open or it is APM output pin don't open app */
@@ -779,7 +791,13 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 		}
 		__set_bit(app->adma_chan, adsp->adma_usage);
 
-		app->adma_chan += TEGRA210_ADSP_ADMA_CHANNEL_START;
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+		if (of_device_is_compatible(node,
+				"nvidia,tegra210-adsp-audio-hv"))
+			app->adma_chan += TEGRA210_ADSP_ADMA_CHANNEL_START_HV;
+		else
+#endif
+			app->adma_chan += TEGRA210_ADSP_ADMA_CHANNEL_START;
 	}
 	return 0;
 
@@ -1602,13 +1620,190 @@ static int tegra210_adsp_pcm_hw_free(struct snd_pcm_substream *substream)
 	return 0;
 }
 
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+static uint32_t tegra_adsp_get_admaif_id(
+					struct tegra210_adsp *adsp,
+					uint32_t apm_out_in,
+					int stream)
+{
+	int i;
+	uint32_t src;
+	struct tegra210_adsp_app *app = NULL;
+	uint32_t ivc_msg_admaif_id = 0;
+
+	if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+		src = apm_out_in;
+		src = tegra210_adsp_get_source(adsp, src);
+		i = adsp->apps[src].reg;
+		ivc_msg_admaif_id =
+		adsp->fe_to_admaif_map[i-1][stream] - 1;
+		dev_vdbg(adsp->dev, "%s : playback fe %d admaif %d\n",
+				__func__, i, (ivc_msg_admaif_id + 1));
+	} else {
+		for (i = ADSP_FE_START; i <= ADSP_FE_END; i++) {
+			app = &adsp->apps[i];
+			src = app->reg;
+			while (!IS_APM_OUT(src) && src != 0) {
+				src = tegra210_adsp_get_source(
+							adsp, src);
+			}
+
+			if (src != apm_out_in)
+				continue;
+			ivc_msg_admaif_id =
+			adsp->fe_to_admaif_map[i-1][stream] - 1;
+			dev_vdbg(adsp->dev, "%s : capture fe %d admaif %d\n",
+					__func__, i, (ivc_msg_admaif_id + 1));
+			break;
+		}
+	}
+	return ivc_msg_admaif_id;
+}
+
+static int tegra_ivc_start_playback(
+					struct tegra210_adsp *adsp,
+					uint32_t ivc_msg_admaif_id)
+{
+	int err = 0;
+	struct nvaudio_ivc_msg  msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_START_PLAYBACK;
+	msg.params.dmaif_info.id = ivc_msg_admaif_id;
+	err = nvaudio_ivc_send(adsp->hivc_client,
+				&msg,
+				sizeof(struct nvaudio_ivc_msg));
+	return err;
+}
+
+static int tegra_ivc_start_capture(
+					struct tegra210_adsp *adsp,
+					uint32_t ivc_msg_admaif_id)
+{
+	int err = 0;
+	struct nvaudio_ivc_msg  msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_START_CAPTURE;
+	msg.params.dmaif_info.id = ivc_msg_admaif_id;
+	err = nvaudio_ivc_send(adsp->hivc_client,
+				&msg,
+				sizeof(struct nvaudio_ivc_msg));
+	return err;
+}
+
+static int tegra_ivc_stop_playback(
+					struct tegra210_adsp *adsp,
+					uint32_t ivc_msg_admaif_id)
+{
+	int err = 0;
+	struct nvaudio_ivc_msg  msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_STOP_PLAYBACK;
+	msg.params.dmaif_info.id = ivc_msg_admaif_id;
+	err = nvaudio_ivc_send(adsp->hivc_client,
+				&msg,
+				sizeof(struct nvaudio_ivc_msg));
+	return err;
+}
+
+static int tegra_ivc_stop_capture(
+					struct tegra210_adsp *adsp,
+					uint32_t ivc_msg_admaif_id)
+{
+	int err = 0;
+	struct nvaudio_ivc_msg  msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_STOP_CAPTURE;
+	msg.params.dmaif_info.id = ivc_msg_admaif_id;
+	err = nvaudio_ivc_send(adsp->hivc_client,
+				&msg,
+				sizeof(struct nvaudio_ivc_msg));
+	return err;
+}
+
+static uint32_t tegra210_adsp_hv_pcm_trigger(
+					struct tegra210_adsp *adsp,
+					uint32_t apm_out_in,
+					int stream,
+					int cmd)
+{
+	int ret = 0;
+	uint32_t ivc_msg_admaif_id = 0;
+
+	ivc_msg_admaif_id =
+	tegra_adsp_get_admaif_id(adsp,
+				apm_out_in,
+				stream);
+
+	switch (cmd) {
+	case SNDRV_PCM_TRIGGER_START:
+	case SNDRV_PCM_TRIGGER_RESUME:
+	case SNDRV_PCM_TRIGGER_PAUSE_RELEASE:
+		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+			ret = tegra_ivc_start_playback(adsp,
+					ivc_msg_admaif_id);
+		} else {
+			ret = tegra_ivc_start_capture(adsp,
+				ivc_msg_admaif_id);
+		}
+
+		if (ret < 0) {
+			pr_err("error on ivc_send\n");
+			return ret;
+		}
+		break;
+	case SNDRV_PCM_TRIGGER_STOP:
+	case SNDRV_PCM_TRIGGER_PAUSE_PUSH:
+	case SNDRV_PCM_TRIGGER_SUSPEND:
+		if (stream == SNDRV_PCM_STREAM_PLAYBACK) {
+			ret = tegra_ivc_stop_playback(adsp,
+					ivc_msg_admaif_id);
+		} else {
+			ret = tegra_ivc_stop_capture(adsp,
+					ivc_msg_admaif_id);
+		}
+
+		if (ret < 0) {
+			pr_err("error on ivc_send\n");
+			return ret;
+		}
+		break;
+	default:
+		pr_err("Unsupported state.");
+		return -EINVAL;
+	}
+	return ret;
+}
+#endif
+
 static int tegra210_adsp_pcm_trigger(struct snd_pcm_substream *substream,
 				     int cmd)
 {
 	struct tegra210_adsp_pcm_rtd *prtd = substream->runtime->private_data;
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+	struct tegra210_adsp *adsp = prtd->fe_apm->adsp;
+	struct device *dev = adsp->dev;
+	struct device_node *node = dev->of_node;
+#endif
 	int ret = 0;
 
 	dev_vdbg(prtd->dev, "%s : state %d", __func__, cmd);
+
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
+		ret = tegra210_adsp_hv_pcm_trigger(adsp,
+					prtd->fe_apm->reg,
+					substream->stream,
+					cmd);
+		if (ret < 0) {
+			pr_err("error on ivc_send\n");
+			return ret;
+		}
+	}
+#endif
 
 	switch (cmd) {
 	case SNDRV_PCM_TRIGGER_START:
@@ -1759,12 +1954,168 @@ static void tegra210_adsp_pcm_free(struct snd_pcm *pcm)
 	}
 }
 
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+static void tegra_adsp_set_admaif_id(
+				struct tegra210_adsp *adsp,
+				uint32_t admaif_id,
+				uint32_t be_reg,
+				int s_stream)
+{
+	int i, stream;
+	uint32_t src;
+	struct tegra210_adsp_app *app = NULL;
+
+	if (s_stream == SNDRV_PCM_STREAM_CAPTURE) {
+		app = &adsp->apps[be_reg];
+		src = app->reg;
+		while (!IS_ADSP_FE(src))
+			src = tegra210_adsp_get_source(adsp, src);
+		i = adsp->apps[src].reg;
+		stream = SNDRV_PCM_STREAM_PLAYBACK;
+		adsp->fe_to_admaif_map[i-1][stream] = admaif_id;
+		dev_vdbg(adsp->dev, "%s : capture fe %d admaif %d\n",
+				__func__, i, admaif_id);
+	} else {
+		for (i = ADSP_FE_START; i <= ADSP_FE_END; i++) {
+			app = &adsp->apps[i];
+			src = app->reg;
+			while (!IS_ADSP_ADMAIF(src) && src != 0) {
+				src = tegra210_adsp_get_source(
+							 adsp, src);
+			}
+			if (src != be_reg)
+				continue;
+			stream = SNDRV_PCM_STREAM_CAPTURE;
+			adsp->fe_to_admaif_map[i-1][stream] = admaif_id;
+			dev_vdbg(adsp->dev, "%s : capture fe %d admaif %d\n",
+					__func__, i, admaif_id);
+		}
+	}
+}
+
+static int tegra_adsp_admaif_ivc_set_cif(struct tegra210_adsp *adsp,
+				struct snd_pcm_hw_params *params,
+				uint32_t admaif_id,
+				int stream)
+{
+	int ret;
+	uint32_t ivc_msg_admaif_id;
+	struct tegra210_virt_audio_cif cif_setting;
+	struct tegra210_virt_audio_cif *cif_conf = NULL;
+	struct nvaudio_ivc_msg  msg;
+	unsigned int value;
+
+	adsp->hivc_client =
+			nvaudio_ivc_alloc_ctxt(adsp->dev);
+
+	if (!adsp->hivc_client) {
+		dev_err(adsp->dev, "Failed to allocate IVC context\n");
+		ret = -ENODEV;
+		return ret;
+	}
+	cif_conf = &cif_setting;
+
+	ivc_msg_admaif_id = admaif_id - 1;
+
+	memset(cif_conf, 0, sizeof(struct tegra210_virt_audio_cif));
+	cif_conf->audio_channels = params_channels(params);
+	cif_conf->client_channels = params_channels(params);
+
+	switch (params_format(params)) {
+	case SNDRV_PCM_FORMAT_S8:
+		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_8;
+		break;
+	case SNDRV_PCM_FORMAT_S16_LE:
+		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_16;
+		break;
+	case SNDRV_PCM_FORMAT_S24_LE:
+		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_24;
+		break;
+	case SNDRV_PCM_FORMAT_S32_LE:
+		cif_conf->client_bits = TEGRA210_AUDIOCIF_BITS_32;
+		break;
+	default:
+		dev_err(adsp->dev, "Wrong format!\n");
+		return -EINVAL;
+	}
+
+
+	cif_conf->audio_bits = TEGRA210_AUDIOCIF_BITS_32;
+	cif_conf->direction = stream;
+
+	value = (cif_conf->threshold <<
+			TEGRA210_AUDIOCIF_CTRL_FIFO_THRESHOLD_SHIFT) |
+		((cif_conf->audio_channels - 1) <<
+			TEGRA210_AUDIOCIF_CTRL_AUDIO_CHANNELS_SHIFT) |
+		((cif_conf->client_channels - 1) <<
+			TEGRA210_AUDIOCIF_CTRL_CLIENT_CHANNELS_SHIFT) |
+		(cif_conf->audio_bits <<
+			TEGRA210_AUDIOCIF_CTRL_AUDIO_BITS_SHIFT) |
+		(cif_conf->client_bits <<
+			TEGRA210_AUDIOCIF_CTRL_CLIENT_BITS_SHIFT) |
+		(cif_conf->expand <<
+			TEGRA210_AUDIOCIF_CTRL_EXPAND_SHIFT) |
+		(cif_conf->stereo_conv <<
+			TEGRA210_AUDIOCIF_CTRL_STEREO_CONV_SHIFT) |
+		(cif_conf->replicate <<
+			TEGRA210_AUDIOCIF_CTRL_REPLICATE_SHIFT) |
+		(cif_conf->truncate <<
+			TEGRA210_AUDIOCIF_CTRL_TRUNCATE_SHIFT) |
+		(cif_conf->mono_conv <<
+			TEGRA210_AUDIOCIF_CTRL_MONO_CONV_SHIFT);
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.params.dmaif_info.id        = ivc_msg_admaif_id;
+	msg.params.dmaif_info.value     = value;
+	if (cif_conf->direction)
+		msg.cmd = NVAUDIO_DMAIF_SET_TXCIF;
+	else
+		msg.cmd = NVAUDIO_DMAIF_SET_RXCIF;
+
+	ret = nvaudio_ivc_send(adsp->hivc_client,
+				&msg,
+				sizeof(struct nvaudio_ivc_msg));
+
+	if (ret < 0)
+		pr_err("error on ivc_send\n");
+	return ret;
+}
+
+static int tegra210_adsp_admaif_hv_hw_params(
+				struct tegra210_adsp *adsp,
+				struct snd_pcm_hw_params *params,
+				uint32_t admaif_id,
+				uint32_t be_reg,
+				int stream)
+{
+	int ret = 0;
+
+	ret = tegra_adsp_admaif_ivc_set_cif(adsp,
+				params,
+				admaif_id,
+				stream);
+	if (ret < 0) {
+		pr_err("error on ivc_send\n");
+		return ret;
+	}
+	tegra_adsp_set_admaif_id(adsp,
+			admaif_id,
+			be_reg,
+			stream);
+	return ret;
+}
+#endif
+
 /* ADSP-ADMAIF codec driver HW-params. Used for configuring ADMA */
 static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 				 struct snd_pcm_hw_params *params,
 				 struct snd_soc_dai *dai)
 {
 	struct tegra210_adsp *adsp = snd_soc_dai_get_drvdata(dai);
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+	struct device *dev = adsp->dev;
+	struct device_node *node = dev->of_node;
+#endif
 	struct tegra210_adsp_app *app;
 	nvfx_adma_init_params_t adma_params;
 	uint32_t be_reg = dai->id;
@@ -1777,6 +2128,24 @@ static int tegra210_adsp_admaif_hw_params(struct snd_pcm_substream *substream,
 
 	if (!adsp->adsp_started)
 		return -EINVAL;
+#ifdef CONFIG_SND_SOC_TEGRA_VIRT_T210REF_PCM
+	if (of_device_is_compatible(node, "nvidia,tegra210-adsp-audio-hv")) {
+
+		/*Start of sending IVC command for admaif cif settings*/
+		ret = tegra210_adsp_admaif_hv_hw_params(adsp,
+				params,
+				admaif_id,
+				be_reg,
+				substream->stream);
+		if (ret < 0) {
+			pr_err("error on ivc_send\n");
+			return ret;
+		}
+		/*End of sending IVC command for admaif cif setting*/
+
+	}
+#endif
+
 
 	adma_params.mode = ADMA_MODE_CONTINUOUS;
 	adma_params.ahub_channel = admaif_id;
@@ -3335,6 +3704,7 @@ static u64 tegra_dma_mask = DMA_BIT_MASK(32);
 
 static const struct of_device_id tegra210_adsp_audio_of_match[] = {
 	{ .compatible = "nvidia,tegra210-adsp-audio", },
+	{ .compatible = "nvidia,tegra210-adsp-audio-hv", },
 	{},
 };
 
@@ -3624,7 +3994,7 @@ static const struct dev_pm_ops tegra210_adsp_pm_ops = {
 
 static struct platform_driver tegra210_adsp_audio_driver = {
 	.driver = {
-		.name = DRV_NAME,
+		.name = DRV_NAME_ADSP,
 		.owner = THIS_MODULE,
 		.of_match_table = tegra210_adsp_audio_of_match,
 		.pm = &tegra210_adsp_pm_ops,
@@ -3639,6 +4009,6 @@ module_platform_driver(tegra210_adsp_audio_driver);
 MODULE_AUTHOR("Sumit Bhattacharya <sumitb@nvidia.com>");
 MODULE_DESCRIPTION("Tegra210 ADSP Audio driver");
 MODULE_LICENSE("GPL");
-MODULE_ALIAS("platform:" DRV_NAME);
+MODULE_ALIAS("platform:" DRV_NAME_ADSP);
 MODULE_DEVICE_TABLE(of, tegra210_adsp_audio_of_match);
 

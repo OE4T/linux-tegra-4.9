@@ -11139,10 +11139,9 @@ int dhd_net_wifi_platform_set_power(struct net_device *dev, bool on, unsigned lo
 {
 	dhd_info_t *dhd = DHD_DEV_INFO(dev);
 #if IS_BUILTIN(CONFIG_PCI_TEGRA)
-	if (on) {
-		dhdpcie_port_toggle(&dhd->pub, on);
+	dhdpcie_port_toggle(&dhd->pub, on);
+	if (on)
 		tegra_pcie_prepare_l2_exit(&dhd->pub);
-	}
 #endif
 	return wifi_platform_set_power(dhd->adapter, on, delay_msec);
 }

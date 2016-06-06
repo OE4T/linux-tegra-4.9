@@ -30,7 +30,9 @@
 
 #include "t194.h"
 #include "host1x/host1x.h"
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 #include "tsec/tsec.h"
+#endif
 #include "flcn/flcn.h"
 #include "nvdec/nvdec.h"
 #if defined(CONFIG_TEGRA_GRHOST_PVA)
@@ -65,6 +67,7 @@ static inline u32 flcn_thi_sec_ch_lock(void)
 	return (1 << 8);
 }
 
+#if defined(CONFIG_TEGRA_GRHOST_TSEC)
 static int nvhost_tsec_t194_finalize_poweron(struct platform_device *dev)
 {
 	/* Disable access to non-THI registers through channel */
@@ -72,6 +75,7 @@ static int nvhost_tsec_t194_finalize_poweron(struct platform_device *dev)
 
 	return nvhost_tsec_finalize_poweron(dev);
 }
+#endif
 
 static int nvhost_flcn_t194_finalize_poweron(struct platform_device *dev)
 {

@@ -1305,6 +1305,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 	pmu->remove_support = gk20a_remove_pmu_support;
 
 	switch (pmu->desc->app_version) {
+	case APP_VERSION_NC_2:
 	case APP_VERSION_NC_1:
 	case APP_VERSION_NC_0:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =

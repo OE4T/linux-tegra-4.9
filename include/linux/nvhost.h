@@ -356,6 +356,9 @@ struct nvhost_device_data {
 
 	/* bandwidth manager handle */
 	struct tegra_bwmgr_client *bwmgr_handle;
+
+	/* number of frames mlock can be locked for */
+	u32 mlock_timeout_factor;
 };
 
 

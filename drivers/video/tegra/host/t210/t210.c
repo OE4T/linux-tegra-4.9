@@ -142,7 +142,7 @@ struct nvhost_device_data t21_vi_info = {
 	.can_powergate		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
-		{"vi", UINT_MAX},
+		{"vi_bypass", UINT_MAX},
 		{"csi", 0},
 		{"cilab", 102000000},
 		{"cilcd", 102000000},

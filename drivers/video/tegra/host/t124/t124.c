@@ -224,7 +224,7 @@ struct nvhost_device_data t124_vi_info = {
 	.clockgate_delay  = VI_CLOCKGATE_DELAY,
 	.powergate_delay  = VI_POWERGATE_DELAY,
 	.clocks           = {
-		{"vi", UINT_MAX, 0},
+		{"vi_bypass", UINT_MAX, 0},
 		{"csi", 0},
 		{"cilab", 102000000},
 		{"cilcd", 102000000},

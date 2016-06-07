@@ -1,2 +1,0 @@
-source "../nvhost-t18x/drivers/video/tegra/host/Kconfig"
-source "../nvhost-t19x/drivers/video/tegra/host/Kconfig"

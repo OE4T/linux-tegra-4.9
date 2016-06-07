@@ -574,7 +574,6 @@ struct tegra_xusb_fuse_calibration {
 	u32 hs_squelch;
 	u32 hs_term_range_adj;
 	u32 rpd_ctrl;
-	int hs_curr_level_offset; /* deal with platform design deviation */
 };
 
 struct tegra_fuse_calibration {
@@ -601,6 +600,7 @@ struct tegra_pcie_controller {
 
 struct tegra_xusb_utmi_port {
 	enum xusb_port_cap port_cap;
+	int hs_curr_level_offset; /* deal with platform design deviation */
 };
 
 struct tegra_xusb_hsic_port {
@@ -2043,6 +2043,7 @@ enum tegra_xusb_padctl_param {
 	TEGRA_PADCTL_UPHY_PORT_CAP,
 	TEGRA_PADCTL_UPHY_PCIE_CONTROLLER_NUM,
 	TEGRA_PADCTL_UPHY_HSIC_PRETEND_CONNECTED,
+	TEGRA_PADCTL_UPHY_UTMI_HS_CURR_LEVEL_OFFSET,
 };
 
 static const struct tegra_padctl_uphy_property {
@@ -2053,9 +2054,11 @@ static const struct tegra_padctl_uphy_property {
 	{"nvidia,port-cap", TEGRA_PADCTL_UPHY_PORT_CAP},
 	{"nvidia,pcie-controller", TEGRA_PADCTL_UPHY_PCIE_CONTROLLER_NUM},
 	{"nvidia,pretend-connected", TEGRA_PADCTL_UPHY_HSIC_PRETEND_CONNECTED},
+	{"nvidia,hs_curr_level_offset",
+				TEGRA_PADCTL_UPHY_UTMI_HS_CURR_LEVEL_OFFSET},
 };
 
-#define TEGRA_XUSB_PADCTL_PACK(param, value) ((param) << 16 | (value))
+#define TEGRA_XUSB_PADCTL_PACK(param, value) ((param) << 16 | (value & 0xffff))
 #define TEGRA_XUSB_PADCTL_UNPACK_PARAM(config) ((config) >> 16)
 #define TEGRA_XUSB_PADCTL_UNPACK_VALUE(config) ((config) & 0xffff)
 
@@ -2422,6 +2425,24 @@ static int tegra_padctl_uphy_pinconf_group_set(struct pinctrl_dev *pinctrl,
 
 			break;
 
+		case TEGRA_PADCTL_UPHY_UTMI_HS_CURR_LEVEL_OFFSET:
+			if (lane_is_otg(group)) {
+				int port = group - PIN_OTG_0;
+				s16 o =
+				     TEGRA_XUSB_PADCTL_UNPACK_VALUE(configs[i]);
+
+				uphy->utmi_ports[port].hs_curr_level_offset = o;
+
+				TRACE(dev,
+				      "UTMI port %d hs_curr_level_offset %d",
+				      port, o);
+			} else {
+				dev_err(dev, "hs_curr_level_offset is not applicable for pin %d\n",
+					group);
+				return -EINVAL;
+			}
+
+			break;
 		case TEGRA_PADCTL_UPHY_PCIE_CONTROLLER_NUM:
 			if (value >= TEGRA_PCIE_PHYS) {
 				dev_err(dev, "Invalid PCIE controller: %lu\n",
@@ -3817,14 +3838,14 @@ static int tegra186_utmi_phy_power_on(struct phy *phy)
 	reg &= ~USB2_OTG_PD_ZI;
 	reg |= TERM_SEL;
 	reg &= ~HS_CURR_LEVEL(~0);
-	if (uphy->calib.hs_curr_level_offset) {
+	if (uphy->utmi_ports[port].hs_curr_level_offset) {
 		int hs_current_level;
 
 		dev_dbg(uphy->dev, "UTMI port %d apply hs_curr_level_offset %d\n",
-			port, uphy->calib.hs_curr_level_offset);
+			port, uphy->utmi_ports[port].hs_curr_level_offset);
 
 		hs_current_level = (int) uphy->calib.hs_curr_level[port] +
-			uphy->calib.hs_curr_level_offset;
+			uphy->utmi_ports[port].hs_curr_level_offset;
 
 		if (hs_current_level < 0)
 			hs_current_level = 0;
@@ -4691,11 +4712,8 @@ MODULE_DEVICE_TABLE(of, tegra_padctl_uphy_of_match);
 
 static int tegra_xusb_read_fuse_calibration(struct tegra_padctl_uphy *uphy)
 {
-	struct platform_device *pdev = to_platform_device(uphy->dev);
-	struct device_node *np = pdev->dev.of_node;
 	unsigned int i;
 	u32 reg;
-	s32 v;
 
 	reg = tegra_fuse_readl(FUSE_SKU_USB_CALIB_0);
 	dev_info(uphy->dev, "FUSE_SKU_USB_CALIB_0 0x%x\n", reg);
@@ -4711,11 +4729,6 @@ static int tegra_xusb_read_fuse_calibration(struct tegra_padctl_uphy *uphy)
 	reg = tegra_fuse_readl(FUSE_USB_CALIB_EXT_0);
 	dev_info(uphy->dev, "FUSE_USB_CALIB_EXT_0 0x%x\n", reg);
 	uphy->calib.rpd_ctrl = (reg >> RPD_CTRL_SHIFT) & RPD_CTRL_MASK;
-
-	if (of_property_read_s32(np, "nvidia,hs_curr_level_offset", &v) == 0) {
-		dev_dbg(uphy->dev, "HS current level offset %d\n", v);
-		uphy->calib.hs_curr_level_offset = v;
-	}
 
 	return 0;
 }

@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/module.h>
 #include <sound/soc.h>
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
@@ -2027,3 +2028,5 @@ err:
 	return -EINVAL;
 }
 EXPORT_SYMBOL_GPL(tegra_machine_get_tx_mask_t18x);
+
+MODULE_LICENSE("GPL v2");

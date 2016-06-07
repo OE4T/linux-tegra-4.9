@@ -21,7 +21,7 @@
 
 #define VERBOSE_DEBUG
 #define DEBUG
-
+#include <linux/module.h>
 #include <asm/types.h>
 #include <linux/io.h>
 #include <linux/printk.h>
@@ -98,3 +98,4 @@ void program_dspk_clk(int dspk_clk)
 	#endif
 }
 EXPORT_SYMBOL(program_dspk_clk);
+MODULE_LICENSE("GPL");

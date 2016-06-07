@@ -276,8 +276,6 @@ int inv_init_6050(struct nvi_state *st)
 	short index;
 	struct inv_chip_info_s *chip_info = &st->chip_info;
 
-	st->snsr[DEV_ACC].matrix = true;
-	st->snsr[DEV_GYR].matrix = true;
 	if (st->snsr[DEV_ACC].cfg.thresh_hi > 0)
 		st->en_msk |= (1 << EN_LP);
 	else
@@ -345,8 +343,6 @@ int inv_init_6050(struct nvi_state *st)
 
 static int nvi_init_6500(struct nvi_state *st)
 {
-	st->snsr[DEV_ACC].matrix = true;
-	st->snsr[DEV_GYR].matrix = true;
 	if (st->snsr[DEV_ACC].cfg.thresh_hi > 0)
 		st->en_msk |= (1 << EN_LP);
 	else

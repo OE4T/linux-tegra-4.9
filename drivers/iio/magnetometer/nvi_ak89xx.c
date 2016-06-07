@@ -1466,6 +1466,7 @@ static int akm_id_dev(struct akm_state *st, const char *name)
 				nmp.addr = st->i2c_addr;
 				nmp.reg = st->hal->reg_mode;
 				nmp.ctrl = 1;
+				nmp.dmp_ctrl = nmp.ctrl;
 				nmp.data_out = AKM_MODE_SINGLE;
 				nmp.delay_ms = AKM_HW_DELAY_TSM_MS;
 				nmp.delay_us = 0;

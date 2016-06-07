@@ -2519,18 +2519,25 @@ static unsigned int gk20a_event_id_poll(struct file *filep, poll_table *wait)
 	if (event_id_data->is_tsg) {
 		struct tsg_gk20a *tsg = g->fifo.tsg + event_id_data->id;
 
-		gk20a_dbg_info(
-			"found pending event_id=%d on TSG=%d\n",
-			event_id, tsg->tsgid);
+		if (event_id_data->event_posted) {
+			gk20a_dbg_info(
+				"found pending event_id=%d on TSG=%d\n",
+				event_id, tsg->tsgid);
+			mask = (POLLPRI | POLLIN);
+			event_id_data->event_posted = false;
+		}
 	} else {
 		struct channel_gk20a *ch = g->fifo.channel
 					   + event_id_data->id;
 
-		gk20a_dbg_info(
-			"found pending event_id=%d on chid=%d\n",
-			event_id, ch->hw_chid);
+		if (event_id_data->event_posted) {
+			gk20a_dbg_info(
+				"found pending event_id=%d on chid=%d\n",
+				event_id, ch->hw_chid);
+			mask = (POLLPRI | POLLIN);
+			event_id_data->event_posted = false;
+		}
 	}
-	mask = (POLLPRI | POLLIN);
 
 	mutex_unlock(&event_id_data->lock);
 
@@ -2609,6 +2616,7 @@ void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 	gk20a_dbg_info(
 		"posting event for event_id=%d on ch=%d\n",
 		event_id, ch->hw_chid);
+	event_id_data->event_posted = true;
 
 	wake_up_interruptible_all(&event_id_data->event_id_wq);
 

@@ -231,6 +231,7 @@ void gk20a_tsg_event_id_post_event(struct tsg_gk20a *tsg,
 	gk20a_dbg_info(
 		"posting event for event_id=%d on tsg=%d\n",
 		event_id, tsg->tsgid);
+	event_id_data->event_posted = true;
 
 	wake_up_interruptible_all(&event_id_data->event_id_wq);
 

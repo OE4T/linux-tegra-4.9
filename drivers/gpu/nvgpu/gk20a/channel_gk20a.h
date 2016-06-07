@@ -84,6 +84,8 @@ struct gk20a_event_id_data {
 	bool is_tsg;
 	u32 event_id;
 
+	bool event_posted;
+
 	wait_queue_head_t event_id_wq;
 	struct mutex lock;
 	struct list_head event_id_node;

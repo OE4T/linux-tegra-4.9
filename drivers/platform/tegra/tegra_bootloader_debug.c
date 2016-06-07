@@ -75,6 +75,7 @@ static int profiler_show(struct seq_file *s, void *unused)
 	struct profiler_record *profiler_data;
 	int count = 0;
 	int i = 0;
+	int prof_data_section_valid = 0;
 
 	if (!tegra_bl_mapped_prof_start || !tegra_bl_prof_size) {
 		seq_puts(s, "Error mapping profiling data\n");
@@ -86,14 +87,20 @@ static int profiler_show(struct seq_file *s, void *unused)
 	i = -1;
 	while (count--) {
 		i++;
-		if (!profiler_data[i].timestamp)
+		if (!profiler_data[i].timestamp) {
+			if (prof_data_section_valid) {
+				seq_puts(s, "\n");
+				prof_data_section_valid = 0;
+			}
 			continue;
+		}
 		seq_printf(s, "%-54s\t%16lld", profiler_data[i].str, profiler_data[i].timestamp);
 		if (i > 0 && profiler_data[i - 1].timestamp) {
 			seq_printf(s, "\t%16lld",
 				profiler_data[i].timestamp - profiler_data[i - 1].timestamp);
 		}
 		seq_puts(s, "\n");
+		prof_data_section_valid = 1;
 	}
 
 	return 0;

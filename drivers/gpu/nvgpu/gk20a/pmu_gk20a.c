@@ -2877,10 +2877,8 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 
-	if (g->pmu_fw) {
-		gk20a_init_pmu(pmu);
-		return 0;
-	}
+	if (g->pmu_fw)
+		return gk20a_init_pmu(pmu);
 
 	g->pmu_fw = gk20a_request_firmware(g, GK20A_PMU_UCODE_IMAGE);
 	if (!g->pmu_fw) {
@@ -2901,9 +2899,7 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	gk20a_mem_wr_n(g, &pmu->ucode, 0, pmu->ucode_image,
 			pmu->desc->app_start_offset + pmu->desc->app_size);
 
-	gk20a_init_pmu(pmu);
-
-	return 0;
+	return gk20a_init_pmu(pmu);
 
  err_release_fw:
 	release_firmware(g->pmu_fw);

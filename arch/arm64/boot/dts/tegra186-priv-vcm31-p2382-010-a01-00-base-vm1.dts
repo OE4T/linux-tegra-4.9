@@ -141,7 +141,10 @@
 	i2c@c240000 {
 		compatible = "nvidia,tegra186-i2c-hv";
 		ivc_queue = <&tegra_hv 53>;
-	};
+                ublox@42 {
+                        status = "okay";
+                };
+        };
 
 	i2c@c250000 {
 		compatible = "nvidia,tegra186-i2c-hv";

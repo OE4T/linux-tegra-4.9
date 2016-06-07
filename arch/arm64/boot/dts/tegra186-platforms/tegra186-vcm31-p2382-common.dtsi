@@ -157,6 +157,11 @@
 			reg = <0x18>;
 			accelerometer_matrix = [ff 00 00 00 ff 00 00 00 01];
 		};
+		ublox_42: ublox@42 {
+			compatible = "ublox,ublox_gps";
+			reg = <0x42>;
+			status = "disabled";
+		};
 	};
 
 	i2c@3180000 { /* Tegra I2C3 - VCM I2CD */

@@ -197,6 +197,7 @@ struct tegra_spi_data {
 	void __iomem				*base;
 	phys_addr_t				phys;
 	unsigned				irq;
+	bool					clock_always_on;
 	u32					cur_speed;
 
 	struct spi_device			*cur_spi;
@@ -1217,6 +1218,14 @@ static irqreturn_t tegra_spi_isr(int irq, void *context_data)
 	return IRQ_WAKE_THREAD;
 }
 
+static void tegra_spi_parse_dt(struct tegra_spi_data *tspi)
+{
+	struct device_node *np = tspi->dev->of_node;
+
+	if (of_find_property(np, "nvidia,clock-always-on", NULL))
+		tspi->clock_always_on = true;
+}
+
 static struct tegra_spi_chip_data tegra114_spi_chip_data = {
 	.intr_mask_reg = false,
 	.set_rx_tap_delay = false,
@@ -1296,6 +1305,8 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		goto exit_free_master;
 	}
 
+	tegra_spi_parse_dt(tspi);
+
 	r = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	tspi->base = devm_ioremap_resource(&pdev->dev, r);
 	if (IS_ERR(tspi->base)) {
@@ -1335,6 +1346,14 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	init_completion(&tspi->rx_dma_complete);
 
 	init_completion(&tspi->xfer_completion);
+
+	if (tspi->clock_always_on) {
+		ret = clk_prepare_enable(tspi->clk);
+		if (ret < 0) {
+			dev_err(tspi->dev, "clk_prepare failed: %d\n", ret);
+			goto exit_tx_dma_free;
+		}
+	}
 
 	pm_runtime_enable(&pdev->dev);
 	if (!pm_runtime_enabled(&pdev->dev)) {
@@ -1381,6 +1400,9 @@ exit_pm_disable:
 	pm_runtime_disable(&pdev->dev);
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_spi_runtime_suspend(&pdev->dev);
+	if (tspi->clock_always_on)
+		clk_disable_unprepare(tspi->clk);
+exit_tx_dma_free:
 	tegra_spi_deinit_dma_param(tspi, false);
 exit_rx_dma_free:
 	tegra_spi_deinit_dma_param(tspi, true);
@@ -1406,6 +1428,9 @@ static int tegra_spi_remove(struct platform_device *pdev)
 	if (!pm_runtime_status_suspended(&pdev->dev))
 		tegra_spi_runtime_suspend(&pdev->dev);
 
+	if (tspi->clock_always_on)
+		clk_disable_unprepare(tspi->clk);
+
 	return 0;
 }
 
@@ -1413,8 +1438,15 @@ static int tegra_spi_remove(struct platform_device *pdev)
 static int tegra_spi_suspend(struct device *dev)
 {
 	struct spi_master *master = dev_get_drvdata(dev);
+	struct tegra_spi_data *tspi = spi_master_get_devdata(master);
+	int ret;
 
-	return spi_master_suspend(master);
+	ret = spi_master_suspend(master);
+
+	if (tspi->clock_always_on)
+		clk_disable_unprepare(tspi->clk);
+
+	return ret;
 }
 
 static int tegra_spi_resume(struct device *dev)
@@ -1422,6 +1454,14 @@ static int tegra_spi_resume(struct device *dev)
 	struct spi_master *master = dev_get_drvdata(dev);
 	struct tegra_spi_data *tspi = spi_master_get_devdata(master);
 	int ret;
+
+	if (tspi->clock_always_on) {
+		ret = clk_prepare_enable(tspi->clk);
+		if (ret < 0) {
+			dev_err(tspi->dev, "clk_prepare failed: %d\n", ret);
+			return ret;
+		}
+	}
 
 	ret = pm_runtime_get_sync(dev);
 	if (ret < 0) {
@@ -1446,7 +1486,8 @@ static int tegra_spi_runtime_suspend(struct device *dev)
 	/* Flush all write which are in PPSB queue by reading back */
 	tegra_spi_readl(tspi, SPI_COMMAND1);
 
-	clk_disable_unprepare(tspi->clk);
+	if (!tspi->clock_always_on)
+		clk_disable_unprepare(tspi->clk);
 	return 0;
 }
 
@@ -1456,10 +1497,12 @@ static int tegra_spi_runtime_resume(struct device *dev)
 	struct tegra_spi_data *tspi = spi_master_get_devdata(master);
 	int ret;
 
-	ret = clk_prepare_enable(tspi->clk);
-	if (ret < 0) {
-		dev_err(tspi->dev, "clk_prepare failed: %d\n", ret);
-		return ret;
+	if (!tspi->clock_always_on) {
+		ret = clk_prepare_enable(tspi->clk);
+		if (ret < 0) {
+			dev_err(tspi->dev, "clk_prepare failed: %d\n", ret);
+			return ret;
+		}
 	}
 	return 0;
 }

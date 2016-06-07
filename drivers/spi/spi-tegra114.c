@@ -169,9 +169,18 @@
 #define RX_FIFO_FULL_COUNT_ZERO			SPI_RX_FIFO_FULL_COUNT(0)
 #define MAX_HOLD_CYCLES				16
 #define SPI_DEFAULT_SPEED			25000000
+#define SPI_SPEED_TAP_DELAY_MARGIN		35000000
+#define SPI_DEFAULT_RX_TAP_DELAY		10
+#define SPI_DEFAULT_TX_TAP_DELAY		0
 
 struct tegra_spi_chip_data {
 	bool intr_mask_reg;
+	bool set_rx_tap_delay;
+};
+
+struct tegra_spi_client_ctl_data {
+	int rx_clk_tap_delay;
+	int tx_clk_tap_delay;
 };
 
 struct tegra_spi_data {
@@ -212,6 +221,8 @@ struct tegra_spi_data {
 	u32					command1_reg;
 	u32					dma_control_reg;
 	u32					def_command1_reg;
+	u32					def_command2_reg;
+	u8					last_used_cs;
 
 	struct completion			xfer_completion;
 	struct spi_transfer			*curr_xfer;
@@ -709,6 +720,37 @@ static void tegra_spi_deinit_dma_param(struct tegra_spi_data *tspi,
 	dma_release_channel(dma_chan);
 }
 
+static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
+{
+	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
+	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
+	u32 command2_reg = 0;
+	u32 tx_tap = 0;
+	u32 rx_tap = 0;
+
+	/* Avoid write to register for transfers to last used device */
+	if (tspi->last_used_cs == spi->chip_select)
+		return;
+
+	if (cdata && cdata->rx_clk_tap_delay)
+		rx_tap = cdata->rx_clk_tap_delay;
+	else if (speed > SPI_SPEED_TAP_DELAY_MARGIN)
+		rx_tap = SPI_DEFAULT_RX_TAP_DELAY;
+
+	if (cdata && cdata->tx_clk_tap_delay)
+		tx_tap = cdata->tx_clk_tap_delay;
+	else
+		tx_tap = SPI_DEFAULT_TX_TAP_DELAY;
+
+	command2_reg = SPI_TX_TAP_DELAY(tx_tap) |
+		       SPI_RX_TAP_DELAY(rx_tap);
+
+	if (tspi->chip_data->set_rx_tap_delay)
+		if (command2_reg != tspi->def_command2_reg)
+			tegra_spi_writel(tspi, command2_reg, SPI_COMMAND2);
+	tspi->last_used_cs = spi->chip_select;
+}
+
 static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 		struct spi_transfer *t, bool is_first_of_msg)
 {
@@ -759,7 +801,7 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 		else
 			command1 &= ~SPI_CS_SS_VAL;
 
-		tegra_spi_writel(tspi, 0, SPI_COMMAND2);
+		tegra_spi_set_cmd2(spi, speed);
 	} else {
 		command1 = tspi->command1_reg;
 		command1 &= ~SPI_BIT_LENGTH(~0);
@@ -805,9 +847,53 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 	return ret;
 }
 
+static struct tegra_spi_client_ctl_data
+	*tegra_spi_get_cdata_dt(struct spi_device *spi)
+{
+	struct tegra_spi_client_ctl_data *cdata;
+	struct device_node *slave_np, *data_np;
+
+	slave_np = spi->dev.of_node;
+	if (!slave_np) {
+		dev_dbg(&spi->dev, "device node not found\n");
+		return NULL;
+	}
+
+	data_np = of_get_child_by_name(slave_np, "controller-data");
+	if (!data_np) {
+		dev_dbg(&spi->dev, "child node 'controller-data' not found\n");
+		return NULL;
+	}
+
+	cdata = kzalloc(sizeof(*cdata), GFP_KERNEL);
+	if (!cdata) {
+		of_node_put(data_np);
+		return NULL;
+	}
+
+	of_property_read_u32(data_np, "nvidia,rx-clk-tap-delay",
+			     &cdata->rx_clk_tap_delay);
+	of_property_read_u32(data_np, "nvidia,tx-clk-tap-delay",
+			     &cdata->tx_clk_tap_delay);
+
+	of_node_put(data_np);
+
+	return cdata;
+}
+
+static void tegra_spi_cleanup(struct spi_device *spi)
+{
+	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
+
+	spi->controller_data = NULL;
+	if (spi->dev.of_node)
+		kfree(cdata);
+}
+
 static int tegra_spi_setup(struct spi_device *spi)
 {
 	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
+	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
 	u32 val;
 	unsigned long flags;
 	int ret;
@@ -818,9 +904,15 @@ static int tegra_spi_setup(struct spi_device *spi)
 		spi->mode & SPI_CPHA ? "" : "~",
 		spi->max_speed_hz);
 
+	if (!cdata) {
+		cdata = tegra_spi_get_cdata_dt(spi);
+		spi->controller_data = cdata;
+	}
+
 	ret = pm_runtime_get_sync(tspi->dev);
 	if (ret < 0) {
 		dev_err(tspi->dev, "pm runtime failed, e = %d\n", ret);
+		tegra_spi_cleanup(spi);
 		return ret;
 	}
 	tegra_spi_set_intr_mask(tspi);
@@ -1074,18 +1166,22 @@ static irqreturn_t tegra_spi_isr(int irq, void *context_data)
 
 static struct tegra_spi_chip_data tegra114_spi_chip_data = {
 	.intr_mask_reg = false,
+	.set_rx_tap_delay = false,
 };
 
 static struct tegra_spi_chip_data tegra124_spi_chip_data = {
 	.intr_mask_reg = false,
+	.set_rx_tap_delay = true,
 };
 
 static struct tegra_spi_chip_data tegra210_spi_chip_data = {
 	.intr_mask_reg = true,
+	.set_rx_tap_delay = false,
 };
 
 static struct tegra_spi_chip_data tegra186_spi_chip_data = {
 	.intr_mask_reg = true,
+	.set_rx_tap_delay = false,
 };
 
 static const struct of_device_id tegra_spi_of_match[] = {
@@ -1129,6 +1225,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	/* the spi->mode bits understood by this driver: */
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH;
 	master->setup = tegra_spi_setup;
+	master->cleanup = tegra_spi_cleanup;
 	master->transfer_one_message = tegra_spi_transfer_one_message;
 	master->num_chipselect = MAX_CHIP_SELECT;
 	bus_num = of_alias_get_id(pdev->dev.of_node, "spi");
@@ -1203,6 +1300,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 
 	tspi->def_command1_reg  = SPI_M_S;
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
+	tspi->def_command2_reg = tegra_spi_readl(tspi, SPI_COMMAND2);
 	pm_runtime_put(&pdev->dev);
 
 	ret = request_threaded_irq(tspi->irq, tegra_spi_isr,
@@ -1220,6 +1318,8 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can not register to master err %d\n", ret);
 		goto exit_free_irq;
 	}
+	tspi->last_used_cs = master->num_chipselect + 1;
+
 	return ret;
 
 exit_free_irq:
@@ -1276,6 +1376,8 @@ static int tegra_spi_resume(struct device *dev)
 		return ret;
 	}
 	tegra_spi_writel(tspi, tspi->command1_reg, SPI_COMMAND1);
+	tegra_spi_writel(tspi, tspi->def_command2_reg, SPI_COMMAND2);
+	tspi->last_used_cs = master->num_chipselect + 1;
 	tegra_spi_set_intr_mask(tspi);
 	pm_runtime_put(dev);
 

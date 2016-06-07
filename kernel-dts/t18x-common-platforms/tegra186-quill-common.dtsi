@@ -864,8 +864,4 @@
 	rtcpu@b000000 {
 		status = "okay";
 	};
-
-	rtcpu-dbg {
-		status = "okay";
-	};
 };

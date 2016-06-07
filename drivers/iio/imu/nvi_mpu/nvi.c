@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(329)
+#define NVI_DRIVER_VERSION		(330)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -3856,8 +3856,13 @@ static struct sensor_cfg nvi_cfg_dflt[] = {
 		.ch_n			= AXIS_N,
 		.ch_sz			= -2,
 		.vendor			= NVI_VENDOR,
+		.max_range		= {
+			.ival		= 3,
+		},
 		.delay_us_min		= 10000,
 		.delay_us_max		= 255000,
+		.float_significance	= NVS_FLOAT_NANO,
+		.ch_n_max		= AXIS_N,
 	},
 };
 

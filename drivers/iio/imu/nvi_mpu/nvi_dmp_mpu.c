@@ -14,49 +14,64 @@
 #include "nvi.h"
 #include "nvi_dmp_mpu.h"
 
-#define MPU_DMP_PERIOD_US		(5000)
+#define NVI_6QUAT_EN			(1)
 
+#define MPU_DMP_PERIOD_US		(5000)
 #define DMP_HDR_LEN_MAX			(4)
 #define DMP_DEV_ABLE_LEN		(2)
-
-struct nvi_dmp_mpu {
-};
+#define AUX_PORT_DEV_GMF		(0)
+#define MSK_AUX_PORTS_DEV_GMF		(0x3)
+#define AUX_PORT_DEV_PRS		(2)
+#define MSK_AUX_PORTS_DEV_PRS		(0xC)
+#define MSK_EN_AUX_PORTS		(((1 << (AUX_PORT_IO + DEV_N_AUX)) - \
+					  1) & ~MSK_DEV_SNSR)
 
 struct nvi_dmp_dev {
 	unsigned int dev;
 	unsigned int aux_port;
 	unsigned int depend_msk;	/* sensor dependencies */
 	unsigned int buf_n;
-	unsigned int hdr_n;
-	u8 hdr[DMP_HDR_LEN_MAX];
-	u8 hdr_msk[DMP_HDR_LEN_MAX];
 	u16 en_addr;
 	u8 en_len;
 	u8 en[DMP_DEV_ABLE_LEN];
 	u8 dis[DMP_DEV_ABLE_LEN];
 	u16 odr_cfg;
 	u16 odr_cntr;
-	int (*fn_init)(struct nvi_state *st);
+	int (*fn_init)(struct nvi_state *st, unsigned int *en_msk);
+};
+
+struct nvi_dmp_hdr {
+	unsigned int dev;
+	unsigned int aux_port;
+	unsigned int buf_n;
+	unsigned int hdr_n;
+	u8 hdr[DMP_HDR_LEN_MAX];
+	u8 hdr_msk[DMP_HDR_LEN_MAX];
 };
 
 
 /* prs = pressure */
-static int nvi_dmp_prs_init(struct nvi_state *st)
+static int nvi_dmp_prs_init(struct nvi_state *st, unsigned int *en_msk)
 {
 	return 1;
 }
 
 /* gmf = GeoMagnetic Field (compass) */
-static int nvi_dmp_gmf_init(struct nvi_state *st)
+static int nvi_dmp_gmf_init(struct nvi_state *st, unsigned int *en_msk)
 {
-	if (st->aux.port[0].nmp.type != SECONDARY_SLAVE_TYPE_COMPASS)
+	if (st->aux.port[AUX_PORT_DEV_GMF].nmp.type !=
+						  SECONDARY_SLAVE_TYPE_COMPASS)
 		/* DMP shouldn't run if AUX device not supported */
 		return -EINVAL;
+
+	if (!st->aux.port[AUX_PORT_DEV_GMF].nmp.handler)
+		/* no handler */
+		return 1;
 
 	return 0;
 }
 
-static int nvi_dmp_sm_init(struct nvi_state *st)
+static int nvi_dmp_sm_init(struct nvi_state *st, unsigned int *en_msk)
 {
 	int ret;
 
@@ -76,9 +91,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	{
 		.dev			= DEV_ACC,
 		.buf_n			= 6,
-		.hdr_n			= 2,
-		.hdr			= { 0x40, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0 },
 		.en_addr		= CFG_OUT_ACCL,
 		.en_len			= 2,
 		.en			= { 0xA3, 0xA3 },
@@ -89,9 +101,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	{
 		.dev			= DEV_GYR,
 		.buf_n			= 6,
-		.hdr_n			= 2,
-		.hdr			= { 0x20, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0 },
 		.en_addr		= CFG_OUT_GYRO,
 		.en_len			= 2,
 		.en			= { 0xA3, 0xA3 },
@@ -99,14 +108,12 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.odr_cfg		= KEY_CFG_GYRO_ODR,
 		.odr_cntr		= KEY_ODR_CNTR_GYRO,
 	},
+#ifdef NVI_6QUAT_EN
 	{
 		.dev			= DEV_QTN,
 		.depend_msk		= (1 << DEV_ACC) |
 					  (1 << DEV_GYR),
 		.buf_n			= 12,
-		.hdr_n			= 4,
-		.hdr			= { 0x04, 0x00, 0x04, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0, 0xFF, 0xF0 },
 		.en_addr		= CFG_OUT_6QUAT,
 		.en_len			= 2,
 		.en			= { 0xA3, 0xA3 },
@@ -114,11 +121,24 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.odr_cfg		= KEY_CFG_6QUAT_ODR,
 		.odr_cntr		= KEY_ODR_CNTR_6QUAT,
 	},
+#else /* !NVI_6QUAT_EN */
+	{
+		.dev			= DEV_QTN,
+		.depend_msk		= (1 << DEV_ACC) |
+					  (1 << DEV_GYR),
+		.buf_n			= 12,
+		.en_addr		= CFG_OUT_3QUAT,
+		.en_len			= 2,
+		.en			= { 0xA3, 0xA3 },
+		.dis			= { 0xF4, 0x13 },
+		.odr_cfg		= KEY_CFG_3QUAT_ODR,
+		.odr_cntr		= KEY_ODR_CNTR_3QUAT,
+	},
+#endif /* NVI_6QUAT_EN */
 	{
 		.dev			= DEV_SM,
 		.depend_msk		= (1 << DEV_ACC),
 		.buf_n			= 1,
-		.hdr_n			= 0,
 		.fn_init		= &nvi_dmp_sm_init,
 		.en_addr		= D_SMD_ENABLE,
 		.en_len			= 2,
@@ -127,12 +147,9 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= 0,
-		.depend_msk		= (0x03 << DEV_N_AUX),
+		.aux_port		= AUX_PORT_DEV_GMF,
+		.depend_msk		= (MSK_AUX_PORTS_DEV_GMF << DEV_N_AUX),
 		.buf_n			= 6,
-		.hdr_n			= 2,
-		.hdr			= { 0x10, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0 },
 		.fn_init		= &nvi_dmp_gmf_init,
 		.en_addr		= CFG_OUT_CPASS,
 		.en_len			= 2,
@@ -143,12 +160,9 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= 2,
-		.depend_msk		= (0x0C << DEV_N_AUX),
+		.aux_port		= AUX_PORT_DEV_PRS,
+		.depend_msk		= (MSK_AUX_PORTS_DEV_PRS << DEV_N_AUX),
 		.buf_n			= 6,
-		.hdr_n			= 2,
-		.hdr			= { 0x80, 0x00 },
-		.hdr_msk		= { 0xFF, 0xF0 },
 		.fn_init		= &nvi_dmp_prs_init,
 		.en_addr		= CFG_OUT_PRESS,
 		.en_len			= 2,
@@ -159,11 +173,77 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	},
 };
 
+static struct nvi_dmp_hdr nvi_dmp_hdrs[] = {
+	{
+		.dev			= DEV_ACC,
+		.buf_n			= 6,
+		.hdr_n			= 2,
+		.hdr			= { 0x40, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0 },
+	},
+	{
+		.dev			= DEV_GYR,
+		.buf_n			= 6,
+		.hdr_n			= 2,
+		.hdr			= { 0x20, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0 },
+	},
+	{
+		.dev			= DEV_QTN, /* 3QUAT */
+		.buf_n			= 12,
+		.hdr_n			= 4,
+		.hdr			= { 0x08, 0x00, 0x08, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0, 0xFF, 0xF0 },
+	},
+	{
+		.dev			= DEV_QTN, /* 6QUAT */
+		.buf_n			= 12,
+		.hdr_n			= 4,
+		.hdr			= { 0x04, 0x00, 0x04, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0, 0xFF, 0xF0 },
+	},
+	{
+		.dev			= DEV_SM,
+		.buf_n			= 1,
+		.hdr_n			= 0,
+	},
+	{
+		.dev			= DEV_AUX, /* GMF */
+		.aux_port		= AUX_PORT_DEV_GMF,
+		.buf_n			= 6,
+		.hdr_n			= 2,
+		.hdr			= { 0x10, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0 },
+	},
+	{
+		.dev			= DEV_AUX, /* PRS */
+		.aux_port		= AUX_PORT_DEV_PRS,
+		.buf_n			= 6,
+		.hdr_n			= 2,
+		.hdr			= { 0x80, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0 },
+	},
+	{
+		.dev			= DEV_STP,
+		.buf_n			= 6,
+		.hdr_n			= 2,
+		.hdr			= { 0x01, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0 },
+	},
+	{
+		.dev			= -1, /* PQUAT */
+		.buf_n			= 6,
+		.hdr_n			= 2,
+		.hdr			= { 0x02, 0x00 },
+		.hdr_msk		= { 0xFF, 0xF0 },
+	},
+};
+
 static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 {
-	const struct nvi_dmp_dev *dd;
+	const struct nvi_dmp_hdr *dh;
 	struct aux_port *ap;
-	unsigned int dd_i;
+	unsigned int dh_i;
 	unsigned int i;
 	u8 byte;
 
@@ -171,21 +251,21 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 		if (st->sts & (NVS_STS_SUSPEND | NVS_STS_SHUTDOWN))
 			return -1;
 
-		for (dd_i = 0; dd_i < st->hal->dmp->dd_n; dd_i++) {
-			dd = &st->hal->dmp->dd[dd_i];
-			if (!dd->hdr_n)
+		for (dh_i = 0; dh_i < ARRAY_SIZE(nvi_dmp_hdrs); dh_i++) {
+			dh = &nvi_dmp_hdrs[dh_i];
+			if (!dh->hdr_n)
 				continue;
 
-			for (i = 0; i < dd->hdr_n; i++) {
+			for (i = 0; i < dh->hdr_n; i++) {
 				byte = st->buf[st->buf_i + i];
-				byte &= dd->hdr_msk[i];
-				if (byte != dd->hdr[i])
+				byte &= dh->hdr_msk[i];
+				if (byte != dh->hdr[i])
 					break;
 			}
-			if (i >= dd->hdr_n)
+			if (i >= dh->hdr_n)
 				break;
 		}
-		if (dd_i >= st->hal->dmp->dd_n) {
+		if (dh_i >= ARRAY_SIZE(nvi_dmp_hdrs)) {
 			/* unknown header: lost DMP sync so DMP reset */
 			if (st->sts & NVI_DBG_SPEW_FIFO)
 				dev_err(&st->i2c->dev,
@@ -198,27 +278,27 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 			return -1;
 		}
 
-		if (n > dd->buf_n + i) {
-			if (dd->dev == DEV_AUX) {
+		if (n > dh->buf_n + i) {
+			if (dh->dev == DEV_AUX) {
 				if (st->sts & NVI_DBG_SPEW_FIFO)
 					dev_info(&st->i2c->dev,
 						 "%s DMP HDR: AUX port=%u\n",
-						 __func__, dd->aux_port);
-				ap = &st->aux.port[dd->aux_port];
+						 __func__, dh->aux_port);
+				ap = &st->aux.port[dh->aux_port];
 				ap->nmp.handler(&st->buf[st->buf_i + i],
-						dd->buf_n,
-						nvi_ts_dev(st, ts, dd->dev,
-							   dd->aux_port),
+						dh->buf_n,
+						nvi_ts_dev(st, ts, dh->dev,
+							   dh->aux_port),
 						ap->nmp.ext_driver);
-			} else if (dd->dev < DEV_N) {
+			} else if (dh->dev < DEV_N) {
 				if (st->sts & NVI_DBG_SPEW_FIFO)
 					dev_info(&st->i2c->dev,
 						 "%s DMP HDR: %s\n", __func__,
-						 st->snsr[dd->dev].cfg.name);
-				nvi_push(st, dd->dev, &st->buf[st->buf_i + i],
-					 nvi_ts_dev(st, ts, dd->dev, 0));
+						 st->snsr[dh->dev].cfg.name);
+				nvi_push(st, dh->dev, &st->buf[st->buf_i + i],
+					 nvi_ts_dev(st, ts, dh->dev, 0));
 			}
-			i += dd->buf_n;
+			i += dh->buf_n;
 			st->buf_i += i;
 			n -= i;
 		} else {
@@ -234,11 +314,11 @@ static int nvi_dmp_clk_n(struct nvi_state *st, u32 *clk_n)
 	return nvi_mem_rd_le(st, D_DMP_RUN_CNTR, 4, clk_n);
 }
 
-static int nvi_dmp_irq(struct nvi_state *st)
+static int nvi_dmp_irq(struct nvi_state *st, unsigned int en_msk)
 {
 	u32 able;
 
-	if ((st->en_msk & MSK_DEV_ALL) & ~((1 << DEV_SM) | (1 << DEV_STP)))
+	if ((en_msk & MSK_DEV_ALL) & ~((1 << DEV_SM) | (1 << DEV_STP)))
 		/* DMP requires FIFO IRQ */
 		able = 0xFE;
 	else
@@ -278,38 +358,48 @@ static int nvi_dd_odr(struct nvi_state *st, struct nvi_dmp_dev *dd)
 	return ret;
 }
 
-static int nvi_dd_able(struct nvi_state *st, struct nvi_dmp_dev *dd, bool en)
+static int nvi_dd_able(struct nvi_state *st, struct nvi_dmp_dev *dd,
+		       unsigned int *en_msk)
 {
-	int ret;
+	bool en = false;
+	int ret = 0;
 
-	if (dd->dev >= DEV_N_AUX)
+	if (dd->dev == DEV_AUX) {
+		if (*en_msk & (1 << (dd->aux_port + DEV_N_AUX)))
+			en = true;
+	} else if (dd->dev < DEV_AUX) {
+		if (*en_msk & (1 << dd->dev))
+			en = true;
+	} else {
 		return 0;
+	}
 
 	if (en) {
-		if (dd->fn_init)
-			ret = dd->fn_init(st);
-		else
-			ret = 0;
-		if (ret > 0) {
-			/* ignore without error */
-			ret = 0;
-		} else if (!ret) {
-			ret = nvi_dd_odr(st, dd);
-			ret |= nvi_mem_wr(st, dd->en_addr, dd->en_len,
-					  &dd->en[0], false);
+		if (dd->fn_init) {
+			ret = dd->fn_init(st, en_msk);
+			if (ret < 0)
+				return ret;
+
+			if (ret > 0)
+				/* disable without error */
+				en = false;
 		}
-		if (dd->dev != DEV_AUX) {
-			if (ret) {
-				st->en_msk &= ~(1 << dd->dev);
-			} else {
-				st->en_msk |= (1 << dd->dev);
-				st->snsr[dd->dev].buf_n = dd->buf_n;
-			}
-		}
-	} else {
-		ret = nvi_mem_wr(st, dd->en_addr, dd->en_len,
-				 &dd->dis[0], false);
 	}
+
+	if (en) {
+		ret = nvi_dd_odr(st, dd);
+		ret |= nvi_mem_wr(st, dd->en_addr, dd->en_len, dd->en, false);
+		if (ret)
+			en = false;
+	}
+	if (!en)
+		nvi_mem_wr(st, dd->en_addr, dd->en_len, dd->dis, false);
+	if (en)
+		st->snsr[dd->dev].buf_n = dd->buf_n;
+	else if (dd->dev == DEV_AUX)
+		*en_msk &= ~(dd->depend_msk & MSK_EN_AUX_PORTS);
+	else
+		*en_msk &= ~(1 << dd->dev);
 	return ret;
 }
 
@@ -345,6 +435,7 @@ static int nvi_dd_batch(struct nvi_state *st, unsigned int dev, int port)
 static int nvi_dd_init(struct nvi_state *st, unsigned int dev)
 {
 	struct nvi_dmp_dev *dd;
+	unsigned int en_msk = st->en_msk & MSK_DEV_SNSR;
 	int ret = -EINVAL;
 
 	dd = nvi_dd(st, dev, -1);
@@ -352,7 +443,7 @@ static int nvi_dd_init(struct nvi_state *st, unsigned int dev)
 		return -EINVAL;
 
 	if (dd->fn_init)
-		ret = dd->fn_init(st);
+		ret = dd->fn_init(st, &en_msk);
 	return ret;
 }
 
@@ -373,7 +464,7 @@ static u8 nvi_dmp_fcfg_gyro_b[8][3] = {
 	{ 0x36, 0x57, 0x76 },
 	{ 0x37, 0x57, 0x76 },
 	{ 0x37, 0x56, 0x76 },
-	{ 0x37, 0x46, 0x77 },
+	{ 0x37, 0x57, 0x77 },
 	{ 0x37, 0x56, 0x77 },
 	{ 0x36, 0x57, 0x77 },
 	{ 0x36, 0x56, 0x77 },
@@ -464,8 +555,8 @@ static int nvi_dmp_init(struct nvi_state *st)
 static int nvi_dmp_en(struct nvi_state *st)
 {
 	struct nvi_dmp_dev *dd;
-	bool en;
 	unsigned int i;
+	unsigned int irq_msk = 0;
 	unsigned int en_msk = 0;
 	int ret = 0;
 
@@ -474,20 +565,22 @@ static int nvi_dmp_en(struct nvi_state *st)
 		dd = &nvi_dmp_devs[i];
 		if (dd->dev == DEV_AUX) {
 			if (st->snsr[DEV_AUX].enable & (1 << dd->aux_port)) {
+				irq_msk |= (1 << DEV_AUX);
 				en_msk |= (1 << DEV_AUX);
-				en_msk |= (1 << dd->aux_port);
+				en_msk |= (1 << (dd->aux_port + DEV_N_AUX));
 				en_msk |= dd->depend_msk;
 			}
 		} else if (dd->dev < DEV_AUX) {
 			if (st->snsr[dd->dev].enable) {
+				irq_msk |= (1 << dd->dev);
 				en_msk |= (1 << dd->dev);
 				en_msk |= dd->depend_msk;
 			}
 		}
 	}
 
-	st->aux.dmp_en_msk = en_msk >> DEV_N_AUX;
 	st->src[SRC_DMP].period_us_src = MPU_DMP_PERIOD_US;
+	st->src[SRC_MPU].period_us_src = MPU_DMP_PERIOD_US;
 	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->gyro_config1, 0x03,
 			     __func__, &st->rc.gyro_config1);
 	ret |= nvi_i2c_wr_rc(st, &st->hal->reg->gyro_config2, 0x18,
@@ -499,27 +592,21 @@ static int nvi_dmp_en(struct nvi_state *st)
 	if (ret)
 		return ret;
 
-	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
-		dd = &nvi_dmp_devs[i];
-		if (dd->dev > DEV_AUX)
-			continue;
+	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++)
+		ret |= nvi_dd_able(st, &nvi_dmp_devs[i], &en_msk);
+	if (ret)
+		return ret;
 
-		en = false;
-		if (dd->dev == DEV_AUX) {
-			if (en_msk & (1 << (dd->aux_port + DEV_N_AUX)))
-				en = true;
-		} else if (dd->dev < DEV_AUX) {
-			if (en_msk & (1 << dd->dev))
-				en = true;
-		}
-		ret = nvi_dd_able(st, dd, en);
+	st->aux.dmp_en_msk = en_msk >> DEV_N_AUX;
+	if (st->aux.dmp_en_msk) {
+		ret = nvi_aux_enable(st, __func__, true, true);
 		if (ret)
 			return ret;
 	}
-
-	ret = nvi_dmp_irq(st);
-	ret |= nvi_aux_delay(st, __func__);
+	ret = nvi_aux_delay(st, __func__);
+	ret |= nvi_dmp_irq(st, irq_msk & en_msk);
 	if (!ret) {
+		st->en_msk |= (en_msk & ((1 << DEV_N_AUX) - 1));
 		nvi_push_delay(st);
 		ret = nvi_reset(st, __func__, true, false, true);
 	}

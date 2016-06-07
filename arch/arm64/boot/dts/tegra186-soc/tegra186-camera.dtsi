@@ -33,8 +33,6 @@
 
 		#stream-id-cells = <1>;
 
-		#mbox-cells = <1>;			 /* This is mbox controller device */
-
 		clocks = <&tegra_car TEGRA186_CLK_SCE_APB>;
 		clock-names = "sce-apb";
 		resets =
@@ -156,8 +154,6 @@
 
 		#stream-id-cells = <1>;
 
-		#mbox-cells = <1>;
-
 		clocks =
 			<&tegra_car TEGRA186_CLK_APE>,
 			<&tegra_car TEGRA186_CLK_APB2APE>,
@@ -266,11 +262,5 @@
 						TEGRA_HSP_PROC_APE
 						TEGRA_HSP_DB_APE>;
 		};
-	};
-
-	rtcpu-dbg {
-		compatible = "nvidia,tegra186-sysfs-mbox";
-		status = "disabled";
-		mboxes = <&tegra_sce 6>;
 	};
 };

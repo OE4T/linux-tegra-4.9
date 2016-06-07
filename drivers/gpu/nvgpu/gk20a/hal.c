@@ -51,6 +51,7 @@ int gpu_init_hal(struct gk20a *g)
 			return -ENODEV;
 		break;
 	case TEGRA_18x_GPUID2:
+	case TEGRA_18x_GPUID3:
 		if (TEGRA_18x_GPUID2_HAL(g))
 			return -ENODEV;
 		break;

@@ -94,15 +94,19 @@ int tegra_hsp_db_clr_raw(u32 mask);
 
 struct device;
 
+struct tegra_hsp_irq {
+	int irq;
+	u8 si_index;
+	u8 ie_shift;
+};
+
 struct tegra_hsp_sm_pair {
 	struct device *dev;
 	u32 index;
 	u32 (*notify_full)(struct tegra_hsp_sm_pair *, u32);
 	void (*notify_empty)(struct tegra_hsp_sm_pair *, u32);
-	int irq_full;
-	int irq_empty;
-	u8 si_index_empty;
-	struct hlist_node node;
+	struct tegra_hsp_irq full;
+	struct tegra_hsp_irq empty;
 };
 
 int of_tegra_hsp_sm_pair_request(const struct device_node *np, u32 index,

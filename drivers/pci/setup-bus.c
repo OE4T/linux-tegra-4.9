@@ -29,6 +29,7 @@
 #include "pci.h"
 
 unsigned int pci_flags;
+EXPORT_SYMBOL(pci_flags);
 
 struct pci_dev_resource {
 	struct list_head list;

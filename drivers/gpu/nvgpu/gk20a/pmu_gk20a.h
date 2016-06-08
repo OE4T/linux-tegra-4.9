@@ -53,6 +53,7 @@
 #define APP_VERSION_NC_1	20313802
 #define APP_VERSION_NC_0	20360931
 #define APP_VERSION_GM206	20652057
+#define APP_VERSION_NV_GPU	20660622
 #define APP_VERSION_GM20B_5 20490253
 #define APP_VERSION_GM20B_4 19008461
 #define APP_VERSION_GM20B_3 18935575
@@ -618,10 +619,25 @@ struct pmu_init_msg_pmu_v2 {
 	u8 dummy[18];
 };
 
+struct pmu_init_msg_pmu_v3 {
+	u8 msg_type;
+	u8  queue_index[PMU_QUEUE_COUNT];
+	u16 queue_size[PMU_QUEUE_COUNT];
+	u16 queue_offset;
+
+	u16 sw_managed_area_offset;
+	u16 sw_managed_area_size;
+
+	u16  os_debug_entry_point;
+
+	u8 dummy[18];
+};
+
 union pmu_init_msg_pmu {
 	struct pmu_init_msg_pmu_v0 v0;
 	struct pmu_init_msg_pmu_v1 v1;
 	struct pmu_init_msg_pmu_v2 v2;
+	struct pmu_init_msg_pmu_v3 v3;
 };
 
 struct pmu_init_msg {
@@ -630,6 +646,7 @@ struct pmu_init_msg {
 		struct pmu_init_msg_pmu_v1 pmu_init_v1;
 		struct pmu_init_msg_pmu_v0 pmu_init_v0;
 		struct pmu_init_msg_pmu_v2 pmu_init_v2;
+		struct pmu_init_msg_pmu_v3 pmu_init_v3;
 	};
 };
 

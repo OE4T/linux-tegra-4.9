@@ -576,6 +576,27 @@ static void pmu_allocation_set_dmem_offset_v0(struct pmu_gk20a *pmu,
 	pmu_a_ptr->alloc.dmem.offset = offset;
 }
 
+static void *get_pmu_msg_pmu_init_msg_ptr_v3(struct pmu_init_msg *init)
+{
+	return (void *)(&(init->pmu_init_v3));
+}
+
+static u16 get_pmu_init_msg_pmu_sw_mg_off_v3(union pmu_init_msg_pmu *init_msg)
+{
+	struct pmu_init_msg_pmu_v3 *init =
+		(struct pmu_init_msg_pmu_v3 *)(&init_msg->v3);
+
+	return init->sw_managed_area_offset;
+}
+
+static u16 get_pmu_init_msg_pmu_sw_mg_size_v3(union pmu_init_msg_pmu *init_msg)
+{
+	struct pmu_init_msg_pmu_v3 *init =
+		(struct pmu_init_msg_pmu_v3 *)(&init_msg->v3);
+
+	return init->sw_managed_area_size;
+}
+
 static void *get_pmu_msg_pmu_init_msg_ptr_v2(struct pmu_init_msg *init)
 {
 	return (void *)(&(init->pmu_init_v2));
@@ -1114,6 +1135,17 @@ static void get_pmu_init_msg_pmu_queue_params_v2(struct pmu_queue *queue,
 	queue->size = init->queue_info[id].size;
 }
 
+static void get_pmu_init_msg_pmu_queue_params_v3(struct pmu_queue *queue,
+	u32 id, void *pmu_init_msg)
+{
+	struct pmu_init_msg_pmu_v3 *init =
+		(struct pmu_init_msg_pmu_v3 *)pmu_init_msg;
+
+	queue->index    = init->queue_index[id];
+	queue->offset   = init->queue_offset;
+	queue->size = init->queue_size[id];
+}
+
 static void *get_pmu_sequence_in_alloc_ptr_v3(struct pmu_sequence *seq)
 {
 	return (void *)(&seq->in_v3);
@@ -1409,6 +1441,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			get_pmu_sequence_out_alloc_ptr_v1;
 		break;
 	case APP_VERSION_GM206:
+	case APP_VERSION_NV_GPU:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =
 				pg_cmd_eng_buf_load_size_v2;
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type =
@@ -1466,14 +1499,28 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			pmu_allocation_get_dmem_offset_addr_v3;
 		g->ops.pmu_ver.pmu_allocation_set_dmem_offset =
 			pmu_allocation_set_dmem_offset_v3;
-		g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
-				get_pmu_init_msg_pmu_queue_params_v2;
-		g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
-				get_pmu_msg_pmu_init_msg_ptr_v2;
-		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =
-				get_pmu_init_msg_pmu_sw_mg_off_v2;
-		g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
-				get_pmu_init_msg_pmu_sw_mg_size_v2;
+
+		if(pmu->desc->app_version != APP_VERSION_NV_GPU) {
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
+					get_pmu_init_msg_pmu_queue_params_v2;
+			g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
+					get_pmu_msg_pmu_init_msg_ptr_v2;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =
+					get_pmu_init_msg_pmu_sw_mg_off_v2;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
+					get_pmu_init_msg_pmu_sw_mg_size_v2;
+		}
+		else
+		{
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
+				get_pmu_init_msg_pmu_queue_params_v3;
+			g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =
+				get_pmu_msg_pmu_init_msg_ptr_v3;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_off =
+				get_pmu_init_msg_pmu_sw_mg_off_v3;
+			g->ops.pmu_ver.get_pmu_init_msg_pmu_sw_mg_size =
+				get_pmu_init_msg_pmu_sw_mg_size_v3;
+		}
 		g->ops.pmu_ver.get_pmu_perfmon_cmd_start_size =
 			get_pmu_perfmon_cmd_start_size_v3;
 		g->ops.pmu_ver.get_perfmon_cmd_start_offsetofvar =
@@ -2866,7 +2913,6 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 
 static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct pmu_gk20a *pmu = &g->pmu;
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
@@ -2919,8 +2965,7 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	pmu_seq_init(pmu);
 
-	if (platform->can_elpg)
-		INIT_WORK(&pmu->pg_init, pmu_setup_hw);
+	INIT_WORK(&pmu->pg_init, pmu_setup_hw);
 
 	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_SEQ_BUF_SIZE, &pmu->seq_buf);
 	if (err) {
@@ -3028,11 +3073,13 @@ void pmu_setup_hw(struct work_struct *work)
 {
 	struct pmu_gk20a *pmu = container_of(work, struct pmu_gk20a, pg_init);
 	struct gk20a *g = gk20a_from_pmu(pmu);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	switch (pmu->pmu_state) {
 	case PMU_STATE_INIT_RECEIVED:
 		gk20a_dbg_pmu("pmu starting");
-		pmu_init_powergating(g);
+		if (platform->can_elpg)
+			pmu_init_powergating(g);
 		break;
 	case PMU_STATE_ELPG_BOOTED:
 		gk20a_dbg_pmu("elpg booted");
@@ -3380,6 +3427,8 @@ static u8 get_perfmon_id(struct pmu_gk20a *pmu)
 		break;
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	case TEGRA_18x_GPUID:
+	case TEGRA_18x_GPUID2:
+	case TEGRA_18x_GPUID3:
 		unit_id = PMU_UNIT_PERFMON_T18X;
 		break;
 #endif

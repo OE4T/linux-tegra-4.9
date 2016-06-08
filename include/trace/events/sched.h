@@ -628,6 +628,7 @@ TRACE_EVENT(sched_load_avg_task,
 		__field( int,	cpu				)
 		__field( unsigned long,	load_avg		)
 		__field( unsigned long,	util_avg		)
+		__field( unsigned long,	util_fast_avg		)
 		__field( u64,		load_sum		)
 		__field( u32,		util_sum		)
 		__field( u32,		period_contrib		)
@@ -639,18 +640,20 @@ TRACE_EVENT(sched_load_avg_task,
 		__entry->cpu			= task_cpu(tsk);
 		__entry->load_avg		= avg->load_avg;
 		__entry->util_avg		= avg->util_avg;
+		__entry->util_fast_avg		= avg->util_fast_avg;
 		__entry->load_sum		= avg->load_sum;
 		__entry->util_sum		= avg->util_sum;
 		__entry->period_contrib		= avg->period_contrib;
 	),
 
-	TP_printk("comm=%s pid=%d cpu=%d load_avg=%lu util_avg=%lu load_sum=%llu"
-		  " util_sum=%u period_contrib=%u",
+	TP_printk("comm=%s pid=%d cpu=%d load_avg=%lu util_avg=%lu util_fast_avg=%lu"
+		  " load_sum=%llu util_sum=%u period_contrib=%u",
 		  __entry->comm,
 		  __entry->pid,
 		  __entry->cpu,
 		  __entry->load_avg,
 		  __entry->util_avg,
+		  __entry->util_fast_avg,
 		  (u64)__entry->load_sum,
 		  (u32)__entry->util_sum,
 		  (u32)__entry->period_contrib)
@@ -661,24 +664,29 @@ TRACE_EVENT(sched_load_avg_task,
  */
 TRACE_EVENT(sched_load_avg_cpu,
 
-	TP_PROTO(int cpu, struct cfs_rq *cfs_rq),
+	TP_PROTO(int cpu, struct cfs_rq *cfs_rq, int root),
 
-	TP_ARGS(cpu, cfs_rq),
+	TP_ARGS(cpu, cfs_rq, root),
 
 	TP_STRUCT__entry(
 		__field( int,	cpu				)
 		__field( unsigned long,	load_avg		)
 		__field( unsigned long,	util_avg		)
+		__field( unsigned long,	util_fast_avg		)
+		__field( int, root				)
 	),
 
 	TP_fast_assign(
 		__entry->cpu			= cpu;
 		__entry->load_avg		= cfs_rq->avg.load_avg;
 		__entry->util_avg		= cfs_rq->avg.util_avg;
+		__entry->util_fast_avg		= cfs_rq->avg.util_fast_avg;
+		__entry->root			= root;
 	),
 
-	TP_printk("cpu=%d load_avg=%lu util_avg=%lu",
-		  __entry->cpu, __entry->load_avg, __entry->util_avg)
+	TP_printk("cpu=%d load_avg=%lu util_avg=%lu util_fast_avg=%lu root=%d",
+		  __entry->cpu, __entry->load_avg, __entry->util_avg,
+		  __entry->util_fast_avg, __entry->root)
 );
 
 /*

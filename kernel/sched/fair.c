@@ -692,6 +692,10 @@ static unsigned long task_h_load(struct task_struct *p);
 #define LOAD_AVG_MAX 47742 /* maximum possible load avg */
 #define LOAD_AVG_MAX_N 345 /* number of full periods to produce LOAD_AVG_MAX */
 
+#define LOAD_AVG_FAST_PERIOD 3
+#define LOAD_AVG_FAST_MAX 4959
+#define LOAD_AVG_FAST_MAX_N 31
+
 /* Give new sched_entity start runnable values to heavy its load in infant time */
 void init_entity_runnable_average(struct sched_entity *se)
 {
@@ -721,6 +725,8 @@ void init_entity_runnable_average(struct sched_entity *se)
 		sysctl_sched_initial_task_util :
 		0;
 	sa->util_sum = 0;
+	sa->util_fast_avg = 0;
+	sa->util_fast_sum = 0;
 	/* when this task enqueue'ed, it will contribute to its cfs_rq's load_avg */
 }
 
@@ -772,6 +778,8 @@ void post_init_entity_util_avg(struct sched_entity *se)
 			sa->util_avg = cap;
 		}
 		sa->util_sum = sa->util_avg * LOAD_AVG_MAX;
+		sa->util_fast_avg = sa->util_avg;
+		sa->util_fast_sum = sa->util_fast_avg * LOAD_AVG_FAST_MAX;
 	}
 
 	if (entity_is_task(se)) {
@@ -2708,6 +2716,14 @@ static const u32 runnable_avg_yN_sum[] = {
 	17718,18340,18949,19545,20128,20698,21256,21802,22336,22859,23371,
 };
 
+static const u32 runnable_avg_fast_yN_inv[] = {
+	0xffffffff, 0xcb2ff529, 0xa14517cb, 0x7fffffff,
+};
+
+static const u32 runnable_avg_fast_yN_sum[] = {
+	0, 812, 1457, 1969,
+};
+
 /*
  * Precomputed \Sum y^k { 1<=k<=n, where n%32=0). Values are rolled down to
  * lower integers. See Documentation/scheduler/sched-avg.txt how these
@@ -2750,6 +2766,34 @@ static __always_inline u64 decay_load(u64 val, u64 n)
 	return val;
 }
 
+static __always_inline u64 decay_fast_load(u64 val, u64 n)
+{
+	unsigned int local_n;
+
+	if (!n)
+		return val;
+	else if (unlikely(n > LOAD_AVG_FAST_PERIOD * 63))
+		return 0;
+
+	/* after bounds checking we can collapse to 32-bit */
+	local_n = n;
+
+	/*
+	 * As y^PERIOD = 1/2, we can combine
+	 *    y^n = 1/2^(n/PERIOD) * y^(n%PERIOD)
+	 * With a look-up table which covers y^n (n<PERIOD)
+	 *
+	 * To achieve constant time decay_load.
+	 */
+	if (unlikely(local_n >= LOAD_AVG_FAST_PERIOD)) {
+		val >>= local_n / LOAD_AVG_FAST_PERIOD;
+		local_n %= LOAD_AVG_FAST_PERIOD;
+	}
+
+	val = mul_u64_u32_shr(val, runnable_avg_fast_yN_inv[local_n], 32);
+	return val;
+}
+
 /*
  * For updates fully spanning n periods, the contribution to runnable
  * average will be: \Sum 1024*y^n
@@ -2771,6 +2815,27 @@ static u32 __compute_runnable_contrib(u64 n)
 	n %= LOAD_AVG_PERIOD;
 	contrib = decay_load(contrib, n);
 	return contrib + runnable_avg_yN_sum[n];
+}
+
+static u32 __compute_runnable_contrib_fast(u64 n)
+{
+	u32 contrib = 0;
+
+	if (likely(n <= LOAD_AVG_FAST_PERIOD))
+		return runnable_avg_fast_yN_sum[n];
+	else if (unlikely(n >= LOAD_AVG_FAST_MAX_N))
+		return LOAD_AVG_FAST_MAX;
+
+	/* Compute \Sum k^n combining precomputed values for k^i, \Sum k^j */
+	do {
+		contrib /= 2; /* y^LOAD_AVG_PERIOD = 1/2 */
+		contrib += runnable_avg_fast_yN_sum[LOAD_AVG_FAST_PERIOD];
+
+		n -= LOAD_AVG_FAST_PERIOD;
+	} while (n > LOAD_AVG_FAST_PERIOD);
+
+	contrib = decay_fast_load(contrib, n);
+	return contrib + runnable_avg_fast_yN_sum[n];
 }
 
 #define cap_scale(v, s) ((v)*(s) >> SCHED_CAPACITY_SHIFT)
@@ -2808,7 +2873,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		  unsigned long weight, int running, struct cfs_rq *cfs_rq)
 {
 	u64 delta, scaled_delta, periods;
-	u32 contrib;
+	u32 contrib, contrib_fast;
 	unsigned int delta_w, scaled_delta_w, decayed = 0;
 	unsigned long scale_freq, scale_cpu;
 
@@ -2857,8 +2922,11 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 						weight * scaled_delta_w;
 			}
 		}
-		if (running)
-			sa->util_sum += scaled_delta_w * scale_cpu;
+		if (running) {
+			unsigned long scaled_contrib = scaled_delta_w * scale_cpu;
+			sa->util_sum += scaled_contrib;
+			sa->util_fast_sum += scaled_contrib;
+		}
 
 		delta -= delta_w;
 
@@ -2872,6 +2940,8 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 				decay_load(cfs_rq->runnable_load_sum, periods + 1);
 		}
 		sa->util_sum = decay_load((u64)(sa->util_sum), periods + 1);
+		sa->util_fast_sum = decay_fast_load((u64)(sa->util_fast_sum),
+						periods + 1);
 
 		/* Efficiently calculate \sum (1..n_period) 1024*y^i */
 		contrib = __compute_runnable_contrib(periods);
@@ -2881,8 +2951,12 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 			if (cfs_rq)
 				cfs_rq->runnable_load_sum += weight * contrib;
 		}
-		if (running)
+		if (running) {
+			contrib_fast = __compute_runnable_contrib_fast(periods);
+			contrib_fast = cap_scale(contrib_fast, scale_freq);
 			sa->util_sum += contrib * scale_cpu;
+			sa->util_fast_sum += contrib_fast * scale_cpu;
+		}
 	}
 
 	/* Remainder of delta accrued against u_0` */
@@ -2892,8 +2966,11 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 		if (cfs_rq)
 			cfs_rq->runnable_load_sum += weight * scaled_delta;
 	}
-	if (running)
-		sa->util_sum += scaled_delta * scale_cpu;
+	if (running) {
+		unsigned long scaled_contrib = scaled_delta * scale_cpu;
+		sa->util_sum += scaled_contrib;
+		sa->util_fast_sum += scaled_contrib;
+	}
 
 	sa->period_contrib += delta;
 
@@ -2904,6 +2981,7 @@ __update_load_avg(u64 now, int cpu, struct sched_avg *sa,
 				div_u64(cfs_rq->runnable_load_sum, LOAD_AVG_MAX);
 		}
 		sa->util_avg = sa->util_sum / LOAD_AVG_MAX;
+		sa->util_fast_avg = sa->util_fast_sum / LOAD_AVG_FAST_MAX;
 	}
 
 	return decayed;
@@ -3069,6 +3147,13 @@ update_cfs_rq_load_avg(u64 now, struct cfs_rq *cfs_rq, bool update_freq)
 		removed_util = 1;
 	}
 
+	if (atomic_long_read(&cfs_rq->removed_util_fast_avg)) {
+		long r = atomic_long_xchg(&cfs_rq->removed_util_fast_avg, 0);
+		sub_positive(&sa->util_fast_avg, r);
+		sub_positive(&sa->util_fast_sum, r * LOAD_AVG_FAST_MAX);
+		removed_util = 1;
+	}
+
 	decayed = __update_load_avg(now, cpu_of(rq_of(cfs_rq)), sa,
 		scale_load_down(cfs_rq->load.weight), cfs_rq->curr != NULL, cfs_rq);
 
@@ -3104,7 +3189,7 @@ static inline void update_load_avg(struct sched_entity *se, int update_tg)
 
 	if (entity_is_task(se))
 		trace_sched_load_avg_task(task_of(se), &se->avg);
-	trace_sched_load_avg_cpu(cpu, cfs_rq);
+	trace_sched_load_avg_cpu(cpu, cfs_rq, cfs_rq == &rq->cfs);
 }
 
 /**
@@ -3142,6 +3227,8 @@ skip_aging:
 	cfs_rq->avg.load_sum += se->avg.load_sum;
 	cfs_rq->avg.util_avg += se->avg.util_avg;
 	cfs_rq->avg.util_sum += se->avg.util_sum;
+	cfs_rq->avg.util_fast_avg += se->avg.util_fast_avg;
+	cfs_rq->avg.util_fast_sum += se->avg.util_fast_sum;
 
 	cfs_rq_util_change(cfs_rq);
 }
@@ -3164,6 +3251,8 @@ static void detach_entity_load_avg(struct cfs_rq *cfs_rq, struct sched_entity *s
 	sub_positive(&cfs_rq->avg.load_sum, se->avg.load_sum);
 	sub_positive(&cfs_rq->avg.util_avg, se->avg.util_avg);
 	sub_positive(&cfs_rq->avg.util_sum, se->avg.util_sum);
+	sub_positive(&cfs_rq->avg.util_fast_avg, se->avg.util_fast_avg);
+	sub_positive(&cfs_rq->avg.util_fast_sum, se->avg.util_fast_sum);
 
 	cfs_rq_util_change(cfs_rq);
 }
@@ -3252,6 +3341,7 @@ void remove_entity_load_avg(struct sched_entity *se)
 	__update_load_avg(last_update_time, cpu_of(rq_of(cfs_rq)), &se->avg, 0, 0, NULL);
 	atomic_long_add(se->avg.load_avg, &cfs_rq->removed_load_avg);
 	atomic_long_add(se->avg.util_avg, &cfs_rq->removed_util_avg);
+	atomic_long_add(se->avg.util_fast_avg, &cfs_rq->removed_util_fast_avg);
 }
 
 static inline unsigned long cfs_rq_runnable_load_avg(struct cfs_rq *cfs_rq)
@@ -9871,6 +9961,7 @@ void init_cfs_rq(struct cfs_rq *cfs_rq)
 #ifdef CONFIG_SMP
 	atomic_long_set(&cfs_rq->removed_load_avg, 0);
 	atomic_long_set(&cfs_rq->removed_util_avg, 0);
+	atomic_long_set(&cfs_rq->removed_util_fast_avg, 0);
 #endif
 }
 

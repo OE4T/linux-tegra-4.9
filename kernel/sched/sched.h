@@ -405,7 +405,7 @@ struct cfs_rq {
 #ifdef CONFIG_FAIR_GROUP_SCHED
 	unsigned long tg_load_avg_contrib;
 #endif
-	atomic_long_t removed_load_avg, removed_util_avg;
+	atomic_long_t removed_load_avg, removed_util_avg, removed_util_fast_avg;
 #ifndef CONFIG_64BIT
 	u64 load_last_update_time_copy;
 #endif

@@ -589,12 +589,6 @@ int tegra_hsp_init(void)
 		pr_debug("tegra-hsp: db[%d]: %p\n", i, db_bases[i]);
 	}
 
-	irq = irq_of_parse_and_map(np, 0);
-	if (!irq) {
-		pr_err("tegra-hsp: failed to parse doorbell irq\n");
-		goto out;
-	}
-
 	ret = request_irq(irq, dbell_irq, IRQF_NO_SUSPEND, "hsp", NULL);
 	if (ret) {
 		pr_err("tegra-hsp: request_irq() failed (%d)\n", ret);

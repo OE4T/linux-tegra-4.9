@@ -21,7 +21,8 @@
 #include "tegra194-soc/tegra194-soc-base.dtsi"
 #include "tegra194-soc/tegra194-cpus.dtsi"
 #include "tegra194-platforms/tegra194-sim-dp.dtsi"
-
+#include "tegra194-soc/tegra194-soc-sdhci.dtsi"
+#include "tegra194-soc/tegra194-soc-prod.dtsi"
 / {
 	model = "t186ref";
 	compatible = "nvidia,tegra186";
@@ -108,5 +109,10 @@
 		reg-io-width = <4>;
 		smsc,irq-active-high;
 		smsc,irq-push-pull;
+	};
+	sdhci@3460000 {
+		       nvidia,enable-strobe-mode;
+		       max-clk-limit = <6400000>;
+		       status = "okay";
 	};
 };

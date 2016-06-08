@@ -4162,6 +4162,26 @@ static inline u32 gr_fe_gfxp_wfi_timeout_count_disabled_f(void)
 {
 	return 0x0;
 }
+static inline u32 gr_debug_2_r(void)
+{
+	return 0x00400088;
+}
+static inline u32 gr_debug_2_gfxp_wfi_always_injects_wfi_m(void)
+{
+	return 0x1 << 23;
+}
+static inline u32 gr_debug_2_gfxp_wfi_always_injects_wfi_v(u32 r)
+{
+	return (r >> 23) & 0x1;
+}
+static inline u32 gr_debug_2_gfxp_wfi_always_injects_wfi_enabled_f(void)
+{
+	return 0x800000;
+}
+static inline u32 gr_debug_2_gfxp_wfi_always_injects_wfi_disabled_f(void)
+{
+	return 0x0;
+}
 static inline u32 gr_gpcs_tpcs_sm_texio_control_r(void)
 {
 	return 0x00419c84;

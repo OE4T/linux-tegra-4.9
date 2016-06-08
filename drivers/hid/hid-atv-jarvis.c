@@ -3,7 +3,7 @@
  *  providing keys and microphone audio functionality
  *
  * Copyright (C) 2014 Google, Inc.
- * Copyright (c) 2015-2017, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2018, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -2112,6 +2112,7 @@ static void atvr_exit(void)
 
 	driver_remove_file(&atvr_driver.driver, &driver_attr_hid_miss_stats);
 	hid_unregister_driver(&atvr_driver);
+	switch_dev_unregister(&shdr_mic_switch);
 	mutex_destroy(&snd_cards_lock);
 	mutex_destroy(&hid_miss_stats_lock);
 }

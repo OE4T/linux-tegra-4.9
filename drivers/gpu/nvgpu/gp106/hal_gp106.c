@@ -180,13 +180,14 @@ int gp106_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
+	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 
 	gk20a_dbg_fn("");
 
 	*gops = gp106_ops;
 
-	gops->privsecurity = 0;
-	gops->securegpccs = 0;
+	gops->privsecurity = 1;
+	gops->securegpccs = 1;
 
 	gp10b_init_mc(gops);
 	gp106_init_gr(gops);
@@ -202,9 +203,20 @@ int gp106_init_hal(struct gk20a *g)
 	gp10b_init_cde_ops(gops);
 	gp10b_init_therm_ops(gops);
 	gm206_init_bios(gops);
-	gops->name = "gp106";
+	switch(ver){
+		case NVGPU_GPUID_GP106:
+			gops->name = "gp106";
+			break;
+		case NVGPU_GPUID_GP104:
+			gops->name = "gp104";
+			break;
+		default:
+			gk20a_err(g->dev, "no support for %x", ver);
+			BUG();
+	}
 	gops->get_litter_value = gp106_get_litter_value;
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
+	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_B;

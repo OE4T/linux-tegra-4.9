@@ -23,7 +23,9 @@ nvgpu-y += \
 	$(nvgpu-t18x)/gp106/mm_gp106.o \
 	$(nvgpu-t18x)/gp106/pmu_gp106.o \
 	$(nvgpu-t18x)/gp106/gr_gp106.o \
-	$(nvgpu-t18x)/gp106/gr_ctx_gp106.o
+	$(nvgpu-t18x)/gp106/gr_ctx_gp106.o \
+	$(nvgpu-t18x)/gp106/acr_gp106.o \
+	$(nvgpu-t18x)/gp106/sec2_gp106.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t18x)/gp10b/platform_gp10b_tegra.o
 

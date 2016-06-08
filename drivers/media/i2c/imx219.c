@@ -474,6 +474,25 @@ fail:
 	return err;
 }
 
+static int imx219_verify_streaming(struct imx219 *priv)
+{
+	int err = 0;
+
+	err = camera_common_s_power(priv->subdev, true);
+	if (err)
+		return err;
+
+	err = imx219_s_stream(priv->subdev, true);
+	if (err)
+		goto error;
+
+error:
+	imx219_s_stream(priv->subdev, false);
+	camera_common_s_power(priv->subdev, false);
+
+	return err;
+}
+
 static int imx219_g_volatile_ctrl(struct v4l2_ctrl *ctrl)
 {
 	struct imx219 *priv =
@@ -734,6 +753,10 @@ static int imx219_probe(struct i2c_client *client,
 	v4l2_i2c_subdev_init(&common_data->subdev, client, &imx219_subdev_ops);
 
 	err = imx219_ctrls_init(priv);
+	if (err)
+		return err;
+
+	err = imx219_verify_streaming(priv);
 	if (err)
 		return err;
 

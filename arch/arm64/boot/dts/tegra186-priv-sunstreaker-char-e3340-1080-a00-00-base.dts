@@ -208,6 +208,9 @@
 	ast@b050000 {
 		status = "okay";
 	};
+	tegra-hsp@b150000 {
+		status = "okay";
+	};
 	rtcpu@b000000 {
 		status = "okay";
 	};

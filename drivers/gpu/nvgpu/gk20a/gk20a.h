@@ -815,6 +815,8 @@ struct gk20a {
 	wait_queue_head_t sw_irq_nonstall_last_handled_wq;
 
 	struct devfreq *devfreq;
+	u32 devfreq_max_freq;
+	u32 devfreq_min_freq;
 
 	struct gk20a_scale_profile *scale_profile;
 

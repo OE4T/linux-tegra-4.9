@@ -896,7 +896,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.prescale = gk20a_tegra_prescale,
 	.postscale = gk20a_tegra_postscale,
 	.devfreq_governor = "nvhost_podgov",
-	.qos_id = PM_QOS_GPU_FREQ_MIN,
+	.qos_notify = gk20a_scale_qos_notify,
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
@@ -956,7 +956,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.prescale = gk20a_tegra_prescale,
 	.postscale = gk20a_tegra_postscale,
 	.devfreq_governor = "nvhost_podgov",
-	.qos_id = PM_QOS_GPU_FREQ_MIN,
+	.qos_notify = gk20a_scale_qos_notify,
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,

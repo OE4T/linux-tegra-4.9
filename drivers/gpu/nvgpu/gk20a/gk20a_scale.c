@@ -41,8 +41,44 @@
  * has changed. The function calls postscaling callback if it is defined.
  */
 
-static int gk20a_scale_qos_notify(struct notifier_block *nb,
-				  unsigned long n, void *p)
+#if defined(CONFIG_COMMON_CLK)
+int gk20a_scale_qos_notify(struct notifier_block *nb,
+			  unsigned long n, void *p)
+{
+	struct gk20a_scale_profile *profile =
+			container_of(nb, struct gk20a_scale_profile,
+			qos_notify_block);
+	struct gk20a *g = get_gk20a(profile->dev);
+	struct devfreq *devfreq = g->devfreq;
+	s32 min_qos_freq, max_qos_freq;
+
+	if (!devfreq)
+		return NOTIFY_OK;
+
+	/* check for pm_qos min and max frequency requirement */
+	min_qos_freq = pm_qos_read_min_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
+	max_qos_freq = pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS) * 1000;
+
+	mutex_lock(&devfreq->lock);
+
+	devfreq->min_freq = max_t(u32, g->devfreq_min_freq, min_qos_freq);
+	devfreq->max_freq = min_t(u32, g->devfreq_max_freq, max_qos_freq);
+
+	WARN_ON(devfreq->min_freq > devfreq->max_freq);
+
+	/*
+	 * update_devfreq() will adjust the current (or newly estimated)
+	 * frequency based on devfreq->min_freq/max_freq
+	 */
+	update_devfreq(devfreq);
+
+	mutex_unlock(&devfreq->lock);
+
+	return NOTIFY_OK;
+}
+#else
+int gk20a_scale_qos_notify(struct notifier_block *nb,
+			  unsigned long n, void *p)
 {
 	struct gk20a_scale_profile *profile =
 		container_of(nb, struct gk20a_scale_profile,
@@ -57,7 +93,7 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 	/* get the frequency requirement. if devfreq is enabled, check if it
 	 * has higher demand than qos */
 	freq = platform->clk_round_rate(profile->dev,
-				pm_qos_request(platform->qos_id));
+			(u32)pm_qos_read_min_bound(PM_QOS_GPU_FREQ_BOUNDS));
 	if (g->devfreq)
 		freq = max(g->devfreq->previous_freq, freq);
 
@@ -68,6 +104,7 @@ static int gk20a_scale_qos_notify(struct notifier_block *nb,
 
 	return NOTIFY_OK;
 }
+#endif
 
 /*
  * gk20a_scale_make_freq_table(profile)
@@ -311,16 +348,19 @@ void gk20a_scale_init(struct device *dev)
 			devfreq = NULL;
 
 		g->devfreq = devfreq;
+		g->devfreq_max_freq = devfreq->max_freq;
+		g->devfreq_min_freq = devfreq->min_freq;
 	}
 
 	/* Should we register QoS callback for this device? */
-	if (platform->qos_id < PM_QOS_NUM_CLASSES &&
-	    platform->qos_id != PM_QOS_RESERVED &&
-	    platform->postscale) {
+	if (platform->qos_notify) {
 		profile->qos_notify_block.notifier_call =
-			&gk20a_scale_qos_notify;
-		pm_qos_add_notifier(platform->qos_id,
-				    &profile->qos_notify_block);
+					platform->qos_notify;
+
+		pm_qos_add_min_notifier(PM_QOS_GPU_FREQ_BOUNDS,
+					&profile->qos_notify_block);
+		pm_qos_add_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
+					&profile->qos_notify_block);
 	}
 
 	return;
@@ -335,10 +375,10 @@ void gk20a_scale_exit(struct device *dev)
 	struct gk20a *g = platform->g;
 	int err;
 
-	if (platform->qos_id < PM_QOS_NUM_CLASSES &&
-	    platform->qos_id != PM_QOS_RESERVED &&
-	    platform->postscale) {
-		pm_qos_remove_notifier(platform->qos_id,
+	if (platform->qos_notify) {
+		pm_qos_remove_min_notifier(PM_QOS_GPU_FREQ_BOUNDS,
+				&g->scale_profile->qos_notify_block);
+		pm_qos_remove_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
 				&g->scale_profile->qos_notify_block);
 	}
 

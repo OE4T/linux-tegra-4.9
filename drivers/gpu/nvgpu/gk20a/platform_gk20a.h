@@ -181,10 +181,11 @@ struct gk20a_platform {
 	 * this governor to be used in scaling */
 	const char *devfreq_governor;
 
-	/* Quality of service id. If this is set, the scaling routines
-	 * will register a callback to id. Each time we receive a new value,
-	 * the postscale callback gets called.  */
-	int qos_id;
+	/* Quality of service notifier callback. If this is set, the scaling
+	 * routines will register a callback to Qos. Each time we receive
+	 * a new value, this callback gets called.  */
+	int (*qos_notify)(struct notifier_block *nb,
+			  unsigned long n, void *p);
 
 	/* Called as part of debug dump. If the gpu gets hung, this function
 	 * is responsible for delivering all necessary debug data of other

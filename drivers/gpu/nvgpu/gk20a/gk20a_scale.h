@@ -47,11 +47,18 @@ void gk20a_scale_notify_idle(struct device *);
 
 void gk20a_scale_suspend(struct device *);
 void gk20a_scale_resume(struct device *);
+int gk20a_scale_qos_notify(struct notifier_block *nb,
+			unsigned long n, void *p);
 #else
 static inline void gk20a_scale_notify_busy(struct device *dev) {}
 static inline void gk20a_scale_notify_idle(struct device *dev) {}
 static inline void gk20a_scale_suspend(struct device *dev) {}
 static inline void gk20a_scale_resume(struct device *dev) {}
+static inline int gk20a_scale_qos_notify(struct notifier_block *nb,
+			unsigned long n, void *p)
+{
+	return -ENOSYS;
+}
 #endif
 
 #endif

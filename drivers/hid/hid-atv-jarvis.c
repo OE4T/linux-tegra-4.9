@@ -988,10 +988,6 @@ static void snd_atvr_timer_callback(unsigned long data)
 static void snd_atvr_timer_start(struct snd_pcm_substream *substream)
 {
 	struct snd_atvr *atvr_snd = snd_pcm_substream_chip(substream);
-
-	if (try_to_del_timer_sync(&atvr_snd->decoding_timer) < 0)
-		return -EAGAIN;
-
 	atvr_snd->timer_enabled = true;
 	atvr_snd->previous_jiffies = jiffies;
 	atvr_snd->timeout_jiffies =

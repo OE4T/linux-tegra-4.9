@@ -118,4 +118,6 @@ struct flcn_acr_desc_v1 {
 	u32 dummy[4];  //ACR_BSI_VPR_DESC
 };
 
+void gp106_init_secure_pmu(struct gpu_ops *gops);
+
 #endif /*__PMU_GP106_H_*/

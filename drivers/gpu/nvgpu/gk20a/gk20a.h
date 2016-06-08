@@ -126,6 +126,7 @@ struct gpu_ops {
 	} ce2;
 	struct {
 		int (*init_fs_state)(struct gk20a *g);
+		int (*init_preemption_state)(struct gk20a *g);
 		void (*access_smpc_reg)(struct gk20a *g, u32 quad, u32 offset);
 		void (*bundle_cb_defaults)(struct gk20a *g);
 		void (*cb_size_default)(struct gk20a *g);

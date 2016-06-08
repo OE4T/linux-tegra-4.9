@@ -4587,6 +4587,12 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	if (err)
 		goto out;
 
+	if (g->ops.gr.init_preemption_state) {
+		err = g->ops.gr.init_preemption_state(g);
+		if (err)
+			goto out;
+	}
+
 	/* disable fe_go_idle */
 	gk20a_writel(g, gr_fe_go_idle_timeout_r(),
 		gr_fe_go_idle_timeout_count_disabled_f());

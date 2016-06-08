@@ -312,6 +312,29 @@ static int vgpu_init_gpu_characteristics(struct gk20a *g)
 	return 0;
 }
 
+static int vgpu_read_ptimer(struct gk20a *g, u64 *value)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	struct tegra_vgpu_cmd_msg msg = {0};
+	struct tegra_vgpu_read_ptimer_params *p = &msg.params.read_ptimer;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_READ_PTIMER;
+	msg.handle = platform->virt_handle;
+
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (!err)
+		*value = p->time;
+	else
+		gk20a_err(dev_from_gk20a(g),
+			"vgpu read ptimer failed, err=%d", err);
+
+	return err;
+}
+
 void vgpu_init_hal_common(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
@@ -324,6 +347,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_fecs_trace_ops(gops);
 	vgpu_init_tsg_ops(gops);
 	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
+	gops->read_ptimer = vgpu_read_ptimer;
 }
 
 static int vgpu_init_hal(struct gk20a *g)

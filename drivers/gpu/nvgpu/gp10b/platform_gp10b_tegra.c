@@ -412,7 +412,8 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.prescale = gp10b_tegra_prescale,
 	.postscale = gp10b_tegra_postscale,
 	.devfreq_governor = "nvhost_podgov",
-	.qos_id = PM_QOS_GPU_FREQ_MIN,
+
+	.qos_notify = gk20a_scale_qos_notify,
 
 	.secure_alloc = gk20a_tegra_secure_alloc,
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,

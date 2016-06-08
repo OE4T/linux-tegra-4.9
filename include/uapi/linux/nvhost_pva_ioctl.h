@@ -57,18 +57,38 @@ struct pva_characteristics_req {
 struct pva_characteristics {
 	__u8 num_vpu;
 	__u8 vpu_generation;
-	__u8 reserved[6];
+	__u8 reserved[2];
 	__u32 r5_ucode_version;
 	__u32 r5_ucode_earliest;
 	__u32 r5_vpu_runtime_earliest;
 };
 
+/**
+ * struct pva_pin_unpin_args - buffer handles to pin or unpin
+ *
+ * @buffers: Pointer to the table of u32
+ * @num_buffers: elements in the buffer table
+ * @reserved: reserved
+ *
+ * Used to deliver information about the buffer handles that should be
+ * be pinned into (or unpinned from) the PVA address space.
+ *
+ */
+struct pva_pin_unpin_args {
+	__u64 buffers;
+	__u32 num_buffers;
+	__u32 reserved;
+};
 
 #define PVA_IOCTL_CHARACTERISTICS	\
 	_IOWR(NVHOST_PVA_IOCTL_MAGIC, 1, struct pva_characteristics_req)
+#define PVA_IOCTL_PIN	\
+	_IOW(NVHOST_PVA_IOCTL_MAGIC, 2, struct pva_pin_unpin_args)
+#define PVA_IOCTL_UNPIN	\
+	_IOW(NVHOST_PVA_IOCTL_MAGIC, 3, struct pva_pin_unpin_args)
 
 
-#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_CHARACTERISTICS)
+#define NVHOST_PVA_IOCTL_LAST _IOC_NR(PVA_IOCTL_UNPIN)
 #define NVHOST_PVA_IOCTL_MAX_ARG_SIZE sizeof(struct pva_characteristics_req)
 
 #endif /* __LINUX_NVHOST_PVA_IOCTL_H */

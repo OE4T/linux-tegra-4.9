@@ -27,19 +27,69 @@
 
 #include "pva.h"
 #include "dev.h"
+#include "pva_buffer.h"
 #include "nvhost_acm.h"
 
 /**
  * struct pva_private - Per-fd specific data
  *
- * @pdev:	Pointer the pva device
- * @queue:	Pointer the struct pva_queue
- *
+ * @pdev:		Pointer the pva device
+ * @queue:		Pointer the struct pva_queue
+ * @buffer:		Pointer to the struct pva_buffer
  */
 struct pva_private {
 	struct platform_device *pdev;
 	struct pva_queue *queue;
+	struct pva_buffers *buffers;
 };
+
+static int pva_pin(struct pva_private *priv, void *arg)
+{
+	u32 *handles;
+	int err = 0;
+	struct pva_pin_unpin_args *buf_list = (struct pva_pin_unpin_args *)arg;
+	u32 count = buf_list->num_buffers;
+
+	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
+	if (!handles)
+		return -ENOMEM;
+
+	if (copy_from_user(handles, (void __user *)buf_list->buffers,
+			(count * sizeof(u32)))) {
+		err = -EFAULT;
+		goto pva_buffer_cpy_err;
+	}
+
+	err = pva_buffer_pin(priv->buffers, handles, count);
+
+pva_buffer_cpy_err:
+	kfree(handles);
+	return err;
+}
+
+static int pva_unpin(struct pva_private *priv, void *arg)
+{
+	u32 *handles;
+	int err = 0;
+	struct pva_pin_unpin_args *buf_list = (struct pva_pin_unpin_args *)arg;
+	u32 count = buf_list->num_buffers;
+
+	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
+	if (!handles)
+		return -ENOMEM;
+
+	if (copy_from_user(handles, (void __user *)buf_list->buffers,
+			(count * sizeof(u32)))) {
+		err = -EFAULT;
+		goto pva_buffer_cpy_err;
+	}
+
+	pva_buffer_unpin(priv->buffers, handles, count);
+
+pva_buffer_cpy_err:
+	kfree(handles);
+	return err;
+}
 
 static int pva_get_characteristics(struct pva_private *priv,
 		void *arg)
@@ -108,6 +158,16 @@ static long pva_ioctl(struct file *file, unsigned int cmd,
 		err = pva_get_characteristics(priv, buf);
 		break;
 	}
+	case PVA_IOCTL_PIN:
+	{
+		err = pva_pin(priv, buf);
+		break;
+	}
+	case PVA_IOCTL_UNPIN:
+	{
+		err = pva_unpin(priv, buf);
+		break;
+	}
 	default:
 		return -ENOIOCTLCMD;
 	}
@@ -141,13 +201,23 @@ static int pva_open(struct inode *inode, struct file *file)
 	if (err < 0)
 		goto err_add_client;
 
+	priv->buffers = pva_buffer_init(pdev);
+	if (IS_ERR(priv->buffers)) {
+		err = PTR_ERR(priv->buffers);
+		goto err_alloc_buffer;
+	}
+
 	priv->queue = pva_queue_alloc(pdev);
-	if (IS_ERR(priv->queue))
+	if (IS_ERR(priv->queue)) {
+		err = PTR_ERR(priv->queue);
 		goto err_alloc_queue;
+	}
 
 	return nonseekable_open(inode, file);
 
 err_alloc_queue:
+	kfree(priv->buffers);
+err_alloc_buffer:
 	nvhost_module_remove_client(pdev, priv);
 err_add_client:
 	kfree(priv);
@@ -163,6 +233,7 @@ static int pva_release(struct inode *inode, struct file *file)
 	pva_queue_put(priv->queue);
 	nvhost_module_remove_client(priv->pdev, priv);
 
+	pva_buffer_put(priv->buffers);
 	kfree(priv);
 
 	return 0;

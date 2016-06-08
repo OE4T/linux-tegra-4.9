@@ -674,6 +674,69 @@ clean_up:
 	return err;
 }
 
+static int nvgpu_gpu_get_engine_info(
+	struct gk20a *g,
+	struct nvgpu_gpu_get_engine_info_args *args)
+{
+	int err = 0;
+	u32 engine_enum = ENGINE_INVAL_GK20A;
+	u32 report_index = 0;
+	u32 engine_id_idx;
+	const u32 max_buffer_engines = args->engine_info_buf_size /
+		sizeof(struct nvgpu_gpu_get_engine_info_item);
+	struct nvgpu_gpu_get_engine_info_item __user *dst_item_list =
+		(void __user *)(uintptr_t)args->engine_info_buf_addr;
+
+	for (engine_id_idx = 0; engine_id_idx < g->fifo.num_engines;
+		++engine_id_idx) {
+		u32 active_engine_id = g->fifo.active_engines_list[engine_id_idx];
+		const struct fifo_engine_info_gk20a *src_info =
+			&g->fifo.engine_info[active_engine_id];
+		struct nvgpu_gpu_get_engine_info_item dst_info;
+
+		memset(&dst_info, 0, sizeof(dst_info));
+
+		engine_enum = src_info->engine_enum;
+
+		switch (engine_enum) {
+		case ENGINE_GR_GK20A:
+			dst_info.engine_id = NVGPU_GPU_ENGINE_ID_GR;
+			break;
+
+		case ENGINE_GRCE_GK20A:
+			dst_info.engine_id = NVGPU_GPU_ENGINE_ID_GR_COPY;
+			break;
+
+		case ENGINE_ASYNC_CE_GK20A:
+			dst_info.engine_id = NVGPU_GPU_ENGINE_ID_ASYNC_COPY;
+			break;
+
+		default:
+			gk20a_err(dev_from_gk20a(g), "Unmapped engine enum %u\n",
+				  engine_enum);
+			continue;
+		}
+
+		dst_info.engine_instance = src_info->inst_id;
+		dst_info.runlist_id = src_info->runlist_id;
+
+		if (report_index < max_buffer_engines) {
+			err = copy_to_user(&dst_item_list[report_index],
+					   &dst_info, sizeof(dst_info));
+			if (err)
+				goto clean_up;
+		}
+
+		++report_index;
+	}
+
+	args->engine_info_buf_size =
+		report_index * sizeof(struct nvgpu_gpu_get_engine_info_item);
+
+clean_up:
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct device *dev = filp->private_data;
@@ -914,6 +977,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_GET_GPU_TIME:
 		err = nvgpu_gpu_get_gpu_time(g,
 			(struct nvgpu_gpu_get_gpu_time_args *)buf);
+		break;
+
+        case NVGPU_GPU_IOCTL_GET_ENGINE_INFO:
+		err = nvgpu_gpu_get_engine_info(g,
+			(struct nvgpu_gpu_get_engine_info_args *)buf);
 		break;
 
 	default:

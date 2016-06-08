@@ -394,6 +394,33 @@ struct nvgpu_gpu_get_gpu_time_args {
 	__u64 reserved;
 };
 
+struct nvgpu_gpu_get_engine_info_item {
+
+#define NVGPU_GPU_ENGINE_ID_GR 0
+#define NVGPU_GPU_ENGINE_ID_GR_COPY 1
+#define NVGPU_GPU_ENGINE_ID_ASYNC_COPY 2
+	__u32 engine_id;
+
+	__u32 engine_instance;
+
+	/* runlist id for opening channels to the engine, or -1 if
+	 * channels are not supported */
+	__s32 runlist_id;
+
+	__u32 reserved;
+};
+
+struct nvgpu_gpu_get_engine_info_args {
+	/* [in]  Buffer size reserved by userspace.
+	 *
+	 * [out] Full kernel buffer size. Multiple of sizeof(struct
+	 *       nvgpu_gpu_get_engine_info_item)
+	*/
+	__u32 engine_info_buf_size;
+	__u32 reserved;
+	__u64 engine_info_buf_addr;
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -446,8 +473,11 @@ struct nvgpu_gpu_get_gpu_time_args {
 #define NVGPU_GPU_IOCTL_GET_GPU_TIME \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 25, \
 			struct nvgpu_gpu_get_gpu_time_args)
+#define NVGPU_GPU_IOCTL_GET_ENGINE_INFO \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 26, \
+			struct nvgpu_gpu_get_engine_info_args)
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_GET_GPU_TIME)
+	_IOC_NR(NVGPU_GPU_IOCTL_GET_ENGINE_INFO)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 

@@ -1,19 +1,21 @@
 KBUILD_CFLAGS += -I$(srctree)/sound/soc/tegra-alt
 subdir-ccflags-y += -Werror
 
+snd-soc-tegra186-alt-xbar-objs := tegra186_xbar_alt.o \
+	../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra210_xbar_alt.o
 snd-soc-tegra186-alt-asrc-objs := tegra186_asrc_alt.o
 snd-soc-tegra186-alt-arad-objs := tegra186_arad_alt.o
-snd-soc-tegra186-alt-afc-objs := tegra186_afc_alt.o
-snd-soc-tegra186-alt-xbar-objs := tegra186_xbar_alt.o
+snd-soc-tegra186-alt-afc-objs := tegra186_afc_alt.o \
+	../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra210_afc_alt.o
 snd-soc-tegra186-alt-fpga-clock-objs := ahub_unit_fpga_clock_t18x.o
 snd-soc-tegra186-alt-dspk-objs := tegra186_dspk_alt.o
 snd-soc-tegra-asoc-machine-alt-t18x-objs := tegra_asoc_machine_alt_t18x.o \
 	../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra_asoc_machine_alt.o
 
-obj-$(CONFIG_SND_SOC_TEGRA186_ASRC_ALT) += snd-soc-tegra186-alt-asrc.o
+obj-$(CONFIG_SND_SOC_TEGRA186_XBAR_ALT) += snd-soc-tegra186-alt-xbar.o
 obj-$(CONFIG_SND_SOC_TEGRA186_ARAD_ALT) += snd-soc-tegra186-alt-arad.o
-obj-$(CONFIG_SND_SOC_TEGRA210_AFC_ALT) += snd-soc-tegra186-alt-afc.o
-obj-$(CONFIG_SND_SOC_TEGRA210_XBAR_ALT) += snd-soc-tegra186-alt-xbar.o
+obj-$(CONFIG_SND_SOC_TEGRA186_ASRC_ALT) += snd-soc-tegra186-alt-asrc.o
+obj-$(CONFIG_SND_SOC_TEGRA186_AFC_ALT) += snd-soc-tegra186-alt-afc.o
 obj-$(CONFIG_SND_SOC_TEGRA_ALT) += snd-soc-tegra186-alt-fpga-clock.o
 obj-$(CONFIG_SND_SOC_TEGRA186_DSPK_ALT) += snd-soc-tegra186-alt-dspk.o
 obj-$(CONFIG_SND_SOC_TEGRA_ASOC_MACHINE_T18X_ALT) += snd-soc-tegra-asoc-machine-alt-t18x.o

@@ -123,5 +123,37 @@
 				};
 			};
 		};
+		fragment-b00-xusb-config {
+			ids = ">=3310-1000-500";
+			override@0 {
+				target = <&tegra_padctl_uphy_pinmux_default>;
+				_overlay_ {
+					usb3-std-A-port2 {
+						nvidia,lanes = "uphy-lane-0";
+						nvidia,usb3-port = <0>;
+					};
+					pcie {
+						nvidia,lanes = "uphy-lane-1", "uphy-lane-2", "uphy-lane-3", "uphy-lane-4";
+					};
+				};
+			};
+			override@1 {
+				target = <&{/xhci@3530000}>;
+				_overlay_ {
+					phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+						<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+						<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
+					phy-names = "utmi-0", "utmi-1", "usb3-0";
+				};
+			};
+			override@2 {
+				target = <&tegra_gpio>;
+				_overlay_ {
+					e3325_lane0_mux {
+						status = "okay";
+					};
+				};
+			};
+		};
 	};
 };

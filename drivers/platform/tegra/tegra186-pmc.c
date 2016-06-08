@@ -154,7 +154,6 @@ int tegra186_pmc_io_dpd_enable(int reg, int bit_pos)
 	unsigned int dpd_status;
 
 	spin_lock(&tegra186_pmc_access_lock);
-	tegra186_pmc_writel(0x10, PMC_IO_SEL_DPD_TIM);
 	enable_mask = ((1 << bit_pos) | PMC_IO_DPD_CODE_DPD_ON);
 
 	tegra186_pmc_writel(enable_mask, (PMC_IO_DPD_REQ + reg * 8));

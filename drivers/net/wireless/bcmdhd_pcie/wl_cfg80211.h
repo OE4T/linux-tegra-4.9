@@ -84,13 +84,14 @@ struct bcm_cfg80211 *wl_get_bcm_cfg80211_ptr(void);
 #define CFG80211_ERROR_TEXT		"CFG80211-ERROR) "
 #endif /* CUSTOMER_HW4_DEBUG */
 
+#define printwl(fmt, ...) pr_info("%s: " fmt, __func__, ##__VA_ARGS__)
+
 #if defined(DHD_DEBUG)
 #ifdef DHD_LOG_DUMP
 #define	WL_ERR(args)	\
 do {	\
 	if (wl_dbg_level & WL_DBG_ERR) {	\
-		printk(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
-		printk args;	\
+		printwl args;	\
 		dhd_log_dump_print("[%s] %s: ", dhd_log_dump_get_timestamp(), __func__);	\
 		dhd_log_dump_print args;	\
 	}	\
@@ -99,8 +100,7 @@ do {	\
 #define	WL_ERR(args)									\
 do {										\
 	if (wl_dbg_level & WL_DBG_ERR) {				\
-			printk(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
-			printk args;						\
+			printwl args;						\
 		}								\
 } while (0)
 #endif /* DHD_LOG_DUMP */
@@ -108,8 +108,7 @@ do {										\
 #define	WL_ERR(args)									\
 do {										\
 	if ((wl_dbg_level & WL_DBG_ERR) && net_ratelimit()) {				\
-			printk(KERN_INFO CFG80211_ERROR_TEXT "%s : ", __func__);	\
-			printk args;						\
+			printwl args;						\
 		}								\
 } while (0)
 #endif /* defined(DHD_DEBUG) */

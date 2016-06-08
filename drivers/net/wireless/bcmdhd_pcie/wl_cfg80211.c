@@ -4591,7 +4591,7 @@ wl_cfg80211_connect(struct wiphy *wiphy, struct net_device *dev,
 			MAC2STRDBG((u8*)(&ext_join_params->assoc.bssid)),
 			ext_join_params->ssid.SSID, ext_join_params->ssid.SSID_len));
 	} else {
-		WL_ERR(("Connecting with" MACDBG " ssid \"%s\", len (%d) channel=%d\n\n",
+		WL_ERR(("Connecting with" MACDBG " ssid \"%s\", len (%d) channel=%d\n",
 			MAC2STRDBG((u8*)(&ext_join_params->assoc.bssid)),
 			ext_join_params->ssid.SSID, ext_join_params->ssid.SSID_len, cfg->channel));
 	}

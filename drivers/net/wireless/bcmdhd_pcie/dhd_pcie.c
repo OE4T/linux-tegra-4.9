@@ -431,30 +431,30 @@ static int dump_wifi_config_space(struct pci_dev *pdev)
 	int row, col, row_cnt;
 	struct pci_dev *parent = pdev->bus->self;
 
-	DHD_ERROR(("%s: dumping pcie root port config space\n", __FUNCTION__));
+	pr_info("%s: dumping pcie root port config space\n", __FUNCTION__);
 	row_cnt = pci_is_pcie(parent) ?
 		PCI_EXT_CFG_SPACE_SIZE : PCI_CFG_SPACE_SIZE;
 	for (row = 0; row < (row_cnt / 16); row++) {
-		DHD_ERROR(("%02x: ", (row * 16)));
+		pr_cont("%02x: ", (row * 16));
 		for (col = 0; col < 16; col++) {
 			pci_read_config_byte(parent, ((row * 16) + col),
 				&val);
-			DHD_ERROR(("%02x ", val));
+			pr_cont("%02x ", val);
 		}
-		DHD_ERROR(("\n"));
+		pr_cont("\n");
 	}
 
-	DHD_ERROR(("%s: dumping Wi-Fi pcie config space\n", __FUNCTION__));
+	pr_info("%s: dumping Wi-Fi pcie config space\n", __FUNCTION__);
 	row_cnt = pci_is_pcie(pdev) ?
 		PCI_EXT_CFG_SPACE_SIZE : PCI_CFG_SPACE_SIZE;
 	for (row = 0; row < (row_cnt / 16); row++) {
-		DHD_ERROR(("%02x: ", (row * 16)));
+		pr_cont("%02x: ", (row * 16));
 		for (col = 0; col < 16; col++) {
 			pci_read_config_byte(pdev, ((row * 16) + col),
 				&val);
-			DHD_ERROR(("%02x ", val));
+			pr_cont("%02x ", val);
 		}
-		DHD_ERROR(("\n"));
+		pr_cont("\n");
 	}
 
 	return 0;

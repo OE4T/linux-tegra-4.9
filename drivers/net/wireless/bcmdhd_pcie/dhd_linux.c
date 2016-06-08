@@ -3713,7 +3713,6 @@ __dhd_sendpkt(dhd_pub_t *dhdp, int ifidx, void *pktbuf)
 					DHD_ERROR(("/%d", dhdp->dequeue_prec_map));
 				}
 #endif /* DHD_LOSSLESS_ROAMING */
-				DHD_ERROR(("\n"));
 			} else if (source_port == 0x0043 || dest_port == 0x0043) {
 				DHD_ERROR(("DHCP - BOOTP [RX]\n"));
 			}
@@ -9352,7 +9351,7 @@ dhd_register_if(dhd_pub_t *dhdp, int ifidx, bool need_rtnl_lock)
 
 
 
-	printf("Register interface [%s]  MAC: "MACDBG"\n\n", net->name,
+	printf("Register interface [%s]  MAC: "MACDBG"\n", net->name,
 #if defined(CUSTOMER_HW4_DEBUG)
 		MAC2STRDBG(dhd->pub.mac.octet));
 #else

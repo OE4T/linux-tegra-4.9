@@ -154,11 +154,12 @@ static unsigned int get_next_freq(struct sugov_cpu *sg_cpu, unsigned long util,
 static void sugov_get_util(unsigned long *util, unsigned long *max)
 {
 	struct rq *rq = this_rq();
-	unsigned long cfs_max;
+	unsigned long cfs_max, util_max;
 
 	cfs_max = arch_scale_cpu_capacity(NULL, smp_processor_id());
 
-	*util = min(rq->cfs.avg.util_avg, cfs_max);
+	util_max = max(rq->cfs.avg.util_avg, rq->cfs.avg.util_fast_avg);
+	*util = min(util_max, cfs_max);
 	*max = cfs_max;
 }
 

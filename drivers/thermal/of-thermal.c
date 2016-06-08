@@ -970,7 +970,7 @@ static int of_parse_thermal_zone_params(struct device_node *np,
 	if (!pstr)
 		return 0;
 
-	strncpy(tzp->governor_name, pstr, THERMAL_NAME_LENGTH);
+	strlcpy(tzp->governor_name, pstr, THERMAL_NAME_LENGTH);
 
 	gov = thermal_find_governor(tzp->governor_name);
 	if (!gov)

@@ -72,8 +72,6 @@ int tegra_hsp_db_enable_master(enum tegra_hsp_master master);
 
 int tegra_hsp_db_disable_master(enum tegra_hsp_master master);
 
-int tegra_hsp_db_get_enabled_masters(void);
-
 int tegra_hsp_db_ring(enum tegra_hsp_doorbell dbell);
 
 int tegra_hsp_db_can_ring(enum tegra_hsp_doorbell dbell);
@@ -81,14 +79,6 @@ int tegra_hsp_db_can_ring(enum tegra_hsp_doorbell dbell);
 int tegra_hsp_db_add_handler(int master, db_handler_t handler, void *data);
 
 int tegra_hsp_db_del_handler(int master);
-
-int tegra_hsp_db_get_pending(void);
-
-int tegra_hsp_db_clr_pending(u32 mask);
-
-int tegra_hsp_db_get_raw(void);
-
-int tegra_hsp_db_clr_raw(u32 mask);
 
 #define tegra_hsp_find_master(mask, master)	((mask) & (1 << (master)))
 

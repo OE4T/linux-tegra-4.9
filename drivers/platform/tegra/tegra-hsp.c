@@ -133,20 +133,6 @@ static irqreturn_t dbell_irq(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-/**
- * tegra_hsp_db_get_enabled_masters: get masters that can ring CCPLEX
- * @master:	 HSP master
- *
- * Returns the mask of enabled masters of CCPLEX.
- */
-int tegra_hsp_db_get_enabled_masters(void)
-{
-	if (!hsp_ready())
-		return -EINVAL;
-	return hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
-}
-EXPORT_SYMBOL(tegra_hsp_db_get_enabled_masters);
-
 static int tegra_hsp_db_set_master(enum tegra_hsp_master master, bool enabled)
 {
 	u32 reg;
@@ -220,63 +206,6 @@ int tegra_hsp_db_can_ring(enum tegra_hsp_doorbell dbell)
 }
 EXPORT_SYMBOL(tegra_hsp_db_can_ring);
 
-static int tegra_hsp_db_get_signals(u32 reg)
-{
-	if (!hsp_ready())
-		return -EINVAL;
-	return hsp_readl(db_bases[HSP_DB_CCPLEX], reg);
-}
-
-static int tegra_hsp_db_clr_signals(u32 reg, u32 mask)
-{
-	if (!hsp_ready())
-		return -EINVAL;
-	hsp_writel(db_bases[HSP_DB_CCPLEX], reg, mask);
-	return 0;
-}
-
-/**
- * tegra_hsp_db_get_pending: get pending rings to CCPLEX
- *
- * Returns a mask of pending signals.
- */
-int tegra_hsp_db_get_pending(void)
-{
-	return tegra_hsp_db_get_signals(HSP_DB_REG_PENDING);
-}
-EXPORT_SYMBOL(tegra_hsp_db_get_pending);
-
-/**
- * tegra_hsp_db_clr_pending: clear rings of ccplex based on <mask>
- * @mask:	mask of masters to be cleared
- */
-int tegra_hsp_db_clr_pending(u32 mask)
-{
-	return tegra_hsp_db_clr_signals(HSP_DB_REG_PENDING, mask);
-}
-EXPORT_SYMBOL(tegra_hsp_db_clr_pending);
-
-/**
- * tegra_hsp_db_get_raw: get unmasked rings to CCPLEX
- *
- * Returns a mask of unmasked pending signals.
- */
-int tegra_hsp_db_get_raw(void)
-{
-	return tegra_hsp_db_get_signals(HSP_DB_REG_RAW);
-}
-EXPORT_SYMBOL(tegra_hsp_db_get_raw);
-
-/**
- * tegra_hsp_db_clr_raw: clear unmasked rings of ccplex based on <mask>
- * @mask:	mask of masters to be cleared
- */
-int tegra_hsp_db_clr_raw(u32 mask)
-{
-	return tegra_hsp_db_clr_signals(HSP_DB_REG_RAW, mask);
-}
-EXPORT_SYMBOL(tegra_hsp_db_clr_raw);
-
 /**
  * tegra_hsp_db_add_handler: register an CCPLEX doorbell IRQ handler
  * @ master:	master id
@@ -339,7 +268,7 @@ EXPORT_SYMBOL(tegra_hsp_db_del_handler);
 
 static int hsp_dbg_enable_master_show(void *data, u64 *val)
 {
-	*val = tegra_hsp_db_get_enabled_masters();
+	*val = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_ENABLE);
 	return 0;
 }
 
@@ -388,25 +317,25 @@ static int hsp_dbg_can_ring_store(void *data, u64 val)
 
 static int hsp_dbg_pending_show(void *data, u64 *val)
 {
-	*val = tegra_hsp_db_get_pending();
+	*val = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING);
 	return 0;
 }
 
 static int hsp_dbg_pending_store(void *data, u64 val)
 {
-	tegra_hsp_db_clr_pending((u32)val);
+	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_PENDING, (u32)val);
 	return 0;
 }
 
 static int hsp_dbg_raw_show(void *data, u64 *val)
 {
-	*val = tegra_hsp_db_get_raw();
+	*val = hsp_readl(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_RAW);
 	return 0;
 }
 
 static int hsp_dbg_raw_store(void *data, u64 val)
 {
-	tegra_hsp_db_clr_raw((u32)val);
+	hsp_writel(db_bases[HSP_DB_CCPLEX], HSP_DB_REG_RAW, (u32)val);
 	return 0;
 }
 

@@ -15,6 +15,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gm20b/mm_gm20b.h"
+#include "gm206/mm_gm206.h"
 
 #include "hw_fbpa_gm206.h"
 #include "hw_top_gm206.h"

@@ -21,7 +21,6 @@
 #include <uapi/linux/nvgpu.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/reset.h>
 #include <soc/tegra/tegra_bpmp.h>
 #include <linux/hashtable.h>
@@ -172,8 +171,6 @@ static int gp10b_tegra_probe(struct device *dev)
 
 static int gp10b_tegra_late_probe(struct device *dev)
 {
-	/* Make gk20a power domain a subdomain of host1x */
-	nvhost_register_client_domain(dev_to_genpd(dev));
 	/*Create GP10B specific sysfs*/
 	gp10b_create_sysfs(dev);
 
@@ -184,8 +181,6 @@ static int gp10b_tegra_late_probe(struct device *dev)
 
 static int gp10b_tegra_remove(struct device *dev)
 {
-	/* remove gk20a power subdomain from host1x */
-	nvhost_unregister_client_domain(dev_to_genpd(dev));
 	gr_gp10b_remove_sysfs(dev);
 	/*Remove GP10B specific sysfs*/
 	gp10b_remove_sysfs(dev);

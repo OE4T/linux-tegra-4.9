@@ -332,7 +332,12 @@ static int __init parse_fragment(struct device_node *np)
 	int cname_count, cval_count;
 	int nchild;
 	bool found = false;
+	bool override_on_all_match;
 	int ret;
+
+
+	override_on_all_match = of_property_read_bool(np,
+					"enable-override-on-all-matches");
 
 	cname_count = of_property_count_strings(np, "config-names");
 	cval_count = of_property_count_u32_elems(np, "configs");
@@ -376,9 +381,15 @@ static int __init parse_fragment(struct device_node *np)
 			if (found) {
 				pr_info("node %s match with board %s\n",
 					np->full_name, bname);
-				goto search_done;
+				if (override_on_all_match)
+					break;
+				else
+					goto search_done;
 			}
 		}
+
+		if (override_on_all_match && !found)
+			return 0;
 	}
 
 	if ((odm_count > 0) && odm_np) {
@@ -387,9 +398,15 @@ static int __init parse_fragment(struct device_node *np)
 			if (found) {
 				pr_info("node %s match with odm-data %s\n",
 					np->full_name, bname);
-				goto search_done;
+				if (override_on_all_match)
+					break;
+				else
+					goto search_done;
 			}
 		}
+
+		if (override_on_all_match && !found)
+			return 0;
 	}
 
 	if ((nct_count > 0) && nct_np) {
@@ -398,9 +415,15 @@ static int __init parse_fragment(struct device_node *np)
 			if (found) {
 				pr_info("node %s match with nct-data %s\n",
 					np->full_name, bname);
-				goto search_done;
+				if (override_on_all_match)
+					break;
+				else
+					goto search_done;
 			}
 		}
+
+		if (override_on_all_match && !found)
+			return 0;
 	}
 
 	if ((chip_id_count > 0) && chip_np) {
@@ -409,9 +432,15 @@ static int __init parse_fragment(struct device_node *np)
 			if (found) {
 				pr_info("node %s match with chip-id %s\n",
 					np->full_name, bname);
-				goto search_done;
+				if (override_on_all_match)
+					break;
+				else
+					goto search_done;
 			}
 		}
+
+		if (override_on_all_match && !found)
+			return 0;
 	}
 
 	if ((cname_count > 0) && config_np) {
@@ -438,9 +467,15 @@ static int __init parse_fragment(struct device_node *np)
 			if (found) {
 				pr_info("node %s match with config %s\n",
 					np->full_name, bname);
-				goto search_done;
+				if (override_on_all_match)
+					break;
+				else
+					goto search_done;
 			}
 		}
+
+		if (override_on_all_match && !found)
+			return 0;
 	}
 
 search_done:

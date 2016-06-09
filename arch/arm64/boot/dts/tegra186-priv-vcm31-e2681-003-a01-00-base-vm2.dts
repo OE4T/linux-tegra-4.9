@@ -106,7 +106,7 @@
 		nvidia,vmid = <2>;
 
 		nvidia,ch-base = <32>;
-		nvidia,nb-channels = <31>;
+		nvidia,nb-channels = <30>;
 
 		nvidia,nb-hw-pts = <576>;
 		nvidia,pts-base = <288>;

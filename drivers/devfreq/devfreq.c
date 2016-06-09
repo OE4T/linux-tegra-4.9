@@ -947,7 +947,7 @@ static ssize_t governor_show(struct device *dev,
 	if (!to_devfreq(dev)->governor)
 		return -EINVAL;
 
-	return sprintf(buf, "%s\n", to_devfreq(dev)->governor->name);
+	return snprintf(buf, PAGE_SIZE, "%s\n", to_devfreq(dev)->governor->name);
 }
 
 static ssize_t governor_store(struct device *dev, struct device_attribute *attr,
@@ -1013,7 +1013,7 @@ static ssize_t available_governors_show(struct device *d,
 	if (count)
 		count--;
 
-	count += sprintf(&buf[count], "\n");
+	count += snprintf(&buf[count], (PAGE_SIZE - count), "\n");
 
 	return count;
 }
@@ -1027,23 +1027,25 @@ static ssize_t cur_freq_show(struct device *dev, struct device_attribute *attr,
 
 	if (devfreq->profile->get_cur_freq &&
 		!devfreq->profile->get_cur_freq(devfreq->dev.parent, &freq))
-			return sprintf(buf, "%lu\n", freq);
+			return snprintf(buf, PAGE_SIZE, "%lu\n", freq);
 
-	return sprintf(buf, "%lu\n", devfreq->previous_freq);
+	return snprintf(buf, PAGE_SIZE, "%lu\n", devfreq->previous_freq);
 }
 static DEVICE_ATTR_RO(cur_freq);
 
 static ssize_t target_freq_show(struct device *dev,
 				struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%lu\n", to_devfreq(dev)->previous_freq);
+	return snprintf(buf, PAGE_SIZE, "%lu\n",
+			to_devfreq(dev)->previous_freq);
 }
 static DEVICE_ATTR_RO(target_freq);
 
 static ssize_t polling_interval_show(struct device *dev,
 				     struct device_attribute *attr, char *buf)
 {
-	return sprintf(buf, "%d\n", to_devfreq(dev)->profile->polling_ms);
+	return snprintf(buf, PAGE_SIZE, "%d\n",
+			to_devfreq(dev)->profile->polling_ms);
 }
 
 static ssize_t polling_interval_store(struct device *dev,
@@ -1126,7 +1128,7 @@ unlock:
 static ssize_t name##_show					\
 (struct device *dev, struct device_attribute *attr, char *buf)	\
 {								\
-	return sprintf(buf, "%lu\n", to_devfreq(dev)->name);	\
+	return snprintf(buf, PAGE_SIZE, "%lu\n", to_devfreq(dev)->name);	\
 }
 show_one(min_freq);
 show_one(max_freq);
@@ -1172,7 +1174,7 @@ static ssize_t available_frequencies_show(struct device *d,
 	if (count)
 		count--;
 
-	count += sprintf(&buf[count], "\n");
+	count += snprintf(&buf[count], PAGE_SIZE - count, "\n");
 
 	return count;
 }
@@ -1206,32 +1208,31 @@ static ssize_t trans_stat_show(struct device *dev,
 	else
 		prev_freq = devfreq->profile->freq_table[prev_freq_level];
 
-	len = sprintf(buf, "     From  :   To\n");
-	len += sprintf(buf + len, "           :");
-
+	len = snprintf(buf, PAGE_SIZE, "     From  :   To\n");
+	len += snprintf(buf + len, PAGE_SIZE - len, "           :");
 	for (i = 0; i < max_state; i++)
-		len += sprintf(buf + len, "%10lu",
+		len += snprintf(buf + len, PAGE_SIZE - len, "%10lu",
 				devfreq->profile->freq_table[i]);
 
-	len += sprintf(buf + len, "   time(ms)\n");
+	len += snprintf(buf + len, PAGE_SIZE - len, "   time(ms)\n");
 
 	for (i = 0; i < max_state; i++) {
 		if (devfreq->profile->freq_table[i] == prev_freq &&
 		    !devfreq->suspended) {
-			len += sprintf(buf + len, "*");
+			len += snprintf(buf + len, PAGE_SIZE - len, "*");
 		} else {
-			len += sprintf(buf + len, " ");
+			len += snprintf(buf + len, PAGE_SIZE - len, " ");
 		}
-		len += sprintf(buf + len, "%10lu:",
+		len += snprintf(buf + len, PAGE_SIZE - len, "%10lu:",
 				devfreq->profile->freq_table[i]);
 		for (j = 0; j < max_state; j++)
-			len += sprintf(buf + len, "%10u",
+			len += snprintf(buf + len, PAGE_SIZE - len, "%10u",
 				devfreq->trans_table[(i * max_state) + j]);
-		len += sprintf(buf + len, "%10u\n",
+		len += snprintf(buf + len, PAGE_SIZE - len, "%10u\n",
 			jiffies_to_msecs(devfreq->time_in_state[i]));
 	}
 
-	len += sprintf(buf + len, "Total transition : %u\n",
+	len += snprintf(buf + len, PAGE_SIZE - len, "Total transition : %u\n",
 					devfreq->total_trans);
 	return len;
 }

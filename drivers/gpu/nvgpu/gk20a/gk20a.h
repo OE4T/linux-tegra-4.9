@@ -664,6 +664,7 @@ struct gk20a {
 	struct device *dev;
 	struct platform_device *host1x_dev;
 
+
 	struct resource *reg_mem;
 	void __iomem *regs;
 	void __iomem *regs_saved;
@@ -673,6 +674,7 @@ struct gk20a {
 	void __iomem *bar1_saved;
 
 	bool power_on;
+	bool suspended;
 
 	struct rw_semaphore busy_lock;
 
@@ -880,11 +882,6 @@ struct gk20a_cyclestate_buffer_elem {
 /* out */
 /* keep 64 bits to be consistent */
 	u64 data;
-};
-
-struct gk20a_domain_data {
-	struct generic_pm_domain gpd;
-	struct gk20a *gk20a;
 };
 
 /* debug accessories */

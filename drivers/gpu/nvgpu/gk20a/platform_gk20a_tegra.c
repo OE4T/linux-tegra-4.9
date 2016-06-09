@@ -22,7 +22,6 @@
 #include <uapi/linux/nvgpu.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/tegra_soctherm.h>
 #include <linux/platform/tegra/clock.h>
 #include <linux/platform/tegra/dvfs.h>
@@ -780,9 +779,6 @@ static int gk20a_tegra_probe(struct device *dev)
 
 static int gk20a_tegra_late_probe(struct device *dev)
 {
-	/* Make gk20a power domain a subdomain of host1x */
-	nvhost_register_client_domain(dev_to_genpd(dev));
-
 	/* Initialise tegra specific scaling quirks */
 	gk20a_tegra_scale_init(dev);
 
@@ -791,9 +787,6 @@ static int gk20a_tegra_late_probe(struct device *dev)
 
 static int gk20a_tegra_remove(struct device *dev)
 {
-	/* remove gk20a power subdomain from host1x */
-	nvhost_unregister_client_domain(dev_to_genpd(dev));
-
 	/* deinitialise tegra specific scaling quirks */
 	gk20a_tegra_scale_exit(dev);
 

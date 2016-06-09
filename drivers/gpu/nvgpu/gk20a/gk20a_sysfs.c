@@ -276,49 +276,33 @@ static DEVICE_ATTR(ptimer_src_freq,
 			NULL);
 
 
-#if defined(CONFIG_PM) && defined(CONFIG_PM_GENERIC_DOMAINS)
+#if defined(CONFIG_PM)
 static ssize_t railgate_enable_store(struct device *dev,
 	struct device_attribute *attr, const char *buf, size_t count)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct generic_pm_domain *genpd = dev_to_genpd(dev);
-	struct gk20a *g = get_gk20a(dev);
 	unsigned long railgate_enable = 0;
 	int err = 0;
 
 	if (kstrtoul(buf, 10, &railgate_enable) < 0)
 		return -EINVAL;
+
 	if (railgate_enable && !platform->can_railgate) {
-		mutex_lock(&platform->railgate_lock);
+		/* release extra ref count */
+		gk20a_idle(dev);
 		platform->can_railgate = true;
-		genpd->gov = NULL;
-		pm_genpd_set_poweroff_delay(genpd, platform->railgate_delay);
-		/* release extra ref count:if power domains not enabled */
-		if ((platform->railgate) && \
-				!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-			err = platform->railgate(dev);
-		mutex_unlock(&platform->railgate_lock);
 	} else if (railgate_enable == 0 && platform->can_railgate) {
-		mutex_lock(&platform->railgate_lock);
+		/* take extra ref count */
+		err = gk20a_busy(dev);
+		if (err)
+			return err;
 		platform->can_railgate = false;
-		genpd->gov = &pm_domain_always_on_gov;
-		pm_genpd_set_poweroff_delay(genpd, platform->railgate_delay);
-		/* take extra ref count - incase of power domains not enabled */
-		if ((platform->unrailgate) && \
-				!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-			err = platform->unrailgate(dev);
-		mutex_unlock(&platform->railgate_lock);
 	}
 	if (err)
 		return err;
 
 	dev_info(dev, "railgate is %s.\n", platform->can_railgate ?
 		"enabled" : "disabled");
-	/* wake-up system to make railgating_enable effective immediately */
-	err = gk20a_busy(g->dev);
-	if (err)
-		return err;
-	gk20a_idle(g->dev);
 
 	return count;
 }
@@ -351,11 +335,11 @@ static ssize_t railgate_delay_store(struct device *dev,
 
 	ret = sscanf(buf, "%d", &railgate_delay);
 	if (ret == 1 && railgate_delay >= 0) {
-		struct generic_pm_domain *genpd = pd_to_genpd(dev->pm_domain);
 		platform->railgate_delay = railgate_delay;
-		pm_genpd_set_poweroff_delay(genpd, platform->railgate_delay);
+		pm_runtime_set_autosuspend_delay(dev, platform->railgate_delay);
 	} else
 		dev_err(dev, "Invalid powergate delay\n");
+
 	/* wake-up system to make rail-gating delay effective immediately */
 	err = gk20a_busy(g->dev);
 	if (err)
@@ -782,9 +766,7 @@ void gk20a_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_is_railgated);
 #ifdef CONFIG_PM
 	device_remove_file(dev, &dev_attr_force_idle);
-#if defined(CONFIG_PM_GENERIC_DOMAINS)
 	device_remove_file(dev, &dev_attr_railgate_enable);
-#endif
 #endif
 	device_remove_file(dev, &dev_attr_aelpg_param);
 	device_remove_file(dev, &dev_attr_aelpg_enable);
@@ -823,9 +805,7 @@ void gk20a_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_is_railgated);
 #ifdef CONFIG_PM
 	error |= device_create_file(dev, &dev_attr_force_idle);
-#if defined(CONFIG_PM_GENERIC_DOMAINS)
 	error |= device_create_file(dev, &dev_attr_railgate_enable);
-#endif
 #endif
 	error |= device_create_file(dev, &dev_attr_aelpg_param);
 	error |= device_create_file(dev, &dev_attr_aelpg_enable);

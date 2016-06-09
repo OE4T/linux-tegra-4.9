@@ -36,7 +36,6 @@
 #include <linux/debugfs.h>
 #include <linux/spinlock.h>
 #include <linux/tegra-powergate.h>
-#include <linux/tegra_pm_domains.h>
 #include <linux/clk/tegra.h>
 #include <linux/kthread.h>
 #include <linux/platform/tegra/common.h>
@@ -1130,41 +1129,31 @@ struct channel_gk20a *gk20a_get_channel_from_file(int fd)
 	return ch;
 }
 
-static int gk20a_pm_enable_clk(struct device *dev)
+static int gk20a_pm_railgate(struct device *dev)
 {
-	int index = 0;
-	struct gk20a_platform *platform;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	int ret = 0;
 
-	platform = dev_get_drvdata(dev);
-	if (!platform)
-		return -EINVAL;
+	if (platform->railgate)
+		ret = platform->railgate(dev);
 
-	for (index = 0; index < platform->num_clks; index++) {
-		int err = 0;
-		if (platform->clk[index])
-			err = clk_prepare_enable(platform->clk[index]);
-		if (err)
-			return -EINVAL;
-	}
-
-	return 0;
+	return ret;
 }
 
-static int gk20a_pm_disable_clk(struct device *dev)
+static int gk20a_pm_unrailgate(struct device *dev)
 {
-	int index = 0;
-	struct gk20a_platform *platform;
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	int ret = 0;
 
-	platform = dev_get_drvdata(dev);
-	if (!platform)
-		return -EINVAL;
+	trace_gk20a_pm_unrailgate(dev_name(dev));
 
-	for (index = 0; index < platform->num_clks; index++) {
-		if (platform->clk[index])
-			clk_disable_unprepare(platform->clk[index]);
+	if (platform->unrailgate) {
+		mutex_lock(&platform->railgate_lock);
+		ret = platform->unrailgate(dev);
+		mutex_unlock(&platform->railgate_lock);
 	}
 
-	return 0;
+	return ret;
 }
 
 static void gk20a_pm_shutdown(struct platform_device *pdev)
@@ -1176,17 +1165,12 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 	/* If GPU is already railgated,
 	 * just prevent more requests, and return */
 	if (platform->is_railgated && platform->is_railgated(&pdev->dev)) {
-#ifdef CONFIG_PM
 		__pm_runtime_disable(&pdev->dev, false);
-#endif
 		return;
 	}
 
-
-#ifdef CONFIG_PM
 	/* Prevent more requests by disabling Runtime PM */
 	__pm_runtime_disable(&pdev->dev, false);
-#endif
 
 	/* Be ready for rail-gate after this point */
 	if (gk20a_gpu_is_virtual(&pdev->dev))
@@ -1194,63 +1178,55 @@ static void gk20a_pm_shutdown(struct platform_device *pdev)
 	else
 		gk20a_pm_prepare_poweroff(&pdev->dev);
 
+	gk20a_pm_railgate(&pdev->dev);
+
 	dev_info(&pdev->dev, "shut down complete\n");
 }
 
-#ifdef CONFIG_PM
-static const struct dev_pm_ops gk20a_pm_ops = {
-#if defined(CONFIG_PM) && !defined(CONFIG_PM_GENERIC_DOMAINS)
-	.runtime_resume = gk20a_pm_enable_clk,
-	.runtime_suspend = gk20a_pm_disable_clk,
-#endif
-};
-#endif
-
-static int _gk20a_pm_railgate(struct device *dev)
+static int gk20a_pm_runtime_resume(struct device *dev)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	int ret = 0;
-	if (platform->railgate)
-		ret = platform->railgate(dev);
-	return ret;
+	int err = 0;
+
+	err = gk20a_pm_unrailgate(dev);
+	if (err)
+		goto fail;
+
+	err = gk20a_pm_finalize_poweron(dev);
+	if (err)
+		goto fail_poweron;
+
+	return 0;
+
+fail_poweron:
+	gk20a_pm_railgate(dev);
+fail:
+	return err;
 }
 
-static int gk20a_pm_railgate(struct generic_pm_domain *domain)
+static int gk20a_pm_runtime_suspend(struct device *dev)
 {
-	struct gk20a_domain_data *gk20a_domain = container_of(domain,
-			   struct gk20a_domain_data, gpd);
-	struct gk20a *g = gk20a_domain->gk20a;
+	int err = 0;
 
-	return _gk20a_pm_railgate(g->dev);
-}
+	err = gk20a_pm_prepare_poweroff(dev);
+	if (err)
+		goto fail;
 
-static int _gk20a_pm_unrailgate(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	int ret = 0;
+	err = gk20a_pm_railgate(dev);
+	if (err)
+		goto fail_railgate;
 
-	if (platform->unrailgate) {
-		mutex_lock(&platform->railgate_lock);
-		ret = platform->unrailgate(dev);
-		mutex_unlock(&platform->railgate_lock);
-	}
+	return 0;
 
-	return ret;
-}
-
-static int gk20a_pm_unrailgate(struct generic_pm_domain *domain)
-{
-	struct gk20a_domain_data *gk20a_domain = container_of(domain,
-				     struct gk20a_domain_data, gpd);
-	struct gk20a *g = gk20a_domain->gk20a;
-	trace_gk20a_pm_unrailgate(dev_name(g->dev));
-
-	return _gk20a_pm_unrailgate(g->dev);
+fail_railgate:
+	gk20a_pm_finalize_poweron(dev);
+fail:
+	return err;
 }
 
 static int gk20a_pm_suspend(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
 
 #ifdef CONFIG_PM
@@ -1258,86 +1234,43 @@ static int gk20a_pm_suspend(struct device *dev)
 		return -EBUSY;
 #endif
 
-	ret = gk20a_pm_prepare_poweroff(dev);
+	if (!g->power_on)
+		return 0;
+
+	ret = gk20a_pm_runtime_suspend(dev);
 	if (ret)
 		return ret;
 
 	if (platform->suspend)
 		platform->suspend(dev);
 
+	g->suspended = true;
+
 	return 0;
 }
 
 static int gk20a_pm_resume(struct device *dev)
 {
-	return gk20a_pm_finalize_poweron(dev);
-}
+	struct gk20a *g = get_gk20a(dev);
+	int ret = 0;
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-static int gk20a_pm_initialise_domain(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct dev_power_governor *pm_domain_gov = NULL;
-	struct generic_pm_domain *domain = dev_to_genpd(dev);
-
-	if (IS_ERR(domain))
+	if (!g->suspended)
 		return 0;
 
-#ifdef CONFIG_PM
-	if (!platform->can_railgate)
-		pm_domain_gov = &pm_domain_always_on_gov;
-#endif
-	domain->gov = pm_domain_gov;
+	ret = gk20a_pm_runtime_resume(dev);
 
-	if (platform->railgate_delay)
-		pm_genpd_set_poweroff_delay(domain, platform->railgate_delay);
-
-	device_set_wakeup_capable(dev, 0);
-	return 0;
-}
-
-#else
-static int gk20a_pm_initialise_domain(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct dev_power_governor *pm_domain_gov = NULL;
-	struct generic_pm_domain *domain = NULL;
-	int ret = 0;
-	struct gk20a_domain_data *gpu_gpd_data = (struct gk20a_domain_data *)
-			kzalloc(sizeof(struct gk20a_domain_data), GFP_KERNEL);
-
-	if (!gpu_gpd_data)
-		return -ENOMEM;
-
-	gpu_gpd_data->gk20a = platform->g;
-	domain = &gpu_gpd_data->gpd;
-
-	domain->name = "gpu";
-
-#ifdef CONFIG_PM
-	if (!platform->can_railgate)
-		pm_domain_gov = &pm_domain_always_on_gov;
-#endif
-
-	pm_genpd_init(domain, pm_domain_gov, true);
-
-	domain->power_off = gk20a_pm_railgate;
-	domain->power_on = gk20a_pm_unrailgate;
-	domain->dev_ops.start = gk20a_pm_enable_clk;
-	domain->dev_ops.stop = gk20a_pm_disable_clk;
-	domain->dev_ops.save_state = gk20a_pm_prepare_poweroff;
-	domain->dev_ops.restore_state = gk20a_pm_finalize_poweron;
-	domain->dev_ops.suspend = gk20a_pm_suspend;
-	domain->dev_ops.resume = gk20a_pm_resume;
-
-	device_set_wakeup_capable(dev, 0);
-	ret = pm_genpd_add_device(domain, dev);
-
-	if (platform->railgate_delay)
-		pm_genpd_set_poweroff_delay(domain, platform->railgate_delay);
+	g->suspended = false;
 
 	return ret;
 }
+
+#ifdef CONFIG_PM
+static const struct dev_pm_ops gk20a_pm_ops = {
+	.runtime_resume = gk20a_pm_runtime_resume,
+	.runtime_suspend = gk20a_pm_runtime_suspend,
+	.resume = gk20a_pm_resume,
+	.suspend = gk20a_pm_suspend,
+};
 #endif
 
 int gk20a_pm_init(struct device *dev)
@@ -1350,24 +1283,20 @@ int gk20a_pm_init(struct device *dev)
 	/* Initialise pm runtime */
 	if (platform->railgate_delay) {
 		pm_runtime_set_autosuspend_delay(dev,
-						 platform->railgate_delay);
+				 platform->railgate_delay);
 		pm_runtime_use_autosuspend(dev);
 	}
 
-	pm_runtime_enable(dev);
-	if (!pm_runtime_enabled(dev))
-		gk20a_pm_enable_clk(dev);
-
-	/* Enable runtime railgating if possible. If not,
-	 * turn on the rail now. */
-	if (platform->can_railgate && IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-		_gk20a_pm_railgate(dev);
-	else if (!IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-		_gk20a_pm_unrailgate(dev);
-
-	/* genpd will take care of runtime power management if it is enabled */
-	if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-		err = gk20a_pm_initialise_domain(dev);
+	if (platform->can_railgate) {
+		pm_runtime_enable(dev);
+		if (!pm_runtime_enabled(dev))
+			gk20a_pm_unrailgate(dev);
+		else
+			gk20a_pm_railgate(dev);
+	} else {
+		__pm_runtime_disable(dev, false);
+		gk20a_pm_unrailgate(dev);
+	}
 
 	return err;
 }
@@ -1386,23 +1315,11 @@ static int gk20a_secure_page_alloc(struct platform_device *pdev)
 	return err;
 }
 
-static struct of_device_id tegra_gpu_domain_match[] = {
-	{.compatible = "nvidia,tegra124-gpu-pd"},
-	{.compatible = "nvidia,tegra132-gpu-pd"},
-	{.compatible = "nvidia,tegra210-gpu-pd"},
-	{.compatible = "nvidia,tegra186-gpu-pd"},
-	{},
-};
-
 static int gk20a_probe(struct platform_device *dev)
 {
 	struct gk20a *gk20a;
 	int err;
 	struct gk20a_platform *platform = NULL;
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-	struct gk20a_domain_data *gk20a_domain;
-#endif
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -1433,12 +1350,6 @@ static int gk20a_probe(struct platform_device *dev)
 
 	init_waitqueue_head(&gk20a->sw_irq_stall_last_handled_wq);
 	init_waitqueue_head(&gk20a->sw_irq_nonstall_last_handled_wq);
-
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-	gk20a_domain = container_of(dev_to_genpd(&dev->dev),
-			     struct gk20a_domain_data, gpd);
-	gk20a_domain->gk20a = gk20a;
-#endif
 
 	set_gk20a(dev, gk20a);
 	gk20a->dev = &dev->dev;
@@ -1636,7 +1547,6 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	struct gk20a_domain_data *gk20a_gpd;
 
 	gk20a_dbg_fn("");
 
@@ -1665,14 +1575,8 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 		platform->secure_buffer.destroy(dev,
 				&platform->secure_buffer);
 
-	gk20a_gpd = container_of(&g, struct gk20a_domain_data, gk20a);
-	gk20a_gpd->gk20a = NULL;
-	kfree(gk20a_gpd);
-
 	if (pm_runtime_enabled(dev))
 		pm_runtime_disable(dev);
-	else
-		gk20a_pm_disable_clk(dev);
 
 	if (platform->remove)
 		platform->remove(dev);
@@ -1704,63 +1608,6 @@ static struct platform_driver gk20a_driver = {
 	}
 };
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS_OF
-
-
-static int _gk20a_init_domain(struct device_node *np,
-			      struct generic_pm_domain *gpd)
-{
-	bool is_off = false;
-
-	gpd->name = (char *)np->name;
-
-	if (of_property_read_bool(np, "is_off"))
-		is_off = true;
-
-	pm_genpd_init(gpd, NULL, is_off);
-
-	gpd->power_on = gk20a_pm_unrailgate;
-	gpd->power_off = gk20a_pm_railgate;
-	gpd->dev_ops.start = gk20a_pm_enable_clk;
-	gpd->dev_ops.stop = gk20a_pm_disable_clk;
-	gpd->dev_ops.save_state = gk20a_pm_prepare_poweroff;
-	gpd->dev_ops.restore_state = gk20a_pm_finalize_poweron;
-	gpd->dev_ops.suspend = gk20a_pm_suspend;
-	gpd->dev_ops.resume = gk20a_pm_resume;
-
-	of_genpd_add_provider_simple(np, gpd);
-	gpd->of_node = of_node_get(np);
-
-	genpd_pm_subdomain_attach(gpd);
-	return 0;
-}
-
-static int gk20a_domain_init(struct of_device_id *matches)
-{
-	int ret = 0;
-	struct device_node *np;
-	struct gk20a_domain_data *gk20a_domain;
-
-	np = of_find_matching_node(NULL, matches);
-	if (!np)
-		return -ENOENT;
-
-	gk20a_domain = (struct gk20a_domain_data *)kzalloc
-		       (sizeof(struct gk20a_domain_data), GFP_KERNEL);
-	if (!gk20a_domain)
-		return -ENOMEM;
-
-	ret = _gk20a_init_domain(np, &gk20a_domain->gpd);
-
-	return ret;
-}
-#else
-static int gk20a_domain_init(struct of_device_id *matches)
-{
-	return 0;
-}
-#endif
-
 struct class nvgpu_class = {
 	.owner = THIS_MODULE,
 	.name = CLASS_NAME,
@@ -1772,10 +1619,6 @@ static int __init gk20a_init(void)
 	int ret;
 
 	ret = class_register(&nvgpu_class);
-	if (ret)
-		return ret;
-
-	ret = gk20a_domain_init(tegra_gpu_domain_match);
 	if (ret)
 		return ret;
 
@@ -1802,38 +1645,37 @@ int gk20a_busy(struct device *dev)
 {
 	int ret = 0;
 	struct gk20a *g = get_gk20a(dev);
-#ifdef CONFIG_PM
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-#endif
 
 	down_read(&g->busy_lock);
 
-#ifdef CONFIG_PM
-	if (platform->busy) {
-		ret = platform->busy(dev);
+	if (pm_runtime_enabled(dev)) {
+		if (platform->busy) {
+			ret = platform->busy(dev);
+			if (ret < 0) {
+				dev_err(dev, "%s: failed to poweron platform dependency\n",
+					__func__);
+				goto fail;
+			}
+		}
+
+		ret = pm_runtime_get_sync(dev);
 		if (ret < 0) {
-			dev_err(dev, "%s: failed to poweron platform dependency\n",
-				__func__);
+			pm_runtime_put_noidle(dev);
+			if (platform->idle)
+				platform->idle(dev);
 			goto fail;
+		}
+	} else {
+		if (!g->power_on) {
+			ret = gk20a_gpu_is_virtual(dev) ?
+				vgpu_pm_finalize_poweron(dev)
+				: gk20a_pm_finalize_poweron(dev);
+			if (ret)
+				goto fail;
 		}
 	}
 
-	ret = pm_runtime_get_sync(dev);
-	if (ret < 0) {
-		pm_runtime_put_noidle(dev);
-		if (platform->idle)
-			platform->idle(dev);
-		goto fail;
-	}
-#else
-	if (!g->power_on) {
-		ret = gk20a_gpu_is_virtual(dev) ?
-			vgpu_pm_finalize_poweron(dev)
-			: gk20a_pm_finalize_poweron(dev);
-		if (ret)
-			goto fail;
-	}
-#endif
 	gk20a_scale_notify_busy(dev);
 
 fail:
@@ -1844,18 +1686,22 @@ fail:
 
 void gk20a_idle(struct device *dev)
 {
-#ifdef CONFIG_PM
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
-	if (atomic_read(&dev->power.usage_count) == 1)
-		gk20a_scale_notify_idle(dev);
-	pm_runtime_mark_last_busy(dev);
-	pm_runtime_put_sync_autosuspend(dev);
 
-	if (platform->idle)
-		platform->idle(dev);
-#else
-	gk20a_scale_notify_idle(dev);
+	if (pm_runtime_enabled(dev)) {
+#ifdef CONFIG_PM
+		if (atomic_read(&dev->power.usage_count) == 1)
+			gk20a_scale_notify_idle(dev);
 #endif
+
+		pm_runtime_mark_last_busy(dev);
+		pm_runtime_put_sync_autosuspend(dev);
+
+		if (platform->idle)
+			platform->idle(dev);
+	} else {
+		gk20a_scale_notify_idle(dev);
+	}
 }
 
 void gk20a_disable(struct gk20a *g, u32 units)
@@ -1991,8 +1837,6 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		/* Save the GPU state */
 		gk20a_pm_prepare_poweroff(dev);
 
-		gk20a_pm_disable_clk(dev);
-
 		/* railgate GPU */
 		platform->railgate(dev);
 
@@ -2043,8 +1887,6 @@ int __gk20a_do_unidle(struct device *dev)
 		 * then unrailgate the GPU here first
 		 */
 		platform->unrailgate(dev);
-
-		gk20a_pm_enable_clk(dev);
 
 		/* restore the GPU state */
 		gk20a_pm_finalize_poweron(dev);

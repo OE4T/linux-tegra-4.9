@@ -17,7 +17,6 @@
 #define _GK20A_PLATFORM_H_
 
 #include <linux/device.h>
-#include <linux/pm_domain.h>
 #include <linux/dma-attrs.h>
 
 struct gk20a;

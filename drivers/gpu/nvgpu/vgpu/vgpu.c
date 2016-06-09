@@ -430,48 +430,13 @@ done:
 	return err;
 }
 
-static int vgpu_pm_initialise_domain(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct dev_power_governor *pm_domain_gov = NULL;
-	struct gk20a_domain_data *vgpu_pd_data;
-	struct generic_pm_domain *domain;
-
-	vgpu_pd_data = (struct gk20a_domain_data *)kzalloc
-		(sizeof(struct gk20a_domain_data), GFP_KERNEL);
-
-	if (!vgpu_pd_data)
-		return -ENOMEM;
-
-	domain = &vgpu_pd_data->gpd;
-	vgpu_pd_data->gk20a = platform->g;
-
-	domain->name = "gpu";
-
-#ifdef CONFIG_PM
-	pm_domain_gov = &pm_domain_always_on_gov;
-#endif
-
-	pm_genpd_init(domain, pm_domain_gov, true);
-
-	domain->dev_ops.save_state = vgpu_pm_prepare_poweroff;
-	domain->dev_ops.restore_state = vgpu_pm_finalize_poweron;
-
-	device_set_wakeup_capable(dev, 0);
-	return pm_genpd_add_device(domain, dev);
-}
-
 static int vgpu_pm_init(struct device *dev)
 {
 	int err = 0;
 
 	gk20a_dbg_fn("");
 
-	pm_runtime_enable(dev);
-
-	/* genpd will take care of runtime power management if it is enabled */
-	if (IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS))
-		err = vgpu_pm_initialise_domain(dev);
+	__pm_runtime_disable(dev, false);
 
 	return err;
 }
@@ -567,15 +532,10 @@ int vgpu_remove(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
 	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_domain_data *vgpu_gpd;
 	gk20a_dbg_fn("");
 
 	if (g->remove_support)
 		g->remove_support(dev);
-
-	vgpu_gpd = container_of(&g, struct gk20a_domain_data, gk20a);
-	vgpu_gpd->gk20a = NULL;
-	kfree(vgpu_gpd);
 
 	vgpu_comm_deinit();
 	gk20a_user_deinit(dev, &nvgpu_class);

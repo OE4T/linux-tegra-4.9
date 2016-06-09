@@ -14,6 +14,7 @@
  */
 
 #include "gk20a/gk20a.h" /* FERMI and MAXWELL classes defined here */
+#include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/tegra-fuse.h>
 
@@ -31,6 +32,8 @@
 #include "hw_mc_gp10b.h"
 #include "gp10b_sysfs.h"
 #include <linux/vmalloc.h>
+
+#define NVGPU_GFXP_WFI_TIMEOUT_US	100LL
 
 static bool gr_gp10b_is_valid_class(struct gk20a *g, u32 class_num)
 {
@@ -2151,6 +2154,28 @@ static int gp10b_gr_fuse_override(struct gk20a *g)
 	}
 
 	kfree(fuses);
+
+	return 0;
+}
+
+static int gr_gp10b_init_preemption_state(struct gk20a *g)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+	u32 debug_2;
+	u64 sysclk_rate;
+	u32 sysclk_cycles;
+
+	sysclk_rate = platform->clk_get_rate(g->dev);
+	sysclk_cycles = (u32)((sysclk_rate * NVGPU_GFXP_WFI_TIMEOUT_US) / 1000000ULL);
+	gk20a_writel(g, gr_fe_gfxp_wfi_timeout_r(),
+			gr_fe_gfxp_wfi_timeout_count_f(sysclk_cycles));
+
+	debug_2 = gk20a_readl(g, gr_debug_2_r());
+	debug_2 = set_field(debug_2,
+			gr_debug_2_gfxp_wfi_always_injects_wfi_m(),
+			gr_debug_2_gfxp_wfi_always_injects_wfi_enabled_f());
+	gk20a_writel(g, gr_debug_2_r(), debug_2);
+
 	return 0;
 }
 
@@ -2158,6 +2183,7 @@ void gp10b_init_gr(struct gpu_ops *gops)
 {
 	gm20b_init_gr(gops);
 	gops->gr.init_fs_state = gr_gp10b_init_fs_state;
+	gops->gr.init_preemption_state = gr_gp10b_init_preemption_state;
 	gops->gr.is_valid_class = gr_gp10b_is_valid_class;
 	gops->gr.commit_global_cb_manager = gr_gp10b_commit_global_cb_manager;
 	gops->gr.commit_global_pagepool = gr_gp10b_commit_global_pagepool;

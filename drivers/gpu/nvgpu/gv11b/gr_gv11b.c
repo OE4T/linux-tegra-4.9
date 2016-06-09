@@ -1401,7 +1401,7 @@ static int gr_gv11b_disable_channel_or_tsg(struct gk20a *g, struct channel_gk20a
 		return ret;
 	}
 
-	ret = g->ops.fifo.update_runlist(g, 0, ~0, true, false);
+	ret = g->ops.fifo.update_runlist(g, fault_ch->runlist_id, ~0, true, false);
 	if (ret) {
 		gk20a_err(dev_from_gk20a(g),
 				"CILP: failed to restart runlist 0!");

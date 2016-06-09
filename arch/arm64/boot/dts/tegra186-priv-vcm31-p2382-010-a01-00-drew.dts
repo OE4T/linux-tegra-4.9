@@ -61,4 +61,10 @@
 		};
 	};
 
+	host1x {
+		isp@15600000 {
+			status = "disabled";
+		};
+	};
+
 };

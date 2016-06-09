@@ -25,4 +25,6 @@ int tegra_camrtc_reset(struct device *dev);
 int tegra_camrtc_boot(struct device *dev);
 int tegra_camrtc_ivc_setup_ready(struct device *dev);
 
+int tegra_camrtc_command(struct device *dev, u32 command, long timeout);
+
 #endif

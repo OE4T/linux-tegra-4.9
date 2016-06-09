@@ -380,8 +380,7 @@ static long tegra_camrtc_wait_for_empty(struct device *dev,
 	return timeout;
 }
 
-static int tegra_camrtc_command(struct device *dev, u32 command,
-				long timeout)
+int tegra_camrtc_command(struct device *dev, u32 command, long timeout)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 	int response;
@@ -421,6 +420,7 @@ done:
 
 	return response;
 }
+EXPORT_SYMBOL(tegra_camrtc_command);
 
 int tegra_camrtc_boot(struct device *dev)
 {

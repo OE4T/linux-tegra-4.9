@@ -17,6 +17,9 @@
 #include "gm20b/mm_gm20b.h"
 #include "gm20b/acr_gm20b.h"
 #include "gm206/acr_gm206.h"
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "acr_t18x.h"
+#endif
 
 struct acr_desc {
 	struct mem_desc ucode_blob;
@@ -26,7 +29,12 @@ struct acr_desc {
 	struct acr_fw_header *fw_hdr;
 	u32 pmu_args;
 	const struct firmware *acr_fw;
-	struct flcn_acr_desc *acr_dmem_desc;
+	union{
+		struct flcn_acr_desc *acr_dmem_desc;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+		struct flcn_acr_desc_v1 *acr_dmem_desc_v1;
+#endif
+	};
 	struct mem_desc acr_ucode;
 	const struct firmware *hsbl_fw;
 	struct mem_desc hsbl_ucode;

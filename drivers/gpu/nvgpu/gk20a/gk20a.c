@@ -545,29 +545,15 @@ int gk20a_sim_esc_read(struct gk20a *g, char *path, u32 index, u32 count, u32 *d
 static irqreturn_t gk20a_intr_isr_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	irqreturn_t ret;
 
-	ret = g->ops.mc.isr_stall(g);
-	if (ret == IRQ_WAKE_THREAD) {
-		/* balanced in gk20a_intr_thread_stall() */
-		gk20a_busy_noresume(g->dev);
-	}
-
-	return ret;
+	return g->ops.mc.isr_stall(g);
 }
 
 static irqreturn_t gk20a_intr_isr_nonstall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	irqreturn_t ret;
 
-	ret = g->ops.mc.isr_nonstall(g);
-	if (ret == IRQ_WAKE_THREAD) {
-		/* balanced in gk20a_intr_thread_nonstall() */
-		gk20a_busy_noresume(g->dev);
-	}
-
-	return ret;
+	return g->ops.mc.isr_nonstall(g);
 }
 
 void gk20a_pbus_isr(struct gk20a *g)
@@ -607,27 +593,13 @@ void gk20a_pbus_isr(struct gk20a *g)
 static irqreturn_t gk20a_intr_thread_stall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	irqreturn_t ret;
-
-	ret = g->ops.mc.isr_thread_stall(g);
-
-	/* refcount taken in gk20a_intr_isr_stall() */
-	gk20a_idle_nosuspend(g->dev);
-
-	return ret;
+	return g->ops.mc.isr_thread_stall(g);
 }
 
 static irqreturn_t gk20a_intr_thread_nonstall(int irq, void *dev_id)
 {
 	struct gk20a *g = dev_id;
-	irqreturn_t ret;
-
-	ret = g->ops.mc.isr_thread_nonstall(g);
-
-	/* refcount taken in gk20a_intr_isr_nonstall() */
-	gk20a_idle_nosuspend(g->dev);
-
-	return ret;
+	return g->ops.mc.isr_thread_nonstall(g);
 }
 
 void gk20a_remove_support(struct device *dev)
@@ -1868,11 +1840,6 @@ fail:
 	up_read(&g->busy_lock);
 
 	return ret < 0 ? ret : 0;
-}
-
-void gk20a_idle_nosuspend(struct device *dev)
-{
-	pm_runtime_put_noidle(dev);
 }
 
 void gk20a_idle(struct device *dev)

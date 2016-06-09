@@ -1061,7 +1061,6 @@ void gk20a_remove_sysfs(struct device *dev);
 
 void gk20a_busy_noresume(struct device *dev);
 int __must_check gk20a_busy(struct device *dev);
-void gk20a_idle_nosuspend(struct device *dev);
 void gk20a_idle(struct device *dev);
 void gk20a_disable(struct gk20a *g, u32 units);
 void gk20a_enable(struct gk20a *g, u32 units);

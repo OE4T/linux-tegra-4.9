@@ -165,6 +165,61 @@ u32 gk20a_fifo_get_all_ce_engine_reset_mask(struct gk20a *g)
 	return reset_mask;
 }
 
+u32 gk20a_fifo_get_gr_runlist_id(struct gk20a *g)
+{
+	u32 gr_engine_cnt = 0;
+	u32 gr_engine_id = FIFO_INVAL_ENGINE_ID;
+	struct fifo_engine_info_gk20a *engine_info;
+	u32 gr_runlist_id = ~0;
+
+	/* Consider 1st available GR engine */
+	gr_engine_cnt = gk20a_fifo_get_engine_ids(g, &gr_engine_id,
+			1, ENGINE_GR_GK20A);
+
+	if (!gr_engine_cnt) {
+		gk20a_err(dev_from_gk20a(g),
+			"No GR engine available on this device!");
+		goto end;
+	}
+
+	engine_info = gk20a_fifo_get_engine_info(g, gr_engine_id);
+
+	if (engine_info) {
+		gr_runlist_id = engine_info->runlist_id;
+	} else {
+		gk20a_err(g->dev,
+			"gr_engine_id is not in active list/invalid %d", gr_engine_id);
+	}
+
+end:
+	return gr_runlist_id;
+}
+
+bool gk20a_fifo_is_valid_runlist_id(struct gk20a *g, u32 runlist_id)
+{
+	struct fifo_gk20a *f = NULL;
+	u32 engine_id_idx;
+	u32 active_engine_id;
+	struct fifo_engine_info_gk20a *engine_info;
+
+	if (!g)
+		return false;
+
+	f = &g->fifo;
+
+	for (engine_id_idx = 0; engine_id_idx < f->num_engines; ++engine_id_idx) {
+		active_engine_id = f->active_engines_list[engine_id_idx];
+		engine_info = gk20a_fifo_get_engine_info(g, active_engine_id);
+		if (engine_info && (engine_info->runlist_id == runlist_id)) {
+			return true;
+		}
+	}
+
+	gk20a_err(g->dev, "runlist_id is not in active list/invalid %d", runlist_id);
+
+	return false;
+}
+
 /*
  * Link engine IDs to MMU IDs and vice versa.
  */
@@ -2733,6 +2788,30 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	runlist->cur_buffer = new_buf;
 
 clean_up:
+	return ret;
+}
+
+int gk20a_fifo_update_runlist_ids(struct gk20a *g, u32 runlist_ids, u32 hw_chid,
+				bool add, bool wait_for_finish)
+{
+	u32 ret = -EINVAL;
+	u32 runlist_id = 0;
+	u32 errcode;
+
+	if (!g)
+		goto end;
+
+	ret = 0;
+	for_each_set_bit(runlist_id, (unsigned long *)&runlist_ids, 32) {
+		/* Capture the last failure error code */
+		errcode = g->ops.fifo.update_runlist(g, runlist_id, hw_chid, add, wait_for_finish);
+		if (errcode) {
+			gk20a_err(dev_from_gk20a(g),
+				"failed to update_runlist %d %d", runlist_id, errcode);
+			ret = errcode;
+		}
+	}
+end:
 	return ret;
 }
 

@@ -114,6 +114,16 @@ int gk20a_tsg_bind_channel(struct tsg_gk20a *tsg,
 
 	ch->tsgid = tsg->tsgid;
 
+	/* all the channel part of TSG should need to be same runlist_id */
+	if (tsg->runlist_id == ~0)
+		tsg->runlist_id = ch->runlist_id;
+	else if (tsg->runlist_id != ch->runlist_id) {
+		gk20a_err(dev_from_gk20a(tsg->g),
+			"Error: TSG channel should be share same runlist ch[%d] tsg[%d]\n",
+			ch->runlist_id, tsg->runlist_id);
+		return -EINVAL;
+	}
+
 	mutex_lock(&tsg->ch_list_lock);
 	list_add_tail(&ch->ch_entry, &tsg->ch_list);
 	mutex_unlock(&tsg->ch_list_lock);
@@ -185,7 +195,7 @@ static int gk20a_tsg_set_priority(struct gk20a *g, struct tsg_gk20a *tsg,
 	gk20a_channel_get_timescale_from_timeslice(g, tsg->timeslice_us,
 			&tsg->timeslice_timeout, &tsg->timeslice_scale);
 
-	g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+	g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
 
 	return 0;
 }
@@ -346,7 +356,7 @@ static int gk20a_tsg_set_runlist_interleave(struct tsg_gk20a *tsg, u32 level)
 		break;
 	}
 
-	return ret ? ret : g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+	return ret ? ret : g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
 }
 
 static int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
@@ -360,7 +370,7 @@ static int gk20a_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 	gk20a_channel_get_timescale_from_timeslice(g, timeslice,
 			&tsg->timeslice_timeout, &tsg->timeslice_scale);
 
-	return g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+	return g->ops.fifo.update_runlist(g, tsg->runlist_id, ~0, true, true);
 }
 
 static void release_used_tsg(struct fifo_gk20a *f, struct tsg_gk20a *tsg)
@@ -411,6 +421,7 @@ int gk20a_tsg_open(struct gk20a *g, struct file *filp)
 	tsg->timeslice_us = 0;
 	tsg->timeslice_timeout = 0;
 	tsg->timeslice_scale = 0;
+	tsg->runlist_id = ~0;
 
 	filp->private_data = tsg;
 
@@ -447,6 +458,8 @@ static void gk20a_tsg_release(struct kref *ref)
 	}
 
 	release_used_tsg(&g->fifo, tsg);
+
+	tsg->runlist_id = ~0;
 
 	gk20a_dbg(gpu_dbg_fn, "tsg released %d\n", tsg->tsgid);
 }

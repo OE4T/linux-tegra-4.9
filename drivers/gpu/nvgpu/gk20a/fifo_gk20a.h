@@ -243,4 +243,11 @@ bool gk20a_fifo_is_valid_engine_id(struct gk20a *g, u32 engine_id);
 u32 gk20a_fifo_get_gr_engine_id(struct gk20a *g);
 
 u32 gk20a_fifo_get_all_ce_engine_reset_mask(struct gk20a *g);
+
+u32 gk20a_fifo_get_gr_runlist_id(struct gk20a *g);
+
+bool gk20a_fifo_is_valid_runlist_id(struct gk20a *g, u32 runlist_id);
+
+int gk20a_fifo_update_runlist_ids(struct gk20a *g, u32 runlist_ids, u32 hw_chid,
+		bool add, bool wait_for_finish);
 #endif /*__GR_GK20A_H__*/

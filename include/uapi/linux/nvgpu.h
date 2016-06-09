@@ -298,7 +298,20 @@ struct nvgpu_gpu_get_tpc_masks_args {
 };
 
 struct nvgpu_gpu_open_channel_args {
-	__s32 channel_fd;
+	union {
+		__s32 channel_fd; /* deprecated: use out.channel_fd instead */
+		struct {
+			 /* runlist_id is the runlist for the
+			  * channel. Basically, the runlist specifies the target
+			  * engine(s) for which the channel is
+			  * opened. Runlist_id -1 is synonym for the primary
+			  * graphics runlist. */
+			__s32 runlist_id;
+		} in;
+		struct {
+			__s32 channel_fd;
+		} out;
+	};
 };
 
 /* L2 cache writeback, optionally invalidate clean lines and flush fb */
@@ -820,7 +833,20 @@ struct nvgpu_get_param_args {
 } __packed;
 
 struct nvgpu_channel_open_args {
-	__s32 channel_fd;
+	union {
+		__s32 channel_fd; /* deprecated: use out.channel_fd instead */
+		struct {
+			 /* runlist_id is the runlist for the
+			  * channel. Basically, the runlist specifies the target
+			  * engine(s) for which the channel is
+			  * opened. Runlist_id -1 is synonym for the primary
+			  * graphics runlist. */
+			__s32 runlist_id;
+		} in;
+		struct {
+			__s32 channel_fd;
+		} out;
+	};
 };
 
 struct nvgpu_set_nvmap_fd_args {

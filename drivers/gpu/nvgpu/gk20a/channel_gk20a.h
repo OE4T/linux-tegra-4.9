@@ -198,6 +198,8 @@ struct channel_gk20a {
 	struct work_struct update_fn_work;
 
 	u32 interleave_level;
+
+	u32 runlist_id;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -250,7 +252,9 @@ void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller);
 #define gk20a_channel_put(ch) _gk20a_channel_put(ch, __func__)
 
 int gk20a_wait_channel_idle(struct channel_gk20a *ch);
-struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g);
+
+/* runlist_id -1 is synonym for ENGINE_GR_GK20A runlist id */
+struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g, s32 runlist_id);
 struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		void (*update_fn)(struct channel_gk20a *, void *),
 		void *update_fn_data);

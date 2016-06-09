@@ -175,6 +175,8 @@ static int init_engine_info(struct fifo_gk20a *f)
 
 	/* FIXME: retrieve this from server */
 	gr_info->runlist_id = 0;
+	f->active_engines_list[0] = gr_sw_id;
+
 	return 0;
 }
 
@@ -281,11 +283,14 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	f->tsg = vzalloc(f->num_channels * sizeof(*f->tsg));
 	f->engine_info = kzalloc(f->max_engines * sizeof(*f->engine_info),
 				GFP_KERNEL);
+	f->active_engines_list = kzalloc(f->max_engines * sizeof(u32),
+				GFP_KERNEL);
 
-	if (!(f->channel && f->tsg && f->engine_info)) {
+	if (!(f->channel && f->tsg && f->engine_info && f->active_engines_list)) {
 		err = -ENOMEM;
 		goto clean_up;
 	}
+	memset(f->active_engines_list, 0xff, (f->max_engines * sizeof(u32)));
 
 	init_engine_info(f);
 
@@ -327,6 +332,8 @@ clean_up:
 	f->tsg = NULL;
 	kfree(f->engine_info);
 	f->engine_info = NULL;
+	kfree(f->active_engines_list);
+	f->active_engines_list = NULL;
 
 	return err;
 }

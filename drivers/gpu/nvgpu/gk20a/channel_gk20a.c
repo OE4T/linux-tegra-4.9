@@ -328,17 +328,8 @@ static int channel_gk20a_setup_userd(struct channel_gk20a *c)
 static void channel_gk20a_bind(struct channel_gk20a *c)
 {
 	struct gk20a *g = c->g;
-	struct fifo_gk20a *f = &g->fifo;
-	u32 engine_id;
-	struct fifo_engine_info_gk20a *engine_info = NULL;
 	u32 inst_ptr = gk20a_mm_inst_block_addr(g, &c->inst_block)
 		>> ram_in_base_shift_v();
-
-	/* TODO:Need to handle non GR engine channel bind path */
-	engine_id = gk20a_fifo_get_gr_engine_id(g);
-
-	/* Consider 1st available GR engine */
-	engine_info = (f->engine_info + engine_id);
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
 		c->hw_chid, inst_ptr);
@@ -348,7 +339,7 @@ static void channel_gk20a_bind(struct channel_gk20a *c)
 	gk20a_writel(g, ccsr_channel_r(c->hw_chid),
 		(gk20a_readl(g, ccsr_channel_r(c->hw_chid)) &
 		 ~ccsr_channel_runlist_f(~0)) |
-		 ccsr_channel_runlist_f(engine_info->runlist_id));
+		 ccsr_channel_runlist_f(c->runlist_id));
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
@@ -401,7 +392,7 @@ void channel_gk20a_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 static int channel_gk20a_update_runlist(struct channel_gk20a *c, bool add)
 {
-	return c->g->ops.fifo.update_runlist(c->g, 0, c->hw_chid, add, true);
+	return c->g->ops.fifo.update_runlist(c->g, c->runlist_id, c->hw_chid, add, true);
 }
 
 void channel_gk20a_enable(struct channel_gk20a *ch)
@@ -715,7 +706,7 @@ static int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 		break;
 	}
 
-	return ret ? ret : g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+	return ret ? ret : g->ops.fifo.update_runlist(g, ch->runlist_id, ~0, true, true);
 }
 
 static int gk20a_init_error_notifier(struct channel_gk20a *ch,
@@ -1102,7 +1093,7 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		void (*update_fn)(struct channel_gk20a *, void *),
 		void *update_fn_data)
 {
-	struct channel_gk20a *ch = gk20a_open_new_channel(g);
+	struct channel_gk20a *ch = gk20a_open_new_channel(g, -1);
 
 	if (ch) {
 		spin_lock(&ch->update_fn_lock);
@@ -1114,10 +1105,15 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 	return ch;
 }
 
-struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
+struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g, s32 runlist_id)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
+
+	/* compatibility with existing code */
+	if (!gk20a_fifo_is_valid_runlist_id(g, runlist_id)) {
+		runlist_id = gk20a_fifo_get_gr_runlist_id(g);
+	}
 
 	gk20a_dbg_fn("");
 
@@ -1132,6 +1128,9 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 
 	BUG_ON(ch->g);
 	ch->g = g;
+
+	/* Runlist for the channel */
+	ch->runlist_id = runlist_id;
 
 	if (g->ops.fifo.alloc_inst(g, ch)) {
 		ch->g = NULL;
@@ -1184,7 +1183,8 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g)
 	return ch;
 }
 
-static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
+/* note: runlist_id -1 is synonym for the ENGINE_GR_GK20A runlist id */
+static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_id)
 {
 	int err;
 	struct channel_gk20a *ch;
@@ -1198,7 +1198,7 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp)
 		gk20a_err(dev_from_gk20a(g), "failed to power on, %d", err);
 		return err;
 	}
-	ch = gk20a_open_new_channel(g);
+	ch = gk20a_open_new_channel(g, runlist_id);
 	gk20a_idle(g->dev);
 	if (!ch) {
 		gk20a_err(dev_from_gk20a(g),
@@ -1220,7 +1220,7 @@ int gk20a_channel_open(struct inode *inode, struct file *filp)
 	int ret;
 
 	gk20a_dbg_fn("start");
-	ret = __gk20a_channel_open(g, filp);
+	ret = __gk20a_channel_open(g, filp, -1);
 
 	gk20a_dbg_fn("end");
 	return ret;
@@ -1233,6 +1233,7 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 	int fd;
 	struct file *file;
 	char *name;
+	s32 runlist_id = args->in.runlist_id;
 
 	err = get_unused_fd_flags(O_RDWR);
 	if (err < 0)
@@ -1253,12 +1254,12 @@ int gk20a_channel_open_ioctl(struct gk20a *g,
 		goto clean_up;
 	}
 
-	err = __gk20a_channel_open(g, file);
+	err = __gk20a_channel_open(g, file, runlist_id);
 	if (err)
 		goto clean_up_file;
 
 	fd_install(fd, file);
-	args->channel_fd = fd;
+	args->out.channel_fd = fd;
 	return 0;
 
 clean_up_file:
@@ -2780,6 +2781,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 	u32 chid;
 	bool channels_in_use = false;
 	int err;
+	u32 active_runlist_ids = 0;
 
 	gk20a_dbg_fn("");
 
@@ -2803,12 +2805,14 @@ int gk20a_channel_suspend(struct gk20a *g)
 
 			channels_in_use = true;
 
+			active_runlist_ids |= BIT(ch->runlist_id);
+
 			gk20a_channel_put(ch);
 		}
 	}
 
 	if (channels_in_use) {
-		g->ops.fifo.update_runlist(g, 0, ~0, false, true);
+		gk20a_fifo_update_runlist_ids(g, active_runlist_ids, ~0, false, true);
 
 		for (chid = 0; chid < f->num_channels; chid++) {
 			if (gk20a_channel_get(&f->channel[chid])) {
@@ -2827,6 +2831,7 @@ int gk20a_channel_resume(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 	bool channels_in_use = false;
+	u32 active_runlist_ids = 0;
 
 	gk20a_dbg_fn("");
 
@@ -2835,12 +2840,13 @@ int gk20a_channel_resume(struct gk20a *g)
 			gk20a_dbg_info("resume channel %d", chid);
 			g->ops.fifo.bind_channel(&f->channel[chid]);
 			channels_in_use = true;
+			active_runlist_ids |= BIT(f->channel[chid].runlist_id);
 			gk20a_channel_put(&f->channel[chid]);
 		}
 	}
 
 	if (channels_in_use)
-		g->ops.fifo.update_runlist(g, 0, ~0, true, true);
+		gk20a_fifo_update_runlist_ids(g, active_runlist_ids, ~0, true, true);
 
 	gk20a_dbg_fn("done");
 	return 0;

@@ -341,7 +341,7 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 
 	/* CIL PHY registers setup */
 	cil_write(port, TEGRA_CSI_CIL_PAD_CONFIG0, 0x0);
-	cil_write(port, TEGRA_CSI_CIL_PHY_CONTROL, 0xA);
+	cil_write(port, TEGRA_CSI_CIL_PHY_CONTROL, BYPASS_LP_SEQ | 0xA);
 
 	/*
 	 * The CSI unit provides for connection of up to six cameras in
@@ -360,8 +360,10 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 			  BRICK_CLOCK_A_4X);
 		cil_write(port_b, TEGRA_CSI_CIL_PAD_CONFIG0, 0x0);
 		cil_write(port_b, TEGRA_CSI_CIL_INTERRUPT_MASK, 0x0);
-		cil_write(port_a, TEGRA_CSI_CIL_PHY_CONTROL, 0xA);
-		cil_write(port_b, TEGRA_CSI_CIL_PHY_CONTROL, 0xA);
+		cil_write(port_a, TEGRA_CSI_CIL_PHY_CONTROL,
+					BYPASS_LP_SEQ | 0xA);
+		cil_write(port_b, TEGRA_CSI_CIL_PHY_CONTROL,
+					BYPASS_LP_SEQ | 0xA);
 		csi_write(csi, TEGRA_CSI_PHY_CIL_COMMAND,
 			CSI_A_PHY_CIL_ENABLE | CSI_B_PHY_CIL_ENABLE,
 			port_num>>1);

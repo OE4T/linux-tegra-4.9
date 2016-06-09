@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -69,7 +69,41 @@ fail:
 	return err;
 }
 
+static int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dbg_s->g->dev);
+	struct tegra_vgpu_cmd_msg msg;
+	struct tegra_vgpu_set_powergate_params *p = &msg.params.set_powergate;
+	int err = 0;
+
+	gk20a_dbg_fn("");
+
+	/* Just return if requested mode is the same as the session's mode */
+	switch (mode) {
+	case NVGPU_DBG_GPU_POWERGATE_MODE_DISABLE:
+		if (dbg_s->is_pg_disabled)
+			return 0;
+		dbg_s->is_pg_disabled = true;
+		break;
+	case NVGPU_DBG_GPU_POWERGATE_MODE_ENABLE:
+		if (!dbg_s->is_pg_disabled)
+			return 0;
+		dbg_s->is_pg_disabled = false;
+		break;
+	default:
+		return -EINVAL;
+	}
+
+	msg.cmd = TEGRA_VGPU_CMD_SET_POWERGATE;
+	msg.handle = platform->virt_handle;
+	p->mode = mode;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	return err;
+}
+
 void vgpu_dbg_init(void)
 {
 	dbg_gpu_session_ops_gk20a.exec_reg_ops = vgpu_exec_regops;
+	dbg_gpu_session_ops_gk20a.dbg_set_powergate = vgpu_dbg_set_powergate;
 }

@@ -38,6 +38,7 @@ struct dbg_gpu_session_ops {
 	int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
 			    struct nvgpu_dbg_gpu_reg_op *ops,
 			    u64 num_ops);
+	int (*dbg_set_powergate)(struct dbg_session_gk20a *dbg_s, u32 mode);
 };
 
 struct dbg_gpu_session_events {

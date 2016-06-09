@@ -96,6 +96,7 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_FORCE_RESET = 57,
 	TEGRA_VGPU_CMD_CHANNEL_ENABLE = 58,
 	TEGRA_VGPU_CMD_READ_PTIMER = 59,
+	TEGRA_VGPU_CMD_SET_POWERGATE = 60,
 };
 
 struct tegra_vgpu_connect_params {
@@ -394,6 +395,10 @@ struct tegra_vgpu_read_ptimer_params {
 	u64 time;
 };
 
+struct tegra_vgpu_set_powergate_params {
+	u32 mode;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -435,6 +440,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_tsg_timeslice_params tsg_timeslice;
 		struct tegra_vgpu_tsg_runlist_interleave_params tsg_interleave;
 		struct tegra_vgpu_read_ptimer_params read_ptimer;
+		struct tegra_vgpu_set_powergate_params set_powergate;
 		char padding[192];
 	} params;
 };

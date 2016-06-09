@@ -1260,31 +1260,9 @@ static void tegra_ahci_shutdown(struct platform_device *pdev)
 	struct ata_host *host = platform_get_drvdata(pdev);
 	struct ahci_host_priv *hpriv = host->private_data;
 	struct tegra_ahci_priv *tegra = hpriv->plat_data;
-	u32 mask;
-	u32 val;
-	u32 px_cmd;
-	int i = 0;
 
-	mask = T_AHCI_PORT_PXCMD_ICC_MASK;
-	val = T_AHCI_PORT_PXCMD_ICC_ACTIVE;
-	tegra_ahci_bar5_update(
-			hpriv, val, mask, T_AHCI_PORT_PXCMD);
-	do {
-		mdelay(10);
-		px_cmd = tegra_ahci_bar5_readl(
-				hpriv, T_AHCI_PORT_PXCMD);
-	} while ((px_cmd & T_AHCI_PORT_PXCMD_ICC_MASK) &&
-			(i++ < T_AHCI_PORT_PXCMD_ICC_TIMEOUT));
-
-	if (px_cmd & T_AHCI_PORT_PXCMD_ICC_MASK)
-		dev_warn(&pdev->dev,
-		"Failed to put the drive back to active state =%x\n", px_cmd);
-
-	for (i = 0; i < host->n_ports; i++) {
-		struct ata_port *ap = host->ports[i];
-		ahci_ops.port_stop(ap);
-	}
-	ata_platform_remove_one(pdev);
+	if (!pm_runtime_suspended(&pdev->dev))
+		ata_platform_remove_one(pdev);
 
 	if (tegra && tegra->prod_list) {
 		tegra_prod_release(&tegra->prod_list);

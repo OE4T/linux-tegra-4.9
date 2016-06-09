@@ -57,8 +57,110 @@ struct gk20a_sync_pt {
 
 struct gk20a_sync_pt_inst {
 	struct sync_pt			pt;
+
+	/*
+	 * Magic number to identify a gk20a_sync_pt_inst from either a struct
+	 * fence or a struct sync_pt.
+	 */
+#define GK20A_SYNC_PT_INST_MAGIC	0xb333eeef;
+	u32				magic;
+
 	struct gk20a_sync_pt		*shared;
 };
+
+/**
+ * Check if a sync_pt is a gk20a_sync_pt_inst.
+ */
+int __gk20a_is_gk20a_sync_pt_inst(struct sync_pt *pt)
+{
+	struct gk20a_sync_pt_inst *pti =
+			container_of(pt, struct gk20a_sync_pt_inst, pt);
+
+	return pti->magic == GK20A_SYNC_PT_INST_MAGIC;
+}
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
+/**
+ * Check if a fence is a gk20a_sync_pt_inst.
+ */
+int gk20a_is_gk20a_sync_pt_inst(struct fence *f)
+{
+	struct sync_pt *pt = container_of(f, struct sync_pt, base);
+
+	return __gk20a_is_gk20a_sync_pt_inst(pt);
+}
+
+/**
+ * Get the underlying semaphore from a gk20a_sync_pt_inst. This assumes the
+ * passed fence is in fact a gk20a_sync_pt_inst - use
+ * gk20a_is_gk20a_sync_pt_inst() to verify this before using this function.
+ */
+struct gk20a_semaphore *gk20a_sync_pt_inst_get_sema(struct fence *f)
+{
+	struct sync_pt *pt = container_of(f, struct sync_pt, base);
+	struct gk20a_sync_pt_inst *pti =
+			container_of(pt, struct gk20a_sync_pt_inst, pt);
+
+	BUG_ON(!gk20a_is_gk20a_sync_pt_inst(f));
+
+	return pti->shared->sema;
+}
+#else
+/**
+ * Get the underlying semaphore from a gk20a_sync_pt_inst. This assumes the
+ * passed sync_pt is in fact a gk20a_sync_pt_inst - use
+ * gk20a_is_gk20a_sync_pt_inst() to verify this before using this function.
+ */
+struct gk20a_semaphore *gk20a_sync_pt_inst_get_sema(struct sync_pt *pt)
+{
+	struct gk20a_sync_pt_inst *pti;
+
+	BUG_ON(!__gk20a_is_gk20a_sync_pt_inst(pt));
+	pti = container_of(pt, struct gk20a_sync_pt_inst, pt);
+
+	return pti->shared->sema;
+}
+#endif
+
+/**
+ * Check if the passed sync_fence is backed by a single GPU semaphore. In such
+ * cases we can short circuit a lot of SW involved in signaling pre-fences and
+ * post fences.
+ */
+int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence)
+{
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
+	struct sync_pt *pt;
+	int i = 0;
+
+	if (list_empty(&fence->pt_list_head))
+		return 0;
+
+	/*
+	 * For now reject multi-sync_pt fences. This could be changed in
+	 * future. It would require that the sema fast path push a sema
+	 * acquire for each semaphore in the fence.
+	 */
+	list_for_each_entry(pt, &fence->pt_list_head, pt_list) {
+		i++;
+
+		if (i >= 2)
+			return 0;
+	}
+
+	pt = list_first_entry(&fence->pt_list_head, struct sync_pt, pt_list);
+	return __gk20a_is_gk20a_sync_pt_inst(pt);
+
+#else
+	struct sync_fence_cb *cb0 = &fence->cbs[0];
+
+	if (fence->num_fences != 1)
+		return 0;
+
+	return gk20a_is_gk20a_sync_pt_inst(cb0->sync_pt);
+#endif
+}
+
 
 /**
  * Compares sync pt values a and b, both of which will trigger either before
@@ -181,6 +283,7 @@ static struct sync_pt *gk20a_sync_pt_create_inst(
 	if (!pti)
 		return NULL;
 
+	pti->magic = GK20A_SYNC_PT_INST_MAGIC;
 	pti->shared = gk20a_sync_pt_create_shared(obj, sema, dependency);
 	if (!pti->shared) {
 		sync_pt_free(&pti->pt);
@@ -327,11 +430,23 @@ static void gk20a_sync_timeline_value_str(struct sync_timeline *timeline,
 	snprintf(str, size, "%d", gk20a_sync_timeline_current(obj));
 }
 
+static void gk20a_sync_pt_value_str_for_sema(struct gk20a_sync_pt *pt,
+					     char *str, int size)
+{
+	snprintf(str, size, "gk20a-sema");
+}
+
 static void gk20a_sync_pt_value_str(struct sync_pt *sync_pt, char *str,
 		int size)
 {
 	struct gk20a_sync_pt *pt = to_gk20a_sync_pt(sync_pt);
 	ktime_t dur = gk20a_sync_pt_duration(sync_pt);
+
+	if (pt->sema) {
+		gk20a_sync_pt_value_str_for_sema(pt, str, size);
+		return;
+	}
+
 	if (pt->dep) {
 		snprintf(str, size, "(dep: [%p] %s) %d",
 			 pt->dep, pt->dep->name, pt->thresh);

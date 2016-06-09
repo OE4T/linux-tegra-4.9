@@ -19,11 +19,23 @@
 #define _GK20A_SYNC_H_
 
 #include <linux/types.h>
+#include <linux/version.h>
 
 struct sync_timeline;
 struct sync_fence;
 struct sync_pt;
 struct gk20a_semaphore;
+struct fence;
+
+int __gk20a_is_gk20a_sync_pt_inst(struct sync_pt *pt);
+int gk20a_is_gk20a_sync_pt_inst(struct fence *f);
+int gk20a_is_sema_backed_sync_fence(struct sync_fence *fence);
+
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3,18,0)
+struct gk20a_semaphore *gk20a_sync_pt_inst_get_sema(struct fence *f);
+#else
+struct gk20a_semaphore *gk20a_sync_pt_inst_get_sema(struct sync_pt *pt);
+#endif
 
 #ifdef CONFIG_SYNC
 struct sync_timeline *gk20a_sync_timeline_create(const char *fmt, ...);

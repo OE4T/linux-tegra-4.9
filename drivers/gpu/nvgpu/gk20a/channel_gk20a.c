@@ -1767,8 +1767,7 @@ fail_unlock:
 	gk20a_channel_put(ch);
 }
 
-static int gk20a_free_priv_cmdbuf(struct channel_gk20a *c,
-					struct priv_cmd_entry *e)
+int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 {
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
 	struct device *d = dev_from_gk20a(c->g);

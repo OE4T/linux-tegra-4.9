@@ -20,7 +20,7 @@
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
 
-static const struct snd_soc_pcm_stream default_link_params = {
+static struct snd_soc_pcm_stream default_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S16_LE,
 	.rate_min = 48000,
 	.rate_max = 48000,
@@ -28,7 +28,7 @@ static const struct snd_soc_pcm_stream default_link_params = {
 	.channels_max = 2,
 };
 
-static const struct snd_soc_pcm_stream tdm_link_params = {
+static struct snd_soc_pcm_stream tdm_link_params = {
 	.formats = SNDRV_PCM_FMTBIT_S32_LE,
 	.rate_min = 48000,
 	.rate_max = 48000,

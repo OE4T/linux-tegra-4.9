@@ -173,7 +173,7 @@ static struct snd_soc_jack_pin tegra_t186ref_hp_jack_pins[] = {
 };
 #endif
 
-static const struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
+static struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
@@ -238,14 +238,12 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	pr_info("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
 		machine->audio_clock.set_mclk, clk_out_rate, clk_rate);
 
-#if 0
 	/* update dai link hw_params for non pcm links */
 	for (idx = 0; idx < TEGRA186_XBAR_DAI_LINKS; idx++) {
 		if (card->rtd[idx].dai_link->params) {
 			dai_params =
 			  (struct snd_soc_pcm_stream *)
 			  card->rtd[idx].dai_link->params;
-			  FP
 			dai_params->rate_min = rate;
 			dai_params->channels_min = channels;
 			dai_params->formats = 1ULL <<
@@ -254,7 +252,6 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 				SNDRV_PCM_FORMAT_S16_LE);
 		}
 	}
-#endif
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
 	/* check if idx has valid number */
 	if (idx != -EINVAL) {

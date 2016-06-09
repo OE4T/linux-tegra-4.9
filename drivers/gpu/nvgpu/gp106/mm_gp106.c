@@ -15,6 +15,7 @@
 
 #include "gk20a/gk20a.h"
 #include "gp10b/mm_gp10b.h"
+#include "gp106/mm_gp106.h"
 
 #include "hw_fb_gp106.h"
 

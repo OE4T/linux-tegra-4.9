@@ -98,8 +98,8 @@ int gk20a_fence_install_fd(struct gk20a_fence *f)
 #endif
 }
 
-static struct gk20a_fence *alloc_fence(const struct gk20a_fence_ops *ops,
-				struct sync_fence *sync_fence, bool wfi)
+struct gk20a_fence *gk20a_alloc_fence(const struct gk20a_fence_ops *ops,
+				      struct sync_fence *sync_fence, bool wfi)
 {
 	struct gk20a_fence *f = kzalloc(sizeof(*f), GFP_KERNEL);
 	if (!f)
@@ -161,7 +161,7 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 		return NULL;
 #endif
 
-	f  = alloc_fence(&gk20a_semaphore_fence_ops, sync_fence, wfi);
+	f  = gk20a_alloc_fence(&gk20a_semaphore_fence_ops, sync_fence, wfi);
 	if (!f) {
 #ifdef CONFIG_SYNC
 		sync_fence_put(sync_fence);
@@ -216,7 +216,7 @@ struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
 	}
 #endif
 
-	f = alloc_fence(&gk20a_syncpt_fence_ops, sync_fence, wfi);
+	f = gk20a_alloc_fence(&gk20a_syncpt_fence_ops, sync_fence, wfi);
 	if (!f) {
 #ifdef CONFIG_SYNC
 		if (sync_fence)

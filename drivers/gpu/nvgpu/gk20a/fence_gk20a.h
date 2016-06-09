@@ -59,6 +59,10 @@ struct gk20a_fence *gk20a_fence_from_syncpt(
 		u32 id, u32 value, bool wfi,
 		bool need_sync_fence);
 
+struct gk20a_fence *gk20a_alloc_fence(const struct gk20a_fence_ops *ops,
+				      struct sync_fence *sync_fence,
+				      bool wfi);
+
 /* Fence operations */
 void gk20a_fence_put(struct gk20a_fence *f);
 struct gk20a_fence *gk20a_fence_get(struct gk20a_fence *f);

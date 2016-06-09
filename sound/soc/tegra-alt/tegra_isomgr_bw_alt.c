@@ -15,7 +15,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
+#include <linux/module.h>
 #include <sound/pcm_params.h>
 #include <sound/soc.h>
 #include <linux/platform/tegra/isomgr.h>
@@ -199,3 +199,5 @@ void tegra_isomgr_adma_unregister(void)
 }
 EXPORT_SYMBOL(tegra_isomgr_adma_unregister);
 #endif
+
+MODULE_LICENSE("GPL");

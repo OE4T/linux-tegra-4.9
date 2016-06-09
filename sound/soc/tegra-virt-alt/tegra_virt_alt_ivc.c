@@ -12,6 +12,8 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
+
+#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/resource.h>
 #include <linux/of.h>
@@ -262,3 +264,5 @@ static int nvaudio_ivc_init(struct nvaudio_ivc_ctxt *ictxt)
 
 	return 0;
 }
+
+MODULE_LICENSE("GPL");

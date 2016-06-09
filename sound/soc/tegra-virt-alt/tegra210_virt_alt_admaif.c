@@ -16,6 +16,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/module.h>
 #include <linux/platform_device.h>
 #include <linux/of_platform.h>
 #include <sound/soc.h>
@@ -397,3 +398,5 @@ err:
 	return ret;
 }
 EXPORT_SYMBOL_GPL(tegra210_virt_admaif_register_component);
+
+MODULE_LICENSE("GPL");

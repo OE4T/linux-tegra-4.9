@@ -21,7 +21,7 @@
 
 #define VERBOSE_DEBUG
 #define DEBUG
-
+#include <linux/module.h>
 #include <asm/types.h>
 #include <../arch/arm/mach-tegra/iomap.h>
 #include <linux/io.h>
@@ -1315,3 +1315,4 @@ void ahub_unit_fpga_deinit(void)
 	iounmap(ahub_unit_fpga_private.i2s5_cya_base);
 }
 EXPORT_SYMBOL(ahub_unit_fpga_deinit);
+MODULE_LICENSE("GPL");

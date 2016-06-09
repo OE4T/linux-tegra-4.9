@@ -223,6 +223,19 @@ error:
 	return err;
 }
 
+/**
+ * of_tegra_sm_pair_request - request a Tegra HSP shared mailbox pair from DT.
+ *
+ * @np: device node
+ * @index: mailbox pair entry offset in the DT property
+ * @pair: initialized HSP mailbox structure
+ *
+ * Looks up a shared mailbox pair in device tree by index. The device node
+ * needs a nvidia,hsp-shared-mailbox property, containing pairs of
+ * OF phandle and mailbox number. The OF phandle points to the Tegra HSP
+ * platform device. The mailbox number refers to the consumer side mailbox.
+ * The producer side mailbox is the other one in the same (even-odd) pair.
+ */
 int of_tegra_hsp_sm_pair_request(const struct device_node *np, u32 index,
 					struct tegra_hsp_sm_pair *pair)
 {
@@ -248,6 +261,16 @@ int of_tegra_hsp_sm_pair_request(const struct device_node *np, u32 index,
 }
 EXPORT_SYMBOL(of_tegra_hsp_sm_pair_request);
 
+/**
+ * of_tegra_sm_pair_by_name - request a Tegra HSP shared mailbox pair from DT.
+ *
+ * @np: device node
+ * @name: mailbox pair entry name
+ * @pair: initialized HSP mailbox structure
+ *
+ * Looks up a shared mailbox pair in device tree by name. The device node needs
+ * nvidia,hsp-shared-mailbox and nvidia-hsp-shared-mailbox-names properties.
+ */
 int of_tegra_hsp_sm_pair_by_name(const struct device_node *np, char const *name,
 					struct tegra_hsp_sm_pair *pair)
 {
@@ -263,6 +286,9 @@ int of_tegra_hsp_sm_pair_by_name(const struct device_node *np, char const *name,
 }
 EXPORT_SYMBOL(of_tegra_hsp_sm_pair_by_name);
 
+/**
+ * tegra_hsp_sm_pair_free - free a Tegra HSP shared mailbox pair.
+ */
 void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *pair)
 {
 	struct device *dev = pair->dev;
@@ -284,6 +310,15 @@ void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *pair)
 }
 EXPORT_SYMBOL(tegra_hsp_sm_pair_free);
 
+/**
+ * tegra_hsp_sm_pair_write - fill a Tegra HSP shared mailbox
+ *
+ * @pair: shared mailbox pair
+ * @value: value to fill mailbox with (only 31-bits low order bits are used)
+ *
+ * This writes a value to the producer side mailbox of a mailbox pair.
+ * The mailbox must be empty (especially if notify_empty callback is non-nul).
+ */
 void tegra_hsp_sm_pair_write(const struct tegra_hsp_sm_pair *pair,
 				u32 value)
 {

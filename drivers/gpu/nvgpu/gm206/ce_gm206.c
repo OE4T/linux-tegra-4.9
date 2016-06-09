@@ -63,7 +63,7 @@ static u32 ce_launcherr_isr(struct gk20a *g, u32 fifo_intr, u32 inst_id)
 	return ce2_intr_status_launcherr_pending_f();
 }
 
-void gm206_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+static void gm206_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	u32 ce_intr_status_reg = (pri_base + COP_INTR_STATUS_OFFSET);
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_reg);
@@ -82,7 +82,7 @@ void gm206_ce_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 	return;
 }
 
-void gm206_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
+static void gm206_ce_nonstall_isr(struct gk20a *g, u32 inst_id, u32 pri_base)
 {
 	u32 ce_intr_status_reg = (pri_base + COP_INTR_STATUS_OFFSET);
 	u32 ce_intr = gk20a_readl(g, ce_intr_status_reg);

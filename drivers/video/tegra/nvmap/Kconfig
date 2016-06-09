@@ -135,19 +135,4 @@ config NVMAP_DEFER_FD_RECYCLE_MAX_FD
 	  Once last allocated FD reaches this number, allocation of subsequent
 	  FD's start from NVMAP_START_FD.
 
-config NVMAP_CONVERT_CARVEOUT_TO_IOVMM
-	bool "Convert carveout to IOVMM"
-	depends on TEGRA_NVMAP && IOMMU_API && !NVMAP_CONVERT_IOVMM_TO_CARVEOUT
-	default y
-	help
-	  Say Y here to force to convert carveout memory requests to
-	  I/O virtual memory requests.
-
-config NVMAP_CONVERT_IOVMM_TO_CARVEOUT
-	bool "Convert IOVMM to carveout"
-	depends on TEGRA_NVMAP && IOMMU_API && ARCH_TEGRA_18x_SOC
-	help
-	  Say Y here to force to convert I/O virtual memory requests to
-	  carveout memory requests.
-
 endif

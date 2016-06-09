@@ -45,6 +45,8 @@
 #include <linux/swap.h>
 #include <linux/swapops.h>
 #include <linux/version.h>
+#include <linux/of.h>
+#include <linux/iommu.h>
 
 #if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
 #include <linux/backing-dev.h>
@@ -1642,6 +1644,7 @@ int __init nvmap_probe(struct platform_device *pdev)
 	struct dentry *nvmap_debug_root;
 	unsigned int i;
 	int e;
+	int generic_carveout_present = 0;
 
 	if (WARN_ON(nvmap_dev != NULL)) {
 		dev_err(&pdev->dev, "only one nvmap device may be present\n");
@@ -1725,6 +1728,21 @@ int __init nvmap_probe(struct platform_device *pdev)
 	e = nvmap_dmabuf_stash_init();
 	if (e)
 		goto fail_heaps;
+
+	for (i = 0; i < dev->nr_carveouts; i++)
+		if (dev->heaps[i].heap_bit & NVMAP_HEAP_CARVEOUT_GENERIC)
+			generic_carveout_present = 1;
+
+	if (generic_carveout_present) {
+		if (!iommu_present(&platform_bus_type))
+			nvmap_convert_iovmm_to_carveout = 1;
+		else if (!of_property_read_bool(pdev->dev.of_node,
+				"dont-convert-iovmm-to-carveout"))
+			nvmap_convert_iovmm_to_carveout = 1;
+	} else {
+		BUG_ON(!iommu_present(&platform_bus_type));
+		nvmap_convert_carveout_to_iovmm = 1;
+	}
 
 	return 0;
 fail_heaps:

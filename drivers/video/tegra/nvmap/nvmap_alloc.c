@@ -36,6 +36,9 @@ bool zero_memory;
 #define ZERO_MEMORY_PERMS 0644
 #endif
 
+bool nvmap_convert_carveout_to_iovmm;
+bool nvmap_convert_iovmm_to_carveout;
+
 static int zero_memory_set(const char *arg, const struct kernel_param *kp)
 {
 #ifdef CONFIG_NVMAP_FORCE_ZEROED_USER_PAGES
@@ -175,18 +178,15 @@ static void alloc_handle(struct nvmap_client *client,
 
 	BUG_ON(type & (type - 1));
 
-	BUILD_BUG_ON(config_enabled(CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM) &&
-		     config_enabled(CONFIG_NVMAP_CONVERT_IOVMM_TO_CARVEOUT));
-
-#ifdef CONFIG_NVMAP_CONVERT_CARVEOUT_TO_IOVMM
-	carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
-	iovmm_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
-#elif defined(CONFIG_NVMAP_CONVERT_IOVMM_TO_CARVEOUT)
-	if (type & NVMAP_HEAP_IOVMM) {
-		type &= ~NVMAP_HEAP_IOVMM;
-		type |= NVMAP_HEAP_CARVEOUT_GENERIC;
+	if (nvmap_convert_carveout_to_iovmm) {
+		carveout_mask &= ~NVMAP_HEAP_CARVEOUT_GENERIC;
+		iovmm_mask |= NVMAP_HEAP_CARVEOUT_GENERIC;
+	} else if (nvmap_convert_iovmm_to_carveout) {
+		if (type & NVMAP_HEAP_IOVMM) {
+			type &= ~NVMAP_HEAP_IOVMM;
+			type |= NVMAP_HEAP_CARVEOUT_GENERIC;
+		}
 	}
-#endif
 
 	if (type & carveout_mask) {
 		struct nvmap_heap_block *b;

@@ -384,6 +384,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.poweron_reset		= true,
 	.serialize		= true,
 	.push_work_done		= true,
+	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 };
 
 struct nvhost_device_data t19_nvdla1_info = {
@@ -404,6 +405,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.poweron_reset		= true,
 	.serialize		= true,
 	.push_work_done		= true,
+	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 };
 #endif
 

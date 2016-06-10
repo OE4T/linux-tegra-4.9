@@ -28,6 +28,7 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t194/t194.h"
+#include "nvhost_nvdla_ioctl.h"
 
 /* data structure to keep device data */
 struct nvdla {
@@ -44,6 +45,57 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 {
 	return 0;
 }
+
+/* IOCTL API's */
+struct nvdla_private {
+	struct platform_device *pdev;
+};
+
+static long nvdla_ioctl(struct file *file, unsigned int cmd,
+			unsigned long arg)
+{
+	struct nvdla_private *priv = file->private_data;
+	struct platform_device *pdev = priv->pdev;
+
+	nvhost_dbg_fn("pdev:%p priv:%p", pdev, priv);
+
+	return -ENOIOCTLCMD;
+}
+
+static int nvdla_open(struct inode *inode, struct file *file)
+{
+	struct nvdla_private *priv;
+
+	priv = kmalloc(sizeof(*priv), GFP_KERNEL);
+	if (unlikely(priv == NULL))
+		return -ENOMEM;
+
+	file->private_data = priv;
+
+	return nonseekable_open(inode, file);
+}
+
+static int nvdla_release(struct inode *inode, struct file *file)
+{
+	struct nvdla_private *priv = file->private_data;
+	struct platform_device *pdev = priv->pdev;
+
+	nvhost_dbg_fn("pdev:%p priv:%p", pdev, priv);
+
+	kfree(priv);
+	return 0;
+}
+
+const struct file_operations tegra_nvdla_ctrl_ops = {
+	.owner = THIS_MODULE,
+	.llseek = no_llseek,
+	.unlocked_ioctl = nvdla_ioctl,
+#ifdef CONFIG_COMPAT
+	.compat_ioctl = nvdla_ioctl,
+#endif
+	.open = nvdla_open,
+	.release = nvdla_release,
+};
 
 /* driver probe and init */
 static struct of_device_id tegra_nvdla_of_match[] = {

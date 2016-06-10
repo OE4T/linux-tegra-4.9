@@ -21,6 +21,8 @@
 #ifndef __NVHOST_NVDLA_H__
 #define __NVHOST_NVDLA_H__
 
+extern const struct file_operations tegra_nvdla_ctrl_ops;
+
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev);
 int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev);
 

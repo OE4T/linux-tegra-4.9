@@ -119,7 +119,7 @@ int flcn_wait_idle(struct platform_device *pdev,
 int flcn_setup_ucode_image(struct platform_device *dev,
 				u32 *ucode_ptr,
 				const struct firmware *ucode_fw);
-
+int flcn_intr_init(struct platform_device *pdev);
 
 /* hack, get these from elsewhere */
 #define NVA0B6_VIDEO_COMPOSITOR_SET_APPLICATION_ID		(0x00000200)

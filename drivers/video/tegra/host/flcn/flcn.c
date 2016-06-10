@@ -53,6 +53,44 @@ static int nvhost_flcn_init_sw(struct platform_device *dev);
 
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
 #define FLCN_IDLE_CHECK_PERIOD		10	/* 10 usec */
+
+static irqreturn_t flcn_isr(int irq, void *dev_id)
+{
+	struct platform_device *pdev = (struct platform_device *)(dev_id);
+	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
+
+	host1x_writel(pdev, flcn_irqsclr_r(), flcn_irqsclr_swgen0_set_f() |
+					      flcn_irqsclr_swgen1_set_f());
+	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
+
+	if (pdata->flcn_isr)
+		pdata->flcn_isr(pdev);
+
+	return IRQ_HANDLED;
+}
+
+int flcn_intr_init(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
+	int ret = 0;
+
+	pdata->irq = platform_get_irq(pdev, 0);
+	if (IS_ERR_VALUE(pdata->irq)) {
+		dev_err(&pdev->dev, "failed to get IRQ\n");
+		return -ENXIO;
+	}
+
+	ret = request_irq(pdata->irq,
+			  flcn_isr, 0,
+			  dev_name(&pdev->dev), pdev);
+	if (ret) {
+		dev_err(&pdev->dev, "failed to request irq. err %d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+
 int flcn_wait_idle(struct platform_device *pdev,
 				u32 *timeout)
 {
@@ -307,6 +345,16 @@ int flcn_wait_mem_scrubbing(struct platform_device *dev)
 	return -ETIMEDOUT;
 }
 
+int nvhost_flcn_prepare_poweroff(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+
+	if (pdata->flcn_isr)
+		disable_irq(pdata->irq);
+
+	return 0;
+}
+
 int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
@@ -359,6 +407,9 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 	host1x_writel(pdev, flcn_itfen_r(),
 			     (flcn_itfen_mthden_enable_f() |
 					flcn_itfen_ctxen_enable_f()));
+
+	if (pdata->flcn_isr)
+		enable_irq(pdata->irq);
 
 	/* boot falcon */
 	host1x_writel(pdev, flcn_bootvec_r(), flcn_bootvec_vec_f(0));
@@ -590,6 +641,9 @@ static int flcn_probe(struct platform_device *dev)
 		pm_runtime_put(&dev->dev);
 		return err;
 	}
+
+	if (pdata->flcn_isr)
+		flcn_intr_init(dev);
 
 	return 0;
 }

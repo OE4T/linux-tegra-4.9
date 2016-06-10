@@ -50,6 +50,14 @@
 #ifndef _hw_flcn_h_
 #define _hw_flcn_h_
 
+static inline u32 flcn_thi_int_stat_r(void)
+{
+	return 0x78;
+}
+static inline u32 flcn_thi_int_stat_clr_f(void)
+{
+	return 0x1;
+}
 static inline u32 flcn_slcg_override_high_a_r(void)
 {
 	return 0x00000088;
@@ -61,6 +69,18 @@ static inline u32 flcn_slcg_override_low_a_r(void)
 static inline u32 flcn_clk_override_r(void)
 {
 	return 0x00000e00;
+}
+static inline u32 flcn_irqsclr_r(void)
+{
+	return 0x1004;
+}
+static inline u32 flcn_irqsclr_swgen0_set_f(void)
+{
+	return 0x40;
+}
+static inline u32 flcn_irqsclr_swgen1_set_f(void)
+{
+	return 0x80;
 }
 static inline u32 flcn_irqmset_r(void)
 {

@@ -161,6 +161,10 @@ struct nvhost_device_data {
 	u32		modulemutexes[NVHOST_MODULE_MAX_MODMUTEXES];
 	u32		moduleid;	/* Module id for user space API */
 
+	/* interrupt ISR routine for falcon based engines */
+	int (*flcn_isr)(struct platform_device *dev);
+	int irq;
+
 	/* Should we toggle the engine SLCG when we turn on the domain? */
 	bool		poweron_toggle_slcg;
 

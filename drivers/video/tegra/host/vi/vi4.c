@@ -52,7 +52,6 @@
 #define VI_NOTIFY_FIFO_OVFL_ERR_MASK		0x00000008
 #define VI_ISPBUFA_ERR_MASK			0x00000001
 
-static struct tegra_mc_vi *mc_vi;
 /* Interrupt handler */
 /* NOTE: VI4 has three interrupt lines. This handler is for the master/error
  * line. The other lines are dedicated to VI NOTIFY and handled elsewhere.
@@ -386,7 +385,6 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	mutex_init(&vi->update_la_lock);
 	vi->mc_vi.ndev = pdev;
 	vi->mc_vi.fops = data->vi_fops;
-	mc_vi = &vi->mc_vi;
 	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);
 	if (err) {
 		if (vi->hvnd != NULL)
@@ -399,17 +397,10 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	return 0;
 }
 
-struct tegra_mc_vi *tegra_get_mc_vi(void)
-{
-	return mc_vi;
-}
-EXPORT_SYMBOL(tegra_get_mc_vi);
-
 static int tegra_vi4_remove(struct platform_device *pdev)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
-	mc_vi = NULL;
 	tegra_vi_media_controller_cleanup(&vi->mc_vi);
 	if (vi->hvnd != NULL)
 		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);

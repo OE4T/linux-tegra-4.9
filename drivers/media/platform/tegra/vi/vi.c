@@ -105,6 +105,7 @@ struct tegra_mfi_chan {
 	struct work_struct mfi_cb_work;
 	struct rcu_head rcu;
 	u8 channel;
+	void *priv;
 };
 
 struct tegra_vi_mfi_ctx {
@@ -117,16 +118,10 @@ static void vi_mfi_worker(struct work_struct *vi_work)
 {
 	struct tegra_mfi_chan *mfi_chan =
 		container_of(vi_work, struct tegra_mfi_chan, mfi_cb_work);
+	struct tegra_mc_vi *vi = tegra_get_mc_vi();
 
 	mutex_lock(&vi_isr_lock);
-	if (mfi_callback == NULL) {
-		pr_debug("NULL callback\n");
-		mutex_unlock(&vi_isr_lock);
-		return;
-	}
-	if (mfi_callback_arg)
-		mfi_callback_arg->vi_chan = mfi_chan->channel;
-	mfi_callback(mfi_callback_arg);
+	tegra_vi_mfi_work(vi, mfi_chan->channel);
 	mutex_unlock(&vi_isr_lock);
 }
 

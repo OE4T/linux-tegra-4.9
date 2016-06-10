@@ -1022,6 +1022,28 @@ static int vi4_channel_stop_streaming(struct vb2_queue *vq)
 	return 0;
 }
 
+static int vi4_mfi_work(struct tegra_mc_vi *vi, int channel)
+{
+	struct tegra_channel *it = NULL;
+	int ret = 0;
+
+	/* for vi4, the input argument is the hw channel id*/
+	/* search the list and match the hw id */
+	list_for_each_entry(it, &vi->vi_chans, list) {
+		if (channel == it->vnc_id[0]) {
+			ret = v4l2_subdev_call(it->subdev_on_csi, core,
+					sync, V4L2_SYNC_EVENT_FOCUS_POS);
+			if (ret < 0 && ret != -ENOIOCTLCMD) {
+				dev_err(vi->dev,
+					"%s:channel failed\n", __func__);
+				return ret;
+			}
+		}
+	}
+
+	return ret;
+}
+
 int tegra_vi4_power_on(struct tegra_mc_vi *vi)
 {
 	int ret;
@@ -1145,4 +1167,5 @@ struct tegra_vi_fops vi4_fops = {
 	.vi_add_ctrls = vi4_add_ctrls,
 	.vi_init_video_formats = vi4_init_video_formats,
 	.vi_default_ioctl = vi4_default_ioctl,
+	.vi_mfi_work = vi4_mfi_work,
 };

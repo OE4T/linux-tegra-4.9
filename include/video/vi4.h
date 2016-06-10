@@ -55,5 +55,4 @@ int nvhost_vi4_aggregate_constraints(struct platform_device *dev,
 
 int vi4_v4l2_set_la(struct platform_device *pdev,
 			u32 vi_bypass_bw, u32 is_ioctl);
-struct tegra_mc_vi *tegra_get_mc_vi(void);
 #endif

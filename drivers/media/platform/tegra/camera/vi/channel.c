@@ -1841,6 +1841,15 @@ void tegra_vi_channels_unregister(struct tegra_mc_vi *vi)
 	}
 }
 
+int tegra_vi_mfi_work(struct tegra_mc_vi *vi, int channel)
+{
+	if (vi->fops)
+		return vi->fops->vi_mfi_work(vi, channel);
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_vi_mfi_work);
+
 int tegra_vi_channels_init(struct tegra_mc_vi *vi)
 {
 	int ret = 0;

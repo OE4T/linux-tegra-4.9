@@ -301,8 +301,10 @@ void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
 void tegra_channel_ec_close(struct tegra_mc_vi *mc_vi);
 void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
 		struct v4l2_event *event);
+int tegra_vi_mfi_work(struct tegra_mc_vi *vi, int csiport);
 int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode);
 void tpg_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
+struct tegra_mc_vi *tegra_get_mc_vi(void);
 
 u32 tegra_core_get_fourcc_by_idx(struct tegra_channel *chan,
 		unsigned int index);
@@ -335,6 +337,7 @@ struct tegra_vi_fops {
 	void (*vi_init_video_formats)(struct tegra_channel *chan);
 	long (*vi_default_ioctl)(struct file *file, void *fh,
 			bool use_prio, unsigned int cmd, void *arg);
+	int (*vi_mfi_work)(struct tegra_mc_vi *vi, int port);
 };
 
 struct tegra_csi_fops {

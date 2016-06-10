@@ -171,7 +171,11 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 	}
 #endif
 
+#if defined(CONFIG_PLATFORM_TEGRA) && !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	*freq = clk_round_rate(clk_get_parent(profile->clk), *freq);
+#else
+	*freq = clk_round_rate(profile->clk, *freq);
+#endif
 	if (clk_get_rate(profile->clk) == *freq)
 		return 0;
 

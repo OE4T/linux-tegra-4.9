@@ -1442,6 +1442,7 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 		break;
 	case APP_VERSION_GM206:
 	case APP_VERSION_NV_GPU:
+	case APP_VERSION_NV_GPU_1:
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_size =
 				pg_cmd_eng_buf_load_size_v2;
 		g->ops.pmu_ver.pg_cmd_eng_buf_load_set_cmd_type =
@@ -1500,7 +1501,8 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 		g->ops.pmu_ver.pmu_allocation_set_dmem_offset =
 			pmu_allocation_set_dmem_offset_v3;
 
-		if(pmu->desc->app_version != APP_VERSION_NV_GPU) {
+		if(pmu->desc->app_version != APP_VERSION_NV_GPU &&
+			pmu->desc->app_version != APP_VERSION_NV_GPU_1) {
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
 					get_pmu_init_msg_pmu_queue_params_v2;
 			g->ops.pmu_ver.get_pmu_msg_pmu_init_msg_ptr =

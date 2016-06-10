@@ -47,6 +47,12 @@
 		memory-region = <&ivm0>;
 	};
 
+	tegra_hv_comm {
+		compatible = "nvidia,tegra-hv-comm";
+		status = "okay";
+		ivc = <&tegra_hv 80>;
+	};
+
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp-hv";
 		ivc_queue = <&tegra_hv 0 14>;

@@ -108,6 +108,12 @@
 		};
 	};
 
+	tegra_hv_comm {
+		compatible = "nvidia,tegra-hv-comm";
+		status = "okay";
+		ivc = <&tegra_hv 80>;
+	};
+
 	i2c@3160000 {
 		compatible = "nvidia,tegra186-i2c-hv";
 		ivc_queue = <&tegra_hv 53>;

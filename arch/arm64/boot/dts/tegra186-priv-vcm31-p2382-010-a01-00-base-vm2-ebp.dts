@@ -56,6 +56,12 @@
 		memory-region = <&ivm0>;
 	};
 
+	tegra_hv_comm {
+		compatible = "nvidia,tegra-hv-comm";
+		status = "okay";
+		ivc = <&tegra_hv 80>;
+	};
+
 	mc_sid@2c00000 {
 		nvidia,by-pass-smmu-streamid = <0x7d>;
 		status = "okay";

@@ -813,9 +813,12 @@ static void tegra_se_send_ctr_seed(struct tegra_se_dev *se_dev, u32 *pdata,
 	i = se_dev->cmdbuf_cnt;
 
 	cpuvaddr[i++] =
+		__nvhost_opcode_nonincr(opcode_addr +
+			SE_AES_CRYPTO_CTR_SPARE, 1);
+	cpuvaddr[i++] = SE_AES_CTR_LITTLE_ENDIAN;
+	cpuvaddr[i++] =
 		__nvhost_opcode_incr(opcode_addr +
 			SE_AES_CRYPTO_LINEAR_CTR, 4);
-
 	for (j = 0; j < SE_CRYPTO_CTR_REG_COUNT; j++)
 		cpuvaddr[i++] = pdata[j];
 
@@ -1166,7 +1169,6 @@ static void tegra_se_send_data(struct tegra_se_dev *se_dev,
 						SE_OPERATION_OP(restart_op);
 		}
 		cpuvaddr[i++] = val;
-
 		total -= src_ll->data_len;
 		src_ll++;
 		dst_ll++;

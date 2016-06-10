@@ -84,5 +84,29 @@ static inline void *mb_get_data(struct tipc_msg_buf *mb, size_t len)
 	return pos;
 }
 
+/* OTE-TIPC wrapper APIs*/
+/*
+ * te_open_trusted_session - Establishes the session with TA
+ * @name(in): name of the TA to connect to.
+ * @ctx(out): pointer to the private data associated to the open session
+ * Returns 0 on Success else error code.
+ */
+int te_open_trusted_session(char *name, void **ctx);
+/*
+ * te_close_trusted_session - Closes the session established
+ * @ctx: ctx returned by open session
+ */
+void te_close_trusted_session(void *ctx);
+/*
+ * te_launch_trusted_oper - Communicate with TA to perform any operation
+ * @buf: Buffer to sent to secure world.
+ * @buf_len: length of the buffer.
+ * @ta_cmd: command to sent to secure world.
+ * @ctx: ctx returned by open session.
+ * Returns 0 on Success else error code.
+ */
+int te_launch_trusted_oper(void *buf, size_t buf_len, uint32_t ta_cmd,
+		void *ctx);
+
 #endif /* __LINUX_TRUSTY_TRUSTY_IPC_H */
 

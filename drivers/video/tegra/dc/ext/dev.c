@@ -876,7 +876,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			tegra_dc_call_flip_callback();
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-		tegra_nvdisp_phase_in_mempool(dc);
+		tegra_nvdisp_complete_imp_programming(dc);
 #endif
 	}
 

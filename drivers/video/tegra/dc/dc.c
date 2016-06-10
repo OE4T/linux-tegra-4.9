@@ -3476,7 +3476,7 @@ static void tegra_dc_vblank(struct work_struct *work)
 	 * If this HEAD has a pending COMMON_ACT_REQ, the COMMON channel state
 	 * should be promoted on vblank.
 	 */
-	tegra_nvdisp_handle_common_state_promotion(dc);
+	tegra_nvdisp_handle_common_channel_promotion(dc);
 
 	if (dc->out->sd_settings) {
 		if (dc->out->sd_settings->enable) {

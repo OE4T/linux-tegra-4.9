@@ -230,10 +230,11 @@ struct tegra_dc {
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc_imp_head_results	imp_results[TEGRA_MAX_DC];
 	bool					common_channel_reserved;
-	bool					common_channel_programmed;
-	bool					new_bw_pending;
+	bool					common_channel_pending;
+	bool					new_imp_results_needed;
+	bool					need_to_complete_imp;
 	bool					new_mempool_needed;
-	bool					new_mempool_pending;
+	bool					new_bw_pending;
 #endif
 
 #if defined(CONFIG_TEGRA_DC_CMU)

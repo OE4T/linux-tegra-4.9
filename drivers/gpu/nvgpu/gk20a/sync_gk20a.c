@@ -433,7 +433,12 @@ static void gk20a_sync_timeline_value_str(struct sync_timeline *timeline,
 static void gk20a_sync_pt_value_str_for_sema(struct gk20a_sync_pt *pt,
 					     char *str, int size)
 {
-	snprintf(str, size, "gk20a-sema");
+	struct gk20a_semaphore *s = pt->sema;
+
+	snprintf(str, size, "S: c=%d [v=%u,r_v=%u]",
+		 s->hw_sema->ch->hw_chid,
+		 gk20a_semaphore_get_value(s),
+		 gk20a_semaphore_read(s));
 }
 
 static void gk20a_sync_pt_value_str(struct sync_pt *sync_pt, char *str,

@@ -869,6 +869,7 @@
 			clock-names = "nvjpg";
 			#stream-id-cells = <1>;
 			status = "disabled";
+			interrupts = <0 198 0x04>;
 		};
 
 		tsec@15500000 {

@@ -216,7 +216,7 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 	val = pbdma_acquire_retry_man_2_f() |
 		pbdma_acquire_retry_exp_2_f();
 
-	if (!c->g->timeouts_enabled)
+	if (!c->g->timeouts_enabled || !c->wdt_enabled)
 		return val;
 
 	timeout = gk20a_get_channel_watchdog_timeout(c);

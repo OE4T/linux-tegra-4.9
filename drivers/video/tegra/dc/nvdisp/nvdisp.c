@@ -41,8 +41,8 @@
 
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
-static DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_common_channel_wq);
-static DECLARE_WAIT_QUEUE_HEAD(tegra_nvdisp_mempool_wq);
+static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_reservation_wq);
+static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_promotion_wq);
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
@@ -2158,68 +2158,10 @@ static int tegra_nvdisp_parse_imp_results(struct tegra_dc *dc,
 	return 0;
 }
 
-static bool tegra_nvdisp_any_new_mempool_needed(void)
+static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 {
-	int i;
-
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		struct tegra_dc *dc = tegra_dc_get_dc(i);
-		if (dc && dc->new_mempool_needed)
-			return true;
-	}
-
-	return false;
-}
-
-int tegra_nvdisp_wait_for_mempool_to_promote(struct tegra_dc *dc)
-{
-	int ret = 0;
-
-	mutex_lock(&tegra_nvdisp_lock);
-
-	ret = ___wait_event(tegra_nvdisp_mempool_wq,
-		___wait_cond_timeout(!dc->new_mempool_pending),
-		TASK_INTERRUPTIBLE, 0, HZ,
-		mutex_unlock(&tegra_nvdisp_lock);
-		__ret = schedule_timeout(__ret);
-		mutex_lock(&tegra_nvdisp_lock));
-
-	mutex_unlock(&tegra_nvdisp_lock);
-	return ret;
-}
-
-void tegra_nvdisp_notify_mempool_promoted(struct tegra_dc *dc)
-{
-	dc->new_mempool_needed = false;
-	dc->new_mempool_pending = false;
-	wake_up(&tegra_nvdisp_mempool_wq);
-}
-
-static void tegra_nvdisp_program_mempool(struct tegra_dc *dc,
-	struct tegra_dc_imp_head_results *res)
-{
-	u32 entries;
-	int j;
-
-	/* program cursor mempool */
-	entries = res->pool_config_entries_cursor;
-	tegra_dc_writel(dc,
-		nvdisp_ihub_cursor_pool_config_entries_f(entries),
-		nvdisp_ihub_cursor_pool_config_r());
-
-	for (j = 0; j < res->num_windows; j++) {
-		struct tegra_dc_win *win;
-
-		win = tegra_dc_get_window(dc, res->win_ids[j]);
-		if (!win)
-			continue;
-
-		/* program wgrp mempool */
-		entries = res->pool_config_entries_win[j];
-		nvdisp_win_write(win,
-			win_ihub_pool_config_entries_f(entries),
-			win_ihub_pool_config_r());
-	}
+	if (!dc || !dc->enabled)
+		return;
 
 	tegra_dc_writel(dc,
 		nvdisp_cmd_state_ctrl_common_act_update_enable_f(),
@@ -2230,28 +2172,76 @@ static void tegra_nvdisp_program_mempool(struct tegra_dc *dc,
 		nvdisp_cmd_state_ctrl_r());
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
 
-	dc->new_mempool_pending = true;
-	tegra_nvdisp_wait_for_mempool_to_promote(dc);
+	dc->common_channel_pending = true;
 }
 
-void tegra_nvdisp_phase_in_mempool(struct tegra_dc *dc)
+static int tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
 {
+	int ret = 0;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	ret = ___wait_event(nvdisp_common_channel_promotion_wq,
+		___wait_cond_timeout(!dc->common_channel_pending),
+		TASK_INTERRUPTIBLE, 0, HZ,
+		mutex_unlock(&tegra_nvdisp_lock);
+		__ret = schedule_timeout(__ret);
+		mutex_lock(&tegra_nvdisp_lock));
+
+	mutex_unlock(&tegra_nvdisp_lock);
+	return ret;
+}
+
+static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
+{
+	dc->common_channel_pending = false;
+	wake_up(&nvdisp_common_channel_promotion_wq);
+}
+
+static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
+	struct tegra_dc_imp_head_results *res)
+{
+	u32 entries;
 	int i;
 
-	if (!dc->common_channel_reserved)
+	if (!dc || !dc->enabled)
 		return;
 
-	/* Make sure there's no pending mempool change on the current head. */
-	tegra_nvdisp_wait_for_mempool_to_promote(dc);
+	/* program cursor mempool */
+	entries = res->pool_config_entries_cursor;
+	tegra_dc_writel(dc,
+		nvdisp_ihub_cursor_pool_config_entries_f(entries),
+		nvdisp_ihub_cursor_pool_config_r());
+
+	for (i = 0; i < res->num_windows; i++) {
+		struct tegra_dc_win *win;
+
+		win = tegra_dc_get_window(dc, res->win_ids[i]);
+		if (!win)
+			continue;
+
+		/* program wgrp mempool */
+		entries = res->pool_config_entries_win[i];
+		nvdisp_win_write(win,
+			win_ihub_pool_config_entries_f(entries),
+			win_ihub_pool_config_r());
+	}
+
+	tegra_nvdisp_activate_common_channel(dc);
+	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
+}
+
+static void tegra_nvdisp_program_all_needed_mempool(struct tegra_dc *dc)
+{
+	int i;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
 		if (other_dc && other_dc->new_mempool_needed)
-			tegra_nvdisp_program_mempool(other_dc,
+			tegra_nvdisp_program_dc_mempool(other_dc,
 				&dc->imp_results[other_dc->ctrl_num]);
 	}
 }
-EXPORT_SYMBOL(tegra_nvdisp_phase_in_mempool);
 
 static void tegra_nvdisp_handle_mempool_allocation(struct tegra_dc *dc)
 {
@@ -2335,8 +2325,35 @@ static void tegra_nvdisp_handle_mempool_allocation(struct tegra_dc *dc)
 	}
 
 	if (mempool_all_decreasing)
-		tegra_nvdisp_phase_in_mempool(dc);
+		tegra_nvdisp_program_all_needed_mempool(dc);
 }
+
+void tegra_nvdisp_complete_imp_programming(struct tegra_dc *dc)
+{
+	mutex_lock(&tegra_nvdisp_lock);
+
+	if (!dc->need_to_complete_imp) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		return;
+	}
+	dc->need_to_complete_imp = false;
+
+	mutex_unlock(&tegra_nvdisp_lock);
+
+	/* Make sure there's no pending change on the current head. */
+	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
+	tegra_nvdisp_program_all_needed_mempool(dc);
+
+	/* Re-enable ihub latency events. */
+	tegra_dc_writel(dc,
+		tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
+		nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+		nvdisp_ihub_misc_ctl_r());
+
+	/* Release the common channel. */
+	tegra_nvdisp_release_common_channel(dc);
+}
+EXPORT_SYMBOL(tegra_nvdisp_complete_imp_programming);
 
 static bool tegra_nvdisp_common_channel_is_free(void)
 {
@@ -2357,14 +2374,7 @@ int tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	/*
-	 * If this HEAD has already reserved the COMMON channel,
-	 * let it through.
-	 */
-	if (dc->common_channel_reserved)
-		goto unlock_and_ret;
-
-	ret = ___wait_event(tegra_nvdisp_common_channel_wq,
+	ret = ___wait_event(nvdisp_common_channel_reservation_wq,
 		___wait_cond_timeout(tegra_nvdisp_common_channel_is_free()),
 		TASK_INTERRUPTIBLE, 0, HZ,
 		mutex_unlock(&tegra_nvdisp_lock);
@@ -2372,7 +2382,7 @@ int tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
 		mutex_lock(&tegra_nvdisp_lock));
 
 	dc->common_channel_reserved = true;
-unlock_and_ret:
+
 	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
 }
@@ -2380,48 +2390,20 @@ unlock_and_ret:
 void tegra_nvdisp_release_common_channel(struct tegra_dc *dc)
 {
 	dc->common_channel_reserved = false;
-	dc->common_channel_programmed = false;
-	wake_up(&tegra_nvdisp_common_channel_wq);
+	wake_up(&nvdisp_common_channel_reservation_wq);
 }
 
-void tegra_nvdisp_handle_common_state_promotion(struct tegra_dc *dc)
+void tegra_nvdisp_handle_common_channel_promotion(struct tegra_dc *dc)
 {
 	mutex_lock(&tegra_nvdisp_lock);
 
-	/* Return immediately if COMMON_ACT_REQ is still pending. */
-	if (tegra_dc_readl(dc, DC_CMD_STATE_CONTROL) & COMMON_ACT_REQ) {
-		mutex_unlock(&tegra_nvdisp_lock);
-		return;
-	}
-
-	if (dc->new_mempool_pending)
-		tegra_nvdisp_notify_mempool_promoted(dc);
-
-	/*
-	 * Release the COMMON channel if the following conditions are met:
-	 * - This HEAD has programmed some COMMON channel state and
-	 *   COMMON_ACT_REQ has cleared.
-	 * - This HEAD has no pending bandwidth that needs to take effect.
-	 * - Any new mempool allocations have taken effect for the wgrps on each
-	 *   head.
-	 *
-	 * Also re-enable ihub latency events before releasing the COMMON
-	 * channel.
-	 */
-	if (dc->common_channel_programmed &&
-		!dc->new_bw_pending &&
-		!tegra_nvdisp_any_new_mempool_needed()) {
-		tegra_dc_writel(dc,
-			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
-			nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-			nvdisp_ihub_misc_ctl_r());
-
-		tegra_nvdisp_release_common_channel(dc);
-	}
+	if (dc->common_channel_pending &&
+		!(tegra_dc_readl(dc, DC_CMD_STATE_CONTROL) & COMMON_ACT_REQ))
+		tegra_nvdisp_notify_common_channel_promoted(dc);
 
 	mutex_unlock(&tegra_nvdisp_lock);
 }
-EXPORT_SYMBOL(tegra_nvdisp_handle_common_state_promotion);
+EXPORT_SYMBOL(tegra_nvdisp_handle_common_channel_promotion);
 
 int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data)
@@ -2437,9 +2419,16 @@ int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
 
 	ret = tegra_nvdisp_parse_imp_results(dc, flip_user_data);
 	if (ret)
-		tegra_nvdisp_release_common_channel(dc);
+		goto release_and_ret;
 
 	tegra_nvdisp_handle_mempool_allocation(dc);
+
+	dc->new_imp_results_needed = true;
+	dc->need_to_complete_imp = true;
+
+	return ret;
+release_and_ret:
+	tegra_nvdisp_release_common_channel(dc);
 	return ret;
 }
 EXPORT_SYMBOL(tegra_nvdisp_process_imp_results);
@@ -2546,9 +2535,6 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 	val = (dc->imp_results[dc->ctrl_num].window_slots_value) |
 		(dc->imp_results[dc->ctrl_num].cursor_slots_value << 8);
 	tegra_dc_writel(dc, val, nvdisp_ihub_common_fetch_meter_r());
-
-	dc->new_mempool_pending = true;
-	dc->common_channel_programmed = true;
 }
 
 void reg_dump(struct tegra_dc *dc, void *data,

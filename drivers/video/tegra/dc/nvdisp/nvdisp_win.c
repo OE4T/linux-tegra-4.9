@@ -668,7 +668,7 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 	 * channel, go ahead ahd program the ihub registers (assembly)
 	 * if they haven't been programmed yet.
 	 */
-	if (dc->common_channel_reserved && !dc->common_channel_programmed) {
+	if (dc->common_channel_reserved && dc->new_imp_results_needed) {
 		tegra_nvdisp_program_imp_results(dc);
 
 		/*
@@ -679,6 +679,9 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		update_mask |=
 			nvdisp_cmd_state_ctrl_common_act_update_enable_f();
 		act_req_mask |= nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+
+		dc->new_imp_results_needed = false;
+		dc->common_channel_pending = true;
 	}
 
 	for (i = 0; i < n; i++) {

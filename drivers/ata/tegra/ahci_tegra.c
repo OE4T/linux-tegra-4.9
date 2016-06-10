@@ -80,6 +80,9 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 	lpm_state = TEGRA_AHCI_PORT_RUNTIME_ACTIVE;
 	tegra->skip_rtpm = false;
 
+	if (!ata_dev_enabled(ap->link.device))
+		goto skip;
+
 	port_status = tegra_ahci_bar5_readl(hpriv, T_AHCI_PORT_PXSSTS);
 	port_status = (port_status & T_AHCI_PORT_PXSSTS_IPM_MASK) >>
 					T_AHCI_PORT_PXSSTS_IPM_SHIFT;
@@ -146,13 +149,10 @@ static int tegra_ahci_port_suspend(struct ata_port *ap, pm_message_t mesg)
 			return 0;
 		}
 	}
+skip:
 
 	if (!ret && !(ap->pflags & ATA_PFLAG_SUSPENDED)) {
 		ret = ahci_ops.port_suspend(ap, mesg);
-		if (ret == 0) {
-			pm_runtime_mark_last_busy(&tegra->pdev->dev);
-			pm_runtime_put_sync_autosuspend(&tegra->pdev->dev);
-		}
 	}
 
 	return ret;
@@ -173,14 +173,6 @@ static int tegra_ahci_port_resume(struct ata_port *ap)
 		tegra->skip_rtpm = false;
 		if (ap->pm_mesg.event & PM_EVENT_AUTO)
 			return 0;
-	}
-
-	ret = pm_runtime_get_sync(&tegra->pdev->dev);
-	if (ret < 0) {
-		dev_err(&tegra->pdev->dev,
-				"%s(%d) Failed to resume the devcie err=%d\n",
-				__func__, __LINE__, ret);
-		return AC_ERR_SYSTEM;
 	}
 
 	if (ap->pm_mesg.event & PM_EVENT_RESUME) {
@@ -1300,89 +1292,6 @@ static void tegra_ahci_shutdown(struct platform_device *pdev)
 	}
 }
 
-/*
-       This function is similar to ahci_enable_ahci which is
-       defined in libahci.c.
-       Since tegra_ahci_enable needs to be called before a
-       host is allocated we will not be able to call ahci_enable_ahci
-*/
-
-static void tegra_ahci_enable(struct ahci_host_priv *hpriv)
-{
-	int i;
-	u32 tmp;
-	u32 val;
-	u32 mask;
-
-	/* turn on AHCI_EN */
-	tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
-	if (tmp & HOST_AHCI_EN)
-		return;
-
-	/* Some controllers need AHCI_EN to be written multiple times.
-	 * Try a few times before giving up.
-	 */
-	for (i = 0; i < 5; i++) {
-		val = mask = T_AHCI_HBA_GHC_AE;
-		tegra_ahci_bar5_update(hpriv, val, mask, T_AHCI_HBA_GHC);
-		tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
-		if (tmp & T_AHCI_HBA_GHC_AE)
-			return;
-		msleep(10);
-	}
-
-	WARN_ON(1);
-}
-
-/*
-       This function is similar to ahci_reset_controller which is
-       defined in libahci.c.
-       Since tegra_ahci_reset_controller needs to be called before a
-       host is allocated we will not be able to call ahci_reset_controller
-*/
-static int tegra_ahci_reset_controller(struct ahci_host_priv *hpriv)
-{
-	struct tegra_ahci_priv *tegra = hpriv->plat_data;
-	void __iomem *mmio = tegra->base_list[TEGRA_SATA_AHCI];
-	struct platform_device *pdev = tegra->pdev;
-	struct device *dev = &pdev->dev;
-	u32 tmp;
-	u32 val;
-	u32 mask;
-
-	/* we must be in AHCI mode, before using anything
-	 * AHCI-specific, such as HOST_RESET.
-	 */
-	tegra_ahci_enable(hpriv);
-
-	/* global controller reset */
-	tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
-	if ((tmp & T_AHCI_HBA_GHC_HR) == 0) {
-		val = mask = T_AHCI_HBA_GHC_HR;
-		tegra_ahci_bar5_update(hpriv, val, mask, T_AHCI_HBA_GHC);
-
-		tmp = tegra_ahci_bar5_readl(hpriv, T_AHCI_HBA_GHC);
-	}
-
-	/*
-	 * to perform host reset, OS should set HOST_RESET
-	 * and poll until this bit is read to be "0".
-	 * reset must complete within 1 second, or
-	 * the hardware should be considered fried.
-	 */
-	tmp = ata_wait_register(NULL, mmio + HOST_CTL, HOST_RESET,
-			HOST_RESET, 10, 1000);
-
-	if (tmp & T_AHCI_HBA_GHC_HR) {
-		dev_err(dev, "controller reset failed (0x%x)\n",
-				tmp);
-		return -EIO;
-	}
-	mdelay(20);
-
-	return 0;
-}
-
 static int tegra_ahci_probe(struct platform_device *pdev)
 {
 	struct ahci_host_priv *hpriv;
@@ -1418,20 +1327,6 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	if (ret)
 		goto poweroff_controller;
 
-	ret = tegra_ahci_reset_controller(hpriv);
-	if (ret)
-		goto poweroff_controller;
-
-	if (!tegra_ahci_bar5_readl(hpriv, T_AHCI_PORT_PXSSTS)) {
-		struct platform_driver *drv =
-			to_platform_driver(pdev->dev.driver);
-
-		dev_info(&pdev->dev, "Drive not present\n");
-		drv->driver.pm = NULL;
-		ret = -ENODEV;
-		goto poweroff_controller;
-	}
-
 
 	ret = ahci_platform_init_host(pdev, hpriv, &ahci_tegra_port_info,
 							&ahci_platform_sht);
@@ -1446,17 +1341,11 @@ static int tegra_ahci_probe(struct platform_device *pdev)
 	}
 
 	ret = pm_runtime_set_active(&pdev->dev);
-	if (ret) {
+	if (ret)
 		dev_dbg(&pdev->dev, "unable to set runtime pm active err=%d\n",
 								ret);
-	} else {
-		pm_runtime_set_autosuspend_delay(&pdev->dev,
-				TEGRA_AHCI_DEFAULT_IDLE_TIME);
-		pm_runtime_use_autosuspend(&pdev->dev);
-		pm_suspend_ignore_children(&pdev->dev, true);
-		pm_runtime_get_noresume(&pdev->dev);
+	else
 		pm_runtime_enable(&pdev->dev);
-	}
 
 #ifdef CONFIG_DEBUG_FS
 	tegra_ahci_dump_debuginit(hpriv);

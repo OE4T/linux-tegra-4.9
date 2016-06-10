@@ -924,8 +924,10 @@ static int __init init_freqtbls(struct device_node *dn)
 		delta_ndiv = vhtbl->ndiv_max - vhtbl->ndiv_min;
 		if (unlikely(delta_ndiv == 0))
 			max_freq_steps = 1;
-		else
-			max_freq_steps = delta_ndiv / freq_table_step_size;
+		else {
+			/* We store both ndiv_min and ndiv_max hence the +1 */
+			max_freq_steps = delta_ndiv / freq_table_step_size + 1;
+		}
 
 		max_freq_steps += (delta_ndiv % freq_table_step_size) ? 1 : 0;
 

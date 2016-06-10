@@ -30,7 +30,6 @@
 
 #include <media/tegra-v4l2-camera.h>
 #include <media/camera_common.h>
-#include <media/tegra_camera_dev_mfi.h>
 
 #define LC898212_ACTUATOR_RANGE	1023
 #define LC898212_POS_LOW_DEFAULT	(0)
@@ -62,13 +61,8 @@
 #define LC898212_ADOFFSET	0x3C
 #define LC898212_EQENBL		0x87
 
-/**
-* standard + custom controls
-* custom controls not added for this focuser yet
-*/
-#define NUM_FOCUS_STD_CTRLS	1
-#define NUM_FOCUS_CUSTOM_CTRLS	0
-#define NUM_FOCUS_CTRLS (NUM_FOCUS_STD_CTRLS + NUM_FOCUS_CUSTOM_CTRLS)
+#define V4L2_CID_CAMERA_LC898212_BASE	(V4L2_CID_CAMERA_CLASS_BASE + 0x1000)
+#define V4L2_CID_FOCUS_SYNC_EXTERNAL	V4L2_CID_CAMERA_LC898212_BASE
 
 static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl);
 
@@ -88,11 +82,34 @@ struct lc898212 {
 	struct	camera_common_focuser_data	*s_data;
 	struct	regmap				*regmap8;
 	struct	regmap				*regmap16;
+	struct	mutex				pos_lock;
+	s16					position;
+	s16					curr_pos;
 	int					numctrls;
-	struct camera_mfi_dev			*cmfi_dev16;
-	bool					support_mfi;
+	bool					sync_external;
 	struct	v4l2_ctrl			*ctrls[];
 };
+
+static const struct v4l2_ctrl_ops lc898212_ctrl_ops = {
+	.s_ctrl		= lc898212_s_ctrl,
+};
+
+static const struct v4l2_ctrl_config ctrl_config_list[] = {
+/* Do not change the name field for the controls! */
+	{
+		.ops = &lc898212_ctrl_ops,
+		.id = V4L2_CID_FOCUS_SYNC_EXTERNAL,
+		.name = "Focus Sync External",
+		.type = V4L2_CTRL_TYPE_BOOLEAN,
+		.max = 1,
+		.step = 1,
+	},
+};
+
+/* standard + custom controls */
+#define NUM_FOCUS_STD_CTRLS	1
+#define NUM_FOCUS_CUSTOM_CTRLS	ARRAY_SIZE(ctrl_config_list)
+#define NUM_FOCUS_CTRLS (NUM_FOCUS_STD_CTRLS + NUM_FOCUS_CUSTOM_CTRLS)
 
 static struct lc898212_reg lc898212_init_setting[] = {
 	{LC898212_REG_ACCESS, 0x80, 0x34},
@@ -162,6 +179,37 @@ const static struct of_device_id lc898212_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, lc898212_of_match);
 
+static int lc898212_sync(struct v4l2_subdev *sd, unsigned int sync_events)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_focuser_data *s_data =
+				to_camera_common_focuser_data(client);
+	struct lc898212 *priv = (struct lc898212 *)s_data->priv;
+	int ret = 0;
+	s16 new_pos = 0;
+
+	dev_dbg(&client->dev, "%s++\n", __func__);
+
+	mutex_lock(&priv->pos_lock);
+	if (!(sync_events & V4L2_SYNC_EVENT_FOCUS_POS) ||
+		(priv->curr_pos == priv->position))
+		goto done;
+
+	/* write when ROI(focus area) end for the current frame */
+	ret = regmap_write(priv->regmap16, LC898212_RZ, (u16) priv->position);
+	if (ret < 0) {
+		dev_err(&client->dev, "%s:error writing pos %d\n",
+				 __func__, new_pos);
+		goto done;
+	}
+	priv->curr_pos = priv->position;
+
+done:
+	mutex_unlock(&priv->pos_lock);
+	dev_dbg(&client->dev, "%s--\n", __func__);
+	return ret;
+}
+
 static int lc898212_set_position(struct lc898212 *priv, u32 position)
 {
 	int ret = 0;
@@ -184,15 +232,17 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 
 	/* unsigned 10 bit to signed 16 bit */
 	new_pos = ((s16) position - AF_RANGE / 2) * 64;
-
-	if (priv->support_mfi) {
-		ret = tegra_camera_dev_mfi_clear(priv->cmfi_dev16);
-		ret |= tegra_camera_dev_mfi_wr_add(priv->cmfi_dev16,
-				LC898212_RZ,
-				(u16) new_pos);
-	} else {
-		ret = regmap_write(priv->regmap16, LC898212_RZ, (u16) new_pos);
-	}
+	/* store the new position and wait for sync call to write */
+	mutex_lock(&priv->pos_lock);
+	if (priv->curr_pos != priv->position)
+		dev_err(&priv->i2c_client->dev,
+			"%s:clear previous position %d, set new value %d\n",
+			 __func__, priv->position, new_pos);
+	priv->position = new_pos;
+	mutex_unlock(&priv->pos_lock);
+	/* Focus external sync is not present synchronize internally */
+	if (!priv->sync_external)
+		lc898212_sync(priv->subdev, V4L2_SYNC_EVENT_FOCUS_POS);
 
 	dev_dbg(&s_data->i2c_client->dev, "%s--\n", __func__);
 	return ret;
@@ -201,10 +251,6 @@ static int lc898212_set_position(struct lc898212 *priv, u32 position)
 /*
  * V4l2 controls
  */
-
-static const struct v4l2_ctrl_ops lc898212_ctrl_ops = {
-	.s_ctrl		= lc898212_s_ctrl,
-};
 
 static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl)
 {
@@ -220,6 +266,9 @@ static int lc898212_s_ctrl(struct v4l2_ctrl *ctrl)
 	switch (ctrl->id) {
 	case V4L2_CID_FOCUS_ABSOLUTE:
 		err = lc898212_set_position(priv, ctrl->val);
+		break;
+	case V4L2_CID_FOCUS_SYNC_EXTERNAL:
+		priv->sync_external = ctrl->val;
 		break;
 	default:
 		pr_err("%s: unknown v4l2 ctlr id\n", __func__);
@@ -257,6 +306,17 @@ static int lc898212_ctrls_init(struct camera_common_focuser_data *s_data)
 		goto error;
 	}
 	priv->ctrls[0] = ctrl;
+
+	/* add custom controls */
+	ctrl = v4l2_ctrl_new_custom(&priv->ctrl_handler,
+			&ctrl_config_list[0], NULL);
+	if (ctrl == NULL) {
+		dev_err(&client->dev, "Failed to init %s ctrl\n",
+			ctrl_config_list[0].name);
+		err = -EINVAL;
+		goto error;
+	}
+	priv->ctrls[1] = ctrl;
 
 	err = v4l2_ctrl_handler_setup(&priv->ctrl_handler);
 	if (err) {
@@ -454,6 +514,7 @@ static int lc898212_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 
 static struct v4l2_subdev_core_ops lc898212_subdev_core_ops = {
 	.s_power	= camera_common_focuser_s_power,
+	.sync		= lc898212_sync,
 };
 
 static struct v4l2_subdev_ops lc898212_subdev_ops = {
@@ -476,9 +537,6 @@ static int lc898212_probe(struct i2c_client *client,
 	int err;
 	struct lc898212 *priv;
 	struct camera_common_focuser_data *common_data;
-	char dev_id[20];
-	const char *p_mfi_str;
-
 	static struct regmap_config lc898212_regmap_config8 = {
 		.reg_bits = 8,
 		.val_bits = 8,
@@ -536,47 +594,15 @@ static int lc898212_probe(struct i2c_client *client,
 	priv->s_data			= common_data;
 	priv->subdev			= &common_data->subdev;
 	priv->subdev->dev		= &client->dev;
+	mutex_init(&priv->pos_lock);
 
-	if (client->dev.of_node) {
-		err = of_property_read_string(client->dev.of_node,
-					"support_mfi",
-					&p_mfi_str);
-		if (err < 0) {
-			dev_err(&client->dev,
-					"%s unable to read MFI property\n",
-					__func__);
-			goto ERROR_RET;
-		}
-
-		priv->support_mfi = !strcmp(p_mfi_str, "true") ? true : false;
-
-		if (priv->support_mfi) {
-			int remain;
-
-			memset(dev_id, 0, sizeof(dev_id));
-			strncpy(dev_id, "lc898212", (sizeof(dev_id) - 1));
-			/* calculate how many bytes remaining in dev_id[] */
-			remain = sizeof(dev_id) - strlen(dev_id) - 1;
-			/* strncat most of 'remain' bytes from dev_name[] */
-			strncat(dev_id, dev_name(&client->dev), remain);
-			err = tegra_camera_dev_mfi_add_regmap(&priv->cmfi_dev16,
-				dev_id, priv->regmap16);
-			if (err < 0) {
-				dev_err(&client->dev,
-					"%s unable to add to mfi regmap\n",
-					__func__);
-				goto ERROR_RET;
-			}
-		}
-	}
+	v4l2_i2c_subdev_init(priv->subdev, client, &lc898212_subdev_ops);
 
 	err = camera_common_focuser_init(common_data);
 	if (err) {
 		dev_err(&client->dev, "unable to initialize focuser\n");
 		goto ERROR_RET;
 	}
-
-	v4l2_i2c_subdev_init(priv->subdev, client, &lc898212_subdev_ops);
 
 	priv->subdev->internal_ops = &lc898212_subdev_internal_ops;
 	priv->subdev->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |

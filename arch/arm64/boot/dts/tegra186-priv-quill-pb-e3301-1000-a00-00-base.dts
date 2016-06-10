@@ -84,6 +84,10 @@
 				nvidia,lanes = "uphy-lane-5";
 				nvidia,function = "sata";
 			};
+			ufs {
+				nvidia,function = "mphy";
+				status = "disabled";
+			};
 		};
 	};
 	pcie-controller@10003000 {

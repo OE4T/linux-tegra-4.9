@@ -332,6 +332,11 @@ struct device_node *tegra_primary_panel_get_dt_node(
 						&dsi_s_wqxga_10_1_ops);
 			}
 
+			/* 62681 */
+			if (!of_device_is_available(np_panel))
+				np_panel = of_get_child_by_name(np_primary,
+					"panel-a-2820x720-10-1_8-6");
+
 			/* HDMI */
 			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_primary,
@@ -416,6 +421,11 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_secondary,
 					"panel-s-wqxga-10-1");
+
+			/* 62681 */
+			if (!of_device_is_available(np_panel))
+				np_panel = of_get_child_by_name(
+					np_secondary, "panel-a-2820x720-10-1_8-6");
 		}
 	} else { /* for linsim or no display panel case */
 

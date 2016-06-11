@@ -17,7 +17,7 @@
 #include <dt-bindings/display/tegra-dc.h>
 #include <dt-bindings/display/tegra-panel.h>
 
-#include "tegra210-display-p2393-0000-a00-panel-dsi-1080p.dtsi"
+#include "tegra186-display-62681-panel-dsi-2820x720.dtsi"
 #include "tegra186-hdmi.dtsi"
 
 / {
@@ -217,7 +217,7 @@
 			status = "okay";
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
 
-			panel-dsi-1080p-p2382 {
+			panel-a-2820x720-10-1_8-6 {
 				status = "okay";
 				nvidia,dsi-video-burst-mode = <TEGRA_DSI_VIDEO_NONE_BURST_MODE>;
 				nvidia,dsi-refresh-rate = <60>;
@@ -228,20 +228,20 @@
 					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
 					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
 					nvidia,out-parent-clk = "pll_d_out1";
-					nvidia,out-xres = <1920>;
-					nvidia,out-yres = <1080>;
+					nvidia,out-xres = <2820>;
+					nvidia,out-yres = <720>;
 				};
 				display-timings {
-					1920x1080-32 {
-						clock-frequency = <148500000>;
-						hactive = <1920>;
-						vactive = <1080>;
-						hfront-porch = <88>;
-						hback-porch = <148>;
-						hsync-len = <44>;
-						vfront-porch = <4>;
-						vback-porch = <36>;
-						vsync-len = <5>;
+					2880x720-32 {
+						clock-frequency = <137000000>;
+						hactive = <2820>;
+						vactive = <720>;
+						hfront-porch = <48>;
+						hback-porch = <80>;
+						hsync-len = <32>;
+						vfront-porch = <3>;
+						vback-porch = <37>;
+						vsync-len = <6>;
 						nvidia,h-ref-to-sync = <1>;
 						nvidia,v-ref-to-sync = <1>;
 					};

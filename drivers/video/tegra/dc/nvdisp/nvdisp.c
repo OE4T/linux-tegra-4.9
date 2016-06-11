@@ -766,9 +766,13 @@ static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
 	char rst_name[6];
 	int i;
 
-	/* Use only if bpmp is enabled */
-	if (!tegra_bpmp_running())
-		return 0;
+	/* Continue if bpmp is enabled or sim */
+	if (!tegra_bpmp_running()) {
+		if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+			dev_err(&dc->ndev->dev, "Continue without BPMP for sim\n");
+		else
+			return 0;
+	}
 
 	nvdisp_common_rst[0] =
 		devm_reset_control_get(&dc->ndev->dev, "misc");
@@ -881,11 +885,13 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 			tegra_pd_get_powergate_id(nvdisp_disc_pd);
 
 #ifdef CONFIG_TEGRA_ISOMGR
-	/* Register with isomgr */
-	if (tegra_nvdisp_isomgr_register(TEGRA_ISO_CLIENT_DISP_0,
-		tegra_dc_calc_min_bandwidth(dc))) {
-		dev_err(&dc->ndev->dev, "could not register isomgr\n");
-		goto INIT_ERR;
+	if (!tegra_platform_is_vdk()) {
+		/* Register with isomgr */
+		if (tegra_nvdisp_isomgr_register(TEGRA_ISO_CLIENT_DISP_0,
+			tegra_dc_calc_min_bandwidth(dc))) {
+			dev_err(&dc->ndev->dev, "could not register isomgr\n");
+			goto INIT_ERR;
+		}
 	}
 #endif
 
@@ -893,7 +899,8 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 
 INIT_ERR:
 #ifdef CONFIG_TEGRA_ISOMGR
-	tegra_nvdisp_isomgr_unregister();
+	if (!tegra_platform_is_vdk())
+		tegra_nvdisp_isomgr_unregister();
 #endif
 
 	for (i = 0; i < DC_N_WINDOWS; ++i) {
@@ -1181,11 +1188,12 @@ int tegra_nvdisp_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_ISOMGR
 	/* Save reference to isohub bw info */
-	tegra_nvdisp_isomgr_attach(dc);
+	if (!tegra_platform_is_vdk())
+		tegra_nvdisp_isomgr_attach(dc);
 #endif
 
-	/* Take the controller out of reset if bpmp is loaded*/
-	if (tegra_bpmp_running() && tegra_platform_is_silicon()) {
+	if ((tegra_bpmp_running() && tegra_platform_is_silicon())
+		|| tegra_platform_is_vdk()) {
 		snprintf(rst_name, sizeof(rst_name), "head%u", dc->ctrl_num);
 		dc->rst = devm_reset_control_get(&dc->ndev->dev, rst_name);
 		if (IS_ERR(dc->rst)) {

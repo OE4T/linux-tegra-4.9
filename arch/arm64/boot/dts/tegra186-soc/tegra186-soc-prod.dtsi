@@ -22,8 +22,6 @@
 
 	pcie-controller@10003000 {
 		prod-settings {
-			#prod-cells = <3>;
-			mask-one-style;
 			prod_c_pad {
 				prod = <
 					0x000000C8 0xFFFFFFFF 0x80b880b8	// PADS_REFCLK_CFG0		31:0	 0x80b880b8

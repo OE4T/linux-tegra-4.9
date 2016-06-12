@@ -23,7 +23,7 @@
 
 #include <asm/ioctls.h>
 
-#include "t194/t194.h"
+#include "pva.h"
 #include "pva_queue.h"
 #include "nvhost_acm.h"
 

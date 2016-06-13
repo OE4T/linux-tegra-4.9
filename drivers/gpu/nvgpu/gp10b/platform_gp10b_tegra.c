@@ -371,12 +371,7 @@ struct gk20a_platform t18x_gpu_tegra_platform = {
 	.railgate_delay		= 500,
 
 	/* power management configuration */
-	/* WAR: Rail-gating GPU causes hangs on kernel-4.4 */
-#if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	.can_railgate           = true,
-#else
-	.can_railgate           = false,
-#endif
 	.enable_elpg            = true,
 	.can_elpg               = true,
 	.enable_blcg		= true,

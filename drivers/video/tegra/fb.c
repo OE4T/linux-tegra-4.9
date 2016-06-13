@@ -661,7 +661,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 {
 	struct fb_event event;
 	int i;
-	int blank = FB_BLANK_UNBLANK;
+	int blank = FB_BLANK_NORMAL;
 
 	mutex_lock(&fb_info->info->lock);
 	fb_destroy_modedb(fb_info->info->monspecs.modedb);
@@ -732,6 +732,8 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		fb_videomode_to_var(&fb_info->info->var, &specs->modedb[0]);
 		fb_notifier_call_chain(FB_EVENT_MODE_CHANGE_ALL, &event);
 		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
+		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
+		blank = FB_BLANK_UNBLANK;
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);
 		console_unlock();
 	} else {

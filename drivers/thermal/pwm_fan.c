@@ -424,7 +424,10 @@ static void set_pwm_duty_cycle(int pwm, struct fan_dev_data *fan_data)
 	int duty;
 
 	if (fan_data != NULL && fan_data->pwm_dev != NULL) {
-		duty = (fan_data->fan_pwm_max - pwm)
+		if (pwm == 0)
+			duty = fan_data->pwm_period;
+		else
+			duty = (fan_data->fan_pwm_max - pwm)
 				* fan_data->precision_multiplier;
 		pwm_config(fan_data->pwm_dev,
 			duty, fan_data->pwm_period);

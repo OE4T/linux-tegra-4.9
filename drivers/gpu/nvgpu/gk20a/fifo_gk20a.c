@@ -215,8 +215,6 @@ bool gk20a_fifo_is_valid_runlist_id(struct gk20a *g, u32 runlist_id)
 		}
 	}
 
-	gk20a_err(g->dev, "runlist_id is not in active list/invalid %d", runlist_id);
-
 	return false;
 }
 

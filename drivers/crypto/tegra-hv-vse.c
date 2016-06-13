@@ -276,6 +276,8 @@ enum tegra_virual_se_aes_iv_type {
 #define AES_KEYTBL_TYPE_UIV 4
 
 #define TEGRA_VIRTUAL_SE_AES_IV_SIZE 16
+#define TEGRA_VIRTUAL_SE_AES_LCTR_SIZE 16
+#define TEGRA_VIRTUAL_SE_AES_LCTR_CNTN 1
 
 /* Security Engine RSA context */
 struct tegra_virtual_se_rsa_context {
@@ -869,10 +871,19 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 		ivc_tx.cmd = VIRTUAL_SE_CMD_AES_DECRYPT;
 
 	if (req->info) {
-		err = tegra_hv_vse_aes_set_keyiv(se_dev, req->info,
-			aes_ctx->keylen,
-			aes_ctx->aes_keyslot,
-			AES_KEYTBL_TYPE_OIV);
+		if (req_ctx->op_mode == AES_CTR) {
+			memcpy(ivc_tx.args.aes.op.lctr, req->info,
+				TEGRA_VIRTUAL_SE_AES_LCTR_SIZE);
+			ivc_tx.args.aes.op.ctr_cntn  =
+				TEGRA_VIRTUAL_SE_AES_LCTR_CNTN;
+		} else {
+			err = tegra_hv_vse_aes_set_keyiv(se_dev, req->info,
+				aes_ctx->keylen,
+				aes_ctx->aes_keyslot,
+				AES_KEYTBL_TYPE_OIV);
+			if (err)
+				goto err_exit;
+		}
 	}
 
 	ivc_tx.args.aes.op.keyslot = aes_ctx->aes_keyslot;
@@ -976,6 +987,9 @@ static int tegra_hv_vse_aes_queue_req(struct tegra_virtual_se_dev *se_dev,
 	unsigned long flags;
 	bool idle = true;
 	int err = 0;
+
+	if (req->nbytes % VIRTUAL_SE_AES_BLOCK_SIZE)
+		return -EINVAL;
 
 	if (!tegra_hv_vse_count_sgs(req->src, req->nbytes))
 		return -EINVAL;
@@ -1087,6 +1101,54 @@ static int tegra_hv_vse_aes_ecb_decrypt(struct ablkcipher_request *req)
 	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
 }
 
+static int tegra_hv_vse_aes_ctr_encrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+		ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = true;
+	req_ctx->op_mode = AES_CTR;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_hv_vse_aes_ctr_decrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+			ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = false;
+	req_ctx->op_mode = AES_CTR;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_hv_vse_aes_ofb_encrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+		ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = true;
+	req_ctx->op_mode = AES_OFB;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
+static int tegra_hv_vse_aes_ofb_decrypt(struct ablkcipher_request *req)
+{
+	struct tegra_virtual_se_aes_req_context *req_ctx =
+			ablkcipher_request_ctx(req);
+
+	req_ctx->encrypt = false;
+	req_ctx->op_mode = AES_OFB;
+	req_ctx->engine_id = VIRTUAL_SE_AES1;
+	req_ctx->se_dev = g_virtual_se_dev[VIRTUAL_SE_AES1];
+	return tegra_hv_vse_aes_queue_req(req_ctx->se_dev, req);
+}
+
 static int tegra_hv_vse_aes_setkey(struct crypto_ablkcipher *tfm,
 	const u8 *key, u32 keylen)
 {
@@ -1138,7 +1200,7 @@ static struct crypto_alg aes_algs[] = {
 		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
-		.cra_ctxsize  = sizeof(struct tegra_virtual_se_aes_context),
+		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
 		.cra_alignmask = 0,
 		.cra_type = &crypto_ablkcipher_type,
 		.cra_module = THIS_MODULE,
@@ -1158,7 +1220,7 @@ static struct crypto_alg aes_algs[] = {
 		.cra_priority = 300,
 		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
 		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
-		.cra_ctxsize  = sizeof(struct tegra_virtual_se_aes_context),
+		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
 		.cra_alignmask = 0,
 		.cra_type = &crypto_ablkcipher_type,
 		.cra_module = THIS_MODULE,
@@ -1172,7 +1234,49 @@ static struct crypto_alg aes_algs[] = {
 			.encrypt = tegra_hv_vse_aes_ecb_encrypt,
 			.decrypt = tegra_hv_vse_aes_ecb_decrypt,
 		}
-	}
+	}, {
+		.cra_name = "ctr(aes)",
+		.cra_driver_name = "ctr-aes-tegra",
+		.cra_priority = 300,
+		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
+		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
+		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
+		.cra_alignmask = 0,
+		.cra_type = &crypto_ablkcipher_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_hv_vse_aes_cra_init,
+		.cra_exit = tegra_hv_vse_aes_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize = VIRTUAL_SE_AES_MIN_KEY_SIZE,
+			.max_keysize = VIRTUAL_SE_AES_MAX_KEY_SIZE,
+			.ivsize = VIRTUAL_SE_AES_IV_SIZE,
+			.setkey = tegra_hv_vse_aes_setkey,
+			.encrypt = tegra_hv_vse_aes_ctr_encrypt,
+			.decrypt = tegra_hv_vse_aes_ctr_decrypt,
+			.geniv = "eseqiv",
+		}
+	}, {
+		.cra_name = "ofb(aes)",
+		.cra_driver_name = "ofb-aes-tegra",
+		.cra_priority = 300,
+		.cra_flags = CRYPTO_ALG_TYPE_ABLKCIPHER | CRYPTO_ALG_ASYNC,
+		.cra_blocksize = VIRTUAL_SE_AES_BLOCK_SIZE,
+		.cra_ctxsize = sizeof(struct tegra_virtual_se_aes_context),
+		.cra_alignmask = 0,
+		.cra_type = &crypto_ablkcipher_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_hv_vse_aes_cra_init,
+		.cra_exit = tegra_hv_vse_aes_cra_exit,
+		.cra_u.ablkcipher = {
+			.min_keysize = VIRTUAL_SE_AES_MIN_KEY_SIZE,
+			.max_keysize = VIRTUAL_SE_AES_MAX_KEY_SIZE,
+			.ivsize = VIRTUAL_SE_AES_IV_SIZE,
+			.setkey = tegra_hv_vse_aes_setkey,
+			.encrypt = tegra_hv_vse_aes_ofb_encrypt,
+			.decrypt = tegra_hv_vse_aes_ofb_decrypt,
+				.geniv = "eseqiv",
+		}
+	},
 };
 
 static struct ahash_alg sha_algs[] = {

@@ -746,10 +746,6 @@ static int gk20a_tegra_probe(struct device *dev)
 
 	platform->g->host1x_dev = host1x_pdev;
 
-	if (platform->g->host1x_dev)
-		nvhost_register_dump_device(platform->g->host1x_dev,
-					gk20a_debug_dump_device,
-					platform->g->dev);
 #ifdef CONFIG_OF
 	joint_xpu_rail = of_property_read_bool(of_chosen,
 				"nvidia,tegra-joint_xpu_rail");
@@ -794,11 +790,6 @@ static int gk20a_tegra_late_probe(struct device *dev)
 
 static int gk20a_tegra_remove(struct device *dev)
 {
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-
-	if (platform->g->host1x_dev)
-		nvhost_unregister_dump_device(platform->g->host1x_dev);
-
 	/* remove gk20a power subdomain from host1x */
 	nvhost_unregister_client_domain(dev_to_genpd(dev));
 

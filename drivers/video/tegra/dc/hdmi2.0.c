@@ -2580,7 +2580,7 @@ static int tegra_dc_hdmi_set_hdr(struct tegra_dc *dc)
 
 	/* If the sink isn't HDR capable, return */
 	ret = tegra_edid_get_ex_hdr_cap(hdmi->edid);
-	if (!(ret & FB_CAP_HDR))
+	if (!ret)
 		return 0;
 	tegra_hdmi_hdr_infoframe(hdmi);
 

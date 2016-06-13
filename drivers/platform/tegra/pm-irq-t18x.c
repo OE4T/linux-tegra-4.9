@@ -23,6 +23,10 @@
 #include <linux/seq_file.h>
 #include <linux/syscore_ops.h>
 #include <linux/irqchip/arm-gic.h>
+#include <linux/irq.h>
+#include <linux/irqchip.h>
+#include <linux/irqdomain.h>
+#include <linux/of_address.h>
 #include <linux/irqchip/tegra.h>
 #include <linux/tegra-pmc.h>
 #include <linux/tegra-soc.h>
@@ -30,6 +34,9 @@
 
 #include "tegra186-aowake.h"
 
+#define INT_OFFSET	32
+
+#ifdef CONFIG_PM_SLEEP
 /* Per wake registers */
 #define WAKE_AOWAKE_CNTRL_0		0x0	/* ~0x17f */
 #define WAKE_AOWAKE_MASK_W_0		0x180	/* ~0x2ff */
@@ -65,6 +72,10 @@ static u32 wke_wake_level[WAKE_NR_VECTORS];
 static u32 wke_wake_level_any[WAKE_NR_VECTORS];
 
 static u32 wke_wake_irq_count[WAKE_NR_EVENTS];
+
+#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
+static struct irq_domain *tegra_pm_irq_domain;
+#endif
 
 /* ensures that sufficient time is passed for a register write to
  * serialize into the 32KHz domain */
@@ -231,6 +242,7 @@ static int wke_irq_set_wake_level(int wake, int flow_type)
 static void process_wake_event(int index, u32 status)
 {
 	int irq;
+	irq_hw_number_t hwirq;
 	int wake;
 	struct irq_desc *desc;
 
@@ -238,13 +250,18 @@ static void process_wake_event(int index, u32 status)
 		(index + 1) * 32, index * 32, status);
 
 	for_each_set_bit(wake, (ulong *)&status, 32) {
-		irq = tegra_wake_to_irq(wake + 32 * index);
-		if (irq == -EINVAL) {
+		hwirq = tegra_wake_to_irq(wake + 32 * index);
+		if (hwirq == -EINVAL) {
 			pr_info("Resume caused by WAKE%d\n",
 				(wake + 32 * index));
 			continue;
 		}
 
+#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
+		irq = irq_find_mapping(tegra_pm_irq_domain, hwirq);
+#else
+		irq = hwirq;
+#endif
 		desc = irq_to_desc(irq);
 		if (!desc || !desc->action || !desc->action->name) {
 			pr_info("Resume caused by WAKE%d, irq %d\n",
@@ -316,21 +333,6 @@ static int tegra_pm_irq_suspend(void)
 	return 0;
 }
 
-static struct syscore_ops pm_irq_ops = {
-	.suspend = tegra_pm_irq_suspend,
-	.resume = tegra_pm_irq_resume,
-	.save = tegra_pm_irq_suspend,
-	.restore = tegra_pm_irq_resume,
-};
-
-static int tegra_pm_irq_init(void)
-{
-	register_syscore_ops(&pm_irq_ops);
-	return 0;
-}
-subsys_initcall(tegra_pm_irq_init);
-
-#ifndef CONFIG_IRQ_DOMAIN_HIERARCHY
 static int pm_irq_set_type(struct irq_data *d, unsigned int flow_type)
 {
 	int i;
@@ -339,7 +341,7 @@ static int pm_irq_set_type(struct irq_data *d, unsigned int flow_type)
 	int wake_list[WAKE_NR_EVENTS];
 	int err = 0;
 
-	tegra_irq_to_wake(d->irq, wake_list, &wake_size);
+	tegra_irq_to_wake(d->hwirq, wake_list, &wake_size);
 
 	for (i = 0; i < wake_size; i++) {
 		ret = wke_irq_set_wake_level(wake_list[i], flow_type);
@@ -362,7 +364,7 @@ static int pm_irq_set_wake(struct irq_data *d, unsigned int enable)
 	int wake_list[WAKE_NR_EVENTS];
 	int err = 0;
 
-	tegra_irq_to_wake(d->irq, wake_list, &wake_size);
+	tegra_irq_to_wake(d->hwirq, wake_list, &wake_size);
 
 	for (i = 0; i < wake_size; i++) {
 		/* pmc lp0 wake enable for non-gpio wake sources */
@@ -378,7 +380,6 @@ static int pm_irq_set_wake(struct irq_data *d, unsigned int enable)
 
 	return err;
 }
-#endif /* CONFIG_IRQ_DOMAIN_HIERARCHY  */
 
 int tegra_pm_irq_set_wake_type(int wake, int flow_type)
 {
@@ -390,13 +391,132 @@ int tegra_pm_irq_set_wake(int wake, int enable)
 	return wke_irq_set_wake(wake, enable);
 }
 
+static struct syscore_ops pm_irq_ops = {
+	.suspend = tegra_pm_irq_suspend,
+	.resume = tegra_pm_irq_resume,
+	.save = tegra_pm_irq_suspend,
+	.restore = tegra_pm_irq_resume,
+};
+
+
+#ifndef CONFIG_IRQ_DOMAIN_HIERARCHY
+static int tegra_pm_irq_init(void)
+{
+	register_syscore_ops(&pm_irq_ops);
+
+	return 0;
+}
+subsys_initcall(tegra_pm_irq_init);
+#endif
+
 int __init pm_irq_init(void)
 {
 	tegra_wakeup_table_init();
-	/* Hook into GIC ops */
 #ifndef CONFIG_IRQ_DOMAIN_HIERARCHY
+	/* Hook into GIC ops */
 	gic_arch_extn.irq_set_type = pm_irq_set_type;
 	gic_arch_extn.irq_set_wake = pm_irq_set_wake;
 #endif
 	return 0;
 }
+#endif /* CONFIG_PM_SLEEP */
+
+#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
+static struct irq_chip tegra_pm_chip = {
+	.name			= "PM",
+	.irq_eoi		= irq_chip_eoi_parent,
+	.irq_mask		= irq_chip_mask_parent,
+	.irq_unmask		= irq_chip_unmask_parent,
+	.irq_retrigger		= irq_chip_retrigger_hierarchy,
+#ifdef CONFIG_PM_SLEEP
+	.irq_set_wake		= pm_irq_set_wake,
+	.irq_set_type		= pm_irq_set_type,
+#endif
+#ifdef CONFIG_SMP
+	.irq_set_affinity	= irq_chip_set_affinity_parent,
+#endif
+};
+
+static int tegra_pm_domain_translate(struct irq_domain *d,
+				     struct irq_fwspec *fwspec,
+				     unsigned long *hwirq,
+				     unsigned int *type)
+{
+	if (is_of_node(fwspec->fwnode)) {
+		if (fwspec->param_count != 3)
+			return -EINVAL;
+
+		/* No PPI should point to this domain */
+		if (fwspec->param[0] != 0)
+			return -EINVAL;
+
+		*hwirq = fwspec->param[1] + INT_OFFSET;
+		*type = fwspec->param[2];
+		return 0;
+	}
+
+	return -EINVAL;
+}
+
+static int tegra_pm_domain_alloc(struct irq_domain *domain,
+				 unsigned int virq,
+				 unsigned int nr_irqs, void *data)
+{
+	struct irq_fwspec *fwspec = data;
+	struct irq_fwspec parent_fwspec;
+	irq_hw_number_t hwirq;
+	int i;
+
+	if (fwspec->param_count != 3)
+		return -EINVAL;	/* Not GIC compliant */
+	if (fwspec->param[0] != 0)
+		return -EINVAL;	/* No PPI should point to this domain */
+
+	hwirq = fwspec->param[1] + INT_OFFSET;
+
+	for (i = 0; i < nr_irqs; i++)
+		irq_domain_set_hwirq_and_chip(domain, virq + i, hwirq + i,
+					      &tegra_pm_chip, NULL);
+
+	parent_fwspec = *fwspec;
+	parent_fwspec.fwnode = domain->parent->fwnode;
+	return irq_domain_alloc_irqs_parent(domain, virq, nr_irqs,
+					    &parent_fwspec);
+}
+
+static const struct irq_domain_ops tegra_pm_domain_ops = {
+	.translate	= tegra_pm_domain_translate,
+	.alloc		= tegra_pm_domain_alloc,
+	.free		= irq_domain_free_irqs_common,
+};
+
+static int __init tegra_pm_irq_init(struct device_node *node,
+				    struct device_node *parent)
+{
+	struct irq_domain *domain, *parent_domain;
+
+	if (!parent) {
+		pr_err("%s: no parent, giving up\n", node->full_name);
+		return -ENODEV;
+	}
+
+	parent_domain = irq_find_host(parent);
+	if (!parent_domain) {
+		pr_err("%s: unable to obtain parent domain\n", node->full_name);
+		return -ENXIO;
+	}
+
+	domain = irq_domain_add_hierarchy(parent_domain, 0, 0, node,
+					  &tegra_pm_domain_ops, NULL);
+	if (!domain)
+		return -ENOMEM;
+
+#ifdef CONFIG_PM_SLEEP
+	tegra_pm_irq_domain = domain;
+	register_syscore_ops(&pm_irq_ops);
+#endif
+
+	return 0;
+}
+IRQCHIP_DECLARE(tegra_pm_irq, "nvidia,tegra186-pm-irq", tegra_pm_irq_init);
+#endif /* CONFIG_IRQ_DOMAIN_HIERARCHY */

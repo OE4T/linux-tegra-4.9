@@ -354,6 +354,16 @@ config TEGRA_HDMI_74MHZ_LIMIT
 	  Say Y here to make kernel report only low bandwidth modes.
 	  Useful only for boards which can't deliver 148.50 MHz.
 
+config TEGRA_YUV_BYPASS_MODE_FILTER
+	bool "Filter-out YUV bypass modes"
+	default n
+	help
+	  Display driver parses all the YUV modes specified in EDID of a given sink.
+	  But T210 does not have hardware support for any of the YUV modes and T186 hardware
+	  supports only YUV422 and YUV444 modes. Say Y here to filter out all YUV modes on
+	  T210 platforms and to filter out YUV420 modes on T186 platforms. These modes will
+	  not be exposed to upper layers, including userspace.
+
 config TEGRA_DC_FAKE_PANEL_SUPPORT
 	bool "Enables fake panel and NULL OR support"
 	depends on TEGRA_DC

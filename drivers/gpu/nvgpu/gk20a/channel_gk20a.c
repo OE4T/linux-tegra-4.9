@@ -1612,7 +1612,7 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch,
 {
 	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 
-	if (!ch->g->timeouts_enabled || !platform->ch_wdt_timeout_ms)
+	if (!ch->g->timeouts_enabled || !platform->ch_wdt_enabled)
 		return;
 
 	if (!ch->wdt_enabled)

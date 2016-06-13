@@ -28,9 +28,7 @@
 struct camrtc_debug {
 	struct mutex mutex;
 	struct dentry *root;
-	spinlock_t lock_pending;
-	struct camrtc_dbg_response *pending;
-	struct completion wait_for_response;
+	wait_queue_head_t waitq;
 	struct {
 		u32 completion_timeout;
 		u32 mods_loops;
@@ -124,43 +122,17 @@ static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
 
-	while (tegra_ivc_can_read(&ch->ivc)) {
-		const struct camrtc_dbg_response *resp;
-
-		dev_info(&ch->dev, "rx msg\n");
-
-		resp = tegra_ivc_read_get_next_frame(&ch->ivc);
-		if (IS_ERR_OR_NULL(resp))
-			break;
-
-		spin_lock(&crd->lock_pending);
-
-		if (crd->pending == NULL) {
-			dev_err(&ch->dev, "no pending request\n");
-		} else if (crd->pending->resp_type != resp->resp_type) {
-			dev_err(&ch->dev, "unexpected response\n");
-		} else {
-			*crd->pending = *resp;
-			crd->pending = NULL;
-			complete(&crd->wait_for_response);
-		}
-
-		spin_unlock(&crd->lock_pending);
-		tegra_ivc_read_advance(&ch->ivc);
-	}
+	wake_up_all(&crd->waitq);
 }
 
 static int camrtc_ivc_dbg_xact(
 	struct tegra_ivc_channel *ch,
 	struct camrtc_dbg_request *req,
 	struct camrtc_dbg_response *resp,
-	unsigned long timeout)
+	long timeout)
 {
 	struct camrtc_debug *crd = tegra_ivc_channel_get_drvdata(ch);
-	unsigned long flags;
 	int ret;
-
-	resp->resp_type = req->req_type;
 
 	if (timeout == 0)
 		timeout = crd->parameters.completion_timeout;
@@ -169,32 +141,51 @@ static int camrtc_ivc_dbg_xact(
 	if (ret)
 		return ret;
 
-	spin_lock_irqsave(&crd->lock_pending, flags);
-	crd->pending = resp;
-	spin_unlock_irqrestore(&crd->lock_pending, flags);
+	while (tegra_ivc_can_read(&ch->ivc)) {
+		tegra_ivc_read_advance(&ch->ivc);
+		dev_warn(&ch->dev, "stray response\n");
+	}
+
+	timeout = wait_event_interruptible_timeout(crd->waitq,
+				tegra_ivc_can_write(&ch->ivc), timeout);
+	if (timeout <= 0) {
+		ret = timeout ?: -ETIMEDOUT;
+		goto out;
+	}
 
 	ret = tegra_ivc_write(&ch->ivc, req, sizeof(*req));
 	if (ret < 0) {
-		dev_err(&ch->dev, "tegra_ivc_write failed\n");
-		goto done;
+		dev_err(&ch->dev, "IVC write error: %d\n", ret);
+		goto out;
 	}
 
-	timeout = wait_for_completion_killable_timeout(&crd->wait_for_response,
-					msecs_to_jiffies(timeout));
-	if (timeout <= 0) {
-		ret = timeout ? timeout : -ETIMEDOUT;
-		goto done;
+	for (;;) {
+		timeout = wait_event_interruptible_timeout(crd->waitq,
+			tegra_ivc_can_read(&ch->ivc), timeout);
+		if (timeout <= 0) {
+			ret = timeout ?: -ETIMEDOUT;
+			goto out;
+		}
+
+		dev_dbg(&ch->dev, "rx msg\n");
+
+		ret = tegra_ivc_read_peek(&ch->ivc, resp, 0, sizeof (*resp));
+		if (ret < 0) {
+			dev_err(&ch->dev, "IVC read error: %d\n", ret);
+			goto out;
+		}
+
+		tegra_ivc_read_advance(&ch->ivc);
+
+		if (resp->resp_type == req->req_type) {
+			ret = 0;
+			break;
+		}
+
+		dev_err(&ch->dev, "unexpected response\n");
 	}
-
-	ret = 0;
-
-done:
-	spin_lock_irqsave(&crd->lock_pending, flags);
-	crd->pending = NULL;
-	spin_unlock_irqrestore(&crd->lock_pending, flags);
-
+out:
 	mutex_unlock(&crd->mutex);
-
 	return ret;
 }
 
@@ -338,8 +329,7 @@ static int camrtc_debug_probe(struct tegra_ivc_channel *ch)
 	crd->parameters.mods_loops = 20;
 
 	mutex_init(&crd->mutex);
-	spin_lock_init(&crd->lock_pending);
-	init_completion(&crd->wait_for_response);
+	init_waitqueue_head(&crd->waitq);
 
 	tegra_ivc_channel_set_drvdata(ch, crd);
 

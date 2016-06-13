@@ -1099,8 +1099,6 @@ int gk20a_user_init(struct device *dev, const char *interface_name,
 		    struct class *class);
 void gk20a_user_deinit(struct device *dev, struct class *class);
 
-void gk20a_debug_dump_device(void *dev);
-
 static inline u32 ptimer_scalingfactor10x(u32 ptimer_src_freq)
 {
 	return (u32)(((u64)(PTIMER_REF_FREQ_HZ * 10)) / ptimer_src_freq);

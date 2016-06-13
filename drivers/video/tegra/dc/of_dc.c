@@ -46,6 +46,7 @@
 #include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinconf-tegra.h>
 #endif
+#include <video/tegra_hdmi_audio.h>
 
 #include <mach/clk.h>
 #include <mach/dc.h>

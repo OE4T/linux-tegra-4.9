@@ -985,7 +985,13 @@ int tegra_nvdisp_set_ocsc(struct tegra_dc *dc,
 	if (dc->yuv_bypass)
 		csc2_control = nvdisp_csc2_control_output_color_sel_rgb_f();
 
+	if ((dc->mode.vmode & FB_VMODE_LIMITED_RANGE) && (!dc->yuv_bypass))
+		csc2_control |= nvdisp_csc2_control_limit_rgb_enable_f();
+	else
+		csc2_control |= nvdisp_csc2_control_limit_rgb_disable_f();
+
 	tegra_dc_writel(dc, csc2_control, nvdisp_csc2_control_r());
+
 	return 0;
 }
 

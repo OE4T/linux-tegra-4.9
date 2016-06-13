@@ -1004,12 +1004,11 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	 * it here so that the output CSC and chroma LPF blocks are correctly
 	 * programmed during modeset for YUV bypass modes. Otherwise, momentary
 	 * screen corruption can be observed during the modeset.
-	 *
-	 * Also, T186 HW supports YUV422 8/12 bpc and YUV444 8bpc, but
-	 * userspace is still doing the pixel packing for these modes. Keep
-	 * using FB_VMODE_YUV_MASK until that changes.
 	 */
 	dc->yuv_bypass = mode->vmode & FB_VMODE_YUV_MASK;
+	if ((mode->vmode & FB_VMODE_Y422) |
+		(mode->vmode & FB_VMODE_Y444))
+		dc->yuv_bypass = 0;
 
 	v_back_porch = mode->v_back_porch;
 	v_front_porch = mode->v_front_porch;

@@ -181,7 +181,7 @@
 
 #define FB_CAP_Y422		0x2000	/* YCbCr 4:2:2 support */
 #define FB_CAP_Y444		0x4000	/* YCbCr 4:4:4 support */
-#define FB_CAP_HDR		0x8000	/* Device supports HDR*/
+#define FB_CAP_SMPTE_2084	0x8000	/* Device supports HDR*/
 /* Device supports selectable RGB range */
 #define FB_CAP_RGB_QUANT_SELECTABLE		0x10000
 /* Device supports selectable YUV range */

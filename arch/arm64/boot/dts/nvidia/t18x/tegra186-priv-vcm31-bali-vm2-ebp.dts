@@ -75,7 +75,6 @@
 		status = "disabled";
 	};
 
-
 	sdhci@3400000 { /* Used for SDCard */
 		/delete-property/ vddio_sdmmc-supply;
 		/delete-property/ vddio_sd_slot-supply;
@@ -83,6 +82,12 @@
 	};
 
 	sdhci@3420000 { /* Should be used for eMMC. HS400 mode is not supported */
+		status = "disabled";
+	};
+
+	sdhci@3440000 {
+		/delete-property/ vddio_sdmmc-supply;
+		/delete-property/ vddio_sd_slot-supply;
 		status = "disabled";
 	};
 
@@ -94,6 +99,9 @@
 
 	fixed-regulators {
 		regulator@4 {
+			status = "disabled";
+		};
+		regulator@5 {
 			status = "disabled";
 		};
 	};
@@ -342,6 +350,7 @@
 				/delete-node/ ldo2;
 				/delete-node/ ldo3;
 				/delete-node/ ldo4;
+				/delete-node/ ldo5;
 				/delete-node/ ldo6;
 				/delete-node/ ldo7;
 				/delete-node/ ldo8;

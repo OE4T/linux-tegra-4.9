@@ -69,7 +69,7 @@ static ssize_t elcg_enable_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d\n", g->elcg_enabled ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->elcg_enabled ? 1 : 0);
 }
 
 static DEVICE_ATTR(elcg_enable, ROOTRW, elcg_enable_read, elcg_enable_store);
@@ -125,7 +125,7 @@ static ssize_t blcg_enable_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d\n", g->blcg_enabled ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->blcg_enabled ? 1 : 0);
 }
 
 
@@ -190,7 +190,7 @@ static ssize_t slcg_enable_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d\n", g->slcg_enabled ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->slcg_enabled ? 1 : 0);
 }
 
 static DEVICE_ATTR(slcg_enable, ROOTRW, slcg_enable_read, slcg_enable_store);
@@ -240,7 +240,7 @@ static ssize_t ptimer_ref_freq_show(struct device *dev,
 		return -EINVAL;
 	}
 
-	res = sprintf(buf, "%u\n", PTIMER_REF_FREQ_HZ);
+	res = snprintf(buf, PAGE_SIZE, "%u\n", PTIMER_REF_FREQ_HZ);
 
 	return res;
 
@@ -264,7 +264,7 @@ static ssize_t ptimer_src_freq_show(struct device *dev,
 		return -EINVAL;
 	}
 
-	res = sprintf(buf, "%u\n", src_freq_hz);
+	res = snprintf(buf, PAGE_SIZE, "%u\n", src_freq_hz);
 
 	return res;
 
@@ -325,7 +325,7 @@ static ssize_t railgate_enable_read(struct device *dev,
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 
-	return sprintf(buf, "%d\n", platform->can_railgate ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", platform->can_railgate ? 1 : 0);
 }
 
 static DEVICE_ATTR(railgate_enable, ROOTRW, railgate_enable_read,
@@ -365,6 +365,7 @@ static ssize_t railgate_delay_show(struct device *dev,
 				   struct device_attribute *attr, char *buf)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+
 	return snprintf(buf, PAGE_SIZE, "%d\n", platform->railgate_delay);
 }
 static DEVICE_ATTR(railgate_delay, ROOTRW, railgate_delay_show,
@@ -477,7 +478,7 @@ static ssize_t elpg_enable_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d\n", g->elpg_enabled ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->elpg_enabled ? 1 : 0);
 }
 
 static DEVICE_ATTR(elpg_enable, ROOTRW, elpg_enable_read, elpg_enable_store);
@@ -528,7 +529,8 @@ static ssize_t aelpg_param_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d %d %d %d %d\n", g->pmu.aelpg_param[0],
+	return snprintf(buf, PAGE_SIZE,
+		"%d %d %d %d %d\n", g->pmu.aelpg_param[0],
 		g->pmu.aelpg_param[1], g->pmu.aelpg_param[2],
 		g->pmu.aelpg_param[3], g->pmu.aelpg_param[4]);
 }
@@ -580,7 +582,7 @@ static ssize_t aelpg_enable_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d\n", g->aelpg_enabled ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->aelpg_enabled ? 1 : 0);
 }
 
 static DEVICE_ATTR(aelpg_enable, ROOTRW,
@@ -591,7 +593,8 @@ static ssize_t allow_all_enable_read(struct device *dev,
 		struct device_attribute *attr, char *buf)
 {
 	struct gk20a *g = get_gk20a(dev);
-	return sprintf(buf, "%d\n", g->allow_all ? 1 : 0);
+
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->allow_all ? 1 : 0);
 }
 
 static ssize_t allow_all_enable_store(struct device *dev,
@@ -633,7 +636,7 @@ static ssize_t emc3d_ratio_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d\n", g->emc3d_ratio);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->emc3d_ratio);
 }
 
 static DEVICE_ATTR(emc3d_ratio, ROOTRW, emc3d_ratio_read, emc3d_ratio_store);
@@ -647,7 +650,7 @@ static ssize_t fmax_at_vmin_safe_read(struct device *dev,
 	gpu_fmax_at_vmin_hz = tegra_dvfs_get_fmax_at_vmin_safe_t(
 		clk_get_parent(g->clk.tegra_clk));
 
-	return sprintf(buf, "%d\n", (int)(gpu_fmax_at_vmin_hz));
+	return snprintf(buf, PAGE_SIZE, "%d\n", (int)(gpu_fmax_at_vmin_hz));
 }
 
 static DEVICE_ATTR(fmax_at_vmin_safe, S_IRUGO, fmax_at_vmin_safe_read, NULL);
@@ -695,7 +698,7 @@ static ssize_t force_idle_read(struct device *dev,
 {
 	struct gk20a *g = get_gk20a(dev);
 
-	return sprintf(buf, "%d\n", g->forced_idle ? 1 : 0);
+	return snprintf(buf, PAGE_SIZE, "%d\n", g->forced_idle ? 1 : 0);
 }
 
 static DEVICE_ATTR(force_idle, ROOTRW, force_idle_read, force_idle_store);
@@ -751,7 +754,7 @@ static ssize_t tpc_fs_mask_read(struct device *dev,
 
 	gk20a_idle(g->dev);
 
-	return sprintf(buf, "0x%x\n", tpc_fs_mask);
+	return snprintf(buf, PAGE_SIZE, "0x%x\n", tpc_fs_mask);
 }
 
 static DEVICE_ATTR(tpc_fs_mask, ROOTRW, tpc_fs_mask_read, tpc_fs_mask_store);

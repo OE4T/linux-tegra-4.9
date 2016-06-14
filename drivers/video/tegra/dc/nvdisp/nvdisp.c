@@ -2042,6 +2042,7 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 EXPORT_SYMBOL(tegra_nvdisp_update_cmu);
 #endif
 
+#define NO_THREAD_GROUP ((u32)-1)
 void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 				struct tegra_dc_ext_imp_user_info *info)
 {
@@ -2328,6 +2329,312 @@ static void tegra_nvdisp_handle_mempool_allocation(struct tegra_dc *dc)
 		tegra_nvdisp_program_all_needed_mempool(dc);
 }
 
+static void tegra_nvdisp_generate_tg_dep_graph(struct tegra_dc *dc,
+					u32 tg_assignments[DC_N_WINDOWS],
+					int tg_owners[DC_N_WINDOWS],
+					int in_edges[DC_N_WINDOWS],
+					int out_edges[DC_N_WINDOWS])
+{
+	/*
+	 * The graph that we use to represent thread group dependencies is very
+	 * simple and is defined as follows:
+	 *
+	 * - Each window is a vertex. Let W[I] represent window I.
+	 * - A directed edge (W[I], W[J]) means that W[J] currently owns
+	 *   the thread group that we wish to assign to W[I]. Since a thread
+	 *   group can only be owned by one active window at any point in time,
+	 *   each window vertex can have at most one incoming edge and one
+	 *   outgoing edge.
+	 */
+	int i;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		u32 tg = tg_assignments[i];
+		int owner = -1;
+
+		if (tg < DC_N_WINDOWS) {
+			owner = tg_owners[tg];
+			if (owner >= DC_N_WINDOWS)
+				continue;
+		}
+
+		/*
+		 * If a thread group will not be assigned to this window, or if
+		 * the thread group we wish to assign is not owned by any other
+		 * window, this window has no dependency. Else, mark the
+		 * dependency accordingly.
+		 */
+		if (tg == NO_THREAD_GROUP || owner < 0 || owner == i) {
+			out_edges[i] = -1;
+		} else {
+			out_edges[i] = owner;
+			in_edges[owner] = i;
+		}
+	}
+}
+
+static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
+{
+	/*
+	 * This algorithm generates a correct - although not necessarily optimal
+	 * - ordering of thread group updates by following these steps:
+	 *
+	 * 1) Generate a thread group dependency graph. This graph is
+	 *    represented as a collection of in-edges and out-edges.
+	 * 2) While there are still dependencies left to resolve in the graph,
+	 *    locate all vertices which have no dependencies. For each one of
+	 *    these vertices V:
+	 *    2a) Continue following the trail of incoming edges backwards as
+	 *        long as each successive edge originates from a window vertex
+	 *        belonging to the same head as V. Let V' represent each such
+	 *        window vertex.
+	 *    2b) Group each one of the V' found in the previous step, along
+	 *        with V, into one batch request. We can group these window
+	 *        vertices together since their thread group updates are all
+	 *        contained to the same head.
+	 *    2c) Mark V and each V' so that we don't recheck them in a future
+	 *        iteration. Also update the number of dependencies left.
+	 *    2d) Update the out-edges of the graph.
+	 *    2e) At the end of each iteration, check which heads have thread
+	 *        group updates that can be performed at this stage. Append them
+	 *        to a running list.
+	 *
+	 * Step 2 can fail if either:
+	 * A) The algorithm detects a circular dependency. This means that
+	 *    there's no way to seamlessly update the required thread groups
+	 *    without explicitly disabling at least one window.
+	 * B) The thread group updates for the head whose window state is
+	 *    changing cannot all fit in one request.
+	 */
+	int tg_owners[DC_N_WINDOWS], owner_dc_idx[DC_N_WINDOWS];
+	int in_edges[DC_N_WINDOWS];
+	int cur_out_edges[DC_N_WINDOWS], new_out_edges[DC_N_WINDOWS];
+	int dep_left = 0, dep_mask = 0;
+	int win_id, req_idx = 0;
+	int i, j;
+	struct tegra_dc *other_dc;
+	bool dc_req_filled = false;
+	u32 cur_tg_assignments[DC_N_WINDOWS];
+	u32 new_tg_assignments[DC_N_WINDOWS];
+	u32 cur_tg, new_tg;
+
+	/* initialize arrays with dummy values */
+	memset(tg_owners, -1, sizeof(tg_owners));
+	memset(owner_dc_idx, -1, sizeof(owner_dc_idx));
+	memset(in_edges, -1, sizeof(in_edges));
+	memset(new_out_edges, -1, sizeof(new_out_edges));
+	memset(cur_tg_assignments, NO_THREAD_GROUP, sizeof(cur_tg_assignments));
+	memset(new_tg_assignments, NO_THREAD_GROUP, sizeof(new_tg_assignments));
+
+	/* fill in the lookup arrays */
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		struct tegra_dc_imp_head_results *res;
+
+		other_dc = tegra_dc_get_dc(i);
+		if (!other_dc)
+			continue;
+
+		res = &dc->imp_results[i];
+		for (j = 0; j < res->num_windows; j++) {
+			struct tegra_dc_win *win;
+
+			win_id = res->win_ids[j];
+			win = tegra_dc_get_window(other_dc, win_id);
+			if (!win)
+				continue;
+
+			cur_tg = nvdisp_win_read(win,
+						win_ihub_thread_group_r());
+			if (cur_tg & win_ihub_thread_group_enable_yes_f())
+				cur_tg = (cur_tg >> 1) & 0x1f;
+			else
+				cur_tg = NO_THREAD_GROUP;
+
+			cur_tg_assignments[win_id] = cur_tg;
+			if (cur_tg < DC_N_WINDOWS)
+				tg_owners[cur_tg] = win_id;
+			new_tg = res->thread_group_win[j];
+			new_tg_assignments[win_id] = new_tg;
+
+			owner_dc_idx[win_id] = i;
+			dep_left += 1;
+		}
+	}
+
+	/* Step 1 */
+	tegra_nvdisp_generate_tg_dep_graph(dc,
+					new_tg_assignments,
+					tg_owners,
+					in_edges,
+					new_out_edges);
+
+	/* Step 2 proper */
+	memset(dc->tg_reqs, 0, sizeof(dc->tg_reqs));
+	while (dep_left > 0) {
+		struct tegra_nvdisp_tg_req reqs[TEGRA_MAX_DC];
+		bool dep_decreased = false;
+		int dc_idx;
+
+		memset(reqs, 0, sizeof(reqs));
+		memcpy(cur_out_edges, new_out_edges, sizeof(cur_out_edges));
+		for (i = 0; i < DC_N_WINDOWS; i++) {
+			win_id = i;
+			if (cur_out_edges[win_id] != -1 ||
+				(dep_mask & (1 << win_id)))
+				continue;
+
+			/* Step 2a */
+			while (win_id != -1) {
+				struct tegra_nvdisp_tg_req *req;
+
+				/* If this window isn't active, skip it. */
+				dc_idx = owner_dc_idx[win_id];
+				if (dc_idx == -1)
+					break;
+
+				/* Step 2b */
+				cur_tg = cur_tg_assignments[win_id];
+				new_tg = new_tg_assignments[win_id];
+
+				/*
+				 * Only fill in the thread group request if the
+				 * thread group for this window is actually
+				 * changing.
+				*/
+				if (new_tg != cur_tg) {
+					req = &reqs[dc_idx];
+					req->win_ids[req->num_wins] = win_id;
+					req->tgs[req->num_wins] = new_tg;
+					req->dc_idx = dc_idx;
+					req->num_wins++;
+				}
+
+				/* Step 2c */
+				dep_mask |= (1 << win_id);
+				dep_left -= 1;
+				dep_decreased = true;
+
+				/* Step 2d */
+				win_id = in_edges[win_id];
+				if (win_id != -1) {
+					new_out_edges[win_id] = -1;
+					if (owner_dc_idx[win_id] != dc_idx)
+						win_id = -1;
+				}
+			}
+		}
+
+		/* Error A */
+		if (!dep_decreased)
+			return -EINVAL;
+
+		/* Step 2e */
+		for (i = 0; i < TEGRA_MAX_DC; i++) {
+			other_dc = tegra_dc_get_dc(i);
+			if (!other_dc || !reqs[i].num_wins)
+				continue;
+
+			if (other_dc->ctrl_num == dc->ctrl_num) {
+				/* Error B */
+				if (dc_req_filled)
+					return -EINVAL;
+				dc_req_filled = true;
+			}
+
+			dc->tg_reqs[req_idx++] = reqs[i];
+		}
+	}
+
+	return 0;
+}
+
+static void tegra_nvdisp_program_thread_group_reqs(struct tegra_dc *dc,
+						int start,
+						int end)
+{
+	int i, j;
+
+	for (i = start; i < end; i++) {
+		struct tegra_nvdisp_tg_req *req;
+		struct tegra_dc *owner_dc;
+
+		req = &dc->tg_reqs[i];
+		owner_dc = tegra_dc_get_dc(req->dc_idx);
+		if (!owner_dc || !owner_dc->enabled)
+			continue;
+
+		if (!req->num_wins)
+			break;
+
+		for (j = 0; j < req->num_wins; j++) {
+			struct tegra_dc_win *win;
+			int win_id;
+			u32 tg;
+
+			win_id = req->win_ids[j];
+			win = tegra_dc_get_window(owner_dc, win_id);
+			if (!win)
+				continue;
+
+			tg = req->tgs[j];
+			if (tg == NO_THREAD_GROUP)
+				nvdisp_win_write(win,
+					win_ihub_thread_group_enable_no_f(),
+					win_ihub_thread_group_r());
+			else
+				nvdisp_win_write(win,
+					win_ihub_thread_group_num_f(tg) |
+					win_ihub_thread_group_enable_yes_f(),
+					win_ihub_thread_group_r());
+		}
+
+		tegra_nvdisp_activate_common_channel(owner_dc);
+		tegra_nvdisp_wait_for_common_channel_to_promote(owner_dc);
+	}
+}
+
+static void tegra_nvdisp_program_thread_groups(struct tegra_dc *dc,
+					bool before_flip)
+{
+	int start, end;
+	int i;
+
+	for (i = 0; i < DC_N_WINDOWS; i++) {
+		struct tegra_nvdisp_tg_req *req;
+		struct tegra_dc *other_dc;
+
+		req = &dc->tg_reqs[i];
+		if (!req->num_wins)
+			break;
+
+		other_dc = tegra_dc_get_dc(req->dc_idx);
+		if (other_dc && other_dc->ctrl_num == dc->ctrl_num)
+			break;
+	}
+
+	if (before_flip) {
+		start = 0;
+		end = i;
+	} else {
+		start = i + 1;
+		end = DC_N_WINDOWS;
+	}
+
+	tegra_nvdisp_program_thread_group_reqs(dc, start, end);
+}
+
+static int tegra_nvdisp_handle_tg_assignments(struct tegra_dc *dc)
+{
+	int ret = 0;
+
+	ret = tegra_nvdisp_generate_tg_ordering(dc);
+	if (ret)
+		return ret;
+	tegra_nvdisp_program_thread_groups(dc, true);
+
+	return ret;
+}
+
 void tegra_nvdisp_complete_imp_programming(struct tegra_dc *dc)
 {
 	mutex_lock(&tegra_nvdisp_lock);
@@ -2342,7 +2649,9 @@ void tegra_nvdisp_complete_imp_programming(struct tegra_dc *dc)
 
 	/* Make sure there's no pending change on the current head. */
 	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
+
 	tegra_nvdisp_program_all_needed_mempool(dc);
+	tegra_nvdisp_program_thread_groups(dc, false);
 
 	/* Re-enable ihub latency events. */
 	tegra_dc_writel(dc,
@@ -2422,6 +2731,9 @@ int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
 		goto release_and_ret;
 
 	tegra_nvdisp_handle_mempool_allocation(dc);
+	ret = tegra_nvdisp_handle_tg_assignments(dc);
+	if (ret)
+		goto release_and_ret;
 
 	dc->new_imp_results_needed = true;
 	dc->need_to_complete_imp = true;
@@ -2482,15 +2794,26 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			win_precomp_pipe_meter_r());
 
 		/*
-		 * Only program wgrp mempool for the head whose window state is
-		 * changing. Mempool changes on other heads will be taken care
-		 * of separately.
+		 * Only program wgrp thread group and mempool for the head whose
+		 * window state is changing. Thread group and mempool changes on
+		 * other heads will be taken care of separately.
 		 */
 		if (dc->ctrl_num == owner_head) {
 			val = imp_head_results->pool_config_entries_win[i];
 			nvdisp_win_write(win,
 				win_ihub_pool_config_entries_f(val),
 				win_ihub_pool_config_r());
+
+			val = imp_head_results->thread_group_win[i];
+			if (val == NO_THREAD_GROUP)
+				nvdisp_win_write(win,
+					win_ihub_thread_group_enable_no_f(),
+					win_ihub_thread_group_r());
+			else
+				nvdisp_win_write(win,
+					win_ihub_thread_group_num_f(val) |
+					win_ihub_thread_group_enable_yes_f(),
+					win_ihub_thread_group_r());
 		}
 	}
 
@@ -2536,6 +2859,7 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 		(dc->imp_results[dc->ctrl_num].cursor_slots_value << 8);
 	tegra_dc_writel(dc, val, nvdisp_ihub_common_fetch_meter_r());
 }
+#undef NO_THREAD_GROUP
 
 void reg_dump(struct tegra_dc *dc, void *data,
 		       void (* print)(void *data, const char *str))

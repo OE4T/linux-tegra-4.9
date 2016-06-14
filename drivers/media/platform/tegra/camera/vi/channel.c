@@ -120,6 +120,50 @@ static void update_gang_mode(struct tegra_channel *chan)
 	update_gang_mode_params(chan);
 }
 
+static void tegra_channel_fmt_align(struct tegra_channel *chan,
+				     u32 *width, u32 *height, u32 *bytesperline)
+{
+	unsigned int min_width;
+	unsigned int max_width;
+	unsigned int min_bpl;
+	unsigned int max_bpl;
+	unsigned int temp_width;
+	unsigned int align;
+	unsigned int temp_bpl;
+	unsigned int bpp = chan->fmtinfo->bpp;
+
+	/* Init, if un-init */
+	if (!*width || !*height) {
+		*width = chan->format.width;
+		*height = chan->format.height;
+	}
+
+	if (!*bytesperline)
+		*bytesperline = *width * chan->fmtinfo->bpp;
+
+	/* The transfer alignment requirements are expressed in bytes. Compute
+	 * the minimum and maximum values, clamp the requested width and convert
+	 * it back to pixels.
+	 */
+	align = lcm(chan->width_align, bpp);
+	min_width = roundup(TEGRA_MIN_WIDTH, align);
+	max_width = rounddown(TEGRA_MAX_WIDTH, align);
+	temp_width = roundup(*width * bpp, align);
+
+	*width = clamp(temp_width, min_width, max_width) / bpp;
+	*height = clamp(*height, TEGRA_MIN_HEIGHT, TEGRA_MAX_HEIGHT);
+
+	/* Clamp the requested bytes per line value. If the maximum bytes per
+	 * line value is zero, the module doesn't support user configurable line
+	 * sizes. Override the requested value with the minimum in that case.
+	 */
+	min_bpl = *width * bpp;
+	max_bpl = rounddown(TEGRA_MAX_WIDTH, chan->stride_align);
+	temp_bpl = roundup(*bytesperline, chan->stride_align);
+
+	*bytesperline = clamp(temp_bpl, min_bpl, max_bpl);
+}
+
 static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 {
 	int ret, pixel_format_index = 0, init_code = 0;
@@ -171,7 +215,10 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	v4l2_fill_pix_format(&chan->format, &fmt.format);
 	chan->format.pixelformat = chan->fmtinfo->fourcc;
 	chan->format.bytesperline = chan->format.width *
-					chan->fmtinfo->bpp;
+		chan->fmtinfo->bpp;
+	tegra_channel_fmt_align(chan,
+				&chan->format.width, &chan->format.height,
+				&chan->format.bytesperline);
 	chan->format.sizeimage = chan->format.bytesperline *
 		chan->format.height;
 	if (chan->total_ports > 1)
@@ -610,6 +657,10 @@ tegra_channel_s_dv_timings(struct file *file, void *fh,
 		chan->format.height = bt->height;
 		chan->format.bytesperline = bt->width *
 			chan->fmtinfo->bpp;
+		tegra_channel_fmt_align(chan,
+					&chan->format.width,
+					&chan->format.height,
+					&chan->format.bytesperline);
 		chan->format.sizeimage = chan->format.bytesperline *
 			chan->format.height;
 	}
@@ -674,41 +725,6 @@ tegra_channel_dv_timings_cap(struct file *file, void *fh,
 		return -ENOTTY;
 
 	return v4l2_subdev_call(sd, pad, dv_timings_cap, cap);
-}
-
-static void tegra_channel_fmt_align(struct v4l2_pix_format *pix,
-				struct tegra_channel *chan, unsigned int bpp)
-{
-	unsigned int min_width;
-	unsigned int max_width;
-	unsigned int min_bpl;
-	unsigned int max_bpl;
-	unsigned int width;
-	unsigned int align;
-	unsigned int bpl;
-
-	/* The transfer alignment requirements are expressed in bytes. Compute
-	 * the minimum and maximum values, clamp the requested width and convert
-	 * it back to pixels.
-	 */
-	align = lcm(chan->width_align, bpp);
-	min_width = roundup(TEGRA_MIN_WIDTH, align);
-	max_width = rounddown(TEGRA_MAX_WIDTH, align);
-	width = roundup(pix->width * bpp, align);
-
-	pix->width = clamp(width, min_width, max_width) / bpp;
-	pix->height = clamp(pix->height, TEGRA_MIN_HEIGHT, TEGRA_MAX_HEIGHT);
-
-	/* Clamp the requested bytes per line value. If the maximum bytes per
-	 * line value is zero, the module doesn't support user configurable line
-	 * sizes. Override the requested value with the minimum in that case.
-	 */
-	min_bpl = pix->width * bpp;
-	max_bpl = rounddown(TEGRA_MAX_WIDTH, chan->stride_align);
-	bpl = roundup(pix->bytesperline, chan->stride_align);
-
-	pix->bytesperline = clamp(bpl, min_bpl, max_bpl);
-	pix->sizeimage = pix->bytesperline * pix->height;
 }
 
 static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
@@ -878,7 +894,7 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 	vfmt = tegra_core_get_format_by_code(fmt.format.code);
 	if (vfmt != NULL) {
 		pix->pixelformat = vfmt->fourcc;
-		pix->bytesperline = pix->width * vfmt->bpp;
+		pix->bytesperline = chan->format.bytesperline;
 		pix->sizeimage = pix->height * pix->bytesperline;
 	}
 
@@ -912,7 +928,9 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 		vfmt = tegra_core_get_format_by_fourcc(pix->pixelformat);
 	}
 
-	tegra_channel_fmt_align(pix, chan, vfmt->bpp);
+	tegra_channel_fmt_align(chan,
+				&pix->width, &pix->height, &pix->bytesperline);
+	pix->sizeimage = pix->bytesperline * pix->height;
 
 	fmt.which = V4L2_SUBDEV_FORMAT_TRY;
 	fmt.pad = 0;
@@ -923,10 +941,6 @@ __tegra_channel_try_format(struct tegra_channel *chan,
 		return -ENOTTY;
 
 	v4l2_fill_pix_format(pix, &fmt.format);
-	if (ret)
-		pix->bytesperline = pix->width * chan->fmtinfo->bpp;
-	else
-		pix->bytesperline = pix->width * vfmt->bpp;
 
 	pix->sizeimage = pix->height * pix->bytesperline;
 
@@ -963,8 +977,6 @@ __tegra_channel_set_format(struct tegra_channel *chan,
 		return -ENOTTY;
 
 	v4l2_fill_pix_format(pix, &fmt.format);
-	pix->bytesperline = pix->width * vfmt->bpp;
-	pix->sizeimage = pix->height * pix->bytesperline;
 
 	if (!ret) {
 		chan->format = *pix;

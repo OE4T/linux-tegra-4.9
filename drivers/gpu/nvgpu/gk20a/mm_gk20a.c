@@ -724,15 +724,28 @@ static void gk20a_init_pramin(struct mm_gk20a *mm)
 
 static int gk20a_init_vidmem(struct mm_gk20a *mm)
 {
+#if defined(CONFIG_GK20A_VIDMEM)
 	struct gk20a *g = mm->g;
+	struct device *d = dev_from_gk20a(g);
 	size_t size = g->ops.mm.get_vidmem_size ?
 		g->ops.mm.get_vidmem_size(g) : 0;
+	int err;
 
 	if (!size)
 		return 0;
 
+	err = nvmap_register_vidmem_carveout(&mm->vidmem_dev, SZ_4K, size);
+	if (err) {
+		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
+				size, err);
+		return err;
+	}
+
 	mm->vidmem_size = size;
 
+	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
+
+#endif
 	return 0;
 }
 
@@ -760,7 +773,10 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 		       (int)(mm->channel.kernel_size >> 20));
 
 	gk20a_init_pramin(mm);
-	gk20a_init_vidmem(mm);
+
+	err = gk20a_init_vidmem(mm);
+	if (err)
+		return err;
 
 	err = gk20a_alloc_sysmem_flush(g);
 	if (err)
@@ -2332,7 +2348,14 @@ int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem)
 	return gk20a_gmmu_alloc_attr(g, 0, size, mem);
 }
 
-int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size,
+		struct mem_desc *mem)
+{
+	return gk20a_gmmu_alloc_attr_sys(g, attr, size, mem);
+}
+
+int gk20a_gmmu_alloc_attr_sys(struct gk20a *g, enum dma_attr attr,
+		size_t size, struct mem_desc *mem)
 {
 	struct device *d = dev_from_gk20a(g);
 	int err;
@@ -2384,7 +2407,7 @@ fail_free:
 	return err;
 }
 
-void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
+static void gk20a_gmmu_free_attr_sys(struct gk20a *g, enum dma_attr attr,
 			  struct mem_desc *mem)
 {
 	struct device *d = dev_from_gk20a(g);
@@ -2421,6 +2444,116 @@ void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
 	mem->aperture = APERTURE_INVALID;
 }
 
+int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct mem_desc *mem)
+{
+	return gk20a_gmmu_alloc_attr_vid(g, 0, size, mem);
+}
+
+int gk20a_gmmu_alloc_attr_vid(struct gk20a *g, enum dma_attr attr,
+		size_t size, struct mem_desc *mem)
+{
+	return gk20a_gmmu_alloc_attr_vid_at(g, attr, size, mem, 0);
+}
+
+int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
+		size_t size, struct mem_desc *mem, dma_addr_t at)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	struct device *d = &g->mm.vidmem_dev;
+	int err;
+	dma_addr_t iova;
+	DEFINE_DMA_ATTRS(attrs);
+
+	gk20a_dbg_fn("");
+
+	if (at) {
+		void *va;
+
+		dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+		va = dma_mark_declared_memory_occupied(d, at, size,
+				&attrs);
+
+		if (IS_ERR(va))
+			return PTR_ERR(va);
+
+		iova = at;
+		mem->fixed = true;
+	} else {
+		dma_set_attr(attr, &attrs);
+		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+		/* cpuva has no meaning here, the following returns null */
+		dma_alloc_attrs(d, size, &iova, GFP_KERNEL, &attrs);
+
+		if (iova == DMA_ERROR_CODE)
+			return -ENOMEM;
+
+		mem->fixed = false;
+	}
+
+	err = gk20a_get_sgtable(d, &mem->sgt, NULL, iova, size);
+	if (err)
+		goto fail_free;
+
+	mem->size = size;
+	mem->aperture = APERTURE_VIDMEM;
+
+	gk20a_dbg_fn("done");
+
+	return 0;
+
+fail_free:
+	if (at) {
+		dma_mark_declared_memory_unoccupied(d, iova, mem->size,
+				&attrs);
+	} else {
+		dma_free_attrs(d, size, NULL, iova, &attrs);
+	}
+
+	return err;
+#else
+	return -ENOSYS;
+#endif
+}
+
+static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
+			  struct mem_desc *mem)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	struct device *d = &g->mm.vidmem_dev;
+	DEFINE_DMA_ATTRS(attrs);
+
+	if (mem->fixed) {
+		dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+		dma_mark_declared_memory_unoccupied(d,
+				sg_dma_address(mem->sgt->sgl), mem->size,
+				&attrs);
+	} else {
+		dma_set_attr(attr, &attrs);
+		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
+		dma_free_attrs(d, mem->size, NULL,
+				sg_dma_address(mem->sgt->sgl),
+				&attrs);
+		gk20a_free_sgtable(&mem->sgt);
+	}
+
+	mem->size = 0;
+	mem->aperture = APERTURE_INVALID;
+#endif
+}
+
+void gk20a_gmmu_free_attr(struct gk20a *g, enum dma_attr attr,
+			  struct mem_desc *mem)
+{
+	switch (mem->aperture) {
+	case APERTURE_SYSMEM:
+		return gk20a_gmmu_free_attr_sys(g, attr, mem);
+	case APERTURE_VIDMEM:
+		return gk20a_gmmu_free_attr_vid(g, attr, mem);
+	default:
+		break; /* like free() on "null" memory */
+	}
+}
+
 void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
 {
 	return gk20a_gmmu_free_attr(g, 0, mem);
@@ -2435,6 +2568,33 @@ int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
 			 enum dma_attr attr, size_t size, struct mem_desc *mem)
 {
 	int err = gk20a_gmmu_alloc_attr(vm->mm->g, attr, size, mem);
+
+	if (err)
+		return err;
+
+	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0,
+				     gk20a_mem_flag_none, false);
+	if (!mem->gpu_va) {
+		err = -ENOMEM;
+		goto fail_free;
+	}
+
+	return 0;
+
+fail_free:
+	gk20a_gmmu_free(vm->mm->g, mem);
+	return err;
+}
+
+int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm, size_t size, struct mem_desc *mem)
+{
+	return gk20a_gmmu_alloc_map_attr_vid(vm, 0, size, mem);
+}
+
+int gk20a_gmmu_alloc_map_attr_vid(struct vm_gk20a *vm,
+			 enum dma_attr attr, size_t size, struct mem_desc *mem)
+{
+	int err = gk20a_gmmu_alloc_attr_vid(vm->mm->g, attr, size, mem);
 
 	if (err)
 		return err;

@@ -100,4 +100,13 @@ config GK20A_PCI
 	help
 	  Enable support for GPUs on PCIe bus.
 
+config GK20A_VIDMEM
+	bool "Support separate video memory on nvgpu"
+	depends on GK20A
+	default n
+	help
+	  Enable support for using and allocating buffers in a distinct video
+	  memory aperture (in contrast to general system memory), available on
+	  GPUs that have their own banks. PCIe GPUs have this, for example.
+
 trysource "../nvgpu-t19x/drivers/gpu/nvgpu/Kconfig"

@@ -47,12 +47,13 @@ enum gk20a_aperture {
 };
 
 struct mem_desc {
-	void *cpu_va;
-	struct page **pages;
+	void *cpu_va; /* sysmem only */
+	struct page **pages; /* sysmem only */
 	struct sg_table *sgt;
 	enum gk20a_aperture aperture;
 	size_t size;
 	u64 gpu_va;
+	bool fixed; /* vidmem only */
 };
 
 struct mem_desc_sub {
@@ -371,6 +372,7 @@ struct mm_gk20a {
 #endif
 
 	size_t vidmem_size;
+	struct device vidmem_dev;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);
@@ -526,6 +528,15 @@ int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
 		size_t size,
 		struct mem_desc *mem);
 
+int gk20a_gmmu_alloc_map_vid(struct vm_gk20a *vm,
+		size_t size,
+		struct mem_desc *mem);
+
+int gk20a_gmmu_alloc_map_attr_vid(struct vm_gk20a *vm,
+		enum dma_attr attr,
+		size_t size,
+		struct mem_desc *mem);
+
 void gk20a_gmmu_unmap_free(struct vm_gk20a *vm,
 		struct mem_desc *mem);
 
@@ -537,6 +548,26 @@ int gk20a_gmmu_alloc_attr(struct gk20a *g,
 		enum dma_attr attr,
 		size_t size,
 		struct mem_desc *mem);
+
+int gk20a_gmmu_alloc_attr_sys(struct gk20a *g,
+		enum dma_attr attr,
+		size_t size,
+		struct mem_desc *mem);
+
+int gk20a_gmmu_alloc_vid(struct gk20a *g,
+		size_t size,
+		struct mem_desc *mem);
+
+int gk20a_gmmu_alloc_attr_vid(struct gk20a *g,
+		enum dma_attr attr,
+		size_t size,
+		struct mem_desc *mem);
+
+int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g,
+		enum dma_attr attr,
+		size_t size,
+		struct mem_desc *mem,
+		dma_addr_t at);
 
 void gk20a_gmmu_free(struct gk20a *g,
 		struct mem_desc *mem);

@@ -167,5 +167,14 @@
 				};
 			};
 		};
+		fragment-b00-sdmmc3-config {
+			ids = ">=3310-1000-500";
+			override@0 {
+				target = <&sdmmc3>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+		};
 	};
 };

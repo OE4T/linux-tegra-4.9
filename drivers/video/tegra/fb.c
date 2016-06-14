@@ -321,18 +321,30 @@ static int tegra_fb_blank(int blank, struct fb_info *info)
 {
 	struct tegra_fb_info *tegra_fb = info->par;
 	struct tegra_dc *dc = tegra_fb->win.dc;
+	int ret = 0;
+	/* note if there has been a mode change */
+	bool mode_dirty = dc->mode_dirty;
 
 	switch (blank) {
 	case FB_BLANK_UNBLANK:
 		dev_info(&tegra_fb->ndev->dev, "unblank\n");
 		tegra_dc_enable(dc);
 
-		if (!dc->suspended && dc->blanked &&
-		    !tegra_dc_restore(dc)) {
-			struct tegra_dc_win *win = &tegra_fb->win;
-			tegra_dc_update_windows(&win, 1, NULL, true);
-			tegra_dc_sync_windows(&win, 1);
-			tegra_dc_program_bandwidth(dc, true);
+		if (!dc->suspended && dc->blanked) {
+			/*
+			 * Do not restore old EXT windows if mode has been
+			 * updated. EXT window parameters will be updated as
+			 * required for the new mode in upcoming flip call.
+			 */
+			if (!mode_dirty)
+				ret = tegra_dc_restore(dc);
+			if (!ret) {
+				struct tegra_dc_win *win = &tegra_fb->win;
+
+				tegra_dc_update_windows(&win, 1, NULL, true);
+				tegra_dc_sync_windows(&win, 1);
+				tegra_dc_program_bandwidth(dc, true);
+			}
 		}
 
 		dc->blanked = false;

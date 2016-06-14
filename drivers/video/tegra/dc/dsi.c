@@ -2110,8 +2110,13 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 
 	dsi->current_dsi_clk_khz =
 			clk_get_rate(dsi->dsi_clk[0]) / 1000;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
+					dsi->current_dsi_clk_khz);
+#else
 	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
 					(dsi->current_dsi_clk_khz * 2));
+#endif
 }
 
 static void tegra_dsi_hs_clk_out_enable(struct tegra_dc_dsi_data *dsi)

@@ -1119,6 +1119,17 @@ static ssize_t bits_per_pixel_set(struct file *file, const char __user *buf,
 	dp->dc->out->hotplug_state = 0;
 	tegra_dp_pending_hpd(dp);
 
+#ifdef CONFIG_SWITCH
+	if (tegra_edid_audio_supported(dp->hpd_data.edid)
+				&& tegra_dc_is_ext_dp_panel(dp->dc)) {
+		switch_set_state(&dp->audio_switch, 0);
+		msleep(1);
+		pr_info("audio_switch toggle 0\n");
+		switch_set_state(&dp->audio_switch, 1);
+		pr_info("audio_switch toggle 1\n");
+	}
+#endif
+
 	return count;
 }
 

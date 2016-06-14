@@ -34,4 +34,13 @@
 			hardware = "p2382_t186";
 		};
 	};
+
+#ifdef CONFIG_ANDROID
+	/* TBD : once runtime PM is implemented in rtcpu driver, it will be removed
+	Bug 200205818, 200191464, 1614189
+	*/
+	rtcpu@b000000 { /* don't use SCE as camera-rtcpu */
+		status = "disabled";
+	};
+#endif
 };

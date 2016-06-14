@@ -21,9 +21,13 @@
 #ifndef __NVHOST_NVDLA_H__
 #define __NVHOST_NVDLA_H__
 
+#define NV_DLA_THI_METHOD_ID	0x00000040      /* RW-4R */
+#define NV_DLA_THI_METHOD_DATA	0x00000044      /* RW-4R */
+
 extern const struct file_operations tegra_nvdla_ctrl_ops;
 
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev);
 int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev);
+int nvhost_nvdla_flcn_isr(struct platform_device *pdev);
 
 #endif

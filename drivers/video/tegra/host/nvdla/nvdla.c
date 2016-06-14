@@ -23,6 +23,7 @@
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/slab.h>
+#include <linux/dma-mapping.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -30,20 +31,118 @@
 #include "flcn/flcn.h"
 #include "t194/t194.h"
 #include "nvhost_nvdla_ioctl.h"
+#include "flcn/flcn.h"
+#include "flcn/hw_flcn.h"
+#include "nvdla/nvdla.h"
+#include "nvdla_ucode_interface.h"
+
+#define DEBUG_BUFFER_SIZE 0x100
+DEFINE_DMA_ATTRS(attrs);
 
 /* data structure to keep device data */
 struct nvdla {
 	struct platform_device *pdev;
 };
 
+int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
+{
+	struct flcn *m = get_flcn(pdev);
+	uint32_t mailbox0;
+
+	/* dump falcon data if debug enabled */
+	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
+	if (mailbox0 == DLA_DEBUG_PRINT)
+		dev_info(&pdev->dev, "falcon: %s\n",
+			 (char *)m->debug_dump_va);
+
+	return 0;
+}
+
+/* Helper API's */
+static void nvdla_send_cmd(struct platform_device *pdev,
+		   uint32_t method_id, uint32_t method_data)
+{
+	host1x_writel(pdev, NV_DLA_THI_METHOD_ID, method_id);
+	host1x_writel(pdev, NV_DLA_THI_METHOD_DATA, method_data);
+}
+
+static int nvdla_alloc_dump_region(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct flcn *m;
+
+	if (!pdata->flcn_isr)
+		return 0;
+
+	m = get_flcn(pdev);
+	/* allocate dump region */
+	m->debug_dump_va = dma_alloc_attrs(&pdev->dev,
+				   DEBUG_BUFFER_SIZE, &m->debug_dump_pa,
+				   GFP_KERNEL, &attrs);
+	if (!m->debug_dump_va) {
+		dev_err(&pdev->dev, "dma memory allocation failed");
+		return -ENOMEM;
+	}
+
+	/* pass dump region to falcon */
+	nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
+		       (m->debug_dump_pa >> 8) & 0xffffffff);
+
+	return 0;
+}
+
+static void nvdla_free_dump_region(struct platform_device *pdev)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct flcn *m;
+
+	if (!pdata->flcn_isr)
+		return;
+
+	m = get_flcn(pdev);
+	if (m->debug_dump_pa) {
+		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
+			       m->debug_dump_va, m->debug_dump_pa,
+			       &attrs);
+		m->debug_dump_va = NULL;
+		m->debug_dump_pa = 0;
+
+		/* reset dump region */
+		nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS, m->debug_dump_pa);
+	}
+}
+
 /* power management API */
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
-	return nvhost_flcn_finalize_poweron(pdev);
+	int ret = 0;
+
+	ret = nvhost_flcn_finalize_poweron(pdev);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to poweron\n", __func__);
+		return ret;
+	}
+
+	ret = nvdla_alloc_dump_region(pdev);
+	if (ret)
+		nvhost_nvdla_prepare_poweroff(pdev);
+
+	return ret;
 }
 
 int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 {
+	int ret;
+
+	/* free dump region */
+	nvdla_free_dump_region(pdev);
+
+	ret = nvhost_flcn_prepare_poweroff(pdev);
+	if (ret) {
+		dev_err(&pdev->dev, "%s: failed to poweroff\n", __func__);
+		return ret;
+	}
+
 	return 0;
 }
 
@@ -172,6 +271,9 @@ static int nvdla_probe(struct platform_device *dev)
 	err = nvhost_client_device_init(dev);
 	if (err)
 		goto err_client_device_init;
+
+	if (pdata->flcn_isr)
+		flcn_intr_init(dev);
 
 	return 0;
 

@@ -515,8 +515,6 @@
 #define TEGRA186_CLK_DSIB 118
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DSIB_LP */
 #define TEGRA186_CLK_DSIB_LP 119
-/** @deprecated */
-#define TEGRA186_CLK_ENTROPY 120
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC1 */
 #define TEGRA186_CLK_DMIC1 122
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_DMIC2 */
@@ -839,8 +837,6 @@
 #define TEGRA186_CLK_PLLP 516
 /** @deprecated */
 #define TEGRA186_CLK_PLL_P TEGRA186_CLK_PLLP
-/** @deprecated */
-#define TEGRA186_CLK_PLLA_VCO 517
 /** @brief PLL controlled by CLK_RST_CONTROLLER_PLLD_BASE for use by DSI */
 #define TEGRA186_CLK_PLLD 518
 /** @brief PLL controlled by CLK_RST_CONTROLLER_PLLD2_BASE for use by HDMI or DP */

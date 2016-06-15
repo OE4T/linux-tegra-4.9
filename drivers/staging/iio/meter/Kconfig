@@ -75,4 +75,12 @@ config ADE7854_SPI
 	  To compile this driver as a module, choose M here: the
 	  module will be called ade7854-spi.
 
+config INA219
+	tristate "TI INA219 bidirectional current/power monitor"
+	depends on I2C
+	help
+	  TI INA219 is High- or Low-Side Measurement,Bidirectional
+	  CURRENT/POWER MONITOR with I2C Interface.
+	  Say Y here if you have INA219 hooked to a I2C bus.
+
 endmenu

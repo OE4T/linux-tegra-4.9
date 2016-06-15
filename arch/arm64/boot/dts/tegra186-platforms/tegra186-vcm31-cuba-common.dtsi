@@ -872,6 +872,8 @@
 		compatible = "nvidia,isc-mgr";
 		i2c-bus = <7>;
 		csi-port = <0>;
+		interrupt-parent = <&tegra_gpio>;
+		interrupts = <TEGRA_GPIO(S, 4) 2>;
 		status = "okay";
 	};
 

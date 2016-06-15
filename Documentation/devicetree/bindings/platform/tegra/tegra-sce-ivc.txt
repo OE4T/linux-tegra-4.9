@@ -13,10 +13,11 @@ such as clocks, resets etc.
 
 Required properties:
 - compatible: Should be "nvidia,tegra186-sce-ivc" for T18x.
-- reg: Address entries (SCE BASE, SCE CFG BASE, SCE_EVP, SCEPM)
+- reg: Address entries (SCE EVP, SCE PM. SCE CFG BASE, SCE CPU AST,
+  SCE DMA AST)
   Formatted as per standard rules for this property.
-- nvidia,ast: SCE AST0 and AST1 phandles
-  For details refer: ../tegra-ast.txt
+- reg-names: "sce-evp",  "sce-pm", "sce-cfg", "ast-cpu", "ast-dma"
+  as per the reg property.
 - clock-names: Names of the clocks required by SCE.
   Must include following entry:
   - sce-apb
@@ -97,9 +98,12 @@ If the HSP shared mailbox is used for boot synchronization:
 
 tegra_sce: rtcpu@b000000 {
 	compatible = "nvidia,tegra186-sce-ivc";
-	reg =	<0 0xb000000 0 0x1000>,	  /* SCE EVP (SCE_ATCM_EVP) */
-		<0 0xb1f0000 0 0x40000>,  /* SCE PM */
-		<0 0xb230000 0 0x10000>;  /* APS_FRSC (SCE_CFG) */
+	reg =	<0 0xb000000 0 0x1000>,
+		<0 0xb1f0000 0 0x40000>,
+		<0 0xb230000 0 0x10000>,
+		<0 0xb040000 0 0x10000>,
+                <0 0xb050000 0 0x10000>;
+	reg-names = "sce-evp", "sce-pm", "sce-cfg", "ast-cpu", "ast-dma";
 	clocks = <&tegra_car TEGRA186_CLK_SCE_APB>;
 	clock-names = "sce-apb";
 	resets =
@@ -130,9 +134,9 @@ tegra_sce: rtcpu@b000000 {
 		"sce-tke",
 		"sce-gte",
 		"sce-cfg";
-	nvidia,ast = <&sce_ast0>, <&sce_ast1>;
 	#address-cells = <1>;
 	#size-cells = <1>;
+
 	ivc-channels@90000000 {
 		#address-cells = <1>;
 		#size-cells = <0>;

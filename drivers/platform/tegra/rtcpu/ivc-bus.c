@@ -348,11 +348,17 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 	void __iomem *ast[2];
 	int ret, region = 2;
 
-	/* Get AST handles */
-	ret = tegra_ast_map(bus->dev.parent, NV(ast), 2, ast);
-	if (ret) {
-		dev_err(&bus->dev, "ASTs not found: %d\n", ret);
-		return ret;
+	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
+	ast[0] = tegra_ast_map_byname(bus->dev.parent, "ast-cpu");
+	if (IS_ERR(ast[0])) {
+		dev_err(&bus->dev, "AST %s not found\n", "ast-cpu");
+		return PTR_ERR(ast[0]);
+	}
+
+	ast[1] = tegra_ast_map_byname(bus->dev.parent, "ast-dma");
+	if (IS_ERR(ast[1])) {
+		dev_err(&bus->dev, "AST %s not found\n", "ast-dma");
+		return PTR_ERR(ast[1]);
 	}
 
 	/* Parse out all nodes with a region */

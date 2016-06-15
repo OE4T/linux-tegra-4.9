@@ -140,6 +140,7 @@
 		status = "okay";
 		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
 		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 4) 0>;
+		/delete-property/ ignore-pm-notify;
 		uhs-mask = <0x1F>;
 	};
 

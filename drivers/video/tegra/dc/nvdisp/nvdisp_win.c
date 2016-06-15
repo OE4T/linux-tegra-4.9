@@ -473,6 +473,9 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 		win_options &= ~win_options_cp_enable_enable_f();
 	}
 
+	if (win_options & win_options_cp_enable_enable_f())
+		tegra_dc_set_lut(dc, win);
+
 	nvdisp_win_write(win, win_options, win_options_r());
 
 	nvdisp_win_write(win,

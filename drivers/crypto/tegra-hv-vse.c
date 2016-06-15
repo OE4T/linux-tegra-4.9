@@ -944,6 +944,45 @@ static int tegra_hv_vse_aes_set_keyiv(struct tegra_virtual_se_dev *se_dev,
 	return 0;
 }
 
+static void tegra_hv_vse_copy_to_dst_sg(struct tegra_virtual_se_dev *se_dev,
+	struct ablkcipher_request *req)
+{
+	int src_len = 0, dst_len = 0, len, total_len;
+	int src_offset = 0, dst_offset = 0;
+	u8 *src_ptr = NULL, *dst_ptr = NULL;
+	struct scatterlist *src_sg, *dst_sg;
+
+	src_sg = req->src;
+	dst_sg = req->dst;
+	total_len = req->nbytes;
+
+	while (total_len) {
+		if (src_sg && !src_len) {
+			src_len = src_sg->length;
+			src_offset = 0;
+			src_ptr = sg_virt(src_sg);
+		}
+		if (dst_sg && !dst_len) {
+			dst_len = dst_sg->length;
+			dst_offset = 0;
+			dst_ptr = sg_virt(dst_sg);
+		}
+		len = min(src_len, dst_len);
+		memcpy(dst_ptr + dst_offset, src_ptr + src_offset, len);
+		src_offset += len;
+		dst_offset += len;
+		src_len -= len;
+		dst_len -= len;
+		total_len -= len;
+
+		if (src_len == 0)
+			src_sg = scatterwalk_sg_next(src_sg);
+
+		if (dst_len == 0)
+			dst_sg = scatterwalk_sg_next(dst_sg);
+	}
+}
+
 static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 {
 	struct tegra_virtual_se_dev *se_dev;
@@ -955,8 +994,8 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 	struct tegra_virtual_se_ivc_tx_msg_t ivc_tx;
 	struct tegra_virtual_se_ivc_resp_msg_t ivc_rx;
 	struct tegra_hv_ivc_cookie *pivck = g_ivck;
-	struct scatterlist *src_sg, *dst_sg;
-	int src_sg_count = 0, dst_sg_count = 0;
+	struct scatterlist *dst_sg;
+	int dst_sg_count = 0;
 	int err = 0;
 	u32 total_len;
 	int i;
@@ -969,7 +1008,6 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 	}
 
 	ivc_tx.engine = req_ctx->engine_id;
-
 	if (req_ctx->encrypt == true)
 		ivc_tx.cmd = VIRTUAL_SE_CMD_AES_ENCRYPT;
 	else
@@ -995,35 +1033,30 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 	ivc_tx.args.aes.op.key_length = aes_ctx->keylen;
 	ivc_tx.args.aes.op.streamid = se_dev->stream_id;
 	ivc_tx.args.aes.op.mode = req_ctx->op_mode;
-
 	ivc_tx.args.aes.op.ivsel = AES_ORIGINAL_IV;
-	src_sg = req->src;
+
+	i = 0;
+	total_len = req->nbytes;
 	dst_sg = req->dst;
 
-	i = 0;
-	total_len = req->nbytes;
-	while (src_sg && total_len) {
-		dma_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
-		ivc_tx.args.aes.op.src_addr[i].lo = sg_dma_address(src_sg);
-		ivc_tx.args.aes.op.src_addr[i++].hi =
-				min(src_sg->length, total_len);
-		total_len -= min(src_sg->length, total_len);
-		src_sg_count++;
-		src_sg = scatterwalk_sg_next(src_sg);
-	}
-	ivc_tx.args.aes.op.src_ll_num = i;
+	if (req->src != req->dst)
+		tegra_hv_vse_copy_to_dst_sg(se_dev, req);
 
-	i = 0;
-	total_len = req->nbytes;
 	while (dst_sg && total_len) {
-		dma_map_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE);
-		ivc_tx.args.aes.op.dst_addr[i].lo = sg_dma_address(dst_sg);
+		dma_map_sg(se_dev->dev, dst_sg, 1, DMA_BIDIRECTIONAL);
+		ivc_tx.args.aes.op.src_addr[i].lo =
+			sg_dma_address(dst_sg);
+		ivc_tx.args.aes.op.src_addr[i].hi =
+				min(dst_sg->length, total_len);
+		ivc_tx.args.aes.op.dst_addr[i].lo =
+			sg_dma_address(dst_sg);
 		ivc_tx.args.aes.op.dst_addr[i++].hi =
 				min(dst_sg->length, total_len);
 		total_len -= min(dst_sg->length, total_len);
 		dst_sg_count++;
 		dst_sg = scatterwalk_sg_next(dst_sg);
 	}
+	ivc_tx.args.aes.op.src_ll_num = i;
 	ivc_tx.args.aes.op.dst_ll_num = i;
 	ivc_tx.args.aes.op.data_length = req->nbytes;
 
@@ -1039,16 +1072,10 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 		err = ivc_rx.status;
 
 exit:
-	src_sg = req->src;
-	while (src_sg && src_sg_count--) {
-		dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
-		src_sg = scatterwalk_sg_next(src_sg);
-	}
-
 	dst_sg = req->dst;
 	while (dst_sg && dst_sg_count--) {
-		dma_unmap_sg(se_dev->dev, dst_sg, 1, DMA_FROM_DEVICE);
-		src_sg = scatterwalk_sg_next(dst_sg);
+		dma_unmap_sg(se_dev->dev, dst_sg, 1, DMA_BIDIRECTIONAL);
+		dst_sg = scatterwalk_sg_next(dst_sg);
 	}
 
 err_exit:

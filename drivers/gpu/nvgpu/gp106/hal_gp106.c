@@ -26,7 +26,7 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp10b/fb_gp10b.h"
-#include "gp10b/fifo_gp10b.h"
+#include "gp106/fifo_gp106.h"
 #include "gp10b/gp10b_gating_reglist.h"
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/cde_gp10b.h"
@@ -193,7 +193,7 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_gr(gops);
 	gp10b_init_ltc(gops);
 	gp10b_init_fb(gops);
-	gp10b_init_fifo(gops);
+	gp106_init_fifo(gops);
 	gp10b_init_ce(gops);
 	gp106_init_gr_ctx(gops);
 	gp106_init_mm(gops);

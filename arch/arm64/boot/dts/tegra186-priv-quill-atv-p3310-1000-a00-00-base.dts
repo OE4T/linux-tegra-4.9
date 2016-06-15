@@ -144,4 +144,24 @@ tegra_padctl_uphy_pinmux_default: pinmux {
 			nvidia,dc-or-node = "/host1x/sor";
 		};
 	};
+
+	sdhci@3460000 {
+		uhs-mask = <0x0>; /*enable HS400 mode*/
+		nvidia,enable-strobe-mode;
+		status = "okay";
+		vqmmc-supply = <&spmic_sd2>;
+		vmmc-supply = <&spmic_sd3>;
+		vddio_sdmmc-supply = <0x0>;
+		vddio_sd_slot-supply = <0x0>;
+	};
+	sdhci@3400000 {
+		uhs-mask = <0x1C>;
+		cd-inverted;
+		wp-inverted;
+		status = "okay";
+		vqmmc-supply = <&spmic_ldo3>;
+		vmmc-supply = <&en_vdd_sdcard1>;
+		vddio_sdmmc-supply = <0x0>;
+		vddio_sd_slot-supply = <0x0>;
+	};
 };

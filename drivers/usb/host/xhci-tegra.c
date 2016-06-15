@@ -316,6 +316,8 @@ struct tegra_xusb_soc {
 
 	bool is_xhci_vf;
 	u8 vf_id;
+
+	bool lpm_support;
 };
 
 struct tegra_xhci_ipfs_context {
@@ -3319,6 +3321,7 @@ static const char * const tegra186_supply_names[] = {
 
 static const struct tegra_xusb_soc tegra186_soc = {
 	.firmware = "tegra18x_xusb_firmware",
+	.lpm_support = true,
 	.supply_names = tegra186_supply_names,
 	.num_supplies = ARRAY_SIZE(tegra186_supply_names),
 	.num_typed_phys[USB3_PHY] = 3,
@@ -3451,7 +3454,11 @@ static struct platform_driver tegra_xusb_driver = {
 
 static void tegra_xhci_quirks(struct device *dev, struct xhci_hcd *xhci)
 {
+	struct tegra_xusb *tegra = dev_get_drvdata(dev);
+
 	xhci->quirks |= XHCI_PLAT;
+	if (tegra && tegra->soc->lpm_support)
+		xhci->quirks |= XHCI_LPM_SUPPORT;
 }
 
 static int tegra_xhci_setup(struct usb_hcd *hcd)

@@ -8814,7 +8814,7 @@ dhd_preinit_ioctls(dhd_pub_t *dhd)
 		bcmstrtok(&ptr, "\n", 0);
 		/* Print fw version info */
 		DHD_ERROR(("Firmware version = %s\n", buf));
-		strncpy(fw_version, buf, FW_VER_STR_LEN);
+		strncpy(fw_version, buf, strlen(buf));
 #if defined(BCMSDIO)
 		dhd_set_version_info(dhd, buf);
 #endif /* defined(BCMSDIO) */

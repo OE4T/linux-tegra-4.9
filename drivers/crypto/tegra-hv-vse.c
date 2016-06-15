@@ -180,6 +180,11 @@ struct tegra_virtual_se_sha_context {
 	u32 hashblock_size;
 };
 
+struct sha_zero_length_vector {
+	unsigned int size;
+	char *digest;
+};
+
 /* Tegra Virtual Security Engine operation modes */
 enum tegra_virtual_se_op_mode {
 	/* Secure Hash Algorithm-1 (SHA1) mode */
@@ -378,9 +383,6 @@ static int tegra_hv_vse_sha_init(struct ahash_request *req)
 	if (!req)
 		return -EINVAL;
 
-	if (!req->nbytes)
-		return -EINVAL;
-
 	sha_ctx->digest_size = crypto_ahash_digestsize(tfm);
 	switch (sha_ctx->digest_size) {
 	case SHA1_DIGEST_SIZE:
@@ -440,12 +442,62 @@ static int  tegra_hv_vse_sha_final(struct ahash_request *req)
 	int len, process_len;
 	u32 addr, addr_offset;
 	u32 list_count  = 0;
+	u32 mode;
+	struct sha_zero_length_vector zero_vec[] = {
+		{
+			.size = SHA1_DIGEST_SIZE,
+			.digest = "\xda\x39\xa3\xee\x5e\x6b\x4b\x0d"
+				  "\x32\x55\xbf\xef\x95\x60\x18\x90"
+				  "\xaf\xd8\x07\x09",
+		}, {
+			.size = SHA224_DIGEST_SIZE,
+			.digest = "\xd1\x4a\x02\x8c\x2a\x3a\x2b\xc9"
+				  "\x47\x61\x02\xbb\x28\x82\x34\xc4"
+				  "\x15\xa2\xb0\x1f\x82\x8e\xa6\x2a"
+				  "\xc5\xb3\xe4\x2f",
+		}, {
+			.size = SHA256_DIGEST_SIZE,
+			.digest = "\xe3\xb0\xc4\x42\x98\xfc\x1c\x14"
+				  "\x9a\xfb\xf4\xc8\x99\x6f\xb9\x24"
+				  "\x27\xae\x41\xe4\x64\x9b\x93\x4c"
+				  "\xa4\x95\x99\x1b\x78\x52\xb8\x55",
+		}, {
+			.size = SHA384_DIGEST_SIZE,
+			.digest = "\x38\xb0\x60\xa7\x51\xac\x96\x38"
+				  "\x4c\xd9\x32\x7e\xb1\xb1\xe3\x6a"
+				  "\x21\xfd\xb7\x11\x14\xbe\x07\x43"
+				  "\x4c\x0c\xc7\xbf\x63\xf6\xe1\xda"
+				  "\x27\x4e\xde\xbf\xe7\x6f\x65\xfb"
+				  "\xd5\x1a\xd2\xf1\x48\x98\xb9\x5b",
+		}, {
+			.size = SHA512_DIGEST_SIZE,
+			.digest = "\xcf\x83\xe1\x35\x7e\xef\xb8\xbd"
+				  "\xf1\x54\x28\x50\xd6\x6d\x80\x07"
+				  "\xd6\x20\xe4\x05\x0b\x57\x15\xdc"
+				  "\x83\xf4\xa9\x21\xd3\x6c\xe9\xce"
+				  "\x47\xd0\xd1\x3c\x5d\x85\xf2\xb0"
+				  "\xff\x83\x18\xd2\x87\x7e\xec\x2f"
+				  "\x63\xb9\x31\xbd\x47\x41\x7a\x81"
+				  "\xa5\x38\x32\x7a\xf9\x27\xda\x3e",
+		}
+	};
 
 	if (!req)
 		return -EINVAL;
 
-	if (!req->nbytes)
-		return -EINVAL;
+	if (!req->nbytes) {
+		/*
+		 *  SW WAR for zero length SHA operation since
+		 *  SE HW can't accept zero length SHA operation.
+		 */
+		if (sha_ctx->mode == VIRTUAL_SE_OP_MODE_SHA1)
+			mode = VIRTUAL_SE_OP_MODE_SHA1;
+		else
+			mode = sha_ctx->mode - VIRTUAL_SE_OP_MODE_SHA224 + 1;
+		memcpy(req->result, zero_vec[mode].digest, zero_vec[mode].size);
+
+		return 0;
+	}
 
 	sg = req->src;
 	num_sgs = tegra_hv_vse_count_sgs(sg, req->nbytes);

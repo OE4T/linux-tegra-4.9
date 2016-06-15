@@ -52,7 +52,7 @@
 
 typedef struct wifi_adapter_info {
 	const char	*name;
-	uint		irq_num;
+	int		irq_num;
 	uint		intr_flags;
 	int             wlan_pwr;
 	int             wlan_rst;

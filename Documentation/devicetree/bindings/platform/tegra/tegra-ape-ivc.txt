@@ -45,6 +45,11 @@ Required properties:
 
 == APE sub nodes ==
 
+* ast
+
+Describes the address space translation used.
+See ./tegra-sce-channel.txt for details.
+
 * ivc-channels
 
 Contains a sub-node for each IVC channel implemented by the APE.
@@ -52,45 +57,8 @@ For IVC channel details, please refer: ./tegra-ivc-channel.txt
 
 * hsp
 
-Describes the hardware synchronization primitive(s) used between CCPLEX
-and SCE to signal incoming IVC messages or IVC write room.
-
-Required property:
-- compatible: Should match with the device driver implementing the
-    cross-processor synchronization primitive.
-
-If the HSP doorbell is used for IVC notifications:
-
-- compatible: "nvidia,tegra186-hsp-doorbell"
-
-- nvidia,hsp-doorbell: <HSP-phandle HSP-ID HSP-DB>
-  * HSP is a set of HW synchronization primitives used in Tegra to allow
-    multiple processors to share resources and communicate together.
-  * HSP-ID is NVIDIA Tegra HSP unique source ID for SCE, used in IPC.
-  * HSP-DB is NVIDIA Tegra HSP unique doorbell number allotted to SCE.
-    A HSP doorbell allows a set of source agents in Tegra to request the
-    attention of specified target agent. In general the agents are processors
-    and doorbell used as part of an IPC protocol.
-  * For more HSP details, refer: ./tegra-hsp.txt.
-
-If the HSP shared mailbox is used for IVC notifications:
-
-- nvidia,hsp-shared-mailbox: <HSP-phandle MBOX-NUMBER HSP-phandle MBOX-NUMBER...>
-  * HSP is a set of HW synchronization primitives used in Tegra to allow
-    multiple processors to share resources and communicate together.
-  * MBOX-NUMBER is number of shared mailbox pair
-  * For more HSP details, refer: ../tegra-hsp.txt.
-
-- nvidia,hsp-shared-mailbox-names:
-  Must include following entry:
-  - ivc-pair
-
-If the HSP shared mailbox is used for boot synchronization:
-
-- nvidia,hsp-shared-mailbox: <HSP-phandle MBOX-NUMBER...>
-- nvidia,hsp-shared-mailbox-names:
-  Must include following entry:
-  - cmd-pair
+Describes the hardware synchronization primitive(s) used.
+See ./tegra-sce-ivc.txt for details (syntax is the same).
 
 == Possible example ==
 
@@ -129,23 +97,5 @@ tegra_ape: rtcpu@2993000 {
 		"ape",
 		"adsp";
 
-	#address-cells = <1>;
-	#size-cells = <1>;
-	ivc-channels@0 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg = <0x90000000 0x10000>;
-		ivc-channel@0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
-			reg = <0x0000>, <0x0480>;
-			reg-names = "rx", "tx";
-			nvidia,frame-size = <64>;
-			nvidia,frame-count = <16>;
-		};
-	};
-	hsp {
-		compatible = "nvidia,tegra186-hsp-mailbox";
-		nvidia,hsp-shared-mailbox = <&ape_hsp 1>, <&ape_hsp 7>;
-		nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
-	};
+	/* See ./tegra-sce-ivc.txt for generic IVC example */
 };

@@ -46,6 +46,19 @@ Required properties:
 
 == SCE sub nodes ==
 
+* ast
+
+Tegra AST unit converts any auxiliary CPUs' local AXI PA space
+(not the CCPLEX PA space) to either physical or virtual MC
+address space, i.e. its local slave address to either PA or
+if SMMU enabled then to IOVA.
+
+Required property:
+
+- reg: base address and length of the AST aperture
+  * Two apertures are required for SCE, so there should be two
+    <address, length> pairs.
+
 * ivc-channels
 
 Contains a sub-node for each IVC channel implemented by the SCE.
@@ -133,6 +146,11 @@ tegra_sce: rtcpu@b000000 {
 	nvidia,ast = <&sce_ast0>, <&sce_ast1>;
 	#address-cells = <1>;
 	#size-cells = <1>;
+	ranges;
+
+	ast {
+		reg = <0x0b040000 0x10000>, <0x0b050000 0x10000>;
+	};
 	ivc-channels@90000000 {
 		#address-cells = <1>;
 		#size-cells = <0>;

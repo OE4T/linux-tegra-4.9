@@ -1474,7 +1474,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 			dev_err(&dc->ndev->dev,
 				"failed to assign window %d\n", idx);
 		else {
-			dev_err(&dc->ndev->dev,
+			dev_info(&dc->ndev->dev,
 				"Window %d assigned to head %d\n", idx,
 				dc->ctrl_num);
 			if (i == -1)

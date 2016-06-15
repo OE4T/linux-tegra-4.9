@@ -29,8 +29,11 @@
 
 		reg =	<0 0xb000000 0 0x1000>,	  /* SCE EVP (SCE_ATCM_EVP) */
 			<0 0xb1f0000 0 0x40000>,  /* SCE PM */
-			<0 0xb230000 0 0x10000>;  /* APS_FRSC (SCE_CFG) */
-		reg-names = "sce-evp", "sce-pm", "sce-cfg";
+			<0 0xb230000 0 0x10000>,  /* APS_FRSC (SCE_CFG) */
+			<0 0xb040000 0 0x10000>,
+			<0 0xb050000 0 0x10000>;
+		reg-names = "sce-evp", "sce-pm", "sce-cfg",
+				"ast-cpu", "ast-dma";
 
 		#stream-id-cells = <1>;
 
@@ -66,8 +69,6 @@
 			"sce-tke",
 			"sce-gte",
 			"sce-cfg";
-
-		nvidia,ast = <&sce_ast0>, <&sce_ast1>;
 
 		#address-cells = <1>;
 		#size-cells = <1>;
@@ -150,8 +151,10 @@
 
 		power-domains = <&ape_pd>;
 
-		reg = <0x0 0x02993000 0x0 0x1000>; /* APE EVP */
-		reg-names = "ape-evp";
+		reg =	<0 0x02993000 0 0x1000>, /* APE EVP */
+			<0 0x02994000 0 0x2000>,
+			<0 0x02996000 0 0x2000>;
+		reg-names = "ape-evp", "ast-cpu", "ast-dma";
 
 		#stream-id-cells = <1>;
 
@@ -187,8 +190,6 @@
 				"adspwdt",
 				"ape",
 				"adsp";
-
-		nvidia,ast = <&ape_ast0>, <&ape_ast1>;
 
 		#address-cells = <1>;
 		#size-cells = <1>;

@@ -2407,30 +2407,6 @@
 		status = "disabled";
 	};
 
-	sce_ast0: ast@b040000 {
-		compatible = "nvidia,tegra186-ast";
-		reg = <0 0x0b040000 0 0x10000>;
-		status = "disabled";
-	};
-
-	sce_ast1: ast@b050000 {
-		compatible = "nvidia,tegra186-ast";
-		reg = <0 0x0b050000 0 0x10000>;
-		status = "disabled";
-	};
-
-	ape_ast0: ast@2994000 {
-		compatible = "nvidia,tegra186-ast";
-		reg = <0 0x02994000 0 0x10000>;
-		status = "disabled";
-	};
-
-	ape_ast1: ast@2996000 {
-		compatible = "nvidia,tegra186-ast";
-		reg = <0 0x02996000 0 0x10000>;
-		status = "disabled";
-	};
-
 	aon_ast0: ast@c040000 {
 		compatible = "nvidia,tegra186-ast";
 		reg = <0 0x0c040000 0 0x10000>;

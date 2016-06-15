@@ -73,8 +73,10 @@
 		nvidia,ddr-tap-delay = <11>;
 		ddr-trim-delay = <5>;
                 bus-width = <4>;
+		ignore-pm-notify;
                 mmc-ocr-mask = <0>;
 		keep-power-in-suspend;
+		non-removable;
 		cap-mmc-highspeed;
 		cap-sd-highspeed;
 		pwrdet-support;

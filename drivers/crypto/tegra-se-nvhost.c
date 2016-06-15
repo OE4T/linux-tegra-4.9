@@ -47,6 +47,8 @@
 #include <crypto/sha.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/version.h>
+#include <linux/pm_qos.h>
+#include <linux/jiffies.h>
 
 #include "tegra-se-nvhost.h"
 #define NV_SE1_CLASS_ID		0x3A
@@ -98,6 +100,7 @@ struct tegra_se_req_context {
 
 struct tegra_se_chipdata {
 	unsigned long aes_freq;
+	unsigned int cpu_freq_mhz;
 };
 
 /* Security Engine Linked List */
@@ -146,6 +149,11 @@ struct tegra_se_dev {
 	int gather_buf_sz;
 	u32 *aes_cmdbuf_cpuvaddr;
 	dma_addr_t aes_cmdbuf_iova;
+	struct pm_qos_request boost_cpufreq_req;
+	struct mutex boost_cpufreq_lock;
+	struct delayed_work restore_cpufreq_work;
+	unsigned long cpufreq_last_boosted;
+	bool cpufreq_boosted;
 };
 
 static struct tegra_se_dev *sg_tegra_se_dev[4];
@@ -248,6 +256,66 @@ static int force_reseed_count;
 static int se_num;
 
 #define GET_MSB(x)  ((x) >> (8*sizeof(x)-1))
+
+#define BOOST_PERIOD	(msecs_to_jiffies(2*1000)) /* 2 seconds */
+static unsigned int boost_cpu_freq;
+module_param(boost_cpu_freq, uint, S_IRUGO|S_IWUSR);
+MODULE_PARM_DESC(boost_cpu_freq, "CPU frequency (in MHz) to boost");
+
+static void tegra_se_restore_cpu_freq_fn(struct work_struct *work)
+{
+	struct tegra_se_dev *se_dev =
+			container_of(work, struct tegra_se_dev, restore_cpufreq_work.work);
+	unsigned long delay = BOOST_PERIOD;
+
+	mutex_lock(&se_dev->boost_cpufreq_lock);
+	if (time_is_after_jiffies(se_dev->cpufreq_last_boosted + delay)) {
+		schedule_delayed_work(&se_dev->restore_cpufreq_work, delay);
+	} else {
+		pm_qos_update_request(&se_dev->boost_cpufreq_req,
+				PM_QOS_DEFAULT_VALUE);
+		se_dev->cpufreq_boosted = false;
+	}
+	mutex_unlock(&se_dev->boost_cpufreq_lock);
+}
+
+static void tegra_se_boost_cpu_freq(struct tegra_se_dev *se_dev)
+{
+	unsigned long delay = BOOST_PERIOD;
+	s32 cpufreq_hz = boost_cpu_freq * 1000;
+
+	mutex_lock(&se_dev->boost_cpufreq_lock);
+	if (!se_dev->cpufreq_boosted) {
+		pm_qos_update_request(&se_dev->boost_cpufreq_req,
+				cpufreq_hz);
+		schedule_delayed_work(&se_dev->restore_cpufreq_work, delay);
+		se_dev->cpufreq_boosted = true;
+	}
+
+	se_dev->cpufreq_last_boosted = jiffies;
+	mutex_unlock(&se_dev->boost_cpufreq_lock);
+}
+
+static void tegra_se_boost_cpu_init(struct tegra_se_dev *se_dev)
+{
+	boost_cpu_freq = se_dev->chipdata->cpu_freq_mhz;
+
+	INIT_DELAYED_WORK(&se_dev->restore_cpufreq_work,
+						tegra_se_restore_cpu_freq_fn);
+
+	pm_qos_add_request(&se_dev->boost_cpufreq_req,
+						PM_QOS_CPU_FREQ_MIN, PM_QOS_DEFAULT_VALUE);
+
+	mutex_init(&se_dev->boost_cpufreq_lock);
+}
+
+static void tegra_se_boost_cpu_deinit(struct tegra_se_dev *se_dev)
+{
+	mutex_destroy(&se_dev->boost_cpufreq_lock);
+	pm_qos_remove_request(&se_dev->boost_cpufreq_req);
+	cancel_delayed_work_sync(&se_dev->restore_cpufreq_work);
+}
+
 static void tegra_se_leftshift_onebit(u8 *in_buf, u32 size, u8 *org_msb)
 {
 	u8 carry;
@@ -1238,6 +1306,7 @@ static void tegra_se_process_new_req(struct crypto_async_request *async_req)
 	if (se_dev->queue.qlen &&
 		(se_dev->req_cnt < SE_MAX_TASKS_PER_SUBMIT))
 		return;
+	tegra_se_boost_cpu_freq(se_dev);
 
 	err = tegra_se_setup_ablk_req(se_dev);
 	if (err)
@@ -2751,6 +2820,7 @@ static bool is_algo_supported(struct tegra_se_dev *se_dev, const char *algo)
 
 static struct tegra_se_chipdata tegra18_se_chipdata = {
 	.aes_freq = 600000000,
+	.cpu_freq_mhz = 1900,
 };
 
 static struct nvhost_device_data nvhost_se1_info = {
@@ -3077,6 +3147,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 		tegra_se_init_cmdbuf_addr(se_dev);
 	}
 
+	tegra_se_boost_cpu_init(se_dev);
+
 	se_dev->se_dev_num = se_num;
 	sg_tegra_se_dev[se_num] = se_dev;
 	se_num++;
@@ -3112,6 +3184,8 @@ static int tegra_se_remove(struct platform_device *pdev)
 
 	if (!se_dev)
 		return -ENODEV;
+
+	tegra_se_boost_cpu_deinit(se_dev);
 
 	cancel_work_sync(&se_dev->se_work);
 	if (se_dev->se_work_q)

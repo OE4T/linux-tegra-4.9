@@ -37,8 +37,8 @@ typedef int (*get_ucode_details)(struct gk20a *g,
 
 /* Both size and address of WPR need to be 128K-aligned */
 #define WPR_ALIGNMENT	0x20000
-#define GP106_DGPU_NONWPR 0x10000000 /* start from 256MB location at VIDMEM */
-#define GP106_DGPU_WPR 0x20000000
+#define GP106_DGPU_NONWPR 0x18000000
+#define GP106_DGPU_WPR (GP106_DGPU_NONWPR + 0x400000)
 #define DGPU_WPR_SIZE 0x100000
 
 /*Externs*/
@@ -364,9 +364,6 @@ int gp106_prepare_ucode_blob(struct gk20a *g)
 	gp106_dbg_pmu("fetching GMMU regs\n");
 	gm20b_mm_mmu_vpr_info_fetch(g);
 	gr_gk20a_init_ctxsw_ucode(g);
-
-	if (g->ops.fb.dump_vpr_wpr_info)
-		g->ops.fb.dump_vpr_wpr_info(g);
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 	gp106_dbg_pmu("wpr carveout base:%llx\n", (wpr_inf.wpr_base));

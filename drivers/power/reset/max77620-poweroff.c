@@ -293,6 +293,8 @@ static int max77620_poweroff_probe(struct platform_device *pdev)
 	if (!max77620_poweroff)
 		return -ENOMEM;
 
+	platform_set_drvdata(pdev, max77620_poweroff);
+
 	if (!np)
 		goto gpio_done;
 
@@ -367,6 +369,9 @@ static int max77620_poweroff_remove(struct platform_device *pdev)
 {
 	struct max77620_poweroff *max77620_poweroff =
 					platform_get_drvdata(pdev);
+
+	if (!max77620_poweroff)
+		return 0;
 	system_pmic_unregister(max77620_poweroff->system_pmic_dev);
 	return 0;
 }

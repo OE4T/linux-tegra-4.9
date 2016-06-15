@@ -35,6 +35,8 @@
 #include <linux/reset.h>
 #include <linux/spi/spi.h>
 #include <linux/tegra_prod.h>
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
 
 #define SPI_COMMAND1				0x000
 #define SPI_BIT_LENGTH(x)			(((x) & 0x1f) << 0)
@@ -161,6 +163,9 @@
 #define SPI_INTR_RDY_MASK			BIT(29)
 #define SPI_INTR_ALL_MASK			(0x1fUL << 25)
 
+#define SPI_MISC				0x194
+#define SPI_MISC_CLKEN_OVERRIDE			BIT(31)
+
 #define MAX_CHIP_SELECT				4
 #define SPI_FIFO_DEPTH				64
 #define DATA_DIR_TX				(1 << 0)
@@ -180,6 +185,7 @@
 struct tegra_spi_chip_data {
 	bool intr_mask_reg;
 	bool set_rx_tap_delay;
+	bool slcg_support;
 };
 
 struct tegra_spi_client_ctl_data {
@@ -195,6 +201,7 @@ struct tegra_spi_data {
 	struct device				*dev;
 	struct spi_master			*master;
 	spinlock_t				lock;
+	struct dentry				*debugfs;
 
 	struct clk				*clk;
 	struct reset_control			*rst;
@@ -1464,6 +1471,17 @@ static irqreturn_t tegra_spi_isr(int irq, void *context_data)
 	return IRQ_WAKE_THREAD;
 }
 
+static void tegra_spi_set_slcg(struct tegra_spi_data *tspi)
+{
+	int reg;
+
+	if (!tspi->chip_data->slcg_support)
+		return;
+	reg = tegra_spi_readl(tspi, SPI_MISC);
+	reg &= ~SPI_MISC_CLKEN_OVERRIDE;
+	tegra_spi_writel(tspi, reg, SPI_MISC);
+}
+
 static void tegra_spi_parse_dt(struct tegra_spi_data *tspi)
 {
 	const unsigned int *prop;
@@ -1512,21 +1530,25 @@ static void tegra_spi_parse_dt(struct tegra_spi_data *tspi)
 static struct tegra_spi_chip_data tegra114_spi_chip_data = {
 	.intr_mask_reg = false,
 	.set_rx_tap_delay = false,
+	.slcg_support = false,
 };
 
 static struct tegra_spi_chip_data tegra124_spi_chip_data = {
 	.intr_mask_reg = false,
 	.set_rx_tap_delay = true,
+	.slcg_support = false,
 };
 
 static struct tegra_spi_chip_data tegra210_spi_chip_data = {
 	.intr_mask_reg = true,
 	.set_rx_tap_delay = false,
+	.slcg_support = false,
 };
 
 static struct tegra_spi_chip_data tegra186_spi_chip_data = {
 	.intr_mask_reg = true,
 	.set_rx_tap_delay = false,
+	.slcg_support = true,
 };
 
 static const struct of_device_id tegra_spi_of_match[] = {
@@ -1546,6 +1568,74 @@ static const struct of_device_id tegra_spi_of_match[] = {
 	{}
 };
 MODULE_DEVICE_TABLE(of, tegra_spi_of_match);
+
+#ifdef	CONFIG_DEBUG_FS
+static int tegra_spi_slcg_show(struct seq_file *s, void *unused)
+{
+	struct tegra_spi_data *tspi = s->private;
+	unsigned long reg;
+	int ret;
+
+	if (!tspi->chip_data->slcg_support) {
+		seq_puts(s, "unsupported\n");
+		return 0;
+	}
+	ret = pm_runtime_get_sync(tspi->dev);
+	if (ret < 0) {
+		dev_err(tspi->dev, "pm runtime failed, e = %d\n", ret);
+		return ret;
+	}
+	reg = tegra_spi_readl(tspi, SPI_MISC);
+	if (reg & SPI_MISC_CLKEN_OVERRIDE)
+		seq_puts(s, "disabled\n");
+	else
+		seq_puts(s, "enabled\n");
+
+	pm_runtime_put(tspi->dev);
+
+	return 0;
+}
+
+static int tegra_spi_slcg_dfs_open(struct inode *inode, struct file *f)
+{
+	return single_open(f, tegra_spi_slcg_show, inode->i_private);
+}
+
+static const struct file_operations tegra_spi_slcg_dfs_fops = {
+	.owner = THIS_MODULE,
+	.open = tegra_spi_slcg_dfs_open,
+	.release = single_release,
+	.read = seq_read,
+	.llseek = seq_lseek,
+};
+
+static void tegra_spi_debugfs_init(struct tegra_spi_data *tspi)
+{
+	struct dentry *retval;
+
+	tspi->debugfs = debugfs_create_dir(dev_name(tspi->dev), NULL);
+	if (IS_ERR_OR_NULL(tspi->debugfs))
+		goto clean;
+	retval = debugfs_create_file("slcg", S_IRUGO | S_IWUSR,
+				     tspi->debugfs, (void *)tspi,
+				     &tegra_spi_slcg_dfs_fops);
+	if (IS_ERR_OR_NULL(retval))
+		goto clean;
+
+	return;
+clean:
+	pr_warn("tegra spi: Failed to create debugfs!\n");
+	debugfs_remove_recursive(tspi->debugfs);
+}
+
+static void tegra_spi_debugfs_deinit(struct tegra_spi_data *tspi)
+{
+	debugfs_remove_recursive(tspi->debugfs);
+}
+#else
+static void tegra_spi_debugfs_init(struct tegra_spi_data *tspi) {}
+static void tegra_spi_debugfs_deinit(struct tegra_spi_data *tspi) {}
+#endif
 
 static int tegra_spi_probe(struct platform_device *pdev)
 {
@@ -1635,6 +1725,9 @@ static int tegra_spi_probe(struct platform_device *pdev)
 
 	init_completion(&tspi->xfer_completion);
 
+	if (tspi->chip_data->slcg_support)
+		tspi->clock_always_on = true;
+
 	if (tspi->clock_always_on) {
 		ret = clk_prepare_enable(tspi->clk);
 		if (ret < 0) {
@@ -1662,6 +1755,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	tspi->def_command1_reg |= SPI_CS_SEL(tspi->def_chip_select);
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
 	tspi->def_command2_reg = tegra_spi_readl(tspi, SPI_COMMAND2);
+	tegra_spi_set_slcg(tspi);
 	pm_runtime_put(&pdev->dev);
 
 	ret = request_threaded_irq(tspi->irq, tegra_spi_isr,
@@ -1680,6 +1774,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		goto exit_free_irq;
 	}
 	tspi->last_used_cs = master->num_chipselect + 1;
+	tegra_spi_debugfs_init(tspi);
 
 	return ret;
 
@@ -1706,6 +1801,9 @@ static int tegra_spi_remove(struct platform_device *pdev)
 	struct tegra_spi_data	*tspi = spi_master_get_devdata(master);
 
 	free_irq(tspi->irq, tspi);
+
+	tegra_spi_debugfs_deinit(tspi);
+	spi_unregister_master(master);
 
 	if (tspi->tx_dma_chan)
 		tegra_spi_deinit_dma_param(tspi, false);
@@ -1761,6 +1859,7 @@ static int tegra_spi_resume(struct device *dev)
 	tegra_spi_writel(tspi, tspi->def_command2_reg, SPI_COMMAND2);
 	tspi->last_used_cs = master->num_chipselect + 1;
 	tegra_spi_set_intr_mask(tspi);
+	tegra_spi_set_slcg(tspi);
 	pm_runtime_put(dev);
 
 	return spi_master_resume(master);

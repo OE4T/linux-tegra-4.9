@@ -210,8 +210,6 @@ static int imx219_power_on(struct camera_common_data *s_data)
 
 	dev_dbg(&priv->i2c_client->dev, "%s: power on\n", __func__);
 
-	imx219_mclk_enable(pw);
-
 	if (gpio_cansleep(pw->reset_gpio))
 		gpio_set_value_cansleep(pw->reset_gpio, 0);
 	else
@@ -238,7 +236,13 @@ static int imx219_power_on(struct camera_common_data *s_data)
 		gpio_set_value_cansleep(pw->reset_gpio, 1);
 	else
 		gpio_set_value(pw->reset_gpio, 1);
-	usleep_range(300, 310);
+
+	usleep_range(1, 2);
+	imx219_mclk_enable(pw);
+
+	/* Need to wait for t4 + t5 + t9 time as per the data sheet */
+	/* t4 - 200us, t5 - 6ms, t9 - 1.2ms */
+	usleep_range(7400, 7410);
 
 	pw->state = SWITCH_ON;
 	return 0;
@@ -250,7 +254,6 @@ imx219_iovdd_fail:
 	regulator_disable(pw->avdd);
 
 imx219_avdd_fail:
-	imx219_mclk_disable(pw);
 	return -ENODEV;
 }
 

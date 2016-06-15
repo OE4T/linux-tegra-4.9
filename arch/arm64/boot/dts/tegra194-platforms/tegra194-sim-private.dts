@@ -33,6 +33,7 @@
 
 	chosen {
 		bootargs ="mem=1024M@2048M console=ttyS0,115200 earlyprintk=uart8250-32bit,0x03100000";
+		stdout-path = &uarta;
 	};
 
 	memory@80000000 {

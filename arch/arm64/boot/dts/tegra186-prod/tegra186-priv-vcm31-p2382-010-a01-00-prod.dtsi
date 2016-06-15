@@ -37,4 +37,19 @@
 			};
 		};
 	};
+	ahci-sata@3507000 {
+		prod-settings {
+			mask-one-style;
+			prod {
+				board {
+					prod = <
+						1 0x00000680 0x00000001 0x1
+						1 0x00000690 0x3FFFFFFF 0x00000715	// T_SATA0_CHX_PHY_CTRL1_GEN1	31:0
+						1 0x00000694 0x3FFFFFFF 0x0000A018	// T_SATA0_CHX_PHY_CTRL1_GEN2	31:0
+						1 0x00000680 0x00000001 0x0
+					>;
+				};
+			};
+		};
+	};
 };

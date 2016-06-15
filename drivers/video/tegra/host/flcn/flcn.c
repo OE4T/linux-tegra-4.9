@@ -188,7 +188,7 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 
 	ucode.bin_header = (struct ucode_bin_header_v1_flcn *)ucode_ptr;
 	/* endian problems would show up right here */
-	if (ucode.bin_header->bin_magic != 0x10de) {
+	if (ucode.bin_header->bin_magic != 0x10de && ucode.bin_header->bin_magic != 0x10fe) {
 		dev_err(&dev->dev,
 			   "failed to get firmware magic");
 		return -EINVAL;
@@ -267,6 +267,8 @@ int flcn_setup_ucode_image(struct platform_device *dev,
 	v->os.code_offset = ucode.os_header->os_code_offset;
 	v->os.data_offset = ucode.os_header->os_data_offset;
 	v->os.data_size   = ucode.os_header->os_data_size;
+	v->os.code_size = ucode.os_header->os_code_size;
+	v->os.bin_magic = ucode.bin_header->bin_magic;
 
 	return 0;
 }
@@ -390,8 +392,14 @@ int nvhost_flcn_finalize_poweron(struct platform_device *pdev)
 					   v->os.data_offset + offset,
 					   offset, false);
 
-	flcn_dma_pa_to_internal_256b(pdev, v->os.code_offset,
+	if (v->os.bin_magic == 0x10fe) {
+		for (offset = 0; offset < v->os.code_size; offset += 256)
+			flcn_dma_pa_to_internal_256b(pdev, v->os.code_offset + offset,
+					   offset, true);
+	} else {
+		flcn_dma_pa_to_internal_256b(pdev, v->os.code_offset,
 					   0, true);
+	}
 
 	/* setup falcon interrupts and enable interface */
 	host1x_writel(pdev, flcn_irqmset_r(),

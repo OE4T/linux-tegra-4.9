@@ -72,10 +72,12 @@ struct flcn {
 	bool is_booted;
 
 	struct {
+		u32 bin_magic;
 		u32 reserved_offset;
 		u32 bin_data_offset;
 		u32 data_offset;
 		u32 data_size;
+		u32 code_size;
 		u32 code_offset;
 		u32 size;
 	} os, fce;

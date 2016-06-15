@@ -91,4 +91,12 @@ config INA230
 	  CURRENT/POWER MONITOR with I2C Interface.
 	  Say Y here if you have INA230 hooked to a I2C bus.
 
+config INA3221
+	tristate "TI INA3221 3-Channel Shunt and Bus Voltage Monitor"
+	depends on I2C
+	help
+	  TI INA3221 is Triple-Channel, High-Side Measurement, Shunt and Bus
+	  Voltage Monitor with I2C Interface
+	  Say Y here if you have INA3221 hooked to a I2C bus.
+
 endmenu

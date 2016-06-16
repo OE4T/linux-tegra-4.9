@@ -132,7 +132,7 @@ static int parse_test_settings(const char __user *user_buf, size_t count,
 	int i = 0, j = 0;
 	u8 u8_val;
 
-	buf = kzalloc(count, GFP_KERNEL);
+	buf = kzalloc(count + 1, GFP_KERNEL);
 	if (!buf) {
 		pr_err("dp_debug: Not enough memory for buffer\n");
 		return -ENOMEM;

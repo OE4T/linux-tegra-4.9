@@ -30,6 +30,7 @@
 		reg =	<0 0xb000000 0 0x1000>,	  /* SCE EVP (SCE_ATCM_EVP) */
 			<0 0xb1f0000 0 0x40000>,  /* SCE PM */
 			<0 0xb230000 0 0x10000>;  /* APS_FRSC (SCE_CFG) */
+		reg-names = "sce-evp", "sce-pm", "sce-cfg";
 
 		#stream-id-cells = <1>;
 
@@ -150,6 +151,7 @@
 		power-domains = <&ape_pd>;
 
 		reg = <0x0 0x02993000 0x0 0x1000>; /* APE EVP */
+		reg-names = "ape-evp";
 
 		#stream-id-cells = <1>;
 

@@ -300,7 +300,7 @@ enum tegra_virual_se_aes_iv_type {
 #define TEGRA_VIRTUAL_SE_RSA1536_DIGEST_SIZE   192
 #define TEGRA_VIRTUAL_SE_RSA2048_DIGEST_SIZE   256
 
-#define TEGRA_VIRTUAL_SE_SHA_MAX_BUFFER_SIZE 0x1000000
+#define TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE 0x1000000
 
 #define AES_KEYTBL_TYPE_KEY 1
 #define AES_KEYTBL_TYPE_OIV 2
@@ -412,6 +412,69 @@ static int tegra_hv_vse_read_ivc(
 	return 0;
 }
 
+static int tegra_hv_vse_prepare_ivc_linked_list(
+	struct tegra_virtual_se_dev *se_dev, struct scatterlist *sg,
+	u32 total_len, int max_ll_len, int block_size,
+	struct tegra_virtual_se_addr *src_addr,
+	int *num_lists, enum dma_data_direction dir)
+{
+	struct scatterlist *src_sg;
+	int err = 0;
+	int sg_count = 0;
+	int i = 0;
+	int len, process_len;
+	u32 addr, addr_offset;
+
+	src_sg = sg;
+	while (src_sg && total_len) {
+		dma_map_sg(se_dev->dev, src_sg, 1, dir);
+		sg_count++;
+		len = min(src_sg->length, total_len);
+		addr = sg_dma_address(src_sg);
+		addr_offset = 0;
+		while (len >= TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE) {
+			process_len = TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE -
+				block_size;
+			if (i > max_ll_len) {
+				dev_err(se_dev->dev,
+					"Unsupported no. of list %d\n", i);
+				err = -EINVAL;
+				goto exit;
+			}
+			src_addr[i].lo = addr + addr_offset;
+			src_addr[i].hi = process_len;
+			i++;
+			addr_offset += process_len;
+			total_len -= process_len;
+			len -= process_len;
+		}
+		if (len) {
+			if (i > max_ll_len) {
+				dev_err(se_dev->dev,
+					"Unsupported no. of list %d\n", i);
+				err = -EINVAL;
+				goto exit;
+			}
+			src_addr[i].lo = addr + addr_offset;
+			src_addr[i].hi = len;
+			i++;
+		}
+		total_len -= len;
+		src_sg = scatterwalk_sg_next(src_sg);
+	}
+	*num_lists = i;
+
+	return 0;
+exit:
+	src_sg = sg;
+	while (src_sg && sg_count--) {
+		dma_unmap_sg(se_dev->dev, src_sg, 1, dir);
+		src_sg = scatterwalk_sg_next(src_sg);
+	}
+
+	return err;
+}
+
 static int tegra_hv_vse_count_sgs(struct scatterlist *sl, u32 nbytes)
 {
 	struct scatterlist *sg = sl;
@@ -486,15 +549,10 @@ static int  tegra_hv_vse_sha_final(struct ahash_request *req)
 	struct scatterlist *sg;
 	struct tegra_virtual_se_dev *se_dev = g_virtual_se_dev[VIRTUAL_SE_SHA];
 	struct tegra_hv_ivc_cookie *pivck = g_ivck;
-	u32 total_len;
-	int i = 0;
 	int err = 0;
 	u32 num_sgs;
-	u32 sg_count = 0;
 	dma_addr_t dst_buf_addr;
-	int len, process_len;
-	u32 addr, addr_offset;
-	u32 list_count  = 0;
+	u32 num_lists;
 	u32 mode;
 	struct sha_zero_length_vector zero_vec[] = {
 		{
@@ -556,7 +614,7 @@ static int  tegra_hv_vse_sha_final(struct ahash_request *req)
 	num_sgs = tegra_hv_vse_count_sgs(sg, req->nbytes);
 	if (num_sgs > TEGRA_HV_VSE_SHA_MAX_LL_NUM) {
 		dev_err(se_dev->dev,
-			"\n Unsupported number of linked list %d\n", i);
+			"\n Unsupported number of linked list %d\n", num_sgs);
 		return -EINVAL;
 	}
 
@@ -572,45 +630,17 @@ static int  tegra_hv_vse_sha_final(struct ahash_request *req)
 	ivc_tx.args.sha.mode = sha_ctx->mode;
 	ivc_tx.args.sha.msg_total_length = req->nbytes;
 
-	total_len = req->nbytes;
-	while (sg && total_len) {
-		dma_map_sg(se_dev->dev, sg, 1, DMA_TO_DEVICE);
-		len = min(sg->length, total_len);
-		addr = sg_dma_address(sg);
-		addr_offset = 0;
-		while (len >= TEGRA_VIRTUAL_SE_SHA_MAX_BUFFER_SIZE) {
-			process_len = (TEGRA_VIRTUAL_SE_SHA_MAX_BUFFER_SIZE -
-				sha_ctx->hashblock_size);
-			ivc_tx.args.sha.src.addr[i].lo =
-				addr + addr_offset;
-			ivc_tx.args.sha.src.addr[i++].hi = process_len;
-			addr_offset += process_len;
-			total_len -= process_len;
-			len -= process_len;
-			list_count++;
-			if (list_count > TEGRA_HV_VSE_SHA_MAX_LL_NUM) {
-				dev_err(se_dev->dev,
-					"Unsupported no. of list %d\n", i);
-				goto exit;
-			}
-		}
-		if (len) {
-			ivc_tx.args.sha.src.addr[i].lo =
-				addr + addr_offset;
-			ivc_tx.args.sha.src.addr[i++].hi = len;
-			list_count++;
-			if (list_count > TEGRA_HV_VSE_SHA_MAX_LL_NUM) {
-				dev_err(se_dev->dev,
-					"Unsupported no. of list %d\n", i);
-				goto exit;
-			}
-		}
-		total_len -= len;
-		sg = scatterwalk_sg_next(sg);
-		sg_count++;
-	}
+	err = tegra_hv_vse_prepare_ivc_linked_list(se_dev,
+		sg, req->nbytes,
+		TEGRA_HV_VSE_SHA_MAX_LL_NUM,
+		sha_ctx->hashblock_size,
+		ivc_tx.args.sha.src.addr,
+		&num_lists,
+		DMA_TO_DEVICE);
+	if (err)
+		goto exit;
 
-	ivc_tx.args.sha.src.number = i;
+	ivc_tx.args.sha.src.number = num_lists;
 	ivc_tx.args.sha.msg_block_length = req->nbytes;
 	ivc_tx.args.sha.msg_left_length = req->nbytes;
 
@@ -625,13 +655,13 @@ static int  tegra_hv_vse_sha_final(struct ahash_request *req)
 	if (ivc_rx.status)
 		err = ivc_rx.status;
 
-exit:
 	sg = req->src;
-	while (sg && sg_count--) {
+	while (sg) {
 		dma_unmap_sg(se_dev->dev, sg, 1, DMA_TO_DEVICE);
 		sg = scatterwalk_sg_next(sg);
 	}
 
+exit:
 	dma_unmap_single(se_dev->dev,
 		dst_buf_addr, sha_ctx->digest_size, DMA_FROM_DEVICE);
 
@@ -995,10 +1025,9 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 	struct tegra_virtual_se_ivc_resp_msg_t ivc_rx;
 	struct tegra_hv_ivc_cookie *pivck = g_ivck;
 	struct scatterlist *dst_sg;
-	int dst_sg_count = 0;
 	int err = 0;
-	u32 total_len;
 	int i;
+	int num_lists = 0;
 
 	se_dev = req_ctx->se_dev;
 	if (!aes_ctx->is_key_slot_allocated) {
@@ -1035,29 +1064,27 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 	ivc_tx.args.aes.op.mode = req_ctx->op_mode;
 	ivc_tx.args.aes.op.ivsel = AES_ORIGINAL_IV;
 
-	i = 0;
-	total_len = req->nbytes;
-	dst_sg = req->dst;
-
 	if (req->src != req->dst)
 		tegra_hv_vse_copy_to_dst_sg(se_dev, req);
 
-	while (dst_sg && total_len) {
-		dma_map_sg(se_dev->dev, dst_sg, 1, DMA_BIDIRECTIONAL);
+	err = tegra_hv_vse_prepare_ivc_linked_list(se_dev, req->dst,
+			req->nbytes, TEGRA_HV_VSE_AES_MAX_LL_NUM,
+			TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
+			ivc_tx.args.aes.op.dst_addr,
+			&num_lists,
+			DMA_BIDIRECTIONAL);
+	if (err)
+		goto exit;
+
+	ivc_tx.args.aes.op.src_ll_num = num_lists;
+	ivc_tx.args.aes.op.dst_ll_num = num_lists;
+
+	for (i = 0; i < num_lists; i++) {
 		ivc_tx.args.aes.op.src_addr[i].lo =
-			sg_dma_address(dst_sg);
+			ivc_tx.args.aes.op.dst_addr[i].lo;
 		ivc_tx.args.aes.op.src_addr[i].hi =
-				min(dst_sg->length, total_len);
-		ivc_tx.args.aes.op.dst_addr[i].lo =
-			sg_dma_address(dst_sg);
-		ivc_tx.args.aes.op.dst_addr[i++].hi =
-				min(dst_sg->length, total_len);
-		total_len -= min(dst_sg->length, total_len);
-		dst_sg_count++;
-		dst_sg = scatterwalk_sg_next(dst_sg);
+			ivc_tx.args.aes.op.dst_addr[i].hi;
 	}
-	ivc_tx.args.aes.op.src_ll_num = i;
-	ivc_tx.args.aes.op.dst_ll_num = i;
 	ivc_tx.args.aes.op.data_length = req->nbytes;
 
 	err = tegra_hv_vse_send_ivc(se_dev, pivck, &ivc_tx, sizeof(ivc_tx));
@@ -1073,7 +1100,7 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 
 exit:
 	dst_sg = req->dst;
-	while (dst_sg && dst_sg_count--) {
+	while (dst_sg && num_lists--) {
 		dma_unmap_sg(se_dev->dev, dst_sg, 1, DMA_BIDIRECTIONAL);
 		dst_sg = scatterwalk_sg_next(dst_sg);
 	}
@@ -1310,14 +1337,13 @@ static int tegra_hv_vse_cmac_final(struct ahash_request *req)
 	unsigned int sg_flags = SG_MITER_ATOMIC;
 	u8 *temp_buffer = NULL;
 	bool use_orig_iv = true;
-	int src_sg_count = 0;
-	int process_len;
 	dma_addr_t cmac_dma_addr;
 	u8 *cmac_buffer = NULL;
 	dma_addr_t piv_buf_dma_addr;
 	u8 *piv_buf = NULL;
 	dma_addr_t result_dma_addr;
 	int err = 0;
+	int num_lists = 0;
 
 	blocks_to_process = req->nbytes / TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE;
 	/* num of bytes less than block size */
@@ -1353,26 +1379,22 @@ static int tegra_hv_vse_cmac_final(struct ahash_request *req)
 	/* first process all blocks except last block */
 	if (blocks_to_process) {
 		total_len = blocks_to_process * TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE;
-		process_len = total_len;
 		ivc_tx.args.aes.op_cmac.keyslot = cmac_ctx->aes_keyslot;
 		ivc_tx.args.aes.op_cmac.key_length = cmac_ctx->keylen;
 		ivc_tx.args.aes.op_cmac.streamid = se_dev->stream_id;
 		ivc_tx.args.aes.op_cmac.ivsel = AES_ORIGINAL_IV;
 
-		src_sg = req->src;
-		while (src_sg && total_len) {
-			dma_map_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
-			ivc_tx.args.aes.op_cmac.src.addr[i].lo =
-				sg_dma_address(src_sg);
-			ivc_tx.args.aes.op_cmac.src.addr[i++].hi =
-				min(src_sg->length, total_len);
-			total_len -= min(src_sg->length, total_len);
-			src_sg_count++;
-			src_sg = scatterwalk_sg_next(src_sg);
-		}
+		err = tegra_hv_vse_prepare_ivc_linked_list(se_dev, req->src,
+			total_len, TEGRA_HV_VSE_AES_CMAC_MAX_LL_NUM,
+			TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
+			ivc_tx.args.aes.op_cmac.src.addr,
+			&num_lists,
+			DMA_TO_DEVICE);
+		if (err)
+			goto exit;
 
-		ivc_tx.args.aes.op_cmac.src.number = i;
-		ivc_tx.args.aes.op_cmac.data_length = process_len;
+		ivc_tx.args.aes.op_cmac.src.number = num_lists;
+		ivc_tx.args.aes.op_cmac.data_length = total_len;
 		ivc_tx.args.aes.op_cmac.dst = piv_buf_dma_addr;
 
 		err = tegra_hv_vse_send_ivc(se_dev,
@@ -1488,13 +1510,12 @@ unmap_exit:
 	dma_unmap_single(se_dev->dev, result_dma_addr,
 		TEGRA_VIRUTAL_SE_AES_CMAC_DIGEST_SIZE, DMA_FROM_DEVICE);
 
-exit:
 	src_sg = req->src;
-	while (src_sg && src_sg_count--) {
+	while (src_sg) {
 		dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
 		src_sg = scatterwalk_sg_next(src_sg);
 	}
-
+exit:
 	if (cmac_buffer)
 		dma_free_coherent(se_dev->dev, TEGRA_VIRTUAL_SE_AES_BLOCK_SIZE,
 			cmac_buffer, cmac_dma_addr);

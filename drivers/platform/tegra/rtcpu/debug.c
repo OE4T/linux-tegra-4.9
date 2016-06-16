@@ -15,6 +15,7 @@
  */
 
 #include "camrtc-dbg-messages.h"
+#include "camrtc-commands.h"
 
 #include <linux/debugfs.h>
 #include <linux/kernel.h>
@@ -207,7 +208,7 @@ static int camrtc_show_ping(struct seq_file *file, void *data)
 	};
 	struct camrtc_dbg_response resp;
 	u64 sent, recv, tsc;
-	int ret = 0;
+	int ret;
 
 	sent = sched_clock();
 	req.data.ping_data.ts_req = sent;
@@ -234,6 +235,36 @@ static int camrtc_show_ping(struct seq_file *file, void *data)
 }
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_ping, camrtc_show_ping);
+
+static int camrtc_show_sm_ping(struct seq_file *file, void *data)
+{
+	struct tegra_ivc_channel *ch = file->private;
+	struct device *camrtc = camrtc_get_device(ch);
+	u64 sent, recv;
+	u32 command;
+	int ret;
+
+	sent = sched_clock();
+
+	command = RTCPU_COMMAND(PING, sent & 0xffffff);
+
+	ret = tegra_camrtc_command(camrtc, command, 0);
+	if (ret < 0)
+		return ret;
+
+	recv = sched_clock();
+
+	seq_printf(file,
+		"roundtrip=%llu.%03llu us "
+		"(sent=%llu.%09llu recv=%llu.%09llu)\n",
+		(recv - sent) / 1000, (recv - sent) % 1000,
+		sent / 1000000000, sent % 1000000000,
+		recv / 1000000000, recv % 1000000000);
+
+	return 0;
+}
+
+DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_sm_ping, camrtc_show_sm_ping);
 
 static int camrtc_show_mods_result(struct seq_file *file, void *data)
 {
@@ -484,6 +515,9 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 		goto error;
 	if (!debugfs_create_file("ping", S_IRUGO, dir, ch,
 			&camrtc_dbgfs_fops_ping))
+		goto error;
+	if (!debugfs_create_file("sm-ping", S_IRUGO, dir, ch,
+			&camrtc_dbgfs_fops_sm_ping))
 		goto error;
 	if (!debugfs_create_u32("timeout", S_IRUGO | S_IWUSR, dir,
 			&crd->parameters.completion_timeout))

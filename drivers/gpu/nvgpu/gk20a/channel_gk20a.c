@@ -1465,7 +1465,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		return -EEXIST;
 	}
 
-	err = gk20a_gmmu_alloc_map_sys(ch_vm,
+	err = gk20a_gmmu_alloc_map(ch_vm,
 			gpfifo_size * sizeof(struct nvgpu_gpfifo),
 			&c->gpfifo.mem);
 	if (err) {

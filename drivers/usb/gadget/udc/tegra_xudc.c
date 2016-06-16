@@ -1627,6 +1627,10 @@ static int __tegra_xudc_ep_enable(struct tegra_xudc_ep *ep,
 	unsigned int i;
 	u32 val;
 
+	if (xudc->gadget.speed == USB_SPEED_SUPER &&
+		!usb_endpoint_xfer_control(desc) && !ep->usb_ep.comp_desc)
+		return -EINVAL;
+
 	/* Disable the EP if it is not disabled */
 	if (ep_ctx_read_state(ep->context) != EP_STATE_DISABLED)
 		__tegra_xudc_ep_disable(ep);

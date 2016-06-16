@@ -609,6 +609,15 @@ static void platform_drv_shutdown(struct device *_dev)
 		drv->shutdown(dev);
 }
 
+static void platform_drv_late_shutdown(struct device *_dev)
+{
+	struct platform_driver *drv = to_platform_driver(_dev->driver);
+	struct platform_device *dev = to_platform_device(_dev);
+
+	if (drv->late_shutdown)
+		drv->late_shutdown(dev);
+}
+
 /**
  * __platform_driver_register - register a driver for platform-level devices
  * @drv: platform driver structure
@@ -622,6 +631,7 @@ int __platform_driver_register(struct platform_driver *drv,
 	drv->driver.probe = platform_drv_probe;
 	drv->driver.remove = platform_drv_remove;
 	drv->driver.shutdown = platform_drv_shutdown;
+	drv->driver.late_shutdown = platform_drv_late_shutdown;
 
 	return driver_register(&drv->driver);
 }

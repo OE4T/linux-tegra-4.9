@@ -84,7 +84,6 @@ struct gk20a_platform {
 	bool enable_aelpg;
 
 	/* Timeout for per-channel watchdog (in mS) */
-	bool ch_wdt_enabled;
 	u32 ch_wdt_timeout_ms;
 
 	/* Enable SMMU bypass by default */

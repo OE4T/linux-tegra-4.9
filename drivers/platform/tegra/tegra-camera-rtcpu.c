@@ -106,7 +106,6 @@ enum tegra_cam_rtcpu_id {
 };
 
 struct tegra_cam_rtcpu_pdata {
-	const char *rtcpu_name;
 	const char * const *clock_names;
 	const char * const *reset_names;
 	struct clk **clocks;
@@ -118,7 +117,6 @@ struct tegra_cam_rtcpu_pdata {
 };
 
 static const struct tegra_cam_rtcpu_pdata sce_pdata = {
-	.rtcpu_name = "sce",
 	.clock_names = sce_clock_names,
 	.reset_names = sce_reset_names,
 	.clocks = sce_clocks,
@@ -130,7 +128,6 @@ static const struct tegra_cam_rtcpu_pdata sce_pdata = {
 };
 
 static const struct tegra_cam_rtcpu_pdata ape_pdata = {
-	.rtcpu_name = "ape",
 	.clock_names = ape_clock_names,
 	.reset_names = ape_reset_names,
 	.clocks = ape_clocks,

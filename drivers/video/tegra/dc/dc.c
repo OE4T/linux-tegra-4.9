@@ -1974,6 +1974,96 @@ static const struct file_operations dbg_window_toggle_ops = {
 	.release = single_release,
 };
 
+static int dbg_dc_cmu_lut1_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc *dc = s->private;
+	u32 val;
+	int i;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+	/* Disable CMU while reading LUTs */
+	val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
+	tegra_dc_writel(dc, val & ~CMU_ENABLE, DC_DISP_DISP_COLOR_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	_tegra_dc_wait_for_frame_end(dc,
+		div_s64(dc->frametime_ns, 1000000ll) * 2);
+
+	for (i = 0; i < 256; i++) {
+		tegra_dc_writel(dc, LUT1_READ_EN | LUT1_READ_ADDR(i),
+			DC_COM_CMU_LUT1_READ);
+
+		seq_printf(s, "%lu\n",
+			LUT1_READ_DATA(tegra_dc_readl(dc, DC_COM_CMU_LUT1)));
+	}
+	tegra_dc_writel(dc, 0, DC_COM_CMU_LUT1_READ);
+
+	tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+	return 0;
+}
+
+static int dbg_dc_cmu_lut1_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dc_cmu_lut1_show, inode->i_private);
+}
+
+static const struct file_operations cmu_lut1_fops = {
+	.open		= dbg_dc_cmu_lut1_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
+static int dbg_dc_cmu_lut2_show(struct seq_file *s, void *unused)
+{
+	struct tegra_dc *dc = s->private;
+	u32 val;
+	int i;
+
+	mutex_lock(&dc->lock);
+	tegra_dc_get(dc);
+
+	/* Disable CMU while reading LUTs */
+	val = tegra_dc_readl(dc, DC_DISP_DISP_COLOR_CONTROL);
+	tegra_dc_writel(dc, val & ~CMU_ENABLE, DC_DISP_DISP_COLOR_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+	_tegra_dc_wait_for_frame_end(dc,
+		div_s64(dc->frametime_ns, 1000000ll) * 2);
+
+	for (i = 0; i < 960; i++) {
+		tegra_dc_writel(dc, LUT2_READ_EN | LUT2_READ_ADDR(i),
+			DC_COM_CMU_LUT2_READ);
+
+		seq_printf(s, "%lu\n",
+			LUT2_READ_DATA(tegra_dc_readl(dc, DC_COM_CMU_LUT2)));
+	}
+	tegra_dc_writel(dc, 0, DC_COM_CMU_LUT2_READ);
+
+	tegra_dc_writel(dc, val, DC_DISP_DISP_COLOR_CONTROL);
+	tegra_dc_writel(dc, GENERAL_ACT_REQ, DC_CMD_STATE_CONTROL);
+
+	tegra_dc_put(dc);
+	mutex_unlock(&dc->lock);
+	return 0;
+}
+
+static int dbg_dc_cmu_lut2_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbg_dc_cmu_lut2_show, inode->i_private);
+}
+
+static const struct file_operations cmu_lut2_fops = {
+	.open		= dbg_dc_cmu_lut2_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 {
 	if (dc->debugdir)
@@ -2173,6 +2263,17 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	if (!retval)
 		goto remove_out;
 #endif
+
+	retval = debugfs_create_file("cmu_lut1", S_IRUGO, dc->debugdir, dc,
+		&cmu_lut1_fops);
+	if (!retval)
+		goto remove_out;
+
+	retval = debugfs_create_file("cmu_lut2", S_IRUGO, dc->debugdir, dc,
+		&cmu_lut2_fops);
+	if (!retval)
+		goto remove_out;
+
 	return;
 remove_out:
 	dev_err(&dc->ndev->dev, "could not create debugfs\n");

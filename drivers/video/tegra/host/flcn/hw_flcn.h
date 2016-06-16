@@ -146,6 +146,14 @@ static inline u32 flcn_itfen_mthden_enable_f(void)
 {
 	return 0x2;
 }
+static inline u32 flcn_mailbox0_r(void)
+{
+	return 0x00001040;
+}
+static inline u32 flcn_mailbox1_r(void)
+{
+	return 0x00001044;
+}
 static inline u32 flcn_idlestate_r(void)
 {
 	return 0x0000104c;

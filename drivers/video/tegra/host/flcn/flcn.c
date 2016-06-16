@@ -59,12 +59,12 @@ static irqreturn_t flcn_isr(int irq, void *dev_id)
 	struct platform_device *pdev = (struct platform_device *)(dev_id);
 	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
 
+	if (pdata->flcn_isr)
+		pdata->flcn_isr(pdev);
+
 	host1x_writel(pdev, flcn_irqsclr_r(), flcn_irqsclr_swgen0_set_f() |
 					      flcn_irqsclr_swgen1_set_f());
 	host1x_writel(pdev, flcn_thi_int_stat_r(), flcn_thi_int_stat_clr_f());
-
-	if (pdata->flcn_isr)
-		pdata->flcn_isr(pdev);
 
 	return IRQ_HANDLED;
 }
@@ -87,6 +87,9 @@ int flcn_intr_init(struct platform_device *pdev)
 		dev_err(&pdev->dev, "failed to request irq. err %d\n", ret);
 		return ret;
 	}
+
+	/* keep irq disabled */
+	disable_irq(pdata->irq);
 
 	return 0;
 }

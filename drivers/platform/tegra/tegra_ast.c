@@ -49,6 +49,26 @@
 /* TEGRA_APS_AST_REGION_<x>_SLAVE_BASE_LO register fields */
 #define AST_SLV_BASE_LO_ENABLE		1
 
+static void __iomem *tegra_ast_map_one(struct device *dev, int index)
+{
+	struct resource mem;
+	int err = of_address_to_resource(dev->of_node, index, &mem);
+	if (err)
+		return IOMEM_ERR_PTR(err);
+
+	/* NOTE: assumes size is large enough for caller */
+	return devm_ioremap_resource(dev, &mem);
+}
+
+void __iomem *tegra_ast_map_byname(struct device *dev, const char *name)
+{
+	int index = of_property_match_string(dev->of_node, "reg-names", name);
+	if (index < 0)
+		return IOMEM_ERR_PTR(-ENOENT);
+	return tegra_ast_map_one(dev, index);
+}
+EXPORT_SYMBOL(tegra_ast_map_byname);
+
 int tegra_ast_map(struct device *dev, const char *name,
 			unsigned count, void __iomem *bases[])
 {

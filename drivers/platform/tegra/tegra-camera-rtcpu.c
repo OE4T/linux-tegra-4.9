@@ -23,10 +23,10 @@
 #include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
-#include <linux/of_address.h>
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/slab.h>
+#include <linux/tegra_ast.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/wait.h>
@@ -502,7 +502,6 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu;
 	struct device *dev = &pdev->dev;
-	struct device_node *dev_node = dev->of_node;
 	struct device_node *hsp_node;
 	int ret;
 	const struct of_device_id *match;
@@ -527,14 +526,16 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		/* EVP should be mapped if the (APE) FW is reloaded by kernel */
 
 		/* SCE PM addr */
-		cam_rtcpu->rtcpu_sce.sce_pm_base = of_iomap(dev_node, 1);
+		cam_rtcpu->rtcpu_sce.sce_pm_base =
+			tegra_ast_map_byname(dev, "sce-pm");
 		if (!cam_rtcpu->rtcpu_sce.sce_pm_base) {
 			dev_err(dev, "failed to map SCE PM space.\n");
 			return -EINVAL;
 		}
 
 		/* SCE CFG addr */
-		cam_rtcpu->rtcpu_sce.sce_cfg_base = of_iomap(dev_node, 2);
+		cam_rtcpu->rtcpu_sce.sce_cfg_base =
+			tegra_ast_map_byname(dev, "sce-cfg");
 		if (!cam_rtcpu->rtcpu_sce.sce_cfg_base) {
 			dev_err(dev, "failed to map SCE CFG space.\n");
 			return -EINVAL;

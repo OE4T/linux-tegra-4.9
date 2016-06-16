@@ -46,6 +46,8 @@ struct tegra_ast_region_info {
 	u32 control;
 };
 
+void __iomem *tegra_ast_map_byname(struct device *, const char *name);
+
 int tegra_ast_map(struct device *, const char *name, unsigned count,
 			void __iomem *[]);
 void tegra_ast_unmap(struct device *, unsigned count, void __iomem *const []);

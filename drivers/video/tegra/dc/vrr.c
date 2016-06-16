@@ -98,7 +98,7 @@ static ssize_t vrr_settings_show(struct kobject *kobj,
 
 #define vrr_check_and_update(_min, _max, _varname) { \
 	int val; \
-	if (kstrtol(buf, 10, (long *)&val) != -EINVAL) { \
+	if (kstrtoint(buf, 10, &val) != -EINVAL) { \
 		if (val >= _min && val <= _max) { \
 			vrr->_varname = val; \
 	} } }

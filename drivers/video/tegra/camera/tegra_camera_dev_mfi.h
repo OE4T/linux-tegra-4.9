@@ -44,6 +44,10 @@ struct camera_mfi_dev {
 	struct list_head list;
 };
 
+struct mfi_cb_arg {
+	u8 vi_chan;
+};
+
 int tegra_camera_dev_mfi_init(void);
 void tegra_camera_dev_mfi_cb(void *stub);
 int tegra_camera_dev_mfi_clear(struct camera_mfi_dev *cmfidev);

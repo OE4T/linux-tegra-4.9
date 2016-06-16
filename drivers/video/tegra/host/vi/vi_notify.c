@@ -34,12 +34,18 @@
 
 struct tegra_vi4_syncpts_req {
 	u32 syncpt_ids[3];
-	u32 pad;
+	u8 stream;
+	u8 vc;
+	u16 pad;
 };
 
 #define NVHOST_VI_SET_IGN_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 10, u32)
 #define NVHOST_VI_SET_SYNCPTS \
 	_IOW(NVHOST_VI_IOCTL_MAGIC, 13, struct tegra_vi4_syncpts_req)
+#define NVHOST_VI_ENABLE_REPORTS \
+	_IOW(NVHOST_VI_IOCTL_MAGIC, 14, struct tegra_vi4_syncpts_req)
+#define NVHOST_VI_RESET_CHANNEL \
+	_IOW(NVHOST_VI_IOCTL_MAGIC, 15, struct tegra_vi4_syncpts_req)
 
 struct vi_notify_channel {
 	struct vi_notify_dev *vnd;
@@ -51,7 +57,9 @@ struct vi_notify_channel {
 
 	atomic_t overruns;
 	atomic_t errors;
+	atomic_t report;
 	DECLARE_KFIFO(fifo, struct vi_notify_msg, 128);
+	struct vi_capture_status status;
 };
 
 struct vi_notify_dev {
@@ -107,6 +115,24 @@ void vi_notify_dev_error(struct vi_notify_dev *vnd)
 	rcu_read_unlock();
 }
 EXPORT_SYMBOL(vi_notify_dev_error);
+
+void vi_notify_dev_report(struct vi_notify_dev *vnd, u8 channel,
+			const struct vi_capture_status *status)
+{
+	struct vi_notify_channel *chan;
+
+	rcu_read_lock();
+	chan = rcu_dereference(vnd->channels[channel]);
+
+	if (chan != NULL && !atomic_read(&chan->report)) {
+		chan->status = *status;
+		atomic_set(&chan->report, 1);
+		wake_up(&chan->readq);
+	}
+
+	rcu_read_unlock();
+}
+EXPORT_SYMBOL(vi_notify_dev_report);
 
 static bool vi_notify_is_broadcast(u8 tag)
 {
@@ -170,13 +196,25 @@ static ssize_t vi_notify_read(struct file *file, char __user *buf, size_t len,
 		DEFINE_WAIT(wait);
 		unsigned int copied;
 		int ret = 0;
+		unsigned report = atomic_read(&chan->report);
 
-		if (len < sizeof(struct vi_notify_msg))
+		if (len < (report
+				? sizeof(struct vi_capture_status)
+				: sizeof(struct vi_notify_msg)))
 			return 0;
+
 		if (mutex_lock_interruptible(&chan->read_lock))
 			return -ERESTARTSYS;
 
-		ret = kfifo_to_user(&chan->fifo, buf, len, &copied);
+		if (report) {
+			copied = sizeof(chan->status);
+			if (copy_to_user(buf, &chan->status, copied))
+				ret = -EFAULT;
+			atomic_set(&chan->report, 0);
+		} else {
+			ret = kfifo_to_user(&chan->fifo, buf, len, &copied);
+		}
+
 		mutex_unlock(&chan->read_lock);
 
 		if (ret)
@@ -216,6 +254,8 @@ static unsigned int vi_notify_poll(struct file *file,
 		ret |= POLLIN | POLLRDNORM;
 	if (atomic_read(&chan->overruns) || atomic_read(&chan->errors))
 		ret |= POLLERR;
+	if (atomic_read(&chan->report))
+		ret |= POLLPRI;
 
 	return ret;
 }
@@ -259,6 +299,8 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 		struct tegra_vi4_syncpts_req req;
 		int err;
 
+		if (!vnd->driver->set_syncpts)
+			return -ENOTSUPP;
 		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
 			return -EFAULT;
 		if (req.pad)
@@ -270,6 +312,42 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 						req.syncpt_ids);
 		mutex_unlock(&vnd->lock);
 		return err;
+	}
+
+	case NVHOST_VI_ENABLE_REPORTS: {
+		struct tegra_vi4_syncpts_req req;
+		int err;
+
+		if (!vnd->driver->enable_reports)
+			return -ENOTSUPP;
+		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
+			return -EFAULT;
+		if (req.pad)
+			return -EINVAL;
+		if (mutex_lock_interruptible(&vnd->lock))
+			return -ERESTARTSYS;
+
+		err = vnd->driver->enable_reports(vnd->device, channel,
+					req.stream, req.vc, req.syncpt_ids);
+		mutex_unlock(&vnd->lock);
+		return err;
+	}
+
+	case NVHOST_VI_RESET_CHANNEL: {
+		struct tegra_vi4_syncpts_req req;
+
+		if (!vnd->driver->reset_channel)
+			return -ENOTSUPP;
+		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
+			return -EFAULT;
+		if (req.pad)
+			return -EINVAL;
+		if (mutex_lock_interruptible(&vnd->lock))
+			return -ERESTARTSYS;
+
+		vnd->driver->reset_channel(vnd->device, channel);
+		mutex_unlock(&vnd->lock);
+		return 0;
 	}
 	}
 
@@ -312,6 +390,7 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 
 	atomic_set(&chan->overruns, 0);
 	atomic_set(&chan->errors, 0);
+	atomic_set(&chan->report, 0);
 	INIT_KFIFO(chan->fifo);
 
 	mutex_lock(&vnd->lock);

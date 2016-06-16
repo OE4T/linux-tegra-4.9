@@ -396,6 +396,9 @@ int vgpu_pm_finalize_poweron(struct device *dev)
 	if (err)
 		goto done;
 
+	if (g->ops.ltc.init_fs_state)
+		g->ops.ltc.init_fs_state(g);
+
 	err = vgpu_init_mm_support(g);
 	if (err) {
 		gk20a_err(dev, "failed to init gk20a mm");

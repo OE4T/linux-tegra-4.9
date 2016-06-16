@@ -1346,6 +1346,8 @@ static void tegra_i2c_shutdown(struct platform_device *pdev)
 {
 	struct tegra_i2c_dev *i2c_dev = platform_get_drvdata(pdev);
 
+	dev_info(i2c_dev->dev, "Bus is shutdown down..\n");
+	i2c_shutdown_adapter(&i2c_dev->adapter);
 	i2c_dev->is_shutdown = true;
 }
 
@@ -1390,7 +1392,7 @@ static const struct dev_pm_ops tegra_i2c_pm = {
 static struct platform_driver tegra_i2c_driver = {
 	.probe   = tegra_i2c_probe,
 	.remove  = tegra_i2c_remove,
-	.shutdown = tegra_i2c_shutdown,
+	.late_shutdown = tegra_i2c_shutdown,
 	.driver  = {
 		.name  = "tegra-i2c",
 		.of_match_table = tegra_i2c_of_match,

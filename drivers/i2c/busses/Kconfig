@@ -905,6 +905,7 @@ config I2C_SUN6I_P2WI
 config I2C_TEGRA
 	tristate "NVIDIA Tegra internal I2C controller"
 	depends on ARCH_TEGRA
+	select I2C_ALGOBIT
 	help
 	  If you say yes to this option, support will be included for the
 	  I2C controller embedded in NVIDIA Tegra SOCs

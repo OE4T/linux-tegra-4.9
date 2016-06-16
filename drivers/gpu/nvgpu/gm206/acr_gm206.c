@@ -56,31 +56,12 @@ static void flcn64_set_dma(struct falc_u64 *dma_addr, u64 value)
 int gm206_alloc_blob_space(struct gk20a *g,
 		size_t size, struct mem_desc *mem)
 {
-	int err = 0;
 	struct wpr_carveout_info wpr_inf;
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 
-	mem->aperture = APERTURE_VIDMEM;
-	mem->sgt = kzalloc(sizeof(*mem->sgt), GFP_KERNEL);
-	if (!mem->sgt) {
-		gk20a_err(dev_from_gk20a(g), "failed to allocate memory\n");
-		return -ENOMEM;
-	}
-
-	err = sg_alloc_table(mem->sgt, 1, GFP_KERNEL);
-	if (err) {
-		gk20a_err(dev_from_gk20a(g), "failed to allocate sg_table\n");
-		goto free_sgt;
-	}
-
-	sg_dma_address(mem->sgt->sgl) = wpr_inf.wpr_base;
-
-	return err;
-
-free_sgt:
-	gk20a_free_sgtable(&mem->sgt);
-	return err;
+	return gk20a_gmmu_alloc_attr_vid_at(g, 0, wpr_inf.size, mem,
+			wpr_inf.wpr_base);
 }
 
 void gm206_init_secure_pmu(struct gpu_ops *gops)

@@ -33,7 +33,8 @@ struct vi_notify_req {
 		struct {
 			u8 type;
 			u8 channel;
-			u8 pad1[2];
+			u8 stream;
+			u8 vc;
 			union {
 				u32 syncpt_ids[3];
 				u32 mask;
@@ -47,7 +48,21 @@ enum {
 	TEGRA_IVC_VI_CLASSIFY,
 	TEGRA_IVC_VI_SET_SYNCPTS,
 	TEGRA_IVC_VI_RESET_CHANNEL,
+	TEGRA_IVC_VI_ENABLE_REPORTS,
 };
+
+/* Extended VI notify message */
+struct vi_notify_msg_ex {
+	u32 type;	/* message type (LSB=0) */
+	u32 dest;	/* destination channels (bitmask) */
+	u32 size;	/* data size */
+	u8 data[];	/* payload data */
+};
+
+/* Extended message types */
+#define VI_NOTIFY_MSG_INVALID	0x00000000
+#define VI_NOTIFY_MSG_ACK	0x00000002
+#define VI_NOTIFY_MSG_STATUS	0x00000004
 
 struct tegra_ivc_vi_notify {
 	struct vi_notify_dev *vi_notify;
@@ -58,13 +73,32 @@ struct tegra_ivc_vi_notify {
 };
 
 static void tegra_ivc_vi_notify_process(struct tegra_ivc_channel *chan,
-					const struct vi_notify_msg *msg)
+					const struct vi_notify_msg_ex *msg)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	struct vi_notify_dev *vnd = ivn->vi_notify;
+	u32 mask;
+	u8 ch;
 
-	switch (VI_NOTIFY_TAG_TAG(msg->tag)) {
-	case 1: /* acknowledgement */
+	switch (msg->type) {
+	case VI_NOTIFY_MSG_ACK:
 		complete(&ivn->ack);
+		break;
+	case VI_NOTIFY_MSG_STATUS:
+		if (msg->size != sizeof(struct vi_capture_status)) {
+			dev_warn(&chan->dev, "Invalid status message.\n");
+			break;
+		}
+		mask = msg->dest & ivn->channels;
+		for (ch = 0; mask; mask >>= 1, ch++) {
+			if (!(mask & 1u))
+				continue;
+			vi_notify_dev_report(vnd, ch,
+					(struct vi_capture_status *)msg->data);
+		}
+		break;
+	default:
+		dev_warn(&chan->dev, "Unknown message type: %u\n", msg->type);
 		break;
 	}
 }
@@ -82,7 +116,7 @@ static void tegra_ivc_vi_notify_recv(struct tegra_ivc_channel *chan,
 		if (VI_NOTIFY_TAG_VALID(entries->tag))
 			vi_notify_dev_recv(ivn->vi_notify, entries);
 		else
-			tegra_ivc_vi_notify_process(chan, entries);
+			tegra_ivc_vi_notify_process(chan, data);
 
 		entries++;
 		len -= sizeof(*entries);
@@ -184,6 +218,31 @@ static int tegra_ivc_vi_notify_set_syncpts(struct device *dev, u8 ch,
 	return err;
 }
 
+static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
+					u8 st, u8 vc, const u32 ids[3])
+{
+	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+	struct vi_notify_req msg = {
+		.type = TEGRA_IVC_VI_ENABLE_REPORTS,
+		.channel = ch,
+		.stream = st,
+		.vc = vc,
+	};
+	int err;
+
+	memcpy(msg.syncpt_ids, ids, sizeof(msg.syncpt_ids));
+
+	err = tegra_ivc_vi_notify_send(chan, &msg);
+	if (likely(err == 0))
+		ivn->channels |= 1u << ch;
+
+	if (ivn->tags == 0 && ivn->channels == 0)
+		nvhost_module_idle(ivn->vi);
+
+	return err;
+}
+
 static void tegra_ivc_vi_notify_reset_channel(struct device *dev, u8 ch)
 {
 	struct tegra_ivc_channel *chan = to_tegra_ivc_channel(dev);
@@ -206,6 +265,7 @@ static struct vi_notify_driver tegra_ivc_vi_notify_driver = {
 	.probe		= tegra_ivc_vi_notify_probe,
 	.classify	= tegra_ivc_vi_notify_classify,
 	.set_syncpts	= tegra_ivc_vi_notify_set_syncpts,
+	.enable_reports = tegra_ivc_vi_notify_enable_reports,
 	.reset_channel	= tegra_ivc_vi_notify_reset_channel,
 };
 

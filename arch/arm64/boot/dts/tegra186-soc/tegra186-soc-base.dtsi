@@ -44,6 +44,7 @@
 #include "tegra186-soc/tegra186-camera.dtsi"
 #include "tegra186-soc/tegra186-soc-actmon.dtsi"
 #include <../../../../include/dt-bindings/soc/gp10b-fuse.h>
+#include <tegra186-soc-pm.dtsi>
 
 / {
 	compatible = "nvidia,tegra186";

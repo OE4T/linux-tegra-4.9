@@ -183,11 +183,12 @@ static int tegra_cam_rtcpu_get_clks_resets(struct device *dev)
 	for (i = 0; i < pdata->num_clocks; i++) {
 		pdata->clocks[i] = devm_clk_get(dev, pdata->clock_names[i]);
 		if (IS_ERR(pdata->clocks[i])) {
+			if (PTR_ERR(pdata->clocks[i]) == -EPROBE_DEFER)
+				return PTR_ERR(pdata->clocks[i]);
+
 			dev_err(dev, "clock %s not found: %ld\n",
 				pdata->clock_names[i],
 				PTR_ERR(pdata->clocks[i]));
-			if (PTR_ERR(pdata->clocks[i]) == -EPROBE_DEFER)
-				return PTR_ERR(pdata->clocks[i]);
 		}
 	}
 
@@ -195,11 +196,12 @@ static int tegra_cam_rtcpu_get_clks_resets(struct device *dev)
 		pdata->resets[i] =
 			devm_reset_control_get(dev, pdata->reset_names[i]);
 		if (IS_ERR(pdata->resets[i])) {
+			if (PTR_ERR(pdata->resets[i]) == -EPROBE_DEFER)
+				return PTR_ERR(pdata->resets[i]);
+
 			dev_err(dev, "reset %s not found: %ld\n",
 				pdata->reset_names[i],
 				PTR_ERR(pdata->resets[i]));
-			if (PTR_ERR(pdata->resets[i]) == -EPROBE_DEFER)
-				return PTR_ERR(pdata->resets[i]);
 		}
 	}
 

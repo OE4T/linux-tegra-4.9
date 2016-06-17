@@ -170,7 +170,8 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv)
+			   int rw_flag, bool sparse, bool priv,
+			   enum gk20a_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 pte_addr = 0;
@@ -184,9 +185,9 @@ static int update_gmmu_pde3_locked(struct vm_gk20a *vm,
 	pte_addr = entry_addr(g, pte) >> gmmu_new_pde_address_shift_v();
 	pde_addr = entry_addr(g, parent);
 
-	pde_v[0] |= g->mm.vidmem_is_vidmem ?
-			gmmu_new_pde_aperture_sys_mem_ncoh_f() :
-			gmmu_new_pde_aperture_video_memory_f();
+	pde_v[0] |= gk20a_aperture_mask(g, &pte->mem,
+			gmmu_new_pde_aperture_sys_mem_ncoh_f(),
+			gmmu_new_pde_aperture_video_memory_f());
 	pde_v[0] |= gmmu_new_pde_address_sys_f(u64_lo32(pte_addr));
 	pde_v[0] |= gmmu_new_pde_vol_true_f();
 	pde_v[1] |= pte_addr >> 24;
@@ -214,7 +215,8 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv)
+			   int rw_flag, bool sparse, bool priv,
+			   enum gk20a_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	bool small_valid, big_valid;
@@ -239,9 +241,9 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 
 	if (small_valid) {
 		pde_v[2] |= gmmu_new_dual_pde_address_small_sys_f(pte_addr_small);
-		pde_v[2] |= g->mm.vidmem_is_vidmem ?
-			gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f() :
-			gmmu_new_dual_pde_aperture_small_video_memory_f();
+		pde_v[2] |= gk20a_aperture_mask(g, &pte->mem,
+			gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(),
+			gmmu_new_dual_pde_aperture_small_video_memory_f());
 		pde_v[2] |= gmmu_new_dual_pde_vol_small_true_f();
 		pde_v[3] |= pte_addr_small >> 24;
 	}
@@ -249,9 +251,9 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	if (big_valid) {
 		pde_v[0] |= gmmu_new_dual_pde_address_big_sys_f(pte_addr_big);
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
-		pde_v[0] |= g->mm.vidmem_is_vidmem ?
-			gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f() :
-			gmmu_new_dual_pde_aperture_big_video_memory_f();
+		pde_v[0] |= gk20a_aperture_mask(g, &pte->mem,
+			gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(),
+			gmmu_new_dual_pde_aperture_big_video_memory_f());
 		pde_v[1] |= pte_addr_big >> 28;
 	}
 
@@ -276,7 +278,8 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv)
+			   int rw_flag, bool sparse, bool priv,
+			   enum gk20a_aperture aperture)
 {
 	struct gk20a *g = vm->mm->g;
 	u32 page_size  = vm->gmmu_page_sizes[gmmu_pgsz_idx];
@@ -284,15 +287,18 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 
 	if (*iova) {
-		if (unmapped_pte)
-			pte_w[0] = gmmu_new_pte_valid_false_f();
-		else
-			pte_w[0] = gmmu_new_pte_valid_true_f();
-		pte_w[0] |= g->mm.vidmem_is_vidmem ?
-			gmmu_new_pte_aperture_sys_mem_ncoh_f() :
-			gmmu_new_pte_aperture_video_memory_f();
-		pte_w[0] |= gmmu_new_pte_address_sys_f(*iova
-			      >> gmmu_new_pte_address_shift_v());
+		u32 pte_valid = unmapped_pte ?
+			gmmu_new_pte_valid_false_f() :
+			gmmu_new_pte_valid_true_f();
+		u32 iova_v = *iova >> gmmu_new_pte_address_shift_v();
+		u32 pte_addr = aperture == APERTURE_SYSMEM ?
+				gmmu_new_pte_address_sys_f(iova_v) :
+				gmmu_new_pte_address_vid_f(iova_v);
+		u32 pte_tgt = __gk20a_aperture_mask(g, aperture,
+				gmmu_new_pte_aperture_sys_mem_ncoh_f(),
+				gmmu_new_pte_aperture_video_memory_f());
+
+		pte_w[0] = pte_valid | pte_addr | pte_tgt;
 
 		if (priv)
 			pte_w[0] |= gmmu_new_pte_privilege_true_f();

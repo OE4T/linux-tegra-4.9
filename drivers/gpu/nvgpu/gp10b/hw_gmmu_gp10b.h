@@ -242,6 +242,14 @@ static inline u32 gmmu_new_pte_address_sys_w(void)
 {
 	return 0;
 }
+static inline u32 gmmu_new_pte_address_vid_f(u32 v)
+{
+	return (v & 0xffffff) << 8;
+}
+static inline u32 gmmu_new_pte_address_vid_w(void)
+{
+	return 0;
+}
 static inline u32 gmmu_new_pte_vol_w(void)
 {
 	return 0;

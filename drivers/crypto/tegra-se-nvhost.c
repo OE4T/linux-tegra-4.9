@@ -2623,6 +2623,7 @@ static struct ahash_alg hash_algs[] = {
 		.digest = tegra_se_aes_cmac_digest,
 		.setkey = tegra_se_aes_cmac_setkey,
 		.halg.digestsize = TEGRA_SE_AES_CMAC_DIGEST_SIZE,
+		.halg.statesize = TEGRA_SE_AES_CMAC_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "cmac(aes)",
 			.cra_driver_name = "tegra-se-cmac(aes)",
@@ -2642,6 +2643,7 @@ static struct ahash_alg hash_algs[] = {
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
 		.halg.digestsize = SHA1_DIGEST_SIZE,
+		.halg.statesize = SHA1_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha1",
 			.cra_driver_name = "tegra-se-sha1",
@@ -2661,6 +2663,7 @@ static struct ahash_alg hash_algs[] = {
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
 		.halg.digestsize = SHA224_DIGEST_SIZE,
+		.halg.statesize = SHA224_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha224",
 			.cra_driver_name = "tegra-se-sha224",
@@ -2680,6 +2683,7 @@ static struct ahash_alg hash_algs[] = {
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
 		.halg.digestsize = SHA256_DIGEST_SIZE,
+		.halg.statesize = SHA256_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha256",
 			.cra_driver_name = "tegra-se-sha256",
@@ -2699,6 +2703,7 @@ static struct ahash_alg hash_algs[] = {
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
 		.halg.digestsize = SHA384_DIGEST_SIZE,
+		.halg.statesize = SHA384_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha384",
 			.cra_driver_name = "tegra-se-sha384",
@@ -2718,6 +2723,7 @@ static struct ahash_alg hash_algs[] = {
 		.finup = tegra_se_sha_finup,
 		.digest = tegra_se_sha_digest,
 		.halg.digestsize = SHA512_DIGEST_SIZE,
+		.halg.statesize = SHA512_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha512",
 			.cra_driver_name = "tegra-se-sha512",
@@ -3061,7 +3067,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 				}
 			}
 		}
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 		if (is_algo_supported(se_dev,
 				hash_algs[0].halg.base.cra_name)) {
 			err = crypto_register_ahash(&hash_algs[0]);
@@ -3071,10 +3076,8 @@ static int tegra_se_probe(struct platform_device *pdev)
 				goto reg_fail;
 			}
 		}
-#endif
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	if (se_num == 3) {
 		for (i = 1; i < 6; i++) {
 			if (is_algo_supported(se_dev,
@@ -3090,6 +3093,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	if (se_num == 2) {
 		for (i = 6; i < ARRAY_SIZE(hash_algs); i++) {
 			if (is_algo_supported(se_dev,

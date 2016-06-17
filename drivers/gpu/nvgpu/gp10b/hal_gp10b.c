@@ -43,6 +43,7 @@
 
 #include "gp10b.h"
 #include "hw_proj_gp10b.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 #define FUSE_OPT_PRIV_SEC_EN_0 0x264
 #define PRIV_SECURITY_ENABLED 0x01
@@ -236,6 +237,7 @@ int gp10b_init_hal(struct gk20a *g)
 	gp10b_init_mm(gops);
 	gp10b_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
+	gk20a_init_dbg_session_ops(gops);
 	gp10b_init_regops(gops);
 	gp10b_init_cde_ops(gops);
 	gp10b_init_therm_ops(gops);

@@ -45,6 +45,7 @@
 #include "gp106/gr_gp106.h"
 #include "nvgpu_gpuid_t18x.h"
 #include "hw_proj_gp106.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 static struct gpu_ops gp106_ops = {
 	.clock_gating = {
@@ -198,6 +199,7 @@ int gp106_init_hal(struct gk20a *g)
 	gp106_init_mm(gops);
 	gp106_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
+	gk20a_init_dbg_session_ops(gops);
 	gp10b_init_regops(gops);
 	gp10b_init_cde_ops(gops);
 	gp10b_init_therm_ops(gops);

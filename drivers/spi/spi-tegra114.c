@@ -77,7 +77,8 @@
 #define SPI_RX_TAP_DELAY(x)			(((x) & 0x3F) << 0)
 
 #define SPI_CS_TIMING1				0x008
-#define SPI_SETUP_HOLD(setup, hold)		(((setup) << 4) | (hold))
+#define SPI_SETUP_HOLD(setup, hold)		(((setup - 1) << 4) |	\
+						(hold - 1))
 #define SPI_CS_SETUP_HOLD(reg, cs, val)			\
 		((((val) & 0xFFu) << ((cs) * 8)) |	\
 		((reg) & ~(0xFFu << ((cs) * 8))))
@@ -179,6 +180,9 @@ struct tegra_spi_chip_data {
 };
 
 struct tegra_spi_client_ctl_data {
+	bool is_hw_based_cs;
+	int cs_setup_clk_count;
+	int cs_hold_clk_count;
 	int rx_clk_tap_delay;
 	int tx_clk_tap_delay;
 };
@@ -208,6 +212,7 @@ struct tegra_spi_data {
 
 	unsigned				dma_buf_size;
 	unsigned				max_buf_size;
+	bool					is_hw_based_cs;
 	bool					is_curr_dma_xfer;
 
 	struct completion			rx_dma_complete;
@@ -221,6 +226,7 @@ struct tegra_spi_data {
 	u32					command1_reg;
 	u32					dma_control_reg;
 	u32					def_command1_reg;
+	u32					spi_cs_timing;
 	u32					def_command2_reg;
 	u8					last_used_cs;
 
@@ -752,9 +758,12 @@ static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
 }
 
 static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
-		struct spi_transfer *t, bool is_first_of_msg)
+					struct spi_transfer *t,
+					bool is_first_of_msg,
+					bool is_single_xfer)
 {
 	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
+	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
 	u32 speed = t->speed_hz;
 	u8 bits_per_word = t->bits_per_word;
 	u32 command1;
@@ -795,11 +804,43 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 		} else
 			tegra_spi_writel(tspi, command1, SPI_COMMAND1);
 
-		command1 |= SPI_CS_SW_HW;
-		if (spi->mode & SPI_CS_HIGH)
-			command1 |= SPI_CS_SS_VAL;
-		else
+		tspi->is_hw_based_cs = false;
+		if (cdata && cdata->is_hw_based_cs && is_single_xfer &&
+		    ((tspi->curr_dma_words * tspi->bytes_per_word) ==
+		     (t->len - tspi->cur_pos))) {
+			u32 set_count;
+			u32 hold_count;
+			u32 spi_cs_timing;
+			u32 spi_cs_setup;
+
+			set_count = min(cdata->cs_setup_clk_count, 16);
+			if (set_count)
+				set_count--;
+
+			hold_count = min(cdata->cs_hold_clk_count, 16);
+			if (hold_count)
+				hold_count--;
+
+			spi_cs_setup = SPI_SETUP_HOLD(set_count, hold_count);
+			spi_cs_timing = tspi->spi_cs_timing;
+			spi_cs_timing = SPI_CS_SETUP_HOLD(spi_cs_timing,
+							  spi->chip_select,
+							  spi_cs_setup);
+			tspi->spi_cs_timing = spi_cs_timing;
+			tegra_spi_writel(tspi, spi_cs_timing, SPI_CS_TIMING1);
+			tspi->is_hw_based_cs = true;
+		}
+
+		if (!tspi->is_hw_based_cs) {
+			command1 |= SPI_CS_SW_HW;
+			if (spi->mode & SPI_CS_HIGH)
+				command1 |= SPI_CS_SS_VAL;
+			else
+				command1 &= ~SPI_CS_SS_VAL;
+		} else {
+			command1 &= ~SPI_CS_SW_HW;
 			command1 &= ~SPI_CS_SS_VAL;
+		}
 
 		tegra_spi_set_cmd2(spi, speed);
 	} else {
@@ -852,6 +893,7 @@ static struct tegra_spi_client_ctl_data
 {
 	struct tegra_spi_client_ctl_data *cdata;
 	struct device_node *slave_np, *data_np;
+	int ret;
 
 	slave_np = spi->dev.of_node;
 	if (!slave_np) {
@@ -871,6 +913,14 @@ static struct tegra_spi_client_ctl_data
 		return NULL;
 	}
 
+	ret = of_property_read_bool(data_np, "nvidia,enable-hw-based-cs");
+	if (ret)
+		cdata->is_hw_based_cs = 1;
+
+	of_property_read_u32(data_np, "nvidia,cs-setup-clk-count",
+			     &cdata->cs_setup_clk_count);
+	of_property_read_u32(data_np, "nvidia,cs-hold-clk-count",
+			     &cdata->cs_hold_clk_count);
 	of_property_read_u32(data_np, "nvidia,rx-clk-tap-delay",
 			     &cdata->rx_clk_tap_delay);
 	of_property_read_u32(data_np, "nvidia,tx-clk-tap-delay",
@@ -945,6 +995,7 @@ static int tegra_spi_transfer_one_message(struct spi_master *master,
 			struct spi_message *msg)
 {
 	bool is_first_msg = true;
+	int single_xfer;
 	struct tegra_spi_data *tspi = spi_master_get_devdata(master);
 	struct spi_transfer *xfer;
 	struct spi_device *spi = msg->spi;
@@ -954,12 +1005,14 @@ static int tegra_spi_transfer_one_message(struct spi_master *master,
 	msg->status = 0;
 	msg->actual_length = 0;
 
+	single_xfer = list_is_singular(&msg->transfers);
 	list_for_each_entry(xfer, &msg->transfers, transfer_list) {
 		u32 cmd1;
 
 		reinit_completion(&tspi->xfer_completion);
 
-		cmd1 = tegra_spi_setup_transfer_one(spi, xfer, is_first_msg);
+		cmd1 = tegra_spi_setup_transfer_one(spi, xfer, is_first_msg,
+						    single_xfer);
 
 		if (!xfer->len) {
 			ret = 0;

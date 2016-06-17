@@ -70,73 +70,7 @@
 			"sce-gte",
 			"sce-cfg";
 
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		ivc-channels@90000000  {
-			reg = <0x90000000 0x10000>;
-
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			echo@0 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
-				reg = <0x0000>, <0x8000>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <16>;
-				nvidia,frame-size = <64>;
-			};
-			i2c@480 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
-				reg = <0x0480>, <0x8480>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <1088>;
-			};
-			i2c@940 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
-				reg = <0x0940>, <0x8940>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <1088>;
-			};
-			i2c@e00 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
-				reg = <0x0E00>, <0x8E00>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <1088>;
-			};
-			vinotify@12c0 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
-				reg = <0x012C0>, <0x92C0>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <63>;
-				nvidia,frame-size = <128>;
-				device = <&tegra_vi>;
-			};
-			mods@32c0 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-mods";
-				reg = <0x032C0>, <0xB2C0>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <64>;
-			};
-			dbg@7c00 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
-				reg = <0x7C00>, <0xFC00>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <384>;
-			};
-			dbg@7e00 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
-				reg = <0x7E00>, <0xFE00>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <384>;
-			};
-		};
+		nvidia,ivc-channels = <&tegra_camera_ivc 2 0x90000000 0x10000>;
 
 		hsp {
 			compatible = "nvidia,tegra186-hsp-mailbox";
@@ -191,77 +125,75 @@
 				"ape",
 				"adsp";
 
-		#address-cells = <1>;
-		#size-cells = <1>;
-
-		ivc-channels@40000000 {
-			reg = <0x40000000 0x10000>;
-
-			#address-cells = <1>;
-			#size-cells = <0>;
-			echo@0 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
-				reg = <0x0000>, <0x8000>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <16>;
-				nvidia,frame-size = <64>;
-			};
-			i2c@480 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
-				reg = <0x0480>, <0x8480>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <1088>;
-			};
-			i2c@940 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
-				reg = <0x0940>, <0x8940>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <1088>;
-			};
-			i2c@e00 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
-				reg = <0x0E00>, <0x8E00>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <1088>;
-			};
-			vinotify@12c0 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
-				reg = <0x012C0>, <0x92C0>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <63>;
-				nvidia,frame-size = <128>;
-				device = <&tegra_vi>;
-			};
-			mods@32c0 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-mods";
-				reg = <0x032C0>, <0xB2C0>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <64>;
-			};
-			dbg@7c00 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
-				reg = <0x7C00>, <0xFC00>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <384>;
-			};
-			dbg@7e00 {
-				compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
-				reg = <0x7E00>, <0xFE00>;
-				reg-names = "rx", "tx";
-				nvidia,frame-count = <1>;
-				nvidia,frame-size = <384>;
-			};
-		};
+		nvidia,ivc-channels = <&tegra_camera_ivc 2 0x40000000 0x10000>;
 
 		hsp {
 			compatible = "nvidia,tegra186-hsp-mailbox";
 			nvidia,hsp-shared-mailbox = <&ape_hsp 1 &ape_hsp 6>;
 			nvidia,hsp-shared-mailbox-names = "ivc-pair", "cmd-pair";
+		};
+	};
+
+	tegra_camera_ivc: camera-ivc-channels {
+		#address-cells = <1>;
+		#size-cells = <0>;
+
+		echo@0 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
+			reg = <0x0000>, <0x8000>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <16>;
+			nvidia,frame-size = <64>;
+		};
+		i2c@480 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
+			reg = <0x0480>, <0x8480>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <1>;
+			nvidia,frame-size = <1088>;
+		};
+		i2c@940 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
+			reg = <0x0940>, <0x8940>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <1>;
+			nvidia,frame-size = <1088>;
+		};
+		i2c@e00 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-i2c";
+			reg = <0x0E00>, <0x8E00>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <1>;
+			nvidia,frame-size = <1088>;
+		};
+		vinotify@12c0 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-vinotify";
+			reg = <0x012C0>, <0x92C0>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <63>;
+			nvidia,frame-size = <128>;
+			device = <&tegra_vi>;
+		};
+		mods@32c0 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-mods";
+			reg = <0x032C0>, <0xB2C0>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <1>;
+			nvidia,frame-size = <64>;
+		};
+		dbg@7c00 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-dbg";
+			reg = <0x7C00>, <0xFC00>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <1>;
+			nvidia,frame-size = <384>;
+		};
+		dbg@7e00 {
+			compatible = "nvidia,tegra186-camera-ivc-protocol-debug";
+			reg = <0x7E00>, <0xFE00>;
+			reg-names = "rx", "tx";
+			nvidia,frame-count = <1>;
+			nvidia,frame-size = <384>;
 		};
 	};
 };

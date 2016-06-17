@@ -514,7 +514,7 @@ irqreturn_t eqos_ch_isr(int irq, void *device_id)
 {
 	struct eqos_prv_data *pdata = (struct eqos_prv_data *)device_id;
 	uint i;
-	UINT qinx;
+	int qinx = -1;
 	int napi_sched = 0;
 
 	i = smp_processor_id();
@@ -530,7 +530,12 @@ irqreturn_t eqos_ch_isr(int irq, void *device_id)
 
 	DBGPR("-->%s(): cpu=%d, chan=%d\n", __func__, i, qinx);
 
-	handle_ti_ri_chan_intrs(pdata, qinx, &napi_sched);
+	if (qinx != -1) {
+		handle_ti_ri_chan_intrs(pdata, qinx, &napi_sched);
+	} else {
+		DBGPR("%(): irq %d not handled\n", __func__, irq);
+		return IRQ_NONE;
+	}
 
 	DBGPR("<--%s()\n", __func__);
 

@@ -449,7 +449,7 @@ struct gpu_ops {
 				u8 value);
 	} pmu_ver;
 	struct {
-		int (*get_netlist_name)(int index, char *name);
+		int (*get_netlist_name)(struct gk20a *g, int index, char *name);
 		bool (*is_fw_defined)(void);
 		bool use_dma_for_fw_bootstrap;
 	} gr_ctx;

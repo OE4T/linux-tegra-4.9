@@ -61,7 +61,7 @@ static int gr_gk20a_alloc_load_netlist_aiv(u32 *src, u32 len,
 	return 0;
 }
 
-static int gr_gk20a_get_netlist_name(int index, char *name)
+static int gr_gk20a_get_netlist_name(struct gk20a *g, int index, char *name)
 {
 	switch (index) {
 #ifdef GK20A_NETLIST_IMAGE_FW_NAME
@@ -130,7 +130,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 	}
 
 	for (; net < max; net++) {
-		if (g->ops.gr_ctx.get_netlist_name(net, name) != 0) {
+		if (g->ops.gr_ctx.get_netlist_name(g, net, name) != 0) {
 			gk20a_warn(d, "invalid netlist index %d", net);
 			continue;
 		}

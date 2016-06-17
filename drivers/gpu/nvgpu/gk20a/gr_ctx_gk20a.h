@@ -28,6 +28,17 @@
 #define GK20A_NETLIST_IMAGE_C	"NETC_img.bin"
 #define GK20A_NETLIST_IMAGE_D   "NETD_img.bin"
 
+/*
+ * Need to support multiple ARCH in same GPU family
+ * then need to provide path like ARCH/NETIMAGE to
+ * point to correct netimage within GPU family,
+ * Example, gm20x can support gm204 or gm206,so path
+ * for netimage is gm204/NETC_img.bin, and '/' char
+ * will inserted at null terminator char of "GAxxx"
+ * to get complete path like gm204/NETC_img.bin
+ */
+#define GPU_ARCH "GAxxx"
+
 union __max_name {
 #ifdef GK20A_NETLIST_IMAGE_A
 	char __name_a[sizeof(GK20A_NETLIST_IMAGE_A)];
@@ -43,7 +54,7 @@ union __max_name {
 #endif
 };
 
-#define MAX_NETLIST_NAME sizeof(union __max_name)
+#define MAX_NETLIST_NAME (sizeof(GPU_ARCH) + sizeof(union __max_name))
 
 /* index for emulation netlists */
 #define NETLIST_FINAL		-1

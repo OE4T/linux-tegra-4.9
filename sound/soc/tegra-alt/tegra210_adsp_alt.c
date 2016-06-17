@@ -3500,6 +3500,7 @@ static struct platform_driver tegra210_adsp_audio_driver = {
 		.owner = THIS_MODULE,
 		.of_match_table = tegra210_adsp_audio_of_match,
 		.pm = &tegra210_adsp_pm_ops,
+		.suppress_bind_attrs = true,
 	},
 	.probe = tegra210_adsp_audio_platform_probe,
 	.remove = tegra210_adsp_audio_platform_remove,

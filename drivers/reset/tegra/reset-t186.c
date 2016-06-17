@@ -29,11 +29,6 @@ static int tegra18x_reset_probe(struct platform_device *pdev)
 	return bpmp_register_reset(TEGRA186_RESET_SIZE, pdev);
 }
 
-static int tegra18x_reset_remove(struct platform_device *pdev)
-{
-	return bpmp_reset_remove(pdev);
-}
-
 static const struct of_device_id tegra18x_reset_match[] = {
 	{ .compatible = "nvidia,tegra18x-car", },
 	{ },
@@ -41,7 +36,6 @@ static const struct of_device_id tegra18x_reset_match[] = {
 
 static struct platform_driver tegra18x_reset_driver = {
 	.probe = tegra18x_reset_probe,
-	.remove = tegra18x_reset_remove,
 	.driver = {
 		.name		= "tegra18x-reset",
 		.owner		= THIS_MODULE,

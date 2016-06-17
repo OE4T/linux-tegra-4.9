@@ -18,7 +18,6 @@
 #define __TEGRA_RESET_H
 
 int bpmp_register_reset(int num_resets, struct platform_device *pdev);
-int bpmp_reset_remove(struct platform_device *pdev);
 
 #endif
 

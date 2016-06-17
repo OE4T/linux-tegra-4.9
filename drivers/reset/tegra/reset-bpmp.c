@@ -90,12 +90,3 @@ int bpmp_register_reset(int num_resets, struct platform_device *pdev)
 
 	return reset_controller_register(rcdev);
 }
-
-int bpmp_reset_remove(struct platform_device *pdev)
-{
-	struct reset_controller_dev *rcdev = platform_get_drvdata(pdev);
-
-	reset_controller_unregister(rcdev);
-
-	return 0;
-}

@@ -118,9 +118,6 @@ int channel_gk20a_commit_va(struct channel_gk20a *c)
 {
 	gk20a_dbg_fn("");
 
-	if (!c->inst_block.cpu_va)
-		return -ENOMEM;
-
 	gk20a_init_inst_block(&c->inst_block, c->vm,
 			c->vm->gmmu_page_sizes[gmmu_page_size_big]);
 
@@ -391,7 +388,7 @@ int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_alloc_inst_block(g, &ch->inst_block);
+	err = gk20a_gmmu_alloc(g, ram_in_alloc_size_v(), &ch->inst_block);
 	if (err)
 		return err;
 

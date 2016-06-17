@@ -973,7 +973,7 @@ channel_from_inst_ptr(struct fifo_gk20a *f, u64 inst_ptr)
 			continue;
 
 		ch_inst_ptr = gk20a_mm_inst_block_addr(g, &ch->inst_block);
-		if (ch->inst_block.cpu_va && inst_ptr == ch_inst_ptr)
+		if (inst_ptr == ch_inst_ptr)
 			return ch;
 
 		gk20a_channel_put(ch);

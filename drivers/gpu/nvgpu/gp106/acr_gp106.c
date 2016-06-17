@@ -27,6 +27,7 @@
 #include "gm20b/acr_gm20b.h"
 #include "gm206/pmu_gm206.h"
 #include "sec2_gp106.h"
+#include "nvgpu_gpuid_t18x.h"
 
 /*Defines*/
 #define gp106_dbg_pmu(fmt, arg...) \
@@ -185,11 +186,22 @@ release_img_fw:
 
 int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
+	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
-	const struct firmware *fecs_sig;
+	const struct firmware *fecs_sig = NULL;
 	int err;
 
-	fecs_sig = gk20a_request_firmware(g, GM20B_FECS_UCODE_SIG);
+	switch (ver) {
+		case NVGPU_GPUID_GP104:
+			fecs_sig = gk20a_request_firmware(g, GP104_FECS_UCODE_SIG);
+			break;
+		case NVGPU_GPUID_GP106:
+			fecs_sig = gk20a_request_firmware(g, GP106_FECS_UCODE_SIG);
+			break;
+		default:
+			gk20a_err(g->dev, "no support for GPUID %x", ver);
+	}
+
 	if (!fecs_sig) {
 		gk20a_err(dev_from_gk20a(g), "failed to load fecs sig");
 		return -ENOENT;
@@ -252,14 +264,25 @@ rel_sig:
 }
 int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
+	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
-	const struct firmware *gpccs_sig;
+	const struct firmware *gpccs_sig = NULL;
 	int err;
 
 	if (g->ops.securegpccs == false)
 		return -ENOENT;
 
-	gpccs_sig = gk20a_request_firmware(g, T18x_GPCCS_UCODE_SIG);
+	switch (ver) {
+		case NVGPU_GPUID_GP104:
+			gpccs_sig = gk20a_request_firmware(g, GP104_GPCCS_UCODE_SIG);
+			break;
+		case NVGPU_GPUID_GP106:
+			gpccs_sig = gk20a_request_firmware(g, GP106_GPCCS_UCODE_SIG);
+			break;
+		default:
+			gk20a_err(g->dev, "no support for GPUID %x", ver);
+	}
+
 	if (!gpccs_sig) {
 		gk20a_err(dev_from_gk20a(g), "failed to load gpccs sig");
 		return -ENOENT;

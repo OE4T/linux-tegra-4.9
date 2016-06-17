@@ -17,6 +17,11 @@
 #include "gm20b/acr_gm20b.h"
 #include "gm206/acr_gm206.h"
 
+#define GP106_FECS_UCODE_SIG "gp106/fecs_sig.bin"
+#define GP106_GPCCS_UCODE_SIG "gp106/gpccs_sig.bin"
+#define GP104_FECS_UCODE_SIG "gp104/fecs_sig.bin"
+#define GP104_GPCCS_UCODE_SIG "gp104/gpccs_sig.bin"
+
 struct lsf_ucode_desc_v1 {
 	u8  prd_keys[2][16];
 	u8  dbg_keys[2][16];

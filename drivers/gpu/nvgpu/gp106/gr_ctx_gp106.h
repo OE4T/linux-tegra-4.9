@@ -20,6 +20,7 @@
 
 /* production netlist, one and only one from below */
 #define GP106_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_C
+#define GP104_NETLIST_IMAGE_FW_NAME GK20A_NETLIST_IMAGE_D
 
 void gp106_init_gr_ctx(struct gpu_ops *gops);
 

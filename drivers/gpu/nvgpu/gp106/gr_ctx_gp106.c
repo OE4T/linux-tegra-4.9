@@ -15,10 +15,25 @@
 
 #include "gk20a/gk20a.h"
 #include "gr_ctx_gp106.h"
+#include "nvgpu_gpuid_t18x.h"
 
-static int gr_gp106_get_netlist_name(int index, char *name)
+static int gr_gp106_get_netlist_name(struct gk20a *g, int index, char *name)
 {
-	sprintf(name, GP106_NETLIST_IMAGE_FW_NAME);
+	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
+
+	switch (ver) {
+		case NVGPU_GPUID_GP104:
+			sprintf(name, "%s/%s", "gp104",
+					GP104_NETLIST_IMAGE_FW_NAME);
+			break;
+		case NVGPU_GPUID_GP106:
+			sprintf(name, "%s/%s", "gp106",
+					GP106_NETLIST_IMAGE_FW_NAME);
+			break;
+		default:
+			gk20a_err(g->dev, "no support for GPUID %x", ver);
+	}
+
 	return 0;
 }
 

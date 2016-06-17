@@ -22,7 +22,7 @@
 #include "gk20a/gk20a.h"
 #include "gr_ctx_gp10b.h"
 
-static int gr_gp10b_get_netlist_name(int index, char *name)
+static int gr_gp10b_get_netlist_name(struct gk20a *g, int index, char *name)
 {
 	switch (index) {
 #ifdef GP10B_NETLIST_IMAGE_FW_NAME

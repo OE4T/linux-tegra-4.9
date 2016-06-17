@@ -163,6 +163,28 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
 	},
+	{
+		/* 10 */
+		.name = DAI_NAME(11),
+		.stream_name = STREAM_NAME,
+		.codec_name = CODEC_NAME,
+		.cpu_name = LINK_CPU_NAME,
+		.cpu_dai_name = CPU_DAI_NAME(11),
+		.codec_dai_name = CODEC_DAI_NAME,
+		.platform_name = PLATFORM_NAME,
+		.params = &default_params,
+	},
+	{
+		/* 11 */
+		.name = DAI_NAME(12),
+		.stream_name = STREAM_NAME,
+		.codec_name = CODEC_NAME,
+		.cpu_name = LINK_CPU_NAME,
+		.cpu_dai_name = CPU_DAI_NAME(12),
+		.codec_dai_name = CODEC_DAI_NAME,
+		.platform_name = PLATFORM_NAME,
+		.params = &default_params,
+	},
 };
 
 #define MUX_VALUE(npart, nbit) (1 + nbit + npart * 32)

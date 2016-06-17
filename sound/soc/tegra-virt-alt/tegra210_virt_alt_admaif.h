@@ -1,7 +1,7 @@
 /*
  * tegra210_admaif_alt.h - Tegra210 ADMAIF registers
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -66,6 +66,8 @@ enum {
 	ADMAIF_ID_7,
 	ADMAIF_ID_8,
 	ADMAIF_ID_9,
+	ADMAIF_ID_10,
+	ADMAIF_ID_11,
 	MAX_ADMAIF_IDS
 };
 

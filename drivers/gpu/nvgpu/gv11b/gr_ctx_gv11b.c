@@ -21,7 +21,7 @@
 #include "gk20a/gk20a.h"
 #include "gr_ctx_gv11b.h"
 
-static int gr_gv11b_get_netlist_name(int index, char *name)
+static int gr_gv11b_get_netlist_name(struct gk20a *g, int index, char *name)
 {
 	switch (index) {
 #ifdef GV11B_NETLIST_IMAGE_FW_NAME

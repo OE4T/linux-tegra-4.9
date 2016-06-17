@@ -83,14 +83,6 @@
 			partition-id = <TEGRA_POWERGATE_NVJPG>;
 		};
 
-		gpu_pd: gpu-pd {
-			compatible = "nvidia,tegra210-gpu-pd";
-			is_off;
-			#power-domain-cells = <0>;
-			power-domains = <&host1x_pd>;
-			partition-id = <TEGRA_POWERGATE_GPU>;
-		};
-
 		pcie_pd: pcie-pd {
 			compatible = "nvidia,tegra210-pcie-pd";
 			is_off;

@@ -807,7 +807,6 @@
 	gpu {
 		compatible = "nvidia,tegra210-gm20b", "nvidia,gm20b";
 		nvidia,host1x = <&host1x>;
-		power-domains = <&gpu_pd>;
 		reg = <0x0 0x57000000 0x0 0x01000000>,
 		    <0x0 0x58000000 0x0 0x01000000>,
 		    <0x0 0x538f0000 0x0 0x00001000>;

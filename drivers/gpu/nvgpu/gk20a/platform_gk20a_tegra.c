@@ -130,9 +130,6 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 	if (dma_mapping_error(&tegra_vpr_dev, iova))
 		return -ENOMEM;
 
-	desc->mem.size = size;
-	desc->destroy = gk20a_tegra_secure_destroy;
-
 	sgt = kzalloc(sizeof(*sgt), GFP_KERNEL);
 	if (!sgt) {
 		gk20a_err(dev, "failed to allocate memory\n");
@@ -148,7 +145,11 @@ int gk20a_tegra_secure_alloc(struct device *dev,
 	/* This bypasses SMMU for VPR during gmmu_map. */
 	sg_dma_address(sgt->sgl) = 0;
 
+	desc->destroy = gk20a_tegra_secure_destroy;
+
 	desc->mem.sgt = sgt;
+	desc->mem.size = size;
+	desc->mem.aperture = APERTURE_SYSMEM;
 
 	return err;
 

@@ -187,7 +187,8 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 
 	/* Map into the GPU... Doesn't need to be fixed. */
 	p->gpu_va = gk20a_gmmu_map(vm, &p->rw_sg_table, PAGE_SIZE,
-				   0, gk20a_mem_flag_none, false);
+				   0, gk20a_mem_flag_none, false,
+				   APERTURE_SYSMEM);
 	if (!p->gpu_va) {
 		err = -ENOMEM;
 		goto fail_unmap_sgt;
@@ -204,7 +205,8 @@ int gk20a_semaphore_pool_map(struct gk20a_semaphore_pool *p,
 				    p->sema_sea->gpu_va, p->sema_sea->map_size,
 				    0,
 				    gk20a_mem_flag_read_only,
-				    false);
+				    false,
+				    APERTURE_SYSMEM);
 	if (!addr) {
 		err = -ENOMEM;
 		BUG();

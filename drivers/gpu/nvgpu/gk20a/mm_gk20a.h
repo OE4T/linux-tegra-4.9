@@ -40,8 +40,13 @@
 		outer_flush_range(pa, pa + (size_t)(size));		\
 	} while (0)
 
+/*
+ * Real location of a buffer - gk20a_aperture_mask() will deduce what will be
+ * told to the gpu about the aperture, but this flag designates where the
+ * memory actually was allocated from.
+ */
 enum gk20a_aperture {
-	APERTURE_INVALID, /* e.g., unallocated */
+	APERTURE_INVALID, /* unallocated or N/A */
 	APERTURE_SYSMEM,
 	APERTURE_VIDMEM
 };
@@ -520,14 +525,16 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		u64 size,
 		u32 flags,
 		int rw_flag,
-		bool priv);
+		bool priv,
+		enum gk20a_aperture aperture);
 u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 		struct sg_table **sgt,
 		u64 addr,
 		u64 size,
 		u32 flags,
 		int rw_flag,
-		bool priv);
+		bool priv,
+		enum gk20a_aperture aperture);
 
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm,
 		size_t size,
@@ -619,7 +626,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			bool clear_ctags,
 			bool sparse,
 			bool priv,
-			struct vm_gk20a_mapping_batch *batch);
+			struct vm_gk20a_mapping_batch *batch,
+			enum gk20a_aperture aperture);
 
 void gk20a_gmmu_unmap(struct vm_gk20a *vm,
 		u64 vaddr,

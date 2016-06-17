@@ -492,7 +492,8 @@ struct gpu_ops {
 				bool clear_ctags,
 				bool sparse,
 				bool priv,
-				struct vm_gk20a_mapping_batch *batch);
+				struct vm_gk20a_mapping_batch *batch,
+				enum gk20a_aperture aperture);
 		void (*gmmu_unmap)(struct vm_gk20a *vm,
 				u64 vaddr,
 				u64 size,

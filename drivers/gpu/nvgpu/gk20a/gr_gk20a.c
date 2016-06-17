@@ -1824,7 +1824,8 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 							&pm_ctx->mem.sgt,
 							pm_ctx->mem.size,
 							NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-							gk20a_mem_flag_none, true);
+							gk20a_mem_flag_none, true,
+							pm_ctx->mem.aperture);
 			if (!pm_ctx->mem.gpu_va) {
 				gk20a_err(dev_from_gk20a(g),
 					"failed to map pm ctxt buffer");
@@ -2046,7 +2047,8 @@ static int gr_gk20a_init_ctxsw_ucode_vaspace(struct gk20a *g)
 					ucode_info->surface_desc.size,
 					0, /* flags */
 					gk20a_mem_flag_read_only,
-					false);
+					false,
+					ucode_info->surface_desc.aperture);
 	if (!ucode_info->surface_desc.gpu_va) {
 		gk20a_err(d, "failed to update gmmu ptes\n");
 		return -ENOMEM;
@@ -2650,82 +2652,73 @@ static int gr_gk20a_map_global_ctx_buffers(struct gk20a *g,
 	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
 	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
 	struct gr_gk20a *gr = &g->gr;
-	struct sg_table *sgt;
-	u64 size;
+	struct mem_desc *mem;
 	u64 gpu_va;
 	u32 i;
 	gk20a_dbg_fn("");
 
 	/* Circular Buffer */
 	if (!c->vpr || (gr->global_ctx_buffer[CIRCULAR_VPR].mem.sgt == NULL)) {
-		sgt = gr->global_ctx_buffer[CIRCULAR].mem.sgt;
-		size = gr->global_ctx_buffer[CIRCULAR].mem.size;
+		mem = &gr->global_ctx_buffer[CIRCULAR].mem;
 	} else {
-		sgt = gr->global_ctx_buffer[CIRCULAR_VPR].mem.sgt;
-		size = gr->global_ctx_buffer[CIRCULAR_VPR].mem.size;
+		mem = &gr->global_ctx_buffer[CIRCULAR_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				gk20a_mem_flag_none, true);
+				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[CIRCULAR_VA] = gpu_va;
-	g_bfr_size[CIRCULAR_VA] = size;
+	g_bfr_size[CIRCULAR_VA] = mem->size;
 
 	/* Attribute Buffer */
 	if (!c->vpr || (gr->global_ctx_buffer[ATTRIBUTE_VPR].mem.sgt == NULL)) {
-		sgt = gr->global_ctx_buffer[ATTRIBUTE].mem.sgt;
-		size = gr->global_ctx_buffer[ATTRIBUTE].mem.size;
+		mem = &gr->global_ctx_buffer[ATTRIBUTE].mem;
 	} else {
-		sgt = gr->global_ctx_buffer[ATTRIBUTE_VPR].mem.sgt;
-		size = gr->global_ctx_buffer[ATTRIBUTE_VPR].mem.size;
+		mem = &gr->global_ctx_buffer[ATTRIBUTE_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				gk20a_mem_flag_none, false);
+				gk20a_mem_flag_none, false, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[ATTRIBUTE_VA] = gpu_va;
-	g_bfr_size[ATTRIBUTE_VA] = size;
+	g_bfr_size[ATTRIBUTE_VA] = mem->size;
 
 	/* Page Pool */
 	if (!c->vpr || (gr->global_ctx_buffer[PAGEPOOL_VPR].mem.sgt == NULL)) {
-		sgt = gr->global_ctx_buffer[PAGEPOOL].mem.sgt;
-		size = gr->global_ctx_buffer[PAGEPOOL].mem.size;
+		mem = &gr->global_ctx_buffer[PAGEPOOL].mem;
 	} else {
-		sgt = gr->global_ctx_buffer[PAGEPOOL_VPR].mem.sgt;
-		size = gr->global_ctx_buffer[PAGEPOOL_VPR].mem.size;
+		mem = &gr->global_ctx_buffer[PAGEPOOL_VPR].mem;
 	}
 
-	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size,
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size,
 				NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-				gk20a_mem_flag_none, true);
+				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PAGEPOOL_VA] = gpu_va;
-	g_bfr_size[PAGEPOOL_VA] = size;
+	g_bfr_size[PAGEPOOL_VA] = mem->size;
 
 	/* Golden Image */
-	sgt = gr->global_ctx_buffer[GOLDEN_CTX].mem.sgt;
-	size = gr->global_ctx_buffer[GOLDEN_CTX].mem.size;
-	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size, 0,
-				gk20a_mem_flag_none, true);
+	mem = &gr->global_ctx_buffer[GOLDEN_CTX].mem;
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size, 0,
+				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[GOLDEN_CTX_VA] = gpu_va;
-	g_bfr_size[GOLDEN_CTX_VA] = size;
+	g_bfr_size[GOLDEN_CTX_VA] = mem->size;
 
 	/* Priv register Access Map */
-	sgt = gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.sgt;
-	size = gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.size;
-	gpu_va = gk20a_gmmu_map(ch_vm, &sgt, size, 0,
-				gk20a_mem_flag_none, true);
+	mem = &gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem;
+	gpu_va = gk20a_gmmu_map(ch_vm, &mem->sgt, mem->size, 0,
+				gk20a_mem_flag_none, true, mem->aperture);
 	if (!gpu_va)
 		goto clean_up;
 	g_bfr_va[PRIV_ACCESS_MAP_VA] = gpu_va;
-	g_bfr_size[PRIV_ACCESS_MAP_VA] = size;
+	g_bfr_size[PRIV_ACCESS_MAP_VA] = mem->size;
 
 	c->ch_ctx.global_ctx_buffer_mapped = true;
 	return 0;
@@ -2793,7 +2786,8 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 
 	gr_ctx->mem.gpu_va = gk20a_gmmu_map(vm, &gr_ctx->mem.sgt, gr_ctx->mem.size,
 					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
-					gk20a_mem_flag_none, true);
+					gk20a_mem_flag_none, true,
+					gr_ctx->mem.aperture);
 	if (!gr_ctx->mem.gpu_va)
 		goto err_free_mem;
 

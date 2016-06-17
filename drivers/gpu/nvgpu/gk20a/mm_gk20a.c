@@ -1594,7 +1594,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			bool clear_ctags,
 			bool sparse,
 			bool priv,
-			struct vm_gk20a_mapping_batch *batch)
+			struct vm_gk20a_mapping_batch *batch,
+			enum gk20a_aperture aperture)
 {
 	int err = 0;
 	bool allocated = false;
@@ -1642,7 +1643,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      rw_flag,
 				      sparse,
 				      priv,
-				      APERTURE_SYSMEM); /* no vidmem bufs yet */
+				      aperture);
 	if (err) {
 		gk20a_err(d, "failed to update ptes on map");
 		goto fail_validate;
@@ -1998,7 +1999,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 					clear_ctags,
 					false,
 					false,
-					batch);
+					batch,
+					APERTURE_SYSMEM); /* no vidmem yet */
 	if (!map_offset)
 		goto clean_up;
 
@@ -2256,7 +2258,8 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 				false, /* clear_ctags */
 				false, /* sparse */
 				false, /* priv */
-				NULL); /* mapping_batch handle */
+				NULL,  /* mapping_batch handle */
+				g->gr.compbit_store.mem.aperture);
 
 		if (!mapped_buffer->ctag_map_win_addr) {
 			mutex_unlock(&vm->update_gmmu_lock);
@@ -2295,7 +2298,8 @@ static u64 __gk20a_gmmu_map(struct vm_gk20a *vm,
 			    u64 size,
 			    u32 flags,
 			    int rw_flag,
-			    bool priv)
+			    bool priv,
+			    enum gk20a_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	u64 vaddr;
@@ -2312,7 +2316,8 @@ static u64 __gk20a_gmmu_map(struct vm_gk20a *vm,
 				false, /* clear_ctags */
 				false, /* sparse */
 				priv, /* priv */
-				NULL); /* mapping_batch handle */
+				NULL, /* mapping_batch handle */
+				aperture);
 	mutex_unlock(&vm->update_gmmu_lock);
 	if (!vaddr) {
 		gk20a_err(dev_from_vm(vm), "failed to allocate va space");
@@ -2327,9 +2332,11 @@ u64 gk20a_gmmu_map(struct vm_gk20a *vm,
 		   u64 size,
 		   u32 flags,
 		   int rw_flag,
-		   bool priv)
+		   bool priv,
+		   enum gk20a_aperture aperture)
 {
-	return __gk20a_gmmu_map(vm, sgt, 0, size, flags, rw_flag, priv);
+	return __gk20a_gmmu_map(vm, sgt, 0, size, flags, rw_flag, priv,
+			aperture);
 }
 
 /*
@@ -2341,9 +2348,11 @@ u64 gk20a_gmmu_fixed_map(struct vm_gk20a *vm,
 			 u64 size,
 			 u32 flags,
 			 int rw_flag,
-			 bool priv)
+			 bool priv,
+			 enum gk20a_aperture aperture)
 {
-	return __gk20a_gmmu_map(vm, sgt, addr, size, flags, rw_flag, priv);
+	return __gk20a_gmmu_map(vm, sgt, addr, size, flags, rw_flag, priv,
+			aperture);
 }
 
 int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem)
@@ -2599,7 +2608,8 @@ int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
 		return err;
 
 	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0,
-				     gk20a_mem_flag_none, false);
+				     gk20a_mem_flag_none, false,
+				     mem->aperture);
 	if (!mem->gpu_va) {
 		err = -ENOMEM;
 		goto fail_free;
@@ -2626,7 +2636,8 @@ int gk20a_gmmu_alloc_map_attr_vid(struct vm_gk20a *vm,
 		return err;
 
 	mem->gpu_va = gk20a_gmmu_map(vm, &mem->sgt, size, 0,
-				     gk20a_mem_flag_none, false);
+				     gk20a_mem_flag_none, false,
+				     mem->aperture);
 	if (!mem->gpu_va) {
 		err = -ENOMEM;
 		goto fail_free;
@@ -3727,7 +3738,8 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 false,
 					 true,
 					 false,
-					 NULL);
+					 NULL,
+					 APERTURE_INVALID);
 		if (!map_offset) {
 			mutex_unlock(&vm->update_gmmu_lock);
 			gk20a_bfree(vma, vaddr_start);

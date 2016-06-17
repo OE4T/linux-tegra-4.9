@@ -387,7 +387,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   u8 kind_v, u32 ctag_offset, bool cacheable,
 				   bool umapped_pte, int rw_flag,
 				   bool sparse,
-				   bool priv);
+				   bool priv,
+				   enum gk20a_aperture aperture);
 static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
@@ -1640,7 +1641,8 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 				      NVGPU_AS_MAP_BUFFER_FLAGS_UNMAPPED_PTE,
 				      rw_flag,
 				      sparse,
-				      priv);
+				      priv,
+				      APERTURE_SYSMEM); /* no vidmem bufs yet */
 	if (err) {
 		gk20a_err(d, "failed to update ptes on map");
 		goto fail_validate;
@@ -1690,7 +1692,8 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 				vaddr + size,
 				0, 0, false /* n/a for unmap */,
 				false, rw_flag,
-				sparse, 0);
+				sparse, 0,
+				APERTURE_INVALID); /* don't care for unmap */
 	if (err)
 		dev_err(dev_from_vm(vm),
 			"failed to update gmmu ptes on unmap");
@@ -2784,26 +2787,32 @@ u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 }
 
 /* for gk20a the "video memory" apertures here are misnomers. */
-static inline u32 big_valid_pde0_bits(struct gk20a *g, u64 pte_addr)
+static inline u32 big_valid_pde0_bits(struct gk20a *g,
+		struct mem_desc *entry_mem)
 {
+	u64 pte_addr = g->ops.mm.get_iova_addr(g, entry_mem->sgt->sgl, 0);
 	u32 pde0_bits =
-		(g->mm.vidmem_is_vidmem ?
-		  gmmu_pde_aperture_big_sys_mem_ncoh_f() :
+		gk20a_aperture_mask(g, entry_mem,
+		  gmmu_pde_aperture_big_sys_mem_ncoh_f(),
 		  gmmu_pde_aperture_big_video_memory_f()) |
 		gmmu_pde_address_big_sys_f(
 			   (u32)(pte_addr >> gmmu_pde_address_shift_v()));
-	return  pde0_bits;
+
+	return pde0_bits;
 }
 
-static inline u32 small_valid_pde1_bits(struct gk20a *g, u64 pte_addr)
+static inline u32 small_valid_pde1_bits(struct gk20a *g,
+		struct mem_desc *entry_mem)
 {
+	u64 pte_addr = g->ops.mm.get_iova_addr(g, entry_mem->sgt->sgl, 0);
 	u32 pde1_bits =
-		(g->mm.vidmem_is_vidmem ?
-		  gmmu_pde_aperture_small_sys_mem_ncoh_f() :
+		gk20a_aperture_mask(g, entry_mem,
+		  gmmu_pde_aperture_small_sys_mem_ncoh_f(),
 		  gmmu_pde_aperture_small_video_memory_f()) |
 		gmmu_pde_vol_small_true_f() | /* tbd: why? */
 		gmmu_pde_address_small_sys_f(
 			   (u32)(pte_addr >> gmmu_pde_address_shift_v()));
+
 	return pde1_bits;
 }
 
@@ -2821,11 +2830,11 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unammped_pte,
-			   int rw_flag, bool sparse, bool priv)
+			   int rw_flag, bool sparse, bool priv,
+			   enum gk20a_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	bool small_valid, big_valid;
-	u64 pte_addr_small = 0, pte_addr_big = 0;
 	struct gk20a_mm_entry *entry = vm->pdb.entries + i;
 	u32 pde_v[2] = {0, 0};
 	u32 pde;
@@ -2835,18 +2844,13 @@ static int update_gmmu_pde_locked(struct vm_gk20a *vm,
 	small_valid = entry->mem.size && entry->pgsz == gmmu_page_size_small;
 	big_valid   = entry->mem.size && entry->pgsz == gmmu_page_size_big;
 
-	if (small_valid)
-		pte_addr_small = g->ops.mm.get_iova_addr(g, entry->mem.sgt->sgl, 0);
-
-	if (big_valid)
-		pte_addr_big = g->ops.mm.get_iova_addr(g, entry->mem.sgt->sgl, 0);
-
 	pde_v[0] = gmmu_pde_size_full_f();
-	pde_v[0] |= big_valid ? big_valid_pde0_bits(g, pte_addr_big) :
-		(gmmu_pde_aperture_big_invalid_f());
+	pde_v[0] |= big_valid ?
+		big_valid_pde0_bits(g, &entry->mem) :
+		gmmu_pde_aperture_big_invalid_f();
 
 	pde_v[1] |= (small_valid ?
-		     small_valid_pde1_bits(g, pte_addr_small) :
+		     small_valid_pde1_bits(g, &entry->mem) :
 		     (gmmu_pde_aperture_small_invalid_f() |
 		      gmmu_pde_vol_small_false_f()))
 		    |
@@ -2871,7 +2875,8 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 			   u64 *iova,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv)
+			   int rw_flag, bool sparse, bool priv,
+			   enum gk20a_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_shift = ilog2(g->ops.fb.compression_page_size(g));
@@ -2879,20 +2884,21 @@ static int update_gmmu_pte_locked(struct vm_gk20a *vm,
 	u32 pte_w[2] = {0, 0}; /* invalid pte */
 
 	if (*iova) {
-		if (unmapped_pte)
-			pte_w[0] = gmmu_pte_valid_false_f() |
-				gmmu_pte_address_sys_f(*iova
-				>> gmmu_pte_address_shift_v());
-		else
-			pte_w[0] = gmmu_pte_valid_true_f() |
-				gmmu_pte_address_sys_f(*iova
-				>> gmmu_pte_address_shift_v());
+		u32 pte_valid = unmapped_pte ?
+			gmmu_pte_valid_false_f() :
+			gmmu_pte_valid_true_f();
+		u32 iova_v = *iova >> gmmu_pte_address_shift_v();
+		u32 pte_addr = aperture == APERTURE_SYSMEM ?
+				gmmu_pte_address_sys_f(iova_v) :
+				gmmu_pte_address_vid_f(iova_v);
+
+		pte_w[0] = pte_valid | pte_addr;
 
 		if (priv)
 			pte_w[0] |= gmmu_pte_privilege_true_f();
 
-		pte_w[1] = (g->mm.vidmem_is_vidmem ?
-			  gmmu_pte_aperture_sys_mem_ncoh_f() :
+		pte_w[1] = __gk20a_aperture_mask(g, aperture,
+			  gmmu_pte_aperture_sys_mem_ncoh_f(),
 			  gmmu_pte_aperture_video_memory_f()) |
 			gmmu_pte_kind_f(kind_v) |
 			gmmu_pte_comptagline_f((u32)(*ctag >> ctag_shift));
@@ -2973,7 +2979,8 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				    int rw_flag,
 				    bool sparse,
 				    int lvl,
-				    bool priv)
+				    bool priv,
+				    enum gk20a_aperture aperture)
 {
 	const struct gk20a_mmu_level *l = &vm->mmu_levels[lvl];
 	const struct gk20a_mmu_level *next_l = &vm->mmu_levels[lvl+1];
@@ -3021,7 +3028,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 		err = l->update_entry(vm, pte, pde_i, pgsz_idx,
 				sgl, offset, iova,
 				kind_v, ctag, cacheable, unmapped_pte,
-				rw_flag, sparse, priv);
+				rw_flag, sparse, priv, aperture);
 		if (err)
 			return err;
 
@@ -3042,7 +3049,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				gpu_va,
 				next,
 				kind_v, ctag, cacheable, unmapped_pte,
-				rw_flag, sparse, lvl+1, priv);
+				rw_flag, sparse, lvl+1, priv, aperture);
 			unmap_gmmu_pages(next_pte);
 
 			if (err)
@@ -3067,7 +3074,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				   bool cacheable, bool unmapped_pte,
 				   int rw_flag,
 				   bool sparse,
-				   bool priv)
+				   bool priv,
+				   enum gk20a_aperture aperture)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
 	int ctag_granularity = g->ops.fb.compression_page_size(g);
@@ -3130,7 +3138,8 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 			&iova,
 			gpu_va, gpu_end,
 			kind_v, &ctag,
-			cacheable, unmapped_pte, rw_flag, sparse, 0, priv);
+			cacheable, unmapped_pte, rw_flag, sparse, 0, priv,
+			aperture);
 	unmap_gmmu_pages(&vm->pdb);
 
 	smp_mb();

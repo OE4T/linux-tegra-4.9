@@ -234,7 +234,8 @@ struct gk20a_mmu_level {
 			   u64 *iova,
 			   u32 kind_v, u64 *ctag,
 			   bool cacheable, bool unmapped_pte,
-			   int rw_flag, bool sparse, bool priv);
+			   int rw_flag, bool sparse, bool priv,
+			   enum gk20a_aperture aperture);
 	size_t entry_size;
 };
 

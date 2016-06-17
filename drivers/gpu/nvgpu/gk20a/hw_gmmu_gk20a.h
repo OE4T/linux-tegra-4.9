@@ -182,6 +182,14 @@ static inline u32 gmmu_pte_address_sys_w(void)
 {
 	return 0;
 }
+static inline u32 gmmu_pte_address_vid_f(u32 v)
+{
+	return (v & 0x1ffffff) << 4;
+}
+static inline u32 gmmu_pte_address_vid_w(void)
+{
+	return 0;
+}
 static inline u32 gmmu_pte_vol_w(void)
 {
 	return 1;

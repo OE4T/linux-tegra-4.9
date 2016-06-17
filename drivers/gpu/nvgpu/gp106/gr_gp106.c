@@ -32,6 +32,7 @@ static bool gr_gp106_is_valid_class(struct gk20a *g, u32 class_num)
 	case PASCAL_A:
 	case PASCAL_B:
 	case PASCAL_DMA_COPY_A:
+	case PASCAL_DMA_COPY_B:
 		valid = true;
 		break;
 

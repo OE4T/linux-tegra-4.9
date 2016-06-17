@@ -25,6 +25,7 @@ enum {
 	PASCAL_A                 = 0xC097,
 	PASCAL_COMPUTE_A         = 0xC0C0,
 	PASCAL_DMA_COPY_A        = 0xC0B5,
+	PASCAL_DMA_COPY_B        = 0xC1B5,
 };
 
 #define NVC097_SET_GO_IDLE_TIMEOUT		0x022c

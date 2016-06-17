@@ -33,7 +33,6 @@ static int gp10b_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct mem_desc *inst_block = &mm->bar1.inst_block;
-	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
 	int err = 0;
 
 	gk20a_dbg_fn("");
@@ -44,7 +43,7 @@ static int gp10b_init_mm_setup_hw(struct gk20a *g)
 		     (g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
 		     >> 8ULL));
 
-	g->ops.mm.bar1_bind(g, inst_pa);
+	g->ops.mm.bar1_bind(g, inst_block);
 
 	if (g->ops.mm.init_bar2_mm_hw_setup) {
 		err = g->ops.mm.init_bar2_mm_hw_setup(g);
@@ -378,21 +377,24 @@ static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 	return gp10b_mm_levels;
 }
 
-static void gp10b_mm_init_pdb(struct gk20a *g, struct mem_desc *mem,
-		u64 pdb_addr)
+static void gp10b_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
+		struct vm_gk20a *vm)
 {
+	u64 pdb_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.sgt->sgl, 0);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
-	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_lo_w(),
-		(g->mm.vidmem_is_vidmem ?
-		  ram_in_page_dir_base_target_sys_mem_ncoh_f() :
+	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
+
+	gk20a_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
+		gk20a_aperture_mask(g, &vm->pdb.mem,
+		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
 		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |
 		ram_in_page_dir_base_lo_f(pdb_addr_lo) |
 		1 << 10);
 
-	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_hi_w(),
+	gk20a_mem_wr32(g, inst_block, ram_in_page_dir_base_hi_w(),
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 

@@ -51,7 +51,8 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 				bool clear_ctags,
 				bool sparse,
 				bool priv,
-				struct vm_gk20a_mapping_batch *batch)
+				struct vm_gk20a_mapping_batch *batch,
+				enum gk20a_aperture aperture)
 {
 	int err = 0;
 	struct device *d = dev_from_vm(vm);

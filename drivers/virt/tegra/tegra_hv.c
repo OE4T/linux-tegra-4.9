@@ -24,6 +24,8 @@
 #include <linux/interrupt.h>
 #include <linux/of.h>
 #include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_irq.h>
 
 #include <linux/tegra-soc.h>
 #include <linux/tegra-ivc.h>
@@ -36,6 +38,10 @@
 #define INFO(...) pr_info("tegra_hv: " __VA_ARGS__)
 
 struct tegra_hv_data;
+
+static struct property interrupts_prop = {
+	.name = "interrupts",
+};
 
 struct hv_ivc {
 	struct tegra_hv_data	*hvd;
@@ -60,6 +66,7 @@ struct hv_ivc {
 	int			reserved;
 
 	char			name[16];
+	int			irq;
 };
 
 #define cookie_to_ivc_dev(_cookie) \
@@ -92,6 +99,8 @@ struct tegra_hv_data {
 	struct hv_mempool *mempools;
 
 	struct class *hv_class;
+
+	struct device_node *dev;
 };
 
 /*
@@ -165,23 +174,24 @@ static void ivc_release_irq(struct hv_ivc *ivc)
 {
 	BUG_ON(!ivc);
 
-	free_irq(ivc->qd->irq, ivc);
+	free_irq(ivc->irq, ivc);
 }
 
 static int ivc_request_cookie_irq(struct hv_ivc *ivcd)
 {
-	return request_irq(ivcd->qd->irq, ivc_dev_cookie_irq_handler, 0,
+	return request_irq(ivcd->irq, ivc_dev_cookie_irq_handler, 0,
 			ivcd->name, ivcd);
 }
 
 static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
-		const struct tegra_hv_queue_data *qd)
+		const struct tegra_hv_queue_data *qd, uint32_t index)
 {
 	struct hv_ivc *ivc;
 	int ret;
 	int rx_first;
 	uintptr_t rx_base, tx_base;
 	uint32_t i;
+	struct irq_data *d;
 
 	ivc = &hvd->ivc_devs[qd->id];
 	BUG_ON(ivc->valid);
@@ -236,8 +246,20 @@ static int tegra_hv_add_ivc(struct tegra_hv_data *hvd,
 
 	snprintf(ivc->name, sizeof(ivc->name), "ivc%u", qd->id);
 
-	INFO("adding ivc%u: rx_base=%lx tx_base = %lx size=%x\n",
-			qd->id, rx_base, tx_base, qd->size);
+	ivc->irq = of_irq_get(hvd->dev, index);
+	if (ivc->irq < 0) {
+		ERR("Unable to get irq for ivc%u\n", qd->id);
+		return ivc->irq;
+	}
+	d = irq_get_irq_data(ivc->irq);
+	if (!d) {
+		ERR("Failed to get data for irq %d (ivc%u)\n", ivc->irq,
+				qd->id);
+		return -ENODEV;
+	}
+
+	INFO("adding ivc%u: rx_base=%lx tx_base = %lx size=%x irq = %d (%lu)\n",
+			qd->id, rx_base, tx_base, qd->size, ivc->irq, d->hwirq);
 	tegra_ivc_init(&ivc->ivc, rx_base, tx_base, qd->nframes, qd->frame_size,
 			NULL, ivc_raise_irq);
 
@@ -321,9 +343,17 @@ static CLASS_ATTR_RO(vmid);
 
 static int __init tegra_hv_setup(struct tegra_hv_data *hvd)
 {
+	const int intr_property_size = 3;
 	uint64_t info_page;
 	uint32_t i;
 	int ret;
+	uint32_t *interrupts_arr;
+
+	hvd->dev = of_find_compatible_node(NULL, NULL, "nvidia,tegra-hv");
+	if (!hvd->dev) {
+		ERR("could not find hv node\n");
+		return -ENODEV;
+	}
 
 	ret = hyp_read_gid(&hvd->guestid);
 	if (ret != 0) {
@@ -377,9 +407,17 @@ static int __init tegra_hv_setup(struct tegra_hv_data *hvd)
 		hvd->guest_ivc_info[i].length = hvd->info->areas[i].size;
 	}
 
+	/* Do not free this, of_add_property does not copy the structure */
+	interrupts_arr = kmalloc(hvd->info->nr_queues * sizeof(uint32_t)
+			* intr_property_size, GFP_KERNEL);
+	if (interrupts_arr == NULL) {
+		ERR("failed to allocate array for interrupts property\n");
+		return -ENOMEM;
+	}
+
 	/*
 	 * Determine the largest queue id in order to allocate a queue id-
-	 * indexed array and device nodes.
+	 * indexed array and device nodes, and create interrupts property
 	 */
 	hvd->max_qid = 0;
 	for (i = 0; i < hvd->info->nr_queues; i++) {
@@ -387,6 +425,22 @@ static int __init tegra_hv_setup(struct tegra_hv_data *hvd)
 				&ivc_info_queue_array(hvd->info)[i];
 		if (qd->id > hvd->max_qid)
 			hvd->max_qid = qd->id;
+		/* 0 => SPI */
+		interrupts_arr[(i * intr_property_size)] = cpu_to_be32(0);
+		interrupts_arr[(i * intr_property_size) + 1] =
+			cpu_to_be32(qd->irq - 32); /* Id in SPI namespace */
+		/* 0x1 == low-to-high edge */
+		interrupts_arr[(i * intr_property_size) + 2] = cpu_to_be32(0x1);
+	}
+
+	interrupts_prop.length =
+		hvd->info->nr_queues * sizeof(uint32_t) * intr_property_size;
+	interrupts_prop.value = interrupts_arr;
+
+	if (of_add_property(hvd->dev, &interrupts_prop)) {
+		ERR("failed to add interrupts property\n");
+		kfree(interrupts_arr);
+		return -EACCES;
 	}
 
 	hvd->ivc_devs = kzalloc((hvd->max_qid + 1) * sizeof(*hvd->ivc_devs),
@@ -401,7 +455,7 @@ static int __init tegra_hv_setup(struct tegra_hv_data *hvd)
 	for (i = 0; i < hvd->info->nr_queues; i++) {
 		const struct tegra_hv_queue_data *qd =
 				&ivc_info_queue_array(hvd->info)[i];
-		ret = tegra_hv_add_ivc(hvd, qd);
+		ret = tegra_hv_add_ivc(hvd, qd, i);
 		if (ret != 0) {
 			ERR("failed to add queue #%u\n", qd->id);
 			return ret;
@@ -473,8 +527,8 @@ static int __init tegra_hv_init(void)
 
 static int ivc_dump(struct hv_ivc *ivc)
 {
-	INFO("IVC#%d: IRQ=%d nframes=%d frame_size=%d offset=%d\n",
-			ivc->qd->id, ivc->qd->irq,
+	INFO("IVC#%d: IRQ=%d(%d) nframes=%d frame_size=%d offset=%d\n",
+			ivc->qd->id, ivc->irq, ivc->qd->irq,
 			ivc->qd->nframes, ivc->qd->frame_size, ivc->qd->offset);
 
 	return 0;
@@ -510,7 +564,7 @@ struct tegra_hv_ivc_cookie *tegra_hv_ivc_reserve(struct device_node *dn,
 	ivc->cookie_ops = ops;
 
 	ivck = &ivc->cookie;
-	ivck->irq = ivc->qd->irq;
+	ivck->irq = ivc->irq;
 	ivck->peer_vmid = ivc->other_guestid;
 	ivck->nframes = ivc->qd->nframes;
 	ivck->frame_size = ivc->qd->frame_size;

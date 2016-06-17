@@ -657,7 +657,7 @@ void gk20a_ctxsw_trace_channel_reset(struct gk20a *g, struct channel_gk20a *ch)
 		.vmid = 0,
 		.tag = NVGPU_CTXSW_TAG_ENGINE_RESET,
 		.context_id = 0,
-		.pid = ch->pid,
+		.pid = ch->tgid,
 	};
 
 	if (!g->ctxsw_trace)

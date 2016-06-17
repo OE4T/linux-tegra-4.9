@@ -117,6 +117,7 @@ struct channel_gk20a {
 	bool vpr;
 	bool cde;
 	pid_t pid;
+	pid_t tgid;
 	struct mutex ioctl_lock;
 
 	int tsgid;

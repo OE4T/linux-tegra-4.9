@@ -631,10 +631,14 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 			GK20A_FECS_TRACE_NUM_RECORDS));
 
 	gk20a_mem_end(g, mem);
+
+	/* pid (process identifier) in user space, corresponds to tgid (thread
+	 * group id) in kernel space.
+	 */
 	if (gk20a_is_channel_marked_as_tsg(ch))
 		pid = tsg_gk20a_from_ch(ch)->tgid;
 	else
-		pid = ch->pid;
+		pid = ch->tgid;
 	gk20a_fecs_trace_hash_add(g, context_ptr, pid);
 
 	return 0;

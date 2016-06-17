@@ -2999,7 +2999,7 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 		seq_printf(s, "%-8d %-8d %-8d %-9d %-8d %-10d %-8d %-8d\n",
 				ch->hw_chid,
 				ch->tsgid,
-				ch->pid,
+				ch->tgid,
 				tsg ? tsg->timeslice_us : ch->timeslice_us,
 				ch->timeout_ms_max,
 				ch->interleave_level,

@@ -1171,6 +1171,7 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 	 * alive and used (i.e. get-able) yet */
 
 	ch->pid = current->pid;
+	ch->tgid = current->tgid;  /* process granularity for FECS traces */
 
 	/* By default, channel is regular (non-TSG) channel */
 	ch->tsgid = NVGPU_INVALID_TSG_ID;

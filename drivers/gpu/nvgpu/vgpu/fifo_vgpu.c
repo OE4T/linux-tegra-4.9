@@ -74,7 +74,7 @@ static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ALLOC_HWCTX;
 	msg.handle = platform->virt_handle;
 	p->id = ch->hw_chid;
-	p->pid = (u64)current->pid;
+	p->pid = (u64)current->tgid;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret) {
 		gk20a_err(dev_from_gk20a(g), "fail");

@@ -521,11 +521,11 @@ struct gpu_ops {
 		void (*remove_bar2_vm)(struct gk20a *g);
 		const struct gk20a_mmu_level *
 			(*get_mmu_levels)(struct gk20a *g, u32 big_page_size);
-		void (*init_pdb)(struct gk20a *g, struct mem_desc *mem,
-				u64 pdb_addr);
+		void (*init_pdb)(struct gk20a *g, struct mem_desc *inst_block,
+				struct vm_gk20a *vm);
 		u64 (*get_iova_addr)(struct gk20a *g, struct scatterlist *sgl,
 					 u32 flags);
-		int (*bar1_bind)(struct gk20a *g, u64 bar1_iova);
+		int (*bar1_bind)(struct gk20a *g, struct mem_desc *bar1_inst);
 		size_t (*get_vidmem_size)(struct gk20a *g);
 	} mm;
 	struct {

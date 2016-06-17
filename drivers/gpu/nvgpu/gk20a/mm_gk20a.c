@@ -92,10 +92,10 @@ static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
 	u32 hi = (u32)((addr & ~(u64)0xfffff)
 		>> bus_bar0_window_target_bar0_window_base_shift_v());
 	u32 lo = (u32)(addr & 0xfffff);
-	u32 win = (g->mm.vidmem_is_vidmem && mem->aperture == APERTURE_SYSMEM ?
-		  bus_bar0_window_target_sys_mem_noncoherent_f() :
-		 bus_bar0_window_target_vid_mem_f()) |
-		 bus_bar0_window_base_f(hi);
+	u32 win = gk20a_aperture_mask(g, mem,
+			bus_bar0_window_target_sys_mem_noncoherent_f(),
+			bus_bar0_window_target_vid_mem_f()) |
+		bus_bar0_window_base_f(hi);
 
 	gk20a_dbg(gpu_dbg_mem,
 			"0x%08x:%08x begin for %p at [%llx,%llx] (sz %zu)",
@@ -817,8 +817,6 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 int gk20a_init_mm_setup_hw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
-	struct mem_desc *inst_block = &mm->bar1.inst_block;
-	u64 inst_pa = gk20a_mm_inst_block_addr(g, inst_block);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -832,7 +830,7 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 		     g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
 		     >> 8);
 
-	g->ops.mm.bar1_bind(g, inst_pa);
+	g->ops.mm.bar1_bind(g, &mm->bar1.inst_block);
 
 	if (g->ops.mm.init_bar2_mm_hw_setup) {
 		err = g->ops.mm.init_bar2_mm_hw_setup(g);
@@ -847,17 +845,19 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gk20a_mm_bar1_bind(struct gk20a *g, u64 bar1_iova)
+static int gk20a_mm_bar1_bind(struct gk20a *g, struct mem_desc *bar1_inst)
 {
-	u64 inst_pa = (u32)(bar1_iova >> bar1_instance_block_shift_gk20a());
-	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
+	u64 iova = gk20a_mm_inst_block_addr(g, bar1_inst);
+	u32 ptr_v = (u32)(iova >> bar1_instance_block_shift_gk20a());
+
+	gk20a_dbg_info("bar1 inst block ptr: 0x%08x", ptr_v);
 
 	gk20a_writel(g, bus_bar1_block_r(),
-		     (g->mm.vidmem_is_vidmem ?
-		       bus_bar1_block_target_sys_mem_ncoh_f() :
+		     gk20a_aperture_mask(g, bar1_inst,
+		       bus_bar1_block_target_sys_mem_ncoh_f(),
 		       bus_bar1_block_target_vid_mem_f()) |
 		     bus_bar1_block_mode_virtual_f() |
-		     bus_bar1_block_ptr_f(inst_pa));
+		     bus_bar1_block_ptr_f(ptr_v));
 
 	return 0;
 }
@@ -2559,6 +2559,29 @@ void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
 	return gk20a_gmmu_free_attr(g, 0, mem);
 }
 
+u32 __gk20a_aperture_mask(struct gk20a *g, enum gk20a_aperture aperture,
+		u32 sysmem_mask, u32 vidmem_mask)
+{
+	switch (aperture) {
+	case APERTURE_SYSMEM:
+		/* sysmem for dgpus; some igpus consider system memory vidmem */
+		return g->mm.vidmem_is_vidmem ? sysmem_mask : vidmem_mask;
+	case APERTURE_VIDMEM:
+		/* for dgpus only */
+		return vidmem_mask;
+	case APERTURE_INVALID:
+		WARN_ON("Bad aperture");
+	}
+	return 0;
+}
+
+u32 gk20a_aperture_mask(struct gk20a *g, struct mem_desc *mem,
+		u32 sysmem_mask, u32 vidmem_mask)
+{
+	return __gk20a_aperture_mask(g, mem->aperture,
+			sysmem_mask, vidmem_mask);
+}
+
 int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size, struct mem_desc *mem)
 {
 	return gk20a_gmmu_alloc_map_attr(vm, 0, size, mem);
@@ -4049,19 +4072,23 @@ static int gk20a_init_cde_vm(struct mm_gk20a *mm)
 			false, false, "cde");
 }
 
-void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *mem, u64 pdb_addr)
+void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
+		struct vm_gk20a *vm)
 {
+	u64 pdb_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.sgt->sgl, 0);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
-	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_lo_w(),
-		(g->mm.vidmem_is_vidmem ?
-		  ram_in_page_dir_base_target_sys_mem_ncoh_f() :
+	gk20a_dbg_info("pde pa=0x%llx", pdb_addr);
+
+	gk20a_mem_wr32(g, inst_block, ram_in_page_dir_base_lo_w(),
+		gk20a_aperture_mask(g, &vm->pdb.mem,
+		  ram_in_page_dir_base_target_sys_mem_ncoh_f(),
 		  ram_in_page_dir_base_target_vid_mem_f()) |
 		ram_in_page_dir_base_vol_true_f() |
 		ram_in_page_dir_base_lo_f(pdb_addr_lo));
 
-	gk20a_mem_wr32(g, mem, ram_in_page_dir_base_hi_w(),
+	gk20a_mem_wr32(g, inst_block, ram_in_page_dir_base_hi_w(),
 		ram_in_page_dir_base_hi_f(pdb_addr_hi));
 }
 
@@ -4069,14 +4096,11 @@ void gk20a_init_inst_block(struct mem_desc *inst_block, struct vm_gk20a *vm,
 		u32 big_page_size)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u64 pde_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.sgt->sgl, 0);
 
 	gk20a_dbg_info("inst block phys = 0x%llx, kv = 0x%p",
 		gk20a_mm_inst_block_addr(g, inst_block), inst_block->cpu_va);
 
-	gk20a_dbg_info("pde pa=0x%llx", (u64)pde_addr);
-
-	g->ops.mm.init_pdb(g, inst_block, pde_addr);
+	g->ops.mm.init_pdb(g, inst_block, vm);
 
 	gk20a_mem_wr32(g, inst_block, ram_in_adr_limit_lo_w(),
 		u64_lo32(vm->va_limit - 1) & ~0xfff);
@@ -4311,7 +4335,7 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u32 addr_lo = u64_lo32(g->ops.mm.get_iova_addr(vm->mm->g,
+	u32 addr_lo = u64_lo32(g->ops.mm.get_iova_addr(g,
 						  vm->pdb.mem.sgt->sgl, 0) >> 12);
 	u32 data;
 	s32 retry = 2000;
@@ -4348,8 +4372,8 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	gk20a_writel(g, fb_mmu_invalidate_pdb_r(),
 		fb_mmu_invalidate_pdb_addr_f(addr_lo) |
-		(g->mm.vidmem_is_vidmem ?
-		  fb_mmu_invalidate_pdb_aperture_sys_mem_f() :
+		gk20a_aperture_mask(g, &vm->pdb.mem,
+		  fb_mmu_invalidate_pdb_aperture_sys_mem_f(),
 		  fb_mmu_invalidate_pdb_aperture_vid_mem_f()));
 
 	gk20a_writel(g, fb_mmu_invalidate_r(),

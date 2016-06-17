@@ -600,6 +600,11 @@ static inline phys_addr_t gk20a_mem_phys(struct mem_desc *mem)
 	return 0;
 }
 
+u32 __gk20a_aperture_mask(struct gk20a *g, enum gk20a_aperture aperture,
+		u32 sysmem_mask, u32 vidmem_mask);
+u32 gk20a_aperture_mask(struct gk20a *g, struct mem_desc *mem,
+		u32 sysmem_mask, u32 vidmem_mask);
+
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			u64 map_offset,
 			struct sg_table *sgt,
@@ -767,7 +772,8 @@ struct gpu_ops;
 void gk20a_init_mm(struct gpu_ops *gops);
 const struct gk20a_mmu_level *gk20a_mm_get_mmu_levels(struct gk20a *g,
 						      u32 big_page_size);
-void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *mem, u64 pdb_addr);
+void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *mem,
+		struct vm_gk20a *vm);
 
 void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block);
 

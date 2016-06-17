@@ -476,7 +476,8 @@ int gr_gk20a_load_zbc_default_table(struct gk20a *g, struct gr_gk20a *gr);
 
 /* pmu */
 int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size);
-int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr);
+int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g,
+		struct mem_desc *inst_block);
 int gr_gk20a_fecs_set_reglist_virtual_addr(struct gk20a *g, u64 pmu_va);
 
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine);

@@ -674,11 +674,24 @@ void gr_gk20a_ctx_patch_write(struct gk20a *g,
 	}
 }
 
+static u32 fecs_current_ctx_data(struct gk20a *g, struct mem_desc *inst_block)
+{
+	u32 ptr = u64_lo32(gk20a_mm_inst_block_addr(g, inst_block)
+			>> ram_in_base_shift_v());
+	u32 aperture = gk20a_aperture_mask(g, inst_block,
+			gr_fecs_current_ctx_target_sys_mem_ncoh_f(),
+			gr_fecs_current_ctx_target_vid_mem_f());
+
+	return gr_fecs_current_ctx_ptr_f(ptr) | aperture |
+		gr_fecs_current_ctx_valid_f(1);
+}
+
 static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 					struct channel_gk20a *c)
 {
 	u32 inst_base_ptr = u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)
 				     >> ram_in_base_shift_v());
+	u32 data = fecs_current_ctx_data(g, &c->inst_block);
 	u32 ret;
 
 	gk20a_dbg_info("bind channel %d inst ptr 0x%08x",
@@ -687,11 +700,7 @@ static int gr_gk20a_fecs_ctx_bind_channel(struct gk20a *g,
 	ret = gr_gk20a_submit_fecs_method_op(g,
 		     (struct fecs_method_op_gk20a) {
 		     .method.addr = gr_fecs_method_push_adr_bind_pointer_v(),
-		     .method.data = (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-				     (g->mm.vidmem_is_vidmem ?
-				       gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
-				       gr_fecs_current_ctx_target_vid_mem_f()) |
-				     gr_fecs_current_ctx_valid_f(1)),
+		     .method.data = data,
 		     .mailbox = { .id = 0, .data = 0,
 				  .clr = 0x30,
 				  .ret = NULL,
@@ -1392,21 +1401,12 @@ static int gr_gk20a_fecs_ctx_image_save(struct channel_gk20a *c, u32 save_type)
 	struct gk20a *g = c->g;
 	int ret;
 
-	u32 inst_base_ptr =
-		u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)
-		>> ram_in_base_shift_v());
-
-
 	gk20a_dbg_fn("");
 
 	ret = gr_gk20a_submit_fecs_method_op(g,
 		(struct fecs_method_op_gk20a) {
 		.method.addr = save_type,
-		.method.data = (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-				(g->mm.vidmem_is_vidmem ?
-				  gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
-				  gr_fecs_current_ctx_target_vid_mem_f()) |
-				gr_fecs_current_ctx_valid_f(1)),
+		.method.data = fecs_current_ctx_data(g, &c->inst_block),
 		.mailbox = {.id = 0, .data = 0, .clr = 3, .ret = NULL,
 			.ok = 1, .fail = 2,
 		},
@@ -1987,18 +1987,11 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	gk20a_mem_end(g, mem);
 
 	if (tegra_platform_is_linsim()) {
-		u32 inst_base_ptr =
-			u64_lo32(gk20a_mm_inst_block_addr(g, &c->inst_block)
-			>> ram_in_base_shift_v());
+		u32 mdata = fecs_current_ctx_data(g, &c->inst_block);
 
 		ret = gr_gk20a_submit_fecs_method_op(g,
 			  (struct fecs_method_op_gk20a) {
-				  .method.data =
-					  (gr_fecs_current_ctx_ptr_f(inst_base_ptr) |
-					   (g->mm.vidmem_is_vidmem ?
-					     gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
-					     gr_fecs_current_ctx_target_vid_mem_f()) |
-					   gr_fecs_current_ctx_valid_f(1)),
+				  .method.data = mdata,
 				  .method.addr =
 					  gr_fecs_method_push_adr_restore_golden_v(),
 				  .mailbox = {
@@ -4507,8 +4500,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	addr >>= fb_mmu_debug_wr_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_wr_r(),
-		     (g->mm.vidmem_is_vidmem ?
-		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f() :
+		     gk20a_aperture_mask(g, &gr->mmu_wr_mem,
+		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
 		       fb_mmu_debug_wr_aperture_vid_mem_f()) |
 		     fb_mmu_debug_wr_vol_false_f() |
 		     fb_mmu_debug_wr_addr_f(addr));
@@ -4517,8 +4510,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 	addr >>= fb_mmu_debug_rd_addr_alignment_v();
 
 	gk20a_writel(g, fb_mmu_debug_rd_r(),
-		     (g->mm.vidmem_is_vidmem ?
-		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f() :
+		     gk20a_aperture_mask(g, &gr->mmu_rd_mem,
+		       fb_mmu_debug_wr_aperture_sys_mem_ncoh_f(),
 		       fb_mmu_debug_rd_aperture_vid_mem_f()) |
 		     fb_mmu_debug_rd_vol_false_f() |
 		     fb_mmu_debug_rd_addr_f(addr));
@@ -4966,8 +4959,7 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 	}
 
 
-	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
-			gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block));
+	err = gr_gk20a_fecs_set_reglist_bind_inst(g, &mm->pmu.inst_block);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");
@@ -5245,8 +5237,7 @@ int gk20a_gr_reset(struct gk20a *g)
 		return err;
 	}
 
-	err = gr_gk20a_fecs_set_reglist_bind_inst(g,
-			gk20a_mm_inst_block_addr(g, &g->mm.pmu.inst_block));
+	err = gr_gk20a_fecs_set_reglist_bind_inst(g, &g->mm.pmu.inst_block);
 	if (err) {
 		gk20a_err(dev_from_gk20a(g),
 			"fail to bind pmu inst to gr");
@@ -6346,16 +6337,15 @@ int gr_gk20a_fecs_get_reglist_img_size(struct gk20a *g, u32 *size)
 			   .mailbox.fail = 0}, false);
 }
 
-int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g, phys_addr_t addr)
+int gr_gk20a_fecs_set_reglist_bind_inst(struct gk20a *g,
+		struct mem_desc *inst_block)
 {
+	u32 data = fecs_current_ctx_data(g, inst_block);
+
 	return gr_gk20a_submit_fecs_method_op(g,
 		   (struct fecs_method_op_gk20a){
 			   .mailbox.id = 4,
-			   .mailbox.data = (gr_fecs_current_ctx_ptr_f(addr >> 12) |
-					    gr_fecs_current_ctx_valid_f(1) |
-					    (g->mm.vidmem_is_vidmem ?
-					      gr_fecs_current_ctx_target_sys_mem_ncoh_f() :
-					      gr_fecs_current_ctx_target_vid_mem_f())),
+			   .mailbox.data = data,
 			   .mailbox.clr = ~0,
 			   .method.data = 1,
 			   .method.addr = gr_fecs_method_push_adr_set_reglist_bind_instance_v(),

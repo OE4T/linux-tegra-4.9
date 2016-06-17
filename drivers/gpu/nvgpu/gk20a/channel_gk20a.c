@@ -143,8 +143,8 @@ static int channel_gk20a_commit_userd(struct channel_gk20a *c)
 
 	gk20a_mem_wr32(g, &c->inst_block,
 		       ram_in_ramfc_w() + ram_fc_userd_w(),
-		       (g->mm.vidmem_is_vidmem ?
-			pbdma_userd_target_sys_mem_ncoh_f() :
+		       gk20a_aperture_mask(g, &g->fifo.userd,
+			pbdma_userd_target_sys_mem_ncoh_f(),
 			pbdma_userd_target_vid_mem_f()) |
 		       pbdma_userd_addr_f(addr_lo));
 
@@ -360,8 +360,8 @@ static void channel_gk20a_bind(struct channel_gk20a *c)
 
 	gk20a_writel(g, ccsr_channel_inst_r(c->hw_chid),
 		ccsr_channel_inst_ptr_f(inst_ptr) |
-		(g->mm.vidmem_is_vidmem ?
-		 ccsr_channel_inst_target_sys_mem_ncoh_f() :
+		gk20a_aperture_mask(g, &c->inst_block,
+		 ccsr_channel_inst_target_sys_mem_ncoh_f(),
 		 ccsr_channel_inst_target_vid_mem_f()) |
 		ccsr_channel_inst_bind_true_f());
 

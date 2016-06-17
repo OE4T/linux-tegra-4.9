@@ -135,18 +135,20 @@ static bool gm20b_mm_support_sparse(struct gk20a *g)
 	return true;
 }
 
-static int gm20b_mm_bar1_bind(struct gk20a *g, u64 bar1_iova)
+static int gm20b_mm_bar1_bind(struct gk20a *g, struct mem_desc *bar1_inst)
 {
 	int retry = 1000;
-	u64 inst_pa = (u32)(bar1_iova >> bar1_instance_block_shift_gk20a());
-	gk20a_dbg_info("bar1 inst block ptr: 0x%08x",  (u32)inst_pa);
+	u64 iova = gk20a_mm_inst_block_addr(g, bar1_inst);
+	u32 ptr_v = (u32)(iova >> bar1_instance_block_shift_gk20a());
+
+	gk20a_dbg_info("bar1 inst block ptr: 0x%08x", ptr_v);
 
 	gk20a_writel(g, bus_bar1_block_r(),
-		     (g->mm.vidmem_is_vidmem ?
-		       bus_bar1_block_target_sys_mem_ncoh_f() :
+		     gk20a_aperture_mask(g, bar1_inst,
+		       bus_bar1_block_target_sys_mem_ncoh_f(),
 		       bus_bar1_block_target_vid_mem_f()) |
 		     bus_bar1_block_mode_virtual_f() |
-		     bus_bar1_block_ptr_f(inst_pa));
+		     bus_bar1_block_ptr_f(ptr_v));
 	do {
 		u32 val = gk20a_readl(g, bus_bind_status_r());
 		u32 pending = bus_bind_status_bar1_pending_v(val);

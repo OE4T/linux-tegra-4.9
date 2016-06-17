@@ -14,6 +14,15 @@ config POWER_SUPPLY_DEBUG
 	  Say Y here to enable debugging messages for power supply class
 	  and drivers.
 
+config POWER_SUPPLY_EXTCON
+	bool "Power supply detection through extcon"
+	depends on EXTCON
+	help
+	  Say Y to enable the power supply cable type notification
+	  through extcon. The external driver like USB Host identify
+	  the supply type and generate the cable type notification
+	  through extcon.
+
 config PDA_POWER
 	tristate "Generic PDA/phone power driver"
 	depends on !S390

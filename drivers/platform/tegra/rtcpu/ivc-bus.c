@@ -344,9 +344,9 @@ static void tegra_ivc_bus_destroy_channels(struct tegra_ivc_bus *bus)
 static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 					struct device_node *dev_node, u32 sid)
 {
-	struct device_node *reg_node;
+	struct of_phandle_args reg_spec;
 	void __iomem *ast[2];
-	int ret, region = 2;
+	int ret, i;
 
 	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
 	ast[0] = tegra_ast_map_byname(bus->dev.parent, "ast-cpu");
@@ -362,49 +362,41 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 	}
 
 	/* Parse out all nodes with a region */
-	for_each_child_of_node(dev_node, reg_node) {
+	for (i = 0;
+		of_parse_phandle_with_fixed_args(dev_node, NV(ivc-channels), 3,
+							i, &reg_spec) == 0;
+		i++) {
 		struct device_node *ch_node;
 		unsigned long base;
 		dma_addr_t ivc_dma;
-		struct {
-			u32 va, size;
-		} ivc = { 0, 0 };
-
-		if (of_node_cmp(reg_node->name, "ivc-channels"))
-			continue;
-
-		/* IVC VA addr and size */
-		if (of_property_read_u32_array(reg_node, "reg", &ivc.va, 2)) {
-			dev_err(&bus->dev, "missing <%s> property\n", "reg");
-			ret = -EINVAL;
-			goto error;
-		}
+		u32 region = reg_spec.args[0];
+		u32 vaddr = reg_spec.args[1];
+		u32 size = reg_spec.args[2];
 
 		/* IVC buffer size must be a power of 2 */
-		if (unlikely(ivc.size & (ivc.size - 1))) {
+		if (unlikely(size & (size - 1))) {
 			dev_err(&bus->dev, "invalid region size 0x%08X\n",
-				ivc.size);
+				size);
 			ret = -EINVAL;
 			goto error;
 		}
 
 		/* Allocate RAM for IVC */
 		base = (unsigned long)dmam_alloc_coherent(bus->dev.parent,
-				ivc.size, &ivc_dma, GFP_KERNEL | __GFP_ZERO);
+				size, &ivc_dma, GFP_KERNEL | __GFP_ZERO);
 		if (unlikely(base == 0)) {
 			ret = -ENOMEM;
 			goto error;
 		}
 
-		tegra_ast_region_enable(2, ast, region, ivc.va, ivc.size,
-					ivc_dma, sid);
-		region++;
+		tegra_ast_region_enable(ARRAY_SIZE(ast), ast, region, vaddr,
+					size, ivc_dma, sid);
 
-		for_each_child_of_node(reg_node, ch_node) {
+		for_each_child_of_node(reg_spec.np, ch_node) {
 			struct tegra_ivc_channel *chan;
 
 			chan = tegra_ivc_bus_parse_channel(ch_node, &bus->dev,
-						base, ivc_dma, ivc.size);
+						base, ivc_dma, size);
 			if (IS_ERR(chan)) {
 				ret = PTR_ERR(chan);
 				of_node_put(ch_node);
@@ -419,7 +411,7 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 	return tegra_ivc_bus_validate_channels(bus);
 
 error:
-	of_node_put(reg_node);
+	of_node_put(reg_spec.np);
 	tegra_ivc_bus_destroy_channels(bus);
 	return ret;
 }

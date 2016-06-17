@@ -15,16 +15,13 @@ frame sizes are multiples of 64-byte cache lines.
 
 List of IVC channels implemented by remote core to talk to CCPLEX.
 The top-level node defines the AST region shared by IVC channels below
-it. The node name must be "ivc-channels[@<region-address>]".
+it.
 
 Required properties:
 - #address-cells: Number of address cells in each subnode.
   Must be set to <1>.
 - #size-cells: Number of size cells in each subnode.
   Must be set to <0>.
-- reg: Address and size of the IVC region within the remote CPU
-  address space.  Size must be a power of two. Address must be aligned
-  on size.
 
 == IVC channel sub nodes ==
 
@@ -46,12 +43,9 @@ Optional properties:
 
 Example:
 
-#address-cells = <1>;
-#size-cells = <1>;
-ivc-channels@90000000 {
+ivc-channels {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	reg = <0x90000000 0x10000>;
 	echo@0 {
 		compatible = "nvidia,tegra186-ivc-protocol-echo";
 		reg = <0x0000>, <0x0480>;

@@ -37,13 +37,9 @@ Required properties:
   - adspwdt
   - ape
   - adsp
+- nvidia,ivc-channels: IVC channel layout. See ./tegra-sce-ivc.txt.
 
 == APE sub nodes ==
-
-* ivc-channels
-
-Contains a sub-node for each IVC channel implemented by the APE.
-For IVC channel details, please refer: ./tegra-ivc-channel.txt
 
 * hsp
 

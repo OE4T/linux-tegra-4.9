@@ -40,17 +40,16 @@ Required properties:
   - sce-cfg
 - resets: Should contain an entry for each entry in reset-names.
   See ../reset/reset.txt for details.
-- #address-cells: Number of address cells in each subnode (ivc-channels).
-  Must be set to <1>.
-- #size-cells: Number of size cells in each subnode (ivc-channels).
-  Must be set to <1>.
+- nvidia,ivc-channels: List of IVC channel regions.
+  For each IVC channel regions (usually, there is only one region):
+  - an OF phandle pointing to the list,
+  - the region number for Tegra AST,
+  - the base address of the region in the remote processor (for address space
+    translation),
+  - the length of the region in bytes (must be a power of two).
+  For IVC channel details, please refer to: ./tegra-ivc-channel.txt
 
 == SCE sub nodes ==
-
-* ivc-channels
-
-Contains a sub-node for each IVC channel implemented by the SCE.
-For IVC channel details, please refer: ./tegra-ivc-channel.txt
 
 * hsp
 
@@ -134,21 +133,8 @@ tegra_sce: rtcpu@b000000 {
 		"sce-tke",
 		"sce-gte",
 		"sce-cfg";
-	#address-cells = <1>;
-	#size-cells = <1>;
+	nvidia,ivc-channels = <&tegra_camera_ivc 0x90000000 0x10000>;
 
-	ivc-channels@90000000 {
-		#address-cells = <1>;
-		#size-cells = <0>;
-		reg = <0x90000000 0x10000>;
-		ivc-channel@0 {
-			compatible = "nvidia,tegra186-camera-ivc-protocol-echo";
-			reg = <0x0000>, <0x8000>;
-			reg-names = "rx", "tx";
-			nvidia,frame-size = <64>;
-			nvidia,frame-count = <16>;
-		};
-	};
 	hsp {
 		compatible = "nvidia,tegra186-hsp-mailbox";
 		nvidia,hsp-shared-mailbox = <&sce_hsp 1 &sce_hsp 7>;

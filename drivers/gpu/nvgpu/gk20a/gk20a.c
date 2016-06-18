@@ -1562,13 +1562,14 @@ static int gk20a_probe(struct platform_device *dev)
 
 	gk20a_create_sysfs(&dev->dev);
 
+	gk20a->mm.bypass_smmu = platform->bypass_smmu;
+	gk20a->mm.disable_bigpage = platform->disable_bigpage;
+	gk20a->mm.has_physical_mode = true;
+
 #ifdef CONFIG_DEBUG_FS
 	spin_lock_init(&gk20a->debugfs_lock);
 	gk20a->mm.ltc_enabled = true;
 	gk20a->mm.ltc_enabled_debug = true;
-	gk20a->mm.bypass_smmu = platform->bypass_smmu;
-	gk20a->mm.disable_bigpage = platform->disable_bigpage;
-	gk20a->mm.has_physical_mode = true;
 	gk20a->debugfs_ltc_enabled =
 			debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
 				 platform->debugfs,

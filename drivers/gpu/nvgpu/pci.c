@@ -243,8 +243,10 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	g->mm.has_physical_mode = false;
 	g->mm.vidmem_is_vidmem = true;
+#ifdef CONFIG_DEBUG_FS
 	g->mm.ltc_enabled = true;
 	g->mm.ltc_enabled_debug = true;
+#endif
 	g->mm.bypass_smmu = platform->bypass_smmu;
 	g->mm.disable_bigpage = platform->disable_bigpage;
 

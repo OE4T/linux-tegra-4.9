@@ -1,7 +1,7 @@
 /*
  * gk20a allocator
  *
- * Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -1160,6 +1160,7 @@ static void balloc_init_alloc_debug(struct gk20a_allocator *a)
 					       a, &__alloc_fops);
 }
 
+#ifdef CONFIG_DEBUG_FS
 void gk20a_alloc_debugfs_init(struct platform_device *pdev)
 {
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
@@ -1172,3 +1173,4 @@ void gk20a_alloc_debugfs_init(struct platform_device *pdev)
 	debugfs_create_u32("tracing", 0664, balloc_debugfs_root,
 			   &balloc_tracing_on);
 }
+#endif

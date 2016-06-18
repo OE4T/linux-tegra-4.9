@@ -1,0 +1,46 @@
+* NVIDIA Tegra Address Space Translation (AST) bindings
+
+Tegra AST unit converts any auxiliary CPUs' local AXI PA space
+(it is not the CCPLEX PA space) to either Physical or virtual MC
+Address space. i.e. its local slave address to either PA or
+if SMMU enabled then to IOVA.
+
+== AST Device Nodes ==
+
+Required properties:
+
+- compatible: should be "nvidia,tegra186-ast" for T18x.
+
+- reg: base address and length of the AST aperture
+
+Possible example:
+
+some_device_ast0: ast@b040000 {
+	compatible = "nvidia,tegra186-ast";
+	reg = <0 0x0b040000 0 0x10000>;
+};
+
+some_device_ast1: ast@b050000 {
+	compatible = "nvidia,tegra186-ast";
+	reg = <0 0x0b050000 0 0x10000>;
+
+};
+
+== Clients ==
+
+Clients that use an AST must define a property that contains
+the phandle of the AST device.
+The name of this property is defined by the client's binding.
+
+A possible example is:
+
+some_device {
+	nvidia,ast0 = <&some_device_ast0>;
+	nvidia,ast1 = <&some_device_ast1>;
+};
+
+Or only single property can contain mutliple AST phandles, like:
+
+some_device {
+	nvidia,ast = <&some_device_ast0>, <&some_device_ast1>;
+};

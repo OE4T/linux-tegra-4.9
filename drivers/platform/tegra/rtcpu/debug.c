@@ -20,8 +20,6 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
-#include <linux/of_address.h>
-#include <linux/io.h>
 #include <linux/slab.h>
 #include <linux/tegra_ast.h>
 #include <linux/tegra-camera-rtcpu.h>
@@ -277,13 +275,16 @@ DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_freertos_state,
 		camrtc_dbgfs_show_freertos_state);
 
 static void camrtc_dbgfs_show_ast_region(struct seq_file *file,
-						void __iomem *base, u32 index)
+				void __iomem *ast[],
+				int ast_dma,
+				u32 index)
 {
+	void __iomem *base = ast[ast_dma];
 	struct tegra_ast_region_info info;
 
 	tegra_ast_get_region_info(base, index, &info);
 
-	seq_printf(file, "ast region %u %s\n", index,
+	seq_printf(file, "ast%u region %u %s\n", ast_dma, index,
 		info.enabled ? "enabled" : "disabled");
 
 	if (!info.enabled)
@@ -310,7 +311,7 @@ static void camrtc_dbgfs_show_ast_region(struct seq_file *file,
 struct camrtc_dbgfs_ast_node
 {
 	struct tegra_ivc_channel *ch;
-	const char *name;
+	uint8_t dma;
 	uint8_t mask;
 };
 
@@ -320,29 +321,29 @@ static int camrtc_dbgfs_show_ast(struct seq_file *file,
 	struct camrtc_dbgfs_ast_node *node = file->private;
 	struct tegra_ivc_channel *ch = node->ch;
 	struct device *rce_dev = camrtc_get_device(ch);
-	void __iomem *ast;
-	int i;
+	void __iomem *ast[2];
+	int i, ret;
 
-	i = of_property_match_string(rce_dev->of_node, "reg-names",
-					node->name);
-	if (i < 0)
-		return i;
+	BUG_ON(node->dma >= ARRAY_SIZE(ast));
 
-	ast = of_iomap(rce_dev->of_node, i);
-	if (ast == NULL)
-		return -ENOMEM;
+	ret = tegra_ast_map(rce_dev, NV(ast), ARRAY_SIZE(ast), ast);
+	if (ret) {
+		dev_err(&ch->dev, "RTCPU ASTs not found: %d\n", ret);
+		return ret;
+	}
 
 	for (i = 0; i <= 7; i++) {
 		if (!(node->mask & BIT(i)))
 			continue;
 
-		camrtc_dbgfs_show_ast_region(file, ast, i);
+		camrtc_dbgfs_show_ast_region(file, ast, node->dma, i);
 
 		if (node->mask & (node->mask - 1)) /* are multiple bits set? */
 			seq_puts(file, "\n");
 	}
 
-	iounmap(ast);
+	tegra_ast_unmap(rce_dev, ARRAY_SIZE(ast), ast);
+
 	return 0;
 }
 
@@ -398,13 +399,12 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 		goto error;
 
 	for (dma = 0; dma <= 1; dma++) {
-		const char *ast_name = dma ? "ast-dma" : "ast-cpu";
-		dir = debugfs_create_dir(ast_name, crd->root);
+		dir = debugfs_create_dir(dma ? "ast1" : "ast0", crd->root);
 		if (dir == NULL)
 			goto error;
 
 		ast_nodes->ch = ch;
-		ast_nodes->name = ast_name;
+		ast_nodes->dma = dma;
 		ast_nodes->mask = 0xff;
 
 		if (!debugfs_create_file("all", S_IRUGO, dir, ast_nodes,
@@ -419,7 +419,7 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 			snprintf(name, sizeof name, "%u", region);
 
 			ast_nodes->ch = ch;
-			ast_nodes->name = ast_name;
+			ast_nodes->dma = dma;
 			ast_nodes->mask = BIT(region);
 
 			if (!debugfs_create_file(name, S_IRUGO, dir, ast_nodes,

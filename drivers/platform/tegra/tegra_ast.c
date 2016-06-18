@@ -49,7 +49,7 @@
 /* TEGRA_APS_AST_REGION_<x>_SLAVE_BASE_LO register fields */
 #define AST_SLV_BASE_LO_ENABLE		1
 
-void __iomem *tegra_ast_map(struct device *dev, int index)
+static void __iomem *tegra_ast_map_one(struct device *dev, int index)
 {
 	struct resource mem;
 	int err = of_address_to_resource(dev->of_node, index, &mem);
@@ -59,16 +59,63 @@ void __iomem *tegra_ast_map(struct device *dev, int index)
 	/* NOTE: assumes size is large enough for caller */
 	return devm_ioremap_resource(dev, &mem);
 }
-EXPORT_SYMBOL(tegra_ast_map);
 
 void __iomem *tegra_ast_map_byname(struct device *dev, const char *name)
 {
 	int index = of_property_match_string(dev->of_node, "reg-names", name);
 	if (index < 0)
 		return IOMEM_ERR_PTR(-ENOENT);
-	return tegra_ast_map(dev, index);
+	return tegra_ast_map_one(dev, index);
 }
 EXPORT_SYMBOL(tegra_ast_map_byname);
+
+int tegra_ast_map(struct device *dev, const char *name,
+			unsigned count, void __iomem *bases[])
+{
+	int err, i;
+
+	if (dev->of_node == NULL)
+		return -EINVAL;
+
+	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
+	for (i = 0; i < count; i++) {
+		struct device_node *node;
+		void __iomem *base;
+		struct resource res;
+
+		node = of_parse_phandle(dev->of_node, name, i);
+		if (node == NULL) {
+			err = -EINVAL;
+			goto error;
+		}
+
+		err = of_address_to_resource(node, 0, &res);
+		if (err)
+			goto error;
+
+		base = devm_ioremap(dev, res.start, resource_size(&res));
+		if (base == NULL) {
+			err = -ENOMEM;
+			goto error;
+		}
+
+		bases[i] = base;
+	}
+	return 0;
+
+error:
+	tegra_ast_unmap(dev, i, bases);
+	return err;
+}
+EXPORT_SYMBOL(tegra_ast_map);
+
+void tegra_ast_unmap(struct device *dev,
+			unsigned count, void __iomem *const bases[])
+{
+	while (count > 0)
+		devm_iounmap(dev, bases[--count]);
+}
+EXPORT_SYMBOL(tegra_ast_unmap);
 
 int tegra_ast_region_enable(unsigned count, void __iomem *const bases[],
 				u32 region, u32 slave_base, u32 size,

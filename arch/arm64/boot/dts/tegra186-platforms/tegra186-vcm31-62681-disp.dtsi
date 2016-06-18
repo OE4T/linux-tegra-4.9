@@ -30,6 +30,7 @@
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-win = <0>;
+			win-mask = <0x03>;
 			nvidia,dc-ctrlnum = <0>;
 			nvidia,dc-or-node = "/host1x/dsi";
 		};
@@ -39,9 +40,20 @@
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
-			nvidia,fb-win = <3>;
+			nvidia,fb-win = <2>;
+			win-mask = <0x0c>;
 			nvidia,dc-ctrlnum = <1>;
-//			nvidia,dc-or-node = "/host1x/sor";
+			nvidia,dc-or-node = "/host1x/sor";
+		};
+
+		nvdisplay@15220000 {
+			status = "okay";
+			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
+			nvidia,emc-clk-rate = <300000000>;
+			nvidia,fb-bpp = <32>; /* bits per pixel */
+			nvidia,fb-win = <4>;
+			win-mask = <0x30>;
+			nvidia,dc-ctrlnum = <2>;
 			nvidia,dc-or-node = "/host1x/sor1";
 		};
 

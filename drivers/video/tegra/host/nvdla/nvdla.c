@@ -37,7 +37,7 @@
 #include "nvdla_ucode_interface.h"
 
 #define DEBUG_BUFFER_SIZE 0x100
-DEFINE_DMA_ATTRS(attrs);
+static DEFINE_DMA_ATTRS(attrs);
 
 /* data structure to keep device data */
 struct nvdla {

@@ -259,7 +259,7 @@
 					};
 				};
 				smartdimmer {
-					status = "okay";
+					status = "disabled";
 					nvidia,use-auto-pwm = <0>;
 					nvidia,hw-update-delay = <0>;
 					nvidia,bin-width = <0xffffffff>;

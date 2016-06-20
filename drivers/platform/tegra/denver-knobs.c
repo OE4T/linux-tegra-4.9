@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -111,7 +111,6 @@ enum creg_command {
 	CREG_READ,
 	CREG_WRITE
 };
-#endif
 
 static const char * const pmic_names[] = {
 	[UNDEFINED] = "none",
@@ -122,6 +121,7 @@ static const char * const pmic_names[] = {
 };
 
 static DEFINE_SPINLOCK(nvg_lock);
+#endif
 
 int smp_call_function_denver(smp_call_func_t func, void *info, int wait)
 {

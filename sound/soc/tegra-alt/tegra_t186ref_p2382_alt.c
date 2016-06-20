@@ -59,13 +59,33 @@ struct tegra_t186ref_p2382 {
 	unsigned int num_codec_links;
 };
 
-static struct snd_soc_pcm_stream tegra_t186ref_p2382_amx_input_params[] = {
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
-	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+static const struct snd_soc_pcm_stream tegra_t186ref_p2382_amx_input_params[][4] = {
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 6),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+	},
+	{
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+		PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
+	},
 };
-static struct snd_soc_pcm_stream tegra_t186ref_p2382_amx_output_params[] = {
+static const struct snd_soc_pcm_stream tegra_t186ref_p2382_amx_output_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S32_LE, 8),
 };
 static struct snd_soc_pcm_stream tegra_t186ref_p2382_adx_output_params[] = {
@@ -596,16 +616,16 @@ static int tegra_t186ref_p2382_driver_probe(struct platform_device *pdev)
 		for (i = 0; i < machine->amx_adx_conf.num_amx; i++) {
 			tegra_machine_set_dai_params(TEGRA186_DAI_LINK_AMX1_1 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_p2382_amx_input_params[0]);
+				&tegra_t186ref_p2382_amx_input_params[i][0]);
 			tegra_machine_set_dai_params(TEGRA186_DAI_LINK_AMX1_2 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_p2382_amx_input_params[1]);
+				&tegra_t186ref_p2382_amx_input_params[i][1]);
 			tegra_machine_set_dai_params(TEGRA186_DAI_LINK_AMX1_3 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_p2382_amx_input_params[2]);
+				&tegra_t186ref_p2382_amx_input_params[i][2]);
 			tegra_machine_set_dai_params(TEGRA186_DAI_LINK_AMX1_4 + (5*i),
 				(struct snd_soc_pcm_stream *)
-				&tegra_t186ref_p2382_amx_input_params[3]);
+				&tegra_t186ref_p2382_amx_input_params[i][3]);
 			tegra_machine_set_dai_params(TEGRA186_DAI_LINK_AMX1 + (5*i),
 				(struct snd_soc_pcm_stream *)
 				&tegra_t186ref_p2382_amx_output_params[0]);

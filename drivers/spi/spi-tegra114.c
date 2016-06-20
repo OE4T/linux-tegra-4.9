@@ -555,6 +555,7 @@ static int tegra_spi_start_dma_based_transfer(
 		struct tegra_spi_data *tspi, struct spi_transfer *t)
 {
 	u32 val;
+	u32 command1;
 	unsigned int len;
 	int ret = 0, maxburst;
 	struct dma_slave_config dma_sconfig;
@@ -631,6 +632,14 @@ static int tegra_spi_start_dma_based_transfer(
 	tspi->is_curr_dma_xfer = true;
 	tspi->dma_control_reg = val;
 
+	command1 = tspi->command1_reg;
+	command1 &=  ~SPI_BOTH_EN_BIT;
+	if ((t->rx_nbits == SPI_NBITS_DUAL) ||
+	    (t->tx_nbits == SPI_NBITS_DUAL))
+		command1 |=  SPI_BOTH_EN_BIT;
+	if (command1 != tspi->command1_reg)
+		tegra_spi_writel(tspi, command1, SPI_COMMAND1);
+
 	val |= SPI_DMA_EN;
 	tegra_spi_writel(tspi, val, SPI_DMA_CTL);
 	return ret;
@@ -667,6 +676,10 @@ static int tegra_spi_start_cpu_based_transfer(
 
 	tspi->is_curr_dma_xfer = false;
 	val = tspi->command1_reg;
+	val &= ~SPI_BOTH_EN_BIT;
+	if ((t->rx_nbits == SPI_NBITS_DUAL) ||
+	    (t->tx_nbits == SPI_NBITS_DUAL))
+		val |=  SPI_BOTH_EN_BIT;
 	val |= SPI_PIO;
 	tegra_spi_writel(tspi, val, SPI_COMMAND1);
 	return 0;
@@ -898,7 +911,6 @@ static int tegra_spi_start_transfer_one(struct spi_device *spi,
 	int ret;
 
 	total_fifo_words = tegra_spi_calculate_curr_xfer_param(spi, tspi, t);
-
 	if (tspi->is_packed)
 		command1 |= SPI_PACKED;
 
@@ -1359,7 +1371,8 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		master->max_speed_hz = 25000000; /* 25MHz */
 
 	/* the spi->mode bits understood by this driver: */
-	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH | SPI_LSB_FIRST;
+	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH | SPI_LSB_FIRST |
+		SPI_TX_DUAL | SPI_RX_DUAL;
 	master->setup = tegra_spi_setup;
 	master->cleanup = tegra_spi_cleanup;
 	master->transfer_one_message = tegra_spi_transfer_one_message;

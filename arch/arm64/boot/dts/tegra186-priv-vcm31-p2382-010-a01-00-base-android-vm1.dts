@@ -301,6 +301,14 @@
 			status = "disabled";
 		};
 
+		se@15810000 {
+			status = "disabled";
+		};
+
+		se@15820000 {
+			status = "disabled";
+		};
+
 		se@15830000 {
 			status = "disabled";
 		};
@@ -585,7 +593,7 @@
 		compatible = "nvidia,tegra186-hv-vse";
 		#stream-id-cells = <1>;
 		ivc = <76>;
-		status = "disabled";
+		se-engine-id = <1>;
 	};
 
 	vse@15830000 {

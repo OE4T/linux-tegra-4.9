@@ -3,7 +3,7 @@
  *
  * crypto dev node for NVIDIA tegra aes hardware
  *
- * Copyright (c) 2010-2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2010-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -521,7 +521,7 @@ static long tegra_crypto_dev_ioctl(struct file *filp,
 #ifdef CONFIG_COMPAT
 	case TEGRA_CRYPTO_IOCTL_PROCESS_REQ_32:
 		ret = copy_from_user(&crypt_req_32, (void __user *)arg,
-			sizeof(crypt_req_32));
+			sizeof(struct tegra_crypt_req_32));
 		if (ret) {
 			pr_err("%s: copy_from_user fail(%d)\n", __func__, ret);
 			return -EFAULT;

@@ -125,7 +125,7 @@ static u16 smooth_k_frames_left;
    (indicating to SW to keep brightness at 100%). The field's max value is
    influenced by the field DC_DISP_SD_CONTROL[BIAS0]. The following table is
    used to scale BRIGHTNESS by the correct max value expected from HW. */
-u8 bias0_to_max_bl[4] = {
+static u8 bias0_to_max_bl[4] = {
 	0xfb, /* BIAS0 */
 	0xfd, /* BIAS1 */
 	0xfb, /* BIAS_HALF */

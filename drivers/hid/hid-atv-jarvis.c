@@ -171,6 +171,7 @@ struct shdr_device {
 	struct snd_card *shdr_card;
 };
 static int num_remotes;
+static struct mutex snd_cards_lock;
 static int index[SNDRV_CARDS] = SNDRV_DEFAULT_IDX;  /* Index 0-MAX */
 static char *id[SNDRV_CARDS] = SNDRV_DEFAULT_STR;   /* ID for this card */
 /* enable upto 5 sound cards for multiple remotes,controllers */
@@ -1641,7 +1642,7 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	 * only then to avoid race conditions on subsequent connections.
 	 * AudioService.java delays enabling the output
 	 */
-
+	mutex_lock(&snd_cards_lock);
 	ret = atvr_snd_initialize(hdev, &shdr_card);
 	if (ret)
 		goto err_stop;
@@ -1662,9 +1663,11 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 		num_remotes, num_remotes+1);
 	num_remotes++;
 
+	mutex_unlock(&snd_cards_lock);
 	return 0;
 err_stop:
 	hid_hw_stop(hdev);
+	mutex_unlock(&snd_cards_lock);
 err_start:
 err_parse:
 	kfree(shdr_dev);
@@ -1681,6 +1684,7 @@ static void atvr_remove(struct hid_device *hdev)
 	if (shdr_card == NULL)
 		return -EIO;
 
+	mutex_lock(&snd_cards_lock);
 	atvr_snd = shdr_card->private_data;
 	mutex_lock(&atvr_snd->hdev_lock);
 	atvr_snd->hdev = NULL;
@@ -1698,8 +1702,8 @@ static void atvr_remove(struct hid_device *hdev)
 	cards_in_use[atvr_snd->card_index] = false;
 	mutex_destroy(&atvr_snd->hdev_lock);
 	snd_card_free(shdr_card);
-
 	kfree(shdr_dev);
+	mutex_unlock(&snd_cards_lock);
 }
 
 static const struct hid_device_id atvr_devices[] = {
@@ -1727,6 +1731,7 @@ static int atvr_init(void)
 {
 	int ret;
 
+	mutex_init(&snd_cards_lock);
 	ret = switch_dev_register(&shdr_mic_switch);
 	if (ret)
 		pr_err("%s: failed to create shdr_mic_switch\n", __func__);
@@ -1783,6 +1788,7 @@ static void atvr_exit(void)
 #endif
 
 	hid_unregister_driver(&atvr_driver);
+	mutex_destroy(&snd_cards_lock);
 }
 
 module_init(atvr_init);

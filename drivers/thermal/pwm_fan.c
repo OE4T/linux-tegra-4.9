@@ -74,9 +74,6 @@ struct fan_dev_data {
 	bool is_fan_reg_enabled;
 };
 
-#ifdef CONFIG_DEBUG_FS
-static struct dentry *fan_debugfs_root;
-
 static void fan_update_target_pwm(struct fan_dev_data *fan_data, int val)
 {
 	if (fan_data) {
@@ -88,6 +85,9 @@ static void fan_update_target_pwm(struct fan_dev_data *fan_data, int val)
 					msecs_to_jiffies(fan_data->step_time));
 	}
 }
+
+#ifdef CONFIG_DEBUG_FS
+static struct dentry *fan_debugfs_root;
 
 static int fan_target_pwm_show(void *data, u64 *val)
 {
@@ -994,7 +994,9 @@ static int pwm_fan_remove(struct platform_device *pdev)
 
 	if (!fan_data)
 		return -EINVAL;
+#ifdef CONFIG_DEBUG_FS
 	debugfs_remove_recursive(fan_debugfs_root);
+#endif
 	free_irq(fan_data->tach_irq, NULL);
 	gpio_free(fan_data->tach_gpio);
 	pwm_config(fan_data->pwm_dev, 0, fan_data->pwm_period);

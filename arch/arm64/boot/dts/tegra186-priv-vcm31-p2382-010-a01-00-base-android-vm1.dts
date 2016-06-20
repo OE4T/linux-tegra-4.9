@@ -592,13 +592,13 @@
 		compatible = "nvidia,tegra186-hv-vse";
 		#stream-id-cells = <1>;
 		ivc = <76>;
-		status = "disabled";
+		se-engine-id = <2>;
 	};
 
 	vse@15840000 {
 		compatible = "nvidia,tegra186-hv-vse";
 		#stream-id-cells = <1>;
 		ivc = <76>;
-		status = "disabled";
+		se-engine-id = <3>;
 	};
 };

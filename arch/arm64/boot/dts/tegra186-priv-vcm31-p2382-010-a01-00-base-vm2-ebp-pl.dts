@@ -40,11 +40,11 @@
 
 	vse@15830000 {
 		ivc = <77>;
-		status = "disabled";
+		se-engine-id = <2>;
 	};
 
 	vse@15840000 {
 		ivc = <77>;
-		status = "disabled";
+		se-engine-id = <3>;
 	};
 };

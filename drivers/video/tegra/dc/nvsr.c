@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvsr.c
  *
- * Copyright (c) 2014, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -47,18 +47,6 @@
 /* Wait for 3 frames max to enter/exit */
 #define SR_ENTRY_MAX_TRIES 3
 #define SR_EXIT_MAX_TRIES 3
-
-static void tegra_dc_nvsr_get(struct tegra_dc_nvsr_data *nvsr)
-{
-	tegra_dc_get(nvsr->dc);
-	clk_prepare_enable(nvsr->aux_clk);
-}
-
-static void tegra_dc_nvsr_put(struct tegra_dc_nvsr_data *nvsr)
-{
-	clk_disable_unprepare(nvsr->aux_clk);
-	tegra_dc_put(nvsr->dc);
-}
 
 static unsigned long
 tegra_dc_nvsr_poll_register(struct tegra_dc_nvsr_data *nvsr,
@@ -949,6 +937,19 @@ static void tegra_dc_nvsr_init_out_ops(struct tegra_dc_nvsr_data *nvsr,
 }
 
 #ifdef CONFIG_DEBUG_FS
+
+static void tegra_dc_nvsr_get(struct tegra_dc_nvsr_data *nvsr)
+{
+	tegra_dc_get(nvsr->dc);
+	clk_prepare_enable(nvsr->aux_clk);
+}
+
+static void tegra_dc_nvsr_put(struct tegra_dc_nvsr_data *nvsr)
+{
+	clk_disable_unprepare(nvsr->aux_clk);
+	tegra_dc_put(nvsr->dc);
+}
+
 static int nvsr_dbg_read_read_show(struct seq_file *s, void *unused)
 { return 0; }
 static int nvsr_dbg_read_write_show(struct seq_file *s, void *unused)

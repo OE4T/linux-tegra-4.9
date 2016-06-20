@@ -648,7 +648,7 @@
 				     11289600	/* AUD_MCLK_x11025_RATE */
 				     45158400	/* PLLA_OUT0_x11025_RATE */
 				     45158400	/* AHUB_x11025_RATE */
-				     344063944  /* PLLA_x8000_RATE */
+				     245760000  /* PLLA_x8000_RATE */
 				     12288000	/* AUD_MCLK_x8000_RATE */
 				     49152000	/* PLLA_OUT0_x8000_RATE */
 				     49152000 >;/* AHUB_x8000_RATE */

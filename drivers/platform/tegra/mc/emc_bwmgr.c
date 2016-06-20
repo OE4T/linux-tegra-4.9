@@ -361,7 +361,7 @@ void __exit bwmgr_exit(void)
 }
 module_exit(bwmgr_exit);
 
-#if CONFIG_DEBUG_FS
+#ifdef CONFIG_DEBUG_FS
 static struct tegra_bwmgr_client *bwmgr_debugfs_client_handle;
 static struct dentry *debugfs_dir;
 static struct dentry *debugfs_node_floor;

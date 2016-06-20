@@ -61,7 +61,7 @@ static void pcibios_bus_report_status(struct pci_bus *bus,
 		pci_write_config_word(dev, PCI_STATUS, status & status_mask);
 
 		if (warn)
-			printk("(%s: %04X) ", pci_name(dev), status);
+			pr_warn("(%s: %04X) ", pci_name(dev), status);
 	}
 
 	list_for_each_entry(dev, &bus->devices, bus_list)
@@ -343,7 +343,7 @@ static u8 pcibios_swizzle(struct pci_dev *dev, u8 *pin)
 		slot = pci_common_swizzle(dev, pin);
 
 	if (debug_pci)
-		printk("PCI: %s swizzling pin %d => pin %d slot %d\n",
+		pr_info("PCI: %s swizzling pin %d => pin %d slot %d\n",
 			pci_name(dev), oldpin, *pin, slot);
 
 	return slot;
@@ -361,7 +361,7 @@ static int pcibios_map_irq(const struct pci_dev *dev, u8 slot, u8 pin)
 		irq = sys->map_irq(dev, slot, pin);
 
 	if (debug_pci)
-		printk("PCI: %s mapping slot %d pin %d => irq %d\n",
+		pr_info("PCI: %s mapping slot %d pin %d => irq %d\n",
 			pci_name(dev), slot, pin, irq);
 
 	return irq;

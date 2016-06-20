@@ -43,6 +43,37 @@
                 };
         };
 
+	padctl_uphy: pinctrl@3520000 {
+		p2379_uphy_default: pinmux {
+
+			/delete-node/ usb2-ftdi-hub-port1;
+
+			usb2-std-A-port1 {
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;
+			};
+			usb3-std-A-port1 {
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;
+			};
+		};
+	};
+
+	external-connection {
+		id_gpio_extcon: extcon@0 {
+			/* Set OTG port as Host */
+			extcon-gpio,default-connected;
+		};
+	};
+
+	xudc@3550000 {
+		status = "okay";
+		extcon-cables = <&vbus_gpio_extcon 0>;
+		extcon-cable-names = "vbus";
+		#extcon-cells = <1>;
+		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
+		phy-names = "usb2", "usb3";
+	};
+
 	isc-mgr.0 {
 		/* This node is to control the aggregator connected to Tegra A on Tegra B */
 		aggregator_ta@48 {

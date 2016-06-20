@@ -656,7 +656,8 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, tegra_wdt_t18x);
 
 	if (default_disable)
-		disable_por_reset_store(tegra_wdt_t18x, 1);
+		tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
+			WDT_CFG_SYS_PORST_EN, 0);
 
 	tegra_wdt_t18x_debugfs_init(tegra_wdt_t18x);
 

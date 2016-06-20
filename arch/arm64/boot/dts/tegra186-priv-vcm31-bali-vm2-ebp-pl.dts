@@ -30,7 +30,7 @@
 
 	vse@15810000 {
 		ivc = <77>;
-		status = "disabled";
+		se-engine-id = <0>;
 	};
 
 	vse@15820000 {

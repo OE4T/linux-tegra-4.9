@@ -64,13 +64,13 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 
 	if (dev_name == NULL)
 		dev_name = cfg->name;
-	if (sprintf(str, "%s_disable", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_disable", dev_name) > 0) {
 		if (!of_property_read_u32(np, str, (u32 *)&i)) {
 			if (i)
 				cfg->snsr_id = -1;
 		}
 	}
-	if (sprintf(str, "%s_float_significance", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_float_significance", dev_name) > 0) {
 		if (!of_property_read_string((struct device_node *)np,
 					     str, &charp)) {
 			u32tmp = ARRAY_SIZE(nvs_float_significances);
@@ -87,7 +87,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 		}
 	}
 
-	if (sprintf(str, "%s_flags", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_flags", dev_name) > 0) {
 		if (!of_property_read_u32(np, str, &u32tmp)) {
 			i = cfg->flags & SENSOR_FLAG_READONLY_MASK;
 			u32tmp &= ~SENSOR_FLAG_READONLY_MASK;
@@ -98,7 +98,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_kbuffer_size", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_kbuffer_size", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->kbuf_sz != s32tmp) {
 				cfg->kbuf_sz = s32tmp;
@@ -106,7 +106,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_max_range_ival", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_max_range_ival", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->max_range.ival != s32tmp) {
 				cfg->max_range.ival = s32tmp;
@@ -114,7 +114,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_max_range_fval", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_max_range_fval", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->max_range.fval != s32tmp) {
 				cfg->max_range.fval = s32tmp;
@@ -122,7 +122,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_resolution_ival", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_resolution_ival", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->resolution.ival != s32tmp) {
 				cfg->resolution.ival = s32tmp;
@@ -130,7 +130,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_resolution_fval", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_resolution_fval", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->resolution.fval != s32tmp) {
 				cfg->resolution.fval = s32tmp;
@@ -138,7 +138,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_milliamp_ival", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_milliamp_ival", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->milliamp.ival != s32tmp) {
 				cfg->milliamp.ival = s32tmp;
@@ -146,7 +146,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_milliamp_fval", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_milliamp_fval", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->milliamp.fval != s32tmp) {
 				cfg->milliamp.fval = s32tmp;
@@ -154,7 +154,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_delay_us_min", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_delay_us_min", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->delay_us_min != s32tmp) {
 				cfg->delay_us_min = s32tmp;
@@ -162,7 +162,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_delay_us_max", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_delay_us_max", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->delay_us_max != s32tmp) {
 				cfg->delay_us_max = s32tmp;
@@ -170,7 +170,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_fifo_reserved_event_count", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_fifo_reserved_event_count", dev_name) > 0) {
 		if (!of_property_read_u32(np, str, &u32tmp)) {
 			if (cfg->fifo_rsrv_evnt_cnt != u32tmp) {
 				cfg->fifo_rsrv_evnt_cnt = u32tmp;
@@ -178,7 +178,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_fifo_max_event_count", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_fifo_max_event_count", dev_name) > 0) {
 		if (!of_property_read_u32(np, str, &u32tmp)) {
 			if (cfg->fifo_max_evnt_cnt != u32tmp) {
 				cfg->fifo_max_evnt_cnt = u32tmp;
@@ -186,20 +186,20 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_matrix", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_matrix", dev_name) > 0) {
 		charp = of_get_property(np, str, &lenp);
 		if (charp && lenp == sizeof(cfg->matrix))
 			memcpy(&cfg->matrix, charp, lenp);
 	}
-	if (sprintf(str, "%s_uncalibrated_lo", dev_name) > 0)
+	if (snprintf(str, sizeof(str), "%s_uncalibrated_lo", dev_name) > 0)
 		of_property_read_s32(np, str, (s32 *)&cfg->uncal_lo);
-	if (sprintf(str, "%s_uncalibrated_hi", dev_name) > 0)
+	if (snprintf(str, sizeof(str), "%s_uncalibrated_hi", dev_name) > 0)
 		of_property_read_s32(np, str, (s32 *)&cfg->uncal_hi);
-	if (sprintf(str, "%s_calibrated_lo", dev_name) > 0)
+	if (snprintf(str, sizeof(str), "%s_calibrated_lo", dev_name) > 0)
 		of_property_read_s32(np, str, (s32 *)&cfg->cal_lo);
-	if (sprintf(str, "%s_calibrated_hi", dev_name) > 0)
+	if (snprintf(str, sizeof(str), "%s_calibrated_hi", dev_name) > 0)
 		of_property_read_s32(np, str, (s32 *)&cfg->cal_hi);
-	if (sprintf(str, "%s_threshold_lo", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_threshold_lo", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->thresh_lo != s32tmp) {
 				cfg->thresh_lo = s32tmp;
@@ -207,7 +207,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_threshold_hi", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_threshold_hi", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->thresh_hi != s32tmp) {
 				cfg->thresh_hi = s32tmp;
@@ -215,7 +215,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_report_count", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_report_count", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->report_n != s32tmp) {
 				cfg->report_n = s32tmp;
@@ -223,7 +223,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_scale_ival", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_scale_ival", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->scale.ival != s32tmp) {
 				cfg->scale.ival = s32tmp;
@@ -231,7 +231,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_scale_fval", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_scale_fval", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->scale.fval != s32tmp) {
 				cfg->scale.fval = s32tmp;
@@ -239,7 +239,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_offset_ival", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_offset_ival", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->offset.ival != s32tmp) {
 				cfg->offset.ival = s32tmp;
@@ -247,7 +247,7 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 			}
 		}
 	}
-	if (sprintf(str, "%s_offset_fval", dev_name) > 0) {
+	if (snprintf(str, sizeof(str), "%s_offset_fval", dev_name) > 0) {
 		if (!of_property_read_s32(np, str, &s32tmp)) {
 			if (cfg->offset.fval != s32tmp) {
 				cfg->offset.fval = s32tmp;
@@ -256,7 +256,8 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 		}
 	}
 	for (i = 0; i < cfg->ch_n_max; i++) {
-		if (sprintf(str, "%s_scale_ival_ch%u", dev_name, i) > 0) {
+		if (snprintf(str, sizeof(str), "%s_scale_ival_ch%u",
+			     dev_name, i) > 0) {
 			if (!of_property_read_s32(np, str, &s32tmp)) {
 				if (cfg->scales[i].ival != s32tmp) {
 					cfg->scales[i].ival = s32tmp;
@@ -264,7 +265,8 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 				}
 			}
 		}
-		if (sprintf(str, "%s_scale_fval_ch%u", dev_name, i) > 0) {
+		if (snprintf(str, sizeof(str), "%s_scale_fval_ch%u",
+			     dev_name, i) > 0) {
 			if (!of_property_read_s32(np, str, &s32tmp)) {
 				if (cfg->scales[i].fval != s32tmp) {
 					cfg->scales[i].fval = s32tmp;
@@ -272,7 +274,8 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 				}
 			}
 		}
-		if (sprintf(str, "%s_offset_ival_ch%u", dev_name, i) > 0) {
+		if (snprintf(str, sizeof(str), "%s_offset_ival_ch%u",
+			     dev_name, i) > 0) {
 			if (!of_property_read_s32(np, str, &s32tmp)) {
 				if (cfg->offsets[i].ival != s32tmp) {
 					cfg->offsets[i].ival = s32tmp;
@@ -280,7 +283,8 @@ int nvs_of_dt(const struct device_node *np, struct sensor_cfg *cfg,
 				}
 			}
 		}
-		if (sprintf(str, "%s_offset_fval_ch%u", dev_name, i) > 0) {
+		if (snprintf(str, sizeof(str), "%s_offset_fval_ch%u",
+			     dev_name, i) > 0) {
 			if (!of_property_read_s32(np, str, &s32tmp)) {
 				if (cfg->offsets[i].fval != s32tmp) {
 					cfg->offsets[i].fval = s32tmp;

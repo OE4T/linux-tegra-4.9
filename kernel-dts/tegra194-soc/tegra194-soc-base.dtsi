@@ -157,4 +157,52 @@
 		reset-names = "serial";
 		status = "disabled";
 	};
+
+	host1x: host1x {
+		compatible = "nvidia,tegra186-host1x", "simple-bus";
+		reg = <0x0 0x13e10000 0x0 0x00010000
+		       0x0 0x13e00000 0x0 0x00010000
+		       0x0 0x13ec0000 0x0 0x00040000>;
+		interrupts = <0 265 0x04>,
+			     <0 263 0x04>;
+
+		wakeup_capable;
+
+		nvidia,vmid = <1>;
+
+		#stream-id-cells = <9>;
+		#address-cells = <2>;
+		#size-cells = <2>;
+
+		ranges;
+
+		vic@15340000 {
+			compatible = "nvidia,tegra186-vic";
+			reg = <0x0 0x15340000 0x0 0x00040000>;
+
+			#stream-id-cells = <1>;
+		};
+
+		nvjpg@15380000 {
+			compatible = "nvidia,tegra186-nvjpg";
+			reg = <0x0 0x15380000 0x0 0x00040000>;
+
+			#stream-id-cells = <1>;
+		};
+
+		nvdec@15480000 {
+			compatible = "nvidia,tegra186-nvdec";
+			reg = <0x0 0x15480000 0x0 0x00040000>;
+
+			#stream-id-cells = <1>;
+		};
+
+		nvenc@154c0000 {
+			compatible = "nvidia,tegra186-nvenc";
+			reg = <0x0 0x154c0000 0x0 0x00040000>;
+
+			#stream-id-cells = <1>;
+		};
+	};
+
 };

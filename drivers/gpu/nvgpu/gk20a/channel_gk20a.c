@@ -2047,7 +2047,7 @@ static int gk20a_submit_append_gpfifo(struct channel_gk20a *c,
 			/* wrap-around */
 			int length0 = gpfifo_size - start;
 			int length1 = len - length0;
-			void *user2 = (u8*)user_gpfifo + length0;
+			void __user *user2 = (u8 __user *)user_gpfifo + length0;
 
 			err = copy_from_user(gpfifo_mem->cpu_va + start,
 					user_gpfifo, length0);
@@ -2130,7 +2130,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	bool need_sync_fence = false;
 	bool new_sync_created = false;
 	struct nvgpu_gpfifo __user *user_gpfifo = args ?
-		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : 0;
+		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
 
 	/*
 	 * If user wants to allocate sync_fence_fd always, then respect that;

@@ -81,6 +81,8 @@ struct tegra_vi_stats {
 	atomic_t overflow;
 };
 
+struct tegra_vi_mfi_ctx;
+
 struct vi {
 	struct tegra_camera *camera;
 	struct platform_device *ndev;
@@ -91,9 +93,8 @@ struct vi {
 	struct regulator *reg;
 	struct dentry *debugdir;
 	struct tegra_vi_stats vi_out;
-	struct workqueue_struct *vi_workqueue;
 	struct work_struct stats_work;
-	struct work_struct mfi_cb_work;
+	struct tegra_vi_mfi_ctx *mfi_ctx;
 #if defined(CONFIG_TEGRA_ISOMGR)
 	tegra_isomgr_handle isomgr_handle;
 #endif
@@ -109,17 +110,11 @@ int nvhost_vi_finalize_poweron(struct platform_device *);
 
 void nvhost_vi_reset_all(struct platform_device *);
 
-#ifdef CONFIG_VIDEO_TEGRA_VI
 int tegra_vi_register_mfi_cb(callback cb, void *cb_arg);
 int tegra_vi_unregister_mfi_cb(void);
-#else
-static inline int tegra_vi_register_mfi_cb(callback cb, void *cb_arg)
-{
-	return -ENOSYS;
-}
-static inline int tegra_vi_unregister_mfi_cb(void)
-{
-	return -ENOSYS;
-}
-#endif
+
+bool tegra_vi_has_mfi_callback(void);
+int tegra_vi_mfi_event_notify(struct tegra_vi_mfi_ctx *mfi_ctx, u8 channel);
+int tegra_vi_init_mfi(struct tegra_vi_mfi_ctx **mfi_ctx, u8 num_channels);
+void tegra_vi_deinit_mfi(struct tegra_vi_mfi_ctx **mfi_ctx);
 #endif

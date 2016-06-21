@@ -42,6 +42,8 @@
 #include "vi_irq.h"
 #include "camera_priv_defs.h"
 
+#include "tegra_camera_dev_mfi.h"
+
 #define MAX_DEVID_LENGTH	16
 #define TEGRA_VI_NAME		"tegra_vi"
 
@@ -60,20 +62,20 @@ static struct of_device_id tegra_vi_of_match[] = {
 static struct i2c_camera_ctrl *i2c_ctrl;
 
 static void (*mfi_callback)(void *);
-static void *mfi_callback_arg;
+static struct mfi_cb_arg *mfi_callback_arg;
 static DEFINE_MUTEX(vi_isr_lock);
 
-#ifdef CONFIG_VIDEO_TEGRA_VI
 int tegra_vi_register_mfi_cb(callback cb, void *cb_arg)
 {
+	mutex_lock(&vi_isr_lock);
 	if (mfi_callback || mfi_callback_arg) {
 		pr_err("cb already registered\n");
+		mutex_unlock(&vi_isr_lock);
 		return -1;
 	}
 
-	mutex_lock(&vi_isr_lock);
 	mfi_callback = cb;
-	mfi_callback_arg = cb_arg;
+	mfi_callback_arg = (struct  mfi_cb_arg *)cb_arg;
 	mutex_unlock(&vi_isr_lock);
 
 	return 0;
@@ -90,20 +92,135 @@ int tegra_vi_unregister_mfi_cb(void)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_vi_unregister_mfi_cb);
-#endif
+
+struct tegra_mfi_chan {
+	struct work_struct mfi_cb_work;
+	struct rcu_head rcu;
+	u8 channel;
+};
+
+struct tegra_vi_mfi_ctx {
+	u8 num_channels;
+	struct workqueue_struct *mfi_workqueue;
+	struct tegra_mfi_chan __rcu *mfi_chans;
+};
 
 static void vi_mfi_worker(struct work_struct *vi_work)
 {
-	struct vi *pdev = container_of(vi_work, struct vi, mfi_cb_work);
+	struct tegra_mfi_chan *mfi_chan =
+		container_of(vi_work, struct tegra_mfi_chan, mfi_cb_work);
 
+	mutex_lock(&vi_isr_lock);
 	if (mfi_callback == NULL) {
-		dev_dbg(&pdev->ndev->dev, "NULL callback\n");
+		pr_debug("NULL callback\n");
+		mutex_unlock(&vi_isr_lock);
 		return;
 	}
-	mutex_lock(&vi_isr_lock);
+	if (mfi_callback_arg)
+		mfi_callback_arg->vi_chan = mfi_chan->channel;
 	mfi_callback(mfi_callback_arg);
 	mutex_unlock(&vi_isr_lock);
 }
+
+int tegra_vi_mfi_event_notify(struct tegra_vi_mfi_ctx *mfi_ctx, u8 channel)
+{
+	struct tegra_mfi_chan *chan;
+
+	if (!mfi_ctx) {
+		pr_err("Invalid mfi_ctx\n");
+		return -EINVAL;
+	}
+
+	if (channel > mfi_ctx->num_channels-1) {
+		pr_err("Invalid mfi channel\n");
+		return -EINVAL;
+	}
+
+	rcu_read_lock();
+	chan = rcu_dereference(mfi_ctx->mfi_chans);
+	queue_work(mfi_ctx->mfi_workqueue, &chan[channel].mfi_cb_work);
+	rcu_read_unlock();
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_vi_mfi_event_notify);
+
+bool tegra_vi_has_mfi_callback(void)
+{
+	bool ret;
+
+	mutex_lock(&vi_isr_lock);
+	ret = mfi_callback ? true : false;
+	mutex_unlock(&vi_isr_lock);
+
+	return ret;
+}
+EXPORT_SYMBOL(tegra_vi_has_mfi_callback);
+
+int tegra_vi_init_mfi(struct tegra_vi_mfi_ctx **pmfi_ctx, u8 num_channels)
+{
+	u8 i;
+	struct tegra_mfi_chan *chan;
+	struct tegra_vi_mfi_ctx *mfi_ctx;
+
+	if (!pmfi_ctx) {
+		pr_err("mfi_ctx is invalid\n");
+		return -EINVAL;
+	}
+
+	mfi_ctx = kzalloc(sizeof(*mfi_ctx), GFP_KERNEL);
+	if (unlikely(mfi_ctx == NULL))
+		return -ENOMEM;
+
+	/* create workqueue for mfi callback */
+	mfi_ctx->mfi_workqueue = alloc_workqueue("mfi_workqueue",
+					WQ_HIGHPRI | WQ_UNBOUND, 1);
+	if (!mfi_ctx->mfi_workqueue) {
+		pr_err("Failed to allocated mfi_workqueue");
+		tegra_vi_deinit_mfi(&mfi_ctx);
+		return -ENOMEM;
+	}
+
+	chan = kcalloc(num_channels, sizeof(*chan), GFP_KERNEL);
+	if (unlikely(chan == NULL)) {
+		tegra_vi_deinit_mfi(&mfi_ctx);
+		return -ENOMEM;
+	}
+
+	mfi_ctx->num_channels = num_channels;
+
+	/* Init mfi callback work */
+	for (i = 0; i < num_channels; i++) {
+		INIT_WORK(&chan[i].mfi_cb_work, vi_mfi_worker);
+		chan[i].channel = i;
+	}
+
+	rcu_assign_pointer(mfi_ctx->mfi_chans, chan);
+
+	*pmfi_ctx = mfi_ctx;
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_vi_init_mfi);
+
+void tegra_vi_deinit_mfi(struct tegra_vi_mfi_ctx **pmfi_ctx)
+{
+	struct tegra_vi_mfi_ctx *mfi_ctx;
+
+	if (!pmfi_ctx || !*pmfi_ctx)
+		return;
+
+	mfi_ctx = *pmfi_ctx;
+
+	flush_workqueue(mfi_ctx->mfi_workqueue);
+	destroy_workqueue(mfi_ctx->mfi_workqueue);
+
+	kfree_rcu(mfi_ctx->mfi_chans, rcu);
+
+	kfree(mfi_ctx);
+	mfi_ctx = NULL;
+}
+EXPORT_SYMBOL(tegra_vi_deinit_mfi);
 
 #if defined(CONFIG_TEGRA_ISOMGR)
 static int vi_isomgr_unregister(struct vi *tegra_vi)
@@ -231,6 +348,7 @@ static int vi_probe(struct platform_device *dev)
 	int err = 0;
 	struct vi *tegra_vi;
 	struct nvhost_device_data *pdata = NULL;
+	u8 num_channels;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
@@ -275,22 +393,21 @@ static int vi_probe(struct platform_device *dev)
 	if (err)
 		goto vi_probe_fail;
 
-	/* create workqueue for mfi callback */
-	tegra_vi->vi_workqueue = alloc_workqueue("vi_workqueue",
-					WQ_HIGHPRI | WQ_UNBOUND, 1);
-	if (!tegra_vi->vi_workqueue) {
-		dev_err(&dev->dev, "Failed to allocated vi_workqueue");
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	num_channels = 6;
+#else
+	num_channels = 2;
+#endif
+	err = tegra_vi_init_mfi(&tegra_vi->mfi_ctx, num_channels);
+	if (err)
 		goto vi_probe_fail;
-	}
-	/* Init mfi callback work */
-	INIT_WORK(&tegra_vi->mfi_cb_work, vi_mfi_worker);
 
 	/* call vi_intr_init and stats_work */
 	INIT_WORK(&tegra_vi->stats_work, vi_stats_worker);
 
 	err = vi_intr_init(tegra_vi);
 	if (err)
-		goto vi_probe_fail;
+		goto vi_mfi_init_fail;
 
 	vi_create_debugfs(tegra_vi);
 
@@ -365,6 +482,8 @@ camera_i2c_unregister:
 	if (i2c_ctrl && i2c_ctrl->remove_devices)
 		i2c_ctrl->remove_devices(dev);
 	pdata->private_data = i2c_ctrl;
+vi_mfi_init_fail:
+	tegra_vi_deinit_mfi(&tegra_vi->mfi_ctx);
 vi_probe_fail:
 	dev_err(&dev->dev, "%s: failed\n", __func__);
 	return err;
@@ -390,6 +509,8 @@ static int __exit vi_remove(struct platform_device *dev)
 		vi_isomgr_unregister(tegra_vi);
 #endif
 
+	tegra_vi_deinit_mfi(&tegra_vi->mfi_ctx);
+
 	vi_remove_debugfs(tegra_vi);
 
 	tegra_vi_media_controller_cleanup(&tegra_vi->mc_vi);
@@ -404,8 +525,6 @@ static int __exit vi_remove(struct platform_device *dev)
 	vi_intr_free(tegra_vi);
 
 	pdata->aperture[0] = NULL;
-	flush_workqueue(tegra_vi->vi_workqueue);
-	destroy_workqueue(tegra_vi->vi_workqueue);
 #ifdef CONFIG_TEGRA_CAMERA
 	err = tegra_camera_unregister(tegra_vi->camera);
 	if (err)

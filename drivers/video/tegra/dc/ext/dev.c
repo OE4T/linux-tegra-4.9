@@ -695,7 +695,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		struct tegra_dc_win *win;
 		struct tegra_dc_ext_win *ext_win;
 		struct tegra_dc_ext_flip_data *temp = NULL;
-		s64 head_timestamp = -1;
+		s64 head_timestamp = 0;
 		int j = 0;
 		u32 reg_val = 0;
 
@@ -717,10 +717,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			if (!tegra_platform_is_silicon())
 				continue;
 			if (j == 0) {
-				if (unlikely(temp != data)) {
-					/* Frame doesn't contain timestamp in list */
-					break;
-				} else
+				if (unlikely(temp != data))
+					dev_err(&win->dc->ndev->dev,
+							"work queue did NOT dequeue head!!!");
+				else
 					head_timestamp = tegra_timespec_to_ns(
 						&flip_win->attr.timestamp);
 			} else {
@@ -734,7 +734,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			}
 			j++;
 		}
-		if (head_timestamp >= 0)
+		if (!list_empty(&ext_win->timestamp_queue))
 			list_del(&data->timestamp_node);
 		mutex_unlock(&ext_win->queue_lock);
 
@@ -1059,16 +1059,15 @@ static int tegra_dc_ext_pin_windows(struct tegra_dc_ext_user *user,
 
 		memcpy(&flip_win->attr, &wins[i], sizeof(flip_win->attr));
 
-		if (has_timestamp && tegra_timespec_to_ns(
-			&flip_win->attr.timestamp)) {
+		/* Set first frame timestamp to 0 after device boot-up
+		   to prevent wait on 1st flip request */
+		if (!dc->frame_end_timestamp)
+			memset(&flip_win->attr.timestamp, 0,
+				sizeof(flip_win->attr.timestamp));
 
-			/* Set first frame timestamp to 0 after device boot-up
-			   to prevent wait on 1st flip request */
-			if (!dc->frame_end_timestamp)
-				memset(&flip_win->attr.timestamp, 0,
-					sizeof(flip_win->attr.timestamp));
+		if (has_timestamp && tegra_timespec_to_ns(
+			&flip_win->attr.timestamp))
 			*has_timestamp = true;
-		}
 
 		if (index < 0 || !test_bit(index, &dc->valid_windows))
 			continue;

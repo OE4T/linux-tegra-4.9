@@ -528,18 +528,21 @@ static inline bool nvmap_page_mkclean(struct page **page)
  */
 static inline int nvmap_handle_mk(struct nvmap_handle *h,
 				  u32 offset, u32 size,
-				  bool (*fn)(struct page **))
+				  bool (*fn)(struct page **),
+				  bool locked)
 {
 	int i, nchanged = 0;
 	int start_page = PAGE_ALIGN(offset) >> PAGE_SHIFT;
 	int end_page = (offset + size) >> PAGE_SHIFT;
 
-	mutex_lock(&h->lock);
+	if (!locked)
+		mutex_lock(&h->lock);
 	if (h->heap_pgalloc) {
 		for (i = start_page; i < end_page; i++)
 			nchanged += fn(&h->pgalloc.pages[i]) ? 1 : 0;
 	}
-	mutex_unlock(&h->lock);
+	if (!locked)
+		mutex_unlock(&h->lock);
 	return nchanged;
 }
 
@@ -551,12 +554,12 @@ static inline void nvmap_handle_mkclean(struct nvmap_handle *h,
 	if (h->heap_pgalloc && !atomic_read(&h->pgalloc.ndirty))
 		return;
 
-	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkclean);
+	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkclean, false);
 	if (h->heap_pgalloc)
 		atomic_sub(nchanged, &h->pgalloc.ndirty);
 }
 
-static inline void nvmap_handle_mkdirty(struct nvmap_handle *h,
+static inline void _nvmap_handle_mkdirty(struct nvmap_handle *h,
 					u32 offset, u32 size)
 {
 	int nchanged;
@@ -565,7 +568,7 @@ static inline void nvmap_handle_mkdirty(struct nvmap_handle *h,
 		(atomic_read(&h->pgalloc.ndirty) == (h->size >> PAGE_SHIFT)))
 		return;
 
-	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkdirty);
+	nchanged = nvmap_handle_mk(h, offset, size, nvmap_page_mkdirty, true);
 	if (h->heap_pgalloc)
 		atomic_add(nchanged, &h->pgalloc.ndirty);
 }

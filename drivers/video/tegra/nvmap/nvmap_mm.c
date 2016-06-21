@@ -75,61 +75,6 @@ void nvmap_zap_handle(struct nvmap_handle *handle, u32 offset, u32 size)
 	mutex_unlock(&handle->lock);
 }
 
-static int nvmap_vm_insert_handle(struct nvmap_handle *handle,
-			struct vm_area_struct *vma, u32 vm_size)
-{
-	int i;
-	pte_t *start_pte = NULL;
-	pte_t *pte = NULL;
-	spinlock_t *ptl = NULL;
-	unsigned long curr_pmd = 0;
-	unsigned long addr = vma->vm_start;
-
-	vm_size >>= PAGE_SHIFT;
-	for (i = 0; i < vm_size; i++, addr += PAGE_SHIFT) {
-		if (curr_pmd != (addr & PMD_MASK)) {
-			curr_pmd = addr & PMD_MASK;
-			if (ptl && start_pte)
-				pte_unmap_unlock(start_pte, ptl);
-			else if (ptl)
-				BUG();
-			start_pte = pte = get_locked_pte(vma->vm_mm,
-							addr, &ptl);
-		} else {
-			pte++;
-		}
-		if (!pte) {
-			pr_err("nvmap: %s get_locked_pte failed\n",
-				__func__);
-			if (ptl && start_pte)
-				pte_unmap_unlock(start_pte, ptl);
-			else if (ptl)
-				BUG();
-			return -ENOMEM;
-		}
-		if (pte_none(pte)) {
-			struct page *page =
-					nvmap_to_page(handle->pgalloc.pages[i]);
-			/*
-			 * page->_map_count gets incrmented while
-			 * mapping here. If _count is not incremented,
-			 * mm code will see that page as a bad page
-			 * and hits VM_BUG_ON
-			 */
-			get_page(page);
-			do_set_pte(vma, vma->vm_start + (i << PAGE_SHIFT), page,
-					pte, true, false);
-		}
-		nvmap_page_mkdirty(&handle->pgalloc.pages[i]);
-		atomic_inc(&handle->pgalloc.ndirty);
-	}
-	if (ptl && start_pte)
-		pte_unmap_unlock(start_pte, ptl);
-	else if (ptl)
-		BUG();
-	return 0;
-}
-
 static int nvmap_prot_handle(struct nvmap_handle *handle, u32 offset,
 		u32 size, int op)
 {
@@ -190,9 +135,7 @@ static int nvmap_prot_handle(struct nvmap_handle *handle, u32 offset,
 					vma_list->save_vm_flags);
 			if (err)
 				goto try_unlock;
-			err = nvmap_vm_insert_handle(handle, vma, vm_size);
-			if (err)
-				goto try_unlock;
+			_nvmap_handle_mkdirty(handle, 0, size);
 			break;
 		default:
 			BUG();

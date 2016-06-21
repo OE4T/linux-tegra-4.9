@@ -67,3 +67,10 @@ config TEGRA_GRHOST_SYNC
         help
           Add tegra host backend for the cross driver synchronization framework.
           Allows creating sync fence file descriptors from Tegra host syncpoints.
+
+config NVDEC_BOOTLOADER
+	depends on TEGRA_GRHOST_NVDEC
+	bool "Enable use of nvdec bootloader"
+	help
+	  Say Y here if you want to enable nvdec bootloader
+	  If unsure, say N

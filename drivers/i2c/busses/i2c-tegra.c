@@ -34,6 +34,7 @@
 #include <linux/of_gpio.h>
 #include <linux/i2c-algo-bit.h>
 #include <linux/i2c-gpio.h>
+#include <linux/tegra_prod.h>
 
 #include <asm/unaligned.h>
 
@@ -130,10 +131,19 @@
 
 #define I2C_CONFIG_LOAD_TIMEOUT			1000000
 
+#define I2C_INTERFACE_TIMING_0                  0x94
+#define I2C_TLOW_MASK                           0x3F
+#define I2C_THIGH_SHIFT                         8
+#define I2C_THIGH_MASK                          (0x3F << I2C_THIGH_SHIFT)
+
 #define I2C_MASTER_RESET_CONTROL		0x0A8
 
 #define I2C_MAX_TRANSFER_LEN			4096
 
+/* Define speed modes */
+#define I2C_STANDARD_MODE			100000
+#define I2C_FAST_MODE				400000
+#define I2C_FAST_MODE_PLUS			1000000
 /*
  * msg_end_type: The bus control which need to be send at end of transfer.
  * @MSG_END_STOP: Send stop pulse at end of transfer.
@@ -226,6 +236,9 @@ struct tegra_i2c_dev {
 	const struct i2c_algorithm *bit_algo;
 	bool bit_banging_xfer_after_shutdown;
 	bool is_shutdown;
+	u32 low_clock_count;
+	u32 high_clock_count;
+	struct tegra_prod *prod_list;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val,
@@ -604,16 +617,64 @@ static int tegra_i2c_set_clk_rate(struct tegra_i2c_dev *i2c_dev)
 	u32 clk_multiplier = I2C_CLK_MULTIPLIER_STD_FAST_MODE;
 	int ret = 0;
 
-	clk_multiplier *= (i2c_dev->clk_divisor_non_hs_mode + 1);
+
+	switch (i2c_dev->bus_clk_rate) {
+	case I2C_FAST_MODE_PLUS:
+	case I2C_STANDARD_MODE:
+	case I2C_FAST_MODE:
+	default:
+		clk_multiplier = (i2c_dev->low_clock_count +
+				  i2c_dev->high_clock_count + 2);
+		clk_multiplier *= (i2c_dev->clk_divisor_non_hs_mode + 1);
+		break;
+	}
+
 	ret = clk_set_rate(i2c_dev->div_clk,
 			   i2c_dev->bus_clk_rate * clk_multiplier);
 	if (ret) {
 		dev_err(i2c_dev->dev, "Clock rate change failed %d\n", ret);
 		return ret;
 	}
+
 	return ret;
 }
 
+static void tegra_i2c_config_prod_settings(struct tegra_i2c_dev *i2c_dev)
+{
+	char *prod_name;
+	int ret;
+
+	switch (i2c_dev->bus_clk_rate) {
+	case I2C_FAST_MODE:
+		prod_name = "prod_i2c_fm";
+		break;
+	case I2C_FAST_MODE_PLUS:
+		prod_name = "prod_i2c_fm_plus";
+		break;
+	case I2C_STANDARD_MODE:
+	default:
+		prod_name = "prod_i2c_sm";
+		break;
+	}
+
+	ret = tegra_prod_set_by_name(&i2c_dev->base, prod_name,
+				     i2c_dev->prod_list);
+	if (ret == 0)
+		dev_dbg(i2c_dev->dev, "setting prod: %s\n", prod_name);
+}
+
+static void tegra_i2c_get_clk_parameters(struct tegra_i2c_dev *i2c_dev)
+{
+	u32 val;
+
+	val = i2c_readl(i2c_dev, I2C_INTERFACE_TIMING_0);
+	i2c_dev->low_clock_count = val & I2C_TLOW_MASK;
+	i2c_dev->high_clock_count = (val & I2C_THIGH_MASK) >> I2C_THIGH_SHIFT;
+
+	val = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
+	i2c_dev->clk_divisor_non_hs_mode = (val >>
+			I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT);
+}
 
 static int tegra_i2c_init(struct tegra_i2c_dev *i2c_dev)
 {
@@ -654,15 +715,20 @@ skip_periph_reset:
 	i2c_writel(i2c_dev, val, I2C_CNFG);
 	i2c_writel(i2c_dev, 0, I2C_INT_MASK);
 
-	err = tegra_i2c_set_clk_rate(i2c_dev);
-	if (err < 0)
-		return err;
-
 	/* Make sure clock divisor programmed correctly */
 	clk_divisor = i2c_dev->hw->clk_divisor_hs_mode;
 	clk_divisor |= i2c_dev->clk_divisor_non_hs_mode <<
 					I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT;
 	i2c_writel(i2c_dev, clk_divisor, I2C_CLK_DIVISOR);
+
+	if (i2c_dev->prod_list)
+		tegra_i2c_config_prod_settings(i2c_dev);
+
+	tegra_i2c_get_clk_parameters(i2c_dev);
+
+	err = tegra_i2c_set_clk_rate(i2c_dev);
+	if (err < 0)
+		return err;
 
 	if (!i2c_dev->is_dvc) {
 		u32 sl_cfg = i2c_readl(i2c_dev, I2C_SL_CNFG);
@@ -1227,6 +1293,12 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 		i2c_dev->fast_clk = fast_clk;
 	}
 
+	i2c_dev->prod_list = devm_tegra_prod_get(&pdev->dev);
+	if (IS_ERR_OR_NULL(i2c_dev->prod_list)) {
+		dev_dbg(&pdev->dev, "Prod-setting not available\n");
+		i2c_dev->prod_list = NULL;
+	}
+
 	platform_set_drvdata(pdev, i2c_dev);
 
 	if (!i2c_dev->hw->has_single_clk_source) {
@@ -1240,7 +1312,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->clk_divisor_non_hs_mode =
 			i2c_dev->hw->clk_divisor_std_fast_mode;
 	if (i2c_dev->hw->clk_divisor_fast_plus_mode &&
-		(i2c_dev->bus_clk_rate == 1000000))
+		(i2c_dev->bus_clk_rate == I2C_FAST_MODE_PLUS))
 		i2c_dev->clk_divisor_non_hs_mode =
 			i2c_dev->hw->clk_divisor_fast_plus_mode;
 

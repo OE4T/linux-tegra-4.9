@@ -28,6 +28,7 @@
 #include <linux/sched.h>
 
 #include "vi_notify.h"
+#include "vi.h"
 
 /* XXX: move ioctls to include/linux/ (after T18X merge) */
 #include <linux/nvhost_vi_ioctl.h>
@@ -68,8 +69,11 @@ struct vi_notify_dev {
 	dev_t major;
 	u8 num_channels;
 	struct mutex lock;
+	struct tegra_vi_mfi_ctx *mfi_ctx;
 	struct vi_notify_channel __rcu *channels[];
 };
+
+#define VI_NOTIFY_TAG_CHANSEL_NLINES 0x08
 
 static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 {
@@ -82,6 +86,10 @@ static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 		if (chan != NULL)
 			ign_mask &= atomic_read(&chan->ign_mask);
 	}
+
+	/* Unmask NLINES event, for Mid-Frame Interrupt */
+	if (ign_mask != 0xffffffff && tegra_vi_has_mfi_callback())
+		ign_mask &= ~(1u << VI_NOTIFY_TAG_CHANSEL_NLINES);
 
 	return vnd->driver->classify(vnd->device, ~ign_mask);
 }
@@ -156,6 +164,10 @@ static void vi_notify_recv(struct vi_notify_dev *vnd,
 
 	rcu_read_lock();
 	chan = rcu_dereference(vnd->channels[channel]);
+
+	/* Notify NLINES event to tegra_vi */
+	if (tag == VI_NOTIFY_TAG_CHANSEL_NLINES)
+		tegra_vi_mfi_event_notify(vnd->mfi_ctx, channel);
 
 	if (chan != NULL && !((1u << tag) & atomic_read(&chan->ign_mask))) {
 		if (!kfifo_put(&chan->fifo, *msg))
@@ -471,9 +483,14 @@ int vi_notify_register(struct vi_notify_driver *drv, struct device *dev,
 	if (err)
 		goto error;
 
+	err = tegra_vi_init_mfi(&vnd->mfi_ctx, num_channels);
+	if (err)
+		goto error;
+
 	mutex_lock(&vnd_lock);
 	if (vnd_ != NULL) {
 		mutex_unlock(&vnd_lock);
+		tegra_vi_deinit_mfi(&vnd->mfi_ctx);
 		WARN_ON(1);
 		err = -EBUSY;
 		goto error;
@@ -507,6 +524,8 @@ void vi_notify_unregister(struct vi_notify_driver *drv, struct device *dev)
 	WARN_ON(vnd->driver != drv);
 	WARN_ON(vnd->device != dev);
 	mutex_unlock(&vnd_lock);
+
+	tegra_vi_deinit_mfi(&vnd->mfi_ctx);
 
 	for (i = 0; i < vnd->num_channels; i++) {
 		dev_t devt = MKDEV(vi_notify_major, i);

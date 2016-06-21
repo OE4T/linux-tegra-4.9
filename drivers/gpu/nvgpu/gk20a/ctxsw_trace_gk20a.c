@@ -253,7 +253,7 @@ static int gk20a_ctxsw_dev_ioctl_poll(struct gk20a_ctxsw_dev *dev)
 	if (err)
 		return err;
 
-	if (g->ops.fecs_trace.flush(g))
+	if (g->ops.fecs_trace.flush)
 		err = g->ops.fecs_trace.flush(g);
 
 	if (likely(!err))

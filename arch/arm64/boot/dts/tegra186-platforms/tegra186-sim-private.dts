@@ -347,6 +347,10 @@
 
 	};
 
+	mipical {
+		status = "okay";
+	};
+
 	host1x {
 		nvdisplay@15200000 {
 			status = "okay";

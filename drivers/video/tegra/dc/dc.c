@@ -3126,6 +3126,7 @@ static struct tegra_dc_mode *tegra_dc_get_override_mode(struct tegra_dc *dc)
 			mode->vmode |= FB_VMODE_LIMITED_RANGE;
 #endif
 
+		tegra_dc_put(dc);
 	}
 
 	if (dc->out->type == TEGRA_DC_OUT_RGB  ||

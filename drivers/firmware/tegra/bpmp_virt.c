@@ -19,6 +19,7 @@
 #include <linux/tegra-ivc.h>
 #include <asm/io.h>
 #include "mail_t186.h"
+#include "bpmp.h"
 
 static void *virt_base;
 static bool is_virt = false;

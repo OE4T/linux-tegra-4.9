@@ -2832,6 +2832,7 @@ int gk20a_channel_suspend(struct gk20a *g)
 			gk20a_disable_channel_tsg(g, ch);
 			/* preempt the channel */
 			gk20a_fifo_preempt(g, ch);
+			gk20a_channel_timeout_stop(ch);
 			gk20a_channel_cancel_job_clean_up(ch, true);
 			/* wait for channel update notifiers */
 			if (ch->update_fn)

@@ -414,6 +414,29 @@ mmap_addr_to_ex_addr(unsigned long addr,
 	return ti->addr + offset;
 }
 
+static int
+get_section_index_by_address(struct ex_region_info *ri,
+			     unsigned long addr)
+{
+	int i;
+	struct extab_info *ti;
+	unsigned long start, end;
+
+	for (i = 0; i < ARRAY_SIZE(ri->ex_sec); i++) {
+		ti = &ri->ex_sec[i];
+
+		if (ti->length > 0) {
+			start = ti->addr;
+			end = start + ti->length;
+
+			if (addr >= start && addr < end)
+				return i;
+		}
+	}
+
+	return -QUADD_URC_IDX_NOT_FOUND;
+}
+
 static inline int validate_regnum(struct regs_state *rs, int regnum)
 {
 	if (unlikely(regnum >= ARRAY_SIZE(rs->reg))) {
@@ -436,6 +459,20 @@ set_rule_offset(struct regs_state *rs, int regnum, int where, long offset)
 
 	r->where = where;
 	r->loc.offset = offset;
+}
+
+static inline void __maybe_unused
+set_rule_reg(struct regs_state *rs, int regnum, int where, unsigned long reg)
+{
+	struct reg_info *r;
+
+	if (!validate_regnum(rs, regnum))
+		return;
+
+	r = &rs->reg[regnum];
+
+	r->where = where;
+	r->loc.reg = reg;
 }
 
 static inline void
@@ -719,22 +756,28 @@ dwarf_read_encoded_value(struct ex_region_info *ri,
 
 	if (res != 0) {
 		if (encoding & DW_EH_PE_indirect) {
-			pr_debug("DW_EH_PE_indirect\n");
+			int sec_idx;
 
-			if (dw_ptr_size == 4) {
-				res = read_mmap_data_u32(ri, (u32 *)res,
-							 st, &err);
-			} else if (dw_ptr_size == 8) {
-				res = read_mmap_data_u64(ri, (u64 *)res,
-							 st, &err);
+			pr_debug("DW_EH_PE_indirect, addr: %#lx\n", res);
+
+			sec_idx = get_section_index_by_address(ri, res);
+			if (sec_idx >= 0) {
+				if (dw_ptr_size == 4) {
+					res = read_mmap_data_u32(ri, (u32 *)res,
+								 sec_idx, &err);
+				} else if (dw_ptr_size == 8) {
+					res = read_mmap_data_u64(ri, (u64 *)res,
+								 sec_idx, &err);
+				} else {
+					return -QUADD_URC_UNHANDLED_INSTRUCTION;
+				}
+
+				if (err)
+					return err;
 			} else {
-				pr_err_once("error: wrong dwarf size\n");
-				return -QUADD_URC_UNHANDLED_INSTRUCTION;
-			}
-
-			/* we ignore links to unloaded sections */
-			if (err)
+				/* we ignore links to unloaded sections */
 				res = 0;
+			}
 		}
 	}
 

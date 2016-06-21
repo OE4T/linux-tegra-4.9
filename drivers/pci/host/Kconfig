@@ -68,7 +68,7 @@ config PCI_IMX6
 	select PCIE_DW
 
 config PCI_TEGRA
-	bool "NVIDIA Tegra PCIe controller"
+	tristate "NVIDIA Tegra PCIe controller"
 	depends on (ARCH_TEGRA || PLATFORM_TEGRA)
 	help
 	  Say Y here if you want support for the PCIe host controller found

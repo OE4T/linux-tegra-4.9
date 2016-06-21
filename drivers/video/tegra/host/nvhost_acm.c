@@ -812,14 +812,16 @@ int nvhost_module_init(struct platform_device *dev)
 	gpd = dev_to_genpd(&dev->dev);
 	if (IS_ERR(gpd)) {
 		dev_err(&dev->dev, "dev_to_genpd failed.\n");
-		return PTR_ERR(gpd);
-	}
-
-	dn = gpd->of_node;
-
-	/* Update partition-id from DT and for failure case assign -1 id */
-	if (of_property_read_u32(dn, "partition-id", &pdata->powergate_id))
+		if (!tegra_platform_is_linsim())
+			return PTR_ERR(gpd);
 		pdata->powergate_id = -1;
+	} else {
+		dn = gpd->of_node;
+
+		/* Update partition-id from DT and for failure case assign -1 id */
+		if (of_property_read_u32(dn, "partition-id", &pdata->powergate_id))
+			pdata->powergate_id = -1;
+	}
 #endif
 
 	/* needed to WAR MBIST issue */

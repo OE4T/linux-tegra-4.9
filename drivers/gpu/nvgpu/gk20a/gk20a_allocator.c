@@ -285,6 +285,15 @@ int __gk20a_allocator_init(struct gk20a_allocator *a,
 	a->blk_size = blk_size;
 	a->blk_shift = __ffs(blk_size);
 
+	/*
+	 * If base is 0 then modfy base to be the size of one block so that we
+	 * can return errors by returning addr == 0.
+	 */
+	if (a->base == 0) {
+		a->base = a->blk_size;
+		a->length -= a->blk_size;
+	}
+
 	/* blk_size must be greater than 0 and a power of 2. */
 	if (blk_size == 0)
 		return -EINVAL;

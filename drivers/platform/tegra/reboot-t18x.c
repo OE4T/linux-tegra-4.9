@@ -21,23 +21,15 @@
 #include <asm/io.h>
 
 #include "iomap.h"
-
-#define NV_ADDRESS_MAP_SCRATCH_BASE	0x0c390000
-#define SCRATCH_SCRATCH0_0		(NV_ADDRESS_MAP_SCRATCH_BASE + 0x2000)
-
-#define RECOVERY_MODE		BIT(31)
-#define BOOTLOADER_MODE		BIT(30)
-#define FORCED_RECOVERY_MODE	BIT(1)
+#include <soc/tegra/pmc.h>
 
 static void program_reboot_reason(const char *cmd)
 {
-	void __iomem *scratch = ioremap(SCRATCH_SCRATCH0_0, 4);
-	u32 reg;
+	u32 reboot_reason;
 
 	/* clean up */
-	reg = readl_relaxed(scratch);
-	reg &= ~(BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE);
-	writel_relaxed(reg, scratch);
+	reboot_reason = BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE;
+	tegra_pmc_clear_reboot_reason(reboot_reason);
 
 	/* valid command? */
 	if (!cmd || (strlen(cmd) == 0))
@@ -45,14 +37,14 @@ static void program_reboot_reason(const char *cmd)
 
 	/* Writing recovery kernel or Bootloader mode in SCRATCH0 31:30:1 */
 	if (!strcmp(cmd, "recovery"))
-		reg |= RECOVERY_MODE;
+		reboot_reason |= RECOVERY_MODE;
 	else if (!strcmp(cmd, "bootloader"))
-		reg |= BOOTLOADER_MODE;
+		reboot_reason |= BOOTLOADER_MODE;
 	else if (!strcmp(cmd, "forced-recovery"))
-		reg |= FORCED_RECOVERY_MODE;
+		reboot_reason |= FORCED_RECOVERY_MODE;
 
 	/* write the restart command */
-	writel_relaxed(reg, scratch);
+	tegra_pmc_set_reboot_reason(reboot_reason);
 }
 
 static __init int tegra_register_reboot_handler(void)

@@ -11137,7 +11137,7 @@ int net_os_send_hang_message_reason(struct net_device *dev, const char *string_n
 int dhd_net_wifi_platform_set_power(struct net_device *dev, bool on, unsigned long delay_msec)
 {
 	dhd_info_t *dhd = DHD_DEV_INFO(dev);
-#if IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 	dhdpcie_port_toggle(&dhd->pub, on);
 	if (on)
 		tegra_pcie_prepare_l2_exit(&dhd->pub);

@@ -58,7 +58,7 @@
 #include <mach/msm_pcie.h>
 #endif /* CONFIG_PCI_MSM */
 #endif /* CONFIG_ARCH_MSM */
-#if IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 #include <linux/pci-tegra.h>
 #endif
 #ifdef CONFIG_BCMDHD_CUSTOM_SYSFS_TEGRA
@@ -725,7 +725,7 @@ int dhdpcie_scan_resource(dhdpcie_info_t *dhdpcie_info)
 
 }
 
-#if IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 void dhdpcie_port_toggle(dhd_pub_t *pub, bool on)
 {
 	struct dhd_bus *bus = pub->bus;
@@ -1049,7 +1049,7 @@ dhdpcie_start_host_pcieclock(dhd_bus_t *bus)
 
 done:
 #endif /* CONFIG_ARCH_MSM */
-#if IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 	ret = tegra_pcie_pm_control(TEGRA_PCIE_RESUME_POST, bus->dev);
 	if (ret) {
 		DHD_ERROR(("%s Failed to bring up PCIe link\n", __FUNCTION__));
@@ -1099,7 +1099,7 @@ dhdpcie_stop_host_pcieclock(dhd_bus_t *bus)
 	}
 done:
 #endif /* CONFIG_ARCH_MSM */
-#if IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 	ret = tegra_pcie_pm_control(TEGRA_PCIE_SUSPEND, bus->dev);
 	if (ret) {
 		DHD_ERROR(("Failed to stop PCIe link\n"));

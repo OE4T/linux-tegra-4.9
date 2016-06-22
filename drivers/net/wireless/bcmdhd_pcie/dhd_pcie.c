@@ -66,7 +66,7 @@
 #include "ftdi_sio_external.h"
 #endif /* PCIE_OOB */
 
-#if IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 #include <linux/pci-tegra.h>
 #endif
 
@@ -2993,7 +2993,7 @@ pcie2_mdiosetblock(dhd_bus_t *bus, uint blk)
 	return TRUE;
 }
 
-#if IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if IS_ENABLED(CONFIG_PCI_TEGRA)
 void tegra_pcie_prepare_l2_exit(dhd_pub_t *dhdp)
 {
 	dhd_bus_t *bus = dhdp->bus;
@@ -3008,7 +3008,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 	dhd_bus_t *bus = dhdp->bus;
 	int bcmerror = 0;
 	unsigned long flags;
-#if defined(CONFIG_ARCH_MSM) || IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if defined(CONFIG_ARCH_MSM) || IS_ENABLED(CONFIG_PCI_TEGRA)
 	int retry = POWERUP_MAX_RETRY;
 #endif /* CONFIG_ARCH_MSM || CONFIG_PCI_TEGRA */
 
@@ -3044,7 +3044,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 						__FUNCTION__, bcmerror));
 					goto done;
 				}
-#if defined(CONFIG_ARCH_MSM) || IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if defined(CONFIG_ARCH_MSM) || IS_ENABLED(CONFIG_PCI_TEGRA)
 				bcmerror = dhdpcie_bus_clock_stop(bus);
 				if (bcmerror) {
 					DHD_ERROR(("%s: host clock stop failed: %d\n",
@@ -3075,7 +3075,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 					goto done;
 				}
 
-#if defined(CONFIG_ARCH_MSM) || IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if defined(CONFIG_ARCH_MSM) || IS_ENABLED(CONFIG_PCI_TEGRA)
 				bcmerror = dhdpcie_bus_clock_stop(bus);
 				if (bcmerror) {
 					DHD_ERROR(("%s: host clock stop failed: %d\n",
@@ -3092,7 +3092,7 @@ dhd_bus_devreset(dhd_pub_t *dhdp, uint8 flag)
 			if (bus->dhd->busstate == DHD_BUS_DOWN) {
 				/* Powering On */
 				DHD_ERROR(("%s: == Power ON ==\n", __FUNCTION__));
-#if defined(CONFIG_ARCH_MSM) || IS_BUILTIN(CONFIG_PCI_TEGRA)
+#if defined(CONFIG_ARCH_MSM) || IS_ENABLED(CONFIG_PCI_TEGRA)
 				while (--retry) {
 					bcmerror = dhdpcie_bus_clock_start(bus);
 					if (!bcmerror) {

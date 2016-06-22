@@ -2826,7 +2826,7 @@ static bool is_algo_supported(struct tegra_se_dev *se_dev, const char *algo)
 
 static struct tegra_se_chipdata tegra18_se_chipdata = {
 	.aes_freq = 600000000,
-	.cpu_freq_mhz = 1900,
+	.cpu_freq_mhz = 2400,
 };
 
 static struct nvhost_device_data nvhost_se1_info = {

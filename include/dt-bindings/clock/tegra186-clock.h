@@ -431,8 +431,6 @@
 #define TEGRA186_CLK_SDMMC3 76
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_UARTD */
 #define TEGRA186_CLK_UARTD 77
-/** @deprecated */
-#define TEGRA186_CLK_CSITE 78
 /** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S1 */
 #define TEGRA186_CLK_I2S1 79
 /** output of gate CLK_ENB_DTV */
@@ -441,8 +439,6 @@
 #define TEGRA186_CLK_TSEC 81
 /** @brief output of gate CLK_ENB_DP2 */
 #define TEGRA186_CLK_DP2 82
-/** @deprecated */
-#define TEGRA186_CLK_LA 83
 /** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S4 */
 #define TEGRA186_CLK_I2S4 84
 /** output of mux controlled by CLK_RST_CONTROLLER_CLK_SOURCE_I2S5 */
@@ -753,8 +749,6 @@
 #define TEGRA186_CLK_PLLP_OUT5 270
 /** PLL controlled by CLK_RST_CONTROLLER_PLLA_BASE for use by audio clocks */
 #define TEGRA186_CLK_PLLA 271
-/** @deprecated */
-#define TEGRA186_CLK_JTAG_TCK_IB 272
 /** @brief output of mux controlled by CLK_RST_CONTROLLER_ACLK_BURST_POLICY divided by the divider controlled by ACLK_CLK_DIVISOR in CLK_RST_CONTROLLER_SUPER_ACLK_DIVIDER */
 #define TEGRA186_CLK_ACLK 273
 /** fixed 48MHz clock divided down from TEGRA186_CLK_PLL_U */

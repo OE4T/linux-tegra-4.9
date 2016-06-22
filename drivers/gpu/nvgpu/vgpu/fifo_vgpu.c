@@ -160,22 +160,29 @@ static int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 	return (err || msg.ret) ? -ENOMEM : 0;
 }
 
-static int init_engine_info(struct fifo_gk20a *f)
+static int vgpu_fifo_init_engine_info(struct fifo_gk20a *f)
 {
 	struct fifo_engine_info_gk20a *gr_info;
+	struct fifo_engine_info_gk20a *ce_info;
 	const u32 gr_sw_id = ENGINE_GR_GK20A;
+	const u32 ce_sw_id = ENGINE_GRCE_GK20A;
 
 	gk20a_dbg_fn("");
 
-	/* all we really care about finding is the graphics entry    */
-	/* especially early on in sim it probably thinks it has more */
-	f->num_engines = 1;
+	f->num_engines = 2;
 
-	gr_info = f->engine_info + gr_sw_id;
+	gr_info = &f->engine_info[0];
 
 	/* FIXME: retrieve this from server */
 	gr_info->runlist_id = 0;
-	f->active_engines_list[0] = gr_sw_id;
+	gr_info->engine_enum = gr_sw_id;
+	f->active_engines_list[0] = 0;
+
+	ce_info = &f->engine_info[1];
+	ce_info->runlist_id = 0;
+	ce_info->inst_id = 2;
+	ce_info->engine_enum = ce_sw_id;
+	f->active_engines_list[1] = 1;
 
 	return 0;
 }
@@ -292,7 +299,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	}
 	memset(f->active_engines_list, 0xff, (f->max_engines * sizeof(u32)));
 
-	init_engine_info(f);
+	g->ops.fifo.init_engine_info(f);
 
 	init_runlist(g, f);
 
@@ -778,4 +785,5 @@ void vgpu_init_fifo_ops(struct gpu_ops *gops)
 	gops->fifo.set_runlist_interleave = vgpu_fifo_set_runlist_interleave;
 	gops->fifo.channel_set_timeslice = vgpu_channel_set_timeslice;
 	gops->fifo.force_reset_ch = vgpu_fifo_force_reset_ch;
+	gops->fifo.init_engine_info = vgpu_fifo_init_engine_info;
 }

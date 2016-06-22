@@ -250,4 +250,7 @@ bool gk20a_fifo_is_valid_runlist_id(struct gk20a *g, u32 runlist_id);
 
 int gk20a_fifo_update_runlist_ids(struct gk20a *g, u32 runlist_ids, u32 hw_chid,
 		bool add, bool wait_for_finish);
+
+int gk20a_fifo_init_engine_info(struct fifo_gk20a *f);
+
 #endif /*__GR_GK20A_H__*/

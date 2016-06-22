@@ -279,7 +279,7 @@ int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 	return ret;
 }
 
-static int init_engine_info(struct fifo_gk20a *f)
+int gk20a_fifo_init_engine_info(struct fifo_gk20a *f)
 {
 	struct gk20a *g = f->g;
 	struct device *d = dev_from_gk20a(g);
@@ -796,7 +796,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	for (i = 0; i < f->num_pbdma; ++i)
 		f->pbdma_map[i] = gk20a_readl(g, fifo_pbdma_map_r(i));
 
-	init_engine_info(f);
+	g->ops.fifo.init_engine_info(f);
 
 	init_runlist(g, f);
 
@@ -3082,4 +3082,5 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	/* gk20a doesn't support device_info_data packet parsing */
 	gops->fifo.device_info_data_parse = NULL;
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
+	gops->fifo.init_engine_info = gk20a_fifo_init_engine_info;
 }

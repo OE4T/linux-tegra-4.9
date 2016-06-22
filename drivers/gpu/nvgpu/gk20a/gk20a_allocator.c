@@ -90,6 +90,11 @@ static void balloc_compute_max_order(struct gk20a_allocator *a)
 {
 	u64 true_max_order = ilog2(a->blks);
 
+	if (a->max_order == 0) {
+		a->max_order = true_max_order;
+		return;
+	}
+
 	if (a->max_order > true_max_order)
 		a->max_order = true_max_order;
 	if (a->max_order > GPU_BALLOC_MAX_ORDER)

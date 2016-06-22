@@ -132,6 +132,14 @@ static int channel_gp10b_setup_ramfc(struct channel_gk20a *c,
 
 	gk20a_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
 
+	if (c->is_privileged_channel) {
+		/* Set privilege level for channel */
+		gk20a_mem_wr32(g, mem, ram_fc_config_w(),
+			pbdma_config_auth_level_privileged_f());
+
+		gk20a_channel_setup_ramfc_for_privileged_channel(c);
+	}
+
 	return channel_gp10b_commit_userd(c);
 }
 

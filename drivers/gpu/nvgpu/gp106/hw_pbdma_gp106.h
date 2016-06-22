@@ -322,6 +322,14 @@ static inline u32 pbdma_userd_hi_addr_f(u32 v)
 {
 	return (v & 0xff) << 0;
 }
+static inline u32 pbdma_config_r(u32 i)
+{
+	return 0x000400f4 + i*8192;
+}
+static inline u32 pbdma_config_auth_level_privileged_f(void)
+{
+	return 0x100;
+}
 static inline u32 pbdma_hce_ctrl_r(u32 i)
 {
 	return 0x000400e4 + i*8192;

@@ -225,7 +225,11 @@ static const struct file_operations nvhost_debug_fops = {
 void nvhost_device_debug_init(struct platform_device *dev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-	pdata->debugfs = debugfs_create_dir(dev->name, pdata->debugfs);
+	const char *debugfs_name;
+
+	debugfs_name = pdata->devfs_name ? pdata->devfs_name : dev->name;
+
+	pdata->debugfs = debugfs_create_dir(debugfs_name, pdata->debugfs);
 }
 
 void nvhost_device_debug_deinit(struct platform_device *dev)

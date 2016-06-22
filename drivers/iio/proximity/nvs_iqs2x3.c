@@ -1,4 +1,4 @@
-/* Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+/* Copyright (c) 2015-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -35,7 +35,7 @@
 #include <asm/atomic.h>
 
 
-#define IQS_DRIVER_VERSION		(21)
+#define IQS_DRIVER_VERSION		(22)
 #define IQS_VENDOR			"Azoteq"
 #define IQS_NAME			"iqs2x3"
 #define IQS_NAME_IQS253			"iqs253"
@@ -867,23 +867,25 @@ static int iqs_i2c(struct iqs_state *st, bool poll)
 			for (i = 0; i < st->msg_n; i++) {
 				n = 0;
 				if (st->msg[i].flags & I2C_M_RD) {
-					t = sprintf(spew, "read=");
+					t = snprintf(spew, PAGE_SIZE, "read=");
 				} else {
 					if (st->msg[i].len == 1) {
 						/* part of read transaction */
-						t = sprintf(spew, "read %#2x=",
+						t = snprintf(spew, PAGE_SIZE,
+							     "read %#2x=",
 							    st->msg[i].buf[0]);
 						i++;
 					} else {
-						t = sprintf(spew,
-							    "write %#2x=",
+						t = snprintf(spew, PAGE_SIZE,
+							     "write %#2x=",
 							    st->msg[i].buf[0]);
 						n = 1;
 					}
 				}
 				for (; n < st->msg[i].len; n++)
-					t += sprintf(spew + t, "%#2x ",
-						     st->msg[i].buf[n]);
+					t += snprintf(spew + t, PAGE_SIZE - t,
+						      "%#2x ",
+						      st->msg[i].buf[n]);
 				dev_info(&st->i2c->dev, "%s %s\n",
 					 __func__, spew);
 			}
@@ -1302,8 +1304,8 @@ static int iqs_rd_delta(struct iqs_state *st, s64 ts)
 			if (st->cfg[i].scale.fval) {
 				i = IQS_DEV_DELTA0 + ch;
 				if (st->cfg[i].resolution.fval) {
-					calc_f = (u64)(hw *
-						   st->cfg[i].resolution.fval);
+					calc_f = (u64)hw *
+						    st->cfg[i].resolution.fval;
 					do_div(calc_f, st->cfg[i].scale.fval);
 				}
 				if (st->cfg[i].resolution.ival) {
@@ -1809,29 +1811,32 @@ static int iqs_regs(void *client, int snsr_id, char *buf)
 	for (i = 0; i < st->hal_tbl_n; i++)
 		iqs_i2c_rd(st, i, 0);
 	ret = iqs_i2c(st, false);
-	t = sprintf(buf, "registers: (ERR=%d)\n", ret);
+	t = snprintf(buf, PAGE_SIZE, "registers: (ERR=%d)\n", ret);
 	for (i = 0; i < st->hal_tbl_n; i++) {
 		n = st->hal_tbl[i].ndx;
-		t += sprintf(buf + t, "0x%hhx=", st->rc[n]);
+		t += snprintf(buf + t, PAGE_SIZE - t, "0x%hhx=", st->rc[n]);
 		n = st->hal_tbl[i].ndx + st->hal_tbl[i].len;
 		for (j = st->hal_tbl[i].ndx + 1; j <= n; j++)
-			t += sprintf(buf + t, "0x%hhx ", st->rc[j]);
-		t += sprintf(buf + t, "\n");
+			t += snprintf(buf + t, PAGE_SIZE - t, "0x%hhx ",
+				      st->rc[j]);
+		t += snprintf(buf + t, PAGE_SIZE - t, "\n");
 	}
 #else /* IQS_I2C_M_NO_RD_ACK */
-	t = sprintf(buf, "registers:\n");
+	t = snprintf(buf, PAGE_SIZE, "registers:\n");
 	for (i = 0; i < st->hal_tbl_n; i++) {
 		ret = iqs_i2c_read(st, i, 0, false);
 		n = st->hal_tbl[i].ndx;
 		if (ret) {
-			t += sprintf(buf + t, "0x%hhx=ERR %d",
-				     st->rc[n], ret);
+			t += snprintf(buf + t, PAGE_SIZE - t, "0x%hhx=ERR %d",
+				      st->rc[n], ret);
 		} else {
-			t += sprintf(buf + t, "0x%hhx=", st->rc[n]);
+			t += snprintf(buf + t, PAGE_SIZE - t, "0x%hhx=",
+				      st->rc[n]);
 			n = st->hal_tbl[i].ndx + st->hal_tbl[i].len;
 			for (j = st->hal_tbl[i].ndx + 1; j <= n; j++)
-				t += sprintf(buf + t, "0x%hhx ", st->rc[j]);
-			t += sprintf(buf + t, "\n");
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "0x%hhx ", st->rc[j]);
+			t += snprintf(buf + t, PAGE_SIZE - t, "\n");
 		}
 	}
 #endif /* IQS_I2C_M_NO_RD_ACK */
@@ -1934,22 +1939,23 @@ static ssize_t iqs_nvs_dbg_db(struct iqs_state *st, char *buf, ssize_t t,
 		n = db[i];
 		i++;
 		if (n == 0xFF) {
-			t += sprintf(buf + t, "flush write and mdelay=%hhu\n",
-				     db[i]);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "flush write and mdelay=%hhu\n", db[i]);
 			i++;
 			continue;
 		}
 
-		t += sprintf(buf + t, "len=%x reg=%x data/mask=", n, db[i]);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "len=%x reg=%x data/mask=", n, db[i]);
 		i++;
 		for (j = 0; j < n; j++)
-			t += sprintf(buf + t, "%x/%x ",
-				     db[i + j], db[i + j + n]);
-		t += sprintf(buf + t, "\n");
+			t += snprintf(buf + t, PAGE_SIZE - t, "%x/%x ",
+				      db[i + j], db[i + j + n]);
+		t += snprintf(buf + t, PAGE_SIZE - t, "\n");
 		i += (n << 1);
 	}
 	if (i == 0)
-		t += sprintf(buf + t, "<empty>\n");
+		t += snprintf(buf + t, PAGE_SIZE - t, "<empty>\n");
 	return t;
 }
 
@@ -1958,25 +1964,29 @@ static ssize_t iqs_nvs_dbg_tst(struct iqs_state *st, char *buf, ssize_t t,
 {
 	if (tst->lt >= 0 && tst->gt >= 0) {
 		if (tst->lt > tst->gt)
-			t += sprintf(buf + t, "if (ch%d > %d && ch%d < %d)\n",
-				     tst->ch, tst->gt, tst->ch, tst->lt);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "if (ch%d > %d && ch%d < %d)\n",
+				      tst->ch, tst->gt, tst->ch, tst->lt);
 		else
-			t += sprintf(buf + t, "if (ch%d < %d || ch%d > %d)\n",
-				     tst->ch, tst->lt, tst->ch, tst->gt);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "if (ch%d < %d || ch%d > %d)\n",
+				      tst->ch, tst->lt, tst->ch, tst->gt);
 		return t;
 	}
 
 	if (tst->lt >= 0) {
-		t += sprintf(buf + t, "if (ch%d < %d)\n", tst->ch, tst->lt);
+		t += snprintf(buf + t, PAGE_SIZE - t, "if (ch%d < %d)\n",
+			      tst->ch, tst->lt);
 		return t;
 	}
 
 	if (tst->gt >= 0) {
-		t += sprintf(buf + t, "if (ch%d > %d)\n", tst->ch, tst->gt);
+		t += snprintf(buf + t, PAGE_SIZE - t, "if (ch%d > %d)\n",
+			      tst->ch, tst->gt);
 		return t;
 	}
 
-	t += sprintf(buf + t, "exit conditions\n");
+	t += snprintf(buf + t, PAGE_SIZE - t, "exit conditions\n");
 	return t;
 }
 
@@ -1994,19 +2004,21 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 	switch (st->dbg & 0xFF) {
 	case IQS_INFO_DBG:
 		if (cmd >= IQS_DB_CMD_N) {
-			t = sprintf(buf, "ERR: UNKNOWN COMMAND\n");
+			t = snprintf(buf, PAGE_SIZE, "ERR: UNKNOWN COMMAND\n");
 			break;
 		}
 
 		if (cmd == IQS_DB_CMD_DELTA) {
-			t = sprintf(buf, "DELTA conditions:\n");
+			t = snprintf(buf, PAGE_SIZE, "DELTA conditions:\n");
 			for (i = 0; i < IQS_DELTA_TEST0_N; i++) {
 				if (i)
-					t += sprintf(buf + t, "if %s:\n",
-						     iqs_delta_tst_dt[i]);
+					t += snprintf(buf + t, PAGE_SIZE - t,
+						      "if %s:\n",
+						      iqs_delta_tst_dt[i]);
 				else
-					t += sprintf(buf + t, "%s:\n",
-						     iqs_delta_tst_dt[i]);
+					t += snprintf(buf + t, PAGE_SIZE - t,
+						      "%s:\n",
+						      iqs_delta_tst_dt[i]);
 				for (j = 0; j < IQS_DELTA_TEST1_N; j++) {
 					if (st->delta_tst[i][j].ch < 0)
 						break;
@@ -2029,12 +2041,12 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		} else if (prt == IQS_DEVID_IQS263) {
 			i = IQS_PART_263;
 		} else {
-			t = sprintf(buf, "ERR: UNKNOWN PART\n");
+			t = snprintf(buf, PAGE_SIZE, "ERR: UNKNOWN PART\n");
 			break;
 		}
 
 		if (dev > IQS_DEV_HW_N) {
-			t = sprintf(buf, "ERR: UNKNOWN DEVICE\n");
+			t = snprintf(buf, PAGE_SIZE, "ERR: UNKNOWN DEVICE\n");
 			break;
 		} else if (dev) {
 			n = dev;
@@ -2044,113 +2056,137 @@ static int iqs_nvs_read(void *client, int snsr_id, char *buf)
 		}
 
 		if (cmd == IQS_DB_CMD_INIT || !cmd) {
-			t += sprintf(buf + t, "%s initialization:\n",
-				     iqs_i2c_device_id[i].name);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "%s initialization:\n",
+				      iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_init[i]);
 		}
 		if (cmd == IQS_DB_CMD_EN || !cmd) {
 			for (j = dev; j < n; j++) {
-				t += sprintf(buf + t, "%s %s enable:\n",
-					     iqs_i2c_device_id[i].name,
-					     iqs_snsr_names[j]);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "%s %s enable:\n",
+					      iqs_i2c_device_id[i].name,
+					      iqs_snsr_names[j]);
 				t += iqs_nvs_dbg_db(st, buf, t,
-						    st->dt_en[i][j]);
+						    &st->dt_en[i][j][0]);
 			}
 		}
 		if (cmd == IQS_DB_CMD_DIS || !cmd) {
 			for (j = dev; j < n; j++) {
-				t += sprintf(buf + t, "%s %s disable:\n",
-					     iqs_i2c_device_id[i].name,
-					     iqs_snsr_names[j]);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "%s %s disable:\n",
+					      iqs_i2c_device_id[i].name,
+					      iqs_snsr_names[j]);
 				t += iqs_nvs_dbg_db(st, buf, t,
-						    st->dt_dis[i][j]);
+						    &st->dt_dis[i][j][0]);
 			}
 		}
 		if (cmd == IQS_DB_CMD_EVNT || !cmd) {
-			t += sprintf(buf + t, "%s event:\n",
-				     iqs_i2c_device_id[i].name);
+			t += snprintf(buf + t, PAGE_SIZE - t, "%s event:\n",
+				      iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_evnt[i]);
 		}
 		if (cmd == IQS_DB_CMD_SUSPND || !cmd) {
-			t += sprintf(buf + t, "%s suspend:\n",
-				     iqs_i2c_device_id[i].name);
+			t += snprintf(buf + t, PAGE_SIZE - t, "%s suspend:\n",
+				      iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_suspnd[i]);
 		}
 		if (cmd == IQS_DB_CMD_EXT_LO || !cmd) {
-			t += sprintf(buf + t, "%s external_lo:\n",
-				     iqs_i2c_device_id[i].name);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "%s external_lo:\n",
+				      iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_ext_lo[i]);
 		}
 		if (cmd == IQS_DB_CMD_EXT_HI || !cmd) {
-			t += sprintf(buf + t, "%s external_hi:\n",
-				     iqs_i2c_device_id[i].name);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "%s external_hi:\n",
+				      iqs_i2c_device_id[i].name);
 			t += iqs_nvs_dbg_db(st, buf, t, st->dt_ext_hi[i]);
 		}
 		break;
 
 	default:
-		t = sprintf(buf, "IQS driver v. %u\n", IQS_DRIVER_VERSION);
-		t += sprintf(buf + t, "ATI redo count=%u\n", st->ati_redo_n);
+		t = snprintf(buf, PAGE_SIZE, "IQS driver v. %u\n",
+			     IQS_DRIVER_VERSION);
+		t += snprintf(buf + t, PAGE_SIZE - t, "ATI redo count=%u\n",
+			      st->ati_redo_n);
 		st->ati_redo_n = 0;
-		t += sprintf(buf + t, "os_options=%x\n", st->os);
-		t += sprintf(buf + t, "stream_mode=%x\n", st->stream);
-		t += sprintf(buf + t, "watchdog_timeout_ms=%u\n",
-			     st->wd_to_ms);
-		t += sprintf(buf + t, "i2c_ss_delay_ns=%lld\n",
-			     st->i2c_ss_war_ns);
-		t += sprintf(buf + t, "i2c_retry=%u\n", st->i2c_retry);
-		t += sprintf(buf + t, "gpio_rdy_retry=%u\n",
-			     st->gpio_rdy_retry);
-		t += sprintf(buf + t, "gpio_rdy_delay_count=%u\n",
-			     st->gpio_rdy_dly_n);
-		t += sprintf(buf + t, "gpio_rdy_delay_us_min=%u\n",
-			     st->gpio_rdy_dly_min);
-		t += sprintf(buf + t, "gpio_rdy_delay_us_max=%u\n",
-			     st->gpio_rdy_dly_max);
+		t += snprintf(buf + t, PAGE_SIZE - t, "os_options=%x\n",
+			      st->os);
+		t += snprintf(buf + t, PAGE_SIZE - t, "stream_mode=%x\n",
+			      st->stream);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "watchdog_timeout_ms=%u\n", st->wd_to_ms);
+		t += snprintf(buf + t, PAGE_SIZE - t, "i2c_ss_delay_ns=%lld\n",
+			      st->i2c_ss_war_ns);
+		t += snprintf(buf + t, PAGE_SIZE - t, "i2c_retry=%u\n",
+			      st->i2c_retry);
+		t += snprintf(buf + t, PAGE_SIZE - t, "gpio_rdy_retry=%u\n",
+			      st->gpio_rdy_retry);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "gpio_rdy_delay_count=%u\n", st->gpio_rdy_dly_n);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "gpio_rdy_delay_us_min=%u\n",
+			      st->gpio_rdy_dly_min);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "gpio_rdy_delay_us_max=%u\n",
+			      st->gpio_rdy_dly_max);
 		if (st->gpio_rdy < 0)
-			t += sprintf(buf + t, "NO gpio_rdy\n");
+			t += snprintf(buf + t, PAGE_SIZE - t, "NO gpio_rdy\n");
 		else
-			t += sprintf(buf + t, "gpio_rdy %d=%d\n", st->gpio_rdy,
-				     gpio_get_value_cansleep(st->gpio_rdy));
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "gpio_rdy %d=%d\n", st->gpio_rdy,
+				      gpio_get_value_cansleep(st->gpio_rdy));
 		if (st->gpio_sar < 0)
-			t += sprintf(buf + t, "NO gpio_sar\n");
+			t += snprintf(buf + t, PAGE_SIZE - t, "NO gpio_sar\n");
 		else
-			t += sprintf(buf + t, "gpio_sar %d=%d\n", st->gpio_sar,
-				     gpio_get_value_cansleep(st->gpio_sar));
-		t += sprintf(buf + t, "gpio_sar_assert_polarity=%d\n",
-			     st->gpio_sar_asrt_pol);
-		t += sprintf(buf + t, "gpio_sar_dev_assert=%s\n",
-			     iqs_snsr_names[st->gpio_sar_dev_asrt]);
-		t += sprintf(buf + t, "gpio_sar_dev_deassert=%s\n",
-			     iqs_snsr_names[st->gpio_sar_dev_dasrt]);
-		t += sprintf(buf + t, "gpio_sar_suspend_assert=%d\n",
-			     st->gpio_sar_sus_asrt);
-		t += sprintf(buf + t, "deferred_resume_ms=%u\n",
-			     st->dfr_rsm_ms);
-		t += sprintf(buf + t, "resume=%x\n", st->resume);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "gpio_sar %d=%d\n", st->gpio_sar,
+				      gpio_get_value_cansleep(st->gpio_sar));
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "gpio_sar_assert_polarity=%d\n",
+			      st->gpio_sar_asrt_pol);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "gpio_sar_dev_assert=%s\n",
+			      iqs_snsr_names[st->gpio_sar_dev_asrt]);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "gpio_sar_dev_deassert=%s\n",
+			      iqs_snsr_names[st->gpio_sar_dev_dasrt]);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "gpio_sar_suspend_assert=%d\n",
+			      st->gpio_sar_sus_asrt);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "deferred_resume_ms=%u\n", st->dfr_rsm_ms);
+		t += snprintf(buf + t, PAGE_SIZE - t, "resume=%x\n",
+			      st->resume);
 		for (i = 0; i < IQS_DEV_HW_N; i++) {
 			if (st->dbnc_lo[i])
-				t += sprintf(buf + t, "%s_debounce_lo=%u\n",
-					     iqs_snsr_names[i],
-					     st->dbnc_lo[i]);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "%s_debounce_lo=%u\n",
+					      iqs_snsr_names[i],
+					      st->dbnc_lo[i]);
 			if (st->dbnc_hi[i])
-				t += sprintf(buf + t, "%s_debounce_hi=%u\n",
-					     iqs_snsr_names[i],
-					     st->dbnc_hi[i]);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "%s_debounce_hi=%u\n",
+					      iqs_snsr_names[i],
+					      st->dbnc_hi[i]);
 		}
-		t += sprintf(buf + t, "SAR_delta_channel_mask=%u\n",
-			     st->delta_ch_msk);
+		t += snprintf(buf + t, PAGE_SIZE - t,
+			      "SAR_delta_channel_mask=%u\n", st->delta_ch_msk);
 		if (st->delta_ch_msk)
-			t += sprintf(buf + t, "SAR_delta_average_count=%u\n",
-				     st->delta_avg_n);
-		t += sprintf(buf + t, "irq=%d\n", st->i2c->irq);
-		t += sprintf(buf + t, "irq_disable=%x\n", st->irq_dis);
-		t += sprintf(buf + t, "irq_trigger_edge=%x\n",
-			     st->irq_trigger_edge);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "SAR_delta_average_count=%u\n",
+				      st->delta_avg_n);
+		t += snprintf(buf + t, PAGE_SIZE - t, "irq=%d\n",
+			      st->i2c->irq);
+		t += snprintf(buf + t, PAGE_SIZE - t, "irq_disable=%x\n",
+			      st->irq_dis);
+		t += snprintf(buf + t, PAGE_SIZE - t, "irq_trigger_edge=%x\n",
+			      st->irq_trigger_edge);
 		for (i = 0; i < IQS_DEV_HW_N; i++)
-			t += sprintf(buf + t, "%s_binary_hw=%x\n",
-				     iqs_snsr_names[i],
-				     st->prox[i].proximity_binary_hw);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "%s_binary_hw=%x\n", iqs_snsr_names[i],
+				      st->prox[i].proximity_binary_hw);
 	}
 
 	st->dbg = IQS_INFO_STS;
@@ -2279,18 +2315,18 @@ static int iqs_remove(struct i2c_client *client)
 	struct iqs_state *st = i2c_get_clientdata(client);
 	unsigned int i;
 
-	if (st != NULL) {
-		iqs_shutdown(client);
-		if (st->nvs) {
-			for (i = 0; i < IQS_DEV_N; i++) {
-				if (st->prox[i].nvs_st)
-					st->nvs->remove(st->prox[i].nvs_st);
-			}
+	iqs_shutdown(client);
+	if (st->nvs) {
+		for (i = 0; i < IQS_DEV_N; i++) {
+			if (st->prox[i].nvs_st)
+				st->nvs->remove(st->prox[i].nvs_st);
 		}
-		iqs_pm_exit(st);
 	}
+
+	iqs_pm_exit(st);
 	for (i = 0; i < IQS_CH_N; i++)
 		kfree(st->delta_avg[i]);
+
 	dev_info(&client->dev, "%s\n", __func__);
 	return 0;
 }
@@ -2438,9 +2474,9 @@ static int iqs_of_dt_db(struct iqs_state *st, struct device_node *dn,
 
 	n = 0;
 	for (i = 0; i < limit; i++) {
-		ret = sprintf(str, "%s_%u", name, i);
+		ret = snprintf(str, sizeof(str), "%s_%u", name, i);
 		if (ret <= 0) {
-			dev_err(&st->i2c->dev, "%s sprintf(%s_%u)\n",
+			dev_err(&st->i2c->dev, "%s snprintf(%s_%u)\n",
 				__func__, name, i);
 			return -ENODEV;
 		}
@@ -2516,9 +2552,11 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 	if (dn) {
 		/* device specific parameters */
 		for (i = 0; i < IQS_DEV_HW_N; i++) {
-			sprintf(str, "%s_debounce_lo", iqs_snsr_names[i]);
+			snprintf(str, sizeof(str), "%s_debounce_lo",
+				 iqs_snsr_names[i]);
 			of_property_read_u32(dn, str, &st->dbnc_lo[i]);
-			sprintf(str, "%s_debounce_hi", iqs_snsr_names[i]);
+			snprintf(str, sizeof(str), "%s_debounce_hi",
+				 iqs_snsr_names[i]);
 			of_property_read_u32(dn, str, &st->dbnc_hi[i]);
 		}
 		of_property_read_u32(dn, "SAR_delta_average_count",
@@ -2556,8 +2594,9 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 		if (i)
 			st->irq_trigger_edge = true;
 		of_property_read_u32(dn, "watchdog_timeout_ms", &st->wd_to_ms);
-		of_property_read_u32(dn, "i2c_ss_delay_ns",
-				     (u32 *)&st->i2c_ss_war_ns);
+		i = IQS_I2C_STOP_DLY_NS;
+		of_property_read_u32(dn, "i2c_ss_delay_ns", &i);
+		st->i2c_ss_war_ns = i;
 		of_property_read_u32(dn, "i2c_retry", &st->i2c_retry);
 		of_property_read_u32(dn, "gpio_rdy_retry",
 				     &st->gpio_rdy_retry);
@@ -2601,19 +2640,19 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 				part = 253;
 			else
 				part = 263;
-			sprintf(str, "%uinit", part);
+			snprintf(str, sizeof(str), "%uinit", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_init[i],
 					    IQS_DT_INIT_N);
-			sprintf(str, "%uevent", part);
+			snprintf(str, sizeof(str), "%uevent", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_evnt[i],
 					    IQS_DT_EVNT_N);
-			sprintf(str, "%uexternal_lo", part);
+			snprintf(str, sizeof(str), "%uexternal_lo", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_ext_lo[i],
 					    IQS_DT_EXT_N);
-			sprintf(str, "%uexternal_hi", part);
+			snprintf(str, sizeof(str), "%uexternal_hi", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_ext_hi[i],
 					    IQS_DT_EXT_N);
-			sprintf(str, "%ususpend", part);
+			snprintf(str, sizeof(str), "%ususpend", part);
 			ret |= iqs_of_dt_db(st, dn, str, st->dt_suspnd[i],
 					    IQS_DT_SUSPND_N);
 			for (j = 0; j < IQS_DEV_HW_N; j++) {
@@ -2621,11 +2660,13 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 					dev = "prox";
 				else
 					dev = "touch";
-				sprintf(str, "%uen_%s", part, dev);
+				snprintf(str, sizeof(str), "%uen_%s",
+					 part, dev);
 				ret |= iqs_of_dt_db(st, dn, str,
 						    st->dt_en[i][j],
 						    IQS_DT_ABLE_N);
-				sprintf(str, "%udis_%s", part, dev);
+				snprintf(str, sizeof(str), "%udis_%s",
+					 part, dev);
 				ret |= iqs_of_dt_db(st, dn, str,
 						    st->dt_dis[i][j],
 						    IQS_DT_ABLE_N);
@@ -2636,16 +2677,16 @@ static int iqs_of_dt(struct iqs_state *st, struct device_node *dn)
 
 		for (i = 0; i < IQS_DELTA_TEST0_N; i++) {
 			for (j = 0; j < IQS_DELTA_TEST1_N; j++) {
-				sprintf(str, "%s_%u_ch",
-					iqs_delta_tst_dt[i], j);
+				snprintf(str, sizeof(str), "%s_%u_ch",
+					 iqs_delta_tst_dt[i], j);
 				of_property_read_s32(dn, str,
 						     &st->delta_tst[i][j].ch);
-				sprintf(str, "%s_%u_lt",
-					iqs_delta_tst_dt[i], j);
+				snprintf(str, sizeof(str), "%s_%u_lt",
+					 iqs_delta_tst_dt[i], j);
 				of_property_read_s32(dn, str,
 						     &st->delta_tst[i][j].lt);
-				sprintf(str, "%s_%u_gt",
-					iqs_delta_tst_dt[i], j);
+				snprintf(str, sizeof(str), "%s_%u_gt",
+					 iqs_delta_tst_dt[i], j);
 				of_property_read_s32(dn, str,
 						     &st->delta_tst[i][j].gt);
 			}

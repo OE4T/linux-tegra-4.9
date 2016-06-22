@@ -4,7 +4,7 @@
  *
  * Support for Tegra Security Engine hardware crypto algorithms.
  *
- * Copyright (c) 2015, NVIDIA Corporation. All Rights Reserved.
+ * Copyright (c) 2015-2016, NVIDIA Corporation. All Rights Reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -1082,6 +1082,7 @@ static u32 tegra_se_acquire_rng_mutex(struct tegra_se_elp_dev *se_dev)
 static u32 tegra_se_check_rng_status(struct tegra_se_elp_dev *se_dev)
 {
 	static bool rng1_first = true;
+	bool secure_mode;
 	u32 ret = 0;
 	u32 val = TEGRA_SE_ELP_RNG_STATUS_BUSY(TRUE);
 
@@ -1100,11 +1101,22 @@ static u32 tegra_se_check_rng_status(struct tegra_se_elp_dev *se_dev)
 	}
 
 	if (rng1_first) {
+		val = se_elp_readl(se_dev, RNG1,
+				TEGRA_SE_ELP_RNG_STATUS_OFFSET);
+		if (val & TEGRA_SE_ELP_RNG_STATUS_SECURE(STATUS_SECURE))
+			secure_mode = true;
+		else
+			secure_mode = false;
+
 		/*Check health test is ok*/
 		val = se_elp_readl(se_dev, RNG1,
 					TEGRA_SE_ELP_RNG_ISTATUS_OFFSET);
-		if (!(val &
-			TEGRA_SE_ELP_RNG_ISTATUS_NOISE_RDY(ISTATUS_ACTIVE))) {
+		if (secure_mode)
+			val &= TEGRA_SE_ELP_RNG_ISTATUS_DONE(ISTATUS_ACTIVE);
+		else
+			val &= TEGRA_SE_ELP_RNG_ISTATUS_DONE(ISTATUS_ACTIVE) |
+			TEGRA_SE_ELP_RNG_ISTATUS_NOISE_RDY(ISTATUS_ACTIVE);
+		if (!val) {
 			dev_err(se_dev->dev,
 				"\nWrong Startup value in RNG_ISTATUS Reg\n");
 			return -EINVAL;

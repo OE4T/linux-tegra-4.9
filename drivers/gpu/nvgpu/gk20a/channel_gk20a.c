@@ -244,6 +244,18 @@ u32 channel_gk20a_pbdma_acquire_val(struct channel_gk20a *c)
 	return val;
 }
 
+void gk20a_channel_setup_ramfc_for_privileged_channel(struct channel_gk20a *c)
+{
+	struct gk20a *g = c->g;
+	struct mem_desc *mem = &c->inst_block;
+
+	gk20a_dbg_info("channel %d : set ramfc privileged_channel", c->hw_chid);
+
+	/* Enable HCE priv mode for phys mode transfer */
+	gk20a_mem_wr32(g, mem, ram_fc_hce_ctrl_w(),
+		pbdma_hce_ctrl_hce_priv_mode_yes_f());
+}
+
 int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries, u32 flags)
 {
@@ -299,6 +311,9 @@ int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 		fifo_pb_timeslice_enable_true_f());
 
 	gk20a_mem_wr32(g, mem, ram_fc_chid_w(), ram_fc_chid_id_f(c->hw_chid));
+
+	if (c->is_privileged_channel)
+		gk20a_channel_setup_ramfc_for_privileged_channel(c);
 
 	return channel_gk20a_commit_userd(c);
 }
@@ -1093,7 +1108,7 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		void (*update_fn)(struct channel_gk20a *, void *),
 		void *update_fn_data)
 {
-	struct channel_gk20a *ch = gk20a_open_new_channel(g, -1);
+	struct channel_gk20a *ch = gk20a_open_new_channel(g, -1, false);
 
 	if (ch) {
 		spin_lock(&ch->update_fn_lock);
@@ -1105,7 +1120,9 @@ struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 	return ch;
 }
 
-struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g, s32 runlist_id)
+struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
+		s32 runlist_id,
+		bool is_privileged_channel)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch;
@@ -1131,6 +1148,9 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g, s32 runlist_id)
 
 	/* Runlist for the channel */
 	ch->runlist_id = runlist_id;
+
+	/* Channel privilege level */
+	ch->is_privileged_channel = is_privileged_channel;
 
 	if (g->ops.fifo.alloc_inst(g, ch)) {
 		ch->g = NULL;
@@ -1198,7 +1218,8 @@ static int __gk20a_channel_open(struct gk20a *g, struct file *filp, s32 runlist_
 		gk20a_err(dev_from_gk20a(g), "failed to power on, %d", err);
 		return err;
 	}
-	ch = gk20a_open_new_channel(g, runlist_id);
+	/* All the user space channel should be non privilege */
+	ch = gk20a_open_new_channel(g, runlist_id, false);
 	gk20a_idle(g->dev);
 	if (!ch) {
 		gk20a_err(dev_from_gk20a(g),

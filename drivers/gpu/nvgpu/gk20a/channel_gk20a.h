@@ -200,6 +200,8 @@ struct channel_gk20a {
 	u32 interleave_level;
 
 	u32 runlist_id;
+
+	bool is_privileged_channel;
 };
 
 static inline bool gk20a_channel_as_bound(struct channel_gk20a *ch)
@@ -255,7 +257,9 @@ void _gk20a_channel_put(struct channel_gk20a *ch, const char *caller);
 int gk20a_wait_channel_idle(struct channel_gk20a *ch);
 
 /* runlist_id -1 is synonym for ENGINE_GR_GK20A runlist id */
-struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g, s32 runlist_id);
+struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
+		s32 runlist_id,
+		bool is_privileged_channel);
 struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		void (*update_fn)(struct channel_gk20a *, void *),
 		void *update_fn_data);
@@ -290,5 +294,7 @@ int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority);
 int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice);
 void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 				       int event_id);
+
+void gk20a_channel_setup_ramfc_for_privileged_channel(struct channel_gk20a *c);
 
 #endif /* CHANNEL_GK20A_H */

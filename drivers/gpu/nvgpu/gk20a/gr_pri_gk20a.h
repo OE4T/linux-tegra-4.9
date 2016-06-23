@@ -124,11 +124,10 @@ static inline u32 pri_be_shared_addr(struct gk20a *g, u32 addr)
 }
 static inline bool pri_is_be_addr(struct gk20a *g, u32 addr)
 {
-	u32 num_fbps = nvgpu_get_litter_value(g, GPU_LIT_NUM_FBPS);
 	u32 rop_base = nvgpu_get_litter_value(g, GPU_LIT_ROP_BASE);
 	u32 rop_stride = nvgpu_get_litter_value(g, GPU_LIT_ROP_STRIDE);
 	return	((addr >= rop_base) &&
-		 (addr < rop_base + num_fbps * rop_stride)) ||
+		 (addr < rop_base + g->ltc_count * rop_stride)) ||
 		pri_is_be_addr_shared(g, addr);
 }
 

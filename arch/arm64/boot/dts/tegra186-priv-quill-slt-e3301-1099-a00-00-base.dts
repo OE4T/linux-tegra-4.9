@@ -25,6 +25,7 @@
 	nvidia,proc-boardid = "3301:1099:A0";
 
 	chosen {
+		board-has-eeprom;
 		bootargs ="console=ttyS0,115200";
 		stdout-path = &uarta;
 	};

@@ -558,7 +558,6 @@ int vgpu_probe(struct platform_device *pdev)
 			CONFIG_GK20A_DEFAULT_TIMEOUT;
 	gk20a->timeouts_enabled = true;
 
-	gk20a_create_sysfs(dev);
 	gk20a_init_gr(gk20a);
 
 	return 0;

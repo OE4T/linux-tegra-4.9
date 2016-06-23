@@ -81,20 +81,27 @@
 	sdhci@3460000 {
 		vddio_sdmmc-supply = <&spmic_sd2>;
 		vddio_sd_slot-supply = <&spmic_sd3>;
+		vqmmc-supply = <&spmic_sd2>;
+		vmmc-supply = <&spmic_sd3>;
 	};
 
 	sdhci@3440000 {
 		vddio_sdmmc-supply = <&spmic_ldo5>;
 		vddio_sd_slot-supply = <&spmic_sd2>;
+		vqmmc-supply = <&spmic_ldo5>;
+		vmmc-supply = <&spmic_sd2>;
 	};
 
 	sdhci@3420000 {
 		vddio_sdmmc-supply = <&spmic_sd2>;
 		vddio_sd_slot-supply = <&spmic_sd3>;
+		vqmmc-supply = <&spmic_sd2>;
+		vmmc-supply = <&spmic_sd3>;
 	};
 
 	sdhci@3400000 {
 		vddio_sdmmc-supply = <&spmic_ldo3>;
+		vmmc-supply = <&spmic_ldo3>;
 	};
 
 	xhci@3530000 {

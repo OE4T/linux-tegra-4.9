@@ -4885,6 +4885,8 @@ static bool _tegra_dc_enable(struct tegra_dc *dc)
 	if (dc->enabled)
 		return true;
 
+	dc->shutdown = false;
+
 	if ((dc->out->type == TEGRA_DC_OUT_HDMI ||
 		dc->out->type == TEGRA_DC_OUT_DP) &&
 		!tegra_dc_hpd(dc))
@@ -5077,6 +5079,11 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 	if (dc->yuv_bypass && yuv_flag == (FB_VMODE_Y420 | FB_VMODE_Y30))
 		yuv_420_10b_path = true;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (dc->shutdown)
+		yuv_420_10b_path = false;
+#endif
+
 	if (yuv_420_10b_path) {
 		u32 active_width = dc->mode.h_active;
 		u32 active_height = dc->mode.v_active;
@@ -5118,6 +5125,11 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		}
 		dcwins[nr_win++]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
+
+	if (dc->shutdown)
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		tegra_nvdisp_stop_display(dc);
+#endif
 
 	/* Skip update for linsim */
 	if (!tegra_platform_is_linsim()) {
@@ -5169,6 +5181,7 @@ static void _tegra_dc_disable(struct tegra_dc *dc)
 
 void tegra_dc_disable(struct tegra_dc *dc)
 {
+	dc->shutdown = true;
 	tegra_dc_disable_irq_ops(dc, false);
 }
 

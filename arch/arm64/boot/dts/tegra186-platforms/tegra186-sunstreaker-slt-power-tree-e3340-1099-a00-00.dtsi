@@ -45,21 +45,29 @@
 	sdhci@3460000 {
 		vddio_sdmmc-supply = <&spmic_sd2>;
 		vddio_sd_slot-supply = <&spmic_sd3>;
+		vqmmc-supply = <&spmic_sd2>;
+		vmmc-supply = <&spmic_sd3>;
 	};
 
 	sdhci@3440000 {
 		vddio_sdmmc-supply = <&spmic_ldo5>;
 		vddio_sd_slot-supply = <&vdd_sdcard1_3v3>;
+		vqmmc-supply = <&spmic_ldo5>;
+		vmmc-supply = <&vdd_sdcard1_3v3>;
 	};
 
 	sdhci@3420000 {
 		vddio_sdmmc-supply = <&spmic_sd2>;
 		vddio_sd_slot-supply = <&spmic_ldo6>;
+		vqmmc-supply = <&spmic_sd2>;
+		vmmc-supply = <&spmic_ldo6>;
 	};
 
 	sdhci@3400000 {
 		vddio_sdmmc-supply = <&spmic_ldo3>;
 		vddio_sd_slot-supply = <&vdd_sdcard1_3v3>;
+		vqmmc-supply = <&spmic_ldo3>;
+		vmmc-supply = <&vdd_sdcard1_3v3>;
 	};
 
 	ahci-sata@3507000 {

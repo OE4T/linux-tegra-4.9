@@ -463,7 +463,7 @@ static ssize_t cable_name_show(struct device *dev,
 						  attr_name);
 	int i = cable->cable_index;
 
-	return sprintf(buf, "%s\n",
+	return snprintf(buf, PAGE_SIZE, "%s\n",
 			extcon_info[cable->edev->supported_cable[i]].name);
 }
 
@@ -475,7 +475,7 @@ static ssize_t cable_state_show(struct device *dev,
 
 	int i = cable->cable_index;
 
-	return sprintf(buf, "%d\n",
+	return snprintf(buf, PAGE_SIZE, "%d\n",
 		extcon_get_state(cable->edev, cable->edev->supported_cable[i]));
 }
 
@@ -1176,7 +1176,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 
 				goto err_alloc_cables;
 			}
-			strcpy(str, buf);
+			strncpy(str, buf, strlen(buf));
 
 			cable->edev = edev;
 			cable->cable_index = index;
@@ -1222,7 +1222,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 		}
 
 		for (index = 0; edev->mutually_exclusive[index]; index++) {
-			sprintf(buf, "0x%x", edev->mutually_exclusive[index]);
+			snprintf(buf, sizeof(buf), "0x%x", edev->mutually_exclusive[index]);
 			name = kzalloc(sizeof(char) * (strlen(buf) + 1),
 				       GFP_KERNEL);
 			if (!name) {
@@ -1235,7 +1235,7 @@ int extcon_dev_register(struct extcon_dev *edev)
 				ret = -ENOMEM;
 				goto err_muex;
 			}
-			strcpy(name, buf);
+			strncpy(name, buf, strlen(buf));
 			sysfs_attr_init(&edev->d_attrs_muex[index].attr);
 			edev->d_attrs_muex[index].attr.name = name;
 			edev->d_attrs_muex[index].attr.mode = 0000;

@@ -68,8 +68,10 @@
 	};
 
 	sdhci@3400000 {
-		vddio_sdmmc-supply = <&spmic_ldo3>;
-		vddio_sd_slot-supply = <&vdd_sdcard1_3v3>;
+		vddio_sdmmc-supply = <0x0>;
+		vddio_sd_slot-supply = <0x0>;
+		vqmmc-supply = <&spmic_ldo3>;
+		vmmc-supply = <&vdd_sdcard1_3v3>;
 	};
 
 	ahci-sata@3507000 {

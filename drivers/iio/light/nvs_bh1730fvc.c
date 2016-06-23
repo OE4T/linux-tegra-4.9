@@ -32,7 +32,7 @@
 
 #define BH1730_VENDOR			"ROHM"
 #define BH1730_NAME			"bh1730fvc"
-#define BH1730_LIGHT_VERSION		(1)
+#define BH1730_LIGHT_VERSION		(2)
 #define BH1730_LIGHT_MAX_RANGE_IVAL	(100000)
 #define BH1730_LIGHT_MAX_RANGE_MICRO	(0)
 #define BH1730_LIGHT_RESOLUTION_IVAL	(1)
@@ -414,14 +414,14 @@ static int bh1730_regs(void *client, int snsr_id, char *buf)
 		BH1730_REG_DATA1HIGH
 	};
 
-	t = sprintf(buf, "lux: %u\n", st->light.lux);
-	t += sprintf(buf, "registers:\n");
+	t = snprintf(buf, PAGE_SIZE,  "lux: %u\n", st->light.lux);
+	t += snprintf(buf + t, PAGE_SIZE - t,  "registers:\n");
 	for (i = 0; i < ARRAY_SIZE(regs); i++) {
 		ret = bh1730_i2c_rd(st, regs[i], &readval);
 		if (ret)
-			t += sprintf(buf + t, "0x%hhx=ERR\n", i);
+			t += snprintf(buf + t, PAGE_SIZE - t,  "0x%hhx=ERR\n", i);
 		else
-			t += sprintf(buf + t, "0x%hhx=0x%hhx\n", i, readval);
+			t += snprintf(buf + t, PAGE_SIZE - t,  "0x%hhx=0x%hhx\n", i, readval);
 	}
 	return t;
 }
@@ -640,14 +640,14 @@ static ssize_t bh1730_debugfs_read_reg(struct file *file,
 		BH1730_REG_DATA1HIGH
 	};
 
-	len = sprintf(buf, "lux: %u\n", st->light.hw);
-	len += sprintf(buf + len, "registers:\n");
+	len = snprintf(buf, PAGE_SIZE,  "lux: %u\n", st->light.hw);
+	len += snprintf(buf + len, PAGE_SIZE - len,  "registers:\n");
 	for (i = 0; i < ARRAY_SIZE(regs); i++) {
 		ret = bh1730_i2c_rd(st, regs[i], &val);
 		if (ret)
-			len += sprintf(buf + len, "0x%02hhx=ERR\n", regs[i]);
+			len += snprintf(buf + len, PAGE_SIZE - len,  "0x%02hhx=ERR\n", regs[i]);
 		else
-			len += sprintf(buf + len, "0x%02hhx=0x%02hhx\n",
+			len += snprintf(buf + len, PAGE_SIZE - len,  "0x%02hhx=0x%02hhx\n",
 					regs[i], val);
 	}
 	buf[len++] = 0;
@@ -669,7 +669,7 @@ static ssize_t bh1730_debugfs_write_reg(struct file *file,
 
 	buf[count] = 0;
 
-	ret = sscanf(buf, "%i %i", &reg, &val);
+	ret = sscanf(buf, "%10i %10i", &reg, &val);
 
 	switch (ret) {
 	case 1:

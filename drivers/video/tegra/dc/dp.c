@@ -1747,35 +1747,44 @@ static int tegra_dp_set_lane_count(struct tegra_dc_dp_data *dp, u8 lane_cnt)
 
 static void tegra_dp_link_cal(struct tegra_dc_dp_data *dp)
 {
-	struct tegra_dc_sor_data *sor = dp->sor;
 	struct tegra_dc_dp_link_config *cfg = &dp->link_cfg;
-	u32 load_adj;
+	int err = 0;
+
 
 	switch (cfg->link_bw) {
-	case SOR_LINK_SPEED_G1_62:
-		load_adj = 0x3;
+	case SOR_LINK_SPEED_G1_62:  /* RBR */
+		if (!IS_ERR(dp->prod_list)) {
+			err = tegra_prod_set_by_name(&dp->sor->base,
+				"prod_c_rbr", dp->prod_list);
+			if (err) {
+				dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
+				return;
+			}
+		}
 		break;
-	case SOR_LINK_SPEED_G2_7:
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		load_adj = 0x3;
-#else
-		load_adj = 0x4;
-#endif
+	case SOR_LINK_SPEED_G2_7:   /* HBR */
+		if (!IS_ERR(dp->prod_list)) {
+			err = tegra_prod_set_by_name(&dp->sor->base,
+				"prod_c_hbr", dp->prod_list);
+			if (err) {
+				dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
+				return;
+			}
+		}
 		break;
-	case SOR_LINK_SPEED_G5_4:
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		load_adj = 0x4;
-#else
-		load_adj = 0x6;
-#endif
+	case SOR_LINK_SPEED_G5_4:  /* HBR2 */
+		if (!IS_ERR(dp->prod_list)) {
+			err = tegra_prod_set_by_name(&dp->sor->base,
+				"prod_c_hbr2", dp->prod_list);
+			if (err) {
+				dev_warn(&dp->dc->ndev->dev, "DP : Prod set failed\n");
+				return;
+			}
+		}
 		break;
 	default:
 		BUG();
 	}
-
-	tegra_sor_write_field(sor, NV_SOR_PLL1,
-			NV_SOR_PLL1_LOADADJ_DEFAULT_MASK,
-			load_adj << NV_SOR_PLL1_LOADADJ_SHIFT);
 }
 
 static void tegra_dp_irq_evt_worker(struct work_struct *work)

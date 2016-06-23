@@ -2508,6 +2508,26 @@ static struct rng_alg rng_algs[] = { {
 #endif
 
 static struct crypto_alg aes_algs[] = {
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
+	{
+		.cra_name = "rng_drbg",
+		.cra_driver_name = "rng_drbg-aes-tegra",
+		.cra_priority = 100,
+		.cra_flags = CRYPTO_ALG_TYPE_RNG,
+		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
+		.cra_type = &crypto_rng_type,
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_se_rng_drbg_init,
+		.cra_exit = tegra_se_rng_drbg_exit,
+		.cra_u = {
+			.rng = {
+				.rng_make_random = tegra_se_rng_drbg_get_random,
+				.rng_reset = tegra_se_rng_drbg_reset,
+				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
+			}
+		}
+	},
+#endif
 	{
 		.cra_name = "cbc(aes)",
 		.cra_driver_name = "cbc-aes-tegra",
@@ -2528,28 +2548,7 @@ static struct crypto_alg aes_algs[] = {
 			.encrypt = tegra_se_aes_cbc_encrypt,
 			.decrypt = tegra_se_aes_cbc_decrypt,
 		}
-	},
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-{
-		.cra_name = "rng_drbg",
-		.cra_driver_name = "rng_drbg-aes-tegra",
-		.cra_priority = 100,
-		.cra_flags = CRYPTO_ALG_TYPE_RNG,
-		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
-		.cra_type = &crypto_rng_type,
-		.cra_module = THIS_MODULE,
-		.cra_init = tegra_se_rng_drbg_init,
-		.cra_exit = tegra_se_rng_drbg_exit,
-		.cra_u = {
-			.rng = {
-				.rng_make_random = tegra_se_rng_drbg_get_random,
-				.rng_reset = tegra_se_rng_drbg_reset,
-				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
-			}
-		}
-	},
-#endif
- {
+	}, {
 		.cra_name = "ecb(aes)",
 		.cra_driver_name = "ecb-aes-tegra",
 		.cra_priority = 300,
@@ -2819,11 +2818,6 @@ static struct ahash_alg hash_algs[] = {
 	}
 };
 
-static bool is_algo_supported(struct tegra_se_dev *se_dev, const char *algo)
-{
-	return true;
-}
-
 static struct tegra_se_chipdata tegra18_se_chipdata = {
 	.aes_freq = 600000000,
 	.cpu_freq_mhz = 2400,
@@ -2989,7 +2983,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 	se_dev->io_regs = pdata->aperture[0];
 
-	if (se_num == 0) {
+	if (se_num == 0 || se_num == 1) {
 		err = tegra_init_key_slot(se_dev);
 		if (err) {
 			dev_err(se_dev->dev, "init_key_slot failed\n");
@@ -3021,111 +3015,96 @@ static int tegra_se_probe(struct platform_device *pdev)
 	}
 
 	if (se_num == 0) {
+		/* Register RNG(DRBG), the first element in aes_algs/rng_algs
+		 * with SE1/AES0
+		 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-		for (i = 0; i < 2; i++) {
-#else
-		for (i = 0; i < 1; i++) {
-#endif
-			if (is_algo_supported(se_dev, aes_algs[i].cra_name)) {
-				INIT_LIST_HEAD(&aes_algs[i].cra_list);
-				err = crypto_register_alg(&aes_algs[i]);
-				if (err) {
-					dev_err(se_dev->dev,
-					"crypto_register_alg failed index[%d]\n",
-					i);
-					goto reg_fail;
-				}
-			}
+		INIT_LIST_HEAD(&aes_algs[0].cra_list);
+		err = crypto_register_alg(&aes_algs[0]);
+		if (err) {
+			dev_err(se_dev->dev,
+				"crypto_register_alg failed for rng\n");
+			goto reg_fail;
 		}
-#if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
-		if (is_algo_supported(se_dev, rng_algs[0].base.cra_name)) {
-			INIT_LIST_HEAD(&rng_algs[0].base.cra_list);
-			err = crypto_register_rng(&rng_algs[0]);
-			if (err) {
-				dev_err(se_dev->dev,
-				"crypto_register_rng failed\n");
-				goto reg_fail;
-			}
+#else
+		INIT_LIST_HEAD(&rng_algs[0].base.cra_list);
+		err = crypto_register_rng(&rng_algs[0]);
+		if (err) {
+			dev_err(se_dev->dev, "crypto_register_rng failed\n");
+			goto reg_fail;
 		}
 #endif
 	}
 
 	if (se_num == 1) {
+		/* Register all aes_algs except RNG(DRBG), that is,
+		 * ecb,cbc,ofb,ctr and first element in hash_algs that is
+		 * cmac, with SE2/AES1
+		 */
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3,19,0)
-		for (i = 2; i < ARRAY_SIZE(aes_algs); i++) {
-#else
 		for (i = 1; i < ARRAY_SIZE(aes_algs); i++) {
+#else
+		for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
 #endif
-			if (is_algo_supported(se_dev, aes_algs[i].cra_name)) {
-				INIT_LIST_HEAD(&aes_algs[i].cra_list);
-				err = crypto_register_alg(&aes_algs[i]);
-				if (err) {
-					dev_err(se_dev->dev,
-					"crypto_register_alg failed index[%d]\n",
-					i);
-					goto reg_fail;
-				}
-			}
-		}
-		if (is_algo_supported(se_dev,
-				hash_algs[0].halg.base.cra_name)) {
-			err = crypto_register_ahash(&hash_algs[0]);
+			INIT_LIST_HEAD(&aes_algs[i].cra_list);
+			err = crypto_register_alg(&aes_algs[i]);
 			if (err) {
 				dev_err(se_dev->dev,
-				"crypto_register_ahash alg failed index[0]\n");
+				"crypto_register_alg failed index[%d]\n", i);
 				goto reg_fail;
 			}
+		}
+
+		err = crypto_register_ahash(&hash_algs[0]);
+		if (err) {
+			dev_err(se_dev->dev,
+			"crypto_register_ahash alg failed for cmac\n");
+			goto reg_fail;
 		}
 	}
 
 	if (se_num == 3) {
+		/* Register all SHA algorithms in hash_algs with SE3 */
 		for (i = 1; i < 6; i++) {
-			if (is_algo_supported(se_dev,
-				hash_algs[i].halg.base.cra_name)) {
-				err = crypto_register_ahash(&hash_algs[i]);
-				if (err) {
-					dev_err(se_dev->dev,
-					"crypto_register_ahash alg"
-					"failed index[%d]\n", i);
-					goto reg_fail;
-				}
+			err = crypto_register_ahash(&hash_algs[i]);
+			if (err) {
+				dev_err(se_dev->dev, "crypto_register_ahash alg"
+				"failed index[%d]\n", i);
+				goto reg_fail;
 			}
 		}
 	}
 
 #if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	if (se_num == 2) {
+		/* Register all RSA algorithms in hash_algs with SE4 */
 		for (i = 6; i < ARRAY_SIZE(hash_algs); i++) {
-			if (is_algo_supported(se_dev,
-				hash_algs[i].halg.base.cra_name)) {
-				err = crypto_register_ahash(&hash_algs[i]);
-				if (err) {
-					dev_err(se_dev->dev,
-					"crypto_register_ahash"
-					"alg failed index[%d]\n", i);
-					goto reg_fail;
-				}
+			err = crypto_register_ahash(&hash_algs[i]);
+			if (err) {
+				dev_err(se_dev->dev, "crypto_register_ahash"
+				"alg failed index[%d]\n", i);
+				goto reg_fail;
 			}
 		}
 	}
 #endif
 
-	/* Make sure engine is powered ON with clk enabled */
-	err = nvhost_module_busy(pdev);
-	if (err) {
-		dev_err(se_dev->dev, "nvhost_module_busy failed for se_dev\n");
-		goto reg_fail;
-	}
-
 	/* RNG register only exists in se0/se1 */
 	if (se_num == 0) {
+		/* Make sure engine is powered ON with clk enabled */
+		err = nvhost_module_busy(pdev);
+		if (err) {
+			dev_err(se_dev->dev,
+				"nvhost_module_busy failed for se_dev\n");
+			goto reg_fail;
+		}
 		se_writel(se_dev,
 			SE_RNG_SRC_CONFIG_RO_ENT_SRC(DRBG_RO_ENT_SRC_ENABLE) |
 		SE_RNG_SRC_CONFIG_RO_ENT_SRC_LOCK(DRBG_RO_ENT_SRC_LOCK_ENABLE),
 				SE_RNG_SRC_CONFIG_REG_OFFSET);
+		/* Power OFF after SE register update */
+		nvhost_module_idle(pdev);
 	}
-	/* Power OFF after SE register update */
-	nvhost_module_idle(pdev);
 
 	sprintf(se_nvhost_name, "158%d0000.se", (se_num+1));
 	se_dev->syncpt_id = nvhost_get_syncpt_host_managed(se_dev->pdev,
@@ -3174,8 +3153,7 @@ ll_alloc_fail:
 fail:
 	platform_set_drvdata(pdev, NULL);
 	kfree(se_dev);
-	for (i = 0; i < 4; i++)
-		sg_tegra_se_dev[i] = NULL;
+	sg_tegra_se_dev[se_num] = NULL;
 
 	return err;
 }
@@ -3216,8 +3194,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 			se_dev->aes_cmdbuf_cpuvaddr, se_dev->aes_cmdbuf_iova,
 			&attrs);
 	kfree(se_dev);
-	for (i = 0; i < 4; i++)
-		sg_tegra_se_dev[i] = NULL;
+	sg_tegra_se_dev[se_dev->se_dev_num] = NULL;
 	return 0;
 }
 

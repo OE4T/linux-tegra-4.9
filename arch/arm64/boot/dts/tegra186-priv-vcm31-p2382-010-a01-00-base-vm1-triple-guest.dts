@@ -52,6 +52,10 @@
 		status = "disabled";
 	};
 
+	spi@c260000 {
+		status = "disabled";
+	};
+
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp-hv";
 		ivc_queue = <&tegra_hv 0 14>;

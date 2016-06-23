@@ -1557,6 +1557,13 @@ void tegra_nvdisp_vrr_work(struct work_struct *work)
 }
 EXPORT_SYMBOL(tegra_nvdisp_vrr_work);
 
+void tegra_nvdisp_stop_display(struct tegra_dc *dc)
+{
+	tegra_dc_writel(dc, nvdisp_display_command_control_mode_stop_f(),
+		nvdisp_display_command_r());
+}
+EXPORT_SYMBOL(tegra_nvdisp_stop_display);
+
 u32 tegra_nvdisp_ihub_read(struct tegra_dc *dc, int win_number,
 				int ihub_switch)
 {

@@ -50,7 +50,7 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 static int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
 static int tegra_channel_mipi_cal(struct tegra_channel *chan, char is_bypass);
 
-u32 tegra_channel_read(struct tegra_channel *chan,
+static u32 tegra_channel_read(struct tegra_channel *chan,
 			unsigned int addr)
 {
 	return readl(chan->vi->iomem + addr);

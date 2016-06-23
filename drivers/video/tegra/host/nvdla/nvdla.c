@@ -24,6 +24,7 @@
 #include <linux/platform_device.h>
 #include <linux/slab.h>
 #include <linux/dma-mapping.h>
+#include <linux/uaccess.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -37,6 +38,9 @@
 #include "nvdla_ucode_interface.h"
 
 #define DEBUG_BUFFER_SIZE 0x100
+#define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
+#define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
+
 static DEFINE_DMA_ATTRS(attrs);
 
 /* data structure to keep device data */
@@ -86,7 +90,7 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 
 	/* pass dump region to falcon */
 	nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-		       (m->debug_dump_pa >> 8) & 0xffffffff);
+		       ALIGNED_DMA(m->debug_dump_pa));
 
 	return 0;
 }
@@ -151,19 +155,115 @@ struct nvdla_private {
 	struct platform_device *pdev;
 };
 
+static int nvdla_ctrl_ping(struct platform_device *pdev,
+			   struct nvdla_ctrl_ping_args *args)
+{
+	DEFINE_DMA_ATTRS(ping_attrs);
+	dma_addr_t ping_pa;
+	u32 *ping_va;
+
+	uint32_t mailbox0;
+	uint32_t mailbox1;
+	u32 timeout = FLCN_IDLE_TIMEOUT_DEFAULT * 5;
+	int err = 0;
+
+	/* make sure that device is powered on */
+	nvhost_module_busy(pdev);
+
+	/* allocate ping buffer */
+	ping_va = dma_alloc_attrs(&pdev->dev,
+				  DEBUG_BUFFER_SIZE, &ping_pa,
+				  GFP_KERNEL, &ping_attrs);
+	if (!ping_va) {
+		dev_err(&pdev->dev, "dma memory allocation failed for ping");
+		err = -ENOMEM;
+		goto fail_to_alloc;
+	}
+
+	/* pass ping value to falcon */
+	*ping_va = args->in_challenge;
+
+	/* run ping cmd */
+	nvdla_send_cmd(pdev, DLA_CMD_PING, ALIGNED_DMA(ping_pa));
+
+	/* wait for falcon to idle */
+	err = flcn_wait_idle(pdev, &timeout);
+	if (err != 0) {
+		dev_err(&pdev->dev, "failed for wait for idle in timeout");
+		goto fail_to_idle;
+	}
+
+	/* mailbox0 should have (in_challenge * 2) */
+	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
+
+	/* mailbox1 should have (in_challenge * 3) */
+	mailbox1 = host1x_readl(pdev, flcn_mailbox1_r());
+
+	/* out value should have (in_challenge * 4) */
+	args->out_response = *ping_va;
+
+	if ((mailbox0 != args->in_challenge*2) ||
+	    (mailbox1 != args->in_challenge*3) ||
+	    (args->out_response != args->in_challenge*4)) {
+		dev_err(&pdev->dev, "ping cmd failed. Falcon is not active");
+		err = -EINVAL;
+	}
+
+fail_to_idle:
+	if (ping_va)
+		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
+			       ping_va, ping_pa, &attrs);
+fail_to_alloc:
+	nvhost_module_idle(pdev);
+
+	return err;
+}
+
 static long nvdla_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
 {
 	struct nvdla_private *priv = file->private_data;
 	struct platform_device *pdev = priv->pdev;
+	u8 buf[NVDLA_IOCTL_CTRL_MAX_ARG_SIZE] __aligned(sizeof(u64));
+	int err = 0;
 
-	nvhost_dbg_fn("pdev:%p priv:%p", pdev, priv);
+	/* check for valid IOCTL cmd */
+	if ((_IOC_TYPE(cmd) != NVHOST_NVDLA_IOCTL_MAGIC) ||
+	    (_IOC_NR(cmd) == 0) ||
+	    (_IOC_NR(cmd) > NVDLA_IOCTL_CTRL_LAST) ||
+	    (_IOC_SIZE(cmd) > NVDLA_IOCTL_CTRL_MAX_ARG_SIZE)) {
+		return -ENOIOCTLCMD;
+	}
 
-	return -ENOIOCTLCMD;
+	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
+
+	/* copy from user for read commands */
+	if (_IOC_DIR(cmd) & _IOC_WRITE)
+		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
+			return -EFAULT;
+
+	/* handle IOCTL cmd */
+	switch (cmd) {
+	case NVDLA_IOCTL_CTRL_PING:
+		err = nvdla_ctrl_ping(pdev, (void *)buf);
+		break;
+	default:
+		err = -ENOIOCTLCMD;
+		break;
+	}
+
+	/* copy to user for write commands */
+	if ((err == 0) && (_IOC_DIR(cmd) & _IOC_READ))
+		err = copy_to_user((void __user *)arg, buf, _IOC_SIZE(cmd));
+
+	return err;
 }
 
 static int nvdla_open(struct inode *inode, struct file *file)
 {
+	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
+					struct nvhost_device_data, ctrl_cdev);
+	struct platform_device *pdev = pdata->pdev;
 	struct nvdla_private *priv;
 
 	priv = kmalloc(sizeof(*priv), GFP_KERNEL);
@@ -171,6 +271,9 @@ static int nvdla_open(struct inode *inode, struct file *file)
 		return -ENOMEM;
 
 	file->private_data = priv;
+	priv->pdev = pdev;
+
+	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
 
 	return nonseekable_open(inode, file);
 }
@@ -180,7 +283,7 @@ static int nvdla_release(struct inode *inode, struct file *file)
 	struct nvdla_private *priv = file->private_data;
 	struct platform_device *pdev = priv->pdev;
 
-	nvhost_dbg_fn("pdev:%p priv:%p", pdev, priv);
+	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
 
 	kfree(priv);
 	return 0;
@@ -241,7 +344,7 @@ static int nvdla_probe(struct platform_device *dev)
 		goto err_get_pdata;
 	}
 
-	nvhost_dbg_fn("dev:%p pdata:%p", dev, pdata);
+	nvhost_dbg_fn("%s: pdev:%p pdata:%p\n", __func__, dev, pdata);
 
 	nvdla = devm_kzalloc(&dev->dev, sizeof(*nvdla), GFP_KERNEL);
 	if (!nvdla) {

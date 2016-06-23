@@ -28,6 +28,20 @@
 #define __user
 #endif
 
+struct nvdla_ctrl_ping_args {
+	__u32 in_challenge;
+	__u32 out_response;
+};
+
 #define NVHOST_NVDLA_IOCTL_MAGIC 'D'
+
+#define NVDLA_IOCTL_CTRL_PING		\
+		_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 1, struct nvdla_ctrl_ping_args)
+
+#define NVDLA_IOCTL_CTRL_LAST		\
+		_IOC_NR(NVDLA_IOCTL_CTRL_PING)
+
+#define NVDLA_IOCTL_CTRL_MAX_ARG_SIZE  \
+		sizeof(struct nvdla_ctrl_ping_args)
 
 #endif /* __LINUX_NVHOST_NVDLA_IOCTL_H */

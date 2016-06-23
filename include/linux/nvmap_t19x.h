@@ -20,9 +20,15 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
+#include <linux/types.h>
+#include <linux/device.h>
+
 #ifndef _LINUX_NVMAP_T19x_H
 #define _LINUX_NVMAP_T19x_H
 
 #define NVMAP_HEAP_CARVEOUT_CVSRAM  (1ul<<25)
+
+int nvmap_register_cvsram_carveout(struct device *dma_dev,
+		phys_addr_t base, size_t size);
 
 #endif /* _LINUX_NVMAP_T19x_H */

@@ -854,8 +854,6 @@ static int tegra_virt_t210ref_pcm_driver_probe(struct platform_device *pdev)
 	}
 
 	tegra_pd_add_device(&pdev->dev);
-	pm_genpd_dev_need_save(&pdev->dev, true);
-	pm_genpd_dev_need_restore(&pdev->dev, true);
 	pm_runtime_forbid(&pdev->dev);
 
 	return ret;

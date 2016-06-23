@@ -85,5 +85,7 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		pclk = 0;
 
 	WARN_ONCE(!pclk, "pclk is 0\n");
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(clk, pclk);
+#endif
 }

@@ -565,13 +565,17 @@ static int dsc_rc_ranges_8bpp_8bpc[16][3] = {
 void tegra_dc_clk_enable(struct tegra_dc *dc)
 {
 	tegra_disp_clk_prepare_enable(dc->clk);
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
+#endif
 }
 
 void tegra_dc_clk_disable(struct tegra_dc *dc)
 {
 	tegra_disp_clk_disable_unprepare(dc->clk);
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(dc->clk, 0);
+#endif
 }
 
 static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
@@ -4663,7 +4667,11 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
 		tegra_dc_clk_enable(dc);
 	else
+#ifdef CONFIG_TEGRA_CORE_DVFS
 		tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
+#else
+		;
+#endif
 
 	tegra_dc_get(dc);
 
@@ -4685,7 +4693,11 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
 			tegra_dc_clk_disable(dc);
 		else
+#ifdef CONFIG_TEGRA_CORE_DVFS
 			tegra_dvfs_set_rate(dc->clk, 0);
+#else
+			;
+#endif
 		dev_warn(&dc->ndev->dev,
 			"%s: tegra_dc_init failed\n", __func__);
 		return false;
@@ -5004,7 +5016,11 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (!(dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE))
 		tegra_dc_clk_disable(dc);
 	else
+#ifdef CONFIG_TEGRA_CORE_DVFS
 		tegra_dvfs_set_rate(dc->clk, 0);
+#else
+		;
+#endif
 
 	tegra_disp_clk_disable_unprepare(dc->emc_la_clk);
 #endif

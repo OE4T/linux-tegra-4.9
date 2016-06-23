@@ -1975,7 +1975,9 @@ static void tegra_dsi_start_dc_stream(struct tegra_dc *dc,
 	u32 val;
 
 	tegra_dc_get(dc);
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
+#endif
 
 	tegra_dc_writel(dc, DSI_ENABLE, DC_DISP_DISP_WIN_OPTIONS);
 
@@ -5336,7 +5338,9 @@ static int _tegra_dsi_host_suspend(struct tegra_dc *dc,
 						"is not supported.\n");
 	}
 
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(dc->clk, 0);
+#endif
 
 	return 0;
 fail:
@@ -5397,7 +5401,9 @@ static int _tegra_dsi_host_resume(struct tegra_dc *dc,
 						"is not supported.\n");
 	}
 
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
+#endif
 	return 0;
 fail:
 	return err;
@@ -5872,7 +5878,9 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		clk_set_parent(clk, parent_clk);
 
 skip_setup:
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(dc->clk, dc->mode.pclk);
+#endif
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 }
 

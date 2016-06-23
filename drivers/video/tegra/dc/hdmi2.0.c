@@ -2192,11 +2192,13 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 			clk_set_parent(sor->brick_clk, sor->src_switch_clk);
 		clk_set_rate(sor->brick_clk, rate);
 
+#ifdef CONFIG_TEGRA_CORE_DVFS
 		/*
 		 * Select primary -- HDMI -- DVFS table for SOR clock (if SOR
 		 * clock has single DVFS table for all modes, nothing changes).
 		 */
 		tegra_dvfs_use_alt_freqs_on_clk(sor->sor_clk, false);
+#endif
 
 		/* Select sor clock muxes */
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
@@ -2344,6 +2346,7 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	if (clk_get_rate(parent_clk) != dc->mode.pclk)
 		clk_set_rate(parent_clk, dc->mode.pclk);
 skip_setup:
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	/*
 	 * DC clock divider is controlled by DC driver transparently to clock
 	 * framework -- hence, direct call to DVFS with target mode rate. SOR
@@ -2362,6 +2365,7 @@ skip_setup:
 		tegra_dvfs_set_rate(clk, dc->mode.pclk);
 	else
 		tegra_dvfs_set_rate(clk, clk_get_rate(clk));
+#endif
 
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 #endif

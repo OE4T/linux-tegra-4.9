@@ -132,10 +132,14 @@ void tegra_sor_config_dp_clk(struct tegra_dc_sor_data *sor)
 	if (flag)
 		tegra_sor_clk_disable(sor);
 
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_use_alt_freqs_on_clk(sor->sor_clk, true);
+#endif
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	if (tegra_platform_is_silicon())
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+#endif
 
 	if (flag)
 		tegra_sor_clk_enable(sor);
@@ -1188,8 +1192,10 @@ void tegra_sor_config_hdmi_clk(struct tegra_dc_sor_data *sor)
 	if (flag)
 		tegra_sor_clk_disable(sor);
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	if (tegra_platform_is_silicon())
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
+#endif
 
 	if (flag)
 		tegra_sor_clk_enable(sor);
@@ -1964,8 +1970,10 @@ static void tegra_sor_config_lvds_clk(struct tegra_dc_sor_data *sor)
 	if (flag)
 		tegra_sor_clk_disable(sor);
 
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	if (tegra_platform_is_silicon())
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 1);
+#endif
 
 	if (flag)
 		tegra_sor_clk_enable(sor);

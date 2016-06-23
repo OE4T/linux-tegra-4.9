@@ -2296,7 +2296,9 @@ static void tegra_dc_hdmi_disable(struct tegra_dc *dc)
 	tegra_periph_reset_assert(hdmi->clk);
 	hdmi->clk_enabled = false;
 	clk_disable_unprepare(hdmi->clk);
+#ifdef CONFIG_TEGRA_CORE_DVFS
 	tegra_dvfs_set_rate(hdmi->clk, 0);
+#endif
 }
 
 

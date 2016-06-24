@@ -84,10 +84,15 @@ struct tegra_smmu_chip_data {
 static size_t __smmu_iommu_iova_to_phys(struct smmu_as *as, dma_addr_t iova,
 					phys_addr_t *pa, int *npte);
 
+static struct smmu_domain *to_smmu_domain(struct iommu_domain *dom)
+{
+	return container_of(dom, struct smmu_domain, domain);
+}
+
 struct smmu_as *domain_to_as(struct iommu_domain *_domain,
 						unsigned long iova)
 {
-	struct smmu_domain *domain = _domain->priv;
+	struct smmu_domain *domain = to_smmu_domain(_domain);
 	int idx;
 
 	BUG_ON(iova != -1 && !domain->bitmap[0]);
@@ -1247,7 +1252,7 @@ char *debug_dma_platformdata(struct device *dev)
 	int asid = -1;
 
 	if (mapping) {
-		struct smmu_domain *dom = mapping->domain->priv;
+		struct smmu_domain *dom = to_smmu_domain(mapping->domain);
 		int i, len = 0;
 		for_each_set_bit(i, (unsigned long *)&(dom->bitmap),
 				MAX_AS_PER_DEV) {
@@ -1368,7 +1373,7 @@ static void debugfs_create_master(struct smmu_client *c)
 static int smmu_iommu_attach_dev(struct iommu_domain *domain,
 				 struct device *dev)
 {
-	struct smmu_domain *dom = domain->priv;
+	struct smmu_domain *dom = to_smmu_domain(domain);
 	struct smmu_as *as;
 	struct smmu_device *smmu;
 	struct smmu_client *client, *c;
@@ -1493,27 +1498,26 @@ out:
 	debugfs_remove_recursive(temp);
 }
 
-static int smmu_iommu_domain_init(struct iommu_domain *domain)
+static struct iommu_domain *smmu_iommu_domain_alloc(unsigned type)
 {
 	struct smmu_device *smmu = smmu_handle;
 	struct smmu_domain *smmu_domain;
+	struct iommu_domain *domain;
 
-	BUG_ON(domain->priv);
+	/* BUG_ON(domain->priv); */
 	smmu_domain = devm_kzalloc(smmu->dev, sizeof(*smmu_domain), GFP_KERNEL);
 	if (!smmu_domain)
-		return -ENOMEM;
+		return NULL;
 
-	domain->priv = smmu_domain;
-	smmu_domain->iommu_domain = domain;
-
+	domain = &smmu_domain->domain;
 	domain->geometry.aperture_start = smmu->iovmm_base;
 	domain->geometry.aperture_end   = smmu->iovmm_base +
 		smmu->page_count * SMMU_PAGE_SIZE - 1;
 	domain->geometry.force_aperture = true;
-	return 0;
+	return domain;
 }
 
-static void __smmu_domain_destroy(struct smmu_device *smmu, struct smmu_as *as)
+static void __smmu_domain_free(struct smmu_device *smmu, struct smmu_as *as)
 {
 	if (as->pdir_page) {
 		spin_lock(&smmu->lock);
@@ -1528,7 +1532,7 @@ static void __smmu_domain_destroy(struct smmu_device *smmu, struct smmu_as *as)
 	return;
 }
 
-static void smmu_iommu_domain_destroy(struct iommu_domain *domain)
+static void smmu_iommu_domain_free(struct iommu_domain *domain)
 {
 	struct smmu_as *as = domain_to_as(domain, -1);
 	struct smmu_device *smmu;
@@ -1551,7 +1555,7 @@ static void smmu_iommu_domain_destroy(struct iommu_domain *domain)
 
 	debugfs_remove_recursive(as->debugfs_root);
 
-	smmu_domain_destroy(smmu, as);
+	smmu_domain_free(smmu, as);
 
 	if (!list_empty(&as->client)) {
 		struct smmu_client *c, *tmp_c;
@@ -1565,8 +1569,7 @@ static void smmu_iommu_domain_destroy(struct iommu_domain *domain)
 
 	spin_unlock_irqrestore(&as->lock, flags);
 
-	devm_kfree(smmu->dev, domain->priv);
-	domain->priv = NULL;
+	devm_kfree(smmu->dev, to_smmu_domain(domain));
 	dev_dbg(smmu->dev, "smmu_as@%p\n", as);
 }
 
@@ -1616,8 +1619,8 @@ static int smmu_iommu_add_device(struct device *dev)
 
 static struct iommu_ops smmu_iommu_ops_default = {
 	.capable	= smmu_iommu_capable,
-	.domain_init	= smmu_iommu_domain_init,
-	.domain_destroy	= smmu_iommu_domain_destroy,
+	.domain_alloc	= smmu_iommu_domain_alloc,
+	.domain_free	= smmu_iommu_domain_free,
 	.attach_dev	= smmu_iommu_attach_dev,
 	.detach_dev	= smmu_iommu_detach_dev,
 	.map		= smmu_iommu_map,
@@ -1911,7 +1914,7 @@ void smmu_dump_pagetable(int swgid, dma_addr_t fault)
 		if (!(c->swgids & (1ULL << swgid)))
 			continue;
 
-		as = domain_to_as(c->domain->iommu_domain, fault);
+		as = domain_to_as(&c->domain->domain, fault);
 		if (!as)
 			continue;
 
@@ -2353,7 +2356,8 @@ static struct platform_driver tegra_smmu_driver = {
 int (*__smmu_client_set_hwgrp)(struct smmu_client *c, u64 map, int on) = __smmu_client_set_hwgrp_default;
 struct smmu_as *(*smmu_as_alloc)(void) = smmu_as_alloc_default;
 void (*smmu_as_free)(struct smmu_domain *dom, unsigned long as_alloc_bitmap) = smmu_as_free_default;
-void (*smmu_domain_destroy)(struct smmu_device *smmu, struct smmu_as *as) = __smmu_domain_destroy;
+void (*smmu_domain_free)(struct smmu_device *smmu, struct smmu_as *as)
+	= __smmu_domain_free;
 int (*__smmu_iommu_map_pfn)(struct smmu_as *as, dma_addr_t iova, unsigned long pfn, unsigned long prot) = __smmu_iommu_map_pfn_default;
 int (*__smmu_iommu_map_largepage)(struct smmu_as *as, dma_addr_t iova, phys_addr_t pa, unsigned long prot) = __smmu_iommu_map_largepage_default;
 size_t (*__smmu_iommu_unmap)(struct smmu_as *as, dma_addr_t iova, size_t bytes) = __smmu_iommu_unmap_default;

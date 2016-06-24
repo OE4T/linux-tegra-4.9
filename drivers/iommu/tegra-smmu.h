@@ -177,9 +177,9 @@
 #define SMMU_CLIENT_CONF0			0x40
 
 struct smmu_domain {
-	struct iommu_domain *iommu_domain;
 	struct smmu_as *as[MAX_AS_PER_DEV];
 	unsigned long bitmap[1];
+	struct iommu_domain domain;
 };
 
 /*
@@ -274,7 +274,7 @@ extern int (*__smmu_client_set_hwgrp) (struct smmu_client *c, u64 map, int on);
 extern struct smmu_as *(*smmu_as_alloc) (void);
 extern void (*smmu_as_free) (struct smmu_domain *dom,
 				unsigned long as_alloc_bitmap);
-extern void (*smmu_domain_destroy) (struct smmu_device *smmu, struct smmu_as *as);
+extern void (*smmu_domain_free)(struct smmu_device *smmu, struct smmu_as *as);
 extern int (*__tegra_smmu_suspend) (struct device *dev);
 extern int (*__tegra_smmu_resume) (struct device *dev);
 extern int (*__tegra_smmu_probe)(struct platform_device *pdev,

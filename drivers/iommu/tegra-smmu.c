@@ -37,6 +37,7 @@
 #include <linux/pci.h>
 
 #include <soc/tegra/ahb.h>
+#include <soc/tegra/fuse.h>
 
 #include <asm/page.h>
 #include <asm/cacheflush.h>
@@ -405,9 +406,9 @@ static void smmu_setup_regs(struct smmu_device *smmu)
 
 	val = SMMU_TLB_CONFIG_RESET_VAL;
 	if ((IS_ENABLED(CONFIG_ARCH_TEGRA_12x_SOC) &&
-	     (tegra_get_chipid() == TEGRA_CHIPID_TEGRA12)) ||
+	     (tegra_get_chip_id() == TEGRA124)) ||
 	    (IS_ENABLED(CONFIG_ARCH_TEGRA_13x_SOC) &&
-	     (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13)))
+	     (tegra_get_chip_id() == TEGRA132)))
 		val |= SMMU_TLB_CONFIG_ACTIVE_LINES__VALUE << 1;
 	else  /* T210. */
 		val |= (SMMU_TLB_CONFIG_ACTIVE_LINES__VALUE * 3);
@@ -419,21 +420,21 @@ static void smmu_setup_regs(struct smmu_device *smmu)
 
 	smmu_client_ordered(smmu);
 	if (IS_ENABLED(CONFIG_ARCH_TEGRA_12x_SOC) &&
-	    (tegra_get_chipid() == TEGRA_CHIPID_TEGRA12))
+	    (tegra_get_chip_id() == TEGRA124))
 		smmu_flush_regs(smmu, 1);
 	else /* T132+ */
 		smmu_flush_regs(smmu, 0);
 
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA3
-			|| tegra_get_chipid() == TEGRA_CHIPID_TEGRA11
-			|| tegra_get_chipid() == TEGRA_CHIPID_TEGRA14) {
+	if (tegra_get_chip_id() == TEGRA30
+			|| tegra_get_chip_id() == TEGRA114
+			|| tegra_get_chip_id() == TEGRA148) {
 		val = ahb_read(smmu, AHB_XBAR_CTRL);
 		val |= AHB_XBAR_CTRL_SMMU_INIT_DONE_DONE <<
 			AHB_XBAR_CTRL_SMMU_INIT_DONE_SHIFT;
 		ahb_write(smmu, val, AHB_XBAR_CTRL);
 	}
 	/* On T114, Set PPCS1 ASID for SDMMC */
-	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA11)
+	if (tegra_get_chip_id() == TEGRA114)
 		ahb_write(smmu, AHB_MASTER_SELECT_SDMMC, AHB_MASTER_SWID_0);
 }
 

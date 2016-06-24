@@ -497,8 +497,6 @@
 	};
 	i2c@3190000 {  //i2c3, dp_aux_ch1_i2c
 		status = "okay";
-		nvidia,high-clock-count = <2>;
-		nvidia,clk-div-std-fast-mode = <0x19>;
 	};
 
 	i2c@3160000 { /* Tegra I2C0 - VCM I2CA */

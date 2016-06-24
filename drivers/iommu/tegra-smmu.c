@@ -2426,6 +2426,8 @@ struct notifier_block tegra_smmu_device_pci_nb = {
 	.notifier_call = tegra_smmu_device_notifier,
 };
 
+#ifdef CONFIG_PLATFORM_ENABLE_IOMMU
+
 void tegra_smmu_map_misc_device(struct device *dev)
 {
 	tegra_smmu_device_notifier(&tegra_smmu_device_nb,
@@ -2439,6 +2441,8 @@ void tegra_smmu_unmap_misc_device(struct device *dev)
 				   BUS_NOTIFY_UNBOUND_DRIVER, dev);
 }
 EXPORT_SYMBOL(tegra_smmu_unmap_misc_device);
+
+#endif
 
 static int tegra_smmu_init(void)
 {

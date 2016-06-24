@@ -29,6 +29,8 @@
 #include <linux/clk/tegra.h>
 #include <linux/pm.h>
 
+#include <linux/tegra-fuse.h>
+#include <linux/tegra-powergate.h>
 
 #if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #include "mipi_cal_t21x.h"
@@ -38,6 +40,12 @@
 #define MIPI_DEBUG 0
 #define DRV_NAME "tegra_mipi_cal"
 #define MIPI_CAL_TIMEOUT_MSEC 1
+
+#define dump_register(nm)	\
+{				\
+	.name = #nm,		\
+	.offset = nm,		\
+}
 
 struct tegra_mipi_bias {
 	/* BIAS_PAD_CFG0 */
@@ -94,6 +102,8 @@ struct tegra_mipi {
 	struct tegra_mipi_prod_csi *prod_csi;
 	struct tegra_mipi_prod_dsi *prod_dsi;
 	struct tegra_mipi_ops *ops;
+	char addr_offset;
+	void __iomem *io;
 	atomic_t refcount;
 };
 
@@ -314,10 +324,16 @@ static int tegra_mipi_clk_enable(struct tegra_mipi *mipi)
 {
 	int err;
 
+	err = tegra_unpowergate_partition(TEGRA_POWERGATE_SOR);
+	if (err) {
+		dev_err(mipi->dev, "Fail to unpowergate SOR\n");
+		return err;
+	}
+
 	err = clk_prepare_enable(mipi->mipi_cal_fixed);
 	if (err) {
 		dev_err(mipi->dev, "Fail to enable uart_mipi_cal clk\n");
-		return err;
+		goto err_fixed_clk;
 	}
 	mdelay(1);
 	err = clk_prepare_enable(mipi->mipi_cal_clk);
@@ -329,6 +345,9 @@ static int tegra_mipi_clk_enable(struct tegra_mipi *mipi)
 
 err_mipi_cal_clk:
 	clk_disable_unprepare(mipi->mipi_cal_fixed);
+err_fixed_clk:
+	tegra_powergate_partition(TEGRA_POWERGATE_SOR);
+
 	return err;
 }
 
@@ -336,6 +355,7 @@ static void tegra_mipi_clk_disable(struct tegra_mipi *mipi)
 {
 	clk_disable_unprepare(mipi->mipi_cal_clk);
 	clk_disable_unprepare(mipi->mipi_cal_fixed);
+	tegra_powergate_partition(TEGRA_POWERGATE_SOR);
 }
 
 static void select_lanes(struct tegra_mipi *mipi, int lanes)
@@ -396,30 +416,101 @@ static void clear_all(struct tegra_mipi *mipi)
 }
 
 #ifdef CONFIG_DEBUG_FS
+static const struct debugfs_reg32 mipical_regs[] = {
+	dump_register(MIPI_CAL_CTRL),
+	dump_register(MIPI_CAL_AUTOCAL_CTRL0),
+	dump_register(CIL_MIPI_CAL_STATUS),
+	dump_register(CIL_MIPI_CAL_STATUS_2),
+	dump_register(CILA_MIPI_CAL_CONFIG),
+	dump_register(CILB_MIPI_CAL_CONFIG),
+	dump_register(CILC_MIPI_CAL_CONFIG),
+	dump_register(CILD_MIPI_CAL_CONFIG),
+	dump_register(CILE_MIPI_CAL_CONFIG),
+	dump_register(CILF_MIPI_CAL_CONFIG),
+	dump_register(DSIA_MIPI_CAL_CONFIG),
+	dump_register(DSIB_MIPI_CAL_CONFIG),
+	dump_register(DSIC_MIPI_CAL_CONFIG),
+	dump_register(DSID_MIPI_CAL_CONFIG),
+	dump_register(MIPI_BIAS_PAD_CFG0),
+	dump_register(MIPI_BIAS_PAD_CFG1),
+	dump_register(MIPI_BIAS_PAD_CFG2),
+	dump_register(DSIA_MIPI_CAL_CONFIG_2),
+	dump_register(DSIB_MIPI_CAL_CONFIG_2),
+	dump_register(DSIC_MIPI_CAL_CONFIG_2),
+	dump_register(DSID_MIPI_CAL_CONFIG_2),
+};
+
 static u32 mipical_status;
 static u32 timeout_ct;
 static u32 counts;
+
+static int dbgfs_show_regs(struct seq_file *s, void *data)
+{
+	struct tegra_mipi *mipi = s->private;
+	int err;
+
+	err = tegra_unpowergate_partition(TEGRA_POWERGATE_SOR);
+	if (err) {
+		dev_err(mipi->dev, "Fail to unpowergate SOR\n");
+		return err;
+	}
+
+	err = tegra_mipi_clk_enable(mipi);
+	if (err) {
+		dev_err(mipi->dev, "Fail to enable mipi clk\n");
+		goto clk_err;
+	}
+	debugfs_print_regs32(s, mipical_regs, ARRAY_SIZE(mipical_regs),
+				mipi->io, "");
+	tegra_mipi_clk_disable(mipi);
+	err = 0;
+
+clk_err:
+	tegra_powergate_partition(TEGRA_POWERGATE_SOR);
+	return err;
+}
+
+static int dbgfs_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, dbgfs_show_regs, inode->i_private);
+}
+
+static const struct file_operations dbgfs_ops = {
+	.open		= dbgfs_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release
+};
 
 static int dbgfs_mipi_init(struct tegra_mipi *mipi)
 {
 	struct dentry *dir;
 	struct dentry *val;
 
-	dir = debugfs_create_dir("tegra_mipical", NULL);
+	dir = debugfs_create_dir(DRV_NAME, NULL);
 	if (!dir)
 		return -ENOMEM;
 
 	val = debugfs_create_x32("LAST_STATUS", S_IRUGO, dir, &mipical_status);
 	if (!val)
-		return -ENOMEM;
+		goto err;
 	val = debugfs_create_u32("COUNT", S_IRUGO | S_IWUGO, dir, &counts);
 	if (!val)
-		return -ENOMEM;
+		goto err;
 	val = debugfs_create_u32("TIMEOUTS", S_IRUGO | S_IWUGO, dir,
 				&timeout_ct);
 	if (!val)
-		return -ENOMEM;
+		goto err;
+
+	val = debugfs_create_file("regs", S_IRUGO, dir, mipi, &dbgfs_ops);
+	if (!val)
+		goto err;
+
 	return 0;
+err:
+	dev_err(mipi->dev, "%s:Fail to create debugfs\n", __func__);
+	debugfs_remove_recursive(dir);
+	return -ENODEV;
 }
 #endif
 static int _tegra_mipi_calibration(struct tegra_mipi *mipi, int lanes)
@@ -644,6 +735,7 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	mipi->io = regs;
 	mipi->regmap = devm_regmap_init_mmio(&pdev->dev, regs,
 			&t210_mipi_cal_regmap_config);
 	if (IS_ERR(mipi->regmap)) {

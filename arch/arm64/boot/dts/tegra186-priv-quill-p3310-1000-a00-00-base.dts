@@ -62,8 +62,9 @@
 		status = "okay";
 		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
-			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>;
-		phy-names = "utmi-0", "utmi-1", "usb3-1";
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>;
+		phy-names = "utmi-0", "utmi-1", "usb3-1", "utmi-2";
 	};
 
 	pinctrl@3520000 {
@@ -93,7 +94,7 @@
 				nvidia,lanes = "otg-2";
 				nvidia,function = "xusb";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
-				status = "disabled";
+				status = "okay";
 			};
 
 			e3325-usb3-std-A-SS {

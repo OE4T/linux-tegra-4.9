@@ -195,7 +195,7 @@ int tegra_camera_dev_mfi_add_i2cclient(
 			goto cmfidev_add_i2c_unlock;
 		}
 		memset(new_cmfidev, 0, sizeof(struct camera_mfi_dev));
-		strncpy(new_cmfidev->name, name, sizeof(new_cmfidev->name));
+		strncpy(new_cmfidev->name, name, sizeof(new_cmfidev->name)-1);
 		INIT_LIST_HEAD(&new_cmfidev->list);
 		new_cmfidev->i2c_client = i2c_client;
 		new_cmfidev->num_used = 0;
@@ -239,7 +239,7 @@ int tegra_camera_dev_mfi_add_regmap(
 			goto cmfidev_add_regmap_unlock;
 		}
 		memset(new_cmfidev, 0, sizeof(struct camera_mfi_dev));
-		strncpy(new_cmfidev->name, name, sizeof(new_cmfidev->name));
+		strncpy(new_cmfidev->name, name, sizeof(new_cmfidev->name)-1);
 		INIT_LIST_HEAD(&new_cmfidev->list);
 		new_cmfidev->regmap = regmap;
 		new_cmfidev->num_used = 0;

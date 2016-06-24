@@ -200,7 +200,7 @@ static int t18x_a57_enter_state(
 				__func__);
 			index = t18x_a57_idle_driver.state_count;
 		} else
-			index = denver_idle_state;
+			index = a57_idle_state;
 
 		wake_time = 0xFFFFEEEE;
 	}

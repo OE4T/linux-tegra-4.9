@@ -424,12 +424,13 @@ static inline u64 __nv_gmmu_va_small_page_limit(void)
 
 static inline int __nv_gmmu_va_is_big_page_region(struct vm_gk20a *vm, u64 addr)
 {
+	struct gk20a_allocator *a = &vm->vma[gmmu_page_size_big];
+
 	if (!vm->big_pages)
 		return 0;
 
-	return addr >= vm->vma[gmmu_page_size_big].base &&
-		addr < vm->vma[gmmu_page_size_big].base +
-		vm->vma[gmmu_page_size_big].length;
+	return addr >= gk20a_alloc_base(a) &&
+		addr < gk20a_alloc_base(a) + gk20a_alloc_length(a);
 }
 
 /*

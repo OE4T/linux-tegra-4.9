@@ -17,42 +17,57 @@
  */
 
 #include <linux/kernel.h>
-#include <linux/seq_file.h>
 #include <linux/slab.h>
-#include <linux/debugfs.h>
 
 #include "platform_gk20a.h"
 #include "gk20a_allocator.h"
 
 #include "mm_gk20a.h"
 
-static struct dentry *balloc_debugfs_root;
+static struct dentry *gk20a_alloc_debugfs_root;
 
 static struct kmem_cache *buddy_cache;	/* slab cache for meta data. */
 
-static u32 balloc_tracing_on;
+u32 gk20a_alloc_tracing_on;
 
-#define balloc_trace_func()				\
+#define gk20a_alloc_trace_func()			\
 	do {						\
-		if (balloc_tracing_on)			\
+		if (gk20a_alloc_tracing_on)		\
 			trace_printk("%s\n", __func__);	\
 	} while (0)
 
-#define balloc_trace_func_done()				\
+#define gk20a_alloc_trace_func_done()				\
 	do {							\
-		if (balloc_tracing_on)				\
+		if (gk20a_alloc_tracing_on)			\
 			trace_printk("%s_done\n", __func__);	\
 	} while (0)
 
+/*
+ * Buddy allocator implementation.
+ */
+static u64  gk20a_buddy_alloc(struct gk20a_allocator *__a, u64 len);
+static void gk20a_buddy_free(struct gk20a_allocator *__a, u64 addr);
+static u64  gk20a_buddy_alloc_fixed(struct gk20a_allocator *__a,
+				    u64 base, u64 len);
+static u64  gk20a_buddy_alloc_base(struct gk20a_allocator *a);
+static u64  gk20a_buddy_alloc_length(struct gk20a_allocator *a);
+static u64  gk20a_buddy_alloc_end(struct gk20a_allocator *a);
+static int  gk20a_buddy_alloc_inited(struct gk20a_allocator *a);
 
-static void balloc_init_alloc_debug(struct gk20a_allocator *a);
-static void balloc_print_stats(struct gk20a_allocator *a, struct seq_file *s,
-			       int lock);
-static struct gk20a_buddy *balloc_free_buddy(struct gk20a_allocator *a,
+static void gk20a_buddy_allocator_destroy(struct gk20a_allocator *__a);
+static void gk20a_buddy_print_stats(struct gk20a_allocator *__a,
+				    struct seq_file *s, int lock);
+
+/* Some other buddy allocator functions. */
+static struct gk20a_buddy *balloc_free_buddy(struct gk20a_buddy_allocator *a,
 					     u64 addr);
-static void balloc_coalesce(struct gk20a_allocator *a, struct gk20a_buddy *b);
-static void __balloc_do_free_fixed(struct gk20a_allocator *a,
+static void balloc_coalesce(struct gk20a_buddy_allocator *a,
+			    struct gk20a_buddy *b);
+static void __balloc_do_free_fixed(struct gk20a_buddy_allocator *a,
 				   struct gk20a_fixed_alloc *falloc);
+
+/* Debugging. */
+static void gk20a_init_alloc_debug(struct gk20a_allocator *a);
 
 /*
  * This function is not present in older kernel's list.h code.
@@ -61,6 +76,23 @@ static void __balloc_do_free_fixed(struct gk20a_allocator *a,
 #define list_last_entry(ptr, type, member) \
 	list_entry((ptr)->prev, type, member)
 #endif
+
+static const struct gk20a_allocator_ops buddy_ops = {
+	.alloc		= gk20a_buddy_alloc,
+	.free		= gk20a_buddy_free,
+
+	.alloc_fixed	= gk20a_buddy_alloc_fixed,
+	/* .free_fixed not needed. */
+
+	.base		= gk20a_buddy_alloc_base,
+	.length		= gk20a_buddy_alloc_length,
+	.end		= gk20a_buddy_alloc_end,
+	.inited		= gk20a_buddy_alloc_inited,
+
+	.fini		= gk20a_buddy_allocator_destroy,
+
+	.print_stats	= gk20a_buddy_print_stats,
+};
 
 /*
  * GPU buddy allocator for various address spaces.
@@ -80,13 +112,95 @@ static void __balloc_do_free_fixed(struct gk20a_allocator *a,
  *      easily PDE aligned so this hasn't been a problem.
  */
 
+static u64 gk20a_buddy_alloc_length(struct gk20a_allocator *a)
+{
+	struct gk20a_buddy_allocator *ba = a->priv;
+
+	return ba->length;
+}
+
+static u64 gk20a_buddy_alloc_base(struct gk20a_allocator *a)
+{
+	struct gk20a_buddy_allocator *ba = a->priv;
+
+	return ba->start;
+}
+
+static int gk20a_buddy_alloc_inited(struct gk20a_allocator *a)
+{
+	struct gk20a_buddy_allocator *ba = a->priv;
+
+	return ba->inited;
+}
+static u64 gk20a_buddy_alloc_end(struct gk20a_allocator *a)
+{
+	struct gk20a_buddy_allocator *ba = a->priv;
+
+	return ba->end;
+}
+
+u64 gk20a_alloc_length(struct gk20a_allocator *a)
+{
+	return a->ops->length(a);
+}
+
+u64 gk20a_alloc_base(struct gk20a_allocator *a)
+{
+	return a->ops->base(a);
+}
+
+u64 gk20a_alloc_initialized(struct gk20a_allocator *a)
+{
+	if (!a->ops)
+		return 0;
+
+	return a->ops->inited(a);
+}
+
+u64 gk20a_alloc_end(struct gk20a_allocator *a)
+{
+	return a->ops->end(a);
+}
+
+u64 gk20a_alloc(struct gk20a_allocator *a, u64 len)
+{
+	return a->ops->alloc(a, len);
+}
+
+void gk20a_free(struct gk20a_allocator *a, u64 addr)
+{
+	a->ops->free(a, addr);
+}
+
+u64 gk20a_alloc_fixed(struct gk20a_allocator *a, u64 base, u64 len)
+{
+	return a->ops->alloc_fixed(a, base, len);
+}
+
+void gk20a_free_fixed(struct gk20a_allocator *a, u64 base, u64 len)
+{
+	/*
+	 * If this operation is not defined for the allocator then just do
+	 * nothing. The alternative would be to fall back on the regular
+	 * free but that may be harmful in unexpected ways.
+	 */
+	if (a->ops->free_fixed)
+		a->ops->free_fixed(a, base, len);
+}
+
+void gk20a_alloc_destroy(struct gk20a_allocator *a)
+{
+	a->ops->fini(a);
+	memset(a, 0, sizeof(*a));
+}
+
 /*
  * Pick a suitable maximum order for this allocator.
  *
  * Hueristic: Just guessing that the best max order is the largest single
  * block that will fit in the address space.
  */
-static void balloc_compute_max_order(struct gk20a_allocator *a)
+static void balloc_compute_max_order(struct gk20a_buddy_allocator *a)
 {
 	u64 true_max_order = ilog2(a->blks);
 
@@ -105,9 +219,10 @@ static void balloc_compute_max_order(struct gk20a_allocator *a)
  * Since we can only allocate in chucks of a->blk_size we need to trim off
  * any excess data that is not aligned to a->blk_size.
  */
-static void balloc_allocator_align(struct gk20a_allocator *a)
+static void balloc_allocator_align(struct gk20a_buddy_allocator *a)
 {
 	a->start = ALIGN(a->base, a->blk_size);
+	WARN_ON(a->start != a->base);
 	a->end   = (a->base + a->length) & ~(a->blk_size - 1);
 	a->count = a->end - a->start;
 	a->blks  = a->count >> a->blk_shift;
@@ -116,7 +231,7 @@ static void balloc_allocator_align(struct gk20a_allocator *a)
 /*
  * Pass NULL for parent if you want a top level buddy.
  */
-static struct gk20a_buddy *balloc_new_buddy(struct gk20a_allocator *a,
+static struct gk20a_buddy *balloc_new_buddy(struct gk20a_buddy_allocator *a,
 					    struct gk20a_buddy *parent,
 					    u64 start, u64 order)
 {
@@ -136,13 +251,14 @@ static struct gk20a_buddy *balloc_new_buddy(struct gk20a_allocator *a,
 	return new_buddy;
 }
 
-static void __balloc_buddy_list_add(struct gk20a_allocator *a,
+static void __balloc_buddy_list_add(struct gk20a_buddy_allocator *a,
 				    struct gk20a_buddy *b,
 				    struct list_head *list)
 {
 	if (buddy_is_in_list(b)) {
-		balloc_dbg(a, "Oops: adding added buddy (%llu:0x%llx)\n",
-			   b->order, b->start);
+		alloc_dbg(balloc_owner(a),
+			  "Oops: adding added buddy (%llu:0x%llx)\n",
+			  b->order, b->start);
 		BUG();
 	}
 
@@ -160,12 +276,13 @@ static void __balloc_buddy_list_add(struct gk20a_allocator *a,
 	buddy_set_in_list(b);
 }
 
-static void __balloc_buddy_list_rem(struct gk20a_allocator *a,
+static void __balloc_buddy_list_rem(struct gk20a_buddy_allocator *a,
 				    struct gk20a_buddy *b)
 {
 	if (!buddy_is_in_list(b)) {
-		balloc_dbg(a, "Oops: removing removed buddy (%llu:0x%llx)\n",
-			   b->order, b->start);
+		alloc_dbg(balloc_owner(a),
+			  "Oops: removing removed buddy (%llu:0x%llx)\n",
+			  b->order, b->start);
 		BUG();
 	}
 
@@ -177,19 +294,21 @@ static void __balloc_buddy_list_rem(struct gk20a_allocator *a,
  * Add a buddy to one of the buddy lists and deal with the necessary
  * book keeping. Adds the buddy to the list specified by the buddy's order.
  */
-static void balloc_blist_add(struct gk20a_allocator *a, struct gk20a_buddy *b)
+static void balloc_blist_add(struct gk20a_buddy_allocator *a,
+			     struct gk20a_buddy *b)
 {
 	__balloc_buddy_list_add(a, b, balloc_get_order_list(a, b->order));
 	a->buddy_list_len[b->order]++;
 }
 
-static void balloc_blist_rem(struct gk20a_allocator *a, struct gk20a_buddy *b)
+static void balloc_blist_rem(struct gk20a_buddy_allocator *a,
+			     struct gk20a_buddy *b)
 {
 	__balloc_buddy_list_rem(a, b);
 	a->buddy_list_len[b->order]--;
 }
 
-static u64 balloc_get_order(struct gk20a_allocator *a, u64 len)
+static u64 balloc_get_order(struct gk20a_buddy_allocator *a, u64 len)
 {
 	if (len == 0)
 		return 0;
@@ -200,7 +319,8 @@ static u64 balloc_get_order(struct gk20a_allocator *a, u64 len)
 	return fls(len);
 }
 
-static u64 __balloc_max_order_in(struct gk20a_allocator *a, u64 start, u64 end)
+static u64 __balloc_max_order_in(struct gk20a_buddy_allocator *a,
+				 u64 start, u64 end)
 {
 	u64 size = (end - start) >> a->blk_shift;
 
@@ -213,7 +333,7 @@ static u64 __balloc_max_order_in(struct gk20a_allocator *a, u64 start, u64 end)
 /*
  * Initialize the buddy lists.
  */
-static int balloc_init_lists(struct gk20a_allocator *a)
+static int balloc_init_lists(struct gk20a_buddy_allocator *a)
 {
 	int i;
 	u64 bstart, bend, order;
@@ -253,6 +373,26 @@ cleanup:
 }
 
 /*
+ * Handle the common init stuff for a gk20a_allocator.
+ */
+static int __gk20a_alloc_common_init(struct gk20a_allocator *a,
+				     const char *name, void *priv,
+				     const struct gk20a_allocator_ops *ops)
+{
+	if (!ops)
+		return -EINVAL;
+
+	a->ops = ops;
+	a->priv = priv;
+
+	mutex_init(&a->lock);
+
+	strlcpy(a->name, name, sizeof(a->name));
+
+	return 0;
+}
+
+/*
  * Initialize a buddy allocator. Returns 0 on success. This allocator does
  * not necessarily manage bytes. It manages distinct ranges of resources. This
  * allows the allocator to work for things like comp_tags, semaphores, etc.
@@ -270,29 +410,13 @@ cleanup:
  *             will try and pick a reasonable max order.
  * @flags: Extra flags necessary. See GPU_BALLOC_*.
  */
-int __gk20a_allocator_init(struct gk20a_allocator *a,
-			   struct vm_gk20a *vm, const char *name,
-			   u64 base, u64 size, u64 blk_size, u64 max_order,
-			   u64 flags)
+int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
+				 struct vm_gk20a *vm, const char *name,
+				 u64 base, u64 size, u64 blk_size,
+				 u64 max_order, u64 flags)
 {
 	int err;
-
-	memset(a, 0, sizeof(struct gk20a_allocator));
-	strncpy(a->name, name, 32);
-
-	a->base = base;
-	a->length = size;
-	a->blk_size = blk_size;
-	a->blk_shift = __ffs(blk_size);
-
-	/*
-	 * If base is 0 then modfy base to be the size of one block so that we
-	 * can return errors by returning addr == 0.
-	 */
-	if (a->base == 0) {
-		a->base = a->blk_size;
-		a->length -= a->blk_size;
-	}
+	struct gk20a_buddy_allocator *a;
 
 	/* blk_size must be greater than 0 and a power of 2. */
 	if (blk_size == 0)
@@ -307,6 +431,29 @@ int __gk20a_allocator_init(struct gk20a_allocator *a,
 	if (flags & GPU_BALLOC_GVA_SPACE && !vm)
 		return -EINVAL;
 
+	a = kzalloc(sizeof(struct gk20a_buddy_allocator), GFP_KERNEL);
+	if (!a)
+		return -ENOMEM;
+
+	err = __gk20a_alloc_common_init(__a, name, a, &buddy_ops);
+	if (err)
+		goto fail;
+
+	a->base = base;
+	a->length = size;
+	a->blk_size = blk_size;
+	a->blk_shift = __ffs(blk_size);
+	a->owner = __a;
+
+	/*
+	 * If base is 0 then modfy base to be the size of one block so that we
+	 * can return errors by returning addr == 0.
+	 */
+	if (a->base == 0) {
+		a->base = a->blk_size;
+		a->length -= a->blk_size;
+	}
+
 	a->vm = vm;
 	if (flags & GPU_BALLOC_GVA_SPACE)
 		a->pte_blk_order = balloc_get_order(a, vm->big_page_size << 10);
@@ -320,49 +467,55 @@ int __gk20a_allocator_init(struct gk20a_allocator *a,
 	/* Shared buddy kmem_cache for all allocators. */
 	if (!buddy_cache)
 		buddy_cache = KMEM_CACHE(gk20a_buddy, 0);
-	if (!buddy_cache)
-		return -ENOMEM;
+	if (!buddy_cache) {
+		err = -ENOMEM;
+		goto fail;
+	}
 
 	a->alloced_buddies = RB_ROOT;
+	a->fixed_allocs = RB_ROOT;
 	err = balloc_init_lists(a);
 	if (err)
-		return err;
+		goto fail;
 
-	mutex_init(&a->lock);
+	a->inited = 1;
 
-	a->init = 1;
-
-	balloc_init_alloc_debug(a);
-	balloc_dbg(a, "New allocator: base      0x%llx\n", a->base);
-	balloc_dbg(a, "               size      0x%llx\n", a->length);
-	balloc_dbg(a, "               blk_size  0x%llx\n", a->blk_size);
-	balloc_dbg(a, "               max_order %llu\n", a->max_order);
-	balloc_dbg(a, "               flags     0x%llx\n", a->flags);
+	gk20a_init_alloc_debug(__a);
+	alloc_dbg(__a, "New allocator: base      0x%llx\n", a->base);
+	alloc_dbg(__a, "               size      0x%llx\n", a->length);
+	alloc_dbg(__a, "               blk_size  0x%llx\n", a->blk_size);
+	alloc_dbg(__a, "               max_order %llu\n", a->max_order);
+	alloc_dbg(__a, "               flags     0x%llx\n", a->flags);
 
 	return 0;
+
+fail:
+	kfree(a);
+	return err;
 }
 
-int gk20a_allocator_init(struct gk20a_allocator *a, const char *name,
-			 u64 base, u64 size, u64 blk_size)
+int gk20a_buddy_allocator_init(struct gk20a_allocator *a, const char *name,
+			       u64 base, u64 size, u64 blk_size, u64 flags)
 {
-	return __gk20a_allocator_init(a, NULL, name,
-				      base, size, blk_size, 0, 0);
+	return __gk20a_buddy_allocator_init(a, NULL, name,
+					    base, size, blk_size, 0, 0);
 }
 
 /*
  * Clean up and destroy the passed allocator.
  */
-void gk20a_allocator_destroy(struct gk20a_allocator *a)
+static void gk20a_buddy_allocator_destroy(struct gk20a_allocator *__a)
 {
+	int i;
 	struct rb_node *node;
 	struct gk20a_buddy *bud;
 	struct gk20a_fixed_alloc *falloc;
-	int i;
+	struct gk20a_buddy_allocator *a = __a->priv;
 
-	balloc_lock(a);
+	alloc_lock(__a);
 
-	if (!IS_ERR_OR_NULL(a->debugfs_entry))
-		debugfs_remove(a->debugfs_entry);
+	if (!IS_ERR_OR_NULL(__a->debugfs_entry))
+		debugfs_remove(__a->debugfs_entry);
 
 	/*
 	 * Free the fixed allocs first.
@@ -415,16 +568,9 @@ void gk20a_allocator_destroy(struct gk20a_allocator *a)
 		}
 	}
 
-	a->init = 0;
+	kfree(a);
 
-	balloc_unlock(a);
-
-	/*
-	 * We cant unlock an allocator after memsetting it. That wipes the
-	 * state of the mutex. Hopefully no one uses the allocator after
-	 * destroying it...
-	 */
-	memset(a, 0, sizeof(struct gk20a_allocator));
+	alloc_unlock(__a);
 }
 
 /*
@@ -433,7 +579,8 @@ void gk20a_allocator_destroy(struct gk20a_allocator *a)
  *
  * @a must be locked.
  */
-static void balloc_coalesce(struct gk20a_allocator *a, struct gk20a_buddy *b)
+static void balloc_coalesce(struct gk20a_buddy_allocator *a,
+			    struct gk20a_buddy *b)
 {
 	struct gk20a_buddy *parent;
 
@@ -473,8 +620,8 @@ static void balloc_coalesce(struct gk20a_allocator *a, struct gk20a_buddy *b)
  *
  * @a must be locked.
  */
-static int balloc_split_buddy(struct gk20a_allocator *a, struct gk20a_buddy *b,
-			      int pte_size)
+static int balloc_split_buddy(struct gk20a_buddy_allocator *a,
+			      struct gk20a_buddy *b, int pte_size)
 {
 	struct gk20a_buddy *left, *right;
 	u64 half;
@@ -521,7 +668,8 @@ static int balloc_split_buddy(struct gk20a_allocator *a, struct gk20a_buddy *b,
  *
  * @a must be locked.
  */
-static void balloc_alloc_buddy(struct gk20a_allocator *a, struct gk20a_buddy *b)
+static void balloc_alloc_buddy(struct gk20a_buddy_allocator *a,
+			       struct gk20a_buddy *b)
 {
 	struct rb_node **new = &(a->alloced_buddies.rb_node);
 	struct rb_node *parent = NULL;
@@ -552,7 +700,7 @@ static void balloc_alloc_buddy(struct gk20a_allocator *a, struct gk20a_buddy *b)
  *
  * @a must be locked.
  */
-static struct gk20a_buddy *balloc_free_buddy(struct gk20a_allocator *a,
+static struct gk20a_buddy *balloc_free_buddy(struct gk20a_buddy_allocator *a,
 					     u64 addr)
 {
 	struct rb_node *node = a->alloced_buddies.rb_node;
@@ -582,7 +730,7 @@ static struct gk20a_buddy *balloc_free_buddy(struct gk20a_allocator *a,
 /*
  * Find a suitable buddy for the given order and PTE type (big or little).
  */
-static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_allocator *a,
+static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_buddy_allocator *a,
 					       u64 order, int pte_size)
 {
 	struct gk20a_buddy *bud;
@@ -615,7 +763,8 @@ static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_allocator *a,
  *
  * @a must be locked.
  */
-static u64 __balloc_do_alloc(struct gk20a_allocator *a, u64 order, int pte_size)
+static u64 __balloc_do_alloc(struct gk20a_buddy_allocator *a,
+			     u64 order, int pte_size)
 {
 	u64 split_order;
 	struct gk20a_buddy *bud = NULL;
@@ -644,21 +793,22 @@ static u64 __balloc_do_alloc(struct gk20a_allocator *a, u64 order, int pte_size)
 /*
  * Allocate memory from the passed allocator.
  */
-u64 gk20a_balloc(struct gk20a_allocator *a, u64 len)
+static u64 gk20a_buddy_alloc(struct gk20a_allocator *__a, u64 len)
 {
 	u64 order, addr;
 	int pte_size;
+	struct gk20a_buddy_allocator *a = __a->priv;
 
-	balloc_trace_func();
+	gk20a_alloc_trace_func();
 
-	balloc_lock(a);
+	alloc_lock(__a);
 
 	order = balloc_get_order(a, len);
 
 	if (order > a->max_order) {
-		balloc_unlock(a);
-		balloc_dbg(a, "Alloc fail\n");
-		balloc_trace_func_done();
+		alloc_unlock(__a);
+		alloc_dbg(balloc_owner(a), "Alloc fail\n");
+		gk20a_alloc_trace_func_done();
 		return 0;
 	}
 
@@ -681,18 +831,19 @@ u64 gk20a_balloc(struct gk20a_allocator *a, u64 len)
 	if (addr) {
 		a->bytes_alloced += len;
 		a->bytes_alloced_real += balloc_order_to_len(a, order);
-		balloc_dbg(a, "Alloc 0x%-10llx %3lld:0x%-10llx pte_size=%s\n",
-			   addr, order, len,
+		alloc_dbg(balloc_owner(a),
+			  "Alloc 0x%-10llx %3lld:0x%-10llx pte_size=%s\n",
+			  addr, order, len,
 			   pte_size == gmmu_page_size_big   ? "big" :
 			   pte_size == gmmu_page_size_small ? "small" :
 			   "NA/any");
 	} else {
-		balloc_dbg(a, "Alloc failed: no mem!\n");
+		alloc_dbg(balloc_owner(a), "Alloc failed: no mem!\n");
 	}
 
-	balloc_unlock(a);
+	alloc_unlock(__a);
 
-	balloc_trace_func_done();
+	gk20a_alloc_trace_func_done();
 	return addr;
 }
 
@@ -703,7 +854,8 @@ u64 gk20a_balloc(struct gk20a_allocator *a, u64 len)
  * TODO: Right now this uses the unoptimal approach of going through all
  * outstanding allocations and checking their base/ends. This could be better.
  */
-static int balloc_is_range_free(struct gk20a_allocator *a, u64 base, u64 end)
+static int balloc_is_range_free(struct gk20a_buddy_allocator *a,
+				u64 base, u64 end)
 {
 	struct rb_node *node;
 	struct gk20a_buddy *bud;
@@ -728,7 +880,7 @@ static int balloc_is_range_free(struct gk20a_allocator *a, u64 base, u64 end)
 	return 1;
 }
 
-static void balloc_alloc_fixed(struct gk20a_allocator *a,
+static void balloc_alloc_fixed(struct gk20a_buddy_allocator *a,
 			       struct gk20a_fixed_alloc *f)
 {
 	struct rb_node **new = &(a->fixed_allocs.rb_node);
@@ -758,8 +910,8 @@ static void balloc_alloc_fixed(struct gk20a_allocator *a,
  *
  * @a must be locked.
  */
-static struct gk20a_fixed_alloc *balloc_free_fixed(struct gk20a_allocator *a,
-						   u64 addr)
+static struct gk20a_fixed_alloc *balloc_free_fixed(
+	struct gk20a_buddy_allocator *a, u64 addr)
 {
 	struct rb_node *node = a->fixed_allocs.rb_node;
 	struct gk20a_fixed_alloc *falloc;
@@ -788,7 +940,7 @@ static struct gk20a_fixed_alloc *balloc_free_fixed(struct gk20a_allocator *a,
  * Find the parent range - doesn't necessarily need the parent to actually exist
  * as a buddy. Finding an existing parent comes later...
  */
-static void __balloc_get_parent_range(struct gk20a_allocator *a,
+static void __balloc_get_parent_range(struct gk20a_buddy_allocator *a,
 				      u64 base, u64 order,
 				      u64 *pbase, u64 *porder)
 {
@@ -808,8 +960,8 @@ static void __balloc_get_parent_range(struct gk20a_allocator *a,
  * Makes a buddy at the passed address. This will make all parent buddies
  * necessary for this buddy to exist as well.
  */
-static struct gk20a_buddy *__balloc_make_fixed_buddy(struct gk20a_allocator *a,
-						     u64 base, u64 order)
+static struct gk20a_buddy *__balloc_make_fixed_buddy(
+	struct gk20a_buddy_allocator *a, u64 base, u64 order)
 {
 	struct gk20a_buddy *bud = NULL;
 	struct list_head *order_list;
@@ -843,7 +995,7 @@ static struct gk20a_buddy *__balloc_make_fixed_buddy(struct gk20a_allocator *a,
 	}
 
 	if (cur_order > a->max_order) {
-		balloc_dbg(a, "No buddy for range ???\n");
+		alloc_dbg(balloc_owner(a), "No buddy for range ???\n");
 		return NULL;
 	}
 
@@ -864,7 +1016,7 @@ static struct gk20a_buddy *__balloc_make_fixed_buddy(struct gk20a_allocator *a,
 	return bud;
 }
 
-static u64 __balloc_do_alloc_fixed(struct gk20a_allocator *a,
+static u64 __balloc_do_alloc_fixed(struct gk20a_buddy_allocator *a,
 				   struct gk20a_fixed_alloc *falloc,
 				   u64 base, u64 len)
 {
@@ -880,7 +1032,8 @@ static u64 __balloc_do_alloc_fixed(struct gk20a_allocator *a,
 				    __fls(len >> a->blk_shift));
 
 	if (align_order > a->max_order) {
-		balloc_dbg(a, "Align order too big: %llu > %llu\n",
+		alloc_dbg(balloc_owner(a),
+			   "Align order too big: %llu > %llu\n",
 			   align_order, a->max_order);
 		return 0;
 	}
@@ -898,7 +1051,8 @@ static u64 __balloc_do_alloc_fixed(struct gk20a_allocator *a,
 					balloc_base_unshift(a, inc_base),
 					align_order);
 		if (!bud) {
-			balloc_dbg(a, "Fixed buddy failed: {0x%llx, %llu}!\n",
+			alloc_dbg(balloc_owner(a),
+				   "Fixed buddy failed: {0x%llx, %llu}!\n",
 				   balloc_base_unshift(a, inc_base),
 				   align_order);
 			goto err_and_cleanup;
@@ -943,13 +1097,15 @@ err_and_cleanup:
  *
  * Please do not use this function unless _absolutely_ necessary.
  */
-u64 gk20a_balloc_fixed(struct gk20a_allocator *a, u64 base, u64 len)
+static u64 gk20a_buddy_alloc_fixed(struct gk20a_allocator *__a,
+				   u64 base, u64 len)
 {
-	struct gk20a_fixed_alloc *falloc = NULL;
-	struct gk20a_buddy *bud;
 	u64 ret, real_bytes = 0;
+	struct gk20a_buddy *bud;
+	struct gk20a_fixed_alloc *falloc = NULL;
+	struct gk20a_buddy_allocator *a = __a->priv;
 
-	balloc_trace_func();
+	gk20a_alloc_trace_func();
 
 	/* If base isn't aligned to an order 0 block, fail. */
 	if (base & (a->blk_size - 1))
@@ -966,16 +1122,18 @@ u64 gk20a_balloc_fixed(struct gk20a_allocator *a, u64 base, u64 len)
 	falloc->start = base;
 	falloc->end = base + len;
 
-	balloc_lock(a);
+	alloc_lock(__a);
 	if (!balloc_is_range_free(a, base, base + len)) {
-		balloc_dbg(a, "Range not free: 0x%llx -> 0x%llx\n",
+		alloc_dbg(balloc_owner(a),
+			   "Range not free: 0x%llx -> 0x%llx\n",
 			   base, base + len);
 		goto fail_unlock;
 	}
 
 	ret = __balloc_do_alloc_fixed(a, falloc, base, len);
 	if (!ret) {
-		balloc_dbg(a, "Alloc-fixed failed ?? 0x%llx -> 0x%llx\n",
+		alloc_dbg(balloc_owner(a),
+			   "Alloc-fixed failed ?? 0x%llx -> 0x%llx\n",
 			   base, base + len);
 		goto fail_unlock;
 	}
@@ -988,21 +1146,21 @@ u64 gk20a_balloc_fixed(struct gk20a_allocator *a, u64 base, u64 len)
 	a->bytes_alloced += len;
 	a->bytes_alloced_real += real_bytes;
 
-	balloc_unlock(a);
-	balloc_dbg(a, "Alloc (fixed) 0x%llx\n", base);
+	alloc_unlock(__a);
+	alloc_dbg(balloc_owner(a), "Alloc (fixed) 0x%llx\n", base);
 
-	balloc_trace_func_done();
+	gk20a_alloc_trace_func_done();
 	return base;
 
 fail_unlock:
-	balloc_unlock(a);
+	alloc_unlock(__a);
 fail:
 	kfree(falloc);
-	balloc_trace_func_done();
+	gk20a_alloc_trace_func_done();
 	return 0;
 }
 
-static void __balloc_do_free_fixed(struct gk20a_allocator *a,
+static void __balloc_do_free_fixed(struct gk20a_buddy_allocator *a,
 				   struct gk20a_fixed_alloc *falloc)
 {
 	struct gk20a_buddy *bud;
@@ -1029,19 +1187,20 @@ static void __balloc_do_free_fixed(struct gk20a_allocator *a,
 /*
  * Free the passed allocation.
  */
-void gk20a_bfree(struct gk20a_allocator *a, u64 addr)
+static void gk20a_buddy_free(struct gk20a_allocator *__a, u64 addr)
 {
 	struct gk20a_buddy *bud;
 	struct gk20a_fixed_alloc *falloc;
+	struct gk20a_buddy_allocator *a = __a->priv;
 
-	balloc_trace_func();
+	gk20a_alloc_trace_func();
 
 	if (!addr) {
-		balloc_trace_func_done();
+		gk20a_alloc_trace_func_done();
 		return;
 	}
 
-	balloc_lock(a);
+	alloc_lock(__a);
 
 	/*
 	 * First see if this is a fixed alloc. If not fall back to a regular
@@ -1066,9 +1225,9 @@ void gk20a_bfree(struct gk20a_allocator *a, u64 addr)
 	balloc_coalesce(a, bud);
 
 done:
-	balloc_unlock(a);
-	balloc_dbg(a, "Free 0x%llx\n", addr);
-	balloc_trace_func_done();
+	alloc_unlock(__a);
+	alloc_dbg(balloc_owner(a), "Free 0x%llx\n", addr);
+	gk20a_alloc_trace_func_done();
 	return;
 }
 
@@ -1077,49 +1236,42 @@ done:
  * stats are printed to the kernel log. This lets this code be used for
  * debugging purposes internal to the allocator.
  */
-static void balloc_print_stats(struct gk20a_allocator *a, struct seq_file *s,
-			       int lock)
+static void gk20a_buddy_print_stats(struct gk20a_allocator *__a,
+				    struct seq_file *s, int lock)
 {
-#define __balloc_pstat(s, fmt, arg...)			\
-	do {						\
-		if (s)					\
-			seq_printf(s, fmt, ##arg);	\
-		else					\
-			balloc_dbg(a, fmt, ##arg);	\
-	} while (0)
-
 	int i;
 	struct rb_node *node;
 	struct gk20a_fixed_alloc *falloc;
+	struct gk20a_buddy_allocator *a = __a->priv;
 
-	__balloc_pstat(s, "base = %llu, limit = %llu, blk_size = %llu\n",
-		   a->base, a->length, a->blk_size);
-	__balloc_pstat(s, "Internal params:\n");
-	__balloc_pstat(s, "  start = 0x%llx\n", a->start);
-	__balloc_pstat(s, "  end   = 0x%llx\n", a->end);
-	__balloc_pstat(s, "  count = 0x%llx\n", a->count);
-	__balloc_pstat(s, "  blks  = 0x%llx\n", a->blks);
-	__balloc_pstat(s, "  max_order = %llu\n", a->max_order);
+	__alloc_pstat(s, __a, "base = %llu, limit = %llu, blk_size = %llu\n",
+		      a->base, a->length, a->blk_size);
+	__alloc_pstat(s, __a, "Internal params:\n");
+	__alloc_pstat(s, __a, "  start = 0x%llx\n", a->start);
+	__alloc_pstat(s, __a, "  end   = 0x%llx\n", a->end);
+	__alloc_pstat(s, __a, "  count = 0x%llx\n", a->count);
+	__alloc_pstat(s, __a, "  blks  = 0x%llx\n", a->blks);
+	__alloc_pstat(s, __a, "  max_order = %llu\n", a->max_order);
 
-	__balloc_pstat(s, "Buddy blocks:\n");
-	__balloc_pstat(s, "  Order   Free    Alloced   Split\n");
-	__balloc_pstat(s, "  -----   ----    -------   -----\n");
+	__alloc_pstat(s, __a, "Buddy blocks:\n");
+	__alloc_pstat(s, __a, "  Order   Free    Alloced   Split\n");
+	__alloc_pstat(s, __a, "  -----   ----    -------   -----\n");
 
 	if (lock)
-		balloc_lock(a);
+		alloc_lock(__a);
 	for (i = a->max_order; i >= 0; i--) {
 		if (a->buddy_list_len[i] == 0 &&
 		    a->buddy_list_alloced[i] == 0 &&
 		    a->buddy_list_split[i] == 0)
 			continue;
 
-		__balloc_pstat(s, "  %3d     %-7llu %-9llu %llu\n", i,
-			       a->buddy_list_len[i],
-			       a->buddy_list_alloced[i],
-			       a->buddy_list_split[i]);
+		__alloc_pstat(s, __a, "  %3d     %-7llu %-9llu %llu\n", i,
+			      a->buddy_list_len[i],
+			      a->buddy_list_alloced[i],
+			      a->buddy_list_split[i]);
 	}
 
-	__balloc_pstat(s, "\n");
+	__alloc_pstat(s, __a, "\n");
 
 	for (node = rb_first(&a->fixed_allocs), i = 1;
 	     node != NULL;
@@ -1127,27 +1279,33 @@ static void balloc_print_stats(struct gk20a_allocator *a, struct seq_file *s,
 		falloc = container_of(node,
 				      struct gk20a_fixed_alloc, alloced_entry);
 
-		__balloc_pstat(s, "Fixed alloc (%d): [0x%llx -> 0x%llx]\n",
-				i, falloc->start, falloc->end);
+		__alloc_pstat(s, __a, "Fixed alloc (%d): [0x%llx -> 0x%llx]\n",
+			      i, falloc->start, falloc->end);
 	}
 
-	__balloc_pstat(s, "\n");
-	__balloc_pstat(s, "Bytes allocated:        %llu\n", a->bytes_alloced);
-	__balloc_pstat(s, "Bytes allocated (real): %llu\n",
-		       a->bytes_alloced_real);
-	__balloc_pstat(s, "Bytes freed:            %llu\n", a->bytes_freed);
+	__alloc_pstat(s, __a, "\n");
+	__alloc_pstat(s, __a, "Bytes allocated:        %llu\n",
+		      a->bytes_alloced);
+	__alloc_pstat(s, __a, "Bytes allocated (real): %llu\n",
+		      a->bytes_alloced_real);
+	__alloc_pstat(s, __a, "Bytes freed:            %llu\n",
+		      a->bytes_freed);
 
 	if (lock)
-		balloc_unlock(a);
+		alloc_unlock(__a);
+}
 
-#undef __balloc_pstats
+void gk20a_alloc_print_stats(struct gk20a_allocator *__a,
+			     struct seq_file *s, int lock)
+{
+	__a->ops->print_stats(__a, s, lock);
 }
 
 static int __alloc_show(struct seq_file *s, void *unused)
 {
 	struct gk20a_allocator *a = s->private;
 
-	balloc_print_stats(a, s, 1);
+	gk20a_alloc_print_stats(a, s, 1);
 
 	return 0;
 }
@@ -1164,13 +1322,13 @@ static const struct file_operations __alloc_fops = {
 	.release = single_release,
 };
 
-static void balloc_init_alloc_debug(struct gk20a_allocator *a)
+static void gk20a_init_alloc_debug(struct gk20a_allocator *a)
 {
-	if (!balloc_debugfs_root)
+	if (!gk20a_alloc_debugfs_root)
 		return;
 
 	a->debugfs_entry = debugfs_create_file(a->name, S_IRUGO,
-					       balloc_debugfs_root,
+					       gk20a_alloc_debugfs_root,
 					       a, &__alloc_fops);
 }
 
@@ -1180,11 +1338,11 @@ void gk20a_alloc_debugfs_init(struct platform_device *pdev)
 	struct gk20a_platform *platform = platform_get_drvdata(pdev);
 	struct dentry *gpu_root = platform->debugfs;
 
-	balloc_debugfs_root = debugfs_create_dir("allocators", gpu_root);
-	if (IS_ERR_OR_NULL(balloc_debugfs_root))
+	gk20a_alloc_debugfs_root = debugfs_create_dir("allocators", gpu_root);
+	if (IS_ERR_OR_NULL(gk20a_alloc_debugfs_root))
 		return;
 
-	debugfs_create_u32("tracing", 0664, balloc_debugfs_root,
-			   &balloc_tracing_on);
+	debugfs_create_u32("tracing", 0664, gk20a_alloc_debugfs_root,
+			   &gk20a_alloc_tracing_on);
 }
 #endif

@@ -1331,7 +1331,7 @@ u64 gk20a_vm_alloc_va(struct vm_gk20a *vm,
 	gk20a_dbg_info("size=0x%llx @ pgsz=%dKB", size,
 			vm->gmmu_page_sizes[gmmu_pgsz_idx]>>10);
 
-	offset = gk20a_balloc(vma, size);
+	offset = gk20a_alloc(vma, size);
 	if (!offset) {
 		gk20a_err(dev_from_vm(vm),
 			  "%s oom: sz=0x%llx", vma->name, size);
@@ -1350,7 +1350,7 @@ int gk20a_vm_free_va(struct vm_gk20a *vm,
 
 	gk20a_dbg_info("%s free addr=0x%llx, size=0x%llx",
 			vma->name, offset, size);
-	gk20a_bfree(vma, offset);
+	gk20a_free(vma, offset);
 
 	return 0;
 }
@@ -3407,12 +3407,12 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 	 *
 	 * !!! TODO: cleanup.
 	 */
-	sema_sea->gpu_va = gk20a_balloc_fixed(&vm->vma[gmmu_page_size_kernel],
-					      vm->va_limit -
-					      mm->channel.kernel_size,
-					      512 * PAGE_SIZE);
+	sema_sea->gpu_va = gk20a_alloc_fixed(&vm->vma[gmmu_page_size_kernel],
+					     vm->va_limit -
+					     mm->channel.kernel_size,
+					     512 * PAGE_SIZE);
 	if (!sema_sea->gpu_va) {
-		gk20a_bfree(&vm->vma[gmmu_page_size_small], sema_sea->gpu_va);
+		gk20a_free(&vm->vma[gmmu_page_size_small], sema_sea->gpu_va);
 		gk20a_vm_put(vm);
 		return -ENOMEM;
 	}
@@ -3420,7 +3420,7 @@ static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 	err = gk20a_semaphore_pool_map(vm->sema_pool, vm);
 	if (err) {
 		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
-		gk20a_bfree(&vm->vma[gmmu_page_size_small],
+		gk20a_free(&vm->vma[gmmu_page_size_small],
 			    vm->sema_pool->gpu_va);
 		gk20a_vm_put(vm);
 	}
@@ -3542,13 +3542,13 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		snprintf(alloc_name, sizeof(alloc_name),
 			 "gk20a_%s-fixed", name);
 
-		err = __gk20a_allocator_init(&vm->fixed,
-					     vm, alloc_name,
-					     small_vma_start,
-					     g->separate_fixed_allocs,
-					     SZ_4K,
-					     GPU_BALLOC_MAX_ORDER,
-					     GPU_BALLOC_GVA_SPACE);
+		err = __gk20a_buddy_allocator_init(&vm->fixed,
+						   vm, alloc_name,
+						   small_vma_start,
+						   g->separate_fixed_allocs,
+						   SZ_4K,
+						   GPU_BALLOC_MAX_ORDER,
+						   GPU_BALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_ptes;
 
@@ -3559,13 +3559,14 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	if (small_vma_start < small_vma_limit) {
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB", name,
 			 vm->gmmu_page_sizes[gmmu_page_size_small] >> 10);
-		err = __gk20a_allocator_init(&vm->vma[gmmu_page_size_small],
-					     vm, alloc_name,
-					     small_vma_start,
-					     small_vma_limit - small_vma_start,
-					     SZ_4K,
-					     GPU_BALLOC_MAX_ORDER,
-					     GPU_BALLOC_GVA_SPACE);
+		err = __gk20a_buddy_allocator_init(
+			&vm->vma[gmmu_page_size_small],
+			vm, alloc_name,
+			small_vma_start,
+			small_vma_limit - small_vma_start,
+			SZ_4K,
+			GPU_BALLOC_MAX_ORDER,
+			GPU_BALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_ptes;
 	}
@@ -3573,13 +3574,14 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	if (large_vma_start < large_vma_limit) {
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB",
 			 name, vm->gmmu_page_sizes[gmmu_page_size_big] >> 10);
-		err = __gk20a_allocator_init(&vm->vma[gmmu_page_size_big],
-					     vm, alloc_name,
-					     large_vma_start,
-					     large_vma_limit - large_vma_start,
-					     big_page_size,
-					     GPU_BALLOC_MAX_ORDER,
-					     GPU_BALLOC_GVA_SPACE);
+		err = __gk20a_buddy_allocator_init(
+			&vm->vma[gmmu_page_size_big],
+			vm, alloc_name,
+			large_vma_start,
+			large_vma_limit - large_vma_start,
+			big_page_size,
+			GPU_BALLOC_MAX_ORDER,
+			GPU_BALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_small_allocator;
 	}
@@ -3589,13 +3591,13 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	/*
 	 * kernel reserved VMA is at the end of the aperture
 	 */
-	err = __gk20a_allocator_init(&vm->vma[gmmu_page_size_kernel],
-				     vm, alloc_name,
-				     kernel_vma_start,
-				     kernel_vma_limit - kernel_vma_start,
-				     SZ_4K,
-				     GPU_BALLOC_MAX_ORDER,
-				     GPU_BALLOC_GVA_SPACE);
+	err = __gk20a_buddy_allocator_init(&vm->vma[gmmu_page_size_kernel],
+					   vm, alloc_name,
+					   kernel_vma_start,
+					   kernel_vma_limit - kernel_vma_start,
+					   SZ_4K,
+					   GPU_BALLOC_MAX_ORDER,
+					   GPU_BALLOC_GVA_SPACE);
 	if (err)
 		goto clean_up_big_allocator;
 
@@ -3620,10 +3622,10 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 
 clean_up_big_allocator:
 	if (large_vma_start < large_vma_limit)
-		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
+		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_big]);
 clean_up_small_allocator:
 	if (small_vma_start < small_vma_limit)
-		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
+		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_small]);
 clean_up_ptes:
 	free_gmmu_pages(vm, &vm->pdb);
 clean_up_pdes:
@@ -3730,15 +3732,15 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 
 	vma = &vm->vma[pgsz_idx];
 	if (args->flags & NVGPU_AS_ALLOC_SPACE_FLAGS_FIXED_OFFSET) {
-		if (vm->fixed.init)
+		if (gk20a_alloc_initialized(&vm->fixed))
 			vma = &vm->fixed;
-		vaddr_start = gk20a_balloc_fixed(vma, args->o_a.offset,
-						 (u64)args->pages *
-						 (u64)args->page_size);
+		vaddr_start = gk20a_alloc_fixed(vma, args->o_a.offset,
+						(u64)args->pages *
+						(u64)args->page_size);
 	} else {
-		vaddr_start = gk20a_balloc(vma,
-					   (u64)args->pages *
-					   (u64)args->page_size);
+		vaddr_start = gk20a_alloc(vma,
+					  (u64)args->pages *
+					  (u64)args->page_size);
 	}
 
 	if (!vaddr_start) {
@@ -3772,7 +3774,7 @@ int gk20a_vm_alloc_space(struct gk20a_as_share *as_share,
 					 APERTURE_INVALID);
 		if (!map_offset) {
 			mutex_unlock(&vm->update_gmmu_lock);
-			gk20a_bfree(vma, vaddr_start);
+			gk20a_free(vma, vaddr_start);
 			kfree(va_node);
 			goto clean_up;
 		}
@@ -3807,11 +3809,11 @@ int gk20a_vm_free_space(struct gk20a_as_share *as_share,
 	pgsz_idx = __nv_gmmu_va_is_big_page_region(vm, args->offset) ?
 			gmmu_page_size_big : gmmu_page_size_small;
 
-	if (vm->fixed.init)
+	if (gk20a_alloc_initialized(&vm->fixed))
 		vma = &vm->fixed;
 	else
 		vma = &vm->vma[pgsz_idx];
-	gk20a_bfree(vma, args->offset);
+	gk20a_free(vma, args->offset);
 
 	mutex_lock(&vm->update_gmmu_lock);
 	va_node = addr_to_reservation(vm, args->offset);
@@ -3995,13 +3997,13 @@ int gk20a_vm_unmap_buffer(struct vm_gk20a *vm, u64 offset,
 
 void gk20a_deinit_vm(struct vm_gk20a *vm)
 {
-	gk20a_allocator_destroy(&vm->vma[gmmu_page_size_kernel]);
-	if (vm->vma[gmmu_page_size_big].init)
-		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_big]);
-	if (vm->vma[gmmu_page_size_small].init)
-		gk20a_allocator_destroy(&vm->vma[gmmu_page_size_small]);
-	if (vm->fixed.init)
-		gk20a_allocator_destroy(&vm->fixed);
+	gk20a_alloc_destroy(&vm->vma[gmmu_page_size_kernel]);
+	if (gk20a_alloc_initialized(&vm->vma[gmmu_page_size_big]))
+		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_big]);
+	if (gk20a_alloc_initialized(&vm->vma[gmmu_page_size_small]))
+		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_small]);
+	if (gk20a_alloc_initialized(&vm->fixed))
+		gk20a_alloc_destroy(&vm->fixed);
 
 	gk20a_vm_free_entries(vm, &vm->pdb, 0);
 }

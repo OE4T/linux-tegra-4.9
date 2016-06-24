@@ -20,9 +20,48 @@
 #include <linux/list.h>
 #include <linux/rbtree.h>
 #include <linux/debugfs.h>
+#include <linux/seq_file.h>
 #include <linux/platform_device.h>
 
 /* #define ALLOCATOR_DEBUG */
+
+struct gk20a_allocator;
+struct vm_gk20a;
+
+/*
+ * Operations for an allocator to implement.
+ */
+struct gk20a_allocator_ops {
+	u64  (*alloc)(struct gk20a_allocator *allocator, u64 len);
+	void (*free)(struct gk20a_allocator *allocator, u64 addr);
+
+	/*
+	 * Special interface to allocate a memory region with a specific
+	 * starting address. Yikes. Note: if free() works for freeing both
+	 * regular and fixed allocations then free_fixed() does not need to
+	 * be implemented. This behavior exists for legacy reasons and should
+	 * not be propagated to new allocators.
+	 */
+	u64  (*alloc_fixed)(struct gk20a_allocator *allocator,
+			     u64 base, u64 len);
+	void (*free_fixed)(struct gk20a_allocator *allocator,
+			    u64 base, u64 len);
+
+	/*
+	 * Returns info about the allocator.
+	 */
+	u64  (*base)(struct gk20a_allocator *allocator);
+	u64  (*length)(struct gk20a_allocator *allocator);
+	u64  (*end)(struct gk20a_allocator *allocator);
+	int  (*inited)(struct gk20a_allocator *allocator);
+
+	/* Destructor. */
+	void (*fini)(struct gk20a_allocator *allocator);
+
+	/* Debugging. */
+	void (*print_stats)(struct gk20a_allocator *allocator,
+			    struct seq_file *s, int lock);
+};
 
 /*
  * Each buddy is an element in a binary tree.
@@ -97,8 +136,6 @@ struct gk20a_fixed_alloc {
 	u64 end;			/* End address. */
 };
 
-struct vm_gk20a;
-
 /*
  * GPU buddy allocator for the various GPU address spaces. Each addressable unit
  * doesn't have to correspond to a byte. In some cases each unit is a more
@@ -109,11 +146,9 @@ struct vm_gk20a;
  *
  * order_size is the size of an order 0 buddy.
  */
-struct gk20a_allocator {
-
+struct gk20a_buddy_allocator {
+	struct gk20a_allocator *owner;	/* Owner of this buddy allocator. */
 	struct vm_gk20a *vm;		/* Parent VM - can be NULL. */
-
-	char name[32];			/* Name of allocator. */
 
 	u64 base;			/* Base address of the space. */
 	u64 length;			/* Length of the space. */
@@ -131,11 +166,6 @@ struct gk20a_allocator {
 
 	struct rb_root alloced_buddies;	/* Outstanding allocations. */
 	struct rb_root fixed_allocs;	/* Outstanding fixed allocations. */
-
-	struct mutex lock;		/* Protects buddy access. */
-
-#define GPU_BALLOC_GVA_SPACE		0x1
-	u64 flags;
 
 	/*
 	 * Impose an upper bound on the maximum order.
@@ -155,52 +185,121 @@ struct gk20a_allocator {
 	 */
 	u64 pte_blk_order;
 
-	struct dentry *debugfs_entry;
+	int inited;
+
+#define GPU_BALLOC_GVA_SPACE		0x1
+	u64 flags;
 
 	u64 bytes_alloced;
 	u64 bytes_alloced_real;
 	u64 bytes_freed;
 };
 
-#define balloc_lock(a)		mutex_lock(&(a)->lock)
-#define balloc_unlock(a)	mutex_unlock(&(a)->lock)
+struct gk20a_allocator {
+	char name[32];
+	struct mutex lock;
 
-#define balloc_get_order_list(a, order)	(&(a)->buddy_list[(order)])
-#define balloc_order_to_len(a, order)	((1 << order) * (a)->blk_size)
-#define balloc_base_shift(a, base)	((base) - (a)->start)
-#define balloc_base_unshift(a, base)	((base) + (a)->start)
+	void *priv;
+	const struct gk20a_allocator_ops *ops;
 
-int  gk20a_allocator_init(struct gk20a_allocator *allocator,
-			  const char *name, u64 base, u64 size, u64 order0);
-int  __gk20a_allocator_init(struct gk20a_allocator *allocator,
-			    struct vm_gk20a *vm, const char *name,
-			    u64 base, u64 size, u64 order0,
-			    u64 max_order, u64 flags);
-void gk20a_allocator_destroy(struct gk20a_allocator *allocator);
+	struct dentry *debugfs_entry;
+};
+
+static inline void alloc_lock(struct gk20a_allocator *a)
+{
+	mutex_lock(&a->lock);
+}
+
+static inline void alloc_unlock(struct gk20a_allocator *a)
+{
+	mutex_unlock(&a->lock);
+}
+
+static inline struct gk20a_buddy_allocator *buddy_allocator(
+	struct gk20a_allocator *a)
+{
+	return (struct gk20a_buddy_allocator *)a->priv;
+}
+
+static inline struct list_head *balloc_get_order_list(
+	struct gk20a_buddy_allocator *a, int order)
+{
+	return &a->buddy_list[order];
+}
+
+static inline u64 balloc_order_to_len(struct gk20a_buddy_allocator *a,
+				      int order)
+{
+	return (1 << order) * a->blk_size;
+}
+
+static inline u64 balloc_base_shift(struct gk20a_buddy_allocator *a,
+				    u64 base)
+{
+	return base - a->start;
+}
+
+static inline u64 balloc_base_unshift(struct gk20a_buddy_allocator *a,
+				      u64 base)
+{
+	return base + a->start;
+}
+
+static inline struct gk20a_allocator *balloc_owner(
+	struct gk20a_buddy_allocator *a)
+{
+	return a->owner;
+}
 
 /*
- * Normal alloc/free operations for the buddy allocator.
+ * Buddy allocator specific initializers.
  */
-u64  gk20a_balloc(struct gk20a_allocator *allocator, u64 len);
-void gk20a_bfree(struct gk20a_allocator *allocator, u64 addr);
+int  __gk20a_buddy_allocator_init(struct gk20a_allocator *a,
+				  struct vm_gk20a *vm, const char *name,
+				  u64 base, u64 size, u64 blk_size,
+				  u64 max_order, u64 flags);
+int  gk20a_buddy_allocator_init(struct gk20a_allocator *allocator,
+				const char *name, u64 base, u64 size,
+				u64 blk_size, u64 flags);
 
 /*
- * Special interface to allocate a memory regions with a specific starting
- * address. Yikes.
+ * Allocator APIs.
  */
-u64  gk20a_balloc_fixed(struct gk20a_allocator *allocator, u64 base, u64 len);
+u64  gk20a_alloc(struct gk20a_allocator *allocator, u64 len);
+void gk20a_free(struct gk20a_allocator *allocator, u64 addr);
+
+u64  gk20a_alloc_fixed(struct gk20a_allocator *allocator, u64 base, u64 len);
+void gk20a_free_fixed(struct gk20a_allocator *allocator, u64 base, u64 len);
+
+u64  gk20a_alloc_base(struct gk20a_allocator *a);
+u64  gk20a_alloc_length(struct gk20a_allocator *a);
+u64  gk20a_alloc_end(struct gk20a_allocator *a);
+u64  gk20a_alloc_initialized(struct gk20a_allocator *a);
+
+void gk20a_alloc_destroy(struct gk20a_allocator *allocator);
+
+void gk20a_alloc_print_stats(struct gk20a_allocator *a,
+			     struct seq_file *s, int lock);
 
 /*
- * Debugfs init.
+ * Debug stuff.
  */
 void gk20a_alloc_debugfs_init(struct platform_device *pdev);
 
+#define __alloc_pstat(seq, allocator, fmt, arg...)		\
+	do {							\
+		if (s)						\
+			seq_printf(seq, fmt, ##arg);		\
+		else						\
+			alloc_dbg(allocator, fmt, ##arg);	\
+	} while (0)
+
 #if defined(ALLOCATOR_DEBUG)
-#define balloc_dbg(alloctor, format, arg...)		\
+#define alloc_dbg(allocator, format, arg...)		\
 	pr_info("%-25s %25s() " format,			\
-		alloctor->name, __func__, ##arg)
+		allocator->name, __func__, ##arg)
 #else
-#define balloc_dbg(allocator, format, arg...)
+#define alloc_dbg(allocator, format, arg...)
 #endif
 
 #endif /* GK20A_ALLOCATOR_H */

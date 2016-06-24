@@ -67,8 +67,12 @@ bool ds90ub947_lvds2fpdlink3_detect(struct tegra_dc *dc)
 {
 	int ret, val;
 
+	if (NULL == g_ds90ub947_data)
+		return false;
+	mutex_lock(&g_ds90ub947_data->lock);
 	ret = regmap_read(g_ds90ub947_data->regmap, DS90UB947_GENERAL_STATUS,
 		&val);
+	mutex_unlock(&g_ds90ub947_data->lock);
 	if (0 == ret && (val & 0x01))
 		return true;
 	return false;
@@ -290,7 +294,7 @@ err3:
 err2:
 	if (data->init_regs)
 		devm_kfree(&client->dev, data->init_regs);
-
+	g_ds90ub947_data = NULL;
 	devm_kfree(&client->dev, data);
 err1:
 	pr_info("%s: returning %d\n", __func__, ret);

@@ -1576,6 +1576,14 @@ struct nvgpu_sched_tsg_runlist_interleave_args {
 	__u32 runlist_interleave;
 };
 
+struct nvgpu_sched_api_version_args {
+	__u32 version;
+};
+
+struct nvgpu_sched_tsg_refcount_args {
+	__u32 tsgid;                    /* in: TSG identifier */
+};
+
 #define NVGPU_SCHED_IOCTL_GET_TSGS					\
 	_IOWR(NVGPU_SCHED_IOCTL_MAGIC, 1,				\
 		struct nvgpu_sched_get_tsgs_args)
@@ -1598,9 +1606,17 @@ struct nvgpu_sched_tsg_runlist_interleave_args {
 	_IO(NVGPU_SCHED_IOCTL_MAGIC, 7)
 #define NVGPU_SCHED_IOCTL_UNLOCK_CONTROL				\
 	_IO(NVGPU_SCHED_IOCTL_MAGIC, 8)
-
+#define NVGPU_SCHED_IOCTL_GET_API_VERSION				\
+	_IOR(NVGPU_SCHED_IOCTL_MAGIC, 9,				\
+	    struct nvgpu_sched_api_version_args)
+#define NVGPU_SCHED_IOCTL_GET_TSG					\
+	_IOW(NVGPU_SCHED_IOCTL_MAGIC, 10,				\
+		struct nvgpu_sched_tsg_refcount_args)
+#define NVGPU_SCHED_IOCTL_PUT_TSG					\
+	_IOW(NVGPU_SCHED_IOCTL_MAGIC, 11,				\
+		struct nvgpu_sched_tsg_refcount_args)
 #define NVGPU_SCHED_IOCTL_LAST						\
-	_IOC_NR(NVGPU_SCHED_IOCTL_UNLOCK_CONTROL)
+	_IOC_NR(NVGPU_SCHED_IOCTL_PUT_TSG)
 
 #define NVGPU_SCHED_IOCTL_MAX_ARG_SIZE					\
 	sizeof(struct nvgpu_sched_tsg_get_params_args)
@@ -1619,5 +1635,7 @@ struct nvgpu_sched_event_arg {
 	__u64 reserved;
 	__u64 status;
 };
+
+#define NVGPU_SCHED_API_VERSION		1
 
 #endif

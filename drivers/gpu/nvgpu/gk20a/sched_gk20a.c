@@ -105,8 +105,6 @@ static int gk20a_sched_dev_ioctl_get_tsgs(struct gk20a_sched_ctrl *sched,
 		mutex_unlock(&sched->status_lock);
 		return -EFAULT;
 	}
-
-	memset(sched->recent_tsg_bitmap, 0, sched->bitmap_size);
 	mutex_unlock(&sched->status_lock);
 
 	return 0;
@@ -159,13 +157,15 @@ static int gk20a_sched_dev_ioctl_get_tsgs_by_pid(struct gk20a_sched_ctrl *sched,
 	if (!bitmap)
 		return -ENOMEM;
 
-	mutex_lock(&f->tsg_inuse_mutex);
+	mutex_lock(&sched->status_lock);
 	for (tsgid = 0; tsgid < f->num_channels; tsgid++) {
-		tsg = &f->tsg[tsgid];
-		if ((tsg->in_use) && (tsg->tgid == tgid))
-			NVGPU_SCHED_SET(tsgid, bitmap);
+		if (NVGPU_SCHED_ISSET(tsgid, sched->active_tsg_bitmap)) {
+			tsg = &f->tsg[tsgid];
+			if (tsg->tgid == tgid)
+				NVGPU_SCHED_SET(tsgid, bitmap);
+		}
 	}
-	mutex_unlock(&f->tsg_inuse_mutex);
+	mutex_unlock(&sched->status_lock);
 
 	if (copy_to_user((void __user *)(uintptr_t)arg->buffer,
 		bitmap, sched->bitmap_size))
@@ -183,23 +183,15 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 	struct fifo_gk20a *f = &g->fifo;
 	struct tsg_gk20a *tsg;
 	u32 tsgid = arg->tsgid;
-	int err = -ENXIO;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
 
-	mutex_lock(&f->tsg_inuse_mutex);
 	tsg = &f->tsg[tsgid];
-	if (!tsg->in_use)
-		goto unlock_in_use;
-
-	mutex_lock(&sched->status_lock);
-	if (!NVGPU_SCHED_ISSET(tsgid, sched->active_tsg_bitmap)) {
-		gk20a_dbg(gpu_dbg_sched, "tsgid=%u not active", tsgid);
-		goto unlock_status;
-	}
+	if (!kref_get_unless_zero(&tsg->refcount))
+		return -ENXIO;
 
 	arg->pid = tsg->tgid;	/* kernel tgid corresponds to user pid */
 	arg->runlist_interleave = tsg->interleave_level;
@@ -215,15 +207,9 @@ static int gk20a_sched_dev_ioctl_get_params(struct gk20a_sched_ctrl *sched,
 		arg->compute_preempt_mode = 0;
 	}
 
-	err = 0;
+	kref_put(&tsg->refcount, gk20a_tsg_release);
 
-unlock_status:
-	mutex_unlock(&sched->status_lock);
-
-unlock_in_use:
-	mutex_unlock(&f->tsg_inuse_mutex);
-
-	return err;
+	return 0;
 }
 
 static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
@@ -234,37 +220,27 @@ static int gk20a_sched_dev_ioctl_tsg_set_timeslice(
 	struct fifo_gk20a *f = &g->fifo;
 	struct tsg_gk20a *tsg;
 	u32 tsgid = arg->tsgid;
-	int err = -ENXIO;
+	int err;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
 
-	mutex_lock(&f->tsg_inuse_mutex);
 	tsg = &f->tsg[tsgid];
-	if (!tsg->in_use)
-		goto unlock_in_use;
-
-	mutex_lock(&sched->status_lock);
-	if (NVGPU_SCHED_ISSET(tsgid, sched->recent_tsg_bitmap)) {
-		gk20a_dbg(gpu_dbg_sched, "tsgid=%u was re-allocated", tsgid);
-		goto unlock_status;
-	}
+	if (!kref_get_unless_zero(&tsg->refcount))
+		return -ENXIO;
 
 	err = gk20a_busy(g->dev);
 	if (err)
-		goto unlock_status;
+		goto done;
 
 	err = gk20a_tsg_set_timeslice(tsg, arg->timeslice);
 
 	gk20a_idle(g->dev);
 
-unlock_status:
-	mutex_unlock(&sched->status_lock);
-
-unlock_in_use:
-	mutex_unlock(&f->tsg_inuse_mutex);
+done:
+	kref_put(&tsg->refcount, gk20a_tsg_release);
 
 	return err;
 }
@@ -277,37 +253,27 @@ static int gk20a_sched_dev_ioctl_tsg_set_runlist_interleave(
 	struct fifo_gk20a *f = &g->fifo;
 	struct tsg_gk20a *tsg;
 	u32 tsgid = arg->tsgid;
-	int err = -ENXIO;
+	int err;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
 
 	if (tsgid >= f->num_channels)
 		return -EINVAL;
 
-	mutex_lock(&f->tsg_inuse_mutex);
 	tsg = &f->tsg[tsgid];
-	if (!tsg->in_use)
-		goto unlock_in_use;
-
-	mutex_lock(&sched->status_lock);
-	if (NVGPU_SCHED_ISSET(tsgid, sched->recent_tsg_bitmap)) {
-		gk20a_dbg(gpu_dbg_sched, "tsgid=%u was re-allocated", tsgid);
-		goto unlock_status;
-	}
+	if (!kref_get_unless_zero(&tsg->refcount))
+		return -ENXIO;
 
 	err = gk20a_busy(g->dev);
 	if (err)
-		goto unlock_status;
+		goto done;
 
 	err = gk20a_tsg_set_runlist_interleave(tsg, arg->runlist_interleave);
 
 	gk20a_idle(g->dev);
 
-unlock_status:
-	mutex_unlock(&sched->status_lock);
-
-unlock_in_use:
-	mutex_unlock(&f->tsg_inuse_mutex);
+done:
+	kref_put(&tsg->refcount, gk20a_tsg_release);
 
 	return err;
 }
@@ -329,6 +295,80 @@ static int gk20a_sched_dev_ioctl_unlock_control(struct gk20a_sched_ctrl *sched)
 	mutex_lock(&sched->control_lock);
 	sched->control_locked = false;
 	mutex_unlock(&sched->control_lock);
+	return 0;
+}
+
+static int gk20a_sched_dev_ioctl_get_api_version(struct gk20a_sched_ctrl *sched,
+	struct nvgpu_sched_api_version_args *args)
+{
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "");
+
+	args->version = NVGPU_SCHED_API_VERSION;
+	return 0;
+}
+
+static int gk20a_sched_dev_ioctl_get_tsg(struct gk20a_sched_ctrl *sched,
+	struct nvgpu_sched_tsg_refcount_args *arg)
+{
+	struct gk20a *g = sched->g;
+	struct fifo_gk20a *f = &g->fifo;
+	struct tsg_gk20a *tsg;
+	u32 tsgid = arg->tsgid;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
+
+	if (tsgid >= f->num_channels)
+		return -EINVAL;
+
+	tsg = &f->tsg[tsgid];
+	if (!kref_get_unless_zero(&tsg->refcount))
+		return -ENXIO;
+
+	mutex_lock(&sched->status_lock);
+	if (NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
+		gk20a_warn(dev_from_gk20a(g),
+			"tsgid=%d already referenced", tsgid);
+		/* unlock status_lock as gk20a_tsg_release locks it */
+		mutex_unlock(&sched->status_lock);
+		kref_put(&tsg->refcount, gk20a_tsg_release);
+		return -ENXIO;
+	}
+
+	/* keep reference on TSG, will be released on
+	 * NVGPU_SCHED_IOCTL_PUT_TSG ioctl, or close
+	 */
+	NVGPU_SCHED_SET(tsgid, sched->ref_tsg_bitmap);
+	mutex_unlock(&sched->status_lock);
+
+	return 0;
+}
+
+static int gk20a_sched_dev_ioctl_put_tsg(struct gk20a_sched_ctrl *sched,
+	struct nvgpu_sched_tsg_refcount_args *arg)
+{
+	struct gk20a *g = sched->g;
+	struct fifo_gk20a *f = &g->fifo;
+	struct tsg_gk20a *tsg;
+	u32 tsgid = arg->tsgid;
+
+	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "tsgid=%u", tsgid);
+
+	if (tsgid >= f->num_channels)
+		return -EINVAL;
+
+	mutex_lock(&sched->status_lock);
+	if (!NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
+		mutex_unlock(&sched->status_lock);
+		gk20a_warn(dev_from_gk20a(g),
+			"tsgid=%d not previously referenced", tsgid);
+		return -ENXIO;
+	}
+	NVGPU_SCHED_CLR(tsgid, sched->ref_tsg_bitmap);
+	mutex_unlock(&sched->status_lock);
+
+	tsg = &f->tsg[tsgid];
+	kref_put(&tsg->refcount, gk20a_tsg_release);
+
 	return 0;
 }
 
@@ -354,6 +394,7 @@ int gk20a_sched_dev_open(struct inode *inode, struct file *filp)
 
 	memcpy(sched->recent_tsg_bitmap, sched->active_tsg_bitmap,
 			sched->bitmap_size);
+	memset(sched->ref_tsg_bitmap, 0, sched->bitmap_size);
 
 	filp->private_data = sched;
 	gk20a_dbg(gpu_dbg_sched, "filp=%p sched=%p", filp, sched);
@@ -414,6 +455,18 @@ long gk20a_sched_dev_ioctl(struct file *filp, unsigned int cmd,
 	case NVGPU_SCHED_IOCTL_UNLOCK_CONTROL:
 		err = gk20a_sched_dev_ioctl_unlock_control(sched);
 		break;
+	case NVGPU_SCHED_IOCTL_GET_API_VERSION:
+		err = gk20a_sched_dev_ioctl_get_api_version(sched,
+			(struct nvgpu_sched_api_version_args *)buf);
+		break;
+	case NVGPU_SCHED_IOCTL_GET_TSG:
+		err = gk20a_sched_dev_ioctl_get_tsg(sched,
+			(struct nvgpu_sched_tsg_refcount_args *)buf);
+		break;
+	case NVGPU_SCHED_IOCTL_PUT_TSG:
+		err = gk20a_sched_dev_ioctl_put_tsg(sched,
+			(struct nvgpu_sched_tsg_refcount_args *)buf);
+		break;
 	default:
 		dev_dbg(dev_from_gk20a(g), "unrecognized gpu ioctl cmd: 0x%x",
 			cmd);
@@ -436,8 +489,20 @@ long gk20a_sched_dev_ioctl(struct file *filp, unsigned int cmd,
 int gk20a_sched_dev_release(struct inode *inode, struct file *filp)
 {
 	struct gk20a_sched_ctrl *sched = filp->private_data;
+	struct gk20a *g = sched->g;
+	struct fifo_gk20a *f = &g->fifo;
+	struct tsg_gk20a *tsg;
+	int tsgid;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_sched, "sched: %p", sched);
+
+	/* release any reference to TSGs */
+	for (tsgid = 0; tsgid < f->num_channels; tsgid++) {
+		if (NVGPU_SCHED_ISSET(tsgid, sched->ref_tsg_bitmap)) {
+			tsg = &f->tsg[tsgid];
+			kref_put(&tsg->refcount, gk20a_tsg_release);
+		}
+	}
 
 	/* unlock control */
 	mutex_lock(&sched->control_lock);
@@ -569,11 +634,15 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 
 	sched->active_tsg_bitmap = kzalloc(sched->bitmap_size, GFP_KERNEL);
 	if (!sched->active_tsg_bitmap)
-		goto fail_active;
+		return -ENOMEM;
 
 	sched->recent_tsg_bitmap = kzalloc(sched->bitmap_size, GFP_KERNEL);
 	if (!sched->recent_tsg_bitmap)
-		goto fail_recent;
+		goto free_active;
+
+	sched->ref_tsg_bitmap = kzalloc(sched->bitmap_size, GFP_KERNEL);
+	if (!sched->ref_tsg_bitmap)
+		goto free_recent;
 
 	init_waitqueue_head(&sched->readout_wq);
 	mutex_init(&sched->status_lock);
@@ -584,10 +653,12 @@ int gk20a_sched_ctrl_init(struct gk20a *g)
 
 	return 0;
 
-fail_recent:
+free_recent:
+	kfree(sched->recent_tsg_bitmap);
+
+free_active:
 	kfree(sched->active_tsg_bitmap);
 
-fail_active:
 	return -ENOMEM;
 }
 
@@ -597,7 +668,9 @@ void gk20a_sched_ctrl_cleanup(struct gk20a *g)
 
 	kfree(sched->active_tsg_bitmap);
 	kfree(sched->recent_tsg_bitmap);
+	kfree(sched->ref_tsg_bitmap);
 	sched->active_tsg_bitmap = NULL;
 	sched->recent_tsg_bitmap = NULL;
+	sched->ref_tsg_bitmap = NULL;
 	sched->sw_ready = false;
 }

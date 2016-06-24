@@ -28,8 +28,6 @@
 #define NVGPU_TSG_MIN_TIMESLICE_US 1000
 #define NVGPU_TSG_MAX_TIMESLICE_US 50000
 
-static void gk20a_tsg_release(struct kref *ref);
-
 bool gk20a_is_channel_marked_as_tsg(struct channel_gk20a *ch)
 {
 	return !(ch->tsgid == NVGPU_INVALID_TSG_ID);
@@ -449,7 +447,7 @@ int gk20a_tsg_dev_open(struct inode *inode, struct file *filp)
 	return ret;
 }
 
-static void gk20a_tsg_release(struct kref *ref)
+void gk20a_tsg_release(struct kref *ref)
 {
 	struct tsg_gk20a *tsg = container_of(ref, struct tsg_gk20a, refcount);
 	struct gk20a *g = tsg->g;

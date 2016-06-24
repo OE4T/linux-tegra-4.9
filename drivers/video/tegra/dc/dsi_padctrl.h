@@ -22,6 +22,8 @@ struct tegra_dsi_padctrl {
 	struct reset_control *reset;
 	struct resource *base_res;
 	u8 pwr_dwn_mask[DSI_MAX_INSTANCES];
+	struct tegra_prod_list *prod_list;
+	bool prod_settings_updated;
 	void __iomem *base_addr;
 };
 

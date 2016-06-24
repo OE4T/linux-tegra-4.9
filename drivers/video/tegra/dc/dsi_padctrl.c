@@ -23,6 +23,8 @@
 #include "dc_priv.h"
 #include "dsi.h"
 
+#include <linux/tegra_prod.h>
+
 #define DSI_PADCTRL_INSTANCE	4
 #define DSI_MAX_INSTANCES	4
 
@@ -76,8 +78,17 @@ static void tegra_dsi_padctrl_reset(struct tegra_dsi_padctrl *dsi_padctrl)
 
 void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl)
 {
-	int val;
+	int val, err;
 	u8 i;
+
+	if (!dsi_padctrl->prod_settings_updated && dsi_padctrl->prod_list) {
+		err = tegra_prod_set_by_name(&dsi_padctrl->base_addr,
+			"dsi-padctrl-prod", dsi_padctrl->prod_list);
+		if (err)
+			pr_err("dsi padctl:prod settings failed%d\n", err);
+		else
+			dsi_padctrl->prod_settings_updated = true;
+	}
 
 	/* Clear pwr and pull downs for required data and clock lanes */
 	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pwr_down_regs); i++) {
@@ -216,6 +227,14 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 		tegra_dsi_padctrl_reset(dsi_padctrl);
 	}
 
+	dsi_padctrl->prod_list = tegra_prod_init(
+		(const struct device_node *)np_dsi);
+	if (IS_ERR(dsi_padctrl->prod_list)) {
+		dev_err(&dc->ndev->dev, "dsi padctl:prod list init failed%ld\n",
+			PTR_ERR(dsi_padctrl->prod_list));
+		dsi_padctrl->prod_list = NULL;
+	}
+
 	/* Set up active data and clock lanes mask */
 	tegra_dsi_padctrl_setup_pwr_down_mask(dsi, dsi_padctrl);
 
@@ -244,7 +263,7 @@ void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc)
 			dsi_padctrl_pwr_down_regs[i]);
 	} 
 
-	/* Clear all pull downs for all controllers */
+	/* Enable all pull downs for all controllers */
 	val = 0;
 	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pull_down_regs); i++) {
 		val |= (DSI_PADCTRL_E_PULL_DWN_PD_CLK_EN |
@@ -252,6 +271,11 @@ void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc)
 			DSI_PADCTRL_E_PULL_DWN_PD_IO_1_EN);
 		tegra_dsi_padctrl_write(dsi_padctrl, val,
 			dsi_padctrl_pull_down_regs[i]);
+	}
+
+	if (dsi_padctrl->prod_list) {
+		tegra_prod_release(&dsi_padctrl->prod_list);
+		dsi_padctrl->prod_settings_updated = false;
 	}
 
 	iounmap(dsi_padctrl->base_addr);

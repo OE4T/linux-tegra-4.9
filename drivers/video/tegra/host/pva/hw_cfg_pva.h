@@ -58,6 +58,30 @@ static inline u32 cfg_ccq_r(void)
 {
 	return 0x71000;
 }
+static inline u32 cfg_vps0user_lsegreg_r(void)
+{
+	return 0x71004;
+}
+static inline u32 cfg_vps1user_lsegreg_r(void)
+{
+	return 0x71008;
+}
+static inline u32 cfg_r5user_lsegreg_r(void)
+{
+	return 0x7100c;
+}
+static inline u32 cfg_vps0user_usegreg_r(void)
+{
+	return 0x71010;
+}
+static inline u32 cfg_vps1user_usegreg_r(void)
+{
+	return 0x71014;
+}
+static inline u32 cfg_r5user_usegreg_r(void)
+{
+	return 0x71018;
+}
 static inline u32 cfg_ccq_status0_r(void)
 {
 	return 0x72000;

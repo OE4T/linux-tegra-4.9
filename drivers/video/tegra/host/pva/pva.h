@@ -21,7 +21,10 @@
 #ifndef __NVHOST_PVA_H__
 #define __NVHOST_PVA_H__
 
+#include <linux/dma-attrs.h>
+
 #include "nvhost_queue.h"
+#include "pva-ucode-header.h"
 
 extern const struct file_operations tegra_pva_ctrl_ops;
 
@@ -31,10 +34,34 @@ extern const struct file_operations tegra_pva_ctrl_ops;
 #define MAX_PVA_QUEUE_COUNT 16
 
 /**
+ * struct pva_fw - struct to handle the PVA firmware information
+ *
+ * @hdr:		pointer to the pva_code_hdr struct
+ * @size:		firmware file size
+ * @booted:		variable to check whether boot completed
+ * @phys:		physical address of the dram allocated
+ * @mapped:		virtually mapped address for dram allocated
+ * @attrs:		dma_attrs struct information
+ *
+ */
+
+struct pva_fw {
+	struct pva_ucode_hdr *hdr;
+
+	size_t size;
+	bool booted;
+
+	dma_addr_t phys;
+	void *mapped;
+	struct dma_attrs attrs;
+};
+
+/**
  * struct pva - Driver private data, shared with all applications
  *
  * @pdev:		Pointer to the PVA device
  * @pool:		Pointer to Queue table available for the PVA
+ * @fw_info:		firmware information struct
  * @lock:		Spinlock for pva struct
  * @irq:		IRQ number obtained on registering the module
  *
@@ -42,6 +69,7 @@ extern const struct file_operations tegra_pva_ctrl_ops;
 struct pva {
 	struct platform_device *pdev;
 	struct nvhost_queue_pool *pool;
+	struct pva_fw fw_info;
 
 	spinlock_t lock;
 	int irq;

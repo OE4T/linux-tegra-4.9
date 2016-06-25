@@ -44,6 +44,10 @@ static irqreturn_t pva_mbox_isr(int irq, void *dev_id)
 		host1x_writel(pdev, hsp_sm6_r(), 0x0);
 
 	if (status7) {
+
+		if (status7 & PVA_INT_PENDING)
+			pva->fw_info.booted = true;
+
 		/* Interrupt bits are cleared in pva_read_mbox_status() */
 		pva_read_mbox_status(pdev, status7, &mb_status);
 		pva_process_mbox_status(pdev, &mb_status);

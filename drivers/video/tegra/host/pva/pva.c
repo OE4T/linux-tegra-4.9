@@ -28,6 +28,8 @@
 #include <linux/uaccess.h>
 #include <linux/delay.h>
 #include <linux/slab.h>
+#include <linux/firmware.h>
+#include <linux/iommu.h>
 
 #include "dev.h"
 #include "bus_client.h"
@@ -51,10 +53,168 @@ static struct of_device_id tegra_pva_of_match[] = {
 	{ },
 };
 
+#define R5_USER_SEGREG_OFFSET 0x40000000
+static int pva_init_fw(struct platform_device *pdev)
+{
+	int err = 0, w;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva *pva = pdata->private_data;
+	struct pva_fw *fw_info = &pva->fw_info;
+	u32 *ucode_ptr = fw_info->mapped;
+
+	nvhost_dbg_fn("");
+
+	/* Set the Ucode Header address for R5 */
+	/* Program user seg subtracting the offset */
+	host1x_writel(pdev, cfg_r5user_lsegreg_r(),
+		PVA_LOW32((fw_info->phys - R5_USER_SEGREG_OFFSET)));
+	host1x_writel(pdev, cfg_r5user_usegreg_r(),
+		PVA_EXTRACT64((fw_info->phys - R5_USER_SEGREG_OFFSET),
+					39, 32, u32));
+
+	/* check the type of segments and their offset and address */
+	for (w = 0; w < fw_info->hdr->nsegments; w++) {
+		struct pva_ucode_seg *useg = (struct pva_ucode_seg *)
+			((void *)ucode_ptr + PVA_UCODE_SEG_HDR_LENGTH
+				+ (PVA_UCODE_SEG_HDR_LENGTH * w));
+
+		switch (useg->type) {
+
+		case PVA_UCODE_SEG_EVP:
+		{
+			/* TODO: After verification evp data will be copied
+			 *	directly to the evp memory address.
+			 * Disabling EVP register programming till the VDK
+			 * get fixed to avoid the system hang on evp access
+			 * from ccplex
+			 */
+		}
+		break;
+		case PVA_UCODE_SEG_R5:
+		{
+			/* R5 segment - Program PRIV1 segment regs*/
+			/* Subracting PRIV1 start for R5PRIV1 address*/
+			u64 seg_addr = (fw_info->phys - useg->addr);
+
+			host1x_writel(pdev, cfg_priv_ar1_start_r(),
+						useg->addr);
+			host1x_writel(pdev, cfg_priv_ar1_end_r(),
+				useg->addr + useg->size);
+			host1x_writel(pdev, cfg_priv_ar1_lsegreg_r(),
+				PVA_LOW32((seg_addr + useg->offset)));
+			host1x_writel(pdev, cfg_priv_ar1_usegreg_r(),
+				PVA_EXTRACT64((seg_addr + useg->offset),
+						39, 32, u32));
+		}
+		break;
+
+		}
+	}
+
+	/* TODO: Add stream ID */
+
+	/* Indicate the OS is waiting for PVA ready Interrupt */
+	host1x_writel(pdev, hsp_ss0_set_r(), PVA_BOOT_INT);
+
+	nvhost_dbg_fn("WAITING.... for PVA to be READY");
+
+	/* wait till the PVA firmware boot completes */
+	while (fw_info->booted == false)
+		usleep_range(10, 100);
+
+	nvhost_dbg_fn("PVA is READY");
+
+	return err;
+}
+
+static int pva_free_fw(struct platform_device *pdev, struct pva *pva)
+{
+	struct pva_fw *fw_info = &pva->fw_info;
+
+	if (fw_info->mapped)
+		dma_free_attrs(&pdev->dev, fw_info->size, fw_info->mapped,
+			fw_info->phys, &fw_info->attrs);
+
+	memset(fw_info, 0, sizeof(struct pva_fw));
+
+	return 0;
+}
+
+static int pva_read_ucode(struct platform_device *pdev,
+		const char *fw_name, struct pva_fw *fw_info)
+{
+	int err = 0, w;
+	u32 *ucode_ptr;
+	const struct firmware *ucode_fw;
+
+	nvhost_dbg_fn("");
+
+	init_dma_attrs(&fw_info->attrs);
+
+	ucode_fw = nvhost_client_request_firmware(pdev, fw_name);
+	if (!ucode_fw) {
+		nvhost_dbg_fn("pva firmware request failed");
+		dev_err(&pdev->dev,
+			"Failed to load the %s firmware\n", fw_name);
+		err = -ENOENT;
+		return err;
+	}
+
+	fw_info->size = ucode_fw->size;
+	dma_set_attr(DMA_ATTR_READ_ONLY, &fw_info->attrs);
+
+	/* Allocate the Memory area to load the firmware */
+	fw_info->mapped = dma_alloc_attrs(&pdev->dev, fw_info->size,
+		&fw_info->phys, GFP_KERNEL, &fw_info->attrs);
+
+	if (!fw_info->mapped) {
+		err = -ENOMEM;
+		goto clean_up;
+	}
+
+	ucode_ptr = fw_info->mapped;
+
+	/* copy the whole thing taking into account endianness */
+	for (w = 0; w < ucode_fw->size/sizeof(u32); w++)
+		ucode_ptr[w] = le32_to_cpu(((u32 *)ucode_fw->data)[w]);
+
+	/* set the header location accordingly */
+	fw_info->hdr = (struct pva_ucode_hdr *)ucode_ptr;
+
+	/* check for the magic number  and header version*/
+	if ((fw_info->hdr->magic != PVA_HDR_MAGIC) &&
+		(fw_info->hdr->hdr_version != PVA_HDR_VERSION)) {
+		dev_err(&pdev->dev, "Wrong PVA uCode header magic/version\n");
+		err = -EINVAL;
+	}
+
+clean_up:
+	release_firmware(ucode_fw);
+	return err;
+}
+
+static int pva_load_fw(struct platform_device *pdev)
+{
+	int err = 0;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva *pva = pdata->private_data;
+
+	err = pva_read_ucode(pdev, pdata->firmware_name, &pva->fw_info);
+	if (err < 0)
+		goto load_fw_err;
+
+	return err;
+
+load_fw_err:
+	pva_free_fw(pdev, pva);
+	return err;
+}
+
 int pva_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
+	int err = 0;
 
 	/* Enable LIC_INTERRUPT line for HSP1 */
 	host1x_writel(pva->pdev, sec_lic_intr_enable_r(),
@@ -62,7 +222,19 @@ int pva_finalize_poweron(struct platform_device *pdev)
 
 	enable_irq(pva->irq);
 
-	return 0;
+	err = pva_load_fw(pdev);
+	if (err < 0)
+		goto err_poweron;
+
+	err = pva_init_fw(pdev);
+	if (err < 0)
+		goto err_poweron;
+
+	return err;
+
+err_poweron:
+	disable_irq(pva->irq);
+	return err;
 }
 
 int pva_prepare_poweroff(struct platform_device *pdev)
@@ -71,6 +243,8 @@ int pva_prepare_poweroff(struct platform_device *pdev)
 	struct pva *pva = pdata->private_data;
 
 	disable_irq(pva->irq);
+
+	pva_free_fw(pdev, pva);
 
 	return 0;
 }

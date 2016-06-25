@@ -17,6 +17,7 @@
 #include "tegra186-platforms/tegra186-vcm31-p2379-common.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-power-tree-p2379-0000-c01-00.dtsi"
 #include "tegra186-platforms/tegra186-vcm31-62379-disp.dtsi"
+#include "tegra186-prod/tegra186-priv-vcm31-p2379-0000-c01-00-prod-a.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

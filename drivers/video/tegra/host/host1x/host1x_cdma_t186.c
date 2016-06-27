@@ -368,7 +368,8 @@ static void cdma_timeout_release_mlock(struct nvhost_cdma *cdma)
 				&cpu_own, &ch_own, &owner);
 
 	/* if this channel does not own the mlock, quit */
-	if (!(ch_own && owner == orig_ch->chid))
+	if (!(ch_own && owner == orig_ch->chid) &&
+	    !nvhost_dev_is_virtual(pdev))
 		return;
 
 	/* allocate a new channel to execute recovery. use a stack variable

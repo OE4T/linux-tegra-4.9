@@ -70,10 +70,20 @@
 		status = "disabled";
 	};
 
+	sdhci@3440000 {
+		/delete-property/ vddio_sdmmc-supply;
+		/delete-property/ vddio_sd_slot-supply;
+		status = "disabled";
+	};
+
 	/delete-node/ pmc-iopower;
 
 	fixed-regulators {
 		regulator@4 {
+			status = "disabled";
+		};
+
+		regulator@5 {
 			status = "disabled";
 		};
 	};
@@ -311,6 +321,7 @@
 				/delete-node/ ldo1;
 				/delete-node/ ldo2;
 				/delete-node/ ldo4;
+				/delete-node/ ldo5;
 				/delete-node/ ldo6;
 				/delete-node/ ldo7;
 				/delete-node/ ldo8;

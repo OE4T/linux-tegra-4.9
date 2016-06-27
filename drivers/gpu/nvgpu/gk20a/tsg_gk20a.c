@@ -80,15 +80,14 @@ static bool gk20a_is_channel_active(struct gk20a *g, struct channel_gk20a *ch)
 
 static int gk20a_tsg_bind_channel_fd(struct tsg_gk20a *tsg, int ch_fd)
 {
-	struct file *f = fget(ch_fd);
 	struct channel_gk20a *ch;
 	int err;
 
 	ch = gk20a_get_channel_from_file(ch_fd);
 	if (!ch)
 		return -EINVAL;
+
 	err = ch->g->ops.fifo.tsg_bind_channel(tsg, ch);
-	fput(f);
 	return err;
 }
 

@@ -284,7 +284,7 @@ static ssize_t railgate_enable_store(struct device *dev,
 	struct generic_pm_domain *genpd = dev_to_genpd(dev);
 	struct gk20a *g = get_gk20a(dev);
 	unsigned long railgate_enable = 0;
-	int err;
+	int err = 0;
 
 	if (kstrtoul(buf, 10, &railgate_enable) < 0)
 		return -EINVAL;
@@ -309,6 +309,9 @@ static ssize_t railgate_enable_store(struct device *dev,
 			err = platform->unrailgate(dev);
 		mutex_unlock(&platform->railgate_lock);
 	}
+	if (err)
+		return err;
+
 	dev_info(dev, "railgate is %s.\n", platform->can_railgate ?
 		"enabled" : "disabled");
 	/* wake-up system to make railgating_enable effective immediately */

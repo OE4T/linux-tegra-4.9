@@ -26,9 +26,6 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int err = 0;
 	u32 i, temp;
-	char *size_path  = NULL;
-	char *reg_path   = NULL;
-	char *value_path = NULL;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_info,
 		   "querying grctx info from chiplib");
@@ -54,35 +51,15 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_sim_esc_readl(g, "GRCTX_SW_CTX_LOAD_SIZE", 0,
 			    &g->gr.ctx_vars.sw_ctx_load.count);
 
-	switch (0) { /*g->gr.ctx_vars.reg_init_override)*/
-#if 0
-	case NV_REG_STR_RM_GR_REG_INIT_OVERRIDE_PROD_DIFF:
-		sizePath   = "GRCTX_NONCTXSW_PROD_DIFF_REG_SIZE";
-		regPath    = "GRCTX_NONCTXSW_PROD_DIFF_REG:REG";
-		valuePath  = "GRCTX_NONCTXSW_PROD_DIFF_REG:VALUE";
-		break;
-#endif
-	default:
-		size_path   = "GRCTX_NONCTXSW_REG_SIZE";
-		reg_path    = "GRCTX_NONCTXSW_REG:REG";
-		value_path  = "GRCTX_NONCTXSW_REG:VALUE";
-		break;
-	}
 
-	gk20a_sim_esc_readl(g, size_path, 0,
+	gk20a_sim_esc_readl(g, "GRCTX_NONCTXSW_REG_SIZE", 0,
 			    &g->gr.ctx_vars.sw_non_ctx_load.count);
-
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_SYS_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.sys.count);
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_GPC_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.gpc.count);
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_TPC_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.tpc.count);
-#if 0
-	/* looks to be unused, actually chokes the sim */
-	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_PPC_COUNT", 0,
-			    &g->gr.ctx_vars.ctxsw_regs.ppc.count);
-#endif
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_ZCULL_GPC_COUNT", 0,
 			    &g->gr.ctx_vars.ctxsw_regs.zcull_gpc.count);
 	gk20a_sim_esc_readl(g, "GRCTX_REG_LIST_PM_SYS_COUNT", 0,
@@ -156,8 +133,10 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 
 	for (i = 0; i < g->gr.ctx_vars.sw_non_ctx_load.count; i++) {
 		struct av_gk20a *l = g->gr.ctx_vars.sw_non_ctx_load.l;
-		gk20a_sim_esc_readl(g, reg_path, i, &l[i].addr);
-		gk20a_sim_esc_readl(g, value_path, i, &l[i].value);
+		gk20a_sim_esc_readl(g, "GRCTX_NONCTXSW_REG:REG",
+				    i, &l[i].addr);
+		gk20a_sim_esc_readl(g, "GRCTX_NONCTXSW_REG:VALUE",
+				    i, &l[i].value);
 	}
 
 	for (i = 0; i < g->gr.ctx_vars.ctxsw_regs.sys.count; i++) {

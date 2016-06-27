@@ -46,9 +46,9 @@
 #define NVGPU_ALLOC_OBJ_FLAGS_CILP		(1 << 2)
 
 /* Flags in nvgpu_preemption_mode_args.graphics_preempt_flags */
-#define NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP	BIT(1)
+#define NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP     (1 << 1)
 /* Flags in nvgpu_preemption_mode_args.compute_preempt_flags */
-#define NVGPU_COMPUTE_PREEMPTION_MODE_CILP	BIT(2)
+#define NVGPU_COMPUTE_PREEMPTION_MODE_CILP      (1 << 2)
 
 /* SM LRF ECC is enabled */
 #define NVGPU_GPU_FLAGS_ECC_ENABLED_SM_LRF	(1ULL << 60)

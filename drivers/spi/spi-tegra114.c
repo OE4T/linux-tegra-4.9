@@ -201,6 +201,7 @@ struct tegra_spi_client_ctl_data {
 	int rx_clk_tap_delay;
 	int tx_clk_tap_delay;
 	int cs_inactive_cycles;
+	int clk_delay_between_packets;
 };
 
 struct tegra_spi_data {
@@ -246,6 +247,7 @@ struct tegra_spi_data {
 	u32					dma_control_reg;
 	u32					def_command1_reg;
 	u32					spi_cs_timing;
+	u32					spi_cs_timing2;
 	u32					def_command2_reg;
 	u8					last_used_cs;
 	u8					def_chip_select;
@@ -927,6 +929,7 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
 	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
 	struct tegra_spi_client_ctl_state *cstate = spi->controller_state;
+	u32 spi_cs_timing2 = 0;
 	u32 speed = t->speed_hz;
 	u8 bits_per_word = t->bits_per_word;
 	u32 command1;
@@ -1014,6 +1017,34 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 			tspi->is_hw_based_cs = true;
 		}
 
+		if (cdata && cdata->cs_inactive_cycles) {
+			u32 inactive_cycles;
+
+			SPI_SET_CS_ACTIVE_BETWEEN_PACKETS(spi_cs_timing2,
+							  spi->chip_select,
+							  0);
+			inactive_cycles = min(cdata->cs_inactive_cycles, 32);
+			SPI_SET_CYCLES_BETWEEN_PACKETS(spi_cs_timing2,
+						       spi->chip_select,
+						       inactive_cycles);
+			if (tspi->spi_cs_timing2 != spi_cs_timing2) {
+				tspi->spi_cs_timing2 = spi_cs_timing2;
+				tegra_spi_writel(tspi, spi_cs_timing2,
+						 SPI_CS_TIMING2);
+			}
+			tspi->is_hw_based_cs = true;
+		} else {
+			SPI_SET_CS_ACTIVE_BETWEEN_PACKETS(spi_cs_timing2,
+							  spi->chip_select, 1);
+			SPI_SET_CYCLES_BETWEEN_PACKETS(spi_cs_timing2,
+						       spi->chip_select, 0);
+			if (tspi->spi_cs_timing2 != spi_cs_timing2) {
+				tspi->spi_cs_timing2 = spi_cs_timing2;
+				tegra_spi_writel(tspi, spi_cs_timing2,
+						 SPI_CS_TIMING2);
+			}
+		}
+
 		if (!tspi->is_hw_based_cs) {
 			command1 |= SPI_CS_SW_HW;
 			if (spi->mode & SPI_CS_HIGH)
@@ -1034,20 +1065,6 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 		}
 
 		tegra_spi_set_cmd2(spi, speed);
-
-		if (cdata && cdata->cs_inactive_cycles) {
-			u32 spi_cs_timing2 = 0;
-			u32 inactive_cycles;
-
-			SPI_SET_CS_ACTIVE_BETWEEN_PACKETS(spi_cs_timing2,
-							  spi->chip_select,
-							  0);
-			inactive_cycles = min(cdata->cs_inactive_cycles, 32);
-			SPI_SET_CYCLES_BETWEEN_PACKETS(spi_cs_timing2,
-						       spi->chip_select,
-						       inactive_cycles);
-			tegra_spi_writel(tspi, spi_cs_timing2, SPI_CS_TIMING2);
-		}
 	} else {
 		command1 = tspi->command1_reg;
 		command1 &= ~SPI_BIT_LENGTH(~0);
@@ -1133,6 +1150,8 @@ static struct tegra_spi_client_ctl_data
 			     &cdata->tx_clk_tap_delay);
 	of_property_read_u32(data_np, "nvidia,cs-inactive-cycles",
 			     &cdata->cs_inactive_cycles);
+	of_property_read_u32(data_np, "nvidia,clk-delay-between-packets",
+			     &cdata->clk_delay_between_packets);
 
 	of_node_put(data_np);
 
@@ -1144,6 +1163,8 @@ static void tegra_spi_cleanup(struct spi_device *spi)
 	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
 	struct tegra_spi_client_ctl_state *cstate = spi->controller_state;
 
+	if (cdata && cdata->clk_delay_between_packets)
+		cdata->cs_inactive_cycles = 0;
 	spi->controller_state = NULL;
 	if (cstate && cstate->cs_gpio_valid)
 		gpio_free(spi->cs_gpio);
@@ -1200,6 +1221,16 @@ static int tegra_spi_setup(struct spi_device *spi)
 
 			gpio_set_value(spi->cs_gpio, val);
 		}
+	}
+
+	if (cdata && cdata->clk_delay_between_packets) {
+		if (cdata->cs_inactive_cycles || !cstate->cs_gpio_valid) {
+			dev_err(&spi->dev,
+				"Invalid cs packet delay config\n");
+			tegra_spi_cleanup(spi);
+			return -EINVAL;
+		}
+		cdata->cs_inactive_cycles = cdata->clk_delay_between_packets;
 	}
 
 	ret = pm_runtime_get_sync(tspi->dev);

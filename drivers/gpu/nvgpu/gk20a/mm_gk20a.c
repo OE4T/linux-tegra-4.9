@@ -2205,7 +2205,7 @@ int gk20a_vm_map_compbits(struct vm_gk20a *vm,
 		cacheline_start = mapped_buffer->ctag_offset /
 			g->gr.comptags_per_cacheline;
 		cacheline_offset_start =
-			cacheline_start * aggregate_cacheline_sz;
+			(u64)cacheline_start * aggregate_cacheline_sz;
 
 		if (fixed_mapping) {
 			struct buffer_attrs bfr;

@@ -343,6 +343,7 @@ static int bridge_serr_hook(struct pt_regs *regs, int reason,
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
 static DEFINE_MUTEX(bridge_mca_mutex);
 static struct dentry *bridge_root;
 
@@ -409,6 +410,9 @@ clean:
 	}
 	return PTR_ERR(d);
 }
+#else
+static int bridge_mca_dbgfs_init(void) { return 0; }
+#endif
 
 #define AXI2APB_ERROR_STATUS	0x2ec
 #define AXI2APB_FIFO_STATUS3	0x2f8
@@ -520,6 +524,10 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 		return -ENOENT;
 	}
 
+	rc = bridge_mca_dbgfs_init();
+	if (rc)
+		return rc;
+
 	bank = devm_kzalloc(&pdev->dev, sizeof(*bank), GFP_KERNEL);
 	bank->bank = res_base->start;
 	bank->vaddr = devm_ioremap_resource(&pdev->dev, res_base);
@@ -543,10 +551,6 @@ static int tegra18_bridge_probe(struct platform_device *pdev)
 	raw_spin_unlock_irqrestore(&bridge_lock, flags);
 
 	register_serr_hook(hook);
-
-	rc = bridge_mca_dbgfs_init();
-	if (rc)
-		return rc;
 
 	/*
 	 * Flush out (and report) any early bridge errors.

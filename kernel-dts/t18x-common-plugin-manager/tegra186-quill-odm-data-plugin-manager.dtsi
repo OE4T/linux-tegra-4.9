@@ -18,7 +18,7 @@
 		fragement@0 {
 			odm-data = "enable-tegra-wdt";
 			override@0 {
-				target = <&tegra_arm_wdt>;
+				target = <&tegra_wdt>;
 				_overlay_ {
 					status = "okay";
 				};
@@ -39,16 +39,6 @@
 			odm-data = "enable-pmic-wdt";
 			override@0 {
 				target = <&spmic_wdt>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
-		};
-
-		fragement@3 {
-			odm-data = "enable-denver-wdt";
-			override@0 {
-				target = <&tegra_denver_wdt>;
 				_overlay_ {
 					status = "okay";
 				};

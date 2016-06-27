@@ -1066,12 +1066,12 @@ struct nvgpu_event_id_ctrl_args {
 
 struct nvgpu_preemption_mode_args {
 /* only one should be enabled at a time */
-#define NVGPU_GRAPHICS_PREEMPTION_MODE_WFI		BIT(0)
+#define NVGPU_GRAPHICS_PREEMPTION_MODE_WFI              (1 << 0)
 	__u32 graphics_preempt_mode; /* in */
 
 /* only one should be enabled at a time */
-#define NVGPU_COMPUTE_PREEMPTION_MODE_WFI		BIT(0)
-#define NVGPU_COMPUTE_PREEMPTION_MODE_CTA		BIT(1)
+#define NVGPU_COMPUTE_PREEMPTION_MODE_WFI               (1 << 0)
+#define NVGPU_COMPUTE_PREEMPTION_MODE_CTA               (1 << 1)
 	__u32 compute_preempt_mode; /* in */
 };
 

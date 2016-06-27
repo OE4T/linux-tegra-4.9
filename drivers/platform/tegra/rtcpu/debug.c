@@ -266,6 +266,58 @@ static int camrtc_show_sm_ping(struct seq_file *file, void *data)
 
 DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_sm_ping, camrtc_show_sm_ping);
 
+static int camrtc_dbgfs_show_loglevel(void *data, u64 *val)
+{
+	struct tegra_ivc_channel *ch = data;
+	struct camrtc_dbg_request req = {
+		.req_type = CAMRTC_REQ_GET_LOGLEVEL,
+	};
+	struct camrtc_dbg_response resp;
+	int ret;
+
+	ret = camrtc_ivc_dbg_xact(ch, &req, &resp, 0);
+	if (ret)
+		return ret;
+
+	if (resp.status != CAMRTC_STATUS_OK)
+		return -EPROTO;
+
+	*val = resp.data.log_data.level;
+
+	return 0;
+}
+
+static int camrtc_dbgfs_store_loglevel(void *data, u64 val)
+{
+	struct tegra_ivc_channel *ch = data;
+	struct camrtc_dbg_request req = {
+		.req_type = CAMRTC_REQ_SET_LOGLEVEL,
+	};
+	struct camrtc_dbg_response resp;
+	int ret;
+
+	if ((u32)val != val)
+		return -EINVAL;
+
+	req.data.log_data.level = val;
+
+	ret = camrtc_ivc_dbg_xact(ch, &req, &resp, 0);
+	if (ret)
+		return ret;
+
+	if (resp.status == CAMRTC_STATUS_INVALID_PARAM)
+		return -EINVAL;
+	else if (resp.status != CAMRTC_STATUS_OK)
+		return -EPROTO;
+
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(camrtc_dbgfs_fops_loglevel,
+			camrtc_dbgfs_show_loglevel,
+			camrtc_dbgfs_store_loglevel,
+			"%lld\n");
+
 static int camrtc_show_mods_result(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -518,6 +570,9 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 		goto error;
 	if (!debugfs_create_file("sm-ping", S_IRUGO, dir, ch,
 			&camrtc_dbgfs_fops_sm_ping))
+		goto error;
+	if (!debugfs_create_file("log-level", S_IRUGO | S_IWUSR, dir, ch,
+			&camrtc_dbgfs_fops_loglevel))
 		goto error;
 	if (!debugfs_create_u32("timeout", S_IRUGO | S_IWUSR, dir,
 			&crd->parameters.completion_timeout))

@@ -2054,28 +2054,12 @@
 		clock-names = "eqos_ape.ape", "pll_a_out0", "pll_a";
 	};
 
-	tegra_denver_wdt:watchdog@30c0000 {
+	tegra_wdt:watchdog@30c0000 {
 		compatible = "nvidia,tegra-wdt-t18x";
 		reg = <0x0 0x030c0000 0x0 0x10000>, /* WDT0 */
 		      <0x0 0x03090000 0x0 0x10000>, /* TMR7 */
 		      <0x0 0x03010000 0x0 0x10000>; /* TKE */
 		interrupts = <0 7 0x4>; /* TKE shared int */
-		nvidia,wdt-cluster-id = <0>; /* M/Denver cluster */
-		nvidia,expiry-count = <5>;
-		nvidia,enable-on-init;
-		nvidia,extend-watchdog-suspend;
-		nvidia,heartbeat-init = <120>;
-		nvidia,disable-debug-reset;
-		status = "disabled";
-	};
-
-	tegra_arm_wdt:watchdog@30d0000 {
-		compatible = "nvidia,tegra-wdt-t18x";
-		reg = <0x0 0x030d0000 0x0 0x10000>, /* WDT1 */
-		      <0x0 0x030a0000 0x0 0x10000>, /* TMR8 */
-		      <0x0 0x03010000 0x0 0x10000>; /* TKE */
-		interrupts = <0 8 0x4>; /* TKE shared int */
-		nvidia,wdt-cluster-id = <1>; /* B/ARM cluster */
 		nvidia,expiry-count = <5>;
 		nvidia,enable-on-init;
 		nvidia,extend-watchdog-suspend;

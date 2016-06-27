@@ -288,10 +288,6 @@
 		nvidia,shutdown-timeout = <150>;
 	};
 
-	watchdog@30d0000 {
-		nvidia,shutdown-timeout = <150>;
-	};
-
 	pcie-controller@10003000 {
 		status = "okay";
 		pci@1,0 {

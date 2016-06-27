@@ -58,7 +58,6 @@ struct tegra_wdt_t18x {
 	int			irq;
 	int			hwirq;
 	unsigned long		status;
-	int			cluster_id;
 	bool			enable_on_init;
 	int			expiry_count;
 	int			active_count;
@@ -72,16 +71,11 @@ struct tegra_wdt_t18x {
 #define WDT_ENABLED_USERSPACE	2
 };
 
-/* Cluster ids */
-#define WDT_CLUSTER_ID_DENVER	0
-#define WDT_CLUSTER_ID_ARM	1
-#define WDT_CLUSTER_ID_COUNT	2
-
 /*
- * Global variable to store wdt pointer for all clusters
- * required by nvdumper and pmic to change wdt state
+ * Global variable to store wdt pointer required by nvdumper and pmic to
+ * change wdt state
  */
-static struct tegra_wdt_t18x *t18x_wdt_array[WDT_CLUSTER_ID_COUNT];
+static struct tegra_wdt_t18x *t18x_wdt;
 
 static bool nowayout = WATCHDOG_NOWAYOUT;
 module_param(nowayout, bool, 0);
@@ -139,7 +133,6 @@ static inline struct tegra_wdt_t18x *to_tegra_wdt_t18x(
 #define WDT_UNLOCK_PATTERN		(0xC45A << 0)
 #define WDT_SKIP			(0x10)
 #define WDT_SKIP_VAL(i, val)		(((val) & 0xf) << (4 * (i)))
-#define MAX_NR_CLUSTER_WDT		0x2
 
 static int __tegra_wdt_t18x_ping(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
@@ -193,12 +186,6 @@ static inline int tegra_wdt_t18x_skip(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
 	u32 val = 0;
 	int skip_count = 0;
-
-	/* Skip the 2nd expiry of WDT for ARM cluster */
-	if (tegra_wdt_t18x->cluster_id == WDT_CLUSTER_ID_ARM) {
-		val = WDT_SKIP_VAL(1, 1);
-		skip_count++;
-	}
 
 	/* Skip the 4th expiry if debug reset is disabled */
 	if (!(tegra_wdt_t18x->config & WDT_CFG_DBG_RST_EN)) {
@@ -323,14 +310,9 @@ static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
 
 void tegra_wdt_t18x_debug_reset(bool state)
 {
-	struct tegra_wdt_t18x *tegra_wdt_t18x;
-	int i;
-
-	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
-		tegra_wdt_t18x = t18x_wdt_array[i];
-		if (!tegra_wdt_t18x)
+		if (!t18x_wdt)
 			continue;
-		tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
+		tegra_wdt_t18x_update_config_bit(t18x_wdt,
 						WDT_CFG_DBG_RST_EN, state);
 	}
 }
@@ -338,14 +320,9 @@ EXPORT_SYMBOL(tegra_wdt_t18x_debug_reset);
 
 void tegra_wdt_t18x_por_reset(bool state)
 {
-	struct tegra_wdt_t18x *tegra_wdt_t18x;
-	int i;
-
-	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
-		tegra_wdt_t18x = t18x_wdt_array[i];
-		if (!tegra_wdt_t18x)
+		if (!t18x_wdt)
 			continue;
-		tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
+		tegra_wdt_t18x_update_config_bit(t18x_wdt,
 						WDT_CFG_SYS_PORST_EN, state);
 	}
 }
@@ -353,15 +330,8 @@ EXPORT_SYMBOL(tegra_wdt_t18x_por_reset);
 
 void tegra_wdt_t18x_disable_all(void)
 {
-	struct tegra_wdt_t18x *tegra_wdt_t18x;
-	int i;
-
-	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
-		tegra_wdt_t18x = t18x_wdt_array[i];
-		if (!tegra_wdt_t18x)
-			continue;
-		__tegra_wdt_t18x_disable(tegra_wdt_t18x);
-	}
+	if (t18x_wdt)
+		__tegra_wdt_t18x_disable(t18x_wdt);
 }
 EXPORT_SYMBOL(tegra_wdt_t18x_disable_all);
 
@@ -487,8 +457,7 @@ static int tegra_wdt_t18x_setup_pet(struct tegra_wdt_t18x *tegra_wdt_t18x,
 	tegra_wdt_t18x_enable(&tegra_wdt_t18x->wdt);
 	set_bit(WDOG_ACTIVE, &tegra_wdt_t18x->wdt.status);
 	set_bit(WDT_ENABLED_ON_INIT, &tegra_wdt_t18x->status);
-	pr_info("Tegra WDT setup for cluster %d. Timeout = %u seconds.\n",
-			tegra_wdt_t18x->cluster_id,
+	pr_info("Tegra WDT setup timeout = %u seconds.\n",
 			tegra_wdt_t18x->wdt.timeout);
 
 	return 0;
@@ -562,16 +531,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	tegra_wdt_t18x->extended_suspend = of_property_read_bool(np,
 				"nvidia,extend-watchdog-suspend");
 
-	ret = of_property_read_u32(np, "nvidia,wdt-cluster-id", &pval);
-	if (ret) {
-		dev_err(&pdev->dev, "no WDT cluster ID provided!\n");
-		return -EINVAL;
-	}
-	tegra_wdt_t18x->cluster_id = pval;
-	if (pval < WDT_CLUSTER_ID_COUNT)
-		t18x_wdt_array[pval] = tegra_wdt_t18x;
-	else
-		dev_warn(&pdev->dev, "Cluster ID out of bound\n");
+	t18x_wdt = tegra_wdt_t18x;
 
 	res_src = platform_get_resource(pdev, IORESOURCE_MEM, 0);
 	res_wdt = platform_get_resource(pdev, IORESOURCE_MEM, 1);
@@ -721,28 +681,16 @@ static int tegra_wdt_t18x_resume(struct device *dev)
 
 static int tegra_wdt_t18x_syscore_suspend(void)
 {
-	struct tegra_wdt_t18x *tegra_wdt_t18x;
-	int i;
-
-	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
-		tegra_wdt_t18x = t18x_wdt_array[i];
-		if (tegra_wdt_t18x && tegra_wdt_t18x->extended_suspend)
-			__tegra_wdt_t18x_disable(tegra_wdt_t18x);
-	}
+	if (t18x_wdt && t18x_wdt->extended_suspend)
+		__tegra_wdt_t18x_disable(t18x_wdt);
 
 	return 0;
 }
 
 static void tegra_wdt_t18x_syscore_resume(void)
 {
-	struct tegra_wdt_t18x *tegra_wdt_t18x;
-	int i;
-
-	for (i = 0; i < WDT_CLUSTER_ID_COUNT; i++) {
-		tegra_wdt_t18x = t18x_wdt_array[i];
-		if (tegra_wdt_t18x && tegra_wdt_t18x->extended_suspend)
-			__tegra_wdt_t18x_enable(tegra_wdt_t18x);
-	}
+	if (t18x_wdt && t18x_wdt->extended_suspend)
+		__tegra_wdt_t18x_enable(t18x_wdt);
 }
 
 #else

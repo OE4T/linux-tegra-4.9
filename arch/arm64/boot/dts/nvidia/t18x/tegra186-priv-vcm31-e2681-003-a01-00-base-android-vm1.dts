@@ -429,7 +429,7 @@
 		status = "disabled";
 	};
 
-	watchdog@30d0000 {
+	watchdog@30c0000 {
 		status = "disabled";
 	};
 

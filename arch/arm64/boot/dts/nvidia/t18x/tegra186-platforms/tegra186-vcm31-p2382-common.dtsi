@@ -342,7 +342,7 @@
 		status = "okay";
 	};
 
-	tegra_arm_wdt:watchdog@30d0000 {
+	tegra_wdt:watchdog@30c0000 {
 		status = "okay";
 	};
 

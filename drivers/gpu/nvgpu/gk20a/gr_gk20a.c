@@ -6629,7 +6629,7 @@ int gr_gk20a_get_ctx_buffer_offsets(struct gk20a *g,
 		return -ENODEV;
 
 	priv_registers = kzalloc(sizeof(u32) * potential_offsets, GFP_KERNEL);
-	if (IS_ERR_OR_NULL(priv_registers)) {
+	if (!priv_registers) {
 		gk20a_dbg_fn("failed alloc for potential_offsets=%d", potential_offsets);
 		err = PTR_ERR(priv_registers);
 		goto cleanup;

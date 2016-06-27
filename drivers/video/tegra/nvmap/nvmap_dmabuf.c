@@ -553,23 +553,50 @@ static void nvmap_dmabuf_vunmap(struct dma_buf *dmabuf, void *vaddr)
 static int nvmap_dmabuf_set_private(struct dma_buf *dmabuf,
 		struct device *dev, void *priv, void (*delete)(void *priv))
 {
-	struct nvmap_handle_info *info;
+	struct nvmap_handle_info *info = dmabuf->priv;
+	struct nvmap_handle *handle = info->handle;
+	struct nvmap_handle_dmabuf_priv *curr = NULL;
+	int ret = 0;
 
-	info = dmabuf->priv;
-	info->handle->nvhost_priv = priv;
-	info->handle->nvhost_priv_delete = delete;
+	mutex_lock(&handle->lock);
+	list_for_each_entry(curr, &handle->dmabuf_priv, list) {
+		if (curr->dev == dev) {
+			ret = -EEXIST;
+			goto unlock;
+		}
+	}
 
-	return 0;
+	curr = kmalloc(sizeof(*curr), GFP_KERNEL);
+	if (!curr) {
+		ret = -ENOMEM;
+		goto unlock;
+	}
+	curr->priv = priv;
+	curr->dev = dev;
+	curr->priv_release = delete;
+	list_add_tail(&curr->list, &handle->dmabuf_priv);
+unlock:
+	mutex_unlock(&handle->lock);
+	return ret;
 }
 
 static void *nvmap_dmabuf_get_private(struct dma_buf *dmabuf,
 		struct device *dev)
 {
-	void *priv;
-	struct nvmap_handle_info *info;
+	void *priv = NULL;
+	struct nvmap_handle_info *info = dmabuf->priv;
+	struct nvmap_handle *handle = info->handle;
+	struct nvmap_handle_dmabuf_priv *curr = NULL;
 
-	info = dmabuf->priv;
-	priv = info->handle->nvhost_priv;
+	mutex_lock(&handle->lock);
+	list_for_each_entry(curr, &handle->dmabuf_priv, list) {
+		if (curr->dev == dev) {
+			priv = curr->priv;
+			goto unlock;
+		}
+	}
+unlock:
+	mutex_unlock(&handle->lock);
 	return priv;
 }
 

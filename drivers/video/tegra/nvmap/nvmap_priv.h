@@ -152,6 +152,14 @@ struct nvmap_pgalloc {
 #define NVMAP_IVM_IVMID_WIDTH  (3)
 #define NVMAP_IVM_IVMID_MASK   ((1 << NVMAP_IVM_IVMID_WIDTH) - 1)
 #define NVMAP_IVM_ALIGNMENT    (SZ_32K)
+
+struct nvmap_handle_dmabuf_priv {
+	void *priv;
+	struct device *dev;
+	void (*priv_release)(void *priv);
+	struct list_head list;
+};
+
 struct nvmap_handle {
 	struct rb_node node;	/* entry on global handle tree */
 	atomic_t ref;		/* reference count (i.e., # of duplications) */
@@ -178,8 +186,7 @@ struct nvmap_handle {
 	atomic_t share_count;	/* number of processes sharing the handle */
 	struct list_head lru;	/* list head to track the lru */
 	struct mutex lock;
-	void *nvhost_priv;	/* nvhost private data */
-	void (*nvhost_priv_delete)(void *priv);
+	struct list_head dmabuf_priv;
 	unsigned int ivm_id;
 	int peer;		/* Peer VM number */
 };

@@ -443,9 +443,13 @@ int nvmap_alloc_handle_from_va(struct nvmap_client *client,
 void _nvmap_handle_free(struct nvmap_handle *h)
 {
 	unsigned int i, nr_page, page_index = 0;
+	struct nvmap_handle_dmabuf_priv *curr, *next;
 
-	if (h->nvhost_priv)
-		h->nvhost_priv_delete(h->nvhost_priv);
+	list_for_each_entry_safe(curr, next, &h->dmabuf_priv, list) {
+		curr->priv_release(curr->priv);
+		list_del(&curr->list);
+		kzfree(curr);
+	}
 
 	if (nvmap_handle_remove(nvmap_dev, h) != 0)
 		return;

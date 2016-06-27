@@ -2135,7 +2135,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->as_ioctl_nr_last = NVGPU_AS_IOCTL_LAST;
 	gpu->gpu_va_bit_count = 40;
 
-	memcpy(gpu->chipname, g->ops.name, strlen(g->ops.name));
+	strlcpy(gpu->chipname, g->ops.name, sizeof(gpu->chipname));
 	gpu->max_fbps_count = g->ops.gr.get_max_fbps_count(g);
 	gpu->fbp_en_mask = g->ops.gr.get_fbp_en_mask(g);
 	gpu->max_ltc_per_fbp =  g->ops.gr.get_max_ltc_per_fbp(g);

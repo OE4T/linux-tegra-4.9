@@ -65,6 +65,7 @@ struct tegra_wdt_t18x {
 	int			shutdown_timeout;
 	int			index;
 	bool			extended_suspend;
+	bool			preset_config;
 /* Bit numbers for status flags */
 #define WDT_ENABLED		0
 #define WDT_ENABLED_ON_INIT	1
@@ -228,7 +229,9 @@ static int __tegra_wdt_t18x_enable(struct tegra_wdt_t18x *tegra_wdt_t18x)
 	val |= (TOP_TKE_TMR_EN | TOP_TKE_TMR_PERIODIC);
 	writel(val, tegra_wdt_t18x->wdt_timer + TOP_TKE_TMR_PTV);
 
-	writel(tegra_wdt_t18x->config, tegra_wdt_t18x->wdt_source + WDT_CFG);
+	if (!tegra_wdt_t18x->preset_config)
+		writel(tegra_wdt_t18x->config,
+		       tegra_wdt_t18x->wdt_source + WDT_CFG);
 	writel(WDT_CMD_START_COUNTER, tegra_wdt_t18x->wdt_source + WDT_CMD);
 	set_bit(WDT_ENABLED, &tegra_wdt_t18x->status);
 
@@ -308,26 +311,6 @@ static inline int tegra_wdt_t18x_update_config_bit(struct tegra_wdt_t18x
 	return 0;
 }
 
-void tegra_wdt_t18x_debug_reset(bool state)
-{
-		if (!t18x_wdt)
-			continue;
-		tegra_wdt_t18x_update_config_bit(t18x_wdt,
-						WDT_CFG_DBG_RST_EN, state);
-	}
-}
-EXPORT_SYMBOL(tegra_wdt_t18x_debug_reset);
-
-void tegra_wdt_t18x_por_reset(bool state)
-{
-		if (!t18x_wdt)
-			continue;
-		tegra_wdt_t18x_update_config_bit(t18x_wdt,
-						WDT_CFG_SYS_PORST_EN, state);
-	}
-}
-EXPORT_SYMBOL(tegra_wdt_t18x_por_reset);
-
 void tegra_wdt_t18x_disable_all(void)
 {
 	if (t18x_wdt)
@@ -367,12 +350,6 @@ static int disable_dbg_reset_show(void *data, u64 *val)
 	return 0;
 }
 
-static int disable_dbg_reset_store(void *data, u64 val)
-{
-	return tegra_wdt_t18x_update_config_bit((struct tegra_wdt_t18x*)data,
-			WDT_CFG_DBG_RST_EN, !val);
-}
-
 static int disable_por_reset_show(void *data, u64 *val)
 {
 	struct tegra_wdt_t18x *tegra_wdt_t18x = data;
@@ -381,18 +358,12 @@ static int disable_por_reset_show(void *data, u64 *val)
 	return 0;
 }
 
-static int disable_por_reset_store(void *data, u64 val)
-{
-	return tegra_wdt_t18x_update_config_bit((struct tegra_wdt_t18x*)data,
-			WDT_CFG_SYS_PORST_EN, !val);
-}
-
 DEFINE_SIMPLE_ATTRIBUTE(dump_regs_fops, dump_registers_show,
 	NULL, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(disable_dbg_reset_fops, disable_dbg_reset_show,
-	disable_dbg_reset_store, "%lld\n");
+	NULL, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(disable_por_reset_fops, disable_por_reset_show,
-	disable_por_reset_store, "%lld\n");
+	NULL, "%lld\n");
 
 static void tegra_wdt_t18x_debugfs_init(struct tegra_wdt_t18x *tegra_wdt_t18x)
 {
@@ -470,6 +441,7 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	struct device_node *np = pdev->dev.of_node;
 	struct of_phandle_args oirq;
 	u32 pval = 0;
+	u32 cfg;
 	int ret = 0, index;
 
 	if (!np) {
@@ -544,6 +516,12 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 
 	tegra_wdt_t18x->wdt_source = devm_ioremap_resource(&pdev->dev,
 								res_src);
+
+	cfg = readl(tegra_wdt_t18x->wdt_source + WDT_CFG);
+	//cfg = 0;
+	tegra_wdt_t18x->preset_config = (cfg & WDT_CFG_INT_EN) != 0;
+	tegra_wdt_t18x->config = cfg;
+
 	if (IS_ERR(tegra_wdt_t18x->wdt_source)) {
 		dev_err(&pdev->dev,
 			"Cannot request memregion/iomap res_src\n");
@@ -568,33 +546,35 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	/* Watchdog index in list of wdts under top_tke */
 	tegra_wdt_t18x->index = ((res_src->start >> 16) & 0xF) - 0xc;
 
-	/* Configure timer source and period */
-	tegra_wdt_t18x->config = (((res_wdt->start >> 16) & (0xf)) - 2 ) |
-								WDT_CFG_PERIOD;
-	/* Enable local interrupt for WDT petting */
-	tegra_wdt_t18x->config |= WDT_CFG_INT_EN;
+	if (!tegra_wdt_t18x->preset_config) {
+		/* Configure timer source and period */
+		cfg = (((res_wdt->start >> 16) & (0xf)) - 2 ) | WDT_CFG_PERIOD;
+		tegra_wdt_t18x->config = cfg;
 
-	/* 'ErrorThreshold' field @ TKE_TOP_WDT1_WDTCR_0 decides the
-	 * indication to HSM. The WDT logic asserts an error signal to HSM when
-	 * ExpirationLevel >= ErrorThreshold. Retain the POR value to avoid
-	 * nuisance trigger to HSM.
-	 */
-	tegra_wdt_t18x->config |= WDT_CFG_ERR_THRESHOLD;
+		/* Enable local interrupt for WDT petting */
+		tegra_wdt_t18x->config |= WDT_CFG_INT_EN;
 
-	/* Enable local FIQ and remote interrupt for debug dump */
-	if (tegra_wdt_t18x->cluster_id == WDT_CLUSTER_ID_DENVER)
+		/* 'ErrorThreshold' field @ TKE_TOP_WDT1_WDTCR_0 decides the
+		 * indication to HSM. The WDT logic asserts an error signal to
+		 * HSM when ExpirationLevel >= ErrorThreshold. Retain the POR
+		 * value to avoid nuisance trigger to HSM.
+		 */
+		tegra_wdt_t18x->config |= WDT_CFG_ERR_THRESHOLD;
+
+		/* Enable local FIQ and remote interrupt for debug dump */
 		tegra_wdt_t18x->config |= WDT_CFG_FINT_EN;
-	tegra_wdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
+		tegra_wdt_t18x->config |= WDT_CFG_REMOTE_INT_EN;
 
-	/* Debug and POR reset events should be enabled by default.
-	 * Disable only if explicitly indicated in device tree or
-	 * HALT_IN_FIQ is set, so as to allow external debugger to poke.
-	 */
-	if (!tegra_pmc_is_halt_in_fiq()) {
-		if(!of_property_read_bool(np, "nvidia,disable-debug-reset"))
-			tegra_wdt_t18x->config |= WDT_CFG_DBG_RST_EN;
-		if(!of_property_read_bool(np, "nvidia,disable-por-reset"))
-			tegra_wdt_t18x->config |= WDT_CFG_SYS_PORST_EN;
+		/* Debug and POR reset events should be enabled by default.
+		 * Disable only if explicitly indicated in device tree or
+		 * HALT_IN_FIQ is set, so as to allow external debugger to poke.
+		 */
+		if (!tegra_pmc_is_halt_in_fiq()) {
+			if (!of_property_read_bool(np, "nvidia,disable-debug-reset"))
+				tegra_wdt_t18x->config |= WDT_CFG_DBG_RST_EN;
+			if (!of_property_read_bool(np, "nvidia,disable-por-reset"))
+				tegra_wdt_t18x->config |= WDT_CFG_SYS_PORST_EN;
+		}
 	}
 
 	tegra_wdt_t18x_disable(&tegra_wdt_t18x->wdt);
@@ -614,10 +594,6 @@ static int tegra_wdt_t18x_probe(struct platform_device *pdev)
 	}
 
 	platform_set_drvdata(pdev, tegra_wdt_t18x);
-
-	if (default_disable)
-		tegra_wdt_t18x_update_config_bit(tegra_wdt_t18x,
-			WDT_CFG_SYS_PORST_EN, 0);
 
 	tegra_wdt_t18x_debugfs_init(tegra_wdt_t18x);
 

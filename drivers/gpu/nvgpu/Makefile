@@ -53,6 +53,7 @@ nvgpu-y := \
 	gk20a/hal.o \
 	gk20a/hal_gk20a.o \
 	gk20a/gk20a_allocator.o \
+	gk20a/gk20a_allocator_buddy.o \
 	gk20a/cde_gk20a.o \
 	gk20a/platform_gk20a_generic.o \
 	gk20a/tsg_gk20a.o \

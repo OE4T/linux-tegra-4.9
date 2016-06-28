@@ -629,6 +629,13 @@ struct gpu_ops {
 				struct gk20a_debug_output *o);
 	} debug;
 	struct {
+		int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
+			    struct nvgpu_dbg_gpu_reg_op *ops,
+			    u64 num_ops);
+		int (*dbg_set_powergate)(struct dbg_session_gk20a *dbg_s,
+					u32 mode);
+	} dbg_session_ops;
+	struct {
 		void (*get_program_numbers)(struct gk20a *g,
 					    u32 block_height_log2,
 					    int *hprog, int *vprog);

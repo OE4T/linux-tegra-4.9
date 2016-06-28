@@ -40,6 +40,7 @@
 #include "bios_gm206.h"
 #include "gr_gm206.h"
 #include "hw_proj_gm206.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 static struct gpu_ops gm206_ops = {
 	.clock_gating = {
@@ -194,6 +195,7 @@ int gm206_init_hal(struct gk20a *g)
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
 	gm20b_init_debug_ops(gops);
+	gk20a_init_dbg_session_ops(gops);
 	gm20b_init_cde_ops(gops);
 	gm20b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);

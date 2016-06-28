@@ -34,13 +34,6 @@ void gk20a_dbg_gpu_post_events(struct channel_gk20a *fault_ch);
 struct channel_gk20a *
 nvgpu_dbg_gpu_get_session_channel(struct dbg_session_gk20a *dbg_s);
 
-struct dbg_gpu_session_ops {
-	int (*exec_reg_ops)(struct dbg_session_gk20a *dbg_s,
-			    struct nvgpu_dbg_gpu_reg_op *ops,
-			    u64 num_ops);
-	int (*dbg_set_powergate)(struct dbg_session_gk20a *dbg_s, u32 mode);
-};
-
 struct dbg_gpu_session_events {
 	wait_queue_head_t wait_queue;
 	bool events_enabled;
@@ -76,9 +69,6 @@ struct dbg_session_gk20a {
 	struct list_head ch_list;
 	struct mutex ch_list_lock;
 
-	/* session operations */
-	struct dbg_gpu_session_ops *ops;
-
 	/* event support */
 	struct dbg_gpu_session_events dbg_events;
 
@@ -98,12 +88,11 @@ struct dbg_session_channel_data {
 	struct dbg_session_data *session_data;
 };
 
-extern struct dbg_gpu_session_ops dbg_gpu_session_ops_gk20a;
-
 int dbg_unbind_single_channel_gk20a(struct dbg_session_gk20a *dbg_s,
 			struct dbg_session_channel_data *ch_data);
 
 bool gk20a_dbg_gpu_broadcast_stop_trigger(struct channel_gk20a *ch);
 int gk20a_dbg_gpu_clear_broadcast_stop_trigger(struct channel_gk20a *ch);
+void gk20a_init_dbg_session_ops(struct gpu_ops *gops);
 
 #endif /* DBG_GPU_GK20A_H */

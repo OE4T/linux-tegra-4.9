@@ -35,6 +35,7 @@
 #include "cde_gm20b.h"
 #include "therm_gm20b.h"
 #include "hw_proj_gm20b.h"
+#include "gk20a/dbg_gpu_gk20a.h"
 
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
 #define PRIV_SECURITY_DISABLE 0x01
@@ -221,6 +222,7 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_clk_ops(gops);
 	gm20b_init_regops(gops);
 	gm20b_init_debug_ops(gops);
+	gk20a_init_dbg_session_ops(gops);
 	gm20b_init_cde_ops(gops);
 	gm20b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);

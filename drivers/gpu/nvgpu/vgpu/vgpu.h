@@ -60,7 +60,7 @@ void vgpu_init_hal_common(struct gk20a *g);
 int vgpu_gk20a_init_hal(struct gk20a *g);
 int vgpu_gm20b_init_hal(struct gk20a *g);
 
-void vgpu_dbg_init(void);
+void vgpu_init_dbg_session_ops(struct gpu_ops *gops);
 #else
 static inline int vgpu_pm_prepare_poweroff(struct device *dev)
 {

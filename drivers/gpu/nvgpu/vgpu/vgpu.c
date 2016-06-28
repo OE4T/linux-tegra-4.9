@@ -348,6 +348,7 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_ltc_ops(gops);
 	vgpu_init_mm_ops(gops);
 	vgpu_init_debug_ops(gops);
+	vgpu_init_dbg_session_ops(gops);
 	vgpu_init_fecs_trace_ops(gops);
 	vgpu_init_tsg_ops(gops);
 	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
@@ -531,7 +532,6 @@ int vgpu_probe(struct platform_device *pdev)
 		return err;
 
 	vgpu_init_support(pdev);
-	vgpu_dbg_init();
 
 	init_rwsem(&gk20a->busy_lock);
 

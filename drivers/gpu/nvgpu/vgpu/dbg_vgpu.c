@@ -102,8 +102,8 @@ static int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
 	return err;
 }
 
-void vgpu_dbg_init(void)
+void vgpu_init_dbg_session_ops(struct gpu_ops *gops)
 {
-	dbg_gpu_session_ops_gk20a.exec_reg_ops = vgpu_exec_regops;
-	dbg_gpu_session_ops_gk20a.dbg_set_powergate = vgpu_dbg_set_powergate;
+	gops->dbg_session_ops.exec_reg_ops = vgpu_exec_regops;
+	gops->dbg_session_ops.dbg_set_powergate = vgpu_dbg_set_powergate;
 }

@@ -825,7 +825,8 @@ static int gk20a_apply_smpc_war(struct dbg_session_gk20a *dbg_s)
 	ops[3].offset   = 0x00419f40;
 	ops[3].value_lo = 0x18;
 
-	return dbg_s->ops->exec_reg_ops(dbg_s, ops, ARRAY_SIZE(ops));
+	return dbg_s->g->ops.dbg_session_ops.exec_reg_ops(dbg_s, ops,
+							ARRAY_SIZE(ops));
 }
 
 void gk20a_init_regops(struct gpu_ops *gops)

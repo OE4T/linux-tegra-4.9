@@ -18,6 +18,10 @@
 #include <dt-bindings/thermal/thermal.h>
 
 / {
+	dvfs {
+		compatible = "nvidia,tegra210-dvfs";
+	};
+
 	i2c@7000d000 {
 		nvidia,bit-banging-xfer-after-shutdown;
 

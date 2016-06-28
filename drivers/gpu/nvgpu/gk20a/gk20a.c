@@ -813,6 +813,10 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	g->power_on = false;
 
+	/* Decrement platform power refcount */
+	if (platform->idle)
+		platform->idle(dev);
+
 	/* Stop CPU from accessing the GPU registers. */
 	gk20a_lockout_registers(g);
 
@@ -858,6 +862,16 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		return 0;
 
 	trace_gk20a_finalize_poweron(dev_name(dev));
+
+	/* Increment platform power refcount */
+	if (platform->busy) {
+		err = platform->busy(dev);
+		if (err < 0) {
+			dev_err(dev, "%s: failed to poweron platform dependency\n",
+				__func__);
+			goto done;
+		}
+	}
 
 	err = gk20a_restore_registers(g);
 	if (err)
@@ -1787,25 +1801,12 @@ int gk20a_busy(struct device *dev)
 {
 	int ret = 0;
 	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	down_read(&g->busy_lock);
-
 	if (pm_runtime_enabled(dev)) {
-		if (platform->busy) {
-			ret = platform->busy(dev);
-			if (ret < 0) {
-				dev_err(dev, "%s: failed to poweron platform dependency\n",
-					__func__);
-				goto fail;
-			}
-		}
-
 		ret = pm_runtime_get_sync(dev);
 		if (ret < 0) {
 			pm_runtime_put_noidle(dev);
-			if (platform->idle)
-				platform->idle(dev);
 			goto fail;
 		}
 	} else {
@@ -1818,8 +1819,6 @@ int gk20a_busy(struct device *dev)
 		}
 	}
 
-	gk20a_scale_notify_busy(dev);
-
 fail:
 	up_read(&g->busy_lock);
 
@@ -1828,8 +1827,6 @@ fail:
 
 void gk20a_idle(struct device *dev)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
-
 	if (pm_runtime_enabled(dev)) {
 #ifdef CONFIG_PM
 		if (atomic_read(&dev->power.usage_count) == 1)
@@ -1839,8 +1836,6 @@ void gk20a_idle(struct device *dev)
 		pm_runtime_mark_last_busy(dev);
 		pm_runtime_put_sync_autosuspend(dev);
 
-		if (platform->idle)
-			platform->idle(dev);
 	} else {
 		gk20a_scale_notify_idle(dev);
 	}

@@ -79,9 +79,24 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_core = {
 	.is_ready = false,
 };
 
+static struct dvfs_rail tegra210_dvfs_rail_vdd_gpu = {
+	.reg_id = "vdd-gpu",
+	.max_millivolts = 1300,
+	.step = VDD_SAFE_STEP,
+	.step_up = 1300,
+	.jmp_to_zero = true,
+	.alignment = {
+		.step_uv = 6250, /* 6.25mV */
+	},
+	.stats = {
+		.bin_uv = 6250, /* 6.25mV */
+	},
+};
+
 static struct dvfs_rail *tegra210_dvfs_rails[] = {
 	&tegra210_dvfs_rail_vdd_cpu,
 	&tegra210_dvfs_rail_vdd_core,
+	&tegra210_dvfs_rail_vdd_gpu,
 };
 
 static struct dvfs cpu_dvfs = {

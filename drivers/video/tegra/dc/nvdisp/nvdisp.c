@@ -1369,6 +1369,17 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		return ret; /*TODO: Add proper cleanup later */
 	}
 	clk_set_parent(hubclk, hubparent_clk);
+
+	/*
+	 * WAR for bug 200212319
+	 *
+	 * IMP will ultimately be responsible for setting the required hubclk
+	 * rate in the kernel, but it's not ready yet. As such, explicitly drive
+	 * the hubclk rate to 408MHz so that we're not stuck with the rate set
+	 * by BL.
+	 */
+	clk_set_rate(hubclk, 408000000);
+
 	tegra_disp_clk_prepare_enable(hubclk);
 	pr_info(" rate get on hub %ld\n", clk_get_rate(hubclk));
 

@@ -45,6 +45,7 @@ static struct {
 
 static bool clk_update_disabled;
 
+int __init pmqos_bwmgr_init(void);
 static void bwmgr_debugfs_init(void);
 
 static inline void bwmgr_lock(void)
@@ -312,6 +313,7 @@ int __init bwmgr_init(void)
 	mutex_init(&bwmgr.lock);
 	bwmgr_debugfs_init();
 	bwmgr_eff_init();
+	pmqos_bwmgr_init();
 
 	dn = of_find_compatible_node(NULL, NULL, "nvidia,bwmgr");
 	if (dn == NULL) {
@@ -417,6 +419,7 @@ static const char * const tegra_bwmgr_client_names[] = {
 	"se2",
 	"se3",
 	"se4",
+	"pmqos",
 	"debug",
 	"null",
 };

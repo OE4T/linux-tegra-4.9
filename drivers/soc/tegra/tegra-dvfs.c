@@ -1104,6 +1104,33 @@ int tegra_dvfs_core_update_thermal_index(enum tegra_dvfs_core_thermal_type type,
 }
 EXPORT_SYMBOL(tegra_dvfs_core_update_thermal_index);
 
+struct dvfs_rail *tegra_dvfs_get_rail_by_name(char *name)
+{
+	struct dvfs_rail *rail;
+
+	list_for_each_entry(rail, &dvfs_rail_list, node) {
+		if (!strcmp(rail->reg_id, name))
+			return rail;
+	}
+
+	return NULL;
+}
+
+bool tegra_dvfs_is_rail_up(struct dvfs_rail *rail)
+{
+	return regulator_is_enabled(rail->reg);
+}
+
+int tegra_dvfs_rail_power_up(struct dvfs_rail *rail)
+{
+	return regulator_enable(rail->reg);
+}
+
+int tegra_dvfs_rail_power_down(struct dvfs_rail *rail)
+{
+	return regulator_disable(rail->reg);
+}
+
 /*
  * Validate rail thermal floors/caps, and get its size.
  * Valid floors/caps:

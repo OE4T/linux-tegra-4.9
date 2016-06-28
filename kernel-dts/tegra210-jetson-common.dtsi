@@ -195,7 +195,7 @@
 			reg = <0>;
 			compatible = "pwm-regulator";
 			pwms = <&pwm_dfll 0 2500>;
-			regulator-name = "vdd_cpu";
+			regulator-name = "vdd-cpu";
 			regulator-min-microvolt = <708000>;
 			regulator-max-microvolt = <1322400>;
 			regulator-always-on;

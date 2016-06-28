@@ -107,6 +107,8 @@
 
 #define PMC_DDR_CNTRL			0x11C
 
+#define SCRATCH_SCRATCH0_0_OFFSET      0x2000
+
 static DEFINE_SPINLOCK(tegra186_pmc_access_lock);
 
 void __iomem *tegra186_pmc_base;
@@ -141,6 +143,28 @@ void tegra186_pmc_register_update(int offset,
 	spin_unlock_irqrestore(&tegra186_pmc_access_lock, flags);
 }
 EXPORT_SYMBOL(tegra186_pmc_register_update);
+
+int tegra_pmc_clear_reboot_reason(u32 val)
+{
+	u32 pmc_reg;
+
+	pmc_reg = readl_relaxed(tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
+	pmc_reg &= ~val;
+	writel_relaxed(pmc_reg, tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_clear_reboot_reason);
+
+int tegra_pmc_set_reboot_reason(u32 val)
+{
+	u32 pmc_reg;
+
+	pmc_reg = readl_relaxed(tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
+	pmc_reg = pmc_reg | val;
+	writel_relaxed(pmc_reg, tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_pmc_set_reboot_reason);
 
 unsigned long tegra_pmc_register_get(u32 offset)
 {

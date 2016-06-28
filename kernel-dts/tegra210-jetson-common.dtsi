@@ -213,6 +213,22 @@
 				<1226400 27>, <1245600 28>, <1264800 29>,
 				<1284000 30>, <1303200 31>, <1322400 32>;
 		};
+
+		gpu_ovr_reg: pwm-regulator@1 {
+			status = "okay";
+			reg = <1>;
+			compatible = "pwm-regulator";
+			pwms = <&tegra_pwm 1 4880>;
+			regulator-name = "vdd-gpu";
+			regulator-min-microvolt = <710000>;
+			regulator-max-microvolt = <1320000>;
+			regulator-init-microvolt = <1000000>;
+			regulator-n-voltages = <62>;
+			regulator-enable-ramp-delay = <1000>;
+			enable-gpio = <&max77620 6 0>;
+			voltage-time-sel = <80>;
+                };
+
 	};
 
 	dfll: clock@70110000 {

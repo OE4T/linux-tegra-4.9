@@ -681,6 +681,7 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 	int i;
 	int blank = FB_BLANK_NORMAL;
 	struct tegra_dc *dc = fb_info->win.dc;
+	struct fb_videomode fb_mode;
 
 	mutex_lock(&fb_info->info->lock);
 	fb_destroy_modedb(fb_info->info->monspecs.modedb);
@@ -744,13 +745,21 @@ void tegra_fb_update_monspecs(struct tegra_fb_info *fb_info,
 		dc->out_ops->vrr_update_monspecs(dc,
 			&fb_info->info->modelist);
 
+	if (dc->use_cached_mode) {
+		tegra_dc_to_fb_videomode(&fb_mode, &dc->cached_mode);
+		dc->use_cached_mode = false;
+	} else {
+		memcpy(&fb_mode, &specs->modedb[0],
+				sizeof(struct fb_videomode));
+	}
+
 	event.info = fb_info->info;
 	/* Restoring to state running. */
 	fb_info->info->state =  FBINFO_STATE_RUNNING;
 	if (fb_console_mapped()) {
 		console_lock();
-		tegra_dc_set_fb_mode(fb_info->win.dc, specs->modedb, false);
-		fb_videomode_to_var(&fb_info->info->var, &specs->modedb[0]);
+		tegra_dc_set_fb_mode(fb_info->win.dc, &fb_mode, false);
+		fb_videomode_to_var(&fb_info->info->var, &fb_mode);
 		fb_notifier_call_chain(FB_EVENT_MODE_CHANGE_ALL, &event);
 		fb_notifier_call_chain(FB_EVENT_NEW_MODELIST, &event);
 		fb_notifier_call_chain(FB_EVENT_BLANK, &event);

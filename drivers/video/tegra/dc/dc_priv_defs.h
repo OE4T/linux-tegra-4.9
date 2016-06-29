@@ -225,6 +225,8 @@ struct tegra_dc {
 	void				*out_data;
 
 	struct tegra_dc_mode		mode;
+	struct tegra_dc_mode		cached_mode;
+	bool				use_cached_mode;
 	s64				frametime_ns;
 
 #ifndef CONFIG_TEGRA_NVDISPLAY

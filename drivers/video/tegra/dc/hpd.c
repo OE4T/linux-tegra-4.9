@@ -350,7 +350,8 @@ static const dispatch_func_t state_machine_dispatch[] = {
 
 static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 {
-	int tgt_state, timeout;
+	int tgt_state;
+	int timeout = 0;
 
 	if ((STATE_DONE_ENABLED == data->state) && !cur_hpd) {
 		/*
@@ -369,9 +370,20 @@ static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 		tgt_state = STATE_RECHECK_EDID;
 		timeout = CHECK_EDID_DELAY_MS;
 	} else if (STATE_DONE_ENABLED == data->state && cur_hpd) {
-		/* Looks like HPD dropped but came back quickly, ignore it. */
-		pr_info("hpd: ignoring bouncing hpd\n");
-		return;
+		if (!tegra_dc_ext_is_userspace_active()) {
+			/* No userspace running. Enable DC with cached mode */
+			pr_info("hpd: No EDID change. No userspace active. "
+			"Using cached mode to initialize dc!\n");
+			data->dc->use_cached_mode = true;
+			tgt_state = STATE_CHECK_EDID;
+		} else  {
+			/*
+			 * Looks like HPD dropped but came back quickly,
+			 * ignore it.
+			 */
+			pr_info("hpd: ignoring bouncing hpd\n");
+			return;
+		}
 	} else if (STATE_INIT_FROM_BOOTLOADER == data->state && cur_hpd) {
 		/*
 		 * We follow the same protocol as STATE_HPD_RESET in the

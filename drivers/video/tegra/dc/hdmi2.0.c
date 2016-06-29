@@ -669,6 +669,36 @@ enum tegra_hdmi_plug_states {
 	TEGRA_HDMI_MONITOR_ENABLE,
 };
 
+static int hdmi_hpd_process_edid_match(struct tegra_hdmi *hdmi, int match)
+{
+	int ret = 0;
+
+	if (match) {
+		if (!tegra_dc_ext_is_userspace_active()) {
+			/* No userspace running. Enable DC with cached mode */
+			dev_info(&hdmi->dc->ndev->dev,
+			"hdmi: No EDID change. No userspace active. Using "
+			"cached mode to initialize dc!\n");
+			hdmi->dc->use_cached_mode = true;
+			hdmi->plug_state = TEGRA_HDMI_MONITOR_ENABLE;
+		} else {
+			/*
+			 * Userspace is active. No EDID change. Userspace will
+			 * issue unblank call to enable DC later.
+			 */
+			dev_info(&hdmi->dc->ndev->dev, "hdmi: No EDID change "
+			"after HPD bounce, taking no action\n");
+			ret = -EINVAL;
+		}
+	} else {
+		dev_info(&hdmi->dc->ndev->dev,
+			"hdmi: EDID change after HPD bounce, resetting\n");
+		hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
+	}
+
+	return ret;
+}
+
 static int read_edid_into_buffer(struct tegra_hdmi *hdmi,
 				 u8 *edid_data, size_t edid_data_len)
 {
@@ -744,13 +774,9 @@ static void tegra_hdmi_hpd_worker(struct work_struct *work)
 				dev_info(&hdmi->dc->ndev->dev, "hdmi: unable to read EDID\n");
 				goto fail;
 			} else {
-				if (match) {
-					dev_info(&hdmi->dc->ndev->dev, "hdmi: No EDID change after HPD bounce, taking no action.\n");
+				err = hdmi_hpd_process_edid_match(hdmi, match);
+				if (err < 0)
 					goto fail;
-				} else {
-					dev_info(&hdmi->dc->ndev->dev, "hdmi: EDID change after HPD bounce, resetting\n");
-					hdmi->plug_state = TEGRA_HDMI_MONITOR_DISABLE;
-				}
 			}
 			break;
 		case TEGRA_HDMI_MONITOR_DISABLE:

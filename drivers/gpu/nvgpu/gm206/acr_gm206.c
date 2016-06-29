@@ -204,7 +204,7 @@ static int  gm206_flcn_populate_bl_dmem_desc(struct gk20a *g,
 
 /*Loads ACR bin to FB mem and bootstraps PMU with bootloader code
  * start and end are addresses of ucode blob in non-WPR region*/
-int gm206_bootstrap_hs_flcn(struct gk20a *g)
+static int gm206_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;

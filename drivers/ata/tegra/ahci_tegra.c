@@ -1191,7 +1191,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 		goto err_out;
 
 	if (tegra_platform_is_silicon()) {
-		phy = devm_phy_get(dev, "sata-phy");
+		phy = devm_phy_optional_get(dev, "sata-phy");
 		if (!IS_ERR(phy)) {
 			hpriv->phys = devm_kzalloc(dev, sizeof(*hpriv->phys),
 					GFP_KERNEL);

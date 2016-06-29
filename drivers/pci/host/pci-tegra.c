@@ -67,10 +67,8 @@
 #include <asm/io.h>
 
 #include <mach/io_dpd.h>
-#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
+#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
 #include <linux/phy/phy.h>
-#else
-#include <mach/tegra_usb_pad_ctrl.h>
 #endif
 #include <linux/pci-tegra.h>
 
@@ -433,6 +431,9 @@ struct tegra_pcie {
 
 	void __iomem *pads;
 	void __iomem *afi;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	void __iomem *lanes;
+#endif
 	int irq;
 
 	struct list_head buses;
@@ -448,6 +449,9 @@ struct tegra_pcie {
 
 	struct tegra_msi msi;
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	struct reset_control *uphy_rst;
+#endif
 	struct reset_control *afi_rst;
 	struct reset_control *pcie_rst;
 	struct reset_control *pciex_rst;
@@ -464,7 +468,7 @@ struct tegra_pcie {
 
 	struct regulator	**pcie_regulators;
 
-#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
+#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
 	struct phy *u_phy;
 #endif
 	struct tegra_pci_platform_data *plat_data;
@@ -557,6 +561,13 @@ static inline unsigned int rp_readl(struct tegra_pcie_port *port,
 	return readl(offset + port->base);
 }
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+static inline u32 lane_readl(struct tegra_pcie *pcie, unsigned lane,
+							unsigned offset)
+{
+	return readl(pcie->lanes + lane * 0x10000 + offset);
+}
+#endif
 /*
  * The configuration space mapping on Tegra is somewhat similar to the ECAM
  * defined by PCIe. However it deviates a bit in how the 4 bits for extended
@@ -1416,26 +1427,7 @@ static int tegra_pcie_enable_pads(struct tegra_pcie *pcie, bool enable)
 	if (!tegra_platform_is_silicon())
 		return err;
 
-#if !defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
-	if (enable) {
-		if (pex_usb_pad_pll_reset_deassert())
-			dev_err(pcie->dev, "failed to deassert pex pll\n");
-	}
-
-	if (!tegra_platform_is_fpga()) {
-		/* PCIe pad programming done in shared XUSB_PADCTL space */
-		err = pcie_phy_pad_enable(enable,
-				pcie->plat_data->lane_map);
-		if (err)
-			dev_err(pcie->dev,
-				"%s unable to initalize pads\n", __func__);
-	}
-
-	if (!enable || err) {
-		if (pex_usb_pad_pll_reset_assert())
-			dev_err(pcie->dev, "failed to assert pex pll\n");
-	}
-#else
+#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
 	if (enable)
 		err = phy_power_on(pcie->u_phy);
 	else
@@ -1649,6 +1641,22 @@ static int tegra_pcie_map_resources(struct tegra_pcie *pcie)
 		dev_err(&pdev->dev, "PCIE: Failed to request region for CS registers\n");
 		return -EBUSY;
 	}
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (pcie->lanes)
+		goto lane_registers_mapped;
+
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "lanes");
+	pcie->lanes = devm_ioremap_resource(&pdev->dev, res);
+	if (IS_ERR(pcie->lanes)) {
+		int err = PTR_ERR(pcie->lanes);
+
+		pcie->lanes = NULL;
+		dev_err(pcie->dev, "PCIE: Failed to map lanes registers\n");
+		return err;
+	}
+lane_registers_mapped:
+#endif
 
 	return 0;
 }
@@ -1939,6 +1947,14 @@ static int tegra_pcie_get_resets(struct tegra_pcie *pcie)
 		return PTR_ERR(pcie->pciex_rst);
 	}
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	pcie->uphy_rst = devm_reset_control_get(pcie->dev, "uphy");
+	if (IS_ERR(pcie->uphy_rst)) {
+		dev_err(pcie->dev, "PCIE : uphy reset is missing\n");
+		return PTR_ERR(pcie->uphy_rst);
+	}
+#endif
+
 	return 0;
 }
 
@@ -2136,17 +2152,34 @@ void tegra_pcie_port_disable_per_pdev(struct pci_dev *pdev)
 }
 EXPORT_SYMBOL(tegra_pcie_port_disable_per_pdev);
 
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#define UPHY_LANE_AUX_CTL_1			(0x0)
+#define   AUX_TX_RDET_STATUS			(0x1 << 7)
+
+bool tegra_pcie_get_lane_rdet(struct tegra_pcie *pcie, u8 lane_num)
+{
+	u32 data;
+
+	reset_control_deassert(pcie->uphy_rst);
+
+	data = lane_readl(pcie, lane_num, UPHY_LANE_AUX_CTL_1);
+	data = data & AUX_TX_RDET_STATUS;
+	return !(!data);
+}
+#endif
+
 static bool get_rdet_status(struct tegra_pcie *pcie, u32 index)
 {
 	u32 i = 0;
 	bool flag = 0;
 
 	for (i = 0; i < ARRAY_SIZE(rp_to_lane_map[index]); i++)
-#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
+#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
 		flag |= tegra_phy_get_lane_rdet(pcie->u_phy,
 					rp_to_lane_map[index][i]);
-#else
-		flag |= tegra_phy_get_lane_rdet(rp_to_lane_map[index][i]);
+#elif defined(CONFIG_ARCH_TEGRA_18x_SOC)
+		flag |= tegra_pcie_get_lane_rdet(pcie,
+					rp_to_lane_map[index][i]);
 #endif
 	return flag;
 }
@@ -4578,7 +4611,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	pcie->dev = &pdev->dev;
 	pcie_domain.tegra_pcie = pcie;
 
-#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
+#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
 	pcie->u_phy = devm_phy_get(pcie->dev, "pcie-phy");
 	if (IS_ERR(pcie->u_phy)) {
 		ret = PTR_ERR(pcie->u_phy);
@@ -4687,7 +4720,7 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 		tegra_pcie_disable_msi(pcie);
 	tegra_pcie_detach(pcie);
 	tegra_pcie_power_off(pcie);
-#if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)
+#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
 	if (tegra_platform_is_silicon())
 		phy_exit(pcie->u_phy);
 #endif

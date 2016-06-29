@@ -54,11 +54,7 @@ static int tegra_prod_get_child_tupple_count(const struct device_node *np,
 		total_tupple = count / n_tupple;
 	}
 
-	for_each_child_of_node(np, child) {
-		/* Check whether child is enabled or not */
-		if (!of_device_is_available(child))
-			continue;
-
+	for_each_available_child_of_node(np, child) {
 		count = of_property_count_u32_elems(child, "prod");
 		if (count < 0) {
 			pr_err("Node %s: prod prop not found\n", child->name);
@@ -84,9 +80,6 @@ static int tegra_prod_read_prod_data(const struct device_node *np,
 	int cnt;
 	int index;
 	int ret;
-
-	if (!of_device_is_available(np))
-		return 0;
 
 	count = of_property_count_u32_elems(np, "prod");
 	if (count <= 0) {
@@ -156,7 +149,7 @@ static int tegra_prod_read_node_tupple(const struct device_node *np,
 	sindex = ret;
 	p_tuple += ret;
 
-	for_each_child_of_node(np, child) {
+	for_each_available_child_of_node(np, child) {
 		ret = tegra_prod_read_prod_data(child, p_tuple, n_tupple);
 		if (ret < 0)
 			return -EINVAL;
@@ -210,11 +203,7 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 							   "mask-one-style");
 
 	n_child = 0;
-	for_each_child_of_node(np_prod, child) {
-		/* Check whether child is enabled or not */
-		if (!of_device_is_available(child))
-			continue;
-
+	for_each_available_child_of_node(np_prod, child) {
 		t_prod = &tegra_prod_list->tegra_prod[n_child];
 		t_prod->name = child->name;
 

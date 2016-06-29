@@ -30,6 +30,7 @@
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/wait.h>
+#include <linux/sched.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>

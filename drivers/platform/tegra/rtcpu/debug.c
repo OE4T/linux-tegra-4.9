@@ -29,6 +29,7 @@
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
+#include <linux/sched.h>
 
 struct camrtc_debug {
 	struct mutex mutex;

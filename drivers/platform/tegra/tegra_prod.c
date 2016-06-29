@@ -14,6 +14,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/device.h>
 #include <linux/kernel.h>
 #include <linux/err.h>
 #include <linux/slab.h>
@@ -22,7 +23,6 @@
 #include <linux/io.h>
 #include <linux/tegra_prod.h>
 #include <linux/kmemleak.h>
-
 
 #define PROD_TUPLE_NUM (sizeof(struct prod_tuple)/sizeof(u32))
 
@@ -33,7 +33,7 @@
  *		to those bits whose mask bits are 0.
  */
 struct tegra_prod_list {
-	struct tegra_prod *tegra_prod;
+	struct tegra_prod_config *prod_config;
 	int num; /* number of tegra_prod*/
 	int n_prod_cells;
 	bool mask_ones;
@@ -46,7 +46,7 @@ struct prod_tuple {
 	u32 val;   /* value */
 };
 
-struct tegra_prod {
+struct tegra_prod_config {
 	const char *name;
 	struct prod_tuple *prod_tuple;
 	int count; /* number of prod_tuple*/
@@ -149,7 +149,7 @@ static int tegra_prod_read_prod_data(const struct device_node *np,
 }
 
 static int tegra_prod_read_node_tupple(const struct device_node *np,
-		struct tegra_prod *t_prod, int n_tupple)
+		struct tegra_prod_config *t_prod, int n_tupple)
 {
 	int ret = 0;
 	int sindex;
@@ -193,7 +193,7 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 		struct tegra_prod_list *tegra_prod_list)
 {
 	struct device_node *child;
-	struct tegra_prod *t_prod;
+	struct tegra_prod_config *t_prod;
 	struct prod_tuple *p_tuple;
 	int n_child, j;
 	int n_tupple = 3;
@@ -201,7 +201,7 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 	int count;
 	u32 pval;
 
-	if (!tegra_prod_list || !tegra_prod_list->tegra_prod) {
+	if (!tegra_prod_list || !tegra_prod_list->prod_config) {
 		pr_err("Node %s: Invalid tegra prods list.\n", np->name);
 		return -EINVAL;
 	};
@@ -220,7 +220,7 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 
 	n_child = 0;
 	for_each_available_child_of_node(np_prod, child) {
-		t_prod = &tegra_prod_list->tegra_prod[n_child];
+		t_prod = &tegra_prod_list->prod_config[n_child];
 		t_prod->name = child->name;
 
 		count = tegra_prod_get_child_tupple_count(child, n_tupple);
@@ -273,7 +273,7 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 err_parsing:
 	of_node_put(child);
 	for (j = 0; j <= n_child; j++) {
-		t_prod = (struct tegra_prod *)&tegra_prod_list->tegra_prod[j];
+		t_prod = (struct tegra_prod_config *)&tegra_prod_list->prod_config[j];
 		kfree(t_prod->prod_tuple);
 	}
 	return ret;
@@ -317,7 +317,7 @@ static int tegra_prod_set_tuple(void __iomem **base,
  * Returns 0 on success.
  */
 static int tegra_prod_set(void __iomem **base,
-			  struct tegra_prod *tegra_prod,
+			  struct tegra_prod_config *tegra_prod,
 			  bool mask_ones)
 {
 	int i;
@@ -353,7 +353,7 @@ int tegra_prod_set_list(void __iomem **base,
 		return -EINVAL;
 
 	for (i = 0; i < tegra_prod_list->num; i++) {
-		ret = tegra_prod_set(base, &tegra_prod_list->tegra_prod[i],
+		ret = tegra_prod_set(base, &tegra_prod_list->prod_config[i],
 				     tegra_prod_list->mask_ones);
 		if (ret)
 			return ret;
@@ -381,9 +381,9 @@ int tegra_prod_set_boot_init(void __iomem **base,
 		return -EINVAL;
 
 	for (i = 0; i < tegra_prod_list->num; i++) {
-		if (!tegra_prod_list->tegra_prod[i].boot_init)
+		if (!tegra_prod_list->prod_config[i].boot_init)
 			continue;
-		ret = tegra_prod_set(base, &tegra_prod_list->tegra_prod[i],
+		ret = tegra_prod_set(base, &tegra_prod_list->prod_config[i],
 				     tegra_prod_list->mask_ones);
 		if (ret)
 			return ret;
@@ -408,13 +408,13 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 		struct tegra_prod_list *tegra_prod_list)
 {
 	int i;
-	struct tegra_prod *t_prod;
+	struct tegra_prod_config *t_prod;
 
 	if (!tegra_prod_list)
 		return -EINVAL;
 
 	for (i = 0; i < tegra_prod_list->num; i++) {
-		t_prod = &tegra_prod_list->tegra_prod[i];
+		t_prod = &tegra_prod_list->prod_config[i];
 		if (!t_prod)
 			return -EINVAL;
 		if (!strcmp(t_prod->name, name))
@@ -466,13 +466,13 @@ struct tegra_prod_list *tegra_prod_init(const struct device_node *np)
 
 	kmemleak_not_leak(tegra_prod_list);
 
-	tegra_prod_list->tegra_prod = kzalloc(prod_num *
-				sizeof(struct tegra_prod), GFP_KERNEL);
-	if (!tegra_prod_list->tegra_prod) {
+	tegra_prod_list->prod_config = kzalloc(prod_num *
+				sizeof(struct tegra_prod_config), GFP_KERNEL);
+	if (!tegra_prod_list->prod_config) {
 		ret = -ENOMEM;
 		goto err_prod_alloc;
 	}
-	kmemleak_not_leak(tegra_prod_list->tegra_prod);
+	kmemleak_not_leak(tegra_prod_list->prod_config);
 	tegra_prod_list->num = prod_num;
 
 	ret = tegra_prod_parse_dt(np, np_prod, tegra_prod_list);
@@ -485,7 +485,7 @@ struct tegra_prod_list *tegra_prod_init(const struct device_node *np)
 	return tegra_prod_list;
 
 err_get:
-	kfree(tegra_prod_list->tegra_prod);
+	kfree(tegra_prod_list->prod_config);
 err_prod_alloc:
 	kfree(tegra_prod_list);
 	return ERR_PTR(ret);
@@ -518,7 +518,7 @@ EXPORT_SYMBOL(tegra_prod_get);
 int tegra_prod_release(struct tegra_prod_list **tegra_prod_list)
 {
 	int i;
-	struct tegra_prod *t_prod;
+	struct tegra_prod_config *t_prod;
 	struct tegra_prod_list *tp_list;
 
 	if (!tegra_prod_list)
@@ -526,14 +526,14 @@ int tegra_prod_release(struct tegra_prod_list **tegra_prod_list)
 
 	tp_list = *tegra_prod_list;
 	if (tp_list) {
-		if (tp_list->tegra_prod) {
+		if (tp_list->prod_config) {
 			for (i = 0; i < tp_list->num; i++) {
-				t_prod = (struct tegra_prod *)
-					&tp_list->tegra_prod[i];
+				t_prod = (struct tegra_prod_config *)
+					&tp_list->prod_config[i];
 				if (t_prod)
 					kfree(t_prod->prod_tuple);
 			}
-			kfree(tp_list->tegra_prod);
+			kfree(tp_list->prod_config);
 		}
 		kfree(tp_list);
 	}
@@ -542,3 +542,44 @@ int tegra_prod_release(struct tegra_prod_list **tegra_prod_list)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_prod_release);
+
+static void devm_tegra_prod_release(struct device *dev, void *res)
+
+{
+	struct tegra_prod *prod_list = *(struct tegra_prod **)res;
+
+	tegra_prod_release(&prod_list);
+}
+
+struct tegra_prod *devm_tegra_prod_get(struct device *dev)
+{
+	struct tegra_prod **ptr, *prod_list;
+
+	ptr = devres_alloc(devm_tegra_prod_release, sizeof(*ptr), GFP_KERNEL);
+	if (!ptr)
+		return ERR_PTR(-ENOMEM);
+
+	prod_list = tegra_prod_get(dev, NULL);
+	if (IS_ERR(prod_list)) {
+		devres_free(ptr);
+		return prod_list;
+	}
+
+	*ptr = prod_list;
+	devres_add(dev, ptr);
+
+	return prod_list;
+}
+EXPORT_SYMBOL(devm_tegra_prod_get);
+
+struct tegra_prod *tegra_prod_get_from_node(struct device_node *np)
+{
+	return tegra_prod_init(np);
+}
+EXPORT_SYMBOL(tegra_prod_get_from_node);
+
+int tegra_prod_put(struct tegra_prod *tegra_prod)
+{
+	return tegra_prod_release(&tegra_prod);
+}
+EXPORT_SYMBOL(tegra_prod_put);

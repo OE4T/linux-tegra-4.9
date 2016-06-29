@@ -265,7 +265,9 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 		bool is_privileged_channel);
 struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		void (*update_fn)(struct channel_gk20a *, void *),
-		void *update_fn_data);
+		void *update_fn_data,
+		int runlist_id,
+		bool is_privileged_channel);
 void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
@@ -295,6 +297,8 @@ int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int *__timeslice_timeout, int *__timeslice_scale);
 int gk20a_channel_set_priority(struct channel_gk20a *ch, u32 priority);
 int gk20a_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice);
+int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
+		u32 level);
 void gk20a_channel_event_id_post_event(struct channel_gk20a *ch,
 				       int event_id);
 

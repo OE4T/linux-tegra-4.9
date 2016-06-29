@@ -773,6 +773,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
 	int ret = 0;
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
 	gk20a_dbg_fn("");
 
@@ -785,6 +786,9 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 
 	/* cancel any pending cde work */
 	gk20a_cde_suspend(g);
+
+	if (platform->has_ce)
+		gk20a_ce_suspend(g);
 
 	ret = gk20a_channel_suspend(g);
 	if (ret)
@@ -995,6 +999,11 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 
 	if (platform->has_cde)
 		gk20a_init_cde_support(g);
+
+	if (platform->has_ce)
+		gk20a_init_ce_support(g);
+
+	gk20a_init_mm_ce_context(g);
 
 	enable_irq(g->irq_stall);
 	if (g->irq_stall != g->irq_nonstall)
@@ -1658,6 +1667,7 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a_pmu_debugfs_init(&dev->dev);
 	gk20a_railgating_debugfs_init(&dev->dev);
 	gk20a_cde_debugfs_init(&dev->dev);
+	gk20a_ce_debugfs_init(&dev->dev);
 	gk20a_alloc_debugfs_init(dev);
 	gk20a_mm_debugfs_init(&dev->dev);
 	gk20a_fifo_debugfs_init(&dev->dev);
@@ -1692,6 +1702,9 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 
 	if (g->remove_support)
 		g->remove_support(dev);
+
+	if (platform->has_ce)
+		gk20a_ce_destroy(g);
 
 	gk20a_user_deinit(dev, &nvgpu_class);
 

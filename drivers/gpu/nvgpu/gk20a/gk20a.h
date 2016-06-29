@@ -864,6 +864,8 @@ struct gk20a {
 
 	struct nvgpu_bios bios;
 	struct debugfs_blob_wrapper bios_blob;
+
+	struct gk20a_ce_app ce_app;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)

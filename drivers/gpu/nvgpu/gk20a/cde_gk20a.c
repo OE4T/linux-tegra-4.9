@@ -1186,7 +1186,9 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	}
 
 	ch = gk20a_open_new_channel_with_cb(g, gk20a_cde_finished_ctx_cb,
-			cde_ctx);
+			cde_ctx,
+			-1,
+			false);
 	if (!ch) {
 		gk20a_warn(cde_ctx->dev, "cde: gk20a channel not available");
 		err = -ENOMEM;

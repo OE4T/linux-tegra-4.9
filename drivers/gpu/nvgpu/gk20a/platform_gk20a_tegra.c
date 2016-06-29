@@ -900,6 +900,8 @@ struct gk20a_platform gk20a_tegra_platform = {
 	.secure_page_alloc = gk20a_tegra_secure_page_alloc,
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
+	.has_ce = true,
+
 	.soc_name = "tegra12x",
 
 	.vidmem_is_vidmem = false,
@@ -961,6 +963,8 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.dump_platform_dependencies = gk20a_tegra_debug_dump,
 
 	.has_cde = true,
+
+	.has_ce = true,
 
 	.soc_name = "tegra21x",
 

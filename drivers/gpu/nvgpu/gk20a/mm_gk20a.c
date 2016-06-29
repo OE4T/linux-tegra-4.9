@@ -393,7 +393,7 @@ static int __must_check gk20a_init_system_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_bar1_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_cde_vm(struct mm_gk20a *mm);
-
+static int __must_check gk20a_init_ce_vm(struct mm_gk20a *mm);
 
 struct gk20a_dmabuf_priv {
 	struct mutex lock;
@@ -702,6 +702,7 @@ void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
 static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 {
 	struct gk20a *g = gk20a_from_mm(mm);
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	if (g->ops.mm.remove_bar2_vm)
 		g->ops.mm.remove_bar2_vm(g);
@@ -709,6 +710,14 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	gk20a_remove_vm(&mm->pmu.vm, &mm->pmu.inst_block);
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
 	gk20a_vm_remove_support_nofree(&mm->cde.vm);
+
+	if (mm->ce_vidmem_ctx_id != ~0)
+		gk20a_ce_delete_context(g->dev, mm->ce_vidmem_ctx_id );
+
+	mm->ce_vidmem_ctx_id =  ~0;
+
+	if (platform->has_ce)
+		gk20a_vm_remove_support_nofree(&mm->ce.vm);
 }
 
 static int gk20a_alloc_sysmem_flush(struct gk20a *g)
@@ -754,6 +763,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	int err;
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -774,6 +784,8 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 		       (int)(mm->channel.kernel_size >> 20));
 
 	gk20a_init_pramin(mm);
+
+	mm->ce_vidmem_ctx_id =  ~0;
 
 	err = gk20a_init_vidmem(mm);
 	if (err)
@@ -803,6 +815,12 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	err = gk20a_init_cde_vm(mm);
 	if (err)
 		return err;
+
+	if (platform->has_ce) {
+		err = gk20a_init_ce_vm(mm);
+		if (err)
+			return err;
+	}
 
 	/* set vm_alloc_share op here as gk20a_as_alloc_share needs it */
 	g->ops.mm.vm_alloc_share = gk20a_vm_alloc_share;
@@ -879,6 +897,25 @@ int gk20a_init_mm_support(struct gk20a *g)
 		err = g->ops.mm.init_mm_setup_hw(g);
 
 	return err;
+}
+
+void gk20a_init_mm_ce_context(struct gk20a *g)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	if (g->mm.vidmem_size && (g->mm.ce_vidmem_ctx_id ==  ~0)) {
+		g->mm.ce_vidmem_ctx_id =
+			gk20a_ce_create_context_with_cb(g->dev,
+				gk20a_fifo_get_fast_ce_runlist_id(g),
+				-1,
+				-1,
+				-1,
+				NULL);
+
+		if (g->mm.ce_vidmem_ctx_id == ~0)
+			gk20a_err(g->dev,
+				"Failed to allocate CE context for vidmem page clearing support");
+	}
+#endif
 }
 
 static int alloc_gmmu_phys_pages(struct vm_gk20a *vm, u32 order,
@@ -2484,6 +2521,7 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	struct device *d = &g->mm.vidmem_dev;
 	int err;
 	dma_addr_t iova;
+	bool need_pramin_access = true;
 	DEFINE_DMA_ATTRS(attrs);
 
 	gk20a_dbg_fn("");
@@ -2519,7 +2557,38 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
 
-	gk20a_memset(g, mem, 0, 0, size);
+	if (g->mm.ce_vidmem_ctx_id != ~0) {
+		struct gk20a_fence *gk20a_fence_out = NULL;
+		u64 dst_bufbase = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
+
+		err = gk20a_ce_execute_ops(g->dev,
+				g->mm.ce_vidmem_ctx_id,
+				0,
+				dst_bufbase,
+				(u64)size,
+				0x00000000,
+				NVGPU_CE_DST_LOCATION_LOCAL_FB,
+				NVGPU_CE_MEMSET,
+				NULL,
+				0,
+				&gk20a_fence_out);
+
+		if (!err) {
+			if (gk20a_fence_out) {
+				err = gk20a_fence_wait(gk20a_fence_out, gk20a_get_gr_idle_timeout(g));
+				gk20a_fence_put(gk20a_fence_out);
+				if (err)
+					gk20a_err(g->dev,
+						"Failed to get the fence_out from CE execute ops");
+				else
+					need_pramin_access = false;
+			}
+		} else
+			gk20a_err(g->dev, "Failed gk20a_ce_execute_ops[%d]",err);
+	}
+
+	if (need_pramin_access)
+		gk20a_memset(g, mem, 0, 0, size);
 
 	gk20a_dbg_fn("done");
 
@@ -4123,6 +4192,19 @@ static int gk20a_init_cde_vm(struct mm_gk20a *mm)
 			NV_MM_DEFAULT_KERNEL_SIZE,
 			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
 			false, false, "cde");
+}
+
+static int gk20a_init_ce_vm(struct mm_gk20a *mm)
+{
+	struct vm_gk20a *vm = &mm->ce.vm;
+	struct gk20a *g = gk20a_from_mm(mm);
+	u32 big_page_size = gk20a_get_platform(g->dev)->default_big_page_size;
+
+	return gk20a_init_vm(mm, vm, big_page_size,
+			SZ_4K * 16,
+			NV_MM_DEFAULT_KERNEL_SIZE,
+			NV_MM_DEFAULT_KERNEL_SIZE + NV_MM_DEFAULT_USER_SIZE,
+			false, false, "ce");
 }
 
 void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,

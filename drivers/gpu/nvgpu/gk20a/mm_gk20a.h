@@ -307,6 +307,7 @@ int gk20a_init_mm_support(struct gk20a *g);
 int gk20a_init_mm_setup_sw(struct gk20a *g);
 int gk20a_init_mm_setup_hw(struct gk20a *g);
 void gk20a_mm_debugfs_init(struct device *dev);
+void gk20a_init_mm_ce_context(struct gk20a *g);
 
 int gk20a_mm_fb_flush(struct gk20a *g);
 void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate);
@@ -349,6 +350,10 @@ struct mm_gk20a {
 		struct vm_gk20a vm;
 	} cde;
 
+	struct {
+		struct vm_gk20a vm;
+	} ce;
+
 	struct mutex l2_op_lock;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct mem_desc bar2_desc;
@@ -388,6 +393,7 @@ struct mm_gk20a {
 
 	size_t vidmem_size;
 	struct device vidmem_dev;
+	u32 ce_vidmem_ctx_id;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

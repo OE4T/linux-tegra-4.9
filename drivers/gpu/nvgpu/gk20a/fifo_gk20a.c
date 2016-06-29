@@ -165,6 +165,33 @@ u32 gk20a_fifo_get_all_ce_engine_reset_mask(struct gk20a *g)
 	return reset_mask;
 }
 
+u32 gk20a_fifo_get_fast_ce_runlist_id(struct gk20a *g)
+{
+	u32 ce_runlist_id = gk20a_fifo_get_gr_runlist_id(g);
+	u32 engine_enum = ENGINE_INVAL_GK20A;
+	struct fifo_gk20a *f = NULL;
+	u32 engine_id_idx;
+	struct fifo_engine_info_gk20a *engine_info;
+	u32 active_engine_id = 0;
+
+	if (!g)
+		return ce_runlist_id;
+
+	f = &g->fifo;
+
+	for (engine_id_idx = 0; engine_id_idx < f->num_engines; ++engine_id_idx) {
+		active_engine_id = f->active_engines_list[engine_id_idx];
+		engine_info = &f->engine_info[active_engine_id];
+		engine_enum = engine_info->engine_enum;
+
+		/* selecet last available ASYNC_CE if available */
+		if (engine_enum == ENGINE_ASYNC_CE_GK20A)
+			ce_runlist_id = engine_info->runlist_id;
+	}
+
+	return ce_runlist_id;
+}
+
 u32 gk20a_fifo_get_gr_runlist_id(struct gk20a *g)
 {
 	u32 gr_engine_cnt = 0;

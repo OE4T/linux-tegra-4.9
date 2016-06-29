@@ -702,7 +702,7 @@ static int gk20a_channel_set_wdt_status(struct channel_gk20a *ch,
 	return 0;
 }
 
-static int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
+int gk20a_channel_set_runlist_interleave(struct channel_gk20a *ch,
 						u32 level)
 {
 	struct gk20a *g = ch->g;
@@ -1113,9 +1113,11 @@ static void gk20a_channel_update_runcb_fn(struct work_struct *work)
 
 struct channel_gk20a *gk20a_open_new_channel_with_cb(struct gk20a *g,
 		void (*update_fn)(struct channel_gk20a *, void *),
-		void *update_fn_data)
+		void *update_fn_data,
+		int runlist_id,
+		bool is_privileged_channel)
 {
-	struct channel_gk20a *ch = gk20a_open_new_channel(g, -1, false);
+	struct channel_gk20a *ch = gk20a_open_new_channel(g, runlist_id, is_privileged_channel);
 
 	if (ch) {
 		spin_lock(&ch->update_fn_lock);

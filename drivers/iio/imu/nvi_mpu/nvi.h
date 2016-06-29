@@ -96,6 +96,10 @@
 #define NVI_DBG_SPEW_FIFO		(1 << (NVS_STS_EXT_N + 2))
 #define NVI_DBG_SPEW_TS			(1 << (NVS_STS_EXT_N + 3))
 #define NVI_DBG_SPEW_SNSR		(1 << (NVS_STS_EXT_N + 4))
+
+#define NVI_RC_BANK_REG_BANK		(0x7F / 64)
+#define NVI_RC_MSK_REG_BANK		((u64)(1ULL << (0x7F % 64)))
+
 /* register bits */
 #define BITS_SELF_TEST_EN		(0xE0)
 #define BIT_ACCEL_FCHOCIE_B		(0x08)
@@ -174,6 +178,8 @@ struct nvi_src {
 	s64 ts_period;
 	unsigned int period_us_src;
 	unsigned int period_us_req;
+	unsigned int period_us_min;
+	unsigned int period_us_max;
 	unsigned int fifo_data_n;
 	u32 base_t;
 };
@@ -289,6 +295,8 @@ struct nvi_mc_icm {
 	u32 data_out_ctl;
 	u32 data_intr_ctl;
 	u32 motion_event_ctl;
+	u32 acc_scale;
+	u32 acc_scale2;
 	u32 accel_cal_rate;
 	u32 ped_rate;
 	u32 accel_alpha_var;
@@ -304,6 +312,7 @@ struct nvi_mc_icm {
 	u32 smd_delay2_thld;
 	u32 smd_timer_thld;
 	u32 wom_enable;
+	u32 wtf_8a;
 };
 
 struct nvi_mc_mpu {
@@ -328,6 +337,7 @@ struct nvi_dmp {
 	unsigned int fw_mem_addr;
 	unsigned int fw_start;
 	unsigned int dmp_reset_delay_ms;
+	int fifo_mode;
 	unsigned int dev_msk;
 	unsigned int en_msk;
 	unsigned int dd_n;
@@ -341,7 +351,6 @@ struct nvi_dmp {
 };
 
 struct nvi_fn {
-	void (*por2rc)(struct nvi_state *st);
 	int (*pm)(struct nvi_state *st, u8 pm1, u8 pm2, u8 lp);
 	int (*init)(struct nvi_state *st);
 	int (*st_acc)(struct nvi_state *st);
@@ -453,6 +462,7 @@ struct nvi_state {
 	struct nvi_snsr snsr[DEV_N_AUX];
 	struct nvi_src src[SRC_N];
 	int fifo_src;
+	u64 rc_msk[8];
 	bool rc_dis;
 	bool mc_dis;
 	bool irq_dis;

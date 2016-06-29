@@ -405,8 +405,8 @@ static int inv_icm_st_acc_do(struct nvi_state *st,
 	}
 	accel_s = 0;
 	ret = inv_icm_st_rd(st, DEV_ACC, accel_result, &accel_s);
-	if (ret)
-		return ret;
+	if (ret || accel_s <= 0)
+		return -1;
 
 	for (j = 0; j < AXIS_N; j++) {
 		accel_result[j] = accel_result[j] / accel_s;
@@ -422,8 +422,8 @@ static int inv_icm_st_acc_do(struct nvi_state *st,
 	msleep(ICM_ST_STABLE_TIME);
 	accel_s = 0;
 	ret = inv_icm_st_rd(st, DEV_ACC, accel_st_result, &accel_s);
-	if (ret)
-		return ret;
+	if (ret || accel_s <= 0)
+		return -1;
 
 	for (j = 0; j < AXIS_N; j++) {
 		accel_st_result[j] = accel_st_result[j] / accel_s;
@@ -453,8 +453,8 @@ static int inv_icm_st_gyr_do(struct nvi_state *st,
 	}
 	gyro_s = 0;
 	ret = inv_icm_st_rd(st, DEV_GYR, gyro_result, &gyro_s);
-	if (ret)
-		return ret;
+	if (ret || gyro_s <= 0)
+		return -1;
 
 	for (j = 0; j < AXIS_N; j++) {
 		gyro_result[j] = gyro_result[j] / gyro_s;
@@ -470,8 +470,8 @@ static int inv_icm_st_gyr_do(struct nvi_state *st,
 	msleep(ICM_ST_STABLE_TIME);
 	gyro_s = 0;
 	ret = inv_icm_st_rd(st, DEV_GYR, gyro_st_result, &gyro_s);
-	if (ret)
-		return ret;
+	if (ret || gyro_s <= 0)
+		return -1;
 
 	for (j = 0; j < AXIS_N; j++) {
 		gyro_st_result[j] = gyro_st_result[j] / gyro_s;
@@ -628,9 +628,7 @@ static int nvi_init_icm(struct nvi_state *st)
 	int ret;
 
 	st->snsr[DEV_ACC].cfg.thresh_hi = 0; /* no ACC LP on ICM */
-#if ICM_DMP_FW_VER == 1
 	st->snsr[DEV_SM].cfg.thresh_hi = ICM_SMD_TIMER_THLD_INIT;
-#endif /* ICM_DMP_FW_VER */
 	ret = nvi_i2c_rd(st, &st->hal->reg->tbc_pll, &val);
 	if (ret)
 		return ret;
@@ -650,16 +648,7 @@ static int nvi_init_icm(struct nvi_state *st)
 	return 0;
 }
 
-static void nvi_por2rc_icm(struct nvi_state *st)
-{
-	st->rc.lp_config = 0x40;
-	st->rc.pm1 = 0x41;
-	st->rc.gyro_config1 = 0x01;
-	st->rc.accel_config = 0x01;
-}
-
 struct nvi_fn nvi_fn_icm = {
-	.por2rc				= nvi_por2rc_icm,
 	.pm				= nvi_pm_icm,
 	.init				= nvi_init_icm,
 	.st_acc				= inv_st_acc_icm,

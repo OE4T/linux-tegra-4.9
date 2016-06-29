@@ -15,21 +15,28 @@
 
 /* Invensense doesn't label their DMP FW with a version so we use
  * ICM_DMP_FW_VER sequentially starting at 0.
- * Currently a version 0 or 1 is the option here as both are included in this
- * driver.  Typically version 0 would be used although 1 is the latest.
+ * Currently a version 0, 1 or 2 is the option here as all are included in
+ * this driver.  Version 2 is recommended that includes timing fixes.
  */
-#define ICM_DMP_FW_VER			(0)
+#define ICM_DMP_FW_VER			(2)
 #if ICM_DMP_FW_VER == 0
 #define ICM_DMP_FW_CRC32		(0x12F362A6)
-#else
+#define ICM_DMP_FIFO_MODE		(0)
+#define ICM_SMD_TIMER_THLD_INIT		(0x00000258)
+#elif ICM_DMP_FW_VER == 1
 #define ICM_DMP_FW_CRC32		(0xFEF1270D)
+#define ICM_DMP_FIFO_MODE		(0)
+#define ICM_SMD_TIMER_THLD_INIT		(0x0000015E)
+#else /* ICM_DMP_FW_VER == 2 */
+#define ICM_DMP_FW_CRC32		(0xDA126847)
+#define ICM_DMP_FIFO_MODE		(-1)
+#define ICM_SMD_TIMER_THLD_INIT		(0x0000015E)
 #endif /* ICM_DMP_FW_VER */
 
 #define ICM_DMP_FREQ			(102)
 #define ICM_DMP_PERIOD_US		(9804)
 #define ICM_BASE_SAMPLE_RATE		(1125)
 #define ICM_DMP_DIVIDER			(ICM_BASE_SAMPLE_RATE / ICM_DMP_FREQ)
-#define ICM_SMD_TIMER_THLD_INIT		(0x0000015E)
 
 #define DATA_OUT_CTL1			(4 * 16)	/* 0x0040 */
 #define DATA_OUT_CTL2			(4 * 16 + 2)	/* 0x0042 */
@@ -138,11 +145,18 @@
 #define PEDSTD_DRIVE_STATE		(43 * 16 + 10)
 #define PED_RATE			(58 * 16 +  4)	/* 0x03A4 */
 
+/* FW verison 0 */
 #define SMD_MOT_THLD			(72 * 16 + 12)	/* 0x048C */
 #define SMD_DELAY_THLD			(76 * 16 + 8)	/* 0x04C8 */
 #define SMD_DELAY2_THLD			(76 * 16 + 12)	/* 0x04CC */
-
+/* FW version 1 */
 #define SMD_TIMER_THLD			(26 * 16)	/* 0x01A0 */
+/* FW version 2 */
+#define SMD_E1_THLD			(75 * 16 +  8)	/* 0x04B8 */
+#define SMD_CNTR_TH			(74 * 16 +  8)	/* 0x04A8 */
+#define SMD_CNTR_LO_TH			(74 * 16 + 12)	/* 0x04AC */
+#define SMD_LOW_ENERGY_TIMER_TH		(76 * 16 +  8)	/* 0x04C8 */
+#define SMD_E1_COUNTER_TH		(76 * 16 + 12)	/* 0x04CC */
 
 #define WOM_ENABLE			(64 * 16 + 14)	/* 0x040E */
 #define WOM_STATUS			(64 * 16 + 6)	/* 0x0406 */
@@ -152,19 +166,8 @@
 #define TILT_ENABLE			(68 * 16 + 12)
 #define BAC_STATE			(147 * 16)
 
-#define ACCEL_MASK			0x80
-#define GYRO_MASK			0x40
-#define CPASS_MASK			0x20
-#define ALS_MASK			0x10
-#define QUAT6_MASK			0x08
-#define QUAT9_MASK			0x04
-#define PQUAT6_MASK			0x02
-#define PRESSURE_MASK			0x80
-#define GYRO_CALIBR_MASK		0x40
-#define CPASS_CALIBR_MASK		0x20
-#define PED_STEPDET_MASK		0x10
-#define HEADER2_MASK			0x08
-#define PED_STEPIND_MASK		0x07
+#define ACC_SCALE			(30 * 16 + 0)	/* 0x01E0 */
+#define ACC_SCALE2			(79 * 16 + 4)	/* 0x04F4 */
 
 #define ACCEL_SET			0x8000
 #define GYRO_SET			0x4000
@@ -179,13 +182,6 @@
 #define PED_STEPDET_SET			0x0010
 #define HEADER2_SET			0x0008
 #define PED_STEPIND_SET			0x0007
-
-#define ACCEL_ACCURACY_MASK		0x4000
-#define GYRO_ACCURACY_MASK		0x2000
-#define CPASS_ACCURACY_MASK		0x1000
-#define GEOMAG_MASK			0x0200
-#define BATCH_MODE_MASK			0x0100
-#define ACT_RECOG_MASK			0x8000
 
 #define ACCEL_ACCURACY_SET		0x4000
 #define GYRO_ACCURACY_SET		0x2000

@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(330)
+#define NVI_DRIVER_VERSION		(333)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -106,7 +106,8 @@ enum NVI_INFO {
 	NVI_INFO_MEM_RD,
 	NVI_INFO_MEM_WR,
 	NVI_INFO_DMP_FW,
-	NVI_INFO_DMP_EN_MSK
+	NVI_INFO_DMP_EN_MSK,
+	NVI_INFO_FN_INIT
 };
 
 /* regulator names in order of powering on */
@@ -206,6 +207,16 @@ static void nvi_enable_irq(struct nvi_state *st)
 	}
 }
 
+static void nvi_rc_clr(struct nvi_state *st, const char *fn)
+{
+	unsigned int i;
+
+	for (i = 0; i < ARRAY_SIZE(st->rc_msk); i++)
+		st->rc_msk[i] = 0;
+	if (st->sts & NVI_DBG_SPEW_MSG)
+		dev_info(&st->i2c->dev, "%s-%s\n", __func__, fn);
+}
+
 static int nvi_i2c_w(struct nvi_state *st, u16 len, u8 *buf)
 {
 	struct i2c_msg msg;
@@ -225,24 +236,33 @@ static int nvi_i2c_w(struct nvi_state *st, u16 len, u8 *buf)
 static int nvi_wr_reg_bank_sel(struct nvi_state *st, u8 reg_bank)
 {
 	u8 buf[2];
+	bool wr = true;
 	int ret = 0;
 
 	if (!st->hal->reg->reg_bank.reg)
 		return 0;
 
 	reg_bank <<= 4;
-	if (reg_bank != st->rc.reg_bank) {
+	if (st->rc_msk[NVI_RC_BANK_REG_BANK] & NVI_RC_MSK_REG_BANK) {
+		if (reg_bank == st->rc.reg_bank)
+			wr = false;
+	}
+	if (wr) {
 		buf[0] = st->hal->reg->reg_bank.reg;
 		buf[1] = reg_bank;
 		ret = nvi_i2c_w(st, sizeof(buf), buf);
 		if (ret) {
 			dev_err(&st->i2c->dev, "%s 0x%x!->0x%x ERR=%d\n",
 				__func__, st->rc.reg_bank, reg_bank, ret);
+			st->rc_msk[NVI_RC_BANK_REG_BANK] &=
+							  ~NVI_RC_MSK_REG_BANK;
 		} else {
 			if (st->sts & NVI_DBG_SPEW_MSG)
 				dev_info(&st->i2c->dev, "%s 0x%x->0x%x\n",
 					 __func__, st->rc.reg_bank, reg_bank);
 			st->rc.reg_bank = reg_bank;
+			st->rc_msk[NVI_RC_BANK_REG_BANK] |=
+							   NVI_RC_MSK_REG_BANK;
 		}
 	}
 	return ret;
@@ -285,26 +305,44 @@ static int nvi_i2c_write_le(struct nvi_state *st, const struct nvi_br *br,
 int nvi_i2c_write_rc(struct nvi_state *st, const struct nvi_br *br, u32 val,
 		     const char *fn, u8 *rc, bool be)
 {
-	bool wr = false;
 	u16 len;
+	u64 rc_msk;
+	bool wr;
+	unsigned int rc_bank;
 	unsigned int i;
 	int ret = 0;
 
 	len = br->len;
 	if (!len)
 		len++;
+	rc_bank = br->bank;
+	rc_bank <<= 7; /* registers only go to 0x7F */
+	rc_bank |= br->reg;
+	rc_msk = ((1 << len) - 1) << (rc_bank % 64);
+	rc_bank /= 64;
 	val |= br->dflt;
-	if (rc != NULL) {
-		for (i = 0; i < len; i++) {
-			if (*(rc + i) != (u8)(val >> (8 * i))) {
+	wr = st->rc_dis;
+	if (!wr) {
+		if (rc) {
+			if ((st->rc_msk[rc_bank] & rc_msk) == rc_msk) {
+				/* register is cached */
+				for (i = 0; i < len; i++) {
+					if (*(rc + i) !=
+							(u8)(val >> (8 * i))) {
+						/* register data changed */
+						wr = true;
+						break;
+					}
+				}
+			} else {
+				/* register not cached */
 				wr = true;
-				break;
 			}
+		} else {
+			wr = true;
 		}
-	} else {
-		wr = true;
 	}
-	if (wr || st->rc_dis) {
+	if (wr) {
 		if (be)
 			ret = nvi_i2c_write_be(st, br, len, val);
 		else
@@ -315,14 +353,19 @@ int nvi_i2c_write_rc(struct nvi_state *st, const struct nvi_br *br, u32 val,
 			dev_err(&st->i2c->dev,
 				"%s 0x%08x!=>0x%01x%02x ERR=%d\n",
 				fn, val, br->bank, br->reg, ret);
+			st->rc_msk[rc_bank] &= ~rc_msk;
 		} else {
 			if (st->sts & NVI_DBG_SPEW_MSG && fn)
 				dev_info(&st->i2c->dev,
 					 "%s 0x%08x=>0x%01x%02x\n",
 					 fn, val, br->bank, br->reg);
-			if (rc != NULL) {
+			if (rc) {
 				for (i = 0; i < len; i++)
 					*(rc + i) = (u8)(val >> (8 * i));
+				st->rc_msk[rc_bank] |= rc_msk;
+			} else {
+				/* register data not cached */
+				st->rc_msk[rc_bank] &= ~rc_msk;
 			}
 		}
 	}
@@ -359,13 +402,45 @@ int nvi_i2c_wr(struct nvi_state *st, const struct nvi_br *br,
 int nvi_i2c_wr_rc(struct nvi_state *st, const struct nvi_br *br,
 		  u8 val, const char *fn, u8 *rc)
 {
+	u64 rc_msk;
+	bool wr;
+	unsigned int rc_bank;
 	int ret = 0;
 
 	val |= br->dflt;
-	if (val != *rc || st->rc_dis) {
+	rc_bank = br->bank;
+	rc_bank <<= 7; /* registers only go to 0x7F */
+	rc_bank |= br->reg;
+	rc_msk = 1 << (rc_bank % 64);
+	rc_bank /= 64;
+	wr = st->rc_dis;
+	if (!wr) {
+		if (rc) {
+			if (st->rc_msk[rc_bank] & rc_msk) {
+				/* register is cached */
+				if (val != *rc)
+					/* register data changed */
+					wr = true;
+			} else {
+				/* register not cached */
+				wr = true;
+			}
+		} else {
+			wr = true;
+		}
+	}
+	if (wr) {
 		ret = nvi_i2c_wr(st, br, val, fn);
-		if (!ret)
-			*rc = val;
+		if (ret) {
+			st->rc_msk[rc_bank] &= ~rc_msk;
+		} else {
+			if (rc) {
+				*rc = val;
+				st->rc_msk[rc_bank] |= rc_msk;
+			} else {
+				st->rc_msk[rc_bank] &= ~rc_msk;
+			}
+		}
 	}
 	return ret;
 }
@@ -775,7 +850,8 @@ static int nvi_user_ctrl_rst(struct nvi_state *st, u8 user_ctrl)
 		if (st->hal->reg->fifo_rst.reg) {
 			/* ICM part */
 			if (st->en_msk & (1 << DEV_DMP)) {
-				ret = nvi_wr_fifo_cfg(st, 0);
+				ret = nvi_wr_fifo_cfg(st,
+						      st->hal->dmp->fifo_mode);
 			} else {
 				n = 0;
 				for (i = 0; i < DEV_AXIS_N; i++) {
@@ -933,9 +1009,8 @@ int nvi_wr_pm1(struct nvi_state *st, const char *fn, u8 pm1)
 	st->pm = NVI_PM_ERR;
 	if (pm1 & BIT_H_RESET && !ret) {
 		st->en_msk &= MSK_RST;
-		memset(&st->rc, 0, sizeof(st->rc));
-		if (st->hal->fn->por2rc)
-			st->hal->fn->por2rc(st);
+		nvi_rc_clr(st, __func__);
+		st->rc_dis = false;
 		for (i = 0; i < st->hal->src_n; i++)
 			st->src[i].period_us_req = 0;
 
@@ -948,11 +1023,9 @@ int nvi_wr_pm1(struct nvi_state *st, const char *fn, u8 pm1)
 		}
 
 		msleep(POR_MS);
-		st->rc.pm1 = pm1_rd;
 		nvi_rd_accel_offset(st);
 		nvi_rd_gyro_offset(st);
 		nvi_dmp_fw(st);
-		st->rc_dis = false;
 	}
 	if (st->sts & NVI_DBG_SPEW_MSG)
 		dev_info(&st->i2c->dev, "%s-%s pm1=%x err=%d\n",
@@ -1177,6 +1250,7 @@ static int nvi_dmp_fw(struct nvi_state *st)
 #endif /* NVI_FW_CRC_CHECK */
 	int ret;
 
+	st->icm_dmp_war = false;
 	if (!st->hal->dmp)
 		return -EINVAL;
 
@@ -1417,7 +1491,11 @@ static int nvi_en(struct nvi_state *st)
 		if (i < DEV_N_AUX)
 			break;
 
-		return nvi_pm(st, __func__, NVI_PM_AUTO);
+		ret_t = nvi_pm(st, __func__, NVI_PM_AUTO);
+		if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
+			dev_info(&st->i2c->dev, "%s en_msk=%x err=%d\n",
+				 __func__, st->en_msk, ret_t);
+		return ret_t;
 	}
 
 	ret_t |= nvi_int_able(st, __func__, false);
@@ -1843,7 +1921,8 @@ static int nvi_aux_bypass_request(struct nvi_state *st, bool enable)
 	} else {
 		if (st->aux.bypass_lock) {
 			ns = nvs_timestamp() - st->aux.bypass_timeout_ns;
-			to = st->bypass_timeout_ms * 1000000;
+			to = st->bypass_timeout_ms;
+			to *= 1000000;
 			if (ns > to)
 				st->aux.bypass_lock = 0;
 			else
@@ -2775,7 +2854,8 @@ static int nvi_fifo_rd(struct nvi_state *st, int src, unsigned int fifo_n_max,
 	}
 
 	if (ts_n) {
-		ts_period = st->src[src].period_us_src * 1000;
+		ts_period = st->src[src].period_us_src;
+		ts_period *= 1000;
 		if (sync && ts_end > st->src[src].ts_end && ts_end < ts_now &&
 					  ts_end > (ts_now - (ts_period >> 2)))
 			/* ts_irq is within the rate so sync to IRQ */
@@ -3092,6 +3172,7 @@ static int nvi_flush(void *client, int snsr_id)
 static int nvi_max_range(void *client, int snsr_id, int max_range)
 {
 	struct nvi_state *st = (struct nvi_state *)client;
+	int ret = 0;
 	unsigned int i = max_range;
 	unsigned int ch;
 
@@ -3128,7 +3209,9 @@ static int nvi_max_range(void *client, int snsr_id, int max_range)
 		}
 	}
 
-	return 0;
+	if (st->en_msk & (1 << DEV_DMP))
+		ret = nvi_en(st);
+	return ret;
 }
 
 static int nvi_offset(void *client, int snsr_id, int channel, int offset)
@@ -3231,9 +3314,9 @@ static int nvi_self_test(void *client, int snsr_id, char *buf)
 	nvi_period_all(st);
 	nvi_en(st);
 	if (ret)
-		return sprintf(buf, "%d   FAIL\n", ret);
+		return snprintf(buf, PAGE_SIZE, "%d   FAIL\n", ret);
 
-	return sprintf(buf, "%d   PASS\n", ret);
+	return snprintf(buf, PAGE_SIZE, "%d   PASS\n", ret);
 }
 
 static int nvi_regs(void *client, int snsr_id, char *buf)
@@ -3245,9 +3328,9 @@ static int nvi_regs(void *client, int snsr_id, char *buf)
 	unsigned int j;
 	int ret;
 
-	t = sprintf(buf, "registers: (only data != 0 shown)\n");
+	t = snprintf(buf, PAGE_SIZE, "registers: (only data != 0 shown)\n");
 	for (j = 0; j < st->hal->reg_bank_n; j++) {
-		t += sprintf(buf + t, "bank %u:\n", j);
+		t += snprintf(buf + t, PAGE_SIZE - t, "bank %u:\n", j);
 		for (i = 0; i < st->hal->regs_n; i++) {
 			if ((j == st->hal->reg->fifo_rw.bank) &&
 					      (i == st->hal->reg->fifo_rw.reg))
@@ -3255,9 +3338,10 @@ static int nvi_regs(void *client, int snsr_id, char *buf)
 
 			ret = nvi_i2c_r(st, j, i, 1, &data);
 			if (ret)
-				t += sprintf(buf + t, "0x%02x=ERR\n", i);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "0x%02x=ERR\n", i);
 			else if (data)
-				t += sprintf(buf + t,
+				t += snprintf(buf + t, PAGE_SIZE - t,
 					     "0x%02x=0x%02x\n", i, data);
 		}
 	}
@@ -3276,6 +3360,7 @@ static int nvi_nvs_write(void *client, int snsr_id, unsigned int nvs)
 	case NVI_INFO_MEM_WR:
 	case NVI_INFO_DMP_FW:
 	case NVI_INFO_DMP_EN_MSK:
+	case NVI_INFO_FN_INIT:
 		break;
 
 	case NVI_INFO_DBG_SPEW:
@@ -3321,75 +3406,85 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 	st->info = NVI_INFO_VER;
 	switch (info & 0xFF) {
 	case NVI_INFO_VER:
-		t = sprintf(buf, "NVI driver v. %u\n", NVI_DRIVER_VERSION);
+		t = snprintf(buf, PAGE_SIZE, "NVI driver v. %u\n",
+			     NVI_DRIVER_VERSION);
 		if (st->en_msk & (1 << FW_LOADED)) {
-			t += sprintf(buf + t, "DMP FW v. %u\n",
-				     st->hal->dmp->fw_ver);
-			t += sprintf(buf + t, "DMP enabled=%u\n",
-				     !!(st->en_msk & (1 << DEV_DMP)));
+			t += snprintf(buf + t, PAGE_SIZE - t, "DMP FW v. %u\n",
+				      st->hal->dmp->fw_ver);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "DMP enabled=%u\n",
+				      !!(st->en_msk & (1 << DEV_DMP)));
 		}
-		t += sprintf(buf + t, "standby_en=%x\n",
-			     !!(st->en_msk & (1 << EN_STDBY)));
-		t += sprintf(buf + t, "bypass_timeout_ms=%u\n",
-			     st->bypass_timeout_ms);
+		t += snprintf(buf + t, PAGE_SIZE - t, "standby_en=%x\n",
+			      !!(st->en_msk & (1 << EN_STDBY)));
+		t += snprintf(buf + t, PAGE_SIZE - t, "bypass_timeout_ms=%u\n",
+			      st->bypass_timeout_ms);
 		for (i = 0; i < DEV_N_AUX; i++) {
 			if (st->snsr[i].push_delay_ns)
-				t += sprintf(buf + t,
-					     "%s_push_delay_ns=%lld\n",
-					     st->snsr[i].cfg.name,
-					     st->snsr[i].push_delay_ns);
+				t += snprintf(buf + t, PAGE_SIZE - t,
+					      "%s_push_delay_ns=%lld\n",
+					      st->snsr[i].cfg.name,
+					      st->snsr[i].push_delay_ns);
 		}
 
 		for (i = 0; i < DEV_N_AUX; i++) {
 			if ((st->dmp_dev_msk | MSK_DEV_MPU_AUX) & (1 << i)) {
 				if (st->dmp_en_msk & (1 << i))
-					t += sprintf(buf + t, "%s_dmp_en=1\n",
-						     st->snsr[i].cfg.name);
+					t += snprintf(buf + t, PAGE_SIZE - t,
+						      "%s_dmp_en=1\n",
+						      st->snsr[i].cfg.name);
 				else
-					t += sprintf(buf + t, "%s_dmp_en=0\n",
-						     st->snsr[i].cfg.name);
+					t += snprintf(buf + t, PAGE_SIZE - t,
+						      "%s_dmp_en=0\n",
+						      st->snsr[i].cfg.name);
 			}
 		}
 
 		return t;
 
 	case NVI_INFO_DBG:
-		t = sprintf(buf, "en_msk=%x\n", st->en_msk);
-		t += sprintf(buf + t, "sts=%x\n", st->sts);
-		t += sprintf(buf + t, "pm=%d\n", st->pm);
-		t += sprintf(buf + t, "bm_timeout_us=%u\n", st->bm_timeout_us);
-		t += sprintf(buf + t, "fifo_src=%d\n", st->fifo_src);
+		t = snprintf(buf, PAGE_SIZE, "en_msk=%x\n", st->en_msk);
+		t += snprintf(buf + t, PAGE_SIZE - t, "sts=%x\n", st->sts);
+		t += snprintf(buf + t, PAGE_SIZE - t, "pm=%d\n", st->pm);
+		t += snprintf(buf + t, PAGE_SIZE - t, "bm_timeout_us=%u\n",
+			      st->bm_timeout_us);
+		t += snprintf(buf + t, PAGE_SIZE - t, "fifo_src=%d\n",
+			      st->fifo_src);
 		for (i = 0; i < DEV_N_AUX; i++) {
-			t += sprintf(buf + t, "snsr[%u] %s:\n",
-				     i, st->snsr[i].cfg.name);
-			t += sprintf(buf + t, "enable=%x\n",
-				     st->snsr[i].enable);
-			t += sprintf(buf + t, "period_us=%u\n",
-				     st->snsr[i].period_us);
-			t += sprintf(buf + t, "timeout_us=%u\n",
-				     st->snsr[i].timeout_us);
-			t += sprintf(buf + t, "odr=%u\n",
-				     st->snsr[i].odr);
-			t += sprintf(buf + t, "ts_last=%lld\n",
-				     st->snsr[i].ts_last);
-			t += sprintf(buf + t, "ts_reset=%x\n",
-				     st->snsr[i].ts_reset);
-			t += sprintf(buf + t, "flush=%x\n",
-				     st->snsr[i].flush);
-			t += sprintf(buf + t, "matrix=%x\n",
-				     st->snsr[i].matrix);
-			t += sprintf(buf + t, "buf_shft=%d\n",
-				     st->snsr[i].buf_shft);
-			t += sprintf(buf + t, "buf_n=%u\n",
-				     st->snsr[i].buf_n);
+			t += snprintf(buf + t, PAGE_SIZE - t, "snsr[%u] %s:\n",
+				      i, st->snsr[i].cfg.name);
+			t += snprintf(buf + t, PAGE_SIZE - t, "usr_cfg=%x\n",
+				      st->snsr[i].usr_cfg);
+			t += snprintf(buf + t, PAGE_SIZE - t, "enable=%x\n",
+				      st->snsr[i].enable);
+			t += snprintf(buf + t, PAGE_SIZE - t, "period_us=%u\n",
+				      st->snsr[i].period_us);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "timeout_us=%u\n",
+				      st->snsr[i].timeout_us);
+			t += snprintf(buf + t, PAGE_SIZE - t, "odr=%u\n",
+				      st->snsr[i].odr);
+			t += snprintf(buf + t, PAGE_SIZE - t, "ts_last=%lld\n",
+				      st->snsr[i].ts_last);
+			t += snprintf(buf + t, PAGE_SIZE - t, "ts_reset=%x\n",
+				      st->snsr[i].ts_reset);
+			t += snprintf(buf + t, PAGE_SIZE - t, "flush=%x\n",
+				      st->snsr[i].flush);
+			t += snprintf(buf + t, PAGE_SIZE - t, "matrix=%x\n",
+				      st->snsr[i].matrix);
+			t += snprintf(buf + t, PAGE_SIZE - t, "buf_shft=%d\n",
+				      st->snsr[i].buf_shft);
+			t += snprintf(buf + t, PAGE_SIZE - t, "buf_n=%u\n",
+				      st->snsr[i].buf_n);
 		}
 
 		if (st->hal->dmp) {
 			/* nvi_dmp_clk_n */
 			st->hal->dmp->fn_clk_n(st, &n);
-			t += sprintf(buf + t, "nvi_dmp_clk_n=%u\n", n);
-			t += sprintf(buf + t, "st->dmp_clk_n=%u\n",
-				     st->dmp_clk_n);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "nvi_dmp_clk_n=%u\n", n);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "st->dmp_clk_n=%u\n", st->dmp_clk_n);
 			n = SRC_DMP;
 		} else {
 			n = 0;
@@ -3398,47 +3493,58 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 			if (i >= st->hal->src_n && i != SRC_DMP)
 				continue;
 
-			t += sprintf(buf + t, "src[%u]:\n", i);
-			t += sprintf(buf + t, "ts_reset=%x\n",
-				     st->src[i].ts_reset);
-			t += sprintf(buf + t, "ts_end=%lld\n",
-				     st->src[i].ts_end);
-			t += sprintf(buf + t, "ts_period=%lld\n",
-				     st->src[i].ts_period);
-			t += sprintf(buf + t, "period_us_src=%u\n",
-				     st->src[i].period_us_src);
-			t += sprintf(buf + t, "period_us_req=%u\n",
-				     st->src[i].period_us_req);
-			t += sprintf(buf + t, "fifo_data_n=%u\n",
-				     st->src[i].fifo_data_n);
-			t += sprintf(buf + t, "base_t=%u\n",
-				     st->src[i].base_t);
+			t += snprintf(buf + t, PAGE_SIZE - t, "src[%u]:\n", i);
+			t += snprintf(buf + t, PAGE_SIZE - t, "ts_reset=%x\n",
+				      st->src[i].ts_reset);
+			t += snprintf(buf + t, PAGE_SIZE - t, "ts_end=%lld\n",
+				      st->src[i].ts_end);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "ts_period=%lld\n",
+				      st->src[i].ts_period);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_src=%u\n",
+				      st->src[i].period_us_src);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_req=%u\n",
+				      st->src[i].period_us_req);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_min=%u\n",
+				      st->src[i].period_us_min);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "period_us_max=%u\n",
+				      st->src[i].period_us_max);
+			t += snprintf(buf + t, PAGE_SIZE - t,
+				      "fifo_data_n=%u\n",
+				      st->src[i].fifo_data_n);
+			t += snprintf(buf + t, PAGE_SIZE - t, "base_t=%u\n",
+				      st->src[i].base_t);
 		}
 		return t;
 
 	case NVI_INFO_DBG_SPEW:
-		return sprintf(buf, "DBG spew=%x\n",
-			       !!(st->sts & NVI_DBG_SPEW_MSG));
+		return snprintf(buf, PAGE_SIZE, "DBG spew=%x\n",
+				!!(st->sts & NVI_DBG_SPEW_MSG));
 
 	case NVI_INFO_AUX_SPEW:
-		return sprintf(buf, "AUX spew=%x\n",
-			       !!(st->sts & NVI_DBG_SPEW_AUX));
+		return snprintf(buf, PAGE_SIZE, "AUX spew=%x\n",
+				!!(st->sts & NVI_DBG_SPEW_AUX));
 
 	case NVI_INFO_FIFO_SPEW:
-		return sprintf(buf, "FIFO spew=%x\n",
-			       !!(st->sts & NVI_DBG_SPEW_FIFO));
+		return snprintf(buf, PAGE_SIZE, "FIFO spew=%x\n",
+				!!(st->sts & NVI_DBG_SPEW_FIFO));
 
 	case NVI_INFO_TS_SPEW:
-		return sprintf(buf, "TS spew=%x\n",
-			       !!(st->sts & NVI_DBG_SPEW_TS));
+		return snprintf(buf, PAGE_SIZE, "TS spew=%x\n",
+				!!(st->sts & NVI_DBG_SPEW_TS));
 
 	case NVI_INFO_REG_WR:
 		st->rc_dis = true;
 		buf_rw[0] = (u8)(info >> 16);
 		buf_rw[1] = (u8)(info >> 8);
 		ret = nvi_i2c_write(st, info >> 24, 2, buf_rw);
-		return sprintf(buf, "REG WR: b=%02x r=%02x d=%02x ERR=%d\n",
-			       info >> 24, buf_rw[0], buf_rw[1], ret);
+		return snprintf(buf, PAGE_SIZE,
+				"REG WR: b=%02x r=%02x d=%02x ERR=%d\n",
+				info >> 24, buf_rw[0], buf_rw[1], ret);
 
 	case NVI_INFO_MEM_RD:
 		n = (info >> 8) & 0xFF;
@@ -3446,40 +3552,54 @@ static int nvi_nvs_read(void *client, int snsr_id, char *buf)
 			n = sizeof(buf_rw);
 		ret = nvi_mem_rd(st, info >> 16, n, buf_rw);
 		if (ret)
-			return sprintf(buf, "MEM RD: ERR=%d\n", ret);
+			return snprintf(buf, PAGE_SIZE,
+					"MEM RD: ERR=%d\n", ret);
 
-		t = sprintf(buf, "MEM RD:\n");
+		t = snprintf(buf, PAGE_SIZE, "MEM RD:\n");
 		for (i = 0; i < n; i++) {
 			if (!(i % 8))
-				t += sprintf(buf + t, "%04x: ",
-					     (info >> 16) + i);
-			t += sprintf(buf + t, "%02x ", buf_rw[i]);
+				t += snprintf(buf + t, PAGE_SIZE - t, "%04x: ",
+					      (info >> 16) + i);
+			t += snprintf(buf + t, PAGE_SIZE - t, "%02x ",
+				      buf_rw[i]);
 			if (!((i + 1) % 8))
-				t += sprintf(buf + t, "\n");
+				t += snprintf(buf + t, PAGE_SIZE - t, "\n");
 		}
-		t += sprintf(buf + t, "\n");
+		t += snprintf(buf + t, PAGE_SIZE - t, "\n");
 		return t;
 
 	case NVI_INFO_MEM_WR:
 		st->mc_dis = true;
 		buf_rw[0] = (u8)(info >> 8);
 		ret = nvi_mem_wr(st, info >> 16, 1, buf_rw, true);
-		return sprintf(buf, "MEM WR: a=%04x d=%02x ERR=%d\n",
-			       info >> 16, buf_rw[0], ret);
+		return snprintf(buf, PAGE_SIZE,
+				"MEM WR: a=%04x d=%02x ERR=%d\n",
+				info >> 16, buf_rw[0], ret);
 
 	case NVI_INFO_DMP_FW:
 		ret = nvi_dmp_fw(st);
-		return sprintf(buf, "DMP FW: ERR=%d\n", ret);
+		return snprintf(buf, PAGE_SIZE, "DMP FW: ERR=%d\n", ret);
 
 	case NVI_INFO_DMP_EN_MSK:
 		st->dmp_en_msk = (info >> 8) & MSK_DEV_ALL;
-		return sprintf(buf, "st->dmp_en_msk=%x\n", st->dmp_en_msk);
+		return snprintf(buf, PAGE_SIZE, "st->dmp_en_msk=%x\n",
+				st->dmp_en_msk);
+
+	case NVI_INFO_FN_INIT:
+		if (st->hal->fn->init) {
+			ret = st->hal->fn->init(st);
+			return snprintf(buf, PAGE_SIZE,
+					"hal->fn->init() ret=%d\n", ret);
+		} else {
+			return snprintf(buf, PAGE_SIZE,
+					"no hal->fn->init()\n");
+		}
 
 	default:
 		i = info - NVI_INFO_SNSR_SPEW;
 		if (i < DEV_N)
-			return sprintf(buf, "%s spew=%x\n",
-				       st->snsr[i].cfg.name,
+			return snprintf(buf, PAGE_SIZE, "%s spew=%x\n",
+					st->snsr[i].cfg.name,
 				       !!(st->sts & (NVI_DBG_SPEW_SNSR << i)));
 		break;
 	}
@@ -3891,9 +4011,10 @@ static int nvi_of_dt_pre(struct nvi_state *st, struct device_node *dn)
 	}
 	of_property_read_u32(dn, "bypass_timeout_ms", &st->bypass_timeout_ms);
 	for (i = 0; i < DEV_N_AUX; i++) {
-		sprintf(str, "%s_push_delay_ns", st->snsr[i].cfg.name);
-		of_property_read_u32(dn, str,
-				     (u32 *)&st->snsr[i].push_delay_ns);
+		snprintf(str, sizeof(str), "%s_push_delay_ns",
+			 st->snsr[i].cfg.name);
+		if (!of_property_read_u32(dn, str, &tmp))
+			st->snsr[i].push_delay_ns = (s64)tmp;
 	}
 
 	return 0;
@@ -3918,7 +4039,8 @@ static void nvi_of_dt_post(struct nvi_state *st, struct device_node *dn)
 			tmp |= st->snsr[i].cfg.matrix[j];
 		if (tmp) {
 			/* sensor has a matrix */
-			sprintf(str, "%s_matrix_enable", st->snsr[i].cfg.name);
+			snprintf(str, sizeof(str), "%s_matrix_enable",
+				 st->snsr[i].cfg.name);
 			if (!of_property_read_u32(dn, str, &tmp)) {
 				/* matrix override */
 				if (tmp)
@@ -3939,8 +4061,8 @@ static void nvi_of_dt_post(struct nvi_state *st, struct device_node *dn)
 		st->dmp_dev_msk = st->hal->dmp->dev_msk;
 		st->dmp_en_msk = st->hal->dmp->en_msk;
 		for (i = 0; i < DEV_N_AUX; i++) {
-			sprintf(str, "%s_dmp_en",
-				st->snsr[i].cfg.name);
+			snprintf(str, sizeof(str), "%s_dmp_en",
+				 st->snsr[i].cfg.name);
 			if (!of_property_read_u32(dn, str, &tmp)) {
 				if (tmp) {
 					msk = 1 << i;
@@ -4047,6 +4169,8 @@ static int nvi_init(struct nvi_state *st,
 	}
 
 	nvi_pm(st, __func__, NVI_PM_AUTO);
+	nvi_rc_clr(st, __func__);
+	st->rc_dis = false; /* enable register cache after initialization */
 	nvi_state_local = st;
 	return 0;
 }
@@ -4092,6 +4216,7 @@ static int nvi_probe(struct i2c_client *client,
 
 	st = &pd->st;
 	i2c_set_clientdata(client, pd);
+	st->rc_dis = true; /* disable register cache during initialization */
 	st->i2c = client;
 	pd->i2c_dev_id = i2c_dev_id;
 	/* Init fw load worker thread */

@@ -23,6 +23,22 @@
 #include <linux/tegra_prod.h>
 #include <linux/kmemleak.h>
 
+
+#define PROD_TUPLE_NUM (sizeof(struct prod_tuple)/sizeof(u32))
+
+/* tegra_prod_list: Tegra Prod list for the given submodule
+ * @n_prod_cells: Number of prod setting cells.
+ * @mask_ones:  Mask value type. if it is true than value applied for those
+ *		bits whose mask bits are 1s. If it false then value applies
+ *		to those bits whose mask bits are 0.
+ */
+struct tegra_prod_list {
+	struct tegra_prod *tegra_prod;
+	int num; /* number of tegra_prod*/
+	int n_prod_cells;
+	bool mask_ones;
+};
+
 struct prod_tuple {
 	u32 index; /* Address base index */
 	u32 addr;  /* offset address*/

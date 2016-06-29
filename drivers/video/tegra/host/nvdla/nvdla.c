@@ -30,11 +30,13 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "flcn/flcn.h"
-#include "t194/t194.h"
-#include "nvhost_nvdla_ioctl.h"
-#include "flcn/flcn.h"
 #include "flcn/hw_flcn.h"
+
+#include "t194/t194.h"
+#include "nvhost_queue.h"
+
 #include "nvdla/nvdla.h"
+#include "nvhost_nvdla_ioctl.h"
 #include "nvdla_ucode_interface.h"
 
 #define DEBUG_BUFFER_SIZE 0x100
@@ -44,8 +46,9 @@
 static DEFINE_DMA_ATTRS(attrs);
 
 /* data structure to keep device data */
-struct nvdla {
+struct nvdla_device {
 	struct platform_device *pdev;
+	struct nvhost_queue_pool *pool;
 };
 
 int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
@@ -153,6 +156,7 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 /* IOCTL API's */
 struct nvdla_private {
 	struct platform_device *pdev;
+	struct nvhost_queue *queue;
 };
 
 static int nvdla_ctrl_ping(struct platform_device *pdev,
@@ -264,18 +268,40 @@ static int nvdla_open(struct inode *inode, struct file *file)
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
 					struct nvhost_device_data, ctrl_cdev);
 	struct platform_device *pdev = pdata->pdev;
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 	struct nvdla_private *priv;
+	int err = 0;
 
 	priv = kmalloc(sizeof(*priv), GFP_KERNEL);
-	if (unlikely(priv == NULL))
-		return -ENOMEM;
+	if (unlikely(priv == NULL)) {
+		err = -ENOMEM;
+		goto err_alloc_priv;
+	}
 
 	file->private_data = priv;
 	priv->pdev = pdev;
 
 	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
 
+	/* add priv to client list */
+	err = nvhost_module_add_client(pdev, priv);
+	if (err < 0)
+		goto err_add_client;
+
+	priv->queue = nvhost_queue_alloc(nvdla_dev->pool);
+	if (IS_ERR(priv->queue)) {
+		err = PTR_ERR(priv->queue);
+		goto err_alloc_queue;
+	}
+
 	return nonseekable_open(inode, file);
+
+err_alloc_queue:
+	nvhost_module_remove_client(pdev, priv);
+err_add_client:
+	kfree(priv);
+err_alloc_priv:
+	return err;
 }
 
 static int nvdla_release(struct inode *inode, struct file *file)
@@ -284,6 +310,10 @@ static int nvdla_release(struct inode *inode, struct file *file)
 	struct platform_device *pdev = priv->pdev;
 
 	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
+
+	nvhost_queue_abort(priv->queue);
+	nvhost_queue_put(priv->queue);
+	nvhost_module_remove_client(pdev, priv);
 
 	kfree(priv);
 	return 0;
@@ -321,81 +351,96 @@ static struct of_device_id tegra_nvdla_domain_match[] = {
 };
 #endif
 
-static int nvdla_probe(struct platform_device *dev)
+static int nvdla_probe(struct platform_device *pdev)
 {
 	int err = 0;
 	struct nvhost_device_data *pdata = NULL;
-	struct nvdla *nvdla = NULL;
+	struct nvdla_device *nvdla_dev = NULL;
+	struct device *dev = &pdev->dev;
 
-	if (dev->dev.of_node) {
+	if (pdev->dev.of_node) {
 		const struct of_device_id *match;
 
-		match = of_match_device(tegra_nvdla_of_match, &dev->dev);
+		match = of_match_device(tegra_nvdla_of_match, dev);
 		if (match)
 			pdata = (struct nvhost_device_data *)match->data;
 	} else {
-		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
+		pdata = (struct nvhost_device_data *)pdev->dev.platform_data;
 	}
 
 	WARN_ON(!pdata);
 	if (!pdata) {
-		dev_info(&dev->dev, "no platform data\n");
+		dev_info(dev, "no platform data\n");
 		err = -ENODATA;
 		goto err_get_pdata;
 	}
 
-	nvhost_dbg_fn("%s: pdev:%p pdata:%p\n", __func__, dev, pdata);
+	nvhost_dbg_fn("%s: pdev:%p pdata:%p\n", __func__, pdev, pdata);
 
-	nvdla = devm_kzalloc(&dev->dev, sizeof(*nvdla), GFP_KERNEL);
-	if (!nvdla) {
+	nvdla_dev = devm_kzalloc(dev, sizeof(*nvdla_dev), GFP_KERNEL);
+	if (!nvdla_dev) {
 		err = -ENOMEM;
 		goto err_alloc_nvdla;
 	}
 
-	nvdla->pdev = dev;
-	pdata->pdev = dev;
+	nvdla_dev->pdev = pdev;
+	pdata->pdev = pdev;
 	mutex_init(&pdata->lock);
-	platform_set_drvdata(dev, pdata);
+	pdata->private_data = nvdla_dev;
+	platform_set_drvdata(pdev, pdata);
 
-	err = nvhost_client_device_get_resources(dev);
+	err = nvhost_client_device_get_resources(pdev);
 	if (err)
 		goto err_get_resources;
 
-	err = nvhost_module_init(dev);
+	err = nvhost_module_init(pdev);
 	if (err)
 		goto err_module_init;
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
-	err = nvhost_module_add_domain(&pdata->pd, dev);
+	err = nvhost_module_add_domain(&pdata->pd, pdev);
 	if (err)
 		goto err_add_domain;
 #endif
 
-	err = nvhost_client_device_init(dev);
+	err = nvhost_client_device_init(pdev);
 	if (err)
 		goto err_client_device_init;
 
 	if (pdata->flcn_isr)
-		flcn_intr_init(dev);
+		flcn_intr_init(pdev);
+
+	nvdla_dev->pool = nvhost_queue_init(pdev, MAX_NVDLA_QUEUE_COUNT);
+	if (IS_ERR(nvdla_dev->pool)) {
+		err = PTR_ERR(nvdla_dev->pool);
+		goto err_queue_init;
+	}
 
 	return 0;
 
+err_queue_init:
+	nvhost_client_device_release(pdev);
 err_client_device_init:
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 err_add_domain:
 #endif
-	nvhost_module_deinit(dev);
+	nvhost_module_deinit(pdev);
 err_module_init:
 err_get_resources:
+	devm_kfree(dev, nvdla_dev);
 err_alloc_nvdla:
 err_get_pdata:
 
 	return err;
 }
 
-static int __exit nvdla_remove(struct platform_device *dev)
+static int __exit nvdla_remove(struct platform_device *pdev)
 {
-	nvhost_client_device_release(dev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
+	nvhost_queue_deinit(nvdla_dev->pool);
+	nvhost_client_device_release(pdev);
 
 	return 0;
 }

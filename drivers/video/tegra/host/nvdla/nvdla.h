@@ -23,6 +23,7 @@
 
 #define NV_DLA_THI_METHOD_ID	0x00000040      /* RW-4R */
 #define NV_DLA_THI_METHOD_DATA	0x00000044      /* RW-4R */
+#define MAX_NVDLA_QUEUE_COUNT	16
 
 extern const struct file_operations tegra_nvdla_ctrl_ops;
 

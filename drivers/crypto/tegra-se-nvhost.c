@@ -1015,11 +1015,14 @@ static u32 tegra_se_get_crypto_config(struct tegra_se_dev *se_dev,
 static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 			struct tegra_se_req_context *req_ctx, u32 count)
 {
-	int j, k;
+	int k;
 	int err = 0;
 	u32 cmdbuf_num_words = 0, i = 0, opcode_addr;
 	u32 *cmdbuf_cpuvaddr = NULL;
 	dma_addr_t cmdbuf_iova = 0;
+	struct tegra_se_ll *src_ll = se_dev->src_ll;
+	int total = count, val;
+	u64 msg_len;
 
 	if (se_dev->se_dev_num == 3) {
 		opcode_addr = SE4_SHA_CONFIG_REG_OFFSET;
@@ -1033,32 +1036,60 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 				 &cmdbuf_iova, GFP_KERNEL, &attrs);
 	if (!cmdbuf_cpuvaddr)
 		return -ENOMEM;
+	while (total) {
+		if (src_ll->data_len & SE_BUFF_SIZE_MASK)
+			return -EINVAL;
 
-	cmdbuf_cpuvaddr[i++] = __nvhost_opcode_incr(opcode_addr, 4);
-	cmdbuf_cpuvaddr[i++] = req_ctx->config;
-	cmdbuf_cpuvaddr[i++] = SE4_HW_INIT_HASH(HW_INIT_HASH_ENABLE);
-	cmdbuf_cpuvaddr[i++] = se_dev->src_ll->addr;
-	cmdbuf_cpuvaddr[i++] = (u32)(SE_ADDR_HI_MSB(MSB(se_dev->src_ll->addr)) |
-			SE_ADDR_HI_SZ(se_dev->src_ll->data_len)); /* in-hi */
-
-	cmdbuf_cpuvaddr[i++] =
-		__nvhost_opcode_incr(opcode_addr +
-			SE_SHA_MSG_LENGTH_OFFSET, 8);
-
-	/* Repeat for SHA_MSG_LENGTH & SHA_MSG_LEFT */
-	for (k = 0; k < 2; k++) {
-		for (j = 0; j < 4; j++) {
-			if (!j)
-				cmdbuf_cpuvaddr[i++] = (count * 8);
-			else
+		if (total == count) {
+			cmdbuf_cpuvaddr[i++] =
+				__nvhost_opcode_incr(opcode_addr +
+					SE_SHA_MSG_LENGTH_OFFSET, 8);
+			msg_len = (count * 8);
+			for (k = 0; k < 2; k++) {
+				cmdbuf_cpuvaddr[i++] =
+					(u32)(msg_len & 0xFFFFFFFFULL);
+				cmdbuf_cpuvaddr[i++] = (u32)(msg_len >> 32);
 				cmdbuf_cpuvaddr[i++] = 0;
+				cmdbuf_cpuvaddr[i++] = 0;
+			}
+			cmdbuf_cpuvaddr[i++] =
+				__nvhost_opcode_incr(opcode_addr, 4);
+			cmdbuf_cpuvaddr[i++] = req_ctx->config;
+			cmdbuf_cpuvaddr[i++] =
+				SE4_HW_INIT_HASH(HW_INIT_HASH_ENABLE);
+		} else {
+			cmdbuf_cpuvaddr[i++] =
+				__nvhost_opcode_incr(opcode_addr +
+					SE4_SHA_IN_ADDR_OFFSET, 2);
 		}
+		cmdbuf_cpuvaddr[i++] = src_ll->addr;
+		cmdbuf_cpuvaddr[i++] = (u32)(SE_ADDR_HI_MSB(MSB(src_ll->addr)) |
+				SE_ADDR_HI_SZ(src_ll->data_len)); /* in-hi */
+
+		cmdbuf_cpuvaddr[i++] =
+			__nvhost_opcode_nonincr(opcode_addr +
+				SE_SHA_OPERATION_OFFSET, 1);
+
+		val = SE_OPERATION_WRSTALL(WRSTALL_TRUE);
+		if (total == count) {
+			if (total == src_ll->data_len)
+				val |= SE_OPERATION_LASTBUF(LASTBUF_TRUE) |
+						SE_OPERATION_OP(OP_START);
+			else
+				val |= SE_OPERATION_LASTBUF(LASTBUF_FALSE) |
+						SE_OPERATION_OP(OP_START);
+		} else {
+			if (total == src_ll->data_len)
+				val |= SE_OPERATION_LASTBUF(LASTBUF_TRUE) |
+						SE_OPERATION_OP(OP_RESTART_IN);
+			else
+				val |= SE_OPERATION_LASTBUF(LASTBUF_FALSE) |
+						SE_OPERATION_OP(OP_RESTART_IN);
+		}
+		cmdbuf_cpuvaddr[i++] = val;
+		total -= src_ll->data_len;
+		src_ll++;
 	}
-	cmdbuf_cpuvaddr[i++] =
-		__nvhost_opcode_nonincr(opcode_addr +
-			SE_SHA_OPERATION_OFFSET, 1);
-	cmdbuf_cpuvaddr[i++] = SE_OPERATION_LASTBUF(LASTBUF_TRUE) |
-				SE_OPERATION_OP(OP_START);
 
 	cmdbuf_num_words = i;
 	err = tegra_se_channel_submit_gather(se_dev,
@@ -1066,6 +1097,7 @@ static int tegra_se_send_sha_data(struct tegra_se_dev *se_dev,
 			0, cmdbuf_num_words, false);
 	dma_free_attrs(se_dev->dev->parent, SZ_4K,
 			cmdbuf_cpuvaddr, cmdbuf_iova, &attrs);
+
 	return err;
 }
 
@@ -1855,6 +1887,7 @@ static int tegra_se_sha_final(struct ahash_request *req)
 	se_dev->src_ll = (struct tegra_se_ll *)(se_dev->src_ll_buf + 1);
 
 	src_sg = req->src;
+
 	total = req->nbytes;
 	if (total)
 		tegra_map_sg(se_dev->dev,
@@ -2768,7 +2801,7 @@ static struct ahash_alg hash_algs[] = {
 		.halg.base = {
 			.cra_name = "cmac(aes)",
 			.cra_driver_name = "tegra-se-cmac(aes)",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 			.cra_blocksize = TEGRA_SE_AES_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_aes_cmac_context),
@@ -2788,7 +2821,7 @@ static struct ahash_alg hash_algs[] = {
 		.halg.base = {
 			.cra_name = "sha1",
 			.cra_driver_name = "tegra-se-sha1",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 			.cra_blocksize = SHA1_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -2808,7 +2841,7 @@ static struct ahash_alg hash_algs[] = {
 		.halg.base = {
 			.cra_name = "sha224",
 			.cra_driver_name = "tegra-se-sha224",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 			.cra_blocksize = SHA224_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -2828,7 +2861,7 @@ static struct ahash_alg hash_algs[] = {
 		.halg.base = {
 			.cra_name = "sha256",
 			.cra_driver_name = "tegra-se-sha256",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 			.cra_blocksize = SHA256_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -2848,7 +2881,7 @@ static struct ahash_alg hash_algs[] = {
 		.halg.base = {
 			.cra_name = "sha384",
 			.cra_driver_name = "tegra-se-sha384",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 			.cra_blocksize = SHA384_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),
@@ -2868,7 +2901,7 @@ static struct ahash_alg hash_algs[] = {
 		.halg.base = {
 			.cra_name = "sha512",
 			.cra_driver_name = "tegra-se-sha512",
-			.cra_priority = 100,
+			.cra_priority = 300,
 			.cra_flags = CRYPTO_ALG_TYPE_AHASH,
 			.cra_blocksize = SHA512_BLOCK_SIZE,
 			.cra_ctxsize = sizeof(struct tegra_se_sha_context),

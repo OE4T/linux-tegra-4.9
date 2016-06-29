@@ -17,6 +17,8 @@
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
 #include <linux/pm_runtime.h>
+#include <linux/pm_qos.h>
+
 #include "vgpu/vgpu.h"
 #include "vgpu/fecs_trace_vgpu.h"
 #include "gk20a/debug_gk20a.h"
@@ -24,6 +26,7 @@
 #include "gk20a/hw_mc_gk20a.h"
 #include "gk20a/ctxsw_trace_gk20a.h"
 #include "gk20a/tsg_gk20a.h"
+#include "gk20a/gk20a_scale.h"
 #include "gk20a/channel_gk20a.h"
 #include "gm20b/hal_gm20b.h"
 
@@ -430,6 +433,61 @@ done:
 	return err;
 }
 
+static int vgpu_qos_notify(struct notifier_block *nb,
+			  unsigned long n, void *data)
+{
+	struct gk20a_scale_profile *profile =
+			container_of(nb, struct gk20a_scale_profile,
+			qos_notify_block);
+	struct gk20a_platform *platform = gk20a_get_platform(profile->dev);
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
+	u32 max_freq;
+	int err;
+
+	gk20a_dbg_fn("");
+
+	max_freq = (u32)pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS);
+
+	msg.cmd = TEGRA_VGPU_CMD_SET_GPU_CLK_RATE;
+	msg.handle = platform->virt_handle;
+	p->rate = max_freq;
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+	if (err)
+		gk20a_err(profile->dev, "%s failed, err=%d", __func__, err);
+
+	return NOTIFY_OK; /* need notify call further */
+}
+
+static int vgpu_pm_qos_init(struct device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+	struct gk20a_scale_profile *profile;
+
+	profile = kzalloc(sizeof(*profile), GFP_KERNEL);
+	if (!profile)
+		return -ENOMEM;
+
+	profile->dev = dev;
+	profile->qos_notify_block.notifier_call = vgpu_qos_notify;
+	g->scale_profile = profile;
+	pm_qos_add_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
+				&profile->qos_notify_block);
+
+	return 0;
+}
+
+static void vgpu_pm_qos_remove(struct device *dev)
+{
+	struct gk20a *g = get_gk20a(dev);
+
+	pm_qos_remove_max_notifier(PM_QOS_GPU_FREQ_BOUNDS,
+				&g->scale_profile->qos_notify_block);
+	kfree(g->scale_profile);
+	g->scale_profile = NULL;
+}
+
 static int vgpu_pm_init(struct device *dev)
 {
 	int err = 0;
@@ -437,6 +495,9 @@ static int vgpu_pm_init(struct device *dev)
 	gk20a_dbg_fn("");
 
 	__pm_runtime_disable(dev, false);
+	err = vgpu_pm_qos_init(dev);
+	if (err)
+		return err;
 
 	return err;
 }
@@ -534,6 +595,7 @@ int vgpu_remove(struct platform_device *pdev)
 	struct gk20a *g = get_gk20a(dev);
 	gk20a_dbg_fn("");
 
+	vgpu_pm_qos_remove(dev);
 	if (g->remove_support)
 		g->remove_support(dev);
 

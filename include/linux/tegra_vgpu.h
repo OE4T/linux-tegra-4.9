@@ -97,6 +97,7 @@ enum {
 	TEGRA_VGPU_CMD_CHANNEL_ENABLE = 58,
 	TEGRA_VGPU_CMD_READ_PTIMER = 59,
 	TEGRA_VGPU_CMD_SET_POWERGATE = 60,
+	TEGRA_VGPU_CMD_SET_GPU_CLK_RATE = 61,
 };
 
 struct tegra_vgpu_connect_params {
@@ -399,6 +400,10 @@ struct tegra_vgpu_set_powergate_params {
 	u32 mode;
 };
 
+struct tegra_vgpu_gpu_clk_rate_params {
+	u32 rate; /* in kHz */
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -441,6 +446,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_tsg_runlist_interleave_params tsg_interleave;
 		struct tegra_vgpu_read_ptimer_params read_ptimer;
 		struct tegra_vgpu_set_powergate_params set_powergate;
+		struct tegra_vgpu_gpu_clk_rate_params gpu_clk_rate;
 		char padding[192];
 	} params;
 };

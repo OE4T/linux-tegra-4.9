@@ -22,14 +22,36 @@
 		bus@0 {
 			i2c-bus = <&gen8_i2c>;
 			word-address-1-byte-slave-addresses = <0x50 0x57>;
+			eeprom@0 {
+				slave-address = <0x50>;
+				label = "cvm";
+			};
+			eeprom@1 {
+				slave-address = <0x57>;
+				label = "cvb";
+			};
 		};
 		bus@1 {
 			i2c-bus = <&gen2_i2c>;
 			word-address-1-byte-slave-addresses = <0x51>;
+			eeprom@0 {
+				slave-address = <0x51>;
+			};
 		};
 		bus@2 {
 			i2c-bus = <&gen1_i2c>;
 			word-address-1-byte-slave-addresses = <0x50>;
+			eeprom@0 {
+				slave-address = <0x50>;
+			};
+		};
+		bus@3 {
+			i2c-bus = <&gen7_i2c>;
+			eeprom@0 {
+				slave-address = <0x54>;
+				label = "cam";
+				enable-gpio = <&gpio_i2c_0_77 9>;
+			};
 		};
 	};
 	plugin-manager {

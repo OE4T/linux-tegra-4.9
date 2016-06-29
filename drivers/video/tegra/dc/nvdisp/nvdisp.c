@@ -1119,6 +1119,9 @@ int tegra_nvdisp_program_mode(struct tegra_dc *dc, struct tegra_dc_mode
 	if (dc->out_ops && dc->out_ops->modeset_notifier)
 		dc->out_ops->modeset_notifier(dc);
 
+	if (dc->mode_dirty)
+		memcpy(&dc->cached_mode, &dc->mode, sizeof(dc->mode));
+
 	tegra_dc_put(dc);
 
 	dc->mode_dirty = false;

@@ -1,7 +1,7 @@
 /*
  * Tegra flcn common Module Support
  *
- * Copyright (c) 2011-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -94,11 +94,11 @@ struct flcn {
 
 static inline struct flcn *get_flcn(struct platform_device *dev)
 {
-	return (struct flcn *)nvhost_get_private_data(dev);
+	return (struct flcn *)nvhost_get_falcon_data(dev);
 }
 static inline void set_flcn(struct platform_device *dev, struct flcn *flcn)
 {
-	nvhost_set_private_data(dev, flcn);
+	nvhost_set_falcon_data(dev, flcn);
 }
 
 int nvhost_vic_prepare_poweroff(struct platform_device *);

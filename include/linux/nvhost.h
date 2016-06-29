@@ -252,6 +252,7 @@ struct nvhost_device_data {
 	bool				kernel_only;
 
 	void *private_data;		/* private platform data */
+	void *falcon_data;		/* store the falcon info */
 	struct platform_device *pdev;	/* owner platform_device */
 	void *virt_priv;		/* private data for virtualized dev */
 

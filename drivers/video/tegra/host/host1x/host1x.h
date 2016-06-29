@@ -151,6 +151,24 @@ int nvhost_gather_filter_enabled(struct nvhost_syncpt *sp);
 
 int nvhost_update_characteristics(struct platform_device *dev);
 
+static inline void *nvhost_get_falcon_data(struct platform_device *_dev)
+{
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)platform_get_drvdata(_dev);
+	BUG_ON(!pdata);
+	return pdata ? pdata->falcon_data : NULL;
+}
+
+static inline void nvhost_set_falcon_data(struct platform_device *_dev,
+	void *priv_data)
+{
+	struct nvhost_device_data *pdata =
+		(struct nvhost_device_data *)platform_get_drvdata(_dev);
+	WARN_ON(!pdata);
+	pdata->falcon_data = priv_data;
+}
+
+
 static inline void *nvhost_get_private_data(struct platform_device *_dev)
 {
 	struct nvhost_device_data *pdata =

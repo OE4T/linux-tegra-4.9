@@ -76,7 +76,7 @@ static get_ucode_details pmu_acr_supp_ucode_list[] = {
 	gpccs_ucode_details,
 };
 
-void gp106_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
+static void gp106_wpr_info(struct gk20a *g, struct wpr_carveout_info *inf)
 {
 	inf->wpr_base = GP106_DGPU_WPR;
 	inf->nonwpr_base = GP106_DGPU_NONWPR;
@@ -89,7 +89,7 @@ static void flcn64_set_dma(struct falc_u64 *dma_addr, u64 value)
 	dma_addr->hi |= u64_hi32(value);
 }
 
-int gp106_alloc_blob_space(struct gk20a *g,
+static int gp106_alloc_blob_space(struct gk20a *g,
 		size_t size, struct mem_desc *mem)
 {
 	struct wpr_carveout_info wpr_inf;
@@ -117,7 +117,7 @@ void gp106_init_secure_pmu(struct gpu_ops *gops)
 }
 /* TODO - check if any free blob res needed*/
 
-int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
+static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
 	const struct firmware *pmu_fw, *pmu_desc, *pmu_sig;
 	struct pmu_gk20a *pmu = &g->pmu;
@@ -184,7 +184,7 @@ release_img_fw:
 	return err;
 }
 
-int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
+static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
@@ -262,7 +262,8 @@ rel_sig:
 	release_firmware(fecs_sig);
 	return err;
 }
-int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
+
+static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 {
 	u32 ver = g->gpu_characteristics.arch + g->gpu_characteristics.impl;
 	struct lsf_ucode_desc_v1 *lsf_desc;
@@ -345,7 +346,7 @@ rel_sig:
 	return err;
 }
 
-int gp106_prepare_ucode_blob(struct gk20a *g)
+static int gp106_prepare_ucode_blob(struct gk20a *g)
 {
 
 	int err;
@@ -1008,7 +1009,7 @@ static int lsf_gen_wpr_requirements(struct gk20a *g,
 
 /*Loads ACR bin to FB mem and bootstraps PMU with bootloader code
  * start and end are addresses of ucode blob in non-WPR region*/
-int gp106_bootstrap_hs_flcn(struct gk20a *g)
+static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 {
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;

@@ -27,7 +27,7 @@
 #define PMU_MEM_SCRUBBING_TIMEOUT_MAX 1000
 #define PMU_MEM_SCRUBBING_TIMEOUT_DEFAULT 10
 
-int gp106_pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
+static int gp106_pmu_enable_hw(struct pmu_gk20a *pmu, bool enable)
 {
 	struct gk20a *g = gk20a_from_pmu(pmu);
 
@@ -115,7 +115,7 @@ static int pmu_enable(struct pmu_gk20a *pmu, bool enable)
 	return 0;
 }
 
-int gp106_pmu_reset(struct gk20a *g)
+static int gp106_pmu_reset(struct gk20a *g)
 {
 	struct pmu_gk20a *pmu = &g->pmu;
 	int err = 0;
@@ -143,7 +143,7 @@ int gp106_pmu_reset(struct gk20a *g)
 	return err;
 }
 
-int gp106_sec2_reset(struct gk20a *g)
+static int gp106_sec2_reset(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 	//sec2 reset

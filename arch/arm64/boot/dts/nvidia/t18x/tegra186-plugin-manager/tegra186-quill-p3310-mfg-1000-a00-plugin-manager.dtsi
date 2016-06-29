@@ -23,7 +23,6 @@
 		boardid-with-config = <3310>;
 		bus@0 {
 			i2c-bus = <&gen8_i2c>;
-			word-address-1-byte-slave-addresses = <0x50 0x57>;
 			eeprom@0 {
 				slave-address = <0x50>;
 				label = "cvm";
@@ -35,14 +34,12 @@
 		};
 		bus@1 {
 			i2c-bus = <&gen2_i2c>;
-			word-address-1-byte-slave-addresses = <0x51>;
 			eeprom@0 {
 				slave-address = <0x51>;
 			};
 		};
 		bus@2 {
 			i2c-bus = <&gen1_i2c>;
-			word-address-1-byte-slave-addresses = <0x50>;
 			eeprom@0 {
 				slave-address = <0x50>;
 			};

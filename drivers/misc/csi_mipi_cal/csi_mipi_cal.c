@@ -49,7 +49,7 @@ static const struct regmap_config tegra186_csi_mipical_regmap_config = {
 	.reg_stride = 4,
 	.val_bits = 32,
 	.max_register = MIPI_CAL_DSID_MIPI_CAL_CONFIG_2_0,
-	.cache_type = REGCACHE_FLAT,
+	.cache_type = REGCACHE_NONE,
 };
 
 static const struct of_device_id tegra186_csi_mipical_of_match[] = {

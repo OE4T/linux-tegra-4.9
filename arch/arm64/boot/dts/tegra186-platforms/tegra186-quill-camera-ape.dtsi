@@ -18,6 +18,10 @@
 		tegra-camera-rtcpu = &tegra_ape;
 	};
 
+	tegra-hsp@29a0000 {
+		status = "okay";
+	};
+
 	rtcpu@b000000 {	/* Do not use SCE as camera-rtcpu */
 		status = "disabled";
 	};
@@ -27,6 +31,22 @@
 	};
 
 	adsp@2993000 {	/* Do not use APE as adsp */
+		status = "disabled";
+	};
+
+	ahub {
+		status = "disabled";
+	};
+
+	spdif_dit {
+		status = "disabled";
+	};
+
+	adma@2930000 {
+		status = "disabled";
+	};
+
+        adsp_audio {
 		status = "disabled";
 	};
 };

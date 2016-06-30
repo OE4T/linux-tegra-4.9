@@ -2147,14 +2147,19 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		if (!info)
 			return -ENOMEM;
 
-		if (copy_from_user(info, user_arg, sizeof(*info)))
+		if (copy_from_user(info, user_arg, sizeof(*info))) {
+			kfree(info);
 			return -EFAULT;
+		}
 
 		tegra_nvdisp_get_imp_user_info(user->ext->dc, info);
 
-		if (copy_to_user(user_arg, info, sizeof(*info)))
+		if (copy_to_user(user_arg, info, sizeof(*info))) {
+			kfree(info);
 			return -EFAULT;
+		}
 
+		kfree(info);
 		return 0;
 #else
 		return -EINVAL;
@@ -2242,6 +2247,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		win_num = args.win_num;
 		win = kzalloc(sizeof(*win) * win_num, GFP_KERNEL);
+		if (!win)
+			return -ENOMEM;
 
 		if (dev_cpy_from_usr(win, (void *)args.win,
 					usr_win_size, win_num)) {
@@ -2252,11 +2259,17 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		nr_user_data = args.nr_elements;
 		flip_user_data = kzalloc(sizeof(*flip_user_data)
 					* nr_user_data, GFP_KERNEL);
+		if (!flip_user_data) {
+			kfree(win);
+			return -ENOMEM;
+		}
+
 		if (nr_user_data > 0) {
 			if (copy_from_user(flip_user_data,
 				(void __user *) (uintptr_t)args.data,
 				sizeof(*flip_user_data) * nr_user_data)) {
 				kfree(win);
+				kfree(flip_user_data);
 				return -EFAULT;
 			}
 
@@ -2271,8 +2284,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		if (!ret)
 			ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
 
-		if (nr_user_data > 0)
-			kfree(flip_user_data);
+		kfree(flip_user_data);
 
 		kfree(win);
 

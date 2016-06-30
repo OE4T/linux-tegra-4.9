@@ -1744,6 +1744,11 @@ int __init nvmap_probe(struct platform_device *pdev)
 		nvmap_convert_carveout_to_iovmm = 1;
 	}
 
+#ifdef CONFIG_NVMAP_PAGE_POOLS
+	if (nvmap_convert_iovmm_to_carveout)
+		nvmap_page_pool_fini(dev);
+#endif
+
 	return 0;
 fail_heaps:
 	for (i = 0; i < dev->nr_carveouts; i++) {

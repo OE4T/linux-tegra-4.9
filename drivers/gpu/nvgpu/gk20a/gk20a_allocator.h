@@ -74,7 +74,7 @@ struct gk20a_allocator {
 /*
  * Allocator flags.
  */
-#define GPU_BALLOC_GVA_SPACE		0x1
+#define GPU_ALLOC_GVA_SPACE		0x1
 
 static inline void alloc_lock(struct gk20a_allocator *a)
 {

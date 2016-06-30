@@ -3548,7 +3548,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 						   g->separate_fixed_allocs,
 						   SZ_4K,
 						   GPU_BALLOC_MAX_ORDER,
-						   GPU_BALLOC_GVA_SPACE);
+						   GPU_ALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_ptes;
 
@@ -3566,7 +3566,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 			small_vma_limit - small_vma_start,
 			SZ_4K,
 			GPU_BALLOC_MAX_ORDER,
-			GPU_BALLOC_GVA_SPACE);
+			GPU_ALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_ptes;
 	}
@@ -3581,7 +3581,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 			large_vma_limit - large_vma_start,
 			big_page_size,
 			GPU_BALLOC_MAX_ORDER,
-			GPU_BALLOC_GVA_SPACE);
+			GPU_ALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_small_allocator;
 	}
@@ -3597,7 +3597,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 					   kernel_vma_limit - kernel_vma_start,
 					   SZ_4K,
 					   GPU_BALLOC_MAX_ORDER,
-					   GPU_BALLOC_GVA_SPACE);
+					   GPU_ALLOC_GVA_SPACE);
 	if (err)
 		goto clean_up_big_allocator;
 

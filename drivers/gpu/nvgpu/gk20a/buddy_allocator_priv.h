@@ -137,7 +137,7 @@ struct gk20a_buddy_allocator {
 
 	/*
 	 * This is for when the allocator is managing a GVA space (the
-	 * GPU_BALLOC_GVA_SPACE bit is set in @flags). This requires
+	 * GPU_ALLOC_GVA_SPACE bit is set in @flags). This requires
 	 * that we group like sized allocations into PDE blocks.
 	 */
 	u64 pte_blk_order;

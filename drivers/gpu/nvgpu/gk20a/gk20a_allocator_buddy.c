@@ -131,7 +131,7 @@ static void __balloc_buddy_list_add(struct gk20a_buddy_allocator *a,
 	 * This lets the code that checks if there are available blocks check
 	 * without cycling through the entire list.
 	 */
-	if (a->flags & GPU_BALLOC_GVA_SPACE &&
+	if (a->flags & GPU_ALLOC_GVA_SPACE &&
 	    b->pte_size == BALLOC_PTE_SIZE_BIG)
 		list_add_tail(&b->buddy_entry, list);
 	else
@@ -383,7 +383,7 @@ static int balloc_split_buddy(struct gk20a_buddy_allocator *a,
 	right->parent = b;
 
 	/* PTE considerations. */
-	if (a->flags & GPU_BALLOC_GVA_SPACE &&
+	if (a->flags & GPU_ALLOC_GVA_SPACE &&
 	    left->order <= a->pte_blk_order) {
 		left->pte_size = pte_size;
 		right->pte_size = pte_size;
@@ -473,7 +473,7 @@ static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_buddy_allocator *a,
 	    list_empty(balloc_get_order_list(a, order)))
 		return NULL;
 
-	if (a->flags & GPU_BALLOC_GVA_SPACE &&
+	if (a->flags & GPU_ALLOC_GVA_SPACE &&
 	    pte_size == BALLOC_PTE_SIZE_BIG)
 		bud = list_last_entry(balloc_get_order_list(a, order),
 				      struct gk20a_buddy, buddy_entry);
@@ -823,7 +823,7 @@ static u64 gk20a_buddy_balloc(struct gk20a_allocator *__a, u64 len)
 	 * TODO: once userspace supports a unified address space pass 0 for
 	 * the base. This will make only 'len' affect the PTE size.
 	 */
-	if (a->flags & GPU_BALLOC_GVA_SPACE)
+	if (a->flags & GPU_ALLOC_GVA_SPACE)
 		pte_size = __get_pte_size(a->vm, a->base, len);
 	else
 		pte_size = BALLOC_PTE_SIZE_ANY;
@@ -1112,7 +1112,7 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 		return -EINVAL;
 
 	/* If this is to manage a GVA space we need a VM. */
-	if (flags & GPU_BALLOC_GVA_SPACE && !vm)
+	if (flags & GPU_ALLOC_GVA_SPACE && !vm)
 		return -EINVAL;
 
 	a = kzalloc(sizeof(struct gk20a_buddy_allocator), GFP_KERNEL);
@@ -1139,7 +1139,7 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 	}
 
 	a->vm = vm;
-	if (flags & GPU_BALLOC_GVA_SPACE)
+	if (flags & GPU_ALLOC_GVA_SPACE)
 		a->pte_blk_order = balloc_get_order(a, vm->big_page_size << 10);
 
 	a->flags = flags;

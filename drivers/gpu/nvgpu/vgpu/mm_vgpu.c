@@ -381,7 +381,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 					small_vma_limit - small_vma_start,
 					SZ_4K,
 					GPU_BALLOC_MAX_ORDER,
-					GPU_BALLOC_GVA_SPACE);
+					GPU_ALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_share;
 	}
@@ -396,7 +396,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 					large_vma_limit - large_vma_start,
 					big_page_size,
 					GPU_BALLOC_MAX_ORDER,
-					GPU_BALLOC_GVA_SPACE);
+					GPU_ALLOC_GVA_SPACE);
 		if (err)
 			goto clean_up_small_allocator;
 	}
@@ -412,7 +412,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 				     kernel_vma_limit - kernel_vma_start,
 				     SZ_4K,
 				     GPU_BALLOC_MAX_ORDER,
-				     GPU_BALLOC_GVA_SPACE);
+				     GPU_ALLOC_GVA_SPACE);
 	if (err)
 		goto clean_up_big_allocator;
 

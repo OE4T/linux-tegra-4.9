@@ -187,12 +187,14 @@ static void wke_clear_wake_status(void)
 	int i, wake;
 	u32 reg = WAKE_AOWAKE_STATUS_R_31_0_0;
 	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
+	unsigned long ulong_status;
 
 	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
 		status = tegra_aowake_read(reg);
 		status = status & tegra_aowake_read(reg);
+		ulong_status = (unsigned long)status;
 		regw = WAKE_AOWAKE_STATUS_W_0 + i * 32 * 4;
-		for_each_set_bit(wake, (ulong *)&status, 32)
+		for_each_set_bit(wake, &ulong_status, 32)
 			wke_32kwritel(1, regw + wake * 4);
 	}
 }
@@ -246,6 +248,7 @@ static void process_wake_event(int index, u32 status)
 	irq_hw_number_t hwirq;
 	int wake;
 	struct irq_desc *desc;
+	unsigned long ulong_status = (unsigned long)status;
 #ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
 	int gpio;
 #endif
@@ -253,7 +256,7 @@ static void process_wake_event(int index, u32 status)
 	pr_info("Wake[%d:%d]  status=0x%x\n",
 		(index + 1) * 32, index * 32, status);
 
-	for_each_set_bit(wake, (ulong *)&status, 32) {
+	for_each_set_bit(wake, &ulong_status, 32) {
 		hwirq = tegra_wake_to_irq(wake + 32 * index);
 		if (hwirq == -EINVAL) {
 			pr_info("Resume caused by WAKE%d\n",

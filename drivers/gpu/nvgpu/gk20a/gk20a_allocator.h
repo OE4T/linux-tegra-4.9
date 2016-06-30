@@ -73,9 +73,35 @@ struct gk20a_allocator {
 };
 
 /*
- * Allocator flags.
+ * These are the available allocator flags.
+ *
+ *   GPU_ALLOC_GVA_SPACE
+ *
+ *     This flag makes sense for the buddy allocator only. It specifies that the
+ *     allocator will be used for managing a GVA space. When managing GVA spaces
+ *     special care has to be taken to ensure that allocations of similar PTE
+ *     sizes are placed in the same PDE block. This allows the higher level
+ *     code to skip defining both small and large PTE tables for every PDE. That
+ *     can save considerable memory for address spaces that have a lot of
+ *     allocations.
+ *
+ *   GPU_ALLOC_NO_ALLOC_PAGE
+ *
+ *     For any allocator that needs to manage a resource in a latency critical
+ *     path this flag specifies that the allocator should not use any kmalloc()
+ *     or similar functions during normal operation. Initialization routines
+ *     may still use kmalloc(). This prevents the possibility of long waits for
+ *     pages when using alloc_page(). Currently only the bitmap allocator
+ *     implements this functionality.
+ *
+ *     Also note that if you accept this flag then you must also define the
+ *     free_fixed() function. Since no meta-data is allocated to help free
+ *     allocations you need to keep track of the meta-data yourself (in this
+ *     case the base and length of the allocation as opposed to just the base
+ *     of the allocation).
  */
 #define GPU_ALLOC_GVA_SPACE		0x1
+#define GPU_ALLOC_NO_ALLOC_PAGE		0x2
 
 static inline void alloc_lock(struct gk20a_allocator *a)
 {
@@ -96,6 +122,13 @@ int  __gk20a_buddy_allocator_init(struct gk20a_allocator *a,
 				  u64 max_order, u64 flags);
 int  gk20a_buddy_allocator_init(struct gk20a_allocator *allocator,
 				const char *name, u64 base, u64 size,
+				u64 blk_size, u64 flags);
+
+/*
+ * Bitmap initializers.
+ */
+int gk20a_bitmap_allocator_init(struct gk20a_allocator *__a,
+				const char *name, u64 base, u64 length,
 				u64 blk_size, u64 flags);
 
 #define GPU_BALLOC_MAX_ORDER		31

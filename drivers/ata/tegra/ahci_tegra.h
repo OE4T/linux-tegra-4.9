@@ -208,6 +208,7 @@ struct tegra_ahci_priv {
 	struct pinctrl_state	   *devslp_active;
 	struct pinctrl_state	   *devslp_pullup;
 	struct tegra_prod	   *prod_list;
+	struct work_struct	   work;
 	int			   devslp_gpio;
 	bool			   devslp_override;
 	bool			   devslp_pinmux_override;

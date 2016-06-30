@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-fpga-cl34563539-private.dtsi
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,7 +17,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
-#include "dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
+#include "dt-bindings/pinctrl/pinctrl-tegra-padctl.h"
 
 / {
 	asim {
@@ -65,8 +65,8 @@
 		dvdd-pex-pll-supply = <&battery_reg>;
 		hvdd-pex-pll-supply = <&battery_reg>;
 
-		phys = <&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
-			<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phys = <&sysfpga_padctl TEGRA_PADCTL_PHY_USB3_P(0)>,
+			<&sysfpga_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "usb3", "usb2";
 	};
 
@@ -77,14 +77,14 @@
 		avdd_pll_utmip-supply = <&battery_reg>;
 		hvdd_usb-supply = <&battery_reg>;
 
-		phys = 	<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
-			<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
-			<&sysfpga_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>;
+		phys = 	<&sysfpga_padctl TEGRA_PADCTL_PHY_USB3_P(1)>,
+			<&sysfpga_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
+			<&sysfpga_padctl TEGRA_PADCTL_PHY_UTMI_P(2)>;
 
 		phy-names = "usb3-1", "utmi-1", "utmi-2";
 	};
 
-	sysfpga_padctl_uphy: pinctrl@3520000 {
+	sysfpga_padctl: pinctrl@3520000 {
 		status = "okay";
 
 		vbus-0-supply = <&battery_reg>;
@@ -104,9 +104,7 @@
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
 			host-mode-ss-port {
-				nvidia,lanes = "uphy-lane-1";
-				nvidia,function = "usb3";
-				nvidia,usb3-port = <1>;
+				nvidia,lanes = "usb3-1";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
 			device-mode-utmi-pads {
@@ -115,9 +113,7 @@
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_DEVICE_ONLY>;
 			};
 			device-mode-ss-port {
-				nvidia,lanes = "uphy-lane-0";
-				nvidia,function = "usb3";
-				nvidia,usb3-port = <0>;
+				nvidia,lanes = "usb3-0";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_DEVICE_ONLY>;
 			};
 		};

@@ -147,11 +147,11 @@
                         uhs-mask = <0x00>;
         };
 
-	padctl_uphy: pinctrl@3520000 {
+	padctl: pinctrl@3520000 {
 		status = "okay";
-		pinctrl-0 = <&p2379_uphy_default>;
+		pinctrl-0 = <&p2379_padctl_default>;
 		pinctrl-names = "default";
-		p2379_uphy_default: pinmux {
+		p2379_padctl_default: pinmux {
 			usb2-ftdi-hub-port1 {
 				nvidia,lanes = "otg-0";
 				nvidia,function = "xusb";
@@ -163,15 +163,8 @@
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
 			usb3-std-A-port1 {
-				nvidia,lanes = "uphy-lane-0";
-				nvidia,function = "usb3";
-				nvidia,usb3-port = <0>;
+				nvidia,lanes = "usb3-0";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
-			};
-			pcie {
-				nvidia,lanes = "uphy-lane-1", "uphy-lane-2", "uphy-lane-3", "uphy-lane-4";
-				nvidia,function = "pcie";
-				nvidia,pcie-controller = <0>;
 			};
 		};
 	};
@@ -204,7 +197,7 @@
 		extcon-cables = <&vbus_gpio_extcon 0>;
 		extcon-cable-names = "vbus";
 		#extcon-cells = <1>;
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phys = <&padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "usb2";
 	};
 
@@ -213,8 +206,8 @@
 		extcon-cables = <&id_gpio_extcon 0>;
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
+		phys = <&padctl TEGRA_PADCTL_PHY_UTMI_P(2)>,
+			<&padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
 		phy-names = "utmi-2", "usb3-0";
 	};
 

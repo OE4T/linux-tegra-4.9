@@ -15,7 +15,6 @@
  */
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
-#include "dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 
 / {
 	pinmux@2430000 {
@@ -54,8 +53,6 @@
 		resets = <&tegra_car TEGRA186_RESET_SATA>,
 			<&tegra_car TEGRA186_RESET_SATACOLD>;
 		reset-names = "sata", "satacold";
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SATA_P(0)>;
-		phy-names = "sata-phy";
 		pinctrl-names = "devslp_active", "devslp_pullup";
 		pinctrl-0 = <&devslp_active_state>;
 		pinctrl-1 = <&devslp_pullup_state>;

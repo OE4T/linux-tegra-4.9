@@ -34,7 +34,7 @@
 #include "tegra186-soc/tegra186-soc-spi.dtsi"
 #include "tegra186-soc/tegra186-soc-pwm.dtsi"
 #include "dt-bindings/soc/tegra186-powergate.h"
-#include "dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
+#include "dt-bindings/pinctrl/pinctrl-tegra-padctl.h"
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
 #include "tegra186-soc/tegra186-soc-eqos.dtsi"
 #include "tegra186-soc/tegra186-soc-power-domain.dtsi"
@@ -480,47 +480,18 @@
 		status = "disabled";
 	};
 
-	tegra_padctl_uphy: pinctrl@3520000 {
-		compatible = "nvidia,tegra186-padctl-uphy";
+	tegra_padctl: pinctrl@3520000 {
+		compatible = "nvidia,tegra186-padctl";
 		reg = <0x0 0x03520000 0x0 0x1000>,
-			<0x0 0x03540000 0x0 0x1000>,
-			<0x0 0x02500000 0x0 0xa0000>;
-		reg-names = "padctl", "ao", "uphy";
-		resets = <&tegra_car TEGRA186_RESET_UPHY>,
-			<&tegra_car TEGRA186_RESET_XUSB_PADCTL>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_PLL0>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_PLL1>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L0>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L1>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L2>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L3>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L4>,
-			<&tegra_car TEGRA186_RESET_PEX_USB_UPHY_L5>;
-		reset-names = "uphy_rst", "padctl_rst", "uphy_master_rst",
-			"uphy_pll0_rst", "uphy_pll1_rst", "uphy_lane0_rst",
-			"uphy_lane1_rst", "uphy_lane2_rst", "uphy_lane3_rst",
-			"uphy_lane4_rst", "uphy_lane5_rst";
-		clocks = <&tegra_car TEGRA186_CLK_PLLP_OUT0>,
-			<&tegra_car TEGRA186_CLK_XUSB>,
-			<&tegra_car TEGRA186_CLK_PLLE>,
-			<&tegra_car TEGRA186_CLK_PLLE_PWRSEQ>,
-			<&tegra_car TEGRA186_CLK_PLLREFE_OUT1>,
+			<0x0 0x03540000 0x0 0x1000>;
+		reg-names = "padctl", "ao";
+		resets = <&tegra_car TEGRA186_RESET_XUSB_PADCTL>;
+		reset-names = "padctl_rst";
+		clocks = <&tegra_car TEGRA186_CLK_XUSB>,
 			<&tegra_car TEGRA186_CLK_PLLU>,
 			<&tegra_car TEGRA186_CLK_USB2_TRK>,
-			<&tegra_car TEGRA186_CLK_HSIC_TRK>,
-			<&tegra_car TEGRA186_CLK_PEX_USB_PAD0_MGMT>,
-			<&tegra_car TEGRA186_CLK_PEX_USB_PAD1_MGMT>,
-			<&tegra_car TEGRA186_CLK_UPHY_PLL0_PWRSEQ>,
-			<&tegra_car TEGRA186_CLK_UPHY_PLL1_PWRSEQ>,
-			<&tegra_car TEGRA186_CLK_PEX_SATA_USB_RX_BYP>,
-			<&tegra_car TEGRA186_CLK_PLLREFE_PEX>,
-			<&tegra_car TEGRA186_CLK_PLLREFE_PLLE_PASSTHROUGH>;
-		clock-names = "pllp", "xusb_clk", "plle", "plle_pwrseq",
-			"pllrefe", "utmipll", "usb2_trk", "hsic_trk",
-			"uphy_pll0_mgmt", "uphy_pll1_mgmt",
-			"uphy_pll0_pwrseq", "uphy_pll1_pwrseq", "rx_byp",
-			"pllrefe_pex", "plle_passthrough";
+			<&tegra_car TEGRA186_CLK_HSIC_TRK>;
+		clock-names = "xusb_clk", "utmipll", "usb2_trk", "hsic_trk";
 
 		interrupts = <0 167 0x4>;
 		mboxes = <&xusb_mbox>;
@@ -1367,8 +1338,9 @@
 		device_type = "pci";
 		reg = <0x0 0x10003000 0x0 0x00000800   /* PADS registers */
 		       0x0 0x10003800 0x0 0x00000800   /* AFI registers */
-		       0x0 0x40000000 0x0 0x10000000>; /* configuration space */
-		reg-names = "pads", "afi", "cs";
+		       0x0 0x40000000 0x0 0x10000000   /* configuration space */
+		       0x0 0x02520000 0x0 0x00060000>; /* UPHY Lane registers */
+		reg-names = "pads", "afi", "cs", "lanes";
 
 		clocks = <&tegra_car TEGRA186_CLK_AFI>,
 			<&tegra_car TEGRA186_CLK_PCIE>,
@@ -1377,8 +1349,9 @@
 
 		resets = <&tegra_car TEGRA186_RESET_AFI>,
 			<&tegra_car TEGRA186_RESET_PCIE>,
-			<&tegra_car TEGRA186_RESET_PCIEXCLK>;
-		reset-names = "afi", "pcie", "pciex";
+			<&tegra_car TEGRA186_RESET_PCIEXCLK>,
+			<&tegra_car TEGRA186_RESET_UPHY>;
+		reset-names = "afi", "pcie", "pciex", "uphy";
 
 		interrupts = <0 72 0x04>, /* controller interrupt */
 			     <0 73 0x04>; /* MSI interrupt */
@@ -1400,9 +1373,6 @@
 			  0x81000000 0 0x0        0x0 0x50000000 0 0x00010000   /* downstream I/O (64 KiB) */
 			  0x82000000 0 0x50100000 0x0 0x50100000 0 0x07F00000   /* non-prefetchable memory (127 MiB) */
 			  0xc2000000 0 0x58000000 0x0 0x58000000 0 0x28000000>; /* prefetchable memory (640 MiB) */
-
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
-		phy-names = "pcie-phy";
 
 		nvidia,lane-map = <0x04>;
 		status = "disabled";

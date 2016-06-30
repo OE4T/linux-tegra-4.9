@@ -13,8 +13,6 @@
  * more details.
  */
 
-#include "dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
-
 / {
 
 	tegra_ufs: ufshci@2450000 {
@@ -58,8 +56,6 @@
 		nvidia,max-pwm-gear = <4>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_UFS>;
 		pad-names = "ufs";
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UFS_P(0)>;
-		phy-names = "uphy";
 		status = "disabled";
 
 		ufs_variant {

@@ -50,7 +50,7 @@
 			override@1 {
 				target = <&tegra_xudc>;
 				_overlay_ {
-					phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+					phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 					phy-names = "usb2";
 					status = "okay";
 				};
@@ -60,27 +60,6 @@
 				target = <&tegra_xhci>;
 				_overlay_ {
 					status = "disabled";
-				};
-			};
-
-			override@3 {
-				target = <&tegra_padctl_uphy_pinmux_default>;
-				_overlay_ {
-					usb3-std-A-port0 {
-						status = "disabled";
-					};
-					usb3-micro-AB {
-						status = "disabled";
-					};
-					usb2-std-A-port2 {
-						status = "disabled";
-					};
-					usb3-std-A-port2 {
-						status = "disabled";
-					};
-					pcie {
-						nvidia,lanes = "uphy-lane-0", "uphy-lane-1", "uphy-lane-2", "uphy-lane-3", "uphy-lane-4";
-					};
 				};
 			};
 

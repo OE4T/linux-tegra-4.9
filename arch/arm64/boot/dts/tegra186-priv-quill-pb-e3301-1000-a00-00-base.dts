@@ -47,18 +47,16 @@
 
 	pinctrl@3520000 {
 		status = "okay";
-		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;
+		pinctrl-0 = <&tegra_padctl_pinmux_default>;
 		pinctrl-names = "default";
-		tegra_padctl_uphy_pinmux_default: pinmux {
+		tegra_padctl_pinmux_default: pinmux {
 			usb2-micro-AB {
 				nvidia,lanes = "otg-0";
 				nvidia,function = "xusb";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;
 			};
 			usb3-micro-AB {
-				nvidia,lanes = "uphy-lane-1";
-				nvidia,function = "usb3";
-				nvidia,usb3-port = <1>;
+				nvidia,lanes = "usb3-1";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;
 			};
 			usb2-std-A-port2 {
@@ -67,27 +65,12 @@
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
 			usb3-std-A-port2 {
-				nvidia,lanes = "uphy-lane-2";
-				nvidia,function = "usb3";
-				nvidia,usb3-port = <2>;
+				nvidia,lanes = "usb3-2";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
 			};
 			hsic {
 				nvidia,lanes = "hsic-0";
 				nvidia,function = "hsic";
-			};
-			pcie {
-				nvidia,lanes = "uphy-lane-0", "uphy-lane-3", "uphy-lane-4";
-				nvidia,function = "pcie";
-				nvidia,pcie-controller = <0>;
-			};
-			sata {
-				nvidia,lanes = "uphy-lane-5";
-				nvidia,function = "sata";
-			};
-			ufs {
-				nvidia,function = "mphy";
-				status = "disabled";
 			};
 		};
 	};

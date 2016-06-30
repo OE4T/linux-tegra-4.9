@@ -44,8 +44,8 @@
                 };
         };
 
-	padctl_uphy: pinctrl@3520000 {
-		p2379_uphy_default: pinmux {
+	padctl: pinctrl@3520000 {
+		p2379_padctl_default: pinmux {
 
 			/delete-node/ usb2-ftdi-hub-port1;
 
@@ -70,8 +70,8 @@
 		extcon-cables = <&vbus_gpio_extcon 0>;
 		extcon-cable-names = "vbus";
 		#extcon-cells = <1>;
-		phys = <&padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
-			<&padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
+		phys = <&padctl TEGRA_PADCTL_PHY_UTMI_P(2)>,
+			<&padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
 		phy-names = "usb2", "usb3";
 	};
 

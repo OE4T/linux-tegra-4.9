@@ -76,7 +76,7 @@
 				};
 			};
 			override@1 {
-				target = <&tegra_padctl_uphy>;
+				target = <&tegra_padctl>;
 				_overlay_ {
 					delete-target-property = "mboxes";
 				};
@@ -199,21 +199,6 @@
 					status = "disabled";
 				};
 			};
-			override@2 {
-				target = <&tegra_padctl_uphy>;
-				_overlay_ {
-					pinmux {
-						ufs {
-							nvidia,lanes = "uphy-lane-5";
-							nvidia,function = "mphy";
-							status = "okay";
-						};
-						sata {
-							status = "disabled";
-						};
-					};
-				};
-			};
 			override@3 {
 				target = <&gen1_i2c>;
 				_overlay_ {
@@ -240,24 +225,6 @@
 				target = <&tegra_sata>;
 				_overlay_ {
 					status = "disabled";
-				};
-			};
-			override@2 {
-				target = <&tegra_padctl_uphy>;
-				_overlay_ {
-					pinmux {
-						pcie {
-							nvidia,lanes = "uphy-lane-0", "uphy-lane-3";
-						};
-						sata {
-							status = "disabled";
-						};
-						ufs {
-							nvidia,lanes = "uphy-lane-4", "uphy-lane-5";
-							nvidia,function = "mphy";
-							status = "okay";
-						};
-					};
 				};
 			};
 			override@3 {

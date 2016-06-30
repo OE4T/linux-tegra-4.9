@@ -425,6 +425,7 @@ static int tegra_crypto_sha(struct file *filp, struct tegra_crypto_ctx *ctx,
 	}
 
 	init_completion(&sha_complete.restart);
+	sha_complete.req_err = 0;
 
 	memset(result, 0, 64);
 

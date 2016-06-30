@@ -3942,7 +3942,7 @@ static int apply_aspm_state(struct seq_file *s, void *data)
 	u32 val;
 	struct tegra_pcie_port *port = (struct tegra_pcie_port *)(s->private);
 
-	if (config_aspm_state > ARRAY_SIZE(aspm_states)) {
+	if (config_aspm_state >= ARRAY_SIZE(aspm_states)) {
 		seq_printf(s, "Invalid ASPM state : %u\n", config_aspm_state);
 		list_aspm_states(s, data);
 	} else {

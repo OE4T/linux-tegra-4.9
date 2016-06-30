@@ -25,6 +25,7 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/tegra_prod.h>
+#include <linux/uaccess.h>
 
 #include <mach/dc.h>
 #include <mach/io_dpd.h>
@@ -363,7 +364,7 @@ static int sor_crc_open(struct inode *inode, struct file *file)
 }
 
 static ssize_t sor_crc_write(struct file *file,
-				const char  *buf, size_t count, loff_t *off)
+		const char __user *user_buf, size_t count, loff_t *off)
 {
 	struct seq_file *s = file->private_data;
 	struct tegra_dc_sor_data *sor = s->private;
@@ -372,8 +373,10 @@ static ssize_t sor_crc_write(struct file *file,
 	u32    data;
 	static u8 asy_crcmode;
 
-	if (sscanf(buf, "%x", &data) != 1)
+	/* autodetect radix */
+	if (kstrtouint_from_user(user_buf, count, 0, &data) < 0)
 		return -EINVAL;
+
 	/* at this point:
 	 * data[0:0] = 1|0: enable|disable CRC
 	 * data[5:4] contains ASY_CRCMODE */

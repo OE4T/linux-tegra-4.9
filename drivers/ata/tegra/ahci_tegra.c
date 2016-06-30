@@ -38,6 +38,8 @@ static int tegra_ahci_suspend(struct device *dev);
 static int tegra_ahci_resume(struct device *dev);
 #endif
 
+static void tegra_ahci_shutdown(struct platform_device *pdev);
+
 static char * const tegra_rail_names[] = {};
 
 static const struct tegra_ahci_soc_data tegra_ahci_data = {
@@ -265,6 +267,34 @@ static int tegra_ahci_softreset(struct ata_link *link, unsigned int *class,
 
 }
 
+static void tegra_ahci_unbind(struct work_struct *work)
+{
+	struct tegra_ahci_priv *tegra =
+			container_of(work, struct tegra_ahci_priv, work);
+	struct platform_device *pdev = tegra->pdev;
+
+	tegra_ahci_shutdown(pdev);
+	pm_runtime_put_sync(&pdev->dev);
+	pm_runtime_disable(&pdev->dev);
+	pdev->dev.driver->pm = NULL;
+	pdev->dev.driver->shutdown  = NULL;
+}
+
+static void tegra_ahci_error_handler(struct ata_port *ap)
+{
+	ahci_ops.error_handler(ap);
+	if (!ata_dev_enabled(ap->link.device)) {
+		if (!(ap->pflags & ATA_PFLAG_SUSPENDED)) {
+			struct ata_host *host = ap->host;
+			struct ahci_host_priv *hpriv =  host->private_data;
+			struct tegra_ahci_priv *tegra = hpriv->plat_data;
+
+			INIT_WORK(&tegra->work, tegra_ahci_unbind);
+			schedule_work(&tegra->work);
+		}
+	}
+}
+
 static struct ata_port_operations ahci_tegra_port_ops = {
 	.inherits	= &ahci_ops,
 	.qc_issue	= tegra_ahci_qc_issue,
@@ -273,6 +303,7 @@ static struct ata_port_operations ahci_tegra_port_ops = {
 	.port_resume	= tegra_ahci_port_resume,
 	.hardreset	= tegra_ahci_hardreset,
 	.softreset	= tegra_ahci_softreset,
+	.error_handler	= tegra_ahci_error_handler,
 };
 
 static struct ata_port_info ahci_tegra_port_info = {

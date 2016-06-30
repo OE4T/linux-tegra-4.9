@@ -873,8 +873,7 @@ static int tegra_hdmi_tmds_init(struct tegra_hdmi *hdmi)
 		return -EINVAL;
 	}
 
-	hdmi->prod_list =
-		tegra_prod_init((const struct device_node *)np_prod);
+	hdmi->prod_list = tegra_prod_get_from_node(np_prod);
 	if (IS_ERR(hdmi->prod_list)) {
 		dev_warn(&hdmi->dc->ndev->dev,
 			"hdmi: prod list init failed with error %ld\n",
@@ -1210,7 +1209,8 @@ static void tegra_dc_hdmi_destroy(struct tegra_dc *dc)
 	free_irq(gpio_to_irq(dc->out->hotplug_gpio), dc);
 	gpio_free(dc->out->hotplug_gpio);
 	devm_kfree(&dc->ndev->dev, hdmi);
-	tegra_prod_release(&hdmi->prod_list);
+	tegra_prod_put(hdmi->prod_list);
+	hdmi->prod_list = NULL;
 
 	switch_dev_unregister(&hdmi->hpd_switch);
 #ifdef CONFIG_SWITCH

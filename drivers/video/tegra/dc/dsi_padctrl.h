@@ -15,6 +15,7 @@
  */
 #include <linux/of.h>
 #include <mach/dc.h>
+#include <linux/tegra_prod.h>
 
 #define DSI_MAX_INSTANCES	4
 
@@ -22,7 +23,7 @@ struct tegra_dsi_padctrl {
 	struct reset_control *reset;
 	struct resource *base_res;
 	u8 pwr_dwn_mask[DSI_MAX_INSTANCES];
-	struct tegra_prod_list *prod_list;
+	struct tegra_prod *prod_list;
 	bool prod_settings_updated;
 	void __iomem *base_addr;
 };

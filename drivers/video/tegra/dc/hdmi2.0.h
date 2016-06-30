@@ -17,6 +17,8 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_HDMI2_0_H__
 #define __DRIVERS_VIDEO_TEGRA_DC_HDMI2_0_H__
 
+#include <linux/tegra_prod.h>
+
 #define HDMI_HPD_DEBOUNCE_DELAY_MS	(100)
 #define HDMI_SCDC_MONITOR_TIMEOUT_MS	(5000)
 #define HDMI_EDID_MAX_LENGTH 512
@@ -384,7 +386,7 @@ struct tegra_hdmi {
 
 	int ddc_i2c_original_rate;
 	int irq;
-	struct tegra_prod_list *prod_list;
+	struct tegra_prod *prod_list;
 	int ddc_refcount;
 	struct mutex ddc_refcount_lock;
 	bool device_shutdown;

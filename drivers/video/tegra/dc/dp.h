@@ -20,6 +20,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/reset.h>
+#include <linux/tegra_prod.h>
 
 #include "sor.h"
 #include "dc_priv.h"
@@ -108,7 +109,7 @@ struct tegra_dc_dp_data {
 
 	struct mutex dpaux_lock;
 
-	struct tegra_prod_list *prod_list;
+	struct tegra_prod *prod_list;
 
 	u8 sink_cap[DP_DPCD_SINK_CAP_SIZE];
 	bool sink_cap_valid;

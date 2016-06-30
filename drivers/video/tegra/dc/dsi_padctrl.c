@@ -227,8 +227,7 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc)
 		tegra_dsi_padctrl_reset(dsi_padctrl);
 	}
 
-	dsi_padctrl->prod_list = tegra_prod_init(
-		(const struct device_node *)np_dsi);
+	dsi_padctrl->prod_list = tegra_prod_get_from_node(np_dsi);
 	if (IS_ERR(dsi_padctrl->prod_list)) {
 		dev_err(&dc->ndev->dev, "dsi padctl:prod list init failed%ld\n",
 			PTR_ERR(dsi_padctrl->prod_list));
@@ -274,7 +273,8 @@ void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc)
 	}
 
 	if (dsi_padctrl->prod_list) {
-		tegra_prod_release(&dsi_padctrl->prod_list);
+		tegra_prod_put(dsi_padctrl->prod_list);
+		dsi_padctrl->prod_list = NULL;
 		dsi_padctrl->prod_settings_updated = false;
 	}
 

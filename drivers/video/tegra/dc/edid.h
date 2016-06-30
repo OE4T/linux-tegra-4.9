@@ -191,4 +191,5 @@ int tegra_edid_underscan_supported(struct tegra_edid *edid);
 int tegra_edid_i2c_adap_change_rate(struct i2c_adapter *i2c_adap, int rate);
 int tegra_edid_read_block(struct tegra_edid *edid, int block, u8 *data);
 int tegra_edid_audio_supported(struct tegra_edid *edid);
+bool tegra_edid_is_vrr_capable(struct tegra_edid *edid);
 #endif

@@ -1033,9 +1033,15 @@ static status_t tegra210_adsp_msg_handler(uint32_t msg, void *data)
 	break;
 	case apm_cmd_raw_data_ready: {
 		apm_raw_data_msg_t *msg = kzalloc(sizeof(apm_raw_data_msg_t), GFP_ATOMIC);
+		if (!msg) {
+			ret = -ENOMEM;
+			break;
+		}
+
 		ret = tegra210_adsp_get_raw_data_msg(app->apm, msg);
 		if (ret < 0) {
 			pr_err("Dequeue failed %d.", ret);
+			kfree(msg);
 			break;
 		}
 		memcpy(app->read_data.data, msg->msg.fx_raw_data_params.data,

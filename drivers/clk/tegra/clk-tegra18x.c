@@ -27,7 +27,7 @@
 #include <linux/of_device.h>
 #include <linux/tegra-soc.h>
 
-#include "clk.h"
+#include "clk-t18x.h"
 
 /* Needed for a nvdisp linsim clock hack */
 #define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008

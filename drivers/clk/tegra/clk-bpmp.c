@@ -24,7 +24,7 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
 
-#include "clk.h"
+#include "clk-t18x.h"
 #include "clk-mrq.h"
 
 /**

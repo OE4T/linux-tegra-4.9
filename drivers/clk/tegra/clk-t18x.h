@@ -17,8 +17,6 @@
 #ifndef __TEGRA186_CLK_H
 #define __TEGRA186_CLK_H
 
-#include "clk.h"
-
 /**
  * struct tegra_bpmp_clk
  *

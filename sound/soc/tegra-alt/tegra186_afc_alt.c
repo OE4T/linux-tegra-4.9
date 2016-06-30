@@ -1,7 +1,7 @@
 /*
  * tegra186_afc_alt.c - Additional features for T186
  *
- * Copyright (c) 2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -109,7 +109,7 @@ static unsigned int tegra186_afc_get_dspk_id(unsigned int afc_id)
 int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 				unsigned int afc_id)
 {
-	unsigned int module_id, value;
+	unsigned int module_id, value = 0;
 	unsigned int module_sel = 0;
 
 	if (tegra210_afc_get_sfc_id(afc_id)) {
@@ -119,7 +119,10 @@ int tegra210_afc_set_thresholds(struct tegra210_afc *afc,
 		value |= 3 << TEGRA210_AFC_FIFO_START_THRESHOLD_SHIFT;
 		value |= 2;
 	}
-	regmap_write(afc->regmap, TEGRA210_AFC_TXCIF_FIFO_PARAMS, value);
+
+	if (value)
+		regmap_write(afc->regmap, TEGRA210_AFC_TXCIF_FIFO_PARAMS,
+				value);
 
 	module_id = tegra186_afc_get_i2s_id(afc_id);
 

@@ -29,7 +29,7 @@
 #include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
 
-#include "powergate-priv.h"
+#include "powergate-priv-t18x.h"
 
 #define UPDATE_LOGIC_STATE	0x1
 #define LOGIC_STATE_ON		0x1

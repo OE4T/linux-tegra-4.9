@@ -110,4 +110,25 @@
 			status = "okay";
 		};
 	};
+
+	host1x {
+		sor {
+			status = "okay";
+			hdmi-display {
+				status = "okay";
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+		};
+		sor1 {
+			status = "okay";
+			hdmi-display {
+				status = "okay";
+				disp-default-out {
+					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
+				};
+			};
+		};
+	};
 };

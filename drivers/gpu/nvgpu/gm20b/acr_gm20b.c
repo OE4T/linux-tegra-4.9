@@ -146,7 +146,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	err = gk20a_init_pmu(pmu);
 	if (err) {
 		gm20b_dbg_pmu("failed to set function pointers\n");
-		goto release_desc;
+		goto release_sig;
 	}
 
 	lsf_desc = kzalloc(sizeof(struct lsf_ucode_desc), GFP_KERNEL);

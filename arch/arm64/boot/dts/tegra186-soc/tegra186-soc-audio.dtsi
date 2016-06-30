@@ -108,7 +108,15 @@
 			status = "okay";
 		};
 
+		dmic@2904100 {
+			status = "okay";
+		};
+
 		dmic@2904200 {
+			status = "okay";
+		};
+
+		dmic@2904300 {
 			status = "okay";
 		};
 
@@ -212,6 +220,34 @@
 		};
 
 		spdif-dit.6@6 {
+			status = "okay";
+		};
+
+		spdif-dit.7@7 {
+			status = "okay";
+		};
+
+		spdif-dit.8@8 {
+			status = "okay";
+		};
+
+		spdif-dit.9@9 {
+			status = "okay";
+		};
+
+		spdif-dit.10@a {
+			status = "okay";
+		};
+
+		spdif-dit.11@b {
+			status = "okay";
+		};
+
+		spdif-dit.12@c {
+			status = "okay";
+		};
+
+		spdif-dit.13@d {
 			status = "okay";
 		};
 	};

@@ -232,53 +232,6 @@
 		status = "disabled";
 	};
 
-	tegra_sound: sound {
-		e2614_dspk_r_dai_link: nvidia,dai-link-7 {
-			link-name = "dspk-playback-r";
-			cpu-dai = <&tegra_dspk2>;
-			codec-dai = <&e2614_tas2552_r>;
-			cpu-dai-name = "DSPK2";
-			codec-dai-name = "tas2552-amplifier";
-			format = "i2s";
-			bit-format = "s16_le";
-			srate = <48000>;
-			num-channel = <2>;
-			ignore_suspend;
-			name-prefix = "d1";
-			status = "disabled";
-		};
-
-		e2614_dspk_l_dai_link: nvidia,dai-link-8 {
-			link-name = "dspk-playback-l";
-			cpu-dai = <&tegra_dspk2>;
-			codec-dai = <&e2614_tas2552_l>;
-			cpu-dai-name = "DSPK2";
-			codec-dai-name = "tas2552-amplifier";
-			format = "i2s";
-			bit-format = "s16_le";
-			srate = <48000>;
-			num-channel = <2>;
-			ignore_suspend;
-			name-prefix = "d2";
-			status = "disabled";
-                };
-
-		e2614_spdif_dai_link: nvidia,dai-link-9 {
-			link-name = "spdif-playback";
-			cpu-dai = <&tegra_spdif>;
-			codec-dai = <&spdif_dit4>;
-			cpu-dai-name = "SPDIF1-1";
-			codec-dai-name = "dit-hifi";
-			format = "i2s";
-			bit-format = "s16_le";
-			srate = <48000>;
-			num-channel = <2>;
-			ignore_suspend;
-			name-prefix = "s";
-			status = "disabled";
-		};
-	};
-
 	plugin-manager {
 		fragment-e2614-common@0 {
 			ids = "2614-0000-*";
@@ -334,17 +287,7 @@
 			overrides@10 {
 				target = <&tegra_sound>;
 				_overlay_ {
-					nvidia,num-codec-link = <9>;
 					nvidia,audio-routing =
-						"y Headphone",		"y OUT",
-						"y IN",			"y Mic",
-						"z IN",			"z OUT",
-						"m Headphone",		"m OUT",
-						"m IN",			"m Mic",
-						"p Headphone",		"p OUT",
-						"p IN",			"p Mic",
-						"q Headphone",		"q OUT",
-						"q IN",			"q Mic",
 						"x Headphone Jack",	"x HPO L Playback",
 						"x Headphone Jack",	"x HPO R Playback",
 						"x IN1P",		"x Mic Jack",
@@ -353,31 +296,48 @@
 						"x DMIC L2",		"x Int Mic",
 						"x DMIC R1",		"x Int Mic",
 						"x DMIC R2",		"x Int Mic",
+						"y Headphone",		"y OUT",
+						"y IN",			"y Mic",
+						"z IN",			"z OUT",
+						"m Headphone",		"m OUT",
+						"m IN",			"m Mic",
+						"n Headphone",		"n OUT",
+						"n IN",			"n Mic",
+						"o Headphone",		"o OUT",
+						"o IN",			"o Mic",
+						"a IN",			"a Mic",
+						"b IN",			"b Mic",
+						"c IN",			"c Mic",
+						"d IN",			"d Mic",
+						"e Headphone",		"e OUT",
+						"e IN",			"e Mic",
 						"d1 Headphone",		"d1 OUT",
-						"d1 IN",		"d1 Mic",
-						"d2 Headphone",		"d2 OUT",
-						"d2 IN",		"d2 Mic",
-						"s Headphone",		"s OUT",
-						"s IN",			"s Mic";
+						"d2 Headphone",		"d2 OUT";
 				};
 			};
 
 			overrides@11 {
-				target = <&e2614_rt565x_dai_link>;
+				target = <&rt565x_dai_link>;
 				_overlay_ {
 					codec-dai-name = "rt5659-aif1";
 				};
 			};
 			overrides@12 {
-				target = <&e2614_dspk_r_dai_link>;
+				target = <&dspk_1_dai_link>;
 				_overlay_ {
-					status = "okay";
+					cpu-dai = <&tegra_dspk2>;
+					codec-dai = <&e2614_tas2552_r>;
+					cpu-dai-name = "DSPK2";
+					codec-dai-name = "tas2552-amplifier";
 				};
 			};
 			overrides@13 {
-				target = <&e2614_dspk_l_dai_link>;
+				target = <&dspk_2_dai_link>;
 				_overlay_ {
-					status = "okay";
+					cpu-dai = <&tegra_dspk2>;
+					codec-dai = <&e2614_tas2552_l>;
+					cpu-dai-name = "DSPK2";
+					codec-dai-name = "tas2552-amplifier";
 				};
 			};
 			overrides@14 {
@@ -404,12 +364,6 @@
                                         status = "okay";
                                 };
                         };
-			overrides@18 {
-				target = <&e2614_spdif_dai_link>;
-				_overlay_ {
-					status = "okay";
-				};
-			};
 		};
 
 		fragment-e2614-a00@1 {
@@ -421,7 +375,7 @@
 				};
 			};
 			overrides@1 {
-				target = <&e2614_rt565x_dai_link>;
+				target = <&rt565x_dai_link>;
 				_overlay_ {
 					codec-dai = <&e2614_rt5658>;
 				};
@@ -438,7 +392,7 @@
 			};
 
 			overrides@1 {
-				target = <&e2614_rt565x_dai_link>;
+				target = <&rt565x_dai_link>;
 				_overlay_ {
 					codec-dai = <&e2614_rt5658_i2c3>;
 				};

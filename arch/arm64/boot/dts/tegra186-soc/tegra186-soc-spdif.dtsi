@@ -62,7 +62,49 @@
 
 		spdif_dit6: spdif-dit.6@6 {
 			compatible = "linux,spdif-dit";
-			reg = <0x6>;
+			reg = <0x06>;
+			status = "disabled";
+		};
+
+		spdif_dit7: spdif-dit.7@7 {
+			compatible = "linux,spdif-dit";
+			reg = <0x07>;
+			status = "disabled";
+		};
+
+		spdif_dit8: spdif-dit.8@8 {
+			compatible = "linux,spdif-dit";
+			reg = <0x08>;
+			status = "disabled";
+		};
+
+		spdif_dit9: spdif-dit.9@9 {
+			compatible = "linux,spdif-dit";
+			reg = <0x09>;
+			status = "disabled";
+		};
+
+		spdif_dit10: spdif-dit.10@a {
+			compatible = "linux,spdif-dit";
+			reg = <0x0a>;
+			status = "disabled";
+		};
+
+		spdif_dit11: spdif-dit.11@b {
+			compatible = "linux,spdif-dit";
+			reg = <0x0b>;
+			status = "disabled";
+		};
+
+		spdif_dit12: spdif-dit.12@c {
+			compatible = "linux,spdif-dit";
+			reg = <0x0c>;
+			status = "disabled";
+		};
+
+		spdif_dit13: spdif-dit.13@d {
+			compatible = "linux,spdif-dit";
+			reg = <0x0d>;
 			status = "disabled";
 		};
 	};

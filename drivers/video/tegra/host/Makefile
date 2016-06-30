@@ -5,6 +5,7 @@ ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 
 subdir-ccflags-y := -Werror
+obj-y  += nvhost_queue.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
 obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/

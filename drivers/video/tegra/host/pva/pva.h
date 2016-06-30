@@ -21,7 +21,7 @@
 #ifndef __NVHOST_PVA_H__
 #define __NVHOST_PVA_H__
 
-#include "pva_queue.h"
+#include "nvhost_queue.h"
 
 extern const struct file_operations tegra_pva_ctrl_ops;
 
@@ -34,16 +34,12 @@ extern const struct file_operations tegra_pva_ctrl_ops;
  * struct pva - Driver private data, shared with all applications
  *
  * @pdev:			Pointer to the PVA device
- * @queues:			Queues available for the PVA
- * @allocated_queues_mutex:	Mutex for the bitmap of reserved queues
- * @allocated_queues:		Bitmap of allocated queues
+ * @pool:			Pointer to Queue table available for the PVA
  *
  */
 struct pva {
 	struct platform_device *pdev;
-	struct pva_queue queues[MAX_PVA_QUEUE_COUNT];
-	struct mutex allocated_queues_mutex;
-	unsigned long allocated_queues;
+	struct nvhost_queue_pool *pool;
 };
 
 /**

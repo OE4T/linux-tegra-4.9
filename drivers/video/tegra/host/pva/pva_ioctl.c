@@ -34,12 +34,12 @@
  * struct pva_private - Per-fd specific data
  *
  * @pdev:		Pointer the pva device
- * @queue:		Pointer the struct pva_queue
+ * @queue:		Pointer the struct nvhost_queue
  * @buffer:		Pointer to the struct pva_buffer
  */
 struct pva_private {
 	struct platform_device *pdev;
-	struct pva_queue *queue;
+	struct nvhost_queue *queue;
 	struct pva_buffers *buffers;
 };
 
@@ -184,6 +184,7 @@ static int pva_open(struct inode *inode, struct file *file)
 	struct nvhost_device_data *pdata = container_of(inode->i_cdev,
 					struct nvhost_device_data, ctrl_cdev);
 	struct platform_device *pdev = pdata->pdev;
+	struct pva *pva = pdata->private_data;
 	struct pva_private *priv;
 	int err = 0;
 
@@ -207,7 +208,7 @@ static int pva_open(struct inode *inode, struct file *file)
 		goto err_alloc_buffer;
 	}
 
-	priv->queue = pva_queue_alloc(pdev);
+	priv->queue = nvhost_queue_alloc(pva->pool);
 	if (IS_ERR(priv->queue)) {
 		err = PTR_ERR(priv->queue);
 		goto err_alloc_queue;
@@ -229,8 +230,8 @@ static int pva_release(struct inode *inode, struct file *file)
 {
 	struct pva_private *priv = file->private_data;
 
-	pva_queue_abort(priv->queue);
-	pva_queue_put(priv->queue);
+	nvhost_queue_abort(priv->queue);
+	nvhost_queue_put(priv->queue);
 	nvhost_module_remove_client(priv->pdev, priv);
 
 	pva_buffer_put(priv->buffers);

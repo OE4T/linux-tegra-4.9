@@ -33,7 +33,7 @@
 #include "bus_client.h"
 #include "nvhost_acm.h"
 #include "t194/t194.h"
-#include "pva_queue.h"
+#include "nvhost_queue.h"
 #include "pva.h"
 
 /* Map PVA-A and PVA-B to respective configuration items in nvhost */
@@ -87,7 +87,6 @@ static int pva_probe(struct platform_device *pdev)
 	}
 
 	/* Initialize PVA private data */
-	mutex_init(&pva->allocated_queues_mutex);
 	pva->pdev = pdev;
 
 	/* Initialize nvhost specific data */
@@ -121,10 +120,16 @@ static int pva_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_client_device_init;
 
-	pva_queue_init(pva);
+	pva->pool = nvhost_queue_init(pdev, MAX_PVA_QUEUE_COUNT);
+	if (IS_ERR(pva->pool)) {
+		err = PTR_ERR(pva->pool);
+		goto err_queue_init;
+	}
 
 	return 0;
 
+err_queue_init:
+	nvhost_client_device_release(pdev);
 err_client_device_init:
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 err_add_domain:
@@ -141,6 +146,10 @@ err_get_pdata:
 
 static int __exit pva_remove(struct platform_device *pdev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva *pva = pdata->private_data;
+
+	nvhost_queue_deinit(pva->pool);
 	nvhost_client_device_release(pdev);
 
 	return 0;

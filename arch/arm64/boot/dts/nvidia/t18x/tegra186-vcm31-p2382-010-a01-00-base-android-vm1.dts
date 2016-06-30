@@ -581,6 +581,51 @@
         /delete-node/ axip2p@2180000;
         /delete-node/ axip2p@2190000;
 
+	sdhci@3460000 {
+		status = "disabled";
+	};
+
+	/* the virtual storage device node */
+	/* APP */
+	tegra_hv_storage {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <0>;
+		ivc = <&tegra_hv 67>;
+	};
+
+	/* VENDOR */
+	tegra_hv_storage1 {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <1>;
+		ivc = <&tegra_hv 68>;
+	};
+
+	/* CAC */
+	tegra_hv_storage2 {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <2>;
+		ivc = <&tegra_hv 69>;
+	};
+
+	/* MDA */
+	tegra_hv_storage3 {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <3>;
+		ivc = <&tegra_hv 70>;
+	};
+
+	/* UDA */
+	tegra_hv_storage4 {
+		compatible = "nvidia,tegra-hv-storage";
+		status = "okay";
+		instance = <4>;
+		ivc = <&tegra_hv 90>;
+	};
+
 	gpio-keys {
 		status = "disabled";
 	};

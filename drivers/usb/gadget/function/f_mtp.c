@@ -40,7 +40,7 @@
 
 #include "configfs.h"
 
-#define MTP_BULK_BUFFER_SIZE       16384
+#define MTP_BULK_BUFFER_SIZE       131072
 #define INTR_BUFFER_SIZE           28
 #define MAX_INST_NAME_LEN          40
 #define MTP_MAX_FILE_SIZE          0xFFFFFFFFL

@@ -1,7 +1,7 @@
 /*
  * drivers/thermal/pid_thermal_gov.c
  *
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
 
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -323,7 +323,7 @@ static struct kobj_type pid_thermal_gov_ktype = {
 	.sysfs_ops	= &pid_thermal_gov_sysfs_ops,
 };
 
-static int pid_thermal_gov_start(struct thermal_zone_device *tz)
+static int pid_thermal_gov_bind(struct thermal_zone_device *tz)
 {
 	struct pid_thermal_governor *gov;
 	struct pid_thermal_gov_params *params;
@@ -352,7 +352,7 @@ static int pid_thermal_gov_start(struct thermal_zone_device *tz)
 	return 0;
 }
 
-static void pid_thermal_gov_stop(struct thermal_zone_device *tz)
+static void pid_thermal_gov_unbind(struct thermal_zone_device *tz)
 {
 	struct pid_thermal_governor *gov = tz_to_gov(tz);
 
@@ -521,8 +521,8 @@ static int pid_thermal_gov_of_parse(struct thermal_zone_params *tzp,
 
 static struct thermal_governor pid_thermal_gov = {
 	.name		= DRV_NAME,
-	.start		= pid_thermal_gov_start,
-	.stop		= pid_thermal_gov_stop,
+	.bind_to_tz	= pid_thermal_gov_bind,
+	.unbind_from_tz	= pid_thermal_gov_unbind,
 	.throttle	= pid_thermal_gov_throttle,
 	.of_parse	= pid_thermal_gov_of_parse,
 };

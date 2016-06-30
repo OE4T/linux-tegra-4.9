@@ -1181,6 +1181,12 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	gk20a_dbg_fn("%s smpc ctxsw mode = %d",
 		     dev_name(dbg_s->dev), args->mode);
 
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		return err;
+	}
+
 	/* Take the global lock, since we'll be doing global regops */
 	mutex_lock(&g->dbg_sessions_lock);
 
@@ -1203,6 +1209,7 @@ static int nvgpu_dbg_gpu_ioctl_smpc_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	err = g->ops.regops.apply_smpc_war(dbg_s);
  clean_up:
 	mutex_unlock(&g->dbg_sessions_lock);
+	gk20a_idle(g->dev);
 	return  err;
 }
 
@@ -1215,6 +1222,12 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 
 	gk20a_dbg_fn("%s pm ctxsw mode = %d",
 		     dev_name(dbg_s->dev), args->mode);
+
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		return err;
+	}
 
 	/* Take the global lock, since we'll be doing global regops */
 	mutex_lock(&g->dbg_sessions_lock);
@@ -1238,6 +1251,7 @@ static int nvgpu_dbg_gpu_ioctl_hwpm_ctxsw_mode(struct dbg_session_gk20a *dbg_s,
 	 */
  clean_up:
 	mutex_unlock(&g->dbg_sessions_lock);
+	gk20a_idle(g->dev);
 	return  err;
 }
 
@@ -1254,6 +1268,12 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	if (!ch)
 		return -EINVAL;
+
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		return err;
+	}
 
 	mutex_lock(&g->dbg_sessions_lock);
 
@@ -1281,6 +1301,7 @@ static int nvgpu_dbg_gpu_ioctl_suspend_resume_sm(
 
 clean_up:
 	mutex_unlock(&g->dbg_sessions_lock);
+	gk20a_idle(g->dev);
 
 	return  err;
 }
@@ -1316,8 +1337,14 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 	virt_addr_hi = u64_hi32(args->offset);
 	/* but check anyway */
 	if (args->offset + virt_size > SZ_4G) {
-		gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset, NULL);
-		return -EINVAL;
+		err = -EINVAL;
+		goto fail_unmap;
+	}
+
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		goto fail_unmap;
 	}
 
 	/* address and size are aligned to 32 bytes, the lowest bits read back
@@ -1337,16 +1364,29 @@ static int gk20a_perfbuf_map(struct dbg_session_gk20a *dbg_s,
 			perf_pmasys_mem_block_valid_true_f() |
 			perf_pmasys_mem_block_target_lfb_f());
 
+	gk20a_idle(g->dev);
+
 	return 0;
+
+fail_unmap:
+	gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset, NULL);
+	return err;
 }
 
 static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 		struct nvgpu_dbg_gpu_perfbuf_unmap_args *args)
 {
 	struct gk20a *g = dbg_s->g;
+	int err;
 
 	if (!g->allow_all)
 		return -EACCES;
+
+	err = gk20a_busy(g->dev);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g), "failed to poweron");
+		return err;
+	}
 
 	gk20a_writel(g, perf_pmasys_outbase_r(), 0);
 	gk20a_writel(g, perf_pmasys_outbaseupper_r(),
@@ -1357,6 +1397,8 @@ static int gk20a_perfbuf_unmap(struct dbg_session_gk20a *dbg_s,
 			perf_pmasys_mem_block_base_f(0) |
 			perf_pmasys_mem_block_valid_false_f() |
 			perf_pmasys_mem_block_target_f(0));
+
+	gk20a_idle(g->dev);
 
 	gk20a_vm_unmap_buffer(&g->mm.pmu.vm, args->offset, NULL);
 

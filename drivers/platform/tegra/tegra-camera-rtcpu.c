@@ -29,6 +29,7 @@
 #include <linux/tegra_ast.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
+#include <linux/tegra-rtcpu-trace.h>
 #include <linux/wait.h>
 #include <linux/sched.h>
 
@@ -156,6 +157,7 @@ struct tegra_cam_rtcpu {
 	struct tegra_ivc_bus *ivc;
 	struct tegra_ast *ast;
 	struct tegra_hsp_sm_pair *sm_pair;
+	struct tegra_rtcpu_trace *tracer;
 	struct {
 		struct mutex mutex;
 		wait_queue_head_t response_waitq;
@@ -578,6 +580,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		ret = PTR_ERR(cam_rtcpu->ast);
 		goto fail;
 	}
+
+	cam_rtcpu->tracer = tegra_rtcpu_trace_create(dev, cam_rtcpu->ast,
+						cam_rtcpu->rtcpu_pdata->sid);
 
 	ret = tegra_camrtc_boot(dev);
 	if (ret)

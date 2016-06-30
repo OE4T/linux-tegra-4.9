@@ -8,3 +8,4 @@ obj-y += debug.o
 obj-y += tegra-sysfs-mbox.o
 obj-y += vi-notify.o
 obj-y += hsp-mbox.o
+obj-y += tegra-rtcpu-trace.o

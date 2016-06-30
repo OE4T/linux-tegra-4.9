@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/host/tsec/tsec_methods.h
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -219,3 +219,8 @@ struct hdcp_context_t {
 	u32				session_id;
 	struct nvhdcp_msg               msg;
 };
+
+extern int tsec_hdcp_create_context(struct hdcp_context_t *hdcp_context);
+extern int tsec_hdcp_free_context(struct hdcp_context_t *hdcp_context);
+extern void tsec_send_method(struct hdcp_context_t *hdcp_context,
+					u32 method, u32 flags);

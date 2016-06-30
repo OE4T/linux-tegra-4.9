@@ -145,4 +145,16 @@
 			dat_len = <8>;  /* 8 bit data length */
 		};
 	};
+
+	host1x {
+		sor1 {
+			prod-settings {
+				prod_c_150M {
+					board-tegra-b {
+						status = "okay";
+					};
+				};
+			};
+		};
+	};
 };

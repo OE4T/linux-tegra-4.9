@@ -317,14 +317,6 @@
 		status = "disabled";
 	};
 
-	ast@c040000 {
-		status = "disabled";
-	};
-
-	ast@c050000 {
-		status = "disabled";
-	};
-
         efuse@3820000 {
                 status = "disabled";
         };

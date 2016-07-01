@@ -2407,18 +2407,6 @@
 		status = "disabled";
 	};
 
-	aon_ast0: ast@c040000 {
-		compatible = "nvidia,tegra186-ast";
-		reg = <0 0x0c040000 0 0x10000>;
-		status = "disabled";
-	};
-
-	aon_ast1: ast@c050000 {
-		compatible = "nvidia,tegra186-ast";
-		reg = <0 0x0c050000 0 0x10000>;
-		status = "disabled";
-	};
-
 	cpufreq@e070000 {
 		compatible = "nvidia,tegra18x-cpufreq";
 		reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */

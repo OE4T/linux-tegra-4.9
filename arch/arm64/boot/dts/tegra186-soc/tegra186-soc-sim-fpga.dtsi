@@ -271,14 +271,6 @@
 		nvidia,enable-autocc3;
 	};
 
-	ast@c040000 {
-		status = "okay";
-	};
-
-	ast@c050000 {
-		status = "okay";
-	};
-
 	efuse@3820000 {
 		status = "okay";
 	};

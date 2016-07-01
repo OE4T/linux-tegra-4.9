@@ -322,6 +322,32 @@
 			reset-names = "dpaux";
 		}; //dpaux@155c0000
 
+		pvaa {
+			compatible = "nvidia,tegra194-pva";
+			reg = <0x0 0x16000000 0x0 0x800000>;
+			interrupts = <0 234 0x04>;
+
+			clocks = <&bpmp_clks TEGRA194_CLK_PVA0_AXI>,
+				 <&bpmp_clks TEGRA194_CLK_PVA0_VPS0>,
+				 <&bpmp_clks TEGRA194_CLK_PVA0_VPS1>;
+			clock-names = "pva0", "pva0_vps0", "pva0_vps1";
+
+			#stream-id-cells = <1>;
+		};
+
+		pvab {
+			compatible = "nvidia,tegra194-pva";
+			reg = <0x0 0x16800000 0x0 0x800000>;
+			interrupts = <0 235 0x04>;
+
+			clocks = <&bpmp_clks TEGRA194_CLK_PVA1_AXI>,
+				 <&bpmp_clks TEGRA194_CLK_PVA1_VPS0>,
+				 <&bpmp_clks TEGRA194_CLK_PVA1_VPS1>;
+			clock-names = "pva1", "pva1_vps0", "pva1_vps1";
+
+			#stream-id-cells = <1>;
+		};
+
 	}; // host1x
 
 	tegra_car: clock@20000000 {

@@ -42,6 +42,7 @@ u32 tegra_read_chipid(void);
 
 #if !defined(CONFIG_TEGRA_FUSE)
 int tegra_fuse_readl(unsigned long offset, u32 *value);
+u8 tegra_get_chip_id(void);
 #endif
 
 #endif /* __ASSEMBLY__ */

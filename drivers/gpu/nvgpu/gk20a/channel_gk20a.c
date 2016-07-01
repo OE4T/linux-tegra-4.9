@@ -69,6 +69,8 @@ static void gk20a_free_error_notifiers(struct channel_gk20a *ch);
 static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch);
 
 static void gk20a_channel_clean_up_jobs(struct work_struct *work);
+static void gk20a_channel_cancel_job_clean_up(struct channel_gk20a *c,
+				bool wait_for_completion);
 
 /* allocate GPU channel */
 static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
@@ -459,6 +461,8 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 {
 	struct channel_gk20a_job *job, *n;
 	bool released_job_semaphore = false;
+
+	gk20a_channel_cancel_job_clean_up(ch, true);
 
 	/* ensure no fences are pending */
 	mutex_lock(&ch->sync_lock);

@@ -146,6 +146,24 @@
 		status = "disabled";
 	};
 
+	hsp_top: tegra-hsp@3c00000 {
+		compatible = "nvidia,tegra186-hsp";
+		reg = <0x0 0x03c00000 0x0 0x000a0000>;
+		interrupts =	<0 176 0x4>,
+				<0 120 0x4>,
+				<0 121 0x4>,
+				<0 122 0x4>,
+				<0 123 0x4>,
+				<0 124 0x4>,
+				<0 125 0x4>,
+				<0 126 0x4>,
+				<0 127 0x4>;
+		interrupt-names = "doorbell",
+				"shared0", "shared1", "shared2", "shared3",
+				"shared4", "shared5", "shared6", "shared7";
+		status = "okay";
+	};
+
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		#stream-id-cells = <1>;

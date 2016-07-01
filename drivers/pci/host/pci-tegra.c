@@ -471,7 +471,7 @@ struct tegra_pcie {
 	struct tegra_pcie_soc_data *soc_data;
 	struct dentry *debugfs;
 	struct delayed_work detect_delay;
-	struct tegra_prod_list	*prod_list;
+	struct tegra_prod	*prod_list;
 };
 
 struct tegra_pcie_domain {
@@ -4621,7 +4621,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	if (ret < 0)
 		goto release_regulators;
 
-	pcie->prod_list = tegra_prod_init(pcie->dev->of_node);
+	pcie->prod_list = devm_tegra_prod_get(pcie->dev);
 	if (IS_ERR(pcie->prod_list)) {
 		dev_info(pcie->dev, "No prod values found\n");
 		pcie->prod_list = NULL;
@@ -4673,8 +4673,6 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 	}
 	if (IS_ENABLED(CONFIG_PCI_MSI))
 		tegra_pcie_disable_msi(pcie);
-	if (pcie->prod_list)
-		tegra_prod_release(&pcie->prod_list);
 	tegra_pcie_detach(pcie);
 	tegra_pcie_power_off(pcie);
 #if defined(CONFIG_PINCTRL_TEGRA186_PADCTL_UPHY)

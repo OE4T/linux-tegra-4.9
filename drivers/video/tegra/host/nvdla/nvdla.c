@@ -29,6 +29,7 @@
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
+#include "nvhost_buffer.h"
 #include "flcn/flcn.h"
 #include "flcn/hw_flcn.h"
 
@@ -157,7 +158,58 @@ int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 struct nvdla_private {
 	struct platform_device *pdev;
 	struct nvhost_queue *queue;
+	struct nvhost_buffers *buffers;
 };
+
+static int nvdla_ctrl_pin(struct nvdla_private *priv, void *arg)
+{
+	u32 *handles;
+	int err = 0;
+	struct nvdla_ctrl_pin_unpin_args *buf_list =
+			(struct nvdla_ctrl_pin_unpin_args *)arg;
+	u32 count = buf_list->num_buffers;
+
+	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
+	if (!handles)
+		return -ENOMEM;
+
+	if (copy_from_user(handles, (void __user *)buf_list->buffers,
+			(count * sizeof(u32)))) {
+		err = -EFAULT;
+		goto nvdla_buffer_cpy_err;
+	}
+
+	err = nvhost_buffer_pin(priv->buffers, handles, count);
+
+nvdla_buffer_cpy_err:
+	kfree(handles);
+	return err;
+}
+
+static int nvdla_ctrl_unpin(struct nvdla_private *priv, void *arg)
+{
+	u32 *handles;
+	int err = 0;
+	struct nvdla_ctrl_pin_unpin_args *buf_list =
+			(struct nvdla_ctrl_pin_unpin_args *)arg;
+	u32 count = buf_list->num_buffers;
+
+	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
+	if (!handles)
+		return -ENOMEM;
+
+	if (copy_from_user(handles, (void __user *)buf_list->buffers,
+		(count * sizeof(u32)))) {
+		err = -EFAULT;
+		goto nvdla_buffer_cpy_err;
+	}
+
+	nvhost_buffer_unpin(priv->buffers, handles, count);
+
+nvdla_buffer_cpy_err:
+	kfree(handles);
+	return err;
+}
 
 static int nvdla_ctrl_ping(struct platform_device *pdev,
 			   struct nvdla_ctrl_ping_args *args)
@@ -251,6 +303,12 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 	case NVDLA_IOCTL_CTRL_PING:
 		err = nvdla_ctrl_ping(pdev, (void *)buf);
 		break;
+	case NVDLA_IOCTL_CTRL_PIN:
+		err = nvdla_ctrl_pin(priv, (void *)buf);
+		break;
+	case NVDLA_IOCTL_CTRL_UNPIN:
+		err = nvdla_ctrl_unpin(priv, (void *)buf);
+		break;
 	default:
 		err = -ENOIOCTLCMD;
 		break;
@@ -288,6 +346,12 @@ static int nvdla_open(struct inode *inode, struct file *file)
 	if (err < 0)
 		goto err_add_client;
 
+	priv->buffers = nvhost_buffer_init(pdev);
+	if (IS_ERR(priv->buffers)) {
+		err = PTR_ERR(priv->buffers);
+		goto err_alloc_buffer;
+	}
+
 	priv->queue = nvhost_queue_alloc(nvdla_dev->pool);
 	if (IS_ERR(priv->queue)) {
 		err = PTR_ERR(priv->queue);
@@ -298,6 +362,8 @@ static int nvdla_open(struct inode *inode, struct file *file)
 
 err_alloc_queue:
 	nvhost_module_remove_client(pdev, priv);
+err_alloc_buffer:
+	kfree(priv->buffers);
 err_add_client:
 	kfree(priv);
 err_alloc_priv:
@@ -313,6 +379,7 @@ static int nvdla_release(struct inode *inode, struct file *file)
 
 	nvhost_queue_abort(priv->queue);
 	nvhost_queue_put(priv->queue);
+	nvhost_buffer_put(priv->buffers);
 	nvhost_module_remove_client(pdev, priv);
 
 	kfree(priv);

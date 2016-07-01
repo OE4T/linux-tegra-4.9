@@ -33,15 +33,25 @@ struct nvdla_ctrl_ping_args {
 	__u32 out_response;
 };
 
+struct nvdla_ctrl_pin_unpin_args {
+	__u64 buffers;
+	__u32 num_buffers;
+	__u32 reserved;
+};
+
 #define NVHOST_NVDLA_IOCTL_MAGIC 'D'
 
 #define NVDLA_IOCTL_CTRL_PING		\
 		_IOWR(NVHOST_NVDLA_IOCTL_MAGIC, 1, struct nvdla_ctrl_ping_args)
+#define NVDLA_IOCTL_CTRL_PIN   \
+	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 2, struct nvdla_ctrl_pin_unpin_args)
+#define NVDLA_IOCTL_CTRL_UNPIN \
+	_IOW(NVHOST_NVDLA_IOCTL_MAGIC, 3, struct nvdla_ctrl_pin_unpin_args)
 
 #define NVDLA_IOCTL_CTRL_LAST		\
-		_IOC_NR(NVDLA_IOCTL_CTRL_PING)
+		_IOC_NR(NVDLA_IOCTL_CTRL_UNPIN)
 
 #define NVDLA_IOCTL_CTRL_MAX_ARG_SIZE  \
-		sizeof(struct nvdla_ctrl_ping_args)
+		sizeof(struct nvdla_ctrl_pin_unpin_args)
 
 #endif /* __LINUX_NVHOST_NVDLA_IOCTL_H */

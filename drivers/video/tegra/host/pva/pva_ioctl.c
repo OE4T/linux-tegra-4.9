@@ -27,7 +27,7 @@
 
 #include "pva.h"
 #include "dev.h"
-#include "pva_buffer.h"
+#include "nvhost_buffer.h"
 #include "nvhost_acm.h"
 
 /**

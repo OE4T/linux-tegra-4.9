@@ -23,7 +23,7 @@
 #include <linux/dma-buf.h>
 
 #include "dev.h"
-#include "pva_buffer.h"
+#include "nvhost_buffer.h"
 
 /**
  * pva_vm_buffer - Virtual mapping information for a buffer

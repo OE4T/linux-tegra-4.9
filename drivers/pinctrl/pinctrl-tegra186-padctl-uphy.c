@@ -668,7 +668,7 @@ struct tegra_padctl_uphy {
 	const struct tegra_padctl_uphy_soc *soc;
 	struct tegra_xusb_fuse_calibration calib;
 	struct tegra_fuse_calibration fuse_calib;
-	struct tegra_prod_list *prod_list;
+	struct tegra_prod *prod_list;
 	struct pinctrl_dev *pinctrl;
 	struct pinctrl_desc desc;
 
@@ -5024,7 +5024,7 @@ static int tegra186_padctl_uphy_probe(struct platform_device *pdev)
 
 	uphy->sata_bypass_fuse =
 		of_property_read_bool(np, "nvidia,sata-use-prods");
-	uphy->prod_list = tegra_prod_init(pdev->dev.of_node);
+	uphy->prod_list = devm_tegra_prod_get(&pdev->dev);
 	if (IS_ERR(uphy->prod_list)) {
 		dev_warn(&pdev->dev, "Prod-settings not available\n");
 		uphy->prod_list = NULL;
@@ -5323,8 +5323,6 @@ static int tegra186_padctl_uphy_remove(struct platform_device *pdev)
 	pinctrl_unregister(uphy->pinctrl);
 	reset_control_assert(uphy->uphy_master_rst);
 	reset_control_assert(uphy->uphy_rst);
-	if (uphy->prod_list)
-		tegra_prod_release(&uphy->prod_list);
 
 	clk_disable_unprepare(uphy->pllp);
 	regulator_bulk_disable(uphy->soc->num_supplies, uphy->supplies);

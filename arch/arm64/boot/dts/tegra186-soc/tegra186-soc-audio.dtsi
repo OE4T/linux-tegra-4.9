@@ -108,6 +108,10 @@
 			status = "okay";
 		};
 
+		dmic@2904200 {
+			status = "okay";
+		};
+
 		afc@2907000 {
 			status = "okay";
 		};
@@ -204,6 +208,10 @@
 		};
 
 		spdif-dit.5@5 {
+			status = "okay";
+		};
+
+		spdif-dit.6@6 {
 			status = "okay";
 		};
 	};

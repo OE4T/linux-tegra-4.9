@@ -59,5 +59,11 @@
 			reg = <0x05>;
 			status = "disabled";
 		};
+
+		spdif_dit6: spdif-dit.6@6 {
+			compatible = "linux,spdif-dit";
+			reg = <0x6>;
+			status = "disabled";
+		};
 	};
 };

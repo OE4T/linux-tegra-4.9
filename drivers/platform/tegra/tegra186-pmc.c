@@ -615,7 +615,7 @@ static void tegra186_pmc_rst_status(void)
 	return;
 }
 
-static struct tegra_prod_list *prod_list;
+static struct tegra_prod *prod_list;
 
 static int __init tegra186_pmc_init(void)
 {
@@ -657,7 +657,7 @@ static int __init tegra186_pmc_init(void)
 		pr_info("Failed to create PMC debugfs :%d\n", ret);
 
 	/* Prod setting like platform specific rails */
-	prod_list = tegra_prod_get(&tegra186_pmc_dev, NULL);
+	prod_list = devm_tegra_prod_get(&tegra186_pmc_dev);
 	if (IS_ERR(prod_list)) {
 		ret = PTR_ERR(prod_list);
 		dev_info(&tegra186_pmc_dev, "prod list not found: %d\n",

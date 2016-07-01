@@ -233,7 +233,7 @@
 	};
 
 	tegra_sound: sound {
-		e2614_dspk_r_dai_link: nvidia,dai-link-6 {
+		e2614_dspk_r_dai_link: nvidia,dai-link-7 {
 			link-name = "dspk-playback-r";
 			cpu-dai = <&tegra_dspk2>;
 			codec-dai = <&e2614_tas2552_r>;
@@ -248,7 +248,7 @@
 			status = "disabled";
 		};
 
-		e2614_dspk_l_dai_link: nvidia,dai-link-7 {
+		e2614_dspk_l_dai_link: nvidia,dai-link-8 {
 			link-name = "dspk-playback-l";
 			cpu-dai = <&tegra_dspk2>;
 			codec-dai = <&e2614_tas2552_l>;
@@ -263,7 +263,7 @@
 			status = "disabled";
                 };
 
-		e2614_spdif_dai_link: nvidia,dai-link-8 {
+		e2614_spdif_dai_link: nvidia,dai-link-9 {
 			link-name = "spdif-playback";
 			cpu-dai = <&tegra_spdif>;
 			codec-dai = <&spdif_dit4>;
@@ -334,7 +334,7 @@
 			overrides@10 {
 				target = <&tegra_sound>;
 				_overlay_ {
-					nvidia,num-codec-link = <8>;
+					nvidia,num-codec-link = <9>;
 					nvidia,audio-routing =
 						"y Headphone",		"y OUT",
 						"y IN",			"y Mic",
@@ -343,6 +343,8 @@
 						"m IN",			"m Mic",
 						"p Headphone",		"p OUT",
 						"p IN",			"p Mic",
+						"q Headphone",		"q OUT",
+						"q IN",			"q Mic",
 						"x Headphone Jack",	"x HPO L Playback",
 						"x Headphone Jack",	"x HPO R Playback",
 						"x IN1P",		"x Mic Jack",

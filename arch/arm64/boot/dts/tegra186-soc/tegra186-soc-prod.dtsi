@@ -390,8 +390,28 @@
 			};
 		};
 		dpaux@155c0000 {
+			prod-settings {
+				#prod-cells = <3>;
+				mask-one-style;
+
+				prod_c_dpaux {
+					prod = <
+						0x00000124 0x000037fe 0x00002462
+						>;
+					};
+				};
 			};
 		dpaux@15040000 {
+			prod-settings {
+				#prod-cells = <3>;
+				mask-one-style;
+
+				prod_c_dpaux {
+					prod = <
+						0x00000124 0x000037fe 0x00002462
+						>;
+					};
+				};
 			};
 
 		dsi {

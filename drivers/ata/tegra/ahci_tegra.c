@@ -729,11 +729,6 @@ static void tegra_ahci_power_off(struct ahci_host_priv *hpriv)
 
 	regulator_bulk_disable(tegra->soc_data->num_sata_regulators,
 			tegra->supplies);
-
-	if (tegra && tegra->prod_list) {
-		tegra_prod_release(&tegra->prod_list);
-		tegra->prod_list = NULL;
-	}
 }
 
 static int tegra_ahci_controller_init(struct ahci_host_priv *hpriv)
@@ -1235,7 +1230,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 		goto err_out;
 	}
 
-	tegra->prod_list = tegra_prod_init(dev->of_node);
+	tegra->prod_list = devm_tegra_prod_get(dev);
 	if (IS_ERR(tegra->prod_list)) {
 		dev_err(dev, "Prod Init failed\n");
 		tegra->prod_list = NULL;
@@ -1257,17 +1252,8 @@ err_out:
 
 static void tegra_ahci_shutdown(struct platform_device *pdev)
 {
-	struct ata_host *host = platform_get_drvdata(pdev);
-	struct ahci_host_priv *hpriv = host->private_data;
-	struct tegra_ahci_priv *tegra = hpriv->plat_data;
-
 	if (!pm_runtime_suspended(&pdev->dev))
 		ata_platform_remove_one(pdev);
-
-	if (tegra && tegra->prod_list) {
-		tegra_prod_release(&tegra->prod_list);
-		tegra->prod_list = NULL;
-	}
 }
 
 static int tegra_ahci_probe(struct platform_device *pdev)

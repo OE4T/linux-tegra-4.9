@@ -17,24 +17,49 @@
 #ifndef _TEGRA_PRODS_H
 #define _TEGRA_PRODS_H
 
-struct tegra_prod_list;
+struct tegra_prod;
 
-#define tegra_prod tegra_prod_list
+/**
+ * tegra_prod_set_list(): Set all prods configurations
+ * @base: List of IO mapped registers.
+ * @tegra_prod: tegra_prod handle which is allocated by devm_tegra_prod_get()
+ *		or tegra_prod_get_from_node();
+ *
+ * Configure all the prod configuration listed on prod-setting nodes.
+ *
+ * Returns 0 on success otherwise negive error number for failed case.
+ */
+int tegra_prod_set_list(void __iomem **base, struct tegra_prod *tegra_prod);
 
-int tegra_prod_set_list(void __iomem **base,
-		struct tegra_prod_list *tegra_prod_list);
-
+/**
+ * tegra_prod_set_boot_init(): Set all prods configurations which has boot init
+ *			       flag on the prod setting nodes.
+ * @base: List of IO mapped registers.
+ * @tegra_prod: tegra_prod handle which is allocated by devm_tegra_prod_get()
+ *		or tegra_prod_get_from_node();
+ *
+ * Configure all the prod configuration listed on prod-setting nodes.
+ *
+ * Returns 0 on success otherwise negive error number for failed case.
+ */
 int tegra_prod_set_boot_init(void __iomem **base,
-		struct tegra_prod_list *tegra_prod_list);
+			     struct tegra_prod *tegra_prod);
 
+/**
+ * tegra_prod_set_by_name(): Set prod configuration with specific prod name.
+ *			     This is used for conditional prod configurations.
+ * @base: List of IO mapped registers.
+ * @name: Name of conditional prod which need to be configure.
+ * @tegra_prod: tegra_prod handle which is allocated by devm_tegra_prod_get()
+ *		or tegra_prod_get_from_node();
+ *
+ * Configure prod configuration with specific prod name for conditional
+ * prod configurations.
+ *
+ * Returns 0 on success otherwise negive error number for failed case.
+ */
 int tegra_prod_set_by_name(void __iomem **base, const char *name,
-		struct tegra_prod_list *tegra_prod_list);
-
-struct tegra_prod_list *tegra_prod_init(const struct device_node *np);
-
-struct tegra_prod_list *tegra_prod_get(struct device *dev, const char *name);
-
-int tegra_prod_release(struct tegra_prod_list **tegra_prod_list);
+			   struct tegra_prod *tegra_prod);
 
 /**
  * devm_tegra_prod_get(): Get the prod handle from the device.

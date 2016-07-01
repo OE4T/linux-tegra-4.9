@@ -11,6 +11,7 @@
  * more details.
  */
 
+#include <linux/delay.h>
 #include <linux/of_address.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-instance.h>
@@ -75,8 +76,11 @@ static void native_synchronize(void)
 	pr_info("bpmp: synchronizing channels\n");
 
 	for (i = 0; i < NR_CHANNELS; i++) {
-		while (tegra_ivc_channel_notified(ivc_channels + i))
+		while (tegra_ivc_channel_notified(ivc_channels + i)) {
 			native_ring_doorbell(i);
+			if (tegra_platform_is_vdk())
+				msleep(100);
+		}
 	}
 
 	pr_info("bpmp: channels synchronized\n");
@@ -87,9 +91,7 @@ static int native_handshake(void)
 	struct device_node *of_node;
 	void __iomem *bpmp_base;
 	uint32_t sem;
-
-	if (tegra_platform_is_linsim())
-		return -ENODEV;
+	int i;
 
 	/* FIXME: do not assume DT path */
 	of_node = of_find_node_by_path("/bpmp");
@@ -100,17 +102,30 @@ static int native_handshake(void)
 	if (!bpmp_base)
 		return -ENODEV;
 
-	/* WAR for simulator */
 	sem = __raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA);
+	if (sem || !tegra_platform_is_vdk())
+		goto next;
 
+	pr_info("bpmp: waiting for signs of life\n");
+
+	for (i = 0; i < 10 && !sem; i++) {
+		msleep(500);
+		sem = __raw_readl(bpmp_base + HSP_SHRD_SEM_1_STA);
+	}
+
+next:
 	iounmap(bpmp_base);
 
-	if (!sem)
+	if (!sem) {
+		pr_info("bpmp: no signs of life\n");
 		return -ENODEV;
+	}
 
 	pr_info("bpmp: waiting for handshake\n");
-	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP))
-		;
+	while (!tegra_hsp_db_can_ring(HSP_DB_BPMP)) {
+		if (tegra_platform_is_vdk())
+			msleep(100);
+	}
 
 	pr_info("bpmp: handshake completed\n");
 	return 0;

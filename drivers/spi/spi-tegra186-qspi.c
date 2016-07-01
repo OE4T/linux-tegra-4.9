@@ -252,7 +252,7 @@ struct tegra_qspi_data {
 	u32					*tx_dma_buf;
 	dma_addr_t				tx_dma_phys;
 	struct dma_async_tx_descriptor		*tx_dma_desc;
-	struct tegra_prod_list *prod_list;
+	struct tegra_prod			*prod_list;
 #ifdef QSPI_BRINGUP_BUILD
 	int					qspi_force_unpacked_mode;
 	int					qspi_enable_cmbseq_mode;
@@ -1801,7 +1801,7 @@ static int tegra_qspi_probe(struct platform_device *pdev)
 	tqspi->dma_req_sel = pdata->dma_req_sel;
 	tqspi->clock_always_on = pdata->is_clkon_always;
 	tqspi->dev = &pdev->dev;
-	tqspi->prod_list = tegra_prod_get(&pdev->dev, NULL);
+	tqspi->prod_list = devm_tegra_prod_get(&pdev->dev);
 	if (IS_ERR(tqspi->prod_list)) {
 		dev_info(&pdev->dev, "Prod settings list not initialized\n");
 		tqspi->prod_list = NULL;
@@ -1972,8 +1972,6 @@ exit_rx_dma_free:
 exit_free_irq:
 	free_irq(qspi_irq, tqspi);
 exit_free_master:
-	if (tqspi->prod_list)
-		tegra_prod_release(&tqspi->prod_list);
 	spi_master_put(master);
 
 	return ret;
@@ -2003,8 +2001,6 @@ static int tegra_qspi_remove(struct platform_device *pdev)
 		clk_disable_unprepare(tqspi->sdr_ddr_clk);
 		clk_disable_unprepare(tqspi->clk);
 	}
-	if (tqspi->prod_list)
-		tegra_prod_release(&tqspi->prod_list);
 
 	return 0;
 }

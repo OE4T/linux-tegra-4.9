@@ -18,24 +18,8 @@
 		tegra-camera-rtcpu = &tegra_ape;
 	};
 
-	ast@b040000 {
-		status = "disabled";
-	};
-
-	ast@b050000 {
-		status = "disabled";
-	};
-
 	rtcpu@b000000 {	/* Do not use SCE as camera-rtcpu */
 		status = "disabled";
-	};
-
-	ast@2994000 {
-		status = "okay";
-	};
-
-	ast@2996000 {
-		status = "okay";
 	};
 
 	rtcpu@2993000 {	/* use APE as camera-rtcpu */

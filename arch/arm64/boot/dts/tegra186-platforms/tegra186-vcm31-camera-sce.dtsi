@@ -18,27 +18,11 @@
 		status = "okay";
 	};
 
-	ast@b040000 {
-		status = "okay";
-	};
-
-	ast@b050000 {
-		status = "okay";
-	};
-
 	rtcpu@b000000 {	/* use SCE as camera-rtcpu */
 		status = "okay";
 	};
 
 	tegra-hsp@29a0000 {
-		status = "disabled";
-	};
-
-	ast@2994000 {
-		status = "disabled";
-	};
-
-	ast@2996000 {
 		status = "disabled";
 	};
 

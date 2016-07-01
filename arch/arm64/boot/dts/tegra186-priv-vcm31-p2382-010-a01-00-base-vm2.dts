@@ -455,14 +455,6 @@
 		status = "disabled";
 	};
 
-	ast@b040000 {
-		status = "disabled";
-	};
-
-	ast@b050000 {
-		status = "disabled";
-	};
-
 	ast@c040000 {
 		status = "disabled";
 	};

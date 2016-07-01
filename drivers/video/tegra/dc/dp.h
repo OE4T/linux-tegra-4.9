@@ -111,6 +111,8 @@ struct tegra_dc_dp_data {
 
 	struct tegra_prod *prod_list;
 
+	struct tegra_prod *dpaux_prod_list;
+
 	u8 sink_cap[DP_DPCD_SINK_CAP_SIZE];
 	bool sink_cap_valid;
 	u8 sink_cnt_cp_ready;

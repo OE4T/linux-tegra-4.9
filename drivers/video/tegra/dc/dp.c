@@ -1331,17 +1331,7 @@ static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 	/* clear interrupt */
 	tegra_dpaux_writel(dp, DPAUX_INTR_AUX, 0xffffffff);
 
-	tegra_dpaux_writel(dp, DPAUX_HYBRID_PADCTL,
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-		DPAUX_HYBRID_PADCTL_AUX_DRVZ_OHM_56_49 |
-		DPAUX_HYBRID_PADCTL_AUX_CMH_V1_10 |
-#else
-		DPAUX_HYBRID_PADCTL_AUX_DRVZ_OHM_50 |
-		DPAUX_HYBRID_PADCTL_AUX_CMH_V0_70 |
-#endif
-		0x18 << DPAUX_HYBRID_PADCTL_AUX_DRVI_SHIFT |
-		DPAUX_HYBRID_PADCTL_AUX_INPUT_RCV_ENABLE);
-
+	tegra_dpaux_prod_set(dp->dc);
 	tegra_dpaux_pad_power(dp->dc,
 		dp_num == 0 ? TEGRA_DPAUX_INSTANCE_0 :
 		TEGRA_DPAUX_INSTANCE_1, true);
@@ -1937,6 +1927,30 @@ static irqreturn_t tegra_dp_irq(int irq, void *ptr)
 
 static void _tegra_dpaux_init(struct tegra_dc_dp_data *dp)
 {
+
+	int sor_num = tegra_dc_which_sor(dp->dc);
+	struct device_node *np_prod_dpaux = of_find_node_by_path(
+				sor_num ? DPAUX1_NODE : DPAUX_NODE);
+
+	if (!np_prod_dpaux) {
+		dev_warn(&dp->dc->ndev->dev,
+			"dp: find prod node for dpaux failed\n");
+		return;
+	}
+
+	dp->dpaux_prod_list =
+		tegra_prod_get_from_node(np_prod_dpaux);
+
+	if (IS_ERR(dp->dpaux_prod_list)) {
+		dev_warn(&dp->dc->ndev->dev,
+			"dp: prod list init failed for dpaux with error %ld\n",
+			PTR_ERR(dp->dpaux_prod_list));
+		of_node_put(np_prod_dpaux);
+		return;
+	}
+
+	of_node_put(np_prod_dpaux);
+
 	if (dp->sor->safe_clk)
 		tegra_sor_safe_clk_enable(dp->sor);
 	tegra_dpaux_clk_enable(dp);
@@ -2777,6 +2791,10 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 		dp->prod_list = NULL;
 	}
 
+	if (!IS_ERR(dp->dpaux_prod_list)) {
+		tegra_prod_put(dp->dpaux_prod_list);
+		dp->dpaux_prod_list = NULL;
+	}
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&dp->audio_switch);
 #endif

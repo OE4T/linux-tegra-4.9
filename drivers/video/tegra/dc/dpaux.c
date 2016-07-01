@@ -18,10 +18,12 @@
 #include <linux/mutex.h>
 #include <linux/clk.h>
 #include <linux/err.h>
+#include <linux/tegra_prod.h>
 
 #include "dpaux_regs.h"
 #include "dc_priv.h"
 #include "dpaux.h"
+#include "dp.h"
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
 static const char *const dpaux_clks[TEGRA_DPAUX_INSTANCE_N] = {
@@ -164,3 +166,36 @@ void tegra_set_dpaux_addr(void __iomem *dpaux_base,
 {
 	dpaux_baseaddr[id] = dpaux_base;
 }
+
+void tegra_dpaux_prod_set(struct tegra_dc *dc)
+{
+	int err = 0;
+	int sor_num = tegra_dc_which_sor(dc);
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+	struct device_node *np_dp = of_find_node_by_path(
+			sor_num ? DPAUX1_NODE : DPAUX_NODE);
+
+	if (!np_dp) {
+		dev_err(&dc->ndev->dev, "dp node not available\n");
+		return;
+	}
+
+	tegra_dc_unpowergate_locked(dc);
+	tegra_dpaux_clk_en(np_dp, sor_num);
+	tegra_dc_io_start(dc);
+
+	if (!IS_ERR(dp->dpaux_prod_list)) {
+		err = tegra_prod_set_by_name(&dp->aux_base, "prod_c_dpaux",
+							dp->dpaux_prod_list);
+		if (err) {
+			dev_warn(&dc->ndev->dev,
+				"dpaux: prod set failed\n");
+		}
+	}
+
+	/* Do clean up upon error */
+	tegra_dc_io_end(dc);
+	tegra_dpaux_clk_dis(np_dp, sor_num);
+	tegra_dc_powergate_locked(dc);
+}
+

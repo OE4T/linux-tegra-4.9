@@ -1,5 +1,5 @@
 /*
- * PVA buffer management for T194
+ * NVHOST buffer management for T194
  *
  * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
  *
@@ -26,7 +26,7 @@
 #include "nvhost_buffer.h"
 
 /**
- * pva_vm_buffer - Virtual mapping information for a buffer
+ * nvhost_vm_buffer - Virtual mapping information for a buffer
  *
  * @buf:		Pointer to dma_buf struct
  * @attach:		Pointer to dma_buf_attachment struct
@@ -39,7 +39,7 @@
  * @pin_list:		List of pinned buffer
  *
  */
-struct pva_vm_buffer {
+struct nvhost_vm_buffer {
 	struct dma_buf *buf;
 	struct dma_buf_attachment *attach;
 	struct sg_table *sgt;
@@ -53,12 +53,12 @@ struct pva_vm_buffer {
 	struct list_head pin_list;
 };
 
-static struct pva_vm_buffer *pva_find_map_buffer(
-		struct pva_buffers *pva_buffers, u32 handle)
+static struct nvhost_vm_buffer *nvhost_find_map_buffer(
+		struct nvhost_buffers *nvhost_buffers, u32 handle)
 {
-	struct pva_vm_buffer *vm;
+	struct nvhost_vm_buffer *vm;
 
-	list_for_each_entry(vm, &pva_buffers->buffer_list, pin_list) {
+	list_for_each_entry(vm, &nvhost_buffers->buffer_list, pin_list) {
 		if (vm->memhandle == handle)
 			return vm;
 	}
@@ -66,8 +66,8 @@ static struct pva_vm_buffer *pva_find_map_buffer(
 	return NULL;
 }
 
-static int pva_buffer_map(struct platform_device *pdev, u32 mem_id,
-			struct pva_vm_buffer *vm)
+static int nvhost_buffer_map(struct platform_device *pdev, u32 mem_id,
+			struct nvhost_vm_buffer *vm)
 {
 	struct dma_buf *buf;
 	struct dma_buf_attachment *attach;
@@ -118,14 +118,14 @@ buf_get_err:
 	return err;
 }
 
-static void pva_free_buffers(struct kref *kref)
+static void nvhost_free_buffers(struct kref *kref)
 {
-	struct pva_buffers *pva_buffers = container_of(kref,
-					struct pva_buffers, kref);
-	kfree(pva_buffers);
+	struct nvhost_buffers *nvhost_buffers = container_of(kref,
+					struct nvhost_buffers, kref);
+	kfree(nvhost_buffers);
 }
 
-static void pva_buffer_unmap(struct pva_vm_buffer *vm)
+static void nvhost_buffer_unmap(struct nvhost_vm_buffer *vm)
 {
 	nvhost_dbg_fn("");
 
@@ -142,154 +142,156 @@ static void pva_buffer_unmap(struct pva_vm_buffer *vm)
 	kfree(vm);
 }
 
-struct pva_buffers *pva_buffer_init(struct platform_device *pdev)
+struct nvhost_buffers *nvhost_buffer_init(struct platform_device *pdev)
 {
-	struct pva_buffers *pva_buffers;
+	struct nvhost_buffers *nvhost_buffers;
 	int err = 0;
 
-	pva_buffers = kzalloc(sizeof(struct pva_buffers), GFP_KERNEL);
-	if (!pva_buffers) {
+	nvhost_buffers = kzalloc(sizeof(struct nvhost_buffers), GFP_KERNEL);
+	if (!nvhost_buffers) {
 		err = -ENOMEM;
-		goto pva_buffer_init_err;
+		goto nvhost_buffer_init_err;
 	}
 
-	pva_buffers->pdev = pdev;
-	mutex_init(&pva_buffers->buffer_list_mutex);
-	INIT_LIST_HEAD(&pva_buffers->buffer_list);
-	kref_init(&pva_buffers->kref);
+	nvhost_buffers->pdev = pdev;
+	mutex_init(&nvhost_buffers->buffer_list_mutex);
+	INIT_LIST_HEAD(&nvhost_buffers->buffer_list);
+	kref_init(&nvhost_buffers->kref);
 
-	return pva_buffers;
+	return nvhost_buffers;
 
-pva_buffer_init_err:
+nvhost_buffer_init_err:
 	return ERR_PTR(err);
 }
 
-int pva_buffer_submit_pin(struct pva_buffers *pva_buffers,
+int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 				u32 *handles, u32 count)
 {
-	struct pva_vm_buffer *vm;
+	struct nvhost_vm_buffer *vm;
 	int i = 0;
 
-	mutex_lock(&pva_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_list_mutex);
 
 	for (i = 0; i < count; i++) {
 
-		vm = pva_find_map_buffer(pva_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
 		if (vm)
 			vm->submit_map_count++;
 		else
 			goto submit_err;
 	}
 
-	kref_get(&pva_buffers->kref);
-	mutex_unlock(&pva_buffers->buffer_list_mutex);
+	kref_get(&nvhost_buffers->kref);
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 	return 0;
 
 submit_err:
-	mutex_unlock(&pva_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 
 	count = i;
-	pva_buffer_submit_unpin(pva_buffers, handles, count);
+	nvhost_buffer_submit_unpin(nvhost_buffers, handles, count);
 
 	return -EINVAL;
 }
 
-int pva_buffer_pin(struct pva_buffers *pva_buffers, u32 *handles, u32 count)
+int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
+			u32 count)
 {
-	struct pva_vm_buffer *vm;
+	struct nvhost_vm_buffer *vm;
 	int i = 0;
 	int err = 0;
 
-	mutex_lock(&pva_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_list_mutex);
 
 	for (i = 0; i < count; i++) {
 
-		vm = pva_find_map_buffer(pva_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
 		if (vm) {
 			vm->user_map_count++;
 			continue;
 		}
 
-		vm = kzalloc(sizeof(struct pva_vm_buffer), GFP_KERNEL);
+		vm = kzalloc(sizeof(struct nvhost_vm_buffer), GFP_KERNEL);
 		if (!vm)
 			goto buf_alloc_err;
 
-		err = pva_buffer_map(pva_buffers->pdev, handles[i], vm);
+		err = nvhost_buffer_map(nvhost_buffers->pdev, handles[i], vm);
 		if (err)
-			goto pva_pin_err;
+			goto nvhost_pin_err;
 
-		list_add_tail(&vm->pin_list, &pva_buffers->buffer_list);
+		list_add_tail(&vm->pin_list, &nvhost_buffers->buffer_list);
 	}
 
-	mutex_unlock(&pva_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 	return err;
 
 buf_alloc_err:
-pva_pin_err:
-	mutex_unlock(&pva_buffers->buffer_list_mutex);
+nvhost_pin_err:
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 
 	/* free pinned buffers */
 	count = i;
-	pva_buffer_unpin(pva_buffers, handles, count);
+	nvhost_buffer_unpin(nvhost_buffers, handles, count);
 
 	return err;
 }
 
-void pva_buffer_submit_unpin(struct pva_buffers *pva_buffers,
+void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
 					u32 *handles, u32 count)
 {
-	struct pva_vm_buffer *vm;
+	struct nvhost_vm_buffer *vm;
 	int i = 0;
 
-	mutex_lock(&pva_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_list_mutex);
 
 	for (i = 0; i < count; i++) {
 
-		vm = pva_find_map_buffer(pva_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
 		if (vm) {
 			if (vm->submit_map_count-- < 0)
 				vm->submit_map_count = 0;
-			pva_buffer_unmap(vm);
+			nvhost_buffer_unmap(vm);
 		}
 	}
 
-	mutex_unlock(&pva_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 
-	kref_put(&pva_buffers->kref, pva_free_buffers);
+	kref_put(&nvhost_buffers->kref, nvhost_free_buffers);
 }
 
-void pva_buffer_unpin(struct pva_buffers *pva_buffers, u32 *handles, u32 count)
+void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
+				u32 count)
 {
 	int i = 0;
 
-	mutex_lock(&pva_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_list_mutex);
 
 	for (i = 0; i < count; i++) {
-		struct pva_vm_buffer *vm = NULL;
+		struct nvhost_vm_buffer *vm = NULL;
 
-		vm = pva_find_map_buffer(pva_buffers, handles[i]);
+		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
 		if (vm) {
 			if (vm->user_map_count-- < 0)
 				vm->user_map_count = 0;
-			pva_buffer_unmap(vm);
+			nvhost_buffer_unmap(vm);
 		}
 	}
 
-	mutex_unlock(&pva_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 }
 
-void pva_buffer_put(struct pva_buffers *pva_buffers)
+void nvhost_buffer_put(struct nvhost_buffers *nvhost_buffers)
 {
-	struct pva_vm_buffer *vm;
+	struct nvhost_vm_buffer *vm;
 
-	mutex_lock(&pva_buffers->buffer_list_mutex);
+	mutex_lock(&nvhost_buffers->buffer_list_mutex);
 
-	list_for_each_entry(vm, &pva_buffers->buffer_list, pin_list) {
+	list_for_each_entry(vm, &nvhost_buffers->buffer_list, pin_list) {
 		vm->user_map_count = 0;
-		pva_buffer_unmap(vm);
+		nvhost_buffer_unmap(vm);
 	}
 
-	mutex_unlock(&pva_buffers->buffer_list_mutex);
+	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 
-	kref_put(&pva_buffers->kref, pva_free_buffers);
+	kref_put(&nvhost_buffers->kref, nvhost_free_buffers);
 }

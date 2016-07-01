@@ -1,5 +1,5 @@
 /*
- * PVA Buffer Management Header
+ * NVHOST Buffer Management Header
  *
  * Copyright (c) 2016, NVIDIA Corporation.  All rights reserved.
  *
@@ -16,19 +16,19 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#ifndef __NVHOST_PVA_BUFFER_H__
-#define __NVHOST_PVA_BUFFER_H__
+#ifndef __NVHOST_NVHOST_BUFFER_H__
+#define __NVHOST_NVHOST_BUFFER_H__
 
 /**
- * pva_buffers - Information needed for buffers
+ * nvhost_buffers - Information needed for buffers
  *
- * @pdev:		Pointer to PVA device
+ * @pdev:		Pointer to NVHOST device
  * @buffer_list:	List of all the buffers used by a file pointer
  * @buffer_list_mutex:	Mutex for the buffer list
  * @kref:		Reference count for the bufferlist
  *
  */
-struct pva_buffers {
+struct nvhost_buffers {
 	struct platform_device *pdev;
 	struct list_head buffer_list;
 	struct mutex buffer_list_mutex;
@@ -36,21 +36,21 @@ struct pva_buffers {
 };
 
 /**
- * pva_buffer_init - Initialize the pva_buffer per open request
+ * nvhost_buffer_init - Initialize the nvhost_buffer per open request
  *
- * @pva_buffers:	Pointer to pva_buffers struct
+ * @nvhost_buffers:	Pointer to nvhost_buffers struct
  *
- * Return:		pva_buffers pointer on success or negative on error
+ * Return:		nvhost_buffers pointer on success or negative on error
  *
- * This function allocates pva_buffers struct and init the bufferlist
+ * This function allocates nvhost_buffers struct and init the bufferlist
  * and mutex.
  */
-struct pva_buffers *pva_buffer_init(struct platform_device *pdev);
+struct nvhost_buffers *nvhost_buffer_init(struct platform_device *pdev);
 
 /**
- * pva_buffer_pin - Pin the memhandle using dma_buf functions
+ * nvhost_buffer_pin - Pin the memhandle using dma_buf functions
  *
- * @pva_buffers:	Pointer to pva_buffers struct
+ * @nvhost_buffers:	Pointer to nvhost_buffers struct
  * @handles:		Pointer to MemHandle list
  * @count:		Number of memhandles in the list
  *
@@ -59,24 +59,26 @@ struct pva_buffers *pva_buffer_init(struct platform_device *pdev);
  * This function maps the buffer memhandle list passed from user side
  * to device iova.
  */
-int pva_buffer_pin(struct pva_buffers *pva_buffers, u32 *handles, u32 count);
+int nvhost_buffer_pin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
+			u32 count);
 
 /**
- * pva_buffer_unpin - UnPins the mapped address space.
+ * nvhost_buffer_unpin - UnPins the mapped address space.
  *
- * @pva_buffers:	Pointer to pva_buffer struct
+ * @nvhost_buffers:	Pointer to nvhost_buffer struct
  * @handles:		Pointer to MemHandle list
  * @count:		Number of memhandles in the list
  *
  * Return: None
  *
  */
-void pva_buffer_unpin(struct pva_buffers *pva_buffers, u32 *handles, u32 count);
+void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
+				u32 count);
 
 /**
- * pva_buffer_submit_pin - Pin the mapped buffer for a task submit
+ * nvhost_buffer_submit_pin - Pin the mapped buffer for a task submit
  *
- * @pva_buffers:	Pointer to pva_buffer struct
+ * @nvhost_buffers:	Pointer to nvhost_buffer struct
  * @handles:		Pointer to MemHandle list
  * @count:		Number of memhandles in the list
  *
@@ -85,13 +87,13 @@ void pva_buffer_unpin(struct pva_buffers *pva_buffers, u32 *handles, u32 count);
  * This function increased the reference count for a mapped buffer during
  * task submission.
  */
-int pva_buffer_submit_pin(struct pva_buffers *pva_buffers,
+int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 					u32 *handles, u32 count);
 
 /**
- * pva_buffer_unpin - UnPins the mapped address space on task completion.
+ * nvhost_buffer_unpin - UnPins the mapped address space on task completion.
  *
- * @pva_buffers:	Pointer to pva_buffer struct
+ * @nvhost_buffers:	Pointer to nvhost_buffer struct
  * @handles:		Pointer to MemHandle list
  * @count:		Number of memhandles in the list
  *
@@ -100,17 +102,17 @@ int pva_buffer_submit_pin(struct pva_buffers *pva_buffers,
  * This function decrease the reference count for a mapped buffer when the
  * task get completed or aborted.
  */
-void pva_buffer_submit_unpin(struct pva_buffers *pva_buffers,
+void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
 					u32 *handles, u32 count);
 
 /**
- * pva_buffer_put - Cleanup all the buffers in the list
+ * nvhost_buffer_put - Cleanup all the buffers in the list
  *
- * @pva_buffer:	Pointer to pva_buffer struct
+ * @nvhost_buffer:	Pointer to nvhost_buffer struct
  *
  * Return: None
  *
  */
-void pva_buffer_put(struct pva_buffers *pva_buffers);
+void nvhost_buffer_put(struct nvhost_buffers *nvhost_buffers);
 
-#endif /*__NVHOST_PVA_BUFFER_H__ */
+#endif /*__NVHOST_NVHOST_BUFFER_H__ */

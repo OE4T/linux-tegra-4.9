@@ -35,12 +35,12 @@
  *
  * @pdev:		Pointer the pva device
  * @queue:		Pointer the struct nvhost_queue
- * @buffer:		Pointer to the struct pva_buffer
+ * @buffer:		Pointer to the struct nvhost_buffer
  */
 struct pva_private {
 	struct platform_device *pdev;
 	struct nvhost_queue *queue;
-	struct pva_buffers *buffers;
+	struct nvhost_buffers *buffers;
 };
 
 static int pva_pin(struct pva_private *priv, void *arg)
@@ -60,7 +60,7 @@ static int pva_pin(struct pva_private *priv, void *arg)
 		goto pva_buffer_cpy_err;
 	}
 
-	err = pva_buffer_pin(priv->buffers, handles, count);
+	err = nvhost_buffer_pin(priv->buffers, handles, count);
 
 pva_buffer_cpy_err:
 	kfree(handles);
@@ -84,7 +84,7 @@ static int pva_unpin(struct pva_private *priv, void *arg)
 		goto pva_buffer_cpy_err;
 	}
 
-	pva_buffer_unpin(priv->buffers, handles, count);
+	nvhost_buffer_unpin(priv->buffers, handles, count);
 
 pva_buffer_cpy_err:
 	kfree(handles);
@@ -202,7 +202,7 @@ static int pva_open(struct inode *inode, struct file *file)
 	if (err < 0)
 		goto err_add_client;
 
-	priv->buffers = pva_buffer_init(pdev);
+	priv->buffers = nvhost_buffer_init(pdev);
 	if (IS_ERR(priv->buffers)) {
 		err = PTR_ERR(priv->buffers);
 		goto err_alloc_buffer;
@@ -234,7 +234,7 @@ static int pva_release(struct inode *inode, struct file *file)
 	nvhost_queue_put(priv->queue);
 	nvhost_module_remove_client(priv->pdev, priv);
 
-	pva_buffer_put(priv->buffers);
+	nvhost_buffer_put(priv->buffers);
 	kfree(priv);
 
 	return 0;

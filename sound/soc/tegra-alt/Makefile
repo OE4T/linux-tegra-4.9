@@ -1,5 +1,7 @@
-KBUILD_CFLAGS += -I$(srctree)/sound/soc/tegra-alt
 subdir-ccflags-y += -Werror
+EXTRA_CFLAGS += -I$(srctree)/sound/soc/tegra-alt
+EXTRA_CFLAGS += -I$(srctree)
+EXTRA_CFLAGS += -I$(srctree)/../t18x
 
 snd-soc-tegra186-alt-xbar-objs := tegra186_xbar_alt.o \
 	../../../../$(lastword $(subst /, ,$(srctree)))/sound/soc/tegra-alt/tegra210_xbar_alt.o

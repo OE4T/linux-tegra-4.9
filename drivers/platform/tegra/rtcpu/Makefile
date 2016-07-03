@@ -1,5 +1,9 @@
 ccflags-y := -Werror
 ccflags-y += -I$(srctree)/include
+ccflags-y += -I$(srctree)/../nvhost
+ccflags-y += -I$(srctree)
+ccflags-y += -I$(srctree)/../t18x
+
 obj-y += debug.o
 obj-y += tegra-sysfs-mbox.o
 obj-y += vi-notify.o

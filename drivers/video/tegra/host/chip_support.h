@@ -3,7 +3,7 @@
  *
  * Tegra Graphics Host Chip Support
  *
- * Copyright (c) 2011-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -127,6 +127,8 @@ struct nvhost_intr_ops {
 	int (*debug_dump)(struct nvhost_intr *, struct output *);
 	void (*enable_host_irq)(struct nvhost_intr *, int irq);
 	void (*disable_host_irq)(struct nvhost_intr *, int irq);
+	void (*enable_module_intr)(struct nvhost_intr *, int irq);
+	void (*disable_module_intr)(struct nvhost_intr *, int irq);
 };
 
 struct nvhost_dev_ops {

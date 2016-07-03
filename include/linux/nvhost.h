@@ -164,6 +164,7 @@ struct nvhost_device_data {
 	/* interrupt ISR routine for falcon based engines */
 	int (*flcn_isr)(struct platform_device *dev);
 	int irq;
+	int module_irq; /* IRQ bit from general intr reg for module intr */
 
 	/* Should we toggle the engine SLCG when we turn on the domain? */
 	bool		poweron_toggle_slcg;

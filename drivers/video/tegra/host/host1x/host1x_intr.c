@@ -371,6 +371,27 @@ static void intr_disable_host_irq(struct nvhost_intr *intr, int irq)
 	host1x_sync_writel(dev, host1x_sync_hintmask_r(), val);
 }
 
+static void intr_enable_module_intr(struct nvhost_intr *intr, int irq)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	long val;
+
+	val = host1x_sync_readl(dev, host1x_sync_intc0mask_r());
+	val |= BIT(irq);
+	host1x_sync_writel(dev, host1x_sync_intc0mask_r(), val);
+}
+
+static void intr_disable_module_intr(struct nvhost_intr *intr, int irq)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	long val;
+
+	val = host1x_sync_readl(dev, host1x_sync_intc0mask_r());
+	val &= ~BIT(irq);
+	host1x_sync_writel(dev, host1x_sync_intc0mask_r(), val);
+}
+
+
 static const struct nvhost_intr_ops host1x_intr_ops = {
 	.init_host_sync = t20_intr_init_host_sync,
 	.set_host_clocks_per_usec = t20_intr_set_host_clocks_per_usec,
@@ -384,4 +405,6 @@ static const struct nvhost_intr_ops host1x_intr_ops = {
 	.debug_dump = intr_debug_dump,
 	.enable_host_irq = intr_enable_host_irq,
 	.disable_host_irq = intr_disable_host_irq,
+	.enable_module_intr = intr_enable_module_intr,
+	.disable_module_intr = intr_disable_module_intr,
 };

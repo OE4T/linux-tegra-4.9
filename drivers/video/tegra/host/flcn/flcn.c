@@ -1,7 +1,7 @@
 /*
 * Tegra flcn common driver
 *
-* Copyright (c) 2011-2015, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -73,6 +73,9 @@ int flcn_intr_init(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = nvhost_get_devdata(pdev);
 	int ret = 0;
+
+	if (!pdata->module_irq)
+		return 0;
 
 	pdata->irq = platform_get_irq(pdev, 0);
 	if (IS_ERR_VALUE(pdata->irq)) {
@@ -659,9 +662,10 @@ static int flcn_probe(struct platform_device *dev)
 	return 0;
 }
 
-static int __exit flcn_remove(struct platform_device *dev)
+static int __exit flcn_remove(struct platform_device *pdev)
 {
-	nvhost_client_device_release(dev);
+	nvhost_client_device_release(pdev);
+
 	return 0;
 }
 

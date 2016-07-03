@@ -155,6 +155,8 @@ void nvhost_intr_enable_host_irq(struct nvhost_intr *intr, int irq,
 				 void (*host_isr)(u32, void *),
 				 void *priv);
 void nvhost_intr_disable_host_irq(struct nvhost_intr *intr, int irq);
+void nvhost_intr_enable_module_intr(struct nvhost_intr *intr, int module_irq);
+void nvhost_intr_disable_module_intr(struct nvhost_intr *intr, int module_irq);
 
 void nvhost_syncpt_thresh_fn(void *dev_id);
 irqreturn_t nvhost_intr_irq_fn(int irq, void *dev_id);

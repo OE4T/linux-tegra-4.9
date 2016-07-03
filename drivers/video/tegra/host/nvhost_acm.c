@@ -1219,10 +1219,13 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 static int nvhost_module_prepare_poweroff(struct device *dev)
 {
 	struct nvhost_device_data *pdata;
+	struct nvhost_master *host;
 
 	pdata = dev_get_drvdata(dev);
 	if (!pdata)
 		return -EINVAL;
+
+	host = nvhost_get_host(pdata->pdev);
 
 	if (dev_pm_qos_flags(dev, PM_QOS_FLAG_NO_POWER_OFF)
 			== PM_QOS_FLAGS_ALL)
@@ -1230,6 +1233,11 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 
 	devfreq_suspend_device(pdata->power_manager);
 	nvhost_scale_hw_deinit(to_platform_device(dev));
+
+	/* disable module interrupt if support available */
+	if (pdata->module_irq)
+		nvhost_intr_disable_module_intr(&host->intr,
+						pdata->module_irq);
 
 #if defined(CONFIG_TEGRA_BWMGR)
 	/* set EMC rate to zero */
@@ -1255,6 +1263,7 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 static int nvhost_module_finalize_poweron(struct device *dev)
 {
 	struct platform_device *pdev = to_platform_device(dev);
+	struct nvhost_master *host;
 	struct nvhost_device_data *pdata;
 	int retry_count, ret = 0, i;
 
@@ -1262,6 +1271,7 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 	if (!pdata)
 		return -EINVAL;
 
+	host = nvhost_get_host(pdata->pdev);
 	/* WAR to bug 1588951: Retry booting 3 times */
 
 	for (retry_count = 0; retry_count < 3; retry_count++) {
@@ -1308,6 +1318,11 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 			}
 		}
 	}
+
+	/* enable module interrupt if support available */
+	if (pdata->module_irq)
+		nvhost_intr_enable_module_intr(&host->intr,
+						pdata->module_irq);
 
 	nvhost_scale_hw_init(to_platform_device(dev));
 	devfreq_resume_device(pdata->power_manager);

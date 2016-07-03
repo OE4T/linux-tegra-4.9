@@ -654,3 +654,17 @@ void nvhost_intr_disable_host_irq(struct nvhost_intr *intr, int irq)
 	intr->host_isr[irq] = NULL;
 	intr->host_isr_priv[irq] = NULL;
 }
+
+void nvhost_intr_enable_module_intr(struct nvhost_intr *intr, int module_irq)
+{
+	mutex_lock(&intr->mutex);
+	intr_op().enable_module_intr(intr, module_irq);
+	mutex_unlock(&intr->mutex);
+}
+
+void nvhost_intr_disable_module_intr(struct nvhost_intr *intr, int module_irq)
+{
+	mutex_lock(&intr->mutex);
+	intr_op().disable_module_intr(intr, module_irq);
+	mutex_unlock(&intr->mutex);
+}

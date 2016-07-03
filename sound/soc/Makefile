@@ -54,6 +54,6 @@ obj-$(CONFIG_SND_SOC)	+= xtensa/
 obj-$(CONFIG_SND_SOC)	+= zte/
 
 # The wildcard hack is necessary for kernel's make clean.
-ifneq ($(wildcard $(srctree)/../t18x/sound/soc/Makefile),)
+ifneq ($(wildcard $(srctree)/../t18x/sound/soc/Makefile*),)
 obj-$(CONFIG_ARCH_TEGRA_18x_SOC) += ../../../t18x/sound/soc/
 endif

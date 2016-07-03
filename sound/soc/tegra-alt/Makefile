@@ -2,6 +2,9 @@ GCOV_PROFILE := y
 
 subdir-ccflags-y := -Werror
 
+subdir-ccflags-y += -I$(srctree)/../t18x
+subdir-ccflags-y += -I$(srctree)
+
 # Tegra platform Support
 snd-soc-tegra-alt-pcm-objs := tegra_pcm_alt.o
 CFLAGS_tegra_pcm_alt.o += -Wno-shift-count-overflow

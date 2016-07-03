@@ -356,6 +356,7 @@ struct nvhost_device_data t18_nvjpg_info = {
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_NVJPG,
 	.isolate_contexts	= true,
 	.mlock_timeout_factor	= 3,
+	.module_irq		= 14,
 };
 #endif
 

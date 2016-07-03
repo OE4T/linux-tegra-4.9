@@ -336,6 +336,26 @@ static void intr_disable_host_irq(struct nvhost_intr *intr, int irq)
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intmask_r(), val);
 }
 
+static void intr_enable_module_intr(struct nvhost_intr *intr, int irq)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	unsigned long val;
+
+	val = host1x_hypervisor_readl(dev->dev, host1x_sync_intc0mask_r());
+	val |= BIT(irq);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intc0mask_r(), val);
+}
+
+static void intr_disable_module_intr(struct nvhost_intr *intr, int irq)
+{
+	struct nvhost_master *dev = intr_to_dev(intr);
+	unsigned long val;
+
+	val = host1x_hypervisor_readl(dev->dev, host1x_sync_intc0mask_r());
+	val &= ~BIT(irq);
+	host1x_hypervisor_writel(dev->dev, host1x_sync_intc0mask_r(), val);
+}
+
 static int intr_debug_dump(struct nvhost_intr *intr, struct output *o)
 {
 	struct nvhost_master *dev = intr_to_dev(intr);
@@ -374,4 +394,6 @@ static const struct nvhost_intr_ops host1x_intr_ops = {
 	.debug_dump = intr_debug_dump,
 	.disable_host_irq = intr_disable_host_irq,
 	.enable_host_irq = intr_enable_host_irq,
+	.disable_module_intr = intr_disable_module_intr,
+	.enable_module_intr = intr_enable_module_intr,
 };

@@ -36,9 +36,20 @@ struct nvhost_queue {
 };
 
 /**
+ * struct nvhost_queue_ops - hardware specific queue callbacks
+ *
+ * @abort:	abort all tasks from a queue
+ *
+ */
+struct nvhost_queue_ops {
+	int (*abort)(struct nvhost_queue *queue);
+};
+
+/**
  * struct nvhost_queue_pool - Queue pool data structure to hold queue table
  *
  * @pdev:		Pointer to the Queue client device
+ * @ops			Pointer to hardware specific queue ops
  * @queues:		Queues available for the client
  * @queue_lock:		Mutex for the bitmap of reserved queues
  * @alloc_table:	Bitmap of allocated queues
@@ -47,6 +58,7 @@ struct nvhost_queue {
  */
 struct nvhost_queue_pool {
 	struct platform_device *pdev;
+	struct nvhost_queue_ops *ops;
 	struct nvhost_queue *queues;
 	struct mutex queue_lock;
 	unsigned long alloc_table;
@@ -57,6 +69,7 @@ struct nvhost_queue_pool {
  * nvhost_queue_init() - Initialize queue structures
  *
  * @pdev:		Pointer to the Queue client device
+ * @ops			Pointer to device speicific callbacks
  * @num_queues:		Max number queues available for client
  *
  * Return:	pointer to queue pool
@@ -64,6 +77,7 @@ struct nvhost_queue_pool {
  * This function allocates and initializes queue data structures.
  */
 struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
+					struct nvhost_queue_ops *ops,
 					unsigned int num_queues);
 
 /**

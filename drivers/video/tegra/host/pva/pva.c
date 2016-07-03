@@ -49,6 +49,17 @@ static struct of_device_id tegra_pva_of_match[] = {
 	{ },
 };
 
+int pva_queue_abort(struct nvhost_queue *queue)
+{
+	/* TBD: Abort pending tasks from the queue */
+
+	return 0;
+}
+
+static struct nvhost_queue_ops pva_queue_ops = {
+	.abort = pva_queue_abort,
+};
+
 int pva_finalize_poweron(struct platform_device *pdev)
 {
 	return 0;
@@ -120,7 +131,8 @@ static int pva_probe(struct platform_device *pdev)
 	if (err < 0)
 		goto err_client_device_init;
 
-	pva->pool = nvhost_queue_init(pdev, MAX_PVA_QUEUE_COUNT);
+	pva->pool = nvhost_queue_init(pdev, &pva_queue_ops,
+					MAX_PVA_QUEUE_COUNT);
 	if (IS_ERR(pva->pool)) {
 		err = PTR_ERR(pva->pool);
 		goto err_queue_init;

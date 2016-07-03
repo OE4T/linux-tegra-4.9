@@ -25,6 +25,7 @@
 #include "nvhost_queue.h"
 
 struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
+					struct nvhost_queue_ops *ops,
 					unsigned int num_queues)
 {
 	struct nvhost_queue_pool *pool;
@@ -46,6 +47,7 @@ struct nvhost_queue_pool *nvhost_queue_init(struct platform_device *pdev,
 	}
 	/* initialize pool and queues */
 	pool->pdev = pdev;
+	pool->ops = ops;
 	pool->queues = queues;
 	pool->alloc_table = 0;
 	pool->max_queue_cnt = num_queues;
@@ -153,7 +155,11 @@ err_alloc_queue:
 
 int nvhost_queue_abort(struct nvhost_queue *queue)
 {
-	/* TBD: Abort pending tasks from the queue */
+	struct nvhost_queue_pool *pool = queue->pool;
+
+	if (pool->ops && pool->ops->abort)
+		return pool->ops->abort(queue);
+
 	return 0;
 }
 

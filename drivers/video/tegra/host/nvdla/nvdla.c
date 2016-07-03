@@ -120,6 +120,18 @@ static void nvdla_free_dump_region(struct platform_device *pdev)
 	}
 }
 
+/* Queue management API */
+int nvdla_queue_abort(struct nvhost_queue *queue)
+{
+	/* TBD: Abort pending tasks from the queue */
+
+	return 0;
+}
+
+static struct nvhost_queue_ops nvdla_queue_ops = {
+	.abort = nvdla_queue_abort,
+};
+
 /* power management API */
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
@@ -477,7 +489,8 @@ static int nvdla_probe(struct platform_device *pdev)
 	if (pdata->flcn_isr)
 		flcn_intr_init(pdev);
 
-	nvdla_dev->pool = nvhost_queue_init(pdev, MAX_NVDLA_QUEUE_COUNT);
+	nvdla_dev->pool = nvhost_queue_init(pdev, &nvdla_queue_ops,
+				MAX_NVDLA_QUEUE_COUNT);
 	if (IS_ERR(nvdla_dev->pool)) {
 		err = PTR_ERR(nvdla_dev->pool);
 		goto err_queue_init;

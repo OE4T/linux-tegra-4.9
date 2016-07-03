@@ -91,15 +91,3 @@ static int __init tegra_register_ramoops_device(void)
 }
 core_initcall(tegra_register_ramoops_device);
 #endif /* CONFIG_PSTORE_RAM */
-
-#ifndef CONFIG_TEGRA_COMMON
-/* stub for panel files that rely on this function
-   in kernel.../drivers/platform/tegra/common.c,
-   which isn't compiled for t186. */
-void find_dc_node(struct device_node **dc1_node,
-	struct device_node **dc2_node)
-{
-	pr_err("%s: function is unimplemented\n", __func__);
-	return;
-}
-#endif

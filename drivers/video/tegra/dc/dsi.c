@@ -5892,7 +5892,7 @@ static void tegra_dc_dsi_vrr_enable(struct tegra_dc *dc, bool enable)
 		vrr->enable = enable;
 }
 
-void tegra_dsi_vrr_update_monspecs(struct tegra_dc *dc,
+static void tegra_dsi_vrr_update_monspecs(struct tegra_dc *dc,
 	struct list_head *head)
 {
 	struct tegra_vrr *vrr;

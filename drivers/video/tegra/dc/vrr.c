@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/vrr.c
  *
- * Copyright (c) 2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -124,7 +124,7 @@ static ssize_t vrr_settings_store(struct kobject *kobj,
 	else if (IS_VRR_ATTR(min_fps)) {
 		int val;
 
-		if (kstrtol(buf, 10, (long *)&val) != -EINVAL) {
+		if (kstrtoint(buf, 10, &val) != -EINVAL) {
 			if (val >= 20 && val <= vrr->vrr_max_fps) {
 				int lines_per_frame_max;
 				struct tegra_dc_mode *m = &dc->mode;

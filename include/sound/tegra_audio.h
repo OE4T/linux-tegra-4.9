@@ -24,8 +24,8 @@
 #include "tegra210_xbar_alt.h"
 #include "tegra210_afc_alt.h"
 #include "ahub_unit_fpga_clock.h"
-#include "../../../../t18x/sound/soc/tegra-alt/ahub_unit_fpga_clock_t18x.h"
-#include "../../../../t18x/sound/soc/tegra-alt/tegra186_admaif_alt.h"
-#include "../../../../t18x/sound/soc/tegra-alt/tegra186_afc_alt.h"
-#include "../../../../t18x/sound/soc/tegra-alt/tegra186_xbar_alt.h"
+#include "sound/soc/tegra-alt/ahub_unit_fpga_clock_t18x.h"
+#include "sound/soc/tegra-alt/tegra186_admaif_alt.h"
+#include "sound/soc/tegra-alt/tegra186_afc_alt.h"
+#include "sound/soc/tegra-alt/tegra186_xbar_alt.h"
 #endif

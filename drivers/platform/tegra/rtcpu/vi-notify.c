@@ -25,8 +25,8 @@
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
 
-#include "../../../video/tegra/host/vi/vi_notify.h"
-#include "../../../../../nvhost/drivers/video/tegra/host/nvhost_acm.h"
+#include "drivers/video/tegra/host/vi/vi_notify.h"
+#include "drivers/video/tegra/host/nvhost_acm.h"
 
 struct vi_notify_req {
 	union {

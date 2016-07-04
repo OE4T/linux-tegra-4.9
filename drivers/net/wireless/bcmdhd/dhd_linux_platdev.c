@@ -45,7 +45,6 @@
 #include <linux/wlan_plat.h>
 #endif
 #include <linux/of_gpio.h>
-#include <linux/of_net.h>
 #include <linux/of.h>
 #include <linux/of_irq.h>
 #include <linux/irq.h>
@@ -223,24 +222,7 @@ int wifi_platform_bus_enumerate(wifi_adapter_info_t *adapter, bool device_presen
 
 }
 
-static int wifi_get_mac_addr(unsigned char *buf)
-{
-	struct device_node *dt_node;
-	const void *mac_addr;
-
-	dt_node = of_find_compatible_node(NULL, NULL, "android,bcmdhd_wlan");
-	if (!dt_node)
-		return -ENOENT;
-	mac_addr = of_get_mac_address(dt_node);
-	of_node_put(dt_node);
-	if (!mac_addr)
-		return -ENOENT;
-	memcpy(buf, mac_addr, 6);
-	pr_info("%s: %02x:%02x:%02x:%02x:%02x:%02x\n",
-		__func__, buf[0], buf[1], buf[2], buf[3], buf[4], buf[5]);
-
-	return 0;
-}
+extern int wifi_get_mac_addr(unsigned char *buf);
 
 int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)
 {
@@ -252,7 +234,8 @@ int wifi_platform_get_mac_addr(wifi_adapter_info_t *adapter, unsigned char *buf)
 
 	/* The MAC address search order is:
 	 * Userspace command (e.g. ifconfig)
-	 * of_get_mac_address()
+	 * DTB (from NCT/EEPROM)
+	 * File (FCT/rootfs)
 	 * OTP
 	 */
 	if (wifi_get_mac_addr(buf) == 0)

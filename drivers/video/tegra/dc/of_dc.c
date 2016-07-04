@@ -85,6 +85,10 @@ static struct regulator *of_edp_sec_mode;
 static struct regulator *of_dp_pad;
 static struct regulator *of_dp_hdmi_5v0;
 
+#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
+atomic_t sd_brightness = ATOMIC_INIT(255);
+#endif
+
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 /* The dc_or_node_name should be saved as per
  * dc id based on probe.

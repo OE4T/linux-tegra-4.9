@@ -35,6 +35,8 @@
 #include <linux/atomic.h>
 
 #include "trusty-workitem.h"
+#include "syscalls.h"
+
 #define  RSC_DESCR_VER  1
 
 struct trusty_vdev;
@@ -345,6 +347,7 @@ static struct virtqueue *_find_vq(struct virtio_device *vdev,
 	struct trusty_vring *tvr;
 	struct trusty_vdev *tvdev = vdev_to_tvdev(vdev);
 	phys_addr_t pa;
+	int ret = 0;
 
 	if (!name)
 		return ERR_PTR(-EINVAL);
@@ -366,9 +369,12 @@ static struct virtqueue *_find_vq(struct virtio_device *vdev,
 
 	pa = virt_to_phys(tvr->vaddr);
 	/* save vring address to shared structure */
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-	hyp_ipa_translate(&pa);
-#endif
+	ret = hyp_ipa_translate(&pa);
+	if (ret) {
+		dev_err(&vdev->dev, "IPA to PA failed: %x\n", ret);
+		goto err_new_virtqueue;
+	}
+
 	tvr->vr_descr->da = (u32)pa;
 	/* da field is only 32 bit wide. Use previously unused 'reserved' field
 	 * to store top 32 bits of 64-bit address

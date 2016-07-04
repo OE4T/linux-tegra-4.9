@@ -27,9 +27,7 @@
 #include <linux/dma-mapping.h>
 #include <xen/xen.h>
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 #include <linux/trusty/trusty.h>
-#endif
 
 #ifdef DEBUG
 /* For development, we want to crash whenever the ring is screwed. */
@@ -275,6 +273,7 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 	unsigned int i, n, avail, descs_used, uninitialized_var(prev), err_idx;
 	int head;
 	bool indirect, prev_initialized = false;
+	int ret = 0;
 
 	START_USE(vq);
 
@@ -345,9 +344,14 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-			hyp_ipa_translate(&desc[i].addr);
-#endif
+			ret = hyp_ipa_translate(&desc[i].addr);
+			if (ret) {
+				pr_err("%s: IPA to PA failed: %x\n",
+					 __func__, ret);
+				END_USE(vq);
+				return ret;
+			}
+
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
 			prev_initialized = true;
@@ -362,9 +366,14 @@ static inline int virtqueue_add(struct virtqueue *_vq,
 
 			desc[i].flags = cpu_to_virtio16(_vq->vdev, VRING_DESC_F_NEXT | VRING_DESC_F_WRITE);
 			desc[i].addr = cpu_to_virtio64(_vq->vdev, addr);
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-			hyp_ipa_translate(&desc[i].addr);
-#endif
+			ret = hyp_ipa_translate(&desc[i].addr);
+			if (ret) {
+				pr_err("%s: IPA to PA failed: %x\n",
+					 __func__, ret);
+				END_USE(vq);
+				return ret;
+			}
+
 			desc[i].len = cpu_to_virtio32(_vq->vdev, sg->length);
 			prev = i;
 			prev_initialized = true;

@@ -536,6 +536,18 @@ static int tegra_cec_probe(struct platform_device *pdev)
 		goto cec_error;
 	}
 
+	/*
+	 * Create a symlink for tegra_cec if it is not under platform bus or
+	 * it has been created with different name.
+	 */
+	if ((pdev->dev.parent != &platform_bus) ||
+			strcmp(dev_name(&pdev->dev), TEGRA_CEC_NAME)) {
+		ret = sysfs_create_link(&platform_bus.kobj,
+				&pdev->dev.kobj, TEGRA_CEC_NAME);
+		if (ret)
+			dev_warn(&pdev->dev, "Could not create sysfs link.\n");
+	}
+
 	ret = sysfs_create_file(
 		&pdev->dev.kobj, &dev_attr_cec_logical_addr_config.attr);
 	dev_info(&pdev->dev, "cec_add_sysfs ret=%d\n", ret);

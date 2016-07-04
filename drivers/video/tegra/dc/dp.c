@@ -2118,6 +2118,8 @@ static int tegra_dc_dp_init(struct tegra_dc *dc)
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	parent_clk = tegra_disp_of_clk_get_by_name(np_dp, "plldp");
+#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
+	parent_clk = clk_get_sys("pll_dp", NULL);
 #else
 	parent_clk = tegra_get_clock_by_name("pll_dp");
 #endif

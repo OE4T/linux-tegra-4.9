@@ -29,7 +29,7 @@
 #include <video/tegra_dc_ext.h>
 #include <soc/tegra/tegra_bpmp.h>
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <linux/clk-provider.h>
 #endif
 
@@ -71,7 +71,7 @@ static inline void tegra_dc_io_end(struct tegra_dc *dc)
 
 static inline int tegra_dc_is_clk_enabled(struct clk *clk)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	return __clk_get_enable_count(clk);
 #else
 	return tegra_is_clk_enabled(clk);

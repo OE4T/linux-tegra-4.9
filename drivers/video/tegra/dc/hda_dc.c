@@ -364,7 +364,7 @@ EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 					struct tegra_dc_hda_data *hda)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	int sor_num = tegra_dc_which_sor(dc);
 	struct device_node *np_sor =
 		sor_num ? of_find_node_by_path(SOR1_NODE) :

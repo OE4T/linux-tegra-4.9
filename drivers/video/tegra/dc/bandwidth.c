@@ -28,7 +28,9 @@
 #include <trace/events/display.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
+#if !defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <linux/platform/tegra/tegra_emc.h>
+#endif
 #include <linux/platform/tegra/mc.h>
 
 #include "dc_reg.h"

@@ -122,10 +122,16 @@ ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ifneq ($(wildcard $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile),)
 include $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile
 endif
+ifneq ($(wildcard $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile.nvgpu-t18x),)
+include $(srctree)/../nvgpu-t18x/drivers/gpu/nvgpu/Makefile.nvgpu-t18x
+endif
 endif
 
-ifeq ($(CONFIG_TEGRA_19x_GPU),y)
+ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
 ifneq ($(wildcard $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile),)
 include $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile
+endif
+ifneq ($(wildcard $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile.nvgpu-t19x),)
+include $(srctree)/../nvgpu-t19x/drivers/gpu/nvgpu/Makefile.nvgpu-t19x
 endif
 endif

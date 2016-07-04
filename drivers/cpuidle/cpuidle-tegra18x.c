@@ -836,7 +836,7 @@ static struct notifier_block suspend_notifier = {
 	.notifier_call = tegra_suspend_notify_callback,
 };
 
-static int tegra18x_cpuidle_probe(struct platform_device *pdev)
+static int __init tegra18x_cpuidle_probe(struct platform_device *pdev)
 {
 	int cpu_number;
 	struct device_node *a57_cluster_states;
@@ -932,12 +932,12 @@ static int tegra18x_cpuidle_probe(struct platform_device *pdev)
 	return 0;
 }
 
-static const struct of_device_id tegra18x_cpuidle_of[] = {
+static const struct of_device_id tegra18x_cpuidle_of[] __initconst = {
         { .compatible = "nvidia,tegra18x-cpuidle" },
         {}
 };
 
-static struct platform_driver tegra18x_cpuidle_driver = {
+static struct platform_driver tegra18x_cpuidle_driver __refdata = {
         .probe = tegra18x_cpuidle_probe,
         .driver = {
                 .owner = THIS_MODULE,

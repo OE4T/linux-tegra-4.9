@@ -19,6 +19,7 @@
 #include <linux/trusty/sm_err.h>
 #include <linux/device.h>
 #include <linux/pagemap.h>
+#include <linux/tegra-soc.h>
 
 enum {
 	TRUSTY_DEV_UNINIT = -1,
@@ -33,9 +34,7 @@ s32 trusty_fast_call32(struct device *dev, u32 smcnr, u32 a0, u32 a1, u32 a2);
 #ifdef CONFIG_64BIT
 s64 trusty_fast_call64(struct device *dev, u64 smcnr, u64 a0, u64 a1, u64 a2);
 #endif
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 int hyp_ipa_translate(uint64_t *ipa);
-#endif
 #else
 static inline s32 trusty_std_call32(struct device *dev, u32 smcnr,
 				    u32 a0, u32 a1, u32 a2)

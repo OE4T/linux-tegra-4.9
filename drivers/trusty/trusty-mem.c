@@ -80,15 +80,17 @@ int trusty_encode_page_info(struct ns_mem_page_info *inf,
 {
 	int mem_attr;
 	uint64_t pte;
+	int ret = 0;
 
 	if (!inf || !page)
 		return -EINVAL;
 
 	/* get physical address */
 	pte = (uint64_t) page_to_phys(page);
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-	hyp_ipa_translate(&pte);
-#endif
+	ret = hyp_ipa_translate(&pte);
+	if (ret)
+		return ret;
+
 	/* get memory attributes */
 	mem_attr = get_mem_attr(page, pgprot);
 	if (mem_attr < 0)
@@ -114,7 +116,7 @@ int trusty_call32_mem_buf(struct device *dev, u32 smcnr,
 			  struct page *page,  u32 size,
 			  pgprot_t pgprot)
 {
-	int ret;
+	int ret = 0;
 	struct ns_mem_page_info pg_inf;
 
 	if (!dev || !page)

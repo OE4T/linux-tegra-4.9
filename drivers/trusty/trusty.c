@@ -25,11 +25,8 @@
 #include <linux/trusty/smcall.h>
 #include <linux/trusty/sm_err.h>
 #include <linux/trusty/trusty.h>
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-#include <../virt/tegra/syscalls.h>
-#include <linux/tegra-soc.h>
-#endif
 #include "trusty-workitem.h"
+#include "syscalls.h"
 
 struct trusty_state;
 
@@ -70,7 +67,6 @@ struct trusty_state {
 #define SMC_REGISTERS_TRASHED	"ip"
 #endif
 
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
 int hyp_ipa_translate(uint64_t *ipa)
 {
 	int gid, ret = 0;
@@ -85,12 +81,12 @@ int hyp_ipa_translate(uint64_t *ipa)
 		ret = hyp_read_ipa_pa_info(&info, gid, *ipa);
 
 		*ipa = info.base + info.offset;
-	}
+	} else
+			pr_info("It's not tegra hypervisor mode.\n");
 
 	return ret;
 }
 EXPORT_SYMBOL(hyp_ipa_translate);
-#endif
 
 static inline ulong smc(ulong r0, ulong r1, ulong r2, ulong r3)
 {

@@ -188,9 +188,12 @@ static int trusty_log_probe(struct platform_device *pdev)
 	}
 	s->log = page_address(s->log_pages);
 	pa = page_to_phys(s->log_pages);
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-	hyp_ipa_translate(&pa);
-#endif
+	result = hyp_ipa_translate(&pa);
+	if (result) {
+		pr_err("%s: IPA to PA failed: %x\n", __func__, result);
+		goto error_std_call;
+	}
+
 	result = trusty_std_call32(s->trusty_dev,
 				   SMC_SC_SHARED_LOG_ADD,
 				   (u32)(pa), (u32)(pa >> 32),
@@ -240,10 +243,14 @@ static int trusty_log_remove(struct platform_device *pdev)
 	int result;
 	struct trusty_log_state *s = platform_get_drvdata(pdev);
 	phys_addr_t pa = page_to_phys(s->log_pages);
-#ifdef CONFIG_TEGRA_VIRTUALIZATION
-	hyp_ipa_translate(&pa);
-#endif
+
 	dev_dbg(&pdev->dev, "%s\n", __func__);
+
+	result = hyp_ipa_translate(&pa);
+	if (result) {
+		pr_err("%s: IPA to PA failed: %x\n", __func__, result);
+		return result;
+	}
 
 	atomic_notifier_chain_unregister(&panic_notifier_list,
 					 &s->panic_notifier);

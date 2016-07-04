@@ -71,19 +71,13 @@ static int tegra_prod_get_child_tupple_count(const struct device_node *np,
 	}
 
 	for_each_available_child_of_node(np, child) {
-		count = of_property_count_u32_elems(child, "prod");
-		if (count < 0) {
-			pr_err("Node %s: prod prop not found\n", child->name);
-			continue;
-		}
+		count = tegra_prod_get_child_tupple_count(child, n_tupple);
+		if (count < 0)
+			return count;
 
-		if ((count < n_tupple) || (count % n_tupple != 0)) {
-			pr_err("Node %s: Not found proper setting in %s\n",
-				child->name, np->name);
-			return -EINVAL;
-		}
-		total_tupple += count / n_tupple;
+		total_tupple += count;
 	}
+
 	return total_tupple;
 }
 
@@ -149,14 +143,11 @@ static int tegra_prod_read_prod_data(const struct device_node *np,
 }
 
 static int tegra_prod_read_node_tupple(const struct device_node *np,
-		struct tegra_prod_config *t_prod, int n_tupple)
+		struct prod_tuple *p_tuple, int n_tupple)
 {
 	int ret = 0;
 	int sindex;
-	struct prod_tuple *p_tuple;
 	struct device_node *child;
-
-	p_tuple = (struct prod_tuple *)&t_prod->prod_tuple[0];
 
 	ret = tegra_prod_read_prod_data(np, p_tuple, n_tupple);
 	if (ret < 0)
@@ -166,12 +157,13 @@ static int tegra_prod_read_node_tupple(const struct device_node *np,
 	p_tuple += ret;
 
 	for_each_available_child_of_node(np, child) {
-		ret = tegra_prod_read_prod_data(child, p_tuple, n_tupple);
+		ret = tegra_prod_read_node_tupple(child, p_tuple, n_tupple);
 		if (ret < 0)
 			return -EINVAL;
 		sindex += ret;
 		p_tuple += ret;
 	}
+
 	return sindex;
 }
 
@@ -250,7 +242,8 @@ static int tegra_prod_parse_dt(const struct device_node *np,
 		t_prod->boot_init = of_property_read_bool(child,
 						"nvidia,prod-boot-init");
 
-		ret = tegra_prod_read_node_tupple(child, t_prod, n_tupple);
+		ret = tegra_prod_read_node_tupple(child, t_prod->prod_tuple,
+						  n_tupple);
 		if (ret < 0) {
 			pr_err("Node %s: Reading prod setting failed: %d\n",
 				child->name, ret);

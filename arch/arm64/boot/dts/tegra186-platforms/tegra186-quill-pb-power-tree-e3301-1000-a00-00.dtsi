@@ -63,6 +63,7 @@
 	};
 
 	sdhci@3400000 {
+		cd-inverted;
 		vddio_sdmmc-supply = <&spmic_ldo3>;
 		vddio_sd_slot-supply = <&vdd_sdcard1_3v3_sw>;
 		vqmmc-supply = <&spmic_ldo3>;

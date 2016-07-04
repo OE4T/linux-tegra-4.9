@@ -62,4 +62,6 @@ obj-$(CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT) += fake_panel.o null_or.o
 obj-$(CONFIG_TEGRA_VRR) += vrr.o
 obj-$(CONFIG_TEGRA_NVDISPLAY) += dsi_padctrl.o
 obj-$(CONFIG_TEGRA_HDMIVRR) += hdmivrr.o
+ifndef CONFIG_ARCH_TEGRA_210_SOC
 obj-y += panel/
+endif

@@ -51,10 +51,7 @@
 #include "hda_dc.h"
 #endif
 
-#ifdef CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT
 #include "fake_panel.h"
-#endif /*CONFIG_TEGRA_DC_FAKE_PANEL_SUPPORT*/
-
 #include <linux/tegra_prod.h>
 
 #include "hdmi2fpd_ds90uh949.h"

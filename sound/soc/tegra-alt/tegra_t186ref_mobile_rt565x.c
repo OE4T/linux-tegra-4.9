@@ -45,6 +45,9 @@
 #include "tegra_asoc_machine_alt.h"
 #include "tegra_asoc_machine_alt_t18x.h"
 #include "tegra210_xbar_alt.h"
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 2, 0)
+#include <dt-bindings/sound/tas2552.h>
+#endif
 
 #define DRV_NAME "tegra-snd-t186ref-mobile-rt565x"
 
@@ -336,8 +339,13 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
 		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
 		0, clk_out_rate, SND_SOC_CLOCK_IN);
+#else
+		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+		TAS2552_PDM_CLK_IVCLKIN, clk_out_rate, SND_SOC_CLOCK_IN);
+#endif
 		if (err < 0) {
 			dev_err(card->dev, "codec_dai clock not set\n");
 			return err;
@@ -356,8 +364,13 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
 		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
 		0, clk_out_rate, SND_SOC_CLOCK_IN);
+#else
+		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+		TAS2552_PDM_CLK_IVCLKIN, clk_out_rate, SND_SOC_CLOCK_IN);
+#endif
 		if (err < 0) {
 			dev_err(card->dev, "codec_dai clock not set\n");
 			return err;

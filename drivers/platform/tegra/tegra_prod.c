@@ -506,14 +506,7 @@ static struct tegra_prod *tegra_prod_get(struct device *dev, const char *name)
 	return tegra_prod_init(dev->of_node);
 }
 
-/**
- * tegra_prod_release - Release all the resources.
- * @tegra_prod:	the list of tegra prods.
- *
- * Release all the resources of tegra_prod.
- * Returns 0 on success.
- */
-static int tegra_prod_release(struct tegra_prod **tegra_prod)
+int tegra_prod_put(struct tegra_prod *tegra_prod)
 {
 	int i;
 	struct tegra_prod_config *t_prod;
@@ -522,30 +515,27 @@ static int tegra_prod_release(struct tegra_prod **tegra_prod)
 	if (!tegra_prod)
 		return -EINVAL;
 
-	tp_list = *tegra_prod;
-	if (tp_list) {
-		if (tp_list->prod_config) {
-			for (i = 0; i < tp_list->num; i++) {
-				t_prod = (struct tegra_prod_config *)
-					&tp_list->prod_config[i];
-				if (t_prod)
-					kfree(t_prod->prod_tuple);
-			}
-			kfree(tp_list->prod_config);
+	tp_list = tegra_prod;
+	if (tp_list->prod_config) {
+		for (i = 0; i < tp_list->num; i++) {
+			t_prod = &tp_list->prod_config[i];
+			if (t_prod)
+				kfree(t_prod->prod_tuple);
 		}
-		kfree(tp_list);
+		kfree(tp_list->prod_config);
 	}
+	kfree(tp_list);
 
-	*tegra_prod = NULL;
 	return 0;
 }
+EXPORT_SYMBOL(tegra_prod_put);
 
 static void devm_tegra_prod_release(struct device *dev, void *res)
 
 {
 	struct tegra_prod *prod_list = *(struct tegra_prod **)res;
 
-	tegra_prod_release(&prod_list);
+	tegra_prod_put(prod_list);
 }
 
 struct tegra_prod *devm_tegra_prod_get(struct device *dev)
@@ -574,9 +564,3 @@ struct tegra_prod *tegra_prod_get_from_node(struct device_node *np)
 	return tegra_prod_init(np);
 }
 EXPORT_SYMBOL(tegra_prod_get_from_node);
-
-int tegra_prod_put(struct tegra_prod *tegra_prod)
-{
-	return tegra_prod_release(&tegra_prod);
-}
-EXPORT_SYMBOL(tegra_prod_put);

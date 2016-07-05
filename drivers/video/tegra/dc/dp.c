@@ -2013,7 +2013,8 @@ static int tegra_dp_prods_init(struct tegra_dc_dp_data *dp)
 		return -EINVAL;
 	}
 
-	dp->prod_list = tegra_prod_get_from_node(np_prod);
+	dp->prod_list = devm_tegra_prod_get_from_node(&dp->dc->ndev->dev,
+						      np_prod);
 	if (IS_ERR(dp->prod_list)) {
 		dev_warn(&dp->dc->ndev->dev,
 			"dp: prod list init failed with error %ld\n",
@@ -2786,10 +2787,7 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	if (!np_dp || !of_device_is_available(np_dp))
 		release_resource(dp->res);
 	devm_kfree(&dc->ndev->dev, dp);
-	if (!IS_ERR(dp->prod_list)) {
-		tegra_prod_put(dp->prod_list);
-		dp->prod_list = NULL;
-	}
+	dp->prod_list = NULL;
 
 	if (!IS_ERR(dp->dpaux_prod_list)) {
 		tegra_prod_put(dp->dpaux_prod_list);

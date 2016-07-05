@@ -2010,7 +2010,9 @@ static int tegra_spi_probe(struct platform_device *pdev)
 		dev_err(&pdev->dev, "can not register to master err %d\n", ret);
 		goto exit_free_irq;
 	}
+#ifdef	CONFIG_DEBUG_FS
 	tegra_spi_debugfs_init(tspi);
+#endif
 
 	return ret;
 

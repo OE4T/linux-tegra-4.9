@@ -329,7 +329,10 @@ static int tas2552_hw_params(struct snd_pcm_substream *substream,
 	snd_soc_update_bits(codec, TAS2552_CFG_3, TAS2552_WCLK_FREQ_MASK,
 			    wclk_rate);
 
-	return tas2552_setup_pll(codec, params);
+	if (tas2552->pdm_clk)
+		return 0;
+	else
+		return tas2552_setup_pll(codec, params);
 }
 
 #define TAS2552_DAI_FMT_MASK	(TAS2552_BCLKDIR | \
@@ -544,7 +547,7 @@ static struct snd_soc_dai_driver tas2552_dai[] = {
 	{
 		.name = "tas2552-amplifier",
 		.playback = {
-			.stream_name = "Playback",
+			.stream_name = "DAC Playback",
 			.channels_min = 2,
 			.channels_max = 2,
 			.rates = SNDRV_PCM_RATE_8000_192000,
@@ -565,14 +568,23 @@ static const char * const tas2552_din_source_select[] = {
 	"Right",
 	"Left + Right average",
 };
+static const char * const tas2552_input_modulator_select[] = {
+	"None",
+	"PDM",
+};
 static SOC_ENUM_SINGLE_DECL(tas2552_din_source_enum,
 			    TAS2552_CFG_3, 3,
 			    tas2552_din_source_select);
+static SOC_ENUM_SINGLE_DECL(tas2552_input_modulator_enum,
+			    TAS2552_CFG_3, 5,
+			    tas2552_input_modulator_select);
+
 
 static const struct snd_kcontrol_new tas2552_snd_controls[] = {
 	SOC_SINGLE_TLV("Speaker Driver Playback Volume",
 			 TAS2552_PGA_GAIN, 0, 0x1f, 0, dac_tlv),
 	SOC_ENUM("DIN source", tas2552_din_source_enum),
+	SOC_ENUM("Input Modulator Format", tas2552_input_modulator_enum),
 };
 
 static int tas2552_codec_probe(struct snd_soc_codec *codec)

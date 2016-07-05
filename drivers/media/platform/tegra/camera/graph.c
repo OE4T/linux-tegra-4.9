@@ -335,8 +335,6 @@ static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 		next = of_graph_get_next_endpoint(node, ep);
 		if (next == NULL)
 			break;
-
-		of_node_put(ep);
 		ep = next;
 
 		dev_dbg(vi->dev, "handling endpoint %s\n", ep->full_name);
@@ -349,15 +347,12 @@ static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 
 		/* Skip entities that we have already processed. */
 		if (remote == vi->dev->of_node ||
-		    tegra_vi_graph_find_entity(vi, remote)) {
-			of_node_put(remote);
+		    tegra_vi_graph_find_entity(vi, remote))
 			continue;
-		}
 
 		entity = devm_kzalloc(vi->dev, sizeof(*entity),
 				GFP_KERNEL);
 		if (entity == NULL) {
-			of_node_put(remote);
 			ret = -ENOMEM;
 			break;
 		}
@@ -369,7 +364,6 @@ static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 		vi->num_subdevs++;
 	} while (next);
 
-	of_node_put(ep);
 	return ret;
 }
 

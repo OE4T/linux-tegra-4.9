@@ -15,6 +15,7 @@
 #include <linux/kernel.h>
 #include <linux/debugfs.h>
 #include <linux/delay.h>
+#include <linux/gpio.h>
 #include <linux/init.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
@@ -245,6 +246,9 @@ static void process_wake_event(int index, u32 status)
 	irq_hw_number_t hwirq;
 	int wake;
 	struct irq_desc *desc;
+#ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
+	int gpio;
+#endif
 
 	pr_info("Wake[%d:%d]  status=0x%x\n",
 		(index + 1) * 32, index * 32, status);
@@ -258,7 +262,11 @@ static void process_wake_event(int index, u32 status)
 		}
 
 #ifdef CONFIG_IRQ_DOMAIN_HIERARCHY
-		irq = irq_find_mapping(tegra_pm_irq_domain, hwirq);
+		gpio = tegra_wake_to_gpio(wake + 32 * index);
+		if (gpio != -EINVAL)
+			irq = gpio_to_irq(gpio);
+		else
+			irq = irq_find_mapping(tegra_pm_irq_domain, hwirq);
 #else
 		irq = hwirq;
 #endif

@@ -29,6 +29,11 @@
 #include <trace/events/nvhost.h>
 #include <linux/uaccess.h>
 
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#include <soc/tegra/tegra-dvfs.h>
+#include <linux/clk-provider.h>
+#endif
+
 #include <governor.h>
 
 #include "dev.h"
@@ -165,7 +170,11 @@ static int nvhost_scale_target(struct device *dev, unsigned long *freq,
 	struct nvhost_device_profile *profile = pdata->power_profile;
 
 #ifdef CONFIG_ARCH_TEGRA
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+	if(!__clk_get_enable_count(profile->clk)) {
+#else
 	if (!tegra_is_clk_enabled(profile->clk)) {
+#endif
 		*freq = profile->devfreq_profile.freq_table[0];
 		return 0;
 	}

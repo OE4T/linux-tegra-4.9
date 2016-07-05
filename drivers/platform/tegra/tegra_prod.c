@@ -557,3 +557,25 @@ struct tegra_prod *tegra_prod_get_from_node(struct device_node *np)
 	return tegra_prod_init(np);
 }
 EXPORT_SYMBOL(tegra_prod_get_from_node);
+
+struct tegra_prod *devm_tegra_prod_get_from_node(struct device *dev,
+						 struct device_node *np)
+{
+	struct tegra_prod **ptr, *prod_list;
+
+	ptr = devres_alloc(devm_tegra_prod_release, sizeof(*ptr), GFP_KERNEL);
+	if (!ptr)
+		return ERR_PTR(-ENOMEM);
+
+	prod_list = tegra_prod_init(np);
+	if (IS_ERR(prod_list)) {
+		devres_free(ptr);
+		return prod_list;
+	}
+
+	*ptr = prod_list;
+	devres_add(dev, ptr);
+
+	return prod_list;
+}
+EXPORT_SYMBOL(devm_tegra_prod_get_from_node);

@@ -988,6 +988,11 @@ static void tegra_pcie_configure_aspm(void)
 			(pci_pcie_type(pdev) == PCI_EXP_TYPE_DOWNSTREAM))
 			continue;
 		parent = pdev->bus->self;
+
+		/* following needs to be done only for devices which are
+		 * directly connected to Tegra root ports */
+		if (parent->bus->self)
+			continue;
 		rp = PCI_SLOT(parent->devfn);
 		list_for_each_entry(port, &pcie->ports, list)
 			if (rp == port->index + 1)

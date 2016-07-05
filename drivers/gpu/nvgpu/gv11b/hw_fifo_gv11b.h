@@ -104,7 +104,7 @@ static inline u32 fifo_eng_runlist_base_r(u32 i)
 }
 static inline u32 fifo_eng_runlist_base__size_1_v(void)
 {
-	return 0x0000000d;
+	return 0x00000001;
 }
 static inline u32 fifo_eng_runlist_r(u32 i)
 {
@@ -112,7 +112,7 @@ static inline u32 fifo_eng_runlist_r(u32 i)
 }
 static inline u32 fifo_eng_runlist__size_1_v(void)
 {
-	return 0x0000000d;
+	return 0x00000001;
 }
 static inline u32 fifo_eng_runlist_length_f(u32 v)
 {
@@ -268,7 +268,7 @@ static inline u32 fifo_intr_mmu_fault_id_r(void)
 }
 static inline u32 fifo_intr_mmu_fault_eng_id_graphics_v(void)
 {
-	return 0x00000040;
+	return 0x00000000;
 }
 static inline u32 fifo_intr_mmu_fault_eng_id_graphics_f(void)
 {
@@ -332,7 +332,7 @@ static inline u32 fifo_intr_pbdma_id_status_v(u32 r, u32 i)
 }
 static inline u32 fifo_intr_pbdma_id_status__size_1_v(void)
 {
-	return 0x0000000e;
+	return 0x00000001;
 }
 static inline u32 fifo_intr_runlist_r(void)
 {
@@ -412,7 +412,7 @@ static inline u32 fifo_engine_status_r(u32 i)
 }
 static inline u32 fifo_engine_status__size_1_v(void)
 {
-	return 0x0000000f;
+	return 0x00000002;
 }
 static inline u32 fifo_engine_status_id_v(u32 r)
 {
@@ -500,7 +500,7 @@ static inline u32 fifo_pbdma_status_r(u32 i)
 }
 static inline u32 fifo_pbdma_status__size_1_v(void)
 {
-	return 0x0000000e;
+	return 0x00000001;
 }
 static inline u32 fifo_pbdma_status_id_v(u32 r)
 {
@@ -600,11 +600,11 @@ static inline u32 fifo_replay_fault_buffer_size_r(void)
 }
 static inline u32 fifo_replay_fault_buffer_size_hw_f(u32 v)
 {
-	return (v & 0x3fff) << 0;
+	return (v & 0x1ff) << 0;
 }
 static inline u32 fifo_replay_fault_buffer_size_hw_entries_v(void)
 {
-	return 0x00002000;
+	return 0x000000c0;
 }
 static inline u32 fifo_replay_fault_buffer_get_r(void)
 {
@@ -612,7 +612,7 @@ static inline u32 fifo_replay_fault_buffer_get_r(void)
 }
 static inline u32 fifo_replay_fault_buffer_get_offset_hw_f(u32 v)
 {
-	return (v & 0x3fff) << 0;
+	return (v & 0x1ff) << 0;
 }
 static inline u32 fifo_replay_fault_buffer_get_offset_hw_init_v(void)
 {
@@ -624,7 +624,7 @@ static inline u32 fifo_replay_fault_buffer_put_r(void)
 }
 static inline u32 fifo_replay_fault_buffer_put_offset_hw_f(u32 v)
 {
-	return (v & 0x3fff) << 0;
+	return (v & 0x1ff) << 0;
 }
 static inline u32 fifo_replay_fault_buffer_put_offset_hw_init_v(void)
 {

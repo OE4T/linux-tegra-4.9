@@ -542,6 +542,10 @@ static inline u32 pwr_pmu_new_instblk_target_sys_coh_f(void)
 {
 	return 0x20000000;
 }
+static inline u32 pwr_pmu_new_instblk_target_sys_ncoh_f(void)
+{
+	return 0x30000000;
+}
 static inline u32 pwr_pmu_new_instblk_valid_f(u32 v)
 {
 	return (v & 0x1) << 30;

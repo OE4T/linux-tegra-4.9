@@ -70,9 +70,17 @@ static inline u32 gmmu_new_pde_aperture_video_memory_f(void)
 {
 	return 0x2;
 }
+static inline u32 gmmu_new_pde_aperture_sys_mem_coh_f(void)
+{
+	return 0x4;
+}
+static inline u32 gmmu_new_pde_aperture_sys_mem_ncoh_f(void)
+{
+	return 0x6;
+}
 static inline u32 gmmu_new_pde_address_sys_f(u32 v)
 {
-	return (v & 0xfffffff) << 8;
+	return (v & 0xffffff) << 8;
 }
 static inline u32 gmmu_new_pde_address_sys_w(void)
 {
@@ -118,6 +126,14 @@ static inline u32 gmmu_new_dual_pde_aperture_big_video_memory_f(void)
 {
 	return 0x2;
 }
+static inline u32 gmmu_new_dual_pde_aperture_big_sys_mem_coh_f(void)
+{
+	return 0x4;
+}
+static inline u32 gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(void)
+{
+	return 0x6;
+}
 static inline u32 gmmu_new_dual_pde_address_big_sys_f(u32 v)
 {
 	return (v & 0xfffffff) << 4;
@@ -137,6 +153,14 @@ static inline u32 gmmu_new_dual_pde_aperture_small_invalid_f(void)
 static inline u32 gmmu_new_dual_pde_aperture_small_video_memory_f(void)
 {
 	return 0x2;
+}
+static inline u32 gmmu_new_dual_pde_aperture_small_sys_mem_coh_f(void)
+{
+	return 0x4;
+}
+static inline u32 gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(void)
+{
+	return 0x6;
 }
 static inline u32 gmmu_new_dual_pde_vol_small_w(void)
 {
@@ -164,7 +188,7 @@ static inline u32 gmmu_new_dual_pde_vol_big_false_f(void)
 }
 static inline u32 gmmu_new_dual_pde_address_small_sys_f(u32 v)
 {
-	return (v & 0xfffffff) << 8;
+	return (v & 0xffffff) << 8;
 }
 static inline u32 gmmu_new_dual_pde_address_small_sys_w(void)
 {
@@ -212,7 +236,7 @@ static inline u32 gmmu_new_pte_privilege_false_f(void)
 }
 static inline u32 gmmu_new_pte_address_sys_f(u32 v)
 {
-	return (v & 0xfffffff) << 8;
+	return (v & 0xffffff) << 8;
 }
 static inline u32 gmmu_new_pte_address_sys_w(void)
 {
@@ -237,6 +261,14 @@ static inline u32 gmmu_new_pte_aperture_w(void)
 static inline u32 gmmu_new_pte_aperture_video_memory_f(void)
 {
 	return 0x0;
+}
+static inline u32 gmmu_new_pte_aperture_sys_mem_coh_f(void)
+{
+	return 0x4;
+}
+static inline u32 gmmu_new_pte_aperture_sys_mem_ncoh_f(void)
+{
+	return 0x6;
 }
 static inline u32 gmmu_new_pte_read_only_w(void)
 {
@@ -1078,7 +1110,7 @@ static inline u32 gmmu_pte_kind_c32_ms2_2cbr_v(void)
 {
 	return 0x000000de;
 }
-static inline u32 gmmu_pte_kind_c32_ms2_4cbra_v(void)
+static inline u32 gmmu_pte_kind_c32_ms2_2cra_v(void)
 {
 	return 0x000000cc;
 }
@@ -1142,7 +1174,7 @@ static inline u32 gmmu_pte_kind_c64_ms2_2cbr_v(void)
 {
 	return 0x000000ec;
 }
-static inline u32 gmmu_pte_kind_c64_ms2_2cbra_v(void)
+static inline u32 gmmu_pte_kind_c64_ms2_2cra_v(void)
 {
 	return 0x000000cd;
 }

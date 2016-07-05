@@ -182,6 +182,10 @@ static inline u32 fb_mmu_invalidate_replay_cancel_global_f(void)
 {
 	return 0x20;
 }
+static inline u32 fb_mmu_invalidate_replay_cancel_f(void)
+{
+	return 0x20;
+}
 static inline u32 fb_mmu_invalidate_sys_membar_s(void)
 {
 	return 1;
@@ -469,5 +473,9 @@ static inline u32 fb_mmu_vpr_info_fetch_false_v(void)
 static inline u32 fb_mmu_vpr_info_fetch_true_v(void)
 {
 	return 0x00000001;
+}
+static inline u32 fb_niso_flush_sysmem_addr_r(void)
+{
+	return 0x00100c10;
 }
 #endif

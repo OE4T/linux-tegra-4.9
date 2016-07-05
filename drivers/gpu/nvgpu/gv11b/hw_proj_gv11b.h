@@ -70,6 +70,10 @@ static inline u32 proj_lts_stride_v(void)
 {
 	return 0x00000200;
 }
+static inline u32 proj_fbpa_stride_v(void)
+{
+	return 0x00004000;
+}
 static inline u32 proj_ppc_in_gpc_base_v(void)
 {
 	return 0x00003000;
@@ -102,29 +106,37 @@ static inline u32 proj_tpc_in_gpc_shared_base_v(void)
 {
 	return 0x00001800;
 }
+static inline u32 proj_host_num_engines_v(void)
+{
+	return 0x00000002;
+}
 static inline u32 proj_host_num_pbdma_v(void)
 {
-	return 0x0000000e;
+	return 0x00000001;
 }
 static inline u32 proj_scal_litter_num_tpc_per_gpc_v(void)
 {
-	return 0x00000007;
+	return 0x00000002;
 }
 static inline u32 proj_scal_litter_num_fbps_v(void)
 {
-	return 0x00000008;
+	return 0x00000001;
+}
+static inline u32 proj_scal_litter_num_fbpas_v(void)
+{
+	return 0x00000001;
 }
 static inline u32 proj_scal_litter_num_gpcs_v(void)
 {
-	return 0x00000008;
+	return 0x00000001;
 }
 static inline u32 proj_scal_litter_num_pes_per_gpc_v(void)
 {
-	return 0x00000003;
+	return 0x00000001;
 }
 static inline u32 proj_scal_litter_num_tpcs_per_pes_v(void)
 {
-	return 0x00000003;
+	return 0x00000002;
 }
 static inline u32 proj_scal_litter_num_zcull_banks_v(void)
 {

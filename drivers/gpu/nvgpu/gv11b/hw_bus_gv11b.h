@@ -50,30 +50,6 @@
 #ifndef _hw_bus_gv11b_h_
 #define _hw_bus_gv11b_h_
 
-static inline u32 bus_bar0_window_r(void)
-{
-	return 0x00001700;
-}
-static inline u32 bus_bar0_window_base_f(u32 v)
-{
-	return (v & 0xffffff) << 0;
-}
-static inline u32 bus_bar0_window_target_vid_mem_f(void)
-{
-	return 0x0;
-}
-static inline u32 bus_bar0_window_target_sys_mem_coherent_f(void)
-{
-	return 0x2000000;
-}
-static inline u32 bus_bar0_window_target_sys_mem_noncoherent_f(void)
-{
-	return 0x3000000;
-}
-static inline u32 bus_bar0_window_target_bar0_window_base_shift_v(void)
-{
-	return 0x00000010;
-}
 static inline u32 bus_bar1_block_r(void)
 {
 	return 0x00001704;
@@ -129,6 +105,58 @@ static inline u32 bus_bar1_block_ptr_shift_v(void)
 static inline u32 bus_bar2_block_ptr_shift_v(void)
 {
 	return 0x0000000c;
+}
+static inline u32 bus_bind_status_r(void)
+{
+	return 0x00001710;
+}
+static inline u32 bus_bind_status_bar1_pending_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 bus_bind_status_bar1_pending_empty_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar1_pending_busy_f(void)
+{
+	return 0x1;
+}
+static inline u32 bus_bind_status_bar1_outstanding_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 bus_bind_status_bar1_outstanding_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar1_outstanding_true_f(void)
+{
+	return 0x2;
+}
+static inline u32 bus_bind_status_bar2_pending_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 bus_bind_status_bar2_pending_empty_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar2_pending_busy_f(void)
+{
+	return 0x4;
+}
+static inline u32 bus_bind_status_bar2_outstanding_v(u32 r)
+{
+	return (r >> 3) & 0x1;
+}
+static inline u32 bus_bind_status_bar2_outstanding_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 bus_bind_status_bar2_outstanding_true_f(void)
+{
+	return 0x8;
 }
 static inline u32 bus_intr_0_r(void)
 {

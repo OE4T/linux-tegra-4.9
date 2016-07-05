@@ -56,7 +56,7 @@ static inline u32 ccsr_channel_inst_r(u32 i)
 }
 static inline u32 ccsr_channel_inst__size_1_v(void)
 {
-	return 0x00001000;
+	return 0x00000200;
 }
 static inline u32 ccsr_channel_inst_ptr_f(u32 v)
 {
@@ -88,7 +88,7 @@ static inline u32 ccsr_channel_r(u32 i)
 }
 static inline u32 ccsr_channel__size_1_v(void)
 {
-	return 0x00001000;
+	return 0x00000200;
 }
 static inline u32 ccsr_channel_enable_v(u32 r)
 {

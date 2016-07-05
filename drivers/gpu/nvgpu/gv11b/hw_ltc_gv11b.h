@@ -50,6 +50,26 @@
 #ifndef _hw_ltc_gv11b_h_
 #define _hw_ltc_gv11b_h_
 
+static inline u32 ltc_pltcg_base_v(void)
+{
+	return 0x00140000;
+}
+static inline u32 ltc_pltcg_extent_v(void)
+{
+	return 0x0017ffff;
+}
+static inline u32 ltc_ltc0_ltss_v(void)
+{
+	return 0x00140200;
+}
+static inline u32 ltc_ltc0_lts0_v(void)
+{
+	return 0x00140400;
+}
+static inline u32 ltc_ltcs_ltss_v(void)
+{
+	return 0x0017e200;
+}
 static inline u32 ltc_ltcs_lts0_cbc_ctrl1_r(void)
 {
 	return 0x0014046c;
@@ -549,5 +569,13 @@ static inline u32 ltc_ltc0_lts0_tstg_info_1_slice_size_in_kb_v(u32 r)
 static inline u32 ltc_ltc0_lts0_tstg_info_1_slices_per_l2_v(u32 r)
 {
 	return (r >> 16) & 0x1f;
+}
+static inline u32 ltc_ltca_g_axi_pctrl_r(void)
+{
+	return 0x00160000;
+}
+static inline u32 ltc_ltca_g_axi_pctrl_user_sid_f(u32 v)
+{
+	return (v & 0xff) << 2;
 }
 #endif

@@ -911,17 +911,6 @@ static void dump_ctx_switch_stats(struct gk20a *g, struct vm_gk20a *vm,
 				ctxsw_prog_main_image_magic_value_o()),
 		ctxsw_prog_main_image_magic_value_v_value_v());
 
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi : %x\n",
-		gk20a_mem_rd(g, mem,
-				ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o()));
-
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_ptr : %x\n",
-		gk20a_mem_rd(g, mem,
-				ctxsw_prog_main_image_context_timestamp_buffer_ptr_o()));
-
-	gk20a_err(dev_from_gk20a(g), "ctxsw_prog_main_image_context_timestamp_buffer_control : %x\n",
-		gk20a_mem_rd(g, mem,
-				ctxsw_prog_main_image_context_timestamp_buffer_control_o()));
 
 	gk20a_err(dev_from_gk20a(g), "NUM_SAVE_OPERATIONS : %d\n",
 		gk20a_mem_rd(g, mem,
@@ -1144,8 +1133,8 @@ static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_CWD_FS: 0x%x\n",
 		gk20a_readl(g, gr_cwd_fs_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_FE_TPC_FS: 0x%x\n",
-		gk20a_readl(g, gr_fe_tpc_fs_r(0)));
-	gk20a_debug_output(o, "NV_PGRAPH_PRI_CWD_GPC_TPC_ID(0): 0x%x\n",
+		gk20a_readl(g, gr_fe_tpc_fs_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_CWD_GPC_TPC_ID: 0x%x\n",
 		gk20a_readl(g, gr_cwd_gpc_tpc_id_r(0)));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_CWD_SM_ID(0): 0x%x\n",
 		gk20a_readl(g, gr_cwd_sm_id_r(0)));
@@ -1552,16 +1541,16 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			gpc, tpc, global_esr);
 
 	if (cilp_enabled && sm_debugger_attached) {
-		if (global_esr & gr_gpc0_tpc0_sm1_hww_global_esr_bpt_int_pending_f())
-			gk20a_writel(g, gr_gpc0_tpc0_sm1_hww_global_esr_r() + offset,
-					gr_gpc0_tpc0_sm1_hww_global_esr_bpt_int_pending_f());
+		if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f())
+			gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
+					gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f());
 
-		if (global_esr & gr_gpc0_tpc0_sm1_hww_global_esr_single_step_complete_pending_f())
-			gk20a_writel(g, gr_gpc0_tpc0_sm1_hww_global_esr_r() + offset,
-					gr_gpc0_tpc0_sm1_hww_global_esr_single_step_complete_pending_f());
+		if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f())
+			gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
+					gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f());
 
-		global_mask = gr_gpcs_tpcs_sm1_hww_global_esr_multiple_warp_errors_pending_f() |
-			gr_gpcs_tpcs_sm1_hww_global_esr_bpt_pause_pending_f();
+		global_mask = gr_gpcs_tpcs_sm_hww_global_esr_multiple_warp_errors_pending_f() |
+			gr_gpcs_tpcs_sm_hww_global_esr_bpt_pause_pending_f();
 
 		if (warp_esr != 0 || (global_esr & global_mask) != 0) {
 			*ignore_debugger = true;
@@ -1585,7 +1574,7 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			}
 
 			/* reset the HWW errors after locking down */
-			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm1_hww_global_esr_r() + offset);
+			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
 			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr_copy);
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: HWWs cleared for gpc %d tpc %d\n",
@@ -1598,7 +1587,7 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 				return ret;
 			}
 
-			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm1_dbgr_control0_r() + offset);
+			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
 			if (dbgr_control0 & gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_enable_f()) {
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: clearing SINGLE_STEP_MODE before resume for gpc %d tpc %d\n",
@@ -1606,7 +1595,7 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 				dbgr_control0 = set_field(dbgr_control0,
 						gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_m(),
 						gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_disable_f());
-				gk20a_writel(g, gr_gpc0_tpc0_sm1_dbgr_control0_r() + offset, dbgr_control0);
+				gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
 			}
 
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
@@ -1720,10 +1709,10 @@ clean_up:
 
 static u32 gv11b_mask_hww_warp_esr(u32 hww_warp_esr)
 {
-	if (!(hww_warp_esr & gr_gpc0_tpc0_sm1_hww_warp_esr_addr_valid_m()))
+	if (!(hww_warp_esr & gr_gpc0_tpc0_sm_hww_warp_esr_addr_valid_m()))
 		hww_warp_esr = set_field(hww_warp_esr,
-			gr_gpc0_tpc0_sm1_hww_warp_esr_addr_error_type_m(),
-			gr_gpc0_tpc0_sm1_hww_warp_esr_addr_error_type_none_f());
+			gr_gpc0_tpc0_sm_hww_warp_esr_addr_error_type_m(),
+			gr_gpc0_tpc0_sm_hww_warp_esr_addr_error_type_none_f());
 
 	return hww_warp_esr;
 }

@@ -124,7 +124,7 @@ static inline u32 fuse_status_opt_fbp_r(void)
 }
 static inline u32 fuse_status_opt_fbp_idx_v(u32 r, u32 i)
 {
-	return (r >> (0 + i*0)) & 0x1;
+	return (r >> (0 + i*1)) & 0x1;
 }
 static inline u32 fuse_opt_ecc_en_r(void)
 {

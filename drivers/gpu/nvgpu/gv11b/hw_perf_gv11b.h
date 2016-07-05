@@ -52,7 +52,7 @@
 
 static inline u32 perf_pmasys_control_r(void)
 {
-	return 0x0024a000;
+	return 0x001b4000;
 }
 static inline u32 perf_pmasys_control_membuf_status_v(u32 r)
 {
@@ -84,7 +84,7 @@ static inline u32 perf_pmasys_control_membuf_clear_status_doit_f(void)
 }
 static inline u32 perf_pmasys_mem_block_r(void)
 {
-	return 0x0024a070;
+	return 0x001b4070;
 }
 static inline u32 perf_pmasys_mem_block_base_f(u32 v)
 {
@@ -148,7 +148,7 @@ static inline u32 perf_pmasys_mem_block_valid_false_f(void)
 }
 static inline u32 perf_pmasys_outbase_r(void)
 {
-	return 0x0024a074;
+	return 0x001b4074;
 }
 static inline u32 perf_pmasys_outbase_ptr_f(u32 v)
 {
@@ -156,7 +156,7 @@ static inline u32 perf_pmasys_outbase_ptr_f(u32 v)
 }
 static inline u32 perf_pmasys_outbaseupper_r(void)
 {
-	return 0x0024a078;
+	return 0x001b4078;
 }
 static inline u32 perf_pmasys_outbaseupper_ptr_f(u32 v)
 {
@@ -164,7 +164,7 @@ static inline u32 perf_pmasys_outbaseupper_ptr_f(u32 v)
 }
 static inline u32 perf_pmasys_outsize_r(void)
 {
-	return 0x0024a07c;
+	return 0x001b407c;
 }
 static inline u32 perf_pmasys_outsize_numbytes_f(u32 v)
 {
@@ -172,7 +172,7 @@ static inline u32 perf_pmasys_outsize_numbytes_f(u32 v)
 }
 static inline u32 perf_pmasys_mem_bytes_r(void)
 {
-	return 0x0024a084;
+	return 0x001b4084;
 }
 static inline u32 perf_pmasys_mem_bytes_numbytes_f(u32 v)
 {
@@ -180,7 +180,7 @@ static inline u32 perf_pmasys_mem_bytes_numbytes_f(u32 v)
 }
 static inline u32 perf_pmasys_mem_bump_r(void)
 {
-	return 0x0024a088;
+	return 0x001b4088;
 }
 static inline u32 perf_pmasys_mem_bump_numbytes_f(u32 v)
 {
@@ -188,7 +188,7 @@ static inline u32 perf_pmasys_mem_bump_numbytes_f(u32 v)
 }
 static inline u32 perf_pmasys_enginestatus_r(void)
 {
-	return 0x0024a0a4;
+	return 0x001b40a4;
 }
 static inline u32 perf_pmasys_enginestatus_rbufempty_f(u32 v)
 {

@@ -117,10 +117,26 @@ int nvhost_vi4_finalize_poweron(struct platform_device *pdev)
 	return 0;
 }
 
+void nvhost_vi4_idle(struct platform_device *pdev)
+{
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	vi->busy = false;
+}
+
+void nvhost_vi4_busy(struct platform_device *pdev)
+{
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	vi->busy = true;
+}
+
 void nvhost_vi4_reset(struct platform_device *pdev)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
+	if (vi->busy)
+		return;
 	if (!IS_ERR(vi->vi_reset))
 		reset_control_reset(vi->vi_reset);
 	if (!IS_ERR(vi->vi_tsc_reset))

@@ -47,6 +47,7 @@ struct nvhost_vi_dev {
 	struct reset_control *vi_tsc_reset;
 	struct dentry *debug_dir;
 	int error_irq;
+	bool busy;
 	atomic_t overflow;
 	atomic_t notify_overflow;
 	atomic_t fmlite_overflow;
@@ -55,6 +56,8 @@ struct nvhost_vi_dev {
 
 int nvhost_vi4_prepare_poweroff(struct platform_device *);
 int nvhost_vi4_finalize_poweron(struct platform_device *);
+void nvhost_vi4_idle(struct platform_device *);
+void nvhost_vi4_busy(struct platform_device *);
 void nvhost_vi4_reset(struct platform_device *);
 extern const struct file_operations nvhost_vi4_ctrl_ops;
 

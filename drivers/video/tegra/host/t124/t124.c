@@ -55,6 +55,13 @@
 #define TSEC_POWERGATE_DELAY 500
 #define HOST1X_POWERGATE_DELAY 50
 
+#ifndef INT_HOST1X_MPCORE_SYNCPT
+#define INT_HOST1X_MPCORE_SYNCPT -1
+#endif
+#ifndef INT_HOST1X_MPCORE_GENERAL
+#define INT_HOST1X_MPCORE_GENERAL -1
+#endif
+
 #ifdef CONFIG_ARCH_TEGRA
 static struct resource tegra_host1x04_resources[] = {
 	{

@@ -57,6 +57,8 @@ enum cmd_mode {
 	R_TRANSFER = 0,
 	W_TRANSFER,
 	R_CONFIG,
+	R_TRANSFER_SHARED_BUF,
+	W_TRANSFER_SHARED_BUF,
 	UNKNOWN_CMD = 0xffffffff,
 };
 
@@ -83,9 +85,12 @@ struct virtual_storage_configinfo {
 	uint32_t hardsect_size;           /* Sector Size */
 	uint32_t max_sectors_per_io;      /* Limit number of sectors per I/O*/
 	uint32_t virtual_storage_ver;     /* Version of virtual storage */
+	uint32_t shared_buffer_offset;    /* Storage offset of shared buffer*/
 };
 #pragma pack(pop)
 
+static struct tegra_hv_ivm_cookie *ivmk;
+static void *shared_buffer;
 /*
 * The drvdata of virtual device.
 */
@@ -98,7 +103,9 @@ struct vblk_dev {
 	struct request_queue *queue;     /* The device request queue */
 	struct gendisk *gd;              /* The gendisk structure */
 	uint32_t ivc_id;
+	uint32_t ivm_id;
 	struct tegra_hv_ivc_cookie *ivck;
+	struct tegra_hv_ivm_cookie *ivmk;
 	uint32_t devnum;
 	sector_t cur_sector;
 	uint32_t cur_nsect;
@@ -107,7 +114,6 @@ struct vblk_dev {
 	uint8_t serial_number;
 	uint8_t total_frame;
 	struct req_iterator iter;
-	uint max_sectors_per_frame;
 	struct request *req;
 	struct timer_list ivc_timer;
 	bool initialized;
@@ -116,6 +122,7 @@ struct vblk_dev {
 	struct work_struct work;
 	struct workqueue_struct *wq;
 	struct device *device;
+	void *shared_buffer;
 };
 
 static int vblk_send_config_cmd(struct vblk_dev *vblkdev)
@@ -216,7 +223,10 @@ static int next_transfer(struct vblk_dev *vblkdev)
 		return -EIO;
 	}
 
-	ivc_blk_req->cmd = vblkdev->cur_transfer_cmd;
+	if (vblkdev->cur_transfer_cmd == R_TRANSFER)
+		ivc_blk_req->cmd = R_TRANSFER_SHARED_BUF;
+	if (vblkdev->cur_transfer_cmd == W_TRANSFER)
+		ivc_blk_req->cmd = W_TRANSFER_SHARED_BUF;
 
 	ivc_blk_req->sector_offset = vblkdev->cur_sector;
 	ivc_blk_req->sector_number = vblkdev->cur_nsect;
@@ -226,7 +236,7 @@ static int next_transfer(struct vblk_dev *vblkdev)
 	if (vblkdev->cur_transfer_cmd == W_TRANSFER) {
 		rq_for_each_segment(bvec, vblkdev->req, vblkdev->iter) {
 			size = bvec.bv_len;
-			vblkdev->cur_buffer  = page_address(bvec.bv_page) +
+			vblkdev->cur_buffer = page_address(bvec.bv_page) +
 						bvec.bv_offset;
 
 			if ((total_size + size) > (vblkdev->cur_nsect *
@@ -235,9 +245,8 @@ static int next_transfer(struct vblk_dev *vblkdev)
 					vblkdev->config.hardsect_size) -
 					total_size;
 
-			memcpy((void *)ivc_blk_req +
-				sizeof(struct ivc_blk_request) + total_size,
-				vblkdev->cur_buffer , size);
+			memcpy(vblkdev->shared_buffer + total_size,
+				vblkdev->cur_buffer, size);
 			total_size += size;
 			if (total_size == (vblkdev->cur_nsect *
 				vblkdev->config.hardsect_size))
@@ -296,11 +305,8 @@ static int get_data_from_io_server(struct vblk_dev *vblkdev)
 					size = (vblkdev->cur_nsect *
 						vblkdev->config.hardsect_size) -
 						total_size;
-
 				memcpy(vblkdev->cur_buffer ,
-					(void *)ivc_blk_res +
-					sizeof(struct ivc_blk_result) +
-					total_size,
+					vblkdev->shared_buffer + total_size,
 					size);
 
 				total_size += size;
@@ -327,18 +333,14 @@ static int fetch_next_req(struct vblk_dev *vblkdev)
 
 	vblkdev->cur_transfer_cmd = rq_data_dir(vblkdev->req);
 	vblkdev->serial_number = 0;
-	vblkdev->total_frame = blk_rq_sectors(vblkdev->req) /
-				vblkdev->max_sectors_per_frame;
+	vblkdev->total_frame = 1;
 	vblkdev->iter.bio = NULL;
-	if (blk_rq_sectors(vblkdev->req) %
-		vblkdev->max_sectors_per_frame != 0)
-		vblkdev->total_frame++;
 
 	if (blk_rq_sectors(vblkdev->req) >
 		vblkdev->config.max_sectors_per_io) {
 		dev_err(vblkdev->device,
 			"Request size over I/O limit. 0x%x > 0x%x\n",
-			vblkdev->cur_nsect,
+			blk_rq_sectors(vblkdev->req),
 			vblkdev->config.max_sectors_per_io);
 		spin_lock(vblkdev->queue->queue_lock);
 		__blk_end_request_all(vblkdev->req, -EIO);
@@ -353,20 +355,7 @@ static void do_next_bio(struct vblk_dev *vblkdev)
 {
 	vblkdev->serial_number += 1;
 	vblkdev->cur_sector = blk_rq_pos(vblkdev->req);
-	if (vblkdev->serial_number == vblkdev->total_frame)
-		vblkdev->cur_nsect = blk_rq_sectors(vblkdev->req);
-	else
-		vblkdev->cur_nsect = vblkdev->max_sectors_per_frame;
-
-	if (vblkdev->cur_nsect > vblkdev->max_sectors_per_frame) {
-		dev_err(vblkdev->device,
-			"bio size over I/O limit. 0x%x > 0x%x\n",
-			vblkdev->cur_nsect, vblkdev->max_sectors_per_frame);
-		spin_lock(vblkdev->queue->queue_lock);
-		__blk_end_request_all(vblkdev->req, -EIO);
-		spin_unlock(vblkdev->queue->queue_lock);
-		return;
-	}
+	vblkdev->cur_nsect = blk_rq_sectors(vblkdev->req);
 
 	if ((vblkdev->cur_sector + vblkdev->cur_nsect) >
 		vblkdev->config.nsectors) {
@@ -517,10 +506,6 @@ static void setup_device(struct vblk_dev *vblkdev)
 	vblkdev->size =
 		vblkdev->config.nsectors * vblkdev->config.hardsect_size;
 
-	vblkdev->max_sectors_per_frame =
-		(vblkdev->ivck->frame_size - sizeof(struct ivc_blk_request)) /
-		vblkdev->config.hardsect_size;
-
 	spin_lock_init(&vblkdev->lock);
 
 	init_timer(&vblkdev->ivc_timer);
@@ -574,6 +559,8 @@ static void vblk_init_device(struct work_struct *ws)
 		if (vblk_get_configinfo(vblkdev))
 			return;
 
+		vblkdev->shared_buffer = shared_buffer +
+					vblkdev->config.shared_buffer_offset;
 		vblkdev->initialized = true;
 		vblkdev->req = NULL;
 		setup_device(vblkdev);
@@ -598,6 +585,7 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 	struct vblk_dev *vblkdev;
 	struct device *dev = &pdev->dev;
 	int ret;
+	static uint32_t ivm_id;
 
 	if (!is_tegra_hypervisor_mode()) {
 		dev_err(dev, "Hypervisor is not present\n");
@@ -635,6 +623,12 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 			ret = -ENODEV;
 			goto free_drvdata;
 		}
+		if (of_property_read_u32_index(vblk_node, "mempool", 0,
+			&(vblkdev->ivm_id))) {
+			dev_err(dev, "Failed to read mempool property\n");
+			ret = -ENODEV;
+			goto free_drvdata;
+		}
 	}
 
 	vblkdev->ivck = tegra_hv_ivc_reserve(NULL, vblkdev->ivc_id, NULL);
@@ -646,6 +640,29 @@ static int tegra_hv_vblk_probe(struct platform_device *pdev)
 		goto free_drvdata;
 	}
 
+	if (!ivmk) {
+		ivmk = tegra_hv_mempool_reserve(NULL, vblkdev->ivm_id);
+		if (IS_ERR_OR_NULL(ivmk)) {
+			dev_err(dev, "Failed to reserve IVM channel %d\n",
+				vblkdev->ivm_id);
+			ivmk = NULL;
+			ret = -ENODEV;
+			goto free_drvdata;
+		}
+		shared_buffer = ioremap_cache(ivmk->ipa, ivmk->size);
+		ivm_id = vblkdev->ivm_id;
+	} else {
+		if (vblkdev->ivm_id != ivm_id) {
+			dev_err(dev, "mempool id do not match\n");
+			goto free_drvdata;
+		}
+		if (vblkdev->ivck->peer_vmid != ivmk->peer_vmid) {
+			dev_err(dev, "IVC and IVM has different peer\n");
+			goto free_drvdata;
+		}
+	}
+
+	vblkdev->ivmk = ivmk;
 	vblkdev->initialized = false;
 
 	vblkdev->wq = alloc_workqueue("vblk_req_wq%d",

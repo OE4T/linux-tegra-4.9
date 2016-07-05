@@ -75,19 +75,6 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 struct tegra_prod *devm_tegra_prod_get(struct device *dev);
 
 /**
- * tegra_prod_get_from_node(): Get the prod handle from the node.
- * @np: Node pointer on which prod setting nodes are available.
- *
- * Parse the prod-setting node of the node pointer "np" and keep all prod
- * setting data in prod handle.
- * This handle is used for setting prod configurations.
- *
- * Returns valid prod_list handle on success or pointer to the error
- * when it failed.
- */
-struct tegra_prod *tegra_prod_get_from_node(struct device_node *np);
-
-/**
  * devm_tegra_prod_get_from_node(): Get the prod handle from the node.
  * @dev: Device handle.
  * @np: Node pointer on which prod setting nodes are available.
@@ -104,15 +91,4 @@ struct tegra_prod *tegra_prod_get_from_node(struct device_node *np);
  */
 struct tegra_prod *devm_tegra_prod_get_from_node(struct device *dev,
 						 struct device_node *np);
-
-/**
- * tegra_prod_put(): Put the allocated prod handle.
- * @tegra_prod: Tegra prod handle which was allocated by function
- *		devm_tegra_prod_get() or tegra_prod_get_from_node().
- *
- * Release the prod handle.
- *
- * Returns 0 on success or error number in negative when it failed.
- */
-int tegra_prod_put(struct tegra_prod *tegra_prod);
 #endif

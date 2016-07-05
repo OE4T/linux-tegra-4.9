@@ -149,7 +149,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 	}
 
 	/* assert module and mc client reset */
-	if (pdata->clocks[0].reset) {
+	if (pdata->clk[0] && pdata->clocks[0].reset) {
 		ret = tegra_mc_flush(pdata->clocks[0].reset);
 		if (ret) {
 			dump_clock_status(nvhost_get_host(dev)->dev);
@@ -170,7 +170,7 @@ static void do_module_reset_locked(struct platform_device *dev)
 	udelay(POWERGATE_DELAY);
 
 	/* deassert reset */
-	if (pdata->clocks[0].reset) {
+	if (pdata->clk[0] && pdata->clocks[0].reset) {
 		tegra_periph_reset_deassert(pdata->clk[0]);
 		tegra_mc_flush_done(pdata->clocks[0].reset);
 	}

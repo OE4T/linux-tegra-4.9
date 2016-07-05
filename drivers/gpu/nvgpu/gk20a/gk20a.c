@@ -1474,7 +1474,7 @@ static int gk20a_probe(struct platform_device *dev)
 
 	gk20a->mm.bypass_smmu = platform->bypass_smmu;
 	gk20a->mm.disable_bigpage = platform->disable_bigpage;
-	gk20a->mm.has_physical_mode = true;
+	gk20a->mm.has_physical_mode = !is_tegra_hypervisor_mode();
 
 #ifdef CONFIG_DEBUG_FS
 	spin_lock_init(&gk20a->debugfs_lock);

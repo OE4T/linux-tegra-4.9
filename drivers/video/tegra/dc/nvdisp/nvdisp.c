@@ -1761,6 +1761,30 @@ void tegra_nvdisp_underflow_handler(struct tegra_dc *dc)
 	}
 }
 
+int tegra_nvdisp_is_powered(int pg_id)
+{
+	int i, ret;
+	int pd_index = -1;
+
+	for (i = 0; i < NVDISP_PD_COUNT; i++) {
+		if (nvdisp_pg[i].powergate_id == pg_id) {
+			pd_index = i;
+			break;
+		}
+	}
+
+	if (pd_index < 0) {
+		pr_info("Not a disp powerdomain\n");
+		return 0;
+	}
+
+	mutex_lock(&tegra_nvdisp_lock);
+	ret = nvdisp_pg[pd_index].ref_cnt;
+	mutex_unlock(&tegra_nvdisp_lock);
+
+	return ret;
+}
+
 int tegra_nvdisp_powergate_partition(int pg_id)
 {
 	int i , ret = 0;

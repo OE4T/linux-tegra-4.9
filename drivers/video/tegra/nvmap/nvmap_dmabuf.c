@@ -807,9 +807,9 @@ static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)
 		seq_printf(s, " flags = 0x%08x, refs = %d\n",
 			   handle->flags, atomic_read(&handle->ref));
 
-		seq_printf(s, "  device = %s, mapping = %p\n",
+		seq_printf(s, "  device = %s, mapping = %lx\n",
 			   dev_name(nvmap_sgt->dev),
-			   nvmap_sgt->mapping);
+			   (unsigned long)nvmap_sgt->mapping);
 		addr = sg_dma_address(nvmap_sgt->sgt->sgl);
 		seq_printf(s, "  IO addr = %pa + 0x%zx\n",
 			&addr, handle->size);

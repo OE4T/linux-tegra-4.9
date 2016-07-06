@@ -22,6 +22,9 @@
 #include <linux/seq_file.h>
 #include <linux/uaccess.h>
 
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#include <soc/tegra/fuse.h>
+#endif
 #include "dev.h"
 #include "chip_support.h"
 #include "host1x/host1x_actmon.h"
@@ -167,7 +170,11 @@ static int host1x_actmon_init(struct host1x_actmon *actmon)
 		return 0;
 
 	if (actmon->init == ACTMON_OFF) {
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+		if (tegra_get_chip_id() == TEGRA210) {
+#else
 		if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21) {
+#endif
 			actmon->usecs_per_sample = 80;
 			actmon->k = 4;
 		} else {

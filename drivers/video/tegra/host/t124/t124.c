@@ -19,7 +19,11 @@
  */
 #include <linux/slab.h>
 #include <linux/tegra-powergate.h>
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#include <soc/tegra/fuse.h>
+#else
 #include <linux/tegra-fuse.h>
+#endif
 
 #include <linux/platform/tegra/mc.h>
 
@@ -516,7 +520,11 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	struct nvhost_device_data *data = platform_get_drvdata(host->dev);
 
 	/* Select the soc name */
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+	if (tegra_get_chip_id() == TEGRA124)
+#else
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA12)
+#endif
 		op->soc_name = "tegra12x";
 	else
 		op->soc_name = "tegra13x";
@@ -553,7 +561,11 @@ int nvhost_init_t124_support(struct nvhost_master *host,
 	op->priv = t124;
 	op->remove_support = t124_remove_support;
 
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+	if (tegra_get_chip_id() == TEGRA132) {
+#else
 	if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA13) {
+#endif
 		for (i = 0; i < ARRAY_SIZE(t132_override); i++) {
 			struct nvhost_device_data *from = t132_override[i].from;
 			struct nvhost_device_data *to = t132_override[i].to;

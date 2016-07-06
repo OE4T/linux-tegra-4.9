@@ -27,7 +27,11 @@
 #include <linux/slab.h>
 #include <linux/module.h>
 #include <linux/tegra_pm_domains.h>
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+#include <soc/tegra/fuse.h>
+#else
 #include <linux/tegra-fuse.h>
+#endif
 
 #include "dev.h"
 #include "bus_client.h"
@@ -283,15 +287,25 @@ static int isp_probe(struct platform_device *dev)
 		if (!IS_ENABLED(CONFIG_ARCH_TEGRA_18x_SOC)) {
 			if (sscanf(dev->name, "isp.%1d", &dev_id) != 1)
 				return -EINVAL;
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+			switch (tegra_get_chip_id()) {
+			case TEGRA124:
+			case TEGRA132:
+#else
 			switch (tegra_get_chipid()) {
 			case TEGRA_CHIPID_TEGRA12:
 			case TEGRA_CHIPID_TEGRA13:
+#endif
 				if (dev_id == ISPB_DEV_ID)
 					pdata = &t124_ispb_info;
 				if (dev_id == ISPA_DEV_ID)
 					pdata = &t124_isp_info;
 				break;
+#if defined(CONFIG_ARCH_TEGRA_210_SOC)
+			case TEGRA210:
+#else
 			case TEGRA_CHIPID_TEGRA21:
+#endif
 				if (dev_id == ISPB_DEV_ID)
 					pdata = &t21_ispb_info;
 				if (dev_id == ISPA_DEV_ID)

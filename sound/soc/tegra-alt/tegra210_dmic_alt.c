@@ -124,12 +124,18 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	int channels, srate, dmic_clk, osr = TEGRA210_DMIC_OSR_64, ret;
 	struct tegra210_xbar_cif_conf cif_conf;
 	unsigned long long boost_gain;
+	int channel_select;
 
 	memset(&cif_conf, 0, sizeof(struct tegra210_xbar_cif_conf));
 
 	channels = params_channels(params);
 	srate = params_rate(params);
 	dmic_clk = (1 << (6+osr)) * srate;
+
+	if (channels < 2)
+		channel_select = dmic->ch_select;
+	else
+		channel_select = (1 << channels) - 1;
 
 	if ((tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
 		program_dmic_gpio();
@@ -160,7 +166,7 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	regmap_update_bits(dmic->regmap,
 				TEGRA210_DMIC_CTRL,
 				TEGRA210_DMIC_CTRL_CHANNEL_SELECT_MASK,
-				((1 << channels) - 1) <<
+				channel_select <<
 				   TEGRA210_DMIC_CTRL_CHANNEL_SELECT_SHIFT);
 
 	/* Configure LPF for passthrough and use */
@@ -229,24 +235,30 @@ static int tegra210_dmic_hw_params(struct snd_pcm_substream *substream,
 	return 0;
 }
 
-static int tegra210_dmic_get_boost_gain(struct snd_kcontrol *kcontrol,
+static int tegra210_dmic_get_control(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
 
-	ucontrol->value.integer.value[0] = dmic->boost_gain;
+	if (strstr(kcontrol->id.name, "Boost"))
+		ucontrol->value.integer.value[0] = dmic->boost_gain;
+	else if (strstr(kcontrol->id.name, "Mono"))
+		ucontrol->value.integer.value[0] = dmic->ch_select;
 
 	return 0;
 }
 
-static int tegra210_dmic_put_boost_gain(struct snd_kcontrol *kcontrol,
+static int tegra210_dmic_put_control(struct snd_kcontrol *kcontrol,
 	struct snd_ctl_elem_value *ucontrol)
 {
 	struct snd_soc_codec *codec = snd_soc_kcontrol_codec(kcontrol);
 	struct tegra210_dmic *dmic = snd_soc_codec_get_drvdata(codec);
 
-	dmic->boost_gain = ucontrol->value.integer.value[0];
+	if (strstr(kcontrol->id.name, "Boost"))
+		dmic->boost_gain = ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "Mono"))
+		dmic->ch_select = ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -304,9 +316,18 @@ static const struct snd_soc_dapm_route tegra210_dmic_routes[] = {
 	{ "DMIC Transmit", NULL, "DMIC TX" },
 };
 
+static const char * const tegra210_dmic_ch_select[] = {
+	"None", "L", "R",
+};
+static const struct soc_enum tegra210_dmic_ch_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_dmic_ch_select),
+		tegra210_dmic_ch_select);
 static const struct snd_kcontrol_new tegra210_dmic_controls[] = {
 	SOC_SINGLE_EXT("Boost Gain", 0, 0, 25600, 0,
-		tegra210_dmic_get_boost_gain, tegra210_dmic_put_boost_gain),
+		tegra210_dmic_get_control, tegra210_dmic_put_control),
+	SOC_ENUM_EXT("Mono Channel Select", tegra210_dmic_ch_enum,
+		tegra210_dmic_get_control, tegra210_dmic_put_control),
 };
 
 static struct snd_soc_codec_driver tegra210_dmic_codec = {

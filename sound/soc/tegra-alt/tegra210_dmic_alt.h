@@ -1,7 +1,7 @@
 /*
  * tegra210_dmic_alt.h - Definitions for Tegra210 DMIC driver
  *
- * Copyright (c) 2014-2015 NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016 NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -120,6 +120,7 @@ struct tegra210_dmic {
 	struct regmap *regmap;
 	const struct tegra210_dmic_soc_data *soc_data;
 	int boost_gain; /* with 100x factor */
+	int ch_select;
 };
 
 #endif

@@ -92,6 +92,18 @@
 				};
 			};
 		};
+
+		dpaux@155c0000 {
+			prod-settings {
+				prod_c_dpaux {
+					board {
+						prod = <
+							0x00000124 0x000037FC 0x0000249C
+						>;
+					};
+				};
+			};
+		};
 	};
 
 	i2c@3190000 {  //i2c3, dp_aux_ch1_i2c

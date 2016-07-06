@@ -3344,7 +3344,7 @@ const struct gk20a_mmu_level gk20a_mm_levels_128k[] = {
  * Initialize a semaphore pool. Just return successfully if we do not need
  * semaphores (i.e when sync-pts are active).
  */
-int gk20a_init_sema_pool(struct vm_gk20a *vm)
+static int gk20a_init_sema_pool(struct vm_gk20a *vm)
 {
 	struct gk20a_semaphore_sea *sema_sea;
 	struct mm_gk20a *mm = vm->mm;

@@ -445,13 +445,13 @@ static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 			goto err_get_clk;
 		}
 #else
-		hda->pll_p_clk = tegra_get_clock_by_name("pll_p");
+		hda->pll_p_clk = clk_get_sys("pll_p", NULL);
 		if (IS_ERR_OR_NULL(hda->pll_p_clk)) {
 			dev_err(&hda->dc->ndev->dev,
 				"hda: can't get pll_p clock\n");
 			goto err_get_clk;
 		}
-		hda->maud_clk = tegra_get_clock_by_name("maud");
+		hda->maud_clk = clk_get_sys("maud", NULL);
 		if (IS_ERR_OR_NULL(hda->maud_clk)) {
 			dev_err(&hda->dc->ndev->dev,
 				"hda: can't get maud clock\n");

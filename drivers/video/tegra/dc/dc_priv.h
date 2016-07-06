@@ -50,6 +50,7 @@
 int tegra_nvdisp_powergate_partition(int pg_id);
 int tegra_nvdisp_unpowergate_partition(int pg_id);
 int tegra_nvdisp_set_compclk(struct tegra_dc *dc);
+int tegra_nvdisp_is_powered(int pg_id);
 #endif
 
 static inline int tegra_dc_io_start(struct tegra_dc *dc)
@@ -493,6 +494,7 @@ static inline bool tegra_dc_is_powered(struct tegra_dc *dc)
 #if defined(CONFIG_TEGRA_NVDISPLAY)
 	if (tegra_platform_is_linsim())
 		return true;
+	return tegra_nvdisp_is_powered(dc->powergate_id);
 #endif
 	return tegra_powergate_is_powered(dc->powergate_id);
 }

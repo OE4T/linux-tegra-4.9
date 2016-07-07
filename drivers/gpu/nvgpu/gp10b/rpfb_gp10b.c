@@ -34,7 +34,7 @@ int gp10b_replayable_pagefault_buffer_init(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	if (!g->mm.bar2_desc.gpu_va) {
-		err = gk20a_gmmu_alloc_map(vm, rbfb_size,
+		err = gk20a_gmmu_alloc_map_sys(vm, rbfb_size,
 						&g->mm.bar2_desc);
 		if (err) {
 			dev_err(dev_from_gk20a(g),

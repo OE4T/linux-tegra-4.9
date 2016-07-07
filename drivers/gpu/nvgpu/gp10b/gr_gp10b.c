@@ -827,7 +827,7 @@ int gr_gp10b_alloc_buffer(struct vm_gk20a *vm, size_t size,
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc_attr(vm->mm->g, 0, size, mem);
+	err = gk20a_gmmu_alloc_sys(vm->mm->g, size, mem);
 	if (err)
 		return err;
 

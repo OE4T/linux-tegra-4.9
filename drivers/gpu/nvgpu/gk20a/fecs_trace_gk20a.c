@@ -385,7 +385,7 @@ static int gk20a_fecs_trace_alloc_ring(struct gk20a *g)
 {
 	struct gk20a_fecs_trace *trace = g->fecs_trace;
 
-	return gk20a_gmmu_alloc(g, GK20A_FECS_TRACE_NUM_RECORDS
+	return gk20a_gmmu_alloc_sys(g, GK20A_FECS_TRACE_NUM_RECORDS
 			* ctxsw_prog_record_timestamp_record_size_in_bytes_v(),
 			&trace->trace_buf);
 }

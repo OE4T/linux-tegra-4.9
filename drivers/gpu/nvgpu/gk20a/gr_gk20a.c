@@ -1810,7 +1810,8 @@ int gr_gk20a_update_hwpm_ctxsw_mode(struct gk20a *g,
 	if (enable_hwpm_ctxsw) {
 		/* Allocate buffer if necessary */
 		if (pm_ctx->mem.gpu_va == 0) {
-			ret = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+			ret = gk20a_gmmu_alloc_attr_sys(g,
+					DMA_ATTR_NO_KERNEL_MAPPING,
 					g->gr.ctx_vars.pm_ctxsw_image_size,
 					&pm_ctx->mem);
 			if (ret) {
@@ -2148,7 +2149,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 		g->gr.ctx_vars.ucode.gpccs.inst.count * sizeof(u32),
 		g->gr.ctx_vars.ucode.gpccs.data.count * sizeof(u32));
 
-	err = gk20a_gmmu_alloc(g, ucode_size, &ucode_info->surface_desc);
+	err = gk20a_gmmu_alloc_sys(g, ucode_size, &ucode_info->surface_desc);
 	if (err)
 		goto clean_up;
 
@@ -2535,7 +2536,7 @@ static int gk20a_gr_alloc_ctx_buffer(struct gk20a *g,
 {
 	int err = 0;
 
-	err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+	err = gk20a_gmmu_alloc_attr_sys(g, DMA_ATTR_NO_KERNEL_MAPPING,
 				    size, &desc->mem);
 	if (err)
 		return err;
@@ -2778,13 +2779,15 @@ int gr_gk20a_alloc_gr_ctx(struct gk20a *g,
 	if (!gr_ctx)
 		return -ENOMEM;
 
-	err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+	err = gk20a_gmmu_alloc_attr_sys(g, DMA_ATTR_NO_KERNEL_MAPPING,
 					gr->ctx_vars.buffer_total_size,
 					&gr_ctx->mem);
 	if (err)
 		goto err_free_ctx;
 
-	gr_ctx->mem.gpu_va = gk20a_gmmu_map(vm, &gr_ctx->mem.sgt, gr_ctx->mem.size,
+	gr_ctx->mem.gpu_va = gk20a_gmmu_map(vm,
+					&gr_ctx->mem.sgt,
+					gr_ctx->mem.size,
 					NVGPU_MAP_BUFFER_FLAGS_CACHEABLE_TRUE,
 					gk20a_mem_flag_none, true,
 					gr_ctx->mem.aperture);
@@ -2874,7 +2877,7 @@ static int gr_gk20a_alloc_channel_patch_ctx(struct gk20a *g,
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc_map_attr(ch_vm, DMA_ATTR_NO_KERNEL_MAPPING,
+	err = gk20a_gmmu_alloc_map_attr_sys(ch_vm, DMA_ATTR_NO_KERNEL_MAPPING,
 					128 * sizeof(u32), &patch_ctx->mem);
 	if (err)
 		return err;
@@ -3486,11 +3489,11 @@ static int gr_gk20a_init_mmu_sw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	int err;
 
-	err = gk20a_gmmu_alloc(g, 0x1000, &gr->mmu_wr_mem);
+	err = gk20a_gmmu_alloc_sys(g, 0x1000, &gr->mmu_wr_mem);
 	if (err)
 		goto err;
 
-	err = gk20a_gmmu_alloc(g, 0x1000, &gr->mmu_rd_mem);
+	err = gk20a_gmmu_alloc_sys(g, 0x1000, &gr->mmu_rd_mem);
 	if (err)
 		goto err_free_wr_mem;
 	return 0;
@@ -4945,7 +4948,7 @@ static int gk20a_init_gr_bind_fecs_elpg(struct gk20a *g)
 	}
 
 	if (!pmu->pg_buf.cpu_va) {
-		err = gk20a_gmmu_alloc_map(vm, size, &pmu->pg_buf);
+		err = gk20a_gmmu_alloc_map_sys(vm, size, &pmu->pg_buf);
 		if (err) {
 			gk20a_err(d, "failed to allocate memory\n");
 			return -ENOMEM;

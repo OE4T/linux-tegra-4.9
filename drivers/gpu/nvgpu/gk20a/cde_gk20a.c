@@ -241,7 +241,7 @@ static int gk20a_init_cde_buf(struct gk20a_cde_ctx *cde_ctx,
 
 	/* allocate buf */
 	mem = cde_ctx->mem + cde_ctx->num_bufs;
-	err = gk20a_gmmu_alloc_map(cde_ctx->vm, buf->num_bytes, mem);
+	err = gk20a_gmmu_alloc_map_sys(cde_ctx->vm, buf->num_bytes, mem);
 	if (err) {
 		gk20a_warn(cde_ctx->dev, "cde: could not allocate device memory. buffer idx = %d",
 			   cde_ctx->num_bufs);

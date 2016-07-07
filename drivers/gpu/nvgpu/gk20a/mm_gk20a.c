@@ -713,7 +713,7 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 
 static int gk20a_alloc_sysmem_flush(struct gk20a *g)
 {
-	return gk20a_gmmu_alloc(g, SZ_4K, &g->mm.sysmem_flush);
+	return gk20a_gmmu_alloc_sys(g, SZ_4K, &g->mm.sysmem_flush);
 }
 
 static void gk20a_init_pramin(struct mm_gk20a *mm)
@@ -976,9 +976,9 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	 * default.
 	 */
 	if (IS_ENABLED(CONFIG_ARM64))
-		err = gk20a_gmmu_alloc(g, len, &entry->mem);
+		err = gk20a_gmmu_alloc_sys(g, len, &entry->mem);
 	else
-		err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
+		err = gk20a_gmmu_alloc_attr_sys(g, DMA_ATTR_NO_KERNEL_MAPPING,
 				len, &entry->mem);
 
 
@@ -2363,7 +2363,15 @@ int gk20a_gmmu_alloc(struct gk20a *g, size_t size, struct mem_desc *mem)
 int gk20a_gmmu_alloc_attr(struct gk20a *g, enum dma_attr attr, size_t size,
 		struct mem_desc *mem)
 {
+	if (g->mm.vidmem_is_vidmem)
+		return gk20a_gmmu_alloc_attr_vid(g, attr, size, mem);
+
 	return gk20a_gmmu_alloc_attr_sys(g, attr, size, mem);
+}
+
+int gk20a_gmmu_alloc_sys(struct gk20a *g, size_t size, struct mem_desc *mem)
+{
+	return gk20a_gmmu_alloc_attr_sys(g, 0, size, mem);
 }
 
 int gk20a_gmmu_alloc_attr_sys(struct gk20a *g, enum dma_attr attr,
@@ -2594,7 +2602,8 @@ u32 gk20a_aperture_mask(struct gk20a *g, struct mem_desc *mem,
 			sysmem_mask, vidmem_mask);
 }
 
-int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size, struct mem_desc *mem)
+int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
+		struct mem_desc *mem)
 {
 	return gk20a_gmmu_alloc_map_attr(vm, 0, size, mem);
 }
@@ -2602,7 +2611,22 @@ int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size, struct mem_desc *mem)
 int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
 			 enum dma_attr attr, size_t size, struct mem_desc *mem)
 {
-	int err = gk20a_gmmu_alloc_attr(vm->mm->g, attr, size, mem);
+	if (vm->mm->vidmem_is_vidmem)
+		return gk20a_gmmu_alloc_map_attr_vid(vm, 0, size, mem);
+
+	return gk20a_gmmu_alloc_map_attr_sys(vm, 0, size, mem);
+}
+
+int gk20a_gmmu_alloc_map_sys(struct vm_gk20a *vm, size_t size,
+		struct mem_desc *mem)
+{
+	return gk20a_gmmu_alloc_map_attr_sys(vm, 0, size, mem);
+}
+
+int gk20a_gmmu_alloc_map_attr_sys(struct vm_gk20a *vm,
+			 enum dma_attr attr, size_t size, struct mem_desc *mem)
+{
+	int err = gk20a_gmmu_alloc_attr_sys(vm->mm->g, attr, size, mem);
 
 	if (err)
 		return err;
@@ -3983,7 +4007,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc(g, ram_in_alloc_size_v(), inst_block);
+	err = gk20a_gmmu_alloc_sys(g, ram_in_alloc_size_v(), inst_block);
 	if (err) {
 		gk20a_err(dev, "%s: memory allocation failed\n", __func__);
 		return err;

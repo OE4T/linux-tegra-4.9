@@ -1327,7 +1327,7 @@ static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c)
 	size = roundup_pow_of_two(c->gpfifo.entry_num *
 				  2 * 18 * sizeof(u32) / 3);
 
-	err = gk20a_gmmu_alloc_map(ch_vm, size, &q->mem);
+	err = gk20a_gmmu_alloc_map_sys(ch_vm, size, &q->mem);
 	if (err) {
 		gk20a_err(d, "%s: memory allocation failed\n", __func__);
 		goto clean_up;
@@ -1464,7 +1464,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 		return -EEXIST;
 	}
 
-	err = gk20a_gmmu_alloc_map(ch_vm,
+	err = gk20a_gmmu_alloc_map_sys(ch_vm,
 			gpfifo_size * sizeof(struct nvgpu_gpfifo),
 			&c->gpfifo.mem);
 	if (err) {

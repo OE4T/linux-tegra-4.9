@@ -231,7 +231,7 @@ static int css_hw_enable_snapshot(struct gr_gk20a *gr, u32 snapshot_size)
 	if (snapshot_size < CSS_MIN_HW_SNAPSHOT_SIZE)
 		snapshot_size = CSS_MIN_HW_SNAPSHOT_SIZE;
 
-	ret = gk20a_gmmu_alloc_map(&g->mm.pmu.vm, snapshot_size,
+	ret = gk20a_gmmu_alloc_map_sys(&g->mm.pmu.vm, snapshot_size,
 							&data->hw_memdesc);
 	if (ret)
 		return ret;

@@ -2894,7 +2894,8 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
 			pmu->desc->descriptor_size);
 
-	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_UCODE_SIZE_MAX, &pmu->ucode);
+	err = gk20a_gmmu_alloc_map_sys(vm, GK20A_PMU_UCODE_SIZE_MAX,
+			&pmu->ucode);
 	if (err)
 		goto err_release_fw;
 
@@ -2965,13 +2966,15 @@ static int gk20a_init_pmu_setup_sw(struct gk20a *g)
 
 	INIT_WORK(&pmu->pg_init, pmu_setup_hw);
 
-	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_SEQ_BUF_SIZE, &pmu->seq_buf);
+	err = gk20a_gmmu_alloc_map_sys(vm, GK20A_PMU_SEQ_BUF_SIZE,
+			&pmu->seq_buf);
 	if (err) {
 		gk20a_err(d, "failed to allocate memory\n");
 		goto err_free_seq;
 	}
 
-	err = gk20a_gmmu_alloc_map(vm, GK20A_PMU_TRACE_BUFSIZE, &pmu->trace_buf);
+	err = gk20a_gmmu_alloc_map_sys(vm, GK20A_PMU_TRACE_BUFSIZE,
+			&pmu->trace_buf);
 	if (err) {
 		gk20a_err(d, "failed to allocate trace memory\n");
 		goto err_free_seq_buf;

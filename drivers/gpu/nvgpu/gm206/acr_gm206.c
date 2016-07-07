@@ -252,7 +252,7 @@ static int gm206_bootstrap_hs_flcn(struct gk20a *g)
 			err = -1;
 			goto err_release_acr_fw;
 		}
-		err = gk20a_gmmu_alloc_map(vm, img_size_in_bytes,
+		err = gk20a_gmmu_alloc_map_sys(vm, img_size_in_bytes,
 				&acr->acr_ucode);
 		if (err) {
 			err = -ENOMEM;

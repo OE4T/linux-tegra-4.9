@@ -355,7 +355,7 @@ static int gm20b_alloc_blob_space(struct gk20a *g,
 {
 	int err;
 
-	err = gk20a_gmmu_alloc(g, size, mem);
+	err = gk20a_gmmu_alloc_sys(g, size, mem);
 
 	return err;
 }
@@ -1100,7 +1100,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 			err = -1;
 			goto err_release_acr_fw;
 		}
-		err = gk20a_gmmu_alloc_map(vm, img_size_in_bytes,
+		err = gk20a_gmmu_alloc_map_sys(vm, img_size_in_bytes,
 				&acr->acr_ucode);
 		if (err) {
 			err = -ENOMEM;
@@ -1403,7 +1403,7 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 		/*TODO in code verify that enable PMU is done,
 			scrubbing etc is done*/
 		/*TODO in code verify that gmmu vm init is done*/
-		err = gk20a_gmmu_alloc_attr(g,
+		err = gk20a_gmmu_alloc_attr_sys(g,
 				DMA_ATTR_READ_ONLY, bl_sz, &acr->hsbl_ucode);
 		if (err) {
 			gk20a_err(d, "failed to allocate memory\n");

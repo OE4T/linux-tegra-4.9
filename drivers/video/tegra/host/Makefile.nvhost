@@ -37,7 +37,7 @@ endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
 ifneq ($(wildcard $(srctree)/../nvhost-t19x/drivers/video/tegra/host/Makefile),)
-obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../nvhost-t19x/drivers/video/tegra/host/
+obj-$(CONFIG_TEGRA_GRHOST) += $(call tegra-path,nvhost-t19x/,drivers/video/tegra/host/)
 endif
 endif
 

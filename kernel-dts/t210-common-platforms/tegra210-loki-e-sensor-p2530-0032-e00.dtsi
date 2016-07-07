@@ -28,7 +28,6 @@
 			invensense,orientation = [ff 00 00 00 01 00 00 00 ff];
 			accelerometer_matrix = [ff 00 00 00 01 00 00 00 ff];
 			gyroscope_matrix = [ff 00 00 00 01 00 00 00 ff];
-			gyroscope_delay_us_max = <100000>;
 		};
 
 		ak8963c@0c {
@@ -36,6 +35,7 @@
 			reg = <0x0c>;
 			orientation = [01 00 00 00 ff 00 00 00 ff];
 			magnetic_field_matrix = [01 00 00 00 ff 00 00 00 ff];
+			magnetic_field_delay_us_min = <16666>;
 		};
 
 		jsa1127@39 {

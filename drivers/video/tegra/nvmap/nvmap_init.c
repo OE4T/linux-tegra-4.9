@@ -440,6 +440,7 @@ static struct platform_driver __refdata nvmap_driver = {
 		.owner	= THIS_MODULE,
 		.of_match_table = nvmap_of_ids,
 		.probe_type = PROBE_PREFER_ASYNCHRONOUS,
+		.suppress_bind_attrs = true,
 	},
 };
 

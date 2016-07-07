@@ -116,18 +116,26 @@
 			status = "okay";
 			hdmi-display {
 				status = "okay";
+				nvidia,audio-switch-name = "hdmi_audio";
 				disp-default-out {
 					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
 				};
 			};
+			dp-display {
+				status = "disabled";
+			};
 		};
 		sor1 {
 			status = "okay";
+			nvidia,audio-switch-name = "hdmi_audio";
 			hdmi-display {
 				status = "okay";
 				disp-default-out {
 					nvidia,out-flags = <TEGRA_DC_OUT_HOTPLUG_HIGH>;
 				};
+			};
+			dp-display {
+				status = "disabled";
 			};
 		};
 	};

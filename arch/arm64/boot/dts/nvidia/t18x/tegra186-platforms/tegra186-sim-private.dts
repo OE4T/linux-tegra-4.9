@@ -401,4 +401,8 @@
 			status = "disabled";
 		};
 	};
+
+	denver-pmu {
+		status = "disabled";
+	};
 };

@@ -109,4 +109,5 @@ void gp106_init_gr(struct gpu_ops *gops)
 	gops->gr.pagepool_default_size = gr_gp106_pagepool_default_size;
 	gops->gr.handle_sw_method = gr_gp106_handle_sw_method;
 	gops->gr.cb_size_default = gr_gp106_cb_size_default;
+	gops->gr.init_preemption_state = NULL;
 }

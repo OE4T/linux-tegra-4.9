@@ -1801,6 +1801,10 @@ static struct snd_soc_codec_conf
 		.dev_name = "tegra210-dmic.0",
 		.name_prefix = "DMIC1",
 	},
+	[TEGRA186_CODEC_DMIC3_CONF] = {
+		.dev_name = "tegra210-dmic.2",
+		.name_prefix = "DMIC3",
+	},
 	[TEGRA186_CODEC_SPDIF_CONF] = {
 		.dev_name = "tegra210-spdif",
 		.name_prefix = "SPDIF",

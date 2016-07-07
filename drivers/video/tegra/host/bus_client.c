@@ -519,6 +519,9 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	struct nvhost_reloc_shift __user *reloc_shifts =
 		(struct nvhost_reloc_shift __user *)
 				(uintptr_t)args->reloc_shifts;
+	struct nvhost_reloc_type __user *reloc_types =
+		(struct nvhost_reloc_type __user *)
+				(uintptr_t)args->reloc_types;
 	struct nvhost_waitchk __user *waitchks =
 		(struct nvhost_waitchk __user *)(uintptr_t)args->waitchks;
 	struct nvhost_syncpt_incr __user *syncpt_incrs =
@@ -618,6 +621,13 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			reloc_shifts, sizeof(*reloc_shifts) * num_relocs);
 	if (err)
 		goto fail;
+
+	if (reloc_types) {
+		err = copy_from_user(job->reloctypearray,
+				reloc_types, sizeof(*reloc_types) * num_relocs);
+		if (err)
+			goto fail;
+	}
 
 	err = copy_from_user(job->waitchk,
 			waitchks, sizeof(*waitchks) * num_waitchks);

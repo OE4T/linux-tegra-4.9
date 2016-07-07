@@ -311,6 +311,9 @@ struct nvhost_device_data {
 	 * between hardware revisions */
 	int (*hw_init)(struct platform_device *dev);
 
+	/* Used to add platform specific masks on reloc address */
+	dma_addr_t (*get_reloc_phys_addr)(dma_addr_t phys_addr, u32 reloc_type);
+
 	/* Allocates a context handler for the device */
 	struct nvhost_hwctx_handler *(*alloc_hwctx_handler)(u32 syncpt,
 			struct nvhost_channel *ch);

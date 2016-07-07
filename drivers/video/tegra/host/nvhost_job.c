@@ -44,6 +44,7 @@ static size_t job_size(u32 num_cmdbufs, u32 num_relocs, u32 num_waitchks,
 	total = sizeof(struct nvhost_job)
 			+ (u64)num_relocs * sizeof(struct nvhost_reloc)
 			+ (u64)num_relocs * sizeof(struct nvhost_reloc_shift)
+			+ (u64)num_relocs * sizeof(struct nvhost_reloc_type)
 			+ num_unpins * sizeof(struct nvhost_job_unpin)
 			+ (u64)num_waitchks * sizeof(struct nvhost_waitchk)
 			+ (u64)num_cmdbufs * sizeof(struct nvhost_job_gather)
@@ -77,6 +78,8 @@ static void init_fields(struct nvhost_job *job,
 	mem += num_relocs * sizeof(struct nvhost_reloc);
 	job->relocshiftarray = num_relocs ? mem : NULL;
 	mem += num_relocs * sizeof(struct nvhost_reloc_shift);
+	job->reloctypearray = num_relocs ? mem : NULL;
+	mem += num_relocs * sizeof(struct nvhost_reloc_type);
 	job->unpins = num_unpins ? mem : NULL;
 	mem += num_unpins * sizeof(struct nvhost_job_unpin);
 	job->waitchk = num_waitchks ? mem : NULL;
@@ -384,14 +387,17 @@ static int pin_job_mem(struct nvhost_job *job)
 static int do_relocs(struct nvhost_job *job,
 		u32 cmdbuf_mem, struct dma_buf *buf)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(job->ch->dev);
 	int i = 0;
 	int last_page = -1;
 	void *cmdbuf_page_addr = NULL;
+	dma_addr_t phys_addr;
 
 	/* pin & patch the relocs for one gather */
 	while (i < job->num_relocs) {
 		struct nvhost_reloc *reloc = &job->relocarray[i];
 		struct nvhost_reloc_shift *shift = &job->relocshiftarray[i];
+		struct nvhost_reloc_type *type = &job->reloctypearray[i];
 
 		/* skip all other gathers */
 		if (cmdbuf_mem != reloc->cmdbuf_mem) {
@@ -414,8 +420,15 @@ static int do_relocs(struct nvhost_job *job,
 			}
 		}
 
+		if (pdata->get_reloc_phys_addr)
+			phys_addr = pdata->get_reloc_phys_addr(
+						job->reloc_addr_phys[i],
+						type->reloc_type);
+		else
+			phys_addr = job->reloc_addr_phys[i];
+
 		__raw_writel(
-			(job->reloc_addr_phys[i] +
+			(phys_addr +
 				reloc->target_offset) >> shift->shift,
 			(void __iomem *)(cmdbuf_page_addr +
 				(reloc->cmdbuf_offset & ~PAGE_MASK)));
@@ -426,11 +439,14 @@ static int do_relocs(struct nvhost_job *job,
 				&job->relocarray[job->num_relocs - 1];
 			struct nvhost_reloc_shift *shift_last =
 				&job->relocshiftarray[job->num_relocs - 1];
+			struct nvhost_reloc_type *type_last =
+				&job->reloctypearray[job->num_relocs - 1];
 			reloc->cmdbuf_mem	= reloc_last->cmdbuf_mem;
 			reloc->cmdbuf_offset	= reloc_last->cmdbuf_offset;
 			reloc->target		= reloc_last->target;
 			reloc->target_offset	= reloc_last->target_offset;
 			shift->shift		= shift_last->shift;
+			type->reloc_type	= type_last->reloc_type;
 			job->reloc_addr_phys[i] =
 				job->reloc_addr_phys[job->num_relocs - 1];
 			job->num_relocs--;

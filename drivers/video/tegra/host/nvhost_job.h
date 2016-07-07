@@ -88,6 +88,7 @@ struct nvhost_job {
 	/* Array of handles to be pinned & unpinned */
 	struct nvhost_reloc *relocarray;
 	struct nvhost_reloc_shift *relocshiftarray;
+	struct nvhost_reloc_type *reloctypearray;
 	int num_relocs;
 	struct nvhost_job_unpin *unpins;
 	int num_unpins;

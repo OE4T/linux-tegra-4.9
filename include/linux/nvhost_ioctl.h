@@ -67,6 +67,14 @@ struct nvhost_reloc_shift {
 	__u32 shift;
 } __packed;
 
+#define NVHOST_RELOC_TYPE_DEFAULT	0
+#define NVHOST_RELOC_TYPE_PITCH_LINEAR	1
+#define NVHOST_RELOC_TYPE_BLOCK_LINEAR	2
+struct nvhost_reloc_type {
+	__u32 reloc_type;
+	__u32 padding;
+};
+
 struct nvhost_waitchk {
 	__u32 mem;
 	__u32 offset;
@@ -211,8 +219,9 @@ struct nvhost_submit_args {
 	__u64 syncpt_incrs;
 	__u64 cmdbuf_exts;
 
-	__u64 pad[3];		/* future expansion */
+	__u64 pad[2];		/* future expansion */
 
+	__u64 reloc_types;
 	__u64 cmdbufs;
 	__u64 relocs;
 	__u64 reloc_shifts;

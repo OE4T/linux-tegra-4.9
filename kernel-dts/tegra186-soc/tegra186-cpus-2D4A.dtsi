@@ -111,4 +111,10 @@
 				      &{/cpus/cpu@2} &{/cpus/cpu@3}
 				      &{/cpus/cpu@4} &{/cpus/cpu@5}>;
 	};
+
+	denver-pmu {
+		compatible = "nvidia,denver15-pmu";
+		interrupts = <0 290 0x4>;
+		interrupt-affinity = <&{/cpus/cpu@0}>;
+	};
 };

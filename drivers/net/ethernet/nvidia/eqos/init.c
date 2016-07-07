@@ -1036,11 +1036,7 @@ int eqos_probe(struct platform_device *pdev)
 
 	DBGPR("<-- eqos_probe\n");
 
-	if (pdata->hw_feat.pcs_sel) {
-		netif_carrier_off(ndev);
-		pr_err("carrier off till LINK is up\n");
-	} else
-		DBGPR("Net device registration sucessful\n");
+	netif_carrier_off(ndev);
 
 	if (tegra_platform_is_unit_fpga()) {
 		ret = request_irq(power_irq, EQOS_ISR_SW_EQOS_POWER,

@@ -742,8 +742,8 @@ int gk20a_dmabuf_alloc_drvdata(struct dma_buf *dmabuf, struct device *dev);
 int gk20a_dmabuf_get_state(struct dma_buf *dmabuf, struct device *dev,
 			   u64 offset, struct gk20a_buffer_state **state);
 
-int map_gmmu_pages(struct gk20a_mm_entry *entry);
-void unmap_gmmu_pages(struct gk20a_mm_entry *entry);
+int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry);
+void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry);
 void pde_range_from_vaddr_range(struct vm_gk20a *vm,
 					      u64 addr_lo, u64 addr_hi,
 					      u32 *pde_lo, u32 *pde_hi);

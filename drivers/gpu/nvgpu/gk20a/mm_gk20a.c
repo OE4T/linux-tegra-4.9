@@ -1016,31 +1016,31 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 				&entry->mem);
 }
 
-int map_gmmu_pages(struct gk20a_mm_entry *entry)
+int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
-	int count = PAGE_ALIGN(entry->mem.size) >> PAGE_SHIFT;
-	struct page **pages;
 	gk20a_dbg_fn("");
 
 	if (tegra_platform_is_linsim())
 		return map_gmmu_phys_pages(entry);
 
 	if (IS_ENABLED(CONFIG_ARM64)) {
+		if (entry->mem.aperture == APERTURE_VIDMEM)
+			return 0;
+
 		FLUSH_CPU_DCACHE(entry->mem.cpu_va,
 				 sg_phys(entry->mem.sgt->sgl),
 				 entry->mem.size);
 	} else {
-		pages = entry->mem.pages;
-		entry->mem.cpu_va = vmap(pages, count, 0,
-				     pgprot_writecombine(PAGE_KERNEL));
-		if (!entry->mem.cpu_va)
-			return -ENOMEM;
+		int err = gk20a_mem_begin(g, &entry->mem);
+
+		if (err)
+			return err;
 	}
 
 	return 0;
 }
 
-void unmap_gmmu_pages(struct gk20a_mm_entry *entry)
+void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
 	gk20a_dbg_fn("");
 
@@ -1050,12 +1050,14 @@ void unmap_gmmu_pages(struct gk20a_mm_entry *entry)
 	}
 
 	if (IS_ENABLED(CONFIG_ARM64)) {
+		if (entry->mem.aperture == APERTURE_VIDMEM)
+			return;
+
 		FLUSH_CPU_DCACHE(entry->mem.cpu_va,
 				 sg_phys(entry->mem.sgt->sgl),
 				 entry->mem.size);
 	} else {
-		vunmap(entry->mem.cpu_va);
-		entry->mem.cpu_va = NULL;
+		gk20a_mem_end(g, &entry->mem);
 	}
 }
 
@@ -3019,6 +3021,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				    bool priv,
 				    enum gk20a_aperture aperture)
 {
+	struct gk20a *g = gk20a_from_vm(vm);
 	const struct gk20a_mmu_level *l = &vm->mmu_levels[lvl];
 	const struct gk20a_mmu_level *next_l = &vm->mmu_levels[lvl+1];
 	int err = 0;
@@ -3071,7 +3074,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 
 		if (next_l->update_entry) {
 			/* get cpu access to the ptes */
-			err = map_gmmu_pages(next_pte);
+			err = map_gmmu_pages(g, next_pte);
 			if (err) {
 				gk20a_err(dev_from_vm(vm),
 					   "couldn't map ptes for update as=%d",
@@ -3087,7 +3090,7 @@ static int update_gmmu_level_locked(struct vm_gk20a *vm,
 				next,
 				kind_v, ctag, cacheable, unmapped_pte,
 				rw_flag, sparse, lvl+1, priv, aperture);
-			unmap_gmmu_pages(next_pte);
+			unmap_gmmu_pages(g, next_pte);
 
 			if (err)
 				return err;
@@ -3162,7 +3165,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 
 	gk20a_dbg(gpu_dbg_map, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx",
 			pgsz_idx, gpu_va, gpu_end-1, iova);
-	err = map_gmmu_pages(&vm->pdb);
+	err = map_gmmu_pages(g, &vm->pdb);
 	if (err) {
 		gk20a_err(dev_from_vm(vm),
 			   "couldn't map ptes for update as=%d",
@@ -3177,7 +3180,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 			kind_v, &ctag,
 			cacheable, unmapped_pte, rw_flag, sparse, 0, priv,
 			aperture);
-	unmap_gmmu_pages(&vm->pdb);
+	unmap_gmmu_pages(g, &vm->pdb);
 
 	smp_mb();
 

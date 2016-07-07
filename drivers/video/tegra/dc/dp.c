@@ -1935,8 +1935,10 @@ static void _tegra_dpaux_init(struct tegra_dc_dp_data *dp)
 		return;
 	}
 
-	dp->dpaux_prod_list = devm_tegra_prod_get_from_node(&dp->dc->ndev->dev,
-							    np_prod_dpaux);
+	dp->dpaux_prod_list =
+		devm_tegra_prod_get_from_node(&dp->dc->ndev->dev,
+				np_prod_dpaux);
+
 	if (IS_ERR(dp->dpaux_prod_list)) {
 		dev_warn(&dp->dc->ndev->dev,
 			"dp: prod list init failed for dpaux with error %ld\n",
@@ -2787,8 +2789,7 @@ static void tegra_dc_dp_destroy(struct tegra_dc *dc)
 	devm_kfree(&dc->ndev->dev, dp);
 	dp->prod_list = NULL;
 
-	if (!IS_ERR(dp->dpaux_prod_list))
-		dp->dpaux_prod_list = NULL;
+	dp->dpaux_prod_list = NULL;
 
 #ifdef CONFIG_SWITCH
 	switch_dev_unregister(&dp->audio_switch);

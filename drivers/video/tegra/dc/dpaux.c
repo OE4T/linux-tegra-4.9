@@ -185,7 +185,7 @@ void tegra_dpaux_prod_set(struct tegra_dc *dc)
 	tegra_dc_io_start(dc);
 
 	if (!IS_ERR(dp->dpaux_prod_list)) {
-		err = tegra_prod_set_by_name(&dp->aux_base, "prod_c_dpaux",
+		err = tegra_prod_set_by_name(&dp->aux_base, "prod_c_dpaux_dp",
 							dp->dpaux_prod_list);
 		if (err) {
 			dev_warn(&dc->ndev->dev,

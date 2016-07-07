@@ -233,7 +233,7 @@
 				#prod-cells = <3>;
 				mask-one-style;
 
-				prod_c_dpaux {
+				prod_c_dpaux_dp {
 					prod = <
 						0x00000124 0x000037fe 0x00002462
 						>;
@@ -244,7 +244,7 @@
 			prod-settings	{
 				#prod-cells = <3>;
 				mask-one-style;
-				prod_c_dpaux {
+				prod_c_dpaux_dp {
 					prod = <
 						0x00000124 0x000037fe 0x00002462
 						>;

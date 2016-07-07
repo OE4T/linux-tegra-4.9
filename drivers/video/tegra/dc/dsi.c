@@ -38,11 +38,11 @@
 #include <linux/nvhost.h>
 #include <linux/of_address.h>
 #include <linux/io.h>
+#include <linux/padctrl/padctrl.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
 #include <mach/csi.h>
-#include <mach/io_dpd.h>
 
 #include "dc_reg.h"
 #include "dc_priv.h"
@@ -110,27 +110,6 @@ static bool enable_read_debug;
 module_param(enable_read_debug, bool, 0644);
 MODULE_PARM_DESC(enable_read_debug,
 		"Enable to print read fifo and return packet type");
-
-static struct tegra_io_dpd dsi_io = {
-	.name                   = "DSI",
-	.io_dpd_reg_index       = 0,
-	.io_dpd_bit             = 2,
-};
-static struct tegra_io_dpd dsib_io = {
-	.name                   = "DSIB",
-	.io_dpd_reg_index       = 1,
-	.io_dpd_bit             = 7,
-};
-static struct tegra_io_dpd dsic_io = {
-	.name                   = "DSIC",
-	.io_dpd_reg_index       = 1,
-	.io_dpd_bit             = 8,
-};
-static struct tegra_io_dpd dsid_io = {
-	.name                   = "DSID",
-	.io_dpd_reg_index       = 1,
-	.io_dpd_bit             = 9,
-};
 
 bool tegra_dsi_enable_read_debug(struct tegra_dc_dsi_data *dsi)
 {
@@ -4936,6 +4915,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct clk *dsi_fixed_clk = NULL;
 	struct clk *dsi_lp_clk = NULL;
 	struct reset_control *dsi_reset = NULL;
+	struct padctrl *dsi_io_padctrl = NULL;
 
 	struct tegra_dsi_out *dsi_pdata = NULL;
 	int err = 0, i;
@@ -4943,6 +4923,7 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 
 	char *split_link_reg_name[4] = {"split_dsia_regs", "split_disb_regs",
 					"split_dsic_regs", "split_dsid_regs"};
+	char *dsi_io_padctrl_name[4] = {"dsia", "dsib", "dsic", "dsid"};
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
 					NULL, NULL};
@@ -5068,11 +5049,20 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			reset_control_reset(dsi_reset);
 		}
 #endif
+		dsi_io_padctrl = devm_padctrl_get_from_node(&dc->ndev->dev,
+			np_dsi, dsi_io_padctrl_name[i]);
+		if (IS_ERR_OR_NULL(dsi_io_padctrl)) {
+			dev_err(&dc->ndev->dev, "dsi: %s IO padctrl unavailable\n",
+				dsi_io_padctrl_name[i]);
+			dsi_io_padctrl = NULL;
+		}
+
 		dsi->base[i] = base;
 		dsi->base_res[i] = base_res;
 		dsi->dsi_clk[i] = dsi_clk;
 		dsi->dsi_lp_clk[i] = dsi_lp_clk;
 		dsi->dsi_reset[i] = dsi_reset;
+		dsi->dsi_io_padctrl[i] = dsi_io_padctrl;
 	}
 
 	/* Initialise pad registers needed for split link */
@@ -5164,14 +5154,18 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	 */
 	if (!dsi->info.ganged_type && !dsi->info.dsi_csi_loopback &&
 		(dsi->info.controller_vs >= DSI_VS_1)) {
-		if (dsi->info.dpd_dsi_pads & DSI_DPD_EN)
-			tegra_io_dpd_enable(&dsi_io);
-		if (dsi->info.dpd_dsi_pads & DSIB_DPD_EN)
-			tegra_io_dpd_enable(&dsib_io);
-		if (dsi->info.dpd_dsi_pads & DSIC_DPD_EN)
-			tegra_io_dpd_enable(&dsic_io);
-		if (dsi->info.dpd_dsi_pads & DSID_DPD_EN)
-			tegra_io_dpd_enable(&dsid_io);
+		if ((dsi->info.dpd_dsi_pads & DSI_DPD_EN) &&
+			dsi->dsi_io_padctrl[0])
+			padctrl_power_disable(dsi->dsi_io_padctrl[0]);
+		if ((dsi->info.dpd_dsi_pads & DSIB_DPD_EN) &&
+			dsi->dsi_io_padctrl[1])
+			padctrl_power_disable(dsi->dsi_io_padctrl[1]);
+		if ((dsi->info.dpd_dsi_pads & DSIC_DPD_EN) &&
+			dsi->dsi_io_padctrl[2])
+			padctrl_power_disable(dsi->dsi_io_padctrl[2]);
+		if ((dsi->info.dpd_dsi_pads & DSID_DPD_EN) &&
+			dsi->dsi_io_padctrl[3])
+			padctrl_power_disable(dsi->dsi_io_padctrl[3]);
 	}
 
 	of_node_put(np_dsi);

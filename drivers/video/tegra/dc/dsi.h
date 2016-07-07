@@ -135,6 +135,7 @@ struct tegra_dc_dsi_data {
 	u32 device_shutdown;
 
 	struct sysedp_consumer *sysedpc;
+	struct padctrl *dsi_io_padctrl[MAX_DSI_INSTANCE];
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct tegra_dsi_padctrl *pad_ctrl;

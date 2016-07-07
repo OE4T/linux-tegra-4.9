@@ -1,7 +1,7 @@
 /*
  * GP10B L2
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -70,6 +70,7 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	u32 compbit_backing_size;
 
 	int err;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -100,7 +101,7 @@ static int gp10b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_info("gobs_per_comptagline_per_slice: %d",
 		gobs_per_comptagline_per_slice);
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		err = gk20a_ltc_alloc_phys_cbc(g, compbit_backing_size);
 	else
 		err = gk20a_ltc_alloc_virt_cbc(g, compbit_backing_size);

@@ -187,11 +187,12 @@ int gp10b_init_hal(struct gk20a *g)
 {
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	*gops = gp10b_ops;
 
 #ifdef CONFIG_TEGRA_ACR
-	if (tegra_platform_is_linsim()) {
+	if (platform->is_fmodel) {
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
 	} else {
@@ -206,8 +207,8 @@ int gp10b_init_hal(struct gk20a *g)
 		}
 	}
 #else
-	if (tegra_platform_is_linsim()) {
-		gk20a_dbg_info("running ASIM with PRIV security disabled");
+	if (platform->is_fmodel) {
+		gk20a_dbg_info("running simulator with PRIV security disabled");
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
 	} else {

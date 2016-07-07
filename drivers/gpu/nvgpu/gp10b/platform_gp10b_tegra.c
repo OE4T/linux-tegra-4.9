@@ -64,7 +64,7 @@ static int gp10b_tegra_get_clocks(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int i;
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return 0;
 
 	platform->num_clks = 0;

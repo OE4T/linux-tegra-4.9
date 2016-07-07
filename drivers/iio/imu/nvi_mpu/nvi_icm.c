@@ -628,7 +628,11 @@ static int nvi_init_icm(struct nvi_state *st)
 	int ret;
 
 	st->snsr[DEV_ACC].cfg.thresh_hi = 0; /* no ACC LP on ICM */
-	st->snsr[DEV_SM].cfg.thresh_hi = ICM_SMD_TIMER_THLD_INIT;
+	st->snsr[DEV_SM].cfg.thresh_lo = ICM_SMD_THLD_INIT;
+	st->snsr[DEV_SM].cfg.thresh_hi = ICM_SMD_THLD_N_INIT;
+	st->snsr[DEV_SM].cfg.delay_us_min = ICM_SMD_TIMER_INIT;
+	st->snsr[DEV_SM].cfg.delay_us_max = ICM_SMD_TIMER2_INIT;
+	st->snsr[DEV_SM].cfg.report_n = ICM_SMD_RESET_INIT;
 	ret = nvi_i2c_rd(st, &st->hal->reg->tbc_pll, &val);
 	if (ret)
 		return ret;
@@ -642,6 +646,15 @@ static int nvi_init_icm(struct nvi_state *st)
 	st->src[SRC_AUX].base_t = NSEC_PER_SEC;
 	for (src = 0; src < st->hal->src_n; src++)
 		st->src[src].base_t /= ICM_BASE_SAMPLE_RATE;
+
+	/* calculate the period_us_max */
+	st->src[SRC_GYR].period_us_max = (st->src[SRC_GYR].base_t *
+					  0xFF) / 1000;
+	/* WAR: limit SRC_ACC to SRC_GYR since same period required by WAR */
+	st->src[SRC_ACC].period_us_max = st->src[SRC_GYR].period_us_max;
+	st->src[SRC_AUX].period_us_max = st->hal->src[SRC_AUX].period_us_max;
+	for (src = 0; src < st->hal->src_n; src++)
+		st->src[src].period_us_min = st->hal->src[src].period_us_min;
 
 	nvi_en_gyr_icm(st);
 	nvi_en_acc_icm(st);
@@ -663,13 +676,14 @@ static int nvi_src(struct nvi_state *st, unsigned int src)
 	unsigned int rate;
 	int ret;
 
-	rate = st->src[src].period_us_req / ICM_BASE_SAMPLE_RATE;
+	rate = (st->src[src].period_us_req * 1000) / st->src[src].base_t;
 	if (rate)
 		rate--;
 	ret = nvi_i2c_write_rc(st, &st->hal->reg->smplrt[src], rate,
 			       __func__, (u8 *)&st->rc.smplrt[src], true);
 	if (!ret)
-		st->src[src].period_us_src = (rate + 1) * ICM_BASE_SAMPLE_RATE;
+		st->src[src].period_us_src = ((rate + 1) *
+					      st->src[src].base_t) / 1000;
 	if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
 		dev_info(&st->i2c->dev,
 			 "%s src[%u] period_req=%u period_src=%u err=%d\n",
@@ -732,13 +746,13 @@ static const struct nvi_hal_src src[] = {
 	[SRC_GYR]			{
 		.dev_msk		= (1 << DEV_GYR) | (1 << DEV_GYU),
 		.period_us_min		= 10000,
-		.period_us_max		= 256000,
+		.period_us_max		= 200000,
 		.fn_period		= nvi_src_gyr,
 	},
 	[SRC_ACC]			{
 		.dev_msk		= (1 << DEV_ACC),
 		.period_us_min		= 10000,
-		.period_us_max		= 256000,
+		.period_us_max		= 200000,
 		.fn_period		= nvi_src_acc,
 	},
 	[SRC_AUX]			{

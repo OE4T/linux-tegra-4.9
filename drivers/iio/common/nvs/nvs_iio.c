@@ -76,7 +76,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(213)
+#define NVS_IIO_DRIVER_VERSION		(214)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -349,28 +349,40 @@ static ssize_t nvs_dbg_cfg(struct iio_dev *indio_dev, char *buf)
 	unsigned int i;
 	ssize_t t;
 
-	t = sprintf(buf, "name=%s\n", st->cfg->name);
-	t += sprintf(buf + t, "snsr_id=%d\n", st->cfg->snsr_id);
-	t += sprintf(buf + t, "timestamp_sz=%d\n", st->cfg->timestamp_sz);
-	t += sprintf(buf + t, "snsr_data_n=%d\n", st->cfg->snsr_data_n);
-	t += sprintf(buf + t, "kbuf_sz=%d\n", st->cfg->kbuf_sz);
-	t += sprintf(buf + t, "ch_n=%u\n", st->cfg->ch_n);
-	t += sprintf(buf + t, "ch_sz=%d\n", st->cfg->ch_sz);
-	t += sprintf(buf + t, "ch_inf=%p\n", st->cfg->ch_inf);
-	t += sprintf(buf + t, "delay_us_min=%u\n", st->cfg->delay_us_min);
-	t += sprintf(buf + t, "delay_us_max=%u\n", st->cfg->delay_us_max);
-	t += sprintf(buf + t, "matrix: ");
+	t = snprintf(buf, PAGE_SIZE, "name=%s\n", st->cfg->name);
+	t += snprintf(buf + t, PAGE_SIZE - t, "snsr_id=%d\n",
+		      st->cfg->snsr_id);
+	t += snprintf(buf + t, PAGE_SIZE - t, "timestamp_sz=%d\n",
+		      st->cfg->timestamp_sz);
+	t += snprintf(buf + t, PAGE_SIZE - t, "snsr_data_n=%d\n",
+		      st->cfg->snsr_data_n);
+	t += snprintf(buf + t, PAGE_SIZE - t, "kbuf_sz=%d\n",
+		      st->cfg->kbuf_sz);
+	t += snprintf(buf + t, PAGE_SIZE - t, "ch_n=%u\n", st->cfg->ch_n);
+	t += snprintf(buf + t, PAGE_SIZE - t, "ch_sz=%d\n", st->cfg->ch_sz);
+	t += snprintf(buf + t, PAGE_SIZE - t, "ch_inf=%p\n", st->cfg->ch_inf);
+	t += snprintf(buf + t, PAGE_SIZE - t, "delay_us_min=%u\n",
+		      st->cfg->delay_us_min);
+	t += snprintf(buf + t, PAGE_SIZE - t, "delay_us_max=%u\n",
+		      st->cfg->delay_us_max);
+	t += snprintf(buf + t, PAGE_SIZE - t, "matrix: ");
 	for (i = 0; i < 9; i++)
-		t += sprintf(buf + t, "%hhd ", st->cfg->matrix[i]);
-	t += sprintf(buf + t, "\nuncal_lo=%d\n", st->cfg->uncal_lo);
-	t += sprintf(buf + t, "uncal_hi=%d\n", st->cfg->uncal_hi);
-	t += sprintf(buf + t, "cal_lo=%d\n", st->cfg->cal_lo);
-	t += sprintf(buf + t, "cal_hi=%d\n", st->cfg->cal_hi);
-	t += sprintf(buf + t, "thresh_lo=%d\n", st->cfg->thresh_lo);
-	t += sprintf(buf + t, "thresh_hi=%d\n", st->cfg->thresh_hi);
-	t += sprintf(buf + t, "report_n=%d\n", st->cfg->report_n);
-	t += sprintf(buf + t, "float_significance=%s\n",
-		     nvs_float_significances[st->cfg->float_significance]);
+		t += snprintf(buf + t, PAGE_SIZE - t, "%hhd ",
+			      st->cfg->matrix[i]);
+	t += snprintf(buf + t, PAGE_SIZE - t, "\nuncal_lo=%d\n",
+		      st->cfg->uncal_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "uncal_hi=%d\n",
+		      st->cfg->uncal_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "cal_lo=%d\n", st->cfg->cal_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "cal_hi=%d\n", st->cfg->cal_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresh_lo=%d\n",
+		      st->cfg->thresh_lo);
+	t += snprintf(buf + t, PAGE_SIZE - t, "thresh_hi=%d\n",
+		      st->cfg->thresh_hi);
+	t += snprintf(buf + t, PAGE_SIZE - t, "report_n=%d\n",
+		      st->cfg->report_n);
+	t += snprintf(buf + t, PAGE_SIZE - t, "float_significance=%s\n",
+		      nvs_float_significances[st->cfg->float_significance]);
 	return t;
 }
 
@@ -404,7 +416,7 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 	unsigned int i;
 	u64 data;
 
-	t = sprintf(buf, "%s: ", st->cfg->name);
+	t = snprintf(buf, PAGE_SIZE, "%s: ", st->cfg->name);
 	n = 0;
 	for (i = 0; i < indio_dev->num_channels - 1; i++) {
 		ch = &indio_dev->channels[i];
@@ -412,7 +424,7 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 			ch_n = ch->scan_type.storagebits / 8;
 			buf_i = nvs_buf_index(ch_n, &n);
 		} else {
-			t += sprintf(buf + t, "disabled ");
+			t += snprintf(buf + t, PAGE_SIZE - t, "disabled ");
 			continue;
 		}
 
@@ -421,16 +433,18 @@ static ssize_t nvs_dbg_data(struct iio_dev *indio_dev, char *buf)
 			memcpy(&data, &st->buf[buf_i], ch_n);
 			if (ch->scan_type.sign == 's') {
 				shift = 64 - ch->scan_type.realbits;
-				t += sprintf(buf + t, "%lld ",
-					     (s64)(data << shift) >> shift);
+				t += snprintf(buf + t, PAGE_SIZE - t, "%lld ",
+					      (s64)(data << shift) >> shift);
 			} else {
-				t += sprintf(buf + t, "%llu ", data);
+				t += snprintf(buf + t, PAGE_SIZE - t, "%llu ",
+					      data);
 			}
 		} else {
-			t += sprintf(buf + t, "ERR ");
+			t += snprintf(buf + t, PAGE_SIZE - t, "ERR ");
 		}
 	}
-	t += sprintf(buf + t, "ts=%lld  ts_diff=%lld\n", st->ts, st->ts_diff);
+	t += snprintf(buf + t, PAGE_SIZE - t, "ts=%lld  ts_diff=%lld\n",
+		      st->ts, st->ts_diff);
 	return t;
 }
 
@@ -671,47 +685,50 @@ static ssize_t nvs_attr_show(struct device *dev,
 	case NVS_ATTR_ENABLE:
 		if (st->fn_dev->enable != nvs_fn_dev_enable) {
 			mutex_lock(&indio_dev->mlock);
-			ret = sprintf(buf, "%x\n",
-				      st->fn_dev->enable(st->client,
+			ret = snprintf(buf, PAGE_SIZE, "%x\n",
+				       st->fn_dev->enable(st->client,
 							st->cfg->snsr_id, -1));
 			mutex_unlock(&indio_dev->mlock);
 		}
 		return ret;
 
 	case NVS_ATTR_PART:
-		return sprintf(buf, "%s %s\n", st->cfg->part, st->cfg->name);
+		return snprintf(buf, PAGE_SIZE, "%s %s\n",
+				st->cfg->part, st->cfg->name);
 
 	case NVS_ATTR_VENDOR:
-		return sprintf(buf, "%s\n", st->cfg->vendor);
+		return snprintf(buf, PAGE_SIZE, "%s\n", st->cfg->vendor);
 
 	case NVS_ATTR_VERSION:
-		return sprintf(buf, "%d\n", st->cfg->version);
+		return snprintf(buf, PAGE_SIZE, "%d\n", st->cfg->version);
 
 	case NVS_ATTR_MILLIAMP:
-		return sprintf(buf, "%d.%06u\n",
-			       st->cfg->milliamp.ival,
-			       st->cfg->milliamp.fval);
+		return snprintf(buf, PAGE_SIZE, "%d.%06u\n",
+				st->cfg->milliamp.ival,
+				st->cfg->milliamp.fval);
 
 	case NVS_ATTR_FIFO_RSRV_EVNT_CNT:
-		return sprintf(buf, "%u\n", st->cfg->fifo_rsrv_evnt_cnt);
+		return snprintf(buf, PAGE_SIZE, "%u\n",
+				st->cfg->fifo_rsrv_evnt_cnt);
 
 	case NVS_ATTR_FIFO_MAX_EVNT_CNT:
-		return sprintf(buf, "%u\n", st->cfg->fifo_max_evnt_cnt);
+		return snprintf(buf, PAGE_SIZE, "%u\n",
+				st->cfg->fifo_max_evnt_cnt);
 
 	case NVS_ATTR_FLAGS:
-		return sprintf(buf, "%u\n", st->cfg->flags);
+		return snprintf(buf, PAGE_SIZE, "%u\n", st->cfg->flags);
 
 	case NVS_ATTR_MATRIX:
-		return sprintf(buf, "%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-			       st->cfg->matrix[0],
-			       st->cfg->matrix[1],
-			       st->cfg->matrix[2],
-			       st->cfg->matrix[3],
-			       st->cfg->matrix[4],
-			       st->cfg->matrix[5],
-			       st->cfg->matrix[6],
-			       st->cfg->matrix[7],
-			       st->cfg->matrix[8]);
+		return snprintf(buf, PAGE_SIZE, "%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
+				st->cfg->matrix[0],
+				st->cfg->matrix[1],
+				st->cfg->matrix[2],
+				st->cfg->matrix[3],
+				st->cfg->matrix[4],
+				st->cfg->matrix[5],
+				st->cfg->matrix[6],
+				st->cfg->matrix[7],
+				st->cfg->matrix[8]);
 
 	case NVS_ATTR_SELF_TEST:
 		if (st->fn_dev->self_test) {
@@ -809,12 +826,13 @@ static ssize_t nvs_info_show(struct device *dev,
 		return nvs_dbg_data(indio_dev, buf);
 
 	case NVS_INFO_VER:
-		return sprintf(buf, "version=%u\n", NVS_IIO_DRIVER_VERSION);
+		return snprintf(buf, PAGE_SIZE, "version=%u\n",
+				NVS_IIO_DRIVER_VERSION);
 
 	case NVS_INFO_ERRS:
 		i = *st->fn_dev->errs;
 		*st->fn_dev->errs = 0;
-		return sprintf(buf, "error count=%u\n", i);
+		return snprintf(buf, PAGE_SIZE, "error count=%u\n", i);
 
 	case NVS_INFO_RESET:
 		if (st->fn_dev->reset) {
@@ -823,9 +841,9 @@ static ssize_t nvs_info_show(struct device *dev,
 			mutex_unlock(&indio_dev->mlock);
 		}
 		if (ret)
-			return sprintf(buf, "reset ERR\n");
+			return snprintf(buf, PAGE_SIZE, "reset ERR\n");
 		else
-			return sprintf(buf, "reset done\n");
+			return snprintf(buf, PAGE_SIZE, "reset done\n");
 
 	case NVS_INFO_REGS:
 		if (st->fn_dev->regs)
@@ -837,23 +855,23 @@ static ssize_t nvs_info_show(struct device *dev,
 		return nvs_dbg_cfg(indio_dev, buf);
 
 	case NVS_INFO_DBG_KEY:
-		return sprintf(buf, "%s\n", NVS_DBG_KEY);
+		return snprintf(buf, PAGE_SIZE, "%s\n", NVS_DBG_KEY);
 
 	case NVS_INFO_DBG:
-		return sprintf(buf, "DBG spew=%x\n",
-			       !!(*st->fn_dev->sts & NVS_STS_SPEW_MSG));
+		return snprintf(buf, PAGE_SIZE, "DBG spew=%x\n",
+				!!(*st->fn_dev->sts & NVS_STS_SPEW_MSG));
 
 	case NVS_INFO_DBG_DATA:
-		return sprintf(buf, "DATA spew=%x\n",
-			       !!(*st->fn_dev->sts & NVS_STS_SPEW_DATA));
+		return snprintf(buf, PAGE_SIZE, "DATA spew=%x\n",
+				!!(*st->fn_dev->sts & NVS_STS_SPEW_DATA));
 
 	case NVS_INFO_DBG_BUF:
-		return sprintf(buf, "BUF spew=%x\n",
-			       !!(*st->fn_dev->sts & NVS_STS_SPEW_BUF));
+		return snprintf(buf, PAGE_SIZE, "BUF spew=%x\n",
+				!!(*st->fn_dev->sts & NVS_STS_SPEW_BUF));
 
 	case NVS_INFO_DBG_IRQ:
-		return sprintf(buf, "IRQ spew=%x\n",
-			       !!(*st->fn_dev->sts & NVS_STS_SPEW_IRQ));
+		return snprintf(buf, PAGE_SIZE, "IRQ spew=%x\n",
+				!!(*st->fn_dev->sts & NVS_STS_SPEW_IRQ));
 
 	default:
 		if (dbg < NVS_INFO_LIMIT_MAX)
@@ -1110,10 +1128,14 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 	case IIO_CHAN_INFO_BATCH_PERIOD:
 		msg = "IIO_CHAN_INFO_BATCH_PERIOD";
 		old = st->batch_period_us;
-		if (val < st->cfg->delay_us_min)
-			val = st->cfg->delay_us_min;
-		if (st->cfg->delay_us_max && val > st->cfg->delay_us_max)
-			val = st->cfg->delay_us_max;
+		if (SENSOR_FLAG_ONE_SHOT_MODE != (st->cfg->flags &
+						  REPORTING_MODE_MASK)) {
+			if (val < st->cfg->delay_us_min)
+				val = st->cfg->delay_us_min;
+			if (st->cfg->delay_us_max && (val >
+						      st->cfg->delay_us_max))
+				val = st->cfg->delay_us_max;
+		}
 		if (st->fn_dev->batch) {
 			ret = st->fn_dev->batch(st->client, st->cfg->snsr_id,
 						st->batch_flags,

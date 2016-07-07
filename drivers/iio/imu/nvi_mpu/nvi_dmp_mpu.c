@@ -78,12 +78,18 @@ static int nvi_dmp_sm_init(struct nvi_state *st, unsigned int *en_msk)
 	ret = nvi_mem_wr_be_mc(st, D_SMD_MOT_THLD, 4,
 			       st->snsr[DEV_SM].cfg.thresh_lo << 16,
 			       &st->mc.mpu.d_smd_mot_thld);
-	ret |= nvi_mem_wr_be_mc(st, D_SMD_DELAY_THLD, 4,
+	ret |= nvi_mem_wr_be_mc(st, D_SMD_DELAY_CNTR, 4,
 				st->snsr[DEV_SM].cfg.thresh_hi,
+				&st->mc.mpu.d_smd_delay_cntr);
+	ret |= nvi_mem_wr_be_mc(st, D_SMD_DELAY_THLD, 4,
+				st->snsr[DEV_SM].cfg.delay_us_min,
 				&st->mc.mpu.d_smd_delay_thld);
 	ret |= nvi_mem_wr_be_mc(st, D_SMD_DELAY2_THLD, 4,
 				st->snsr[DEV_SM].cfg.delay_us_max,
 				&st->mc.mpu.d_smd_delay2_thld);
+	ret |= nvi_mem_wr_be_mc(st, D_SMD_EXE_STATE, 4,
+				st->snsr[DEV_SM].cfg.report_n,
+				&st->mc.mpu.d_smd_exe_state);
 	return ret;
 }
 

@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(333)
+#define NVI_DRIVER_VERSION		(334)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -1407,10 +1407,10 @@ static int nvi_period_src(struct nvi_state *st, int src)
 	}
 
 	if (enabled) {
-		if (period_us < st->hal->src[src].period_us_min)
-			period_us = st->hal->src[src].period_us_min;
-		if (period_us > st->hal->src[src].period_us_max)
-			period_us = st->hal->src[src].period_us_max;
+		if (period_us < st->src[src].period_us_min)
+			period_us = st->src[src].period_us_min;
+		if (period_us > st->src[src].period_us_max)
+			period_us = st->src[src].period_us_max;
 		if (period_us != st->src[src].period_us_req) {
 			st->src[src].period_us_req = period_us;
 			return 1;
@@ -1976,7 +1976,7 @@ static int nvi_aux_dev_valid(struct nvi_state *st,
 	/* enable it at fastest speed */
 	st->aux.port[AUX_PORT_IO].nmp.delay_ms = 0;
 	st->aux.port[AUX_PORT_IO].period_us =
-			st->hal->src[st->hal->dev[DEV_AUX]->src].period_us_min;
+			     st->src[st->hal->dev[DEV_AUX]->src].period_us_min;
 	ret = nvi_user_ctrl_en(st, __func__, false, false, false, false);
 	ret |= nvi_aux_port_enable(st, 1 << AUX_PORT_IO, true);
 	ret |= nvi_user_ctrl_en(st, __func__, false, false, true, false);
@@ -3123,7 +3123,20 @@ static int nvi_batch(void *client, int snsr_id, int flags,
 		     unsigned int period, unsigned int timeout)
 {
 	struct nvi_state *st = (struct nvi_state *)client;
-	int ret;
+	int ret = 0;
+
+	/* We use batch to set parameters in realtime for one-shot sensors
+	 * (that normally doesn't use batch)
+	 */
+	if (SENSOR_FLAG_ONE_SHOT_MODE == (st->snsr[snsr_id].cfg.flags &
+					  REPORTING_MODE_MASK)) {
+		st->snsr[snsr_id].cfg.delay_us_min = period;
+		st->snsr[snsr_id].cfg.delay_us_max = timeout;
+		st->snsr[snsr_id].cfg.report_n = flags;
+		if (st->en_msk & (1 << DEV_DMP))
+			ret = st->hal->dmp->fn_dev_init(st, snsr_id);
+		return ret;
+	}
 
 	if (timeout && !st->snsr[snsr_id].cfg.fifo_max_evnt_cnt)
 		return -EINVAL;
@@ -3848,23 +3861,6 @@ static int nvi_id_dev(struct nvi_state *st,
 					      st->hal->dev[dev]->milliamp.fval;
 	}
 
-#define SRM				(SENSOR_FLAG_SPECIAL_REPORTING_MODE)
-#define OSM				(SENSOR_FLAG_ONE_SHOT_MODE)
-	BUG_ON(SRC_N < st->hal->src_n);
-	for (dev = 0; dev < DEV_N; dev++) {
-		src = st->hal->dev[dev]->src;
-		if (src < 0)
-			continue;
-
-		BUG_ON(src >= st->hal->src_n);
-		if ((st->snsr[dev].cfg.flags & SRM) != OSM) {
-			st->snsr[dev].cfg.delay_us_min =
-					       st->hal->src[src].period_us_min;
-			st->snsr[dev].cfg.delay_us_max =
-					       st->hal->src[src].period_us_max;
-		}
-	}
-
 	ret = nvs_vregs_sts(st->vreg, ARRAY_SIZE(nvi_vregs));
 	if (ret < 0)
 		/* regulators aren't supported so manually do master reset */
@@ -3875,10 +3871,27 @@ static int nvi_id_dev(struct nvi_state *st,
 		st->dev_offset[DEV_ACC][i] = 0;
 		st->dev_offset[DEV_GYR][i] = 0;
 	}
+
+	BUG_ON(SRC_N < st->hal->src_n);
 	if (st->hal->fn->init)
 		ret = st->hal->fn->init(st);
 	else
 		ret = 0;
+	/* set sensor period limits after st->hal->fn->init executes */
+	for (dev = 0; dev < DEV_N; dev++) {
+		src = st->hal->dev[dev]->src;
+		if (src < 0)
+			continue;
+
+		if (SENSOR_FLAG_ONE_SHOT_MODE == (st->snsr[dev].cfg.flags &
+						  REPORTING_MODE_MASK))
+			continue;
+
+		BUG_ON(src >= st->hal->src_n);
+		st->snsr[dev].cfg.delay_us_min = st->src[src].period_us_min;
+		st->snsr[dev].cfg.delay_us_max = st->src[src].period_us_max;
+	}
+
 	if (hw_id == NVI_HW_ID_AUTO)
 		dev_info(&st->i2c->dev, "%s: USING DEVICE TREE: %s\n",
 			 __func__, i2c_dev_id->name);
@@ -4033,6 +4046,17 @@ static void nvi_of_dt_post(struct nvi_state *st, struct device_node *dn)
 	for (i = 0; i < DEV_N; i++)
 		nvs_of_dt(dn, &st->snsr[i].cfg, NULL);
 
+	/* nvs_of_dt doesn't allow REPORTING_MODE_MASK bits to change so we
+	 * allow for it here so that we can configure whether batch sysfs nodes
+	 * are populated to be used to configure significant motion parameters
+	 * in realtime.
+	 */
+	if (!of_property_read_u32(dn, "significant_motion_flags", &tmp)) {
+		msk = SENSOR_FLAG_READONLY_MASK & ~REPORTING_MODE_MASK;
+		tmp &= ~msk;
+		st->snsr[DEV_SM].cfg.flags &= msk;
+		st->snsr[DEV_SM].cfg.flags |= tmp;
+	}
 	for (i = 0; i < DEV_N; i++) {
 		tmp = 0;
 		for (j = 0; j < 9; j++)
@@ -4160,6 +4184,11 @@ static int nvi_init(struct nvi_state *st,
 	if (!n)
 		return -ENODEV;
 
+	/* restore SENSOR_FLAG_ONE_SHOT_MODE for significant motion in case it
+	 * was cleared to allow realtime calibration with batch.
+	 */
+	st->snsr[DEV_SM].cfg.flags &= ~REPORTING_MODE_MASK;
+	st->snsr[DEV_SM].cfg.flags |= SENSOR_FLAG_ONE_SHOT_MODE;
 	ret = request_threaded_irq(st->i2c->irq, nvi_handler, nvi_thread,
 				   IRQF_TRIGGER_RISING, NVI_NAME, st);
 	if (ret) {

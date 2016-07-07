@@ -13,6 +13,12 @@
 #ifndef _NVI_DMP_MPU_H_
 #define _NVI_DMP_MPU_H_
 
+#define MPU_SMD_THLD_INIT		(0x000005DC)
+#define MPU_SMD_DELAY_N_INIT		(0x0000006C)
+#define MPU_SMD_TIMER_INIT		(0x00000258)
+#define MPU_SMD_TIMER2_INIT		(0x000000C8)
+#define MPU_SMD_EXE_STATE_INIT		(0x00000001)
+
 #define FCFG_1				(1078)		/* 0x0436 */
 #define FCFG_3				(1103)		/* 0x044F */
 #define FCFG_2				(1082)		/* 0x043A */

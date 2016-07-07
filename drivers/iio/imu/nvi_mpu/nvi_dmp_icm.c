@@ -359,22 +359,38 @@ static int nvi_dmp_sm_init(struct nvi_state *st, u32 *out_ctl,
 
 	ret = nvi_mem_wr_be_mc(st, SMD_MOT_THLD, 4,
 			       st->snsr[DEV_SM].cfg.thresh_lo << 16,
-			       &st->mc.icm.smd_mot_thld);
+			       &st->mc.icm.smd_thld);
 	ret |= nvi_mem_wr_be_mc(st, SMD_DELAY_THLD, 4,
-				st->snsr[DEV_SM].cfg.thresh_hi,
-				&st->mc.icm.smd_delay_thld);
+				st->snsr[DEV_SM].cfg.delay_us_min,
+				&st->mc.icm.smd_delay);
 	ret |= nvi_mem_wr_be_mc(st, SMD_DELAY2_THLD, 4,
 				st->snsr[DEV_SM].cfg.delay_us_max,
-				&st->mc.icm.smd_delay2_thld);
+				&st->mc.icm.smd_delay2);
 	return ret;
 #elif ICM_DMP_FW_VER == 1
-	return nvi_mem_wr_be_mc(st, SMD_TIMER_THLD, 4,
-				st->snsr[DEV_SM].cfg.thresh_hi,
-				&st->mc.icm.smd_timer_thld);
+	/* no documentation from INV here.
+	 * It can be assumed that SMD is broken with DMP FW version 1.
+	 */
+	return 0;
 #elif ICM_DMP_FW_VER == 2
-	return nvi_mem_wr_be_mc(st, SMD_CNTR_TH, 4,
+	int ret;
+
+	ret = nvi_mem_wr_be_mc(st, SMD_E1_THLD, 4,
+			       st->snsr[DEV_SM].cfg.thresh_lo,
+			       &st->mc.icm.smd_thld);
+	ret |= nvi_mem_wr_be_mc(st, SMD_E1_COUNTER_TH, 4,
 				st->snsr[DEV_SM].cfg.thresh_hi,
-				&st->mc.icm.smd_timer_thld);
+				&st->mc.icm.smd_thld_n);
+	ret |= nvi_mem_wr_be_mc(st, SMD_CNTR_LO_TH, 4,
+				st->snsr[DEV_SM].cfg.delay_us_min,
+				&st->mc.icm.smd_delay);
+	ret |= nvi_mem_wr_be_mc(st, SMD_CNTR_TH, 4,
+				st->snsr[DEV_SM].cfg.delay_us_max,
+				&st->mc.icm.smd_delay2);
+	ret |= nvi_mem_wr_be_mc(st, SMD_LOW_ENERGY_TIMER_TH, 4,
+				st->snsr[DEV_SM].cfg.report_n,
+				&st->mc.icm.smd_reset);
+	return ret;
 #else
 	return 0;
 #endif /* ICM_DMP_FW_VER */
@@ -805,7 +821,7 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 	 */
 	/* initialize source period */
 	for (src = 0; src < st->hal->src_n; src++)
-		period_us_req[src] = st->hal->src[src].period_us_max;
+		period_us_req[src] = st->src[src].period_us_max;
 
 	/* set source's period_us_req[] to fastest enabled sensor */
 	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
@@ -856,6 +872,8 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 		}
 
 		period_us_req[SRC_AUX] = period_us;
+	} else {
+		period_us_req[SRC_AUX] = st->src[SRC_AUX].period_us_req;
 	}
 
 	period_us_req[SRC_GYR] = period_us;
@@ -865,62 +883,17 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 	/* program the sources */
 	for (src = 0; src < st->hal->src_n; src++) {
 		dev_msk = st->hal->src[src].dev_msk;
+#if 0 /* WAR: program all clock sources regardless if used */
 		if (dev_msk & (1 << DEV_AUX))
 			dev_msk |= MSK_EN_AUX_PORTS;
 		if (!(dev_msk & en_msk))
 			/* no active sensors use this source */
 			continue;
-
+#endif /* WAR: end */
 		if (period_us_req[src] < st->src[src].period_us_min)
 			period_us_req[src] = st->src[src].period_us_min;
-		if (period_us_req[src] > st->src[src].period_us_max)
-			period_us_req[src] = st->src[src].period_us_max;
 		st->src[src].period_us_req = period_us_req[src];
-		switch (src) {
-		case SRC_GYR:
-		case SRC_ACC:
-			i = (st->src[src].period_us_req * 1000) /
-							   st->src[src].base_t;
-			if (i)
-				i--;
-/* WAR: start
- * It appears that the latest INV ICM DMP FW runs everything off of the SRC_GYR
- */
-#if 0 /* WAR: must program both SRC_ACC & SRC_GYR regardless if used*/
-			ret = nvi_i2c_write_rc(st, &st->hal->reg->smplrt[src],
-					       i, __func__,
-					      (u8 *)&st->rc.smplrt[src], true);
-			if (ret)
-				ret_t |= ret;
-			else
-				st->src[src].period_us_src = ((i + 1) *
-						   st->src[src].base_t) / 1000;
-#endif /* WAR */
-			ret = nvi_i2c_write_rc(st,
-					       &st->hal->reg->smplrt[SRC_GYR],
-					       i, __func__,
-					  (u8 *)&st->rc.smplrt[SRC_GYR], true);
-			if (ret)
-				ret_t |= ret;
-			else
-				st->src[SRC_GYR].period_us_src = ((i + 1) *
-					       st->src[SRC_GYR].base_t) / 1000;
-			ret = nvi_i2c_write_rc(st,
-					       &st->hal->reg->smplrt[SRC_ACC],
-					       i, __func__,
-					  (u8 *)&st->rc.smplrt[SRC_ACC], true);
-			if (ret)
-				ret_t |= ret;
-			else
-				st->src[SRC_ACC].period_us_src = ((i + 1) *
-					       st->src[SRC_ACC].base_t) / 1000;
-/* WAR: end */
-			break;
-
-		case SRC_AUX:
-			ret_t |= st->hal->src[SRC_AUX].fn_period(st);
-			break;
-		}
+		ret_t |= st->hal->src[src].fn_period(st);
 	}
 
 	/* now set each DMP device's ODR based on their period */
@@ -1167,11 +1140,8 @@ static int nvi_dd_able(struct nvi_state *st,
 	int ret;
 
 	st->en_msk &= ~MSK_DEV_SNSR;
-	for (i = 0; i < st->hal->src_n; i++) {
-		st->src[i].period_us_min = st->hal->src[i].period_us_min;
-		st->src[i].period_us_max = st->hal->src[i].period_us_max;
-	}
-
+	st->src[SRC_AUX].period_us_min = st->hal->src[SRC_AUX].period_us_min;
+	st->src[SRC_AUX].period_us_max = st->hal->src[SRC_AUX].period_us_max;
 	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
 		dd = &nvi_dmp_devs[i];
 		if (dd->dev > DEV_AUX)
@@ -1304,6 +1274,9 @@ static int nvi_dmp_en(struct nvi_state *st)
 		st->mc_dis = false; /* enable cache */
 	}
 	ret |= nvi_dd_able(st, en_msk, irq_msk);
+	/* restore any modified period limits */
+	st->src[SRC_AUX].period_us_min = st->hal->src[SRC_AUX].period_us_min;
+	st->src[SRC_AUX].period_us_max = st->hal->src[SRC_AUX].period_us_max;
 	if (!ret) {
 		st->en_msk |= (1 << DEV_DMP);
 		ret = nvi_i2c_wr(st, &st->hal->reg->pm2, 0, __func__);

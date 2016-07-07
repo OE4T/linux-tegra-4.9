@@ -13,6 +13,7 @@
 #include <linux/kernel.h>
 #include <linux/delay.h>
 #include "nvi.h"
+#include "nvi_dmp_mpu.h"
 
 enum inv_filter_e {
 	INV_FILTER_256HZ_NOLPF2 = 0,
@@ -265,6 +266,7 @@ static short index_of_key(u16 key)
 
 int inv_init_6050(struct nvi_state *st)
 {
+	unsigned int i;
 	int ret;
 	u8 prod_ver = 0x00, prod_rev = 0x00;
 	struct prod_rev_map_t *p_rev;
@@ -280,6 +282,12 @@ int inv_init_6050(struct nvi_state *st)
 		st->en_msk |= (1 << EN_LP);
 	else
 		st->en_msk &= ~(1 << EN_LP);
+	for (i = 0; i < st->hal->src_n; i++) {
+		st->src[i].period_us_min = st->hal->src[i].period_us_min;
+		st->src[i].period_us_max = st->hal->src[i].period_us_max;
+	}
+
+	/* INV crap starts here */
 	ret = nvi_i2c_r(st, 0, REG_PRODUCT_ID, 1, &prod_ver);
 	if (ret)
 		return ret;
@@ -343,10 +351,24 @@ int inv_init_6050(struct nvi_state *st)
 
 static int nvi_init_6500(struct nvi_state *st)
 {
+	unsigned int i;
+
 	if (st->snsr[DEV_ACC].cfg.thresh_hi > 0)
 		st->en_msk |= (1 << EN_LP);
 	else
 		st->en_msk &= ~(1 << EN_LP);
+	for (i = 0; i < st->hal->src_n; i++) {
+		st->src[i].period_us_min = st->hal->src[i].period_us_min;
+		st->src[i].period_us_max = st->hal->src[i].period_us_max;
+	}
+	st->snsr[DEV_SM].cfg.thresh_lo = MPU_SMD_THLD_INIT;
+	st->snsr[DEV_SM].cfg.thresh_hi = MPU_SMD_DELAY_N_INIT;
+	/* delay_us_min/max is ignored by NVS since this is a one-shot
+	 * sensor so we use them to store parameters.
+	 */
+	st->snsr[DEV_SM].cfg.delay_us_min = MPU_SMD_TIMER_INIT;
+	st->snsr[DEV_SM].cfg.delay_us_max = MPU_SMD_TIMER2_INIT;
+	st->snsr[DEV_SM].cfg.report_n = MPU_SMD_EXE_STATE_INIT;
 	return 0;
 }
 

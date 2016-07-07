@@ -307,10 +307,11 @@ struct nvi_mc_icm {
 	u32 cpass_a_var;
 	u32 cpass_rad_3d_thr;
 	u32 cpass_nomot_var_thr;
-	u32 smd_mot_thld;
-	u32 smd_delay_thld;
-	u32 smd_delay2_thld;
-	u32 smd_timer_thld;
+	u32 smd_thld;
+	u32 smd_thld_n;
+	u32 smd_delay;
+	u32 smd_delay2;
+	u32 smd_reset;
 	u32 wom_enable;
 	u32 wtf_8a;
 };
@@ -320,6 +321,8 @@ struct nvi_mc_mpu {
 	u32 d_smd_mot_thld;
 	u32 d_smd_delay_thld;
 	u32 d_smd_delay2_thld;
+	u32 d_smd_exe_state;
+	u32 d_smd_delay_cntr;
 };
 
 struct nvi_mc {

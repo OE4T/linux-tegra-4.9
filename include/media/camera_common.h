@@ -251,12 +251,11 @@ int camera_common_try_fmt(struct v4l2_subdev *sd,
 int camera_common_s_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
 int camera_common_g_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf);
 int camera_common_enum_framesizes(struct v4l2_subdev *sd,
-		struct v4l2_frmsizeenum *fsizes);
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_frame_size_enum *fse);
 int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
-		struct v4l2_frmivalenum *fintervals);
-
-int camera_common_g_chip_ident(struct v4l2_subdev *sd,
-			     struct v4l2_dbg_chip_ident *id);
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_frame_interval_enum *fie);
 int camera_common_set_power(struct camera_common_data *data, int on);
 int camera_common_s_power(struct v4l2_subdev *sd, int on);
 void camera_common_dpd_disable(struct camera_common_data *s_data);

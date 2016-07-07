@@ -372,7 +372,7 @@ int camera_common_enum_mbus_code(struct v4l2_subdev *sd,
 EXPORT_SYMBOL(camera_common_enum_mbus_code);
 
 int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
-			 enum v4l2_mbus_pixelcode *code)
+			unsigned int *code)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(client);
@@ -506,7 +506,8 @@ static int camera_common_evaluate_color_format(struct v4l2_subdev *sd,
 }
 
 int camera_common_enum_framesizes(struct v4l2_subdev *sd,
-				  struct v4l2_frmsizeenum *fsizes)
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_frame_size_enum *fse)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(client);
@@ -515,22 +516,24 @@ int camera_common_enum_framesizes(struct v4l2_subdev *sd,
 	if (!s_data || !s_data->frmfmt)
 		return -EINVAL;
 
-	if (fsizes->index >= s_data->numfmts)
+	if (fse->index >= s_data->numfmts)
 		return -EINVAL;
 
-	ret = camera_common_evaluate_color_format(sd, fsizes->pixel_format);
+	ret = camera_common_evaluate_color_format(sd, fse->code);
 	if (ret)
 		return ret;
 
-	fsizes->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	fsizes->discrete = s_data->frmfmt[fsizes->index].size;
-
+	fse->min_width = fse->max_width =
+		s_data->frmfmt[fse->index].size.width;
+	fse->min_height = fse->max_height =
+		s_data->frmfmt[fse->index].size.height;
 	return 0;
 }
 EXPORT_SYMBOL(camera_common_enum_framesizes);
 
 int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
-				      struct v4l2_frmivalenum *fintervals)
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_frame_interval_enum *fie)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
 	struct camera_common_data *s_data = to_camera_common_data(client);
@@ -540,27 +543,26 @@ int camera_common_enum_frameintervals(struct v4l2_subdev *sd,
 		return -EINVAL;
 
 	/* Check color format */
-	ret = camera_common_evaluate_color_format(sd, fintervals->pixel_format);
+	ret = camera_common_evaluate_color_format(sd, fie->code);
 	if (ret)
 		return ret;
 
 	/* Check resolution sizes */
 	for (i = 0; i < s_data->numfmts; i++) {
-		if (s_data->frmfmt[i].size.width == fintervals->width &&
-		    s_data->frmfmt[i].size.height == fintervals->height)
+		if (s_data->frmfmt[i].size.width == fie->width &&
+		    s_data->frmfmt[i].size.height == fie->height)
 			break;
 	}
 	if (i >= s_data->numfmts)
 		return -EINVAL;
 
 	/* Check index is in the rage of framerates array index */
-	if (fintervals->index >= s_data->frmfmt[i].num_framerates)
+	if (fie->index >= s_data->frmfmt[i].num_framerates)
 		return -EINVAL;
 
-	fintervals->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	fintervals->discrete.numerator = 1;
-	fintervals->discrete.denominator =
-		s_data->frmfmt[i].framerates[fintervals->index];
+	fie->interval.numerator = 1;
+	fie->interval.denominator =
+		s_data->frmfmt[i].framerates[fie->index];
 
 	return 0;
 }

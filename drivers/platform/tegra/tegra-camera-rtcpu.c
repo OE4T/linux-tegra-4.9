@@ -154,9 +154,9 @@ MODULE_DEVICE_TABLE(of, tegra_cam_rtcpu_of_match);
 
 struct tegra_cam_rtcpu {
 	struct tegra_ivc_bus *ivc;
+	struct tegra_hsp_sm_pair *sm_pair;
 	struct {
 		struct mutex mutex;
-		struct tegra_hsp_sm_pair pair;
 		wait_queue_head_t response_waitq;
 		wait_queue_head_t empty_waitq;
 		atomic_t response;
@@ -334,29 +334,20 @@ void tegra_camrtc_ready(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_ready);
 
-static u32 tegra_camrtc_full_notify(struct tegra_hsp_sm_pair *pair,
-				u32 response)
+static u32 tegra_camrtc_full_notify(void *data, u32 response)
 {
-	struct tegra_cam_rtcpu *cam_rtcpu;
-
-	cam_rtcpu = container_of(pair, struct tegra_cam_rtcpu, cmd.pair);
+	struct tegra_cam_rtcpu *cam_rtcpu = data;
 
 	atomic_set(&cam_rtcpu->cmd.response, response);
-
 	wake_up(&cam_rtcpu->cmd.response_waitq);
-
 	return 0;
 }
 
-static void tegra_camrtc_empty_notify(struct tegra_hsp_sm_pair *pair,
-				u32 empty_value)
+static void tegra_camrtc_empty_notify(void *data, u32 empty_value)
 {
-	struct tegra_cam_rtcpu *cam_rtcpu;
-
-	cam_rtcpu = container_of(pair, struct tegra_cam_rtcpu, cmd.pair);
+	struct tegra_cam_rtcpu *cam_rtcpu = data;
 
 	atomic_set(&cam_rtcpu->cmd.emptied, 1);
-
 	wake_up(&cam_rtcpu->cmd.empty_waitq);
 }
 
@@ -372,7 +363,7 @@ static long tegra_camrtc_wait_for_empty(struct device *dev,
 		cam_rtcpu->cmd.empty_waitq,
 		/* Make sure IRQ has been handled */
 		atomic_read(&cam_rtcpu->cmd.emptied) != 0 &&
-		tegra_hsp_sm_pair_is_empty(&cam_rtcpu->cmd.pair),
+		tegra_hsp_sm_pair_is_empty(cam_rtcpu->sm_pair),
 		timeout);
 
 	if (timeout > 0)
@@ -402,7 +393,7 @@ int tegra_camrtc_command(struct device *dev, u32 command, long timeout)
 
 	atomic_set(&cam_rtcpu->cmd.response, INVALID_RESPONSE);
 
-	tegra_hsp_sm_pair_write(&cam_rtcpu->cmd.pair, command);
+	tegra_hsp_sm_pair_write(cam_rtcpu->sm_pair, command);
 
 	timeout = wait_event_interruptible_timeout(
 		cam_rtcpu->cmd.response_waitq,
@@ -440,8 +431,7 @@ int tegra_camrtc_boot(struct device *dev)
 	 * Insert a random command (INIT 16) to mailbox before
 	 * unhalting.
 	 */
-	tegra_hsp_sm_pair_write(&cam_rtcpu->cmd.pair,
-		RTCPU_COMMAND(INIT, 16));
+	tegra_hsp_sm_pair_write(cam_rtcpu->sm_pair, RTCPU_COMMAND(INIT, 16));
 
 	tegra_camrtc_ready(dev);
 
@@ -560,13 +550,13 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	mutex_init(&cam_rtcpu->cmd.mutex);
 	init_waitqueue_head(&cam_rtcpu->cmd.response_waitq);
 	init_waitqueue_head(&cam_rtcpu->cmd.empty_waitq);
-	cam_rtcpu->cmd.pair.notify_full = tegra_camrtc_full_notify;
-	cam_rtcpu->cmd.pair.notify_empty = tegra_camrtc_empty_notify;
 	hsp_node = of_get_child_by_name(dev->of_node, "hsp");
-	ret = of_tegra_hsp_sm_pair_by_name(hsp_node, "cmd-pair",
-					&cam_rtcpu->cmd.pair);
+	cam_rtcpu->sm_pair = of_tegra_hsp_sm_pair_by_name(hsp_node,
+					"cmd-pair", tegra_camrtc_full_notify,
+					tegra_camrtc_empty_notify, cam_rtcpu);
 	of_node_put(hsp_node);
-	if (ret) {
+	if (IS_ERR(cam_rtcpu->sm_pair)) {
+		ret = PTR_ERR(cam_rtcpu->sm_pair);
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "failed to obtain mbox pair: %d\n", ret);
 		return ret;
@@ -592,7 +582,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 fail:
 	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
-	tegra_hsp_sm_pair_free(&cam_rtcpu->cmd.pair);
+	tegra_hsp_sm_pair_free(cam_rtcpu->sm_pair);
 	return ret;
 }
 
@@ -602,7 +592,7 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 	struct tegra_cam_rtcpu *cam_rtcpu = platform_get_drvdata(pdev);
 
 	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
-	tegra_hsp_sm_pair_free(&cam_rtcpu->cmd.pair);
+	tegra_hsp_sm_pair_free(cam_rtcpu->sm_pair);
 
 	return 0;
 }

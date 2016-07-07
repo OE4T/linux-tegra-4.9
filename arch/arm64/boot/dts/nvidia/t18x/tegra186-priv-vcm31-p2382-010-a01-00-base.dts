@@ -35,6 +35,14 @@
 		};
 	};
 
+#ifndef CONFIG_ANDROID
+	i2c@c240000 {
+		ublox@42 {
+			status = "okay";
+		};
+	};
+#endif
+
 #ifdef CONFIG_ANDROID
 	/* TBD : once runtime PM is implemented in rtcpu driver, it will be removed
 	Bug 200205818, 200191464, 1614189

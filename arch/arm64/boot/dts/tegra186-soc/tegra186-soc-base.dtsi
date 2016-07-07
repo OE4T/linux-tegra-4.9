@@ -545,9 +545,14 @@
 					TEGRA_IO_PAD_GROUP_DMIC_HV
 					TEGRA_IO_PAD_GROUP_SDMMC1_HV
 					TEGRA_IO_PAD_GROUP_SDMMC2_HV
-					TEGRA_IO_PAD_GROUP_SDMMC3_HV>;
+					TEGRA_IO_PAD_GROUP_SDMMC3_HV
+					TEGRA_IO_PAD_GROUP_DSI
+					TEGRA_IO_PAD_GROUP_DSIB
+					TEGRA_IO_PAD_GROUP_DSIC
+					TEGRA_IO_PAD_GROUP_DSID>;
 		pad-names = "ufs", "dbg", "spi", "audio-hv", "ao-hv",
-				"dmic-hv", "sdmmc1-hv", "sdmmc2-hv", "sdmmc3-hv";
+				"dmic-hv", "sdmmc1-hv", "sdmmc2-hv", "sdmmc3-hv",
+				"dsia", "dsib", "dsic", "dsid";
 		status = "disabled";
 	};
 
@@ -793,6 +798,11 @@
 				<&tegra_car TEGRA186_RESET_DSIPADCTL>;
 			reset-names = "dsia", "dsib", "dsic", "dsid", "dsi_padctrl";
 			nvidia,enable-hs-clk-in-lp-mode = <1>;
+			pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_DSI>,
+					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSIB>,
+					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSIC>,
+					<&tegra_pmc TEGRA_IO_PAD_GROUP_DSID>;
+			pad-names = "dsia", "dsib", "dsic", "dsid";
 			status = "disabled";
 		};
 

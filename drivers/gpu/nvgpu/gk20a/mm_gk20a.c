@@ -2517,6 +2517,8 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
 
+	gk20a_memset(g, mem, 0, 0, size);
+
 	gk20a_dbg_fn("done");
 
 	return 0;

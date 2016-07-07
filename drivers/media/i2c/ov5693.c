@@ -539,8 +539,6 @@ static struct v4l2_subdev_video_ops ov5693_subdev_video_ops = {
 	.s_stream	= ov5693_s_stream,
 	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status = ov5693_g_input_status,
-	.enum_framesizes	= camera_common_enum_framesizes,
-	.enum_frameintervals	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops ov5693_subdev_core_ops = {
@@ -572,6 +570,8 @@ static struct v4l2_subdev_pad_ops ov5693_subdev_pad_ops = {
 	.set_fmt = ov5693_set_fmt,
 	.get_fmt = ov5693_get_fmt,
 	.enum_mbus_code = camera_common_enum_mbus_code,
+	.enum_frame_size	= camera_common_enum_framesizes,
+	.enum_frame_interval	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_ops ov5693_subdev_ops = {

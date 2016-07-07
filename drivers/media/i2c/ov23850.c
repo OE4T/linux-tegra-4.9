@@ -445,12 +445,6 @@ static int ov23850_power_get(struct ov23850 *priv)
 		return PTR_ERR(pw->mclk);
 	}
 
-	parent = devm_clk_get(&priv->i2c_client->dev, "pllp_grtba");
-	if (IS_ERR(parent))
-		dev_err(&priv->i2c_client->dev, "devm_clk_get failed for pllp_grtba");
-	else
-		clk_set_parent(pw->mclk, parent);
-
 	err = clk_set_rate(pw->mclk, OV23850_DEFAULT_CLK_FREQ);
 	if (!err)
 		err = clk_prepare_enable(pw->mclk);
@@ -570,8 +564,6 @@ static struct v4l2_subdev_video_ops ov23850_subdev_video_ops = {
 	.s_stream	= ov23850_s_stream,
 	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status	= ov23850_g_input_status,
-	.enum_framesizes	= camera_common_enum_framesizes,
-	.enum_frameintervals	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops ov23850_subdev_core_ops = {
@@ -603,6 +595,8 @@ static struct v4l2_subdev_pad_ops ov23850_subdev_pad_ops = {
 	.set_fmt = ov23850_set_fmt,
 	.get_fmt = ov23850_get_fmt,
 	.enum_mbus_code = camera_common_enum_mbus_code,
+	.enum_frame_size	= camera_common_enum_framesizes,
+	.enum_frame_interval	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_ops ov23850_subdev_ops = {
@@ -1294,7 +1288,6 @@ static int ov23850_probe(struct i2c_client *client,
 	struct ov23850 *priv;
 	char debugfs_name[10];
 	int err;
-	u32 port = 0;
 
 	pr_info("[OV23850]: probing v4l2 sensor at addr 0x%0x.\n",
 		client->addr);

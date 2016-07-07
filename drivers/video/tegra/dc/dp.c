@@ -1328,7 +1328,7 @@ static void tegra_dpaux_enable(struct tegra_dc_dp_data *dp)
 	/* clear interrupt */
 	tegra_dpaux_writel(dp, DPAUX_INTR_AUX, 0xffffffff);
 
-	tegra_dpaux_prod_set(dp->dc);
+	tegra_dpaux_prod_set_for_dp(dp->dc);
 	tegra_dpaux_pad_power(dp->dc,
 		dp_num == 0 ? TEGRA_DPAUX_INSTANCE_0 :
 		TEGRA_DPAUX_INSTANCE_1, true);

@@ -24,6 +24,7 @@
 #include "dc_priv.h"
 #include "dpaux.h"
 #include "dp.h"
+#include "hdmi2.0.h"
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
 static const char *const dpaux_clks[TEGRA_DPAUX_INSTANCE_N] = {
@@ -167,7 +168,7 @@ void tegra_set_dpaux_addr(void __iomem *dpaux_base,
 	dpaux_baseaddr[id] = dpaux_base;
 }
 
-void tegra_dpaux_prod_set(struct tegra_dc *dc)
+void tegra_dpaux_prod_set_for_dp(struct tegra_dc *dc)
 {
 	int err = 0;
 	int sor_num = tegra_dc_which_sor(dc);
@@ -189,13 +190,52 @@ void tegra_dpaux_prod_set(struct tegra_dc *dc)
 							dp->dpaux_prod_list);
 		if (err) {
 			dev_warn(&dc->ndev->dev,
-				"dpaux: prod set failed\n");
+				"dpaux: prod set failed for DP\n");
+			}
+		}
+
+	tegra_dc_io_end(dc);
+	tegra_dpaux_clk_dis(np_dp, sor_num);
+	tegra_dc_powergate_locked(dc);
+}
+
+void tegra_dpaux_prod_set_for_hdmi(struct tegra_dc *dc)
+{
+	int err = 0;
+	int sor_num = tegra_dc_which_sor(dc);
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+	struct device_node *np_dpaux = of_find_node_by_path(
+			sor_num ? DPAUX1_NODE : DPAUX_NODE);
+#ifndef CONFIG_TEGRA_NVDISPLAY
+	void __iomem *regaddr;
+#endif
+
+	if (!np_dpaux) {
+		dev_err(&dc->ndev->dev, "HDMI node not available\n");
+		return;
+	}
+
+	tegra_dc_unpowergate_locked(dc);
+	tegra_dpaux_clk_en(np_dpaux, sor_num);
+	tegra_dc_io_start(dc);
+
+	if (!IS_ERR(hdmi->dpaux_prod_list)) {
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		err = tegra_prod_set_by_name(&hdmi->hdmi_dpaux_base[sor_num],
+				"prod_c_dpaux_hdmi", hdmi->dpaux_prod_list);
+#else
+		regaddr = IO_ADDRESS(dpaux_base_addr[sor_num]);
+		err = tegra_prod_set_by_name(&regaddr,
+				"prod_c_dpaux_hdmi", hdmi->dpaux_prod_list);
+#endif
+		if (err) {
+			dev_warn(&dc->ndev->dev,
+				"dpaux: prod set failed for HDMI\n");
 		}
 	}
 
-	/* Do clean up upon error */
 	tegra_dc_io_end(dc);
-	tegra_dpaux_clk_dis(np_dp, sor_num);
+	tegra_dpaux_clk_dis(np_dpaux, sor_num);
 	tegra_dc_powergate_locked(dc);
 }
 

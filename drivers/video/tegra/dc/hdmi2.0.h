@@ -377,6 +377,10 @@ struct tegra_hdmi {
 	struct switch_dev audio_switch;
 #endif
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	struct resource *hdmi_dpaux_res[2];
+	void __iomem *hdmi_dpaux_base[2];
+#endif
 	struct hdmi_vendor_infoframe vsi;
 
 	struct tegra_nvhdcp *nvhdcp;
@@ -387,6 +391,7 @@ struct tegra_hdmi {
 	int ddc_i2c_original_rate;
 	int irq;
 	struct tegra_prod *prod_list;
+	struct tegra_prod *dpaux_prod_list;
 	int ddc_refcount;
 	struct mutex ddc_refcount_lock;
 	bool device_shutdown;

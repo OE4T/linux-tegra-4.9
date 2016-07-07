@@ -39,5 +39,6 @@ void tegra_dpaux_pad_power(struct tegra_dc *dc,
 void tegra_dpaux_config_pad_mode(struct tegra_dc *dc,
 				enum tegra_dpaux_instance id,
 				enum tegra_dpaux_pad_mode mode);
-void tegra_dpaux_prod_set(struct tegra_dc *dc);
+void tegra_dpaux_prod_set_for_dp(struct tegra_dc *dc);
+void tegra_dpaux_prod_set_for_hdmi(struct tegra_dc *dc);
 #endif

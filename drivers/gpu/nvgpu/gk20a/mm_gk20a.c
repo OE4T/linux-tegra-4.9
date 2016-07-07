@@ -1173,9 +1173,9 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	 * default.
 	 */
 	if (IS_ENABLED(CONFIG_ARM64))
-		err = gk20a_gmmu_alloc_sys(g, len, &entry->mem);
+		err = gk20a_gmmu_alloc(g, len, &entry->mem);
 	else
-		err = gk20a_gmmu_alloc_attr_sys(g, DMA_ATTR_NO_KERNEL_MAPPING,
+		err = gk20a_gmmu_alloc_attr(g, DMA_ATTR_NO_KERNEL_MAPPING,
 				len, &entry->mem);
 
 

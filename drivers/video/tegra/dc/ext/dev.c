@@ -2032,9 +2032,11 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		bypass = !!(args.flags & TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 		if (!!(user->ext->dc->mode.vmode & FB_VMODE_YUV_MASK) !=
 		    bypass)
 			return -EINVAL;
+#endif
 
 		if (bypass != user->ext->dc->yuv_bypass)
 			user->ext->dc->yuv_bypass_dirty = true;
@@ -2088,9 +2090,11 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		bypass = !!(args.flags & TEGRA_DC_EXT_FLIP_HEAD_FLAG_YUVBYPASS);
 
+#ifndef CONFIG_TEGRA_NVDISPLAY
 		if (!!(user->ext->dc->mode.vmode & FB_VMODE_YUV_MASK) !=
 		    bypass)
 			return -EINVAL;
+#endif
 
 		if (bypass != user->ext->dc->yuv_bypass)
 			user->ext->dc->yuv_bypass_dirty = true;

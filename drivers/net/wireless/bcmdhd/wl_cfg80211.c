@@ -10203,22 +10203,14 @@ wl_notify_rx_mgmt_frame(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 #endif
 
 #if (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0))
-                        cfg80211_rx_mgmt(cfgdev, cfg->tdls_mgmt_freq, 0,
-                                cfg->tdls_mgmt_frame, cfg->tdls_mgmt_frame_len,
-                                0);
+	cfg80211_rx_mgmt(cfgdev, freq, 0, mgmt_frame, mgmt_frame_len, 0);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 12, 0))
-                        cfg80211_rx_mgmt(cfgdev, cfg->tdls_mgmt_freq, 0,
-                                cfg->tdls_mgmt_frame, cfg->tdls_mgmt_frame_len,
-                                0, GFP_ATOMIC);
+	cfg80211_rx_mgmt(cfgdev, freq, 0, mgmt_frame, mgmt_frame_len, 0, GFP_ATOMIC);
 #elif (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 4, 0)) || \
         defined(WL_COMPAT_WIRELESS)
-                        cfg80211_rx_mgmt(cfgdev, cfg->tdls_mgmt_freq, 0,
-                                cfg->tdls_mgmt_frame, cfg->tdls_mgmt_frame_len,
-                                GFP_ATOMIC);
+	cfg80211_rx_mgmt(cfgdev, freq, 0, mgmt_frame, mgmt_frame_len, GFP_ATOMIC);
 #else
-                        cfg80211_rx_mgmt(cfgdev, cfg->tdls_mgmt_freq,
-                                cfg->tdls_mgmt_frame, cfg->tdls_mgmt_frame_len,
-                                GFP_ATOMIC);
+	cfg80211_rx_mgmt(cfgdev, freq, mgmt_frame, mgmt_frame_len, GFP_ATOMIC);
 #endif /* LINUX_VERSION >= VERSION(3, 12, 0) */
 
 	WL_DBG(("mgmt_frame_len (%d) , e->datalen (%d), channel (%d), freq (%d)\n",

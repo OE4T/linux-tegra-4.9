@@ -185,35 +185,71 @@ static struct snd_soc_pcm_stream tegra_t186ref_asrc_link_params[] = {
 	PARAMS(SNDRV_PCM_FMTBIT_S16_LE, 2),
 };
 
-static int tegra_t186ref_set_params(struct snd_soc_pcm_stream *dai_params,
-					struct snd_soc_dai *cpu_dai,
-					struct snd_soc_pcm_runtime *rtd,
-					struct snd_soc_card *card,
-					int rate,
-					int channels,
-					u64 formats)
+static int tegra_t186ref_set_params(struct snd_soc_card *card,
+				    struct tegra_t186ref *machine,
+				    int rate,
+				    int channels,
+				    u64 format)
 {
-	unsigned int fmt = rtd->dai_link->dai_fmt;
 	unsigned int tx_mask = (1 << channels) - 1;
 	unsigned int rx_mask = (1 << channels) - 1;
-	int err = 0;
+	int idx, err = 0;
+	int num_of_dai_links = TEGRA186_XBAR_DAI_LINKS +
+				machine->num_codec_links;
 
-	/* update link_param to update hw_param for DAPM */
-	dai_params->rate_min = rate;
-	dai_params->channels_min = channels;
-	dai_params->formats = formats;
+	/* update dai link hw_params */
+	for (idx = 0; idx < num_of_dai_links; idx++) {
+		if (card->rtd[idx].dai_link->params) {
+			struct snd_soc_pcm_stream *dai_params;
 
-	/* set TDM slot mask */
-	if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) == SND_SOC_DAIFMT_DSP_A) {
-		err = snd_soc_dai_set_tdm_slot(cpu_dai,
-				tx_mask, rx_mask, 0, 0);
-		if (err < 0) {
-			dev_err(card->dev, "%s cpu DAI slot mask not set\n",
-					cpu_dai->name);
+			dai_params =
+			  (struct snd_soc_pcm_stream *)
+			  card->rtd[idx].dai_link->params;
+
+			dai_params->rate_min = rate;
+			dai_params->channels_min = channels;
+			dai_params->formats = format;
+
+			if (idx >= TEGRA186_XBAR_DAI_LINKS) {
+				unsigned int fmt;
+				int bclk_ratio;
+
+				err = 0;
+				fmt = card->rtd[idx].dai_link->dai_fmt;
+				bclk_ratio =
+					tegra_machine_get_bclk_ratio_t18x(
+						&card->rtd[idx]);
+
+				if (bclk_ratio >= 0) {
+					err = snd_soc_dai_set_bclk_ratio(
+							card->rtd[idx].cpu_dai,
+							bclk_ratio);
+				}
+
+				if (err < 0) {
+					dev_err(card->dev,
+					"Failed to set cpu dai bclk ratio for %s\n",
+					card->rtd[idx].dai_link->name);
+				}
+
+				/* set TDM slot mask */
+				if ((fmt & SND_SOC_DAIFMT_FORMAT_MASK) ==
+							SND_SOC_DAIFMT_DSP_A) {
+					err = snd_soc_dai_set_tdm_slot(
+							card->rtd[idx].cpu_dai,
+							tx_mask, rx_mask, 0, 0);
+					if (err < 0) {
+						dev_err(card->dev,
+						"%s cpu DAI slot mask not set\n",
+						card->rtd[idx].cpu_dai->name);
+					}
+				}
+			}
 		}
 	}
-	return err;
+	return 0;
 }
+
 static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 					int rate,
 					int channels,
@@ -225,9 +261,12 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int idx, clk_out_rate;
 	int err, codec_rate, clk_rate;
+	u64 fmt;
 
 	codec_rate = tegra_t186ref_srate_values[machine->rate_via_kcontrol];
 	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
+	fmt = (machine->fmt_via_kcontrol == 2) ?
+				(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock, clk_rate,
 						0, 0);
@@ -241,20 +280,8 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	pr_info("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
 		machine->audio_clock.set_mclk, clk_out_rate, clk_rate);
 
-	/* update dai link hw_params for non pcm links */
-	for (idx = 0; idx < TEGRA186_XBAR_DAI_LINKS; idx++) {
-		if (card->rtd[idx].dai_link->params) {
-			dai_params =
-			  (struct snd_soc_pcm_stream *)
-			  card->rtd[idx].dai_link->params;
-			dai_params->rate_min = rate;
-			dai_params->channels_min = channels;
-			dai_params->formats = 1ULL <<
-				((machine->fmt_via_kcontrol == 2) ?
-				SNDRV_PCM_FORMAT_S32_LE :
-				SNDRV_PCM_FORMAT_S16_LE);
-		}
-	}
+	tegra_t186ref_set_params(card, machine, rate, channels, fmt);
+
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
 	/* check if idx has valid number */
 	if (idx != -EINVAL) {
@@ -269,69 +296,6 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 				return err;
 			}
 		}
-
-		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
-		if (err < 0) {
-			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
-				card->rtd[idx].dai_link->name);
-			return err;
-		}
-
-		err = tegra_t186ref_set_params(dai_params,
-						card->rtd[idx].cpu_dai,
-						&card->rtd[idx], card,
-						clk_rate, channels, formats);
-		if (err < 0)
-			return err;
-
-		/* Override PCM format for HRA */
-		dai_params->formats = 1ULL <<
-			((machine->fmt_via_kcontrol == 2) ?
-			SNDRV_PCM_FORMAT_S32_LE :
-			SNDRV_PCM_FORMAT_S16_LE);
-	}
-
-	idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-dit-0");
-	if (idx != -EINVAL) {
-		dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-
-		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
-		if (err < 0) {
-			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
-				card->rtd[idx].dai_link->name);
-			return err;
-		}
-
-		err = tegra_t186ref_set_params(dai_params,
-						card->rtd[idx].cpu_dai,
-						&card->rtd[idx], card,
-						rate, channels,	formats);
-		if (err < 0)
-			return err;
-	}
-
-	idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-dit-1");
-	if (idx != -EINVAL) {
-		dai_params =
-		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
-
-		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
-		if (err < 0) {
-			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
-				card->rtd[idx].dai_link->name);
-			return err;
-		}
-
-		err = tegra_t186ref_set_params(dai_params,
-						card->rtd[idx].cpu_dai,
-						&card->rtd[idx], card,
-						clk_rate, channels, formats);
-		if (err < 0)
-			return err;
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("dspk-playback-r");
@@ -339,24 +303,20 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
+		if (!machine->is_codec_dummy) {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-		0, clk_out_rate, SND_SOC_CLOCK_IN);
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+				0, clk_out_rate, SND_SOC_CLOCK_IN);
 #else
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-		TAS2552_PDM_CLK_IVCLKIN, clk_out_rate, SND_SOC_CLOCK_IN);
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+				TAS2552_PDM_CLK_IVCLKIN, clk_out_rate,
+				SND_SOC_CLOCK_IN);
 #endif
-		if (err < 0) {
-			dev_err(card->dev, "codec_dai clock not set\n");
-			return err;
+			if (err < 0) {
+				dev_err(card->dev, "codec_dai clock not set\n");
+				return err;
+			}
 		}
-
-		err = tegra_t186ref_set_params(dai_params,
-						card->rtd[idx].cpu_dai,
-						&card->rtd[idx], card,
-						clk_rate, channels, formats);
-		if (err < 0)
-			return err;
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("dspk-playback-l");
@@ -364,24 +324,20 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
 
+		if (!machine->is_codec_dummy) {
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4, 2, 0)
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-		0, clk_out_rate, SND_SOC_CLOCK_IN);
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+				0, clk_out_rate, SND_SOC_CLOCK_IN);
 #else
-		err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
-		TAS2552_PDM_CLK_IVCLKIN, clk_out_rate, SND_SOC_CLOCK_IN);
+			err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
+				TAS2552_PDM_CLK_IVCLKIN, clk_out_rate,
+				SND_SOC_CLOCK_IN);
 #endif
-		if (err < 0) {
-			dev_err(card->dev, "codec_dai clock not set\n");
-			return err;
+			if (err < 0) {
+				dev_err(card->dev, "codec_dai clock not set\n");
+				return err;
+			}
 		}
-
-		err = tegra_t186ref_set_params(dai_params,
-						card->rtd[idx].cpu_dai,
-						&card->rtd[idx], card,
-						clk_rate, channels, formats);
-		if (err < 0)
-			return err;
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-playback");
@@ -404,21 +360,6 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 				return err;
 			}
 		}
-
-		err = snd_soc_dai_set_bclk_ratio(card->rtd[idx].cpu_dai,
-			tegra_machine_get_bclk_ratio_t18x(&card->rtd[idx]));
-		if (err < 0) {
-			dev_err(card->dev, "Failed to set cpu dai bclk ratio for %s\n",
-				card->rtd[idx].dai_link->name);
-			return err;
-		}
-
-		err = tegra_t186ref_set_params(dai_params,
-						card->rtd[idx].cpu_dai,
-						&card->rtd[idx], card,
-						clk_rate, channels, formats);
-		if (err < 0)
-			return err;
 	}
 
 	return 0;
@@ -734,23 +675,25 @@ static const struct snd_soc_dapm_widget tegra_t186ref_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("x Mic Jack", tegra_rt565x_event_ext_mic),
 	SND_SOC_DAPM_MIC("Int Mic", NULL),
 	SND_SOC_DAPM_HP("x Headphone", NULL),
-	SND_SOC_DAPM_HP("y Headphone", NULL),
-	SND_SOC_DAPM_HP("z Headphone", NULL),
-	SND_SOC_DAPM_HP("m Headphone", NULL),
-	SND_SOC_DAPM_HP("p Headphone", NULL),
-	SND_SOC_DAPM_HP("q Headphone", NULL),
 	SND_SOC_DAPM_MIC("x Mic", NULL),
+	SND_SOC_DAPM_HP("y Headphone", NULL),
 	SND_SOC_DAPM_MIC("y Mic", NULL),
+	SND_SOC_DAPM_HP("z Headphone", NULL),
 	SND_SOC_DAPM_MIC("z Mic", NULL),
+	SND_SOC_DAPM_HP("m Headphone", NULL),
 	SND_SOC_DAPM_MIC("m Mic", NULL),
-	SND_SOC_DAPM_MIC("p Mic", NULL),
-	SND_SOC_DAPM_MIC("q Mic", NULL),
+	SND_SOC_DAPM_HP("n Headphone", NULL),
+	SND_SOC_DAPM_MIC("n Mic", NULL),
+	SND_SOC_DAPM_HP("o Headphone", NULL),
+	SND_SOC_DAPM_MIC("o Mic", NULL),
+	SND_SOC_DAPM_MIC("a Mic", NULL),
+	SND_SOC_DAPM_MIC("b Mic", NULL),
+	SND_SOC_DAPM_MIC("c Mic", NULL),
+	SND_SOC_DAPM_MIC("d Mic", NULL),
+	SND_SOC_DAPM_HP("e Headphone", NULL),
+	SND_SOC_DAPM_MIC("e Mic", NULL),
 	SND_SOC_DAPM_SPK("d1 Headphone", NULL),
 	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
-	SND_SOC_DAPM_MIC("d1 Mic", NULL),
-	SND_SOC_DAPM_MIC("d2 Mic", NULL),
-	SND_SOC_DAPM_HP("s Headphone", NULL),
-	SND_SOC_DAPM_MIC("s Mic", NULL),
 };
 
 static int tegra_t186ref_suspend_pre(struct snd_soc_card *card)

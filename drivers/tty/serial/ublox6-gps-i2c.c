@@ -31,6 +31,7 @@
 
 /* By default u-blox GPS fill its buffer every 1 second (1000 msecs) */
 #define READ_TIME 1000
+#define FAST_READ_TIME 100
 
 struct ublox_device {
 	struct tty_driver *tty_driver;
@@ -38,6 +39,7 @@ struct ublox_device {
 	struct i2c_client *i2c_client;
 	struct regmap *i2c_regmap;
 	struct delayed_work dwork;
+	bool is_active;
 };
 
 static void ublox_gps_read_worker(struct work_struct *private);
@@ -73,8 +75,8 @@ static void ublox_gps_read_worker(struct work_struct *private)
 	 * The currently available number of bytes is read via the 2 bytes at
 	 * 0xfd and 0xfe.
 	 */
-	gps_buf_size = ((gps_buf_size & 0xf) << 8) |
-			((gps_buf_size & 0xf0) >> 8);
+	gps_buf_size = ((gps_buf_size & 0xff) << 8) |
+			((gps_buf_size & 0xff00) >> 8);
 	if (gps_buf_size > 0) {
 		buf = kcalloc(gps_buf_size, sizeof(*buf), GFP_KERNEL);
 		if (!buf)
@@ -113,11 +115,16 @@ static void ublox_gps_read_worker(struct work_struct *private)
 		tty_flip_buffer_push(&ublox_dev->tty_port);
 
 		kfree(buf);
+		if (ublox_dev->is_active)
+			schedule_delayed_work(&ublox_dev->dwork,
+					msecs_to_jiffies(FAST_READ_TIME));
+		return;
 	}
-
 end:
 	/* resubmit the workqueue again */
-	schedule_delayed_work(&ublox_dev->dwork, msecs_to_jiffies(READ_TIME));
+	if (ublox_dev->is_active)
+		schedule_delayed_work(&ublox_dev->dwork,
+					msecs_to_jiffies(READ_TIME));
 }
 
 static int ublox_gps_serial_open(struct tty_struct *tty, struct file *filp)
@@ -151,6 +158,9 @@ static int ublox_gps_serial_write(struct tty_struct *tty,
 	else
 		dev_dbg(&ublox_dev->i2c_client->dev, "%d bytes written\n",
 			count);
+	if (ublox_dev->is_active)
+		schedule_delayed_work(&ublox_dev->dwork,
+					msecs_to_jiffies(FAST_READ_TIME));
 
 	return (ret == 0 ? count : ret);
 }
@@ -173,6 +183,7 @@ static void ublox_gps_shutdown(struct tty_port *port)
 	struct ublox_device *ublox_dev = (struct ublox_device *)
 			container_of(port, struct ublox_device, tty_port);
 
+	ublox_dev->is_active = false;
 	cancel_delayed_work(&ublox_dev->dwork);
 	flush_work(&ublox_dev->dwork.work);
 }
@@ -182,6 +193,7 @@ static int ublox_gps_activate(struct tty_port *port, struct tty_struct *tty)
 	struct ublox_device *ublox_dev = (struct ublox_device *)
 			container_of(port, struct ublox_device, tty_port);
 
+	ublox_dev->is_active = true;
 	schedule_delayed_work(&ublox_dev->dwork, 0);
 
 	return 0;
@@ -253,6 +265,7 @@ static int ublox_gps_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, ublox_dev);
 
 	INIT_DELAYED_WORK(&ublox_dev->dwork, ublox_gps_read_worker);
+	ublox_dev->is_active = false;
 
 	dev_info(&client->dev, ": " DRIVER_VERSION ": " DRIVER_DESC "\n");
 

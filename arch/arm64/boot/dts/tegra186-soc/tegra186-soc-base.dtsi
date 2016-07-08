@@ -19,13 +19,13 @@
  */
 
 #include <dt-bindings/memory/tegra-swgroup.h>
-#include "../../../../include/dt-bindings/memory/tegra186-swgroup.h"
+#include "dt-bindings/memory/tegra186-swgroup.h"
 #include <dt-bindings/display/tegra-dc.h>
-#include "../../../../include/dt-bindings/clock/tegra186-clock.h"
-#include "../../../../include/dt-bindings/reset/tegra186-reset.h"
-#include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
-#include "../../../../include/dt-bindings/interrupt-controller/tegra-t18x-agic.h"
-#include "../../../../include/dt-bindings/padctrl/tegra186-pads.h"
+#include "dt-bindings/clock/tegra186-clock.h"
+#include "dt-bindings/reset/tegra186-reset.h"
+#include "dt-bindings/interrupt/tegra186-irq.h"
+#include "dt-bindings/interrupt-controller/tegra-t18x-agic.h"
+#include "dt-bindings/padctrl/tegra186-pads.h"
 #include "tegra186-soc/tegra186-soc-sdhci.dtsi"
 #include "tegra186-soc/tegra186-soc-sata.dtsi"
 #include "tegra186-soc/tegra186-soc-ufshc.dtsi"
@@ -33,17 +33,17 @@
 #include "tegra186-soc/tegra186-soc-spdif.dtsi"
 #include "tegra186-soc/tegra186-soc-spi.dtsi"
 #include "tegra186-soc/tegra186-soc-pwm.dtsi"
-#include "../../../../include/dt-bindings/soc/tegra186-powergate.h"
-#include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
+#include "dt-bindings/soc/tegra186-powergate.h"
+#include "dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 #include "tegra186-soc/tegra186-soc-uart.dtsi"
 #include "tegra186-soc/tegra186-soc-eqos.dtsi"
 #include "tegra186-soc/tegra186-soc-power-domain.dtsi"
 #include "tegra186-soc/tegra186-trusty.dtsi"
-#include <../../../../include/dt-bindings/hsp/tegra-hsp.h>
+#include <dt-bindings/hsp/tegra-hsp.h>
 #include "tegra186-soc/tegra186-soc-thermal.dtsi"
 #include "tegra186-soc/tegra186-camera.dtsi"
 #include "tegra186-soc/tegra186-soc-actmon.dtsi"
-#include <../../../../include/dt-bindings/soc/gp10b-fuse.h>
+#include <dt-bindings/soc/gp10b-fuse.h>
 #include <tegra186-soc-pm.dtsi>
 
 / {

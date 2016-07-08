@@ -13,7 +13,7 @@
  * more details.
  */
 
-#include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
+#include "dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 
 / {
 

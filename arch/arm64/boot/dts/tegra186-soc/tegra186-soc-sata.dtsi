@@ -15,7 +15,7 @@
  */
 
 #include <dt-bindings/pinctrl/pinctrl-tegra.h>
-#include "../../../../include/dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
+#include "dt-bindings/pinctrl/pinctrl-tegra-padctl-uphy.h"
 
 / {
 	pinmux@2430000 {

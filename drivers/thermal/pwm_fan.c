@@ -44,6 +44,8 @@
 #include <linux/regulator/consumer.h>
 #include <linux/time.h>
 #include <linux/atomic.h>
+#include <linux/sched.h>
+#include <linux/pinctrl/consumer.h>
 
 #define USEC_PER_MIN	(60L * USEC_PER_SEC)
 
@@ -845,6 +847,29 @@ irqreturn_t fan_tach_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
+static int set_pwm_pinctrl(struct device *dev)
+{
+	struct pinctrl *pin;
+	struct pinctrl_state *active;
+	int ret;
+
+	pin = devm_pinctrl_get(dev);
+	if (IS_ERR_OR_NULL(pin))
+		return 0;
+
+	active = pinctrl_lookup_state(pin, "pin_on_pwm_mode");
+	if (IS_ERR_OR_NULL(active)) {
+		return 0;
+	}
+
+	ret = pinctrl_select_state(pin, active);
+	if (ret < 0) {
+		dev_err(dev, "setting state failed\n");
+		return -EINVAL;
+	}
+	return 0;
+}
+
 static int pwm_fan_probe(struct platform_device *pdev)
 {
 	int i;
@@ -861,7 +886,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	u32 value;
 	int pwm_fan_gpio;
 	int tach_gpio;
-	int gpio_free_flag = 0;
 
 	if (!pdev)
 		return -EINVAL;
@@ -1028,6 +1052,13 @@ static int pwm_fan_probe(struct platform_device *pdev)
 		goto cdev_register_fail;
 	}
 
+	/* change pwm pin pinmux if needed */
+	if (set_pwm_pinctrl(&pdev->dev)) {
+		dev_err(&pdev->dev, "Failed to change pin function\n");
+		err = -EINVAL;
+		goto cdev_register_fail;
+	}
+
 	fan_data->pwm_dev = pwm_request(fan_data->pwm_id, dev_name(&pdev->dev));
 	if (IS_ERR_OR_NULL(fan_data->pwm_dev)) {
 		dev_err(&pdev->dev, "unable to request PWM for fan\n");
@@ -1039,8 +1070,6 @@ static int pwm_fan_probe(struct platform_device *pdev)
 
 	spin_lock_init(&fan_data->irq_lock);
 	atomic_set(&fan_data->tach_enabled, 0);
-	gpio_free(fan_data->pwm_gpio);
-	gpio_free_flag = 1;
 	if (fan_data->tach_gpio != -1) {
 		/* init fan tach */
 		fan_data->tach_irq = gpio_to_irq(fan_data->tach_gpio);
@@ -1104,6 +1133,9 @@ static int pwm_fan_probe(struct platform_device *pdev)
 	set_pwm_duty_cycle(fan_data->fan_pwm[0], fan_data);
 	fan_data->fan_cur_pwm = fan_data->fan_pwm[0];
 
+	/* Change to SFIO from GPIO after set duty */
+	gpio_free(fan_data->pwm_gpio);
+
 	platform_set_drvdata(pdev, fan_data);
 
 	if (add_sysfs_entry(&pdev->dev)) {
@@ -1147,8 +1179,6 @@ lookup_alloc_fail:
 rrd_alloc_fail:
 rru_alloc_fail:
 rpm_alloc_fail:
-	if (!gpio_free_flag)
-		gpio_free(fan_data->pwm_gpio);
 gpio_request_fail:
 	if (err == -ENXIO)
 		pr_err("FAN: of_property_read failed\n");

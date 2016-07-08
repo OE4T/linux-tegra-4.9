@@ -175,13 +175,13 @@ static int nvhost_ioctl_ctrl_syncpt_waitex(struct nvhost_ctrl_userctx *ctx,
 static int nvhost_ioctl_ctrl_syncpt_waitmex(struct nvhost_ctrl_userctx *ctx,
 	struct nvhost_ctrl_syncpt_waitmex_args *args)
 {
-	ulong timeout;
+	u32 timeout;
 	int err;
 	struct timespec ts;
 	if (!nvhost_syncpt_is_valid_hw_pt(&ctx->dev->syncpt, args->id))
 		return -EINVAL;
 	if (args->timeout == NVHOST_NO_TIMEOUT)
-		timeout = MAX_SCHEDULE_TIMEOUT;
+		timeout = (u32)MAX_SCHEDULE_TIMEOUT;
 	else
 		timeout = (u32)msecs_to_jiffies(args->timeout);
 

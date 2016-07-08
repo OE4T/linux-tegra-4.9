@@ -677,6 +677,9 @@ static ssize_t actmon_sample_period_norm_write(struct file *file,
 	if (copy_from_user(buffer, user_buf, buf_size))
 		return -EFAULT;
 
+	if (strlen(buffer) > buf_size)
+		return -EFAULT;
+
 	if (kstrtoul(buffer, 10, &period))
 		return -EINVAL;
 
@@ -740,6 +743,9 @@ static ssize_t actmon_k_write(struct file *file,
 	buf_size = min(count, (sizeof(buffer)-1));
 
 	if (copy_from_user(buffer, user_buf, buf_size))
+		return -EFAULT;
+
+	if (strlen(buffer) > buf_size)
 		return -EFAULT;
 
 	if (kstrtoul(buffer, 10, &k))

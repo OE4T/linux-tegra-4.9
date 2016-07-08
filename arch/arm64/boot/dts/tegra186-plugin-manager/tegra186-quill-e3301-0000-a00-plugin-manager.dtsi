@@ -103,33 +103,5 @@
 				};
 			};
 		};
-
-		e3301-a02-all@1 {
-			ids = ">=3301-1000-200", ">=3301-1080-200";
-			override@1 {
-				target = <&{/host1x/sor}>;
-				_overlay_ {
-					status = "okay";
-					hdmi-display {
-						status = "okay";
-					};
-				};
-			};
-			override@2 {
-				target = <&{/host1x/sor1}>;
-				_overlay_ {
-					status = "disabled";
-					hdmi-display {
-						status = "disabled";
-					};
-				};
-			};
-			override@3 {
-				target = <&{/host1x/nvdisplay@15210000}>;
-				_overlay_ {
-					nvidia,dc-or-node = "/host1x/sor";
-				};
-			};
-		};
 	};
 };

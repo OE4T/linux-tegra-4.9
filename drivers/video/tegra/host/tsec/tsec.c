@@ -74,6 +74,8 @@
 #define hdcp_align_dma(var) (((unsigned long)(hdcp_context->var \
 			+ HDCP_ALIGNMENT_256 - 1)) & ~HDCP_ALIGNMENT_256);
 
+#define FW_NAME_SIZE 32
+
 static int nvhost_tsec_init_sw(struct platform_device *dev);
 
 /* The key value in ascii hex */
@@ -475,14 +477,14 @@ static char *tsec_get_fw_name(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	/* note size here is a little over...*/
-	fw_name = kzalloc(32, GFP_KERNEL);
+	fw_name = kzalloc(FW_NAME_SIZE, GFP_KERNEL);
 	if (!fw_name)
 		return NULL;
 
 	decode_tsec_ver(pdata->version, &maj, &min);
 	if (maj == 1) {
 		/* there are no minor versions so far for maj==1 */
-		sprintf(fw_name, "nvhost_tsec.fw");
+		snprintf(fw_name, FW_NAME_SIZE, "nvhost_tsec.fw");
 	} else {
 		kfree(fw_name);
 		return NULL;

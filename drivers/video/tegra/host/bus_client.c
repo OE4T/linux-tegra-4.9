@@ -1656,7 +1656,7 @@ nvhost_client_request_firmware(struct platform_device *dev, const char *fw_name)
 		if (!fw_path)
 			return NULL;
 
-		sprintf(fw_path, "%s/%s", op->soc_name, fw_name);
+		snprintf(fw_path, sizeof(*fw_path) * path_len, "%s/%s", op->soc_name, fw_name);
 		fw_name = fw_path;
 	}
 

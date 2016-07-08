@@ -58,6 +58,7 @@
 
 #define NVDEC_IDLE_TIMEOUT_DEFAULT	100000	/* 100 milliseconds */
 #define NVDEC_IDLE_CHECK_PERIOD		10	/* 10 usec */
+#define FW_NAME_SIZE			32
 
 #define get_nvdec(ndev) ((struct nvdec **)(ndev)->dev.platform_data)
 #define set_nvdec(ndev, f) ((ndev)->dev.platform_data = f)
@@ -80,7 +81,7 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 					nvdec_scp_ctl_stat_debug_mode_m();
 
 	/* note size here is a little over...*/
-	fw_name = kzalloc(32, GFP_KERNEL);
+	fw_name = kzalloc(FW_NAME_SIZE, GFP_KERNEL);
 	if (!fw_name)
 		return NULL;
 
@@ -90,15 +91,16 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 			if (fw == host_nvdec_fw_bl) {
 				if (tegra_platform_is_qt() ||
 					tegra_platform_is_linsim())
-					sprintf(fw_name,
+					snprintf(fw_name, FW_NAME_SIZE,
 							"nvhost_nvdec_bl_no_wpr0%d%d.fw",
 							maj, min);
 				else
-					sprintf(fw_name,
+					snprintf(fw_name, FW_NAME_SIZE,
 							"nvhost_nvdec_bl0%d%d.fw",
 							maj, min);
 			} else
-				sprintf(fw_name, "nvhost_nvdec0%d%d.fw",
+				snprintf(fw_name, FW_NAME_SIZE,
+						"nvhost_nvdec0%d%d.fw",
 						maj, min);
 		} else {
 			if (fw == host_nvdec_fw_bl)
@@ -109,15 +111,16 @@ static char *nvdec_get_fw_name(struct platform_device *dev, int fw)
 					kfree(fw_name);
 					return NULL;
 				} else
-					sprintf(fw_name,
+					snprintf(fw_name, FW_NAME_SIZE,
 							"nvhost_nvdec_bl0%d%d_prod.fw",
 							maj, min);
 			else
-				sprintf(fw_name, "nvhost_nvdec0%d%d_prod.fw",
+				snprintf(fw_name, FW_NAME_SIZE,
+						"nvhost_nvdec0%d%d_prod.fw",
 						maj, min);
 		}
 	} else
-		sprintf(fw_name, "nvhost_nvdec0%d%d_ns.fw", maj, min);
+		snprintf(fw_name, FW_NAME_SIZE, "nvhost_nvdec0%d%d_ns.fw", maj, min);
 
 	dev_info(&dev->dev, "fw name:%s\n", fw_name);
 

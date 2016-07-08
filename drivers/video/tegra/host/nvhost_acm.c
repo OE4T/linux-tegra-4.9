@@ -566,7 +566,7 @@ static ssize_t force_on_show(struct kobject *kobj,
 	struct platform_device *dev = power_attribute->ndev;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	return sprintf(buf, "%d\n", pdata->forced_on);
+	return snprintf(buf, PAGE_SIZE, "%d\n", pdata->forced_on);
 
 }
 
@@ -613,7 +613,7 @@ static ssize_t powergate_delay_show(struct kobject *kobj,
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	mutex_lock(&pdata->lock);
-	ret = sprintf(buf, "%d\n", pdata->powergate_delay);
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", pdata->powergate_delay);
 	mutex_unlock(&pdata->lock);
 
 	return ret;
@@ -655,7 +655,7 @@ static ssize_t clockgate_delay_show(struct kobject *kobj,
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	mutex_lock(&pdata->lock);
-	ret = sprintf(buf, "%d\n", pdata->clockgate_delay);
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", pdata->clockgate_delay);
 	mutex_unlock(&pdata->lock);
 
 	return ret;

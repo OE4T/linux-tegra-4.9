@@ -4940,14 +4940,17 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 	struct tegra_dsi_out *dsi_pdata = NULL;
 	int err = 0, i;
 	int dsi_instance;
-	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
+
 	char *split_link_reg_name[4] = {"split_dsia_regs", "split_disb_regs",
 					"split_dsic_regs", "split_dsid_regs"};
 #ifdef CONFIG_TEGRA_NVDISPLAY
+	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
+					NULL, NULL};
 	char *dsi_clk_name[4] = {"dsi", "dsib", "dsic", "dsid"};
 	char *dsi_lp_clk_name[4] = {"dsia_lp", "dsib_lp", "dsic_lp", "dsid_lp"};
 	char *dsi_reset_name[4] = {"dsia", "dsib", "dsic", "dsid"};
 #else
+	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
 	char *dsi_clk_name[4] = {"dsia", "dsib", "dsic", "dsid"};
 	char *dsi_lp_clk_name[4] = {"dsialp", "dsiblp", "dsiclp", "dsidlp"};
 #endif

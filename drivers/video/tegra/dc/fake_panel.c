@@ -321,7 +321,12 @@ int tegra_dc_destroy_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	int i = 0;
 	struct resource *res;
 	struct resource dsi_res;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
+					NULL, NULL};
+#else
 	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
+#endif
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_OF
 	struct device_node *np_dsi =
@@ -400,7 +405,12 @@ int tegra_dc_reinit_dsi_resources(struct tegra_dc *dc, long dc_outtype)
 	struct resource dsi_res;
 
 	int err = 0, i;
-	char *ganged_reg_name[2] = {"ganged_dsia_regs", "ganged_dsib_regs"};
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs",
+					NULL, NULL};
+#else
+	char *ganged_reg_name[4] = {"ganged_dsia_regs", "ganged_dsib_regs"};
+#endif
 
 	struct device_node *np = dc->ndev->dev.of_node;
 #ifdef CONFIG_OF

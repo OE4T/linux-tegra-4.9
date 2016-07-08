@@ -2796,12 +2796,13 @@ int gk20a_fifo_update_runlist_ids(struct gk20a *g, u32 runlist_ids, u32 hw_chid,
 	u32 ret = -EINVAL;
 	u32 runlist_id = 0;
 	u32 errcode;
+	unsigned long ulong_runlist_ids = (unsigned long)runlist_ids;
 
 	if (!g)
 		goto end;
 
 	ret = 0;
-	for_each_set_bit(runlist_id, (unsigned long *)&runlist_ids, 32) {
+	for_each_set_bit(runlist_id, &ulong_runlist_ids, 32) {
 		/* Capture the last failure error code */
 		errcode = g->ops.fifo.update_runlist(g, runlist_id, hw_chid, add, wait_for_finish);
 		if (errcode) {

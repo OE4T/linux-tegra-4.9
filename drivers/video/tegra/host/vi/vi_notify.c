@@ -80,15 +80,18 @@ static int vi_notify_dev_classify(struct vi_notify_dev *vnd)
 	struct vi_notify_channel *chan;
 	u32 ign_mask = -1;
 	unsigned i;
+	bool active = false;
 
 	for (i = 0; i < vnd->num_channels; i++) {
 		chan = rcu_access_pointer(vnd->channels[i]);
-		if (chan != NULL)
+		if (chan != NULL) {
 			ign_mask &= atomic_read(&chan->ign_mask);
+			active = true;
+		}
 	}
 
 	/* Unmask NLINES event, for Mid-Frame Interrupt */
-	if (ign_mask != 0xffffffff && tegra_vi_has_mfi_callback())
+	if (active && tegra_vi_has_mfi_callback())
 		ign_mask &= ~(1u << VI_NOTIFY_TAG_CHANSEL_NLINES);
 
 	return vnd->driver->classify(vnd->device, ~ign_mask);
@@ -414,6 +417,7 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 	}
 
 	rcu_assign_pointer(vnd->channels[channel], chan);
+	vi_notify_dev_classify(vnd);
 	mutex_unlock(&vnd->lock);
 
 	file->private_data = chan;

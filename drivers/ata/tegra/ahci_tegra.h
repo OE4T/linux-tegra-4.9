@@ -230,6 +230,11 @@ struct tegra_ahci_soc_data {
 	void	*data;
 };
 
+#ifdef CONFIG_DEBUG_FS
+int tegra_ahci_dbg_dump_show(struct seq_file *s, void *data);
+int tegra_ahci_dump_debuginit(void *data);
+#endif
+
 #ifdef CONFIG_PM
 #ifndef _AHCI_TEGRA_DEBUG_H
 static u32 pg_save_bar5_registers[] = {

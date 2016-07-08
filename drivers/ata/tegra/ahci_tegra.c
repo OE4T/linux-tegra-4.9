@@ -15,11 +15,18 @@
  */
 
 #include "ahci_tegra.h"
-#ifdef CONFIG_DEBUG_FS
-#include "ahci_tegra_debug.h"
-#endif
 #include "linux/pinctrl/consumer.h"
 
+#ifdef CONFIG_DEBUG_FS
+#include <linux/debugfs.h>
+#include <linux/seq_file.h>
+
+#define	TEGRA_AHCI_DUMP_REGS(s, fmt, args...) { if (s != NULL)\
+			seq_printf(s, fmt, ##args); else  printk(fmt, ##args); }
+#define	TEGRA_AHCI_DUMP_STRING(s, str) { if (s != NULL)\
+			seq_puts(s, str); else printk(str); }
+
+#endif
 
 static int tegra_ahci_power_on(struct ahci_host_priv *hpriv);
 static void tegra_ahci_power_off(struct ahci_host_priv *hpriv);
@@ -60,7 +67,7 @@ static const struct of_device_id tegra_ahci_of_match[] = {
 	},
 	{}
 };
-MODULE_DEVICE_TABLE(of, of_ahci_tegra_match);
+MODULE_DEVICE_TABLE(of, tegra_ahci_of_match);
 
 static void tegra_ahci_host_stop(struct ata_host *host)
 {
@@ -1375,6 +1382,91 @@ static struct platform_driver tegra_ahci_driver = {
 	},
 };
 module_platform_driver(tegra_ahci_driver);
+
+#ifdef CONFIG_DEBUG_FS
+
+static void tegra_ahci_dbg_print_regs(struct seq_file *s, u32 *ptr,
+		u32 base, u32 regs)
+{
+#define REGS_PER_LINE   4
+
+	u32 i, j;
+	u32 lines = regs / REGS_PER_LINE;
+
+	for (i = 0; i < lines; i++) {
+		TEGRA_AHCI_DUMP_REGS(s, "0x%08x: ", base+(i*16));
+		for (j = 0; j < REGS_PER_LINE; ++j) {
+			TEGRA_AHCI_DUMP_REGS(s, "0x%08x ", readl(ptr));
+			++ptr;
+		}
+		TEGRA_AHCI_DUMP_STRING(s, "\n");
+	}
+#undef REGS_PER_LINE
+}
+
+int tegra_ahci_dbg_dump_show(struct seq_file *s, void *data)
+{
+	struct ahci_host_priv *hpriv = NULL;
+	struct tegra_ahci_priv *tegra = NULL;
+	u32 base;
+	u32 *ptr;
+	u32 i;
+
+	if (s)
+		hpriv = s->private;
+	else
+		hpriv = data;
+
+	tegra = hpriv->plat_data;
+
+	tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_CH1, T_SATA0_INDEX);
+
+	base = tegra->res[TEGRA_SATA_CONFIG]->start;
+	ptr = tegra->base_list[TEGRA_SATA_CONFIG];
+	TEGRA_AHCI_DUMP_STRING(s, "SATA CONFIG Registers:\n");
+	TEGRA_AHCI_DUMP_STRING(s, "----------------------\n");
+	tegra_ahci_dbg_print_regs(s, ptr, base, 0x400);
+
+	base = tegra->res[TEGRA_SATA_AHCI]->start;
+	ptr = hpriv->mmio;
+	TEGRA_AHCI_DUMP_STRING(s, "\nAHCI HBA Registers:\n");
+	TEGRA_AHCI_DUMP_STRING(s, "-------------------\n");
+	tegra_ahci_dbg_print_regs(s, ptr, base, 64);
+
+	for (i = 0; i < hpriv->nports; ++i) {
+		base = (tegra->res[TEGRA_SATA_AHCI]->start) + 0x100 + (0x80*i);
+		ptr = hpriv->mmio + 0x100;
+		TEGRA_AHCI_DUMP_REGS(s, "\nPort %u Registers:\n", i);
+		TEGRA_AHCI_DUMP_STRING(s, "---------------\n");
+		tegra_ahci_dbg_print_regs(s, ptr, base, 20);
+	}
+
+	tegra_ahci_scfg_writel(hpriv, T_SATA0_INDEX_NONE_SELECTED,
+								T_SATA0_INDEX);
+
+	return 0;
+}
+
+static int tegra_ahci_dbg_dump_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, tegra_ahci_dbg_dump_show, inode->i_private);
+}
+
+static const struct file_operations debug_fops = {
+	.open           = tegra_ahci_dbg_dump_open,
+	.read           = seq_read,
+	.llseek         = seq_lseek,
+	.release        = single_release,
+};
+
+int tegra_ahci_dump_debuginit(void *data)
+{
+	(void) debugfs_create_file("tegra_ahci", S_IRUGO,
+			NULL, data, &debug_fops);
+	return 0;
+}
+EXPORT_SYMBOL(tegra_ahci_dump_debuginit);
+#endif
 
 MODULE_DESCRIPTION("Tegra AHCI SATA driver");
 MODULE_LICENSE("GPL v2");

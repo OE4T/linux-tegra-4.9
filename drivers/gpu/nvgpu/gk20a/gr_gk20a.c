@@ -372,8 +372,9 @@ static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 {
 	u32 val;
 	u32 delay = expect_delay;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return 0;
 
 	gk20a_dbg_fn("");
@@ -1491,6 +1492,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
 	u32 last_method_data = 0;
 	int retries = FE_PWR_MODE_TIMEOUT_MAX / FE_PWR_MODE_TIMEOUT_DEFAULT;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -1502,7 +1504,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (gr->ctx_vars.golden_image_initialized)
 		goto clean_up;
 
-	if (!tegra_platform_is_linsim()) {
+	if (!platform->is_fmodel) {
 		gk20a_writel(g, gr_fe_pwr_mode_r(),
 			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_force_on_f());
 		do {
@@ -1542,7 +1544,7 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	gk20a_readl(g, gr_fecs_ctxsw_reset_ctl_r());
 	udelay(10);
 
-	if (!tegra_platform_is_linsim()) {
+	if (!platform->is_fmodel) {
 		gk20a_writel(g, gr_fe_pwr_mode_r(),
 			gr_fe_pwr_mode_req_send_f() | gr_fe_pwr_mode_mode_auto_f());
 
@@ -1903,6 +1905,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 	u32 v, data;
 	int ret = 0;
 	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -1990,7 +1993,7 @@ int gr_gk20a_load_golden_ctx_image(struct gk20a *g,
 
 	gk20a_mem_end(g, mem);
 
-	if (tegra_platform_is_linsim()) {
+	if (platform->is_fmodel) {
 		u32 mdata = fecs_current_ctx_data(g, &c->inst_block);
 
 		ret = gr_gk20a_submit_fecs_method_op(g,
@@ -2416,10 +2419,11 @@ static void gr_gk20a_load_falcon_with_bootloader(struct gk20a *g)
 int gr_gk20a_load_ctxsw_ucode(struct gk20a *g)
 {
 	int err;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
-	if (tegra_platform_is_linsim()) {
+	if (platform->is_fmodel) {
 		gk20a_writel(g, gr_fecs_ctxsw_mailbox_r(7),
 			gr_fecs_ctxsw_mailbox_value_f(0xc0de7777));
 		gk20a_writel(g, gr_gpccs_ctxsw_mailbox_r(7),
@@ -4211,6 +4215,7 @@ void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine)
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
 	u32 gate_ctrl, idle_filter;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
 
@@ -4239,7 +4244,7 @@ void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 			"invalid elcg mode %d", mode);
 	}
 
-	if (tegra_platform_is_linsim()) {
+	if (platform->is_fmodel) {
 		gate_ctrl = set_field(gate_ctrl,
 			therm_gate_ctrl_eng_delay_after_m(),
 			therm_gate_ctrl_eng_delay_after_f(4));

@@ -48,6 +48,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	u32 compbit_backing_size;
 
 	int err;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -80,7 +81,7 @@ static int gm20b_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 	gk20a_dbg_info("max comptag lines : %d",
 		max_comptag_lines);
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		err = gk20a_ltc_alloc_phys_cbc(g, compbit_backing_size);
 	else
 		err = gk20a_ltc_alloc_virt_cbc(g, compbit_backing_size);

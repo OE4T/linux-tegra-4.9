@@ -25,7 +25,9 @@
 
 void gk20a_reset_priv_ring(struct gk20a *g)
 {
-	if (tegra_platform_is_linsim())
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+
+	if (platform->is_fmodel)
 		return;
 
 	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
@@ -50,8 +52,9 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	u32 status0, status1;
 	u32 cmd;
 	s32 retry = 100;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return;
 
 	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());

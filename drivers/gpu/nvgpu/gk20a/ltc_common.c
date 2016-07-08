@@ -3,7 +3,7 @@
  *
  * GK20A Graphics
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -92,8 +92,9 @@ static void gk20a_ltc_init_cbc(struct gk20a *g, struct gr_gk20a *gr)
 	u64 compbit_base_post_multiply64;
 	u64 compbit_store_iova;
 	u64 compbit_base_post_divide64;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		compbit_store_iova = gk20a_mem_phys(&gr->compbit_store.mem);
 	else
 		compbit_store_iova = g->ops.mm.get_iova_addr(g,

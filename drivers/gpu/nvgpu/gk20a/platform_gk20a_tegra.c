@@ -83,7 +83,7 @@ int gk20a_tegra_secure_page_alloc(struct device *dev)
 	dma_addr_t iova;
 	size_t size = PAGE_SIZE;
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return -EINVAL;
 
 	(void)dma_alloc_attrs(&tegra_vpr_dev, size, &iova,
@@ -314,7 +314,7 @@ static bool gk20a_tegra_is_railgated(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	bool ret = false;
 
-	if (!tegra_platform_is_linsim())
+	if (!(platform->is_fmodel))
 		ret = !tegra_dvfs_is_rail_up(platform->gpu_rail);
 
 	return ret;
@@ -331,7 +331,7 @@ static int gk20a_tegra_railgate(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (tegra_platform_is_linsim() ||
+	if (platform->is_fmodel ||
 	    !tegra_dvfs_is_rail_up(platform->gpu_rail))
 		return 0;
 
@@ -383,7 +383,7 @@ static int gm20b_tegra_railgate(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int ret = 0;
 
-	if (tegra_platform_is_linsim() ||
+	if (platform->is_fmodel ||
 	    !tegra_dvfs_is_rail_up(platform->gpu_rail))
 		return 0;
 
@@ -439,7 +439,7 @@ static int gk20a_tegra_unrailgate(struct device *dev)
 	int ret = 0;
 	bool first = false;
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return 0;
 
 	if (!platform->gpu_rail) {
@@ -510,7 +510,7 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 	int ret = 0;
 	bool first = false;
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return 0;
 
 	if (!platform->gpu_rail) {

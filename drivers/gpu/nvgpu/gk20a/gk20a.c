@@ -1483,6 +1483,9 @@ static int gk20a_probe(struct platform_device *dev)
 		return -ENODATA;
 	}
 
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+		platform->is_fmodel = true;
+
 	gk20a_dbg_fn("");
 
 	platform_set_drvdata(dev, platform);

@@ -1023,10 +1023,11 @@ static int alloc_gmmu_pages(struct vm_gk20a *vm, u32 order,
 	u32 num_pages = 1 << order;
 	u32 len = num_pages * PAGE_SIZE;
 	int err;
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return alloc_gmmu_phys_pages(vm, order, entry);
 
 	/*
@@ -1052,13 +1053,14 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 		     struct gk20a_mm_entry *entry)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	gk20a_dbg_fn("");
 
 	if (!entry->mem.size)
 		return;
 
-	if (tegra_platform_is_linsim()) {
+	if (platform->is_fmodel) {
 		free_gmmu_phys_pages(vm, entry);
 		return;
 	}
@@ -1076,9 +1078,11 @@ void free_gmmu_pages(struct vm_gk20a *vm,
 
 int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+
 	gk20a_dbg_fn("");
 
-	if (tegra_platform_is_linsim())
+	if (platform->is_fmodel)
 		return map_gmmu_phys_pages(entry);
 
 	if (IS_ENABLED(CONFIG_ARM64)) {
@@ -1100,9 +1104,11 @@ int map_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 
 void unmap_gmmu_pages(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
+	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+
 	gk20a_dbg_fn("");
 
-	if (tegra_platform_is_linsim()) {
+	if (platform->is_fmodel) {
 		unmap_gmmu_phys_pages(entry);
 		return;
 	}

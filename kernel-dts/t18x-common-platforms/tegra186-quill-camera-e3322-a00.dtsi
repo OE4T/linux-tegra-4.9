@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 #include <tegra186-modules/tegra186-camera-e3322-a00.dtsi>
-#include "../../../../include/dt-bindings/clock/tegra186-clock.h"
+#include "dt-bindings/clock/tegra186-clock.h"
 
 #define CAM0_RST_L     TEGRA_GPIO(R, 5)
 #define CAMERA_I2C_MUX_BUS(x) (0x1E + x)

@@ -759,7 +759,7 @@ static void tc358840_set_csi_mbus_config(struct v4l2_subdev *sd)
 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
 
 	switch (state->mbus_fmt_code) {
-	case V4L2_MBUS_FMT_UYVY8_1X16:
+	case MEDIA_BUS_FMT_UYVY8_1X16:
 		v4l2_dbg(2, debug, sd, "%s: YCbCr 422 16-bit\n", __func__);
 
 		i2c_wr8(sd, VOUT_FMT, MASK_OUTFMT_422 | MASK_422FMT_NORMAL);
@@ -773,7 +773,7 @@ static void tc358840_set_csi_mbus_config(struct v4l2_subdev *sd)
 		i2c_wr16(sd, CONFCTL1, 0x0);
 		break;
 
-	case V4L2_MBUS_FMT_RGB888_1X24:
+	case MEDIA_BUS_FMT_RGB888_1X24:
 		v4l2_dbg(2, debug, sd, "%s: RGB 888 24-bit\n", __func__);
 
 		i2c_wr8(sd, VOUT_FMT, MASK_OUTFMT_444_RGB);
@@ -802,14 +802,14 @@ static unsigned tc358840_num_csi_lanes_needed(struct v4l2_subdev *sd)
 	struct v4l2_bt_timings *bt = &state->timings.bt;
 	struct tc358840_platform_data *pdata = &state->pdata;
 	u32 bits_pr_pixel =
-		(state->mbus_fmt_code == V4L2_MBUS_FMT_UYVY8_1X16) ?  16 : 24;
+		(state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16) ?  16 : 24;
 	u32 bps = bt->width * bt->height * fps(bt) * bits_pr_pixel;
 	u32 bps_pr_lane = (pdata->refclk_hz / pdata->pll_prd) * pdata->pll_fbd;
 
 	/* CISCO HACK: Use all lanes and lower clock speed for 1080p60 to
 	 * reduce number of CSI resets */
 	if (bt->width == 1920 && bt->height == 1080 && fps(bt) == 60 &&
-			state->mbus_fmt_code == V4L2_MBUS_FMT_UYVY8_1X16) {
+			state->mbus_fmt_code == MEDIA_BUS_FMT_UYVY8_1X16) {
 		return 4;
 	}
 
@@ -1456,7 +1456,7 @@ static irqreturn_t tc358840_irq_handler(int irq, void *dev_id)
 /* --------------- PAD OPS --------------- */
 
 static int tc358840_get_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_fh *fh,
+		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_format *format)
 {
 	struct tc358840_state *state = to_state(sd);
@@ -1500,11 +1500,11 @@ static int tc358840_get_fmt(struct v4l2_subdev *sd,
 }
 
 static int tc358840_set_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_fh *fh,
+		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_format *format)
 {
 	u32 code = format->format.code; /* is overwritten by get_fmt */
-	int ret = tc358840_get_fmt(sd, fh, format);
+	int ret = tc358840_get_fmt(sd, cfg, format);
 
 	v4l2_dbg(3, debug, sd, "%s():\n", __func__);
 
@@ -1514,8 +1514,8 @@ static int tc358840_set_fmt(struct v4l2_subdev *sd,
 		return ret;
 
 	switch (code) {
-	case V4L2_MBUS_FMT_RGB888_1X24:
-	case V4L2_MBUS_FMT_UYVY8_1X16:
+	case MEDIA_BUS_FMT_RGB888_1X24:
+	case MEDIA_BUS_FMT_UYVY8_1X16:
 		break;
 	default:
 		return -EINVAL;
@@ -1910,56 +1910,9 @@ static int tc358840_s_stream(struct v4l2_subdev *sd, int enable)
 	return enable_stream(sd, enable);
 }
 
-static int tc358840_s_mbus_fmt(struct v4l2_subdev *sd,
-			       struct v4l2_mbus_framefmt *fmt)
-{
-	struct v4l2_subdev_format format;
-
-	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
-
-	memcpy(&format.format, fmt, sizeof(struct v4l2_mbus_framefmt));
-	format.which = V4L2_SUBDEV_FORMAT_ACTIVE;
-	format.pad = 0;
-
-	return tc358840_set_fmt(sd, NULL, &format);
-}
-
-static int tc358840_g_mbus_fmt(struct v4l2_subdev *sd,
-			       struct v4l2_mbus_framefmt *fmt)
-{
-	struct v4l2_subdev_format format;
-	int ret;
-
-	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
-
-	format.pad = 0;
-	ret = tc358840_get_fmt(sd, NULL, &format);
-	if (ret)
-		return ret;
-
-	*fmt = format.format;
-
-	return 0;
-}
-
-static int tc358840_try_mbus_fmt(struct v4l2_subdev *sd,
-				 struct v4l2_mbus_framefmt *fmt)
-{
-	struct v4l2_subdev_format format;
-
-	v4l2_dbg(2, debug, sd,
-		"%s(): width=%d, height=%d, code=0x%04X, field=%d\n",
-		__func__, fmt->width, fmt->height, fmt->code, fmt->field);
-
-	memcpy(&format.format, fmt, sizeof(struct v4l2_mbus_framefmt));
-	format.which = V4L2_SUBDEV_FORMAT_TRY;
-	format.pad = 0;
-
-	return tc358840_set_fmt(sd, NULL, &format);
-}
-
-static int tc358840_enum_mbus_code(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh,
-			          struct v4l2_subdev_mbus_code_enum *code)
+static int tc358840_enum_mbus_code(struct v4l2_subdev *sd,
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_mbus_code_enum *code)
 {
 	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
 
@@ -1968,38 +1921,40 @@ static int tc358840_enum_mbus_code(struct v4l2_subdev *sd, struct v4l2_subdev_fh
 
 	switch (code->index) {
 	case 0:
-		code->code = V4L2_MBUS_FMT_UYVY8_1X16;
+		code->code = MEDIA_BUS_FMT_UYVY8_1X16;
 		break;
 	case 1:
-		code->code = V4L2_MBUS_FMT_RGB888_1X24;
+		code->code = MEDIA_BUS_FMT_RGB888_1X24;
 		break;
 	}
 	return 0;
 }
 
 static int tc358840_enum_framesizes(struct v4l2_subdev *sd,
-				    struct v4l2_frmsizeenum *fsizes)
+				struct v4l2_subdev_pad_config *cfg,                             
+				struct v4l2_subdev_frame_size_enum *fse)
 {
 	const struct camera_common_frmfmt *frmfmt = tc358840_frmfmt;
 	int num_frmfmt = ARRAY_SIZE(tc358840_frmfmt);
 
 	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
 
-	if (fsizes->pixel_format != V4L2_PIX_FMT_UYVY &&
-	    fsizes->pixel_format != V4L2_PIX_FMT_ABGR32)
+	if (fse->code != V4L2_PIX_FMT_UYVY &&
+	    fse->code != V4L2_PIX_FMT_ABGR32)
 		return -EINVAL;
 
-	if (fsizes->index >= num_frmfmt)
+	if (fse->index >= num_frmfmt)
 		return -EINVAL;
 
-	fsizes->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	fsizes->discrete = frmfmt[fsizes->index].size;
+	fse->min_width = fse->max_width = frmfmt[fse->index].size.width;
+	fse->min_height = fse->max_height = frmfmt[fse->index].size.height;
 
 	return 0;
 }
 
 static int tc358840_enum_frameintervals(struct v4l2_subdev *sd,
-				      struct v4l2_frmivalenum *fintervals)
+				struct v4l2_subdev_pad_config *cfg,
+				struct v4l2_subdev_frame_interval_enum *fie)
 {
 	const struct camera_common_frmfmt *frmfmt = tc358840_frmfmt;
 	int num_frmfmt = ARRAY_SIZE(tc358840_frmfmt);
@@ -2007,25 +1962,23 @@ static int tc358840_enum_frameintervals(struct v4l2_subdev *sd,
 
 	v4l2_dbg(2, debug, sd, "%s()\n", __func__);
 
-	if (fintervals->pixel_format != V4L2_PIX_FMT_UYVY &&
-	    fintervals->pixel_format != V4L2_PIX_FMT_ABGR32)
+	if (fie->code != V4L2_PIX_FMT_UYVY &&
+	    fie->code != V4L2_PIX_FMT_ABGR32)
 		return -EINVAL;
 
 	for (i = 0; i < num_frmfmt; i++) {
-		if (frmfmt[i].size.width == fintervals->width &&
-		    frmfmt[i].size.height == fintervals->height)
+		if (frmfmt[i].size.width == fie->width &&
+		    frmfmt[i].size.height == fie->height)
 			break;
 	}
 	if (i >= num_frmfmt)
 		return -EINVAL;
 
-	if (fintervals->index >= frmfmt[i].num_framerates)
+	if (fie->index >= frmfmt[i].num_framerates)
 		return -EINVAL;
 
-	fintervals->type = V4L2_FRMSIZE_TYPE_DISCRETE;
-	fintervals->discrete.numerator = 1;
-	fintervals->discrete.denominator =
-		frmfmt[i].framerates[fintervals->index];
+	fie->interval.numerator = 1;
+	fie->interval.denominator = frmfmt[i].framerates[fie->index];
 
 	return 0;
 }
@@ -2042,13 +1995,6 @@ static struct v4l2_subdev_video_ops tc358840_subdev_video_ops = {
 	.query_dv_timings = tc358840_query_dv_timings,
 	.g_mbus_config = tc358840_g_mbus_config,
 	.s_stream = tc358840_s_stream,
-
-	.s_mbus_fmt = tc358840_s_mbus_fmt,
-	.g_mbus_fmt = tc358840_g_mbus_fmt,
-	.try_mbus_fmt = tc358840_try_mbus_fmt,
-
-	.enum_framesizes = tc358840_enum_framesizes,
-	.enum_frameintervals = tc358840_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops tc358840_subdev_core_ops = {
@@ -2071,6 +2017,8 @@ static const struct v4l2_subdev_pad_ops tc358840_pad_ops = {
 	.set_edid = tc358840_s_edid,
 	.dv_timings_cap = tc358840_dv_timings_cap,
 	.enum_dv_timings = tc358840_enum_dv_timings,
+	.enum_frame_size = tc358840_enum_framesizes,
+	.enum_frame_interval = tc358840_enum_frameintervals,
 };
 
 static struct v4l2_subdev_ops tc358840_ops = {
@@ -2428,7 +2376,7 @@ static int tc358840_probe(struct i2c_client *client, const struct i2c_device_id 
 			tc358840_delayed_work_enable_hotplug);
 
 	/* Initial Setup */
-	state->mbus_fmt_code = V4L2_MBUS_FMT_UYVY8_1X16;
+	state->mbus_fmt_code = MEDIA_BUS_FMT_UYVY8_1X16;
 	tc358840_initial_setup(sd);
 
 	tc358840_set_csi_mbus_config(sd);

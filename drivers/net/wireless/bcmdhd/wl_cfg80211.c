@@ -7425,12 +7425,10 @@ wl_cfg80211_del_station(
 #endif /* (LINUX_VERSION_CODE >= KERNEL_VERSION(3, 19, 0)) */
 
 	WL_DBG(("Entry\n"));
-#if (LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0))
 	if (mac_addr == NULL) {
 		WL_DBG(("mac_addr is NULL ignore it\n"));
 		return 0;
 	}
-#endif
 	if (!cfg)
 		return -EINVAL;
 

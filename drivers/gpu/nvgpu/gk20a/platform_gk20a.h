@@ -39,6 +39,9 @@ struct gk20a_platform {
 	struct gk20a *g;
 
 	/* Should be populated at probe. */
+	bool is_fmodel;
+
+	/* Should be populated at probe. */
 	bool can_railgate;
 
 	/* Should be populated at probe. */

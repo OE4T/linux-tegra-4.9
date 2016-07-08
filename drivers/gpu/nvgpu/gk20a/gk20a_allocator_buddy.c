@@ -1119,7 +1119,7 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 	if (!a)
 		return -ENOMEM;
 
-	err = __gk20a_alloc_common_init(__a, name, a, &buddy_ops);
+	err = __gk20a_alloc_common_init(__a, name, a, false, &buddy_ops);
 	if (err)
 		goto fail;
 

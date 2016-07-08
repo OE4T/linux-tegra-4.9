@@ -69,6 +69,7 @@ struct gk20a_allocator {
 	const struct gk20a_allocator_ops *ops;
 
 	struct dentry *debugfs_entry;
+	bool debug;				/* Control for debug msgs. */
 };
 
 /*
@@ -124,8 +125,18 @@ void gk20a_alloc_print_stats(struct gk20a_allocator *a,
 void gk20a_init_alloc_debug(struct gk20a_allocator *a);
 void gk20a_fini_alloc_debug(struct gk20a_allocator *a);
 int  __gk20a_alloc_common_init(struct gk20a_allocator *a,
-			       const char *name, void *priv,
+			       const char *name, void *priv, bool dbg,
 			       const struct gk20a_allocator_ops *ops);
+
+static inline void gk20a_alloc_enable_dbg(struct gk20a_allocator *a)
+{
+	a->debug = true;
+}
+
+static inline void gk20a_alloc_disable_dbg(struct gk20a_allocator *a)
+{
+	a->debug = false;
+}
 
 /*
  * Debug stuff.
@@ -154,12 +165,24 @@ void gk20a_alloc_debugfs_init(struct platform_device *pdev);
 			alloc_dbg(allocator, fmt, ##arg);	\
 	} while (0)
 
+#define __alloc_dbg(a, fmt, arg...)					\
+	pr_info("%-25s %25s() " fmt, (a)->name, __func__, ##arg)
+
 #if defined(ALLOCATOR_DEBUG)
-#define alloc_dbg(allocator, format, arg...)		\
-	pr_info("%-25s %25s() " format,			\
-		allocator->name, __func__, ##arg)
+/*
+ * Always print the debug messages...
+ */
+#define alloc_dbg(a, fmt, arg...) __alloc_dbg(a, fmt, ##arg)
 #else
-#define alloc_dbg(allocator, format, arg...)
+/*
+ * Only print debug messages if debug is enabled for a given allocator.
+ */
+#define alloc_dbg(a, fmt, arg...)			\
+	do {						\
+		if ((a)->debug)				\
+			__alloc_dbg((a), fmt, ##arg);	\
+	} while (0)
+
 #endif
 
 #endif /* GK20A_ALLOCATOR_H */

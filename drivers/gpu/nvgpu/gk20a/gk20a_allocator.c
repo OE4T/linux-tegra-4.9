@@ -86,7 +86,7 @@ void gk20a_alloc_destroy(struct gk20a_allocator *a)
  * Handle the common init stuff for a gk20a_allocator.
  */
 int __gk20a_alloc_common_init(struct gk20a_allocator *a,
-			      const char *name, void *priv,
+			      const char *name, void *priv, bool dbg,
 			      const struct gk20a_allocator_ops *ops)
 {
 	if (!ops)
@@ -94,6 +94,7 @@ int __gk20a_alloc_common_init(struct gk20a_allocator *a,
 
 	a->ops = ops;
 	a->priv = priv;
+	a->debug = dbg;
 
 	mutex_init(&a->lock);
 

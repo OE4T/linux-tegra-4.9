@@ -74,6 +74,30 @@ static void __iomem *tegra_hsp_ie_reg(struct device *dev, u8 si)
 	return tegra_hsp_reg(dev, TEGRA_HSP_IE(si));
 }
 
+static void tegra_hsp_irq_suspend(struct device *dev, struct tegra_hsp_irq *hi)
+{
+	if (hi->si_index != 0xff) {
+		struct tegra_hsp *hsp = dev_get_drvdata(dev);
+		void __iomem *reg = tegra_hsp_ie_reg(dev, hi->si_index);
+
+		mutex_lock(&hsp->lock);
+		writel(readl(reg) & ~(1u << hi->ie_shift), reg);
+		mutex_unlock(&hsp->lock);
+	}
+}
+
+static void tegra_hsp_irq_resume(struct device *dev, struct tegra_hsp_irq *hi)
+{
+	if (hi->si_index != 0xff) {
+		struct tegra_hsp *hsp = dev_get_drvdata(dev);
+		void __iomem *reg = tegra_hsp_ie_reg(dev, hi->si_index);
+
+		mutex_lock(&hsp->lock);
+		writel(readl(reg) | (1u << hi->ie_shift), reg);
+		mutex_unlock(&hsp->lock);
+	}
+}
+
 static void __iomem *tegra_hsp_sm_reg(struct device *dev, u32 sm)
 {
 	return tegra_hsp_reg(dev, TEGRA_HSP_SM(sm));
@@ -132,7 +156,6 @@ static int tegra_hsp_get_shared_irq(struct device *dev, irq_handler_t handler,
 	flags |= IRQF_PROBE_SHARED;
 
 	for (i = 0; i < hsp->n_si; i++) {
-		void __iomem *reg = tegra_hsp_ie_reg(dev, i);
 		char irqname[8];
 
 		sprintf(irqname, "shared%X", i);
@@ -151,9 +174,7 @@ static int tegra_hsp_get_shared_irq(struct device *dev, irq_handler_t handler,
 		dev_dbg(&pdev->dev, "using shared IRQ %u (%d)\n", i, hi->irq);
 
 		/* Update interrupt masks (for shared interrupts only) */
-		mutex_lock(&hsp->lock);
-		writel(readl(reg) | (1u << ie_shift), reg);
-		mutex_unlock(&hsp->lock);
+		tegra_hsp_irq_resume(dev, hi);
 		return 0;
 	}
 
@@ -187,19 +208,43 @@ static int tegra_hsp_get_sm_irq(struct device *dev, bool empty,
 	return tegra_hsp_get_shared_irq(dev, handler, flags, ie_shift, hi);
 }
 
-static void tegra_hsp_free_irq(struct device *dev, struct tegra_hsp_irq *hi)
+static void tegra_hsp_irq_free(struct device *dev, struct tegra_hsp_irq *hi)
 {
-	struct tegra_hsp *hsp = dev_get_drvdata(dev);
-
-	if (hi->si_index != 0xff) {
-		void __iomem *reg = tegra_hsp_ie_reg(dev, hi->si_index);
-
-		mutex_lock(&hsp->lock);
-		writel(readl(reg) & ~(1u << hi->ie_shift), reg);
-		mutex_unlock(&hsp->lock);
-	}
+	tegra_hsp_irq_suspend(dev, hi);
 	free_irq(hi->irq, hi);
 }
+
+static int tegra_hsp_sm_suspend(struct device *dev)
+{
+	struct tegra_hsp_sm_pair *pair =
+		container_of(dev, struct tegra_hsp_sm_pair, dev);
+
+	tegra_hsp_irq_suspend(dev->parent, &pair->full);
+	if (pair->notify_empty != NULL)
+		tegra_hsp_irq_suspend(dev->parent, &pair->empty);
+	return 0;
+}
+
+static int tegra_hsp_sm_resume(struct device *dev)
+{
+	struct tegra_hsp_sm_pair *pair =
+		container_of(dev, struct tegra_hsp_sm_pair, dev);
+
+	if (pair->notify_empty != NULL)
+		tegra_hsp_irq_resume(dev->parent, &pair->empty);
+	tegra_hsp_irq_resume(dev->parent, &pair->full);
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_hsp_sm_pm_ops = {
+	.suspend_noirq	= tegra_hsp_sm_suspend,
+	.resume_noirq	= tegra_hsp_sm_resume,
+};
+
+static const struct device_type tegra_hsp_sm_dev_type = {
+	.name	= "tegra-hsp-shared-mailbox-pair",
+	.pm	= &tegra_hsp_sm_pm_ops,
+};
 
 static void tegra_hsp_sm_dev_release(struct device *dev)
 {
@@ -231,6 +276,7 @@ static struct tegra_hsp_sm_pair *tegra_hsp_sm_pair_request(
 	pair->full.index = index;
 	pair->empty.index = index ^ 1;
 	pair->dev.parent = dev;
+	pair->dev.type = &tegra_hsp_sm_dev_type;
 	pair->dev.release = tegra_hsp_sm_dev_release;
 	dev_set_name(&pair->dev, "%s:sm%u", dev_name(dev), index);
 	dev_set_drvdata(&pair->dev, data);
@@ -252,7 +298,7 @@ static struct tegra_hsp_sm_pair *tegra_hsp_sm_pair_request(
 	err = tegra_hsp_get_sm_irq(dev, false, &pair->full);
 	if (err) {
 		if (pair->notify_empty != NULL)
-			tegra_hsp_free_irq(dev, &pair->empty);
+			tegra_hsp_irq_free(dev, &pair->empty);
 		goto error;
 	}
 
@@ -343,9 +389,9 @@ void tegra_hsp_sm_pair_free(struct tegra_hsp_sm_pair *pair)
 
 	/* Make sure that the structure is no longer referenced.
 	 * This also implies that callbacks are no longer pending. */
-	tegra_hsp_free_irq(dev, &pair->full);
+	tegra_hsp_irq_free(dev, &pair->full);
 	if (pair->notify_empty != NULL)
-		tegra_hsp_free_irq(dev, &pair->empty);
+		tegra_hsp_irq_free(dev, &pair->empty);
 
 	device_unregister(&pair->dev);
 }

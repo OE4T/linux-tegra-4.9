@@ -16,7 +16,7 @@
  */
 
 #include <tegra186-modules/tegra186-camera-e3326-a00.dtsi>
-#include "../../../../include/dt-bindings/clock/tegra186-clock.h"
+#include "dt-bindings/clock/tegra186-clock.h"
 
 #define CAM0_RST_L	TEGRA_GPIO(R, 5)
 #define CAM0_PWDN	TEGRA_GPIO(R, 0)

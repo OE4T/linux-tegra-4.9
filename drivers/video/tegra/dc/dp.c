@@ -3118,8 +3118,8 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 	 * use fail-safe mode i.e. VGA 640x480@60
 	 */
 	if (dc->edid->errors)
-		return (mode->xres == 640 && mode->yres == 480
-			&& mode->refresh == 60) ? true : false;
+		return (mode->xres == 640 && mode->yres == 480)
+			 ? true : false;
 
 	return true;
 }

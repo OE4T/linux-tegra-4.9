@@ -922,11 +922,62 @@ static const struct of_device_id pca953x_dt_ids[] = {
 
 MODULE_DEVICE_TABLE(of, pca953x_dt_ids);
 
+#ifdef CONFIG_PM_SLEEP
+static int pca953x_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static int pca953x_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct pca953x_chip *chip = i2c_get_clientdata(client);
+	int reg_count = NBANK(chip);
+	int i, reg_out, reg_dir;
+	int ret = 0;
+
+	switch (PCA_CHIP_TYPE(chip->driver_data)) {
+	case PCA953X_TYPE:
+		reg_out = PCA953X_OUTPUT;
+		reg_dir = PCA953X_DIRECTION;
+		break;
+	case PCA957X_TYPE:
+		reg_out = PCA957X_OUT;
+		reg_dir = PCA957X_CFG;
+		break;
+	default:
+		return 0;
+	}
+
+	for (i = 0; i < reg_count; ++i) {
+		ret = pca953x_write_single(chip, reg_out,
+					   chip->reg_output[i], i * 8);
+		if (ret < 0)
+			dev_err(dev, "Failed to write Reg %d: %d\n",
+				reg_out + i, ret);
+
+		ret = pca953x_write_single(chip, reg_dir,
+					   chip->reg_direction[i], i * 8);
+		if (ret)
+			dev_err(dev, "Failed to write Reg %d: %d\n",
+				reg_dir + i, ret);
+	}
+
+	return 0;
+}
+#endif
+
+static const struct dev_pm_ops pca953x_pm = {
+	SET_SYSTEM_SLEEP_PM_OPS(pca953x_suspend, pca953x_resume)
+};
+
 static struct i2c_driver pca953x_driver = {
 	.driver = {
 		.name	= "pca953x",
 		.of_match_table = pca953x_dt_ids,
 		.acpi_match_table = ACPI_PTR(pca953x_acpi_ids),
+		.pm     = &pca953x_pm,
+
 	},
 	.probe		= pca953x_probe,
 	.remove		= pca953x_remove,

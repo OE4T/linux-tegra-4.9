@@ -121,7 +121,7 @@ static void nvdla_free_dump_region(struct platform_device *pdev)
 }
 
 /* Queue management API */
-int nvdla_queue_abort(struct nvhost_queue *queue)
+static int nvdla_queue_abort(struct nvhost_queue *queue)
 {
 	/* TBD: Abort pending tasks from the queue */
 

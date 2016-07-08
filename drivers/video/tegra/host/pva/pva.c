@@ -49,7 +49,7 @@ static struct of_device_id tegra_pva_of_match[] = {
 	{ },
 };
 
-int pva_queue_abort(struct nvhost_queue *queue)
+static int pva_queue_abort(struct nvhost_queue *queue)
 {
 	/* TBD: Abort pending tasks from the queue */
 

@@ -18,9 +18,9 @@
  *
  */
 
-#include "../../../../include/dt-bindings/interrupt/tegra186-irq.h"
-#include "../../../../include/dt-bindings/clock/tegra186-clock.h"
-#include "../../../../include/dt-bindings/reset/tegra186-reset.h"
+#include "dt-bindings/interrupt/tegra186-irq.h"
+#include "dt-bindings/clock/tegra186-clock.h"
+#include "dt-bindings/reset/tegra186-reset.h"
 
 / {
 	compatible = "nvidia,tegra186";

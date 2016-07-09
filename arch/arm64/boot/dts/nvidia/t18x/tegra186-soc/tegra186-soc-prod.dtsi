@@ -657,4 +657,13 @@
 		};
 	};
 
+	mipical {
+		prod-settings {
+			#prod-cells = <3>;
+			mask-one-style;
+			prod_c_dsi {
+				prod = <0x00000000 0x00000000 0x00000000>;
+			};
+		};
+	};
 };

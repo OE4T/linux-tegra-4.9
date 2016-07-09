@@ -601,8 +601,10 @@ static void tegra_dc_sor_instance(struct tegra_dc *dc, int out_type)
 
 void tegra_dc_get(struct tegra_dc *dc)
 {
-	BUG_ON(dc->enable_count < 0);
-	if (dc->enable_count++ == 0) {
+	int enable_count = atomic_inc_return(&dc->enable_count);
+
+	BUG_ON(enable_count  < 1);
+	if (enable_count == 1) {
 		tegra_dc_io_start(dc);
 
 		/* extra reference to dc clk */
@@ -613,9 +615,10 @@ EXPORT_SYMBOL(tegra_dc_get);
 
 void tegra_dc_put(struct tegra_dc *dc)
 {
-	if (WARN_ONCE(dc->enable_count == 0, "unbalanced clock calls"))
+	if (WARN_ONCE(atomic_read(&dc->enable_count) == 0,
+		"unbalanced clock calls"))
 		return;
-	if (--dc->enable_count == 0) {
+	if (atomic_dec_return(&dc->enable_count) == 0) {
 		/* balance extra dc clk reference */
 		tegra_disp_clk_disable_unprepare(dc->clk);
 
@@ -5256,7 +5259,7 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 	trace_display_mode(dc, &dc->mode);
 
 	/* disable pending clks due to uncompleted frames */
-	while (tegra_platform_is_silicon() && dc->enable_count)
+	while (tegra_platform_is_silicon() && atomic_read(&dc->enable_count))
 		tegra_dc_put(dc);
 }
 

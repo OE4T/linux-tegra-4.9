@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/mipi_cal_regs.h
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -25,6 +25,8 @@
 	defined(CONFIG_ARCH_TEGRA_3x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_11x_SOC)
 	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_MIPI_BIAS_PAD_CFG2_0
+#elif defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	#define MIPI_VALID_REG_LIMIT  (MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0 + 4)
 #else
 	#define MIPI_VALID_REG_LIMIT  MIPI_CAL_CSIE_MIPI_CAL_CONFIG_2_0
 #endif

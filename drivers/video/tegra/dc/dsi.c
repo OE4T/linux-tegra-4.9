@@ -39,6 +39,7 @@
 #include <linux/of_address.h>
 #include <linux/io.h>
 #include <linux/padctrl/padctrl.h>
+#include <linux/tegra_prod.h>
 
 #include <mach/dc.h>
 #include <mach/fb.h>
@@ -2472,6 +2473,7 @@ void tegra_dsi_mipi_calibration_13x(struct tegra_dc_dsi_data *dsi)
 static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 {
 	u32 val = 0;
+	int err;
 #if !defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	struct clk *clk72mhz = NULL;
 	clk72mhz = clk_get_sys("clk72mhz", NULL);
@@ -2534,6 +2536,17 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_MIPI_CAL_CTRL_0);
 
+		if (!IS_ERR(dsi->mipi_cal->prod_list)) {
+			err = tegra_prod_set_by_name(
+				&dsi->mipi_cal->base,
+				"prod_c_dsi",
+				dsi->mipi_cal->prod_list);
+			if (err) {
+				dev_warn(&dsi->mipi_cal->dc->ndev->dev,
+					"mipi_cal: DSI prod set failed\n");
+			}
+		}
+
 		tegra_dsi_mipi_calibration_status(dsi);
 	}
 	/* Calibrate DSI 1 */
@@ -2563,6 +2576,17 @@ static void tegra_dsi_mipi_calibration_21x(struct tegra_dc_dsi_data *dsi)
 			  MIPI_CAL_AUTOCAL_EN(0x0);
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 			MIPI_CAL_MIPI_CAL_CTRL_0);
+
+		if (!IS_ERR(dsi->mipi_cal->prod_list)) {
+			err = tegra_prod_set_by_name(
+				&dsi->mipi_cal->base,
+				"prod_c_dsi",
+				dsi->mipi_cal->prod_list);
+			if (err) {
+				dev_warn(&dsi->mipi_cal->dc->ndev->dev,
+					"mipi_cal: DSI prod set failed\n");
+			}
+		}
 
 		tegra_dsi_mipi_calibration_status(dsi);
 	}

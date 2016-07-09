@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/mipi_cal.c
  *
- * Copyright (c) 2012-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2012-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -23,6 +23,7 @@
 #include "mipi_cal_regs.h"
 #include "dsi.h"
 #include <linux/of_address.h>
+#include <linux/tegra_prod.h>
 
 #include "../../../../arch/arm/mach-tegra/iomap.h"
 
@@ -46,7 +47,12 @@ static int dbg_dsi_mipi_show(struct seq_file *s, void *unused)
 		if (col == 0)
 			seq_printf(s, "%08lX:", TEGRA_MIPI_CAL_BASE + i);
 		seq_printf(s, "%c%08lX", col == 2 ? '-' : ' ',
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+			tegra_mipi_cal_read(mipi_cal,
+				((i == 0) ? MIPI_CAL_MIPI_CAL_MODE : (i-4))));
+#else
 			tegra_mipi_cal_read(mipi_cal, i));
+#endif
 		if (col == 3) {
 			seq_printf(s, "\n");
 			col = 0;
@@ -220,6 +226,15 @@ struct tegra_mipi_cal *tegra_mipi_cal_init_sw(struct tegra_dc *dc)
 		err = PTR_ERR(uart_fs_mipi_clk);
 		goto fail_free_map;
 	}
+
+	mipi_cal->prod_list = devm_tegra_prod_get_from_node(
+		&dc->ndev->dev, np_mipi_cal);
+
+	if (IS_ERR(mipi_cal->prod_list)) {
+		dev_warn(&dc->ndev->dev, "mipi_cal: DSI prod list init failed\n");
+		err = PTR_ERR(mipi_cal->prod_list);
+		goto fail_free_map;
+	}
 #endif
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	/*Check bpmp running and real silicon */
@@ -288,6 +303,11 @@ void tegra_mipi_cal_destroy(struct tegra_dc *dc)
 
 	if (mipi_cal->uart_fs_mipi_clk)
 		clk_put(mipi_cal->uart_fs_mipi_clk);
+#endif
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (!IS_ERR(mipi_cal->prod_list))
+		mipi_cal->prod_list = NULL;
 #endif
 
 	clk_put(mipi_cal->clk);

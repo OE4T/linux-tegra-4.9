@@ -55,8 +55,8 @@
 			};
 			cc6 {
 				state-name = "Cluster powergate";
-				wakeup-latency-us = <50>;
-				min-residency-us = <500>;
+				wakeup-latency-us = <350>;
+				min-residency-us = <5000>;
 				power = <19>;
 				pmstate = <0x6>;
 				status = "disabled";
@@ -75,7 +75,7 @@
 			compatible = "nvidia,tegra186-cpuidle-a57-thresholds";
 
 			thresholds {
-				crossover_cc1_cc6       = <500>;
+				crossover_cc1_cc6       = <5000>;
 				crossover_cc1_cc7       = <700>;
 			};
 		};

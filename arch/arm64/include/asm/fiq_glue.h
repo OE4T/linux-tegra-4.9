@@ -22,5 +22,6 @@ struct fiq_glue_handler {
 };
 
 int fiq_glue_register_handler(struct fiq_glue_handler *handler);
+void fiq_glue_entry_aarch64(void);
 
 #endif

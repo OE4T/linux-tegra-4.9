@@ -64,8 +64,8 @@
 			};
 			cc6 {
 				state-name = "Cluster powergate";
-				wakeup-latency-us = <50>;
-				min-residency-us = <500>;
+				wakeup-latency-us = <450>;
+				min-residency-us = <5000>;
 				power = <19>;
 				pmstate = <0x6>;
 				status = "disabled";
@@ -85,7 +85,7 @@
 
 			thresholds {
 				crossover_c1_c6         = <1000>;
-				crossover_cc1_cc6       = <15000>;
+				crossover_cc1_cc6       = <5000>;
 				crossover_cc1_cc7       = <20000>;
 			};
 		};

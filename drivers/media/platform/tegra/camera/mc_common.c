@@ -342,6 +342,7 @@ mc_init_fail:
 	dev_err(&pdev->dev, "%s: failed\n", __func__);
 	return err;
 }
+EXPORT_SYMBOL(tegra_vi_media_controller_init);
 
 void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi)
 {

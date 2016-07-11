@@ -509,28 +509,6 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 	return 0;
 }
 
-/*
- * Only use this subdevice media bus ops for test pattern generator,
- * because CSI device is an separated subdevice which has 6 source
- * pads to generate test pattern.
- */
-static struct v4l2_mbus_framefmt tegra_csi_tpg_fmts[] = {
-	{
-		TEGRA_DEF_WIDTH,
-		TEGRA_DEF_HEIGHT,
-		MEDIA_BUS_FMT_SRGGB10_1X10,
-		V4L2_FIELD_NONE,
-		V4L2_COLORSPACE_SRGB
-	},
-	{
-		TEGRA_DEF_WIDTH,
-		TEGRA_DEF_HEIGHT,
-		MEDIA_BUS_FMT_RGBA8888_4X8_LE,
-		V4L2_FIELD_NONE,
-		V4L2_COLORSPACE_SRGB
-	}
-
-};
 /* -----------------------------------------------------------------------------
  * V4L2 Subdevice Operations
  */

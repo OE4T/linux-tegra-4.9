@@ -711,7 +711,6 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 		media_entity_pipeline_stop(&chan->video.entity);
 	}
 
-	return 0;
 }
 
 static const struct vb2_ops tegra_channel_queue_qops = {

@@ -178,6 +178,8 @@ static int nvdec_dma_pa_to_internal_256b(struct platform_device *dev,
 
 static int nvdec_wait_idle(struct platform_device *dev, u32 *timeout)
 {
+	u32 w = 0;
+
 	nvhost_dbg_fn("");
 
 	if (!*timeout)
@@ -185,7 +187,7 @@ static int nvdec_wait_idle(struct platform_device *dev, u32 *timeout)
 
 	do {
 		u32 check = min_t(u32, NVDEC_IDLE_CHECK_PERIOD, *timeout);
-		u32 w = host1x_readl(dev, nvdec_idlestate_r());
+		w = host1x_readl(dev, nvdec_idlestate_r());
 
 		if (!w) {
 			nvhost_dbg_fn("done");
@@ -194,6 +196,8 @@ static int nvdec_wait_idle(struct platform_device *dev, u32 *timeout)
 		udelay(NVDEC_IDLE_CHECK_PERIOD);
 		*timeout -= check;
 	} while (*timeout || !tegra_platform_is_silicon());
+
+	nvhost_err(&dev->dev, "nvdec_idlestate_r = %x\n", w);
 
 	return -1;
 }

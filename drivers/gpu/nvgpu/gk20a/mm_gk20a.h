@@ -391,9 +391,11 @@ struct mm_gk20a {
 	bool force_pramin; /* via debugfs */
 #endif
 
-	size_t vidmem_size;
-	struct device vidmem_dev;
-	u32 ce_vidmem_ctx_id;
+	struct {
+		size_t size;
+		struct gk20a_allocator allocator;
+		u32 ce_ctx_id;
+	} vidmem;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

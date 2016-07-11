@@ -699,6 +699,14 @@ void gk20a_remove_vm(struct vm_gk20a *vm, struct mem_desc *inst_block)
 	gk20a_vm_remove_support_nofree(vm);
 }
 
+static void gk20a_vidmem_destroy(struct gk20a *g)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	if (gk20a_alloc_initialized(&g->mm.vidmem.allocator))
+		gk20a_alloc_destroy(&g->mm.vidmem.allocator);
+#endif
+}
+
 static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 {
 	struct gk20a *g = gk20a_from_mm(mm);
@@ -711,13 +719,15 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
 	gk20a_vm_remove_support_nofree(&mm->cde.vm);
 
-	if (mm->ce_vidmem_ctx_id != ~0)
-		gk20a_ce_delete_context(g->dev, mm->ce_vidmem_ctx_id );
+	if (mm->vidmem.ce_ctx_id != ~0)
+		gk20a_ce_delete_context(g->dev, mm->vidmem.ce_ctx_id);
 
-	mm->ce_vidmem_ctx_id =  ~0;
+	mm->vidmem.ce_ctx_id = ~0;
 
 	if (platform->has_ce)
 		gk20a_vm_remove_support_nofree(&mm->ce.vm);
+
+	gk20a_vidmem_destroy(g);
 }
 
 static int gk20a_alloc_sysmem_flush(struct gk20a *g)
@@ -744,14 +754,15 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	if (!size)
 		return 0;
 
-	err = nvmap_register_vidmem_carveout(&mm->vidmem_dev, SZ_4K, size);
+	err = gk20a_buddy_allocator_init(&g->mm.vidmem.allocator, "vidmem",
+			SZ_4K, size, SZ_4K, 0);
 	if (err) {
 		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
 				size, err);
 		return err;
 	}
 
-	mm->vidmem_size = size;
+	mm->vidmem.size = size;
 
 	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
 
@@ -785,7 +796,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 
 	gk20a_init_pramin(mm);
 
-	mm->ce_vidmem_ctx_id =  ~0;
+	mm->vidmem.ce_ctx_id = ~0;
 
 	err = gk20a_init_vidmem(mm);
 	if (err)
@@ -902,8 +913,8 @@ int gk20a_init_mm_support(struct gk20a *g)
 void gk20a_init_mm_ce_context(struct gk20a *g)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	if (g->mm.vidmem_size && (g->mm.ce_vidmem_ctx_id ==  ~0)) {
-		g->mm.ce_vidmem_ctx_id =
+	if (g->mm.vidmem.size && (g->mm.vidmem.ce_ctx_id == ~0)) {
+		g->mm.vidmem.ce_ctx_id =
 			gk20a_ce_create_context_with_cb(g->dev,
 				gk20a_fifo_get_fast_ce_runlist_id(g),
 				-1,
@@ -911,7 +922,7 @@ void gk20a_init_mm_ce_context(struct gk20a *g)
 				-1,
 				NULL);
 
-		if (g->mm.ce_vidmem_ctx_id == ~0)
+		if (g->mm.vidmem.ce_ctx_id == ~0)
 			gk20a_err(g->dev,
 				"Failed to allocate CE context for vidmem page clearing support");
 	}
@@ -2518,51 +2529,55 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 		size_t size, struct mem_desc *mem, dma_addr_t at)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	struct device *d = &g->mm.vidmem_dev;
+	u64 addr;
 	int err;
-	dma_addr_t iova;
 	bool need_pramin_access = true;
-	DEFINE_DMA_ATTRS(attrs);
 
 	gk20a_dbg_fn("");
 
+	if (!gk20a_alloc_initialized(&g->mm.vidmem.allocator))
+		return -ENOSYS;
+
+	/* we don't support dma attributes here, except that kernel mappings
+	 * are not done anyway */
+	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
+
 	if (at) {
-		void *va;
+		addr = gk20a_alloc_fixed(&g->mm.vidmem.allocator, at, size);
+		if (!addr)
+			return -ENOMEM;
 
-		dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
-		va = dma_mark_declared_memory_occupied(d, at, size,
-				&attrs);
-
-		if (IS_ERR(va))
-			return PTR_ERR(va);
-
-		iova = at;
 		mem->fixed = true;
 	} else {
-		dma_set_attr(attr, &attrs);
-		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-		/* cpuva has no meaning here, the following returns null */
-		dma_alloc_attrs(d, size, &iova, GFP_KERNEL, &attrs);
-
-		if (iova == DMA_ERROR_CODE)
+		addr = gk20a_alloc(&g->mm.vidmem.allocator, size);
+		if (!addr)
 			return -ENOMEM;
 
 		mem->fixed = false;
 	}
 
-	err = gk20a_get_sgtable(d, &mem->sgt, NULL, iova, size);
+	mem->sgt = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
+	if (!mem->sgt) {
+		err = -ENOMEM;
+		goto fail_physfree;
+	}
+
+	err = sg_alloc_table(mem->sgt, 1, GFP_KERNEL);
 	if (err)
-		goto fail_free;
+		goto fail_kfree;
+
+	sg_dma_address(mem->sgt->sgl) = addr;
+	sg_set_page(mem->sgt->sgl, NULL, size, 0);
 
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
 
-	if (g->mm.ce_vidmem_ctx_id != ~0) {
+	if (g->mm.vidmem.ce_ctx_id != ~0) {
 		struct gk20a_fence *gk20a_fence_out = NULL;
 		u64 dst_bufbase = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
 
 		err = gk20a_ce_execute_ops(g->dev,
-				g->mm.ce_vidmem_ctx_id,
+				g->mm.vidmem.ce_ctx_id,
 				0,
 				dst_bufbase,
 				(u64)size,
@@ -2590,18 +2605,14 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	if (need_pramin_access)
 		gk20a_memset(g, mem, 0, 0, size);
 
-	gk20a_dbg_fn("done");
+	gk20a_dbg_fn("done at 0x%llx size %zu", addr, size);
 
 	return 0;
 
-fail_free:
-	if (at) {
-		dma_mark_declared_memory_unoccupied(d, iova, mem->size,
-				&attrs);
-	} else {
-		dma_free_attrs(d, size, NULL, iova, &attrs);
-	}
-
+fail_kfree:
+	kfree(mem->sgt);
+fail_physfree:
+	gk20a_free(&g->mm.vidmem.allocator, addr);
 	return err;
 #else
 	return -ENOSYS;
@@ -2612,23 +2623,8 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 			  struct mem_desc *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	struct device *d = &g->mm.vidmem_dev;
-	DEFINE_DMA_ATTRS(attrs);
-
-	if (mem->fixed) {
-		dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
-		dma_mark_declared_memory_unoccupied(d,
-				sg_dma_address(mem->sgt->sgl), mem->size,
-				&attrs);
-	} else {
-		dma_set_attr(attr, &attrs);
-		dma_set_attr(DMA_ATTR_NO_KERNEL_MAPPING, &attrs);
-		dma_free_attrs(d, mem->size, NULL,
-				sg_dma_address(mem->sgt->sgl),
-				&attrs);
-		gk20a_free_sgtable(&mem->sgt);
-	}
-
+	gk20a_free(&g->mm.vidmem.allocator, sg_dma_address(mem->sgt->sgl));
+	gk20a_free_sgtable(&mem->sgt);
 	mem->size = 0;
 	mem->aperture = APERTURE_INVALID;
 #endif

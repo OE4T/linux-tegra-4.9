@@ -224,7 +224,7 @@ static inline int gk20a_get_valid_launch_flags(struct gk20a *g, int launch_flags
 {
 	/* there is no local memory available,
 	don't allow local memory related CE flags */
-	if (!g->mm.vidmem_size) {
+	if (!g->mm.vidmem.size) {
 		launch_flags &= ~(NVGPU_CE_SRC_LOCATION_LOCAL_FB |
 			NVGPU_CE_DST_LOCATION_LOCAL_FB);
 	}

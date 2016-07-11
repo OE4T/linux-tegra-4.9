@@ -115,8 +115,12 @@ struct tegra_se_dev {
 	struct device *dev;
 	void __iomem *io_regs;	/* se device memory/io */
 	void __iomem *pmc_io_reg;	/* pmc device memory/io */
-	spinlock_t lock;	/* spin lock */
-	struct mutex	mtx;
+	struct mutex lock;	/* Protect request queue */
+	/* Mutex lock (mtx) is to protect Hardware, as it can be used
+	 * in parallel by different threads. For example, set_key
+	 * request can come from a different thread and access HW
+	 */
+	struct mutex mtx;
 	struct clk *pclk;	/* Security Engine clock */
 	struct clk *enclk;	/* Security Engine clock */
 	struct crypto_queue queue; /* Security Engine crypto queue */
@@ -1372,16 +1376,15 @@ static void tegra_se_work_handler(struct work_struct *work)
 					struct tegra_se_dev, se_work);
 	struct crypto_async_request *async_req = NULL;
 	struct crypto_async_request *backlog = NULL;
-	unsigned long flags;
 
 	mutex_lock(&se_dev->mtx);
 	do {
-		spin_lock_irqsave(&se_dev->lock, flags);
+		mutex_lock(&se_dev->lock);
 		backlog = crypto_get_backlog(&se_dev->queue);
 		async_req = crypto_dequeue_request(&se_dev->queue);
 		if (!async_req)
 			se_dev->work_q_busy = false;
-		spin_unlock_irqrestore(&se_dev->lock, flags);
+		mutex_unlock(&se_dev->lock);
 
 		if (backlog) {
 			backlog->complete(backlog, -EINPROGRESS);
@@ -1399,22 +1402,21 @@ static void tegra_se_work_handler(struct work_struct *work)
 static int tegra_se_aes_queue_req(struct tegra_se_dev *se_dev,
 				struct ablkcipher_request *req)
 {
-	unsigned long flags;
 	int err = 0;
 	int chained;
 
 	if (!tegra_se_count_sgs(req->src, req->nbytes, &chained))
 		return -EINVAL;
 
-	spin_lock_irqsave(&se_dev->lock, flags);
+	mutex_lock(&se_dev->lock);
 	err = ablkcipher_enqueue_request(&se_dev->queue, req);
 
 	if (!se_dev->work_q_busy) {
 		se_dev->work_q_busy = true;
-		spin_unlock_irqrestore(&se_dev->lock, flags);
+		mutex_unlock(&se_dev->lock);
 		queue_work(se_dev->se_work_q, &se_dev->se_work);
 	} else {
-		spin_unlock_irqrestore(&se_dev->lock, flags);
+		mutex_unlock(&se_dev->lock);
 	}
 
 	return err;
@@ -2988,6 +2990,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	int err = 0, i = 0;
 	char se_nvhost_name[15];
 
+
 	se_dev = kzalloc(sizeof(struct tegra_se_dev), GFP_KERNEL);
 	if (!se_dev) {
 		dev_err(&pdev->dev, "memory allocation failed\n");
@@ -3008,7 +3011,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		(struct nvhost_device_data *)pdev->id_entry->driver_data;
 	}
 
-	spin_lock_init(&se_dev->lock);
+	mutex_init(&se_dev->lock);
 	crypto_init_queue(&se_dev->queue, TEGRA_SE_CRYPTO_QUEUE_LENGTH);
 
 	se_dev->dev = &pdev->dev;

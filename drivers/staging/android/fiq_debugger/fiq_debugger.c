@@ -26,6 +26,7 @@
 #include <linux/kmsg_dump.h>
 #include <linux/irq.h>
 #include <linux/delay.h>
+#include <linux/fiq_debugger.h>
 #include <linux/reboot.h>
 #include <linux/sched.h>
 #include <linux/slab.h>
@@ -44,7 +45,6 @@
 
 #include <linux/uaccess.h>
 
-#include "fiq_debugger.h"
 #include "fiq_debugger_priv.h"
 #include "fiq_debugger_ringbuf.h"
 
@@ -98,6 +98,8 @@ struct fiq_debugger_state {
 	struct fiq_debugger_ringbuf *tty_rbuf;
 	bool syslog_dumping;
 #endif
+
+	spinlock_t debug_fiq_lock;
 
 	unsigned int last_irqs[NR_IRQS];
 	unsigned int last_local_timer_irqs[NR_CPUS];
@@ -735,6 +737,18 @@ static void fiq_debugger_fiq(struct fiq_glue_handler *h,
 		container_of(h, struct fiq_debugger_state, handler);
 	unsigned int this_cpu = THREAD_INFO(svc_sp)->cpu;
 	bool need_irq;
+	static DEFINE_PER_CPU(bool, immediate_dump) = true;
+
+	/* Spew regs and callstack immediately after entering FIQ handler */
+	if (per_cpu(immediate_dump, this_cpu)) {
+		spin_lock(&state->debug_fiq_lock);
+		fiq_debugger_printf(&state->output,
+					"Dump for CPU%d:\n", this_cpu);
+		fiq_debugger_fiq_exec(state, "bt", regs, svc_sp);
+		fiq_debugger_fiq_exec(state, "allregs", regs, svc_sp);
+		spin_unlock(&state->debug_fiq_lock);
+		per_cpu(immediate_dump, this_cpu) = false;
+	}
 
 	need_irq = fiq_debugger_handle_uart_interrupt(state, this_cpu, regs,
 			svc_sp);
@@ -1113,6 +1127,7 @@ static int fiq_debugger_probe(struct platform_device *pdev)
 
 #ifdef CONFIG_FIQ_GLUE
 	if (fiq_debugger_have_fiq(state)) {
+		spin_lock_init(&state->debug_fiq_lock);
 		state->handler.fiq = fiq_debugger_fiq;
 		state->handler.resume = fiq_debugger_resume;
 		ret = fiq_glue_register_handler(&state->handler);

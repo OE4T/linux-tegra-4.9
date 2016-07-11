@@ -28,8 +28,7 @@
 #include <linux/stacktrace.h>
 #include <linux/irqchip/tegra.h>
 #include <linux/tegra_fiq_debugger.h>
-
-#include <asm/fiq_debugger.h>
+#include <linux/fiq_debugger.h>
 
 #include <linux/uaccess.h>
 
@@ -118,10 +117,14 @@ static void debug_flush(struct platform_device *pdev)
 
 static void fiq_enable(struct platform_device *pdev, unsigned int irq, bool on)
 {
+#ifdef CONFIG_ARM
 	if (on)
 		tegra_fiq_enable(irq);
 	else
 		tegra_fiq_disable(irq);
+#else
+	; // do nothing
+#endif
 }
 
 static int tegra_fiq_debugger_id;

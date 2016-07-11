@@ -65,6 +65,14 @@
 					gpios = <&spmic 7 0>;
 				};
 			};
+			override@1 {
+				target = <&{/bpmp_i2c/spmic@3c/pinmux@0}>;
+				_overlay_ {
+					pin_gpio7 {
+						drive-push-pull = <1>;
+					};
+				};
+			};
 		};
 		e3325_xusb {
 			odm-data = "enable-xusb-on-uphy-lane0";

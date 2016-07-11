@@ -1935,6 +1935,20 @@ static struct dma_buf *gk20a_vidbuf_export(struct gk20a_vidmem_buf *buf)
 }
 #endif
 
+static struct gk20a *gk20a_vidmem_buf_owner(struct dma_buf *dmabuf)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+
+	if (dmabuf->ops != &gk20a_vidbuf_ops)
+		return NULL;
+
+	return buf->g;
+#else
+	return NULL;
+#endif
+}
+
 int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
@@ -2010,6 +2024,8 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u32 ctag_map_win_ctagline = 0;
 	struct vm_reserved_va_node *va_node = NULL;
 	u32 ctag_offset;
+	struct gk20a *buf_owner;
+	enum gk20a_aperture aperture;
 
 	if (user_mapped && vm->userspace_managed &&
 	    !(flags & NVGPU_AS_MAP_BUFFER_FLAGS_FIXED_OFFSET)) {
@@ -2185,6 +2201,24 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		ctag_offset += buffer_offset >>
 			       ilog2(g->ops.fb.compression_page_size(g));
 
+	buf_owner = gk20a_vidmem_buf_owner(dmabuf);
+	if (buf_owner == NULL) {
+		/* Not nvgpu-allocated, assume system memory */
+		aperture = APERTURE_SYSMEM;
+	} else if (WARN_ON(buf_owner == g && !g->mm.vidmem_is_vidmem)) {
+		/* Looks like our video memory, but this gpu doesn't support
+		 * it. Warn about a bug and bail out */
+		err = -EINVAL;
+		goto clean_up;
+	} else if (buf_owner != g) {
+		/* Someone else's vidmem */
+		err = -EINVAL;
+		goto clean_up;
+	} else {
+		/* Yay, buf_owner == g */
+		aperture = APERTURE_VIDMEM;
+	}
+
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm, map_offset,
 					bfr.sgt,
@@ -2198,7 +2232,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 					false,
 					false,
 					batch,
-					APERTURE_SYSMEM); /* no vidmem yet */
+					aperture);
 	if (!map_offset)
 		goto clean_up;
 

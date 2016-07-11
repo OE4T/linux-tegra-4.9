@@ -219,7 +219,10 @@ struct nvhost_submit_args {
 	__u64 syncpt_incrs;
 	__u64 cmdbuf_exts;
 
-	__u64 pad[2];		/* future expansion */
+	__u32 checksum_methods;
+	__u32 checksum_falcon_methods;
+
+	__u64 pad[1];		/* future expansion */
 
 	__u64 reloc_types;
 	__u64 cmdbufs;

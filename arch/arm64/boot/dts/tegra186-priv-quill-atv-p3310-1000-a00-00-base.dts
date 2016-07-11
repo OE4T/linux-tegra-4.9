@@ -119,7 +119,7 @@ tegra_padctl_uphy_pinmux_default: pinmux {
 			status = "okay";
 		};
 		pci@2,0 {
-			status = "okay";
+			status = "disabled";
 		};
 		pci@3,0 {
 			status = "okay";

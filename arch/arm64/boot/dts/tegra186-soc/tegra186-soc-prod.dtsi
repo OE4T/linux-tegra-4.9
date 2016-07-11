@@ -86,6 +86,9 @@
 			prod-default-1v8 {
 				prod = <0x00001E4 0x00007F7F 0x7A00>;
 			};
+			prod-sdr104-1v8 {
+				prod = <0x00001E4 0x00007F7F 0x7A00>;
+			};
 			comp-vref-default {
 				prod = <0x00001E0 0x0000000F 0x7>;
 			};

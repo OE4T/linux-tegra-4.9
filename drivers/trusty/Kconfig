@@ -26,7 +26,7 @@ config TRUSTY_FIQ_ARM64
 	depends on ARM64
 	select FIQ_GLUE
 	select TRUSTY_FIQ
-	default y
+	default n
 
 config TRUSTY_LOG
 	tristate

@@ -67,6 +67,15 @@ static inline u32 flcn_thi_sec_ch_lock(void)
 	return (1 << 8);
 }
 
+static dma_addr_t nvhost_t194_get_reloc_phys_addr(dma_addr_t phys_addr,
+						  u32 reloc_type)
+{
+	if (reloc_type == NVHOST_RELOC_TYPE_BLOCK_LINEAR)
+		phys_addr += BIT(39);
+
+	return phys_addr;
+}
+
 #if defined(CONFIG_TEGRA_GRHOST_TSEC)
 static int nvhost_tsec_t194_finalize_poweron(struct platform_device *dev)
 {
@@ -186,6 +195,7 @@ struct nvhost_device_data t19_msenc_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_MSENC,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif
 
@@ -324,6 +334,7 @@ struct nvhost_device_data t19_vic_info = {
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
 	.vm_regs		= {{0x30, true}, {0x34, false} },
 	.bwmgr_client_id	= TEGRA_BWMGR_CLIENT_VIC,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif
 
@@ -344,6 +355,7 @@ struct nvhost_device_data t19_pvab_info = {
 	.poweron_reset		= true,
 	.serialize		= true,
 	.push_work_done		= true,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 
 struct nvhost_device_data t19_pvaa_info = {
@@ -362,6 +374,7 @@ struct nvhost_device_data t19_pvaa_info = {
 	.poweron_reset		= true,
 	.serialize		= true,
 	.push_work_done		= true,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif
 
@@ -387,6 +400,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.serialize		= true,
 	.push_work_done		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 
 struct nvhost_device_data t19_nvdla1_info = {
@@ -409,6 +423,7 @@ struct nvhost_device_data t19_nvdla1_info = {
 	.serialize		= true,
 	.push_work_done		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
+	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 #endif
 

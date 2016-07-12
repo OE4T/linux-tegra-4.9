@@ -38,25 +38,15 @@ static bool nvgpu_pci_tegra_is_railgated(struct device *pdev)
 	return false;
 }
 
-static int nvgpu_pci_busy(struct device *dev)
-{
-	struct gk20a *g = get_gk20a(dev);
-	int err = 0;
-
-	if (!g->power_on)
-		err = gk20a_pm_finalize_poweron(dev);
-
-	return err;
-}
-
 static struct gk20a_platform nvgpu_pci_device = {
 	/* ptimer src frequency in hz */
 	.ptimer_src_freq	= 31250000,
 
 	.probe = nvgpu_pci_tegra_probe,
 	.remove = nvgpu_pci_tegra_remove,
-	.busy = nvgpu_pci_busy,
 
+	/* power management configuration */
+	.railgate_delay		= 500,
 	.can_elpg = false,
 
 	/* power management callbacks */
@@ -147,6 +137,45 @@ static struct class nvgpu_pci_class = {
 	.name = "nvidia-pci-gpu",
 	.devnode = nvgpu_pci_devnode,
 };
+
+#ifdef CONFIG_PM
+static int nvgpu_pci_pm_runtime_resume(struct device *dev)
+{
+	return gk20a_pm_finalize_poweron(dev);
+}
+
+static int nvgpu_pci_pm_runtime_suspend(struct device *dev)
+{
+	return 0;
+}
+
+static const struct dev_pm_ops nvgpu_pci_pm_ops = {
+	.runtime_resume = nvgpu_pci_pm_runtime_resume,
+	.runtime_suspend = nvgpu_pci_pm_runtime_suspend,
+	.resume = nvgpu_pci_pm_runtime_resume,
+	.suspend = nvgpu_pci_pm_runtime_suspend,
+};
+#endif
+
+int nvgpu_pci_pm_init(struct device *dev)
+{
+#ifdef CONFIG_PM
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	if (platform->railgate_delay)
+		pm_runtime_set_autosuspend_delay(dev,
+			platform->railgate_delay);
+
+	/*
+	 * Runtime PM for PCI devices is disabled by default,
+	 * so we need to enable it first
+	 */
+	pm_runtime_use_autosuspend(dev);
+	pm_runtime_put_noidle(dev);
+	pm_runtime_allow(dev);
+#endif
+	return 0;
+}
 
 static int nvgpu_pci_probe(struct pci_dev *pdev,
 			   const struct pci_device_id *pent)
@@ -252,6 +281,12 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	gk20a_init_gr(g);
 
+	err = nvgpu_pci_pm_init(&pdev->dev);
+	if (err) {
+		gk20a_err(&pdev->dev, "pm init failed");
+		return err;
+	}
+
 	return 0;
 }
 
@@ -281,6 +316,9 @@ static struct pci_driver nvgpu_pci_driver = {
 	.id_table = nvgpu_pci_table,
 	.probe = nvgpu_pci_probe,
 	.remove = nvgpu_pci_remove,
+#ifdef CONFIG_PM
+	.driver.pm = &nvgpu_pci_pm_ops,
+#endif
 };
 
 int __init nvgpu_pci_init(void)

@@ -1104,7 +1104,10 @@ static void hub_activate(struct usb_hub *hub, enum hub_activation_type type)
 		}
 
 		/* Clear status-change flags; we'll debounce later */
-		if (portchange & USB_PORT_STAT_C_CONNECTION) {
+		if ((portchange & USB_PORT_STAT_C_CONNECTION) &&
+			!(hub_is_superspeed(hub->hdev) &&
+			((portstatus & USB_PORT_STAT_LINK_STATE) ==
+						USB_SS_PORT_LS_SS_INACTIVE))) {
 			need_debounce_delay = true;
 			usb_clear_port_feature(hub->hdev, port1,
 					USB_PORT_FEAT_C_CONNECTION);

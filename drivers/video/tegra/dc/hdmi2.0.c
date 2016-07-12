@@ -919,23 +919,26 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	int i;
 	int err = 0;
 
-	/* Select mode with smallest clk freq > pclk */
-	tmds_len = ARRAY_SIZE(tmds_config_modes);
-	for (i = 0; i < tmds_len - 1 &&
-		tmds_config_modes[i].clk < hdmi->dc->mode.pclk; i++);
-
 	if (tegra_platform_is_linsim())
 		return 0;
 
-	err = tegra_prod_set_by_name(&hdmi->sor->base,
-				tmds_config_modes[i].name, hdmi->prod_list);
-	if (err) {
-		dev_warn(&hdmi->dc->ndev->dev,
-			"hdmi: tmds prod set failed\n");
-		return -EINVAL;
+	tmds_len = ARRAY_SIZE(tmds_config_modes);
+
+	/* Select mode with smallest clk freq > pclk */
+	for (i = 0; i < tmds_len; i++) {
+		if (tmds_config_modes[i].clk < hdmi->dc->mode.pclk)
+			continue;
+
+		err = tegra_prod_set_by_name(&hdmi->sor->base,
+			tmds_config_modes[i].name, hdmi->prod_list);
+
+		/* Return if matching mode found */
+		if (!err)
+			return 0;
 	}
 
-	return 0;
+	dev_warn(&hdmi->dc->ndev->dev, "hdmi: tmds prod set failed\n");
+	return -EINVAL;
 }
 
 #ifdef CONFIG_TEGRA_NVDISPLAY

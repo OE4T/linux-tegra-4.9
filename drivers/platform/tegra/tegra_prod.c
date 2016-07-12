@@ -414,6 +414,28 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 }
 EXPORT_SYMBOL(tegra_prod_set_by_name);
 
+bool tegra_prod_by_name_supported(struct tegra_prod *tegra_prod,
+				  const char *name)
+{
+	int i;
+	struct tegra_prod_config *t_prod;
+
+	if (!tegra_prod)
+		return false;
+
+	for (i = 0; i < tegra_prod->num; i++) {
+		t_prod = &tegra_prod->prod_config[i];
+		if (!t_prod)
+			break;
+
+		if (!strcmp(t_prod->name, name))
+			return true;
+	}
+
+	return false;
+}
+EXPORT_SYMBOL(tegra_prod_by_name_supported);
+
 /**
  * tegra_prod_init - Init tegra prod list.
  # @dev:	Device handle.

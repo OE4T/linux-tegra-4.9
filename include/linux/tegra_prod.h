@@ -62,6 +62,18 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 			   struct tegra_prod *tegra_prod);
 
 /**
+ * tegra_prod_by_name_supported - Tell whether tegra prod will be supported by
+ *				  given name or not.
+ * @tegra_prod: the list of tegra prods.
+ * @name:       the name of tegra prod need to set.
+ *
+ * Find the tegra prod in the list according to the name. If it exist then
+ * return true else false.
+ */
+bool tegra_prod_by_name_supported(struct tegra_prod *tegra_prod,
+                                  const char *name);
+
+/**
  * devm_tegra_prod_get(): Get the prod handle from the device.
  * @dev: Device handle on which prod setting nodes are available.
  *

@@ -21,7 +21,7 @@
 #ifndef __TEGRA_VI4_H__
 #define __TEGRA_VI4_H__
 
-#include "mc_common.h"
+#include "../camera/mc_common.h"
 
 struct nvhost_vi_ch_incrs {
 	atomic_t syncpt_ids[3];

@@ -28,8 +28,8 @@
 
 #include "dev.h"
 #include "nvhost_acm.h"
-#include "vi/vi_notify.h"
-#include "vi/vi4.h"
+#include "vi_notify.h"
+#include "vi4.h"
 #include "t186/t186.h"
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform/tegra/latency_allowance.h>

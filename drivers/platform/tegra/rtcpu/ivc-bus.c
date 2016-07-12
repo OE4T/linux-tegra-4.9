@@ -24,8 +24,217 @@
 
 #define NV(p) "nvidia," #p
 
-static int tegra_ivc_bus_start(struct device *);
-static void tegra_ivc_bus_stop(struct device *);
+struct tegra_ivc_region {
+	void *base;
+	dma_addr_t dma;
+	unsigned ast_id;
+	u32 ast_va;
+	u32 size;
+};
+
+struct tegra_ivc_bus {
+	struct device dev;
+	struct tegra_ivc_channel *chans;
+	unsigned num_regions;
+	struct tegra_ivc_region regions[];
+};
+
+static void tegra_hsp_ring(struct device *dev)
+{
+	const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
+
+	BUG_ON(ops == NULL || ops->ring == NULL);
+	ops->ring(dev);
+}
+
+static void tegra_ivc_channel_ring(struct ivc *ivc)
+{
+	struct tegra_ivc_channel *chan =
+		container_of(ivc, struct tegra_ivc_channel, ivc);
+	struct tegra_ivc_bus *bus =
+		container_of(chan->dev.parent, struct tegra_ivc_bus, dev);
+
+	tegra_hsp_ring(&bus->dev);
+}
+
+struct device_type tegra_ivc_channel_type = {
+	.name = "tegra-ivc-channel",
+};
+EXPORT_SYMBOL(tegra_ivc_channel_type);
+
+static void tegra_ivc_channel_release(struct device *dev)
+{
+	struct tegra_ivc_channel *chan =
+		container_of(dev, struct tegra_ivc_channel, dev);
+
+	of_node_put(dev->of_node);
+	kfree(chan);
+}
+
+static int tegra_ivc_bus_check_overlap(struct device *dev,
+					const struct tegra_ivc_channel *chan)
+{
+	const struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
+	const struct tegra_ivc_channel *chan2;
+	uintptr_t tx = (uintptr_t)chan->ivc.tx_channel;
+	uintptr_t rx = (uintptr_t)chan->ivc.rx_channel;
+	unsigned s = tegra_ivc_total_queue_size(chan->ivc.nframes *
+							chan->ivc.frame_size);
+
+	for (chan2 = bus->chans; chan2 != NULL; chan2 = chan2->next) {
+		uintptr_t tx2 = (uintptr_t)chan2->ivc.tx_channel;
+		uintptr_t rx2 = (uintptr_t)chan2->ivc.rx_channel;
+		unsigned s2 = tegra_ivc_total_queue_size(chan2->ivc.nframes *
+							chan2->ivc.frame_size);
+
+		if ((tx < tx2 ? tx + s > tx2 : tx2 + s2 > tx) ||
+			(rx < tx2 ? rx + s > tx2 : tx2 + s2 > rx) ||
+			(rx < rx2 ? rx + s > rx2 : rx2 + s2 > rx) ||
+			(tx < rx2 ? tx + s > rx2 : rx2 + s2 > tx)) {
+			dev_err(dev, "buffers for %s and %s overlap\n",
+				dev_name(&chan->dev), dev_name(&chan2->dev));
+			return -EINVAL;
+		}
+	}
+	return 0;
+}
+
+static struct tegra_ivc_channel *tegra_ivc_channel_create(
+		struct device *dev, struct device_node *ch_node,
+		struct tegra_ivc_region *region)
+{
+	union {
+		u32 tab[2];
+		struct {
+			u32 rx;
+			u32 tx;
+		};
+	} start, end;
+	u32 nframes, frame_size;
+	int ret;
+
+	struct tegra_ivc_channel *chan = kzalloc(sizeof(*chan), GFP_KERNEL);
+	if (unlikely(chan == NULL))
+		return ERR_PTR(-ENOMEM);
+
+	chan->dev.parent = dev;
+	chan->dev.type = &tegra_ivc_channel_type;
+	chan->dev.bus = &tegra_ivc_bus_type;
+	chan->dev.of_node = of_node_get(ch_node);
+	chan->dev.release = tegra_ivc_channel_release;
+	dev_set_name(&chan->dev, "%s:%s", dev_name(dev),
+			kbasename(ch_node->full_name));
+	device_initialize(&chan->dev);
+
+	ret = of_property_read_u32_array(ch_node, "reg", start.tab,
+						ARRAY_SIZE(start.tab));
+	if (ret) {
+		dev_err(&chan->dev, "missing <%s> property\n", "reg");
+		goto error;
+	}
+
+	ret = of_property_read_u32(ch_node, NV(frame-count), &nframes);
+	if (ret) {
+		dev_err(&chan->dev, "missing <%s> property\n",
+			NV(frame-count));
+		goto error;
+	}
+
+	ret = of_property_read_u32(ch_node, NV(frame-size), &frame_size);
+	if (ret) {
+		dev_err(&chan->dev, "missing <%s> property\n", NV(frame-size));
+		goto error;
+	}
+
+	ret = -EINVAL;
+	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
+	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
+
+	if (end.rx > region->size) {
+		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "RX");
+		goto error;
+	}
+
+	if (end.tx > region->size) {
+		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "TX");
+		goto error;
+	}
+
+	if (start.tx < start.rx ? end.tx > start.rx : end.rx > start.tx) {
+		dev_err(&chan->dev, "RX and TX buffers overlap\n");
+		goto error;
+	}
+
+	ret = tegra_ivc_bus_check_overlap(dev, chan);
+	if (ret)
+		goto error;
+
+	/* FIXME: revisit if dev->parent actually needed */
+	/* Init IVC */
+	ret = tegra_ivc_init_with_dma_handle(&chan->ivc,
+			(uintptr_t)region->base + start.rx,
+			region->dma + start.rx,
+			(uintptr_t)region->base + start.tx,
+			(u64)region->dma + start.tx,
+			nframes, frame_size, dev->parent,
+			tegra_ivc_channel_ring);
+	if (ret) {
+		dev_err(&chan->dev, "IVC initialization error: %d\n", ret);
+		goto error;
+	}
+
+	dev_dbg(&chan->dev, "%s: RX: 0x%x-0x%x TX: 0x%x-0x%x\n",
+		ch_node->name, start.rx, end.rx, start.tx, end.tx);
+
+	ret = device_add(&chan->dev);
+	if (ret) {
+		dev_err(&chan->dev, "channel device error: %d\n", ret);
+		goto error;
+	}
+
+	return chan;
+error:
+	put_device(&chan->dev);
+	return ERR_PTR(ret);
+}
+
+static void tegra_ivc_channel_notify(struct tegra_ivc_channel *chan)
+{
+	const struct tegra_ivc_channel_ops *ops;
+
+	rcu_read_lock();
+	ops = rcu_dereference(chan->ops);
+
+	if (ops != NULL && ops->notify != NULL)
+		ops->notify(chan);
+	rcu_read_unlock();
+}
+
+void tegra_hsp_notify(struct device *dev)
+{
+	struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
+	struct tegra_ivc_channel *chan;
+
+	for (chan = bus->chans; chan != NULL; chan = chan->next)
+		tegra_ivc_channel_notify(chan);
+}
+EXPORT_SYMBOL(tegra_hsp_notify);
+
+struct device_type tegra_hsp_type = {
+	.name = "tegra-hsp",
+};
+EXPORT_SYMBOL(tegra_hsp_type);
+
+static void tegra_ivc_bus_release(struct device *dev)
+{
+	struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
+
+	of_node_put(dev->of_node);
+	kfree(bus);
+}
 
 static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 {
@@ -34,6 +243,55 @@ static int tegra_ivc_bus_match(struct device *dev, struct device_driver *drv)
 	if (dev->type != ivcdrv->dev_type)
 		return 0;
 	return of_driver_match_device(dev, drv);
+}
+
+static void tegra_ivc_bus_stop(struct device *dev)
+{
+	struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
+
+	while (bus->chans != NULL) {
+		struct tegra_ivc_channel *chan = bus->chans;
+
+		bus->chans = chan->next;
+		device_unregister(&chan->dev);
+	}
+}
+
+static int tegra_ivc_bus_start(struct device *dev)
+{
+	struct tegra_ivc_bus *bus =
+		container_of(dev, struct tegra_ivc_bus, dev);
+	struct device_node *dn = bus->dev.parent->of_node;
+	struct of_phandle_args reg_spec;
+	int i, ret;
+
+	for (i = 0;
+		of_parse_phandle_with_fixed_args(dn, NV(ivc-channels), 3,
+							i, &reg_spec) == 0;
+		i++) {
+		struct device_node *ch_node;
+
+		for_each_child_of_node(reg_spec.np, ch_node) {
+			struct tegra_ivc_channel *chan;
+
+			chan = tegra_ivc_channel_create(&bus->dev, ch_node,
+							&bus->regions[i]);
+			if (IS_ERR(chan)) {
+				ret = PTR_ERR(chan);
+				of_node_put(ch_node);
+				goto error;
+			}
+
+			chan->next = bus->chans;
+			bus->chans = chan;
+		}
+	}
+
+	return 0;
+error:
+	tegra_ivc_bus_stop(dev);
+	return ret;
 }
 
 static int tegra_ivc_bus_probe(struct device *dev)
@@ -118,229 +376,6 @@ void tegra_ivc_driver_unregister(struct tegra_ivc_driver *drv)
 }
 EXPORT_SYMBOL(tegra_ivc_driver_unregister);
 
-struct tegra_ivc_bus {
-	struct device dev;
-	int hsp_master;
-	int hsp_db;
-	struct tegra_ivc_channel *chans;
-};
-
-static void tegra_hsp_ring(struct device *dev)
-{
-	const struct tegra_hsp_ops *ops = tegra_hsp_dev_ops(dev);
-
-	BUG_ON(ops == NULL || ops->ring == NULL);
-	ops->ring(dev);
-}
-
-struct device_type tegra_hsp_type = {
-	.name = "tegra-hsp",
-};
-EXPORT_SYMBOL(tegra_hsp_type);
-
-static void tegra_ivc_channel_release(struct device *dev)
-{
-	struct tegra_ivc_channel *chan =
-		container_of(dev, struct tegra_ivc_channel, dev);
-
-	of_node_put(dev->of_node);
-	kfree(chan);
-}
-
-static void tegra_ivc_bus_release(struct device *dev)
-{
-	struct tegra_ivc_bus *bus =
-		container_of(dev, struct tegra_ivc_bus, dev);
-
-	of_node_put(dev->of_node);
-	kfree(bus);
-}
-
-static void tegra_ivc_channel_ring(struct ivc *ivc)
-{
-	struct tegra_ivc_channel *chan =
-		container_of(ivc, struct tegra_ivc_channel, ivc);
-	struct tegra_ivc_bus *bus =
-		container_of(chan->dev.parent, struct tegra_ivc_bus, dev);
-
-	tegra_hsp_ring(&bus->dev);
-}
-
-static void tegra_ivc_channel_notify(struct tegra_ivc_channel *chan)
-{
-	const struct tegra_ivc_channel_ops *ops;
-
-	rcu_read_lock();
-	ops = rcu_dereference(chan->ops);
-
-	if (ops != NULL && ops->notify != NULL)
-		ops->notify(chan);
-	rcu_read_unlock();
-}
-
-struct device_type tegra_ivc_channel_type = {
-	.name = "tegra-ivc-channel",
-};
-EXPORT_SYMBOL(tegra_ivc_channel_type);
-
-void tegra_hsp_notify(struct device *dev)
-{
-	struct tegra_ivc_bus *bus =
-		container_of(dev, struct tegra_ivc_bus, dev);
-	struct tegra_ivc_channel *chan;
-
-	for (chan = bus->chans; chan != NULL; chan = chan->next)
-		tegra_ivc_channel_notify(chan);
-}
-EXPORT_SYMBOL(tegra_hsp_notify);
-
-static struct tegra_ivc_channel *tegra_ivc_bus_parse_channel(
-		struct device_node *ch_node, struct device *parent,
-		uintptr_t ivc_base, dma_addr_t ivc_dma, u32 ivc_size)
-{
-	int ret;
-	u32 nframes, frame_size;
-	union {
-		u32 tab[2];
-		struct {
-			u32 rx;
-			u32 tx;
-		};
-	} start, end;
-
-	struct tegra_ivc_channel *chan = kzalloc(sizeof(*chan), GFP_KERNEL);
-	if (unlikely(chan == NULL))
-		return ERR_PTR(-ENOMEM);
-
-	chan->dev.parent = parent;
-	chan->dev.type = &tegra_ivc_channel_type;
-	chan->dev.bus = &tegra_ivc_bus_type;
-	chan->dev.of_node = of_node_get(ch_node);
-	chan->dev.release = tegra_ivc_channel_release;
-	dev_set_name(&chan->dev, "%s:%s", dev_name(parent),
-			kbasename(ch_node->full_name));
-	device_initialize(&chan->dev);
-
-	ret = of_property_read_u32_array(ch_node, "reg", start.tab,
-						ARRAY_SIZE(start.tab));
-	if (ret) {
-		dev_err(&chan->dev, "missing <%s> property\n", "reg");
-		goto error;
-	}
-
-	ret = of_property_read_u32(ch_node, NV(frame-count), &nframes);
-	if (ret) {
-		dev_err(&chan->dev, "missing <%s> property\n",
-			NV(frame-count));
-		goto error;
-	}
-
-	ret = of_property_read_u32(ch_node, NV(frame-size), &frame_size);
-	if (ret) {
-		dev_err(&chan->dev, "missing <%s> property\n", NV(frame-size));
-		goto error;
-	}
-
-	ret = -EINVAL;
-	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
-	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
-
-	if (end.rx > ivc_size) {
-		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "RX");
-		goto error;
-	}
-
-	if (end.tx > ivc_size) {
-		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "TX");
-		goto error;
-	}
-
-	if (start.tx < start.rx ? end.tx > start.rx : end.rx > start.tx) {
-		dev_err(&chan->dev, "RX and TX buffers overlap\n");
-		goto error;
-	}
-
-	/* FIXME: revisit if dev->parent actually needed */
-	/* Init IVC */
-	ret = tegra_ivc_init_with_dma_handle(&chan->ivc,
-			ivc_base + start.rx, (u64)ivc_dma + start.rx,
-			ivc_base + start.tx, (u64)ivc_dma + start.tx,
-			nframes, frame_size, parent->parent,
-			tegra_ivc_channel_ring);
-	if (ret) {
-		dev_err(&chan->dev, "IVC initialization error: %d\n", ret);
-		goto error;
-	}
-
-	dev_dbg(&chan->dev, "%s: RX: 0x%x-0x%x TX: 0x%x-0x%x\n",
-		ch_node->name, start.rx, end.rx, start.tx, end.tx);
-	return chan;
-error:
-	put_device(&chan->dev);
-	return ERR_PTR(ret);
-}
-
-static int tegra_ivc_bus_check_overlap(struct device *dev,
-					const struct tegra_ivc_channel *ch0,
-					const struct tegra_ivc_channel *ch1)
-{
-	unsigned s0, s1;
-	uintptr_t tx0, rx0, tx1, rx1;
-
-	if (ch0 == NULL || ch1 == NULL)
-		return -EINVAL;
-
-	tx0 = (uintptr_t)ch0->ivc.tx_channel;
-	rx0 = (uintptr_t)ch0->ivc.rx_channel;
-	s0 = ch0->ivc.nframes * ch0->ivc.frame_size;
-	s0 = tegra_ivc_total_queue_size(s0);
-
-	tx1 = (uintptr_t)ch1->ivc.tx_channel;
-	rx1 = (uintptr_t)ch1->ivc.rx_channel;
-	s1 = ch1->ivc.nframes * ch1->ivc.frame_size;
-	s1 = tegra_ivc_total_queue_size(s1);
-
-	if ((tx0 < tx1 ? tx0 + s0 > tx1 : tx1 + s1 > tx0) ||
-		(rx0 < tx1 ? rx0 + s0 > tx1 : tx1 + s1 > rx0) ||
-		(rx0 < rx1 ? rx0 + s0 > rx1 : rx1 + s1 > rx0) ||
-		(tx0 < rx1 ? tx0 + s0 > rx1 : rx1 + s1 > tx0)) {
-		dev_err(dev, "buffers overlap on channels %s and %s\n",
-			dev_name(&ch0->dev), dev_name(&ch1->dev));
-		return -EINVAL;
-	}
-
-	return 0;
-}
-
-static int tegra_ivc_bus_validate_channels(struct tegra_ivc_bus *bus)
-{
-	struct tegra_ivc_channel *ch0;
-
-	for (ch0 = bus->chans; ch0 != NULL; ch0 = ch0->next) {
-		struct tegra_ivc_channel *ch1;
-
-		for (ch1 = ch0->next; ch1 != NULL; ch1 = ch1->next) {
-			int ret;
-
-			ret = tegra_ivc_bus_check_overlap(&bus->dev, ch0, ch1);
-			if (ret)
-				return ret;
-		}
-	}
-
-	return 0;
-}
-
-static void tegra_ivc_bus_destroy_channels(struct tegra_ivc_bus *bus)
-{
-	while (bus->chans != NULL) {
-		struct tegra_ivc_channel *chan = bus->chans;
-
-		bus->chans = chan->next;
-		put_device(&chan->dev);
-	}
-}
-
 static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 					struct device_node *dev_node, u32 sid)
 {
@@ -366,64 +401,62 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 		of_parse_phandle_with_fixed_args(dev_node, NV(ivc-channels), 3,
 							i, &reg_spec) == 0;
 		i++) {
-		struct device_node *ch_node;
-		unsigned long base;
-		dma_addr_t ivc_dma;
-		u32 region = reg_spec.args[0];
-		u32 vaddr = reg_spec.args[1];
-		u32 size = reg_spec.args[2];
+		struct tegra_ivc_region *region = &bus->regions[i];
+
+		region->ast_id = reg_spec.args[0];
+		region->ast_va = reg_spec.args[1];
+		region->size = reg_spec.args[2];
 
 		/* IVC buffer size must be a power of 2 */
-		if (unlikely(size & (size - 1))) {
+		if (unlikely(region->size & (region->size - 1))) {
 			dev_err(&bus->dev, "invalid region size 0x%08X\n",
-				size);
+				region->size);
 			ret = -EINVAL;
 			goto error;
 		}
 
 		/* Allocate RAM for IVC */
-		base = (unsigned long)dmam_alloc_coherent(bus->dev.parent,
-				size, &ivc_dma, GFP_KERNEL | __GFP_ZERO);
-		if (unlikely(base == 0)) {
+		region->base = dmam_alloc_coherent(bus->dev.parent,
+			region->size, &region->dma, GFP_KERNEL | __GFP_ZERO);
+		if (unlikely(region->base == NULL)) {
 			ret = -ENOMEM;
 			goto error;
 		}
 
-		tegra_ast_region_enable(ARRAY_SIZE(ast), ast, region, vaddr,
-					size, ivc_dma, sid);
-
-		for_each_child_of_node(reg_spec.np, ch_node) {
-			struct tegra_ivc_channel *chan;
-
-			chan = tegra_ivc_bus_parse_channel(ch_node, &bus->dev,
-						base, ivc_dma, size);
-			if (IS_ERR(chan)) {
-				ret = PTR_ERR(chan);
-				of_node_put(ch_node);
-				goto error;
-			}
-
-			chan->next = bus->chans;
-			bus->chans = chan;
-		}
+		tegra_ast_region_enable(ARRAY_SIZE(ast), ast, region->ast_id,
+			region->ast_va, region->size, region->dma, sid);
 	}
 
-	return tegra_ivc_bus_validate_channels(bus);
-
+	return 0;
 error:
 	of_node_put(reg_spec.np);
-	tegra_ivc_bus_destroy_channels(bus);
 	return ret;
+}
+
+static unsigned tegra_ivc_bus_count_regions(const struct device_node *dev_node)
+{
+	unsigned i;
+
+	for (i = 0; of_parse_phandle_with_fixed_args(dev_node,
+			NV(ivc-channels), 3, i, NULL) == 0; i++)
+		;
+
+	return i;
 }
 
 struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 {
+	struct tegra_ivc_bus *bus;
+	unsigned num;
 	int ret;
 
-	struct tegra_ivc_bus *bus = kzalloc(sizeof(*bus), GFP_KERNEL);
+	num = tegra_ivc_bus_count_regions(dev->of_node);
+
+	bus = kzalloc(sizeof(*bus) + num * sizeof(*bus->regions), GFP_KERNEL);
 	if (unlikely(bus == NULL))
 		return ERR_PTR(-ENOMEM);
 
+	bus->num_regions = num;
 	bus->dev.parent = dev;
 	bus->dev.type = &tegra_hsp_type;
 	bus->dev.bus = &tegra_ivc_bus_type;
@@ -442,7 +475,6 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 	ret = device_add(&bus->dev);
 	if (ret) {
 		dev_err(&bus->dev, "IVC instance error: %d\n", ret);
-		tegra_ivc_bus_destroy_channels(bus);
 		goto error;
 	}
 
@@ -454,43 +486,10 @@ error:
 }
 EXPORT_SYMBOL(tegra_ivc_bus_create);
 
-static int tegra_ivc_bus_start(struct device *dev)
-{
-	struct tegra_ivc_bus *bus =
-		container_of(dev, struct tegra_ivc_bus, dev);
-	struct tegra_ivc_channel *chan;
-
-	for (chan = bus->chans; chan != NULL; chan = chan->next) {
-		int ret = device_add(&chan->dev);
-		if (ret) {
-			struct tegra_ivc_channel *cd;
-
-			dev_err(&chan->dev, "channel device error: %d\n", ret);
-
-			for (cd = bus->chans; cd != chan; cd = cd->next)
-				device_del(&cd->dev);
-			return ret;
-		}
-	}
-
-	return 0;
-}
-
-static void tegra_ivc_bus_stop(struct device *dev)
-{
-	struct tegra_ivc_bus *bus =
-		container_of(dev, struct tegra_ivc_bus, dev);
-	struct tegra_ivc_channel *chan;
-
-	for (chan = bus->chans; chan != NULL; chan = chan->next)
-		device_del(&chan->dev);
-}
-
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {
 	if (IS_ERR_OR_NULL(bus))
 		return;
-	tegra_ivc_bus_destroy_channels(bus);
 	device_unregister(&bus->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_destroy);

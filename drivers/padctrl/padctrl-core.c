@@ -54,10 +54,10 @@ static struct class padctrl_class = {
 	.dev_release = padctrl_dev_release,
 };
 
-static struct padctrl *of_pad_get(struct device *dev, const char *name)
+static struct padctrl *of_pad_get(struct device *dev, struct device_node *np,
+				  const char *name)
 {
 	struct of_phandle_args npspec;
-	struct device_node *np = dev->of_node;
 	struct padctrl *pad;
 	struct padctrl_dev *pad_dev;
 	int index = 0;
@@ -107,7 +107,7 @@ struct padctrl *padctrl_get(struct device *dev, const char *name)
 	}
 
 	mutex_lock(&padctrl_dev_list_mutex);
-	pad = of_pad_get(dev, name);
+	pad = of_pad_get(dev, dev->of_node, name);
 	mutex_unlock(&padctrl_dev_list_mutex);
 	return pad;
 }
@@ -148,6 +148,37 @@ struct padctrl *devm_padctrl_get(struct device *dev, const char *name)
 	return padctrl;
 }
 EXPORT_SYMBOL(devm_padctrl_get);
+
+struct padctrl *devm_padctrl_get_from_node(struct device *dev,
+					   struct device_node *np,
+					   const char *name)
+{
+	struct padctrl **ptr, *padctrl;
+
+	if (!dev || !np) {
+		pr_err("%s: not enough information provided\n", __func__);
+		return ERR_PTR(-ENODEV);
+	}
+
+	ptr = devres_alloc(devm_padctrl_release, sizeof(*ptr), GFP_KERNEL);
+	if (!ptr)
+		return ERR_PTR(-ENOMEM);
+
+	mutex_lock(&padctrl_dev_list_mutex);
+	padctrl = of_pad_get(dev, np, name);
+	mutex_unlock(&padctrl_dev_list_mutex);
+
+	if (IS_ERR(padctrl)) {
+		devres_free(ptr);
+		return padctrl;
+	}
+
+	*ptr = padctrl;
+	devres_add(dev, ptr);
+
+	return padctrl;
+}
+EXPORT_SYMBOL(devm_padctrl_get_from_node);
 
 int padctrl_set_voltage(struct padctrl *pad, u32 voltage)
 {

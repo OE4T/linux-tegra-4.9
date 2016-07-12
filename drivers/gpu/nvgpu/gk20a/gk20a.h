@@ -64,6 +64,18 @@ struct cooling_device_gk20a {
 	struct gk20a *g;
 };
 
+#ifdef CONFIG_DEBUG_FS
+struct railgate_stats {
+	unsigned long last_rail_gate_start;
+	unsigned long last_rail_gate_complete;
+	unsigned long last_rail_ungate_start;
+	unsigned long last_rail_ungate_complete;
+	unsigned long total_rail_gate_time_ms;
+	unsigned long total_rail_ungate_time_ms;
+	unsigned long railgating_cycle_count;
+};
+#endif
+
 enum gk20a_cbc_op {
 	gk20a_cbc_op_clear,
 	gk20a_cbc_op_clean,
@@ -687,6 +699,9 @@ struct gk20a {
 	struct acr_desc acr;
 	struct cooling_device_gk20a gk20a_cdev;
 
+#ifdef CONFIG_DEBUG_FS
+	struct railgate_stats pstats;
+#endif
 	/* Save pmu fw here so that it lives cross suspend/resume.
 	   pmu suspend destroys all pmu sw/hw states. Loading pmu
 	   fw in resume crashes when the resume is from sys_exit. */

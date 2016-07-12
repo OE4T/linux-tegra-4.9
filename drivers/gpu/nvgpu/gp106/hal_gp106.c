@@ -207,6 +207,7 @@ int gp106_init_hal(struct gk20a *g)
 	gops->get_litter_value = gp106_get_litter_value;
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->gr_ctx.use_dma_for_fw_bootstrap = true;
+	gops->read_ptimer = gk20a_read_ptimer;
 
 	c->twod_class = FERMI_TWOD_A;
 	c->threed_class = PASCAL_B;

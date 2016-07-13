@@ -379,7 +379,7 @@ int tsec_hdcp_revocation_check(struct hdcp_context_t *hdcp_context)
 	}
 	seg = get_fs();
 	set_fs(get_ds());
-	fp->f_op->read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
+	vfs_read(fp, (u8 *)hdcp_context->cpuvaddr_srm,
 			HDCP_SRM_SIZE, &fp->f_pos);
 	set_fs(seg);
 	revocation_check_param.srm_size = fp->f_pos;

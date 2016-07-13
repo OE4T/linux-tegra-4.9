@@ -31,6 +31,9 @@
 
 #include <mach/dc.h>
 #include <linux/platform/tegra/tegra_kfuse.h>
+#if (defined(CONFIG_TRUSTY))
+#include <linux/trusty/trusty_ipc.h>
+#endif
 
 #include <video/nvhdcp.h>
 
@@ -108,12 +111,13 @@ static DECLARE_WAIT_QUEUE_HEAD(wq_worker);
 		pr_err("nvhdcp: Error: " __VA_ARGS__)
 #define nvhdcp_info(...)	\
 		pr_info("nvhdcp: " __VA_ARGS__)
+#define HDCP_PORT_NAME	"com.nvidia.tos.hdcp"
 
 static u8 g_seq_num_m_retries;
 static u8 g_fallback;
 
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
-static u32 g_session_id;
+static void *ta_ctx;
 #endif
 
 static struct tegra_dc *tegra_dc_hdmi_get_dc(struct tegra_hdmi *hdmi)
@@ -1303,7 +1307,6 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	u8 b_caps;
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	int hdcp_ta_ret; /* track returns from TA */
-	uint32_t hdcp_auth_uuid[4] = HDCP_AUTH_UUID;
 	uint32_t ta_cmd = HDCP_AUTH_CMD;
 	bool enc = false;
 
@@ -1350,8 +1353,8 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	nvhdcp_vdbg("read Bcaps = 0x%02x\n", b_caps);
 
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
-	e = te_open_trusted_session(hdcp_auth_uuid,
-		sizeof(hdcp_auth_uuid), &g_session_id);
+	ta_ctx = NULL;
+	e = te_open_trusted_session(HDCP_PORT_NAME, &ta_ctx);
 	if (e) {
 		nvhdcp_info("Invalid session id");
 		goto failure;
@@ -1362,10 +1365,9 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	*pkt = HDCP_TA_CMD_REP;
 	*(pkt + 1*HDCP_CMD_OFFSET) = 0;
 	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
-				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
-		nvhdcp_err("te launch operation failed\n");
+		nvhdcp_err("te launch operation failed with error %d\n", e);
 		goto failure;
 	} else {
 		nvhdcp_vdbg("Loading kfuse\n");
@@ -1378,10 +1380,9 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	usleep_range(20000, 25000);
 	*pkt = HDCP_TA_CMD_CTRL;
 	*(pkt + HDCP_CMD_OFFSET) = HDCP_TA_CTRL_ENABLE;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
-				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
-		nvhdcp_err("te launch operation failed\n");
+		nvhdcp_err("te launch operation failed with error %d\n", e);
 		goto failure;
 	} else {
 		nvhdcp_vdbg("wait AN_VALID ...\n");
@@ -1403,11 +1404,10 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 
 	msleep(25);
 	*pkt = HDCP_TA_CMD_AKSV;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
-				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
-			nvhdcp_err("te launch operation failed\n");
-			goto failure;
+		nvhdcp_err("te launch operation failed with error %d\n", e);
+		goto failure;
 	} else {
 		hdcp_ta_ret = (u64)*pkt;
 		nvhdcp->a_ksv = (u64)*(pkt + 1*HDCP_CMD_BYTE_OFFSET);
@@ -1506,10 +1506,9 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 	*pkt = HDCP_TA_CMD_BKSV;
 	*(pkt + 1*HDCP_CMD_OFFSET) = nvhdcp->b_ksv;
 	*(pkt + 2*HDCP_CMD_OFFSET) = b_caps & BCAPS_REPEATER;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
-				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 	if (e) {
-		nvhdcp_err("te launch operation failed\n");
+		nvhdcp_err("te launch operation failed with error: %d\n", e);
 		goto failure;
 	} else {
 		/* check if Bksv verification was successful */
@@ -1568,10 +1567,9 @@ static void nvhdcp_downstream_worker(struct work_struct *work)
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	*pkt = HDCP_TA_CMD_ENC;
 	*(pkt + HDCP_CMD_OFFSET) = b_caps;
-	e = te_launch_trusted_oper(pkt, PKT_SIZE/4, g_session_id,
-				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+	e = te_launch_trusted_oper(pkt, PKT_SIZE/4, ta_cmd, ta_ctx);
 	if (e) {
-		nvhdcp_err("te launch operation failed\n");
+		nvhdcp_err("te launch operation failed with error: %d\n", e);
 		goto failure;
 	}
 	enc = true;
@@ -1627,10 +1625,9 @@ lost_hdmi:
 	*pkt = HDCP_TA_CMD_CTRL;
 	*(pkt + HDCP_CMD_OFFSET) = HDCP_TA_CTRL_DISABLE;
 	if (enc) {
-		e = te_launch_trusted_oper(pkt, PKT_SIZE, g_session_id,
-				hdcp_auth_uuid, ta_cmd, sizeof(hdcp_auth_uuid));
+		e = te_launch_trusted_oper(pkt, PKT_SIZE, ta_cmd, ta_ctx);
 		if (e) {
-			nvhdcp_err("te launch operation failed\n");
+			nvhdcp_err("te launch operation failed with error: %d\n", e);
 			goto failure;
 		}
 	}
@@ -1642,9 +1639,8 @@ err:
 	mutex_unlock(&nvhdcp->lock);
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	kfree(pkt);
-	if (g_session_id)
-		te_close_trusted_session(g_session_id, hdcp_auth_uuid,
-					sizeof(hdcp_auth_uuid));
+	if (ta_ctx)
+		te_close_trusted_session(ta_ctx);
 #endif
 	tegra_dc_io_end(dc);
 	return;
@@ -1652,9 +1648,8 @@ disable:
 	nvhdcp->state = STATE_OFF;
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	kfree(pkt);
-	if (g_session_id)
-		te_close_trusted_session(g_session_id, hdcp_auth_uuid,
-						sizeof(hdcp_auth_uuid));
+	if (ta_ctx)
+		te_close_trusted_session(ta_ctx);
 #endif
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);

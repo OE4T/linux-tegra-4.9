@@ -83,15 +83,6 @@ struct tegra_nvhdcp *tegra_nvhdcp_create(struct tegra_hdmi *hdmi,
 					int id, int bus);
 void tegra_nvhdcp_destroy(struct tegra_nvhdcp *nvhdcp);
 void tegra_nvhdcp_debugfs_init(struct tegra_nvhdcp *nvhdcp);
-#if (defined(CONFIG_ARCH_TEGRA_18x_SOC) \
-&& defined(CONFIG_TRUSTED_LITTLE_KERNEL))
-extern int te_launch_trusted_oper(u64 *buf_ptr,
-					u64 buflen, u32 session_id,
-				u32 *ta_uuid, u32 cmd, u32 size);
-extern int te_open_trusted_session(u32 *ta_uuid, u32 size, u32 *session_id);
-extern void te_close_trusted_session(u32 session_id, u32 *ta_uuid,
-							u32 size);
-#endif
 #else
 static inline void tegra_nvhdcp_set_plug(struct tegra_nvhdcp *nvhdcp, bool hpd)
 {

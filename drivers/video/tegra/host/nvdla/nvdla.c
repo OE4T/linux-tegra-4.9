@@ -38,7 +38,7 @@
 
 #include "nvdla/nvdla.h"
 #include "nvhost_nvdla_ioctl.h"
-#include "nvdla_ucode_interface.h"
+#include "dla_os_interface.h"
 
 #define DEBUG_BUFFER_SIZE 0x100
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */

@@ -60,7 +60,7 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 	/* dump falcon data if debug enabled */
 	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
 	if (mailbox0 == DLA_DEBUG_PRINT)
-		dev_info(&pdev->dev, "falcon: %s\n",
+		dev_info(&pdev->dev, "falcon: %s",
 			 (char *)m->debug_dump_va);
 
 	return 0;
@@ -76,8 +76,12 @@ static void nvdla_send_cmd(struct platform_device *pdev,
 
 static int nvdla_alloc_dump_region(struct platform_device *pdev)
 {
-	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	int err = 0;
 	struct flcn *m;
+	dma_addr_t region_pa;
+	struct dla_region_printf *region;
+	u32 timeout = FLCN_IDLE_TIMEOUT_DEFAULT * 5;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	if (!pdata->flcn_isr)
 		return 0;
@@ -92,11 +96,42 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 		return -ENOMEM;
 	}
 
+	/* allocate memory for command */
+	region = (struct dla_region_printf *)dma_alloc_attrs(&pdev->dev,
+					sizeof(struct dla_region_printf),
+					&region_pa, GFP_KERNEL, &attrs);
+	if (!region) {
+		dev_err(&pdev->dev, "dma memory allocation failed");
+		err = -ENOMEM;
+		goto set_region_failed;
+	}
+
+	region->region = DLA_REGION_PRINTF;
+	region->address = ALIGNED_DMA(m->debug_dump_pa);
+	region->size = DEBUG_BUFFER_SIZE;
+
 	/* pass dump region to falcon */
 	nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-		       ALIGNED_DMA(m->debug_dump_pa));
+			       ALIGNED_DMA(region_pa));
+
+	/* wait for falcon to idle */
+	err = flcn_wait_idle(pdev, &timeout);
+	if (err != 0)
+		dev_err(&pdev->dev, "failed for wait for idle in timeout");
+
+	/* free memory allocated for command */
+	dma_free_attrs(&pdev->dev, sizeof(struct dla_region_printf),
+		       region, region_pa,
+		       &attrs);
 
 	return 0;
+
+set_region_failed:
+	dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
+		       m->debug_dump_va, m->debug_dump_pa,
+		       &attrs);
+
+	return err;
 }
 
 static void nvdla_free_dump_region(struct platform_device *pdev)

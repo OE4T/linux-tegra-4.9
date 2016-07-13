@@ -31,6 +31,7 @@
 #include <sound/soc.h>
 #include <linux/of_device.h>
 #include <linux/debugfs.h>
+#include <linux/pinctrl/consumer.h>
 #include <linux/pinctrl/pinconf-tegra.h>
 
 #include "tegra210_xbar_alt.h"
@@ -72,11 +73,22 @@ static const struct reg_default tegra210_dmic_reg_defaults[] = {
 static int tegra210_dmic_runtime_suspend(struct device *dev)
 {
 	struct tegra210_dmic *dmic = dev_get_drvdata(dev);
+	int ret;
+
 	regcache_cache_only(dmic->regmap, true);
 	regcache_mark_dirty(dmic->regmap);
 
-	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga()))
+	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (!IS_ERR(dmic->pin_idle_state) && dmic->is_pinctrl) {
+			ret = pinctrl_select_state(
+				dmic->pinctrl, dmic->pin_idle_state);
+			if (ret < 0)
+				dev_err(dev,
+				"setting dap pinctrl idle state failed\n");
+		}
+
 		clk_disable_unprepare(dmic->clk_dmic);
+	}
 
 	pm_runtime_put_sync(dev->parent);
 
@@ -95,6 +107,14 @@ static int tegra210_dmic_runtime_resume(struct device *dev)
 	}
 
 	if (!(tegra_platform_is_unit_fpga() || tegra_platform_is_fpga())) {
+		if (!IS_ERR(dmic->pin_active_state) && dmic->is_pinctrl) {
+			ret = pinctrl_select_state(dmic->pinctrl,
+						dmic->pin_active_state);
+			if (ret < 0)
+				dev_err(dev,
+				"setting dap pinctrl active state failed\n");
+		}
+
 		ret = clk_prepare_enable(dmic->clk_dmic);
 		if (ret) {
 			dev_err(dev, "clk_enable failed: %d\n", ret);
@@ -547,9 +567,46 @@ static int tegra210_dmic_platform_probe(struct platform_device *pdev)
 		goto err_suspend;
 	}
 
-	if (of_property_read_string(np, "prod-name", &prod_name) == 0)
-		tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+	if (of_property_read_string(np, "prod-name", &prod_name) == 0) {
+		ret = tegra_pinctrl_config_prod(&pdev->dev, prod_name);
+		if (ret < 0)
+			dev_warn(&pdev->dev, "Failed to set %s setting\n",
+					prod_name);
+	}
 
+	if (of_property_read_u32(np, "nvidia,is-pinctrl",
+				&dmic->is_pinctrl) < 0)
+		dmic->is_pinctrl = 0;
+
+	if (dmic->is_pinctrl) {
+		dmic->pinctrl = devm_pinctrl_get(&pdev->dev);
+		if (IS_ERR(dmic->pinctrl)) {
+			dev_warn(&pdev->dev, "Missing pinctrl device\n");
+			goto err_dap;
+		}
+
+		dmic->pin_active_state = pinctrl_lookup_state(dmic->pinctrl,
+									"dap_active");
+		if (IS_ERR(dmic->pin_active_state)) {
+			dev_warn(&pdev->dev, "Missing dap-active state\n");
+			goto err_dap;
+		}
+
+		dmic->pin_idle_state = pinctrl_lookup_state(dmic->pinctrl,
+								"dap_inactive");
+		if (IS_ERR(dmic->pin_idle_state)) {
+			dev_warn(&pdev->dev, "Missing dap-inactive state\n");
+			goto err_dap;
+		}
+
+		ret = pinctrl_select_state(dmic->pinctrl, dmic->pin_idle_state);
+		if (ret < 0) {
+			dev_err(&pdev->dev, "setting state failed\n");
+			goto err_dap;
+		}
+	}
+
+err_dap:
 	dev_set_drvdata(&pdev->dev, dmic);
 
 	return 0;

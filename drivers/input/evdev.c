@@ -535,6 +535,7 @@ static ssize_t evdev_write(struct file *file, const char __user *buffer,
 	struct evdev *evdev = client->evdev;
 	struct input_event event;
 	int retval = 0;
+	size_t cnt;
 
 	if (count != 0 && count < input_event_size())
 		return -EINVAL;
@@ -554,6 +555,10 @@ static ssize_t evdev_write(struct file *file, const char __user *buffer,
 			retval = -EFAULT;
 			goto out;
 		}
+	cnt = evdev_get_mask_cnt(event.type);
+	if (!cnt || event.code >= cnt)
+		goto out;
+
 		retval += input_event_size();
 
 		input_inject_event(&evdev->handle,
@@ -1213,6 +1218,9 @@ static long evdev_do_ioctl(struct file *file, unsigned int cmd,
 		error = input_ff_upload(dev, &effect, file);
 		if (error)
 			return error;
+
+		if (effect.id >= dev->ff->max_effects)
+			return -EINVAL;
 
 		if (put_user(effect.id, &(((struct ff_effect __user *)p)->id)))
 			return -EFAULT;

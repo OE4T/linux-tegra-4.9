@@ -43,6 +43,7 @@ u32 tegra_read_chipid(void);
 #if !defined(CONFIG_TEGRA_FUSE)
 int tegra_fuse_readl(unsigned long offset, u32 *value);
 u8 tegra_get_chip_id(void);
+enum tegra_revision tegra_chip_get_revision(void);
 
 /* TODO: Dummy implementation till upstream fuse driver implements these*/
 static inline bool tegra_spare_fuse(int bit)

@@ -52,6 +52,14 @@ u8 tegra_get_chip_id(void)
 	return (tegra_read_chipid() >> 8) & 0xff;
 }
 
+enum tegra_revision tegra_chip_get_revision(void)
+{
+	if (tegra_sku_info.revision == TEGRA_REVISION_UNKNOWN)
+		tegra_init_revision();
+
+	return tegra_sku_info.revision;
+}
+
 u32 tegra_read_straps(void)
 {
 	if (strapping_base)

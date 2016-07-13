@@ -95,7 +95,7 @@
 
 		dpaux@155c0000 {
 			prod-settings {
-				prod_c_dpaux {
+				prod_c_dpaux_dp {
 					board {
 						prod = <
 							0x00000124 0x000037FC 0x0000249C

@@ -48,11 +48,11 @@
 			};
 		};
 		bus@3 {
-			i2c-bus = <&gen7_i2c>;
+			i2c-bus = <&cam_i2c>;
 			eeprom@0 {
 				slave-address = <0x54>;
 				label = "cam";
-				enable-gpio = <&gpio_i2c_0_77 9>;
+				enable-gpio = <2 9>;
 			};
 		};
 	};

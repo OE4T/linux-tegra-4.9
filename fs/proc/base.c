@@ -1164,6 +1164,11 @@ static ssize_t oom_adj_write(struct file *file, const char __user *buf,
 		goto out;
 	}
 
+	if (strlen(buffer) > count) {
+		err = -EFAULT;
+		goto out;
+	}
+
 	err = kstrtoint(strstrip(buffer), 0, &oom_adj);
 	if (err)
 		goto out;
@@ -1220,6 +1225,11 @@ static ssize_t oom_score_adj_write(struct file *file, const char __user *buf,
 	if (count > sizeof(buffer) - 1)
 		count = sizeof(buffer) - 1;
 	if (copy_from_user(buffer, buf, count)) {
+		err = -EFAULT;
+		goto out;
+	}
+
+	if (strlen(buffer) > count) {
 		err = -EFAULT;
 		goto out;
 	}

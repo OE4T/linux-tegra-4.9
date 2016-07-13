@@ -631,6 +631,38 @@
 		};
 	};
 
+	pinmux@2430000 {
+		dap_active_state: dap_active {
+			dmic_can_gpio0_paa0 {
+				nvidia,pins = "can_gpio0_paa0";
+				nvidia,function = "dmic3";
+			};
+			dmic_can_gpio1_paa1 {
+				nvidia,pins = "can_gpio1_paa1";
+				nvidia,function = "dmic3";
+			};
+		};
+		dap_inactive_state: dap_inactive {
+			dmic_can_gpio0_paa0 {
+				nvidia,pins = "can_gpio0_paa0";
+				nvidia,function = "dmic5";
+			};
+			dmic_can_gpio1_paa1 {
+				nvidia,pins = "can_gpio1_paa1";
+				nvidia,function = "dmic5";
+			};
+		};
+	};
+
+	ahub {
+		dmic@2904200 {
+			nvidia,is-pinctrl = <1>;
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <&dap_active_state>;
+			pinctrl-1 = <&dap_inactive_state>;
+		};
+	};
+
 	adma@2930000 {
 		dma-channels = <10>;
 	};

@@ -17,6 +17,9 @@
 #ifndef __SOC_TEGRA_FUSE_H__
 #define __SOC_TEGRA_FUSE_H__
 
+#include <linux/tegra-soc.h>
+#include <linux/tegra-fuse.h>
+
 #define TEGRA20		0x20
 #define TEGRA30		0x30
 #define TEGRA114	0x35
@@ -33,36 +36,9 @@
 u32 tegra_read_chipid(void);
 u8 tegra_get_chip_id(void);
 
-enum tegra_revision {
-	TEGRA_REVISION_UNKNOWN = 0,
-	TEGRA_REVISION_A01,
-	TEGRA_REVISION_A01q,
-	TEGRA_REVISION_A02,
-	TEGRA_REVISION_A03,
-	TEGRA_REVISION_A03p,
-	TEGRA_REVISION_A04,
-	TEGRA_REVISION_MAX,
-};
-
-struct tegra_sku_info {
-	int sku_id;
-	int cpu_process_id;
-	int cpu_speedo_id;
-	int cpu_speedo_value;
-	int cpu_iddq_value;
-	int soc_process_id;
-	int soc_speedo_id;
-	int soc_speedo_value;
-	int gpu_process_id;
-	int gpu_speedo_id;
-	int gpu_speedo_value;
-	enum tegra_revision revision;
-};
-
 u32 tegra_read_straps(void);
 u32 tegra_read_ram_code(void);
 u32 tegra_read_chipid(void);
-int tegra_fuse_readl(unsigned long offset, u32 *value);
 
 extern struct tegra_sku_info tegra_sku_info;
 #if !defined(CONFIG_TEGRA_FUSE)

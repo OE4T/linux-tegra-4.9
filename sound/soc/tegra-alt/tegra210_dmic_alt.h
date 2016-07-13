@@ -119,6 +119,10 @@ struct tegra210_dmic {
 	struct clk *clk_pll_a_out0;
 	struct regmap *regmap;
 	const struct tegra210_dmic_soc_data *soc_data;
+	int is_pinctrl;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pin_active_state;
+	struct pinctrl_state *pin_idle_state;
 	int boost_gain; /* with 100x factor */
 	int ch_select;
 };

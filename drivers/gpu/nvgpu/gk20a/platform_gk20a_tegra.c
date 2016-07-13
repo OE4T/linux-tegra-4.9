@@ -13,6 +13,7 @@
  * more details.
  */
 
+#include <linux/version.h>
 #include <linux/of_platform.h>
 #include <linux/nvhost.h>
 #include <linux/debugfs.h>
@@ -28,6 +29,9 @@
 #include <linux/platform/tegra/common.h>
 #include <linux/platform/tegra/mc.h>
 #include <linux/clk/tegra.h>
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+#include <soc/tegra/fuse.h>
+#endif
 
 #include <linux/platform/tegra/tegra_emc.h>
 

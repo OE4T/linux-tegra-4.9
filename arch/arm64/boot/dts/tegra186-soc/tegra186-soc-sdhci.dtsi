@@ -92,6 +92,7 @@
 		#stream-id-cells = <1>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC3_HV>;
 		pad-names = "sdmmc";
+		nvidia,disable-rtpm;
 		status = "disabled";
 	};
 
@@ -128,6 +129,7 @@
 		#stream-id-cells = <1>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC2_HV>;
 		pad-names = "sdmmc";
+		nvidia,disable-rtpm;
 		status = "disabled";
 	};
 
@@ -160,6 +162,7 @@
 		#stream-id-cells = <1>;
 		pad-controllers = <&tegra_pmc TEGRA_IO_PAD_GROUP_SDMMC1_HV>;
 		pad-names = "sdmmc";
+		nvidia,disable-rtpm;
 		status = "disabled";
 	 };
 };

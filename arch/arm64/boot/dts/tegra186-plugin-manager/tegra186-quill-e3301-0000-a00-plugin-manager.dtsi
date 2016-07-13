@@ -46,11 +46,15 @@
 			};
 		};
 		bus@3 {
-			i2c-bus = <&gen7_i2c>;
+			i2c-bus = <&cam_i2c>;
 			eeprom@0 {
 				slave-address = <0x54>;
 				label = "cam";
-				enable-gpio = <&gpio_i2c_0_77 9>;
+				enable-gpio = <2 9>;
+				/* Hard code chip_id 2 in DT for now,
+				 * Refer to http://git-master/r/#/c/1178868/5/include/drivers/tegrabl_gpio.h@23
+				 * Should change back after bootloader DT support enabled in gpio driver
+				 */
 			};
 		};
 	};

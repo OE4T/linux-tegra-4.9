@@ -102,6 +102,12 @@
 
 #define VIVID_CID_SDR_CAP_FM_DEVIATION	(VIVID_CID_VIVID_BASE + 110)
 
+#define VIVID_CID_COARSE_TIME		(VIVID_CID_VIVID_BASE + 120)
+#define VIVID_CID_COARSE_TIME_SHORT	(VIVID_CID_VIVID_BASE + 121)
+#define VIVID_CID_FRAME_LENGTH		(VIVID_CID_VIVID_BASE + 122)
+#define VIVID_CID_GROUP_HOLD		(VIVID_CID_VIVID_BASE + 123)
+#define VIVID_CID_HDR_EN		(VIVID_CID_VIVID_BASE + 124)
+
 /* General User Controls */
 
 static int vivid_user_gen_s_ctrl(struct v4l2_ctrl *ctrl)
@@ -279,7 +285,6 @@ static const struct v4l2_ctrl_config vivid_ctrl_clear_fb = {
 	.name = "Clear Framebuffer",
 	.type = V4L2_CTRL_TYPE_BUTTON,
 };
-
 
 /* Video User Controls */
 
@@ -481,6 +486,71 @@ static int vivid_vid_cap_s_ctrl(struct v4l2_ctrl *ctrl)
 
 static const struct v4l2_ctrl_ops vivid_vid_cap_ctrl_ops = {
 	.s_ctrl = vivid_vid_cap_s_ctrl,
+};
+
+#define MIN_FRAME_LENGTH	0x0
+#define MAX_FRAME_LENGTH	0x7FFF
+#define DEF_FRAME_LENGTH	0x07C0
+#define MIN_EXPOSURE_COARSE	0x0002
+#define MAX_EXPOSURE_COARSE	0x7FF8
+#define DEF_EXPOSURE_COARSE	0x07B8
+
+static const struct v4l2_ctrl_config vivid_ctrl_framelength = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_FRAME_LENGTH,
+	.name = "Frame Length",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_SLIDER,
+	.min = MIN_FRAME_LENGTH,
+	.max = MAX_FRAME_LENGTH,
+	.def = DEF_FRAME_LENGTH,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_coarsetime = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_COARSE_TIME,
+	.name = "Coarse Time",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_SLIDER,
+	.min = MIN_EXPOSURE_COARSE,
+	.max = MAX_EXPOSURE_COARSE,
+	.def = DEF_EXPOSURE_COARSE,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_coarsetime_short = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_COARSE_TIME_SHORT,
+	.name = "Coarse Time Short",
+	.type = V4L2_CTRL_TYPE_INTEGER,
+	.flags = V4L2_CTRL_FLAG_SLIDER,
+	.min = MIN_EXPOSURE_COARSE,
+	.max = MAX_EXPOSURE_COARSE,
+	.def = DEF_EXPOSURE_COARSE,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_grouphold = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_GROUP_HOLD,
+	.name = "Group Hold",
+	.type = V4L2_CTRL_TYPE_BOOLEAN,
+	.min = 0,
+	.max = 1,
+        .def = 0,
+	.step = 1,
+};
+
+static const struct v4l2_ctrl_config vivid_ctrl_hdrenable = {
+	.ops = &vivid_vid_cap_ctrl_ops,
+	.id = VIVID_CID_HDR_EN,
+	.name = "HDR enable",
+	.type = V4L2_CTRL_TYPE_BOOLEAN,
+	.min = 0,
+	.max = 1,
+        .def = 0,
+	.step = 1,
 };
 
 static const char * const vivid_ctrl_hor_movement_strings[] = {
@@ -1456,6 +1526,11 @@ int vivid_create_controls(struct vivid_dev *dev, bool show_ccs_cap,
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_ycbcr_enc, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_quantization, NULL);
 		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_alpha_mode, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_framelength, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_coarsetime, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_coarsetime_short, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_grouphold, NULL);
+		v4l2_ctrl_new_custom(hdl_vid_cap, &vivid_ctrl_hdrenable, NULL);
 	}
 
 	if (dev->has_vid_out && show_ccs_out) {

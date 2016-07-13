@@ -2860,6 +2860,14 @@ static void tegra_dc_hdmi_postpoweron(struct tegra_dc *dc)
 	_tegra_hdmivrr_activate(tegra_dc_get_outdata(dc), true);
 }
 
+static void tegra_dc_hdmi_sor_sleep(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	if (hdmi->sor->sor_state == SOR_ATTACHED)
+		tegra_dc_sor_sleep(hdmi->sor);
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,
 	.hotplug_init = tegra_dc_hdmi_hpd_init,
@@ -2880,4 +2888,5 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.vrr_update_monspecs = tegra_hdmivrr_update_monspecs,
 	.set_hdr = tegra_dc_hdmi_set_hdr,
 	.postpoweron = tegra_dc_hdmi_postpoweron,
+	.shutdown_interface = tegra_dc_hdmi_sor_sleep,
 };

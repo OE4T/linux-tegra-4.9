@@ -136,6 +136,8 @@ struct tegra_dc_out_ops {
 	/* Configure controller to receive hotplug events */
 	int (*hotplug_init)(struct tegra_dc *dc);
 	int (*set_hdr)(struct tegra_dc *dc);
+	/* shutdown the serial interface */
+	void (*shutdown_interface)(struct tegra_dc *dc);
 };
 
 struct tegra_dc_shift_clk_div {

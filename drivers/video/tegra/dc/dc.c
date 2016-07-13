@@ -5152,9 +5152,13 @@ void tegra_dc_blank(struct tegra_dc *dc, unsigned windows)
 		dcwins[nr_win++]->flags &= ~TEGRA_WIN_FLAG_ENABLED;
 	}
 
-	if (dc->shutdown)
 #ifdef CONFIG_TEGRA_NVDISPLAY
-		tegra_nvdisp_stop_display(dc);
+	if (dc->shutdown) {
+		if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+			(dc->out->type == TEGRA_DC_OUT_DP))
+			if (dc->out_ops && dc->out_ops->shutdown_interface)
+				dc->out_ops->shutdown_interface(dc);
+	}
 #endif
 
 	/* Skip update for linsim */

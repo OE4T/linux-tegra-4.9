@@ -1860,14 +1860,12 @@ void tegra_sor_stop_dc(struct tegra_dc_sor_data *sor)
 	tegra_dc_put(dc);
 }
 
-void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
+void tegra_dc_sor_sleep(struct tegra_dc_sor_data *sor)
 {
 	struct tegra_dc *dc = sor->dc;
 
-	if (sor->sor_state != SOR_ATTACHED)
+	if (sor->sor_state == SOR_SLEEP)
 		return;
-
-	tegra_dc_get(dc);
 
 #if defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_13x_SOC)
 	/* Sleep mode */
@@ -1906,6 +1904,20 @@ void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for HEAD MODE = SLEEP\n");
 	}
+	sor->sor_state = SOR_SLEEP;
+
+}
+
+void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor)
+{
+	struct tegra_dc *dc = sor->dc;
+
+	if (sor->sor_state != SOR_ATTACHED)
+		return;
+
+	tegra_dc_get(dc);
+
+	tegra_dc_sor_sleep(sor);
 
 	tegra_dc_sor_disable_win_short_raster(dc, sor->dc_reg_ctx);
 

@@ -118,10 +118,13 @@ static int gk20a_scale_make_freq_table(struct gk20a_scale_profile *profile)
 	int num_freqs, err;
 	unsigned long *freqs;
 
-	/* get gpu frequency table */
-	err = platform->get_clk_freqs(profile->dev, &freqs,
+	if (platform->get_clk_freqs) {
+		/* get gpu frequency table */
+		err = platform->get_clk_freqs(profile->dev, &freqs,
 					&num_freqs);
-	if (err)
+		if (err)
+			return -ENOSYS;
+	} else
 		return -ENOSYS;
 
 	profile->devfreq_profile.freq_table = (unsigned long *)freqs;

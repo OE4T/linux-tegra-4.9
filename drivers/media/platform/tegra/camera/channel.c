@@ -188,7 +188,7 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 	if (ret)
 		return;
 
-	chan->fmtinfo = tegra_core_get_format_by_code(mbus_fmt.code);
+	chan->fmtinfo = tegra_core_get_format_by_code(fmt.format.code);
 	v4l2_fill_pix_format(&chan->format, &fmt.format);
 	chan->format.pixelformat = chan->fmtinfo->fourcc;
 	chan->format.bytesperline = chan->format.width *
@@ -299,7 +299,7 @@ static void tegra_channel_capture_frame(struct tegra_channel *chan,
 	}
 
 	if (atomic_read(&chan->is_hdmiin_unplug)) {
-		vb2_buffer_done(&buf->buf, VB2_BUF_STATE_ERROR);
+		vb2_buffer_done(&buf->buf.vb2_buf, VB2_BUF_STATE_ERROR);
 		complete(&chan->capture_comp);
 	} else {
 		/* Move buffer to capture done queue */
@@ -765,11 +765,14 @@ tegra_channel_enum_framesizes(struct file *file, void *fh,
 {
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	struct v4l2_subdev_frame_size_enum fse = {
+		.index = sizes->index,
+	};
 	int num_sd;
 
 	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
 		struct v4l2_subdev *sd = chan->subdev[num_sd];
-		int ret = v4l2_subdev_call(sd, video, enum_framesizes, sizes);
+		int ret = v4l2_subdev_call(sd, pad, enum_frame_size, NULL, &fse);
 
 		if (sd && (ret == 0 || ret != -ENOIOCTLCMD))
 			return ret;
@@ -783,12 +786,17 @@ tegra_channel_enum_frameintervals(struct file *file, void *fh,
 {
 	struct v4l2_fh *vfh = file->private_data;
 	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
+	struct v4l2_subdev_frame_interval_enum fie = {
+		.index = intervals->index,
+		.width = intervals->width,
+		.height = intervals->height,
+	};
 	int num_sd;
 
 	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
 		struct v4l2_subdev *sd = chan->subdev[num_sd];
-		int ret = v4l2_subdev_call(sd, video, enum_frameintervals,
-					   intervals);
+		int ret = v4l2_subdev_call(sd, pad, enum_frame_interval, NULL,
+				&fie);
 
 		if (sd && (ret == 0 || ret != -ENOIOCTLCMD))
 			return ret;
@@ -1157,17 +1165,6 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 	}
 
 	return -ENOTTY;
-}
-
-static int
-tegra_channel_get_format(struct file *file, void *fh,
-			struct v4l2_format *format)
-{
-	struct v4l2_fh *vfh = file->private_data;
-	struct tegra_channel *chan = to_tegra_channel(vfh->vdev);
-	struct v4l2_pix_format *pix = &format->fmt.pix;
-
-	return  __tegra_channel_get_format(chan, pix);
 }
 
 static int
@@ -1617,7 +1614,8 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	chan->video.ctrl_handler = &chan->ctrl_handler;
 	chan->video.lock = &chan->video_lock;
 
-	set_bit(V4L2_FL_USE_FH_PRIO, &chan->video.flags);
+        set_bit(_IOC_NR(VIDIOC_G_PRIORITY), chan->video.valid_ioctls);
+        set_bit(_IOC_NR(VIDIOC_S_PRIORITY), chan->video.valid_ioctls);
 
 	video_set_drvdata(&chan->video, chan);
 

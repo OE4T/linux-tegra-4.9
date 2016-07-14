@@ -36,6 +36,7 @@
 #include <trace/events/nvhost.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/nvhost_ioctl.h>
+#include <linux/version.h>
 
 #include <linux/platform/tegra/mc.h>
 #if defined(CONFIG_TEGRA_BWMGR)
@@ -57,12 +58,14 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod);
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data);
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-static int nvhost_module_suspend(struct device *dev);
-static int nvhost_module_power_on(struct generic_pm_domain *domain);
-static int nvhost_module_power_off(struct generic_pm_domain *domain);
+static int nvhost_module_runtime_suspend(struct device *dev);
+static int nvhost_module_runtime_resume(struct device *dev);
 static int nvhost_module_prepare_poweroff(struct device *dev);
 static int nvhost_module_finalize_poweron(struct device *dev);
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
+static int nvhost_module_power_on(struct generic_pm_domain *domain);
+static int nvhost_module_power_off(struct generic_pm_domain *domain);
 #endif
 
 static DEFINE_MUTEX(client_list_lock);
@@ -987,10 +990,29 @@ void nvhost_module_deinit(struct platform_device *dev)
 }
 EXPORT_SYMBOL(nvhost_module_deinit);
 
+/*
+ * Suspend / resume control flow on different kernel versions:
+ * 3.10:
+ * Suspend:
+ * - genpd's prepare calls runtime_resume
+ * - System suspend calls runtime_suspend
+ * Resume:
+ * - System resume calls runtime_resume
+ *
+ * 3.18 / 4.4:
+ * Suspend:
+ * - genpd's prepare calls runtime_resume
+ * - genpd's suspend_noirq calls runtime_suspend
+ * Resume:
+ * - genpd's complete calls runtime_resume
+ */
 const struct dev_pm_ops nvhost_module_pm_ops = {
-#if defined(CONFIG_PM) && !defined(CONFIG_PM_GENERIC_DOMAINS)
-	.runtime_suspend = nvhost_module_disable_clk,
-	.runtime_resume = nvhost_module_enable_clk,
+	SET_RUNTIME_PM_OPS(nvhost_module_runtime_suspend,
+			   nvhost_module_runtime_resume, NULL)
+#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 18, 0)
+	/* On 3.18 and 4.4, genpd will call our runtime pm ops. */
+	SET_SYSTEM_SLEEP_PM_OPS(nvhost_module_runtime_suspend,
+				nvhost_module_runtime_resume)
 #endif
 };
 EXPORT_SYMBOL(nvhost_module_pm_ops);
@@ -1013,14 +1035,9 @@ static int _nvhost_init_domain(struct device_node *np,
 
 	gpd->power_off = nvhost_module_power_off;
 	gpd->power_on = nvhost_module_power_on;
-	gpd->dev_ops.start = nvhost_module_enable_clk;
-	gpd->dev_ops.stop = nvhost_module_disable_clk;
-	gpd->dev_ops.save_state = nvhost_module_prepare_poweroff;
-	gpd->dev_ops.restore_state = nvhost_module_finalize_poweron;
-	if (!of_property_read_bool(np, "host1x")) {
-		gpd->dev_ops.suspend = nvhost_module_suspend;
-		gpd->dev_ops.resume = nvhost_module_finalize_poweron;
-	}
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(3, 18, 0)
+	gpd->flags = GENPD_FLAG_PM_UPSTREAM;
+#endif
 
 	of_genpd_add_provider_simple(np, gpd);
 	gpd->of_node = of_node_get(np);
@@ -1167,21 +1184,43 @@ static void nvhost_module_load_regs(struct platform_device *pdev, bool prod)
 	}
 }
 
-#ifdef CONFIG_PM_GENERIC_DOMAINS
-static int nvhost_module_suspend(struct device *dev)
+static int nvhost_module_runtime_suspend(struct device *dev)
 {
-	/*
-	 * device_prepare takes one ref, so expect usage count to
-	 * be 1 at this point.
-	 */
-#ifdef CONFIG_PM
-	if (atomic_read(&dev->power.usage_count) > 1)
-		return -EBUSY;
-#endif
+	int err;
 
-	return nvhost_module_prepare_poweroff(dev);
+	dev_dbg(dev, "suspending");
+
+	err = nvhost_module_prepare_poweroff(dev);
+	if (err)
+		return err;
+
+	err = nvhost_module_disable_clk(dev);
+	if (err)
+		return err;
+
+	return 0;
 }
 
+static int nvhost_module_runtime_resume(struct device *dev)
+{
+	int err;
+
+	dev_dbg(dev, "resuming");
+
+	err = nvhost_module_enable_clk(dev);
+	if (err)
+		return err;
+
+	err = nvhost_module_finalize_poweron(dev);
+	if (err) {
+		nvhost_module_disable_clk(dev);
+		return err;
+	}
+
+	return 0;
+}
+
+#ifdef CONFIG_PM_GENERIC_DOMAINS
 static int nvhost_module_power_on(struct generic_pm_domain *domain)
 {
 	struct nvhost_device_data *pdata;
@@ -1216,6 +1255,7 @@ static int nvhost_module_power_off(struct generic_pm_domain *domain)
 
 	return 0;
 }
+#endif
 
 static int nvhost_module_prepare_poweroff(struct device *dev)
 {
@@ -1330,7 +1370,6 @@ static int nvhost_module_finalize_poweron(struct device *dev)
 
 	return ret;
 }
-#endif
 
 static int nvhost_module_toggle_slcg(struct notifier_block *nb,
 				     unsigned long action, void *data)

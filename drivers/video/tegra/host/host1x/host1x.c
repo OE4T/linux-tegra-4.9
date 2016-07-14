@@ -996,6 +996,12 @@ static int nvhost_probe(struct platform_device *dev)
 	if (err)
 		goto fail;
 
+	err = power_on_host(dev);
+	if (err) {
+		nvhost_module_idle(dev);
+		goto fail;
+	}
+
 	if (host_device_op().load_gating_regs)
 		host_device_op().load_gating_regs(dev, pdata->engine_can_cg);
 
@@ -1123,6 +1129,9 @@ static const struct dev_pm_ops host1x_pm_ops = {
 	.complete = nvhost_suspend_complete,
 	.suspend_late = nvhost_suspend,
 	.resume_early = nvhost_resume,
+	SET_RUNTIME_PM_OPS(nvhost_module_disable_clk,
+			   nvhost_module_enable_clk,
+			   NULL)
 };
 #endif /* CONFIG_PM */
 

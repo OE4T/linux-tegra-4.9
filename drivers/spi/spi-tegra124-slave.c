@@ -351,6 +351,7 @@ struct tegra_spi_data {
 	int				rem_len;
 	int				rx_trig_words;
 	int				force_unpacked_mode;
+	bool				lsbyte_first;
 #ifdef PROFILE_SPI_SLAVE
 	ktime_t				start_time;
 	ktime_t				end_time;
@@ -1396,6 +1397,9 @@ static struct tegra_spi_device_controller_data
 	if (ret)
 		cdata->variable_length_transfer = 1;
 
+	tspi->lsbyte_first =
+		of_property_read_bool(data_np, "nvidia,lsbyte-first");
+
 	of_node_put(data_np);
 	return cdata;
 }
@@ -1440,6 +1444,9 @@ static int tegra_spi_setup(struct spi_device *spi)
 		val &= ~cs_pol_bit[spi->chip_select];
 	else
 		val |= cs_pol_bit[spi->chip_select];
+
+	if (tspi->lsbyte_first)
+		val |= SPI_LSBYTE_FE;
 
 	tspi->def_command1_reg = val;
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);

@@ -20,6 +20,8 @@ Optional properties:
 	GPIO, when asserted, implies slave controller is ready for transaction.
 	When this GPIO is de-asserted, the master cannot initiate transaction
 	with this slave.
+- nvidia,lsbyte-first: controls byte order; if enabled, least-significant-byte
+        will be transmitted/received first.
 
 Example:
 spi@7000d600 {
@@ -33,4 +35,5 @@ spi@7000d600 {
 	#size-cells = <0>;
 	status = "disabled";
 	nvidia,slave-ready-gpio = <&gpio TEGRA_GPIO(I, 3) GPIO_ACTIVE_LOW>; /*PI3*/
+        nvidia,lsbyte-first;
 };

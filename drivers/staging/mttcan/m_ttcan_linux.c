@@ -1098,9 +1098,6 @@ static int mttcan_power_down(struct net_device *dev)
 	int level;
 	struct mttcan_priv *priv = netdev_priv(dev);
 
-	if (!(dev->flags & IFF_UP))
-		return 0;
-
 	if (ttcan_set_power(priv->ttcan, 0))
 		return -ETIMEDOUT;
 
@@ -1563,7 +1560,8 @@ static int mttcan_suspend(struct platform_device *pdev, pm_message_t state)
 		return ret;
 	}
 
-	mttcan_stop(priv);
+	if (ndev->flags & IFF_UP)
+		mttcan_stop(priv);
 
 	priv->can.state = CAN_STATE_SLEEPING;
 	return 0;
@@ -1575,11 +1573,6 @@ static int mttcan_resume(struct platform_device *pdev)
 	struct net_device *ndev = platform_get_drvdata(pdev);
 	struct mttcan_priv *priv = netdev_priv(ndev);
 
-	if (!(ndev->flags & IFF_UP)) {
-		netdev_err(ndev, "Still in power down mode\n");
-		return -EBUSY;
-	}
-
 	ret = mttcan_power_up(priv);
 	if (ret)
 		return ret;
@@ -1588,7 +1581,8 @@ static int mttcan_resume(struct platform_device *pdev)
 	if (ret)
 		return ret;
 
-	mttcan_start(ndev);
+	if (ndev->flags & IFF_UP)
+		mttcan_start(ndev);
 
 	priv->can.state = CAN_STATE_ERROR_ACTIVE;
 	if (netif_running(ndev)) {

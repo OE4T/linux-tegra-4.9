@@ -651,9 +651,8 @@
 			reset-names = "vi", "tsctnvi";
 			clocks = <&tegra_car TEGRA186_CLK_VI>,
 				 <&tegra_car TEGRA186_CLK_NVCSI>,
-				 <&tegra_car TEGRA186_CLK_NVCSILP>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "vi", "nvcsi", "nvcsilp", "emc";
+				 <&tegra_car TEGRA186_CLK_NVCSILP>;
+			clock-names = "vi", "nvcsi", "nvcsilp";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};
@@ -664,9 +663,8 @@
                         reg = <0x0 0x15600000 0x0 0x00040000>;
                         interrupts = <0 205 0x04>;
 			resets = <&tegra_car TEGRA186_RESET_ISP>;
-			clocks = <&tegra_car TEGRA186_CLK_ISP>,
-				 <&tegra_car TEGRA186_CLK_EMC>;
-			clock-names = "isp", "emc";
+			clocks = <&tegra_car TEGRA186_CLK_ISP>;
+			clock-names = "isp";
 			#stream-id-cells = <1>;
 			status = "disabled";
 		};

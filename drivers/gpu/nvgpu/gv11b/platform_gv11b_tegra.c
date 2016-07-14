@@ -46,25 +46,7 @@ static int gv11b_tegra_get_clocks(struct device *dev)
 static int gv11b_tegra_probe(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	struct device_node *np = dev->of_node;
-	struct device_node *host1x_node;
-	struct platform_device *host1x_pdev;
-	const __be32 *host1x_ptr;
 
-	host1x_ptr = of_get_property(np, "nvidia,host1x", NULL);
-	if (!host1x_ptr) {
-		gk20a_err(dev, "host1x device not available");
-		return -ENOSYS;
-	}
-
-	host1x_node = of_find_node_by_phandle(be32_to_cpup(host1x_ptr));
-	host1x_pdev = of_find_device_by_node(host1x_node);
-	if (!host1x_pdev) {
-		gk20a_err(dev, "host1x device not available");
-		return -ENOSYS;
-	}
-
-	platform->g->host1x_dev = host1x_pdev;
 	platform->bypass_smmu = !device_is_iommuable(dev);
 	platform->disable_bigpage = platform->bypass_smmu;
 

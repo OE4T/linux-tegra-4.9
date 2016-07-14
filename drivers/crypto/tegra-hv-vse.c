@@ -72,6 +72,8 @@ struct tegra_virtual_se_dev {
 	struct mutex mtx;
 	int req_cnt;
 	struct ablkcipher_request *reqs[TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT];
+	/* Maintains number of SGs that are mapped */
+	int num_sg[TEGRA_HV_VSE_MAX_TASKS_PER_SUBMIT];
 };
 
 struct tegra_virtual_se_addr {
@@ -448,7 +450,12 @@ static int tegra_hv_vse_prepare_ivc_linked_list(
 
 	src_sg = sg;
 	while (src_sg && total_len) {
-		dma_map_sg(se_dev->dev, src_sg, 1, dir);
+		err = dma_map_sg(se_dev->dev, src_sg, 1, dir);
+		if (!err) {
+			dev_err(se_dev->dev, "dma_map_sg() error\n");
+			err = -EINVAL;
+			goto exit;
+		}
 		sg_count++;
 		len = min(src_sg->length, total_len);
 		addr = sg_dma_address(src_sg);
@@ -1199,6 +1206,8 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 	for (k = 0; k < se_dev->req_cnt; k++) {
 		req = se_dev->reqs[k];
 		ivc_tx = &ivc_req_msg->d[k].tx;
+		req_ctx = ablkcipher_request_ctx(req);
+		aes_ctx = crypto_ablkcipher_ctx(crypto_ablkcipher_reqtfm(req));
 		tegra_hv_vse_prpare_cmd(se_dev, ivc_tx, req_ctx, aes_ctx, req);
 		if (req->src != req->dst)
 			tegra_hv_vse_copy_to_dst_sg(se_dev, req);
@@ -1222,6 +1231,7 @@ static void tegra_hv_vse_process_new_req(struct crypto_async_request *async_req)
 				ivc_tx->args.aes.op.dst_addr[i].hi;
 		}
 		ivc_tx->args.aes.op.data_length = req->nbytes;
+		se_dev->num_sg[cur_map_cnt] = num_lists;
 		cur_map_cnt++;
 	}
 	ivc_req_msg->hdr.num_reqs = se_dev->req_cnt;
@@ -1243,6 +1253,7 @@ exit:
 	for (k = 0; k < cur_map_cnt; k++) {
 		req = se_dev->reqs[k];
 		dst_sg = req->dst;
+		num_lists = se_dev->num_sg[k];
 		while (dst_sg && num_lists--) {
 			dma_unmap_sg(se_dev->dev, dst_sg, 1, DMA_BIDIRECTIONAL);
 			dst_sg = scatterwalk_sg_next(dst_sg);

@@ -1173,6 +1173,7 @@ static int __init get_lut_from_bpmp(void)
 	dma_addr_t phys;
 	enum cluster cl;
 	int ret = 0;
+	bool ok = false;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
@@ -1181,10 +1182,11 @@ static int __init get_lut_from_bpmp(void)
 		if (!virt) {
 			ret = -ENOMEM;
 			while (cl--) {
-				tegra_bpmp_free_coherent(size, vhtbl->lut,
-					vhtbl->phys);
+				vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
+				tegra_bpmp_free_coherent(size,
+						vhtbl->lut, vhtbl->phys);
 			}
-
+			ok = false;
 			goto err_out;
 		}
 		vhtbl->lut = virt;
@@ -1196,13 +1198,15 @@ static int __init get_lut_from_bpmp(void)
 		ret = tegra_bpmp_send_receive(MRQ_CPU_VHINT, &md,
 				sizeof(struct mrq_cpu_vhint_request), NULL, 0);
 		if (ret) {
-			pr_err("CPU_to_BPMP send receive failure %d\n",
-				ret);
-			goto err_out;
-		}
+			pr_warn("%s: cluster %d: vhint query failed: %d\n",
+				__func__, cl, ret);
+			tegra_bpmp_free_coherent(size, vhtbl->lut,
+					vhtbl->phys);
+		} else
+			ok = true;
 	}
 err_out:
-	return ret;
+	return ok ? 0 : ret;
 }
 
 static int __init mem_map_device(struct device_node *dn)

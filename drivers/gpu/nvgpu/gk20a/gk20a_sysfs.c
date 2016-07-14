@@ -775,12 +775,13 @@ void gk20a_remove_sysfs(struct device *dev)
 
 	if (g->host1x_dev && (dev->parent != &g->host1x_dev->dev)) {
 		sysfs_remove_link(&g->host1x_dev->dev.kobj, dev_name(dev));
-		if (strcmp(dev_name(dev), "gpu.0")) {
-			struct kobject *kobj = &dev->kobj;
-			struct device *parent = container_of((kobj->parent),
-					struct device, kobj);
-			sysfs_remove_link(&parent->kobj, "gpu.0");
-		}
+	}
+
+	if (strcmp(dev_name(dev), "gpu.0")) {
+		struct kobject *kobj = &dev->kobj;
+		struct device *parent = container_of((kobj->parent),
+				struct device, kobj);
+		sysfs_remove_link(&parent->kobj, "gpu.0");
 	}
 }
 
@@ -816,14 +817,14 @@ void gk20a_create_sysfs(struct device *dev)
 		error |= sysfs_create_link(&g->host1x_dev->dev.kobj,
 					   &dev->kobj,
 					   dev_name(dev));
-		if (strcmp(dev_name(dev), "gpu.0")) {
-			struct kobject *kobj = &dev->kobj;
-			struct device *parent = container_of((kobj->parent),
-						struct device, kobj);
-			error |= sysfs_create_link(&parent->kobj,
-					   &dev->kobj, "gpu.0");
-		}
+	}
 
+	if (strcmp(dev_name(dev), "gpu.0")) {
+		struct kobject *kobj = &dev->kobj;
+		struct device *parent = container_of((kobj->parent),
+					struct device, kobj);
+		error |= sysfs_create_link(&parent->kobj,
+				   &dev->kobj, "gpu.0");
 	}
 
 	if (error)

@@ -34,7 +34,9 @@
 #include "tsec/tsec.h"
 #endif
 #include "flcn/flcn.h"
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 #include "nvdec/nvdec.h"
+#endif
 #if defined(CONFIG_TEGRA_GRHOST_PVA)
 #include "pva/pva.h"
 #endif
@@ -94,6 +96,7 @@ static int nvhost_flcn_t194_finalize_poweron(struct platform_device *dev)
 	return nvhost_flcn_finalize_poweron(dev);
 }
 
+#if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 static int nvhost_nvdec_t194_finalize_poweron(struct platform_device *dev)
 {
 	int ret;
@@ -118,6 +121,7 @@ static int nvhost_nvdec_t194_prepare_poweroff(struct platform_device *dev)
 
 	return 0;
 }
+#endif
 
 static struct host1x_device_info host1x04_info = {
 	.nb_channels	= T194_NVHOST_NUMCHANNELS,

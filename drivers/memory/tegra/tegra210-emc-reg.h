@@ -165,6 +165,9 @@
 
 #define EMC_CONFIG_SAMPLE_DELAY					0x5f0
 #define EMC_CFG_UPDATE						0x5f4
+#define EMC_CFG_UPDATE_UPDATE_DLL_IN_UPDATE_SHIFT		9
+#define EMC_CFG_UPDATE_UPDATE_DLL_IN_UPDATE_MASK		\
+	(0x3 << EMC_CFG_UPDATE_UPDATE_DLL_IN_UPDATE_SHIFT)
 #define EMC_CFG							0xc
 #define EMC_CFG_DRAM_CLKSTOP_PD					(1 << 31)
 #define EMC_CFG_DRAM_CLKSTOP_SR					(1 << 30)
@@ -1823,6 +1826,8 @@ struct emc_table {
 	u32 training_mod_num;
 	u32 dram_timing_num;
 
+	u32  ptfv_list[12];
+
 	u32 burst_regs[221];
 	u32 burst_reg_per_ch[8];
 	u32 shadow_regs_ca_train[221];
@@ -1986,9 +1991,34 @@ struct emc_table *emc_get_table(unsigned long over_temp_state);
 void __emc_copy_table_params(struct emc_table *src,
 			     struct emc_table *dst, int flags);
 void set_over_temp_timing(struct emc_table *next_timing, unsigned long state);
+void tegra210_update_emc_alt_timing(struct emc_table *current_timing);
+u32 tegra210_actual_osc_clocks(u32 in);
+void tegra210_start_periodic_compensation(void);
+u32 tegra210_apply_periodic_compensation_trimmer(
+                struct emc_table *next_timing, u32 offset);
+u32 tegra210_dll_prelock(struct emc_table *next_timing,
+			 int dvfs_with_training, u32 clksrc);
+void tegra210_reset_dram_clktree_values(struct emc_table *table);
+u32 tegra210_dvfs_power_ramp_up(u32 clk, int flip_backward,
+				struct emc_table *last_timing,
+				struct emc_table *next_timing);
+u32 tegra210_dvfs_power_ramp_down(u32 clk, int flip_backward,
+				  struct emc_table *last_timing,
+				  struct emc_table *next_timing);
+void tegra210_dll_disable(int channel_mode);
+void tegra210_dll_enable(int channel_mode);
+void tegra210_change_dll_src(struct emc_table *next_timing, u32 clksrc);
+
+void emc_set_clock_r21012(struct emc_table *next_timing,
+			  struct emc_table *last_timing,
+			  int training, u32 clksrc);
 void emc_set_clock_r21015(struct emc_table *next_timing,
 			  struct emc_table *last_timing,
 			  int training, u32 clksrc);
 u32  __do_periodic_emc_compensation_r21015(struct emc_table *current_timing);
+void emc_set_clock_r21021(struct emc_table *next_timing,
+			  struct emc_table *last_timing,
+			  int training, u32 clksrc);
+u32  __do_periodic_emc_compensation_r21021(struct emc_table *current_timing);
 
 #endif

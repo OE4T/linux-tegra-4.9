@@ -152,10 +152,21 @@ static const char *tegra_emc_src_names[TEGRA_EMC_SRC_COUNT] = {
 };
 static struct supported_sequence supported_seqs[] = {
 	{
+		0x5,
+		emc_set_clock_r21012,
+		NULL,
+		"21012",
+	},
+	{
 		0x6,
 		emc_set_clock_r21015,
 		__do_periodic_emc_compensation_r21015,
 		"21018"
+	},
+	{
+		0x7,
+		emc_set_clock_r21021,
+		__do_periodic_emc_compensation_r21021,
 	},
 	{
 		0,

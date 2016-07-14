@@ -22,7 +22,7 @@
 #include <dc_priv_defs.h>
 #include <trace/events/display.h>
 #include <linux/tegra-powergate.h>
-#include <hw_win_nvdisp.h>
+#include "hw_win_nvdisp.h"
 #include "dc_priv.h"
 
 /* TODO: move to device tree */

@@ -198,9 +198,6 @@ struct nvhost_device_data t18_isp_info = {
 	.poweron_reset		= true,
 	.clocks			= {
 		{"isp", 768000000},
-		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
-		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}
 	},
 	.finalize_poweron	= nvhost_isp_t210_finalize_poweron,
 	.prepare_poweroff	= nvhost_isp_t124_prepare_poweroff,
@@ -231,9 +228,6 @@ struct nvhost_device_data t18_vi_info = {
 		{"vi", 408000000},
 		{"nvcsi", 204000000},
 		{"nvcsilp", 204000000},
-		{"emc", HOST_EMC_FLOOR,
-		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
-		 0, TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO}
 	},
 	.num_channels		= 12,
 	.ctrl_ops               = &nvhost_vi4_ctrl_ops,

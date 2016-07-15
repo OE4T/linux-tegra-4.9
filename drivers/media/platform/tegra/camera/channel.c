@@ -37,8 +37,8 @@
 #include <mach/clk.h>
 #include <mach/io_dpd.h>
 
-#include "camera/mc_common.h"
-#include "vi/vi.h"
+#include "mc_common.h"
+#include "../vi/vi.h"
 
 #define FRAMERATE	30
 #define BPP_MEM		2
@@ -48,7 +48,6 @@ static void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 					  enum vb2_buffer_state state);
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 static int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
-static int tegra_channel_mipi_cal(struct tegra_channel *chan, char is_bypass);
 
 static u32 tegra_channel_read(struct tegra_channel *chan,
 			unsigned int addr)
@@ -277,12 +276,13 @@ static int tegra_channel_enable_stream(struct tegra_channel *chan)
 			return ret;
 	}
 	/* perform calibration as sensor started streaming */
+	/*
 	tegra_mipi_bias_pad_enable();
 	if (!chan->vi->pg_mode) {
 		mutex_lock(&chan->vi->mipical_lock);
 		tegra_channel_mipi_cal(chan, 0);
 		mutex_unlock(&chan->vi->mipical_lock);
-	}
+	}*/
 
 	return ret;
 }
@@ -330,15 +330,15 @@ static void tegra_channel_init_ring_buffer(struct tegra_channel *chan)
 
 static void free_ring_buffers(struct tegra_channel *chan, int frames)
 {
-	struct vb2_buffer *vb;
+	struct vb2_v4l2_buffer *vbuf;
 
 	while (frames) {
-		vb = chan->buffers[chan->free_index];
+		vbuf = chan->buffers[chan->free_index];
 
 		/* release one frame */
-		vb->v4l2_buf.sequence = chan->sequence++;
-		vb->v4l2_buf.field = V4L2_FIELD_NONE;
-		vb2_set_plane_payload(vb, 0, chan->format.sizeimage);
+		vbuf->sequence = chan->sequence++;
+		vbuf->field = V4L2_FIELD_NONE;
+		vb2_set_plane_payload(&vbuf->vb2_buf, 0, chan->format.sizeimage);
 
 		/*
 		 * WAR to force buffer state if capture state is not good
@@ -351,7 +351,7 @@ static void free_ring_buffers(struct tegra_channel *chan, int frames)
 			chan->buffer_state[chan->free_index] =
 						VB2_BUF_STATE_ERROR;
 
-		vb2_buffer_done(vb, chan->buffer_state[chan->free_index++]);
+		vb2_buffer_done(&vbuf->vb2_buf, chan->buffer_state[chan->free_index++]);
 
 		if (chan->free_index >= QUEUED_BUFFERS)
 			chan->free_index = 0;
@@ -362,7 +362,7 @@ static void free_ring_buffers(struct tegra_channel *chan, int frames)
 }
 
 static void add_buffer_to_ring(struct tegra_channel *chan,
-				struct vb2_buffer *vb)
+				struct vb2_v4l2_buffer *vb)
 {
 	/* save the buffer to the ring first */
 	/* Mark buffer state as error before start */
@@ -389,7 +389,7 @@ static void update_state_to_buffer(struct tegra_channel *chan, int state)
 }
 
 static void tegra_channel_ring_buffer(struct tegra_channel *chan,
-					struct vb2_buffer *vb,
+					struct vb2_v4l2_buffer *vb,
 					struct timespec *ts, int state)
 
 {
@@ -399,8 +399,8 @@ static void tegra_channel_ring_buffer(struct tegra_channel *chan,
 		update_state_to_buffer(chan, state);
 
 	/* update time stamp of the buffer */
-	vb->v4l2_buf.timestamp.tv_sec = ts->tv_sec;
-	vb->v4l2_buf.timestamp.tv_usec = ts->tv_nsec / NSEC_PER_USEC;
+	vb->timestamp.tv_sec = ts->tv_sec;
+	vb->timestamp.tv_usec = ts->tv_nsec / NSEC_PER_USEC;
 
 	/* Capture state is not GOOD, release all buffers and re-init state */
 	if (chan->capture_state != CAPTURE_GOOD) {
@@ -493,7 +493,7 @@ static void tegra_channel_ec_recover(struct tegra_channel *chan)
 static int tegra_channel_capture_frame(struct tegra_channel *chan,
 				       struct tegra_channel_buffer *buf)
 {
-	struct vb2_buffer *vb = &buf->buf;
+	struct vb2_v4l2_buffer *vb = &buf->buf;
 	struct timespec ts;
 	int err = 0;
 	u32 val, frame_start;
@@ -741,7 +741,7 @@ static int tegra_channel_buffer_prepare(struct vb2_buffer *vb)
 	struct tegra_channel_buffer *buf = to_tegra_channel_buffer(vbuf);
 
 	buf->chan = chan;
-	vb2_set_plane_payload(vb, 0, chan->format.sizeimage);
+	vb2_set_plane_payload(&vbuf->vb2_buf, 0, chan->format.sizeimage);
 #if defined(CONFIG_VIDEOBUF2_DMA_CONTIG)
 	buf->addr = vb2_dma_contig_plane_dma_addr(vb, 0);
 #endif
@@ -885,12 +885,13 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
 			goto error_set_stream;
+		/*
 		nvhost_module_enable_clk(chan->vi->dev);
 		tegra_mipi_bias_pad_enable();
 		mutex_lock(&chan->vi->mipical_lock);
 		tegra_channel_mipi_cal(chan, 1);
 		mutex_unlock(&chan->vi->mipical_lock);
-		nvhost_module_disable_clk(chan->vi->dev);
+		nvhost_module_disable_clk(chan->vi->dev);*/
 		return ret;
 	}
 
@@ -976,8 +977,6 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 
 	if (!chan->bypass)
 		tegra_channel_update_clknbw(chan, 0);
-
-	tegra_mipi_bias_pad_disable();
 }
 
 static const struct vb2_ops tegra_channel_queue_qops = {

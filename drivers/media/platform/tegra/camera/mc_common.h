@@ -131,7 +131,7 @@ struct tegra_channel {
 	unsigned int syncpoint_fifo[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_state[QUEUED_BUFFERS];
-	struct vb2_buffer *buffers[QUEUED_BUFFERS];
+	struct vb2_v4l2_buffer *buffers[QUEUED_BUFFERS];
 	unsigned int timeout;
 	unsigned int save_index;
 	unsigned int free_index;

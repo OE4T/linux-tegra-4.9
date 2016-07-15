@@ -157,7 +157,7 @@ static const struct dev_pm_ops nvgpu_pci_pm_ops = {
 };
 #endif
 
-int nvgpu_pci_pm_init(struct device *dev)
+static int nvgpu_pci_pm_init(struct device *dev)
 {
 #ifdef CONFIG_PM
 	struct gk20a_platform *platform = gk20a_get_platform(dev);

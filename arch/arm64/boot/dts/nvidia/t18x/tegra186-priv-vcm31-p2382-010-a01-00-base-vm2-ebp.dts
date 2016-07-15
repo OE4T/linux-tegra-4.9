@@ -211,6 +211,8 @@
 			dp-display {
 				disp-default-out {
 					nvidia,out-hotplug-state = <1>;	/*TEGRA_HPD_STATE_FORCE_ASSERT*/
+					nvidia,out-xres = <1920>;
+					nvidia,out-yres = <1080>;
 				};
 				display-timings {
 					1920x1080-32 {
@@ -234,6 +236,8 @@
 			hdmi-display {
 				disp-default-out {
 					nvidia,out-hotplug-state = <1>;	/*TEGRA_HPD_STATE_FORCE_ASSERT*/
+					nvidia,out-xres = <1920>;
+					nvidia,out-yres = <1080>;
 				};
 				display-timings {
 					1920x1080-32 {

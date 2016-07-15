@@ -411,6 +411,14 @@ struct gk20a_dmabuf_priv {
 	u64 buffer_id;
 };
 
+struct gk20a_vidmem_buf {
+	struct gk20a *g;
+	struct mem_desc mem;
+	struct dma_buf *dmabuf;
+	void *dmabuf_priv;
+	void (*dmabuf_priv_delete)(void *);
+};
+
 static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm);
 
 static int gk20a_comptaglines_alloc(struct gk20a_comptag_allocator *allocator,
@@ -1831,6 +1839,146 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	if (sgt)
 		*sgt = mapped_buffer->sgt;
 	return mapped_buffer->addr;
+}
+
+#if defined(CONFIG_GK20A_VIDMEM)
+static struct sg_table *gk20a_vidbuf_map_dma_buf(
+	struct dma_buf_attachment *attach, enum dma_data_direction dir)
+{
+	struct gk20a_vidmem_buf *buf = attach->dmabuf->priv;
+
+	return buf->mem.sgt;
+}
+
+static void gk20a_vidbuf_unmap_dma_buf(struct dma_buf_attachment *attach,
+				       struct sg_table *sgt,
+				       enum dma_data_direction dir)
+{
+}
+
+static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
+{
+	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+
+	gk20a_dbg_fn("");
+
+	if (buf->dmabuf_priv)
+		buf->dmabuf_priv_delete(buf->dmabuf_priv);
+
+	gk20a_gmmu_free(buf->g, &buf->mem);
+	kfree(buf);
+}
+
+static void *gk20a_vidbuf_kmap(struct dma_buf *dmabuf, unsigned long page_num)
+{
+	WARN_ON("Not supported");
+	return NULL;
+}
+
+static void *gk20a_vidbuf_kmap_atomic(struct dma_buf *dmabuf,
+				      unsigned long page_num)
+{
+	WARN_ON("Not supported");
+	return NULL;
+}
+
+static int gk20a_vidbuf_mmap(struct dma_buf *dmabuf, struct vm_area_struct *vma)
+{
+	return -EINVAL;
+}
+
+static int gk20a_vidbuf_set_private(struct dma_buf *dmabuf,
+		struct device *dev, void *priv, void (*delete)(void *priv))
+{
+	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+
+	buf->dmabuf_priv = priv;
+	buf->dmabuf_priv_delete = delete;
+
+	return 0;
+}
+
+static void *gk20a_vidbuf_get_private(struct dma_buf *dmabuf,
+		struct device *dev)
+{
+	struct gk20a_vidmem_buf *buf = dmabuf->priv;
+
+	return buf->dmabuf_priv;
+}
+
+static const struct dma_buf_ops gk20a_vidbuf_ops = {
+	.map_dma_buf      = gk20a_vidbuf_map_dma_buf,
+	.unmap_dma_buf    = gk20a_vidbuf_unmap_dma_buf,
+	.release          = gk20a_vidbuf_release,
+	.kmap_atomic      = gk20a_vidbuf_kmap_atomic,
+	.kmap             = gk20a_vidbuf_kmap,
+	.mmap             = gk20a_vidbuf_mmap,
+	.set_drvdata      = gk20a_vidbuf_set_private,
+	.get_drvdata      = gk20a_vidbuf_get_private,
+};
+
+static struct dma_buf *gk20a_vidbuf_export(struct gk20a_vidmem_buf *buf)
+{
+#if LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0)
+	DEFINE_DMA_BUF_EXPORT_INFO(exp_info);
+
+	exp_info.priv = buf;
+	exp_info.ops = &gk20a_vidbuf_ops;
+	exp_info.size = buf->mem.size;
+	exp_info.flags = O_RDWR;
+
+	return dma_buf_export(&exp_info);
+#else
+	return dma_buf_export(buf, &gk20a_vidbuf_ops, buf->mem.size,
+			O_RDWR, NULL);
+#endif
+}
+#endif
+
+int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	struct gk20a_vidmem_buf *buf;
+	int err, fd;
+
+	gk20a_dbg_fn("");
+
+	buf = kzalloc(sizeof(*buf), GFP_KERNEL);
+	if (!buf)
+		return -ENOMEM;
+
+	buf->g = g;
+
+	err = gk20a_gmmu_alloc_vid(g, bytes, &buf->mem);
+	if (err)
+		goto err_kfree;
+
+	buf->dmabuf = gk20a_vidbuf_export(buf);
+	if (IS_ERR(buf->dmabuf)) {
+		err = PTR_ERR(buf->dmabuf);
+		goto err_bfree;
+	}
+
+	fd = get_unused_fd_flags(O_RDWR);
+	if (fd < 0) {
+		/* ->release frees what we have done */
+		dma_buf_put(buf->dmabuf);
+		return fd;
+	}
+
+	/* fclose() on this drops one ref, freeing the dma buf */
+	fd_install(fd, buf->dmabuf->file);
+
+	return fd;
+
+err_bfree:
+	gk20a_gmmu_free(g, &buf->mem);
+err_kfree:
+	kfree(buf);
+	return err;
+#else
+	return -ENOSYS;
+#endif
 }
 
 u64 gk20a_vm_map(struct vm_gk20a *vm,

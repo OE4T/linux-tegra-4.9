@@ -704,6 +704,49 @@ clean_up:
 	return err;
 }
 
+static int nvgpu_gpu_alloc_vidmem(struct gk20a *g,
+			struct nvgpu_gpu_alloc_vidmem_args *args)
+{
+	u32 align = args->in.alignment ? args->in.alignment : SZ_4K;
+	int fd;
+
+	gk20a_dbg_fn("");
+
+	/* not yet supported */
+	if (WARN_ON(args->in.flags & NVGPU_GPU_ALLOC_VIDMEM_FLAG_CPU_MASK))
+		return -EINVAL;
+
+	/* not yet supported */
+	if (WARN_ON(args->in.flags & NVGPU_GPU_ALLOC_VIDMEM_FLAG_VPR))
+		return -EINVAL;
+
+	if (args->in.size & (SZ_4K - 1))
+		return -EINVAL;
+
+	if (!args->in.size)
+		return -EINVAL;
+
+	if (align & (align - 1))
+		return -EINVAL;
+
+	if (align > roundup_pow_of_two(args->in.size)) {
+		/* log this special case, buddy allocator detail */
+		gk20a_warn(dev_from_gk20a(g),
+			"alignment larger than buffer size rounded up to power of 2 is not supported");
+		return -EINVAL;
+	}
+
+	fd = gk20a_vidmem_buf_alloc(g, args->in.size);
+	if (fd < 0)
+		return fd;
+
+	args->out.dmabuf_fd = fd;
+
+	gk20a_dbg_fn("done, fd=%d", fd);
+
+	return 0;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct device *dev = filp->private_data;
@@ -949,6 +992,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
         case NVGPU_GPU_IOCTL_GET_ENGINE_INFO:
 		err = nvgpu_gpu_get_engine_info(g,
 			(struct nvgpu_gpu_get_engine_info_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_ALLOC_VIDMEM:
+		err = nvgpu_gpu_alloc_vidmem(g,
+			(struct nvgpu_gpu_alloc_vidmem_args *)buf);
 		break;
 
 	default:

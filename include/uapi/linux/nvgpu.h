@@ -196,6 +196,8 @@ struct nvgpu_gpu_characteristics {
 	__u32 default_graphics_preempt_mode; /* NVGPU_GRAPHICS_PREEMPTION_MODE_* */
 	__u32 default_compute_preempt_mode; /* NVGPU_COMPUTE_PREEMPTION_MODE_* */
 
+	__u64 local_video_memory_size; /* in bytes, non-zero only for dGPUs */
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary
@@ -434,6 +436,72 @@ struct nvgpu_gpu_get_engine_info_args {
 	__u64 engine_info_buf_addr;
 };
 
+#define NVGPU_GPU_ALLOC_VIDMEM_FLAG_CONTIGUOUS		(1U << 0)
+
+/* CPU access and coherency flags (3 bits). Use CPU access with care,
+ * BAR resources are scarce. */
+#define NVGPU_GPU_ALLOC_VIDMEM_FLAG_CPU_NOT_MAPPABLE	(0U << 1)
+#define NVGPU_GPU_ALLOC_VIDMEM_FLAG_CPU_WRITE_COMBINE	(1U << 1)
+#define NVGPU_GPU_ALLOC_VIDMEM_FLAG_CPU_CACHED		(2U << 1)
+#define NVGPU_GPU_ALLOC_VIDMEM_FLAG_CPU_MASK		(7U << 1)
+
+#define NVGPU_GPU_ALLOC_VIDMEM_FLAG_VPR			(1U << 4)
+
+/* Allocation of device-specific local video memory. Returns dmabuf fd
+ * on success. */
+struct nvgpu_gpu_alloc_vidmem_args {
+	union {
+		struct {
+			/* Size for allocation. Must be a multiple of
+			 * small page size. */
+			__u64 size;
+
+			/* NVGPU_GPU_ALLOC_VIDMEM_FLAG_* */
+			__u32 flags;
+
+			/* Informational mem tag for resource usage
+			 * tracking. */
+			__u16 memtag;
+
+			__u16 reserved0;
+
+			/* GPU-visible physical memory alignment in
+			 * bytes.
+			 *
+			 * Alignment must be a power of two. Minimum
+			 * alignment is the small page size, which 0
+			 * also denotes.
+			 *
+			 * For contiguous and non-contiguous
+			 * allocations, the start address of the
+			 * physical memory allocation will be aligned
+			 * by this value.
+			 *
+			 * For non-contiguous allocations, memory is
+			 * internally allocated in round_up(size /
+			 * alignment) contiguous blocks. The start
+			 * address of each block is aligned by the
+			 * alignment value. If the size is not a
+			 * multiple of alignment (which is ok), the
+			 * last allocation block size is (size %
+			 * alignment).
+			 *
+			 * By specifying the big page size here and
+			 * allocation size that is a multiple of big
+			 * pages, it will be guaranteed that the
+			 * allocated buffer is big page size mappable.
+			 */
+			__u32 alignment;
+
+			__u32 reserved1[3];
+		} in;
+
+		struct {
+			__s32 dmabuf_fd;
+		} out;
+	};
+};
+
 #define NVGPU_GPU_IOCTL_ZCULL_GET_CTX_SIZE \
 	_IOR(NVGPU_GPU_IOCTL_MAGIC, 1, struct nvgpu_gpu_zcull_get_ctx_size_args)
 #define NVGPU_GPU_IOCTL_ZCULL_GET_INFO \
@@ -489,8 +557,11 @@ struct nvgpu_gpu_get_engine_info_args {
 #define NVGPU_GPU_IOCTL_GET_ENGINE_INFO \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 26, \
 			struct nvgpu_gpu_get_engine_info_args)
+#define NVGPU_GPU_IOCTL_ALLOC_VIDMEM \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 27, \
+			struct nvgpu_gpu_alloc_vidmem_args)
 #define NVGPU_GPU_IOCTL_LAST		\
-	_IOC_NR(NVGPU_GPU_IOCTL_GET_ENGINE_INFO)
+	_IOC_NR(NVGPU_GPU_IOCTL_ALLOC_VIDMEM)
 #define NVGPU_GPU_IOCTL_MAX_ARG_SIZE	\
 	sizeof(struct nvgpu_gpu_get_cpu_time_correlation_info_args)
 

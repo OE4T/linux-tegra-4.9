@@ -2148,6 +2148,7 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->default_compute_preempt_mode =
 		g->gr.preemption_mode_rec.default_compute_preempt_mode;
 
+	gpu->local_video_memory_size = g->mm.vidmem.size;
 
 	return 0;
 }

@@ -718,6 +718,8 @@ void gk20a_vm_mapping_batch_finish_locked(
 	struct vm_gk20a *vm, struct vm_gk20a_mapping_batch *batch);
 
 
+int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes);
+
 /* Note: batch may be NULL if map op is not part of a batch */
 int gk20a_vm_map_buffer(struct vm_gk20a *vm,
 			int dmabuf_fd,

@@ -31,161 +31,172 @@
 
 #include "powergate-priv-t18x.h"
 
-#define UPDATE_LOGIC_STATE	0x1
-#define LOGIC_STATE_ON		0x1
-#define LOGIC_STATE_OFF		0x0
-
-#define UPDATE_SRAM_STATE	0x1
-#define SRAM_STATE_SD		(1 << 0)
-#define SRAM_STATE_SLP		(1 << 1)
-#define SRAM_STATE_DSLP		(1 << 2)
-#define SRAM_STATE_ON		0x0
-
-#define UPDATE_CLK_STATE	0x1
-#define CLK_STATE_ON		0x1
-#define CLK_STATE_OFF		0x0
-
-static const char *partition_names[] = {
-	[TEGRA186_POWER_DOMAIN_AUD] = "audio",
-	[TEGRA186_POWER_DOMAIN_DFD] = "dfd",
-	[TEGRA186_POWER_DOMAIN_DISP] = "disp",
-	[TEGRA186_POWER_DOMAIN_DISPB] = "dispb",
-	[TEGRA186_POWER_DOMAIN_DISPC] = "dispc",
-	[TEGRA186_POWER_DOMAIN_ISPA] = "ispa",
-	[TEGRA186_POWER_DOMAIN_NVDEC] = "nvdec",
-	[TEGRA186_POWER_DOMAIN_NVJPG] = "nvjpg",
-	[TEGRA186_POWER_DOMAIN_MPE] = "nvenc",
-	[TEGRA186_POWER_DOMAIN_PCX] = "pcie",
-	[TEGRA186_POWER_DOMAIN_SAX] = "sata",
-	[TEGRA186_POWER_DOMAIN_VE] = "ve",
-	[TEGRA186_POWER_DOMAIN_VIC] = "vic",
-	[TEGRA186_POWER_DOMAIN_XUSBA] = "xusba",
-	[TEGRA186_POWER_DOMAIN_XUSBB] = "xusbb",
-	[TEGRA186_POWER_DOMAIN_XUSBC] = "xusbc",
-	[TEGRA186_POWER_DOMAIN_GPU] = "gpu",
+struct pg_partition_info {
+	const char *name;
+	int refcount;
+	struct mutex pg_mutex;
 };
 
-struct powergate_request {
-	uint32_t partition_id;
-	uint32_t logic_state;
-	uint32_t sram_state;
-	uint32_t clk_state;
+static struct pg_partition_info t186_partition_info[] = {
+	[TEGRA186_POWER_DOMAIN_AUD] = { .name = "audio" },
+	[TEGRA186_POWER_DOMAIN_DFD] = { .name = "dfd" },
+	[TEGRA186_POWER_DOMAIN_DISP] = { .name = "disp" },
+	[TEGRA186_POWER_DOMAIN_DISPB] = { .name = "dispb" },
+	[TEGRA186_POWER_DOMAIN_DISPC] = { .name = "dispc" },
+	[TEGRA186_POWER_DOMAIN_ISPA] = { .name = "ispa" },
+	[TEGRA186_POWER_DOMAIN_NVDEC] = { .name = "nvdec" },
+	[TEGRA186_POWER_DOMAIN_NVJPG] = { .name = "nvjpg" },
+	[TEGRA186_POWER_DOMAIN_MPE] = { .name = "nvenc" },
+	[TEGRA186_POWER_DOMAIN_PCX] = { .name = "pcie" },
+	[TEGRA186_POWER_DOMAIN_SAX] = { .name = "sata" },
+	[TEGRA186_POWER_DOMAIN_VE] = { .name = "ve" },
+	[TEGRA186_POWER_DOMAIN_VIC] = { .name = "vic" },
+	[TEGRA186_POWER_DOMAIN_XUSBA] = { .name = "xusba" },
+	[TEGRA186_POWER_DOMAIN_XUSBB] = { .name = "xusbb" },
+	[TEGRA186_POWER_DOMAIN_XUSBC] = { .name = "xusbc" },
+	[TEGRA186_POWER_DOMAIN_GPU] = { .name = "gpu" },
 };
 
-struct powergate_state {
-	uint32_t logic_state;
-	uint32_t sram_state;
-};
+static int pg_set_state(int id, u32 state)
+{
+	struct mrq_pg_request req = {
+		.cmd = CMD_PG_SET_STATE,
+		.id = id,
+		.set_state = {
+			.state = state,
+		}
+	};
 
-static int tegra186_pg_powergate_partition(int id)
+	return tegra_bpmp_send_receive(MRQ_PG, &req, sizeof(req), NULL, 0);
+}
+
+static int tegra186_pg_query_abi(void)
 {
 	int ret;
-	struct mrq_pg_update_state_request req;
+	struct mrq_query_abi_request req = { .mrq = MRQ_PG };
+	struct mrq_query_abi_response resp;
 
-	req.partition_id = id;
-	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_OFF);
-	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_SD);
-	req.clock_state = 0;
-
-	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
+	ret = tegra_bpmp_send_receive(MRQ_QUERY_ABI, &req, sizeof(req), &resp,
+				      sizeof(resp));
 	if (ret)
 		return ret;
 
-	return 0;
+	return resp.status;
+}
+
+static int tegra186_pg_powergate_partition(int id)
+{
+	int ret = 0;
+	struct pg_partition_info *partition =
+		&t186_partition_info[id];
+
+	mutex_lock(&partition->pg_mutex);
+	if (partition->refcount) {
+		if (--partition->refcount == 0)
+			ret = pg_set_state(id, PG_STATE_OFF);
+	} else {
+		WARN(1, "partition %s refcount underflow\n",
+		     partition->name);
+	}
+	mutex_unlock(&partition->pg_mutex);
+
+	return ret;
 }
 
 static int tegra186_pg_unpowergate_partition(int id)
 {
-	int ret;
-	struct mrq_pg_update_state_request req;
+	int ret = 0;
+	struct pg_partition_info *partition =
+		&t186_partition_info[id];
 
-	req.partition_id = id;
-	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_ON);
-	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_ON);
-	req.clock_state = 0;
+	mutex_lock(&partition->pg_mutex);
+	if (partition->refcount++ == 0)
+		ret = pg_set_state(id, PG_STATE_ON);
+	mutex_unlock(&partition->pg_mutex);
 
-	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
-	if (ret)
-		return ret;
-
-	return 0;
+	return ret;
 }
 
 static int tegra186_pg_powergate_clk_off(int id)
 {
-	int ret;
-	struct mrq_pg_update_state_request req;
-
-	req.partition_id = id;
-	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_OFF);
-	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_SD);
-	req.clock_state = UPDATE_CLK_STATE | (1 << CLK_STATE_OFF);
-
-	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
-	if (ret)
-		return ret;
-
-	return 0;
+	return tegra186_pg_powergate_partition(id);
 }
 
 static int tegra186_pg_unpowergate_clk_on(int id)
 {
-	int ret;
-	struct mrq_pg_update_state_request req;
+	int ret = 0;
+	struct pg_partition_info *partition =
+		&t186_partition_info[id];
 
-	req.partition_id = id;
-	req.logic_state = UPDATE_LOGIC_STATE | (1 << LOGIC_STATE_ON);
-	req.sram_state = UPDATE_SRAM_STATE | (1 << SRAM_STATE_ON);
-	req.clock_state = UPDATE_CLK_STATE | (1 << CLK_STATE_ON);
+	mutex_lock(&partition->pg_mutex);
+	if (partition->refcount++ == 0)
+		ret = pg_set_state(id, PG_STATE_RUNNING);
+	mutex_unlock(&partition->pg_mutex);
 
-	ret = tegra_bpmp_send_receive(MRQ_PG_UPDATE_STATE, &req, sizeof(req), NULL, 0);
-	if (ret)
-		return ret;
-
-	return 0;
+	return ret;
 }
 
 static const char *tegra186_pg_get_name(int id)
 {
-	return partition_names[id];
+	return t186_partition_info[id].name;
 }
 
 static bool tegra186_pg_is_powered(int id)
 {
 	int ret;
-	struct mrq_pg_read_state_response msg;
-	struct mrq_pg_read_state_request req;
+	struct mrq_pg_request req = {
+		.cmd = CMD_PG_GET_STATE,
+		.id = id,
+	};
+	struct mrq_pg_response resp;
 
-	req.partition_id = id;
-	ret = tegra_bpmp_send_receive(MRQ_PG_READ_STATE, &req, sizeof(req), &msg, sizeof(msg));
+	ret = tegra_bpmp_send_receive(MRQ_PG, &req, sizeof(req), &resp, sizeof(resp));
 	if (ret)
-		return 0;
+		return false;
 
-	return !!msg.logic_state;
+	if (resp.get_state.state == PG_STATE_OFF)
+		return false;
+	else
+		return true;
+}
+
+static int tegra186_pg_force_powergate(int id)
+{
+	int ret;
+
+	ret = pg_set_state(id, PG_STATE_ON);
+	if (ret)
+		return ret;
+
+	return pg_set_state(id, PG_STATE_OFF);
 }
 
 static int tegra186_init_refcount(void)
 {
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(t186_partition_info); ++i)
+		mutex_init(&t186_partition_info[i].pg_mutex);
+
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_XUSBA);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_XUSBB);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_XUSBC);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_SAX);
+	tegra186_pg_force_powergate(TEGRA186_POWER_DOMAIN_PCX);
+
 	/*
-	 * Ensure reference count is correct before turning off partitions
+	 * WAR: tegra_ape_power_on() avoid calling unpowergate on the AUD
+	 * partition the first time it is called as it expects it to already be
+	 * on during boot (and the  reason for that is that AGIC need to be
+	 * powered on early in boot).
+	 * Thus there would be a mismatch in the refcount the first
+	 * time tegra_ape_power_off() is called, so fix it up here.
+	 * (and this can't easily be fixed in tegra_ape_power_on(), since
+	 * that will break t210).
+	 *
+	 * This WAR can be removed when GIC has proper runtime pm support.
 	 */
-	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_XUSBA))
-		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBA);
-	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_XUSBB))
-		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBB);
-	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_XUSBC))
-		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_XUSBC);
-	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_SAX))
-		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_SAX);
-	if (!tegra_powergate_is_powered(TEGRA186_POWER_DOMAIN_PCX))
-		tegra_unpowergate_partition_with_clk_on(TEGRA186_POWER_DOMAIN_PCX);
-
-
-	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBA);
-	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBB);
-	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_XUSBC);
-	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_SAX);
-	tegra_powergate_partition_with_clk_off(TEGRA186_POWER_DOMAIN_PCX);
+	t186_partition_info[TEGRA186_POWER_DOMAIN_AUD].refcount = 1;
 
 	return 0;
 }
@@ -209,5 +220,10 @@ static struct powergate_ops tegra186_pg_ops = {
 
 struct powergate_ops *tegra186_powergate_init_chip_support(void)
 {
+	if (tegra186_pg_query_abi()) {
+		WARN(1, "Missing BPMP support for MRQ_PG\n");
+		return 0;
+	}
+
 	return &tegra186_pg_ops;
 }

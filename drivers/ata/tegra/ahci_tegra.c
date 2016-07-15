@@ -18,6 +18,8 @@
 #ifdef CONFIG_DEBUG_FS
 #include "ahci_tegra_debug.h"
 #endif
+#include "linux/pinctrl/consumer.h"
+
 
 static int tegra_ahci_power_on(struct ahci_host_priv *hpriv);
 static void tegra_ahci_power_off(struct ahci_host_priv *hpriv);

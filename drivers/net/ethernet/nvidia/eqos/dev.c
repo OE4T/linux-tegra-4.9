@@ -3833,6 +3833,13 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 	mac_mcr = mac_mcr & (ULONG) (0xffcfff7c);
 	mac_mcr = mac_mcr | ((0x1) << 0) | ((0x1) << 20) | ((0x1) << 21);
 	mac_mcr |= ((0x1) << 1);
+
+	/* if multi channels are enabled, default duplex
+	 * is full
+	 */
+	if (pdata->dt_cfg.use_multi_q)
+		mac_mcr |= ((0x1) << 13);
+
 	MAC_MCR_WR(mac_mcr);
 
 	if (pdata->hw_feat.rx_coe_sel &&

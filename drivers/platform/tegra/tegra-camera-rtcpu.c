@@ -518,7 +518,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 		/* SCE PM addr */
 		cam_rtcpu->rtcpu_sce.sce_pm_base =
-			tegra_ast_map_byname(dev, "sce-pm");
+			tegra_ioremap_byname(dev, "sce-pm");
 		if (!cam_rtcpu->rtcpu_sce.sce_pm_base) {
 			dev_err(dev, "failed to map SCE PM space.\n");
 			return -EINVAL;
@@ -526,7 +526,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 		/* SCE CFG addr */
 		cam_rtcpu->rtcpu_sce.sce_cfg_base =
-			tegra_ast_map_byname(dev, "sce-cfg");
+			tegra_ioremap_byname(dev, "sce-cfg");
 		if (!cam_rtcpu->rtcpu_sce.sce_cfg_base) {
 			dev_err(dev, "failed to map SCE CFG space.\n");
 			return -EINVAL;

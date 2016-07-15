@@ -384,13 +384,13 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 	int ret, i;
 
 	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
-	ast[0] = tegra_ast_map_byname(bus->dev.parent, "ast-cpu");
+	ast[0] = tegra_ioremap_byname(bus->dev.parent, "ast-cpu");
 	if (IS_ERR(ast[0])) {
 		dev_err(&bus->dev, "AST %s not found\n", "ast-cpu");
 		return PTR_ERR(ast[0]);
 	}
 
-	ast[1] = tegra_ast_map_byname(bus->dev.parent, "ast-dma");
+	ast[1] = tegra_ioremap_byname(bus->dev.parent, "ast-dma");
 	if (IS_ERR(ast[1])) {
 		dev_err(&bus->dev, "AST %s not found\n", "ast-dma");
 		return PTR_ERR(ast[1]);

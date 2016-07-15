@@ -259,6 +259,10 @@ struct tegra210_spdif {
 	struct regmap *regmap;
 	unsigned int loopback;
 	const struct tegra210_spdif_soc_data *soc_data;
+	int is_pinctrl;
+	struct pinctrl *pinctrl;
+	struct pinctrl_state *pin_active_state;
+	struct pinctrl_state *pin_idle_state;
 };
 
 #endif

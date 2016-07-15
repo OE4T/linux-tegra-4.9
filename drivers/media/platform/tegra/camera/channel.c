@@ -1150,6 +1150,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 {
 	struct media_entity *entity;
 	struct media_pad *pad;
+	struct v4l2_subdev *sd;
 	int index = 0;
 	int num_sd = 0;
 
@@ -1160,7 +1161,11 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 		return -ENODEV;
 
 	entity = pad->entity;
-	chan->subdev[num_sd++] = media_entity_to_v4l2_subdev(entity);
+	sd = media_entity_to_v4l2_subdev(entity);
+	chan->subdev[num_sd++] = sd;
+	/* Add subdev name to this video dev name with vi-output tag*/
+	snprintf(chan->video.name, sizeof(chan->video.name), "%s, %s",
+		"vi-output", sd->name);
 
 	index = pad->index - 1;
 	while (index >= 0) {
@@ -1177,7 +1182,12 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 			break;
 
 		entity = pad->entity;
-		chan->subdev[num_sd++] = media_entity_to_v4l2_subdev(entity);
+		sd = media_entity_to_v4l2_subdev(entity);
+		chan->subdev[num_sd++] = sd;
+		/* Add subdev name to this video dev name with vi-output tag*/
+		snprintf(chan->video.name, sizeof(chan->video.name), "%s, %s",
+			"vi-output", sd->name);
+
 
 		index = pad->index - 1;
 	}

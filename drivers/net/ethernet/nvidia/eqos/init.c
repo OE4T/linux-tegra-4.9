@@ -893,19 +893,6 @@ int eqos_probe(struct platform_device *pdev)
 
 	ndev->netdev_ops = eqos_get_netdev_ops();
 
-	pdata->interface = eqos_get_phy_interface(pdata);
-	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
-	if (1 == pdata->hw_feat.sma_sel) {
-		ret = eqos_mdio_register(ndev);
-		if (ret < 0) {
-			pr_err("MDIO bus (id %d) registration failed\n",
-			       pdata->bus_id);
-			goto err_out_mdio_reg;
-		}
-	} else {
-		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
-	}
-
 	pdata->dt_cfg.use_multi_q = use_multi_q;
 
 	pdata->ptp_cfg.use_tagged_ptp = of_property_read_bool(node,
@@ -945,6 +932,19 @@ int eqos_probe(struct platform_device *pdev)
 
 		/* enable tx interrupts for all chan */
 		pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
+	}
+
+	pdata->interface = eqos_get_phy_interface(pdata);
+	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
+	if (1 == pdata->hw_feat.sma_sel) {
+		ret = eqos_mdio_register(ndev);
+		if (ret < 0) {
+			pr_err("MDIO bus (id %d) registration failed\n",
+			       pdata->bus_id);
+			goto err_out_mdio_reg;
+		}
+	} else {
+		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
 	/* csr_clock_speed is axi_cbb_clk rate */

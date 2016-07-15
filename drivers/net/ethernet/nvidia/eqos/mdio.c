@@ -463,6 +463,14 @@ static int eqos_init_phy(struct net_device *dev)
 		phydev->supported = PHY_BASIC_FEATURES;
 	}
 
+	/* if multi channels are enabled, disable half duplex
+	 * advertisement
+	 */
+	if (pdata->dt_cfg.use_multi_q) {
+		phydev->supported &= ~(SUPPORTED_1000baseT_Half |
+			SUPPORTED_100baseT_Half | SUPPORTED_10baseT_Half);
+	}
+
 	phydev->supported |= (SUPPORTED_Pause | SUPPORTED_Asym_Pause);
 	if (pdata->dt_cfg.pause_frames == PAUSE_FRAMES_DISABLED)
 		phydev->supported &= ~(SUPPORTED_Pause | SUPPORTED_Asym_Pause);

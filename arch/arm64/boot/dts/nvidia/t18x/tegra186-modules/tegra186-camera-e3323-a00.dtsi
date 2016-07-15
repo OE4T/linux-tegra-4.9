@@ -446,12 +446,16 @@
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_sensor";
+					/* Driver v4l2 device name */
+					devname = "ov23850 2-0010";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@3180000/ov23850_a@10";
 				};
 				drivernode1 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_focuser";
+					/* Driver v4l2 device name */
+					devname = "lc898212 2-0072";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@3180000/lc898212@72";
 				};
@@ -463,12 +467,16 @@
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_sensor";
+					/* Driver v4l2 device name */
+					devname = "ov23850 1-0036";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@c240000/ov23850_c@36";
 				};
 				drivernode1 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_focuser";
+					/* Driver v4l2 device name */
+					devname = "lc898212 1-0072";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@c240000/lc898212@72";
 				};

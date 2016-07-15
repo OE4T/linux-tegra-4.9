@@ -144,21 +144,11 @@ struct tegra_ast_region {
 static void tegra_ast_region_enable(struct tegra_ast_region *region)
 {
 	struct tegra_ast *ast = to_tegra_ast(region->dev.parent);
-	u32 ast_sid = AST_STREAMID(region->stream_id);
 	unsigned i;
 
 	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
 		void __iomem *base = ast->bases[i];
 		unsigned vmidx = region->vmids[i];
-
-		/*
-		 * TODO: MB1 should set stream_id to one VM, and this would no
-		 * longer be necessary.
-		 */
-		u32 r = readl(base + TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
-		if ((r & 0x0000ff00) != ast_sid)
-			writel(ast_sid | AST_STREAMID_CTL_ENABLE, base +
-				TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
 
 		base += region->ast_id * TEGRA_APS_AST_REGION_STRIDE;
 
@@ -254,7 +244,7 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 	dev_set_name(&region->dev, "%s:%u", dev_name(&ast->dev), ast_id);
 	device_initialize(&region->dev);
 
-	/* Check for VM indeces before modifying anything. */
+	/* Check for VM indices before modifying anything. */
 	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
 		void __iomem *base = ast->bases[i];
 		unsigned vmidx;
@@ -267,25 +257,7 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 		}
 
 		if (vmidx > AST_MAX_VMINDEX) {
-			dev_warn(&region->dev,
-					"stream ID %u not in AST %u VM table",
-					stream_id, i);
-			/*
-			 * TODO: This is racy. Return an error once MB1 sets
-			 * stream_id in at least one of the vmidx table,
-			 * and remove this fallback loop.
-			 */
-			for (vmidx = 0; vmidx <= AST_MAX_VMINDEX; vmidx++) {
-				u32 r = readl(base +
-						TEGRA_APS_AST_STREAMID_CTL +
-						(4 * vmidx));
-				if (r & 0x0000ff00)
-					break;
-			}
-		}
-
-		if (vmidx > AST_MAX_VMINDEX) {
-			err = -ENOBUFS;
+			err = -EPERM;
 			goto error;
 		}
 

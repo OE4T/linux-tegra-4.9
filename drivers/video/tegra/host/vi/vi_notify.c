@@ -427,10 +427,10 @@ static int vi_notify_release(struct inode *inode, struct file *file)
 	struct vi_notify_dev *vnd = chan->vnd;
 	unsigned channel = iminor(inode);
 
+	mutex_lock(&vnd->lock);
 	if (vnd->driver->reset_channel)
 		vnd->driver->reset_channel(vnd->device, channel);
 
-	mutex_lock(&vnd->lock);
 	WARN_ON(rcu_access_pointer(vnd->channels[channel]) != chan);
 	RCU_INIT_POINTER(vnd->channels[channel], NULL);
 

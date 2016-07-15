@@ -326,6 +326,8 @@
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_sensor";
+					/* Driver v4l2 device name */
+					devname = "ov5693 2-0036";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@3180000/ov5693_c@36";
 				};

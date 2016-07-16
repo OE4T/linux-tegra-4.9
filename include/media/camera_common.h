@@ -52,8 +52,24 @@
 #define V4L2_CID_TEGRA_CAMERA_LAST	(V4L2_CID_TEGRA_CAMERA_BASE+8)
 #define V4L2_CID_VI_BYPASS_MODE		(V4L2_CID_TEGRA_CAMERA_BASE+9)
 
+/* undefine default CID for GAIN/EXPOSURE and use NV's version */
+#undef V4L2_CID_GAIN
+#undef V4L2_CID_EXPOSURE
+#define V4L2_CID_GAIN				(V4L2_CID_TEGRA_CAMERA_BASE+11)
+#define V4L2_CID_EXPOSURE			(V4L2_CID_TEGRA_CAMERA_BASE+12)
+#define V4L2_CID_FRAME_RATE			(V4L2_CID_TEGRA_CAMERA_BASE+13)
+
 #define MAX_BUFFER_SIZE			32
 #define MAX_CID_CONTROLS		16
+#define MAX_NUM_SENSOR_MODES		30
+#define OF_MAX_STR_LEN			256
+#define OF_SENSORMODE_PREFIX ("mode")
+
+/*
+ * Scaling factor for converting a Q10.22 fixed point value
+ * back to its original floating point value
+ */
+#define FIXED_POINT_SCALING_FACTOR (1ULL << 22)
 
 struct reg_8 {
 	u16 addr;
@@ -84,6 +100,12 @@ struct camera_common_regulators {
 	const char *vcmvdd;
 };
 
+struct camera_common_mode_info {
+	u32	width;
+	u32 height;
+	u32 line_length;
+	u64 pixel_clock;
+};
 
 struct camera_common_pdata {
 	const char *mclk_name; /* NULL for default default_mclk */
@@ -97,6 +119,7 @@ struct camera_common_pdata {
 	struct camera_common_regulators regulators;
 	bool use_cam_gpio;
 	bool has_eeprom;
+	struct camera_common_mode_info *mode_info;
 };
 
 struct camera_common_eeprom_data {
@@ -230,6 +253,8 @@ int camera_common_parse_clocks(struct i2c_client *client,
 			struct camera_common_pdata *pdata);
 int camera_common_parse_ports(struct i2c_client *client,
 			      struct camera_common_data *s_data);
+int camera_common_parse_sensor_mode(struct i2c_client *client,
+			struct camera_common_pdata *pdata);
 
 int camera_common_debugfs_show(struct seq_file *s, void *unused);
 ssize_t camera_common_debugfs_write(

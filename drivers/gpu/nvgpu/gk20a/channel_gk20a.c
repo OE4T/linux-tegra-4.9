@@ -1511,7 +1511,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	return 0;
 
 clean_up_unmap:
-	kfree(c->gpfifo.pipe);
+	nvgpu_free(c->gpfifo.pipe);
 	gk20a_gmmu_unmap_free(ch_vm, &c->gpfifo.mem);
 clean_up:
 	memset(&c->gpfifo, 0, sizeof(struct gpfifo_desc));

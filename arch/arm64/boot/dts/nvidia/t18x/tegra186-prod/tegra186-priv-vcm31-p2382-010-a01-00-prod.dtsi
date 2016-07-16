@@ -104,6 +104,18 @@
 				};
 			};
 		};
+
+		dpaux@15040000 {
+			prod-settings {
+				prod_c_dpaux_hdmi {
+					board {
+						prod = <
+							0x00000124 0x00000700 0x00000400
+						>;
+					};
+				};
+			};
+		};
 	};
 
 	i2c@3190000 {  //i2c3, dp_aux_ch1_i2c

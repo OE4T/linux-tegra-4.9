@@ -25,6 +25,7 @@ struct tegra_dsi_padctrl {
 	u8 pwr_dwn_mask[DSI_MAX_INSTANCES];
 	struct tegra_prod *prod_list;
 	bool prod_settings_updated;
+	bool dsi_pads_enabled;
 	void __iomem *base_addr;
 };
 
@@ -34,3 +35,6 @@ struct tegra_dsi_padctrl *tegra_dsi_padctrl_init(struct tegra_dc *dc);
 void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc);
 /* Defined in dsi_padctrl.c and used in dsi.c */
 void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl);
+/* Defined in dsi_padctrl.c and used in dsi.c */
+void tegra_dsi_padctrl_disable(struct tegra_dsi_padctrl *dsi_padctrl);
+

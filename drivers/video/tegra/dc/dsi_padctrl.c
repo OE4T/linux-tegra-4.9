@@ -76,10 +76,53 @@ static void tegra_dsi_padctrl_reset(struct tegra_dsi_padctrl *dsi_padctrl)
 	reset_control_reset(dsi_padctrl->reset);
 }
 
+void tegra_dsi_padctrl_disable(struct tegra_dsi_padctrl *dsi_padctrl)
+{
+	int val, i;
+
+	if (!dsi_padctrl->dsi_pads_enabled)
+		return;
+
+	/* Enable all pwr downs for all controllers */
+	val = 0;
+	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pwr_down_regs); i++) {
+		val |= (DSI_PADCTRL_PWR_DOWN_PD_CLK_EN |
+			DSI_PADCTRL_PWR_DOWN_PD_IO_0_EN |
+			DSI_PADCTRL_PWR_DOWN_PD_IO_1_EN);
+		tegra_dsi_padctrl_write(dsi_padctrl, val,
+			dsi_padctrl_pwr_down_regs[i]);
+	}
+
+	/* Enable all pull downs for all controllers */
+	val = 0;
+	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pull_down_regs); i++) {
+		val |= (DSI_PADCTRL_E_PULL_DWN_PD_CLK_EN |
+			DSI_PADCTRL_E_PULL_DWN_PD_IO_0_EN |
+			DSI_PADCTRL_E_PULL_DWN_PD_IO_1_EN);
+		tegra_dsi_padctrl_write(dsi_padctrl, val,
+			dsi_padctrl_pull_down_regs[i]);
+	}
+
+	/* Enable PDVCLAMP in global pad controls */
+	val = tegra_dsi_padctrl_read(dsi_padctrl, DSI_PADCTRL_GLOBAL_CNTRLS);
+	val |=  DSI_PADCTRL_PDVCLAMP_AB | DSI_PADCTRL_PDVCLAMP_CD;
+	tegra_dsi_padctrl_write(dsi_padctrl, val, DSI_PADCTRL_GLOBAL_CNTRLS);
+
+	dsi_padctrl->dsi_pads_enabled = false;
+}
+
 void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl)
 {
 	int val, err;
 	u8 i;
+
+	if (dsi_padctrl->dsi_pads_enabled)
+		return;
+
+	/* Disable PDVCLAMP in global pad controls */
+	val = tegra_dsi_padctrl_read(dsi_padctrl, DSI_PADCTRL_GLOBAL_CNTRLS);
+	val &=  ~(DSI_PADCTRL_PDVCLAMP_AB | DSI_PADCTRL_PDVCLAMP_CD);
+	tegra_dsi_padctrl_write(dsi_padctrl, val, DSI_PADCTRL_GLOBAL_CNTRLS);
 
 	if (!dsi_padctrl->prod_settings_updated && dsi_padctrl->prod_list) {
 		err = tegra_prod_set_by_name(&dsi_padctrl->base_addr,
@@ -100,6 +143,8 @@ void tegra_dsi_padctrl_enable(struct tegra_dsi_padctrl *dsi_padctrl)
 		tegra_dsi_padctrl_write(dsi_padctrl, val,
 			dsi_padctrl_pull_down_regs[i]);
 	}
+
+	dsi_padctrl->dsi_pads_enabled = true;
 }
 
 /*
@@ -248,30 +293,11 @@ void tegra_dsi_padctrl_shutdown(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	struct tegra_dsi_padctrl *dsi_padctrl;
-	int val;
-	u8 i;
 
 	dsi_padctrl = dsi->pad_ctrl;
 
-	/* Enable all pwr downs for all controllers */
-	val = 0;
-	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pwr_down_regs); i++) {
-		val |= (DSI_PADCTRL_PWR_DOWN_PD_CLK_EN |
-			DSI_PADCTRL_PWR_DOWN_PD_IO_0_EN |
-			DSI_PADCTRL_PWR_DOWN_PD_IO_1_EN);
-		tegra_dsi_padctrl_write(dsi_padctrl, val,
-			dsi_padctrl_pwr_down_regs[i]);
-	} 
-
-	/* Enable all pull downs for all controllers */
-	val = 0;
-	for (i = 0; i < ARRAY_SIZE(dsi_padctrl_pull_down_regs); i++) {
-		val |= (DSI_PADCTRL_E_PULL_DWN_PD_CLK_EN |
-			DSI_PADCTRL_E_PULL_DWN_PD_IO_0_EN |
-			DSI_PADCTRL_E_PULL_DWN_PD_IO_1_EN);
-		tegra_dsi_padctrl_write(dsi_padctrl, val,
-			dsi_padctrl_pull_down_regs[i]);
-	}
+	/* Power down all DSI pads */
+	tegra_dsi_padctrl_disable(dsi_padctrl);
 
 	if (dsi_padctrl->prod_list) {
 		dsi_padctrl->prod_list = NULL;

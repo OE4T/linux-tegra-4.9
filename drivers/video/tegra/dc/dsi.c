@@ -2893,8 +2893,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_14x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_12x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	defined(CONFIG_ARCH_TEGRA_12x_SOC)
 		tegra_mipi_cal_write(dsi->mipi_cal,
 			MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
 			MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
@@ -2922,7 +2921,7 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		val = tegra_mipi_cal_read(dsi->mipi_cal,
 				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
 #ifdef CONFIG_TEGRA_NVDISPLAY
-		val &= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
+		val |= MIPI_BIAS_PAD_PDVCLAMP(0x1);
 #else
 		val |= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
 #endif
@@ -5562,6 +5561,11 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 
 	/* Disable dsi source clock */
 	tegra_dsi_clk_disable(dsi);
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (dsi->pad_ctrl)
+		tegra_dsi_padctrl_disable(dsi->pad_ctrl);
+#endif
 
 	dsi->enabled = false;
 	dsi->host_suspended = true;

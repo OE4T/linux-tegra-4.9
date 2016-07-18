@@ -93,8 +93,18 @@ static int gp106_alloc_blob_space(struct gk20a *g,
 		size_t size, struct mem_desc *mem)
 {
 	struct wpr_carveout_info wpr_inf;
+	int err;
 
 	g->ops.pmu.get_wpr(g, &wpr_inf);
+
+	/*
+	 * Even though this mem_desc wouldn't be used, the wpr region needs to
+	 * be reserved in the allocator.
+	 */
+	err = gk20a_gmmu_alloc_attr_vid_at(g, 0, wpr_inf.size,
+				&g->acr.wpr_dummy, wpr_inf.wpr_base);
+	if (err)
+		return err;
 
 	return gk20a_gmmu_alloc_attr_vid_at(g, 0, wpr_inf.size, mem,
 			wpr_inf.nonwpr_base);

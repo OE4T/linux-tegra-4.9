@@ -118,34 +118,25 @@ static void wke_write_tier2_routing(u32 *enb)
 	print_vals("route", enb);
 }
 
-static void wke_read_wake_levels(u32 *lvl)
+static void wke_write_wake_level(int wake, int level)
 {
-	int i, j;
 	u32 val;
-	u32 reg = WAKE_AOWAKE_CNTRL_0;
+	u32 reg = WAKE_AOWAKE_CNTRL_0 + wake*4;
 
-	for (i = 0; i < WAKE_NR_VECTORS; i++) {
-		lvl[i] = 0;
-		for (j = 0; j < 32; j++, reg += 4) {
-			val = tegra_aowake_read(reg);
-			lvl[i] |= (((val >> 3) & 0x1) << j);
-		}
-	}
+	val = tegra_aowake_read(reg);
+	if (level)
+		val |= (1 << 3);
+	else
+		val &= ~(1 << 3);
+	tegra_aowake_write(val, reg);
 }
 
 static void wke_write_wake_levels(u32 *lvl)
 {
 	int i;
-	u32 val;
-	u32 reg = WAKE_AOWAKE_CNTRL_0;
 
-	for (i = 0; i < WAKE_NR_EVENTS; i++, reg += 4) {
-		val = tegra_aowake_read(reg);
-		if (test_bit(i, (ulong *)lvl))
-			val |= (1 << 3);
-		else
-			val &= ~(1 << 3);
-		tegra_aowake_write(val, reg);
+	for (i = 0; i < WAKE_NR_EVENTS; i++) {
+		wke_write_wake_level(i, test_bit(i, (ulong *)lvl));
 	}
 	print_vals("level", lvl);
 }
@@ -164,21 +155,42 @@ int tegra_read_wake_status(u32 *status)
 	return WAKE_NR_VECTORS;
 }
 
+static void wke_clear_sw_wake_status(void)
+{
+	wke_32kwritel(1, WAKE_AOWAKE_SW_STATUS_W_0);
+}
+
 static void wke_read_sw_wake_status(u32 *status)
 {
 	int i;
 	u32 reg = WAKE_AOWAKE_SW_STATUS_31_0_0;
-	u32 mask = WAKE_AOWAKE_TIER2_ROUTING_31_0_0;
 
-	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4, mask += 4) {
+	for (i = 0; i < WAKE_NR_EVENTS; i++)
+		wke_write_wake_level(i, 0);
+
+	wke_clear_sw_wake_status();
+	wke_32kwritel(1, WAKE_LATCH_SW);
+
+	/*
+	 * WAKE_AOWAKE_SW_STATUS is edge triggered, so in order to
+	 * obtain the current status of the wake signals, change the polarity
+	 * of the wake level from 0->1 while latching to force a positive edge
+	 * if the sampled signal is '1'.
+	 */
+	for (i = 0; i < WAKE_NR_EVENTS; i++)
+		wke_write_wake_level(i, 1);
+
+	/*
+	 * Wait for the update to be synced into the 32kHz domain,
+	 * and let enough time lapse, so that the wake signals have time to
+	 * be sampled.
+	 */
+	udelay(300);
+
+	wke_32kwritel(0, WAKE_LATCH_SW);
+
+	for (i = 0; i < WAKE_NR_VECTORS; i++, reg += 4)
 		status[i] = tegra_aowake_read(reg);
-		status[i] = status[i] & tegra_aowake_read(mask);
-	}
-}
-
-static void wke_clear_sw_wake_status(void)
-{
-	wke_32kwritel(1, WAKE_AOWAKE_SW_STATUS_W_0);
 }
 
 static void wke_clear_wake_status(void)
@@ -314,20 +326,12 @@ static int tegra_pm_irq_suspend(void)
 	enum tegra_revision revision;
 	int i;
 
-	wke_clear_sw_wake_status();
-
-	wke_32kwritel(1, WAKE_LATCH_SW);
-	wke_32kwritel(0, WAKE_LATCH_SW);
-
 	wke_read_sw_wake_status(status);
-
-	wke_read_wake_levels(lvl);
 
 	/* flip the wakeup trigger for any-edge triggered pads
 	 * which are currently asserting as wakeups */
 	for (i = 0; i < WAKE_NR_VECTORS; i++) {
-		lvl[i] ^= status[i];
-		lvl[i] &= wke_wake_level_any[i];
+		lvl[i] = ~status[i] & wke_wake_level_any[i];
 		wake_level[i] = lvl[i] | wke_wake_level[i];
 		wake_enb[i] = wke_wake_enb[i];
 	}

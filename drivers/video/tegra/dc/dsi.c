@@ -4574,11 +4574,29 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 {
 	struct tegra_dc_dsi_data *dsi = tegra_dc_get_outdata(dc);
 	int err = 0;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	int val;
+#endif
+
 #ifdef CONFIG_SYSEDP_FRAMEWORK
 	sysedp_set_state(dsi->sysedpc, 1);
 #endif
 	mutex_lock(&dsi->lock);
 	tegra_dc_io_start(dc);
+
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	if (dsi->pad_ctrl)
+		tegra_dsi_padctrl_enable(dsi->pad_ctrl);
+
+	/* Disable mipi bias pad power down */
+	tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+	val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+	val &= ~PAD_PDVREG(1);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+	tegra_mipi_cal_clk_disable(dsi->mipi_cal);
+#endif
 
 	/*
 	 * Do not program this panel as the bootloader as has already
@@ -4589,10 +4607,6 @@ static void tegra_dc_dsi_enable(struct tegra_dc *dc)
 		goto fail;
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
-	if (dsi->pad_ctrl)
-		tegra_dsi_padctrl_enable(dsi->pad_ctrl);
-#endif
 	/* Stop DC stream before configuring DSI registers
 	 * to avoid visible glitches on panel during transition
 	 * from bootloader to kernel driver
@@ -5565,6 +5579,15 @@ static int tegra_dsi_deep_sleep(struct tegra_dc *dc,
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (dsi->pad_ctrl)
 		tegra_dsi_padctrl_disable(dsi->pad_ctrl);
+
+	/* Enable mipi bias pad power down */
+	tegra_mipi_cal_clk_enable(dsi->mipi_cal);
+	val = tegra_mipi_cal_read(dsi->mipi_cal,
+			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+	val |= PAD_PDVREG(1);
+	tegra_mipi_cal_write(dsi->mipi_cal, val,
+			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
+	tegra_mipi_cal_clk_disable(dsi->mipi_cal);
 #endif
 
 	dsi->enabled = false;

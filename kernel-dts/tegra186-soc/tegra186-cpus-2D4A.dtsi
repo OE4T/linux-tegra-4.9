@@ -33,6 +33,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&DENVER_C6 &DENVER_C7>;
 			cpu-capacity = <1024>;
+			next-level-cache = <&L2_DENVER>;
 		};
 
 		cpu@1 {
@@ -42,6 +43,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&DENVER_C6 &DENVER_C7>;
 			cpu-capacity = <1024>;
+			next-level-cache = <&L2_DENVER>;
 		};
 
 		cpu_a57_0: cpu@2 {
@@ -51,6 +53,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
 			cpu-capacity = <752>;
+			next-level-cache = <&L2_A57>;
 		};
 
 		cpu_a57_1: cpu@3 {
@@ -60,6 +63,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
 			cpu-capacity = <752>;
+			next-level-cache = <&L2_A57>;
 		};
 
 		cpu_a57_2: cpu@4 {
@@ -69,6 +73,7 @@
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
 			cpu-capacity = <752>;
+			next-level-cache = <&L2_A57>;
 		};
 
 		cpu_a57_3: cpu@5 {
@@ -78,6 +83,19 @@
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
 			cpu-capacity = <752>;
+			next-level-cache = <&L2_A57>;
+		};
+
+		L2_A57: l2-cache0 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <2>;
+		};
+
+		L2_DENVER: l2-cache1 {
+			compatible = "cache";
+			cache-unified;
+			cache-level = <2>;
 		};
 	};
 

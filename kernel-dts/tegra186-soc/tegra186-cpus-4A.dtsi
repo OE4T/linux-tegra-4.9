@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-cpus-4A.dtsi
  *
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -31,6 +31,7 @@
 			reg = <0x0 0x100>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			next-level-cache = <&L2_A57>;
 		};
 
 		cpu@1 {
@@ -39,6 +40,7 @@
 			reg = <0x0 0x101>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			next-level-cache = <&L2_A57>;
 		};
 
 		cpu@2 {
@@ -47,6 +49,7 @@
 			reg = <0x0 0x102>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			next-level-cache = <&L2_A57>;
 		};
 
 		cpu@3 {
@@ -55,7 +58,14 @@
 			reg = <0x0 0x103>;
 			enable-method = "psci";
 			cpu-idle-states = <&A57_C7>;
+			next-level-cache = <&L2_A57>;
 		};
+
+		L2_A57: l2-cache {
+                        compatible = "cache";
+                        cache-unified;
+                        cache-level = <2>;
+                };
 	};
 
 	arm-pmu {

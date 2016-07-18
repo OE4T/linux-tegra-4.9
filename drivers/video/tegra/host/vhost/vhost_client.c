@@ -1,7 +1,7 @@
 /*
 * Tegra Host1x Virtualization client common driver
 *
-* Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+* Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
 *
 * This program is free software; you can redistribute it and/or modify it
 * under the terms and conditions of the GNU General Public License,
@@ -38,6 +38,11 @@
 #endif
 
 static int nvhost_vhost_client_finalize_poweron(struct platform_device *pdev)
+{
+	return 0;
+}
+
+static int nvhost_vhost_client_prepare_poweroff(struct platform_device *pdev)
 {
 	return 0;
 }
@@ -182,6 +187,7 @@ static int vhost_client_probe(struct platform_device *dev)
 	pdata->idle = NULL;
 	pdata->scaling_init = NULL;
 	pdata->finalize_poweron = nvhost_vhost_client_finalize_poweron;
+	pdata->prepare_poweroff = nvhost_vhost_client_prepare_poweroff;
 	pdata->poweron_reset = false;
 	pdata->engine_cg_regs = NULL;
 	pdata->keepalive = false;

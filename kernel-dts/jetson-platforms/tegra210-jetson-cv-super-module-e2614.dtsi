@@ -49,15 +49,12 @@
 			compatible = "ak,ak89xx";
 			reg = <0x0d>;
                         magnetic_field_matrix = [01 00 00 00 01 00 00 00 01];
-			magnetic_field_delay_us_min = <16666>;
 			status = "disabled";
 		};
 
 		bmp280_77: bmp280@77 {
 			compatible = "bmp,bmpX80";
 			reg = <0x77>;
-			pressure_delay_us_min = <16666>;
-			pressure_disable = <1>;
 			status = "disabled";
 		};
 

@@ -478,7 +478,7 @@ static int tegra210_amx_get_byte_map(struct snd_kcontrol *kcontrol,
 	if (enabled)
 		ucontrol->value.integer.value[0] = bytes_map[reg];
 	else
-		ucontrol->value.integer.value[0] = -1;
+		ucontrol->value.integer.value[0] = 256;
 
 	return 0;
 }
@@ -494,7 +494,7 @@ static int tegra210_amx_put_byte_map(struct snd_kcontrol *kcontrol,
 	int reg = mc->reg;
 	int value = ucontrol->value.integer.value[0];
 
-	if (value >= 0) {
+	if (value >= 0 && value <= 255) {
 		/* update byte map and enable slot */
 		bytes_map[reg] = value;
 		if (reg > 31)
@@ -613,7 +613,7 @@ static const struct snd_soc_dapm_route tegra210_amx_routes[] = {
 };
 
 #define TEGRA210_AMX_BYTE_MAP_CTRL(reg) \
-	SOC_SINGLE_EXT("Byte Map " #reg, reg, 0, 0xFF, 0, \
+	SOC_SINGLE_EXT("Byte Map " #reg, reg, 0, 256, 0, \
 		tegra210_amx_get_byte_map, tegra210_amx_put_byte_map)
 
 #define TEGRA210_AMX_OUTPUT_CHANNELS_CTRL(reg) \

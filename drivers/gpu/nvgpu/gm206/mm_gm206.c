@@ -33,4 +33,5 @@ void gm206_init_mm(struct gpu_ops *gops)
 {
 	gm20b_init_mm(gops);
 	gops->mm.get_vidmem_size = gm206_mm_get_vidmem_size;
+	gops->mm.get_physical_addr_bits = NULL;
 }

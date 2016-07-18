@@ -23,6 +23,7 @@
 
 struct acr_desc {
 	struct mem_desc ucode_blob;
+	struct mem_desc wpr_dummy;
 	struct bin_hdr *bl_bin_hdr;
 	struct hsflcn_bl_desc *pmu_hsbl_desc;
 	struct bin_hdr *hsbin_hdr;

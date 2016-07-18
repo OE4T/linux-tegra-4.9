@@ -13,6 +13,27 @@
 
 #ifndef NVGPU_BIOS_GM206_H
 #define NVGPU_BIOS_GM206_H
+
+#define PERF_PTRS_WIDTH 0x4
+
+enum {
+	CLOCKS_TABLE = 2,
+	CLOCK_PROGRAMMING_TABLE,
+	NAFLL_TABLE,
+	ADC_TABLE,
+};
+
+enum {
+	CONTINUOUS_VIRTUAL_BINNING_TABLE,
+};
+
+struct bit_token {
+	u8 token_id;
+	u8 data_version;
+	u16 data_size;
+	u16 data_ptr;
+} __packed;
+
 struct gpu_ops;
 
 void gm206_init_bios(struct gpu_ops *gops);

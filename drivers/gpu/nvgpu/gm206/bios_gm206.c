@@ -21,6 +21,7 @@
 #include "hw_mc_gm206.h"
 #include "hw_xve_gm206.h"
 #include "hw_top_gm206.h"
+#include "bios_gm206.h"
 
 #define BIT_HEADER_ID 0xb8ff
 #define BIT_HEADER_SIGNATURE 0x00544942
@@ -54,15 +55,10 @@ struct bit {
 	u8 header_checksum;
 } __packed;
 
-struct bit_token {
-	u8 token_id;
-	u8 data_version;
-	u16 data_size;
-	u16 data_ptr;
-} __packed;
-
 #define TOKEN_ID_NVINIT_PTRS 0x49
 #define TOKEN_ID_FALCON_DATA 0x70
+#define TOKEN_ID_PERF_PTRS 0x50
+#define TOKEN_ID_CLOCK_PTRS 0x43
 
 struct nvinit_ptrs {
 	u16 initscript_table_ptr;
@@ -423,6 +419,42 @@ static void gm206_bios_parse_falcon_data_v2(struct gk20a *g, int offset)
 			  "could not parse falcon ucode table");
 }
 
+static void *gm206_bios_get_perf_table_ptrs(struct gk20a *g,
+		struct bit_token *ptoken, u8 table_id)
+{
+	u32 perf_table_id_offset = 0;
+	u8 *perf_table_ptr = NULL;
+
+	if (ptoken != NULL &&
+		table_id < (ptoken->data_size/sizeof(u32))) {
+
+		perf_table_id_offset = *((u32 *)&g->bios.data[
+				ptoken->data_ptr +
+				(table_id * PERF_PTRS_WIDTH)]);
+
+		gk20a_dbg_info("Perf_Tbl_ID-offset 0x%x Tbl_ID_Ptr-offset- 0x%x",
+					(ptoken->data_ptr +
+					(table_id * PERF_PTRS_WIDTH)),
+					perf_table_id_offset);
+
+		if (perf_table_id_offset != 0) {
+			/* check is perf_table_id_offset is > 64k */
+			if (perf_table_id_offset & ~0xFFFF)
+				perf_table_ptr =
+					&g->bios.data[g->bios.expansion_rom_offset +
+						perf_table_id_offset];
+			else
+				perf_table_ptr =
+					&g->bios.data[perf_table_id_offset];
+		} else
+			gk20a_warn(g->dev, "PERF TABLE ID %d is NULL",
+					table_id);
+	} else
+		gk20a_warn(g->dev, "INVALID PERF TABLE ID - %d ", table_id);
+
+	return (void *)perf_table_ptr;
+}
+
 static void gm206_bios_parse_bit(struct gk20a *g, int offset)
 {
 	struct bit bit;
@@ -452,6 +484,14 @@ static void gm206_bios_parse_bit(struct gk20a *g, int offset)
 			if (bit_token.data_version == 2)
 				gm206_bios_parse_falcon_data_v2(g,
 						bit_token.data_ptr);
+			break;
+		case TOKEN_ID_PERF_PTRS:
+			g->bios.perf_token =
+				(struct bit_token *)&g->bios.data[offset];
+			break;
+		case TOKEN_ID_CLOCK_PTRS:
+			g->bios.clock_token =
+				(struct bit_token *)&g->bios.data[offset];
 			break;
 		default:
 			break;
@@ -715,4 +755,5 @@ static int gm206_bios_init(struct gk20a *g)
 void gm206_init_bios(struct gpu_ops *gops)
 {
 	gops->bios.init = gm206_bios_init;
+	gops->bios.get_perf_table_ptrs = gm206_bios_get_perf_table_ptrs;
 }

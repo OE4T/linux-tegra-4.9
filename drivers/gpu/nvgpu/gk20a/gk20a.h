@@ -53,6 +53,7 @@ struct acr_desc;
 #include "cde_gk20a.h"
 #include "debug_gk20a.h"
 #include "sched_gk20a.h"
+#include "gm206/bios_gm206.h"
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
     32 ns is the resolution of ptimer. */
@@ -656,6 +657,8 @@ struct gpu_ops {
 
 	struct {
 		int (*init)(struct gk20a *g);
+		void *(*get_perf_table_ptrs)(struct gk20a *g,
+				struct bit_token *ptoken, u8 table_id);
 	} bios;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
@@ -704,6 +707,8 @@ struct nvgpu_bios {
 	u32 devinit_tables_phys_base;
 	u32 devinit_script_phys_base;
 
+	struct bit_token *perf_token;
+	struct bit_token *clock_token;
 	u32 expansion_rom_offset;
 };
 

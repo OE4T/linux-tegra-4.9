@@ -29,7 +29,7 @@
  * DAMAGE.
  * ========================================================================= */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -793,7 +793,7 @@ static int eqos_map_non_page_buffs_64(struct eqos_prv_data *pdata,
 
 	ptx_swcx_desc->dma = dma_map_single((&pdata->pdev->dev),
 			(skb->data + offset),
-			ALIGN_SIZE(size), DMA_TO_DEVICE);
+			size, DMA_TO_DEVICE);
 
 	if (dma_mapping_error((&pdata->pdev->dev), ptx_swcx_desc->dma)) {
 		pr_err("failed to do the dma map\n");
@@ -815,13 +815,12 @@ static int eqos_map_page_buffs_64(struct eqos_prv_data *pdata,
 {
 	unsigned int page_idx = (frag->page_offset + offset) >> PAGE_SHIFT;
 	unsigned int page_offset = (frag->page_offset + offset) & ~PAGE_MASK;
-
 	DBGPR("-->eqos_map_page_buffs_64\n");
 	/* fill the first buffer pointer in buffer->dma */
 	ptx_swcx_desc->dma = dma_map_page((&pdata->pdev->dev),
 				(frag->page.p + page_idx),
 				page_offset,
-				ALIGN_SIZE(size), DMA_TO_DEVICE);
+				size, DMA_TO_DEVICE);
 	if (dma_mapping_error((&pdata->pdev->dev),
 				ptx_swcx_desc->dma)) {
 		pr_err("failed to do the dma map\n");
@@ -1009,12 +1008,12 @@ static void tx_swcx_free(struct eqos_prv_data *pdata,
 	if (ptx_swcx->dma) {
 		if (ptx_swcx->buf1_mapped_as_page == Y_TRUE)
 			dma_unmap_page((&pdata->pdev->dev), ptx_swcx->dma,
-				       ALIGN_SIZE(ptx_swcx->len),
+				       ptx_swcx->len,
 				       DMA_TO_DEVICE);
 		else
 			dma_unmap_single((&pdata->pdev->dev),
 					 ptx_swcx->dma,
-					 ALIGN_SIZE(ptx_swcx->len),
+					 ptx_swcx->len,
 					 DMA_TO_DEVICE);
 
 		ptx_swcx->dma = 0;

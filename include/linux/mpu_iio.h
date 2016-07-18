@@ -149,18 +149,13 @@ struct mpu_platform_data {
  *      3:0. If the port is to do write transactions then this
  *      value must be 1.  See MPU documentation for the other
  *      bits in I2C_SLVx_CTRL that can be applied by this byte.
- * - dmp_ctrl: When the DMP in enabled, the number of
- *      consecutive registers to read in 3:0. If the port is to
- *      do write transactions then this value must be 1.  See
- *      MPU documentation for the other bits in I2C_SLVx_CTRL
- *      that can be applied by this byte.
  * - data_out: The data byte written if the port is configured
  *      to do writes (addr 7:7 = 0).
  * - delay_ms: The polling delay time between I2C transactions
  *      in ms.  Note that the MPU HW only supports one delay
  *      time so the longest delay of all the MPU ports enabled
  *      is used.
- * - delay_us: The delay at which the read data is reported.
+ * - period_us: The period at which the read data is reported.
  * - shutdown_bypass: set if a connection to the host is needed
  *      when the system is shutdown.  The MPU API will be
  *      disabled as part of its shutdown but it will enable the
@@ -190,10 +185,9 @@ struct nvi_mpu_port {
 	u8 addr;
 	u8 reg;
 	u8 ctrl;
-	u8 dmp_ctrl;
 	u8 data_out;
 	unsigned int delay_ms;
-	unsigned long delay_us;
+	unsigned int period_us;
 	bool shutdown_bypass;
 	void (*handler)(u8 *data, unsigned int len,
 			long long timestamp, void *ext_driver);
@@ -202,6 +196,17 @@ struct nvi_mpu_port {
 	enum secondary_slave_type type;
 	enum ext_slave_id id;
 	u64 q30[3];
+};
+
+struct nvi_mpu_inf {
+	unsigned int period_us_min;
+	unsigned int period_us_max;
+	unsigned int fifo_reserve;
+	unsigned int fifo_max;
+	unsigned int dmp_rd_len_sts;	/* status length from DMP */
+	unsigned int dmp_rd_len_data;	/* data length from DMP */
+	bool dmp_rd_be_sts;		/* status endian from DMP */
+	bool dmp_rd_be_data;		/* data endian from DMP */
 };
 
 /**
@@ -281,14 +286,6 @@ int nvi_mpu_dev_valid(struct nvi_mpu_port *nmp, u8 *data);
  *           - ext_driver: this pointer is passed in handler for
  *                use by external driver.  This should be NULL
  *                if the port is configured for writes.
- * @param port: request a specific port (0 to 3).
- *            If port is -1 then the returned port ID will be
- *            automatically selected.
- *            Requesting a specific port is used when the device
- *            is expected to work with the Invensense DMP, since
- *            the DMP FW is pathetically designed and has strict
- *            limitations of how it will work with auxiliary
- *            devices.
  * @return int error/port ID
  *            if return >= 0 then this is the port ID.  The ID
  *            will have a value of 0 to 3 (HW has 4 ports).
@@ -302,7 +299,7 @@ int nvi_mpu_dev_valid(struct nvi_mpu_port *nmp, u8 *data);
  *                 freed.
  *            - -EINVAL: Problem with input parameters.
  */
-int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp, int port);
+int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp);
 
 /**
  * Remove a port.
@@ -396,10 +393,10 @@ int nvi_mpu_batch(int port, unsigned int period_us, unsigned int timeout_us);
 int nvi_mpu_flush(int port);
 
 /**
- * batch fifo.
- * @param port
- * @param reserve
- * @param max
+ * nvi_mpu_info.  MPU/ICM populates the nvi_mpu_inf structure
+ * pointed to by inf.
+ * @param port used for reading
+ * @param ptr to nvi_mpu_inf structure.
  * @return int error
  *            Possible errors are:
  *            - -EAGAIN: MPU is not initialized yet.
@@ -408,7 +405,7 @@ int nvi_mpu_flush(int port);
  *            - -EBUSY: MPU is busy with another request.
  *            - -EINVAL: Problem with input parameters.
  */
-int nvi_mpu_fifo(int port, unsigned int *reserve, unsigned int *max);
+int nvi_mpu_info(int read_port, struct nvi_mpu_inf *inf);
 
 /**
  * Enable/disable the MPU bypass mode.  When enabled, the MPU

@@ -22,9 +22,87 @@
 #define AUX_PORT_DEV_GMF		(0)
 #define MSK_AUX_PORTS_DEV_GMF		(0x3)
 #define AUX_PORT_DEV_PRS		(2)
-#define MSK_AUX_PORTS_DEV_PRS		(0xC)
+/* The MPU DMP FW requires port 0 to be enabled and reading 10 bytes
+ * when pressure is enabled.  This is accomplished by enabling the
+ * compass with the pressure dependency mask, MSK_AUX_PORTS_DEV_PRS.
+ */
+#define MSK_AUX_PORTS_DEV_PRS		(0xF)
 #define MSK_EN_AUX_PORTS		(((1 << (AUX_PORT_IO + DEV_N_AUX)) - \
 					  1) & ~MSK_DEV_SNSR)
+
+static struct nvi_aux_port_dmp_dev ap_dd_gmf[] = {
+	{
+		.dev			= COMPASS_ID_AK8963,
+		.dmp_rd_len_sts		= 0,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= false,
+		.dmp_rd_ctrl		= 0x0A,
+		.dmp_rd_reg		= 0x01,
+	},
+	{
+		.dev			= COMPASS_ID_AK8975,
+		.dmp_rd_len_sts		= 0,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= false,
+		.dmp_rd_ctrl		= 0x0A,
+		.dmp_rd_reg		= 0x01,
+	},
+	{
+		.dev			= COMPASS_ID_AK09911,
+		.dmp_rd_len_sts		= 0,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= false,
+		.dmp_rd_ctrl		= 0x0A,
+		.dmp_rd_reg		= 0x10,
+	},
+};
+
+static struct nvi_aux_port_dmp_dev ap_dd_prs[] = {
+	{
+		.dev			= PRESSURE_ID_BMP280,
+		.dmp_rd_len_sts		= 0,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= true,
+		.dmp_rd_ctrl		= 0x06,
+		.dmp_rd_reg		= 0xF7,
+	},
+};
+
+static struct nvi_dmp_aux_port nvi_dmp_ap[] = {
+	/* MPU DMP FW supports only this configuration */
+	/* port 0 */
+	{
+		.type			= SECONDARY_SLAVE_TYPE_COMPASS,
+		.port_rd		= true,
+		.port			= AUX_PORT_DEV_GMF,
+		.dd_n			= ARRAY_SIZE(ap_dd_gmf),
+		.dd			= ap_dd_gmf,
+	},
+	/* port 1 */
+	{
+		.type			= SECONDARY_SLAVE_TYPE_COMPASS,
+		.port_rd		= false,
+		.port			= AUX_PORT_DEV_GMF + 1,
+	},
+	/* port 2 */
+	{
+		.type			= SECONDARY_SLAVE_TYPE_PRESSURE,
+		.port_rd		= true,
+		.port			= AUX_PORT_DEV_PRS,
+		.dd_n			= ARRAY_SIZE(ap_dd_prs),
+		.dd			= ap_dd_prs,
+	},
+	/* port 3 */
+	{
+		.type			= SECONDARY_SLAVE_TYPE_PRESSURE,
+		.port_rd		= false,
+		.port			= AUX_PORT_DEV_PRS + 1,
+	},
+};
 
 struct nvi_dmp_dev {
 	unsigned int dev;
@@ -49,27 +127,6 @@ struct nvi_dmp_hdr {
 	u8 hdr_msk[DMP_HDR_LEN_MAX];
 };
 
-
-/* prs = pressure */
-static int nvi_dmp_prs_init(struct nvi_state *st, unsigned int *en_msk)
-{
-	return 1;
-}
-
-/* gmf = GeoMagnetic Field (compass) */
-static int nvi_dmp_gmf_init(struct nvi_state *st, unsigned int *en_msk)
-{
-	if (st->aux.port[AUX_PORT_DEV_GMF].nmp.type !=
-						  SECONDARY_SLAVE_TYPE_COMPASS)
-		/* DMP shouldn't run if AUX device not supported */
-		return -EINVAL;
-
-	if (!st->aux.port[AUX_PORT_DEV_GMF].nmp.handler)
-		/* no handler */
-		return 1;
-
-	return 0;
-}
 
 static int nvi_dmp_sm_init(struct nvi_state *st, unsigned int *en_msk)
 {
@@ -114,7 +171,7 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.odr_cfg		= KEY_CFG_GYRO_ODR,
 		.odr_cntr		= KEY_ODR_CNTR_GYRO,
 	},
-#ifdef NVI_6QUAT_EN
+#if NVI_6QUAT_EN
 	{
 		.dev			= DEV_QTN,
 		.depend_msk		= (1 << DEV_ACC) |
@@ -156,7 +213,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.aux_port		= AUX_PORT_DEV_GMF,
 		.depend_msk		= (MSK_AUX_PORTS_DEV_GMF << DEV_N_AUX),
 		.buf_n			= 6,
-		.fn_init		= &nvi_dmp_gmf_init,
 		.en_addr		= CFG_OUT_CPASS,
 		.en_len			= 2,
 		.en			= { 0xA3, 0xA3 },
@@ -169,7 +225,6 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 		.aux_port		= AUX_PORT_DEV_PRS,
 		.depend_msk		= (MSK_AUX_PORTS_DEV_PRS << DEV_N_AUX),
 		.buf_n			= 6,
-		.fn_init		= &nvi_dmp_prs_init,
 		.en_addr		= CFG_OUT_PRESS,
 		.en_len			= 2,
 		.en			= { 0xA3, 0xA3 },
@@ -245,15 +300,60 @@ static struct nvi_dmp_hdr nvi_dmp_hdrs[] = {
 	},
 };
 
+static unsigned int nvi_dmp_dbg(struct nvi_state *st, unsigned int n)
+{
+	dev_info(&st->i2c->dev,
+		 "n=%04u %02x %02x %02x %02x %02x %02x %02x %02x\n",
+		 n, st->buf[st->buf_i], st->buf[st->buf_i + 1],
+		 st->buf[st->buf_i + 2], st->buf[st->buf_i + 3],
+		 st->buf[st->buf_i + 4], st->buf[st->buf_i + 5],
+		 st->buf[st->buf_i + 6], st->buf[st->buf_i + 7]);
+	dev_info(&st->i2c->dev,
+		 "       %02x %02x %02x %02x %02x %02x %02x %02x\n",
+		 st->buf[st->buf_i + 8], st->buf[st->buf_i + 9],
+		 st->buf[st->buf_i + 10], st->buf[st->buf_i + 11],
+		 st->buf[st->buf_i + 12], st->buf[st->buf_i + 13],
+		 st->buf[st->buf_i + 14], st->buf[st->buf_i + 15]);
+	if (n > 16) {
+		st->buf_i += 16;
+		n -= 16;
+	} else {
+		st->buf_i += n;
+		n = 0;
+	}
+	return n;
+}
+
+static void nvi_dmp_rd_aux(struct nvi_state *st, struct nvi_dmp_hdr *dh,
+			   unsigned int buf_i, s64 ts)
+{
+	struct aux_port *ap;
+
+	if (dh->aux_port >= AUX_PORT_IO)
+		return;
+
+	if (!(st->snsr[DEV_AUX].enable & (1 << dh->aux_port)))
+		return;
+
+	ap = &st->aux.port[dh->aux_port];
+	ap->nmp.handler(&st->buf[buf_i], dh->buf_n,
+			nvi_ts_dev(st, ts, dh->dev, dh->aux_port),
+			ap->nmp.ext_driver);
+}
+
 static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 {
-	const struct nvi_dmp_hdr *dh;
-	struct aux_port *ap;
+	struct nvi_dmp_hdr *dh;
 	unsigned int dh_i;
 	unsigned int i;
 	u8 byte;
 
 	while (n > DMP_HDR_LEN_MAX) {
+		if (st->sts & NVI_DBG_SPEW_FIFO) {
+			n = nvi_dmp_dbg(st, n);
+			continue;
+		}
+
 		if (st->sts & (NVS_STS_SUSPEND | NVS_STS_SHUTDOWN))
 			return -1;
 
@@ -273,7 +373,7 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 		}
 		if (dh_i >= ARRAY_SIZE(nvi_dmp_hdrs)) {
 			/* unknown header: lost DMP sync so DMP reset */
-			if (st->sts & NVI_DBG_SPEW_FIFO)
+			if (st->sts & NVI_DBG_SPEW_MSG)
 				dev_err(&st->i2c->dev,
 					"%s ERR: DMP sync  HDR: %x %x %x %x\n",
 					__func__, st->buf[st->buf_i],
@@ -285,25 +385,11 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 		}
 
 		if (n > dh->buf_n + i) {
-			if (dh->dev == DEV_AUX) {
-				if (st->sts & NVI_DBG_SPEW_FIFO)
-					dev_info(&st->i2c->dev,
-						 "%s DMP HDR: AUX port=%u\n",
-						 __func__, dh->aux_port);
-				ap = &st->aux.port[dh->aux_port];
-				ap->nmp.handler(&st->buf[st->buf_i + i],
-						dh->buf_n,
-						nvi_ts_dev(st, ts, dh->dev,
-							   dh->aux_port),
-						ap->nmp.ext_driver);
-			} else if (dh->dev < DEV_N) {
-				if (st->sts & NVI_DBG_SPEW_FIFO)
-					dev_info(&st->i2c->dev,
-						 "%s DMP HDR: %s\n", __func__,
-						 st->snsr[dh->dev].cfg.name);
+			if (dh->dev == DEV_AUX)
+				nvi_dmp_rd_aux(st, dh, st->buf_i + i, ts);
+			else if (dh->dev < DEV_N)
 				nvi_push(st, dh->dev, &st->buf[st->buf_i + i],
 					 nvi_ts_dev(st, ts, dh->dev, 0));
-			}
 			i += dh->buf_n;
 			st->buf_i += i;
 			n -= i;
@@ -470,7 +556,7 @@ static u8 nvi_dmp_fcfg_gyro_b[8][3] = {
 	{ 0x36, 0x57, 0x76 },
 	{ 0x37, 0x57, 0x76 },
 	{ 0x37, 0x56, 0x76 },
-	{ 0x37, 0x57, 0x77 },
+	{ 0x37, 0x56, 0x77 },
 	{ 0x37, 0x56, 0x77 },
 	{ 0x36, 0x57, 0x77 },
 	{ 0x36, 0x56, 0x77 },
@@ -950,6 +1036,8 @@ struct nvi_dmp nvi_dmp_mpu = {
 	.en_msk				= (1 << DEV_SM) | (1 << DEV_QTN),
 	.dd_n				= ARRAY_SIZE(nvi_dmp_devs),
 	.dd				= nvi_dmp_devs,
+	.ap				= nvi_dmp_ap,
+	.ap_n				= ARRAY_SIZE(nvi_dmp_ap),
 	.fn_rd				= &nvi_dmp_rd,
 	.fn_clk_n			= &nvi_dmp_clk_n,
 	.fn_init			= &nvi_dmp_init,

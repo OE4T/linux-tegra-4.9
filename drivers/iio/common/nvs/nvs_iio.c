@@ -56,7 +56,13 @@
  * Keep in mind the data is buffered but the NVS HAL will display the data and
  * scale/offset parameters in the log.  See calibration steps below.
  */
-
+/* This module automatically handles on-change sensors by testing for allowed
+ * report rate and whether data has changed.  This allows sensors that are
+ * on-change in name only that normally stream data to behave as on-change.
+ */
+/* This module automatically handles one-shot sensors by disabling the sensor
+ * after an event.
+ */
 
 #include <linux/init.h>
 #include <linux/module.h>
@@ -76,7 +82,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(214)
+#define NVS_IIO_DRIVER_VERSION		(215)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -119,6 +125,9 @@ struct nvs_state {
 	bool shutdown;
 	bool suspend;
 	bool flush;
+	bool first_push;
+	bool one_shot;
+	bool on_change;
 	int enabled;
 	int batch_flags;
 	unsigned int batch_period_us;
@@ -392,6 +401,18 @@ static int nvs_fn_dev_enable(void *client, int snsr_id, int enable)
 	return 0;
 }
 
+static int nvs_disable(struct nvs_state *st)
+{
+	int ret;
+
+	ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, 0);
+	if (!ret) {
+		st->enabled = 0;
+		st->dbg_data_lock = 0;
+	}
+	return ret;
+}
+
 static unsigned int nvs_buf_index(unsigned int size, unsigned int *bytes)
 {
 	unsigned int index;
@@ -469,6 +490,8 @@ static int nvs_buf_i(struct iio_dev *indio_dev, unsigned int ch)
 static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 {
 	struct nvs_state *st = iio_priv(indio_dev);
+	bool push = true;
+	bool buf_data = false;
 	char char_buf[128];
 	unsigned int n;
 	unsigned int i;
@@ -483,25 +506,54 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 	 * In this case, just the timestamp is sent.
 	 */
 	if (data_chan_n) {
+		if (st->on_change)
+			/* on-change needs data change for push */
+			push = false;
 		for (i = 0; i < data_chan_n; i++) {
 			if (iio_scan_mask_query(indio_dev,
 						indio_dev->buffer, i)) {
 				n = indio_dev->channels[i].
 						     scan_type.storagebits / 8;
 				dst_i = nvs_buf_index(n, &bytes);
-				if (data && !(st->dbg_data_lock & (1 << i)))
+				if (!data) {
+					/* buffer calculations only */
+					src_i += n;
+					continue;
+				}
+
+				buf_data = true;
+				if (st->on_change) {
+					/* wasted cycles when st->first_push
+					 * but saved cycles in the long run.
+					 */
+					ret = memcmp(&st->buf[dst_i],
+						     &data[src_i], n);
+					if (ret)
+						/* data changed */
+						push = true;
+				}
+				if (!(st->dbg_data_lock & (1 << i)))
 					memcpy(&st->buf[dst_i],
 					       &data[src_i], n);
 				src_i += n;
 			}
 		}
 	}
+
+	if (st->first_push || !buf_data)
+		/* first push || pushing just timestamp */
+		push = true;
 	if (ts) {
 		st->ts_diff = ts - st->ts;
-		st->ts = ts;
 		if (st->ts_diff < 0)
 			dev_err(st->dev, "%s %s ts_diff=%lld\n",
 				__func__, st->cfg->name, st->ts_diff);
+		else if (st->on_change && (st->ts_diff <
+					   (s64)st->batch_period_us * 1000)) {
+			/* data rate faster than requested */
+			if (!st->first_push)
+				push = false;
+		}
 	} else {
 		st->flush = false;
 		if (*st->fn_dev->sts & (NVS_STS_SPEW_MSG | NVS_STS_SPEW_DATA))
@@ -513,22 +565,23 @@ static int nvs_buf_push(struct iio_dev *indio_dev, unsigned char *data, s64 ts)
 		dst_i = nvs_buf_index(n, &bytes);
 		memcpy(&st->buf[dst_i], &ts, n);
 	}
-	if (iio_buffer_enabled(indio_dev)) {
+	if (push && iio_buffer_enabled(indio_dev)) {
 		ret = iio_push_to_buffers(indio_dev, st->buf);
-		i = st->cfg->flags & SENSOR_FLAG_READONLY_MASK;
-		if (i == SENSOR_FLAG_ONE_SHOT_MODE && ts && !ret) {
-			/* one-shot sensor sent sensor data so disable */
-			ret = st->fn_dev->enable(st->client,
-						 st->cfg->snsr_id, 0);
-			if (!ret)
-				st->enabled = 0;
-		}
-		if (*st->fn_dev->sts & NVS_STS_SPEW_BUF) {
-			for (i = 0; i < bytes; i++)
-				dev_info(st->dev, "%s buf[%u]=%x\n",
-					 st->cfg->name, i, st->buf[i]);
-			dev_info(st->dev, "%s ts=%lld  diff=%lld\n",
-				 st->cfg->name, ts, st->ts_diff);
+		if (!ret) {
+			if (ts) {
+				st->first_push = false;
+				st->ts = ts; /* log ts push */
+				if (st->one_shot)
+					/* disable one-shot after event */
+					nvs_disable(st);
+			}
+			if (*st->fn_dev->sts & NVS_STS_SPEW_BUF) {
+				for (i = 0; i < bytes; i++)
+					dev_info(st->dev, "%s buf[%u]=%x\n",
+						 st->cfg->name, i, st->buf[i]);
+				dev_info(st->dev, "%s ts=%lld  diff=%lld\n",
+					 st->cfg->name, ts, st->ts_diff);
+			}
 		}
 	}
 	if ((*st->fn_dev->sts & NVS_STS_SPEW_DATA) && ts) {
@@ -571,17 +624,36 @@ static int nvs_enable(struct iio_dev *indio_dev, bool en)
 		} else {
 			enable = 1;
 		}
+		st->first_push = true;
+		ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, enable);
+		if (!ret)
+			st->enabled = enable;
 	} else {
-		st->dbg_data_lock = 0;
+		ret = nvs_disable(st);
 	}
-
-	ret = st->fn_dev->enable(st->client, st->cfg->snsr_id, enable);
-	if (!ret)
-		st->enabled = enable;
 	if (*st->fn_dev->sts & NVS_STS_SPEW_MSG)
 		dev_info(st->dev, "%s %s enable=%x ret=%d",
 			 __func__, st->cfg->name, enable, ret);
 	return ret;
+}
+
+static void nvs_report_mode(struct nvs_state *st)
+{
+	/* Currently this is called once during initialization. However, there
+	 * may be mechanisms where this is allowed to change at runtime, hence
+	 * this function above nvs_attr_store for st->cfg->flags.
+	 */
+	st->on_change = false;
+	st->one_shot = false;
+	switch (st->cfg->flags & REPORTING_MODE_MASK) {
+	case SENSOR_FLAG_ON_CHANGE_MODE:
+		st->on_change = true;
+		break;
+
+	case SENSOR_FLAG_ONE_SHOT_MODE:
+		st->one_shot = true;
+		break;
+	}
 }
 
 static ssize_t nvs_attr_store(struct device *dev,
@@ -1117,19 +1189,18 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 		if (st->fn_dev->flush) {
 			ret = st->fn_dev->flush(st->client, st->cfg->snsr_id);
 			if (ret) {
-				nvs_buf_push(indio_dev, st->buf, 0);
+				nvs_buf_push(indio_dev, NULL, 0);
 				ret = 0;
 			}
 		} else {
-			nvs_buf_push(indio_dev, st->buf, 0);
+			nvs_buf_push(indio_dev, NULL, 0);
 		}
 		break;
 
 	case IIO_CHAN_INFO_BATCH_PERIOD:
 		msg = "IIO_CHAN_INFO_BATCH_PERIOD";
 		old = st->batch_period_us;
-		if (SENSOR_FLAG_ONE_SHOT_MODE != (st->cfg->flags &
-						  REPORTING_MODE_MASK)) {
+		if (!st->one_shot) {
 			if (val < st->cfg->delay_us_min)
 				val = st->cfg->delay_us_min;
 			if (st->cfg->delay_us_max && (val >
@@ -1146,6 +1217,8 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 		} else {
 			if (st->batch_timeout_us)
 				ret = -EINVAL;
+			else
+				st->batch_period_us = val;
 		}
 		break;
 
@@ -1320,7 +1393,6 @@ static int nvs_write_raw(struct iio_dev *indio_dev,
 			memcpy(&st->buf[ret], &val,
 			       chan->scan_type.storagebits / 8);
 			st->dbg_data_lock |= (1 << ch);
-			st->ts++;
 			ret = nvs_buf_push(indio_dev, st->buf, st->ts);
 			if (ret > 0)
 				ret = 0;
@@ -1487,8 +1559,7 @@ static int nvs_chan(struct iio_dev *indio_dev)
 	if (st->ch == NULL)
 		return -ENOMEM;
 
-	if (SENSOR_FLAG_ONE_SHOT_MODE == (st->cfg->flags &
-					  SENSOR_FLAG_SPECIAL_REPORTING_MODE))
+	if (st->one_shot)
 		info_mask_msk = BIT(IIO_CHAN_INFO_BATCH_FLAGS) |
 				BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
 				BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
@@ -1661,6 +1732,7 @@ static int nvs_init(struct iio_dev *indio_dev, struct nvs_state *st)
 {
 	int ret;
 
+	nvs_report_mode(st);
 	ret = nvs_attr(indio_dev);
 	if (ret) {
 		dev_err(st->dev, "%s nvs_attr ERR=%d\n", __func__, ret);
@@ -1734,6 +1806,9 @@ static int nvs_probe(void **handle, void *dev_client, struct device *dev,
 	int ret;
 
 	dev_info(dev, "%s\n", __func__);
+	if (!snsr_cfg)
+		return -ENODEV;
+
 	if (snsr_cfg->snsr_id < 0) {
 		/* device has been disabled */
 		if (snsr_cfg->name)

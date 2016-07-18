@@ -29,7 +29,7 @@
 
 #include "nvi.h"
 
-#define NVI_DRIVER_VERSION		(334)
+#define NVI_DRIVER_VERSION		(336)
 #define NVI_VENDOR			"Invensense"
 #define NVI_NAME			"mpu6xxx"
 #define NVI_NAME_MPU6050		"mpu6050"
@@ -869,6 +869,13 @@ static int nvi_user_ctrl_rst(struct nvi_state *st, u8 user_ctrl)
 				else
 					ret = nvi_wr_fifo_cfg(st, -1);
 			}
+			if (st->icm_fifo_off) {
+				ret |= nvi_i2c_wr(st, &st->hal->reg->fifo_rst,
+						  0x1F, __func__);
+				ret |= nvi_i2c_wr(st, &st->hal->reg->fifo_rst,
+						  0, __func__);
+				st->icm_fifo_off = false;
+			}
 			if (st->en_msk & (1 << DEV_DMP))
 				fifo_rst = 0x1E;
 			else
@@ -949,11 +956,9 @@ int nvi_user_ctrl_en(struct nvi_state *st, const char *fn,
 			for (i = 0; i < AUX_PORT_IO; i++) {
 				ap = &st->aux.port[i];
 				if (st->snsr[DEV_AUX].enable & (1 << i) &&
-					       (ap->nmp.addr & BIT_I2C_READ) &&
-							     ap->nmp.handler) {
+						   ap->nmp.addr & BIT_I2C_READ)
 					val |= (1 <<
 						st->hal->bit->slv_fifo_en[i]);
-				}
 			}
 		}
 
@@ -1633,8 +1638,9 @@ static void nvi_aux_dbg(struct nvi_state *st, char *tag, int val)
 			st->aux.port[i].period_us, n->shutdown_bypass);
 		p = &st->aux.port[i];
 		/* PS = port structure */
-		pr_info("PS: P%d OFFSET=%u DMP_CTRL=%x EN=%x HWDOUT=%x\n",
-			i, p->ext_data_offset, !!(a->dmp_ctrl_msk & (1 << i)),
+		pr_info("PS: P%d EDO=%u ODR=%u DMP_CTRL=%x EN=%x HWDOUT=%x\n",
+			i, p->ext_data_offset, p->odr,
+			!!(a->dmp_ctrl_msk & (1 << i)),
 			!!(st->snsr[DEV_AUX].enable & (1 << i)), p->hw_do);
 	}
 
@@ -1703,12 +1709,13 @@ static int nvi_aux_port_en(struct nvi_state *st, int port, bool en)
 {
 	struct aux_port *ap;
 	u8 slv_ctrl;
-	u8 val;
+	u8 ctrl;
+	u8 reg;
 	unsigned int dmp_ctrl_msk;
 	int ret = 0;
 
 	ap = &st->aux.port[port];
-	if (en && !st->rc.i2c_slv_addr[port]) {
+	if (en && ap->nmp.addr != st->rc.i2c_slv_addr[port]) {
 		ret = nvi_aux_port_wr(st, port);
 		if (!ret)
 			ap->hw_do = true;
@@ -1721,25 +1728,33 @@ static int nvi_aux_port_en(struct nvi_state *st, int port, bool en)
 		slv_ctrl = st->rc.i2c_slv_ctrl[port];
 		if (en) {
 			dmp_ctrl_msk = st->aux.dmp_ctrl_msk;
-			if (st->en_msk & (1 << DEV_DMP)) {
-				val = ap->nmp.dmp_ctrl | BIT_SLV_EN;
-				st->aux.dmp_ctrl_msk |= (1 << port);
+			reg = ap->nmp.reg;
+			ctrl = ap->nmp.ctrl;
+			if (ap->dd && st->en_msk & (1 << DEV_DMP)) {
+				reg = ap->dd->dmp_rd_reg;
+				if (ctrl != ap->dd->dmp_rd_ctrl) {
+					ctrl = ap->dd->dmp_rd_ctrl;
+					st->aux.dmp_ctrl_msk |= (1 << port);
+				}
 			} else {
-				val = ap->nmp.ctrl | BIT_SLV_EN;
 				st->aux.dmp_ctrl_msk &= ~(1 << port);
 			}
-			if (ap->nmp.dmp_ctrl != ap->nmp.ctrl && dmp_ctrl_msk !=
-							  st->aux.dmp_ctrl_msk)
+			if (dmp_ctrl_msk != st->aux.dmp_ctrl_msk)
 				/* AUX HW needs to be reset if slv_ctrl values
 				 * change other than enable bit.
 				 */
 				st->aux.reset_i2c = true;
+			ret = nvi_i2c_wr_rc(st,
+					    &st->hal->reg->i2c_slv_reg[port],
+					    reg, __func__,
+					    &st->rc.i2c_slv_reg[port]);
+			ctrl |= BIT_SLV_EN;
 		} else {
-			val = 0;
+			ctrl = 0;
 			st->aux.dmp_ctrl_msk &= ~(1 << port);
 		}
-		ret = nvi_i2c_wr_rc(st, &st->hal->reg->i2c_slv_ctrl[port], val,
-				    __func__, &st->rc.i2c_slv_ctrl[port]);
+		ret |= nvi_i2c_wr_rc(st, &st->hal->reg->i2c_slv_ctrl[port],
+				   ctrl, __func__, &st->rc.i2c_slv_ctrl[port]);
 		if (slv_ctrl != st->rc.i2c_slv_ctrl[port])
 			nvi_aux_ext_data_offset(st);
 	}
@@ -1851,30 +1866,62 @@ static int nvi_aux_port_free(struct nvi_state *st, int port)
 static int nvi_aux_port_alloc(struct nvi_state *st,
 			      struct nvi_mpu_port *nmp, int port)
 {
-	int i;
+	struct nvi_aux_port_dmp_dev *dd = NULL;
+	struct nvi_dmp_aux_port *ap;
+	unsigned int i;
+	unsigned int j;
 
 	if (st->aux.reset_i2c)
 		nvi_reset(st, __func__, false, true, true);
 	if (port < 0) {
 		for (i = 0; i < AUX_PORT_IO; i++) {
-			if (st->aux.port[i].nmp.addr == 0)
+			if (!st->aux.port[i].nmp.addr)
+				/* port available */
 				break;
 		}
-		if (i == AUX_PORT_IO)
+		if (i < AUX_PORT_IO)
+			port = i;
+		else
 			return -ENODEV;
 	} else {
-		if (st->aux.port[port].nmp.addr == 0)
-			i = port;
+		if (st->aux.port[port].nmp.addr)
+			/* already taken */
+			return -ENODEV;
+	}
+
+	/* override port setting if DMP used */
+	if (st->hal->dmp && port < AUX_PORT_IO) {
+		for (i = 0; i < st->hal->dmp->ap_n; i++) {
+			ap = &st->hal->dmp->ap[i];
+			if (nmp->type == ap->type && ap->port_rd ==
+					    (bool)(nmp->addr & BIT_I2C_READ)) {
+				if (ap->dd) {
+					for (j = 0; j < ap->dd_n; j++) {
+						if (nmp->id == ap->dd[j].dev) {
+							dd = &ap->dd[j];
+							break;
+						}
+					}
+					if (j >= ap->dd_n)
+						/* device not supported */
+						return -ENODEV;
+				}
+
+				break;
+			}
+		}
+		if (i < st->hal->dmp->ap_n && !st->aux.port[ap->port].nmp.addr)
+			port = ap->port;
 		else
 			return -ENODEV;
 	}
 
-	memset(&st->aux.port[i], 0, sizeof(struct aux_port));
-	memcpy(&st->aux.port[i].nmp, nmp, sizeof(struct nvi_mpu_port));
-	if (!st->aux.port[i].nmp.dmp_ctrl)
-		st->aux.port[i].nmp.dmp_ctrl = st->aux.port[i].nmp.ctrl;
-	st->aux.port[i].period_us = st->aux.port[i].nmp.delay_us;
-	return i;
+	memset(&st->aux.port[port], 0, sizeof(struct aux_port));
+	memcpy(&st->aux.port[port].nmp, nmp, sizeof(struct nvi_mpu_port));
+	st->aux.port[port].dd = dd;
+	st->aux.port[port].nmp.ctrl &= ~BIT_SLV_EN;
+	st->aux.port[port].period_us = st->aux.port[port].nmp.period_us;
+	return port;
 }
 
 static int nvi_aux_bypass_enable(struct nvi_state *st, bool en)
@@ -2082,7 +2129,7 @@ int nvi_mpu_dev_valid(struct nvi_mpu_port *nmp, u8 *data)
 }
 EXPORT_SYMBOL(nvi_mpu_dev_valid);
 
-int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp, int port)
+int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp)
 {
 	struct nvi_state *st = nvi_state_local;
 	int ret = -EPERM;
@@ -2098,13 +2145,13 @@ int nvi_mpu_port_alloc(struct nvi_mpu_port *nmp, int port)
 	if (nmp == NULL || !(nmp->ctrl & BITS_I2C_SLV_CTRL_LEN))
 		return -EINVAL;
 
-	if (port >= AUX_PORT_IO)
+	if (nmp->addr & BIT_I2C_READ && !nmp->handler)
 		return -EINVAL;
 
 	nvi_mutex_lock(st);
 	if (!(st->sts & (NVS_STS_SHUTDOWN | NVS_STS_SUSPEND))) {
 		nvi_pm(st, __func__, NVI_PM_ON);
-		ret = nvi_aux_port_alloc(st, nmp, port);
+		ret = nvi_aux_port_alloc(st, nmp, -1);
 		if (ret >= 0 && st->hal->dmp)
 			/* need to reinitialize DMP for new device */
 			st->hal->dmp->fn_init(st);
@@ -2150,10 +2197,10 @@ int nvi_mpu_enable(unsigned int port_mask, bool enable)
 
 	if (st != NULL) {
 		if (st->sts & NVI_DBG_SPEW_AUX)
-			pr_info("%s port_mask %x: %x\n",
+			pr_info("%s port_mask 0x%x: %x\n",
 				__func__, port_mask, enable);
 	} else {
-		pr_debug("%s port_mask %x: %x ERR -EAGAIN\n",
+		pr_debug("%s port_mask 0x%x: %x ERR -EAGAIN\n",
 			 __func__, port_mask, enable);
 		return -EAGAIN;
 	}
@@ -2306,39 +2353,51 @@ int nvi_mpu_flush(int port)
 }
 EXPORT_SYMBOL(nvi_mpu_flush);
 
-int nvi_mpu_fifo(int port, unsigned int *reserve, unsigned int *max)
+int nvi_mpu_info(int read_port, struct nvi_mpu_inf *inf)
 {
 	struct nvi_state *st = nvi_state_local;
+	struct nvi_aux_port_dmp_dev *dd;
+	unsigned int i;
 	int ret;
 
 	if (st != NULL) {
 		if (st->sts & NVI_DBG_SPEW_AUX)
-			pr_info("%s port %d\n", __func__, port);
+			pr_info("%s port %d\n", __func__, read_port);
 	} else {
-		pr_debug("%s port %d ERR -EAGAIN\n", __func__, port);
+		pr_debug("%s port %d ERR -EAGAIN\n", __func__, read_port);
 		return -EAGAIN;
 	}
 
+	if (!inf)
+		return -EINVAL;
+
 	nvi_mutex_lock(st);
-	ret = nvi_aux_mpu_call_pre(st, port);
+	ret = nvi_aux_mpu_call_pre(st, read_port);
 	if (!ret) {
-		if ((st->aux.port[port].nmp.id != ID_INVALID) &&
-			(st->aux.port[port].nmp.id < ID_INVALID_END)) {
-			if (reserve)
-				/* batch not supported at this time */
-				*reserve = 0;
-			if (max)
-				/* batch not supported at this time */
-				*max = 0;
-			ret = nvi_aux_mpu_call_post(st, "nvi_mpu_fifo=", 0);
+		i = st->hal->dev[DEV_AUX]->src;
+		inf->period_us_min = st->src[i].period_us_min;
+		inf->period_us_max = st->src[i].period_us_max;
+		/* batch not supported at this time */
+		inf->fifo_reserve = 0;
+		inf->fifo_max = 0;
+		dd = st->aux.port[read_port].dd;
+		if (dd) {
+			inf->dmp_rd_len_sts = dd->dmp_rd_len_sts;
+			inf->dmp_rd_len_data = dd->dmp_rd_len_data;
+			inf->dmp_rd_be_sts = dd->dmp_rd_be_sts;
+			inf->dmp_rd_be_data = dd->dmp_rd_be_data;
 		} else {
-			ret = -EINVAL;
+			inf->dmp_rd_len_sts = 0;
+			inf->dmp_rd_len_data = 0;
+			inf->dmp_rd_be_sts = false;
+			inf->dmp_rd_be_data = false;
 		}
+		ret = nvi_aux_mpu_call_post(st, "nvi_mpu_info=", 0);
 	}
 	nvi_mutex_unlock(st);
 	return ret;
 }
-EXPORT_SYMBOL(nvi_mpu_fifo);
+EXPORT_SYMBOL(nvi_mpu_info);
 
 int nvi_mpu_bypass_request(bool enable)
 {
@@ -2553,8 +2612,7 @@ static void nvi_aux_rd(struct nvi_state *st)
 	for (i = 0; i < AUX_PORT_IO; i++) {
 		ap = &st->aux.port[i];
 		if ((st->rc.i2c_slv_ctrl[i] & BIT_SLV_EN) &&
-					       (ap->nmp.addr & BIT_I2C_READ) &&
-						   (ap->nmp.handler != NULL)) {
+						 ap->nmp.addr & BIT_I2C_READ) {
 			p = &st->aux.ext_data[ap->ext_data_offset];
 			len = ap->nmp.ctrl & BITS_I2C_SLV_CTRL_LEN;
 			ap->nmp.handler(p, len, ts, ap->nmp.ext_driver);

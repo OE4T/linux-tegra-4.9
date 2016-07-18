@@ -11,7 +11,6 @@
  */
 
 #include <linux/delay.h>
-#include <linux/kernel.h>
 #include "nvi.h"
 #include "nvi_dmp_icm.h"
 
@@ -19,23 +18,102 @@
 					 (1 << DEV_QTN) | \
 					 (1 << DEV_GMR) | \
 					 (1 << DEV_GYU))
+
 #define AUX_PORT_DEV_GMF		(0)
 #define MSK_AUX_PORTS_DEV_GMF		(0x3)
 #define AUX_PORT_DEV_PRS		(3)
-#define MSK_AUX_PORTS_DEV_PRS		(0x8)
+/* all ports enabled when pressure enabled
+ * see nvi_dmp_aux_war
+ */
+#define MSK_AUX_PORTS_DEV_PRS		(0xF)
+/* redefine the port to the HW */
+#define DMP_AUX_PORT_0			(AUX_PORT_DEV_GMF)
+#define DMP_AUX_PORT_0_MSK		(MSK_AUX_PORTS_DEV_GMF)
+#define DMP_AUX_PORT_2			(-1)
+#define DMP_AUX_PORT_2_MSK		(0)
+#define DMP_AUX_PORT_3			(AUX_PORT_DEV_PRS)
+#define DMP_AUX_PORT_3_MSK		(MSK_AUX_PORTS_DEV_PRS)
+
 #define MSK_EN_AUX_PORTS		(((1 << (AUX_PORT_IO + DEV_N_AUX)) - \
 					  1) & ~MSK_DEV_SNSR)
-
-#define DEFAULT_ACCEL_GAIN		(0x02000000)
-#define PED_ACCEL_GAIN			(0x04000000)
-#define DMP_ACC_PERIOD_US_PED		(19608)
-#define DMP_MULTI_SHIFT			(30)
-
 #define DMP_HDR_LEN_MAX			(4)
 #define DMP_HDR1_HDR2_MSK		(0x0008)
 #define DMP_HDR1_PUSH_MSK		(0xFEF0)
 #define DMP_DATA_OUT_CTL_HDR2_MSK	(0x0000FFFF)
+/* INV defines */
+#define DEFAULT_ACCEL_GAIN		(0x02000000)
+#define PED_ACCEL_GAIN			(0x04000000)
+#define DMP_ACC_PERIOD_US_PED		(19608)
 
+
+static struct nvi_aux_port_dmp_dev ap_dd_gmf[] = {
+	{
+		.dev			= COMPASS_ID_AK8963,
+		.dmp_rd_len_sts		= 2,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= true,
+		.dmp_rd_ctrl		= 0x59,
+		.dmp_rd_reg		= 0x01,
+	},
+	{
+		.dev			= COMPASS_ID_AK8975,
+		.dmp_rd_len_sts		= 2,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= true,
+		.dmp_rd_ctrl		= 0x59,
+		.dmp_rd_reg		= 0x01,
+	},
+	{
+		.dev			= COMPASS_ID_AK09911,
+		.dmp_rd_len_sts		= 2,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= true,
+		.dmp_rd_ctrl		= 0x5A,
+		.dmp_rd_reg		= 0x10,
+	},
+};
+
+static struct nvi_aux_port_dmp_dev ap_dd_prs[] = {
+	{
+		.dev			= PRESSURE_ID_BMP280,
+		.dmp_rd_len_sts		= 0,
+		.dmp_rd_len_data	= 6,
+		.dmp_rd_be_sts		= true,
+		.dmp_rd_be_data		= true,
+		.dmp_rd_ctrl		= 0x06,
+		.dmp_rd_reg		= 0xF7,
+	},
+};
+
+static struct nvi_dmp_aux_port nvi_dmp_ap[] = {
+	/* ICM DMP FW supports only this configuration */
+	/* port 0 */
+	{
+		.type			= SECONDARY_SLAVE_TYPE_COMPASS,
+		.port_rd		= true,
+		.port			= AUX_PORT_DEV_GMF,
+		.dd_n			= ARRAY_SIZE(ap_dd_gmf),
+		.dd			= ap_dd_gmf,
+	},
+	/* port 1 */
+	{
+		.type			= SECONDARY_SLAVE_TYPE_COMPASS,
+		.port_rd		= false,
+		.port			= AUX_PORT_DEV_GMF + 1,
+	},
+	/* port 2 not supported */
+	/* port 3 */
+	{
+		.type			= SECONDARY_SLAVE_TYPE_PRESSURE,
+		.port_rd		= true,
+		.port			= AUX_PORT_DEV_PRS,
+		.dd_n			= ARRAY_SIZE(ap_dd_prs),
+		.dd			= ap_dd_prs,
+	},
+};
 
 struct nvi_dmp_dev {
 	unsigned int dev;
@@ -212,15 +290,6 @@ static int nvi_dmp_acc_initd(struct nvi_state *st, u32 *out_ctl,
 static int nvi_dmp_gmf_init(struct nvi_state *st, u32 *out_ctl,
 			    unsigned int en_msk, unsigned int irq_msk)
 {
-	if (st->aux.port[AUX_PORT_DEV_GMF].nmp.type !=
-						  SECONDARY_SLAVE_TYPE_COMPASS)
-		/* disable without error if no compass */
-		return 1;
-
-	if (!st->aux.port[AUX_PORT_DEV_GMF].nmp.handler)
-		/* no handler */
-		return 1;
-
 	st->src[SRC_AUX].period_us_max =
 				       st->hal->src[SRC_AUX].period_us_min * 8;
 	if (irq_msk & (1 << (AUX_PORT_DEV_GMF + DEV_N_AUX)) ||
@@ -327,18 +396,6 @@ static int nvi_dmp_gmf_initd(struct nvi_state *st, u32 *out_ctl,
 				&st->mc.icm.cpass_nomot_var_thr);
 #endif /* ICM_DMP_FW_VER */
 	return ret;
-}
-
-/* prs = pressure */
-static int nvi_dmp_prs_init(struct nvi_state *st, u32 *out_ctl,
-			    unsigned int en_msk, unsigned int irq_msk)
-{
-	if (st->aux.port[AUX_PORT_DEV_PRS].nmp.type !=
-						 SECONDARY_SLAVE_TYPE_PRESSURE)
-		/* disable without error if no pressure */
-		return 1;
-
-	return 0;
 }
 
 static int nvi_dmp_gyr_init(struct nvi_state *st, u32 *out_ctl,
@@ -482,8 +539,8 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= AUX_PORT_DEV_GMF,
-		.depend_msk		= (MSK_AUX_PORTS_DEV_GMF << DEV_N_AUX),
+		.aux_port		= DMP_AUX_PORT_0,
+		.depend_msk		= (DMP_AUX_PORT_0_MSK << DEV_N_AUX),
 		.buf_n			= 6,
 		.int_ctl		= CPASS_SET,
 		.odr_cfg		= ODR_CPASS,
@@ -494,13 +551,23 @@ static struct nvi_dmp_dev nvi_dmp_devs[] = {
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= AUX_PORT_DEV_PRS,
+		.aux_port		= DMP_AUX_PORT_2,
+		.depend_msk		= (DMP_AUX_PORT_2_MSK << DEV_N_AUX),
+		.buf_n			= 8,
+		.int_ctl		= ALS_SET,
+		.odr_cfg		= ODR_ALS,
+		.odr_cntr		= ODR_CNTR_ALS,
+		.odr_src		= SRC_AUX,
+	},
+	{
+		.dev			= DEV_AUX,
+		.aux_port		= DMP_AUX_PORT_3,
+		.depend_msk		= (DMP_AUX_PORT_3_MSK << DEV_N_AUX),
 		.buf_n			= 6,
 		.int_ctl		= PRESSURE_SET,
 		.odr_cfg		= ODR_PRESSURE,
 		.odr_cntr		= ODR_CNTR_PRESSURE,
 		.odr_src		= SRC_AUX,
-		.fn_init		= &nvi_dmp_prs_init,
 	},
 };
 
@@ -518,7 +585,7 @@ static struct nvi_dmp_hdr nvi_dmp_hdr2s[] = {
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= AUX_PORT_DEV_GMF,
+		.aux_port		= DMP_AUX_PORT_0,
 		.data_n			= 2,
 		.hdr_msk		= CPASS_ACCURACY_SET,
 	},
@@ -547,13 +614,13 @@ static struct nvi_dmp_hdr nvi_dmp_hdr1s[] = {
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= AUX_PORT_DEV_GMF,
+		.aux_port		= DMP_AUX_PORT_0,
 		.data_n			= 6,
 		.hdr_msk		= CPASS_SET,
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= -1, /* ALS */
+		.aux_port		= DMP_AUX_PORT_2,
 		.data_n			= 8,
 		.hdr_msk		= ALS_SET,
 	},
@@ -574,7 +641,7 @@ static struct nvi_dmp_hdr nvi_dmp_hdr1s[] = {
 	},
 	{
 		.dev			= DEV_AUX,
-		.aux_port		= AUX_PORT_DEV_PRS,
+		.aux_port		= DMP_AUX_PORT_3,
 		.data_n			= 6,
 		.hdr_msk		= PRESSURE_SET,
 	},
@@ -631,9 +698,6 @@ static void nvi_dmp_rd_aux(struct nvi_state *st, struct nvi_dmp_hdr *dh,
 		return;
 
 	ap = &st->aux.port[dh->aux_port];
-	if (!ap->nmp.ext_driver)
-		return;
-
 	ap->nmp.handler(&st->buf[buf_i], dh->data_n,
 			nvi_ts_dev(st, 0, dh->dev, dh->aux_port),
 			ap->nmp.ext_driver);
@@ -737,6 +801,7 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 					"%s ERR: DMP sync HDR2=%hx\n",
 					__func__, hdr2);
 			nvi_err(st);
+			st->icm_fifo_off = true;
 			return -1;
 		}
 
@@ -761,6 +826,7 @@ static int nvi_dmp_rd(struct nvi_state *st, s64 ts, unsigned int n)
 					"%s ERR: DMP sync HDR1: %x\n",
 					__func__, hdr1);
 			nvi_err(st);
+			st->icm_fifo_off = true;
 			return -1;
 		}
 	}
@@ -855,7 +921,12 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 	 * SRC_AUX has timestamps set to ts_now = 0 since SRC_AUX has fixed
 	 * rates and can't sync with the other sources.
 	 */
-	period_us = min(period_us_req[SRC_GYR], period_us_req[SRC_ACC]);
+	period_us = -1;
+	for (src = 0; src < st->hal->src_n; src++) {
+		if (period_us_req[src] < period_us)
+			period_us = period_us_req[src];
+	}
+
 	/* The latest INV driver implements this WAR with a twist: the gmf
 	 * lookup table, nvi_dmp_gmf_us_periods.
 	 */
@@ -871,6 +942,9 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 			period_us = nvi_dmp_gmf_us_periods[i];
 		}
 
+		period_us_req[SRC_AUX] = period_us;
+	} else if (en_msk & MSK_EN_AUX_PORTS) {
+		/* other aux device(s) enabled */
 		period_us_req[SRC_AUX] = period_us;
 	} else {
 		period_us_req[SRC_AUX] = st->src[SRC_AUX].period_us_req;
@@ -914,6 +988,10 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 			continue;
 
 		if (dd->dev == DEV_AUX) {
+			if (dd->aux_port >= AUX_PORT_IO)
+				/* unused port */
+				continue;
+
 			if (!(en_msk & (1 << (dd->aux_port + DEV_N_AUX))))
 				/* AUX sensor not enabled */
 				continue;
@@ -937,8 +1015,13 @@ static int nvi_dmp_period(struct nvi_state *st, u32 *out_ctl,
 		}
 		if (irq_msk & (1 << dd->dev)) {
 			/* ODR rate for sent sensor data */
+#if ICM_DMP_FW_VER == 2
+			/* everything is off of SRC_GYR for v.2 */
+			odr_cfg = period_us / st->src[SRC_GYR].period_us_src;
+#else /* ICM_DMP_FW_VER < 2 */
 			odr_cfg = period_us /
 					    st->src[dd->odr_src].period_us_src;
+#endif /* ICM_DMP_FW_VER */
 			if (odr_cfg)
 				odr_cfg--;
 		} else {
@@ -1051,8 +1134,8 @@ static int nvi_dmp_init_gmf(struct nvi_state *st)
 	unsigned int j;
 	unsigned int k;
 
-	if (st->aux.port[AUX_PORT_DEV_GMF].nmp.type !=
-						  SECONDARY_SLAVE_TYPE_COMPASS)
+	if (!st->aux.port[AUX_PORT_DEV_GMF].nmp.addr)
+		/* no device */
 		return -EINVAL;
 
 	nmp = &st->aux.port[AUX_PORT_DEV_GMF].nmp;
@@ -1104,6 +1187,45 @@ static int nvi_dmp_init_gyr(struct nvi_state *st)
 	return ret;
 }
 
+static int nvi_dmp_aux_war(struct nvi_state *st)
+{
+	if (!st->aux.port[3].nmp.addr)
+		/* pressure not populated */
+		return 0;
+
+	if (!st->aux.port[0].dd)
+		/* need this info for the WAR */
+		return -EINVAL;
+
+	/* The ICM DMP FW requires port 0 to be enabled and reading 10 bytes
+	 * and port 2 enabled and reading 8 bytes when port 3 (pressure in
+	 * continuous mode) is enabled reading 6 bytes.
+	 * To accomplish this, we create fake port data for port 2 that will
+	 * read 8 bytes from the pressure sensor.
+	 * When the pressure is enabled, the MSK_AUX_PORTS_DEV_PRS will also
+	 * enable ports 0, 1, and 2.
+	 * When the pressure is disabled, either the nvi_aux_enable will detect
+	 * that port 2 is no longer enabled when not in DMP mode or if in DMP
+	 * mode port 2 will simply not be enabled.
+	 */
+	/* Obviously if compass is not populated or port 2 has a legitimate
+	 * device on it, then this WAR needs to be modified to account for all
+	 * possible scenarios so that port 0 reads 10 bytes and port 2 reads 8
+	 * bytes when port 3 is enabled to read 6 bytes of pressure/temp data.
+	 */
+	st->aux.port[2].nmp.addr = st->aux.port[3].nmp.addr;
+	st->aux.port[2].nmp.reg = 0x88; /* BMP280_REG_CWORD00 */
+	/* Note that technically the above is true and is what INV also does as
+	 * a WAR in their source drop. However, due to the port 0 big endian
+	 * byte swapping read configuration on an odd address that leaves a
+	 * byte dangling, the actual number of bytes needing to be read on port
+	 * 2 is 9 for some compass devices.
+	 */
+	st->aux.port[2].nmp.ctrl = 8 + 10 - (st->aux.port[0].dd->dmp_rd_ctrl &
+					     BITS_I2C_SLV_CTRL_LEN);
+	return 0;
+}
+
 static int nvi_dmp_init(struct nvi_state *st)
 {
 	int ret;
@@ -1123,6 +1245,8 @@ static int nvi_dmp_init(struct nvi_state *st)
 
 	ret = nvi_dmp_init_gyr(st);
 	nvi_dmp_init_gmf(st);
+	/* WAR: DMP FW for auxiliary ports has issues */
+	nvi_dmp_aux_war(st);
 	return ret;
 }
 
@@ -1149,6 +1273,10 @@ static int nvi_dd_able(struct nvi_state *st,
 
 		en = false;
 		if (dd->dev == DEV_AUX) {
+			if (dd->aux_port >= AUX_PORT_IO)
+				/* unused port */
+				continue;
+
 			if (en_msk & (1 << (dd->aux_port + DEV_N_AUX)))
 				en = true;
 		} else if (dd->dev < DEV_AUX) {
@@ -1171,8 +1299,10 @@ static int nvi_dd_able(struct nvi_state *st,
 		if (en) {
 			if (dd->int_ctl && (irq_msk & (1 << dd->dev)))
 				out_ctl |= (dd->int_ctl << 16);
-			st->snsr[dd->dev].buf_n = dd->buf_n;
-			st->snsr[dd->dev].buf_shft = dd->buf_shft;
+			if (dd->dev != DEV_AUX) {
+				st->snsr[dd->dev].buf_n = dd->buf_n;
+				st->snsr[dd->dev].buf_shft = dd->buf_shft;
+			}
 		} else {
 			if (dd->dev == DEV_AUX)
 				en_msk &= ~(1 << (dd->aux_port + DEV_N_AUX));
@@ -1251,6 +1381,10 @@ static int nvi_dmp_en(struct nvi_state *st)
 	for (i = 0; i < ARRAY_SIZE(nvi_dmp_devs); i++) {
 		dd = &nvi_dmp_devs[i];
 		if (dd->dev == DEV_AUX) {
+			if (dd->aux_port >= AUX_PORT_IO)
+				/* unused port */
+				continue;
+
 			if (st->snsr[DEV_AUX].enable & (1 << dd->aux_port)) {
 				irq_msk |= (1 << DEV_AUX);
 				irq_msk |= (1 << (dd->aux_port + DEV_N_AUX));
@@ -1279,6 +1413,7 @@ static int nvi_dmp_en(struct nvi_state *st)
 	st->src[SRC_AUX].period_us_max = st->hal->src[SRC_AUX].period_us_max;
 	if (!ret) {
 		st->en_msk |= (1 << DEV_DMP);
+		/* TODO: WAR: pm2 has a mind of its own */
 		ret = nvi_i2c_wr(st, &st->hal->reg->pm2, 0, __func__);
 		nvi_push_delay(st);
 		ret |= nvi_reset(st, __func__, true, false, true);
@@ -4029,6 +4164,8 @@ struct nvi_dmp nvi_dmp_icm = {
 	.en_msk				= MSK_DEV_ALL,
 	.dd_n				= ARRAY_SIZE(nvi_dmp_devs),
 	.dd				= nvi_dmp_devs,
+	.ap				= nvi_dmp_ap,
+	.ap_n				= ARRAY_SIZE(nvi_dmp_ap),
 	.fn_rd				= &nvi_dmp_rd,
 	.fn_clk_n			= &nvi_dmp_clk_n,
 	.fn_init			= &nvi_dmp_init,

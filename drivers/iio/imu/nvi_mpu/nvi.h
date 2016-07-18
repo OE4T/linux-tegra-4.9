@@ -332,6 +332,53 @@ struct nvi_mc {
 	};
 };
 
+struct nvi_aux_port_dmp_dev {
+	enum ext_slave_id dev;
+	unsigned int dmp_rd_len_sts;
+	unsigned int dmp_rd_len_data;
+	bool dmp_rd_be_sts;
+	bool dmp_rd_be_data;
+	u8 dmp_rd_ctrl;
+	u8 dmp_rd_reg;
+};
+
+struct nvi_dmp_aux_port {
+	enum secondary_slave_type type;
+	bool port_rd;
+	int port;
+	unsigned int dd_n;
+	struct nvi_aux_port_dmp_dev *dd;
+};
+
+struct aux_port {
+	struct nvi_mpu_port nmp;
+	struct nvi_aux_port_dmp_dev *dd;
+	unsigned int ext_data_offset;
+	unsigned int period_us;
+	unsigned int timeout_us;
+	unsigned int odr;
+	s64 ts_last;
+	bool ts_reset;
+	bool flush;
+	bool hw_valid;
+	bool hw_en;
+	bool hw_do;
+};
+
+struct aux_ports {
+	struct aux_port port[AUX_PORT_MAX];
+	s64 bypass_timeout_ns;
+	unsigned int bypass_lock;
+	unsigned int dmp_en_msk;
+	unsigned int dmp_ctrl_msk;
+	unsigned int ext_data_n;
+	u8 delay_hw;
+	unsigned char ext_data[AUX_EXT_DATA_REG_MAX];
+	unsigned char clock_i2c;
+	bool reset_i2c;
+	bool reset_fifo;
+};
+
 struct nvi_dmp {
 	const u8 const *fw;
 	unsigned int fw_ver;
@@ -345,6 +392,8 @@ struct nvi_dmp {
 	unsigned int en_msk;
 	unsigned int dd_n;
 	const struct nvi_dmp_dev *dd;
+	struct nvi_dmp_aux_port *ap;
+	int ap_n;
 	int (*fn_rd)(struct nvi_state *st, s64 ts, unsigned int n);
 	int (*fn_clk_n)(struct nvi_state *st, u32 *clk_n);
 	int (*fn_init)(struct nvi_state *st);
@@ -398,34 +447,6 @@ struct nvi_snsr {
 	bool matrix;
 };
 
-struct aux_port {
-	struct nvi_mpu_port nmp;
-	unsigned int ext_data_offset;
-	unsigned int period_us;
-	unsigned int timeout_us;
-	unsigned int odr;
-	s64 ts_last;
-	bool ts_reset;
-	bool flush;
-	bool hw_valid;
-	bool hw_en;
-	bool hw_do;
-};
-
-struct aux_ports {
-	struct aux_port port[AUX_PORT_MAX];
-	s64 bypass_timeout_ns;
-	unsigned int bypass_lock;
-	unsigned int dmp_en_msk;
-	unsigned int dmp_ctrl_msk;
-	unsigned int ext_data_n;
-	u8 delay_hw;
-	unsigned char ext_data[AUX_EXT_DATA_REG_MAX];
-	unsigned char clock_i2c;
-	bool reset_i2c;
-	bool reset_fifo;
-};
-
 /**
  *  struct inv_chip_info_s - Chip related information.
  *  @product_id:	Product id.
@@ -471,6 +492,7 @@ struct nvi_state {
 	bool irq_dis;
 	bool irq_set_irq_wake;
 	bool icm_dmp_war;
+	bool icm_fifo_off;
 	int pm;
 	u32 dmp_clk_n;
 	s64 ts_now;

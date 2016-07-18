@@ -737,8 +737,10 @@ static int nvi_src_aux(struct nvi_state *st)
 		ret = nvi_aux_delay(st, __func__);
 	}
 	if (st->sts & (NVS_STS_SPEW_MSG | NVI_DBG_SPEW_MSG))
-		dev_info(&st->i2c->dev, "%s src[SRC_AUX]: period=%u err=%d\n",
-			 __func__, st->src[SRC_AUX].period_us_req, ret);
+		dev_info(&st->i2c->dev,
+			"%s src[SRC_AUX] period_req=%u period_src=%u err=%d\n",
+			 __func__, st->src[SRC_AUX].period_us_req,
+			 st->src[SRC_AUX].period_us_src, ret);
 	return ret;
 }
 

@@ -1879,6 +1879,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	u32 opcode_addr;
 
 	se_dev = sg_tegra_se_dev[1];
+	mutex_lock(&se_dev->mtx);
 
 	if (se_dev->se_dev_num == 0) {
 		opcode_addr = SE1_AES0_CONFIG_REG_OFFSET;
@@ -1887,6 +1888,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 	} else {
 		dev_err(se_dev->dev, "SE%d does not support %s operation\n",
 			(se_dev->se_dev_num + 1), __func__);
+		mutex_unlock(&se_dev->mtx);
 		return -EINVAL;
 	}
 
@@ -2043,6 +2045,7 @@ out:
 			cmac_ctx->buffer, cmac_ctx->dma_addr);
 	}
 
+	mutex_unlock(&se_dev->mtx);
 	return ret;
 }
 
@@ -2062,9 +2065,11 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	u32 opcode_addr;
 
 	se_dev = sg_tegra_se_dev[1];
+	mutex_lock(&se_dev->mtx);
 
 	if (!ctx) {
 		dev_err(se_dev->dev, "invalid context");
+		mutex_unlock(&se_dev->mtx);
 		return -EINVAL;
 	}
 
@@ -2072,6 +2077,7 @@ static int tegra_se_aes_cmac_setkey(struct crypto_ahash *tfm, const u8 *key,
 	if (!req_ctx) {
 		dev_err(se_dev->dev,
 			"memory allocation failed for cmac req_ctx\n");
+		mutex_unlock(&se_dev->mtx);
 		return -ENOMEM;
 	}
 	if ((keylen != TEGRA_SE_KEY_128_SIZE) &&
@@ -2191,6 +2197,7 @@ out:
 	}
 free_ctx:
 	kfree(req_ctx);
+	mutex_unlock(&se_dev->mtx);
 	return ret;
 }
 

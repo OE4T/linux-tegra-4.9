@@ -1,12 +1,14 @@
 GCOV_PROFILE := y
 ccflags-y += -I../nvhost/drivers/video/tegra/host
-ccflags-y += -I../t19x/drivers/video/tegra/host
+ccflags-y += -I../nvhost-t18x/drivers/video/tegra/host
+ccflags-y += -I../nvhost-t19x/drivers/video/tegra/host
 ccflags-y += -Idrivers/devfreq
 ccflags-y += -Wno-multichar
 
 subdir-ccflags-y := -Werror
 obj-y  += nvhost_queue.o \
-	  nvhost_buffer.o
+	  nvhost_buffer.o \
+	  nvhost_syncpt_unit_interface.o
 
 obj-$(CONFIG_TEGRA_GRHOST) += t194/
 obj-$(CONFIG_TEGRA_GRHOST_PVA) += pva/

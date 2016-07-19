@@ -18,6 +18,7 @@
 #include <linux/device.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <linux/slab.h>
 #include <linux/tegra_ast.h>
 #include <linux/io.h>
 
@@ -70,86 +71,223 @@ EXPORT_SYMBOL(tegra_ioremap_byname);
 /* TEGRA_APS_AST_REGION_<x>_SLAVE_BASE_LO register fields */
 #define AST_SLV_BASE_LO_ENABLE		1
 
-int tegra_ast_region_enable(unsigned count, void __iomem *const bases[],
-				u32 region, u32 slave_base, u32 size,
-				u64 master_base, u32 stream_id)
+struct tegra_ast
 {
-	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
-	u32 mask = size - 1;
-	u32 ast_sid = AST_STREAMID(stream_id);
-	u32 vmidx;
+	void __iomem *bases[2];
+	struct device dev;
+};
+
+static inline struct tegra_ast *to_tegra_ast(struct device *dev)
+{
+	return container_of(dev, struct tegra_ast, dev);
+}
+
+static void tegra_ast_dev_release(struct device *dev)
+{
+	kfree(to_tegra_ast(dev));
+}
+
+struct tegra_ast *tegra_ast_create(struct device *dev)
+{
+	struct tegra_ast *ast;
+	int err, i;
+
+	ast = kzalloc(sizeof(*ast), GFP_KERNEL);
+	if (unlikely(ast == NULL))
+		return ERR_PTR(-ENOMEM);
+
+	ast->dev.parent = dev;
+	ast->dev.release = tegra_ast_dev_release;
+	dev_set_name(&ast->dev, "%s:ast", dev_name(dev));
+	device_initialize(&ast->dev);
+
+	/* TODO: dedicated OF node for AST */
+	ast->bases[0] = tegra_ioremap_byname(dev, "ast-cpu");
+	ast->bases[1] = tegra_ioremap_byname(dev, "ast-dma");
+
+	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
+		if (IS_ERR(ast->bases[i])) {
+			err = PTR_ERR(ast->bases[i]);
+			goto error;
+		}
+	}
+
+	err = device_add(&ast->dev);
+	if (err)
+		goto error;
+
+	return ast;
+error:
+	put_device(&ast->dev);
+	return ERR_PTR(err);
+}
+EXPORT_SYMBOL(tegra_ast_create);
+
+void tegra_ast_destroy(struct tegra_ast *ast)
+{
+	if (!IS_ERR_OR_NULL(ast))
+		device_unregister(&ast->dev);
+}
+
+struct tegra_ast_region {
+	u8 ast_id;
+	u8 stream_id;
+	u8 vmids[2];
+	u64 master_base;
+	u32 slave_base;
+	u32 size;
+	struct device dev;
+};
+
+static void tegra_ast_region_enable(struct tegra_ast_region *region)
+{
+	struct tegra_ast *ast = to_tegra_ast(region->dev.parent);
+	u32 ast_sid = AST_STREAMID(region->stream_id);
 	unsigned i;
 
-	if (region > AST_MAX_REGION || stream_id > AST_MAX_STREAMID)
-		return -EINVAL;
-	if (size & mask)
-		return -EOPNOTSUPP;
+	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
+		void __iomem *base = ast->bases[i];
+		unsigned vmidx = region->vmids[i];
 
-	for (i = 0; i < count; i++) {
+		/*
+		 * TODO: MB1 should set stream_id to one VM, and this would no
+		 * longer be necessary.
+		 */
+		u32 r = readl(base + TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
+		if ((r & 0x0000ff00) != ast_sid)
+			writel(ast_sid | AST_STREAMID_CTL_ENABLE, base +
+				TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
+
+		base += region->ast_id * TEGRA_APS_AST_REGION_STRIDE;
+
+		writel(0, base + TEGRA_APS_AST_REGION_0_MASK_HI);
+		writel((region->size - 1) & AST_ADDR_MASK,
+			base + TEGRA_APS_AST_REGION_0_MASK_LO);
+
+		writel(0, base + TEGRA_APS_AST_REGION_0_MASTER_BASE_HI);
+		writel(region->master_base & AST_ADDR_MASK,
+			base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO);
+
+		writel(AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP |
+				(vmidx << AST_RGN_CTRL_VM_INDEX),
+			base + TEGRA_APS_AST_REGION_0_CONTROL);
+
+		writel(0, base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI);
+		writel((region->slave_base & AST_ADDR_MASK) |
+			AST_SLV_BASE_LO_ENABLE,
+			base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO);
+	}
+}
+
+static void tegra_ast_region_disable(struct tegra_ast_region *region)
+{
+	struct tegra_ast *ast = to_tegra_ast(region->dev.parent);
+	u32 offset = region->ast_id * TEGRA_APS_AST_REGION_STRIDE;
+	unsigned i;
+
+	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
+		void __iomem *base = ast->bases[i] + offset;
+
+		writel(0, base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO);
+	}
+}
+
+static void tegra_ast_region_dev_release(struct device *dev)
+{
+	struct tegra_ast_region *region =
+		container_of(dev, struct tegra_ast_region, dev);
+
+	kfree(region);
+}
+
+struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
+	u32 ast_id, u32 slave_base, u32 size, u64 master_base, u32 stream_id)
+{
+	struct tegra_ast_region *region;
+	unsigned i;
+	int err;
+
+	if (ast_id > AST_MAX_REGION || stream_id > AST_MAX_STREAMID)
+		return ERR_PTR(-EINVAL);
+	if (size & (size - 1))
+		return ERR_PTR(-EOPNOTSUPP);
+
+	region = kzalloc(sizeof(*region), GFP_KERNEL);
+	if (unlikely(region == NULL))
+		return ERR_PTR(-ENOMEM);
+
+	region->ast_id = ast_id;
+	region->stream_id = stream_id;
+	region->master_base = master_base;
+	region->slave_base = slave_base;
+	region->size = size;
+	region->dev.parent = &ast->dev;
+	region->dev.release = tegra_ast_region_dev_release;
+	dev_set_name(&region->dev, "%s:%u", dev_name(&ast->dev), ast_id);
+	device_initialize(&region->dev);
+
+	/* Check for VM indeces before modifying anything. */
+	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
+		void __iomem *base = ast->bases[i];
+		unsigned vmidx;
+
 		for (vmidx = 0; vmidx <= AST_MAX_VMINDEX; vmidx++) {
-			u32 r = readl(bases[i] + TEGRA_APS_AST_STREAMID_CTL +
+			u32 r = readl(base + TEGRA_APS_AST_STREAMID_CTL +
 					(4 * vmidx));
-			if ((r & 0x0000ff00) == ast_sid)
+			if ((r & 0x0000ff00) >> 8 == stream_id)
 				break;
 		}
 
 		if (vmidx > AST_MAX_VMINDEX) {
+			dev_warn(&region->dev,
+					"stream ID %u not in AST %u VM table",
+					stream_id, i);
 			/*
-			 * TBD: will be replaced with return error once MB1
-			 * sets stream_id at least one of vmidx table
+			 * TODO: This is racy. Return an error once MB1 sets
+			 * stream_id in at least one of the vmidx table,
+			 * and remove this fallback loop.
 			 */
 			for (vmidx = 0; vmidx <= AST_MAX_VMINDEX; vmidx++) {
-				u32 r = readl(bases[i] +
+				u32 r = readl(base +
 						TEGRA_APS_AST_STREAMID_CTL +
 						(4 * vmidx));
 				if (r & 0x0000ff00)
 					break;
 			}
-
-			if (vmidx > AST_MAX_VMINDEX)
-				goto error;
-
-			writel(ast_sid | AST_STREAMID_CTL_ENABLE, bases[i] +
-				TEGRA_APS_AST_STREAMID_CTL + (4 * vmidx));
 		}
 
-		writel(0, bases[i] + TEGRA_APS_AST_REGION_0_MASK_HI + offset);
-		writel(mask & AST_ADDR_MASK, bases[i] +
-			TEGRA_APS_AST_REGION_0_MASK_LO + offset);
+		if (vmidx > AST_MAX_VMINDEX) {
+			err = -ENOBUFS;
+			goto error;
+		}
 
-		writel(0, bases[i] +
-			TEGRA_APS_AST_REGION_0_MASTER_BASE_HI + offset);
-		writel(master_base & AST_ADDR_MASK, bases[i] +
-			TEGRA_APS_AST_REGION_0_MASTER_BASE_LO + offset);
-
-		writel(AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP |
-				(vmidx << AST_RGN_CTRL_VM_INDEX),
-			bases[i] + TEGRA_APS_AST_REGION_0_CONTROL + offset);
-
-		writel(0, bases[i] +
-			TEGRA_APS_AST_REGION_0_SLAVE_BASE_HI + offset);
-		writel((slave_base & AST_ADDR_MASK) | AST_SLV_BASE_LO_ENABLE,
-			bases[i] +
-			TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO + offset);
+		dev_dbg(&region->dev, "stream ID %u using AST %u VM ID %u",
+			stream_id, i, vmidx);
+		region->vmids[i] = vmidx;
 	}
 
-	return 0;
+	tegra_ast_region_enable(region);
+
+	err = device_add(&region->dev);
+	if (err)
+		goto error;
+
+	return region;
 error:
-	tegra_ast_region_disable(i, bases, region);
-	return -EBUSY;
+	put_device(&region->dev);
+	return ERR_PTR(err);
 }
-EXPORT_SYMBOL(tegra_ast_region_enable);
+EXPORT_SYMBOL(tegra_ast_region_map);
 
-void tegra_ast_region_disable(unsigned count, void __iomem *const bases[],
-				u32 region)
+void tegra_ast_region_unmap(struct tegra_ast_region *region)
 {
-	u32 offset = region * TEGRA_APS_AST_REGION_STRIDE;
+	if (IS_ERR_OR_NULL(region))
+		return;
 
-	while (count > 0)
-		writel(0, bases[--count] +
-			TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO + offset);
+	tegra_ast_region_disable(region);
+	device_unregister(&region->dev);
 }
-EXPORT_SYMBOL(tegra_ast_region_disable);
+EXPORT_SYMBOL(tegra_ast_region_unmap);
 
 void tegra_ast_get_region_info(void __iomem *base,
 			u32 region,
@@ -195,3 +333,6 @@ void tegra_ast_get_region_info(void __iomem *base,
 	info->master = ((hi << 32U) + lo) & AST_ADDR_MASK64;
 }
 EXPORT_SYMBOL(tegra_ast_get_region_info);
+
+MODULE_DESCRIPTION("Tegra Adress Space Translation class driver");
+MODULE_LICENSE("GPL");

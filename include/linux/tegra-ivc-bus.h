@@ -19,8 +19,10 @@
 extern struct bus_type tegra_ivc_bus_type;
 struct tegra_ivc_bus;
 struct tegra_hsp_ops;
+struct tegra_ast;
 
-struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *, u32 sid);
+struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *, struct tegra_ast *,
+						u32 sid);
 void tegra_ivc_bus_destroy(struct tegra_ivc_bus *ibus);
 
 struct tegra_ivc_driver {

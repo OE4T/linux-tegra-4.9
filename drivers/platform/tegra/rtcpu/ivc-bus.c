@@ -25,6 +25,7 @@
 #define NV(p) "nvidia," #p
 
 struct tegra_ivc_region {
+	struct tegra_ast_region *region;
 	void *base;
 	dma_addr_t dma;
 	unsigned ast_id;
@@ -34,7 +35,9 @@ struct tegra_ivc_region {
 
 struct tegra_ivc_bus {
 	struct device dev;
+	struct tegra_ast *ast;
 	struct tegra_ivc_channel *chans;
+	u32 sid;
 	unsigned num_regions;
 	struct tegra_ivc_region regions[];
 };
@@ -377,24 +380,10 @@ void tegra_ivc_driver_unregister(struct tegra_ivc_driver *drv)
 EXPORT_SYMBOL(tegra_ivc_driver_unregister);
 
 static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
-					struct device_node *dev_node, u32 sid)
+					struct device_node *dev_node)
 {
 	struct of_phandle_args reg_spec;
-	void __iomem *ast[2];
 	int ret, i;
-
-	/* AST regions 0 and 1 are used for DRAM and SYSRAM carveouts */
-	ast[0] = tegra_ioremap_byname(bus->dev.parent, "ast-cpu");
-	if (IS_ERR(ast[0])) {
-		dev_err(&bus->dev, "AST %s not found\n", "ast-cpu");
-		return PTR_ERR(ast[0]);
-	}
-
-	ast[1] = tegra_ioremap_byname(bus->dev.parent, "ast-dma");
-	if (IS_ERR(ast[1])) {
-		dev_err(&bus->dev, "AST %s not found\n", "ast-dma");
-		return PTR_ERR(ast[1]);
-	}
 
 	/* Parse out all nodes with a region */
 	for (i = 0;
@@ -423,8 +412,12 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 			goto error;
 		}
 
-		tegra_ast_region_enable(ARRAY_SIZE(ast), ast, region->ast_id,
-			region->ast_va, region->size, region->dma, sid);
+		region->region = tegra_ast_region_map(bus->ast, region->ast_id,
+			region->ast_va, region->size, region->dma, bus->sid);
+		if (IS_ERR(region->region)) {
+			ret = PTR_ERR(region->region);
+			goto error;
+		}
 	}
 
 	return 0;
@@ -444,7 +437,8 @@ static unsigned tegra_ivc_bus_count_regions(const struct device_node *dev_node)
 	return i;
 }
 
-struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
+struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev,
+						struct tegra_ast *ast, u32 sid)
 {
 	struct tegra_ivc_bus *bus;
 	unsigned num;
@@ -456,6 +450,8 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 	if (unlikely(bus == NULL))
 		return ERR_PTR(-ENOMEM);
 
+	bus->ast = ast;
+	bus->sid = sid;
 	bus->num_regions = num;
 	bus->dev.parent = dev;
 	bus->dev.type = &tegra_hsp_type;
@@ -466,7 +462,7 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev, u32 sid)
 
 	device_initialize(&bus->dev);
 
-	ret = tegra_ivc_bus_parse_channels(bus, dev->of_node, sid);
+	ret = tegra_ivc_bus_parse_channels(bus, dev->of_node);
 	if (ret) {
 		dev_err(&bus->dev, "IVC channels setup failed: %d\n", ret);
 		goto error;

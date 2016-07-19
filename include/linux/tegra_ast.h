@@ -49,11 +49,16 @@ struct tegra_ast_region_info {
 void __iomem *tegra_ioremap(struct device *, int index);
 void __iomem *tegra_ioremap_byname(struct device *, const char *name);
 
-int tegra_ast_region_enable(unsigned count, void __iomem *const [],
-				u32 region, u32 slave_base, u32 mask,
+struct tegra_ast;
+struct tegra_ast_region;
+
+struct tegra_ast *tegra_ast_create(struct device *dev);
+void tegra_ast_destroy(struct tegra_ast *);
+
+struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *,
+				u32 region, u32 slave_base, u32 size,
 				u64 master_base, u32 stream_id);
-void tegra_ast_region_disable(unsigned count, void __iomem *const [],
-				u32 region);
+void tegra_ast_region_unmap(struct tegra_ast_region *);
 
 void tegra_ast_get_region_info(void __iomem *base,
 			u32 region, struct tegra_ast_region_info *info);

@@ -154,6 +154,7 @@ MODULE_DEVICE_TABLE(of, tegra_cam_rtcpu_of_match);
 
 struct tegra_cam_rtcpu {
 	struct tegra_ivc_bus *ivc;
+	struct tegra_ast *ast;
 	struct tegra_hsp_sm_pair *sm_pair;
 	struct {
 		struct mutex mutex;
@@ -489,6 +490,16 @@ int tegra_camrtc_ivc_setup_ready(struct device *dev)
 }
 EXPORT_SYMBOL(tegra_camrtc_ivc_setup_ready);
 
+static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = platform_get_drvdata(pdev);
+
+	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
+	tegra_ast_destroy(cam_rtcpu->ast);
+	tegra_hsp_sm_pair_free(cam_rtcpu->sm_pair);
+	return 0;
+}
+
 static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu;
@@ -562,11 +573,17 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		return ret;
 	}
 
+	cam_rtcpu->ast = tegra_ast_create(dev);
+	if (IS_ERR(cam_rtcpu->ast)) {
+		ret = PTR_ERR(cam_rtcpu->ast);
+		goto fail;
+	}
+
 	ret = tegra_camrtc_boot(dev);
 	if (ret)
 		goto fail;
 
-	cam_rtcpu->ivc = tegra_ivc_bus_create(dev,
+	cam_rtcpu->ivc = tegra_ivc_bus_create(dev, cam_rtcpu->ast,
 						cam_rtcpu->rtcpu_pdata->sid);
 	if (IS_ERR(cam_rtcpu->ivc)) {
 		ret = PTR_ERR(cam_rtcpu->ivc);
@@ -581,20 +598,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	return 0;
 
 fail:
-	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
-	tegra_hsp_sm_pair_free(cam_rtcpu->sm_pair);
+	tegra_cam_rtcpu_remove(pdev);
 	return ret;
-}
-
-
-static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
-{
-	struct tegra_cam_rtcpu *cam_rtcpu = platform_get_drvdata(pdev);
-
-	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
-	tegra_hsp_sm_pair_free(cam_rtcpu->sm_pair);
-
-	return 0;
 }
 
 static int tegra_cam_rtcpu_resume(struct device *dev)

@@ -41,6 +41,7 @@
 #include "vi/vi.h"
 #include "vi/vi_irq.h"
 #include "camera/vi2_fops.h"
+#include "csi/csi2_fops.h"
 
 #include "tegra_camera_dev_mfi.h"
 
@@ -59,12 +60,14 @@ struct tegra_vi_data t124_vi_data = {
 	.info = (struct nvhost_device_data *)&t124_vi_info,
 	.vi_fops = &vi2_fops,
 	.channel_fops = &vi2_channel_fops,
+	.csi_fops = &csi2_fops,
 };
 
 struct tegra_vi_data t210_vi_data = {
 	.info = (struct nvhost_device_data *)&t21_vi_info,
 	.vi_fops = &vi2_fops,
 	.channel_fops = &vi2_channel_fops,
+	.csi_fops = &csi2_fops,
 };
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
@@ -424,7 +427,7 @@ static int vi_probe(struct platform_device *dev)
 	tegra_vi->dev = &dev->dev;
 
 	/* If missing SoC fops, whole VI/CSI has be in bypass mode */
-	if (!data->vi_fops || !data->channel_fops)
+	if (!data->vi_fops || !data->channel_fops || !data->csi_fops)
 		tegra_vi->bypass = true;
 
 	err = nvhost_client_device_get_resources(dev);
@@ -507,6 +510,7 @@ static int vi_probe(struct platform_device *dev)
 		goto camera_unregister;
 
 	tegra_vi->csi.vi = tegra_vi;
+	tegra_vi->csi.fops = tegra_vi->data->csi_fops;
 	err = tegra_csi_init(&tegra_vi->csi, dev);
 	if (err)
 		goto vi_mc_init_error;

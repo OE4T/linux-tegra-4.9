@@ -27,6 +27,7 @@
 
 #include "camera/mc_common.h"
 #include "chip_support.h"
+#include "csi/csi.h"
 
 #define VI_CFG_INTERRUPT_MASK_0				0x8c
 #define VI_CFG_INTERRUPT_STATUS_0			0x98
@@ -108,6 +109,7 @@ struct tegra_vi_data {
 	struct nvhost_device_data *info;
 	struct tegra_vi_fops *vi_fops;
 	struct tegra_vi_channel_fops *channel_fops;
+	struct tegra_csi_fops *csi_fops;
 };
 
 struct vi {

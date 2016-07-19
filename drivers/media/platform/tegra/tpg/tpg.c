@@ -40,6 +40,7 @@ static int tpg_probe(struct vi *tegra_vi)
 	/* Init CSI related media controller interface */
 	csi->num_ports = TPG_CHANNELS;
 	csi->pg_mode = TEGRA_VI_PG_PATCH;
+	csi->vi = tegra_vi;
 	ret = tegra_csi_media_controller_init(csi, pdev);
 	if (ret)
 		return ret;

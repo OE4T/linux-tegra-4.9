@@ -31,6 +31,7 @@
 #include <linux/firmware.h>
 #include <linux/iommu.h>
 
+#include "nvhost_syncpt_unit_interface.h"
 #include "dev.h"
 #include "bus_client.h"
 #include "nvhost_acm.h"
@@ -351,10 +352,17 @@ static int pva_probe(struct platform_device *pdev)
 
 	err = pva_register_isr(pdev);
 	if (err < 0)
-		goto err_queue_init;
+		goto err_isr_init;
+
+	err = nvhost_syncpt_unit_interface_init(pdev);
+	if (err)
+		goto err_mss_init;
 
 	return 0;
 
+err_mss_init:
+err_isr_init:
+	nvhost_queue_deinit(pva->pool);
 err_queue_init:
 	nvhost_client_device_release(pdev);
 err_client_device_init:

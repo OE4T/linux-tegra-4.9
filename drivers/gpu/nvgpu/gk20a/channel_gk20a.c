@@ -2086,6 +2086,100 @@ out:
 	return 0;
 }
 
+/*
+ * Handle the submit synchronization - pre-fences and post-fences.
+ */
+static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
+				      struct nvgpu_fence *fence,
+				      struct priv_cmd_entry **wait_cmd,
+				      struct priv_cmd_entry **incr_cmd,
+				      struct gk20a_fence **pre_fence,
+				      struct gk20a_fence **post_fence,
+				      bool force_need_sync_fence,
+				      u32 flags)
+{
+	struct gk20a *g = c->g;
+	bool need_sync_fence = false;
+	bool new_sync_created = false;
+	int wait_fence_fd = -1;
+	int err = 0;
+	bool need_wfi = !(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI);
+
+	/*
+	 * If user wants to always allocate sync_fence_fds then respect that;
+	 * otherwise, allocate sync_fence_fd based on user flags.
+	 */
+	if (force_need_sync_fence)
+		need_sync_fence = true;
+
+	mutex_lock(&c->sync_lock);
+	if (!c->sync) {
+		c->sync = gk20a_channel_sync_create(c);
+		if (!c->sync) {
+			err = -ENOMEM;
+			mutex_unlock(&c->sync_lock);
+			goto fail;
+		}
+		new_sync_created = true;
+	}
+	atomic_inc(&c->sync->refcount);
+	mutex_unlock(&c->sync_lock);
+
+	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
+		err = g->ops.fifo.resetup_ramfc(c);
+		if (err)
+			goto fail;
+	}
+
+	/*
+	 * Optionally insert syncpt wait in the beginning of gpfifo submission
+	 * when user requested and the wait hasn't expired. Validate that the id
+	 * makes sense, elide if not. The only reason this isn't being
+	 * unceremoniously killed is to keep running some tests which trigger
+	 * this condition.
+	 */
+	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
+		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
+			wait_fence_fd = fence->id;
+			err = c->sync->wait_fd(c->sync, wait_fence_fd,
+					       wait_cmd, pre_fence);
+		} else {
+			err = c->sync->wait_syncpt(c->sync, fence->id,
+						   fence->value, wait_cmd,
+						   pre_fence);
+		}
+	}
+	if (err)
+		goto fail;
+
+	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
+	    (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE))
+		need_sync_fence = true;
+
+	/*
+	 * Always generate an increment at the end of a GPFIFO submission. This
+	 * is used to keep track of method completion for idle railgating. The
+	 * sync_pt/semaphore PB is added to the GPFIFO later on in submit.
+	 */
+	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
+		err = c->sync->incr_user(c->sync, wait_fence_fd, incr_cmd,
+				 post_fence, need_wfi, need_sync_fence);
+	else
+		err = c->sync->incr(c->sync, incr_cmd,
+				    post_fence, need_sync_fence);
+	if (err)
+		goto fail;
+
+	return 0;
+
+fail:
+	/*
+	 * Cleanup is handled by gk20a_submit_channel_gpfifo() since it is the
+	 * real owner of the objects we make here.
+	 */
+	return err;
+}
+
 int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				struct nvgpu_gpfifo *gpfifo,
 				struct nvgpu_submit_gpfifo_args *args,
@@ -2097,8 +2191,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 {
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
-	int err = 0;
-	int wait_fence_fd = -1;
 	struct priv_cmd_entry *wait_cmd = NULL;
 	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_fence *pre_fence = NULL;
@@ -2106,20 +2198,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	/* we might need two extra gpfifo entries - one for pre fence
 	 * and one for post fence. */
 	const int extra_entries = 2;
-	bool need_wfi = !(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI);
 	bool skip_buffer_refcounting = (flags &
 			NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING);
-	bool need_sync_fence = false;
-	bool new_sync_created = false;
+	int err = 0;
 	struct nvgpu_gpfifo __user *user_gpfifo = args ?
 		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
-
-	/*
-	 * If user wants to allocate sync_fence_fd always, then respect that;
-	 * otherwise, allocate sync_fence_fd based on user flags only
-	 */
-	if (force_need_sync_fence)
-		need_sync_fence = true;
 
 	if (c->has_timedout)
 		return -ETIMEDOUT;
@@ -2192,62 +2275,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 
-	mutex_lock(&c->sync_lock);
-	if (!c->sync) {
-		c->sync = gk20a_channel_sync_create(c);
-		if (!c->sync) {
-			err = -ENOMEM;
-			mutex_unlock(&c->sync_lock);
-			goto clean_up;
-		}
-		new_sync_created = true;
-	}
-	atomic_inc(&c->sync->refcount);
-	mutex_unlock(&c->sync_lock);
-
-	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
-		err = g->ops.fifo.resetup_ramfc(c);
-		if (err) {
-			goto clean_up;
-		}
-	}
-
-	/*
-	 * optionally insert syncpt wait in the beginning of gpfifo submission
-	 * when user requested and the wait hasn't expired.
-	 * validate that the id makes sense, elide if not
-	 * the only reason this isn't being unceremoniously killed is to
-	 * keep running some tests which trigger this condition
-	 */
-	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
-		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
-			wait_fence_fd = fence->id;
-			err = c->sync->wait_fd(c->sync, wait_fence_fd,
-					&wait_cmd, &pre_fence);
-		} else {
-			err = c->sync->wait_syncpt(c->sync, fence->id,
-					fence->value, &wait_cmd, &pre_fence);
-		}
-	}
-	if (err) {
+	err = gk20a_submit_prepare_syncs(c, fence, &wait_cmd, &incr_cmd,
+					 &pre_fence, &post_fence,
+					 force_need_sync_fence, flags);
+	if (err)
 		goto clean_up;
-	}
-
-	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
-			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE))
-		need_sync_fence = true;
-
-	/* always insert syncpt increment at end of gpfifo submission
-	   to keep track of method completion for idle railgating */
-	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
-		err = c->sync->incr_user(c->sync, wait_fence_fd, &incr_cmd,
-				 &post_fence, need_wfi, need_sync_fence);
-	else
-		err = c->sync->incr(c->sync, &incr_cmd,
-				    &post_fence, need_sync_fence);
-	if (err) {
-		goto clean_up;
-	}
 
 	if (wait_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, wait_cmd);
@@ -2258,6 +2290,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (err)
 		goto clean_up;
 
+	/*
+	 * And here's where we add the incr_cmd we generated earlier. It should
+	 * always run!
+	 */
 	if (incr_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, incr_cmd);
 

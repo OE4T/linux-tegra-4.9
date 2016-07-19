@@ -240,8 +240,6 @@ struct tegra_mc_vi {
 	unsigned long aggregated_kbyteps;
 	unsigned long max_requested_hz;
 	struct mutex mipical_lock;
-	unsigned int link_status;
-	unsigned int subdevs_bound;
 
 	struct tegra_vi_fops *fops;
 };

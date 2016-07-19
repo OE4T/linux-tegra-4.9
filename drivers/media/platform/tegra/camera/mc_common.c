@@ -66,12 +66,7 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 
 	/* clock settings */
 	ret = clk_prepare_enable(vi->clk);
-	if (ret) {
-		dev_err(vi->dev, "failed to enable vi clock\n");
-		goto error_clk_enable;
-	}
-
-	ret = clk_set_rate(vi->clk, 0);
+	clk_set_rate(vi->clk, 0);
 	if (ret) {
 		dev_err(vi->dev, "failed to set vi clock\n");
 		goto error_clk_set_rate;

@@ -285,7 +285,7 @@ static void gk20a_bitmap_free(struct gk20a_allocator *__a, u64 addr)
 	blks = alloc->length >> a->blk_shift;
 
 	bitmap_clear(a->bitmap, offs, blks);
-	alloc_dbg(__a, "Free  0x%-10llx \n", addr);
+	alloc_dbg(__a, "Free  0x%-10llx\n", addr);
 
 	a->bytes_freed += alloc->length;
 
@@ -400,7 +400,7 @@ int gk20a_bitmap_allocator_init(struct gk20a_allocator *__a,
 	a->bit_offs = a->base >> a->blk_shift;
 	a->flags = flags;
 
-	a->bitmap = kzalloc(sizeof(*a->bitmap) * BITS_TO_LONGS(a->num_bits),
+	a->bitmap = kcalloc(BITS_TO_LONGS(a->num_bits), sizeof(*a->bitmap),
 			    GFP_KERNEL);
 	if (!a->bitmap)
 		goto fail;

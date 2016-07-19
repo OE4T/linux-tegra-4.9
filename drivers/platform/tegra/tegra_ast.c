@@ -202,6 +202,24 @@ static void tegra_ast_region_dev_release(struct device *dev)
 	kfree(region);
 }
 
+static int tegra_ast_region_resume(struct device *dev)
+{
+	struct tegra_ast_region *region =
+		container_of(dev, struct tegra_ast_region, dev);
+
+	tegra_ast_region_enable(region);
+	return 0;
+}
+
+static const struct dev_pm_ops tegra_ast_region_pm_ops = {
+	.resume_noirq = tegra_ast_region_resume,
+};
+
+static const struct device_type tegra_ast_region_dev_type = {
+	.name	= "tegra-ast-region",
+	.pm	= &tegra_ast_region_pm_ops,
+};
+
 struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 	u32 ast_id, u32 slave_base, u32 size, u32 stream_id)
 {
@@ -231,6 +249,7 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 	}
 
 	region->dev.parent = &ast->dev;
+	region->dev.type = &tegra_ast_region_dev_type;
 	region->dev.release = tegra_ast_region_dev_release;
 	dev_set_name(&region->dev, "%s:%u", dev_name(&ast->dev), ast_id);
 	device_initialize(&region->dev);

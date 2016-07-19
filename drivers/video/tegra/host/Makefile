@@ -30,11 +30,15 @@ obj-$(CONFIG_TEGRA_GRHOST) += flcn/
 obj-$(CONFIG_TEGRA_GRHOST) += t210/
 
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
+ifneq ($(wildcard $(srctree)/../nvhost-t18x/drivers/video/tegra/host/Makefile),)
 obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../nvhost-t18x/drivers/video/tegra/host/
+endif
 endif
 
 ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+ifneq ($(wildcard $(srctree)/../nvhost-t19x/drivers/video/tegra/host/Makefile),)
 obj-$(CONFIG_TEGRA_GRHOST) += ../../../../../nvhost-t19x/drivers/video/tegra/host/
+endif
 endif
 
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o

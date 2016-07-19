@@ -24,20 +24,13 @@
 
 #define NV(p) "nvidia," #p
 
-struct tegra_ivc_region {
-	struct tegra_ast_region *region;
-	unsigned ast_id;
-	u32 ast_va;
-	u32 size;
-};
-
 struct tegra_ivc_bus {
 	struct device dev;
 	struct tegra_ast *ast;
 	struct tegra_ivc_channel *chans;
 	u32 sid;
 	unsigned num_regions;
-	struct tegra_ivc_region regions[];
+	struct tegra_ast_region *regions[];
 };
 
 static void tegra_hsp_ring(struct device *dev)
@@ -103,7 +96,7 @@ static int tegra_ivc_bus_check_overlap(struct device *dev,
 
 static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		struct device *dev, struct device_node *ch_node,
-		struct tegra_ivc_region *region)
+		struct tegra_ast_region *region)
 {
 	void *base;
 	dma_addr_t dma_handle;
@@ -151,8 +144,7 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		goto error;
 	}
 
-	base = tegra_ast_region_get_mapping(region->region, &size,
-						&dma_handle);
+	base = tegra_ast_region_get_mapping(region, &size, &dma_handle);
 	ret = -EINVAL;
 	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
 	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
@@ -279,7 +271,7 @@ static int tegra_ivc_bus_start(struct device *dev)
 			struct tegra_ivc_channel *chan;
 
 			chan = tegra_ivc_channel_create(&bus->dev, ch_node,
-							&bus->regions[i]);
+							bus->regions[i]);
 			if (IS_ERR(chan)) {
 				ret = PTR_ERR(chan);
 				of_node_put(ch_node);
@@ -379,44 +371,31 @@ void tegra_ivc_driver_unregister(struct tegra_ivc_driver *drv)
 }
 EXPORT_SYMBOL(tegra_ivc_driver_unregister);
 
-static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
+static int tegra_ivc_bus_parse_regions(struct tegra_ivc_bus *bus,
 					struct device_node *dev_node)
 {
 	struct of_phandle_args reg_spec;
-	int ret, i;
+	int i;
 
-	/* Parse out all nodes with a region */
+	/* Parse out all regions in a node */
 	for (i = 0;
 		of_parse_phandle_with_fixed_args(dev_node, NV(ivc-channels), 3,
 							i, &reg_spec) == 0;
 		i++) {
-		struct tegra_ivc_region *region = &bus->regions[i];
-
-		region->ast_id = reg_spec.args[0];
-		region->ast_va = reg_spec.args[1];
-		region->size = reg_spec.args[2];
-
-		/* IVC buffer size must be a power of 2 */
-		if (unlikely(region->size & (region->size - 1))) {
-			dev_err(&bus->dev, "invalid region size 0x%08X\n",
-				region->size);
-			ret = -EINVAL;
-			goto error;
-		}
+		struct tegra_ast_region *region;
 
 		/* Allocate RAM for IVC */
-		region->region = tegra_ast_region_map(bus->ast, region->ast_id,
-			region->ast_va, region->size, bus->sid);
-		if (IS_ERR(region->region)) {
-			ret = PTR_ERR(region->region);
-			goto error;
-		}
+		region = of_tegra_ast_region_map(bus->ast, &reg_spec,
+							bus->sid);
+		of_node_put(reg_spec.np);
+
+		if (IS_ERR(region))
+			return PTR_ERR(region);
+
+		bus->regions[i] = region;
 	}
 
 	return 0;
-error:
-	of_node_put(reg_spec.np);
-	return ret;
 }
 
 static unsigned tegra_ivc_bus_count_regions(const struct device_node *dev_node)
@@ -455,9 +434,9 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev,
 
 	device_initialize(&bus->dev);
 
-	ret = tegra_ivc_bus_parse_channels(bus, dev->of_node);
+	ret = tegra_ivc_bus_parse_regions(bus, dev->of_node);
 	if (ret) {
-		dev_err(&bus->dev, "IVC channels setup failed: %d\n", ret);
+		dev_err(&bus->dev, "IVC regions setup failed: %d\n", ret);
 		goto error;
 	}
 

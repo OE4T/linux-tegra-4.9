@@ -312,6 +312,22 @@ void *tegra_ast_region_get_mapping(struct tegra_ast_region *region,
 }
 EXPORT_SYMBOL(tegra_ast_region_get_mapping);
 
+struct tegra_ast_region *of_tegra_ast_region_map(struct tegra_ast *ast,
+				const struct of_phandle_args *spec, u32 sid)
+{
+	u32 id, va, size;
+
+	if (spec->args_count < 3)
+		return ERR_PTR(-EINVAL);
+
+	id = spec->args[0];
+	va = spec->args[1];
+	size = spec->args[2];
+
+	return tegra_ast_region_map(ast, id, va, size, sid);
+}
+EXPORT_SYMBOL(of_tegra_ast_region_map);
+
 void tegra_ast_get_region_info(void __iomem *base,
 			u32 region,
 			struct tegra_ast_region_info *info)

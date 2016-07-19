@@ -19,6 +19,7 @@
 
 struct device;
 struct device_node;
+struct of_phandle_args;
 
 struct tegra_ast_region_info {
 	u8  enabled;
@@ -60,6 +61,8 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *,
 void tegra_ast_region_unmap(struct tegra_ast_region *);
 void *tegra_ast_region_get_mapping(struct tegra_ast_region *, size_t *,
 					dma_addr_t *);
+struct tegra_ast_region *of_tegra_ast_region_map(struct tegra_ast *,
+			const struct of_phandle_args *spec, u32 sid);
 
 void tegra_ast_get_region_info(void __iomem *base,
 			u32 region, struct tegra_ast_region_info *info);

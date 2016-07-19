@@ -144,7 +144,7 @@ static const struct file_operations railgate_residency_fops = {
 	.release	= single_release,
 };
 
-int gk20a_railgating_debugfs_init(struct device *dev)
+static int gk20a_railgating_debugfs_init(struct device *dev)
 {
 	struct dentry *d;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);

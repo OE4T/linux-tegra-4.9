@@ -659,6 +659,10 @@
 
 		ranges;
 
+		clocks = <&tegra_car TEGRA210_CLK_HOST1X>,
+			<&tegra_car TEGRA210_CLK_ACTMON>;
+		clock-names = "host1x", "actmon";
+
 		nvidia,ch-base = <0>;
 		nvidia,nb-channels = <12>;
 
@@ -752,6 +756,8 @@
 			reg = <0x0 0x54340000 0x0 0x00040000>;
 			iommus = <&smmu TEGRA_SWGROUP_VIC>;
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_VIC03>;
+			clock-names = "vic03";
 		};
 
 		nvenc {

@@ -26,8 +26,6 @@
 
 struct tegra_ivc_region {
 	struct tegra_ast_region *region;
-	void *base;
-	dma_addr_t dma;
 	unsigned ast_id;
 	u32 ast_va;
 	u32 size;
@@ -107,6 +105,9 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		struct device *dev, struct device_node *ch_node,
 		struct tegra_ivc_region *region)
 {
+	void *base;
+	dma_addr_t dma_handle;
+	size_t size;
 	union {
 		u32 tab[2];
 		struct {
@@ -150,16 +151,18 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 		goto error;
 	}
 
+	base = tegra_ast_region_get_mapping(region->region, &size,
+						&dma_handle);
 	ret = -EINVAL;
 	end.rx = start.rx + tegra_ivc_total_queue_size(nframes * frame_size);
 	end.tx = start.tx + tegra_ivc_total_queue_size(nframes * frame_size);
 
-	if (end.rx > region->size) {
+	if (end.rx > size) {
 		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "RX");
 		goto error;
 	}
 
-	if (end.tx > region->size) {
+	if (end.tx > size) {
 		dev_err(&chan->dev, "%s buffer exceeds IVC size\n", "TX");
 		goto error;
 	}
@@ -173,13 +176,10 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	if (ret)
 		goto error;
 
-	/* FIXME: revisit if dev->parent actually needed */
 	/* Init IVC */
 	ret = tegra_ivc_init_with_dma_handle(&chan->ivc,
-			(uintptr_t)region->base + start.rx,
-			region->dma + start.rx,
-			(uintptr_t)region->base + start.tx,
-			(u64)region->dma + start.tx,
+			(uintptr_t)base + start.rx, dma_handle + start.rx,
+			(uintptr_t)base + start.tx, dma_handle + start.tx,
 			nframes, frame_size, dev->parent,
 			tegra_ivc_channel_ring);
 	if (ret) {
@@ -405,15 +405,8 @@ static int tegra_ivc_bus_parse_channels(struct tegra_ivc_bus *bus,
 		}
 
 		/* Allocate RAM for IVC */
-		region->base = dmam_alloc_coherent(bus->dev.parent,
-			region->size, &region->dma, GFP_KERNEL | __GFP_ZERO);
-		if (unlikely(region->base == NULL)) {
-			ret = -ENOMEM;
-			goto error;
-		}
-
 		region->region = tegra_ast_region_map(bus->ast, region->ast_id,
-			region->ast_va, region->size, region->dma, bus->sid);
+			region->ast_va, region->size, bus->sid);
 		if (IS_ERR(region->region)) {
 			ret = PTR_ERR(region->region);
 			goto error;

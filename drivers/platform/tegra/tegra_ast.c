@@ -16,6 +16,7 @@
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/device.h>
+#include <linux/dma-mapping.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
 #include <linux/slab.h>
@@ -133,9 +134,10 @@ struct tegra_ast_region {
 	u8 ast_id;
 	u8 stream_id;
 	u8 vmids[2];
-	u64 master_base;
 	u32 slave_base;
-	u32 size;
+	size_t size;
+	void *base;
+	dma_addr_t dma;
 	struct device dev;
 };
 
@@ -165,7 +167,7 @@ static void tegra_ast_region_enable(struct tegra_ast_region *region)
 			base + TEGRA_APS_AST_REGION_0_MASK_LO);
 
 		writel(0, base + TEGRA_APS_AST_REGION_0_MASTER_BASE_HI);
-		writel(region->master_base & AST_ADDR_MASK,
+		writel(region->dma & AST_ADDR_MASK,
 			base + TEGRA_APS_AST_REGION_0_MASTER_BASE_LO);
 
 		writel(AST_RGN_CTRL_NON_SECURE | AST_RGN_CTRL_SNOOP |
@@ -201,7 +203,7 @@ static void tegra_ast_region_dev_release(struct device *dev)
 }
 
 struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
-	u32 ast_id, u32 slave_base, u32 size, u64 master_base, u32 stream_id)
+	u32 ast_id, u32 slave_base, u32 size, u32 stream_id)
 {
 	struct tegra_ast_region *region;
 	unsigned i;
@@ -218,9 +220,16 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 
 	region->ast_id = ast_id;
 	region->stream_id = stream_id;
-	region->master_base = master_base;
 	region->slave_base = slave_base;
 	region->size = size;
+
+	region->base = dma_alloc_coherent(ast->dev.parent, size, &region->dma,
+						GFP_KERNEL | __GFP_ZERO);
+	if (unlikely(region->base == NULL)) {
+		kfree(region);
+		return ERR_PTR(-ENOMEM);
+	}
+
 	region->dev.parent = &ast->dev;
 	region->dev.release = tegra_ast_region_dev_release;
 	dev_set_name(&region->dev, "%s:%u", dev_name(&ast->dev), ast_id);
@@ -274,6 +283,8 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 
 	return region;
 error:
+	dma_free_coherent(ast->dev.parent, region->size,
+				region->base, region->dma);
 	put_device(&region->dev);
 	return ERR_PTR(err);
 }
@@ -285,9 +296,21 @@ void tegra_ast_region_unmap(struct tegra_ast_region *region)
 		return;
 
 	tegra_ast_region_disable(region);
+	dma_free_coherent(region->dev.parent->parent, region->size,
+				region->base, region->dma);
 	device_unregister(&region->dev);
 }
 EXPORT_SYMBOL(tegra_ast_region_unmap);
+
+void *tegra_ast_region_get_mapping(struct tegra_ast_region *region,
+					size_t *size, dma_addr_t *dma)
+{
+	BUG_ON(IS_ERR_OR_NULL(region));
+	*size = region->size;
+	*dma = region->dma;
+	return region->base;
+}
+EXPORT_SYMBOL(tegra_ast_region_get_mapping);
 
 void tegra_ast_get_region_info(void __iomem *base,
 			u32 region,

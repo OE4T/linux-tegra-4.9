@@ -1,4 +1,6 @@
 /*
+ *   Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
+ *
  *   This program is free software; you can redistribute it and/or modify
  *   it under the terms of the GNU General Public License as published by
  *   the Free Software Foundation; either version 2 of the License, or
@@ -966,7 +968,7 @@ int snd_usb_endpoint_start(struct snd_usb_endpoint *ep)
 
 		err = usb_submit_urb(urb, GFP_ATOMIC);
 		if (err < 0) {
-			usb_audio_err(ep->chip,
+			usb_audio_err_ratelimited(ep->chip,
 				"cannot submit urb %d, error %d: %s\n",
 				i, err, usb_error_string(err));
 			goto __error;

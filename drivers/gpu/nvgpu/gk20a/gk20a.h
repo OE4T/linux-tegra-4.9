@@ -264,7 +264,8 @@ struct gpu_ops {
 				bool *early_exit, bool *ignore_debugger);
 		u32 (*mask_hww_warp_esr)(u32 hww_warp_esr);
 		int (*handle_sm_exception)(struct gk20a *g, u32 gpc, u32 tpc,
-			bool *post_event, struct channel_gk20a *fault_ch);
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr);
 		int (*handle_tex_exception)(struct gk20a *g, u32 gpc, u32 tpc,
 						bool *post_event);
 		void (*create_gr_sysfs)(struct device *dev);

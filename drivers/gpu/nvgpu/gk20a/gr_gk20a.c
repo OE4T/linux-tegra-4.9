@@ -5869,7 +5869,8 @@ fail:
 }
 
 int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
-		bool *post_event, struct channel_gk20a *fault_ch)
+		bool *post_event, struct channel_gk20a *fault_ch,
+		u32 *hww_global_esr)
 {
 	int ret = 0;
 	bool do_warp_sync = false, early_exit = false, ignore_debugger = false;
@@ -5901,35 +5902,12 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		return -EFAULT;
 	}
 
-	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()) {
-		if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
-			struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
-
-			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
-		} else {
-			gk20a_channel_event_id_post_event(fault_ch,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
-		}
-	}
-
-	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f()) {
-		if (gk20a_is_channel_marked_as_tsg(fault_ch)) {
-			struct tsg_gk20a *tsg = &g->fifo.tsg[fault_ch->tsgid];
-
-			gk20a_tsg_event_id_post_event(tsg,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
-		} else {
-			gk20a_channel_event_id_post_event(fault_ch,
-				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
-		}
-	}
-
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 		  "sm hww global %08x warp %08x", global_esr, warp_esr);
 
 	gr_gk20a_elpg_protected_call(g,
 		g->ops.gr.record_sm_error_state(g, gpc, tpc));
+	*hww_global_esr = global_esr;
 
 	if (g->ops.gr.pre_process_sm_exception) {
 		ret = g->ops.gr.pre_process_sm_exception(g, gpc, tpc,
@@ -5946,7 +5924,7 @@ int gr_gk20a_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 
 	if (early_exit) {
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
-				"returning early, skipping event posting");
+				"returning early");
 		return ret;
 	}
 
@@ -6009,7 +5987,8 @@ int gr_gk20a_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 }
 
 static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
-		bool *post_event, struct channel_gk20a *fault_ch)
+		bool *post_event, struct channel_gk20a *fault_ch,
+		u32 *hww_global_esr)
 {
 	int ret = 0;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
@@ -6026,7 +6005,8 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
 				"GPC%d TPC%d: SM exception pending", gpc, tpc);
 		ret = g->ops.gr.handle_sm_exception(g, gpc, tpc,
-							post_event, fault_ch);
+							post_event, fault_ch,
+							hww_global_esr);
 	}
 
 	/* check if a tex exeption is pending */
@@ -6041,7 +6021,7 @@ static int gk20a_gr_handle_tpc_exception(struct gk20a *g, u32 gpc, u32 tpc,
 }
 
 static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
-		struct channel_gk20a *fault_ch)
+		struct channel_gk20a *fault_ch, u32 *hww_global_esr)
 {
 	int ret = 0;
 	u32 gpc_offset, tpc_offset, gpc, tpc;
@@ -6081,7 +6061,7 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 					gpc_offset + tpc_offset);
 
 			ret = gk20a_gr_handle_tpc_exception(g, gpc, tpc,
-					post_event, fault_ch);
+					post_event, fault_ch, hww_global_esr);
 
 			/* clear the hwws, also causes tpc and gpc
 			 * exceptions to be cleared */
@@ -6090,6 +6070,35 @@ static int gk20a_gr_handle_gpc_exception(struct gk20a *g, bool *post_event,
 	}
 
 	return ret;
+}
+
+static int gk20a_gr_post_bpt_events(struct gk20a *g, struct channel_gk20a *ch,
+				    u32 global_esr)
+{
+	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f()) {
+		if (gk20a_is_channel_marked_as_tsg(ch)) {
+			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+
+			gk20a_tsg_event_id_post_event(tsg,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
+		} else {
+			gk20a_channel_event_id_post_event(ch,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_INT);
+		}
+	}
+	if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_pause_pending_f()) {
+		if (gk20a_is_channel_marked_as_tsg(ch)) {
+			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+
+			gk20a_tsg_event_id_post_event(tsg,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
+		} else {
+			gk20a_channel_event_id_post_event(ch,
+				NVGPU_IOCTL_CHANNEL_EVENT_ID_BPT_PAUSE);
+		}
+	}
+
+	return 0;
 }
 
 int gk20a_gr_isr(struct gk20a *g)
@@ -6101,8 +6110,10 @@ int gk20a_gr_isr(struct gk20a *g)
 	int need_reset = 0;
 	u32 gr_intr = gk20a_readl(g, gr_intr_r());
 	struct channel_gk20a *ch = NULL;
+	struct channel_gk20a *fault_ch = NULL;
 	int tsgid = NVGPU_INVALID_TSG_ID;
 	u32 gr_engine_id;
+	u32 global_esr = 0;
 
 	gk20a_dbg_fn("");
 	gk20a_dbg(gpu_dbg_intr, "pgraph intr %08x", gr_intr);
@@ -6235,7 +6246,6 @@ int gk20a_gr_isr(struct gk20a *g)
 
 		/* check if a gpc exception has occurred */
 		if (exception & gr_exception_gpc_m() && need_reset == 0) {
-			struct channel_gk20a *fault_ch;
 			bool post_event = false;
 
 			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "GPC exception pending");
@@ -6246,7 +6256,7 @@ int gk20a_gr_isr(struct gk20a *g)
 
 			/* check if any gpc has an exception */
 			need_reset |= gk20a_gr_handle_gpc_exception(g,
-					&post_event, fault_ch);
+					&post_event, fault_ch, &global_esr);
 
 			/* signal clients waiting on an event */
 			if (gk20a_gr_sm_debugger_attached(g) && post_event && fault_ch) {
@@ -6309,6 +6319,10 @@ int gk20a_gr_isr(struct gk20a *g)
 	if (gr_intr)
 		gk20a_err(dev_from_gk20a(g),
 			   "unhandled gr interrupt 0x%08x", gr_intr);
+
+	/* Posting of BPT events should be the last thing in this function */
+	if (global_esr && fault_ch)
+		gk20a_gr_post_bpt_events(g, fault_ch, global_esr);
 
 	if (ch)
 		gk20a_channel_put(ch);

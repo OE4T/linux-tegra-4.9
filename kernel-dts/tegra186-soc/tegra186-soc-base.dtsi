@@ -46,10 +46,6 @@
 #include <dt-bindings/soc/gp10b-fuse.h>
 #include <dt-bindings/linux/driver-info.h>
 
-#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
-#include <tegra186-soc-pm.dtsi>
-#endif
-
 / {
 	compatible = "nvidia,tegra186";
 	interrupt-parent = <&intc>;
@@ -110,6 +106,10 @@
 	rtc@c2a0000 {
 		compatible = "nvidia,tegra18-rtc";
 		reg = <0x0 0x0c2a0000 0x0 0x100>;
+
+#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
+		interrupt-parent = <&pm_irq>;
+#endif
 		interrupts = <0 10 0x04>;
 		status = "disabled";
 	};
@@ -451,6 +451,10 @@
 		compatible = "nvidia,tegra186-xhci";
 		reg = <0x0 0x03530000 0x0 0x8000>,
 			<0x0 0x03538000 0x0 0x1000>;
+
+#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
+		interrupt-parent = <&pm_irq>;
+#endif
 		interrupts = <0 163 0x4>, <0 167 0x4>;
 		mboxes = <&xusb_mbox>;
 		mbox-names = "xusb";
@@ -1079,6 +1083,15 @@
 			0x0 0x0300f800 0x0 0x00000800>;
 		status = "disabled";
 	};
+
+#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
+	pm_irq: tegra186-pm-irq {
+		compatible = "nvidia,tegra186-pm-irq";
+		interrupt-controller;
+		#interrupt-cells = <3>;
+		interrupt-parent = <&intc>;
+	};
+#endif
 
 	timer@3020000 {
 		compatible = "nvidia,tegra186-timer";

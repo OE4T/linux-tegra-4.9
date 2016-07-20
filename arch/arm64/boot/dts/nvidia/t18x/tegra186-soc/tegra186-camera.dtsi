@@ -37,8 +37,11 @@
 
 		#stream-id-cells = <1>;
 
-		clocks = <&tegra_car TEGRA186_CLK_SCE_APB>;
-		clock-names = "sce-apb";
+		clocks =
+			<&tegra_car TEGRA186_CLK_SCE_APB>,
+			<&tegra_car TEGRA186_CLK_SCE_CPU_NIC>,
+			<&tegra_car TEGRA186_CLK_SCE_NIC>;
+		clock-names = "sce-apb", "sce-cpu-nic", "sce-nic";
 		resets =
 			<&tegra_car TEGRA186_RESET_SCE_APB>,
 			<&tegra_car TEGRA186_RESET_SCE_NIC>,

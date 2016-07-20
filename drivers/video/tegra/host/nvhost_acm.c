@@ -1228,10 +1228,6 @@ static int nvhost_module_prepare_poweroff(struct device *dev)
 
 	host = nvhost_get_host(pdata->pdev);
 
-	if (dev_pm_qos_flags(dev, PM_QOS_FLAG_NO_POWER_OFF)
-			== PM_QOS_FLAGS_ALL)
-		return -EAGAIN;
-
 	devfreq_suspend_device(pdata->power_manager);
 	nvhost_scale_hw_deinit(to_platform_device(dev));
 

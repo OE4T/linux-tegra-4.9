@@ -31,24 +31,25 @@
 
 /* MCE command enums for SMC calls */
 enum {
-	MCE_SMC_ENTER_CSTATE,
-	MCE_SMC_UPDATE_CSTATE_INFO,
-	MCE_SMC_UPDATE_XOVER_TIME,
-	MCE_SMC_READ_CSTATE_STATS,
-	MCE_SMC_WRITE_CSTATE_STATS,
-	MCE_SMC_IS_SC7_ALLOWED,
-	MCE_SMC_ONLINE_CORE,
-	MCE_SMC_CC3_CTRL,
-	MCE_SMC_ECHO_DATA,
-	MCE_SMC_READ_VERSIONS,
-	MCE_SMC_ENUM_FEATURES,
-	MCE_SMC_ROC_FLUSH_CACHE,
-	MCE_SMC_ENUM_READ_MCA,
-	MCE_SMC_ENUM_WRITE_MCA,
-	MCE_SMC_ROC_FLUSH_CACHE_ONLY,
-	MCE_SMC_ROC_CLEAN_CACHE_ONLY,
-	MCE_SMC_ENABLE_LATIC,
-	MCE_SMC_UNCORE_PERFMON_REQ,
+	MCE_SMC_ENTER_CSTATE = 0,
+	MCE_SMC_UPDATE_CSTATE_INFO = 1,
+	MCE_SMC_UPDATE_XOVER_TIME = 2,
+	MCE_SMC_READ_CSTATE_STATS = 3,
+	MCE_SMC_WRITE_CSTATE_STATS = 4,
+	MCE_SMC_IS_SC7_ALLOWED = 5,
+	MCE_SMC_ONLINE_CORE = 6,
+	MCE_SMC_CC3_CTRL = 7,
+	MCE_SMC_ECHO_DATA = 8,
+	MCE_SMC_READ_VERSIONS = 9,
+	MCE_SMC_ENUM_FEATURES = 10,
+	MCE_SMC_ROC_FLUSH_CACHE = 11,
+	MCE_SMC_ENUM_READ_MCA = 12,
+	MCE_SMC_ENUM_WRITE_MCA = 13,
+	MCE_SMC_ROC_FLUSH_CACHE_ONLY = 14,
+	MCE_SMC_ROC_CLEAN_CACHE_ONLY = 15,
+	MCE_SMC_ENABLE_LATIC = 16,
+	MCE_SMC_UNCORE_PERFMON_REQ = 17,
+	MCE_SMC_MISC_CCPLEX = 18,
 	MCE_SMC_ENUM_MAX = 0xFF,	/* enums cannot exceed this value */
 };
 
@@ -491,6 +492,21 @@ static int mce_enable_latic_set(void *data, u64 val)
 	return 0;
 }
 
+/* Enable/disable coresight clock gating */
+static int mce_coresight_cg_set(void *data, u64 val)
+{
+	struct mce_regs regs;
+	/* Enable - 1, disable - 0 are the only valid values */
+	if (val > 1) {
+		pr_err("mce: invalid enable value.\n");
+		return -EINVAL;
+	}
+	regs.args[0] = TEGRA_ARI_MISC_CCPLEX_CORESIGHT_CG_CTRL;
+	regs.args[1] = (u32)val;
+	send_smc(MCE_SMC_MISC_CCPLEX, &regs);
+	return 0;
+}
+
 static int mce_dbg_cstats_open(struct inode *inode, struct file *file)
 {
 	return single_open(file, mce_dbg_cstats_show, inode->i_private);
@@ -508,6 +524,8 @@ DEFINE_SIMPLE_ATTRIBUTE(mce_versions_fops, mce_versions_get, NULL, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(mce_features_fops, mce_features_get, NULL, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(mce_enable_latic_fops,
 			NULL, mce_enable_latic_set, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(mce_coresight_cg_fops,
+			NULL, mce_coresight_cg_set, "%llu\n");
 
 static struct dentry *mce_debugfs_root;
 
@@ -523,6 +541,7 @@ static struct debugfs_entry mce_dbg_attrs[] = {
 	{ "features", &mce_features_fops, S_IRUGO },
 	{ "cstats", &mce_cstats_fops, S_IRUGO },
 	{ "enable-latic", &mce_enable_latic_fops, S_IWUSR },
+	{ "coresight_cg_enable", &mce_coresight_cg_fops, S_IWUSR },
 	{ NULL, NULL, 0 }
 };
 

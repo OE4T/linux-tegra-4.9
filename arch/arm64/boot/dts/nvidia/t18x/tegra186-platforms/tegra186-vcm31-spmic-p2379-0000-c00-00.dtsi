@@ -18,6 +18,7 @@
 #include <dt-bindings/thermal/thermal.h>
 #include <dt-bindings/interrupt-controller/irq.h>
 #include "tegra186-platforms-simple-bus.dtsi"
+#include <dt-bindings/linux/driver-info.h>
 
 / {
 	bpmp_i2c {
@@ -25,6 +26,9 @@
 			compatible = "maxim,max20024";
 			reg = <0x3c>;
 
+#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
+			interrupt-parent = <&pm_irq>;
+#endif
 			interrupts = <0 209 IRQ_TYPE_NONE>;
 
 			#interrupt-cells = <2>;

@@ -70,12 +70,6 @@ struct tegra_vi_data t210_vi_data = {
 	.csi_fops = &csi2_fops,
 };
 
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-struct tegra_vi_data t186_vi_data = {
-	.info = (struct nvhost_device_data *)&t18_vi_info,
-};
-#endif
-
 static struct of_device_id tegra_vi_of_match[] = {
 	{
 		.compatible = "nvidia,tegra124-vi",
@@ -85,12 +79,6 @@ static struct of_device_id tegra_vi_of_match[] = {
 		.compatible = "nvidia,tegra210-vi",
 		.data = &t210_vi_data
 	},
-#ifdef CONFIG_ARCH_TEGRA_18x_SOC
-	{
-		.compatible = "nvidia,tegra186-vi",
-		.data = &t186_vi_data
-	},
-#endif
 	{ },
 };
 

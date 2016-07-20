@@ -10,6 +10,7 @@ dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-00-ape-cam.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-00-edp.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-00-dsi-hdmi-dp.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-00-dsi-dp.dtb
+dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-p3310-1000-a00-00-base-mods-display.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-char-e3301-1080-a00-00-base.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-mfg-p3310-1000-a00-00-base.dtb
 dtb-$(CONFIG_ARCH_TEGRA_18x_SOC) += tegra186-quill-pb-e3301-1000-a00-00-base.dtb

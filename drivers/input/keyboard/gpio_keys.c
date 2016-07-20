@@ -33,6 +33,7 @@
 #include <linux/of_gpio.h>
 #include <linux/of_irq.h>
 #include <linux/spinlock.h>
+#include <linux/suspend.h>
 
 struct gpio_button_data {
 	const struct gpio_keys_button *button;
@@ -56,6 +57,7 @@ struct gpio_keys_drvdata {
 	const struct gpio_keys_platform_data *pdata;
 	struct input_dev *input;
 	struct mutex disable_lock;
+	struct notifier_block pm_nb;
 	struct gpio_button_data data[0];
 };
 
@@ -746,6 +748,33 @@ gpio_keys_get_devtree_pdata(struct device *dev)
 
 #endif
 
+static int gpio_keys_pm_notify(struct notifier_block *nb,
+				unsigned long event, void *data)
+{
+	struct gpio_keys_drvdata *ddata =
+			container_of(nb, struct gpio_keys_drvdata, pm_nb);
+	struct gpio_button_data *bdata;
+	int i;
+
+	if (event == PM_SUSPEND_PREPARE) {
+		if (device_may_wakeup(ddata->input->dev.parent)) {
+			for (i = 0; i < ddata->pdata->nbuttons; i++) {
+				bdata = &ddata->data[i];
+				bdata->suspended = true;
+			}
+		}
+	} else if (event == PM_POST_SUSPEND) {
+		if (device_may_wakeup(ddata->input->dev.parent)) {
+			for (i = 0; i < ddata->pdata->nbuttons; i++) {
+				bdata = &ddata->data[i];
+				bdata->suspended = false;
+			}
+		}
+	}
+
+	return NOTIFY_OK;
+}
+
 static int gpio_keys_probe(struct platform_device *pdev)
 {
 	struct device *dev = &pdev->dev;
@@ -826,8 +855,15 @@ static int gpio_keys_probe(struct platform_device *pdev)
 
 	device_init_wakeup(&pdev->dev, wakeup);
 
+	ddata->pm_nb.notifier_call = gpio_keys_pm_notify;
+	error = register_pm_notifier(&ddata->pm_nb);
+	if (error < 0)
+		goto err_init_wakeup;
+
 	return 0;
 
+err_init_wakeup:
+	device_init_wakeup(&pdev->dev, 0);
 err_remove_group:
 	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
 	return error;
@@ -835,9 +871,11 @@ err_remove_group:
 
 static int gpio_keys_remove(struct platform_device *pdev)
 {
-	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
+	struct gpio_keys_drvdata *ddata = platform_get_drvdata(pdev);
 
+	unregister_pm_notifier(&ddata->pm_nb);
 	device_init_wakeup(&pdev->dev, 0);
+	sysfs_remove_group(&pdev->dev.kobj, &gpio_keys_attr_group);
 
 	return 0;
 }
@@ -854,7 +892,6 @@ static int gpio_keys_suspend(struct device *dev)
 			struct gpio_button_data *bdata = &ddata->data[i];
 			if (bdata->button->wakeup)
 				enable_irq_wake(bdata->irq);
-			bdata->suspended = true;
 		}
 	} else {
 		mutex_lock(&input->mutex);
@@ -878,7 +915,6 @@ static int gpio_keys_resume(struct device *dev)
 			struct gpio_button_data *bdata = &ddata->data[i];
 			if (bdata->button->wakeup)
 				disable_irq_wake(bdata->irq);
-			bdata->suspended = false;
 		}
 	} else {
 		mutex_lock(&input->mutex);

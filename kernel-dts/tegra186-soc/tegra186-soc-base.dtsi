@@ -44,7 +44,11 @@
 #include "tegra186-soc/tegra186-camera.dtsi"
 #include "tegra186-soc/tegra186-soc-actmon.dtsi"
 #include <dt-bindings/soc/gp10b-fuse.h>
+#include <dt-bindings/linux/driver-info.h>
+
+#ifdef WAKEUP_VIA_PM_IRQ_INTERRUPT_CONTROLLER
 #include <tegra186-soc-pm.dtsi>
+#endif
 
 / {
 	compatible = "nvidia,tegra186";

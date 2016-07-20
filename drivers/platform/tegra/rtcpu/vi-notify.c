@@ -21,6 +21,7 @@
 #include <linux/of.h>
 #include <linux/of_device.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
@@ -137,17 +138,40 @@ static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)
 }
 
 /* VI Notify */
+static int tegra_ivc_vi_notify_prepare(struct tegra_ivc_channel *chan)
+{
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+
+	if (ivn->tags == 0 && ivn->channels == 0) {
+		int err = pm_runtime_get_sync(&chan->dev);
+		if (err)
+			return err;
+
+		return nvhost_module_busy(ivn->vi);
+	}
+
+	return 0;
+}
+
+static void tegra_ivc_vi_notify_complete(struct tegra_ivc_channel *chan)
+{
+	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
+
+	if (ivn->tags == 0 && ivn->channels == 0) {
+		nvhost_module_idle(ivn->vi);
+		pm_runtime_put(&chan->dev);
+	}
+}
+
 static int tegra_ivc_vi_notify_send(struct tegra_ivc_channel *chan,
 					const struct vi_notify_req *req)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 	int ret;
 
-	if (ivn->tags == 0 && ivn->channels == 0) {
-		ret = nvhost_module_busy(ivn->vi);
-		if (ret)
-			return ret;
-	}
+	ret = tegra_ivc_vi_notify_prepare(chan);
+	if (ret)
+		return ret;
 
 	if (tegra_ivc_write(&chan->ivc, req, sizeof(*req)) != sizeof(*req))
 		ret = -EBUSY;
@@ -192,9 +216,7 @@ static int tegra_ivc_vi_notify_classify(struct device *dev, u32 mask)
 	err = tegra_ivc_vi_notify_send(chan, &req);
 	if (likely(err == 0))
 		ivn->tags = mask;
-
-	if (ivn->tags == 0 && ivn->channels == 0)
-		nvhost_module_idle(ivn->vi);
+	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
 }
@@ -215,9 +237,7 @@ static int tegra_ivc_vi_notify_set_syncpts(struct device *dev, u8 ch,
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels |= 1u << ch;
-
-	if (ivn->tags == 0 && ivn->channels == 0)
-		nvhost_module_idle(ivn->vi);
+	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
 }
@@ -240,9 +260,7 @@ static int tegra_ivc_vi_notify_enable_reports(struct device *dev, u8 ch,
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels |= 1u << ch;
-
-	if (ivn->tags == 0 && ivn->channels == 0)
-		nvhost_module_idle(ivn->vi);
+	tegra_ivc_vi_notify_complete(chan);
 
 	return err;
 }
@@ -260,8 +278,7 @@ static void tegra_ivc_vi_notify_reset_channel(struct device *dev, u8 ch)
 	err = tegra_ivc_vi_notify_send(chan, &msg);
 	if (likely(err == 0))
 		ivn->channels &= ~(1u << ch);
-	if (ivn->tags == 0 && ivn->channels == 0)
-		nvhost_module_idle(ivn->vi);
+	tegra_ivc_vi_notify_complete(chan);
 }
 
 static struct vi_notify_driver tegra_ivc_vi_notify_driver = {

@@ -2918,6 +2918,7 @@ static struct ahash_alg hash_algs[] = {
 		.digest = tegra_se_rsa_digest,
 		.setkey = tegra_se_rsa_setkey,
 		.halg.digestsize = TEGRA_SE_RSA512_DIGEST_SIZE,
+		.halg.statesize = RSA512_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa512",
 			.cra_driver_name = "tegra-se-rsa512",
@@ -2938,6 +2939,7 @@ static struct ahash_alg hash_algs[] = {
 		.digest = tegra_se_rsa_digest,
 		.setkey = tegra_se_rsa_setkey,
 		.halg.digestsize = TEGRA_SE_RSA1024_DIGEST_SIZE,
+		.halg.statesize = RSA1024_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa1024",
 			.cra_driver_name = "tegra-se-rsa1024",
@@ -2958,6 +2960,7 @@ static struct ahash_alg hash_algs[] = {
 		.digest = tegra_se_rsa_digest,
 		.setkey = tegra_se_rsa_setkey,
 		.halg.digestsize = TEGRA_SE_RSA1536_DIGEST_SIZE,
+		.halg.statesize = RSA1536_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa1536",
 			.cra_driver_name = "tegra-se-rsa1536",
@@ -2978,6 +2981,7 @@ static struct ahash_alg hash_algs[] = {
 		.digest = tegra_se_rsa_digest,
 		.setkey = tegra_se_rsa_setkey,
 		.halg.digestsize = TEGRA_SE_RSA2048_DIGEST_SIZE,
+		.halg.statesize = RSA2048_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa2048",
 			.cra_driver_name = "tegra-se-rsa2048",
@@ -3262,7 +3266,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 		}
 	}
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3, 19, 0)
 	if (se_num == 2) {
 		/* Register all RSA algorithms in hash_algs with SE4 */
 		for (i = 6; i < ARRAY_SIZE(hash_algs); i++) {
@@ -3274,7 +3277,6 @@ static int tegra_se_probe(struct platform_device *pdev)
 			}
 		}
 	}
-#endif
 
 	/* RNG register only exists in se0/se1 */
 	if (se_num == 0) {

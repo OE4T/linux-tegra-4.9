@@ -21,7 +21,7 @@
 #include <linux/notifier.h>
 #include <linux/tegra-mce.h>
 #include <linux/tegra-soc.h>
-#include <linux/mce_ari.h>
+#include <linux/t18x_ari.h>
 
 #include <asm/smp_plat.h>
 
@@ -417,7 +417,7 @@ EXPORT_SYMBOL(tegra_mce_write_uncore_perfmon);
 
 #ifdef CONFIG_DEBUG_FS
 
-#define CSTAT_ENTRY(stat) [MCE_ARI_READ_CSTATE_STATS_##stat] = #stat
+#define CSTAT_ENTRY(stat) [TEGRA_ARI_CSTATE_STATS_##stat] = #stat
 
 static const char * const cstats_table[] = {
 	CSTAT_ENTRY(SC7_ENTRIES),
@@ -473,7 +473,7 @@ static int mce_dbg_cstats_show(struct seq_file *s, void *data)
 	u32 val;
 	seq_printf(s, "%-30s%-10s\n", "name", "count");
 	seq_printf(s, "----------------------------------------\n");
-	for (st = 1; st <= MCE_ARI_READ_CSTATE_STATS_MAX; st++) {
+	for (st = 1; st <= TEGRA_ARI_CSTATE_STATS_MAX; st++) {
 		if (!cstats_table[st])
 			continue;
 		if (tegra_mce_read_cstate_stats(st, &val))

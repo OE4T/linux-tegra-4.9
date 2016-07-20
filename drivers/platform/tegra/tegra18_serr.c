@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,7 +23,7 @@
 #include <linux/platform_device.h>
 #include <linux/platform/tegra/denver_mca.h>
 #include <linux/tegra-mce.h>
-#include <linux/mce_ari.h>
+#include <linux/t18x_ari.h>
 
 /* Denver MCA */
 
@@ -91,8 +91,8 @@ static void tegra18_denver_serr_enable(void)
 	mca_cmd_t cmd;
 	u32 error;
 	cmd.data = 0;
-	cmd.cmd = MCE_ARI_MCA_WRITE_SERR;
-	cmd.idx = MCE_ARI_MCA_RD_WR_GLOBAL_CONFIG_REGISTER;
+	cmd.cmd = TEGRA_ARI_MCA_WRITE_SERR;
+	cmd.idx = TEGRA_ARI_MCA_RD_WR_GLOBAL_CONFIG_REGISTER;
 	tegra_mce_write_uncore_mca(cmd, 1, &error);
 }
 

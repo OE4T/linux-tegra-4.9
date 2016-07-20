@@ -25,6 +25,8 @@
 
 #include "inter_tegra_spi.h"
 
+#define RX_RETRY_CNT_MAX 3
+
 static int inter_tegra_spi_xfer(struct spi_device *spi,
 			u8 *txbuf, u8 *rxbuf, int count, int timeout)
 {
@@ -169,13 +171,21 @@ static int inter_tegra_read_thread(void *data)
 
 	while (!kthread_should_stop()) {
 		err = inter_tegra_receive(inter_tegra);
-		if (!err)
+		if (!err) {
+			inter_tegra->rx_retry_cnt = 0;
 			dev_dbg(&inter_tegra->spi->dev,
 				"[inter_tegra_read_thread] rx_temp:%d\n",
 				inter_tegra->rx_temp);
-		else {
-			/* If there is no packet from master, set to 0C */
+		} else
+			inter_tegra->rx_retry_cnt++;
+
+		if (inter_tegra->rx_retry_cnt >= RX_RETRY_CNT_MAX) {
 			inter_tegra->rx_temp = 0;
+			dev_err(&inter_tegra->spi->dev,
+				"spi receive failed over %d times\n",
+				RX_RETRY_CNT_MAX);
+			dev_err(&inter_tegra->spi->dev,
+				"reset rx_temp to zero\n");
 		}
 	}
 	return 0;

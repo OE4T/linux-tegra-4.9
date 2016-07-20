@@ -54,6 +54,8 @@ struct inter_tegra_data {
 
 	int tx_temp;
 	int rx_temp;
+
+	int rx_retry_cnt;
 };
 
 struct inter_tegra_pkt_data {

@@ -189,13 +189,17 @@ static int tegra_t186ref_set_params(struct snd_soc_card *card,
 				    struct tegra_t186ref *machine,
 				    int rate,
 				    int channels,
-				    u64 format)
+				    u64 formats)
 {
 	unsigned int tx_mask = (1 << channels) - 1;
 	unsigned int rx_mask = (1 << channels) - 1;
 	int idx, err = 0;
+	u64 format_k;
 	int num_of_dai_links = TEGRA186_XBAR_DAI_LINKS +
 				machine->num_codec_links;
+
+	format_k = (machine->fmt_via_kcontrol == 2) ?
+				(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
 	/* update dai link hw_params */
 	for (idx = 0; idx < num_of_dai_links; idx++) {
@@ -208,13 +212,15 @@ static int tegra_t186ref_set_params(struct snd_soc_card *card,
 
 			dai_params->rate_min = rate;
 			dai_params->channels_min = channels;
-			dai_params->formats = format;
+			dai_params->formats = format_k;
 
 			if (idx >= TEGRA186_XBAR_DAI_LINKS) {
 				unsigned int fmt;
 				int bclk_ratio;
 
 				err = 0;
+				dai_params->formats = formats;
+
 				fmt = card->rtd[idx].dai_link->dai_fmt;
 				bclk_ratio =
 					tegra_machine_get_bclk_ratio_t18x(
@@ -261,12 +267,9 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	struct snd_soc_pcm_stream *dai_params;
 	unsigned int idx, clk_out_rate;
 	int err, codec_rate, clk_rate;
-	u64 fmt;
 
 	codec_rate = tegra_t186ref_srate_values[machine->rate_via_kcontrol];
 	clk_rate = (machine->rate_via_kcontrol) ? codec_rate : rate;
-	fmt = (machine->fmt_via_kcontrol == 2) ?
-				(1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
 	err = tegra_alt_asoc_utils_set_rate(&machine->audio_clock, clk_rate,
 						0, 0);
@@ -280,13 +283,17 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 	pr_info("pll_a_out0 = %d Hz, aud_mclk = %d Hz, codec rate = %d Hz\n",
 		machine->audio_clock.set_mclk, clk_out_rate, clk_rate);
 
-	tegra_t186ref_set_params(card, machine, rate, channels, fmt);
+	tegra_t186ref_set_params(card, machine, rate, channels, formats);
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("rt565x-playback");
 	/* check if idx has valid number */
 	if (idx != -EINVAL) {
 		dai_params =
 		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+		dai_params->rate_min = clk_rate;
+		dai_params->formats = (machine->fmt_via_kcontrol == 2) ?
+                                (1ULL << SNDRV_PCM_FORMAT_S32_LE) : formats;
 
 		if (!machine->is_codec_dummy) {
 			err = snd_soc_dai_set_sysclk(card->rtd[idx].codec_dai,
@@ -296,6 +303,15 @@ static int tegra_t186ref_dai_init(struct snd_soc_pcm_runtime *rtd,
 				return err;
 			}
 		}
+	}
+
+	/* set clk rate for i2s3 dai link*/
+	idx = tegra_machine_get_codec_dai_link_idx_t18x("spdif-dit-2");
+	if (idx != -EINVAL) {
+		dai_params =
+		(struct snd_soc_pcm_stream *)card->rtd[idx].dai_link->params;
+
+		dai_params->rate_min = clk_rate;
 	}
 
 	idx = tegra_machine_get_codec_dai_link_idx_t18x("dspk-playback-r");

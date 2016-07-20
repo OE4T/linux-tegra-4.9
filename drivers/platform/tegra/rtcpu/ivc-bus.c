@@ -17,6 +17,7 @@
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/slab.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra_ast.h>
@@ -123,6 +124,8 @@ static struct tegra_ivc_channel *tegra_ivc_channel_create(
 	dev_set_name(&chan->dev, "%s:%s", dev_name(dev),
 			kbasename(ch_node->full_name));
 	device_initialize(&chan->dev);
+	pm_runtime_no_callbacks(&chan->dev);
+	pm_runtime_enable(&chan->dev);
 
 	ret = of_property_read_u32_array(ch_node, "reg", start.tab,
 						ARRAY_SIZE(start.tab));
@@ -249,6 +252,7 @@ static void tegra_ivc_bus_stop(struct device *dev)
 		struct tegra_ivc_channel *chan = bus->chans;
 
 		bus->chans = chan->next;
+		pm_runtime_disable(&chan->dev);
 		device_unregister(&chan->dev);
 	}
 }
@@ -431,8 +435,9 @@ struct tegra_ivc_bus *tegra_ivc_bus_create(struct device *dev,
 	bus->dev.of_node = of_get_child_by_name(dev->of_node, "hsp");
 	bus->dev.release = tegra_ivc_bus_release;
 	dev_set_name(&bus->dev, "ivc-%s", dev_name(dev));
-
 	device_initialize(&bus->dev);
+	pm_runtime_no_callbacks(&bus->dev);
+	pm_runtime_enable(&bus->dev);
 
 	ret = tegra_ivc_bus_parse_regions(bus, dev->of_node);
 	if (ret) {
@@ -458,6 +463,8 @@ void tegra_ivc_bus_destroy(struct tegra_ivc_bus *bus)
 {
 	if (IS_ERR_OR_NULL(bus))
 		return;
+
+	pm_runtime_disable(&bus->dev);
 	device_unregister(&bus->dev);
 }
 EXPORT_SYMBOL(tegra_ivc_bus_destroy);

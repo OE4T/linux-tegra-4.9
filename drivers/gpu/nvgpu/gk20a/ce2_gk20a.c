@@ -186,20 +186,24 @@ static void gk20a_ce_free_command_buffer_stored_fence(struct gk20a_gpu_ctx *ce_c
 /* assume this api should need to call under mutex_lock(&ce_app->app_mutex) */
 static void gk20a_ce_delete_gpu_context(struct gk20a_gpu_ctx *ce_ctx)
 {
+	struct list_head *list = &ce_ctx->list;
+
 	ce_ctx->gpu_ctx_state = NVGPU_CE_GPU_CTX_DELETED;
 
 	mutex_lock(&ce_ctx->gpu_ctx_mutex);
 
-	gk20a_ce_free_command_buffer_stored_fence(ce_ctx);
-
-	gk20a_gmmu_unmap_free(ce_ctx->vm, &ce_ctx->cmd_buf_mem);
+	if (ce_ctx->cmd_buf_mem.cpu_va) {
+		gk20a_ce_free_command_buffer_stored_fence(ce_ctx);
+		gk20a_gmmu_unmap_free(ce_ctx->vm, &ce_ctx->cmd_buf_mem);
+	}
 
 	/* free the channel */
 	if (ce_ctx->ch)
 		gk20a_channel_close(ce_ctx->ch);
 
 	/* housekeeping on app */
-	list_del(&ce_ctx->list);
+	if (list->prev && list->next)
+		list_del(list);
 
 	mutex_unlock(&ce_ctx->gpu_ctx_mutex);
 	mutex_destroy(&ce_ctx->gpu_ctx_mutex);

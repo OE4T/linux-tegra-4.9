@@ -24,6 +24,7 @@
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
+#include <linux/pm_runtime.h>
 #include <linux/reset.h>
 #include <linux/sched.h>
 #include <linux/seq_buf.h>
@@ -52,6 +53,13 @@
 
 static const char * const sce_clock_names[] = {
 	"sce-apb",
+	"sce-cpu-nic",
+};
+
+static const unsigned sce_clock_rates[][2] = {
+	/* Slow rate (RTPM),	fast rate */
+	{ 102000000,		102000000, },
+	{ 115200000,		473600000, },
 };
 
 static const char * const sce_reset_names[] = {
@@ -94,6 +102,7 @@ enum tegra_cam_rtcpu_id {
 
 struct tegra_cam_rtcpu_pdata {
 	const char * const *clock_names;
+	const unsigned (*clock_rates)[2];
 	const char * const *reset_names;
 	enum tegra_cam_rtcpu_id id;
 	u32 sid;
@@ -103,6 +112,7 @@ struct tegra_cam_rtcpu_pdata {
 
 static const struct tegra_cam_rtcpu_pdata sce_pdata = {
 	.clock_names = sce_clock_names,
+	.clock_rates = sce_clock_rates,
 	.reset_names = sce_reset_names,
 	.id = TEGRA_CAM_RTCPU_SCE,
 	.sid = TEGRA_SID_SCE,
@@ -547,10 +557,43 @@ static void tegra_camrtc_log_fw_version(struct device *dev)
 	dev_info(dev, "firmware %s", version);
 }
 
+static int tegra_cam_rtcpu_runtime_suspend(struct device *dev)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->rtcpu_pdata;
+	int i;
+
+	if (pdata->clock_rates == NULL) {
+		dev_warn(dev, "runtime PM not implemented\n");
+		return -ENOSYS;
+	}
+
+	for (i = 0; i < pdata->num_clocks; i++)
+		clk_set_rate(rtcpu->clocks[i], pdata->clock_rates[i][0]);
+
+	return 0;
+}
+
+static int tegra_cam_rtcpu_runtime_resume(struct device *dev)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->rtcpu_pdata;
+	int i;
+
+	if (pdata->clock_rates == NULL)
+		return 0;
+
+	for (i = 0; i < pdata->num_clocks; i++)
+		clk_set_rate(rtcpu->clocks[i], pdata->clock_rates[i][1]);
+
+	return 0;
+}
+
 static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 {
 	struct tegra_cam_rtcpu *cam_rtcpu = platform_get_drvdata(pdev);
 
+	pm_runtime_disable(&pdev->dev);
 	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
 	tegra_ast_destroy(cam_rtcpu->ast);
 	tegra_hsp_sm_pair_free(cam_rtcpu->sm_pair);
@@ -660,6 +703,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto fail;
 
 	tegra_camrtc_log_fw_version(dev);
+	tegra_cam_rtcpu_runtime_suspend(dev); /* default state is suspended */
+	pm_runtime_enable(dev);
 
 	dev_dbg(dev, "probe successful\n");
 	return 0;
@@ -699,6 +744,8 @@ static int tegra_cam_rtcpu_suspend(struct device *dev)
 static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.suspend = tegra_cam_rtcpu_suspend,
 	.resume = tegra_cam_rtcpu_resume,
+	.runtime_suspend = tegra_cam_rtcpu_runtime_suspend,
+	.runtime_resume = tegra_cam_rtcpu_runtime_resume,
 };
 
 static struct platform_driver tegra_cam_rtcpu_driver = {

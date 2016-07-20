@@ -548,6 +548,7 @@ static int get_nvhdcp_state(struct tegra_nvhdcp *nvhdcp,
 		memcpy(pkt->v_prime, nvhdcp->v_prime, sizeof(nvhdcp->v_prime));
 		pkt->packet_results = TEGRA_NVHDCP_RESULT_SUCCESS;
 		pkt->hdcp22 = nvhdcp->hdcp22;
+		pkt->port = TEGRA_NVHDCP_PORT_HDMI;
 	}
 	mutex_unlock(&nvhdcp->lock);
 	return 0;

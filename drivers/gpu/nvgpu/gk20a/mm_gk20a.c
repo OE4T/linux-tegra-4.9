@@ -229,8 +229,14 @@ static inline void pramin_access_batch_wr_n(struct gk20a *g, u32 start,
 {
 	u32 r = start, *src_u32 = *arg;
 
+	/*
+	 * Barrier moved here from gk20a_writel in the loop. The writes don't
+	 * have to be ordered.
+	 */
+	wmb();
+
 	while (words--) {
-		gk20a_writel(g, r, *src_u32++);
+		writel_relaxed(*src_u32++, g->regs + r);
 		r += sizeof(u32);
 	}
 
@@ -242,8 +248,14 @@ static inline void pramin_access_batch_set(struct gk20a *g, u32 start,
 {
 	u32 r = start, repeat = **arg;
 
+	/*
+	 * Barrier moved here from gk20a_writel in the loop. The writes don't
+	 * have to be ordered.
+	 */
+	wmb();
+
 	while (words--) {
-		gk20a_writel(g, r, repeat);
+		writel_relaxed(repeat, g->regs + r);
 		r += sizeof(u32);
 	}
 }

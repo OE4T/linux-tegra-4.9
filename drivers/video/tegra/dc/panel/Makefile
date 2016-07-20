@@ -20,6 +20,9 @@ GCOV_PROFILE_panel-s-wuxga-8-0.o := n
 
 ccflags-y += -Iarch/arm/mach-tegra
 
+ifdef CONFIG_ARCH_TEGRA_210_SOC
+obj-y += board-panel.o
+endif
 obj-y += panel-lgd-wxga-7-0.o
 obj-y += panel-p-wuxga-10-1.o
 obj-y += panel-s-wqxga-10-1.o

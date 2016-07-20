@@ -25,6 +25,7 @@
 #include <linux/platform_device.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
+#include <soc/tegra/common.h>
 
 #include <mach/dc.h>
 

@@ -85,10 +85,6 @@ static struct regulator *of_edp_sec_mode;
 static struct regulator *of_dp_pad;
 static struct regulator *of_dp_hdmi_5v0;
 
-#if defined(CONFIG_ARCH_TEGRA_210_SOC) && !defined(CONFIG_TEGRA_NVDISPLAY)
-atomic_t sd_brightness = ATOMIC_INIT(255);
-#endif
-
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 /* The dc_or_node_name should be saved as per
  * dc id based on probe.
@@ -182,9 +178,10 @@ static int parse_dc_out_type(struct device_node *np,
 		np_target_disp = tegra_primary_panel_get_dt_node(NULL);
 	else if (ndev->id == 1)
 		np_target_disp = tegra_secondary_panel_get_dt_node(NULL);
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	else if (ndev->id == 2)
 		np_target_disp = tegra_tertiary_panel_get_dt_node(NULL);
-
+#endif
 	out_type = out_type_from_pn(np_target_disp);
 
 	of_node_put(np_target_disp);
@@ -1300,9 +1297,10 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 		np_dsi_panel = tegra_primary_panel_get_dt_node(pdata);
 	else if (ndev->id == 1)
 		np_dsi_panel = tegra_secondary_panel_get_dt_node(pdata);
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	else if (ndev->id == 2)
 		np_dsi_panel = tegra_tertiary_panel_get_dt_node(pdata);
-
+#endif
 
 	if (!np_dsi_panel) {
 		pr_err("There is no valid panel node\n");
@@ -1951,9 +1949,10 @@ static struct device_node *parse_dp_settings(struct platform_device *ndev,
 		np_dp_panel = tegra_primary_panel_get_dt_node(pdata);
 	else if (ndev->id == 1)
 		np_dp_panel = tegra_secondary_panel_get_dt_node(pdata);
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	else if (ndev->id == 2)
 		np_dp_panel = tegra_tertiary_panel_get_dt_node(pdata);
-
+#endif
 
 	if (!np_dp_panel) {
 		pr_err("There is no valid panel node\n");
@@ -2398,8 +2397,10 @@ struct device_node *tegra_get_panel_node_out_type_check
 		np_panel = tegra_primary_panel_get_dt_node(NULL);
 	else if (dc->ndev->id == 1)
 		np_panel = tegra_secondary_panel_get_dt_node(NULL);
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 	else if (dc->ndev->id == 2)
 		np_panel = tegra_tertiary_panel_get_dt_node(NULL);
+#endif
 
 	if (!np_panel) {
 		pr_err("There is no valid panel node\n");
@@ -2640,9 +2641,11 @@ struct tegra_dc_platform_data
 		else if (ndev->id == 1)
 			np_target_disp
 				= tegra_secondary_panel_get_dt_node(pdata);
+#if defined(CONFIG_TEGRA_NVDISPLAY)
 		else if (ndev->id == 2)
 			np_target_disp
 				= tegra_tertiary_panel_get_dt_node(pdata);
+#endif
 
 		if (!np_target_disp ||
 			!of_device_is_available(np_target_disp)) {

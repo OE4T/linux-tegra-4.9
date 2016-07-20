@@ -282,9 +282,13 @@ static void set_vi_register_base(struct tegra_mc_vi *mc_vi,
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 				   struct platform_device *pdev)
 {
-	int err = 0;
-	struct nvhost_device_data *pdata = pdev->dev.platform_data;
 
+	int err = 0;
+	struct nvhost_device_data *pdata = (struct nvhost_device_data *)
+		platform_get_drvdata(pdev);
+
+	if (!pdata)
+		return -EINVAL;
 	set_vi_register_base(mc_vi, pdata->aperture[0]);
 
 	err = vi_get_clks(mc_vi, pdev);

@@ -378,7 +378,7 @@ static void set_csi_registers(struct tegra_csi_device *csi,
 int csi2_init(struct tegra_csi_device *csi, struct platform_device *pdev)
 {
 	int err = 0;
-	struct nvhost_device_data *pdata = pdev->dev.platform_data;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 
 	csi->dev = &pdev->dev;
 	err = set_csi_properties(csi, pdev);

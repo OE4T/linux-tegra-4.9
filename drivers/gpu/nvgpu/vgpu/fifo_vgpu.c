@@ -23,7 +23,6 @@
 
 static void vgpu_channel_bind(struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
@@ -32,7 +31,7 @@ static void vgpu_channel_bind(struct channel_gk20a *ch)
 	gk20a_dbg_info("bind channel %d", ch->hw_chid);
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -42,7 +41,6 @@ static void vgpu_channel_bind(struct channel_gk20a *ch)
 
 static void vgpu_channel_unbind(struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 
 	gk20a_dbg_fn("");
 
@@ -53,7 +51,7 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 		int err;
 
 		msg.cmd = TEGRA_VGPU_CMD_CHANNEL_UNBIND;
-		msg.handle = platform->virt_handle;
+		msg.handle = vgpu_get_handle(ch->g);
 		p->handle = ch->virt_ctx;
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		WARN_ON(err || msg.ret);
@@ -64,7 +62,6 @@ static void vgpu_channel_unbind(struct channel_gk20a *ch)
 
 static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_hwctx_params *p = &msg.params.channel_hwctx;
 	int err;
@@ -72,7 +69,7 @@ static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ALLOC_HWCTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->id = ch->hw_chid;
 	p->pid = (u64)current->tgid;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -88,7 +85,6 @@ static int vgpu_channel_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 static void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_hwctx_params *p = &msg.params.channel_hwctx;
 	int err;
@@ -96,7 +92,7 @@ static void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_HWCTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -104,7 +100,6 @@ static void vgpu_channel_free_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 static void vgpu_channel_enable(struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
@@ -113,7 +108,7 @@ static void vgpu_channel_enable(struct channel_gk20a *ch)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ENABLE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -121,7 +116,6 @@ static void vgpu_channel_enable(struct channel_gk20a *ch)
 
 static void vgpu_channel_disable(struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
@@ -130,7 +124,7 @@ static void vgpu_channel_disable(struct channel_gk20a *ch)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_DISABLE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -139,7 +133,6 @@ static void vgpu_channel_disable(struct channel_gk20a *ch)
 static int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 				u32 gpfifo_entries, u32 flags)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct device __maybe_unused *d = dev_from_gk20a(ch->g);
 	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);
 	struct tegra_vgpu_cmd_msg msg;
@@ -149,7 +142,7 @@ static int vgpu_channel_setup_ramfc(struct channel_gk20a *ch, u64 gpfifo_base,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SETUP_RAMFC;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	p->gpfifo_va = gpfifo_base;
 	p->num_entries = gpfifo_entries;
@@ -242,7 +235,6 @@ clean_up_runlist:
 
 static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct fifo_gk20a *f = &g->fifo;
 	struct device *d = dev_from_gk20a(g);
 	int chid, err = 0;
@@ -256,7 +248,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 
 	f->g = g;
 
-	err = vgpu_get_attribute(platform->virt_handle,
+	err = vgpu_get_attribute(vgpu_get_handle(g),
 				TEGRA_VGPU_ATTRIB_NUM_CHANNELS,
 				&f->num_channels);
 	if (err)
@@ -411,7 +403,6 @@ int vgpu_init_fifo_support(struct gk20a *g)
 
 static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct fifo_gk20a *f = &g->fifo;
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_config_params *p =
@@ -421,7 +412,7 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_PREEMPT;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = f->channel[hw_chid].virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
@@ -436,7 +427,6 @@ static int vgpu_fifo_preempt_channel(struct gk20a *g, u32 hw_chid)
 
 static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_tsg_preempt_params *p =
 			&msg.params.tsg_preempt;
@@ -445,7 +435,7 @@ static int vgpu_fifo_preempt_tsg(struct gk20a *g, u32 tsgid)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_PREEMPT;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->tsg_id = tsgid;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
@@ -490,7 +480,6 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					u32 hw_chid, bool add,
 					bool wait_for_finish)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct fifo_gk20a *f = &g->fifo;
 	struct fifo_runlist_info_gk20a *runlist;
 	u16 *runlist_entry = NULL;
@@ -529,7 +518,7 @@ static int vgpu_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	} else	/* suspend to remove all channels */
 		count = 0;
 
-	return vgpu_submit_runlist(platform->virt_handle, runlist_id,
+	return vgpu_submit_runlist(vgpu_get_handle(g), runlist_id,
 				runlist->mem[0].cpu_va, count);
 }
 
@@ -566,7 +555,6 @@ static int vgpu_fifo_wait_engine_idle(struct gk20a *g)
 
 static int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_priority_params *p =
 			&msg.params.channel_priority;
@@ -575,7 +563,7 @@ static int vgpu_channel_set_priority(struct channel_gk20a *ch, u32 priority)
 	gk20a_dbg_info("channel %d set priority %u", ch->hw_chid, priority);
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_PRIORITY;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	p->priority = priority;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -589,7 +577,6 @@ static int vgpu_fifo_tsg_set_runlist_interleave(struct gk20a *g,
 					u32 runlist_id,
 					u32 new_level)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_tsg_runlist_interleave_params *p =
 			&msg.params.tsg_interleave;
@@ -598,7 +585,7 @@ static int vgpu_fifo_tsg_set_runlist_interleave(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_SET_RUNLIST_INTERLEAVE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->tsg_id = tsgid;
 	p->level = new_level;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -612,7 +599,6 @@ static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 					u32 runlist_id,
 					u32 new_level)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_runlist_interleave_params *p =
 			&msg.params.channel_interleave;
@@ -627,7 +613,7 @@ static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 
 	ch = &g->fifo.channel[id];
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_RUNLIST_INTERLEAVE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	p->level = new_level;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -637,7 +623,6 @@ static int vgpu_fifo_set_runlist_interleave(struct gk20a *g,
 
 static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_timeslice_params *p =
 			&msg.params.channel_timeslice;
@@ -646,7 +631,7 @@ static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_TIMESLICE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	p->timeslice_us = timeslice;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -659,7 +644,6 @@ static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 	struct tsg_gk20a *tsg = NULL;
 	struct channel_gk20a *ch_tsg = NULL;
 	struct gk20a *g = ch->g;
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_channel_config_params *p =
 			&msg.params.channel_config;
@@ -687,7 +671,7 @@ static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FORCE_RESET;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);

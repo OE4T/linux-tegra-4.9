@@ -204,8 +204,7 @@ struct gk20a_platform {
 
 	bool virtual_dev;
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
-	u64 virt_handle;
-	struct task_struct *intr_handler;
+	void *vgpu_priv;
 #endif
 	/* source frequency for ptimer in hz */
 	u32 ptimer_src_freq;

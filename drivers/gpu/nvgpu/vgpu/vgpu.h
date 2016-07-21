@@ -21,6 +21,42 @@
 #include "gk20a/gk20a.h"
 
 #ifdef CONFIG_TEGRA_GR_VIRTUALIZATION
+
+struct vgpu_priv_data {
+	u64 virt_handle;
+	struct task_struct *intr_handler;
+};
+
+static inline
+struct vgpu_priv_data *vgpu_get_priv_data_from_dev(struct device *dev)
+{
+	struct gk20a_platform *plat = gk20a_get_platform(dev);
+
+	return (struct vgpu_priv_data *)plat->vgpu_priv;
+}
+
+static inline struct vgpu_priv_data *vgpu_get_priv_data(struct gk20a *g)
+{
+	return vgpu_get_priv_data_from_dev(g->dev);
+}
+
+static inline u64 vgpu_get_handle_from_dev(struct device *dev)
+{
+	struct vgpu_priv_data *priv = vgpu_get_priv_data_from_dev(dev);
+
+	if (unlikely(!priv)) {
+		dev_err(dev, "invalid vgpu_priv_data in %s\n", __func__);
+		return INT_MAX;
+	}
+
+	return priv->virt_handle;
+}
+
+static inline u64 vgpu_get_handle(struct gk20a *g)
+{
+	return vgpu_get_handle_from_dev(g->dev);
+}
+
 int vgpu_pm_prepare_poweroff(struct device *dev);
 int vgpu_pm_finalize_poweron(struct device *dev);
 int vgpu_probe(struct platform_device *dev);

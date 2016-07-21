@@ -187,7 +187,7 @@ static int vgpu_intr_thread(void *dev_id)
 static void vgpu_remove_support(struct device *dev)
 {
 	struct gk20a *g = get_gk20a(dev);
-	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct vgpu_priv_data *priv = vgpu_get_priv_data_from_dev(dev);
 	struct tegra_vgpu_intr_msg msg;
 	int err;
 
@@ -208,7 +208,7 @@ static void vgpu_remove_support(struct device *dev)
 				TEGRA_GR_COMM_ID_SELF, TEGRA_VGPU_QUEUE_INTR,
 				&msg, sizeof(msg));
 	WARN_ON(err);
-	kthread_stop(platform->intr_handler);
+	kthread_stop(priv->intr_handler);
 
 	/* free mappings to registers, etc*/
 
@@ -271,11 +271,10 @@ int vgpu_pm_prepare_poweroff(struct device *dev)
 static void vgpu_detect_chip(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	u32 mc_boot_0_value;
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_PMC_BOOT_0,
 			&mc_boot_0_value)) {
 		gk20a_err(dev_from_gk20a(g), "failed to detect chip");
@@ -297,7 +296,6 @@ static void vgpu_detect_chip(struct gk20a *g)
 
 static int vgpu_init_gpu_characteristics(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 max_freq;
 	int err;
 
@@ -307,7 +305,7 @@ static int vgpu_init_gpu_characteristics(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_MAX_FREQ, &max_freq))
 		return -ENOMEM;
 
@@ -318,7 +316,6 @@ static int vgpu_init_gpu_characteristics(struct gk20a *g)
 
 static int vgpu_read_ptimer(struct gk20a *g, u64 *value)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_read_ptimer_params *p = &msg.params.read_ptimer;
 	int err;
@@ -326,7 +323,7 @@ static int vgpu_read_ptimer(struct gk20a *g, u64 *value)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_READ_PTIMER;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
@@ -441,7 +438,6 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 	struct gk20a_scale_profile *profile =
 			container_of(nb, struct gk20a_scale_profile,
 			qos_notify_block);
-	struct gk20a_platform *platform = gk20a_get_platform(profile->dev);
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_gpu_clk_rate_params *p = &msg.params.gpu_clk_rate;
 	u32 max_freq;
@@ -452,7 +448,7 @@ static int vgpu_qos_notify(struct notifier_block *nb,
 	max_freq = (u32)pm_qos_read_max_bound(PM_QOS_GPU_FREQ_BOUNDS);
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_GPU_CLK_RATE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle_from_dev(profile->dev);
 	p->rate = max_freq;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
@@ -510,6 +506,7 @@ int vgpu_probe(struct platform_device *pdev)
 	int err;
 	struct device *dev = &pdev->dev;
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
+	struct vgpu_priv_data *priv;
 
 	if (!platform) {
 		dev_err(dev, "no platform data\n");
@@ -518,6 +515,10 @@ int vgpu_probe(struct platform_device *pdev)
 
 	gk20a_dbg_fn("");
 
+	priv = devm_kzalloc(dev, sizeof(*priv), GFP_KERNEL);
+	if (!priv)
+		return -ENOMEM;
+
 	gk20a = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
 	if (!gk20a) {
 		dev_err(dev, "couldn't allocate gk20a support");
@@ -525,6 +526,7 @@ int vgpu_probe(struct platform_device *pdev)
 	}
 
 	platform->g = gk20a;
+	platform->vgpu_priv = priv;
 	gk20a->dev = dev;
 
 	err = gk20a_user_init(dev, INTERFACE_NAME, &nvgpu_class);
@@ -564,15 +566,15 @@ int vgpu_probe(struct platform_device *pdev)
 		return -ENOSYS;
 	}
 
-	platform->virt_handle = vgpu_connect();
-	if (!platform->virt_handle) {
+	priv->virt_handle = vgpu_connect();
+	if (!priv->virt_handle) {
 		dev_err(dev, "failed to connect to server node\n");
 		vgpu_comm_deinit();
 		return -ENOSYS;
 	}
 
-	platform->intr_handler = kthread_run(vgpu_intr_thread, gk20a, "gk20a");
-	if (IS_ERR(platform->intr_handler))
+	priv->intr_handler = kthread_run(vgpu_intr_thread, gk20a, "gk20a");
+	if (IS_ERR(priv->intr_handler))
 		return -ENOMEM;
 
 	gk20a_debug_init(dev);

@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Memory Management
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -86,7 +86,6 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 	int err = 0;
 	struct device *d = dev_from_vm(vm);
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct dma_iommu_mapping *mapping = to_dma_iommu_mapping(d);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
@@ -114,7 +113,7 @@ static u64 vgpu_locked_gmmu_map(struct vm_gk20a *vm,
 		prot = TEGRA_VGPU_MAP_PROT_NONE;
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_MAP;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
 	p->addr = addr;
 	p->gpu_va = map_offset;
@@ -164,7 +163,6 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 				struct vm_gk20a_mapping_batch *batch)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_params *p = &msg.params.as_map;
 	int err;
@@ -181,7 +179,7 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_UNMAP;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
 	p->gpu_va = vaddr;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -195,7 +193,6 @@ static void vgpu_locked_gmmu_unmap(struct vm_gk20a *vm,
 static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 {
 	struct gk20a *g = vm->mm->g;
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct mapped_buffer_node *mapped_buffer;
 	struct vm_reserved_va_node *va_node, *va_node_tmp;
 	struct tegra_vgpu_cmd_msg msg;
@@ -225,7 +222,7 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -244,7 +241,6 @@ static void vgpu_vm_remove_support(struct vm_gk20a *vm)
 
 u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct dma_iommu_mapping *mapping =
 			to_dma_iommu_mapping(dev_from_gk20a(g));
 	u64 addr = g->ops.mm.get_iova_addr(g, (*sgt)->sgl, 0);
@@ -253,7 +249,7 @@ u64 vgpu_bar1_map(struct gk20a *g, struct sg_table **sgt, u64 size)
 	int err;
 
 	msg.cmd = TEGRA_VGPU_CMD_MAP_BAR1;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->addr = addr;
 	p->size = size;
 	p->iova = mapping ? 1 : 0;
@@ -320,7 +316,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	vm->va_limit  = mm->channel.user_size + mm->channel.kernel_size;
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_ALLOC_SHARE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->size = vm->va_limit;
 	p->big_page_size = vm->big_page_size;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -434,7 +430,7 @@ clean_up_small_allocator:
 		gk20a_alloc_destroy(&vm->vma[gmmu_page_size_small]);
 clean_up_share:
 	msg.cmd = TEGRA_VGPU_CMD_AS_FREE_SHARE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -448,7 +444,6 @@ static int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
 				struct channel_gk20a *ch)
 {
 	struct vm_gk20a *vm = as_share->vm;
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_bind_share_params *p = &msg.params.as_bind_share;
 	int err;
@@ -457,7 +452,7 @@ static int vgpu_vm_bind_channel(struct gk20a_as_share *as_share,
 
 	ch->vm = vm;
 	msg.cmd = TEGRA_VGPU_CMD_AS_BIND_SHARE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->as_handle = vm->handle;
 	p->chan_handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -485,26 +480,23 @@ static void vgpu_cache_maint(u64 handle, u8 op)
 
 static int vgpu_mm_fb_flush(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	gk20a_dbg_fn("");
 
-	vgpu_cache_maint(platform->virt_handle, TEGRA_VGPU_FB_FLUSH);
+	vgpu_cache_maint(vgpu_get_handle(g), TEGRA_VGPU_FB_FLUSH);
 	return 0;
 }
 
 static void vgpu_mm_l2_invalidate(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 
 	gk20a_dbg_fn("");
 
-	vgpu_cache_maint(platform->virt_handle, TEGRA_VGPU_L2_MAINT_INV);
+	vgpu_cache_maint(vgpu_get_handle(g), TEGRA_VGPU_L2_MAINT_INV);
 }
 
 static void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u8 op;
 
 	gk20a_dbg_fn("");
@@ -514,13 +506,12 @@ static void vgpu_mm_l2_flush(struct gk20a *g, bool invalidate)
 	else
 		op =  TEGRA_VGPU_L2_MAINT_FLUSH;
 
-	vgpu_cache_maint(platform->virt_handle, op);
+	vgpu_cache_maint(vgpu_get_handle(g), op);
 }
 
 static void vgpu_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_invalidate_params *p = &msg.params.as_invalidate;
 	int err;
@@ -528,7 +519,7 @@ static void vgpu_mm_tlb_invalidate(struct vm_gk20a *vm)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_INVALIDATE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -536,7 +527,6 @@ static void vgpu_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_mmu_debug_mode *p = &msg.params.mmu_debug_mode;
 	int err;
@@ -544,7 +534,7 @@ static void vgpu_mm_mmu_set_debug_mode(struct gk20a *g, bool enable)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_MMU_DEBUG_MODE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->enable = (u32)enable;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);

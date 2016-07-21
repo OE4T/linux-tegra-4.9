@@ -106,7 +106,7 @@ static int vgpu_fecs_trace_enable(struct gk20a *g)
 {
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_ENABLE,
-		.handle = gk20a_get_platform(g->dev)->virt_handle,
+		.handle = vgpu_get_handle(g),
 	};
 	int err;
 
@@ -120,7 +120,7 @@ static int vgpu_fecs_trace_disable(struct gk20a *g)
 {
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_DISABLE,
-		.handle = gk20a_get_platform(g->dev)->virt_handle,
+		.handle = vgpu_get_handle(g),
 	};
 	int err;
 
@@ -134,7 +134,7 @@ static int vgpu_fecs_trace_poll(struct gk20a *g)
 {
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_POLL,
-		.handle = gk20a_get_platform(g->dev)->virt_handle,
+		.handle = vgpu_get_handle(g),
 	};
 	int err;
 
@@ -190,7 +190,7 @@ static int vgpu_fecs_trace_set_filter(struct gk20a *g,
 {
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_SET_FILTER,
-		.handle = gk20a_get_platform(g->dev)->virt_handle,
+		.handle = vgpu_get_handle(g),
 	};
 	struct tegra_vgpu_fecs_trace_filter *p = &msg.params.fecs_trace_filter;
 	int err;

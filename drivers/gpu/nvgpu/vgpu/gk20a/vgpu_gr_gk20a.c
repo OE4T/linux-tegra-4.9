@@ -20,12 +20,11 @@
 
 static void vgpu_gk20a_detect_sm_arch(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 v = 0, raw_version, version = 0;
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH, &v))
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve SM arch");
 

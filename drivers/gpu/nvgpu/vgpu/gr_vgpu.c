@@ -19,7 +19,6 @@
 
 static int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	int err;
@@ -27,7 +26,7 @@ static int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_COMMIT_GR_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(c->g);
 	p->handle = c->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
@@ -37,7 +36,6 @@ static int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 static int vgpu_gr_commit_global_ctx_buffers(struct gk20a *g,
 					struct channel_gk20a *c, bool patch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	int err;
@@ -45,7 +43,7 @@ static int vgpu_gr_commit_global_ctx_buffers(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_COMMIT_GR_GLOBAL_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = c->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
@@ -56,7 +54,6 @@ static int vgpu_gr_commit_global_ctx_buffers(struct gk20a *g,
 static int vgpu_gr_load_golden_ctx_image(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	int err;
@@ -64,7 +61,7 @@ static int vgpu_gr_load_golden_ctx_image(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_LOAD_GR_GOLDEN_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = c->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 
@@ -73,15 +70,14 @@ static int vgpu_gr_load_golden_ctx_image(struct gk20a *g,
 
 int vgpu_gr_init_ctx_state(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct gr_gk20a *gr = &g->gr;
 
 	gk20a_dbg_fn("");
 
-	vgpu_get_attribute(platform->virt_handle,
+	vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_GOLDEN_CTX_SIZE,
 			&g->gr.ctx_vars.golden_image_size);
-	vgpu_get_attribute(platform->virt_handle,
+	vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_ZCULL_CTX_SIZE,
 			&g->gr.ctx_vars.zcull_ctxsw_image_size);
 	if (!g->gr.ctx_vars.golden_image_size ||
@@ -128,7 +124,6 @@ static int vgpu_gr_alloc_global_ctx_buffers(struct gk20a *g)
 static int vgpu_gr_map_global_ctx_buffers(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_ch_ctx_params *p = &msg.params.ch_ctx;
 	struct vm_gk20a *ch_vm = c->vm;
@@ -183,7 +178,7 @@ static int vgpu_gr_map_global_ctx_buffers(struct gk20a *g,
 		gr->global_ctx_buffer[PRIV_ACCESS_MAP].mem.size;
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_MAP_GR_GLOBAL_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = c->virt_ctx;
 	p->cb_va = g_bfr_va[CIRCULAR_VA];
 	p->attr_va = g_bfr_va[ATTRIBUTE_VA];
@@ -209,7 +204,6 @@ static int vgpu_gr_map_global_ctx_buffers(struct gk20a *g,
 
 static void vgpu_gr_unmap_global_ctx_buffers(struct channel_gk20a *c)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
 	struct vm_gk20a *ch_vm = c->vm;
 	u64 *g_bfr_va = c->ch_ctx.global_ctx_buffer_va;
 	u64 *g_bfr_size = c->ch_ctx.global_ctx_buffer_size;
@@ -223,7 +217,7 @@ static void vgpu_gr_unmap_global_ctx_buffers(struct channel_gk20a *c)
 		int err;
 
 		msg.cmd = TEGRA_VGPU_CMD_CHANNEL_UNMAP_GR_GLOBAL_CTX;
-		msg.handle = platform->virt_handle;
+		msg.handle = vgpu_get_handle(c->g);
 		p->handle = c->virt_ctx;
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		WARN_ON(err || msg.ret);
@@ -245,7 +239,6 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 			u32 class,
 			u32 flags)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
 	struct gr_gk20a *gr = &g->gr;
@@ -276,7 +269,7 @@ int vgpu_gr_alloc_gr_ctx(struct gk20a *g,
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_GR_CTX_ALLOC;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->as_handle = vm->handle;
 	p->gr_ctx_va = gr_ctx->mem.gpu_va;
 	p->class_num = class;
@@ -302,13 +295,12 @@ void vgpu_gr_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 	gk20a_dbg_fn("");
 
 	if (gr_ctx && gr_ctx->mem.gpu_va) {
-		struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 		struct tegra_vgpu_cmd_msg msg;
 		struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
 		int err;
 
 		msg.cmd = TEGRA_VGPU_CMD_GR_CTX_FREE;
-		msg.handle = platform->virt_handle;
+		msg.handle = vgpu_get_handle(g);
 		p->gr_ctx_handle = gr_ctx->virt_ctx;
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		WARN_ON(err || msg.ret);
@@ -329,7 +321,6 @@ static void vgpu_gr_free_channel_gr_ctx(struct channel_gk20a *c)
 static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
 					struct channel_gk20a *c)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct patch_desc *patch_ctx = &c->ch_ctx.patch_ctx;
 	struct vm_gk20a *ch_vm = c->vm;
 	struct tegra_vgpu_cmd_msg msg;
@@ -346,7 +337,7 @@ static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
 		return -ENOMEM;
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_ALLOC_GR_PATCH_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = c->virt_ctx;
 	p->patch_ctx_va = patch_ctx->mem.gpu_va;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -361,7 +352,6 @@ static int vgpu_gr_alloc_channel_patch_ctx(struct gk20a *g,
 
 static void vgpu_gr_free_channel_patch_ctx(struct channel_gk20a *c)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
 	struct patch_desc *patch_ctx = &c->ch_ctx.patch_ctx;
 	struct vm_gk20a *ch_vm = c->vm;
 
@@ -373,7 +363,7 @@ static void vgpu_gr_free_channel_patch_ctx(struct channel_gk20a *c)
 		int err;
 
 		msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_GR_PATCH_CTX;
-		msg.handle = platform->virt_handle;
+		msg.handle = vgpu_get_handle(c->g);
 		p->handle = c->virt_ctx;
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		WARN_ON(err || msg.ret);
@@ -386,7 +376,6 @@ static void vgpu_gr_free_channel_patch_ctx(struct channel_gk20a *c)
 
 static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_free_hwpm_ctx *p = &msg.params.free_hwpm_ctx;
 	struct channel_ctx_gk20a *ch_ctx = &c->ch_ctx;
@@ -399,7 +388,7 @@ static void vgpu_gr_free_channel_pm_ctx(struct channel_gk20a *c)
 		return;
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FREE_HWPM_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(c->g);
 	p->handle = c->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -427,7 +416,6 @@ static void vgpu_gr_free_channel_ctx(struct channel_gk20a *c)
 
 static int vgpu_gr_ch_bind_gr_ctx(struct channel_gk20a *c)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(c->g->dev);
 	struct gr_ctx_desc *gr_ctx = c->ch_ctx.gr_ctx;
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_channel_bind_gr_ctx_params *p =
@@ -435,7 +423,7 @@ static int vgpu_gr_ch_bind_gr_ctx(struct channel_gk20a *c)
 	int err;
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(c->g);
 	p->ch_handle = c->virt_ctx;
 	p->gr_ctx_handle = gr_ctx->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -447,7 +435,6 @@ static int vgpu_gr_ch_bind_gr_ctx(struct channel_gk20a *c)
 
 static int vgpu_gr_tsg_bind_gr_ctx(struct tsg_gk20a *tsg)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(tsg->g->dev);
 	struct gr_ctx_desc *gr_ctx = tsg->tsg_gr_ctx;
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_tsg_bind_gr_ctx_params *p =
@@ -455,7 +442,7 @@ static int vgpu_gr_tsg_bind_gr_ctx(struct tsg_gk20a *tsg)
 	int err;
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_BIND_GR_CTX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(tsg->g);
 	p->tsg_id = tsg->tsgid;
 	p->gr_ctx_handle = gr_ctx->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -621,12 +608,11 @@ static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
 
 static u32 vgpu_gr_get_gpc_tpc_count(struct gk20a *g, u32 gpc_index)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 data;
 
 	WARN_ON(gpc_index > 0);
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_GPC0_TPC_COUNT, &data))
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve gpc0_tpc_count");
 	return data;
@@ -634,26 +620,25 @@ static u32 vgpu_gr_get_gpc_tpc_count(struct gk20a *g, u32 gpc_index)
 
 static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 gpc_index;
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_GPC_COUNT, &gr->gpc_count))
 		return -ENOMEM;
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_MAX_TPC_PER_GPC_COUNT,
 			&gr->max_tpc_per_gpc_count))
 		return -ENOMEM;
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT,
 			&gr->max_tpc_count))
 		return -ENOMEM;
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_TPC_COUNT,
 			&gr->tpc_count))
 		return -ENOMEM;
@@ -701,7 +686,6 @@ static int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 				struct channel_gk20a *c, u64 zcull_va,
 				u32 mode)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_zcull_bind_params *p = &msg.params.zcull_bind;
 	int err;
@@ -709,7 +693,7 @@ static int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND_ZCULL;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = c->virt_ctx;
 	p->zcull_va = zcull_va;
 	p->mode = mode;
@@ -721,7 +705,6 @@ static int vgpu_gr_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 				struct gr_zcull_info *zcull_params)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_zcull_info_params *p = &msg.params.zcull_info;
 	int err;
@@ -729,7 +712,7 @@ static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_GET_ZCULL_INFO;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	if (err || msg.ret)
 		return -ENOMEM;
@@ -752,12 +735,11 @@ static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 
 static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 data;
 
 	WARN_ON(gpc_index > 0);
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_GPC0_TPC_MASK, &data))
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve gpc0_tpc_mask");
 
@@ -766,12 +748,11 @@ static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 
 static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 max_fbps_count = 0;
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_NUM_FBPS, &max_fbps_count))
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve num fbps");
 
@@ -780,12 +761,11 @@ static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
 
 static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 fbp_en_mask = 0;
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_FBP_EN_MASK, &fbp_en_mask))
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve fbp en mask");
 
@@ -794,12 +774,11 @@ static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 
 static u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 val = 0;
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_MAX_LTC_PER_FBP, &val))
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve max ltc per fbp");
 
@@ -808,12 +787,11 @@ static u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
 
 static u32 vgpu_gr_get_max_lts_per_ltc(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	u32 val = 0;
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(platform->virt_handle,
+	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_MAX_LTS_PER_LTC, &val))
 		gk20a_err(dev_from_gk20a(g), "failed to retrieve lts per ltc");
 
@@ -829,7 +807,6 @@ static u32 *vgpu_gr_rop_l2_en_mask(struct gk20a *g)
 static int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			   struct zbc_entry *zbc_val)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_zbc_set_table_params *p = &msg.params.zbc_set_table;
 	int err;
@@ -837,7 +814,7 @@ static int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_ZBC_SET_TABLE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 
 	p->type = zbc_val->type;
 	p->format = zbc_val->format;
@@ -861,7 +838,6 @@ static int vgpu_gr_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 static int vgpu_gr_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_query_params *query_params)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_zbc_query_table_params *p =
 					&msg.params.zbc_query_table;
@@ -870,7 +846,7 @@ static int vgpu_gr_query_zbc(struct gk20a *g, struct gr_gk20a *gr,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_ZBC_QUERY_TABLE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 
 	p->type = query_params->type;
 	p->index_size = query_params->index_size;
@@ -1048,7 +1024,6 @@ int vgpu_gr_nonstall_isr(struct gk20a *g,
 static int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 	struct channel_gk20a *ch, u64 sms, bool enable)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_sm_debug_mode *p = &msg.params.sm_debug_mode;
 	int err;
@@ -1056,7 +1031,7 @@ static int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_SM_DEBUG_MODE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = ch->virt_ctx;
 	p->sms = sms;
 	p->enable = (u32)enable;
@@ -1069,7 +1044,6 @@ static int vgpu_gr_set_sm_debug_mode(struct gk20a *g,
 static int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 	struct channel_gk20a *ch, bool enable)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_set_ctxsw_mode *p = &msg.params.set_ctxsw_mode;
 	int err;
@@ -1077,7 +1051,7 @@ static int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_SMPC_CTXSW_MODE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = ch->virt_ctx;
 
 	if (enable)
@@ -1094,7 +1068,6 @@ static int vgpu_gr_update_smpc_ctxsw_mode(struct gk20a *g,
 static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	struct channel_gk20a *ch, bool enable)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_channel_set_ctxsw_mode *p = &msg.params.set_ctxsw_mode;
 	int err;
@@ -1102,7 +1075,7 @@ static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_SET_HWPM_CTXSW_MODE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = ch->virt_ctx;
 
 	/* If we just enabled HWPM context switching, flag this

@@ -26,7 +26,6 @@
 static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 			struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(tsg->g->dev);
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_tsg_bind_unbind_channel_params *p =
 				&msg.params.tsg_bind_unbind_channel;
@@ -39,7 +38,7 @@ static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 		return err;
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_BIND_CHANNEL;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(tsg->g);
 	p->tsg_id = tsg->tsgid;
 	p->ch_handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
@@ -56,7 +55,6 @@ static int vgpu_tsg_bind_channel(struct tsg_gk20a *tsg,
 
 static int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(ch->g->dev);
 	struct tegra_vgpu_cmd_msg msg = {};
 	struct tegra_vgpu_tsg_bind_unbind_channel_params *p =
 				&msg.params.tsg_bind_unbind_channel;
@@ -69,7 +67,7 @@ static int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
 		return err;
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_UNBIND_CHANNEL;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(ch->g);
 	p->ch_handle = ch->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
@@ -80,7 +78,6 @@ static int vgpu_tsg_unbind_channel(struct channel_gk20a *ch)
 
 static int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(tsg->g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_tsg_timeslice_params *p =
 				&msg.params.tsg_timeslice;
@@ -89,7 +86,7 @@ static int vgpu_tsg_set_timeslice(struct tsg_gk20a *tsg, u32 timeslice)
 	gk20a_dbg_fn("");
 
 	msg.cmd = TEGRA_VGPU_CMD_TSG_SET_TIMESLICE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(tsg->g);
 	p->tsg_id = tsg->tsgid;
 	p->timeslice_us = timeslice;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));

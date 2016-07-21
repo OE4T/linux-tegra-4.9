@@ -27,7 +27,6 @@ static int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 		      u64 num_ops)
 {
 	struct channel_gk20a *ch;
-	struct gk20a_platform *platform = gk20a_get_platform(dbg_s->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_reg_ops_params *p = &msg.params.reg_ops;
 	void *oob;
@@ -54,7 +53,7 @@ static int vgpu_exec_regops(struct dbg_session_gk20a *dbg_s,
 	memcpy(oob, ops, ops_size);
 
 	msg.cmd = TEGRA_VGPU_CMD_REG_OPS;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(dbg_s->g);
 	ch = nvgpu_dbg_gpu_get_session_channel(dbg_s);
 	p->handle = ch ? ch->virt_ctx : 0;
 	p->num_ops = num_ops;
@@ -71,7 +70,6 @@ fail:
 
 static int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(dbg_s->g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_set_powergate_params *p = &msg.params.set_powergate;
 	int err = 0;
@@ -95,7 +93,7 @@ static int vgpu_dbg_set_powergate(struct dbg_session_gk20a *dbg_s, __u32 mode)
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_SET_POWERGATE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(dbg_s->g);
 	p->mode = mode;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;

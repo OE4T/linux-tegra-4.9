@@ -5840,6 +5840,26 @@ static void tegra_dc_dsi_destroy(struct tegra_dc *dc)
 	tegra_mipi_cal_destroy(dc);
 }
 
+/*
+ * If a bridge is CONFIGured (compiled and linked) for this SOC,
+ * and ENABLEd (deemed relevant to this detection process),
+ * call its detect method.
+ * Without bridges, DSI assumes a display is always connected,
+ */
+bool tegra_dc_dsi_detect(struct tegra_dc *dc)
+{
+	bool	result = true;
+
+#if defined(CONFIG_DS90UB947)
+	/* DrivePX2: DSI->sn65dsi85(LVDS)->ds90ub947(FPDLink) */
+	struct tegra_dc_dsi_data	*dsi = tegra_dc_get_outdata(dc);
+
+	if (dsi->info.dsi2lvds_bridge_enable)
+		result = ds90ub947_lvds2fpdlink3_detect(dc);
+#endif /*defined(CONFIG_DS90UB947)*/
+	return result;
+}
+
 static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 {
 	unsigned long rate;
@@ -5974,9 +5994,7 @@ static void tegra_dc_dsi_modeset_notifier(struct tegra_dc *dc)
 struct tegra_dc_out_ops tegra_dc_dsi_ops = {
 	.init = tegra_dc_dsi_init,
 	.destroy = tegra_dc_dsi_destroy,
-#if defined(CONFIG_TEGRA_DSI2LVDS_SN65DSI85) && defined(CONFIG_DS90UB947)
-	.detect = ds90ub947_lvds2fpdlink3_detect,
-#endif /*defined(CONFIG_TEGRA_DSI2LVDS_SN65DSI85) && defined(CONFIG_DS90UB947)*/
+	.detect = tegra_dc_dsi_detect,
 	.enable = tegra_dc_dsi_enable,
 	.postpoweron = tegra_dc_dsi_postpoweron,
 	.disable = tegra_dc_dsi_disable,

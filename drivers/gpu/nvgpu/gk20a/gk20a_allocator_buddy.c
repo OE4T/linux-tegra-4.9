@@ -1143,6 +1143,16 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 	if (flags & GPU_ALLOC_GVA_SPACE)
 		a->pte_blk_order = balloc_get_order(a, vm->big_page_size << 10);
 
+	/*
+	 * When we have a GVA space with big_pages enabled the size and base
+	 * must be PDE aligned. If big_pages are not enabled then this
+	 * requirement is not necessary.
+	 */
+	if (flags & GPU_ALLOC_GVA_SPACE && vm->big_pages &&
+	    (base & ((vm->big_page_size << 10) - 1) ||
+	     size & ((vm->big_page_size << 10) - 1)))
+		return -EINVAL;
+
 	a->flags = flags;
 	a->max_order = max_order;
 

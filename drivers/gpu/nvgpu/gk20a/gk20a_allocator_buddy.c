@@ -111,6 +111,7 @@ static struct gk20a_buddy *balloc_new_buddy(struct gk20a_buddy_allocator *a,
 	new_buddy->start = start;
 	new_buddy->order = order;
 	new_buddy->end = start + (1 << order) * a->blk_size;
+	new_buddy->pte_size = BALLOC_PTE_SIZE_ANY;
 
 	return new_buddy;
 }
@@ -132,7 +133,7 @@ static void __balloc_buddy_list_add(struct gk20a_buddy_allocator *a,
 	 * without cycling through the entire list.
 	 */
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
-	    b->pte_size == BALLOC_PTE_SIZE_BIG)
+	    b->pte_size == gmmu_page_size_big)
 		list_add_tail(&b->buddy_entry, list);
 	else
 		list_add(&b->buddy_entry, list);
@@ -474,7 +475,7 @@ static struct gk20a_buddy *__balloc_find_buddy(struct gk20a_buddy_allocator *a,
 		return NULL;
 
 	if (a->flags & GPU_ALLOC_GVA_SPACE &&
-	    pte_size == BALLOC_PTE_SIZE_BIG)
+	    pte_size == gmmu_page_size_big)
 		bud = list_last_entry(balloc_get_order_list(a, order),
 				      struct gk20a_buddy, buddy_entry);
 	else

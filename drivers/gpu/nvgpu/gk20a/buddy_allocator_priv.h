@@ -46,11 +46,10 @@ struct gk20a_buddy {
 
 	/*
 	 * Size of the PDE this buddy is using. This allows for grouping like
-	 * sized allocations into the same PDE.
+	 * sized allocations into the same PDE. This uses the gmmu_pgsz_gk20a
+	 * enum except for the BALLOC_PTE_SIZE_ANY specifier.
 	 */
-#define BALLOC_PTE_SIZE_ANY	0x0
-#define BALLOC_PTE_SIZE_SMALL	0x1
-#define BALLOC_PTE_SIZE_BIG	0x2
+#define BALLOC_PTE_SIZE_ANY	-1
 	int pte_size;
 };
 

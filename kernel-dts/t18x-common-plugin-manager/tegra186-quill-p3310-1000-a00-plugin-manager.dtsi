@@ -138,17 +138,14 @@
 			};
 		};
 		fragment-b00-xusb-config {
-			enable-override-on-all-matches;
-			odm-data = "enable-pcie-on-uphy-lane0"; /* this odm-data has reverse meaning for B00 and above boards */
 			ids = ">=3310-1000-500";
 			override@1 {
 				target = <&{/xhci@3530000}>;
 				_overlay_ {
 					phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
 						<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
-						<&tegra_padctl TEGRA_PADCTL_PHY_USB3_P(0)>,
-						<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(2)>;
-					phy-names = "utmi-0", "utmi-1", "usb3-0", "utmi-2";
+						<&tegra_padctl TEGRA_PADCTL_PHY_USB3_P(0)>;
+					phy-names = "utmi-0", "utmi-1", "usb3-0";
 				};
 			};
 			override@2 {
@@ -166,45 +163,6 @@
 				target = <&sdmmc3>;
 				_overlay_ {
 					status = "okay";
-				};
-			};
-		};
-		fragment-b00-pcie-lane0-config {
-			enable-override-on-all-matches;
-			odm-data = "enable-xusb-on-uphy-lane0"; /* this odm-data has reverse meaning for B00 and above boards */
-			ids = ">=3310-1000-500";
-			override@0 {
-				target = <&tegra_padctl_pinmux_default>;
-				_overlay_ {
-					e3325-usb3-std-A-SS {
-						status = "disabled";
-					};
-					usb3-std-A-port2 {
-						status = "disabled";
-					};
-				};
-			};
-			override@1 {
-				target = <&{/xhci@3530000}>;
-				_overlay_ {
-					phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
-						<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
-						<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(2)>;
-					phy-names = "utmi-0", "utmi-1", "utmi-2";
-				};
-			};
-			override@2 {
-				target = <&tegra_gpio>;
-				_overlay_ {
-					pcie0_lane2_mux {
-						status = "okay";
-					};
-					e3325_lane0_mux {
-						status = "disabled";
-					};
-					e3325_sdio_rst {
-						status = "disabled";
-					};
 				};
 			};
 		};

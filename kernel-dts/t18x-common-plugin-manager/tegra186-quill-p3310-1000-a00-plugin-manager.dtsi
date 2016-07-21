@@ -72,7 +72,9 @@
 				};
 			};
 		};
-		e3325_xusb {
+		fragment-e3325-xusb {
+			enable-override-on-all-matches;
+			ids = "<3310-1000-500";
 			odm-data = "enable-xusb-on-uphy-lane0";
 			override@0 {
 				target = <&tegra_padctl_pinmux_default>;
@@ -114,7 +116,7 @@
 				};
 			};
 		};
-		fragment-b00-pcie-config {
+		fragment-500-pcie-config {
 			ids = ">=3310-1000-500";
 			override@0 {
 				target = <&tegra_pcie>;
@@ -138,9 +140,9 @@
 				};
 			};
 		};
-		fragment-b00-xusb-config {
+		fragment-500-xusb-config {
 			ids = ">=3310-1000-500";
-			override@1 {
+			override@0 {
 				target = <&{/xhci@3530000}>;
 				_overlay_ {
 					phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
@@ -149,10 +151,40 @@
 					phy-names = "utmi-0", "utmi-1", "usb3-0";
 				};
 			};
+			override@1 {
+				target = <&tegra_padctl_pinmux_default>;
+				_overlay_ {
+					usb3-std-A-port2 {
+						nvidia,lanes = "usb3-0";
+					};
+				};
+			};
+		};
+		fragment-500-e3325-pcie {
+			enable-override-on-all-matches;
+			ids = ">=3310-1000-500";
+			odm-data = "enable-pcie-on-uphy-lane0";
+			override@0 {
+				target = <&{/xhci@3530000}>;
+				_overlay_ {
+					phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+						<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>;
+					phy-names = "utmi-0", "utmi-1";
+				};
+			};
+			override@1 {
+				target = <&tegra_padctl_pinmux_default>;
+				_overlay_ {
+					usb3-std-A-port2 {
+						status = "disabled";
+					};
+				};
+			};
+
 			override@2 {
 				target = <&tegra_gpio>;
 				_overlay_ {
-					e3325_lane0_mux {
+					pcie0_lane2_mux {
 						status = "okay";
 					};
 				};

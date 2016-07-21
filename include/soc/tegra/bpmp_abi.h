@@ -81,13 +81,18 @@
  * Provides the MRQ number for the MRQ message: #mrq. The remainder of
  * the MRQ message is a payload (immediately following the
  * mrq_request) whose format depends on mrq.
- *
- * @todo document the flags
  */
 struct mrq_request {
 	/** @brief MRQ number of the request */
 	uint32_t mrq;
-	/** @brief flags for the request */
+	/**
+	 * @brief flags providing follow up directions to the receiver
+	 *
+	 * | Bit | Description                                |
+	 * |-----|--------------------------------------------|
+	 * | 1   | ring the sender's doorbell when responding |
+	 * | 0   | should be 1                                |
+	 */
 	uint32_t flags;
 } __ABI_PACKED;
 
@@ -99,13 +104,11 @@ struct mrq_request {
  *  remainder of the MRQ response is a payload (immediately following
  *  the mrq_response) whose format depends on the associated
  *  mrq_request::mrq
- *
- * @todo document the flags
  */
 struct mrq_response {
 	/** @brief error code for the MRQ request itself */
 	int32_t err;
-	/** @brief flags for the response */
+	/** @brief reserved for future use */
 	uint32_t flags;
 } __ABI_PACKED;
 

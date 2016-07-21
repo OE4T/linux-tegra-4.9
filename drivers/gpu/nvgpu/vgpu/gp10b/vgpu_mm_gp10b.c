@@ -1,7 +1,7 @@
 /*
  * Virtualized GPU Memory Management
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -57,7 +57,6 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	int err = 0;
 	struct device *d = dev_from_vm(vm);
 	struct gk20a *g = gk20a_from_vm(vm);
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg;
 	struct tegra_vgpu_as_map_ex_params *p = &msg.params.as_map_ex;
 	struct tegra_vgpu_mem_desc *mem_desc;
@@ -149,7 +148,7 @@ static u64 vgpu_gp10b_locked_gmmu_map(struct vm_gk20a *vm,
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_AS_MAP_EX;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->handle = vm->handle;
 	p->gpu_va = map_offset;
 	p->size = size;

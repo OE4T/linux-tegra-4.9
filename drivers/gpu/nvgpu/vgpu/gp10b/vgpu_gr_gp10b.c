@@ -20,7 +20,6 @@
 static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 				struct gr_ctx_desc *gr_ctx)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_gr_ctx_params *p = &msg.params.gr_ctx;
 	int err;
@@ -31,7 +30,7 @@ static void vgpu_gr_gp10b_free_gr_ctx(struct gk20a *g, struct vm_gk20a *vm,
 		return;
 
 	msg.cmd = TEGRA_VGPU_CMD_GR_CTX_FREE;
-	msg.handle = platform->virt_handle;
+	msg.handle = vgpu_get_handle(g);
 	p->gr_ctx_handle = gr_ctx->virt_ctx;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	WARN_ON(err || msg.ret);
@@ -52,7 +51,6 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 				u32 class,
 				u32 flags)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	struct tegra_vgpu_cmd_msg msg = {0};
 	struct tegra_vgpu_gr_bind_ctxsw_buffers_params *p =
 			&msg.params.gr_bind_ctxsw_buffers;
@@ -162,7 +160,7 @@ static int vgpu_gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 
 	if (gr_ctx->graphics_preempt_mode || gr_ctx->compute_preempt_mode) {
 		msg.cmd = TEGRA_VGPU_CMD_CHANNEL_BIND_GR_CTXSW_BUFFERS;
-		msg.handle = platform->virt_handle;
+		msg.handle = vgpu_get_handle(g);
 		p->gr_ctx_handle = gr_ctx->virt_ctx;
 		err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 		if (err || msg.ret) {
@@ -181,7 +179,6 @@ fail:
 
 static int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 {
-	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -190,7 +187,7 @@ static int vgpu_gr_gp10b_init_ctx_state(struct gk20a *g)
 	if (err)
 		return err;
 
-	vgpu_get_attribute(platform->virt_handle,
+	vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_PREEMPT_CTX_SIZE,
 			&g->gr.t18x.ctx_vars.preempt_image_size);
 	if (!g->gr.t18x.ctx_vars.preempt_image_size)

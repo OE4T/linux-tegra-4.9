@@ -1365,7 +1365,7 @@ static int gr_gm20b_get_preemption_mode_flags(struct gk20a *g,
 	return 0;
 }
 
-static int gm20b_gr_tpc_disable_override(struct gk20a *g, u32 mask)
+int gm20b_gr_tpc_disable_override(struct gk20a *g, u32 mask)
 {
 	if (!mask)
 		return 0;

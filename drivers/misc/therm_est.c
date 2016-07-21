@@ -176,7 +176,9 @@ static int therm_est_get_trend(void *of_data, long *trend)
 {
 	struct therm_estimator *est = (struct therm_estimator *)of_data;
 
-	if (est->thz->temperature > est->thz->last_temperature + 100)
+	if (IS_ERR_OR_NULL(est->thz))
+		*trend = THERMAL_TREND_STABLE;
+	else if (est->thz->temperature > est->thz->last_temperature + 100)
 		*trend = THERMAL_TREND_RAISING;
 	else if (est->thz->temperature < est->thz->last_temperature - 100)
 		*trend = THERMAL_TREND_DROPPING;

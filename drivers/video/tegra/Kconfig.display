@@ -200,6 +200,17 @@ config TEGRA_DC_EXTENSIONS
 	  Provides additional IOCTLs exposing display controller specific features
 	  to user space applications.
 
+config TEGRA_DC_SCREEN_CAPTURE
+	bool "Tegra Display Screen Capture"
+	depends on TEGRA_DC && TEGRA_DC_EXTENSIONS
+	default n
+	help
+	  Say Y here to enable the Tegra Screen Capture support.
+	  Provides additional IOCTLs to pause display and capture display control
+	  information and framebuffers.
+	  Disabled by default since this may disrupt display. Recommend to enable
+	  only for development.
+
 config TEGRA_DSI
 	bool "Enable DSI panel."
 	depends on TEGRA_DC && TEGRA_MIPI_CAL

@@ -16,6 +16,7 @@
  * more details.
  */
 
+#include <mach/dc.h>
 #include <video/tegra_dc_ext.h>
 #include "tegra_dc_ext_priv.h"
 
@@ -146,11 +147,13 @@ int tegra_dc_ext_set_cursor_image(struct tegra_dc_ext_user *user,
 	if (ret)
 		goto unlock;
 
-	ext->cursor.cur_handle = handle;
+	tegra_dc_scrncapt_disp_pause_lock(dc);
 
+	ext->cursor.cur_handle = handle;
 	ret = tegra_dc_cursor_image(dc, blendfmt, size, fg, bg, phys_addr,
 				colorfmt, args->alpha, args->flags);
 
+	tegra_dc_scrncapt_disp_pause_unlock(dc);
 	mutex_unlock(&ext->cursor.lock);
 
 	if (old_handle) {
@@ -191,8 +194,11 @@ int tegra_dc_ext_set_cursor(struct tegra_dc_ext_user *user,
 
 	enable = !!(args->flags & TEGRA_DC_EXT_CURSOR_FLAGS_VISIBLE);
 
+	tegra_dc_scrncapt_disp_pause_lock(dc);
+
 	ret = tegra_dc_cursor_set(dc, enable, args->x, args->y);
 
+	tegra_dc_scrncapt_disp_pause_unlock(dc);
 	mutex_unlock(&ext->cursor.lock);
 
 	return ret;

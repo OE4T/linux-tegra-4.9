@@ -162,4 +162,36 @@ extern unsigned int tegra_dc_ext_event_poll(struct file *, poll_table *);
 
 extern int tegra_dc_ext_get_num_outputs(void);
 
+#ifdef CONFIG_TEGRA_DC_SCREEN_CAPTURE
+extern int  tegra_dc_scrncapt_init(void);
+extern int  tegra_dc_scrncapt_exit(void);
+extern void  tegra_dc_scrncapt_disp_pause_lock(struct tegra_dc *dc);
+extern void  tegra_dc_scrncapt_disp_pause_unlock(struct tegra_dc *dc);
+extern int  tegra_dc_scrncapt_pause(
+		struct tegra_dc_ext_control_user           *ctlusr,
+		struct tegra_dc_ext_control_scrncapt_pause *args);
+extern int  tegra_dc_scrncapt_resume(
+		struct tegra_dc_ext_control_user            *ctlusr,
+		struct tegra_dc_ext_control_scrncapt_resume *args);
+extern int  tegra_dc_scrncapt_get_info(
+		struct tegra_dc_ext_user *user,
+		struct tegra_dc_ext_scrncapt_get_info *args);
+extern int  tegra_dc_scrncapt_dup_fbuf(
+		struct tegra_dc_ext_user *user,
+		struct tegra_dc_ext_scrncapt_dup_fbuf *args);
+#else /* !CONFIG_TEGRA_DC_SCREEN_CAPTURE */
+static inline int  tegra_dc_scrncapt_init(void)
+{
+	return 0;
+}
+
+static inline int  tegra_dc_scrncapt_exit(void)
+{
+	return 0;
+}
+
+static inline void  tegra_dc_scrncapt_disp_pause_lock(struct tegra_dc *dc) {}
+static inline void  tegra_dc_scrncapt_disp_pause_unlock(struct tegra_dc *dc) {}
+#endif
+
 #endif /* __TEGRA_DC_EXT_PRIV_H */

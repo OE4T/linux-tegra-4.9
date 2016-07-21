@@ -281,6 +281,41 @@ static long tegra_dc_ext_control_ioctl(struct file *filp, unsigned int cmd,
 
 		return ret;
 	}
+	case TEGRA_DC_EXT_CONTROL_SCRNCAPT_PAUSE:
+	/* TODO: Screen Capture support has been verified only for NVDisplay
+	 *       with T18x. Dependency check on CONFIG_TEGRA_NVDISPLAY will
+	 *       be kept until verification with older DC is made. Check on
+	 *       the pause ioctl would be enough since other ioctl will be
+	 *       rejected without the pause. */
+#if defined(CONFIG_TEGRA_DC_SCREEN_CAPTURE) && defined(CONFIG_TEGRA_NVDISPLAY)
+	{
+		struct tegra_dc_ext_control_scrncapt_pause  args;
+		int ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+		ret = tegra_dc_scrncapt_pause(user, &args);
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+		return ret;
+	}
+#else
+		return -EINVAL;
+#endif
+	case TEGRA_DC_EXT_CONTROL_SCRNCAPT_RESUME:
+#if defined(CONFIG_TEGRA_DC_SCREEN_CAPTURE)
+	{
+		struct tegra_dc_ext_control_scrncapt_resume  args;
+		int ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+		ret = tegra_dc_scrncapt_resume(user, &args);
+		return ret;
+	}
+#else
+		return -EINVAL;
+#endif
 	default:
 		return -EINVAL;
 	}

@@ -692,6 +692,136 @@ struct tegra_dc_ext_feature {
 	__u32 __user *entries;
 };
 
+
+/*
+ * Tegra Display Screen Capture
+ *
+ * This feature will make a snap shot of display HW configurations and its
+ * frame buffer contents, so reconstruction of full display screen would be
+ * possible.
+ *
+ * A screen capture will be made in following sequence.
+ *
+ * 1. Pause display flip on all heads with the IOCTL
+ *    TEGRA_DC_EXT_CONTROL_SCRNCAPT_PAUSE. The kernel driver may also set a
+ *    timer for automatic resume. The default timer value for native Linux is
+ *    0.5Sec and user app can override the default timer value. The timer
+ *    value can vary depending on each OS and HyperVisor configuration.
+ *    The display pause is an exclusive operation. Once a pause is called,
+ *    no more pause call is allowed until resuming the pause in effective.
+ *    For this purpose, the pause call will return a magic number. It should
+ *    be saved and used by following screen capture calls until the resume.
+ * 2. Collect configration information of a display head and all windows
+ *    assigned to the head with the IOCTL TEGRA_DC_EXT_SCRNCAPT_GET_INFO.
+ * 3. Duplicate the frame buffer of the latest flip of a window that is
+ *    currently on display with the IOCTL TEGRA_DC_EXT_SCRNCAPT_DUP_FBUF.
+ * 4. Repeat the step 3 for every window assigned to the head.
+ * 5. Repeat the step 2 through step 4 for every head to capture.
+ * 6. Resume display flip on all heads and clear the auto resume timer with
+ *    the IOCTL TEGRA_DC_EXT_CONTROL_SCRNCAPT_RESUME. Pausing and resuming
+ *    flips are intended for all display heads to make the internal logic
+ *    simple and efficient. This means no individual head pause and no partial
+ *    resumming are supported.
+ */
+
+/* To collect configuration information of one display head
+ */
+/* API data structure version and magic number */
+#define TEGRA_DC_EXT_SCRNCAPT_VER_2(magic) (((magic) & ~0xff) | 2)
+#define TEGRA_DC_EXT_SCRNCAPT_VER_V(magic) ((magic) & 0xff)
+/* info_type HEAD: struct tegra_dc_ext_scrncapt_get_info_head */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_HEAD (0)
+/* info_type WIN: struct tegra_dc_ext_scrncapt_get_info_win */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_WINS (1)
+/* info_type CURSOR: struct tegra_dc_ext_cursor_image */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CURSOR (2)
+/* info_type CURSOR_DATA: struct tegra_dc_ext_scrncapt_get_info_cursor_data */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CURSOR_DATA (3)
+/* info_type CMU_V2: struct tegra_dc_ext_cmu_v2 */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CMU_V2 (4)
+/* info_type CSC_V2: struct tegra_dc_ext_csc_v2 */
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_CSC_V2 (5)
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO_FLAG_WINS(n)  (1u << (n))
+
+struct tegra_dc_ext_scrncapt_get_info_head {
+	__u8   sts_en;        /* returns display head enabled or not */
+	__u32  hres;          /* returns display horizontal resolution */
+	__u32  vres;          /* returns display vertical resolution */
+	__u32  flag_val_wins; /* returns valid windows mask */
+	__u32  reserved[12];
+};
+
+struct tegra_dc_ext_scrncapt_get_info_win {
+	__u32 flag_wins; /* bitmask of TEGRA_DC_EXT_SCRNCAPT_GET_INFO_FLAG_WINS
+			  * set bit to indicate the window to be captured */
+	__u32 num_wins;    /* returns number of windows saved to 'wins' */
+	__u64 __user wins; /* pointer to array of
+			    * struct tegra_dc_ext_flip_windowattr_v2.
+			    * should have enough entries to hold 'flag_wins'
+			    * selection. */
+	__u32 reserved[8];
+};
+
+struct tegra_dc_ext_scrncapt_get_info_cursor_data {
+	__u32 size;       /* byte size of total space allocated to 'ptr' */
+	__u32 len;        /* returns byte size of data copied into 'ptr' */
+	__u64 __user ptr; /* pointer to buffer */
+	__u32 reserved[4];
+};
+
+struct tegra_dc_ext_scrncapt_get_info_data {
+	__u32 type; /* type of data, TEGRA_DC_EXT_SCRNCAPT_GET_INFO_TYPE_xxx */
+	__u64 __user ptr; /* pointer to its data structure */
+	__u32 reserved[3];
+};
+
+struct tegra_dc_ext_scrncapt_get_info  {
+	__u32 ver;      /* set to TEGRA_DC_EXT_SCRNCAPT_VER_2
+			 * returns TEGRA_DC_EXT_SCRNCAPT_VER_2 */
+	__u32 head;     /* head ID */
+	__u32 num_data; /* number of entries in 'data' */
+	__u64 __user data; /* pointer to the array of
+			    * struct tegra_dc_ext_scrncapt_get_info_data */
+	__u32 reserved[8];
+};
+
+/* To duplicate single window raw frame buffer that may consists with one or
+ * more planes.
+ *
+ * RGB pixel formats use only the first plane.
+ * YUV(YCbCr) pixel formats use one to 3 planes depending on its format.
+ * Y plane holds Y or YUV(YCbCr) data depending on the pixel format.
+ * U(Cb) plane holds U(Cb) or UV(CbCr) data depending on the pixel format.
+ * V(Cr) plane holds V(Cr) data depending on the pixel format.
+ * CDE plane is not used.
+ *
+ * The returned length of each plane indicates the data length of each plane
+ * in the raw frame buffer, and 0 length indicates the plane is not used.
+ * The returned offset of each plane indicates the offset to the plane within
+ * the data buffer pointed by 'buffer'.
+ */
+#define  TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_RGB  0 /* RGB plane */
+#define  TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_Y    0 /* Y plane */
+#define  TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_U    1 /* U or Cb plane */
+#define  TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_V    2 /* V or Cr plane */
+#define  TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_CDE  3 /* CDE plane */
+#define  TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_NUM  4 /* number of planes */
+
+struct tegra_dc_ext_scrncapt_dup_fbuf  {
+	__u32 ver;      /* set to TEGRA_DC_EXT_SCRNCAPT_VER_2
+			 * returns TEGRA_DC_EXT_SCRNCAPT_VER_2 */
+	__u32 head;     /* head ID */
+	__u32 win;      /* window ID */
+	__u32 buffer_max;    /* allocated byte amount to 'buffer' */
+	__u64 __user buffer; /* pointer to data buffer to store all planes */
+	/* returns length of each plane, 0 for plane not available */
+	__u32 plane_sizes[TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_NUM];
+	/* returns offset of each plane within the 'buffer' */
+	__u32 plane_offsets[TEGRA_DC_SCRNCAPT_DUP_FBUF_IDX_NUM];
+	__u32 reserved[16];
+};
+
+
 #define TEGRA_DC_EXT_SET_NVMAP_FD \
 	_IOW('D', 0x00, __s32)
 
@@ -788,6 +918,12 @@ struct tegra_dc_ext_feature {
 #define TEGRA_DC_EXT_GET_IMP_USER_INFO \
 	_IOW('D', 0x20, struct tegra_dc_ext_imp_user_info)
 
+#define TEGRA_DC_EXT_SCRNCAPT_GET_INFO \
+	_IOWR('D', 0x21, struct tegra_dc_ext_scrncapt_get_info)
+
+#define TEGRA_DC_EXT_SCRNCAPT_DUP_FBUF \
+	_IOWR('D', 0x22, struct tegra_dc_ext_scrncapt_dup_fbuf)
+
 enum tegra_dc_ext_control_output_type {
 	TEGRA_DC_EXT_DSI,
 	TEGRA_DC_EXT_LVDS,
@@ -876,6 +1012,34 @@ struct tegra_dc_ext_control_capabilities {
 	__u32 pad[3];
 };
 
+
+/* Tegra Display Screen Capture
+ * control IOCTL
+ */
+#define  TEGRA_DC_EXT_CONTROL_SCRNCAPT_MAGIC  (0x73636171)
+
+struct tegra_dc_ext_control_scrncapt_pause {
+	__u32  magic; /* call with TEGRA_DC_EXT_CONTROL_SCRNCAPT_MAGIC
+		       * returns a magic value for the session */
+	__u32  reserved;
+	__u32  tm_resume_msec; /* auto resume timer value in mSec
+				*   0: use disp driver default value
+				*   -1: turn off auto resume timer
+				*   others: valid timer value
+				* returns the timer set value
+				*   -1: auto resume timer turned off
+				*   others: timer set value */
+	__u32  num_heads; /* returns max number of DC heads */
+	__u32  num_wins;  /* returns max number of windows */
+	__u32  reserved2[3];
+};
+
+struct tegra_dc_ext_control_scrncapt_resume {
+	__u32  magic; /* magic value returned from the pause call */
+	__u32  reserved[7];
+};
+
+
 #define TEGRA_DC_EXT_CONTROL_GET_NUM_OUTPUTS \
 	_IOR('C', 0x00, __u32)
 #define TEGRA_DC_EXT_CONTROL_GET_OUTPUT_PROPERTIES \
@@ -886,5 +1050,9 @@ struct tegra_dc_ext_control_capabilities {
 	_IOW('C', 0x03, __u32)
 #define TEGRA_DC_EXT_CONTROL_GET_CAPABILITIES \
 	_IOR('C', 0x04, struct tegra_dc_ext_control_capabilities)
+#define TEGRA_DC_EXT_CONTROL_SCRNCAPT_PAUSE \
+	_IOWR('C', 0x05, struct tegra_dc_ext_control_scrncapt_pause)
+#define TEGRA_DC_EXT_CONTROL_SCRNCAPT_RESUME \
+	_IOW('C', 0x06, struct tegra_dc_ext_control_scrncapt_resume)
 
 #endif /* __TEGRA_DC_EXT_H */

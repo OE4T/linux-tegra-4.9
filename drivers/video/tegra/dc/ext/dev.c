@@ -27,9 +27,9 @@
 #include <linux/delay.h>
 #include <mach/fb.h>
 #include <linux/fb.h>
+#include <mach/dc.h>
 #include <video/tegra_dc_ext.h>
 
-#include <mach/dc.h>
 #include <mach/tegra_dc_ext.h>
 #include <trace/events/display.h>
 
@@ -691,6 +691,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 	if (!blank_win)
 		dev_err(&ext->dc->ndev->dev, "Failed to allocate blank_win.\n");
 
+	tegra_dc_scrncapt_disp_pause_lock(dc);
+
 	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
@@ -891,6 +893,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		}
 #endif
 	}
+
+	tegra_dc_scrncapt_disp_pause_unlock(dc);
 
 	if (!skip_flip) {
 		for (i = 0; i < win_num; i++) {
@@ -1542,6 +1546,7 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 		mutex_unlock(&ext_win->lock);
 		return -EACCES;
 	}
+	tegra_dc_scrncapt_disp_pause_lock(dc);
 
 #if defined(CONFIG_TEGRA_LUT)
 
@@ -1555,6 +1560,7 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 
 #endif
 	if (err) {
+		tegra_dc_scrncapt_disp_pause_unlock(dc);
 		mutex_unlock(&ext_win->lock);
 		return -EFAULT;
 	}
@@ -1562,6 +1568,7 @@ static int tegra_dc_ext_set_lut(struct tegra_dc_ext_user *user,
 	tegra_dc_update_lut(dc, index,
 			new_lut->flags & TEGRA_DC_EXT_LUT_FLAGS_FBOVERRIDE);
 
+	tegra_dc_scrncapt_disp_pause_unlock(dc);
 	mutex_unlock(&ext_win->lock);
 
 	return 0;
@@ -1609,12 +1616,14 @@ static int tegra_dc_ext_set_cmu_v2(struct tegra_dc_ext_user *user,
 	if (!cmu)
 		return -ENOMEM;
 
+	tegra_dc_scrncapt_disp_pause_lock(dc);
 	dc->pdata->cmu_enable = args->cmu_enable;
 	lut_size = args->lut_size;
 	for (i = 0; i < lut_size; i++)
 		cmu->rgb[i] = args->rgb[i];
 
 	tegra_nvdisp_update_cmu(dc, cmu);
+	tegra_dc_scrncapt_disp_pause_unlock(dc);
 
 	return 0;
 }
@@ -2676,6 +2685,42 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 #endif
 	}
 
+	/* Screen Capture Support
+	 */
+	case TEGRA_DC_EXT_SCRNCAPT_GET_INFO:
+	{
+#ifdef CONFIG_TEGRA_DC_SCREEN_CAPTURE
+		struct tegra_dc_ext_scrncapt_get_info  args;
+		int  ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+		ret = tegra_dc_scrncapt_get_info(user, &args);
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+		return ret;
+#else
+		return -EINVAL;
+#endif
+	}
+
+	case TEGRA_DC_EXT_SCRNCAPT_DUP_FBUF:
+	{
+#ifdef CONFIG_TEGRA_DC_SCREEN_CAPTURE
+		struct tegra_dc_ext_scrncapt_dup_fbuf  args;
+		int  ret;
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+		ret = tegra_dc_scrncapt_dup_fbuf(user, &args);
+		if (copy_to_user(user_arg, &args, sizeof(args)))
+			return -EFAULT;
+		return ret;
+#else
+		return -EINVAL;
+#endif
+	}
+
 	default:
 		return -EINVAL;
 	}
@@ -2871,6 +2916,8 @@ int __init tegra_dc_ext_module_init(void)
 	if (ret)
 		goto cleanup_region;
 
+	tegra_dc_scrncapt_init();
+
 	return 0;
 
 cleanup_region:
@@ -2884,6 +2931,7 @@ cleanup_class:
 
 void __exit tegra_dc_ext_module_exit(void)
 {
+	tegra_dc_scrncapt_exit();
 	unregister_chrdev_region(tegra_dc_ext_devno, TEGRA_MAX_DC);
 	class_destroy(tegra_dc_ext_class);
 }

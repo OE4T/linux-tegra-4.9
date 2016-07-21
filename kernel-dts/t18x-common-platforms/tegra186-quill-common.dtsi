@@ -634,7 +634,30 @@
 	};
 
 	pinmux@2430000 {
-		dap_active_state: dap_active {
+		/* Dynamic pinmux config for DMIC1 */
+		dmic1_dap_active_state: dmic1_dap_active {
+			dmic_dmic1_clk_pm1 {
+				nvidia,pins = "dmic1_clk_pm1";
+				nvidia,function = "dmic1";
+			};
+			dmic_dmic1_dat_pm0 {
+				nvidia,pins = "dmic1_dat_pm0";
+				nvidia,function = "dmic1";
+			};
+		};
+		/* Dynamic pinmux config for DMIC2 */
+		dmic2_dap_active_state: dmic2_dap_active {
+			dmic_dmic2_dat_pm2 {
+				nvidia,pins = "dmic2_dat_pm2";
+				nvidia,function = "dmic2";
+			};
+			dmic_dmic2_clk_pm3 {
+				nvidia,pins = "dmic2_clk_pm3";
+				nvidia,function = "dmic2";
+			};
+		};
+		/* Dynamic pinmux config for DMIC3 */
+		dmic3_dap_active_state: dmic3_dap_active {
 			dmic_can_gpio0_paa0 {
 				nvidia,pins = "can_gpio0_paa0";
 				nvidia,function = "dmic3";
@@ -644,7 +667,7 @@
 				nvidia,function = "dmic3";
 			};
 		};
-		dap_inactive_state: dap_inactive {
+		dmic3_dap_inactive_state: dmic3_dap_inactive {
 			dmic_can_gpio0_paa0 {
 				nvidia,pins = "can_gpio0_paa0";
 				nvidia,function = "dmic5";
@@ -652,16 +675,45 @@
 			dmic_can_gpio1_paa1 {
 				nvidia,pins = "can_gpio1_paa1";
 				nvidia,function = "dmic5";
+			};
+		};
+		/* Dynamic pinmux config for DMIC4 */
+		dmic4_dap_active_state: dmic4_dap_active {
+			dmic_dmic4_dat_pm4 {
+				nvidia,pins = "dmic4_dat_pm4";
+				nvidia,function = "dmic4";
+			};
+			dmic_dmic4_clk_pm5 {
+				nvidia,pins = "dmic4_clk_pm5";
+				nvidia,function = "dmic4";
 			};
 		};
 	};
 
 	ahub {
+		dmic@2904000 {
+			nvidia,is-pinctrl = <1>;
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <&dmic1_dap_active_state>;
+			pinctrl-1 = <>;
+		};
+		dmic@2904100 {
+			nvidia,is-pinctrl = <1>;
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <&dmic2_dap_active_state>;
+			pinctrl-1 = <>;
+		};
 		dmic@2904200 {
 			nvidia,is-pinctrl = <1>;
 			pinctrl-names = "dap_active", "dap_inactive";
-			pinctrl-0 = <&dap_active_state>;
-			pinctrl-1 = <&dap_inactive_state>;
+			pinctrl-0 = <&dmic3_dap_active_state>;
+			pinctrl-1 = <&dmic3_dap_inactive_state>;
+		};
+		dmic@2904300 {
+			nvidia,is-pinctrl = <1>;
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <&dmic4_dap_active_state>;
+			pinctrl-1 = <>;
 		};
 	};
 

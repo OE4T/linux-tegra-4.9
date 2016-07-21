@@ -321,7 +321,7 @@ void tegra_dp_lt_init(struct tegra_dp_lt_data *lt_data,
 void tegra_dp_lt_set_pending_evt(struct tegra_dp_lt_data *lt_data);
 void tegra_dp_lt_force_disable(struct tegra_dp_lt_data *lt_data);
 long tegra_dp_lt_wait_for_completion(struct tegra_dp_lt_data *lt_data,
-						unsigned long timeout_ms);
+			int target_state, unsigned long timeout_ms);
 int tegra_dp_get_lt_state(struct tegra_dp_lt_data *lt_data);
 bool tegra_dp_get_lt_status(struct tegra_dp_lt_data *lt_data);
 #endif

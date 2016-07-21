@@ -977,9 +977,12 @@ void tegra_dp_lt_set_pending_evt(struct tegra_dp_lt_data *lt_data)
 
 /* block till link training has reached final state */
 long tegra_dp_lt_wait_for_completion(struct tegra_dp_lt_data *lt_data,
-						unsigned long timeout_ms)
+			int target_state, unsigned long timeout_ms)
 {
 	might_sleep();
+
+	if (target_state == tegra_dp_get_lt_state(lt_data))
+		return 1;
 
 	mutex_lock(&lt_data->lock);
 	reinit_completion(&lt_data->lt_complete);

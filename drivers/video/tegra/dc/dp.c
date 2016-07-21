@@ -2720,7 +2720,7 @@ static void tegra_dc_dp_enable(struct tegra_dc *dc)
 		!no_lt_at_unblank) {
 		tegra_dp_lt_set_pending_evt(&dp->lt_data);
 		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
-							LT_TIMEOUT_MS);
+					STATE_DONE_PASS, LT_TIMEOUT_MS);
 		if (!ret)
 			dev_err(&dp->dc->ndev->dev,
 				"dp: link training failed\n");
@@ -2819,7 +2819,7 @@ static void tegra_dc_dp_disable(struct tegra_dc *dc)
 	if (dc->out->type != TEGRA_DC_OUT_FAKE_DP) {
 		tegra_dp_lt_force_disable(&dp->lt_data);
 		ret = tegra_dp_lt_wait_for_completion(&dp->lt_data,
-							LT_TIMEOUT_MS);
+					STATE_DONE_FAIL, LT_TIMEOUT_MS);
 		WARN_ON(!ret);
 	}
 

@@ -18,6 +18,7 @@
 #include <linux/delay.h>
 #include <linux/tegra-fuse.h>
 
+#include <dt-bindings/soc/gm20b-fuse.h>
 #include <dt-bindings/soc/gp10b-fuse.h>
 
 #include "gk20a/gr_gk20a.h"
@@ -2144,6 +2145,9 @@ static int gp10b_gr_fuse_override(struct gk20a *g)
 		fuse = fuses[2 * i];
 		value = fuses[2 * i + 1];
 		switch (fuse) {
+		case GM20B_FUSE_OPT_TPC_DISABLE:
+			gm20b_gr_tpc_disable_override(g, value);
+			break;
 		case GP10B_FUSE_OPT_ECC_EN:
 			g->gr.t18x.fecs_feature_override_ecc_val = value;
 			break;

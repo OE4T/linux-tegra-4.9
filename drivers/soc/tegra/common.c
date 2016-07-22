@@ -8,6 +8,8 @@
 
 #include <linux/of.h>
 #include <linux/ioport.h>
+#include <linux/io.h>
+#include <linux/highmem.h>
 
 #include <soc/tegra/common.h>
 #include <linux/memblock.h>
@@ -48,6 +50,8 @@ phys_addr_t tegra_lut_start;
 phys_addr_t tegra_lut_size;
 
 static int usb_port_owner_info;
+static int panel_id;
+static struct board_info display_board_info;
 
 bool soc_is_tegra210_n_before(void)
 {
@@ -208,9 +212,11 @@ bool tegra_is_bl_display_initialized(int instance)
 	 */
 	switch (instance) {
 		case 0:
-			return tegra_bootloader_fb_start && tegra_bootloader_fb_size;
+			return tegra_bootloader_fb_start &&
+				tegra_bootloader_fb_size;
 		case 1:
-			return tegra_bootloader_fb2_start && tegra_bootloader_fb2_size;
+			return tegra_bootloader_fb2_start &&
+				tegra_bootloader_fb2_size;
 		default:
 			return false;
 	}
@@ -231,3 +237,174 @@ int tegra_get_usb_port_owner_info(void)
 EXPORT_SYMBOL(tegra_get_usb_port_owner_info);
 
 __setup("usb_port_owner_info=", tegra_usb_port_owner_info);
+
+int tegra_get_board_panel_id(void)
+{
+	return panel_id;
+}
+static int __init tegra_board_panel_id(char *options)
+{
+	char *p = options;
+	panel_id = memparse(p, &p);
+	return panel_id;
+}
+__setup("display_panel=", tegra_board_panel_id);
+
+
+
+static int tegra_get_board_info_properties(struct board_info *bi,
+		const char *property_name)
+{
+	struct device_node *board_info;
+	char board_info_path[50] = {0};
+	u32 prop_val;
+	int err;
+
+
+	strcpy(board_info_path, "/chosen/");
+	strcat(board_info_path, property_name);
+
+	board_info = of_find_node_by_path(board_info_path);
+	memset(bi, 0, sizeof(*bi));
+
+	if (board_info) {
+		err = of_property_read_u32(board_info, "id", &prop_val);
+		if (err < 0) {
+			pr_err("failed to read %s/id\n", board_info_path);
+			goto out;
+		}
+		bi->board_id = prop_val;
+
+		err = of_property_read_u32(board_info, "sku", &prop_val);
+		if (err < 0) {
+			pr_err("failed to read %s/sku\n", board_info_path);
+			goto out;
+		}
+		bi->sku = prop_val;
+
+		err = of_property_read_u32(board_info, "fab", &prop_val);
+		if (err < 0) {
+			pr_err("failed to read %s/fab\n", board_info_path);
+			goto out;
+		}
+		bi->fab = prop_val;
+
+		err = of_property_read_u32(board_info,
+					"major_revision", &prop_val);
+		if (err < 0) {
+			pr_err("failed to read %s/major_revision\n",
+					board_info_path);
+			goto out;
+		}
+		bi->major_revision = prop_val;
+
+		err = of_property_read_u32(board_info,
+					"minor_revision", &prop_val);
+		if (err < 0) {
+			pr_err("failed to read %s/minor_revision\n",
+					board_info_path);
+			goto out;
+		}
+		bi->minor_revision = prop_val;
+		return 0;
+	}
+
+	pr_err("Node path %s not found\n", board_info_path);
+out:
+	return -1;
+}
+
+void tegra_get_display_board_info(struct board_info *bi)
+{
+	static bool parsed = 0;
+
+	if (!parsed) {
+		int ret;
+		parsed = 1;
+		ret = tegra_get_board_info_properties(bi, "display-board");
+		if (!ret)
+			memcpy(&display_board_info, bi,
+					sizeof(struct board_info));
+	}
+	memcpy(bi, &display_board_info, sizeof(struct board_info));
+}
+
+/*
+ * Due to conflicting restrictions on the placement of the framebuffer,
+ * the bootloader is likely to leave the framebuffer pointed at a location
+ * in memory that is outside the grhost aperture.  This function will move
+ * the framebuffer contents from a physical address that is anywhere (lowmem,
+ * highmem, or outside the memory map) to a physical address that is outside
+ * the memory map.
+ */
+void __tegra_move_framebuffer(struct platform_device *pdev,
+	phys_addr_t to, phys_addr_t from,
+	size_t size)
+{
+	struct page *page;
+	void __iomem *to_io;
+	void *from_virt;
+	unsigned long i;
+
+	BUG_ON(PAGE_ALIGN((unsigned long)to) != (unsigned long)to);
+	BUG_ON(PAGE_ALIGN(from) != from);
+	BUG_ON(PAGE_ALIGN(size) != size);
+
+	to_io = ioremap_wc(to, size);
+	if (!to_io) {
+		pr_err("%s: Failed to map target framebuffer\n", __func__);
+		return;
+	}
+
+	if (from && pfn_valid(page_to_pfn(phys_to_page(from)))) {
+		for (i = 0 ; i < size; i += PAGE_SIZE) {
+			page = phys_to_page(from + i);
+			from_virt = kmap(page);
+			memcpy(to_io + i, from_virt, PAGE_SIZE);
+			kunmap(page);
+		}
+	} else if (from) {
+		void __iomem *from_io = ioremap_wc(from, size);
+		if (!from_io) {
+			pr_err("%s: Failed to map source framebuffer\n",
+				__func__);
+			goto out;
+		}
+
+		for (i = 0; i < size; i += 4)
+			writel_relaxed(readl_relaxed(from_io + i), to_io + i);
+		dmb(ishld);
+
+		iounmap(from_io);
+	}
+
+out:
+	iounmap(to_io);
+}
+
+void __tegra_clear_framebuffer(struct platform_device *pdev,
+			       unsigned long to, unsigned long size)
+{
+	void __iomem *to_io;
+	unsigned long i;
+
+	BUG_ON(PAGE_ALIGN((unsigned long)to) != (unsigned long)to);
+	BUG_ON(PAGE_ALIGN(size) != size);
+
+	to_io = ioremap_wc(to, size);
+	if (!to_io) {
+		pr_err("%s: Failed to map target framebuffer\n", __func__);
+		return;
+	}
+
+	if (pfn_valid(page_to_pfn(phys_to_page(to)))) {
+		for (i = 0 ; i < size; i += PAGE_SIZE)
+			memset(to_io + i, 0, PAGE_SIZE);
+	} else {
+		for (i = 0; i < size; i += 4)
+			writel_relaxed(0, to_io + i);
+		dmb(ishld);
+	}
+
+	iounmap(to_io);
+}

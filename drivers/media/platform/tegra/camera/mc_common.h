@@ -241,6 +241,7 @@ struct tegra_mc_vi {
 	unsigned long max_requested_hz;
 	struct mutex mipical_lock;
 
+	bool bypass;
 	struct tegra_vi_fops *fops;
 };
 

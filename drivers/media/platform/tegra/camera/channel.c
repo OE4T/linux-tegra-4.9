@@ -1071,7 +1071,7 @@ static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 	case V4L2_CID_VI_BYPASS_MODE:
 		if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON)
 			chan->bypass = true;
-		else if (chan->vi->vi->bypass) {
+		else if (chan->vi->bypass) {
 			dev_dbg(&chan->video.dev,
 				"can't disable bypass mode\n");
 			dev_dbg(&chan->video.dev,

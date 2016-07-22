@@ -538,8 +538,8 @@ static void print_address(struct seq_file *file, u64 addr)
 	addr_type = get_mca_addr_type(addr);
 
 	print_mca(file, "\tAddress Type = %sSecure %s\n",
-		  (addr_type & 0x02) ? "Non-" : "",
-		  (addr_type & 0x01) ? "MMIO" : "DRAM");
+		  (addr_type & 0x01) ? "Non-" : "",
+		  (addr_type & 0x02) ? "MMIO" : "DRAM");
 
 	phys_addr = get_mca_addr_addr(addr);
 	res = locate_resource(&iomem_resource, phys_addr);

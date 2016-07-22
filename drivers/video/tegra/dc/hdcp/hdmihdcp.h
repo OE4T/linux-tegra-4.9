@@ -73,7 +73,7 @@ struct tegra_nvhdcp {
 	u64				bksv_list[TEGRA_NVHDCP_MAX_DEVS];
 	int				fail_count;
 	char				hdcp22;
-	u8				max_retries;
+	s8				max_retries;
 	u8				repeater;
 	struct workqueue_struct		*fallback_wq;
 	struct delayed_work		fallback_work;

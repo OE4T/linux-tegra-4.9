@@ -50,12 +50,10 @@ enum ivc_tasks_dbg_enable {
 	IVC_TASKS_GLOBAL_DBG_ENABLE = 0,
 	IVC_ECHO_TASK_DBG_ENABLE = 1,
 	IVC_DBG_TASK_DBG_ENABLE = 2,
-	IVC_TASK_ENABLE_MAX = 3,
+	IVC_SPI_TASK_DBG_ENABLE = 3,
+	IVC_TASK_ENABLE_MAX = 4,
 	IVC_TASKS_MAX = 31,
-	IVC_TASKS_GLOBAL_DBG_DISABLE = 32,
-	IVC_ECHO_TASK_DBG_DISABLE = 33,
-	IVC_DBG_TASK_DBG_DISABLE = 34,
-	IVC_TASK_DISABLE_MAX = 35,
+	IVC_TASKS_DBG_ENABLE_BIT = 31,
 };
 
 struct tegra_aon {
@@ -373,17 +371,12 @@ static ssize_t store_ivc_dbg(struct device *dev, struct device_attribute *attr,
 	if (ret)
 		return -EINVAL;
 
-	if ((channel >= IVC_TASKS_GLOBAL_DBG_ENABLE &&
-		channel < IVC_TASK_ENABLE_MAX) ||
-		(channel >= IVC_TASKS_GLOBAL_DBG_DISABLE &&
-		channel < IVC_TASK_DISABLE_MAX)) {
-		enable = (channel > IVC_TASKS_MAX) ? 0 : BIT(IVC_TASKS_MAX);
-		channel = channel % (IVC_TASKS_MAX + 1);
-	} else {
+	enable = channel & BIT(IVC_TASKS_DBG_ENABLE_BIT);
+	channel &= ~BIT(IVC_TASKS_DBG_ENABLE_BIT);
+	if (channel >= BIT(IVC_TASK_ENABLE_MAX))
 		return -EINVAL;
-	}
 
-	shrdsem_msg = BIT(channel) | enable;
+	shrdsem_msg = channel | enable;
 	writel(shrdsem_msg, aon->shrdsem_base + SHRD_SEM_SET);
 	writel(SMBOX_IVC_DBG_ENABLE, aon->smbox_base + SMBOX1_OFFSET);
 

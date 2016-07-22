@@ -62,12 +62,12 @@ void tegra_csi_pad_control(struct tegra_csi_device *csi,
 	if (enable) {
 		for (i = 0; csi_port_is_valid(port_num[i]); i++) {
 			port = port_num[i];
-			camera_common_dpd_disable(&csi->s_data[port]);
+			//camera_common_dpd_disable(&csi->s_data[port]);
 		}
 	} else {
 		for (i = 0; csi_port_is_valid(port_num[i]); i++) {
 			port = port_num[i];
-			camera_common_dpd_enable(&csi->s_data[port]);
+		       // camera_common_dpd_enable(&csi->s_data[port]);
 		}
 	}
 }
@@ -87,13 +87,13 @@ int tegra_csi_channel_power(struct tegra_csi_device *csi,
 				csi->cil[cil_num], csi->clk_freq);
 			if (err)
 				dev_err(csi->dev, "cil clk start error\n");
-			camera_common_dpd_disable(&csi->s_data[port]);
+			//camera_common_dpd_disable(&csi->s_data[port]);
 		}
 	} else {
 		for (i = 0; csi_port_is_valid(port_num[i]); i++) {
 			port = port_num[i];
 			cil_num = port >> 1;
-			camera_common_dpd_enable(&csi->s_data[port]);
+			//camera_common_dpd_enable(&csi->s_data[port]);
 			clk_disable_unprepare(csi->cil[cil_num]);
 		}
 	}
@@ -159,6 +159,8 @@ void tegra_csi_tpg_start_streaming(struct tegra_csi_device *csi,
 void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num)
 {
+	if (!csi->fops)
+		return;
 	csi->fops->soc_start_streaming(csi, port_num);
 }
 EXPORT_SYMBOL(tegra_csi_start_streaming);
@@ -166,12 +168,16 @@ EXPORT_SYMBOL(tegra_csi_start_streaming);
 int tegra_csi_error(struct tegra_csi_device *csi,
 			enum tegra_csi_port_num port_num)
 {
+	if (!csi->fops)
+		return 0;
 	return csi->fops->soc_error(csi, port_num);
 }
 
 void tegra_csi_status(struct tegra_csi_device *csi,
 			enum tegra_csi_port_num port_num)
 {
+	if (!csi->fops)
+		return;
 	csi->fops->soc_status(csi, port_num);
 }
 EXPORT_SYMBOL(tegra_csi_status);
@@ -179,12 +185,16 @@ EXPORT_SYMBOL(tegra_csi_status);
 void tegra_csi_error_recover(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num)
 {
+	if (!csi->fops)
+		return;
 	csi->fops->soc_error_recover(csi, port_num);
 }
 
 void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num)
 {
+	if (!csi->fops)
+		return;
 	csi->fops->soc_stop_streaming(csi, port_num);
 }
 EXPORT_SYMBOL(tegra_csi_stop_streaming);
@@ -194,6 +204,8 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	struct tegra_csi_device *csi = to_csi(subdev);
 	struct tegra_channel *chan;
 	int index;
+
+	return 0;
 
 	if (csi->pg_mode)
 		return 0;
@@ -362,6 +374,9 @@ static int tegra_csi_g_input_status(struct v4l2_subdev *sd, u32 *status)
 
 static int tegra_csi_get_format(struct v4l2_subdev *subdev,
 			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_format *fmt) __maybe_unused;
+static int tegra_csi_get_format(struct v4l2_subdev *subdev,
+			   struct v4l2_subdev_pad_config *cfg,
 			   struct v4l2_subdev_format *fmt)
 {
 	struct v4l2_mbus_framefmt mbus_fmt;
@@ -376,6 +391,9 @@ static int tegra_csi_get_format(struct v4l2_subdev *subdev,
 	return 0;
 }
 
+static int tegra_csi_set_format(struct v4l2_subdev *subdev,
+			   struct v4l2_subdev_pad_config *cfg,
+			   struct v4l2_subdev_format *fmt) __maybe_unused;
 static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 			   struct v4l2_subdev_pad_config *cfg,
 			   struct v4l2_subdev_format *fmt)
@@ -407,8 +425,8 @@ static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 };
 
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {
-	.get_fmt	= tegra_csi_get_format,
-	.set_fmt	= tegra_csi_set_format,
+	//.get_fmt	= tegra_csi_get_format,
+	//.set_fmt	= tegra_csi_set_format,
 	.enum_frame_size = tegra_csi_enum_framesizes,
 	.enum_frame_interval = tegra_csi_enum_frameintervals,
 };
@@ -532,8 +550,9 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 		return ret;
 
 	ret = tegra_csi_init(csi, pdev);
-	if (ret < 0)
-		return ret;
+	if (ret < 0) {
+		dev_err(&pdev->dev, "Failed to init csi property,clks\n");
+	}
 
 	/* Initialize V4L2 subdevice and media entity */
 	subdev = &csi->subdev;

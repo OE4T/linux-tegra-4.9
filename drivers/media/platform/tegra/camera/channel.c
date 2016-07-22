@@ -196,6 +196,8 @@ static void tegra_channel_fmts_bitmap_init(struct tegra_channel *chan)
 
 static int tegra_channel_capture_setup(struct tegra_channel *chan)
 {
+	if (!chan->fops)
+		return 0;
 	return chan->fops->soc_channel_capture_setup(chan);
 }
 
@@ -234,6 +236,8 @@ static int tegra_channel_enable_stream(struct tegra_channel *chan)
 
 static int tegra_channel_error_status(struct tegra_channel *chan)
 {
+	if (!chan->fops)
+		return 0;
 	return chan->fops->soc_channel_error_status(chan);
 }
 
@@ -342,7 +346,8 @@ static void tegra_channel_ec_init(struct tegra_channel *chan)
 	 * TODO: Get frame rate from sub-device and adopt timeout
 	 */
 	chan->timeout = 20;
-
+        if (!chan->fops)
+		return;
 	chan->fops->soc_channel_ec_init(chan);
 }
 
@@ -352,7 +357,8 @@ static void tegra_channel_ec_recover(struct tegra_channel *chan)
 
 	/* Disable pad power to start recovery */
 	tegra_csi_pad_control(chan->vi->csi, chan->port, DISABLE);
-
+        if (!chan->fops)
+		return;
 	chan->fops->soc_channel_ec_recover(chan);
 
 	/* Re-init VI and CSI */
@@ -377,6 +383,8 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	int state = VB2_BUF_STATE_DONE;
 
 	/* Init registers related to each frames */
+	if (!chan->fops)
+		return 0;
 	chan->fops->soc_channel_capture_frame_init(chan, buf, thresh);
 
 	if (!chan->bfirst_fstart) {
@@ -388,10 +396,14 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 			return err;
 		}
 		/* Enable input stream once the VI registers are configured */
+		if (!chan->fops)
+			return 0;
 		chan->fops->soc_channel_capture_frame_enable(chan);
 	}
 
 	/* Arm capture and wait for notifier or syncpoint */
+	if (!chan->fops)
+		return 0;
 	err = chan->fops->soc_channel_capture_frame(chan, &ts, thresh);
 	if (err) {
 		state = VB2_BUF_STATE_ERROR;
@@ -445,7 +457,8 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 	buf = dequeue_buffer(chan);
 	if (!buf)
 		return;
-
+        if (!chan->fops)
+		return;
 	err = chan->fops->soc_channel_capture_done(chan, buf, &ts);
 	if (err) {
 		state = VB2_BUF_STATE_ERROR;
@@ -696,7 +709,6 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		nvhost_module_disable_clk(chan->vi->dev);*/
 		return ret;
 	}
-
 	chan->capture_state = CAPTURE_IDLE;
 	for (i = 0; i < chan->valid_ports; i++) {
 		tegra_csi_start_streaming(chan->vi->csi, chan->port[i]);
@@ -1167,6 +1179,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 		entity = pad->entity;
 		chan->subdev[num_sd++] = media_entity_to_v4l2_subdev(entity);
 
+		chan->subdev_on_csi = sd;
 		index = pad->index - 1;
 	}
 	chan->num_subdevs = num_sd;
@@ -1450,7 +1463,7 @@ static int tegra_channel_open(struct file *fp)
 	int ret;
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
-	struct vi *tegra_vi;
+	//struct vi *tegra_vi;
 	struct tegra_mc_vi *vi;
 	struct tegra_csi_device *csi;
 
@@ -1465,31 +1478,35 @@ static int tegra_channel_open(struct file *fp)
 	}
 
 	vi = chan->vi;
-	tegra_vi = vi->vi;
+	//tegra_vi = vi->vi;
 	csi = vi->csi;
 
 	/* TPG mode and a real sensor is open, return busy */
+	/*
 	if (vi->pg_mode && tegra_vi->sensor_opened)
-		return -EBUSY;
+		return -EBUSY;*/
 
 	/* None TPG mode and a TPG channel is opened, return busy */
+	/*
 	if (!vi->pg_mode && tegra_vi->tpg_opened)
 		return -EBUSY;
+        */
 
 	/* The first open then turn on power */
 	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
-		tegra_vi_power_on(vi);
+		/*tegra_vi_power_on(vi);
 		tegra_csi_power_on(csi);
 		if (vi->pg_mode)
 			tegra_vi->tpg_opened = true;
 		else
 			tegra_vi->sensor_opened = true;
+			*/
 	}
 
 	if (!vi->pg_mode &&
 		(atomic_add_return(1, &chan->power_on_refcnt) == 1)) {
 		/* power on sensors connected in channel */
-		tegra_csi_channel_power_on(csi, chan->port);
+		//tegra_csi_channel_power_on(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 1);
 		if (ret < 0)
 			goto unlock;
@@ -1508,8 +1525,8 @@ static int tegra_channel_close(struct file *fp)
 	struct video_device *vdev = video_devdata(fp);
 	struct tegra_channel *chan = video_get_drvdata(vdev);
 	struct tegra_mc_vi *vi = chan->vi;
-	struct vi *tegra_vi = vi->vi;
-	struct tegra_csi_device *csi = vi->csi;
+	//struct vi *tegra_vi = vi->vi;
+	//struct tegra_csi_device *csi = vi->csi;
 	bool is_singular;
 
 	mutex_lock(&chan->video_lock);
@@ -1524,7 +1541,7 @@ static int tegra_channel_close(struct file *fp)
 	if (!vi->pg_mode &&
 		atomic_dec_and_test(&chan->power_on_refcnt)) {
 		/* power off sensors connected in channel */
-		tegra_csi_channel_power_off(csi, chan->port);
+		//tegra_csi_channel_power_off(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 0);
 		if (ret < 0)
 			dev_err(vi->dev, "Failed to power off subdevices\n");
@@ -1532,12 +1549,13 @@ static int tegra_channel_close(struct file *fp)
 
 	/* The last release then turn off power */
 	if (atomic_dec_and_test(&vi->power_on_refcnt)) {
-		tegra_csi_power_off(csi);
+		/*tegra_csi_power_off(csi);
 		tegra_vi_power_off(vi);
 		if (vi->pg_mode)
 			tegra_vi->tpg_opened = false;
 		else
 			tegra_vi->sensor_opened = false;
+			*/
 	}
 
 	mutex_unlock(&chan->video_lock);
@@ -1574,6 +1592,7 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i]);
 }
 
+static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index) __maybe_unused;
 static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index)
 {
 	int numlanes = 0;
@@ -1609,12 +1628,12 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	struct tegra_channel *chan = &vi->chans[index];
 
 	/* VI/CSI is in bypass mode, then channel has to be in bypass */
-	if (vi->vi->bypass)
-		chan->bypass = true;
+	//if (vi->vi->bypass)
+	chan->bypass = true;
 
 	chan->vi = vi;
-	chan->fops = vi->vi->data->channel_fops;
-	tegra_channel_csi_init(vi, index);
+	//chan->fops = vi->vi->data->channel_fops;
+	//tegra_channel_csi_init(vi, index);
 
 	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
 	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;

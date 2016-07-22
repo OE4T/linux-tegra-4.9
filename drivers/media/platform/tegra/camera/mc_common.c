@@ -170,7 +170,6 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 	int ret;
 
 	vi_tpg_fmts_bitmap_init(vi);
-
 	/*
 	 * TPG mode need to reuse the real media_device struct of tegra_vi,
 	 * so bypass the media_device_register() here.
@@ -292,8 +291,9 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	set_vi_register_base(mc_vi, pdata->aperture[0]);
 
 	err = vi_get_clks(mc_vi, pdev);
-	if (err)
-		return err;
+	if (err) {
+                dev_err(&pdev->dev, "Failed to init vi clks\n");
+	}
 
 	if (mc_vi->pg_mode) {
 		mc_vi->chans = devm_kzalloc(&pdev->dev,

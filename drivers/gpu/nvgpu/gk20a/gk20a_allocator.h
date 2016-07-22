@@ -99,9 +99,32 @@ struct gk20a_allocator {
  *     allocations you need to keep track of the meta-data yourself (in this
  *     case the base and length of the allocation as opposed to just the base
  *     of the allocation).
+ *
+ *   GPU_ALLOC_4K_VIDMEM_PAGES
+ *
+ *     We manage vidmem pages at a large page granularity for performance
+ *     reasons; however, this can lead to wasting memory. For page allocators
+ *     setting this flag will tell the allocator to manage pools of 4K pages
+ *     inside internally allocated large pages.
+ *
+ *   GPU_ALLOC_FORCE_CONTIG
+ *
+ *     Force allocations to be contiguous. Currently only relevant for page
+ *     allocators since all other allocators are naturally contiguous.
+ *
+ *   GPU_ALLOC_NO_SCATTER_GATHER
+ *
+ *     The page allocator normally returns a scatter gather data structure for
+ *     allocations (to handle discontiguous pages). However, at times that can
+ *     be annoying so this flag forces the page allocator to return a u64
+ *     pointing to the allocation base (requires GPU_ALLOC_FORCE_CONTIG to be
+ *     set as well).
  */
 #define GPU_ALLOC_GVA_SPACE		0x1
 #define GPU_ALLOC_NO_ALLOC_PAGE		0x2
+#define GPU_ALLOC_4K_VIDMEM_PAGES	0x4
+#define GPU_ALLOC_FORCE_CONTIG		0x8
+#define GPU_ALLOC_NO_SCATTER_GATHER	0x10
 
 static inline void alloc_lock(struct gk20a_allocator *a)
 {
@@ -130,6 +153,13 @@ int  gk20a_buddy_allocator_init(struct gk20a_allocator *allocator,
 int gk20a_bitmap_allocator_init(struct gk20a_allocator *__a,
 				const char *name, u64 base, u64 length,
 				u64 blk_size, u64 flags);
+
+/*
+ * Page allocator initializers.
+ */
+int gk20a_page_allocator_init(struct gk20a_allocator *__a,
+			      const char *name, u64 base, u64 length,
+			      u64 blk_size, u64 flags);
 
 #define GPU_BALLOC_MAX_ORDER		31
 
@@ -199,7 +229,7 @@ void gk20a_alloc_debugfs_init(struct platform_device *pdev);
 	} while (0)
 
 #define __alloc_dbg(a, fmt, arg...)					\
-	pr_info("%-25s %25s() " fmt, (a)->name, __func__, ##arg)
+	pr_warn("%-25s %25s() " fmt, (a)->name, __func__, ##arg)
 
 #if defined(ALLOCATOR_DEBUG)
 /*

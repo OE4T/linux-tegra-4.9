@@ -22,9 +22,9 @@
 #ifndef __NVHOST_HARDWARE_T194_H
 #define __NVHOST_HARDWARE_T194_H
 
-#include "host1x/hw_host1x5_sync.h"
-#include "host1x/hw_host1x5_uclass.h"
-#include "host1x/hw_host1x5_channel.h"
+#include "host1x/hw_host1x6_sync.h"
+#include "host1x/hw_host1x6_uclass.h"
+#include "host1x/hw_host1x6_channel.h"
 #include "host1x/hw_host1x5_actmon.h"
 
 /* sync registers */
@@ -54,21 +54,6 @@ static inline u32 nvhost_class_host_load_syncpt_base(
 {
 	return host1x_uclass_wait_syncpt_indx_f(indx)
 		| host1x_uclass_wait_syncpt_thresh_f(threshold);
-}
-
-static inline u32 nvhost_class_host_wait_syncpt_base(
-	unsigned indx, unsigned base_indx, unsigned offset)
-{
-	return host1x_uclass_wait_syncpt_base_indx_f(indx)
-		| host1x_uclass_wait_syncpt_base_base_indx_f(base_indx)
-		| host1x_uclass_wait_syncpt_base_offset_f(offset);
-}
-
-static inline u32 nvhost_class_host_incr_syncpt_base(
-	unsigned base_indx, unsigned offset)
-{
-	return host1x_uclass_incr_syncpt_base_base_indx_f(base_indx)
-		| host1x_uclass_incr_syncpt_base_offset_f(offset);
 }
 
 static inline u32 nvhost_class_host_incr_syncpt(

@@ -31,6 +31,7 @@
 
 static ov10823_reg ov10823_start[] = {
 	{ 0x0100, 0x01 },
+	{OV10823_TABLE_WAIT_MS, 66},
 	{ OV10823_TABLE_END, 0x00 }
 };
 
@@ -44,7 +45,6 @@ static ov10823_reg fsync_master[] = {
 	{0x3009, 0x06},
 	{0x3823, 0x00},
 
-	{OV10823_TABLE_WAIT_MS, 66},
 	{OV10823_TABLE_END, 0x00}
 };
 
@@ -53,7 +53,6 @@ static ov10823_reg fsync_slave[] = {
 	{0x3009, 0x02},
 	{0x3823, 0x30},
 
-	{OV10823_TABLE_WAIT_MS, 66},
 	{OV10823_TABLE_END, 0x00}
 };
 
@@ -248,7 +247,6 @@ static ov10823_reg mode_4336x2440_24MhzMCLK[] = {
 	{0x3830, 0x00},
 	{0x3831, 0x00},
 
-	{OV10823_TABLE_WAIT_MS, 66},
 	{OV10823_TABLE_END, 0x00}
 };
 
@@ -443,7 +441,6 @@ static ov10823_reg mode_3000x2440_24MhzMCLK[] = {
 	{0x3830, 0x00},
 	{0x3831, 0x00},
 
-	{OV10823_TABLE_WAIT_MS, 66},
 	{OV10823_TABLE_END, 0x00}
 };
 
@@ -632,7 +629,6 @@ static ov10823_reg mode_2168x1220_24MhzMCLK[] = {
 	{0x3830, 0x00},
 	{0x3831, 0x00},
 
-	{OV10823_TABLE_WAIT_MS, 66},
 	{OV10823_TABLE_END, 0x00}
 };
 

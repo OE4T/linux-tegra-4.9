@@ -56,7 +56,7 @@
 
 #define REGW_SID	0x300c
 #define DEFAULT_ADDR	0x10
-#define MASTER_ADDR	0x22
+#define MASTER_ADDR	0x20
 
 static bool assigned;
 

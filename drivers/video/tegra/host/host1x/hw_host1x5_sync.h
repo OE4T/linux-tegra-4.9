@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -124,7 +124,7 @@ static inline u32 host1x_sync_usec_clk_r(void)
 }
 static inline u32 host1x_sync_ctxsw_timeout_cfg_r(void)
 {
-	return 0x2248;
+	return 0x22e0;
 }
 static inline u32 host1x_sync_ip_busy_timeout_r(void)
 {
@@ -314,7 +314,7 @@ static inline u32 host1x_sync_common_mlock_locked_v(u32 r)
 {
 	return (r >> 0) & 0x1;
 }
-static inline u32 host1x_thost_common_icg_en_override_0_r(void)
+static inline u32 host1x_sync_common_icg_en_override_0_r(void)
 {
 	return 0x2aa8;
 }

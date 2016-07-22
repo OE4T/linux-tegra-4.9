@@ -143,9 +143,9 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 	nvhost_debug_output(o, "%d: fifo:\n", chid);
 
 	temp = host1x_hypervisor_readl(pdev,
-			host1x_thost_common_icg_en_override_0_r());
+			host1x_sync_common_icg_en_override_0_r());
 	host1x_hypervisor_writel(pdev,
-			host1x_thost_common_icg_en_override_0_r(), 0x1);
+			host1x_sync_common_icg_en_override_0_r(), 0x1);
 
 	host1x_hypervisor_writel(pdev, host1x_sync_cfpeek_ctrl_r(),
 			host1x_sync_cfpeek_ctrl_cfpeek_ena_f(1)
@@ -192,7 +192,7 @@ static void debug_show_channel_fifo(struct nvhost_master *m,
 	} while (max && rd_ptr != wr_ptr);
 
 	host1x_hypervisor_writel(pdev,
-			host1x_thost_common_icg_en_override_0_r(), temp);
+			host1x_sync_common_icg_en_override_0_r(), temp);
 
 	nvhost_debug_output(o, "\n");
 }

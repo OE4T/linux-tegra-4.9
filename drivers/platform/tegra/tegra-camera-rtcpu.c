@@ -36,6 +36,8 @@
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
 
+#include "rtcpu/camrtc-commands.h"
+
 /* Register specifics */
 #define TEGRA_APS_FRSC_SC_CTL_0			0x0
 #define TEGRA_SCE_APS_FRSC_SC_MODEIN_0		0x14
@@ -45,19 +47,6 @@
 #define TEGRA_SCE_R5R_SC_DISABLE		0x5
 #define TEGRA_SCE_FN_MODEIN			0x29527
 #define TEGRA_SCE_FWLOADDONE			0x2
-
-enum {
-	RTCPU_CMD_INIT = 0,
-	RTCPU_CMD_FW_VERSION = 1,
-	RTCPU_CMD_IVC_READY,
-	RTCPU_CMD_ERROR = 0x7f,
-};
-
-#define RTCPU_COMMAND(id, value)	((RTCPU_CMD_ ## id << 24) | value)
-#define RTCPU_GET_COMMAND_ID(value)	(((value) >> 24) & 0x7f)
-#define RTCPU_GET_COMMAND_VALUE(value)	((value) & 0xffffff)
-
-#define RTCPU_FW_VERSION (1)
 
 static const char * const sce_clock_names[] = {
 	"sce-apb",

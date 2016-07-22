@@ -51,6 +51,16 @@ enum gk20a_aperture {
 	APERTURE_VIDMEM
 };
 
+static inline const char *gk20a_aperture_str(enum gk20a_aperture aperture)
+{
+	switch (aperture) {
+		case APERTURE_INVALID: return "invalid";
+		case APERTURE_SYSMEM:  return "sysmem";
+		case APERTURE_VIDMEM:  return "vidmem";
+	};
+	return "UNKNOWN";
+}
+
 struct mem_desc {
 	void *cpu_va; /* sysmem only */
 	struct page **pages; /* sysmem only */

@@ -395,6 +395,8 @@ static int __must_check gk20a_init_hwpm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_cde_vm(struct mm_gk20a *mm);
 static int __must_check gk20a_init_ce_vm(struct mm_gk20a *mm);
 
+static struct gk20a *gk20a_vidmem_buf_owner(struct dma_buf *dmabuf);
+
 struct gk20a_dmabuf_priv {
 	struct mutex lock;
 
@@ -1677,7 +1679,7 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	gk20a_dbg(gpu_dbg_map,
 	   "as=%d pgsz=%d "
 	   "kind=0x%x flags=0x%x "
-	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x + %llx",
+	   "ctags=%d start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x + %llx size=%lld aperture=%s",
 	   vm_aspace_id(vm), pgsz_idx,
 	   kind_v, flags,
 	   ctag_lines, ctag_offset,
@@ -1686,7 +1688,9 @@ u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 	   lo32((u64)sg_dma_address(sgt->sgl)),
 	   hi32((u64)sg_phys(sgt->sgl)),
 	   lo32((u64)sg_phys(sgt->sgl)),
-	   buffer_offset);
+	   buffer_offset,
+	   size,
+	   gk20a_aperture_str(aperture));
 
 	err = update_gmmu_ptes_locked(vm, pgsz_idx,
 				      sgt,
@@ -1777,6 +1781,28 @@ void gk20a_locked_gmmu_unmap(struct vm_gk20a *vm,
 	}
 }
 
+static enum gk20a_aperture gk20a_dmabuf_aperture(struct gk20a *g,
+		struct dma_buf *dmabuf)
+{
+	struct gk20a *buf_owner = gk20a_vidmem_buf_owner(dmabuf);
+	if (buf_owner == NULL) {
+		/* Not nvgpu-allocated, assume system memory */
+		return APERTURE_SYSMEM;
+	} else if (WARN_ON(buf_owner == g && !g->mm.vidmem_is_vidmem)) {
+		/* Looks like our video memory, but this gpu doesn't support
+		 * it. Warn about a bug and bail out */
+		gk20a_warn(dev_from_gk20a(g),
+			"dmabuf is our vidmem but we don't have local vidmem");
+		return APERTURE_INVALID;
+	} else if (buf_owner != g) {
+		/* Someone else's vidmem */
+		return APERTURE_INVALID;
+	} else {
+		/* Yay, buf_owner == g */
+		return APERTURE_VIDMEM;
+	}
+}
+
 static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 					 struct dma_buf *dmabuf,
 					 u64 offset_align,
@@ -1786,6 +1812,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 					 bool user_mapped,
 					 int rw_flag)
 {
+	struct gk20a *g = gk20a_from_vm(vm);
 	struct mapped_buffer_node *mapped_buffer = NULL;
 
 	mapped_buffer =
@@ -1824,7 +1851,7 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 	gk20a_dbg(gpu_dbg_map,
 		   "reusing as=%d pgsz=%d flags=0x%x ctags=%d "
 		   "start=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x "
-		   "own_mem_ref=%d user_mapped=%d",
+		   "own_mem_ref=%d user_mapped=%d size=%zu aperture=%s",
 		   vm_aspace_id(vm), mapped_buffer->pgsz_idx,
 		   mapped_buffer->flags,
 		   mapped_buffer->ctag_lines,
@@ -1834,7 +1861,9 @@ static u64 gk20a_vm_map_duplicate_locked(struct vm_gk20a *vm,
 		   lo32((u64)sg_dma_address(mapped_buffer->sgt->sgl)),
 		   hi32((u64)sg_phys(mapped_buffer->sgt->sgl)),
 		   lo32((u64)sg_phys(mapped_buffer->sgt->sgl)),
-		   mapped_buffer->own_mem_ref, user_mapped);
+		   mapped_buffer->own_mem_ref, user_mapped,
+		   dmabuf->size,
+		   gk20a_aperture_str(gk20a_dmabuf_aperture(g, dmabuf)));
 
 	if (sgt)
 		*sgt = mapped_buffer->sgt;
@@ -2024,7 +2053,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	u32 ctag_map_win_ctagline = 0;
 	struct vm_reserved_va_node *va_node = NULL;
 	u32 ctag_offset;
-	struct gk20a *buf_owner;
 	enum gk20a_aperture aperture;
 
 	if (user_mapped && vm->userspace_managed &&
@@ -2201,22 +2229,10 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 		ctag_offset += buffer_offset >>
 			       ilog2(g->ops.fb.compression_page_size(g));
 
-	buf_owner = gk20a_vidmem_buf_owner(dmabuf);
-	if (buf_owner == NULL) {
-		/* Not nvgpu-allocated, assume system memory */
-		aperture = APERTURE_SYSMEM;
-	} else if (WARN_ON(buf_owner == g && !g->mm.vidmem_is_vidmem)) {
-		/* Looks like our video memory, but this gpu doesn't support
-		 * it. Warn about a bug and bail out */
+	aperture = gk20a_dmabuf_aperture(g, dmabuf);
+	if (aperture == APERTURE_INVALID) {
 		err = -EINVAL;
 		goto clean_up;
-	} else if (buf_owner != g) {
-		/* Someone else's vidmem */
-		err = -EINVAL;
-		goto clean_up;
-	} else {
-		/* Yay, buf_owner == g */
-		aperture = APERTURE_VIDMEM;
 	}
 
 	/* update gmmu ptes */
@@ -2239,7 +2255,7 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	gk20a_dbg(gpu_dbg_map,
 	   "as=%d pgsz=%d "
 	   "kind=0x%x kind_uc=0x%x flags=0x%x "
-	   "ctags=%d start=%d ctags_allocated=%d ctags_mappable=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x",
+	   "ctags=%d start=%d ctags_allocated=%d ctags_mappable=%d gv=0x%x,%08x -> 0x%x,%08x -> 0x%x,%08x size=%lld/%lld aperture=%s",
 	   vm_aspace_id(vm), gmmu_page_size,
 	   bfr.kind_v, bfr.uc_kind_v, flags,
 	   bfr.ctag_lines, bfr.ctag_offset,
@@ -2248,7 +2264,9 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	   hi32((u64)sg_dma_address(bfr.sgt->sgl)),
 	   lo32((u64)sg_dma_address(bfr.sgt->sgl)),
 	   hi32((u64)sg_phys(bfr.sgt->sgl)),
-	   lo32((u64)sg_phys(bfr.sgt->sgl)));
+	   lo32((u64)sg_phys(bfr.sgt->sgl)),
+	   bfr.size, mapping_size,
+	   gk20a_aperture_str(aperture));
 
 #if defined(NVHOST_DEBUG)
 	{

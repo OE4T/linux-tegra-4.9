@@ -741,6 +741,24 @@ static int tegra_cam_rtcpu_suspend(struct device *dev)
 	return 0;
 }
 
+static void tegra_cam_rtcpu_shutdown(struct platform_device *pdev)
+{
+	struct device *dev = &pdev->dev;
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+	/*
+	 * Send the SUSPEND command before resetting SCE
+	 */
+	u32 command = RTCPU_COMMAND(PM_SUSPEND, 0);
+	int ret = tegra_camrtc_command(dev, command, 0);
+	if (RTCPU_GET_COMMAND_ID(ret) != RTCPU_CMD_PM_SUSPEND)
+		dev_warn(dev, "unclean RTCPU shutdown\n");
+
+	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE)
+		tegra_camrtc_set_halt(dev, true);
+
+	tegra_camrtc_reset(dev);
+}
+
 static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.suspend = tegra_cam_rtcpu_suspend,
 	.resume = tegra_cam_rtcpu_resume,
@@ -759,6 +777,7 @@ static struct platform_driver tegra_cam_rtcpu_driver = {
 	},
 	.probe = tegra_cam_rtcpu_probe,
 	.remove = tegra_cam_rtcpu_remove,
+	.shutdown = tegra_cam_rtcpu_shutdown,
 };
 module_platform_driver(tegra_cam_rtcpu_driver);
 

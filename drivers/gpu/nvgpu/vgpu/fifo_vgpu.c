@@ -237,6 +237,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 	struct device *d = dev_from_gk20a(g);
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int chid, err = 0;
 
 	gk20a_dbg_fn("");
@@ -247,13 +248,7 @@ static int vgpu_init_fifo_setup_sw(struct gk20a *g)
 	}
 
 	f->g = g;
-
-	err = vgpu_get_attribute(vgpu_get_handle(g),
-				TEGRA_VGPU_ATTRIB_NUM_CHANNELS,
-				&f->num_channels);
-	if (err)
-		return -ENXIO;
-
+	f->num_channels = priv->constants.num_channels;
 	f->max_engines = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
 
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();

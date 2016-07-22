@@ -271,22 +271,11 @@ int vgpu_pm_prepare_poweroff(struct device *dev)
 static void vgpu_detect_chip(struct gk20a *g)
 {
 	struct nvgpu_gpu_characteristics *gpu = &g->gpu_characteristics;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	u32 mc_boot_0_value;
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_PMC_BOOT_0,
-			&mc_boot_0_value)) {
-		gk20a_err(dev_from_gk20a(g), "failed to detect chip");
-		return;
-	}
-
-	gpu->arch = mc_boot_0_architecture_v(mc_boot_0_value) <<
-		NVGPU_GPU_ARCHITECTURE_SHIFT;
-	gpu->impl = mc_boot_0_implementation_v(mc_boot_0_value);
-	gpu->rev =
-		(mc_boot_0_major_revision_v(mc_boot_0_value) << 4) |
-		mc_boot_0_minor_revision_v(mc_boot_0_value);
+	gpu->arch = priv->constants.arch;
+	gpu->impl = priv->constants.impl;
+	gpu->rev = priv->constants.rev;
 
 	gk20a_dbg_info("arch: %x, impl: %x, rev: %x\n",
 			g->gpu_characteristics.arch,
@@ -296,7 +285,7 @@ static void vgpu_detect_chip(struct gk20a *g)
 
 static int vgpu_init_gpu_characteristics(struct gk20a *g)
 {
-	u32 max_freq;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	int err;
 
 	gk20a_dbg_fn("");
@@ -305,11 +294,7 @@ static int vgpu_init_gpu_characteristics(struct gk20a *g)
 	if (err)
 		return err;
 
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_MAX_FREQ, &max_freq))
-		return -ENOMEM;
-
-	g->gpu_characteristics.max_freq = max_freq;
+	g->gpu_characteristics.max_freq = priv->constants.max_freq;
 	g->gpu_characteristics.map_buffer_batch_limit = 0;
 	return 0;
 }
@@ -500,6 +485,29 @@ static int vgpu_pm_init(struct device *dev)
 	return err;
 }
 
+static int vgpu_get_constants(struct gk20a *g)
+{
+	struct tegra_vgpu_cmd_msg msg = {};
+	struct tegra_vgpu_constants_params *p = &msg.params.constants;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
+	int err;
+
+	gk20a_dbg_fn("");
+
+	msg.cmd = TEGRA_VGPU_CMD_GET_CONSTANTS;
+	msg.handle = vgpu_get_handle(g);
+	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
+	err = err ? err : msg.ret;
+
+	if (unlikely(err)) {
+		gk20a_err(g->dev, "%s failed, err=%d", __func__, err);
+		return err;
+	}
+
+	priv->constants = *p;
+	return 0;
+}
+
 int vgpu_probe(struct platform_device *pdev)
 {
 	struct gk20a *gk20a;
@@ -571,6 +579,12 @@ int vgpu_probe(struct platform_device *pdev)
 		dev_err(dev, "failed to connect to server node\n");
 		vgpu_comm_deinit();
 		return -ENOSYS;
+	}
+
+	err = vgpu_get_constants(gk20a);
+	if (err) {
+		vgpu_comm_deinit();
+		return err;
 	}
 
 	priv->intr_handler = kthread_run(vgpu_intr_thread, gk20a, "gk20a");

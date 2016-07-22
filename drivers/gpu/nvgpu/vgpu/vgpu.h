@@ -25,6 +25,7 @@
 struct vgpu_priv_data {
 	u64 virt_handle;
 	struct task_struct *intr_handler;
+	struct tegra_vgpu_constants_params constants;
 };
 
 static inline

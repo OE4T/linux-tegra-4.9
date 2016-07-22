@@ -96,6 +96,7 @@ enum {
 	TEGRA_VGPU_CMD_READ_PTIMER = 59,
 	TEGRA_VGPU_CMD_SET_POWERGATE = 60,
 	TEGRA_VGPU_CMD_SET_GPU_CLK_RATE = 61,
+	TEGRA_VGPU_CMD_GET_CONSTANTS = 62,
 };
 
 struct tegra_vgpu_connect_params {
@@ -110,14 +111,14 @@ struct tegra_vgpu_channel_hwctx_params {
 };
 
 enum {
-	TEGRA_VGPU_ATTRIB_NUM_CHANNELS = 0,
+	TEGRA_VGPU_ATTRIB_NUM_CHANNELS = 0, /*deprecated */
 	TEGRA_VGPU_ATTRIB_GOLDEN_CTX_SIZE = 1,
 	TEGRA_VGPU_ATTRIB_ZCULL_CTX_SIZE = 2,
 	TEGRA_VGPU_ATTRIB_COMPTAG_LINES = 3,
 	TEGRA_VGPU_ATTRIB_GPC_COUNT = 4,
 	TEGRA_VGPU_ATTRIB_MAX_TPC_PER_GPC_COUNT = 5,
 	TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT = 6,
-	TEGRA_VGPU_ATTRIB_PMC_BOOT_0 = 7,
+	TEGRA_VGPU_ATTRIB_PMC_BOOT_0 = 7, /* deprecated */
 	TEGRA_VGPU_ATTRIB_L2_SIZE = 8,
 	TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH = 9,
 	TEGRA_VGPU_ATTRIB_NUM_FBPS = 10,
@@ -131,7 +132,7 @@ enum {
 	TEGRA_VGPU_ATTRIB_LTC_COUNT = 18,
 	TEGRA_VGPU_ATTRIB_TPC_COUNT = 19,
 	TEGRA_VGPU_ATTRIB_GPC0_TPC_COUNT = 20,
-	TEGRA_VGPU_ATTRIB_MAX_FREQ = 21,
+	TEGRA_VGPU_ATTRIB_MAX_FREQ = 21, /* deprecated */
 };
 
 struct tegra_vgpu_attrib_params {
@@ -402,6 +403,14 @@ struct tegra_vgpu_gpu_clk_rate_params {
 	u32 rate; /* in kHz */
 };
 
+struct tegra_vgpu_constants_params {
+	u32 arch;
+	u32 impl;
+	u32 rev;
+	u32 max_freq;
+	u32 num_channels;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -445,6 +454,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_read_ptimer_params read_ptimer;
 		struct tegra_vgpu_set_powergate_params set_powergate;
 		struct tegra_vgpu_gpu_clk_rate_params gpu_clk_rate;
+		struct tegra_vgpu_constants_params constants;
 		char padding[192];
 	} params;
 };

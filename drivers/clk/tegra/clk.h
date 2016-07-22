@@ -846,4 +846,7 @@ void tegra_register_pto(struct clk *clk, struct tegra_pto_table *ptodef);
 /* add some extra nodes to debugfs */
 void tegra_clk_debugfs_add(struct clk *clk);
 
+int div71_get(unsigned long rate, unsigned parent_rate, u8 width,
+	      u8 frac_width, u8 flags);
+
 #endif /* TEGRA_CLK_H */

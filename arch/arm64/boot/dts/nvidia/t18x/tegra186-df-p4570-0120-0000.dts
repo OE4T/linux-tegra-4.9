@@ -192,6 +192,11 @@
 			gpio = <&tegra_gpio TEGRA_GPIO(I, 5) 0>;
 			enable-active-high;
 		};
+                vdd_usb2_5v: regulator@17 {
+			gpio = "";
+			regulator-always-on;
+			regulator-boot-on;
+		};
 	};
 
 	pwm-fan {
@@ -609,6 +614,39 @@
 		};
 	};
 
+	xhci@3530000 {
+		status = "okay";
+		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+			<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
+			<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(2)>;
+		phy-names = "utmi-0", "utmi-1", "utmi-2";
+	};
+
+	pinctrl@3520000 {
+		tegra_padctl_pinmux_default: pinmux {
+			usb2-micro-AB-2 {
+				nvidia,lanes = "otg-2";
+				nvidia,function = "xusb";
+				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+			};
+			/* P4573 does not support usb 3.0 */
+			usb3-std-A-port2 {
+				status = "disabled";
+			};
+		};
+	};
+
+	plugin-manager {
+		fragment-500-xusb-config {
+			status = "disbled";
+		};
+		fragment-e3325-xusb {
+			status = "disabled";
+		};
+		fragment-500-e3325-pcie {
+			status = "disabled";
+		};
+	};
 	pinmux@2430000 {
 		pinctrl-names = "default";
 		pinctrl-0 = <&pinmux_default>;

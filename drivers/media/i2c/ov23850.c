@@ -434,6 +434,7 @@ static int ov23850_power_get(struct ov23850 *priv)
 	struct camera_common_power_rail *pw = &priv->power;
 	struct camera_common_pdata *pdata = priv->pdata;
 	const char *mclk_name;
+	struct clk *parent;
 	int err = 0;
 
 	mclk_name = priv->pdata->mclk_name ?
@@ -444,6 +445,12 @@ static int ov23850_power_get(struct ov23850 *priv)
 			"unable to get clock %s\n", mclk_name);
 		return PTR_ERR(pw->mclk);
 	}
+
+	parent = devm_clk_get(&priv->i2c_client->dev, "pllp_grtba");
+	if (IS_ERR(parent))
+		dev_err(&priv->i2c_client->dev, "devm_clk_get failed for pllp_grtba");
+	else
+		clk_set_parent(pw->mclk, parent);
 
 	err = clk_set_rate(pw->mclk, OV23850_DEFAULT_CLK_FREQ);
 	if (!err)

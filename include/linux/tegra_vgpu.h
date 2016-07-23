@@ -112,8 +112,8 @@ struct tegra_vgpu_channel_hwctx_params {
 
 enum {
 	TEGRA_VGPU_ATTRIB_NUM_CHANNELS = 0, /*deprecated */
-	TEGRA_VGPU_ATTRIB_GOLDEN_CTX_SIZE = 1,
-	TEGRA_VGPU_ATTRIB_ZCULL_CTX_SIZE = 2,
+	TEGRA_VGPU_ATTRIB_GOLDEN_CTX_SIZE = 1, /* deprecated */
+	TEGRA_VGPU_ATTRIB_ZCULL_CTX_SIZE = 2, /* deprecated */
 	TEGRA_VGPU_ATTRIB_COMPTAG_LINES = 3,
 	TEGRA_VGPU_ATTRIB_GPC_COUNT = 4,
 	TEGRA_VGPU_ATTRIB_MAX_TPC_PER_GPC_COUNT = 5,
@@ -409,6 +409,8 @@ struct tegra_vgpu_constants_params {
 	u32 rev;
 	u32 max_freq;
 	u32 num_channels;
+	u32 golden_ctx_size;
+	u32 zcull_ctx_size;
 };
 
 struct tegra_vgpu_cmd_msg {

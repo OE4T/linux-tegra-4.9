@@ -71,15 +71,12 @@ static int vgpu_gr_load_golden_ctx_image(struct gk20a *g,
 int vgpu_gr_init_ctx_state(struct gk20a *g)
 {
 	struct gr_gk20a *gr = &g->gr;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
-	vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_GOLDEN_CTX_SIZE,
-			&g->gr.ctx_vars.golden_image_size);
-	vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_ZCULL_CTX_SIZE,
-			&g->gr.ctx_vars.zcull_ctxsw_image_size);
+	g->gr.ctx_vars.golden_image_size = priv->constants.golden_ctx_size;
+	g->gr.ctx_vars.zcull_ctxsw_image_size = priv->constants.zcull_ctx_size;
 	if (!g->gr.ctx_vars.golden_image_size ||
 		!g->gr.ctx_vars.zcull_ctxsw_image_size)
 		return -ENXIO;

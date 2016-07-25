@@ -314,7 +314,7 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 
 	while (refs--) {
 		pm_runtime_mark_last_busy(&dev->dev);
-		if (pdata->clockgate_delay)
+		if (pdata->autosuspend_delay)
 			pm_runtime_put_sync_autosuspend(&dev->dev);
 		else
 			pm_runtime_put(&dev->dev);
@@ -533,92 +533,43 @@ static ssize_t force_on_show(struct kobject *kobj,
 
 }
 
-static ssize_t powergate_delay_store(struct kobject *kobj,
+static ssize_t autosuspend_delay_store(struct kobject *kobj,
 	struct kobj_attribute *attr, const char *buf, size_t count)
 {
-	int powergate_delay = 0, ret = 0;
+	int autosuspend_delay = 0, ret = 0;
 	struct nvhost_device_power_attr *power_attribute =
 		container_of(attr, struct nvhost_device_power_attr, \
-			power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY]);
+			power_attr[NVHOST_POWER_SYSFS_ATTRIB_AUTOSUSPEND_DELAY]);
 	struct platform_device *dev = power_attribute->ndev;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
-	if (!pdata->can_powergate) {
-		dev_info(&dev->dev, "does not support power-gating\n");
-		return count;
-	}
-
-	ret = sscanf(buf, "%d", &powergate_delay);
-	if (ret == 1 && powergate_delay >= 0) {
-		struct generic_pm_domain *genpd =
-			pd_to_genpd(dev->dev.pm_domain);
-
+	ret = sscanf(buf, "%d", &autosuspend_delay);
+	if (ret == 1 && autosuspend_delay >= 0) {
 		mutex_lock(&pdata->lock);
-		pdata->powergate_delay = powergate_delay;
-		mutex_unlock(&pdata->lock);
-
-		pm_genpd_set_poweroff_delay(genpd, pdata->powergate_delay);
-	} else {
-		dev_err(&dev->dev, "Invalid powergate delay\n");
-	}
-
-	return count;
-}
-
-static ssize_t powergate_delay_show(struct kobject *kobj,
-	struct kobj_attribute *attr, char *buf)
-{
-	int ret;
-	struct nvhost_device_power_attr *power_attribute =
-		container_of(attr, struct nvhost_device_power_attr, \
-			power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY]);
-	struct platform_device *dev = power_attribute->ndev;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	mutex_lock(&pdata->lock);
-	ret = snprintf(buf, PAGE_SIZE, "%d\n", pdata->powergate_delay);
-	mutex_unlock(&pdata->lock);
-
-	return ret;
-}
-
-static ssize_t clockgate_delay_store(struct kobject *kobj,
-	struct kobj_attribute *attr, const char *buf, size_t count)
-{
-	int clockgate_delay = 0, ret = 0;
-	struct nvhost_device_power_attr *power_attribute =
-		container_of(attr, struct nvhost_device_power_attr, \
-			power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY]);
-	struct platform_device *dev = power_attribute->ndev;
-	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
-
-	ret = sscanf(buf, "%d", &clockgate_delay);
-	if (ret == 1 && clockgate_delay >= 0) {
-		mutex_lock(&pdata->lock);
-		pdata->clockgate_delay = clockgate_delay;
+		pdata->autosuspend_delay = autosuspend_delay;
 		mutex_unlock(&pdata->lock);
 
 		pm_runtime_set_autosuspend_delay(&dev->dev,
-				pdata->clockgate_delay);
+				pdata->autosuspend_delay);
 	} else {
-		dev_err(&dev->dev, "Invalid clockgate delay\n");
+		dev_err(&dev->dev, "Invalid autosuspend delay\n");
 	}
 
 	return count;
 }
 
-static ssize_t clockgate_delay_show(struct kobject *kobj,
+static ssize_t autosuspend_delay_show(struct kobject *kobj,
 	struct kobj_attribute *attr, char *buf)
 {
 	int ret;
 	struct nvhost_device_power_attr *power_attribute =
 		container_of(attr, struct nvhost_device_power_attr, \
-			power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY]);
+			power_attr[NVHOST_POWER_SYSFS_ATTRIB_AUTOSUSPEND_DELAY]);
 	struct platform_device *dev = power_attribute->ndev;
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 
 	mutex_lock(&pdata->lock);
-	ret = snprintf(buf, PAGE_SIZE, "%d\n", pdata->clockgate_delay);
+	ret = snprintf(buf, PAGE_SIZE, "%d\n", pdata->autosuspend_delay);
 	mutex_unlock(&pdata->lock);
 
 	return ret;
@@ -811,9 +762,9 @@ int nvhost_module_init(struct platform_device *dev)
 	}
 
 	/* set pm runtime delays */
-	if (pdata->clockgate_delay) {
+	if (pdata->autosuspend_delay) {
 		pm_runtime_set_autosuspend_delay(&dev->dev,
-			pdata->clockgate_delay);
+			pdata->autosuspend_delay);
 		pm_runtime_use_autosuspend(&dev->dev);
 	}
 
@@ -850,28 +801,16 @@ int nvhost_module_init(struct platform_device *dev)
 		goto fail_attrib_alloc;
 	}
 
-	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY];
-	attr->attr.name = "clockgate_delay";
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_AUTOSUSPEND_DELAY];
+	attr->attr.name = "autosuspend_delay";
 	attr->attr.mode = S_IWUSR | S_IRUGO;
-	attr->show = clockgate_delay_show;
-	attr->store = clockgate_delay_store;
+	attr->show = autosuspend_delay_show;
+	attr->store = autosuspend_delay_store;
 	sysfs_attr_init(&attr->attr);
 	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
-		dev_err(&dev->dev, "Could not create sysfs attribute clockgate_delay\n");
+		dev_err(&dev->dev, "Could not create sysfs attribute autosuspend_delay\n");
 		err = -EIO;
-		goto fail_clockdelay;
-	}
-
-	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY];
-	attr->attr.name = "powergate_delay";
-	attr->attr.mode = S_IWUSR | S_IRUGO;
-	attr->show = powergate_delay_show;
-	attr->store = powergate_delay_store;
-	sysfs_attr_init(&attr->attr);
-	if (sysfs_create_file(pdata->power_kobj, &attr->attr)) {
-		dev_err(&dev->dev, "Could not create sysfs attribute powergate_delay\n");
-		err = -EIO;
-		goto fail_powergatedelay;
+		goto fail_autosuspenddelay;
 	}
 
 	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON];
@@ -889,14 +828,10 @@ int nvhost_module_init(struct platform_device *dev)
 	return 0;
 
 fail_forceon:
-	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY];
+	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_AUTOSUSPEND_DELAY];
 	sysfs_remove_file(pdata->power_kobj, &attr->attr);
 
-fail_powergatedelay:
-	attr = &pdata->power_attrib->power_attr[NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY];
-	sysfs_remove_file(pdata->power_kobj, &attr->attr);
-
-fail_clockdelay:
+fail_autosuspenddelay:
 	kobject_put(pdata->power_kobj);
 
 fail_attrib_alloc:
@@ -1056,10 +991,6 @@ int nvhost_module_add_domain(struct generic_pm_domain *domain,
 	if (!pdata->can_powergate)
 		pm_domain_gov = &pm_domain_always_on_gov;
 	domain->gov = pm_domain_gov;
-
-	if (pdata->powergate_delay)
-		pm_genpd_set_poweroff_delay(domain,
-				pdata->powergate_delay);
 
 	if (of_property_read_bool(dn, "wakeup-capable"))
 		wakeup_capable = true;

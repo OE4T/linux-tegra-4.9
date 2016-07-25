@@ -58,7 +58,6 @@ struct sync_pt;
 #define NVHOST_MODULE_MAX_MODMUTEXES		5
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM	3
 #define NVHOST_MODULE_NO_POWERGATE_ID		.powergate_id = -1
-#define NVHOST_DEFAULT_CLOCKGATE_DELAY		.clockgate_delay = 25
 #define NVHOST_MODULE_MAX_IORESOURCE_MEM 3
 #define NVHOST_NAME_SIZE			24
 #define NVSYNCPT_INVALID			(-1)
@@ -82,8 +81,7 @@ struct sync_pt;
 #define NVMODMUTEX_VI_1			(11)	/* t124, t132, t210 */
 
 enum nvhost_power_sysfs_attributes {
-	NVHOST_POWER_SYSFS_ATTRIB_CLOCKGATE_DELAY = 0,
-	NVHOST_POWER_SYSFS_ATTRIB_POWERGATE_DELAY,
+	NVHOST_POWER_SYSFS_ATTRIB_AUTOSUSPEND_DELAY,
 	NVHOST_POWER_SYSFS_ATTRIB_FORCE_ON,
 	NVHOST_POWER_SYSFS_ATTRIB_MAX
 };
@@ -193,8 +191,7 @@ struct nvhost_device_data {
 	int		powergate_id;
 	bool		engine_can_cg;	/* True if CG is enabled */
 	bool		can_powergate;	/* True if module can be power gated */
-	int		clockgate_delay;/* Delay before clock gated */
-	int		powergate_delay;/* Delay before power gated */
+	int		autosuspend_delay;/* Delay before power gated */
 	struct nvhost_clock clocks[NVHOST_MODULE_MAX_CLOCKS];/* Clock names */
 
 	/* Clock gating registers */

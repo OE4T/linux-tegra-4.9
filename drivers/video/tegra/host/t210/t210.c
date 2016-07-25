@@ -52,7 +52,7 @@
 
 #define HOST_EMC_FLOOR 204000000
 #define HOST_NVDEC_EMC_FLOOR 102000000
-#define TSEC_POWERGATE_DELAY 500
+#define TSEC_AUTOSUSPEND_DELAY 500
 
 #define BIT64(nr) (1ULL << (nr))
 
@@ -76,7 +76,7 @@ struct nvhost_device_data t21_host1x_info = {
 				   {"actmon", UINT_MAX}, {} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate		= true,
-	.powergate_delay	= 50,
+	.autosuspend_delay	= 50,
 	.private_data		= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
@@ -93,8 +93,7 @@ struct nvhost_device_data t21_isp_info = {
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP },
@@ -115,8 +114,7 @@ struct nvhost_device_data t21_ispb_info = {
 	.exclusive		= true,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {
 		{ "isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB },
@@ -137,8 +135,7 @@ struct nvhost_device_data t21_vi_info = {
 	.class			= NV_VIDEO_STREAMING_VI_CLASS_ID,
 	/* HACK: Mark as keepalive until 1188795 is fixed */
 	.keepalive		= true,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.moduleid		= NVHOST_MODULE_VI,
 	.clocks = {
@@ -166,8 +163,7 @@ struct nvhost_device_data t21_msenc_info = {
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_MSENC},
 	.devfs_name		= "msenc",
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 				   {"emc", HOST_EMC_FLOOR} },
@@ -198,8 +194,7 @@ struct nvhost_device_data t21_nvdec_info = {
 	.class			= NV_NVDEC_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_NVDEC},
 	.devfs_name		= "nvdec",
-	.clockgate_delay	= 10,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= {{"nvdec", 0, 0, TEGRA_MC_CLIENT_NVDEC},
 				   {"emc", HOST_NVDEC_EMC_FLOOR,
@@ -231,8 +226,7 @@ struct nvhost_device_data t21_nvjpg_info = {
 	.class			= NV_NVJPG_CLASS_ID,
 	.modulemutexes		= {NVMODMUTEX_NVJPG},
 	.devfs_name		= "nvjpg",
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.can_powergate		= true,
 	.clocks			= { {"nvjpg", UINT_MAX, 0, TEGRA_MC_CLIENT_NVJPG},
 				    {"emc", HOST_EMC_FLOOR} },
@@ -269,9 +263,8 @@ struct nvhost_device_data t21_tsec_info = {
 	.clocks			= {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 				   {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate		= true,
-	.powergate_delay	= TSEC_POWERGATE_DELAY,
+	.autosuspend_delay	= TSEC_AUTOSUSPEND_DELAY,
 	.keepalive		= true,
 	.moduleid		= NVHOST_MODULE_TSEC,
 	.engine_can_cg		= true,
@@ -294,9 +287,8 @@ struct nvhost_device_data t21_tsecb_info = {
 	.clocks			= {{"tsecb", UINT_MAX, 0, TEGRA_MC_CLIENT_TSECB},
 				   {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate		= true,
-	.powergate_delay	= TSEC_POWERGATE_DELAY,
+	.autosuspend_delay	= TSEC_AUTOSUSPEND_DELAY,
 	.keepalive		= true,
 	.engine_can_cg		= true,
 	.engine_cg_regs		= t21x_tsec_gating_registers,
@@ -323,9 +315,8 @@ struct nvhost_device_data t21_vic_info = {
 				   {"emc_shared", 0,
 				   NVHOST_MODULE_ID_EMC_SHARED}, {} },
 	.version		= NVHOST_ENCODE_FLCN_VER(4, 0),
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate		= true,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.moduleid		= NVHOST_MODULE_VIC,
 	.class			= NV_GRAPHICS_VIC_CLASS_ID,
 	.engine_cg_regs		= t21x_vic_gating_registers,

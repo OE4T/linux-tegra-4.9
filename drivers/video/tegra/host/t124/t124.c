@@ -52,12 +52,10 @@
 #include "cg_regs.c"
 
 #define HOST_EMC_FLOOR 300000000
-#define VI_CLOCKGATE_DELAY 60
-#define VI_POWERGATE_DELAY 500
-#define ISP_CLOCKGATE_DELAY 60
-#define ISP_POWERGATE_DELAY 500
-#define TSEC_POWERGATE_DELAY 500
-#define HOST1X_POWERGATE_DELAY 50
+#define VI_AUTOSUSPEND_DELAY 500
+#define ISP_AUTOSUSPEND_DELAY 500
+#define TSEC_AUTOSUSPEND_DELAY 500
+#define HOST1X_AUTOSUSPEND_DELAY 50
 
 #ifndef INT_HOST1X_MPCORE_SYNCPT
 #define INT_HOST1X_MPCORE_SYNCPT -1
@@ -105,7 +103,7 @@ struct nvhost_device_data t124_host1x_info = {
 	.clocks		= {{"host1x", 81600000}, {"actmon", UINT_MAX} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
 	.can_powergate   = true,
-	.powergate_delay = HOST1X_POWERGATE_DELAY,
+	.autosuspend_delay = HOST1X_AUTOSUSPEND_DELAY,
 	.private_data	= &host1x04_info,
 	.finalize_poweron = nvhost_host1x_finalize_poweron,
 	.prepare_poweroff = nvhost_host1x_prepare_poweroff,
@@ -146,8 +144,7 @@ struct nvhost_device_data t124_isp_info = {
 	.exclusive       = true,
 	.keepalive       = true,
 	.can_powergate   = true,
-	.clockgate_delay = ISP_CLOCKGATE_DELAY,
-	.powergate_delay = ISP_POWERGATE_DELAY,
+	.autosuspend_delay = ISP_AUTOSUSPEND_DELAY,
 	.clocks          = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISP},
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
@@ -186,8 +183,7 @@ struct nvhost_device_data t124_ispb_info = {
 	.exclusive       = true,
 	.keepalive       = true,
 	.can_powergate   = true,
-	.clockgate_delay = ISP_CLOCKGATE_DELAY,
-	.powergate_delay = ISP_POWERGATE_DELAY,
+	.autosuspend_delay = ISP_AUTOSUSPEND_DELAY,
 	.clocks          = {
 		{"isp", UINT_MAX, 0, TEGRA_MC_CLIENT_ISPB},
 		{"emc", 0, NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER},
@@ -232,8 +228,7 @@ struct nvhost_device_data t124_vi_info = {
 	.exclusive        = true,
 	.keepalive       = true,
 	.can_powergate    = true,
-	.clockgate_delay  = VI_CLOCKGATE_DELAY,
-	.powergate_delay  = VI_POWERGATE_DELAY,
+	.autosuspend_delay  = VI_AUTOSUSPEND_DELAY,
 	.clocks           = {
 		{"vi_bypass", UINT_MAX, 0},
 		{"csi", 0},
@@ -280,9 +275,8 @@ struct nvhost_device_data t124_msenc_info = {
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR,
 				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_MSENC,
-	.powergate_delay = 100,
+	.autosuspend_delay = 100,
 	.can_powergate	= true,
 	.poweron_reset	= true,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,
@@ -326,10 +320,9 @@ struct nvhost_device_data t124_tsec_info = {
 	.clocks	       = {{"tsec", UINT_MAX, 0, TEGRA_MC_CLIENT_TSEC},
 			 {"emc", HOST_EMC_FLOOR} },
 	NVHOST_MODULE_NO_POWERGATE_ID,
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.can_powergate   = true,
 	.poweron_reset   = true,
-	.powergate_delay = TSEC_POWERGATE_DELAY,
+	.autosuspend_delay = TSEC_AUTOSUSPEND_DELAY,
 	.keepalive       = true,
 	.moduleid      = NVHOST_MODULE_TSEC,
 	.finalize_poweron = nvhost_tsec_finalize_poweron,
@@ -371,14 +364,13 @@ struct nvhost_device_data t124_vic_info = {
 			{"emc_shared", 0,
 				NVHOST_MODULE_ID_EMC_SHARED} },
 	.version = NVHOST_ENCODE_FLCN_VER(3, 0),
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid      = NVHOST_MODULE_VIC,
 	.class                  = NV_GRAPHICS_VIC_CLASS_ID,
 	.can_powergate		= true,
 	.engine_can_cg		= true,
 	.engine_cg_regs		= t12x_vic_gating_registers,
 	.poweron_reset		= true,
-	.powergate_delay	= 500,
+	.autosuspend_delay	= 500,
 	.finalize_poweron	= nvhost_vic_finalize_poweron,
 	.scaling_init		= nvhost_scale_emc_init,
 	.scaling_deinit		= nvhost_scale_emc_deinit,
@@ -421,9 +413,8 @@ static struct nvhost_device_data t132_msenc_info = {
 	.clocks		= {{"msenc", UINT_MAX, 0, TEGRA_MC_CLIENT_MSENC},
 			  {"emc", HOST_EMC_FLOOR,
 				NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER} },
-	NVHOST_DEFAULT_CLOCKGATE_DELAY,
 	.moduleid	= NVHOST_MODULE_MSENC,
-	.powergate_delay = 100,
+	.autosuspend_delay = 100,
 	.can_powergate	= true,
 	.poweron_reset	= true,
 	.finalize_poweron = nvhost_flcn_finalize_poweron,

@@ -490,18 +490,26 @@
 	xusb@70090000 {
 		compatible = "nvidia,tegra210-xhci";
 		power-domains = <&mc_clk_pd>;
-		reg = <0x0 0x70090000 0x0 0x8000
-		       0x0 0x70098000 0x0 0x1000
-		       0x0 0x70099000 0x0 0x1000
-		       0x0 0x7009f000 0x0 0x1000>;
-		interrupts = <0 39 0x04
-			      0 40 0x04
-			      0 49 0x04
-			      0 97 0x04
-			      0 21 0x04>;
-		nvidia,hsic0 = /bits/8 <0x1 0x1 0x8 0xa 0 0 1 0x1c 0>;
+		reg = <0x0 0x70090000 0x0 0x8000>,
+			<0x0 0x70098000 0x0 0x1000>,
+			<0x0 0x70099000 0x0 0x1000>;
+		interrupts = <0 39 0x04>, <0 49 0x04>;
+		mboxes = <&xusb_mbox>;
+		mbox-names = "xusb";
+		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SWGROUP_XUSB_HOST>;
 		status = "disabled";
+		clocks = <&tegra_car TEGRA210_CLK_XUSB_HOST>,
+				<&tegra_car TEGRA210_CLK_XUSB_FALCON_SRC>,
+				<&tegra_car TEGRA210_CLK_XUSB_SS>,
+				<&tegra_car TEGRA210_CLK_XUSB_SS_SRC>,
+				<&tegra_car TEGRA210_CLK_XUSB_HS_SRC>,
+				<&tegra_car TEGRA210_CLK_XUSB_FS_SRC>,
+				<&tegra_car TEGRA210_CLK_PLL_U_480M>,
+				<&tegra_car TEGRA210_CLK_CLK_M>,
+				<&tegra_car TEGRA210_CLK_PLL_E>;
+		clock-names = "host", "falcon_src", "ss", "ss_src", "hs_src",
+			"fs_src", "pll_u_480M", "clk_m", "pll_e";
 	};
 
 	uarta: serial@70006000 {

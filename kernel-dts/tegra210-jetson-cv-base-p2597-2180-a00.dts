@@ -500,12 +500,16 @@
 	};
 
 	xusb@70090000 {
-		/* nvidia,uses_external_pmic;
-		/* nvidia,gpio_controls_muxed_ss_lanes; */
-		nvidia,gpio_ss1_sata = <0>;
-		nvidia,ulpicap = <0>; /* No ulpi support. can we remove */
-		nvidia,portmap = <0x0e03>;
 		status = "okay";
+		extcon-cables = <&vbus_gpio_extcon 1>;
+		extcon-cable-names = "id";
+		#extcon-cells = <1>;
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
+		phy-names = "utmi-0", "utmi-2", "usb3-1", "utmi-1", "usb3-0";
 	};
 
 	xudc@700d0000 {

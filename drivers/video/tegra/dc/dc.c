@@ -1569,7 +1569,7 @@ static ssize_t dbg_hotplug_write(struct file *file, const char __user *addr,
 
 	/* retrigger the hotplug */
 	if (dc->out_ops->detect)
-		dc->connected = dc->out_ops->detect(dc);
+		dc->out_ops->detect(dc);
 	mutex_unlock(&dc->lock);
 
 	return len;

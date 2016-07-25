@@ -688,6 +688,25 @@
 				nvidia,function = "dmic4";
 			};
 		};
+		/* Dynamic pinmux config for I2S3 */
+		i2s3_dap_active_state: i2s3_dap_active {
+			i2s3_dmic1_clk_pm1 {
+				nvidia,pins = "dmic1_clk_pm1";
+				nvidia,function = "i2s3";
+			};
+			i2s3_dmic1_dat_pm0 {
+				nvidia,pins = "dmic1_dat_pm0";
+				nvidia,function = "i2s3";
+			};
+			i2s3_dmic2_dat_pm2 {
+				nvidia,pins = "dmic2_dat_pm2";
+				nvidia,function = "i2s3";
+			};
+			i2s3_dmic2_clk_pm3 {
+				nvidia,pins = "dmic2_clk_pm3";
+				nvidia,function = "i2s3";
+			};
+		};
 	};
 
 	ahub {
@@ -713,6 +732,12 @@
 			nvidia,is-pinctrl = <1>;
 			pinctrl-names = "dap_active", "dap_inactive";
 			pinctrl-0 = <&dmic4_dap_active_state>;
+			pinctrl-1 = <>;
+		};
+		i2s@2901200 {
+			nvidia,is-pinctrl = <1>;
+			pinctrl-names = "dap_active", "dap_inactive";
+			pinctrl-0 = <&i2s3_dap_active_state>;
 			pinctrl-1 = <>;
 		};
 	};

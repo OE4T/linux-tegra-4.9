@@ -17,39 +17,25 @@
 
 static int vgpu_determine_L2_size_bytes(struct gk20a *g)
 {
-	u32 cache_size = 0;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_L2_SIZE, &cache_size))
-		dev_err(dev_from_gk20a(g), "unable to get L2 size\n");
-
-	return cache_size;
+	return priv->constants.l2_size;
 }
 
 static int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 {
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	u32 max_comptag_lines = 0;
 	int err;
 
 	gk20a_dbg_fn("");
 
-	err = vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_CACHELINE_SIZE,
-			&gr->cacheline_size);
-	err |= vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_COMPTAGS_PER_CACHELINE,
-			&gr->comptags_per_cacheline);
-	err |= vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_SLICES_PER_LTC,
-			&gr->slices_per_ltc);
-	err |= vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_COMPTAG_LINES, &max_comptag_lines);
-	if (err) {
-		dev_err(dev_from_gk20a(g), "failed to get ctags atributes\n");
-		return -ENXIO;
-	}
+	gr->cacheline_size = priv->constants.cacheline_size;
+	gr->comptags_per_cacheline = priv->constants.comptags_per_cacheline;
+	gr->slices_per_ltc = priv->constants.slices_per_ltc;
+	max_comptag_lines = priv->constants.comptag_lines;
 
 	if (max_comptag_lines < 2)
 		return -ENXIO;
@@ -63,15 +49,11 @@ static int vgpu_ltc_init_comptags(struct gk20a *g, struct gr_gk20a *gr)
 
 static void vgpu_ltc_init_fs_state(struct gk20a *g)
 {
-	u32 ltc_count = 0;
-	int err;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
-	err = vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_LTC_COUNT, &ltc_count);
-	WARN_ON(err);
-	g->ltc_count = ltc_count;
+	g->ltc_count = priv->constants.ltc_count;
 }
 
 void vgpu_init_ltc_ops(struct gpu_ops *gops)

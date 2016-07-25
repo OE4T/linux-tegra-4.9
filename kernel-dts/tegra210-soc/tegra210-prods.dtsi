@@ -536,7 +536,7 @@
 		};
 	};
 
-	xusb@70090000 {
+	pinctrl@7009f000 {
 		prod-settings {
 			#prod-cells = <4>;
 			prod_c_bias {

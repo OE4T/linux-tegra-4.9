@@ -357,8 +357,7 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 		hw_if->disable_chan_interrupts(qinx, pdata);
 		__napi_schedule(&rx_queue->napi);
 	} else {
-		pr_err("driver bug! Rx interrupt while in poll\n");
-		hw_if->disable_chan_interrupts(qinx, pdata);
+		/* Do nothing here. We should not hit this case. */
 	}
 	DBGPR("<--%s()\n", __func__);
 }

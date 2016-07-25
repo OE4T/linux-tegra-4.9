@@ -2111,7 +2111,9 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	struct tegra_dc_sor_data *sor = hdmi->sor;
 
 	tegra_dc_get(dc);
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	tegra_hdmi_get(dc);
+#endif
 
 	tegra_sor_hdmi_pad_power_up(sor);
 
@@ -2377,7 +2379,8 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	}
 
 	/* Enable SOR_CLK*/
-	tegra_sor_clk_enable(sor);
+	if (atomic_inc_return(&hdmi->clock_refcount) == 1)
+		tegra_sor_clk_enable(sor);
 
 	/* Select the sor_out parent as SAFE_CLK*/
 	clk_set_parent(sor->src_switch_clk, sor->safe_clk);

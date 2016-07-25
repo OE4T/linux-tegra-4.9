@@ -13,28 +13,8 @@
 
 #include <linux/kernel.h>
 
-#include "gm20b/hw_gr_gm20b.h"
 #include "gk20a/gk20a.h"
-#include "vgpu/vgpu.h"
 #include "vgpu_gr_gm20b.h"
-
-static void vgpu_gm20b_detect_sm_arch(struct gk20a *g)
-{
-	u32 v = 0;
-
-	gk20a_dbg_fn("");
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH, &v))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve SM arch");
-
-	g->gpu_characteristics.sm_arch_spa_version =
-		gr_gpc0_tpc0_sm_arch_spa_version_v(v);
-	g->gpu_characteristics.sm_arch_sm_version =
-		gr_gpc0_tpc0_sm_arch_sm_version_v(v);
-	g->gpu_characteristics.sm_arch_warp_count =
-		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
-}
 
 static int vgpu_gm20b_init_fs_state(struct gk20a *g)
 {
@@ -60,6 +40,5 @@ static int vgpu_gm20b_init_fs_state(struct gk20a *g)
 
 void vgpu_gm20b_init_gr_ops(struct gpu_ops *gops)
 {
-	gops->gr.detect_sm_arch = vgpu_gm20b_detect_sm_arch;
 	gops->gr.init_fs_state = vgpu_gm20b_init_fs_state;
 }

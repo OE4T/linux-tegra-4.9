@@ -17,6 +17,20 @@
 #include "gk20a/hw_gr_gk20a.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 
+static void vgpu_gr_detect_sm_arch(struct gk20a *g)
+{
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
+
+	gk20a_dbg_fn("");
+
+	g->gpu_characteristics.sm_arch_sm_version =
+			priv->constants.sm_arch_sm_version;
+	g->gpu_characteristics.sm_arch_spa_version =
+			priv->constants.sm_arch_spa_version;
+	g->gpu_characteristics.sm_arch_warp_count =
+			priv->constants.sm_arch_warp_count;
+}
+
 static int vgpu_gr_commit_inst(struct channel_gk20a *c, u64 gpu_va)
 {
 	struct tegra_vgpu_cmd_msg msg;
@@ -1095,6 +1109,7 @@ static int vgpu_gr_update_hwpm_ctxsw_mode(struct gk20a *g,
 
 void vgpu_init_gr_ops(struct gpu_ops *gops)
 {
+	gops->gr.detect_sm_arch = vgpu_gr_detect_sm_arch;
 	gops->gr.free_channel_ctx = vgpu_gr_free_channel_ctx;
 	gops->gr.alloc_obj_ctx = vgpu_gr_alloc_obj_ctx;
 	gops->gr.free_obj_ctx = vgpu_gr_free_obj_ctx;

@@ -13,36 +13,8 @@
 
 #include <linux/kernel.h>
 
-#include "gk20a/hw_gr_gk20a.h"
 #include "gk20a/gk20a.h"
-#include "vgpu/vgpu.h"
 #include "vgpu_gr_gk20a.h"
-
-static void vgpu_gk20a_detect_sm_arch(struct gk20a *g)
-{
-	u32 v = 0, raw_version, version = 0;
-
-	gk20a_dbg_fn("");
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH, &v))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve SM arch");
-
-	raw_version = gr_gpc0_tpc0_sm_arch_spa_version_v(v);
-
-	if (raw_version == gr_gpc0_tpc0_sm_arch_spa_version_smkepler_lp_v())
-		version = 0x320; /* SM 3.2 */
-	else
-		gk20a_err(dev_from_gk20a(g), "Unknown SM version 0x%x",
-			  raw_version);
-
-	/* on Kepler, SM version == SPA version */
-	g->gpu_characteristics.sm_arch_spa_version = version;
-	g->gpu_characteristics.sm_arch_sm_version = version;
-
-	g->gpu_characteristics.sm_arch_warp_count =
-		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
-}
 
 static int vgpu_gk20a_init_fs_state(struct gk20a *g)
 {
@@ -73,6 +45,5 @@ static int vgpu_gk20a_init_fs_state(struct gk20a *g)
 
 void vgpu_gk20a_init_gr_ops(struct gpu_ops *gops)
 {
-	gops->gr.detect_sm_arch = vgpu_gk20a_detect_sm_arch;
 	gops->gr.init_fs_state = vgpu_gk20a_init_fs_state;
 }

@@ -120,7 +120,7 @@ enum {
 	TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT = 6,
 	TEGRA_VGPU_ATTRIB_PMC_BOOT_0 = 7, /* deprecated */
 	TEGRA_VGPU_ATTRIB_L2_SIZE = 8, /* deprecated */
-	TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH = 9,
+	TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH = 9, /* deprecated */
 	TEGRA_VGPU_ATTRIB_NUM_FBPS = 10,
 	TEGRA_VGPU_ATTRIB_FBP_EN_MASK = 11,
 	TEGRA_VGPU_ATTRIB_MAX_LTC_PER_FBP = 12,
@@ -417,6 +417,9 @@ struct tegra_vgpu_constants_params {
 	u32 slices_per_ltc;
 	u32 comptags_per_cacheline;
 	u32 comptag_lines;
+	u32 sm_arch_sm_version;
+	u32 sm_arch_spa_version;
+	u32 sm_arch_warp_count;
 };
 
 struct tegra_vgpu_cmd_msg {

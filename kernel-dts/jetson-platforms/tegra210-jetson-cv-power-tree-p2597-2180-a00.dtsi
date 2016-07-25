@@ -333,9 +333,10 @@
 		usb_vbus-supply = <&usb_vbus1>;
 	};
 
-	xusb@70090000 {
-		usb_vbus1-supply = <&en_vdd_eth_5v0>;
-		usb_vbus2-supply = <&en_usb_vbus2>;
+	pinctrl@7009f000 {
+		vbus-0-supply = <&usb_vbus1>;
+		vbus-1-supply = <&en_vdd_eth_5v0>;
+		vbus-2-supply = <&en_usb_vbus2>;
 	};
 
 	spi@7000da00 {

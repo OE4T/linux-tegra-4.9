@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -250,10 +250,6 @@
 	};
 
 	xusb@70090000 {
-		usb_vbus0-supply = <&battery_reg>;
-		usb_vbus1-supply = <&usb_vbus3>;
-		usb_vbus2-supply = <&usb_vbus1>;
-		usb_vbus3-supply = <&vdd_3v3>;
 		hvdd_usb-supply = <&vdd_3v3>;
 		avdd_pll_utmip-supply = <&max77620_sd3>;
 		vddio_hsic-supply = <&max77620_ldo0>;
@@ -273,7 +269,12 @@
 		usb_vbus-supply = <&battery_reg>;
 	};
 
-	xusb_padctl {
+	 pinctrl@7009f000 {
+		vbus-0-supply = <&battery_reg>;
+		vbus-1-supply = <&usb_vbus3>;
+		vbus-2-supply = <&usb_vbus1>;
+		vbus-3-supply = <&vdd_3v3>;
+		vddio-hsic-supply = <&max77620_ldo0>;
 		avdd_pll_uerefe-supply = <&max77620_ldo7>;
 		hvdd_pex_pll_e-supply = <&max77620_sd3>;
 		dvdd_pex_pll-supply = <&max77620_ldo1>;

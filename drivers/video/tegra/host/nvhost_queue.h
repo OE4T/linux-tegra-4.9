@@ -39,10 +39,12 @@ struct nvhost_queue {
  * struct nvhost_queue_ops - hardware specific queue callbacks
  *
  * @abort:	abort all tasks from a queue
+ * @submit:	submit the given list of tasks to hardware
  *
  */
 struct nvhost_queue_ops {
 	int (*abort)(struct nvhost_queue *queue);
+	int (*submit)(struct nvhost_queue *queue, void *task_arg);
 };
 
 /**
@@ -128,7 +130,7 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool);
 /**
  * nvhost_queue_abort() - Abort tasks within a client queue
  *
- * @pdev:	Pointer to an allocated queue
+ * @queue:	Pointer to an allocated queue
  *
  * Return:	None
  *
@@ -138,5 +140,19 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool);
  * It is expected to be called when an active device fd gets closed.
  */
 int nvhost_queue_abort(struct nvhost_queue *queue);
+
+/**
+ * nvhost_queue_submit() - submits the given list of tasks to hardware
+ *
+ * @queue:	Pointer to an allocated queue
+ * @submit:	Submit the given list of tasks to hardware
+ *
+ * Return:	0 on success, otherwise a negative error code is returned.
+ *
+ * This function submits the given list of tasks to hardware.
+ * The submit structure is updated with the fence values as appropriate.
+ *
+ */
+int nvhost_queue_submit(struct nvhost_queue *queue, void *submit);
 
 #endif

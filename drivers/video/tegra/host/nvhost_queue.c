@@ -163,3 +163,12 @@ int nvhost_queue_abort(struct nvhost_queue *queue)
 	return 0;
 }
 
+int nvhost_queue_submit(struct nvhost_queue *queue, void *task_arg)
+{
+	struct nvhost_queue_pool *pool = queue->pool;
+
+	if (pool->ops && pool->ops->submit)
+		return pool->ops->submit(queue, task_arg);
+
+	return 0;
+}

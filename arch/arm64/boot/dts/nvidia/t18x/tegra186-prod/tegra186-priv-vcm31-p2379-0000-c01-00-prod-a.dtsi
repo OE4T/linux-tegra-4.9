@@ -171,6 +171,24 @@
 		};
 	};
 
+	mipical {
+		prod-settings {
+			prod_c_dsi {
+				board {
+					prod = <
+						0x00000000 0x00000001 0x00000000
+						0x00000004 0x3F000010 0x2A000010
+						0x0000003C 0x403F1F1F 0x002F0F00
+						0x00000040 0x403F1F1F 0x002F0F00
+						0x00000060 0x000F0F0F 0x00000000
+						0x00000064 0x0F0F00F5 0x00000000
+						0x00000068 0x403F1F1F 0x00270303
+					>;
+				};
+			};
+		};
+	};
+
 	csi_mipical {
 		prod-settings {
 			#prod-cells = <3>;

@@ -68,6 +68,9 @@
 
 	spi@c260000 { /* Tegra SPI2 <-> VCM SPIA: Dirana */
 		status = "okay";
+#if defined(KERNEL_VERSION_4_4)
+                cs-gpios = <&tegra_gpio TEGRA_GPIO(N,0) 0>;
+#endif
 		spi@0 {
 			compatible = "saf775x";
 			reg = <0>;
@@ -75,7 +78,9 @@
 			spi-cpha;
 			controller-data {
 				nvidia,clk-delay-between-packets = <10>;
+#if defined(KERNEL_VERSION_3_18)
 				nvidia,chipselect-gpio = <&tegra_gpio TEGRA_GPIO(N,0) 0>;
+#endif
 			};
 		};
 	};
@@ -665,14 +670,27 @@
 		status = "okay";
 	};
 
-	sdhci@3400000 {
-		/* 7F: disable all UHS mode */
-                uhs-mask = <0x7F>;
-	};
+	sdhci@3460000 { /* SDMMC_D: Used for eMMc */
+                        status = "okay";
+                        uhs-mask = <0x40>;   /*HS400 is not supported*/
+        };
 
 	sdhci@3440000 {
 		/* 7F: disable all UHS mode */
                 uhs-mask = <0x7F>;
+#if defined(SDMMC_USE_CORE_REGULATOR_HANDLER)
+                cd-inverted;
+                wp-inverted;
+#endif
+	};
+
+	sdhci@3400000 {
+		/* 7F: disable all UHS mode */
+                uhs-mask = <0x7F>;
+#if defined(SDMMC_USE_CORE_REGULATOR_HANDLER)
+                cd-inverted;
+                wp-inverted;
+#endif
 	};
 
         ptm_a57_0: ptm@9840000 {
@@ -742,5 +760,17 @@
 			debounce-interval = <5>;
 		};
 	};
+
+        /*
+         * FIXME : when auatmotive team switchs to k4.4 from k3.18
+         *   1. serial index will be moved from ttyS0 to ttyS1 in os_args in cfg
+         *   2. remove serial0/1 alias below
+         */
+#if defined(KERNEL_VERSION_4_4)
+        aliases {
+                serial1 = &uarta;
+                serial0 = &uartb;
+        };
+#endif
 };
 

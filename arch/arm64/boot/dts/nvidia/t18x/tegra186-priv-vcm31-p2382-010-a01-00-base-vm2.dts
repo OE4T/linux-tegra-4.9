@@ -60,6 +60,10 @@
 		status = "disabled";
 	};
 
+	sdhci@3460000 {
+		status = "disabled";
+	};
+
 	sdhci@3420000 { /* Should be used for eMMC. HS400 mode is not supported */
 		status = "disabled";
 	};
@@ -67,6 +71,8 @@
 	sdhci@3400000 {
 		/delete-property/ vddio_sdmmc-supply;
 		/delete-property/ vddio_sd_slot-supply;
+		/delete-property/ vqmmc-supply;
+		/delete-property/ vmmc-supply;
 		status = "disabled";
 	};
 
@@ -1010,10 +1016,6 @@
         /delete-node/ axip2p@2170000;
         /delete-node/ axip2p@2180000;
         /delete-node/ axip2p@2190000;
-
-	sdhci@3460000 {
-		status = "disabled";
-	};
 
 	/* the virtual storage device node */
 	tegra_hv_storage {

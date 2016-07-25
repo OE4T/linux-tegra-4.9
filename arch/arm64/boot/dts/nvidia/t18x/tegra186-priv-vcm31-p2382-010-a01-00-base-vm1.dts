@@ -99,6 +99,8 @@
 	sdhci@3440000 {
 		/delete-property/ vddio_sdmmc-supply;
 		/delete-property/ vddio_sd_slot-supply;
+		/delete-property/ vqmmc-supply;
+		/delete-property/ vmmc-supply;
 		status = "disabled";
 	};
 

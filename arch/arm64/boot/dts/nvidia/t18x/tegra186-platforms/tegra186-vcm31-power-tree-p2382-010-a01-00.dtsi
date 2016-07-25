@@ -59,20 +59,47 @@
 		};
         };
 
+#if defined(SDMMC_USE_CORE_REGULATOR_HANDLER)
+	sdhci@3460000 { /* SDMMC_D/4 */
+                vddio_sdmmc-supply = <0x0>;
+                vddio_sd_slot-supply = <0x0>;
+                vqmmc-supply = <&vdd_1v8>;
+                vmmc-supply = <&spmic_otp_sd3>;
+	};
+#else
 	sdhci@3460000 { /* SDMMC_D/4 */
 		vddio_sdmmc-supply = <&vdd_1v8>;
 		vddio_sd_slot-supply = <&spmic_otp_sd3>;
 	};
+#endif
 
+#if defined(SDMMC_USE_CORE_REGULATOR_HANDLER)
+	sdhci@3440000 {
+                vddio_sdmmc-supply = <0x0>;
+                vddio_sd_slot-supply = <0x0>;
+                vqmmc-supply = <&spmic_ldo5>;
+                vmmc-supply = <&en_vdd_sdcard3>;
+	};
+#else
 	sdhci@3440000 {
 		vddio_sdmmc-supply = <&spmic_ldo5>;
 		vddio_sd_slot-supply = <&en_vdd_sdcard3>;
 	};
+#endif
 
+#if defined(SDMMC_USE_CORE_REGULATOR_HANDLER)
+	sdhci@3400000 {
+                vddio_sdmmc-supply = <0x0>;
+                vddio_sd_slot-supply = <0x0>;
+                vqmmc-supply = <&spmic_ldo3>;
+                vmmc-supply = <&en_vdd_sdcard1>;
+	};
+#else
 	sdhci@3400000 {
 		vddio_sdmmc-supply = <&spmic_ldo3>;
 		vddio_sd_slot-supply = <&en_vdd_sdcard1>;
 	};
+#endif
 
 	xhci@3530000 {
 		avddio_usb-supply = <&spmic_otp_sd3>;

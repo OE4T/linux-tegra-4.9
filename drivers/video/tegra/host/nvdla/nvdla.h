@@ -32,6 +32,7 @@ struct nvdla_device {
 };
 
 extern const struct file_operations tegra_nvdla_ctrl_ops;
+extern struct nvhost_queue_ops nvdla_queue_ops;
 
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev);
 int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev);

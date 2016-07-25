@@ -149,18 +149,6 @@ static void nvdla_free_dump_region(struct platform_device *pdev)
 	}
 }
 
-/* Queue management API */
-static int nvdla_queue_abort(struct nvhost_queue *queue)
-{
-	/* TBD: Abort pending tasks from the queue */
-
-	return 0;
-}
-
-static struct nvhost_queue_ops nvdla_queue_ops = {
-	.abort = nvdla_queue_abort,
-};
-
 /* power management API */
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {

@@ -7,6 +7,7 @@ ccflags-y += -Werror
 
 nvhost-nvdla-objs  = \
 		nvdla.o \
-		nvdla_ioctl.o
+		nvdla_ioctl.o \
+		nvdla_queue.o
 
 obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvhost-nvdla.o

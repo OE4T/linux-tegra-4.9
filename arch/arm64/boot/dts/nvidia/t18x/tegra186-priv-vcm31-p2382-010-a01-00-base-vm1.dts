@@ -59,7 +59,6 @@
 
 	bpmp_i2c {
                 spmic: spmic@3c {
-			/delete-property/ maxim,device-state-on-disabled-event;
 			/delete-node/ backup-battery;
 			/delete-node/ fps;
 			pinmux@0 {

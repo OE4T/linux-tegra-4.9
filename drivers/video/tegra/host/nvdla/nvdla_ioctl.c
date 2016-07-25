@@ -152,6 +152,40 @@ fail_to_alloc:
 	return err;
 }
 
+static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
+{
+	struct nvdla_ctrl_submit_args *args =
+			(struct nvdla_ctrl_submit_args *)arg;
+	struct nvdla_ctrl_ioctl_submit_task __user *user_tasks =
+		(struct nvdla_ctrl_ioctl_submit_task __user *)
+		(uintptr_t)args->tasks;
+	struct nvdla_ctrl_ioctl_submit_task *local_tasks;
+	struct nvhost_queue *queue = priv->queue;
+	u32 num_tasks = args->num_tasks;
+	int err = 0, i = 0;
+
+	if (num_tasks > MAX_TASKS_PER_SUBMIT)
+		return -EINVAL;
+
+	local_tasks = kcalloc(num_tasks, sizeof(*local_tasks),
+			  GFP_KERNEL);
+	if (!local_tasks)
+		return -ENOMEM;
+
+	if (copy_from_user(local_tasks, user_tasks,
+			(num_tasks * sizeof(*user_tasks)))) {
+		err = -EFAULT;
+		goto fail_to_copy_task;
+	}
+
+	for (i = 0; i < num_tasks; i++)
+		nvhost_queue_submit(queue, &local_tasks[i]);
+
+fail_to_copy_task:
+	return err;
+}
+
+
 static long nvdla_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)
 {
@@ -185,6 +219,9 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 		break;
 	case NVDLA_IOCTL_CTRL_UNPIN:
 		err = nvdla_ctrl_unpin(priv, (void *)buf);
+		break;
+	case NVDLA_IOCTL_CTRL_SUBMIT:
+		err = nvdla_ctrl_submit(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOIOCTLCMD;

@@ -125,7 +125,8 @@ static int nct1008_sensor_regs[SENSORS_COUNT][REGS_COUNT] = {
 #define NCT1008_MAX_TEMP_MILLI   191750
 
 #define MAX_STR_PRINT            50
-#define CONV_TIME_ONESHOT_US     52000
+#define NCT_CONV_TIME_ONESHOT_US	52000
+#define TMP451_CONV_TIME_ONESHOT_US	31000
 
 #define CELSIUS_TO_MILLICELSIUS(x) ((x)*1000)
 #define MILLICELSIUS_TO_CELSIUS(x) ((x)/1000)
@@ -151,6 +152,7 @@ struct nct1008_data {
 	struct mutex mutex;
 	u8 config;
 	enum nct1008_chip chip;
+	char chip_name[I2C_NAME_SIZE];
 	struct regulator *nct_reg;
 	int conv_period_ms;
 	int nct_disabled;
@@ -532,11 +534,10 @@ static ssize_t nct1008_show_regs(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_data *nct = i2c_get_clientdata(client);
-	char *name = nct->chip == NCT72 ? "nct72" : "nct1008";
 	int sz = 0;
 
 	sz += snprintf(buf + sz, PAGE_SIZE - sz,
-		"%s Registers\n", name);
+		"%s Registers\n", nct->chip_name);
 	sz += snprintf(buf + sz, PAGE_SIZE - sz,
 		"---------------------------------------\n");
 	sz += snprintf(buf + sz, PAGE_SIZE - sz, "%20s  %4s  %4s  %s\n",
@@ -614,11 +615,10 @@ static ssize_t nct1008_show_offsets(struct device *dev,
 {
 	struct i2c_client *client = to_i2c_client(dev);
 	struct nct1008_data *nct = i2c_get_clientdata(client);
-	char *name = nct->chip == NCT72 ? "nct72" : "nct1008";
 	int i, sz = 0;
 
 	sz += snprintf(buf + sz, PAGE_SIZE - sz,
-				"%s offsets table\n", name);
+				"%s offsets table\n", nct->chip_name);
 	sz += snprintf(buf + sz, PAGE_SIZE - sz,
 				"%2s  %4s  %s\n", " #", "temp", "offset");
 	sz += snprintf(buf + sz, PAGE_SIZE - sz,
@@ -712,8 +712,8 @@ static int nct1008_shutdown_warning_set_cur_state(
 
 	if ((temp >= (limit - THERM_WARN_RANGE_HIGH_OFFSET)) &&
 		(temp != shutdown_warn_saved_temp)) {
-		pr_warn("NCT%s: Warning: chip temperature (%d.%02dC) is %s SHUTDOWN limit (%c%ldC).\n",
-			(data->chip == NCT72) ? "72" : "1008",
+		pr_warn("%s: Warning: chip temperature (%d.%02dC) is %s SHUTDOWN limit (%c%ldC).\n",
+			data->chip_name,
 			temp / 1000, (temp % 1000) / 10,
 			temp > limit ? "above" :
 			temp == limit ? "at" : "near",
@@ -769,8 +769,8 @@ static int nct1008_thermal_set_limits(int sensor,
 	}
 
 	if (sensor == LOC)
-		pr_debug("NCT1008: LOC-sensor limits set to %ld - %ld\n",
-			lo_limit, hi_limit);
+		pr_debug("%s: LOC-sensor limits set to %ld - %ld\n",
+			data->chip_name, lo_limit, hi_limit);
 
 	return 0;
 }
@@ -1095,8 +1095,8 @@ static int nct1008_loc_bind(struct thermal_zone_device *thz,
 	int i;
 	struct nct1008_sensor_platform_data *sensor_data;
 
-	pr_debug("NCT1008: LOC-sensor bind %s, %s attempt\n",
-		 thz->type, cdev->type);
+	pr_debug("%s: LOC-sensor bind %s, %s attempt\n",
+		 data->chip_name, thz->type, cdev->type);
 
 	sensor_data = &data->plat_data.sensors[LOC];
 
@@ -1184,10 +1184,11 @@ static void nct1008_work_func(struct work_struct *work)
 		return;
 
 	intr_status = nct1008_read_reg(data->client, STATUS_RD);
-	pr_debug("NCT1008: interruption (0x%08x)\n", intr_status);
+	pr_debug("%s: interruption (0x%08x)\n", data->chip_name, intr_status);
 
 	if (intr_status & (LOC_LO_BIT | LOC_HI_BIT)) {
-		pr_debug("NCT1008: LOC-sensor is not within limits\n");
+		pr_debug("%s: LOC-sensor is not within limits\n",
+				data->chip_name);
 		nct1008_update(LOC, data);
 	}
 
@@ -1200,7 +1201,12 @@ static void nct1008_work_func(struct work_struct *work)
 		return;
 
 	/* Give hardware necessary time to finish conversion */
-	usleep_range(CONV_TIME_ONESHOT_US, CONV_TIME_ONESHOT_US + 1000);
+	if (data->chip == TMP451)
+		usleep_range(TMP451_CONV_TIME_ONESHOT_US,
+			TMP451_CONV_TIME_ONESHOT_US + 1000);
+	else
+		usleep_range(NCT_CONV_TIME_ONESHOT_US,
+			NCT_CONV_TIME_ONESHOT_US + 1000);
 
 	err = nct1008_read_reg(data->client, STATUS_RD);
 	if (err < 0)
@@ -1237,14 +1243,14 @@ static void nct1008_power_control(struct nct1008_data *data, bool is_enable)
 		ret = regulator_disable(data->nct_reg);
 
 	if (ret < 0)
-		dev_err(&data->client->dev, "Error in %s rail vdd_nct%s, "
+		dev_err(&data->client->dev, "Error in %s %s VDD rail, "
 			"error %d\n", (is_enable) ? "enabling" : "disabling",
-			(data->chip == NCT72) ? "72" : "1008",
+			data->chip_name,
 			ret);
 	else
-		dev_info(&data->client->dev, "success in %s rail vdd_nct%s\n",
+		dev_info(&data->client->dev, "success in %s %s VDD rail\n",
 			(is_enable) ? "enabling" : "disabling",
-			(data->chip == NCT72) ? "72" : "1008");
+			data->chip_name);
 	data->nct_disabled = !is_enable;
 	mutex_unlock(&data->mutex);
 }
@@ -1277,8 +1283,8 @@ static void nct1008_setup_shutdown_warning(struct nct1008_data *data)
 		}
 	}
 
-	pr_info("NCT%s: Enabled overheat logging at %ld.%02ldC\n",
-			(data->chip == NCT72) ? "72" : "1008",
+	pr_info("%s: Enabled overheat logging at %ld.%02ldC\n",
+			data->chip_name,
 			warn_temp / 1000, (warn_temp % 1000) / 10);
 }
 
@@ -1297,8 +1303,8 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 
 	ret = nct1008_read_reg(data->client, STATUS_RD);
 	if (ret & BIT(2)) {
-		pr_info("NCT%s: ERR: remote sensor circuit is open (0x%02x)\n",
-			(data->chip == NCT72) ? "72" : "1008", ret);
+		pr_info("%s: ERR: remote sensor circuit is open (0x%02x)\n",
+			data->chip_name, ret);
 		ext_err = true; /* flag the error */
 	}
 
@@ -1364,7 +1370,12 @@ static int nct1008_configure_sensor(struct nct1008_data *data)
 		goto error;
 
 	/* Give hardware necessary time to finish conversion */
-	usleep_range(CONV_TIME_ONESHOT_US, CONV_TIME_ONESHOT_US + 1000);
+	if (data->chip == TMP451)
+		usleep_range(TMP451_CONV_TIME_ONESHOT_US,
+			TMP451_CONV_TIME_ONESHOT_US + 1000);
+	else
+		usleep_range(NCT_CONV_TIME_ONESHOT_US,
+			NCT_CONV_TIME_ONESHOT_US + 1000);
 
 	/* read initial local temperature */
 	ret = nct1008_read_reg(client, LOC_TEMP_RD);
@@ -1455,8 +1466,7 @@ error:
 
 static int nct1008_configure_irq(struct nct1008_data *data)
 {
-	data->workqueue = create_singlethread_workqueue((data->chip == NCT72) \
-							? "nct72" : "nct1008");
+	data->workqueue = create_singlethread_workqueue(data->chip_name);
 
 	INIT_WORK(&data->work, nct1008_work_func);
 
@@ -1465,7 +1475,7 @@ static int nct1008_configure_irq(struct nct1008_data *data)
 	else
 		return request_irq(data->client->irq, nct1008_irq,
 			IRQF_TRIGGER_LOW,
-			(data->chip == NCT72) ? "nct72" : "nct1008",
+			data->chip_name,
 			data);
 }
 
@@ -1610,6 +1620,7 @@ static int nct1008_probe(struct i2c_client *client,
 
 	data->client = client;
 	data->chip = id->driver_data;
+	strlcpy(data->chip_name, id->name, I2C_NAME_SIZE);
 	memcpy(&data->plat_data, client->dev.platform_data,
 		sizeof(struct nct1008_platform_data));
 
@@ -1950,19 +1961,21 @@ static const struct dev_pm_ops nct1008_pm_ops = {
 
 static const struct i2c_device_id nct1008_id[] = {
 	{ "nct1008", NCT1008 },
-	{ "nct72", NCT72},
+	{ "nct72", NCT72 },
+	{ "tmp451", TMP451 },
 	{}
 };
 MODULE_DEVICE_TABLE(i2c, nct1008_id);
 
 static const struct of_device_id nct1008_of_match[] = {
 	{.compatible = "onsemi,nct72", },
+	{.compatible = "ti,tmp451", },
 	{ }
 };
 
 static struct i2c_driver nct1008_driver = {
 	.driver = {
-		.name	= "nct1008_nct72",
+		.name	= "nct1008/nct72/tmp451",
 #ifdef CONFIG_PM_SLEEP
 		.pm = &nct1008_pm_ops,
 #endif
@@ -2003,7 +2016,7 @@ static void __exit nct1008_exit(void)
 	i2c_del_driver(&nct1008_driver);
 }
 
-MODULE_DESCRIPTION("Temperature sensor driver for OnSemi NCT1008/NCT72");
+MODULE_DESCRIPTION("Temperature sensor driver for NCT1008/NCT72/TMP451");
 MODULE_LICENSE("GPL");
 
 module_init(nct1008_init);

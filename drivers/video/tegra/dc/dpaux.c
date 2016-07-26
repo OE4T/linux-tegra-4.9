@@ -48,7 +48,7 @@ static inline struct clk *tegra_dpaux_clk_get(struct device_node *np,
 {
 	if (id >= TEGRA_DPAUX_INSTANCE_N)
 		return ERR_PTR(-EINVAL);
-#ifdef CONFIG_TEGRA_NVDISPLAY
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	return tegra_disp_of_clk_get_by_name(np, dpaux_clks[id]);
 #else
 	return clk_get_sys(dpaux_clks[id], NULL);

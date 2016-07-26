@@ -5776,8 +5776,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	snprintf(clk_name, sizeof(clk_name), "nvdisplay_p%u", dc->ctrl_num);
-#else
+#elif !defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	memset(clk_name, 0, sizeof(clk_name));
+#else
+	snprintf(clk_name, sizeof(clk_name), "disp%u", dc->ctrl_num + 1);
+
 #endif
 	clk = tegra_disp_clk_get(&ndev->dev, clk_name);
 	if (IS_ERR_OR_NULL(clk)) {

@@ -590,20 +590,20 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 		goto err_release_resource_reg;
 	}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	clk = tegra_disp_of_clk_get_by_name(np_sor, res_name);
 #else
 	clk = clk_get(NULL, res_name);
 #endif
 	if (IS_ERR_OR_NULL(clk)) {
-		dev_err(&dc->ndev->dev, "sor: can't get clock\n");
+		dev_err(&dc->ndev->dev, "sor%d: can't get clock %s\n", sor_num, res_name);
 		err = -ENOENT;
 		goto err_iounmap_reg;
 	}
 
 #ifndef	CONFIG_ARCH_TEGRA_12x_SOC
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	safe_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor_safe");
 #else
 	safe_clk = clk_get(NULL, "sor_safe");
@@ -616,13 +616,21 @@ struct tegra_dc_sor_data *tegra_dc_sor_init(struct tegra_dc *dc,
 	}
 #ifndef CONFIG_TEGRA_NVDISPLAY
 	if (!strcmp(res_name, "sor1")) {
+#ifndef CONFIG_ARCH_TEGRA_21x_SOC
 		brick_clk = clk_get(NULL, "sor1_brick");
+#else
+		brick_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor1_brick");
+#endif
 		if (IS_ERR_OR_NULL(brick_clk)) {
 			dev_err(&dc->ndev->dev, "sor: can't get brick clock\n");
 			err = -ENOENT;
 			goto err_brick;
 		}
+#ifndef CONFIG_ARCH_TEGRA_21x_SOC
 		src_clk = clk_get(NULL, "sor1_src");
+#else
+		src_clk = tegra_disp_of_clk_get_by_name(np_sor, "sor1_src");
+#endif
 		if (IS_ERR_OR_NULL(src_clk)) {
 			dev_err(&dc->ndev->dev, "sor: can't get src clock\n");
 			err = -ENOENT;

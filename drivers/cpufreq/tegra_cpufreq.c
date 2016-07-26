@@ -294,31 +294,27 @@ err_out:
 /* Denver cluster cpu_to_emc freq */
 static unsigned long m_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 {
-	unsigned long emc_rate;
-
-	if (cpu_rate > 1020000)
-		emc_rate = 600000000;	/* cpu > 1.02GHz, emc 600MHz */
+	if (cpu_rate >= 1400000)
+		return tfreq_data.emc_max_rate;	/* cpu >= 1.4GHz, emc max */
+	else if (cpu_rate >= 800000)
+		return 660000000;	/* cpu >= 800 MHz, emc 660 MHz */
+	else if (cpu_rate >= 450000)
+		return  408000000;	/* cpu >= 450 MHz, emc 408 MHz */
 	else
-		emc_rate = 300000000;	/* 300MHz floor always */
-
-	return emc_rate;
+		return  100000000;	/* emc 100 MHz */
 }
 
 /* Arm cluster cpu_to_emc freq */
 static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
 {
-	if (cpu_rate >= 1300000)
-		return tfreq_data.emc_max_rate;	/* cpu >= 1.3GHz, emc max */
-	else if (cpu_rate >= 975000)
-		return 400000000;	/* cpu >= 975 MHz, emc 400 MHz */
-	else if (cpu_rate >= 725000)
-		return  200000000;	/* cpu >= 725 MHz, emc 200 MHz */
-	else if (cpu_rate >= 500000)
-		return  100000000;	/* cpu >= 500 MHz, emc 100 MHz */
-	else if (cpu_rate >= 275000)
-		return  50000000;	/* cpu >= 275 MHz, emc 50 MHz */
+	if (cpu_rate >= 1400000)
+		return tfreq_data.emc_max_rate;	/* cpu >= 1.4GHz, emc max */
+	else if (cpu_rate >= 800000)
+		return 660000000;	/* cpu >= 800 MHz, emc 660 MHz */
+	else if (cpu_rate >= 450000)
+		return  408000000;	/* cpu >= 450 MHz, emc 408 MHz */
 	else
-		return 0;		/* emc min */
+		return  100000000;	/* emc 100 MHz */
 }
 
 /**

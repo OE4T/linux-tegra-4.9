@@ -812,7 +812,7 @@ int nvhost_module_init(struct platform_device *dev)
 	gpd = dev_to_genpd(&dev->dev);
 	if (IS_ERR(gpd)) {
 		dev_err(&dev->dev, "dev_to_genpd failed.\n");
-		if (!tegra_platform_is_linsim())
+		if (!tegra_platform_is_linsim() && !tegra_platform_is_vdk())
 			return PTR_ERR(gpd);
 		pdata->powergate_id = -1;
 	} else {

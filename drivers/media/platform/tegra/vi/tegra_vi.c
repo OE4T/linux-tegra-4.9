@@ -34,8 +34,6 @@
 #include "vi/vi.h"
 #include "vi/vi_irq.h"
 
-static DEFINE_MUTEX(la_lock);
-
 #define T12_VI_CFG_CG_CTRL	0xb8
 #define T12_CG_2ND_LEVEL_EN	1
 #define T12_VI_CSI_0_SW_RESET	0x100

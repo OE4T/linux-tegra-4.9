@@ -3,7 +3,7 @@
  *
  * NCT1008, temperature monitoring device from ON Semiconductors
  *
- * Copyright (c) 2010-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -30,7 +30,7 @@
 
 struct nct1008_data;
 
-enum nct1008_chip { NCT1008, NCT72 };
+enum nct1008_chip { NCT1008, NCT72, TMP451 };
 
 enum nct1008_sensors { LOC, EXT, SENSORS_COUNT };
 

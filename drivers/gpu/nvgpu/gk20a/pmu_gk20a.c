@@ -520,6 +520,14 @@ static u32 *pmu_allocation_get_dmem_offset_addr_v3(struct pmu_gk20a *pmu,
 	return &pmu_a_ptr->alloc.dmem.offset;
 }
 
+void *pmu_allocation_get_fb_addr_v3(
+				struct pmu_gk20a *pmu, void *pmu_alloc_ptr)
+{
+	struct pmu_allocation_v3 *pmu_a_ptr =
+			(struct pmu_allocation_v3 *)pmu_alloc_ptr;
+	return (void *)&pmu_a_ptr->alloc.fb;
+}
+
 static u32 *pmu_allocation_get_dmem_offset_addr_v2(struct pmu_gk20a *pmu,
 	void *pmu_alloc_ptr)
 {
@@ -1500,7 +1508,8 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			pmu_allocation_get_dmem_offset_addr_v3;
 		g->ops.pmu_ver.pmu_allocation_set_dmem_offset =
 			pmu_allocation_set_dmem_offset_v3;
-
+		g->ops.pmu_ver.pmu_allocation_get_fb_addr =
+				pmu_allocation_get_fb_addr_v3;
 		if(pmu->desc->app_version != APP_VERSION_NV_GPU &&
 			pmu->desc->app_version != APP_VERSION_NV_GPU_1) {
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
@@ -3763,6 +3772,27 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)));
 
+	if (seq->out_mem != NULL) {
+		memset(pv->pmu_allocation_get_fb_addr(pmu,
+			pv->get_pmu_seq_out_a_ptr(seq)), 0x0,
+			pv->get_pmu_allocation_struct_size(pmu));
+
+		gk20a_pmu_surface_free(g, seq->out_mem);
+		if (seq->out_mem != seq->in_mem)
+			kfree(seq->out_mem);
+		else
+			seq->out_mem = NULL;
+	}
+
+	if (seq->in_mem != NULL) {
+		memset(pv->pmu_allocation_get_fb_addr(pmu,
+			pv->get_pmu_seq_in_a_ptr(seq)), 0x0,
+			pv->get_pmu_allocation_struct_size(pmu));
+
+		gk20a_pmu_surface_free(g, seq->in_mem);
+		kfree(seq->in_mem);
+	}
+
 	if (seq->callback)
 		seq->callback(g, msg, seq->cb_params, seq->desc, ret);
 
@@ -4356,6 +4386,53 @@ clean_up:
 	return err;
 }
 
+void gk20a_pmu_surface_describe(struct gk20a *g, struct mem_desc *mem,
+		struct flcn_mem_desc_v0 *fb)
+{
+	fb->address.lo = u64_lo32(mem->gpu_va);
+	fb->address.hi = u64_hi32(mem->gpu_va);
+	fb->params = ((u32)mem->size & 0xFFFFFF);
+	fb->params |= (GK20A_PMU_DMAIDX_VIRT << 24);
+}
+
+int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
+		u32 size)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	int err;
+
+	err = gk20a_gmmu_alloc_map_vid(vm, size, mem);
+	if (err) {
+		gk20a_err(g->dev, "memory allocation failed");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
+		u32 size)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct vm_gk20a *vm = &mm->pmu.vm;
+	int err;
+
+	err = gk20a_gmmu_alloc_map_sys(vm, size, mem);
+	if (err) {
+		gk20a_err(g->dev, "failed to allocate memory\n");
+		return -ENOMEM;
+	}
+
+	return 0;
+}
+
+void gk20a_pmu_surface_free(struct gk20a *g, struct mem_desc *mem)
+{
+	gk20a_gmmu_free_attr(g, DMA_ATTR_NO_KERNEL_MAPPING, mem);
+	memset(mem, 0, sizeof(struct mem_desc));
+}
+
 int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		struct pmu_msg *msg, struct pmu_payload *payload,
 		u32 queue_id, pmu_callback callback, void* cb_param,
@@ -4425,9 +4502,28 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu, in)))
 			goto clean_up;
 
-		pmu_copy_to_dmem(pmu, (pv->pmu_allocation_get_dmem_offset(pmu,
-		in)),
-			payload->in.buf, payload->in.size, 0);
+		if (payload->in.fb_size != 0x0) {
+			seq->in_mem = kzalloc(sizeof(struct mem_desc),
+				GFP_KERNEL);
+			if (!seq->in_mem) {
+				err = -ENOMEM;
+				goto clean_up;
+			}
+
+			gk20a_pmu_vidmem_surface_alloc(g, seq->in_mem,
+					payload->in.fb_size);
+			gk20a_pmu_surface_describe(g, seq->in_mem,
+					(struct flcn_mem_desc_v0 *)
+					pv->pmu_allocation_get_fb_addr(pmu, in));
+
+			gk20a_mem_wr_n(g, seq->in_mem, 0,
+					payload->in.buf, payload->in.fb_size);
+
+		} else {
+			pmu_copy_to_dmem(pmu,
+				(pv->pmu_allocation_get_dmem_offset(pmu, in)),
+				payload->in.buf, payload->in.size, 0);
+		}
 		pv->pmu_allocation_set_dmem_size(pmu,
 		pv->get_pmu_seq_in_a_ptr(seq),
 		pv->pmu_allocation_get_dmem_size(pmu, in));
@@ -4442,27 +4538,44 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 		pv->pmu_allocation_set_dmem_size(pmu, out,
 		(u16)payload->out.size);
 
-		if (payload->out.buf != payload->in.buf) {
-
+		if (payload->in.buf != payload->out.buf) {
 			*(pv->pmu_allocation_get_dmem_offset_addr(pmu, out)) =
 				gk20a_alloc(&pmu->dmem,
 				    pv->pmu_allocation_get_dmem_size(pmu, out));
 			if (!*(pv->pmu_allocation_get_dmem_offset_addr(pmu,
-								       out)))
+					out)))
 				goto clean_up;
+
+			if (payload->out.fb_size != 0x0) {
+				seq->out_mem = kzalloc(sizeof(struct mem_desc),
+					GFP_KERNEL);
+				if (!seq->out_mem) {
+					err = -ENOMEM;
+					goto clean_up;
+				}
+				gk20a_pmu_vidmem_surface_alloc(g, seq->out_mem,
+					payload->out.fb_size);
+				gk20a_pmu_surface_describe(g, seq->out_mem,
+					(struct flcn_mem_desc_v0 *)
+					pv->pmu_allocation_get_fb_addr(pmu,
+					out));
+			}
 		} else {
 			BUG_ON(in == NULL);
+			seq->out_mem = seq->in_mem;
 			pv->pmu_allocation_set_dmem_offset(pmu, out,
 			pv->pmu_allocation_get_dmem_offset(pmu, in));
 		}
-
 		pv->pmu_allocation_set_dmem_size(pmu,
 		pv->get_pmu_seq_out_a_ptr(seq),
 		pv->pmu_allocation_get_dmem_size(pmu, out));
 		pv->pmu_allocation_set_dmem_offset(pmu,
 		pv->get_pmu_seq_out_a_ptr(seq),
 		pv->pmu_allocation_get_dmem_offset(pmu, out));
+
 	}
+
+
 
 	seq->state = PMU_SEQ_STATE_USED;
 	err = pmu_write_cmd(pmu, cmd, queue_id, timeout);

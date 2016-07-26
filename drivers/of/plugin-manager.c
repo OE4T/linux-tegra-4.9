@@ -25,6 +25,7 @@ enum plugin_manager_match_type {
 	PLUGIN_MANAGER_MATCH_EXACT,
 	PLUGIN_MANAGER_MATCH_PARTIAL,
 	PLUGIN_MANAGER_MATCH_GE,
+	PLUGIN_MANAGER_MATCH_LT,
 };
 
 static struct property *__of_copy_property(const struct property *prop,
@@ -227,6 +228,13 @@ static bool plugin_manager_match_id(struct device_node *np, const char *id_name)
 		goto match_type_done;
 	}
 
+	if ((valid_str_len > 1) && (in_str[0] == '<')) {
+		in_str += 1;
+		valid_str_len -= 1;
+		match_type = PLUGIN_MANAGER_MATCH_LT;
+		goto match_type_done;
+	}
+
 	if ((valid_str_len > 1) && (in_str[0] == '^')) {
 		in_str += 1;
 		valid_str_len -= 1;
@@ -243,7 +251,8 @@ static bool plugin_manager_match_id(struct device_node *np, const char *id_name)
 	}
 
 match_type_done:
-	if (match_type == PLUGIN_MANAGER_MATCH_GE) {
+	if ((match_type == PLUGIN_MANAGER_MATCH_GE) ||
+		(match_type == PLUGIN_MANAGER_MATCH_LT)) {
 		fabid = plugin_manager_get_fabid(in_str);
 		if (fabid < 0)
 			return false;
@@ -271,6 +280,7 @@ match_type_done:
 			break;
 
 		case PLUGIN_MANAGER_MATCH_GE:
+		case PLUGIN_MANAGER_MATCH_LT:
 			if (strlen(prop->name) < 13)
 				break;
 			if (memcmp(in_str, prop->name, 10))
@@ -278,7 +288,11 @@ match_type_done:
 			prop_fabid = plugin_manager_get_fabid(prop->name);
 			if (prop_fabid < 0)
 				break;
-			if (prop_fabid >= fabid)
+			if (prop_fabid >= fabid &&
+				match_type == PLUGIN_MANAGER_MATCH_GE)
+				return true;
+			if (prop_fabid < fabid &&
+				match_type == PLUGIN_MANAGER_MATCH_LT)
 				return true;
 			break;
 		default:

@@ -21,6 +21,8 @@
 #include <linux/io.h>
 #include <linux/interrupt.h>
 #include <linux/clk.h>
+#include <linux/of_address.h>
+#include <linux/of_irq.h>
 #include <linux/platform_device.h>
 #include <linux/irq.h>
 #include <linux/serial_reg.h>
@@ -227,3 +229,58 @@ void tegra_serial_debug_init_irq_mode(unsigned int base, int irq,
 {
 	__tegra_serial_debug_init(base, -1, irq, clk, signal_irq, wakeup_irq);
 }
+
+static int __init tegra_fiq_debugger_init(void)
+{
+	struct device_node *dn, *dn_debugger;
+	struct resource resource;
+	unsigned uartbase = 0;
+	int irq = -1;
+
+	dn_debugger = of_find_compatible_node(NULL, NULL,
+			"nvidia,fiq-debugger");
+	if (!dn_debugger) {
+		pr_err("%s: no fiq_debugger node\n", __func__);
+		return -ENODEV;
+	}
+
+	/* Search for the IO memory of console port */
+	if (of_property_read_bool(dn_debugger, "use-console-port")) {
+		dn = of_find_node_with_property(NULL, "console-port");
+		if (!dn) {
+			pr_err("%s: no console-port found\n", __func__);
+			return -ENODEV;
+		}
+	} else
+		dn = dn_debugger;
+
+	if (of_address_to_resource(dn, 0, &resource)) {
+		pr_err("%s: could not get IO memory\n", __func__);
+		return -ENXIO;
+	}
+	uartbase = resource.start;
+	pr_debug("%s: found console port at %08X\n", __func__, uartbase);
+
+	/* Search for the interrupt which acts as trigger of FIQ debugger */
+	if (of_property_read_bool(dn_debugger, "use-wdt-irq")) {
+		dn = of_find_compatible_node(NULL, NULL, "nvidia,tegra-wdt");
+		if (!dn) {
+			pr_err("%s: no tegra-wdt found\n", __func__);
+			return -ENODEV;
+		}
+	} else
+		dn = dn_debugger;
+
+	irq = irq_of_parse_and_map(dn, 0);
+	if (irq <= 0) {
+		pr_err("%s: cound not find interrupt for FIQ\n", __func__);
+		return -ENODEV;
+	}
+	pr_info("%s: found FIQ source (IRQ %d)\n", __func__, irq);
+
+	tegra_serial_debug_init(uartbase, irq, NULL, -1, -1);
+
+	return 0;
+}
+
+subsys_initcall(tegra_fiq_debugger_init)

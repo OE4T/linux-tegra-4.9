@@ -724,8 +724,8 @@ struct hw_if_struct {
 	INT(*disable_rx_csum) (void);
 	INT(*get_rx_csum_status) (void);
 
-	INT(*read_phy_regs) (INT, INT, INT*);
-	INT(*write_phy_regs) (INT, INT, INT);
+	INT(*read_phy_regs) (INT, INT, INT*, INT);
+	INT(*write_phy_regs) (INT, INT, INT, INT);
 	INT(*set_full_duplex) (VOID);
 	INT(*set_half_duplex) (VOID);
 	INT(*set_mii_speed_100) (struct eqos_prv_data *);
@@ -1538,6 +1538,7 @@ struct eqos_prv_data {
 	int tcp_pkt;
 
 	u32 csr_clock_speed;
+	u32 mdc_cr;
 
 	struct workqueue_struct *fbe_wq;
 	struct work_struct fbe_work;

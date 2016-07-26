@@ -51,6 +51,7 @@
 
 #define V4L2_CID_TEGRA_CAMERA_LAST	(V4L2_CID_TEGRA_CAMERA_BASE+8)
 #define V4L2_CID_VI_BYPASS_MODE		(V4L2_CID_TEGRA_CAMERA_BASE+9)
+#define V4L2_CID_SENSOR_MODE_ID		(V4L2_CID_TEGRA_CAMERA_BASE+10)
 
 /* undefine default CID for GAIN/EXPOSURE and use NV's version */
 #undef V4L2_CID_GAIN
@@ -201,6 +202,8 @@ struct camera_common_data {
 	int	def_mode, def_width, def_height;
 	int	def_clk_freq;
 	int	fmt_width, fmt_height;
+	int	sensor_mode_id;
+	bool	use_sensor_mode_id;
 };
 
 struct camera_common_focuser_data;

@@ -421,23 +421,33 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	s_data->fmt_width = s_data->def_width;
 	s_data->fmt_height = s_data->def_height;
 
-	for (i = 0; i < s_data->numfmts; i++) {
-		if (mf->width == frmfmt[i].size.width &&
-		    mf->height == frmfmt[i].size.height &&
-		    hdr_en == frmfmt[i].hdr_en) {
-			s_data->mode = frmfmt[i].mode;
-			s_data->fmt_width = mf->width;
-			s_data->fmt_height = mf->height;
-			break;
+	if (s_data->use_sensor_mode_id &&
+		s_data->sensor_mode_id >= 0 &&
+		s_data->sensor_mode_id < s_data->numfmts) {
+		dev_dbg(&client->dev, "%s: use_sensor_mode_id %d\n",
+				__func__, s_data->sensor_mode_id);
+		s_data->mode = frmfmt[s_data->sensor_mode_id].mode;
+		s_data->fmt_width = mf->width;
+		s_data->fmt_height = mf->height;
+	} else {
+		for (i = 0; i < s_data->numfmts; i++) {
+			if (mf->width == frmfmt[i].size.width &&
+				mf->height == frmfmt[i].size.height &&
+				hdr_en == frmfmt[i].hdr_en) {
+				s_data->mode = frmfmt[i].mode;
+				s_data->fmt_width = mf->width;
+				s_data->fmt_height = mf->height;
+				break;
+			}
 		}
-	}
 
-	if (i == s_data->numfmts) {
-		mf->width = s_data->fmt_width;
-		mf->height = s_data->fmt_height;
-		dev_dbg(&client->dev,
-			"%s: invalid resolution supplied to set mode %d %d\n",
-			__func__, mf->width, mf->height);
+		if (i == s_data->numfmts) {
+			mf->width = s_data->fmt_width;
+			mf->height = s_data->fmt_height;
+			dev_dbg(&client->dev,
+				"%s: invalid resolution supplied to set mode %d %d\n",
+				__func__, mf->width, mf->height);
+		}
 	}
 
 	if (mf->code != MEDIA_BUS_FMT_SRGGB8_1X8 &&

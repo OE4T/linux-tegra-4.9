@@ -151,7 +151,9 @@ static struct tegra_dc_win	tegra_dc_windows[DC_N_WINDOWS];
 
 
 static DEFINE_MUTEX(tegra_dc_lock);
+#ifdef CONFIG_ARCH_TEGRA_2x_SOC
 static DEFINE_MUTEX(shared_lock);
+#endif
 
 static struct device_dma_parameters tegra_dc_dma_parameters = {
 	.max_segment_size = UINT_MAX,

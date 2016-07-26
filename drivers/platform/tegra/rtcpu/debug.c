@@ -233,6 +233,9 @@ static int camrtc_show_ping(struct seq_file *file, void *data)
 		tsc / (1000000000 / 32), tsc % (1000000000 / 32),
 		(tsc * 32ULL - sent) / 1000000000,
 		(tsc * 32ULL - sent) % 1000000000);
+	seq_printf(file, "%.*s\n",
+		(int)sizeof(resp.data.ping_data.data),
+		(char *)resp.data.ping_data.data);
 
 	return 0;
 }

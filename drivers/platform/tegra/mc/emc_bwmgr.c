@@ -46,6 +46,19 @@ static struct {
 static bool clk_update_disabled;
 
 int __init pmqos_bwmgr_init(void);
+
+static struct {
+	unsigned long bw;
+	unsigned long iso_bw;
+	unsigned long non_iso_cap;
+	unsigned long iso_cap;
+	unsigned long floor;
+	unsigned long total_bw_aftr_eff;
+	unsigned long iso_bw_aftr_eff;
+	unsigned long calc_freq;
+	unsigned long req_freq;
+} debug_info;
+
 static void bwmgr_debugfs_init(void);
 
 static inline void bwmgr_lock(void)
@@ -104,22 +117,26 @@ static int bwmgr_update_clk(void)
 		iso_cap = min(iso_cap, bwmgr.bwmgr_client[i].iso_cap);
 		floor = max(floor, bwmgr.bwmgr_client[i].floor);
 	}
-
+	debug_info.bw = bw;
+	debug_info.iso_bw = iso_bw;
+	debug_info.floor = floor;
+	debug_info.iso_cap = iso_cap;
+	debug_info.non_iso_cap = non_iso_cap;
 	bw += iso_bw;
 	bw = max(bw, bwmgr.emc_min_rate);
 	bw = min(bw, bwmgr.emc_max_rate);
-
 	bw = bwmgr_apply_efficiency(
 			bw, iso_bw, bwmgr.emc_max_rate,
 			iso_client_flags, &iso_bw_min);
+	debug_info.total_bw_aftr_eff = bw;
+	debug_info.iso_bw_aftr_eff = iso_bw_min;
 	iso_bw_min = clk_round_rate(bwmgr.emc_clk, iso_bw_min);
-
 	floor = min(floor, bwmgr.emc_max_rate);
 	bw = max(bw, floor);
-
 	bw = min(bw, min(iso_cap, max(non_iso_cap, iso_bw_min)));
+	debug_info.calc_freq = bw;
 	bw = clk_round_rate(bwmgr.emc_clk, bw);
-
+	debug_info.req_freq = bw;
 	if (bw == tegra_bwmgr_get_emc_rate())
 		return ret;
 
@@ -362,7 +379,6 @@ int __init bwmgr_init(void)
 		bwmgr.status = true;
 	else
 		bwmgr.status = false;
-
 	return 0;
 }
 subsys_initcall(bwmgr_init);
@@ -539,10 +555,10 @@ static int bwmgr_clients_info_show(struct seq_file *s, void *data)
 {
 	int i;
 
+	bwmgr_lock();
 	seq_printf(s, "%15s%15s%15s%15s%15s%15s (Khz)\n", "Client",
 			"Floor", "SharedBw", "SharedIsoBw", "Cap",
 			"IsoCap");
-
 	for (i = 0; i < TEGRA_BWMGR_CLIENT_COUNT; i++) {
 		seq_printf(s, "%15s%15lu%15lu%15lu%15lu%15lu\n",
 				tegra_bwmgr_client_names[i],
@@ -552,9 +568,30 @@ static int bwmgr_clients_info_show(struct seq_file *s, void *data)
 				bwmgr.bwmgr_client[i].cap / 1000,
 				bwmgr.bwmgr_client[i].iso_cap / 1000);
 	}
-
+	seq_printf(s, "Total BW requested                              : %lu (Khz)\n",
+				 debug_info.bw / 1000);
+	seq_printf(s, "Total ISO_BW requested                          : %lu (Khz)\n",
+				 debug_info.iso_bw / 1000);
+	seq_printf(s, "Effective floor request                         : %lu (Khz)\n",
+				 debug_info.floor / 1000);
+	seq_printf(s, "Effective NON_ISO_CAP                           : %lu (Khz)\n",
+				 debug_info.non_iso_cap / 1000);
+	seq_printf(s, "Effective ISO_CAP                               : %lu (Khz)\n",
+				 debug_info.iso_cap / 1000);
+	seq_printf(s, "Total BW + ISO_BW                               : %lu (Khz)\n",
+				 (debug_info.bw + debug_info.iso_bw) / 1000);
+	seq_printf(s, "Total BW+ISO_BW after applying efficieny numbers: %lu (Khz)\n",
+				 debug_info.total_bw_aftr_eff / 1000);
+	seq_printf(s, "Total ISO_BW after applying efficiency          : %lu (Khz)\n",
+				 debug_info.iso_bw_aftr_eff / 1000);
+	seq_printf(s, "EMC calculated rate                             : %lu (Khz)\n",
+				 debug_info.calc_freq / 1000);
+	seq_printf(s, "EMC requested(rounded) rate                     : %lu (Khz)\n",
+				 debug_info.req_freq / 1000);
+	seq_printf(s, "EMC current rate                                : %lu (Khz)\n",
+				 tegra_bwmgr_get_emc_rate() / 1000);
+	bwmgr_unlock();
 	return 0;
-
 }
 DEFINE_SIMPLE_ATTRIBUTE(fops_debugfs_iso_bw, bwmgr_debugfs_iso_bw_get,
 		bwmgr_debugfs_iso_bw_set, "%llu\n");
@@ -619,6 +656,11 @@ static void bwmgr_debugfs_init(void)
 			 &fops_bwmgr_clients_info);
 	} else
 		pr_err("bwmgr: error creating bwmgr debugfs dir.\n");
+
+	bwmgr_lock();
+	debug_info.non_iso_cap = bwmgr.emc_max_rate;
+	debug_info.iso_cap = bwmgr.emc_max_rate;
+	bwmgr_unlock();
 }
 
 #else

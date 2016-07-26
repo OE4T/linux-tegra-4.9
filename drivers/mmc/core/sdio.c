@@ -515,6 +515,7 @@ static int sdio_set_bus_speed_mode(struct mmc_card *card)
  */
 static int mmc_sdio_init_uhs_card(struct mmc_card *card)
 {
+	struct mmc_host *host = card->host;
 	int err;
 
 	if (!card->scr.sda_spec3)
@@ -523,9 +524,11 @@ static int mmc_sdio_init_uhs_card(struct mmc_card *card)
 	/*
 	 * Switch to wider bus (if supported).
 	 */
-	if (card->host->caps & MMC_CAP_4_BIT_DATA)
+	if (card->host->caps & MMC_CAP_4_BIT_DATA) {
 		err = sdio_enable_4bit_bus(card);
-
+		if (err)
+			pr_info("%s: Failed to enable 4 bit buswidth\n", mmc_hostname(host));
+	}
 	/* Set the driver strength for the card */
 	sdio_select_driver_type(card);
 

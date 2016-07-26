@@ -20,7 +20,6 @@
 #include <linux/slab.h>
 #include <linux/padctrl/padctrl.h>
 
-static DEFINE_MUTEX(padctrl_ops);
 static DEFINE_MUTEX(padctrl_dev_list_mutex);
 static LIST_HEAD(padctrl_dev_list);
 

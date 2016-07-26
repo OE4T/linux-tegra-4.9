@@ -25,6 +25,18 @@
 
 #define NV(p) "nvidia," #p
 
+#ifndef dev_err_once
+#define dev_err_once(dev, fmt, ...)					\
+do {									\
+	static bool __print_once __read_mostly;				\
+									\
+	if (!__print_once) {						\
+		__print_once = true;					\
+		dev_err(dev, fmt, ##__VA_ARGS__);			\
+	}								\
+} while (0)
+#endif
+
 static ssize_t sysfs_mbox_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -32,7 +44,7 @@ static ssize_t sysfs_mbox_show(struct device *dev,
 	size_t length = chan->ivc.frame_size;
 	ssize_t count = 0;
 
-	dev_err(dev, "mbox is deprecated\n");
+	dev_err_once(dev, "mbox is deprecated\n");
 
 	while ((count + length < PAGE_SIZE) &&
 		tegra_ivc_can_read(&chan->ivc)) {
@@ -62,7 +74,7 @@ static ssize_t sysfs_mbox_store(struct device *dev,
 		return -EMSGSIZE;
 	}
 
-	dev_err(dev, "mbox is deprecated\n");
+	dev_err_once(dev, "mbox is deprecated\n");
 	dev_dbg(&chan->dev, "tx msg\n");
 	print_hex_dump(KERN_DEBUG, "", DUMP_PREFIX_OFFSET,
 			16, 1, buf, count, true);

@@ -315,7 +315,7 @@ void nvhost_module_idle_mult(struct platform_device *dev, int refs)
 	while (refs--) {
 		pm_runtime_mark_last_busy(&dev->dev);
 		if (pdata->autosuspend_delay)
-			pm_runtime_put_sync_autosuspend(&dev->dev);
+			pm_runtime_put_autosuspend(&dev->dev);
 		else
 			pm_runtime_put(&dev->dev);
 	}

@@ -578,7 +578,7 @@ int nvhost_mutex_try_lock(struct nvhost_syncpt *sp, int idx)
 
 void nvhost_mutex_unlock(struct nvhost_syncpt *sp, int idx)
 {
-	syncpt_op().mutex_unlock(sp, idx);
+	syncpt_op().mutex_unlock_nvh(sp, idx);
 	nvhost_module_idle(syncpt_to_dev(sp)->dev);
 	atomic_dec(&sp->lock_counts[idx]);
 }

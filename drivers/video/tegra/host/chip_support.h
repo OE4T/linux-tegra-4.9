@@ -102,7 +102,7 @@ struct nvhost_syncpt_ops {
 	const char * (*name)(struct nvhost_syncpt *, u32 id);
 	int (*mutex_try_lock)(struct nvhost_syncpt *,
 			      unsigned int idx);
-	void (*mutex_unlock)(struct nvhost_syncpt *,
+	void (*mutex_unlock_nvh)(struct nvhost_syncpt *,
 			     unsigned int idx);
 	void (*mutex_owner)(struct nvhost_syncpt *,
 			    unsigned int idx,

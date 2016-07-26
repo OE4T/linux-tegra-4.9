@@ -1,7 +1,7 @@
 /*
  * Tegra Graphics Virtualization Host Syncpoints for HOST1X
  *
- * Copyright (c) 2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -157,5 +157,5 @@ void vhost_init_host1x_syncpt_ops(struct nvhost_syncpt_ops *ops)
 	ops->update_min = vhost_syncpt_update_min;
 	ops->cpu_incr = vhost_syncpt_cpu_incr;
 	ops->mutex_try_lock = vhost_syncpt_mutex_try_lock;
-	ops->mutex_unlock = vhost_syncpt_mutex_unlock;
+	ops->mutex_unlock_nvh = vhost_syncpt_mutex_unlock;
 };

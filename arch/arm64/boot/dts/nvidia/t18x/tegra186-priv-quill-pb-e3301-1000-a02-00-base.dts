@@ -34,6 +34,9 @@
 			hdmi-display {
 				status = "disabled";
 			};
+			dp-display {
+				status = "okay";
+			};
 		};
 	};
 };

@@ -85,11 +85,6 @@ static const char * const ape_reset_names[] = {
 	"adsp",
 };
 
-static struct clk *sce_clocks[ARRAY_SIZE(sce_clock_names)];
-static struct clk *ape_clocks[ARRAY_SIZE(sce_clock_names)];
-static struct reset_control *sce_resets[ARRAY_SIZE(sce_reset_names)];
-static struct reset_control *ape_resets[ARRAY_SIZE(ape_reset_names)];
-
 enum tegra_cam_rtcpu_id {
 	TEGRA_CAM_RTCPU_SCE,
 	TEGRA_CAM_RTCPU_APE,
@@ -98,8 +93,6 @@ enum tegra_cam_rtcpu_id {
 struct tegra_cam_rtcpu_pdata {
 	const char * const *clock_names;
 	const char * const *reset_names;
-	struct clk **clocks;
-	struct reset_control **resets;
 	enum tegra_cam_rtcpu_id id;
 	u32 sid;
 	u32 num_clocks;
@@ -109,8 +102,6 @@ struct tegra_cam_rtcpu_pdata {
 static const struct tegra_cam_rtcpu_pdata sce_pdata = {
 	.clock_names = sce_clock_names,
 	.reset_names = sce_reset_names,
-	.clocks = sce_clocks,
-	.resets = sce_resets,
 	.id = TEGRA_CAM_RTCPU_SCE,
 	.sid = TEGRA_SID_SCE,
 	.num_clocks = ARRAY_SIZE(sce_clock_names),
@@ -120,8 +111,6 @@ static const struct tegra_cam_rtcpu_pdata sce_pdata = {
 static const struct tegra_cam_rtcpu_pdata ape_pdata = {
 	.clock_names = ape_clock_names,
 	.reset_names = ape_reset_names,
-	.clocks = ape_clocks,
-	.resets = ape_resets,
 	.id = TEGRA_CAM_RTCPU_APE,
 	.sid = TEGRA_SID_APE,
 	.num_clocks = ARRAY_SIZE(ape_clock_names),
@@ -159,41 +148,48 @@ struct tegra_cam_rtcpu {
 			void __iomem *sce_pm_base;
 		} __packed rtcpu_sce;
 	};
+
+	struct clk **clocks;
+	struct reset_control **resets;
 	const struct tegra_cam_rtcpu_pdata *rtcpu_pdata;
 };
 
 static int tegra_cam_rtcpu_get_clks_resets(struct device *dev)
 {
-	struct tegra_cam_rtcpu *cam_rtcpu;
-	const struct tegra_cam_rtcpu_pdata *pdata;
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->rtcpu_pdata;
 	int i;
 
-	cam_rtcpu = dev_get_drvdata(dev);
-	pdata = cam_rtcpu->rtcpu_pdata;
+	rtcpu->clocks = devm_kmalloc(dev,
+		pdata->num_clocks * sizeof(rtcpu->clocks[0]), GFP_KERNEL);
+	rtcpu->resets = devm_kmalloc(dev,
+		pdata->num_resets * sizeof(rtcpu->resets[0]), GFP_KERNEL);
+	if (unlikely(rtcpu->clocks == NULL || rtcpu->resets == NULL))
+		return -ENOMEM;
 
 	/* Get clocks and resets */
 	for (i = 0; i < pdata->num_clocks; i++) {
-		pdata->clocks[i] = devm_clk_get(dev, pdata->clock_names[i]);
-		if (IS_ERR(pdata->clocks[i])) {
-			if (PTR_ERR(pdata->clocks[i]) == -EPROBE_DEFER)
-				return PTR_ERR(pdata->clocks[i]);
+		rtcpu->clocks[i] = devm_clk_get(dev, pdata->clock_names[i]);
+		if (IS_ERR(rtcpu->clocks[i])) {
+			if (rtcpu->clocks[i] == ERR_PTR(-EPROBE_DEFER))
+				return -EPROBE_DEFER;
 
 			dev_err(dev, "clock %s not found: %ld\n",
 				pdata->clock_names[i],
-				PTR_ERR(pdata->clocks[i]));
+				PTR_ERR(rtcpu->clocks[i]));
 		}
 	}
 
 	for (i = 0; i < pdata->num_resets; i++) {
-		pdata->resets[i] =
+		rtcpu->resets[i] =
 			devm_reset_control_get(dev, pdata->reset_names[i]);
-		if (IS_ERR(pdata->resets[i])) {
-			if (PTR_ERR(pdata->resets[i]) == -EPROBE_DEFER)
-				return PTR_ERR(pdata->resets[i]);
+		if (IS_ERR(rtcpu->resets[i])) {
+			if (rtcpu->resets[i] == ERR_PTR(-EPROBE_DEFER))
+				return -EPROBE_DEFER;
 
 			dev_err(dev, "reset %s not found: %ld\n",
 				pdata->reset_names[i],
-				PTR_ERR(pdata->resets[i]));
+				PTR_ERR(rtcpu->resets[i]));
 		}
 	}
 
@@ -201,19 +197,17 @@ static int tegra_cam_rtcpu_get_clks_resets(struct device *dev)
 }
 
 static int tegra_cam_rtcpu_apply_clks(struct device *dev,
-				int (*func)(struct clk *clk))
+					int (*func)(struct clk *clk))
 {
-	struct tegra_cam_rtcpu *cam_rtcpu;
-	const struct tegra_cam_rtcpu_pdata *pdata;
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->rtcpu_pdata;
 	int i, ret;
 
-	cam_rtcpu = dev_get_drvdata(dev);
-	pdata = cam_rtcpu->rtcpu_pdata;
-
 	for (i = 0; i < pdata->num_clocks; i++) {
-		if (IS_ERR(pdata->clocks[i]))
+		if (IS_ERR(rtcpu->clocks[i]))
 			continue;
-		ret = (*func)(pdata->clocks[i]);
+
+		ret = (*func)(rtcpu->clocks[i]);
 		if (ret) {
 			dev_err(dev, "clock %s failed: %d\n",
 				pdata->clock_names[i], ret);
@@ -224,19 +218,17 @@ static int tegra_cam_rtcpu_apply_clks(struct device *dev,
 }
 
 static int tegra_cam_rtcpu_apply_resets(struct device *dev,
-			int (*func)(struct reset_control *))
+					int (*func)(struct reset_control *))
 {
-	struct tegra_cam_rtcpu *cam_rtcpu;
-	const struct tegra_cam_rtcpu_pdata *pdata;
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->rtcpu_pdata;
 	int i, ret;
 
-	cam_rtcpu = dev_get_drvdata(dev);
-	pdata = cam_rtcpu->rtcpu_pdata;
-
 	for (i = 0; i < pdata->num_resets; i++) {
-		if (IS_ERR(pdata->resets[i]))
+		if (IS_ERR(rtcpu->resets[i]))
 			continue;
-		ret = (*func)(pdata->resets[i]);
+
+		ret = (*func)(rtcpu->resets[i]);
 		if (ret) {
 			dev_err(dev, "reset %s failed: %d\n",
 				pdata->reset_names[i], ret);

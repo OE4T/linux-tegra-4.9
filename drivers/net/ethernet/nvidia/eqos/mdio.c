@@ -77,7 +77,8 @@ INT eqos_mdio_read_direct(struct eqos_prv_data *pdata,
 
 	if (hw_if->read_phy_regs) {
 		phy_reg_read_status =
-		    hw_if->read_phy_regs(phyaddr, phyreg, phydata);
+		    hw_if->read_phy_regs(phyaddr, phyreg, phydata,
+			pdata->mdc_cr);
 	} else {
 		phy_reg_read_status = 1;
 		pr_err("%s: hw_if->read_phy_regs not defined", DEV_NAME);
@@ -119,7 +120,8 @@ INT eqos_mdio_write_direct(struct eqos_prv_data *pdata,
 
 	if (hw_if->write_phy_regs) {
 		phy_reg_write_status =
-		    hw_if->write_phy_regs(phyaddr, phyreg, phydata);
+		    hw_if->write_phy_regs(phyaddr, phyreg,
+			phydata, pdata->mdc_cr);
 	} else {
 		phy_reg_write_status = 1;
 		pr_err("%s: hw_if->write_phy_regs not defined", DEV_NAME);
@@ -156,7 +158,8 @@ static INT eqos_mdio_read(struct mii_bus *bus, int phyaddr, int phyreg)
 		   phyaddr, phyreg);
 
 	if (hw_if->read_phy_regs)
-		hw_if->read_phy_regs(phyaddr, phyreg, &phydata);
+		hw_if->read_phy_regs(phyaddr, phyreg, &phydata,
+			pdata->mdc_cr);
 	else
 		pr_err("%s: hw_if->read_phy_regs not defined", DEV_NAME);
 
@@ -191,7 +194,8 @@ static INT eqos_mdio_write(struct mii_bus *bus, int phyaddr, int phyreg,
 	DBGPR_MDIO("--> eqos_mdio_write\n");
 
 	if (hw_if->write_phy_regs) {
-		hw_if->write_phy_regs(phyaddr, phyreg, phydata);
+		hw_if->write_phy_regs(phyaddr, phyreg, phydata,
+			pdata->mdc_cr);
 	} else {
 		ret = -1;
 		pr_err("%s: hw_if->write_phy_regs not defined", DEV_NAME);
@@ -222,18 +226,21 @@ static INT eqos_mdio_reset(struct mii_bus *bus)
 
 	DBGPR_MDIO("-->eqos_mdio_reset: phyaddr : %d\n", pdata->phyaddr);
 
-	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
+	hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata,
+		pdata->mdc_cr);
 
 	if (phydata < 0)
 		return 0;
 
 	/* issue soft reset to PHY */
 	phydata |= BMCR_RESET;
-	hw_if->write_phy_regs(pdata->phyaddr, MII_BMCR, phydata);
+	hw_if->write_phy_regs(pdata->phyaddr, MII_BMCR, phydata,
+		pdata->mdc_cr);
 
 	/* wait until software reset completes */
 	do {
-		hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata);
+		hw_if->read_phy_regs(pdata->phyaddr, MII_BMCR, &phydata,
+			pdata->mdc_cr);
 	} while ((phydata >= 0) && (phydata & BMCR_RESET));
 
 	DBGPR_MDIO("<--eqos_mdio_reset\n");

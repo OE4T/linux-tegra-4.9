@@ -661,6 +661,35 @@ static int eqos_therm_init(struct eqos_prv_data *pdata)
 	return 0;
 }
 
+/* Converts csr clock to MDC clock.
+ * Values come from CR field in MAC_MDIO_Address register
+ */
+static void save_mdc(struct eqos_prv_data *pdata)
+{
+	if (pdata->csr_clock_speed > 250) {
+		pdata->mdc_cr = 5;
+		return;
+	}
+	if (pdata->csr_clock_speed > 150) {
+		pdata->mdc_cr = 4;
+		return;
+	}
+	if (pdata->csr_clock_speed > 100) {
+		pdata->mdc_cr = 1;
+		return;
+	}
+	if (pdata->csr_clock_speed > 60) {
+		pdata->mdc_cr = 0;
+		return;
+	}
+	if (pdata->csr_clock_speed > 35) {
+		pdata->mdc_cr = 3;
+		return;
+	}
+	/* for CSR < 35mhz */
+	pdata->mdc_cr = 2;
+}
+
 /*!
 * \brief API to initialize the device.
 *
@@ -934,19 +963,6 @@ int eqos_probe(struct platform_device *pdev)
 		pchinfo->int_mask |= VIRT_INTR_CH_CRTL_TX_WR_MASK;
 	}
 
-	pdata->interface = eqos_get_phy_interface(pdata);
-	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
-	if (1 == pdata->hw_feat.sma_sel) {
-		ret = eqos_mdio_register(ndev);
-		if (ret < 0) {
-			pr_err("MDIO bus (id %d) registration failed\n",
-			       pdata->bus_id);
-			goto err_out_mdio_reg;
-		}
-	} else {
-		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
-	}
-
 	/* csr_clock_speed is axi_cbb_clk rate */
 	pdata->csr_clock_speed = clk_get_rate(pdata->axi_cbb_clk) / 1000000;
 	if (pdata->csr_clock_speed <= 0) {
@@ -956,6 +972,7 @@ int eqos_probe(struct platform_device *pdev)
 			pdata->csr_clock_speed);
 			MAC_1US_TIC_WR(pdata->csr_clock_speed - 1);
 	}
+	save_mdc(pdata);
 
 	ret = eqos_get_mac_address_dtb("/chosen", "nvidia,ether-mac", mac_addr);
 	if (ret < 0) {
@@ -972,6 +989,19 @@ int eqos_probe(struct platform_device *pdev)
 		ndev->dev_addr[4] = mac_addr[4];
 		ndev->dev_addr[5] = mac_addr[5];
 	}
+	pdata->interface = eqos_get_phy_interface(pdata);
+	/* Bypass PHYLIB for TBI, RTBI and SGMII interface */
+	if (1 == pdata->hw_feat.sma_sel) {
+		ret = eqos_mdio_register(ndev);
+		if (ret < 0) {
+			pr_err("MDIO bus (id %d) registration failed\n",
+			       pdata->bus_id);
+			goto err_out_mdio_reg;
+		}
+	} else {
+		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
+	}
+
 	/* enabling and registration of irq with magic wakeup */
 	if (1 == pdata->hw_feat.mgk_sel) {
 		device_set_wakeup_capable(&pdev->dev, 1);

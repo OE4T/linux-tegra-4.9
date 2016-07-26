@@ -2465,63 +2465,54 @@ static INT set_promiscuous_mode(void)
 * \retval -1 Failure
 */
 
-static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data)
+static INT mdio_poll(void)
 {
-	ULONG retry_cnt = 1000;
-	ULONG vy_count;
-	volatile ULONG mac_gmiiar;
+	/* half sec timeout */
+	ULONG retry_cnt = (500 * 100);
+	ULONG vy_count = 0;
+
+	ULONG mac_gmiiar;
+
+	while (vy_count < retry_cnt) {
+		MAC_GMIIAR_RD(mac_gmiiar);
+		if (GET_VALUE(mac_gmiiar, MAC_GMIIAR_GB_LPOS,
+			      MAC_GMIIAR_GB_HPOS) == 0)
+			return Y_SUCCESS;
+		vy_count++;
+		udelay(10);
+	}
+	return -Y_FAILURE;
+}
+
+static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data,
+				INT mdc_cr)
+{
+	ULONG mac_gmiiar;
 
 	/* wait for any previous MII read/write operation to complete */
+	if (mdio_poll() == -Y_FAILURE)
+		return -Y_FAILURE;
 
-	/*Poll Until Poll Condition */
-	vy_count = 0;
-	while (1) {
-		if (vy_count > retry_cnt) {
-			return -Y_FAILURE;
-		} else {
-			vy_count++;
-			mdelay(1);
-		}
-		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE
-		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
-			break;
-		}
-	}
 	/* write the data */
 	MAC_GMIIDR_GD_WR(phy_reg_data);
+
 	/* initiate the MII write operation by updating desired */
 	/* phy address/id (0 - 31) */
 	/* phy register offset */
 	/* CSR Clock Range (20 - 35MHz) */
 	/* Select write operation */
 	/* set busy bit */
-	MAC_GMIIAR_RD(mac_gmiiar);
-	mac_gmiiar = mac_gmiiar & (ULONG) (0x12);
-	mac_gmiiar =
-	    mac_gmiiar | ((phy_id) << 21) | ((phy_reg) << 16) | ((0x2) << 8)
-	    | ((0x1) << 2) | ((0x1) << 0);
+	mdc_cr <<= 8;
+	mac_gmiiar = ((phy_id) << 21) | ((phy_reg) << 16) | mdc_cr |
+			((0x1) << 2) | ((0x1) << 0);
 	MAC_GMIIAR_WR(mac_gmiiar);
 
-	/*DELAY IMPLEMENTATION USING udelay() */
-	udelay(10);
-	/* wait for MII write operation to complete */
+	/* delay some to allow mac to set busy bit */
+	udelay(2);
 
-	/*Poll Until Poll Condition */
-	vy_count = 0;
-	while (1) {
-		if (vy_count > retry_cnt) {
-			return -Y_FAILURE;
-		} else {
-			vy_count++;
-			mdelay(1);
-		}
-		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE
-		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
-			break;
-		}
-	}
+	/* wait for MII write operation to complete */
+	if (mdio_poll() == -Y_FAILURE)
+		return -Y_FAILURE;
 
 	return Y_SUCCESS;
 }
@@ -2536,62 +2527,36 @@ static INT write_phy_regs(INT phy_id, INT phy_reg, INT phy_reg_data)
 * \retval -1 Failure
 */
 
-static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data)
+static INT read_phy_regs(INT phy_id, INT phy_reg, INT *phy_reg_data,
+				INT mdc_cr)
 {
 	ULONG retry_cnt = 1000;
 	ULONG vy_count;
-	volatile ULONG mac_gmiiar;
+	ULONG mac_gmiiar;
 	ULONG mac_gmiidr;
 
 	/* wait for any previous MII read/write operation to complete */
+	if (mdio_poll() == -Y_FAILURE)
+		return -Y_FAILURE;
 
-	/*Poll Until Poll Condition */
-	vy_count = 0;
-	while (1) {
-		if (vy_count > retry_cnt) {
-			return -Y_FAILURE;
-		} else {
-			vy_count++;
-			mdelay(1);
-		}
-		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE
-		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
-			break;
-		}
-	}
 	/* initiate the MII read operation by updating desired */
 	/* phy address/id (0 - 31) */
 	/* phy register offset */
 	/* CSR Clock Range (20 - 35MHz) */
 	/* Select read operation */
 	/* set busy bit */
-	MAC_GMIIAR_RD(mac_gmiiar);
-	mac_gmiiar = mac_gmiiar & (ULONG) (0x12);
-	mac_gmiiar =
-	    mac_gmiiar | ((phy_id) << 21) | ((phy_reg) << 16) | ((0x2) << 8)
-	    | ((0x3) << 2) | ((0x1) << 0);
+	mdc_cr <<= 8;
+	mac_gmiiar = ((phy_id) << 21) | ((phy_reg) << 16) | mdc_cr |
+			((0x3) << 2) | ((0x1) << 0);
 	MAC_GMIIAR_WR(mac_gmiiar);
 
-	/*DELAY IMPLEMENTATION USING udelay() */
-	udelay(10);
-	/* wait for MII write operation to complete */
+	/* delay some to allow mac to set busy bit */
+	udelay(2);
 
-	/*Poll Until Poll Condition */
-	vy_count = 0;
-	while (1) {
-		if (vy_count > retry_cnt) {
-			return -Y_FAILURE;
-		} else {
-			vy_count++;
-			mdelay(1);
-		}
-		MAC_GMIIAR_RD(mac_gmiiar);
-		if (GET_VALUE
-		    (mac_gmiiar, MAC_GMIIAR_GB_LPOS, MAC_GMIIAR_GB_HPOS) == 0) {
-			break;
-		}
-	}
+	/* wait for MII read operation to complete */
+	if (mdio_poll() == -Y_FAILURE)
+		return -Y_FAILURE;
+
 	/* read the data */
 	MAC_GMIIDR_RD(mac_gmiidr);
 	*phy_reg_data =
@@ -3322,11 +3287,11 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 
 static INT eqos_car_reset(struct eqos_prv_data *pdata)
 {
-	ULONG retry_cnt = 1000;
-	ULONG vy_count;
-	volatile ULONG dma_bmr;
+	/* one sec timeout */
+	ULONG retry_cnt = (500 * 1000);
+	ULONG vy_count = 0;
 
-	DBGPR("-->eqos_car_reset\n");
+	ULONG dma_bmr;
 
 	/* Issue a CAR reset */
 	if (!IS_ERR_OR_NULL(pdata->eqos_rst))
@@ -3335,27 +3300,16 @@ static INT eqos_car_reset(struct eqos_prv_data *pdata)
 	/* add delay of 10 usec */
 	udelay(10);
 
-	/* Poll Until Poll Condition */
-	vy_count = 0;
-	while (1) {
-		if (vy_count > retry_cnt) {
-			dev_err(&pdata->pdev->dev,
-				"%s():%d: Timed out polling on DMA_BMR_SWR\n",
-				__func__, __LINE__);
-			return -Y_FAILURE;
-		} else {
-			vy_count++;
-			mdelay(1);
-		}
+	while (vy_count < retry_cnt) {
 		DMA_BMR_RD(dma_bmr);
-		if (GET_VALUE(dma_bmr, DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
-			break;
+		if (GET_VALUE(dma_bmr,
+			DMA_BMR_SWR_LPOS, DMA_BMR_SWR_HPOS) == 0) {
+			return Y_SUCCESS;
 		}
+		vy_count++;
+		udelay(10);
 	}
-
-	DBGPR("<--eqos_car_reset\n");
-
-	return Y_SUCCESS;
+	return -Y_FAILURE;
 }
 
 /*!
@@ -3540,7 +3494,7 @@ static UINT calculate_per_queue_fifo(ULONG fifo_size, UCHAR queue_count)
 static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 {
 	struct eqos_tx_queue *queue_data = GET_TX_QUEUE_PTR(qinx);
-	ULONG retry_cnt = 1000;
+	ULONG retry_cnt;
 	ULONG vy_count;
 	volatile ULONG mtl_qtomr;
 	UINT p_rx_fifo = EQOS_256, p_tx_fifo = EQOS_256;
@@ -3551,20 +3505,21 @@ static INT configure_mtl_queue(UINT qinx, struct eqos_prv_data *pdata)
 	/*Flush Tx Queue */
 	MTL_QTOMR_FTQ_WR(qinx, 0x1);
 
-	/*Poll Until Poll Condition */
+	/* half sec timeout */
+	retry_cnt = (500 * 1000);
 	vy_count = 0;
-	while (1) {
-		if (vy_count > retry_cnt) {
-			return -Y_FAILURE;
-		} else {
-			vy_count++;
-			mdelay(1);
-		}
+
+	/* add delay of 10 usec */
+	udelay(10);
+
+	while (vy_count < retry_cnt) {
 		MTL_QTOMR_RD(qinx, mtl_qtomr);
 		if (GET_VALUE(mtl_qtomr, MTL_QTOMR_FTQ_LPOS, MTL_QTOMR_FTQ_HPOS)
 		    == 0) {
 			break;
 		}
+		vy_count++;
+		udelay(10);
 	}
 
 	/*Enable Store and Forward mode for TX */

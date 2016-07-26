@@ -1407,6 +1407,9 @@ static bool gk20a_fifo_handle_mmu_fault(
 
 			/* handled during channel free */
 			g->fifo.deferred_reset_pending = true;
+			gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg,
+				   "sm debugger attached,"
+				   " deferring channel recovery to channel free");
 		} else if (engine_id != ~0) {
 			was_reset = mutex_is_locked(&g->fifo.gr_reset_mutex);
 			mutex_lock(&g->fifo.gr_reset_mutex);
@@ -1456,14 +1459,6 @@ static bool gk20a_fifo_handle_mmu_fault(
 			gk20a_err(dev_from_gk20a(g), "couldn't locate channel for mmu fault");
 	}
 
-	if (g->fifo.deferred_reset_pending) {
-		gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "sm debugger attached,"
-			   " deferring channel recovery to channel free");
-		/* clear interrupt */
-		gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
-		goto exit_enable;
-	}
-
 	/* clear interrupt */
 	gk20a_writel(g, fifo_intr_mmu_fault_id_r(), fault_id);
 
@@ -1476,7 +1471,6 @@ static bool gk20a_fifo_handle_mmu_fault(
 		     gr_gpfifo_ctl_access_enabled_f() |
 		     gr_gpfifo_ctl_semaphore_access_enabled_f());
 
-exit_enable:
 	/* It is safe to enable ELPG again. */
 	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
 		gk20a_pmu_enable_elpg(g);

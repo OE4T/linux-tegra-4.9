@@ -446,11 +446,16 @@
 		pinctrl-0 = <&tegra_padctl_uphy_pinmux_default>;
 		pinctrl-names = "default";
 		tegra_padctl_uphy_pinmux_default: pinmux {
-			usb2-micro-AB {
-				 nvidia,lanes = "otg-0";
-				 nvidia,function = "xusb";
-				 nvidia,port-cap =
+			usb2-micro-AB-xusb {
+				nvidia,lanes = "otg-0";
+				nvidia,function = "xusb";
+				nvidia,port-cap =
 					<TEGRA_PADCTL_PORT_OTG_CAP>;
+				status = "disabled";
+			};
+			usb2-micro-AB-snps {
+				nvidia,lanes = "otg-0";
+				nvidia,function = "snps";
 			};
 			usb2-std-A-port0 {
 				 nvidia,lanes = "otg-2";
@@ -504,12 +509,11 @@
 		extcon-cables = <&vbus_gpio_extcon 1>;
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;
-		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
-			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
+		phys =	<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
-		phy-names = "utmi-0", "utmi-2", "usb3-1", "utmi-1", "usb3-0";
+		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0";
 	};
 
 	xudc@700d0000 {

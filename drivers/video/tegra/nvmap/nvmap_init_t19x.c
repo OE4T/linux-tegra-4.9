@@ -18,6 +18,11 @@
 
 #define pr_fmt(fmt)	"nvmap: %s() " fmt, __func__
 
+#include <linux/module.h>
+#include <linux/of.h>
+#include <linux/of_reserved_mem.h>
+#include <linux/platform_device.h>
+
 #include "../../../../include/linux/nvmap_t19x.h"
 #include "nvmap_priv.h"
 
@@ -42,3 +47,186 @@ int nvmap_register_cvsram_carveout(struct device *dma_dev,
 	return nvmap_create_carveout(&cvsram);
 }
 EXPORT_SYMBOL(nvmap_register_cvsram_carveout);
+
+static struct nvmap_platform_carveout gosmem = {
+	.name = "gosmem",
+	.usage_mask = NVMAP_HEAP_CARVEOUT_GOS,
+	.no_cpu_access = true,
+};
+
+static struct cv_dev_info *cvdev_info;
+static int count = 0;
+
+static void nvmap_gosmem_device_release(struct reserved_mem *rmem,
+		struct device *dev)
+{
+	int i;
+	struct reserved_mem_ops *rmem_ops =
+		(struct reserved_mem_ops *)rmem->ops;
+
+	for (i = 0; i < count; i++)
+		of_node_put(cvdev_info[i].np);
+	kfree(cvdev_info);
+	rmem_ops->device_release(rmem, dev);
+}
+
+static int __init nvmap_gosmem_device_init(struct reserved_mem *rmem,
+		struct device *dev)
+{
+	struct of_phandle_iter iter;
+	struct device_node *np;
+	DEFINE_DMA_ATTRS(attrs);
+	phys_addr_t pa;
+	int ret, i, idx, bytes;
+	struct reserved_mem_ops *rmem_ops =
+		(struct reserved_mem_ops *)rmem->ops;
+
+	dma_set_attr(DMA_ATTR_ALLOC_EXACT_SIZE, &attrs);
+
+	np = of_find_compatible_node(NULL, NULL, rmem->name);
+	if (!np) {
+		pr_err("Can't find the node using compatible\n");
+		return -ENODEV;
+	}
+
+	of_property_for_each_phandle_with_args(iter, np, "cvdevs",
+			NULL, 0)
+		count++;
+
+	(void)dma_alloc_attrs(gosmem.dma_dev, count * SZ_4K,
+				&pa, DMA_MEMORY_NOMAP, &attrs);
+	if (dma_mapping_error(dev, pa)) {
+		pr_err("Failed to allocate from Gos mem carveout\n");
+		return -ENOMEM;
+	}
+
+	bytes = sizeof(*cvdev_info) * count;
+	bytes += sizeof(struct sg_table) * count * count;
+	cvdev_info = kmalloc(bytes, GFP_KERNEL);
+	if (!cvdev_info) {
+		pr_err("kmalloc failed. No memory!!!\n");
+		ret = -ENOMEM;
+		goto unmap_dma;
+	}
+
+	idx = 0;
+	of_property_for_each_phandle_with_args(iter, np, "cvdevs",
+			NULL, 0) {
+		struct of_phandle_args *ret = &iter.out_args;
+
+		BUG_ON(!ret);
+		cvdev_info[idx].np = of_node_get(ret->np);
+		if (!cvdev_info[idx].np)
+			continue;
+		cvdev_info[idx].count = count;
+		cvdev_info[idx].idx = idx;
+		cvdev_info[idx].sgt =
+			(struct sg_table *)(cvdev_info + count);
+		cvdev_info[idx].sgt += idx * count;
+
+		for (i = 0; i < count; i++) {
+			struct sg_table *sgt = cvdev_info[idx].sgt + i;
+
+			sg_set_buf(sgt->sgl,
+				phys_to_virt(pa + SZ_4K * idx), SZ_4K);
+		}
+		idx++;
+	}
+	ret = rmem_ops->device_init(rmem, dev);
+	if (ret)
+		goto free;
+	return ret;
+free:
+	kfree(cvdev_info);
+unmap_dma:
+	dma_free_attrs(gosmem.dma_dev, SZ_4K, NULL, pa, &attrs);
+	return ret;
+}
+
+static struct reserved_mem_ops gosmem_rmem_ops = {
+	.device_init = nvmap_gosmem_device_init,
+	.device_release = nvmap_gosmem_device_release,
+};
+
+int __init nvmap_gosmem_setup(struct reserved_mem *rmem)
+{
+	int ret;
+
+	rmem->priv = &gosmem;
+	ret = nvmap_co_setup(rmem);
+	if (ret)
+		return ret;
+
+	rmem->priv = (struct reserved_mem_ops *)rmem->ops;
+	rmem->ops = &gosmem_rmem_ops;
+	return 0;
+}
+RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,gosmem", nvmap_gosmem_setup);
+
+static int nvmap_gosmem_notifier(struct notifier_block *nb,
+		unsigned long event, void *_dev)
+{
+	struct device *dev = _dev;
+	int ents, i;
+
+	if ((event != BUS_NOTIFY_BOUND_DRIVER) &&
+		(event != BUS_NOTIFY_UNBIND_DRIVER))
+		return NOTIFY_DONE;
+
+	for (i = 0; i < count; i++)
+		if (cvdev_info[i].np == dev->of_node)
+			goto map_gosmem;
+	return NOTIFY_DONE;
+map_gosmem:
+	for (i = 0; i < count; i++) {
+		DEFINE_DMA_ATTRS(attrs);
+		enum dma_data_direction dir;
+
+		dir = DMA_BIDIRECTIONAL;
+		dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+		if (cvdev_info[i].np != dev->of_node) {
+			dma_set_attr(DMA_ATTR_READ_ONLY, &attrs);
+			dir = DMA_TO_DEVICE;
+		}
+
+		switch (event) {
+		case BUS_NOTIFY_BOUND_DRIVER:
+			ents = dma_map_sg_attrs(dev, cvdev_info[i].sgt->sgl,
+					cvdev_info[i].sgt->nents, dir, &attrs);
+			if (ents != 1) {
+				pr_err("mapping gosmem chunk %d for %s failed\n",
+					i, dev_name(dev));
+				return NOTIFY_DONE;
+			}
+			break;
+		case BUS_NOTIFY_UNBIND_DRIVER:
+			dma_unmap_sg_attrs(dev, cvdev_info[i].sgt->sgl,
+					cvdev_info[i].sgt->nents, dir, &attrs);
+		default:
+			return NOTIFY_DONE;
+		};
+	}
+	return NOTIFY_DONE;
+}
+
+static struct notifier_block nvmap_gosmem_nb = {
+	.notifier_call = nvmap_gosmem_notifier,
+};
+
+static int nvmap_t19x_init(void)
+{
+	return bus_register_notifier(&platform_bus_type,
+			&nvmap_gosmem_nb);
+}
+core_initcall(nvmap_t19x_init);
+
+struct cv_dev_info *nvmap_fetch_cv_dev_info(struct device *dev)
+{
+	int i;
+
+	for (i = 0; i < count; i++)
+		if (cvdev_info[i].np == dev->of_node)
+			return &cvdev_info[i];
+	return NULL;
+}

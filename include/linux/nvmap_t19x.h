@@ -27,8 +27,18 @@
 #define _LINUX_NVMAP_T19x_H
 
 #define NVMAP_HEAP_CARVEOUT_CVSRAM  (1ul<<25)
+#define NVMAP_HEAP_CARVEOUT_GOS     (1ul<<24)
 
 int nvmap_register_cvsram_carveout(struct device *dma_dev,
 		phys_addr_t base, size_t size);
+
+struct cv_dev_info {
+	struct device_node *np;
+	struct sg_table *sgt;
+	int idx; /* index to use by firmware to identify the client */
+	int count; /* number of sgt */
+};
+
+struct cv_dev_info *nvmap_fetch_cv_dev_info(struct device *dev);
 
 #endif /* _LINUX_NVMAP_T19x_H */

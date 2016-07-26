@@ -5536,6 +5536,8 @@ struct clk *tegra_disp_clk_get(struct device *dev, const char *id)
 		return disp_clk;
 	}
 
+#elif defined(CONFIG_ARCH_TEGRA_210_SOC)
+	return devm_clk_get(dev, id);
 #else
 	return clk_get(dev, id);
 #endif

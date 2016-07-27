@@ -83,12 +83,38 @@ struct tegra_vi_stats {
 };
 
 struct tegra_vi_mfi_ctx;
+struct tegra_vi_fops {
+	int (*soc_power_on)(struct tegra_mc_vi *vi);
+	void (*soc_power_off)(struct tegra_mc_vi *vi);
+};
+
+struct tegra_vi_channel_fops {
+	void (*soc_channel_ec_init)(struct tegra_channel *chan);
+	void (*soc_channel_ec_recover)(struct tegra_channel *chan);
+	int (*soc_channel_capture_setup)(struct tegra_channel *chan);
+	void (*soc_channel_capture_frame_init)(struct tegra_channel *chan,
+			struct tegra_channel_buffer *buf, u32 *thresh);
+	void (*soc_channel_capture_frame_enable)(struct tegra_channel *chan);
+	int (*soc_channel_capture_frame)(struct tegra_channel *chan,
+			struct timespec *ts, u32 *thresh);
+	int (*soc_channel_capture_done)(struct tegra_channel *chan,
+			struct tegra_channel_buffer *buf,
+			struct timespec *ts);
+	int (*soc_channel_error_status)(struct tegra_channel *chan);
+	int (*soc_channel_stop_streaming)(struct tegra_channel *chan);
+};
+
+struct tegra_vi_data {
+	struct nvhost_device_data *info;
+	struct tegra_vi_fops *vi_fops;
+	struct tegra_vi_channel_fops *channel_fops;
+};
 
 struct vi {
 	struct tegra_camera *camera;
 	struct platform_device *ndev;
 	struct device *dev;
-	struct nvhost_device_data *ndata;
+	struct tegra_vi_data *data;
 	struct tegra_mc_vi mc_vi;
 	struct tegra_csi_device csi;
 
@@ -107,6 +133,7 @@ struct vi {
 	bool master_deinitialized;
 	bool tpg_opened;
 	bool sensor_opened;
+	bool bypass;
 };
 
 extern const struct file_operations tegra_vi_ctrl_ops;

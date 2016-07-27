@@ -27,12 +27,6 @@
 #include "vi/vi.h"
 #include "camera/registers.h"
 
-
-void vi_write(struct tegra_mc_vi *vi, unsigned int addr, u32 val)
-{
-	writel(val, vi->iomem + addr);
-}
-
 /* In TPG mode, VI only support 2 formats */
 static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
 {
@@ -66,14 +60,9 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 		}
 	}
 
-	vi_write(vi, TEGRA_VI_CFG_CG_CTRL, 1);
-
-	/* unpowergate VE */
-	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VENC);
-	if (ret) {
-		dev_err(vi->dev, "failed to unpower gate VI\n");
-		goto error_unpowergate;
-	}
+	ret = vi->fops->soc_power_on(vi);
+	if (ret)
+		goto error_soc_power_on;
 
 	/* clock settings */
 	ret = clk_prepare_enable(vi->clk);
@@ -95,10 +84,8 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 	return 0;
 err_emc_enable:
 error_clk_set_rate:
-	clk_disable_unprepare(vi->clk);
-error_clk_enable:
-	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
-error_unpowergate:
+	vi->fops->soc_power_off(vi);
+error_soc_power_on:
 	regulator_disable(vi->reg);
 error_regulator_fail:
 	nvhost_module_idle_ext(vi->ndev);
@@ -110,7 +97,7 @@ void tegra_vi_power_off(struct tegra_mc_vi *vi)
 {
 	tegra_camera_emc_clk_disable();
 	clk_disable_unprepare(vi->clk);
-	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
+	vi->fops->soc_power_off(vi);
 	regulator_disable(vi->reg);
 	nvhost_module_idle_ext(vi->ndev);
 }

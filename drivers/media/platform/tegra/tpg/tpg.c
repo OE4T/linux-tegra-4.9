@@ -50,6 +50,7 @@ static int tpg_probe(struct vi *tegra_vi)
 	mc_vi->reg = tegra_vi->reg;
 	mc_vi->pg_mode = TEGRA_VI_PG_PATCH;
 	mc_vi->num_channels = TPG_CHANNELS;
+	mc_vi->fops = tegra_vi->data->vi_fops;
 	ret = tegra_vi_media_controller_init(mc_vi, pdev);
 	if (ret)
 		goto vi_mc_error;

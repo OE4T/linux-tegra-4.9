@@ -631,28 +631,21 @@ static u32 vgpu_gr_get_gpc_tpc_count(struct gk20a *g, u32 gpc_index)
 
 static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 	u32 gpc_index;
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_GPC_COUNT, &gr->gpc_count))
-		return -ENOMEM;
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_MAX_TPC_PER_GPC_COUNT,
-			&gr->max_tpc_per_gpc_count))
-		return -ENOMEM;
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT,
-			&gr->max_tpc_count))
-		return -ENOMEM;
+	gr->max_gpc_count = priv->constants.max_gpc_count;
+	gr->gpc_count = priv->constants.gpc_count;
+	gr->max_tpc_per_gpc_count = priv->constants.max_tpc_per_gpc_count;
 
 	if (vgpu_get_attribute(vgpu_get_handle(g),
 			TEGRA_VGPU_ATTRIB_TPC_COUNT,
 			&gr->tpc_count))
 		return -ENOMEM;
+
+	gr->max_tpc_count = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
 
 	gr->gpc_tpc_count = kzalloc(gr->gpc_count * sizeof(u32), GFP_KERNEL);
 	if (!gr->gpc_tpc_count)
@@ -682,7 +675,7 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	g->ops.gr.init_fs_state(g);
 	return 0;
 cleanup:
-	gk20a_err(dev_from_gk20a(g), "%s: out of memory\n", __func__);
+	gk20a_err(dev_from_gk20a(g), "%s: out of memory", __func__);
 
 	kfree(gr->gpc_tpc_count);
 	gr->gpc_tpc_count = NULL;
@@ -759,54 +752,38 @@ static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 
 static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)
 {
-	u32 max_fbps_count = 0;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_NUM_FBPS, &max_fbps_count))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve num fbps");
-
-	return max_fbps_count;
+	return priv->constants.num_fbps;
 }
 
 static u32 vgpu_gr_get_fbp_en_mask(struct gk20a *g)
 {
-	u32 fbp_en_mask = 0;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_FBP_EN_MASK, &fbp_en_mask))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve fbp en mask");
-
-	return fbp_en_mask;
+	return priv->constants.fbp_en_mask;
 }
 
 static u32 vgpu_gr_get_max_ltc_per_fbp(struct gk20a *g)
 {
-	u32 val = 0;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_MAX_LTC_PER_FBP, &val))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve max ltc per fbp");
-
-	return val;
+	return priv->constants.ltc_per_fbp;
 }
 
 static u32 vgpu_gr_get_max_lts_per_ltc(struct gk20a *g)
 {
-	u32 val = 0;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
 	gk20a_dbg_fn("");
 
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_MAX_LTS_PER_LTC, &val))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve lts per ltc");
-
-	return val;
+	return priv->constants.max_lts_per_ltc;
 }
 
 static u32 *vgpu_gr_rop_l2_en_mask(struct gk20a *g)

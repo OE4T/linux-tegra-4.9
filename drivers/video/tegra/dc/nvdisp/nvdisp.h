@@ -38,9 +38,8 @@ struct nvdisp_pd_info {
 
 /* struct to hold the compclk client info*/
 struct nvdisp_compclk_client {
-	struct clk *clk;
-	unsigned long rate;
 	bool inuse;
+	struct tegra_dc *dc;
 };
 
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);

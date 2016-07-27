@@ -75,7 +75,8 @@ static struct of_device_id nvdisp_disc_pd[] = {
 };
 
 static struct nvdisp_pd_info nvdisp_pg[NVDISP_PD_COUNT];
-static struct nvdisp_compclk_client compclk_client[TEGRA_MAX_DC];
+static struct nvdisp_compclk_client clk_client[TEGRA_MAX_DC];
+bool compclk_already_on = false, hubclk_already_on = false;
 
 static unsigned int default_srgb_regamma_lut[] = {
 		0x6000, 0x60CE, 0x619D, 0x626C, 0x632D, 0x63D4,
@@ -792,31 +793,38 @@ static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
 
 int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 {
-	int i;
+	int i, index = 0;
 	unsigned long rate = 0;
-	bool compclk_already_on = false;
-
-	compclk_client[dc->ctrl_num].clk = dc->clk;
-	compclk_client[dc->ctrl_num].rate = dc->mode.pclk;
-	if (compclk_client[dc->ctrl_num].inuse)
-		compclk_already_on = true;
-	compclk_client[dc->ctrl_num].inuse = true;
 
 	/* comp clk will be maximum of head0/1/2 */
+	mutex_lock(&tegra_nvdisp_lock);
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		if (compclk_client[i].inuse &&
-			rate <= compclk_client[i].rate) {
-			rate = compclk_client[i].rate;
-			pr_info(" rate get on compclk %ld\n", rate);
-			/* Set parent for Display clock */
-			clk_set_parent(compclk, compclk_client[i].clk);
+		if (clk_client[i].inuse && clk_client[i].dc &&
+			rate <= clk_get_rate(clk_client[i].dc->clk)) {
+			rate = clk_get_rate(clk_client[i].dc->clk);
+			index = i;
 		}
 	}
 
-	/* Enable Display comp clock */
-	if (!compclk_already_on)
-		tegra_disp_clk_prepare_enable(compclk);
+	if (rate == 0) {
+		/* none of the pclks is on. disable compclk */
+		tegra_disp_clk_disable_unprepare(compclk);
+		compclk_already_on = false;
+		mutex_unlock(&tegra_nvdisp_lock);
+		return 0;
+	}
 
+	pr_info(" rate get on compclk %ld\n", rate);
+	/* Set parent for Display clock */
+	clk_set_parent(compclk, clk_client[index].dc->clk);
+
+	/* Enable Display comp clock */
+	if (!compclk_already_on) {
+		tegra_disp_clk_prepare_enable(compclk);
+		compclk_already_on = true;
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
 	return 0;
 }
 
@@ -1338,17 +1346,29 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 				dc->ctrl_num);
 	}
 
-	/* Disable display comp clock */
-	if (compclk_client[dc->ctrl_num].inuse) {
-		tegra_disp_clk_disable_unprepare(compclk);
-		compclk_client[dc->ctrl_num].inuse = false;
-	}
+	/* Set comp clock to different pclk since dc->clk will be disabled */
+	mutex_lock(&tegra_nvdisp_lock);
+	clk_client[dc->ctrl_num].inuse = false;
+	mutex_unlock(&tegra_nvdisp_lock);
+	tegra_nvdisp_set_compclk(dc);
 
 	/* Disable DC clock */
 	tegra_disp_clk_disable_unprepare(dc->clk);
 
-	/* Disable display hub clock */
-	tegra_disp_clk_disable_unprepare(hubclk);
+	/* check if any of head is using hub clock */
+	mutex_lock(&tegra_nvdisp_lock);
+	for (idx = 0; idx < TEGRA_MAX_DC; idx++) {
+		if (clk_client[idx].inuse)
+			break;
+	}
+
+	/* disable hub clock if none of the heads is using it */
+	if (idx == TEGRA_MAX_DC) {
+		tegra_disp_clk_disable_unprepare(hubclk);
+		hubclk_already_on = false;
+	}
+	mutex_unlock(&tegra_nvdisp_lock);
+
 	return 0;
 }
 
@@ -1389,7 +1409,17 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	 */
 	clk_set_rate(hubclk, 408000000);
 
-	tegra_disp_clk_prepare_enable(hubclk);
+	/* set clock status to inuse */
+	mutex_lock(&tegra_nvdisp_lock);
+	clk_client[dc->ctrl_num].inuse = true;
+	clk_client[dc->ctrl_num].dc = dc;
+
+	if (!hubclk_already_on) {
+		tegra_disp_clk_prepare_enable(hubclk);
+		hubclk_already_on = true;
+	}
+	mutex_unlock(&tegra_nvdisp_lock);
+
 	pr_info(" rate get on hub %ld\n", clk_get_rate(hubclk));
 
 	/* Enable OR -- need to enable the connection first */

@@ -1053,6 +1053,8 @@ static ssize_t tipc_write_iter(struct kiocb *iocb, struct iov_iter *iter)
 
 	/* check available space */
 	if (len > mb_avail_space(txbuf)) {
+		pr_err("%s: MSG Size too large: %zdB, Avail: %zdB\n",
+			__func__, len, mb_avail_space(txbuf));
 		ret = -EMSGSIZE;
 		goto err_out;
 	}

@@ -327,10 +327,10 @@
 				     11289600   /* AUD_MCLK_x11025_RATE */
 				     45158400   /* PLLA_OUT0_x11025_RATE */
 				     45158400   /* AHUB_x11025_RATE */
-				     368640000  /* PLLA_x8000_RATE */
+				     24576000  /* PLLA_x8000_RATE */
 				     12288000   /* AUD_MCLK_x8000_RATE */
-				     184319970  /* PLLA_OUT0_x8000_RATE */
-				     49151992 >;/* AHUB_x8000_RATE */
+				     24576000  /* PLLA_OUT0_x8000_RATE */
+				     24576000 >;/* AHUB_x8000_RATE */
 		clocks =<&tegra_car TEGRA186_CLK_PLLP_OUT0>,
 			<&tegra_car TEGRA186_CLK_PLLA>,
 			<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
@@ -341,7 +341,7 @@
 			"extern1";
 		resets = <&tegra_car TEGRA186_RESET_AUD_MCLK>;
 		reset-names = "extern1_rst";
-		nvidia,num-codec-link = <3>;
+		nvidia,num-codec-link = <4>;
 		nvidia,num-amx = <4>;
 		nvidia,num-adx = <4>;
 		nvidia,amx-slot-size = <32 32 32 32>;
@@ -428,7 +428,9 @@
 			"Headphone-y", "y OUT",
 			"y IN", "LineIn-y",
 			"Headphone-d", "d OUT",
-			"d IN", "LineIn-d";
+			"d IN", "LineIn-d",
+			"BT-out", "b OUT",
+			"b IN", "BT-in";
 
 		nvidia,xbar = <&tegra_axbar>;
 
@@ -454,9 +456,9 @@
 
 		nvidia,dai-link-2 {
 			link-name = "p2382-audio-dsp-tdm1-2";
-			cpu-dai = <&tegra_i2s4>;
+			cpu-dai = <&tegra_i2s5>;
 			codec-dai = <&spdif_dit1>;
-			cpu-dai-name = "I2S4";
+			cpu-dai-name = "I2S5";
 			codec-dai-name = "dit-hifi";
 			tx-mask = <0xFF>;
 			rx-mask = <0xFF>;
@@ -474,22 +476,38 @@
 
 		nvidia,dai-link-3 {
 			link-name = "dummy-playback";
-			cpu-dai = <&tegra_i2s1>;
+			cpu-dai = <&tegra_i2s2>;
 			codec-dai = <&spdif_dit2>;
-			cpu-dai-name = "I2S1";
+			cpu-dai-name = "I2S2";
 			codec-dai-name = "dit-hifi";
-			tx-mask = <0xFF>;
-			rx-mask = <0xFF>;
+			tx-mask = <0x1>;
+			rx-mask = <0x1>;
 			format = "dsp_a";
 			bitclock-master;
 			frame-master;
-			bitclock-noninversion;
-			frame-noninversion;
-			bit-format = "s32_le";
+			bitclock-inversion;
+			frame-inversion;
+			bit-format = "s16_le";
 			bclk_ratio = <1>;
-			srate = <48000>;
-			num-channel = <8>;
+			srate = <16000>;
+			num-channel = <1>;
 			name-prefix = "d";
+		};
+
+		nvidia,dai-link-4 {
+			link-name = "p2382-btsco";
+			cpu-dai = <&tegra_i2s4>;
+			codec-dai = <&spdif_dit3>;
+			cpu-dai-name = "I2S4";
+			codec-dai-name = "dit-hifi";
+			format = "i2s";
+			bitclock-slave;
+			frame-slave;
+			bit-format = "s16_le";
+			bclk_ratio = <1>;
+			srate = <8000>;
+			num-channel = <2>;
+			name-prefix = "b";
 		};
 	};
 

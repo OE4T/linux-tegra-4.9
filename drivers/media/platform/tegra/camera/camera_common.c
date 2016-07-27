@@ -15,7 +15,6 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-
 #include <media/camera_common.h>
 #include <linux/of_graph.h>
 #include <linux/string.h>
@@ -659,12 +658,10 @@ int camera_common_s_power(struct v4l2_subdev *sd, int on)
 		if (err) {
 			dev_err(s_data->dev,
 				"%s: error power on\n", __func__);
-			camera_common_dpd_enable(s_data);
 			camera_common_mclk_disable(s_data);
 		}
 	} else {
 		call_s_op(s_data, power_off);
-		camera_common_dpd_enable(s_data);
 		camera_common_mclk_disable(s_data);
 	}
 

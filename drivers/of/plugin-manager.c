@@ -539,12 +539,7 @@ static int __init plugin_manager_init(void)
 		return 0;
 	}
 
-	for_each_child_of_node(pm_node, child) {
-		if (!of_device_is_available(child)) {
-			pr_info("Plugin-manager child %s status disabled\n",
-				child->name);
-			continue;
-		}
+	for_each_available_child_of_node(pm_node, child) {
 		ret = parse_fragment(child);
 		if (ret < 0)
 			pr_err("Error in parsing node %s: %d\n",

@@ -1115,6 +1115,8 @@ static struct sk_buff *ncm_wrap_ntb(struct gether *port,
 			      HRTIMER_MODE_REL);
 
 		/* Add the datagram position entries */
+		if (!ncm->skb_tx_ndp)
+			goto err;
 		ntb_ndp = (void *) skb_put(ncm->skb_tx_ndp, dgram_idx_len);
 		memset(ntb_ndp, 0, dgram_idx_len);
 

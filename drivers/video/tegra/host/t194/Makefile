@@ -5,6 +5,7 @@ ccflags-y += -Idrivers/media/platform/tegra/camera
 #ccflags-y += -I../t18x/drivers/video/tegra/host
 ccflags-y += -I../nvhost-t18x/drivers/video/tegra/host
 ccflags-y += -I../nvhost-t19x/drivers/video/tegra/host
+ccflags-y += -I../nvhost-t19x/include
 ccflags-y += -Wno-multichar
 ccflags-y += -Werror
 

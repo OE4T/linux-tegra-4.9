@@ -33,7 +33,7 @@
 #include "nvhost_queue.h"
 
 #include "nvdla/nvdla.h"
-#include "nvhost_nvdla_ioctl.h"
+#include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 
 #define DEBUG_BUFFER_SIZE 0x100
@@ -41,6 +41,13 @@
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
 static DEFINE_DMA_ATTRS(attrs);
+
+/**
+ * struct nvdla_private per unique FD private data
+ * @pdev		pointer to platform device
+ * @queue		pointer to nvhost_queue
+ * @buffers		pointer to nvhost_buffer
+ */
 
 struct nvdla_private {
 	struct platform_device *pdev;
@@ -156,17 +163,28 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 {
 	struct nvdla_ctrl_submit_args *args =
 			(struct nvdla_ctrl_submit_args *)arg;
-	struct nvdla_ctrl_ioctl_submit_task __user *user_tasks =
-		(struct nvdla_ctrl_ioctl_submit_task __user *)
-		(uintptr_t)args->tasks;
+	struct nvdla_ctrl_ioctl_submit_task __user *user_tasks;
 	struct nvdla_ctrl_ioctl_submit_task *local_tasks;
-	struct nvhost_queue *queue = priv->queue;
-	u32 num_tasks = args->num_tasks;
+	struct nvhost_queue *queue;
+	u32 num_tasks;
+	struct nvdla_task *task;
 	int err = 0, i = 0;
 
-	if (num_tasks > MAX_TASKS_PER_SUBMIT)
+	if (!args || !priv)
 		return -EINVAL;
 
+	queue = priv->queue;
+	if (!queue)
+		return -EINVAL;
+
+	user_tasks = (struct nvdla_ctrl_ioctl_submit_task __user *)
+			(uintptr_t)args->tasks;
+	num_tasks = args->num_tasks;
+
+	if (num_tasks <= 0 && num_tasks > MAX_TASKS_PER_SUBMIT)
+		return -EINVAL;
+
+	/* copy descriptors */
 	local_tasks = kcalloc(num_tasks, sizeof(*local_tasks),
 			  GFP_KERNEL);
 	if (!local_tasks)
@@ -178,13 +196,39 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 		goto fail_to_copy_task;
 	}
 
-	for (i = 0; i < num_tasks; i++)
-		nvhost_queue_submit(queue, &local_tasks[i]);
+	for (i = 0; i < num_tasks; i++) {
+		/* allocate per task and update fields */
+		task = nvdla_task_alloc(queue, local_tasks[i]);
+		if (IS_ERR(task)) {
+			err = PTR_ERR(task);
+			goto fail_to_task_alloc;
+		}
 
+		/* send job to engine */
+		err = nvhost_queue_submit(queue, task);
+		if (err)
+			goto fail_to_submit_task;
+
+		/* send fences to user */
+		err = nvdla_send_postfences(task, user_tasks[i]);
+		if (err)
+			goto fail_to_send_postfences;
+	}
+
+	kfree(local_tasks);
+	local_tasks = NULL;
+
+	return 0;
+
+fail_to_send_postfences:
+fail_to_submit_task:
+fail_to_task_alloc:
+	/*TODO: traverse list in reverse and delete jobs */
 fail_to_copy_task:
+	kfree(local_tasks);
+	local_tasks = NULL;
 	return err;
 }
-
 
 static long nvdla_ioctl(struct file *file, unsigned int cmd,
 			unsigned long arg)

@@ -28,17 +28,42 @@
 #define __user
 #endif
 
+/**
+ * struct nvdla_ctrl_ping_args structure for ping data
+ *
+ * @in_challenge	challenge data to be sent
+ * @out_response	response/CRC on challenge data from engine
+ *
+ */
 struct nvdla_ctrl_ping_args {
 	__u32 in_challenge;
 	__u32 out_response;
 };
 
+
+/**
+ * struct nvdla_ctrl_pin_unpin_args strcture args for buffer pin/unpin
+ *
+ * @buffers		list of buffers to pin/unpin'ed
+ * @num_buffers		number of buffers count
+ * @reserved		reserved for future use
+ *
+ */
 struct nvdla_ctrl_pin_unpin_args {
 	__u64 buffers;
 	__u32 num_buffers;
 	__u32 reserved;
 };
 
+/**
+ * struct nvdla_ctrl_submit_args structure for task submit
+ *
+ * @tasks		pointer to task list
+ * @num_tasks		number of tasks count
+ * @flags		flags for task submit, like atomic
+ * @version		version of task structure
+ *
+ */
 struct nvdla_ctrl_submit_args {
 	__u64 tasks;
 	__u16 num_tasks;
@@ -48,6 +73,25 @@ struct nvdla_ctrl_submit_args {
 	__u32 version;
 };
 
+/**
+ * struct nvdla_ctrl_ioctl_submit_task structure for single task information
+ *
+ * @num_prefences		number of pre-fences in task
+ * @num_postfences		number of post-fences in task
+ * @num_input_task_status	number of input task status
+ * @num_output_task_status	number of output task status
+ * @flags			flags for bitwise task info embeddeing
+ * @reserved			reserved for future use
+ * @prefences			pointer to pre-fence struct table
+ * @postfences			pointer to post-fence struct table
+ * @input_task_status		pointer to input task status struct table
+ * @output_task_status		pointer to output task status struct table
+ * @num_operations		number of operations for a task
+ * @num_addresses		total number of addressed passed in structure
+ * @surface_desc		pointer to surface descriptor
+ * @address_list		pointer to address list
+ *
+ */
 struct nvdla_ctrl_ioctl_submit_task {
 	__u8 num_prefences;
 	__u8 num_postfences;
@@ -70,6 +114,14 @@ struct nvdla_ctrl_ioctl_submit_task {
 	__u64 address_list;
 };
 
+/**
+ * struct nvdla_fence structure for passing fence information
+ *
+ * @type			type of fence: syncpoint, Linux Sync Fd
+ * @syncpoint_index		syncpoint id
+ * @syncpoint_value		value of syncpoint id
+ * @sync_fd			Linux sync FD handle
+ */
 struct nvdla_fence {
 	__u32 type;
 #define NVDLA_FENCE_TYPE_SYNCPT		0
@@ -77,23 +129,6 @@ struct nvdla_fence {
 	__u32 syncpoint_index;
 	__u32 syncpoint_value;
 	__u32 sync_fd;
-};
-
-struct nvdla_task_surface {
-	__u64 format;
-	__u32 handle;
-	__u32 offset;
-};
-
-struct nvdla_task_roi {
-	__u32 handle;
-	__u32 offset;
-};
-
-struct nvdla_task_status_handle {
-	__u32 handle;
-	__u32 reserved;
-	__u64 offset;
 };
 
 #define NVHOST_NVDLA_IOCTL_MAGIC 'D'

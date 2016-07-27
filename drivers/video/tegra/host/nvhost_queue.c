@@ -141,6 +141,10 @@ struct nvhost_queue *nvhost_queue_alloc(struct nvhost_queue_pool *pool)
 	/* initialize queue ref count */
 	kref_init(&queue->kref);
 
+	/* initialize task list */
+	INIT_LIST_HEAD(&queue->tasklist);
+	mutex_init(&queue->list_lock);
+
 	mutex_unlock(&pool->queue_lock);
 
 	return queue;

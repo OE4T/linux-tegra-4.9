@@ -37,11 +37,19 @@
 #include "nvhost_queue.h"
 
 #include "nvdla/nvdla.h"
-#include "nvhost_nvdla_ioctl.h"
+#include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 
+/**
+ * Maximum buffer size for debug dump
+ */
 #define DEBUG_BUFFER_SIZE 0x100
+
+/**
+ * default falcon idle timeout
+ */
 #define FLCN_IDLE_TIMEOUT_DEFAULT	10000	/* 10 milliseconds */
+
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
 static DEFINE_DMA_ATTRS(attrs);

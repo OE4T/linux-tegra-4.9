@@ -26,6 +26,8 @@
  * @kref:	struct kref for reference count
  * @syncpt_id:	Host1x syncpt id
  * @id:		Queue id
+ * @list_lock	mutex for tasks lists control
+ * @tasklist	Head of tasks list
  *
  */
 struct nvhost_queue {
@@ -33,6 +35,8 @@ struct nvhost_queue {
 	struct kref kref;
 	u32 syncpt_id;
 	u32 id;
+	struct mutex list_lock;
+	struct list_head tasklist;
 };
 
 /**

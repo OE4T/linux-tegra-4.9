@@ -253,6 +253,9 @@ static struct v4l2_frmsize_discrete tegra_csi_tpg_sizes[] = {
 
 static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_frame_size_enum *fse) __maybe_unused;
+static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_frame_size_enum *fse)
 {
 	int i;
@@ -284,6 +287,9 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 
 #define TPG_PIXEL_OUTPUT_RATE 182476800
 
+static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_frame_interval_enum *fie) __maybe_unused;
 static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_frame_interval_enum *fie)
@@ -427,8 +433,8 @@ static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {
 	//.get_fmt	= tegra_csi_get_format,
 	//.set_fmt	= tegra_csi_set_format,
-	.enum_frame_size = tegra_csi_enum_framesizes,
-	.enum_frame_interval = tegra_csi_enum_frameintervals,
+	//.enum_frame_size = tegra_csi_enum_framesizes,
+	//.enum_frame_interval = tegra_csi_enum_frameintervals,
 };
 
 static struct v4l2_subdev_ops tegra_csi_ops = {

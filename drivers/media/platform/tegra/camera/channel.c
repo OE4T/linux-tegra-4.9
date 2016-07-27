@@ -1179,7 +1179,6 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 		entity = pad->entity;
 		chan->subdev[num_sd++] = media_entity_to_v4l2_subdev(entity);
 
-		chan->subdev_on_csi = sd;
 		index = pad->index - 1;
 	}
 	chan->num_subdevs = num_sd;

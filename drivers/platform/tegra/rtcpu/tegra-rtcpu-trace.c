@@ -573,6 +573,34 @@ static void rtcpu_trace_rtos_event(struct camrtc_event_struct *event)
 	}
 }
 
+static void rtcpu_trace_dbg_event(struct camrtc_event_struct *event)
+{
+	switch (event->header.id) {
+	case camrtc_trace_dbg_unknown:
+		trace_rtcpu_dbg_unknown(event->header.tstamp,
+			event->data.data32[0]);
+		break;
+	case camrtc_trace_dbg_enter:
+		trace_rtcpu_dbg_enter(event->header.tstamp,
+			event->data.data32[0]);
+		break;
+	case camrtc_trace_dbg_exit:
+		trace_rtcpu_dbg_exit(event->header.tstamp);
+		break;
+	case camrtc_trace_dbg_set_loglevel:
+		trace_rtcpu_dbg_set_loglevel(event->header.tstamp,
+			event->data.data32[0],
+			event->data.data32[1]);
+		break;
+	default:
+		trace_rtcpu_unknown(event->header.tstamp,
+		    event->header.id,
+		    event->header.len - CAMRTC_TRACE_EVENT_HEADER_SIZE,
+		    event->data.data8);
+		break;
+	}
+}
+
 char *g_trace_vinotify_tag_strs[] = {
 	"FS", "FE",
 	"CSIMUX_FRAME", "CSIMUX_STREAM",
@@ -599,7 +627,8 @@ static void rtcpu_trace_vinotify_event(struct camrtc_event_struct *event)
 	switch (event->header.id) {
 	case camrtc_trace_vinotify_handle_msg:
 		trace_rtcpu_vinotify_handle_msg(event->header.tstamp,
-		(event->data.data32[0] >> 1) & 0x7f, event->data.data32[0]);
+		(event->data.data32[0] >> 1) & 0x7f, event->data.data32[0],
+		event->data.data32[1], event->data.data32[2]);
 		break;
 	default:
 		trace_rtcpu_unknown(event->header.tstamp,
@@ -618,6 +647,9 @@ static void rtcpu_trace_array_event(struct camrtc_event_struct *event)
 		break;
 	case CAMRTC_EVENT_MODULE_RTOS:
 		rtcpu_trace_rtos_event(event);
+		break;
+	case CAMRTC_EVENT_MODULE_DBG:
+		rtcpu_trace_dbg_event(event);
 		break;
 	case CAMRTC_EVENT_MODULE_VINOTIFY:
 		rtcpu_trace_vinotify_event(event);

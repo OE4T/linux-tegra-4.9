@@ -38,6 +38,21 @@ DECLARE_EVENT_CLASS(rtcpu__noarg,
 	TP_printk("tstamp:%llu", __entry->tstamp)
 );
 
+DECLARE_EVENT_CLASS(rtcpu__arg1,
+	TP_PROTO(u64 tstamp, u32 data1),
+	TP_ARGS(tstamp, data1),
+	TP_STRUCT__entry(
+		__field(u64, tstamp)
+		__field(u32, data1)
+	),
+	TP_fast_assign(
+		__entry->tstamp = tstamp;
+		__entry->data1 = data1;
+	),
+	TP_printk("tstamp:%llu, data:%u", __entry->tstamp,
+		__entry->data1)
+);
+
 DECLARE_EVENT_CLASS(rtcpu__dump,
 	TP_PROTO(u64 tstamp, u32 id, u32 len, void *data),
 	TP_ARGS(tstamp, id, len, data),
@@ -137,6 +152,42 @@ DEFINE_EVENT(rtcpu__noarg, rtcpu_start_scheduler,
 );
 
 /*
+ * Debug interface
+ */
+
+DEFINE_EVENT(rtcpu__arg1, rtcpu_dbg_unknown,
+	TP_PROTO(u64 tstamp, u32 data1),
+	TP_ARGS(tstamp, data1)
+);
+
+DEFINE_EVENT(rtcpu__arg1, rtcpu_dbg_enter,
+	TP_PROTO(u64 tstamp, u32 req_type),
+	TP_ARGS(tstamp, req_type)
+);
+
+DEFINE_EVENT(rtcpu__noarg, rtcpu_dbg_exit,
+	TP_PROTO(u64 tstamp),
+	TP_ARGS(tstamp)
+);
+
+TRACE_EVENT(rtcpu_dbg_set_loglevel,
+	TP_PROTO(u64 tstamp, u32 old_level, u32 new_level),
+	TP_ARGS(tstamp, old_level, new_level),
+	TP_STRUCT__entry(
+		__field(u64, tstamp)
+		__field(u32, old_level)
+		__field(u32, new_level)
+	),
+	TP_fast_assign(
+		__entry->tstamp = tstamp;
+		__entry->old_level = old_level;
+		__entry->new_level = new_level;
+	),
+	TP_printk("tstamp:%llu old:%u new:%u", __entry->tstamp,
+		__entry->old_level, __entry->new_level)
+);
+
+/*
  * VI Notify events
  */
 
@@ -144,25 +195,31 @@ extern char *g_trace_vinotify_tag_strs[];
 extern unsigned int g_trace_vinotify_tag_str_count;
 
 TRACE_EVENT(rtcpu_vinotify_handle_msg,
-	TP_PROTO(u64 tstamp, u8 tag, u32 ch_frame),
-	TP_ARGS(tstamp, tag, ch_frame),
+	TP_PROTO(u64 tstamp, u8 tag, u32 ch_frame, u32 vi_tstamp, u32 data),
+	TP_ARGS(tstamp, tag, ch_frame, vi_tstamp, data),
 	TP_STRUCT__entry(
 		__field(u64, tstamp)
 		__field(u8, tag)
 		__field(u32, ch_frame)
+		__field(u32, vi_tstamp)
+		__field(u32, data)
 	),
 	TP_fast_assign(
 		__entry->tstamp = tstamp;
 		__entry->tag = tag;
 		__entry->ch_frame = ch_frame;
+		__entry->vi_tstamp = vi_tstamp;
+		__entry->data = data;
 	),
-	TP_printk("tstamp:%llu tag:%s channel:%u frame:%u",
+	TP_printk(
+		"tstamp:%llu tag:%s channel:0x%02x frame:%u vi_tstamp:%u data:0x%08x",
 		__entry->tstamp,
 		(__entry->tag < g_trace_vinotify_tag_str_count) ?
 			g_trace_vinotify_tag_strs[__entry->tag] :
 			__print_hex(&__entry->tag, 1),
 		(__entry->ch_frame >> 8) & 0xff,
-		(__entry->ch_frame >> 16) & 0xffff)
+		(__entry->ch_frame >> 16) & 0xffff,
+		__entry->vi_tstamp, __entry->data)
 );
 
 #endif /* _TRACE_TEGRA_RTCPU_H */

@@ -11,11 +11,7 @@
 #ifndef INCLUDE_CAMRTC_TRACE_H
 #define INCLUDE_CAMRTC_TRACE_H
 
-#if defined(__KERNEL__)
-#include <linux/types.h>
-#else
-#include <stdint.h>
-#endif
+#include <camrtc-common.h>
 
 /*
  * Trace memory consists of three part.
@@ -88,7 +84,7 @@ struct camrtc_trace_memory_header {
 	uint32_t exception_next_idx;
 	uint32_t event_next_idx;
 	uint32_t reserved_ptrs[0x38 / 4];
-};
+} __packed;
 
 /*
  * Exception entry
@@ -108,7 +104,7 @@ enum camrtc_trace_armv7_exception_type {
 struct camrtc_trace_callstack {
 	uint32_t lr_stack_addr;		/* address in stack where lr is saved */
 	uint32_t lr;			/* value of saved lr */
-};
+} __packed;
 
 struct camrtc_trace_armv7_exception {
 	uint32_t len;		/* length in byte including this */
@@ -132,7 +128,7 @@ struct camrtc_trace_armv7_exception {
 	/* instruction fault status/address register */
 	uint32_t ifsr, ifar, aifsr;
 	struct camrtc_trace_callstack callstack[CAMRTC_TRACE_CALLSTACK_MAX];
-};
+} __packed;
 
 /*
  * Each trace event shares the header.
@@ -169,7 +165,7 @@ struct camrtc_event_header {
 	uint32_t len;		/* Size in bytes including this field */
 	uint32_t id;		/* Event ID */
 	uint64_t tstamp;	/* Timestamp from TKE TSC */
-};
+} __packed;
 
 struct camrtc_event_struct {
 	struct camrtc_event_header header;
@@ -177,7 +173,7 @@ struct camrtc_event_struct {
 		uint8_t data8[CAMRTC_TRACE_EVENT_PAYLOAD_SIZE];
 		uint32_t data32[CAMRTC_TRACE_EVENT_PAYLOAD_SIZE / 4];
 	} data;
-};
+} __packed;
 
 enum camrtc_event_type {
 	CAMRTC_EVENT_TYPE_ARRAY,
@@ -289,6 +285,16 @@ enum camrtc_trace_event_rtos_ids {
 	camrtc_trace_rtos_pend_func_call,
 	camrtc_trace_rtos_pend_func_call_from_isr,
 	camrtc_trace_rtos_queue_registry_add,
+};
+
+enum camrtc_trace_dbg_ids {
+	camrtc_trace_dbg_ids_begin =
+		CAMRTC_EVENT_MAKE_ID(CAMRTC_EVENT_TYPE_ARRAY,
+			CAMRTC_EVENT_MODULE_DBG, 0),
+	camrtc_trace_dbg_unknown,
+	camrtc_trace_dbg_enter,
+	camrtc_trace_dbg_exit,
+	camrtc_trace_dbg_set_loglevel,
 };
 
 enum camrtc_trace_vinotify_ids {

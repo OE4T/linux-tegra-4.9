@@ -588,6 +588,7 @@
 	};
 
 	sdhci@3440000 {
+		uhs-mask = <0x8>;
 		status = "disabled";
 	};
 
@@ -598,6 +599,8 @@
 	sdhci@3400000 {
 		cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 6) 0>;
 		wp-gpios = <&tegra_gpio TEGRA_GPIO(P, 4) 0>;
+		cd-inverted;
+		wp-inverted;
 		uhs-mask = <0x8>;
 		status = "okay";
 	};

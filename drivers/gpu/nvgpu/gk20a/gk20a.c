@@ -1819,6 +1819,8 @@ int gk20a_busy(struct device *dev)
 		}
 	}
 
+	gk20a_scale_notify_busy(dev);
+
 fail:
 	up_read(&g->busy_lock);
 

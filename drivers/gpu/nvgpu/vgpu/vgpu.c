@@ -504,6 +504,13 @@ static int vgpu_get_constants(struct gk20a *g)
 		return err;
 	}
 
+	if (unlikely(p->gpc_count > TEGRA_VGPU_MAX_GPC_COUNT ||
+		p->max_tpc_per_gpc_count > TEGRA_VGPU_MAX_TPC_COUNT_PER_GPC)) {
+		gk20a_err(g->dev, "gpc_count %d max_tpc_per_gpc %d overflow",
+			(int)p->gpc_count, (int)p->max_tpc_per_gpc_count);
+		return -EINVAL;
+	}
+
 	priv->constants = *p;
 	return 0;
 }

@@ -117,7 +117,7 @@ enum {
 	TEGRA_VGPU_ATTRIB_COMPTAG_LINES = 3, /* deprecated */
 	TEGRA_VGPU_ATTRIB_GPC_COUNT = 4, /* deprecated */
 	TEGRA_VGPU_ATTRIB_MAX_TPC_PER_GPC_COUNT = 5, /* deprecated */
-	TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT = 6,
+	TEGRA_VGPU_ATTRIB_MAX_TPC_COUNT = 6, /* deprecated */
 	TEGRA_VGPU_ATTRIB_PMC_BOOT_0 = 7, /* deprecated */
 	TEGRA_VGPU_ATTRIB_L2_SIZE = 8, /* deprecated */
 	TEGRA_VGPU_ATTRIB_GPC0_TPC0_SM_ARCH = 9, /* deprecated */
@@ -125,13 +125,13 @@ enum {
 	TEGRA_VGPU_ATTRIB_FBP_EN_MASK = 11, /* deprecated */
 	TEGRA_VGPU_ATTRIB_MAX_LTC_PER_FBP = 12, /* deprecated */
 	TEGRA_VGPU_ATTRIB_MAX_LTS_PER_LTC = 13, /* deprecated */
-	TEGRA_VGPU_ATTRIB_GPC0_TPC_MASK = 14,
+	TEGRA_VGPU_ATTRIB_GPC0_TPC_MASK = 14, /* deprecated */
 	TEGRA_VGPU_ATTRIB_CACHELINE_SIZE = 15, /* deprecated */
 	TEGRA_VGPU_ATTRIB_COMPTAGS_PER_CACHELINE = 16, /* deprecated */
 	TEGRA_VGPU_ATTRIB_SLICES_PER_LTC = 17, /* deprecated */
 	TEGRA_VGPU_ATTRIB_LTC_COUNT = 18, /* deprecated */
 	TEGRA_VGPU_ATTRIB_TPC_COUNT = 19, /* deprecated */
-	TEGRA_VGPU_ATTRIB_GPC0_TPC_COUNT = 20,
+	TEGRA_VGPU_ATTRIB_GPC0_TPC_COUNT = 20, /* deprecated */
 	TEGRA_VGPU_ATTRIB_MAX_FREQ = 21, /* deprecated */
 };
 
@@ -403,6 +403,9 @@ struct tegra_vgpu_gpu_clk_rate_params {
 	u32 rate; /* in kHz */
 };
 
+#define TEGRA_VGPU_MAX_GPC_COUNT 16
+#define TEGRA_VGPU_MAX_TPC_COUNT_PER_GPC 16
+
 struct tegra_vgpu_constants_params {
 	u32 arch;
 	u32 impl;
@@ -427,6 +430,11 @@ struct tegra_vgpu_constants_params {
 	u32 fbp_en_mask;
 	u32 ltc_per_fbp;
 	u32 max_lts_per_ltc;
+	u8 gpc_tpc_count[TEGRA_VGPU_MAX_GPC_COUNT];
+	/* mask bits should be equal or larger than
+	 * TEGRA_VGPU_MAX_TPC_COUNT_PER_GPC
+	 */
+	u16 gpc_tpc_mask[TEGRA_VGPU_MAX_GPC_COUNT];
 };
 
 struct tegra_vgpu_cmd_msg {

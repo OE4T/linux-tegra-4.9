@@ -617,18 +617,6 @@ static int vgpu_gr_free_obj_ctx(struct channel_gk20a  *c,
 	return 0;
 }
 
-static u32 vgpu_gr_get_gpc_tpc_count(struct gk20a *g, u32 gpc_index)
-{
-	u32 data;
-
-	WARN_ON(gpc_index > 0);
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_GPC0_TPC_COUNT, &data))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve gpc0_tpc_count");
-	return data;
-}
-
 static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 {
 	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
@@ -639,11 +627,6 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	gr->max_gpc_count = priv->constants.max_gpc_count;
 	gr->gpc_count = priv->constants.gpc_count;
 	gr->max_tpc_per_gpc_count = priv->constants.max_tpc_per_gpc_count;
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_TPC_COUNT,
-			&gr->tpc_count))
-		return -ENOMEM;
 
 	gr->max_tpc_count = gr->max_gpc_count * gr->max_tpc_per_gpc_count;
 
@@ -660,9 +643,12 @@ static int vgpu_gr_init_gr_config(struct gk20a *g, struct gr_gk20a *gr)
 	if (!gr->sm_to_cluster)
 		goto cleanup;
 
+	gr->tpc_count = 0;
 	for (gpc_index = 0; gpc_index < gr->gpc_count; gpc_index++) {
 		gr->gpc_tpc_count[gpc_index] =
-			vgpu_gr_get_gpc_tpc_count(g, gpc_index);
+			priv->constants.gpc_tpc_count[gpc_index];
+
+		gr->tpc_count += gr->gpc_tpc_count[gpc_index];
 
 		if (g->ops.gr.get_gpc_tpc_mask)
 			gr->gpc_tpc_mask[gpc_index] =
@@ -739,15 +725,9 @@ static int vgpu_gr_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 
 static u32 vgpu_gr_get_gpc_tpc_mask(struct gk20a *g, u32 gpc_index)
 {
-	u32 data;
+	struct vgpu_priv_data *priv = vgpu_get_priv_data(g);
 
-	WARN_ON(gpc_index > 0);
-
-	if (vgpu_get_attribute(vgpu_get_handle(g),
-			TEGRA_VGPU_ATTRIB_GPC0_TPC_MASK, &data))
-		gk20a_err(dev_from_gk20a(g), "failed to retrieve gpc0_tpc_mask");
-
-	return data;
+	return priv->constants.gpc_tpc_mask[gpc_index];
 }
 
 static u32 vgpu_gr_get_max_fbps_count(struct gk20a *g)

@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2015, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -30,7 +30,7 @@ unsigned long tegra_dc_pclk_round_rate(struct tegra_dc *dc, int pclk)
 {
 	unsigned long rate;
 	unsigned long div;
-	
+
 	rate = tegra_dc_clk_get_rate(dc);
 
 	if (TEGRA_DC_OUT_DSI == dc->out->type ||
@@ -83,6 +83,9 @@ void tegra_dc_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		pclk = dc->out_ops->setup_clk(dc, clk);
 	else
 		pclk = 0;
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+	tegra_nvdisp_set_compclk(dc);
+#endif
 
 	WARN_ONCE(!pclk, "pclk is 0\n");
 #ifdef CONFIG_TEGRA_CORE_DVFS

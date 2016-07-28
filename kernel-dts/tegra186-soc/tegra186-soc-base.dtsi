@@ -1156,6 +1156,8 @@
 				<0 143 0x4>,
 				<0 144 0x4>;
 		interrupt-names = "shared1", "shared2", "shared3", "shared4";
+		resets = <&tegra_car TEGRA186_RESET_SCE_HSP>;
+		reset-names = "hsp";
 		status = "disabled";
 	};
 

@@ -2912,20 +2912,16 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		val = tegra_mipi_cal_read(dsi->mipi_cal,
 				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
 		val &= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
-		tegra_mipi_cal_write(dsi->mipi_cal, val,
-				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-
 #if defined(CONFIG_ARCH_TEGRA_11x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_14x_SOC) || \
 	defined(CONFIG_ARCH_TEGRA_12x_SOC)
-		tegra_mipi_cal_write(dsi->mipi_cal,
-			MIPI_BIAS_PAD_E_VCLAMP_REF(0x1),
-			MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		val |= MIPI_BIAS_PAD_E_VCLAMP_REF(0x1);
 #else
-		tegra_mipi_cal_write(dsi->mipi_cal,
-			MIPI_BIAS_PAD_E_VCLAMP_REF(0x0),
-			MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+		val &= ~MIPI_BIAS_PAD_E_VCLAMP_REF(0x1);
 #endif
+		tegra_mipi_cal_write(dsi->mipi_cal, val,
+				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
+
 		tegra_mipi_cal_write(dsi->mipi_cal,
 			PAD_PDVREG(0x0) | PAD_VCLAMP_LEVEL(0x0),
 			MIPI_CAL_MIPI_BIAS_PAD_CFG2_0);
@@ -2944,10 +2940,13 @@ static void tegra_dsi_pad_calibration(struct tegra_dc_dsi_data *dsi)
 		/* disable mipi bias pad */
 		val = tegra_mipi_cal_read(dsi->mipi_cal,
 				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		val |= MIPI_BIAS_PAD_PDVCLAMP(0x1);
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+		/*
+		 * val &= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
+		 * Leave PDVCLAMP cleared (powered ON).
+		 */
 #else
-		val |= ~MIPI_BIAS_PAD_PDVCLAMP(0x1);
+		val |= MIPI_BIAS_PAD_PDVCLAMP(0x1);
 #endif
 		tegra_mipi_cal_write(dsi->mipi_cal, val,
 				MIPI_CAL_MIPI_BIAS_PAD_CFG0_0);

@@ -405,8 +405,13 @@ struct mm_gk20a {
 
 	struct {
 		size_t size;
+		u64 base;
+		size_t bootstrap_size;
+		u64 bootstrap_base;
+
 		struct gk20a_allocator allocator;
 		struct gk20a_allocator bootstrap_allocator;
+
 		u32 ce_ctx_id;
 		bool cleared;
 	} vidmem;

@@ -774,6 +774,70 @@ static void gk20a_init_pramin(struct mm_gk20a *mm)
 	mm->force_pramin = GK20A_FORCE_PRAMIN_DEFAULT;
 }
 
+#if defined(CONFIG_GK20A_VIDMEM)
+static int gk20a_vidmem_clear_all(struct gk20a *g)
+{
+	struct mm_gk20a *mm = &g->mm;
+	struct gk20a_fence *gk20a_fence_out = NULL;
+	u64 region2_base = 0;
+	int err = 0;
+
+	if (mm->vidmem.ce_ctx_id == ~0)
+		return -EINVAL;
+
+	err = gk20a_ce_execute_ops(g->dev,
+			mm->vidmem.ce_ctx_id,
+			0,
+			mm->vidmem.base,
+			mm->vidmem.bootstrap_base - mm->vidmem.base,
+			0x00000000,
+			NVGPU_CE_DST_LOCATION_LOCAL_FB,
+			NVGPU_CE_MEMSET,
+			NULL,
+			0,
+			NULL);
+	if (err) {
+		gk20a_err(g->dev,
+			"Failed to clear vidmem region 1 : %d", err);
+		return err;
+	}
+
+	region2_base = mm->vidmem.bootstrap_base + mm->vidmem.bootstrap_size;
+
+	err = gk20a_ce_execute_ops(g->dev,
+			mm->vidmem.ce_ctx_id,
+			0,
+			region2_base,
+			mm->vidmem.size - region2_base,
+			0x00000000,
+			NVGPU_CE_DST_LOCATION_LOCAL_FB,
+			NVGPU_CE_MEMSET,
+			NULL,
+			0,
+			&gk20a_fence_out);
+	if (err) {
+		gk20a_err(g->dev,
+			"Failed to clear vidmem region 2 : %d", err);
+		return err;
+	}
+
+	if (gk20a_fence_out) {
+		err = gk20a_fence_wait(gk20a_fence_out,
+				gk20a_get_gr_idle_timeout(g));
+		gk20a_fence_put(gk20a_fence_out);
+		if (err) {
+			gk20a_err(g->dev,
+				"fence wait failed for CE execute ops");
+			return err;
+		}
+	}
+
+	mm->vidmem.cleared = true;
+
+	return 0;
+}
+#endif
+
 static int gk20a_init_vidmem(struct mm_gk20a *mm)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
@@ -813,7 +877,10 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	gk20a_alloc_fixed(&g->mm.vidmem.allocator,
 			  bootstrap_base, bootstrap_size);
 
-	mm->vidmem.size = size;
+	mm->vidmem.base = base;
+	mm->vidmem.size = size - base;
+	mm->vidmem.bootstrap_base = bootstrap_base;
+	mm->vidmem.bootstrap_size = bootstrap_size;
 
 	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
 
@@ -2027,7 +2094,7 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	struct gk20a_vidmem_buf *buf;
-	int err, fd;
+	int err = 0, fd;
 
 	gk20a_dbg_fn("");
 
@@ -2036,6 +2103,14 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 		return -ENOMEM;
 
 	buf->g = g;
+
+	if (!g->mm.vidmem.cleared) {
+		err = gk20a_vidmem_clear_all(g);
+		if (err) {
+			gk20a_err(g->dev, "failed to clear whole vidmem");
+			goto err_kfree;
+		}
+	}
 
 	err = gk20a_gmmu_alloc_vid(g, bytes, &buf->mem);
 	if (err)
@@ -2743,6 +2818,59 @@ static void gk20a_gmmu_free_attr_sys(struct gk20a *g, enum dma_attr attr,
 	mem->aperture = APERTURE_INVALID;
 }
 
+#if defined(CONFIG_GK20A_VIDMEM)
+static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
+{
+	struct gk20a_fence *gk20a_fence_out = NULL;
+	struct gk20a_fence *gk20a_last_fence = NULL;
+	struct gk20a_page_alloc *alloc = NULL;
+	struct page_alloc_chunk *chunk = NULL;
+	int err = 0;
+
+	if (g->mm.vidmem.ce_ctx_id == ~0)
+		return -EINVAL;
+
+	alloc = (struct gk20a_page_alloc *)
+			g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
+
+	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
+		if (gk20a_last_fence)
+			gk20a_fence_put(gk20a_last_fence);
+
+		err = gk20a_ce_execute_ops(g->dev,
+			g->mm.vidmem.ce_ctx_id,
+			0,
+			chunk->base,
+			chunk->length,
+			0x00000000,
+			NVGPU_CE_DST_LOCATION_LOCAL_FB,
+			NVGPU_CE_MEMSET,
+			NULL,
+			0,
+			&gk20a_fence_out);
+
+		if (err) {
+			gk20a_err(g->dev,
+				"Failed gk20a_ce_execute_ops[%d]", err);
+			return err;
+		}
+
+		gk20a_last_fence = gk20a_fence_out;
+	}
+
+	if (gk20a_last_fence) {
+		err = gk20a_fence_wait(gk20a_last_fence,
+				gk20a_get_gr_idle_timeout(g));
+		gk20a_fence_put(gk20a_last_fence);
+		if (err)
+			gk20a_err(g->dev,
+				"fence wait failed for CE execute ops");
+	}
+
+	return err;
+}
+#endif
+
 int gk20a_gmmu_alloc_vid(struct gk20a *g, size_t size, struct mem_desc *mem)
 {
 	return gk20a_gmmu_alloc_attr_vid(g, 0, size, mem);
@@ -2803,56 +2931,10 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
 
-	if (g->mm.vidmem.ce_ctx_id != ~0) {
-		struct gk20a_fence *gk20a_fence_out = NULL;
-		struct gk20a_fence *gk20a_last_fence = NULL;
-		struct gk20a_page_alloc *alloc = NULL;
-		struct page_alloc_chunk *chunk = NULL;
-
-		alloc = (struct gk20a_page_alloc *)
-				g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
-
-		list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
-			if (gk20a_last_fence)
-				gk20a_fence_put(gk20a_last_fence);
-
-			err = gk20a_ce_execute_ops(g->dev,
-				g->mm.vidmem.ce_ctx_id,
-				0,
-				chunk->base,
-				chunk->length,
-				0x00000000,
-				NVGPU_CE_DST_LOCATION_LOCAL_FB,
-				NVGPU_CE_MEMSET,
-				NULL,
-				0,
-				&gk20a_fence_out);
-
-			if (err) {
-				gk20a_err(g->dev,
-					"Failed gk20a_ce_execute_ops[%d]", err);
-				goto fail_free_table;
-			}
-
-			gk20a_last_fence = gk20a_fence_out;
-		}
-
-		if (gk20a_last_fence) {
-			err = gk20a_fence_wait(gk20a_last_fence,
-					gk20a_get_gr_idle_timeout(g));
-			gk20a_fence_put(gk20a_last_fence);
-			if (err)
-				gk20a_err(g->dev,
-					"Failed to get the fence_out from CE execute ops");
-		}
-	}
-
 	gk20a_dbg_fn("done at 0x%llx size %zu", addr, size);
 
 	return 0;
 
-fail_free_table:
-	sg_free_table(mem->sgt);
 fail_kfree:
 	kfree(mem->sgt);
 fail_physfree:
@@ -2867,6 +2949,7 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 			  struct mem_desc *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
+	gk20a_gmmu_clear_vidmem_mem(g, mem);
 	gk20a_free(&g->mm.vidmem.allocator, sg_dma_address(mem->sgt->sgl));
 	gk20a_free_sgtable(&mem->sgt);
 	mem->size = 0;

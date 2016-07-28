@@ -20,6 +20,7 @@
 #include <linux/of_platform.h>
 #include <linux/interrupt.h>
 #include <linux/module.h>
+#include <linux/reset.h>
 #include <linux/slab.h>
 #include <linux/platform_device.h>
 #include <linux/rculist.h>
@@ -30,6 +31,7 @@
 
 struct tegra_hsp {
 	void __iomem *base;
+	struct reset_control *reset;
 	struct mutex lock;
 	u8 n_sm;
 	u8 n_as;
@@ -440,6 +442,33 @@ bool tegra_hsp_sm_pair_is_empty(const struct tegra_hsp_sm_pair *pair)
 }
 EXPORT_SYMBOL(tegra_hsp_sm_pair_is_empty);
 
+static int tegra_hsp_suspend(struct device *dev)
+{
+	struct tegra_hsp *hsp = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (!IS_ERR(hsp->reset))
+		ret = reset_control_assert(hsp->reset);
+
+	return ret;
+}
+
+static int tegra_hsp_resume(struct device *dev)
+{
+	struct tegra_hsp *hsp = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (!IS_ERR(hsp->reset))
+		ret = reset_control_deassert(hsp->reset);
+
+	return ret;
+}
+
+static const struct dev_pm_ops tegra_hsp_pm_ops = {
+	.suspend_noirq	= tegra_hsp_suspend,
+	.resume_noirq	= tegra_hsp_resume,
+};
+
 static const struct of_device_id tegra_hsp_of_match[] = {
 	{ .compatible = NV(tegra186-hsp), },
 	{ },
@@ -467,13 +496,18 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	if (resource_size(r) < 0x10000) {
-		dev_err(&pdev->dev, "memory range too short");
+		dev_err(&pdev->dev, "memory range too short\n");
 		return -EINVAL;
 	}
 
 	hsp->base = devm_ioremap(&pdev->dev, r->start, resource_size(r));
 	if (hsp->base == NULL)
 		return -ENOMEM;
+
+	/* devm_reset_control_get() fails indistinctly with -EPROBE_DEFER */
+	hsp->reset = of_reset_control_get(pdev->dev.of_node, "hsp");
+	if (hsp->reset == ERR_PTR(-EPROBE_DEFER))
+		return -EPROBE_DEFER;
 
 	reg = readl(tegra_hsp_reg(&pdev->dev, TEGRA_HSP_DIMENSIONING));
 	hsp->n_sm = reg & 0xf;
@@ -484,20 +518,30 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 
 	if ((resource_size(r) >> 16) < (1 + (hsp->n_sm / 2) + hsp->n_ss +
 					hsp->n_as + (hsp->n_db > 0))) {
-		dev_err(&pdev->dev, "memory range too short");
+		dev_err(&pdev->dev, "memory range too short\n");
 		return -EINVAL;
 	}
 
 	return 0;
 }
 
+static __exit int tegra_hsp_remove(struct platform_device *pdev)
+{
+	struct tegra_hsp *hsp = platform_get_drvdata(pdev);
+
+	reset_control_put(hsp->reset);
+	return 0;
+}
+
 static struct platform_driver tegra_hsp_driver = {
 	.probe	= tegra_hsp_probe,
+	.remove	= __exit_p(tegra_hsp_remove),
 	.driver = {
 		.name	= "tegra186-hsp",
 		.owner	= THIS_MODULE,
 		.suppress_bind_attrs = true,
 		.of_match_table = of_match_ptr(tegra_hsp_of_match),
+		.pm	= &tegra_hsp_pm_ops,
 	},
 };
 module_platform_driver(tegra_hsp_driver);

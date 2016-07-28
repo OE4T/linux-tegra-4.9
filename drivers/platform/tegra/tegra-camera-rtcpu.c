@@ -441,11 +441,12 @@ int tegra_camrtc_boot(struct device *dev)
 	}
 
 	ret = tegra_camrtc_command(dev,
-		RTCPU_COMMAND(FW_VERSION, RTCPU_FW_VERSION), 0);
+		RTCPU_COMMAND(FW_VERSION, RTCPU_FW_SM2_VERSION), 0);
 	if (ret < 0)
 		return ret;
 
-	if (ret != RTCPU_COMMAND(FW_VERSION, RTCPU_FW_VERSION)) {
+	if (RTCPU_GET_COMMAND_ID(ret) != RTCPU_CMD_FW_VERSION ||
+		RTCPU_GET_COMMAND_VALUE(ret) < RTCPU_FW_VERSION) {
 		dev_err(dev, "RTCPU version mismatch (response=0x%08x)", ret);
 		return -EIO;
 	}
@@ -456,14 +457,23 @@ EXPORT_SYMBOL(tegra_camrtc_boot);
 
 int tegra_camrtc_ivc_setup_ready(struct device *dev)
 {
-	u32 command = RTCPU_COMMAND(IVC_READY, RTCPU_FW_VERSION);
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	u32 command;
 	int ret;
+
+	if (rtcpu->tracer) {
+		dev_info(dev, "enabling tracing");
+		command = RTCPU_COMMAND(IVC_READY, RTCPU_IVC_WITH_TRACE);
+	} else {
+		dev_warn(dev, "disabling tracing");
+		command = RTCPU_COMMAND(IVC_READY, RTCPU_IVC_SANS_TRACE);
+	}
 
 	ret = tegra_camrtc_command(dev, command, 0);
 	if (ret < 0)
 		return ret;
 
-	if (ret != command) {
+	if (RTCPU_GET_COMMAND_ID(ret) != RTCPU_CMD_IVC_READY) {
 		dev_err(dev, "IVC setup problem (response=0x%08x)", ret);
 		return -EIO;
 	}

@@ -92,6 +92,10 @@ struct tegra_ast *tegra_ast_create(struct device *dev)
 {
 	struct tegra_ast *ast;
 	int err, i;
+	static const char * const names[ARRAY_SIZE(ast->bases)] = {
+		"ast-cpu",
+		"ast-dma",
+	};
 
 	ast = kzalloc(sizeof(*ast), GFP_KERNEL);
 	if (unlikely(ast == NULL))
@@ -103,11 +107,14 @@ struct tegra_ast *tegra_ast_create(struct device *dev)
 	device_initialize(&ast->dev);
 
 	/* TODO: dedicated OF node for AST */
-	ast->bases[0] = tegra_ioremap_byname(dev, "ast-cpu");
-	ast->bases[1] = tegra_ioremap_byname(dev, "ast-dma");
-
 	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
+		ast->bases[i] = tegra_ioremap_byname(dev, names[i]);
 		if (IS_ERR(ast->bases[i])) {
+			if (i > 0 && PTR_ERR(ast->bases[i]) == -ENOENT) {
+				ast->bases[i] = NULL;
+				continue;
+			}
+			dev_err(dev, "cannot ioremap %s", names[i]);
 			err = PTR_ERR(ast->bases[i]);
 			goto error;
 		}
@@ -150,6 +157,9 @@ static void tegra_ast_region_enable(struct tegra_ast_region *region)
 		void __iomem *base = ast->bases[i];
 		unsigned vmidx = region->vmids[i];
 
+		if (base == NULL)
+			continue;
+
 		base += region->ast_id * TEGRA_APS_AST_REGION_STRIDE;
 
 		writel(0, base + TEGRA_APS_AST_REGION_0_MASK_HI);
@@ -179,6 +189,9 @@ static void tegra_ast_region_disable(struct tegra_ast_region *region)
 
 	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
 		void __iomem *base = ast->bases[i] + offset;
+
+		if (base == NULL)
+			continue;
 
 		writel(0, base + TEGRA_APS_AST_REGION_0_SLAVE_BASE_LO);
 	}
@@ -248,6 +261,9 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 	for (i = 0; i < ARRAY_SIZE(ast->bases); i++) {
 		void __iomem *base = ast->bases[i];
 		unsigned vmidx;
+
+		if (base == NULL)
+			continue;
 
 		for (vmidx = 0; vmidx <= AST_MAX_VMINDEX; vmidx++) {
 			u32 r = readl(base + TEGRA_APS_AST_STREAMID_CTL +

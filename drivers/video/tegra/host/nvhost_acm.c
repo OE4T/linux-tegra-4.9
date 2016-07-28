@@ -806,7 +806,8 @@ int nvhost_module_init(struct platform_device *dev)
 	 * and for linsim platform */
 	pdata->can_powergate = IS_ENABLED(CONFIG_PM) &&
 		IS_ENABLED(CONFIG_PM_GENERIC_DOMAINS) &&
-		pdata->can_powergate && !tegra_platform_is_linsim();
+		pdata->can_powergate && !tegra_platform_is_linsim() &&
+		!tegra_platform_is_vdk();
 
 #if defined(CONFIG_PM_GENERIC_DOMAINS)
 	gpd = dev_to_genpd(&dev->dev);

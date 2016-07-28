@@ -1004,8 +1004,14 @@ static int nvhost_probe(struct platform_device *dev)
 		nvhost_intr_start(&host->intr, clk_get_rate(pdata->clk[0]));
 
 	nvhost_device_list_init();
-	pdata->nvhost_timeout_default = tegra_platform_is_linsim() ?
-			0 : CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+
+	/* Disable timeouts in simulation */
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
+		pdata->nvhost_timeout_default = 0;
+	else
+		pdata->nvhost_timeout_default =
+			CONFIG_TEGRA_GRHOST_DEFAULT_TIMEOUT;
+
 	nvhost_debug_init(host);
 
 	nvhost_module_idle(dev);

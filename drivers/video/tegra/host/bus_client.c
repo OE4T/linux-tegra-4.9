@@ -1556,7 +1556,7 @@ int nvhost_client_device_init(struct platform_device *dev)
 	dma_set_max_seg_size(&dev->dev, UINT_MAX);
 
 	/* disable context isolation in simulation */
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		pdata->isolate_contexts = false;
 
 	dev_info(&dev->dev, "initialized\n");

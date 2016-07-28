@@ -60,7 +60,6 @@ static const char * const sce_reset_names[] = {
 	"sce-presetdbgn",
 	"sce-actmon",
 	"sce-dma",
-	"sce-hsp",
 	"tsctnsce",
 	"sce-tke",
 	"sce-gte",

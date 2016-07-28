@@ -5436,6 +5436,16 @@ static int gk20a_gr_handle_semaphore_pending(struct gk20a *g,
 	struct fifo_gk20a *f = &g->fifo;
 	struct channel_gk20a *ch = &f->channel[isr_data->chid];
 
+	if (gk20a_is_channel_marked_as_tsg(ch)) {
+		struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
+
+		gk20a_tsg_event_id_post_event(tsg,
+			NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
+	} else {
+		gk20a_channel_event_id_post_event(ch,
+			NVGPU_IOCTL_CHANNEL_EVENT_ID_GR_SEMAPHORE_WRITE_AWAKEN);
+	}
+
 	wake_up_interruptible_all(&ch->semaphore_wq);
 
 	return 0;

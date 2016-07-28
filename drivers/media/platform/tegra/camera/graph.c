@@ -56,7 +56,7 @@ static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 				    struct tegra_vi_graph_entity *entity)
 {
 	u32 link_flags = MEDIA_LNK_FL_ENABLED;
-	struct media_entity *local = entity->entity;
+	struct media_entity *local;
 	struct media_entity *remote;
 	struct media_pad *local_pad;
 	struct media_pad *remote_pad;
@@ -66,6 +66,13 @@ static int tegra_vi_graph_build_one(struct tegra_mc_vi *vi,
 	struct device_node *next;
 	int ret = 0;
 
+	if (!entity->subdev) {
+		dev_dbg(vi->dev, "%s:No subdev under entity, skip linking\n",
+				__func__);
+		return 0;
+	}
+
+	local = entity->entity;
 	dev_dbg(vi->dev, "creating links for entity %s\n", local->name);
 
 	do {

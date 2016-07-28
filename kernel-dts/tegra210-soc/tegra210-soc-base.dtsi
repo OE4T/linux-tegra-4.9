@@ -737,6 +737,11 @@
 			interrupts = <0 74 0x04>;
 			iommus = <&smmu TEGRA_SWGROUP_DCB>;
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_DISP2>,
+			       <&tegra_car TEGRA210_CLK_TIMER>;
+			clock-names = "disp2", "timer";
+			resets = <&tegra_car TEGRA210_CLK_DISP2>;
+			reset-names = "dc_rst";
 
 			rgb {
 				status = "disabled";
@@ -805,6 +810,9 @@
 			reg = <0x0 0x54540000 0x0 0x00040000>;
 			status = "disabled";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
+			clocks = <&tegra_car TEGRA210_CLK_SOR0>,
+				<&tegra_car TEGRA210_CLK_SOR_SAFE>;
+			clock-names = "sor0", "sor_safe";
 		};
 
 		sor1 {
@@ -813,6 +821,20 @@
 			interrupts = <0 76 0x4>; /* INT_SOR_1 */
 			status = "disabled";
 			nvidia,xbar-ctrl = <2 1 0 3 4>;
+			clocks = <&tegra_car TEGRA210_CLK_SOR1>,
+				<&tegra_car TEGRA210_CLK_SOR_SAFE>,
+				<&tegra_car TEGRA210_CLK_SOR1_BRICK>,
+				<&tegra_car TEGRA210_CLK_SOR1_MUX>,
+			    <&tegra_car TEGRA210_CLK_HDA>,
+			    <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
+			    <&tegra_car TEGRA210_CLK_HDA2HDMI>;
+			clock-names = "sor1", "sor_safe", "sor1_brick", "sor1_src",
+			    "hda", "hda2codec_2x", "hda2hdmi";
+			resets = <&tegra_car 183>,
+			       <&tegra_car TEGRA210_CLK_HDA>,
+			       <&tegra_car TEGRA210_CLK_HDA2CODEC_2X>,
+			       <&tegra_car TEGRA210_CLK_HDA2HDMI>;
+			reset-names = "sor1", "hda_rst", "hda2codec_2x_rst", "hda2hdmi_rst";
 		};
 
 		dpaux {
@@ -820,6 +842,8 @@
 			reg = <0x0 0x545c0000 0x0 0x00040000>;
 			interrupts = <0 159 0x4>; /* INT_DPAUX */
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_DPAUX>;
+			clock-names = "dpaux";
 		};
 
 		dpaux1 {
@@ -827,6 +851,8 @@
 			reg = <0x0 0x54040000 0x0 0x00040000>;
 			interrupts = <0 11 0x4>; /* INT_DPAUX_1 */
 			status = "disabled";
+			clocks = <&tegra_car TEGRA210_CLK_DPAUX1>;
+			clock-names = "dpaux1";
 		};
 		i2c7: i2c@546c0000 {
 			#address-cells = <1>;
@@ -867,6 +893,8 @@
 		reg = <0x0 0x7000e400 0x0 0x400>;
 		#padcontroller-cells = <1>;
 		status = "disabled";
+		clocks = <&tegra_car TEGRA210_CLK_PCLK>;
+		clock-names = "pclk";
 		io-pad-defaults {
 			audio {
 				nvidia,io-pad-init-voltage = <IO_PAD_VOLTAGE_1_8V>;

@@ -510,24 +510,7 @@ static int gk20a_channel_semaphore_wait_syncpt(
 	return -ENODEV;
 }
 
-/*
- * UGHHH - the sync_fence underlying implementation changes from 3.10 to 3.18.
- * But since there's no API for getting the underlying sync_pts we have to do
- * some conditional compilation.
- */
 #ifdef CONFIG_SYNC
-static struct gk20a_semaphore *sema_from_sync_fence(struct sync_fence *f)
-{
-#if LINUX_VERSION_CODE < KERNEL_VERSION(3,18,0)
-	struct sync_pt *pt;
-
-	pt = list_first_entry(&f->pt_list_head, struct sync_pt, pt_list);
-	return gk20a_sync_pt_inst_get_sema(pt);
-#else
-	return gk20a_sync_pt_inst_get_sema(f->cbs[0].sync_pt);
-#endif
-}
-
 /*
  * Attempt a fast path for waiting on a sync_fence. Basically if the passed
  * sync_fence is backed by a gk20a_semaphore then there's no reason to go
@@ -551,7 +534,7 @@ static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
 	if (!gk20a_is_sema_backed_sync_fence(fence))
 		return -ENODEV;
 
-	sema = sema_from_sync_fence(fence);
+	sema = gk20a_sync_fence_get_sema(fence);
 
 	/*
 	 * If there's no underlying sema then that means the underlying sema has

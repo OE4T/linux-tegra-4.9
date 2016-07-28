@@ -29,9 +29,12 @@ enum plugin_manager_match_type {
 };
 
 static struct property *__of_copy_property(const struct property *prop,
-		gfp_t flags)
+					   void *new_value, int val_len,
+					   gfp_t flags)
 {
 	struct property *propn;
+	int nlen;
+	void *nval;
 
 	propn = kzalloc(sizeof(*prop), flags);
 	if (propn == NULL)
@@ -41,12 +44,14 @@ static struct property *__of_copy_property(const struct property *prop,
 	if (propn->name == NULL)
 		goto err_fail_name;
 
-	if (prop->length > 0) {
-		propn->value = kmalloc(prop->length, flags);
+	nlen = (new_value) ? val_len : prop->length;
+	nval = (new_value) ? new_value : prop->value;
+	if (nlen > 0) {
+		propn->value = kmalloc(nlen, flags);
 		if (propn->value == NULL)
 			goto err_fail_value;
-		memcpy(propn->value, prop->value, prop->length);
-		propn->length = prop->length;
+		memcpy(propn->value, nval, nlen);
+		propn->length = nlen;
 	}
 	return propn;
 
@@ -166,7 +171,7 @@ static int __init update_target_node_from_overlay(
 			goto add_prop;
 		}
 
-		new_prop = __of_copy_property(prop, GFP_KERNEL);
+		new_prop = __of_copy_property(prop, NULL, 0, GFP_KERNEL);
 		if (!new_prop) {
 			pr_err("Prop %s can not be duplicated\n",
 				prop->name);

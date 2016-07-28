@@ -133,6 +133,7 @@
 			gpio = <&gpio_i2c_0_74 2 0>;
 			enable-active-high;
 			regulator-boot-on;
+			regulator-always-on;
 		};
 
 		en_avdd_disp_3v3: regulator@105 {

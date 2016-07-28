@@ -63,6 +63,9 @@
 #include "hal.h"
 #include "vgpu/vgpu.h"
 #include "pci.h"
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "pstate/pstate.h"
+#endif
 
 #define CREATE_TRACE_POINTS
 #include <trace/events/gk20a.h>
@@ -956,6 +959,16 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	if (g->ops.pmupstate) {
+		err = gk20a_init_pstate_support(g);
+		if (err) {
+			gk20a_err(dev, "failed to init pstates");
+			goto done;
+		}
+	}
+#endif
+
 	err = gk20a_init_pmu_support(g);
 	if (err) {
 		gk20a_err(dev, "failed to init gk20a pmu");
@@ -967,6 +980,16 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		gk20a_err(dev, "failed to init gk20a gr");
 		goto done;
 	}
+
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	if (g->ops.pmupstate) {
+		err = gk20a_init_pstate_pmu_support(g);
+		if (err) {
+			gk20a_err(dev, "failed to init pstates");
+			goto done;
+		}
+	}
+#endif
 
 	if (g->ops.pmu.mclk_init) {
 		err = g->ops.pmu.mclk_init(g);

@@ -54,6 +54,11 @@ struct acr_desc;
 #include "debug_gk20a.h"
 #include "sched_gk20a.h"
 #include "gm206/bios_gm206.h"
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+#include "clk/clk.h"
+#include "perf/perf.h"
+#endif
+#include "gm206/bios_gm206.h"
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
     32 ns is the resolution of ptimer. */
@@ -607,6 +612,7 @@ struct gpu_ops {
 	} clk;
 	bool privsecurity;
 	bool securegpccs;
+	bool pmupstate;
 	struct {
 		const struct regop_offset_range* (
 				*get_global_whitelist_ranges)(void);
@@ -717,6 +723,7 @@ struct nvgpu_bios {
 
 	struct bit_token *perf_token;
 	struct bit_token *clock_token;
+	struct bit_token *virt_token;
 	u32 expansion_rom_offset;
 };
 
@@ -746,6 +753,10 @@ struct gk20a {
 	struct pmu_gk20a pmu;
 	struct acr_desc acr;
 	struct cooling_device_gk20a gk20a_cdev;
+#ifdef CONFIG_ARCH_TEGRA_18x_SOC
+	struct clk_pmupstate clk_pmu;
+	struct perf_pmupstate perf_pmu;
+#endif
 
 #ifdef CONFIG_DEBUG_FS
 	struct railgate_stats pstats;
@@ -992,6 +1003,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_map_v   = BIT(14), /* verbose mem mappings */
 	gpu_dbg_sema	= BIT(15), /* semaphore debugging */
 	gpu_dbg_sema_v	= BIT(16), /* verbose semaphore debugging */
+	gpu_dbg_pmu_pstate = BIT(17), /* p state controlled by pmu */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

@@ -23,6 +23,9 @@
 
 #include "pmu_api.h"
 #include "pmu_common.h"
+#include "pmuif/gpmuifboardobj.h"
+#include "pmuif/gpmuifclk.h"
+#include "pmuif/gpmuifperf.h"
 
 /* defined by pmu hw spec */
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
@@ -172,8 +175,10 @@ struct pmu_ucode_desc_v1 {
 #define PMU_UNIT_ACR		(0x0A)
 #define PMU_UNIT_PERFMON_T18X	(0x11)
 #define PMU_UNIT_PERFMON	(0x12)
-#define PMU_UNIT_RC			(0x1F)
+#define PMU_UNIT_PERF            (0x13)
+#define PMU_UNIT_RC		(0x1F)
 #define PMU_UNIT_FECS_MEM_OVERRIDE      (0x1E)
+#define PMU_UNIT_CLK             (0x1C)
 
 #define PMU_UNIT_END		(0x23)
 
@@ -295,29 +300,6 @@ struct pmu_rc_msg {
 	struct pmu_rc_msg_unhandled_cmd unhandled_cmd;
 };
 
-enum {
-	PMU_PG_CMD_ID_ELPG_CMD = 0,
-	PMU_PG_CMD_ID_ENG_BUF_LOAD,
-	PMU_PG_CMD_ID_ENG_BUF_UNLOAD,
-	PMU_PG_CMD_ID_PG_STAT,
-	PMU_PG_CMD_ID_PG_LOG_INIT,
-	PMU_PG_CMD_ID_PG_LOG_FLUSH,
-	PMU_PG_CMD_ID_PG_PARAM,
-	PMU_PG_CMD_ID_ELPG_INIT,
-	PMU_PG_CMD_ID_ELPG_POLL_CTXSAVE,
-	PMU_PG_CMD_ID_ELPG_ABORT_POLL,
-	PMU_PG_CMD_ID_ELPG_PWR_UP,
-	PMU_PG_CMD_ID_ELPG_DISALLOW,
-	PMU_PG_CMD_ID_ELPG_ALLOW,
-	PMU_PG_CMD_ID_AP,
-	RM_PMU_PG_CMD_ID_PSI,
-	RM_PMU_PG_CMD_ID_CG,
-	PMU_PG_CMD_ID_ZBC_TABLE_UPDATE,
-	PMU_PG_CMD_ID_PWR_RAIL_GATE_DISABLE = 0x20,
-	PMU_PG_CMD_ID_PWR_RAIL_GATE_ENABLE,
-	PMU_PG_CMD_ID_PWR_RAIL_SMU_MSG_DISABLE
-};
-
 /***************************** ACR ERROR CODES  ******************************/
 /*!
  * Error codes used in PMU-ACR Task
@@ -369,6 +351,9 @@ struct pmu_cmd {
 		struct pmu_zbc_cmd zbc;
 		struct pmu_acr_cmd acr;
 		struct pmu_lrf_tex_ltc_dram_cmd lrf_tex_ltc_dram;
+		struct nv_pmu_boardobj_cmd boardobj;
+		struct nv_pmu_perf_cmd perf;
+		struct nv_pmu_clk_cmd clk;
 	} cmd;
 };
 
@@ -381,6 +366,9 @@ struct pmu_msg {
 		struct pmu_rc_msg rc;
 		struct pmu_acr_msg acr;
 		struct pmu_lrf_tex_ltc_dram_msg lrf_tex_ltc_dram;
+		struct nv_pmu_boardobj_msg boardobj;
+		struct nv_pmu_perf_msg perf;
+		struct nv_pmu_clk_msg clk;
 	} msg;
 };
 
@@ -813,4 +801,6 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
 		u32 size);
 int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
 		u32 size);
+
+void print_vbios_table(u8 *msg, u8 *buff, int size);
 #endif /*__PMU_GK20A_H__*/

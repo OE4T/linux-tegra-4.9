@@ -181,7 +181,7 @@ int gm206_init_hal(struct gk20a *g)
 
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;
-
+	gops->pmupstate = false;
 	gm20b_init_mc(gops);
 	gm20b_init_ltc(gops);
 	gm206_init_gr(gops);

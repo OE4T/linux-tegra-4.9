@@ -61,6 +61,7 @@ struct bit {
 #define TOKEN_ID_FALCON_DATA 0x70
 #define TOKEN_ID_PERF_PTRS 0x50
 #define TOKEN_ID_CLOCK_PTRS 0x43
+#define TOKEN_ID_VIRT_PTRS 0x56
 
 struct nvinit_ptrs {
 	u16 initscript_table_ptr;
@@ -434,17 +435,29 @@ static void *gm206_bios_get_perf_table_ptrs(struct gk20a *g,
 {
 	u32 perf_table_id_offset = 0;
 	u8 *perf_table_ptr = NULL;
+	u8 data_size = 4;
 
-	if (ptoken != NULL &&
-		table_id < (ptoken->data_size/sizeof(u32))) {
+	if (ptoken != NULL) {
 
-		perf_table_id_offset = *((u32 *)&g->bios.data[
+		if (ptoken->token_id == TOKEN_ID_VIRT_PTRS) {
+			perf_table_id_offset = *((u16 *)&g->bios.data[
+				ptoken->data_ptr +
+				(table_id * PERF_PTRS_WIDTH_16)]);
+			data_size = PERF_PTRS_WIDTH_16;
+		} else {
+			perf_table_id_offset = *((u32 *)&g->bios.data[
 				ptoken->data_ptr +
 				(table_id * PERF_PTRS_WIDTH)]);
+			data_size = PERF_PTRS_WIDTH;
+		}
+	} else
+		return (void *)perf_table_ptr;
+
+	if (table_id < (ptoken->data_size/data_size)) {
 
 		gk20a_dbg_info("Perf_Tbl_ID-offset 0x%x Tbl_ID_Ptr-offset- 0x%x",
 					(ptoken->data_ptr +
-					(table_id * PERF_PTRS_WIDTH)),
+					(table_id * data_size)),
 					perf_table_id_offset);
 
 		if (perf_table_id_offset != 0) {
@@ -501,6 +514,10 @@ static void gm206_bios_parse_bit(struct gk20a *g, int offset)
 			break;
 		case TOKEN_ID_CLOCK_PTRS:
 			g->bios.clock_token =
+				(struct bit_token *)&g->bios.data[offset];
+			break;
+		case TOKEN_ID_VIRT_PTRS:
+			g->bios.virt_token =
 				(struct bit_token *)&g->bios.data[offset];
 			break;
 		default:

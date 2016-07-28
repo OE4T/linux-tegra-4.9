@@ -184,6 +184,7 @@ int gm20b_init_hal(struct gk20a *g)
 
 	*gops = gm20b_ops;
 	gops->securegpccs = false;
+	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
 	if (platform->is_fmodel) {
 		gops->privsecurity = 1;

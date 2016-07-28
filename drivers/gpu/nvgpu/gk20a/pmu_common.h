@@ -95,6 +95,8 @@ struct flcn_u64 {
 	u32 hi;
 };
 
+#define nv_flcn_u64 flcn_u64
+
 struct flcn_mem_desc_v0 {
 	struct flcn_u64 address;
 	u32 params;
@@ -132,6 +134,8 @@ struct pmu_allocation_v3 {
 	} alloc;
 };
 
+#define nv_pmu_allocation pmu_allocation_v3
+
 struct pmu_hdr {
 	u8 unit_id;
 	u8 size;
@@ -142,4 +146,36 @@ struct pmu_hdr {
 #define nv_pmu_hdr pmu_hdr
 typedef u8 flcn_status;
 
-#endif /*__PMU_COMMON_H__*/
+#define ALIGN_UP(v, gran)       (((v) + ((gran) - 1)) & ~((gran)-1))
+
+/*!
+ * Falcon PMU DMA's minimum size in bytes.
+ */
+#define PMU_DMA_MIN_READ_SIZE_BYTES                                    16
+#define PMU_DMA_MIN_WRITE_SIZE_BYTES                                      4
+
+#define PMU_FB_COPY_RW_ALIGNMENT                                          \
+	(PMU_DMA_MIN_READ_SIZE_BYTES > PMU_DMA_MIN_WRITE_SIZE_BYTES ?     \
+	PMU_DMA_MIN_READ_SIZE_BYTES : PMU_DMA_MIN_WRITE_SIZE_BYTES)
+
+/*!
+ * Macros to make aligned versions of RM_PMU_XXX structures. PMU needs aligned
+ * data structures to issue DMA read/write operations.
+ */
+#define NV_PMU_MAKE_ALIGNED_STRUCT(name, size)           \
+union name##_aligned {		                         \
+		struct name data;                        \
+		u8 pad[ALIGN_UP(sizeof(struct name),     \
+		(PMU_FB_COPY_RW_ALIGNMENT))];            \
+}
+
+#define NV_PMU_MAKE_ALIGNED_UNION(name, size)	         \
+union name##_aligned {		                         \
+		union name data;                         \
+		u8 pad[ALIGN_UP(sizeof(union name),      \
+		(PMU_FB_COPY_RW_ALIGNMENT))];            \
+}
+
+#define NV_UNSIGNED_ROUNDED_DIV(a, b)    (((a) + ((b) / 2)) / (b))
+
+#endif

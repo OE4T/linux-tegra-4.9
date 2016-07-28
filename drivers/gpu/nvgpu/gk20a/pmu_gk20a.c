@@ -3756,9 +3756,6 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 		}
 		if (pv->pmu_allocation_get_dmem_size(pmu,
 		pv->get_pmu_seq_out_a_ptr(seq)) != 0) {
-		  gk20a_err(dev_from_gk20a(g), "dmem offs %x size %x\n", pv->pmu_allocation_get_dmem_offset(pmu,pv->get_pmu_seq_out_a_ptr(seq)), pv->pmu_allocation_get_dmem_size(pmu,
-pv->get_pmu_seq_out_a_ptr(seq)));
-		  gk20a_err(dev_from_gk20a(g), "copying to %p \n", seq->out_payload);
 			pmu_copy_from_dmem(pmu,
 			pv->pmu_allocation_get_dmem_offset(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)),

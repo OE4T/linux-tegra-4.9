@@ -28,6 +28,8 @@
 #include "drivers/video/tegra/host/vi/vi_notify.h"
 #include "drivers/video/tegra/host/nvhost_acm.h"
 
+#define BUG_200219206
+
 struct vi_notify_req {
 	union {
 		struct {
@@ -156,7 +158,9 @@ static int tegra_ivc_vi_notify_send(struct tegra_ivc_channel *chan,
 	ret = wait_for_completion_killable_timeout(&ivn->ack, HZ);
 	if (ret <= 0) {
 		dev_err(&chan->dev, "no reply from camera processor\n");
+#ifndef BUG_200219206
 		WARN_ON(1);
+#endif
 		return -EIO;
 	}
 

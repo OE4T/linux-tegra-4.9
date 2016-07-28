@@ -797,7 +797,10 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 
 	if (g->ops.mm.remove_bar2_vm)
 		g->ops.mm.remove_bar2_vm(g);
-	gk20a_remove_vm(&mm->bar1.vm, &mm->bar1.inst_block);
+
+	if (g->ops.mm.is_bar1_supported(g))
+		gk20a_remove_vm(&mm->bar1.vm, &mm->bar1.inst_block);
+
 	gk20a_remove_vm(&mm->pmu.vm, &mm->pmu.inst_block);
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
 	gk20a_vm_remove_support_nofree(&mm->cde.vm);
@@ -1001,10 +1004,11 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = gk20a_init_bar1_vm(mm);
-	if (err)
-		return err;
-
+	if (g->ops.mm.is_bar1_supported(g)) {
+		err = gk20a_init_bar1_vm(mm);
+		if (err)
+			return err;
+	}
 	if (g->ops.mm.init_bar2_vm) {
 		err = g->ops.mm.init_bar2_vm(g);
 		if (err)
@@ -1055,7 +1059,8 @@ int gk20a_init_mm_setup_hw(struct gk20a *g)
 		     g->ops.mm.get_iova_addr(g, g->mm.sysmem_flush.sgt->sgl, 0)
 		     >> 8);
 
-	g->ops.mm.bar1_bind(g, &mm->bar1.inst_block);
+	if (g->ops.mm.bar1_bind)
+		g->ops.mm.bar1_bind(g, &mm->bar1.inst_block);
 
 	if (g->ops.mm.init_bar2_mm_hw_setup) {
 		err = g->ops.mm.init_bar2_mm_hw_setup(g);
@@ -5249,6 +5254,11 @@ clean_up:
 	return err;
 }
 
+static bool gk20a_mm_is_bar1_supported(struct gk20a *g)
+{
+	return true;
+}
+
 #ifdef CONFIG_DEBUG_FS
 void gk20a_mm_debugfs_init(struct device *dev)
 {
@@ -5284,4 +5294,5 @@ void gk20a_init_mm(struct gpu_ops *gops)
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 	gops->mm.bar1_bind = gk20a_mm_bar1_bind;
+	gops->mm.is_bar1_supported = gk20a_mm_is_bar1_supported;
 }

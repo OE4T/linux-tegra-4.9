@@ -167,6 +167,8 @@ static inline const char *gk20a_fifo_interleave_level_name(u32 interleave_level)
 
 int gk20a_init_fifo_support(struct gk20a *g);
 
+int gk20a_init_fifo_setup_hw(struct gk20a *g);
+
 void gk20a_fifo_isr(struct gk20a *g);
 void gk20a_fifo_nonstall_isr(struct gk20a *g);
 
@@ -262,5 +264,9 @@ int gk20a_fifo_init_engine_info(struct fifo_gk20a *f);
 
 void gk20a_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist);
 void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist);
+
+u32 gk20a_userd_gp_get(struct gk20a *g, struct channel_gk20a *c);
+void gk20a_userd_gp_put(struct gk20a *g, struct channel_gk20a *c);
+
 
 #endif /*__GR_GK20A_H__*/

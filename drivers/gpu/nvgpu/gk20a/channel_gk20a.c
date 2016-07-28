@@ -1541,12 +1541,25 @@ clean_up:
 	return err;
 }
 
+u32 gk20a_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
+{
+	return gk20a_bar1_readl(g,
+		c->userd_gpu_va + sizeof(u32) * ram_userd_gp_get_w());
+}
+
+void gk20a_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
+{
+	gk20a_bar1_writel(g,
+		c->userd_gpu_va + sizeof(u32) * ram_userd_gp_put_w(),
+		c->gpfifo.put);
+}
+
 /* Update with this periodically to determine how the gpfifo is draining. */
 static inline u32 update_gp_get(struct gk20a *g,
 				struct channel_gk20a *c)
 {
-	u32 new_get = gk20a_bar1_readl(g,
-		c->userd_gpu_va + sizeof(u32) * ram_userd_gp_get_w());
+	u32 new_get = g->ops.fifo.userd_gp_get(g, c);
+
 	if (new_get < c->gpfifo.get)
 		c->gpfifo.wrap = !c->gpfifo.wrap;
 	c->gpfifo.get = new_get;
@@ -2360,9 +2373,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				wait_cmd, incr_cmd,
 				skip_buffer_refcounting);
 
-	gk20a_bar1_writel(g,
-		c->userd_gpu_va + 4 * ram_userd_gp_put_w(),
-		c->gpfifo.put);
+	g->ops.fifo.userd_gp_put(g, c);
 
 	trace_gk20a_channel_submitted_gpfifo(dev_name(c->g->dev),
 				c->hw_chid,
@@ -2988,6 +2999,8 @@ void gk20a_init_channel(struct gpu_ops *gops)
 	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
 	gops->fifo.channel_set_priority = gk20a_channel_set_priority;
 	gops->fifo.channel_set_timeslice = gk20a_channel_set_timeslice;
+	gops->fifo.userd_gp_get = gk20a_userd_gp_get;
+	gops->fifo.userd_gp_put = gk20a_userd_gp_put;
 }
 
 long gk20a_channel_ioctl(struct file *filp,

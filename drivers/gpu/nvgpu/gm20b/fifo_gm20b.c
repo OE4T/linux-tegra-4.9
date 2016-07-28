@@ -15,6 +15,7 @@
 
 #include <linux/delay.h>
 #include "gk20a/gk20a.h"
+#include "gk20a/fifo_gk20a.h"
 #include "fifo_gm20b.h"
 #include "hw_ccsr_gm20b.h"
 #include "hw_ram_gm20b.h"
@@ -133,6 +134,7 @@ static void gm20b_device_info_data_parse(struct gk20a *g,
 }
 void gm20b_init_fifo(struct gpu_ops *gops)
 {
+	gops->fifo.init_fifo_setup_hw = gk20a_init_fifo_setup_hw;
 	gops->fifo.bind_channel = channel_gm20b_bind;
 	gops->fifo.unbind_channel = channel_gk20a_unbind;
 	gops->fifo.disable_channel = channel_gk20a_disable;
@@ -142,6 +144,8 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.setup_ramfc = channel_gk20a_setup_ramfc;
 	gops->fifo.channel_set_priority = gk20a_channel_set_priority;
 	gops->fifo.channel_set_timeslice = gk20a_channel_set_timeslice;
+	gops->fifo.userd_gp_get = gk20a_userd_gp_get;
+	gops->fifo.userd_gp_put = gk20a_userd_gp_put;
 
 	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;
 	gops->fifo.preempt_tsg = gk20a_fifo_preempt_tsg;

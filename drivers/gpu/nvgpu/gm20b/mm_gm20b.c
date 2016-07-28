@@ -163,6 +163,11 @@ static int gm20b_mm_bar1_bind(struct gk20a *g, struct mem_desc *bar1_inst)
 	return retry ? -EINVAL : 0;
 }
 
+static bool gm20b_mm_is_bar1_supported(struct gk20a *g)
+{
+	return true;
+}
+
 void gm20b_init_mm(struct gpu_ops *gops)
 {
 	gops->mm.support_sparse = gm20b_mm_support_sparse;
@@ -186,4 +191,5 @@ void gm20b_init_mm(struct gpu_ops *gops)
 	gops->mm.init_pdb = gk20a_mm_init_pdb;
 	gops->mm.init_mm_setup_hw = gk20a_init_mm_setup_hw;
 	gops->mm.bar1_bind = gm20b_mm_bar1_bind;
+	gops->mm.is_bar1_supported = gm20b_mm_is_bar1_supported;
 }

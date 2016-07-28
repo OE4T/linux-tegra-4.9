@@ -342,6 +342,7 @@ struct gpu_ops {
 		void (*pg_gr_load_gating_prod)(struct gk20a *g, bool prod);
 	} clock_gating;
 	struct {
+		int (*init_fifo_setup_hw)(struct gk20a *g);
 		void (*bind_channel)(struct channel_gk20a *ch_gk20a);
 		void (*unbind_channel)(struct channel_gk20a *ch_gk20a);
 		void (*disable_channel)(struct channel_gk20a *ch);
@@ -386,6 +387,8 @@ struct gpu_ops {
 					u32 *runlist);
 		void (*get_ch_runlist_entry)(struct channel_gk20a *ch,
 					u32 *runlist);
+		u32 (*userd_gp_get)(struct gk20a *g, struct channel_gk20a *ch);
+		void (*userd_gp_put)(struct gk20a *g, struct channel_gk20a *ch);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/
@@ -552,6 +555,7 @@ struct gpu_ops {
 		u32 (*get_big_page_sizes)(void);
 		u32 (*get_physical_addr_bits)(struct gk20a *g);
 		int (*init_mm_setup_hw)(struct gk20a *g);
+		bool (*is_bar1_supported)(struct gk20a *g);
 		int (*init_bar2_vm)(struct gk20a *g);
 		int (*init_bar2_mm_hw_setup)(struct gk20a *g);
 		void (*remove_bar2_vm)(struct gk20a *g);

@@ -491,7 +491,10 @@ static void gk20a_remove_fifo_support(struct fifo_gk20a *f)
 
 	vfree(f->channel);
 	vfree(f->tsg);
-	gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
+	if (g->ops.mm.is_bar1_supported(g))
+		gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
+	else
+		gk20a_gmmu_free(g, &f->userd);
 
 	gk20a_fifo_delete_runlist(f);
 
@@ -797,16 +800,6 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 	f->userd_entry_size = 1 << ram_userd_base_shift_v();
 
-	err = gk20a_gmmu_alloc_map_sys(&g->mm.bar1.vm,
-				   f->userd_entry_size * f->num_channels,
-				   &f->userd);
-	if (err) {
-		dev_err(d, "memory allocation failed\n");
-		goto clean_up;
-	}
-
-	gk20a_dbg(gpu_dbg_map_v, "userd bar1 va = 0x%llx", f->userd.gpu_va);
-
 	f->channel = vzalloc(f->num_channels * sizeof(*f->channel));
 	f->tsg = vzalloc(f->num_channels * sizeof(*f->tsg));
 	f->pbdma_map = kzalloc(f->num_pbdma * sizeof(*f->pbdma_map),
@@ -834,13 +827,26 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	INIT_LIST_HEAD(&f->free_chs);
 	mutex_init(&f->free_chs_mutex);
 
+	if (g->ops.mm.is_bar1_supported(g))
+		err = gk20a_gmmu_alloc_map_sys(&g->mm.bar1.vm,
+				   f->userd_entry_size * f->num_channels,
+				   &f->userd);
+
+	else
+		err = gk20a_gmmu_alloc_sys(g, f->userd_entry_size *
+				f->num_channels, &f->userd);
+	if (err) {
+		dev_err(d, "userd memory allocation failed\n");
+		goto clean_up;
+	}
+	gk20a_dbg(gpu_dbg_map, "userd gpu va = 0x%llx", f->userd.gpu_va);
+
 	for (chid = 0; chid < f->num_channels; chid++) {
 		f->channel[chid].userd_iova =
 			g->ops.mm.get_iova_addr(g, f->userd.sgt->sgl, 0)
-				+ chid * f->userd_entry_size;
+			+ chid * f->userd_entry_size;
 		f->channel[chid].userd_gpu_va =
 			f->userd.gpu_va + chid * f->userd_entry_size;
-
 		gk20a_init_channel_support(g, chid);
 		gk20a_init_tsg_support(g, chid);
 	}
@@ -858,7 +864,10 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 
 clean_up:
 	gk20a_dbg_fn("fail");
-	gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
+	if (g->ops.mm.is_bar1_supported(g))
+		gk20a_gmmu_unmap_free(&g->mm.bar1.vm, &f->userd);
+	else
+		gk20a_gmmu_free(g, &f->userd);
 
 	vfree(f->channel);
 	f->channel = NULL;
@@ -884,7 +893,7 @@ static void gk20a_fifo_handle_runlist_event(struct gk20a *g)
 	gk20a_writel(g, fifo_intr_runlist_r(), runlist_event);
 }
 
-static int gk20a_init_fifo_setup_hw(struct gk20a *g)
+int gk20a_init_fifo_setup_hw(struct gk20a *g)
 {
 	struct fifo_gk20a *f = &g->fifo;
 
@@ -952,7 +961,8 @@ int gk20a_init_fifo_support(struct gk20a *g)
 	if (err)
 		return err;
 
-	err = gk20a_init_fifo_setup_hw(g);
+	if (g->ops.fifo.init_fifo_setup_hw)
+		err = g->ops.fifo.init_fifo_setup_hw(g);
 	if (err)
 		return err;
 
@@ -3015,7 +3025,8 @@ int gk20a_fifo_suspend(struct gk20a *g)
 	gk20a_dbg_fn("");
 
 	/* stop bar1 snooping */
-	gk20a_writel(g, fifo_bar1_base_r(),
+	if (g->ops.mm.is_bar1_supported(g))
+		gk20a_writel(g, fifo_bar1_base_r(),
 			fifo_bar1_base_valid_false_f());
 
 	/* disable fifo intr */
@@ -3246,6 +3257,7 @@ void gk20a_fifo_debugfs_init(struct device *dev)
 void gk20a_init_fifo(struct gpu_ops *gops)
 {
 	gk20a_init_channel(gops);
+	gops->fifo.init_fifo_setup_hw = gk20a_init_fifo_setup_hw;
 	gops->fifo.preempt_channel = gk20a_fifo_preempt_channel;
 	gops->fifo.preempt_tsg = gk20a_fifo_preempt_tsg;
 	gops->fifo.update_runlist = gk20a_fifo_update_runlist;

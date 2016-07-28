@@ -102,6 +102,123 @@ static void gr_gp106_cb_size_default(struct gk20a *g)
 		gr_gpc0_ppc0_cbm_alpha_cb_size_v_default_v();
 }
 
+static int gr_gp106_set_ctxsw_preemption_mode(struct gk20a *g,
+				struct gr_ctx_desc *gr_ctx,
+				struct vm_gk20a *vm, u32 class,
+				u32 graphics_preempt_mode,
+				u32 compute_preempt_mode)
+{
+	int err = 0;
+
+	if (class == PASCAL_B && g->gr.t18x.ctx_vars.force_preemption_gfxp)
+		graphics_preempt_mode = NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP;
+
+	if (class == PASCAL_COMPUTE_B &&
+			g->gr.t18x.ctx_vars.force_preemption_cilp)
+		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
+
+	/* check for invalid combinations */
+	if ((graphics_preempt_mode == 0) && (compute_preempt_mode == 0))
+		return -EINVAL;
+
+	if ((graphics_preempt_mode == NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP) &&
+		   (compute_preempt_mode == NVGPU_COMPUTE_PREEMPTION_MODE_CILP))
+		return -EINVAL;
+
+	/* set preemption modes */
+	switch (graphics_preempt_mode) {
+	case NVGPU_GRAPHICS_PREEMPTION_MODE_GFXP:
+		{
+		u32 spill_size =
+			gr_gpc0_swdx_rm_spill_buffer_size_256b_default_v() *
+			gr_gpc0_swdx_rm_spill_buffer_size_256b_byte_granularity_v();
+		u32 pagepool_size = g->ops.gr.pagepool_default_size(g) *
+			gr_scc_pagepool_total_pages_byte_granularity_v();
+		u32 betacb_size = g->gr.attrib_cb_default_size +
+				  (gr_gpc0_ppc0_cbm_beta_cb_size_v_gfxp_v() -
+				   gr_gpc0_ppc0_cbm_beta_cb_size_v_default_v());
+		u32 attrib_cb_size = (betacb_size + g->gr.alpha_cb_size) *
+				  gr_gpc0_ppc0_cbm_beta_cb_size_v_granularity_v() *
+				  g->gr.max_tpc_count;
+		attrib_cb_size = ALIGN(attrib_cb_size, 128);
+
+		gk20a_dbg_info("gfxp context spill_size=%d", spill_size);
+		gk20a_dbg_info("gfxp context pagepool_size=%d", pagepool_size);
+		gk20a_dbg_info("gfxp context attrib_cb_size=%d",
+				attrib_cb_size);
+
+		err = gr_gp10b_alloc_buffer(vm,
+					g->gr.t18x.ctx_vars.preempt_image_size,
+					&gr_ctx->t18x.preempt_ctxsw_buffer);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				  "cannot allocate preempt buffer");
+			goto fail;
+		}
+
+		err = gr_gp10b_alloc_buffer(vm,
+					spill_size,
+					&gr_ctx->t18x.spill_ctxsw_buffer);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				  "cannot allocate spill buffer");
+			goto fail_free_preempt;
+		}
+
+		err = gr_gp10b_alloc_buffer(vm,
+					attrib_cb_size,
+					&gr_ctx->t18x.betacb_ctxsw_buffer);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				  "cannot allocate beta buffer");
+			goto fail_free_spill;
+		}
+
+		err = gr_gp10b_alloc_buffer(vm,
+					pagepool_size,
+					&gr_ctx->t18x.pagepool_ctxsw_buffer);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+				  "cannot allocate page pool");
+			goto fail_free_betacb;
+		}
+
+		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;
+		break;
+		}
+
+	case NVGPU_GRAPHICS_PREEMPTION_MODE_WFI:
+		gr_ctx->graphics_preempt_mode = graphics_preempt_mode;
+		break;
+
+	default:
+		break;
+	}
+
+	if (class == PASCAL_COMPUTE_B) {
+		switch (compute_preempt_mode) {
+		case NVGPU_COMPUTE_PREEMPTION_MODE_WFI:
+		case NVGPU_COMPUTE_PREEMPTION_MODE_CTA:
+		case NVGPU_COMPUTE_PREEMPTION_MODE_CILP:
+			gr_ctx->compute_preempt_mode = compute_preempt_mode;
+			break;
+		default:
+			break;
+		}
+	}
+
+	return 0;
+
+fail_free_betacb:
+	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.betacb_ctxsw_buffer);
+fail_free_spill:
+	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.spill_ctxsw_buffer);
+fail_free_preempt:
+	gk20a_gmmu_unmap_free(vm, &gr_ctx->t18x.preempt_ctxsw_buffer);
+fail:
+	return err;
+}
+
 void gp106_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -110,4 +227,5 @@ void gp106_init_gr(struct gpu_ops *gops)
 	gops->gr.handle_sw_method = gr_gp106_handle_sw_method;
 	gops->gr.cb_size_default = gr_gp106_cb_size_default;
 	gops->gr.init_preemption_state = NULL;
+	gops->gr.set_ctxsw_preemption_mode = gr_gp106_set_ctxsw_preemption_mode;
 }

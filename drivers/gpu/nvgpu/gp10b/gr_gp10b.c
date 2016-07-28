@@ -992,9 +992,15 @@ static int gr_gp10b_alloc_gr_ctx(struct gk20a *g,
 		compute_preempt_mode = NVGPU_COMPUTE_PREEMPTION_MODE_CILP;
 
 	if (graphics_preempt_mode || compute_preempt_mode) {
-		err = gr_gp10b_set_ctxsw_preemption_mode(g, *gr_ctx, vm,
+		if (g->ops.gr.set_ctxsw_preemption_mode) {
+			err = g->ops.gr.set_ctxsw_preemption_mode(g, *gr_ctx, vm,
 			    class, graphics_preempt_mode, compute_preempt_mode);
-		if (err)
+			if (err) {
+				gk20a_err(dev_from_gk20a(g),
+						"set_ctxsw_preemption_mode failed");
+				goto fail_free_gk20a_ctx;
+			}
+		} else
 			goto fail_free_gk20a_ctx;
 	}
 
@@ -2067,10 +2073,15 @@ static int gr_gp10b_set_preemption_mode(struct channel_gk20a *ch,
 		vm = ch->vm;
 	}
 
-	err = gr_gp10b_set_ctxsw_preemption_mode(g, gr_ctx, vm, class,
-					graphics_preempt_mode, compute_preempt_mode);
-	if (err)
-		return err;
+	if (g->ops.gr.set_ctxsw_preemption_mode) {
+		err = g->ops.gr.set_ctxsw_preemption_mode(g, gr_ctx, vm, class,
+						graphics_preempt_mode, compute_preempt_mode);
+		if (err) {
+			gk20a_err(dev_from_gk20a(g),
+					"set_ctxsw_preemption_mode failed");
+			return err;
+		}
+	}
 
 	if (gk20a_mem_begin(g, mem))
 		return -ENOMEM;
@@ -2225,6 +2236,7 @@ void gp10b_init_gr(struct gpu_ops *gops)
 	gops->gr.get_lrf_tex_ltc_dram_override = get_ecc_override_val;
 	gops->gr.suspend_contexts = gr_gp10b_suspend_contexts;
 	gops->gr.set_preemption_mode = gr_gp10b_set_preemption_mode;
+	gops->gr.set_ctxsw_preemption_mode = gr_gp10b_set_ctxsw_preemption_mode;
 	gops->gr.get_preemption_mode_flags = gr_gp10b_get_preemption_mode_flags;
 	gops->gr.fuse_override = gp10b_gr_fuse_override;
 	gops->gr.load_smid_config = gr_gp10b_load_smid_config;

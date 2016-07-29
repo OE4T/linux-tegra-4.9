@@ -47,6 +47,8 @@ phys_addr_t tegra_fb3_size;
 phys_addr_t tegra_lut_start;
 phys_addr_t tegra_lut_size;
 
+static int usb_port_owner_info;
+
 bool soc_is_tegra210_n_before(void)
 {
 	struct device_node *root;
@@ -213,3 +215,19 @@ bool tegra_is_bl_display_initialized(int instance)
 			return false;
 	}
 }
+
+static int __init tegra_usb_port_owner_info(char *id)
+{
+	char *p = id;
+
+	usb_port_owner_info = memparse(p, &p);
+	return 1;
+}
+
+int tegra_get_usb_port_owner_info(void)
+{
+	return usb_port_owner_info;
+}
+EXPORT_SYMBOL(tegra_get_usb_port_owner_info);
+
+__setup("usb_port_owner_info=", tegra_usb_port_owner_info);

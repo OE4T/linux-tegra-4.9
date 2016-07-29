@@ -27,30 +27,30 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					vi_in0: endpoint {
+					e3323_vi_in0: endpoint {
 						csi-port = <0>;
 						bus-width = <4>;
-						remote-endpoint = <&csi_out0>;
+						remote-endpoint = <&e3323_csi_out0>;
 					};
 				};
 				port@1 {
 					reg = <1>;
-					vi_in1: endpoint {
+					e3323_vi_in1: endpoint {
 						csi-port = <2>;
 						bus-width = <4>;
-						remote-endpoint = <&csi_out1>;
+						remote-endpoint = <&e3323_csi_out1>;
 					};
 				};
 				port@2 {
 					reg = <2>;
-					vi_in2: endpoint {
-						remote-endpoint = <&lc898212_out0>;
+					e3323_vi_in2: endpoint {
+						remote-endpoint = <&e3323_lc898212_out0>;
 					};
 				};
 				port@3 {
 					reg = <3>;
-					vi_in3: endpoint {
-						remote-endpoint = <&lc898212_out1>;
+					e3323_vi_in3: endpoint {
+						remote-endpoint = <&e3323_lc898212_out1>;
 					};
 				};
 			};
@@ -62,28 +62,28 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					csi_in0: endpoint@0 {
+					e3323_csi_in0: endpoint@0 {
 						bus-width = <4>;
-						remote-endpoint = <&ov23850_out0>;
+						remote-endpoint = <&e3323_ov23850_out0>;
 					};
 				};
 				port@1 {
 					reg = <1>;
-					csi_out0: endpoint@1 {
-						remote-endpoint = <&vi_in0>;
+					e3323_csi_out0: endpoint@1 {
+						remote-endpoint = <&e3323_vi_in0>;
 					};
 				};
 				port@2 {
 					reg = <2>;
-					csi_in1: endpoint@2 {
+					e3323_csi_in1: endpoint@2 {
 						bus-width = <4>;
-						remote-endpoint = <&ov23850_out1>;
+						remote-endpoint = <&e3323_ov23850_out1>;
 					};
 				};
 				port@3 {
 					reg = <3>;
-					csi_out1: endpoint@3 {
-						remote-endpoint = <&vi_in1>;
+					e3323_csi_out1: endpoint@3 {
+						remote-endpoint = <&e3323_vi_in1>;
 					};
 				};
 			};
@@ -242,15 +242,15 @@
 
 				port@0 {
 					reg = <0>;
-					ov23850_out0: endpoint {
+					e3323_ov23850_out0: endpoint {
 						csi-port = <0>;
 						bus-width = <4>;
-						remote-endpoint = <&csi_in0>;
+						remote-endpoint = <&e3323_csi_in0>;
 					};
 				};
 			};
 		};
-		lc898212@2_0072 {
+		lc898212@72 {
 			compatible = "nvidia,lc898212";
 			reg = <0x72>;
 
@@ -274,8 +274,8 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					lc898212_out0: endpoint {
-						remote-endpoint = <&vi_in2>;
+					e3323_lc898212_out0: endpoint {
+						remote-endpoint = <&e3323_vi_in2>;
 					};
 				};
 			};
@@ -358,15 +358,15 @@
 
 				port@0 {
 					reg = <0>;
-					ov23850_out1: endpoint {
+					e3323_ov23850_out1: endpoint {
 						csi-port = <2>;
 						bus-width = <4>;
-						remote-endpoint = <&csi_in1>;
+						remote-endpoint = <&e3323_csi_in1>;
 					};
 				};
 			};
 		};
-		lc898212@1_0072 {
+		lc898212@72 {
 			compatible = "nvidia,lc898212";
 			reg = <0x72>;
 
@@ -384,8 +384,8 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					lc898212_out1: endpoint {
-						remote-endpoint = <&vi_in3>;
+					e3323_lc898212_out1: endpoint {
+						remote-endpoint = <&e3323_vi_in3>;
 					};
 				};
 			};
@@ -445,7 +445,7 @@
 				orientation = "3";
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_soc_sensor";
+					pcl_id = "v4l2_sensor";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@3180000/ov23850_a@10";
 				};
@@ -453,7 +453,7 @@
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_focuser";
 					/* Declare the device-tree hierarchy to driver instance */
-					proc-device-tree = "/proc/device-tree/i2c@3180000/lc898212@2_0072";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/lc898212@72";
 				};
 			};
 			module1 {
@@ -462,7 +462,7 @@
 				orientation = "3";
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_soc_sensor";
+					pcl_id = "v4l2_sensor";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@c240000/ov23850_c@36";
 				};
@@ -470,7 +470,7 @@
 					/* Declare PCL support driver (classically known as guid)  */
 					pcl_id = "v4l2_focuser";
 					/* Declare the device-tree hierarchy to driver instance */
-					proc-device-tree = "/proc/device-tree/i2c@c240000/lc898212@1_0072";
+					proc-device-tree = "/proc/device-tree/i2c@c240000/lc898212@72";
 				};
 			};
 		};

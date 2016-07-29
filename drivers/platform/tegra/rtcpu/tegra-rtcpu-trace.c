@@ -28,6 +28,7 @@
 #include <linux/workqueue.h>
 #include <linux/tegra_ast.h>
 #include <linux/debugfs.h>
+#include <linux/seq_buf.h>
 #include <linux/tegra-rtcpu-trace.h>
 #include <asm/cacheflush.h>
 
@@ -40,7 +41,7 @@
 #define NV(p) "nvidia," #p
 
 #define WORK_INTERVAL_DEFAULT		100
-#define EXCEPTION_STR_LENGTH		1024
+#define EXCEPTION_STR_LENGTH		2048
 
 /*
  * Private driver data structure
@@ -84,7 +85,6 @@ struct tegra_rtcpu_trace {
 	/* copy of the latest */
 	struct camrtc_trace_armv7_exception copy_last_exception;
 	char last_exception_str[EXCEPTION_STR_LENGTH];
-	int last_exception_str_len;
 	struct camrtc_event_struct copy_last_event;
 
 	/* debugfs */
@@ -198,76 +198,79 @@ static void rtcpu_trace_invalidate_entries(struct tegra_rtcpu_trace *tracer,
 static void rtcpu_trace_exception(struct tegra_rtcpu_trace *tracer,
 	struct camrtc_trace_armv7_exception *exc)
 {
-	char *str = tracer->last_exception_str;
-	size_t len = sizeof(tracer->last_exception_str);
-	int this_len;
+	static char *s_str_exc_type[] = {
+		"Invalid (Reset)",
+		"Undefined instruction",
+		"Invalid (SWI)",
+		"Prefetch abort",
+		"Data abort",
+		"Invalid (Reserved)",
+		"IRQ",
+		"FIQ",
+	};
+
+	struct seq_buf sb;
 	unsigned int i, count;
 
-	this_len = snprintf(str, len, "Type: %u\n",
-	    exc->type);
-	str += this_len; len -= this_len;
+	seq_buf_init(&sb, tracer->last_exception_str,
+		sizeof(tracer->last_exception_str));
 
-	this_len = snprintf(str, len, "General Purpose Registers\n");
-	str += this_len; len -= this_len;
-	this_len = snprintf(str, len,
+	seq_buf_printf(&sb, "Type: %u (%s)\n", exc->type,
+		(exc->type < ARRAY_SIZE(s_str_exc_type)) ?
+			s_str_exc_type[exc->type] : "Unknown");
+
+	seq_buf_printf(&sb, "General Purpose Registers\n");
+	seq_buf_printf(&sb,
 	    "  R0:  %08x R1:  %08x R2:  %08x R4:  %08x\n",
 	    exc->gpr.r0, exc->gpr.r1, exc->gpr.r2, exc->gpr.r3);
-	str += this_len; len -= this_len;
-	this_len = snprintf(str, len,
+	seq_buf_printf(&sb,
 	    "  R4:  %08x R5:  %08x R6:  %08x R7:  %08x\n",
 	    exc->gpr.r4, exc->gpr.r5, exc->gpr.r6, exc->gpr.r7);
-	str += this_len; len -= this_len;
-	this_len = snprintf(str, len,
+	seq_buf_printf(&sb,
 	    "  R8:  %08x R9:  %08x R10: %08x R11: %08x\n",
 	    exc->gpr.r8, exc->gpr.r9, exc->gpr.r10, exc->gpr.r11);
-	str += this_len; len -= this_len;
-	this_len = snprintf(str, len,
+	seq_buf_printf(&sb,
 	    "  R12: %08x SP:  %08x LR:  %08x PC:  %08x\n",
 	    exc->gpr.r12, exc->gpr.sp, exc->gpr.lr, exc->gpr.pc);
-	str += this_len; len -= this_len;
 
-	this_len = snprintf(str, len,
+	seq_buf_printf(&sb,
 	    "General Purpose Registers in previous mode\n");
-	str += this_len; len -= this_len;
 	if (exc->type == CAMRTC_ARMV7_EXCEPTION_FIQ) {
-		this_len = snprintf(str, len,
+		seq_buf_printf(&sb,
 		    "  R8: %08x R9: %08x R10: %08x R11: %08x, R12: %08x\n",
 		    exc->gpr.r8_prev, exc->gpr.r9_prev,
 		    exc->gpr.r10_prev, exc->gpr.r11_prev,
 		    exc->gpr.r12_prev);
-		str += this_len; len -= this_len;
 	}
-	this_len = snprintf(str, len, "  SP: %08x LR: %08x\n",
+	seq_buf_printf(&sb, "  SP: %08x LR: %08x\n",
 	    exc->gpr.sp_prev, exc->gpr.lr_prev);
-	str += this_len; len -= this_len;
 
-	this_len = snprintf(str, len, "Program Status Registers\n");
-	str += this_len; len -= this_len;
-	this_len = snprintf(str, len, "  CPSR: %08x SPSR: %08x\n",
+	seq_buf_printf(&sb, "Program Status Registers\n");
+	seq_buf_printf(&sb, "  CPSR: %08x SPSR: %08x\n",
 	    exc->cpsr, exc->spsr);
-	str += this_len; len -= this_len;
 
-	this_len = snprintf(str, len, "Coprocessor Registers\n");
-	str += this_len; len -= this_len;
-	this_len = snprintf(str, len, "  DFSR: %08x DFAR: %08x ADFSR: %08x\n",
+	seq_buf_printf(&sb, "Coprocessor Registers\n");
+	seq_buf_printf(&sb, "  DFSR: %08x DFAR: %08x ADFSR: %08x\n",
 	    exc->dfsr, exc->dfar, exc->adfsr);
-	str += this_len; len -= this_len;
-	this_len = snprintf(str, len, "  IFSR: %08x IFAR: %08x AIFSR: %08x\n",
+	seq_buf_printf(&sb, "  IFSR: %08x IFAR: %08x AIFSR: %08x\n",
 	    exc->ifsr, exc->ifar, exc->aifsr);
-	str += this_len; len -= this_len;
 
-	this_len = snprintf(str, len, "Callstack\n");
-	str += this_len; len -= this_len;
 	count = (exc->len -
 		offsetof(struct camrtc_trace_armv7_exception, callstack)) /
 		sizeof(struct camrtc_trace_callstack);
-	for (i = 0; i < count; ++i) {
-		this_len = snprintf(str, len, "  [%08x]: %08x\n",
-		    exc->callstack[i].lr_stack_addr, exc->callstack[i].lr);
-		str += this_len; len -= this_len;
-	}
 
-	tracer->last_exception_str_len = str - tracer->last_exception_str;
+	if (count > 0)
+		seq_buf_printf(&sb, "Callstack\n");
+
+	for (i = 0; i < count; ++i) {
+		if (i >= CAMRTC_TRACE_CALLSTACK_MAX) {
+			seq_buf_printf(&sb, "  ... [skipping %u entries]\n",
+				count - i);
+			break;
+		}
+		seq_buf_printf(&sb, "  [%08x]: %08x\n",
+			exc->callstack[i].lr_stack_addr, exc->callstack[i].lr);
+	}
 }
 
 static void rtcpu_trace_base_event(struct camrtc_event_struct *event)

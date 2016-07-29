@@ -158,7 +158,6 @@ void tegra_bpmp_resume(void)
 
 int bpmp_connect(void)
 {
-	unsigned long flags;
 	int ret = 0;
 
 	if (connected)
@@ -187,12 +186,6 @@ int bpmp_connect(void)
 	}
 
 	connected = 1;
-
-	local_irq_save(flags);
-	ret = __bpmp_do_ping();
-	local_irq_restore(flags);
-	pr_info("bpmp: ping status is %d\n", ret);
-	WARN_ON(ret);
 
 	return ret;
 }

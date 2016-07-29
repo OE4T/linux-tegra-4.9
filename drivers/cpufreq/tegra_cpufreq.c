@@ -28,6 +28,7 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
 #include <linux/delay.h>
+#include <linux/ptrace.h>
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <linux/tegra-mce.h>
@@ -151,25 +152,31 @@ static uint32_t notrace get_coreclk_count(uint8_t cpu)
 {
 	enum cluster cur_cluster = get_cpu_cluster(cpu);
 	void __iomem *reg_base;
-	uint32_t phy_cpu;
+	uint32_t phy_cpu, ret;
 
 	phy_cpu = logical_to_phys_map(cpu);
 
 	reg_base = coreclk_base(tfreq_data.pcluster[cur_cluster].edvd_pub,
 				phy_cpu);
-	return tcpufreq_readl(reg_base, phy_cpu);
+	pstore_rtrace_set_bypass(1);
+	ret = tcpufreq_readl(reg_base, phy_cpu);
+	pstore_rtrace_set_bypass(0);
+	return ret;
 }
 
 static uint32_t notrace get_refclk_count(uint8_t cpu)
 {
 	enum cluster cur_cl = get_cpu_cluster(cpu);
 	void __iomem *reg_base;
-	uint32_t phy_cpu;
+	uint32_t phy_cpu, ret;
 
 	phy_cpu = logical_to_phys_map(cpu);
 
 	reg_base = refclk_base(tfreq_data.pcluster[cur_cl].edvd_pub, phy_cpu);
-	return tcpufreq_readl(reg_base, phy_cpu) & REF_CLOCK_MASK;
+	pstore_rtrace_set_bypass(1);
+	ret = tcpufreq_readl(reg_base, phy_cpu) & REF_CLOCK_MASK;
+	pstore_rtrace_set_bypass(0);
+	return ret;
 }
 
 struct tegra_cpu_ctr {
@@ -571,8 +578,10 @@ static int get_hint(void *data, u64 *hint)
 
 		cur_cl = get_cpu_cluster(cpu);
 		cpu = logical_to_phys_map(cpu);
+		pstore_rtrace_set_bypass(1);
 		*hint = tcpufreq_readl(tfreq_data.pcluster[cur_cl].edvd_pub +
 			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
+		pstore_rtrace_set_bypass(0);
 
 		spin_unlock_irqrestore(slock, flags);
 	}

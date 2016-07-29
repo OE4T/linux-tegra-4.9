@@ -6,6 +6,9 @@ ccflags-y += -Iarch/arm/mach-tegra
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I../nvhost-t18x/drivers/video/tegra/host/
 endif
+ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+ccflags-y += -I../nvhost-t19x/drivers/video/tegra/host/
+endif
 
 nvhost-nvdec-objs  = \
 	nvdec.o

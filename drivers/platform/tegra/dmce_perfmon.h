@@ -112,7 +112,7 @@ union dmce_perfmon_pmcr_t {
 		uint32_t idcode:8;	/* Identification code (0) */
 		uint32_t imp:8;	/* Implementor code ('N') */
 	} bits;
-} dmce_perfmon_pmcr_t;
+};
 
 /**
  * Data for each uncore perfmon counter

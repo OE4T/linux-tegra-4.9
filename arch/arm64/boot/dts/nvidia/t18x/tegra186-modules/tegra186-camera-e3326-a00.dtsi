@@ -24,10 +24,10 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					vi_in0: endpoint {
+					e3326_vi_in0: endpoint {
 						csi-port = <2>;
 						bus-width = <2>;
-						remote-endpoint = <&csi_out0>;
+						remote-endpoint = <&e3326_csi_out0>;
 					};
 				};
 			};
@@ -39,16 +39,16 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					csi_in0: endpoint@0 {
+					e3326_csi_in0: endpoint@0 {
 						csi-port = <2>;
 						bus-width = <2>;
-						remote-endpoint = <&ov5693_out0>;
+						remote-endpoint = <&e3326_ov5693_out0>;
 					};
 				};
 				port@1 {
 					reg = <1>;
-					csi_out0: endpoint@1 {
-						remote-endpoint = <&vi_in0>;
+					e3326_csi_out0: endpoint@1 {
+						remote-endpoint = <&e3326_vi_in0>;
 					};
 				};
 
@@ -263,10 +263,10 @@
 
 				port@0 {
 					reg = <0>;
-					ov5693_out0: endpoint {
+					e3326_ov5693_out0: endpoint {
 						csi-port = <2>;
 						bus-width = <2>;
-						remote-endpoint = <&csi_in0>;
+						remote-endpoint = <&e3326_csi_in0>;
 					};
 				};
 			};
@@ -325,7 +325,7 @@
 				orientation = "1";
 				drivernode0 {
 					/* Declare PCL support driver (classically known as guid)  */
-					pcl_id = "v4l2_soc_sensor";
+					pcl_id = "v4l2_sensor";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree = "/proc/device-tree/i2c@3180000/ov5693_c@36";
 				};

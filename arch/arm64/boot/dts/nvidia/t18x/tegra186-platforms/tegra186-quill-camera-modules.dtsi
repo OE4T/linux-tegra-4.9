@@ -1,0 +1,144 @@
+/*
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation; version 2 of the License.
+ *
+ * This program is distributed in the hope that it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ */
+
+#include "tegra186-platforms/tegra186-quill-camera-e3326-a00.dtsi"
+#include "tegra186-platforms/tegra186-quill-camera-e3323-a00.dtsi"
+
+#define CAM0_RST_L	TEGRA_GPIO(R, 5)
+#define CAM0_PWDN	TEGRA_GPIO(R, 0)
+#define CAM1_RST_L	TEGRA_GPIO(R, 1)
+#define CAM1_PWDN	TEGRA_GPIO(L, 6)
+
+/ {
+	/* set camera gpio direction to output */
+	gpio: gpio@2200000 {
+		camera-control {
+			gpio-output-low = <
+				CAM0_RST_L
+				CAM0_PWDN
+				CAM1_RST_L
+				CAM1_PWDN
+				>;
+		};
+	};
+
+	/* all cameras are disabled by default */
+	host1x {
+		vi_base: vi@15700000 {
+			ports {
+				vi_port0: port@0 {
+					status = "disabled";
+					vi_in0: endpoint {
+						status = "disabled";
+					};
+				};
+				vi_port1: port@1 {
+					status = "disabled";
+					vi_in1: endpoint {
+						status = "disabled";
+					};
+				};
+				vi_port2: port@2 {
+					status = "disabled";
+					vi_in2: endpoint {
+						status = "disabled";
+					};
+				};
+				vi_port3: port@3 {
+					status = "disabled";
+					vi_in3: endpoint {
+						status = "disabled";
+					};
+				};
+			};
+		};
+		csi_base: nvcsi@150c0000 {
+			ports {
+				csi_port0: port@0 {
+					status = "disabled";
+					csi_in0: endpoint@0 {
+						status = "disabled";
+					};
+				};
+				csi_port1: port@1 {
+					status = "disabled";
+					csi_out0: endpoint@1 {
+						status = "disabled";
+					};
+				};
+				csi_port2: port@2 {
+					status = "disabled";
+					csi_in1: endpoint@2 {
+						status = "disabled";
+					};
+				};
+				csi_port3: port@3 {
+					status = "disabled";
+					csi_out1: endpoint@3 {
+						status = "disabled";
+					};
+				};
+			};
+		};
+	};
+
+	i2c@3180000 {
+		e3326_cam0: ov5693_c@36 {
+			status = "disabled";
+		};
+		e3323_cam0: ov23850_a@10 {
+			status = "disabled";
+		};
+		e3323_vcm0: lc898212@72 {
+			status = "disabled";
+		};
+	};
+
+	i2c@c240000 {
+		e3323_cam1: ov23850_c@36 {
+			status = "disabled";
+		};
+		e3323_vcm1: lc898212@72 {
+			status = "disabled";
+		};
+	};
+
+	tcp: tegra-camera-platform {
+		compatible = "nvidia, tegra-camera-platform";
+		modules {
+			cam_module0: module0 {
+				status = "disabled";
+				cam_module0_drivernode0: drivernode0 {
+					status = "disabled";
+				};
+				cam_module0_drivernode1: drivernode1 {
+					status = "disabled";
+					pcl_id = "v4l2_focuser_stub";
+					proc-device-tree = "";
+				};
+			};
+			cam_module1: module1 {
+				status = "disabled";
+				cam_module1_drivernode0: drivernode0 {
+					status = "disabled";
+				};
+				cam_module1_drivernode1: drivernode1 {
+					status = "disabled";
+					pcl_id = "v4l2_focuser_stub";
+					proc-device-tree = "";
+				};
+			};
+		};
+	};
+};

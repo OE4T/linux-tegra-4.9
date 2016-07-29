@@ -82,6 +82,11 @@
 		/delete-node/ modules;
 	};
 
+	plugin-manager {
+		/delete-node/ fragment-e3326@0;
+		/delete-node/ fragment-e3323@0;
+	};
+
 	host1x {
 		vi@15700000 {
 			num-channels = <3>;
@@ -90,24 +95,28 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
+					status = "okay";
 					vi_in0: endpoint {
 						remote-endpoint = <&csi_out0>;
+						status = "okay";
 					};
 				};
 				port@1 {
 					reg = <1>;
+					status = "okay";
 					vi_in1: endpoint {
 						remote-endpoint = <&csi_out1>;
+						status = "okay";
 					};
 				};
 				port@2 {
 					reg = <2>;
+					status = "okay";
 					vi_in2: endpoint {
 						remote-endpoint = <&csi_out2>;
+						status = "okay";
 					};
 				};
-
-				/delete-node/ port@3;
 			};
 		};
 
@@ -117,41 +126,53 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
+					status = "okay";
 					csi_in0: endpoint@0 {
-					bus-width = <4>;
-					remote-endpoint = <&ov10823_out0>;
+						bus-width = <4>;
+						remote-endpoint = <&ov10823_out0>;
+						status = "okay";
 					};
 				};
 				port@1 {
 					reg = <1>;
+					status = "okay";
 					csi_out0: endpoint@1 {
-					remote-endpoint = <&vi_in0>;
+						remote-endpoint = <&vi_in0>;
+						status = "okay";
 					};
 				};
 				port@2 {
 					reg = <2>;
+					status = "okay";
 					csi_in1: endpoint@2 {
-					bus-width = <4>;
-					remote-endpoint = <&ov10823_out1>;
+						bus-width = <4>;
+						remote-endpoint = <&ov10823_out1>;
+						status = "okay";
 					};
 				};
 				port@3 {
 					reg = <3>;
+					status = "okay";
 					csi_out1: endpoint@3 {
-					remote-endpoint = <&vi_in1>;
+						remote-endpoint = <&vi_in1>;
+						status = "okay";
 					};
 				};
 				port@4 {
 					reg = <4>;
+					status = "okay";
 					csi_in2: endpoint@4 {
-					bus-width = <4>;
-					remote-endpoint = <&ov10823_out2>;
+						bus-width = <4>;
+						remote-endpoint = <&ov10823_out2>;
+						status = "okay";
 					};
 				};
 				port@5 {
 					reg = <5>;
+					status = "okay";
 					csi_out2: endpoint@5 {
-					remote-endpoint = <&vi_in2>;
+						remote-endpoint = <&vi_in2>;
+						status = "okay";
 					};
 				};
 			};
@@ -198,6 +219,7 @@
 	};
 
 	i2c@3180000 {
+		/delete-node/ ov5693_c@36;
 		/delete-node/ ov23850_a@10;
 		/delete-node/ lc898212@2_0072;
 

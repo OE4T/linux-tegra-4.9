@@ -87,7 +87,7 @@ void tegra_isomgr_adma_setbw(struct snd_pcm_substream *substream,
 	struct snd_pcm_runtime *runtime = substream->runtime;
 	struct snd_pcm *pcm = substream->pcm;
 
-	if (!adma || !runtime)
+	if (!adma || !runtime || !pcm)
 		return;
 
 	if (pcm->device >= MAX_DEV_NUM) {

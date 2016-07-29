@@ -54,5 +54,51 @@
 			nvidia,dc-ctrlnum = <2>;
 			nvidia,dc-or-node = "/host1x/sor1";
 		};
+
+		dsi {   /* dsi@15300000 */
+			status = "okay";
+
+			panel-dsi-1080p-p2382 {  /* p2393 DSI2DP 1920x1080@60 */
+//				status = "okay";
+				status = "disabled";
+				nvidia,dsi-n-data-lanes = <8>;
+				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
+				nvidia,dsi-ganged-swap-links = <0>;
+				nvidia,dsi-ganged-write-to-all-links = <1>;
+			};
+
+			panel-s-wqxga-10-1 {  /* p2393 DSI2DP 2560x1600@60 */
+				status = "okay";
+//				status = "disabled";
+				nvidia,dsi-edp-bridge = <TEGRA_DSI_ENABLE>;
+				nvidia,panel-bridge-en-0-gpio = <&tegra_gpio TEGRA_GPIO(O, 1) 0>; /* PO1 */
+				nvidia,dsi-n-data-lanes = <8>;
+				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
+				nvidia,dsi-ganged-swap-links = <0>;
+				nvidia,dsi-ganged-write-to-all-links = <1>;
+				disp-default-out {
+					nvidia,out-type = <TEGRA_DC_OUT_DSI>;
+					nvidia,out-flags = <TEGRA_DC_OUT_CONTINUOUS_MODE>;
+					nvidia,out-parent-clk = "pll_d_out1";
+					nvidia,out-xres = <2560>;
+					nvidia,out-yres = <1600>;
+				};
+				display-timings {
+					2560x1600-32 {
+						clock-frequency = <268500000>;
+						hactive = <2560>;
+						vactive = <1600>;
+						hfront-porch = <48>;
+						hback-porch = <80>;
+						hsync-len = <32>;
+						vfront-porch = <3>;
+						vback-porch = <37>;
+						vsync-len = <6>;
+						nvidia,h-ref-to-sync = <0>;
+						nvidia,v-ref-to-sync = <1>;
+					};
+				};
+			};
+		};
 	};
 };

@@ -159,7 +159,7 @@
 	};
 
 	host1x: host1x {
-		compatible = "nvidia,tegra186-host1x", "simple-bus";
+		compatible = "nvidia,tegra194-host1x", "simple-bus";
 		reg = <0x0 0x13e10000 0x0 0x00010000
 		       0x0 0x13e00000 0x0 0x00010000
 		       0x0 0x13ec0000 0x0 0x00040000>;
@@ -177,28 +177,28 @@
 		ranges;
 
 		vic@15340000 {
-			compatible = "nvidia,tegra186-vic";
+			compatible = "nvidia,tegra194-vic";
 			reg = <0x0 0x15340000 0x0 0x00040000>;
 
 			#stream-id-cells = <1>;
 		};
 
 		nvjpg@15380000 {
-			compatible = "nvidia,tegra186-nvjpg";
+			compatible = "nvidia,tegra194-nvjpg";
 			reg = <0x0 0x15380000 0x0 0x00040000>;
 
 			#stream-id-cells = <1>;
 		};
 
 		nvdec@15480000 {
-			compatible = "nvidia,tegra186-nvdec";
+			compatible = "nvidia,tegra194-nvdec";
 			reg = <0x0 0x15480000 0x0 0x00040000>;
 
 			#stream-id-cells = <1>;
 		};
 
 		nvenc@154c0000 {
-			compatible = "nvidia,tegra186-nvenc";
+			compatible = "nvidia,tegra194-nvenc";
 			reg = <0x0 0x154c0000 0x0 0x00040000>;
 
 			#stream-id-cells = <1>;

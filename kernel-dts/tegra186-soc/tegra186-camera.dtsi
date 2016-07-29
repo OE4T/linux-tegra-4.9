@@ -85,9 +85,8 @@
 		power-domains = <&ape_pd>;
 
 		reg =	<0 0x02993000 0 0x1000>, /* APE EVP */
-			<0 0x02994000 0 0x2000>,
-			<0 0x02996000 0 0x2000>;
-		reg-names = "ape-evp", "ast-cpu", "ast-dma";
+			<0 0x02994000 0 0x2000>; /* ACAST */
+		reg-names = "ape-evp", "ast-cpu";
 
 		#stream-id-cells = <1>;
 

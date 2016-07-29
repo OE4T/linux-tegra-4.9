@@ -27,8 +27,8 @@ enum aon_pm_request {
 	AON_PM_THRESHOLD = 1,
 	/* Query/set the wake timeout of AON */
 	AON_PM_WAKE_TIMEOUT = 2,
-	/* Force AON to sleep */
-	AON_PM_FORCE_SLEEP = 3,
+	/* Allow SPE to turn PLL_AON off */
+	AON_PM_DISABLE_PLLAON = 3,
 	/* Extract the number of times each power state of AON in entered */
 	AON_PM_STATE_COUNT = 4,
 	/* Extract the amount of time spent in each power state of AON */
@@ -136,12 +136,14 @@ struct aon_pm_wake_timeout {
 	u32 timeout;
 };
 
-/* This struct is used to query or set the wake timeout for the target.
+/* This struct is used to query or set whether pll_aon can be disabled or not.
  * Fields:
- * force_entry:	when set forces the target to sleep
+ * flag:	to indicate read or write
+ * disable:	to indicate whether pll_aon can be disabled or not
  */
-struct aon_pm_force_sleep {
-	u32 force_entry;
+struct aon_pm_disable_pllaon {
+	u16 flag;
+	u16 disable;
 };
 
 /* This struct is used to extract the time spent in each power state.
@@ -212,7 +214,7 @@ struct aon_pm_dbg_xfer {
 		struct aon_pm_threshold threshold;
 		struct aon_pm_target_pstate pstate;
 		struct aon_pm_wake_timeout wake_tout;
-		struct aon_pm_force_sleep force_sleep;
+		struct aon_pm_disable_pllaon disable_pllaon;
 		struct aon_pm_state_time state_times;
 		struct aon_pm_state_count state_counts;
 		struct aon_pm_vdd_rtc_retention retention;

@@ -162,8 +162,9 @@ static struct aon_dbg_response *aon_create_ivc_dbg_req(u32 request,
 		req.data.pm_xfer.type.wake_tout.flag = flag;
 		req.data.pm_xfer.type.wake_tout.timeout = (flag) ? data : 0;
 		break;
-	case AON_PM_FORCE_SLEEP:
-		req.data.pm_xfer.type.force_sleep.force_entry = data;
+	case AON_PM_DISABLE_PLLAON:
+		req.data.pm_xfer.type.disable_pllaon.flag = flag;
+		req.data.pm_xfer.type.disable_pllaon.disable = data;
 		break;
 	case AON_MODS_LOOPS_TEST:
 		req.data.mods_xfer.loops = data;
@@ -304,6 +305,9 @@ static int aon_pm_show(void *data, u64 *val)
 	case AON_PM_VDD_RTC_RETENTION:
 		*val = resp->data.pm_xfer.type.retention.enable;
 		break;
+	case AON_PM_DISABLE_PLLAON:
+		*val = resp->data.pm_xfer.type.disable_pllaon.disable;
+		break;
 	case AON_PM_SC8_COUNT:
 		*val = resp->data.pm_xfer.type.sc8_count.count;
 		break;
@@ -333,7 +337,7 @@ DEFINE_SIMPLE_ATTRIBUTE(aon_pm_threshold_fops, aon_pm_show,
 			aon_pm_store, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(aon_pm_wake_timeout_fops, aon_pm_show,
 			aon_pm_store, "%lld\n");
-DEFINE_SIMPLE_ATTRIBUTE(aon_pm_force_sleep_fops, NULL,
+DEFINE_SIMPLE_ATTRIBUTE(aon_pm_disable_pllaon_fops, aon_pm_show,
 			aon_pm_store, "%lld\n");
 DEFINE_SIMPLE_ATTRIBUTE(aon_pm_retention_fops, aon_pm_show,
 			aon_pm_store, "%lld\n");
@@ -507,9 +511,9 @@ static struct aon_dbgfs_node aon_nodes[] = {
 	{.name = "wake_timeout", .id = AON_PM_WAKE_TIMEOUT, .pdr_id = AON_PM,
 			.mode = S_IRUGO | S_IWUSR,
 			.fops = &aon_pm_wake_timeout_fops,},
-	{.name = "force_sleep", .id = AON_PM_FORCE_SLEEP, .pdr_id = AON_PM,
+	{.name = "disable_pllaon", .id = AON_PM_DISABLE_PLLAON, .pdr_id = AON_PM,
 			.mode = S_IRUGO | S_IWUSR,
-			.fops = &aon_pm_force_sleep_fops,},
+			.fops = &aon_pm_disable_pllaon_fops,},
 	{.name = "state_times", .id = AON_PM_STATE_TIME,
 			.pdr_id = AON_STATS, .mode = S_IRUGO,
 			.fops = &aon_pm_state_times_fops,},

@@ -1201,6 +1201,10 @@ static int procrank_pte_entry(pte_t *pte, unsigned long addr, unsigned long end,
 	return 0;
 }
 
+#ifndef PTRACE_MODE_READ_FSCREDS
+#define PTRACE_MODE_READ_FSCREDS PTRACE_MODE_READ
+#endif
+
 static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 				   u64 *total)
 {
@@ -1217,7 +1221,7 @@ static void nvmap_iovmm_get_client_mss(struct nvmap_client *client, u64 *pss,
 	*pss = *total = 0;
 
 	mm = mm_access(client->task,
-			PTRACE_MODE_READ);
+			PTRACE_MODE_READ_FSCREDS);
 	if (!mm || IS_ERR(mm)) return;
 
 	down_read(&mm->mmap_sem);

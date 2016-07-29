@@ -1496,6 +1496,11 @@
 	udc: udc@7d000000 {
 		compatible = "nvidia,tegra210-udc";
 		reg = <0x0 0x7d000000 0x0 0x4000>;
+		clocks = <&tegra_car TEGRA210_CLK_ID_USBD>,
+			 <&tegra_car TEGRA210_CLK_PLL_U>;
+		clock-names = "usbd", "pllu";
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SNPS_P(0)>;
+		phy-names = "snps-0";
 		interrupts = <0 20 0x04>;
 		status = "disabled";
 	};
@@ -1505,6 +1510,8 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x7d000000 0x0 0x4000>;
 		interrupts = <0 20 0x04>;
+		clocks = <&tegra_car TEGRA210_CLK_ID_USBD>;
+		clock-names = "usbd";
 		nvidia,hc-device = <&ehci1>;
 		status = "disabled";
 	};

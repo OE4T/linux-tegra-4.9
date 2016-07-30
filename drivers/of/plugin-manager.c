@@ -62,6 +62,20 @@ err_fail_name:
 	return NULL;
 }
 
+static void free_property(struct property *pp)
+{
+	if (!pp)
+		return;
+
+	if (pp->name)
+		kfree(pp->name);
+
+	if (pp->value)
+		kfree(pp->value);
+
+	kfree(pp);
+}
+
 static struct property *__of_string_append(struct device_node *target,
 					   struct property *prop)
 {
@@ -185,18 +199,23 @@ add_prop:
 			if (ret < 0) {
 				pr_err("Prop %s can not be added on node %s\n",
 					new_prop->name, target->full_name);
-				return ret;
+				goto cleanup;
 			}
 		} else {
 			ret = of_update_property(target, new_prop);
 			if (ret < 0) {
 				pr_err("Prop %s can not be updated on node %s\n",
 					new_prop->name, target->full_name);
-				return ret;
+				goto cleanup;
 			}
 		}
 	}
+
 	return 0;
+
+cleanup:
+	free_property(new_prop);
+	return ret;
 }
 
 static int plugin_manager_get_fabid(const char *id_str)

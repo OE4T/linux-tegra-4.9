@@ -141,8 +141,8 @@ struct device_node *of_get_child_by_addressed_name(
 	return NULL;
 }
 
-static int __init update_target_node_from_overlay(
-		struct device_node *target, struct device_node *overlay)
+static int __init do_property_override_from_overlay(struct device_node *target,
+						    struct device_node *overlay)
 {
 	struct property *prop;
 	struct property *tprop;
@@ -327,14 +327,14 @@ match_type_done:
 	return false;
 }
 
-static int __init update_target_node(struct device_node *target,
-	struct device_node *overlay)
+static int __init do_property_overrides(struct device_node *target,
+					struct device_node *overlay)
 {
 	struct device_node *tchild, *ochild;
 	const char *address_name;
 	int ret;
 
-	ret = update_target_node_from_overlay(target, overlay);
+	ret = do_property_override_from_overlay(target, overlay);
 	if (ret < 0) {
 		pr_err("Target %s update with overlay %s failed: %d\n",
 			target->name, overlay->name, ret);
@@ -349,7 +349,7 @@ static int __init update_target_node(struct device_node *target,
 				ochild->full_name, target->full_name);
 			continue;
 		}
-		ret = update_target_node(tchild, ochild);
+		ret = do_property_overrides(tchild, ochild);
 		if (ret < 0) {
 			pr_err("Target %s update with overlay %s failed: %d\n",
 				tchild->name, ochild->name, ret);
@@ -359,9 +359,40 @@ static int __init update_target_node(struct device_node *target,
 	return 0;
 }
 
-static int __init parse_fragment(struct device_node *np)
+static int handle_properties_overrides(struct device_node *np,
+				       struct device_node *target)
 {
-	struct device_node *board_np, *nct_np, *odm_np, *overlay, *target, *cnp;
+	struct device_node *overlay;
+	int ret;
+
+	if (!target) {
+		target = of_parse_phandle(np, "target", 0);
+		if (!target) {
+			pr_err("Node %s does not have targer node\n",
+				np->name);
+			return -EINVAL;
+		}
+	}
+
+	overlay = of_get_child_by_name(np, "_overlay_");
+	if (!overlay) {
+		pr_err("Node %s does not have Overlay\n", np->name);
+		return -EINVAL;
+	}
+
+	ret = do_property_overrides(target, overlay);
+	if (ret < 0) {
+		pr_err("Target %s update with overlay %s failed: %d\n",
+			target->name, overlay->name, ret);
+		return -EINVAL;
+	}
+
+	return 0;
+}
+
+static int __init plugin_manager(struct device_node *np)
+{
+	struct device_node *board_np, *nct_np, *odm_np, *cnp;
 	struct device_node *config_np, *chip_np;
 	const char *bname;
 	struct property *prop;
@@ -372,7 +403,6 @@ static int __init parse_fragment(struct device_node *np)
 	bool found = false;
 	bool override_on_all_match;
 	int ret;
-
 
 	override_on_all_match = of_property_read_bool(np,
 					"enable-override-on-all-matches");
@@ -520,27 +550,9 @@ search_done:
 	if (!found)
 		return 0;
 
-	for_each_child_of_node(np, cnp) {
-		target = of_parse_phandle(cnp, "target", 0);
-		if (!target) {
-			pr_err("Node %s does not have targer node\n",
-				cnp->name);
-			continue;
-		}
+	for_each_child_of_node(np, cnp)
+		handle_properties_overrides(cnp, NULL);
 
-		overlay = of_get_child_by_name(cnp, "_overlay_");
-		if (!overlay) {
-			pr_err("Node %s does not have Overlay\n", cnp->name);
-			continue;
-		}
-
-		ret = update_target_node(target, overlay);
-		if (ret < 0) {
-			pr_err("Target %s update with overlay %s failed: %d\n",
-				target->name, overlay->name, ret);
-			continue;
-		}
-	}
 	return 0;
 }
 
@@ -564,7 +576,7 @@ static int __init plugin_manager_init(void)
 	}
 
 	for_each_available_child_of_node(pm_node, child) {
-		ret = parse_fragment(child);
+		ret = plugin_manager(child);
 		if (ret < 0)
 			pr_err("Error in parsing node %s: %d\n",
 				child->full_name, ret);

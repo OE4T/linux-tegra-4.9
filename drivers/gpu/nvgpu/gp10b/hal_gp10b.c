@@ -193,7 +193,7 @@ int gp10b_init_hal(struct gk20a *g)
 	u32 val;
 
 	*gops = gp10b_ops;
-
+	gops->pmupstate = false;
 #ifdef CONFIG_TEGRA_ACR
 	if (platform->is_fmodel) {
 		gops->privsecurity = 0;

@@ -126,4 +126,92 @@ static inline u32 fuse_status_opt_fbp_idx_v(u32 r, u32 i)
 {
 	return (r >> (0 + i*0)) & 0x1;
 }
+static inline u32 fuse_vin_cal_fuse_rev_r(void)
+{
+	return 0x0002164c;
+}
+static inline u32 fuse_vin_cal_fuse_rev_v(u32 r)
+{
+	return 0x3 & r;
+}
+static inline u32 fuse_vin_cal_gpc0_r(void)
+{
+	return 0x00021650;
+}
+static inline u32 fuse_vin_cal_gpc0_icpt_data_v(u32 r)
+{
+	return ((r & 0xFFFC000) >> 14);
+}
+static inline u32 fuse_vin_cal_gpc0_icpt_frac_size_v(void)
+{
+	return 2;
+}
+static inline u32 fuse_vin_cal_gpc0_slope_data_v(u32 r)
+{
+	return (r & 0x3FFF);
+}
+static inline u32 fuse_vin_cal_gpc0_slope_frac_size_v(void)
+{
+	return 10;
+}
+static inline u32 fuse_vin_cal_gpc1_delta_r(void)
+{
+	return 0x00021654;
+}
+static inline u32 fuse_vin_cal_gpc1_icpt_sign_f(void)
+{
+	return 0x400000;
+}
+static inline u32 fuse_vin_cal_gpc1_slope_sign_f(void)
+{
+	return 0x8000;
+}
+static inline u32 fuse_vin_cal_gpc1_icpt_data_v(u32 r)
+{
+	return ((r & 0x3FF000) >> 12);
+}
+static inline u32 fuse_vin_cal_gpc1_icpt_frac_size_v(void)
+{
+	return 2;
+}
+static inline u32 fuse_vin_cal_gpc1_slope_data_v(u32 r)
+{
+	return (r & 0x7FF);
+}
+static inline u32 fuse_vin_cal_gpc1_slope_frac_size_v(void)
+{
+	return 10;
+}
+static inline u32 fuse_vin_cal_gpc2_delta_r(void)
+{
+	return 0x00021658;
+}
+static inline u32 fuse_vin_cal_gpc3_delta_r(void)
+{
+	return 0x0002165c;
+}
+static inline u32 fuse_vin_cal_gpc4_delta_r(void)
+{
+	return 0x00021660;
+}
+static inline u32 fuse_vin_cal_gpc5_delta_r(void)
+{
+	return 0x00021664;
+}
+static inline u32 fuse_vin_cal_shared_delta_r(void)
+{
+	return 0x00021668;
+}
+static inline u32 fuse_vin_cal_sram_delta_r(void)
+{
+	return 0x0002166c;
+}
+static inline u32 fuse_vin_cal_sram_icpt_data_v(u32 r)
+{
+	return ((r & 0x3FF000) >> 12);
+}
+static inline u32 fuse_vin_cal_sram_icpt_frac_size_v(void)
+{
+	return 1;
+}
 #endif

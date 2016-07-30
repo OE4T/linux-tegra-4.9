@@ -28,7 +28,17 @@ nvgpu-y += \
 	$(nvgpu-t18x)/gp106/sec2_gp106.o \
 	$(nvgpu-t18x)/gp106/fifo_gp106.o \
 	$(nvgpu-t18x)/gp106/ltc_gp106.o \
-	$(nvgpu-t18x)/clk/clk_mclk.o
+	$(nvgpu-t18x)/clk/clk_mclk.o \
+	$(nvgpu-t18x)/pstate/pstate.o \
+	$(nvgpu-t18x)/clk/clk_vin.o \
+	$(nvgpu-t18x)/clk/clk_fll.o \
+	$(nvgpu-t18x)/clk/clk_domain.o \
+	$(nvgpu-t18x)/clk/clk_prog.o \
+	$(nvgpu-t18x)/clk/clk_vf_point.o \
+	$(nvgpu-t18x)/perf/vfe_var.o \
+	$(nvgpu-t18x)/perf/vfe_equ.o \
+	$(nvgpu-t18x)/perf/perf.o \
+	$(nvgpu-t18x)/clk/clk.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t18x)/gp10b/platform_gp10b_tegra.o
 

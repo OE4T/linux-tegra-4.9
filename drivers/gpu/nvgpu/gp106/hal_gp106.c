@@ -144,7 +144,7 @@ int gp106_init_hal(struct gk20a *g)
 
 	gops->privsecurity = 1;
 	gops->securegpccs = 1;
-
+	gops->pmupstate = true;
 	gp10b_init_mc(gops);
 	gp106_init_gr(gops);
 	gp106_init_ltc(gops);

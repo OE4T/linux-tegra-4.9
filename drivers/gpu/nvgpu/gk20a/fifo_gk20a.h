@@ -142,7 +142,7 @@ struct fifo_gk20a {
 
 	} intr;
 
-	u32 deferred_fault_engines;
+	unsigned long deferred_fault_engines;
 	bool deferred_reset_pending;
 	struct mutex deferred_reset_mutex;
 };
@@ -241,6 +241,8 @@ struct fifo_engine_info_gk20a *gk20a_fifo_get_engine_info(struct gk20a *g, u32 e
 bool gk20a_fifo_is_valid_engine_id(struct gk20a *g, u32 engine_id);
 
 u32 gk20a_fifo_get_gr_engine_id(struct gk20a *g);
+
+int gk20a_fifo_deferred_reset(struct gk20a *g, struct channel_gk20a *ch);
 
 u32 gk20a_fifo_get_all_ce_engine_reset_mask(struct gk20a *g);
 

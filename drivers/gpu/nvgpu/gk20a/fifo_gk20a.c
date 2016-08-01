@@ -39,6 +39,7 @@
 static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 					    u32 hw_chid, bool add,
 					    bool wait_for_finish);
+static u32 gk20a_fifo_engines_on_id(struct gk20a *g, u32 id, bool is_tsg);
 
 u32 gk20a_fifo_get_engine_ids(struct gk20a *g,
 		u32 engine_id[], u32 engine_id_sz,
@@ -1269,6 +1270,42 @@ void gk20a_fifo_abort_tsg(struct gk20a *g, u32 tsgid, bool preempt)
 	mutex_unlock(&tsg->ch_list_lock);
 }
 
+int gk20a_fifo_deferred_reset(struct gk20a *g, struct channel_gk20a *ch)
+{
+	u32 engine_id, engines;
+
+	mutex_lock(&g->dbg_sessions_lock);
+	gr_gk20a_disable_ctxsw(g);
+
+	if (!g->fifo.deferred_reset_pending)
+		goto clean_up;
+
+	if (gk20a_is_channel_marked_as_tsg(ch))
+		engines = gk20a_fifo_engines_on_id(g, ch->tsgid, true);
+	else
+		engines = gk20a_fifo_engines_on_id(g, ch->hw_chid, false);
+	if (!engines)
+		goto clean_up;
+
+	/*
+	 * If deferred reset is set for an engine, and channel is running
+	 * on that engine, reset it
+	 */
+	for_each_set_bit(engine_id, &g->fifo.deferred_fault_engines, 32) {
+		if (BIT(engine_id) & engines)
+			gk20a_fifo_reset_engine(g, engine_id);
+	}
+
+	g->fifo.deferred_fault_engines = 0;
+	g->fifo.deferred_reset_pending = false;
+
+clean_up:
+	gr_gk20a_enable_ctxsw(g);
+	mutex_unlock(&g->dbg_sessions_lock);
+
+	return 0;
+}
+
 static bool gk20a_fifo_handle_mmu_fault(
 	struct gk20a *g,
 	u32 mmu_fault_engines, /* queried from HW if 0 */
@@ -1403,7 +1440,7 @@ static bool gk20a_fifo_handle_mmu_fault(
 		/* check if engine reset should be deferred */
 		if ((ch || tsg) && gk20a_fifo_should_defer_engine_reset(g,
 				engine_id, &f, fake_fault)) {
-			g->fifo.deferred_fault_engines = fault_id;
+			g->fifo.deferred_fault_engines |= BIT(engine_id);
 
 			/* handled during channel free */
 			g->fifo.deferred_reset_pending = true;

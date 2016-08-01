@@ -910,11 +910,8 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 		/* if lock is already taken, a reset is taking place
 		so no need to repeat */
 		if (!was_reset)
-			gk20a_fifo_reset_engine(g,
-				g->fifo.deferred_fault_engines);
+			gk20a_fifo_deferred_reset(g, ch);
 		mutex_unlock(&g->fifo.gr_reset_mutex);
-		g->fifo.deferred_fault_engines = 0;
-		g->fifo.deferred_reset_pending = false;
 	}
 	mutex_unlock(&f->deferred_reset_mutex);
 

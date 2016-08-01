@@ -708,8 +708,6 @@ static const struct snd_soc_dapm_widget tegra_t186ref_dapm_widgets[] = {
 	SND_SOC_DAPM_MIC("d Mic", NULL),
 	SND_SOC_DAPM_HP("e Headphone", NULL),
 	SND_SOC_DAPM_MIC("e Mic", NULL),
-	SND_SOC_DAPM_SPK("d1 Headphone", NULL),
-	SND_SOC_DAPM_SPK("d2 Headphone", NULL),
 };
 
 static int tegra_t186ref_suspend_pre(struct snd_soc_card *card)

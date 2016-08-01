@@ -309,9 +309,7 @@
 						"c IN",			"c Mic",
 						"d IN",			"d Mic",
 						"e Headphone",		"e OUT",
-						"e IN",			"e Mic",
-						"d1 Headphone",		"d1 OUT",
-						"d2 Headphone",		"d2 OUT";
+						"e IN",			"e Mic";
 				};
 			};
 

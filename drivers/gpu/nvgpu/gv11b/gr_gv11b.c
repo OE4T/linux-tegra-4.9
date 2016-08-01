@@ -61,14 +61,15 @@ static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
 }
 
 static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
-			bool *post_event, struct channel_gk20a *fault_ch)
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
 {
 	int ret = 0;
 	u32 offset = proj_gpc_stride_v() * gpc +
 			proj_tpc_in_gpc_stride_v() * tpc;
 	u32 lrf_ecc_status, shm_ecc_status;
 
-	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch);
+	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */
         lrf_ecc_status = gk20a_readl(g,

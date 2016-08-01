@@ -753,7 +753,7 @@
 	tegra_sound: sound {
 		compatible = "nvidia,tegra-audio-t186ref-mobile-rt565x";
 		nvidia,model = "tegra-snd-t186ref-mobile-rt565x";
-		nvidia,num-codec-link = <13>;
+		nvidia,num-codec-link = <11>;
 		nvidia,num-clk = <8>;
 		nvidia,clk-rates = < 270950400	/* PLLA_x11025_RATE */
 				     11289600	/* AUD_MCLK_x11025_RATE */
@@ -792,9 +792,7 @@
 			"c IN",			"c Mic",
 			"d IN",			"d Mic",
 			"e Headphone",		"e OUT",
-			"e IN",			"e Mic",
-			"d1 Headphone",		"d1 OUT",
-			"d2 Headphone",		"d2 OUT";
+			"e IN",			"e Mic";
 
 		nvidia,xbar = <&tegra_axbar>;
 

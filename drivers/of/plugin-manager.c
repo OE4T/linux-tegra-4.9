@@ -9,7 +9,7 @@
  *
  * This program is distributed in the hope it will be useful, but WITHOUT
  * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * FITNESS FOR A PARTICULAR PURPOSE. See the GNU General Public License for
  * more details.
  */
 
@@ -37,18 +37,18 @@ static struct property *__of_copy_property(const struct property *prop,
 	void *nval;
 
 	propn = kzalloc(sizeof(*prop), flags);
-	if (propn == NULL)
+	if (!propn)
 		return NULL;
 
 	propn->name = kstrdup(prop->name, flags);
-	if (propn->name == NULL)
+	if (!propn->name)
 		goto err_fail_name;
 
 	nlen = (new_value) ? val_len : prop->length;
 	nval = (new_value) ? new_value : prop->value;
 	if (nlen > 0) {
 		propn->value = kmalloc(nlen, flags);
-		if (propn->value == NULL)
+		if (!propn->value)
 			goto err_fail_value;
 		memcpy(propn->value, nval, nlen);
 		propn->length = nlen;
@@ -67,12 +67,8 @@ static void free_property(struct property *pp)
 	if (!pp)
 		return;
 
-	if (pp->name)
-		kfree(pp->name);
-
-	if (pp->value)
-		kfree(pp->value);
-
+	kfree(pp->name);
+	kfree(pp->value);
 	kfree(pp);
 }
 
@@ -451,8 +447,7 @@ static int __init plugin_manager(struct device_node *np)
 					np->full_name, bname);
 				if (override_on_all_match)
 					break;
-				else
-					goto search_done;
+				goto search_done;
 			}
 		}
 
@@ -468,8 +463,7 @@ static int __init plugin_manager(struct device_node *np)
 					np->full_name, bname);
 				if (override_on_all_match)
 					break;
-				else
-					goto search_done;
+				goto search_done;
 			}
 		}
 
@@ -485,8 +479,7 @@ static int __init plugin_manager(struct device_node *np)
 					np->full_name, bname);
 				if (override_on_all_match)
 					break;
-				else
-					goto search_done;
+				goto search_done;
 			}
 		}
 
@@ -502,8 +495,7 @@ static int __init plugin_manager(struct device_node *np)
 					np->full_name, bname);
 				if (override_on_all_match)
 					break;
-				else
-					goto search_done;
+				goto search_done;
 			}
 		}
 
@@ -537,8 +529,7 @@ static int __init plugin_manager(struct device_node *np)
 					np->full_name, bname);
 				if (override_on_all_match)
 					break;
-				else
-					goto search_done;
+				goto search_done;
 			}
 		}
 

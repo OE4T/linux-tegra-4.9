@@ -373,6 +373,10 @@ static int parse_disp_default_out(struct platform_device *ndev,
 
 		hotplug_gpio = of_get_named_gpio_flags(np_hdmi,
 				"nvidia,hpd-gpio", 0, &flags);
+		if (hotplug_gpio == -EPROBE_DEFER) {
+			err = -EPROBE_DEFER;
+			goto parse_disp_defout_fail;
+		}
 		default_out->hotplug_gpio = hotplug_gpio;
 	}
 	if (np_sor && of_device_is_available(np_sor) &&
@@ -2738,6 +2742,17 @@ struct tegra_dc_platform_data
 	} else {
 		err = parse_disp_default_out(ndev, default_out_np,
 			pdata->default_out, pdata->fb);
+		if (err == -EPROBE_DEFER) {
+			of_node_put(sd_np);
+#if defined(CONFIG_TEGRA_DC_CMU) || defined(CONFIG_TEGRA_DC_CMU_V2)
+			of_node_put(cmu_np);
+			of_node_put(cmu_adbRGB_np);
+#endif
+			of_node_put(np_dsi);
+			of_node_put(np_sor);
+			of_node_put(np_hdmi);
+			return ERR_PTR(err);
+		}
 		if (err)
 			goto fail_parse;
 	}

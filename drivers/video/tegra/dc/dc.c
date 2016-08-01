@@ -5622,8 +5622,11 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		res = &dt_res;
 
 		dt_pdata = of_dc_parse_platform_data(ndev);
-		if (dt_pdata == NULL)
+		if (IS_ERR_OR_NULL(dt_pdata)) {
+			if (dt_pdata)
+				ret = PTR_ERR(dt_pdata);
 			goto err_free;
+		}
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		dc->ctrl_num = dt_pdata->ctrl_num;

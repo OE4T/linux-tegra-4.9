@@ -52,7 +52,7 @@
 #define THIRD_CAM_POS				(2)
 
 / {
-	model = "p4573-3310";
+	model = "p4570-0120";
 	nvidia,dtsfilename = __FILE__;
 
 	dfsh {

@@ -627,7 +627,7 @@
 						0x00000044 0x00200000 0x00000000
 						0x00000048 0x00200000 0x00000000>;
 				};
-				soc_a01 {
+				csi_mipical_prod_soc_a01: soc_a01 {
 					status = "disabled";
 					prod = <
 						0x00000018 0x0000f81f 0x00001010
@@ -637,7 +637,7 @@
 						0x00000028 0x0000f81f 0x00001010
 						0x0000002C 0x0000f81f 0x00001010>;
 				};
-				soc_a02 {
+				csi_mipical_prod_soc_a02: soc_a02 {
 					status = "disabled";
 					prod = <
 						0x00000018 0x0000f81f 0x00000000

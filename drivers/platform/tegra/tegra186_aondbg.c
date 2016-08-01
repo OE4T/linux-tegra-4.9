@@ -28,6 +28,7 @@
 #include <linux/uaccess.h>
 #include <linux/completion.h>
 #include <linux/jiffies.h>
+#include <linux/tegra-firmwares.h>
 
 #include <asm/cacheflush.h>
 
@@ -410,21 +411,51 @@ static const struct file_operations aon_pm_state_counts_fops = {
 	.release = single_release
 };
 
-static int aon_ping_show(struct seq_file *file, void *data)
+static ssize_t __aon_do_ping(u32 context, char **data)
 {
 	struct aon_dbg_response *resp;
 	int ret = 0;
 
-	mutex_lock(&aon_mutex);
-	resp = aon_create_ivc_dbg_req(*(u32 *)file->private, READ, 0);
+	*data = NULL;
+	resp = aon_create_ivc_dbg_req(context, READ, 0);
 	if (IS_ERR(resp))
 		ret = PTR_ERR(resp);
 	else
-		seq_printf(file, "%s\n", resp->data.ping_xfer.data);
+		*data = resp->data.ping_xfer.data;
+
+	return ret;
+}
+
+static int aon_ping_show(struct seq_file *file, void *param)
+{
+	char *data;
+	int ret;
+
+	mutex_lock(&aon_mutex);
+	ret = __aon_do_ping(*(u32 *)file->private, &data);
+	if (ret >= 0)
+		seq_printf(file, "%s\n", data);
 	mutex_unlock(&aon_mutex);
 
 	return ret;
 }
+
+static ssize_t aon_version_show(struct device *dev, char *buf, size_t size)
+{
+	char *data;
+	int ret = 0;
+
+	mutex_lock(&aon_mutex);
+	ret = __aon_do_ping(AON_PING_TEST, &data);
+	if (ret < 0)
+		ret = snprintf(buf, size, "error retrieving version: %d", ret);
+	else
+		ret = snprintf(buf, size, "%s", data);
+	mutex_unlock(&aon_mutex);
+
+	return ret;
+}
+
 
 static int aon_ping_open(struct inode *inode, struct file *file)
 {
@@ -665,6 +696,8 @@ static int tegra_aondbg_probe(struct platform_device *pdev)
 	}
 	dev_info(dev, "aondbg driver probe() OK\n");
 
+	devm_tegrafw_register(&pdev->dev, "spe", TFW_NORMAL,
+			aon_version_show, NULL);
 	return 0;
 }
 

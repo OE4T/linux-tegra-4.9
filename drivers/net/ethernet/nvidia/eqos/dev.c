@@ -3214,7 +3214,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 {
 	struct platform_device *pdev = pdata->pdev;
 	int ret;
-	uint i;
+	int i;
 	u32 hwreg;
 
 	if (tegra_platform_is_unit_fpga())
@@ -3249,7 +3249,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 		if (hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK)
 			break;
 	}
-	if (!i) {
+	if (i < 0) {
 		ret = -1;
 		dev_err(&pdev->dev,
 			"eqos pad calibration took too long to start\n");
@@ -3266,7 +3266,7 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 		if (!(hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK))
 			break;
 	}
-	if (!i) {
+	if (i < 0) {
 		ret = -1;
 		dev_err(&pdev->dev,
 			"eqos pad calibration took too long to complete\n");

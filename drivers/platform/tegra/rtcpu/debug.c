@@ -18,18 +18,18 @@
 #include "camrtc-commands.h"
 
 #include <linux/debugfs.h>
+#include <linux/io.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/of.h>
 #include <linux/of_address.h>
-#include <linux/io.h>
+#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/string.h>
 #include <linux/tegra_ast.h>
 #include <linux/tegra-camera-rtcpu.h>
 #include <linux/tegra-ivc.h>
 #include <linux/tegra-ivc-bus.h>
-#include <linux/sched.h>
 
 struct camrtc_debug {
 	struct mutex mutex;

@@ -16,22 +16,22 @@
 
 #include <linux/tegra-camera-rtcpu.h>
 
-#include <linux/kernel.h>
 #include <linux/bitops.h>
 #include <linux/clk.h>
+#include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
 #include <linux/of.h>
 #include <linux/of_platform.h>
 #include <linux/platform_device.h>
 #include <linux/reset.h>
+#include <linux/sched.h>
 #include <linux/slab.h>
 #include <linux/tegra_ast.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/tegra-rtcpu-trace.h>
 #include <linux/wait.h>
-#include <linux/sched.h>
 
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>

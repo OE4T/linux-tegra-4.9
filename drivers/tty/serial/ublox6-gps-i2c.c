@@ -115,10 +115,6 @@ static void ublox_gps_read_worker(struct work_struct *private)
 		tty_flip_buffer_push(&ublox_dev->tty_port);
 
 		kfree(buf);
-		if (ublox_dev->is_active)
-			schedule_delayed_work(&ublox_dev->dwork,
-					msecs_to_jiffies(FAST_READ_TIME));
-		return;
 	}
 end:
 	/* resubmit the workqueue again */
@@ -159,8 +155,8 @@ static int ublox_gps_serial_write(struct tty_struct *tty,
 		dev_dbg(&ublox_dev->i2c_client->dev, "%d bytes written\n",
 			count);
 	if (ublox_dev->is_active)
-		schedule_delayed_work(&ublox_dev->dwork,
-					msecs_to_jiffies(FAST_READ_TIME));
+		mod_delayed_work(system_wq, &ublox_dev->dwork,
+				msecs_to_jiffies(FAST_READ_TIME));
 
 	return (ret == 0 ? count : ret);
 }

@@ -72,6 +72,22 @@ static int _fops_ ## _open(struct inode *inode, struct file *file) \
 } \
 static const struct file_operations _fops_ = INIT_OPEN_FOPS(_fops_ ## _open)
 
+static int camrtc_show_version(struct seq_file *file, void *data)
+{
+	struct tegra_ivc_channel *ch = file->private;
+	struct device *rce_dev = camrtc_get_device(ch);
+	char version[TEGRA_CAMRTC_VERSION_LEN];
+
+	tegra_camrtc_print_version(rce_dev, version, sizeof(version));
+
+	seq_puts(file, version);
+	seq_puts(file, "\n");
+
+	return 0;
+}
+
+DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_version, camrtc_show_version);
+
 static int camrtc_show_reboot(struct seq_file *file, void *data)
 {
 	struct tegra_ivc_channel *ch = file->private;
@@ -118,7 +134,7 @@ DEFINE_SIMPLE_ATTRIBUTE(camrtc_dbgfs_fops_halt,
 
 static int camrtc_show_reset(struct seq_file *file, void *data)
 {
-	struct tegra_ivc_channel *ch = data;
+	struct tegra_ivc_channel *ch = file->private;
 	struct device *rce_dev = camrtc_get_device(ch);
 
 	tegra_camrtc_reset(rce_dev);
@@ -559,6 +575,9 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 	if (dir == NULL)
 		return -ENOMEM;
 
+	if (!debugfs_create_file("version", S_IRUGO, dir, ch,
+			&camrtc_dbgfs_fops_version))
+		goto error;
 	if (!debugfs_create_file("reboot", S_IRUGO, dir, ch,
 			&camrtc_dbgfs_fops_reboot))
 		goto error;

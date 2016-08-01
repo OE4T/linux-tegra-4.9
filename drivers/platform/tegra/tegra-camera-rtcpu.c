@@ -29,6 +29,7 @@
 #include <linux/seq_buf.h>
 #include <linux/slab.h>
 #include <linux/tegra_ast.h>
+#include <linux/tegra-firmwares.h>
 #include <linux/tegra-hsp.h>
 #include <linux/tegra-ivc-bus.h>
 #include <linux/tegra-rtcpu-trace.h>
@@ -519,7 +520,7 @@ static int tegra_camrtc_get_fw_hash(struct device *dev,
 	return 0;
 }
 
-static ssize_t tegra_camrtc_print_version(struct device *dev,
+ssize_t tegra_camrtc_print_version(struct device *dev,
 					char *buf, size_t size)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
@@ -535,10 +536,11 @@ static ssize_t tegra_camrtc_print_version(struct device *dev,
 
 	return seq_buf_used(&s);
 }
+EXPORT_SYMBOL(tegra_camrtc_print_version);
 
 static void tegra_camrtc_log_fw_version(struct device *dev)
 {
-	char version[128];
+	char version[TEGRA_CAMRTC_VERSION_LEN];
 
 	tegra_camrtc_print_version(dev, version, sizeof(version));
 
@@ -641,7 +643,10 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail;
 
-	tegra_camrtc_get_fw_hash(dev, cam_rtcpu->fw_hash);
+	ret = tegra_camrtc_get_fw_hash(dev, cam_rtcpu->fw_hash);
+	if (ret == 0)
+		devm_tegrafw_register(dev, "camrtc",
+			TFW_NORMAL, tegra_camrtc_print_version, NULL);
 
 	cam_rtcpu->ivc = tegra_ivc_bus_create(dev, cam_rtcpu->ast,
 						cam_rtcpu->rtcpu_pdata->sid);

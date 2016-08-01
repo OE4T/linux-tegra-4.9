@@ -24,6 +24,9 @@ int tegra_camrtc_get_halt(struct device *dev, bool *halt);
 int tegra_camrtc_reset(struct device *dev);
 int tegra_camrtc_boot(struct device *dev);
 int tegra_camrtc_ivc_setup_ready(struct device *dev);
+ssize_t tegra_camrtc_print_version(struct device *dev, char *buf, size_t size);
+
+#define TEGRA_CAMRTC_VERSION_LEN 128
 
 int tegra_camrtc_command(struct device *dev, u32 command, long timeout);
 

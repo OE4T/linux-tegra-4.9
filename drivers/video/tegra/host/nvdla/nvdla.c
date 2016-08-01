@@ -265,8 +265,6 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 	dma_addr_t ping_pa;
 	u32 *ping_va;
 
-	uint32_t mailbox0;
-	uint32_t mailbox1;
 	u32 timeout = FLCN_IDLE_TIMEOUT_DEFAULT * 5;
 	int err = 0;
 
@@ -296,18 +294,10 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 		goto fail_to_idle;
 	}
 
-	/* mailbox0 should have (in_challenge * 2) */
-	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
-
-	/* mailbox1 should have (in_challenge * 3) */
-	mailbox1 = host1x_readl(pdev, flcn_mailbox1_r());
-
 	/* out value should have (in_challenge * 4) */
 	args->out_response = *ping_va;
 
-	if ((mailbox0 != args->in_challenge*2) ||
-	    (mailbox1 != args->in_challenge*3) ||
-	    (args->out_response != args->in_challenge*4)) {
+	if (args->out_response != args->in_challenge*4) {
 		dev_err(&pdev->dev, "ping cmd failed. Falcon is not active");
 		err = -EINVAL;
 	}

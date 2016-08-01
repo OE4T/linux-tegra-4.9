@@ -98,7 +98,8 @@ static void gr_gp10b_sm_lrf_ecc_overcount_war(int single_err,
 }
 
 static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
-			bool *post_event, struct channel_gk20a *fault_ch)
+			bool *post_event, struct channel_gk20a *fault_ch,
+			u32 *hww_global_esr)
 {
 	int ret = 0;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
@@ -108,7 +109,7 @@ static int gr_gp10b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 lrf_single_count_delta, lrf_double_count_delta;
 	u32 shm_ecc_status;
 
-	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch);
+	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */
         lrf_ecc_status = gk20a_readl(g,

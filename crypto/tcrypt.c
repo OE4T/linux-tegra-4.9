@@ -1088,10 +1088,7 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 	case 10:
 		ret += tcrypt_test("ecb(aes)");
 		ret += tcrypt_test("cbc(aes)");
-		ret += tcrypt_test("lrw(aes)");
-		ret += tcrypt_test("xts(aes)");
 		ret += tcrypt_test("ctr(aes)");
-		ret += tcrypt_test("rfc3686(ctr(aes))");
 		break;
 
 	case 11:
@@ -1203,6 +1200,9 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 
 	case 35:
 		ret += tcrypt_test("gcm(aes)");
+		ret += tcrypt_test("lrw(aes)");
+		ret += tcrypt_test("xts(aes)");
+		ret += tcrypt_test("rfc3686(ctr(aes))");
 		break;
 
 	case 36:
@@ -2060,16 +2060,6 @@ static int __init tcrypt_mod_init(void)
 		printk(KERN_ERR "tcrypt: one or more tests failed!\n");
 		goto err_free_tv;
 	}
-
-	/* We intentionaly return -EAGAIN to prevent keeping the module,
-	 * unless we're running in fips mode. It does all its work from
-	 * init() and doesn't offer any runtime functionality, but in
-	 * the fips case, checking for a successful load is helpful.
-	 * => we don't need it in the memory, do we?
-	 *                                        -- mludvig
-	 */
-	if (!fips_enabled)
-		err = -EAGAIN;
 
 err_free_tv:
 	for (i = 0; i < TVMEMSIZE && tvmem[i]; i++)

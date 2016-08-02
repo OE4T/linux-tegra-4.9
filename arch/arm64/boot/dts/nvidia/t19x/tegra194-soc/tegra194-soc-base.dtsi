@@ -203,6 +203,14 @@
 
 			#stream-id-cells = <1>;
 		};
+
+		nvdla0@15880000 {
+			compatible = "nvidia,tegra194-nvdla";
+			reg = <0x0 0x15880000 0x0 0x00040000>;
+			interrupts = <0 236 0x04>;
+
+			#stream-id-cells = <1>;
+		};
 	};
 
 };

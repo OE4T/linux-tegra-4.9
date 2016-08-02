@@ -85,6 +85,8 @@
 #define TEGRA_TX_DMA				2
 
 #define TEGRA_UART_FCR_IIR_FIFO_EN		0x40
+#define TEGRA_UART_MAX_RX_CHARS			256
+#define TEGRA_UART_MAX_REPEAT_ERRORS		100
 
 /**
  * tegra_uart_chip_data: SOC specific data.
@@ -151,6 +153,8 @@ struct tegra_uart_port {
 	int					timer_timeout_jiffies;
 	bool					enable_rx_buffer_throttle;
 	bool                                    is_hw_flow_enabled;
+	struct timer_list			error_timer;
+	int					error_timer_timeout_jiffies;
 };
 
 static void tegra_uart_start_next_tx(struct tegra_uart_port *tup);
@@ -291,6 +295,18 @@ static void tegra_uart_wait_sym_time(struct tegra_uart_port *tup,
 			tup->current_baud));
 }
 
+static void tegra_uart_disable_rx_irqs(struct tegra_uart_port *tup)
+{
+	unsigned long ier;
+
+	/* Disable Rx interrupts */
+	ier = tup->ier_shadow;
+	ier &= ~(UART_IER_RDI | UART_IER_RLSI | UART_IER_RTOIE |
+			TEGRA_UART_IER_EORD);
+	tup->ier_shadow = ier;
+	tegra_uart_write(tup, ier, UART_IER);
+}
+
 static int tegra_uart_is_fifo_mode_enabled(struct tegra_uart_port *tup)
 {
 	unsigned long iir;
@@ -407,37 +423,52 @@ static int tegra_set_baudrate(struct tegra_uart_port *tup, unsigned int baud)
 	return 0;
 }
 
+static void tegra_uart_flush_fifo(struct tegra_uart_port *tup, u8 fcr_bits)
+{
+	unsigned long fcr = tup->fcr_shadow;
+	unsigned int lsr, tmout = 10000;
+
+	fcr |= fcr_bits & (UART_FCR_CLEAR_RCVR | UART_FCR_CLEAR_XMIT);
+	tegra_uart_write(tup, fcr, UART_FCR);
+
+	do {
+		lsr = tegra_uart_read(tup, UART_LSR);
+		if (!(lsr & UART_LSR_DR))
+			break;
+		if (--tmout == 0)
+			break;
+		udelay(1);
+	} while (1);
+}
+
 static char tegra_uart_decode_rx_error(struct tegra_uart_port *tup,
 			unsigned long lsr)
 {
 	char flag = TTY_NORMAL;
 
 	if (unlikely(lsr & TEGRA_UART_LSR_ANY)) {
-		if (lsr & UART_LSR_OE) {
-			/* Overrrun error */
-			flag = TTY_OVERRUN;
-			tup->uport.icount.overrun++;
-			dev_err(tup->uport.dev, "Got overrun errors\n");
+		if (lsr & UART_LSR_BI) {
+			tup->uport.icount.brk++;
+			flag = TTY_BREAK;
+			tegra_uart_flush_fifo(tup, UART_FCR_CLEAR_RCVR);
+
+			if (tup->uport.ignore_status_mask & UART_LSR_BI)
+				goto exit;
+			dev_dbg(tup->uport.dev, "Got Break\n");
 		} else if (lsr & UART_LSR_PE) {
 			/* Parity error */
 			flag = TTY_PARITY;
 			tup->uport.icount.parity++;
-			dev_err(tup->uport.dev, "Got Parity errors\n");
+			dev_dbg(tup->uport.dev, "Got Parity errors\n");
 		} else if (lsr & UART_LSR_FE) {
 			flag = TTY_FRAME;
 			tup->uport.icount.frame++;
-			dev_err(tup->uport.dev, "Got frame errors\n");
-		} else if (lsr & UART_LSR_BI) {
-			tup->uport.icount.brk++;
-			/* If FIFO read error without any data, reset Rx FIFO */
-			if (!(lsr & UART_LSR_DR) && (lsr & UART_LSR_FIFOE))
-				tegra_uart_fifo_reset(tup, UART_FCR_CLEAR_RCVR);
-
-			flag = TTY_BREAK;
-			if (tup->uport.ignore_status_mask & UART_LSR_BI)
-				goto exit;
-
-			dev_err(tup->uport.dev, "Got Break\n");
+			dev_dbg(tup->uport.dev, "Got frame errors\n");
+		} else if (lsr & UART_LSR_OE) {
+			/* Overrrun error */
+			flag |= TTY_OVERRUN;
+			tup->uport.icount.overrun++;
+			dev_dbg(tup->uport.dev, "Got overrun errors\n");
 		}
 		uart_insert_char(&tup->uport, lsr, UART_LSR_OE, 0, flag);
 	}
@@ -608,9 +639,12 @@ static void tegra_uart_handle_tx_pio(struct tegra_uart_port *tup)
 	tegra_uart_start_next_tx(tup);
 }
 
-static void tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
+static int tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
 		struct tty_port *tty)
 {
+	int max_rx_count = TEGRA_UART_MAX_RX_CHARS;
+	int error_count = 0;
+
 	do {
 		char flag = TTY_NORMAL;
 		unsigned long lsr = 0;
@@ -622,8 +656,15 @@ static void tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
 			break;
 
 		flag = tegra_uart_decode_rx_error(tup, lsr);
-		if (flag != TTY_NORMAL)
+		if (flag != TTY_NORMAL) {
+			if (error_count++ > TEGRA_UART_MAX_REPEAT_ERRORS) {
+				tegra_uart_disable_rx_irqs(tup);
+				mod_timer(&tup->error_timer,
+					jiffies + tup->error_timer_timeout_jiffies);
+				return -EIO;
+			}
 			continue;
+		}
 
 		ch = (unsigned char) tegra_uart_read(tup, UART_RX);
 		tup->uport.icount.rx++;
@@ -633,10 +674,17 @@ static void tegra_uart_handle_rx_pio(struct tegra_uart_port *tup,
 
 		if (!uart_handle_sysrq_char(&tup->uport, ch) && tty) {
 			copied  = tty_insert_flip_char(tty, ch, flag);
-			if (copied != 1)
+			if (copied != 1) {
 				dev_err(tup->uport.dev, "RxData PIO to tty layer failed\n");
+				tegra_uart_disable_rx_irqs(tup);
+				mod_timer(&tup->error_timer,
+					jiffies + tup->error_timer_timeout_jiffies);
+				return -ENOSPC;
+			}
 		}
-	} while (1);
+	} while (max_rx_count--);
+
+	return 0;
 }
 
 static void tegra_uart_rx_buffer_throttle_timer(unsigned long _data)
@@ -664,55 +712,81 @@ static void tegra_uart_rx_buffer_throttle_timer(unsigned long _data)
 	spin_unlock_irqrestore(&u->lock, flags);
 }
 
-static void tegra_uart_copy_rx_to_tty(struct tegra_uart_port *tup,
+static void tegra_uart_rx_error_handle_timer(unsigned long _data)
+{
+	struct tegra_uart_port *tup = (struct tegra_uart_port *)_data;
+	struct uart_port *u = &tup->uport;
+	unsigned long flags;
+	unsigned long ier;
+
+	spin_lock_irqsave(&u->lock, flags);
+	ier = tup->ier_shadow;
+	ier |= (UART_IER_RLSI | UART_IER_RTOIE | TEGRA_UART_IER_EORD);
+	tup->ier_shadow = ier;
+	tegra_uart_write(tup, ier, UART_IER);
+	spin_unlock_irqrestore(&u->lock, flags);
+}
+
+static int tegra_uart_copy_rx_to_tty(struct tegra_uart_port *tup,
 				      struct tty_port *tty,
 				      unsigned int count)
 {
 	int copied;
+	int ret = 0;
 
 	/* If count is zero, then there is no data to be copied */
 	if (!count)
-		return;
+		return 0;
 
 	tup->uport.icount.rx += count;
 	if (!tty) {
 		dev_err(tup->uport.dev, "No tty port\n");
-		return;
+		return -EINVAL;
 	}
 
 	if (tup->uport.ignore_status_mask & UART_LSR_DR)
-		return;
+		return 0;
 
 	dma_sync_single_for_cpu(tup->uport.dev, tup->rx_dma_buf_phys,
 				TEGRA_UART_RX_DMA_BUFFER_SIZE, DMA_FROM_DEVICE);
 	copied = tty_insert_flip_string(tty,
 			((unsigned char *)(tup->rx_dma_buf_virt)), count);
 	if (copied != count) {
-		WARN_ON(1);
-		dev_err(tup->uport.dev, "RxData copy to tty layer failed\n");
+		dev_err(tup->uport.dev, "RxData DMA copy to tty layer failed\n");
+		tegra_uart_disable_rx_irqs(tup);
+		mod_timer(&tup->error_timer,
+				jiffies + tup->error_timer_timeout_jiffies);
+		ret = -ENOSPC;
 	}
 	dma_sync_single_for_device(tup->uport.dev, tup->rx_dma_buf_phys,
 				TEGRA_UART_RX_DMA_BUFFER_SIZE, DMA_TO_DEVICE);
+	return ret;
 }
 
-static void tegra_uart_rx_buffer_push(struct tegra_uart_port *tup,
+static int tegra_uart_rx_buffer_push(struct tegra_uart_port *tup,
 				      unsigned int residue)
 {
 	struct tty_port *port = &tup->uport.state->port;
 	struct tty_struct *tty = tty_port_tty_get(port);
 	unsigned int count;
+	int ret;
 
 	async_tx_ack(tup->rx_dma_desc);
 	count = tup->rx_bytes_requested - residue;
 
 	/* If we are here, DMA is stopped */
-	tegra_uart_copy_rx_to_tty(tup, port, count);
+	ret = tegra_uart_copy_rx_to_tty(tup, port, count);
+	if (ret)
+		goto skip_pio;
 
-	tegra_uart_handle_rx_pio(tup, port);
+	ret = tegra_uart_handle_rx_pio(tup, port);
+skip_pio:
 	if (tty) {
 		tty_flip_buffer_push(port);
 		tty_kref_put(tty);
 	}
+
+	return ret;
 }
 
 static void tegra_uart_rx_dma_complete(void *args)
@@ -764,12 +838,13 @@ done:
 	spin_unlock_irqrestore(&u->lock, flags);
 }
 
-static void tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
+static int tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
 {
 	struct tty_port *port = &tup->uport.state->port;
 	struct dma_tx_state state;
 	struct dma_async_tx_descriptor *prev_rx_dma_desc;
 	int rx_level = 0;
+	int ret;
 
 	/* Deactivate flow control to stop sender */
 	if (tup->rts_active && tup->is_hw_flow_enabled)
@@ -778,7 +853,8 @@ static void tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
 	dmaengine_terminate_all(tup->rx_dma_chan);
 	dmaengine_tx_status(tup->rx_dma_chan, tup->rx_cookie, &state);
 	prev_rx_dma_desc = tup->rx_dma_desc;
-	tegra_uart_rx_buffer_push(tup, state.residue);
+
+	ret = tegra_uart_rx_buffer_push(tup, state.residue);
 
 	if (tup->enable_rx_buffer_throttle) {
 		rx_level = tty_buffer_get_level(port);
@@ -796,6 +872,8 @@ static void tegra_uart_handle_rx_dma(struct tegra_uart_port *tup)
 			set_rts(tup, true);
 	} else if (tup->rts_active && tup->is_hw_flow_enabled)
 		set_rts(tup, true);
+
+	return ret;
 }
 
 static int tegra_uart_start_rx_dma(struct tegra_uart_port *tup)
@@ -881,13 +959,18 @@ static irqreturn_t tegra_uart_isr(int irq, void *data)
 	unsigned long ier;
 	bool is_rx_int = false;
 	unsigned long flags;
+	int ret;
 
 	spin_lock_irqsave(&u->lock, flags);
 	while (1) {
 		iir = tegra_uart_read(tup, UART_IIR);
 		if (iir & UART_IIR_NO_INT) {
 			if (!tup->use_rx_pio && is_rx_int) {
-				tegra_uart_handle_rx_dma(tup);
+				ret = tegra_uart_handle_rx_dma(tup);
+				if (ret) {
+					spin_unlock_irqrestore(&u->lock, flags);
+					return IRQ_HANDLED;
+				}
 				if (tup->rx_in_progress) {
 					ier = tup->ier_shadow;
 					ier |= (UART_IER_RLSI | UART_IER_RTOIE |
@@ -968,6 +1051,8 @@ static void tegra_uart_stop_rx(struct uart_port *u)
 	} else {
 		tegra_uart_handle_rx_pio(tup, port);
 	}
+
+	del_timer_sync(&tup->error_timer);
 }
 
 static void tegra_uart_hw_deinit(struct tegra_uart_port *tup)
@@ -1658,6 +1743,10 @@ static int tegra_uart_probe(struct platform_device *pdev)
 				(unsigned long)tup);
 		tup->timer_timeout_jiffies = msecs_to_jiffies(10);
 	}
+
+	setup_timer(&tup->error_timer, tegra_uart_rx_error_handle_timer,
+			(unsigned long)tup);
+	tup->error_timer_timeout_jiffies = msecs_to_jiffies(500);
 
 	return ret;
 }

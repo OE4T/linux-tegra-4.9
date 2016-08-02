@@ -76,6 +76,8 @@ struct wl_ibss;
 #define PM_BLOCK 1
 #define PM_ENABLE 0
 
+#define DISCONNECT_WAIT_TIME 250
+
 #if defined(DHD_DEBUG)
 #define	WL_ERR(args)									\
 do {										\
@@ -571,6 +573,7 @@ struct bcm_cfg80211 {
 	wait_queue_head_t netif_change_event;
 	wl_if_event_info if_event_info;
 	struct completion send_af_done;
+	struct completion send_disconnected;
 	struct afx_hdl *afx_hdl;
 	struct ap_info *ap_info;
 	struct sta_info *sta_info;

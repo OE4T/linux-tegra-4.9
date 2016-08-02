@@ -4494,6 +4494,7 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 	bool act = false;
 	s32 err = 0;
 	u8 *curbssid;
+	int ret;
 #ifdef CUSTOM_SET_CPUCORE
 	dhd_pub_t *dhd = (dhd_pub_t *)(cfg->pub);
 #endif /* CUSTOM_SET_CPUCORE */
@@ -4530,6 +4531,16 @@ wl_cfg80211_disconnect(struct wiphy *wiphy, struct net_device *dev,
 			wl_clr_drv_status(cfg, DISCONNECTING, dev);
 			WL_ERR(("error (%d)\n", err));
 			return err;
+		}
+		reinit_completion(&cfg->send_disconnected);
+		/* Wait till link down event is received from FW */
+		ret = wait_for_completion_interruptible_timeout(
+			&cfg->send_disconnected,
+			msecs_to_jiffies(DISCONNECT_WAIT_TIME));
+		if (!ret) {
+			WL_ERR(("Link down event is not received\n"));
+		} else if (ret == -ERESTARTSYS) {
+			WL_ERR(("Wait aborted by a signal\n"));
 		}
 	}
 #ifdef CUSTOM_SET_CPUCORE
@@ -9172,6 +9183,7 @@ wl_notify_connect_status(struct bcm_cfg80211 *cfg, bcm_struct_cfgdev *cfgdev,
 					false, GFP_KERNEL);
 				wl_link_down(cfg);
 				wl_init_prof(cfg, ndev);
+				complete(&cfg->send_disconnected);
 			}
 			else if (wl_get_drv_status(cfg, CONNECTING, ndev)) {
 				printk("link down, during connecting\n");
@@ -11563,6 +11575,7 @@ static s32 wl_init_priv(struct bcm_cfg80211 *cfg)
 	sema_init(&cfg->net_wdev_sema, 1);
 	init_waitqueue_head(&cfg->netif_change_event);
 	init_completion(&cfg->send_af_done);
+	init_completion(&cfg->send_disconnected);
 	init_completion(&cfg->iface_disable);
 	wl_init_eq(cfg);
 	err = wl_init_priv_mem(cfg);

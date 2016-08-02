@@ -1128,6 +1128,7 @@ static int ufs_tegra_init(struct ufs_hba *hba)
 	ufs_tegra_config_soc_data(ufs_tegra);
 	ufs_tegra->nvquirks |= NVQUIRK_BROKEN_HIBERN8_ENTRY;
 	hba->spm_lvl = UFS_PM_LVL_3;
+	hba->rpm_lvl = UFS_PM_LVL_1;
 	hba->caps |= UFSHCD_CAP_INTR_AGGR;
 
 	ufs_tegra->ufs_padctrl = devm_padctrl_get(dev, "ufs");
@@ -1273,11 +1274,9 @@ static const struct of_device_id ufs_tegra_of_match[] = {
 static const struct dev_pm_ops ufs_tegra_pm_ops = {
 	.suspend        = ufshcd_pltfrm_suspend,
 	.resume         = ufshcd_pltfrm_resume,
-#ifdef CONFIG_SCSI_UFSHCD_PLATFORM_PM
 	.runtime_suspend = ufshcd_pltfrm_runtime_suspend,
 	.runtime_resume  = ufshcd_pltfrm_runtime_resume,
 	.runtime_idle    = ufshcd_pltfrm_runtime_idle,
-#endif
 };
 
 static struct platform_driver ufs_tegra_platform = {

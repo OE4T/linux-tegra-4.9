@@ -765,7 +765,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 		return 0;
 
 	err = gk20a_buddy_allocator_init(&g->mm.vidmem.allocator, "vidmem",
-			SZ_4K, size, SZ_4K, 0);
+			SZ_4K, size - SZ_4K, SZ_4K, 0);
 	if (err) {
 		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
 				size, err);

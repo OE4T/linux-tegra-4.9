@@ -142,7 +142,7 @@
 	};
 
 	i2c@c250000 {
-		tegra_nct72: onsemi,nct72@4c {
+		tegra_tmp451: ti,tmp451@4c {
 			vdd-supply = <&vdd_1v8_sw>;
 		};
 	};

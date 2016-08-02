@@ -81,6 +81,15 @@ void of_device_make_bus_id(struct device *dev)
 
 	/* Construct the name, using parent nodes if necessary to ensure uniqueness */
 	while (node->parent) {
+		const char *pname;
+
+		/* Try to get name from node */
+		if (!of_property_read_string(node, "aux-device-name", &pname)) {
+			dev_set_name(dev, dev_name(dev) ? "%s:%s" : "%s",
+				     pname, dev_name(dev));
+			return;
+		}
+
 		/*
 		 * If the address can be translated, then that is as much
 		 * uniqueness as we need. Make it the first component and return

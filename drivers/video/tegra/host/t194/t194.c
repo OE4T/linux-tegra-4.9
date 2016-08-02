@@ -405,6 +405,7 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.push_work_done		= true,
 	.ctrl_ops		= &tegra_nvdla_ctrl_ops,
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
+	.module_irq		= 1,
 };
 
 struct nvhost_device_data t19_nvdla1_info = {

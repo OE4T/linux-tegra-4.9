@@ -38,9 +38,11 @@ struct camera_mfi_dev {
 	char name[CAMERA_MAX_NAME_LENGTH];
 	struct regmap *regmap;
 	struct cam_reg reg[CAMERA_REGCACHE_MAX];
+	struct cam_reg prev_reg[CAMERA_REGCACHE_MAX];
 	struct i2c_client *i2c_client;
 	struct cam_i2c_msg msg[CAMERA_REGCACHE_MAX];
 	u32 num_used;
+	u32 prev_num_used;
 	struct list_head list;
 };
 

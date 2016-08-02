@@ -35,18 +35,32 @@ void tegra_camera_dev_mfi_cb(void *stub)
 	u32 idx = 0;
 	struct camera_mfi_dev *itr = NULL;
 	int err = 0;
-
 	mutex_lock(&cmfidev_mutex);
 	list_for_each_entry(itr, &cmfidev_list, list) {
 		if (itr->regmap) {
-			for (idx = 0; idx < itr->num_used; idx++) {
+			/* MFI driver has to delay the focuser writes by one
+			 * frame, which is required to get sync in focus
+			 * position and sharpness.
+			 * So write previous frame focuser settings in current
+			 * frame's callback, and then save current frame focuser
+			 * writes for next callback.
+			 */
+			for (idx = 0; idx < itr->prev_num_used; idx++) {
 				err = regmap_write(itr->regmap,
-						itr->reg[idx].addr,
-						itr->reg[idx].val);
+						itr->prev_reg[idx].addr,
+						itr->prev_reg[idx].val);
 				if (err)
 					pr_err("%s: [%s] regmap_write failed\n",
 						__func__, itr->name);
 			}
+			/* Consume current settings, which would be programmed
+			 * in next frame callback.
+			 */
+			for (idx = 0; idx < itr->num_used; idx++) {
+				itr->prev_reg[idx].addr = itr->reg[idx].addr;
+				itr->prev_reg[idx].val = itr->reg[idx].val;
+			}
+			itr->prev_num_used = itr->num_used;
 		} else if (itr->i2c_client) {
 			for (idx = 0; idx < itr->num_used; idx++) {
 				err = i2c_transfer(itr->i2c_client->adapter,
@@ -243,6 +257,7 @@ int tegra_camera_dev_mfi_add_regmap(
 		INIT_LIST_HEAD(&new_cmfidev->list);
 		new_cmfidev->regmap = regmap;
 		new_cmfidev->num_used = 0;
+		new_cmfidev->prev_num_used = 0;
 		list_add(&new_cmfidev->list, &cmfidev_list);
 	}
 

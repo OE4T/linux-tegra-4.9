@@ -26,10 +26,10 @@
 	i2c@c250000 {
 		status = "okay";
 
-		tegra_nct72: onsemi,nct72@4c {
+		tegra_tmp451: ti,tmp451@4c {
 			status = "okay";
 			#thermal-sensor-cells = <1>;
-			compatible = "onsemi,nct72";
+			compatible = "ti,tmp451";
 			reg = <0x4c>;
 			sensor-name = "tmp451-ext";
 			supported-hwrev = <1>;
@@ -60,7 +60,7 @@
 			status = "okay";
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
-			thermal-sensors = <&tegra_nct72 0>;
+			thermal-sensors = <&tegra_tmp451 0>;
 
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";
@@ -79,7 +79,7 @@
 			status = "okay";
 			polling-delay = <0>;
 			polling-delay-passive = <1000>;
-			thermal-sensors = <&tegra_nct72 1>;
+			thermal-sensors = <&tegra_tmp451 1>;
 
 			thermal-zone-params {
 				governor-name = "pid_thermal_gov";

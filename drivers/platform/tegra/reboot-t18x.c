@@ -21,7 +21,7 @@
 #include <asm/io.h>
 
 #include "iomap.h"
-#include <soc/tegra/pmc.h>
+#include <linux/tegra-pmc.h>
 
 static void program_reboot_reason(const char *cmd)
 {

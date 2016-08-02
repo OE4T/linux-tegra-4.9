@@ -91,7 +91,6 @@
 struct tegra_gpio_controller {
 	int controller;
 	int irq;
-	spinlock_t lvl_lock[4];
 	u32 cnf[MAX_PORTS * MAX_PINS_PER_PORT];
 	u32 dbc[MAX_PORTS * MAX_PINS_PER_PORT];
 	u32 out_ctrl[MAX_PORTS * MAX_PINS_PER_PORT];
@@ -197,10 +196,8 @@ static inline bool is_gpio_accessible(u32 offset)
 	u32 i, j;
 	bool found = false;
 
-	if (controller == -1) {
-		pr_err("Invalid gpio number %d\n", offset);
+	if (controller == -1)
 		return false;
-	}
 
 	for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {
 		for (j = 0; j < MAX_GPIO_PORTS; j++) {
@@ -535,10 +532,9 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	struct resource *res;
 	struct tegra_gpio_controller *tg_cont;
 	void __iomem *base;
-	u32 i, j;
+	u32 i;
 	int gpio;
 	int ret;
-	unsigned long flags;
 
 	read_gpio_mapping_data(pdev);
 
@@ -624,6 +620,10 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	for (gpio = 0; gpio < tegra_gpio_chip.ngpio; gpio++) {
 		int irq = irq_create_mapping(irq_domain, gpio);
 
+		if (is_gpio_accessible(gpio))
+			/* mask interrupts for this GPIO */
+			tegra_gpio_update(gpio, GPIO_ENB_CONFIG_REG, GPIO_INT_FUNC_BIT, 0);
+
 		tg_cont = &tegra_gpio_controllers[controller_index(gpio)];
 
 		irq_set_chip_data(irq, tg_cont);
@@ -642,17 +642,13 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		irq_domain_remove(irq_domain);
 		return ret;
 	}
-	local_irq_save(flags);
+
 	for (i = 0; i < tegra_gpio_bank_count; i++) {
 		tg_cont = &tegra_gpio_controllers[i];
-
-		for (j = 0; j < 4; j++)
-			spin_lock_init(&tg_cont->lvl_lock[j]);
-
 		irq_set_chained_handler_and_data(tg_cont->irq,
 					tegra_gpio_irq_handler, tg_cont);
 	}
-	local_irq_restore(flags);
+
 	return 0;
 }
 

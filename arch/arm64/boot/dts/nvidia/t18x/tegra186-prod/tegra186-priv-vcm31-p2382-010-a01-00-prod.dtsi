@@ -341,4 +341,72 @@
 			};
 		};
 	};
+        /*SPIB*/
+	spi@3210000 {
+		status = "okay";
+		prod-settings {
+			mask-one-style;
+			prod_c_cs0 {
+				board {
+					prod = <0x04 0x00000fff 0x00000000
+						0x08 0x000000ff 0x00000000
+						0x0c 0x0000003f 0x00000020>;
+				};
+			};
+			prod_c_cs1 {
+				board {
+					prod = <0x04 0x00000fff 0x00000000
+						0x08 0x0000ff00 0x00000000
+						0x0c 0x00003f00 0x00002000>;
+                                };
+			};
+		};
+	};
+
+        /*SPIC*/
+	spi@3240000 {
+		status = "okay";
+		prod-settings {
+			mask-one-style;
+			prod_c_cs0 {
+				board {
+				    prod = <0x04 0x00000fff 0x00000000
+					    0x08 0x000000ff 0x00000000
+					    0x0c 0x0000003f 0x00000020>;
+				};
+			};
+		};
+	};
+
+        /*SPIA*/
+	spi@c260000 {
+		status = "okay";
+		prod-settings {
+			mask-one-style;
+			prod_c_cs0 {
+				board {
+				    prod = <0x04 0x00000fff 0x00000000
+					    0x08 0x000000ff 0x00000000
+					    0x0c 0x0000003f 0x0000000a>;
+				};
+			};
+		};
+	};
+
+        /*QSPI*/
+	spi@3270000 {
+		status = "okay";
+		prod-settings {
+			mask-one-style;
+			prod_c_cs0 {
+				board {
+				    prod = <0x04 0x00000fff 0x00000000
+		                            0x08 0x000000ff 0x00000000
+		                            0x0c 0x0000003f 0x00000020
+		                            0x198 0x1f1f1f1f 0x00000000>;
+				};
+			};
+		};
+	};
+
 };

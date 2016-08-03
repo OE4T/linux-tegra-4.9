@@ -668,27 +668,6 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		memcpy(&dc->shadow_windows[win->idx], win, sizeof(*win));
 	}
 
-	/*
-	 * If this HEAD has already reserved exclusive use of the COMMON
-	 * channel, go ahead ahd program the ihub registers (assembly)
-	 * if they haven't been programmed yet.
-	 */
-	if (dc->common_channel_reserved && dc->new_imp_results_needed) {
-		tegra_nvdisp_program_imp_results(dc);
-
-		/*
-		 * The ihub registers live on the COMMON channel. Update the
-		 * masks accordingly so that the COMMON channel state is
-		 * promoted along with the WINDOW channel state.
-		 */
-		update_mask |=
-			nvdisp_cmd_state_ctrl_common_act_update_enable_f();
-		act_req_mask |= nvdisp_cmd_state_ctrl_common_act_req_enable_f();
-
-		dc->new_imp_results_needed = false;
-		dc->common_channel_pending = true;
-	}
-
 	for (i = 0; i < n; i++) {
 		struct tegra_dc_win *win = windows[i];
 		struct tegra_dc_win *dc_win;
@@ -820,6 +799,27 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		}
 
 		trace_window_update(dc, win);
+	}
+
+	/* If new IMP results are pending, go ahead and program them. */
+	if (dc->imp_dirty) {
+		tegra_nvdisp_program_imp_results(dc);
+
+		/*
+		 * The ihub registers live on the COMMON channel. Update the
+		 * masks accordingly so that the COMMON channel state is
+		 * promoted along with the WINDOW channel state.
+		 */
+		update_mask |=
+			nvdisp_cmd_state_ctrl_common_act_update_enable_f();
+		act_req_mask |= nvdisp_cmd_state_ctrl_common_act_req_enable_f();
+
+		/*
+		 * We can safely set the pending flag here since we're holding
+		 * the global nvdisp lock.
+		 */
+		dc->common_channel_pending = true;
+		dc->imp_dirty = false;
 	}
 
 	if (tegra_cpu_is_asim())

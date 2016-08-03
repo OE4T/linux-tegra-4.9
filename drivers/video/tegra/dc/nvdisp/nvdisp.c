@@ -41,6 +41,8 @@
 
 DEFINE_MUTEX(tegra_nvdisp_lock);
 
+LIST_HEAD(nvdisp_imp_settings_queue);
+
 static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_reservation_wq);
 static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_promotion_wq);
 
@@ -2226,8 +2228,9 @@ static void tegra_nvdisp_parse_imp_head_results(
 		sizeof(*res->pool_config_entries_win) * num_wins);
 }
 
-static int tegra_nvdisp_parse_imp_results(struct tegra_dc *dc,
-			struct tegra_dc_ext_flip_user_data *flip_user_data)
+static int tegra_nvdisp_parse_imp_results(
+			struct tegra_dc_ext_flip_user_data *flip_user_data,
+			struct tegra_dc_imp_settings *imp_settings)
 {
 	void __user *ext_res_ptr =
 		(void __user *)flip_user_data->imp_ptr.results;
@@ -2235,16 +2238,30 @@ static int tegra_nvdisp_parse_imp_results(struct tegra_dc *dc,
 	int i;
 
 	if (copy_from_user(ext_res, ext_res_ptr, sizeof(ext_res))) {
-		dev_err(&dc->ndev->dev,
-			"Failed to copy IMP results from user\n");
+		pr_err("Failed to copy IMP results from user\n");
 		return -EFAULT;
 	}
 
 	for (i = 0; i < TEGRA_MAX_DC; i++)
-		tegra_nvdisp_parse_imp_head_results(&dc->imp_results[i],
-							&ext_res[i]);
+		tegra_nvdisp_parse_imp_head_results(
+			&imp_settings->imp_results[i], &ext_res[i]);
 
 	return 0;
+}
+
+static struct tegra_dc_imp_settings *tegra_nvdisp_get_pending_imp_settings(void)
+{
+	return list_first_entry_or_null(&nvdisp_imp_settings_queue,
+					struct tegra_dc_imp_settings,
+					imp_node);
+}
+
+static struct tegra_dc_imp_settings *tegra_nvdisp_get_last_imp_settings(void)
+{
+	return !list_empty(&nvdisp_imp_settings_queue) ?
+		list_last_entry(&nvdisp_imp_settings_queue,
+				struct tegra_dc_imp_settings,
+				imp_node) : NULL;
 }
 
 static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
@@ -2264,27 +2281,42 @@ static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 	dc->common_channel_pending = true;
 }
 
-static int tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
+static void tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
 {
-	int ret = 0;
+	DEFINE_WAIT(wait);
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	ret = ___wait_event(nvdisp_common_channel_promotion_wq,
-		___wait_cond_timeout(!dc->common_channel_pending),
-		TASK_INTERRUPTIBLE, 0, HZ,
+	if (!dc->common_channel_pending) {
 		mutex_unlock(&tegra_nvdisp_lock);
-		__ret = schedule_timeout(__ret);
-		mutex_lock(&tegra_nvdisp_lock));
+		return;
+	}
 
+	/*
+	 * Use an exclusive wait since only one HEAD can program COMMON channel
+	 * state at any given time.
+	 */
+	prepare_to_wait_exclusive(&nvdisp_common_channel_promotion_wq,
+				&wait,
+				TASK_INTERRUPTIBLE);
+	if (dc->common_channel_pending) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		schedule();
+		mutex_lock(&tegra_nvdisp_lock);
+	}
+
+	finish_wait(&nvdisp_common_channel_promotion_wq, &wait);
 	mutex_unlock(&tegra_nvdisp_lock);
-	return ret;
 }
 
 static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
 {
 	dc->common_channel_pending = false;
-	wake_up(&nvdisp_common_channel_promotion_wq);
+
+	/*
+	 * Selectively wake up one exclusive waiter. There should only be one.
+	 */
+	wake_up_nr(&nvdisp_common_channel_promotion_wq, 1);
 }
 
 static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
@@ -2320,19 +2352,23 @@ static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
 	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
 }
 
-static void tegra_nvdisp_program_all_needed_mempool(struct tegra_dc *dc)
+static void tegra_nvdisp_program_all_needed_mempool(struct tegra_dc *dc,
+				struct tegra_dc_imp_settings *imp_settings)
 {
 	int i;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
-		if (other_dc && other_dc->new_mempool_needed)
+		if (other_dc &&
+			imp_settings->update_mempool[other_dc->ctrl_num])
 			tegra_nvdisp_program_dc_mempool(other_dc,
-				&dc->imp_results[other_dc->ctrl_num]);
+				&imp_settings->imp_results[other_dc->ctrl_num]);
 	}
 }
 
-static void tegra_nvdisp_handle_mempool_allocation(struct tegra_dc *dc)
+static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
+				struct tegra_dc_imp_settings *imp_settings,
+				struct tegra_dc_imp_settings *last_imp_settings)
 {
 	/*
 	 * Per the register manual, SW must follow these rules in order to
@@ -2350,44 +2386,51 @@ static void tegra_nvdisp_handle_mempool_allocation(struct tegra_dc *dc)
 	 * its head-specific state and the state of any windows that it owns.
 	 * Suppose we have three active heads - H0, H1, H2 - and the state of H0
 	 * is changing in a manner that affects the mempool allocation for some
-	 * subset of the windows on all three heads. Only one PROPOSE can be
-	 * active at any given time, which means that the state of H1 and H2
-	 * cannot be updated during this period.
+	 * subset of the windows on all three heads. Only one HEAD can update
+	 * the current IMP settings at any given time, which means that the
+	 * state of H1 and H2 cannot be updated during this period.
 	 *
 	 * Since the state of H1 and H2 isn't being updated, the mempool for
 	 * their windows will either all decrease or all increase:
 	 * - In the first case, we will promote the mempool for these windows
-	 *   during PROPOSE, before the new window and common channel state for
-	 *   H0 is updated in the subsequent flip.
+	 *   before the new window and common channel state for H0 is updated.
 	 * - In the second case, we will phase in the mempool for these windows
-	 *   during the flip worker's cleanup, after the new window and common
-	 *   channel state for H0 has already been activated.
+	 *   after the new window and common channel state for H0 has already
+	 *   been activated.
 	 *
 	 * Note that it doesn't matter if we're reducing the mempool for some of
 	 * H0's windows while increasing the mempool for its other windows since
 	 * these updates are all contained to H0 and will be promoted together
 	 * on its next vblank.
 	 */
-	bool mempool_all_decreasing = true;
+	bool mempool_all_decreasing = false;
 	int i, j;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		struct tegra_dc_imp_head_results *new_result;
+		struct tegra_dc_imp_head_results *old_result = NULL;
+		struct tegra_dc_imp_head_results *new_result = NULL;
 		struct tegra_dc *other_dc;
 		u32 old_val, new_val;
+		u32 ctrl_num;
 
 		other_dc = tegra_dc_get_dc(i);
 		if (!other_dc || !other_dc->enabled || other_dc == dc)
 			continue;
 
-		new_result = &dc->imp_results[other_dc->ctrl_num];
-		old_val = nvdisp_ihub_cursor_pool_config_entries_f(
-				tegra_dc_readl(other_dc,
-				nvdisp_ihub_cursor_pool_config_r()));
+		ctrl_num = other_dc->ctrl_num;
+		if (last_imp_settings) {
+			old_result = &last_imp_settings->imp_results[ctrl_num];
+			old_val = old_result->pool_config_entries_cursor;
+		} else {
+			old_val = nvdisp_ihub_cursor_pool_config_entries_f(
+					tegra_dc_readl(other_dc,
+					nvdisp_ihub_cursor_pool_config_r()));
+		}
+		new_result = &imp_settings->imp_results[ctrl_num];
 		new_val = new_result->pool_config_entries_cursor;
 
 		if (new_val != old_val) {
-			other_dc->new_mempool_needed = true;
+			imp_settings->update_mempool[ctrl_num] = true;
 			mempool_all_decreasing = (new_val < old_val);
 			continue;
 		}
@@ -2401,24 +2444,103 @@ static void tegra_nvdisp_handle_mempool_allocation(struct tegra_dc *dc)
 			if (!win)
 				continue;
 
-			old_val = win_ihub_pool_config_entries_f(
-					nvdisp_win_read(win,
-					win_ihub_pool_config_r()));
+			/*
+			 * It's valid to use the index j across both cases since
+			 * the window state for the other heads isn't changing
+			 * here.
+			 */
+			if (old_result)
+				old_val =
+					old_result->pool_config_entries_win[j];
+			else
+				old_val = win_ihub_pool_config_entries_f(
+						nvdisp_win_read(win,
+						win_ihub_pool_config_r()));
 			new_val = new_result->pool_config_entries_win[j];
 			if (new_val != old_val) {
-				other_dc->new_mempool_needed = true;
+				imp_settings->update_mempool[ctrl_num] = true;
 				mempool_all_decreasing = (new_val < old_val);
 				break;
 			}
 		}
 	}
 
-	if (mempool_all_decreasing)
-		tegra_nvdisp_program_all_needed_mempool(dc);
+	imp_settings->program_mempool_before_update = mempool_all_decreasing;
 }
 
-static void tegra_nvdisp_generate_tg_dep_graph(struct tegra_dc *dc,
-					u32 tg_assignments[DC_N_WINDOWS],
+static void tegra_nvdisp_fill_tg_lookup_tables(int *dep_left,
+				u32 cur_tg_assignments[DC_N_WINDOWS],
+				u32 new_tg_assignments[DC_N_WINDOWS],
+				int tg_owners[DC_N_WINDOWS],
+				int owner_dc_idx[DC_N_WINDOWS],
+				struct tegra_dc_imp_settings *imp_settings,
+				struct tegra_dc_imp_settings *last_imp_settings)
+{
+	struct tegra_dc_imp_head_results *res = NULL;
+	struct tegra_dc_win *win = NULL;
+	struct tegra_dc *other_dc = NULL;
+	int win_id;
+	int i, j;
+
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		other_dc = tegra_dc_get_dc(i);
+		if (!other_dc || !other_dc->enabled)
+			continue;
+
+		if (last_imp_settings)
+			res = &last_imp_settings->imp_results[i];
+		else
+			res = &imp_settings->imp_results[i];
+
+		for (j = 0; j < res->num_windows; j++) {
+			u32 cur_tg;
+
+			win_id = res->win_ids[j];
+			if (last_imp_settings) {
+				cur_tg = res->thread_group_win[j];
+			} else {
+				win = tegra_dc_get_window(other_dc, win_id);
+				if (!win)
+					continue;
+
+				cur_tg = nvdisp_win_read(win,
+						win_ihub_thread_group_r());
+				if (cur_tg &
+					win_ihub_thread_group_enable_yes_f())
+					cur_tg = (cur_tg >> 1) & 0x1f;
+				else
+					cur_tg = NO_THREAD_GROUP;
+			}
+
+			cur_tg_assignments[win_id] = cur_tg;
+			if (cur_tg < DC_N_WINDOWS)
+				tg_owners[cur_tg] = win_id;
+		}
+	}
+
+	for (i = 0; i < TEGRA_MAX_DC; i++) {
+		other_dc = tegra_dc_get_dc(i);
+		if (!other_dc || !other_dc->enabled)
+			continue;
+
+		res = &imp_settings->imp_results[i];
+		for (j = 0; j < res->num_windows; j++) {
+			u32 new_tg;
+
+			win_id = res->win_ids[j];
+			win = tegra_dc_get_window(other_dc, win_id);
+			if (!win)
+				continue;
+
+			new_tg = res->thread_group_win[j];
+			new_tg_assignments[win_id] = new_tg;
+			owner_dc_idx[win_id] = i;
+			(*dep_left)++;
+		}
+	}
+}
+
+static void tegra_nvdisp_generate_tg_dep_graph(u32 tg_assignments[DC_N_WINDOWS],
 					int tg_owners[DC_N_WINDOWS],
 					int in_edges[DC_N_WINDOWS],
 					int out_edges[DC_N_WINDOWS])
@@ -2461,7 +2583,9 @@ static void tegra_nvdisp_generate_tg_dep_graph(struct tegra_dc *dc,
 	}
 }
 
-static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
+static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc,
+				struct tegra_dc_imp_settings *imp_settings,
+				struct tegra_dc_imp_settings *last_imp_settings)
 {
 	/*
 	 * This algorithm generates a correct - although not necessarily optimal
@@ -2498,13 +2622,10 @@ static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
 	int in_edges[DC_N_WINDOWS];
 	int cur_out_edges[DC_N_WINDOWS], new_out_edges[DC_N_WINDOWS];
 	int dep_left = 0, dep_mask = 0;
-	int win_id, req_idx = 0;
-	int i, j;
-	struct tegra_dc *other_dc;
+	int req_idx = 0;
 	bool dc_req_filled = false;
 	u32 cur_tg_assignments[DC_N_WINDOWS];
 	u32 new_tg_assignments[DC_N_WINDOWS];
-	u32 cur_tg, new_tg;
 
 	/* initialize arrays with dummy values */
 	memset(tg_owners, -1, sizeof(tg_owners));
@@ -2515,53 +2636,27 @@ static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
 	memset(new_tg_assignments, NO_THREAD_GROUP, sizeof(new_tg_assignments));
 
 	/* fill in the lookup arrays */
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		struct tegra_dc_imp_head_results *res;
-
-		other_dc = tegra_dc_get_dc(i);
-		if (!other_dc)
-			continue;
-
-		res = &dc->imp_results[i];
-		for (j = 0; j < res->num_windows; j++) {
-			struct tegra_dc_win *win;
-
-			win_id = res->win_ids[j];
-			win = tegra_dc_get_window(other_dc, win_id);
-			if (!win)
-				continue;
-
-			cur_tg = nvdisp_win_read(win,
-						win_ihub_thread_group_r());
-			if (cur_tg & win_ihub_thread_group_enable_yes_f())
-				cur_tg = (cur_tg >> 1) & 0x1f;
-			else
-				cur_tg = NO_THREAD_GROUP;
-
-			cur_tg_assignments[win_id] = cur_tg;
-			if (cur_tg < DC_N_WINDOWS)
-				tg_owners[cur_tg] = win_id;
-			new_tg = res->thread_group_win[j];
-			new_tg_assignments[win_id] = new_tg;
-
-			owner_dc_idx[win_id] = i;
-			dep_left += 1;
-		}
-	}
+	tegra_nvdisp_fill_tg_lookup_tables(&dep_left,
+					cur_tg_assignments,
+					new_tg_assignments,
+					tg_owners,
+					owner_dc_idx,
+					imp_settings,
+					last_imp_settings);
 
 	/* Step 1 */
-	tegra_nvdisp_generate_tg_dep_graph(dc,
-					new_tg_assignments,
+	tegra_nvdisp_generate_tg_dep_graph(new_tg_assignments,
 					tg_owners,
 					in_edges,
 					new_out_edges);
 
 	/* Step 2 proper */
-	memset(dc->tg_reqs, 0, sizeof(dc->tg_reqs));
+	memset(imp_settings->tg_reqs, 0, sizeof(imp_settings->tg_reqs));
 	while (dep_left > 0) {
-		struct tegra_nvdisp_tg_req reqs[TEGRA_MAX_DC];
+		struct tegra_dc_tg_req reqs[TEGRA_MAX_DC];
 		bool dep_decreased = false;
-		int dc_idx;
+		int dc_idx, win_id;
+		int i;
 
 		memset(reqs, 0, sizeof(reqs));
 		memcpy(cur_out_edges, new_out_edges, sizeof(cur_out_edges));
@@ -2573,7 +2668,8 @@ static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
 
 			/* Step 2a */
 			while (win_id != -1) {
-				struct tegra_nvdisp_tg_req *req;
+				struct tegra_dc_tg_req *req;
+				u32 cur_tg, new_tg;
 
 				/* If this window isn't active, skip it. */
 				dc_idx = owner_dc_idx[win_id];
@@ -2618,7 +2714,7 @@ static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
 
 		/* Step 2e */
 		for (i = 0; i < TEGRA_MAX_DC; i++) {
-			other_dc = tegra_dc_get_dc(i);
+			struct tegra_dc *other_dc = tegra_dc_get_dc(i);
 			if (!other_dc || !reqs[i].num_wins)
 				continue;
 
@@ -2629,7 +2725,7 @@ static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
 				dc_req_filled = true;
 			}
 
-			dc->tg_reqs[req_idx++] = reqs[i];
+			imp_settings->tg_reqs[req_idx++] = reqs[i];
 		}
 	}
 
@@ -2637,16 +2733,17 @@ static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc)
 }
 
 static void tegra_nvdisp_program_thread_group_reqs(struct tegra_dc *dc,
-						int start,
-						int end)
+				struct tegra_dc_imp_settings *imp_settings,
+				int start,
+				int end)
 {
 	int i, j;
 
 	for (i = start; i < end; i++) {
-		struct tegra_nvdisp_tg_req *req;
+		struct tegra_dc_tg_req *req;
 		struct tegra_dc *owner_dc;
 
-		req = &dc->tg_reqs[i];
+		req = &imp_settings->tg_reqs[i];
 		owner_dc = tegra_dc_get_dc(req->dc_idx);
 		if (!owner_dc || !owner_dc->enabled)
 			continue;
@@ -2682,16 +2779,17 @@ static void tegra_nvdisp_program_thread_group_reqs(struct tegra_dc *dc,
 }
 
 static void tegra_nvdisp_program_thread_groups(struct tegra_dc *dc,
-					bool before_flip)
+				struct tegra_dc_imp_settings *imp_settings,
+				bool before_window_update)
 {
 	int start, end;
 	int i;
 
 	for (i = 0; i < DC_N_WINDOWS; i++) {
-		struct tegra_nvdisp_tg_req *req;
+		struct tegra_dc_tg_req *req;
 		struct tegra_dc *other_dc;
 
-		req = &dc->tg_reqs[i];
+		req = &imp_settings->tg_reqs[i];
 		if (!req->num_wins)
 			break;
 
@@ -2700,7 +2798,7 @@ static void tegra_nvdisp_program_thread_groups(struct tegra_dc *dc,
 			break;
 	}
 
-	if (before_flip) {
+	if (before_window_update) {
 		start = 0;
 		end = i;
 	} else {
@@ -2708,49 +2806,53 @@ static void tegra_nvdisp_program_thread_groups(struct tegra_dc *dc,
 		end = DC_N_WINDOWS;
 	}
 
-	tegra_nvdisp_program_thread_group_reqs(dc, start, end);
+	tegra_nvdisp_program_thread_group_reqs(dc, imp_settings, start, end);
 }
 
-static int tegra_nvdisp_handle_tg_assignments(struct tegra_dc *dc)
+void tegra_nvdisp_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 {
-	int ret = 0;
+	struct tegra_dc_imp_settings *imp_settings = NULL;
+	bool program_mempool = false;
 
-	ret = tegra_nvdisp_generate_tg_ordering(dc);
-	if (ret)
-		return ret;
-	tegra_nvdisp_program_thread_groups(dc, true);
-
-	return ret;
-}
-
-void tegra_nvdisp_complete_imp_programming(struct tegra_dc *dc)
-{
 	mutex_lock(&tegra_nvdisp_lock);
 
-	if (!dc->need_to_complete_imp) {
+	imp_settings = tegra_nvdisp_get_pending_imp_settings();
+	if (!imp_settings) {
 		mutex_unlock(&tegra_nvdisp_lock);
 		return;
 	}
-	dc->need_to_complete_imp = false;
+	program_mempool = !(before_win_update ^
+				imp_settings->program_mempool_before_update);
 
 	mutex_unlock(&tegra_nvdisp_lock);
 
 	/* Make sure there's no pending change on the current head. */
 	tegra_nvdisp_wait_for_common_channel_to_promote(dc);
 
-	tegra_nvdisp_program_all_needed_mempool(dc);
-	tegra_nvdisp_program_thread_groups(dc, false);
+	if (program_mempool)
+		tegra_nvdisp_program_all_needed_mempool(dc, imp_settings);
+	tegra_nvdisp_program_thread_groups(dc, imp_settings, before_win_update);
 
-	/* Re-enable ihub latency events. */
-	tegra_dc_writel(dc,
-		tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
-		nvdisp_ihub_misc_ctl_latency_event_enable_f(),
-		nvdisp_ihub_misc_ctl_r());
+	if (!before_win_update) {
+		mutex_lock(&tegra_nvdisp_lock);
 
-	/* Release the common channel. */
-	tegra_nvdisp_release_common_channel(dc);
+		/* Re-enable ihub latency events. */
+		tegra_dc_writel(dc,
+			tegra_dc_readl(dc, nvdisp_ihub_misc_ctl_r()) |
+			nvdisp_ihub_misc_ctl_latency_event_enable_f(),
+			nvdisp_ihub_misc_ctl_r());
+
+		/*
+		 * These IMP settings are no longer pending. Remove them from
+		 * the global queue and free the associated memory.
+		 */
+		list_del(&imp_settings->imp_node);
+		kfree(imp_settings);
+
+		mutex_unlock(&tegra_nvdisp_lock);
+	}
 }
-EXPORT_SYMBOL(tegra_nvdisp_complete_imp_programming);
+EXPORT_SYMBOL(tegra_nvdisp_adjust_imp);
 
 static bool tegra_nvdisp_common_channel_is_free(void)
 {
@@ -2765,30 +2867,46 @@ static bool tegra_nvdisp_common_channel_is_free(void)
 	return true;
 }
 
-int tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
+void tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
 {
-	int ret = 0;
+	DEFINE_WAIT(wait);
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	ret = ___wait_event(nvdisp_common_channel_reservation_wq,
-		___wait_cond_timeout(tegra_nvdisp_common_channel_is_free()),
-		TASK_INTERRUPTIBLE, 0, HZ,
+	if (tegra_nvdisp_common_channel_is_free())
+		goto reserve_and_unlock;
+
+	/*
+	 * Use an exclusive wait since only one HEAD can reserve the COMMON
+	 * channel at any given time. Exclusive waiters are also queued in
+	 * a FIFO order, which guarantees that the pending waiters are always
+	 * in-sync with the global list of pending IMP requests.
+	 */
+	prepare_to_wait_exclusive(&nvdisp_common_channel_reservation_wq,
+				&wait,
+				TASK_INTERRUPTIBLE);
+	if (!tegra_nvdisp_common_channel_is_free()) {
 		mutex_unlock(&tegra_nvdisp_lock);
-		__ret = schedule_timeout(__ret);
-		mutex_lock(&tegra_nvdisp_lock));
+		schedule();
+		mutex_lock(&tegra_nvdisp_lock);
+	}
 
+	finish_wait(&nvdisp_common_channel_reservation_wq, &wait);
+
+reserve_and_unlock:
 	dc->common_channel_reserved = true;
-
 	mutex_unlock(&tegra_nvdisp_lock);
-	return ret;
 }
+EXPORT_SYMBOL(tegra_nvdisp_reserve_common_channel);
 
 void tegra_nvdisp_release_common_channel(struct tegra_dc *dc)
 {
 	dc->common_channel_reserved = false;
-	wake_up(&nvdisp_common_channel_reservation_wq);
+
+	/* Selectively wake up the next exclusive waiter. */
+	wake_up_nr(&nvdisp_common_channel_reservation_wq, 1);
 }
+EXPORT_SYMBOL(tegra_nvdisp_release_common_channel);
 
 void tegra_nvdisp_handle_common_channel_promotion(struct tegra_dc *dc)
 {
@@ -2802,36 +2920,57 @@ void tegra_nvdisp_handle_common_channel_promotion(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_nvdisp_handle_common_channel_promotion);
 
-int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
+int tegra_nvdisp_handle_imp_propose(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data)
 {
-	int ret;
+	struct tegra_dc_imp_settings *imp_settings = NULL;
+	struct tegra_dc_imp_settings *last_imp_settings = NULL;
+	int ret = 0;
+
+	imp_settings = kzalloc(sizeof(*imp_settings), GFP_KERNEL);
+	if (!imp_settings) {
+		dev_err(&dc->ndev->dev,
+			"Failed to allocate memory for IMP settings\n");
+		ret = -ENOMEM;
+		goto free_and_ret;
+	}
+	INIT_LIST_HEAD(&imp_settings->imp_node);
+
+	ret = tegra_nvdisp_parse_imp_results(flip_user_data, imp_settings);
+	if (ret)
+		goto free_and_ret;
+
+	mutex_lock(&tegra_nvdisp_lock);
 
 	/*
-	 * This function is called during the PROPOSE phase. Once the COMMON
-	 * channel is reserved, it will eventually be released after the
-	 * ihub settings get promoted on vblank.
+	 * We need to compare the new proposed mempool and thread group values
+	 * with the previous configuration. It's always valid to check the last
+	 * pending item since IMP settings only get queued if they pass PROPOSE,
+	 * and the settings are programmed in their queued order. If the queue
+	 * is empty, we will read back the active values of the registers
+	 * instead.
 	 */
-	tegra_nvdisp_reserve_common_channel(dc);
+	last_imp_settings = tegra_nvdisp_get_last_imp_settings();
+	tegra_nvdisp_generate_mempool_ordering(dc,
+					imp_settings,
+					last_imp_settings);
+	ret = tegra_nvdisp_generate_tg_ordering(dc,
+					imp_settings,
+					last_imp_settings);
+	if (ret) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		goto free_and_ret;
+	}
+	list_add_tail(&imp_settings->imp_node, &nvdisp_imp_settings_queue);
 
-	ret = tegra_nvdisp_parse_imp_results(dc, flip_user_data);
-	if (ret)
-		goto release_and_ret;
-
-	tegra_nvdisp_handle_mempool_allocation(dc);
-	ret = tegra_nvdisp_handle_tg_assignments(dc);
-	if (ret)
-		goto release_and_ret;
-
-	dc->new_imp_results_needed = true;
-	dc->need_to_complete_imp = true;
-
+	mutex_unlock(&tegra_nvdisp_lock);
 	return ret;
-release_and_ret:
-	tegra_nvdisp_release_common_channel(dc);
+
+free_and_ret:
+	kfree(imp_settings);
 	return ret;
 }
-EXPORT_SYMBOL(tegra_nvdisp_process_imp_results);
+EXPORT_SYMBOL(tegra_nvdisp_handle_imp_propose);
 
 static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			struct tegra_dc_imp_head_results *imp_head_results,
@@ -2858,7 +2997,7 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 		/*
 		 * Since these wgrp latency registers take effect immediately,
 		 * re-enable latency events after the rest of the window channel
-		 * state for this flip has promoted.
+		 * state has promoted.
 		 */
 		val = imp_head_results->thresh_lwm_dvfs_win[i];
 		tegra_dc_writel(dc,
@@ -2931,20 +3070,25 @@ static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 
 void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 {
+	struct tegra_dc_imp_settings *imp_settings = NULL;
 	u32 val = 0;
 	int i;
+
+	imp_settings = tegra_nvdisp_get_pending_imp_settings();
+	if (!imp_settings)
+		return;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
 		if (other_dc && other_dc->enabled)
 			tegra_nvdisp_program_imp_head_results(other_dc,
-					&dc->imp_results[other_dc->ctrl_num],
-					dc->ctrl_num);
+				&imp_settings->imp_results[other_dc->ctrl_num],
+				dc->ctrl_num);
 	}
 
 	/* program common win and cursor fetch meter slots */
-	val = (dc->imp_results[dc->ctrl_num].window_slots_value) |
-		(dc->imp_results[dc->ctrl_num].cursor_slots_value << 8);
+	val = (imp_settings->imp_results[dc->ctrl_num].window_slots_value) |
+	(imp_settings->imp_results[dc->ctrl_num].cursor_slots_value << 8);
 	tegra_dc_writel(dc, val, nvdisp_ihub_common_fetch_meter_r());
 }
 #undef NO_THREAD_GROUP

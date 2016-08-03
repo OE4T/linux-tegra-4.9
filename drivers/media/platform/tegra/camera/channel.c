@@ -38,7 +38,8 @@
 #include <mach/io_dpd.h>
 
 #include "mc_common.h"
-#include "../vi/vi.h"
+#include "vi/vi.h"
+#include "mipical/mipi_cal.h"
 
 #define FRAMERATE	30
 #define BPP_MEM		2
@@ -700,13 +701,10 @@ static int tegra_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
 			goto error_set_stream;
-		/*
-		nvhost_module_enable_clk(chan->vi->dev);
 		tegra_mipi_bias_pad_enable();
 		mutex_lock(&chan->vi->mipical_lock);
-		tegra_channel_mipi_cal(chan, 1);
+		csi_mipi_cal(chan, 1);
 		mutex_unlock(&chan->vi->mipical_lock);
-		nvhost_module_disable_clk(chan->vi->dev);*/
 		return ret;
 	}
 	chan->capture_state = CAPTURE_IDLE;
@@ -777,6 +775,7 @@ static void tegra_channel_stop_streaming(struct vb2_queue *vq)
 	if (!chan->vi->pg_mode) {
 		tegra_channel_set_stream(chan, false);
 		media_entity_pipeline_stop(&chan->video.entity);
+		tegra_mipi_bias_pad_disable();
 	}
 
 	if (!chan->bypass)
@@ -1625,7 +1624,6 @@ static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index)
 		/* maximum of 4 lanes are present per CSI block */
 		chan->csibase[idx] = vi->iomem +
 					TEGRA_VI_CSI_BASE(chan->port[idx]);
-		set_csi_portinfo(vi->csi, chan->port[idx], numlanes);
 	}
 	/* based on gang mode valid ports will be updated - set default to 1 */
 	chan->valid_ports = chan->total_ports ? 1 : 0;
@@ -1642,7 +1640,7 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 
 	chan->vi = vi;
 	//chan->fops = vi->vi->data->channel_fops;
-	//tegra_channel_csi_init(vi, index);
+	tegra_channel_csi_init(vi, index);
 
 	chan->width_align = TEGRA_WIDTH_ALIGNMENT;
 	chan->stride_align = TEGRA_STRIDE_ALIGNMENT;

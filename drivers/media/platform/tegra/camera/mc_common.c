@@ -312,6 +312,7 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	mc_vi->dev = &pdev->dev;
 	INIT_LIST_HEAD(&mc_vi->entities);
         mc_vi->bypass = true;
+	mutex_init(&mc_vi->mipical_lock);
 	err = tegra_vi_v4l2_init(mc_vi);
 	if (err < 0)
 		goto mc_init_fail;

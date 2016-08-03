@@ -135,9 +135,6 @@ static int t18x_denver_enter_state(
 	/* Todo: Based on the Latency number reprogram deepest */
 	/*       CC state allowed if needed*/
 
-	/* Todo: inform MCE of cstate only if wake time */
-	/*       is higher than CCP3 crossover threshold.    */
-
 	if (tegra_cpu_is_asim()) {
 		asm volatile("wfi\n");
 		return index;
@@ -183,9 +180,6 @@ static int t18x_a57_enter_state(
 
 	/* Todo: Based on the Latency number reprogram deepest */
 	/*       CC state allowed if needed*/
-
-	/* Todo: inform MCE of cstate only if wake time */
-	/*       is higher than CCP3 crossover threshold.    */
 
 	if (tegra_cpu_is_asim()) {
 		asm volatile("wfi\n");
@@ -735,11 +729,6 @@ static void send_crossover(void *data)
 		{"crossover_c1_c6", TEGRA_MCE_XOVER_C1_C6},
 		{"crossover_cc1_cc6", TEGRA_MCE_XOVER_CC1_CC6},
 		{"crossover_cc1_cc7", TEGRA_MCE_XOVER_CC1_CC7},
-		{"crossover_ccp1_ccp3", TEGRA_MCE_XOVER_CCP1_CCP3},
-		{"crossover_ccp3_sc2", TEGRA_MCE_XOVER_CCP3_SC2},
-		{"crossover_ccp3_sc3", TEGRA_MCE_XOVER_CCP3_SC3},
-		{"crossover_ccp3_sc4", TEGRA_MCE_XOVER_CCP3_SC4},
-		{"crossover_ccp3_sc7", TEGRA_MCE_XOVER_CCP3_SC7},
 	};
 
 	for_each_child_of_node(of_states, child)

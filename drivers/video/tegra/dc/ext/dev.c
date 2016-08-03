@@ -122,6 +122,9 @@ struct tegra_dc_ext_flip_data {
 	u8 flags;
 	struct tegra_dc_hdr hdr_data;
 	bool hdr_cache_dirty;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	bool imp_dirty;
+#endif
 };
 
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
@@ -862,6 +865,12 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 					data->flags &
 					TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE);
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		if (data->imp_dirty) {
+			tegra_nvdisp_adjust_imp(dc, true);
+			dc->imp_dirty = true;
+		}
+#endif
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL,
 			wait_for_vblank);
@@ -876,7 +885,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 			tegra_dc_call_flip_callback();
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-		tegra_nvdisp_complete_imp_programming(dc);
+		if (data->imp_dirty) {
+			tegra_nvdisp_adjust_imp(dc, false);
+			tegra_nvdisp_release_common_channel(dc);
+		}
 #endif
 	}
 
@@ -1184,6 +1196,11 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 					sizeof(hdr->static_metadata));
 			}
 			break;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA:
+			data->imp_dirty = true;
+			break;
+#endif
 		default:
 			dev_err(&data->ext->dc->ndev->dev,
 				"Invalid FLIP_USER_DATA_TYPE\n");
@@ -1308,6 +1325,17 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	}
 #endif
 	data->flags = flip_flags;
+
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	/*
+	 * If this flip needs to update the current IMP settings, reserve
+	 * exclusive access to the COMMON channel. This call can potentially
+	 * block.
+	 */
+	if (data->imp_dirty)
+		tegra_nvdisp_reserve_common_channel(ext->dc);
+#endif
+
 	queue_work(ext->win[work_index].flip_wq, &data->work);
 
 	unlock_windows_for_flip(user, win, win_num);
@@ -2279,8 +2307,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 			if (flip_user_data[0].data_type ==
-					TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA)
-				ret = tegra_nvdisp_process_imp_results(
+				TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA)
+				ret = tegra_nvdisp_handle_imp_propose(
 						user->ext->dc, flip_user_data);
 #endif
 		}

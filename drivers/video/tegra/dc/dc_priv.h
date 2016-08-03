@@ -753,10 +753,12 @@ int tegra_nvdisp_set_output_lut(struct tegra_dc *dc,
 int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *lut);
 void tegra_dc_cache_cmu(struct tegra_dc *dc, struct tegra_dc_cmu *src_cmu);
 void tegra_nvdisp_get_default_cmu(struct tegra_dc_cmu *default_cmu);
-int tegra_nvdisp_process_imp_results(struct tegra_dc *dc,
+void tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc);
+void tegra_nvdisp_release_common_channel(struct tegra_dc *dc);
+int tegra_nvdisp_handle_imp_propose(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data);
 void tegra_nvdisp_handle_common_channel_promotion(struct tegra_dc *dc);
-void tegra_nvdisp_complete_imp_programming(struct tegra_dc *dc);
+void tegra_nvdisp_adjust_imp(struct tegra_dc *dc, bool before_win_update);
 void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 				struct tegra_dc_ext_imp_user_info *info);
 int nvdisp_register_backlight_notifier(struct tegra_dc *dc);

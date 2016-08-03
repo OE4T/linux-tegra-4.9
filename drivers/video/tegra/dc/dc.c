@@ -3708,8 +3708,9 @@ static void tegra_dc_vblank(struct work_struct *work)
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	/*
-	 * If this HEAD has a pending COMMON_ACT_REQ, the COMMON channel state
-	 * should be promoted on vblank.
+	 * COMMON channel state is promoted on the very next loadv boundary for
+	 * whichever HEAD set COMMON_ACT_REQ. Clear the COMMON channel pending
+	 * flag if this condition has been met.
 	 */
 	tegra_nvdisp_handle_common_channel_promotion(dc);
 

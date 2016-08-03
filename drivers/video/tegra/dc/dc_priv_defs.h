@@ -168,15 +168,6 @@ enum tegra_dc_cursor_color_format {
 	TEGRA_DC_CURSOR_COLORFMT_A8R8G8B8,
 };
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
-struct tegra_nvdisp_tg_req {
-	int	dc_idx;
-	u32	num_wins;
-	u32	win_ids[DC_N_WINDOWS];
-	u32	tgs[DC_N_WINDOWS];
-};
-#endif
-
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
@@ -242,12 +233,9 @@ struct tegra_dc {
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	struct tegra_dc_imp_head_results	imp_results[TEGRA_MAX_DC];
-	struct tegra_nvdisp_tg_req		tg_reqs[DC_N_WINDOWS];
 	bool					common_channel_reserved;
 	bool					common_channel_pending;
-	bool					new_imp_results_needed;
-	bool					need_to_complete_imp;
-	bool					new_mempool_needed;
+	bool					imp_dirty;
 	bool					new_bw_pending;
 #endif
 

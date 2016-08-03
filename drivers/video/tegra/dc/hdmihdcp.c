@@ -1639,8 +1639,10 @@ err:
 	mutex_unlock(&nvhdcp->lock);
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	kfree(pkt);
-	if (ta_ctx)
+	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);
+		ta_ctx = NULL;
+	}
 #endif
 	tegra_dc_io_end(dc);
 	return;
@@ -1648,8 +1650,10 @@ disable:
 	nvhdcp->state = STATE_OFF;
 #if (defined(CONFIG_ARCH_TEGRA_18x_SOC))
 	kfree(pkt);
-	if (ta_ctx)
+	if (ta_ctx) {
 		te_close_trusted_session(ta_ctx);
+		ta_ctx = NULL;
+	}
 #endif
 	nvhdcp_set_plugged(nvhdcp, false);
 	mutex_unlock(&nvhdcp->lock);

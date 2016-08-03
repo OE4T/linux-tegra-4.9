@@ -3,7 +3,7 @@
  *
  * GK20A Semaphores
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -364,6 +364,27 @@ fail:
 }
 
 /*
+ * Free the channel used semaphore index
+ */
+void gk20a_semaphore_free_hw_sema(struct channel_gk20a *ch)
+{
+	struct gk20a_semaphore_pool *p = ch->vm->sema_pool;
+
+	BUG_ON(!p);
+
+	mutex_lock(&p->pool_lock);
+
+	clear_bit(ch->hw_sema->idx, p->semas_alloced);
+
+	/* Make sure that when the ch is re-opened it will get a new HW sema. */
+	list_del(&ch->hw_sema->hw_sema_list);
+	kfree(ch->hw_sema);
+	ch->hw_sema = NULL;
+
+	mutex_unlock(&p->pool_lock);
+}
+
+/*
  * Allocate a semaphore from the passed pool.
  *
  * Since semaphores are ref-counted there's no explicit free for external code
@@ -377,7 +398,7 @@ struct gk20a_semaphore *gk20a_semaphore_alloc(struct channel_gk20a *ch)
 	if (!ch->hw_sema) {
 		ret = __gk20a_init_hw_sema(ch);
 		if (ret)
-			return ERR_PTR(ret);
+			return NULL;
 	}
 
 	s = kzalloc(sizeof(*s), GFP_KERNEL);

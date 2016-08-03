@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -174,6 +174,7 @@ void gk20a_semaphore_pool_put(struct gk20a_semaphore_pool *p);
 struct gk20a_semaphore *gk20a_semaphore_alloc(struct channel_gk20a *ch);
 void gk20a_semaphore_put(struct gk20a_semaphore *s);
 void gk20a_semaphore_get(struct gk20a_semaphore *s);
+void gk20a_semaphore_free_hw_sema(struct channel_gk20a *ch);
 
 /*
  * Return the address of a specific semaphore.

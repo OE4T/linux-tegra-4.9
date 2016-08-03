@@ -56,41 +56,6 @@
 		status = "disabled";
 	};
 
-	bpmp {
-		compatible = "nvidia,tegra186-bpmp-hv";
-		ivc_queue = <&tegra_hv 0 14>;
-		mempool = <4>;
-
-		bpmpthermal {
-			status = "disabled";
-		};
-	};
-
-	bpmp_i2c {
-                spmic: spmic@3c {
-			/delete-node/ backup-battery;
-			/delete-node/ fps;
-			pinmux@0 {
-				/delete-node/ pin_gpio2;
-				/delete-node/ pin_gpio3;
-			};
-			regulators {
-				/delete-node/ sd0;
-				/delete-node/ sd1;
-				/delete-node/ sd2;
-				/delete-node/ sd3;
-				/delete-node/ sd4;
-				/delete-node/ ldo0;
-				/delete-node/ ldo1;
-				/delete-node/ ldo2;
-				/delete-node/ ldo4;
-				/delete-node/ ldo6;
-				/delete-node/ ldo7;
-				/delete-node/ ldo8;
-			};
-		};
-	};
-
 	aon@c160000 {
 		status = "disabled";
 	};
@@ -100,13 +65,21 @@
 		status = "disabled";
 	};
 
-	sdhci@3400000 { /* Used for SDCard */
+	sdhci@3400000 {
 		/delete-property/ vddio_sdmmc-supply;
 		/delete-property/ vddio_sd_slot-supply;
+		/delete-property/ vqmmc-supply;
+		/delete-property/ vmmc-supply;
 		status = "disabled";
 	};
 
 	/delete-node/ pmc-iopower;
+
+	fixed-regulators {
+		regulator@4 {
+			status = "disabled";
+		};
+	};
 
 	i2c@3160000 {
 		compatible = "nvidia,tegra186-i2c-hv";
@@ -130,6 +103,42 @@
 	/* Tegra I2C6 - VCM DP_AUX0, DP DDC/EDP AUX */
 	i2c@31b0000 {
 		status = "disabled";
+	};
+
+	bpmp {
+		compatible = "nvidia,tegra186-bpmp-hv";
+		ivc_queue = <&tegra_hv 0 14>;
+		mempool = <5>;
+
+		bpmpthermal {
+			status = "disabled";
+		};
+	};
+
+	bpmp_i2c {
+                spmic: spmic@3c {
+			/delete-node/ backup-battery;
+			/delete-node/ fps;
+			pinmux@0 {
+				/delete-node/ pin_gpio2;
+				/delete-node/ pin_gpio3;
+			};
+			regulators {
+				/delete-node/ sd0;
+				/delete-node/ sd1;
+				/delete-node/ sd2;
+				/delete-node/ sd3;
+				/delete-node/ sd4;
+				/delete-node/ ldo0;
+				/delete-node/ ldo1;
+				/delete-node/ ldo2;
+				/delete-node/ ldo3;
+				/delete-node/ ldo4;
+				/delete-node/ ldo6;
+				/delete-node/ ldo7;
+				/delete-node/ ldo8;
+			};
+		};
 	};
 
 	tegra_hv_net@0 {
@@ -476,7 +485,6 @@
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
 			      <&{/aon@c160000}		TEGRA_SID_AON>,
 			      <&{/rtcpu@b000000}	TEGRA_SID_SCE>,
-			      <&{/bpmp}			TEGRA_SID_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3230000}		TEGRA_SID_GPCDMA_0>,

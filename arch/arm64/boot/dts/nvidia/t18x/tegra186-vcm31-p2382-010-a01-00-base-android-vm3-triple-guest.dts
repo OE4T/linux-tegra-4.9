@@ -298,7 +298,7 @@
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp-hv";
 		ivc_queue = <&tegra_hv 28 14>;
-		mempool = <5>;
+		mempool = <7>;
 		status = "okay";
 
 		bpmpthermal {

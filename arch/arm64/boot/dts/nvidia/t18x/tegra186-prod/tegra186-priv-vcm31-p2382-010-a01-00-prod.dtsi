@@ -18,14 +18,25 @@
 		prod-settings {
 			#prod-cells = <4>;
 			mask-one-style;
+			prod_c_bias {
+				board {
+					prod = <0 0x284 0x00000038 0x38>; //XUSB_PADCTL_USB2_BIAS_PAD_CTL
+				};
+			};
 			prod_c_utmi0 {
 				board {
-					prod = <0 0x94 0x000001cf 0x00000000>;
+					prod = <
+						0 0x88 0x01fe0000 0x00cc0000 //XUSB_PADCTL_USB2_OTG_PAD0_CTL_0
+						0 0x94 0x000001cf 0x00000000 //XUSB_PADCTL_USB2_OTG_PAD0_CTL_3
+					>;
 				};
 			};
 			prod_c_utmi2 {
 				board {
-					prod = <0 0x114 0x000001cf 0x00000000>;
+					prod = <
+						0 0x108 0x01fe0000 0x00cc0000 //XUSB_PADCTL_USB2_OTG_PAD2_CTL_0
+						0 0x114 0x000001cf 0x00000000 //XUSB_PADCTL_USB2_OTG_PAD2_CTL_3
+					>;
 				};
 			};
 			prod_c_sata {
@@ -147,6 +158,36 @@
 		};
 	};
 
+	i2c@3160000 { //i2c
+		prod-settings {
+			mask-one-style;
+			prod_i2c_sm {
+				board {
+					prod = <
+						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
+						0x0000006C 0xFFFF0000 0x00160000 //I2C_I2C_INTERFACE_TIMING
+						0x00000094 0x00003F3F 0x00000304
+					>;
+				};
+			};
+		};
+	};
+
+	i2c@3180000 { //i2c
+		prod-settings {
+			mask-one-style;
+			prod_i2c_fm {
+				board {
+					prod = <
+						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
+						0x0000006C 0xFFFF0000 0x00190000 //I2C_I2C_INTERFACE_TIMING
+						0x00000094 0x00003F3F 0x00000204
+					>;
+				};
+			};
+		};
+	};
+
 	i2c@3190000 {  //i2c3, dp_aux_ch1_i2c
 		prod-settings {
 			mask-one-style;
@@ -154,6 +195,36 @@
 				board {
 					prod = <0x0000006C 0xFFFF0000 0x00160000
 						0x00000094 0x00003F3F 0x00000304>;
+				};
+			};
+		};
+	};
+
+	i2c@c24000 { //i2c
+		prod-settings {
+			mask-one-style;
+			prod_i2c_sm {
+				board {
+					prod = <
+						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
+						0x0000006C 0xFFFF0000 0x00160000 //I2C_I2C_INTERFACE_TIMING
+						0x00000094 0x00003F3F 0x00000304
+					>;
+				};
+			};
+		};
+	};
+
+	i2c@c25000 { //i2c
+		prod-settings {
+			mask-one-style;
+			prod_i2c_fm {
+				board {
+					prod = <
+						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
+						0x0000006C 0xFFFF0000 0x00190000 //I2C_I2C_INTERFACE_TIMING
+						0x00000094 0x00003F3F 0x00000204
+					>;
 				};
 			};
 		};

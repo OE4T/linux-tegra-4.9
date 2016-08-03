@@ -1886,7 +1886,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 
 	/* the spi->mode bits understood by this driver: */
 	master->mode_bits = SPI_CPOL | SPI_CPHA | SPI_CS_HIGH | SPI_LSB_FIRST |
-		SPI_TX_DUAL | SPI_RX_DUAL;
+		SPI_TX_DUAL | SPI_RX_DUAL | SPI_LSBYTE_FIRST;
 	master->bits_per_word_mask = (u32)~(BIT(0) | BIT(1) | BIT(2));
 	master->setup = tegra_spi_setup;
 	master->cleanup = tegra_spi_cleanup;

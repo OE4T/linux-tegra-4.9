@@ -767,6 +767,10 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	if (!g->power_on)
 		goto done;
 
+	if (gk20a_fifo_is_engine_busy(g)) {
+		mutex_unlock(&g->poweroff_lock);
+		return -EBUSY;
+	}
 	gk20a_scale_suspend(dev);
 
 	/* cancel any pending cde work */
@@ -1353,6 +1357,7 @@ static int gk20a_pm_runtime_suspend(struct device *dev)
 fail_railgate:
 	gk20a_pm_finalize_poweron(dev);
 fail:
+	pm_runtime_mark_last_busy(dev);
 	return err;
 }
 
@@ -1751,6 +1756,7 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		msecs_to_jiffies(GK20A_WAIT_FOR_IDLE_MS);
 	int ref_cnt;
 	bool is_railgated;
+	int err = 0;
 
 	/* acquire busy lock to block other busy() calls */
 	down_write(&g->busy_lock);
@@ -1825,7 +1831,9 @@ int __gk20a_do_idle(struct device *dev, bool force_reset)
 		 */
 
 		/* Save the GPU state */
-		gk20a_pm_prepare_poweroff(dev);
+		err = gk20a_pm_prepare_poweroff(dev);
+		if (err)
+			goto fail_drop_usage_count;
 
 		/* railgate GPU */
 		platform->railgate(dev);

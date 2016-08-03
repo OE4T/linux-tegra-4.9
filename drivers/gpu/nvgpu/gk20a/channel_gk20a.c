@@ -2789,15 +2789,9 @@ int gk20a_channel_suspend(struct gk20a *g)
 	struct fifo_gk20a *f = &g->fifo;
 	u32 chid;
 	bool channels_in_use = false;
-	int err;
 	u32 active_runlist_ids = 0;
 
 	gk20a_dbg_fn("");
-
-	/* wait for engine idle */
-	err = g->ops.fifo.wait_engine_idle(g);
-	if (err)
-		return err;
 
 	for (chid = 0; chid < f->num_channels; chid++) {
 		struct channel_gk20a *ch = &f->channel[chid];

@@ -3016,6 +3016,19 @@ bool gk20a_fifo_mmu_fault_pending(struct gk20a *g)
 		return false;
 }
 
+bool gk20a_fifo_is_engine_busy(struct gk20a *g)
+{
+	int i;
+
+	for (i = 0; i < fifo_engine_status__size_1_v(); i++) {
+		u32 status = gk20a_readl(g, fifo_engine_status_r(i));
+		if (fifo_engine_status_engine_v(status) ==
+			fifo_engine_status_engine_busy_v())
+			return true;
+	}
+	return false;
+}
+
 int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 {
 	unsigned long end_jiffies = jiffies +
@@ -3023,7 +3036,6 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 	unsigned long delay = GR_IDLE_CHECK_DEFAULT;
 	int ret = -ETIMEDOUT;
 	u32 i;
-	struct device *d = dev_from_gk20a(g);
 
 	gk20a_dbg_fn("");
 
@@ -3041,7 +3053,7 @@ int gk20a_fifo_wait_engine_idle(struct gk20a *g)
 		} while (time_before(jiffies, end_jiffies) ||
 				!tegra_platform_is_silicon());
 		if (ret) {
-			gk20a_err(d, "cannot idle engine %u\n", i);
+			gk20a_dbg_info("cannot idle engine %u", i);
 			break;
 		}
 	}

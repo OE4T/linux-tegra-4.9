@@ -3771,6 +3771,9 @@ static INT configure_mac(struct eqos_prv_data *pdata)
 		MAC_MCR_JD_WR(0x0);
 	}
 
+	/* PLSEN is set to 1 so that LPI is not initiated */
+	MAC_LPS_PLSEN_WR(1);
+
 	/* update the MAC address */
 	MAC_MA0HR_WR(((pdata->dev->dev_addr[5] << 8) |
 		      (pdata->dev->dev_addr[4])));

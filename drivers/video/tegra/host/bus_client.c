@@ -511,8 +511,8 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	int num_syncpt_incrs = args->num_syncpt_incrs;
 	struct nvhost_cmdbuf __user *cmdbufs =
 		(struct nvhost_cmdbuf __user *)(uintptr_t)args->cmdbufs;
-	struct nvhost_cmdbuf __user *cmdbuf_exts =
-		(struct nvhost_cmdbuf __user *)(uintptr_t)args->cmdbuf_exts;
+	struct nvhost_cmdbuf_ext __user *cmdbuf_exts =
+		(struct nvhost_cmdbuf_ext __user *)(uintptr_t)args->cmdbuf_exts;
 	struct nvhost_reloc __user *relocs =
 		(struct nvhost_reloc __user *)(uintptr_t)args->relocs;
 	struct nvhost_reloc_shift __user *reloc_shifts =

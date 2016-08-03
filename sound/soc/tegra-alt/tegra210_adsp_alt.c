@@ -3181,6 +3181,14 @@ static const struct snd_kcontrol_new tegra210_adsp_controls[] = {
 	APM_CONTROL("Input Mode", INT_MAX),
 };
 
+static int tegra210_adsp_component_probe(struct snd_soc_component *component)
+{
+	component->read = tegra210_adsp_read;
+	component->write = tegra210_adsp_write;
+
+	return 0;
+}
+
 static const struct snd_soc_component_driver tegra210_adsp_component = {
 	.name		= "tegra210-adsp",
 	.dapm_widgets		= tegra210_adsp_widgets,
@@ -3189,6 +3197,7 @@ static const struct snd_soc_component_driver tegra210_adsp_component = {
 	.num_dapm_routes	= ARRAY_SIZE(tegra210_adsp_routes),
 	.controls		= tegra210_adsp_controls,
 	.num_controls		= ARRAY_SIZE(tegra210_adsp_controls),
+	.probe			= tegra210_adsp_component_probe,
 };
 
 static int tegra210_adsp_codec_probe(struct snd_soc_codec *codec)

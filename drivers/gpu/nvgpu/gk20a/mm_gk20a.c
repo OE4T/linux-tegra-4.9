@@ -29,6 +29,7 @@
 #include <linux/lcm.h>
 #include <uapi/linux/nvgpu.h>
 #include <trace/events/gk20a.h>
+#include <gk20a/page_allocator_priv.h>
 
 #include "gk20a.h"
 #include "mm_gk20a.h"
@@ -84,10 +85,31 @@ void gk20a_mem_end(struct gk20a *g, struct mem_desc *mem)
 	mem->cpu_va = NULL;
 }
 
+static u64 gk20a_mem_get_vidmem_addr(struct gk20a *g, struct mem_desc *mem)
+{
+	struct gk20a_page_alloc *alloc;
+	struct page_alloc_chunk *chunk;
+
+	if (mem && mem->aperture == APERTURE_VIDMEM) {
+		alloc = (struct gk20a_page_alloc *)
+				sg_dma_address(mem->sgt->sgl);
+
+		/* This API should not be used with > 1 chunks */
+		if (alloc->nr_chunks != 1)
+			return 0;
+
+		chunk = list_first_entry(&alloc->alloc_chunks,
+				struct page_alloc_chunk, list_entry);
+		return chunk->base;
+	}
+
+	return 0;
+}
+
 /* WARNING: returns pramin_window_lock taken, complement with pramin_exit() */
 static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
 {
-	u64 bufbase = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
+	u64 bufbase = gk20a_mem_get_vidmem_addr(g, mem);
 	u64 addr = bufbase + w * sizeof(u32);
 	u32 hi = (u32)((addr & ~(u64)0xfffff)
 		>> bus_bar0_window_target_bar0_window_base_shift_v());
@@ -765,9 +787,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 		return 0;
 
 	err = gk20a_page_allocator_init(&g->mm.vidmem.allocator, "vidmem",
-					SZ_4K, size - SZ_4K, SZ_4K,
-					GPU_ALLOC_FORCE_CONTIG |
-					GPU_ALLOC_NO_SCATTER_GATHER);
+					SZ_4K, size - SZ_4K, SZ_4K, 0);
 	if (err) {
 		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
 				size, err);
@@ -2721,7 +2741,6 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;
 	int err;
-	bool need_pramin_access = true;
 
 	gk20a_dbg_fn("");
 
@@ -2764,13 +2783,22 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 
 	if (g->mm.vidmem.ce_ctx_id != ~0) {
 		struct gk20a_fence *gk20a_fence_out = NULL;
-		u64 dst_bufbase = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
+		struct gk20a_fence *gk20a_last_fence = NULL;
+		struct gk20a_page_alloc *alloc = NULL;
+		struct page_alloc_chunk *chunk = NULL;
 
-		err = gk20a_ce_execute_ops(g->dev,
+		alloc = (struct gk20a_page_alloc *)
+				g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
+
+		list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
+			if (gk20a_last_fence)
+				gk20a_fence_put(gk20a_last_fence);
+
+			err = gk20a_ce_execute_ops(g->dev,
 				g->mm.vidmem.ce_ctx_id,
 				0,
-				dst_bufbase,
-				(u64)size,
+				chunk->base,
+				chunk->length,
 				0x00000000,
 				NVGPU_CE_DST_LOCATION_LOCAL_FB,
 				NVGPU_CE_MEMSET,
@@ -2778,27 +2806,31 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 				0,
 				&gk20a_fence_out);
 
-		if (!err) {
-			if (gk20a_fence_out) {
-				err = gk20a_fence_wait(gk20a_fence_out, gk20a_get_gr_idle_timeout(g));
-				gk20a_fence_put(gk20a_fence_out);
-				if (err)
-					gk20a_err(g->dev,
-						"Failed to get the fence_out from CE execute ops");
-				else
-					need_pramin_access = false;
+			if (err) {
+				gk20a_err(g->dev,
+					"Failed gk20a_ce_execute_ops[%d]", err);
+				goto fail_free_table;
 			}
-		} else
-			gk20a_err(g->dev, "Failed gk20a_ce_execute_ops[%d]",err);
-	}
 
-	if (need_pramin_access)
-		gk20a_memset(g, mem, 0, 0, size);
+			gk20a_last_fence = gk20a_fence_out;
+		}
+
+		if (gk20a_last_fence) {
+			err = gk20a_fence_wait(gk20a_last_fence,
+					gk20a_get_gr_idle_timeout(g));
+			gk20a_fence_put(gk20a_last_fence);
+			if (err)
+				gk20a_err(g->dev,
+					"Failed to get the fence_out from CE execute ops");
+		}
+	}
 
 	gk20a_dbg_fn("done at 0x%llx size %zu", addr, size);
 
 	return 0;
 
+fail_free_table:
+	sg_free_table(mem->sgt);
 fail_kfree:
 	kfree(mem->sgt);
 fail_physfree:
@@ -3381,13 +3413,9 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	u32 page_size  = vm->gmmu_page_sizes[pgsz_idx];
 	int err;
 	struct scatterlist *sgl = NULL;
-
-	gk20a_dbg(gpu_dbg_pte, "size_idx=%d, iova=%llx, buffer offset %lld, nents %d",
-		   pgsz_idx,
-		   sgt ? g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0)
-		       : 0ULL,
-		   buffer_offset,
-		   sgt ? sgt->nents : 0);
+	struct gk20a_page_alloc *alloc = NULL;
+	struct page_alloc_chunk *chunk = NULL;
+	u64 length;
 
 	/* note: here we need to map kernel to small, since the
 	 * low-level mmu code assumes 0 is small and 1 is big pages */
@@ -3397,30 +3425,6 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	if (space_to_skip & (page_size - 1))
 		return -EINVAL;
 
-	if (sgt) {
-		iova = g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0);
-		if (!vm->mm->bypass_smmu && iova) {
-			iova += space_to_skip;
-		} else {
-			sgl = sgt->sgl;
-
-			gk20a_dbg(gpu_dbg_pte, "chunk address %llx, size %d",
-					(u64)sg_phys(sgl),
-					sgl->length);
-			while (space_to_skip && sgl &&
-			       space_to_skip + page_size > sgl->length) {
-				space_to_skip -= sgl->length;
-				sgl = sg_next(sgl);
-				gk20a_dbg(gpu_dbg_pte, "chunk address %llx, size %d",
-						(u64)sg_phys(sgl),
-						sgl->length);
-			}
-			iova = sg_phys(sgl) + space_to_skip;
-		}
-	}
-
-	gk20a_dbg(gpu_dbg_map_v, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx",
-			pgsz_idx, gpu_va, gpu_end-1, iova);
 	err = map_gmmu_pages(g, &vm->pdb);
 	if (err) {
 		gk20a_err(dev_from_vm(vm),
@@ -3428,14 +3432,98 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 			   vm_aspace_id(vm));
 		return err;
 	}
-	err = update_gmmu_level_locked(vm, &vm->pdb, pgsz_idx,
-			&sgl,
-			&space_to_skip,
-			&iova,
-			gpu_va, gpu_end,
-			kind_v, &ctag,
-			cacheable, unmapped_pte, rw_flag, sparse, 0, priv,
-			aperture);
+
+	if (aperture == APERTURE_VIDMEM) {
+		gk20a_dbg(gpu_dbg_map_v, "vidmem map size_idx=%d, gpu_va=[%llx,%llx], alloc=%llx",
+				pgsz_idx, gpu_va, gpu_end-1, iova);
+
+		if (sgt) {
+			alloc = (struct gk20a_page_alloc *)
+				g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0);
+
+			list_for_each_entry(chunk, &alloc->alloc_chunks,
+							list_entry) {
+				if (space_to_skip &&
+				    space_to_skip > chunk->length) {
+					space_to_skip -= chunk->length;
+				} else {
+					iova = chunk->base + space_to_skip;
+					length = chunk->length - space_to_skip;
+					space_to_skip = 0;
+
+					err = update_gmmu_level_locked(vm,
+						&vm->pdb, pgsz_idx,
+						&sgl,
+						&space_to_skip,
+						&iova,
+						gpu_va, gpu_va + length,
+						kind_v, &ctag,
+						cacheable, unmapped_pte,
+						rw_flag, sparse, 0, priv,
+						aperture);
+
+					/* need to set explicit zero here */
+					space_to_skip = 0;
+					gpu_va += length;
+				}
+			}
+		} else {
+			err = update_gmmu_level_locked(vm, &vm->pdb, pgsz_idx,
+					&sgl,
+					&space_to_skip,
+					&iova,
+					gpu_va, gpu_end,
+					kind_v, &ctag,
+					cacheable, unmapped_pte, rw_flag,
+					sparse, 0, priv,
+					aperture);
+		}
+	} else {
+		gk20a_dbg(gpu_dbg_pte, "size_idx=%d, iova=%llx, buffer offset %lld, nents %d",
+			   pgsz_idx,
+			   sgt ? g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0)
+			       : 0ULL,
+			   buffer_offset,
+			   sgt ? sgt->nents : 0);
+
+		gk20a_dbg(gpu_dbg_map_v, "size_idx=%d, gpu_va=[%llx,%llx], iova=%llx",
+				pgsz_idx, gpu_va, gpu_end-1, iova);
+
+		if (sgt) {
+			iova = g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0);
+			if (!vm->mm->bypass_smmu && iova) {
+				iova += space_to_skip;
+			} else {
+				sgl = sgt->sgl;
+
+				gk20a_dbg(gpu_dbg_pte, "chunk address %llx, size %d",
+						(u64)sg_phys(sgl),
+						sgl->length);
+
+				while (space_to_skip && sgl &&
+				      space_to_skip + page_size > sgl->length) {
+					space_to_skip -= sgl->length;
+					sgl = sg_next(sgl);
+					gk20a_dbg(gpu_dbg_pte, "chunk address %llx, size %d",
+							(u64)sg_phys(sgl),
+							sgl->length);
+				}
+
+				iova = sg_phys(sgl) + space_to_skip;
+			}
+		}
+
+		err = update_gmmu_level_locked(vm, &vm->pdb, pgsz_idx,
+				&sgl,
+				&space_to_skip,
+				&iova,
+				gpu_va, gpu_end,
+				kind_v, &ctag,
+				cacheable, unmapped_pte, rw_flag,
+				sparse, 0, priv,
+				aperture);
+	}
+
 	unmap_gmmu_pages(g, &vm->pdb);
 
 	smp_mb();

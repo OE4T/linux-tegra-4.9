@@ -19,6 +19,7 @@
 
 #include <linux/list.h>
 #include <linux/rbtree.h>
+#include <gk20a/gk20a_allocator.h>
 
 #include "gk20a_allocator.h"
 

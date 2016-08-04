@@ -37,6 +37,13 @@
 
 const struct disp_client *tegra_la_disp_clients_info;
 atomic_t sd_brightness = ATOMIC_INIT(255);
+phys_addr_t tegra_bootloader_fb_start;
+phys_addr_t tegra_bootloader_fb_size;
+phys_addr_t tegra_bootloader_fb2_start;
+phys_addr_t tegra_bootloader_fb2_size;
+phys_addr_t tegra_bootloader_fb3_start;
+phys_addr_t tegra_bootloader_fb3_size;
+
 EXPORT_SYMBOL(sd_brightness);
 
 int tegra_is_clk_enabled(struct clk *c)
@@ -126,11 +133,80 @@ int nvdisp_register_backlight_notifier(struct tegra_dc *dc)
 	return 0;
 }
 
-/* Update this after carve out is defined */
+static int __init tegra_bootloader_fb_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_fb_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_fb_start = memparse(p+1, &p);
+
+	pr_info("Found tegra_fbmem: %08llx@%08llx\n",
+		(u64)tegra_bootloader_fb_size, (u64)tegra_bootloader_fb_start);
+	return 0;
+}
+early_param("tegra_fbmem", tegra_bootloader_fb_arg);
+
+static int __init tegra_bootloader_fb2_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_fb2_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_fb2_start = memparse(p+1, &p);
+
+	pr_info("Found tegra_fbmem2: %08llx@%08llx\n",
+		(u64)tegra_bootloader_fb2_size,
+		(u64)tegra_bootloader_fb2_start);
+	return 0;
+}
+early_param("tegra_fbmem2", tegra_bootloader_fb2_arg);
+
+static int __init tegra_bootloader_fb3_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_fb3_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_fb3_start = memparse(p+1, &p);
+
+	pr_info("Found tegra_fbmem3: %08llx@%08llx\n",
+		(u64)tegra_bootloader_fb3_size,
+		(u64)tegra_bootloader_fb3_start);
+	return 0;
+}
+early_param("tegra_fbmem3", tegra_bootloader_fb3_arg);
+
 void tegra_get_fb_resource(struct resource *fb_res, int instance)
 {
-	fb_res->start = 0;
-	fb_res->end = 0;
+	if (!tegra_is_bl_display_initialized(instance)) {
+		fb_res->start = 0;
+		fb_res->end = 0;
+	} else {
+		switch (instance) {
+		case 0:
+			fb_res->start =
+				(resource_size_t) tegra_bootloader_fb_start;
+			fb_res->end = fb_res->start +
+				(resource_size_t) tegra_bootloader_fb_size - 1;
+			break;
+		case 1:
+			fb_res->start =
+				(resource_size_t) tegra_bootloader_fb2_start;
+			fb_res->end = fb_res->start +
+				(resource_size_t) tegra_bootloader_fb2_size - 1;
+			break;
+		case 2:
+			fb_res->start =
+				(resource_size_t) tegra_bootloader_fb3_start;
+			fb_res->end = fb_res->start +
+				(resource_size_t) tegra_bootloader_fb3_size - 1;
+			break;
+		default:
+			pr_err("Could not find DC instance %d\n", instance);
+			break;
+		}
+	}
 }
 
 static int disp_fb_linear_set(void)
@@ -295,6 +371,20 @@ extern struct tegra_panel_ops panel_sim_ops;
 bool tegra_is_bl_display_initialized(int instance)
 {
 	return false;
+	/* display initialized implies non-zero
+	 * fb size is passed from bl to kernel
+	 */
+	switch (instance) {
+	case 0:
+		return tegra_bootloader_fb_start && tegra_bootloader_fb_size;
+	case 1:
+		return tegra_bootloader_fb2_start && tegra_bootloader_fb2_size;
+	case 2:
+		return tegra_bootloader_fb3_start && tegra_bootloader_fb3_size;
+	default:
+		pr_err("Could not find DC instance %d\n", instance);
+		return false;
+	}
 }
 
 /* Clone from board-panel.c */

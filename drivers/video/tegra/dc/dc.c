@@ -5846,15 +5846,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 
 	if (np) {
 		struct resource of_fb_res;
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		tegra_get_fb_resource(&of_fb_res);
-#else
-		if (dc->ctrl_num == 0)
-			tegra_get_fb_resource(&of_fb_res);
-		else /* dc->ctrl_num == 1*/
-			tegra_get_fb2_resource(&of_fb_res);
-#endif
 
+		tegra_get_fb_resource(&of_fb_res, dc->ctrl_num);
 		fb_mem = kzalloc(sizeof(struct resource), GFP_KERNEL);
 		if (fb_mem == NULL) {
 			ret = -ENOMEM;

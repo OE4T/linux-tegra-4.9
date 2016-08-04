@@ -6,6 +6,7 @@ ccflags-y += -I../nvhost-t19x/include/linux
 ccflags-y += -Werror
 
 nvhost-nvdla-objs  = \
-		nvdla.o
+		nvdla.o \
+		nvdla_ioctl.o
 
 obj-$(CONFIG_TEGRA_GRHOST_NVDLA) += nvhost-nvdla.o

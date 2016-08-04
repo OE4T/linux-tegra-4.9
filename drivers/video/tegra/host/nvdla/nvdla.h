@@ -25,10 +25,18 @@
 #define NV_DLA_THI_METHOD_DATA	0x00000044      /* RW-4R */
 #define MAX_NVDLA_QUEUE_COUNT	16
 
+/* data structure to keep device data */
+struct nvdla_device {
+	struct platform_device *pdev;
+	struct nvhost_queue_pool *pool;
+};
+
 extern const struct file_operations tegra_nvdla_ctrl_ops;
 
 int nvhost_nvdla_finalize_poweron(struct platform_device *pdev);
 int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev);
 int nvhost_nvdla_flcn_isr(struct platform_device *pdev);
+void nvdla_send_cmd(struct platform_device *pdev,
+			uint32_t method_id, uint32_t method_data);
 
-#endif
+#endif /* end of __NVHOST_NVDLA_H__ */

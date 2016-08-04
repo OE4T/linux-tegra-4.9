@@ -26,6 +26,7 @@
 #include <linux/platform_device.h>
 #include <linux/reset.h>
 #include <linux/sched.h>
+#include <linux/seq_buf.h>
 #include <linux/slab.h>
 #include <linux/tegra_ast.h>
 #include <linux/tegra-hsp.h>
@@ -142,6 +143,9 @@ struct tegra_cam_rtcpu {
 		atomic_t response;
 		atomic_t emptied;
 	} cmd;
+	u32 fw_version;
+	u32 ivc_version;
+	u8 fw_hash[RTCPU_FW_HASH_SIZE];
 	union {
 		struct {
 			void __iomem *sce_cfg_base;
@@ -451,6 +455,8 @@ int tegra_camrtc_boot(struct device *dev)
 		return -EIO;
 	}
 
+	cam_rtcpu->fw_version = RTCPU_GET_COMMAND_VALUE(ret);
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_camrtc_boot);
@@ -478,9 +484,66 @@ int tegra_camrtc_ivc_setup_ready(struct device *dev)
 		return -EIO;
 	}
 
+	rtcpu->ivc_version = RTCPU_GET_COMMAND_VALUE(ret);
+
 	return 0;
 }
 EXPORT_SYMBOL(tegra_camrtc_ivc_setup_ready);
+
+static int tegra_camrtc_get_fw_hash(struct device *dev,
+				u8 hash[RTCPU_FW_HASH_SIZE])
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	int ret, i;
+	u32 value;
+
+	if (rtcpu->fw_version < RTCPU_FW_SM2_VERSION) {
+		dev_info(dev, "fw version %u has no sha1", rtcpu->fw_version);
+		return -EIO;
+	}
+
+	for (i = 0; i < RTCPU_FW_HASH_SIZE; i++) {
+		ret = tegra_camrtc_command(dev, RTCPU_COMMAND(FW_HASH, i), 0);
+		value = RTCPU_GET_COMMAND_VALUE(ret);
+
+		if (ret < 0 ||
+			RTCPU_GET_COMMAND_ID(ret) != RTCPU_CMD_FW_HASH ||
+			value > (u8)~0) {
+			dev_warn(dev, "FW_HASH problem (response=0x%08x)", ret);
+			return -EIO;
+		}
+
+		hash[i] = value;
+	}
+
+	return 0;
+}
+
+static ssize_t tegra_camrtc_print_version(struct device *dev,
+					char *buf, size_t size)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	struct seq_buf s;
+	int i;
+
+	seq_buf_init(&s, buf, size);
+	seq_buf_printf(&s, "version cmd=%u ivc=%u sha1 ",
+		rtcpu->fw_version, rtcpu->ivc_version);
+
+	for (i = 0; i < RTCPU_FW_HASH_SIZE; i++)
+		seq_buf_printf(&s, "%02x", rtcpu->fw_hash[i]);
+
+	return seq_buf_used(&s);
+}
+
+static void tegra_camrtc_log_fw_version(struct device *dev)
+{
+	char version[128];
+
+	tegra_camrtc_print_version(dev, version, sizeof(version));
+
+	dev_info(dev, "firmware %s", version);
+}
 
 static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 {
@@ -578,6 +641,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	if (ret)
 		goto fail;
 
+	tegra_camrtc_get_fw_hash(dev, cam_rtcpu->fw_hash);
+
 	cam_rtcpu->ivc = tegra_ivc_bus_create(dev, cam_rtcpu->ast,
 						cam_rtcpu->rtcpu_pdata->sid);
 	if (IS_ERR(cam_rtcpu->ivc)) {
@@ -588,6 +653,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	ret = tegra_camrtc_ivc_setup_ready(dev);
 	if (ret)
 		goto fail;
+
+	tegra_camrtc_log_fw_version(dev);
 
 	dev_dbg(dev, "probe successful\n");
 	return 0;

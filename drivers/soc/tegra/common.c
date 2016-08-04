@@ -211,15 +211,41 @@ bool tegra_is_bl_display_initialized(int instance)
 	 * fb size is passed from bl to kernel
 	 */
 	switch (instance) {
-		case 0:
-			return tegra_bootloader_fb_start &&
-				tegra_bootloader_fb_size;
-		case 1:
-			return tegra_bootloader_fb2_start &&
-				tegra_bootloader_fb2_size;
-		default:
-			return false;
+	case 0:
+		return tegra_bootloader_fb_start && tegra_bootloader_fb_size;
+	case 1:
+		return tegra_bootloader_fb2_start && tegra_bootloader_fb2_size;
+	default:
+		pr_err("Could not find DC instance %d\n", instance);
+		return false;
 	}
+}
+
+void tegra_get_fb_resource(struct resource *fb_res, int instance)
+{
+	if (!tegra_is_bl_display_initialized(instance)) {
+		fb_res->start = 0;
+		fb_res->end = 0;
+	} else {
+		switch (instance) {
+		case 0:
+			fb_res->start =
+				(resource_size_t) tegra_bootloader_fb_start;
+			fb_res->end = fb_res->start +
+				(resource_size_t) tegra_bootloader_fb_size - 1;
+			break;
+		case 1:
+			fb_res->start =
+				(resource_size_t) tegra_bootloader_fb2_start;
+			fb_res->end = fb_res->start +
+				(resource_size_t) tegra_bootloader_fb2_size - 1;
+			break;
+		default:
+			pr_err("Could not find DC instance %d\n", instance);
+			break;
+		}
+	}
+
 }
 
 static int __init tegra_usb_port_owner_info(char *id)

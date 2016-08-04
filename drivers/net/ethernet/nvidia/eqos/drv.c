@@ -44,6 +44,7 @@
  * @brief: Driver functions.
  */
 
+#include <linux/gpio.h>
 #include "yheader.h"
 #include "yapphdr.h"
 #include "drv.h"
@@ -5818,8 +5819,10 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	hw_if->stop_mac_tx();
 
 	/* stop the PHY */
-	if (pdata->phydev)
+	if (pdata->phydev) {
 		phy_stop(pdata->phydev);
+		gpio_set_value(pdata->phy_reset_gpio, 0);
+	}
 
 	/* stop DMA RX */
 	eqos_stop_all_ch_rx_dma(pdata);
@@ -5842,6 +5845,12 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 	struct desc_if_struct *desc_if = &pdata->desc_if;
 
 	DBGPR("-->%s()\n", __func__);
+
+	if (!gpio_get_value(pdata->phy_reset_gpio))
+	{
+		/* deassert phy reset */
+		gpio_set_value(pdata->phy_reset_gpio, 1);
+	}
 
 	/* issue CAR reset to device */
 	hw_if->car_reset(pdata);

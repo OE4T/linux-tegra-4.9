@@ -357,7 +357,8 @@ void handle_ti_ri_chan_intrs(struct eqos_prv_data *pdata,
 		hw_if->disable_chan_interrupts(qinx, pdata);
 		__napi_schedule(&rx_queue->napi);
 	} else {
-		/* Do nothing here. We should not hit this case. */
+		/* Do nothing here. */
+		pr_alert("Ethernet Interrupt while in poll!\n");
 	}
 	DBGPR("<--%s()\n", __func__);
 }
@@ -535,6 +536,10 @@ irqreturn_t eqos_ch_isr(int irq, void *device_id)
 		DBGPR("%(): irq %d not handled\n", __func__, irq);
 		return IRQ_NONE;
 	}
+
+	spin_lock(&pdata->chinfo[qinx].irq_lock);
+	handle_ti_ri_chan_intrs(pdata, qinx, &napi_sched);
+	spin_unlock(&pdata->chinfo[qinx].irq_lock);
 
 	DBGPR("<--%s()\n", __func__);
 

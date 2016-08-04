@@ -16,8 +16,18 @@
  *
  */
 
-#include "tegra186-priv-quill-p3310-1000-a00-00-dsi-dp.dts"
+#include "tegra186-quill-p3310-1000-a00-00-base.dts"
 
 / {
 	nvidia,dtsfilename = __FILE__;
-  };
+
+	host1x {
+		nvdisplay@15210000 {
+			nvidia,dc-or-node = "/host1x/sor";
+		};
+
+		nvdisplay@15220000 {
+			status = "disabled";
+		};
+	};
+};

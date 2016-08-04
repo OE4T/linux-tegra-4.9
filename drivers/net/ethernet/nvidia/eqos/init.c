@@ -1057,6 +1057,9 @@ int eqos_probe(struct platform_device *pdev)
 	for (i = 0; i < num_chans; i++)
 		spin_lock_init(&pdata->chinfo[i].chan_lock);
 
+	for (i = 0; i < num_chans; i++)
+		spin_lock_init(&pdata->chinfo[i].irq_lock);
+
 	ret = register_netdev(ndev);
 	if (ret) {
 		pr_err("%s: Net device registration failed\n",

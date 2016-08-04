@@ -84,49 +84,49 @@ enum {
  * Fields:
  * force_entry:	when set forces the target to sleep for a set time
  */
-struct __packed camrtc_pm_data {
+struct camrtc_pm_data {
 	uint32_t force_entry;
-};
+} __packed;
 
 /* This struct is used to send the loop count to perform the mods test
  * on the target.
  * Fields:
  * mods_loops:	number of times mods test should be run
  */
-struct __packed camrtc_mods_data {
+struct camrtc_mods_data {
 	uint32_t mods_loops;
-};
+} __packed;
 
-/* This struct is used to extract the firmware version of the SPE.
+/* This struct is used to extract the firmware version of the RTCPU.
  * Fields:
  * data:	buffer to store the version string. Uses uint8_t
  */
-struct __packed camrtc_ping_data {
+struct camrtc_ping_data {
 	uint64_t ts_req;		/* requestor timestamp */
 	uint64_t ts_resp;		/* response timestamp */
 	uint8_t data[64];		/* data */
-};
+} __packed;
 
-struct __packed camrtc_log_data {
+struct camrtc_log_data {
 	uint32_t level;
-};
+} __packed;
 
-struct __packed camrtc_rtos_state_data {
+struct camrtc_rtos_state_data {
 	uint8_t rtos_state[CAMRTC_DBG_MAX_DATA];	/* string data */
-};
+} __packed;
 
 /* This structure is used to read 32 bit data from firmware address space.
  * Fields:
  *   addr: address to read from. should be 4 byte aligned.
  *   data: 32 bit value read from memory.
  */
-struct __packed camrtc_dbg_read_memory_32bit {
+struct camrtc_dbg_read_memory_32bit {
 	uint32_t addr;
-};
+} __packed;
 
-struct __packed camrtc_dbg_read_memory_32bit_result {
+struct camrtc_dbg_read_memory_32bit_result {
 	uint32_t data;
-};
+} __packed;
 
 /* This structure is used to read memory in firmware address space.
  * Fields:
@@ -134,14 +134,14 @@ struct __packed camrtc_dbg_read_memory_32bit_result {
  *   count: number of bytes to read. limited to CAMRTC_DBG_READ_MEMORY_COUNT_MAX
  *   data: contents read from memory.
  */
-struct __packed camrtc_dbg_read_memory {
+struct camrtc_dbg_read_memory {
 	uint32_t addr;
 	uint32_t count;
-};
+} __packed;
 
-struct __packed camrtc_dbg_read_memory_result {
+struct camrtc_dbg_read_memory_result {
 	uint8_t data[CAMRTC_DBG_READ_MEMORY_COUNT_MAX];
-};
+} __packed;
 
 /* These structure is used to set event type that each performance counter
  * will monitor. This doesn't include fixed performance counter. If there
@@ -153,12 +153,12 @@ struct __packed camrtc_dbg_read_memory_result {
  *   cycle_counter_div64: Whether to enable cycle counter divider
  *   events: Event type to monitor
  */
-struct __packed camrtc_dbg_set_perf_counters {
+struct camrtc_dbg_set_perf_counters {
 	uint32_t number;
 	uint32_t do_reset;
 	uint32_t cycle_counter_div64;
 	uint32_t events[CAMRTC_DBG_MAX_PERF_COUNTERS];
-};
+} __packed;
 
 /* These structure is used to get performance counters.
  * Fields:
@@ -169,21 +169,21 @@ struct __packed camrtc_dbg_set_perf_counters {
  *       For first entry, this field is don't care.
  *     value: Value of performance counter.
  */
-struct __packed camrtc_dbg_get_perf_counters_result {
+struct camrtc_dbg_get_perf_counters_result {
 	uint32_t number;
 	struct {
 		uint32_t event;
 		uint32_t value;
 	} counters[CAMRTC_DBG_MAX_PERF_COUNTERS];
-};
+} __packed;
 
 
 #define CAMRTC_DBG_MAX_TEST_DATA (CAMRTC_DBG_MAX_DATA - 8)
 
-struct __packed camrtc_dbg_run_test_data {
+struct camrtc_dbg_run_test_data {
 	uint64_t timeout;	/* Time in nanoseconds */
 	uint8_t data[CAMRTC_DBG_MAX_TEST_DATA];
-};
+} __packed;
 
 /* This struct encapsulates the type of the request and the respective
  * data associated with that request.
@@ -192,7 +192,7 @@ struct __packed camrtc_dbg_run_test_data {
  *		mods or ping.
  * data:	Union of structs of all the request types.
  */
-struct __packed camrtc_dbg_request {
+struct camrtc_dbg_request {
 	uint32_t req_type;
 	uint32_t reserved;
 	union {
@@ -205,7 +205,7 @@ struct __packed camrtc_dbg_request {
 		struct camrtc_dbg_set_perf_counters set_perf_data;
 		struct camrtc_dbg_run_test_data run_test_data;
 	} data;
-};
+} __packed;
 
 /* This struct encapsulates the type of the response and the respective
  * data associated with that response.
@@ -216,7 +216,7 @@ struct __packed camrtc_dbg_request {
  *		In case of mods, this field is the result.
  * data:	Union of structs of all the request/response types.
  */
-struct __packed camrtc_dbg_response {
+struct camrtc_dbg_response {
 	uint32_t resp_type;
 	uint32_t status;
 	union {
@@ -229,6 +229,6 @@ struct __packed camrtc_dbg_response {
 		struct camrtc_dbg_get_perf_counters_result get_perf_data;
 		struct camrtc_dbg_run_test_data run_test_data;
 	} data;
-};
+} __packed;
 
 #endif /* INCLUDE_CAMRTC_DBG_MESSAGES_H */

@@ -1443,7 +1443,18 @@ static int dbg_edid_show(struct seq_file *s, void *unused)
 	u8 *buf;
 	int i;
 
-	if (WARN_ON(!dc || !dc->out || !dc->edid))
+	if (WARN_ON(!dc || !dc->out))
+		return -EINVAL;
+
+	if (dc->out->type == TEGRA_DC_OUT_DSI ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSIA ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSIB ||
+		dc->out->type == TEGRA_DC_OUT_FAKE_DSI_GANGED) {
+		seq_puts(s, "No EDID\n");
+		return 0;
+	}
+
+	if (WARN_ON(!dc->edid))
 		return -EINVAL;
 
 	data = tegra_edid_get_data(edid);

@@ -96,7 +96,7 @@ static void trusty_dump_logs(struct trusty_log_state *s)
 			get = alloc - log->sz;
 			continue;
 		}
-		pr_info("trusty: %s", s->line_buffer);
+		pr_info("[TRUSTY] %s", s->line_buffer);
 		get += read_chars;
 	}
 	s->get = get;

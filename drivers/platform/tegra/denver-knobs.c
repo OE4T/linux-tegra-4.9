@@ -109,7 +109,14 @@ static struct denver_creg denver_cregs[] = {
 enum creg_command {
 	CREG_INDEX = 1,
 	CREG_READ,
-	CREG_WRITE
+	CREG_WRITE,
+	TRACER_CONTROL
+};
+
+enum tc_input {
+	TC_CLEAR = 0,
+	TC_START,
+	TC_STOP
 };
 
 static const char * const pmic_names[] = {
@@ -238,6 +245,11 @@ struct creg_param {
 	u64 val;
 };
 
+struct tc_param {
+	enum tc_input in;
+	u64 val;
+};
+
 static void _denver_creg_get(struct creg_param *param)
 {
 	asm volatile (
@@ -248,6 +260,33 @@ static void _denver_creg_get(struct creg_param *param)
 	: "=r" (param->val)
 	: "r" (param->offset), "r" (CREG_INDEX), "r" (CREG_READ)
 	);
+}
+
+static void _denver_tracer_control(struct tc_param *param)
+{
+	pr_debug("%s:param->in = %d\n", __func__, param->in);
+	asm volatile (
+	"	sys 0, c11, c0, 1, %1\n"
+	"	sys 0, c11, c0, 0, %2\n"
+	"	sysl %0, 0, c11, c0, 0\n"
+	: "=r" (param->val)
+	: "r" (param->in), "r" (TRACER_CONTROL)
+	);
+	pr_debug("%s:param->val= %llu\n", __func__, param->val);
+}
+
+static int denver_tracer_control(void *data, u64 *val)
+{
+	int ret;
+	struct tc_param param;
+	enum tc_input *in = (enum tc_input *)data;
+
+	param.in = *in;
+
+	ret = smp_call_function_denver((smp_call_func_t) _denver_tracer_control,
+					&param, 1);
+	*val = param.val;
+	return ret;
 }
 
 static void _denver_creg_set(struct creg_param *param)
@@ -413,6 +452,48 @@ static const struct file_operations inst_stats_fops = {
 	.release	= single_release,
 };
 
+static ssize_t tc_write(struct file *file, const char __user *addr,
+	size_t len, loff_t *pos)
+{
+	int ret = 0;
+	enum tc_input tc_in;
+	u64 val = -1;
+
+	ret = kstrtol_from_user(addr, len, 10, (long *)&tc_in);
+	if (ret < 0)
+		return ret;
+
+	if ((tc_in < TC_CLEAR) || (tc_in > TC_STOP)) {
+		pr_err("%s: Invalid tc_input - %d\n", __func__, tc_in);
+		return -EINVAL;
+	}
+
+	denver_tracer_control(&tc_in, &val);
+	pr_info("TRACER_CONTROL CMD for input = %d - %s\n",
+		tc_in, (val == 0) ? "succeeded" : "failed");
+
+	return len;
+}
+
+static int tc_show(struct seq_file *s, void *data)
+{
+	seq_puts(s, "write 0 to clear, 1 to start, 2 to stop TRACER_CONTROL\n");
+	return 0;
+}
+
+static int tc_open(struct inode *inode, struct file *file)
+{
+	return single_open(file, tc_show, inode->i_private);
+}
+
+static const struct file_operations tc_fops = {
+	.open		= tc_open,
+	.read		= seq_read,
+	.write		= tc_write,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+};
+
 static int agg_stats_show(struct seq_file *s, void *data)
 {
 	struct nvmstat stat;
@@ -436,6 +517,21 @@ static const struct file_operations agg_stats_fops = {
 	.llseek		= seq_lseek,
 	.release	= single_release,
 };
+
+static int __init create_denver_tracer_control(void)
+{
+	if (!debugfs_create_file("tracer_control",
+				S_IRUGO,
+				denver_debugfs_root,
+				NULL,
+				&tc_fops)) {
+		pr_err("%s: Couldn't create the \"tracer_control\" debugfs node.\n",
+			__func__);
+		return -1;
+	}
+
+	return 0;
+}
 
 static int __init create_denver_nvmstats(void)
 {
@@ -708,6 +804,9 @@ static int __init denver_knobs_init(void)
 
 	if (backdoor_enabled) {
 		error = create_denver_cregs();
+		if (error)
+			return error;
+		error = create_denver_tracer_control();
 		if (error)
 			return error;
 	}

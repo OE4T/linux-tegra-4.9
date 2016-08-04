@@ -135,4 +135,8 @@
 			};
 		};
 	};
+
+	spi@3240000 { /* Tegra SPI4 <-> VCM SPIC: MCU */
+		status = "disabled";
+	};
 };

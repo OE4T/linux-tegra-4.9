@@ -51,6 +51,8 @@ enum gk20a_aperture {
 	APERTURE_VIDMEM
 };
 
+#define NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE	0x18000000
+
 static inline const char *gk20a_aperture_str(enum gk20a_aperture aperture)
 {
 	switch (aperture) {
@@ -404,7 +406,9 @@ struct mm_gk20a {
 	struct {
 		size_t size;
 		struct gk20a_allocator allocator;
+		struct gk20a_allocator bootstrap_allocator;
 		u32 ce_ctx_id;
+		bool cleared;
 	} vidmem;
 };
 

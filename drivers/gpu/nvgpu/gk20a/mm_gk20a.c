@@ -781,18 +781,37 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	struct device *d = dev_from_gk20a(g);
 	size_t size = g->ops.mm.get_vidmem_size ?
 		g->ops.mm.get_vidmem_size(g) : 0;
+	u64 bootstrap_base, bootstrap_size, base;
 	int err;
 
 	if (!size)
 		return 0;
 
+	bootstrap_base = NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE;
+	bootstrap_size = SZ_16M;
+	base = SZ_4K;
+
+	/*
+	 * Bootstrap allocator for use before the CE is initialized (CE
+	 * initialization requires vidmem but we want to use the CE to zero
+	 * out vidmem before allocating it...
+	 */
+	err = gk20a_page_allocator_init(&g->mm.vidmem.bootstrap_allocator,
+					"vidmem-bootstrap",
+					bootstrap_base, bootstrap_size,
+					SZ_4K, 0);
+
 	err = gk20a_page_allocator_init(&g->mm.vidmem.allocator, "vidmem",
-					SZ_4K, size - SZ_4K, SZ_4K, 0);
+					base, size - base, SZ_4K, 0);
 	if (err) {
 		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
 				size, err);
 		return err;
 	}
+
+	/* Reserve bootstrap region in vidmem allocator */
+	gk20a_alloc_fixed(&g->mm.vidmem.allocator,
+			  bootstrap_base, bootstrap_size);
 
 	mm->vidmem.size = size;
 
@@ -2741,6 +2760,9 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;
 	int err;
+	struct gk20a_allocator *vidmem_alloc = g->mm.vidmem.cleared ?
+		&g->mm.vidmem.allocator :
+		&g->mm.vidmem.bootstrap_allocator;
 
 	gk20a_dbg_fn("");
 
@@ -2752,13 +2774,13 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
 
 	if (at) {
-		addr = gk20a_alloc_fixed(&g->mm.vidmem.allocator, at, size);
+		addr = gk20a_alloc_fixed(vidmem_alloc, at, size);
 		if (!addr)
 			return -ENOMEM;
 
 		mem->fixed = true;
 	} else {
-		addr = gk20a_alloc(&g->mm.vidmem.allocator, size);
+		addr = gk20a_alloc(vidmem_alloc, size);
 		if (!addr)
 			return -ENOMEM;
 

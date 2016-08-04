@@ -13,7 +13,7 @@
  * more details.
  */
 
-#include "tegra186-priv-sunstreaker-char-e3340-1080-a00-00-base.dts"
+#include "tegra186-sunstreaker-char-e3340-1080-a00-00-base.dts"
 
 / {
 	nvidia,dtsfilename = __FILE__;

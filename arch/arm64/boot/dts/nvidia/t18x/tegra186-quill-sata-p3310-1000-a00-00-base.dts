@@ -1,4 +1,5 @@
 /*
+
  * tegra186-quill-sata-p3310-1000-a00-00-base.dts Quill A00 Board
  *
  * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
@@ -13,8 +14,26 @@
  * more details.
  */
 
-#include "tegra186-priv-quill-sata-p3310-1000-a00-00-base.dts"
+#include "tegra186-priv-quill-p3310-1000-a00-00-base.dts"
 
 / {
-	nvidia,dtsfilename = __FILE__;
+  model = "quill-sata";
+  compatible = "nvidia,quill-sata", "nvidia,tegra186";
+
+  nvidia,dtsfilename = __FILE__;
+  nvidia,boardids = "3310:0000:A0";
+  nvidia,proc-boardid = "3310:0000:A0";
+
+  chosen {
+		board-has-eeprom;
+    bootargs ="console=ttyS0,115200";
+    stdout-path = &uarta;
+  };
+
+  firmware {
+    android {
+      compatible = "android,firmware";
+      hardware = "quill-sata";
+    };
+  };
 };

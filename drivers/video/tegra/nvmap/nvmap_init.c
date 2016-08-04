@@ -22,7 +22,6 @@
 #include <linux/of.h>
 #include <linux/of_fdt.h>
 #include <linux/of_platform.h>
-#include <linux/of_reserved_mem.h>
 #include <linux/nvmap.h>
 #include <linux/tegra-ivc.h>
 #include <linux/dma-contiguous.h>
@@ -352,7 +351,7 @@ static const struct reserved_mem_ops nvmap_co_ops = {
 	.device_release	= nvmap_co_device_release,
 };
 
-static int __init nvmap_co_setup(struct reserved_mem *rmem)
+int __init nvmap_co_setup(struct reserved_mem *rmem)
 {
 	struct nvmap_platform_carveout *co;
 	int ret = 0;
@@ -397,6 +396,7 @@ skip_cma:
 	co->cma_dev = NULL;
 	return ret;
 }
+EXPORT_SYMBOL(nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_co, "nvidia,generic_carveout", nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_ivm_co, "nvidia,ivm_carveout", nvmap_co_setup);
 RESERVEDMEM_OF_DECLARE(nvmap_iram_co, "nvidia,iram-carveout", nvmap_co_setup);

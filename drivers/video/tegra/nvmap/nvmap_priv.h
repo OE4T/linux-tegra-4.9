@@ -42,6 +42,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/dma-direction.h>
 #include <linux/platform_device.h>
+#include <linux/of_reserved_mem.h>
 
 #include <asm/cacheflush.h>
 #ifndef CONFIG_ARM64
@@ -378,6 +379,7 @@ int nvmap_remove(struct platform_device *pdev);
 int nvmap_init(struct platform_device *pdev);
 
 int nvmap_create_carveout(const struct nvmap_platform_carveout *co);
+int nvmap_co_setup(struct reserved_mem *rmem);
 
 struct nvmap_heap_block *nvmap_carveout_alloc(struct nvmap_client *dev,
 					      struct nvmap_handle *handle,

@@ -143,9 +143,6 @@ static void nvdla_free_dump_region(struct platform_device *pdev)
 			       &attrs);
 		m->debug_dump_va = NULL;
 		m->debug_dump_pa = 0;
-
-		/* reset dump region */
-		nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS, m->debug_dump_pa);
 	}
 }
 

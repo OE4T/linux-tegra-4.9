@@ -1328,6 +1328,7 @@ struct chan_data {
 	u32	int_mask;
 	spinlock_t chan_tx_lock;
 	spinlock_t chan_lock;
+	spinlock_t irq_lock;
 };
 
 #define EQOS_HW_CHG_MAX_COUNT	50

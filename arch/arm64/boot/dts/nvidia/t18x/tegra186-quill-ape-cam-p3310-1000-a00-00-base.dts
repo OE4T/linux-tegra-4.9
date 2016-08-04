@@ -13,7 +13,7 @@
  * more details.
  */
 
-#include "tegra186-priv-quill-p3310-1000-a00-00-base.dts"
+#include "tegra186-quill-p3310-1000-a00-00-base.dts"
 #include "tegra186-platforms/tegra186-quill-camera-ape.dtsi"
 / {
 	nvidia,dtsfilename = __FILE__;

@@ -14,7 +14,7 @@
  * more details.
  */
 
-#include "tegra186-priv-quill-p3310-1000-a00-00-base.dts"
+#include "tegra186-quill-p3310-1000-a00-00-base.dts"
 
 / {
   model = "quill-sata";

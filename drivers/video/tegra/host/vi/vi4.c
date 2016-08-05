@@ -64,7 +64,7 @@ static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
 		host1x_writel(pdev, VI_NOTIFY_ERROR_0, 1);
 		dev_err(&pdev->dev, "notify buffer overflow\n");
 		atomic_inc(&vi->notify_overflow);
-		vi_notify_dev_error(vi->notify.vnd);
+		nvhost_vi_notify_error(pdev);
 	}
 
 	r = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);
@@ -327,7 +327,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 
 	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);
 	if (err) {
-		if (vi->notify.vnd != NULL)
+		if (vi->hvnd != NULL)
 			vi_notify_unregister(&nvhost_vi_notify_driver,
 						&pdev->dev);
 		nvhost_client_device_release(pdev);
@@ -342,7 +342,7 @@ static int tegra_vi4_remove(struct platform_device *pdev)
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
 
 	tegra_vi_media_controller_cleanup(&vi->mc_vi);
-	if (vi->notify.vnd != NULL)
+	if (vi->hvnd != NULL)
 		vi_notify_unregister(&nvhost_vi_notify_driver, &pdev->dev);
 	nvhost_client_device_release(pdev);
 	/* ^ includes call to nvhost_module_deinit() */

@@ -51,6 +51,20 @@
 #define VI_NOTIFY_TAG_DATA_FE			0x20
 #define VI_NOTIFY_TAG_DATA_LOAD_FRAMED		0x08000000
 
+struct nvhost_vi_ch_incrs {
+	atomic_t syncpt_ids[3];
+};
+
+struct nvhost_vi_notify_dev {
+	struct vi_notify_dev *vnd;
+	u32 mask;
+	u32 classify_mask;
+	u32 ld_mask;
+	int prio_irq;
+	int norm_irq;
+	struct nvhost_vi_ch_incrs incr[12];
+};
+
 static void nvhost_vi_notify_dump_status(struct platform_device *pdev)
 {
 	u32 r = host1x_readl(pdev, VI_NOTIFY_OCCUPANCY_0);
@@ -79,7 +93,7 @@ static void nvhost_vi_notify_do_increment(struct platform_device *pdev,
 {
 	struct nvhost_master *master = nvhost_get_host(pdev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_notify_dev *hvnd = vi->hvnd;
 	int idx;
 	u32 id;
 
@@ -109,7 +123,7 @@ static irqreturn_t nvhost_vi_notify_isr(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_notify_dev *hvnd = vi->hvnd;
 
 	for (;;) {
 		struct vi_notify_msg msg;
@@ -206,9 +220,14 @@ static int nvhost_vi_notify_probe(struct device *dev,
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_notify_dev *hvnd;
 	int ret;
 
+	hvnd = devm_kmalloc(dev, sizeof(*hvnd), GFP_KERNEL);
+	if (unlikely(hvnd == NULL))
+		return -ENOMEM;
+
+	vi->hvnd = hvnd;
 	hvnd->vnd = vnd;
 	hvnd->mask = 0;
 	hvnd->classify_mask = 0;
@@ -217,19 +236,16 @@ static int nvhost_vi_notify_probe(struct device *dev,
 
 	ret = nvhost_vi_get_irq(pdev, 1, nvhost_vi_prio_isr);
 	if (IS_ERR_VALUE(ret))
-		goto error;
+		return ret;
 	hvnd->prio_irq = ret;
 
 	ret = nvhost_vi_get_irq(pdev, 2, nvhost_vi_notify_isr);
 	if (IS_ERR_VALUE(ret)) {
 		devm_free_irq(&pdev->dev, hvnd->prio_irq, pdev);
-		goto error;
+		return ret;
 	}
 	hvnd->norm_irq = ret;
 	return 0;
-error:
-	hvnd->vnd = NULL;
-	return ret;
 }
 
 static void nvhost_vi_notify_dump_classify(struct platform_device *pdev)
@@ -251,7 +267,7 @@ do { \
 static int nvhost_vi_notify_set_mask(struct platform_device *pdev, u32 mask)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_notify_dev *hvnd = vi->hvnd;
 
 	if (mask != 0)
 		/* Unmask events handled by the interrupt handler */
@@ -295,7 +311,7 @@ static int nvhost_vi_notify_classify(struct device *dev, u32 mask)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_notify_dev *hvnd = vi->hvnd;
 
 	hvnd->classify_mask = mask;
 
@@ -308,7 +324,7 @@ static int nvhost_vi_notify_set_syncpts(struct device *dev, u8 ch,
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_master *master = nvhost_get_host(pdev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_notify_dev *hvnd = vi->hvnd;
 	struct nvhost_vi_ch_incrs *incrs;
 	int err;
 	int i;
@@ -338,7 +354,7 @@ static void nvhost_vi_notify_reset(struct device *dev, u8 ch)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
-	struct nvhost_vi_notify_dev *hvnd = &vi->notify;
+	struct nvhost_vi_notify_dev *hvnd = vi->hvnd;
 	struct nvhost_vi_ch_incrs *incrs;
 	int i;
 	u32 mask = hvnd->classify_mask;
@@ -373,3 +389,10 @@ struct vi_notify_driver nvhost_vi_notify_driver = {
 	.set_syncpts = nvhost_vi_notify_set_syncpts,
 	.reset_channel = nvhost_vi_notify_reset,
 };
+
+void nvhost_vi_notify_error(struct platform_device *pdev)
+{
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	vi_notify_dev_error(vi->hvnd->vnd);
+}

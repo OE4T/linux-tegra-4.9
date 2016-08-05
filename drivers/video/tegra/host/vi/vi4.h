@@ -23,26 +23,13 @@
 
 #include "../camera/mc_common.h"
 
-struct nvhost_vi_ch_incrs {
-	atomic_t syncpt_ids[3];
-};
-
-struct nvhost_vi_notify_dev {
-	struct vi_notify_dev *vnd;
-	u32 mask;
-	u32 classify_mask;
-	u32 ld_mask;
-	int prio_irq;
-	int norm_irq;
-	struct nvhost_vi_ch_incrs incr[12];
-};
-
 struct reset_control;
 
 extern struct vi_notify_driver nvhost_vi_notify_driver;
+void nvhost_vi_notify_error(struct platform_device *);
 
 struct nvhost_vi_dev {
-	struct nvhost_vi_notify_dev notify;
+	struct nvhost_vi_notify_dev *hvnd;
 	struct reset_control *vi_reset;
 	struct reset_control *vi_tsc_reset;
 	struct dentry *debug_dir;

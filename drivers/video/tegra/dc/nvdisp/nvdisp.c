@@ -2812,6 +2812,7 @@ static void tegra_nvdisp_program_thread_groups(struct tegra_dc *dc,
 void tegra_nvdisp_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
+	struct tegra_dc_imp_head_results *imp_results = NULL;
 	bool program_mempool = false;
 
 	mutex_lock(&tegra_nvdisp_lock);
@@ -2823,6 +2824,14 @@ void tegra_nvdisp_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 	}
 	program_mempool = !(before_win_update ^
 				imp_settings->program_mempool_before_update);
+
+	/* Make sure bw and LA/PTSA are set correctly. */
+	imp_results = &imp_settings->imp_results[dc->ctrl_num];
+	tegra_nvdisp_program_bandwidth(dc,
+				(u32)imp_results->required_total_bw_kbps,
+				(u32)imp_results->total_latency,
+				(u32)imp_results->hubclk,
+				before_win_update);
 
 	mutex_unlock(&tegra_nvdisp_lock);
 
@@ -2925,14 +2934,14 @@ int tegra_nvdisp_handle_imp_propose(struct tegra_dc *dc,
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
 	struct tegra_dc_imp_settings *last_imp_settings = NULL;
+	struct tegra_dc_imp_head_results *imp_results = NULL;
 	int ret = 0;
 
 	imp_settings = kzalloc(sizeof(*imp_settings), GFP_KERNEL);
 	if (!imp_settings) {
 		dev_err(&dc->ndev->dev,
 			"Failed to allocate memory for IMP settings\n");
-		ret = -ENOMEM;
-		goto free_and_ret;
+		return -ENOMEM;
 	}
 	INIT_LIST_HEAD(&imp_settings->imp_node);
 
@@ -2961,6 +2970,16 @@ int tegra_nvdisp_handle_imp_propose(struct tegra_dc *dc,
 		mutex_unlock(&tegra_nvdisp_lock);
 		goto free_and_ret;
 	}
+
+	imp_results = &imp_settings->imp_results[dc->ctrl_num];
+	ret = tegra_nvdisp_negotiate_reserved_bw(dc,
+				(u32)imp_results->required_total_bw_kbps,
+				(u32)imp_results->total_latency);
+	if (ret) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		goto free_and_ret;
+	}
+
 	list_add_tail(&imp_settings->imp_node, &nvdisp_imp_settings_queue);
 
 	mutex_unlock(&tegra_nvdisp_lock);

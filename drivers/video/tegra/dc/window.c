@@ -283,7 +283,7 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 
 	trace_sync_windows(dc);
 	mutex_lock(&dc->lock);
-	if (tegra_platform_is_linsim()) {
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk()) {
 		/* Don't want to timeout on simulator */
 		ret = ___wait_event(dc->wq, tegra_dc_windows_are_clean(windows, n),
 			TASK_INTERRUPTIBLE, 0, 0,
@@ -1182,7 +1182,7 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
-		if (tegra_platform_is_linsim()) {
+		if (tegra_platform_is_linsim() || tegra_platform_is_vdk()) {
 			/* FIXME: this is not needed when
 			   the simulator clears WIN_x_UPDATE
 			   bits as in HW */

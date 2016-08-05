@@ -64,8 +64,9 @@ tegra_dc_sor_poll_register(struct tegra_dc_sor_data *sor,
 	unsigned long timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32 reg_val = 0;
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return 0;
+
 	do {
 		reg_val = tegra_sor_readl(sor, reg);
 		if ((reg_val & mask) == exp_val)
@@ -245,7 +246,7 @@ static int dbg_sor_show(struct seq_file *s, void *unused)
 	DUMP_REG(NV_SOR_DP_MISC1_OVERRIDE);
 	DUMP_REG(NV_SOR_DP_MISC1_BIT6_0);
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		DUMP_REG(NV_SOR_FPGA_HDMI_HEAD_SEL);
 	hdmi_dump = 1; /* SOR and SOR1 have same registers */
 #else
@@ -476,7 +477,8 @@ static int sor_fpga_settings(struct tegra_dc *dc,
 	u32 head_sel = NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_MODE_HDMI |
 			NV_SOR_FPGA_HDMI_HEAD_SEL_FPGA_HEAD1_OUT_EN_ENABLE;
 
-	if (!tegra_platform_is_linsim() ||
+	/* continue for system fpga and HDMI */
+	if ((!(tegra_platform_is_linsim() || tegra_platform_is_vdk())) ||
 		(dc->out->type != TEGRA_DC_OUT_HDMI))
 		return 0;
 
@@ -1055,7 +1057,7 @@ static void tegra_dc_sor_io_set_dpd(struct tegra_dc_sor_data *sor, bool up)
 	static void __iomem *pmc_base = IO_ADDRESS(TEGRA_PMC_BASE);
 	unsigned long timeout_jf;
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
 
 	if (up) {
@@ -1425,7 +1427,7 @@ static void tegra_dc_sor_enable_dc(struct tegra_dc_sor_data *sor)
 
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY,
 			DC_CMD_STATE_ACCESS);
 	else
@@ -1563,8 +1565,9 @@ static void tegra_sor_dp_cal(struct tegra_dc_sor_data *sor)
 
 static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 {
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
+
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	if (sor->rst) {
 		reset_control_assert(sor->rst);
@@ -1642,7 +1645,7 @@ void tegra_sor_start_dc(struct tegra_dc_sor_data *sor)
 	tegra_dc_get(dc);
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY,
 			DC_CMD_STATE_ACCESS);
 	else
@@ -1668,7 +1671,7 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor)
 
 	reg_val = tegra_dc_readl(dc, DC_CMD_STATE_ACCESS);
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		tegra_dc_writel(dc, reg_val | WRITE_MUX_ASSEMBLY,
 			DC_CMD_STATE_ACCESS);
 	else
@@ -1763,8 +1766,9 @@ tegra_dc_sor_disable_win_short_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
+
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
 
 	/* Store and clear window options */
@@ -1810,7 +1814,7 @@ tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 {
 	int selected_windows, i;
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
 
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -2103,7 +2107,7 @@ void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds)
 		return;
 	}
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
 
 	/* Reset SOR */
@@ -2220,8 +2224,9 @@ void tegra_sor_setup_clk(struct tegra_dc_sor_data *sor, struct clk *clk,
 	struct clk *dc_parent_clk;
 	struct tegra_dc *dc = sor->dc;
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
+
 	if (clk == dc->clk) {
 		dc_parent_clk = clk_get_parent(clk);
 		BUG_ON(!dc_parent_clk);

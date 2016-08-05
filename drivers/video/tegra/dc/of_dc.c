@@ -352,7 +352,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	}
 	if (np_hdmi && of_device_is_available(np_hdmi) &&
 		(default_out->type == TEGRA_DC_OUT_HDMI) &&
-		!tegra_platform_is_linsim()) {
+		!(tegra_platform_is_linsim() ||	tegra_platform_is_vdk())) {
 		int id;
 		ddc = of_parse_phandle(np_hdmi, "nvidia,ddc-i2c-bus", 0);
 
@@ -415,7 +415,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 		default_out->hdcp_policy = TEGRA_DC_HDCP_POLICY_ALWAYS_ON;
 	}
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		default_out->hotplug_gpio = -1;
 
 	/* if hotplug not supported clear TEGRA_DC_OUT_HOTPLUG_WAKE_LP0 */

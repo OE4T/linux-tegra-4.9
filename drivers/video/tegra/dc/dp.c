@@ -177,6 +177,7 @@ static inline void tegra_dp_disable_irq(u32 irq)
 ({ \
 	!tegra_platform_is_fpga() && \
 	!tegra_platform_is_linsim() && \
+	!tegra_platform_is_vdk() && \
 	tegra_dc_is_ext_dp_panel(dp->dc) && \
 	dp->dc->out->type != TEGRA_DC_OUT_FAKE_DP; \
 })
@@ -197,7 +198,7 @@ tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 	unsigned long	timeout_jf = jiffies + msecs_to_jiffies(timeout_ms);
 	u32		reg_val	   = 0;
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return 0;
 
 	do {
@@ -2442,7 +2443,7 @@ static void tegra_dp_hpd_op_edid_recheck(void *drv_data)
 
 static inline void tegra_dp_reset(struct tegra_dc_dp_data *dp)
 {
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
 
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
@@ -2958,7 +2959,8 @@ static bool tegra_dc_dp_hpd_state(struct tegra_dc *dc)
 		return false;
 
 	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP ||
-		tegra_platform_is_linsim())
+		tegra_platform_is_linsim() ||
+		tegra_platform_is_vdk())
 		return true;
 
 	tegra_dpaux_clk_enable(dp);
@@ -2974,7 +2976,7 @@ static bool tegra_dc_dp_detect(struct tegra_dc *dc)
 {
 	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
 
-	if (tegra_platform_is_linsim())
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return true;
 
 	tegra_dp_pending_hpd(dp);
@@ -3034,7 +3036,7 @@ static void tegra_dc_dp_modeset_notifier(struct tegra_dc *dc)
 	tegra_dc_sor_modeset_notifier(dp->sor, false);
 	/* Pixel clock may be changed in new mode,
 	 * recalculate link config */
-	if (!tegra_platform_is_linsim())
+	if (!(tegra_platform_is_linsim() || tegra_platform_is_vdk()))
 		tegra_dc_dp_calc_config(dp, dp->mode, &dp->link_cfg);
 
 

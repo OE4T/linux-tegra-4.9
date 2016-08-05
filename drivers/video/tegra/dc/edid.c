@@ -602,9 +602,9 @@ u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid)
 
 bool tegra_edid_is_scdc_present(struct tegra_edid *edid)
 {
-	if (tegra_platform_is_linsim()) {
+	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return false;
-	}
+
 	if (!edid || !edid->data) {
 		pr_warn("edid invalid\n");
 		return false;

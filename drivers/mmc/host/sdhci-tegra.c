@@ -1303,7 +1303,30 @@ static const struct sdhci_tegra_soc_data soc_data_tegra186 = {
 		    SDHCI_MISC_CTRL_ENABLE_SDR50,
 };
 
+static const struct sdhci_pltfm_data sdhci_tegra194_pdata = {
+	.quirks = SDHCI_QUIRK_SINGLE_POWER_WRITE |
+		  SDHCI_QUIRK_NO_HISPD_BIT |
+		SDHCI_QUIRK_DATA_TIMEOUT_USES_SDCLK |
+		SDHCI_QUIRK_NO_HISPD_BIT |
+		SDHCI_QUIRK_BROKEN_ADMA_ZEROLEN_DESC |
+		SDHCI_QUIRK_NO_ENDATTR_IN_NOPDESC,
+	.quirks2 = SDHCI_QUIRK2_PRESET_VALUE_BROKEN |
+		SDHCI_QUIRK2_USE_64BIT_ADDR |
+		SDHCI_QUIRK2_HOST_OFF_CARD_ON,
+	.ops  = &tegra_sdhci_ops,
+};
+
+static const struct sdhci_tegra_soc_data soc_data_tegra194 = {
+	.pdata = &sdhci_tegra194_pdata,
+	.nvquirks = NVQUIRK_HW_TAP_CONFIG |
+		    NVQUIRK_ENABLE_SDHCI_SPEC_300 |
+		    NVQUIRK_ENABLE_SDR50 |
+		    NVQUIRK_ENABLE_DDR50 |
+		    NVQUIRK_ENABLE_SDR104 |
+		    SDHCI_MISC_CTRL_ENABLE_SDR50,
+};
 static const struct of_device_id sdhci_tegra_dt_match[] = {
+	{ .compatible = "nvidia,tegra194-sdhci", .data = &soc_data_tegra194 },
 	{ .compatible = "nvidia,tegra186-sdhci", .data = &soc_data_tegra186 },
 	{ .compatible = "nvidia,tegra210-sdhci", .data = &soc_data_tegra210 },
 	{ .compatible = "nvidia,tegra124-sdhci", .data = &soc_data_tegra124 },

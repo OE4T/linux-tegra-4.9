@@ -595,6 +595,16 @@ void tegra_hda_reset_data(struct tegra_dc *dc)
 	tegra_dc_hda_put_clocks(dc, hda);
 
 	if (hda_inst[sor_num] != NULL) {
+
+	#if defined(CONFIG_COMMON_CLK)
+		kfree(hda->hda_rst);
+		kfree(hda->hda2hdmi_rst);
+		kfree(hda->hda2codec_rst);
+
+		hda->hda_rst = NULL;
+		hda->hda2hdmi_rst = NULL;
+		hda->hda2codec_rst = NULL;
+	#endif
 		kfree(hda_inst[sor_num]);
 		hda_inst[sor_num] = NULL;
 	}

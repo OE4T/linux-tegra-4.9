@@ -17,9 +17,12 @@
 #include <linux/clkdev.h>
 #include <linux/clk.h>
 #include <linux/clk-provider.h>
+#include <linux/fs.h>
 #include <linux/of.h>
 #include <linux/clk/tegra.h>
 #include <linux/reset-controller.h>
+
+#include <asm/uaccess.h>
 
 #include <soc/tegra/fuse.h>
 
@@ -350,3 +353,114 @@ static int __init tegra_clocks_apply_init_table(void)
 	return 0;
 }
 arch_initcall(tegra_clocks_apply_init_table);
+
+#ifdef CONFIG_TEGRA_CLK_DEBUG
+static int rate_write_op(void *data, u64 rate)
+{
+	struct clk *clk = data;
+	return clk_set_rate(clk, rate);
+}
+
+static int state_write_op(void *data, u64 state)
+{
+	struct clk *clk = data;
+	if (state)
+		return clk_prepare_enable(clk);
+	else
+		clk_disable_unprepare(clk);
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(rate_fops, NULL, rate_write_op, "%llu\n");
+DEFINE_SIMPLE_ATTRIBUTE(state_fops, NULL, state_write_op, "%llu\n");
+
+ssize_t parent_fops_write(struct file *file, const char __user *buf,
+			  size_t len, loff_t *ppos)
+{
+	char *parent_name;
+	struct clk *parent;
+	ssize_t ret = len;
+	struct clk *clk = file->private_data;
+
+	parent_name = kmalloc(len, GFP_KERNEL);
+	if (!parent_name)
+		return -ENOMEM;
+
+	if (copy_from_user(parent_name, buf, len)) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	/* strip trailing '\n' */
+	while (len > 0 && parent_name[len-1] == '\n')
+		parent_name[--len] = 0;
+
+	parent = clk_get_sys("tegra-clk-debug", parent_name);
+	if (IS_ERR_OR_NULL(parent)) {
+		ret = -EFAULT;
+		goto out;
+	}
+
+	if (clk_set_parent(clk, parent))
+		ret = -EFAULT;
+
+out:
+	kfree(parent_name);
+
+	return ret;
+}
+
+static int parent_fops_open(struct inode *inode, struct file *file)
+{
+	file->private_data = inode->i_private;
+
+	return nonseekable_open(inode, file);
+}
+
+static int parent_fops_release(struct inode *inode, struct file *file)
+{
+	return 0;
+}
+
+static const struct file_operations parent_fops = {
+	.owner		= THIS_MODULE,
+	.open		= parent_fops_open,
+	.release	= parent_fops_release,
+	.read		= NULL,
+	.write		= parent_fops_write,
+	.llseek		= generic_file_llseek,
+};
+
+static int __init tegra_register_debugfs(void)
+{
+	int i;
+	struct clk *clk;
+	struct dentry *d;
+	const char *name;
+
+	 for (i = 0; i < clk_num; i++) {
+                if (IS_ERR(clks[i]) || !clks[i])
+                        continue;
+
+		clk = clks[i];
+		name = __clk_get_name(clk);
+		d = __clk_debugfs_add_file(clk, "clk_update_rate", 0200, clk,
+				   &rate_fops);
+		if (!d)
+			pr_err("debugfs clk_update_rate failed %s\n", name);
+
+		d = __clk_debugfs_add_file(clk, "clk_update_state", 0200, clk,
+				   &state_fops);
+		if (!d)
+			pr_err("debugfs clk_update_state failed %s\n", name);
+
+		d = __clk_debugfs_add_file(clk, "clk_update_parent", 0200, clk,
+				   &parent_fops);
+		if (!d)
+			pr_err("debugfs clk_update_state failed %s\n", name);
+	}
+
+	return 0;
+}
+late_initcall_sync(tegra_register_debugfs);
+#endif

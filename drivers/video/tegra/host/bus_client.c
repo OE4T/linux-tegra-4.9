@@ -501,96 +501,44 @@ static inline u32 get_job_fence(struct nvhost_job *job, u32 id)
 	return fence;
 }
 
-static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
-		struct nvhost_submit_args *args)
+static int submit_add_gathers(struct nvhost_submit_args *args,
+			      struct nvhost_job *job,
+			      struct nvhost_device_data *pdata)
 {
-	struct nvhost_job *job;
-	int num_cmdbufs = args->num_cmdbufs;
-	int num_relocs = args->num_relocs;
-	int num_waitchks = args->num_waitchks;
-	int num_syncpt_incrs = args->num_syncpt_incrs;
 	struct nvhost_cmdbuf __user *cmdbufs =
 		(struct nvhost_cmdbuf __user *)(uintptr_t)args->cmdbufs;
 	struct nvhost_cmdbuf_ext __user *cmdbuf_exts =
 		(struct nvhost_cmdbuf_ext __user *)(uintptr_t)args->cmdbuf_exts;
-	struct nvhost_reloc __user *relocs =
-		(struct nvhost_reloc __user *)(uintptr_t)args->relocs;
-	struct nvhost_reloc_shift __user *reloc_shifts =
-		(struct nvhost_reloc_shift __user *)
-				(uintptr_t)args->reloc_shifts;
-	struct nvhost_reloc_type __user *reloc_types =
-		(struct nvhost_reloc_type __user *)
-				(uintptr_t)args->reloc_types;
-	struct nvhost_waitchk __user *waitchks =
-		(struct nvhost_waitchk __user *)(uintptr_t)args->waitchks;
-	struct nvhost_syncpt_incr __user *syncpt_incrs =
-		(struct nvhost_syncpt_incr __user *)
-				(uintptr_t)args->syncpt_incrs;
-	u32 __user *fences = (u32 __user *)(uintptr_t)args->fences;
+
 	u32 __user *class_ids = (u32 __user *)(uintptr_t)args->class_ids;
-	struct nvhost_device_data *pdata = platform_get_drvdata(ctx->pdev);
-
-	const u32 *syncpt_array =
-		(pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) ?
-		ctx->syncpts :
-		ctx->ch->syncpts;
 	u32 *local_class_ids = NULL;
-	int err, i;
 
-	if (num_cmdbufs < 0)
-		return -EINVAL;
-
-	if ((num_syncpt_incrs < 0) || (num_syncpt_incrs >
-		     nvhost_syncpt_nb_pts(&nvhost_get_host(ctx->pdev)->syncpt)))
-		return -EINVAL;
-
-	job = nvhost_job_alloc(ctx->ch,
-			num_cmdbufs,
-			num_relocs,
-			num_waitchks,
-			num_syncpt_incrs);
-	if (!job)
-		return -ENOMEM;
-
-	job->num_relocs = args->num_relocs;
-	job->num_waitchk = args->num_waitchks;
-	job->num_syncpts = args->num_syncpt_incrs;
-	job->clientid = ctx->clientid;
-	job->client_managed_syncpt =
-		(pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) ?
-		ctx->client_managed_syncpt : ctx->ch->client_managed_syncpt;
-
-	/* copy error notifier settings for this job */
-	if (ctx->error_notifier_ref) {
-		get_dma_buf(ctx->error_notifier_ref);
-		job->error_notifier_ref = ctx->error_notifier_ref;
-		job->error_notifier_offset = ctx->error_notifier_offset;
-	}
+	int err;
+	u32 i;
 
 	/* mass copy class_ids */
-	if (args->class_ids) {
-		local_class_ids = kzalloc(sizeof(u32) * num_cmdbufs,
+	if (class_ids) {
+		local_class_ids = kcalloc(args->num_cmdbufs, sizeof(u32),
 			GFP_KERNEL);
-		if (!local_class_ids) {
-			err = -ENOMEM;
-			goto fail;
-		}
+		if (!local_class_ids)
+			return -ENOMEM;
+
 		err = copy_from_user(local_class_ids, class_ids,
-			sizeof(u32) * num_cmdbufs);
+			sizeof(u32) * args->num_cmdbufs);
 		if (err) {
 			err = -EINVAL;
-			goto fail;
+			goto free_local_class_ids;
 		}
 	}
 
-	for (i = 0; i < num_cmdbufs; ++i) {
+	for (i = 0; i < args->num_cmdbufs; ++i) {
 		struct nvhost_cmdbuf cmdbuf;
 		struct nvhost_cmdbuf_ext cmdbuf_ext;
 		u32 class_id = class_ids ? local_class_ids[i] : 0;
 
 		err = copy_from_user(&cmdbuf, cmdbufs + i, sizeof(cmdbuf));
 		if (err)
-			goto fail;
+			goto free_local_class_ids;
 
 		cmdbuf_ext.pre_fence = -1;
 		if (cmdbuf_exts)
@@ -604,7 +552,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		    class_id != pdata->class &&
 		    class_id != NV_HOST1X_CLASS_ID) {
 			err = -EINVAL;
-			goto fail;
+			goto free_local_class_ids;
 		}
 
 		nvhost_job_add_gather(job, cmdbuf.mem, cmdbuf.words,
@@ -613,29 +561,68 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	}
 
 	kfree(local_class_ids);
-	local_class_ids = NULL;
+
+	return 0;
+
+free_local_class_ids:
+	kfree(local_class_ids);
+
+	return err;
+}
+
+static int submit_copy_relocs(struct nvhost_submit_args *args,
+			      struct nvhost_job *job)
+{
+	struct nvhost_reloc __user *relocs =
+		(struct nvhost_reloc __user *)(uintptr_t)args->relocs;
+	struct nvhost_reloc_shift __user *reloc_shifts =
+		(struct nvhost_reloc_shift __user *)
+				(uintptr_t)args->reloc_shifts;
+	struct nvhost_reloc_type __user *reloc_types =
+		(struct nvhost_reloc_type __user *)
+				(uintptr_t)args->reloc_types;
+
+	int err;
+
+	job->num_relocs = args->num_relocs;
 
 	err = copy_from_user(job->relocarray,
-			relocs, sizeof(*relocs) * num_relocs);
+			relocs, sizeof(*relocs) * args->num_relocs);
 	if (err)
-		goto fail;
+		return err;
 
 	err = copy_from_user(job->relocshiftarray,
-			reloc_shifts, sizeof(*reloc_shifts) * num_relocs);
+			reloc_shifts, sizeof(*reloc_shifts) * args->num_relocs);
 	if (err)
-		goto fail;
+		return err;
 
 	if (reloc_types) {
 		err = copy_from_user(job->reloctypearray,
-				reloc_types, sizeof(*reloc_types) * num_relocs);
+			reloc_types, sizeof(*reloc_types) * args->num_relocs);
 		if (err)
-			goto fail;
+			return err;
 	}
 
-	err = copy_from_user(job->waitchk,
-			waitchks, sizeof(*waitchks) * num_waitchks);
-	if (err)
-		goto fail;
+	return 0;
+}
+
+static int submit_get_syncpoints(struct nvhost_submit_args *args,
+				 struct nvhost_job *job,
+				 struct nvhost_channel_userctx *ctx)
+{
+	struct nvhost_device_data *pdata = platform_get_drvdata(ctx->pdev);
+
+	const u32 *syncpt_array =
+		(pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) ?
+		ctx->syncpts :
+		ctx->ch->syncpts;
+
+	struct nvhost_syncpt_incr __user *syncpt_incrs =
+		(struct nvhost_syncpt_incr __user *)
+				(uintptr_t)args->syncpt_incrs;
+
+	int err;
+	u32 i;
 
 	/*
 	 * Go through each syncpoint from userspace. Here we:
@@ -644,7 +631,7 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 	 * - Determine the index of hwctx syncpoint in the table
 	 */
 
-	for (i = 0; i < num_syncpt_incrs; ++i) {
+	for (i = 0; i < args->num_syncpt_incrs; ++i) {
 		struct nvhost_syncpt_incr sp;
 		bool found = false;
 		int j;
@@ -652,13 +639,11 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 		/* Copy */
 		err = copy_from_user(&sp, syncpt_incrs + i, sizeof(sp));
 		if (err)
-			goto fail;
+			return err;
 
 		/* Validate the trivial case */
-		if (sp.syncpt_id == 0) {
-			err = -EINVAL;
-			goto fail;
-		}
+		if (sp.syncpt_id == 0)
+			return -EINVAL;
 
 		/* ..and then ensure that the syncpoints have been reserved
 		 * for this client */
@@ -669,15 +654,119 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 			}
 		}
 
-		if (!found) {
-			err = -EINVAL;
-			goto fail;
-		}
+		if (!found)
+			return -EINVAL;
 
 		/* Store and get a reference */
 		job->sp[i].id = sp.syncpt_id;
 		job->sp[i].incrs = sp.syncpt_incrs;
 	}
+
+	return 0;
+}
+
+static int submit_deliver_fences(struct nvhost_submit_args *args,
+				 struct nvhost_job *job,
+				 struct nvhost_channel_userctx *ctx)
+{
+	u32 __user *fences = (u32 __user *)(uintptr_t)args->fences;
+
+	int err;
+	u32 i;
+
+	/* Deliver multiple fences back to the userspace */
+	if (fences)
+		for (i = 0; i < args->num_syncpt_incrs; ++i) {
+			u32 fence = get_job_fence(job, i);
+			err = copy_to_user(fences + i, &fence, sizeof(u32));
+			if (err)
+				break;
+		}
+
+	/* Deliver the fence using the old mechanism _only_ if a single
+	 * syncpoint is used. */
+
+	if (args->flags & BIT(NVHOST_SUBMIT_FLAG_SYNC_FENCE_FD)) {
+		struct nvhost_ctrl_sync_fence_info *pts;
+
+		pts = kcalloc(args->num_syncpt_incrs,
+			      sizeof(struct nvhost_ctrl_sync_fence_info),
+			      GFP_KERNEL);
+		if (!pts)
+			return -ENOMEM;
+
+		for (i = 0; i < args->num_syncpt_incrs; i++) {
+			pts[i].id = job->sp[i].id;
+			pts[i].thresh = get_job_fence(job, i);
+		}
+
+		err = nvhost_sync_create_fence_fd(ctx->pdev,
+				pts, args->num_syncpt_incrs, "fence",
+				&args->fence);
+		kfree(pts);
+		if (err)
+			return err;
+	} else if (args->num_syncpt_incrs == 1) {
+		args->fence = get_job_fence(job, 0);
+	} else {
+		args->fence = 0;
+	}
+
+	return 0;
+}
+
+static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
+		struct nvhost_submit_args *args)
+{
+	struct nvhost_job *job;
+	struct nvhost_waitchk __user *waitchks =
+		(struct nvhost_waitchk __user *)(uintptr_t)args->waitchks;
+	struct nvhost_device_data *pdata = platform_get_drvdata(ctx->pdev);
+
+	int err;
+
+	if (args->num_syncpt_incrs >
+		     nvhost_syncpt_nb_pts(&nvhost_get_host(ctx->pdev)->syncpt))
+		return -EINVAL;
+
+	job = nvhost_job_alloc(ctx->ch,
+			args->num_cmdbufs,
+			args->num_relocs,
+			args->num_waitchks,
+			args->num_syncpt_incrs);
+	if (!job)
+		return -ENOMEM;
+
+	job->num_syncpts = args->num_syncpt_incrs;
+	job->clientid = ctx->clientid;
+	job->client_managed_syncpt =
+		(pdata->resource_policy == RESOURCE_PER_CHANNEL_INSTANCE) ?
+		ctx->client_managed_syncpt : ctx->ch->client_managed_syncpt;
+
+	/* copy error notifier settings for this job */
+	if (ctx->error_notifier_ref) {
+		get_dma_buf(ctx->error_notifier_ref);
+		job->error_notifier_ref = ctx->error_notifier_ref;
+		job->error_notifier_offset = ctx->error_notifier_offset;
+	}
+
+	err = submit_add_gathers(args, job, pdata);
+	if (err)
+		goto put_job;
+
+	err = submit_copy_relocs(args, job);
+	if (err)
+		goto put_job;
+
+	job->num_waitchk = args->num_waitchks;
+	err = copy_from_user(job->waitchk,
+			waitchks, sizeof(*waitchks) * args->num_waitchks);
+	if (err)
+		goto put_job;
+
+	err = submit_get_syncpoints(args, job, ctx);
+	if (err)
+		goto put_job;
 
 	trace_nvhost_channel_submit(ctx->pdev->name,
 		job->num_gathers, job->num_relocs, job->num_waitchk,
@@ -686,12 +775,12 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	err = nvhost_module_busy(ctx->pdev);
 	if (err)
-		goto fail;
+		goto put_job;
 
 	err = nvhost_job_pin(job, &nvhost_get_host(ctx->pdev)->syncpt);
 	nvhost_module_idle(ctx->pdev);
 	if (err)
-		goto fail;
+		goto put_job;
 
 	if (args->timeout)
 		job->timeout = min(ctx->timeout, args->timeout);
@@ -701,56 +790,20 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	err = nvhost_channel_submit(job);
 	if (err)
-		goto fail_submit;
+		goto unpin_job;
 
-	/* Deliver multiple fences back to the userspace */
-	if (fences)
-		for (i = 0; i < num_syncpt_incrs; ++i) {
-			u32 fence = get_job_fence(job, i);
-			err = copy_to_user(fences, &fence, sizeof(u32));
-			if (err)
-				break;
-			fences++;
-		}
-
-	/* Deliver the fence using the old mechanism _only_ if a single
-	 * syncpoint is used. */
-
-	if (args->flags & BIT(NVHOST_SUBMIT_FLAG_SYNC_FENCE_FD)) {
-		struct nvhost_ctrl_sync_fence_info *pts;
-
-		pts = kzalloc(num_syncpt_incrs *
-			      sizeof(struct nvhost_ctrl_sync_fence_info),
-			      GFP_KERNEL);
-		if (!pts) {
-			err = -ENOMEM;
-			goto fail;
-		}
-
-		for (i = 0; i < num_syncpt_incrs; i++) {
-			pts[i].id = job->sp[i].id;
-			pts[i].thresh = get_job_fence(job, i);
-		}
-
-		err = nvhost_sync_create_fence_fd(ctx->pdev,
-				pts, num_syncpt_incrs, "fence", &args->fence);
-		kfree(pts);
-		if (err)
-			goto fail;
-	} else if (num_syncpt_incrs == 1)
-		args->fence =  get_job_fence(job, 0);
-	else
-		args->fence = 0;
+	err = submit_deliver_fences(args, job, ctx);
+	if (err)
+		goto put_job;
 
 	nvhost_job_put(job);
 
 	return 0;
 
-fail_submit:
+unpin_job:
 	nvhost_job_unpin(job);
-fail:
+put_job:
 	nvhost_job_put(job);
-	kfree(local_class_ids);
 
 	nvhost_err(&pdata->pdev->dev, "failed with err %d\n", err);
 

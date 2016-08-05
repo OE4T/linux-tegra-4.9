@@ -131,6 +131,7 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 
 static char *nvgpu_pci_devnode(struct device *dev, umode_t *mode)
 {
+	*mode = S_IRUGO | S_IWUGO;
 	return kasprintf(GFP_KERNEL, "nvgpu-pci/%s", dev_name(dev));
 }
 

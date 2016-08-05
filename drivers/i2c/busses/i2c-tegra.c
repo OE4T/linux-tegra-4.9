@@ -294,6 +294,7 @@ struct tegra_i2c_dev {
 	int rx_dma_len;
 	dma_cookie_t rx_cookie;
 	bool disable_dma_mode;
+	bool is_clkon_always;
 };
 
 static void dvc_writel(struct tegra_i2c_dev *i2c_dev, u32 val,
@@ -1624,6 +1625,9 @@ static void tegra_i2c_parse_dt(struct tegra_i2c_dev *i2c_dev)
 
 	i2c_dev->disable_dma_mode = of_property_read_bool(np,
 			"nvidia,disable-dma-mode");
+
+	i2c_dev->is_clkon_always = of_property_read_bool(np,
+			"nvidia,clock-always-on");
 }
 
 static const struct i2c_algorithm tegra_i2c_algo = {
@@ -1868,7 +1872,10 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (i2c_dev->is_multimaster_mode) {
+	if (i2c_dev->is_multimaster_mode)
+		i2c_dev->is_clkon_always = true;
+
+	if (i2c_dev->is_clkon_always) {
 		ret = clk_enable(i2c_dev->div_clk);
 		if (ret < 0) {
 			dev_err(i2c_dev->dev, "div_clk enable failed %d\n",
@@ -1918,7 +1925,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	return 0;
 
 disable_div_clk:
-	if (i2c_dev->is_multimaster_mode)
+	if (i2c_dev->is_clkon_always)
 		clk_disable(i2c_dev->div_clk);
 
 disable_rpm:
@@ -1947,7 +1954,7 @@ static int tegra_i2c_remove(struct platform_device *pdev)
 	if (i2c_dev->rx_dma_chan)
 		tegra_i2c_deinit_dma_param(i2c_dev, true);
 
-	if (i2c_dev->is_multimaster_mode)
+	if (i2c_dev->is_clkon_always)
 		clk_disable(i2c_dev->div_clk);
 
 	pm_runtime_disable(&pdev->dev);
@@ -1977,6 +1984,10 @@ static int tegra_i2c_suspend(struct device *dev)
 
 	i2c_lock_adapter(&i2c_dev->adapter);
 	i2c_dev->is_suspended = true;
+
+	if (i2c_dev->is_clkon_always)
+		clk_disable(i2c_dev->div_clk);
+
 	i2c_unlock_adapter(&i2c_dev->adapter);
 
 	return 0;
@@ -1992,6 +2003,16 @@ static int tegra_i2c_resume(struct device *dev)
 	ret = tegra_i2c_init(i2c_dev);
 	if (!ret)
 		i2c_dev->is_suspended = false;
+
+	if (i2c_dev->is_clkon_always) {
+		ret = clk_enable(i2c_dev->div_clk);
+		if (ret < 0) {
+			dev_err(i2c_dev->dev, "clock enable failed %d\n",
+				ret);
+			i2c_unlock_adapter(&i2c_dev->adapter);
+			return ret;
+		}
+	}
 
 	i2c_unlock_adapter(&i2c_dev->adapter);
 

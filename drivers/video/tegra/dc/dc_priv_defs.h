@@ -232,11 +232,9 @@ struct tegra_dc {
 	struct tegra_dc_hdr		hdr;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	struct tegra_dc_imp_head_results	imp_results[TEGRA_MAX_DC];
 	bool					common_channel_reserved;
 	bool					common_channel_pending;
 	bool					imp_dirty;
-	bool					new_bw_pending;
 #endif
 
 #if defined(CONFIG_TEGRA_DC_CMU)

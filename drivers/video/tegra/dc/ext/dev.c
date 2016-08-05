@@ -2313,8 +2313,9 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 #endif
 		}
 
-		if (!ret)
-			ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
+#ifndef CONFIG_TEGRA_NVDISPLAY
+		ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
+#endif
 
 		kfree(flip_user_data);
 

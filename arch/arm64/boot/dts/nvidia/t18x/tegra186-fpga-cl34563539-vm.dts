@@ -1,7 +1,7 @@
 /*
  * arch/arm64/boot/dts/tegra186-fpga-cl34563539-vm.dts
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -18,4 +18,36 @@
  *
  */
 
-#include "tegra186-priv-fpga-cl34563539-vm.dts"
+#include "tegra186-platforms/tegra186-sim-private.dts"
+#include "tegra186-platforms/tegra186-fpga-pinmux.dtsi"
+#include "tegra186-platforms/tegra186-fpga-fixed-regulator.dtsi"
+#include "tegra186-platforms/tegra186-fpga-cl34563539-private.dtsi"
+
+/ {
+	nvidia,dtsfilename = __FILE__;
+
+	tegra_hv: hyp {
+		compatible = "nvidia,tegra-hv";
+		status = "okay";
+	};
+
+	chosen {
+		nvidia,tegra-hypervisor-mode;
+	};
+
+	bpmp {
+		compatible = "nvidia,tegra186-bpmp-hv";
+		ivc_queue = <&tegra_hv 0 14>;
+	};
+
+	aon@c160000 {
+		status = "disabled";
+	};
+
+	cpuidle {
+		compatible = "nvidia,tegra18x-cpuidle";
+		status = "disabled";
+	};
+
+
+};

@@ -29,17 +29,23 @@ static struct dentry *gk20a_alloc_debugfs_root;
 
 u64 gk20a_alloc_length(struct gk20a_allocator *a)
 {
-	return a->ops->length(a);
+	if (a->ops->length)
+		return a->ops->length(a);
+
+	return 0;
 }
 
 u64 gk20a_alloc_base(struct gk20a_allocator *a)
 {
-	return a->ops->base(a);
+	if (a->ops->base)
+		return a->ops->base(a);
+
+	return 0;
 }
 
 u64 gk20a_alloc_initialized(struct gk20a_allocator *a)
 {
-	if (!a->ops)
+	if (!a->ops || !a->ops->inited)
 		return 0;
 
 	return a->ops->inited(a);
@@ -47,7 +53,10 @@ u64 gk20a_alloc_initialized(struct gk20a_allocator *a)
 
 u64 gk20a_alloc_end(struct gk20a_allocator *a)
 {
-	return a->ops->end(a);
+	if (a->ops->end)
+		return a->ops->end(a);
+
+	return 0;
 }
 
 u64 gk20a_alloc(struct gk20a_allocator *a, u64 len)
@@ -62,7 +71,10 @@ void gk20a_free(struct gk20a_allocator *a, u64 addr)
 
 u64 gk20a_alloc_fixed(struct gk20a_allocator *a, u64 base, u64 len)
 {
-	return a->ops->alloc_fixed(a, base, len);
+	if (a->ops->alloc_fixed)
+		return a->ops->alloc_fixed(a, base, len);
+
+	return 0;
 }
 
 void gk20a_free_fixed(struct gk20a_allocator *a, u64 base, u64 len)
@@ -90,6 +102,13 @@ int __gk20a_alloc_common_init(struct gk20a_allocator *a,
 			      const struct gk20a_allocator_ops *ops)
 {
 	if (!ops)
+		return -EINVAL;
+
+	/*
+	 * This is the bare minimum operations required for a sensible
+	 * allocator.
+	 */
+	if (!ops->alloc || !ops->free || !ops->fini)
 		return -EINVAL;
 
 	a->ops = ops;

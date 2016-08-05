@@ -64,7 +64,10 @@ static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
 		host1x_writel(pdev, VI_NOTIFY_ERROR_0, 1);
 		dev_err(&pdev->dev, "notify buffer overflow\n");
 		atomic_inc(&vi->notify_overflow);
-		nvhost_vi_notify_error(pdev);
+
+		/* FIXME: does not work with RTCPU-based VI Notify */
+		if (vi->hvnd != NULL)
+			nvhost_vi_notify_error(pdev);
 	}
 
 	r = host1x_readl(pdev, VI_NOTIFY_TAG_CLASSIFY_SAFETY_ERROR_0);

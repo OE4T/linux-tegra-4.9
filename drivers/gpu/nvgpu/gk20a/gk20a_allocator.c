@@ -88,6 +88,22 @@ void gk20a_free_fixed(struct gk20a_allocator *a, u64 base, u64 len)
 		a->ops->free_fixed(a, base, len);
 }
 
+int gk20a_alloc_reserve_carveout(struct gk20a_allocator *a,
+				 struct gk20a_alloc_carveout *co)
+{
+	if (a->ops->reserve_carveout)
+		return a->ops->reserve_carveout(a, co);
+
+	return -ENODEV;
+}
+
+void gk20a_alloc_release_carveout(struct gk20a_allocator *a,
+				  struct gk20a_alloc_carveout *co)
+{
+	if (a->ops->release_carveout)
+		a->ops->release_carveout(a, co);
+}
+
 void gk20a_alloc_destroy(struct gk20a_allocator *a)
 {
 	a->ops->fini(a);

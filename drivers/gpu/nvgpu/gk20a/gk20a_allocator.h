@@ -24,6 +24,7 @@
 /* #define ALLOCATOR_DEBUG */
 
 struct gk20a_allocator;
+struct gk20a_alloc_carveout;
 struct vm_gk20a;
 
 /*
@@ -44,6 +45,14 @@ struct gk20a_allocator_ops {
 			     u64 base, u64 len);
 	void (*free_fixed)(struct gk20a_allocator *allocator,
 			    u64 base, u64 len);
+
+	/*
+	 * Allow allocators to reserve space for carveouts.
+	 */
+	int  (*reserve_carveout)(struct gk20a_allocator *allocator,
+				 struct gk20a_alloc_carveout *co);
+	void (*release_carveout)(struct gk20a_allocator *allocator,
+				 struct gk20a_alloc_carveout *co);
 
 	/*
 	 * Returns info about the allocator.
@@ -71,6 +80,26 @@ struct gk20a_allocator {
 	struct dentry *debugfs_entry;
 	bool debug;				/* Control for debug msgs. */
 };
+
+struct gk20a_alloc_carveout {
+	const char *name;
+	u64 base;
+	u64 length;
+
+	struct gk20a_allocator *allocator;
+
+	/*
+	 * For usage by the allocator implementation.
+	 */
+	struct list_head co_entry;
+};
+
+#define GK20A_CARVEOUT(__name, __base, __length)	\
+	{						\
+		.name = (__name),			\
+		.base = (__base),			\
+		.length = (__length)			\
+	}
 
 /*
  * These are the available allocator flags.
@@ -184,6 +213,11 @@ void gk20a_free(struct gk20a_allocator *allocator, u64 addr);
 
 u64  gk20a_alloc_fixed(struct gk20a_allocator *allocator, u64 base, u64 len);
 void gk20a_free_fixed(struct gk20a_allocator *allocator, u64 base, u64 len);
+
+int  gk20a_alloc_reserve_carveout(struct gk20a_allocator *a,
+				  struct gk20a_alloc_carveout *co);
+void gk20a_alloc_release_carveout(struct gk20a_allocator *a,
+				  struct gk20a_alloc_carveout *co);
 
 u64  gk20a_alloc_base(struct gk20a_allocator *a);
 u64  gk20a_alloc_length(struct gk20a_allocator *a);

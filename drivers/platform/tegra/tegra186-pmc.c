@@ -112,6 +112,7 @@
 static DEFINE_SPINLOCK(tegra186_pmc_access_lock);
 
 void __iomem *tegra186_pmc_base;
+void __iomem *tegra186_pmc_base_reboot;
 
 static inline u32 tegra186_pmc_readl(u32 reg)
 {
@@ -148,9 +149,9 @@ int tegra_pmc_clear_reboot_reason(u32 val)
 {
 	u32 pmc_reg;
 
-	pmc_reg = readl_relaxed(tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
-	pmc_reg &= ~val;
-	writel_relaxed(pmc_reg, tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
+	pmc_reg = readl_relaxed(tegra186_pmc_base_reboot + SCRATCH_SCRATCH0_0_OFFSET);
+	pmc_reg &= val;
+	writel_relaxed(pmc_reg, tegra186_pmc_base_reboot + SCRATCH_SCRATCH0_0_OFFSET);
 	return 0;
 }
 EXPORT_SYMBOL(tegra_pmc_clear_reboot_reason);
@@ -159,9 +160,9 @@ int tegra_pmc_set_reboot_reason(u32 val)
 {
 	u32 pmc_reg;
 
-	pmc_reg = readl_relaxed(tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
+	pmc_reg = readl_relaxed(tegra186_pmc_base_reboot + SCRATCH_SCRATCH0_0_OFFSET);
 	pmc_reg = pmc_reg | val;
-	writel_relaxed(pmc_reg, tegra186_pmc_base + SCRATCH_SCRATCH0_0_OFFSET);
+	writel_relaxed(pmc_reg, tegra186_pmc_base_reboot + SCRATCH_SCRATCH0_0_OFFSET);
 	return 0;
 }
 EXPORT_SYMBOL(tegra_pmc_set_reboot_reason);
@@ -591,6 +592,7 @@ static int tegra186_pmc_parse_dt(struct device_node *np)
 		return -EINVAL;
 
 	tegra186_pmc_base = of_iomap(np, 0);
+	tegra186_pmc_base_reboot = of_iomap(np, 1);
 
 	if (of_property_read_bool(np, "nvidia,enable-halt-in-fiq"))
 		tegra186_pmc_register_update(PMC_IMPL_RAMDUMP_CTL_STATUS,

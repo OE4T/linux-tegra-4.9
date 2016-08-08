@@ -6,7 +6,7 @@ ccflags-y += -Iarch/arm/mach-tegra
 ifeq ($(CONFIG_ARCH_TEGRA_18x_SOC),y)
 ccflags-y += -I../nvhost-t18x/drivers/video/tegra/host/
 endif
-ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
+ifeq ($(CONFIG_TEGRA_T19X_GRHOST),y)
 ccflags-y += -I../nvhost-t19x/drivers/video/tegra/host/
 endif
 

@@ -36,10 +36,8 @@ obj-$(CONFIG_TEGRA_GRHOST) += $(call tegra-path,nvhost-t18x/,drivers/video/tegra
 endif
 endif
 
-ifeq ($(CONFIG_ARCH_TEGRA_19x_SOC),y)
-ifneq ($(wildcard $(srctree)/../nvhost-t19x/drivers/video/tegra/host/Makefile),)
+ifeq ($(CONFIG_TEGRA_T19X_GRHOST),y)
 obj-$(CONFIG_TEGRA_GRHOST) += $(call tegra-path,nvhost-t19x/,drivers/video/tegra/host/)
-endif
 endif
 
 obj-$(CONFIG_TEGRA_GRHOST_SYNC) += nvhost_sync.o

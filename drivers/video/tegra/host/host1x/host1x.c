@@ -61,7 +61,7 @@
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
 #endif
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_T19X_GRHOST
 #include "t194/t194.h"
 #endif
 
@@ -783,7 +783,7 @@ static struct of_device_id tegra_host1x_of_match[] = {
 	  .compatible = "nvidia,tegra186-host1x-hv",
 		.data = (struct nvhost_device_data *)&t18_host1x_hv_info },
 #endif
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_T19X_GRHOST
 	{ .name = "host1x",
 		.compatible = "nvidia,tegra194-host1x",
 		.data = (struct nvhost_device_data *)&t19_host1x_info },

@@ -48,7 +48,7 @@
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "t186/t186.h"
 #endif
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_T19X_GRHOST
 #include "t194/t194.h"
 #endif
 
@@ -605,7 +605,7 @@ static struct of_device_id tegra_flcn_of_match[] = {
 		.data = (struct nvhost_device_data *)&t18_msenc_info },
 #endif
 #endif
-#ifdef CONFIG_ARCH_TEGRA_19x_SOC
+#ifdef CONFIG_TEGRA_T19X_GRHOST
 #if defined(CONFIG_TEGRA_GRHOST_VIC)
 	{ .compatible = "nvidia,tegra194-vic",
 		.data = (struct nvhost_device_data *)&t19_vic_info },

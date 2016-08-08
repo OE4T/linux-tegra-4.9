@@ -244,11 +244,11 @@ struct tegra_spi_data {
 	bool					is_packed;
 
 	u32					command1_reg;
+	u32					command2_reg;
 	u32					dma_control_reg;
 	u32					def_command1_reg;
 	u32					spi_cs_timing;
 	u32					spi_cs_timing2;
-	u32					def_command2_reg;
 	u8					last_used_cs;
 	u8					def_chip_select;
 
@@ -791,13 +791,9 @@ static void tegra_spi_deinit_dma_param(struct tegra_spi_data *tspi,
 	dma_release_channel(dma_chan);
 }
 
-static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
+static void tegra_spi_set_prod(struct spi_device *spi)
 {
 	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
-	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
-	u32 command2_reg = 0;
-	u32 tx_tap = 0;
-	u32 rx_tap = 0;
 	int ret;
 	char prod_name[15];
 
@@ -811,26 +807,109 @@ static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
 					     tspi->prod_list);
 		ret = tegra_prod_set_by_name(&tspi->base, "prod",
 					     tspi->prod_list);
-	} else {
-		if (cdata && cdata->rx_clk_tap_delay)
-			rx_tap = cdata->rx_clk_tap_delay;
-		else if (speed > SPI_SPEED_TAP_DELAY_MARGIN)
-			rx_tap = SPI_DEFAULT_RX_TAP_DELAY;
-
-		if (cdata && cdata->tx_clk_tap_delay)
-			tx_tap = cdata->tx_clk_tap_delay;
-		else
-			tx_tap = SPI_DEFAULT_TX_TAP_DELAY;
-
-		command2_reg = SPI_TX_TAP_DELAY(tx_tap) |
-			       SPI_RX_TAP_DELAY(rx_tap);
-
-		if (tspi->chip_data->set_rx_tap_delay)
-			if (command2_reg != tspi->def_command2_reg)
-				tegra_spi_writel(tspi, command2_reg,
-						 SPI_COMMAND2);
 	}
+
 	tspi->last_used_cs = spi->chip_select;
+}
+
+static void tegra_spi_set_cmd2(struct spi_device *spi, u32 speed)
+{
+	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
+	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
+	u32 command2_reg = 0;
+	u32 tx_tap = 0;
+	u32 rx_tap = 0;
+
+	if (!cdata || tspi->prod_list)
+		return;
+
+	if (cdata && cdata->rx_clk_tap_delay)
+		rx_tap = cdata->rx_clk_tap_delay;
+	else if (speed > SPI_SPEED_TAP_DELAY_MARGIN)
+		rx_tap = SPI_DEFAULT_RX_TAP_DELAY;
+
+	if (cdata && cdata->tx_clk_tap_delay)
+		tx_tap = cdata->tx_clk_tap_delay;
+	else
+		tx_tap = SPI_DEFAULT_TX_TAP_DELAY;
+
+	command2_reg = SPI_TX_TAP_DELAY(tx_tap) |
+		       SPI_RX_TAP_DELAY(rx_tap);
+
+	if (tspi->chip_data->set_rx_tap_delay)
+		if (command2_reg != tspi->command2_reg) {
+			tspi->command2_reg = command2_reg;
+			tegra_spi_writel(tspi, command2_reg,
+					 SPI_COMMAND2);
+		}
+}
+
+static void tegra_spi_set_timing1(struct spi_device *spi)
+{
+	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
+	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
+	u32 set_count;
+	u32 hold_count;
+	u32 spi_cs_timing;
+	u32 spi_cs_setup;
+
+	if (!cdata || tspi->prod_list)
+		return;
+	set_count = min(cdata->cs_setup_clk_count, 16);
+	if (set_count)
+		set_count--;
+
+	hold_count = min(cdata->cs_hold_clk_count, 16);
+	if (hold_count)
+		hold_count--;
+
+	spi_cs_setup = SPI_SETUP_HOLD(set_count, hold_count);
+	spi_cs_timing = SPI_CS_SETUP_HOLD(tspi->spi_cs_timing,
+					  spi->chip_select,
+					  spi_cs_setup);
+	if (tspi->spi_cs_timing != spi_cs_timing) {
+		tspi->spi_cs_timing = spi_cs_timing;
+		tegra_spi_writel(tspi, spi_cs_timing, SPI_CS_TIMING1);
+	}
+}
+
+static void tegra_spi_set_timing2(struct spi_device *spi)
+{
+	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
+	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
+	u32 spi_cs_timing2 = 0;
+
+	if (!cdata || tspi->prod_list)
+		return;
+	if (!cdata->clk_delay_between_packets)
+		return;
+	if (cdata->cs_inactive_cycles) {
+		u32 inactive_cycles;
+
+		SPI_SET_CS_ACTIVE_BETWEEN_PACKETS(spi_cs_timing2,
+						  spi->chip_select,
+						  0);
+		inactive_cycles = min(cdata->cs_inactive_cycles, 32);
+		SPI_SET_CYCLES_BETWEEN_PACKETS(spi_cs_timing2,
+					       spi->chip_select,
+					       inactive_cycles);
+		if (tspi->spi_cs_timing2 != spi_cs_timing2) {
+			tspi->spi_cs_timing2 = spi_cs_timing2;
+			tegra_spi_writel(tspi, spi_cs_timing2,
+					 SPI_CS_TIMING2);
+		}
+		tspi->is_hw_based_cs = true;
+	} else {
+		SPI_SET_CS_ACTIVE_BETWEEN_PACKETS(spi_cs_timing2,
+						  spi->chip_select, 1);
+		SPI_SET_CYCLES_BETWEEN_PACKETS(spi_cs_timing2,
+					       spi->chip_select, 0);
+		if (tspi->spi_cs_timing2 != spi_cs_timing2) {
+			tspi->spi_cs_timing2 = spi_cs_timing2;
+			tegra_spi_writel(tspi, spi_cs_timing2,
+					 SPI_CS_TIMING2);
+		}
+	}
 }
 
 static void set_best_clk_source(struct tegra_spi_data *tspi,
@@ -931,7 +1010,6 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 	struct tegra_spi_data *tspi = spi_master_get_devdata(spi->master);
 	struct tegra_spi_client_ctl_data *cdata = spi->controller_data;
 	struct tegra_spi_client_ctl_state *cstate = spi->controller_state;
-	u32 spi_cs_timing2 = 0;
 	u32 speed = t->speed_hz;
 	u8 bits_per_word = t->bits_per_word;
 	u32 command1;
@@ -996,56 +1074,11 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 		if (cdata && cdata->is_hw_based_cs && is_single_xfer &&
 		    ((tspi->curr_dma_words * tspi->bytes_per_word) ==
 		     (t->len - tspi->cur_pos))) {
-			u32 set_count;
-			u32 hold_count;
-			u32 spi_cs_timing;
-			u32 spi_cs_setup;
-
-			set_count = min(cdata->cs_setup_clk_count, 16);
-			if (set_count)
-				set_count--;
-
-			hold_count = min(cdata->cs_hold_clk_count, 16);
-			if (hold_count)
-				hold_count--;
-
-			spi_cs_setup = SPI_SETUP_HOLD(set_count, hold_count);
-			spi_cs_timing = tspi->spi_cs_timing;
-			spi_cs_timing = SPI_CS_SETUP_HOLD(spi_cs_timing,
-							  spi->chip_select,
-							  spi_cs_setup);
-			tspi->spi_cs_timing = spi_cs_timing;
-			tegra_spi_writel(tspi, spi_cs_timing, SPI_CS_TIMING1);
+			tegra_spi_set_timing1(spi);
 			tspi->is_hw_based_cs = true;
 		}
 
-		if (cdata && cdata->cs_inactive_cycles) {
-			u32 inactive_cycles;
-
-			SPI_SET_CS_ACTIVE_BETWEEN_PACKETS(spi_cs_timing2,
-							  spi->chip_select,
-							  0);
-			inactive_cycles = min(cdata->cs_inactive_cycles, 32);
-			SPI_SET_CYCLES_BETWEEN_PACKETS(spi_cs_timing2,
-						       spi->chip_select,
-						       inactive_cycles);
-			if (tspi->spi_cs_timing2 != spi_cs_timing2) {
-				tspi->spi_cs_timing2 = spi_cs_timing2;
-				tegra_spi_writel(tspi, spi_cs_timing2,
-						 SPI_CS_TIMING2);
-			}
-			tspi->is_hw_based_cs = true;
-		} else {
-			SPI_SET_CS_ACTIVE_BETWEEN_PACKETS(spi_cs_timing2,
-							  spi->chip_select, 1);
-			SPI_SET_CYCLES_BETWEEN_PACKETS(spi_cs_timing2,
-						       spi->chip_select, 0);
-			if (tspi->spi_cs_timing2 != spi_cs_timing2) {
-				tspi->spi_cs_timing2 = spi_cs_timing2;
-				tegra_spi_writel(tspi, spi_cs_timing2,
-						 SPI_CS_TIMING2);
-			}
-		}
+		tegra_spi_set_timing2(spi);
 
 		if (!tspi->is_hw_based_cs) {
 			command1 |= SPI_CS_SW_HW;
@@ -1065,7 +1098,7 @@ static u32 tegra_spi_setup_transfer_one(struct spi_device *spi,
 				gval = 1;
 			gpio_set_value(spi->cs_gpio, gval);
 		}
-
+		tegra_spi_set_prod(spi);
 		tegra_spi_set_cmd2(spi, speed);
 	} else {
 		command1 = tspi->command1_reg;
@@ -1252,6 +1285,8 @@ static int tegra_spi_setup(struct spi_device *spi)
 		val |= SPI_MODE_SEL(spi->mode & 0x3);
 	tspi->def_command1_reg = val;
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
+	if (tspi->def_chip_select == spi->chip_select)
+		tegra_spi_set_cmd2(spi, spi->max_speed_hz);
 	spin_unlock_irqrestore(&tspi->lock, flags);
 
 	pm_runtime_put(tspi->dev);
@@ -1853,7 +1888,7 @@ static int tegra_spi_probe(struct platform_device *pdev)
 	tspi->def_command1_reg  = SPI_M_S | SPI_LSBYTE_FE;
 	tspi->def_command1_reg |= SPI_CS_SEL(tspi->def_chip_select);
 	tegra_spi_writel(tspi, tspi->def_command1_reg, SPI_COMMAND1);
-	tspi->def_command2_reg = tegra_spi_readl(tspi, SPI_COMMAND2);
+	tspi->command2_reg = tegra_spi_readl(tspi, SPI_COMMAND2);
 	tegra_spi_set_slcg(tspi);
 	pm_runtime_put(&pdev->dev);
 
@@ -1955,7 +1990,7 @@ static int tegra_spi_resume(struct device *dev)
 		return ret;
 	}
 	tegra_spi_writel(tspi, tspi->command1_reg, SPI_COMMAND1);
-	tegra_spi_writel(tspi, tspi->def_command2_reg, SPI_COMMAND2);
+	tegra_spi_writel(tspi, tspi->command2_reg, SPI_COMMAND2);
 	tspi->last_used_cs = master->num_chipselect + 1;
 	tegra_spi_set_intr_mask(tspi);
 	tegra_spi_set_slcg(tspi);

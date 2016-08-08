@@ -321,8 +321,8 @@
 						0x00000068 0x403f1f1f 0x00270303
 					>;
 				};
-				board_soc_a02 {
-					status = "okay";
+				csi_mipical_prod_board_soc_a02: board_soc_a02 {
+					status = "disabled";
 					prod = <
 						0x00000018 0x0000f81f 0x00000000
 						0x0000001c 0x0000f81f 0x00000000

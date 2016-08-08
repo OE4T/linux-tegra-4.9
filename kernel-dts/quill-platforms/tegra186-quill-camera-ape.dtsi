@@ -18,6 +18,10 @@
 		tegra-camera-rtcpu = &tegra_ape;
 	};
 
+	tegra-hsp@b150000 {
+		status = "disabled";
+	};
+
 	tegra-hsp@29a0000 {
 		status = "okay";
 	};

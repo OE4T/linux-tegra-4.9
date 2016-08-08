@@ -76,6 +76,9 @@
 			avdd_hdmi_pll-supply = <&spmic_sd2>;
 			vdd_hdmi_5v0-supply = <&vddio_5v0_hdmi>;
 		};
+		nvdisplay@15220000 {
+			vdd_hdmi_5v0-supply = <&vddio_5v0_hdmi>;
+		};
 	};
 
 	sdhci@3460000 {

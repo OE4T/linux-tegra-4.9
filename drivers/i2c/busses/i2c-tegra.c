@@ -221,6 +221,7 @@ struct tegra_i2c_hw_feature {
 	bool has_sw_reset_reg;
 	bool has_bus_clr_support;
 	bool has_reg_write_buffering;
+	bool has_slcg_support;
 };
 
 /**
@@ -1655,6 +1656,7 @@ static const struct tegra_i2c_hw_feature tegra20_i2c_hw = {
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = false,
 	.has_reg_write_buffering = true,
+	.has_slcg_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
@@ -1671,6 +1673,7 @@ static const struct tegra_i2c_hw_feature tegra30_i2c_hw = {
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = false,
 	.has_reg_write_buffering = true,
+	.has_slcg_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
@@ -1687,6 +1690,7 @@ static const struct tegra_i2c_hw_feature tegra114_i2c_hw = {
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = true,
+	.has_slcg_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
@@ -1703,6 +1707,7 @@ static const struct tegra_i2c_hw_feature tegra124_i2c_hw = {
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = true,
+	.has_slcg_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
@@ -1719,6 +1724,7 @@ static const struct tegra_i2c_hw_feature tegra210_i2c_hw = {
 	.has_sw_reset_reg = false,
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = true,
+	.has_slcg_support = false,
 };
 
 static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
@@ -1735,6 +1741,7 @@ static const struct tegra_i2c_hw_feature tegra186_i2c_hw = {
 	.has_sw_reset_reg = true,
 	.has_bus_clr_support = true,
 	.has_reg_write_buffering = false,
+	.has_slcg_support = true,
 };
 
 /* Match table for of_platform binding */
@@ -1872,7 +1879,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 		}
 	}
 
-	if (i2c_dev->is_multimaster_mode)
+	if (i2c_dev->is_multimaster_mode || i2c_dev->hw->has_slcg_support)
 		i2c_dev->is_clkon_always = true;
 
 	if (i2c_dev->is_clkon_always) {

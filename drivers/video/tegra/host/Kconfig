@@ -1,3 +1,10 @@
+config TEGRA_T19X_GRHOST
+	tristate "Tegra 19x graphics host driver"
+	depends on TEGRA_GRHOST && ARCH_TEGRA_19x_SOC
+	default y
+	help
+	  Driver for the Tegra graphics host hardware.
+
 config TEGRA_GRHOST_NVDLA
 	bool "Tegra NVDLA support"
 	depends on TEGRA_GRHOST && ARCH_TEGRA_19x_SOC

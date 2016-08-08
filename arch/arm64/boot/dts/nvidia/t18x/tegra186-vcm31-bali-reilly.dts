@@ -13,8 +13,53 @@
  * more details.
  */
 
-#include "tegra186-priv-vcm31-bali-reilly.dts"
+#include "tegra186-platforms/tegra186-vcm31-bali-common.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
+	nvidia,boardids = "bali:0010";
+	nvidia,proc-boardid = "bali:0010";
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "bali_t188";
+		};
+	};
+
+	cpus {
+		cpu@0 {
+			status = "disabled";
+		};
+
+		cpu@1 {
+			status = "disabled";
+		};
+
+		cpu@2 {
+			status = "okay";
+		};
+
+		cpu@3 {
+			status = "okay";
+		};
+
+		cpu@4 {
+			status = "okay";
+		};
+
+		cpu@5 {
+			status = "okay";
+		};
+	};
+
+	sdhci@3440000 { /* SDMMC_C  4-bit*/
+		status = "disabled";
+	};
+
 };

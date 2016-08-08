@@ -13,8 +13,35 @@
  * more details.
  */
 
-#include "tegra186-priv-vcm31-p2379-safety-0000-c00-00-base.dts"
+#include "tegra186-platforms/tegra186-vcm31-p2379-common.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-62379-disp.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-camera-ape.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
+	nvidia,boardids = "p2379:0000:C00";
+	nvidia,proc-boardid = "p2379:0000:C00";
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "p2379_t186";
+		};
+	};
+
+	pcie-controller@10003000 {
+		pci@1,0 {
+			nvidia,rst-gpio = <&tegra_gpio TEGRA_GPIO(A, 3) 0>;
+		};
+
+		pci@2,0 {
+			status = "okay";
+			nvidia,num-lanes = <0x1>;
+		};
+	};
 };

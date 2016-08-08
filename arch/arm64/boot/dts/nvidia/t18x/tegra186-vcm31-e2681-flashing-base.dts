@@ -13,8 +13,19 @@
  * more details.
  */
 
-#include "tegra186-priv-vcm31-e2681-003-a01-00-base.dts"
+#include "tegra186-platforms/tegra186-vcm31-e2681-common.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-62681-disp.dtsi"
+#include "t186-status-override/tegra186-vcm31-e2681-0003-a01-dt-status-override.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
+	nvidia,boardids = "e2681:0003:A01";
+	nvidia,proc-boardid = "e2681:0003:A01";
+
+	reserved-memory {
+		generic_carveout {
+			status = "okay";
+			size = <0 0x40000000>;
+		};
+	};
 };

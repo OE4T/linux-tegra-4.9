@@ -13,8 +13,80 @@
  * more details.
  */
 
-#include "tegra186-priv-vcm31-p2379-safety-0000-c01-00-base-a.dts"
+#include "tegra186-platforms/tegra186-vcm31-p2379-common.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-power-tree-p2379-0000-c01-00.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-62379-disp.dtsi"
+#include "tegra186-platforms/tegra186-vcm31-camera-ape.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
+	nvidia,boardids = "p2379:0000:C01";
+	nvidia,proc-boardid = "p2379:0000:C01";
+	model = "drive-px2-a";
+
+	memory@80000000 {
+		device_type = "memory";
+		reg = <0x0 0x80000000 0x0 0x70000000>;
+	};
+
+	firmware {
+		android {
+			compatible = "android,firmware";
+			hardware = "p2379c01_t186a";
+		};
+	};
+
+	isc-mgr.0 {
+		aggregator@48 {
+			addr = <0x48>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		serializer0@40 {
+			addr = <0x40>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		sensor0@30 {
+			addr = <0x30>;  /* 7 bit slave address */
+			reg_len = <16>; /* 16 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+	};
+
+	isc-mgr.1 {
+		aggregator@48 {
+			addr = <0x48>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		serializer0@40 {
+			addr = <0x40>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		sensor0@30 {
+			addr = <0x30>;  /* 7 bit slave address */
+			reg_len = <16>; /* 16 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+	};
+
+	isc-mgr.2 {
+		aggregator@48 {
+			addr = <0x48>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		serializer0@40 {
+			addr = <0x40>;  /* 7 bit slave address */
+			reg_len = <8>;  /* 8 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+		sensor0@30 {
+			addr = <0x30>;  /* 7 bit slave address */
+			reg_len = <16>; /* 16 bit register length */
+			dat_len = <8>;  /* 8 bit data length */
+		};
+	};
 };

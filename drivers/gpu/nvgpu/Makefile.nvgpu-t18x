@@ -38,7 +38,8 @@ nvgpu-y += \
 	$(nvgpu-t18x)/perf/vfe_var.o \
 	$(nvgpu-t18x)/perf/vfe_equ.o \
 	$(nvgpu-t18x)/perf/perf.o \
-	$(nvgpu-t18x)/clk/clk.o
+	$(nvgpu-t18x)/clk/clk.o \
+	$(nvgpu-t18x)/gp106/clk_gp106.o
 
 nvgpu-$(CONFIG_TEGRA_GK20A) += $(nvgpu-t18x)/gp10b/platform_gp10b_tegra.o
 

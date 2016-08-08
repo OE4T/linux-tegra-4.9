@@ -1116,6 +1116,11 @@ static inline u32 set_field(u32 val, u32 mask, u32 field)
 	return ((val & ~mask) | field);
 }
 
+static inline u32 get_field(u32 reg, u32 mask)
+{
+	return (reg & mask);
+}
+
 /* invalidate channel lookup tlb */
 static inline void gk20a_gr_flush_channel_tlb(struct gr_gk20a *gr)
 {

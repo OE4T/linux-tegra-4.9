@@ -74,12 +74,16 @@ struct pll_parms {
 	u32 iddq_exit_delay;
 };
 
+struct namemap_cfg;
+
 struct clk_gk20a {
 	struct gk20a *g;
 	struct clk *tegra_clk;
 	struct pll gpc_pll;
 	struct pll gpc_pll_last;
 	struct mutex clk_mutex;
+	struct namemap_cfg *clk_namemap;
+	u32 namemap_num;
 	bool sw_ready;
 	bool clk_hw_on;
 	bool debugfs_set;

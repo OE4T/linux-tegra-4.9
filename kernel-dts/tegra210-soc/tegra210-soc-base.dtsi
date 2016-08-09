@@ -1524,6 +1524,11 @@
 		iommus = <&smmu TEGRA_SWGROUP_PPCS>,
 			 <&smmu TEGRA_SWGROUP_PPCS1>,
 			 <&smmu TEGRA_SWGROUP_PPCS2>;
+		clocks = <&tegra_car TEGRA210_CLK_ID_USB2>,
+			 <&tegra_car TEGRA210_CLK_PLL_U>;
+		clock-names = "usbd", "pllu";
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_SNPS_P(0)>;
+		phy-names = "snps-0";
 		nvidia,port-otg;
 		nvidia,has-hostpc;
 		nvidia,unaligned-dma-buf-supported;

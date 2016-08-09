@@ -1397,10 +1397,10 @@ int dhdpcie_oob_intr_register(dhd_bus_t *bus)
 		DHD_INFO_HW4(("%s OOB irq=%d flags=%X \n", __FUNCTION__,
 			(int)dhdpcie_osinfo->oob_irq_num,
 			(int)dhdpcie_osinfo->oob_irq_flags));
-		err = request_irq(dhdpcie_osinfo->oob_irq_num, wlan_oob_irq,
-			dhdpcie_osinfo->oob_irq_flags, "dhdpcie_host_wake",
-			bus);
-		if (err) {
+		err = request_any_context_irq(dhdpcie_osinfo->oob_irq_num,
+			wlan_oob_irq, dhdpcie_osinfo->oob_irq_flags,
+			"dhdpcie_host_wake", bus);
+		if (err < 0) {
 			DHD_ERROR(("%s: request_irq failed with %d\n",
 				__FUNCTION__, err));
 			return err;

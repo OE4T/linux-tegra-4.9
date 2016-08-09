@@ -265,7 +265,6 @@ struct tegra_dma_channel {
 struct tegra_dma {
 	struct dma_device		dma_dev;
 	struct device			*dev;
-	spinlock_t			global_lock;
 	void __iomem			*base_addr;
 	const struct tegra_dma_chip_data *chip_data;
 	struct reset_control *rst;
@@ -1755,8 +1754,6 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		return PTR_ERR(tdma->rst);
 	}
 	reset_control_reset(tdma->rst);
-
-	spin_lock_init(&tdma->global_lock);
 
 	dma_device = &pdev->dev;
 

@@ -472,14 +472,14 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 
 	/* release all job semaphores (applies only to jobs that use
 	   semaphore synchronization) */
-	mutex_lock(&ch->jobs_lock);
+	spin_lock(&ch->jobs_lock);
 	list_for_each_entry_safe(job, n, &ch->jobs, list) {
 		if (job->post_fence->semaphore) {
 			gk20a_semaphore_release(job->post_fence->semaphore);
 			released_job_semaphore = true;
 		}
 	}
-	mutex_unlock(&ch->jobs_lock);
+	spin_unlock(&ch->jobs_lock);
 
 	if (released_job_semaphore)
 		wake_up_interruptible_all(&ch->semaphore_wq);
@@ -512,9 +512,9 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(ch->g));
 
 	do {
-		mutex_lock(&ch->jobs_lock);
+		spin_lock(&ch->jobs_lock);
 		channel_idle = list_empty(&ch->jobs);
-		mutex_unlock(&ch->jobs_lock);
+		spin_unlock(&ch->jobs_lock);
 		if (channel_idle)
 			break;
 
@@ -1850,9 +1850,9 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 
 		gk20a_channel_timeout_start(c, job);
 
-		mutex_lock(&c->jobs_lock);
+		spin_lock(&c->jobs_lock);
 		list_add_tail(&job->list, &c->jobs);
-		mutex_unlock(&c->jobs_lock);
+		spin_unlock(&c->jobs_lock);
 	} else {
 		err = -ETIMEDOUT;
 		goto err_free_job;
@@ -1898,14 +1898,14 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 	while (1) {
 		bool completed;
 
-		mutex_lock(&c->jobs_lock);
+		spin_lock(&c->jobs_lock);
 		if (list_empty(&c->jobs)) {
-			mutex_unlock(&c->jobs_lock);
+			spin_unlock(&c->jobs_lock);
 			break;
 		}
 		job = list_first_entry(&c->jobs,
 				       struct channel_gk20a_job, list);
-		mutex_unlock(&c->jobs_lock);
+		spin_unlock(&c->jobs_lock);
 
 		completed = gk20a_fence_is_expired(job->post_fence);
 		if (!completed) {
@@ -1948,9 +1948,9 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 		 * so this wouldn't get freed here. */
 		gk20a_channel_put(c);
 
-		mutex_lock(&c->jobs_lock);
+		spin_lock(&c->jobs_lock);
 		list_del_init(&job->list);
-		mutex_unlock(&c->jobs_lock);
+		spin_unlock(&c->jobs_lock);
 
 		kfree(job);
 		job_finished = 1;
@@ -2331,7 +2331,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	c->referenceable = false;
 	init_waitqueue_head(&c->ref_count_dec_wq);
 	mutex_init(&c->ioctl_lock);
-	mutex_init(&c->jobs_lock);
+	spin_lock_init(&c->jobs_lock);
 	mutex_init(&c->last_submit.fence_lock);
 	mutex_init(&c->timeout.lock);
 	mutex_init(&c->sync_lock);

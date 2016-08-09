@@ -1125,9 +1125,9 @@ __releases(&cde_app->mutex)
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	bool channel_idle;
 
-	mutex_lock(&ch->jobs_lock);
+	spin_lock(&ch->jobs_lock);
 	channel_idle = list_empty(&ch->jobs);
-	mutex_unlock(&ch->jobs_lock);
+	spin_unlock(&ch->jobs_lock);
 
 	if (!channel_idle)
 		return;

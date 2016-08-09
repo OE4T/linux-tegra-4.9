@@ -124,7 +124,7 @@ struct channel_gk20a {
 	struct list_head ch_entry; /* channel's entry in TSG */
 
 	struct list_head jobs;
-	struct mutex jobs_lock;
+	spinlock_t jobs_lock;
 
 	struct vm_gk20a *vm;
 

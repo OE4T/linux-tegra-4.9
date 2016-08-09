@@ -126,9 +126,9 @@ static void gk20a_ce_finished_ctx_cb(struct channel_gk20a *ch, void *data)
 	bool channel_idle;
 	u32 event;
 
-	mutex_lock(&ch->jobs_lock);
+	spin_lock(&ch->jobs_lock);
 	channel_idle = list_empty(&ch->jobs);
-	mutex_unlock(&ch->jobs_lock);
+	spin_unlock(&ch->jobs_lock);
 
 	if (!channel_idle)
 		return;

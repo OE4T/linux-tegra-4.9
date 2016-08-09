@@ -100,7 +100,11 @@ void tegra_sor_config_safe_clk(struct tegra_dc_sor_data *sor)
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		clk_set_parent(sor->src_switch_clk, sor->safe_clk);
 #else
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 0);
+#else
+		clk_set_parent(sor->sor_clk, sor->safe_clk);
+#endif
 #endif
 
 	if (flag)

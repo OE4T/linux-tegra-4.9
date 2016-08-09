@@ -2291,7 +2291,11 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 #endif
 
 		/* Select sor clock muxes */
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 		tegra_clk_cfg_ex(sor->sor_clk, TEGRA_CLK_SOR_CLK_SEL, 3);
+#else
+		clk_set_parent(sor->sor_clk, sor->brick_clk);
+#endif
 
 		tegra_dc_writel(hdmi->dc, PIXEL_CLK_DIVIDER_PCD1 |
 			SHIFT_CLK_DIVIDER(tegra_hdmi_get_shift_clk_div(hdmi)),
@@ -2301,8 +2305,12 @@ static void tegra_hdmi_config_clk(struct tegra_hdmi *hdmi, u32 clk_type)
 	} else if (clk_type == TEGRA_HDMI_SAFE_CLK) {
 		if (!hdmi->dc->initialized) {
 			/* Select sor clock muxes */
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 			tegra_clk_cfg_ex(hdmi->sor->sor_clk,
 				TEGRA_CLK_SOR_CLK_SEL, 0);
+#else
+			clk_set_parent(hdmi->sor->sor_clk, hdmi->sor->safe_clk);
+#endif
 			hdmi->clk_type = TEGRA_HDMI_SAFE_CLK;
 		}
 	} else {

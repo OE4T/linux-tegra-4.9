@@ -2400,7 +2400,12 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	return tegra_dc_pclk_round_rate(dc, dc->mode.pclk);
 #else
 	parent_clk = clk_get(NULL,
-				dc->out->parent_clk ? : "pll_d2");
+#ifndef CONFIG_ARCH_TEGRA_210_SOC
+				"pll_d2");
+#else
+				"pll_d2_out0");
+#endif
+
 
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 

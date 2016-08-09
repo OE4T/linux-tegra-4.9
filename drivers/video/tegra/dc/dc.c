@@ -5933,9 +5933,14 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		 */
 		emc_clk = tegra_disp_clk_get(&ndev->dev, "emc");
 		if (IS_ERR_OR_NULL(emc_clk)) {
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+			dev_info(&ndev->dev, "can't get emc clock\n");
+			emc_clk = NULL;
+#else
 			dev_err(&ndev->dev, "can't get emc clock\n");
 			ret = -ENOENT;
 			goto err_put_clk;
+#endif
 		}
 		dc->emc_clk = emc_clk;
 #endif
@@ -5949,9 +5954,14 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		emc_la_clk = tegra_disp_clk_get(&ndev->dev, "emc.la");
 #endif
 		if (IS_ERR_OR_NULL(emc_la_clk)) {
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+			dev_info(&ndev->dev, "can't get emc.la clock\n");
+			emc_la_clk = NULL;
+#else
 			dev_err(&ndev->dev, "can't get emc.la clock\n");
 			ret = -ENOENT;
 			goto err_put_clk;
+#endif
 		}
 		dc->emc_la_clk = emc_la_clk;
 		clk_set_rate(dc->emc_la_clk, 0);

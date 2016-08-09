@@ -63,12 +63,17 @@ static void ublox_gps_read_worker(struct work_struct *private)
 	struct ublox_device *ublox_dev = (struct ublox_device *)
 			container_of(private, struct ublox_device, dwork.work);
 
+	/* resubmit the workqueue again */
+	if (ublox_dev->is_active)
+		schedule_delayed_work(&ublox_dev->dwork,
+					msecs_to_jiffies(READ_TIME));
+
 	ret = regmap_bulk_read(ublox_dev->i2c_regmap, 0xfd, &gps_buf_size, 2);
 	if (ret < 0) {
 		dev_warn(&ublox_dev->i2c_client->dev,
 			": couldn't read register(0xfd) from GPS.\n");
 		/* try one more time */
-		goto end;
+		return;
 	}
 
 	/*
@@ -81,7 +86,7 @@ static void ublox_gps_read_worker(struct work_struct *private)
 		buf = kcalloc(gps_buf_size, sizeof(*buf), GFP_KERNEL);
 		if (!buf)
 			/* try one more time */
-			goto end;
+			return;
 
 		do {
 			ret = regmap_raw_read(ublox_dev->i2c_regmap, 0xff,
@@ -90,8 +95,7 @@ static void ublox_gps_read_worker(struct work_struct *private)
 				dev_warn(&ublox_dev->i2c_client->dev,
 					": couldn't read register(0xfd) from GPS.\n");
 				kfree(buf);
-				/* try one more time */
-				goto end;
+				return;
 			}
 
 			dev_dbg(&ublox_dev->i2c_client->dev,
@@ -116,11 +120,6 @@ static void ublox_gps_read_worker(struct work_struct *private)
 
 		kfree(buf);
 	}
-end:
-	/* resubmit the workqueue again */
-	if (ublox_dev->is_active)
-		schedule_delayed_work(&ublox_dev->dwork,
-					msecs_to_jiffies(READ_TIME));
 }
 
 static int ublox_gps_serial_open(struct tty_struct *tty, struct file *filp)

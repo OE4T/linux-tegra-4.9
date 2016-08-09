@@ -103,17 +103,10 @@ static int nvhost_nvdec_t186_finalize_poweron(struct platform_device *dev)
 	host1x_writel(dev, flcn_thi_sec(), flcn_thi_sec_ch_lock());
 
 	ret = nvhost_nvdec_finalize_poweron(dev);
-	if (ret)
-		tegra_kfuse_disable_sensing();
 
-	return ret;
-}
-
-static int nvhost_nvdec_t186_prepare_poweroff(struct platform_device *dev)
-{
 	tegra_kfuse_disable_sensing();
 
-	return 0;
+	return ret;
 }
 #endif
 
@@ -291,7 +284,6 @@ struct nvhost_device_data t18_nvdec_info = {
 	.autosuspend_delay      = 500,
 	.clocks			= {
 		{"nvdec", UINT_MAX, 0, TEGRA_MC_CLIENT_NVDEC},
-		{"kfuse", 0, 0},
 		{"emc", HOST_NVDEC_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}
@@ -300,7 +292,6 @@ struct nvhost_device_data t18_nvdec_info = {
 	.engine_can_cg		= true,
 	.poweron_reset		= true,
 	.finalize_poweron	= nvhost_nvdec_t186_finalize_poweron,
-	.prepare_poweroff	= nvhost_nvdec_t186_prepare_poweroff,
 	.moduleid		= NVHOST_MODULE_NVDEC,
 	.ctrl_ops		= &tegra_nvdec_ctrl_ops,
 	.num_channels		= 1,

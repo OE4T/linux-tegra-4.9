@@ -18,7 +18,6 @@
 
 #include <linux/delay.h>
 #include <linux/fs.h>
-#include <linux/miscdevice.h>
 #include <linux/module.h>
 #include <linux/slab.h>
 #include <linux/gpio.h>
@@ -42,6 +41,9 @@
 
 #define PW_ON(flag)	((flag) ? 0 : 1)
 #define PW_OFF(flag)	((flag) ? 1 : 0)
+
+/* minor number range would be 0 to 127 */
+#define ISC_DEV_MAX	128
 
 static irqreturn_t isc_mgr_isr(int irq, void *data)
 {
@@ -68,13 +70,15 @@ static irqreturn_t isc_mgr_isr(int irq, void *data)
 	return IRQ_HANDLED;
 }
 
-int isc_delete_lst(void *ptr, struct i2c_client *client)
+int isc_delete_lst(struct device *dev, struct i2c_client *client)
 {
-	struct isc_mgr_priv *isc_mgr = ptr;
+	struct isc_mgr_priv *isc_mgr;
 	struct isc_mgr_client *isc_dev;
 
-	if (ptr == NULL)
+	if (dev == NULL)
 		return -EFAULT;
+
+	isc_mgr = (struct isc_mgr_priv *)dev_get_drvdata(dev);
 
 	mutex_lock(&isc_mgr->mutex);
 	list_for_each_entry(isc_dev, &isc_mgr->dev_list, list) {
@@ -107,6 +111,7 @@ static int isc_remove_dev(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 		i2c_unregister_device(isc_dev->client);
 	else
 		dev_err(isc_mgr->dev, "%s: list %lx un-exist\n", __func__, arg);
+
 	return 0;
 }
 
@@ -135,16 +140,16 @@ static int __isc_create_dev(
 	}
 
 	memcpy(&isc_dev->cfg, new_dev, sizeof(isc_dev->cfg));
-	dev_dbg(isc_mgr->dev, "%s - %s @ %x, %d %d\n", __func__,
+	dev_dbg(isc_mgr->pdev, "%s - %s @ %x, %d %d\n", __func__,
 		isc_dev->cfg.drv_name, isc_dev->cfg.addr,
 		isc_dev->cfg.reg_bits, isc_dev->cfg.val_bits);
 
-	isc_dev->pdata.isc_mgr = isc_mgr;
 	snprintf(isc_dev->pdata.drv_name, sizeof(isc_dev->pdata.drv_name),
 			"%s.%u.%02x", isc_dev->cfg.drv_name,
 			isc_mgr->adap->nr, isc_dev->cfg.addr);
 	isc_dev->pdata.reg_bits = isc_dev->cfg.reg_bits;
 	isc_dev->pdata.val_bits = isc_dev->cfg.val_bits;
+	isc_dev->pdata.pdev = isc_mgr->dev;
 
 	mutex_init(&isc_dev->mutex);
 	INIT_LIST_HEAD(&isc_dev->list);
@@ -182,7 +187,7 @@ static int isc_create_dev(struct isc_mgr_priv *isc_mgr, const void __user *arg)
 	struct isc_mgr_new_dev d_cfg;
 
 	if (copy_from_user(&d_cfg, arg, sizeof(d_cfg))) {
-		dev_err(isc_mgr->dev,
+		dev_err(isc_mgr->pdev,
 			"%s: failed to copy from user\n", __func__);
 		return -EFAULT;
 	}
@@ -197,23 +202,23 @@ static int isc_mgr_write_pid(struct file *file, const void __user *arg)
 	unsigned long flags;
 
 	if (copy_from_user(&sinfo, arg, sizeof(sinfo))) {
-		dev_err(isc_mgr->dev,
+		dev_err(isc_mgr->pdev,
 			"%s: failed to copy from user\n", __func__);
 		return -EFAULT;
 	}
 
 	if (isc_mgr->sinfo.si_int) {
-		dev_err(isc_mgr->dev, "exist signal info\n");
+		dev_err(isc_mgr->pdev, "exist signal info\n");
 		return -EINVAL;
 	}
 
 	if ((sinfo.sig_no < SIGRTMIN) || (sinfo.sig_no > SIGRTMAX)) {
-		dev_err(isc_mgr->dev, "Invalid signal number\n");
+		dev_err(isc_mgr->pdev, "Invalid signal number\n");
 		return -EINVAL;
 	}
 
 	if (!sinfo.pid) {
-		dev_err(isc_mgr->dev, "Invalid PID\n");
+		dev_err(isc_mgr->pdev, "Invalid PID\n");
 		return -EINVAL;
 	}
 
@@ -227,7 +232,7 @@ static int isc_mgr_write_pid(struct file *file, const void __user *arg)
 	isc_mgr->t = pid_task(find_pid_ns(sinfo.pid, &init_pid_ns),
 				PIDTYPE_PID);
 	if (isc_mgr->t == NULL) {
-		dev_err(isc_mgr->dev, "no such pid\n");
+		dev_err(isc_mgr->pdev, "no such pid\n");
 		rcu_read_unlock();
 		return -ENODEV;
 	}
@@ -244,13 +249,13 @@ static int isc_mgr_get_pwr_info(struct isc_mgr_priv *isc_mgr,
 	int err;
 
 	if (copy_from_user(&pinfo, arg, sizeof(pinfo))) {
-		dev_err(isc_mgr->dev,
+		dev_err(isc_mgr->pdev,
 			"%s: failed to copy from user\n", __func__);
 		return -EFAULT;
 	}
 
 	if (!pd->num_pwr_gpios) {
-		dev_err(isc_mgr->dev,
+		dev_err(isc_mgr->pdev,
 			"%s: no power gpios\n", __func__);
 		pinfo.pwr_status = -1;
 		err = -ENODEV;
@@ -258,7 +263,7 @@ static int isc_mgr_get_pwr_info(struct isc_mgr_priv *isc_mgr,
 	}
 
 	if (pinfo.pwr_gpio >= pd->num_pwr_gpios) {
-		dev_err(isc_mgr->dev,
+		dev_err(isc_mgr->pdev,
 			"%s: invalid power gpio provided\n", __func__);
 		pinfo.pwr_status = -1;
 		err = -EINVAL;
@@ -270,7 +275,7 @@ static int isc_mgr_get_pwr_info(struct isc_mgr_priv *isc_mgr,
 
 pwr_info_end:
 	if (copy_to_user(arg, &pinfo, sizeof(pinfo))) {
-		dev_err(isc_mgr->dev,
+		dev_err(isc_mgr->pdev,
 			"%s: failed to copy to user\n", __func__);
 		return -EFAULT;
 	}
@@ -283,7 +288,7 @@ int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	int i;
 	u32 pwr_gpio;
 
-	dev_dbg(isc_mgr->dev, "%s - %lu\n", __func__, arg);
+	dev_dbg(isc_mgr->pdev, "%s - %lu\n", __func__, arg);
 
 	if (!pd->num_pwr_gpios)
 		goto pwr_up_end;
@@ -301,7 +306,7 @@ int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	}
 
 	for (i = 0; i < pd->num_pwr_gpios; i++) {
-		dev_dbg(isc_mgr->dev, "  - %d, %d\n",
+		dev_dbg(isc_mgr->pdev, "  - %d, %d\n",
 			pd->pwr_gpios[i], PW_ON(pd->pwr_flags[i]));
 		gpio_set_value(pd->pwr_gpios[i], PW_ON(pd->pwr_flags[i]));
 		isc_mgr->pwr_state |= BIT(i);
@@ -317,7 +322,7 @@ int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	int i;
 	u32 pwr_gpio;
 
-	dev_dbg(isc_mgr->dev, "%s - %lx\n", __func__, arg);
+	dev_dbg(isc_mgr->pdev, "%s - %lx\n", __func__, arg);
 
 	if (!pd->num_pwr_gpios)
 		goto pwr_dn_end;
@@ -335,7 +340,7 @@ int isc_mgr_power_down(struct isc_mgr_priv *isc_mgr, unsigned long arg)
 	}
 
 	for (i = 0; i < pd->num_pwr_gpios; i++) {
-		dev_dbg(isc_mgr->dev, "  - %d, %d\n",
+		dev_dbg(isc_mgr->pdev, "  - %d, %d\n",
 			pd->pwr_gpios[i], PW_OFF(pd->pwr_flags[i]));
 		gpio_set_value(pd->pwr_gpios[i], PW_OFF(pd->pwr_flags[i]));
 		isc_mgr->pwr_state &= ~BIT(i);
@@ -351,16 +356,17 @@ static int isc_mgr_misc_ctrl(struct isc_mgr_priv *isc_mgr, bool misc_on)
 	struct isc_mgr_platform_data *pd = isc_mgr->pdata;
 	int err, i;
 
-	dev_dbg(isc_mgr->dev, "%s - %s\n", __func__, misc_on ? "ON" : "OFF");
+	dev_dbg(isc_mgr->pdev, "%s - %s\n", __func__, misc_on ? "ON" : "OFF");
 
 	if (!pd->num_misc_gpios)
 		return 0;
 
 	for (i = 0; i < pd->num_misc_gpios; i++) {
 		if (misc_on) {
-			if (devm_gpio_request(
-				isc_mgr->dev, pd->misc_gpios[i], "misc-gpio")) {
-				dev_err(isc_mgr->dev, "failed req GPIO: %d\n",
+			if (devm_gpio_request(isc_mgr->pdev,
+					      pd->misc_gpios[i],
+					      "misc-gpio")) {
+				dev_err(isc_mgr->pdev, "failed req GPIO: %d\n",
 					pd->misc_gpios[i]);
 				goto misc_ctrl_err;
 			}
@@ -370,14 +376,14 @@ static int isc_mgr_misc_ctrl(struct isc_mgr_priv *isc_mgr, bool misc_on)
 		} else {
 			err = gpio_direction_output(
 				pd->misc_gpios[i], PW_OFF(pd->misc_flags[i]));
-			devm_gpio_free(isc_mgr->dev, pd->misc_gpios[i]);
+			devm_gpio_free(isc_mgr->pdev, pd->misc_gpios[i]);
 		}
 	}
 	return 0;
 
 misc_ctrl_err:
 	for (; i >= 0; i--)
-		devm_gpio_free(isc_mgr->dev, pd->misc_gpios[i]);
+		devm_gpio_free(isc_mgr->pdev, pd->misc_gpios[i]);
 	return -EBUSY;
 }
 
@@ -415,7 +421,7 @@ static long isc_mgr_ioctl(
 		switch (arg) {
 		case ISC_MGR_SIGNAL_RESUME:
 			if (!isc_mgr->sig_no) {
-				dev_err(isc_mgr->dev,
+				dev_err(isc_mgr->pdev,
 					"invalid sig_no, setup pid first\n");
 				return -EINVAL;
 			}
@@ -429,7 +435,7 @@ static long isc_mgr_ioctl(
 			spin_unlock_irqrestore(&isc_mgr->spinlock, flags);
 			break;
 		default:
-			dev_err(isc_mgr->dev, "%s unrecognized signal: %lx\n",
+			dev_err(isc_mgr->pdev, "%s unrecognized signal: %lx\n",
 				__func__, arg);
 		}
 		break;
@@ -437,22 +443,21 @@ static long isc_mgr_ioctl(
 		err = isc_mgr_get_pwr_info(isc_mgr, (void __user *)arg);
 		break;
 	default:
-		dev_err(isc_mgr->dev, "%s unsupported ioctl: %x\n",
+		dev_err(isc_mgr->pdev, "%s unsupported ioctl: %x\n",
 			__func__, cmd);
 		err = -EINVAL;
 	}
 
 	if (err)
-		dev_dbg(isc_mgr->dev, "err = %d\n", err);
+		dev_dbg(isc_mgr->pdev, "err = %d\n", err);
 
 	return err;
 }
 
 static int isc_mgr_open(struct inode *inode, struct file *file)
 {
-	struct miscdevice *misc_dev = file->private_data;
-	struct isc_mgr_priv *isc_mgr =
-		container_of(misc_dev, struct isc_mgr_priv, misc_device);
+	struct isc_mgr_priv *isc_mgr = container_of(inode->i_cdev,
+					struct isc_mgr_priv, cdev);
 
 	if (!isc_mgr)
 		return -ENODEV;
@@ -460,7 +465,7 @@ static int isc_mgr_open(struct inode *inode, struct file *file)
 	if (atomic_xchg(&isc_mgr->in_use, 1))
 		return -EBUSY;
 
-	dev_dbg(isc_mgr->dev, "%s\n", __func__);
+	dev_dbg(isc_mgr->pdev, "%s\n", __func__);
 	file->private_data = isc_mgr;
 
 	/* if runtime_pwrctrl_off is not true, power on all here */
@@ -531,7 +536,7 @@ static void isc_mgr_dev_ins(struct work_struct *work)
 {
 	struct isc_mgr_priv *isc_mgr =
 		container_of(work, struct isc_mgr_priv, ins_work);
-	struct device_node *np = isc_mgr->dev->of_node;
+	struct device_node *np = isc_mgr->pdev->of_node;
 	struct device_node *subdev;
 	struct isc_mgr_new_dev d_cfg = {.drv_name = "isc-dev"};
 	const char *sname;
@@ -795,7 +800,7 @@ static int isc_mgr_probe(struct platform_device *pdev)
 		atomic_set(&isc_mgr->irq_in_use, 0);
 	}
 
-	isc_mgr->dev = &pdev->dev;
+	isc_mgr->pdev = &pdev->dev;
 	dev_set_drvdata(&pdev->dev, isc_mgr);
 
 	if (pd->drv_name)
@@ -805,13 +810,45 @@ static int isc_mgr_probe(struct platform_device *pdev)
 		snprintf(isc_mgr->devname, sizeof(isc_mgr->devname),
 			"isc-mgr.%x.%c", pd->bus, 'a' + pd->csi_port);
 
-	isc_mgr->misc_device.name = isc_mgr->devname;
-	isc_mgr->misc_device.minor = MISC_DYNAMIC_MINOR;
-	isc_mgr->misc_device.fops = &isc_mgr_fileops;
-
-	err = misc_register(&isc_mgr->misc_device);
+	/* Request dynamic allocation of a device major number */
+	err = alloc_chrdev_region(&isc_mgr->devt,
+				0, ISC_DEV_MAX, isc_mgr->devname);
 	if (err < 0) {
-		dev_err(&pdev->dev, "Unable to register misc device!\n");
+		dev_err(&pdev->dev, "failed to allocate char dev region %d\n",
+			err);
+		goto err_probe;
+	}
+
+	/* poluate sysfs entries */
+	isc_mgr->isc_class = class_create(THIS_MODULE, isc_mgr->devname);
+	if (IS_ERR(isc_mgr->isc_class)) {
+		err = PTR_ERR(isc_mgr->isc_class);
+		isc_mgr->isc_class = NULL;
+		dev_err(&pdev->dev, "failed to create class %d\n",
+			err);
+		goto err_probe;
+	}
+
+	/* connect the file operations with the cdev */
+	cdev_init(&isc_mgr->cdev, &isc_mgr_fileops);
+	isc_mgr->cdev.owner = THIS_MODULE;
+
+	/* connect the major/minor number to this dev */
+	err = cdev_add(&isc_mgr->cdev, MKDEV(MAJOR(isc_mgr->devt), 0), 1);
+	if (err) {
+		dev_err(&pdev->dev, "Unable to add cdev %d\n", err);
+		goto err_probe;
+	}
+
+	/* send uevents to udev, it will create /dev node for isc-mgr */
+	isc_mgr->dev = device_create(isc_mgr->isc_class, &pdev->dev,
+				     isc_mgr->cdev.dev,
+				     isc_mgr,
+				     isc_mgr->devname);
+	if (IS_ERR(isc_mgr->dev)) {
+		err = PTR_ERR(isc_mgr->dev);
+		isc_mgr->dev = NULL;
+		dev_err(&pdev->dev, "failed to create device %d\n", err);
 		goto err_probe;
 	}
 
@@ -832,7 +869,18 @@ static int isc_mgr_remove(struct platform_device *pdev)
 	if (isc_mgr) {
 		isc_mgr_debugfs_remove(isc_mgr);
 		isc_mgr_del(isc_mgr);
-		misc_deregister(&isc_mgr->misc_device);
+
+		if (isc_mgr->dev)
+			device_destroy(isc_mgr->isc_class,
+				       isc_mgr->cdev.dev);
+		if (isc_mgr->cdev.dev)
+			cdev_del(&isc_mgr->cdev);
+
+		if (isc_mgr->isc_class)
+			class_destroy(isc_mgr->isc_class);
+
+		if (isc_mgr->devt)
+			unregister_chrdev_region(isc_mgr->devt, ISC_DEV_MAX);
 	}
 
 	return 0;

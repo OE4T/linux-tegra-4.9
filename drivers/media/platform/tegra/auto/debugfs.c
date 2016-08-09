@@ -21,7 +21,6 @@
 #include <linux/uaccess.h>
 #include <linux/platform_device.h>
 #include <linux/fs.h>
-#include <linux/miscdevice.h>
 #include <linux/debugfs.h>
 #include <linux/seq_file.h>
 #include <asm/siginfo.h>
@@ -128,7 +127,7 @@ int isc_mgr_debugfs_init(struct isc_mgr_priv *isc_mgr)
 
 	dev_dbg(isc_mgr->dev, "%s %s\n", __func__, isc_mgr->devname);
 	isc_mgr->d_entry = debugfs_create_dir(
-		isc_mgr->misc_device.this_device->kobj.name, NULL);
+		isc_mgr->devname, NULL);
 	if (isc_mgr->d_entry == NULL) {
 		dev_err(isc_mgr->dev, "%s: create dir failed\n", __func__);
 		return -ENOMEM;
@@ -219,10 +218,12 @@ int isc_dev_debugfs_init(struct isc_dev_info *isc_dev)
 	struct dentry *d;
 
 	dev_dbg(isc_dev->dev, "%s %s\n", __func__, isc_dev->devname);
+
 	if (isc_dev->pdata)
-		isc_mgr = isc_dev->pdata->isc_mgr;
+		isc_mgr = dev_get_drvdata(isc_dev->pdata->pdev);
+
 	isc_dev->d_entry = debugfs_create_dir(
-		isc_dev->miscdev.this_device->kobj.name,
+		isc_dev->devname,
 		isc_mgr ? isc_mgr->d_entry : NULL);
 	if (isc_dev->d_entry == NULL) {
 		dev_err(isc_dev->dev, "%s: create dir failed\n", __func__);

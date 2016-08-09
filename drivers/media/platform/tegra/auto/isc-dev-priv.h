@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,10 +14,12 @@
 #ifndef __ISC_DEV_PRIV_H__
 #define __ISC_DEV_PRIV_H__
 
+#include <linux/cdev.h>
+
 struct isc_dev_info {
 	struct i2c_client *i2c_client;
 	struct device *dev;
-	struct miscdevice miscdev;
+	struct cdev cdev;
 	struct isc_dev_platform_data *pdata;
 	atomic_t in_use;
 	struct mutex mutex;

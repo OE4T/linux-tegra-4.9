@@ -80,7 +80,7 @@ struct isc_mgr_platform_data {
 	char *drv_name;
 };
 
-int isc_delete_lst(void *ptr, struct i2c_client *client);
+int isc_delete_lst(struct device *dev, struct i2c_client *client);
 #endif /* __KERNEL__ */
 
 #endif  /* __TEGRA_ISC_MGR_H__ */

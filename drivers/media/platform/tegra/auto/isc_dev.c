@@ -20,7 +20,6 @@
 #include <linux/device.h>
 #include <linux/fs.h>
 #include <linux/i2c.h>
-#include <linux/miscdevice.h>
 #include <linux/regulator/consumer.h>
 #include <linux/slab.h>
 #include <linux/uaccess.h>
@@ -285,10 +284,9 @@ static long isc_dev_ioctl32(struct file *file,
 
 static int isc_dev_open(struct inode *inode, struct file *file)
 {
-	struct miscdevice *miscdev = file->private_data;
 	struct isc_dev_info *info;
 
-	info = container_of(miscdev, struct isc_dev_info, miscdev);
+	info = container_of(inode->i_cdev, struct isc_dev_info, cdev);
 	if (!info)
 		return -ENODEV;
 
@@ -324,6 +322,7 @@ static int isc_dev_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
 	struct isc_dev_info *info;
+	struct device *pdev;
 	int err;
 
 	dev_dbg(&client->dev, "%s: initializing link @%x-%04x\n",
@@ -351,6 +350,7 @@ static int isc_dev_probe(struct i2c_client *client,
 	if (info->reg_len > 2) {
 		dev_err(&client->dev,
 			"device offset length invalid: %d\n", info->reg_len);
+		devm_kfree(&client->dev, info);
 		return -ENODEV;
 	}
 	info->i2c_client = client;
@@ -363,16 +363,27 @@ static int isc_dev_probe(struct i2c_client *client,
 		snprintf(info->devname, sizeof(info->devname),
 			"isc-dev.%u.%02x", client->adapter->nr, client->addr);
 
-	info->miscdev.name = info->devname;
-	info->miscdev.fops = &isc_dev_fileops;
-	info->miscdev.minor = MISC_DYNAMIC_MINOR;
-	info->miscdev.parent = &client->dev;
-	info->miscdev.mode = S_IWUGO | S_IRUGO;
-	err = misc_register(&info->miscdev);
-	if (err) {
-		pr_err("%s: Unable to register misc device!\n", __func__);
+	cdev_init(&info->cdev, &isc_dev_fileops);
+	info->cdev.owner = THIS_MODULE;
+	pdev = info->pdata->pdev;
+	err = cdev_add(&info->cdev, MKDEV(MAJOR(pdev->devt), client->addr), 1);
+	if (err < 0) {
+		dev_err(&client->dev,
+			"%s: Could not add cdev for %d\n", __func__,
+			MKDEV(MAJOR(pdev->devt), client->addr));
 		devm_kfree(&client->dev, info);
 		return err;
+	}
+
+	/* send uevents to udev, it will create /dev node for isc-mgr */
+	info->dev = device_create(pdev->class, &client->dev,
+				  info->cdev.dev,
+				  info, info->devname);
+	if (IS_ERR(info->dev)) {
+		info->dev = NULL;
+		cdev_del(&info->cdev);
+		devm_kfree(&client->dev, info);
+		return PTR_ERR(info->dev);
 	}
 
 	info->power_is_on = 1;
@@ -384,11 +395,20 @@ static int isc_dev_probe(struct i2c_client *client,
 static int isc_dev_remove(struct i2c_client *client)
 {
 	struct isc_dev_info *info = i2c_get_clientdata(client);
+	struct device *pdev;
 
-	dev_dbg(info->dev, "%s\n", __func__);
+	dev_dbg(&client->dev, "%s\n", __func__);
 	isc_dev_debugfs_remove(info);
-	isc_delete_lst(info->pdata->isc_mgr, client);
-	misc_deregister(&info->miscdev);
+	isc_delete_lst(info->pdata->pdev, client);
+
+	pdev = info->pdata->pdev;
+
+	if (info->dev)
+		device_destroy(pdev->class, info->cdev.dev);
+
+	if (info->cdev.dev)
+		cdev_del(&info->cdev);
+
 	return 0;
 }
 

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -46,7 +46,7 @@ struct __attribute__ ((__packed__)) isc_dev_pkg32 {
 #define MAX_ISC_NAME_LENGTH	32
 
 struct isc_dev_platform_data {
-	void *isc_mgr;
+	struct device *pdev; /* parent device of isc_dev */
 	int reg_bits;
 	int val_bits;
 	char drv_name[MAX_ISC_NAME_LENGTH];

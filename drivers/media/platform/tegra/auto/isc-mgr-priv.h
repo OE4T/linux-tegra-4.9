@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -14,9 +14,14 @@
 #ifndef __ISC_MGR_PRIV_H__
 #define __ISC_MGR_PRIV_H__
 
+#include <linux/cdev.h>
+
 struct isc_mgr_priv {
-	struct device *dev;
-	struct miscdevice misc_device;
+	struct device *pdev; /* parent device */
+	struct device *dev; /* this device */
+	dev_t devt;
+	struct cdev cdev;
+	struct class *isc_class;
 	struct i2c_adapter *adap;
 	struct isc_mgr_platform_data *pdata;
 	struct list_head dev_list;

@@ -1666,8 +1666,6 @@ static int tegra_dma_program_sid(struct tegra_dma_channel *tdc, int chan, int st
 	return 0;
 }
 
-static struct device *dma_device;
-
 static int tegra_dma_probe(struct platform_device *pdev)
 {
 	struct resource	*res;
@@ -1754,8 +1752,6 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		return PTR_ERR(tdma->rst);
 	}
 	reset_control_reset(tdma->rst);
-
-	dma_device = &pdev->dev;
 
 	tegra_pd_add_device(&pdev->dev);
 

@@ -338,6 +338,20 @@
 		};
 	};
 
+	pcie-controller@10003000 {
+		prod-settings {
+			#prod-cells = <3>;
+			mask-one-style;
+			prod_c_pad {
+				prod = <
+					0X000000C8 0XF07CF07C 0X80388038	// PADS_REFCLK_CFG0		31:0	 0X80388038
+					0X000000CC 0X0000F07C 0X00008038	// PADS_REFCLK_CFG1		31:0	 0X00008038
+					0X000000D0 0X00000138 0X00000028	// PADS_REFCLK_BIAS		31:0	 0X00000028
+				>;
+			};
+		};
+	};
+
 	sdhci@3460000 {
 		prod-settings {
 			#prod-cells = <3>;

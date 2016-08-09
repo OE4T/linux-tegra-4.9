@@ -184,6 +184,8 @@
 
 	bcmdhd_pcie_wlan {
 		compatible = "android,bcmdhd_pcie_wlan";
+		interrupt-parent = <&tmpm32xi2c_61>;
+		interrupts = <TMPM32X_GPIO(D, 0) 0x0>;
 		wlan-pwr-gpio = <&tmpm32xi2c_61 TMPM32X_GPIO(C, 0) GPIO_ACTIVE_HIGH>;
 		wlreg_on-supply = <&vdd_wlreg_on>;
 		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";

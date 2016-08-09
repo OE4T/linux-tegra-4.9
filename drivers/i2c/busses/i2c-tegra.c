@@ -942,7 +942,14 @@ skip_periph_reset:
 	i2c_writel(i2c_dev, 0, I2C_INT_MASK);
 
 	/* Make sure clock divisor programmed correctly */
-	clk_divisor = i2c_dev->hw->clk_divisor_hs_mode;
+	if (i2c_dev->bus_clk_rate == I2C_HS_MODE) {
+		i2c_dev->clk_divisor_hs_mode = i2c_dev->hw->clk_divisor_hs_mode;
+	} else {
+		val = i2c_readl(i2c_dev, I2C_CLK_DIVISOR);
+		i2c_dev->clk_divisor_hs_mode = val & I2C_CLK_DIVISOR_HS_MODE_MASK;
+	}
+
+	clk_divisor = i2c_dev->clk_divisor_hs_mode;
 	clk_divisor |= i2c_dev->clk_divisor_non_hs_mode <<
 					I2C_CLK_DIVISOR_STD_FAST_MODE_SHIFT;
 	i2c_writel(i2c_dev, clk_divisor, I2C_CLK_DIVISOR);

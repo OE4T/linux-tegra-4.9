@@ -780,6 +780,36 @@ struct nvmap_handle *nvmap_handle_get_from_dmabuf_fd(
 }
 
 /*
+ * Duplicates a generic dma_buf fd. nvmap dma_buf fd has to be duplicated
+ * using existing code paths to preserve memory accounting behavior, so this
+ * function returns -EINVAL on dma_buf fds created by nvmap.
+ */
+int nvmap_dmabuf_duplicate_gen_fd(struct nvmap_client *client, int fd)
+{
+	struct dma_buf *dmabuf = NULL;
+	int ret = 0;
+
+	dmabuf = dma_buf_get(fd);
+	if (IS_ERR(dmabuf))
+		return PTR_ERR(dmabuf);
+
+	if (dmabuf_is_nvmap(dmabuf)) {
+		ret = -EINVAL;
+		goto error;
+	}
+
+	ret = __nvmap_dmabuf_fd(client, dmabuf, O_CLOEXEC);
+	if (ret < 0)
+		goto error;
+
+	return ret;
+
+error:
+	dma_buf_put(dmabuf);
+	return ret;
+}
+
+/*
  * List detailed info for all buffers allocated.
  */
 static int __nvmap_dmabuf_stashes_show(struct seq_file *s, void *data)

@@ -72,11 +72,13 @@ int nvmap_ioctl_getfd(struct file *filp, void __user *arg)
 		return -EFAULT;
 
 	handle = nvmap_handle_get_from_fd(op.handle);
-	if (!handle)
-		return -EINVAL;
+	if (handle) {
+		op.fd = nvmap_get_dmabuf_fd(client, handle);
+		nvmap_handle_put(handle);
+	} else
+		/* if we get an error, the fd might be non-nvmap dmabuf fd */
+		op.fd = nvmap_dmabuf_duplicate_gen_fd(client, op.handle);
 
-	op.fd = nvmap_get_dmabuf_fd(client, handle);
-	nvmap_handle_put(handle);
 	if (op.fd < 0)
 		return op.fd;
 
@@ -177,6 +179,21 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 			ref->handle->orig_size = op.size;
 	} else if (cmd == NVMAP_IOC_FROM_FD) {
 		ref = nvmap_create_handle_from_fd(client, op.fd);
+
+		/* if we get an error, the fd might be non-nvmap dmabuf fd */
+		if (IS_ERR(ref)) {
+			fd = nvmap_dmabuf_duplicate_gen_fd(client, op.fd);
+			if (fd < 0)
+				return fd;
+
+			op.handle = fd;
+			if (copy_to_user(arg, &op, sizeof(op))) {
+				sys_close(fd);
+				return -EFAULT;
+			}
+
+			return 0;
+		}
 	} else {
 		return -EINVAL;
 	}

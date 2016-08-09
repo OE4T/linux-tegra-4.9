@@ -18,8 +18,8 @@
 #include <dt-bindings/display/tegra-panel.h>
 
 #include "panel-s-wuxga-8-0.dtsi"
-#include "tegra210-display-p2393-0000-a00-panel-dsi-1080p.dtsi"
-#include "tegra210-display-p2393-0000-a00-panel-dsi-25x16.dtsi"
+#include "panel-dsi-1080p.dtsi"
+#include "panel-dsi-25x16.dtsi"
 
 / {
 	host1x {

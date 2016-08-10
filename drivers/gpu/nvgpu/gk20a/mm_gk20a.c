@@ -53,6 +53,10 @@
  */
 #define GK20A_FORCE_PRAMIN_DEFAULT false
 
+#if defined(CONFIG_GK20A_VIDMEM)
+static void gk20a_vidmem_clear_mem_worker(struct work_struct *work);
+#endif
+
 int gk20a_mem_begin(struct gk20a *g, struct mem_desc *mem)
 {
 	void *cpu_va;
@@ -437,7 +441,7 @@ struct gk20a_dmabuf_priv {
 
 struct gk20a_vidmem_buf {
 	struct gk20a *g;
-	struct mem_desc mem;
+	struct mem_desc *mem;
 	struct dma_buf *dmabuf;
 	void *dmabuf_priv;
 	void (*dmabuf_priv_delete)(void *);
@@ -881,6 +885,10 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	mm->vidmem.size = size - base;
 	mm->vidmem.bootstrap_base = bootstrap_base;
 	mm->vidmem.bootstrap_size = bootstrap_size;
+
+	INIT_WORK(&mm->vidmem_clear_mem_worker, gk20a_vidmem_clear_mem_worker);
+	INIT_LIST_HEAD(&mm->vidmem.clear_list_head);
+	mutex_init(&mm->vidmem.clear_list_mutex);
 
 	gk20a_dbg_info("registered vidmem: %zu MB", size / SZ_1M);
 
@@ -1988,7 +1996,7 @@ static struct sg_table *gk20a_vidbuf_map_dma_buf(
 {
 	struct gk20a_vidmem_buf *buf = attach->dmabuf->priv;
 
-	return buf->mem.sgt;
+	return buf->mem->sgt;
 }
 
 static void gk20a_vidbuf_unmap_dma_buf(struct dma_buf_attachment *attach,
@@ -2006,7 +2014,7 @@ static void gk20a_vidbuf_release(struct dma_buf *dmabuf)
 	if (buf->dmabuf_priv)
 		buf->dmabuf_priv_delete(buf->dmabuf_priv);
 
-	gk20a_gmmu_free(buf->g, &buf->mem);
+	gk20a_gmmu_free(buf->g, buf->mem);
 	kfree(buf);
 }
 
@@ -2065,12 +2073,12 @@ static struct dma_buf *gk20a_vidbuf_export(struct gk20a_vidmem_buf *buf)
 
 	exp_info.priv = buf;
 	exp_info.ops = &gk20a_vidbuf_ops;
-	exp_info.size = buf->mem.size;
+	exp_info.size = buf->mem->size;
 	exp_info.flags = O_RDWR;
 
 	return dma_buf_export(&exp_info);
 #else
-	return dma_buf_export(buf, &gk20a_vidbuf_ops, buf->mem.size,
+	return dma_buf_export(buf, &gk20a_vidbuf_ops, buf->mem->size,
 			O_RDWR, NULL);
 #endif
 }
@@ -2112,9 +2120,13 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 		}
 	}
 
-	err = gk20a_gmmu_alloc_vid(g, bytes, &buf->mem);
-	if (err)
+	buf->mem = kzalloc(sizeof(struct mem_desc), GFP_KERNEL);
+	if (!buf->mem)
 		goto err_kfree;
+
+	err = gk20a_gmmu_alloc_vid(g, bytes, buf->mem);
+	if (err)
+		goto err_memfree;
 
 	buf->dmabuf = gk20a_vidbuf_export(buf);
 	if (IS_ERR(buf->dmabuf)) {
@@ -2135,7 +2147,9 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 	return fd;
 
 err_bfree:
-	gk20a_gmmu_free(g, &buf->mem);
+	gk20a_gmmu_free(g, buf->mem);
+err_memfree:
+	kfree(buf->mem);
 err_kfree:
 	kfree(buf);
 	return err;
@@ -2831,7 +2845,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 		return -EINVAL;
 
 	alloc = (struct gk20a_page_alloc *)
-			g->ops.mm.get_iova_addr(g, mem->sgt->sgl, 0);
+			sg_dma_address(mem->sgt->sgl);
 
 	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
 		if (gk20a_last_fence)
@@ -2882,12 +2896,28 @@ int gk20a_gmmu_alloc_attr_vid(struct gk20a *g, enum dma_attr attr,
 	return gk20a_gmmu_alloc_attr_vid_at(g, attr, size, mem, 0);
 }
 
+#if defined(CONFIG_GK20A_VIDMEM)
+static u64 __gk20a_gmmu_alloc(struct gk20a_allocator *allocator, dma_addr_t at,
+				size_t size)
+{
+	u64 addr = 0;
+
+	if (at)
+		addr = gk20a_alloc_fixed(allocator, at, size);
+	else
+		addr = gk20a_alloc(allocator, size);
+
+	return addr;
+}
+#endif
+
 int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 		size_t size, struct mem_desc *mem, dma_addr_t at)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;
 	int err;
+	unsigned long end_jiffies = jiffies + msecs_to_jiffies(1000);
 	struct gk20a_allocator *vidmem_alloc = g->mm.vidmem.cleared ?
 		&g->mm.vidmem.allocator :
 		&g->mm.vidmem.bootstrap_allocator;
@@ -2901,19 +2931,21 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	 * are not done anyway */
 	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
 
-	if (at) {
-		addr = gk20a_alloc_fixed(vidmem_alloc, at, size);
-		if (!addr)
-			return -ENOMEM;
+	do {
+		addr = __gk20a_gmmu_alloc(vidmem_alloc, at, size);
+		if (!addr) /* Possible OOM */
+			usleep_range(100, 300);
+		else
+			break;
+	} while (time_before(jiffies, end_jiffies));
 
+	if (!addr)
+		return -ENOMEM;
+
+	if (at)
 		mem->fixed = true;
-	} else {
-		addr = gk20a_alloc(vidmem_alloc, size);
-		if (!addr)
-			return -ENOMEM;
-
+	else
 		mem->fixed = false;
-	}
 
 	mem->sgt = kzalloc(sizeof(struct sg_table), GFP_KERNEL);
 	if (!mem->sgt) {
@@ -2930,6 +2962,8 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
+
+	INIT_LIST_HEAD(&mem->clear_list_entry);
 
 	gk20a_dbg_fn("done at 0x%llx size %zu", addr, size);
 
@@ -2949,11 +2983,18 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 			  struct mem_desc *mem)
 {
 #if defined(CONFIG_GK20A_VIDMEM)
-	gk20a_gmmu_clear_vidmem_mem(g, mem);
-	gk20a_free(&g->mm.vidmem.allocator, sg_dma_address(mem->sgt->sgl));
-	gk20a_free_sgtable(&mem->sgt);
-	mem->size = 0;
-	mem->aperture = APERTURE_INVALID;
+	bool was_empty;
+
+	mutex_lock(&g->mm.vidmem.clear_list_mutex);
+	was_empty = list_empty(&g->mm.vidmem.clear_list_head);
+	list_add_tail(&mem->clear_list_entry,
+		      &g->mm.vidmem.clear_list_head);
+	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
+
+	if (was_empty) {
+		cancel_work_sync(&g->mm.vidmem_clear_mem_worker);
+		schedule_work(&g->mm.vidmem_clear_mem_worker);
+	}
 #endif
 }
 
@@ -2974,6 +3015,42 @@ void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
 {
 	return gk20a_gmmu_free_attr(g, 0, mem);
 }
+
+#if defined(CONFIG_GK20A_VIDMEM)
+static struct mem_desc *get_pending_mem_desc(struct mm_gk20a *mm)
+{
+	struct mem_desc *mem = NULL;
+
+	mutex_lock(&mm->vidmem.clear_list_mutex);
+	mem = list_first_entry_or_null(&mm->vidmem.clear_list_head,
+			struct mem_desc, clear_list_entry);
+	if (mem)
+		list_del_init(&mem->clear_list_entry);
+	mutex_unlock(&mm->vidmem.clear_list_mutex);
+
+	return mem;
+}
+
+static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
+{
+	struct mm_gk20a *mm = container_of(work, struct mm_gk20a,
+					vidmem_clear_mem_worker);
+	struct gk20a *g = mm->g;
+	struct mem_desc *mem;
+
+	while ((mem = get_pending_mem_desc(mm)) != NULL) {
+		gk20a_gmmu_clear_vidmem_mem(g, mem);
+		gk20a_free(&g->mm.vidmem.allocator,
+			   sg_dma_address(mem->sgt->sgl));
+		gk20a_free_sgtable(&mem->sgt);
+
+		mem->size = 0;
+		mem->aperture = APERTURE_INVALID;
+
+		kfree(mem);
+	}
+}
+#endif
 
 u32 __gk20a_aperture_mask(struct gk20a *g, enum gk20a_aperture aperture,
 		u32 sysmem_mask, u32 vidmem_mask)
@@ -3544,7 +3621,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 
 		if (sgt) {
 			alloc = (struct gk20a_page_alloc *)
-				g->ops.mm.get_iova_addr(vm->mm->g, sgt->sgl, 0);
+					sg_dma_address(sgt->sgl);
 
 			list_for_each_entry(chunk, &alloc->alloc_chunks,
 							list_entry) {
@@ -4917,6 +4994,8 @@ out:
 int gk20a_mm_suspend(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
+
+	cancel_work_sync(&g->mm.vidmem_clear_mem_worker);
 
 	g->ops.mm.cbc_clean(g);
 	g->ops.mm.l2_flush(g, false);

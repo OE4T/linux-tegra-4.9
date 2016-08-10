@@ -71,6 +71,7 @@ struct mem_desc {
 	size_t size;
 	u64 gpu_va;
 	bool fixed; /* vidmem only */
+	struct list_head clear_list_entry; /* vidmem only */
 };
 
 struct mem_desc_sub {
@@ -414,7 +415,11 @@ struct mm_gk20a {
 
 		u32 ce_ctx_id;
 		bool cleared;
+
+		struct list_head clear_list_head;
+		struct mutex clear_list_mutex;
 	} vidmem;
+	struct work_struct vidmem_clear_mem_worker;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

@@ -15,6 +15,7 @@
 #include <linux/i2c.h>
 #include <linux/regmap.h>
 #include <linux/workqueue.h>
+#include <linux/pm_runtime.h>
 
 #include <linux/gpio.h>
 #include <linux/of.h>
@@ -147,17 +148,18 @@ static int ublox_gps_serial_write(struct tty_struct *tty,
 
 	/* Write data */
 	ret = regmap_raw_write(ublox_dev->i2c_regmap, 0xff, (char *)buf, count);
-	if (ret < 0)
+	if (ret < 0) {
 		dev_err(&ublox_dev->i2c_client->dev, "i2c write failed: %d\n",
 			ret);
-	else
-		dev_dbg(&ublox_dev->i2c_client->dev, "%d bytes written\n",
-			count);
+		return ret;
+	}
+	dev_dbg(&ublox_dev->i2c_client->dev, "%d bytes written\n", count);
+
 	if (ublox_dev->is_active)
 		mod_delayed_work(system_wq, &ublox_dev->dwork,
 				msecs_to_jiffies(FAST_READ_TIME));
 
-	return (ret == 0 ? count : ret);
+	return count;
 }
 
 static int ublox_gps_write_room(struct tty_struct *tty)
@@ -234,7 +236,8 @@ static int ublox_gps_probe(struct i2c_client *client,
 	ublox_gps_tty_driver->init_termios.c_oflag = OPOST;
 	ublox_gps_tty_driver->init_termios.c_cflag = B9600 | CS8 | CREAD |
 		HUPCL | CLOCAL;
-	ublox_gps_tty_driver->init_termios.c_lflag &= ~ICANON;
+	ublox_gps_tty_driver->init_termios.c_lflag &=
+			 ~(ICANON | ECHO | ECHOE | ECHOK | ECHOCTL | ECHOKE);
 	ublox_gps_tty_driver->init_termios.c_ispeed = 9600;
 	ublox_gps_tty_driver->init_termios.c_ospeed = 9600;
 	ublox_gps_tty_driver->num = UBLOX_GPS_NUM;
@@ -249,7 +252,6 @@ static int ublox_gps_probe(struct i2c_client *client,
 	}
 
 	ublox_dev->i2c_client = client;
-
 	ublox_dev->i2c_regmap = devm_regmap_init_i2c(client,
 						&ublox_gps_i2c_regmap_config);
 	if (IS_ERR(ublox_dev->i2c_regmap)) {
@@ -293,10 +295,38 @@ static const struct i2c_device_id ublox_gps_id[] = {
 
 MODULE_DEVICE_TABLE(i2c, ublox_gps_id);
 
+#ifdef CONFIG_PM_SLEEP
+static int ublox_suspend(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ublox_device *ublox_dev = (struct ublox_device *)
+					i2c_get_clientdata(client);
+
+	cancel_delayed_work(&ublox_dev->dwork);
+	flush_work(&ublox_dev->dwork.work);
+	dev_dbg(dev, "Suspending u-blox tty driver\n");
+	return 0;
+}
+
+static int ublox_resume(struct device *dev)
+{
+	struct i2c_client *client = to_i2c_client(dev);
+	struct ublox_device *ublox_dev = (struct ublox_device *)
+					i2c_get_clientdata(client);
+	dev_dbg(dev, "Resuming u-blox tty driver\n");
+	schedule_delayed_work(&ublox_dev->dwork,
+				msecs_to_jiffies(READ_TIME));
+	return 0;
+}
+#endif
+
+static SIMPLE_DEV_PM_OPS(ublox_pm_ops, ublox_suspend, ublox_resume);
+
 static struct i2c_driver ublox_gps_i2c_driver = {
 	.driver = {
 		.name  = "ublox_gps",
 		.owner = THIS_MODULE,
+		.pm = &ublox_pm_ops,
 	},
 	.id_table  = ublox_gps_id,
 	.probe     = ublox_gps_probe,

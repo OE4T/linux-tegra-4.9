@@ -3190,7 +3190,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 	mutex_init(&se_dev->mtx);
 	INIT_WORK(&se_dev->se_work, tegra_se_work_handler);
 	se_dev->se_work_q = alloc_workqueue("se_work_q",
-				WQ_HIGHPRI | WQ_UNBOUND, 16);
+				WQ_HIGHPRI | WQ_UNBOUND, 1);
 	if (!se_dev->se_work_q) {
 		dev_err(se_dev->dev, "alloc_workqueue failed\n");
 		goto fail;

@@ -197,8 +197,8 @@
 				readout_orientation = "270";
 				line_length = "7200";
 				inherent_gain = "1";
-				mclk_multiplier = "31.25";
-				pix_clk_hz = "750000000";
+				mclk_multiplier = "30";
+				pix_clk_hz = "720000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "16.0";
@@ -224,8 +224,8 @@
 				readout_orientation = "270";
 				line_length = "7108";
 				inherent_gain = "1";
-				mclk_multiplier = "31.25";
-				pix_clk_hz = "750000000";
+				mclk_multiplier = "30";
+				pix_clk_hz = "720000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "16.0";
@@ -313,8 +313,8 @@
 				readout_orientation = "270";
 				line_length = "7200";
 				inherent_gain = "1";
-				mclk_multiplier = "31.25";
-				pix_clk_hz = "750000000";
+				mclk_multiplier = "30";
+				pix_clk_hz = "720000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "16.0";
@@ -340,8 +340,8 @@
 				readout_orientation = "270";
 				line_length = "7108";
 				inherent_gain = "1";
-				mclk_multiplier = "31.25";
-				pix_clk_hz = "750000000";
+				mclk_multiplier = "30";
+				pix_clk_hz = "720000000";
 
 				min_gain_val = "1.0";
 				max_gain_val = "16.0";

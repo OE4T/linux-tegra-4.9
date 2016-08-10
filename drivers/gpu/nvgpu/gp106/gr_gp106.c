@@ -56,6 +56,11 @@ static u32 gr_gp106_pagepool_default_size(struct gk20a *g)
 	return gr_scc_pagepool_total_pages_hwmax_value_v();
 }
 
+static void gr_gp106_set_go_idle_timeout(struct gk20a *g, u32 data)
+{
+	gk20a_writel(g, gr_fe_go_idle_timeout_r(), data);
+}
+
 static int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
 				     u32 class_num, u32 offset, u32 data)
 {
@@ -81,6 +86,9 @@ static int gr_gp106_handle_sw_method(struct gk20a *g, u32 addr,
 			break;
 		case NVC097_SET_ALPHA_CIRCULAR_BUFFER_SIZE:
 			g->ops.gr.set_alpha_circular_buffer_size(g, data);
+			break;
+		case NVC097_SET_GO_IDLE_TIMEOUT:
+			gr_gp106_set_go_idle_timeout(g, data);
 			break;
 		default:
 			goto fail;

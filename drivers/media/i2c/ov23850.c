@@ -452,10 +452,6 @@ static int ov23850_power_get(struct ov23850 *priv)
 	else
 		clk_set_parent(pw->mclk, parent);
 
-	err = clk_set_rate(pw->mclk, OV23850_DEFAULT_CLK_FREQ);
-	if (!err)
-		err = clk_prepare_enable(pw->mclk);
-
 	/* ananlog 2.7v */
 	err |= camera_common_regulator_get(priv->i2c_client,
 			&pw->avdd, pdata->regulators.avdd);

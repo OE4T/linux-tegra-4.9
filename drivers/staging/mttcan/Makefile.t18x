@@ -15,16 +15,8 @@
 # Foundation, Inc., 59 Temple Place, Suite 330, Boston, MA  02111-1307  USA
 #
 
-
-COMPATIBLE_KERNEL=$(shell if [ $(VERSION) -ge 3 -a $(PATCHLEVEL) -ge 18 \
-	-a $(SUBLEVEL) -ge 11 ] ; then \
-	echo "y" ; fi;)
-
-ifeq ($(COMPATIBLE_KERNEL),y)
 obj-$(CONFIG_MTTCAN) := mttcan.o
-endif
 
 mttcan-y = m_ttcan_linux.o m_ttcan_sys.o hw/m_ttcan.o
 mttcan-y += hw/m_ttcan_intr.o hw/m_ttcan_list.o  hw/m_ttcan_ram.o
 mttcan-y += hw/m_ttcan_tt.o
-

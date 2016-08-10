@@ -40,7 +40,6 @@ static int tpg_probe(struct vi *tegra_vi)
 	/* Init CSI related media controller interface */
 	csi->num_ports = TPG_CHANNELS;
 	csi->pg_mode = TEGRA_VI_PG_PATCH;
-	csi->vi = tegra_vi;
 	ret = tegra_csi_media_controller_init(csi, pdev);
 	if (ret)
 		return ret;
@@ -51,7 +50,6 @@ static int tpg_probe(struct vi *tegra_vi)
 	mc_vi->reg = tegra_vi->reg;
 	mc_vi->pg_mode = TEGRA_VI_PG_PATCH;
 	mc_vi->num_channels = TPG_CHANNELS;
-	mc_vi->fops = tegra_vi->data->vi_fops;
 	ret = tegra_vi_media_controller_init(mc_vi, pdev);
 	if (ret)
 		goto vi_mc_error;
@@ -77,6 +75,7 @@ static int __exit tpg_remove(struct vi *tegra_vi)
 static int __init tpg_init(void)
 {
 	struct vi *tegra_vi = tegra_vi_get();
+
 	if (tegra_vi)
 		return tpg_probe(tegra_vi);
 
@@ -86,6 +85,7 @@ static int __init tpg_init(void)
 static void __exit tpg_exit(void)
 {
 	struct vi *tegra_vi = tegra_vi_get();
+
 	if (tegra_vi)
 		tpg_remove(tegra_vi);
 }

@@ -92,7 +92,6 @@ struct tegra_csi_port {
 
 struct tegra_csi_device {
 	struct v4l2_subdev subdev;
-	struct vi *vi;
 	struct device *dev;
 	struct platform_device *pdev;
 	void __iomem *iomem[3];
@@ -107,25 +106,6 @@ struct tegra_csi_device {
 	unsigned int clk_freq;
 	int num_ports;
 	int pg_mode;
-
-	struct tegra_csi_fops *fops;
-};
-
-struct tegra_csi_fops {
-	void (*soc_tpg_start_streaming)(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num);
-	void (*soc_start_streaming)(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num);
-	int (*soc_error)(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num);
-	void (*soc_status)(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num);
-	void (*soc_error_recover)(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num);
-	void (*soc_stop_streaming)(struct tegra_csi_device *csi,
-			enum tegra_csi_port_num port_num);
-	int (*soc_init)(struct tegra_csi_device *csi,
-			struct platform_device *pdev);
 };
 
 static inline struct tegra_csi_device *to_csi(struct v4l2_subdev *subdev)

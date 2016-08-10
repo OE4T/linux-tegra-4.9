@@ -27,6 +27,12 @@
 #include "vi/vi.h"
 #include "camera/registers.h"
 
+
+static void vi_write(struct tegra_mc_vi *vi, unsigned int addr, u32 val)
+{
+	writel(val, vi->iomem + addr);
+}
+
 /* In TPG mode, VI only support 2 formats */
 static void vi_tpg_fmts_bitmap_init(struct tegra_mc_vi *vi)
 {
@@ -45,6 +51,9 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 {
 	int ret;
 
+	if (atomic_add_return(1, &vi->power_on_refcnt) > 1)
+		return 0;
+
 	ret = nvhost_module_busy_ext(vi->ndev);
 	if (ret) {
 		dev_err(vi->dev, "%s:nvhost module is busy\n", __func__);
@@ -60,13 +69,23 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 		}
 	}
 
-	ret = vi->fops->soc_power_on(vi);
-	if (ret)
-		goto error_soc_power_on;
+	vi_write(vi, TEGRA_VI_CFG_CG_CTRL, 1);
+
+	/* unpowergate VE */
+	ret = tegra_unpowergate_partition(TEGRA_POWERGATE_VENC);
+	if (ret) {
+		dev_err(vi->dev, "failed to unpower gate VI\n");
+		goto error_unpowergate;
+	}
 
 	/* clock settings */
 	ret = clk_prepare_enable(vi->clk);
-	clk_set_rate(vi->clk, 0);
+	if (ret) {
+		dev_err(vi->dev, "failed to enable vi clock\n");
+		goto error_clk_enable;
+	}
+
+	ret = clk_set_rate(vi->clk, 0);
 	if (ret) {
 		dev_err(vi->dev, "failed to set vi clock\n");
 		goto error_clk_set_rate;
@@ -79,8 +98,10 @@ int tegra_vi_power_on(struct tegra_mc_vi *vi)
 	return 0;
 err_emc_enable:
 error_clk_set_rate:
-	vi->fops->soc_power_off(vi);
-error_soc_power_on:
+	clk_disable_unprepare(vi->clk);
+error_clk_enable:
+	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
+error_unpowergate:
 	regulator_disable(vi->reg);
 error_regulator_fail:
 	nvhost_module_idle_ext(vi->ndev);
@@ -90,9 +111,13 @@ error_regulator_fail:
 
 void tegra_vi_power_off(struct tegra_mc_vi *vi)
 {
+	if (!atomic_dec_and_test(&vi->power_on_refcnt))
+		return;
+
+	tegra_channel_ec_close(vi);
 	tegra_camera_emc_clk_disable();
 	clk_disable_unprepare(vi->clk);
-	vi->fops->soc_power_off(vi);
+	tegra_powergate_partition(TEGRA_POWERGATE_VENC);
 	regulator_disable(vi->reg);
 	nvhost_module_idle_ext(vi->ndev);
 }
@@ -176,6 +201,7 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi)
 	 */
 	if (vi->pg_mode) {
 		struct vi *tegra_vi = tegra_vi_get();
+
 		if (tegra_vi)
 			memcpy(&vi->media_dev, &tegra_vi->mc_vi.media_dev,
 					sizeof(struct media_device));
@@ -291,9 +317,8 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	set_vi_register_base(mc_vi, pdata->aperture[0]);
 
 	err = vi_get_clks(mc_vi, pdev);
-	if (err) {
-                dev_err(&pdev->dev, "Failed to init vi clks\n");
-	}
+	if (err)
+		dev_err(&pdev->dev, "Failed to init vi clks\n");
 
 	if (mc_vi->pg_mode) {
 		mc_vi->chans = devm_kzalloc(&pdev->dev,
@@ -311,7 +336,7 @@ int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 	mc_vi->ndev = pdev;
 	mc_vi->dev = &pdev->dev;
 	INIT_LIST_HEAD(&mc_vi->entities);
-        mc_vi->bypass = true;
+	mc_vi->bypass = true;
 	mutex_init(&mc_vi->mipical_lock);
 	err = tegra_vi_v4l2_init(mc_vi);
 	if (err < 0)
@@ -348,3 +373,4 @@ void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi)
 	tegra_vi_channels_cleanup(mc_vi);
 	tegra_vi_v4l2_cleanup(mc_vi);
 }
+EXPORT_SYMBOL(tegra_vi_media_controller_cleanup);

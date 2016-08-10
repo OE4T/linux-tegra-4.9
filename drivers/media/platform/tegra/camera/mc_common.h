@@ -172,8 +172,6 @@ struct tegra_channel {
 	atomic_t is_streaming;
 	int requested_kbyteps;
 	unsigned long requested_hz;
-
-	struct tegra_vi_channel_fops *fops;
 };
 
 #define to_tegra_channel(vdev) \
@@ -242,7 +240,6 @@ struct tegra_mc_vi {
 	struct mutex mipical_lock;
 
 	bool bypass;
-	struct tegra_vi_fops *fops;
 };
 
 int tegra_vi_get_port_info(struct tegra_channel *chan,
@@ -261,6 +258,7 @@ int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi);
 int tegra_vi_media_controller_init(struct tegra_mc_vi *mc_vi,
 			struct platform_device *pdev);
 void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
+void tegra_channel_ec_close(struct tegra_mc_vi *mc_vi);
 void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
 		struct v4l2_event *event);
 #endif

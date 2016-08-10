@@ -40,8 +40,6 @@
 #include "t210/t210.h"
 #include "vi/vi.h"
 #include "vi/vi_irq.h"
-#include "camera/vi2_fops.h"
-#include "csi/csi2_fops.h"
 
 #include "tegra_camera_dev_mfi.h"
 
@@ -56,29 +54,15 @@ struct vi *tegra_vi_get(void)
 }
 EXPORT_SYMBOL(tegra_vi_get);
 
-struct tegra_vi_data t124_vi_data = {
-	.info = (struct nvhost_device_data *)&t124_vi_info,
-	.vi_fops = &vi2_fops,
-	.channel_fops = &vi2_channel_fops,
-	.csi_fops = &csi2_fops,
-};
-
-struct tegra_vi_data t210_vi_data = {
-	.info = (struct nvhost_device_data *)&t21_vi_info,
-	.vi_fops = &vi2_fops,
-	.channel_fops = &vi2_channel_fops,
-	.csi_fops = &csi2_fops,
-};
-
 static struct of_device_id tegra_vi_of_match[] = {
-	{
-		.compatible = "nvidia,tegra124-vi",
-		.data = &t124_vi_data
-	},
-	{
-		.compatible = "nvidia,tegra210-vi",
-		.data = &t210_vi_data
-	},
+#ifdef TEGRA_12X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra124-vi",
+		.data = (struct nvhost_device_data *)&t124_vi_info },
+#endif
+#ifdef TEGRA_21X_OR_HIGHER_CONFIG
+	{ .compatible = "nvidia,tegra210-vi",
+		.data = (struct nvhost_device_data *)&t21_vi_info },
+#endif
 	{ },
 };
 
@@ -373,7 +357,6 @@ static int nvhost_vi_slcg_handler(struct notifier_block *nb,
 static int vi_probe(struct platform_device *dev)
 {
 	int err = 0;
-	struct tegra_vi_data *data = NULL;
 	struct nvhost_device_data *pdata = NULL;
 	u8 num_channels;
 
@@ -381,18 +364,22 @@ static int vi_probe(struct platform_device *dev)
 		const struct of_device_id *match;
 
 		match = of_match_device(tegra_vi_of_match, &dev->dev);
-		if (match)
-			data = (struct tegra_vi_data *) match->data;
-
+		if (match) {
+			pdata = (struct nvhost_device_data *)match->data;
+			dev->dev.platform_data = pdata;
+		}
 		/* DT initializes it to -1, use below WAR to set correct value.
 		 * TODO: Once proper fix for dev-id goes in, remove it.
 		 */
 		dev->id = dev->dev.id;
-	}
+	} else
+		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 
-	BUG_ON(!data || !data->info);
-	dev->dev.platform_data = data->info;
-	pdata = data->info;
+	WARN_ON(!pdata);
+	if (!pdata) {
+		dev_info(&dev->dev, "no platform data\n");
+		return -ENODATA;
+	}
 
 	err = nvhost_check_bondout(pdata->bond_out_id);
 	if (err) {
@@ -411,13 +398,7 @@ static int vi_probe(struct platform_device *dev)
 		return -ENOMEM;
 
 	tegra_vi->ndev = dev;
-	tegra_vi->data = data;
 	tegra_vi->dev = &dev->dev;
-
-	/* If missing SoC fops, whole VI/CSI has be in bypass mode */
-	if (!data->vi_fops || !data->channel_fops || !data->csi_fops)
-		tegra_vi->bypass = true;
-
 	err = nvhost_client_device_get_resources(dev);
 	if (err)
 		goto vi_probe_fail;
@@ -430,7 +411,7 @@ static int vi_probe(struct platform_device *dev)
 	err = tegra_vi_init_mfi(&tegra_vi->mfi_ctx, num_channels);
 	if (err)
 		goto vi_probe_fail;
-	
+
 	if (!pdata->aperture[0]) {
 		dev_err(&dev->dev, "%s: failed to map register base\n",
 				__func__);
@@ -490,15 +471,14 @@ static int vi_probe(struct platform_device *dev)
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	/* add module power domain and also add its domain
-	 * as sub-domain of host1x domain */
+	 * as sub-domain of host1x domain
+	 */
 	err = nvhost_module_add_domain(&pdata->pd, dev);
 #endif
 	err = nvhost_client_device_init(dev);
 	if (err)
 		goto camera_unregister;
 
-	tegra_vi->csi.vi = tegra_vi;
-	tegra_vi->csi.fops = tegra_vi->data->csi_fops;
 	err = tegra_csi_init(&tegra_vi->csi, dev);
 	if (err)
 		goto vi_mc_init_error;
@@ -506,7 +486,6 @@ static int vi_probe(struct platform_device *dev)
 	tegra_vi->mc_vi.vi = tegra_vi;
 	tegra_vi->mc_vi.csi = &tegra_vi->csi;
 	tegra_vi->mc_vi.reg = tegra_vi->reg;
-	tegra_vi->mc_vi.fops = tegra_vi->data->vi_fops;
 	err = tegra_vi_media_controller_init(&tegra_vi->mc_vi, dev);
 	if (err)
 		goto vi_mc_init_error;

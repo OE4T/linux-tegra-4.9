@@ -107,6 +107,10 @@ struct gk20a_allocator {
  *     setting this flag will tell the allocator to manage pools of 4K pages
  *     inside internally allocated large pages.
  *
+ *     Currently this flag is ignored since the only usage of the page allocator
+ *     uses a 4K block size already. However, this flag has been reserved since
+ *     it will be necessary in the future.
+ *
  *   GPU_ALLOC_FORCE_CONTIG
  *
  *     Force allocations to be contiguous. Currently only relevant for page

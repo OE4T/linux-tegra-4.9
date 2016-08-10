@@ -233,7 +233,7 @@ void gk20a_alloc_debugfs_init(struct platform_device *pdev);
 	} while (0)
 
 #define __alloc_dbg(a, fmt, arg...)					\
-	pr_warn("%-25s %25s() " fmt, (a)->name, __func__, ##arg)
+	pr_info("%-25s %25s() " fmt, (a)->name, __func__, ##arg)
 
 #if defined(ALLOCATOR_DEBUG)
 /*

@@ -33,13 +33,18 @@ extern const struct file_operations tegra_pva_ctrl_ops;
 /**
  * struct pva - Driver private data, shared with all applications
  *
- * @pdev:			Pointer to the PVA device
- * @pool:			Pointer to Queue table available for the PVA
+ * @pdev:		Pointer to the PVA device
+ * @pool:		Pointer to Queue table available for the PVA
+ * @lock:		Spinlock for pva struct
+ * @irq:		IRQ number obtained on registering the module
  *
  */
 struct pva {
 	struct platform_device *pdev;
 	struct nvhost_queue_pool *pool;
+
+	spinlock_t lock;
+	int irq;
 };
 
 /**
@@ -68,5 +73,15 @@ int pva_finalize_poweron(struct platform_device *pdev);
  * the PVA. The function should turn off the PVA IRQ.
  */
 int pva_prepare_poweroff(struct platform_device *pdev);
-
+/**
+ * pva_register_isr() - Register PVA ISR.
+ *
+ * @pdev:	Pointer to PVA device
+ *
+ * Return:	0 on Success or negative error code
+ *
+ * This function called from driver to register the
+ * PVA ISR with IRQ.
+ */
+int pva_register_isr(struct platform_device *dev);
 #endif

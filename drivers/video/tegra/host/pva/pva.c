@@ -62,12 +62,21 @@ static struct nvhost_queue_ops pva_queue_ops = {
 
 int pva_finalize_poweron(struct platform_device *pdev)
 {
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva *pva = pdata->private_data;
+
+	enable_irq(pva->irq);
+
 	return 0;
 }
 
 int pva_prepare_poweroff(struct platform_device *pdev)
 {
-	/* TBD: Disable IRQ, etc. */
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct pva *pva = pdata->private_data;
+
+	disable_irq(pva->irq);
+
 	return 0;
 }
 
@@ -138,6 +147,10 @@ static int pva_probe(struct platform_device *pdev)
 		goto err_queue_init;
 	}
 
+	err = pva_register_isr(pdev);
+	if (err < 0)
+		goto err_queue_init;
+
 	return 0;
 
 err_queue_init:
@@ -163,6 +176,7 @@ static int __exit pva_remove(struct platform_device *pdev)
 
 	nvhost_queue_deinit(pva->pool);
 	nvhost_client_device_release(pdev);
+	free_irq(pva->irq, pdata);
 
 	return 0;
 }

@@ -8,6 +8,7 @@ ccflags-y += -Werror
 nvhost-pva-objs  = \
 		pva.o \
 		pva_ioctl.o \
-		pva_mailbox.o
+		pva_mailbox.o \
+		pva_isr.o
 
 obj-$(CONFIG_TEGRA_GRHOST_PVA) += nvhost-pva.o

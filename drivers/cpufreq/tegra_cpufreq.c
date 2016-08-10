@@ -1135,7 +1135,7 @@ static int __init create_ndiv_to_vindex_table(void)
 		if (!vhtbl->vindx) {
 			ret = -ENOMEM;
 			while (cl--)
-				kfree(vhtbl->vindx);
+				kfree(tfreq_data.pcluster[cl].dvfs_tbl.vindx);
 			goto err_out;
 		}
 

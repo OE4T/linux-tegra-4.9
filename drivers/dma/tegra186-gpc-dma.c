@@ -296,7 +296,7 @@ static inline struct tegra_dma_desc *txd_to_tegra_dma_desc(
 
 static inline struct device *tdc2dev(struct tegra_dma_channel *tdc)
 {
-	return &tdc->dma_chan.dev->device;
+	return tdc->dma_chan.device->dev;
 }
 
 static dma_cookie_t tegra_dma_tx_submit(struct dma_async_tx_descriptor *tx);
@@ -323,6 +323,41 @@ static void tegra_dma_dump_chan_regs(struct tegra_dma_channel *tdc)
 		tdc_read(tdc, TEGRA_GPCDMA_CHAN_ERR_STATUS));
 }
 
+static void tegra_dma_desc_put(struct tegra_dma_channel *tdc,
+		struct tegra_dma_desc *dma_desc)
+{
+	unsigned long flags;
+
+	spin_lock_irqsave(&tdc->lock, flags);
+	if (!list_empty(&dma_desc->tx_list))
+		list_splice_init(&dma_desc->tx_list, &tdc->free_sg_req);
+	dma_desc->txd.flags = DMA_CTRL_ACK;
+	list_add_tail(&dma_desc->node, &tdc->free_dma_desc);
+	spin_unlock_irqrestore(&tdc->lock, flags);
+}
+
+static struct tegra_dma_desc *tegra_dma_desc_alloc(
+		struct tegra_dma_channel *tdc, bool prealloc)
+{
+	struct tegra_dma_desc *dma_desc;
+
+	BUG_ON(tdc2dev(tdc) == NULL);
+
+	dma_desc = devm_kzalloc(tdc2dev(tdc), sizeof(*dma_desc), GFP_ATOMIC);
+	if (!dma_desc) {
+		dev_err(tdc2dev(tdc), "dma_desc alloc failed\n");
+		return NULL;
+	}
+
+	dma_async_tx_descriptor_init(&dma_desc->txd, &tdc->dma_chan);
+	dma_desc->txd.tx_submit = tegra_dma_tx_submit;
+
+	if (prealloc)
+		tegra_dma_desc_put(tdc, dma_desc);
+
+	return dma_desc;
+}
+
 /* Get DMA desc from free list, if not there then allocate it.  */
 static struct tegra_dma_desc *tegra_dma_desc_get(
 		struct tegra_dma_channel *tdc)
@@ -344,29 +379,34 @@ static struct tegra_dma_desc *tegra_dma_desc_get(
 
 	spin_unlock_irqrestore(&tdc->lock, flags);
 
-	/* Allocate DMA desc */
-	dma_desc = kzalloc(sizeof(*dma_desc), GFP_ATOMIC);
-	if (!dma_desc) {
-		dev_err(tdc2dev(tdc), "dma_desc alloc failed\n");
-		return NULL;
-	}
-
-	dma_async_tx_descriptor_init(&dma_desc->txd, &tdc->dma_chan);
-	dma_desc->txd.tx_submit = tegra_dma_tx_submit;
-	dma_desc->txd.flags = 0;
-	return dma_desc;
+	return tegra_dma_desc_alloc(tdc, false);
 }
 
-static void tegra_dma_desc_put(struct tegra_dma_channel *tdc,
-		struct tegra_dma_desc *dma_desc)
+static void tegra_dma_sg_req_put(
+		struct tegra_dma_channel *tdc,
+		struct tegra_dma_sg_req *sgreq,
+		bool lock)
 {
 	unsigned long flags;
 
-	spin_lock_irqsave(&tdc->lock, flags);
-	if (!list_empty(&dma_desc->tx_list))
-		list_splice_init(&dma_desc->tx_list, &tdc->free_sg_req);
-	list_add_tail(&dma_desc->node, &tdc->free_dma_desc);
-	spin_unlock_irqrestore(&tdc->lock, flags);
+	if (lock)
+		spin_lock_irqsave(&tdc->lock, flags);
+	list_add_tail(&sgreq->node, &tdc->free_sg_req);
+	if (lock)
+		spin_unlock_irqrestore(&tdc->lock, flags);
+}
+
+static struct tegra_dma_sg_req *tegra_dma_sg_req_alloc(
+		struct tegra_dma_channel *tdc,
+		bool prealloc)
+{
+	struct tegra_dma_sg_req *sg_req = NULL;
+	sg_req = devm_kzalloc(tdc2dev(tdc), sizeof(struct tegra_dma_sg_req), GFP_ATOMIC);
+	if (!sg_req)
+		dev_err(tdc2dev(tdc), "sg_req alloc failed\n");
+	if (prealloc)
+		tegra_dma_sg_req_put(tdc, sg_req, true);
+	return sg_req;
 }
 
 static struct tegra_dma_sg_req *tegra_dma_sg_req_get(
@@ -385,10 +425,7 @@ static struct tegra_dma_sg_req *tegra_dma_sg_req_get(
 	}
 	spin_unlock_irqrestore(&tdc->lock, flags);
 
-	sg_req = kzalloc(sizeof(struct tegra_dma_sg_req), GFP_ATOMIC);
-	if (!sg_req)
-		dev_err(tdc2dev(tdc), "sg_req alloc failed\n");
-	return sg_req;
+	return tegra_dma_sg_req_alloc(tdc, false);
 }
 
 static int tegra_dma_slave_config(struct dma_chan *dc,
@@ -596,7 +633,7 @@ static void handle_once_dma_done(struct tegra_dma_channel *tdc,
 		dma_desc->cb_count++;
 		list_add_tail(&dma_desc->node, &tdc->free_dma_desc);
 	}
-	list_add_tail(&sgreq->node, &tdc->free_sg_req);
+	tegra_dma_sg_req_put(tdc, sgreq, false);
 
 	if (to_terminate || list_empty(&tdc->pending_sg_req))
 		return;
@@ -1574,8 +1611,6 @@ static int tegra_dma_alloc_chan_resources(struct dma_chan *dc)
 static void tegra_dma_free_chan_resources(struct dma_chan *dc)
 {
 	struct tegra_dma_channel *tdc = to_tegra_dma_chan(dc);
-	struct tegra_dma_desc *dma_desc;
-	struct tegra_dma_sg_req *sg_req;
 	struct list_head dma_desc_list;
 	struct list_head sg_req_list;
 	unsigned long flags;
@@ -1594,21 +1629,8 @@ static void tegra_dma_free_chan_resources(struct dma_chan *dc)
 	INIT_LIST_HEAD(&tdc->cb_desc);
 	tdc->config_init = false;
 	tdc->isr_handler = NULL;
-	spin_unlock_irqrestore(&tdc->lock, flags);
-
-	while (!list_empty(&dma_desc_list)) {
-		dma_desc = list_first_entry(&dma_desc_list,
-					typeof(*dma_desc), node);
-		list_del(&dma_desc->node);
-		kfree(dma_desc);
-	}
-
-	while (!list_empty(&sg_req_list)) {
-		sg_req = list_first_entry(&sg_req_list, typeof(*sg_req), node);
-		list_del(&sg_req->node);
-		kfree(sg_req);
-	}
 	tdc->slave_id = -1;
+	spin_unlock_irqrestore(&tdc->lock, flags);
 }
 
 static struct dma_chan *tegra_dma_of_xlate(struct of_phandle_args *dma_spec,
@@ -1676,6 +1698,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	struct tegra_dma_chip_data *chip_data = NULL;
 	int start_chan_idx;
 	int nr_chans, stream_id;
+	int preallocated_desc = 0, preallocated_sg = 0;
 
 	if (pdev->dev.of_node) {
 		const struct of_device_id *match;
@@ -1719,6 +1742,17 @@ static int tegra_dma_probe(struct platform_device *pdev)
 			if (ret)
 				stream_id = TEGRA_SID_GPCDMA_0;
 		}
+
+		/*
+		 * if these properties are unreadable, leave them zeroes
+		 * zeroes imply:
+		 * - NO preallocated sg requests
+		 * - NO preallocated descriptors
+		 */
+		of_property_read_u32(pdev->dev.of_node,
+			"nvidia,preallocated-descs", &preallocated_desc);
+		of_property_read_u32(pdev->dev.of_node,
+			"nvidia,preallocated-sg", &preallocated_sg);
 	} else {
 		/* If no device tree then fallback to tegra186 data */
 		cdata = (struct tegra_dma_chip_data *)pdev->id_entry->driver_data;
@@ -1758,6 +1792,7 @@ static int tegra_dma_probe(struct platform_device *pdev)
 	INIT_LIST_HEAD(&tdma->dma_dev.channels);
 	for (i = 0; i < cdata->nr_channels; i++) {
 		struct tegra_dma_channel *tdc = &tdma->channels[i];
+		int p;
 
 		tdc->chan_base_offset = TEGRA_GPCDMA_CHANNEL_BASE_ADD_OFFSET +
 				start_chan_idx * cdata->channel_reg_size +
@@ -1788,6 +1823,17 @@ static int tegra_dma_probe(struct platform_device *pdev)
 		INIT_LIST_HEAD(&tdc->free_sg_req);
 		INIT_LIST_HEAD(&tdc->free_dma_desc);
 		INIT_LIST_HEAD(&tdc->cb_desc);
+
+		/*
+		 * pre-allocate stuff
+		 */
+		for (p = 0; p < preallocated_desc; p++)
+			if (!tegra_dma_desc_alloc(tdc, true))
+				break;
+
+		for (p = 0; p < preallocated_sg; p++)
+			if (!tegra_dma_sg_req_alloc(tdc, true))
+				break;
 
 		/* program stream-id for this channel */
 		tegra_dma_program_sid(tdc, i, stream_id);

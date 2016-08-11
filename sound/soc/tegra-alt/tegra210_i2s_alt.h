@@ -199,6 +199,12 @@ struct tegra210_i2s_soc_data {
 				unsigned int rx_slot_mask);
 };
 
+enum tegra210_i2s_path {
+	I2S_RX_PATH,
+	I2S_TX_PATH,
+	I2S_PATHS,
+};
+
 struct tegra210_i2s {
 	const struct tegra210_i2s_soc_data *soc_data;
 	struct clk *clk_i2s;
@@ -215,6 +221,10 @@ struct tegra210_i2s {
 	int bclk_ratio;
 	int format_in;
 	int codec_bit_format;
+	int sample_rate_via_control;
+	int channels_via_control;
+	int stereo_to_mono[I2S_PATHS];
+	int mono_to_stereo[I2S_PATHS];
 	unsigned int fsync_width;
 	unsigned int tx_mask;
 	unsigned int rx_mask;

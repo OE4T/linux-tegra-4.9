@@ -2947,8 +2947,7 @@ static int tegra_dsi_init_hw(struct tegra_dc *dc,
 		err = regulator_enable(dsi->avdd_dsi_csi);
 	if (WARN(err, "unable to enable regulator"))
 		return err;
-	/* stablization delay */
-	mdelay(50);
+
 	/* Enable DSI clocks */
 	tegra_dsi_clk_enable(dsi);
 	tegra_dsi_set_dsi_clk(dc, dsi, dsi->target_lp_clk_khz);

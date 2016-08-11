@@ -431,7 +431,8 @@ unsigned long tegra_hdmi_readl(struct tegra_dc_hdmi_data *hdmi,
 		return 0;
 
 	ret = readl(hdmi->base + reg * 4);
-	trace_display_readl(hdmi->dc, ret, hdmi->base + reg * 4);
+	trace_display_readl(hdmi->dc, ret,
+			(char *)hdmi->base_res->start + reg * 4);
 	return ret;
 }
 
@@ -444,7 +445,8 @@ void tegra_hdmi_writel(struct tegra_dc_hdmi_data *hdmi,
 			"DC is power-gated.\n"))
 		return;
 
-	trace_display_writel(hdmi->dc, val, hdmi->base + reg * 4);
+	trace_display_writel(hdmi->dc, val,
+			(char *)hdmi->base_res->start + reg * 4);
 	writel(val, hdmi->base + reg * 4);
 }
 

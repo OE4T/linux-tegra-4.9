@@ -199,6 +199,8 @@ static inline u32 tegra_sor_readl(struct tegra_dc_sor_data *sor, u32 reg)
 			return 0;
 	}
 	reg_val = readl(sor->base + reg * 4);
+	trace_display_readl(sor->dc, reg_val,
+			(char *)sor->base_res->start + reg * 4);
 	return reg_val;
 }
 
@@ -211,6 +213,8 @@ static inline void tegra_sor_writel(struct tegra_dc_sor_data *sor,
 			return;
 	}
 	writel(val, sor->base + reg * 4);
+	trace_display_writel(sor->dc, val,
+			(char *)sor->base_res->start + reg * 4);
 }
 
 static inline void tegra_sor_write_field(struct tegra_dc_sor_data *sor,

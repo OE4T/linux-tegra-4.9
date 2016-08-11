@@ -356,7 +356,9 @@ unsigned long tegra_dsi_controller_readl(struct tegra_dc_dsi_data *dsi,
 			return 0;
 	}
 	ret = readl(dsi->base[index] + GET_BYTE_OFFSET(reg));
-	trace_display_readl(dsi->dc, ret, dsi->base[index] + GET_BYTE_OFFSET(reg));
+	trace_display_readl(dsi->dc, ret,
+			(char *)dsi->base_res[index]->start
+			+ GET_BYTE_OFFSET(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_controller_readl);
@@ -370,7 +372,8 @@ void tegra_dsi_controller_writel(struct tegra_dc_dsi_data *dsi,
 		"DSI is clock gated!"))
 			return;
 	}
-	trace_display_writel(dsi->dc, val, dsi->base[index] + GET_BYTE_OFFSET(reg));
+	trace_display_writel(dsi->dc, val, (char *)dsi->base_res[index]->start
+			+ GET_BYTE_OFFSET(reg));
 	writel(val, dsi->base[index] + GET_BYTE_OFFSET(reg));
 }
 EXPORT_SYMBOL(tegra_dsi_controller_writel);
@@ -380,7 +383,9 @@ unsigned long tegra_dsi_readl(struct tegra_dc_dsi_data *dsi, u32 reg)
 	unsigned long ret;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	ret = readl(dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
-	trace_display_readl(dsi->dc, ret, dsi->base[DSI_INSTANCE_0] + GET_BYTE_OFFSET(reg));
+	trace_display_readl(dsi->dc, ret,
+			(char *)dsi->base_res[DSI_INSTANCE_0]->start
+			+ GET_BYTE_OFFSET(reg));
 	return ret;
 }
 EXPORT_SYMBOL(tegra_dsi_readl);
@@ -390,7 +395,9 @@ void tegra_dsi_writel(struct tegra_dc_dsi_data *dsi, u32 val, u32 reg)
 	int  i = 0;
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	for (i = 0; i < dsi->max_instances; i++) {
-		trace_display_writel(dsi->dc, val, dsi->base[i] + GET_BYTE_OFFSET(reg));
+		trace_display_writel(dsi->dc, val,
+				(char *)dsi->base_res[i]->start
+				+ GET_BYTE_OFFSET(reg));
 		writel(val, dsi->base[i] + GET_BYTE_OFFSET(reg));
 	}
 }
@@ -403,8 +410,8 @@ unsigned long tegra_dsi_pad_control_readl(struct tegra_dc_dsi_data *dsi,
 
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
 	ret = readl((int *)dsi->pad_control_base + reg * 4);
-	trace_display_readl(dsi->dc, ret, (int *)dsi->pad_control_base +
-								reg * 4);
+	trace_display_readl(dsi->dc, ret,
+			(char *)dsi->pad_control_base_res->start + reg * 4);
 	return ret;
 }
 
@@ -412,8 +419,8 @@ void tegra_dsi_pad_control_writel(struct tegra_dc_dsi_data *dsi, u32 val,
 									u32 reg)
 {
 	BUG_ON(!nvhost_module_powered_ext(dsi->dc->ndev));
-	trace_display_writel(dsi->dc, val, (int *)dsi->pad_control_base +
-								reg * 4);
+	trace_display_writel(dsi->dc, val,
+			(char *)dsi->pad_control_base_res->start + reg * 4);
 	writel(val, (int *)dsi->pad_control_base + reg * 4);
 }
 

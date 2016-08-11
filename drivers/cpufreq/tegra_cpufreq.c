@@ -271,29 +271,23 @@ static unsigned int notrace tegra_get_speed(uint32_t cpu)
 	unsigned long rate_mhz = 0;
 	struct tegra_cpu_ctr c;
 
-	get_online_cpus();
-	if (cpu_online(cpu)) {
-		c.cpu = cpu;
-		if (!smp_call_function_single(cpu, tegra_cpu_spin, &c, 1)) {
-			delta_ccnt = c.coreclk_cnt - c.last_coreclk_cnt;
-			if (!delta_ccnt)
-				goto err_out;
+	c.cpu = cpu;
+	if (!smp_call_function_single(cpu, tegra_cpu_spin, &c, 1)) {
+		delta_ccnt = c.coreclk_cnt - c.last_coreclk_cnt;
+		if (!delta_ccnt)
+			goto err_out;
 
-			/* ref clock is 28 bits */
-			delta_refcnt = ((c.refclk_cnt - c.last_refclk_cnt)
-					% (1 << 28));
-			if (!delta_refcnt) {
-				pr_err("Warning: %d is idle, delta_refcnt: 0\n",
-					 cpu);
-				goto err_out;
-			}
-
-			rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ)
-				/ delta_refcnt;
+		/* ref clock is 28 bits */
+		delta_refcnt = (c.refclk_cnt - c.last_refclk_cnt) % (1 << 28);
+		if (!delta_refcnt) {
+			pr_err("Warning: %d is idle, delta_refcnt: 0\n", cpu);
+			goto err_out;
 		}
+
+		rate_mhz = ((unsigned long) delta_ccnt * REF_CLK_MHZ)
+								/ delta_refcnt;
 	}
 err_out:
-	put_online_cpus();
 	return (unsigned int) (rate_mhz * 1000); /* in KHz */
 }
 

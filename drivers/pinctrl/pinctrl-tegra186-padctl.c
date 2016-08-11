@@ -1281,7 +1281,7 @@ static int tegra186_utmi_phy_enable_sleepwalk(struct tegra_padctl *padctl,
 	reg &= ~(USBOP_VAL_PD | USBON_VAL_PD);
 	ao_writel(padctl, reg, XUSB_AO_UTMIP_PAD_CFG(port));
 
-	usleep_range(50, 100);
+	usleep_range(150, 200);
 
 	/* switch the electric control of the USB2.0 pad to XUSB_AO */
 	reg = ao_readl(padctl, XUSB_AO_UTMIP_PAD_CFG(port));
@@ -1870,7 +1870,7 @@ static int tegra186_hsic_phy_enable_sleepwalk(struct tegra_padctl *padctl,
 	reg &= ~(DATA0_VAL_PD | STROBE_VAL_PD);
 	ao_writel(padctl, reg, XUSB_AO_UHSIC_PAD_CFG(port));
 
-	usleep_range(50, 100);
+	usleep_range(150, 200);
 
 	/* switch the electric control of the USB2.0 pad to XUSB_AO */
 	reg = ao_readl(padctl, XUSB_AO_UHSIC_PAD_CFG(port));

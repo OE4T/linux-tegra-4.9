@@ -59,7 +59,7 @@
 				min-residency-us = <5000>;
 				power = <19>;
 				pmstate = <0x6>;
-				status = "disabled";
+				status = "okay";
 			};
 			cc7 {
 				state-name = "Cluster railgate";

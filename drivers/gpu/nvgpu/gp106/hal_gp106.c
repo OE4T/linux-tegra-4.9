@@ -139,9 +139,13 @@ static int gp106_get_litter_value(struct gk20a *g,
 	case GPU_LIT_TPC_IN_GPC_SHARED_BASE:
 		ret = proj_tpc_in_gpc_shared_base_v();
 		break;
+	case GPU_LIT_PPC_IN_GPC_BASE:
+		ret = proj_ppc_in_gpc_base_v();
 	case GPU_LIT_PPC_IN_GPC_STRIDE:
 		ret = proj_ppc_in_gpc_stride_v();
 		break;
+	case GPU_LIT_PPC_IN_GPC_SHARED_BASE:
+		ret = proj_ppc_in_gpc_shared_base_v();
 	case GPU_LIT_ROP_BASE:
 		ret = proj_rop_base_v();
 		break;

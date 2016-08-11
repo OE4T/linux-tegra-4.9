@@ -21,7 +21,7 @@
 #ifndef __TEGRA_VI4_H__
 #define __TEGRA_VI4_H__
 
-#include "../camera/mc_common.h"
+#include "../camera/vi/mc_common.h"
 
 struct reset_control;
 

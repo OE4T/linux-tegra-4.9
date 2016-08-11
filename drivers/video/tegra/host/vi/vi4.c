@@ -33,6 +33,8 @@
 #include "t186/t186.h"
 #include <linux/nvhost_vi_ioctl.h>
 #include <linux/platform/tegra/latency_allowance.h>
+#include "../camera/vi/mc_common.h"
+#include "../camera/vi/vi4_fops.h"
 
 #define VI_CFG_INTERRUPT_STATUS_0		0x0044
 #define VI_CFG_INTERRUPT_MASK_0			0x0048
@@ -52,7 +54,8 @@
 
 /* Interrupt handler */
 /* NOTE: VI4 has three interrupt lines. This handler is for the master/error
- * line. The other lines are dedicated to VI NOTIFY and handled elsewhere. */
+ * line. The other lines are dedicated to VI NOTIFY and handled elsewhere.
+ */
 static irqreturn_t nvhost_vi4_error_isr(int irq, void *dev_id)
 {
 	struct platform_device *pdev = dev_id;
@@ -168,6 +171,7 @@ static long nvhost_vi4_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct platform_device *pdev = file->private_data;
+
 	switch (cmd) {
 	case NVHOST_VI_IOCTL_SET_VI_CLK: {
 		long rate;
@@ -239,10 +243,17 @@ const struct file_operations nvhost_vi4_ctrl_ops = {
 	.release = nvhost_vi4_release,
 };
 
+struct tegra_vi_data t18_vi_data = {
+	.info = (struct nvhost_device_data *)&t18_vi_info,
+	.vi_fops = &vi4_fops,
+};
+
 /* Platform device */
 static struct of_device_id tegra_vi4_of_match[] = {
-	{ .compatible = "nvidia,tegra186-vi",
-		.data = (struct nvhost_device_data *)&t18_vi_info },
+	{
+		.compatible = "nvidia,tegra186-vi",
+		.data = &t18_vi_data
+	},
 	{ },
 };
 
@@ -260,12 +271,14 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 	const struct of_device_id *match;
 	struct nvhost_device_data *pdata;
 	struct nvhost_vi_dev *vi;
+	struct tegra_vi_data *data = NULL;
 	int err;
 
 	match = of_match_device(tegra_vi4_of_match, &pdev->dev);
 	BUG_ON(match == NULL);
+	data = (struct tegra_vi_data *) match->data;
 
-	pdata = (struct nvhost_device_data *)match->data;
+	pdata = (struct nvhost_device_data *)data->info;
 	BUG_ON(pdata == NULL);
 
 	pdata->pdev = pdev;
@@ -328,6 +341,8 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		}
 	}
 
+	vi->mc_vi.ndev = pdev;
+	vi->mc_vi.fops = data->vi_fops;
 	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);
 	if (err) {
 		if (vi->hvnd != NULL)

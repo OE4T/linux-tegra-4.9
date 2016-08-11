@@ -47,6 +47,7 @@ static struct gk20a_platform nvgpu_pci_device = {
 
 	/* power management configuration */
 	.railgate_delay		= 500,
+	.can_railgate		= false,
 	.can_elpg = false,
 
 	/* power management callbacks */
@@ -165,17 +166,21 @@ static int nvgpu_pci_pm_init(struct device *dev)
 #ifdef CONFIG_PM
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
-	if (platform->railgate_delay)
-		pm_runtime_set_autosuspend_delay(dev,
-			platform->railgate_delay);
+	if (!platform->can_railgate) {
+		pm_runtime_disable(dev);
+	} else {
+		if (platform->railgate_delay)
+			pm_runtime_set_autosuspend_delay(dev,
+				platform->railgate_delay);
 
-	/*
-	 * Runtime PM for PCI devices is disabled by default,
-	 * so we need to enable it first
-	 */
-	pm_runtime_use_autosuspend(dev);
-	pm_runtime_put_noidle(dev);
-	pm_runtime_allow(dev);
+		/*
+		 * Runtime PM for PCI devices is disabled by default,
+		 * so we need to enable it first
+		 */
+		pm_runtime_use_autosuspend(dev);
+		pm_runtime_put_noidle(dev);
+		pm_runtime_allow(dev);
+	}
 #endif
 	return 0;
 }

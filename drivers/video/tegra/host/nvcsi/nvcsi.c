@@ -36,11 +36,20 @@
 #include "nvhost_acm.h"
 #include "t186/t186.h"
 #include "nvcsi.h"
-#include "csi/csi.h"
+#include "camera/vi/mc_common.h"
+#include "camera/csi/csi.h"
+#include "camera/csi/csi4_fops.h"
+
+struct tegra_csi_data t18_nvcsi_data = {
+	.info = (struct nvhost_device_data *)&t18_nvcsi_info,
+	.csi_fops = &csi4_fops,
+};
 
 static struct of_device_id tegra_nvcsi_of_match[] = {
-	{ .compatible = "nvidia,tegra186-nvcsi",
-		.data = (struct nvhost_device_data *)&t18_nvcsi_info },
+	{
+		.compatible = "nvidia,tegra186-nvcsi",
+		.data = &t18_nvcsi_data
+	},
 	{ },
 };
 
@@ -104,13 +113,16 @@ static int nvcsi_probe(struct platform_device *dev)
 	int err = 0;
 	struct nvhost_device_data *pdata = NULL;
 	struct nvcsi *nvcsi = NULL;
+	struct tegra_csi_data *data = NULL;
 
 	if (dev->dev.of_node) {
 		const struct of_device_id *match;
 
 		match = of_match_device(tegra_nvcsi_of_match, &dev->dev);
-		if (match)
-			pdata = (struct nvhost_device_data *)match->data;
+		if (match) {
+			data = (struct tegra_csi_data *) match->data;
+			pdata = (struct nvhost_device_data *)data->info;
+		}
 	} else {
 		pdata = (struct nvhost_device_data *)dev->dev.platform_data;
 	}
@@ -156,6 +168,7 @@ static int nvcsi_probe(struct platform_device *dev)
 	if (err)
 		goto err_client_device_init;
 
+	nvcsi->csi.fops = data->csi_fops;
 	err = tegra_csi_media_controller_init(&nvcsi->csi, dev);
 	if (err < 0)
 		goto err_mediacontroller_init;
@@ -279,6 +292,7 @@ static int __init nvcsi_init(void)
 
 #ifdef CONFIG_PM_GENERIC_DOMAINS
 	int ret;
+
 	ret = nvhost_domain_init(tegra_nvcsi_domain_match);
 	if (ret)
 		return ret;

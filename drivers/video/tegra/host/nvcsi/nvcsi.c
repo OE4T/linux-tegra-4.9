@@ -44,12 +44,6 @@ static struct of_device_id tegra_nvcsi_of_match[] = {
 	{ },
 };
 
-struct nvcsi {
-	struct platform_device *pdev;
-	struct regulator *regulator;
-	struct tegra_csi_device csi;
-};
-
 struct nvcsi_private {
 	struct platform_device *pdev;
 };

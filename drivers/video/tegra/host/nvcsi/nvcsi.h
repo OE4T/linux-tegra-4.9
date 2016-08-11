@@ -21,7 +21,15 @@
 #ifndef __NVHOST_NVCSI_H__
 #define __NVHOST_NVCSI_H__
 
+#include "csi/csi.h"
+
 extern const struct file_operations tegra_nvcsi_ctrl_ops;
+
+struct nvcsi {
+	struct platform_device *pdev;
+	struct regulator *regulator;
+	struct tegra_csi_device csi;
+};
 
 int nvcsi_finalize_poweron(struct platform_device *pdev);
 int nvcsi_prepare_poweroff(struct platform_device *pdev);

@@ -1221,11 +1221,17 @@ static int tegra_i2c_start_dma_based_xfer(struct tegra_i2c_dev *i2c_dev,
 	u32 packet_header[3];
 	u32 dma_xfer_len;
 	u32 int_mask;
+	unsigned long flags = 0;
 
 	i2c_dev->is_curr_dma_xfer = true;
 
 	/* set msg_buf_remaining to zero as complete xfer is done thru DMA*/
 	i2c_dev->msg_buf_remaining = 0;
+
+	/* Enable error interrupts */
+	int_mask = I2C_INT_NO_ACK | I2C_INT_ARBITRATION_LOST
+					| I2C_INT_TX_FIFO_OVERFLOW;
+	tegra_i2c_unmask_irq(i2c_dev, int_mask);
 
 	if (!(msg->flags & I2C_M_RD)) {
 		i2c_dev->curr_direction = DATA_DMA_DIR_TX;
@@ -1251,11 +1257,14 @@ static int tegra_i2c_start_dma_based_xfer(struct tegra_i2c_dev *i2c_dev,
 
 		tegra_i2c_config_fifo_trig(i2c_dev, dma_xfer_len);
 
+		/* Acquire the lock before posting the data to FIFO */
+		spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+
 		ret = tegra_i2c_start_tx_dma(i2c_dev, dma_xfer_len);
 		if (ret < 0) {
 			dev_err(i2c_dev->dev,
 				"Starting tx dma failed, err %d\n", ret);
-			return ret;
+			goto exit;
 		}
 	} else {
 		i2c_dev->curr_direction = DATA_DMA_DIR_RX;
@@ -1272,21 +1281,24 @@ static int tegra_i2c_start_dma_based_xfer(struct tegra_i2c_dev *i2c_dev,
 		/* Fill packet header */
 		tegra_i2c_fill_packet_header(i2c_dev, msg, end_state,
 					     packet_header);
+
+		/* Acquire the lock before posting the data to FIFO */
+		spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+
 		/* Transfer packet header through PIO */
 		i2c_writel(i2c_dev, packet_header[0], I2C_TX_FIFO);
 		i2c_writel(i2c_dev, packet_header[1], I2C_TX_FIFO);
 		i2c_writel(i2c_dev, packet_header[2], I2C_TX_FIFO);
 	}
 
-	int_mask = I2C_INT_NO_ACK | I2C_INT_ARBITRATION_LOST
-					| I2C_INT_TX_FIFO_OVERFLOW;
-
 	if (i2c_dev->hw->has_per_pkt_xfer_complete_irq)
 		int_mask |= I2C_INT_PACKET_XFER_COMPLETE;
 
 	tegra_i2c_unmask_irq(i2c_dev, int_mask);
 
-	return 0;
+exit:
+	spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
+	return ret;
 }
 
 static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
@@ -1296,6 +1308,7 @@ static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
 	u32 val;
 	u32 int_mask;
 	u32 packet_header[3];
+	unsigned long flags = 0;
 
 	i2c_dev->is_curr_dma_xfer = false;
 	val = 7 << I2C_FIFO_CTRL_TX_TRIG_SHIFT |
@@ -1304,8 +1317,16 @@ static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
 
 	i2c_dev->msg_add = msg->addr;
 
+	/* Enable error interrupts */
+	int_mask = I2C_INT_NO_ACK | I2C_INT_ARBITRATION_LOST
+					| I2C_INT_TX_FIFO_OVERFLOW;
+	tegra_i2c_unmask_irq(i2c_dev, int_mask);
+
 	/* Fill packet header */
 	tegra_i2c_fill_packet_header(i2c_dev, msg, end_state, packet_header);
+
+	/* Acquire the lock before posting the data to FIFO */
+	spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
 
 	i2c_writel(i2c_dev, packet_header[0], I2C_TX_FIFO);
 	i2c_writel(i2c_dev, packet_header[1], I2C_TX_FIFO);
@@ -1314,8 +1335,6 @@ static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
 	if (!(msg->flags & I2C_M_RD))
 		tegra_i2c_fill_tx_fifo(i2c_dev);
 
-	int_mask = I2C_INT_NO_ACK | I2C_INT_ARBITRATION_LOST
-					| I2C_INT_TX_FIFO_OVERFLOW;
 	if (i2c_dev->hw->has_per_pkt_xfer_complete_irq)
 		int_mask |= I2C_INT_PACKET_XFER_COMPLETE;
 
@@ -1325,6 +1344,7 @@ static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
 		int_mask |= I2C_INT_TX_FIFO_DATA_REQ;
 
 	tegra_i2c_unmask_irq(i2c_dev, int_mask);
+	spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
 
 	return 0;
 }
@@ -1332,8 +1352,6 @@ static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
 static void tegra_i2c_pre_xfer_config(struct tegra_i2c_dev *i2c_dev,
 		struct i2c_msg *msg)
 {
-	u32 int_mask;
-
 	tegra_i2c_flush_fifos(i2c_dev);
 	i2c_writel(i2c_dev, 0, I2C_FIFO_CTRL);
 
@@ -1345,10 +1363,6 @@ static void tegra_i2c_pre_xfer_config(struct tegra_i2c_dev *i2c_dev,
 	reinit_completion(&i2c_dev->msg_complete);
 
 	i2c_writel(i2c_dev, 0, I2C_INT_MASK);
-	/* Enable error interrupts */
-	int_mask = I2C_INT_NO_ACK | I2C_INT_ARBITRATION_LOST
-					| I2C_INT_TX_FIFO_OVERFLOW;
-	tegra_i2c_unmask_irq(i2c_dev, int_mask);
 }
 
 static int tegra_i2c_handle_xfer_error(struct tegra_i2c_dev *i2c_dev)
@@ -1424,7 +1438,6 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev,
 {
 	u32 int_mask = 0;
 	unsigned long time_left;
-	unsigned long flags = 0;
 	int ret;
 
 	if (msg->len == 0)
@@ -1440,8 +1453,6 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev,
 			return ret;
 	}
 
-	spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
-
 	tegra_i2c_pre_xfer_config(i2c_dev, msg);
 
 	if ((msg->len > I2C_PIO_MODE_MAX_LEN) && i2c_dev->tx_dma_chan
@@ -1450,7 +1461,6 @@ static int tegra_i2c_xfer_msg(struct tegra_i2c_dev *i2c_dev,
 	else
 		ret = tegra_i2c_start_pio_based_xfer(i2c_dev, msg, end_state);
 
-	spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
 	if (ret)
 		return ret;
 

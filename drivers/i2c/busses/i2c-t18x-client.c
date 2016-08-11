@@ -190,7 +190,7 @@ static int __init tegra_i2cslv_init_client(void)
 
 	i2cslv_client = kzalloc(sizeof(*i2cslv_client), GFP_KERNEL);
 	if (!i2cslv_client)
-		goto err_enmm;
+		return -ENOMEM;
 
 	i2cslv_client->rx_buf = kzalloc(MAX_BUFF_SIZE, GFP_KERNEL);
 	if (!(i2cslv_client->rx_buf))

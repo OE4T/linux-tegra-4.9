@@ -978,13 +978,13 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 	struct fb_videomode m;
 	DEFINE_DMA_ATTRS(attrs);
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-	if (!tegra_dc_get_window(dc, fb_data->win)) {
-		dev_err(&ndev->dev, "dc does not have a window at index %d\n",
-			fb_data->win);
-		return ERR_PTR(-ENOENT);
+	if (fb_data->win > -1) {
+		if (!tegra_dc_get_window(dc, fb_data->win)) {
+			dev_err(&ndev->dev, "dc does not have a window at index %d\n",
+				fb_data->win);
+			return ERR_PTR(-ENOENT);
+		}
 	}
-#endif
 
 	info = framebuffer_alloc(sizeof(struct tegra_fb_info), &ndev->dev);
 	if (!info) {

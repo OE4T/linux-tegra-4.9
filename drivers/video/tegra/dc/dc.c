@@ -6170,13 +6170,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 #ifdef CONFIG_TEGRA_DC_EXTENSIONS
 		tegra_dc_get(dc);
-#ifdef CONFIG_TEGRA_NVDISPLAY
-		dc->fb = tegra_nvdisp_fb_register(ndev, dc, dc->pdata->fb,
-			fb_mem);
-#else
 		dc->fb = tegra_fb_register(ndev, dc, dc->pdata->fb, fb_mem,
 			NULL);
-#endif
 		tegra_dc_put(dc);
 		if (IS_ERR_OR_NULL(dc->fb)) {
 			dc->fb = NULL;

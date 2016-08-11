@@ -425,6 +425,23 @@ static int tegra210_i2s_get_format(struct snd_kcontrol *kcontrol,
 		ucontrol->value.integer.value[0] = i2s->format_in;
 	else if (strstr(kcontrol->id.name, "codec"))
 		ucontrol->value.integer.value[0] = i2s->codec_bit_format;
+	else if (strstr(kcontrol->id.name, "Sample Rate"))
+		ucontrol->value.integer.value[0] = i2s->sample_rate_via_control;
+	else if (strstr(kcontrol->id.name, "Channels"))
+		ucontrol->value.integer.value[0] = i2s->channels_via_control;
+	else if (strstr(kcontrol->id.name, "RX stereo to mono"))
+		ucontrol->value.integer.value[0] =
+					i2s->stereo_to_mono[I2S_RX_PATH];
+	else if (strstr(kcontrol->id.name, "RX mono to stereo"))
+		ucontrol->value.integer.value[0] =
+					i2s->mono_to_stereo[I2S_RX_PATH];
+	else if (strstr(kcontrol->id.name, "TX stereo to mono"))
+		ucontrol->value.integer.value[0] =
+					i2s->stereo_to_mono[I2S_TX_PATH];
+	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
+		ucontrol->value.integer.value[0] =
+					i2s->mono_to_stereo[I2S_TX_PATH];
+
 	return 0;
 }
 
@@ -439,6 +456,22 @@ static int tegra210_i2s_put_format(struct snd_kcontrol *kcontrol,
 		i2s->format_in = ucontrol->value.integer.value[0];
 	else if (strstr(kcontrol->id.name, "codec"))
 		i2s->codec_bit_format = ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "Sample Rate"))
+		i2s->sample_rate_via_control = ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "Channels"))
+		i2s->channels_via_control = ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "RX stereo to mono"))
+		i2s->stereo_to_mono[I2S_RX_PATH] =
+					ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "RX mono to stereo"))
+		i2s->mono_to_stereo[I2S_RX_PATH] =
+					ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "TX stereo to mono"))
+		i2s->stereo_to_mono[I2S_TX_PATH] =
+					ucontrol->value.integer.value[0];
+	else if (strstr(kcontrol->id.name, "TX mono to stereo"))
+		i2s->mono_to_stereo[I2S_TX_PATH] =
+					ucontrol->value.integer.value[0];
 
 	return 0;
 }
@@ -525,6 +558,12 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 
 	srate = params_rate(params);
 
+	if (i2s->sample_rate_via_control)
+		srate = i2s->sample_rate_via_control;
+
+	if (i2s->channels_via_control)
+		channels = i2s->channels_via_control;
+
 	regmap_read(i2s->regmap, TEGRA210_I2S_CTRL, &val);
 
 	frame_format = val & TEGRA210_I2S_CTRL_FRAME_FORMAT_MASK;
@@ -573,9 +612,32 @@ static int tegra210_i2s_hw_params(struct snd_pcm_substream *substream,
 	regmap_write(i2s->regmap, TEGRA210_I2S_TIMING, val);
 
 	/* As a COCEC DAI, CAPTURE is transmit */
-	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE)
+	if (substream->stream == SNDRV_PCM_STREAM_CAPTURE) {
 		reg = TEGRA210_I2S_AXBAR_RX_CIF_CTRL;
-	else {
+		if (i2s->mono_to_stereo[I2S_RX_PATH] > 0) {
+			cif_conf.audio_channels = 1;
+			cif_conf.client_channels = 2;
+			cif_conf.mono_conv =
+					i2s->mono_to_stereo[I2S_RX_PATH] - 1;
+		} else if (i2s->stereo_to_mono[I2S_RX_PATH] > 0) {
+			cif_conf.audio_channels = 2;
+			cif_conf.client_channels = 1;
+			cif_conf.stereo_conv =
+					i2s->stereo_to_mono[I2S_RX_PATH] - 1;
+		}
+	} else {
+		if (i2s->mono_to_stereo[I2S_TX_PATH] > 0) {
+			cif_conf.audio_channels = 2;
+			cif_conf.client_channels = 1;
+			cif_conf.mono_conv =
+					i2s->mono_to_stereo[I2S_TX_PATH] - 1;
+		} else if (i2s->stereo_to_mono[I2S_TX_PATH] > 0) {
+			cif_conf.audio_channels = 1;
+			cif_conf.client_channels = 2;
+			cif_conf.stereo_conv =
+					i2s->stereo_to_mono[I2S_TX_PATH] - 1;
+		}
+
 		if (i2s->format_in)
 			cif_conf.audio_bits =
 				tegra210_i2s_fmt_values[i2s->format_in];
@@ -714,12 +776,42 @@ static int tegra210_i2s_loopback_put(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static const char * const tegra210_i2s_stereo_conv_text[] = {
+	"None", "CH0", "CH1", "AVG",
+};
+
+static const char * const tegra210_i2s_mono_conv_text[] = {
+	"None", "ZERO", "COPY",
+};
+
+static const struct soc_enum tegra210_i2s_mono_conv_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_i2s_mono_conv_text),
+		tegra210_i2s_mono_conv_text);
+
+static const struct soc_enum tegra210_i2s_stereo_conv_enum =
+	SOC_ENUM_SINGLE(SND_SOC_NOPM, 0,
+		ARRAY_SIZE(tegra210_i2s_stereo_conv_text),
+		tegra210_i2s_stereo_conv_text);
+
 static const struct snd_kcontrol_new tegra210_i2s_controls[] = {
 	SOC_SINGLE_EXT("Loopback", SND_SOC_NOPM, 0, 1, 0,
 		tegra210_i2s_loopback_get, tegra210_i2s_loopback_put),
 	SOC_ENUM_EXT("input bit format", tegra210_i2s_format_enum,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 	SOC_ENUM_EXT("codec bit format", tegra210_i2s_format_enum,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_SINGLE_EXT("Sample Rate", 0, 0, 192000, 0,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_SINGLE_EXT("Channels", 0, 0, 16, 0,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_ENUM_EXT("RX stereo to mono conv", tegra210_i2s_stereo_conv_enum,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_ENUM_EXT("RX mono to stereo conv", tegra210_i2s_mono_conv_enum,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_ENUM_EXT("TX stereo to mono conv", tegra210_i2s_stereo_conv_enum,
+		tegra210_i2s_get_format, tegra210_i2s_put_format),
+	SOC_ENUM_EXT("TX mono to stereo conv", tegra210_i2s_mono_conv_enum,
 		tegra210_i2s_get_format, tegra210_i2s_put_format),
 };
 

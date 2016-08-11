@@ -30,7 +30,7 @@
 	firmware {
 		android {
 			compatible = "android,firmware";
-			hardware = "p2382_t188";
+			hardware = "p2382_t186";
 		};
 	};
 

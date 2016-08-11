@@ -148,17 +148,19 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 		struct gk20a_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
 		struct sync_fence *dependency,
-		bool wfi)
+		bool wfi, bool need_sync_fence)
 {
 	struct gk20a_fence *f;
 	struct sync_fence *sync_fence = NULL;
 
 #ifdef CONFIG_SYNC
-	sync_fence = gk20a_sync_fence_create(timeline, semaphore,
+	if (need_sync_fence) {
+		sync_fence = gk20a_sync_fence_create(timeline, semaphore,
 					dependency, "f-gk20a-0x%04x",
 					gk20a_semaphore_gpu_ro_va(semaphore));
-	if (!sync_fence)
-		return NULL;
+		if (!sync_fence)
+			return NULL;
+	}
 #endif
 
 	f  = gk20a_alloc_fence(&gk20a_semaphore_fence_ops, sync_fence, wfi);

@@ -52,7 +52,7 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 		struct gk20a_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
 		struct sync_fence *dependency,
-		bool wfi);
+		bool wfi, bool need_sync_fence);
 
 struct gk20a_fence *gk20a_fence_from_syncpt(
 		struct platform_device *host1x_pdev,

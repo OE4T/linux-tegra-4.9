@@ -1660,35 +1660,35 @@ static void gk20a_channel_timeout_start(struct channel_gk20a *ch,
 	if (!ch->wdt_enabled)
 		return;
 
-	mutex_lock(&ch->timeout.lock);
+	raw_spin_lock(&ch->timeout.lock);
 
 	if (ch->timeout.initialized) {
-		mutex_unlock(&ch->timeout.lock);
+		raw_spin_unlock(&ch->timeout.lock);
 		return;
 	}
 
 	ch->timeout.job = job;
 	ch->timeout.initialized = true;
+	raw_spin_unlock(&ch->timeout.lock);
+
 	schedule_delayed_work(&ch->timeout.wq,
 	       msecs_to_jiffies(gk20a_get_channel_watchdog_timeout(ch)));
-
-	mutex_unlock(&ch->timeout.lock);
 }
 
 static void gk20a_channel_timeout_stop(struct channel_gk20a *ch)
 {
-	mutex_lock(&ch->timeout.lock);
+	raw_spin_lock(&ch->timeout.lock);
 	if (!ch->timeout.initialized) {
-		mutex_unlock(&ch->timeout.lock);
+		raw_spin_unlock(&ch->timeout.lock);
 		return;
 	}
-	mutex_unlock(&ch->timeout.lock);
+	raw_spin_unlock(&ch->timeout.lock);
 
 	cancel_delayed_work_sync(&ch->timeout.wq);
 
-	mutex_lock(&ch->timeout.lock);
+	raw_spin_lock(&ch->timeout.lock);
 	ch->timeout.initialized = false;
-	mutex_unlock(&ch->timeout.lock);
+	raw_spin_unlock(&ch->timeout.lock);
 }
 
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
@@ -1700,13 +1700,13 @@ void gk20a_channel_timeout_restart_all_channels(struct gk20a *g)
 		struct channel_gk20a *ch = &f->channel[chid];
 
 		if (gk20a_channel_get(ch)) {
-			mutex_lock(&ch->timeout.lock);
+			raw_spin_lock(&ch->timeout.lock);
 			if (!ch->timeout.initialized) {
-				mutex_unlock(&ch->timeout.lock);
+				raw_spin_unlock(&ch->timeout.lock);
 				gk20a_channel_put(ch);
 				continue;
 			}
-			mutex_unlock(&ch->timeout.lock);
+			raw_spin_unlock(&ch->timeout.lock);
 
 			cancel_delayed_work_sync(&ch->timeout.wq);
 			if (!ch->has_timedout)
@@ -1740,10 +1740,10 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 		  ch->hw_chid);
 
 	/* Get timed out job and reset the timer */
-	mutex_lock(&ch->timeout.lock);
+	raw_spin_lock(&ch->timeout.lock);
 	job = ch->timeout.job;
 	ch->timeout.initialized = false;
-	mutex_unlock(&ch->timeout.lock);
+	raw_spin_unlock(&ch->timeout.lock);
 
 	if (gk20a_fence_is_expired(job->post_fence)) {
 		gk20a_err(dev_from_gk20a(g),
@@ -2333,7 +2333,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	mutex_init(&c->ioctl_lock);
 	spin_lock_init(&c->jobs_lock);
 	mutex_init(&c->last_submit.fence_lock);
-	mutex_init(&c->timeout.lock);
+	raw_spin_lock_init(&c->timeout.lock);
 	mutex_init(&c->sync_lock);
 	INIT_DELAYED_WORK(&c->timeout.wq, gk20a_channel_timeout_handler);
 	INIT_DELAYED_WORK(&c->clean_up.wq, gk20a_channel_clean_up_jobs);

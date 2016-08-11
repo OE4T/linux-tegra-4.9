@@ -72,7 +72,7 @@ struct channel_gk20a_job {
 
 struct channel_gk20a_timeout {
 	struct delayed_work wq;
-	struct mutex lock;
+	raw_spinlock_t lock;
 	bool initialized;
 	struct channel_gk20a_job *job;
 };

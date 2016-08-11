@@ -2157,14 +2157,14 @@ void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 
 		for (j = 0; j < TEGRA_MAX_DC; j++) {
 			owner_dc = tegra_dc_get_dc(j);
-			if (!owner_dc)
+			if (!owner_dc || !owner_dc->enabled)
 				continue;
 
 			if (test_bit(i, &owner_dc->valid_windows))
 				win = tegra_dc_get_window(owner_dc, i);
 		}
 
-		if (!win || !WIN_IS_ENABLED(win))
+		if (!win)
 			continue;
 
 		/*

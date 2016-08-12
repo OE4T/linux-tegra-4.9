@@ -81,6 +81,7 @@ static int bwmgr_update_clk(void)
 	unsigned long floor = 0;
 	unsigned long iso_bw_min;
 	u64 iso_client_flags = 0;
+	int ret = 0;
 
 	/* sizeof(iso_client_flags) */
 	BUILD_BUG_ON(TEGRA_BWMGR_CLIENT_COUNT > 64);
@@ -117,9 +118,15 @@ static int bwmgr_update_clk(void)
 	bw = clk_round_rate(bwmgr.emc_clk, bw);
 
 	if (bw == tegra_bwmgr_get_emc_rate())
-		return 0;
+		return ret;
 
-	return clk_set_rate(bwmgr.emc_clk, bw);
+	ret = clk_set_rate(bwmgr.emc_clk, bw);
+	if (ret)
+		pr_err
+		("bwmgr: clk_set_rate failed for freq %lu Hz with errno %d\n",
+				bw, ret);
+
+	return ret;
 }
 
 struct tegra_bwmgr_client *tegra_bwmgr_register(
@@ -265,9 +272,6 @@ int tegra_bwmgr_set_emc(struct tegra_bwmgr_client *handle, unsigned long val,
 		ret = bwmgr_update_clk();
 
 	bwmgr_unlock();
-
-	if (ret)
-		pr_err("bwmgr: couldn't set emc clock rate.\n");
 
 	return ret;
 }

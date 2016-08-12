@@ -146,6 +146,14 @@
 				};
 			};
 		};
+
+		nvdisplay@15200000 {
+			status = "disabled";
+		};
+
+		nvdisplay@15220000 {
+			status = "disabled";
+		};
 	};
 
         mttcan@c310000 {

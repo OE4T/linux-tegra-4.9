@@ -29,6 +29,17 @@
 					ti,enable-gpio = <&gpio_i2c_0_21 3 0>;
 				};
 			};
+			overrides@2 {
+				target = <&{/host1x}>;
+				_overlay_ {
+					nvdisplay@15200000 {
+						status = "okay";
+					};
+					nvdisplay@15220000 {
+						status = "okay";
+					};
+				};
+			};
 		};
 
 		fragment-e3320-a01@1 {
@@ -52,6 +63,17 @@
 				target = <&en_vdd_disp_1v8>;
 				_overlay_ {
 					gpio = <&gpio_i2c_0_21 0 0>;
+				};
+			};
+			overrides@3 {
+				target = <&{/host1x}>;
+				_overlay_ {
+					nvdisplay@15200000 {
+						status = "okay";
+					};
+					nvdisplay@15220000 {
+						status = "okay";
+					};
 				};
 			};
 		};

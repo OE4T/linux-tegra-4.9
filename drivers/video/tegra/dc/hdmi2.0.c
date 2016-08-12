@@ -162,7 +162,7 @@ static inline void tegra_hdmi_reset(struct tegra_hdmi *hdmi)
 	if (tegra_platform_is_linsim())
 		return;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	if (hdmi->sor->rst) {
 		reset_control_assert(hdmi->sor->rst);
 		mdelay(20);

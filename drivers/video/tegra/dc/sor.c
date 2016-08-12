@@ -1579,8 +1579,7 @@ static inline void tegra_sor_reset(struct tegra_dc_sor_data *sor)
 {
 	if (tegra_platform_is_linsim() || tegra_platform_is_vdk())
 		return;
-
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (sor->rst) {
 		reset_control_assert(sor->rst);
 		mdelay(2);

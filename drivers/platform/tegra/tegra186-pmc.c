@@ -150,7 +150,7 @@ int tegra_pmc_clear_reboot_reason(u32 val)
 	u32 pmc_reg;
 
 	pmc_reg = readl_relaxed(tegra186_pmc_base_reboot + SCRATCH_SCRATCH0_0_OFFSET);
-	pmc_reg &= val;
+	pmc_reg &= ~val;
 	writel_relaxed(pmc_reg, tegra186_pmc_base_reboot + SCRATCH_SCRATCH0_0_OFFSET);
 	return 0;
 }

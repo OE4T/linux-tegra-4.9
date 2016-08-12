@@ -25,11 +25,10 @@
 
 static void program_reboot_reason(const char *cmd)
 {
-	u32 reboot_reason = 0;
+	u32 reboot_reason;
 
 	/* clean up */
-	reboot_reason |= ~(BOOTLOADER_MODE | RECOVERY_MODE |
-				FORCED_RECOVERY_MODE);
+	reboot_reason = BOOTLOADER_MODE | RECOVERY_MODE | FORCED_RECOVERY_MODE;
 	tegra_pmc_clear_reboot_reason(reboot_reason);
 
 	/* valid command? */

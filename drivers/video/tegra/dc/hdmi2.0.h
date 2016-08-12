@@ -386,11 +386,12 @@ struct tegra_hdmi {
 	struct switch_dev audio_switch;
 #endif
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	struct resource *hdmi_dpaux_res[2];
 	struct resource *hdmi_dpaux_base_res[2];
 	void __iomem *hdmi_dpaux_base[2];
 #endif
+
 	struct hdmi_vendor_infoframe vsi;
 
 	struct tegra_nvhdcp *nvhdcp;

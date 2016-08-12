@@ -963,7 +963,8 @@ static int tegra_hdmi_config_tmds(struct tegra_hdmi *hdmi)
 	return -EINVAL;
 }
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 
 static int tegra_hdmi_dpaux_init(struct tegra_hdmi *hdmi)
 {
@@ -1077,7 +1078,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	hdmi->dc = dc;
 	dc_hdmi_array[sor_num] = hdmi;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	err = tegra_hdmi_dpaux_init(hdmi);
 	if (err) {
 		goto fail_hdmi;
@@ -1235,7 +1236,7 @@ fail_hdmi_ddc_array:
 fail_np_panel:
 	of_node_put(np_panel);
 fail_tegra_hdmi_dpaux_init:
-#ifdef CONFIG_TEGRA_NVDISPLAY
+#if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	devm_iounmap(&dc->ndev->dev, hdmi->hdmi_dpaux_base[sor_num]);
 	devm_release_mem_region(&dc->ndev->dev,
 		hdmi->hdmi_dpaux_res[sor_num]->start,

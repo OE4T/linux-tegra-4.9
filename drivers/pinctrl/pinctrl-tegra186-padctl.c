@@ -2231,6 +2231,7 @@ static const struct tegra_padctl_soc tegra186_soc = {
 
 static const struct of_device_id tegra_padctl_of_match[] = {
 	{.compatible = "nvidia,tegra186-padctl", .data = &tegra186_soc},
+	{.compatible = "nvidia,tegra186-xusb-padctl", .data = &tegra186_soc},
 	{ }
 };
 MODULE_DEVICE_TABLE(of, tegra_padctl_of_match);

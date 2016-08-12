@@ -15,7 +15,7 @@ how to describe and reference PHYs in device trees.
 
 Required properties:
 --------------------
-- compatible: should be "nvidia,tegra186-padctl"
+- compatible: should be "nvidia,tegra186-xusb-padctl"
 - reg: Physical base address and length of PADCTL.
 - interrupts: IRQ number of PADCTL.
 - #phy-cells: Should be 1. The specifier is the index of the PHY to reference.
@@ -81,7 +81,7 @@ SoC file extract:
 -----------------
 
 	pinctrl@0x03520000 {
-		compatible = "nvidia,tegra186-padctl";
+		compatible = "nvidia,tegra186-xusb-padctl";
 		reg = <0x0 0x03520000 0x0 0x1000>,
 			<0x0 0x02500000 0x0 0xa0000>;
 		interrupts = <0 167 0x4>;

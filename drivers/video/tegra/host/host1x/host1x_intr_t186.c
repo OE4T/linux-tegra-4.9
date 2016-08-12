@@ -282,8 +282,12 @@ static int intr_request_host_general_irq(struct nvhost_intr *intr)
 	/* enable host module interrupt to CPU0 */
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intc0mask_r(), BIT(0));
 	host1x_hypervisor_writel(dev->dev, host1x_sync_intgmask_r(), BIT(0));
-	host1x_hypervisor_writel(dev->dev,
-			host1x_sync_syncpt_intgmask_r(), 0xff << 8);
+	/* enable syncpoint interrupts */
+	host1x_hypervisor_writel(dev->dev, host1x_sync_syncpt_intgmask_r(),
+				/* Camera CPUs 2 and 3 */
+				BIT(2) | BIT(3) |
+				/* VM1..VM8 */
+				(0xff << 8));
 
 	/* master enable for general (not syncpt) host interrupts
 	 * (AXIREAD, AXIWRITE, Syncpoint protection) */

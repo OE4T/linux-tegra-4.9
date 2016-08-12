@@ -9,3 +9,16 @@
  *
  */
 #include "tegra186-prod/tegra186-priv-vcm31-p2379-0000-c01-00-prod-a.dtsi"
+/ {
+	pinctrl@3520000 {
+		prod-settings {
+			#prod-cells = <4>;
+			mask-one-style;
+			prod_c_utmi2 {
+				board {
+					prod = <0 0x108 0x3FFFFFC0 0x02CC88C0>;
+				};
+			};
+		};
+	};
+};

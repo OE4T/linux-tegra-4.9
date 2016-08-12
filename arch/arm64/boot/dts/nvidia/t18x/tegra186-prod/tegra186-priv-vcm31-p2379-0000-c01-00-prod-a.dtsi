@@ -11,6 +11,19 @@
 
 #include "tegra186-soc/tegra186-soc-mid-prod.dtsi"
 / {
+	pinctrl@3520000 {
+		prod-settings {
+			#prod-cells = <4>;
+			mask-one-style;
+			prod_c_utmi2 {
+				board {
+					prod = <0 0x108 0x3FFFFFC0 0x02CC88C0
+						0 0x114 0x000001CF 0x00000002>;
+				};
+			};
+		};
+	};
+
 	host1x {
 		sor{
 			prod-settings {

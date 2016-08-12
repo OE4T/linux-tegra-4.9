@@ -43,6 +43,7 @@
 
 			usb2-std-A-port1 {
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;
+				nvidia,hs_curr_level_offset = <(-6)>;
 			};
 			usb3-std-A-port1 {
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;

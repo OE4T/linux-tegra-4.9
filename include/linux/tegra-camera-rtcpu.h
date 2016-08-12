@@ -27,5 +27,7 @@ bool tegra_camrtc_is_rtcpu_alive(struct device *dev);
 #define TEGRA_CAMRTC_VERSION_LEN 128
 
 int tegra_camrtc_command(struct device *dev, u32 command, long timeout);
+int tegra_camrtc_prefix_command(struct device *dev,
+				u32 prefix, u32 command, long timeout);
 
 #endif

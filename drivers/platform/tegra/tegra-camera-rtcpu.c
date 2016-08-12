@@ -20,6 +20,7 @@
 #include <linux/clk.h>
 #include <linux/delay.h>
 #include <linux/iommu.h>
+#include <linux/jiffies.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
@@ -433,47 +434,75 @@ static long tegra_camrtc_wait_for_empty(struct device *dev,
 	return timeout;
 }
 
-int tegra_camrtc_command(struct device *dev, u32 command, long timeout)
+static int tegra_camrtc_mbox_exchange(struct device *dev,
+					u32 command, long *timeout)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
-	int response;
 
 #define INVALID_RESPONSE (0x80000000U)
 
-	if (timeout == 0)
-		timeout = 2 * HZ;
-
-	mutex_lock(&rtcpu->cmd.mutex);
-
-	timeout = tegra_camrtc_wait_for_empty(dev, timeout);
-	if (timeout <= 0) {
-		dev_err(dev, "Timed out waiting for empty mailbox");
-		response = -ETIMEDOUT;
-		goto done;
+	*timeout = tegra_camrtc_wait_for_empty(dev, *timeout);
+	if (*timeout <= 0) {
+		dev_err(dev, "command: 0x%08x: empty mailbox timeout\n", command);
+		return -ETIMEDOUT;
 	}
 
 	atomic_set(&rtcpu->cmd.response, INVALID_RESPONSE);
 
 	tegra_hsp_sm_pair_write(rtcpu->sm_pair, command);
 
-	timeout = wait_event_interruptible_timeout(
+	*timeout = wait_event_interruptible_timeout(
 		rtcpu->cmd.response_waitq,
 		atomic_read(&rtcpu->cmd.response) != INVALID_RESPONSE,
-		timeout);
-	if (timeout <= 0) {
-		dev_err(dev, "Timed out waiting for response");
-		response = -ETIMEDOUT;
-		goto done;
+		*timeout);
+	if (*timeout <= 0) {
+		dev_err(dev, "command: 0x%08x: response timeout\n", command);
+		return -ETIMEDOUT;
 	}
 
-	response = (int)atomic_read(&rtcpu->cmd.response);
+	return (int)atomic_read(&rtcpu->cmd.response);
+}
 
-done:
+int tegra_camrtc_command(struct device *dev, u32 command, long timeout)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	int response;
+
+	if (timeout == 0)
+		timeout = rtcpu->cmd.timeout;
+
+	mutex_lock(&rtcpu->cmd.mutex);
+
+	response = tegra_camrtc_mbox_exchange(dev, command, &timeout);
+
 	mutex_unlock(&rtcpu->cmd.mutex);
 
 	return response;
 }
 EXPORT_SYMBOL(tegra_camrtc_command);
+
+int tegra_camrtc_prefix_command(struct device *dev,
+				u32 prefix, u32 command, long timeout)
+{
+	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
+	int response;
+
+	if (timeout == 0)
+		timeout = rtcpu->cmd.timeout;
+
+	mutex_lock(&rtcpu->cmd.mutex);
+
+	prefix = RTCPU_COMMAND(PREFIX, prefix);
+	response = tegra_camrtc_mbox_exchange(dev, prefix, &timeout);
+
+	if (RTCPU_GET_COMMAND_ID(response) == RTCPU_CMD_PREFIX)
+		response = tegra_camrtc_mbox_exchange(dev, command, &timeout);
+
+	mutex_unlock(&rtcpu->cmd.mutex);
+
+	return response;
+}
+EXPORT_SYMBOL(tegra_camrtc_prefix_command);
 
 static int tegra_camrtc_poweron(struct device *dev)
 {
@@ -787,7 +816,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	ret = of_property_read_u32(dev->of_node, NV(cmd-timeout),
 				&rtcpu->cmd.timeout);
-	if (ret)
+	if (ret == 0)
+		rtcpu->cmd.timeout = msecs_to_jiffies(rtcpu->cmd.timeout);
+	else
 		rtcpu->cmd.timeout = 2 * HZ;
 
 	mutex_init(&rtcpu->cmd.mutex);

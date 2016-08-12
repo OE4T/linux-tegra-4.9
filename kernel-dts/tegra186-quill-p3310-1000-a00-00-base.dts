@@ -56,29 +56,29 @@
 
 	usb_cd {
 		status = "okay";
-		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "otg-phy";
 	};
 
 	xudc@3550000 {
 		status = "okay";
-		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "usb2";
 	};
 
 	xhci@3530000 {
 		status = "okay";
-		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
-			<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
-			<&tegra_padctl TEGRA_PADCTL_PHY_USB3_P(1)>;
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_USB3_P(1)>;
 		phy-names = "utmi-0", "utmi-1", "usb3-1";
 	};
 
 	pinctrl@3520000 {
 		status = "okay";
-		pinctrl-0 = <&tegra_padctl_pinmux_default>;
+		pinctrl-0 = <&tegra_xusb_padctl_pinmux_default>;
 		pinctrl-names = "default";
-		tegra_padctl_pinmux_default: pinmux {
+		tegra_xusb_padctl_pinmux_default: pinmux {
 			/* Quill does not support usb3-micro AB */
 			usb2-micro-AB {
 				nvidia,lanes = "otg-0";

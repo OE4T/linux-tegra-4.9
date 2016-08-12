@@ -49,5 +49,11 @@
 	rtcpu@b000000 { /* don't use SCE as camera-rtcpu */
 		status = "disabled";
 	};
+
+	/* TBD : due to SCE(rtcpu) still don't support SC7, HSP is disabled, also
+	Bug 200224289 */
+	tegra-hsp@b150000 {
+		status = "disabled";
+	};
 #endif
 };

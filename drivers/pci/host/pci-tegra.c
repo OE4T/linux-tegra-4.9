@@ -165,6 +165,9 @@
 #define AFI_PCIE_CONFIG_XBAR_CONFIG_X4_X0_X1		(0x0 << 20)
 #define AFI_PCIE_CONFIG_XBAR_CONFIG_X2_X1_X1		(0x1 << 20)
 #define AFI_PCIE_CONFIG_XBAR_CONFIG_X1_X1_X1		(0x2 << 20)
+#define AFI_PCIE_CONFIG_PCIEC0_CLKREQ_AS_GPIO		BIT(29)
+#define AFI_PCIE_CONFIG_PCIEC1_CLKREQ_AS_GPIO		BIT(30)
+#define AFI_PCIE_CONFIG_PCIEC2_CLKREQ_AS_GPIO		BIT(31)
 
 #define AFI_FUSE							0x104
 #define AFI_FUSE_PCIE_T0_GEN2_DIS				(1 << 2)
@@ -1515,9 +1518,16 @@ static int tegra_pcie_enable_controller(struct tegra_pcie *pcie)
 	/* Enable all PCIE controller and */
 	/* system management configuration of PCIE crossbar */
 	val = afi_readl(pcie, AFI_PCIE_CONFIG);
-	val &= ~AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE;
-	val &= ~AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE;
-	val &= ~AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE;
+	val |= (AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC0_CLKREQ_AS_GPIO |
+			AFI_PCIE_CONFIG_PCIEC1_CLKREQ_AS_GPIO |
+			AFI_PCIE_CONFIG_PCIEC2_CLKREQ_AS_GPIO);
+	list_for_each_entry(port, &pcie->ports, list) {
+		val &= ~(1 << (port->index + 1));
+		val &= ~(1 << (port->index + 29));
+	}
 	afi_writel(pcie, val, AFI_PCIE_CONFIG);
 
 	tegra_pcie_config_xbar(pcie);
@@ -2077,13 +2087,16 @@ static void tegra_pcie_port_disable(struct tegra_pcie_port *port)
 	data = afi_readl(port->pcie, AFI_PCIE_CONFIG);
 	switch (port->index) {
 	case 0:
-		data |= AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE;
+		data |= (AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC0_CLKREQ_AS_GPIO);
 		break;
 	case 1:
-		data |= AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE;
+		data |= (AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC1_CLKREQ_AS_GPIO);
 		break;
 	case 2:
-		data |= AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE;
+		data |= (AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC2_CLKREQ_AS_GPIO);
 		break;
 	}
 	afi_writel(port->pcie, data, AFI_PCIE_CONFIG);
@@ -2110,13 +2123,16 @@ void tegra_pcie_port_enable_per_pdev(struct pci_dev *pdev)
 
 	switch (port->index) {
 	case 0:
-		data &= ~AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE;
+		data &= ~(AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC0_CLKREQ_AS_GPIO);
 		break;
 	case 1:
-		data &= ~AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE;
+		data &= ~(AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC1_CLKREQ_AS_GPIO);
 		break;
 	case 2:
-		data &= ~AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE;
+		data &= ~(AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC2_CLKREQ_AS_GPIO);
 		break;
 	}
 	afi_writel(port->pcie, data, AFI_PCIE_CONFIG);
@@ -2141,13 +2157,16 @@ void tegra_pcie_port_disable_per_pdev(struct pci_dev *pdev)
 	data = afi_readl(port->pcie, AFI_PCIE_CONFIG);
 	switch (port->index) {
 	case 0:
-		data |= AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE;
+		data |= (AFI_PCIE_CONFIG_PCIEC0_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC0_CLKREQ_AS_GPIO);
 		break;
 	case 1:
-		data |= AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE;
+		data |= (AFI_PCIE_CONFIG_PCIEC1_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC1_CLKREQ_AS_GPIO);
 		break;
 	case 2:
-		data |= AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE;
+		data |= (AFI_PCIE_CONFIG_PCIEC2_DISABLE_DEVICE |
+			AFI_PCIE_CONFIG_PCIEC2_CLKREQ_AS_GPIO);
 		break;
 	}
 	afi_writel(port->pcie, data, AFI_PCIE_CONFIG);

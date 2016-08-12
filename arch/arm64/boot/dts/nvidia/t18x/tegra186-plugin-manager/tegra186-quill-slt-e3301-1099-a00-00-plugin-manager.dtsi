@@ -45,7 +45,7 @@
 				target = <&tegra_xudc>;
 				_overlay_ {
 					status = "okay";
-					phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+					phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 					phy-names = "usb2";
 				};
 			};
@@ -58,7 +58,7 @@
 			};
 
 			override@3 {
-				target = <&tegra_padctl_pinmux_default>;
+				target = <&tegra_xusb_padctl_pinmux_default>;
 				_overlay_ {
 					usb3-micro-AB {
 						status = "disabled";

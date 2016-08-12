@@ -253,7 +253,7 @@
 		extcon-cables = <&vbus_id_extcon 0>;
 		extcon-cable-names = "vbus";
 		#extcon-cells = <1>;
-		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>;
 		phy-names = "usb2";
 	};
 
@@ -262,9 +262,9 @@
 		extcon-cables = <&vbus_id_extcon 1>;
 		extcon-cable-names = "id";
 		#extcon-cells = <1>;
-		phys = <&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
-			<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
-			<&tegra_padctl TEGRA_PADCTL_PHY_UTMI_P(2)>;
+		phys = <&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(0)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(1)>,
+			<&tegra_xusb_padctl TEGRA_PADCTL_PHY_UTMI_P(2)>;
 		phy-names = "utmi-0", "utmi-1", "utmi-2";
 	};
 

@@ -903,7 +903,7 @@ static int tegra_t210ref_driver_probe(struct platform_device *pdev)
 					"nvidia,hp-det-gpios", 0);
 	if (pdata->gpio_hp_det < 0) {
 		/* interrupt handled by codec */
-		dev_warn(&pdev->dev, "Failed to get HP Det GPIO, should be handled by codec\n");
+		dev_info(&pdev->dev, "Failed to get HP Det GPIO, should be handled by codec\n");
 	}
 
 	pdata->gpio_codec1 = pdata->gpio_codec2 = pdata->gpio_codec3 =

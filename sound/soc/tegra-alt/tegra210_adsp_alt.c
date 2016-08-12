@@ -3400,7 +3400,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 			}
 			if (of_property_read_u32(subnp, "param-type",
 				&adsp_app_desc[i].param_type)) {
-				dev_warn(&pdev->dev,
+				dev_info(&pdev->dev,
 					"Default param-type to BYTE for %s\n",
 					adsp_app_desc[i].name);
 				adsp_app_desc[i].param_type =

@@ -486,8 +486,8 @@
 		charger-detector = <&tegra_usb_cd>;
 	};
 
-	tegra_padctl: pinctrl@3520000 {
-		compatible = "nvidia,tegra186-padctl";
+	tegra_xusb_padctl: pinctrl@3520000 {
+		compatible = "nvidia,tegra186-xusb-padctl";
 		reg = <0x0 0x03520000 0x0 0x1000>,
 			<0x0 0x03540000 0x0 0x1000>;
 		reg-names = "padctl", "ao";

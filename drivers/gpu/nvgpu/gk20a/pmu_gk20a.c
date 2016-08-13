@@ -1148,10 +1148,15 @@ static void get_pmu_init_msg_pmu_queue_params_v3(struct pmu_queue *queue,
 {
 	struct pmu_init_msg_pmu_v3 *init =
 		(struct pmu_init_msg_pmu_v3 *)pmu_init_msg;
-
+	u32 current_ptr = 0;
+	u8 i;
 	queue->index    = init->queue_index[id];
-	queue->offset   = init->queue_offset;
 	queue->size = init->queue_size[id];
+	if (id != 0) {
+	  for ( i = 0 ; i < id; i++)
+	    current_ptr += init->queue_size[i];
+	}
+	queue->offset   = init->queue_offset + current_ptr;
 }
 
 static void *get_pmu_sequence_in_alloc_ptr_v3(struct pmu_sequence *seq)
@@ -2493,6 +2498,7 @@ static int pmu_queue_tail(struct pmu_gk20a *pmu, struct pmu_queue *queue,
 			gk20a_writel(g,
 				pwr_pmu_queue_tail_r(queue->index),
 				pwr_pmu_queue_tail_address_f(*tail));
+
 	} else {
 		if (!set)
 			*tail = pwr_pmu_msgq_tail_val_v(
@@ -2681,14 +2687,14 @@ static bool pmu_queue_is_empty(struct pmu_gk20a *pmu,
 static bool pmu_queue_has_room(struct pmu_gk20a *pmu,
 			struct pmu_queue *queue, u32 size, bool *need_rewind)
 {
-	u32 head, tail, free;
+	u32 head, tail;
 	bool rewind = false;
+	int free;
 
 	size = ALIGN(size, QUEUE_ALIGNMENT);
 
 	pmu_queue_head(pmu, queue, &head, QUEUE_GET);
 	pmu_queue_tail(pmu, queue, &tail, QUEUE_GET);
-
 	if (head >= tail) {
 		free = queue->offset + queue->size - head;
 		free -= PMU_CMD_HDR_SIZE;
@@ -2711,6 +2717,7 @@ static bool pmu_queue_has_room(struct pmu_gk20a *pmu,
 static int pmu_queue_push(struct pmu_gk20a *pmu,
 			struct pmu_queue *queue, void *data, u32 size)
 {
+
 	gk20a_dbg_fn("");
 
 	if (!queue->opened && queue->oflag == OFLAG_WRITE){
@@ -3570,7 +3577,6 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 
 	pmu_copy_from_dmem(pmu, tail,
 		(u8 *)&msg->hdr, PMU_MSG_HDR_SIZE, 0);
-
 	if (msg->hdr.unit_id != PMU_UNIT_INIT) {
 		gk20a_err(dev_from_gk20a(g),
 			"expecting init msg");
@@ -4359,6 +4365,7 @@ static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 
 	queue = &pmu->queue[queue_id];
 
+
 	do {
 		err = pmu_queue_open_write(pmu, queue, cmd->hdr.size);
 		if (err == -EAGAIN && time_before(jiffies, end_jiffies))
@@ -4371,6 +4378,7 @@ static int pmu_write_cmd(struct pmu_gk20a *pmu, struct pmu_cmd *cmd,
 		goto clean_up;
 
 	pmu_queue_push(pmu, queue, cmd, cmd->hdr.size);
+
 
 	err = pmu_queue_close(pmu, queue, true);
 

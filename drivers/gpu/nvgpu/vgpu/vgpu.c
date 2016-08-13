@@ -240,6 +240,7 @@ static int vgpu_init_support(struct platform_device *pdev)
 
 	mutex_init(&g->dbg_sessions_lock);
 	mutex_init(&g->client_lock);
+	mutex_init(&g->ch_wdt_lock);
 
 	g->remove_support = vgpu_remove_support;
 	return 0;

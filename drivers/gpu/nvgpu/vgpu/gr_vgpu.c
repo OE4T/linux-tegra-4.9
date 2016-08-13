@@ -1086,4 +1086,5 @@ void vgpu_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.set_sm_debug_mode = vgpu_gr_set_sm_debug_mode;
 	gops->gr.update_smpc_ctxsw_mode = vgpu_gr_update_smpc_ctxsw_mode;
 	gops->gr.update_hwpm_ctxsw_mode = vgpu_gr_update_hwpm_ctxsw_mode;
+	gops->gr.dump_gr_regs = NULL;
 }

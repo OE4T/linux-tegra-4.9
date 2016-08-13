@@ -264,7 +264,8 @@ static int gk20a_gr_dump_regs(struct device *dev,
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 	struct gk20a *g = platform->g;
 
-	gr_gk20a_elpg_protected_call(g, g->ops.gr.dump_gr_regs(g, o));
+	if (g->ops.gr.dump_gr_regs)
+		gr_gk20a_elpg_protected_call(g, g->ops.gr.dump_gr_regs(g, o));
 
 	return 0;
 }

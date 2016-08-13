@@ -1721,10 +1721,6 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	struct channel_gk20a_job *job;
 	struct gk20a *g;
 	struct channel_gk20a *ch;
-	struct channel_gk20a *failing_ch;
-	u32 engine_id;
-	int id = -1;
-	bool is_tsg = false;
 
 	ch = container_of(to_delayed_work(work), struct channel_gk20a,
 			timeout.wq);
@@ -1746,16 +1742,11 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	ch->timeout.initialized = false;
 	mutex_unlock(&ch->timeout.lock);
 
-	if (gr_gk20a_disable_ctxsw(g)) {
-		gk20a_err(dev_from_gk20a(g), "Unable to disable ctxsw!");
-		goto fail_unlock;
-	}
-
 	if (gk20a_fence_is_expired(job->post_fence)) {
 		gk20a_err(dev_from_gk20a(g),
 			  "Timed out fence is expired on c=%d!",
 			  ch->hw_chid);
-		goto fail_enable_ctxsw;
+		goto fail_unlock;
 	}
 
 	gk20a_err(dev_from_gk20a(g), "Confirmed: job on channel %d timed out",
@@ -1764,43 +1755,9 @@ static void gk20a_channel_timeout_handler(struct work_struct *work)
 	gk20a_debug_dump(g->dev);
 	gk20a_gr_debug_dump(g->dev);
 
-	/* Get failing engine data */
-	engine_id = gk20a_fifo_get_failing_engine_data(g, &id, &is_tsg);
+	g->ops.fifo.force_reset_ch(ch,
+		NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT, true);
 
-	if (!gk20a_fifo_is_valid_engine_id(g, engine_id)) {
-		/* If no failing engine, abort the channels */
-		if (gk20a_is_channel_marked_as_tsg(ch)) {
-			struct tsg_gk20a *tsg = &g->fifo.tsg[ch->tsgid];
-
-			gk20a_fifo_set_ctx_mmu_error_tsg(g, tsg);
-			gk20a_fifo_abort_tsg(g, ch->tsgid, false);
-		} else {
-			gk20a_fifo_set_ctx_mmu_error_ch(g, ch);
-			gk20a_channel_abort(ch, false);
-		}
-	} else {
-		/* If failing engine, trigger recovery */
-		failing_ch = gk20a_channel_get(&g->fifo.channel[id]);
-		if (!failing_ch)
-			goto fail_enable_ctxsw;
-
-		if (failing_ch->hw_chid != ch->hw_chid) {
-			gk20a_channel_timeout_start(ch, job);
-
-			mutex_lock(&failing_ch->timeout.lock);
-			failing_ch->timeout.initialized = false;
-			mutex_unlock(&failing_ch->timeout.lock);
-		}
-
-		gk20a_fifo_recover(g, BIT(engine_id),
-			failing_ch->hw_chid, is_tsg,
-			true, failing_ch->timeout_debug_dump);
-
-		gk20a_channel_put(failing_ch);
-	}
-
-fail_enable_ctxsw:
-	gr_gk20a_enable_ctxsw(g);
 fail_unlock:
 	mutex_unlock(&g->ch_wdt_lock);
 	gk20a_channel_put(ch);
@@ -3231,7 +3188,8 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
-		err = ch->g->ops.fifo.force_reset_ch(ch, true);
+		err = ch->g->ops.fifo.force_reset_ch(ch,
+				NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR, true);
 		gk20a_idle(dev);
 		break;
 	case NVGPU_IOCTL_CHANNEL_EVENT_ID_CTRL:

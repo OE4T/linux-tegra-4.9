@@ -1746,7 +1746,8 @@ void gk20a_fifo_recover(struct gk20a *g, u32 __engine_ids,
 }
 
 /* force reset channel and tsg (if it's part of one) */
-int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
+int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch,
+				u32 err_code, bool verbose)
 {
 	struct tsg_gk20a *tsg = NULL;
 	struct channel_gk20a *ch_tsg = NULL;
@@ -1759,8 +1760,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 
 		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
-				gk20a_set_error_notifier(ch_tsg,
-				       NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+				gk20a_set_error_notifier(ch_tsg, err_code);
 				gk20a_channel_put(ch_tsg);
 			}
 		}
@@ -1768,8 +1768,7 @@ int gk20a_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 		mutex_unlock(&tsg->ch_list_lock);
 		gk20a_fifo_recover_tsg(g, ch->tsgid, verbose);
 	} else {
-		gk20a_set_error_notifier(ch,
-			NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+		gk20a_set_error_notifier(ch, err_code);
 		gk20a_fifo_recover_ch(g, ch->hw_chid, verbose);
 	}
 

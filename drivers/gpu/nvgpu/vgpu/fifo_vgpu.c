@@ -634,7 +634,8 @@ static int vgpu_channel_set_timeslice(struct channel_gk20a *ch, u32 timeslice)
 	return err ? err : msg.ret;
 }
 
-static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
+static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
+					u32 err_code, bool verbose)
 {
 	struct tsg_gk20a *tsg = NULL;
 	struct channel_gk20a *ch_tsg = NULL;
@@ -653,16 +654,14 @@ static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch, bool verbose)
 
 		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
-				gk20a_set_error_notifier(ch_tsg,
-				       NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+				gk20a_set_error_notifier(ch_tsg, err_code);
 				gk20a_channel_put(ch_tsg);
 			}
 		}
 
 		mutex_unlock(&tsg->ch_list_lock);
 	} else {
-		gk20a_set_error_notifier(ch,
-			NVGPU_CHANNEL_RESETCHANNEL_VERIF_ERROR);
+		gk20a_set_error_notifier(ch, err_code);
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FORCE_RESET;

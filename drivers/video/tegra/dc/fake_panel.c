@@ -308,7 +308,9 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 
 	if (!dc->out->sd_settings)
 		return -EINVAL;
+#ifndef CONFIG_TEGRA_NVDISPLAY
 	dc->out->sd_settings->enable = 1;
+#endif
 	dc->out->sd_settings->enable_int = 1;
 
 	return 0;

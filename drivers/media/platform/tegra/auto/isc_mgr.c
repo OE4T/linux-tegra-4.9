@@ -34,6 +34,7 @@
 #include <linux/uaccess.h>
 #include <linux/atomic.h>
 #include <linux/i2c.h>
+#include <linux/pwm.h>
 #include <media/isc-dev.h>
 #include <media/isc-mgr.h>
 
@@ -722,6 +723,7 @@ static int isc_mgr_probe(struct platform_device *pdev)
 	struct isc_mgr_priv *isc_mgr;
 	struct isc_mgr_platform_data *pd;
 	unsigned int i;
+	u32 period, duty;
 
 	dev_info(&pdev->dev, "%sing...\n", __func__);
 
@@ -749,6 +751,23 @@ static int isc_mgr_probe(struct platform_device *pdev)
 	} else {
 		dev_err(&pdev->dev, "%s No platform data.\n", __func__);
 		return -EFAULT;
+	}
+
+	isc_mgr->pwm = devm_pwm_get(&pdev->dev, NULL);
+	if (!IS_ERR(isc_mgr->pwm)) {
+		period = pwm_get_period(isc_mgr->pwm);
+		err = of_property_read_u32(pdev->dev.of_node,
+					  "pwm-duty", &duty);
+		if (err) {
+			dev_err(&pdev->dev, "%s: missing pwm-duty # DT %s\n",
+				__func__, pdev->dev.of_node->full_name);
+			return err;
+		}
+
+		dev_info(&pdev->dev, "%s: enabling pwm period:%d duty:%d\n",
+			__func__, period, duty);
+		pwm_config(isc_mgr->pwm, duty, period);
+		pwm_enable(isc_mgr->pwm);
 	}
 
 	isc_mgr->adap = i2c_get_adapter(pd->bus);

@@ -37,6 +37,7 @@ struct isc_mgr_priv {
 	char devname[32];
 	u32 pwr_state;
 	atomic_t irq_in_use;
+	struct pwm_device *pwm;
 };
 
 int isc_mgr_power_up(struct isc_mgr_priv *isc_mgr, unsigned long arg);

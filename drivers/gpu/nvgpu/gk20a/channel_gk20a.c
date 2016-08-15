@@ -1194,7 +1194,6 @@ struct channel_gk20a *gk20a_open_new_channel(struct gk20a *g,
 
 	init_waitqueue_head(&ch->notifier_wq);
 	init_waitqueue_head(&ch->semaphore_wq);
-	init_waitqueue_head(&ch->submit_wq);
 
 	ch->update_fn = NULL;
 	ch->update_fn_data = NULL;
@@ -1974,9 +1973,6 @@ void gk20a_channel_update(struct channel_gk20a *c, int nr_completed)
 		return;
 	}
 
-	update_gp_get(c->g, c);
-	wake_up(&c->submit_wq);
-
 	trace_gk20a_channel_update(c->hw_chid);
 	gk20a_channel_schedule_job_clean_up(c);
 
@@ -2181,22 +2177,16 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_info("pre-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
 
-	/* Make sure we have enough space for gpfifo entries. If not,
-	 * wait for signals from completed submits */
+	/*
+	 * Make sure we have enough space for gpfifo entries. Check cached
+	 * values first and then read from HW. If no space, return EAGAIN
+	 * and let userpace decide to re-try request or not.
+	 */
 	if (gp_free_count(c) < num_entries + extra_entries) {
-		/* we can get here via locked ioctl and other paths too */
-		int locked_path = mutex_is_locked(&c->ioctl_lock);
-		if (locked_path)
-			mutex_unlock(&c->ioctl_lock);
-
-		trace_gk20a_gpfifo_submit_wait_for_space(dev_name(c->g->dev));
-		err = wait_event_interruptible(c->submit_wq,
-			get_gp_free_count(c) >= num_entries + extra_entries ||
-			c->has_timedout);
-		trace_gk20a_gpfifo_submit_wait_for_space_done(dev_name(c->g->dev));
-
-		if (locked_path)
-			mutex_lock(&c->ioctl_lock);
+		if (get_gp_free_count(c) < num_entries + extra_entries) {
+			err = -EAGAIN;
+			goto clean_up;
+		}
 	}
 
 	if (c->has_timedout) {
@@ -2204,10 +2194,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		goto clean_up;
 	}
 
-	if (err) {
-		err = -ENOSPC;
-		goto clean_up;
-	}
 
 	mutex_lock(&c->sync_lock);
 	if (!c->sync) {

@@ -1210,7 +1210,6 @@ static bool gk20a_fifo_set_ctx_mmu_error(struct gk20a *g,
 	/* unblock pending waits */
 	wake_up(&ch->semaphore_wq);
 	wake_up(&ch->notifier_wq);
-	wake_up(&ch->submit_wq);
 	return verbose;
 }
 

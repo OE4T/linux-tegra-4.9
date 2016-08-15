@@ -101,4 +101,12 @@
 		};
 	};
 
+	ethernet@03b40000 {
+		compatible = "smsc,lan91c111";
+		reg = <0x0 0x03b40000 0x0 0x00000100>;
+		interrupts = <0 218 0x4>;
+		reg-io-width = <4>;
+		smsc,irq-active-high;
+		smsc,irq-push-pull;
+	};
 };

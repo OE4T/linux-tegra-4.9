@@ -21,6 +21,7 @@
 #include "gp106/pmu_gp106.h"
 #include "gp106/acr_gp106.h"
 #include "gp106/hw_psec_gp106.h"
+#include "clk/clk_mclk.h"
 #include "hw_mc_gp106.h"
 #include "hw_pwr_gp106.h"
 
@@ -194,6 +195,7 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.reset = gp106_falcon_reset;
+	gops->pmu.mclk_init = clk_mclkseq_build_prgm_gddr5;
 
 	gk20a_dbg_fn("done");
 }

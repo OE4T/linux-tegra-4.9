@@ -126,9 +126,9 @@ static void gk20a_ce_finished_ctx_cb(struct channel_gk20a *ch, void *data)
 	bool channel_idle;
 	u32 event;
 
-	spin_lock(&ch->jobs_lock);
-	channel_idle = list_empty(&ch->jobs);
-	spin_unlock(&ch->jobs_lock);
+	channel_gk20a_joblist_lock(ch);
+	channel_idle = channel_gk20a_joblist_is_empty(ch);
+	channel_gk20a_joblist_unlock(ch);
 
 	if (!channel_idle)
 		return;
@@ -462,7 +462,7 @@ u32 gk20a_ce_create_context_with_cb(struct device *dev,
 
 	/* allocate gpfifo (1024 should be more than enough) */
 	err = gk20a_alloc_channel_gpfifo(ce_ctx->ch,
-		&(struct nvgpu_alloc_gpfifo_args){1024, 0});
+		&(struct nvgpu_alloc_gpfifo_ex_args){1024, 0, 0, {}});
 	if (err) {
 		gk20a_err(ce_ctx->dev, "ce: unable to allocate gpfifo");
 		goto end;

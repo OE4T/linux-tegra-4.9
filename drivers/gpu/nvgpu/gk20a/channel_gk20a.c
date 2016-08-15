@@ -26,6 +26,7 @@
 #include <linux/anon_inodes.h>
 #include <linux/dma-buf.h>
 #include <linux/vmalloc.h>
+#include <linux/circ_buf.h>
 
 #include "debug_gk20a.h"
 #include "ctxsw_trace_gk20a.h"
@@ -54,6 +55,15 @@ static void free_priv_cmdbuf(struct channel_gk20a *c,
 
 static int channel_gk20a_alloc_priv_cmdbuf(struct channel_gk20a *c);
 static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c);
+
+static void channel_gk20a_free_prealloc_resources(struct channel_gk20a *c);
+
+static void channel_gk20a_joblist_add(struct channel_gk20a *c,
+		struct channel_gk20a_job *job);
+static void channel_gk20a_joblist_delete(struct channel_gk20a *c,
+		struct channel_gk20a_job *job);
+static struct channel_gk20a_job *channel_gk20a_joblist_peek(
+		struct channel_gk20a *c);
 
 static int channel_gk20a_commit_userd(struct channel_gk20a *c);
 static int channel_gk20a_setup_userd(struct channel_gk20a *c);
@@ -460,6 +470,7 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 {
 	struct channel_gk20a_job *job, *n;
 	bool released_job_semaphore = false;
+	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(ch);
 
 	gk20a_channel_cancel_job_clean_up(ch, true);
 
@@ -471,14 +482,37 @@ void gk20a_channel_abort_clean_up(struct channel_gk20a *ch)
 
 	/* release all job semaphores (applies only to jobs that use
 	   semaphore synchronization) */
-	spin_lock(&ch->jobs_lock);
-	list_for_each_entry_safe(job, n, &ch->jobs, list) {
-		if (job->post_fence->semaphore) {
-			gk20a_semaphore_release(job->post_fence->semaphore);
-			released_job_semaphore = true;
+	channel_gk20a_joblist_lock(ch);
+	if (pre_alloc_enabled) {
+		int tmp_get = ch->joblist.pre_alloc.get;
+		int put = ch->joblist.pre_alloc.put;
+
+		/*
+		 * ensure put is read before any subsequent reads.
+		 * see corresponding wmb in gk20a_channel_add_job()
+		 */
+		rmb();
+
+		while (tmp_get != put) {
+			job = &ch->joblist.pre_alloc.jobs[tmp_get];
+			if (job->post_fence->semaphore) {
+				gk20a_semaphore_release(
+						job->post_fence->semaphore);
+				released_job_semaphore = true;
+			}
+			tmp_get = (tmp_get + 1) % ch->joblist.pre_alloc.length;
+		}
+	} else {
+		list_for_each_entry_safe(job, n,
+				&ch->joblist.dynamic.jobs, list) {
+			if (job->post_fence->semaphore) {
+				gk20a_semaphore_release(
+						job->post_fence->semaphore);
+				released_job_semaphore = true;
+			}
 		}
 	}
-	spin_unlock(&ch->jobs_lock);
+	channel_gk20a_joblist_unlock(ch);
 
 	if (released_job_semaphore)
 		wake_up_interruptible_all(&ch->semaphore_wq);
@@ -511,9 +545,9 @@ int gk20a_wait_channel_idle(struct channel_gk20a *ch)
 		msecs_to_jiffies(gk20a_get_gr_idle_timeout(ch->g));
 
 	do {
-		spin_lock(&ch->jobs_lock);
-		channel_idle = list_empty(&ch->jobs);
-		spin_unlock(&ch->jobs_lock);
+		channel_gk20a_joblist_lock(ch);
+		channel_idle = channel_gk20a_joblist_is_empty(ch);
+		channel_gk20a_joblist_unlock(ch);
 		if (channel_idle)
 			break;
 
@@ -1016,6 +1050,10 @@ unbind:
 
 	mutex_unlock(&g->dbg_sessions_lock);
 
+	/* free pre-allocated resources, if applicable */
+	if (channel_gk20a_is_prealloc_enabled(ch))
+		channel_gk20a_free_prealloc_resources(ch);
+
 	/* make sure we catch accesses of unopened channels in case
 	 * there's non-refcounted channel pointers hanging around */
 	ch->g = NULL;
@@ -1422,7 +1460,10 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	/* we already handled q->put + size > q->size so BUG_ON this */
 	BUG_ON(q->put > q->size);
 
-	/* commit the previous writes before making the entry valid */
+	/*
+	 * commit the previous writes before making the entry valid.
+	 * see the corresponding rmb() in gk20a_free_priv_cmdbuf().
+	 */
 	wmb();
 
 	e->valid = true;
@@ -1436,26 +1477,222 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e)
 {
-	kfree(e);
+	if (channel_gk20a_is_prealloc_enabled(c))
+		memset(e, 0, sizeof(struct priv_cmd_entry));
+	else
+		kfree(e);
 }
 
-static struct channel_gk20a_job *channel_gk20a_alloc_job(
-		struct channel_gk20a *c)
+static int channel_gk20a_alloc_job(struct channel_gk20a *c,
+		struct channel_gk20a_job **job_out)
 {
-	struct channel_gk20a_job *job = NULL;
+	int err = 0;
 
-	job = kzalloc(sizeof(*job), GFP_KERNEL);
-	return job;
+	if (channel_gk20a_is_prealloc_enabled(c)) {
+		int put = c->joblist.pre_alloc.put;
+		int get = c->joblist.pre_alloc.get;
+
+		/*
+		 * ensure all subsequent reads happen after reading get.
+		 * see corresponding wmb in gk20a_channel_clean_up_jobs()
+		 */
+		rmb();
+
+		if (CIRC_SPACE(put, get, c->joblist.pre_alloc.length))
+			*job_out = &c->joblist.pre_alloc.jobs[put];
+		else {
+			gk20a_warn(dev_from_gk20a(c->g),
+					"out of job ringbuffer space\n");
+			err = -EAGAIN;
+		}
+	} else {
+		*job_out = kzalloc(sizeof(struct channel_gk20a_job),
+				GFP_KERNEL);
+		if (!job_out)
+			err = -ENOMEM;
+	}
+
+	return err;
 }
 
 static void channel_gk20a_free_job(struct channel_gk20a *c,
 		struct channel_gk20a_job *job)
 {
-	kfree(job);
+	/*
+	 * In case of pre_allocated jobs, we need to clean out
+	 * the job but maintain the pointers to the priv_cmd_entry,
+	 * since they're inherently tied to the job node.
+	 */
+	if (channel_gk20a_is_prealloc_enabled(c)) {
+		struct priv_cmd_entry *wait_cmd = job->wait_cmd;
+		struct priv_cmd_entry *incr_cmd = job->incr_cmd;
+		memset(job, 0, sizeof(*job));
+		job->wait_cmd = wait_cmd;
+		job->incr_cmd = incr_cmd;
+	} else
+		kfree(job);
+}
+
+void channel_gk20a_joblist_lock(struct channel_gk20a *c)
+{
+	if (channel_gk20a_is_prealloc_enabled(c))
+		mutex_lock(&c->joblist.pre_alloc.read_lock);
+	else
+		spin_lock(&c->joblist.dynamic.lock);
+}
+
+void channel_gk20a_joblist_unlock(struct channel_gk20a *c)
+{
+	if (channel_gk20a_is_prealloc_enabled(c))
+		mutex_unlock(&c->joblist.pre_alloc.read_lock);
+	else
+		spin_unlock(&c->joblist.dynamic.lock);
+}
+
+static struct channel_gk20a_job *channel_gk20a_joblist_peek(
+		struct channel_gk20a *c)
+{
+	int get;
+	struct channel_gk20a_job *job = NULL;
+
+	if (channel_gk20a_is_prealloc_enabled(c)) {
+		if (!channel_gk20a_joblist_is_empty(c)) {
+			get = c->joblist.pre_alloc.get;
+			job = &c->joblist.pre_alloc.jobs[get];
+		}
+	} else {
+		if (!list_empty(&c->joblist.dynamic.jobs))
+			job = list_first_entry(&c->joblist.dynamic.jobs,
+				       struct channel_gk20a_job, list);
+	}
+
+	return job;
+}
+
+static void channel_gk20a_joblist_add(struct channel_gk20a *c,
+		struct channel_gk20a_job *job)
+{
+	if (channel_gk20a_is_prealloc_enabled(c)) {
+		c->joblist.pre_alloc.put = (c->joblist.pre_alloc.put + 1) %
+				(c->joblist.pre_alloc.length);
+	} else {
+		list_add_tail(&job->list, &c->joblist.dynamic.jobs);
+	}
+}
+
+static void channel_gk20a_joblist_delete(struct channel_gk20a *c,
+		struct channel_gk20a_job *job)
+{
+	if (channel_gk20a_is_prealloc_enabled(c)) {
+		c->joblist.pre_alloc.get = (c->joblist.pre_alloc.get + 1) %
+				(c->joblist.pre_alloc.length);
+	} else {
+		list_del_init(&job->list);
+	}
+}
+
+bool channel_gk20a_joblist_is_empty(struct channel_gk20a *c)
+{
+	if (channel_gk20a_is_prealloc_enabled(c)) {
+		int get = c->joblist.pre_alloc.get;
+		int put = c->joblist.pre_alloc.put;
+		return !(CIRC_CNT(put, get, c->joblist.pre_alloc.length));
+	}
+
+	return list_empty(&c->joblist.dynamic.jobs);
+}
+
+bool channel_gk20a_is_prealloc_enabled(struct channel_gk20a *c)
+{
+	bool pre_alloc_enabled = c->joblist.pre_alloc.enabled;
+
+	rmb();
+	return pre_alloc_enabled;
+}
+
+static int channel_gk20a_prealloc_resources(struct channel_gk20a *c,
+	       unsigned int num_jobs)
+{
+	int i, err;
+	size_t size;
+	struct priv_cmd_entry *entries = NULL;
+
+	if (channel_gk20a_is_prealloc_enabled(c) || !num_jobs)
+		return -EINVAL;
+
+	/*
+	 * pre-allocate the job list.
+	 * since vmalloc take in an unsigned long, we need
+	 * to make sure we don't hit an overflow condition
+	 */
+	size = sizeof(struct channel_gk20a_job);
+	if (num_jobs <= ULONG_MAX / size)
+		c->joblist.pre_alloc.jobs = vzalloc(num_jobs * size);
+	if (!c->joblist.pre_alloc.jobs) {
+		err = -ENOMEM;
+		goto clean_up;
+	}
+
+	/*
+	 * pre-allocate 2x priv_cmd_entry for each job up front.
+	 * since vmalloc take in an unsigned long, we need
+	 * to make sure we don't hit an overflow condition
+	 */
+	size = sizeof(struct priv_cmd_entry);
+	if (num_jobs <= ULONG_MAX / (size << 1))
+		entries = vzalloc((num_jobs << 1) * size);
+	if (!entries) {
+		err = -ENOMEM;
+		goto clean_up_joblist;
+	}
+
+	for (i = 0; i < num_jobs; i++) {
+		c->joblist.pre_alloc.jobs[i].wait_cmd = &entries[i];
+		c->joblist.pre_alloc.jobs[i].incr_cmd =
+			&entries[i + num_jobs];
+	}
+
+	/* pre-allocate a fence pool */
+	err = gk20a_alloc_fence_pool(c, num_jobs);
+	if (err)
+		goto clean_up_priv_cmd;
+
+	c->joblist.pre_alloc.length = num_jobs;
+
+	/*
+	 * commit the previous writes before setting the flag.
+	 * see corresponding rmb in channel_gk20a_is_prealloc_enabled()
+	 */
+	wmb();
+	c->joblist.pre_alloc.enabled = true;
+
+	return 0;
+
+clean_up_priv_cmd:
+	vfree(entries);
+clean_up_joblist:
+	vfree(c->joblist.pre_alloc.jobs);
+clean_up:
+	memset(&c->joblist.pre_alloc, 0, sizeof(c->joblist.pre_alloc));
+	return err;
+}
+
+static void channel_gk20a_free_prealloc_resources(struct channel_gk20a *c)
+{
+	vfree(c->joblist.pre_alloc.jobs[0].wait_cmd);
+	vfree(c->joblist.pre_alloc.jobs);
+	gk20a_free_fence_pool(c);
+
+	/*
+	 * commit the previous writes before disabling the flag.
+	 * see corresponding rmb in channel_gk20a_is_prealloc_enabled()
+	 */
+	wmb();
+	c->joblist.pre_alloc.enabled = false;
 }
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
-		struct nvgpu_alloc_gpfifo_args *args)
+		struct nvgpu_alloc_gpfifo_ex_args *args)
 {
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
@@ -1539,19 +1776,30 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	/* TBD: setup engine contexts */
 
+	if (args->num_inflight_jobs) {
+		err = channel_gk20a_prealloc_resources(c,
+				args->num_inflight_jobs);
+		if (err)
+			goto clean_up_sync;
+	}
+
 	err = channel_gk20a_alloc_priv_cmdbuf(c);
 	if (err)
-		goto clean_up_sync;
+		goto clean_up_prealloc;
 
 	err = channel_gk20a_update_runlist(c, true);
 	if (err)
-		goto clean_up_sync;
+		goto clean_up_priv_cmd;
 
 	g->ops.fifo.bind_channel(c);
 
 	gk20a_dbg_fn("done");
 	return 0;
 
+clean_up_priv_cmd:
+	channel_gk20a_free_priv_cmdbuf(c);
+clean_up_prealloc:
+	channel_gk20a_free_prealloc_resources(c);
 clean_up_sync:
 	gk20a_channel_sync_destroy(c->sync);
 	c->sync = NULL;
@@ -1878,6 +2126,7 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	struct vm_gk20a *vm = c->vm;
 	struct mapped_buffer_node **mapped_buffers = NULL;
 	int err = 0, num_mapped_buffers = 0;
+	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
 
 	/* job needs reference to this vm (released in channel_update) */
 	gk20a_vm_get(vm);
@@ -1898,9 +2147,19 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 
 		gk20a_channel_timeout_start(c, job);
 
-		spin_lock(&c->jobs_lock);
-		list_add_tail(&job->list, &c->jobs);
-		spin_unlock(&c->jobs_lock);
+		if (!pre_alloc_enabled)
+			channel_gk20a_joblist_lock(c);
+
+		/*
+		 * ensure all pending write complete before adding to the list.
+		 * see corresponding rmb in gk20a_channel_clean_up_jobs() &
+		 * gk20a_channel_abort_clean_up()
+		 */
+		wmb();
+		channel_gk20a_joblist_add(c, job);
+
+		if (!pre_alloc_enabled)
+			channel_gk20a_joblist_unlock(c);
 	} else {
 		err = -ETIMEDOUT;
 		goto err_put_buffers;
@@ -1945,14 +2204,20 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 	while (1) {
 		bool completed;
 
-		spin_lock(&c->jobs_lock);
-		if (list_empty(&c->jobs)) {
-			spin_unlock(&c->jobs_lock);
+		channel_gk20a_joblist_lock(c);
+		if (channel_gk20a_joblist_is_empty(c)) {
+			channel_gk20a_joblist_unlock(c);
 			break;
 		}
-		job = list_first_entry(&c->jobs,
-				       struct channel_gk20a_job, list);
-		spin_unlock(&c->jobs_lock);
+
+		/*
+		 * ensure that all subsequent reads occur after checking
+		 * that we have a valid node. see corresponding wmb in
+		 * gk20a_channel_add_job().
+		 */
+		rmb();
+		job = channel_gk20a_joblist_peek(c);
+		channel_gk20a_joblist_unlock(c);
 
 		completed = gk20a_fence_is_expired(job->post_fence);
 		if (!completed) {
@@ -1998,9 +2263,14 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 		 * so this wouldn't get freed here. */
 		gk20a_channel_put(c);
 
-		spin_lock(&c->jobs_lock);
-		list_del_init(&job->list);
-		spin_unlock(&c->jobs_lock);
+		/*
+		 * ensure all pending writes complete before deleting the node.
+		 * see corresponding rmb in channel_gk20a_alloc_job().
+		 */
+		wmb();
+		channel_gk20a_joblist_lock(c);
+		channel_gk20a_joblist_delete(c, job);
+		channel_gk20a_joblist_unlock(c);
 
 		channel_gk20a_free_job(c, job);
 		job_finished = 1;
@@ -2160,6 +2430,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	int wait_fence_fd = -1;
 	int err = 0;
 	bool need_wfi = !(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI);
+	bool pre_alloc_enabled = channel_gk20a_is_prealloc_enabled(c);
 
 	/*
 	 * If user wants to always allocate sync_fence_fds then respect that;
@@ -2197,9 +2468,10 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * this condition.
 	 */
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
-		job->wait_cmd = kzalloc(sizeof(struct priv_cmd_entry),
-					GFP_KERNEL);
 		job->pre_fence = gk20a_alloc_fence(c);
+		if (!pre_alloc_enabled)
+			job->wait_cmd = kzalloc(sizeof(struct priv_cmd_entry),
+						GFP_KERNEL);
 
 		if (!job->wait_cmd || !job->pre_fence) {
 			err = -ENOMEM;
@@ -2233,8 +2505,10 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * is used to keep track of method completion for idle railgating. The
 	 * sync_pt/semaphore PB is added to the GPFIFO later on in submit.
 	 */
-	job->incr_cmd = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
 	job->post_fence = gk20a_alloc_fence(c);
+	if (!pre_alloc_enabled)
+		job->incr_cmd = kzalloc(sizeof(struct priv_cmd_entry),
+					GFP_KERNEL);
 
 	if (!job->incr_cmd || !job->post_fence) {
 		err = -ENOMEM;
@@ -2256,15 +2530,17 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	return 0;
 
 clean_up_post_fence:
-	gk20a_free_priv_cmdbuf(c, job->incr_cmd);
 	gk20a_fence_put(job->post_fence);
-	job->incr_cmd = NULL;
 	job->post_fence = NULL;
+	free_priv_cmdbuf(c, job->incr_cmd);
+	if (!pre_alloc_enabled)
+		job->incr_cmd = NULL;
 clean_up_pre_fence:
-	gk20a_free_priv_cmdbuf(c, job->wait_cmd);
 	gk20a_fence_put(job->pre_fence);
-	job->wait_cmd = NULL;
 	job->pre_fence = NULL;
+	free_priv_cmdbuf(c, job->wait_cmd);
+	if (!pre_alloc_enabled)
+		job->wait_cmd = NULL;
 	*wait_cmd = NULL;
 	*pre_fence = NULL;
 fail:
@@ -2388,11 +2664,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (need_job_tracking) {
-		job = channel_gk20a_alloc_job(c);
-		if (!job) {
-			err = -ENOMEM;
+		err = channel_gk20a_alloc_job(c, &job);
+		if (err)
 			goto clean_up;
-		}
 
 		err = gk20a_submit_prepare_syncs(c, fence, job,
 						 &wait_cmd, &incr_cmd,
@@ -2463,13 +2737,14 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	init_waitqueue_head(&c->ref_count_dec_wq);
 	mutex_init(&c->ioctl_lock);
 	mutex_init(&c->error_notifier_mutex);
-	spin_lock_init(&c->jobs_lock);
+	spin_lock_init(&c->joblist.dynamic.lock);
+	mutex_init(&c->joblist.pre_alloc.read_lock);
 	raw_spin_lock_init(&c->timeout.lock);
 	mutex_init(&c->sync_lock);
 	INIT_DELAYED_WORK(&c->timeout.wq, gk20a_channel_timeout_handler);
 	INIT_DELAYED_WORK(&c->clean_up.wq, gk20a_channel_clean_up_jobs);
 	mutex_init(&c->clean_up.lock);
-	INIT_LIST_HEAD(&c->jobs);
+	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	mutex_init(&c->cyclestate.cyclestate_buffer_mutex);
 	mutex_init(&c->cs_client_mutex);
@@ -3119,7 +3394,7 @@ long gk20a_channel_ioctl(struct file *filp,
 				(struct nvgpu_free_obj_ctx_args *)buf);
 		gk20a_idle(dev);
 		break;
-	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO:
+	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX:
 		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(dev,
@@ -3128,9 +3403,34 @@ long gk20a_channel_ioctl(struct file *filp,
 			break;
 		}
 		err = gk20a_alloc_channel_gpfifo(ch,
-				(struct nvgpu_alloc_gpfifo_args *)buf);
+				(struct nvgpu_alloc_gpfifo_ex_args *)buf);
 		gk20a_idle(dev);
 		break;
+	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO:
+	{
+		struct nvgpu_alloc_gpfifo_ex_args alloc_gpfifo_ex_args;
+		struct nvgpu_alloc_gpfifo_args *alloc_gpfifo_args =
+			(struct nvgpu_alloc_gpfifo_args *)buf;
+
+		err = gk20a_busy(dev);
+		if (err) {
+			dev_err(dev,
+				"%s: failed to host gk20a for ioctl cmd: 0x%x",
+				__func__, cmd);
+			break;
+		}
+
+		/* prepare new args structure */
+		memset(&alloc_gpfifo_ex_args, 0,
+				sizeof(struct nvgpu_alloc_gpfifo_ex_args));
+		alloc_gpfifo_ex_args.num_entries =
+				alloc_gpfifo_args->num_entries;
+		alloc_gpfifo_ex_args.flags = alloc_gpfifo_args->flags;
+
+		err = gk20a_alloc_channel_gpfifo(ch, &alloc_gpfifo_ex_args);
+		gk20a_idle(dev);
+		break;
+	}
 	case NVGPU_IOCTL_CHANNEL_SUBMIT_GPFIFO:
 		err = gk20a_ioctl_channel_submit_gpfifo(ch,
 				(struct nvgpu_submit_gpfifo_args *)buf);

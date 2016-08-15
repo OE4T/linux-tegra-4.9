@@ -963,7 +963,13 @@ struct nvgpu_alloc_gpfifo_args {
 	__u32 num_entries;
 #define NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED	(1 << 0) /* set owner channel of this gpfifo as a vpr channel */
 	__u32 flags;
+};
 
+struct nvgpu_alloc_gpfifo_ex_args {
+	__u32 num_entries;
+	__u32 num_inflight_jobs;
+	__u32 flags;
+	__u32 reserved[5];
 };
 
 struct gk20a_sync_pt_info {
@@ -1182,6 +1188,8 @@ struct nvgpu_preemption_mode_args {
 	_IOWR(NVGPU_IOCTL_MAGIC, 18, struct nvgpu_set_timeout_ex_args)
 #define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO	\
 	_IOW(NVGPU_IOCTL_MAGIC,  100, struct nvgpu_alloc_gpfifo_args)
+#define NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX	\
+	_IOW(NVGPU_IOCTL_MAGIC,  101, struct nvgpu_alloc_gpfifo_ex_args)
 #define NVGPU_IOCTL_CHANNEL_WAIT		\
 	_IOWR(NVGPU_IOCTL_MAGIC, 102, struct nvgpu_wait_args)
 #define NVGPU_IOCTL_CHANNEL_CYCLE_STATS	\

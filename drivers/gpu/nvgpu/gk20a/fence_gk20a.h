@@ -3,7 +3,7 @@
  *
  * GK20A Fences
  *
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -45,6 +45,9 @@ struct gk20a_fence {
 	struct platform_device *host1x_pdev;
 	u32 syncpt_id;
 	u32 syncpt_value;
+
+	/* Valid for fences part of a pre-allocated fence pool */
+	struct gk20a_allocator *allocator;
 };
 
 /* Fences can be created from semaphores or syncpoint (id, value) pairs */
@@ -62,7 +65,15 @@ int gk20a_fence_from_syncpt(
 		u32 id, u32 value, bool wfi,
 		bool need_sync_fence);
 
-struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c);
+int gk20a_alloc_fence_pool(
+		struct channel_gk20a *c,
+		int size);
+
+void gk20a_free_fence_pool(
+		struct channel_gk20a *c);
+
+struct gk20a_fence *gk20a_alloc_fence(
+		struct channel_gk20a *c);
 
 void gk20a_init_fence(struct gk20a_fence *f,
 		const struct gk20a_fence_ops *ops,

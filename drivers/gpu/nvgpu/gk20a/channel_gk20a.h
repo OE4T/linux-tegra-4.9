@@ -70,6 +70,22 @@ struct channel_gk20a_job {
 	struct list_head list;
 };
 
+struct channel_gk20a_joblist {
+	struct {
+		bool enabled;
+		unsigned int length;
+		unsigned int put;
+		unsigned int get;
+		struct channel_gk20a_job *jobs;
+		struct mutex read_lock;
+	} pre_alloc;
+
+	struct {
+		struct list_head jobs;
+		spinlock_t lock;
+	} dynamic;
+};
+
 struct channel_gk20a_timeout {
 	struct delayed_work wq;
 	raw_spinlock_t lock;
@@ -115,6 +131,7 @@ struct channel_gk20a {
 	bool bound;
 	bool first_init;
 	bool vpr;
+	bool no_block;
 	bool cde;
 	pid_t pid;
 	pid_t tgid;
@@ -123,8 +140,8 @@ struct channel_gk20a {
 	int tsgid;
 	struct list_head ch_entry; /* channel's entry in TSG */
 
-	struct list_head jobs;
-	spinlock_t jobs_lock;
+	struct channel_gk20a_joblist joblist;
+	struct gk20a_allocator fence_allocator;
 
 	struct vm_gk20a *vm;
 
@@ -272,7 +289,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				bool force_need_sync_fence);
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
-			       struct nvgpu_alloc_gpfifo_args *args);
+			       struct nvgpu_alloc_gpfifo_ex_args *args);
 
 void channel_gk20a_unbind(struct channel_gk20a *ch_gk20a);
 void channel_gk20a_disable(struct channel_gk20a *ch);
@@ -283,6 +300,11 @@ int channel_gk20a_setup_ramfc(struct channel_gk20a *c,
 			u64 gpfifo_base, u32 gpfifo_entries, u32 flags);
 void channel_gk20a_enable(struct channel_gk20a *ch);
 void gk20a_channel_timeout_restart_all_channels(struct gk20a *g);
+
+bool channel_gk20a_is_prealloc_enabled(struct channel_gk20a *c);
+void channel_gk20a_joblist_lock(struct channel_gk20a *c);
+void channel_gk20a_joblist_unlock(struct channel_gk20a *c);
+bool channel_gk20a_joblist_is_empty(struct channel_gk20a *c);
 
 int gk20a_channel_get_timescale_from_timeslice(struct gk20a *g,
 		int timeslice_period,

@@ -47,7 +47,12 @@ static void gk20a_fence_free(struct kref *ref)
 #endif
 	if (f->semaphore)
 		gk20a_semaphore_put(f->semaphore);
-	kfree(f);
+
+	if (f->allocator) {
+		if (gk20a_alloc_initialized(f->allocator))
+			gk20a_free(f->allocator, (u64)f);
+	} else
+		kfree(f);
 }
 
 void gk20a_fence_put(struct gk20a_fence *f)
@@ -109,15 +114,66 @@ int gk20a_fence_install_fd(struct gk20a_fence *f)
 #endif
 }
 
+int gk20a_alloc_fence_pool(struct channel_gk20a *c, int count)
+{
+	int err;
+	size_t size;
+	struct gk20a_fence *fence_pool = NULL;
+
+	size = sizeof(struct gk20a_fence);
+	if (count <= ULONG_MAX / size) {
+		size = count * size;
+		fence_pool = vzalloc(size);
+	}
+
+	if (!fence_pool)
+		return -ENOMEM;
+
+	err = gk20a_lockless_allocator_init(&c->fence_allocator,
+			      "fence_pool", (u64)fence_pool, size,
+			      sizeof(struct gk20a_fence), 0);
+	if (err)
+		goto fail;
+
+	return 0;
+
+fail:
+	vfree(fence_pool);
+	return err;
+}
+
+void gk20a_free_fence_pool(struct channel_gk20a *c)
+{
+	if (gk20a_alloc_initialized(&c->fence_allocator)) {
+		void *base = (void *)gk20a_alloc_base(&c->fence_allocator);
+
+		gk20a_alloc_destroy(&c->fence_allocator);
+		vfree(base);
+	}
+}
+
 struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c)
 {
-	struct gk20a_fence *fence;
+	struct gk20a_fence *fence = NULL;
 
-	fence = kzalloc(sizeof(struct gk20a_fence), GFP_KERNEL);
-	if (!fence)
-		return NULL;
+	if (channel_gk20a_is_prealloc_enabled(c)) {
+		if (gk20a_alloc_initialized(&c->fence_allocator)) {
+			fence = (struct gk20a_fence *)
+				gk20a_alloc(&c->fence_allocator,
+					sizeof(struct gk20a_fence));
 
-	kref_init(&fence->ref);
+			/* clear the node and reset the allocator pointer */
+			if (fence) {
+				memset(fence, 0, sizeof(*fence));
+				fence->allocator = &c->fence_allocator;
+			}
+		}
+	} else
+		fence = kzalloc(sizeof(struct gk20a_fence), GFP_KERNEL);
+
+	if (fence)
+		kref_init(&fence->ref);
+
 	return fence;
 }
 

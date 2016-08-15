@@ -1126,9 +1126,9 @@ __releases(&cde_app->mutex)
 	struct gk20a_cde_app *cde_app = &g->cde_app;
 	bool channel_idle;
 
-	spin_lock(&ch->jobs_lock);
-	channel_idle = list_empty(&ch->jobs);
-	spin_unlock(&ch->jobs_lock);
+	channel_gk20a_joblist_lock(ch);
+	channel_idle = channel_gk20a_joblist_is_empty(ch);
+	channel_gk20a_joblist_unlock(ch);
 
 	if (!channel_idle)
 		return;
@@ -1207,7 +1207,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 
 	/* allocate gpfifo (1024 should be more than enough) */
 	err = gk20a_alloc_channel_gpfifo(ch,
-		&(struct nvgpu_alloc_gpfifo_args){1024, 0});
+		&(struct nvgpu_alloc_gpfifo_ex_args){1024, 0, 0, {}});
 	if (err) {
 		gk20a_warn(cde_ctx->dev, "cde: unable to allocate gpfifo");
 		goto err_alloc_gpfifo;

@@ -64,29 +64,37 @@
 			};
 		};
 		csi_base: nvcsi@150c0000 {
-			ports {
-				csi_port0: port@0 {
-					status = "disabled";
-					csi_in0: endpoint@0 {
+			csi_chan0: channel@0 {
+				status = "disabled";
+				ports {
+					csi_chan0_port0: port@0 {
 						status = "disabled";
+						csi_in0: endpoint@0 {
+							status = "disabled";
+						};
+					};
+					csi_chan0_port1: port@1 {
+						status = "disabled";
+						csi_out0: endpoint@1 {
+							status = "disabled";
+						};
 					};
 				};
-				csi_port1: port@1 {
-					status = "disabled";
-					csi_out0: endpoint@1 {
+			};
+			csi_chan1: channel@1 {
+				status = "disabled";
+				ports {
+					csi_chan1_port0: port@0 {
 						status = "disabled";
+						csi_in1: endpoint@2 {
+							status = "disabled";
+						};
 					};
-				};
-				csi_port2: port@2 {
-					status = "disabled";
-					csi_in1: endpoint@2 {
+					csi_chan1_port1: port@1 {
 						status = "disabled";
-					};
-				};
-				csi_port3: port@3 {
-					status = "disabled";
-					csi_out1: endpoint@3 {
-						status = "disabled";
+						csi_out1: endpoint@3 {
+							status = "disabled";
+						};
 					};
 				};
 			};

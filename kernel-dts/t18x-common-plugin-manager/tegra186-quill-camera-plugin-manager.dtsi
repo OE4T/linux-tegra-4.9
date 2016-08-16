@@ -72,12 +72,24 @@
 			};
 			/* Enable CSI ports */
 			override@7 {
-				target = <&csi_port0>;
+				target = <&csi_base>;
+				_overlay_ {
+					num-channels=<1>;
+				};
+			};
+			override@8 {
+				target = <&csi_chan0>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@8 {
+			override@9 {
+				target = <&csi_chan0_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@10 {
 				target = <&e3326_csi_in0>;
 				_overlay_ {
 					status = "okay";
@@ -86,13 +98,13 @@
 					remote-endpoint = <&e3326_ov5693_out0>;
 				};
 			};
-			override@9 {
-				target = <&csi_port1>;
+			override@11 {
+				target = <&csi_chan0_port1>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@10 {
+			override@12 {
 				target = <&e3326_csi_out0>;
 				_overlay_ {
 					status = "okay";
@@ -100,7 +112,7 @@
 				};
 			};
 			/* tegra-camera-platform settings */
-			override@11 {
+			override@13 {
 				target = <&tcp>;
 				_overlay_ {
 					num_csi_lanes = <4>;
@@ -264,12 +276,24 @@
 			};
 			/* Enable CSI ports */
 			override@19 {
-				target = <&csi_port0>;
+				target = <&csi_base>;
+				_overlay_ {
+					num-channels=<2>;
+				};
+			};
+			override@20 {
+				target = <&csi_chan0>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@20 {
+			override@21 {
+				target = <&csi_chan0_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@22 {
 				target = <&e3323_csi_in0>;
 				_overlay_ {
 					status = "okay";
@@ -277,26 +301,32 @@
 					remote-endpoint = <&e3323_ov23850_out0>;
 				};
 			};
-			override@21 {
-				target = <&csi_port1>;
+			override@23 {
+				target = <&csi_chan0_port1>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@22 {
+			override@24 {
 				target = <&e3323_csi_out0>;
 				_overlay_ {
 					status = "okay";
 					remote-endpoint = <&e3323_vi_in0>;
 				};
 			};
-			override@23 {
-				target = <&csi_port2>;
+			override@25 {
+				target = <&csi_chan1>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@24 {
+			override@26 {
+				target = <&csi_chan1_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@27 {
 				target = <&e3323_csi_in1>;
 				_overlay_ {
 					status = "okay";
@@ -304,13 +334,13 @@
 					remote-endpoint = <&e3323_ov23850_out1>;
 				};
 			};
-			override@25 {
-				target = <&csi_port3>;
+			override@28 {
+				target = <&csi_chan1_port1>;
 				_overlay_ {
 					status = "okay";
 				};
 			};
-			override@26 {
+			override@29 {
 				target = <&e3323_csi_out1>;
 				_overlay_ {
 					status = "okay";
@@ -318,7 +348,7 @@
 				};
 			};
 			/* tegra-camera-platform settings */
-			override@27 {
+			override@30 {
 				target = <&tcp>;
 				_overlay_ {
 					num_csi_lanes = <8>;

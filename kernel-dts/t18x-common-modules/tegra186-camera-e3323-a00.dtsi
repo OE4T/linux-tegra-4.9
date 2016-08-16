@@ -57,33 +57,46 @@
 		};
 
 		nvcsi@150c0000 {
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-				port@0 {
-					reg = <0>;
-					e3323_csi_in0: endpoint@0 {
-						bus-width = <4>;
-						remote-endpoint = <&e3323_ov23850_out0>;
+			num-channels = <2>;
+			channel@0 {
+				reg = <0>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3323_csi_in0: endpoint@0 {
+							csi-port = <0>;
+							bus-width = <4>;
+							remote-endpoint = <&e3323_ov23850_out0>;
+						};
+					};
+					port@1 {
+						reg = <1>;
+						e3323_csi_out0: endpoint@1 {
+							remote-endpoint = <&e3323_vi_in0>;
+						};
 					};
 				};
-				port@1 {
-					reg = <1>;
-					e3323_csi_out0: endpoint@1 {
-						remote-endpoint = <&e3323_vi_in0>;
+			};
+			channel@1 {
+				reg = <1>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3323_csi_in1: endpoint@2 {
+							csi-port = <2>;
+							bus-width = <4>;
+							remote-endpoint = <&e3323_ov23850_out1>;
+						};
 					};
-				};
-				port@2 {
-					reg = <2>;
-					e3323_csi_in1: endpoint@2 {
-						bus-width = <4>;
-						remote-endpoint = <&e3323_ov23850_out1>;
-					};
-				};
-				port@3 {
-					reg = <3>;
-					e3323_csi_out1: endpoint@3 {
-						remote-endpoint = <&e3323_vi_in1>;
+					port@1 {
+						reg = <1>;
+						e3323_csi_out1: endpoint@3 {
+							remote-endpoint = <&e3323_vi_in1>;
+						};
 					};
 				};
 			};

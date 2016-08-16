@@ -156,7 +156,7 @@
 	};
 
 	i2c@c250000 {
-		tegra_tmp451: ti,tmp451@4c {
+		tegra_tmp451: temp-sensor@4c {
 			vdd-supply = <&vdd_1v8_ap>;
 		};
 	};

@@ -200,6 +200,7 @@ fail_cleanup:
 		c = list_first_entry(&alloc->alloc_chunks,
 				     struct page_alloc_chunk, list_entry);
 		list_del(&c->list_entry);
+		gk20a_free(&a->source_allocator, c->base);
 		kfree(c);
 	}
 	kfree(alloc);

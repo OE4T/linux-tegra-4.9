@@ -815,6 +815,17 @@ enum {
 };
 /** @} */
 
+/**
+ * @name MRQ_CLK properties
+ * Flag bits for cmd_clk_properties_response::flags and
+ * cmd_clk_get_all_info_response::flags
+ * @{
+ */
+#define BPMP_CLK_HAS_MUX	(1 << 0)
+#define BPMP_CLK_HAS_SET_RATE	(1 << 1)
+#define BPMP_CLK_IS_ROOT	(1 << 2)
+/** @} */
+
 #define MRQ_CLK_NAME_MAXLEN	40
 #define MRQ_CLK_MAX_PARENTS	16
 

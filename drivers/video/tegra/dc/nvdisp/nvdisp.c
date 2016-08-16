@@ -876,8 +876,6 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 			goto INIT_ERR;
 	}
 
-	dc->valid_windows = 0;
-
 	/* Assign powergate id for each partition*/
 	nvdisp_pg[NVDISP_PD_INDEX].powergate_id =
 			tegra_pd_get_powergate_id(nvdisp_disa_pd);
@@ -897,6 +895,7 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	}
 #endif
 
+	dc->valid_windows = 0;
 	goto INIT_EXIT;
 
 INIT_ERR:

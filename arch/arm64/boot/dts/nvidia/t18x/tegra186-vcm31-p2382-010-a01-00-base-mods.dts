@@ -97,7 +97,7 @@
 				status = "disabled";
 				nvidia,dsi-n-data-lanes = <8>;
 				nvidia,dsi-ganged-type = <TEGRA_DSI_GANGED_SYMMETRIC_LEFT_RIGHT>;
-				nvidia,dsi-ganged-swap-links = <0>;
+				nvidia,dsi-ganged-swap-links = <1>;
 				nvidia,dsi-ganged-write-to-all-links = <1>;
 			};
 

@@ -30,6 +30,7 @@
 #include <asm/traps.h>
 #include <asm/cputype.h>
 #include <asm/cpu.h>
+#include <asm/smp_plat.h>
 
 #include <mach/hardware.h>
 
@@ -152,11 +153,12 @@ EXPORT_SYMBOL_GPL(smp_call_function_denver);
 static void _denver_get_bg_allowed(void *ret)
 {
 	unsigned long regval;
+	int cpu = MPIDR_AFFINITY_LEVEL(cpu_logical_map(smp_processor_id()), 0);
 
 	asm volatile("mrs %0, s3_0_c15_c0_2" : "=r" (regval) : );
 	regval = (regval >> BG_STATUS_SHIFT) & 0xffff;
 
-	*((bool *) ret) = !!(regval & (1 << smp_processor_id()));
+	*((bool *) ret) = !!(regval & (1 << cpu));
 }
 
 bool denver_get_bg_allowed(int cpu)
@@ -173,8 +175,9 @@ static void _denver_set_bg_allowed(void *_enable)
 	unsigned long regval;
 	bool enabled = 1;
 	bool enable = (bool) _enable;
+	int cpu = MPIDR_AFFINITY_LEVEL(cpu_logical_map(smp_processor_id()), 0);
 
-	regval = 1 << smp_processor_id();
+	regval = 1 << cpu;
 	if (!enable)
 		regval <<= BG_CLR_SHIFT;
 

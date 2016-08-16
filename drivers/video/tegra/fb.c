@@ -1000,6 +1000,28 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 
 	tegra_fb->win.idx = fb_data->win;
 
+#ifdef CONFIG_ARCH_TEGRA_21x_SOC
+	if (virt_addr == NULL && !tegra_fb->phys_start) {
+                /* lines must be 64B aligned */
+                int stride = round_up(fb_data->xres *
+                                      fb_data->bits_per_pixel / 8, 64);
+                /* Add space to permit adjustment of start of buffer.
+                 * start of buffer requires 256B alignment. */
+                int fb_size = stride * fb_data->yres + 256;
+
+                if (!fb_size) {
+                        dev_err(&ndev->dev, "Failed to calculate size\n");
+                }
+
+                virt_addr = dma_alloc_writecombine(&ndev->dev, fb_size,
+                                                   &fb_mem->start, GFP_KERNEL);
+                if (!virt_addr) {
+                        dev_err(&ndev->dev, "Failed to allocate FBMem\n");
+                }
+                fb_mem->end = fb_mem->start + fb_size - 1;
+                dev_info(&ndev->dev, "Allocated %d as FBmem\n", fb_size);
+        }
+#endif
 	if (fb_mem) {
 		fb_size = resource_size(fb_mem);
 		tegra_fb->phys_start = fb_mem->start;
@@ -1112,6 +1134,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		goto err_iounmap_fb;
 	}
 
+#ifndef CONFIG_ARCH_TEGRA_21x_SOC
 	if (ndev->id != info->node) {
 		dev_err(&ndev->dev, "FB device numbering does not\n"
 			  "match device numbering of extended\n"
@@ -1119,6 +1142,7 @@ struct tegra_fb_info *tegra_fb_register(struct platform_device *ndev,
 		ret = -EINVAL;
 		goto err_iounmap_fb;
 	}
+#endif
 
 	tegra_fb->info = info;
 

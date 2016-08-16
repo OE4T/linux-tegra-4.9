@@ -291,7 +291,7 @@ int tegra_dc_init_fakedsi_panel(struct tegra_dc *dc, long dc_outtype)
 
 	dc_out->dsi = &dsi_fake_panel_pdata;
 #if defined(CONFIG_TEGRA_NVDISPLAY)
-	dc_out->parent_clk = "pllp_display";
+	dc_out->parent_clk = "pll_d_out1";
 #else
 	dc_out->parent_clk = "pll_d_out0";
 #endif

@@ -655,6 +655,7 @@ static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 		list_for_each_entry(ch_tsg, &tsg->ch_list, ch_entry) {
 			if (gk20a_channel_get(ch_tsg)) {
 				gk20a_set_error_notifier(ch_tsg, err_code);
+				ch_tsg->has_timedout = true;
 				gk20a_channel_put(ch_tsg);
 			}
 		}
@@ -662,6 +663,7 @@ static int vgpu_fifo_force_reset_ch(struct channel_gk20a *ch,
 		mutex_unlock(&tsg->ch_list_lock);
 	} else {
 		gk20a_set_error_notifier(ch, err_code);
+		ch->has_timedout = true;
 	}
 
 	msg.cmd = TEGRA_VGPU_CMD_CHANNEL_FORCE_RESET;

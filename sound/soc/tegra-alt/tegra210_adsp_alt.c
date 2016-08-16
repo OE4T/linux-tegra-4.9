@@ -3273,6 +3273,12 @@ static int tegra210_adsp_set_param(struct snd_kcontrol *kcontrol,
 		return -EPERM;
 	}
 
+	if (!app->connect) {
+		dev_warn(adsp->dev, "%s, plugin not yet connected\n",
+			kcontrol->id.name);
+		return -EPERM;
+	}
+
 	apm_msg.msgq_msg.size = MSGQ_MSG_WSIZE(apm_fx_set_param_params_t);
 	apm_msg.msg.call_params.size = sizeof(apm_fx_set_param_params_t);
 	apm_msg.msg.call_params.method = nvfx_apm_method_fx_set_param;
@@ -3350,6 +3356,12 @@ static int tegra210_adsp_tlv_callback(struct snd_kcontrol *kcontrol,
 
 	if (!app->plugin) {
 		dev_warn(adsp->dev, "Plugin not yet initialized\n");
+		return 0;
+	}
+
+	if (!app->connect) {
+		dev_warn(adsp->dev, "%s, plugin not yet connected\n",
+			kcontrol->id.name);
 		return 0;
 	}
 

@@ -25,12 +25,26 @@
 					status = "okay";
 				};
 			};
+
+			override@1 {
+				target = <&prod_c_dsi_board_soc_a01>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
 		};
 
 		board-soc-prod-a02-fragment {
 			chip-id = "A02", "A02P";
 			override@0 {
 				target = <&csi_mipical_prod_board_soc_a02>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+
+			override@1 {
+				target = <&prod_c_dsi_board_soc_a02>;
 				_overlay_ {
 					status = "okay";
 				};

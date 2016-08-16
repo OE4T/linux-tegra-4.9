@@ -26,7 +26,7 @@
 	i2c@c250000 {
 		status = "okay";
 
-		tegra_tmp451: ti,tmp451@4c {
+		tegra_tmp451: temp-sensor@4c {
 			status = "okay";
 			#thermal-sensor-cells = <1>;
 			compatible = "ti,tmp451";

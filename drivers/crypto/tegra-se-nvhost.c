@@ -1719,6 +1719,7 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 	} else {
 		dev_err(se_dev->dev, "SE%d does not support %s operation\n",
 			(se_dev->se_dev_num + 1), __func__);
+		mutex_unlock(&se_dev->mtx);
 		kfree(req_ctx);
 		return -EINVAL;
 	}

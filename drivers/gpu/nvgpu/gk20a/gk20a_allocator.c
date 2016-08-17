@@ -168,9 +168,9 @@ void gk20a_fini_alloc_debug(struct gk20a_allocator *a)
 		debugfs_remove(a->debugfs_entry);
 }
 
-void gk20a_alloc_debugfs_init(struct platform_device *pdev)
+void gk20a_alloc_debugfs_init(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dentry *gpu_root = platform->debugfs;
 
 	gk20a_alloc_debugfs_root = debugfs_create_dir("allocators", gpu_root);

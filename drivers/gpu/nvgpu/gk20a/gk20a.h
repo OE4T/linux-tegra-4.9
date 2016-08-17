@@ -1205,4 +1205,9 @@ static inline void gk20a_channel_trace_sched_param(
 			ch->ch_ctx.gr_ctx->compute_preempt_mode : 0));
 }
 
+#ifdef CONFIG_DEBUG_FS
+int gk20a_railgating_debugfs_init(struct device *dev);
+#endif
+
+int gk20a_secure_page_alloc(struct device *dev);
 #endif /* GK20A_H */

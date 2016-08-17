@@ -18,6 +18,7 @@
 #include <linux/interrupt.h>
 #include <linux/pm_runtime.h>
 #include "pci.h"
+#include "nvgpu_common.h"
 #include "gk20a/gk20a.h"
 #include "gk20a/platform_gk20a.h"
 
@@ -58,6 +59,8 @@ static struct gk20a_platform nvgpu_pci_device = {
 	.ch_wdt_timeout_ms = 7000,
 
 	.has_ce = true,
+
+	.vidmem_is_vidmem = true,
 };
 
 static struct pci_device_id nvgpu_pci_table[] = {
@@ -113,19 +116,9 @@ static int nvgpu_pci_init_support(struct pci_dev *pdev)
 		goto fail;
 	}
 
-	g->regs_saved = g->regs;
-	g->bar1_saved = g->bar1;
-
-	mutex_init(&g->dbg_sessions_lock);
-	mutex_init(&g->client_lock);
-	mutex_init(&g->ch_wdt_lock);
-	mutex_init(&g->poweroff_lock);
-
-	g->remove_support = gk20a_remove_support;
 	return 0;
 
  fail:
-	gk20a_remove_support(&pdev->dev);
 	return err;
 }
 
@@ -200,9 +193,6 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		return -ENOMEM;
 	}
 
-	init_waitqueue_head(&g->sw_irq_stall_last_handled_wq);
-	init_waitqueue_head(&g->sw_irq_nonstall_last_handled_wq);
-
 	platform->g = g;
 	g->dev = &pdev->dev;
 
@@ -215,6 +205,7 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	g->irq_nonstall = pdev->irq;
 	if (g->irq_stall < 0)
 		return -ENXIO;
+
 	err = devm_request_threaded_irq(&pdev->dev,
 			g->irq_stall,
 			nvgpu_pci_isr,
@@ -227,6 +218,10 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	}
 	disable_irq(g->irq_stall);
 
+	err = nvgpu_pci_init_support(pdev);
+	if (err)
+		return err;
+
 	if (strchr(dev_name(&pdev->dev), '%')) {
 		gk20a_err(&pdev->dev, "illegal character in device name");
 		return -EINVAL;
@@ -236,63 +231,20 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 	if (!nodefmt)
 		return -ENOMEM;
 
-	err = gk20a_user_init(&pdev->dev, nodefmt, &nvgpu_pci_class);
+	err = nvgpu_probe(g, "gpu_pci", nodefmt, &nvgpu_pci_class);
+	if (err)
+		return err;
+
 	kfree(nodefmt);
 	nodefmt = NULL;
-	if (err)
-		return err;
-
-	err = nvgpu_pci_init_support(pdev);
-	if (err)
-		return err;
-
-	init_rwsem(&g->busy_lock);
-	mutex_init(&platform->railgate_lock);
-
-	spin_lock_init(&g->mc_enable_lock);
-
-	gk20a_debug_init(&pdev->dev);
-
-	/* Initialize the platform interface. */
-	err = platform->probe(&pdev->dev);
-	if (err) {
-		gk20a_err(&pdev->dev, "platform probe failed");
-		return err;
-	}
-
-	/* Set DMA parameters to allow larger sgt lists */
-	pdev->dev.dma_parms = &g->dma_parms;
-	dma_set_max_seg_size(&pdev->dev, UINT_MAX);
-
-	g->gr_idle_timeout_default =
-			CONFIG_GK20A_DEFAULT_TIMEOUT;
-	if (tegra_platform_is_silicon())
-		g->timeouts_enabled = true;
-
-	g->runlist_interleave = true;
-
-	g->timeslice_low_priority_us = 1300;
-	g->timeslice_medium_priority_us = 2600;
-	g->timeslice_high_priority_us = 5200;
-
-	gk20a_create_sysfs(&pdev->dev);
-
-	g->mm.has_physical_mode = false;
-	g->mm.vidmem_is_vidmem = true;
-#ifdef CONFIG_DEBUG_FS
-	g->mm.ltc_enabled = true;
-	g->mm.ltc_enabled_debug = true;
-#endif
-	g->mm.bypass_smmu = platform->bypass_smmu;
-	g->mm.disable_bigpage = platform->disable_bigpage;
-
-	gk20a_init_gr(g);
 
 	err = nvgpu_pci_pm_init(&pdev->dev);
 	if (err) {
 		gk20a_err(&pdev->dev, "pm init failed");
 		return err;
 	}
+
+	g->mm.has_physical_mode = false;
 
 	return 0;
 }

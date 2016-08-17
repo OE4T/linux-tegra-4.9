@@ -599,7 +599,7 @@ int vgpu_probe(struct platform_device *pdev)
 	if (IS_ERR(priv->intr_handler))
 		return -ENOMEM;
 
-	gk20a_debug_init(dev);
+	gk20a_debug_init(dev, "gpu.0");
 
 	/* Set DMA parameters to allow larger sgt lists */
 	dev->dma_parms = &gk20a->dma_parms;

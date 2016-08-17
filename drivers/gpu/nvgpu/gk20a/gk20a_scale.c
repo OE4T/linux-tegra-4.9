@@ -319,6 +319,9 @@ void gk20a_scale_init(struct device *dev)
 	if (g->scale_profile)
 		return;
 
+	if (!platform->devfreq_governor && !platform->qos_notify)
+		return;
+
 	profile = kzalloc(sizeof(*profile), GFP_KERNEL);
 
 	profile->dev = dev;

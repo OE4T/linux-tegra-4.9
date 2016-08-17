@@ -45,6 +45,7 @@
 #include <linux/version.h>
 
 #include "gk20a.h"
+#include "nvgpu_common.h"
 #include "debug_gk20a.h"
 #include "ctrl_gk20a.h"
 #include "hw_mc_gk20a.h"
@@ -82,8 +83,6 @@
 /* TODO: Change to e.g. "nvidia-gpu%s" once we have symlinks in place. */
 
 #define GK20A_NUM_CDEVS 7
-
-#define EMC3D_DEFAULT_RATIO 750
 
 #if defined(GK20A_DEBUG)
 u32 gk20a_dbg_mask = GK20A_DEFAULT_DBG_MASK;
@@ -144,10 +143,13 @@ static const struct file_operations railgate_residency_fops = {
 	.release	= single_release,
 };
 
-static int gk20a_railgating_debugfs_init(struct device *dev)
+int gk20a_railgating_debugfs_init(struct device *dev)
 {
 	struct dentry *d;
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
+
+	if (!platform->can_railgate)
+		return 0;
 
 	d = debugfs_create_file(
 		"railgate_residency", S_IRUGO|S_IWUSR, platform->debugfs, dev,
@@ -740,32 +742,15 @@ static int gk20a_init_support(struct platform_device *dev)
 		goto fail;
 	}
 
-	g->regs_saved = g->regs;
-	g->bar1_saved = g->bar1;
-
-	/* Get interrupt numbers */
-	g->irq_nonstall = platform_get_irq(dev, 1);
-	if (g->irq_stall < 0 || g->irq_nonstall < 0) {
-		err = -ENXIO;
-		goto fail;
-	}
-
 	if (tegra_cpu_is_asim()) {
 		err = gk20a_init_sim_support(dev);
 		if (err)
 			goto fail;
 	}
 
-	mutex_init(&g->dbg_sessions_lock);
-	mutex_init(&g->client_lock);
-	mutex_init(&g->ch_wdt_lock);
-	mutex_init(&g->poweroff_lock);
-
-	g->remove_support = gk20a_remove_support;
 	return 0;
 
  fail:
-	gk20a_remove_support(&dev->dev);
 	return err;
 }
 
@@ -1449,13 +1434,13 @@ int gk20a_pm_init(struct device *dev)
 	return err;
 }
 
-static int gk20a_secure_page_alloc(struct platform_device *pdev)
+int gk20a_secure_page_alloc(struct device *dev)
 {
-	struct gk20a_platform *platform = platform_get_drvdata(pdev);
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	int err = 0;
 
 	if (platform->secure_page_alloc) {
-		err = platform->secure_page_alloc(&pdev->dev);
+		err = platform->secure_page_alloc(dev);
 		if (!err)
 			platform->secure_alloc_ready = true;
 	}
@@ -1499,9 +1484,6 @@ static int gk20a_probe(struct platform_device *dev)
 		return -ENOMEM;
 	}
 
-	init_waitqueue_head(&gk20a->sw_irq_stall_last_handled_wq);
-	init_waitqueue_head(&gk20a->sw_irq_nonstall_last_handled_wq);
-
 	set_gk20a(dev, gk20a);
 	gk20a->dev = &dev->dev;
 
@@ -1509,6 +1491,7 @@ static int gk20a_probe(struct platform_device *dev)
 	gk20a->irq_nonstall = platform_get_irq(dev, 1);
 	if (gk20a->irq_stall < 0 || gk20a->irq_nonstall < 0)
 		return -ENXIO;
+
 	err = devm_request_threaded_irq(&dev->dev,
 			gk20a->irq_stall,
 			gk20a_intr_isr_stall,
@@ -1535,16 +1518,9 @@ static int gk20a_probe(struct platform_device *dev)
 	if (gk20a->irq_stall != gk20a->irq_nonstall)
 		disable_irq(gk20a->irq_nonstall);
 
-	err = gk20a_user_init(&dev->dev, INTERFACE_NAME, &nvgpu_class);
+	err = gk20a_init_support(dev);
 	if (err)
 		return err;
-
-	gk20a_init_support(dev);
-
-	init_rwsem(&gk20a->busy_lock);
-	mutex_init(&platform->railgate_lock);
-
-	spin_lock_init(&gk20a->mc_enable_lock);
 
 #ifdef CONFIG_RESET_CONTROLLER
 	platform->reset_control = devm_reset_control_get(&dev->dev, NULL);
@@ -1552,19 +1528,9 @@ static int gk20a_probe(struct platform_device *dev)
 		platform->reset_control = NULL;
 #endif
 
-	gk20a_debug_init(&dev->dev);
-
-	/* Initialize the platform interface. */
-	err = platform->probe(&dev->dev);
-	if (err) {
-		dev_err(&dev->dev, "platform probe failed");
-		return err;
-	}
-
-	err = gk20a_secure_page_alloc(dev);
+	err = nvgpu_probe(gk20a, "gpu.0", INTERFACE_NAME, &nvgpu_class);
 	if (err)
-		dev_err(&dev->dev,
-			"failed to allocate secure buffer %d\n", err);
+		return err;
 
 	err = gk20a_pm_init(&dev->dev);
 	if (err) {
@@ -1572,126 +1538,7 @@ static int gk20a_probe(struct platform_device *dev)
 		return err;
 	}
 
-	gk20a->emc3d_ratio = EMC3D_DEFAULT_RATIO;
-
-	/* Initialise scaling */
-	if (IS_ENABLED(CONFIG_GK20A_DEVFREQ))
-		gk20a_scale_init(&dev->dev);
-
-	/* Set DMA parameters to allow larger sgt lists */
-	dev->dev.dma_parms = &gk20a->dma_parms;
-	dma_set_max_seg_size(&dev->dev, UINT_MAX);
-
-	gk20a->gr_idle_timeout_default =
-			CONFIG_GK20A_DEFAULT_TIMEOUT;
-	if (tegra_platform_is_silicon())
-		gk20a->timeouts_enabled = true;
-
-	gk20a->runlist_interleave = true;
-
-	gk20a->timeslice_low_priority_us = 1300;
-	gk20a->timeslice_medium_priority_us = 2600;
-	gk20a->timeslice_high_priority_us = 5200;
-
-	/* Set up initial power settings. For non-slicon platforms, disable *
-	 * power features and for silicon platforms, read from platform data */
-	gk20a->slcg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_slcg : false;
-	gk20a->blcg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_blcg : false;
-	gk20a->elcg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_elcg : false;
-	gk20a->elpg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_elpg : false;
-	gk20a->aelpg_enabled =
-		tegra_platform_is_silicon() ? platform->enable_aelpg : false;
-
-	/* set default values to aelpg parameters */
-	gk20a->pmu.aelpg_param[0] = APCTRL_SAMPLING_PERIOD_PG_DEFAULT_US;
-	gk20a->pmu.aelpg_param[1] = APCTRL_MINIMUM_IDLE_FILTER_DEFAULT_US;
-	gk20a->pmu.aelpg_param[2] = APCTRL_MINIMUM_TARGET_SAVING_DEFAULT_US;
-	gk20a->pmu.aelpg_param[3] = APCTRL_POWER_BREAKEVEN_DEFAULT_US;
-	gk20a->pmu.aelpg_param[4] = APCTRL_CYCLES_PER_SAMPLE_MAX_DEFAULT;
-
-	if (platform->late_probe) {
-		err = platform->late_probe(&dev->dev);
-		if (err) {
-			dev_err(&dev->dev, "late probe failed");
-			return err;
-		}
-	}
-
-	gk20a_create_sysfs(&dev->dev);
-
-	gk20a->mm.bypass_smmu = platform->bypass_smmu;
-	gk20a->mm.disable_bigpage = platform->disable_bigpage;
 	gk20a->mm.has_physical_mode = !is_tegra_hypervisor_mode();
-
-#ifdef CONFIG_DEBUG_FS
-	spin_lock_init(&gk20a->debugfs_lock);
-	gk20a->mm.ltc_enabled = true;
-	gk20a->mm.ltc_enabled_debug = true;
-	gk20a->debugfs_ltc_enabled =
-			debugfs_create_bool("ltc_enabled", S_IRUGO|S_IWUSR,
-				 platform->debugfs,
-				 &gk20a->mm.ltc_enabled_debug);
-	gk20a->mm.ltc_enabled_debug = true;
-	gk20a->debugfs_gr_idle_timeout_default =
-			debugfs_create_u32("gr_idle_timeout_default_us",
-					S_IRUGO|S_IWUSR, platform->debugfs,
-					 &gk20a->gr_idle_timeout_default);
-	gk20a->debugfs_timeouts_enabled =
-			debugfs_create_bool("timeouts_enabled",
-					S_IRUGO|S_IWUSR,
-					platform->debugfs,
-					&gk20a->timeouts_enabled);
-	gk20a->debugfs_bypass_smmu =
-			debugfs_create_bool("bypass_smmu",
-					S_IRUGO|S_IWUSR,
-					platform->debugfs,
-					&gk20a->mm.bypass_smmu);
-	gk20a->debugfs_disable_bigpage =
-			debugfs_create_bool("disable_bigpage",
-					S_IRUGO|S_IWUSR,
-					platform->debugfs,
-					&gk20a->mm.disable_bigpage);
-
-	gk20a->debugfs_timeslice_low_priority_us =
-			debugfs_create_u32("timeslice_low_priority_us",
-					S_IRUGO|S_IWUSR,
-					platform->debugfs,
-					&gk20a->timeslice_low_priority_us);
-
-	gk20a->debugfs_timeslice_medium_priority_us =
-			debugfs_create_u32("timeslice_medium_priority_us",
-					S_IRUGO|S_IWUSR,
-					platform->debugfs,
-					&gk20a->timeslice_medium_priority_us);
-
-	gk20a->debugfs_timeslice_high_priority_us =
-			debugfs_create_u32("timeslice_high_priority_us",
-					S_IRUGO|S_IWUSR,
-					platform->debugfs,
-					&gk20a->timeslice_high_priority_us);
-
-	gk20a->debugfs_runlist_interleave =
-			debugfs_create_bool("runlist_interleave",
-					S_IRUGO|S_IWUSR,
-					platform->debugfs,
-					&gk20a->runlist_interleave);
-
-	gr_gk20a_debugfs_init(gk20a);
-	gk20a_pmu_debugfs_init(&dev->dev);
-	gk20a_railgating_debugfs_init(&dev->dev);
-	gk20a_cde_debugfs_init(&dev->dev);
-	gk20a_ce_debugfs_init(&dev->dev);
-	gk20a_alloc_debugfs_init(dev);
-	gk20a_mm_debugfs_init(&dev->dev);
-	gk20a_fifo_debugfs_init(&dev->dev);
-	gk20a_sched_debugfs_init(&dev->dev);
-#endif
-
-	gk20a_init_gr(gk20a);
 
 	return 0;
 }

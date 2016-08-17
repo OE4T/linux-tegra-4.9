@@ -1653,6 +1653,9 @@ void gk20a_cde_debugfs_init(struct device *dev)
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct gk20a *g = get_gk20a(dev);
 
+	if (!platform->has_cde)
+		return;
+
 	debugfs_create_u32("cde_parameter", S_IWUSR | S_IRUGO,
 			   platform->debugfs, &g->cde_app.shader_parameter);
 	debugfs_create_u32("cde_ctx_count", S_IWUSR | S_IRUGO,

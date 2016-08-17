@@ -210,7 +210,7 @@ static inline void gk20a_alloc_disable_dbg(struct gk20a_allocator *a)
  */
 extern u32 gk20a_alloc_tracing_on;
 
-void gk20a_alloc_debugfs_init(struct platform_device *pdev);
+void gk20a_alloc_debugfs_init(struct device *dev);
 
 #define gk20a_alloc_trace_func()			\
 	do {						\

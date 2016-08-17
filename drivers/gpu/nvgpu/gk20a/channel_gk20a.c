@@ -2201,8 +2201,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	bool skip_buffer_refcounting = (flags &
 			NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING);
 	int err = 0;
+	bool need_job_tracking;
 	struct nvgpu_gpfifo __user *user_gpfifo = args ?
 		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
+	struct gk20a_platform *platform = gk20a_get_platform(d);
 
 	if (c->has_timedout)
 		return -ETIMEDOUT;
@@ -2240,11 +2242,30 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	gk20a_dbg_info("channel %d", c->hw_chid);
 
-	/* gk20a_channel_update releases this ref. */
-	err = gk20a_busy(g->dev);
-	if (err) {
-		gk20a_err(d, "failed to host gk20a to submit gpfifo");
-		return err;
+	/*
+	 * Job tracking is necessary for any of the following conditions:
+	 *  - pre- or post-fence functionality
+	 *  - channel wdt
+	 *  - GPU rail-gating
+	 *  - buffer refcounting
+	 *
+	 * If none of the conditions are met, then job tracking is not
+	 * required and a fast submit can be done (ie. only need to write
+	 * out userspace GPFIFO entries and update GP_PUT).
+	 */
+	need_job_tracking = (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) ||
+			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) ||
+			c->wdt_enabled ||
+			platform->can_railgate ||
+			!skip_buffer_refcounting;
+
+	if (need_job_tracking) {
+		/* gk20a_channel_update releases this ref. */
+		err = gk20a_busy(g->dev);
+		if (err) {
+			gk20a_err(d, "failed to host gk20a to submit gpfifo");
+			return err;
+		}
 	}
 
 	trace_gk20a_channel_submit_gpfifo(dev_name(c->g->dev),
@@ -2274,12 +2295,13 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		goto clean_up;
 	}
 
-
-	err = gk20a_submit_prepare_syncs(c, fence, &wait_cmd, &incr_cmd,
-					 &pre_fence, &post_fence,
-					 force_need_sync_fence, flags);
-	if (err)
-		goto clean_up;
+	if (need_job_tracking) {
+		err = gk20a_submit_prepare_syncs(c, fence, &wait_cmd, &incr_cmd,
+						 &pre_fence, &post_fence,
+						 force_need_sync_fence, flags);
+		if (err)
+			goto clean_up;
+	}
 
 	if (wait_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, wait_cmd);
@@ -2306,8 +2328,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		*fence_out = gk20a_fence_get(post_fence);
 	mutex_unlock(&c->last_submit.fence_lock);
 
-	/* TODO! Check for errors... */
-	gk20a_channel_add_job(c, pre_fence, post_fence,
+	if (need_job_tracking)
+		/* TODO! Check for errors... */
+		gk20a_channel_add_job(c, pre_fence, post_fence,
 				wait_cmd, incr_cmd,
 				skip_buffer_refcounting);
 
@@ -2317,11 +2340,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		c->gpfifo.put);
 
 	trace_gk20a_channel_submitted_gpfifo(dev_name(c->g->dev),
-					     c->hw_chid,
-					     num_entries,
-					     flags,
-					     post_fence->syncpt_id,
-					     post_fence->syncpt_value);
+				c->hw_chid,
+				num_entries,
+				flags,
+				post_fence ? post_fence->syncpt_id : 0,
+				post_fence ? post_fence->syncpt_value : 0);
 
 	gk20a_dbg_info("post-submit put %d, get %d, size %d",
 		c->gpfifo.put, c->gpfifo.get, c->gpfifo.entry_num);
@@ -2335,7 +2358,8 @@ clean_up:
 	free_priv_cmdbuf(c, incr_cmd);
 	gk20a_fence_put(pre_fence);
 	gk20a_fence_put(post_fence);
-	gk20a_idle(g->dev);
+	if (need_job_tracking)
+		gk20a_idle(g->dev);
 	return err;
 }
 

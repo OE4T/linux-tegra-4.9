@@ -1706,7 +1706,7 @@ static int emc_stats_show(struct seq_file *s, void *data)
 			continue;
 
 		seq_printf(s, "%-10u %-10llu\n",
-			   tegra_emc_table[i].rate * 1000,
+			   tegra_emc_table[i].rate,
 			   cputime64_to_clock_t(
 					    tegra_emc_stats.time_at_clock[i]));
 	}

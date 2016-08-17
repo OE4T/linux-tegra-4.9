@@ -588,6 +588,7 @@ struct gpu_ops {
 			void *lsfm,	u32 *p_bl_gen_desc_size);
 		int (*flcn_populate_bl_dmem_desc)(struct gk20a *g,
 			void *lsfm,	u32 *p_bl_gen_desc_size, u32 falconid);
+		int (*mclk_init)(struct gk20a *g);
 		u32  lspmuwprinitdone;
 		u32  lsfloadedfalconid;
 		bool fecsbootstrapdone;

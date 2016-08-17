@@ -3081,6 +3081,8 @@ void pmu_setup_hw(struct work_struct *work)
 		gk20a_dbg_pmu("pmu starting");
 		if (platform->can_elpg)
 			pmu_init_powergating(g);
+		if (g->ops.pmu.mclk_init)
+			g->ops.pmu.mclk_init(g);
 		break;
 	case PMU_STATE_ELPG_BOOTED:
 		gk20a_dbg_pmu("elpg booted");

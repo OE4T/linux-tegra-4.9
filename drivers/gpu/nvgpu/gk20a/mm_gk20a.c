@@ -895,6 +895,10 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	u64 default_page_size = SZ_64K;
 	int err;
 
+	static struct gk20a_alloc_carveout wpr_co =
+		GK20A_CARVEOUT("wpr-region",
+			       NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE, SZ_16M);
+
 	if (!size)
 		return 0;
 
@@ -921,8 +925,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	}
 
 	/* Reserve bootstrap region in vidmem allocator */
-	gk20a_alloc_fixed(&g->mm.vidmem.allocator,
-			  bootstrap_base, bootstrap_size);
+	gk20a_alloc_reserve_carveout(&g->mm.vidmem.allocator, &wpr_co);
 
 	mm->vidmem.base = base;
 	mm->vidmem.size = size - base;

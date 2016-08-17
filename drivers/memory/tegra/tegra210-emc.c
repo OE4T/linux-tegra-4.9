@@ -1903,11 +1903,6 @@ static const struct of_device_id car_match[] = {
 	{},
 };
 
-static const struct of_device_id emc_table_match[] = {
-	{ .compatible = "nvidia,tegra210-emc-table" },
-	{},
-};
-
 void __emc_copy_table_params(struct emc_table *src, struct emc_table *dst,
 				int flags)
 {
@@ -1960,15 +1955,6 @@ void __emc_copy_table_params(struct emc_table *src, struct emc_table *dst,
 
 		dst->trained = src->trained;
 	}
-}
-
-static void emc_copy_table_params(struct emc_table *src, struct emc_table *dst,
-					int table_size, int flags)
-{
-	int i;
-
-	for (i = 0; i < table_size; i++)
-		__emc_copy_table_params(&src[i], &dst[i], flags);
 }
 
 static int find_matching_input(struct emc_table *table, struct emc_sel *sel)
@@ -2035,62 +2021,6 @@ static int find_matching_input(struct emc_table *table, struct emc_sel *sel)
 	return 0;
 }
 
-static void parse_dt_data(struct platform_device *pdev)
-{
-	u32 prop;
-	int ret;
-	bool has_derated_tables = false;
-	struct device_node *table_node = NULL;
-	struct resource r;
-	int i;
-
-	ret = of_property_read_u32(pdev->dev.of_node, "max-clock-frequency",
-				   &prop);
-	if (!ret)
-		emc_max_rate = prop * 1000;
-
-	if (of_find_property(pdev->dev.of_node, "has-derated-tables", NULL))
-		has_derated_tables = true;
-
-	table_node = of_find_matching_node(pdev->dev.of_node, emc_table_match);
-	if (!table_node) {
-		dev_err(&pdev->dev, "Can not find EMC table node\n");
-		return;
-	}
-
-	if (of_address_to_resource(table_node, 0, &r)) {
-		dev_err(&pdev->dev, "Can not map EMC table\n");
-		return;
-	}
-
-	tegra_emc_table_normal = devm_ioremap_resource(&pdev->dev, &r);
-	tegra_emc_table_size = resource_size(&r) / sizeof(struct emc_table);
-
-	if (has_derated_tables) {
-		tegra_emc_table_size /= 2;
-		tegra_emc_table_derated = tegra_emc_table_normal +
-					  tegra_emc_table_size;
-
-		for (i = 0; i < tegra_emc_table_size; i++) {
-			if (tegra_emc_table_derated[i].rate !=
-			    tegra_emc_table_normal[i].rate) {
-				dev_err(&pdev->dev, "EMC table check failed\n");
-				tegra_emc_table_normal = NULL;
-				tegra_emc_table_derated = NULL;
-				tegra_emc_table_size = 0;
-				break;
-			}
-		}
-	}
-
-	if (tegra_dram_type == DRAM_TYPE_LPDDR4 && tegra_emc_table_derated)
-		emc_copy_table_params(tegra_emc_table_normal,
-				      tegra_emc_table_derated,
-				      tegra_emc_table_size,
-				      EMC_COPY_TABLE_PARAM_PERIODIC_FIELDS |
-				      EMC_COPY_TABLE_PARAM_TRIM_REGS);
-}
-
 static int tegra210_init_emc_data(struct platform_device *pdev)
 {
 	int i;
@@ -2134,7 +2064,8 @@ static int tegra210_init_emc_data(struct platform_device *pdev)
 		return -ENODATA;
 	}
 
-	parse_dt_data(pdev);
+	tegra_emc_dt_parse_pdata(pdev, &tegra_emc_table_normal,
+			&tegra_emc_table_derated, &tegra_emc_table_size);
 	if (!tegra_emc_table_size ||
 	    tegra_emc_table_size > TEGRA_EMC_TABLE_MAX_SIZE) {
 		dev_err(&pdev->dev, "Invalid table size %d\n",

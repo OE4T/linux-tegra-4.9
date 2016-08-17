@@ -844,6 +844,8 @@ static u64 gk20a_buddy_balloc(struct gk20a_allocator *__a, u64 len)
 		alloc_dbg(balloc_owner(a), "Alloc failed: no mem!\n");
 	}
 
+	a->alloc_made = 1;
+
 	alloc_unlock(__a);
 
 	gk20a_alloc_trace_func_done();
@@ -851,15 +853,10 @@ static u64 gk20a_buddy_balloc(struct gk20a_allocator *__a, u64 len)
 }
 
 /*
- * Allocate a fixed address allocation. The address of the allocation is @base
- * and the length is @len. This is not a typical buddy allocator operation and
- * as such has a high posibility of failure if the address space is heavily in
- * use.
- *
- * Please do not use this function unless _absolutely_ necessary.
+ * Requires @__a to be locked.
  */
-static u64 gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
-				    u64 base, u64 len)
+static u64 __gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
+				      u64 base, u64 len)
 {
 	u64 ret, real_bytes = 0;
 	struct gk20a_buddy *bud;
@@ -883,7 +880,6 @@ static u64 gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
 	falloc->start = base;
 	falloc->end = base + len;
 
-	alloc_lock(__a);
 	if (!balloc_is_range_free(a, base, base + len)) {
 		alloc_dbg(balloc_owner(a),
 			  "Range not free: 0x%llx -> 0x%llx\n",
@@ -907,7 +903,6 @@ static u64 gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
 	a->bytes_alloced += len;
 	a->bytes_alloced_real += real_bytes;
 
-	alloc_unlock(__a);
 	alloc_dbg(balloc_owner(a), "Alloc (fixed) 0x%llx\n", base);
 
 	gk20a_alloc_trace_func_done();
@@ -919,6 +914,28 @@ fail:
 	kfree(falloc);
 	gk20a_alloc_trace_func_done();
 	return 0;
+}
+
+/*
+ * Allocate a fixed address allocation. The address of the allocation is @base
+ * and the length is @len. This is not a typical buddy allocator operation and
+ * as such has a high posibility of failure if the address space is heavily in
+ * use.
+ *
+ * Please do not use this function unless _absolutely_ necessary.
+ */
+static u64 gk20a_balloc_fixed_buddy(struct gk20a_allocator *__a,
+				    u64 base, u64 len)
+{
+	u64 alloc;
+	struct gk20a_buddy_allocator *a = __a->priv;
+
+	alloc_lock(__a);
+	alloc = __gk20a_balloc_fixed_buddy(__a, base, len);
+	a->alloc_made = 1;
+	alloc_unlock(__a);
+
+	return alloc;
 }
 
 /*
@@ -968,6 +985,81 @@ done:
 	return;
 }
 
+static bool gk20a_buddy_reserve_is_possible(struct gk20a_buddy_allocator *a,
+					    struct gk20a_alloc_carveout *co)
+{
+	struct gk20a_alloc_carveout *tmp;
+	u64 co_base, co_end;
+
+	co_base = co->base;
+	co_end  = co->base + co->length;
+
+	/*
+	 * Not the fastest approach but we should not have that many carveouts
+	 * for any reasonable allocator.
+	 */
+	list_for_each_entry(tmp, &a->co_list, co_entry) {
+		if ((co_base >= tmp->base &&
+		     co_base < (tmp->base + tmp->length)) ||
+		    (co_end >= tmp->base &&
+		     co_end < (tmp->base + tmp->length)))
+			return false;
+	}
+
+	return true;
+}
+
+/*
+ * Carveouts can only be reserved before any regular allocations have been
+ * made.
+ */
+static int gk20a_buddy_reserve_co(struct gk20a_allocator *__a,
+				  struct gk20a_alloc_carveout *co)
+{
+	struct gk20a_buddy_allocator *a = __a->priv;
+	u64 addr;
+	int err = 0;
+
+	if (co->base < a->start || (co->base + co->length) > a->end ||
+	    a->alloc_made)
+		return -EINVAL;
+
+	alloc_lock(__a);
+
+	if (!gk20a_buddy_reserve_is_possible(a, co)) {
+		err = -EBUSY;
+		goto done;
+	}
+
+	/* Should not be possible to fail... */
+	addr = __gk20a_balloc_fixed_buddy(__a, co->base, co->length);
+	if (!addr) {
+		err = -ENOMEM;
+		pr_warn("%s: Failed to reserve a valid carveout!\n", __func__);
+		goto done;
+	}
+
+	list_add(&co->co_entry, &a->co_list);
+
+done:
+	alloc_unlock(__a);
+	return err;
+}
+
+/*
+ * Carveouts can be release at any time.
+ */
+static void gk20a_buddy_release_co(struct gk20a_allocator *__a,
+				   struct gk20a_alloc_carveout *co)
+{
+	alloc_lock(__a);
+
+	list_del_init(&co->co_entry);
+	gk20a_free(__a, co->base);
+
+	alloc_unlock(__a);
+}
+
 static u64 gk20a_buddy_alloc_length(struct gk20a_allocator *a)
 {
 	struct gk20a_buddy_allocator *ba = a->priv;
@@ -1004,9 +1096,10 @@ static u64 gk20a_buddy_alloc_end(struct gk20a_allocator *a)
 static void gk20a_buddy_print_stats(struct gk20a_allocator *__a,
 				    struct seq_file *s, int lock)
 {
-	int i;
+	int i = 0;
 	struct rb_node *node;
 	struct gk20a_fixed_alloc *falloc;
+	struct gk20a_alloc_carveout *tmp;
 	struct gk20a_buddy_allocator *a = __a->priv;
 
 	__alloc_pstat(s, __a, "base = %llu, limit = %llu, blk_size = %llu\n",
@@ -1018,12 +1111,23 @@ static void gk20a_buddy_print_stats(struct gk20a_allocator *__a,
 	__alloc_pstat(s, __a, "  blks  = 0x%llx\n", a->blks);
 	__alloc_pstat(s, __a, "  max_order = %llu\n", a->max_order);
 
+	if (lock)
+		alloc_lock(__a);
+
+	if (!list_empty(&a->co_list)) {
+		__alloc_pstat(s, __a, "\n");
+		__alloc_pstat(s, __a, "Carveouts:\n");
+		list_for_each_entry(tmp, &a->co_list, co_entry)
+			__alloc_pstat(s, __a,
+				      "  CO %2d: %-20s 0x%010llx + 0x%llx\n",
+				      i++, tmp->name, tmp->base, tmp->length);
+	}
+
+	__alloc_pstat(s, __a, "\n");
 	__alloc_pstat(s, __a, "Buddy blocks:\n");
 	__alloc_pstat(s, __a, "  Order   Free    Alloced   Split\n");
 	__alloc_pstat(s, __a, "  -----   ----    -------   -----\n");
 
-	if (lock)
-		alloc_lock(__a);
 	for (i = a->max_order; i >= 0; i--) {
 		if (a->buddy_list_len[i] == 0 &&
 		    a->buddy_list_alloced[i] == 0 &&
@@ -1066,6 +1170,9 @@ static const struct gk20a_allocator_ops buddy_ops = {
 
 	.alloc_fixed	= gk20a_balloc_fixed_buddy,
 	/* .free_fixed not needed. */
+
+	.reserve_carveout	= gk20a_buddy_reserve_co,
+	.release_carveout	= gk20a_buddy_release_co,
 
 	.base		= gk20a_buddy_alloc_base,
 	.length		= gk20a_buddy_alloc_length,
@@ -1172,6 +1279,7 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 
 	a->alloced_buddies = RB_ROOT;
 	a->fixed_allocs = RB_ROOT;
+	INIT_LIST_HEAD(&a->co_list);
 	err = balloc_init_lists(a);
 	if (err)
 		goto fail;

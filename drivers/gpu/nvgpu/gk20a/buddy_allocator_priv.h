@@ -124,6 +124,8 @@ struct gk20a_buddy_allocator {
 	struct rb_root alloced_buddies;	/* Outstanding allocations. */
 	struct rb_root fixed_allocs;	/* Outstanding fixed allocations. */
 
+	struct list_head co_list;
+
 	/*
 	 * Impose an upper bound on the maximum order.
 	 */
@@ -142,6 +144,7 @@ struct gk20a_buddy_allocator {
 	u64 pte_blk_order;
 
 	int initialized;
+	int alloc_made;			/* True after the first alloc. */
 
 	u64 flags;
 

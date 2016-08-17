@@ -3388,27 +3388,6 @@ bool tegra_phy_xusb_utmi_pad_secondary_charger_detect(struct phy *phy)
 }
 EXPORT_SYMBOL_GPL(tegra_phy_xusb_utmi_pad_secondary_charger_detect);
 
-int tegra_phy_xusb_phy_to_port(struct phy *phy)
-{
-	struct tegra_padctl *padctl;
-	int port = -EINVAL;
-
-	if (!phy || IS_ERR(phy))
-		return port;
-
-	padctl = phy_get_drvdata(phy);
-
-	if (is_utmi_phy(phy))
-		port = utmi_phy_to_port(phy);
-	else if (is_hsic_phy(phy))
-		port = hsic_phy_to_port(phy);
-	else if (is_usb3_phy(phy))
-		port = usb3_phy_to_port(phy);
-
-	return port;
-}
-EXPORT_SYMBOL_GPL(tegra_phy_xusb_phy_to_port);
-
 MODULE_AUTHOR("JC Kuo <jckuo@nvidia.com>");
 MODULE_DESCRIPTION("Tegra 186 XUSB PADCTL driver");
 MODULE_LICENSE("GPL v2");

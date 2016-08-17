@@ -69,46 +69,19 @@ static int clk_emc_set_rate(struct clk_hw *hw, unsigned long rate,
 			       unsigned long parent_rate)
 {
 	struct tegra_clk_emc *emc = to_clk_emc(hw);
-	struct clk *old_parent, *new_parent, *backup_parent;
-	unsigned long new_parent_rate, backup_rate, old_rate;
+	unsigned long new_parent_rate;
+	struct clk *old_parent, *new_parent;
 	int ret = -EINVAL;
 
 	if (!emc->emc_ops)
 		goto out;
 
+	old_parent = clk_get_parent(hw->clk);
 	new_parent = emc->emc_ops->emc_predict_parent(rate, &new_parent_rate);
 	if (IS_ERR(new_parent))
 		goto out;
 
-	old_parent = clk_get_parent(hw->clk);
-	old_rate = emc->emc_ops->emc_get_rate();
-	if (old_rate == rate)
-		return 0;
-
-	if (new_parent_rate != clk_get_rate(new_parent)) {
-		if (emc->emc_ops->emc_get_backup_parent) {
-			emc->emc_ops->emc_get_backup_parent(&backup_parent,
-							    &backup_rate);
-			if (IS_ERR(backup_parent))
-				goto out;
-			clk_prepare_enable(backup_parent);
-			ret = emc->emc_ops->emc_set_rate(backup_rate);
-			if (ret) {
-				clk_disable_unprepare(backup_parent);
-				goto out;
-			}
-			clk_hw_reparent(hw, __clk_get_hw(backup_parent));
-			clk_disable_unprepare(old_parent);
-			old_parent = backup_parent;
-			ret = clk_set_rate(new_parent, new_parent_rate);
-			if (ret)
-				goto out;
-		} else {
-			goto out;
-		}
-	}
-
-	if (new_parent != old_parent)
+	if (!clk_is_match(new_parent, old_parent))
 		clk_prepare_enable(new_parent);
 
 	ret = emc->emc_ops->emc_set_rate(rate);
@@ -118,7 +91,7 @@ static int clk_emc_set_rate(struct clk_hw *hw, unsigned long rate,
 		goto out;
 	}
 
-	if (new_parent != old_parent) {
+	if (!clk_is_match(new_parent, old_parent)) {
 		clk_hw_reparent(hw, __clk_get_hw(new_parent));
 		clk_disable_unprepare(old_parent);
 	}

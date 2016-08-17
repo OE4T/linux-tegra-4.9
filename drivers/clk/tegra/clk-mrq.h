@@ -17,10 +17,6 @@
 #ifndef _TEGRA_CLK_MRQ_H
 #define _TEGRA_CLK_MRQ_H
 
-#define BPMP_CLK_HAS_MUX                BIT(0)
-#define BPMP_CLK_HAS_SET_RATE           BIT(1)
-#define BPMP_CLK_IS_ROOT                BIT(2)
-
 enum {
 	MRQ_CLK_GET_RATE = 1,
 	MRQ_CLK_SET_RATE = 2,

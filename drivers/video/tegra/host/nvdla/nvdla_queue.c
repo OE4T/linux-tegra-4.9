@@ -108,6 +108,8 @@ static void task_free(struct kref *ref)
 	struct nvdla_task *task = container_of(ref, struct nvdla_task, ref);
 	struct platform_device *pdev = task->queue->pool->pdev;
 
+	nvdla_dbg_info(pdev, "freeing task[%p]", task);
+
 	/* free allocated task desc */
 	if (task->task_desc) {
 		dma_free_attrs(&pdev->dev, task->buf_size,
@@ -132,9 +134,10 @@ void nvdla_task_get(struct nvdla_task *task)
 
 static void nvdla_queue_update(void *priv, int nr_completed)
 {
-	struct nvhost_queue *queue = priv;
-	struct nvdla_task *task, *safe;
 	int task_complete;
+	struct nvdla_task *task, *safe;
+	struct nvhost_queue *queue = priv;
+	struct platform_device *pdev = queue->pool->pdev;
 
 	mutex_lock(&queue->list_lock);
 
@@ -154,6 +157,10 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 
 			/* give taks refs */
 			nvdla_task_put(task);
+
+			nvdla_dbg_info(pdev,
+				"task[%p] completed. syncpt[%d] fence[%d]",
+				task, queue->syncpt_id, task->fence);
 		}
 	}
 	/* put pm refcount */
@@ -196,10 +203,10 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	struct dla_action_list *preactionl;
 	struct dla_action_opcode *opcode;
 	struct nvdla_task *task = NULL;
-	size_t postactionlist_size;
-	size_t preactionlist_size;
 	uint16_t postactionlist_of;
+	size_t postactionlist_size;
 	uint16_t preactionlist_of;
+	size_t preactionlist_size;
 	uint16_t postactionl_of;
 	uint16_t preactionl_of;
 	dma_addr_t buffer_pa;
@@ -209,6 +216,8 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	void *mem;
 	int err;
 	int i;
+
+	nvdla_dbg_fn(pdev, "");
 
 	/* allocate task resource */
 	task_size = sizeof(struct nvdla_task) +
@@ -256,6 +265,14 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 		preactionlist_size +
 		postactionlist_size;
 
+	nvdla_dbg_info(pdev, "num of prefences[%d] num of postfences[%d]",
+			num_prefences, num_postfences);
+	nvdla_dbg_info(pdev, "preaction list size[%zu]",
+			preactionlist_size);
+	nvdla_dbg_info(pdev, "postaction list size[%zu]",
+			postactionlist_size);
+	nvdla_dbg_info(pdev, "Total task desc size[%zu]", buf_size);
+
 	/* allocate task descriptor */
 	buffer_va = dma_alloc_attrs(&pdev->dev, buf_size, &buffer_pa,
 				GFP_KERNEL, &attrs);
@@ -284,6 +301,8 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 
 	task_desc->queue_id = queue->id;
 
+	nvdla_dbg_info(pdev, "Queue id[%d]", task_desc->queue_id);
+
 	/* get pre/post action list HEAD mem offset
 	 * - preactions list HEAD stored after dla_task_descriptor
 	 * - postactions list HEAD followed after preaction list head offset
@@ -291,6 +310,9 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	 */
 	preactionl_of = sizeof(struct dla_task_descriptor);
 	postactionl_of = preactionl_of + sizeof(struct dla_action_list);
+
+	nvdla_dbg_info(pdev, "preaction meta offset[%d]", preactionl_of);
+	nvdla_dbg_info(pdev, "postaction meta offset[%d]", postactionl_of);
 
 	/* ..and send those through descriptor */
 	task_desc->preactions = preactionl_of;
@@ -301,6 +323,9 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 
 	/* actual postaction list offset update */
 	postactionlist_of = preactionlist_of + preactionlist_size;
+
+	nvdla_dbg_info(pdev, "preaction list offset[%d]", preactionlist_of);
+	nvdla_dbg_info(pdev, "postaction list offset[%d]", postactionlist_of);
 
 	/* actually update lists data */
 	mem = (char *)task_desc + preactionl_of;
@@ -374,6 +399,8 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 		postaction->address = get_semaphore_pa(pdev);
 	}
 
+	nvdla_dbg_info(pdev, "task[%p] initialized", task);
+
 	return task;
 
 fail_to_dma_alloc:
@@ -391,6 +418,8 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	uint32_t method_id;
 	int err = 0;
 
+	nvdla_dbg_fn(pdev, "");
+
 	/* get pm refcount */
 	if (nvhost_module_busy(pdev))
 		return -EINVAL;
@@ -407,8 +436,13 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	nvdla_task_get(task);
 	list_add_tail(&task->list, &task->queue->tasklist);
 
+	nvdla_dbg_info(pdev, "task[%p] added to list", task);
+
 	/* get fence from nvhost */
 	task->fence = nvhost_syncpt_incr_max(task->sp, queue->syncpt_id, 1);
+
+	nvdla_dbg_fn(pdev, "syncpt[%d] fence[%d] task[%p]", queue->syncpt_id,
+				task->fence, task);
 
 	/* get syncpoint reference */
 	nvhost_syncpt_get_ref(task->sp, queue->syncpt_id);

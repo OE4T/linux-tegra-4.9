@@ -62,6 +62,8 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 
 	/* dump falcon data if debug enabled */
 	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
+	nvdla_dbg_reg(pdev, "mailbox0=[0x%x]", mailbox0);
+
 	if (mailbox0 == DLA_DEBUG_PRINT)
 		dev_info(&pdev->dev, "falcon: %s",
 			 (char *)m->debug_dump_va);
@@ -73,7 +75,10 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 void nvdla_send_cmd(struct platform_device *pdev,
 		   uint32_t method_id, uint32_t method_data)
 {
+	nvdla_dbg_reg(pdev, "method_id=[0x%x]", method_id);
 	host1x_writel(pdev, NV_DLA_THI_METHOD_ID, method_id);
+
+	nvdla_dbg_reg(pdev, "method_data=[0x%x]", method_data);
 	host1x_writel(pdev, NV_DLA_THI_METHOD_DATA, method_data);
 }
 
@@ -88,6 +93,8 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 
 	if (!pdata->flcn_isr)
 		return 0;
+
+	nvdla_dbg_fn(pdev, "");
 
 	m = get_flcn(pdev);
 	/* allocate dump region */
@@ -142,6 +149,8 @@ static void nvdla_free_dump_region(struct platform_device *pdev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct flcn *m;
 
+	nvdla_dbg_fn(pdev, "");
+
 	if (!pdata->flcn_isr)
 		return;
 
@@ -160,6 +169,8 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 {
 	int ret = 0;
 
+	nvdla_dbg_fn(pdev, "");
+
 	ret = nvhost_flcn_finalize_poweron(pdev);
 	if (ret) {
 		dev_err(&pdev->dev, "%s: failed to poweron\n", __func__);
@@ -176,6 +187,8 @@ int nvhost_nvdla_finalize_poweron(struct platform_device *pdev)
 int nvhost_nvdla_prepare_poweroff(struct platform_device *pdev)
 {
 	int ret;
+
+	nvdla_dbg_fn(pdev, "");
 
 	/* free dump region */
 	nvdla_free_dump_region(pdev);
@@ -304,6 +317,8 @@ static int __exit nvdla_remove(struct platform_device *pdev)
 
 	nvhost_queue_deinit(nvdla_dev->pool);
 	nvhost_client_device_release(pdev);
+
+	nvdla_dbg_fn(pdev, "");
 
 	return 0;
 }

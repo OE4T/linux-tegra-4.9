@@ -33,6 +33,7 @@
 #include "nvhost_queue.h"
 
 #include "nvdla/nvdla.h"
+#include "nvdla/nvdla_debug.h"
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 
@@ -62,6 +63,9 @@ static int nvdla_ctrl_pin(struct nvdla_private *priv, void *arg)
 	struct nvdla_ctrl_pin_unpin_args *buf_list =
 			(struct nvdla_ctrl_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
+	struct platform_device *pdev = priv->pdev;
+
+	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
 	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
 	if (!handles)
@@ -87,6 +91,9 @@ static int nvdla_ctrl_unpin(struct nvdla_private *priv, void *arg)
 	struct nvdla_ctrl_pin_unpin_args *buf_list =
 			(struct nvdla_ctrl_pin_unpin_args *)arg;
 	u32 count = buf_list->num_buffers;
+	struct platform_device *pdev = priv->pdev;
+
+	nvdla_dbg_info(pdev, "num of buffers [%d]", count);
 
 	handles = kcalloc(count, sizeof(u32), GFP_KERNEL);
 	if (!handles)
@@ -131,6 +138,8 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 	/* pass ping value to falcon */
 	*ping_va = args->in_challenge;
 
+	nvdla_dbg_info(pdev, "ping challenge [%d]", *ping_va);
+
 	/* run ping cmd */
 	nvdla_send_cmd(pdev, DLA_CMD_PING, ALIGNED_DMA(ping_pa));
 
@@ -143,6 +152,8 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 
 	/* out value should have (in_challenge * 4) */
 	args->out_response = *ping_va;
+
+	nvdla_dbg_info(pdev, "ping response [%d]", *ping_va);
 
 	if (args->out_response != args->in_challenge*4) {
 		dev_err(&pdev->dev, "ping cmd failed. Falcon is not active");
@@ -165,6 +176,7 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 			(struct nvdla_ctrl_submit_args *)arg;
 	struct nvdla_ctrl_ioctl_submit_task __user *user_tasks;
 	struct nvdla_ctrl_ioctl_submit_task *local_tasks;
+	struct platform_device *pdev;
 	struct nvhost_queue *queue;
 	u32 num_tasks;
 	struct nvdla_task *task;
@@ -173,6 +185,7 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 	if (!args || !priv)
 		return -EINVAL;
 
+	pdev = priv->pdev;
 	queue = priv->queue;
 	if (!queue)
 		return -EINVAL;
@@ -183,6 +196,8 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 
 	if (num_tasks <= 0 && num_tasks > MAX_TASKS_PER_SUBMIT)
 		return -EINVAL;
+
+	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);
 
 	/* copy descriptors */
 	local_tasks = kcalloc(num_tasks, sizeof(*local_tasks),
@@ -197,6 +212,9 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 	}
 
 	for (i = 0; i < num_tasks; i++) {
+
+		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
+
 		/* allocate per task and update fields */
 		task = nvdla_task_alloc(queue, local_tasks[i]);
 		if (IS_ERR(task)) {
@@ -246,12 +264,12 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 		return -ENOIOCTLCMD;
 	}
 
-	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
-
 	/* copy from user for read commands */
 	if (_IOC_DIR(cmd) & _IOC_WRITE)
 		if (copy_from_user(buf, (void __user *)arg, _IOC_SIZE(cmd)))
 			return -EFAULT;
+
+	nvdla_dbg_fn(pdev, "priv:%p cmd:%u", priv, cmd);
 
 	/* handle IOCTL cmd */
 	switch (cmd) {
@@ -297,7 +315,7 @@ static int nvdla_open(struct inode *inode, struct file *file)
 	file->private_data = priv;
 	priv->pdev = pdev;
 
-	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
+	nvdla_dbg_fn(pdev, "priv:%p", priv);
 
 	/* add priv to client list */
 	err = nvhost_module_add_client(pdev, priv);
@@ -333,7 +351,7 @@ static int nvdla_release(struct inode *inode, struct file *file)
 	struct nvdla_private *priv = file->private_data;
 	struct platform_device *pdev = priv->pdev;
 
-	nvhost_dbg_fn("%s: pdev:%p priv:%p\n", __func__, pdev, priv);
+	nvdla_dbg_fn(pdev, "priv:%p", priv);
 
 	nvhost_queue_abort(priv->queue);
 	nvhost_queue_put(priv->queue);

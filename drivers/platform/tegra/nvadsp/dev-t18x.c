@@ -63,7 +63,6 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 {
 	struct nvadsp_drv_data *drv_data = platform_get_drvdata(pdev);
 	struct device *dev = &pdev->dev;
-	uint32_t val;
 	int ret = 0;
 
 	drv_data->ape_clk = devm_clk_get(dev, "adsp.ape");
@@ -129,10 +128,6 @@ static int nvadsp_t18x_clocks_enable(struct platform_device *pdev)
 		goto end;
 	}
 	dev_dbg(dev, "adsp.apb2ape clock enabled\n");
-
-	/* Set MAXCLKLATENCY value before ADSP deasserting reset */
-	val = readl(drv_data->base_regs[AMISC] + ADSP_CONFIG);
-	writel(val | MAXCLKLATENCY, drv_data->base_regs[AMISC] + ADSP_CONFIG);
 
 	dev_dbg(dev, "all clocks enabled\n");
 	return 0;

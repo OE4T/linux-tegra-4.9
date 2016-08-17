@@ -14,7 +14,6 @@
  */
 
 #include "tegra186-platforms/tegra186-vcm31-e2681-common.dtsi"
-#include "tegra186-platforms/tegra186-vcm31-62681-disp.dtsi"
 #include "t186-status-override/tegra186-vcm31-e2681-0003-a01-dt-status-override.dtsi"
 
 / {
@@ -27,5 +26,38 @@
 			status = "okay";
 			size = <0 0x40000000>;
 		};
+	};
+	host1x {
+		status = "disabled";
+	};
+
+	cpus {
+		cpu@0 {
+			status = "disabled";
+		};
+
+		cpu@1 {
+			status = "disabled";
+		};
+
+		cpu@2 {
+			status = "okay";
+		};
+
+		cpu@3 {
+			status = "okay";
+		};
+
+		cpu@4 {
+			status = "okay";
+		};
+
+		cpu@5 {
+			status = "okay";
+		};
+	};
+
+	sdhci@3460000 {
+		status = "okay";
 	};
 };

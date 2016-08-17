@@ -2140,7 +2140,7 @@ void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 	int i, j;
 	u32 ihub_capa;
 
-	info->current_emcclk = tegra_bwmgr_get_emc_rate();
+	info->current_emcclk = tegra_bwmgr_get_core_emc_rate();
 
 	ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
 	/* base entry width is 32 bytes */

@@ -1,3 +1,4 @@
+GCOV_PROFILE := y
 obj-y					+= clk.o
 obj-y					+= clk-audio-sync.o
 obj-y					+= clk-bpmp.o

@@ -145,10 +145,10 @@ static const char *tegra_emc_src_names[TEGRA_EMC_SRC_COUNT] = {
 	[TEGRA_EMC_SRC_PLLC] = "pll_c",
 	[TEGRA_EMC_SRC_PLLP] = "pll_p",
 	[TEGRA_EMC_SRC_CLKM] = "clk_m",
-	[TEGRA_EMC_SRC_PLLM_UD] = "pll_m",
-	[TEGRA_EMC_SRC_PLLMB_UD] = "pll_mb",
+	[TEGRA_EMC_SRC_PLLM_UD] = "pll_m_ud",
+	[TEGRA_EMC_SRC_PLLMB_UD] = "pll_mb_ud",
 	[TEGRA_EMC_SRC_PLLMB] = "pll_mb",
-	[TEGRA_EMC_SRC_PLLP_UD] = "pll_p",
+	[TEGRA_EMC_SRC_PLLP_UD] = "pll_p_ud",
 };
 static struct supported_sequence supported_seqs[] = {
 	{
@@ -1363,7 +1363,7 @@ static struct clk *tegra210_emc_predict_parent(unsigned long rate,
 	if (*parent_rate == clk_get_rate(old_parent))
 		return old_parent;
 
-	if (new_parent == old_parent)
+	if (clk_is_match(new_parent, old_parent))
 		new_parent = emc_clk_sel[val].input_b;
 
 	if (*parent_rate != clk_get_rate(new_parent))
@@ -1406,7 +1406,7 @@ static int tegra210_emc_set_rate(unsigned long rate)
 		last_timing = emc_timing;
 
 	parent = tegra210_emc_predict_parent(rate, &parent_rate);
-	if (parent == emc_clk_sel[i].input)
+	if (clk_is_match(parent, emc_clk_sel[i].input))
 		clk_setting = emc_clk_sel[i].value;
 	else
 		clk_setting = emc_clk_sel[i].value_b;
@@ -1961,7 +1961,6 @@ static int find_matching_input(struct emc_table *table, struct emc_sel *sel)
 {
 	u32 div_value;
 	u32 src_value;
-	u32 src_value_b;
 	unsigned long input_rate = 0;
 	struct clk *input_clk;
 	struct clk_hw *emc_hw;
@@ -1991,7 +1990,8 @@ static int find_matching_input(struct emc_table *table, struct emc_sel *sel)
 	}
 
 	input_clk = tegra_emc_src[src_value];
-	if (input_clk == tegra_emc_src[TEGRA_EMC_SRC_PLLM]) {
+	if (input_clk == tegra_emc_src[TEGRA_EMC_SRC_PLLM]
+		|| input_clk == tegra_emc_src[TEGRA_EMC_SRC_PLLM_UD]) {
 		input_rate = table->rate * (1 + div_value / 2);
 	} else {
 		input_rate = clk_get_rate(input_clk) / 1000;
@@ -2011,11 +2011,14 @@ static int find_matching_input(struct emc_table *table, struct emc_sel *sel)
 
 	if (input_clk == tegra_emc_src[TEGRA_EMC_SRC_PLLM]) {
 		sel->input_b = tegra_emc_src[TEGRA_EMC_SRC_PLLMB];
-		src_value_b = src_value == TEGRA_EMC_SRC_PLLM_UD ?
-			TEGRA_EMC_SRC_PLLMB_UD : TEGRA_EMC_SRC_PLLMB;
-		sel->value_b = (table->clk_src_emc &
-			~EMC_CLK_EMC_2X_CLK_SRC_MASK) |
-			(src_value_b << EMC_CLK_EMC_2X_CLK_SRC_SHIFT);
+		sel->value_b = table->clk_src_emc & ~EMC_CLK_EMC_2X_CLK_SRC_MASK;
+		sel->value_b |= TEGRA_EMC_SRC_PLLMB << EMC_CLK_EMC_2X_CLK_SRC_SHIFT;
+	}
+
+	if (input_clk == tegra_emc_src[TEGRA_EMC_SRC_PLLM_UD]) {
+		sel->input_b = tegra_emc_src[TEGRA_EMC_SRC_PLLMB_UD];
+		sel->value_b = table->clk_src_emc & ~EMC_CLK_EMC_2X_CLK_SRC_MASK;
+		sel->value_b |= TEGRA_EMC_SRC_PLLMB_UD << EMC_CLK_EMC_2X_CLK_SRC_SHIFT;
 	}
 
 	return 0;

@@ -79,7 +79,10 @@
 		((((val) & 0xFFu) << ((cs) * 8)) |	\
 		((reg) & ~(0xFFu << ((cs) * 8))))
 
+#define QSPI_CS_TIMING1				0x008
 #define QSPI_CS_TIMING2				0x00C
+#define QSPI_CS_TIMING3				0x198
+
 #define CYCLES_BETWEEN_PACKETS_0(x)		(((x) & 0x1F) << 0)
 #define CS_ACTIVE_BETWEEN_PACKETS_0             (1 << 5)
 #define QSPI_SET_CYCLES_BETWEEN_PACKETS(reg, cs, val)		\
@@ -962,12 +965,41 @@ static int tegra_qspi_validate_request(struct spi_device *spi,
 	return 0;
 }
 
+static void tegra_qspi_set_gr_registers(struct spi_device *spi)
+{
+	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
+	char prod_name[MAX_PROD_NAME];
+	if (tqspi->prod_list) {
+		/* If available, initialise the config registers
+		 * for QSPI with the values mentioned in prod list.
+		 */
+		sprintf(prod_name, "prod_c_cs%d", spi->chip_select);
+		if (tegra_prod_set_by_name(&tqspi->base,
+					prod_name, tqspi->prod_list))
+			dev_info(tqspi->dev, "failed to apply prod for qspi\n");
+		else {
+			if (tegra_prod_set_by_name(&tqspi->base,
+					"prod", tqspi->prod_list))
+				dev_info(tqspi->dev, "failed to apply prod for qspi\n");
+			else
+				return;
+		}
+	}
+	/* If NOT defined in prod list or error in applying prod settings,
+	 * then initialise golden registers with POR values.
+	 */
+	tegra_qspi_writel(tqspi, 0, QSPI_COMMAND2);
+	tegra_qspi_writel(tqspi, 0, QSPI_CS_TIMING1);
+	tegra_qspi_writel(tqspi, CS_ACTIVE_BETWEEN_PACKETS_0, QSPI_CS_TIMING2);
+	tegra_qspi_writel(tqspi, 0, QSPI_CS_TIMING3);
+}
+
 static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 		struct spi_transfer *t, bool is_first_of_msg,
 		bool is_single_xfer)
 {
 	struct tegra_qspi_data *tqspi = spi_master_get_devdata(spi->master);
-	u32 speed, qspi_cs_timing2 = 0;
+	u32 speed;
 
 #ifdef QSPI_BRINGUP
 	u32 actual_speed = 0;
@@ -979,7 +1011,6 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 	int req_mode;
 	u8 bus_width = X1, num_dummy_cycles = 0;
 	bool is_ddr = false;
-	char prod_name[MAX_PROD_NAME];
 
 	bits_per_word = t->bits_per_word;
 	tqspi->cur_qspi = spi;
@@ -1098,30 +1129,14 @@ static int tegra_qspi_start_transfer_one(struct spi_device *spi,
 
 	tqspi->command1_reg = command1;
 
-	if (tqspi->prod_list) {
-		sprintf(prod_name, "prod_c_cs%d", spi->chip_select);
-		tegra_prod_set_by_name(&tqspi->base,
-					prod_name, tqspi->prod_list);
-		tegra_prod_set_by_name(&tqspi->base,
-					"prod", tqspi->prod_list);
-	} else {
-		/* Set Default values for Command 2 registers */
-		u32 command2_reg = 0;
-		int rx_tap_delay = 0;
-		int tx_tap_delay = 0;
+	tegra_qspi_set_gr_registers(spi);
 
-		command2_reg = QSPI_RX_TAP_DELAY(rx_tap_delay)
-			| QSPI_TX_TAP_DELAY(tx_tap_delay);
-		tegra_qspi_writel(tqspi, command2_reg, QSPI_COMMAND2);
-	}
 	if (tqspi->dcycle_non_cmbseq_mode) {
 		tqspi->qspi_num_dummy_cycle =
 			QSPI_NUM_DUMMY_CYCLE(num_dummy_cycles);
 	}
 
 	tegra_qspi_writel(tqspi, tqspi->qspi_num_dummy_cycle, QSPI_MISC_REG);
-	qspi_cs_timing2 |= CS_ACTIVE_BETWEEN_PACKETS_0;
-	tegra_qspi_writel(tqspi, qspi_cs_timing2, QSPI_CS_TIMING2);
 
 	if (total_fifo_words > QSPI_FIFO_DEPTH)
 		ret = tegra_qspi_start_dma_based_transfer(tqspi, t);

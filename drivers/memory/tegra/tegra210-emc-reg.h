@@ -14,6 +14,8 @@
 #ifndef _TEGRA210_EMC_REG_H
 #define _TEGRA210_EMC_REG_H
 
+#include <linux/of_platform.h>
+
 #define DVFS_FGCG_HIGH_SPEED_THRESHOLD				1000
 #define IOBRICK_DCC_THRESHOLD					2400
 #define DVFS_FGCG_MID_SPEED_THRESHOLD				600
@@ -2020,5 +2022,9 @@ void emc_set_clock_r21021(struct emc_table *next_timing,
 			  struct emc_table *last_timing,
 			  int training, u32 clksrc);
 u32  __do_periodic_emc_compensation_r21021(struct emc_table *current_timing);
+int tegra_emc_dt_parse_pdata(struct platform_device *pdev,
+			     struct emc_table **tables,
+			     struct emc_table **derated_tables,
+			     int *num_entries);
 
 #endif

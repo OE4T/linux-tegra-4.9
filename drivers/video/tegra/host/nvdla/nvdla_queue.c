@@ -28,6 +28,7 @@
 #include "nvhost_queue.h"
 
 #include "nvdla/nvdla.h"
+#include "nvdla/nvdla_debug.h"
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 

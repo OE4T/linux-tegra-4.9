@@ -43,10 +43,18 @@
 
 /**
  * data structure to keep per DLA engine device data
+ *
+ * @pdev		pointer to platform device
+ * @pool		pointer to queue table
+ * @dbg_mask		debug mask for print level
+ * @en_trace		flag to enable tracing
+ *
  */
 struct nvdla_device {
 	struct platform_device *pdev;
 	struct nvhost_queue_pool *pool;
+	u32 dbg_mask;
+	u32 en_trace;
 };
 
 /**

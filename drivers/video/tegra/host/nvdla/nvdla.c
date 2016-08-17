@@ -37,6 +37,7 @@
 #include "nvhost_queue.h"
 
 #include "nvdla/nvdla.h"
+#include "nvdla/nvdla_debug.h"
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "dla_os_interface.h"
 
@@ -233,8 +234,6 @@ static int nvdla_probe(struct platform_device *pdev)
 		goto err_get_pdata;
 	}
 
-	nvhost_dbg_fn("%s: pdev:%p pdata:%p\n", __func__, pdev, pdata);
-
 	nvdla_dev = devm_kzalloc(dev, sizeof(*nvdla_dev), GFP_KERNEL);
 	if (!nvdla_dev) {
 		err = -ENOMEM;
@@ -265,6 +264,9 @@ static int nvdla_probe(struct platform_device *pdev)
 	if (err)
 		goto err_client_device_init;
 
+	/* create debugfs entries */
+	nvdla_debug_init(pdev);
+
 	if (pdata->flcn_isr)
 		flcn_intr_init(pdev);
 
@@ -274,6 +276,8 @@ static int nvdla_probe(struct platform_device *pdev)
 		err = PTR_ERR(nvdla_dev->pool);
 		goto err_queue_init;
 	}
+
+	nvdla_dbg_info(pdev, "%s: pdata:%p\n", __func__, pdata);
 
 	return 0;
 

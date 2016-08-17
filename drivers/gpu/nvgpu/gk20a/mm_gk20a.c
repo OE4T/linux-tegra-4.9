@@ -89,31 +89,11 @@ void gk20a_mem_end(struct gk20a *g, struct mem_desc *mem)
 	mem->cpu_va = NULL;
 }
 
-static u64 gk20a_mem_get_vidmem_addr(struct gk20a *g, struct mem_desc *mem)
-{
-	struct gk20a_page_alloc *alloc;
-	struct page_alloc_chunk *chunk;
-
-	if (mem && mem->aperture == APERTURE_VIDMEM) {
-		alloc = (struct gk20a_page_alloc *)
-				sg_dma_address(mem->sgt->sgl);
-
-		/* This API should not be used with > 1 chunks */
-		if (alloc->nr_chunks != 1)
-			return 0;
-
-		chunk = list_first_entry(&alloc->alloc_chunks,
-				struct page_alloc_chunk, list_entry);
-		return chunk->base;
-	}
-
-	return 0;
-}
-
 /* WARNING: returns pramin_window_lock taken, complement with pramin_exit() */
-static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
+static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem,
+		struct page_alloc_chunk *chunk, u32 w)
 {
-	u64 bufbase = gk20a_mem_get_vidmem_addr(g, mem);
+	u64 bufbase = chunk->base;
 	u64 addr = bufbase + w * sizeof(u32);
 	u32 hi = (u32)((addr & ~(u64)0xfffff)
 		>> bus_bar0_window_target_bar0_window_base_shift_v());
@@ -124,8 +104,9 @@ static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
 		bus_bar0_window_base_f(hi);
 
 	gk20a_dbg(gpu_dbg_mem,
-			"0x%08x:%08x begin for %p at [%llx,%llx] (sz %zu)",
-			hi, lo, mem, bufbase, bufbase + mem->size, mem->size);
+			"0x%08x:%08x begin for %p,%p at [%llx,%llx] (sz %llx)",
+			hi, lo, mem, chunk, bufbase,
+			bufbase + chunk->length, chunk->length);
 
 	WARN_ON(!bufbase);
 
@@ -140,40 +121,12 @@ static u32 gk20a_pramin_enter(struct gk20a *g, struct mem_desc *mem, u32 w)
 	return lo;
 }
 
-static void gk20a_pramin_exit(struct gk20a *g, struct mem_desc *mem)
+static void gk20a_pramin_exit(struct gk20a *g, struct mem_desc *mem,
+			struct page_alloc_chunk *chunk)
 {
-	gk20a_dbg(gpu_dbg_mem, "end for %p", mem);
+	gk20a_dbg(gpu_dbg_mem, "end for %p,%p", mem, chunk);
 
 	spin_unlock(&g->mm.pramin_window_lock);
-}
-
-u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
-{
-	u32 data = 0;
-
-	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
-		u32 *ptr = mem->cpu_va;
-
-		WARN_ON(!ptr);
-		data = ptr[w];
-#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
-		gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
-#endif
-	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
-		u32 addr = gk20a_pramin_enter(g, mem, w);
-		data = gk20a_readl(g, pram_data032_r(addr / sizeof(u32)));
-		gk20a_pramin_exit(g, mem);
-	} else {
-		WARN_ON("Accessing unallocated mem_desc");
-	}
-
-	return data;
-}
-
-u32 gk20a_mem_rd(struct gk20a *g, struct mem_desc *mem, u32 offset)
-{
-	WARN_ON(offset & 3);
-	return gk20a_mem_rd32(g, mem, offset / sizeof(u32));
 }
 
 /*
@@ -191,22 +144,40 @@ typedef void (*pramin_access_batch_fn)(struct gk20a *g, u32 start, u32 words,
 static inline void pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
 		u32 offset, u32 size, pramin_access_batch_fn loop, u32 **arg)
 {
+	struct gk20a_page_alloc *alloc = NULL;
+	struct page_alloc_chunk *chunk = NULL;
+	u32 byteoff, start_reg, until_end, n;
+
+	alloc = (struct gk20a_page_alloc *)sg_dma_address(mem->sgt->sgl);
+	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
+		if (offset >= chunk->length)
+			offset -= chunk->length;
+		else
+			break;
+	}
+
 	offset /= sizeof(u32);
 
 	while (size) {
-		u32 byteoff = gk20a_pramin_enter(g, mem, offset);
-		u32 start_reg = pram_data032_r(byteoff / sizeof(u32));
-		u32 until_end = SZ_1M - (byteoff & (SZ_1M - 1));
-		u32 n = min(size, until_end);
+		byteoff = gk20a_pramin_enter(g, mem, chunk, offset);
+		start_reg = pram_data032_r(byteoff / sizeof(u32));
+		until_end = SZ_1M - (byteoff & (SZ_1M - 1));
+
+		n = min3(size, until_end, (u32)(chunk->length - offset));
 
 		loop(g, start_reg, n / sizeof(u32), arg);
 
 		/* read back to synchronize accesses */
 		gk20a_readl(g, start_reg);
-		gk20a_pramin_exit(g, mem);
+		gk20a_pramin_exit(g, mem, chunk);
 
 		offset += n / sizeof(u32);
 		size -= n;
+
+		if (n == (chunk->length - offset)) {
+			chunk = list_next_entry(chunk, list_entry);
+			offset = 0;
+		}
 	}
 }
 
@@ -247,6 +218,40 @@ static inline void pramin_access_batch_set(struct gk20a *g, u32 start,
 	}
 }
 
+u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
+{
+	u32 data = 0;
+
+	if (mem->aperture == APERTURE_SYSMEM && !g->mm.force_pramin) {
+		u32 *ptr = mem->cpu_va;
+
+		WARN_ON(!ptr);
+		data = ptr[w];
+#ifdef CONFIG_TEGRA_SIMULATION_PLATFORM
+		gk20a_dbg(gpu_dbg_mem, " %p = 0x%x", ptr + w, data);
+#endif
+	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
+		u32 value;
+		u32 *p = &value;
+
+		pramin_access_batched(g, mem, w * sizeof(u32), sizeof(u32),
+				pramin_access_batch_rd_n, &p);
+
+		data = value;
+
+	} else {
+		WARN_ON("Accessing unallocated mem_desc");
+	}
+
+	return data;
+}
+
+u32 gk20a_mem_rd(struct gk20a *g, struct mem_desc *mem, u32 offset)
+{
+	WARN_ON(offset & 3);
+	return gk20a_mem_rd32(g, mem, offset / sizeof(u32));
+}
+
 void gk20a_mem_rd_n(struct gk20a *g, struct mem_desc *mem,
 		u32 offset, void *dest, u32 size)
 {
@@ -284,11 +289,11 @@ void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
 #endif
 		ptr[w] = data;
 	} else if (mem->aperture == APERTURE_VIDMEM || g->mm.force_pramin) {
-		u32 addr = gk20a_pramin_enter(g, mem, w);
-		gk20a_writel(g, pram_data032_r(addr / sizeof(u32)), data);
-		/* read back to synchronize accesses */
-		gk20a_readl(g, pram_data032_r(addr / sizeof(u32)));
-		gk20a_pramin_exit(g, mem);
+		u32 value = data;
+		u32 *p = &value;
+
+		pramin_access_batched(g, mem, w * sizeof(u32), sizeof(u32),
+				pramin_access_batch_wr_n, &p);
 	} else {
 		WARN_ON("Accessing unallocated mem_desc");
 	}
@@ -3000,7 +3005,7 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 			schedule_work(&g->mm.vidmem_clear_mem_worker);
 		}
 	} else {
-		/* TODO: clear with PRAMIN here */
+		gk20a_memset(g, mem, 0, 0, mem->size);
 		gk20a_free(mem->allocator,
 			   sg_dma_address(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);

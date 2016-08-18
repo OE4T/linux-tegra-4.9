@@ -46,6 +46,7 @@
  * @brief: Driver functions.
  */
 #include "yheader.h"
+#include <linux/tegra_prod.h>
 
 /*!
 * \brief read MII PHY register, function called by the driver alone
@@ -332,7 +333,7 @@ static void eqos_adjust_link(struct net_device *dev)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct phy_device *phydev = pdata->phydev;
 	unsigned long flags;
-	int new_state = 0, speed_changed = 0;
+	int new_state = 0, speed_changed = 0, tx_tristate_disable = 0;
 
 	if (phydev == NULL)
 		return;
@@ -385,6 +386,16 @@ static void eqos_adjust_link(struct net_device *dev)
 			new_state = 1;
 			pdata->oldlink = 1;
 			pdata->xstats.link_connect_count++;
+		if (pdata->prod_list) {
+			if (tegra_prod_set_by_name(
+						&pdata->pads,
+						"tx_tristate_disable",
+						pdata->prod_list)) {
+				dev_info(&pdata->pdev->dev,
+						"failed to disable pad prod settings\n");
+				}
+				tx_tristate_disable = 1;
+			}
 		}
 	} else if (pdata->oldlink) {
 		new_state = 1;
@@ -392,6 +403,15 @@ static void eqos_adjust_link(struct net_device *dev)
 		pdata->speed = 0;
 		pdata->oldduplex = -1;
 		pdata->xstats.link_disconnect_count++;
+		if (pdata->prod_list) {
+			if (tegra_prod_set_by_name(
+						&pdata->pads,
+						"tx_tristate_enable",
+						pdata->prod_list)) {
+				dev_info(&pdata->pdev->dev,
+						"failed to enable pad prod settings\n");
+			}
+		}
 	}
 
 	if (new_state)
@@ -411,6 +431,10 @@ static void eqos_adjust_link(struct net_device *dev)
 		if (pdata->oldspeed == SPEED_10)
 			hw_if->pad_calibrate(pdata);
 		pdata->oldspeed = pdata->speed;
+	}
+	if (tx_tristate_disable) {
+		/* recalibrate once we disable tristate*/
+		hw_if->pad_calibrate(pdata);
 	}
 
 

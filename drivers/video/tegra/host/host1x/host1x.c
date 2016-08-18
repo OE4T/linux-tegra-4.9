@@ -429,6 +429,18 @@ static int nvhost_ioctl_ctrl_get_characteristics(struct nvhost_ctrl_userctx *ctx
 	return err;
 }
 
+static int nvhost_ioctl_ctrl_check_module_support(
+	struct nvhost_ctrl_userctx *ctx,
+	struct nvhost_ctrl_check_module_support_args *args)
+{
+	struct platform_device *pdev =
+		nvhost_device_list_match_by_id(args->module_id);
+
+	args->value = pdev != NULL;
+
+	return 0;
+}
+
 static long nvhost_ctrlctl(struct file *filp,
 	unsigned int cmd, unsigned long arg)
 {
@@ -509,6 +521,9 @@ static long nvhost_ctrlctl(struct file *filp,
 		break;
 	case NVHOST_IOCTL_CTRL_GET_CHARACTERISTICS:
 		err = nvhost_ioctl_ctrl_get_characteristics(priv, (void *)buf);
+		break;
+	case NVHOST_IOCTL_CTRL_CHECK_MODULE_SUPPORT:
+		err = nvhost_ioctl_ctrl_check_module_support(priv, (void *)buf);
 		break;
 	default:
 		err = -ENOIOCTLCMD;

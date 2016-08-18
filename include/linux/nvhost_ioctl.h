@@ -3,7 +3,7 @@
  *
  * Tegra graphics host driver
  *
- * Copyright (c) 2009-2015, NVIDIA Corporation.  All rights reserved.
+ * Copyright (c) 2009-2016, NVIDIA Corporation.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -432,6 +432,11 @@ struct nvhost_ctrl_get_characteristics {
 	__u64 nvhost_characteristics_buf_addr;
 };
 
+struct nvhost_ctrl_check_module_support_args {
+	__u32 module_id;
+	__u32 value;
+};
+
 #define NVHOST_IOCTL_CTRL_SYNCPT_READ		\
 	_IOWR(NVHOST_IOCTL_MAGIC, 1, struct nvhost_ctrl_syncpt_read_args)
 #define NVHOST_IOCTL_CTRL_SYNCPT_INCR		\
@@ -466,9 +471,11 @@ struct nvhost_ctrl_get_characteristics {
 	_IOWR(NVHOST_IOCTL_MAGIC, 13, struct nvhost_ctrl_sync_fence_name_args)
 #define NVHOST_IOCTL_CTRL_GET_CHARACTERISTICS  \
 	_IOWR(NVHOST_IOCTL_MAGIC, 14, struct nvhost_ctrl_get_characteristics)
+#define NVHOST_IOCTL_CTRL_CHECK_MODULE_SUPPORT  \
+	_IOWR(NVHOST_IOCTL_MAGIC, 15, struct nvhost_ctrl_check_module_support_args)
 
 #define NVHOST_IOCTL_CTRL_LAST			\
-	_IOC_NR(NVHOST_IOCTL_CTRL_GET_CHARACTERISTICS)
+	_IOC_NR(NVHOST_IOCTL_CTRL_CHECK_MODULE_SUPPORT)
 #define NVHOST_IOCTL_CTRL_MAX_ARG_SIZE	\
 	sizeof(struct nvhost_ctrl_syncpt_waitmex_args)
 

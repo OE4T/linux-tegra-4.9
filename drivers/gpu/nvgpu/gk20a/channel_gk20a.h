@@ -218,7 +218,7 @@ int gk20a_init_channel_support(struct gk20a *, u32 chid);
 void gk20a_channel_close(struct channel_gk20a *ch);
 
 bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
-					    u32 timeout_delta_ms);
+		u32 timeout_delta_ms, bool *progress);
 void gk20a_disable_channel(struct channel_gk20a *ch);
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt);
 void gk20a_channel_abort_clean_up(struct channel_gk20a *ch);

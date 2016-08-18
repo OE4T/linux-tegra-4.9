@@ -1539,16 +1539,19 @@ static inline u32 gp_free_count(struct channel_gk20a *c)
 }
 
 bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
-		u32 timeout_delta_ms)
+		u32 timeout_delta_ms, bool *progress)
 {
 	u32 gpfifo_get = update_gp_get(ch->g, ch);
+
 	/* Count consequent timeout isr */
 	if (gpfifo_get == ch->timeout_gpfifo_get) {
 		/* we didn't advance since previous channel timeout check */
 		ch->timeout_accumulated_ms += timeout_delta_ms;
+		*progress = false;
 	} else {
 		/* first timeout isr encountered */
 		ch->timeout_accumulated_ms = timeout_delta_ms;
+		*progress = true;
 	}
 
 	ch->timeout_gpfifo_get = gpfifo_get;

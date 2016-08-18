@@ -1814,17 +1814,24 @@ u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 		if (ctx_status ==
 				fifo_engine_status_ctx_status_ctxsw_load_v()) {
 			id = fifo_engine_status_next_id_v(status);
-			is_tsg = fifo_pbdma_status_id_type_v(status)
-				!= fifo_pbdma_status_id_type_chid_v();
+			is_tsg = fifo_engine_status_next_id_type_v(status) !=
+				fifo_engine_status_next_id_type_chid_v();
 		} else if (ctx_status ==
 			       fifo_engine_status_ctx_status_ctxsw_switch_v()) {
 			mailbox2 = gk20a_readl(g, gr_fecs_ctxsw_mailbox_r(2));
-			if (mailbox2 & FECS_METHOD_WFI_RESTORE)
+			if (mailbox2 & FECS_METHOD_WFI_RESTORE) {
 				id = fifo_engine_status_next_id_v(status);
-			else
+				is_tsg = fifo_engine_status_next_id_type_v(status) !=
+					fifo_engine_status_next_id_type_chid_v();
+			} else {
 				id = fifo_engine_status_id_v(status);
+				is_tsg = fifo_engine_status_id_type_v(status) !=
+					fifo_engine_status_id_type_chid_v();
+			}
 		} else {
 			id = fifo_engine_status_id_v(status);
+			is_tsg = fifo_engine_status_id_type_v(status) !=
+				fifo_engine_status_id_type_chid_v();
 		}
 		break;
 	}
@@ -1833,6 +1840,97 @@ u32 gk20a_fifo_get_failing_engine_data(struct gk20a *g,
 	*__is_tsg = is_tsg;
 
 	return active_engine_id;
+}
+
+static bool gk20a_fifo_check_ch_ctxsw_timeout(struct channel_gk20a *ch,
+		bool *verbose, u32 *ms)
+{
+	bool recover = false;
+	bool progress = false;
+
+	if (gk20a_channel_get(ch)) {
+		recover = gk20a_channel_update_and_check_timeout(ch,
+				GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000,
+				&progress);
+		*verbose = ch->timeout_debug_dump;
+		*ms = ch->timeout_accumulated_ms;
+		if (recover)
+			gk20a_set_error_notifier(ch,
+					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+
+		gk20a_channel_put(ch);
+	}
+	return recover;
+}
+
+static bool gk20a_fifo_check_tsg_ctxsw_timeout(struct tsg_gk20a *tsg,
+		bool *verbose, u32 *ms)
+{
+	struct channel_gk20a *ch;
+	bool recover = false;
+	bool progress = false;
+
+	*verbose = false;
+	*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
+
+	mutex_lock(&tsg->ch_list_lock);
+
+	/* check if there was some progress on any of the TSG channels.
+	 * fifo recovery is needed if at least one channel reached the
+	 * maximum timeout without progress (update in gpfifo pointers).
+	 */
+	list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+		if (gk20a_channel_get(ch)) {
+			recover = gk20a_channel_update_and_check_timeout(ch,
+					*ms, &progress);
+			if (progress || recover)
+				break;
+			gk20a_channel_put(ch);
+		}
+	}
+
+	/* if at least one channel in the TSG made some progress, reset
+	 * accumulated timeout for all channels in the TSG. In particular,
+	 * this resets timeout for channels that already completed their work
+	 */
+	if (progress) {
+		gk20a_dbg_info("progress on tsg=%d ch=%d",
+				tsg->tsgid, ch->hw_chid);
+		gk20a_channel_put(ch);
+		*ms = GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000;
+		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+			if (gk20a_channel_get(ch)) {
+				ch->timeout_accumulated_ms = *ms;
+				gk20a_channel_put(ch);
+			}
+		}
+	}
+
+	/* if one channel is presumed dead (no progress for too long), then
+	 * fifo recovery is needed. we can't really figure out which channel
+	 * caused the problem, so set timeout error notifier for all channels.
+	 */
+	if (recover) {
+		gk20a_dbg_info("timeout on tsg=%d ch=%d",
+				tsg->tsgid, ch->hw_chid);
+		*ms = ch->timeout_accumulated_ms;
+		gk20a_channel_put(ch);
+		list_for_each_entry(ch, &tsg->ch_list, ch_entry) {
+			if (gk20a_channel_get(ch)) {
+				gk20a_set_error_notifier(ch,
+					NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+				*verbose |= ch->timeout_debug_dump;
+				gk20a_channel_put(ch);
+			}
+		}
+	}
+
+	/* if we could not detect progress on any of the channel, but none
+	 * of them has reached the timeout, there is nothing more to do:
+	 * timeout_accumulated_ms has been updated for all of them.
+	 */
+	mutex_unlock(&tsg->ch_list_lock);
+	return recover;
 }
 
 static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
@@ -1859,49 +1957,39 @@ static bool gk20a_fifo_handle_sched_error(struct gk20a *g)
 	if (fifo_intr_sched_error_code_f(sched_error) ==
 			fifo_intr_sched_error_code_ctxsw_timeout_v()) {
 		struct fifo_gk20a *f = &g->fifo;
-		struct channel_gk20a *ch = &f->channel[id];
+		u32 ms = 0;
+		bool verbose = false;
 
 		if (is_tsg) {
-			gk20a_channel_timeout_restart_all_channels(g);
-			gk20a_fifo_recover(g, BIT(engine_id), id, true,
-					true, true);
-			ret = true;
-			goto err;
+			ret = gk20a_fifo_check_tsg_ctxsw_timeout(
+					&f->tsg[id], &verbose, &ms);
+		} else {
+			ret = gk20a_fifo_check_ch_ctxsw_timeout(
+					&f->channel[id], &verbose, &ms);
 		}
 
-		if (!gk20a_channel_get(ch))
-			goto err;
-
-		if (gk20a_channel_update_and_check_timeout(ch,
-			GRFIFO_TIMEOUT_CHECK_PERIOD_US / 1000)) {
-			gk20a_set_error_notifier(ch,
-				NVGPU_CHANNEL_FIFO_ERROR_IDLE_TIMEOUT);
+		if (ret) {
 			gk20a_err(dev_from_gk20a(g),
-				"fifo sched ctxsw timeout error:"
-				"engine = %u, ch = %d", engine_id, id);
-			gk20a_gr_debug_dump(g->dev);
+				"fifo sched ctxsw timeout error: "
+				"engine=%u, %s=%d, ms=%u",
+				engine_id, is_tsg ? "tsg" : "ch", id, ms);
 			/*
 			 * Cancel all channels' timeout since SCHED error might
 			 * trigger multiple watchdogs at a time
 			 */
 			gk20a_channel_timeout_restart_all_channels(g);
-			gk20a_fifo_recover(g, BIT(engine_id), id, false,
-				true, ch->timeout_debug_dump);
-			ret = true;
+			gk20a_fifo_recover(g, BIT(engine_id), id,
+					is_tsg, true, verbose);
 		} else {
 			gk20a_dbg_info(
-				"fifo is waiting for ctx switch for %d ms,"
-				"ch = %d\n",
-				ch->timeout_accumulated_ms,
-				id);
-			ret = false;
+				"fifo is waiting for ctx switch for %d ms, "
+				"%s=%d", ms, is_tsg ? "tsg" : "ch", id);
 		}
-		gk20a_channel_put(ch);
-		return ret;
+	} else {
+		gk20a_err(dev_from_gk20a(g),
+			"fifo sched error : 0x%08x, engine=%u, %s=%d",
+			sched_error, engine_id, is_tsg ? "tsg" : "ch", id);
 	}
-
-	gk20a_err(dev_from_gk20a(g), "fifo sched error : 0x%08x, engine=%u, %s=%d",
-		sched_error, engine_id, is_tsg ? "tsg" : "ch", id);
 
 err:
 	return ret;
@@ -1913,7 +2001,7 @@ static u32 fifo_error_isr(struct gk20a *g, u32 fifo_intr)
 	struct device *dev = dev_from_gk20a(g);
 	u32 handled = 0;
 
-	gk20a_dbg_fn("");
+	gk20a_dbg_fn("fifo_intr=0x%08x", fifo_intr);
 
 	if (fifo_intr & fifo_intr_0_pio_error_pending_f()) {
 		/* pio mode is unused.  this shouldn't happen, ever. */

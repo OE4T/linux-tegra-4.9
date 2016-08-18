@@ -217,7 +217,7 @@ static u32 t18x_make_power_state(u32 state)
 
 	if (denver_testmode || a57_testmode)
 		wake_time = 0xFFFFEEEE;
-	state = state | ((wake_time << 4) & PSCI_STATE_ID_WKTIM_MASK);
+	state = state | ((wake_time >> 4) & PSCI_STATE_ID_WKTIM_MASK);
 
 	return state;
 }

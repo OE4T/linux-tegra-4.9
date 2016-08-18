@@ -1555,6 +1555,8 @@ struct eqos_prv_data {
 	int tst_buf_size;
 #endif
 	tegra_isomgr_handle isomgr_handle;
+	struct tegra_prod       *prod_list;
+	void __iomem *pads;
 };
 
 typedef enum {

@@ -61,6 +61,7 @@
 #include <linux/gpio.h>
 #include <linux/delay.h>
 #include <linux/workqueue.h>
+#include <linux/tegra_prod.h>
 
 #define LP_SUPPORTED 0
 static const struct of_device_id eqos_of_match[] = {
@@ -715,7 +716,7 @@ int eqos_probe(struct platform_device *pdev)
 	int tx_irqs[MAX_CHANS];
 	struct hw_if_struct *hw_if = NULL;
 	struct desc_if_struct *desc_if = NULL;
-	struct resource *res;
+	struct resource *res, *pads;
 	const struct of_device_id *match;
 	struct device_node *node = pdev->dev.of_node;
 	u8 mac_addr[6];
@@ -732,7 +733,7 @@ int eqos_probe(struct platform_device *pdev)
 		return -EINVAL;
 
 	/* get base addr */
-	res = platform_get_resource(pdev, IORESOURCE_MEM, 0);
+	res = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eqos_base");
 
 	if (unlikely(res == NULL)) {
 		dev_err(&pdev->dev, "invalid resource\n");
@@ -884,6 +885,12 @@ int eqos_probe(struct platform_device *pdev)
 	}
 	DBGPR("phyirq = %d\n", phyirq);
 
+	pdata->prod_list = devm_tegra_prod_get(&pdev->dev);
+	if (IS_ERR(pdata->prod_list)) {
+		dev_info(&pdev->dev, "No prod values found\n");
+		pdata->prod_list = NULL;
+	}
+
 	/* calibrate pad */
 	ret = hw_if->pad_calibrate(pdata);
 	if (ret < 0)
@@ -950,6 +957,18 @@ int eqos_probe(struct platform_device *pdev)
 	get_dt_u32(pdata, "nvidia,eth_iso_enable", &pdt_cfg->eth_iso_enable, 0,
 		1);
 
+	pads = platform_get_resource_byname(pdev, IORESOURCE_MEM, "eqos_pads");
+	pdata->pads = devm_ioremap_nocache(&pdev->dev, pads->start,
+			resource_size(pads));
+	if (!(pdata->pads)) {
+		dev_err(pdata->dev, "Failed to map PAD registers\n");
+		return -EADDRNOTAVAIL;
+	}
+	if (tegra_prod_set_by_name(&pdata->pads, "tx_tristate_enable",
+						pdata->prod_list)) {
+		dev_info(&pdata->pdev->dev,
+				"failed to enable pad prod settings\n");
+	}
 	pdata->num_chans = num_chans;
 	pdata->rx_buffer_len = EQOS_RX_BUF_LEN;
 	pdata->rx_max_frame_size = EQOS_MAX_ETH_FRAME_LEN_DEFAULT;

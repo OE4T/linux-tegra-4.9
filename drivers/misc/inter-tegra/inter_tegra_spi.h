@@ -36,6 +36,7 @@ enum {
 struct inter_tegra_data {
 	struct spi_device *spi;
 	struct mutex mutex;
+	int err_log_enable;
 
 	int is_master;
 	const char *send_tz_type;

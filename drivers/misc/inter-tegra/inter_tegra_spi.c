@@ -27,6 +27,14 @@
 
 #define RX_RETRY_CNT_MAX 3
 
+#define dev_inter_tegra_err(err_enable, dev, format, arg...)		\
+({								\
+	if (err_enable)						\
+		dev_err(dev, format, ##arg);	\
+	else							\
+		dev_info(dev, format, ##arg);	\
+})
+
 static int inter_tegra_spi_xfer(struct spi_device *spi,
 			u8 *txbuf, u8 *rxbuf, int count, int timeout)
 {
@@ -81,7 +89,9 @@ inter_tegra_send(struct inter_tegra_data *inter_tegra, int type)
 		txbuf.pkt_data.value = inter_tegra->tx_temp;
 		break;
 	default:
-		dev_err(&inter_tegra->spi->dev, "cmd err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev,
+			"cmd err!\n");
 		return -1;
 	}
 	txbuf.len = sizeof(txbuf.pkt_data);
@@ -92,19 +102,25 @@ inter_tegra_send(struct inter_tegra_data *inter_tegra, int type)
 					(u8 *)&txbuf, (u8 *)&rxbuf,
 					pkt_length, 0);
 	if (err) {
-		dev_err(&inter_tegra->spi->dev, "tx spi err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev,
+			"tx spi err!\n");
 		return -1;
 	}
 
 	if (rxbuf.head != HEAD || rxbuf.cmd != CMD_SUCCESS) {
-		dev_err(&inter_tegra->spi->dev, "tx receive packet err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev,
+			"tx receive packet err!\n");
 		return -1;
 	}
 
 	rx_check_sum = make_checksum(&rxbuf.pkt_data, sizeof(rxbuf.pkt_data));
 
 	if (rxbuf.check_sum != rx_check_sum) {
-		dev_err(&inter_tegra->spi->dev, "tx receive checksum err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev,
+			"tx receive checksum err!\n");
 		return -1;
 	}
 	return 0;
@@ -136,19 +152,24 @@ inter_tegra_receive(struct inter_tegra_data *inter_tegra)
 					pkt_length,
 					inter_tegra->receive_timeout_ms);
 	if (err) {
-		dev_err(&inter_tegra->spi->dev, "rx spi err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev, "rx spi err!\n");
 		return -1;
 	}
 
 	if (rxbuf.head != HEAD) {
-		dev_err(&inter_tegra->spi->dev, "rx receive packet err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev,
+			"rx receive packet err!\n");
 		return -1;
 	}
 
 	rx_check_sum = make_checksum(&rxbuf.pkt_data, sizeof(rxbuf.pkt_data));
 
 	if (rxbuf.check_sum != rx_check_sum) {
-		dev_err(&inter_tegra->spi->dev, "rx receive checksum err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev,
+			"rx receive checksum err!\n");
 		return -1;
 	}
 
@@ -157,7 +178,9 @@ inter_tegra_receive(struct inter_tegra_data *inter_tegra)
 		inter_tegra->rx_temp = rxbuf.pkt_data.value;
 		break;
 	default:
-		dev_err(&inter_tegra->spi->dev, "cmd err!\n");
+		dev_inter_tegra_err(inter_tegra->err_log_enable,
+			&inter_tegra->spi->dev,
+			"cmd err!\n");
 		return -1;
 	}
 	return 0;
@@ -181,11 +204,11 @@ static int inter_tegra_read_thread(void *data)
 
 		if (inter_tegra->rx_retry_cnt >= RX_RETRY_CNT_MAX) {
 			inter_tegra->rx_temp = 0;
-			dev_err(&inter_tegra->spi->dev,
-				"spi receive failed over %d times\n",
+			dev_inter_tegra_err(inter_tegra->err_log_enable,
+				&inter_tegra->spi->dev,
+				"spi receive failed over %d times\n"
+				"reset rx_temp to zero\n",
 				RX_RETRY_CNT_MAX);
-			dev_err(&inter_tegra->spi->dev,
-				"reset rx_temp to zero\n");
 		}
 	}
 	return 0;
@@ -252,6 +275,38 @@ static struct thermal_zone_of_device_ops inter_tegra_rx_ops = {
 	.get_trend = NULL,
 };
 
+static ssize_t err_log_enable_show(struct device *dev,
+	struct device_attribute *attr, char *buf)
+{
+	struct inter_tegra_data *inter_tegra = dev_get_drvdata(dev);
+
+	return sprintf(buf, "%d\n", inter_tegra->err_log_enable);
+}
+
+static ssize_t err_log_enable_store(struct device *dev,
+			struct device_attribute *attr,
+			const char *buf, size_t count)
+{
+	struct inter_tegra_data *inter_tegra = dev_get_drvdata(dev);
+	bool is_enable = false;
+	int ret;
+
+	ret = strtobool(buf, &is_enable);
+	if (ret)
+		return ret;
+
+	if (is_enable) {
+		inter_tegra->err_log_enable = 1;
+	} else {
+		inter_tegra->err_log_enable = 0;
+	}
+
+	return count;
+}
+
+static DEVICE_ATTR(err_log_enable, (S_IRUGO | (S_IWUSR | S_IWGRP)),
+		err_log_enable_show, err_log_enable_store);
+
 static ssize_t send_enable_show(struct device *dev,
 	struct device_attribute *attr, char *buf)
 {
@@ -298,6 +353,7 @@ static DEVICE_ATTR(send_enable, (S_IRUGO | (S_IWUSR | S_IWGRP)),
 
 static struct attribute *inter_tegra_tx_attributes[] = {
 	&dev_attr_send_enable.attr,
+	&dev_attr_err_log_enable.attr,
 	NULL
 };
 
@@ -364,6 +420,7 @@ static DEVICE_ATTR(receive_enable, (S_IRUGO | (S_IWUSR | S_IWGRP)),
 
 static struct attribute *inter_tegra_rx_attributes[] = {
 	&dev_attr_receive_enable.attr,
+	&dev_attr_err_log_enable.attr,
 	NULL
 };
 
@@ -400,6 +457,8 @@ static int inter_tegra_spi_probe(struct spi_device *spi)
 	}
 
 	spi_set_drvdata(spi, inter_tegra);
+
+	inter_tegra->err_log_enable = 0;
 
 	if (of_property_read_bool(np, "is-master"))
 		inter_tegra->is_master = 1;

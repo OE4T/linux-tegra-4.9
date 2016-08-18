@@ -2124,6 +2124,8 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 	if (!buf->mem)
 		goto err_kfree;
 
+	buf->mem->user_mem = true;
+
 	err = gk20a_gmmu_alloc_vid(g, bytes, buf->mem);
 	if (err)
 		goto err_memfree;
@@ -2962,6 +2964,7 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 
 	mem->size = size;
 	mem->aperture = APERTURE_VIDMEM;
+	mem->allocator = vidmem_alloc;
 
 	INIT_LIST_HEAD(&mem->clear_list_entry);
 
@@ -2985,15 +2988,25 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 #if defined(CONFIG_GK20A_VIDMEM)
 	bool was_empty;
 
-	mutex_lock(&g->mm.vidmem.clear_list_mutex);
-	was_empty = list_empty(&g->mm.vidmem.clear_list_head);
-	list_add_tail(&mem->clear_list_entry,
-		      &g->mm.vidmem.clear_list_head);
-	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
+	if (mem->user_mem) {
+		mutex_lock(&g->mm.vidmem.clear_list_mutex);
+		was_empty = list_empty(&g->mm.vidmem.clear_list_head);
+		list_add_tail(&mem->clear_list_entry,
+			      &g->mm.vidmem.clear_list_head);
+		mutex_unlock(&g->mm.vidmem.clear_list_mutex);
 
-	if (was_empty) {
-		cancel_work_sync(&g->mm.vidmem_clear_mem_worker);
-		schedule_work(&g->mm.vidmem_clear_mem_worker);
+		if (was_empty) {
+			cancel_work_sync(&g->mm.vidmem_clear_mem_worker);
+			schedule_work(&g->mm.vidmem_clear_mem_worker);
+		}
+	} else {
+		/* TODO: clear with PRAMIN here */
+		gk20a_free(mem->allocator,
+			   sg_dma_address(mem->sgt->sgl));
+		gk20a_free_sgtable(&mem->sgt);
+
+		mem->size = 0;
+		mem->aperture = APERTURE_INVALID;
 	}
 #endif
 }
@@ -3040,7 +3053,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 
 	while ((mem = get_pending_mem_desc(mm)) != NULL) {
 		gk20a_gmmu_clear_vidmem_mem(g, mem);
-		gk20a_free(&g->mm.vidmem.allocator,
+		gk20a_free(mem->allocator,
 			   sg_dma_address(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);
 

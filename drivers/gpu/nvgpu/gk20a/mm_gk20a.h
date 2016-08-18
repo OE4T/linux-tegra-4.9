@@ -71,6 +71,8 @@ struct mem_desc {
 	size_t size;
 	u64 gpu_va;
 	bool fixed; /* vidmem only */
+	bool user_mem; /* vidmem only */
+	struct gk20a_allocator *allocator; /* vidmem only */
 	struct list_head clear_list_entry; /* vidmem only */
 };
 

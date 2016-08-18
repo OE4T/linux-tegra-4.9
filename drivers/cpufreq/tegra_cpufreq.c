@@ -194,7 +194,7 @@ static inline void busyloop_udelay(unsigned long usecs)
 		continue;
 }
 
-static void tegra_cpu_spin(void *arg)
+static void notrace tegra_cpu_spin(void *arg)
 {
 	struct tegra_cpu_ctr *c = arg;
 	unsigned long flags;

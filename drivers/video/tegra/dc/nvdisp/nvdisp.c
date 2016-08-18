@@ -872,8 +872,9 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 								syncpt_name);
 
 		/* allocate input LUT memory and assign to HW */
-		if (nvdisp_alloc_input_lut(dc, win, true))
-			goto INIT_ERR;
+		ret = nvdisp_alloc_input_lut(dc, win, true);
+		if (ret)
+			goto INIT_LUT_ERR;
 	}
 
 	/* Assign powergate id for each partition*/
@@ -887,10 +888,11 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 #ifdef CONFIG_TEGRA_ISOMGR
 	if (!tegra_platform_is_vdk()) {
 		/* Register with isomgr */
-		if (tegra_nvdisp_isomgr_register(TEGRA_ISO_CLIENT_DISP_0,
-			tegra_dc_calc_min_bandwidth(dc))) {
+		ret = tegra_nvdisp_isomgr_register(TEGRA_ISO_CLIENT_DISP_0,
+			tegra_dc_calc_min_bandwidth(dc));
+		if (ret) {
 			dev_err(&dc->ndev->dev, "could not register isomgr\n");
-			goto INIT_ERR;
+			goto INIT_ISOMGR_ERR;
 		}
 	}
 #endif
@@ -898,17 +900,17 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 	dc->valid_windows = 0;
 	goto INIT_EXIT;
 
-INIT_ERR:
 #ifdef CONFIG_TEGRA_ISOMGR
+INIT_ISOMGR_ERR:
 	if (!tegra_platform_is_vdk())
 		tegra_nvdisp_isomgr_unregister();
 #endif
-
+INIT_LUT_ERR:
 	for (i = 0; i < DC_N_WINDOWS; ++i) {
 		struct tegra_dc_lut *lut;
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
-		/* Allocate the memory for Input LUT & fb LUT*/
+		/* Free the memory for Input LUT & fb LUT*/
 		lut = &win->lut;
 		if (lut->rgb)
 			dma_free_coherent(&dc->ndev->dev, lut->size,

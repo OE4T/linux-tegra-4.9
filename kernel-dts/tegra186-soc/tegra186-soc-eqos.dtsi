@@ -37,7 +37,9 @@
 / {
         ether_qos@2490000 {
                 compatible = "nvidia,eqos";
-                reg = <0x0 0x02490000 0x0 0x10000>;
+                reg = <0x0 0x02490000 0x0 0x10000        /* EQOS Base Register */
+		       0x0 0x02439000 0x0 0x00000074>;   /* PADS registers */
+		reg-names = "eqos_base", "eqos_pads";
 		interrupts = 	<0 194 0x4>,	/* common */
 				<0 195 0x4>,	/* power */
 				<0 190 0x4>,	/* rx0 */

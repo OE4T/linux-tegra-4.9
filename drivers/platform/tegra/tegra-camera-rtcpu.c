@@ -714,8 +714,16 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto fail;
 
 	tegra_camrtc_log_fw_version(dev);
-	tegra_cam_rtcpu_runtime_suspend(dev); /* default state is suspended */
-	pm_runtime_enable(dev);
+
+	/*
+	 * For now, only SCE supports runtime PM
+	 * until APE HSP interrupt issue is fixed.
+	 */
+	if (cam_rtcpu->rtcpu_pdata->id != TEGRA_CAM_RTCPU_APE) {
+		/* default state is suspended */
+		tegra_cam_rtcpu_runtime_suspend(dev);
+		pm_runtime_enable(dev);
+	}
 
 	dev_dbg(dev, "probe successful\n");
 
@@ -729,6 +737,10 @@ fail:
 static int tegra_cam_rtcpu_resume(struct device *dev)
 {
 	int ret;
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+
+        if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_APE)
+		return 0; /* do nothing */
 
 	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
 	if (ret) {

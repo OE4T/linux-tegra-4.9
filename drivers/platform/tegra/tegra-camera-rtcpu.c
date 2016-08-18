@@ -765,21 +765,23 @@ static int tegra_cam_rtcpu_suspend(struct device *dev)
 		return -EIO;
 	}
 
-	/* Poll for WFI assert.*/
-	while (1) {
-		reg_val = readl(cam_rtcpu->rtcpu_sce.sce_pm_base +
-				TEGRA_SCEPM_PWR_STATUS_0);
+	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
+		/* Poll for WFI assert.*/
+		while (1) {
+			reg_val = readl(cam_rtcpu->rtcpu_sce.sce_pm_base +
+					TEGRA_SCEPM_PWR_STATUS_0);
 
-		if ((reg_val & TEGRA_SCEPM_WFIPIPESTOPPED) == 0)
-			break;
+			if ((reg_val & TEGRA_SCEPM_WFIPIPESTOPPED) == 0)
+				break;
 
-		if (!timeout) {
-			dev_err(dev, "failed to suspend rtcpu\n");
-			return -EBUSY;
+			if (!timeout) {
+				dev_err(dev, "failed to suspend rtcpu\n");
+				return -EBUSY;
+			}
+
+			msleep(delay_stride);
+			timeout -= delay_stride;
 		}
-
-		msleep(delay_stride);
-		timeout -= delay_stride;
 	}
 
 	/* If standbyWFI is asserted, proceed for SC7 */

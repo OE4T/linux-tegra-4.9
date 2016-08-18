@@ -360,6 +360,15 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 
 	cur_cl = get_cpu_cluster(cpu);
 	vhtbl = &tfreq_data.pcluster[cur_cl].dvfs_tbl;
+
+	/*
+	 * LUT for this cluster is not present.
+	 * Could be single cluster or n cluster chip but for <cur_cl>,
+	 * current cluster LUT is not sent by BPMP.
+	 */
+	if (!vhtbl->lut)
+		goto out;
+
 	rate *= vhtbl->pdiv * vhtbl->mdiv;
 	ndiv = (rate * KHZ_TO_HZ) / vhtbl->ref_clk_hz;
 	if ((rate * KHZ_TO_HZ) % vhtbl->ref_clk_hz)
@@ -384,6 +393,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 
 	tcpufreq_writel(val, tfreq_data.pcluster[cur_cl].edvd_pub +
 		EDVD_CL_NDIV_VHINT_OFFSET, phy_cpu);
+out:
 	spin_unlock_irqrestore(slock, flags);
 }
 
@@ -610,6 +620,15 @@ static int show_bpmp_to_cpu_lut(struct seq_file *s, void *data)
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vht = &tfreq_data.pcluster[cl].dvfs_tbl;
+
+		/*
+		 * LUT for this cluster is not present.
+		 * Could be single cluster or n cluster chip but for <cl>,
+		 * current cluster, LUT is not sent by BPMP.
+		 */
+		if (!vht->lut)
+			continue;
+
 		seq_printf(s, "%s:\n", CLUSTER_STR(cl));
 		dump_lut(s, vht);
 	}
@@ -1071,6 +1090,17 @@ static int __init init_freqtbls(struct device_node *dn)
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
 
+		/*
+		 * LUT for this cluster is not present.
+		 * Could be single cluster or n cluster chip but for <cl>,
+		 * current cluster, LUT is not sent by BPMP.
+		 */
+		if (!vhtbl->lut) {
+			pr_warn("%s: cluster %d has no LUT\n",
+				__func__, cl);
+			continue;
+		}
+
 		delta_ndiv = vhtbl->ndiv_max - vhtbl->ndiv_min;
 		if (unlikely(delta_ndiv == 0))
 			max_freq_steps = 1;
@@ -1124,6 +1154,18 @@ static int __init create_ndiv_to_vindex_table(void)
 		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
 
 		lut = vhtbl->lut;
+
+		/*
+		 * LUT for this cluster is not present.
+		 * Could be single cluster or n cluster chip but for <cl>,
+		 * current cluster, LUT is not sent by BPMP.
+		 */
+		if (!lut) {
+			pr_warn("%s: cluster %d has no LUT\n",
+				__func__, cl);
+			continue;
+		}
+
 		vhtbl->vindx = kzalloc(sizeof(uint8_t) * MAX_NDIV,
 				GFP_KERNEL);
 		if (!vhtbl->vindx) {
@@ -1196,6 +1238,8 @@ static int __init get_lut_from_bpmp(void)
 				__func__, cl, ret);
 			tegra_bpmp_free_coherent(size, vhtbl->lut,
 					vhtbl->phys);
+			vhtbl->lut = 0;
+			vhtbl->phys = 0;
 		} else
 			ok = true;
 	}

@@ -606,7 +606,7 @@ static int gk20a_channel_semaphore_wait_fd(
 #else
 	status = atomic_read(&sync_fence->status);
 #endif
-	if (status) {
+	if (status == 0) {
 		sync_fence_put(sync_fence);
 		goto skip_slow_path;
 	}

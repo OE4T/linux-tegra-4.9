@@ -501,7 +501,8 @@ static void __init serial8250_isa_init_ports(void)
 {
 	struct uart_8250_port *up;
 	static int first = 1;
-	int i, irqflag = 0;
+	unsigned int i;
+	int irqflag = 0;
 
 	if (!first)
 		return;

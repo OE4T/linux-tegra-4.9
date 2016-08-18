@@ -230,6 +230,12 @@ config TEGRA_DSI2LVDS_SN65DSI85
 	help
 	  Say Y here to enable the DSI2LVDS TI SN65DSI85 adapter.
 
+config TEGRA_LVDS2FPDL_DS90UB947
+	bool "DS90UB947-Q1 1080p OpenLDS to FPD-Link III Serializer driver"
+	default n
+	help
+		Enable support for TI DS90UB947-Q1 LVDS-to-FPD-Link Serializer driver.
+
 config TEGRA_DP
 	bool "Enable eDP panel."
 	default  y

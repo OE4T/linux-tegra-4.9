@@ -25,7 +25,7 @@
 #include <linux/debugfs.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
-#include "../../../display/drivers/video/tegra/dc/dsi.h"
+#include "dsi.h"
 
 #define DEV_NAME "ds90ub947-q1"
 #define	DS90UB947_GENERAL_STATUS	0x0C
@@ -111,7 +111,6 @@ static int ds90ub947_init(struct ds90ub947_data *data)
 		}
 	}
 	mutex_unlock(&data->lock);
-	pr_info("%s: returning %d\n", __func__, ret);
 	return ret;
 }
 

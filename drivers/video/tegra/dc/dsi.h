@@ -485,7 +485,7 @@ extern struct tegra_dsi_out_ops tegra_dsi2lvds_ops;
 #define tegra_dsi2lvds_ops (*(struct tegra_dsi_out_ops *)NULL)
 #endif
 
-#if defined(CONFIG_DS90UB947)
+#if defined(CONFIG_TEGRA_LVDS2FPDL_DS90UB947)
 extern bool ds90ub947_lvds2fpdlink3_detect(struct tegra_dc *dc);
 #endif
 

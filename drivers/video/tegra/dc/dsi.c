@@ -5880,13 +5880,13 @@ bool tegra_dc_dsi_detect(struct tegra_dc *dc)
 {
 	bool	result = true;
 
-#if defined(CONFIG_DS90UB947)
+#if defined(CONFIG_TEGRA_LVDS2FPDL_DS90UB947)
 	/* DrivePX2: DSI->sn65dsi85(LVDS)->ds90ub947(FPDLink) */
 	struct tegra_dc_dsi_data	*dsi = tegra_dc_get_outdata(dc);
 
 	if (dsi->info.dsi2lvds_bridge_enable)
 		result = ds90ub947_lvds2fpdlink3_detect(dc);
-#endif /*defined(CONFIG_DS90UB947)*/
+#endif /*defined(CONFIG_TEGRA_LVDS2FPDL_DS90UB947)*/
 	return result;
 }
 

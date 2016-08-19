@@ -94,6 +94,39 @@ static int tegra_bpmp_thermal_get_temp(void *data, temp_t *out_temp)
 	return 0;
 }
 
+static int tegra_bpmp_thermal_get_trend(void *data, int trip,
+		enum thermal_trend *trend)
+{
+	struct tegra_bpmp_thermal_zone *zone = data;
+	int ret;
+	temp_t trip_temp, temp, last_temp;
+
+	if (!zone->tzd)
+		return -ENODEV;
+
+	ret = zone->tzd->ops->get_trip_temp(zone->tzd, trip, &trip_temp);
+	if (ret)
+		return ret;
+
+	mutex_lock(&zone->tzd->lock);
+	temp = zone->tzd->temperature;
+	last_temp = zone->tzd->last_temperature;
+	mutex_unlock(&zone->tzd->lock);
+
+	if (temp > trip_temp) {
+		if (temp >= last_temp)
+			*trend = THERMAL_TREND_RAISING;
+		else
+			*trend = THERMAL_TREND_STABLE;
+	} else if (temp < trip_temp)
+		*trend = THERMAL_TREND_DROPPING;
+	else
+		*trend = THERMAL_TREND_STABLE;
+
+	return 0;
+}
+
+
 static int tegra_bpmp_thermal_program_trips(int zone, int low, int high)
 {
 	struct mrq_thermal_host_to_bpmp_request req;
@@ -280,6 +313,7 @@ static int tegra_bpmp_thermal_abi_probe(void)
 static sensor_ops_t tegra_of_thermal_ops = {
 	.get_temp = tegra_bpmp_thermal_get_temp,
 	.trip_update = tegra_bpmp_thermal_trip_update,
+	.get_trend = tegra_bpmp_thermal_get_trend,
 };
 
 static const struct of_device_id tegra_bpmp_thermal_of_match[] = {

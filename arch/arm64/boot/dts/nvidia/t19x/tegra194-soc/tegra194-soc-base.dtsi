@@ -160,14 +160,6 @@
 		status = "disabled";
 	};
 
-	tegra_car: clock@5000000 {
-		compatible = "nvidia,tegra18x-car";
-		reg = <0x0 0x05000000 0x0 0x01000000>;
-		#clock-cells = <1>;
-		#reset-cells = <1>;
-		status = "disabled";
-	};
-
 	host1x: host1x {
 		compatible = "nvidia,tegra194-host1x", "simple-bus";
 		reg = <0x0 0x13e10000 0x0 0x00010000

@@ -2901,6 +2901,8 @@ static int lr388k7_dev_pm_suspend(struct device *dev)
 		 * /sys/class/input/input0/enabled interface.
 		 * Android uses sysfs by default and will not run into here
 		 */
+		if (!g_st_dbg.wakeup.enable)
+			disable_irq(ts->irq);
 		lr388k7_suspend(ts);
 #if defined(CONFIG_ANDROID)
 		dev_info(ts->dev, "disabled without input powerhal support.\n");
@@ -2922,6 +2924,8 @@ static int lr388k7_dev_pm_resume(struct device *dev)
 		 * Android uses sysfs by default and will not run into here
 		 */
 		lr388k7_resume(ts);
+		if (!g_st_dbg.wakeup.enable)
+			enable_irq(ts->irq);
 #if defined(CONFIG_ANDROID)
 		dev_info(ts->dev, "enabled without input powerhal support.\n");
 #endif

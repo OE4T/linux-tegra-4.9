@@ -187,6 +187,16 @@ unsigned long tegra_bwmgr_get_max_emc_rate(void)
 }
 EXPORT_SYMBOL_GPL(tegra_bwmgr_get_max_emc_rate);
 
+/* Returns the actual emc frequency calculated using the dram
+ * frequency and emc_to_dram conversion factor
+ */
+unsigned long tegra_bwmgr_get_core_emc_rate(void)
+{
+	return (unsigned long)(tegra_bwmgr_get_emc_rate() /
+		bwmgr_get_emc_to_dram_freq_factor());
+}
+EXPORT_SYMBOL_GPL(tegra_bwmgr_get_core_emc_rate);
+
 unsigned long tegra_bwmgr_round_rate(unsigned long bw)
 {
 	if (bwmgr.emc_clk)
@@ -380,6 +390,7 @@ static struct dentry *debugfs_node_iso_bw;
 static struct dentry *debugfs_node_emc_rate;
 static struct dentry *debugfs_node_emc_min;
 static struct dentry *debugfs_node_emc_max;
+static struct dentry *debugfs_node_core_emc_rate;
 static struct dentry *debugfs_node_clients_info;
 
 /* keep in sync with tegra_bwmgr_client_id */
@@ -437,6 +448,15 @@ static int bwmgr_debugfs_emc_rate_get(void *data, u64 *val)
 
 DEFINE_SIMPLE_ATTRIBUTE(fops_debugfs_emc_rate, bwmgr_debugfs_emc_rate_get,
 		bwmgr_debugfs_emc_rate_set, "%llu\n");
+
+static int bwmgr_debugfs_core_emc_rate_get(void *data, u64 *val)
+{
+	*val = tegra_bwmgr_get_core_emc_rate();
+	return 0;
+}
+
+DEFINE_SIMPLE_ATTRIBUTE(fops_debugfs_core_emc_rate,
+	bwmgr_debugfs_core_emc_rate_get, NULL, "%llu\n");
 
 static int bwmgr_debugfs_floor_set(void *data, u64 val)
 {
@@ -573,6 +593,9 @@ static void bwmgr_debugfs_init(void)
 		debugfs_node_emc_max = debugfs_create_u64(
 			"emc_max_rate", S_IRUSR, debugfs_dir,
 			(u64 *) &bwmgr.emc_max_rate);
+		debugfs_node_core_emc_rate = debugfs_create_file(
+			"core_emc_rate", S_IRUSR, debugfs_dir, NULL,
+			 &fops_debugfs_core_emc_rate);
 		debugfs_node_emc_rate = debugfs_create_file
 			("emc_rate", S_IRUSR, debugfs_dir, NULL,
 			 &fops_debugfs_emc_rate);

@@ -32,6 +32,8 @@
 	(has_s_op(master, op) ? \
 	 master->ops->op(master, __VA_ARGS__) : 0)
 
+#define HDR_ENABLE		0x1
+
 static const struct camera_common_colorfmt camera_common_color_fmts[] = {
 	{
 		MEDIA_BUS_FMT_SRGGB12_1X12,
@@ -421,6 +423,30 @@ int camera_common_enum_fmt(struct v4l2_subdev *sd, unsigned int index,
 }
 EXPORT_SYMBOL_GPL(camera_common_enum_fmt);
 
+static void select_mode(struct camera_common_data *s_data,
+			struct v4l2_mbus_framefmt *mf,
+			unsigned int mode_type)
+{
+	int i;
+	const struct camera_common_frmfmt *frmfmt = s_data->frmfmt;
+	bool flag = 0;
+
+	for (i = 0; i < s_data->numfmts; i++) {
+		if (mode_type & HDR_ENABLE)
+			flag = !frmfmt[i].hdr_en;
+		/* Add more flags for different controls as needed */
+
+		if (flag)
+			continue;
+
+		if (mf->width == frmfmt[i].size.width &&
+			mf->height == frmfmt[i].size.height) {
+			s_data->mode = frmfmt[i].mode;
+			break;
+		}
+	}
+}
+
 int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -428,7 +454,7 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 	struct tegra_channel *chan = v4l2_get_subdev_hostdata(sd);
 	struct v4l2_control hdr_control;
 	const struct camera_common_frmfmt *frmfmt = s_data->frmfmt;
-	int hdr_en;
+	unsigned int mode_type = 0;
 	int err = 0;
 	int i;
 
@@ -444,7 +470,8 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		return err;
 	}
 
-	hdr_en = switch_ctrl_qmenu[hdr_control.value];
+	/* mode_type can be filled in sensor driver */
+	mode_type |= switch_ctrl_qmenu[hdr_control.value] ? HDR_ENABLE : 0;
 
 	s_data->mode = s_data->def_mode;
 	s_data->fmt_width = s_data->def_width;
@@ -459,10 +486,10 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 		s_data->fmt_width = mf->width;
 		s_data->fmt_height = mf->height;
 	} else {
+		/* select mode based on format match first */
 		for (i = 0; i < s_data->numfmts; i++) {
 			if (mf->width == frmfmt[i].size.width &&
-				mf->height == frmfmt[i].size.height &&
-				hdr_en == frmfmt[i].hdr_en) {
+				mf->height == frmfmt[i].size.height) {
 				s_data->mode = frmfmt[i].mode;
 				s_data->fmt_width = mf->width;
 				s_data->fmt_height = mf->height;
@@ -476,12 +503,17 @@ int camera_common_try_fmt(struct v4l2_subdev *sd, struct v4l2_mbus_framefmt *mf)
 			dev_dbg(&client->dev,
 				"%s: invalid resolution supplied to set mode %d %d\n",
 				__func__, mf->width, mf->height);
+			goto verify_code;
 		}
+		/* update mode based on special mode types */
+		if (mode_type)
+			select_mode(s_data, mf, mode_type);
 	}
 
 	if (!camera_common_verify_code(chan, mf->code))
 		err = -EINVAL;
 
+verify_code:
 	mf->field = V4L2_FIELD_NONE;
 	mf->colorspace = V4L2_COLORSPACE_SRGB;
 	mf->xfer_func = V4L2_XFER_FUNC_DEFAULT;

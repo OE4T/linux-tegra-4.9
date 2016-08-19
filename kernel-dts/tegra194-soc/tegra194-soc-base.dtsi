@@ -18,6 +18,7 @@
  *
  */
 
+#include <dt-bindings/clock/tegra194-clock.h>
 #include "dt-bindings/display/tegra-dc.h"
 #include "dt-bindings/interrupt/tegra186-irq.h"
 #include "dt-bindings/clock/tegra186-clock.h"
@@ -57,6 +58,13 @@
 			      1 11 0xf01
 			      1 10 0xf01>;
 		status = "disabled";
+	};
+
+	bpmp_clks: clock@0 {
+		compatible = "nvidia,tegra-fake-clks";
+		reg = <0x0>;
+		#clock-cells = <1>;
+		status = "okay";
 	};
 
 	rtc@c2a0000 {

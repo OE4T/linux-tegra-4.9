@@ -36,7 +36,6 @@
 #include <linux/pm_runtime.h>
 #include <linux/tegra-powergate.h>
 #include <linux/tegra_pm_domains.h>
-#include <linux/reset.h>
 
 #include <sound/core.h>
 #include <sound/initval.h>
@@ -90,11 +89,6 @@ struct hda_tegra {
 	int partition_id;
 	void __iomem *regs;
 	struct work_struct probe_work;
-#if defined(CONFIG_COMMON_CLK)
-	struct reset_control *hda_rst;
-	struct reset_control *hda2codec_2x_rst;
-	struct reset_control *hda2hdmi_rst;
-#endif
 	bool is_power_on;
 };
 
@@ -245,12 +239,6 @@ static int hda_tegra_enable_clocks(struct hda_tegra *hda)
 #endif
 		hda->is_power_on = true;
 	}
-
-#if defined(CONFIG_COMMON_CLK)
-	reset_control_reset(hda->hda_rst);
-	reset_control_reset(hda->hda2codec_2x_rst);
-	reset_control_reset(hda->hda2hdmi_rst);
-#endif
 
 	rc = clk_prepare_enable(hda->hda_clk);
 	if (rc)
@@ -416,33 +404,6 @@ static int hda_tegra_init_clk(struct azx *chip, struct platform_device *pdev)
 {
 	struct hda_tegra *hda = container_of(chip, struct hda_tegra, chip);
 	struct device *dev = hda->dev;
-
-#if defined(CONFIG_COMMON_CLK)
-	hda->hda_rst = devm_reset_control_get(&pdev->dev, "hda_rst");
-	if (IS_ERR(hda->hda_rst)) {
-		dev_err(dev, "hda_rst reset control not found, err: %ld\n",
-				PTR_ERR(hda->hda_rst));
-		return PTR_ERR(hda->hda_rst);
-	}
-
-	hda->hda2codec_2x_rst =
-		devm_reset_control_get(&pdev->dev, "hda2codec_2x_rst");
-	if (IS_ERR(hda->hda2codec_2x_rst)) {
-		dev_err(dev,
-			"hda2codec_2x reset control not found, err: %ld\n",
-			PTR_ERR(hda->hda2codec_2x_rst));
-		return PTR_ERR(hda->hda2codec_2x_rst);
-	}
-
-	hda->hda2hdmi_rst =
-		devm_reset_control_get(&pdev->dev, "hda2hdmi_rst");
-	if (IS_ERR(hda->hda2hdmi_rst)) {
-		dev_err(dev,
-			"hda2hdmi_rst reset control not found, err: %ld\n",
-			PTR_ERR(hda->hda2hdmi_rst));
-		return PTR_ERR(hda->hda2hdmi_rst);
-	}
-#endif
 
 	hda->hda_clk = devm_clk_get(dev, "hda");
 	if (IS_ERR(hda->hda_clk)) {

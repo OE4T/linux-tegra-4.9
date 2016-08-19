@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -27,7 +27,7 @@
 #include <linux/of_device.h>
 #include <linux/tegra-soc.h>
 
-#include "clk-t18x.h"
+#include "clk-tegra.h"
 
 /* Needed for a nvdisp linsim clock hack */
 #define CLK_RST_CONTROLLER_RST_DEV_NVDISPLAY0_CLR_0 0x800008

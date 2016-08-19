@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,8 +24,24 @@
 #include <soc/tegra/tegra_bpmp.h>
 #include <soc/tegra/bpmp_abi.h>
 
-#include "clk-t18x.h"
+#include "clk-tegra.h"
 #include "clk-mrq.h"
+
+/**
+ * struct tegra_bpmp_clk
+ *
+ * @hw:		handle between common and hardware-specific interfaces
+ * @clk_num:	bpmp clk identifier
+ */
+struct tegra_clk_bpmp {
+	struct clk_hw	hw;
+	int		clk_num;
+	int		num_parents;
+	int		parent;
+	int		parent_ids[0];
+};
+
+#define to_clk_bpmp(_hw) container_of(_hw, struct tegra_clk_bpmp, hw)
 
 /**
  * Mutex to prevent concurrent invocations

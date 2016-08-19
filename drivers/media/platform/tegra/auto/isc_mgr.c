@@ -717,6 +717,17 @@ static struct isc_mgr_platform_data *of_isc_mgr_pdata(struct platform_device
 	return pd;
 }
 
+static char *isc_mgr_devnode(struct device *dev, umode_t *mode)
+{
+	if (!mode)
+		return NULL;
+
+	/* set alway user to access this device */
+	*mode = 0666;
+
+	return NULL;
+}
+
 static int isc_mgr_probe(struct platform_device *pdev)
 {
 	int err = 0;
@@ -847,6 +858,8 @@ static int isc_mgr_probe(struct platform_device *pdev)
 			err);
 		goto err_probe;
 	}
+
+	isc_mgr->isc_class->devnode = isc_mgr_devnode;
 
 	/* connect the file operations with the cdev */
 	cdev_init(&isc_mgr->cdev, &isc_mgr_fileops);

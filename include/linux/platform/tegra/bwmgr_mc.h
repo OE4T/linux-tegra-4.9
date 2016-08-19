@@ -28,5 +28,5 @@ unsigned long bwmgr_bw_to_freq(unsigned long bw);
 
 u32 bwmgr_dvfs_latency(u32 ufreq);
 int bwmgr_iso_bw_percentage_max(void);
-
+int bwmgr_get_emc_to_dram_freq_factor(void);
 #endif /* __BWMGR_MC_H */

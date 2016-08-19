@@ -76,6 +76,7 @@ enum bwmgr_dram_types {
 
 static enum bwmgr_dram_types bwmgr_dram_type;
 static struct mrq_emc_dvfs_latency_response bwmgr_emc_dvfs;
+static int emc_to_dram_freq_factor;
 
 #define MC_BASE 0x02c10000
 #define EMC_BASE 0x02c60000
@@ -150,6 +151,8 @@ void bwmgr_eff_init(void)
 		}
 
 		bwmgr_dram_efficiency = 70;
+		emc_to_dram_freq_factor = 2;
+
 		break;
 
 	case DRAM_LPDDR3:
@@ -157,6 +160,7 @@ void bwmgr_eff_init(void)
 		bwmgr_dram_efficiency = 80;
 		bwmgr_dram_iso_eff_table =
 			bwmgr_t186_lpddr3_iso_eff;
+		emc_to_dram_freq_factor = 1;
 		break;
 
 	case DRAM_DDR3:
@@ -164,6 +168,7 @@ void bwmgr_eff_init(void)
 		bwmgr_dram_efficiency = 80;
 		bwmgr_dram_iso_eff_table =
 			bwmgr_t186_ddr3_iso_eff;
+		emc_to_dram_freq_factor = 1;
 		break;
 
 	case DRAM_DDR2:
@@ -277,3 +282,10 @@ int bwmgr_iso_bw_percentage_max(void)
 	return bwmgr_iso_bw_percentage;
 }
 EXPORT_SYMBOL_GPL(bwmgr_iso_bw_percentage_max);
+
+/* Returns the ratio between dram and emc freq based on the type of dram */
+int bwmgr_get_emc_to_dram_freq_factor(void)
+{
+	return emc_to_dram_freq_factor;
+}
+EXPORT_SYMBOL_GPL(bwmgr_get_emc_to_dram_freq_factor);

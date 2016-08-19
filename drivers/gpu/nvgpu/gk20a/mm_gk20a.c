@@ -2981,7 +2981,7 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;
 	int err;
-	unsigned long end_jiffies = jiffies + msecs_to_jiffies(1000);
+	bool clear_list_empty;
 	struct gk20a_allocator *vidmem_alloc = g->mm.vidmem.cleared ?
 		&g->mm.vidmem.allocator :
 		&g->mm.vidmem.bootstrap_allocator;
@@ -2995,16 +2995,17 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	 * are not done anyway */
 	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
 
-	do {
-		addr = __gk20a_gmmu_alloc(vidmem_alloc, at, size);
-		if (!addr) /* Possible OOM */
-			usleep_range(100, 300);
-		else
-			break;
-	} while (time_before(jiffies, end_jiffies));
+	addr = __gk20a_gmmu_alloc(vidmem_alloc, at, size);
+	if (!addr) {
+		mutex_lock(&g->mm.vidmem.clear_list_mutex);
+		clear_list_empty = list_empty(&g->mm.vidmem.clear_list_head);
+		mutex_unlock(&g->mm.vidmem.clear_list_mutex);
 
-	if (!addr)
-		return -ENOMEM;
+		if (clear_list_empty)
+			return -ENOMEM;
+		else
+			return -EAGAIN;
+	}
 
 	if (at)
 		mem->fixed = true;

@@ -30,7 +30,6 @@
 #include "hdmi2.0.h"
 #include "dp.h"
 #include "hda_dc.h"
-#include <linux/reset.h>
 
 static struct tegra_dc_hda_data *hda_inst[MAX_SOR_COUNT];
 
@@ -364,34 +363,12 @@ EXPORT_SYMBOL(tegra_hdmi_audio_null_sample_inject);
 static void tegra_dc_hda_get_clocks(struct tegra_dc *dc,
 					struct tegra_dc_hda_data *hda)
 {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	int sor_num = tegra_dc_which_sor(dc);
 	struct device_node *np_sor =
 		sor_num ? of_find_node_by_path(SOR1_NODE) :
 		of_find_node_by_path(SOR_NODE);
-#endif
 
-#if defined(CONFIG_COMMON_CLK)
-	hda->hda_rst = of_reset_control_get(np_sor, "hda_rst");
-	if (IS_ERR_OR_NULL(hda->hda_rst)) {
-		dev_err(&dc->ndev->dev, "hda: can't get hda rst\n");
-		goto err_hda_rst;
-	}
-
-	hda->hda2codec_rst = of_reset_control_get(np_sor, "hda2codec_2x_rst");
-	if (IS_ERR_OR_NULL(hda->hda2codec_rst)) {
-		dev_err(&dc->ndev->dev, "hda: can't get hda2codec rst\n");
-		goto err_hda2codec_rst;
-	}
-
-	hda->hda2hdmi_rst = of_reset_control_get(np_sor, "hda2hdmi_rst");
-	if (IS_ERR_OR_NULL(hda->hda2hdmi_rst)) {
-		dev_err(&dc->ndev->dev, "hda: can't get hda2hdmi rst\n");
-		goto err_hda2hdmi_rst;
-	}
-#endif
-
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	hda->hda_clk = tegra_disp_of_clk_get_by_name(np_sor, "hda");
 	if (IS_ERR_OR_NULL(hda->hda_clk)) {
 		dev_err(&dc->ndev->dev, "hda: can't get hda clock\n");
@@ -475,15 +452,8 @@ err_get_clk:
 		if (!IS_ERR_OR_NULL(hda->maud_clk))
 			clk_put(hda->maud_clk);
 	}
-#if defined(CONFIG_COMMON_CLK)
-	reset_control_put(hda->hda2hdmi_rst);
-err_hda2hdmi_rst:
-	reset_control_put(hda->hda2codec_rst);
-err_hda2codec_rst:
-	reset_control_put(hda->hda_rst);
-err_hda_rst:
+
 	return;
-#endif	/*defined(CONFIG_COMMON_CLK)*/
 }
 
 static void tegra_dc_hda_put_clocks(struct tegra_dc *dc,
@@ -511,11 +481,6 @@ static void tegra_dc_hda_enable_clocks(struct tegra_dc_hda_data *hda)
 	if (!hda)
 		return;
 
-#if defined(CONFIG_COMMON_CLK)
-	reset_control_reset(hda->hda_rst);
-	reset_control_reset(hda->hda2codec_rst);
-	reset_control_reset(hda->hda2hdmi_rst);
-#endif
 	clk_prepare_enable(hda->hda_clk);
 	clk_prepare_enable(hda->hda2codec_clk);
 	clk_prepare_enable(hda->hda2hdmi_clk);
@@ -595,16 +560,6 @@ void tegra_hda_reset_data(struct tegra_dc *dc)
 	tegra_dc_hda_put_clocks(dc, hda);
 
 	if (hda_inst[sor_num] != NULL) {
-
-	#if defined(CONFIG_COMMON_CLK)
-		kfree(hda->hda_rst);
-		kfree(hda->hda2hdmi_rst);
-		kfree(hda->hda2codec_rst);
-
-		hda->hda_rst = NULL;
-		hda->hda2hdmi_rst = NULL;
-		hda->hda2codec_rst = NULL;
-	#endif
 		kfree(hda_inst[sor_num]);
 		hda_inst[sor_num] = NULL;
 	}

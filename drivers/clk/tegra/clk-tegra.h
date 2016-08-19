@@ -17,6 +17,7 @@
 #ifndef __TEGRA_DRIVERS_CLK_H
 #define __TEGRA_DRIVERS_CLK_H
 
+int tegra_fake_clks_init(struct device_node *np);
 
 struct clk *tegra_clk_register_bpmp(const char *name, int parent,
 		const char **parent_names, int *parent_ids, int num_parents,

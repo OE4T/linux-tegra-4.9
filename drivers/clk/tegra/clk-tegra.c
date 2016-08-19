@@ -58,8 +58,19 @@ static void __init tegra186_clock_init(struct device_node *np)
 	}
 }
 
+static void __init tegra_of_fake_clks_init(struct device_node *np)
+{
+	int r;
+
+	r = tegra_fake_clks_init(np);
+
+	pr_info("tegra_fake_clks init %s\n", r ? "failed" : "ok");
+}
+
 static const struct of_device_id tegra186_clock_ids[] __initconst = {
-	{ .compatible = "nvidia,tegra18x-car",  .data = tegra186_clock_init},
+	{ .compatible = "nvidia,tegra-fake-clks",
+			.data = tegra_of_fake_clks_init },
+	{ .compatible = "nvidia,tegra18x-car", .data = tegra186_clock_init },
 	{},
 };
 
@@ -69,5 +80,4 @@ static int __init tegra186_of_clk_init(void)
 
 	return 0;
 }
-
 arch_initcall(tegra186_of_clk_init);

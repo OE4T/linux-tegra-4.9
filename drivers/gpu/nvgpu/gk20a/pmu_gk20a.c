@@ -3748,20 +3748,23 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 		if (seq->msg) {
 			if (seq->msg->hdr.size >= msg->hdr.size) {
 				memcpy(seq->msg, msg, msg->hdr.size);
-				if (pv->pmu_allocation_get_dmem_size(pmu,
-				pv->get_pmu_seq_out_a_ptr(seq)) != 0) {
-					pmu_copy_from_dmem(pmu,
-					pv->pmu_allocation_get_dmem_offset(pmu,
-					pv->get_pmu_seq_out_a_ptr(seq)),
-					seq->out_payload,
-					pv->pmu_allocation_get_dmem_size(pmu,
-					pv->get_pmu_seq_out_a_ptr(seq)), 0);
-				}
-			} else {
+			}  else {
 				gk20a_err(dev_from_gk20a(g),
 					"sequence %d msg buffer too small",
 					seq->id);
 			}
+		}
+		if (pv->pmu_allocation_get_dmem_size(pmu,
+		pv->get_pmu_seq_out_a_ptr(seq)) != 0) {
+		  gk20a_err(dev_from_gk20a(g), "dmem offs %x size %x\n", pv->pmu_allocation_get_dmem_offset(pmu,pv->get_pmu_seq_out_a_ptr(seq)), pv->pmu_allocation_get_dmem_size(pmu,
+pv->get_pmu_seq_out_a_ptr(seq)));
+		  gk20a_err(dev_from_gk20a(g), "copying to %p \n", seq->out_payload);
+			pmu_copy_from_dmem(pmu,
+			pv->pmu_allocation_get_dmem_offset(pmu,
+			pv->get_pmu_seq_out_a_ptr(seq)),
+			seq->out_payload,
+			pv->pmu_allocation_get_dmem_size(pmu,
+			pv->get_pmu_seq_out_a_ptr(seq)), 0);
 		}
 	} else
 		seq->callback = NULL;
@@ -4584,6 +4587,7 @@ int gk20a_pmu_cmd_post(struct gk20a *g, struct pmu_cmd *cmd,
 
 
 	seq->state = PMU_SEQ_STATE_USED;
+
 	err = pmu_write_cmd(pmu, cmd, queue_id, timeout);
 	if (err)
 		seq->state = PMU_SEQ_STATE_PENDING;

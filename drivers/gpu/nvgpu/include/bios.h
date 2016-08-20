@@ -408,4 +408,98 @@ struct vfield_entry {
 	u16 strap_desc;
 } __packed;
 
+#define PERF_CLK_DOMAINS_IDX_MAX		(32)
+#define PERF_CLK_DOMAINS_IDX_INVALID		PERF_CLK_DOMAINS_IDX_MAX
+
+#define VBIOS_PSTATE_TABLE_VERSION_5X		0x50
+#define VBIOS_PSTATE_HEADER_5X_SIZE_10		(10)
+
+struct vbios_pstate_header_5x {
+	u8 version;
+	u8 header_size;
+	u8 base_entry_size;
+	u8 base_entry_count;
+	u8 clock_entry_size;
+	u8 clock_entry_count;
+	u8 flags0;
+	u8 initial_pstate;
+	u8 cpi_support_level;
+u8 cpi_features;
+} __packed;
+
+#define VBIOS_PSTATE_CLOCK_ENTRY_5X_SIZE_6	6
+
+#define VBIOS_PSTATE_BASE_ENTRY_5X_SIZE_2	0x2
+#define VBIOS_PSTATE_BASE_ENTRY_5X_SIZE_3	0x3
+
+struct vbios_pstate_entry_clock_5x {
+	u16 param0;
+	u32 param1;
+} __packed;
+
+struct vbios_pstate_entry_5x {
+	u8 pstate_level;
+	u8 flags0;
+	u8 lpwr_entry_idx;
+	struct vbios_pstate_entry_clock_5x clockEntry[PERF_CLK_DOMAINS_IDX_MAX];
+} __packed;
+
+#define VBIOS_PSTATE_5X_CLOCK_PROG_PARAM0_NOM_FREQ_MHZ_SHIFT	0
+#define VBIOS_PSTATE_5X_CLOCK_PROG_PARAM0_NOM_FREQ_MHZ_MASK	0x00003FFF
+
+#define VBIOS_PSTATE_5X_CLOCK_PROG_PARAM1_MIN_FREQ_MHZ_SHIFT	0
+#define VBIOS_PSTATE_5X_CLOCK_PROG_PARAM1_MIN_FREQ_MHZ_MASK	0x00003FFF
+
+#define VBIOS_PSTATE_5X_CLOCK_PROG_PARAM1_MAX_FREQ_MHZ_SHIFT	14
+#define VBIOS_PSTATE_5X_CLOCK_PROG_PARAM1_MAX_FREQ_MHZ_MASK	0x0FFFC000
+
+#define VBIOS_PERFLEVEL_SKIP_ENTRY				0xFF
+
+#define VBIOS_MEMORY_CLOCK_HEADER_11_VERSION				0x11
+
+#define VBIOS_MEMORY_CLOCK_HEADER_11_0_SIZE				16
+#define VBIOS_MEMORY_CLOCK_HEADER_11_1_SIZE				21
+#define VBIOS_MEMORY_CLOCK_HEADER_11_2_SIZE				26
+
+struct vbios_memory_clock_header_1x {
+	u8 version;
+	u8 header_size;
+	u8 base_entry_size;
+	u8 strap_entry_size;
+	u8 strap_entry_count;
+	u8 entry_count;
+	u8 flags;
+	u8 fbvdd_settle_time;
+	u32 cfg_pwrd_val;
+	u16 fbvddq_high;
+	u16 fbvddq_low;
+	u32 script_list_ptr;
+	u8 script_list_count;
+	u32 cmd_script_list_ptr;
+	u8 cmd_script_list_count;
+} __packed;
+
+#define VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_2_SIZE				20
+
+struct vbios_memory_clock_base_entry_11 {
+	u16 minimum;
+	u16 maximum;
+	u32 script_pointer;
+	u8 flags0;
+	u32 fbpa_config;
+	u32 fbpa_config1;
+	u8 flags1;
+	u8 ref_mpllssf_freq_delta;
+	u8 flags2;
+} __packed;
+
+/* Script Pointer Index */
+/* #define VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_FLAGS1_SCRIPT_INDEX		3:2*/
+#define VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_FLAGS1_SCRIPT_INDEX_MASK	0xc
+#define VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_FLAGS1_SCRIPT_INDEX_SHIFT	2
+/* #define VBIOS_MEMORY_CLOCK_BASE_ENTRY_12_FLAGS2_CMD_SCRIPT_INDEX	1:0*/
+#define VBIOS_MEMORY_CLOCK_BASE_ENTRY_12_FLAGS2_CMD_SCRIPT_INDEX_MASK	0x3
+#define VBIOS_MEMORY_CLOCK_BASE_ENTRY_12_FLAGS2_CMD_SCRIPT_INDEX_SHIFT	0
+
 #endif
+

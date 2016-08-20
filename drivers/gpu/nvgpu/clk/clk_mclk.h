@@ -19,13 +19,14 @@
 enum gk20a_mclk_speed {
 	gk20a_mclk_low_speed,
 	gk20a_mclk_mid_speed,
-	gk20a_mclk_high_speed
+	gk20a_mclk_high_speed,
 };
 
 struct clk_mclk_state {
 	enum gk20a_mclk_speed speed;
 	struct mutex mclk_mutex;
 	void *vreg_buf;
+	bool init;
 
 	/* function pointers */
 	int (*change)(struct gk20a *g, enum gk20a_mclk_speed speed);

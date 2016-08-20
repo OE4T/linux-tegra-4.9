@@ -17,6 +17,9 @@
 #include "gm206/bios_gm206.h"
 #include "gk20a/pmu_gk20a.h"
 #include "gk20a/hw_pwr_gk20a.h"
+#include "gp106/hw_fb_gp106.h"
+
+#include "include/bios.h"
 
 #define VREG_COUNT 24
 
@@ -27,63 +30,6 @@
 struct memory_link_training_pattern {
 	u32 regaddr;
 	u32 writeval;
-};
-
-static struct memory_link_training_pattern memory_shadow_p0_reglist[] = {
-	{0x9a065c, 0x20},
-	{0x98467c, 0xffff0000},
-	{0x984708, 0x30550},
-	{0x98470c, 0x4C4C},
-	{0x9006a0, 0x03030303},
-	{0x9006a4, 0x03030303},
-	{0x9046a0, 0x03030303},
-	{0x9046a4, 0x03030303},
-	{0x9086a0, 0x03030303},
-	{0x9086a4, 0x03030303},
-	{0x9846a8, 0x03030303},
-	{0x9846ac, 0x03030303},
-	{0x9a065c, 0x00},
-};
-
-static struct memory_link_training_pattern memory_shadow_p5_reglist[] = {
-	{0x9a065c, 0x10},
-	{0x98467c, 0xfff10000},
-	{0x984708, 0x30002},
-	{0x98470c, 0x1414},
-	{0x9006a0, 0x12121212},
-	{0x9006a4, 0x12121212},
-	{0x9046a0, 0x12121212},
-	{0x9046a4, 0x12121212},
-	{0x9086a0, 0x12121212},
-	{0x9086a4, 0x12121212},
-	{0x90c6a0, 0x12121212},
-	{0x90c6a4, 0x12121212},
-	{0x9106a0, 0x12121212},
-	{0x9106a4, 0x12121212},
-	{0x9146a0, 0x12121212},
-	{0x9146a4, 0x12121212},
-	{0x9a065c, 0x0},
-	{0x9a08e0, 0x10},
-	{0x9846a8, 0x0f0f0f0f},
-	{0x9846ac, 0x0f0f0f0f},
-	{0x984d98, 0x22222222},
-	{0x984d9c, 0x22222222},
-	{0x984da0, 0x22222222},
-	{0x984da4, 0x22222222},
-	{0x984da8, 0x22222222},
-	{0x984dac, 0x22222222},
-	{0x984dac, 0x22222222},
-	{0x984d70, 0x0},
-	{0x984d74, 0x0},
-	{0x984d78, 0x0},
-	{0x984d7c, 0x0},
-	{0x984d80, 0x0},
-	{0x984d84, 0x0},
-	{0x984d88, 0x0},
-	{0x984d8c, 0x0},
-	{0x984d90, 0x0},
-	{0x984d94, 0x0},
-	{0x9a08e0, 0x0},
 };
 
 static struct memory_link_training_pattern memory_pattern_reglist[] = {
@@ -2026,31 +1972,6 @@ static void mclk_memory_load_training_pattern(struct gk20a *g)
 	gk20a_dbg_fn("done");
 }
 
-static void mclk_memory_load_shadow_regs(struct gk20a *g)
-{
-	u32 reg_writes;
-	u32 index;
-
-	gk20a_dbg_info("");
-
-	reg_writes = ((sizeof(memory_shadow_p0_reglist) /
-				sizeof((memory_shadow_p0_reglist)[0])));
-	for (index = 0; index < reg_writes; index++) {
-		gk20a_writel(g, memory_shadow_p0_reglist[index].regaddr,
-				memory_shadow_p0_reglist[index].writeval);
-	}
-
-	reg_writes = ((sizeof(memory_shadow_p5_reglist) /
-				sizeof((memory_shadow_p5_reglist)[0])));
-	for (index = 0; index < reg_writes; index++) {
-		gk20a_writel(g, memory_shadow_p5_reglist[index].regaddr,
-				memory_shadow_p5_reglist[index].writeval);
-	}
-
-	gk20a_dbg_fn("done");
-
-}
-
 static void mclk_seq_pmucmdhandler(struct gk20a *g, struct pmu_msg *_msg,
 			void *param, u32 handle, u32 status)
 {
@@ -2082,9 +2003,189 @@ status_update:
 	*((u32 *)param) = msg_status;
 }
 
+static int mclk_get_memclk_table(struct gk20a *g)
+{
+	int status = 0;
+	u8 *mem_table_ptr = NULL;
+	u32 idx_to_ptr_tbl[8];
+	u32 idx_to_cmd_ptr_tbl[8];
+
+	u32 old_fbio_delay;
+	u32 old_fbio_cmd_delay;
+
+	u32 cmd_idx;
+	u32 shadow_idx;
+
+	struct vbios_memory_clock_header_1x memclock_table_header = { 0 };
+	struct vbios_memory_clock_base_entry_11 memclock_base_entry = { 0 };
+
+	u8 *mem_entry_ptr = NULL;
+	int index;
+
+	gk20a_dbg_info("");
+
+	if (!(g->ops.bios.get_perf_table_ptrs &&
+		g->ops.bios.execute_script)) {
+		goto done;
+	}
+
+	mem_table_ptr = (u8 *)g->ops.bios.get_perf_table_ptrs(g,
+					g->bios.perf_token,
+					MEMORY_CLOCK_TABLE);
+	if (mem_table_ptr == NULL) {
+		status = -EPERM;
+		goto done;
+	}
+
+	memcpy(&memclock_table_header, mem_table_ptr,
+		sizeof(memclock_table_header));
+
+	if ((memclock_table_header.version <
+		VBIOS_MEMORY_CLOCK_HEADER_11_VERSION) ||
+		(memclock_table_header.base_entry_size <
+		VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_2_SIZE)) {
+		status = -EINVAL;
+		goto done;
+	}
+
+	/* reset and save shadow table map and registers */
+	old_fbio_delay = gk20a_readl(g, fb_fbpa_fbio_delay_r());
+	old_fbio_cmd_delay = gk20a_readl(g, fb_fbpa_fbio_cmd_delay_r());
+
+	memset(idx_to_ptr_tbl, 0, sizeof(idx_to_ptr_tbl));
+	memset(idx_to_cmd_ptr_tbl, 0, sizeof(idx_to_cmd_ptr_tbl));
+
+	/* Read table entries */
+	mem_entry_ptr = mem_table_ptr + memclock_table_header.header_size;
+	for (index = 0; index < memclock_table_header.entry_count; index++) {
+		u8 script_index, cmd_script_index;
+		u32 script_ptr = 0, cmd_script_ptr = 0;
+
+		memcpy(&memclock_base_entry, mem_entry_ptr,
+			memclock_table_header.base_entry_size);
+		if (memclock_base_entry.maximum == 0)
+			continue;
+
+		script_index = BIOS_GET_FIELD(memclock_base_entry.flags1,
+			VBIOS_MEMORY_CLOCK_BASE_ENTRY_11_FLAGS1_SCRIPT_INDEX);
+
+		script_ptr = gm206_bios_read_u32(g,
+			memclock_table_header.script_list_ptr +
+				script_index * sizeof(u32));
+
+		if (!script_ptr)
+			continue;
+
+		/* Link and execute shadow scripts */
+
+		for (shadow_idx = 0; shadow_idx <= fb_fbpa_fbio_delay_priv_max_v();
+				++shadow_idx) {
+			if (script_ptr == idx_to_ptr_tbl[shadow_idx]) {
+				break;
+			}
+		}
+
+		/* script has not been executed before */
+		if (shadow_idx > fb_fbpa_fbio_delay_priv_max_v()) {
+			/* find unused index */
+			for (shadow_idx = 0; shadow_idx <
+					fb_fbpa_fbio_delay_priv_max_v();
+					++shadow_idx) {
+				if (idx_to_ptr_tbl[shadow_idx] == 0)
+					break;
+			}
+
+			if (shadow_idx > fb_fbpa_fbio_delay_priv_max_v()) {
+				gk20a_err(dev_from_gk20a(g),
+				"invalid shadow reg script index");
+				status = -EINVAL;
+				goto done;
+			}
+
+			idx_to_ptr_tbl[shadow_idx] = script_ptr;
+
+			gk20a_writel(g, fb_fbpa_fbio_delay_r(),
+				set_field(old_fbio_delay,
+					fb_fbpa_fbio_delay_priv_m(),
+					fb_fbpa_fbio_delay_priv_f(shadow_idx)));
+
+			status = g->ops.bios.execute_script(g, script_ptr);
+			if (status < 0) {
+				gk20a_writel(g, fb_fbpa_fbio_delay_r(),
+					old_fbio_delay);
+				goto done;
+			}
+
+			gk20a_writel(g, fb_fbpa_fbio_delay_r(), old_fbio_delay);
+
+		}
+
+		cmd_script_index = BIOS_GET_FIELD(memclock_base_entry.flags2,
+			VBIOS_MEMORY_CLOCK_BASE_ENTRY_12_FLAGS2_CMD_SCRIPT_INDEX);
+
+		cmd_script_ptr = gm206_bios_read_u32(g,
+			memclock_table_header.cmd_script_list_ptr +
+				cmd_script_index * sizeof(u32));
+
+		if (!cmd_script_ptr)
+			continue;
+
+		/* Link and execute cmd shadow scripts */
+		for (cmd_idx = 0; cmd_idx <= fb_fbpa_fbio_cmd_delay_cmd_priv_max_v();
+				++cmd_idx) {
+			if (cmd_script_ptr == idx_to_cmd_ptr_tbl[cmd_idx])
+				break;
+		}
+
+		/* script has not been executed before */
+		if (cmd_idx > fb_fbpa_fbio_cmd_delay_cmd_priv_max_v()) {
+			/* find unused index */
+			for (cmd_idx = 0; cmd_idx <
+					fb_fbpa_fbio_cmd_delay_cmd_priv_max_v();
+					++cmd_idx) {
+				if (idx_to_cmd_ptr_tbl[cmd_idx] == 0)
+					break;
+			}
+
+			if (cmd_idx > fb_fbpa_fbio_cmd_delay_cmd_priv_max_v()) {
+				gk20a_err(dev_from_gk20a(g),
+				"invalid shadow reg cmd script index");
+				status = -EINVAL;
+				goto done;
+			}
+
+			idx_to_cmd_ptr_tbl[cmd_idx] = cmd_script_ptr;
+			gk20a_writel(g, fb_fbpa_fbio_cmd_delay_r(),
+				set_field(old_fbio_cmd_delay,
+					fb_fbpa_fbio_cmd_delay_cmd_priv_m(),
+					fb_fbpa_fbio_cmd_delay_cmd_priv_f(
+						cmd_idx)));
+
+			status = g->ops.bios.execute_script(g, cmd_script_ptr);
+			if (status < 0) {
+				gk20a_writel(g, fb_fbpa_fbio_cmd_delay_r(),
+					old_fbio_cmd_delay);
+				goto done;
+			}
+
+			gk20a_writel(g, fb_fbpa_fbio_cmd_delay_r(),
+				old_fbio_cmd_delay);
+
+		}
+
+		mem_entry_ptr += memclock_table_header.base_entry_size +
+			memclock_table_header.strap_entry_count *
+			memclock_table_header.strap_entry_size;
+	}
+
+done:
+	return status;
+}
+
 int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 {
 	struct clk_mclk_state *mclk;
+	int status;
 
 	gk20a_dbg_fn("");
 
@@ -2094,8 +2195,10 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 
 	mclk->speed = gk20a_mclk_low_speed; /* Value from Devinit */
 
-	/* Load Shadow registers */
-	mclk_memory_load_shadow_regs(g);
+	/* Parse VBIOS */
+	status = mclk_get_memclk_table(g);
+	if (status < 0)
+		return status;
 
 	/* Load RAM pattern */
 	mclk_memory_load_training_pattern(g);
@@ -2115,6 +2218,8 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 #endif
 	mclk->change = clk_mclkseq_change_mclk_gddr5;
 
+	mclk->init = true;
+
 	return mclk->change(g, DEFAULT_BOOT_MCLK_SPEED);
 }
 
@@ -2125,7 +2230,7 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, enum gk20a_mclk_speed speed)
 	struct nv_pmu_seq_cmd cmd;
 	struct nv_pmu_seq_cmd_run_script *pseq_cmd;
 	u32 seqdesc;
-	u32 status = 0;
+	int status = 0;
 	u32 seq_completion_status = ~0x0;
 	u8 *seq_script_ptr = NULL;
 	size_t seq_script_size = 0;
@@ -2138,6 +2243,9 @@ int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, enum gk20a_mclk_speed speed)
 	mclk = &g->clk_pmu.clk_mclk;
 
 	mutex_lock(&mclk->mclk_mutex);
+
+	if (!mclk->init)
+		goto exit_status;
 
 	if (speed == mclk->speed)
 		goto exit_status;

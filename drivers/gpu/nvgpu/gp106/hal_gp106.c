@@ -31,7 +31,7 @@
 #include "gp106/therm_gp106.h"
 #include "gp106/xve_gp106.h"
 
-#include "gm206/bios_gm206.h"
+#include "gp106/bios_gp106.h"
 
 #include "gm20b/gr_gm20b.h"
 #include "gm20b/fifo_gm20b.h"
@@ -209,7 +209,7 @@ int gp106_init_hal(struct gk20a *g)
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	gk20a_init_css_ops(gops);
 #endif
-	gm206_init_bios(gops);
+	gp106_init_bios(gops);
 	gp106_init_therm_ops(gops);
 	gp106_init_xve_ops(gops);
 

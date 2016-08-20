@@ -187,12 +187,12 @@
 	i2c@3160000 { //i2c
 		prod-settings {
 			mask-one-style;
-			prod_i2c_sm {
+			prod_c_fm {
 				board {
 					prod = <
 						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
-						0x0000006C 0xFFFF0000 0x00160000 //I2C_I2C_INTERFACE_TIMING
-						0x00000094 0x00003F3F 0x00000304 //I2C_TIMING_THIGH_TLOW
+						0x0000006C 0xFFFF0000 0x00190000 //I2C_I2C_INTERFACE_TIMING
+						0x00000094 0x00003F3F 0x00000204 //I2C_TIMING_THIGH_TLOW
 						0x00000098 0x3F3F3F3F 0x04070404 //I2C_TBUF_TSUSTO_THDSTA_TSUSTA
 					>;
 				};
@@ -203,7 +203,7 @@
 	i2c@3180000 { //i2c
 		prod-settings {
 			mask-one-style;
-			prod_i2c_fm {
+			prod_c_fm {
 				board {
 					prod = <
 						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
@@ -219,7 +219,7 @@
 	i2c@31C0000 { //i2c
 		prod-settings {
 			mask-one-style;
-			prod_i2c_fm {
+			prod_c_fm {
 				board {
 					prod = <
 						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
@@ -235,7 +235,7 @@
 	i2c@31E0000 { //i2c
 		prod-settings {
 			mask-one-style;
-			prod_i2c_fm {
+			prod_c_fm {
 				board {
 					prod = <
 						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
@@ -266,14 +266,14 @@
 		};
 	};
 
-	i2c@c24000 { //i2c
+	i2c@c240000 { //i2c
 		prod-settings {
 			mask-one-style;
-			prod_i2c_sm {
+			prod_c_fm {
 				board {
 					prod = <
 						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count
-						0x0000006C 0xFFFF0000 0x00160000 //I2C_I2C_INTERFACE_TIMING
+						0x0000006C 0xFFFF0000 0x00190000 //I2C_I2C_INTERFACE_TIMING
 						0x00000094 0x00003F3F 0x00000204 //I2C_TIMING_THIGH_TLOW
 						0x00000098 0x3F3F3F3F 0x04070404 //I2C_TBUF_TSUSTO_THDSTA_TSUSTA
 					>;
@@ -282,10 +282,10 @@
 		};
 	};
 
-	i2c@c25000 { //i2c
+	i2c@c250000 { //i2c
 		prod-settings {
 			mask-one-style;
-			prod_i2c_fm {
+			prod_c_fm {
 				board {
 					prod = <
 						0x00000000 0x00007000 0x00002000 //I2C_I2C_CFG - debounce count

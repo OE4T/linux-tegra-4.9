@@ -82,7 +82,7 @@
 #include <linux/iio/trigger.h>
 #include <linux/nvs.h>
 
-#define NVS_IIO_DRIVER_VERSION		(215)
+#define NVS_IIO_DRIVER_VERSION		(216)
 
 enum NVS_ATTR {
 	NVS_ATTR_ENABLE,
@@ -95,6 +95,7 @@ enum NVS_ATTR {
 	NVS_ATTR_FLAGS,
 	NVS_ATTR_MATRIX,
 	NVS_ATTR_SELF_TEST,
+	NVS_ATTR_UUID,
 };
 
 enum NVS_DBG {
@@ -110,6 +111,59 @@ enum NVS_DBG {
 	NVS_INFO_DBG_IRQ,
 	NVS_INFO_LIMIT_MAX,
 	NVS_INFO_DBG_KEY = 0x131071D,
+};
+
+static ssize_t nvs_info_show(struct device *dev,
+			     struct device_attribute *attr, char *buf);
+static ssize_t nvs_info_store(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t count);
+static ssize_t nvs_attr_show(struct device *dev,
+			     struct device_attribute *attr, char *buf);
+static ssize_t nvs_attr_store(struct device *dev,
+			      struct device_attribute *attr,
+			      const char *buf, size_t count);
+
+static DEVICE_ATTR(nvs, S_IRUGO | S_IWUSR | S_IWGRP,
+		   nvs_info_show, nvs_info_store);
+static IIO_DEVICE_ATTR(enable, S_IRUGO | S_IWUSR | S_IWGRP,
+		       nvs_attr_show, nvs_attr_store, NVS_ATTR_ENABLE);
+static IIO_DEVICE_ATTR(part, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_PART);
+static IIO_DEVICE_ATTR(vendor, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_VENDOR);
+static IIO_DEVICE_ATTR(version, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_VERSION);
+static IIO_DEVICE_ATTR(milliamp, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_MILLIAMP);
+static IIO_DEVICE_ATTR(fifo_reserved_event_count, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_FIFO_RSRV_EVNT_CNT);
+static IIO_DEVICE_ATTR(fifo_max_event_count, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_FIFO_MAX_EVNT_CNT);
+static IIO_DEVICE_ATTR(flags, S_IRUGO | S_IWUSR | S_IWGRP,
+		       nvs_attr_show, nvs_attr_store, NVS_ATTR_FLAGS);
+static IIO_DEVICE_ATTR(uuid, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_UUID);
+/* matrix permissions are read only - writes are for debug */
+static IIO_DEVICE_ATTR(matrix, S_IRUGO,
+		       nvs_attr_show, nvs_attr_store, NVS_ATTR_MATRIX);
+static IIO_DEVICE_ATTR(self_test, S_IRUGO,
+		       nvs_attr_show, NULL, NVS_ATTR_SELF_TEST);
+
+static struct attribute *nvs_attrs[] = {
+	&dev_attr_nvs.attr,
+	&iio_dev_attr_enable.dev_attr.attr,
+	&iio_dev_attr_part.dev_attr.attr,
+	&iio_dev_attr_vendor.dev_attr.attr,
+	&iio_dev_attr_version.dev_attr.attr,
+	&iio_dev_attr_milliamp.dev_attr.attr,
+	&iio_dev_attr_fifo_reserved_event_count.dev_attr.attr,
+	&iio_dev_attr_fifo_max_event_count.dev_attr.attr,
+	&iio_dev_attr_flags.dev_attr.attr,
+	&iio_dev_attr_uuid.dev_attr.attr,
+	&iio_dev_attr_matrix.dev_attr.attr,
+	&iio_dev_attr_self_test.dev_attr.attr,
+	NULL
 };
 
 struct nvs_state {
@@ -128,6 +182,7 @@ struct nvs_state {
 	bool first_push;
 	bool one_shot;
 	bool on_change;
+	bool special;
 	int enabled;
 	int batch_flags;
 	unsigned int batch_period_us;
@@ -333,6 +388,54 @@ static const struct nvs_iio_ch nvs_iio_ch_tbl[] = {
 		.typ			= IIO_GESTURE_PICKUP,
 		.mod			= NULL,
 	},
+	/* SENSOR_TYPE_WRIST_TILT_GESTURE */
+	{
+		.snsr_name		= "wrist_tilt_gesture",
+		.typ			= IIO_GESTURE_WRIST_TILT,
+		.mod			= NULL,
+	},
+	/* SENSOR_TYPE_DEVICE_ORIENTATION */
+	{
+		.snsr_name		= "device_orientation",
+		.typ			= IIO_DEVICE_ORIENTATION,
+		.mod			= NULL,
+	},
+	/* SENSOR_TYPE_POSE_6DOF */
+	{
+		.snsr_name		= "pose_6dof",
+		.typ			= IIO_POSE_6DOF,
+		.mod			= NULL,
+	},
+	/* SENSOR_TYPE_STATIONARY_DETECT */
+	{
+		.snsr_name		= "stationary_detect",
+		.typ			= IIO_STATIONARY_DETECT,
+		.mod			= NULL,
+	},
+	/* SENSOR_TYPE_MOTION_DETECT */
+	{
+		.snsr_name		= "motion_detect",
+		.typ			= IIO_MOTION_DETECT,
+		.mod			= NULL,
+	},
+	/* SENSOR_TYPE_HEART_BEAT */
+	{
+		.snsr_name		= "heart_beat",
+		.typ			= IIO_HEART_BEAT,
+		.mod			= NULL,
+	},
+	/* SENSOR_TYPE_DYNAMIC_SENSOR_META */
+	{
+		.snsr_name		= "dynamic_sensor_meta",
+		.typ			= IIO_DYNAMIC_SENSOR_META,
+		.mod			= NULL,
+	},
+	/* SENSOR_TYPE_ADDITIONAL_INFO */
+	{
+		.snsr_name		= "additional_info",
+		.typ			= IIO_ADDITIONAL_INFO,
+		.mod			= NULL,
+	},
 };
 
 
@@ -374,7 +477,11 @@ static ssize_t nvs_dbg_cfg(struct iio_dev *indio_dev, char *buf)
 		      st->cfg->delay_us_min);
 	t += snprintf(buf + t, PAGE_SIZE - t, "delay_us_max=%u\n",
 		      st->cfg->delay_us_max);
-	t += snprintf(buf + t, PAGE_SIZE - t, "matrix: ");
+	t += snprintf(buf + t, PAGE_SIZE - t, "uuid: ");
+	for (i = 0; i < 16; i++)
+		t += snprintf(buf + t, PAGE_SIZE - t, "%02x ",
+			      st->cfg->uuid[i]);
+	t += snprintf(buf + t, PAGE_SIZE - t, "\nmatrix: ");
 	for (i = 0; i < 9; i++)
 		t += snprintf(buf + t, PAGE_SIZE - t, "%hhd ",
 			      st->cfg->matrix[i]);
@@ -653,6 +760,10 @@ static void nvs_report_mode(struct nvs_state *st)
 	case SENSOR_FLAG_ONE_SHOT_MODE:
 		st->one_shot = true;
 		break;
+
+	case SENSOR_FLAG_SPECIAL_REPORTING_MODE:
+		st->special = true;
+		break;
 	}
 }
 
@@ -751,7 +862,9 @@ static ssize_t nvs_attr_show(struct device *dev,
 	struct iio_dev *indio_dev = dev_get_drvdata(dev);
 	struct nvs_state *st = iio_priv(indio_dev);
 	struct iio_dev_attr *this_attr = to_iio_dev_attr(attr);
+	ssize_t t = 0;
 	int ret = -EINVAL;
+	unsigned int i;
 
 	switch (this_attr->address) {
 	case NVS_ATTR_ENABLE:
@@ -791,16 +904,12 @@ static ssize_t nvs_attr_show(struct device *dev,
 		return snprintf(buf, PAGE_SIZE, "%u\n", st->cfg->flags);
 
 	case NVS_ATTR_MATRIX:
-		return snprintf(buf, PAGE_SIZE, "%d,%d,%d,%d,%d,%d,%d,%d,%d\n",
-				st->cfg->matrix[0],
-				st->cfg->matrix[1],
-				st->cfg->matrix[2],
-				st->cfg->matrix[3],
-				st->cfg->matrix[4],
-				st->cfg->matrix[5],
-				st->cfg->matrix[6],
-				st->cfg->matrix[7],
-				st->cfg->matrix[8]);
+		for (i = 0; i < 8; i++)
+			t += snprintf(buf + t, PAGE_SIZE - t, "%hhd,",
+				      st->cfg->matrix[i]);
+		t += snprintf(buf + t, PAGE_SIZE - t, "%hhd\n",
+			      st->cfg->matrix[i]);
+		return t;
 
 	case NVS_ATTR_SELF_TEST:
 		if (st->fn_dev->self_test) {
@@ -810,6 +919,13 @@ static ssize_t nvs_attr_show(struct device *dev,
 			mutex_unlock(&indio_dev->mlock);
 		}
 		break;
+
+	case NVS_ATTR_UUID:
+		for (i = 0; i < 16; i++)
+			t += snprintf(buf + t, PAGE_SIZE - t, "%02X ",
+				      st->cfg->uuid[i]);
+		t += snprintf(buf + t, PAGE_SIZE - t, "\n");
+		return t;
 
 	default:
 		return -EINVAL;
@@ -957,45 +1073,6 @@ static ssize_t nvs_info_show(struct device *dev,
 
 	return ret;
 }
-
-static DEVICE_ATTR(nvs, S_IRUGO | S_IWUSR | S_IWGRP,
-		   nvs_info_show, nvs_info_store);
-static IIO_DEVICE_ATTR(enable, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvs_attr_show, nvs_attr_store, NVS_ATTR_ENABLE);
-static IIO_DEVICE_ATTR(part, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_PART);
-static IIO_DEVICE_ATTR(vendor, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_VENDOR);
-static IIO_DEVICE_ATTR(version, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_VERSION);
-static IIO_DEVICE_ATTR(milliamp, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_MILLIAMP);
-static IIO_DEVICE_ATTR(fifo_reserved_event_count, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_FIFO_RSRV_EVNT_CNT);
-static IIO_DEVICE_ATTR(fifo_max_event_count, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_FIFO_MAX_EVNT_CNT);
-static IIO_DEVICE_ATTR(flags, S_IRUGO | S_IWUSR | S_IWGRP,
-		       nvs_attr_show, nvs_attr_store, NVS_ATTR_FLAGS);
-/* matrix permissions are read only - writes are for debug */
-static IIO_DEVICE_ATTR(matrix, S_IRUGO,
-		       nvs_attr_show, nvs_attr_store, NVS_ATTR_MATRIX);
-static IIO_DEVICE_ATTR(self_test, S_IRUGO,
-		       nvs_attr_show, NULL, NVS_ATTR_SELF_TEST);
-
-static struct attribute *nvs_attrs[] = {
-	&dev_attr_nvs.attr,
-	&iio_dev_attr_enable.dev_attr.attr,
-	&iio_dev_attr_part.dev_attr.attr,
-	&iio_dev_attr_vendor.dev_attr.attr,
-	&iio_dev_attr_version.dev_attr.attr,
-	&iio_dev_attr_milliamp.dev_attr.attr,
-	&iio_dev_attr_fifo_reserved_event_count.dev_attr.attr,
-	&iio_dev_attr_fifo_max_event_count.dev_attr.attr,
-	&iio_dev_attr_flags.dev_attr.attr,
-	&iio_dev_attr_matrix.dev_attr.attr,
-	&iio_dev_attr_self_test.dev_attr.attr,
-	NULL
-};
 
 static int nvs_attr_rm(struct nvs_state *st, struct attribute *rm_attr)
 {
@@ -1564,7 +1641,8 @@ static int nvs_chan(struct iio_dev *indio_dev)
 				BIT(IIO_CHAN_INFO_BATCH_PERIOD) |
 				BIT(IIO_CHAN_INFO_BATCH_TIMEOUT) |
 				BIT(IIO_CHAN_INFO_BATCH_FLUSH);
-
+	if (st->special)
+		info_mask = BIT(IIO_CHAN_INFO_RAW);
 	info_mask &= ~info_mask_msk;
 	info_mask_shared_by_type &= ~info_mask_msk;
 	info_mask_msk = 0;
@@ -1705,6 +1783,9 @@ static int nvs_remove(void *handle)
 		return 0;
 
 	st = iio_priv(indio_dev);
+	if (st->cfg->flags & SENSOR_FLAG_DYNAMIC_SENSOR)
+		/* st->cfg->snsr_id may have changed so we don't include it */
+		nvs_dsm_push(indio_dev->id, false, -1, st->cfg->uuid);
 	if (indio_dev->dev.devt)
 		iio_device_unregister(indio_dev);
 	if (st->trig != NULL) {
@@ -1851,6 +1932,9 @@ static int nvs_probe(void **handle, void *dev_client, struct device *dev,
 		nvs_remove(indio_dev);
 	} else {
 		*handle = indio_dev;
+		if (st->cfg->flags & SENSOR_FLAG_DYNAMIC_SENSOR)
+			nvs_dsm_push(indio_dev->id, true, st->cfg->snsr_id,
+				     st->cfg->uuid);
 	}
 	dev_info(st->dev, "%s %s done\n", __func__, st->cfg->name);
 	return ret;

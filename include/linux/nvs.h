@@ -63,16 +63,50 @@
 #define SENSOR_TYPE_WAKE_GESTURE		(23)
 #define SENSOR_TYPE_GLANCE_GESTURE		(24)
 #define SENSOR_TYPE_PICK_UP_GESTURE		(25)
-/* from AOS sensors.h */
+#define SENSOR_TYPE_WRIST_TILT_GESTURE		(26)
+#define SENSOR_TYPE_DEVICE_ORIENTATION		(27)
+#define SENSOR_TYPE_POSE_6DOF			(28)
+#define SENSOR_TYPE_STATIONARY_DETECT		(29)
+#define SENSOR_TYPE_MOTION_DETECT		(30)
+#define SENSOR_TYPE_HEART_BEAT			(31)
+#define SENSOR_TYPE_DYNAMIC_SENSOR_META		(32)
+#define SENSOR_TYPE_ADDITIONAL_INFO		(33)
+
+#define SENSOR_STATUS_NO_CONTACT		(-1)
+#define SENSOR_STATUS_UNRELIABLE		(0)
+#define SENSOR_STATUS_ACCURACY_LOW		(1)
+#define SENSOR_STATUS_ACCURACY_MEDIUM		(2)
+#define SENSOR_STATUS_ACCURACY_HIGH		(3)
+
+#define REPORTING_MODE_SHIFT			(1)
+#define REPORTING_MODE_MASK			(0xE)
+#define DATA_INJECTION_SHIFT			(4)
+#define DATA_INJECTION_MASK			(0x10)
+#define DYNAMIC_SENSOR_SHIFT			(5)
+#define DYNAMIC_SENSOR_MASK			(0x20)
+#define ADDITIONAL_INFO_SHIFT			(6)
+#define ADDITIONAL_INFO_MASK			(0x40)
 #define SENSOR_FLAG_WAKE_UP			(0x1)
 #define SENSOR_FLAG_ON_CHANGE_MODE		(0x2)
 #define SENSOR_FLAG_ONE_SHOT_MODE		(0x4)
 #define SENSOR_FLAG_SPECIAL_REPORTING_MODE	(0x6)
-#define REPORTING_MODE_MASK			(0xE)
-#define REPORTING_MODE_SHIFT			(1)
+#define SENSOR_FLAG_SUPPORTS_DATA_INJECTION	DATA_INJECTION_MASK
+#define SENSOR_FLAG_DYNAMIC_SENSOR		DYNAMIC_SENSOR_MASK
+#define SENSOR_FLAG_ADDITIONAL_INFO		ADDITIONAL_INFO_MASK
 /* end AOS sensors.h */
 /* unconfigurable flags */
 #define SENSOR_FLAG_READONLY_MASK	(REPORTING_MODE_MASK)
+/* nvs_dsm SENSOR_TYPE_DYNAMIC_SENSOR_META message */
+#define NVS_DSM_MSG_FLAGS_CONNECT	(7)
+
+/* IIO limits sizeof(struct nvs_dsm_msg) to 31 hence the chars */
+struct nvs_dsm_msg {
+	unsigned char ver;
+	unsigned char flags;
+	int dev_id;
+	int snsr_id;
+	unsigned char uuid[16];
+};
 
 enum nvs_float_significance {
 	NVS_FLOAT_MICRO			= 0, /* IIO_VAL_INT_PLUS_MICRO */
@@ -107,6 +141,7 @@ struct sensor_cfg {
 	unsigned int fifo_max_evnt_cnt;
 	unsigned int flags;
 	/* end of android struct sensor_t data */
+	unsigned char uuid[16];		/* UUID (RFC 4122 byte order) */
 	signed char matrix[9];		/* device orientation on platform */
 	/* interpolation calibration */
 	int uncal_lo;
@@ -391,5 +426,6 @@ int nvs_vregs_init(struct device *dev, struct regulator_bulk_data *vregs,
 		   unsigned int vregs_n, char **vregs_name);
 int nvs_vregs_sts(struct regulator_bulk_data *vregs, unsigned int vregs_n);
 s64 nvs_timestamp(void);
+int nvs_dsm_push(int dev_id, bool connect, int snsr_id, unsigned char *uuid);
 
 #endif /* _NVS_H_ */

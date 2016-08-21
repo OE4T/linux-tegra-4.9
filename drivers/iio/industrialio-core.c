@@ -97,6 +97,14 @@ const char * const iio_chan_type_name_spec[] = {
 	[IIO_GESTURE_WAKE] = "gesturewake",
 	[IIO_GESTURE_GLANCE] = "gestureglance",
 	[IIO_GESTURE_PICKUP] = "gesturepickup",
+	[IIO_GESTURE_WRIST_TILT] = "gesturewristtilt",
+	[IIO_DEVICE_ORIENTATION] = "dev_orientation",
+	[IIO_POSE_6DOF] = "pose6dof",
+	[IIO_STATIONARY_DETECT] = "stationary_detect",
+	[IIO_MOTION_DETECT] = "motion_detect",
+	[IIO_HEART_BEAT] = "heartbeat",
+	[IIO_DYNAMIC_SENSOR_META] = "dsm",
+	[IIO_ADDITIONAL_INFO] = "info",
 	[IIO_GENERIC] = "generic_sensor",
 };
 EXPORT_SYMBOL(iio_chan_type_name_spec);
@@ -105,6 +113,7 @@ static const char * const iio_modifier_names[] = {
 	[IIO_MOD_X] = "x",
 	[IIO_MOD_Y] = "y",
 	[IIO_MOD_Z] = "z",
+	[IIO_MOD_W] = "w",
 	[IIO_MOD_X_AND_Y] = "x&y",
 	[IIO_MOD_X_AND_Z] = "x&z",
 	[IIO_MOD_Y_AND_Z] = "y&z",

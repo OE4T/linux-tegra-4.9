@@ -522,6 +522,7 @@ struct pmu_payload {
 		void *buf;
 		u32 offset;
 		u32 size;
+		u32 fb_size;
 	} in, out;
 };
 

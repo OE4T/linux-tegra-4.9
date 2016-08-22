@@ -311,6 +311,9 @@ struct tegra_dc {
 
 #ifdef CONFIG_DEBUG_FS
 	struct dentry			*debugdir;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	struct dentry			*debug_common_dir;
+#endif
 #endif
 	struct tegra_dc_lut		fb_lut;
 	struct delayed_work		underflow_work;

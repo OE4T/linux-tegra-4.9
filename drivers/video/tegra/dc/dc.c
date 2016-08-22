@@ -1605,6 +1605,56 @@ static const struct file_operations dbg_hotplug_fops = {
 	.release	= single_release,
 };
 
+static int dbg_color_expand_enable_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc_win *win = m->private;
+
+	if (!win)
+		return -EINVAL;
+
+	seq_printf(m, "%d\n", win->color_expand_enable);
+
+	return 0;
+}
+
+static int dbg_color_expand_enable_open(struct inode *inode,
+	struct file *file)
+{
+	return single_open(file, dbg_color_expand_enable_show,
+		inode->i_private);
+}
+
+static ssize_t dbg_color_expand_enable_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	struct seq_file *m = file->private_data;
+	struct tegra_dc_win *win = m->private;
+	long   new_state;
+	int    ret;
+
+	if (!win)
+		return -EINVAL;
+
+	ret = kstrtol_from_user(addr, len, 10, &new_state);
+	if (ret < 0)
+		return ret;
+
+	if (new_state == 1)
+		win->color_expand_enable = true;
+	else if (new_state == 0)
+		win->color_expand_enable = false;
+
+	return len;
+}
+
+static const struct file_operations dbg_color_expand_enable_fops = {
+	.open = dbg_color_expand_enable_open,
+	.read = seq_read,
+	.write = dbg_color_expand_enable_write,
+	.llseek = seq_lseek,
+	.release = single_release,
+};
+
 static int dbg_vrr_enable_show(struct seq_file *m, void *unused)
 {
 	struct tegra_vrr *vrr = m->private;
@@ -2173,6 +2223,11 @@ static void tegra_dc_remove_debugfs(struct tegra_dc *dc)
 	if (dc->debugdir)
 		debugfs_remove_recursive(dc->debugdir);
 	dc->debugdir = NULL;
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (dc->debug_common_dir)
+		debugfs_remove_recursive(dc->debug_common_dir);
+	dc->debug_common_dir = NULL;
+#endif
 }
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
@@ -2266,7 +2321,9 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 {
 	struct dentry *retval, *vrrdir;
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	struct dentry *ihubdir;
+	struct dentry *ihubdir, *windir;
+	char   winname[50];
+	u32 i;
 #endif
 	char   devname[50];
 
@@ -2383,7 +2440,33 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 	if (!retval)
 		goto remove_out;
 
+/*Create directory for elements common to all DC heads*/
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (!dc->ndev->id) {
+		dc->debug_common_dir = debugfs_create_dir("tegradc.common",
+			NULL);
+		if (!dc->debug_common_dir)
+			goto remove_out;
+		for (i = 0; i < DC_N_WINDOWS; i++) {
+			struct tegra_dc_win *win = &tegra_dc_windows[i];
+
+			snprintf(winname, sizeof(winname), "tegra_win.%d", i);
+			windir = debugfs_create_dir(winname,
+				dc->debug_common_dir);
+			if (!windir)
+				goto remove_out;
+
+			retval = debugfs_create_file("color_expand_enable",
+				S_IRUGO, windir, win,
+				&dbg_color_expand_enable_fops);
+			if (!retval)
+				goto remove_out;
+		}
+	}
+#endif
+
 	return;
+
 remove_out:
 	dev_err(&dc->ndev->dev, "could not create debugfs\n");
 	tegra_dc_remove_debugfs(dc);
@@ -5860,6 +5943,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		struct tegra_dc_win *win = &tegra_dc_windows[i];
+		win->color_expand_enable = true;
 #else
 		struct tegra_dc_win *win = &dc->windows[i];
 		win->dc = dc;

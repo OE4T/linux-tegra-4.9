@@ -208,7 +208,7 @@ static inline u32 top_device_info_data_pri_base_align_v(void)
 }
 static inline u32 top_device_info_data_fault_id_enum_v(u32 r)
 {
-	return (r >> 3) & 0x1f;
+	return (r >> 3) & 0x7f;
 }
 static inline u32 top_device_info_data_fault_id_v(u32 r)
 {

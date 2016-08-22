@@ -72,16 +72,16 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */
-        lrf_ecc_status = gk20a_readl(g,
-			gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset);
-	if ( (lrf_ecc_status &
+	lrf_ecc_status = gk20a_readl(g,
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset);
+	if ((lrf_ecc_status &
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_pending_f()) ||
 		(lrf_ecc_status &
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp1_pending_f()) ||
 		(lrf_ecc_status &
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp2_pending_f()) ||
 		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp3_pending_f()) ) {
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp3_pending_f())) {
 
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
 			"Single bit error detected in SM LRF!");
@@ -93,14 +93,14 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r() + offset,
 			0);
 	}
-	if ( (lrf_ecc_status &
+	if ((lrf_ecc_status &
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_pending_f()) ||
 		(lrf_ecc_status &
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp1_pending_f()) ||
 		(lrf_ecc_status &
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp2_pending_f()) ||
 		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp3_pending_f()) ) {
+		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp3_pending_f())) {
 
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
 			"Double bit error detected in SM LRF!");
@@ -109,14 +109,13 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gk20a_readl(g,
 				gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset);
 		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset,
-			0);
+			gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset, 0);
 	}
 	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
 			lrf_ecc_status);
 
 	/* Check for SHM ECC errors. */
-        shm_ecc_status = gk20a_readl(g,
+	shm_ecc_status = gk20a_readl(g,
 			gr_pri_gpc0_tpc0_sm_shm_ecc_status_r() + offset);
 	if ((shm_ecc_status &
 		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_corrected_shm0_pending_f()) ||
@@ -125,7 +124,7 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 		(shm_ecc_status &
 		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm0_pending_f()) ||
 		(shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm1_pending_f()) ) {
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm1_pending_f())) {
 		u32 ecc_stats_reg_val;
 
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
@@ -144,10 +143,10 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset,
 			ecc_stats_reg_val);
 	}
-	if ( (shm_ecc_status &
+	if ((shm_ecc_status &
 		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm0_pending_f()) ||
 		(shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm1_pending_f()) ) {
+		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm1_pending_f())) {
 		u32 ecc_stats_reg_val;
 
 		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
@@ -1133,8 +1132,8 @@ static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 		gk20a_readl(g, gr_pri_gpc0_tpc0_tex_m_tex_subunits_status_r()));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_CWD_FS: 0x%x\n",
 		gk20a_readl(g, gr_cwd_fs_r()));
-	gk20a_debug_output(o, "NV_PGRAPH_PRI_FE_TPC_FS: 0x%x\n",
-		gk20a_readl(g, gr_fe_tpc_fs_r()));
+	gk20a_debug_output(o, "NV_PGRAPH_PRI_FE_TPC_FS(0): 0x%x\n",
+		gk20a_readl(g, gr_fe_tpc_fs_r(0)));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_CWD_GPC_TPC_ID: 0x%x\n",
 		gk20a_readl(g, gr_cwd_gpc_tpc_id_r(0)));
 	gk20a_debug_output(o, "NV_PGRAPH_PRI_CWD_SM_ID(0): 0x%x\n",
@@ -1184,7 +1183,7 @@ static int gr_gv11b_dump_gr_status_regs(struct gk20a *g,
 
 static bool gr_activity_empty_or_preempted(u32 val)
 {
-	while(val) {
+	while (val) {
 		u32 v = val & 7;
 		if (v != gr_activity_4_gpc0_empty_v() &&
 		    v != gr_activity_4_gpc0_preempted_v())
@@ -1542,16 +1541,16 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			gpc, tpc, global_esr);
 
 	if (cilp_enabled && sm_debugger_attached) {
-		if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f())
-			gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
-					gr_gpc0_tpc0_sm_hww_global_esr_bpt_int_pending_f());
+		if (global_esr & gr_gpc0_tpc0_sm0_hww_global_esr_bpt_int_pending_f())
+			gk20a_writel(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset,
+					gr_gpc0_tpc0_sm0_hww_global_esr_bpt_int_pending_f());
 
-		if (global_esr & gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f())
-			gk20a_writel(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset,
-					gr_gpc0_tpc0_sm_hww_global_esr_single_step_complete_pending_f());
+		if (global_esr & gr_gpc0_tpc0_sm0_hww_global_esr_single_step_complete_pending_f())
+			gk20a_writel(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset,
+					gr_gpc0_tpc0_sm0_hww_global_esr_single_step_complete_pending_f());
 
-		global_mask = gr_gpcs_tpcs_sm_hww_global_esr_multiple_warp_errors_pending_f() |
-			gr_gpcs_tpcs_sm_hww_global_esr_bpt_pause_pending_f();
+		global_mask = gr_gpcs_tpcs_sm0_hww_global_esr_multiple_warp_errors_pending_f() |
+			gr_gpcs_tpcs_sm0_hww_global_esr_bpt_pause_pending_f();
 
 		if (warp_esr != 0 || (global_esr & global_mask) != 0) {
 			*ignore_debugger = true;
@@ -1575,7 +1574,7 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 			}
 
 			/* reset the HWW errors after locking down */
-			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm_hww_global_esr_r() + offset);
+			global_esr_copy = gk20a_readl(g, gr_gpc0_tpc0_sm0_hww_global_esr_r() + offset);
 			gk20a_gr_clear_sm_hww(g, gpc, tpc, global_esr_copy);
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 					"CILP: HWWs cleared for gpc %d tpc %d\n",
@@ -1588,15 +1587,15 @@ static int gr_gv11b_pre_process_sm_exception(struct gk20a *g,
 				return ret;
 			}
 
-			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset);
-			if (dbgr_control0 & gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_enable_f()) {
+			dbgr_control0 = gk20a_readl(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset);
+			if (dbgr_control0 & gr_gpcs_tpcs_sm0_dbgr_control0_single_step_mode_enable_f()) {
 				gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
 						"CILP: clearing SINGLE_STEP_MODE before resume for gpc %d tpc %d\n",
 						gpc, tpc);
 				dbgr_control0 = set_field(dbgr_control0,
-						gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_m(),
-						gr_gpcs_tpcs_sm_dbgr_control0_single_step_mode_disable_f());
-				gk20a_writel(g, gr_gpc0_tpc0_sm_dbgr_control0_r() + offset, dbgr_control0);
+						gr_gpcs_tpcs_sm0_dbgr_control0_single_step_mode_m(),
+						gr_gpcs_tpcs_sm0_dbgr_control0_single_step_mode_disable_f());
+				gk20a_writel(g, gr_gpc0_tpc0_sm0_dbgr_control0_r() + offset, dbgr_control0);
 			}
 
 			gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg,
@@ -1703,10 +1702,10 @@ clean_up:
 
 static u32 gv11b_mask_hww_warp_esr(u32 hww_warp_esr)
 {
-	if (!(hww_warp_esr & gr_gpc0_tpc0_sm_hww_warp_esr_addr_valid_m()))
+	if (!(hww_warp_esr & gr_gpc0_tpc0_sm0_hww_warp_esr_wrap_id_m()))
 		hww_warp_esr = set_field(hww_warp_esr,
-			gr_gpc0_tpc0_sm_hww_warp_esr_addr_error_type_m(),
-			gr_gpc0_tpc0_sm_hww_warp_esr_addr_error_type_none_f());
+			gr_gpc0_tpc0_sm0_hww_warp_esr_addr_error_type_m(),
+			gr_gpc0_tpc0_sm0_hww_warp_esr_addr_error_type_none_f());
 
 	return hww_warp_esr;
 }

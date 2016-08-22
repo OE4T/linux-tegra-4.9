@@ -242,6 +242,14 @@ static inline u32 gmmu_new_pte_address_sys_w(void)
 {
 	return 0;
 }
+static inline u32 gmmu_new_pte_address_vid_f(u32 v)
+{
+	return (v & 0xffffff) << 8;
+}
+static inline u32 gmmu_new_pte_address_vid_w(void)
+{
+	return 0;
+}
 static inline u32 gmmu_new_pte_vol_w(void)
 {
 	return 0;
@@ -1110,7 +1118,7 @@ static inline u32 gmmu_pte_kind_c32_ms2_2cbr_v(void)
 {
 	return 0x000000de;
 }
-static inline u32 gmmu_pte_kind_c32_ms2_2cra_v(void)
+static inline u32 gmmu_pte_kind_c32_ms2_4cbra_v(void)
 {
 	return 0x000000cc;
 }
@@ -1174,7 +1182,7 @@ static inline u32 gmmu_pte_kind_c64_ms2_2cbr_v(void)
 {
 	return 0x000000ec;
 }
-static inline u32 gmmu_pte_kind_c64_ms2_2cra_v(void)
+static inline u32 gmmu_pte_kind_c64_ms2_2cbra_v(void)
 {
 	return 0x000000cd;
 }

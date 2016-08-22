@@ -608,11 +608,11 @@ static inline u32 pwr_pmu_mutex_value_initial_lock_f(void)
 }
 static inline u32 pwr_pmu_queue_head_r(u32 i)
 {
-	return 0x0010a4a0 + i*4;
+	return 0x0010a800 + i*4;
 }
 static inline u32 pwr_pmu_queue_head__size_1_v(void)
 {
-	return 0x00000004;
+	return 0x00000008;
 }
 static inline u32 pwr_pmu_queue_head_address_f(u32 v)
 {
@@ -624,11 +624,11 @@ static inline u32 pwr_pmu_queue_head_address_v(u32 r)
 }
 static inline u32 pwr_pmu_queue_tail_r(u32 i)
 {
-	return 0x0010a4b0 + i*4;
+	return 0x0010a820 + i*4;
 }
 static inline u32 pwr_pmu_queue_tail__size_1_v(void)
 {
-	return 0x00000004;
+	return 0x00000008;
 }
 static inline u32 pwr_pmu_queue_tail_address_f(u32 v)
 {

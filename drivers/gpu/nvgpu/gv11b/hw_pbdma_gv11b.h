@@ -72,7 +72,7 @@ static inline u32 pbdma_gp_base_r(u32 i)
 }
 static inline u32 pbdma_gp_base__size_1_v(void)
 {
-	return 0x00000001;
+	return 0x00000003;
 }
 static inline u32 pbdma_gp_base_offset_f(u32 v)
 {
@@ -470,10 +470,6 @@ static inline u32 pbdma_intr_0_pbcrc_pending_f(void)
 {
 	return 0x80000;
 }
-static inline u32 pbdma_intr_0_xbarconnect_pending_f(void)
-{
-	return 0x100000;
-}
 static inline u32 pbdma_intr_0_method_pending_f(void)
 {
 	return 0x200000;
@@ -509,10 +505,6 @@ static inline u32 pbdma_intr_0_pbseg_pending_f(void)
 static inline u32 pbdma_intr_0_signature_pending_f(void)
 {
 	return 0x80000000;
-}
-static inline u32 pbdma_intr_0_syncpoint_illegal_pending_f(void)
-{
-	return 0x10000000;
 }
 static inline u32 pbdma_intr_1_r(u32 i)
 {
@@ -565,38 +557,6 @@ static inline u32 pbdma_allowed_syncpoints_1_valid_f(u32 v)
 static inline u32 pbdma_allowed_syncpoints_1_index_f(u32 v)
 {
 	return (v & 0x7fff) << 0;
-}
-static inline u32 pbdma_syncpointa_r(u32 i)
-{
-	return 0x000400a4 + i*8192;
-}
-static inline u32 pbdma_syncpointa_payload_v(u32 r)
-{
-	return (r >> 0) & 0xffffffff;
-}
-static inline u32 pbdma_syncpointb_r(u32 i)
-{
-	return 0x000400a8 + i*8192;
-}
-static inline u32 pbdma_syncpointb_op_v(u32 r)
-{
-	return (r >> 0) & 0x1;
-}
-static inline u32 pbdma_syncpointb_op_wait_v(void)
-{
-	return 0x00000000;
-}
-static inline u32 pbdma_syncpointb_wait_switch_v(u32 r)
-{
-	return (r >> 4) & 0x1;
-}
-static inline u32 pbdma_syncpointb_wait_switch_en_v(void)
-{
-	return 0x00000001;
-}
-static inline u32 pbdma_syncpointb_syncpt_index_v(u32 r)
-{
-	return (r >> 8) & 0xfff;
 }
 static inline u32 pbdma_runlist_timeslice_r(u32 i)
 {

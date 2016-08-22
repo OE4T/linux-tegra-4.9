@@ -174,18 +174,6 @@ static inline u32 fb_mmu_invalidate_replay_start_ack_all_f(void)
 {
 	return 0x10;
 }
-static inline u32 fb_mmu_invalidate_replay_cancel_targeted_f(void)
-{
-	return 0x18;
-}
-static inline u32 fb_mmu_invalidate_replay_cancel_global_f(void)
-{
-	return 0x20;
-}
-static inline u32 fb_mmu_invalidate_replay_cancel_f(void)
-{
-	return 0x20;
-}
 static inline u32 fb_mmu_invalidate_sys_membar_s(void)
 {
 	return 1;

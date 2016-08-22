@@ -211,7 +211,7 @@ static int __gk20a_bitmap_store_alloc(struct gk20a_bitmap_allocator *a,
 static u64 gk20a_bitmap_alloc(struct gk20a_allocator *__a, u64 len)
 {
 	u64 blks, addr;
-	unsigned long offs, adjusted_offs;
+	unsigned long offs, adjusted_offs, limit;
 	struct gk20a_bitmap_allocator *a = bitmap_allocator(__a);
 
 	blks = len >> a->blk_shift;
@@ -221,11 +221,26 @@ static u64 gk20a_bitmap_alloc(struct gk20a_allocator *__a, u64 len)
 
 	alloc_lock(__a);
 
-	offs = bitmap_find_next_zero_area(a->bitmap, a->num_bits, 0, blks, 0);
-	if (offs >= a->num_bits)
-		goto fail;
+	/*
+	 * First look from next_blk and onwards...
+	 */
+	offs = bitmap_find_next_zero_area(a->bitmap, a->num_bits,
+					  a->next_blk, blks, 0);
+	if (offs >= a->num_bits) {
+		/*
+		 * If that didn't work try the remaining area. Since there can
+		 * be available space that spans across a->next_blk we need to
+		 * search up to the first set bit after that.
+		 */
+		limit = find_next_bit(a->bitmap, a->num_bits, a->next_blk);
+		offs = bitmap_find_next_zero_area(a->bitmap, limit,
+						  0, blks, 0);
+		if (offs >= a->next_blk)
+			goto fail;
+	}
 
 	bitmap_set(a->bitmap, offs, blks);
+	a->next_blk = offs + blks;
 
 	adjusted_offs = offs + a->bit_offs;
 	addr = ((u64)adjusted_offs) * a->blk_size;
@@ -255,6 +270,7 @@ static u64 gk20a_bitmap_alloc(struct gk20a_allocator *__a, u64 len)
 fail_reset_bitmap:
 	bitmap_clear(a->bitmap, offs, blks);
 fail:
+	a->next_blk = 0;
 	alloc_unlock(__a);
 	alloc_dbg(__a, "Alloc failed!\n");
 	return 0;

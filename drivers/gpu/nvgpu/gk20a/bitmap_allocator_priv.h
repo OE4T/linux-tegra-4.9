@@ -31,6 +31,15 @@ struct gk20a_bitmap_allocator {
 	u64 num_bits;			/* Number of allocatable bits. */
 	u64 bit_offs;			/* Offset of bitmap. */
 
+	/*
+	 * Optimization for making repeated allocations faster. Keep track of
+	 * the next bit after the most recent allocation. This is where the next
+	 * search will start from. This should make allocation faster in cases
+	 * where lots of allocations get made one after another. It shouldn't
+	 * have a negative impact on the case where the allocator is fragmented.
+	 */
+	u64 next_blk;
+
 	unsigned long *bitmap;		/* The actual bitmap! */
 	struct rb_root allocs;		/* Tree of outstanding allocations. */
 

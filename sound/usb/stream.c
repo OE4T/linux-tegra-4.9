@@ -105,6 +105,7 @@ static void snd_usb_init_substream(struct snd_usb_stream *as,
 	subs->ep_num = fp->endpoint;
 	if (fp->channels > subs->channels_max)
 		subs->channels_max = fp->channels;
+	subs->last_prepare = 0;
 }
 
 /* kctl callbacks for usb-audio channel maps */

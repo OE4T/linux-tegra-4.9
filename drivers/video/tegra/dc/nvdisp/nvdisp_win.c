@@ -465,12 +465,9 @@ static int tegra_nvdisp_win_attribute(struct tegra_dc_win *win,
 	if (win->flags & TEGRA_WIN_FLAG_INVERT_V)
 		win_options |= win_options_v_direction_decrement_f();
 
-	if (!(dc->yuv_bypass)) {
-		if (dc->mode.vmode & FB_VMODE_LIMITED_RANGE)
+	if ((!dc->yuv_bypass) && win->color_expand_enable)
 			win_options |= win_options_color_expand_enable_f();
-		else if ((dc->mode.vmode & (FB_VMODE_Y422 | FB_VMODE_Y444)))
-			win_options |= win_options_color_expand_enable_f();
-	}
+
 	if (win->ppflags & TEGRA_WIN_PPFLAG_CP_ENABLE)
 		win_options |= win_options_cp_enable_enable_f();
 

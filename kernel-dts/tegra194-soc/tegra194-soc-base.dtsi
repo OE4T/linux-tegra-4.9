@@ -164,6 +164,15 @@
 		status = "okay";
 	};
 
+	efuse@3820000 {
+		compatible = "nvidia,tegra186-efuse";
+		reg = <0x0 0x03820000 0x0 0x600>;
+		clocks = <&bpmp_clks TEGRA194_CLK_FUSE>,
+		         <&bpmp_clks TEGRA194_CLK_CLK_M>;
+		clock-names = "fuse", "clk_m";
+		status = "okay";
+	};
+
 	bpmp {
 		compatible = "nvidia,tegra186-bpmp";
 		#stream-id-cells = <1>;

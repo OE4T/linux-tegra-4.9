@@ -940,6 +940,16 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	if (err)
 		return err;
 
+	/*
+	 * this requires fixed allocations in vidmem which must be
+	 * allocated before all other buffers
+	 */
+	if (g->ops.pmu.alloc_blob_space && g->mm.vidmem_is_vidmem) {
+		err = g->ops.pmu.alloc_blob_space(g, 0, &g->acr.ucode_blob);
+		if (err)
+			return err;
+	}
+
 	err = gk20a_alloc_sysmem_flush(g);
 	if (err)
 		return err;

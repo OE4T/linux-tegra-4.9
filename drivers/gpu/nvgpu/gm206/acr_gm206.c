@@ -58,6 +58,9 @@ int gm206_alloc_blob_space(struct gk20a *g,
 {
 	struct wpr_carveout_info wpr_inf;
 
+	if (mem->size)
+		return 0;
+
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 
 	return gk20a_gmmu_alloc_attr_vid_at(g, 0, wpr_inf.size, mem,

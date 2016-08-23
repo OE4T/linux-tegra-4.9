@@ -1172,6 +1172,8 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			dc->out && (dc->out->type == TEGRA_DC_OUT_HDMI)) {
 		struct fb_monspecs specs;
 		if (tegra_dc_hpd(dc) && (!dc->initialized)) {
+			/* Unpowergate DC before reading EDID */
+			tegra_dc_unpowergate_locked(hdmi->dc);
 			if (!tegra_edid_get_monspecs(hdmi->edid, &specs))
 				tegra_dc_set_fb_mode(dc, specs.modedb, false);
 			else {
@@ -1179,6 +1181,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 				tegra_dc_set_fb_mode(dc,
 						&tegra_dc_vga_mode, false);
 			}
+			tegra_dc_powergate_locked(hdmi->dc);
 		} else
 
 			tegra_dc_set_fb_mode(dc, &tegra_dc_vga_mode, false);

@@ -117,6 +117,9 @@
 						status = "okay";
 					};
 				};
+				port@3 {
+					status = "disabled";
+				};
 			};
 		};
 
@@ -204,8 +207,12 @@
 	};
 
 	i2c@c240000 {
-		/delete-node/ ov23850_c@36;
-		/delete-node/ lc898212@1_0072;
+		ov23850_c@36 {
+			status = "disabled";
+		};
+		lc898212@72 {
+			status = "disabled";
+		};
 	};
 
 	i2c@3160000 {
@@ -224,9 +231,15 @@
 	};
 
 	i2c@3180000 {
-		/delete-node/ ov5693_c@36;
-		/delete-node/ ov23850_a@10;
-		/delete-node/ lc898212@2_0072;
+		ov5693_c@36 {
+			status = "disabled";
+		};
+		ov23850_a@36 {
+			status = "disabled";
+		};
+		lc898212@72 {
+			status = "disabled";
+		};
 
 		ov10823_a@20 {
 			compatible = "nvidia,ov10823";
@@ -579,9 +592,12 @@
 				badge = "p4572_bottom_ov10823";
 				position = "bottom";
 				orientation = "0";
+				status = "okay";
 				drivernode0 {
+					status = "okay";
 					/* Declare PCL support driver (classically known as guid) */
-					pcl_id = "v4l2_soc_sensor";
+					pcl_id = "v4l2_sensor";
+					devname = "ov10823 2-0020";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree =
 				"/proc/device-tree/i2c@3180000/ov10823_a@20";
@@ -591,9 +607,12 @@
 				badge = "p4572_center_ov10823";
 				position = "center";
 				orientation = "0";
+				status = "okay";
 				drivernode0 {
+					status = "okay";
 					/* Declare PCL support driver (classically known as guid) */
-					pcl_id = "v4l2_soc_sensor";
+					pcl_id = "v4l2_sensor";
+					devname = "ov10823 2-0022";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree =
 				"/proc/device-tree/i2c@3180000/ov10823_c@22";
@@ -603,9 +622,12 @@
 				badge = "p4572_top_ov10823";
 				position = "top";
 				orientation = "0";
+				status = "okay";
 				drivernode0 {
+					status = "okay";
 					/* Declare PCL support driver (classically known as guid) */
-					pcl_id = "v4l2_soc_sensor";
+					pcl_id = "v4l2_sensor";
+					devname = "ov10823 2-0024";
 					/* Declare the device-tree hierarchy to driver instance */
 					proc-device-tree =
 				"/proc/device-tree/i2c@3180000/ov10823_e@24";

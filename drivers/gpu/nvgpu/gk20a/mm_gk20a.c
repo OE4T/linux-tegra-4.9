@@ -3058,6 +3058,31 @@ void gk20a_gmmu_free(struct gk20a *g, struct mem_desc *mem)
 	return gk20a_gmmu_free_attr(g, 0, mem);
 }
 
+/*
+ * If mem is in VIDMEM, return base address in vidmem
+ * else return IOVA address for SYSMEM
+ */
+u64 gk20a_mem_get_base_addr(struct gk20a *g, struct mem_desc *mem,
+			    u32 flags)
+{
+	struct gk20a_page_alloc *alloc;
+	u64 addr;
+
+	if (mem->aperture == APERTURE_VIDMEM) {
+		alloc = (struct gk20a_page_alloc *)
+					sg_dma_address(mem->sgt->sgl);
+
+		/* This API should not be used with > 1 chunks */
+		WARN_ON(alloc->nr_chunks != 1);
+
+		addr = alloc->base;
+	} else {
+		addr = g->ops.mm.get_iova_addr(g, mem->sgt->sgl, flags);
+	}
+
+	return addr;
+}
+
 #if defined(CONFIG_GK20A_VIDMEM)
 static struct mem_desc *get_pending_mem_desc(struct mm_gk20a *mm)
 {
@@ -3341,7 +3366,7 @@ u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 static inline u32 big_valid_pde0_bits(struct gk20a *g,
 		struct mem_desc *entry_mem)
 {
-	u64 pte_addr = g->ops.mm.get_iova_addr(g, entry_mem->sgt->sgl, 0);
+	u64 pte_addr = gk20a_mem_get_base_addr(g, entry_mem, 0);
 	u32 pde0_bits =
 		gk20a_aperture_mask(g, entry_mem,
 		  gmmu_pde_aperture_big_sys_mem_ncoh_f(),
@@ -3355,7 +3380,7 @@ static inline u32 big_valid_pde0_bits(struct gk20a *g,
 static inline u32 small_valid_pde1_bits(struct gk20a *g,
 		struct mem_desc *entry_mem)
 {
-	u64 pte_addr = g->ops.mm.get_iova_addr(g, entry_mem->sgt->sgl, 0);
+	u64 pte_addr = gk20a_mem_get_base_addr(g, entry_mem, 0);
 	u32 pde1_bits =
 		gk20a_aperture_mask(g, entry_mem,
 		  gmmu_pde_aperture_small_sys_mem_ncoh_f(),
@@ -4709,7 +4734,7 @@ static int gk20a_init_ce_vm(struct mm_gk20a *mm)
 void gk20a_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
 		struct vm_gk20a *vm)
 {
-	u64 pdb_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.sgt->sgl, 0);
+	u64 pdb_addr = gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 
@@ -4969,8 +4994,7 @@ int gk20a_vm_find_buffer(struct vm_gk20a *vm, u64 gpu_va,
 void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 {
 	struct gk20a *g = gk20a_from_vm(vm);
-	u32 addr_lo = u64_lo32(g->ops.mm.get_iova_addr(g,
-						  vm->pdb.mem.sgt->sgl, 0) >> 12);
+	u32 addr_lo;
 	u32 data;
 	s32 retry = 2000;
 	static DEFINE_MUTEX(tlb_lock);
@@ -4985,6 +5009,8 @@ void gk20a_mm_tlb_invalidate(struct vm_gk20a *vm)
 
 	if (!g->power_on)
 		return;
+
+	addr_lo = u64_lo32(gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0) >> 12);
 
 	mutex_lock(&tlb_lock);
 

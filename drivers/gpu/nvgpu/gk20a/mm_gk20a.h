@@ -548,6 +548,8 @@ void gk20a_free_sgtable(struct sg_table **sgt);
 u64 gk20a_mm_iova_addr(struct gk20a *g, struct scatterlist *sgl,
 		u32 flags);
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova);
+u64 gk20a_mem_get_base_addr(struct gk20a *g, struct mem_desc *mem,
+			    u32 flags);
 
 void gk20a_mm_ltc_isr(struct gk20a *g);
 

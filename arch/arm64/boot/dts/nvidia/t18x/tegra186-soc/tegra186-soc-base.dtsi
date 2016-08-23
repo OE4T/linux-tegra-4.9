@@ -172,7 +172,7 @@
 
 			      /* Non-host devices. */
 			      <&{/adsp@2993000}		TEGRA_SID_APE>,
-			      <&{/rtcpu@2993000}	TEGRA_SID_APE>,
+			      <&{/rtcpu@2993000}	TEGRA_SID_RCE>,
 			      <&{/ether_qos@2490000}	TEGRA_SID_EQOS>,
 			      <&{/sdhci@3460000}	TEGRA_SID_SDMMC4A>,
 			      <&{/sdhci@3420000}	TEGRA_SID_SDMMC2A>,
@@ -187,7 +187,7 @@
 			      <&{/pcie-controller@10003000} TEGRA_SID_AFI>,
 			      <&{/ahci-sata@3507000}	TEGRA_SID_SATA2>,
 			      <&{/aon@c160000}		TEGRA_SID_AON>,
-			      <&{/rtcpu@b000000}	TEGRA_SID_SCE>,
+			      <&{/rtcpu@b000000}	TEGRA_SID_RCE>,
 			      <&{/bpmp}			TEGRA_SID_BPMP>,
 			      <&{/dma@2600000}		TEGRA_SID_GPCDMA_0>,
 			      <&{/spi@3210000}		TEGRA_SID_GPCDMA_0>,
@@ -236,9 +236,10 @@
 					    TEGRA_SID(NVDEC) TEGRA_SID(NVENC) TEGRA_SID(NVJPG)
 					    TEGRA_SID(ISP) TEGRA_SID(TSEC) TEGRA_SID(TSECB)
 					    TEGRA_SID(NVDISPLAY) TEGRA_SID(NVCSI)
+					    TEGRA_SID(RCE_1X)
 					    TEGRA_SID(SE) TEGRA_SID(SE1)
 					    TEGRA_SID(SE2) TEGRA_SID(SE3)>;
-				sid-list-len = <14>;
+				sid-list-len = <15>;
 			};
 			host1x0_domain {
 				address-space = <&host1x_as>;
@@ -359,6 +360,11 @@
 			ufshci_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_UFSHC>;
+				sid-list-len = <1>;
+			};
+			rce_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_RCE>;
 				sid-list-len = <1>;
 			};
 		};

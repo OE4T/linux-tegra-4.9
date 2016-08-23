@@ -95,6 +95,9 @@ static int gp106_alloc_blob_space(struct gk20a *g,
 	struct wpr_carveout_info wpr_inf;
 	int err;
 
+	if (mem->size)
+		return 0;
+
 	g->ops.pmu.get_wpr(g, &wpr_inf);
 
 	/*

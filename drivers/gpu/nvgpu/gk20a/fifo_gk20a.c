@@ -301,8 +301,6 @@ int gk20a_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 		if (inst_id)
 			*inst_id = (engine_type - top_device_info_type_enum_copy0_v());
 	}
-	else
-		gk20a_err(g->dev, "unknown engine %d", engine_type);
 
 	return ret;
 }

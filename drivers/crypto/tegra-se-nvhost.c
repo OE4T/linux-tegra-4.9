@@ -3418,6 +3418,7 @@ static struct platform_driver tegra_se_driver = {
 		.owner  = THIS_MODULE,
 		.of_match_table = of_match_ptr(tegra_se_of_match),
 		.pm = &nvhost_module_pm_ops,
+		.suppress_bind_attrs = true,
 	},
 };
 

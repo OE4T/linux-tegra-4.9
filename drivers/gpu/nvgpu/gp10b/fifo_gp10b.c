@@ -200,8 +200,6 @@ static int gp10b_fifo_engine_enum_from_type(struct gk20a *g, u32 engine_type,
 		/* Default assumptions - all the CE engine have separate runlist */
 		ret = ENGINE_ASYNC_CE_GK20A;
 	}
-	else
-		gk20a_err(g->dev, "unknown engine %d", engine_type);
 
 	return ret;
 }

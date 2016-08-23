@@ -154,10 +154,11 @@ static u32 pte3_from_index(u32 i)
 static u64 entry_addr(struct gk20a *g, struct gk20a_mm_entry *entry)
 {
 	u64 addr;
+
 	if (g->mm.has_physical_mode)
 		addr = sg_phys(entry->mem.sgt->sgl);
 	else
-		addr = g->ops.mm.get_iova_addr(g, entry->mem.sgt->sgl, 0);
+		addr = gk20a_mem_get_base_addr(g, &entry->mem, 0);
 
 	return addr;
 }
@@ -386,7 +387,7 @@ static const struct gk20a_mmu_level *gp10b_mm_get_mmu_levels(struct gk20a *g,
 static void gp10b_mm_init_pdb(struct gk20a *g, struct mem_desc *inst_block,
 		struct vm_gk20a *vm)
 {
-	u64 pdb_addr = g->ops.mm.get_iova_addr(g, vm->pdb.mem.sgt->sgl, 0);
+	u64 pdb_addr = gk20a_mem_get_base_addr(g, &vm->pdb.mem, 0);
 	u32 pdb_addr_lo = u64_lo32(pdb_addr >> ram_in_base_shift_v());
 	u32 pdb_addr_hi = u64_hi32(pdb_addr);
 

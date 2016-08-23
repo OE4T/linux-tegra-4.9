@@ -2066,7 +2066,7 @@ void pmu_copy_to_dmem(struct pmu_gk20a *pmu,
 
 	data = gk20a_readl(g, pwr_falcon_dmemc_r(port)) & addr_mask;
 	size = ALIGN(size, 4);
-	if (data != dst + size) {
+	if (data != ((dst + size) & addr_mask)) {
 		gk20a_err(dev_from_gk20a(g),
 			"copy failed. bytes written %d, expected %d",
 			data - dst, size);

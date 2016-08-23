@@ -985,12 +985,6 @@ unbind:
 	ch->vpr = false;
 	ch->vm = NULL;
 
-	mutex_lock(&ch->last_submit.fence_lock);
-	gk20a_fence_put(ch->last_submit.pre_fence);
-	gk20a_fence_put(ch->last_submit.post_fence);
-	ch->last_submit.pre_fence = NULL;
-	ch->last_submit.post_fence = NULL;
-	mutex_unlock(&ch->last_submit.fence_lock);
 	WARN_ON(ch->sync);
 
 	/* unlink all debug sessions */
@@ -1451,14 +1445,6 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	}
 	ch_vm = c->vm;
 
-	c->cmds_pending = false;
-	mutex_lock(&c->last_submit.fence_lock);
-	gk20a_fence_put(c->last_submit.pre_fence);
-	gk20a_fence_put(c->last_submit.post_fence);
-	c->last_submit.pre_fence = NULL;
-	c->last_submit.post_fence = NULL;
-	mutex_unlock(&c->last_submit.fence_lock);
-
 	c->ramfc.offset = 0;
 	c->ramfc.size = ram_in_ramfc_s() / 8;
 
@@ -1866,8 +1852,8 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 	if (c) {
 		job->num_mapped_buffers = num_mapped_buffers;
 		job->mapped_buffers = mapped_buffers;
-		job->pre_fence = gk20a_fence_get(pre_fence);
-		job->post_fence = gk20a_fence_get(post_fence);
+		job->pre_fence = pre_fence;
+		job->post_fence = post_fence;
 		job->wait_cmd = wait_cmd;
 		job->incr_cmd = incr_cmd;
 
@@ -2352,14 +2338,8 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	if (incr_cmd)
 		gk20a_submit_append_priv_cmdbuf(c, incr_cmd);
 
-	mutex_lock(&c->last_submit.fence_lock);
-	gk20a_fence_put(c->last_submit.pre_fence);
-	gk20a_fence_put(c->last_submit.post_fence);
-	c->last_submit.pre_fence = pre_fence;
-	c->last_submit.post_fence = post_fence;
 	if (fence_out)
 		*fence_out = gk20a_fence_get(post_fence);
-	mutex_unlock(&c->last_submit.fence_lock);
 
 	if (need_job_tracking)
 		/* TODO! Check for errors... */
@@ -2367,7 +2347,6 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 				wait_cmd, incr_cmd,
 				skip_buffer_refcounting);
 
-	c->cmds_pending = true;
 	gk20a_bar1_writel(g,
 		c->userd_gpu_va + 4 * ram_userd_gp_put_w(),
 		c->gpfifo.put);
@@ -2408,7 +2387,6 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	init_waitqueue_head(&c->ref_count_dec_wq);
 	mutex_init(&c->ioctl_lock);
 	spin_lock_init(&c->jobs_lock);
-	mutex_init(&c->last_submit.fence_lock);
 	raw_spin_lock_init(&c->timeout.lock);
 	mutex_init(&c->sync_lock);
 	INIT_DELAYED_WORK(&c->timeout.wq, gk20a_channel_timeout_handler);
@@ -2426,39 +2404,6 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	list_add(&c->free_chs, &g->fifo.free_chs);
 
 	return 0;
-}
-
-int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout)
-{
-	int err = 0;
-	struct gk20a_fence *fence;
-
-	if (!ch->cmds_pending)
-		return 0;
-
-	mutex_lock(&ch->last_submit.fence_lock);
-	fence = ch->last_submit.post_fence;
-	if (!fence) {
-		mutex_unlock(&ch->last_submit.fence_lock);
-		return -EINVAL;
-	}
-	mutex_unlock(&ch->last_submit.fence_lock);
-
-	/* Do not wait for a timedout channel */
-	if (ch->has_timedout)
-		return -ETIMEDOUT;
-
-	gk20a_dbg_fn("waiting for channel to finish thresh:%d sema:%p",
-		     fence->syncpt_value, fence->semaphore);
-
-	err = gk20a_fence_wait(fence, timeout);
-	if (WARN_ON(err))
-		dev_warn(dev_from_gk20a(ch->g),
-		       "timed out waiting for gk20a channel to finish");
-	else
-		ch->cmds_pending = false;
-
-	return err;
 }
 
 static int gk20a_channel_wait_semaphore(struct channel_gk20a *ch,

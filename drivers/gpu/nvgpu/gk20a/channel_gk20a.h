@@ -152,13 +152,6 @@ struct channel_gk20a {
 	struct channel_gk20a_timeout timeout;
 	struct channel_gk20a_clean_up clean_up;
 
-	bool cmds_pending;
-	struct {
-		struct gk20a_fence *pre_fence;
-		struct gk20a_fence *post_fence;
-		struct mutex fence_lock;
-	} last_submit;
-
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
 	void *cyclestate_buffer;
@@ -221,7 +214,6 @@ bool gk20a_channel_update_and_check_timeout(struct channel_gk20a *ch,
 void gk20a_disable_channel(struct channel_gk20a *ch);
 void gk20a_channel_abort(struct channel_gk20a *ch, bool channel_preempt);
 void gk20a_channel_abort_clean_up(struct channel_gk20a *ch);
-int gk20a_channel_finish(struct channel_gk20a *ch, unsigned long timeout);
 void gk20a_set_error_notifier(struct channel_gk20a *ch, __u32 error);
 void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events);
 int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 size,

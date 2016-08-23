@@ -57,12 +57,11 @@ static void add_wait_cmd(struct gk20a *g, struct priv_cmd_entry *cmd, u32 off,
 }
 
 static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
-		u32 id, u32 thresh, struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence)
+		u32 id, u32 thresh, struct priv_cmd_entry *wait_cmd,
+		struct gk20a_fence *fence)
 {
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
-	struct priv_cmd_entry *wait_cmd = NULL;
 	struct channel_gk20a *c = sp->c;
 	int err = 0;
 
@@ -75,7 +74,7 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 	if (nvhost_syncpt_is_expired_ext(sp->host1x_pdev, id, thresh))
 		return 0;
 
-	err = gk20a_channel_alloc_priv_cmdbuf(c, 4, &wait_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c, 4, wait_cmd);
 	if (err) {
 		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
@@ -84,21 +83,18 @@ static int gk20a_channel_syncpt_wait_syncpt(struct gk20a_channel_sync *s,
 
 	add_wait_cmd(c->g, wait_cmd, 0, id, thresh);
 
-	*entry = wait_cmd;
-	*fence = NULL;
 	return 0;
 }
 
 static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
-		       struct priv_cmd_entry **entry,
-		       struct gk20a_fence **fence)
+		       struct priv_cmd_entry *wait_cmd,
+		       struct gk20a_fence *fence)
 {
 #ifdef CONFIG_SYNC
 	int i;
 	int num_wait_cmds;
 	struct sync_fence *sync_fence;
 	struct sync_pt *pt;
-	struct priv_cmd_entry *wait_cmd = NULL;
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
@@ -134,7 +130,7 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 		return 0;
 	}
 
-	err = gk20a_channel_alloc_priv_cmdbuf(c, 4 * num_wait_cmds, &wait_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c, 4 * num_wait_cmds, wait_cmd);
 	if (err) {
 		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
@@ -172,8 +168,6 @@ static int gk20a_channel_syncpt_wait_fd(struct gk20a_channel_sync *s, int fd,
 	WARN_ON(i != num_wait_cmds);
 	sync_fence_put(sync_fence);
 
-	*entry = wait_cmd;
-	*fence = NULL;
 	return 0;
 #else
 	return -ENODEV;
@@ -193,15 +187,14 @@ static void gk20a_channel_syncpt_update(void *priv, int nr_completed)
 static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 				       bool wfi_cmd,
 				       bool register_irq,
-				       struct priv_cmd_entry **entry,
-				       struct gk20a_fence **fence,
+				       struct priv_cmd_entry *incr_cmd,
+				       struct gk20a_fence *fence,
 				       bool need_sync_fence)
 {
 	u32 thresh;
 	int incr_cmd_size;
 	int off;
 	int err;
-	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_channel_syncpt *sp =
 		container_of(s, struct gk20a_channel_syncpt, ops);
 	struct channel_gk20a *c = sp->c;
@@ -210,7 +203,7 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 	if (wfi_cmd)
 		incr_cmd_size += 2;
 
-	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, &incr_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, incr_cmd);
 	if (err)
 		return err;
 
@@ -267,15 +260,21 @@ static int __gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 		}
 	}
 
-	*fence = gk20a_fence_from_syncpt(sp->host1x_pdev, sp->id, thresh,
+	err = gk20a_fence_from_syncpt(fence, sp->host1x_pdev, sp->id, thresh,
 					 wfi_cmd, need_sync_fence);
-	*entry = incr_cmd;
+	if (err)
+		goto clean_up_priv_cmd;
+
 	return 0;
+
+clean_up_priv_cmd:
+	gk20a_free_priv_cmdbuf(c, incr_cmd);
+	return err;
 }
 
 static int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
-				  struct priv_cmd_entry **entry,
-				  struct gk20a_fence **fence)
+				  struct priv_cmd_entry *entry,
+				  struct gk20a_fence *fence)
 {
 	return __gk20a_channel_syncpt_incr(s,
 			true /* wfi */,
@@ -284,8 +283,8 @@ static int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 }
 
 static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
-			      struct priv_cmd_entry **entry,
-			      struct gk20a_fence **fence,
+			      struct priv_cmd_entry *entry,
+			      struct gk20a_fence *fence,
 			      bool need_sync_fence)
 {
 	/* Don't put wfi cmd to this one since we're not returning
@@ -298,8 +297,8 @@ static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 
 static int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
 				   int wait_fence_fd,
-				   struct priv_cmd_entry **entry,
-				   struct gk20a_fence **fence,
+				   struct priv_cmd_entry *entry,
+				   struct gk20a_fence *fence,
 				   bool wfi,
 				   bool need_sync_fence)
 {
@@ -500,8 +499,8 @@ static void add_sema_cmd(struct gk20a *g, struct channel_gk20a *c,
 
 static int gk20a_channel_semaphore_wait_syncpt(
 		struct gk20a_channel_sync *s, u32 id,
-		u32 thresh, struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence)
+		u32 thresh, struct priv_cmd_entry *entry,
+		struct gk20a_fence *fence)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
@@ -525,7 +524,7 @@ static int gk20a_channel_semaphore_wait_syncpt(
  */
 static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
 					 struct sync_fence *fence,
-					 struct priv_cmd_entry **wait_cmd,
+					 struct priv_cmd_entry *wait_cmd,
 					 struct gk20a_semaphore **fp_sema)
 {
 	struct gk20a_semaphore *sema;
@@ -551,7 +550,7 @@ static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
 
 	gk20a_semaphore_get(sema);
 	BUG_ON(!atomic_read(&sema->value));
-	add_sema_cmd(c->g, c, sema, *wait_cmd, 8, true, false);
+	add_sema_cmd(c->g, c, sema, wait_cmd, 8, true, false);
 
 	/*
 	 * Make sure that gk20a_channel_semaphore_wait_fd() can create another
@@ -565,8 +564,8 @@ static int __semaphore_wait_fd_fast_path(struct channel_gk20a *c,
 
 static int gk20a_channel_semaphore_wait_fd(
 		struct gk20a_channel_sync *s, int fd,
-		struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence)
+		struct priv_cmd_entry *entry,
+		struct gk20a_fence *fence)
 {
 	struct gk20a_channel_semaphore *sema =
 		container_of(s, struct gk20a_channel_semaphore, ops);
@@ -574,7 +573,7 @@ static int gk20a_channel_semaphore_wait_fd(
 #ifdef CONFIG_SYNC
 	struct gk20a_semaphore *fp_sema;
 	struct sync_fence *sync_fence;
-	struct priv_cmd_entry *wait_cmd = NULL;
+	struct priv_cmd_entry *wait_cmd = entry;
 	struct wait_fence_work *w = NULL;
 	int err, ret, status;
 
@@ -582,19 +581,24 @@ static int gk20a_channel_semaphore_wait_fd(
 	if (!sync_fence)
 		return -EINVAL;
 
-	ret = __semaphore_wait_fd_fast_path(c, sync_fence, &wait_cmd, &fp_sema);
+	ret = __semaphore_wait_fd_fast_path(c, sync_fence, wait_cmd, &fp_sema);
 	if (ret == 0) {
-		if (fp_sema)
-			*fence = gk20a_fence_from_semaphore(sema->timeline,
-							    fp_sema,
-							    &c->semaphore_wq,
-							    NULL, false, false);
-		else
+		if (fp_sema) {
+			err = gk20a_fence_from_semaphore(fence,
+					sema->timeline,
+					fp_sema,
+					&c->semaphore_wq,
+					NULL, false, false);
+			if (err) {
+				gk20a_semaphore_put(fp_sema);
+				goto clean_up_priv_cmd;
+			}
+		} else
 			/*
-			 * Allocate an empty fence. It will instantly return
+			 * Init an empty fence. It will instantly return
 			 * from gk20a_fence_wait().
 			 */
-			*fence = gk20a_alloc_fence(NULL, NULL, false);
+			gk20a_init_fence(fence, NULL, NULL, false);
 
 		sync_fence_put(sync_fence);
 		goto skip_slow_path;
@@ -611,18 +615,17 @@ static int gk20a_channel_semaphore_wait_fd(
 		goto skip_slow_path;
 	}
 
-	err = gk20a_channel_alloc_priv_cmdbuf(c, 8, &wait_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c, 8, wait_cmd);
 	if (err) {
 		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
-		sync_fence_put(sync_fence);
-		return -ENOMEM;
+		goto clean_up_sync_fence;
 	}
 
 	w = kzalloc(sizeof(*w), GFP_KERNEL);
 	if (!w) {
 		err = -ENOMEM;
-		goto fail_free_cmdbuf;
+		goto clean_up_priv_cmd;
 	}
 
 	sync_fence_waiter_init(&w->waiter, gk20a_channel_semaphore_launcher);
@@ -631,7 +634,7 @@ static int gk20a_channel_semaphore_wait_fd(
 	if (!w->sema) {
 		gk20a_err(dev_from_gk20a(c->g), "ran out of semaphores");
 		err = -ENOMEM;
-		goto fail_free_worker;
+		goto clean_up_worker;
 	}
 
 	/* worker takes one reference */
@@ -640,6 +643,16 @@ static int gk20a_channel_semaphore_wait_fd(
 
 	/* GPU unblocked when the semaphore value increments. */
 	add_sema_cmd(c->g, c, w->sema, wait_cmd, 8, true, false);
+
+	/*
+	 *  We need to create the fence before adding the waiter to ensure
+	 *  that we properly clean up in the event the sync_fence has
+	 *  already signaled
+	 */
+	err = gk20a_fence_from_semaphore(fence, sema->timeline, w->sema,
+			&c->semaphore_wq, NULL, false, false);
+	if (err)
+		goto clean_up_sema;
 
 	ret = sync_fence_wait_async(sync_fence, &w->waiter);
 
@@ -655,24 +668,22 @@ static int gk20a_channel_semaphore_wait_fd(
 		gk20a_semaphore_put(w->sema);
 	}
 
-	/* XXX - this fixes an actual bug, we need to hold a ref to this
-	   semaphore while the job is in flight. */
-	*fence = gk20a_fence_from_semaphore(sema->timeline, w->sema,
-					    &c->semaphore_wq,
-					    NULL, false, false);
-
 skip_slow_path:
-	*entry = wait_cmd;
 	return 0;
 
-fail_free_worker:
-	if (w && w->sema)
-		gk20a_semaphore_put(w->sema);
+clean_up_sema:
+	/*
+	 * Release the refs to the semaphore, including
+	 * the one for the worker since it will never run.
+	 */
+	gk20a_semaphore_put(w->sema);
+	gk20a_semaphore_put(w->sema);
+clean_up_worker:
 	kfree(w);
+clean_up_priv_cmd:
+	gk20a_free_priv_cmdbuf(c, entry);
+clean_up_sync_fence:
 	sync_fence_put(sync_fence);
-fail_free_cmdbuf:
-	if (wait_cmd)
-		gk20a_free_priv_cmdbuf(c, wait_cmd);
 	return err;
 #else
 	gk20a_err(dev_from_gk20a(c->g),
@@ -684,12 +695,11 @@ fail_free_cmdbuf:
 static int __gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s, bool wfi_cmd,
 		struct sync_fence *dependency,
-		struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence,
+		struct priv_cmd_entry *incr_cmd,
+		struct gk20a_fence *fence,
 		bool need_sync_fence)
 {
 	int incr_cmd_size;
-	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_channel_semaphore *sp =
 		container_of(s, struct gk20a_channel_semaphore, ops);
 	struct channel_gk20a *c = sp->c;
@@ -704,29 +714,37 @@ static int __gk20a_channel_semaphore_incr(
 	}
 
 	incr_cmd_size = 10;
-	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, &incr_cmd);
+	err = gk20a_channel_alloc_priv_cmdbuf(c, incr_cmd_size, incr_cmd);
 	if (err) {
 		gk20a_err(dev_from_gk20a(c->g),
 				"not enough priv cmd buffer space");
-		gk20a_semaphore_put(semaphore);
-		return err;
+		goto clean_up_sema;
 	}
 
 	/* Release the completion semaphore. */
 	add_sema_cmd(c->g, c, semaphore, incr_cmd, 14, false, wfi_cmd);
 
-	*fence = gk20a_fence_from_semaphore(sp->timeline, semaphore,
-					    &c->semaphore_wq,
-					    dependency, wfi_cmd,
-					    need_sync_fence);
-	*entry = incr_cmd;
+	err = gk20a_fence_from_semaphore(fence,
+			sp->timeline, semaphore,
+			&c->semaphore_wq,
+			dependency, wfi_cmd,
+			need_sync_fence);
+	if (err)
+		goto clean_up_priv_cmd;
+
 	return 0;
+
+clean_up_priv_cmd:
+	gk20a_free_priv_cmdbuf(c, incr_cmd);
+clean_up_sema:
+	gk20a_semaphore_put(semaphore);
+	return err;
 }
 
 static int gk20a_channel_semaphore_incr_wfi(
 		struct gk20a_channel_sync *s,
-		struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence)
+		struct priv_cmd_entry *entry,
+		struct gk20a_fence *fence)
 {
 	return __gk20a_channel_semaphore_incr(s,
 			true /* wfi */,
@@ -736,8 +754,8 @@ static int gk20a_channel_semaphore_incr_wfi(
 
 static int gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s,
-		struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence,
+		struct priv_cmd_entry *entry,
+		struct gk20a_fence *fence,
 		bool need_sync_fence)
 {
 	/* Don't put wfi cmd to this one since we're not returning
@@ -751,8 +769,8 @@ static int gk20a_channel_semaphore_incr(
 static int gk20a_channel_semaphore_incr_user(
 		struct gk20a_channel_sync *s,
 		int wait_fence_fd,
-		struct priv_cmd_entry **entry,
-		struct gk20a_fence **fence,
+		struct priv_cmd_entry *entry,
+		struct gk20a_fence *fence,
 		bool wfi,
 		bool need_sync_fence)
 {

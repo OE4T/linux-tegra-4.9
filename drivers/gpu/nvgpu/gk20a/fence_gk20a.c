@@ -63,16 +63,27 @@ struct gk20a_fence *gk20a_fence_get(struct gk20a_fence *f)
 	return f;
 }
 
+static inline bool gk20a_fence_is_valid(struct gk20a_fence *f)
+{
+	bool valid = f->valid;
+
+	rmb();
+	return valid;
+}
+
 int gk20a_fence_wait(struct gk20a_fence *f, int timeout)
 {
-	if (!tegra_platform_is_silicon())
-		timeout = (u32)MAX_SCHEDULE_TIMEOUT;
-	return f->ops->wait(f, timeout);
+	if (f && gk20a_fence_is_valid(f)) {
+		if (!tegra_platform_is_silicon())
+			timeout = (u32)MAX_SCHEDULE_TIMEOUT;
+		return f->ops->wait(f, timeout);
+	}
+	return 0;
 }
 
 bool gk20a_fence_is_expired(struct gk20a_fence *f)
 {
-	if (f && f->ops)
+	if (f && gk20a_fence_is_valid(f) && f->ops)
 		return f->ops->is_expired(f);
 	else
 		return true;
@@ -83,7 +94,7 @@ int gk20a_fence_install_fd(struct gk20a_fence *f)
 #ifdef CONFIG_SYNC
 	int fd;
 
-	if (!f->sync_fence)
+	if (!f || !gk20a_fence_is_valid(f) || !f->sync_fence)
 		return -EINVAL;
 
 	fd = get_unused_fd_flags(O_RDWR);
@@ -98,18 +109,28 @@ int gk20a_fence_install_fd(struct gk20a_fence *f)
 #endif
 }
 
-struct gk20a_fence *gk20a_alloc_fence(const struct gk20a_fence_ops *ops,
-				      struct sync_fence *sync_fence, bool wfi)
+struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c)
 {
-	struct gk20a_fence *f = kzalloc(sizeof(*f), GFP_KERNEL);
-	if (!f)
+	struct gk20a_fence *fence;
+
+	fence = kzalloc(sizeof(struct gk20a_fence), GFP_KERNEL);
+	if (!fence)
 		return NULL;
-	kref_init(&f->ref);
+
+	kref_init(&fence->ref);
+	return fence;
+}
+
+void gk20a_init_fence(struct gk20a_fence *f,
+		const struct gk20a_fence_ops *ops,
+		struct sync_fence *sync_fence, bool wfi)
+{
+	if (!f)
+		return;
 	f->ops = ops;
 	f->sync_fence = sync_fence;
 	f->wfi = wfi;
 	f->syncpt_id = -1;
-	return f;
 }
 
 /* Fences that are backed by GPU semaphores: */
@@ -143,14 +164,15 @@ static const struct gk20a_fence_ops gk20a_semaphore_fence_ops = {
 };
 
 /* This function takes ownership of the semaphore */
-struct gk20a_fence *gk20a_fence_from_semaphore(
+int gk20a_fence_from_semaphore(
+		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
 		struct gk20a_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
 		struct sync_fence *dependency,
 		bool wfi, bool need_sync_fence)
 {
-	struct gk20a_fence *f;
+	struct gk20a_fence *f = fence_out;
 	struct sync_fence *sync_fence = NULL;
 
 #ifdef CONFIG_SYNC
@@ -159,21 +181,26 @@ struct gk20a_fence *gk20a_fence_from_semaphore(
 					dependency, "f-gk20a-0x%04x",
 					gk20a_semaphore_gpu_ro_va(semaphore));
 		if (!sync_fence)
-			return NULL;
+			return -1;
 	}
 #endif
 
-	f  = gk20a_alloc_fence(&gk20a_semaphore_fence_ops, sync_fence, wfi);
+	gk20a_init_fence(f, &gk20a_semaphore_fence_ops, sync_fence, wfi);
 	if (!f) {
 #ifdef CONFIG_SYNC
 		sync_fence_put(sync_fence);
 #endif
-		return NULL;
+		return -EINVAL;
 	}
 
 	f->semaphore = semaphore;
 	f->semaphore_wq = semaphore_wq;
-	return f;
+
+	/* commit previous writes before setting the valid flag */
+	wmb();
+	f->valid = true;
+
+	return 0;
 }
 
 #ifdef CONFIG_TEGRA_GK20A
@@ -197,11 +224,13 @@ static const struct gk20a_fence_ops gk20a_syncpt_fence_ops = {
 	.is_expired = &gk20a_syncpt_fence_is_expired,
 };
 
-struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
-					    u32 id, u32 value, bool wfi,
-					    bool need_sync_fence)
+int gk20a_fence_from_syncpt(
+		struct gk20a_fence *fence_out,
+		struct platform_device *host1x_pdev,
+		u32 id, u32 value, bool wfi,
+		bool need_sync_fence)
 {
-	struct gk20a_fence *f;
+	struct gk20a_fence *f = fence_out;
 	struct sync_fence *sync_fence = NULL;
 
 #ifdef CONFIG_SYNC
@@ -214,27 +243,32 @@ struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
 		sync_fence = nvhost_sync_create_fence(host1x_pdev, &pt, 1,
 						      "fence");
 		if (IS_ERR(sync_fence))
-			return NULL;
+			return -1;
 	}
 #endif
 
-	f = gk20a_alloc_fence(&gk20a_syncpt_fence_ops, sync_fence, wfi);
+	gk20a_init_fence(f, &gk20a_syncpt_fence_ops, sync_fence, wfi);
 	if (!f) {
 #ifdef CONFIG_SYNC
 		if (sync_fence)
 			sync_fence_put(sync_fence);
 #endif
-		return NULL;
+		return -EINVAL;
 	}
 	f->host1x_pdev = host1x_pdev;
 	f->syncpt_id = id;
 	f->syncpt_value = value;
-	return f;
+
+	/* commit previous writes before setting the valid flag */
+	wmb();
+	f->valid = true;
+
+	return 0;
 }
 #else
-struct gk20a_fence *gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
+int gk20a_fence_from_syncpt(struct platform_device *host1x_pdev,
 					    u32 id, u32 value, bool wfi)
 {
-	return NULL;
+	return -EINVAL;
 }
 #endif

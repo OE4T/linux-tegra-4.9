@@ -31,6 +31,7 @@ struct gk20a_fence_ops;
 
 struct gk20a_fence {
 	/* Valid for all fence types: */
+	bool valid;
 	struct kref ref;
 	bool wfi;
 	struct sync_fence *sync_fence;
@@ -47,21 +48,25 @@ struct gk20a_fence {
 };
 
 /* Fences can be created from semaphores or syncpoint (id, value) pairs */
-struct gk20a_fence *gk20a_fence_from_semaphore(
+int gk20a_fence_from_semaphore(
+		struct gk20a_fence *fence_out,
 		struct sync_timeline *timeline,
 		struct gk20a_semaphore *semaphore,
 		wait_queue_head_t *semaphore_wq,
 		struct sync_fence *dependency,
 		bool wfi, bool need_sync_fence);
 
-struct gk20a_fence *gk20a_fence_from_syncpt(
+int gk20a_fence_from_syncpt(
+		struct gk20a_fence *fence_out,
 		struct platform_device *host1x_pdev,
 		u32 id, u32 value, bool wfi,
 		bool need_sync_fence);
 
-struct gk20a_fence *gk20a_alloc_fence(const struct gk20a_fence_ops *ops,
-				      struct sync_fence *sync_fence,
-				      bool wfi);
+struct gk20a_fence *gk20a_alloc_fence(struct channel_gk20a *c);
+
+void gk20a_init_fence(struct gk20a_fence *f,
+		const struct gk20a_fence_ops *ops,
+		struct sync_fence *sync_fence, bool wfi);
 
 /* Fence operations */
 void gk20a_fence_put(struct gk20a_fence *f);

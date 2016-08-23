@@ -36,8 +36,8 @@ struct gk20a_channel_sync {
 	 *    cmdbuf is executed.
 	 */
 	int (*wait_syncpt)(struct gk20a_channel_sync *s, u32 id, u32 thresh,
-			   struct priv_cmd_entry **entry,
-			   struct gk20a_fence **fence);
+			   struct priv_cmd_entry *entry,
+			   struct gk20a_fence *fence);
 
 	/* Generate a gpu wait cmdbuf from sync fd.
 	 * Returns
@@ -46,8 +46,8 @@ struct gk20a_channel_sync {
 	 *    cmdbuf is executed.
 	 */
 	int (*wait_fd)(struct gk20a_channel_sync *s, int fd,
-		       struct priv_cmd_entry **entry,
-		       struct gk20a_fence **fence);
+		       struct priv_cmd_entry *entry,
+		       struct gk20a_fence *fence);
 
 	/* Increment syncpoint/semaphore.
 	 * Returns
@@ -55,8 +55,8 @@ struct gk20a_channel_sync {
 	 *  - a fence that can be passed to wait_cpu() and is_expired().
 	 */
 	int (*incr)(struct gk20a_channel_sync *s,
-		    struct priv_cmd_entry **entry,
-		    struct gk20a_fence **fence,
+		    struct priv_cmd_entry *entry,
+		    struct gk20a_fence *fence,
 		    bool need_sync_fence);
 
 	/* Increment syncpoint/semaphore, preceded by a wfi.
@@ -65,8 +65,8 @@ struct gk20a_channel_sync {
 	 *  - a fence that can be passed to wait_cpu() and is_expired().
 	 */
 	int (*incr_wfi)(struct gk20a_channel_sync *s,
-			struct priv_cmd_entry **entry,
-			struct gk20a_fence **fence);
+			struct priv_cmd_entry *entry,
+			struct gk20a_fence *fence);
 
 	/* Increment syncpoint/semaphore, so that the returned fence represents
 	 * work completion (may need wfi) and can be returned to user space.
@@ -77,8 +77,8 @@ struct gk20a_channel_sync {
 	 */
 	int (*incr_user)(struct gk20a_channel_sync *s,
 			 int wait_fence_fd,
-			 struct priv_cmd_entry **entry,
-			 struct gk20a_fence **fence,
+			 struct priv_cmd_entry *entry,
+			 struct gk20a_fence *fence,
 			 bool wfi,
 			 bool need_sync_fence);
 

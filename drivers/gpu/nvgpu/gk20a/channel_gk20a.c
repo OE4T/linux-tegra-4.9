@@ -1376,16 +1376,20 @@ static void channel_gk20a_free_priv_cmdbuf(struct channel_gk20a *c)
 
 /* allocate a cmd buffer with given size. size is number of u32 entries */
 int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
-			     struct priv_cmd_entry **entry)
+			     struct priv_cmd_entry *e)
 {
 	struct priv_cmd_queue *q = &c->priv_cmd_q;
-	struct priv_cmd_entry *e;
 	u32 free_count;
 	u32 size = orig_size;
 
 	gk20a_dbg_fn("size %d", orig_size);
 
-	*entry = NULL;
+	if (!e) {
+		gk20a_err(dev_from_gk20a(c->g),
+			"ch %d: priv cmd entry is null",
+			c->hw_chid);
+		return -EINVAL;
+	}
 
 	/* if free space in the end is less than requested, increase the size
 	 * to make the real allocated space start from beginning. */
@@ -1399,14 +1403,6 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 
 	if (size > free_count)
 		return -EAGAIN;
-
-	e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
-	if (!e) {
-		gk20a_err(dev_from_gk20a(c->g),
-			"ch %d: fail to allocate priv cmd entry",
-			c->hw_chid);
-		return -ENOMEM;
-	}
 
 	e->size = orig_size;
 	e->mem = &q->mem;
@@ -1426,8 +1422,10 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	/* we already handled q->put + size > q->size so BUG_ON this */
 	BUG_ON(q->put > q->size);
 
-	*entry = e;
+	/* commit the previous writes before making the entry valid */
+	wmb();
 
+	e->valid = true;
 	gk20a_dbg_fn("done");
 
 	return 0;
@@ -1439,6 +1437,21 @@ static void free_priv_cmdbuf(struct channel_gk20a *c,
 			     struct priv_cmd_entry *e)
 {
 	kfree(e);
+}
+
+static struct channel_gk20a_job *channel_gk20a_alloc_job(
+		struct channel_gk20a *c)
+{
+	struct channel_gk20a_job *job = NULL;
+
+	job = kzalloc(sizeof(*job), GFP_KERNEL);
+	return job;
+}
+
+static void channel_gk20a_free_job(struct channel_gk20a *c,
+		struct channel_gk20a_job *job)
+{
+	kfree(job);
 }
 
 int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
@@ -1818,10 +1831,15 @@ int gk20a_free_priv_cmdbuf(struct channel_gk20a *c, struct priv_cmd_entry *e)
 	if (!e)
 		return 0;
 
-	if ((q->get != e->off) && e->off != 0)
-		gk20a_err(d, "requests out-of-order, ch=%d\n", c->hw_chid);
+	if (e->valid) {
+		/* read the entry's valid flag before reading its contents */
+		rmb();
+		if ((q->get != e->off) && e->off != 0)
+			gk20a_err(d, "requests out-of-order, ch=%d\n",
+				  c->hw_chid);
+		q->get = e->off + e->size;
+	}
 
-	q->get = e->off + e->size;
 	free_priv_cmdbuf(c, e);
 
 	return 0;
@@ -1854,14 +1872,10 @@ static void gk20a_channel_cancel_job_clean_up(struct channel_gk20a *c,
 }
 
 static int gk20a_channel_add_job(struct channel_gk20a *c,
-				 struct gk20a_fence *pre_fence,
-				 struct gk20a_fence *post_fence,
-				 struct priv_cmd_entry *wait_cmd,
-				 struct priv_cmd_entry *incr_cmd,
+				 struct channel_gk20a_job *job,
 				 bool skip_buffer_refcounting)
 {
 	struct vm_gk20a *vm = c->vm;
-	struct channel_gk20a_job *job = NULL;
 	struct mapped_buffer_node **mapped_buffers = NULL;
 	int err = 0, num_mapped_buffers = 0;
 
@@ -1875,22 +1889,12 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 			goto err_put_vm;
 	}
 
-	job = kzalloc(sizeof(*job), GFP_KERNEL);
-	if (!job) {
-		err = -ENOMEM;
-		goto err_put_buffers;
-	}
-
 	/* put() is done in gk20a_channel_update() when the job is done */
 	c = gk20a_channel_get(c);
 
 	if (c) {
 		job->num_mapped_buffers = num_mapped_buffers;
 		job->mapped_buffers = mapped_buffers;
-		job->pre_fence = pre_fence;
-		job->post_fence = post_fence;
-		job->wait_cmd = wait_cmd;
-		job->incr_cmd = incr_cmd;
 
 		gk20a_channel_timeout_start(c, job);
 
@@ -1899,13 +1903,11 @@ static int gk20a_channel_add_job(struct channel_gk20a *c,
 		spin_unlock(&c->jobs_lock);
 	} else {
 		err = -ETIMEDOUT;
-		goto err_free_job;
+		goto err_put_buffers;
 	}
 
 	return 0;
 
-err_free_job:
-	kfree(job);
 err_put_buffers:
 	gk20a_vm_put_buffers(vm, mapped_buffers, num_mapped_buffers);
 err_put_vm:
@@ -2000,7 +2002,7 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 		list_del_init(&job->list);
 		spin_unlock(&c->jobs_lock);
 
-		kfree(job);
+		channel_gk20a_free_job(c, job);
 		job_finished = 1;
 		gk20a_idle(g->dev);
 	}
@@ -2143,6 +2145,7 @@ out:
  */
 static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 				      struct nvgpu_fence *fence,
+				      struct channel_gk20a_job *job,
 				      struct priv_cmd_entry **wait_cmd,
 				      struct priv_cmd_entry **incr_cmd,
 				      struct gk20a_fence **pre_fence,
@@ -2194,18 +2197,32 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * this condition.
 	 */
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT) {
+		job->wait_cmd = kzalloc(sizeof(struct priv_cmd_entry),
+					GFP_KERNEL);
+		job->pre_fence = gk20a_alloc_fence(c);
+
+		if (!job->wait_cmd || !job->pre_fence) {
+			err = -ENOMEM;
+			goto clean_up_pre_fence;
+		}
+
 		if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE) {
 			wait_fence_fd = fence->id;
 			err = c->sync->wait_fd(c->sync, wait_fence_fd,
-					       wait_cmd, pre_fence);
+					       job->wait_cmd, job->pre_fence);
 		} else {
 			err = c->sync->wait_syncpt(c->sync, fence->id,
-						   fence->value, wait_cmd,
-						   pre_fence);
+						   fence->value, job->wait_cmd,
+						   job->pre_fence);
 		}
+
+		if (!err) {
+			if (job->wait_cmd->valid)
+				*wait_cmd = job->wait_cmd;
+			*pre_fence = job->pre_fence;
+		} else
+			goto clean_up_pre_fence;
 	}
-	if (err)
-		goto fail;
 
 	if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET) &&
 	    (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE))
@@ -2216,22 +2233,41 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	 * is used to keep track of method completion for idle railgating. The
 	 * sync_pt/semaphore PB is added to the GPFIFO later on in submit.
 	 */
+	job->incr_cmd = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
+	job->post_fence = gk20a_alloc_fence(c);
+
+	if (!job->incr_cmd || !job->post_fence) {
+		err = -ENOMEM;
+		goto clean_up_post_fence;
+	}
+
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
-		err = c->sync->incr_user(c->sync, wait_fence_fd, incr_cmd,
-				 post_fence, need_wfi, need_sync_fence);
+		err = c->sync->incr_user(c->sync, wait_fence_fd, job->incr_cmd,
+				 job->post_fence, need_wfi, need_sync_fence);
 	else
-		err = c->sync->incr(c->sync, incr_cmd,
-				    post_fence, need_sync_fence);
-	if (err)
-		goto fail;
+		err = c->sync->incr(c->sync, job->incr_cmd,
+				    job->post_fence, need_sync_fence);
+	if (!err) {
+		*incr_cmd = job->incr_cmd;
+		*post_fence = job->post_fence;
+	} else
+		goto clean_up_post_fence;
 
 	return 0;
 
+clean_up_post_fence:
+	gk20a_free_priv_cmdbuf(c, job->incr_cmd);
+	gk20a_fence_put(job->post_fence);
+	job->incr_cmd = NULL;
+	job->post_fence = NULL;
+clean_up_pre_fence:
+	gk20a_free_priv_cmdbuf(c, job->wait_cmd);
+	gk20a_fence_put(job->pre_fence);
+	job->wait_cmd = NULL;
+	job->pre_fence = NULL;
+	*wait_cmd = NULL;
+	*pre_fence = NULL;
 fail:
-	/*
-	 * Cleanup is handled by gk20a_submit_channel_gpfifo() since it is the
-	 * real owner of the objects we make here.
-	 */
 	return err;
 }
 
@@ -2250,6 +2286,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	struct priv_cmd_entry *incr_cmd = NULL;
 	struct gk20a_fence *pre_fence = NULL;
 	struct gk20a_fence *post_fence = NULL;
+	struct channel_gk20a_job *job = NULL;
 	/* we might need two extra gpfifo entries - one for pre fence
 	 * and one for post fence. */
 	const int extra_entries = 2;
@@ -2351,11 +2388,18 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	}
 
 	if (need_job_tracking) {
-		err = gk20a_submit_prepare_syncs(c, fence, &wait_cmd, &incr_cmd,
+		job = channel_gk20a_alloc_job(c);
+		if (!job) {
+			err = -ENOMEM;
+			goto clean_up;
+		}
+
+		err = gk20a_submit_prepare_syncs(c, fence, job,
+						 &wait_cmd, &incr_cmd,
 						 &pre_fence, &post_fence,
 						 force_need_sync_fence, flags);
 		if (err)
-			goto clean_up;
+			goto clean_up_job;
 	}
 
 	if (wait_cmd)
@@ -2365,7 +2409,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		err = gk20a_submit_append_gpfifo(c, gpfifo, user_gpfifo,
 				num_entries);
 	if (err)
-		goto clean_up;
+		goto clean_up_job;
 
 	/*
 	 * And here's where we add the incr_cmd we generated earlier. It should
@@ -2379,9 +2423,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 
 	if (need_job_tracking)
 		/* TODO! Check for errors... */
-		gk20a_channel_add_job(c, pre_fence, post_fence,
-				wait_cmd, incr_cmd,
-				skip_buffer_refcounting);
+		gk20a_channel_add_job(c, job, skip_buffer_refcounting);
 
 	g->ops.fifo.userd_gp_put(g, c);
 
@@ -2398,10 +2440,10 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 	gk20a_dbg_fn("done");
 	return err;
 
+clean_up_job:
+	channel_gk20a_free_job(c, job);
 clean_up:
 	gk20a_dbg_fn("fail");
-	free_priv_cmdbuf(c, wait_cmd);
-	free_priv_cmdbuf(c, incr_cmd);
 	gk20a_fence_put(pre_fence);
 	gk20a_fence_put(post_fence);
 	if (need_job_tracking)

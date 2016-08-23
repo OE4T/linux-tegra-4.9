@@ -49,9 +49,42 @@ Optional properties:
 
 - nvidia,enable-autocc3: Enable auto_cc3.
   Auto cc3 is the idle state where freq request is not considered for the cpus
-  in WFI/WFE.
+  in WFI/WFE. It has per cluster, <cluster_no enable/disable> entries to enable
+  / disable per cluster cc3.
+  It assumes that 0th index of the array as entry for 0th(M_CLUSTER)
+  cluster. It should be set as <cluster_no and enable/disable> way.
+  Therfore 1nd index is considered as enable/disable value for
+  0th cluster. Like that 2nd index will have entry for 1st(B_cluster)
+  cluster 3rd index will have enable/disable value for 1st cluster.
+  Assumptions -
+  clusters values -
+     0 - M_CLUSTER
+     1 - B_CLUSTER
+   Disable/Enable
+     0 - Disable
+     1 - Enable
 
+  * Need to fill all the clusters state.
+  * If a cluster is disabled its cc3 freq will be Don't care.
 
+- nvidia,autocc3-freq: autocc3 cluster freq.
+  If a cluster goes in idle, cc3 freq will be requested for the cluster.
+  It has per cluster values to request per cluster cc3 freq.
+  It takes values as <cluster_no freq_in_khz>. It assumes 0th index of
+  the array has entry of 0th(M_CLUSTER) cluster, 1st index as 0th cluster
+  cc3 freq, 2nd index as 1st(B_CLUSTER) cluster and 3rd index as 1st
+  cluster cc3 freq.
+
+  Assumptions -
+  clusters values -
+     0 - M_CLUSTER
+     1 - B_CLUSTER
+  freq_in_khz values -
+     0 - Fmin@Vmin
+     freq_khz - cc3 freq for the cluster
+
+  * Need to fill all the clusters state.
+  * If a cluster is disabled its cc3 freq will be Don't care.
 Example 1:
 ----------
        cpufreq@e070000 {
@@ -70,12 +103,54 @@ Example 2:
                freq_table_step_size = /bits/ 16 <1>;
        };
 
-Example 3: cpufreq and auto-cc3 enabled
+Example 3: cpufreq and auto-cc3 enabled, freq = Fmax@Vmin for each cluster
 ----------
        cpufreq@e070000 {
                compatible = "nvidia,tegra18x-cpufreq";
                reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
                      <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
                status = "okay";
-               nvidia,enable-autocc3;
+               nvidia,enable-autocc3 = <0 1>, /* M_CLUSTER Enable*/
+                      <1 1>; /* B_CLUSTER Enable*/
+               nvidia,autocc3-freq = <0 0>, /* M_CLUSTER Fmin@vmin*/
+                      <1 0>; /* B_CLUSTER Fmin@vmin*/
+       };
+
+Example 4: cpufreq and auto-cc3 enabled, cc3_freq for both cluster
+----------
+       cpufreq@e070000 {
+               compatible = "nvidia,tegra18x-cpufreq";
+               reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
+                     <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+               status = "okay";
+               nvidia,enable-autocc3 = <0 0>, /* M_CLUSTER Disable*/
+                      <1 1>; /* B_CLUSTER Enable*/
+               nvidia,autocc3-freq = <0 0>, /* M_CLUSTER Fmin@vmin*/
+                      <1 0>; /* B_CLUSTER Fmin@vmin*/
+       };
+
+Example 5: cpufreq and auto-cc3 enabled, cc3_freq for M cluster
+           auto-cc3 is disabled for B cluster
+----------
+       cpufreq@e070000 {
+               compatible = "nvidia,tegra18x-cpufreq";
+               reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
+                     <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+               status = "okay";
+               nvidia,enable-autocc3 = <0 0>, /* M_CLUSTER Enable*/
+                      <1 0>; /* B_CLUSTER Disable*/
+       };
+
+Example 6: cpufreq and auto-cc3 enabled, freq = Fmax@Vmin for M cluster
+           auto-cc3 is disabled for B cluster
+----------
+       cpufreq@e070000 {
+               compatible = "nvidia,tegra18x-cpufreq";
+               reg = <0x0 0x0e070000 0x0 0x1000>, /* M/Denver cluster */
+                     <0x0 0x0e060000 0x0 0x1000>; /* B/ARM cluster */
+               status = "okay";
+               nvidia,enable-autocc3 = <0 1>, /* M_CLUSTER Enable*/
+                      <1 1>; /* B_CLUSTER Enable*/
+               nvidia,autocc3-freq = <0 512000>, /* M_CLUSTER 512Mhz*/
+                      <1 644000>; /* B_CLUSTER 644 Mhz*/
        };

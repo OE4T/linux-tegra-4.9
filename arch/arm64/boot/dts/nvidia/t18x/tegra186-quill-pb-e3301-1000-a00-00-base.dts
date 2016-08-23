@@ -95,6 +95,10 @@
 		};
 	};
 
+	sdhci@3440000 {
+		status = "okay";
+	};
+
 	host1x {
 		sor {
 			status = "okay";

@@ -35,6 +35,7 @@
 		reg-names = "sce-evp", "sce-pm", "sce-cfg",
 				"ast-cpu", "ast-dma";
 
+		nvidia,stream-id = <TEGRA_SID_RCE>;
 		#stream-id-cells = <1>;
 
 		clocks =
@@ -91,6 +92,7 @@
 			<0 0x02994000 0 0x2000>; /* ACAST */
 		reg-names = "ape-evp", "ast-cpu";
 
+		nvidia,stream-id = <TEGRA_SID_RCE>;
 		#stream-id-cells = <1>;
 
 		clocks =

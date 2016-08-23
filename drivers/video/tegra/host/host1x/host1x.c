@@ -1180,6 +1180,7 @@ static struct platform_driver platform_driver = {
 #ifdef CONFIG_OF
 		.of_match_table = tegra_host1x_of_match,
 #endif
+		.suppress_bind_attrs = true,
 	},
 };
 

@@ -708,6 +708,7 @@ static struct platform_driver nvdec_driver = {
 #ifdef CONFIG_PM
 		.pm = &nvhost_module_pm_ops,
 #endif
+		.suppress_bind_attrs = true,
 	}
 };
 

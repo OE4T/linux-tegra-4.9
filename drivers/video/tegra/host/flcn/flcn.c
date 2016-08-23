@@ -705,6 +705,7 @@ static struct platform_driver flcn_driver = {
 #ifdef CONFIG_PM
 		.pm = &nvhost_module_pm_ops,
 #endif
+		.suppress_bind_attrs = true,
 	},
 	.id_table = flcn_id_table,
 };

@@ -253,6 +253,7 @@ static struct platform_driver client_driver = {
 #ifdef CONFIG_PM
 		.pm = &nvhost_module_pm_ops,
 #endif
+		.suppress_bind_attrs = true,
 	},
 	.id_table = client_id_table,
 };

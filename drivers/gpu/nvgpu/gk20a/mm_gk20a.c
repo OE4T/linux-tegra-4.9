@@ -831,8 +831,15 @@ static int gk20a_vidmem_clear_all(struct gk20a *g)
 	}
 
 	if (gk20a_fence_out) {
-		err = gk20a_fence_wait(gk20a_fence_out,
-				gk20a_get_gr_idle_timeout(g));
+		unsigned long end_jiffies = jiffies +
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+
+		do {
+			unsigned int timeout = jiffies_to_msecs(end_jiffies - jiffies);
+			err = gk20a_fence_wait(gk20a_fence_out,
+					timeout);
+		} while ((err == -ERESTARTSYS) && time_before(jiffies, end_jiffies));
+
 		gk20a_fence_put(gk20a_fence_out);
 		if (err) {
 			gk20a_err(g->dev,
@@ -2880,8 +2887,15 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 	}
 
 	if (gk20a_last_fence) {
-		err = gk20a_fence_wait(gk20a_last_fence,
-				gk20a_get_gr_idle_timeout(g));
+		unsigned long end_jiffies = jiffies +
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+
+		do {
+			unsigned int timeout = jiffies_to_msecs(end_jiffies - jiffies);
+			err = gk20a_fence_wait(gk20a_last_fence,
+					timeout);
+		} while ((err == -ERESTARTSYS) && time_before(jiffies, end_jiffies));
+
 		gk20a_fence_put(gk20a_last_fence);
 		if (err)
 			gk20a_err(g->dev,

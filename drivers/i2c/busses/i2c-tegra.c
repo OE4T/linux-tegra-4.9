@@ -266,7 +266,7 @@ struct tegra_i2c_dev {
 	u16 clk_divisor_non_hs_mode;
 	bool is_suspended;
 	bool is_multimaster_mode;
-	spinlock_t xfer_lock;
+	raw_spinlock_t xfer_lock;
 	bool is_periph_reset_done;
 	int scl_gpio;
 	int sda_gpio;
@@ -1016,9 +1016,10 @@ static irqreturn_t tegra_i2c_isr(int irq, void *dev_id)
 	unsigned long flags;
 	u32 mask;
 
+	raw_spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+
 	status = i2c_readl(i2c_dev, I2C_INT_STATUS);
 
-	spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
 	if (status == 0) {
 		dev_warn(i2c_dev->dev, "irq status 0 %08x %08x %08x\n",
 			 i2c_readl(i2c_dev, I2C_PACKET_TRANSFER_STATUS),
@@ -1093,7 +1094,7 @@ err:
 
 	complete(&i2c_dev->msg_complete);
 done:
-	spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
+	raw_spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
 	return IRQ_HANDLED;
 }
 
@@ -1258,7 +1259,7 @@ static int tegra_i2c_start_dma_based_xfer(struct tegra_i2c_dev *i2c_dev,
 		tegra_i2c_config_fifo_trig(i2c_dev, dma_xfer_len);
 
 		/* Acquire the lock before posting the data to FIFO */
-		spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+		raw_spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
 
 		ret = tegra_i2c_start_tx_dma(i2c_dev, dma_xfer_len);
 		if (ret < 0) {
@@ -1283,7 +1284,7 @@ static int tegra_i2c_start_dma_based_xfer(struct tegra_i2c_dev *i2c_dev,
 					     packet_header);
 
 		/* Acquire the lock before posting the data to FIFO */
-		spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+		raw_spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
 
 		/* Transfer packet header through PIO */
 		i2c_writel(i2c_dev, packet_header[0], I2C_TX_FIFO);
@@ -1297,7 +1298,7 @@ static int tegra_i2c_start_dma_based_xfer(struct tegra_i2c_dev *i2c_dev,
 	tegra_i2c_unmask_irq(i2c_dev, int_mask);
 
 exit:
-	spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
+	raw_spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
 	return ret;
 }
 
@@ -1326,7 +1327,7 @@ static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
 	tegra_i2c_fill_packet_header(i2c_dev, msg, end_state, packet_header);
 
 	/* Acquire the lock before posting the data to FIFO */
-	spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
+	raw_spin_lock_irqsave(&i2c_dev->xfer_lock, flags);
 
 	i2c_writel(i2c_dev, packet_header[0], I2C_TX_FIFO);
 	i2c_writel(i2c_dev, packet_header[1], I2C_TX_FIFO);
@@ -1344,7 +1345,8 @@ static int tegra_i2c_start_pio_based_xfer(struct tegra_i2c_dev *i2c_dev,
 		int_mask |= I2C_INT_TX_FIFO_DATA_REQ;
 
 	tegra_i2c_unmask_irq(i2c_dev, int_mask);
-	spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
+
+	raw_spin_unlock_irqrestore(&i2c_dev->xfer_lock, flags);
 
 	return 0;
 }
@@ -1841,7 +1843,7 @@ static int tegra_i2c_probe(struct platform_device *pdev)
 	i2c_dev->is_dvc = of_device_is_compatible(pdev->dev.of_node,
 						  "nvidia,tegra20-i2c-dvc");
 	init_completion(&i2c_dev->msg_complete);
-	spin_lock_init(&i2c_dev->xfer_lock);
+	raw_spin_lock_init(&i2c_dev->xfer_lock);
 	init_completion(&i2c_dev->tx_dma_complete);
 	init_completion(&i2c_dev->rx_dma_complete);
 

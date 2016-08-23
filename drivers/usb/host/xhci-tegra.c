@@ -2196,6 +2196,15 @@ static int tegra_xhci_enter_elpg(struct tegra_xusb *tegra, bool runtime)
 		goto out;
 	}
 
+	for (i = 0; i < tegra->soc->num_typed_phys[USB2_PHY]; i++) {
+		struct phy *phy = tegra->typed_phys[USB2_PHY][i];
+
+		if (!phy)
+			continue;
+		tegra_phy_xusb_utmi_pad_power_down(phy);
+	}
+
+
 	for (i = 0; i < tegra->num_phys; i++) {
 		phy_power_off(tegra->phys[i]);
 		if (!do_wakeup)

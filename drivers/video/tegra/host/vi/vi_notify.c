@@ -33,13 +33,6 @@
 /* XXX: move ioctls to include/linux/ (after T18X merge) */
 #include <linux/nvhost_vi_ioctl.h>
 
-struct tegra_vi4_syncpts_req {
-	u32 syncpt_ids[3];
-	u8 stream;
-	u8 vc;
-	u16 pad;
-};
-
 #define NVHOST_VI_SET_IGN_MASK _IOW(NVHOST_VI_IOCTL_MAGIC, 10, u32)
 #define NVHOST_VI_SET_SYNCPTS \
 	_IOW(NVHOST_VI_IOCTL_MAGIC, 13, struct tegra_vi4_syncpts_req)
@@ -61,6 +54,9 @@ struct vi_notify_channel {
 	atomic_t report;
 	DECLARE_KFIFO(fifo, struct vi_notify_msg, 128);
 	struct vi_capture_status status;
+
+	vi_notify_status_callback notify_cb;
+	vi_notify_error_callback error_cb;
 };
 
 struct vi_notify_dev {
@@ -108,6 +104,15 @@ static unsigned vi_notify_occupancy(struct vi_notify_channel *chan)
 	return ret;
 }
 
+void vi_notify_channel_set_notify_func(struct vi_notify_channel *chan,
+			vi_notify_status_callback notify,
+			vi_notify_error_callback error)
+{
+	chan->notify_cb = notify;
+	chan->error_cb = error;
+}
+EXPORT_SYMBOL(vi_notify_channel_set_notify_func);
+
 /* Interrupt handlers */
 void vi_notify_dev_error(struct vi_notify_dev *vnd)
 {
@@ -120,7 +125,10 @@ void vi_notify_dev_error(struct vi_notify_dev *vnd)
 
 		if (chan != NULL) {
 			atomic_set(&chan->errors, 1);
-			wake_up(&chan->readq);
+			if (chan->error_cb)
+				chan->error_cb();
+			else
+				wake_up(&chan->readq);
 		}
 	}
 	rcu_read_unlock();
@@ -138,7 +146,10 @@ void vi_notify_dev_report(struct vi_notify_dev *vnd, u8 channel,
 	if (chan != NULL && !atomic_read(&chan->report)) {
 		chan->status = *status;
 		atomic_set(&chan->report, 1);
-		wake_up(&chan->readq);
+		if (chan->notify_cb)
+			chan->notify_cb(status);
+		else
+			wake_up(&chan->readq);
 	}
 
 	rcu_read_unlock();
@@ -275,11 +286,95 @@ static unsigned int vi_notify_poll(struct file *file,
 	return ret;
 }
 
+int vi_notify_channel_set_ign_mask(struct vi_notify_channel *chan, u32 mask)
+{
+	struct vi_notify_dev *vnd = chan->vnd;
+	u32 old_mask;
+	int err;
+
+	if (mutex_lock_interruptible(&vnd->lock))
+		return -ERESTARTSYS;
+
+	old_mask = atomic_xchg(&chan->ign_mask, mask);
+
+	err = vi_notify_dev_classify(vnd);
+	if (err)
+		atomic_set(&chan->ign_mask, old_mask);
+
+	mutex_unlock(&vnd->lock);
+
+	return err;
+}
+EXPORT_SYMBOL(vi_notify_channel_set_ign_mask);
+
+int vi_notify_channel_set_syncpts(unsigned channel,
+			struct vi_notify_channel *chan,
+			struct tegra_vi4_syncpts_req *req)
+{
+	struct vi_notify_dev *vnd = chan->vnd;
+	int err;
+
+	if (!vnd->driver->set_syncpts)
+		return -ENOTSUPP;
+	if (req->pad)
+		return -EINVAL;
+	if (mutex_lock_interruptible(&vnd->lock))
+		return -ERESTARTSYS;
+
+	err = vnd->driver->set_syncpts(vnd->device, channel,
+					req->syncpt_ids);
+	mutex_unlock(&vnd->lock);
+
+	return err;
+}
+EXPORT_SYMBOL(vi_notify_channel_set_syncpts);
+
+int vi_notify_channel_enable_reports(unsigned channel,
+			struct vi_notify_channel *chan,
+			struct tegra_vi4_syncpts_req *req)
+{
+	struct vi_notify_dev *vnd = chan->vnd;
+	int err;
+
+	if (!vnd->driver->enable_reports)
+		return -ENOTSUPP;
+	if (req->pad)
+		return -EINVAL;
+	if (mutex_lock_interruptible(&vnd->lock))
+		return -ERESTARTSYS;
+
+	err = vnd->driver->enable_reports(vnd->device, channel,
+				req->stream, req->vc, req->syncpt_ids);
+	mutex_unlock(&vnd->lock);
+
+	return err;
+}
+EXPORT_SYMBOL(vi_notify_channel_enable_reports);
+
+int vi_notify_channel_reset(unsigned channel,
+			struct vi_notify_channel *chan,
+			struct tegra_vi4_syncpts_req *req)
+{
+	struct vi_notify_dev *vnd = chan->vnd;
+
+	if (!vnd->driver->reset_channel)
+		return -ENOTSUPP;
+	if (req->pad)
+		return -EINVAL;
+	if (mutex_lock_interruptible(&vnd->lock))
+		return -ERESTARTSYS;
+
+	vnd->driver->reset_channel(vnd->device, channel);
+	mutex_unlock(&vnd->lock);
+
+	return 0;
+}
+EXPORT_SYMBOL(vi_notify_channel_reset);
+
 static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
 	struct vi_notify_channel *chan = file->private_data;
-	struct vi_notify_dev *vnd = chan->vnd;
 	unsigned channel = iminor(file_inode(file));
 
 	switch (cmd) {
@@ -292,77 +387,39 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 	}
 
 	case NVHOST_VI_SET_IGN_MASK: {
-		u32 mask, old_mask;
-		int err;
+		u32 mask;
 
 		if (get_user(mask, (u32 __user *)arg))
 			return -EFAULT;
-		if (mutex_lock_interruptible(&vnd->lock))
-			return -ERESTARTSYS;
 
-		old_mask = atomic_xchg(&chan->ign_mask, mask);
-
-		err = vi_notify_dev_classify(vnd);
-		if (err)
-			atomic_set(&chan->ign_mask, old_mask);
-
-		mutex_unlock(&vnd->lock);
-		return err;
+		return vi_notify_channel_set_ign_mask(chan, mask);
 	}
 
 	case NVHOST_VI_SET_SYNCPTS: {
 		struct tegra_vi4_syncpts_req req;
-		int err;
 
-		if (!vnd->driver->set_syncpts)
-			return -ENOTSUPP;
 		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
 			return -EFAULT;
-		if (req.pad)
-			return -EINVAL;
-		if (mutex_lock_interruptible(&vnd->lock))
-			return -ERESTARTSYS;
 
-		err = vnd->driver->set_syncpts(vnd->device, channel,
-						req.syncpt_ids);
-		mutex_unlock(&vnd->lock);
-		return err;
+		return vi_notify_channel_set_syncpts(channel, chan, &req);
 	}
 
 	case NVHOST_VI_ENABLE_REPORTS: {
 		struct tegra_vi4_syncpts_req req;
-		int err;
 
-		if (!vnd->driver->enable_reports)
-			return -ENOTSUPP;
 		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
 			return -EFAULT;
-		if (req.pad)
-			return -EINVAL;
-		if (mutex_lock_interruptible(&vnd->lock))
-			return -ERESTARTSYS;
 
-		err = vnd->driver->enable_reports(vnd->device, channel,
-					req.stream, req.vc, req.syncpt_ids);
-		mutex_unlock(&vnd->lock);
-		return err;
+		return vi_notify_channel_enable_reports(channel, chan, &req);
 	}
 
 	case NVHOST_VI_RESET_CHANNEL: {
 		struct tegra_vi4_syncpts_req req;
 
-		if (!vnd->driver->reset_channel)
-			return -ENOTSUPP;
 		if (copy_from_user(&req, (void __user *)arg, sizeof(req)))
 			return -EFAULT;
-		if (req.pad)
-			return -EINVAL;
-		if (mutex_lock_interruptible(&vnd->lock))
-			return -ERESTARTSYS;
 
-		vnd->driver->reset_channel(vnd->device, channel);
-		mutex_unlock(&vnd->lock);
-		return 0;
+		return vi_notify_channel_reset(channel, chan, &req);
 	}
 	}
 
@@ -372,30 +429,27 @@ static long vi_notify_ioctl(struct file *file, unsigned int cmd,
 static struct vi_notify_dev *vnd_;
 static DEFINE_MUTEX(vnd_lock);
 
-static int vi_notify_open(struct inode *inode, struct file *file)
+struct vi_notify_channel *vi_notify_channel_open(unsigned channel)
 {
 	struct vi_notify_dev *vnd;
 	struct vi_notify_channel *chan;
-	unsigned channel = iminor(inode);
 
-	if ((file->f_flags & O_ACCMODE) != O_RDONLY)
-		return -EINVAL;
 	if (mutex_lock_interruptible(&vnd_lock))
-		return -ERESTARTSYS;
+		return ERR_PTR(-ERESTARTSYS);
 
 	vnd = vnd_;
 
 	if (vnd == NULL || channel >= vnd->num_channels ||
 		!try_module_get(vnd->driver->owner)) {
 		mutex_unlock(&vnd_lock);
-		return -ENODEV;
+		return ERR_PTR(-ENODEV);
 	}
 	mutex_unlock(&vnd_lock);
 
 	chan = kmalloc(sizeof(*chan), GFP_KERNEL);
 	if (unlikely(chan == NULL)) {
 		module_put(vnd->driver->owner);
-		return -ENOMEM;
+		return ERR_PTR(-ENOMEM);
 	}
 
 	chan->vnd = vnd;
@@ -413,23 +467,20 @@ static int vi_notify_open(struct inode *inode, struct file *file)
 		mutex_unlock(&vnd->lock);
 		kfree(chan);
 		module_put(vnd->driver->owner);
-		return -EBUSY;
+		return ERR_PTR(-EBUSY);
 	}
 
 	rcu_assign_pointer(vnd->channels[channel], chan);
 	vi_notify_dev_classify(vnd);
 	mutex_unlock(&vnd->lock);
 
-	file->private_data = chan;
-
-	return nonseekable_open(inode, file);
+	return chan;
 }
+EXPORT_SYMBOL(vi_notify_channel_open);
 
-static int vi_notify_release(struct inode *inode, struct file *file)
+int vi_notify_channel_close(unsigned channel, struct vi_notify_channel *chan)
 {
-	struct vi_notify_channel *chan = file->private_data;
 	struct vi_notify_dev *vnd = chan->vnd;
-	unsigned channel = iminor(inode);
 
 	mutex_lock(&vnd->lock);
 	if (vnd->driver->reset_channel)
@@ -442,7 +493,34 @@ static int vi_notify_release(struct inode *inode, struct file *file)
 	mutex_unlock(&vnd->lock);
 	kfree_rcu(chan, rcu);
 	module_put(vnd->driver->owner);
+
 	return 0;
+}
+EXPORT_SYMBOL(vi_notify_channel_close);
+
+static int vi_notify_open(struct inode *inode, struct file *file)
+{
+	struct vi_notify_channel *chan;
+	unsigned channel = iminor(inode);
+
+	if ((file->f_flags & O_ACCMODE) != O_RDONLY)
+		return -EINVAL;
+
+	chan = vi_notify_channel_open(channel);
+	if (IS_ERR(chan))
+		return PTR_ERR(chan);
+
+	file->private_data = chan;
+
+	return nonseekable_open(inode, file);
+}
+
+static int vi_notify_release(struct inode *inode, struct file *file)
+{
+	struct vi_notify_channel *chan = file->private_data;
+	unsigned channel = iminor(inode);
+
+	return vi_notify_channel_close(channel, chan);
 }
 
 static const struct file_operations vi_notify_fops = {

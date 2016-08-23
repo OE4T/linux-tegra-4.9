@@ -39,6 +39,9 @@ Required properties:
   - adsp
 - nvidia,ivc-channels: IVC channel layout. See ./tegra-sce-ivc.txt.
 
+Optional properties:
+- nvidia,stream-id: should contain the SMMU Stream ID used.
+
 == APE sub nodes ==
 
 * hsp

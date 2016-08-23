@@ -109,7 +109,6 @@ struct tegra_cam_rtcpu_pdata {
 	const unsigned (*clock_rates)[2];
 	const char * const *reset_names;
 	enum tegra_cam_rtcpu_id id;
-	u32 sid;
 	u32 num_clocks;
 	u32 num_resets;
 };
@@ -119,7 +118,6 @@ static const struct tegra_cam_rtcpu_pdata sce_pdata = {
 	.clock_rates = sce_clock_rates,
 	.reset_names = sce_reset_names,
 	.id = TEGRA_CAM_RTCPU_SCE,
-	.sid = TEGRA_SID_SCE,
 	.num_clocks = ARRAY_SIZE(sce_clock_names),
 	.num_resets = ARRAY_SIZE(sce_reset_names),
 };
@@ -128,7 +126,6 @@ static const struct tegra_cam_rtcpu_pdata ape_pdata = {
 	.clock_names = ape_clock_names,
 	.reset_names = ape_reset_names,
 	.id = TEGRA_CAM_RTCPU_APE,
-	.sid = TEGRA_SID_APE,
 	.num_clocks = ARRAY_SIZE(ape_clock_names),
 	.num_resets = ARRAY_SIZE(ape_reset_names),
 };
@@ -618,6 +615,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	struct device_node *hsp_node;
 	int ret;
 	const struct of_device_id *match;
+	uint32_t stream_id;
 
 	dev_dbg(dev, "probing\n");
 
@@ -655,6 +653,11 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		}
 	}
 
+	ret = of_property_read_u32(dev->of_node, NV(stream-id),
+				&stream_id);
+	if (ret)
+		stream_id = TEGRA_SID_RCE;
+
 	ret = tegra_cam_rtcpu_get_clks_resets(dev);
 	if (ret) {
 		dev_err(dev, "failed to get clocks/resets: %d\n", ret);
@@ -690,8 +693,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		goto fail;
 	}
 
-	cam_rtcpu->tracer = tegra_rtcpu_trace_create(dev, cam_rtcpu->ast,
-						cam_rtcpu->rtcpu_pdata->sid);
+	cam_rtcpu->tracer = tegra_rtcpu_trace_create(dev, cam_rtcpu->ast, stream_id);
 
 	ret = tegra_camrtc_boot(dev);
 	if (ret)
@@ -702,8 +704,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		devm_tegrafw_register(dev, "camrtc",
 			TFW_NORMAL, tegra_camrtc_print_version, NULL);
 
-	cam_rtcpu->ivc = tegra_ivc_bus_create(dev, cam_rtcpu->ast,
-						cam_rtcpu->rtcpu_pdata->sid);
+	cam_rtcpu->ivc = tegra_ivc_bus_create(dev, cam_rtcpu->ast, stream_id);
 	if (IS_ERR(cam_rtcpu->ivc)) {
 		ret = PTR_ERR(cam_rtcpu->ivc);
 		goto fail;

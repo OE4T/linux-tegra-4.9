@@ -49,6 +49,9 @@ Required properties:
   - the length of the region in bytes (must be a power of two).
   For IVC channel details, please refer to: ./tegra-ivc-channel.txt
 
+Optional properties:
+- nvidia,stream-id: should contain the SMMU Stream ID used.
+
 == SCE sub nodes ==
 
 * hsp
@@ -97,6 +100,7 @@ If the HSP shared mailbox is used for boot synchronization:
 
 tegra_sce: rtcpu@b000000 {
 	compatible = "nvidia,tegra186-sce-ivc";
+	nvidia,stream-id = <TEGRA_SID_RCE>;
 	reg =	<0 0xb000000 0 0x1000>,
 		<0 0xb1f0000 0 0x40000>,
 		<0 0xb230000 0 0x10000>,

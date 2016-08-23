@@ -21,7 +21,6 @@
 #include <linux/vmalloc.h>
 #include <linux/miscdevice.h>
 #include <linux/sched.h>
-#include <linux/poll.h>
 #include <linux/bitops.h>
 #include <linux/err.h>
 #include <linux/mm.h>
@@ -54,8 +53,6 @@ struct quadd_comm_ctx {
 	int nr_users;
 
 	int params_ok;
-
-	wait_queue_head_t read_wait;
 
 	struct miscdevice *misc_dev;
 
@@ -175,7 +172,6 @@ write_sample(struct quadd_ring_buffer *rb,
 	}
 
 	rb_hdr->pos_write = new_hdr.pos_write;
-	wake_up_all(&comm_ctx.read_wait);
 
 	return length_sample;
 }
@@ -289,22 +285,6 @@ static int device_release(struct inode *inode, struct file *file)
 	mutex_unlock(&comm_ctx.io_mutex);
 
 	return 0;
-}
-
-static unsigned int
-device_poll(struct file *file, poll_table *wait)
-{
-	unsigned int mask = 0;
-
-	poll_wait(file, &comm_ctx.read_wait, wait);
-
-	if (get_data_size() > 0)
-		mask |= POLLIN | POLLRDNORM;
-
-	if (!atomic_read(&comm_ctx.active))
-		mask |= POLLHUP;
-
-	return mask;
 }
 
 static int
@@ -654,7 +634,6 @@ device_ioctl(struct file *file,
 		if (atomic_cmpxchg(&comm_ctx.active, 1, 0)) {
 			reset_params_ok_flag();
 			comm_ctx.control->stop();
-			wake_up_all(&comm_ctx.read_wait);
 			rb_stop();
 			pr_info("Stop profiling success\n");
 		}
@@ -873,7 +852,6 @@ static void unregister(void)
 }
 
 static const struct file_operations qm_fops = {
-	.poll		= device_poll,
 	.open		= device_open,
 	.release	= device_release,
 	.unlocked_ioctl	= device_ioctl,
@@ -906,8 +884,6 @@ static int comm_init(void)
 	atomic_set(&comm_ctx.active, 0);
 
 	comm_ctx.nr_users = 0;
-
-	init_waitqueue_head(&comm_ctx.read_wait);
 
 	INIT_LIST_HEAD(&comm_ctx.mmap_areas);
 	spin_lock_init(&comm_ctx.mmaps_lock);

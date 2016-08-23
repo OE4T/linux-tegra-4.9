@@ -862,6 +862,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	size_t size = g->ops.mm.get_vidmem_size ?
 		g->ops.mm.get_vidmem_size(g) : 0;
 	u64 bootstrap_base, bootstrap_size, base;
+	u64 default_page_size = SZ_64K;
 	int err;
 
 	if (!size)
@@ -869,7 +870,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 
 	bootstrap_base = NVGPU_VIDMEM_BOOTSTRAP_ALLOCATOR_BASE;
 	bootstrap_size = SZ_16M;
-	base = SZ_4K;
+	base = default_page_size;
 
 	/*
 	 * Bootstrap allocator for use before the CE is initialized (CE
@@ -882,7 +883,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 					SZ_4K, 0);
 
 	err = gk20a_page_allocator_init(&g->mm.vidmem.allocator, "vidmem",
-					base, size - base, SZ_4K, 0);
+				base, size - base, default_page_size, 0);
 	if (err) {
 		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
 				size, err);

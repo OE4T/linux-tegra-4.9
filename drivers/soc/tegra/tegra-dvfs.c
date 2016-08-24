@@ -677,6 +677,23 @@ int tegra_dvfs_get_freqs(struct clk *c, unsigned long **freqs, int *num_freqs)
 }
 EXPORT_SYMBOL(tegra_dvfs_get_freqs);
 
+unsigned long tegra_dvfs_get_maxrate(struct clk *c)
+{
+	unsigned long rate = 0;
+	struct dvfs *d;
+	int err, num_freqs;
+	unsigned long *freqs;
+
+	if (!core_dvfs_started)
+		return rate;
+
+	err = tegra_dvfs_get_freqs(c, &freqs, &num_freqs);
+	if (err < 0)
+		return rate;
+
+	return freqs[num_freqs - 1];
+}
+
 static int tegra_dvfs_clk_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {

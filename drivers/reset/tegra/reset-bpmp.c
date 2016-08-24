@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,31 +19,15 @@
 #include <linux/platform_device.h>
 #include <linux/reset-controller.h>
 #include <linux/slab.h>
+#include <soc/tegra/bpmp_abi.h>
 #include <soc/tegra/tegra_bpmp.h>
-
-#define MRQ_RESET (20)
-
-enum mrq_reset_data_in_req {
-	MRQ_RESET_DATA_IN_REQ_RESET_ASSERT = 1,
-	MRQ_RESET_DATA_IN_REQ_RESET_DEASSERT = 2,
-	MRQ_RESET_DATA_IN_REQ_RESET_MODULE = 3,
-};
-
-struct bpmp_reset_req {
-	u32	cmd;
-	u8	args[0];
-};
 
 static int bpmp_send_reset_message(u32 cmd, u32 reset_id)
 {
-	u8 req_d[8];
+	struct mrq_reset_request req = { .cmd = cmd, .reset_id = reset_id };
 	int err;
-	struct bpmp_reset_req *req = (struct bpmp_reset_req *)&req_d[0];
 
-	req->cmd = cmd;
-	*((u32 *)&req->args[0]) = reset_id;
-
-	err = tegra_bpmp_send_receive(MRQ_RESET, req, 8, NULL, 0);
+	err = tegra_bpmp_send_receive(MRQ_RESET, &req, sizeof(req), NULL, 0);
 	if (err < 0)
 		return -EINVAL;
 
@@ -53,18 +37,17 @@ static int bpmp_send_reset_message(u32 cmd, u32 reset_id)
 static int bpmp_reset_assert(struct reset_controller_dev *rcdev,
 				 unsigned long id)
 {
-	return bpmp_send_reset_message(MRQ_RESET_DATA_IN_REQ_RESET_ASSERT, id);
+	return bpmp_send_reset_message(CMD_RESET_ASSERT, id);
 }
 static int bpmp_reset_deassert(struct reset_controller_dev *rcdev,
 				   unsigned long id)
 {
-	return bpmp_send_reset_message(MRQ_RESET_DATA_IN_REQ_RESET_DEASSERT,
-				       id);
+	return bpmp_send_reset_message(CMD_RESET_DEASSERT, id);
 }
 static int bpmp_reset_module(struct reset_controller_dev *rcdev,
 			  unsigned long id)
 {
-	return bpmp_send_reset_message(MRQ_RESET_DATA_IN_REQ_RESET_MODULE, id);
+	return bpmp_send_reset_message(CMD_RESET_MODULE, id);
 }
 
 static struct reset_control_ops bpmp_reset_ops = {

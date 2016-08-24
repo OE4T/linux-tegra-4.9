@@ -1680,7 +1680,7 @@ restore_fe_go_idle:
 	if (gr->ctx_vars.local_golden_image == NULL) {
 
 		gr->ctx_vars.local_golden_image =
-			kzalloc(gr->ctx_vars.golden_image_size, GFP_KERNEL);
+			vzalloc(gr->ctx_vars.golden_image_size);
 
 		if (gr->ctx_vars.local_golden_image == NULL) {
 			err = -ENOMEM;
@@ -3275,7 +3275,7 @@ static void gk20a_remove_gr_support(struct gr_gk20a *gr)
 	kfree(gr->ctx_vars.ctxsw_regs.pm_ltc.l);
 	kfree(gr->ctx_vars.ctxsw_regs.pm_fbpa.l);
 
-	kfree(gr->ctx_vars.local_golden_image);
+	vfree(gr->ctx_vars.local_golden_image);
 	gr->ctx_vars.local_golden_image = NULL;
 
 	if (gr->ctx_vars.hwpm_ctxsw_buffer_offset_map)

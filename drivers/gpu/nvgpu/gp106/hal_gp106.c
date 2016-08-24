@@ -206,7 +206,6 @@ int gp106_init_hal(struct gk20a *g)
 	gk20a_init_dbg_session_ops(gops);
 	gp10b_init_regops(gops);
 	gp10b_init_cde_ops(gops);
-	gp10b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
 	gm206_init_bios(gops);
 	gops->name = "gp10x";

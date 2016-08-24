@@ -284,8 +284,9 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 		}
 
 		if (vmidx > AST_MAX_VMINDEX) {
-			dev_warn(&region->dev,
-					"stream ID %u not in AST %u VM table",
+			/* Warmboot and mb2 not updated yet */
+			dev_info(&region->dev,
+					"Stream ID %u not in AST %u VM table",
 					stream_id, i);
 			/*
 			 * TODO: This is racy. Return an error once MB1 sets

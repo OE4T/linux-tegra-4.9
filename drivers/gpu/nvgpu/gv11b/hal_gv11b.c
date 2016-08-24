@@ -132,11 +132,12 @@ int gv11b_init_hal(struct gk20a *g)
 	gv11b_init_fb(gops);
 	gv11b_init_fifo(gops);
 	gv11b_init_ce(gops);
-	gv11b_init_mm(gops);
 	gv11b_init_gr_ctx(gops);
+	gv11b_init_mm(gops);
 	gv11b_init_pmu_ops(gops);
 	gk20a_init_debug_ops(gops);
 	gv11b_init_therm_ops(gops);
+	gk20a_init_tsg_ops(gops);
 	gops->name = "gv11b";
 	gops->chip_init_gpu_characteristics = gv11b_init_gpu_characteristics;
 	gops->get_litter_value = gv11b_get_litter_value;

@@ -120,8 +120,11 @@
 #define   GENERATE_SRP				(1 << 31)
 
 #define USB2_BATTERY_CHRG_OTGPADX_CTL1(x)	(0x84 + (x) * 0x40)
-#define   VREG_FIX18				(1 << 6)
+#define   PD_VREG				(1 << 6)
 #define   VREG_LEV(x)				(((x) & 0x3) << 7)
+#define   VREG_DIR(x)				(((x) & 0x3) << 11)
+#define   VREG_DIR_IN				VREG_DIR(1)
+#define   VREG_DIR_OUT				VREG_DIR(2)
 #define   USBOP_RPD_OVRD			(1 << 16)
 #define   USBOP_RPD_OVRD_VAL			(1 << 17)
 #define   USBOP_RPU_OVRD			(1 << 18)
@@ -2375,6 +2378,10 @@ static void tegra186_padctl_init(struct tegra_padctl *padctl)
 	u32 reg;
 
 	for (i = 0; i < TEGRA_UTMI_PHYS; i++) {
+		reg = padctl_readl(padctl, USB2_BATTERY_CHRG_OTGPADX_CTL1(i));
+		reg |= PD_VREG;
+		padctl_writel(padctl, reg, USB2_BATTERY_CHRG_OTGPADX_CTL1(i));
+
 		if (padctl->utmi_ports[i].port_cap == CAP_DISABLED) {
 			reg = ao_readl(padctl, XUSB_AO_UTMIP_PAD_CFG(i));
 			reg |= (E_DPD_OVRD_EN | E_DPD_OVRD_VAL);
@@ -3294,10 +3301,23 @@ void tegra_phy_xusb_utmi_pad_set_protection_level(struct phy *phy, int level)
 	reg = padctl_readl(padctl, USB2_BATTERY_CHRG_OTGPADX_CTL1(port));
 	if (level < 0) {
 		/* disable pad protection */
-		reg |= VREG_FIX18;
+		reg |= PD_VREG;
 		reg &= ~VREG_LEV(~0);
+		reg &= ~VREG_DIR(~0);
 	} else {
-		reg &= ~VREG_FIX18;
+		reg &= ~PD_VREG;
+
+		reg &= ~VREG_DIR(~0);
+		if (padctl->utmi_ports[port].port_cap == OTG) {
+			if (VBUS_OVERRIDE & padctl_readl(padctl, USB2_VBUS_ID))
+				reg |= VREG_DIR_IN;
+			else
+				reg |= VREG_DIR_OUT;
+		} else if (padctl->utmi_ports[port].port_cap == HOST_ONLY)
+			reg |= VREG_DIR_OUT;
+		else if (padctl->utmi_ports[port].port_cap == DEVICE_ONLY)
+			reg |= VREG_DIR_IN;
+
 		reg &= ~VREG_LEV(~0);
 		reg |= VREG_LEV(level);
 	}

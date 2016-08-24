@@ -1388,12 +1388,13 @@ static INT eqos_resume(struct platform_device *pdev)
 	eqos_clock_init(pdata);
 
 	if (netif_running(dev)) {
-		/* Enable PHY interrupts */
-		phy_start_interrupts(pdata->phydev);
+		/* first start eqos  */
+		eqos_start_dev(pdata);
 
 		/* Init the PHY */
 		pdata->phydev->drv->config_init(pdata->phydev);
-		eqos_start_dev(pdata);
+		/* Enable PHY interrupts */
+		phy_start_interrupts(pdata->phydev);
 	}
 	pdata->suspended = 0;
 	pdata->hw_state_flgs &= ~(1 << HW_STOPPED);

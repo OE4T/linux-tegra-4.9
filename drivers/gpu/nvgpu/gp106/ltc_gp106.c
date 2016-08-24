@@ -22,4 +22,5 @@ void gp106_init_ltc(struct gpu_ops *gops)
 
 	/* dGPU does not need the LTC hack */
 	gops->ltc.cbc_fix_config = NULL;
+	gops->ltc.init_cbc = NULL;
 }

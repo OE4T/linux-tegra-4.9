@@ -268,7 +268,8 @@ static int bcm54xx_config_init(struct phy_device *phydev)
 	/* Unmask events we are interested in.  */
 	reg = ~(MII_BCM54XX_INT_DUPLEX |
 		MII_BCM54XX_INT_SPEED |
-		MII_BCM54XX_INT_LINK);
+		MII_BCM54XX_INT_LINK |
+		MII_BCM54XX_INT_ANPR);
 
 	/* unmask energy detect interrupt */
 	if (BRCM_PHY_MODEL(phydev) == PHY_ID_BCM89610 ||

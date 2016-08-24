@@ -29,9 +29,12 @@
 #include "tegra_asoc_machine_alt_t18x.h"
 #include "tegra186_xbar_alt.h"
 
+#include "../codecs/rt5659.h"
+
 #define DRV_NAME "t186-p4573-audio"
 
 #define CS53L30_MAX_INDEX 2
+#define RT5658_INDEX CS53L30_MAX_INDEX
 
 static const char * const dai_link_names[] = {
 	"cs53l30-link1", "cs53l30-link2", "rt5658-link",
@@ -449,6 +452,9 @@ static int tegra186_driver_probe(struct platform_device *pdev)
 			 dev_name(rtd->cpu_dai->dev),
 			 rtd->codec_dai->name,
 			 dev_name(rtd->codec->dev));
+
+		if (i == RT5658_INDEX)
+			rt5659_set_jack_detect(rtd->codec, NULL);
 	}
 
 	return 0;

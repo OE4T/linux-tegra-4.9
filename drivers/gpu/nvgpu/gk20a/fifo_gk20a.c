@@ -3147,7 +3147,7 @@ static int gk20a_fifo_sched_debugfs_seq_show(
 				ch->tgid,
 				tsg ? tsg->timeslice_us : ch->timeslice_us,
 				ch->timeout_ms_max,
-				ch->interleave_level,
+				tsg ? tsg->interleave_level : ch->interleave_level,
 				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->graphics_preempt_mode : -1,
 				ch->ch_ctx.gr_ctx ? ch->ch_ctx.gr_ctx->compute_preempt_mode : -1);
 		gk20a_channel_put(ch);

@@ -26,6 +26,7 @@ struct vgpu_fecs_trace {
 	struct nvgpu_ctxsw_ring_header *header;
 	struct nvgpu_ctxsw_trace_entry *entries;
 	int num_entries;
+	bool enabled;
 	void *buf;
 };
 
@@ -104,6 +105,7 @@ static int vgpu_fecs_trace_deinit(struct gk20a *g)
 
 static int vgpu_fecs_trace_enable(struct gk20a *g)
 {
+	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_ENABLE,
 		.handle = vgpu_get_handle(g),
@@ -113,21 +115,31 @@ static int vgpu_fecs_trace_enable(struct gk20a *g)
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	WARN_ON(err);
+	vcst->enabled = !err;
 	return err;
 }
 
 static int vgpu_fecs_trace_disable(struct gk20a *g)
 {
+	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
 	struct tegra_vgpu_cmd_msg msg = {
 		.cmd = TEGRA_VGPU_CMD_FECS_TRACE_DISABLE,
 		.handle = vgpu_get_handle(g),
 	};
 	int err;
 
+	vcst->enabled = false;
 	err = vgpu_comm_sendrecv(&msg, sizeof(msg), sizeof(msg));
 	err = err ? err : msg.ret;
 	WARN_ON(err);
 	return err;
+}
+
+static bool vpgpu_fecs_trace_is_enabled(struct gk20a *g)
+{
+	struct vgpu_fecs_trace *vcst = (struct vgpu_fecs_trace *)g->fecs_trace;
+
+	return (vcst && vcst->enabled);
 }
 
 static int vgpu_fecs_trace_poll(struct gk20a *g)
@@ -208,6 +220,7 @@ void vgpu_init_fecs_trace_ops(struct gpu_ops *ops)
 	ops->fecs_trace.deinit = vgpu_fecs_trace_deinit;
 	ops->fecs_trace.enable = vgpu_fecs_trace_enable;
 	ops->fecs_trace.disable = vgpu_fecs_trace_disable;
+	ops->fecs_trace.is_enabled = vpgpu_fecs_trace_is_enabled;
 	ops->fecs_trace.reset = NULL;
 	ops->fecs_trace.flush = NULL;
 	ops->fecs_trace.poll = vgpu_fecs_trace_poll;

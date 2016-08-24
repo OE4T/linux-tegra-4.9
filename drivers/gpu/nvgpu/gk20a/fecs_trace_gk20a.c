@@ -651,9 +651,11 @@ static int gk20a_fecs_trace_unbind_channel(struct gk20a *g, struct channel_gk20a
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
 			"ch=%p context_ptr=%x", ch, context_ptr);
 
-	if (g->ops.fecs_trace.flush)
-		g->ops.fecs_trace.flush(g);
-	gk20a_fecs_trace_poll(g);
+	if (g->ops.fecs_trace.is_enabled(g)) {
+		if (g->ops.fecs_trace.flush)
+			g->ops.fecs_trace.flush(g);
+		gk20a_fecs_trace_poll(g);
+	}
 	gk20a_fecs_trace_hash_del(g, context_ptr);
 	return 0;
 }
@@ -662,8 +664,9 @@ static int gk20a_fecs_trace_reset(struct gk20a *g)
 {
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw, "");
 
-	if (g->ops.fecs_trace.flush)
-		g->ops.fecs_trace.flush(g);
+	if (!g->ops.fecs_trace.is_enabled(g))
+		return 0;
+
 	gk20a_fecs_trace_poll(g);
 	return gk20a_fecs_trace_set_read_index(g, 0);
 }
@@ -725,6 +728,14 @@ static int gk20a_fecs_trace_disable(struct gk20a *g)
 	return -EPERM;
 }
 
+static bool gk20a_fecs_trace_is_enabled(struct gk20a *g)
+{
+	struct gk20a_fecs_trace *trace = g->fecs_trace;
+
+	return (trace && trace->poll_task);
+}
+
+
 void gk20a_init_fecs_trace_ops(struct gpu_ops *ops)
 {
 	gk20a_ctxsw_trace_init_ops(ops);
@@ -732,6 +743,7 @@ void gk20a_init_fecs_trace_ops(struct gpu_ops *ops)
 	ops->fecs_trace.deinit = gk20a_fecs_trace_deinit;
 	ops->fecs_trace.enable = gk20a_fecs_trace_enable;
 	ops->fecs_trace.disable = gk20a_fecs_trace_disable;
+	ops->fecs_trace.is_enabled = gk20a_fecs_trace_is_enabled;
 	ops->fecs_trace.reset = gk20a_fecs_trace_reset;
 	ops->fecs_trace.flush = NULL;
 	ops->fecs_trace.poll = gk20a_fecs_trace_poll;

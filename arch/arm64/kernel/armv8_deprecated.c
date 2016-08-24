@@ -505,7 +505,12 @@ static int cp15barrier_handler(struct pt_regs *regs, u32 instr)
 	}
 
 ret:
-	pr_warn_ratelimited("\"%s\" (%ld) uses deprecated CP15 Barrier instruction at 0x%llx\n",
+	if (!test_thread_flag(TIF_DEPRECATED_WARN)) {
+		pr_warn("\"%s\" (%ld) uses deprecated CP15 Barrier instruction at 0x%llx\n",
+			current->comm, (unsigned long)current->pid, regs->pc);
+		set_thread_flag(TIF_DEPRECATED_WARN);
+	} else
+		pr_debug("\"%s\" (%ld) uses deprecated CP15 Barrier instruction at 0x%llx\n",
 			current->comm, (unsigned long)current->pid, regs->pc);
 
 	regs->pc += 4;

@@ -4576,7 +4576,8 @@ static int gk20a_init_gr_setup_hw(struct gk20a *g)
 
 	gr_gk20a_load_zbc_table(g, gr);
 
-	g->ops.ltc.init_cbc(g, gr);
+	if (g->ops.ltc.init_cbc)
+		g->ops.ltc.init_cbc(g, gr);
 
 	/* load ctx init */
 	for (i = 0; i < sw_ctx_load->count; i++)

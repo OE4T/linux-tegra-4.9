@@ -224,7 +224,7 @@ static int tegra_vi_graph_build_links(struct tegra_mc_vi *vi)
 			break;
 		}
 
-		if (NULL == ent->entity) {
+		if (ent->entity == NULL) {
 			dev_dbg(vi->dev, "entity not bounded %s\n",
 				link.remote_node->full_name);
 			continue;
@@ -302,7 +302,8 @@ static int tegra_vi_graph_notify_bound(struct v4l2_async_notifier *notifier,
 	 * subdev pointer.
 	 */
 	list_for_each_entry(entity, &vi->entities, list) {
-		if (entity->node != subdev->dev->of_node)
+		if (entity->node != subdev->dev->of_node &&
+			entity->node != subdev->of_node)
 			continue;
 
 		if (entity->subdev) {
@@ -389,6 +390,7 @@ int tegra_vi_get_port_info(struct tegra_channel *chan,
 			value -= 4;
 			for (i = 1; value > 0; i++, value -= 4) {
 				int next_port = chan->port[i-1] + 2;
+
 				next_port = (next_port % (PORT_F + 1));
 				chan->port[i] = next_port;
 			}
@@ -449,39 +451,6 @@ static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 
 int tegra_vi_tpg_graph_init(struct tegra_mc_vi *mc_vi)
 {
-	int err = 0, i;
-	u32 link_flags = MEDIA_LNK_FL_ENABLED;
-	struct tegra_csi_device *csi = mc_vi->csi;
-	struct media_entity *source = &csi->subdev.entity;
-
-	mc_vi->num_subdevs = mc_vi->num_channels;
-	for (i = 0; i < mc_vi->num_channels; i++) {
-		struct tegra_channel *chan = &mc_vi->chans[i];
-		struct media_entity *sink = &chan->video.entity;
-		struct media_pad *source_pad = &csi->pads[i];
-		struct media_pad *sink_pad = &chan->pad;
-
-		/* Use non-bypass mode by default */
-		chan->bypass = 0;
-
-		/* Create the media link. */
-		dev_dbg(mc_vi->dev, "creating %s:%u -> %s:%u link\n",
-			source->name, source_pad->index,
-			sink->name, sink_pad->index);
-
-		err = media_entity_create_link(source, source_pad->index,
-					       sink, sink_pad->index,
-					       link_flags);
-		if (err < 0) {
-			dev_err(mc_vi->dev,
-				"failed to create %s:%u -> %s:%u link\n",
-				source->name, source_pad->index,
-				sink->name, sink_pad->index);
-			return err;
-		}
-		tegra_channel_init_subdevices(chan);
-	}
-
 	return 0;
 }
 

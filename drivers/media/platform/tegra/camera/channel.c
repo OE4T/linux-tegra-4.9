@@ -299,7 +299,8 @@ static int tegra_channel_error_status(struct tegra_channel *chan)
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		csi_write(chan, index, TEGRA_VI_CSI_ERROR_STATUS, val);
 		err |= val;
-		err |= tegra_csi_error(chan->vi->csi, chan->port[index]);
+		err |= tegra_csi_error(&chan->vi->csi->chans[index],
+			chan->port[index]);
 	}
 
 	if (err)
@@ -317,7 +318,8 @@ static void tegra_channel_capture_error(struct tegra_channel *chan)
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		dev_dbg(&chan->video.dev,
 			"TEGRA_VI_CSI_ERROR_STATUS 0x%08x\n", val);
-		tegra_csi_status(chan->vi->csi, chan->port[index]);
+		tegra_csi_status(&chan->vi->csi->chans[index],
+			chan->port[index]);
 	}
 }
 
@@ -469,7 +471,8 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 	tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, DISABLE);
 	/* clear CSI state */
 	for (index = 0; index < valid_ports; index++) {
-		tegra_csi_error_recover(chan->vi->csi, chan->port[index]);
+		tegra_csi_error_recover(&chan->vi->csi->chans[index],
+			chan->port[index]);
 		csi_write(chan, index,
 				TEGRA_VI_CSI_IMAGE_DEF, 0);
 		tegra_channel_clear_singleshot(chan, index);
@@ -1372,6 +1375,7 @@ int tegra_channel_init_subdevices(struct tegra_channel *chan)
 
 	entity = pad->entity;
 	sd = media_entity_to_v4l2_subdev(entity);
+	v4l2_set_subdev_hostdata(sd, chan);
 	chan->subdev[num_sd++] = sd;
 	/* Add subdev name to this video dev name with vi-output tag*/
 	snprintf(chan->video.name, sizeof(chan->video.name), "%s, %s",

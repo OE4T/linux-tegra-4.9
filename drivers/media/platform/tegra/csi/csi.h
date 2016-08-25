@@ -91,7 +91,6 @@ struct tegra_csi_port {
 };
 
 struct tegra_csi_device {
-	struct v4l2_subdev subdev;
 	struct device *dev;
 	struct platform_device *pdev;
 	void __iomem *iomem[3];
@@ -106,18 +105,47 @@ struct tegra_csi_device {
 	unsigned int clk_freq;
 	int num_ports;
 	int pg_mode;
+	int num_channels;
+
+	struct tegra_csi_channel *chans;
 };
+
+/*
+ * subdev: channel subdev
+ * numports: Number of CSI ports in use for this channel
+ * numlanes: Number of CIL lanes in use
+ */
+struct tegra_csi_channel {
+	struct v4l2_subdev subdev;
+	struct media_pad *pads;
+	struct media_pipeline pipe;
+
+	struct tegra_csi_device *csi;
+	struct tegra_csi_port *ports;
+	unsigned int port[TEGRA_CSI_BLOCKS];
+	unsigned int numports;
+	unsigned int numlanes;
+	unsigned int pg_mode;
+	struct camera_common_data *s_data;
+};
+
+static inline struct tegra_csi_channel *to_csi_chan(struct v4l2_subdev *subdev)
+{
+	return container_of(subdev, struct tegra_csi_channel, subdev);
+}
 
 static inline struct tegra_csi_device *to_csi(struct v4l2_subdev *subdev)
 {
-	return container_of(subdev, struct tegra_csi_device, subdev);
+	struct tegra_csi_channel *chan = to_csi_chan(subdev);
+
+	return chan->csi;
 }
 
 void set_csi_portinfo(struct tegra_csi_device *csi,
 	unsigned int port, unsigned int numlanes);
-void tegra_csi_status(struct tegra_csi_device *csi,
+void tegra_csi_status(struct tegra_csi_channel *chan,
 			enum tegra_csi_port_num port_num);
-int tegra_csi_error(struct tegra_csi_device *csi,
+int tegra_csi_error(struct tegra_csi_channel *chan,
 			enum tegra_csi_port_num port_num);
 void tegra_csi_tpg_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num);
@@ -125,7 +153,7 @@ void tegra_csi_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_stop_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num);
-void tegra_csi_error_recover(struct tegra_csi_device *csi,
+void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_pad_control(struct tegra_csi_device *csi,
 				unsigned char *port_num, int enable);

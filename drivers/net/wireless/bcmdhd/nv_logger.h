@@ -35,6 +35,7 @@
 #include <proto/bcmevent.h>
 
 #define MAX_LOGLIMIT 1024
+#define TIMESTAMPSIZE 40
 extern struct workqueue_struct  *logger_wqueue;
 extern bool enable_file_logging;
 int write_log(int, const char *, const char *);

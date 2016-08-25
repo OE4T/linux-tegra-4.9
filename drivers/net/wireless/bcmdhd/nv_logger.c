@@ -30,7 +30,7 @@ struct mutex suspend_lock;
 
 struct workqueue_struct *logger_wqueue;
 struct log_buffer {
-	char tmstmp[22];
+	char tmstmp[TIMESTAMPSIZE];
 	char *buf;
 	char *info;
 	int event;
@@ -86,6 +86,7 @@ int write_log(int event, const char *buf, const char *info)
 	struct log_node *temp;
 	int buf_len = 0;
 	int info_len = 0;
+	int time_len = 0;
 	static int list1_size;
 	static int list2_size;
 	struct timeval now;
@@ -120,6 +121,7 @@ int write_log(int event, const char *buf, const char *info)
 			pr_err("write_log: temp memory allocation failed");
 			return -1;
 		}
+		memset(temp, 0, sizeof(struct log_node));
 
 		temp->log = kmalloc(sizeof(struct log_buffer), GFP_ATOMIC);
 		if (temp->log == NULL) {
@@ -132,15 +134,17 @@ int write_log(int event, const char *buf, const char *info)
 		temp->log->buf = kmalloc(buf_len, GFP_ATOMIC);
 		if (temp->log->buf == NULL) {
 			pr_err("write_log_buf: log memory allocation failed");
-			kfree(temp);
 			kfree(temp->log);
+			kfree(temp);
 			return -1;
 		}
 
 		strncpy(temp->log->buf, buf, buf_len);
 
 		do_gettimeofday(&now);
-		sprintf(temp->log->tmstmp, "[%.2d-%.2d %.2d:%.2d:%.2d.%u]",
+		time_to_tm(now.tv_sec, -sys_tz.tz_minuteswest * 60, &date_time);
+		time_len = sprintf(temp->log->tmstmp,
+					"[%.2d-%.2d %.2d:%.2d:%.2d.%u]",
 					date_time.tm_mon+1,
 					date_time.tm_mday,
 					date_time.tm_hour,
@@ -150,18 +154,20 @@ int write_log(int event, const char *buf, const char *info)
 		if (info != NULL) {
 			info_len = strlen(info) + 1;
 			temp->log->info = kmalloc(info_len, GFP_ATOMIC);
-			strncpy(temp->log->info, info, info_len);
+			if (temp->log->info != NULL)
+				strncpy(temp->log->info, info, info_len);
+		} else {
+			temp->log->info = NULL;
 		}
-
 		temp->log->event = event;
 
 	/* whichever list is not busy, dump data in that list */
 		if (1 == atomic_read(&list1_val)) {
 			list_add_tail(&(temp->list), &(list1));
-			list1_size += buf_len + info_len;
+			list1_size += time_len + buf_len + info_len;
 		} else if (1 == atomic_read(&list2_val)) {
 			list_add_tail(&(temp->list), &(list2));
-			list2_size += buf_len + info_len;
+			list2_size += time_len + buf_len + info_len;
 		} else {
 		/* send data directly over netlink because both lists are busy*/
 			pr_err("Message dropped due to busy queues");
@@ -195,12 +201,16 @@ void write_queue_work(struct work_struct *work)
 		/* for the correct string of the event */
 			strcat(logbuf, temp->log->tmstmp);
 
-			strcat(logbuf, temp->log->buf);
+			if (temp->log->buf != NULL)
+				strcat(logbuf, temp->log->buf);
 			strcat(logbuf, " ");
-			strcat(logbuf, temp->log->info);
+			if (temp->log->info != NULL)
+				strcat(logbuf, temp->log->info);
 			strcat(logbuf, "\n");
-
 			list_del(pos);
+			kfree(temp->log->info);
+			kfree(temp->log->buf);
+			kfree(temp->log);
 			kfree(temp);
 		}
 		write_log_file(logbuf);
@@ -218,12 +228,17 @@ void write_queue_work(struct work_struct *work)
 		/* for the correct string of the event */
 			strcat(logbuf, temp->log->tmstmp);
 
-			strcat(logbuf, temp->log->buf);
+			if (temp->log->buf != NULL)
+				strcat(logbuf, temp->log->buf);
 			strcat(logbuf, " ");
-			strcat(logbuf, temp->log->info);
+			if (temp->log->info != NULL)
+				strcat(logbuf, temp->log->info);
 			strcat(logbuf, "\n");
 
 			list_del(pos);
+			kfree(temp->log->info);
+			kfree(temp->log->buf);
+			kfree(temp->log);
 			kfree(temp);
 		}
 		write_log_file(logbuf);

@@ -18,6 +18,8 @@
  *
  */
 
+#include "tegra186-soc/tegra186-soc-i2c-prod.dtsi"
+
 / {
 
 	pcie-controller@10003000 {
@@ -578,36 +580,6 @@
 						0x000000C4 0x00FFFFFF 0x00777777	/* DSI_PADCTL_D_LP_DRVR_SLEW_RATE_CTRL_0 */
 					>;
 				};
-			};
-		};
-	};
-
-	i2c@c240000 {
-		prod-settings {
-			mask-one-style;
-			prod_i2c_sm {
-				prod = <0x00000094 0x00003F00 0x00000300
-					0x0000006c 0xFFFF0000 0x00160000>;
-			};
-		};
-	};
-
-	i2c@3190000 {
-		prod-settings {
-			mask-one-style;
-			prod_i2c_sm {
-				prod = <0x00000094 0x00003F00 0x00000300
-					0x0000006c 0xFFFF0000 0x00160000>;
-			};
-		};
-	};
-
-	i2c@31b0000 {
-		prod-settings {
-			mask-one-style;
-			prod_i2c_sm {
-				prod = <0x00000094 0x00003F00 0x00000300
-					0x0000006c 0xFFFF0000 0x00160000>;
 			};
 		};
 	};

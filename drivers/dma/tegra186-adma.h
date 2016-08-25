@@ -258,6 +258,7 @@ enum {
 #define ADMA_CH_STATUS_TRANSFER_PAUSED				BIT(1)
 #define ADMA_CH_STATUS_TRANSFER_ENABLED				BIT(0)
 
+#define MAX_ADMAIF_WITH_DMA_FIFO_SIZE_3				4
 enum tegra_adma_fetching_policy {
 	BURST_BASED = 0,
 	THRESHOLD_BASED = 1,

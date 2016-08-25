@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -101,6 +101,22 @@ static inline u32 pri_ringmaster_start_results_connectivity_pass_v(void)
 static inline u32 pri_ringmaster_intr_status0_r(void)
 {
 	return 0x00120058;
+}
+static inline u32 pri_ringmaster_intr_status0_ring_start_conn_fault_v(u32 r)
+{
+	return (r >> 0) & 0x1;
+}
+static inline u32 pri_ringmaster_intr_status0_disconnect_fault_v(u32 r)
+{
+	return (r >> 1) & 0x1;
+}
+static inline u32 pri_ringmaster_intr_status0_overflow_fault_v(u32 r)
+{
+	return (r >> 2) & 0x1;
+}
+static inline u32 pri_ringmaster_intr_status0_gbl_write_error_sys_v(u32 r)
+{
+	return (r >> 8) & 0x1;
 }
 static inline u32 pri_ringmaster_intr_status1_r(void)
 {

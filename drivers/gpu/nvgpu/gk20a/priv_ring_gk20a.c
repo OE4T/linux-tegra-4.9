@@ -23,6 +23,7 @@
 #include <nvgpu/hw/gk20a/hw_mc_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
+#include <nvgpu/hw/gk20a/hw_pri_ringstation_gpc_gk20a.h>
 
 void gk20a_enable_priv_ring(struct gk20a *g)
 {
@@ -71,6 +72,8 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	u32 status0, status1;
 	u32 cmd;
 	s32 retry = 100;
+	u32 gpc;
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
 	if (platform->is_fmodel)
@@ -82,20 +85,28 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	gk20a_dbg(gpu_dbg_intr, "ringmaster intr status0: 0x%08x,"
 		"status1: 0x%08x", status0, status1);
 
-	if (status0 & (0x1 | 0x2 | 0x4)) {
+	if (pri_ringmaster_intr_status0_ring_start_conn_fault_v(status0) != 0 ||
+	    pri_ringmaster_intr_status0_disconnect_fault_v(status0) != 0 ||
+	    pri_ringmaster_intr_status0_overflow_fault_v(status0) != 0) {
 		gk20a_reset_priv_ring(g);
 	}
 
-	if (status0 & 0x100) {
+	if (pri_ringmaster_intr_status0_gbl_write_error_sys_v(status0) != 0) {
 		gk20a_dbg(gpu_dbg_intr, "SYS write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
-			gk20a_readl(g, 0x122120), gk20a_readl(g, 0x122124), gk20a_readl(g, 0x122128),
-			gk20a_readl(g, 0x12212c));
+			gk20a_readl(g, pri_ringstation_sys_priv_error_adr_r()),
+			gk20a_readl(g, pri_ringstation_sys_priv_error_wrdat_r()),
+			gk20a_readl(g, pri_ringstation_sys_priv_error_info_r()),
+			gk20a_readl(g, pri_ringstation_sys_priv_error_code_r()));
 	}
 
-	if (status1 & 0x1) {
-		gk20a_dbg(gpu_dbg_intr, "GPC write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x",
-			gk20a_readl(g, 0x128120), gk20a_readl(g, 0x128124), gk20a_readl(g, 0x128128),
-			gk20a_readl(g, 0x12812c));
+	for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+		if (status1 & BIT(gpc)) {
+			gk20a_dbg(gpu_dbg_intr, "GPC%u write error. ADR %08x WRDAT %08x INFO %08x, CODE %08x", gpc,
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_adr_r() + gpc * gpc_stride),
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_wrdat_r() + gpc * gpc_stride),
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_info_r() + gpc * gpc_stride),
+				gk20a_readl(g, pri_ringstation_gpc_gpc0_priv_error_code_r() + gpc * gpc_stride));
+		}
 	}
 
 	cmd = gk20a_readl(g, pri_ringmaster_command_r());
@@ -112,10 +123,4 @@ void gk20a_priv_ring_isr(struct gk20a *g)
 	if (retry <= 0)
 		gk20a_warn(dev_from_gk20a(g),
 			"priv ringmaster cmd ack too many retries");
-
-	status0 = gk20a_readl(g, pri_ringmaster_intr_status0_r());
-	status1 = gk20a_readl(g, pri_ringmaster_intr_status1_r());
-
-	gk20a_dbg_info("ringmaster intr status0: 0x%08x,"
-		" status1: 0x%08x", status0, status1);
 }

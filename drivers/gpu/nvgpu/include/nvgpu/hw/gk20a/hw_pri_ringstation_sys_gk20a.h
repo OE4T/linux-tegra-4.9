@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2012-2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2012-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,5 +65,21 @@ static inline u32 pri_ringstation_sys_decode_config_ring_m(void)
 static inline u32 pri_ringstation_sys_decode_config_ring_drop_on_ring_not_started_f(void)
 {
 	return 0x1;
+}
+static inline u32 pri_ringstation_sys_priv_error_adr_r(void)
+{
+	return 0x00122120;
+}
+static inline u32 pri_ringstation_sys_priv_error_wrdat_r(void)
+{
+	return 0x00122124;
+}
+static inline u32 pri_ringstation_sys_priv_error_info_r(void)
+{
+	return 0x00122128;
+}
+static inline u32 pri_ringstation_sys_priv_error_code_r(void)
+{
+	return 0x0012212c;
 }
 #endif

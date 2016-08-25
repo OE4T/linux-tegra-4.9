@@ -48,8 +48,7 @@
 				"B_CLUSTER" : "M_CLUSTER")
 #define LOOP_FOR_EACH_CLUSTER(cl)	for (cl = M_CLUSTER; \
 					cl < MAX_CLUSTERS; cl++)
-#define SAFE_CC3_NDIV		11
-#define SAFE_CC3_VINDEX		25
+#define INDEX_STEP	2
 /* EDVD register details */
 #define EDVD_CL_NDIV_VHINT_OFFSET	0x20
 #define EDVD_COREX_NDIV_VAL_SHIFT	(0)
@@ -108,6 +107,7 @@ struct cpu_vhint_table {
 struct cc3_params {
 	u32 ndiv;
 	u32 vindex;
+	u32 freq;
 	u8 enable;
 };
 
@@ -489,19 +489,75 @@ static void __tegra_mce_cc3_ctrl(void *data)
 	tegra_mce_cc3_ctrl(param->ndiv, param->vindex, param->enable);
 }
 
-static int enable_autocc3(void)
+static inline u16 map_ndiv_to_vindex(struct cpu_vhint_table *vhtbl, u16 ndiv)
 {
+	struct cpu_vhint_data *lut = vhtbl->lut;
+
+	if (ndiv == lut->ndiv_min)
+		return lut->vfloor;
+	else
+		return vhtbl->vindx[ndiv];
+}
+
+static inline u16 clamp_ndiv(struct cpu_vhint_table *vhtbl, u16 ndiv)
+{
+	u16 min = vhtbl->lut->ndiv_min;
+	u16 max = vhtbl->lut->ndiv_max;
+
+	if (!ndiv || (ndiv < min))
+		ndiv = min;
+	if (ndiv > max)
+		ndiv = max;
+
+	return ndiv;
+}
+
+static inline u16 map_freq_to_ndiv(struct cpu_vhint_table *vhtbl,
+	u32 freq)
+{
+	struct cpu_vhint_data *lut = vhtbl->lut;
+
+	return (freq * 1000 * lut->pdiv * lut->mdiv) / lut->ref_clk_hz;
+}
+
+static void enable_cc3(struct device_node *dn)
+{
+	struct cpu_vhint_table *vhtbl;
+	struct cc3_params *cc3;
+	u32 enb, freq = 0, idx = 0;
 	enum cluster cl;
-	int wait = 1;
+	u16 ndiv;
 	int ret = 0;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
+		vhtbl = &tfreq_data.pcluster[cl].dvfs_tbl;
+		cc3 = &tfreq_data.pcluster[cl].cc3;
+
+		if (!vhtbl->lut)
+			goto idx_inc;
+
+		ret = of_property_read_u32_index(dn, "nvidia,enable-autocc3",
+			idx + 1, &enb);
+		if (!enb || ret)
+			goto idx_inc;
+
+		ret = of_property_read_u32_index(dn, "nvidia,autocc3-freq",
+			idx + 1, &freq);
+		if (ret)
+			freq = 0;
+
+		ndiv = map_freq_to_ndiv(vhtbl, freq);
+		ndiv = clamp_ndiv(vhtbl, ndiv);
+		cc3->enable = 1;
+		cc3->ndiv = ndiv;
+		cc3->vindex = map_ndiv_to_vindex(vhtbl, ndiv);
+
 		ret = smp_call_function_any(&tfreq_data.pcluster[cl].cpu_mask,
 				__tegra_mce_cc3_ctrl,
-				&tfreq_data.pcluster[cl].cc3, wait);
+				cc3, 1);
+idx_inc:
+		idx += INDEX_STEP;
 	}
-
-	return ret;
 }
 
 #ifdef CONFIG_DEBUG_FS
@@ -679,50 +735,6 @@ static const struct file_operations lut_fops = {
 	.release = single_release,
 };
 
-static bool get_cc3_status(void)
-{
-	enum cluster cl;
-	bool val = true;
-
-	LOOP_FOR_EACH_CLUSTER(cl)
-		if (!tfreq_data.pcluster[cl].cc3.enable) {
-			val = false;
-			break;
-		}
-
-	return val;
-}
-
-static int get_cc3(void *data, u64 *val)
-{
-	mutex_lock(&tfreq_data.mlock);
-
-	*val = get_cc3_status();
-
-	mutex_unlock(&tfreq_data.mlock);
-
-	return 0;
-}
-
-static int set_cc3(void *data, u64 val)
-{
-	enum cluster cl;
-	int ret = 0;
-
-	mutex_lock(&tfreq_data.mlock);
-
-	if (get_cc3_status() ^ (bool) val) {
-		LOOP_FOR_EACH_CLUSTER(cl)
-			tfreq_data.pcluster[cl].cc3.enable = (bool) val;
-		ret = enable_autocc3();
-	}
-
-	mutex_unlock(&tfreq_data.mlock);
-	return ret;
-}
-DEFINE_SIMPLE_ATTRIBUTE(cc3_fops, get_cc3, set_cc3,
-	"%llu\n");
-
 static int get_pcluster_cc3(void *data, u64 *val)
 {
 	enum cluster cl = (enum cluster)data;
@@ -826,49 +838,11 @@ DEFINE_SIMPLE_ATTRIBUTE(vidx_ops, get_vindex, set_vindex,
 	"%llu\n");
 
 static struct dentry *tegra_cpufreq_debugfs_root;
-static int __init tegra_cpufreq_debug_init(void)
+static int __init cc3_debug_init(void)
 {
 	struct dentry *dir;
 	enum cluster cl;
 	uint8_t buff[15];
-	uint64_t cpu;
-
-	tegra_cpufreq_debugfs_root = debugfs_create_dir("tegra_cpufreq", NULL);
-	if (!tegra_cpufreq_debugfs_root)
-		return -ENOMEM;
-
-	if (!debugfs_create_file("bpmp_cpu_vhint_table", RO_MODE,
-				 tegra_cpufreq_debugfs_root,
-					NULL,
-					&lut_fops))
-		goto err_out;
-
-	if (!debugfs_create_file("freq_compute_delay", RW_MODE,
-				 tegra_cpufreq_debugfs_root,
-					NULL,
-					&freq_compute_fops))
-		goto err_out;
-
-	if (get_cc3_status()) {
-		if (!debugfs_create_file("auto_cc3", RW_MODE,
-				 tegra_cpufreq_debugfs_root,
-					NULL,
-					&cc3_fops))
-			goto err_out;
-	}
-
-	for_each_possible_cpu(cpu) {
-		snprintf(buff, sizeof(buff), "cpu%llu", cpu);
-		dir = debugfs_create_dir(buff, tegra_cpufreq_debugfs_root);
-		if (!dir)
-			goto err_out;
-		if (!debugfs_create_file("freq", RW_MODE, dir, (void *)cpu,
-			&freq_fops))
-			goto err_out;
-		if (!debugfs_create_file("ndiv_vindex_hint", RW_MODE, dir,
-			(void *)cpu, &ndiv_vindex_fops))
-			goto err_out;
-	}
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		snprintf(buff, sizeof(buff), CLUSTER_STR(cl));
@@ -892,8 +866,51 @@ static int __init tegra_cpufreq_debug_init(void)
 			&vidx_ops))
 			goto err_out;
 	}
-
 	return 0;
+
+err_out:
+	return -EINVAL;
+}
+
+static int __init tegra_cpufreq_debug_init(void)
+{
+	struct dentry *dir;
+	uint8_t buff[15];
+	uint64_t cpu;
+
+	tegra_cpufreq_debugfs_root = debugfs_create_dir("tegra_cpufreq", NULL);
+	if (!tegra_cpufreq_debugfs_root)
+		return -ENOMEM;
+
+	if (!debugfs_create_file("bpmp_cpu_vhint_table", RO_MODE,
+				 tegra_cpufreq_debugfs_root,
+					NULL,
+					&lut_fops))
+		goto err_out;
+
+	if (!debugfs_create_file("freq_compute_delay", RW_MODE,
+				 tegra_cpufreq_debugfs_root,
+					NULL,
+					&freq_compute_fops))
+		goto err_out;
+
+	if (cc3_debug_init())
+		goto err_out;
+
+	for_each_possible_cpu(cpu) {
+		snprintf(buff, sizeof(buff), "cpu%llu", cpu);
+		dir = debugfs_create_dir(buff, tegra_cpufreq_debugfs_root);
+		if (!dir)
+			goto err_out;
+		if (!debugfs_create_file("freq", RW_MODE, dir, (void *)cpu,
+			&freq_fops))
+			goto err_out;
+		if (!debugfs_create_file("ndiv_vindex_hint", RW_MODE, dir,
+			(void *)cpu, &ndiv_vindex_fops))
+			goto err_out;
+	}
+	return 0;
+
 err_out:
 	debugfs_remove_recursive(tegra_cpufreq_debugfs_root);
 	return -ENOMEM;
@@ -1377,24 +1394,6 @@ static int __init tegra_cpufreq_init(void)
 		mutex_init(&per_cpu(pcpu_mlock, cpu));
 	}
 
-	if (of_property_read_bool(dn, "nvidia,enable-autocc3")) {
-		enum cluster cl;
-		pr_debug("enabling autocc3\n");
-
-		LOOP_FOR_EACH_CLUSTER(cl) {
-			tfreq_data.pcluster[cl].cc3.ndiv = SAFE_CC3_NDIV;
-			tfreq_data.pcluster[cl].cc3.vindex = SAFE_CC3_VINDEX;
-			tfreq_data.pcluster[cl].cc3.enable = true;
-		}
-
-		ret = enable_autocc3();
-		if (ret) {
-			LOOP_FOR_EACH_CLUSTER(cl)
-				tfreq_data.pcluster[cl].cc3.enable = false;
-			goto err_free_res;
-		}
-	}
-
 #ifdef CONFIG_DEBUG_FS
 	tegra_cpufreq_debug_init();
 #endif
@@ -1418,6 +1417,8 @@ static int __init tegra_cpufreq_init(void)
 	ret = create_ndiv_to_vindex_table();
 	if (ret)
 		goto err_free_res;
+
+	enable_cc3(dn);
 
 	ret = init_freqtbls(dn);
 	if (ret)

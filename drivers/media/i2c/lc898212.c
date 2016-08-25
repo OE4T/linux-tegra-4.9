@@ -483,10 +483,12 @@ static int lc898212_probe(struct i2c_client *client,
 	static struct regmap_config lc898212_regmap_config8 = {
 		.reg_bits = 8,
 		.val_bits = 8,
+		.name = "8bit",
 	};
 	static struct regmap_config lc898212_regmap_config16 = {
 		.reg_bits = 8,
 		.val_bits = 16,
+		.name = "16bit",
 	};
 
 	pr_info("[lc898212]: probing sensor\n");

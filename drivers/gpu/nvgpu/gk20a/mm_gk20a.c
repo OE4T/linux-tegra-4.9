@@ -2183,6 +2183,51 @@ err_kfree:
 #endif
 }
 
+static u64 gk20a_mm_get_align(struct gk20a *g, struct scatterlist *sgl,
+			      enum gk20a_aperture aperture)
+{
+	u64 align = 0, chunk_align = 0;
+	u64 buf_addr;
+
+	if (aperture == APERTURE_VIDMEM) {
+		struct gk20a_page_alloc *alloc = (struct gk20a_page_alloc *)
+						  sg_dma_address(sgl);
+		struct page_alloc_chunk *chunk = NULL;
+
+		list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
+			chunk_align = 1ULL << __ffs(chunk->base | chunk->length);
+
+			if (align)
+				align = min(align, chunk_align);
+			else
+				align = chunk_align;
+		}
+
+		return align;
+	}
+
+	buf_addr = (u64)sg_dma_address(sgl);
+
+	if (g->mm.bypass_smmu || buf_addr == DMA_ERROR_CODE || !buf_addr) {
+		while (sgl) {
+			buf_addr = (u64)sg_phys(sgl);
+			chunk_align = 1ULL << __ffs(buf_addr | (u64)sgl->length);
+
+			if (align)
+				align = min(align, chunk_align);
+			else
+				align = chunk_align;
+			sgl = sg_next(sgl);
+		}
+
+		return align;
+	}
+
+	align = 1ULL << __ffs(buf_addr);
+
+	return align;
+}
+
 u64 gk20a_vm_map(struct vm_gk20a *vm,
 			struct dma_buf *dmabuf,
 			u64 offset_align,
@@ -2207,7 +2252,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	struct gk20a_comptags comptags;
 	bool clear_ctags = false;
 	struct scatterlist *sgl;
-	u64 buf_addr;
 	u64 ctag_map_win_size = 0;
 	u32 ctag_map_win_ctagline = 0;
 	struct vm_reserved_va_node *va_node = NULL;
@@ -2257,22 +2301,14 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	bfr.kind_v = kind;
 	bfr.size = dmabuf->size;
 	sgl = bfr.sgt->sgl;
-	buf_addr = (u64)sg_dma_address(bfr.sgt->sgl);
-	if (g->mm.bypass_smmu || buf_addr == DMA_ERROR_CODE || !buf_addr) {
-		while (sgl) {
-			u64 align;
 
-			buf_addr = (u64)sg_phys(sgl);
+	aperture = gk20a_dmabuf_aperture(g, dmabuf);
+	if (aperture == APERTURE_INVALID) {
+		err = -EINVAL;
+		goto clean_up;
+	}
 
-			align = 1ULL << __ffs(buf_addr | (u64)sgl->length);
-			if (bfr.align)
-				bfr.align = min_t(u64, align, bfr.align);
-			else
-				bfr.align = align;
-			sgl = sg_next(sgl);
-		}
-	} else
-		bfr.align = 1ULL << __ffs(buf_addr);
+	bfr.align = gk20a_mm_get_align(g, sgl, aperture);
 
 	bfr.pgsz_idx = -1;
 	mapping_size = mapping_size ? mapping_size : bfr.size;
@@ -2387,12 +2423,6 @@ u64 gk20a_vm_map(struct vm_gk20a *vm,
 	if (ctag_offset)
 		ctag_offset += buffer_offset >>
 			       ilog2(g->ops.fb.compression_page_size(g));
-
-	aperture = gk20a_dmabuf_aperture(g, dmabuf);
-	if (aperture == APERTURE_INVALID) {
-		err = -EINVAL;
-		goto clean_up;
-	}
 
 	/* update gmmu ptes */
 	map_offset = g->ops.mm.gmmu_map(vm, map_offset,

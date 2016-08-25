@@ -819,7 +819,7 @@ fail:
 
 reschedule_worker:
 	mutex_unlock(&hdmi->hpd_lock);
-	cancel_delayed_work_sync(&hdmi->hpd_worker);
+	cancel_delayed_work(&hdmi->hpd_worker);
 	schedule_delayed_work(&hdmi->hpd_worker, 0);
 	return;
 

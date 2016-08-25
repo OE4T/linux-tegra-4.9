@@ -1,7 +1,7 @@
 /*
  * GK20A priv ring
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -24,7 +24,7 @@
 #include <nvgpu/hw/gk20a/hw_pri_ringmaster_gk20a.h>
 #include <nvgpu/hw/gk20a/hw_pri_ringstation_sys_gk20a.h>
 
-void gk20a_reset_priv_ring(struct gk20a *g)
+void gk20a_enable_priv_ring(struct gk20a *g)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 
@@ -43,6 +43,27 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 
 	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
 
+}
+
+static void gk20a_reset_priv_ring(struct gk20a *g)
+{
+	u32 val;
+
+	gk20a_reset(g, mc_enable_priv_ring_enabled_f());
+
+	val = gk20a_readl(g, pri_ringstation_sys_decode_config_r());
+	val = set_field(val,
+			pri_ringstation_sys_decode_config_ring_m(),
+			pri_ringstation_sys_decode_config_ring_drop_on_ring_not_started_f());
+	gk20a_writel(g, pri_ringstation_sys_decode_config_r(), val);
+
+	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
+			pri_ringmaster_global_ctl_ring_reset_asserted_f());
+	udelay(20);
+	gk20a_writel(g, pri_ringmaster_global_ctl_r(),
+			pri_ringmaster_global_ctl_ring_reset_deasserted_f());
+
+	gk20a_enable_priv_ring(g);
 }
 
 void gk20a_priv_ring_isr(struct gk20a *g)

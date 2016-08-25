@@ -61,4 +61,22 @@
 	ether_qos@2490000 {
 		status = "okay";
 	};
+
+	host1x {
+		vic@15340000 {
+			status = "disabled";
+		};
+
+		nvenc@154c0000 {
+			status = "disabled";
+		};
+
+		nvdec@15480000 {
+			status = "disabled";
+		};
+
+		nvjpg@15380000 {
+			status = "disabled";
+		};
+	};
 };

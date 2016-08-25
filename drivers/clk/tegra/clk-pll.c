@@ -423,6 +423,26 @@ static void _clk_pll_disable(struct clk_hw *hw)
 	}
 }
 
+static void pll_clk_start_ss(struct tegra_clk_pll *pll)
+{
+	if (pll->params->defaults_set && pll->params->ssc_ctrl_reg) {
+		u32 val = pll_readl(pll->params->ssc_ctrl_reg, pll);
+
+		val |= pll->params->ssc_ctrl_en_mask;
+		pll_writel(val, pll->params->ssc_ctrl_reg, pll);
+	}
+}
+
+static void pll_clk_stop_ss(struct tegra_clk_pll *pll)
+{
+	if (pll->params->defaults_set && pll->params->ssc_ctrl_reg) {
+		u32 val = pll_readl(pll->params->ssc_ctrl_reg, pll);
+
+		val &= ~pll->params->ssc_ctrl_en_mask;
+		pll_writel(val, pll->params->ssc_ctrl_reg, pll);
+	}
+}
+
 static int clk_pll_enable(struct clk_hw *hw)
 {
 	struct tegra_clk_pll *pll = to_clk_pll(hw);
@@ -435,6 +455,8 @@ static int clk_pll_enable(struct clk_hw *hw)
 	_clk_pll_enable(hw);
 
 	ret = clk_pll_wait_for_lock(pll);
+
+	pll_clk_start_ss(pll);
 
 	if (pll->lock)
 		spin_unlock_irqrestore(pll->lock, flags);
@@ -449,6 +471,8 @@ static void clk_pll_disable(struct clk_hw *hw)
 
 	if (pll->lock)
 		spin_lock_irqsave(pll->lock, flags);
+
+	pll_clk_stop_ss(pll);
 
 	_clk_pll_disable(hw);
 
@@ -721,26 +745,6 @@ static void _update_pll_cpcon(struct tegra_clk_pll *pll,
 	}
 
 	pll_writel_misc(val, pll);
-}
-
-static void pll_clk_start_ss(struct tegra_clk_pll *pll)
-{
-	if (pll->params->defaults_set && pll->params->ssc_ctrl_reg) {
-		u32 val = pll_readl(pll->params->ssc_ctrl_reg, pll);
-
-		val |= pll->params->ssc_ctrl_en_mask;
-		pll_writel(val, pll->params->ssc_ctrl_reg, pll);
-	}
-}
-
-static void pll_clk_stop_ss(struct tegra_clk_pll *pll)
-{
-	if (pll->params->defaults_set && pll->params->ssc_ctrl_reg) {
-		u32 val = pll_readl(pll->params->ssc_ctrl_reg, pll);
-
-		val &= ~pll->params->ssc_ctrl_en_mask;
-		pll_writel(val, pll->params->ssc_ctrl_reg, pll);
-	}
 }
 
 static int _program_pll(struct clk_hw *hw, struct tegra_clk_pll_freq_table *cfg,

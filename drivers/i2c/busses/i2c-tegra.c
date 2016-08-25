@@ -857,17 +857,17 @@ static void tegra_i2c_config_prod_settings(struct tegra_i2c_dev *i2c_dev)
 
 	switch (i2c_dev->bus_clk_rate) {
 	case I2C_FAST_MODE:
-		prod_name = "prod_i2c_fm";
+		prod_name = "prod_c_fm";
 		break;
 	case I2C_FAST_MODE_PLUS:
-		prod_name = "prod_i2c_fm_plus";
+		prod_name = "prod_c_fmplus";
 		break;
 	case I2C_HS_MODE:
-		prod_name = "prod_i2c_hs";
+		prod_name = "prod_c_hs";
 		break;
 	case I2C_STANDARD_MODE:
 	default:
-		prod_name = "prod_i2c_sm";
+		prod_name = "prod_c_sm";
 		break;
 	}
 

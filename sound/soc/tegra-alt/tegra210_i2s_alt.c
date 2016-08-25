@@ -999,7 +999,7 @@ static int tegra210_i2s_platform_probe(struct platform_device *pdev)
 
 	if (of_property_read_u32(pdev->dev.of_node,
 		"fsync-width", &i2s->fsync_width) < 0) {
-		dev_warn(&pdev->dev, "Missing prop fsync-width for I2S%d\n",
+		dev_info(&pdev->dev, "Missing prop fsync-width for I2S%d\n",
 			pdev->dev.id);
 		i2s->fsync_width = 31;
 	}

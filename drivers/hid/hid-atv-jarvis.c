@@ -20,6 +20,7 @@
 #include <linux/hid.h>
 #include <linux/hiddev.h>
 #include <linux/hardirq.h>
+#include <linux/iio/imu/tsfw_icm20628.h>
 #include <linux/jiffies.h>
 #include <linux/slab.h>
 #include <linux/time.h>
@@ -169,6 +170,8 @@ struct fifo_packet {
 struct shdr_device {
 	struct hid_device	*hdev;
 	struct snd_card *shdr_card;
+	struct tsfw_icm20628_fn_dev *snsr_fns;
+	struct tsfw_icm20628_state *st;
 };
 static int num_remotes;
 static struct mutex snd_cards_lock;
@@ -416,6 +419,36 @@ static int atvr_mic_ctrl(struct hid_device *hdev, bool enable)
 
 	return ret;
 }
+
+int atvr_ts_sensor_set(struct hid_device *hdev, bool enable)
+{
+	u8 report[TS_HOSTCMD_REPORT_SIZE] = { 0x04, 0x5a };
+	u8 sample_rate = 70;
+	int ret;
+
+	hid_info(hdev, "%s enable: %d\n",  __func__, enable);
+
+	if (enable) {
+		report[3] = 0x01; /* set */
+		report[4] = 0x01; /* enable */
+		report[5] = 0x00; /* real data source, 0x01 for dummy */
+		report[6] = sample_rate;
+		hid_info(hdev, "enable ts sensor %dHz\n", sample_rate);
+	} else {
+		report[3] = 0x01; /* set */
+		hid_info(hdev, "disable ts sensor\n");
+	}
+
+	ret =  hdev->hid_output_raw_report(hdev, report,
+			TS_HOSTCMD_REPORT_SIZE, HID_OUTPUT_REPORT);
+	if (ret < 0)
+		hid_info(hdev, "failed to send ts sensor ctrl report, err=%d\n", ret);
+	else
+		ret = 0;
+
+	return ret;
+}
+EXPORT_SYMBOL(atvr_ts_sensor_set);
 
 /***************************************************************************/
 /************* Atomic FIFO *************************************************/
@@ -1492,6 +1525,8 @@ __nodev:
 #define JAR_AUDIO_REPORT_SIZE	233
 #define JAR_AUDIO_FRAME_SIZE	0x3A
 
+#define TS_BUTTON_REPORT_SIZE 19
+
 static int atvr_jarvis_break_events(struct hid_device *hdev,
 				    struct hid_report *report,
 				    u8 *data, int size)
@@ -1567,9 +1602,9 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 #if (DEBUG_HID_RAW_INPUT == 1)
 	pr_info("%s: report->id = 0x%x, size = %d\n",
 		__func__, report->id, size);
-	if (size < 22) {
+	if (size <= 22) {
 		u32 i;
-		for (i = 1; i < sizeof(i); i++)
+		for (i = 0; i < size; i++)
 			pr_info("data[%d] = 0x%02x\n", i, data[i]);
 	}
 #endif
@@ -1636,6 +1671,22 @@ static int atvr_raw_event(struct hid_device *hdev, struct hid_report *report,
 		pr_info("Report ID 10: PID: %d, report %s", hdev->product,
 			(char *)debug_info);
 		kfree(debug_info);
+	} else if (hdev->product == USB_DEVICE_ID_NVIDIA_THUNDERSTRIKE &&
+			(report->id == SENSOR_REPORT_ID ||
+			report->id == SENSOR_REPORT_ID_SYN ||
+			report->id == SENSOR_REPORT_ID_COMBINED) &&
+			shdr_dev->snsr_fns && shdr_dev->snsr_fns->recv) {
+		shdr_dev->snsr_fns->recv(shdr_dev->st, data, size);
+		/* TODO: check ret */
+		/* TODO: TEST data goes to hid_report_raw_event */
+		/* combined data report also has button data
+		 * call hid_report_raw_event to handle button data
+		 */
+		if (report->id == SENSOR_REPORT_ID_COMBINED)
+			hid_report_raw_event(hdev, 0, data,
+					     TS_BUTTON_REPORT_SIZE, 0);
+		/* we've handled the event */
+		return 1;
 	}
 	/* let the event through for regular input processing */
 	return 0;
@@ -1647,6 +1698,7 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	int ret;
 	struct shdr_device *shdr_dev;
 	struct snd_card *shdr_card;
+	struct tsfw_icm20628_state *st;
 
 	shdr_dev = kzalloc(sizeof(*shdr_dev), GFP_KERNEL);
 	if (shdr_dev == NULL) {
@@ -1701,6 +1753,13 @@ static int atvr_probe(struct hid_device *hdev, const struct hid_device_id *id)
 	num_remotes++;
 
 	mutex_unlock(&snd_cards_lock);
+
+	shdr_dev->snsr_fns = tsfw_icm20628_fns();
+	if (shdr_dev->snsr_fns && shdr_dev->snsr_fns->probe)
+		shdr_dev->snsr_fns->probe(hdev, &st);
+	/* TODO: ret check */
+	shdr_dev->st = st;
+
 	return 0;
 err_stop:
 	hid_hw_stop(hdev);
@@ -1720,6 +1779,10 @@ static void atvr_remove(struct hid_device *hdev)
 
 	if (shdr_card == NULL)
 		return -EIO;
+
+	if (shdr_dev->snsr_fns && shdr_dev->snsr_fns->remove)
+		shdr_dev->snsr_fns->remove(shdr_dev->st);
+	/* TODO: ret check */
 
 	mutex_lock(&snd_cards_lock);
 	atvr_snd = shdr_card->private_data;

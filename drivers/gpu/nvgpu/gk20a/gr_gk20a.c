@@ -1578,7 +1578,8 @@ static int gr_gk20a_init_golden_ctx_image(struct gk20a *g,
 	if (g->ops.gr.init_preemption_state)
 		g->ops.gr.init_preemption_state(g);
 
-	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_gr_load_gating_prod)
+		g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
 
 	err = gr_gk20a_wait_idle(g, end_jiffies, GR_IDLE_CHECK_DEFAULT);
 	if (err)

@@ -684,6 +684,8 @@ void gk20a_pbus_isr(struct gk20a *g)
 			"NV_PGRAPH_PRI_GPC0_GPCCS_FS_GPC: 0x%x\n",
 			gk20a_readl(g, gr_gpc0_fs_gpc_r()));
 
+		gk20a_writel(g, timer_pri_timeout_save_0_r(), 0);
+		gk20a_writel(g, timer_pri_timeout_save_1_r(), 0);
 	}
 
 	if (val)

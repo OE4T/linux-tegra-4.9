@@ -2655,22 +2655,6 @@ static void tegra_dc_hdmi_modeset_notifier(struct tegra_dc *dc)
 	tegra_hdmi_put(dc);
 }
 
-#ifdef CONFIG_DEBUG_FS
-/* show current hpd state */
-static int tegra_hdmi_hotplug_dbg_show(struct seq_file *m, void *unused)
-{
-	struct tegra_hdmi *hdmi = m->private;
-	struct tegra_dc *dc = hdmi->dc;
-
-	if (WARN_ON(!hdmi || !dc || !dc->out))
-		return -EINVAL;
-
-	rmb();
-	seq_printf(m, "hdmi hpd state: %d\n", dc->out->hotplug_state);
-
-	return 0;
-}
-
 int tegra_hdmi_get_hotplug_state(struct tegra_hdmi *hdmi)
 {
 	rmb();
@@ -2705,6 +2689,23 @@ void tegra_hdmi_set_hotplug_state(struct tegra_hdmi *hdmi, int new_hpd_state)
 	 */
 	cancel_delayed_work_sync(&hdmi->hpd_worker);
 	schedule_delayed_work(&hdmi->hpd_worker, 0);
+}
+
+
+#ifdef CONFIG_DEBUG_FS
+/* show current hpd state */
+static int tegra_hdmi_hotplug_dbg_show(struct seq_file *m, void *unused)
+{
+	struct tegra_hdmi *hdmi = m->private;
+	struct tegra_dc *dc = hdmi->dc;
+
+	if (WARN_ON(!hdmi || !dc || !dc->out))
+		return -EINVAL;
+	/* make sure we see updated hotplug_state value */
+	rmb();
+	seq_printf(m, "hdmi hpd state: %d\n", dc->out->hotplug_state);
+
+	return 0;
 }
 
 /*

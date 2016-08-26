@@ -951,6 +951,14 @@ static void gk20a_free_channel(struct channel_gk20a *ch)
 	}
 	mutex_unlock(&ch->sync_lock);
 
+	/*
+	 * free the channel used semaphore index.
+	 * we need to do this before releasing the address space,
+	 * as the semaphore pool might get freed after that point.
+	 */
+	if (ch->hw_sema)
+		gk20a_semaphore_free_hw_sema(ch);
+
 	/* release channel binding to the as_share */
 	if (ch_vm->as_share)
 		gk20a_as_release_share(ch_vm->as_share);
@@ -973,10 +981,6 @@ unbind:
 
 	g->ops.fifo.unbind_channel(ch);
 	g->ops.fifo.free_inst(g, ch);
-
-	/* free the channel used semaphore index */
-	if (ch->hw_sema)
-		gk20a_semaphore_free_hw_sema(ch);
 
 	ch->vpr = false;
 	ch->vm = NULL;

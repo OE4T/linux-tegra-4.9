@@ -14,6 +14,7 @@
 #include <linux/types.h>
 
 #include "gk20a/gk20a.h"
+#include "gm20b/ltc_gm20b.h"
 #include "gp10b/ltc_gp10b.h"
 
 void gp106_init_ltc(struct gpu_ops *gops)
@@ -23,4 +24,5 @@ void gp106_init_ltc(struct gpu_ops *gops)
 	/* dGPU does not need the LTC hack */
 	gops->ltc.cbc_fix_config = NULL;
 	gops->ltc.init_cbc = NULL;
+	gops->ltc.init_fs_state = gm20b_ltc_init_fs_state;
 }

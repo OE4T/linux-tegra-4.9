@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -17,6 +17,7 @@
 #ifndef __TEGRA_RESET_H
 #define __TEGRA_RESET_H
 
+int bpmp_get_max_reset_id(uint32_t *max_id);
 int bpmp_register_reset(int num_resets, struct platform_device *pdev);
 
 #endif

@@ -26,7 +26,16 @@
 
 static int tegra18x_reset_probe(struct platform_device *pdev)
 {
-	return bpmp_register_reset(TEGRA186_RESET_SIZE, pdev);
+	uint32_t max_id;
+	int r;
+
+	r = bpmp_get_max_reset_id(&max_id);
+	if (r) {
+		/* for backward compatibility */
+		return bpmp_register_reset(TEGRA186_RESET_SIZE, pdev);
+	}
+
+	return bpmp_register_reset(max_id + 1, pdev);
 }
 
 static int tegra_reset_probe(struct platform_device *pdev)

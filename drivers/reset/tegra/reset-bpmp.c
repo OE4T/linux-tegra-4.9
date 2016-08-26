@@ -34,6 +34,22 @@ static int bpmp_send_reset_message(u32 cmd, u32 reset_id)
 	return 0;
 }
 
+int bpmp_get_max_reset_id(uint32_t *max_id)
+{
+	struct mrq_reset_request req = { .cmd = CMD_RESET_GET_MAX_ID };
+	struct mrq_reset_response resp;
+	int r;
+
+	r = tegra_bpmp_send_receive(MRQ_RESET, &req, sizeof(req),
+			&resp, sizeof(resp));
+	if (r)
+		return r;
+
+	*max_id = resp.reset_get_max_id.max_id;
+
+	return 0;
+}
+
 static int bpmp_reset_assert(struct reset_controller_dev *rcdev,
 				 unsigned long id)
 {

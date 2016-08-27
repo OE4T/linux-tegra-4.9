@@ -20,6 +20,7 @@
 #include "clk_domain.h"
 #include "clk_prog.h"
 #include "clk_vf_point.h"
+#include "clk_mclk.h"
 #include "gk20a/gk20a.h"
 
 #define NV_PERF_DOMAIN_4X_CLOCK_DOMAIN_SKIP 0x10
@@ -33,6 +34,7 @@ struct clk_pmupstate {
 	struct clk_domains clk_domainobjs;
 	struct clk_progs clk_progobjs;
 	struct clk_vf_points clk_vf_pointobjs;
+	struct clk_mclk_state clk_mclk;
 };
 
 struct clockentry {

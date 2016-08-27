@@ -14,6 +14,34 @@
 #ifndef _CLKMCLK_H_
 #define _CLKMCLK_H_
 
-int clk_mclkseq_build_prgm_gddr5(struct gk20a *g);
+#include <linux/mutex.h>
+
+enum gk20a_mclk_speed {
+	gk20a_mclk_low_speed,
+	gk20a_mclk_mid_speed,
+	gk20a_mclk_high_speed
+};
+
+struct clk_mclk_state {
+	enum gk20a_mclk_speed speed;
+	struct mutex mclk_mutex;
+	void *vreg_buf;
+
+	/* function pointers */
+	int (*change)(struct gk20a *g, enum gk20a_mclk_speed speed);
+
+#ifdef CONFIG_DEBUG_FS
+	s64 switch_max;
+	s64 switch_min;
+	u64 switch_num;
+	s64 switch_avg;
+	s64 switch_std;
+	bool debugfs_set;
+#endif
+};
+
+int clk_mclkseq_init_mclk_gddr5(struct gk20a *g);
+int clk_mclkseq_change_mclk_gddr5(struct gk20a *g,
+	enum gk20a_mclk_speed speed);
 
 #endif

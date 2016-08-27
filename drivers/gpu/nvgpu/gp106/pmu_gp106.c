@@ -195,7 +195,7 @@ void gp106_init_pmu_ops(struct gpu_ops *gops)
 	gops->pmu.send_lrf_tex_ltc_dram_overide_en_dis_cmd = NULL;
 	gops->pmu.dump_secure_fuses = NULL;
 	gops->pmu.reset = gp106_falcon_reset;
-	gops->pmu.mclk_init = clk_mclkseq_build_prgm_gddr5;
+	gops->pmu.mclk_init = clk_mclkseq_init_mclk_gddr5;
 
 	gk20a_dbg_fn("done");
 }

@@ -36,7 +36,7 @@ static struct property *__of_copy_property(const struct property *prop,
 	int nlen;
 	void *nval;
 
-	propn = kzalloc(sizeof(*prop), flags);
+	propn = kzalloc(sizeof(*propn), flags);
 	if (!propn)
 		return NULL;
 
@@ -47,7 +47,7 @@ static struct property *__of_copy_property(const struct property *prop,
 	nlen = (new_value) ? val_len : prop->length;
 	nval = (new_value) ? new_value : prop->value;
 	if (nlen > 0) {
-		propn->value = kmalloc(nlen, flags);
+		propn->value = kzalloc(nlen, flags);
 		if (!propn->value)
 			goto err_fail_value;
 		memcpy(propn->value, nval, nlen);
@@ -70,6 +70,21 @@ static void free_property(struct property *pp)
 	kfree(pp->name);
 	kfree(pp->value);
 	kfree(pp);
+}
+
+static struct device_node *of_get_child_by_last_name(struct device_node *node,
+						     const char *name)
+{
+	struct device_node *child;
+
+	for_each_child_of_node(node, child) {
+		const char *lname = strrchr(child->full_name, '/');
+
+		if (!strcmp(lname + 1, name))
+			return child;
+	}
+
+	return NULL;
 }
 
 static struct property *__of_string_append(struct device_node *target,
@@ -118,21 +133,6 @@ err_fail_value:
 	kfree(new_prop->name);
 err_fail_name:
 	kfree(new_prop);
-
-	return NULL;
-}
-
-struct device_node *of_get_child_by_addressed_name(
-		const struct device_node *node, const char *name)
-{
-	struct device_node *child;
-	const char *address_node_name;
-
-	for_each_child_of_node(node, child) {
-		address_node_name =  strrchr(child->full_name, '/');
-		if (!strcmp(name, address_node_name))
-			return child;
-	}
 
 	return NULL;
 }
@@ -339,7 +339,7 @@ static int __init do_property_overrides(struct device_node *target,
 
 	for_each_child_of_node(overlay, ochild) {
 		address_name = strrchr(ochild->full_name, '/');
-		tchild = of_get_child_by_addressed_name(target, address_name);
+		tchild = of_get_child_by_last_name(target, address_name + 1);
 		if (!tchild) {
 			pr_err("Overlay node %s not found in target node %s\n",
 				ochild->full_name, target->full_name);

@@ -258,6 +258,12 @@ static int gk20a_fecs_trace_ring_read(struct gk20a *g, int index)
 		return -EINVAL;
 	}
 
+	/* Clear magic_hi to detect cases where CPU could read write index
+	 * before FECS record is actually written to DRAM. This should not
+	 * as we force FECS writes to SYSMEM by reading through PRAMIN.
+	 */
+	r->magic_hi = 0;
+
 	cur_pid = gk20a_fecs_trace_find_pid(g, r->context_ptr);
 	new_pid = gk20a_fecs_trace_find_pid(g, r->new_context_ptr);
 
@@ -349,14 +355,20 @@ static int gk20a_fecs_trace_poll(struct gk20a *g)
 		"circular buffer: read=%d (mailbox=%d) write=%d cnt=%d",
 		read, gk20a_fecs_trace_get_read_index(g), write, cnt);
 
-	/* consume all records */
+	/* Ensure all FECS writes have made it to SYSMEM */
+	g->ops.mm.fb_flush(g);
+
 	while (read != write) {
-		gk20a_fecs_trace_ring_read(g, read);
+		/* Ignore error code, as we want to consume all records */
+		(void)gk20a_fecs_trace_ring_read(g, read);
 
 		/* Get to next record. */
 		read = (read + 1) & (GK20A_FECS_TRACE_NUM_RECORDS - 1);
-		gk20a_fecs_trace_set_read_index(g, read);
 	}
+
+	/* ensure FECS records has been updated before incrementing read index */
+	wmb();
+	gk20a_fecs_trace_set_read_index(g, read);
 
 done:
 	mutex_unlock(&trace->poll_lock);
@@ -597,6 +609,7 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	struct mem_desc *mem = &ch_ctx->gr_ctx->mem;
 	u32 context_ptr = gk20a_fecs_trace_fecs_context_ptr(ch);
 	pid_t pid;
+	u32 aperture;
 
 	gk20a_dbg(gpu_dbg_fn|gpu_dbg_ctxsw,
 			"hw_chid=%d context_ptr=%x inst_block=%llx",
@@ -609,6 +622,9 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 	pa = gk20a_mm_inst_block_addr(g, &trace->trace_buf);
 	if (!pa)
 		return -ENOMEM;
+	aperture = gk20a_aperture_mask(g, &trace->trace_buf,
+			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_sys_mem_noncoherent_f(),
+			ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_target_vid_mem_f());
 
 	if (gk20a_mem_begin(g, mem))
 		return -ENOMEM;
@@ -624,7 +640,8 @@ static int gk20a_fecs_trace_bind_channel(struct gk20a *g,
 		lo);
 	gk20a_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_ptr_hi_o(),
-		ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(hi));
+		ctxsw_prog_main_image_context_timestamp_buffer_ptr_v_f(hi) |
+		aperture);
 	gk20a_mem_wr(g, mem,
 		ctxsw_prog_main_image_context_timestamp_buffer_control_o(),
 		ctxsw_prog_main_image_context_timestamp_buffer_control_num_records_f(

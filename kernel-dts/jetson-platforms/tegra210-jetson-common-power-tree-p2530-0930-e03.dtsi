@@ -291,23 +291,23 @@
 	};
 
 	sdhci@700b0600 {
-		vqmmc-supply = <&max77620_sd3>;
-		vmmc-supply = <&vdd_3v3>;
+		vddio_sdmmc-supply = <&max77620_sd3>;
+		vddio_sd_slot-supply = <&vdd_3v3>;
 	};
 
 	sdhci@700b0400 {
-		vqmmc-supply = <&max77620_sd3>;
-		vmmc-supply = <&vdd_3v3>;
+		vddio_sdmmc-supply = <&max77620_sd3>;
+		vddio_sd_slot-supply = <&vdd_3v3>;
 	};
 
 	sdhci@700b0200 {
-		vqmmc-supply = <&max77620_sd3>;
-		vmmc-supply = <&vdd_3v3>;
+		vddio_sdmmc-supply = <&max77620_sd3>;
+		vddio_sd_slot-supply = <&vdd_3v3>;
 	};
 
 	sdhci@700b0000 {
-		vqmmc-supply = <&max77620_ldo2>;
-		vmmc-supply = <&en_vdd_sd>;
+		vddio_sdmmc-supply = <&max77620_ldo2>;
+		vddio_sd_slot-supply = <&en_vdd_sd>;
 	};
 
 	sata@70020000 {

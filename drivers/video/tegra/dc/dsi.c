@@ -3948,6 +3948,7 @@ int tegra_dsi_start_host_cmd_v_blank_dcs(struct tegra_dc_dsi_data *dsi,
 #if DSI_USE_SYNC_POINTS
 	atomic_set(&dsi_syncpt_rst, 1);
 #endif
+	tegra_dsi_wait_frame_end(dc, dsi, 2);
 
 	err = tegra_dsi_dcs_pkt_seq_ctrl_init(dsi, cmd);
 	if (err < 0) {

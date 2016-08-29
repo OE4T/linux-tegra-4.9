@@ -331,7 +331,39 @@ static void tegra_mipi_apply_dsi_prod(struct regmap *reg,
 
 }
 
-static int _tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
+static int _t18x_tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
+{
+	if (atomic_read(&mipi->refcount) < 0) {
+		WARN_ON(1);
+		return -EINVAL;
+	}
+	if (atomic_inc_return(&mipi->refcount) == 1) {
+		tegra_mipi_clk_enable(mipi);
+		regmap_update_bits(mipi->regmap, MIPI_BIAS_PAD_CFG0,
+				PDVCLAMP, 0 << PDVCLAMP_SHIFT);
+		regmap_update_bits(mipi->regmap, MIPI_BIAS_PAD_CFG2,
+				PDVREG, 0 << PDVREG_SHIFT);
+	}
+	return 0;
+}
+
+static int _t18x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
+{
+	if (atomic_read(&mipi->refcount) < 1) {
+		WARN_ON(1);
+		return -EINVAL;
+	}
+	if (atomic_dec_return(&mipi->refcount) == 0) {
+		regmap_update_bits(mipi->regmap, MIPI_BIAS_PAD_CFG0,
+				PDVCLAMP, 1 << PDVCLAMP_SHIFT);
+		regmap_update_bits(mipi->regmap, MIPI_BIAS_PAD_CFG2,
+				PDVREG, 1 << PDVREG_SHIFT);
+		tegra_mipi_clk_disable(mipi);
+	}
+	return 0;
+}
+
+static int _t21x_tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 {
 	if (atomic_read(&mipi->refcount) < 0) {
 		WARN_ON(1);
@@ -344,6 +376,7 @@ static int _tegra_mipi_bias_pad_enable(struct tegra_mipi *mipi)
 	}
 	return 0;
 }
+
 int tegra_mipi_bias_pad_enable(void)
 {
 	struct tegra_mipi *mipi;
@@ -360,16 +393,16 @@ int tegra_mipi_bias_pad_enable(void)
 }
 EXPORT_SYMBOL(tegra_mipi_bias_pad_enable);
 
-static int _tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
+static int _t21x_tegra_mipi_bias_pad_disable(struct tegra_mipi *mipi)
 {
 	if (atomic_read(&mipi->refcount) < 1) {
 		WARN_ON(1);
 		return -EINVAL;
 	}
 	if (atomic_dec_return(&mipi->refcount) == 0) {
-		tegra_mipi_clk_disable(mipi);
-		return regmap_update_bits(mipi->regmap,
+		regmap_update_bits(mipi->regmap,
 				MIPI_BIAS_PAD_CFG2, PDVREG, PDVREG);
+		tegra_mipi_clk_disable(mipi);
 	}
 	return 0;
 }
@@ -579,9 +612,6 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 	int err;
 
 	mutex_lock(&mipi->lock);
-	err = tegra_mipi_clk_enable(mipi);
-	if (err)
-		goto err_unlock;
 
 	/* clean up lanes */
 	clear_all(mipi);
@@ -608,8 +638,6 @@ static int tegra_mipical_using_prod(struct tegra_mipi *mipi, int lanes)
 	if (err)
 		timeout_ct++;
 #endif
-	tegra_mipi_clk_disable(mipi);
-err_unlock:
 	mutex_unlock(&mipi->lock);
 	return err;
 
@@ -897,9 +925,6 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 		return -ENOMEM;
 
 	mipi->ops = devm_kzalloc(&pdev->dev, sizeof(*mipi->ops), GFP_KERNEL);
-	mipi->ops->pad_enable = &_tegra_mipi_bias_pad_enable;
-	mipi->ops->pad_disable = &_tegra_mipi_bias_pad_disable;
-
 	mipi->dev = &pdev->dev;
 
 	mem = platform_get_resource(pdev, IORESOURCE_MEM, 0);
@@ -936,21 +961,38 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 	if (of_device_is_compatible(np, "nvidia,tegra210-mipical")) {
 		mipi->mipi_cal_fixed = devm_clk_get(&pdev->dev,
 				"uart_mipi_cal");
+		if (IS_ERR(mipi->mipi_cal_fixed))
+			return PTR_ERR(mipi->mipi_cal_fixed);
 		mipi->prod_csi = devm_kzalloc(&pdev->dev,
 				sizeof(*mipi->prod_csi), GFP_KERNEL);
 		mipi->prod_dsi = devm_kzalloc(&pdev->dev,
 				sizeof(*mipi->prod_dsi), GFP_KERNEL);
 		mipi->ops->calibrate = &_tegra_mipi_calibration;
 		mipi->ops->parse_cfg = &tegra_mipi_parse_config;
+		mipi->ops->pad_enable = &_t21x_tegra_mipi_bias_pad_enable;
+		mipi->ops->pad_disable = &_t21x_tegra_mipi_bias_pad_disable;
 
 	} else if (of_device_is_compatible(np, "nvidia, tegra186-mipical")) {
 		mipi->mipi_cal_fixed = devm_clk_get(&pdev->dev,
 				"uart_fs_mipi_cal");
+		if (IS_ERR(mipi->mipi_cal_fixed))
+			return PTR_ERR(mipi->mipi_cal_fixed);
 		mipi->ops->parse_cfg = &tegra_prod_get_config;
 		mipi->ops->calibrate = &tegra_mipical_using_prod;
+		mipi->ops->pad_enable = &_t18x_tegra_mipi_bias_pad_enable;
+		mipi->ops->pad_disable = &_t18x_tegra_mipi_bias_pad_disable;
+		mipi->rst = devm_reset_control_get(mipi->dev, "mipi_cal");
+		reset_control_deassert(mipi->rst);
+		/* Bug 200224083 requires both register fields set to 1
+		 * after de-asserted
+		 */
+		tegra_mipi_clk_enable(mipi);
+		regmap_update_bits(mipi->regmap, MIPI_BIAS_PAD_CFG0,
+				PDVCLAMP, 1 << PDVCLAMP_SHIFT);
+		regmap_update_bits(mipi->regmap, MIPI_BIAS_PAD_CFG2,
+				PDVREG, 1 << PDVREG_SHIFT);
+		tegra_mipi_clk_disable(mipi);
 	}
-	if (IS_ERR(mipi->mipi_cal_fixed))
-		return PTR_ERR(mipi->mipi_cal_fixed);
 
 	if (mipi->ops->parse_cfg)
 		err = mipi->ops->parse_cfg(pdev, mipi);

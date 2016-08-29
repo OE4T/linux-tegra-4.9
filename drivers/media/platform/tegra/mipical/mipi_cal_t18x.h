@@ -88,6 +88,7 @@
 #define		PAD_DRIV_DN_REF_SHIFT 16
 #define MIPI_BIAS_PAD_CFG2	0x64
 #define		PDVREG		(1 << 1)
+#define		PDVREG_SHIFT	1
 #define		PAD_VAUXP_LEVEL (0x7 << 4)
 #define		PAD_VAUXP_LEVEL_SHIFT 4
 #define		PAD_VCLAMP_LEVEL (0x7 << 16)

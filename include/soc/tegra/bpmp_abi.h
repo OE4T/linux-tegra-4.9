@@ -1024,7 +1024,7 @@ struct mrq_clk_response {
  *
  * * Platforms: All
  * * Initiators: Any
- * * Targets: Any
+ * * Targets: Any except DMCE
  * * Request Payload: @ref mrq_query_abi_request
  * * Response Payload: @ref mrq_query_abi_response
  */
@@ -1044,6 +1044,9 @@ struct mrq_query_abi_request {
 /**
  * @ingroup ABI_info
  * @brief response to MRQ_QUERY_ABI
+ *
+ * @note mrq_response::err of 0 indicates that the query was
+ * successful, not that the MRQ itself is supported!
  */
 struct mrq_query_abi_response {
 	/** @brief 0 if queried MRQ is supported. Else, -#BPMP_ENODEV */

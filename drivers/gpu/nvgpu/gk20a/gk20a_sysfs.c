@@ -104,7 +104,8 @@ static ssize_t blcg_enable_store(struct device *dev,
 		g->ops.clock_gating.blcg_fb_load_gating_prod(g, g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_fifo_load_gating_prod)
 		g->ops.clock_gating.blcg_fifo_load_gating_prod(g, g->blcg_enabled);
-	g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
+	if (g->ops.clock_gating.blcg_gr_load_gating_prod)
+		g->ops.clock_gating.blcg_gr_load_gating_prod(g, g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_ltc_load_gating_prod)
 		g->ops.clock_gating.blcg_ltc_load_gating_prod(g, g->blcg_enabled);
 	if (g->ops.clock_gating.blcg_pmu_load_gating_prod)
@@ -167,10 +168,12 @@ static ssize_t slcg_enable_store(struct device *dev,
 		g->ops.clock_gating.slcg_fb_load_gating_prod(g, g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_fifo_load_gating_prod)
 		g->ops.clock_gating.slcg_fifo_load_gating_prod(g, g->slcg_enabled);
-	g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
+		g->ops.clock_gating.slcg_gr_load_gating_prod(g, g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
 		g->ops.clock_gating.slcg_ltc_load_gating_prod(g, g->slcg_enabled);
-	g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
+	if (g->ops.clock_gating.slcg_perf_load_gating_prod)
+		g->ops.clock_gating.slcg_perf_load_gating_prod(g, g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_priring_load_gating_prod)
 		g->ops.clock_gating.slcg_priring_load_gating_prod(g, g->slcg_enabled);
 	if (g->ops.clock_gating.slcg_pmu_load_gating_prod)

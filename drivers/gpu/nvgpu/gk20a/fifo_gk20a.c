@@ -1323,12 +1323,15 @@ static bool gk20a_fifo_handle_mmu_fault(
 	/* Disable power management */
 	if (support_gk20a_pmu(g->dev) && g->elpg_enabled)
 		gk20a_pmu_disable_elpg(g);
-	g->ops.clock_gating.slcg_gr_load_gating_prod(g,
-			false);
-	g->ops.clock_gating.slcg_perf_load_gating_prod(g,
-			false);
-	g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
-			false);
+	if (g->ops.clock_gating.slcg_gr_load_gating_prod)
+		g->ops.clock_gating.slcg_gr_load_gating_prod(g,
+				false);
+	if (g->ops.clock_gating.slcg_perf_load_gating_prod)
+		g->ops.clock_gating.slcg_perf_load_gating_prod(g,
+				false);
+	if (g->ops.clock_gating.slcg_ltc_load_gating_prod)
+		g->ops.clock_gating.slcg_ltc_load_gating_prod(g,
+				false);
 
 	gr_gk20a_init_cg_mode(g, ELCG_MODE, ELCG_RUN);
 

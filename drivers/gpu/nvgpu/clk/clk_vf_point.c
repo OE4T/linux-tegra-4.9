@@ -243,7 +243,7 @@ static u32 clk_vf_point_construct_volt(struct gk20a *g,
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_VF_POINT_TYPE_VOLT)
 		return -EINVAL;
 
-	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_VF_POINT_TYPE_VOLT);
+	ptmpobj->type_mask = BIT(CTRL_CLK_CLK_VF_POINT_TYPE_VOLT);
 	status = clk_vf_point_construct_super(g, ppboardobj, size, pargs);
 	if (status)
 		return -EINVAL;
@@ -271,7 +271,7 @@ static u32 clk_vf_point_construct_freq(struct gk20a *g,
 	if (BOARDOBJ_GET_TYPE(pargs) != CTRL_CLK_CLK_VF_POINT_TYPE_FREQ)
 		return -EINVAL;
 
-	ptmpobj->type_mask |= BIT(CTRL_CLK_CLK_VF_POINT_TYPE_FREQ);
+	ptmpobj->type_mask = BIT(CTRL_CLK_CLK_VF_POINT_TYPE_FREQ);
 	status = clk_vf_point_construct_super(g, ppboardobj, size, pargs);
 	if (status)
 		return -EINVAL;
@@ -340,4 +340,79 @@ static u32 _clk_vf_point_pmudatainit_super(struct gk20a *g,
 	pset->vfe_equ_idx = pclk_vf_point->vfe_equ_idx;
 	pset->volt_rail_idx = pclk_vf_point->volt_rail_idx;
 	return status;
+}
+
+
+static u32 clk_vf_point_update(struct gk20a *g,
+				struct boardobj *board_obj_ptr,
+				struct nv_pmu_boardobj *ppmudata)
+{
+	struct clk_vf_point *pclk_vf_point;
+	struct nv_pmu_clk_clk_vf_point_boardobj_get_status *pstatus;
+
+	gk20a_dbg_info("");
+
+
+	pclk_vf_point =
+		(struct clk_vf_point *)board_obj_ptr;
+
+	pstatus = (struct nv_pmu_clk_clk_vf_point_boardobj_get_status *)
+		ppmudata;
+
+	if (pstatus->super.type != pclk_vf_point->super.type) {
+		gk20a_err(dev_from_gk20a(g),
+			"pmu data and boardobj type not matching");
+		return -EINVAL;
+	}
+	/* now copy VF pair */
+	memcpy(&pclk_vf_point->pair, &pstatus->pair,
+		sizeof(struct ctrl_clk_vf_pair));
+	return 0;
+}
+
+/*get latest vf point data from PMU */
+u32 clk_vf_point_cache(struct gk20a *g)
+{
+
+	struct clk_vf_points *pclk_vf_points;
+	struct boardobjgrp *pboardobjgrp;
+	struct boardobjgrpmask *pboardobjgrpmask;
+	struct nv_pmu_boardobjgrp_super *pboardobjgrppmu;
+	struct boardobj *pboardobj = NULL;
+	struct nv_pmu_boardobj_query *pboardobjpmustatus = NULL;
+	u32 status;
+	u8 index;
+
+	gk20a_dbg_info("");
+	pclk_vf_points = &g->clk_pmu.clk_vf_pointobjs;
+	pboardobjgrp = &pclk_vf_points->super.super;
+	pboardobjgrpmask = &pclk_vf_points->super.mask.super;
+
+	status = pboardobjgrp->pmugetstatus(g, pboardobjgrp, pboardobjgrpmask);
+	if (status) {
+		gk20a_err(dev_from_gk20a(g), "err getting boardobjs from pmu");
+		return status;
+	}
+	pboardobjgrppmu = pboardobjgrp->pmu.getstatus.buf;
+
+	BOARDOBJGRP_FOR_EACH(pboardobjgrp, struct boardobj*, pboardobj, index) {
+		status = pboardobjgrp->pmustatusinstget(g,
+				(struct nv_pmu_boardobjgrp *)pboardobjgrppmu,
+				&pboardobjpmustatus, index);
+		if (status) {
+			gk20a_err(dev_from_gk20a(g),
+				"could not get status object instance");
+			return status;
+		}
+
+		status = clk_vf_point_update(g, pboardobj,
+			(struct nv_pmu_boardobj *)pboardobjpmustatus);
+		if (status) {
+			gk20a_err(dev_from_gk20a(g),
+				"invalid data from pmu at %d", index);
+			return status;
+		}
+	}
+
+	return 0;
 }

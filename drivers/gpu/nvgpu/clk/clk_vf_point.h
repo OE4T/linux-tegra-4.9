@@ -21,6 +21,7 @@
 
 u32 clk_vf_point_sw_setup(struct gk20a *g);
 u32 clk_vf_point_pmu_setup(struct gk20a *g);
+u32 clk_vf_point_cache(struct gk20a *g);
 
 struct clk_vf_points {
 	struct boardobjgrp_e255 super;

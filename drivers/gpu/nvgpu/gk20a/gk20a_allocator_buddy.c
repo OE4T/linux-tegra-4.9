@@ -1101,6 +1101,7 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 				 u64 max_order, u64 flags)
 {
 	int err;
+	u64 pde_size;
 	struct gk20a_buddy_allocator *a;
 
 	/* blk_size must be greater than 0 and a power of 2. */
@@ -1140,8 +1141,10 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 	}
 
 	a->vm = vm;
-	if (flags & GPU_ALLOC_GVA_SPACE)
-		a->pte_blk_order = balloc_get_order(a, vm->big_page_size << 10);
+	if (flags & GPU_ALLOC_GVA_SPACE) {
+		pde_size = ((u64)vm->big_page_size) << 10;
+		a->pte_blk_order = balloc_get_order(a, pde_size);
+	}
 
 	/*
 	 * When we have a GVA space with big_pages enabled the size and base

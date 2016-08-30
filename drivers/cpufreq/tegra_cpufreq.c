@@ -128,7 +128,6 @@ static struct freq_attr *tegra_cpufreq_attr[] = {
 	NULL,
 };
 
-static DEFINE_PER_CPU(spinlock_t, pcpu_slock);
 static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
 
 static bool debug_fs_only;
@@ -182,12 +181,7 @@ static inline void busyloop_udelay(unsigned long usecs)
 static void notrace tegra_cpu_spin(void *arg)
 {
 	struct tegra_cpu_ctr *c = arg;
-	unsigned long flags;
-	spinlock_t *slock;
 	uint32_t preempted;
-
-	slock = &per_cpu(pcpu_slock, c->cpu);
-	spin_lock_irqsave(slock, flags);
 
 retry:
 	/**
@@ -224,8 +218,6 @@ retry:
 
 	if (stx32(&preempted, 1))
 		goto retry;
-
-	spin_unlock_irqrestore(slock, flags);
 }
 
 /**
@@ -366,13 +358,8 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	struct cpu_vhint_table *vhtbl;
 	uint32_t val = 0, phy_cpu;
 	int cur_cl;
-	unsigned long flags;
-	spinlock_t *slock;
 	uint16_t ndiv;
 	int8_t vindx;
-
-	slock = &per_cpu(pcpu_slock, cpu);
-	spin_lock_irqsave(slock, flags);
 
 	cur_cl = tegra18_logical_to_cluster(cpu);
 	vhtbl = &tfreq_data.pcluster[cur_cl].dvfs_tbl;
@@ -383,7 +370,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	 * current cluster LUT is not sent by BPMP.
 	 */
 	if (!vhtbl->lut)
-		goto out;
+		return;
 
 	rate *= vhtbl->pdiv * vhtbl->mdiv;
 	ndiv = (rate * KHZ_TO_HZ) / vhtbl->ref_clk_hz;
@@ -409,8 +396,6 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 
 	tcpufreq_writel(val, tfreq_data.pcluster[cur_cl].edvd_pub +
 		EDVD_CL_NDIV_VHINT_OFFSET, phy_cpu);
-out:
-	spin_unlock_irqrestore(slock, flags);
 }
 
 /**
@@ -611,28 +596,20 @@ static int set_hint(void *data, u64 val)
 {
 	uint64_t cpu = (uint64_t)data;
 	int cur_cl;
-	unsigned long flags;
-	spinlock_t *slock;
 	uint32_t hint = val;
 
 	if (!val)
-		goto end;
+		return 0;
 
 	/* Take hotplug lock before taking tegra cpufreq lock */
 	get_online_cpus();
 	if (cpu_online(cpu)) {
-		slock = &per_cpu(pcpu_slock, cpu);
-		spin_lock_irqsave(slock, flags);
-
 		cur_cl = tegra18_logical_to_cluster(cpu);
 		cpu = logical_to_phys_map(cpu);
 		tcpufreq_writel(hint, tfreq_data.pcluster[cur_cl].edvd_pub +
 			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
-
-		spin_unlock_irqrestore(slock, flags);
 	}
 	put_online_cpus();
-end:
 	return 0;
 }
 
@@ -641,25 +618,18 @@ static int get_hint(void *data, u64 *hint)
 {
 	uint64_t cpu = (uint64_t)data;
 	int cur_cl;
-	unsigned long flags;
-	spinlock_t *slock;
 
 	*hint = 0;
 
 	/* Take hotplug lock before taking tegra cpufreq lock */
 	get_online_cpus();
 	if (cpu_online(cpu)) {
-		slock = &per_cpu(pcpu_slock, cpu);
-		spin_lock_irqsave(slock, flags);
-
 		cur_cl = tegra18_logical_to_cluster(cpu);
 		cpu = logical_to_phys_map(cpu);
 		pstore_rtrace_set_bypass(1);
 		*hint = tcpufreq_readl(tfreq_data.pcluster[cur_cl].edvd_pub +
 			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
 		pstore_rtrace_set_bypass(0);
-
-		spin_unlock_irqrestore(slock, flags);
 	}
 	put_online_cpus();
 	return 0;
@@ -1373,7 +1343,6 @@ static int __init tegra_cpufreq_init(void)
 	tfreq_data.freq_compute_delay = US_DELAY;
 
 	for_each_possible_cpu(cpu) {
-		spin_lock_init(&per_cpu(pcpu_slock, cpu));
 		mutex_init(&per_cpu(pcpu_mlock, cpu));
 	}
 

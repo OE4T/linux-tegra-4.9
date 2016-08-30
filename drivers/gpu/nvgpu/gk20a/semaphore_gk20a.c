@@ -122,7 +122,7 @@ struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(
 {
 	struct gk20a_semaphore_pool *p;
 	unsigned long page_idx;
-	int err = 0;
+	int ret, err = 0;
 
 	p = kzalloc(sizeof(*p), GFP_KERNEL);
 	if (!p)
@@ -130,12 +130,13 @@ struct gk20a_semaphore_pool *gk20a_semaphore_pool_alloc(
 
 	__lock_sema_sea(sea);
 
-	page_idx = __semaphore_bitmap_alloc(sea->pools_alloced,
-					    SEMAPHORE_POOL_COUNT);
-	if (page_idx < 0) {
-		err = page_idx;
+	ret = __semaphore_bitmap_alloc(sea->pools_alloced, SEMAPHORE_POOL_COUNT);
+	if (ret < 0) {
+		err = ret;
 		goto fail;
 	}
+
+	page_idx = (unsigned long)ret;
 
 	p->page = sea->sea_mem.pages[page_idx];
 	p->ro_sg_table = sea->ro_sg_table;

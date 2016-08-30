@@ -712,7 +712,13 @@ static int mc_sid_probe(struct platform_device *pdev)
 	of_property_read_u32(pdev->dev.of_node, "nvidia,by-pass-smmu-streamid",
 			     &smmu_bypass_sid);
 
-	for (i = 0; i < ARRAY_SIZE(sid_override_reg); i++)
+	/* Stream Id is set as 0x7F by EL3 secure monotor for the initial
+	 * SMMU Bypass. No need to set the stream Id as 0x7F here.
+	 * When support mc_sid_is_cl34000094 is removed this code should be
+	 * cleaned up as well.
+	 */
+	for (i = 0;
+	     i < ARRAY_SIZE(sid_override_reg) && mc_sid_is_cl34000094; i++)
 		__mc_override_sid(smmu_bypass_sid, i, DONTCARE);
 
 	/* FIXME: wait for MC driver */
@@ -738,9 +744,22 @@ static struct platform_driver mc_sid_driver = {
 
 static int __init mc_sid_init(void)
 {
+	struct device_node *np;
+	struct platform_device *pdev = NULL;
+
+	np = of_find_compatible_node(NULL, NULL, "nvidia,tegra-mc-sid");
+	if (!np)
+		np = of_find_compatible_node(NULL, NULL,
+					"nvidia,tegra-mc-sid-cl34000094");
+	if (np)
+		pdev = of_platform_device_create(np, NULL,
+						 platform_bus_type.dev_root);
+	if (IS_ERR_OR_NULL(pdev))
+		pr_err("of_platform_device_create failed\n");
+
 	return platform_driver_register(&mc_sid_driver);
 }
-arch_initcall_sync(mc_sid_init); /* FIXME: population order */
+arch_initcall(mc_sid_init);
 
 MODULE_DESCRIPTION("MC StreamID configuration");
 MODULE_AUTHOR("Hiroshi DOYU <hdoyu@nvidia.com>");

@@ -63,6 +63,33 @@
 #define CFG_ERR_STATUS2VI_MASK_VC1	(0x1 << 8)
 #define CFG_ERR_STATUS2VI_MASK_VC0	(0x1 << 0)
 
+/* T186 TPG */
+#define TPG_EN_0			0x0b8
+#define cfg_tpg_en			0x1
+/* NVCSI_STREAM Legacy T210 PG*/
+#define PG_CTRL				0x194
+#define		PG_MODE_OFFSET		2
+#define		PG_ENABLE		0x1
+#define		PG_DISABLE		0x0
+#define PG_BLANK			0x198
+#define		PG_VBLANK_MASK          0xffff
+#define		PG_HBLANK_MASK          0xffff
+#define		PG_VBLANK_OFFSET	16
+#define		PG_HBLANK_OFFSET	0
+#define PG_PHASE			0x19c
+#define PG_RED_FREQ			0x1a0
+#define		PG_VERT_INIT_FREQ_OFFSET 16
+#define		PG_HOR_INIT_FREQ_OFFSET	0
+#define PG_RED_FREQ_RATE		0x1a4
+#define PG_GREEN_FREQ			0x1a8
+#define PG_GREEN_FREQ_RATE		0x1ac
+#define PG_BLUE_FREQ			0x1b0
+#define PG_BLUE_FREQ_RATE		0X1b4
+#define PG_AOHDR			0x1b8
+#define PG_IMAGE_SIZE			0x1bc
+#define		HEIGHT_OFFSET		16
+#define PG_IMAGE_DT			0x1c0
+
 /* TODO - double check if rr_status2vi_vc0:[0] means bit or value */
 #define ERROR_STATUS2VI_VC0			0x94
 #define ERROR_STATUS2VI_VC1			0x98
@@ -76,6 +103,9 @@
 
 #define INTR_STATUS					0xa4
 #define INTR_MASK					0xa8
+#define PD_CRC_ERR_VC0				(0x1 << 2)
+#define PH_ECC_SINGLE_BIT_ERR_VC0		(0x1 << 1)
+#define PH_ECC_MULTI_BIT_ERR			(0x1 << 16)
 #define ERR_INTR_STATUS				0xac
 #define ERR_INTR_MASK				0xb0
 #define MASK_PH_CRC_ERR					(0x1 << 17)

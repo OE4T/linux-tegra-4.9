@@ -121,16 +121,21 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan)
 static int tegra_channel_enable_stream(struct tegra_channel *chan)
 {
 	int ret = 0, i;
-
+	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_device *csi = chan->vi->csi;
 	/*
 	 * enable pad power and perform calibration before arming
 	 * single shot for first frame after the HW setup is complete
 	 */
+	/* Find connected csi_channel */
+	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
+		if (chan->subdev_on_csi == &csi_chan->subdev)
+			break;
+	}
 	/* start streaming */
-	if (chan->vi->pg_mode) {
+	if (chan->pg_mode) {
 		for (i = 0; i < chan->valid_ports; i++)
-			tegra_csi_tpg_start_streaming(chan->vi->csi,
-							chan->port[i]);
+			tegra_csi_start_streaming(csi_chan, i);
 		atomic_set(&chan->is_streaming, ENABLE);
 	} else {
 		ret = tegra_channel_set_stream(chan, true);
@@ -182,13 +187,19 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 					TEGRA_VI_CFG_VI_INCR_SYNCPT_ERROR);
 	u32 frame_start;
 	int index, valid_ports = chan->valid_ports;
+	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_device *csi = chan->vi->csi;
 
 	/* Disable clock gating to enable continuous clock */
 	tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, DISABLE);
+	/* Find connected csi_channel */
+	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
+		if (chan->subdev_on_csi == &csi_chan->subdev)
+			break;
+	}
 	/* clear CSI state */
 	for (index = 0; index < valid_ports; index++) {
-		tegra_csi_error_recover(&chan->vi->csi->chans[index],
-				chan->port[index]);
+		tegra_csi_error_recover(csi_chan, index);
 		csi_write(chan, index,
 				TEGRA_VI_CSI_IMAGE_DEF, 0);
 		tegra_channel_clear_singleshot(chan, index);
@@ -210,10 +221,8 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 	/* re-init VI and CSI */
 	tegra_channel_capture_setup(chan);
 	for (index = 0; index < valid_ports; index++) {
-		csi2_stop_streaming(chan->vi->csi,
-						chan->port[index]);
-		csi2_start_streaming(chan->vi->csi,
-						chan->port[index]);
+		csi2_stop_streaming(csi_chan, index);
+		csi2_start_streaming(csi_chan, index);
 		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
 						chan->syncpt[index][0]);
 	}
@@ -223,13 +232,19 @@ static void tegra_channel_capture_error(struct tegra_channel *chan)
 {
 	u32 val;
 	int index = 0;
+	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_device *csi = chan->vi->csi;
 
+	/* Find connected csi_channel */
+	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
+		if (chan->subdev_on_csi == &csi_chan->subdev)
+			break;
+	}
 	for (index = 0; index < chan->valid_ports; index++) {
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		dev_dbg(&chan->video.dev,
 			"TEGRA_VI_CSI_ERROR_STATUS 0x%08x\n", val);
-		tegra_csi_status(&chan->vi->csi->chans[index],
-				chan->port[index]);
+		tegra_csi_status(csi_chan, index);
 	}
 }
 
@@ -244,13 +259,19 @@ static int tegra_channel_error_status(struct tegra_channel *chan)
 	u32 val;
 	int err = 0;
 	int index = 0;
+	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_device *csi = chan->vi->csi;
 
+	/* Find connected csi_channel */
+	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
+		if (chan->subdev_on_csi == &csi_chan->subdev)
+			break;
+	}
 	for (index = 0; index < chan->valid_ports; index++) {
 		/* Ignore error based on resolution but reset status */
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		csi_write(chan, index, TEGRA_VI_CSI_ERROR_STATUS, val);
-		err = tegra_csi_error(&chan->vi->csi->chans[index],
-				chan->port[index]);
+		err = tegra_csi_error(csi_chan, index);
 	}
 
 	if (err)
@@ -477,6 +498,8 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0, i;
+	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_device *csi = chan->vi->csi;
 
 	vi_channel_syncpt_init(chan);
 
@@ -504,8 +527,13 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		return ret;
 	}
 	chan->capture_state = CAPTURE_IDLE;
+	/* Find connected csi_channel */
+	list_for_each_entry(csi_chan, &csi->csi_chans, list) {
+		if (chan->subdev_on_csi == &csi_chan->subdev)
+			break;
+	}
 	for (i = 0; i < chan->valid_ports; i++) {
-		csi2_start_streaming(chan->vi->csi, chan->port[i]);
+		csi2_start_streaming(csi_chan, i);
 		/* ensure sync point state is clean */
 		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
 							chan->syncpt[i][0]);
@@ -553,6 +581,8 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	int index;
 	bool is_streaming = atomic_read(&chan->is_streaming);
+	struct tegra_csi_channel *csi_chan;
+	struct tegra_csi_device *csi = chan->vi->csi;
 
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);
@@ -566,9 +596,13 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 
 		/* Disable clock gating to enable continuous clock */
 		tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, DISABLE);
+		/* Find connected csi_channel */
+		list_for_each_entry(csi_chan, &csi->csi_chans, list) {
+			if (chan->subdev_on_csi == &csi_chan->subdev)
+				break;
+		}
 		for (index = 0; index < chan->valid_ports; index++) {
-			csi2_stop_streaming(chan->vi->csi,
-						chan->port[index]);
+			csi2_stop_streaming(csi_chan, index);
 			/* Always clear single shot if armed at close */
 			if (csi_read(chan, index, TEGRA_VI_CSI_SINGLE_SHOT))
 				tegra_channel_clear_singleshot(chan, index);

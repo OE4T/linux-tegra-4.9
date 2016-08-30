@@ -175,7 +175,7 @@ void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 }
 
 
-void csi2_tpg_start_streaming(struct tegra_csi_device *csi,
+static int csi2_tpg_start_streaming(struct tegra_csi_device *csi,
 			      enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_port *port = &csi->ports[port_num];
@@ -199,11 +199,13 @@ void csi2_tpg_start_streaming(struct tegra_csi_device *csi,
 		       (0x10 << PG_BLUE_VERT_INIT_FREQ_OFFSET) |
 		       (0x10 << PG_BLUE_HOR_INIT_FREQ_OFFSET));
 	tpg_write(port, TEGRA_CSI_PG_BLUE_FREQ_RATE, 0x0);
+	return 0;
 }
 
-void csi2_start_streaming(struct tegra_csi_device *csi,
+int csi2_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
+	struct tegra_csi_device *csi = chan->csi;
 	struct tegra_csi_port *port = &csi->ports[port_num];
 
 	csi_write(csi, TEGRA_CSI_CLKEN_OVERRIDE, 0, port_num >> 1);
@@ -286,11 +288,13 @@ void csi2_start_streaming(struct tegra_csi_device *csi,
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 			(0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 			CSI_PP_SINGLE_SHOT_ENABLE | CSI_PP_ENABLE);
+	return 0;
 }
 
-void csi2_stop_streaming(struct tegra_csi_device *csi,
+void csi2_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
+	struct tegra_csi_device *csi = chan->csi;
 	struct tegra_csi_port *port = &csi->ports[port_num];
 
 	if (csi->pg_mode)

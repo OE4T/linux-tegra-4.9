@@ -88,10 +88,14 @@ struct tegra_csi_device {
 
 	unsigned int clk_freq;
 	int num_ports;
-	int pg_mode;
 	int num_channels;
-	struct tegra_csi_channel *chans;
+	unsigned int pg_mode;
+	struct list_head csi_chans;
+	struct tegra_csi_channel *tpg_start;
 	struct tegra_csi_fops *fops;
+	const struct tpg_frmfmt *tpg_frmfmt_table;
+	unsigned int tpg_frmfmt_table_size;
+	atomic_t power_ref;
 };
 
 /*
@@ -100,6 +104,7 @@ struct tegra_csi_device {
  * numlanes: Number of CIL lanes in use
  */
 struct tegra_csi_channel {
+	struct list_head list;
 	struct v4l2_subdev subdev;
 	struct media_pad *pads;
 	struct media_pipeline pipe;
@@ -111,6 +116,7 @@ struct tegra_csi_channel {
 	unsigned int numlanes;
 	unsigned int pg_mode;
 	struct camera_common_data *s_data;
+	unsigned int id;
 };
 
 static inline struct tegra_csi_channel *to_csi_chan(struct v4l2_subdev *subdev)
@@ -131,9 +137,7 @@ void tegra_csi_status(struct tegra_csi_channel *chan,
 			enum tegra_csi_port_num port_num);
 int tegra_csi_error(struct tegra_csi_channel *chan,
 			enum tegra_csi_port_num port_num);
-void tegra_csi_tpg_start_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num);
-void tegra_csi_start_streaming(struct tegra_csi_channel *chan,
+int tegra_csi_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
@@ -154,4 +158,6 @@ int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 				struct platform_device *pdev);
 int tegra_csi_media_controller_remove(struct tegra_csi_device *csi);
 int csi_mipi_cal(struct tegra_channel *chan, char is_bypass);
+int tpg_csi_media_controller_init(struct tegra_csi_device *csi, int pg_mode);
+void tpg_csi_media_controller_cleanup(struct tegra_csi_device *csi);
 #endif

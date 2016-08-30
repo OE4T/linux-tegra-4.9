@@ -21,7 +21,7 @@ int csi4_power_on(struct tegra_csi_device *csi);
 int csi4_power_off(struct tegra_csi_device *csi);
 int csi4_start_streaming(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
-int csi4_stop_streaming(struct tegra_csi_channel *chan,
+void csi4_stop_streaming(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
 
 struct tegra_csi_fops csi4_fops = {

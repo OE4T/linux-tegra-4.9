@@ -9,7 +9,6 @@
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
  */
-#include <linux/device.h>
 #include <linux/nvhost.h>
 #include <linux/tegra-powergate.h>
 #include <linux/kthread.h>
@@ -143,7 +142,6 @@ static bool vi_notify_wait(struct tegra_channel *chan,
 			dev_err(chan->vi->dev,
 				"PXL_SOF syncpt timeout! err = %d\n", err);
 	}
-
 	return true;
 }
 
@@ -411,16 +409,16 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	for (i = 0; i < chan->valid_ports; i++)
 		tegra_channel_surface_setup(chan, buf, i);
 
-	for (i = 0; i < chan->valid_ports; i++) {
-		vi4_channel_write(chan, chan->vnc_id[i], CHANNEL_COMMAND, LOAD);
-		vi4_channel_write(chan, chan->vnc_id[i],
-			CONTROL, SINGLESHOT | MATCH_STATE_EN);
-	}
-
 	if (!chan->bfirst_fstart) {
 		err = tegra_channel_set_stream(chan, true);
 		if (err < 0)
 			return err;
+	}
+
+	for (i = 0; i < chan->valid_ports; i++) {
+		vi4_channel_write(chan, chan->vnc_id[i], CHANNEL_COMMAND, LOAD);
+		vi4_channel_write(chan, chan->vnc_id[i],
+			CONTROL, SINGLESHOT | MATCH_STATE_EN);
 	}
 
 	/* wait for vi notifier events */
@@ -557,12 +555,9 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct v4l2_ctrl *override_ctrl;
 
 	vi4_init(chan);
-	if (!chan->vi->pg_mode) {
-		/* Start the pipeline. */
-		ret = media_entity_pipeline_start(&chan->video.entity, pipe);
-		if (ret < 0)
-			goto error_pipeline_start;
-	}
+	ret = media_entity_pipeline_start(&chan->video.entity, pipe);
+	if (ret < 0)
+		goto error_pipeline_start;
 
 	if (chan->bypass) {
 		ret = tegra_channel_set_stream(chan, true);
@@ -580,7 +575,6 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	chan->capture_state = CAPTURE_IDLE;
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
-	/* Note: Program VI registers after TPG, sensors and CSI streaming */
 	for (i = 0; i < chan->valid_ports; i++) {
 		ret = tegra_channel_capture_setup(chan, i);
 		if (ret < 0)
@@ -628,10 +622,11 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	return 0;
 
 error_capture_setup:
-	if (!chan->vi->pg_mode)
+	tegra_mipi_bias_pad_disable();
+	if (!chan->pg_mode)
 		tegra_channel_set_stream(chan, false);
 error_set_stream:
-	if (!chan->vi->pg_mode)
+	if (!chan->pg_mode)
 		media_entity_pipeline_stop(&chan->video.entity);
 error_pipeline_start:
 	vq->start_streaming_called = 0;
@@ -664,11 +659,9 @@ int vi4_channel_stop_streaming(struct vb2_queue *vq)
 		tegra_channel_queued_buf_done(chan, VB2_BUF_STATE_ERROR);
 	}
 
-	if (!chan->vi->pg_mode) {
-		tegra_channel_set_stream(chan, false);
-		media_entity_pipeline_stop(&chan->video.entity);
-		tegra_mipi_bias_pad_disable();
-	}
+	tegra_channel_set_stream(chan, false);
+	media_entity_pipeline_stop(&chan->video.entity);
+	tegra_mipi_bias_pad_disable();
 
 	if (!chan->bypass)
 		tegra_channel_update_clknbw(chan, 0);
@@ -722,7 +715,7 @@ int vi4_power_on(struct tegra_channel *chan)
 		return ret;
 	tegra_vi4_power_on(vi);
 
-	if (!vi->pg_mode &&
+	if (!chan->pg_mode &&
 		(atomic_add_return(1, &chan->power_on_refcnt) == 1)) {
 		ret = tegra_channel_set_power(chan, 1);
 	}
@@ -739,7 +732,7 @@ void vi4_power_off(struct tegra_channel *chan)
 	vi = chan->vi;
 	csi = vi->csi;
 
-	if (!vi->pg_mode &&
+	if (!chan->pg_mode &&
 		atomic_dec_and_test(&chan->power_on_refcnt)) {
 		ret = tegra_channel_set_power(chan, 0);
 		if (ret < 0)

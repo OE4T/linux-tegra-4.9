@@ -38,6 +38,7 @@
 #define	ENABLE		1
 #define	DISABLE		0
 #define MAX_SYNCPT_PER_CHANNEL 3
+#define TPG_CHANNELS 6
 
 enum channel_capture_state {
 	CAPTURE_IDLE = 0,
@@ -45,6 +46,13 @@ enum channel_capture_state {
 	CAPTURE_TIMEOUT,
 	CAPTURE_ERROR,
 };
+
+enum tegra_vi_pg_mode {
+	TEGRA_VI_PG_DISABLED = 0,
+	TEGRA_VI_PG_DIRECT,
+	TEGRA_VI_PG_PATCH,
+};
+
 /**
  * struct tegra_channel_buffer - video channel buffer
  * @buf: vb2 buffer base object
@@ -113,6 +121,7 @@ struct tegra_vi_graph_entity {
  * @bypass: bypass flag for VI bypass mode
  */
 struct tegra_channel {
+	int id;
 	struct list_head list;
 	struct video_device video;
 	struct media_pad pad;
@@ -169,6 +178,7 @@ struct tegra_channel {
 	atomic_t power_on_refcnt;
 	struct v4l2_fh *fh;
 	bool bypass;
+	enum tegra_vi_pg_mode pg_mode;
 	bool bfirst_fstart;
 	enum channel_capture_state capture_state;
 	spinlock_t capture_state_lock;
@@ -183,12 +193,6 @@ struct tegra_channel {
 
 #define to_tegra_channel(vdev) \
 	container_of(vdev, struct tegra_channel, video)
-
-enum tegra_vi_pg_mode {
-	TEGRA_VI_PG_DISABLED = 0,
-	TEGRA_VI_PG_DIRECT,
-	TEGRA_VI_PG_PATCH,
-};
 
 /**
  * struct tegra_mc_vi - NVIDIA Tegra Media controller structure
@@ -229,7 +233,8 @@ struct tegra_mc_vi {
 	unsigned int num_subdevs;
 
 	struct tegra_csi_device *csi;
-	struct tegra_channel *chans;
+	struct list_head vi_chans;
+	struct tegra_channel *tpg_start;
 	void __iomem *iomem;
 
 	struct v4l2_ctrl_handler ctrl_handler;
@@ -258,7 +263,9 @@ int tegra_vi_v4l2_init(struct tegra_mc_vi *vi);
 int tegra_vi_tpg_graph_init(struct tegra_mc_vi *vi);
 int tegra_vi_graph_init(struct tegra_mc_vi *vi);
 void tegra_vi_graph_cleanup(struct tegra_mc_vi *vi);
+int tegra_channel_init(struct tegra_channel *chan);
 int tegra_vi_channels_init(struct tegra_mc_vi *vi);
+int tegra_channel_cleanup(struct tegra_channel *chan);
 int tegra_vi_channels_cleanup(struct tegra_mc_vi *vi);
 int tegra_channel_init_subdevices(struct tegra_channel *chan);
 int tegra_vi2_power_on(struct tegra_mc_vi *vi);
@@ -272,6 +279,8 @@ void tegra_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
 void tegra_channel_ec_close(struct tegra_mc_vi *mc_vi);
 void tegra_channel_query_hdmiin_unplug(struct tegra_channel *chan,
 		struct v4l2_event *event);
+int tpg_vi_media_controller_init(struct tegra_mc_vi *mc_vi, int pg_mode);
+void tpg_vi_media_controller_cleanup(struct tegra_mc_vi *mc_vi);
 
 struct tegra_vi_fops {
 	int (*vi_power_on)(struct tegra_channel *chan);
@@ -285,7 +294,7 @@ struct tegra_csi_fops {
 	int (*csi_power_off)(struct tegra_csi_device *csi);
 	int (*csi_start_streaming)(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
-	int (*csi_stop_streaming)(struct tegra_csi_channel *chan,
+	void (*csi_stop_streaming)(struct tegra_csi_channel *chan,
 		enum tegra_csi_port_num port_num);
 };
 

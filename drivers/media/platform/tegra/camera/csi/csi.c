@@ -32,30 +32,6 @@
 #include "linux/nvhost.h"
 #include "nvcsi/nvcsi.h"
 
-/*
- * total_cycles_per_lane for one second = pll_d freq / 8
- * width_in_bytes = ((width * bpp) / 8)
- * cycles_per_line = width_in_bytes + hblank
- * cycles_per_image = (cycles_per_line * height) + vblank
- * image_cycles_per_lane = cycles_per_image / numlanes
- * framerate = total_cycles_per_lane / image_cycles_per_lane
- * As per IAS maximum overhead of ~15% can occur
- * hblank and vblank are tuned to consider overhead during capture
- * e.g. for 1920x1080, RAW 10 and two lane TPG
- * cycles_per_lane = (((((1920 * 10)/8) + 512) * 1080) + 8) / 2 ~ 1572480
- * framerate = ((927000000 / 8) / 1572480) ~ 73fps
- * Max overhead of 15% results in minimum of 62fps (max can be 73fps)
- * Note: with changing resolution, bpp and hblank overhead % varies.
- */
-static struct tpg_frmfmt tegra_csi_tpg_frmfmt[] = {
-	{{1280, 720}, V4L2_PIX_FMT_SRGGB10, 120, 512, 8},
-	{{1920, 1080}, V4L2_PIX_FMT_SRGGB10, 60, 512, 8},
-	{{3840, 2160}, V4L2_PIX_FMT_SRGGB10, 20, 8, 8},
-	{{1280, 720}, V4L2_PIX_FMT_RGB32, 60, 512, 8},
-	{{1920, 1080}, V4L2_PIX_FMT_RGB32, 30, 512, 8},
-	{{3840, 2160}, V4L2_PIX_FMT_RGB32, 8, 8, 8},
-};
-
 static int csi_get_clks(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
 {
@@ -113,6 +89,8 @@ static void update_blank_intervals(struct tegra_csi_channel *chan,
 		int portnum, int fmtindex)
 {
 	struct tegra_csi_port *port = &chan->ports[portnum];
+	const struct tpg_frmfmt *tegra_csi_tpg_frmfmt =
+						chan->csi->tpg_frmfmt_table;
 
 	port->framerate = tegra_csi_tpg_frmfmt[fmtindex].framerate;
 	port->h_blank = tegra_csi_tpg_frmfmt[fmtindex].h_blank;
@@ -167,11 +145,15 @@ int tegra_csi_power(struct tegra_csi_device *csi, int enable)
 {
 	int err = 0;
 
-	if (enable)
+	if (enable) {
 		err = csi->fops->csi_power_on(csi);
-	else
+		if (!err)
+			atomic_inc(&csi->power_ref);
+	} else {
 		err = csi->fops->csi_power_off(csi);
-
+		if (!err)
+			atomic_dec(&csi->power_ref);
+	}
 	return err;
 }
 EXPORT_SYMBOL(tegra_csi_power);
@@ -192,18 +174,12 @@ int tegra_csi_s_power(struct v4l2_subdev *subdev, int enable)
  * -----------------------------------------------------------------------------
  */
 
-/* Test Pattern Generator setup */
-void tegra_csi_tpg_start_streaming(struct tegra_csi_device *csi,
-				enum tegra_csi_port_num port_num)
-{
-}
-
-void tegra_csi_start_streaming(struct tegra_csi_channel *chan,
+int tegra_csi_start_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
 	struct tegra_csi_device *csi = chan->csi;
 
-	csi->fops->csi_start_streaming(chan, port_num);
+	return csi->fops->csi_start_streaming(chan, port_num);
 }
 EXPORT_SYMBOL(tegra_csi_start_streaming);
 
@@ -216,30 +192,6 @@ void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
 }
 EXPORT_SYMBOL(tegra_csi_stop_streaming);
 
-static struct tegra_csi_device *get_csi(void)
-{
-	struct device_node *np;
-	struct platform_device *dev;
-	struct nvhost_device_data *pdata;
-
-	np = of_find_node_by_name(NULL, "nvcsi");
-	if (!np) {
-		pr_err("%s: Can not find nvcsi node\n", __func__);
-		return NULL;
-	}
-	dev = of_find_device_by_node(np);
-	if (!dev) {
-		pr_err("%s:Can not find device\n", __func__);
-		return NULL;
-	}
-	pdata = platform_get_drvdata(dev);
-	if (!pdata) {
-		pr_err("%s:Can not find driver\n", __func__);
-		return NULL;
-	}
-	return &((struct nvcsi *)pdata->private_data)->csi;
-}
-
 int csi_mipi_cal(struct tegra_channel *chan, char is_bypass)
 {
 	unsigned int lanes, cur_lanes;
@@ -247,7 +199,7 @@ int csi_mipi_cal(struct tegra_channel *chan, char is_bypass)
 	struct tegra_csi_device *csi;
 	int j;
 
-	csi = get_csi();
+	csi = tegra_get_mc_csi();
 	if (!csi)
 		return -EINVAL;
 
@@ -398,7 +350,7 @@ int csi_mipi_cal(struct tegra_channel *chan, char is_bypass)
 	}
 
 	if (!lanes) {
-		dev_err(csi->dev, "Selected no CSI lane, cannot do calibration");
+		dev_err(csi->dev, "Selected no CSI lane, can't do calibration");
 		return -EINVAL;
 	}
 	return tegra_mipi_calibration(lanes);
@@ -410,7 +362,7 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	struct tegra_csi_device *csi;
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
 	struct tegra_channel *tegra_chan = v4l2_get_subdev_hostdata(subdev);
-	int i;
+	int i, ret = 0;
 
 	if (tegra_chan->bypass)
 		return 0;
@@ -420,13 +372,15 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 		return -EINVAL;
 
 	for (i = 0; i < tegra_chan->valid_ports; i++) {
-		if (enable)
-			tegra_csi_start_streaming(chan, i);
-		else
+		if (enable) {
+			ret = tegra_csi_start_streaming(chan, i);
+			if (ret)
+				tegra_csi_stop_streaming(chan, i);
+		} else
 			tegra_csi_stop_streaming(chan, i);
 	}
 
-	return 0;
+	return ret;
 }
 
 /*
@@ -445,7 +399,7 @@ static struct v4l2_mbus_framefmt tegra_csi_tpg_fmts[] = {
 	{
 		TEGRA_DEF_WIDTH,
 		TEGRA_DEF_HEIGHT,
-		MEDIA_BUS_FMT_RGBA8888_4X8_LE,
+		MEDIA_BUS_FMT_RGB888_1X32_PADHI,
 		V4L2_FIELD_NONE,
 		V4L2_COLORSPACE_SRGB
 	}
@@ -460,15 +414,12 @@ static struct v4l2_frmsize_discrete tegra_csi_tpg_sizes[] = {
 
 static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
-		struct v4l2_subdev_frame_size_enum *fse) __maybe_unused;
-static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_frame_size_enum *fse)
 {
 	int i;
-	struct tegra_csi_device *csi = to_csi(sd);
+	struct tegra_csi_channel *chan = to_csi_chan(sd);
 
-	if (!csi->pg_mode)
+	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
 
 	if (fse->index >= ARRAY_SIZE(tegra_csi_tpg_sizes))
@@ -490,18 +441,21 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 
-static int tegra_csi_get_fmtindex(int width, int height, int pixel_format)
+static int tegra_csi_get_fmtindex(struct tegra_csi_channel *chan,
+				int width, int height, int pixel_format)
 {
 	int i;
+	const struct tpg_frmfmt *tegra_csi_tpg_frmfmt =
+						chan->csi->tpg_frmfmt_table;
 
-	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_frmfmt); i++) {
+	for (i = 0; i < chan->csi->tpg_frmfmt_table_size; i++) {
 		if (tegra_csi_tpg_frmfmt[i].frmsize.width == width &&
 		    tegra_csi_tpg_frmfmt[i].frmsize.height == height &&
 		    tegra_csi_tpg_frmfmt[i].pixel_format == pixel_format)
 			break;
 	}
 
-	if (i == ARRAY_SIZE(tegra_csi_tpg_frmfmt))
+	if (i == chan->csi->tpg_frmfmt_table_size)
 		return -EINVAL;
 
 	return i;
@@ -509,33 +463,24 @@ static int tegra_csi_get_fmtindex(int width, int height, int pixel_format)
 
 static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
-		struct v4l2_subdev_frame_interval_enum *fie) __maybe_unused;
-static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
-		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_frame_interval_enum *fie)
 {
-	int i;
-	struct tegra_csi_device *csi = to_csi(sd);
-	const struct tegra_video_format *format;
 	int index;
+	struct tegra_csi_channel *chan = to_csi_chan(sd);
+	const struct tegra_video_format *format;
+	const struct tpg_frmfmt *tegra_csi_tpg_frmfmt =
+						chan->csi->tpg_frmfmt_table;
 
-	if (!csi->pg_mode)
+	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
 
 	/* One resolution just one framerate */
 	if (fie->index > 0)
 		return -EINVAL;
-
-	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
-		if (tegra_csi_tpg_fmts[i].code == fie->code)
-			break;
-	}
-	if (i == ARRAY_SIZE(tegra_csi_tpg_fmts))
+	format = tegra_core_get_format_by_fourcc(fie->code);
+	if (!format)
 		return -EINVAL;
-
-	format =
-	      tegra_core_get_format_by_code(fie->code);
-	index = tegra_csi_get_fmtindex(fie->width, fie->height,
+	index = tegra_csi_get_fmtindex(chan, fie->width, fie->height,
 					format->fourcc);
 	if (index < 0)
 		return -EINVAL;
@@ -550,13 +495,11 @@ static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
 				  struct v4l2_mbus_framefmt *mf)
 {
 	int i, j;
-	struct tegra_csi_device *csi = to_csi(sd);
+	struct tegra_csi_channel *chan = to_csi_chan(sd);
 	static struct v4l2_frmsize_discrete *sizes;
 
-	if (!csi->pg_mode) {
-		dev_err(csi->dev, "CSI is not in TPG mode\n");
-		return -EINVAL;
-	}
+	if (!chan->pg_mode)
+		return -ENOIOCTLCMD;
 
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
 		struct v4l2_mbus_framefmt *fmt = &tegra_csi_tpg_fmts[i];
@@ -580,11 +523,11 @@ static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
 static int tegra_csi_g_mbus_fmt(struct v4l2_subdev *sd,
 				struct v4l2_mbus_framefmt *fmt)
 {
-	struct tegra_csi_device *csi = to_csi(sd);
-	struct v4l2_mbus_framefmt *format = &csi->ports[0].format;
+	struct tegra_csi_channel *chan = to_csi_chan(sd);
+	struct v4l2_mbus_framefmt *format = &chan->ports[0].format;
 
-	if (!csi->pg_mode) {
-		dev_err(csi->dev, "CSI is not in TPG mode\n");
+	if (!chan->pg_mode) {
+		dev_err(chan->csi->dev, "CSI is not in TPG mode\n");
 		return -EINVAL;
 	}
 
@@ -593,11 +536,18 @@ static int tegra_csi_g_mbus_fmt(struct v4l2_subdev *sd,
 	return 0;
 }
 
+static int csi_is_power_on(struct tegra_csi_device *csi)
+{
+	return atomic_read(&csi->power_ref);
+}
 static int tegra_csi_g_input_status(struct v4l2_subdev *sd, u32 *status)
 {
 	struct tegra_csi_device *csi = to_csi(sd);
 
-	*status = !!csi->pg_mode;
+	/* Set status to 0 if power is on
+	 * Set status to 1 if power is off
+	 */
+	*status = !csi_is_power_on(csi);
 
 	return 0;
 }
@@ -608,9 +558,6 @@ static int tegra_csi_g_input_status(struct v4l2_subdev *sd, u32 *status)
 
 static int tegra_csi_get_format(struct v4l2_subdev *subdev,
 			   struct v4l2_subdev_pad_config *cfg,
-			   struct v4l2_subdev_format *fmt) __maybe_unused;
-static int tegra_csi_get_format(struct v4l2_subdev *subdev,
-			   struct v4l2_subdev_pad_config *cfg,
 			   struct v4l2_subdev_format *fmt)
 {
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
@@ -619,7 +566,6 @@ static int tegra_csi_get_format(struct v4l2_subdev *subdev,
 
 	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
-
 	ret = tegra_csi_g_mbus_fmt(subdev, mbus_fmt);
 	if (ret)
 		return ret;
@@ -629,16 +575,14 @@ static int tegra_csi_get_format(struct v4l2_subdev *subdev,
 
 static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 			   struct v4l2_subdev_pad_config *cfg,
-			   struct v4l2_subdev_format *fmt) __maybe_unused;
-static int tegra_csi_set_format(struct v4l2_subdev *subdev,
-			   struct v4l2_subdev_pad_config *cfg,
 			   struct v4l2_subdev_format *fmt)
 {
 	int ret;
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
 	struct v4l2_mbus_framefmt *format;
 	const struct tegra_video_format *vf;
-	int index;
+	struct tegra_channel *vi_chan = v4l2_get_subdev_hostdata(subdev);
+	int index, i;
 
 	if (!chan->pg_mode)
 		return -ENOIOCTLCMD;
@@ -650,16 +594,25 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 	if (fmt->which == V4L2_SUBDEV_FORMAT_TRY)
 		return 0;
 
-	format = &chan->ports[0].format;
-	memcpy(format, &fmt->format, sizeof(struct v4l2_mbus_framefmt));
-	vf = tegra_core_get_format_by_code(format->code);
-	index = tegra_csi_get_fmtindex(format->width,
-				format->height, vf->fourcc);
-	if (index < 0)
-		return -EINVAL;
+	for (i = 0; i < vi_chan->valid_ports; i++) {
+		format = &chan->ports[i].format;
+		memcpy(format, &fmt->format, sizeof(struct v4l2_mbus_framefmt));
+		vf = tegra_core_get_format_by_code(format->code);
+		if (vf)
+			chan->ports[i].core_format = vf;
+		else {
+			dev_err(chan->csi->dev, "Fail to find tegra video fmt");
+			return -EINVAL;
+		}
+		index = tegra_csi_get_fmtindex(chan, format->width,
+					format->height, vf->fourcc);
+		if (index < 0) {
+			dev_err(chan->csi->dev, "Fail to find matching fmt");
+			return -EINVAL;
+		}
 
-	update_blank_intervals(chan, chan->ports[0].num, index);
-
+		update_blank_intervals(chan, i, index);
+	}
 	return 0;
 }
 
@@ -688,12 +641,10 @@ static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 };
 
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {
-#if 0
 	.get_fmt	= tegra_csi_get_format,
 	.set_fmt	= tegra_csi_set_format,
 	.enum_frame_size = tegra_csi_enum_framesizes,
 	.enum_frame_interval = tegra_csi_enum_frameintervals,
-#endif
 };
 
 static struct v4l2_subdev_core_ops tegra_csi_core_ops = {
@@ -790,17 +741,6 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 	return 0;
 }
 
-static int tegra_tpg_channel_init(struct tegra_csi_device *csi,
-				    struct platform_device *pdev,
-				    unsigned int index)
-{
-	struct tegra_csi_channel *chan = &csi->chans[index];
-
-	chan->numlanes = 2;
-	chan->numports = 1;
-	return 0;
-}
-
 int tegra_csi_init(struct tegra_csi_device *csi,
 		struct platform_device *pdev)
 {
@@ -821,28 +761,26 @@ int tegra_csi_init(struct tegra_csi_device *csi,
 	return err;
 }
 
-static int tegra_csi_channel_init_one(struct tegra_csi_device *csi,
-					unsigned int index)
+static int tegra_csi_channel_init_one(struct tegra_csi_channel *chan)
 {
-	struct tegra_csi_channel *chan = &csi->chans[index];
 	struct v4l2_subdev *sd;
 	int numlanes = 0;
+	struct tegra_csi_device *csi = chan->csi;
 	int i, ret;
 
-	chan->csi = csi;
 	sd = &chan->subdev;
 	/* Initialize V4L2 subdevice and media entity */
 	v4l2_subdev_init(sd, &tegra_csi_ops);
-	sd->dev = csi->dev;
-	snprintf(sd->name, sizeof(sd->name), "%s-%d",
-			dev_name(csi->dev), index);
+	sd->dev = chan->csi->dev;
 	v4l2_set_subdevdata(sd, csi);
 	sd->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE;
 	sd->entity.ops = &tegra_csi_media_ops;
-
 	chan->ports = devm_kzalloc(csi->dev,
 			chan->numports * sizeof(struct tegra_csi_port),
 			GFP_KERNEL);
+	if (!chan->ports)
+		return -ENOMEM;
+
 	/* Initialize the default format */
 	for (i = 0; i < chan->numports; i++) {
 		chan->ports[i].format.code = TEGRA_VF_DEF;
@@ -851,16 +789,20 @@ static int tegra_csi_channel_init_one(struct tegra_csi_device *csi,
 		chan->ports[i].format.width = TEGRA_DEF_WIDTH;
 		chan->ports[i].format.height = TEGRA_DEF_HEIGHT;
 	}
-	if (csi->pg_mode) {
-		chan->port[0] = index;
-		chan->ports[0].num = index;
-		chan->ports[0].lanes = 2;
-
+	if (chan->pg_mode) {
+		/* If CSI has 2 existing channels, chan->id will start
+		 * from 2 for the first TPG channel, which uses PORT_A(0).
+		 * To get the correct PORT number, subtract existing number of
+		 * channels from chan->id.
+		 */
+		chan->port[0] = chan->id - csi->num_channels;
+		WARN_ON(chan->port[0] > TPG_CHANNELS);
+		chan->ports[0].num = chan->id - csi->num_channels;
+		chan->ports->lanes = 2;
 		chan->pads = devm_kzalloc(csi->dev, sizeof(*chan->pads),
 				GFP_KERNEL);
 		if (!chan->pads)
 			return -ENOMEM;
-		chan->pg_mode = true;
 		chan->pads[0].flags = MEDIA_PAD_FL_SOURCE;
 	} else {
 		chan->pads = devm_kzalloc(csi->dev, 2 * sizeof(*chan->pads),
@@ -870,17 +812,14 @@ static int tegra_csi_channel_init_one(struct tegra_csi_device *csi,
 		chan->pads[0].flags = MEDIA_PAD_FL_SINK;
 		chan->pads[1].flags = MEDIA_PAD_FL_SOURCE;
 	}
+	snprintf(sd->name, sizeof(sd->name), "%s-%d",
+			 chan->pg_mode?"tpg":dev_name(csi->dev), chan->port[0]);
 	/* Initialize media entity */
 	ret = media_entity_init(&sd->entity,
 			chan->pg_mode ? 1 : 2,
 			chan->pads, 0);
-	if (ret < 0)
-		return ret;
-
-	ret = v4l2_async_register_subdev(sd);
 	if (ret < 0) {
-		dev_err(csi->dev, "failed to register subdev\n");
-		media_entity_cleanup(&sd->entity);
+		return ret;
 	}
 
 	for (i = 0; i < chan->numports; i++) {
@@ -892,15 +831,23 @@ static int tegra_csi_channel_init_one(struct tegra_csi_device *csi,
 		chan->ports[i].num = chan->port[i];
 	}
 
-	return 0;
+	if (!chan->pg_mode) {
+		ret = v4l2_async_register_subdev(sd);
+		if (ret < 0) {
+			dev_err(csi->dev, "failed to register subdev\n");
+			media_entity_cleanup(&sd->entity);
+		}
+	}
+	return ret;
 }
 
 static int tegra_csi_channels_init(struct tegra_csi_device *csi)
 {
-	int i, ret;
+	int ret;
+	struct tegra_csi_channel *it;
 
-	for (i = 0; i < csi->num_channels; i++) {
-		ret = tegra_csi_channel_init_one(csi, i);
+	list_for_each_entry(it, &csi->csi_chans, list) {
+		ret = tegra_csi_channel_init_one(it);
 		if (ret)
 			return ret;
 	}
@@ -914,47 +861,97 @@ static int csi_parse_dt(struct tegra_csi_device *csi,
 	int err = 0, i;
 	int num_channels = 0;
 	struct device_node *node = pdev->dev.of_node;
+	struct tegra_csi_channel *item;
 
 	err = of_property_read_u32(node, "num-channels", &num_channels);
 	if (err) {
-		dev_err(csi->dev, " Faile to find num of channels, set to 1\n");
-		num_channels = 1;
+		dev_err(csi->dev, " Faile to find num of channels, set to 0\n");
+		num_channels = 0;
 	}
 
 	csi->num_channels = num_channels;
-	csi->chans = devm_kzalloc(csi->dev,
-		(sizeof(*csi->chans) * csi->num_channels),
-		GFP_KERNEL);
-
-	if (!csi->chans)
-		return -ENOMEM;
-
-	for (i = 0; i < csi->num_channels; i++) {
-		csi->chans[i].csi = csi;
-		tegra_csi_get_port_info(&csi->chans[i], node, i);
+	for (i = 0; i < num_channels; i++) {
+		item = devm_kzalloc(csi->dev, sizeof(*item), GFP_KERNEL);
+		if (!item)
+			return -ENOMEM;
+		list_add_tail(&item->list, &csi->csi_chans);
+		item->csi = csi;
+		item->id = i;
+		err = tegra_csi_get_port_info(item, node, item->id);
+		if (err)
+			return err;
 	}
 
 	return 0;
 }
 
+int tpg_csi_media_controller_init(struct tegra_csi_device *csi, int pg_mode)
+{
+	int i, err;
+	struct tegra_csi_channel *item;
+
+	if (!csi)
+		return -EINVAL;
+	for (i = 0; i < TPG_CHANNELS; i++) {
+		item = devm_kzalloc(csi->dev, sizeof(*item), GFP_KERNEL);
+		if (!item) {
+			err = -ENOMEM;
+			goto channel_init_error;
+		}
+		if (i == 0)
+			csi->tpg_start = item;
+		list_add_tail(&item->list, &csi->csi_chans);
+		item->numlanes = 2;
+		item->numports = 1;
+		item->csi = csi;
+		item->pg_mode = pg_mode;
+		item->id = csi->num_channels + i;
+		err = tegra_csi_channel_init_one(item);
+		if (err)
+			goto channel_init_error;
+	}
+	csi->num_channels += TPG_CHANNELS;
+
+	return err;
+
+channel_init_error:
+	if (csi->tpg_start)
+		tpg_csi_media_controller_cleanup(csi);
+	dev_err(csi->dev, "%s: Error\n", __func__);
+	return err;
+}
+EXPORT_SYMBOL(tpg_csi_media_controller_init);
+
+void tpg_csi_media_controller_cleanup(struct tegra_csi_device *csi)
+{
+	struct tegra_csi_channel *item;
+	struct tegra_csi_channel *itemn;
+	struct v4l2_subdev *sd;
+
+	list_for_each_entry_safe(item, itemn, &csi->csi_chans, list) {
+		if (!item->pg_mode)
+			continue;
+		sd = &item->subdev;
+		v4l2_device_unregister_subdev(sd);
+		list_del(&item->list);
+		devm_kfree(csi->dev, item);
+	}
+	csi->num_channels -= TPG_CHANNELS;
+	csi->tpg_start = NULL;
+}
+EXPORT_SYMBOL(tpg_csi_media_controller_cleanup);
 int tegra_csi_media_controller_init(struct tegra_csi_device *csi,
 				    struct platform_device *pdev)
 {
-	int ret, i;
+	int ret;
 
 	csi->dev = &pdev->dev;
 	csi->pdev = pdev;
-	if (csi->pg_mode) {
-		csi->chans = devm_kzalloc(&pdev->dev,
-				csi->num_channels * sizeof(*csi->chans),
-				GFP_KERNEL);
-		for (i = 0 ; i < csi->num_channels; i++)
-			ret = tegra_tpg_channel_init(csi, pdev, i);
-	} else {
-		ret = csi_parse_dt(csi, pdev);
-		if (ret < 0)
-			return ret;
-	}
+	atomic_set(&csi->power_ref, 0);
+	INIT_LIST_HEAD(&csi->csi_chans);
+	ret = csi_parse_dt(csi, pdev);
+	if (ret < 0)
+		return ret;
 	ret = tegra_csi_channels_init(csi);
 	ret = tegra_csi_init(csi, pdev);
 	if (ret < 0)
@@ -968,10 +965,8 @@ int tegra_csi_media_controller_remove(struct tegra_csi_device *csi)
 {
 	struct tegra_csi_channel *chan;
 	struct v4l2_subdev *sd;
-	int i;
 
-	for (i = 0; i < csi->num_channels; i++) {
-		chan = &csi->chans[i];
+	list_for_each_entry(chan, &csi->csi_chans, list) {
 		sd = &chan->subdev;
 		v4l2_async_unregister_subdev(sd);
 		media_entity_cleanup(&sd->entity);

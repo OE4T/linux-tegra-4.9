@@ -44,10 +44,9 @@
 #define US_DELAY		20
 #define CPUFREQ_TBL_STEP_SIZE	4
 
-#define CLUSTER_STR(cl)	(cl == B_CLUSTER ? \
+#define CLUSTER_STR(cl)	(cl ==  1 ?\
 				"B_CLUSTER" : "M_CLUSTER")
-#define LOOP_FOR_EACH_CLUSTER(cl)	for (cl = M_CLUSTER; \
-					cl < MAX_CLUSTERS; cl++)
+#define LOOP_FOR_EACH_CLUSTER(cl)	for (cl = 0; cl < MAX_CLUSTERS; cl++)
 #define INDEX_STEP	2
 /* EDVD register details */
 #define EDVD_CL_NDIV_VHINT_OFFSET	0x20
@@ -72,15 +71,10 @@
 					(REG_OFFSET * cpu))
 #define logical_to_phys_map(cpu)	(MPIDR_AFFINITY_LEVEL \
 					(cpu_logical_map(cpu), 0))
-#define logical_to_phys_cluster(cl)	(cl == B_CLUSTER ? \
+#define logical_to_phys_cluster(cl)	(cl == 1 ? \
 					ARM_CPU_IMP_ARM : \
 					ARM_CPU_IMP_NVIDIA)
-
-enum cluster {
-	M_CLUSTER, /* Denver cluster */
-	B_CLUSTER, /* A57 cluster */
-	MAX_CLUSTERS,
-};
+#define MAX_CLUSTERS			2
 
 /**
  * Cpu side dvfs table
@@ -139,18 +133,9 @@ static DEFINE_PER_CPU(struct mutex, pcpu_mlock);
 
 static bool debug_fs_only;
 
-static enum cluster notrace get_cpu_cluster(uint8_t cpu)
-{
-	struct cpuinfo_arm64 *cpuinfo = &per_cpu(cpu_data, cpu);
-	u32 midr = cpuinfo->reg_midr;
-
-	return (MIDR_IMPLEMENTOR(midr) == ARM_CPU_IMP_ARM ? B_CLUSTER
-		: M_CLUSTER);
-}
-
 static uint32_t notrace get_coreclk_count(uint8_t cpu)
 {
-	enum cluster cur_cluster = get_cpu_cluster(cpu);
+	int cur_cluster = tegra18_logical_to_cluster(cpu);
 	void __iomem *reg_base;
 	uint32_t phy_cpu, ret;
 
@@ -166,7 +151,7 @@ static uint32_t notrace get_coreclk_count(uint8_t cpu)
 
 static uint32_t notrace get_refclk_count(uint8_t cpu)
 {
-	enum cluster cur_cl = get_cpu_cluster(cpu);
+	int cur_cl = tegra18_logical_to_cluster(cpu);
 	void __iomem *reg_base;
 	uint32_t phy_cpu, ret;
 
@@ -326,7 +311,7 @@ static unsigned long b_cluster_cpu_to_emc_freq(uint32_t cpu_rate)
  *         cluster freq as max freq among all the cpu's freq in
  *         a cluster
  */
-static uint32_t get_cluster_freq(enum cluster cl, uint32_t cpu_freq)
+static uint32_t get_cluster_freq(int cl, uint32_t cpu_freq)
 {
 	struct cpuinfo_arm64 *cpuinfo;
 	uint32_t i, phy_cl;
@@ -343,7 +328,7 @@ static uint32_t get_cluster_freq(enum cluster cl, uint32_t cpu_freq)
 }
 
 /* Set emc clock by referring cpu_to_emc freq mapping */
-static void set_cpufreq_to_emcfreq(enum cluster cl,
+static void set_cpufreq_to_emcfreq(int cl,
 	struct cpufreq_policy *policy)
 {
 	unsigned long emc_freq;
@@ -352,7 +337,7 @@ static void set_cpufreq_to_emcfreq(enum cluster cl,
 	tfreq_data.emc_max_rate = tegra_bwmgr_get_max_emc_rate();
 	cluster_freq = get_cluster_freq(cl, policy->cur);
 
-	if (M_CLUSTER == cl)
+	if (cl == 0)
 		emc_freq = m_cluster_cpu_to_emc_freq(cluster_freq);
 	else
 		emc_freq = b_cluster_cpu_to_emc_freq(cluster_freq);
@@ -365,7 +350,7 @@ static void set_cpufreq_to_emcfreq(enum cluster cl,
 
 static struct cpufreq_frequency_table *get_freqtable(uint8_t cpu)
 {
-	enum cluster cur_cl = get_cpu_cluster(cpu);
+	int cur_cl = tegra18_logical_to_cluster(cpu);
 
 	return tfreq_data.pcluster[cur_cl].clft;
 }
@@ -380,7 +365,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 {
 	struct cpu_vhint_table *vhtbl;
 	uint32_t val = 0, phy_cpu;
-	enum cluster cur_cl;
+	int cur_cl;
 	unsigned long flags;
 	spinlock_t *slock;
 	uint16_t ndiv;
@@ -389,7 +374,7 @@ static void tegra_update_cpu_speed(uint32_t rate, uint8_t cpu)
 	slock = &per_cpu(pcpu_slock, cpu);
 	spin_lock_irqsave(slock, flags);
 
-	cur_cl = get_cpu_cluster(cpu);
+	cur_cl = tegra18_logical_to_cluster(cpu);
 	vhtbl = &tfreq_data.pcluster[cur_cl].dvfs_tbl;
 
 	/*
@@ -440,7 +425,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 	struct cpufreq_freqs freqs;
 	struct mutex *mlock;
 	uint32_t tgt_freq;
-	enum cluster cl;
+	int cl;
 	int cpu, ret = 0;
 
 	if (!policy || (!cpu_online(policy->cpu)))
@@ -460,7 +445,7 @@ static int tegra_setspeed(struct cpufreq_policy *policy, unsigned int index)
 
 	cpufreq_freq_transition_begin(policy, &freqs);
 
-	cl = get_cpu_cluster(policy->cpu);
+	cl = tegra18_logical_to_cluster(policy->cpu);
 
 	if (freqs.old != tgt_freq)
 		for_each_cpu(cpu, &tfreq_data.pcluster[cl].cpu_mask) {
@@ -525,8 +510,8 @@ static void enable_cc3(struct device_node *dn)
 	struct cpu_vhint_table *vhtbl;
 	struct cc3_params *cc3;
 	u32 enb, freq = 0, idx = 0;
-	enum cluster cl;
 	u16 ndiv;
+	int cl;
 	int ret = 0;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
@@ -625,7 +610,7 @@ DEFINE_SIMPLE_ATTRIBUTE(freq_fops, freq_get, freq_set, "%llu\n");
 static int set_hint(void *data, u64 val)
 {
 	uint64_t cpu = (uint64_t)data;
-	enum cluster cur_cl;
+	int cur_cl;
 	unsigned long flags;
 	spinlock_t *slock;
 	uint32_t hint = val;
@@ -639,7 +624,7 @@ static int set_hint(void *data, u64 val)
 		slock = &per_cpu(pcpu_slock, cpu);
 		spin_lock_irqsave(slock, flags);
 
-		cur_cl = get_cpu_cluster(cpu);
+		cur_cl = tegra18_logical_to_cluster(cpu);
 		cpu = logical_to_phys_map(cpu);
 		tcpufreq_writel(hint, tfreq_data.pcluster[cur_cl].edvd_pub +
 			EDVD_CL_NDIV_VHINT_OFFSET, cpu);
@@ -655,7 +640,7 @@ end:
 static int get_hint(void *data, u64 *hint)
 {
 	uint64_t cpu = (uint64_t)data;
-	enum cluster cur_cl;
+	int cur_cl;
 	unsigned long flags;
 	spinlock_t *slock;
 
@@ -667,7 +652,7 @@ static int get_hint(void *data, u64 *hint)
 		slock = &per_cpu(pcpu_slock, cpu);
 		spin_lock_irqsave(slock, flags);
 
-		cur_cl = get_cpu_cluster(cpu);
+		cur_cl = tegra18_logical_to_cluster(cpu);
 		cpu = logical_to_phys_map(cpu);
 		pstore_rtrace_set_bypass(1);
 		*hint = tcpufreq_readl(tfreq_data.pcluster[cur_cl].edvd_pub +
@@ -703,7 +688,7 @@ static void dump_lut(struct seq_file *s, struct cpu_vhint_table *vht)
 static int show_bpmp_to_cpu_lut(struct seq_file *s, void *data)
 {
 	struct cpu_vhint_table *vht;
-	enum cluster cl;
+	int cl;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		vht = &tfreq_data.pcluster[cl].dvfs_tbl;
@@ -737,7 +722,7 @@ static const struct file_operations lut_fops = {
 
 static int get_pcluster_cc3(void *data, u64 *val)
 {
-	enum cluster cl = (enum cluster)data;
+	long cl = (long)data;
 
 	mutex_lock(&tfreq_data.mlock);
 
@@ -750,7 +735,7 @@ static int get_pcluster_cc3(void *data, u64 *val)
 
 static int set_pcluster_cc3(void *data, u64 val)
 {
-	enum cluster cl = (enum cluster)data;
+	long cl = (long)data;
 	int wait = 1;
 	int ret = 0;
 
@@ -771,7 +756,7 @@ DEFINE_SIMPLE_ATTRIBUTE(pcl_cc3_ops, get_pcluster_cc3,
 
 static int get_ndiv(void *data, u64 *val)
 {
-	enum cluster cl = (enum cluster)data;
+	long cl = (long)data;
 
 	mutex_lock(&tfreq_data.mlock);
 
@@ -784,7 +769,7 @@ static int get_ndiv(void *data, u64 *val)
 
 static int set_ndiv(void *data, u64 val)
 {
-	enum cluster cl = (enum cluster)data;
+	long cl = (long)data;
 	int wait = 1;
 	int ret = 0;
 
@@ -805,7 +790,7 @@ DEFINE_SIMPLE_ATTRIBUTE(ndiv_ops, get_ndiv, set_ndiv,
 
 static int get_vindex(void *data, u64 *val)
 {
-	enum cluster cl = (enum cluster)data;
+	long cl = (long)data;
 
 	mutex_lock(&tfreq_data.mlock);
 
@@ -818,7 +803,7 @@ static int get_vindex(void *data, u64 *val)
 
 static int set_vindex(void *data, u64 val)
 {
-	enum cluster cl = (enum cluster)data;
+	long cl = (long)data;
 	int wait = 1;
 	int ret = 0;
 
@@ -841,7 +826,7 @@ static struct dentry *tegra_cpufreq_debugfs_root;
 static int __init cc3_debug_init(void)
 {
 	struct dentry *dir;
-	enum cluster cl;
+	long int cl;
 	uint8_t buff[15];
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
@@ -926,7 +911,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 {
 	struct cpufreq_frequency_table *ftbl;
 	struct mutex *mlock;
-	enum cluster cl;
+	int cl;
 	uint32_t freq;
 	int ret = 0;
 	int idx;
@@ -955,7 +940,7 @@ static int tegra_cpu_init(struct cpufreq_policy *policy)
 
 	tfreq_data.cpu_freq[policy->cpu] = policy->cur;
 
-	cl = get_cpu_cluster(policy->cpu);
+	cl = tegra18_logical_to_cluster(policy->cpu);
 	if (tfreq_data.pcluster[cl].bwmgr)
 		set_cpufreq_to_emcfreq(cl, policy);
 
@@ -1006,7 +991,7 @@ static int cluster0_freq_notify(struct notifier_block *b,
 	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
 	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CLUSTER0_FREQ_BOUNDS);
 
-	for_each_cpu(cpu, &tfreq_data.pcluster[M_CLUSTER].cpu_mask) {
+	for_each_cpu(cpu, &tfreq_data.pcluster[0].cpu_mask) {
 		if (cpu_online(cpu)) {
 			policy = cpufreq_cpu_get(cpu);
 			if (!policy)
@@ -1029,7 +1014,7 @@ static int cluster1_freq_notify(struct notifier_block *b,
 	qmin = (u32)pm_qos_read_min_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
 	qmax = (u32)pm_qos_read_max_bound(PM_QOS_CLUSTER1_FREQ_BOUNDS);
 
-	for_each_cpu(cpu, &tfreq_data.pcluster[B_CLUSTER].cpu_mask) {
+	for_each_cpu(cpu, &tfreq_data.pcluster[1].cpu_mask) {
 		if (cpu_online(cpu)) {
 			policy = cpufreq_cpu_get(cpu);
 			if (!policy)
@@ -1069,7 +1054,7 @@ static void __init free_shared_lut(void)
 {
 	uint16_t size = sizeof(struct cpu_vhint_data);
 	struct cpu_vhint_table *vhtbl;
-	enum cluster cl;
+	int cl;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		/* Free lut space shared by BPMP */
@@ -1081,7 +1066,7 @@ static void __init free_shared_lut(void)
 }
 static void free_resources(void)
 {
-	enum cluster cl;
+	int cl;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
 		/* unmap iova space */
@@ -1120,7 +1105,7 @@ static int __init init_freqtbls(struct device_node *dn)
 	struct cpufreq_frequency_table *ftbl;
 	struct cpu_vhint_table *vhtbl;
 	u16 ndiv, max_freq_steps, delta_ndiv;
-	enum cluster cl;
+	int cl;
 	int ret = 0, index;
 
 	if (!of_property_read_u16(dn, "freq_table_step_size",
@@ -1194,7 +1179,7 @@ static int __init create_ndiv_to_vindex_table(void)
 	struct cpu_vhint_table *vhtbl;
 	struct cpu_vhint_data *lut;
 	uint16_t mid_ndiv, i;
-	enum cluster cl;
+	int cl;
 	uint8_t vindx;
 	int ret = 0;
 
@@ -1255,7 +1240,7 @@ static int __init get_lut_from_bpmp(void)
 	struct cpu_vhint_table *vhtbl;
 	struct cpu_vhint_data *virt;
 	dma_addr_t phys;
-	enum cluster cl;
+	int cl;
 	int ret = 0;
 	bool ok = false;
 
@@ -1298,7 +1283,7 @@ err_out:
 static int __init mem_map_device(struct device_node *dn)
 {
 	void __iomem *base = NULL;
-	enum cluster cl;
+	int cl;
 	int ret = 0;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {
@@ -1321,18 +1306,16 @@ err_out:
 static void set_cpu_mask(void)
 {
 	int cpu_num;
+	int cl;
 
-	cpumask_clear(&tfreq_data.pcluster[M_CLUSTER].cpu_mask);
-	cpumask_clear(&tfreq_data.pcluster[B_CLUSTER].cpu_mask);
+	LOOP_FOR_EACH_CLUSTER(cl) {
+		cpumask_clear(&tfreq_data.pcluster[cl].cpu_mask);
+	}
 
 	for_each_possible_cpu(cpu_num) {
-		if (tegra18_is_cpu_denver(cpu_num))
-			cpumask_set_cpu(cpu_num,
-				&tfreq_data.pcluster[M_CLUSTER].cpu_mask);
-		else
-			cpumask_set_cpu(cpu_num,
-				&tfreq_data.pcluster[B_CLUSTER].cpu_mask);
-
+		cpumask_set_cpu(cpu_num,
+			&tfreq_data.pcluster[
+				tegra18_logical_to_cluster(cpu_num)].cpu_mask);
 	}
 }
 
@@ -1340,7 +1323,7 @@ static int __init register_with_emc_bwmgr(void)
 {
 	enum tegra_bwmgr_client_id bw_id = TEGRA_BWMGR_CLIENT_CPU_0;
 	struct tegra_bwmgr_client *bwmgr;
-	enum cluster cl;
+	int cl;
 	int ret = 0;
 
 	LOOP_FOR_EACH_CLUSTER(cl) {

@@ -379,7 +379,8 @@ struct nvhost_device_data t19_nvdla0_info = {
 	.devfs_name		= "nvdla0",
 	.class			= NV_DLA0_CLASS_ID,
 	.clocks			= {
-		{"nvdla", UINT_MAX},
+		{"nvdla0", UINT_MAX},
+		{"nvdla0_flcn", UINT_MAX},
 		{"emc", HOST_EMC_FLOOR,
 		 NVHOST_MODULE_ID_EXTERNAL_MEMORY_CONTROLLER,
 		 0, TEGRA_BWMGR_SET_EMC_FLOOR}

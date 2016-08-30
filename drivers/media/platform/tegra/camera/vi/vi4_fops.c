@@ -27,6 +27,9 @@
 #define BPP_MEM		2
 #define MAX_VI_CHANNEL 12
 
+#define SOF_SYNCPT_IDX	0
+#define FE_SYNCPT_IDX	1
+
 void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 					  enum vb2_buffer_state state);
 int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
@@ -68,7 +71,8 @@ static u32 vi4_read(struct tegra_channel *chan, unsigned int addr)
 static void vi4_channel_write(struct tegra_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
 {
-	writel(val, chan->vi->iomem + 0x10000 + (0x10000 * index) + addr);
+	writel(val,
+		chan->vi->iomem + VI4_CHANNEL_OFFSET * (index + 1) + addr);
 }
 
 static bool vi4_init(struct tegra_channel *chan)
@@ -102,21 +106,9 @@ static bool vi4_check_status(struct tegra_channel *chan)
 
 static bool vi_notify_wait(struct tegra_channel *chan)
 {
-	int err;
-	u32 thresh;
+	int i, err;
+	u32 thresh[TEGRA_CSI_BLOCKS], temp;
 	struct timespec ts;
-	struct tegra_vi4_syncpts_req req = {
-		.syncpt_ids = {
-			chan->syncpt[0],
-			chan->syncpt[1],
-			chan->syncpt[1],
-		},
-		.stream = chan->port[0],
-		.vc = 0,
-	};
-
-	if (!chan->bfirst_fstart)
-		vi_notify_channel_enable_reports(chan->vnc_id, chan->vnc, &req);
 
 	/*
 	 * Increment syncpt for ATOMP_FE
@@ -124,8 +116,9 @@ static bool vi_notify_wait(struct tegra_channel *chan)
 	 * This is needed in order to keep the syncpt max up to date,
 	 * even if we are not waiting for ATOMP_FE here
 	 */
-	thresh = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
-					chan->syncpt[1], 1);
+	for (i = 0; i < chan->valid_ports; i++)
+		temp = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
+					chan->syncpt[i][FE_SYNCPT_IDX], 1);
 
 	/*
 	 * Increment syncpt for PXL_SOF
@@ -133,42 +126,47 @@ static bool vi_notify_wait(struct tegra_channel *chan)
 	 * Increment and retrieve PXL_SOF syncpt max value.
 	 * This value will be used to wait for next syncpt
 	 */
-	thresh = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
-					chan->syncpt[0], 1);
+	for (i = 0; i < chan->valid_ports; i++)
+		thresh[i] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
+					chan->syncpt[i][SOF_SYNCPT_IDX], 1);
 
 	/*
 	 * Wait for PXL_SOF syncpt
 	 *
 	 * Use the syncpt max value we just set as threshold
 	 */
-	err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
-			chan->syncpt[0], thresh,
-			250, NULL, &ts);
-	if (err < 0)
-		dev_err(chan->vi->dev,
-			"PXL_SOF syncpt timeout! err = %d\n", err);
+	for (i = 0; i < chan->valid_ports; i++) {
+		err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
+				chan->syncpt[i][SOF_SYNCPT_IDX], thresh[i],
+				250, NULL, &ts);
+		if (err)
+			dev_err(chan->vi->dev,
+				"PXL_SOF syncpt timeout! err = %d\n", err);
+	}
 
 	return true;
 }
 
-static bool tegra_channel_surface_setup(struct tegra_channel *chan,
-	struct tegra_channel_buffer *buf)
+static void tegra_channel_surface_setup(
+	struct tegra_channel *chan, struct tegra_channel_buffer *buf, int index)
 {
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_EMB_SURFACE_OFFSET0, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_EMB_SURFACE_OFFSET0_H, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_EMB_SURFACE_STRIDE0, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_OFFSET0, buf->addr);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_STRIDE0,
-		chan->format.bytesperline);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_OFFSET0_H, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_OFFSET1, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_OFFSET1_H, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_STRIDE1, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_OFFSET2, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_OFFSET2_H, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_SURFACE_STRIDE2, 0x0);
+	int vnc_id = chan->vnc_id[index];
+	unsigned int offset = chan->buffer_offset[index];
 
-	return true;
+	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_OFFSET0_H, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_EMB_SURFACE_STRIDE0, 0x0);
+	vi4_channel_write(chan, vnc_id,
+		ATOMP_SURFACE_OFFSET0, buf->addr + offset);
+	vi4_channel_write(chan, vnc_id,
+		ATOMP_SURFACE_STRIDE0, chan->format.bytesperline);
+	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET0_H, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET1, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET1_H, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_STRIDE1, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET2, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_OFFSET2_H, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_SURFACE_STRIDE2, 0x0);
 }
 
 static void tegra_channel_handle_error(struct tegra_channel *chan)
@@ -194,6 +192,7 @@ static void tegra_channel_notify_status_callback(
 				void *client_data)
 {
 	struct tegra_channel *chan = (struct tegra_channel *)client_data;
+	int i;
 
 	spin_lock(&chan->capture_state_lock);
 	if (chan->capture_state == CAPTURE_GOOD)
@@ -204,8 +203,9 @@ static void tegra_channel_notify_status_callback(
 	}
 	spin_unlock(&chan->capture_state_lock);
 
-	dev_err(chan->vi->dev, "Status: %2u channel:%02X frame:%04X\n",
-		status->status, chan->vnc_id, status->frame);
+	for (i = 0; i < chan->valid_ports; i++)
+		dev_err(chan->vi->dev, "Status: %2u channel:%02X frame:%04X\n",
+			status->status, chan->vnc_id[i], status->frame);
 	dev_err(chan->vi->dev, "         timestamp sof %llu eof %llu data 0x%08x\n",
 		status->sof_ts, status->eof_ts, status->data);
 	dev_err(chan->vi->dev, "         capture_id %u stream %2u vchan %2u\n",
@@ -214,90 +214,175 @@ static void tegra_channel_notify_status_callback(
 	tegra_channel_handle_error(chan);
 }
 
-static bool tegra_channel_notify_setup(struct tegra_channel *chan)
+static int tegra_channel_notify_enable(
+	struct tegra_channel *chan, unsigned int index)
 {
-	int i;
+	struct tegra_vi4_syncpts_req req;
+	int i, err;
 
-	chan->vnc_id = -1;
+	chan->vnc_id[index] = -1;
 	for (i = 0; i < MAX_VI_CHANNEL; i++) {
-		chan->vnc = vi_notify_channel_open(i);
-		if (!IS_ERR(chan->vnc)) {
-			chan->vnc_id = i;
+		chan->vnc[index] = vi_notify_channel_open(i);
+		if (!IS_ERR(chan->vnc[index])) {
+			chan->vnc_id[index] = i;
 			break;
 		}
 	}
-	if (chan->vnc_id < 0) {
+
+	if (chan->vnc_id[index] < 0) {
 		dev_err(chan->vi->dev, "No VI channel available!\n");
-		return false;
+		return -EFAULT;
 	}
 
-	vi_notify_channel_set_notify_funcs(chan->vnc,
+	vi_notify_channel_set_notify_funcs(chan->vnc[index],
 			&tegra_channel_notify_status_callback,
 			&tegra_channel_notify_error_callback,
 			(void *)chan);
 
 	/* get PXL_SOF syncpt id */
-	chan->syncpt[0] =
+	chan->syncpt[index][SOF_SYNCPT_IDX] =
 		nvhost_get_syncpt_client_managed(chan->vi->ndev, "tegra-vi4");
+	if (chan->syncpt[index][SOF_SYNCPT_IDX] == 0) {
+		dev_err(chan->vi->dev, "Failed to get PXL_SOF syncpt!\n");
+		return -EFAULT;
+	}
 
 	/* get ATOMP_FE syncpt id */
-	chan->syncpt[1] =
+	chan->syncpt[index][FE_SYNCPT_IDX] =
 		nvhost_get_syncpt_client_managed(chan->vi->ndev, "tegra-vi4");
+	if (chan->syncpt[index][FE_SYNCPT_IDX] == 0) {
+		dev_err(chan->vi->dev, "Failed to get ATOMP_FE syncpt!\n");
+		nvhost_syncpt_put_ref_ext(
+			chan->vi->ndev, chan->syncpt[index][SOF_SYNCPT_IDX]);
+		return -EFAULT;
+	}
 
-	nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev, chan->syncpt[0]);
-	nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev, chan->syncpt[1]);
+	nvhost_syncpt_set_min_eq_max_ext(
+		chan->vi->ndev, chan->syncpt[index][SOF_SYNCPT_IDX]);
+	nvhost_syncpt_set_min_eq_max_ext(
+		chan->vi->ndev, chan->syncpt[index][FE_SYNCPT_IDX]);
 
-	return true;
+	/* enable VI Notify report */
+	req.syncpt_ids[0] = chan->syncpt[index][SOF_SYNCPT_IDX]; /* PXL_SOF */
+	req.syncpt_ids[1] = chan->syncpt[index][FE_SYNCPT_IDX]; /* ATOMP_FE */
+	req.syncpt_ids[2] = 0xffffffff;
+	req.stream = chan->port[index];
+	req.vc = 0;
+	req.pad = 0;
+
+	err = vi_notify_channel_enable_reports(
+		chan->vnc_id[index], chan->vnc[index], &req);
+	if (err < 0)
+		dev_err(chan->vi->dev,
+			"Failed to enable report for VI Notify, err = %d\n",
+			err);
+
+	return err;
 }
 
+static int tegra_channel_notify_disable(
+	struct tegra_channel *chan, unsigned int index)
+{
+	int err;
+	int ret = 0;
+	struct tegra_vi4_syncpts_req req;
 
-static int tegra_channel_capture_setup(struct tegra_channel *chan)
+	/* free syncpts */
+	nvhost_syncpt_put_ref_ext(
+		chan->vi->ndev, chan->syncpt[index][SOF_SYNCPT_IDX]);
+	nvhost_syncpt_put_ref_ext(
+		chan->vi->ndev, chan->syncpt[index][FE_SYNCPT_IDX]);
+
+	/* close vi-notifier */
+	req.syncpt_ids[0] = 0xffffffff;
+	req.syncpt_ids[1] = 0xffffffff;
+	req.syncpt_ids[2] = 0xffffffff;
+	req.stream = chan->port[index];
+	req.vc = 0;
+	req.pad = 0;
+
+	err = vi_notify_channel_reset(
+		chan->vnc_id[index], chan->vnc[index], &req);
+	if (err < 0) {
+		dev_err(chan->vi->dev,
+			"VI Notify channel reset failed, err = %d\n", err);
+		if (!ret)
+			ret = err;
+	}
+
+	err = vi_notify_channel_close(chan->vnc_id[index], chan->vnc[index]);
+	if (err < 0) {
+		dev_err(chan->vi->dev,
+			"VI Notify channel close failed, err = %d\n", err);
+		if (!ret)
+			ret = err;
+	}
+
+	return ret;
+}
+
+static int tegra_channel_capture_setup(struct tegra_channel *chan,
+		unsigned int index)
 {
 	u32 height = chan->format.height;
 	u32 width = chan->format.width;
 	u32 format = chan->fmtinfo->img_fmt;
 	u32 data_type = chan->fmtinfo->img_dt;
-	u32 csi_port = chan->port[0];
+	u32 csi_port = chan->port[index];
 	u32 stream = 1U << csi_port;
 	u32 virtual_ch = 1U << 0;
+	u32 vnc_id;
+	int err;
 
-	tegra_channel_notify_setup(chan);
+	if (chan->valid_ports > 1) {
+		height = chan->gang_height;
+		width = chan->gang_width;
+	}
+
+	err = tegra_channel_notify_enable(chan, index);
+	if (err < 0) {
+		dev_err(chan->vi->dev,
+			"Failed to setup VI Notifier, err = %d\n", err);
+		return err;
+	}
+
+	vnc_id = chan->vnc_id[index];
 
 	vi4_write(chan, csimux_config_stream[csi_port], 0x1);
 
-	vi4_channel_write(chan, chan->vnc_id, MATCH,
+	vi4_channel_write(chan, vnc_id, MATCH,
 			((stream << STREAM_SHIFT) & STREAM) |
 			STREAM_MASK |
 			((virtual_ch << VIRTUAL_CHANNEL_SHIFT) &
 			VIRTUAL_CHANNEL)  |
 			VIRTUAL_CHANNEL_MASK);
 
-	vi4_channel_write(chan, chan->vnc_id, MATCH_DATATYPE,
+	vi4_channel_write(chan, vnc_id, MATCH_DATATYPE,
 			((data_type << DATATYPE_SHIFT) & DATATYPE) |
 			DATATYPE_MASK);
 
-	vi4_channel_write(chan, chan->vnc_id, DT_OVERRIDE, 0x0);
+	vi4_channel_write(chan, vnc_id, DT_OVERRIDE, 0x0);
 
-	vi4_channel_write(chan, chan->vnc_id, MATCH_FRAMEID,
+	vi4_channel_write(chan, vnc_id, MATCH_FRAMEID,
 			((0 << FRAMEID_SHIFT) & FRAMEID) | 0);
 
-	vi4_channel_write(chan, chan->vnc_id, FRAME_X, width);
-	vi4_channel_write(chan, chan->vnc_id, FRAME_Y, height);
-	vi4_channel_write(chan, chan->vnc_id, SKIP_X, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, CROP_X, width);
-	vi4_channel_write(chan, chan->vnc_id, OUT_X, width);
-	vi4_channel_write(chan, chan->vnc_id, SKIP_Y, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, CROP_Y, height);
-	vi4_channel_write(chan, chan->vnc_id, OUT_Y, height);
-	vi4_channel_write(chan, chan->vnc_id, PIXFMT_ENABLE, PIXFMT_EN);
-	vi4_channel_write(chan, chan->vnc_id, PIXFMT_WIDE, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, PIXFMT_FORMAT, format);
-	vi4_channel_write(chan, chan->vnc_id, DPCM_STRIP, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_DPCM_CHUNK, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, ISPBUFA, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, LINE_TIMER, 0x1000000);
-	vi4_channel_write(chan, chan->vnc_id, EMBED_X, 0x0);
-	vi4_channel_write(chan, chan->vnc_id, EMBED_Y, 0x0);
+	vi4_channel_write(chan, vnc_id, FRAME_X, width);
+	vi4_channel_write(chan, vnc_id, FRAME_Y, height);
+	vi4_channel_write(chan, vnc_id, SKIP_X, 0x0);
+	vi4_channel_write(chan, vnc_id, CROP_X, width);
+	vi4_channel_write(chan, vnc_id, OUT_X, width);
+	vi4_channel_write(chan, vnc_id, SKIP_Y, 0x0);
+	vi4_channel_write(chan, vnc_id, CROP_Y, height);
+	vi4_channel_write(chan, vnc_id, OUT_Y, height);
+	vi4_channel_write(chan, vnc_id, PIXFMT_ENABLE, PIXFMT_EN);
+	vi4_channel_write(chan, vnc_id, PIXFMT_WIDE, 0x0);
+	vi4_channel_write(chan, vnc_id, PIXFMT_FORMAT, format);
+	vi4_channel_write(chan, vnc_id, DPCM_STRIP, 0x0);
+	vi4_channel_write(chan, vnc_id, ATOMP_DPCM_CHUNK, 0x0);
+	vi4_channel_write(chan, vnc_id, ISPBUFA, 0x0);
+	vi4_channel_write(chan, vnc_id, LINE_TIMER, 0x1000000);
+	vi4_channel_write(chan, vnc_id, EMBED_X, 0x0);
+	vi4_channel_write(chan, vnc_id, EMBED_Y, 0x0);
 	/*
 	 * Set ATOMP_RESERVE to 0 so rctpu won't increment syncpt
 	 * for captureInfo. This is copied from nvvi driver.
@@ -305,24 +390,12 @@ static int tegra_channel_capture_setup(struct tegra_channel *chan)
 	 * If we don't set this register to 0, ATOMP_FE syncpt
 	 * will be increment by 2 for each frame
 	 */
-	vi4_channel_write(chan, chan->vnc_id, ATOMP_RESERVE, 0x0);
-
+	vi4_channel_write(chan, vnc_id, ATOMP_RESERVE, 0x0);
 	dev_dbg(chan->vi->dev,
 		"Create Surface with imgW=%d, imgH=%d, memFmt=%d\n",
 		width, height, format);
 
 	return 0;
-}
-
-static int tegra_channel_enable_stream(struct tegra_channel *chan)
-{
-	int ret = 0;
-
-	ret = tegra_channel_set_stream(chan, true);
-	if (ret < 0)
-		return ret;
-
-	return ret;
 }
 
 static int tegra_channel_capture_frame(struct tegra_channel *chan,
@@ -333,15 +406,22 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	int state = VB2_BUF_STATE_DONE;
 	unsigned long flags;
 	int err = false;
+	int i;
 
-	tegra_channel_surface_setup(chan, buf);
+	for (i = 0; i < chan->valid_ports; i++)
+		tegra_channel_surface_setup(chan, buf, i);
 
-	vi4_channel_write(chan, chan->vnc_id, CHANNEL_COMMAND, LOAD);
-	vi4_channel_write(chan, chan->vnc_id,
-		CONTROL, SINGLESHOT | MATCH_STATE_EN);
+	for (i = 0; i < chan->valid_ports; i++) {
+		vi4_channel_write(chan, chan->vnc_id[i], CHANNEL_COMMAND, LOAD);
+		vi4_channel_write(chan, chan->vnc_id[i],
+			CONTROL, SINGLESHOT | MATCH_STATE_EN);
+	}
 
-	if (!chan->bfirst_fstart)
-		err = tegra_channel_enable_stream(chan);
+	if (!chan->bfirst_fstart) {
+		err = tegra_channel_set_stream(chan, true);
+		if (err < 0)
+			return err;
+	}
 
 	/* wait for vi notifier events */
 	vi_notify_wait(chan);
@@ -361,18 +441,22 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 
 static int tegra_channel_stop_increments(struct tegra_channel *chan)
 {
+	int i;
 	struct tegra_vi4_syncpts_req req = {
 		.syncpt_ids = {
-		0xffffffff,
-		0xffffffff,
-		0xffffffff,
-	},
-				.stream = chan->port[0],
-				.vc = 0,
+			0xffffffff,
+			0xffffffff,
+			0xffffffff,
+		},
+		.stream = chan->port[0],
+		.vc = 0,
 	};
 
 	/* No need to check errors. There's nothing we could do. */
-	return vi_notify_channel_reset(chan->vnc_id, chan->vnc, &req);
+	for (i = 0; i < chan->valid_ports; i++)
+		vi_notify_channel_reset(chan->vnc_id[i], chan->vnc[i], &req);
+
+	return 0;
 }
 
 static void tegra_channel_capture_done(struct tegra_channel *chan)
@@ -380,51 +464,15 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 	struct timespec ts;
 	struct tegra_channel_buffer *buf;
 	int state = VB2_BUF_STATE_DONE;
-	u32 thresh;
-	unsigned long flags;
-	int err;
-
-	spin_lock_irqsave(&chan->capture_state_lock, flags);
-	if (chan->capture_state == CAPTURE_IDLE) {
-		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
-		return;
-	} else if (chan->capture_state == CAPTURE_GOOD) {
-		/* Mark capture state to IDLE as capture is finished */
-		chan->capture_state = CAPTURE_IDLE;
-		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
-
-		/* Get current ATOMP_FE syncpt min value */
-		if (!nvhost_syncpt_read_ext_check(chan->vi->ndev,
-				chan->syncpt[1], &thresh)) {
-			/* Wait for ATOMP_FE syncpt
-			 *
-			 * This is to make sure we don't exit the capture thread
-			 * before the last frame is done writing to memory
-			 */
-			err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
-					chan->syncpt[1], thresh + 1,
-					250, NULL, &ts);
-			if (err < 0)
-				dev_err(chan->vi->dev, "ATOMP_FE syncpt timeout!\n");
-		}
-	} else
-		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
-
-	/* Get current ATOMP_FE syncpt min value */
-	/* close vi-notifier */
-	tegra_channel_stop_increments(chan);
-	vi_notify_channel_close(chan->vnc_id, chan->vnc);
-	chan->vnc_id = -1;
-
-	/* free syncpts */
-	nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[0]);
-	nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[1]);
 
 	/* dequeue buffer and return if no buffer exists */
 	buf = dequeue_buffer(chan);
 	if (!buf)
 		return;
 
+	/* Mark capture state to IDLE as capture is finished */
+	chan->capture_state = CAPTURE_IDLE;
+	getnstimeofday(&ts);
 	tegra_channel_ring_buffer(chan, &buf->buf, &ts, state);
 }
 
@@ -531,16 +579,13 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	chan->capture_state = CAPTURE_IDLE;
 	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
-	for (i = 0; i < chan->valid_ports; i++) {
-		/* ensure sync point state is clean */
-		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
-							chan->syncpt[i]);
-	}
 
 	/* Note: Program VI registers after TPG, sensors and CSI streaming */
-	ret = tegra_channel_capture_setup(chan);
-	if (ret < 0)
-		goto error_capture_setup;
+	for (i = 0; i < chan->valid_ports; i++) {
+		ret = tegra_channel_capture_setup(chan, i);
+		if (ret < 0)
+			goto error_capture_setup;
+	}
 
 	chan->sequence = 0;
 	tegra_channel_init_ring_buffer(chan);
@@ -587,15 +632,20 @@ int vi4_channel_stop_streaming(struct vb2_queue *vq)
 {
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	bool is_streaming = atomic_read(&chan->is_streaming);
+	int i;
 
-	if (chan->vnc_id == -1)
-		return 0;
+	for (i = 0; i < chan->valid_ports; i++) {
+		if (chan->vnc_id[i] == -1)
+			return 0;
+	}
 
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);
 		/* wait for last frame memory write ack */
 		if (is_streaming)
 			tegra_channel_capture_done(chan);
+		for (i = 0; i < chan->valid_ports; i++)
+			tegra_channel_notify_disable(chan, i);
 		/* free all the ring buffers */
 		free_ring_buffers(chan, chan->num_buffers);
 		/* dequeue buffers back to app which are in capture queue */

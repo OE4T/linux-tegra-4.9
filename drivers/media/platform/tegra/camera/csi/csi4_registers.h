@@ -46,7 +46,7 @@
 #define CFG_TIMEOUT_EN				(0x1 << 31)
 #define CFG_TIMEOUT_PERIOD			(0x7fffffff << 0)
 
-#define VC0_DT_OVERRIDE				0x68
+#define VC0_DT_OVERRIDE				0x20
 #define	CFG_VC0_DT_OVERRIDE_EN		(0x1 << 31)
 #define	CFG_VC0_DT_OVERRIDE			(0x3f << 0)
 

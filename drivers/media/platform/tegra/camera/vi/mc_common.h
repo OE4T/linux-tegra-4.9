@@ -37,6 +37,7 @@
 #define	QUEUED_BUFFERS	4
 #define	ENABLE		1
 #define	DISABLE		0
+#define MAX_SYNCPT_PER_CHANNEL 3
 
 enum channel_capture_state {
 	CAPTURE_IDLE = 0,
@@ -128,7 +129,7 @@ struct tegra_channel {
 	struct mutex stop_kthread_lock;
 
 	unsigned char port[TEGRA_CSI_BLOCKS];
-	unsigned int syncpt[TEGRA_CSI_BLOCKS];
+	unsigned int syncpt[TEGRA_CSI_BLOCKS][MAX_SYNCPT_PER_CHANNEL];
 	unsigned int syncpoint_fifo[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_offset[TEGRA_CSI_BLOCKS];
 	unsigned int buffer_state[QUEUED_BUFFERS];
@@ -175,8 +176,8 @@ struct tegra_channel {
 	int requested_kbyteps;
 	unsigned long requested_hz;
 
-	struct vi_notify_channel *vnc;
-	int vnc_id;
+	struct vi_notify_channel *vnc[TEGRA_CSI_BLOCKS];
+	int vnc_id[TEGRA_CSI_BLOCKS];
 	int grp_id;
 };
 

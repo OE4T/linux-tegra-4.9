@@ -71,7 +71,7 @@ static void vi_channel_syncpt_init(struct tegra_channel *chan)
 	int i;
 
 	for (i = 0; i < chan->total_ports; i++)
-		chan->syncpt[i] =
+		chan->syncpt[i][0] =
 			nvhost_get_syncpt_client_managed(chan->vi->ndev, "vi");
 }
 
@@ -80,7 +80,7 @@ static void vi_channel_syncpt_free(struct tegra_channel *chan)
 	int i;
 
 	for (i = 0; i < chan->total_ports; i++)
-		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i]);
+		nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[i][0]);
 }
 
 static int tegra_channel_capture_setup(struct tegra_channel *chan)
@@ -126,8 +126,6 @@ static int tegra_channel_enable_stream(struct tegra_channel *chan)
 	 * enable pad power and perform calibration before arming
 	 * single shot for first frame after the HW setup is complete
 	 */
-	/* enable pad power */
-	tegra_csi_pad_control(chan->vi->csi, chan->port, ENABLE);
 	/* start streaming */
 	if (chan->vi->pg_mode) {
 		for (i = 0; i < chan->valid_ports; i++)
@@ -185,8 +183,6 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 	u32 frame_start;
 	int index, valid_ports = chan->valid_ports;
 
-	/* Disable pad power to start recovery */
-	tegra_csi_pad_control(chan->vi->csi, chan->port, DISABLE);
 	/* Disable clock gating to enable continuous clock */
 	tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, DISABLE);
 	/* clear CSI state */
@@ -219,7 +215,7 @@ static void tegra_channel_vi_csi_recover(struct tegra_channel *chan)
 		csi2_start_streaming(chan->vi->csi,
 						chan->port[index]);
 		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
-						chan->syncpt[index]);
+						chan->syncpt[index][0]);
 	}
 }
 
@@ -287,12 +283,12 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 
 		/* Program syncpoints */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
-					chan->syncpt[index], 1);
+					chan->syncpt[index][0], 1);
 		/* Do not arm sync points if FIFO had entries before */
 		if (!chan->syncpoint_fifo[index]) {
 			frame_start = VI_CSI_PP_FRAME_START(chan->port[index]);
 			val = VI_CFG_VI_INCR_SYNCPT_COND(frame_start) |
-				chan->syncpt[index];
+				chan->syncpt[index][0];
 			tegra_channel_write(chan,
 				TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
 		} else
@@ -325,7 +321,7 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	chan->capture_state = CAPTURE_GOOD;
 	for (index = 0; index < valid_ports; index++) {
 		err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
-			chan->syncpt[index], thresh[index],
+			chan->syncpt[index][0], thresh[index],
 			chan->timeout, NULL, &ts);
 		if (err) {
 			dev_err(&chan->video.dev,
@@ -380,10 +376,10 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 
 		/* Program syncpoints */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
-					chan->syncpt[index], 1);
+					chan->syncpt[index][0], 1);
 		mw_ack_done = VI_CSI_MW_ACK_DONE(chan->port[index]);
 		val = VI_CFG_VI_INCR_SYNCPT_COND(mw_ack_done) |
-				chan->syncpt[index];
+				chan->syncpt[index][0];
 		tegra_channel_write(chan, TEGRA_VI_CFG_VI_INCR_SYNCPT, val);
 		csi_write(chan, index,
 			TEGRA_VI_CSI_SINGLE_SHOT, SINGLE_SHOT_CAPTURE);
@@ -391,7 +387,7 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 
 	for (index = 0; index < chan->valid_ports; index++) {
 		err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
-			chan->syncpt[index], thresh[index],
+			chan->syncpt[index][0], thresh[index],
 			chan->timeout, NULL, &ts);
 		if (err) {
 			dev_err(&chan->video.dev,
@@ -512,7 +508,7 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		csi2_start_streaming(chan->vi->csi, chan->port[i]);
 		/* ensure sync point state is clean */
 		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
-							chan->syncpt[i]);
+							chan->syncpt[i][0]);
 	}
 
 	/* Note: Program VI registers after TPG, sensors and CSI streaming */
@@ -579,7 +575,6 @@ void vi2_channel_stop_streaming(struct vb2_queue *vq)
 		}
 		/* Enable clock gating so VI can be clock gated if necessary */
 		tegra_channel_write(chan, TEGRA_VI_CFG_CG_CTRL, ENABLE);
-		tegra_csi_pad_control(chan->vi->csi, chan->port, DISABLE);
 	}
 
 	if (!chan->vi->pg_mode) {

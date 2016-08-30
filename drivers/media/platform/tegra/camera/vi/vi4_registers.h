@@ -24,6 +24,7 @@
 /* VI registers. Start from 0x0 */
 #define VI_STREAMS (6)
 #define VIRTUAL_CHANNELS (4)
+#define VI4_CHANNEL_OFFSET         0x10000
 
 #define CFG_INTERRUPT_STATUS		0x44
 #define CFG_INTERRUPT_MASK			0x48

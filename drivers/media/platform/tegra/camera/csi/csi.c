@@ -163,23 +163,6 @@ static void set_csi_registers(struct tegra_csi_device *csi,
 #endif
 }
 
-
-void tegra_csi_pad_control(struct tegra_csi_device *csi,
-				unsigned char *port_num, int enable)
-{
-	int i, port;
-
-	if (enable) {
-		for (i = 0; csi_port_is_valid(port_num[i]); i++)
-			port = port_num[i];
-	} else {
-		for (i = 0; csi_port_is_valid(port_num[i]); i++)
-			port = port_num[i];
-	}
-}
-EXPORT_SYMBOL(tegra_csi_pad_control);
-
-
 int tegra_csi_power(struct tegra_csi_device *csi, int enable)
 {
 	int err = 0;
@@ -221,7 +204,6 @@ void tegra_csi_start_streaming(struct tegra_csi_channel *chan,
 	struct tegra_csi_device *csi = chan->csi;
 
 	csi->fops->csi_start_streaming(chan, port_num);
-
 }
 EXPORT_SYMBOL(tegra_csi_start_streaming);
 
@@ -427,18 +409,21 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 {
 	struct tegra_csi_device *csi;
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
+	struct tegra_channel *tegra_chan = v4l2_get_subdev_hostdata(subdev);
+	int i;
+
+	if (tegra_chan->bypass)
+		return 0;
 
 	csi = to_csi(subdev);
 	if (!csi)
 		return -EINVAL;
 
-	if (chan->numports) {
-		enum tegra_csi_port_num port_num = chan->port[0];
-
+	for (i = 0; i < tegra_chan->valid_ports; i++) {
 		if (enable)
-			tegra_csi_start_streaming(chan, port_num);
+			tegra_csi_start_streaming(chan, i);
 		else
-			tegra_csi_stop_streaming(chan, port_num);
+			tegra_csi_stop_streaming(chan, i);
 	}
 
 	return 0;
@@ -744,6 +729,7 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 	int value = 0xFFFF;
 	int ret = 0, i;
 
+	memset(&chan->port[0], INVALID_CSI_PORT, TEGRA_CSI_BLOCKS);
 	for_each_child_of_node(node, chan_dt) {
 		if (!chan_dt->name || of_node_cmp(chan_dt->name, "channel"))
 			continue;
@@ -765,7 +751,6 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 			continue;
 		if (value != 0)
 			continue;
-
 		for_each_child_of_node(port, ep) {
 			if (!ep->name || of_node_cmp(ep->name, "endpoint"))
 				continue;
@@ -778,7 +763,6 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 			if (ret < 0)
 				dev_err(chan->csi->dev, "No bus width info\n");
 			chan->numlanes = value;
-			chan->numports = value >> 1;
 			if (value > 12) {
 				dev_err(chan->csi->dev, "Invalid num lanes\n");
 				return -EINVAL;
@@ -799,6 +783,10 @@ static int tegra_csi_get_port_info(struct tegra_csi_channel *chan,
 			}
 		}
 	}
+
+	for (i = 0; csi_port_is_valid(chan->port[i]); i++)
+		chan->numports++;
+
 	return 0;
 }
 
@@ -838,6 +826,7 @@ static int tegra_csi_channel_init_one(struct tegra_csi_device *csi,
 {
 	struct tegra_csi_channel *chan = &csi->chans[index];
 	struct v4l2_subdev *sd;
+	int numlanes = 0;
 	int i, ret;
 
 	chan->csi = csi;
@@ -893,6 +882,16 @@ static int tegra_csi_channel_init_one(struct tegra_csi_device *csi,
 		dev_err(csi->dev, "failed to register subdev\n");
 		media_entity_cleanup(&sd->entity);
 	}
+
+	for (i = 0; i < chan->numports; i++) {
+		numlanes = chan->numlanes - (i * MAX_CSI_BLOCK_LANES);
+		WARN_ON(numlanes < 0);
+		numlanes = numlanes > MAX_CSI_BLOCK_LANES ?
+			MAX_CSI_BLOCK_LANES : numlanes;
+		chan->ports[i].lanes = numlanes;
+		chan->ports[i].num = chan->port[i];
+	}
+
 	return 0;
 }
 
@@ -905,6 +904,7 @@ static int tegra_csi_channels_init(struct tegra_csi_device *csi)
 		if (ret)
 			return ret;
 	}
+
 	return 0;
 }
 

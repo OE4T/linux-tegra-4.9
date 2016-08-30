@@ -25,6 +25,8 @@
 #include "camera/vi/registers.h"
 #include "camera/csi/csi4_registers.h"
 
+#define MAX_CSI_BLOCK_LANES 4
+
 enum tegra_csi_port_num {
 	PORT_A = 0,
 	PORT_B = 1,
@@ -104,7 +106,7 @@ struct tegra_csi_channel {
 
 	struct tegra_csi_device *csi;
 	struct tegra_csi_port *ports;
-	unsigned int port[TEGRA_CSI_BLOCKS];
+	unsigned char port[TEGRA_CSI_BLOCKS];
 	unsigned int numports;
 	unsigned int numlanes;
 	unsigned int pg_mode;
@@ -137,8 +139,6 @@ void tegra_csi_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
 void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num);
-void tegra_csi_pad_control(struct tegra_csi_device *csi,
-				unsigned char *port_num, int enable);
 int tegra_csi_channel_power(struct tegra_csi_device *csi,
 				unsigned char *port, int enable);
 #define tegra_csi_channel_power_on(csi, port) \

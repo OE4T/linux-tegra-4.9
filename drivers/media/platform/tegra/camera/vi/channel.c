@@ -1275,8 +1275,9 @@ static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index)
 
 	for (idx = 0; csi_port_is_valid(chan->port[idx]); idx++) {
 		chan->total_ports++;
-		numlanes = chan->numlanes - (idx * 4);
-		numlanes = numlanes > 4 ? 4 : numlanes;
+		numlanes = chan->numlanes - (idx * MAX_CSI_BLOCK_LANES);
+		numlanes = numlanes > MAX_CSI_BLOCK_LANES ?
+			MAX_CSI_BLOCK_LANES : numlanes;
 		/* maximum of 4 lanes are present per CSI block */
 		chan->csibase[idx] = vi->iomem +
 					TEGRA_VI_CSI_BASE(chan->port[idx]);

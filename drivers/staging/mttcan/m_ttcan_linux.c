@@ -104,9 +104,6 @@ static __init int mttcan_hw_init(struct mttcan_priv *priv)
 		ttcan_prog_trigger_mem(ttcan, priv->tmc_shadow);
 	}
 
-	ttcan_clear_intr(ttcan);
-	ttcan_clear_tt_intr(ttcan);
-
 	ttcan_print_version(ttcan);
 
 	return err;
@@ -161,8 +158,6 @@ static __init int mttcan_hw_reinit(const struct mttcan_priv *priv)
 	if (ttcan->mram_cfg[MRAM_TMC].num)
 		ttcan_prog_trigger_mem(ttcan, priv->tmc_shadow);
 
-	ttcan_clear_intr(ttcan);
-	ttcan_clear_tt_intr(ttcan);
 	return err;
 }
 
@@ -538,13 +533,12 @@ static void mttcan_tx_event(struct net_device *dev)
 
 static void mttcan_tx_complete(struct net_device *dev)
 {
-	u32 completed_tx;
 	u32 msg_no;
 
 	struct mttcan_priv *priv = netdev_priv(dev);
 	struct net_device_stats *stats = &dev->stats;
 
-	completed_tx = ttcan_read_tx_complete_reg(priv->ttcan);
+	u32 completed_tx = ttcan_read_tx_complete_reg(priv->ttcan);
 
 	/*TODO:- fix how to handle wrap around of tx_next and echo */
 	for (; (priv->tx_next - priv->tx_echo) > 0; priv->tx_echo++) {
@@ -568,9 +562,6 @@ static void mttcan_tx_complete(struct net_device *dev)
 	}
 
 	if (netif_queue_stopped(dev))
-		netif_start_queue(dev);
-
-	if ((priv->tx_next - priv->tx_echo) > 0)
 		netif_wake_queue(dev);
 }
 
@@ -626,6 +617,8 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 		if (ir & MTTCAN_ERR_INTR) {
 			psr = ttcan_read_psr(priv->ttcan);
 			priv->ttcan->proto_state = psr;
+			ack = ir & MTTCAN_ERR_INTR;
+			ttcan_ir_write(priv->ttcan, ack);
 			if ((ir & MTT_IR_EW_MASK) && (psr & MTT_PSR_EW_MASK)) {
 				work_done += mttcan_state_change(dev,
 					CAN_STATE_ERROR_WARNING);
@@ -660,9 +653,14 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			if (priv->can.ctrlmode & CAN_CTRLMODE_BERR_REPORTING) {
 				if ((ir & MTT_IR_PED_MASK) ||
 					(ir & MTT_IR_PEA_MASK)) {
-					enum ttcan_lec_type lec =
-						(psr & MTT_PSR_LEC_MASK)
-						>> MTT_PSR_LEC_SHIFT;
+					enum ttcan_lec_type lec;
+
+					if (ir & MTT_IR_PEA_MASK)
+						lec = (psr & MTT_PSR_LEC_MASK)
+							>> MTT_PSR_LEC_SHIFT;
+					else
+						lec = (psr & MTT_PSR_DLEC_MASK)
+							>> MTT_PSR_DLEC_SHIFT;
 					work_done +=
 					    mttcan_handle_bus_err(dev, lec);
 					netdev_err(dev,	"IR = 0x%x PSR 0x%x\n",
@@ -672,8 +670,12 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			if (ir & MTT_IR_WDI_MASK)
 				netdev_warn(dev,
 					"Message RAM watchdog not handled\n");
-			ack = MTTCAN_ERR_INTR;
+		}
+
+		if (ir & MTT_IR_TOO_MASK) {
+			ack = MTT_IR_TOO_MASK;
 			ttcan_ir_write(priv->ttcan, ack);
+			netdev_warn(dev, "Rx timeout not handled\n");
 		}
 
 		/* High Priority Message */
@@ -698,25 +700,27 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			pr_debug("%s: buffer mesg received\n", __func__);
 
 		}
+
 		/* Handle RX Fifo interrupt */
 		if (ir & MTTCAN_RX_FIFO_INTR) {
 			if (ir & MTT_IR_RF1L_MASK) {
-				mttcan_handle_lost_frame(dev, 1);
-				work_done++;
 				ack = MTT_IR_RF1L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
+				mttcan_handle_lost_frame(dev, 1);
+				work_done++;
 			}
 			if (ir & MTT_IR_RF0L_MASK) {
-				mttcan_handle_lost_frame(dev, 0);
-				work_done++;
 				ack = MTT_IR_RF0L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
+				mttcan_handle_lost_frame(dev, 0);
+				work_done++;
 			}
 
 			if (ir & (MTT_IR_RF1F_MASK | MTT_IR_RF1W_MASK |
 				MTT_IR_RF1N_MASK)) {
-				ack = MTT_IR_RF1F_MASK | MTT_IR_RF1W_MASK |
-					MTT_IR_RF1N_MASK;
+				ack = ir & (MTT_IR_RF1F_MASK |
+					MTT_IR_RF1W_MASK |
+					MTT_IR_RF1N_MASK);
 				ttcan_ir_write(priv->ttcan, ack);
 
 				rec_msgs = ttcan_read_rx_fifo1(priv->ttcan);
@@ -729,8 +733,9 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			}
 			if (ir & (MTT_IR_RF0F_MASK | MTT_IR_RF0W_MASK |
 				MTT_IR_RF0N_MASK)) {
-				ack = MTT_IR_RF0F_MASK | MTT_IR_RF0W_MASK |
-					MTT_IR_RF0N_MASK;
+				ack = ir & (MTT_IR_RF0F_MASK |
+					MTT_IR_RF0W_MASK |
+					MTT_IR_RF0N_MASK);
 				ttcan_ir_write(priv->ttcan, ack);
 				rec_msgs = ttcan_read_rx_fifo0(priv->ttcan);
 				work_done +=
@@ -742,14 +747,14 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			}
 
 			if (ir & MTT_IR_RF0L_MASK) {
-				netdev_err(dev, "%s: some msgs lost on in Q0\n",
+				netdev_warn(dev, "%s: some msgs lost on in Q0\n",
 					__func__);
 				ack = MTT_IR_RF0L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 			}
 
 			if (ir & MTT_IR_RF1L_MASK) {
-				netdev_err(dev, "%s: some msgs lost on in Q1\n",
+				netdev_warn(dev, "%s: some msgs lost on in Q1\n",
 					__func__);
 				ack = MTT_IR_RF1L_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
@@ -765,20 +770,28 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 			ttcan_ir_write(priv->ttcan, ack);
 		}
 
+
 		/* Handle TX complete */
 		if (ir & MTTCAN_TX_INTR) {
 			/* Transmission cancellation finished */
-			if (ir & MTT_IR_TCF_MASK)
+			if (ir & MTT_IR_TCF_MASK) {
 				mttcan_tx_cancelled(dev);
-
-			if (ir & MTT_IR_TC_MASK)
+				ack = MTT_IR_TCF_MASK;
+				ttcan_ir_write(priv->ttcan, ack);
+			}
+			if (ir & MTT_IR_TC_MASK) {
 				mttcan_tx_complete(dev);
+				ack = MTT_IR_TC_MASK;
+				ttcan_ir_write(priv->ttcan, ack);
+			}
 
-			/* if (ir & MTT_IR_TFE_MASK)
-				netdev_warn(dev, "Tx Fifo Empty\n"); */
-
-			ack = MTTCAN_TX_INTR;
-			ttcan_ir_write(priv->ttcan, ack);
+			if (ir & MTT_IR_TFE_MASK) {
+				/*
+				 * netdev_info(dev, "Tx Fifo Empty %x\n", ir);
+				 */
+				ack = MTT_IR_TFE_MASK;
+				ttcan_ir_write(priv->ttcan, ack);
+			}
 		}
 		/* Handle Tx Event */
 		if (ir & MTTCAN_TX_EV_FIFO_INTR) {
@@ -791,7 +804,7 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 
 			if ((ir & MTT_IR_TEFL_MASK) &&
 				priv->ttcan->tx_config.evt_q_num)
-				netdev_err(dev, "Tx event lost\n");
+				netdev_warn(dev, "Tx event lost\n");
 
 			ack = MTTCAN_TX_EV_FIFO_INTR;
 			ttcan_ir_write(priv->ttcan, ack);
@@ -939,11 +952,15 @@ static void mttcan_controller_config(struct net_device *dev)
 static void mttcan_start(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
+	struct ttcan_controller *ttcan = priv->ttcan;
 	u32 psr;
 
 	mttcan_controller_config(dev);
 
 	priv->tx_next = priv->tx_echo = 0;
+
+	ttcan_clear_intr(ttcan);
+	ttcan_clear_tt_intr(ttcan);
 
 	ttcan_set_intrpts(priv->ttcan, 1);
 
@@ -951,15 +968,15 @@ static void mttcan_start(struct net_device *dev)
 	 * It is assumed the controller is reset durning probing time
 	 * It should be in sane state at first start but not guaranteed
 	 */
-	if (priv->ttcan->proto_state)
-		psr = priv->ttcan->proto_state;
+	if (ttcan->proto_state)
+		psr = ttcan->proto_state;
 	else
-		psr = ttcan_read_psr(priv->ttcan);
+		psr = ttcan_read_psr(ttcan);
 
 	if (psr & MTT_PSR_BO_MASK) {
 		/* Bus off */
 		priv->can.state = CAN_STATE_BUS_OFF;
-		ttcan_set_intrpts(priv->ttcan, 0);
+		ttcan_set_intrpts(ttcan, 0);
 		can_bus_off(dev);
 	} else if (psr & MTT_PSR_EP_MASK) {
 		/* Error Passive */
@@ -974,7 +991,7 @@ static void mttcan_start(struct net_device *dev)
 
 	/* start Tx/Rx and enable protected mode */
 	if (!priv->tt_param[0])
-		ttcan_reset_init(priv->ttcan);
+		ttcan_reset_init(ttcan);
 
 	if (priv->poll)
 		schedule_delayed_work(&priv->can_work,
@@ -1183,6 +1200,11 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 	if (can_is_canfd_skb(skb))
 		frame->flags |= CAN_FD_FLAG;
 
+	if (ttcan_tx_buffers_full(priv->ttcan)) {
+		netif_stop_queue(dev);
+		smp_mb();
+		return NETDEV_TX_BUSY;
+	}
 	/* try on buffers first */
 	msg_no = ttcan_tx_msg_buffer_write(priv->ttcan,
 			(struct ttcanfd_frame *)frame,
@@ -1193,10 +1215,10 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 				(struct ttcanfd_frame *)frame);
 
 	if (msg_no < 0) {
-		netdev_err(dev, "Tx message queue full\n");
+		netdev_warn(dev, "No Tx space left\n");
 		kfree_skb(skb);
 		dev->stats.tx_dropped++;
-		goto stopq;
+		return NETDEV_TX_OK;
 	}
 
 	can_put_echo_skb(skb, dev, msg_no);
@@ -1204,12 +1226,6 @@ static netdev_tx_t mttcan_start_xmit(struct sk_buff *skb,
 	priv->tx_next++;
 	priv->tx_object |= 1 << msg_no;
 	priv->tx_obj_cancelled &= ~(1 << msg_no);
-
-stopq:	/*if next tx is not possible stop the queue */
-	if (ttcan_tx_fifo_full(priv->ttcan)) {
-		netdev_err(dev, "Tx message queue full\n");
-		netif_stop_queue(dev);
-	}
 
 	return NETDEV_TX_OK;
 }

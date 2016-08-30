@@ -46,9 +46,8 @@
 #define MTTCAN_RX_FIFO_INTR     (0xFF)
 #define MTTCAN_RX_HP_INTR       (0x1 << 8)
 #define MTTCAN_TX_EV_FIFO_INTR  (0xF << 12)
-#define MTTCAN_DRX_INTR         (0x1 << 19)
 
-#define MTTCAN_ERR_INTR       (0x3FF7 << 16)
+#define MTTCAN_ERR_INTR       (0x1FF9 << 17)
 #define MTTCAN_BUS_OFF        (1 << 25)
 #define MTTCAN_ERR_WARN       (1 << 24)
 #define MTTCAN_ERR_PASS       (1 << 23)

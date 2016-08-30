@@ -403,6 +403,19 @@ int ttcan_tx_buff_req_pending(struct ttcan_controller *ttcan, u8 index)
 		return 0;
 }
 
+int ttcan_tx_buffers_full(struct ttcan_controller *ttcan)
+{
+	u32 txbrp_reg;
+	u32 mask = (1 << ttcan->mram_cfg[MRAM_TXB].num) - 1;
+
+	txbrp_reg = ttcan_read32(ttcan, ADR_MTTCAN_TXBRP);
+
+	if ((txbrp_reg & mask) == mask)
+		return 1;
+	else
+		return 0;
+}
+
 void ttcan_tx_ded_msg_write(struct ttcan_controller *ttcan,
 			    struct ttcanfd_frame *ttcanfd,
 			    u8 index, bool tt_en)
@@ -486,7 +499,7 @@ int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan)
 
 /* Queue Message in Tx Queue
  * Return
- *	-1 in case of error
+ *	-ve in case of error
  *      idx written buffer index
  */
 int ttcan_tx_fifo_queue_msg(struct ttcan_controller *ttcan,
@@ -500,10 +513,9 @@ int ttcan_tx_fifo_queue_msg(struct ttcan_controller *ttcan,
 	if ((txfqs_reg & MTT_TXFQS_TFQF_MASK) == 0) {
 		ttcan_tx_ded_msg_write(ttcan, ttcanfd, put_idx, 0);
 		return put_idx;
-	} else {
-		pr_err("%s: Tx queue/FIFO full\n", __func__);
-		return -ENOMEM;
 	}
+
+	return -ENOMEM;
 }
 
 /* Check tx fifo status
@@ -615,7 +627,6 @@ unsigned int ttcan_read_rx_fifo0(struct ttcan_controller *ttcan)
 	rxf0s_reg = ttcan_read32(ttcan, ADR_MTTCAN_RXF0S);
 
 	if (!(rxf0s_reg & MTT_RXF0S_F0FL_MASK)) {
-		pr_info("%s: Rx fifo0 empty\n", __func__);
 		return msgs_read;
 	}
 
@@ -663,7 +674,6 @@ unsigned int ttcan_read_rx_fifo1(struct ttcan_controller *ttcan)
 	rxf1s_reg = ttcan_read32(ttcan, ADR_MTTCAN_RXF1S);
 
 	if (!(rxf1s_reg & MTT_RXF1S_F1FL_MASK)) {
-		pr_info("%s: Rx fifo1 empty\n", __func__);
 		return msgs_read;
 	}
 

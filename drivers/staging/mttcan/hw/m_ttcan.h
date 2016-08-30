@@ -423,6 +423,8 @@ void ttcan_set_rx_buffers_elements(struct ttcan_controller *ttcan);
 
 int ttcan_set_tx_buffer_addr(struct ttcan_controller *ttcan);
 int ttcan_tx_fifo_full(struct ttcan_controller *ttcan);
+int ttcan_tx_buffers_full(struct ttcan_controller *ttcan);
+
 int ttcan_tx_fifo_queue_msg(struct ttcan_controller *ttcan,
 			    struct ttcanfd_frame *ttcanfd);
 int ttcan_tx_fifo_get_free_element(struct ttcan_controller *ttcan);

@@ -93,6 +93,7 @@ int nvdla_send_postfences(struct nvdla_task *task,
 	for (i = 0; i < num_postfences; i++, postfences++) {
 		fence.syncpoint_index = task->postfences[i].id;
 		fence.syncpoint_value = task->postfences[i].fence;
+		fence.type = task->postfences[i].fence_type;
 
 		err = copy_to_user(postfences, &fence,
 				sizeof(struct nvdla_fence));

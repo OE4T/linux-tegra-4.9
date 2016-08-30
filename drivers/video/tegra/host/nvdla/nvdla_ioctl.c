@@ -123,14 +123,19 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 	int err = 0;
 
 	/* make sure that device is powered on */
-	nvhost_module_busy(pdev);
+	err = nvhost_module_busy(pdev);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to power on\n");
+		err = -ENODEV;
+		goto fail_to_on;
+	}
 
 	/* allocate ping buffer */
 	ping_va = dma_alloc_attrs(&pdev->dev,
 				  DEBUG_BUFFER_SIZE, &ping_pa,
 				  GFP_KERNEL, &ping_attrs);
 	if (!ping_va) {
-		dev_err(&pdev->dev, "dma memory allocation failed for ping");
+		nvdla_dbg_err(pdev, "dma memory allocation failed for ping");
 		err = -ENOMEM;
 		goto fail_to_alloc;
 	}
@@ -146,7 +151,7 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 	/* wait for falcon to idle */
 	err = flcn_wait_idle(pdev, &timeout);
 	if (err != 0) {
-		dev_err(&pdev->dev, "failed for wait for idle in timeout");
+		nvdla_dbg_err(pdev, "failed for wait for idle in timeout");
 		goto fail_to_idle;
 	}
 
@@ -156,7 +161,7 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 	nvdla_dbg_info(pdev, "ping response [%d]", *ping_va);
 
 	if (args->out_response != args->in_challenge*4) {
-		dev_err(&pdev->dev, "ping cmd failed. Falcon is not active");
+		nvdla_dbg_err(pdev, "ping cmd failed. Falcon is not active");
 		err = -EINVAL;
 	}
 
@@ -166,6 +171,7 @@ fail_to_idle:
 			       ping_va, ping_pa, &attrs);
 fail_to_alloc:
 	nvhost_module_idle(pdev);
+fail_to_on:
 
 	return err;
 }
@@ -194,7 +200,7 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 			(uintptr_t)args->tasks;
 	num_tasks = args->num_tasks;
 
-	if (num_tasks <= 0 && num_tasks > MAX_TASKS_PER_SUBMIT)
+	if (num_tasks == 0 || num_tasks > MAX_TASKS_PER_SUBMIT)
 		return -EINVAL;
 
 	nvdla_dbg_info(pdev, "num of tasks [%d]", num_tasks);
@@ -258,7 +264,7 @@ static long nvdla_ioctl(struct file *file, unsigned int cmd,
 
 	/* check for valid IOCTL cmd */
 	if ((_IOC_TYPE(cmd) != NVHOST_NVDLA_IOCTL_MAGIC) ||
-	    (_IOC_NR(cmd) == 0) ||
+	    (_IOC_NR(cmd) == _IOC_NR(0)) ||
 	    (_IOC_NR(cmd) > NVDLA_IOCTL_CTRL_LAST) ||
 	    (_IOC_SIZE(cmd) > NVDLA_IOCTL_CTRL_MAX_ARG_SIZE)) {
 		return -ENOIOCTLCMD;

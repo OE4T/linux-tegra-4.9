@@ -423,6 +423,8 @@ static void pcie_aspm_cap_init(struct pcie_link_state *link, int blacklist)
 	pcie_aspm_configure_common_clock(link);
 
 	/* Get upstream/downstream components' register state */
+	memset((void *)&upreg, 0x0, sizeof(struct aspm_register_info));
+	memset((void *)&dwreg, 0x0, sizeof(struct aspm_register_info));
 	pcie_get_aspm_reg(parent, &upreg);
 	child = list_entry(linkbus->devices.next, struct pci_dev, bus_list);
 	pcie_get_aspm_reg(child, &dwreg);

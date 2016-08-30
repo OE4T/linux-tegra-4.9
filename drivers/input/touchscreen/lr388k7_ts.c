@@ -2744,9 +2744,13 @@ static void lr388k7_start(struct lr388k7 *ts)
 
 	usleep_range(5000, 6000);
 
-	if (ts->spi_intf_en)
-		pinctrl_select_state(ts->pinctrl,
+	if (ts->spi_intf_en) {
+		error = pinctrl_select_state(ts->pinctrl,
 			ts->spi_intf_en);
+		if (error < 0)
+			dev_warn(&g_spi->dev,
+				"setting spi interface pin state failed.\n");
+	}
 
 	/*
 	 * Enable clock, if necessary
@@ -2793,9 +2797,13 @@ static void lr388k7_ctrl_suspend(struct lr388k7 *ts)
 		return;
 	}
 
-	if (ts->spi_intf_dis)
-		pinctrl_select_state(ts->pinctrl,
+	if (ts->spi_intf_dis) {
+		error = pinctrl_select_state(ts->pinctrl,
 				ts->spi_intf_dis);
+		if (error < 0)
+			dev_warn(&g_spi->dev,
+				"setting spi interface pin state failed.\n");
+	}
 
 	/* Disable (3.3V) */
 	if (ts->regulator_3v3) {

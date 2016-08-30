@@ -1212,7 +1212,7 @@ tegra_ahci_platform_get_resources(struct tegra_ahci_priv *tegra)
 		hpriv->mmio = tegra->base_list[TEGRA_SATA_AHCI];
 
 	sz = sizeof(*hpriv->target_pwrs);
-	hpriv->target_pwrs = kzalloc(sz, GFP_KERNEL);
+	hpriv->target_pwrs = devm_kzalloc(dev, sz, GFP_KERNEL);
 	if (!hpriv->target_pwrs) {
 		ret = -ENOMEM;
 		goto err_out;

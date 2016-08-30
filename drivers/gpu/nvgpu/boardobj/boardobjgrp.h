@@ -310,7 +310,7 @@ do {                                                                          \
 	pboardobjgrp,                                      /* pBoardObjGrp */ \
 	&((pboardobjgrp)->pmu.getstatus),                  /* pCmd */         \
 	NV_PMU_##ENG##_CMD_ID_BOARDOBJ_GRP_GET_STATUS,        /* id */        \
-	NV_PMU_##ENG##_MSG_ID_BOARDOBJ_GRP_SET,               /* msgid */     \
+	NV_PMU_##ENG##_MSG_ID_BOARDOBJ_GRP_GET_STATUS,        /* msgid */     \
 	(u32)sizeof(union nv_pmu_##eng##_##class##_boardobjgrp_get_status_header_aligned), \
 	(u32)sizeof(union nv_pmu_##eng##_##class##_boardobj_get_status_union_aligned), \
 	(u32)sizeof(struct nv_pmu_##eng##_##class##_boardobj_grp_get_status))

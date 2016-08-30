@@ -25,6 +25,7 @@
 #define CTRL_VOLT_VOLT_DEV_VID_VSEL_MAX_ENTRIES              (8)
 #define CTRL_VOLT_DOMAIN_INVALID                             0x00
 #define CTRL_VOLT_DOMAIN_LOGIC                               0x01
+#define CLK_PROG_VFE_ENTRY_LOGIC                             0x00
 
 struct ctrl_volt_volt_rail_list_item {
 	u8 rail_idx;

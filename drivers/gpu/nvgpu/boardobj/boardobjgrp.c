@@ -173,6 +173,9 @@ u32 boardobjgrp_pmucmd_pmuinithandle_impl(struct gk20a *g,
 		goto boardobjgrp_pmucmd_pmuinithandle_exit;
 
 	gk20a_pmu_sysmem_surface_alloc(g, sysmem_desc, pcmd->fbsize);
+	/* we only have got sysmem later this will get copied to vidmem
+	surface*/
+	pcmd->surf.vidmem_desc.size = 0;
 
 	pcmd->buf = (struct nv_pmu_boardobjgrp_super *)sysmem_desc->cpu_va;
 
@@ -303,7 +306,7 @@ boardobjgrppmudatainit_super_done:
 u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 {
 	u32 status = 0;
-
+	struct boardobjgrp_pmu_cmd *pcmd = &pboardobjgrp->pmu.set;
 	gk20a_dbg_info("");
 
 	if (pboardobjgrp == NULL)
@@ -321,9 +324,9 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 	if (pboardobjgrp->pmu.set.id == BOARDOBJGRP_GRP_CMD_ID_INVALID)
 		return -EINVAL;
 
-	if ((pboardobjgrp->pmu.set.hdrsize == 0) ||
-		(pboardobjgrp->pmu.set.entrysize == 0) ||
-		(pboardobjgrp->pmu.set.buf == NULL))
+	if ((pcmd->hdrsize == 0) ||
+		(pcmd->entrysize == 0) ||
+		(pcmd->buf == NULL))
 		return -EINVAL;
 
 	/* If no objects in the group, return early */
@@ -331,9 +334,9 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 		return -EINVAL;
 
 	/* Initialize PMU buffer with BOARDOBJGRP data. */
-	memset(pboardobjgrp->pmu.set.buf, 0x0, pboardobjgrp->pmu.set.fbsize);
+	memset(pcmd->buf, 0x0, pcmd->fbsize);
 	status = pboardobjgrp->pmudatainit(g, pboardobjgrp,
-			pboardobjgrp->pmu.set.buf);
+			pcmd->buf);
 	if (status) {
 		gk20a_err(dev_from_gk20a(g),
 			"could not parse pmu data");
@@ -346,9 +349,19 @@ u32 boardobjgrp_pmuset_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp)
 	 */
 	pboardobjgrp->pmu.bset = false;
 
+	/*
+	 * alloc mem in vidmem & copy constructed pmu boardobjgrp data from
+	 * sysmem to vidmem
+	 */
+	if (pcmd->surf.vidmem_desc.size == 0) {
+		gk20a_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
+			pcmd->fbsize);
+	}
+	gk20a_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
+
 	/* Send the SET PMU CMD to the PMU */
 	status = boardobjgrp_pmucmdsend(g, pboardobjgrp,
-			&pboardobjgrp->pmu.set);
+			pcmd);
 	if (status) {
 		gk20a_err(dev_from_gk20a(g), "could not send SET CMD to PMU");
 		goto boardobjgrp_pmuset_exit;
@@ -365,6 +378,8 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	struct boardobjgrpmask *mask)
 {
 	u32 status  = 0;
+	struct boardobjgrp_pmu_cmd *pcmd = &pboardobjgrp->pmu.getstatus;
+	struct boardobjgrp_pmu_cmd *pset = &pboardobjgrp->pmu.set;
 
 	gk20a_dbg_info("");
 
@@ -383,9 +398,9 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 	if (pboardobjgrp->pmu.set.id == BOARDOBJGRP_GRP_CMD_ID_INVALID)
 		return -EINVAL;
 
-	if ((pboardobjgrp->pmu.set.hdrsize == 0) ||
-		(pboardobjgrp->pmu.set.entrysize == 0) ||
-		(pboardobjgrp->pmu.set.buf == NULL))
+	if ((pcmd->hdrsize == 0) ||
+		(pcmd->entrysize == 0) ||
+		(pcmd->buf == NULL))
 		return -EINVAL;
 
 	/* If no objects in the group, return early */
@@ -400,19 +415,28 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 		return -EINVAL;
 
 	/*
+	 * alloc mem in vidmem & copy constructed pmu boardobjgrp data from
+	 * sysmem to vidmem
+	 */
+	if (pcmd->surf.vidmem_desc.size == 0) {
+		gk20a_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
+			pcmd->fbsize);
+	}
+
+	/*
 	 * Initialize PMU buffer with the mask of BOARDOBJGRPs for which to
 	 * retrieve status
 	 */
 
-	memset(pboardobjgrp->pmu.getstatus.buf, 0x0,
-				pboardobjgrp->pmu.getstatus.fbsize);
+	memset(pcmd->buf, 0x0, pcmd->fbsize);
 	status = pboardobjgrp->pmuhdrdatainit(g, pboardobjgrp,
-				pboardobjgrp->pmu.getstatus.buf, mask);
+					pcmd->buf, mask);
 	if (status) {
 		gk20a_err(dev_from_gk20a(g), "could not init PMU HDR data");
 		goto boardobjgrp_pmugetstatus_exit;
 	}
 
+	gk20a_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pset->buf, pset->hdrsize);
 	/* Send the GET_STATUS PMU CMD to the PMU */
 	status = boardobjgrp_pmucmdsend(g, pboardobjgrp,
 				&pboardobjgrp->pmu.getstatus);
@@ -421,6 +445,9 @@ boardobjgrp_pmugetstatus_impl(struct gk20a *g, struct boardobjgrp *pboardobjgrp,
 				"could not send GET_STATUS cmd to PMU");
 		goto boardobjgrp_pmugetstatus_exit;
 	}
+
+	/*copy the data back to sysmem buffer that belongs to command*/
+	gk20a_mem_rd_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
 
 boardobjgrp_pmugetstatus_exit:
 	return status;
@@ -651,14 +678,10 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 	pgrpcmd->grp.entry_size = pcmd->entrysize;
 
 	/*
-	 * alloc mem in vidmem & copy constructed pmu boardobjgrp data from
-	 * sysmem to vidmem
+	 * copy vidmem information to boardobj_cmd_grp
 	 */
-	gk20a_pmu_vidmem_surface_alloc(g, &pcmd->surf.vidmem_desc,
-			pcmd->fbsize);
 	gk20a_pmu_surface_describe(g, &pcmd->surf.vidmem_desc,
 			&pgrpcmd->grp.fb);
-	gk20a_mem_wr_n(g, &pcmd->surf.vidmem_desc, 0, pcmd->buf, pcmd->fbsize);
 
 	/*
 	 * PMU reads command from sysmem so assigned

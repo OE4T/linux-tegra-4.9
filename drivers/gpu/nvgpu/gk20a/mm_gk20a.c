@@ -4800,6 +4800,7 @@ clean_up:
 	return err;
 }
 
+#ifdef CONFIG_DEBUG_FS
 void gk20a_mm_debugfs_init(struct device *dev)
 {
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
@@ -4812,6 +4813,7 @@ void gk20a_mm_debugfs_init(struct device *dev)
 	debugfs_create_bool("force_pramin", 0664, gpu_root,
 			   &g->mm.force_pramin);
 }
+#endif
 
 void gk20a_init_mm(struct gpu_ops *gops)
 {

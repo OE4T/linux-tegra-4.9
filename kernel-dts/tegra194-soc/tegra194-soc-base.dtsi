@@ -244,6 +244,10 @@
 			reg = <0x0 0x15880000 0x0 0x00040000>;
 			interrupts = <0 236 0x04>;
 
+			clocks = <&bpmp_clks TEGRA194_CLK_DLA0_CORE>,
+				 <&bpmp_clks TEGRA194_CLK_DLA0_FALCON>;
+			clock-names = "nvdla0", "nvdla0_flcn";
+
 			#stream-id-cells = <1>;
 		};
 

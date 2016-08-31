@@ -2411,7 +2411,7 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 		struct tegra_dc_imp_head_results *old_result = NULL;
 		struct tegra_dc_imp_head_results *new_result = NULL;
 		struct tegra_dc *other_dc;
-		u32 old_val, new_val;
+		u32 old_val = 0, new_val = 0;
 		u32 ctrl_num;
 
 		other_dc = tegra_dc_get_dc(i);
@@ -2422,7 +2422,12 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 		if (last_imp_settings) {
 			old_result = &last_imp_settings->imp_results[ctrl_num];
 			old_val = old_result->pool_config_entries_cursor;
-		} else {
+		} else if (other_dc->cursor.enabled) {
+			/*
+			 * If this cursor is currently enabled, take the active
+			 * mempool value into account. Else, treat this cursor
+			 * as having no mempool entries.
+			 */
 			old_val = nvdisp_ihub_cursor_pool_config_entries_f(
 					tegra_dc_readl(other_dc,
 					nvdisp_ihub_cursor_pool_config_r()));
@@ -2450,10 +2455,17 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 			 * the window state for the other heads isn't changing
 			 * here.
 			 */
+			old_val = 0;
 			if (old_result)
 				old_val =
 					old_result->pool_config_entries_win[j];
-			else
+			else if (WIN_IS_ENABLED(win))
+				/*
+				 * If this window is currently enabled, take the
+				 * active mempool value into account. Else,
+				 * treat this window as having no mempool
+				 * entries.
+				 */
 				old_val = win_ihub_pool_config_entries_f(
 						nvdisp_win_read(win,
 						win_ihub_pool_config_r()));
@@ -2501,7 +2513,13 @@ static void tegra_nvdisp_fill_tg_lookup_tables(int *dep_left,
 				cur_tg = res->thread_group_win[j];
 			} else {
 				win = tegra_dc_get_window(other_dc, win_id);
-				if (!win)
+
+				/*
+				 * If this window isn't currently enabled, treat
+				 * it as having no thread group and ignore the
+				 * active value.
+				 */
+				if (!win || !WIN_IS_ENABLED(win))
 					continue;
 
 				cur_tg = nvdisp_win_read(win,
@@ -2685,7 +2703,7 @@ static int tegra_nvdisp_generate_tg_ordering(struct tegra_dc *dc,
 				 * Only fill in the thread group request if the
 				 * thread group for this window is actually
 				 * changing.
-				*/
+				 */
 				if (new_tg != cur_tg) {
 					req = &reqs[dc_idx];
 					req->win_ids[req->num_wins] = win_id;

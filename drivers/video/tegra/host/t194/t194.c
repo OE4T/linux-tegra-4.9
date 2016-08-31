@@ -101,9 +101,11 @@ static int nvhost_nvdec_t194_finalize_poweron(struct platform_device *dev)
 {
 	int ret;
 
-	ret = tegra_kfuse_enable_sensing();
-	if (ret)
-		return ret;
+	if (!tegra_platform_is_vdk()) {
+		ret = tegra_kfuse_enable_sensing();
+		if (ret)
+			return ret;
+	}
 
 	/* Disable access to non-THI registers through channel */
 	host1x_writel(dev, flcn_thi_sec(), flcn_thi_sec_ch_lock());
@@ -117,7 +119,8 @@ static int nvhost_nvdec_t194_finalize_poweron(struct platform_device *dev)
 
 static int nvhost_nvdec_t194_prepare_poweroff(struct platform_device *dev)
 {
-	tegra_kfuse_disable_sensing();
+	if (!tegra_platform_is_vdk())
+		tegra_kfuse_disable_sensing();
 
 	return 0;
 }

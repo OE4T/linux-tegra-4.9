@@ -2628,6 +2628,15 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			!skip_buffer_refcounting;
 
 	if (need_job_tracking) {
+		/*
+		 * If the submit is to have deterministic latency and
+		 * job tracking is required, the channel must have
+		 * pre-allocated resources. Otherwise, we fail the submit here
+		 */
+		if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_DETERMINISTIC) &&
+				!channel_gk20a_is_prealloc_enabled(c))
+			return -EINVAL;
+
 		/* gk20a_channel_update releases this ref. */
 		err = gk20a_busy(g->dev);
 		if (err) {

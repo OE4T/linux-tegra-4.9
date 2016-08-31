@@ -994,6 +994,8 @@ struct nvgpu_fence {
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_SUPPRESS_WFI	(1 << 4)
 /* skip buffer refcounting during submit */
 #define NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING	(1 << 5)
+/* submit should exhibit deterministic latency */
+#define NVGPU_SUBMIT_GPFIFO_FLAGS_DETERMINISTIC	(1 << 6)
 
 struct nvgpu_submit_gpfifo_args {
 	__u64 gpfifo;

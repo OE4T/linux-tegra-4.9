@@ -13,6 +13,8 @@
 
 #include <linux/delay.h>
 #include <linux/types.h>
+#include <linux/firmware.h>
+#include <linux/pci.h>
 
 #include "gk20a/gk20a.h"
 #include "gm20b/fifo_gm20b.h"
@@ -29,8 +31,11 @@
 #define NV_PCFG 0x88000
 #define PCI_EXP_ROM_SIG 0xaa55
 #define PCI_EXP_ROM_SIG_NV 0x4e56
+#define ROM_FILE_PAYLOAD_OFFSET 0xa00
 #define PMU_BOOT_TIMEOUT_DEFAULT	100 /* usec */
 #define PMU_BOOT_TIMEOUT_MAX		2000000 /* usec */
+#define BIOS_OVERLAY_NAME "bios-%04x.rom"
+#define BIOS_OVERLAY_NAME_FORMATTED "bios-xxxx.rom"
 
 static u16 gm206_bios_rdu16(struct gk20a *g, int offset)
 {
@@ -724,34 +729,54 @@ static int gm206_bios_init(struct gk20a *g)
 	int i;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct dentry *d;
+	const struct firmware *bios_fw;
 	int err;
 	bool found = 0;
+	struct pci_dev *pdev = to_pci_dev(g->dev);
+	char rom_name[sizeof(BIOS_OVERLAY_NAME_FORMATTED)];
 
 	gk20a_dbg_fn("");
-	g->bios.data = kzalloc(BIOS_SIZE, GFP_KERNEL);
-	if (!g->bios.data)
-		return -ENOMEM;
 
-	gk20a_dbg_info("reading bios");
-	gk20a_writel(g, NV_PCFG + xve_rom_ctrl_r(),
-			xve_rom_ctrl_rom_shadow_disabled_f());
-	for (i = 0; i < BIOS_SIZE/4; i++) {
-		u32 val = be32_to_cpu(gk20a_readl(g, 0x300000 + i*4));
+	snprintf(rom_name, sizeof(rom_name), BIOS_OVERLAY_NAME, pdev->device);
+	gk20a_dbg_info("checking for VBIOS overlay %s", rom_name);
+	bios_fw = gk20a_request_firmware(g, rom_name);
+	if (bios_fw) {
+		gk20a_dbg_info("using VBIOS overlay");
+		g->bios.size = bios_fw->size - ROM_FILE_PAYLOAD_OFFSET;
+		g->bios.data = vmalloc(g->bios.size);
+		if (!g->bios.data)
+			return -ENOMEM;
 
-		g->bios.data[(i*4)] = (val >> 24) & 0xff;
-		g->bios.data[(i*4)+1] = (val >> 16) & 0xff;
-		g->bios.data[(i*4)+2] = (val >> 8) & 0xff;
-		g->bios.data[(i*4)+3] = val & 0xff;
+		memcpy(g->bios.data, &bios_fw->data[ROM_FILE_PAYLOAD_OFFSET],
+		       g->bios.size);
+
+		release_firmware(bios_fw);
+	} else {
+		gk20a_dbg_info("reading bios from EEPROM");
+		g->bios.size = BIOS_SIZE;
+		g->bios.data = vmalloc(BIOS_SIZE);
+		if (!g->bios.data)
+			return -ENOMEM;
+		gk20a_writel(g, NV_PCFG + xve_rom_ctrl_r(),
+				xve_rom_ctrl_rom_shadow_disabled_f());
+		for (i = 0; i < g->bios.size/4; i++) {
+			u32 val = be32_to_cpu(gk20a_readl(g, 0x300000 + i*4));
+
+			g->bios.data[(i*4)] = (val >> 24) & 0xff;
+			g->bios.data[(i*4)+1] = (val >> 16) & 0xff;
+			g->bios.data[(i*4)+2] = (val >> 8) & 0xff;
+			g->bios.data[(i*4)+3] = val & 0xff;
+		}
+		gk20a_writel(g, NV_PCFG + xve_rom_ctrl_r(),
+				xve_rom_ctrl_rom_shadow_enabled_f());
 	}
-	gk20a_writel(g, NV_PCFG + xve_rom_ctrl_r(),
-			xve_rom_ctrl_rom_shadow_enabled_f());
 
 	err = gm206_bios_parse_rom(g);
 	if (err)
 		return err;
 
 	gk20a_dbg_info("read bios");
-	for (i = 0; i < BIOS_SIZE; i++) {
+	for (i = 0; i < g->bios.size; i++) {
 		if (gm206_bios_rdu16(g, i) == BIT_HEADER_ID &&
 		    gm206_bios_rdu32(g, i+2) ==  BIT_HEADER_SIGNATURE) {
 			gm206_bios_parse_bit(g, i);
@@ -764,7 +789,7 @@ static int gm206_bios_init(struct gk20a *g)
 		return -EINVAL;
 	}
 	g->bios_blob.data = g->bios.data;
-	g->bios_blob.size = BIOS_SIZE;
+	g->bios_blob.size = g->bios.size;
 
 	d = debugfs_create_blob("bios", S_IRUGO, platform->debugfs,
 			&g->bios_blob);

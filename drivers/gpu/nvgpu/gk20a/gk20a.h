@@ -709,6 +709,7 @@ struct nvgpu_bios_ucode {
 
 struct nvgpu_bios {
 	u8 *data;
+	size_t size;
 
 	struct nvgpu_bios_ucode devinit;
 	struct nvgpu_bios_ucode preos;

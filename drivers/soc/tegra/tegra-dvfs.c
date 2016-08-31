@@ -473,7 +473,7 @@ static struct dvfs *tegra_clk_to_dvfs(struct clk *c)
 
 	list_for_each_entry(rail, &dvfs_rail_list, node) {
 		list_for_each_entry(d, &rail->dvfs, reg_node) {
-			if (c == d->clk)
+			if (clk_is_match(c, d->clk))
 				return d;
 		}
 	}
@@ -680,7 +680,6 @@ EXPORT_SYMBOL(tegra_dvfs_get_freqs);
 unsigned long tegra_dvfs_get_maxrate(struct clk *c)
 {
 	unsigned long rate = 0;
-	struct dvfs *d;
 	int err, num_freqs;
 	unsigned long *freqs;
 

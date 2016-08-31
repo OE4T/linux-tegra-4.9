@@ -26,8 +26,13 @@ struct clk_domain;
 /*data and function definition to talk to driver*/
 u32 clk_domain_sw_setup(struct gk20a *g);
 u32 clk_domain_pmu_setup(struct gk20a *g);
+
 typedef u32 clkproglink(struct gk20a *g, struct clk_pmupstate *pclk,
 			struct clk_domain *pdomain);
+
+typedef u32 clkvfsearch(struct gk20a *g, struct clk_pmupstate *pclk,
+			struct clk_domain *pdomain, u16 *clkmhz,
+			u32 *voltuv, u8 rail);
 struct clk_domains {
 	struct boardobjgrp_e32 super;
 	u8 n_num_entries;
@@ -55,6 +60,7 @@ struct clk_domain {
 	u8 ratio_domain;
 	u8 usage;
 	clkproglink *clkdomainclkproglink;
+	clkvfsearch *clkdomainclkvfsearch;
 };
 
 struct clk_domain_3x {
@@ -91,5 +97,9 @@ struct clk_domain_3x_slave {
 };
 
 u32 clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk);
+
+#define CLK_CLK_DOMAIN_GET(pclk, idx)                                   \
+	((struct clk_domain *)BOARDOBJGRP_OBJ_GET_BY_IDX(		\
+		&pclk->clk_domainobjs.super.super, (u8)(idx)))
 
 #endif

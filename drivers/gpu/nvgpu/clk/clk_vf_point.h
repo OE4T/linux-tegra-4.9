@@ -46,8 +46,8 @@ struct clk_vf_point_freq {
 };
 
 #define CLK_CLK_VF_POINT_GET(pclk, idx)                                        \
-	((struct clk_vf_point)BOARDOBJGRP_OBJ_GET_BY_IDX(                      \
-		&pclk->vfpoints.super.super, (u8)(idx)))
+	((struct clk_vf_point *)BOARDOBJGRP_OBJ_GET_BY_IDX(                    \
+		&pclk->clk_vf_pointobjs.super.super, (u8)(idx)))
 
 #define clkvfpointpairget(pvfpoint)                                            \
 	(&((pvfpoint)->pair))
@@ -65,6 +65,9 @@ struct clk_vf_point_freq {
 #define clkvfpointvoltageuvset(pgpu, pvfpoint, _voltageuv)                     \
 	CTRL_CLK_VF_PAIR_VOLTAGE_UV_SET(clkvfpointpairget(pvfpoint),           \
 	_voltageuv)
+
+#define clkvfpointvoltageuvget(pgpu, pvfpoint)                          \
+	CTRL_CLK_VF_PAIR_VOLTAGE_UV_GET(clkvfpointpairget(pvfpoint))	\
 
 struct clk_vf_point *construct_clk_vf_point(struct gk20a *g, void *pargs);
 

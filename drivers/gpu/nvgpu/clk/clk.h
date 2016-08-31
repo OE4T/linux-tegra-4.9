@@ -84,5 +84,13 @@ struct vbios_clocks_table_1x_hal_clock_entry {
 
 u32 clk_pmu_vf_inject(struct gk20a *g);
 u32 clk_pmu_vin_load(struct gk20a *g);
+u32 clk_domain_print_vf_table(struct gk20a *g, u32 clkapidomain);
+u32 clk_domain_get_f_or_v
+(
+	struct gk20a *g,
+	u32 clkapidomain,
+	u16 *pclkmhz,
+	u32 *pvoltuv
+);
 
 #endif

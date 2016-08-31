@@ -29,6 +29,7 @@ static struct clk_prog *construct_clk_prog(struct gk20a *g, void *pargs);
 static u32 devinit_get_clk_prog_table(struct gk20a *g,
 	struct clk_progs *pprogobjs);
 static vf_flatten vfflatten_prog_1x_master;
+static vf_lookup vflookup_prog_1x_master;
 
 static u32 _clk_progs_pmudatainit(struct gk20a *g,
 				  struct boardobjgrp *pboardobjgrp,
@@ -603,6 +604,9 @@ static u32 clk_prog_construct_1x_master(struct gk20a *g,
 	pclkprog->vfflatten =
 			vfflatten_prog_1x_master;
 
+	pclkprog->vflookup =
+			vflookup_prog_1x_master;
+
 	pclkprog->p_vf_entries = (struct ctrl_clk_clk_prog_1x_master_vf_entry *)
 		kzalloc(vfsize, GFP_KERNEL);
 
@@ -830,4 +834,153 @@ static u32 vfflatten_prog_1x_master(struct gk20a *g,
 done:
 	gk20a_dbg_info("done status %x", status);
 	return status;
+}
+
+static u32 vflookup_prog_1x_master
+(
+	struct gk20a *g,
+	struct clk_pmupstate *pclk,
+	struct clk_prog_1x_master *p1xmaster,
+	u8 *slave_clk_domain,
+	u16 *pclkmhz,
+	u32 *pvoltuv,
+	u8 rail
+)
+{
+	u8 j;
+	struct ctrl_clk_clk_prog_1x_master_vf_entry
+		*pvfentry;
+	struct clk_vf_point *pvfpoint;
+	struct clk_progs *pclkprogobjs;
+	struct clk_prog_1x_master_ratio *p1xmasterratio;
+	u16 clkmhz;
+	u32 voltuv;
+	u8 slaveentrycount;
+	u8 i;
+	struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry *pslaveents;
+
+	if ((*pclkmhz != 0) && (*pvoltuv != 0))
+		return -EINVAL;
+
+	pclkprogobjs = &(pclk->clk_progobjs);
+
+	slaveentrycount = pclkprogobjs->slave_entry_count;
+
+	if (pclkprogobjs->vf_entry_count >
+		CTRL_CLK_CLK_PROG_1X_MASTER_VF_ENTRY_MAX_ENTRIES)
+		return -EINVAL;
+
+	if (rail >= pclkprogobjs->vf_entry_count)
+		return -EINVAL;
+
+	pvfentry =  p1xmaster->p_vf_entries;
+
+	pvfentry = (struct ctrl_clk_clk_prog_1x_master_vf_entry *)(
+			(u8 *)pvfentry +
+			(sizeof(struct ctrl_clk_clk_prog_1x_master_vf_entry) *
+			(rail+1)));
+
+	clkmhz = *pclkmhz;
+	voltuv = *pvoltuv;
+
+	/*if domain is slave domain and freq is input
+		then derive master clk */
+	if ((slave_clk_domain != NULL) && (*pclkmhz != 0)) {
+		if (p1xmaster->super.super.super.implements(g,
+			&p1xmaster->super.super.super,
+			CTRL_CLK_CLK_PROG_TYPE_1X_MASTER_RATIO)) {
+
+			p1xmasterratio =
+			(struct clk_prog_1x_master_ratio *)p1xmaster;
+			pslaveents = p1xmasterratio->p_slave_entries;
+			for (i = 0; i < slaveentrycount;  i++) {
+				if (pslaveents->clk_dom_idx ==
+					*slave_clk_domain)
+					break;
+				pslaveents++;
+			}
+			if (i == slaveentrycount)
+				return -EINVAL;
+			clkmhz = (clkmhz * 100)/pslaveents->ratio;
+		} else {
+			/* only support ratio for now */
+			return -EINVAL;
+		}
+	}
+
+	/* if both volt and clks are zero simply print*/
+	if ((*pvoltuv == 0) && (*pclkmhz == 0)) {
+		for (j = pvfentry->vf_point_idx_first;
+			j <= pvfentry->vf_point_idx_last; j++) {
+			pvfpoint = CLK_CLK_VF_POINT_GET(pclk, j);
+			gk20a_err(dev_from_gk20a(g), "v %x c %x",
+				clkvfpointvoltageuvget(g, pvfpoint),
+				clkvfpointfreqmhzget(g, pvfpoint));
+		}
+		return -EINVAL;
+	}
+	/* start looking up f for v for v for f */
+	/* looking for volt? */
+	if (*pvoltuv == 0) {
+		pvfpoint = CLK_CLK_VF_POINT_GET(pclk,
+				pvfentry->vf_point_idx_last);
+		/* above range? */
+		if (clkmhz > clkvfpointfreqmhzget(g, pvfpoint))
+			return -EINVAL;
+
+		for (j = pvfentry->vf_point_idx_last;
+			j >= pvfentry->vf_point_idx_first; j--) {
+			pvfpoint = CLK_CLK_VF_POINT_GET(pclk, j);
+			if (clkmhz <= clkvfpointfreqmhzget(g, pvfpoint))
+				voltuv = clkvfpointvoltageuvget(g, pvfpoint);
+			else
+				break;
+		}
+	} else {	/* looking for clk? */
+
+		pvfpoint = CLK_CLK_VF_POINT_GET(pclk,
+				pvfentry->vf_point_idx_first);
+		/* below range? */
+		if (voltuv < clkvfpointvoltageuvget(g, pvfpoint))
+			return -EINVAL;
+
+		for (j = pvfentry->vf_point_idx_first;
+			j <= pvfentry->vf_point_idx_last; j++) {
+			pvfpoint = CLK_CLK_VF_POINT_GET(pclk, j);
+			if (voltuv >= clkvfpointvoltageuvget(g, pvfpoint))
+				clkmhz = clkvfpointfreqmhzget(g, pvfpoint);
+			else
+				break;
+		}
+	}
+
+	/*if domain is slave domain and freq was looked up
+		then derive slave clk */
+	if ((slave_clk_domain != NULL) && (*pclkmhz == 0)) {
+		if (p1xmaster->super.super.super.implements(g,
+			&p1xmaster->super.super.super,
+			CTRL_CLK_CLK_PROG_TYPE_1X_MASTER_RATIO)) {
+
+			p1xmasterratio =
+			(struct clk_prog_1x_master_ratio *)p1xmaster;
+			pslaveents = p1xmasterratio->p_slave_entries;
+			for (i = 0; i < slaveentrycount;  i++) {
+				if (pslaveents->clk_dom_idx ==
+					*slave_clk_domain)
+					break;
+				pslaveents++;
+			}
+			if (i == slaveentrycount)
+				return -EINVAL;
+			clkmhz = (clkmhz * pslaveents->ratio)/100;
+		} else {
+			/* only support ratio for now */
+			return -EINVAL;
+		}
+	}
+	*pclkmhz = clkmhz;
+	*pvoltuv = voltuv;
+	if ((clkmhz == 0) || (voltuv == 0))
+		return -EINVAL;
+	return 0;
 }

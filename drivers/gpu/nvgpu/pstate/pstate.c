@@ -96,6 +96,10 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 		return err;
 
 	err = clk_pmu_vf_inject(g);
+	if (err)
+		return err;
+
+	err = clk_vf_point_cache(g);
 	return err;
 }
 

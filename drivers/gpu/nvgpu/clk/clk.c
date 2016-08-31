@@ -188,3 +188,51 @@ u32 clk_pmu_vf_inject(struct gk20a *g)
 done:
 	return status;
 }
+
+u32 clk_domain_print_vf_table(struct gk20a *g, u32 clkapidomain)
+{
+	u32 status = -EINVAL;
+	struct clk_domain *pdomain;
+	u8 i;
+	struct clk_pmupstate *pclk = &g->clk_pmu;
+	u16 clkmhz = 0;
+	u32 volt = 0;
+
+	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
+			struct clk_domain *, pdomain, i) {
+		if (pdomain->api_domain == clkapidomain) {
+			status = pdomain->clkdomainclkvfsearch(g, pclk,
+				pdomain, &clkmhz, &volt,
+				CLK_PROG_VFE_ENTRY_LOGIC);
+			return status;
+		}
+	}
+	return status;
+}
+
+u32 clk_domain_get_f_or_v(
+	struct gk20a *g,
+	u32 clkapidomain,
+	u16 *pclkmhz,
+	u32 *pvoltuv
+)
+{
+	u32 status = -EINVAL;
+	struct clk_domain *pdomain;
+	u8 i;
+	struct clk_pmupstate *pclk = &g->clk_pmu;
+
+	if ((pclkmhz == NULL) || (pvoltuv == NULL))
+		return -EINVAL;
+
+	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
+			struct clk_domain *, pdomain, i) {
+		if (pdomain->api_domain == clkapidomain) {
+			status = pdomain->clkdomainclkvfsearch(g, pclk,
+				pdomain, pclkmhz, pvoltuv,
+				CLK_PROG_VFE_ENTRY_LOGIC);
+			return status;
+		}
+	}
+	return status;
+}

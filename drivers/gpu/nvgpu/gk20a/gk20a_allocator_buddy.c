@@ -1078,6 +1078,7 @@ static int gk20a_buddy_alloc_inited(struct gk20a_allocator *a)
 {
 	struct gk20a_buddy_allocator *ba = a->priv;
 
+	rmb();
 	return ba->initialized;
 }
 
@@ -1284,6 +1285,7 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 	if (err)
 		goto fail;
 
+	wmb();
 	a->initialized = 1;
 
 	gk20a_init_alloc_debug(__a);

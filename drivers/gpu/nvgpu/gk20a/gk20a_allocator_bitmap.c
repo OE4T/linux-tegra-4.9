@@ -42,6 +42,7 @@ static int gk20a_bitmap_alloc_inited(struct gk20a_allocator *a)
 {
 	struct gk20a_bitmap_allocator *ba = a->priv;
 
+	rmb();
 	return ba->inited;
 }
 
@@ -405,6 +406,7 @@ int gk20a_bitmap_allocator_init(struct gk20a_allocator *__a,
 	if (!a->bitmap)
 		goto fail;
 
+	wmb();
 	a->inited = true;
 
 	gk20a_init_alloc_debug(__a);

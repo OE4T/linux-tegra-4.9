@@ -81,6 +81,7 @@
 				target = <&sdmmc1>;
 				_overlay_ {
 					cd-gpios = <&tegra_gpio TEGRA_GPIO(P, 5) 0>;
+					nvidia,cd-wakeup-capable;
 				};
 			};
 		};

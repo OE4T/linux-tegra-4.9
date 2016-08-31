@@ -27,6 +27,8 @@
 #define BIT_HEADER_SIGNATURE 0x00544942
 #define BIOS_SIZE 0x40000
 #define NV_PCFG 0x88000
+#define PCI_EXP_ROM_SIG 0xaa55
+#define PCI_EXP_ROM_SIG_NV 0x4e56
 #define PMU_BOOT_TIMEOUT_DEFAULT	100 /* usec */
 #define PMU_BOOT_TIMEOUT_MAX		2000000 /* usec */
 
@@ -183,7 +185,7 @@ struct pci_ext_data_struct {
 	u8 flags;
 } __packed;
 
-static void gm206_bios_parse_rom(struct gk20a *g)
+static int gm206_bios_parse_rom(struct gk20a *g)
 {
 	int offset = 0;
 	int last = 0;
@@ -197,6 +199,12 @@ static void gm206_bios_parse_rom(struct gk20a *g)
 		gk20a_dbg_fn("pci rom sig %04x ptr %04x block %x",
 				pci_rom->sig, pci_rom->pci_data_struct_ptr,
 				pci_rom->size_of_block);
+
+		if (pci_rom->sig != PCI_EXP_ROM_SIG &&
+		    pci_rom->sig != PCI_EXP_ROM_SIG_NV) {
+			gk20a_err(g->dev, "invalid VBIOS signature");
+			return -EINVAL;
+		}
 
 		pci_data =
 			(struct pci_data_struct *)
@@ -233,6 +241,8 @@ static void gm206_bios_parse_rom(struct gk20a *g)
 			last = pci_data->last_image;
 		}
 	}
+
+	return 0;
 }
 
 static void gm206_bios_parse_nvinit_ptrs(struct gk20a *g, int offset)
@@ -698,6 +708,7 @@ static int gm206_bios_init(struct gk20a *g)
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
 	struct dentry *d;
 	int err;
+	bool found = 0;
 
 	gk20a_dbg_fn("");
 	g->bios.data = kzalloc(BIOS_SIZE, GFP_KERNEL);
@@ -718,15 +729,23 @@ static int gm206_bios_init(struct gk20a *g)
 	gk20a_writel(g, NV_PCFG + xve_rom_ctrl_r(),
 			xve_rom_ctrl_rom_shadow_enabled_f());
 
-	gm206_bios_parse_rom(g);
+	err = gm206_bios_parse_rom(g);
+	if (err)
+		return err;
+
 	gk20a_dbg_info("read bios");
 	for (i = 0; i < BIOS_SIZE; i++) {
 		if (gm206_bios_rdu16(g, i) == BIT_HEADER_ID &&
 		    gm206_bios_rdu32(g, i+2) ==  BIT_HEADER_SIGNATURE) {
 			gm206_bios_parse_bit(g, i);
+			found = true;
 		}
 	}
 
+	if (!found) {
+		gk20a_err(g->dev, "no valid VBIOS found");
+		return -EINVAL;
+	}
 	g->bios_blob.data = g->bios.data;
 	g->bios_blob.size = BIOS_SIZE;
 

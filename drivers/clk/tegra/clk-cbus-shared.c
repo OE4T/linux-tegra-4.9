@@ -779,6 +779,9 @@ static void sbus_build_round_table(struct clk_hw *hw)
 	num_freqs = 0;
 #endif
 	if (err < 0 || num_freqs == 0) {
+		if (sbus->u.system.fallback)
+			return;
+
 		sbus->u.system.round_table =
 			kzalloc(sizeof(struct clk_div_sel) * 3, GFP_KERNEL);
 		if (!sbus->u.system.round_table) {
@@ -796,8 +799,12 @@ static void sbus_build_round_table(struct clk_hw *hw)
 		}
 		sbus_build_round_table_one(sbus, sbus->max_rate, j++);
 		sbus->u.system.round_table_size = j;
+		sbus->u.system.fallback = true;
 		return;
 	}
+
+	if (sbus->u.system.fallback)
+		kfree(sbus->u.system.round_table);
 
 	sbus->u.system.round_table =
 		kzalloc(num_freqs * sizeof(struct clk_div_sel), GFP_KERNEL);
@@ -831,6 +838,7 @@ static void sbus_build_round_table(struct clk_hw *hw)
 		sbus_build_round_table_one(sbus, rate, j++);
 	}
 	sbus->u.system.round_table_size = j;
+	sbus->u.system.fallback = false;
 }
 
 static long clk_system_round_rate(struct clk_hw *hw, unsigned long rate,
@@ -839,7 +847,7 @@ static long clk_system_round_rate(struct clk_hw *hw, unsigned long rate,
 	struct tegra_clk_cbus_shared *system = to_clk_cbus_shared(hw);
 	int i = 0;
 
-	if (!system->u.system.round_table_size) {
+	if (!system->u.system.round_table_size || system->u.system.fallback) {
 		sbus_build_round_table(hw);
 		if (!system->u.system.round_table_size) {
 			WARN(1, "Invalid sbus round table\n");

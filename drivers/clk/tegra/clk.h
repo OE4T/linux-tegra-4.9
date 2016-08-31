@@ -894,6 +894,7 @@ struct tegra_clk_cbus_shared {
 			struct clk_hw	*ahb_bus;
 			unsigned long	threshold;
 			int round_table_size;
+			bool fallback;
 			struct clk_div_sel *round_table;
 		} system;
 		struct {

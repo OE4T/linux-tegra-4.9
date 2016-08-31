@@ -25,6 +25,8 @@
 #include <linux/of_gpio.h>
 #include <linux/backlight.h>
 #include <linux/iommu.h>
+#include <linux/memblock.h>
+#include <linux/bootmem.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
 
@@ -143,6 +145,20 @@ static int __init tegra_bootloader_fb_arg(char *options)
 
 	pr_info("Found tegra_fbmem: %08llx@%08llx\n",
 		(u64)tegra_bootloader_fb_size, (u64)tegra_bootloader_fb_start);
+
+	if (tegra_bootloader_fb_size) {
+		tegra_bootloader_fb_size = PAGE_ALIGN(tegra_bootloader_fb_size);
+
+		if (memblock_reserve(tegra_bootloader_fb_start,
+				tegra_bootloader_fb_size)) {
+			pr_err("Failed to reserve bootloader fb %08llx@%08llx\n",
+				(u64)tegra_bootloader_fb_size,
+				(u64)tegra_bootloader_fb_start);
+			tegra_bootloader_fb_start = 0;
+			tegra_bootloader_fb_size = 0;
+		}
+	}
+
 	return 0;
 }
 early_param("tegra_fbmem", tegra_bootloader_fb_arg);
@@ -158,6 +174,20 @@ static int __init tegra_bootloader_fb2_arg(char *options)
 	pr_info("Found tegra_fbmem2: %08llx@%08llx\n",
 		(u64)tegra_bootloader_fb2_size,
 		(u64)tegra_bootloader_fb2_start);
+
+	if (tegra_bootloader_fb2_size) {
+		tegra_bootloader_fb2_size =
+				PAGE_ALIGN(tegra_bootloader_fb2_size);
+		if (memblock_reserve(tegra_bootloader_fb2_start,
+				tegra_bootloader_fb2_size)) {
+			pr_err("Failed to reserve bootloader fb2 %08llx@%08llx\n",
+				(u64)tegra_bootloader_fb2_size,
+				(u64)tegra_bootloader_fb2_start);
+			tegra_bootloader_fb2_start = 0;
+			tegra_bootloader_fb2_size = 0;
+		}
+	}
+
 	return 0;
 }
 early_param("tegra_fbmem2", tegra_bootloader_fb2_arg);
@@ -173,6 +203,20 @@ static int __init tegra_bootloader_fb3_arg(char *options)
 	pr_info("Found tegra_fbmem3: %08llx@%08llx\n",
 		(u64)tegra_bootloader_fb3_size,
 		(u64)tegra_bootloader_fb3_start);
+
+	if (tegra_bootloader_fb3_size) {
+		tegra_bootloader_fb3_size =
+				PAGE_ALIGN(tegra_bootloader_fb3_size);
+		if (memblock_reserve(tegra_bootloader_fb3_start,
+				tegra_bootloader_fb3_size)) {
+			pr_err("Failed to reserve bootloader fb3 %08llx@%08llx\n",
+				(u64)tegra_bootloader_fb3_size,
+				(u64)tegra_bootloader_fb3_start);
+			tegra_bootloader_fb3_start = 0;
+			tegra_bootloader_fb3_size = 0;
+		}
+	}
+
 	return 0;
 }
 early_param("tegra_fbmem3", tegra_bootloader_fb3_arg);
@@ -215,6 +259,36 @@ static int disp_fb_linear_set(void)
 	return 0;
 }
 arch_initcall(disp_fb_linear_set);
+
+int __init tegra_release_bootloader_fb(void)
+{
+	if (tegra_bootloader_fb_size) {
+		if (memblock_free(tegra_bootloader_fb_start,
+						tegra_bootloader_fb_size))
+			pr_err("Failed to free bootloader fb.\n");
+		else
+			free_bootmem_late(tegra_bootloader_fb_start,
+						tegra_bootloader_fb_size);
+	}
+	if (tegra_bootloader_fb2_size) {
+		if (memblock_free(tegra_bootloader_fb2_start,
+						tegra_bootloader_fb2_size))
+			pr_err("Failed to free bootloader fb2.\n");
+		else
+			free_bootmem_late(tegra_bootloader_fb2_start,
+						tegra_bootloader_fb2_size);
+	}
+	if (tegra_bootloader_fb3_size) {
+		if (memblock_free(tegra_bootloader_fb3_start,
+						tegra_bootloader_fb3_size))
+			pr_err("Failed to free bootloader fb3.\n");
+		else
+			free_bootmem_late(tegra_bootloader_fb3_start,
+						tegra_bootloader_fb3_size);
+	}
+	return 0;
+}
+late_initcall(tegra_release_bootloader_fb);
 
 int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)
 {

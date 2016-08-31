@@ -172,12 +172,13 @@ static inline void pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
 		gk20a_readl(g, start_reg);
 		gk20a_pramin_exit(g, mem, chunk);
 
-		offset += n / sizeof(u32);
 		size -= n;
 
 		if (n == (chunk->length - offset)) {
 			chunk = list_next_entry(chunk, list_entry);
 			offset = 0;
+		} else {
+			offset += n / sizeof(u32);
 		}
 	}
 }

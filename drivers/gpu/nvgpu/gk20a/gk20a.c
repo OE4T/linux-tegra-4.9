@@ -2098,11 +2098,6 @@ gk20a_request_firmware(struct gk20a *g, const char *fw_name)
 	}
 #endif
 
-	if (!fw) {
-		dev_err(dev, "failed to get firmware\n");
-		return NULL;
-	}
-
 	return fw;
 }
 

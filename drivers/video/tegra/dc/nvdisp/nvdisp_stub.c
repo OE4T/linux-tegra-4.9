@@ -126,16 +126,10 @@ int nvdisp_register_backlight_notifier(struct tegra_dc *dc)
 }
 
 /* Update this after carve out is defined */
-void tegra_get_fb_resource(struct resource *fb_res)
+void tegra_get_fb_resource(struct resource *fb_res, int instance)
 {
 	fb_res->start = 0;
 	fb_res->end = 0;
-}
-
-void tegra_get_fb2_resource(struct resource *fb2_res)
-{
-	fb2_res->start = 0;
-	fb2_res->end = 0;
 }
 
 int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)

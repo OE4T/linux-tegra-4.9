@@ -4690,7 +4690,7 @@ u64 gk20a_mm_inst_block_addr(struct gk20a *g, struct mem_desc *inst_block)
 	if (g->mm.has_physical_mode)
 		addr = gk20a_mem_phys(inst_block);
 	else
-		addr = gk20a_mm_smmu_vaddr_translate(g, sg_dma_address(inst_block->sgt->sgl));
+		addr = gk20a_mem_get_base_addr(g, inst_block, 0);
 
 	return addr;
 }

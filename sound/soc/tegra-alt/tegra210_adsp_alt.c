@@ -113,6 +113,7 @@ struct tegra210_adsp_app {
 	spinlock_t lock;
 	void *private_data;
 	int (*msg_handler)(struct tegra210_adsp_app *, apm_msg_t *);
+	struct work_struct *override_freq_work;
 };
 
 struct tegra210_adsp_pcm_rtd {
@@ -138,6 +139,7 @@ struct tegra210_adsp {
 	struct clk *ahub_clk;
 	struct clk *ape_clk;
 	struct clk *apb2ape_clk;
+	struct work_struct override_freq_work;
 	uint32_t i2s_rate;
 	struct mutex mutex;
 	int init_done;
@@ -635,7 +637,10 @@ static int tegra210_adsp_eavbdma_params_msg(struct tegra210_adsp_app *app,
 	return tegra210_adsp_send_msg(app, &apm_msg, flags);
 }
 
-
+static void tegra_adsp_override_freq_worker(struct work_struct *work)
+{
+	adsp_override_freq(INT_MAX);
+}
 
 static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 					int32_t state, uint32_t flags)
@@ -650,7 +655,7 @@ static int tegra210_adsp_send_state_msg(struct tegra210_adsp_app *app,
 	/* Spike ADSP freq to max when app transitions to active */
 	/* state; DFS will thereafter find appropriate rate      */
 	if (state == nvfx_state_active)
-		adsp_override_freq(INT_MAX);
+		schedule_work(app->override_freq_work);
 
 	return tegra210_adsp_send_msg(app, &apm_msg, flags);
 }
@@ -750,6 +755,7 @@ static int tegra210_adsp_app_init(struct tegra210_adsp *adsp,
 
 	app->adsp = adsp;
 	app->msg_handler = tegra210_adsp_app_default_msg_handler;
+	app->override_freq_work = &adsp->override_freq_work;
 	app->plugin = PLUGIN_SHARED_MEM(app->info->mem.shared);
 	if (IS_APM_IN(app->reg)) {
 		uint32_t apm_out_reg = APM_OUT_START +
@@ -3817,6 +3823,7 @@ static int tegra210_adsp_audio_platform_probe(struct platform_device *pdev)
 
 	/* TODO: Add mixer control to set I2S playback rate */
 	adsp->i2s_rate = 48000;
+	INIT_WORK(&adsp->override_freq_work, tegra_adsp_override_freq_worker);
 	mutex_init(&adsp->mutex);
 	pdev->dev.dma_mask = &tegra_dma_mask;
 	pdev->dev.coherent_dma_mask = tegra_dma_mask;

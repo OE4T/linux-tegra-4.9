@@ -18,12 +18,26 @@
 #include <quill-modules/tegra186-camera-imx274.dtsi>
 #include "dt-bindings/clock/tegra186-clock.h"
 
+#define CAM1_RST_L	TEGRA_GPIO(R, 1)
 #define CAM0_RST_L	TEGRA_GPIO(R, 5)
 
 /* camera control gpio definitions */
 
 / {
 	i2c@3180000 {
+		imx274_a@1a {
+			/* Define any required hw resources needed by driver */
+			/* ie. clocks, io pins, power sources */
+			clocks = <&tegra_car TEGRA186_CLK_EXTPERIPH2>,
+					 <&tegra_car TEGRA186_CLK_PLLP_OUT0>;
+			clock-names = "extperiph2", "pllp_grtba";
+			mclk = "extperiph2";
+			status = "okay";
+			reset-gpios = <&tegra_gpio CAM1_RST_L GPIO_ACTIVE_HIGH>;   //also for VCM_2V8 en
+			vana-supply = <&en_vdd_cam_hv_2v8>;
+			vif-supply = <&en_vdd_cam>;
+			vdig-supply = <&en_vdd_cam_1v2>;
+		};
 		tc358840@1f {
 			single-source-max-width = "1920";
 			mclk = "extperiph2";
@@ -81,4 +95,3 @@
 	};
 
 };
-

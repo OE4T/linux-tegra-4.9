@@ -756,6 +756,7 @@
 		ivc-queue3 = <&tegra_hv 49>;
 		ivc-queue4 = <&tegra_hv 50>;
 		mempool3 = <&tegra_hv 2>;
+		mempool-css = <&tegra_hv 9>;
 	};
 
 	adsp_audio {

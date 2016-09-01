@@ -110,23 +110,9 @@
 			"ahub",
 			"adsp.emc";
 		resets =
-			<&tegra_car TEGRA186_RESET_ADSPDBG>,
-			<&tegra_car TEGRA186_RESET_ADSPINTF>,
-			<&tegra_car TEGRA186_RESET_ADSPNEON>,
-			<&tegra_car TEGRA186_RESET_ADSPPERIPH>,
-			<&tegra_car TEGRA186_RESET_ADSPSCU>,
-			<&tegra_car TEGRA186_RESET_ADSPWDT>,
-			<&tegra_car TEGRA186_RESET_APE>,
-			<&tegra_car TEGRA186_RESET_ADSP>;
+			<&tegra_car TEGRA186_RESET_ADSP_ALL>;
 		reset-names =
-				"adspdbg",
-				"adspintf",
-				"adspneon",
-				"adspperiph",
-				"adspscu",
-				"adspwdt",
-				"ape",
-				"adsp";
+			"adsp-all";
 
 		nvidia,trace = <&tegra_rtcpu_trace 4 0x40200000 0x80000>;
 		nvidia,ivc-channels = <&tegra_camera_ivc 2 0x40000000 0x10000>;

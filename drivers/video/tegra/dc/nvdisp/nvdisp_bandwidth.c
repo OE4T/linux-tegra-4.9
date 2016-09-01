@@ -42,8 +42,8 @@
  *	- Pitch
  *	- LUT disabled
  *
- * NVDISP_BW_MAX_BW_KBPS and NVDISP_BW_TOTAL_MC_LATENCY were calculated with
- * these settings:
+ * NVDISP_BW_MAX_BW_KBPS, NVDISP_BW_TOTAL_MC_LATENCY, and
+ * NVDISP_BW_REQ_HUBCLK_HZ were calculated with these settings:
  * - 3 active heads:
  *	- 4096x2160@60p
  * - 2 active windows on each head:
@@ -72,6 +72,9 @@
 
 /* Total MC request latency that display can tolerate (usec) */
 #define NVDISP_BW_TOTAL_MC_LATENCY	1
+
+/* Required hubclk rate for max config (Hz) */
+#define NVDISP_BW_REQ_HUBCLK_HZ		362000000
 
 /* Output id that we pass to tegra_dc_ext_process_bandwidth_negotiate */
 #define NVDISP_BW_OUTPUT_ID		0
@@ -189,6 +192,40 @@ void tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 	}
 }
 
+void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc)
+{
+	/*
+	 * Use the max config settings. These values will eventually be adjusted
+	 * through IMP, if the client supports it.
+	 */
+
+	u32 proposed_bw = NVDISP_BW_MAX_BW_KBPS;
+	u32 proposed_latency = NVDISP_BW_TOTAL_MC_LATENCY;
+	u32 proposed_hubclk = NVDISP_BW_REQ_HUBCLK_HZ;
+	bool before_win_update = true;
+
+	tegra_nvdisp_negotiate_reserved_bw(dc, proposed_bw, proposed_latency);
+	tegra_nvdisp_program_bandwidth(dc,
+				proposed_bw,
+				proposed_latency,
+				proposed_hubclk,
+				before_win_update);
+}
+
+void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc)
+{
+	u32 proposed_bw = 0;
+	u32 proposed_latency = 1000;
+	u32 proposed_hubclk = 0;
+	bool before_win_update = false;
+
+	tegra_nvdisp_program_bandwidth(dc,
+				proposed_bw,
+				proposed_latency,
+				proposed_hubclk,
+				before_win_update);
+}
+
 /*
  * tegra_dc_calc_min_bandwidth - returns the minimum dedicated bw
  *
@@ -284,7 +321,6 @@ void tegra_nvdisp_isomgr_attach(struct tegra_dc *dc)
  */
 int tegra_nvdisp_isomgr_register(enum tegra_iso_client client, u32 udedi_bw)
 {
-	u32 latency = 0;
 	int err = 0;
 
 	mutex_lock(&tegra_nvdisp_lock);
@@ -302,26 +338,6 @@ int tegra_nvdisp_isomgr_register(enum tegra_iso_client client, u32 udedi_bw)
 	 * we are told by isomgr to backoff.
 	 */
 	ihub_bw_info.available_bw = UINT_MAX;
-
-	/*
-	 * Reserve and realize the max bw at start-up. There's no need to update
-	 * the corresponding fields since these values will be adjusted through
-	 * IMP anyways.
-	 */
-	latency = tegra_isomgr_reserve(ihub_bw_info.isomgr_handle,
-				NVDISP_BW_MAX_BW_KBPS,
-				NVDISP_BW_TOTAL_MC_LATENCY);
-	if (latency) {
-		latency = tegra_isomgr_realize(ihub_bw_info.isomgr_handle);
-		if (!latency) {
-			WARN_ONCE(!latency, "tegra_isomgr_realize failed\n");
-			err = -ENOENT;
-		}
-	} else {
-		WARN_ONCE(1, "tegra_isomgr_reserve failed\n");
-		err = -ENOENT;
-	}
-	tegra_dc_set_latency_allowance(NVDISP_BW_MAX_BW_KBPS);
 
 unlock_and_ret:
 	mutex_unlock(&tegra_nvdisp_lock);
@@ -349,6 +365,8 @@ int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc, u32 proposed_bw,
 {
 	return -ENOSYS;
 }
+void tegra_nvdisp_init_bandwidth(struct tegra_dc *dc) {}
+void tegra_nvdisp_clear_bandwidth(struct tegra_dc *dc) {}
 long tegra_dc_calc_min_bandwidth(struct tegra_dc *dc)
 {
 	return -ENOSYS;

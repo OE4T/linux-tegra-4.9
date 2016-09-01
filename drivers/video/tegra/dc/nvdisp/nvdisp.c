@@ -1373,8 +1373,9 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 			break;
 	}
 
-	/* disable hub clock if none of the heads is using it */
+	/* disable hub clock if none of the heads is using it and clear bw */
 	if (idx == TEGRA_MAX_DC) {
+		tegra_nvdisp_clear_bandwidth(dc);
 		tegra_disp_clk_disable_unprepare(hubclk);
 		hubclk_already_on = false;
 	}
@@ -1410,22 +1411,14 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	}
 	clk_set_parent(hubclk, hubparent_clk);
 
-	/*
-	 * WAR for bug 200212319
-	 *
-	 * IMP will ultimately be responsible for setting the required hubclk
-	 * rate in the kernel, but it's not ready yet. As such, explicitly drive
-	 * the hubclk rate to 408MHz so that we're not stuck with the rate set
-	 * by BL.
-	 */
-	clk_set_rate(hubclk, 408000000);
-
 	/* set clock status to inuse */
 	mutex_lock(&tegra_nvdisp_lock);
 	clk_client[dc->ctrl_num].inuse = true;
 	clk_client[dc->ctrl_num].dc = dc;
 
+	/* turn on hub clock and init bw */
 	if (!hubclk_already_on) {
+		tegra_nvdisp_init_bandwidth(dc);
 		tegra_disp_clk_prepare_enable(hubclk);
 		hubclk_already_on = true;
 	}

@@ -376,6 +376,11 @@ struct gpu_ops {
 		int (*tsg_unbind_channel)(struct channel_gk20a *ch);
 		u32 (*eng_runlist_base_size)(void);
 		int (*init_engine_info)(struct fifo_gk20a *f);
+		u32 (*runlist_entry_size)(void);
+		void (*get_tsg_runlist_entry)(struct tsg_gk20a *tsg,
+					u32 *runlist);
+		void (*get_ch_runlist_entry)(struct channel_gk20a *ch,
+					u32 *runlist);
 	} fifo;
 	struct pmu_v {
 		/*used for change of enum zbc update cmd id from ver 0 to ver1*/

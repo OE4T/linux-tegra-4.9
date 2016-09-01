@@ -615,7 +615,10 @@ static int init_runlist(struct gk20a *g, struct fifo_gk20a *f)
 		if (!runlist->active_tsgs)
 			goto clean_up_runlist;
 
-		runlist_size  = ram_rl_entry_size_v() * f->num_runlist_entries;
+		runlist_size  = f->runlist_entry_size * f->num_runlist_entries;
+		gk20a_dbg_info("runlist_entries %d runlist size %llu\n",
+					f->num_runlist_entries, runlist_size);
+
 		for (i = 0; i < MAX_RUNLIST_BUFFERS; i++) {
 			int err = gk20a_gmmu_alloc_sys(g, runlist_size,
 					&runlist->mem[i]);
@@ -787,6 +790,7 @@ static int gk20a_init_fifo_setup_sw(struct gk20a *g)
 	gk20a_init_fifo_pbdma_intr_descs(f); /* just filling in data/tables */
 
 	f->num_channels = g->ops.fifo.get_num_fifos(g);
+	f->runlist_entry_size =  g->ops.fifo.runlist_entry_size();
 	f->num_runlist_entries = fifo_eng_runlist_length_max_v();
 	f->num_pbdma = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_PBDMA);
 	f->max_engines = nvgpu_get_litter_value(g, GPU_LIT_HOST_NUM_ENGINES);
@@ -2646,8 +2650,9 @@ static int gk20a_fifo_runlist_wait_pending(struct gk20a *g, u32 runlist_id)
 	return ret;
 }
 
-static inline u32 gk20a_get_tsg_runlist_entry_0(struct tsg_gk20a *tsg)
+void gk20a_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
+
 	u32 runlist_entry_0 = ram_rl_entry_id_f(tsg->tsgid) |
 			ram_rl_entry_type_tsg_f() |
 			ram_rl_entry_tsg_length_f(tsg->num_active_channels);
@@ -2661,7 +2666,15 @@ static inline u32 gk20a_get_tsg_runlist_entry_0(struct tsg_gk20a *tsg)
 			ram_rl_entry_timeslice_scale_3_f() |
 			ram_rl_entry_timeslice_timeout_128_f();
 
-	return runlist_entry_0;
+	runlist[0] = runlist_entry_0;
+	runlist[1] = 0;
+
+}
+
+void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist)
+{
+	runlist[0] = ram_rl_entry_chid_f(ch->hw_chid);
+	runlist[1] = 0;
 }
 
 /* recursively construct a runlist with interleaved bare channels and TSGs */
@@ -2677,6 +2690,7 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 	struct channel_gk20a *ch;
 	bool skip_next = false;
 	u32 chid, tsgid, count = 0;
+	u32 runlist_entry_words = f->runlist_entry_size / sizeof(u32);
 
 	gk20a_dbg_fn("");
 
@@ -2709,9 +2723,10 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 			return NULL;
 
 		gk20a_dbg_info("add channel %d to runlist", chid);
-		runlist_entry[0] = ram_rl_entry_chid_f(chid);
-		runlist_entry[1] = 0;
-		runlist_entry += 2;
+		f->g->ops.fifo.get_ch_runlist_entry(ch, runlist_entry);
+		gk20a_dbg_info("run list count %d runlist [0] %x [1] %x\n",
+				count, runlist_entry[0], runlist_entry[1]);
+		runlist_entry += runlist_entry_words;
 		count++;
 		(*entries_left)--;
 	}
@@ -2741,9 +2756,10 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 
 		/* add TSG entry */
 		gk20a_dbg_info("add TSG %d to runlist", tsg->tsgid);
-		runlist_entry[0] = gk20a_get_tsg_runlist_entry_0(tsg);
-		runlist_entry[1] = 0;
-		runlist_entry += 2;
+		f->g->ops.fifo.get_tsg_runlist_entry(tsg, runlist_entry);
+		gk20a_dbg_info("tsg runlist count %d runlist [0] %x [1] %x\n",
+				count, runlist_entry[0], runlist_entry[1]);
+		runlist_entry += runlist_entry_words;
 		count++;
 		(*entries_left)--;
 
@@ -2761,10 +2777,12 @@ static u32 *gk20a_runlist_construct_locked(struct fifo_gk20a *f,
 
 			gk20a_dbg_info("add channel %d to runlist",
 				ch->hw_chid);
-			runlist_entry[0] = ram_rl_entry_chid_f(ch->hw_chid);
-			runlist_entry[1] = 0;
-			runlist_entry += 2;
+			f->g->ops.fifo.get_ch_runlist_entry(ch, runlist_entry);
+			gk20a_dbg_info(
+				"run list count %d runlist [0] %x [1] %x\n",
+				count, runlist_entry[0], runlist_entry[1]);
 			count++;
+			runlist_entry += runlist_entry_words;
 			(*entries_left)--;
 		}
 		mutex_unlock(&tsg->ch_list_lock);
@@ -2826,6 +2844,8 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 	struct channel_gk20a *ch = NULL;
 	struct tsg_gk20a *tsg = NULL;
 	u32 count = 0;
+	u32 runlist_entry_words = f->runlist_entry_size / sizeof(u32);
+
 	runlist = &f->runlist_info[runlist_id];
 
 	/* valid channel, add/remove it from active list.
@@ -2888,8 +2908,7 @@ static int gk20a_fifo_update_runlist_locked(struct gk20a *g, u32 runlist_id,
 			ret = -E2BIG;
 			goto clean_up;
 		}
-
-		count = (runlist_end - runlist_entry_base) / 2;
+		count = (runlist_end - runlist_entry_base) / runlist_entry_words;
 		WARN_ON(count > f->num_runlist_entries);
 	} else	/* suspend to remove all channels */
 		count = 0;
@@ -3242,4 +3261,7 @@ void gk20a_init_fifo(struct gpu_ops *gops)
 	gops->fifo.device_info_data_parse = NULL;
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 	gops->fifo.init_engine_info = gk20a_fifo_init_engine_info;
+	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
+	gops->fifo.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry;
+	gops->fifo.get_ch_runlist_entry = gk20a_get_ch_runlist_entry;
 }

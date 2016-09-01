@@ -97,6 +97,7 @@ struct fifo_engine_info_gk20a {
 struct fifo_gk20a {
 	struct gk20a *g;
 	int num_channels;
+	int runlist_entry_size;
 	int num_runlist_entries;
 
 	int num_pbdma;
@@ -258,5 +259,8 @@ int gk20a_fifo_update_runlist_ids(struct gk20a *g, u32 runlist_ids, u32 hw_chid,
 		bool add, bool wait_for_finish);
 
 int gk20a_fifo_init_engine_info(struct fifo_gk20a *f);
+
+void gk20a_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist);
+void gk20a_get_ch_runlist_entry(struct channel_gk20a *ch, u32 *runlist);
 
 #endif /*__GR_GK20A_H__*/

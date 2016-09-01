@@ -156,4 +156,7 @@ void gm20b_init_fifo(struct gpu_ops *gops)
 	gops->fifo.device_info_data_parse = gm20b_device_info_data_parse;
 	gops->fifo.eng_runlist_base_size = fifo_eng_runlist_base__size_1_v;
 	gops->fifo.init_engine_info = gk20a_fifo_init_engine_info;
+	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
+	gops->fifo.get_tsg_runlist_entry = gk20a_get_tsg_runlist_entry;
+	gops->fifo.get_ch_runlist_entry = gk20a_get_ch_runlist_entry;
 }

@@ -510,7 +510,6 @@ static int lsfm_discover_ucode_images(struct gk20a *g,
 	return 0;
 }
 
-
 static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	void *lsfm, u32 *p_bl_gen_desc_size)
 {
@@ -519,8 +518,8 @@ static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 	struct lsfm_managed_ucode_img_v2 *p_lsfm =
 		(struct lsfm_managed_ucode_img_v2 *)lsfm;
 	struct flcn_ucode_img_v1 *p_img = &(p_lsfm->ucode_img);
-	struct loader_config_v1 *ldr_cfg =
-			&(p_lsfm->bl_gen_desc.loader_cfg_v1);
+	struct flcn_bl_dmem_desc_v1 *ldr_cfg =
+				&(p_lsfm->bl_gen_desc.bl_dmem_desc_v1);
 	u64 addr_base;
 	struct pmu_ucode_desc_v1 *desc;
 	u64 addr_code, addr_data;
@@ -564,21 +563,22 @@ static int gp106_pmu_populate_loader_cfg(struct gk20a *g,
 
 	gp106_dbg_pmu("addr_args %x\n", addr_args);
 
-	/* Populate the loader_config state*/
-	ldr_cfg->dma_idx = GK20A_PMU_DMAIDX_UCODE;
+	/* Populate the LOADER_CONFIG state */
+	memset((void *) ldr_cfg, 0, sizeof(struct flcn_bl_dmem_desc_v1));
+	ldr_cfg->ctx_dma = GK20A_PMU_DMAIDX_UCODE;
 	flcn64_set_dma(&ldr_cfg->code_dma_base, addr_code);
-	ldr_cfg->code_size_total = desc->app_size;
-	ldr_cfg->code_size_to_load = desc->app_resident_code_size;
-	ldr_cfg->code_entry_point = desc->app_imem_entry;
+	ldr_cfg->non_sec_code_off = desc->app_resident_code_offset;
+	ldr_cfg->non_sec_code_size = desc->app_resident_code_size;
 	flcn64_set_dma(&ldr_cfg->data_dma_base, addr_data);
 	ldr_cfg->data_size = desc->app_resident_data_size;
-	flcn64_set_dma(&ldr_cfg->overlay_dma_base, addr_code);
+	ldr_cfg->code_entry_point = desc->app_imem_entry;
 
 	/* Update the argc/argv members*/
 	ldr_cfg->argc = 1;
 	ldr_cfg->argv = addr_args;
 
-	*p_bl_gen_desc_size = sizeof(struct loader_config_v1);
+	*p_bl_gen_desc_size = sizeof(struct flcn_bl_dmem_desc_v1);
+
 	g->acr.pmu_args = addr_args;
 	return 0;
 }

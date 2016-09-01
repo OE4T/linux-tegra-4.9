@@ -259,7 +259,8 @@ void free_ring_buffers(struct tegra_channel *chan, int frames)
 		 * the second buffer is intermittently frame of zeros
 		 * with no error status or padding.
 		 */
-#if 0 /* This will drop the first two frames. Disable for now. */
+#if 0
+		/* This will drop the first two frames. Disable for now. */
 		if (chan->capture_state != CAPTURE_GOOD ||
 			chan->released_bufs < 2)
 			chan->buffer_state[chan->free_index] =
@@ -1134,6 +1135,7 @@ static int tegra_channel_open(struct file *fp)
 	ret = vi->fops->vi_power_on(chan);
 	if (ret < 0)
 		goto unlock;
+
 #ifdef T210
 	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
 		tegra_vi_power_on(vi);
@@ -1221,7 +1223,6 @@ static const struct v4l2_file_operations tegra_channel_fops = {
 	.mmap		= vb2_fop_mmap,
 };
 
-static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index) __maybe_unused;
 static void tegra_channel_csi_init(struct tegra_mc_vi *vi, unsigned int index)
 {
 	int numlanes = 0;

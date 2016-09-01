@@ -28,8 +28,8 @@ extern void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
 extern int tegra_channel_set_stream(struct tegra_channel *chan, bool on);
 extern void tegra_channel_ring_buffer(struct tegra_channel *chan,
-									struct vb2_v4l2_buffer *vb,
-									struct timespec *ts, int state);
+				struct vb2_v4l2_buffer *vb,
+				struct timespec *ts, int state);
 extern struct tegra_channel_buffer *dequeue_buffer(struct tegra_channel *chan);
 extern int update_clk(struct tegra_mc_vi *vi);
 extern void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
@@ -140,14 +140,14 @@ static int tegra_channel_enable_stream(struct tegra_channel *chan)
 			return ret;
 	}
 	/* perform calibration as sensor started streaming */
-	/*
+#if 0
 	tegra_mipi_bias_pad_enable();
 	if (!chan->vi->pg_mode) {
 		mutex_lock(&chan->vi->mipical_lock);
 		tegra_channel_mipi_cal(chan, 0);
 		mutex_unlock(&chan->vi->mipical_lock);
-	}*/
-
+	}
+#endif
 	return ret;
 }
 
@@ -375,7 +375,8 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_MSB, 0x0);
 		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_OFFSET_LSB,
 			(buf->addr + chan->buffer_offset[index]));
-		csi_write(chan, index, TEGRA_VI_CSI_SURFACE0_STRIDE, bytes_per_line);
+		csi_write(chan, index,
+			TEGRA_VI_CSI_SURFACE0_STRIDE, bytes_per_line);
 
 		/* Program syncpoints */
 		thresh[index] = nvhost_syncpt_incr_max_ext(chan->vi->ndev,
@@ -496,13 +497,14 @@ int vi2_channel_start_streaming(struct vb2_queue *vq, u32 count)
 		ret = tegra_channel_set_stream(chan, true);
 		if (ret < 0)
 			goto error_set_stream;
-		/*
+#if 0
 		nvhost_module_enable_clk(chan->vi->dev);
 		tegra_mipi_bias_pad_enable();
 		mutex_lock(&chan->vi->mipical_lock);
 		tegra_channel_mipi_cal(chan, 1);
 		mutex_unlock(&chan->vi->mipical_lock);
-		nvhost_module_disable_clk(chan->vi->dev);*/
+		nvhost_module_disable_clk(chan->vi->dev);
+#endif
 		return ret;
 	}
 	chan->capture_state = CAPTURE_IDLE;
@@ -670,25 +672,26 @@ int vi2_power_on(struct tegra_channel *chan)
 {
 	int ret = 0;
 	struct tegra_mc_vi *vi;
+	struct vi *tegra_vi;
 	struct tegra_csi_device *csi;
 
 	vi = chan->vi;
+	tegra_vi = vi->vi;
 	csi = vi->csi;
 
 	if (atomic_add_return(1, &vi->power_on_refcnt) == 1) {
-	/*	tegra_vi2_power_on(vi);
+		tegra_vi2_power_on(vi);
 		tegra_csi_power_on(csi);
 		if (vi->pg_mode)
 			tegra_vi->tpg_opened = true;
 		else
 			tegra_vi->sensor_opened = true;
-			*/
 	}
 
 	if (!vi->pg_mode &&
 		(atomic_add_return(1, &chan->power_on_refcnt) == 1)) {
 		/* power on sensors connected in channel */
-		//tegra_csi_channel_power_on(csi, chan->port);
+		tegra_csi_channel_power_on(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 1);
 	}
 
@@ -699,15 +702,17 @@ void vi2_power_off(struct tegra_channel *chan)
 {
 	int ret = 0;
 	struct tegra_mc_vi *vi;
+	struct vi *tegra_vi;
 	struct tegra_csi_device *csi;
 
 	vi = chan->vi;
+	tegra_vi = vi->vi;
 	csi = vi->csi;
 
 	if (!vi->pg_mode &&
 		atomic_dec_and_test(&chan->power_on_refcnt)) {
 		/* power off sensors connected in channel */
-		//tegra_csi_channel_power_off(csi, chan->port);
+		tegra_csi_channel_power_off(csi, chan->port);
 		ret = tegra_channel_set_power(chan, 0);
 		if (ret < 0)
 			dev_err(vi->dev, "Failed to power off subdevices\n");
@@ -715,12 +720,11 @@ void vi2_power_off(struct tegra_channel *chan)
 
 	/* The last release then turn off power */
 	if (atomic_dec_and_test(&vi->power_on_refcnt)) {
-		/*tegra_csi_power_off(csi);
+		tegra_csi_power_off(csi);
 		tegra_vi2_power_off(vi);
 		if (vi->pg_mode)
 			tegra_vi->tpg_opened = false;
 		else
 			tegra_vi->sensor_opened = false;
-			*/
 	}
 }

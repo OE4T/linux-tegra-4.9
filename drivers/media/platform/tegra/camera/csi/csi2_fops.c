@@ -14,54 +14,37 @@
 #include <linux/clk/tegra.h>
 #include "camera/csi/csi.h"
 
-#define DEBUG 0
-
 static void csi_write(struct tegra_csi_device *csi, unsigned int addr,
 			u32 val, u8 port)
 {
-	dev_dbg(csi->dev, "%s:port %d offset 0x%08x val:0x%08x\n",
-				__func__, port, addr, val);
 	writel(val, (csi->iomem[port] + addr));
 }
 
 static u32 csi_read(struct tegra_csi_device *csi, unsigned int addr,
 			u8 port)
 {
-	dev_dbg(csi->dev, "%s:port %d offset 0x%08x\n", __func__, port, addr);
 	return readl((csi->iomem[port] + addr));
 }
 
 /* Pixel parser registers accessors */
 static void pp_write(struct tegra_csi_port *port, u32 addr, u32 val)
 {
-#if DEBUG
-	pr_debug("%s:offset 0x%08x val:0x%08x\n", __func__, addr, val);
-#endif
 	writel(val, port->pixel_parser + addr);
 }
 
 static u32 pp_read(struct tegra_csi_port *port, u32 addr)
 {
-#if DEBUG
-	pr_debug("%s:offset 0x%08x\n", __func__, addr);
-#endif
 	return readl(port->pixel_parser + addr);
 }
 
 /* CSI CIL registers accessors */
 static void cil_write(struct tegra_csi_port *port, u32 addr, u32 val)
 {
-#if DEBUG
-	pr_debug("%s:offset 0x%08x val:0x%08x\n", __func__, addr, val);
-#endif
 	writel(val, port->cil + addr);
 }
 
 static u32 cil_read(struct tegra_csi_port *port, u32 addr)
 {
-#if DEBUG
-	pr_debug("%s:offset 0x%08x\n", __func__, addr);
-#endif
 	return readl(port->cil + addr);
 }
 
@@ -124,21 +107,6 @@ void tegra_csi_status(struct tegra_csi_channel *chan,
 		val = cil_read(port, TEGRA_CSI_CILX_STATUS);
 		dev_dbg(chan->csi->dev,
 			"TEGRA_CSI_CILX_STATUS 0x%08x\n", val);
-
-#if DEBUG
-		val = pp_read(port,
-			TEGRA_CSI_DEBUG_COUNTER_0);
-		dev_dbg(chan->csi->dev,
-			"TEGRA_CSI_DEBUG_COUNTER_0 0x%08x\n", val);
-		val = pp_read(port,
-			TEGRA_CSI_DEBUG_COUNTER_1);
-		dev_dbg(chan->csi->dev,
-			"TEGRA_CSI_DEBUG_COUNTER_1 0x%08x\n", val);
-		val = pp_read(port,
-			TEGRA_CSI_DEBUG_COUNTER_2);
-		dev_dbg(chan->csi->dev,
-			"TEGRA_CSI_DEBUG_COUNTER_2 0x%08x\n", val);
-#endif
 	}
 }
 EXPORT_SYMBOL(tegra_csi_status);
@@ -314,11 +282,7 @@ void csi2_start_streaming(struct tegra_csi_device *csi,
 
 	if (csi->pg_mode)
 		csi2_tpg_start_streaming(csi, port_num);
-#if DEBUG
-	/* 0x454140E1 - register setting for line counter */
-	/* 0x454340E1 - tracks frame start, line starts, hpa headers */
-	pp_write(port, TEGRA_CSI_DEBUG_CONTROL, 0x454340E1);
-#endif
+
 	pp_write(port, TEGRA_CSI_PIXEL_STREAM_PP_COMMAND,
 			(0xF << CSI_PP_START_MARKER_FRAME_MAX_OFFSET) |
 			CSI_PP_SINGLE_SHOT_ENABLE | CSI_PP_ENABLE);

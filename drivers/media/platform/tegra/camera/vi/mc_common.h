@@ -79,8 +79,6 @@ struct tegra_vi_graph_entity {
 	struct v4l2_subdev *subdev;
 };
 
-struct vi_notify_channel;
-
 /**
  * struct tegra_channel - Tegra video channel
  * @list: list entry in a composite device dmas list

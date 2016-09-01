@@ -23,7 +23,7 @@
 #include <linux/platform_device.h>
 
 #include "camera/vi/registers.h"
-#include "camera/vi/t18x_registers.h"
+#include "camera/csi/csi4_registers.h"
 
 enum tegra_csi_port_num {
 	PORT_A = 0,

@@ -14,7 +14,7 @@
 #include <linux/clk/tegra.h>
 #include "nvhost_acm.h"
 #include "camera/csi/csi.h"
-#include "camera/vi/t18x_registers.h"
+#include "camera/csi/csi4_registers.h"
 
 static void csi4_write(struct tegra_csi_channel *chan,
 		unsigned int addr, u32 val)
@@ -36,7 +36,7 @@ static void csi4_stream_write(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr, u32 val)
 {
 	struct tegra_csi_device *csi = chan->csi;
-	u32 cilb_offset = (index & 0x1) ? 0x800 : 0x0;
+	u32 cilb_offset = (index & 0x1) ? CSI4_STREAM_OFFSET : 0x0;
 
 	writel(val, csi->iomem[index >> 1] + cilb_offset + addr);
 }
@@ -45,7 +45,7 @@ static u32 csi4_stream_read(struct tegra_csi_channel *chan,
 		unsigned int index, unsigned int addr)
 {
 	struct tegra_csi_device *csi = chan->csi;
-	u32 cilb_offset = (index & 0x1) ? 0x800 : 0x0;
+	u32 cilb_offset = (index & 0x1) ? CSI4_STREAM_OFFSET : 0x0;
 
 	return readl(csi->iomem[index >> 1] + cilb_offset + addr);
 }
@@ -55,7 +55,8 @@ static void csi4_phy_write(struct tegra_csi_channel *chan,
 {
 	struct tegra_csi_device *csi = chan->csi;
 
-	writel(val, csi->iomem_base  + 0x18000 + (0x10000 * index) + addr);
+	writel(val, csi->iomem_base +
+		CSI4_BASE_ADDRESS + (CSI4_PHY_OFFSET * index) + addr);
 }
 
 static u32 csi4_phy_read(struct tegra_csi_channel *chan,
@@ -63,7 +64,8 @@ static u32 csi4_phy_read(struct tegra_csi_channel *chan,
 {
 	struct tegra_csi_device *csi = chan->csi;
 
-	return readl(csi->iomem_base + 0x18000 + (0x10000 * index) + addr);
+	return readl(csi->iomem_base +
+		CSI4_BASE_ADDRESS + (CSI4_PHY_OFFSET * index) + addr);
 }
 
 static bool csi4_check_reg(struct tegra_csi_channel *chan)
@@ -140,7 +142,8 @@ static bool csi4_stream_config(struct tegra_csi_channel *chan, int port_num)
 	return true;
 }
 
-static bool csi4_phy_config(struct tegra_csi_channel *chan, int phy_num)
+static bool csi4_phy_config(struct tegra_csi_channel *chan,
+	int phy_num, int enable)
 {
 	struct tegra_csi_device *csi = chan->csi;
 	int val;
@@ -152,19 +155,40 @@ static bool csi4_phy_config(struct tegra_csi_channel *chan, int phy_num)
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET,
 			SW_RESET1_EN | SW_RESET0_EN);
 
+	/* set to DPHY */
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_PHY_CTRL, 0);
 	val = csi4_phy_read(chan, phy_num, NVCSI_CIL_CONFIG);
 	dev_dbg(csi->dev, "csi_phy 0 read NVCSI_CIL_CONFIG val = %08x\n", val);
 
+	/* set CSI lane number */
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_CONFIG, chan->numlanes);
+
+	/* power down de-serializer*/
+	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0x200);
+	/* disable clock lane*/
+	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_PAD_CONFIG, 0x70011);
+	if (chan->numlanes > 2)
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_PAD_CONFIG, 0x70011);
+
+	if (!enable)
+		goto phy_config_done;
+
+	/* power on de-serializer */
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_PAD_CONFIG, 0);
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_PAD_CONFIG, 0x700011);
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_B_PAD_CONFIG, 0x700011);
+	/* enable clock lane*/
+	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_PAD_CONFIG, 0x700000);
+	if (chan->numlanes > 2)
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_PAD_CONFIG, 0x640000);
+
+	/* setup settle time */
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_CONTROL, 0x110a14);
-	csi4_phy_write(chan, phy_num, NVCSI_CIL_B_CONTROL, 0x110a14);
+	if (chan->numlanes > 2)
+		csi4_phy_write(chan, phy_num, NVCSI_CIL_B_CONTROL, 0x110a14);
 
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_A_SW_RESET, 0x0);
 	csi4_phy_write(chan, phy_num, NVCSI_CIL_B_SW_RESET, 0x0);
+
+phy_config_done:
 	return true;
 }
 
@@ -269,13 +293,14 @@ void csi4_start_streaming(struct tegra_csi_channel *chan,
 
 	csi4_init(chan);
 	csi4_stream_config(chan, port_num);
-	csi4_phy_config(chan, (port_num & 0x6) >> 1);
+	csi4_phy_config(chan, (port_num & 0x6) >> 1, 1);
 	csi4_stream_write(chan, port_num, PP_EN_CTRL, CFG_PP_EN);
 }
 
 void csi4_stop_streaming(struct tegra_csi_channel *chan,
 				enum tegra_csi_port_num port_num)
 {
+	csi4_phy_config(chan, (port_num & 0x6) >> 1, 0);
 	csi4_stream_check_status(chan);
 	csi4_cil_check_status(chan);
 }

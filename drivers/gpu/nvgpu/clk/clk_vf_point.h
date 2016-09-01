@@ -36,11 +36,7 @@ struct clk_vf_point {
 struct clk_vf_point_volt {
 	struct clk_vf_point super;
 	u32 source_voltage_uv;
-	u8 vf_gain_vfe_equ_idx;
-	u8 clk_domain_idx;
-	u16 vf_gain_value;
 	int freq_delta_khz;
-
 };
 
 struct clk_vf_point_freq {

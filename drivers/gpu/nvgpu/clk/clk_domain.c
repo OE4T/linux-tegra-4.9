@@ -94,6 +94,7 @@ static u32 _clk_domains_pmudatainit_3x(struct gk20a *g,
 	pset->b_override_o_v_o_c = false;
 	pset->b_debug_mode = false;
 	pset->b_enforce_vf_monotonicity = pdomains->b_enforce_vf_monotonicity;
+	pset->b_enforce_vf_smoothening = pdomains->b_enforce_vf_smoothening;
 	pset->volt_rails_max = 2;
 	status = boardobjgrpmask_export(
 				&pdomains->master_domains_mask.super,
@@ -168,6 +169,7 @@ u32 clk_domain_sw_setup(struct gk20a *g)
 	boardobjgrpmask_e32_init(&pclkdomainobjs->prog_domains_mask, NULL);
 	boardobjgrpmask_e32_init(&pclkdomainobjs->master_domains_mask, NULL);
 	pclkdomainobjs->b_enforce_vf_monotonicity = true;
+	pclkdomainobjs->b_enforce_vf_smoothening = true;
 
 	memset(&pclkdomainobjs->ordered_noise_aware_list, 0,
 		sizeof(pclkdomainobjs->ordered_noise_aware_list));

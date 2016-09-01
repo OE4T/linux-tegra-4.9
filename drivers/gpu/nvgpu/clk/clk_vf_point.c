@@ -197,8 +197,6 @@ static u32 _clk_vf_point_pmudatainit_volt(struct gk20a *g,
 		ppmudata;
 
 	pset->source_voltage_uv = pclk_vf_point_volt->source_voltage_uv;
-	pset->vf_gain_vfe_equ_idx = pclk_vf_point_volt->vf_gain_vfe_equ_idx;
-	pset->clk_domain_idx = pclk_vf_point_volt->clk_domain_idx;
 	pset->freq_delta_khz = pclk_vf_point_volt->freq_delta_khz;
 
 	return status;
@@ -256,8 +254,6 @@ static u32 clk_vf_point_construct_volt(struct gk20a *g,
 			_clk_vf_point_pmudatainit_volt;
 
 	pclkvfpoint->source_voltage_uv = ptmpvfpoint->source_voltage_uv;
-	pclkvfpoint->vf_gain_vfe_equ_idx = ptmpvfpoint->vf_gain_vfe_equ_idx;
-	pclkvfpoint->clk_domain_idx = ptmpvfpoint->clk_domain_idx;
 
 	return status;
 }

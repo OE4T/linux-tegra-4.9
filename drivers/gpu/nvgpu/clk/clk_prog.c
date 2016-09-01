@@ -433,6 +433,7 @@ static u32 _clk_prog_pmudatainit_1x_master(struct gk20a *g,
 	memcpy(pset->vf_entries, pclk_prog_1x_master->p_vf_entries, vfsize);
 
 	pset->b_o_c_o_v_enabled = pclk_prog_1x_master->b_o_c_o_v_enabled;
+	pset->source_data = pclk_prog_1x_master->source_data;
 
 	memcpy(&pset->deltas, &pclk_prog_1x_master->deltas,
 		(u32) sizeof(struct ctrl_clk_clk_delta));
@@ -810,11 +811,9 @@ static u32 vfflatten_prog_1x_master(struct gk20a *g,
 			/* FLL sources use a voltage-based VF_POINT.*/
 			vf_point_data.board_obj.type =
 				CTRL_CLK_CLK_VF_POINT_TYPE_VOLT;
-			vf_point_data.volt.clk_domain_idx = clk_domain_idx;
 			for (i = 0; i < step_count; i++) {
 				vf_point_data.volt.source_voltage_uv =
 					voltage_min_uv + i * voltage_step_size_uv;
-				vf_point_data.volt.vf_gain_vfe_equ_idx = p_vf_rail->gain_vfe_idx;
 
 				status = _clk_prog_1x_master_rail_construct_vf_point(g, pclk,
 					p1xmaster, p_vf_rail,

@@ -49,8 +49,8 @@ struct clk_prog_1x_master {
 	struct clk_prog_1x super;
 	bool b_o_c_o_v_enabled;
 	struct ctrl_clk_clk_prog_1x_master_vf_entry *p_vf_entries;
-
 	struct ctrl_clk_clk_delta deltas;
+	union ctrl_clk_clk_prog_1x_master_source_data source_data;
 	vf_flatten *vfflatten;
 };
 

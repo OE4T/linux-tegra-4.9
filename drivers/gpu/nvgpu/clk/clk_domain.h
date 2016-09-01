@@ -33,6 +33,7 @@ struct clk_domains {
 	u8 n_num_entries;
 	u8 version;
 	bool b_enforce_vf_monotonicity;
+	bool b_enforce_vf_smoothening;
 	u32 vbios_domains;
 	struct boardobjgrpmask_e32 prog_domains_mask;
 	struct boardobjgrpmask_e32 master_domains_mask;

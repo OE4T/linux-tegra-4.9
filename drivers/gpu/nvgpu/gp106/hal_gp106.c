@@ -26,7 +26,6 @@
 #include "gp10b/mm_gp10b.h"
 #include "gp10b/ce_gp10b.h"
 #include "gp106/fifo_gp106.h"
-#include "gp10b/gp10b_gating_reglist.h"
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/cde_gp10b.h"
 #include "gp10b/therm_gp10b.h"
@@ -43,13 +42,59 @@
 #include "gp106/gr_ctx_gp106.h"
 #include "gp106/gr_gp106.h"
 #include "gp106/fb_gp106.h"
+#include "gp106/gp106_gating_reglist.h"
 #include "nvgpu_gpuid_t18x.h"
 #include "hw_proj_gp106.h"
 #include "gk20a/dbg_gpu_gk20a.h"
 #include "gk20a/css_gr_gk20a.h"
 
 static struct gpu_ops gp106_ops = {
-	.clock_gating = { }
+	.clock_gating = {
+		.slcg_bus_load_gating_prod =
+			gp106_slcg_bus_load_gating_prod,
+		.slcg_ce2_load_gating_prod =
+			gp106_slcg_ce2_load_gating_prod,
+		.slcg_chiplet_load_gating_prod =
+			gp106_slcg_chiplet_load_gating_prod,
+		.slcg_ctxsw_firmware_load_gating_prod =
+			gp106_slcg_ctxsw_firmware_load_gating_prod,
+		.slcg_fb_load_gating_prod =
+			gp106_slcg_fb_load_gating_prod,
+		.slcg_fifo_load_gating_prod =
+			gp106_slcg_fifo_load_gating_prod,
+		.slcg_gr_load_gating_prod =
+			gr_gp106_slcg_gr_load_gating_prod,
+		.slcg_ltc_load_gating_prod =
+			ltc_gp106_slcg_ltc_load_gating_prod,
+		.slcg_perf_load_gating_prod =
+			gp106_slcg_perf_load_gating_prod,
+		.slcg_priring_load_gating_prod =
+			gp106_slcg_priring_load_gating_prod,
+		.slcg_pmu_load_gating_prod =
+			gp106_slcg_pmu_load_gating_prod,
+		.slcg_therm_load_gating_prod =
+			gp106_slcg_therm_load_gating_prod,
+		.slcg_xbar_load_gating_prod =
+			gp106_slcg_xbar_load_gating_prod,
+		.blcg_bus_load_gating_prod =
+			gp106_blcg_bus_load_gating_prod,
+		.blcg_ce_load_gating_prod =
+			gp106_blcg_ce_load_gating_prod,
+		.blcg_fb_load_gating_prod =
+			gp106_blcg_fb_load_gating_prod,
+		.blcg_fifo_load_gating_prod =
+			gp106_blcg_fifo_load_gating_prod,
+		.blcg_gr_load_gating_prod =
+			gp106_blcg_gr_load_gating_prod,
+		.blcg_ltc_load_gating_prod =
+			gp106_blcg_ltc_load_gating_prod,
+		.blcg_pmu_load_gating_prod =
+			gp106_blcg_pmu_load_gating_prod,
+		.blcg_xbar_load_gating_prod =
+			gp106_blcg_xbar_load_gating_prod,
+		.pg_gr_load_gating_prod =
+			gr_gp106_pg_gr_load_gating_prod,
+		}
 };
 
 static int gp106_get_litter_value(struct gk20a *g,

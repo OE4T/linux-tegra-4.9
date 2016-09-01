@@ -180,6 +180,7 @@
 #define MAX_HOLD_CYCLES				16
 #define SPI_DEFAULT_SPEED			25000000
 #define SPI_SPEED_TAP_DELAY_MARGIN		35000000
+#define SPI_POLL_TIMEOUT			10000
 #define SPI_DEFAULT_RX_TAP_DELAY		10
 #define SPI_DEFAULT_TX_TAP_DELAY		0
 #define SPI_FIFO_FLUSH_MAX_DELAY		2000
@@ -216,6 +217,7 @@ struct tegra_spi_data {
 	phys_addr_t				phys;
 	unsigned				irq;
 	bool					clock_always_on;
+	bool					polling_mode;
 	u32					cur_speed;
 	unsigned				min_div;
 
@@ -269,6 +271,7 @@ struct tegra_spi_data {
 
 static int tegra_spi_runtime_suspend(struct device *dev);
 static int tegra_spi_runtime_resume(struct device *dev);
+static int tegra_spi_status_poll(struct tegra_spi_data *tspi);
 
 static inline u32 tegra_spi_readl(struct tegra_spi_data *tspi,
 		unsigned long reg)
@@ -290,13 +293,25 @@ static void tegra_spi_set_intr_mask(struct tegra_spi_data *tspi)
 {
 	unsigned long intr_mask;
 
+	/* Interrupts are disabled by default and need not be cleared
+	 * in polling mode. Still writing to registers to be robust
+	 * This step occurs only in case of system reset or
+	 * resume or error case and not in data path affecting perf.
+	 */
+
 	if (tspi->chip_data->intr_mask_reg) {
 		intr_mask = tegra_spi_readl(tspi, SPI_INTR_MASK);
-		intr_mask &= ~(SPI_INTR_ALL_MASK);
+		if (tspi->polling_mode)
+			intr_mask |= SPI_INTR_ALL_MASK;
+		else
+			intr_mask &= ~(SPI_INTR_ALL_MASK);
 		tegra_spi_writel(tspi, intr_mask, SPI_INTR_MASK);
 	} else {
 		intr_mask = tegra_spi_readl(tspi, SPI_DMA_CTL);
-		intr_mask |= SPI_IE_TX | SPI_IE_RX;
+		if (tspi->polling_mode)
+			intr_mask |= SPI_IE_TX | SPI_IE_RX;
+		else
+			intr_mask &= ~(SPI_IE_TX | SPI_IE_RX);
 		tegra_spi_writel(tspi, intr_mask, SPI_DMA_CTL);
 	}
 }
@@ -608,7 +623,8 @@ static int tegra_spi_start_dma_based_transfer(
 		maxburst = 8;
 	}
 
-	if (!tspi->chip_data->intr_mask_reg) {
+	if (!tspi->chip_data->intr_mask_reg &&
+	    !tspi->polling_mode) {
 		if (tspi->cur_direction & DATA_DIR_TX)
 			val |= SPI_IE_TX;
 		if (tspi->cur_direction & DATA_DIR_RX)
@@ -687,7 +703,8 @@ static int tegra_spi_start_cpu_based_transfer(
 	tegra_spi_writel(tspi, val, SPI_DMA_BLK);
 
 	val = 0;
-	if (!tspi->chip_data->intr_mask_reg) {
+	if (!tspi->chip_data->intr_mask_reg &&
+	    !tspi->polling_mode) {
 		if (tspi->cur_direction & DATA_DIR_TX)
 			val |= SPI_IE_TX;
 		if (tspi->cur_direction & DATA_DIR_RX)
@@ -1398,8 +1415,12 @@ static int tegra_spi_transfer_one_message(struct spi_master *master,
 		}
 
 		is_first_msg = false;
-		ret = wait_for_completion_timeout(&tspi->xfer_completion,
-						SPI_DMA_TIMEOUT);
+		if (tspi->polling_mode)
+			ret = tegra_spi_status_poll(tspi);
+		else
+			ret = wait_for_completion_timeout(
+					&tspi->xfer_completion,
+					SPI_DMA_TIMEOUT);
 		if (WARN_ON(ret == 0)) {
 			dev_err(tspi->dev,
 				"spi transfer timeout, err %d\n", ret);
@@ -1579,6 +1600,48 @@ exit:
 	return IRQ_HANDLED;
 }
 
+static int tegra_spi_status_poll(struct tegra_spi_data *tspi)
+{
+	unsigned int status;
+	unsigned long timeout;
+
+	timeout = SPI_POLL_TIMEOUT;
+	/*
+	 * Read register would take between 1~3us and 1us delay added in loop
+	 * Calculate timeout taking this into consideration
+	 */
+	do {
+		status = tegra_spi_readl(tspi, SPI_TRANS_STATUS);
+		if (status & SPI_RDY)
+			break;
+		timeout--;
+		udelay(1);
+	} while (timeout);
+
+	if (!timeout) {
+		dev_err(tspi->dev, "transfer timeout (polling)\n");
+		return 0;
+	}
+
+	tspi->status_reg = tegra_spi_readl(tspi, SPI_FIFO_STATUS);
+	if (tspi->cur_direction & DATA_DIR_TX)
+		tspi->tx_status = tspi->status_reg &
+					(SPI_TX_FIFO_UNF | SPI_TX_FIFO_OVF);
+
+	if (tspi->cur_direction & DATA_DIR_RX)
+		tspi->rx_status = tspi->status_reg &
+					(SPI_RX_FIFO_OVF | SPI_RX_FIFO_UNF);
+
+	tegra_spi_clear_status(tspi);
+
+	if (!tspi->is_curr_dma_xfer)
+		handle_cpu_based_xfer(tspi);
+	else
+		handle_dma_based_xfer(tspi);
+
+	return timeout;
+}
+
 static irqreturn_t tegra_spi_isr_thread(int irq, void *context_data)
 {
 	struct tegra_spi_data *tspi = context_data;
@@ -1591,6 +1654,9 @@ static irqreturn_t tegra_spi_isr_thread(int irq, void *context_data)
 static irqreturn_t tegra_spi_isr(int irq, void *context_data)
 {
 	struct tegra_spi_data *tspi = context_data;
+
+	if (tspi->polling_mode)
+		dev_warn(tspi->dev, "interrupt raised in polling mode\n");
 
 	tspi->status_reg = tegra_spi_readl(tspi, SPI_FIFO_STATUS);
 	if (tspi->cur_direction & DATA_DIR_TX)
@@ -1627,6 +1693,9 @@ static void tegra_spi_parse_dt(struct tegra_spi_data *tspi)
 
 	if (of_find_property(np, "nvidia,clock-always-on", NULL))
 		tspi->clock_always_on = true;
+
+	if (of_find_property(np, "nvidia,polling-mode", NULL))
+		tspi->polling_mode = true;
 
 	if (of_property_read_u32(np, "spi-max-frequency",
 				 &tspi->master->max_speed_hz))

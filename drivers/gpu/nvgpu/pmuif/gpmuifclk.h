@@ -59,6 +59,7 @@ struct nv_pmu_clk_clk_domain_boardobjgrp_set_header {
 	bool b_override_o_v_o_c;
 	bool b_debug_mode;
 	bool b_enforce_vf_monotonicity;
+	bool b_enforce_vf_smoothening;
 	u8 volt_rails_max;
 	struct ctrl_clk_clk_delta deltas;
 };
@@ -137,6 +138,7 @@ struct nv_pmu_clk_clk_prog_1x_master_boardobj_set {
 	bool b_o_c_o_v_enabled;
 	struct ctrl_clk_clk_prog_1x_master_vf_entry vf_entries[
 		CTRL_CLK_CLK_PROG_1X_MASTER_VF_ENTRY_MAX_ENTRIES];
+	union ctrl_clk_clk_prog_1x_master_source_data source_data;
 	struct ctrl_clk_clk_delta deltas;
 };
 
@@ -245,8 +247,6 @@ struct nv_pmu_clk_clk_vf_point_freq_boardobj_set {
 struct nv_pmu_clk_clk_vf_point_volt_boardobj_set {
 	struct nv_pmu_clk_clk_vf_point_boardobj_set super;
 	u32 source_voltage_uv;
-	u8 vf_gain_vfe_equ_idx;
-	u8 clk_domain_idx;
 	int freq_delta_khz;
 };
 

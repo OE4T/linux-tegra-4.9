@@ -4,5 +4,6 @@ config TEGRA_CLK_EMC
 
 config TEGRA_CLK_DEBUG
 	def_bool y
+	depends on DEBUG_FS
 	---help---
 	Enable debugfs entries to change clock parent/rate/state

@@ -42,6 +42,8 @@ struct flcn_bl_dmem_desc_v1 {
 	u32    code_entry_point;
 	struct falc_u64 data_dma_base;
 	u32    data_size;
+	u32 argc;
+	u32 argv;
 };
 
 /*!

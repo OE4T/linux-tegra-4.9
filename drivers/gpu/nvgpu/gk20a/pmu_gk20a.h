@@ -38,7 +38,7 @@
 #define APP_VERSION_NC_1	20313802
 #define APP_VERSION_NC_0	20360931
 #define APP_VERSION_GM206	20652057
-#define APP_VERSION_NV_GPU	20660622
+#define APP_VERSION_NV_GPU	21082352
 #define APP_VERSION_NV_GPU_1	20799797
 #define APP_VERSION_GM20B_5 20490253
 #define APP_VERSION_GM20B_4 19008461
@@ -178,7 +178,7 @@ struct pmu_ucode_desc_v1 {
 #define PMU_UNIT_PERF            (0x13)
 #define PMU_UNIT_RC		(0x1F)
 #define PMU_UNIT_FECS_MEM_OVERRIDE      (0x1E)
-#define PMU_UNIT_CLK             (0x1C)
+#define PMU_UNIT_CLK             (0x0D)
 
 #define PMU_UNIT_END		(0x23)
 
@@ -255,10 +255,11 @@ struct pmu_init_msg_pmu_v2 {
 	u8 dummy[18];
 };
 
+#define PMU_QUEUE_COUNT_FOR_V3 3
 struct pmu_init_msg_pmu_v3 {
 	u8 msg_type;
-	u8  queue_index[PMU_QUEUE_COUNT];
-	u16 queue_size[PMU_QUEUE_COUNT];
+	u8  queue_index[PMU_QUEUE_COUNT_FOR_V3];
+	u16 queue_size[PMU_QUEUE_COUNT_FOR_V3];
 	u16 queue_offset;
 
 	u16 sw_managed_area_offset;

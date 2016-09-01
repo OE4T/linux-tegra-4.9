@@ -1764,6 +1764,7 @@ static struct platform_driver gk20a_driver = {
 #ifdef CONFIG_PM
 		.pm = &gk20a_pm_ops,
 #endif
+		.suppress_bind_attrs = true,
 	}
 };
 

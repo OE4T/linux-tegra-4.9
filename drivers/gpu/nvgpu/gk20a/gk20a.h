@@ -657,6 +657,24 @@ struct gpu_ops {
 	struct {
 		int (*init)(struct gk20a *g);
 	} bios;
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	struct {
+		int (*enable_snapshot)(struct channel_gk20a *ch,
+				struct gk20a_cs_snapshot_client *client);
+		void (*disable_snapshot)(struct gr_gk20a *gr);
+		int (*check_data_available)(struct channel_gk20a *ch,
+						u32 *pending,
+						bool *hw_overflow);
+		void (*set_handled_snapshots)(struct gk20a *g, u32 num);
+		u32 (*allocate_perfmon_ids)(struct gk20a_cs_snapshot *data,
+				       u32 count);
+		u32 (*release_perfmon_ids)(struct gk20a_cs_snapshot *data,
+				      u32 start,
+				      u32 count);
+		int (*detach_snapshot)(struct channel_gk20a *ch,
+				struct gk20a_cs_snapshot_client *client);
+	} css;
+#endif
 };
 
 struct nvgpu_bios_ucode {

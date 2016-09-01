@@ -875,6 +875,10 @@ static int vgpu_gr_init_gr_setup_sw(struct gk20a *g)
 
 	gr->g = g;
 
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	mutex_init(&g->gr.cs_lock);
+#endif
+
 	err = vgpu_gr_init_gr_config(g, gr);
 	if (err)
 		goto clean_up;

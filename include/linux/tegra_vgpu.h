@@ -97,6 +97,7 @@ enum {
 	TEGRA_VGPU_CMD_SET_POWERGATE = 60,
 	TEGRA_VGPU_CMD_SET_GPU_CLK_RATE = 61,
 	TEGRA_VGPU_CMD_GET_CONSTANTS = 62,
+	TEGRA_VGPU_CMD_CHANNEL_CYCLESTATS_SNAPSHOT = 63,
 };
 
 struct tegra_vgpu_connect_params {
@@ -437,6 +438,15 @@ struct tegra_vgpu_constants_params {
 	u16 gpc_tpc_mask[TEGRA_VGPU_MAX_GPC_COUNT];
 };
 
+struct tegra_vgpu_channel_cyclestats_snapshot_params {
+	u64 handle;
+	u32 perfmon_start;
+	u32 perfmon_count;
+	u32 buf_info; /* client->srvr: get ptr; srvr->client: num pending */
+	u8 subcmd;
+	u8 hw_overflow;
+};
+
 struct tegra_vgpu_cmd_msg {
 	u32 cmd;
 	int ret;
@@ -481,6 +491,7 @@ struct tegra_vgpu_cmd_msg {
 		struct tegra_vgpu_set_powergate_params set_powergate;
 		struct tegra_vgpu_gpu_clk_rate_params gpu_clk_rate;
 		struct tegra_vgpu_constants_params constants;
+		struct tegra_vgpu_channel_cyclestats_snapshot_params cyclestats_snapshot;
 		char padding[192];
 	} params;
 };

@@ -25,92 +25,12 @@
 #include "gk20a.h"
 #include "hw_perf_gk20a.h"
 #include "hw_mc_gk20a.h"
-
-
-
-/* cycle stats fifo header (must match NvSnapshotBufferFifo) */
-struct gk20a_cs_snapshot_fifo {
-	/* layout description of the buffer */
-	u32	start;
-	u32	end;
-
-	/* snafu bits */
-	u32	hw_overflow_events_occured;
-	u32	sw_overflow_events_occured;
-
-	/* the kernel copies new entries to put and
-	 * increment the put++. if put == get then
-	 * overflowEventsOccured++
-	 */
-	u32	put;
-	u32	_reserved10;
-	u32	_reserved11;
-	u32	_reserved12;
-
-	/* the driver/client reads from get until
-	 * put==get, get++ */
-	u32	get;
-	u32	_reserved20;
-	u32	_reserved21;
-	u32	_reserved22;
-
-	/* unused */
-	u32	_reserved30;
-	u32	_reserved31;
-	u32	_reserved32;
-	u32	_reserved33;
-};
-
-/* cycle stats fifo entry (must match NvSnapshotBufferFifoEntry) */
-struct gk20a_cs_snapshot_fifo_entry {
-	/* global 48 timestamp */
-	u32	timestamp31_00:32;
-	u32	timestamp39_32:8;
-
-	/* id of perfmon, should correlate with CSS_MAX_PERFMON_IDS */
-	u32	perfmon_id:8;
-
-	/* typically samples_counter is wired to #pmtrigger count */
-	u32	samples_counter:12;
-
-	/* DS=Delay Sample, SZ=Size (0=32B, 1=16B) */
-	u32	ds:1;
-	u32	sz:1;
-	u32	zero0:1;
-	u32	zero1:1;
-
-	/* counter results */
-	u32	event_cnt:32;
-	u32	trigger0_cnt:32;
-	u32	trigger1_cnt:32;
-	u32	sample_cnt:32;
-
-	/* Local PmTrigger results for Maxwell+ or padding otherwise */
-	u16	local_trigger_b_count:16;
-	u16	book_mark_b:16;
-	u16	local_trigger_a_count:16;
-	u16	book_mark_a:16;
-};
-
-
-/* cycle stats snapshot client data (e.g. associated with channel) */
-struct gk20a_cs_snapshot_client {
-	struct list_head	list;
-	u32			dmabuf_fd;
-	struct dma_buf		*dma_handler;
-	struct gk20a_cs_snapshot_fifo	*snapshot;
-	u32			snapshot_size;
-	u32			perfmon_start;
-	u32			perfmon_count;
-};
+#include "css_gr_gk20a.h"
 
 /* check client for pointed perfmon ownership */
 #define CONTAINS_PERFMON(cl, pm)				\
 		((cl)->perfmon_start <= (pm) &&			\
 		((pm) - (cl)->perfmon_start) < (cl)->perfmon_count)
-
-/* the minimal size of HW buffer - should be enough to avoid HW overflows */
-#define CSS_MIN_HW_SNAPSHOT_SIZE	(8 * 1024 * 1024)
 
 /* the minimal size of client buffer */
 #define CSS_MIN_CLIENT_SNAPSHOT_SIZE				\
@@ -130,20 +50,6 @@ struct gk20a_cs_snapshot_client {
 #define CSS_FIRST_PERFMON_ID	32
 /* should correlate with size of gk20a_cs_snapshot_fifo_entry::perfmon_id */
 #define CSS_MAX_PERFMON_IDS	256
-
-/* local definitions to avoid hardcodes sizes and shifts */
-#define PM_BITMAP_SIZE	DIV_ROUND_UP(CSS_MAX_PERFMON_IDS, BITS_PER_LONG)
-
-/* cycle stats snapshot control structure for one HW entry and many clients */
-struct gk20a_cs_snapshot {
-	unsigned long perfmon_ids[PM_BITMAP_SIZE];
-	struct list_head	clients;
-	struct mem_desc		hw_memdesc;
-	/* pointer to allocated cpu_va memory where GPU place data */
-	struct gk20a_cs_snapshot_fifo_entry	*hw_snapshot;
-	struct gk20a_cs_snapshot_fifo_entry	*hw_end;
-	struct gk20a_cs_snapshot_fifo_entry	*hw_get;
-};
 
 /* reports whether the hw queue overflowed */
 static inline bool css_hw_get_overflow_status(struct gk20a *g)
@@ -215,10 +121,13 @@ static int css_gr_create_shared_data(struct gr_gk20a *gr)
 	return 0;
 }
 
-static int css_hw_enable_snapshot(struct gr_gk20a *gr, u32 snapshot_size)
+static int css_hw_enable_snapshot(struct channel_gk20a *ch,
+				struct gk20a_cs_snapshot_client *cs_client)
 {
-	struct gk20a *g = gr->g;
+	struct gk20a *g = ch->g;
+	struct gr_gk20a *gr = &g->gr;
 	struct gk20a_cs_snapshot *data = gr->cs_data;
+	u32 snapshot_size = cs_client->snapshot_size;
 	int ret;
 
 	u32 virt_addr_lo;
@@ -317,9 +226,11 @@ static void css_hw_disable_snapshot(struct gr_gk20a *gr)
 
 static void css_gr_free_shared_data(struct gr_gk20a *gr)
 {
+	struct gk20a *g = gr->g;
+
 	if (gr->cs_data) {
 		/* the clients list is expected to be empty */
-		css_hw_disable_snapshot(gr);
+		g->ops.css.disable_snapshot(gr);
 
 		/* release the objects */
 		kfree(gr->cs_data);
@@ -344,12 +255,15 @@ css_gr_search_client(struct list_head *clients, u32 perfmon)
 	return NULL;
 }
 
-static int css_gr_flush_snapshots(struct gr_gk20a *gr)
+static int css_gr_flush_snapshots(struct channel_gk20a *ch)
 {
-	struct gk20a *g = gr->g;
+	struct gk20a *g = ch->g;
+	struct gr_gk20a *gr = &g->gr;
 	struct gk20a_cs_snapshot *css = gr->cs_data;
 	struct gk20a_cs_snapshot_client *cur;
-	u32 pending;
+	u32 pending, completed;
+	bool hw_overflow;
+	int err;
 
 	/* variables for iterating over HW entries */
 	u32 sid;
@@ -360,24 +274,25 @@ static int css_gr_flush_snapshots(struct gr_gk20a *gr)
 	struct gk20a_cs_snapshot_fifo *dst;
 	struct gk20a_cs_snapshot_fifo_entry *dst_get;
 	struct gk20a_cs_snapshot_fifo_entry *dst_put;
+	struct gk20a_cs_snapshot_fifo_entry *dst_nxt;
 	struct gk20a_cs_snapshot_fifo_entry *dst_head;
 	struct gk20a_cs_snapshot_fifo_entry *dst_tail;
 
 	if (!css)
 		return -EINVAL;
 
-	if (!css->hw_snapshot)
-		return -EINVAL;
-
 	if (list_empty(&css->clients))
 		return -EBADF;
 
 	/* check data available */
-	pending = css_hw_get_pending_snapshots(g);
+	err = g->ops.css.check_data_available(ch, &pending, &hw_overflow);
+	if (err)
+		return err;
+
 	if (!pending)
 		return 0;
 
-	if (css_hw_get_overflow_status(g)) {
+	if (hw_overflow) {
 		struct list_head *pos;
 
 		list_for_each(pos, &css->clients) {
@@ -387,11 +302,12 @@ static int css_gr_flush_snapshots(struct gr_gk20a *gr)
 		}
 
 		gk20a_warn(dev_from_gk20a(g),
-			   "cyclestats: hardware overflow detected\n");
+			"cyclestats: hardware overflow detected\n");
 	}
 
-	/* proceed all items in HW buffer */
+	/* process all items in HW buffer */
 	sid = 0;
+	completed = 0;
 	cur = NULL;
 	dst = NULL;
 	dst_put = NULL;
@@ -419,7 +335,11 @@ static int css_gr_flush_snapshots(struct gr_gk20a *gr)
 				dst_get = CSS_FIFO_ENTRY(dst, dst->get);
 				dst_put = CSS_FIFO_ENTRY(dst, dst->put);
 				dst_head = CSS_FIFO_ENTRY(dst, dst->start);
-				dst_tail = CSS_FIFO_ENTRY(dst, dst->end) - 1;
+				dst_tail = CSS_FIFO_ENTRY(dst, dst->end);
+
+				dst_nxt = dst_put + 1;
+				if (dst_nxt == dst_tail)
+					dst_nxt = dst_head;
 			} else {
 				/* client not found - skipping this entry */
 				gk20a_warn(dev_from_gk20a(g),
@@ -430,8 +350,7 @@ static int css_gr_flush_snapshots(struct gr_gk20a *gr)
 		}
 
 		/* check for software overflows */
-		if (dst_put + 1 == dst_get ||
-			(dst_put == dst_tail && dst_get == dst_head)) {
+		if (dst_nxt == dst_get) {
 			/* no data copy, no pointer updates */
 			dst->sw_overflow_events_occured++;
 			gk20a_warn(dev_from_gk20a(g),
@@ -439,10 +358,12 @@ static int css_gr_flush_snapshots(struct gr_gk20a *gr)
 							src->perfmon_id);
 		} else {
 			*dst_put = *src;
-			if (dst_put == dst_tail)
-				dst_put = dst_head;
-			else
-				dst_put++;
+			completed++;
+
+			dst_put = dst_nxt++;
+
+			if (dst_nxt == dst_tail)
+				dst_nxt = dst_head;
 		}
 
 next_hw_fifo_entry:
@@ -465,14 +386,17 @@ next_hw_fifo_entry:
 				(css->hw_end - css->hw_get) * sizeof(*src));
 	}
 	gr->cs_data->hw_get = src;
-	css_hw_set_handled_snapshots(g, sid);
-	if (pending != sid) {
+
+	if (g->ops.css.set_handled_snapshots)
+		g->ops.css.set_handled_snapshots(g, sid);
+
+	if (completed != sid) {
 		/* not all entries proceed correctly. some of problems */
 		/* reported as overflows, some as orphaned perfmons,   */
 		/* but it will be better notify with summary about it  */
 		gk20a_warn(dev_from_gk20a(g),
-			   "cyclestats: done %u from %u entries\n",
-							sid, pending);
+			   "cyclestats: completed %u from %u entries\n",
+							completed, pending);
 	}
 
 	return 0;
@@ -511,7 +435,8 @@ static u32 css_gr_release_perfmon_ids(struct gk20a_cs_snapshot *data,
 }
 
 
-static int css_gr_free_client_data(struct gk20a_cs_snapshot *data,
+static int css_gr_free_client_data(struct gk20a *g,
+				struct gk20a_cs_snapshot *data,
 				struct gk20a_cs_snapshot_client *client)
 {
 	int ret = 0;
@@ -519,8 +444,9 @@ static int css_gr_free_client_data(struct gk20a_cs_snapshot *data,
 	if (client->list.next && client->list.prev)
 		list_del(&client->list);
 
-	if (client->perfmon_start && client->perfmon_count) {
-		if (client->perfmon_count != css_gr_release_perfmon_ids(data,
+	if (client->perfmon_start && client->perfmon_count
+					&& g->ops.css.release_perfmon_ids) {
+		if (client->perfmon_count != g->ops.css.release_perfmon_ids(data,
 				client->perfmon_start, client->perfmon_count))
 			ret = -EINVAL;
 	}
@@ -536,7 +462,8 @@ static int css_gr_free_client_data(struct gk20a_cs_snapshot *data,
 	return ret;
 }
 
-static int css_gr_create_client_data(struct gk20a_cs_snapshot *data,
+static int css_gr_create_client_data(struct gk20a *g,
+			struct gk20a_cs_snapshot *data,
 			u32 dmabuf_fd, u32 perfmon_count,
 			struct gk20a_cs_snapshot_client **client)
 {
@@ -581,8 +508,12 @@ static int css_gr_create_client_data(struct gk20a_cs_snapshot *data,
 	cur->snapshot->put = cur->snapshot->start;
 
 	cur->perfmon_count = perfmon_count;
-	if (cur->perfmon_count) {
-		cur->perfmon_start = css_gr_allocate_perfmon_ids(data,
+
+	/* In virtual case, perfmon ID allocation is handled by the server
+	 * at the time of the attach (allocate_perfmon_ids is NULL in this case)
+	 */
+	if (cur->perfmon_count && g->ops.css.allocate_perfmon_ids) {
+		cur->perfmon_start = g->ops.css.allocate_perfmon_ids(data,
 							cur->perfmon_count);
 		if (!cur->perfmon_start) {
 			ret = -ENOENT;
@@ -598,19 +529,20 @@ static int css_gr_create_client_data(struct gk20a_cs_snapshot *data,
 failed:
 	*client = NULL;
 	if (cur)
-		css_gr_free_client_data(data, cur);
+		css_gr_free_client_data(g, data, cur);
 
 	return ret;
 }
 
 
-int gr_gk20a_css_attach(struct gk20a *g,
+int gr_gk20a_css_attach(struct channel_gk20a *ch,
 			u32 dmabuf_fd,
 			u32 perfmon_count,
 			u32 *perfmon_start,
 			struct gk20a_cs_snapshot_client **cs_client)
 {
 	int ret = 0;
+	struct gk20a *g = ch->g;
 	struct gr_gk20a *gr;
 
 	/* we must have a placeholder to store pointer to client structure */
@@ -630,14 +562,14 @@ int gr_gk20a_css_attach(struct gk20a *g,
 	if (ret)
 		goto failed;
 
-	ret = css_gr_create_client_data(gr->cs_data,
+	ret = css_gr_create_client_data(g, gr->cs_data,
 				     dmabuf_fd,
 				     perfmon_count,
 				     cs_client);
 	if (ret)
 		goto failed;
 
-	ret = css_hw_enable_snapshot(gr, (*cs_client)->snapshot_size);
+	ret = g->ops.css.enable_snapshot(ch, *cs_client);
 	if (ret)
 		goto failed;
 
@@ -651,7 +583,7 @@ int gr_gk20a_css_attach(struct gk20a *g,
 failed:
 	if (gr->cs_data) {
 		if (*cs_client) {
-			css_gr_free_client_data(gr->cs_data, *cs_client);
+			css_gr_free_client_data(g, gr->cs_data, *cs_client);
 			*cs_client = NULL;
 		}
 
@@ -666,10 +598,11 @@ failed:
 	return ret;
 }
 
-int gr_gk20a_css_detach(struct gk20a *g,
+int gr_gk20a_css_detach(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client)
 {
 	int ret = 0;
+	struct gk20a *g = ch->g;
 	struct gr_gk20a *gr;
 
 	if (!cs_client)
@@ -680,7 +613,10 @@ int gr_gk20a_css_detach(struct gk20a *g,
 	if (gr->cs_data) {
 		struct gk20a_cs_snapshot *data = gr->cs_data;
 
-		ret = css_gr_free_client_data(data, cs_client);
+		if (g->ops.css.detach_snapshot)
+			g->ops.css.detach_snapshot(ch, cs_client);
+
+		ret = css_gr_free_client_data(g, data, cs_client);
 		if (list_empty(&data->clients))
 			css_gr_free_shared_data(gr);
 	} else {
@@ -691,10 +627,11 @@ int gr_gk20a_css_detach(struct gk20a *g,
 	return ret;
 }
 
-int gr_gk20a_css_flush(struct gk20a *g,
+int gr_gk20a_css_flush(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *cs_client)
 {
 	int ret = 0;
+	struct gk20a *g = ch->g;
 	struct gr_gk20a *gr;
 
 	if (!cs_client)
@@ -702,7 +639,7 @@ int gr_gk20a_css_flush(struct gk20a *g,
 
 	gr = &g->gr;
 	mutex_lock(&gr->cs_lock);
-	ret = css_gr_flush_snapshots(gr);
+	ret = css_gr_flush_snapshots(ch);
 	mutex_unlock(&gr->cs_lock);
 
 	return ret;
@@ -717,4 +654,32 @@ void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g)
 	css_gr_free_shared_data(gr);
 	mutex_unlock(&gr->cs_lock);
 	mutex_destroy(&gr->cs_lock);
+}
+
+static int css_hw_check_data_available(struct channel_gk20a *ch, u32 *pending,
+					bool *hw_overflow)
+{
+	struct gk20a *g = ch->g;
+	struct gr_gk20a *gr = &g->gr;
+	struct gk20a_cs_snapshot *css = gr->cs_data;
+
+	if (!css->hw_snapshot)
+		return -EINVAL;
+
+	*pending = css_hw_get_pending_snapshots(g);
+	if (!*pending)
+		return 0;
+
+	*hw_overflow = css_hw_get_overflow_status(g);
+	return 0;
+}
+
+void gk20a_init_css_ops(struct gpu_ops *gops)
+{
+	gops->css.enable_snapshot = css_hw_enable_snapshot;
+	gops->css.disable_snapshot = css_hw_disable_snapshot;
+	gops->css.check_data_available = css_hw_check_data_available;
+	gops->css.set_handled_snapshots = css_hw_set_handled_snapshots;
+	gops->css.allocate_perfmon_ids = css_gr_allocate_perfmon_ids;
+	gops->css.release_perfmon_ids = css_gr_release_perfmon_ids;
 }

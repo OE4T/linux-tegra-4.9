@@ -603,7 +603,7 @@ static int gk20a_flush_cycle_stats_snapshot(struct channel_gk20a *ch)
 
 	mutex_lock(&ch->cs_client_mutex);
 	if (ch->cs_client)
-		ret = gr_gk20a_css_flush(ch->g, ch->cs_client);
+		ret = gr_gk20a_css_flush(ch, ch->cs_client);
 	else
 		ret = -EBADF;
 	mutex_unlock(&ch->cs_client_mutex);
@@ -622,7 +622,7 @@ static int gk20a_attach_cycle_stats_snapshot(struct channel_gk20a *ch,
 	if (ch->cs_client) {
 		ret = -EEXIST;
 	} else {
-		ret = gr_gk20a_css_attach(ch->g,
+		ret = gr_gk20a_css_attach(ch,
 					dmabuf_fd,
 					perfmon_id_count,
 					perfmon_id_start,
@@ -639,7 +639,7 @@ static int gk20a_free_cycle_stats_snapshot(struct channel_gk20a *ch)
 
 	mutex_lock(&ch->cs_client_mutex);
 	if (ch->cs_client) {
-		ret = gr_gk20a_css_detach(ch->g, ch->cs_client);
+		ret = gr_gk20a_css_detach(ch, ch->cs_client);
 		ch->cs_client = NULL;
 	} else {
 		ret = 0;

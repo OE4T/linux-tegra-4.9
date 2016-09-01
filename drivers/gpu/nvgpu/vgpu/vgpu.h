@@ -85,6 +85,9 @@ void vgpu_init_ltc_ops(struct gpu_ops *gops);
 void vgpu_init_mm_ops(struct gpu_ops *gops);
 void vgpu_init_debug_ops(struct gpu_ops *gops);
 void vgpu_init_tsg_ops(struct gpu_ops *gops);
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+void vgpu_init_css_ops(struct gpu_ops *gops);
+#endif
 int vgpu_init_mm_support(struct gk20a *g);
 int vgpu_init_gr_support(struct gk20a *g);
 int vgpu_init_fifo_support(struct gk20a *g);
@@ -161,6 +164,11 @@ static inline void vgpu_init_mm_ops(struct gpu_ops *gops)
 static inline void vgpu_init_debug_ops(struct gpu_ops *gops)
 {
 }
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+static inline void vgpu_init_css_ops(struct gpu_ops *gops)
+{
+}
+#endif
 static inline int vgpu_init_mm_support(struct gk20a *g)
 {
 	return -ENOSYS;

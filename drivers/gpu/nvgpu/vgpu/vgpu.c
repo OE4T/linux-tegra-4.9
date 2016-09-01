@@ -334,6 +334,9 @@ void vgpu_init_hal_common(struct gk20a *g)
 	vgpu_init_dbg_session_ops(gops);
 	vgpu_init_fecs_trace_ops(gops);
 	vgpu_init_tsg_ops(gops);
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	vgpu_init_css_ops(gops);
+#endif
 	gops->chip_init_gpu_characteristics = vgpu_init_gpu_characteristics;
 	gops->read_ptimer = vgpu_read_ptimer;
 }

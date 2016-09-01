@@ -603,16 +603,16 @@ int gr_gk20a_halt_pipe(struct gk20a *g);
 int gr_gk20a_debugfs_init(struct gk20a *g);
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
-int gr_gk20a_css_attach(struct gk20a *g,	/* in - main hw structure */
-			u32 dmabuf_fd,		/* in - dma mapped memory */
-			u32 perfmon_id_count,	/* in - number of perfmons*/
-			u32 *perfmon_id_start,	/* out- index of first pm */
+int gr_gk20a_css_attach(struct channel_gk20a *ch,   /* in - main hw structure */
+			u32 dmabuf_fd,		    /* in - dma mapped memory */
+			u32 perfmon_id_count,	    /* in - number of perfmons*/
+			u32 *perfmon_id_start,	    /* out- index of first pm */
 			/* out - pointer to client data used in later     */
 			struct gk20a_cs_snapshot_client **css_client);
 
-int gr_gk20a_css_detach(struct gk20a *g,
+int gr_gk20a_css_detach(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *css_client);
-int gr_gk20a_css_flush(struct gk20a *g,
+int gr_gk20a_css_flush(struct channel_gk20a *ch,
 				struct gk20a_cs_snapshot_client *css_client);
 
 void gr_gk20a_free_cyclestats_snapshot_data(struct gk20a *g);

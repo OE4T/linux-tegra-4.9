@@ -36,6 +36,7 @@
 #include "therm_gm20b.h"
 #include "hw_proj_gm20b.h"
 #include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
 
 #define FUSE_OPT_PRIV_SEC_DIS_0 0x264
 #define PRIV_SECURITY_DISABLE 0x01
@@ -226,6 +227,9 @@ int gm20b_init_hal(struct gk20a *g)
 	gm20b_init_cde_ops(gops);
 	gm20b_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gk20a_init_css_ops(gops);
+#endif
 	gops->name = "gm20b";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gm20b_get_litter_value;

@@ -32,6 +32,7 @@
 #include "hw_proj_gk20a.h"
 #include "tsg_gk20a.h"
 #include "dbg_gpu_gk20a.h"
+#include "css_gr_gk20a.h"
 
 static struct gpu_ops gk20a_ops = {
 	.clock_gating = {
@@ -157,6 +158,9 @@ int gk20a_init_hal(struct gk20a *g)
 	gk20a_init_dbg_session_ops(gops);
 	gk20a_init_therm_ops(gops);
 	gk20a_init_tsg_ops(gops);
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gk20a_init_css_ops(gops);
+#endif
 	gops->name = "gk20a";
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;
 	gops->get_litter_value = gk20a_get_litter_value;

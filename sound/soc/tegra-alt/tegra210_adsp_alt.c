@@ -438,12 +438,12 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 	if (ret < 0) {
 		/* Wakeup APM to consume messages and give it some time */
 		ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_msg_ready,
-			NVADSP_MBOX_SMSG, true, 100);
+			NVADSP_MBOX_SMSG, false, 0);
 		if (ret) {
 			pr_err("%s: Failed to send mailbox message id %d ret %d\n",
 				__func__, app->apm->mbox_id, ret);
 		}
-		msleep(20);
+		mdelay(20);
 		/* Attempt queueing again */
 		ret = msgq_queue_message(&app->apm->msgq_recv.msgq,
 				&apm_msg->msgq_msg);
@@ -458,7 +458,7 @@ static int tegra210_adsp_send_msg(struct tegra210_adsp_app *app,
 		return 0;
 
 	ret = nvadsp_mbox_send(&app->apm_mbox, apm_cmd_msg_ready,
-		NVADSP_MBOX_SMSG, true, 100);
+		NVADSP_MBOX_SMSG, false, 0);
 	if (ret) {
 		pr_err("%s: Failed to send mailbox message id %d ret %d\n",
 			__func__, app->apm->mbox_id, ret);

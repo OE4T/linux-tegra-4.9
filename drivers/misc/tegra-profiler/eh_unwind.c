@@ -117,23 +117,6 @@ validate_mmap_addr(struct quadd_mmap_area *mmap,
 	return 1;
 }
 
-#define read_user_data(addr, retval)				\
-({								\
-	long ret;						\
-								\
-	pagefault_disable();					\
-	ret = __get_user(retval, addr);				\
-	pagefault_enable();					\
-								\
-	if (ret) {						\
-		pr_debug("%s: failed for address: %p\n",	\
-			 __func__, addr);			\
-		ret = -QUADD_URC_EACCESS;			\
-	}							\
-								\
-	ret;							\
-})
-
 static inline long
 read_mmap_data(struct quadd_mmap_area *mmap, const u32 *addr, u32 *retval)
 {
@@ -181,10 +164,12 @@ mmap_addr_to_ex_addr(unsigned long addr,
 static inline u32 __maybe_unused
 prel31_to_addr(const u32 *ptr)
 {
+	long err;
 	u32 value;
 	s32 offset;
 
-	if (read_user_data(ptr, value))
+	err = read_user_data(&value, ptr, sizeof(*ptr));
+	if (err < 0)
 		return 0;
 
 	/* sign-extend to 32 bits */
@@ -811,7 +796,8 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		load_sp = mask & (1 << (13 - 4));
 		while (mask) {
 			if (mask & 1) {
-				err = read_user_data(vsp++, ctrl->vrs[reg]);
+				err = read_user_data(&ctrl->vrs[reg], vsp++,
+						     sizeof(u32));
 				if (err < 0)
 					return err;
 
@@ -836,7 +822,8 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 
 		/* pop R4-R[4+bbb] */
 		for (reg = 4; reg <= 4 + (insn & 7); reg++) {
-			err = read_user_data(vsp++, ctrl->vrs[reg]);
+			err = read_user_data(&ctrl->vrs[reg], vsp++,
+					     sizeof(u32));
 			if (err < 0)
 				return err;
 
@@ -845,7 +832,8 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		}
 
 		if (insn & 0x08) {
-			err = read_user_data(vsp++, ctrl->vrs[14]);
+			err = read_user_data(&ctrl->vrs[14], vsp++,
+					     sizeof(u32));
 			if (err < 0)
 				return err;
 
@@ -879,7 +867,8 @@ unwind_exec_insn(struct quadd_mmap_area *mmap,
 		/* pop R0-R3 according to mask */
 		while (mask) {
 			if (mask & 1) {
-				err = read_user_data(vsp++, ctrl->vrs[reg]);
+				err = read_user_data(&ctrl->vrs[reg], vsp++,
+						     sizeof(u32));
 				if (err < 0)
 					return err;
 

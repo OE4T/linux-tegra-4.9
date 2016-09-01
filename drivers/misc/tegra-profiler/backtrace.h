@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/backtrace.h
  *
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -19,6 +19,9 @@
 
 #include <linux/mm.h>
 #include <linux/bitops.h>
+#include <linux/uaccess.h>
+
+#include <linux/tegra_profiler.h>
 
 #define QUADD_MAX_STACK_DEPTH		64
 
@@ -108,6 +111,24 @@ validate_stack_addr(unsigned long addr,
 		return 0;
 
 	return is_vma_addr(addr, vma, nbytes);
+}
+
+static inline long
+read_user_data(void *dst, const void __user *src, unsigned long n)
+{
+	long err;
+
+	pagefault_disable();
+	err = __copy_from_user_inatomic(dst, src, n);
+	pagefault_enable();
+
+	if (unlikely(err)) {
+		pr_debug("%s: failed for address: %p\n",
+			 __func__, src);
+		err = -QUADD_URC_EACCESS;
+	}
+
+	return err;
 }
 
 #endif  /* __QUADD_BACKTRACE_H */

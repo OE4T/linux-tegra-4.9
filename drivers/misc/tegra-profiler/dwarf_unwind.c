@@ -180,23 +180,6 @@ struct eh_sec_data {
 	unsigned char *data;
 };
 
-#define read_user_data(addr, retval)				\
-({								\
-	long ret;						\
-								\
-	pagefault_disable();					\
-	ret = __get_user(retval, addr);				\
-	pagefault_enable();					\
-								\
-	if (ret) {						\
-		pr_debug("%s: failed for address: %p\n",	\
-			 __func__, addr);			\
-		ret = -QUADD_URC_EACCESS;			\
-	}							\
-								\
-	ret;							\
-})
-
 static struct quadd_dwarf_context ctx;
 
 static inline int regnum_sp(int mode)
@@ -1908,10 +1891,11 @@ unwind_frame(struct ex_region_info *ri,
 				return -QUADD_URC_SP_INCORRECT;
 
 			if (mode == DW_MODE_ARM32)
-				err = read_user_data((u32 __user *)addr, val);
+				err = read_user_data(&val, (void __user *)addr,
+						     sizeof(u32));
 			else
-				err = read_user_data((unsigned long __user *)
-						     addr, val);
+				err = read_user_data(&val, (void __user *)addr,
+						     sizeof(unsigned long));
 
 			if (err < 0)
 				return err;

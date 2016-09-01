@@ -28,3 +28,4 @@ obj-$(CONFIG_MAC80211_HWSIM)	+= mac80211_hwsim.o
 
 obj-$(CONFIG_BCMDHD_SDIO)       += bcmdhd/
 obj-$(CONFIG_BCMDHD_PCIE)       += bcmdhd_pcie/
+obj-$(CONFIG_RTL8822BE)	+= rtl8822be/

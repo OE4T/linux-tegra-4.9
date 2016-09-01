@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -2182,8 +2182,9 @@ static int tegra210_emc_probe(struct platform_device *pdev)
 		return ret;
 
 	tegra_emc_init_done = true;
-
+#ifdef CONFIG_DEBUG_FS
 	tegra_emc_debug_init();
+#endif
 
 	return 0;
 }

@@ -89,14 +89,7 @@ static const char * const ape_clock_names[] = {
 };
 
 static const char * const ape_reset_names[] = {
-	"adspdbg",
-	"adspintf",
-	"adspneon",
-	"adspperiph",
-	"adspscu",
-	"adspwdt",
-	"ape",
-	"adsp",
+	"adsp-all"
 };
 
 enum tegra_cam_rtcpu_id {

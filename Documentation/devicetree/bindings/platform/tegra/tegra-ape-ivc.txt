@@ -69,24 +69,8 @@ tegra_ape: rtcpu@2993000 {
 		"ape",
 		"adsp",
 		"adspneon";
-	resets =
-		<&tegra_car TEGRA186_RESET_ADSPDBG>,
-		<&tegra_car TEGRA186_RESET_ADSPINTF>,
-		<&tegra_car TEGRA186_RESET_ADSPNEON>,
-		<&tegra_car TEGRA186_RESET_ADSPPERIPH>,
-		<&tegra_car TEGRA186_RESET_ADSPSCU>,
-		<&tegra_car TEGRA186_RESET_ADSPWDT>,
-		<&tegra_car TEGRA186_RESET_APE>,
-		<&tegra_car TEGRA186_RESET_ADSP>;
-	reset-names =
-		"adspdbg",
-		"adspintf",
-		"adspneon",
-		"adspperiph",
-		"adspscu",
-		"adspwdt",
-		"ape",
-		"adsp";
+	resets = <&tegra_car TEGRA186_RESET_ADSP_ALL>;
+	reset-names = "adsp-all";
 
 	/* See ./tegra-sce-ivc.txt for generic IVC example */
 };

@@ -28,7 +28,7 @@
 #include "gp106/fifo_gp106.h"
 #include "gp10b/regops_gp10b.h"
 #include "gp10b/cde_gp10b.h"
-#include "gp10b/therm_gp10b.h"
+#include "gp106/therm_gp106.h"
 
 #include "gm206/bios_gm206.h"
 
@@ -209,6 +209,7 @@ int gp106_init_hal(struct gk20a *g)
 	gk20a_init_css_ops(gops);
 #endif
 	gm206_init_bios(gops);
+	gp106_init_therm_ops(gops);
 	gops->name = "gp10x";
 	gops->get_litter_value = gp106_get_litter_value;
 	gops->chip_init_gpu_characteristics = gk20a_init_gpu_characteristics;

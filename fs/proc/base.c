@@ -1362,6 +1362,7 @@ static ssize_t proc_fault_inject_write(struct file * file,
 		count = sizeof(buffer) - 1;
 	if (copy_from_user(buffer, buf, count))
 		return -EFAULT;
+	buffer[PROC_NUMBUF - 1] = '\0';
 	rv = kstrtoint(strstrip(buffer), 0, &make_it_fail);
 	if (rv < 0)
 		return rv;

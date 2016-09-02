@@ -81,6 +81,8 @@ void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
  * @nvhost_buffers:	Pointer to nvhost_buffer struct
  * @handles:		Pointer to MemHandle list
  * @count:		Number of memhandles in the list
+ * @paddr:		Pointer to IOVA list
+ * @psize:		Pointer to size of buffer to return
  *
  * Return: 0 on success or negative on error
  *
@@ -88,7 +90,8 @@ void nvhost_buffer_unpin(struct nvhost_buffers *nvhost_buffers, u32 *handles,
  * task submission.
  */
 int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
-					u32 *handles, u32 count);
+				u32 *handles, u32 count,
+				dma_addr_t *paddr, size_t *psize);
 
 /**
  * nvhost_buffer_unpin - UnPins the mapped address space on task completion.

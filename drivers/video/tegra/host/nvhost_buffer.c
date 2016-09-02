@@ -165,7 +165,8 @@ nvhost_buffer_init_err:
 }
 
 int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
-				u32 *handles, u32 count)
+				u32 *handles, u32 count,
+				dma_addr_t *paddr, size_t *psize)
 {
 	struct nvhost_vm_buffer *vm;
 	int i = 0;
@@ -175,10 +176,13 @@ int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 	for (i = 0; i < count; i++) {
 
 		vm = nvhost_find_map_buffer(nvhost_buffers, handles[i]);
-		if (vm)
+		if (vm) {
 			vm->submit_map_count++;
-		else
+			paddr[i] = vm->addr;
+			psize[i] = vm->size;
+		} else {
 			goto submit_err;
+		}
 	}
 
 	kref_get(&nvhost_buffers->kref);

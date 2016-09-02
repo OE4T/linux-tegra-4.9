@@ -383,15 +383,16 @@ pva_set_sched_attr_fixed(struct pva_sched_attr * const attrs,
 #define PVA_CMD_INT_ON_COMPLETE		PVA_BIT(29)
 #define PVA_GET_SUBCOMMAND(_c_, _t_)	PVA_EXTRACT(_c_, 15, 8, _t_)
 #define PVA_SET_SUBCOMMAND(_c_)		PVA_INSERT(_c_, 15, 8)
-#define PVA_GET_COMMAND(_c_)		PVA_EXTRACT(_c_, 7, 0, pva_cmds_t)
+#define PVA_GET_COMMAND(_c_)		PVA_EXTRACT(_c_, 7, 0, enum pva_cmds)
 #define PVA_SET_COMMAND(_c_)		PVA_INSERT(_c_, 7, 0)
 
 /*
  * Generic fields in a command sent through the command FIFO interface.
  */
-#define PVA_FIFO_GET_COMMAND(_c_)	PVA_EXTRACT64(_c_, 63, 56, pva_cmds_t)
 #define PVA_FIFO_INT_ON_ERR		PVA_BIT64(1)
 #define PVA_FIFO_INT_ON_COMPLETE	PVA_BIT64(0)
+#define PVA_FIFO_GET_COMMAND(_c_)	PVA_EXTRACT64(_c_, 63, 56,	\
+						enum pva_cmds)
 
 /*
  * Structure for managing commands through PVA_SHRD_MBOX*
@@ -923,7 +924,7 @@ struct pva_status_queue_attributes {
 	uint32_t	reserved1;
 	uint32_t	reserved2;
 	uint32_t	reserved3;
-} _t;
+};
 
 static inline uint32_t
 pva_cmd_queue_attributes(struct pva_cmd * const cmd,
@@ -1062,8 +1063,8 @@ pva_cmd_set_region(struct pva_cmd * const cmd,
 	return 3U;
 }
 
-#define pva_get_region_header_len(_x_)		PVA_EXTRACT(31, 16, uint32_t)
-#define pva_get_region_element_len(_x_)		PVA_EXTRACT(15, 0, uint32_t)
+#define pva_get_region_header_len(_x_)	PVA_EXTRACT(_x_, 31, 16, uint32_t)
+#define pva_get_region_element_len(_x_)	PVA_EXTRACT(_x_, 15, 0, uint32_t)
 
 /*
  * CMD_SET_LOGGING
@@ -1346,7 +1347,5 @@ pva_cmd_set_sched_attr(struct pva_cmd * const cmd,
 	cmd->mbox[2] = attrs->attr_b;
 	return 3U;
 }
-
-
 
 #endif

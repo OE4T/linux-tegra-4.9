@@ -20,8 +20,15 @@
 #include <linux/module.h>
 #include <linux/delay.h>
 #include <linux/platform_device.h>
+#include "dev.h"
 #include "nvhost_acm.h"
 #include "pva_regs.h"
+
+/* Change this define as more cmd get supported */
+#define SUPPORTED_CMD 1
+static struct pva_status_lookup *commands[SUPPORTED_CMD] = {
+	[CMD_NOOP]			= &pva_noop_cmnd
+};
 
 static u32 pva_get_mb_reg(u32 i)
 {
@@ -35,12 +42,22 @@ static u32 pva_get_mb_reg(u32 i)
 	return mb_reg[i];
 }
 
-u32 pva_send_mbox_cmd(struct platform_device *pdev,
+/* Function to notify unsupported commands */
+static int mbox_cmd_nosupport(struct platform_device *pdev,
+			const struct pva_mbox_status *const mb_status)
+{
+	nvhost_err(&pdev->dev, "mbox cmd 0x%x missing code support\n",
+			PVA_GET_COMMAND(mb_status->cmd));
+	return -EINVAL;
+}
+
+
+int pva_send_mbox_cmd(struct platform_device *pdev,
 				struct pva_cmd *cmd, u32 nregs)
 {
 	u32	reg, status;
 	s32	i;
-	u32	err = 0;
+	int	err = 0;
 
 	if (nregs > VALID_MB_INPUT_REGS) {
 		pr_err("%s nregs %d more than expected\n", __func__, nregs);
@@ -83,7 +100,7 @@ void pva_mbox_poll_status(struct platform_device *pdev)
 
 }
 
-u32 pva_read_mbox_status(struct platform_device *pdev,
+int pva_read_mbox_status(struct platform_device *pdev,
 			int int_status,
 			struct pva_mbox_status *mb_status)
 {
@@ -137,4 +154,25 @@ u32 pva_read_mbox_status(struct platform_device *pdev,
 	host1x_writel(pdev, hsp_sm7_r(), (int_status & ~clear_status));
 
 	return int_status;
+}
+
+int
+pva_process_mbox_status(struct platform_device *pdev,
+		const struct pva_mbox_status *const mb_status)
+{
+	const struct pva_status_lookup *lookup;
+	u32 cmd = PVA_GET_COMMAND(mb_status->cmd);
+	int err = -EINVAL;
+
+	if (cmd < SUPPORTED_CMD) {
+		lookup = commands[cmd];
+		if (lookup &&
+			(lookup->process_mbox != NULL)) {
+			err = lookup->process_mbox(mb_status);
+		}
+	} else {
+		err = mbox_cmd_nosupport(pdev, mb_status);
+	}
+
+	return err;
 }

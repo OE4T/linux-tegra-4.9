@@ -23,8 +23,16 @@
 #include "hw_dma_desc_pva.h"
 #include "hw_proc_pva.h"
 #include "hw_hsp_pva.h"
+#include "hw_sec_pva.h"
 #include "pva-interface.h"
 #include "pva_mailbox.h"
 #include "pva-ucode-header.h"
+
+/* Definition for LIC_INTR_ENABLE bits */
+#define SEC_LIC_INTR_HSP1	0x1
+#define SEC_LIC_INTR_HSP2	0x2
+#define SEC_LIC_INTR_HSP3	0x4
+#define SEC_LIC_INTR_HSP4	0x8
+#define SEC_LIC_INTR_HSP_ALL	0xF
 
 #endif

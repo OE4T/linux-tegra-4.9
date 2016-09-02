@@ -35,6 +35,7 @@
 #include "t194/t194.h"
 #include "nvhost_queue.h"
 #include "pva.h"
+#include "pva_regs.h"
 
 /* Map PVA-A and PVA-B to respective configuration items in nvhost */
 static struct of_device_id tegra_pva_of_match[] = {
@@ -64,6 +65,10 @@ int pva_finalize_poweron(struct platform_device *pdev)
 {
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
+
+	/* Enable LIC_INTERRUPT line for HSP1 */
+	host1x_writel(pva->pdev, sec_lic_intr_enable_r(),
+		sec_lic_intr_enable_hsp_f(SEC_LIC_INTR_HSP1));
 
 	enable_irq(pva->irq);
 

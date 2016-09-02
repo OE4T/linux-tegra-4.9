@@ -104,6 +104,9 @@ int gk20a_init_therm_support(struct gk20a *g)
 	if (err)
 		return err;
 
+	if (g->ops.therm.therm_debugfs_init)
+	    g->ops.therm.therm_debugfs_init(g);
+
 	return err;
 }
 

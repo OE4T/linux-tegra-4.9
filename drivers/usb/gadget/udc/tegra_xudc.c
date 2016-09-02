@@ -1134,17 +1134,15 @@ static unsigned int actual_data_transferred(struct tegra_xudc_ep *ep,
 static void squeeze_transfer_ring(struct tegra_xudc_ep *ep,
 				  struct tegra_xudc_request *req)
 {
-	unsigned int i;
+	struct tegra_xudc_trb *trb = req->first_trb;
 
 	/* Clear out all the TRBs part of or after the cancelled request. */
-	for (i = req->first_trb - ep->transfer_ring; i != ep->enq_ptr; i++) {
-		struct tegra_xudc_trb *trb;
-
-		if (i == XUDC_TRANSFER_RING_SIZE - 1)
-			i = 0;
-
-		trb = &ep->transfer_ring[i];
+	while (trb != &ep->transfer_ring[ep->enq_ptr]) {
 		memset(trb, 0, sizeof(*trb));
+		trb++;
+
+		if (trb_read_type(trb) == TRB_TYPE_LINK)
+			trb = ep->transfer_ring;
 	}
 
 	/* Requests will be re-queued at the start of the cancelled request. */

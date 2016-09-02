@@ -19,6 +19,8 @@
 #ifndef __NVHOST_NVHOST_BUFFER_H__
 #define __NVHOST_NVHOST_BUFFER_H__
 
+#include <linux/dma-buf.h>
+
 /**
  * nvhost_buffers - Information needed for buffers
  *
@@ -117,5 +119,19 @@ void nvhost_buffer_submit_unpin(struct nvhost_buffers *nvhost_buffers,
  *
  */
 void nvhost_buffer_put(struct nvhost_buffers *nvhost_buffers);
+
+/**
+ * nvhost_get_iova_addr - returns dma buf and dma addr for a given handle
+ *
+ * @nvhost_buffer:	Pointer to nvhost_buffer struct
+ * @handle:		MemHandle to search for
+ * @dmabuf:		dma buf pointer to return
+ * @addr:		dma_addr_t pointer to return
+ *
+ * Return: 0 on success or negative on error
+ *
+ */
+int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers, u32 handle,
+			struct dma_buf **dmabuf, dma_addr_t *addr);
 
 #endif /*__NVHOST_NVHOST_BUFFER_H__ */

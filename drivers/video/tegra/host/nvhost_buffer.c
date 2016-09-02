@@ -53,6 +53,22 @@ struct nvhost_vm_buffer {
 	struct list_head pin_list;
 };
 
+int nvhost_get_iova_addr(struct nvhost_buffers *nvhost_buffers, u32 handle,
+			struct dma_buf **dmabuf, dma_addr_t *addr)
+{
+	struct nvhost_vm_buffer *vm;
+
+	list_for_each_entry(vm, &nvhost_buffers->buffer_list, pin_list) {
+		if (vm->memhandle == handle) {
+			*dmabuf = vm->buf;
+			*addr = vm->addr;
+			return 0;
+		}
+	}
+
+	return -EINVAL;
+}
+
 static struct nvhost_vm_buffer *nvhost_find_map_buffer(
 		struct nvhost_buffers *nvhost_buffers, u32 handle)
 {

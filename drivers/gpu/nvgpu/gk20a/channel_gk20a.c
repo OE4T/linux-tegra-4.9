@@ -1376,7 +1376,7 @@ int gk20a_channel_alloc_priv_cmdbuf(struct channel_gk20a *c, u32 orig_size,
 	free_count = (q->size - (q->put - q->get) - 1) % q->size;
 
 	if (size > free_count)
-		return -ENOSPC;
+		return -EAGAIN;
 
 	e = kzalloc(sizeof(struct priv_cmd_entry), GFP_KERNEL);
 	if (!e) {

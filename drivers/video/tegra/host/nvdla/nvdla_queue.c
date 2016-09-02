@@ -119,6 +119,9 @@ static void task_free(struct kref *ref)
 		task->task_desc = NULL;
 	}
 
+	/* free operation descriptor handle */
+	kfree(task->op_handle);
+
 	/* finally free task */
 	kfree(task);
 }
@@ -152,6 +155,10 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 		if (task_complete) {
 			/* give syncpoint reference */
 			nvhost_syncpt_put_ref(task->sp, queue->syncpt_id);
+
+			/* unpin submit ref */
+			nvhost_buffer_submit_unpin(task->buffers,
+				task->op_handle, MAX_HANDLE_PER_OP_DESC);
 
 			/* update takslist */
 			list_del(&task->list);
@@ -192,9 +199,11 @@ dma_addr_t get_semaphore_pa(struct platform_device *pdev)
 #endif
 
 struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
+			struct nvhost_buffers *buffers,
 			struct nvdla_ctrl_ioctl_submit_task user_task)
 {
 	struct platform_device *pdev = queue->pool->pdev;
+	u32 num_operations = user_task.num_operations;
 	u32 num_postfences = user_task.num_postfences;
 	u32 num_prefences = user_task.num_prefences;
 	struct dla_action_semaphore *postaction;
@@ -210,9 +219,11 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	size_t preactionlist_size;
 	uint16_t postactionl_of;
 	uint16_t preactionl_of;
+	dma_addr_t op_dma_addr;
 	dma_addr_t buffer_pa;
 	size_t task_size;
 	size_t buf_size;
+	size_t op_size;
 	u32 *buffer_va;
 	void *mem;
 	int err;
@@ -400,10 +411,37 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 		postaction->address = get_semaphore_pa(pdev);
 	}
 
+	if (num_operations) {
+		task->buffers = buffers;
+		task->op_handle = kcalloc(MAX_HANDLE_PER_OP_DESC, sizeof(u32),
+				GFP_KERNEL);
+		if (!task->op_handle) {
+			err = -ENOMEM;
+			goto fail_to_alloc_opdesc;
+		}
+
+		if (copy_from_user(task->op_handle,
+				(void __user *)user_task.operation_desc,
+				(MAX_HANDLE_PER_OP_DESC * sizeof(u32)))) {
+			err = -EFAULT;
+			goto fail_to_cpy_buffer;
+		}
+
+		err = nvhost_buffer_submit_pin(buffers, task->op_handle,
+			MAX_HANDLE_PER_OP_DESC, &op_dma_addr, &op_size);
+		if (!err) {
+			task_desc->operation_desc = op_dma_addr;
+			task_desc->num_operations = num_operations;
+		}
+	}
+
 	nvdla_dbg_info(pdev, "task[%p] initialized", task);
 
 	return task;
 
+fail_to_cpy_buffer:
+	kfree(task->op_handle);
+fail_to_alloc_opdesc:
 fail_to_dma_alloc:
 	kfree(task);
 fail_to_alloc_task:

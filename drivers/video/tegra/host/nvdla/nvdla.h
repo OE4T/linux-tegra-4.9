@@ -22,6 +22,7 @@
 #define __NVHOST_NVDLA_H__
 
 #include <linux/nvhost_nvdla_ioctl.h>
+#include "nvhost_buffer.h"
 
 /**
  * Method ID and Method data THI registers
@@ -30,6 +31,7 @@
 #define NV_DLA_THI_METHOD_DATA	0x00000044      /* RW-4R */
 
 #define MAX_NUM_ACTION_LIST	1
+#define MAX_HANDLE_PER_OP_DESC	1
 
 /* TODO: Below should come from firmware interface */
 #define ACTION_OPCODE_TERMINATE		0x00
@@ -78,6 +80,7 @@ struct nvdla_task_fence {
  * struct nvdla_task:	structure for task info
  *
  * @queue		Queue in which task submitted
+ * @buffers		nvhost buffers for priv/task
  * @sp			pointer to syncpt
  * @prefences		pointer to prefences
  * @postfences		pointer to post fences
@@ -88,9 +91,12 @@ struct nvdla_task_fence {
  * @task_desc_pa	DLA task desc PA
  * @buf_size		Total size of task dma alloc
  * @timeout		max timeout to wait for task completion
+ * @op_handle		pointer to handle list of operation descriptor
+ *
  */
 struct nvdla_task {
 	struct nvhost_queue *queue;
+	struct nvhost_buffers *buffers;
 	struct nvhost_syncpt *sp;
 	struct nvdla_task_fence *prefences;
 	struct nvdla_task_fence *postfences;
@@ -101,6 +107,7 @@ struct nvdla_task {
 	dma_addr_t task_desc_pa;
 	size_t buf_size;
 	int timeout;
+	u32 *op_handle;
 };
 
 extern const struct file_operations tegra_nvdla_ctrl_ops;
@@ -184,6 +191,7 @@ void nvdla_task_get(struct nvdla_task *task);
  * nvdla_task_alloc()	allocate task for a give queue
  *
  * @queue		Pointer to nvhost queue
+ * @buffers		Pointer to nvhost buffers
  * @user_task		Pointer to user task passed from UMD
  *
  * Return		allocated task in success, otherwise pointer to err
@@ -192,6 +200,7 @@ void nvdla_task_get(struct nvdla_task *task);
  * parameter detais
  */
 struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
+			struct nvhost_buffers *buffers,
 			struct nvdla_ctrl_ioctl_submit_task user_task);
 
 /**

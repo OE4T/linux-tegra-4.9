@@ -184,6 +184,7 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 	struct nvdla_ctrl_ioctl_submit_task *local_tasks;
 	struct platform_device *pdev;
 	struct nvhost_queue *queue;
+	struct nvhost_buffers *buffers;
 	u32 num_tasks;
 	struct nvdla_task *task;
 	int err = 0, i = 0;
@@ -195,6 +196,8 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 	queue = priv->queue;
 	if (!queue)
 		return -EINVAL;
+
+	buffers = priv->buffers;
 
 	user_tasks = (struct nvdla_ctrl_ioctl_submit_task __user *)
 			(uintptr_t)args->tasks;
@@ -222,7 +225,7 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
 
 		/* allocate per task and update fields */
-		task = nvdla_task_alloc(queue, local_tasks[i]);
+		task = nvdla_task_alloc(queue, buffers, local_tasks[i]);
 		if (IS_ERR(task)) {
 			err = PTR_ERR(task);
 			goto fail_to_task_alloc;

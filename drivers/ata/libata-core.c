@@ -725,7 +725,8 @@ u64 ata_tf_read_block(const struct ata_taskfile *tf, struct ata_device *dev)
 			return U64_MAX;
 		}
 
-		block = (cyl * dev->heads + head) * dev->sectors + sect - 1;
+		block = ((u64)cyl * dev->heads + head) *
+			dev->sectors + sect - 1;
 	}
 
 	return block;

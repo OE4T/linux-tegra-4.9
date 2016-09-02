@@ -1,7 +1,7 @@
 /*
  * drivers/misc/tegra-profiler/power_clk.c
  *
- * Copyright (c) 2013-2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -125,10 +125,10 @@ static void make_sample(void)
 
 	mutex_unlock(&s->lock);
 /*
-	pr_debug("make_sample: cpu: %u/%u/%u/%u, gpu: %u, emc: %u\n",
-		 extra_cpus[0], extra_cpus[1], extra_cpus[2], extra_cpus[3],
-		 power_rate->gpu, power_rate->emc);
-*/
+ *	pr_debug("make_sample: cpu: %u/%u/%u/%u, gpu: %u, emc: %u\n",
+ *		 extra_cpus[0], extra_cpus[1], extra_cpus[2], extra_cpus[3],
+ *		 power_rate->gpu, power_rate->emc);
+ */
 	vec.base = extra_cpus;
 	vec.len = power_rate->nr_cpus * sizeof(extra_cpus[0]);
 
@@ -229,7 +229,7 @@ out_unlock:
 static void
 read_source(struct power_clk_source *s, int cpu)
 {
-	mutex_lock(&s->lock);
+	unsigned int value;
 
 	switch (s->type) {
 	case QUADD_POWER_CLK_CPU:
@@ -239,13 +239,18 @@ read_source(struct power_clk_source *s, int cpu)
 			break;
 		}
 
-		s->data[cpu].value = cpufreq_get(cpu);
+		value = cpufreq_get(cpu);
+
+		mutex_lock(&s->lock);
+		s->data[cpu].value = value;
 		pr_debug("QUADD_POWER_CLK_CPU, cpu: %d, value: %lu\n",
 			 cpu, s->data[cpu].value);
+		mutex_unlock(&s->lock);
 		break;
 
 	case QUADD_POWER_CLK_GPU:
 		/* update gpu frequency */
+		mutex_lock(&s->lock);
 		s->clkp = clk_get_sys("3d", NULL);
 		if (!IS_ERR_OR_NULL(s->clkp)) {
 			s->data[0].value =
@@ -254,10 +259,12 @@ read_source(struct power_clk_source *s, int cpu)
 		}
 		pr_debug("QUADD_POWER_CLK_GPU, value: %lu\n",
 			 s->data[0].value);
+		mutex_unlock(&s->lock);
 		break;
 
 	case QUADD_POWER_CLK_EMC:
 		/* update emc frequency */
+		mutex_lock(&s->lock);
 		s->clkp = clk_get_sys("cpu", "emc");
 		if (!IS_ERR_OR_NULL(s->clkp)) {
 			s->data[0].value =
@@ -266,14 +273,13 @@ read_source(struct power_clk_source *s, int cpu)
 		}
 		pr_debug("QUADD_POWER_CLK_EMC, value: %lu\n",
 			 s->data[0].value);
+		mutex_unlock(&s->lock);
 		break;
 
 	default:
 		pr_err_once("error: invalid power_clk type\n");
 		break;
 	}
-
-	mutex_unlock(&s->lock);
 }
 
 static int

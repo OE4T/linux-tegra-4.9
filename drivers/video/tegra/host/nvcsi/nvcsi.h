@@ -34,4 +34,5 @@ struct nvcsi {
 int nvcsi_finalize_poweron(struct platform_device *pdev);
 int nvcsi_prepare_poweroff(struct platform_device *pdev);
 
+struct tegra_csi_device *tegra_get_mc_csi(void);
 #endif

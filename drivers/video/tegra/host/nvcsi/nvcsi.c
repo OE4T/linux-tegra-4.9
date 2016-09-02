@@ -40,6 +40,7 @@
 #include "camera/csi/csi.h"
 #include "camera/csi/csi4_fops.h"
 
+static struct tegra_csi_device *mc_csi;
 struct tegra_csi_data t18_nvcsi_data = {
 	.info = (struct nvhost_device_data *)&t18_nvcsi_info,
 	.csi_fops = &csi4_fops,
@@ -56,6 +57,12 @@ static struct of_device_id tegra_nvcsi_of_match[] = {
 struct nvcsi_private {
 	struct platform_device *pdev;
 };
+
+struct tegra_csi_device *tegra_get_mc_csi(void)
+{
+	return mc_csi;
+}
+EXPORT_SYMBOL(tegra_get_mc_csi);
 
 int nvcsi_finalize_poweron(struct platform_device *pdev)
 {
@@ -145,7 +152,7 @@ static int nvcsi_probe(struct platform_device *dev)
 	mutex_init(&pdata->lock);
 	platform_set_drvdata(dev, pdata);
 	pdata->private_data = nvcsi;
-
+	mc_csi = &nvcsi->csi;
 	err = nvcsi_probe_regulator(nvcsi);
 	if (err)
 		dev_info(&dev->dev, "failed to get regulator (%d)\n", err);
@@ -194,6 +201,7 @@ static int __exit nvcsi_remove(struct platform_device *dev)
 	struct nvhost_device_data *pdata = platform_get_drvdata(dev);
 	struct nvcsi *nvcsi = (struct nvcsi *)pdata->private_data;
 
+	mc_csi = NULL;
 	tegra_csi_media_controller_remove(&nvcsi->csi);
 
 	return 0;

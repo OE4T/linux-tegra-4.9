@@ -165,6 +165,15 @@ int gk20a_page_allocator_init(struct gk20a_allocator *__a,
 			      const char *name, u64 base, u64 length,
 			      u64 blk_size, u64 flags);
 
+/*
+ * Lockless allocatior initializers.
+ * Note: This allocator can only allocate fixed-size structures of a
+ * pre-defined size.
+ */
+int gk20a_lockless_allocator_init(struct gk20a_allocator *__a,
+				  const char *name, u64 base, u64 length,
+				  u64 struct_size, u64 flags);
+
 #define GPU_BALLOC_MAX_ORDER		31
 
 /*

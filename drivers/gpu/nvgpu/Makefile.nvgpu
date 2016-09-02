@@ -57,6 +57,7 @@ nvgpu-y := \
 	gk20a/gk20a_allocator_bitmap.o \
 	gk20a/gk20a_allocator_buddy.o \
 	gk20a/gk20a_allocator_page.o \
+	gk20a/gk20a_allocator_lockless.o \
 	gk20a/cde_gk20a.o \
 	gk20a/platform_gk20a_generic.o \
 	gk20a/tsg_gk20a.o \

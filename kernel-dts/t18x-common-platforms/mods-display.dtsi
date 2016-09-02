@@ -13,8 +13,8 @@
  * more details.
  */
 
-#include "tegra186-platforms/tegra186-dp.dtsi"
-#include "panel-s-wuxga-8-0-mods.dtsi"
+#include "t18x-common-platforms/tegra186-dp.dtsi"
+#include "panels/panel-s-wuxga-8-0-mods.dtsi"
 / {
 	host1x {
 		nvdisplay@15200000 {

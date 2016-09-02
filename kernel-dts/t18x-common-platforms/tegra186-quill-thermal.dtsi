@@ -17,7 +17,7 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/thermal/thermal.h>
-#include "tegra186-platforms/tegra186-balanced-throttle-te770d-ucm1.dtsi"
+#include "t18x-common-platforms/tegra186-balanced-throttle-te770d-ucm1.dtsi"
 
 /* THERMAL gpio definitions */
 #define TEMP_ALERT		TEGRA_GPIO(V, 0)

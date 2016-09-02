@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <tegra186-modules/tegra186-camera-e3326-a00.dtsi>
+#include <t18x-common-modules/tegra186-camera-e3326-a00.dtsi>
 #include "dt-bindings/clock/tegra186-clock.h"
 
 #define CAM0_RST_L	TEGRA_GPIO(R, 5)

@@ -21,12 +21,12 @@
 
 #include "tegra186-soc/tegra186-soc-cvm.dtsi"
 #include "tegra186-platforms-simple-bus.dtsi"
-#include "panel-s-wuxga-8-0.dtsi"
-#include "panel-s-wqxga-10-1.dtsi"
-#include "tegra186-platforms/tegra186-quill-eqos.dtsi"
+#include "panels/panel-s-wuxga-8-0.dtsi"
+#include "panels/panel-s-wqxga-10-1.dtsi"
+#include "t18x-common-platforms/tegra186-quill-eqos.dtsi"
 #include "tegra186-hdmi.dtsi"
 #include "tegra186-dp.dtsi"
-#include "panel-s-edp-uhdtv-15-6.dtsi"
+#include "panels/panel-s-edp-uhdtv-15-6.dtsi"
 #include "tegra186-quill-pwm-fan.dtsi"
 #include "tegra186-quill-thermal-fan-est.dtsi"
 

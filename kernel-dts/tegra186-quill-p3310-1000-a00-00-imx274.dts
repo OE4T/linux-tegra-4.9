@@ -17,7 +17,7 @@
  */
 
 #include "tegra186-quill-p3310-1000-a00-00-base.dts"
-#include "tegra186-platforms/tegra186-quill-camera-imx274.dtsi"
+#include "quill-platforms/tegra186-quill-camera-imx274.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

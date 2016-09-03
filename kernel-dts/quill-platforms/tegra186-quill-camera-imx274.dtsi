@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <tegra186-modules/tegra186-camera-imx274.dtsi>
+#include <quill-modules/tegra186-camera-imx274.dtsi>
 #include "dt-bindings/clock/tegra186-clock.h"
 
 #define CAM0_RST_L	TEGRA_GPIO(R, 5)

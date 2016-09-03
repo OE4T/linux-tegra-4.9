@@ -17,7 +17,7 @@
  */
 
 #include "tegra186-quill-p3310-1000-a00-00-base.dts"
-#include "tegra186-platforms/mods-display.dtsi"
+#include "t18x-common-platforms/mods-display.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;

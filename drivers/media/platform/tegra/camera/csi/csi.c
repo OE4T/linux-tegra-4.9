@@ -32,6 +32,30 @@
 #include "linux/nvhost.h"
 #include "nvcsi/nvcsi.h"
 
+/*
+ * total_cycles_per_lane for one second = pll_d freq / 8
+ * width_in_bytes = ((width * bpp) / 8)
+ * cycles_per_line = width_in_bytes + hblank
+ * cycles_per_image = (cycles_per_line * height) + vblank
+ * image_cycles_per_lane = cycles_per_image / numlanes
+ * framerate = total_cycles_per_lane / image_cycles_per_lane
+ * As per IAS maximum overhead of ~15% can occur
+ * hblank and vblank are tuned to consider overhead during capture
+ * e.g. for 1920x1080, RAW 10 and two lane TPG
+ * cycles_per_lane = (((((1920 * 10)/8) + 512) * 1080) + 8) / 2 ~ 1572480
+ * framerate = ((927000000 / 8) / 1572480) ~ 73fps
+ * Max overhead of 15% results in minimum of 62fps (max can be 73fps)
+ * Note: with changing resolution, bpp and hblank overhead % varies.
+ */
+static struct tpg_frmfmt tegra_csi_tpg_frmfmt[] = {
+	{{1280, 720}, V4L2_PIX_FMT_SRGGB10, 120, 512, 8},
+	{{1920, 1080}, V4L2_PIX_FMT_SRGGB10, 60, 512, 8},
+	{{3840, 2160}, V4L2_PIX_FMT_SRGGB10, 20, 8, 8},
+	{{1280, 720}, V4L2_PIX_FMT_RGB32, 60, 512, 8},
+	{{1920, 1080}, V4L2_PIX_FMT_RGB32, 30, 512, 8},
+	{{3840, 2160}, V4L2_PIX_FMT_RGB32, 8, 8, 8},
+};
+
 static int csi_get_clks(struct tegra_csi_device *csi,
 			struct platform_device *pdev)
 {
@@ -83,6 +107,16 @@ static int set_csi_properties(struct tegra_csi_device *csi,
 	csi->clk_freq = TEGRA_CLOCK_CSI_PORT_MAX;
 
 	return 0;
+}
+
+static void update_blank_intervals(struct tegra_csi_channel *chan,
+		int portnum, int fmtindex)
+{
+	struct tegra_csi_port *port = &chan->ports[portnum];
+
+	port->framerate = tegra_csi_tpg_frmfmt[fmtindex].framerate;
+	port->h_blank = tegra_csi_tpg_frmfmt[fmtindex].h_blank;
+	port->v_blank = tegra_csi_tpg_frmfmt[fmtindex].v_blank;
 }
 
 void set_csi_portinfo(struct tegra_csi_device *csi,
@@ -398,9 +432,6 @@ static int tegra_csi_s_stream(struct v4l2_subdev *subdev, int enable)
 	if (!csi)
 		return -EINVAL;
 
-	if (csi->pg_mode)
-		return 0;
-
 	if (chan->numports) {
 		enum tegra_csi_port_num port_num = chan->port[0];
 
@@ -452,10 +483,8 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 	int i;
 	struct tegra_csi_device *csi = to_csi(sd);
 
-	if (!csi->pg_mode) {
-		dev_err(csi->dev, "CSI is not in TPG mode\n");
-		return -EINVAL;
-	}
+	if (!csi->pg_mode)
+		return -ENOIOCTLCMD;
 
 	if (fse->index >= ARRAY_SIZE(tegra_csi_tpg_sizes))
 		return -EINVAL;
@@ -476,7 +505,22 @@ static int tegra_csi_enum_framesizes(struct v4l2_subdev *sd,
 	return 0;
 }
 
-#define TPG_PIXEL_OUTPUT_RATE 182476800
+static int tegra_csi_get_fmtindex(int width, int height, int pixel_format)
+{
+	int i;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_frmfmt); i++) {
+		if (tegra_csi_tpg_frmfmt[i].frmsize.width == width &&
+		    tegra_csi_tpg_frmfmt[i].frmsize.height == height &&
+		    tegra_csi_tpg_frmfmt[i].pixel_format == pixel_format)
+			break;
+	}
+
+	if (i == ARRAY_SIZE(tegra_csi_tpg_frmfmt))
+		return -EINVAL;
+
+	return i;
+}
 
 static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
 		struct v4l2_subdev_pad_config *cfg,
@@ -487,36 +531,33 @@ static int tegra_csi_enum_frameintervals(struct v4l2_subdev *sd,
 {
 	int i;
 	struct tegra_csi_device *csi = to_csi(sd);
+	const struct tegra_video_format *format;
+	int index;
 
-	if (!csi->pg_mode) {
-		dev_err(csi->dev, "CSI is not in TPG mode\n");
-		return -EINVAL;
-	}
+	if (!csi->pg_mode)
+		return -ENOIOCTLCMD;
 
 	/* One resolution just one framerate */
 	if (fie->index > 0)
 		return -EINVAL;
 
 	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_fmts); i++) {
-		const struct tegra_video_format *format =
-		      tegra_core_get_format_by_code(tegra_csi_tpg_fmts[i].code);
-		if (format && format->fourcc == fie->code)
+		if (tegra_csi_tpg_fmts[i].code == fie->code)
 			break;
 	}
 	if (i == ARRAY_SIZE(tegra_csi_tpg_fmts))
 		return -EINVAL;
 
-	for (i = 0; i < ARRAY_SIZE(tegra_csi_tpg_sizes); i++) {
-		if (tegra_csi_tpg_sizes[i].width == fie->width &&
-		    tegra_csi_tpg_sizes[i].height == fie->height)
-			break;
-	}
-	if (i == ARRAY_SIZE(tegra_csi_tpg_sizes))
+	format =
+	      tegra_core_get_format_by_code(fie->code);
+	index = tegra_csi_get_fmtindex(fie->width, fie->height,
+					format->fourcc);
+	if (index < 0)
 		return -EINVAL;
 
 	fie->interval.numerator = 1;
-	fie->interval.denominator = TPG_PIXEL_OUTPUT_RATE /
-		   (fie->width * fie->height);
+	fie->interval.denominator = tegra_csi_tpg_frmfmt[index].framerate;
+
 	return 0;
 }
 
@@ -554,7 +595,17 @@ static int tegra_csi_try_mbus_fmt(struct v4l2_subdev *sd,
 static int tegra_csi_g_mbus_fmt(struct v4l2_subdev *sd,
 				struct v4l2_mbus_framefmt *fmt)
 {
-	return tegra_csi_try_mbus_fmt(sd, fmt);
+	struct tegra_csi_device *csi = to_csi(sd);
+	struct v4l2_mbus_framefmt *format = &csi->ports[0].format;
+
+	if (!csi->pg_mode) {
+		dev_err(csi->dev, "CSI is not in TPG mode\n");
+		return -EINVAL;
+	}
+
+	memcpy(fmt, format, sizeof(struct v4l2_mbus_framefmt));
+
+	return 0;
 }
 
 static int tegra_csi_g_input_status(struct v4l2_subdev *sd, u32 *status)
@@ -577,14 +628,16 @@ static int tegra_csi_get_format(struct v4l2_subdev *subdev,
 			   struct v4l2_subdev_pad_config *cfg,
 			   struct v4l2_subdev_format *fmt)
 {
-	struct v4l2_mbus_framefmt mbus_fmt;
+	struct tegra_csi_channel *chan = to_csi_chan(subdev);
+	struct v4l2_mbus_framefmt *mbus_fmt = &fmt->format;
 	int ret;
 
-	ret = tegra_csi_g_mbus_fmt(subdev, &mbus_fmt);
+	if (!chan->pg_mode)
+		return -ENOIOCTLCMD;
+
+	ret = tegra_csi_g_mbus_fmt(subdev, mbus_fmt);
 	if (ret)
 		return ret;
-
-	fmt->format = mbus_fmt;
 
 	return 0;
 }
@@ -599,6 +652,11 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 	int ret;
 	struct tegra_csi_channel *chan = to_csi_chan(subdev);
 	struct v4l2_mbus_framefmt *format;
+	const struct tegra_video_format *vf;
+	int index;
+
+	if (!chan->pg_mode)
+		return -ENOIOCTLCMD;
 
 	ret = tegra_csi_try_mbus_fmt(subdev, &fmt->format);
 	if (ret)
@@ -609,6 +667,28 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 
 	format = &chan->ports[0].format;
 	memcpy(format, &fmt->format, sizeof(struct v4l2_mbus_framefmt));
+	vf = tegra_core_get_format_by_code(format->code);
+	index = tegra_csi_get_fmtindex(format->width,
+				format->height, vf->fourcc);
+	if (index < 0)
+		return -EINVAL;
+
+	update_blank_intervals(chan, chan->ports[0].num, index);
+
+	return 0;
+}
+
+static int tegra_csi_g_frame_interval(struct v4l2_subdev *sd,
+			struct v4l2_subdev_frame_interval *vfi)
+{
+	struct tegra_csi_channel *chan = to_csi_chan(sd);
+	struct tegra_csi_port *port = &chan->ports[0];
+
+	if (!port->framerate)
+		return -EINVAL;
+
+	vfi->interval.numerator = 1;
+	vfi->interval.denominator = port->framerate;
 
 	return 0;
 }
@@ -619,6 +699,7 @@ static int tegra_csi_set_format(struct v4l2_subdev *subdev,
 static struct v4l2_subdev_video_ops tegra_csi_video_ops = {
 	.s_stream	= tegra_csi_s_stream,
 	.g_input_status = tegra_csi_g_input_status,
+	.g_frame_interval = tegra_csi_g_frame_interval,
 };
 
 static struct v4l2_subdev_pad_ops tegra_csi_pad_ops = {

@@ -207,6 +207,32 @@ void tegra_csi_error_recover(struct tegra_csi_channel *chan,
 }
 
 
+void csi2_tpg_start_streaming(struct tegra_csi_device *csi,
+			      enum tegra_csi_port_num port_num)
+{
+	struct tegra_csi_port *port = &csi->ports[port_num];
+
+	tpg_write(port, TEGRA_CSI_PATTERN_GENERATOR_CTRL,
+		       ((csi->pg_mode - 1) << PG_MODE_OFFSET) |
+		       PG_ENABLE);
+	tpg_write(port, TEGRA_CSI_PG_BLANK,
+			port->v_blank << PG_VBLANK_OFFSET |
+			port->h_blank);
+	tpg_write(port, TEGRA_CSI_PG_PHASE, 0x0);
+	tpg_write(port, TEGRA_CSI_PG_RED_FREQ,
+		       (0x10 << PG_RED_VERT_INIT_FREQ_OFFSET) |
+		       (0x10 << PG_RED_HOR_INIT_FREQ_OFFSET));
+	tpg_write(port, TEGRA_CSI_PG_RED_FREQ_RATE, 0x0);
+	tpg_write(port, TEGRA_CSI_PG_GREEN_FREQ,
+		       (0x10 << PG_GREEN_VERT_INIT_FREQ_OFFSET) |
+		       (0x10 << PG_GREEN_HOR_INIT_FREQ_OFFSET));
+	tpg_write(port, TEGRA_CSI_PG_GREEN_FREQ_RATE, 0x0);
+	tpg_write(port, TEGRA_CSI_PG_BLUE_FREQ,
+		       (0x10 << PG_BLUE_VERT_INIT_FREQ_OFFSET) |
+		       (0x10 << PG_BLUE_HOR_INIT_FREQ_OFFSET));
+	tpg_write(port, TEGRA_CSI_PG_BLUE_FREQ_RATE, 0x0);
+}
+
 void csi2_start_streaming(struct tegra_csi_device *csi,
 				enum tegra_csi_port_num port_num)
 {
@@ -285,6 +311,9 @@ void csi2_start_streaming(struct tegra_csi_device *csi,
 	pp_write(port, TEGRA_CSI_INPUT_STREAM_CONTROL,
 			(0x3f << CSI_SKIP_PACKET_THRESHOLD_OFFSET) |
 			(port->lanes - 1));
+
+	if (csi->pg_mode)
+		csi2_tpg_start_streaming(csi, port_num);
 #if DEBUG
 	/* 0x454140E1 - register setting for line counter */
 	/* 0x454340E1 - tracks frame start, line starts, hpa headers */

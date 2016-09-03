@@ -164,6 +164,7 @@
 #define PG_ENABLE					0x1
 #define PG_DISABLE					0x0
 
+#define PG_VBLANK_OFFSET				16
 #define TEGRA_CSI_PG_BLANK				0x004
 #define TEGRA_CSI_PG_PHASE				0x008
 #define TEGRA_CSI_PG_RED_FREQ				0x00c

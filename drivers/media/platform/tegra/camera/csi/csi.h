@@ -47,6 +47,14 @@ enum camera_gang_mode {
 
 struct tegra_channel;
 
+struct tpg_frmfmt {
+	struct v4l2_frmsize_discrete frmsize;
+	int pixel_format;
+	int framerate;
+	int h_blank;
+	int v_blank;
+};
+
 struct tegra_csi_port {
 	void __iomem *pixel_parser;
 	void __iomem *cil;
@@ -56,6 +64,9 @@ struct tegra_csi_port {
 	struct v4l2_mbus_framefmt format;
 	const struct tegra_video_format *core_format;
 	unsigned int lanes;
+	unsigned int framerate;
+	unsigned int h_blank;
+	unsigned int v_blank;
 
 	enum tegra_csi_port_num num;
 };

@@ -1,5 +1,5 @@
 /*
- * tegra186-cvb-slt-p2598-a00-e3340-1099-a00-00.dtsi
+ * tegra186-cvb-slt-common-p2598-1099-a00.dtsi: Common PE2598-1099 base file.
  *
  * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
  *

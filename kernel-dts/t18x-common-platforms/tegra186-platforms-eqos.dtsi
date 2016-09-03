@@ -1,6 +1,6 @@
 /*
- * tegra186-sunstreaker-eqos.dtsi: Ethernet QOS DTSI file.  Common
- * for all sunstreaker boards.
+ * tegra186-platforms-eqos.dtsi: Ethernet QOS DTSI file. Common
+ * for all t186 platforms.
  *
  * Copyright (c) 2014-2016, NVIDIA CORPORATION.  All rights reserved.
  *

@@ -1,5 +1,5 @@
 /*
- * tegra186-quill-p3310-1000-a00-plugin-manager.dtsi: P3310 plugin manager
+ * tegra186-odm-data-plugin-manager.dtsi: Tegra186 ODM data P3310 plugin manager
  *
  * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *

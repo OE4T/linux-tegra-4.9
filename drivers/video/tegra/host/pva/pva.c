@@ -34,6 +34,7 @@
 #include "nvhost_acm.h"
 #include "t194/t194.h"
 #include "nvhost_queue.h"
+#include "pva_queue.h"
 #include "pva.h"
 #include "pva_regs.h"
 
@@ -48,17 +49,6 @@ static struct of_device_id tegra_pva_of_match[] = {
 		.compatible = "nvidia,tegra194-pva",
 		.data = (struct nvhost_device_data *)&t19_pvab_info },
 	{ },
-};
-
-static int pva_queue_abort(struct nvhost_queue *queue)
-{
-	/* TBD: Abort pending tasks from the queue */
-
-	return 0;
-}
-
-static struct nvhost_queue_ops pva_queue_ops = {
-	.abort = pva_queue_abort,
 };
 
 int pva_finalize_poweron(struct platform_device *pdev)

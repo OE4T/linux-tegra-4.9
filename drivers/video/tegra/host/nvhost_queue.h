@@ -19,6 +19,8 @@
 #ifndef __NVHOST_NVHOST_QUEUE_H__
 #define __NVHOST_NVHOST_QUEUE_H__
 
+#include <linux/kref.h>
+
 /**
  * struct nvhost_queue - Information needed in a Queue
  *

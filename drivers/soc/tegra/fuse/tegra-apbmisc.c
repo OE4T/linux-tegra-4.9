@@ -26,6 +26,7 @@
 #include "fuse.h"
 
 #define FUSE_SKU_INFO	0x10
+#define TEGRA_APBMISC_EMU_REVID 0x60
 
 #define PMC_STRAPPING_OPT_A_RAM_CODE_SHIFT	4
 #define PMC_STRAPPING_OPT_A_RAM_CODE_MASK_LONG	\
@@ -50,6 +51,16 @@ u8 tegra_get_chip_id(void)
 	}
 
 	return (tegra_read_chipid() >> 8) & 0xff;
+}
+
+u32 tegra_read_emu_revid(void)
+{
+	if (!apbmisc_base) {
+		WARN(1, "Tegra Chip ID not yet available\n");
+		return 0;
+	}
+
+	return readl_relaxed(apbmisc_base + TEGRA_APBMISC_EMU_REVID);
 }
 
 enum tegra_revision tegra_chip_get_revision(void)

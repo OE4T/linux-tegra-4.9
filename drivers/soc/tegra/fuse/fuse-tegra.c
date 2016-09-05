@@ -217,6 +217,7 @@ static int __init tegra_init_fuse(void)
 	struct resource regs;
 
 	tegra_init_apbmisc();
+	tegra_set_tegraid_from_hw();
 
 	np = of_find_matching_node_and_match(NULL, tegra_fuse_match, &match);
 	if (!np) {

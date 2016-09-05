@@ -198,6 +198,13 @@ struct nvgpu_gpu_characteristics {
 
 	__u64 local_video_memory_size; /* in bytes, non-zero only for dGPUs */
 
+	/* These are meaningful only for PCI devices */
+	__u16 pci_vendor_id, pci_device_id;
+	__u16 pci_subsystem_vendor_id, pci_subsystem_device_id;
+	__u16 pci_class;
+	__u8  pci_revision;
+	__u8  reserved2[5];
+
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always
 	     keep the structure size multiple of 8 and make sure that the binary

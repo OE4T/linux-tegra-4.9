@@ -201,6 +201,13 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 		return err;
 	pci_set_master(pdev);
 
+	g->pci_vendor_id = pdev->vendor;
+	g->pci_device_id = pdev->device;
+	g->pci_subsystem_vendor_id = pdev->subsystem_vendor;
+	g->pci_subsystem_device_id = pdev->subsystem_device;
+	g->pci_class = (pdev->class >> 8) & 0xFFFFU; // we only want base/sub
+	g->pci_revision = pdev->revision;
+
 	g->irq_stall = pdev->irq;
 	g->irq_nonstall = pdev->irq;
 	if (g->irq_stall < 0)

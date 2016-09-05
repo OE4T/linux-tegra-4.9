@@ -2014,6 +2014,13 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 
 	gpu->local_video_memory_size = g->mm.vidmem.size;
 
+	gpu->pci_vendor_id = g->pci_vendor_id;
+	gpu->pci_device_id = g->pci_device_id;
+	gpu->pci_subsystem_vendor_id = g->pci_subsystem_vendor_id;
+	gpu->pci_subsystem_device_id = g->pci_subsystem_device_id;
+	gpu->pci_class = g->pci_class;
+	gpu->pci_revision = g->pci_revision;
+
 	return 0;
 }
 

@@ -168,6 +168,8 @@ static struct gk20a_page_alloc *__gk20a_alloc_pages(
 			}
 		} while (!chunk_addr && chunk_len >= a->page_size);
 
+		chunk_pages = chunk_len >> a->page_shift;
+
 		if (!chunk_addr) {
 			palloc_dbg(a, "bailing @ 0x%llx\n", chunk_len);
 			goto fail_cleanup;

@@ -673,8 +673,8 @@
         };
 
 	sdhci@3440000 {
-		/* 68: enable UHS mode, SDR12/25/50/104 */
-		uhs-mask = <0x68>;
+		/* 7F: disable all UHS mode */
+                uhs-mask = <0x7F>;
 #if defined(SDMMC_USE_CORE_REGULATOR_HANDLER)
                 cd-inverted;
                 wp-inverted;
@@ -682,8 +682,8 @@
 	};
 
 	sdhci@3400000 {
-		/* 68: enable UHS mode, SDR12/25/50/104 */
-		uhs-mask = <0x68>;
+		/* 7F: disable all UHS mode */
+                uhs-mask = <0x7F>;
 #if defined(SDMMC_USE_CORE_REGULATOR_HANDLER)
                 cd-inverted;
                 wp-inverted;

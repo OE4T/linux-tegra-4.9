@@ -27,7 +27,7 @@
 		#stream-id-cells = <1>;
 		resets = <&tegra_car TEGRA186_RESET_ACTMON>;
 		reset-names = "actmon_rst";
-		nvidia,sample_period = /bits/ 8 <7>;
+		nvidia,sample_period = /bits/ 8 <20>;
 
 		mc_all {	/* MC_ALL actmon device */
 			#address-cells = <1>;

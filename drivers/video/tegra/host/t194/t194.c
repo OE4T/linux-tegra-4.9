@@ -207,7 +207,7 @@ struct nvhost_device_data t19_msenc_info = {
 
 #if defined(CONFIG_TEGRA_GRHOST_NVDEC)
 struct nvhost_device_data t19_nvdec_info = {
-	.version		= NVHOST_ENCODE_NVDEC_VER(3, 0),
+	.version		= NVHOST_ENCODE_NVDEC_VER(4, 0),
 	.devfs_name		= "nvdec",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVDEC},
 	.class			= NV_NVDEC_CLASS_ID,

@@ -173,7 +173,8 @@ static void enb_dev_intr_all(void __iomem *base)
 {
 	u32 val = 0;
 
-	val |= (ACTMON_DEV_INTR_UP_WMARK_ENB |
+	val |= (ACTMON_DEV_INTR_AT_END_ENB |
+			ACTMON_DEV_INTR_UP_WMARK_ENB |
 			ACTMON_DEV_INTR_DOWN_WMARK_ENB |
 			ACTMON_DEV_INTR_AVG_UP_WMARK_ENB |
 			ACTMON_DEV_INTR_AVG_DOWN_WMARK_ENB);

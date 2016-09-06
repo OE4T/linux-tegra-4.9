@@ -20,5 +20,8 @@ Required properties:
 
 - nvidia,doorbell: doorbell identifier of the local doorbell
 
+- nvidia,mbox-ie: if present, enable and disable all mbox interrupts
+  using mbox-specific registers
+
 Symbolic doorbell constants are defined in:
   <dt-bindings/platform/t186/tegra-hsp.h>

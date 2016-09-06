@@ -38,6 +38,7 @@ struct tegra_hsp {
 	u8 n_ss;
 	u8 n_db;
 	u8 n_si;
+	bool mbox_ie;
 };
 
 struct tegra_hsp_irq {
@@ -45,6 +46,7 @@ struct tegra_hsp_irq {
 	u8 si_index;
 	u8 ie_shift;
 	u8 index;
+	u8 per_sm_ie;
 };
 
 struct tegra_hsp_sm_pair {
@@ -63,6 +65,9 @@ struct tegra_hsp_sm_pair {
 #define TEGRA_HSP_DIMENSIONING		0x380
 #define TEGRA_HSP_SM(sm)		(0x10000 + (0x8000 * (sm)))
 #define TEGRA_HSP_SM_FULL		0x80000000u
+
+#define TEGRA_HSP_SM_IE_FULL		0x4u
+#define TEGRA_HSP_SM_IE_EMPTY		0x8u
 
 static void __iomem *tegra_hsp_reg(struct device *dev, u32 offset)
 {
@@ -105,6 +110,31 @@ static void __iomem *tegra_hsp_sm_reg(struct device *dev, u32 sm)
 	return tegra_hsp_reg(dev, TEGRA_HSP_SM(sm));
 }
 
+static void tegra_hsp_enable_per_sm_irq(struct device *dev,
+					const struct tegra_hsp_irq *hi,
+					int irq)
+{
+	if (hi->per_sm_ie != 0) {
+		void __iomem *reg = tegra_hsp_sm_reg(dev, hi->index);
+
+		/* Disable empty if enable full, disable full if enable empty */
+		writel(0, reg + TEGRA_HSP_SM_IE_EMPTY + TEGRA_HSP_SM_IE_FULL
+			- hi->per_sm_ie);
+		writel(1, reg + hi->per_sm_ie);
+	} else if (!IS_ERR_VALUE(irq)) {
+		enable_irq(irq);
+	}
+}
+
+static void tegra_hsp_disable_per_sm_irq(struct device *dev,
+					const struct tegra_hsp_irq *hi)
+{
+	if (hi->per_sm_ie != 0)
+		writel(0, tegra_hsp_sm_reg(dev, hi->index) + hi->per_sm_ie);
+	else
+		disable_irq_nosync(hi->irq);
+}
+
 static irqreturn_t tegra_hsp_full_isr(int irq, void *data)
 {
 	struct tegra_hsp_irq *hi = data;
@@ -141,19 +171,27 @@ static irqreturn_t tegra_hsp_empty_isr(int irq, void *data)
 	if (value & TEGRA_HSP_SM_FULL)
 		return IRQ_NONE;
 
-	disable_irq_nosync(irq);
+	tegra_hsp_disable_per_sm_irq(dev, &pair->empty);
+
 	pair->notify_empty(dev_get_drvdata(&pair->dev), value);
 	return IRQ_HANDLED;
 }
 
 static int tegra_hsp_get_shared_irq(struct device *dev, irq_handler_t handler,
-					unsigned long flags, u32 ie_shift,
+					unsigned long flags,
+					bool empty,
 					struct tegra_hsp_irq *hi)
 {
 	struct platform_device *pdev = to_platform_device(dev);
 	struct tegra_hsp *hsp = dev_get_drvdata(dev);
+	u8 ie_shift;
 	int ret = -ENODEV;
 	unsigned i;
+
+	if (empty)
+		ie_shift = hi->index;
+	else
+		ie_shift = hi->index + 8;
 
 	flags |= IRQF_PROBE_SHARED;
 
@@ -175,8 +213,11 @@ static int tegra_hsp_get_shared_irq(struct device *dev, irq_handler_t handler,
 
 		dev_dbg(&pdev->dev, "using shared IRQ %u (%d)\n", i, hi->irq);
 
+		tegra_hsp_enable_per_sm_irq(dev, hi, -EPERM);
+
 		/* Update interrupt masks (for shared interrupts only) */
 		tegra_hsp_irq_resume(dev, hi);
+
 		return 0;
 	}
 
@@ -191,9 +232,11 @@ static int tegra_hsp_get_sm_irq(struct device *dev, bool empty,
 	struct platform_device *pdev = to_platform_device(dev);
 	irq_handler_t handler = empty ? tegra_hsp_empty_isr
 					: tegra_hsp_full_isr;
-	unsigned long flags = (empty ? 0 : IRQF_SHARED) | IRQF_ONESHOT;
-	u32 ie_shift = (empty ? 0 : 8) + hi->index;
+	unsigned long flags = IRQF_ONESHOT;
 	char name[7];
+
+	if (!empty || hi->per_sm_ie != 0)
+		flags |= IRQF_SHARED;
 
 	/* Look for dedicated internal IRQ */
 	sprintf(name, empty ? "empty%X" : "full%X", hi->index);
@@ -202,12 +245,14 @@ static int tegra_hsp_get_sm_irq(struct device *dev, bool empty,
 		hi->si_index = 0xff;
 
 		if (request_threaded_irq(hi->irq, NULL, handler, flags,
-						dev_name(dev), hi) == 0)
+						dev_name(dev), hi) == 0) {
+			tegra_hsp_enable_per_sm_irq(dev, hi, -EPERM);
 			return 0;
+		}
 	}
 
 	/* Look for a free shared IRQ */
-	return tegra_hsp_get_shared_irq(dev, handler, flags, ie_shift, hi);
+	return tegra_hsp_get_shared_irq(dev, handler, flags, empty, hi);
 }
 
 static void tegra_hsp_irq_free(struct device *dev, struct tegra_hsp_irq *hi)
@@ -276,7 +321,9 @@ static struct tegra_hsp_sm_pair *tegra_hsp_sm_pair_request(
 	pair->notify_full = full;
 	pair->notify_empty = empty;
 	pair->full.index = index;
+	pair->full.per_sm_ie = hsp->mbox_ie ? TEGRA_HSP_SM_IE_FULL : 0;
 	pair->empty.index = index ^ 1;
+	pair->empty.per_sm_ie = hsp->mbox_ie ? TEGRA_HSP_SM_IE_EMPTY : 0;
 	pair->dev.parent = dev;
 	pair->dev.type = &tegra_hsp_sm_dev_type;
 	pair->dev.release = tegra_hsp_sm_dev_release;
@@ -423,7 +470,7 @@ void tegra_hsp_sm_pair_write(const struct tegra_hsp_sm_pair *pair,
 	writel(TEGRA_HSP_SM_FULL | value, reg);
 
 	if (pair->notify_empty != NULL)
-		enable_irq(pair->empty.irq);
+		tegra_hsp_enable_per_sm_irq(dev, &pair->empty, pair->empty.irq);
 }
 EXPORT_SYMBOL(tegra_hsp_sm_pair_write);
 
@@ -515,6 +562,7 @@ static int tegra_hsp_probe(struct platform_device *pdev)
 	hsp->n_as = (reg >> 8) & 0xf;
 	hsp->n_db = (reg >> 12) & 0xf;
 	hsp->n_si = (reg >> 16) & 0xf;
+	hsp->mbox_ie = of_property_read_bool(pdev->dev.of_node, NV(mbox-ie));
 
 	if ((resource_size(r) >> 16) < (1 + (hsp->n_sm / 2) + hsp->n_ss +
 					hsp->n_as + (hsp->n_db > 0))) {

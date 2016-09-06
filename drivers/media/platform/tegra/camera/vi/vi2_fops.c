@@ -132,7 +132,7 @@ static int tegra_channel_enable_stream(struct tegra_channel *chan)
 	if (chan->vi->pg_mode) {
 		for (i = 0; i < chan->valid_ports; i++)
 			tegra_csi_tpg_start_streaming(chan->vi->csi,
-						      chan->port[i]);
+							chan->port[i]);
 		atomic_set(&chan->is_streaming, ENABLE);
 	} else {
 		ret = tegra_channel_set_stream(chan, true);
@@ -250,10 +250,10 @@ static int tegra_channel_error_status(struct tegra_channel *chan)
 	int index = 0;
 
 	for (index = 0; index < chan->valid_ports; index++) {
+		/* Ignore error based on resolution but reset status */
 		val = csi_read(chan, index, TEGRA_VI_CSI_ERROR_STATUS);
 		csi_write(chan, index, TEGRA_VI_CSI_ERROR_STATUS, val);
-		err |= val;
-		err |= tegra_csi_error(&chan->vi->csi->chans[index],
+		err = tegra_csi_error(&chan->vi->csi->chans[index],
 				chan->port[index]);
 	}
 
@@ -264,7 +264,7 @@ static int tegra_channel_error_status(struct tegra_channel *chan)
 }
 
 static int tegra_channel_capture_frame(struct tegra_channel *chan,
-				       struct tegra_channel_buffer *buf)
+					struct tegra_channel_buffer *buf)
 {
 	struct vb2_v4l2_buffer *vb = &buf->buf;
 	struct timespec ts;

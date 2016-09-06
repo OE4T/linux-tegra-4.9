@@ -2219,12 +2219,16 @@ void gr_gk20a_load_falcon_bind_instblk(struct gk20a *g)
 	inst_ptr = gk20a_mm_inst_block_addr(g, &ucode_info->inst_blk_desc);
 	gk20a_writel(g, gr_fecs_new_ctx_r(),
 			gr_fecs_new_ctx_ptr_f(inst_ptr >> 12) |
-			gr_fecs_new_ctx_target_m() |
+			gk20a_aperture_mask(g, &ucode_info->inst_blk_desc,
+				gr_fecs_new_ctx_target_sys_mem_ncoh_f(),
+				gr_fecs_new_ctx_target_vid_mem_f()) |
 			gr_fecs_new_ctx_valid_m());
 
 	gk20a_writel(g, gr_fecs_arb_ctx_ptr_r(),
 			gr_fecs_arb_ctx_ptr_ptr_f(inst_ptr >> 12) |
-			gr_fecs_arb_ctx_ptr_target_m());
+			gk20a_aperture_mask(g, &ucode_info->inst_blk_desc,
+				gr_fecs_arb_ctx_ptr_target_sys_mem_ncoh_f(),
+				gr_fecs_arb_ctx_ptr_target_vid_mem_f()));
 
 	gk20a_writel(g, gr_fecs_arb_ctx_cmd_r(), 0x7);
 

@@ -4680,7 +4680,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 
 void gk20a_free_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 {
-	if (inst_block->cpu_va)
+	if (inst_block->size)
 		gk20a_gmmu_free(g, inst_block);
 }
 

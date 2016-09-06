@@ -24,6 +24,7 @@
 
 #include "dev.h"
 #include "bus_client.h"
+#include "chip_support.h"
 #include "nvhost_acm.h"
 #include "nvhost_queue.h"
 
@@ -136,6 +137,37 @@ void nvdla_task_get(struct nvdla_task *task)
 	kref_get(&task->ref);
 }
 
+static void nvdla_task_free_locked(struct nvdla_task *task)
+{
+	struct nvhost_queue *queue = task->queue;
+	struct platform_device *pdev = queue->pool->pdev;
+
+	nvdla_dbg_info(pdev,
+		"task[%p] completed. syncpt[%d] fence[%d]",
+		task, queue->syncpt_id, task->fence);
+
+	/* give syncpoint reference */
+	nvhost_syncpt_put_ref(task->sp, queue->syncpt_id);
+
+	/* unpin submit ref */
+	nvhost_buffer_submit_unpin(task->buffers,
+		task->op_handle, MAX_HANDLE_PER_OP_DESC);
+
+	/* update takslist */
+	list_del(&task->list);
+
+	/* give taks refs */
+	nvdla_task_put(task);
+}
+
+static void nvdla_task_syncpt_reset(struct nvhost_syncpt *syncpt,
+			u32 id, u32 fence)
+{
+	atomic_set(&syncpt->min_val[id], fence);
+	syncpt_op().reset(syncpt, id);
+	nvhost_syncpt_update_min(syncpt, id);
+}
+
 static void nvdla_queue_update(void *priv, int nr_completed)
 {
 	int task_complete;
@@ -152,27 +184,11 @@ static void nvdla_queue_update(void *priv, int nr_completed)
 					queue->syncpt_id, task->fence);
 
 		/* clean task and remove from list */
-		if (task_complete) {
-			/* give syncpoint reference */
-			nvhost_syncpt_put_ref(task->sp, queue->syncpt_id);
-
-			/* unpin submit ref */
-			nvhost_buffer_submit_unpin(task->buffers,
-				task->op_handle, MAX_HANDLE_PER_OP_DESC);
-
-			/* update takslist */
-			list_del(&task->list);
-
-			/* give taks refs */
-			nvdla_task_put(task);
-
-			nvdla_dbg_info(pdev,
-				"task[%p] completed. syncpt[%d] fence[%d]",
-				task, queue->syncpt_id, task->fence);
-		}
+		if (task_complete)
+			nvdla_task_free_locked(task);
 	}
 	/* put pm refcount */
-	nvhost_module_idle_mult(queue->pool->pdev, nr_completed);
+	nvhost_module_idle_mult(pdev, nr_completed);
 
 	mutex_unlock(&queue->list_lock);
 }

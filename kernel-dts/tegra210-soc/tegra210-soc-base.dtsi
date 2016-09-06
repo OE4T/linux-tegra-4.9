@@ -765,14 +765,20 @@
 			reg = <0x0 0x54340000 0x0 0x00040000>;
 			iommus = <&smmu TEGRA_SWGROUP_VIC>;
 			status = "disabled";
-			clocks = <&tegra_car TEGRA210_CLK_VIC03>;
-			clock-names = "vic03";
+			clocks = <&tegra_car TEGRA210_CLK_VIC03_CBUS>,
+				 <&tegra_car TEGRA210_CLK_VIC_EMC>,
+				 <&tegra_car TEGRA210_CLK_VIC_FLOOR_CBUS>,
+				 <&tegra_car TEGRA210_CLK_VIC_SHARED_EMC>;
+			clock-names = "vic03", "emc", "vic_floor",
+				      "emc_shared";
 		};
 
 		nvenc {
 			compatible = "nvidia,tegra210-nvenc";
 			power-domains = <&msenc_pd>;
 			reg = <0x0 0x544c0000 0x0 0x00040000>;
+			clocks = <&tegra_car TEGRA210_CLK_NVENC>;
+			clock-names = "msenc";
 			iommus = <&smmu TEGRA_SWGROUP_MPE>;
 			status = "disabled";
 		};

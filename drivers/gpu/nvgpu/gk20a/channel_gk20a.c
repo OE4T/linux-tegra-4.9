@@ -388,7 +388,7 @@ int channel_gk20a_alloc_inst(struct gk20a *g, struct channel_gk20a *ch)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc(g, ram_in_alloc_size_v(), &ch->inst_block);
+	err = gk20a_alloc_inst_block(g, &ch->inst_block);
 	if (err)
 		return err;
 

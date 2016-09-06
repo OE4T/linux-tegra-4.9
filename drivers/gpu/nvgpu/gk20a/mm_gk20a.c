@@ -4668,7 +4668,7 @@ int gk20a_alloc_inst_block(struct gk20a *g, struct mem_desc *inst_block)
 
 	gk20a_dbg_fn("");
 
-	err = gk20a_gmmu_alloc_sys(g, ram_in_alloc_size_v(), inst_block);
+	err = gk20a_gmmu_alloc(g, ram_in_alloc_size_v(), inst_block);
 	if (err) {
 		gk20a_err(dev, "%s: memory allocation failed\n", __func__);
 		return err;

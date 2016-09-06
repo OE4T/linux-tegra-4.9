@@ -758,12 +758,10 @@ static int tegra_se_channel_submit_gather(struct tegra_se_dev *se_dev,
 	}
 
 	err = nvhost_channel_submit(job);
-
 	if (err) {
 		dev_err(se_dev->dev, "Nvhost submit failed\n");
 		goto error;
 	}
-
 
 	if (callback) {
 		priv->se_dev = se_dev;
@@ -1755,7 +1753,8 @@ static int tegra_se_rng_drbg_get_random(struct crypto_rng *tfm,
 }
 
 #if LINUX_VERSION_CODE > KERNEL_VERSION(4,3,0)
-static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, const u8 *seed, unsigned int slen)
+static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, const u8 *seed,
+			unsigned int slen)
 #else
 static int tegra_se_rng_drbg_reset(struct crypto_rng *tfm, u8 *seed, u32 slen)
 #endif
@@ -3085,7 +3084,7 @@ static struct of_device_id tegra_se_of_match[] = {
 	}, {
 		.compatible = "nvidia,tegra186-se4-nvhost",
 		.data = &nvhost_se4_info,
-	},
+	}, {}
 };
 MODULE_DEVICE_TABLE(of, tegra_se_of_match);
 
@@ -3293,7 +3292,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		nvhost_module_idle(pdev);
 	}
 
-	sprintf(se_nvhost_name, "158%d0000.se", (se_num+1));
+	sprintf(se_nvhost_name, "158%d0000.se", (se_num + 1));
 	se_dev->syncpt_id = nvhost_get_syncpt_host_managed(se_dev->pdev,
 						0, se_nvhost_name);
 	if (!se_dev->syncpt_id) {
@@ -3415,6 +3414,7 @@ static int __init tegra_se_module_init(void)
 static void __exit tegra_se_module_exit(void)
 {
 	platform_driver_unregister(&tegra_se_driver);
+	pm_genpd_deinit(&nvhost_se1_info.pd);
 }
 
 module_init(tegra_se_module_init);

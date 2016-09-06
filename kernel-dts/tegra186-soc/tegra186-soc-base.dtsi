@@ -973,6 +973,8 @@
 			compatible = "nvidia,tegra186-se1-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15810000 0x0 0x10000>;
+			drbg-supported;
+			opcode_addr = <0x204>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
@@ -984,6 +986,9 @@
 			compatible = "nvidia,tegra186-se2-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15820000 0x0 0x10000>;
+			aes-supported;
+			cmac-supported;
+			opcode_addr = <0x404>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
@@ -995,6 +1000,8 @@
 			compatible = "nvidia,tegra186-se3-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15830000 0x0 0x10000>;
+			rsa-supported;
+			opcode_addr = <0x604>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";
@@ -1006,6 +1013,8 @@
 			compatible = "nvidia,tegra186-se4-nvhost";
 			power-domains = <&se_pd>;
 			reg = <0x0 0x15840000 0x0 0x10000>;
+			sha-supported;
+			opcode_addr = <0x104>;
 			resets = <&tegra_car TEGRA186_RESET_SE>;
 			clocks = <&tegra_car TEGRA186_CLK_SE>;
 			clock-names = "se";

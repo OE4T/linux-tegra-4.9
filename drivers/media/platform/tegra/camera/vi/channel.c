@@ -894,7 +894,8 @@ __tegra_channel_get_format(struct tegra_channel *chan,
 	vfmt = tegra_core_get_format_by_code(fmt.format.code);
 	if (vfmt != NULL) {
 		pix->pixelformat = vfmt->fourcc;
-		pix->bytesperline = chan->format.bytesperline;
+		tegra_channel_fmt_align(chan,
+			&pix->width, &pix->height, &pix->bytesperline);
 		pix->sizeimage = pix->height * pix->bytesperline;
 	}
 

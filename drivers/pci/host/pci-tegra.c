@@ -709,7 +709,24 @@ static int tegra_pcie_read_conf(struct pci_bus *bus, unsigned int devfn,
 				int where, int size, u32 *value)
 {
 	void __iomem *addr;
+	struct tegra_pcie *pcie = sys_to_pcie(bus->sysdata);
+	struct tegra_pcie_port *port = NULL;
+	u32 rp = 0;
+	struct pci_dev *dn_dev;
 
+	dn_dev = bus->self;
+
+	if (!dn_dev || !pcie)
+		goto skip_ep_check;
+
+	rp = PCI_SLOT(dn_dev->devfn);
+
+	list_for_each_entry(port, &pcie->ports, list)
+		if (rp == port->index + 1)
+			break;
+	if (!port->ep_status)
+		return PCIBIOS_DEVICE_NOT_FOUND;
+skip_ep_check:
 	addr = tegra_pcie_conf_address(bus, devfn, where);
 	if (!addr) {
 		*value = 0xffffffff;
@@ -731,7 +748,23 @@ static int tegra_pcie_write_conf(struct pci_bus *bus, unsigned int devfn,
 {
 	void __iomem *addr;
 	u32 mask, tmp;
+	struct tegra_pcie *pcie = sys_to_pcie(bus->sysdata);
+	struct tegra_pcie_port *port = NULL;
+	u32 rp = 0;
+	struct pci_dev *dn_dev;
 
+	dn_dev = bus->self;
+	if (!dn_dev || !pcie)
+		goto skip_ep_check;
+	rp = PCI_SLOT(dn_dev->devfn);
+
+	list_for_each_entry(port, &pcie->ports, list)
+		if (rp == port->index + 1)
+			break;
+	if (!port->ep_status)
+		return PCIBIOS_DEVICE_NOT_FOUND;
+
+skip_ep_check:
 	addr = tegra_pcie_conf_address(bus, devfn, where);
 	if (!addr)
 		return PCIBIOS_DEVICE_NOT_FOUND;

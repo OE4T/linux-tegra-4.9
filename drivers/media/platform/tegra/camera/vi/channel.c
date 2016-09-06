@@ -411,8 +411,18 @@ int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 
 int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 {
-	return v4l2_device_call_until_err(chan->video.v4l2_dev,
-			chan->grp_id, core, s_power, on);
+	int num_sd;
+
+	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
+		struct v4l2_subdev *sd = chan->subdev[num_sd];
+		int ret = 0;
+
+		ret = v4l2_subdev_call(sd, core, s_power, on);
+		if (ret < 0 && ret != -ENOIOCTLCMD)
+			return ret;
+	}
+
+	return 0;
 }
 
 int update_clk(struct tegra_mc_vi *vi)

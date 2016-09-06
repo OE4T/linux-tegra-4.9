@@ -105,9 +105,9 @@ static int gb10b_init_bar2_mm_hw_setup(struct gk20a *g)
 	gk20a_dbg_info("bar2 inst block ptr: 0x%08x",  (u32)inst_pa);
 
 	gk20a_writel(g, bus_bar2_block_r(),
-		     (g->mm.vidmem_is_vidmem ?
-		       bus_bar2_block_target_sys_mem_ncoh_f() :
-		       bus_bar2_block_target_vid_mem_f()) |
+		     gk20a_aperture_mask(g, inst_block,
+				bus_bar2_block_target_sys_mem_ncoh_f(),
+				bus_bar2_block_target_vid_mem_f()) |
 		     bus_bar2_block_mode_virtual_f() |
 		     bus_bar2_block_ptr_f(inst_pa));
 

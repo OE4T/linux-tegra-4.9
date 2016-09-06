@@ -169,7 +169,9 @@ int bl_bootstrap_sec2(struct pmu_gk20a *pmu,
 			pwr_pmu_new_instblk_ptr_f(
 			gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 			pwr_pmu_new_instblk_valid_f(1) |
-			pwr_pmu_new_instblk_target_sys_coh_f());
+			gk20a_aperture_mask(g, &mm->pmu.inst_block,
+				pwr_pmu_new_instblk_target_sys_coh_f(),
+				pwr_pmu_new_instblk_target_fb_f()));
 
 	data = gk20a_readl(g, psec_falcon_debug1_r());
 	data |= psec_falcon_debug1_ctxsw_mode_m();
@@ -313,7 +315,9 @@ void init_pmu_setup_hw1(struct gk20a *g)
 				pwr_pmu_new_instblk_ptr_f(
 					gk20a_mm_inst_block_addr(g, &mm->pmu.inst_block) >> 12) |
 				pwr_pmu_new_instblk_valid_f(1) |
-				pwr_pmu_new_instblk_target_sys_coh_f());
+				gk20a_aperture_mask(g, &mm->pmu.inst_block,
+					pwr_pmu_new_instblk_target_sys_coh_f(),
+					pwr_pmu_new_instblk_target_fb_f()));
 
 	/*Copying pmu cmdline args*/
 	g->ops.pmu_ver.set_pmu_cmdline_args_cpu_freq(pmu,

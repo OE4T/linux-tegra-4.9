@@ -1414,6 +1414,14 @@ static inline u32 gr_fecs_new_ctx_target_v(u32 r)
 {
 	return (r >> 28) & 0x3;
 }
+static inline u32 gr_fecs_new_ctx_target_vid_mem_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_fecs_new_ctx_target_sys_mem_ncoh_f(void)
+{
+	return 0x30000000;
+}
 static inline u32 gr_fecs_new_ctx_valid_s(void)
 {
 	return 1;
@@ -1465,6 +1473,14 @@ static inline u32 gr_fecs_arb_ctx_ptr_target_m(void)
 static inline u32 gr_fecs_arb_ctx_ptr_target_v(u32 r)
 {
 	return (r >> 28) & 0x3;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_target_vid_mem_f(void)
+{
+	return 0x0;
+}
+static inline u32 gr_fecs_arb_ctx_ptr_target_sys_mem_ncoh_f(void)
+{
+	return 0x30000000;
 }
 static inline u32 gr_fecs_arb_ctx_cmd_r(void)
 {

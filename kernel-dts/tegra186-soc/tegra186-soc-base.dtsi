@@ -513,6 +513,12 @@
 
 	};
 
+	tegra_ext_cdp: max16984-cdp {
+		compatible = "maxim,max16984-tegra186-cdp-phy";
+		#phy-cells = <1>;
+		status = "disabled";
+	};
+
 	kfuse@0x3830000 {
 		compatible = "nvidia,tegra186-kfuse";
 		reg = <0x0 0x3830000 0x0 0x10000>;

@@ -1150,11 +1150,21 @@ static void get_pmu_init_msg_pmu_queue_params_v3(struct pmu_queue *queue,
 		(struct pmu_init_msg_pmu_v3 *)pmu_init_msg;
 	u32 current_ptr = 0;
 	u8 i;
-	queue->index    = init->queue_index[id];
-	queue->size = init->queue_size[id];
-	if (id != 0) {
-	  for ( i = 0 ; i < id; i++)
-	    current_ptr += init->queue_size[i];
+	u8 tmp_id = id;
+
+	if (tmp_id == PMU_COMMAND_QUEUE_HPQ)
+		tmp_id = PMU_QUEUE_HPQ_IDX_FOR_V3;
+	else if (tmp_id == PMU_COMMAND_QUEUE_LPQ)
+		tmp_id = PMU_QUEUE_LPQ_IDX_FOR_V3;
+	else if (tmp_id == PMU_MESSAGE_QUEUE)
+		tmp_id = PMU_QUEUE_MSG_IDX_FOR_V3;
+	else
+		return;
+	queue->index    = init->queue_index[tmp_id];
+	queue->size = init->queue_size[tmp_id];
+	if (tmp_id != 0) {
+		for (i = 0 ; i < tmp_id; i++)
+			current_ptr += init->queue_size[i];
 	}
 	queue->offset   = init->queue_offset + current_ptr;
 }
@@ -2435,7 +2445,6 @@ static int pmu_queue_init(struct pmu_gk20a *pmu,
 	struct pmu_queue *queue = &pmu->queue[id];
 	queue->id	= id;
 	g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params(queue, id, init);
-
 	queue->mutex_id = id;
 	mutex_init(&queue->mutex);
 

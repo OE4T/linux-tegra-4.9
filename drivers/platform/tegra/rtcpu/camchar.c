@@ -100,7 +100,7 @@ static int tegra_camchar_release(struct inode *in, struct file *fp)
 	return 0;
 }
 
-unsigned int tegra_camchar_poll(struct file *fp, poll_table *pt)
+static unsigned int tegra_camchar_poll(struct file *fp, poll_table *pt)
 {
 	unsigned int ret = 0;
 	struct ivc *ivc = &((struct tegra_ivc_channel *)fp->private_data)->ivc;
@@ -119,7 +119,7 @@ unsigned int tegra_camchar_poll(struct file *fp, poll_table *pt)
 	return ret;
 }
 
-static ssize_t tegra_camchar_read(struct file *fp, char *buffer, size_t len,
+static ssize_t tegra_camchar_read(struct file *fp, char __user *buffer, size_t len,
 					loff_t *offset)
 {
 	struct ivc *ivc = &((struct tegra_ivc_channel *)fp->private_data)->ivc;
@@ -158,7 +158,7 @@ static ssize_t tegra_camchar_read(struct file *fp, char *buffer, size_t len,
 	return ret;
 }
 
-static ssize_t tegra_camchar_write(struct file *fp, const char *buffer,
+static ssize_t tegra_camchar_write(struct file *fp, const char __user *buffer,
 					size_t len, loff_t *offset)
 {
 	struct ivc *ivc = &((struct tegra_ivc_channel *)fp->private_data)->ivc;

@@ -166,6 +166,8 @@ struct dfsh_state {
 
 	int pkt_byte_idx;
 	int pyld_len;
+
+	bool tty_close;
 	/* Write lock to single underlying tty device */
 	struct mutex tty_write_lock;
 	/* Read buffer - to hold one pkt before de-muxing */
@@ -370,6 +372,31 @@ static int dfsh_pm_init(struct dfsh_state *st)
 	return ret;
 }
 
+static void dfsh_enable_mcu_sensor(struct dfsh_state *st, bool enable)
+{
+	uint32_t cmd;
+
+	if (enable) {
+		if (!st->enabled_msk) {
+			cmd = CMD_START_TS;
+			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
+			cmd = CMD_CAM_PWR_ON;
+			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
+			cmd = CMD_CAM_FSIN_START;
+			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
+			pr_info("Enable mcu sensor data.");
+		}
+	} else {
+		if ((!st->tty_close) && (!st->enabled_msk)) {
+			cmd = CMD_STOP_TS;
+			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
+			cmd = CMD_CAM_FSIN_STOP;
+			dfsh_write_cmd(st, (uint8_t *)&cmd, sizeof(cmd));
+			pr_info("Disable mcu sensor.");
+		}
+	}
+}
+
 static int dfsh_disable(struct dfsh_state *st, int snsr_id)
 {
 	bool disable = true;
@@ -390,6 +417,7 @@ static int dfsh_disable(struct dfsh_state *st, int snsr_id)
 			for (i = 0; i < DEV_N; i++)
 				st->enabled[i] = 0;
 		}
+		dfsh_enable_mcu_sensor(st, false);
 	}
 	return ret;
 }
@@ -405,6 +433,9 @@ static int dfsh_enable(void *client, int snsr_id, int enable)
 	if (enable) {
 		ret = dfsh_pm(st, true);
 		if (!ret) {
+			/* Enable MCU read sensor data */
+			dfsh_enable_mcu_sensor(st, true);
+
 			/* if individual sensor enable is supported then here
 			 * we want to send the sensor enable message to DFSH.
 			 */
@@ -441,7 +472,6 @@ static struct nvs_fn_dev dfsh_fn_dev = {
 	.reset				= dfsh_reset,
 	.nvs_read			= dfsh_nvs_read,
 };
-
 
 static inline void dfsh_parse_pkt(struct tty_struct *tty, unsigned char c)
 {
@@ -524,7 +554,6 @@ static void dfsh_receive_buf(struct tty_struct *tty, const unsigned char *cp,
 	const unsigned char *p;
 	char *f;
 	char flags = TTY_NORMAL;
-	char buf[64];
 	int i;
 
 	for (i = count, p = cp, f = fp; i; i--, p++) {
@@ -595,16 +624,11 @@ static void dfsh_shutdown(struct tty_struct *tty)
 
 static void dfsh_close(struct tty_struct *tty)
 {
-	uint8_t cmd;
 	struct dfsh_state *st = tty->disc_data;
 	unsigned int i;
 
-	cmd = CMD_STOP_TS;
-	dfsh_write_cmd(st, &cmd, sizeof(cmd));
-	cmd = CMD_CAM_FSIN_STOP;
-	dfsh_write_cmd(st, &cmd, sizeof(cmd));
-
 	if (st != NULL) {
+		st->tty_close = true;
 		dfsh_shutdown(tty);
 		if (st->nvs) {
 			for (i = 0; i < DEV_N; i++) {
@@ -664,7 +688,7 @@ static int dfsh_of_dt(struct dfsh_state *st, struct device_node *dn)
 
 static int dfsh_open(struct tty_struct *tty)
 {
-	uint8_t i, n, cmd;
+	uint8_t i, n;
 	int ret;
 
 	dev_info(tty->dev, "%s\n", __func__);
@@ -700,14 +724,9 @@ static int dfsh_open(struct tty_struct *tty)
 	tty->disc_data = st;
 	tty->receive_room = N_TTY_BUF_SIZE;
 	st->tty = tty;
+	st->tty_close = false;
 	mutex_init(&st->tty_write_lock);
 
-	cmd = CMD_START_TS;
-	dfsh_write_cmd(st, &cmd, sizeof(cmd));
-	cmd = CMD_CAM_PWR_ON;
-	dfsh_write_cmd(st, &cmd, sizeof(cmd));
-	cmd = CMD_CAM_FSIN_START;
-	dfsh_write_cmd(st, &cmd, sizeof(cmd));
 
 	dev_info(tty->dev, "%s done\n", __func__);
 	return 0;

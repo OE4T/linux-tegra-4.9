@@ -47,7 +47,8 @@ enum waitlist_state {
 	WLS_PENDING,
 	WLS_REMOVED,
 	WLS_CANCELLED,
-	WLS_HANDLED
+	WLS_HANDLED,
+	WLS_CLEANUP
 };
 
 static inline bool __maybe_unused
@@ -110,6 +111,8 @@ static void remove_completed_waiters(struct list_head *head, u32 sync,
 	struct nvhost_waitlist *waiter, *next, *prev;
 
 	list_for_each_entry_safe(waiter, next, head, list) {
+		bool removed = false;
+
 		if ((s32)(waiter->thresh - sync) > 0)
 			break;
 
@@ -123,17 +126,16 @@ static void remove_completed_waiters(struct list_head *head, u32 sync,
 					struct nvhost_waitlist, list);
 			if (prev->data == waiter->data) {
 				prev->count++;
-				dest = NULL;
+				removed = true;
 			}
 		}
 
-		/* PENDING->REMOVED or CANCELLED->HANDLED */
-		if (atomic_inc_return(&waiter->state) == WLS_HANDLED || !dest) {
-			list_del(&waiter->list);
-			kref_put(&waiter->refcount, waiter_release);
-		} else {
-			list_move_tail(&waiter->list, dest);
+		/* CANCELLED->HANDLED or PENDING->REMOVED */
+		if ((atomic_inc_return(&waiter->state) == WLS_HANDLED)
+								|| removed) {
+			atomic_set(&waiter->state, WLS_CLEANUP);
 		}
+		list_move_tail(&waiter->list, dest);
 	}
 }
 
@@ -239,12 +241,17 @@ static void run_handlers(struct list_head *completed[NVHOST_INTR_ACTION_COUNT])
 
 		list_for_each_entry_safe(waiter, next, head, list) {
 			list_del(&waiter->list);
+			/* already processed, just need to finish cleanup */
+			if (atomic_read(&waiter->state) == WLS_CLEANUP) {
+				goto cleanup;
+			}
 			handler(waiter);
 			if (handler != action_wakeup_interruptible &&
 			    handler != action_wakeup)
 				WARN_ON(atomic_xchg(&waiter->state, WLS_HANDLED)
 					!= WLS_REMOVED);
 
+cleanup:
 			kref_put(&waiter->refcount, waiter_release);
 		}
 	}

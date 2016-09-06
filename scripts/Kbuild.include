@@ -5,6 +5,7 @@
 comma   := ,
 quote   := "
 squote  := '
+double_dot := ..
 empty   :=
 space   := $(empty) $(empty)
 space_escape := _-_SPACE_-_
@@ -17,6 +18,11 @@ dot-target = $(dir $@).$(notdir $@)
 # The temporary file to save gcc -MD generated dependencies must not
 # contain a comma
 depfile = $(subst $(comma),_,$(dot-target).d)
+
+###
+# The conversion of .. to the _ddot_ to avoid any relative path to be
+# outside of out folder.
+replace_ddot = $(subst $(double_dot),_ddot_,$(1))
 
 ###
 # filename of target with directory and extension stripped

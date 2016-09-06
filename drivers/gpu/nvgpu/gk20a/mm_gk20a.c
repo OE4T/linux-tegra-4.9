@@ -58,6 +58,34 @@
 static void gk20a_vidmem_clear_mem_worker(struct work_struct *work);
 #endif
 
+static inline void
+set_vidmem_page_alloc(struct scatterlist *sgl, u64 addr)
+{
+	/* set bit 0 to indicate vidmem allocation */
+	sg_dma_address(sgl) = (addr | 1ULL);
+}
+
+static inline bool
+is_vidmem_page_alloc(u64 addr)
+{
+	return !!(addr & 1ULL);
+}
+
+static inline struct gk20a_page_alloc *
+get_vidmem_page_alloc(struct scatterlist *sgl)
+{
+	u64 addr;
+
+	addr = sg_dma_address(sgl);
+
+	if (is_vidmem_page_alloc(addr))
+		addr = addr & ~1ULL;
+	else
+		WARN_ON(1);
+
+	return (struct gk20a_page_alloc *)(uintptr_t)addr;
+}
+
 int gk20a_mem_begin(struct gk20a *g, struct mem_desc *mem)
 {
 	void *cpu_va;
@@ -149,8 +177,7 @@ static inline void pramin_access_batched(struct gk20a *g, struct mem_desc *mem,
 	struct page_alloc_chunk *chunk = NULL;
 	u32 byteoff, start_reg, until_end, n;
 
-	alloc = (struct gk20a_page_alloc *)(uintptr_t)
-				sg_dma_address(mem->sgt->sgl);
+	alloc = get_vidmem_page_alloc(mem->sgt->sgl);
 	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
 		if (offset >= chunk->length)
 			offset -= chunk->length;
@@ -2197,8 +2224,7 @@ static u64 gk20a_mm_get_align(struct gk20a *g, struct scatterlist *sgl,
 	u64 buf_addr;
 
 	if (aperture == APERTURE_VIDMEM) {
-		struct gk20a_page_alloc *alloc = (struct gk20a_page_alloc *)
-					(uintptr_t)sg_dma_address(sgl);
+		struct gk20a_page_alloc *alloc = get_vidmem_page_alloc(sgl);
 		struct page_alloc_chunk *chunk = NULL;
 
 		list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
@@ -2914,8 +2940,7 @@ static int gk20a_gmmu_clear_vidmem_mem(struct gk20a *g, struct mem_desc *mem)
 	if (g->mm.vidmem.ce_ctx_id == ~0)
 		return -EINVAL;
 
-	alloc = (struct gk20a_page_alloc *)(uintptr_t)
-			sg_dma_address(mem->sgt->sgl);
+	alloc = get_vidmem_page_alloc(mem->sgt->sgl);
 
 	list_for_each_entry(chunk, &alloc->alloc_chunks, list_entry) {
 		if (gk20a_last_fence)
@@ -3038,7 +3063,7 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	if (err)
 		goto fail_kfree;
 
-	sg_dma_address(mem->sgt->sgl) = addr;
+	set_vidmem_page_alloc(mem->sgt->sgl, addr);
 	sg_set_page(mem->sgt->sgl, NULL, size, 0);
 
 	mem->size = size;
@@ -3082,7 +3107,7 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 	} else {
 		gk20a_memset(g, mem, 0, 0, mem->size);
 		gk20a_free(mem->allocator,
-			   sg_dma_address(mem->sgt->sgl));
+			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);
 
 		mem->size = 0;
@@ -3120,8 +3145,7 @@ u64 gk20a_mem_get_base_addr(struct gk20a *g, struct mem_desc *mem,
 	u64 addr;
 
 	if (mem->aperture == APERTURE_VIDMEM) {
-		alloc = (struct gk20a_page_alloc *)(uintptr_t)
-				sg_dma_address(mem->sgt->sgl);
+		alloc = get_vidmem_page_alloc(mem->sgt->sgl);
 
 		/* This API should not be used with > 1 chunks */
 		WARN_ON(alloc->nr_chunks != 1);
@@ -3159,7 +3183,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 	while ((mem = get_pending_mem_desc(mm)) != NULL) {
 		gk20a_gmmu_clear_vidmem_mem(g, mem);
 		gk20a_free(mem->allocator,
-			   sg_dma_address(mem->sgt->sgl));
+			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);
 
 		WARN_ON(atomic_dec_return(&mm->vidmem.clears_pending) < 0);
@@ -3400,6 +3424,9 @@ void gk20a_free_sgtable(struct sg_table **sgt)
 
 u64 gk20a_mm_smmu_vaddr_translate(struct gk20a *g, dma_addr_t iova)
 {
+	/* ensure it is not vidmem allocation */
+	WARN_ON(is_vidmem_page_alloc((u64)iova));
+
 	if (device_is_iommuable(dev_from_gk20a(g)) &&
 			g->ops.mm.get_physical_addr_bits)
 		return iova | 1ULL << g->ops.mm.get_physical_addr_bits(g);
@@ -3747,8 +3774,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				pgsz_idx, gpu_va, gpu_end-1, iova);
 
 		if (sgt) {
-			alloc = (struct gk20a_page_alloc *)(uintptr_t)
-					sg_dma_address(sgt->sgl);
+			alloc = get_vidmem_page_alloc(sgt->sgl);
 
 			list_for_each_entry(chunk, &alloc->alloc_chunks,
 							list_entry) {

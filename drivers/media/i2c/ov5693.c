@@ -334,7 +334,7 @@ static int ov5693_power_off(struct camera_common_data *s_data)
 
 	dev_dbg(&priv->i2c_client->dev, "%s: power off\n", __func__);
 
-	if (priv->pdata && priv->pdata->power_on) {
+	if (priv->pdata && priv->pdata->power_off) {
 		err = priv->pdata->power_off(pw);
 		if (!err) {
 			goto power_off_done;

@@ -5114,7 +5114,7 @@ void gk20a_mm_l2_flush(struct gk20a *g, bool invalidate)
 {
 	struct mm_gk20a *mm = &g->mm;
 	u32 data;
-	s32 retry = 200;
+	s32 retry = 2000;
 
 	gk20a_dbg_fn("");
 

@@ -125,18 +125,26 @@
 				};
 			};
 		};
-		fragment-comms-chip {
-			ids = ">=3310-1000-500";
+		fragment-comms-a00-chip {
+			ids = "<3310-1000-500";
 			override@0 {
 				target = <&bcm4354>;
 				_overlay_ {
-					status = "okay";
+					sdhci-host = <&sdmmc3>;
+					pwr-retry-cnt = <0>;
+					interrupts = <TEGRA_GPIO(C, 0) 0x14>;
+					delete-target-property = "wlan-pwr-gpio";
 				};
 			};
 			override@1 {
-				target = <&bcm4359>;
+				target = <&wlan_default>;
 				_overlay_ {
-					status = "disabled";
+					 gpio-input = <
+						 TEGRA_GPIO(C, 0)
+						 >;
+					 gpio-output-high = <
+						 TEGRA_GPIO(B, 6)
+						 >;
 				};
 			};
 		};
@@ -187,15 +195,6 @@
 					pcie0_lane2_mux {
 						status = "okay";
 					};
-				};
-			};
-		};
-		fragment-b00-sdmmc3-config {
-			ids = ">=3310-1000-500";
-			override@0 {
-				target = <&sdmmc3>;
-				_overlay_ {
-					status = "okay";
 				};
 			};
 		};

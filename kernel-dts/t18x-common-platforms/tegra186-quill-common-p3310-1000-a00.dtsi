@@ -89,5 +89,9 @@
 			#extcon-cells = <1>;
 		};
 	};
+
+	sdhci@3440000 {
+		status = "okay";
+	};
 };
 

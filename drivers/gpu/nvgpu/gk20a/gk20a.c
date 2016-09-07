@@ -443,8 +443,7 @@ static int gk20a_pm_prepare_poweroff(struct device *dev)
 	/* cancel any pending cde work */
 	gk20a_cde_suspend(g);
 
-	if (platform->has_ce)
-		gk20a_ce_suspend(g);
+	gk20a_ce_suspend(g);
 
 	ret = gk20a_channel_suspend(g);
 	if (ret)
@@ -710,8 +709,7 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (platform->has_cde)
 		gk20a_init_cde_support(g);
 
-	if (platform->has_ce)
-		gk20a_init_ce_support(g);
+	gk20a_init_ce_support(g);
 
 	gk20a_init_mm_ce_context(g);
 
@@ -1302,8 +1300,7 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 	if (g->remove_support)
 		g->remove_support(dev);
 
-	if (platform->has_ce)
-		gk20a_ce_destroy(g);
+	gk20a_ce_destroy(g);
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	nvgpu_clk_arb_cleanup_arbiter(g);

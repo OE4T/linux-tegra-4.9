@@ -236,8 +236,6 @@ struct gk20a_platform {
 
 	bool has_cde;
 
-	bool has_ce;
-
 	/* soc name for finding firmware files */
 	const char *soc_name;
 

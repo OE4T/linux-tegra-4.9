@@ -427,8 +427,6 @@ struct gk20a_platform gp10b_tegra_platform = {
 
 	.has_cde = true,
 
-	.has_ce = true,
-
 	.clk_round_rate = gp10b_round_clk_rate,
 	.get_clk_freqs = gp10b_clk_get_freqs,
 

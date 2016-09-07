@@ -83,8 +83,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	.ch_wdt_timeout_ms = 7000,
 
-	.has_ce = true,
-
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86063000,
 	.hardcode_sw_threshold = true,
@@ -116,8 +114,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.default_big_page_size	= SZ_64K,
 
 	.ch_wdt_timeout_ms = 7000,
-
-	.has_ce = true,
 
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86062d00,
@@ -151,8 +147,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 
 	.ch_wdt_timeout_ms = 7000,
 
-	.has_ce = true,
-
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86063000,
 	.hardcode_sw_threshold = true,
@@ -184,8 +178,6 @@ static struct gk20a_platform nvgpu_pci_device[] = {
 	.default_big_page_size	= SZ_64K,
 
 	.ch_wdt_timeout_ms = 7000,
-
-	.has_ce = true,
 
 	.vidmem_is_vidmem = true,
 	.vbios_min_version = 0x86064700,

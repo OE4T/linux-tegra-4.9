@@ -1028,8 +1028,8 @@ int gk20a_restore_registers(struct gk20a *g);
 static inline void gk20a_writel(struct gk20a *g, u32 r, u32 v)
 {
 	gk20a_dbg(gpu_dbg_reg, " r=0x%x v=0x%x", r, v);
-	wmb();
 	writel_relaxed(v, g->regs + r);
+	wmb();
 }
 static inline u32 gk20a_readl(struct gk20a *g, u32 r)
 {

@@ -239,6 +239,8 @@ struct nvhost_device_data t18_vi_info = {
 				   {0x28000 * 4, true},
 				   {0x2c000 * 4, true},
 				   {0x30000 * 4, true} },
+	.num_ppc			= 8,
+	.aggregate_constraints	= nvhost_vi4_aggregate_constraints,
 };
 #endif
 

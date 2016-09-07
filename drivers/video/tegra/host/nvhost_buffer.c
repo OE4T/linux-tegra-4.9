@@ -187,6 +187,8 @@ int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 	struct nvhost_vm_buffer *vm;
 	int i = 0;
 
+	kref_get(&nvhost_buffers->kref);
+
 	mutex_lock(&nvhost_buffers->buffer_list_mutex);
 
 	for (i = 0; i < count; i++) {
@@ -201,7 +203,6 @@ int nvhost_buffer_submit_pin(struct nvhost_buffers *nvhost_buffers,
 		}
 	}
 
-	kref_get(&nvhost_buffers->kref);
 	mutex_unlock(&nvhost_buffers->buffer_list_mutex);
 	return 0;
 

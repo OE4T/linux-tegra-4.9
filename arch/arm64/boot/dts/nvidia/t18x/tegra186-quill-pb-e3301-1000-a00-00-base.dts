@@ -22,6 +22,7 @@
 #include "tegra186-plugin-manager/tegra186-quill-display-plugin-manager.dtsi"
 #include "tegra186-plugin-manager/tegra186-quill-camera-plugin-manager.dtsi"
 #include "tegra186-prod/tegra186-priv-quill-pb-e3301-1000-a00-prod.dtsi"
+#include "tegra186-platforms/tegra186-quill-comms.dtsi"
 
 / {
 	nvidia,dtsfilename = __FILE__;
@@ -96,6 +97,25 @@
 	};
 
 	sdhci@3440000 {
+		status = "okay";
+	};
+
+	gpio@2200000 {
+		wlan-default {
+			gpio-input = <
+				TEGRA_GPIO(C, 0)
+				>;
+			gpio-output-high = <
+				TEGRA_GPIO(B, 6)
+				>;
+		};
+	};
+
+	bcmdhd_wlan {
+		sdhci-host = <&sdmmc3>;
+		pwr-retry-cnt = <0>;
+		interrupts = <TEGRA_GPIO(C, 0) 0x14>;
+		wlan-pwr-gpio = <>;
 		status = "okay";
 	};
 

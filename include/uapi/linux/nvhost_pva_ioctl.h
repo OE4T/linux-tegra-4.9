@@ -164,7 +164,7 @@ struct pva_fence {
 	__u32 semaphore_value;
 };
 
-#define PVA_MAX_TASKS		16
+#define PVA_MAX_TASKS		1
 #define PVA_MAX_PREFENCES	8
 #define PVA_MAX_POSTFENCES	8
 #define PVA_MAX_INPUT_STATUS	8

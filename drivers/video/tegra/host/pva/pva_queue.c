@@ -16,6 +16,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#include <linux/dma-mapping.h>
+#include <linux/delay.h>
 #include <asm/ioctls.h>
 #include <linux/fs.h>
 #include <linux/uaccess.h>
@@ -23,12 +25,732 @@
 
 #include <uapi/linux/nvhost_pva_ioctl.h>
 
+#include "nvhost_syncpt_unit_interface.h"
+#include "../drivers/staging/android/sync.h"
+#include "pva.h"
+#include "pva-task.h"
+#include "nvhost_buffer.h"
 #include "nvhost_queue.h"
+#include "pva_mailbox.h"
 #include "pva_queue.h"
+#include "dev.h"
+
+static DEFINE_DMA_ATTRS(dma_attrs);
+
+static void pva_task_dump(struct pva_submit_task *task)
+{
+	int i;
+
+	nvhost_dbg_info("task=%p, input_scalars=(handle=%u, offset=%x), "
+			"input_surfaces=%p, input_points=(handle=%u, offset=%u), "
+			"input_rois=(handle=%u, offset=%u), "
+			"output_scalars=(handle=%u, offset=%u), "
+			"output_surfaces=%p, output_points=(handle=%u, offset=%u), "
+			"output_rois=(handle=%u, offset=%u)",
+			task, task->input_scalars.handle,
+			task->input_scalars.offset, task->input_surfaces,
+			task->input_2dpoint.handle,
+			task->input_2dpoint.offset,
+			task->input_rois.handle, task->input_rois.offset,
+			task->output_scalars.handle,
+			task->output_scalars.offset,
+			task->output_surfaces,
+			task->output_2dpoint.handle,
+			task->output_2dpoint.offset,
+			task->output_rois.handle, task->output_rois.offset);
+
+	for (i = 0; i < task->num_prefences; i++)
+		nvhost_dbg_info("prefence %d: type=%u, "
+				"syncpoint_index=%u, syncpoint_value=%u, "
+				"sync_fd=%u, semaphore_handle=%u, "
+				"semaphore_offset=%u, semaphore_value=%u", i,
+				task->prefences[i].type,
+				task->prefences[i].syncpoint_index,
+				task->prefences[i].syncpoint_value,
+				task->prefences[i].sync_fd,
+				task->prefences[i].semaphore_handle,
+				task->prefences[i].semaphore_offset,
+				task->prefences[i].semaphore_value);
+
+	for (i = 0; i < task->num_postfences; i++)
+		nvhost_dbg_info("postfence %d: type=%u, "
+				"syncpoint_index=%u, syncpoint_value=%u, "
+				"sync_fd=%u, semaphore_handle=%u, "
+				"semaphore_offset=%u, semaphore_value=%u", i,
+				task->postfences[i].type,
+				task->postfences[i].syncpoint_index,
+				task->postfences[i].syncpoint_value,
+				task->postfences[i].sync_fd,
+				task->postfences[i].semaphore_handle,
+				task->postfences[i].semaphore_offset,
+				task->postfences[i].semaphore_value);
+
+	for (i = 0; i < task->num_input_surfaces; i++)
+		nvhost_dbg_info("input surface %d: format=%llu, "
+				"surface_handle=%u, surface_offset=%u, "
+				"roi_handle=%u, roi_offset=%u, surface_stride=%u, "
+				"line_stride=%u, depth=%u, width=%u, height=%u, "
+				"layout=%u", i,
+				task->input_surfaces[i].format,
+				task->input_surfaces[i].surface_handle,
+				task->input_surfaces[i].surface_offset,
+				task->input_surfaces[i].roi_handle,
+				task->input_surfaces[i].roi_offset,
+				task->input_surfaces[i].surface_stride,
+				task->input_surfaces[i].line_stride,
+				task->input_surfaces[i].depth,
+				task->input_surfaces[i].width,
+				task->input_surfaces[i].height,
+				task->input_surfaces[i].layout);
+
+	for (i = 0; i < task->num_output_surfaces; i++)
+		nvhost_dbg_info("output surface %d: format=%llu, "
+				"surface_handle=%u, surface_offset=%u, "
+				"roi_handle=%u, roi_offset=%u, surface_stride=%u,"
+				"line_stride=%u, depth=%u, width=%u, height=%u, "
+				"layout=%u", i,
+				task->output_surfaces[i].format,
+				task->output_surfaces[i].surface_handle,
+				task->output_surfaces[i].surface_offset,
+				task->output_surfaces[i].roi_handle,
+				task->output_surfaces[i].roi_offset,
+				task->output_surfaces[i].surface_stride,
+				task->output_surfaces[i].line_stride,
+				task->output_surfaces[i].depth,
+				task->output_surfaces[i].width,
+				task->output_surfaces[i].height,
+				task->output_surfaces[i].layout);
+
+	for (i = 0; i < task->num_input_task_status; i++)
+		nvhost_dbg_info("input task status %d: handle=%u, offset=%u",
+				i, task->input_task_status[i].handle,
+				task->input_task_status[i].offset);
+
+	for (i = 0; i < task->num_output_task_status; i++)
+		nvhost_dbg_info("output task status %d: handle=%u, offset=%u",
+				i, task->output_task_status[i].handle,
+				task->output_task_status[i].offset);
+}
+
+static size_t pva_task_get_size(void)
+{
+	size_t size = 0;
+
+	/* Add task base structure */
+	size = sizeof(struct pva_task);
+
+	size += PVA_MAX_INPUT_SURFACES * sizeof(struct pva_task_surface);
+	size += PVA_MAX_OUTPUT_SURFACES * sizeof(struct pva_task_surface);
+
+	/* Input and output parameters */
+	size += 2 * PVA_PARAM_LAST * sizeof(struct pva_task_parameter_array);
+
+	/* Allocate room for input and output action lists */
+	size += 2 * sizeof(struct pva_action_list);
+
+	/* Calculate space needed for input waits */
+	size += PVA_MAX_PREFENCES *
+		(1 + sizeof(struct pva_task_action_ptr));
+
+	/* Calculate space needed for task done writes */
+	size += PVA_MAX_POSTFENCES *
+		(1 + sizeof(struct pva_task_action_ptr));
+
+	/* Get space for input status checks */
+	size += PVA_MAX_INPUT_STATUS *
+		(1 + sizeof(struct pva_task_action_status));
+
+	/* Calculate space needed for output status writes */
+	size += PVA_MAX_OUTPUT_STATUS *
+		(1 + sizeof(struct pva_task_action_status));
+
+	/* Allocate space for action list termination */
+	size += 2;
+
+	/* Allocate space for done fence */
+	size += sizeof(u32);
+
+	return size;
+}
+
+static void pva_task_unpin_mem(struct pva_submit_task *task)
+{
+	int i;
+
+	/* Release memory that was allocated for the task */
+	if (task->va)
+		dma_free_attrs(&task->pva->pdev->dev, pva_task_get_size(),
+			task->va, task->dma_addr, &dma_attrs);
+
+#define UNPIN_MEMORY(dst_name, src_name)				\
+	do {								\
+		if ((src_name) != 0 && (dst_name).dma_addr != 0)	\
+			nvhost_buffer_submit_unpin(task->buffers,	\
+				&(src_name), 1);			\
+	} while (0)
+
+	for (i = 0; i < task->num_input_surfaces; i++) {
+		UNPIN_MEMORY(task->input_surfaces_ext[i],
+			task->input_surfaces[i].surface_handle);
+		UNPIN_MEMORY(task->input_surface_rois_ext[i],
+			task->input_surfaces[i].roi_handle);
+	}
+
+
+	for (i = 0; i < task->num_output_surfaces; i++) {
+		UNPIN_MEMORY(task->output_surfaces_ext[i],
+			task->output_surfaces[i].surface_handle);
+		UNPIN_MEMORY(task->output_surface_rois_ext[i],
+			task->output_surfaces[i].roi_handle);
+	}
+
+	UNPIN_MEMORY(task->input_scalars_ext, task->input_scalars.handle);
+	UNPIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
+	UNPIN_MEMORY(task->input_2dpoint_ext, task->input_2dpoint.handle);
+	UNPIN_MEMORY(task->output_scalars_ext, task->output_scalars.handle);
+	UNPIN_MEMORY(task->output_rois_ext, task->output_rois.handle);
+	UNPIN_MEMORY(task->output_2dpoint_ext, task->output_2dpoint.handle);
+
+#undef UNPIN_MEMORY
+}
+
+static int pva_task_pin_mem(struct pva_submit_task *task)
+{
+	int err;
+	int i;
+
+	/* Allocate memory for the task itself */
+	task->va = dma_alloc_attrs(&task->pva->pdev->dev, pva_task_get_size(),
+		&task->dma_addr, GFP_KERNEL, &dma_attrs);
+	if (task->va == NULL) {
+		err = -ENOMEM;
+		goto err_alloc_task_buffer;
+	}
+
+#define PIN_MEMORY(dst_name, src_name)					\
+	do {								\
+		if ((src_name) != 0) {					\
+			err = nvhost_buffer_submit_pin(task->buffers,	\
+				&(src_name), 1,				\
+				&(dst_name).dma_addr,			\
+				&(dst_name).size);			\
+			if (err < 0)					\
+				goto err_map_handle;			\
+		}							\
+	} while (0)
+
+	/* Pin input surfaces */
+	for (i = 0; i < task->num_input_surfaces; i++) {
+		PIN_MEMORY(task->input_surfaces_ext[i],
+			task->input_surfaces[i].surface_handle);
+		PIN_MEMORY(task->input_surface_rois_ext[i],
+			task->input_surfaces[i].roi_handle);
+	}
+
+	/* ...and then output surfaces */
+	for (i = 0; i < task->num_output_surfaces; i++) {
+		PIN_MEMORY(task->output_surfaces_ext[i],
+			task->output_surfaces[i].surface_handle);
+		PIN_MEMORY(task->output_surface_rois_ext[i],
+			task->output_surfaces[i].roi_handle);
+	}
+
+	/* Pin rest */
+	PIN_MEMORY(task->input_scalars_ext, task->input_scalars.handle);
+	PIN_MEMORY(task->input_rois_ext, task->input_rois.handle);
+	PIN_MEMORY(task->input_2dpoint_ext, task->input_2dpoint.handle);
+	PIN_MEMORY(task->output_scalars_ext, task->output_scalars.handle);
+	PIN_MEMORY(task->output_rois_ext, task->output_rois.handle);
+	PIN_MEMORY(task->output_2dpoint_ext, task->output_2dpoint.handle);
+
+#undef PIN_MEMORY
+
+	return 0;
+
+err_map_handle:
+	pva_task_unpin_mem(task);
+err_alloc_task_buffer:
+	return err;
+}
+
+static void pva_task_write_surfaces(struct pva_task_surface *hw_surface,
+		struct pva_surface *surface,
+		struct pva_parameter_ext *surface_ext,
+		struct pva_parameter_ext *roi_ext,
+		unsigned int count)
+{
+	int i;
+
+	for (i = 0; i < count; i++) {
+		hw_surface->address = surface_ext->dma_addr;
+		hw_surface->surface_size = surface_ext->size;
+		hw_surface->roi_addr = roi_ext->dma_addr;
+		hw_surface->roi_size = roi_ext->size;
+		hw_surface->format = surface->format;
+		hw_surface->width = surface->width;
+		hw_surface->height = surface->height;
+		hw_surface->line_stride = surface->line_stride;
+		hw_surface->plane_stride = surface->surface_stride;
+		hw_surface->num_planes = surface->depth;
+		hw_surface->layout = surface->layout;
+
+		/* Only DRAM is supported currently */
+		hw_surface->memory = 0;
+	}
+}
+
+static inline int pva_task_write_atomic_op(u8 *base, u8 action)
+{
+	*base = action;
+
+	return 1;
+}
+
+static inline int pva_task_write_ptr_op(u8 *base, u8 action, u64 addr, u32 val)
+{
+	int i = 0;
+
+	base[i++] = action;
+	base[i++] = (u8)((addr >> 0) & 0xff);
+	base[i++] = (u8)((addr >> 8) & 0xff);
+	base[i++] = (u8)((addr >> 16) & 0xff);
+	base[i++] = (u8)((addr >> 24) & 0xff);
+	base[i++] = (u8)((addr >> 32) & 0xff);
+	base[i++] = (u8)((addr >> 40) & 0xff);
+	base[i++] = (u8)((addr >> 48) & 0xff);
+	base[i++] = (u8)((addr >> 56) & 0xff);
+	base[i++] = (u8)((val >> 0) & 0xff);
+	base[i++] = (u8)((val >> 8) & 0xff);
+	base[i++] = (u8)((val >> 16) & 0xff);
+	base[i++] = (u8)((val >> 24) & 0xff);
+
+	return i;
+}
+
+static int pva_task_write_preactions(struct pva_submit_task *task,
+		struct pva_action_list *hw_preaction_list,
+		u16 *offset)
+{
+	u8 *hw_preactions = (void *)((u8 *)task->va + *offset);
+	int i = 0, ptr = 0;
+
+	/* Add waits to preactions list */
+	for (i = 0; i < task->num_prefences; i++) {
+		struct pva_fence *fence = task->prefences + i;
+
+		switch (fence->type) {
+		case PVA_FENCE_TYPE_SYNCPT: {
+			dma_addr_t syncpt_addr = nvhost_syncpt_address(
+				task->pva->pdev, fence->syncpoint_index);
+
+			ptr += pva_task_write_ptr_op(&hw_preactions[ptr],
+				TASK_ACT_PTR_BLK_GTREQL, syncpt_addr,
+				fence->syncpoint_value);
+			break;
+		}
+		default:
+			return -ENOSYS;
+		}
+	}
+
+	ptr += pva_task_write_atomic_op(&hw_preactions[ptr],
+		TASK_ACT_TERMINATE);
+
+	/* Store the preaction list */
+	hw_preaction_list->offset = *offset;
+	hw_preaction_list->length = ptr;
+
+	/* Mark this part of task memory as used */
+	*offset += ptr;
+	*offset = roundup(*offset, sizeof(u64));
+
+	return 0;
+}
+
+static void pva_task_write_postactions(struct pva_submit_task *task,
+		struct pva_action_list *hw_postaction_list,
+		u16 *offset)
+{
+	dma_addr_t syncpt_addr = nvhost_syncpt_address(task->pva->pdev,
+			task->queue->syncpt_id);
+	u8 *hw_postactions = (void *)((u8 *)task->va + *offset);
+	int ptr = 0;
+
+	/* Make a syncpoint increment */
+	ptr += pva_task_write_ptr_op(&hw_postactions[ptr],
+		TASK_ACT_PTR_WRITE_VAL, syncpt_addr, 1);
+	ptr += pva_task_write_atomic_op(&hw_postactions[ptr],
+		TASK_ACT_TERMINATE);
+
+	/* Store the postaction list */
+	hw_postaction_list->offset = *offset;
+	hw_postaction_list->length = ptr;
+
+	/* Mark this part of task memory as used */
+	*offset += ptr;
+	*offset = roundup(*offset, sizeof(u64));
+}
+
+static void pva_task_write_output_surfaces(struct pva_submit_task *task,
+		struct pva_task_parameter_array *hw_output_parameters,
+		u32 *num_output_parameters, u16 *offset)
+{
+	struct pva_task_surface *hw_output_surfaces;
+	struct pva_task_parameter_desc *hw_output_surface_desc;
+
+	if (task->num_output_surfaces == 0) {
+		return;
+	}
+
+	/* Write parameter descriptor */
+	hw_output_parameters[*num_output_parameters].address =
+			task->dma_addr + *offset;
+	hw_output_parameters[*num_output_parameters].type =
+			PVA_PARAM_SURFACE_LIST;
+	hw_output_parameters[*num_output_parameters].size =
+			sizeof(*hw_output_surface_desc) +
+			sizeof(*hw_output_surfaces) *
+			task->num_output_surfaces;
+	*num_output_parameters = *num_output_parameters + 1;
+
+	/* Write the surface descriptor base information */
+	hw_output_surface_desc = (void *)((u8 *)task->va + *offset);
+	hw_output_surface_desc->num_parameters = task->num_output_surfaces;
+	hw_output_surface_desc->reserved = 0;
+	*offset = *offset + sizeof(*hw_output_surface_desc);
+
+	/* Get surface base address */
+	hw_output_surfaces = (void *)((u8 *)task->va + *offset);
+
+	/* Write the output surfaces */
+	pva_task_write_surfaces(hw_output_surfaces,
+			task->output_surfaces,
+			task->output_surfaces_ext,
+			task->output_surface_rois_ext,
+			task->num_output_surfaces);
+
+	/* Track the offset change */
+	*offset = *offset + sizeof(*hw_output_surfaces) *
+		PVA_MAX_OUTPUT_SURFACES;
+}
+
+static void pva_task_write_input_surfaces(struct pva_submit_task *task,
+		struct pva_task_parameter_array *hw_input_parameters,
+		u32 *num_input_parameters, u16 *offset)
+{
+	struct pva_task_surface *hw_input_surfaces;
+	struct pva_task_parameter_desc *hw_input_surface_desc;
+
+	if (task->num_input_surfaces == 0) {
+		return;
+	}
+
+	/* Write parameter descriptor */
+	hw_input_parameters[*num_input_parameters].address =
+			task->dma_addr + *offset;
+	hw_input_parameters[*num_input_parameters].type =
+			PVA_PARAM_SURFACE_LIST;
+	hw_input_parameters[*num_input_parameters].size =
+			sizeof(*hw_input_surface_desc) +
+			sizeof(*hw_input_surfaces) *
+			task->num_input_surfaces;
+	*num_input_parameters = *num_input_parameters + 1;
+
+	/* Write the surface descriptor base information */
+	hw_input_surface_desc = (void *)((u8 *)task->va + *offset);
+	hw_input_surface_desc->num_parameters = task->num_input_surfaces;
+	hw_input_surface_desc->reserved = 0;
+	*offset = *offset + sizeof(*hw_input_surface_desc);
+
+	/* Get surface base address */
+	hw_input_surfaces = (void *)((u8 *)task->va + *offset);
+
+	/* Write the input surfaces */
+	pva_task_write_surfaces(hw_input_surfaces,
+			task->input_surfaces,
+			task->input_surfaces_ext,
+			task->input_surface_rois_ext,
+			task->num_input_surfaces);
+
+	/* Track the offset change */
+	*offset = *offset + sizeof(*hw_input_surfaces) *
+			PVA_MAX_INPUT_SURFACES;
+}
+
+static int pva_task_write(struct pva_submit_task *task, bool atomic)
+{
+	struct pva_task_parameter_array *hw_input_parameters;
+	struct pva_task_parameter_array *hw_output_parameters;
+	struct pva_action_list *hw_postaction_list;
+	struct pva_action_list *hw_preaction_list;
+	struct pva_task *hw_task;
+	u32 num_input_parameters = 0;
+	u32 num_output_parameters = 0;
+	u16 offset = 0;
+	int err;
+	int i;
+
+	/* Task start from the memory base */
+	hw_task = task->va;
+	offset += sizeof(*hw_task);
+
+	/* Allocate room for postactions list */
+	hw_postaction_list = (void *)((u8 *)task->va + offset);
+	hw_task->gen_task.postaction_lists_p = offset;
+	offset = roundup(offset + sizeof(*hw_postaction_list), sizeof(u64));
+
+	/* Allocate room for preactions list */
+	hw_preaction_list = (void *)((u8 *)task->va + offset);
+	hw_task->gen_task.preaction_lists_p = offset;
+	offset = roundup(offset + sizeof(*hw_preaction_list), sizeof(u64));
+
+	/* Allocate space for the input parameters */
+	hw_input_parameters = (void *)((u8 *)task->va + offset);
+	hw_task->input_parameters = offset;
+	offset += sizeof(*hw_input_parameters) * PVA_PARAM_LAST;
+
+	/* ..and then output parameters */
+	hw_output_parameters = (void *)((u8 *)task->va + offset);
+	hw_task->output_parameters = offset;
+	offset += sizeof(*hw_output_parameters) * PVA_PARAM_LAST;
+
+	/* Write the postaction list */
+	err = pva_task_write_preactions(task, hw_preaction_list, &offset);
+	if (err < 0)
+		return err;
+
+	/* Write the postaction list */
+	pva_task_write_postactions(task, hw_postaction_list, &offset);
+
+	/* Initialize parameters */
+
+#define COPY_PARAMETER(name, name_ext, param_type, count)	\
+	do {							\
+		if ((name).handle) {				\
+			hw_input_parameters[count].address =	\
+				(name_ext).dma_addr;		\
+			hw_input_parameters[(count)].size =	\
+				(name_ext).size;		\
+			hw_input_parameters[(count)].type =	\
+				param_type;			\
+			(count)++;				\
+		}						\
+	} while (0)
+
+	COPY_PARAMETER(task->input_scalars, task->input_scalars_ext,
+			PVA_PARAM_SCALAR_LIST, num_input_parameters);
+	COPY_PARAMETER(task->input_rois, task->input_rois_ext,
+			PVA_PARAM_ROI_LIST, num_input_parameters);
+	COPY_PARAMETER(task->input_2dpoint, task->input_2dpoint_ext,
+			PVA_PARAM_2DPOINTS_LIST, num_input_parameters);
+	COPY_PARAMETER(task->output_scalars, task->output_scalars_ext,
+			PVA_PARAM_SCALAR_LIST, num_output_parameters);
+	COPY_PARAMETER(task->output_rois, task->output_rois_ext,
+			PVA_PARAM_ROI_LIST, num_output_parameters);
+	COPY_PARAMETER(task->output_2dpoint, task->output_2dpoint_ext,
+			PVA_PARAM_2DPOINTS_LIST, num_output_parameters);
+#undef COPY_PARAMETER
+
+	/* Write input surfaces */
+	pva_task_write_input_surfaces(task, hw_input_parameters,
+			&num_input_parameters, &offset);
+
+	/* Write output surfaces */
+	pva_task_write_output_surfaces(task, hw_output_parameters,
+			&num_output_parameters, &offset);
+
+	hw_task->gen_task.versionid = TASK_VERSION_ID;
+	hw_task->gen_task.engineid = PVA_ENGINE_ID;
+	hw_task->gen_task.sequence = 0;
+	hw_task->gen_task.length = offset;
+	hw_task->gen_task.n_preaction_lists = 1;
+	hw_task->gen_task.n_postaction_lists = 1;
+	hw_task->runlist_version = PVA_TASK_VERSION_ID;
+	hw_task->queue_id = task->queue->id;
+	hw_task->num_input_parameters = num_input_parameters;
+	hw_task->num_output_parameters = num_output_parameters;
+	hw_task->flags = atomic ? PVA_TASK_FL_ATOMIC : 0;
+	hw_task->operation = task->operation;
+	hw_task->timeout = task->timeout;
+
+	for (i = 0; i < roundup(offset, 16) / 16; i++) {
+		u8 *task_va = task->va;
+		u32 base = i * 16;
+
+		nvhost_dbg_info("%02x, %02x, %02x, %02x, %02x, %02x, %02x %02x, "
+				"%02x, %02x, %02x, %02x, %02x, %02x, %02x %02x",
+				task_va[base],
+				task_va[base + 1],
+				task_va[base + 2],
+				task_va[base + 3],
+				task_va[base + 4],
+				task_va[base + 5],
+				task_va[base + 6],
+				task_va[base + 7],
+				task_va[base + 8],
+				task_va[base + 9],
+				task_va[base + 10],
+				task_va[base + 11],
+				task_va[base + 12],
+				task_va[base + 13],
+				task_va[base + 14],
+				task_va[base + 15]);
+	}
+
+	return 0;
+}
+
+/**
+ * pva_task_remove() - Release memory allocated for a task
+ *
+ * @task: Task to be released.
+ *
+ * This function releases the resources that were allocated for a given task
+ * structure. If the pointer is NULL, the function is no-op.
+ */
+void pva_task_remove(struct pva_submit_task *task)
+{
+	kfree(task->input_surfaces);
+	kfree(task->output_surfaces);
+	kfree(task->prefences);
+	kfree(task->postfences);
+	kfree(task->input_task_status);
+	kfree(task->output_task_status);
+
+	memset(task, 0, sizeof(*task));
+}
+
+static void pva_task_update(void *priv, int nr_completed)
+{
+	struct pva_submit_task *task = priv;
+	struct nvhost_queue *queue = task->queue;
+
+	nvhost_dbg_info("Completed task %p (0x%llx)", task,
+			(u64)task->dma_addr);
+
+	/* Unpin job memory. PVA shouldn't be using it anymore */
+	pva_task_unpin_mem(task);
+
+	/* Drop PM runtime reference of PVA */
+	nvhost_module_idle(task->pva->pdev);
+
+	/* Remove PVA task data structures */
+	pva_task_remove(task);
+	kfree(task);
+
+	/* Drop queue reference to allow reusing it */
+	nvhost_queue_put(queue);
+}
+
+static int pva_task_submit(struct pva_submit_task *task)
+{
+	struct platform_device *host1x_pdev =
+			to_platform_device(task->pva->pdev->dev.parent);
+	struct pva_mailbox_status_regs status;
+	u32 thresh, flags, nregs;
+	struct pva_cmd cmd;
+	int err = 0;
+	int i;
+
+	nvhost_dbg_info("Submitting task %p (0x%llx)", task,
+			(u64)task->dma_addr);
+
+	/* Turn on the hardware */
+	err = nvhost_module_busy(task->pva->pdev);
+	if (err)
+		goto err_module_busy;
+
+	/* Construct submit command */
+	flags = PVA_CMD_INT_ON_ERR | PVA_CMD_INT_ON_COMPLETE;
+	nregs = pva_cmd_submit(&cmd, task->queue->id, task->dma_addr, flags);
+
+	/* Submit request to PVA and wait for response */
+	err = pva_mailbox_send_cmd_sync(task->pva, &cmd, nregs, &status);
+	if (err < 0) {
+		nvhost_warn(&task->pva->pdev->dev,
+			"Failed to submit task: %d", err);
+		goto err_submit;
+	}
+
+	/* Ensure that response is valid */
+	if (status.error != PVA_ERR_NO_ERROR) {
+		nvhost_warn(&task->pva->pdev->dev, "PVA task rejected: %u",
+				status.error);
+		err = -EINVAL;
+		goto err_submit;
+	}
+
+	/* Get a reference of the queue to avoid it being reused. It
+	 * gets freed in the callback...
+	 */
+	nvhost_queue_get(task->queue);
+
+	/* ...that is registered here */
+	thresh = nvhost_syncpt_incr_max_ext(host1x_pdev,
+			task->queue->syncpt_id, 1);
+	err = nvhost_intr_register_notifier(host1x_pdev,
+			task->queue->syncpt_id, thresh,
+			pva_task_update, task);
+	if (err < 0) {
+		nvhost_queue_put(task->queue);
+		goto err_register_isr;
+	}
+
+	nvhost_dbg_info("Postfence id=%u, value=%u",
+			task->queue->syncpt_id, thresh);
+
+	/* Return post-fences */
+	for (i = 0; i < task->num_postfences; i++) {
+		struct pva_fence *fence = task->postfences + i;
+
+		switch (fence->type) {
+		case PVA_FENCE_TYPE_SYNCPT: {
+			fence->syncpoint_index = task->queue->syncpt_id;
+			fence->syncpoint_value = thresh;
+			break;
+		}
+		default:
+			err = -ENOSYS;
+			goto err_write_fences;
+		}
+	}
+
+err_write_fences:
+	return err;
+
+err_register_isr:
+err_submit:
+	nvhost_module_idle(task->pva->pdev);
+err_module_busy:
+	return err;
+}
 
 static int pva_queue_submit(struct nvhost_queue *queue, void *args)
 {
-	return 0;
+	struct pva_submit_tasks *task_header = args;
+	int err = 0;
+	int i;
+
+	for (i = 0; i < task_header->num_tasks; i++) {
+		struct pva_submit_task *task = task_header->tasks + i;
+
+		/* First, dump the task that we are submitting */
+		pva_task_dump(task);
+
+		/* Pin job memory */
+		err = pva_task_pin_mem(task);
+		if (err < 0)
+			break;
+
+		/* Write the task data */
+		pva_task_write(task, false);
+
+		err = pva_task_submit(task);
+		if (err < 0)
+			break;
+	}
+
+	return err;
 }
 
 static int pva_queue_abort(struct nvhost_queue *queue)

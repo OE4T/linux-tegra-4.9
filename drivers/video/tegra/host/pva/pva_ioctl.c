@@ -39,30 +39,10 @@
  * @buffer:		Pointer to the struct nvhost_buffer
  */
 struct pva_private {
-	struct platform_device *pdev;
+	struct pva *pva;
 	struct nvhost_queue *queue;
 	struct nvhost_buffers *buffers;
 };
-
-/**
- * pva_remove_task() - Release memory allocated for a task
- *
- * @task: Task to be released.
- *
- * This function releases the resources that were allocated for a given task
- * structure. If the pointer is NULL, the function is no-op.
- */
-static void pva_remove_task(struct pva_submit_task *task)
-{
-	kfree(task->input_surfaces);
-	kfree(task->output_surfaces);
-	kfree(task->prefences);
-	kfree(task->postfences);
-	kfree(task->input_task_status);
-	kfree(task->output_task_status);
-
-	memset(task, 0, sizeof(*task));
-}
 
 /**
  * pva_copy_task() - Copy a single task from userspace to kernel space
@@ -145,6 +125,24 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	ALLOC_FIELD(task->output_task_status, task->num_output_task_status,
 			struct pva_status_handle);
 
+	/* Allocate space for extensions */
+	ALLOC_FIELD(task->prefences_ext, task->num_prefences,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->postfences_ext, task->num_postfences,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->input_surfaces_ext, task->num_input_surfaces,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->input_surface_rois_ext, task->num_input_surfaces,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->output_surfaces_ext, task->num_output_surfaces,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->output_surface_rois_ext, task->num_output_surfaces,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->input_task_status_ext, task->num_input_task_status,
+			struct pva_parameter_ext);
+	ALLOC_FIELD(task->output_task_status_ext, task->num_output_task_status,
+			struct pva_parameter_ext);
+
 	/* Copy the fields */
 	COPY_FIELD(task->input_surfaces, ioctl_task->input_surfaces,
 			task->num_input_surfaces,
@@ -169,7 +167,7 @@ static int pva_copy_task(struct pva_ioctl_submit_task *ioctl_task,
 	return 0;
 
 err_out:
-	pva_remove_task(task);
+	pva_task_remove(task);
 
 	return err;
 }
@@ -238,6 +236,10 @@ static int pva_submit(struct pva_private *priv, void *arg)
 		if (err < 0) {
 			goto err_copy_tasks;
 		}
+
+		tasks[i].pva = priv->pva;
+		tasks[i].queue = priv->queue;
+		tasks[i].buffers = priv->buffers;
 	}
 
 	/* Populate header structure */
@@ -262,18 +264,19 @@ static int pva_submit(struct pva_private *priv, void *arg)
 				tasks[i].postfences, sizeof(struct pva_fence) *
 				tasks[i].num_postfences);
 		if (err < 0) {
-			nvhost_warn(&priv->pdev->dev,
+			nvhost_warn(&priv->pva->pdev->dev,
 					"Failed to copy fences to userspace");
 		}
 	}
 
-	/* Submit is done, we can release all memory and quit */
+	kfree(ioctl_tasks);
+
+	return 0;
 
 err_submit_task:
 err_copy_tasks:
-	for (i = 0; i < ioctl_tasks_header->num_tasks; i++) {
-		pva_remove_task(tasks + i);
-	}
+	for (i = 0; i < ioctl_tasks_header->num_tasks; i++)
+		pva_task_remove(tasks + i);
 
 err_alloc_task_mem:
 	kfree(tasks);
@@ -440,7 +443,7 @@ static int pva_open(struct inode *inode, struct file *file)
 	}
 
 	file->private_data = priv;
-	priv->pdev = pdev;
+	priv->pva = pva;
 
 	/* add the pva client to nvhost */
 	err = nvhost_module_add_client(pdev, priv);
@@ -477,7 +480,7 @@ static int pva_release(struct inode *inode, struct file *file)
 
 	nvhost_queue_abort(priv->queue);
 	nvhost_queue_put(priv->queue);
-	nvhost_module_remove_client(priv->pdev, priv);
+	nvhost_module_remove_client(priv->pva->pdev, priv);
 
 	nvhost_buffer_put(priv->buffers);
 	kfree(priv);

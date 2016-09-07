@@ -22,7 +22,14 @@
 #include <uapi/linux/nvhost_pva_ioctl.h>
 #include "nvhost_queue.h"
 
+struct dma_buf;
+
 extern struct nvhost_queue_ops pva_queue_ops;
+
+struct pva_parameter_ext {
+	dma_addr_t dma_addr;
+	size_t size;
+};
 
 /**
  * struct pva_submit_task - Describe a task for PVA
@@ -53,6 +60,14 @@ extern struct nvhost_queue_ops pva_queue_ops;
  *
  */
 struct pva_submit_task {
+	struct pva *pva;
+	struct nvhost_buffers *buffers;
+	struct nvhost_queue *queue;
+
+	dma_addr_t dma_addr;
+	void *va;
+	u32 *postfence_va;
+
 	u8 num_prefences;
 	u8 num_postfences;
 	u8 num_input_surfaces;
@@ -61,6 +76,8 @@ struct pva_submit_task {
 	u8 num_output_task_status;
 	u32 operation;
 	u64 timeout;
+
+	/* Data provided by userspace "as is" */
 	struct pva_fence *prefences;
 	struct pva_fence *postfences;
 	struct pva_surface *input_surfaces;
@@ -73,6 +90,22 @@ struct pva_submit_task {
 	struct pva_task_parameter output_rois;
 	struct pva_status_handle *input_task_status;
 	struct pva_status_handle *output_task_status;
+
+	/* External data that is added by the KMD */
+	struct pva_parameter_ext *prefences_ext;
+	struct pva_parameter_ext *postfences_ext;
+	struct pva_parameter_ext *input_surfaces_ext;
+	struct pva_parameter_ext *input_surface_rois_ext;
+	struct pva_parameter_ext input_scalars_ext;
+	struct pva_parameter_ext input_2dpoint_ext;
+	struct pva_parameter_ext input_rois_ext;
+	struct pva_parameter_ext *output_surfaces_ext;
+	struct pva_parameter_ext *output_surface_rois_ext;
+	struct pva_parameter_ext output_scalars_ext;
+	struct pva_parameter_ext output_2dpoint_ext;
+	struct pva_parameter_ext output_rois_ext;
+	struct pva_parameter_ext *input_task_status_ext;
+	struct pva_parameter_ext *output_task_status_ext;
 };
 
 struct pva_submit_tasks {
@@ -80,5 +113,7 @@ struct pva_submit_tasks {
 	u16 flags;
 	u16 num_tasks;
 };
+
+void pva_task_remove(struct pva_submit_task *task);
 
 #endif

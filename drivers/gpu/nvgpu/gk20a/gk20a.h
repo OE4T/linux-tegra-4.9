@@ -302,6 +302,7 @@ struct gpu_ops {
 		void (*program_sm_id_numbering)(struct gk20a *g,
 						u32 gpc, u32 tpc, u32 smid);
 		void (*program_active_tpc_counts)(struct gk20a *g, u32 gpc);
+		int  (*setup_rop_mapping)(struct gk20a *g, struct gr_gk20a *gr);
 	} gr;
 	const char *name;
 	struct {

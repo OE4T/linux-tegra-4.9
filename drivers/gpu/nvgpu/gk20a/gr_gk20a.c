@@ -1363,7 +1363,8 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 	}
 
 	/* gr__setup_pd_mapping stubbed for gk20a */
-	gr_gk20a_setup_rop_mapping(g, gr);
+	if (g->ops.gr.setup_rop_mapping)
+		g->ops.gr.setup_rop_mapping(g, gr);
 	if (g->ops.gr.setup_alpha_beta_tables)
 		g->ops.gr.setup_alpha_beta_tables(g, gr);
 
@@ -9055,4 +9056,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 					gr_gk20a_split_lts_broadcast_addr_stub;
 	gops->gr.split_ltc_broadcast_addr =
 					gr_gk20a_split_ltc_broadcast_addr_stub;
+	gops->gr.setup_rop_mapping = gr_gk20a_setup_rop_mapping;
 }

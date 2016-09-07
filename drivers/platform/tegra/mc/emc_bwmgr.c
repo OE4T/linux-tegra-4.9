@@ -123,8 +123,6 @@ static int bwmgr_update_clk(void)
 	debug_info.iso_cap = iso_cap;
 	debug_info.non_iso_cap = non_iso_cap;
 	bw += iso_bw;
-	bw = max(bw, bwmgr.emc_min_rate);
-	bw = min(bw, bwmgr.emc_max_rate);
 	bw = bwmgr_apply_efficiency(
 			bw, iso_bw, bwmgr.emc_max_rate,
 			iso_client_flags, &iso_bw_min);

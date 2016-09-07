@@ -293,7 +293,7 @@ BUILD_EP_CONTEXT_RW(edtla, rsvd[0], 0, 0xffffff)
 BUILD_EP_CONTEXT_RW(seq_num, rsvd[0], 24, 0xff)
 BUILD_EP_CONTEXT_RW(partial_td, rsvd[0], 25, 0x1)
 BUILD_EP_CONTEXT_RW(cerrcnt, rsvd[1], 18, 0x3)
-BUILD_EP_CONTEXT_RW(data_offset, rsvd[2], 0, 0xffff)
+BUILD_EP_CONTEXT_RW(data_offset, rsvd[2], 0, 0x1ffff)
 BUILD_EP_CONTEXT_RW(numtrbs, rsvd[2], 22, 0x1f)
 BUILD_EP_CONTEXT_RW(devaddr, rsvd[6], 0, 0x7f)
 
@@ -1306,28 +1306,22 @@ unlock:
 	return ret;
 }
 
-static unsigned int actual_data_transferred(struct tegra_xudc_ep *ep,
-					    struct tegra_xudc_request *req)
-{
-	struct tegra_xudc *xudc = ep->xudc;
-	struct tegra_xudc_ep_context *ep_ctx = &xudc->ep_context[ep->index];
-	unsigned int data_offset, num_trbs, data_left;
-
-	data_offset = ep_ctx_read_data_offset(ep_ctx);
-	num_trbs = ep_ctx_read_numtrbs(ep_ctx);
-	data_left = (num_trbs + 1) * XUDC_TRB_MAX_BUFFER_SIZE - data_offset;
-
-	return req->usb_req.length - data_left;
-}
-
 static void squeeze_transfer_ring(struct tegra_xudc_ep *ep,
 				  struct tegra_xudc_request *req)
 {
 	struct tegra_xudc_trb *trb = req->first_trb;
+	bool pcs_enq = trb_read_cycle(trb);
+	bool pcs;
 
-	/* Clear out all the TRBs part of or after the cancelled request. */
+
+	/*
+	 * Clear out all the TRBs part of or after the cancelled request,
+	 * and must correct trb cycle bit to the last un-enqueued state.
+	 */
 	while (trb != &ep->transfer_ring[ep->enq_ptr]) {
+		pcs = trb_read_cycle(trb);
 		memset(trb, 0, sizeof(*trb));
+		trb_write_cycle(trb, !pcs);
 		trb++;
 
 		if (trb_read_type(trb) == TRB_TYPE_LINK)
@@ -1336,6 +1330,11 @@ static void squeeze_transfer_ring(struct tegra_xudc_ep *ep,
 
 	/* Requests will be re-queued at the start of the cancelled request. */
 	ep->enq_ptr = req->first_trb - ep->transfer_ring;
+	/*
+	 * Retrieve the correct cycle bit state from the first trb of
+	 * the cancelled request.
+	 */
+	ep->pcs = pcs_enq;
 	ep->ring_full = false;
 	list_for_each_entry_continue(req, &ep->queue, list) {
 		req->usb_req.status = -EINPROGRESS;
@@ -1424,25 +1423,35 @@ __tegra_xudc_ep_dequeue(struct tegra_xudc_ep *ep,
 	busy = (trb_read_cycle(deq_trb) == ep_ctx_read_dcs(ep->context));
 
 	if (trb_in_request(ep, req, deq_trb) && busy) {
+		/*
+		 * Request has been partially completed or it hasn't
+		 * started processing yet.
+		 */
 		dma_addr_t deq_ptr;
 
-		/* Request has been partially completed. */
 		squeeze_transfer_ring(ep, req);
 
-		req->usb_req.actual = actual_data_transferred(ep, req);
+		req->usb_req.actual = ep_ctx_read_edtla(ep->context);
 		tegra_xudc_req_done(ep, req, -ECONNRESET);
 		kick_queue = true;
 
-		/* Abort the pending transfer and update the dequeue pointer. */
-		ep_ctx_write_edtla(ep->context, 0);
-		ep_ctx_write_partial_td(ep->context, 0);
-		ep_ctx_write_data_offset(ep->context, 0);
+		/* EDTLA is > 0: request has been partially completed */
+		if (req->usb_req.actual > 0) {
+			/*
+			 * Abort the pending transfer and update the dequeue
+			 * pointer
+			 */
+			ep_ctx_write_edtla(ep->context, 0);
+			ep_ctx_write_partial_td(ep->context, 0);
+			ep_ctx_write_data_offset(ep->context, 0);
 
-		deq_ptr = trb_virt_to_phys(ep, &ep->transfer_ring[ep->enq_ptr]);
-		ep_ctx_write_deq_ptr(ep->context, deq_ptr);
-		ep_ctx_write_dcs(ep->context, ep->pcs);
+			deq_ptr = trb_virt_to_phys(ep,
+					&ep->transfer_ring[ep->enq_ptr]);
+			ep_ctx_write_deq_ptr(ep->context, deq_ptr);
+			ep_ctx_write_dcs(ep->context, ep->pcs);
 
-		ep_reload(xudc, ep->index);
+			ep_reload(xudc, ep->index);
+		}
 	} else if (trb_before_request(ep, req, deq_trb) && busy) {
 		/* Request hasn't started processing yet. */
 		squeeze_transfer_ring(ep, req);

@@ -261,6 +261,103 @@ static int tegra_cam_rtcpu_apply_resets(struct device *dev,
 	return 0;
 }
 
+/*
+ * Send the PM_SUSPEND command to remote core FW and
+ * perform necessary checks to confirm if RTCPU is
+ * indeed suspended.
+ */
+static int tegra_cam_rtcpu_cmd_remote_suspend(struct device *dev)
+{
+	u32 reg_val;
+	int err;
+	long timeout = HZ, delay_stride = HZ/50;
+
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+
+	/* Suspend the RTCPU */
+	err = tegra_camrtc_command(dev, RTCPU_COMMAND(PM_SUSPEND, 0), 0);
+	if (err < 0) {
+		dev_err(dev, "tegra_camrtc_command failed: 0x%08x", err);
+		return err;
+	}
+
+	if (err != RTCPU_COMMAND(PM_SUSPEND,
+			(CAMRTC_PM_CTRL_STATE_SUSPEND << 8) |
+				CAMRTC_PM_CTRL_STATUS_OK)) {
+		dev_err(dev, "Suspend failed: RTCPU sync problem 0x%08x", err);
+		return -EIO;
+	}
+
+	/* Check if standbyWFI is asserted, to proceed for SC7 */
+	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
+		/* Poll for WFI assert.*/
+		while (1) {
+			reg_val = readl(cam_rtcpu->rtcpu_sce.sce_pm_base +
+					TEGRA_SCEPM_PWR_STATUS_0);
+
+			if ((reg_val & TEGRA_SCEPM_WFIPIPESTOPPED) == 0)
+				break;
+
+			if (timeout <= 0) {
+				dev_err(dev, "SCE failed to go into WFI\n");
+				return -EBUSY;
+			}
+
+			msleep(delay_stride);
+			timeout -= delay_stride;
+		}
+	}
+
+	return 0;
+}
+
+int tegra_camrtc_start(struct device *dev)
+{
+	int ret;
+
+	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
+	if (ret) {
+		dev_err(dev, "failed to turn on clocks: %d\n", ret);
+		return ret;
+	}
+
+	tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
+
+	tegra_camrtc_boot(dev);
+
+	return tegra_camrtc_ivc_setup_ready(dev);
+}
+EXPORT_SYMBOL(tegra_camrtc_start);
+
+int tegra_camrtc_stop(struct device *dev)
+{
+	int ret;
+
+	ret = tegra_cam_rtcpu_cmd_remote_suspend(dev);
+	if (ret) {
+		dev_err(dev, "failed to suspend camera rtcpu: %d", ret);
+		return ret;
+	}
+
+	tegra_camrtc_set_halt(dev, true);
+
+	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_assert);
+	if (ret) {
+		dev_err(dev, "failed to assert the resets: %d", ret);
+		return ret;
+	}
+
+	ret = tegra_cam_rtcpu_apply_clks(dev,
+				tegra_cam_rtcpu_clk_disable_unprepare);
+	if (ret) {
+		dev_err(dev, "failed to turn off clocks: %d\n", ret);
+		return ret;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_camrtc_stop);
+
 int tegra_camrtc_reset(struct device *dev)
 {
 	return tegra_cam_rtcpu_apply_resets(dev, reset_control_reset);
@@ -737,97 +834,26 @@ fail:
 
 static int tegra_cam_rtcpu_resume(struct device *dev)
 {
-	int ret;
 	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 
         if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_APE)
 		return 0; /* do nothing */
 
-	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
-	if (ret) {
-		dev_err(dev, "failed to turn on clocks: %d\n", ret);
-		return ret;
-	}
-
-	tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
-
-	tegra_camrtc_boot(dev);
-
-	return tegra_camrtc_ivc_setup_ready(dev);
+	return tegra_camrtc_start(dev);
 }
 
 static int tegra_cam_rtcpu_suspend(struct device *dev)
 {
-	u32 reg_val;
-	int err;
-	long timeout = HZ, delay_stride = HZ/50;
-
-	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
-
-	/* Suspend the RTCPU */
-	err = tegra_camrtc_command(dev, RTCPU_COMMAND(PM_SUSPEND, 0), 0);
-	if (err < 0) {
-		dev_err(dev, "tegra_camrtc_command failed: 0x%08x", err);
-		return err;
-	}
-
-	if (err != RTCPU_COMMAND(PM_SUSPEND,
-			(CAMRTC_PM_CTRL_STATE_SUSPEND << 8) |
-				CAMRTC_PM_CTRL_STATUS_OK)) {
-		dev_err(dev, "Suspend failed: RTCPU sync problem 0x%08x", err);
-		return -EIO;
-	}
-
-	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
-		/* Poll for WFI assert.*/
-		while (1) {
-			reg_val = readl(cam_rtcpu->rtcpu_sce.sce_pm_base +
-					TEGRA_SCEPM_PWR_STATUS_0);
-
-			if ((reg_val & TEGRA_SCEPM_WFIPIPESTOPPED) == 0)
-				break;
-
-			if (!timeout) {
-				dev_err(dev, "failed to suspend rtcpu\n");
-				return -EBUSY;
-			}
-
-			msleep(delay_stride);
-			timeout -= delay_stride;
-		}
-	}
-
-	/* If standbyWFI is asserted, proceed for SC7 */
-	err = tegra_cam_rtcpu_apply_clks(dev,
-				tegra_cam_rtcpu_clk_disable_unprepare);
-	if (err) {
-		dev_err(dev, "failed to turn off clocks: %d\n", err);
-		return err;
-	}
-
-	tegra_cam_rtcpu_apply_resets(dev, reset_control_reset);
-
-	tegra_camrtc_set_halt(dev, true);
-
-	return 0;
+	return tegra_camrtc_stop(dev);
 }
 
 static void tegra_cam_rtcpu_shutdown(struct platform_device *pdev)
 {
-	struct device *dev = &pdev->dev;
-	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
-	/*
-	 * Send the SUSPEND command before resetting SCE
-	 */
-	u32 command = RTCPU_COMMAND(PM_SUSPEND, 0);
-	int ret = tegra_camrtc_command(dev, command, 0);
-	if (RTCPU_GET_COMMAND_ID(ret) != RTCPU_CMD_PM_SUSPEND)
-		dev_warn(dev, "unclean RTCPU shutdown\n");
+	int ret;
 
-	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE)
-		tegra_camrtc_set_halt(dev, true);
-
-	tegra_camrtc_reset(dev);
+	ret = tegra_camrtc_stop(&pdev->dev);
+	if (ret)
+		dev_err(&pdev->dev, "failed to shutdown cam-rtcpu: %d\n", ret);
 }
 
 static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {

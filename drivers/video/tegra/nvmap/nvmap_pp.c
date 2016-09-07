@@ -353,7 +353,7 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 			}
 		}
 
-		if (i)
+		if (pool->to_zero)
 			wake_up_interruptible(&nvmap_bg_wait);
 		ret = i;
 	} else {

@@ -301,7 +301,7 @@ static void gp10b_tegra_postscale(struct device *pdev,
 	unsigned long emc_rate;
 
 	gk20a_dbg_fn("");
-	if (profile) {
+	if (profile && !gp10b_tegra_is_railgated(pdev)) {
 		emc_rate = (freq * EMC_BW_RATIO * g->emc3d_ratio) / 1000;
 
 		if (emc_rate > tegra_bwmgr_get_max_emc_rate())

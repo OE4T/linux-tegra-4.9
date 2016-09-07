@@ -63,16 +63,24 @@ static struct gk20a_platform nvgpu_pci_device = {
 	.vidmem_is_vidmem = true,
 };
 
+#define NVGPU_PCI_ENABLE_BLCG	BIT(0)
+#define NVGPU_PCI_ENABLE_SLCG	BIT(1)
+#define NVGPU_PCI_ENABLE_ELCG	BIT(2)
+
 static struct pci_device_id nvgpu_pci_table[] = {
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c36),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
+		.driver_data = NVGPU_PCI_ENABLE_BLCG |
+			       NVGPU_PCI_ENABLE_SLCG,
 	},
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c37),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
+		.driver_data = NVGPU_PCI_ENABLE_BLCG |
+			       NVGPU_PCI_ENABLE_SLCG,
 	},
 	{}
 };
@@ -200,6 +208,13 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	platform->g = g;
 	g->dev = &pdev->dev;
+
+	if (pent->driver_data & NVGPU_PCI_ENABLE_BLCG)
+		platform->enable_blcg = true;
+	if (pent->driver_data & NVGPU_PCI_ENABLE_SLCG)
+		platform->enable_slcg = true;
+	if (pent->driver_data & NVGPU_PCI_ENABLE_ELCG)
+		platform->enable_elcg = true;
 
 	err = pci_enable_device(pdev);
 	if (err)

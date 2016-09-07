@@ -123,6 +123,31 @@ int nvhost_vi4_finalize_poweron(struct platform_device *pdev)
 	return 0;
 }
 
+int nvhost_vi4_aggregate_constraints(struct platform_device *dev,
+				int clk_index,
+				unsigned long floor_rate,
+				unsigned long pixelrate,
+				unsigned long bw_constraint)
+{
+	struct nvhost_device_data *pdata = nvhost_get_devdata(dev);
+
+	if (!pdata) {
+		dev_err(&dev->dev,
+			"No platform data, fall back to default policy\n");
+		return 0;
+	}
+	if (!pixelrate || clk_index != 0)
+		return 0;
+	/* SCF send request using NVHOST_CLK, which is calculated
+	 * in floor_rate, so we need to aggregate its request
+	 * with V4L2 pixelrate request
+	 */
+	if (floor_rate)
+		return floor_rate + (pixelrate / pdata->num_ppc);
+
+	return pixelrate / pdata->num_ppc;
+}
+
 void nvhost_vi4_idle(struct platform_device *pdev)
 {
 	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
@@ -167,6 +192,25 @@ static int vi_set_la(u32 vi_bw, struct platform_device *pdev)
 	return ret;
 }
 
+int vi4_v4l2_set_la(struct platform_device *pdev,
+			u32 vi_bypass_bw, u32 is_ioctl)
+{
+	int ret = 0;
+	unsigned long total_bw;
+	struct nvhost_vi_dev *vi = nvhost_get_private_data(pdev);
+
+	mutex_lock(&vi->update_la_lock);
+	/* SCF has already aggregated bw number */
+	if (is_ioctl)
+		vi->vi_bypass_bw = vi_bypass_bw;
+
+	total_bw = vi->mc_vi.aggregated_kbyteps + vi->vi_bypass_bw;
+	ret = vi_set_la(total_bw, pdev);
+	mutex_unlock(&vi->update_la_lock);
+	return ret;
+}
+EXPORT_SYMBOL(vi4_v4l2_set_la);
+
 static long nvhost_vi4_ioctl(struct file *file, unsigned int cmd,
 				unsigned long arg)
 {
@@ -194,7 +238,7 @@ static long nvhost_vi4_ioctl(struct file *file, unsigned int cmd,
 			return -EFAULT;
 
 		/* Set latency allowance for VI, BW is in MBps */
-		ret = vi_set_la(vi_la_bw, pdev);
+		ret = vi4_v4l2_set_la(pdev, vi_la_bw, 1);
 		if (ret) {
 			dev_err(&pdev->dev, "%s: failed to set la vi_bw %u MBps\n",
 				__func__, vi_la_bw);
@@ -341,6 +385,7 @@ static int tegra_vi4_probe(struct platform_device *pdev)
 		}
 	}
 
+	mutex_init(&vi->update_la_lock);
 	vi->mc_vi.ndev = pdev;
 	vi->mc_vi.fops = data->vi_fops;
 	err = tegra_vi_media_controller_init(&vi->mc_vi, pdev);

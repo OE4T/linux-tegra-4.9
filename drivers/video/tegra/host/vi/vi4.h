@@ -21,7 +21,7 @@
 #ifndef __TEGRA_VI4_H__
 #define __TEGRA_VI4_H__
 
-#include "../camera/vi/mc_common.h"
+#include "camera/vi/mc_common.h"
 
 struct reset_control;
 
@@ -39,6 +39,8 @@ struct nvhost_vi_dev {
 	atomic_t notify_overflow;
 	atomic_t fmlite_overflow;
 	struct tegra_mc_vi mc_vi;
+	struct mutex update_la_lock;
+	unsigned int vi_bypass_bw;
 };
 
 int nvhost_vi4_prepare_poweroff(struct platform_device *);
@@ -47,5 +49,12 @@ void nvhost_vi4_idle(struct platform_device *);
 void nvhost_vi4_busy(struct platform_device *);
 void nvhost_vi4_reset(struct platform_device *);
 extern const struct file_operations nvhost_vi4_ctrl_ops;
+int nvhost_vi4_aggregate_constraints(struct platform_device *dev,
+				int clk_index,
+				unsigned long floor_rate,
+				unsigned long pixelrate,
+				unsigned long bw_constraint);
 
+int vi4_v4l2_set_la(struct platform_device *pdev,
+			u32 vi_bypass_bw, u32 is_ioctl);
 #endif

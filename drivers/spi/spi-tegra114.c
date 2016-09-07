@@ -288,11 +288,11 @@ static inline u32 tegra_spi_readl(struct tegra_spi_data *tspi,
 static inline void tegra_spi_writel(struct tegra_spi_data *tspi,
 		u32 val, unsigned long reg)
 {
-	writel(val, tspi->base + reg);
-
 	/* Read back register to make sure that register writes completed */
-	if (reg != SPI_TX_FIFO)
+	if ((reg == SPI_COMMAND1) && (val & SPI_PIO))
 		readl(tspi->base + SPI_COMMAND1);
+
+	writel(val, tspi->base + reg);
 }
 
 static void tegra_spi_set_intr_mask(struct tegra_spi_data *tspi)

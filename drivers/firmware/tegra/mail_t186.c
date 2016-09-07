@@ -156,7 +156,7 @@ void tegra_bpmp_resume(void)
 		mail_ops->resume();
 }
 
-int bpmp_connect(void)
+int bpmp_connect(struct platform_device *pdev)
 {
 	int ret = 0;
 

@@ -22,13 +22,13 @@
 #include "gk20a/dbg_gpu_gk20a.h"
 
 #include "gm20b/gr_gm20b.h"
-#include "gp10b/gr_gp10b.h"
 #include "gv11b/gr_gv11b.h"
 #include "hw_gr_gv11b.h"
 #include "hw_fifo_gv11b.h"
 #include "hw_proj_gv11b.h"
 #include "hw_ctxsw_prog_gv11b.h"
 #include "hw_mc_gv11b.h"
+#include "hw_gr_gv11b.h"
 #include <linux/vmalloc.h>
 
 static bool gr_gv11b_is_valid_class(struct gk20a *g, u32 class_num)
@@ -1507,6 +1507,64 @@ static u32 gv11b_mask_hww_warp_esr(u32 hww_warp_esr)
 	return hww_warp_esr;
 }
 
+int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
+{
+	u32 map;
+	u32 i, j, mapregs;
+	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g,
+				GPU_LIT_NUM_TPC_PER_GPC);
+
+	gk20a_dbg_fn("");
+
+	if (!gr->map_tiles)
+		return -1;
+
+	gk20a_writel(g, gr_crstr_map_table_cfg_r(),
+		gr_crstr_map_table_cfg_row_offset_f(gr->map_row_offset) |
+		gr_crstr_map_table_cfg_num_entries_f(gr->tpc_count));
+
+	/* 6 tpc can be stored in one map register */
+	mapregs = (num_gpcs * num_tpc_per_gpc + 5) / 6;
+
+	for (i = 0, j = 0; i < mapregs; i++, j = j + 6) {
+		map =  gr_crstr_gpc_map_tile0_f(gr->map_tiles[j]) |
+			gr_crstr_gpc_map_tile1_f(gr->map_tiles[j + 1]) |
+			gr_crstr_gpc_map_tile2_f(gr->map_tiles[j + 2]) |
+			gr_crstr_gpc_map_tile3_f(gr->map_tiles[j + 3]) |
+			gr_crstr_gpc_map_tile4_f(gr->map_tiles[j + 4]) |
+			gr_crstr_gpc_map_tile5_f(gr->map_tiles[j + 5]);
+
+		gk20a_writel(g, gr_crstr_gpc_map_r(i), map);
+		gk20a_writel(g, gr_ppcs_wwdx_map_gpc_map_r(i), map);
+		gk20a_writel(g, gr_rstr2d_gpc_map_r(i), map);
+	}
+
+	gk20a_writel(g, gr_ppcs_wwdx_map_table_cfg_r(),
+		gr_ppcs_wwdx_map_table_cfg_row_offset_f(gr->map_row_offset) |
+		gr_ppcs_wwdx_map_table_cfg_num_entries_f(gr->tpc_count));
+
+	for (i = 0, j = 1; i < gr_ppcs_wwdx_map_table_cfg_coeff__size_1_v();
+					i++, j = j + 4) {
+		gk20a_writel(g, gr_ppcs_wwdx_map_table_cfg_coeff_r(i),
+			gr_ppcs_wwdx_map_table_cfg_coeff_0_mod_value_f(
+					((1 << j) % gr->tpc_count)) |
+			gr_ppcs_wwdx_map_table_cfg_coeff_1_mod_value_f(
+				((1 << (j + 1)) % gr->tpc_count)) |
+			gr_ppcs_wwdx_map_table_cfg_coeff_2_mod_value_f(
+				((1 << (j + 2)) % gr->tpc_count)) |
+			gr_ppcs_wwdx_map_table_cfg_coeff_3_mod_value_f(
+				((1 << (j + 3)) % gr->tpc_count)));
+	}
+
+	gk20a_writel(g, gr_rstr2d_map_table_cfg_r(),
+		gr_rstr2d_map_table_cfg_row_offset_f(gr->map_row_offset) |
+		gr_rstr2d_map_table_cfg_num_entries_f(gr->tpc_count));
+
+	return 0;
+}
+
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -1543,4 +1601,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.pre_process_sm_exception =
 		gr_gv11b_pre_process_sm_exception;
 	gops->gr.handle_fecs_error = gr_gv11b_handle_fecs_error;
+	gops->gr.setup_rop_mapping = gr_gv11b_setup_rop_mapping;
 }

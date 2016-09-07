@@ -16,7 +16,8 @@
 #include <linux/freezer.h>
 #include <media/tegra_camera_platform.h>
 #include "nvhost_acm.h"
-#include "vi/vi.h"
+#include "linux/nvhost_ioctl.h"
+#include "vi/vi4.h"
 #include "mc_common.h"
 #include "mipical/mipi_cal.h"
 #include "t18x_registers.h"
@@ -367,24 +368,28 @@ static void tegra_channel_stop_kthreads(struct tegra_channel *chan)
 	mutex_unlock(&chan->stop_kthread_lock);
 }
 
-static void tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
+static int tegra_channel_update_clknbw(struct tegra_channel *chan, u8 on)
 {
-#if 0
+	int ret = 0;
+
 	/* width * height * fps * KBytes write to memory
 	 * WAR: Using fix fps until we have a way to set it
 	 */
-	chan->requested_kbyteps = (on > 0 ? 1 : -1) * ((chan->format.width
-				* chan->format.height
-				* FRAMERATE * BPP_MEM) / 1000);
-	chan->requested_hz = on > 0 ? chan->format.width * chan->format.height
-				* FRAMERATE : 0;
+	chan->requested_kbyteps = (on > 0 ? 1 : -1) *
+		((long long)(chan->format.width * chan->format.height
+		* FRAMERATE * BPP_MEM) * 115 / 100) / 1000;
 	mutex_lock(&chan->vi->bw_update_lock);
 	chan->vi->aggregated_kbyteps += chan->requested_kbyteps;
-	vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
-	vi_v4l2_set_la(tegra_vi_get(), 0, 0);
-	update_clk(chan->vi);
+	ret = vi_v4l2_update_isobw(chan->vi->aggregated_kbyteps, 0);
 	mutex_unlock(&chan->vi->bw_update_lock);
-#endif
+	if (ret)
+		dev_info(chan->vi->dev,
+		"WAR:Calculation not precise.Ignore BW request failure\n");
+	ret = vi4_v4l2_set_la(chan->vi->ndev, 0, 0);
+	if (ret)
+		dev_info(chan->vi->dev,
+		"WAR:Calculation not precise.Ignore LA failure\n");
+	return 0;
 }
 
 int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
@@ -392,9 +397,9 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0, i;
+	unsigned long request_pixelrate;
 
 	vi4_init(chan);
-
 	if (!chan->vi->pg_mode) {
 		/* Start the pipeline. */
 		ret = media_entity_pipeline_start(&chan->video.entity, pipe);
@@ -430,8 +435,17 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	tegra_channel_init_ring_buffer(chan);
 
 	/* Update clock and bandwidth based on the format */
-	tegra_channel_update_clknbw(chan, 1);
-
+	mutex_lock(&chan->vi->bw_update_lock);
+	request_pixelrate = (long long)(chan->format.width * chan->format.height
+			 * FRAMERATE / 100) * 115;
+	ret = nvhost_module_set_rate(chan->vi->ndev, &chan->video,
+			request_pixelrate, 0, NVHOST_PIXELRATE);
+	mutex_unlock(&chan->vi->bw_update_lock);
+	if (ret)
+		goto error_capture_setup;
+	ret = tegra_channel_update_clknbw(chan, 1);
+	if (ret)
+		goto error_capture_setup;
 	/* Start kthread to capture data to buffer */
 	chan->kthread_capture_start = kthread_run(
 					tegra_channel_kthread_capture_start,
@@ -524,6 +538,12 @@ int vi4_power_on(struct tegra_channel *chan)
 	vi = chan->vi;
 	csi = vi->csi;
 
+	/* Use chan->video as identifier of vi4 nvhost_module client
+	 * since they are unique per channel
+	 */
+	ret = nvhost_module_add_client(vi->ndev, &chan->video);
+	if (ret)
+		return ret;
 	tegra_vi4_power_on(vi);
 
 	if (!vi->pg_mode &&
@@ -551,4 +571,5 @@ void vi4_power_off(struct tegra_channel *chan)
 	}
 
 	tegra_vi4_power_off(vi);
+	nvhost_module_remove_client(vi->ndev, &chan->video);
 }

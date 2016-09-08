@@ -2258,10 +2258,34 @@ static struct tegra_dc_imp_settings *tegra_nvdisp_get_last_imp_settings(void)
 				imp_node) : NULL;
 }
 
+static void tegra_nvdisp_enable_common_channel_intr(struct tegra_dc *dc)
+{
+	/*
+	 * WIN_X_ACT_REQs are checked at VBLANK in NC_DISPLAY mode, and at
+	 * FRAME_END in C_DISPLAY mode. Be consistent and check COMMON_ACT_REQ
+	 * in the same spot.
+	 */
+	if (dc->out->flags & TEGRA_DC_OUT_ONE_SHOT_MODE ||
+		dc->out->flags & TEGRA_DC_OUT_NVSR_MODE) {
+		mutex_lock(&dc->lock);
+
+		set_bit(V_BLANK_IMP, &dc->vblank_ref_count);
+		tegra_dc_unmask_interrupt(dc, V_BLANK_INT);
+
+		mutex_unlock(&dc->lock);
+	} else {
+		tegra_dc_config_frame_end_intr(dc, true);
+	}
+
+	dc->common_channel_intr_enabled = true;
+}
+
 static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 {
 	if (!dc || !dc->enabled)
 		return;
+
+	tegra_nvdisp_enable_common_channel_intr(dc);
 
 	tegra_dc_writel(dc,
 		nvdisp_cmd_state_ctrl_common_act_update_enable_f(),
@@ -2272,7 +2296,9 @@ static void tegra_nvdisp_activate_common_channel(struct tegra_dc *dc)
 		nvdisp_cmd_state_ctrl_r());
 	tegra_dc_readl(dc, nvdisp_cmd_state_ctrl_r()); /* flush */
 
+	mutex_lock(&tegra_nvdisp_lock);
 	dc->common_channel_pending = true;
+	mutex_unlock(&tegra_nvdisp_lock);
 }
 
 static void tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
@@ -2305,11 +2331,9 @@ static void tegra_nvdisp_wait_for_common_channel_to_promote(struct tegra_dc *dc)
 
 static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
 {
+	/* Wake up one exclusive waiter. There should only be one. */
 	dc->common_channel_pending = false;
-
-	/*
-	 * Selectively wake up one exclusive waiter. There should only be one.
-	 */
+	dc->common_channel_intr_enabled = false;
 	wake_up_nr(&nvdisp_common_channel_promotion_wq, 1);
 }
 
@@ -2821,7 +2845,7 @@ static void tegra_nvdisp_program_thread_groups(struct tegra_dc *dc,
 	tegra_nvdisp_program_thread_group_reqs(dc, imp_settings, start, end);
 }
 
-void tegra_nvdisp_adjust_imp(struct tegra_dc *dc, bool before_win_update)
+void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
 	struct tegra_dc_imp_head_results *imp_results = NULL;
@@ -2873,7 +2897,7 @@ void tegra_nvdisp_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 		mutex_unlock(&tegra_nvdisp_lock);
 	}
 }
-EXPORT_SYMBOL(tegra_nvdisp_adjust_imp);
+EXPORT_SYMBOL(tegra_dc_adjust_imp);
 
 static bool tegra_nvdisp_common_channel_is_free(void)
 {
@@ -2888,7 +2912,7 @@ static bool tegra_nvdisp_common_channel_is_free(void)
 	return true;
 }
 
-void tegra_nvdisp_reserve_common_channel(struct tegra_dc *dc)
+void tegra_dc_reserve_common_channel(struct tegra_dc *dc)
 {
 	DEFINE_WAIT(wait);
 
@@ -2918,30 +2942,41 @@ reserve_and_unlock:
 	dc->common_channel_reserved = true;
 	mutex_unlock(&tegra_nvdisp_lock);
 }
-EXPORT_SYMBOL(tegra_nvdisp_reserve_common_channel);
+EXPORT_SYMBOL(tegra_dc_reserve_common_channel);
 
-void tegra_nvdisp_release_common_channel(struct tegra_dc *dc)
+void tegra_dc_release_common_channel(struct tegra_dc *dc)
 {
-	dc->common_channel_reserved = false;
-
 	/* Selectively wake up the next exclusive waiter. */
+	dc->common_channel_reserved = false;
 	wake_up_nr(&nvdisp_common_channel_reservation_wq, 1);
 }
-EXPORT_SYMBOL(tegra_nvdisp_release_common_channel);
+EXPORT_SYMBOL(tegra_dc_release_common_channel);
 
-void tegra_nvdisp_handle_common_channel_promotion(struct tegra_dc *dc)
+bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
 {
+	/*
+	 * COMMON channel state is promoted on the very next loadv boundary for
+	 * whichever HEAD set COMMON_ACT_REQ. Notify whichever HEAD is waiting
+	 * if this condition has been met.
+	 */
+	u32 val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
+	u32 dirty = !!(val & COMMON_ACT_REQ);
+	bool clear_intr = false;
+
 	mutex_lock(&tegra_nvdisp_lock);
 
-	if (dc->common_channel_pending &&
-		!(tegra_dc_readl(dc, DC_CMD_STATE_CONTROL) & COMMON_ACT_REQ))
+	if (dc->common_channel_pending && !dirty) {
+		clear_intr = dc->common_channel_intr_enabled;
 		tegra_nvdisp_notify_common_channel_promoted(dc);
+	}
 
 	mutex_unlock(&tegra_nvdisp_lock);
-}
-EXPORT_SYMBOL(tegra_nvdisp_handle_common_channel_promotion);
 
-int tegra_nvdisp_handle_imp_propose(struct tegra_dc *dc,
+	return clear_intr;
+}
+EXPORT_SYMBOL(tegra_dc_handle_common_channel_promotion);
+
+int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
@@ -3001,7 +3036,7 @@ free_and_ret:
 	kfree(imp_settings);
 	return ret;
 }
-EXPORT_SYMBOL(tegra_nvdisp_handle_imp_propose);
+EXPORT_SYMBOL(tegra_dc_handle_imp_propose);
 
 static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
 			struct tegra_dc_imp_head_results *imp_head_results,

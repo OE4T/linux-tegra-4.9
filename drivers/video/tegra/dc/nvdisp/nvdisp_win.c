@@ -921,7 +921,7 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		return 0;
 	}
 
-	tegra_nvdisp_reserve_common_channel(dc);
+	tegra_dc_reserve_common_channel(dc);
 
 	mutex_lock(&tegra_nvdisp_lock);
 
@@ -976,7 +976,7 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 		dev_err(&dc->ndev->dev,
 			"dc timeout waiting for DC to stop\n");
 
-	tegra_nvdisp_release_common_channel(dc);
+	tegra_dc_release_common_channel(dc);
 
 	/* set the windows scaler coeff value */
 	if (!win->is_scaler_coeff_set) {

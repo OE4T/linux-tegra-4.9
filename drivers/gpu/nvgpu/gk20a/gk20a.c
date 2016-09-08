@@ -1040,6 +1040,21 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	if (g->irq_stall != g->irq_nonstall)
 		enable_irq(g->irq_nonstall);
 
+	if (g->ops.xve.available_speeds) {
+		u32 speed;
+
+		g->ops.xve.sw_init(dev);
+		g->ops.xve.available_speeds(g, &speed);
+
+		/* Set to max speed */
+		speed = 1 << (fls(speed) - 1);
+		err = g->ops.xve.set_speed(g, speed);
+		if (err) {
+			gk20a_err(dev, "Failed to set PCIe bus speed!\n");
+			goto done;
+		}
+	}
+
 done:
 	return err;
 }

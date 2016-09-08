@@ -703,6 +703,14 @@ struct gpu_ops {
 				struct gk20a_cs_snapshot_client *client);
 	} css;
 #endif
+	struct {
+		int (*sw_init)(struct device *dev);
+		int (*get_speed)(struct gk20a *g, u32 *xve_link_speed);
+		int (*set_speed)(struct gk20a *g, u32 xve_link_speed);
+		void (*available_speeds)(struct gk20a *g, u32 *speed_mask);
+		u32 (*xve_readl)(struct gk20a *g, u32 reg);
+		void (*xve_writel)(struct gk20a *g, u32 reg, u32 val);
+	} xve;
 };
 
 struct nvgpu_bios_ucode {
@@ -818,7 +826,7 @@ struct gk20a {
 	struct dentry *debugfs_timeslice_medium_priority_us;
 	struct dentry *debugfs_timeslice_high_priority_us;
 	struct dentry *debugfs_runlist_interleave;
-
+	struct dentry *debugfs_xve;
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;
 
@@ -937,6 +945,10 @@ struct gk20a {
 	u16 pci_subsystem_vendor_id, pci_subsystem_device_id;
 	u16 pci_class;
 	u8 pci_revision;
+
+	/* PCIe power states. */
+	bool xve_l0s;
+	bool xve_l1;
 };
 
 static inline unsigned long gk20a_get_gr_idle_timeout(struct gk20a *g)
@@ -1011,6 +1023,7 @@ enum gk20a_dbg_categories {
 	gpu_dbg_sema	= BIT(15), /* semaphore debugging */
 	gpu_dbg_sema_v	= BIT(16), /* verbose semaphore debugging */
 	gpu_dbg_pmu_pstate = BIT(17), /* p state controlled by pmu */
+	gpu_dbg_xv      = BIT(18), /* XVE debugging */
 	gpu_dbg_mem     = BIT(31), /* memory accesses, very verbose */
 };
 

@@ -3203,8 +3203,16 @@ int gk20a_gmmu_alloc_map(struct vm_gk20a *vm, size_t size,
 int gk20a_gmmu_alloc_map_attr(struct vm_gk20a *vm,
 			 enum dma_attr attr, size_t size, struct mem_desc *mem)
 {
-	if (vm->mm->vidmem_is_vidmem)
-		return gk20a_gmmu_alloc_map_attr_vid(vm, 0, size, mem);
+	if (vm->mm->vidmem_is_vidmem) {
+		int err = gk20a_gmmu_alloc_map_attr_vid(vm, 0, size, mem);
+
+		if (!err)
+			return 0;
+		/*
+		 * Fall back to sysmem (which may then also fail) in case
+		 * vidmem is exhausted.
+		 */
+	}
 
 	return gk20a_gmmu_alloc_map_attr_sys(vm, 0, size, mem);
 }

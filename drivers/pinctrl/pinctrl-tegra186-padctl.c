@@ -2240,7 +2240,7 @@ static int tegra_xusb_read_fuse_calibration(struct tegra_padctl *padctl)
 	unsigned int i;
 	u32 reg;
 
-	reg = tegra_fuse_readl(FUSE_SKU_USB_CALIB_0);
+	tegra_fuse_readl(FUSE_SKU_USB_CALIB_0, &reg);
 	dev_info(padctl->dev, "FUSE_SKU_USB_CALIB_0 0x%x\n", reg);
 
 	for (i = 0; i < TEGRA_UTMI_PHYS; i++) {
@@ -2252,7 +2252,7 @@ static int tegra_xusb_read_fuse_calibration(struct tegra_padctl *padctl)
 	padctl->calib.hs_term_range_adj = (reg >> HS_TERM_RANGE_ADJ_SHIFT) &
 					HS_TERM_RANGE_ADJ_MASK;
 
-	reg = tegra_fuse_readl(FUSE_USB_CALIB_EXT_0);
+	tegra_fuse_readl(FUSE_USB_CALIB_EXT_0, &reg);
 	dev_info(padctl->dev, "FUSE_USB_CALIB_EXT_0 0x%x\n", reg);
 
 	padctl->calib.rpd_ctrl = (reg >> RPD_CTRL_SHIFT) & RPD_CTRL_MASK;

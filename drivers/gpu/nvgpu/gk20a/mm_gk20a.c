@@ -902,7 +902,8 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	mm->vidmem.bootstrap_base = bootstrap_base;
 	mm->vidmem.bootstrap_size = bootstrap_size;
 
-	INIT_WORK(&mm->vidmem_clear_mem_worker, gk20a_vidmem_clear_mem_worker);
+	INIT_WORK(&mm->vidmem.clear_mem_worker, gk20a_vidmem_clear_mem_worker);
+	atomic_set(&mm->vidmem.clears_pending, 0);
 	INIT_LIST_HEAD(&mm->vidmem.clear_list_head);
 	mutex_init(&mm->vidmem.clear_list_mutex);
 
@@ -2982,10 +2983,10 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 #if defined(CONFIG_GK20A_VIDMEM)
 	u64 addr;
 	int err;
-	bool clear_list_empty;
 	struct gk20a_allocator *vidmem_alloc = g->mm.vidmem.cleared ?
 		&g->mm.vidmem.allocator :
 		&g->mm.vidmem.bootstrap_allocator;
+	int before_pending;
 
 	gk20a_dbg_fn("");
 
@@ -2996,16 +2997,19 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	 * are not done anyway */
 	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
 
+	mutex_lock(&g->mm.vidmem.clear_list_mutex);
+	before_pending = atomic_read(&g->mm.vidmem.clears_pending);
 	addr = __gk20a_gmmu_alloc(vidmem_alloc, at, size);
+	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
 	if (!addr) {
-		mutex_lock(&g->mm.vidmem.clear_list_mutex);
-		clear_list_empty = list_empty(&g->mm.vidmem.clear_list_head);
-		mutex_unlock(&g->mm.vidmem.clear_list_mutex);
-
-		if (clear_list_empty)
-			return -ENOMEM;
-		else
+		/*
+		 * If memory is known to be freed soon, let the user know that
+		 * it may be available after a while.
+		 */
+		if (before_pending)
 			return -EAGAIN;
+		else
+			return -ENOMEM;
 	}
 
 	if (at)
@@ -3057,11 +3061,12 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 		was_empty = list_empty(&g->mm.vidmem.clear_list_head);
 		list_add_tail(&mem->clear_list_entry,
 			      &g->mm.vidmem.clear_list_head);
+		atomic_inc(&g->mm.vidmem.clears_pending);
 		mutex_unlock(&g->mm.vidmem.clear_list_mutex);
 
 		if (was_empty) {
-			cancel_work_sync(&g->mm.vidmem_clear_mem_worker);
-			schedule_work(&g->mm.vidmem_clear_mem_worker);
+			cancel_work_sync(&g->mm.vidmem.clear_mem_worker);
+			schedule_work(&g->mm.vidmem.clear_mem_worker);
 		}
 	} else {
 		gk20a_memset(g, mem, 0, 0, mem->size);
@@ -3136,7 +3141,7 @@ static struct mem_desc *get_pending_mem_desc(struct mm_gk20a *mm)
 static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 {
 	struct mm_gk20a *mm = container_of(work, struct mm_gk20a,
-					vidmem_clear_mem_worker);
+					vidmem.clear_mem_worker);
 	struct gk20a *g = mm->g;
 	struct mem_desc *mem;
 
@@ -3146,6 +3151,7 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 			   sg_dma_address(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);
 
+		WARN_ON(atomic_dec_return(&mm->vidmem.clears_pending) < 0);
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;
 
@@ -5098,7 +5104,7 @@ int gk20a_mm_suspend(struct gk20a *g)
 {
 	gk20a_dbg_fn("");
 
-	cancel_work_sync(&g->mm.vidmem_clear_mem_worker);
+	cancel_work_sync(&g->mm.vidmem.clear_mem_worker);
 
 	g->ops.mm.cbc_clean(g);
 	g->ops.mm.l2_flush(g, false);

@@ -420,8 +420,10 @@ struct mm_gk20a {
 
 		struct list_head clear_list_head;
 		struct mutex clear_list_mutex;
+
+		struct work_struct clear_mem_worker;
+		atomic_t clears_pending;
 	} vidmem;
-	struct work_struct vidmem_clear_mem_worker;
 };
 
 int gk20a_mm_init(struct mm_gk20a *mm);

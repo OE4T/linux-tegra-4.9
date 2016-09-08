@@ -16,6 +16,7 @@
 #include "gk20a/gk20a.h"
 #include "clk/clk.h"
 #include "perf/perf.h"
+#include "pmgr/pmgr.h"
 
 /*sw setup for pstate components*/
 int gk20a_init_pstate_support(struct gk20a *g)
@@ -49,6 +50,10 @@ int gk20a_init_pstate_support(struct gk20a *g)
 		return err;
 
 	err = clk_prog_sw_setup(g);
+	if (err)
+		return err;
+
+	err = pmgr_domain_sw_setup(g);
 	return err;
 }
 
@@ -100,6 +105,10 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 		return err;
 
 	err = clk_set_boot_fll_clk(g);
+	if (err)
+		return err;
+
+	err = pmgr_domain_pmu_setup(g);
 	return err;
 }
 

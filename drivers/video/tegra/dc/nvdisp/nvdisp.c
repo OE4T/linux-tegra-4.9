@@ -1843,8 +1843,8 @@ int tegra_nvdisp_powergate_partition(int pg_id)
 	}
 
 	if (pd_index < 0) {
-		pr_info("Not a disp powerdomain\n");
-		return 0;
+		pr_info(" Not a disp powerdomain: %d.\n", pd_index);
+		return -EINVAL;
 	}
 
 	if (!nvdisp_pg[pd_index].ref_cnt) {
@@ -1927,8 +1927,8 @@ int tegra_nvdisp_unpowergate_partition(int pg_id)
 	}
 
 	if (pd_index < 0) {
-		pr_info(" Not a disp powerdomain\n");
-		return 0;
+		pr_info(" Not a disp powerdomain: %d.\n", pd_index);
+		return -EINVAL;
 	}
 	mutex_lock(&tegra_nvdisp_lock);
 

@@ -764,6 +764,45 @@ static int snd_atvr_decode_msbc_packet(
 	return num_samples;
 }
 
+static int snd_atvr_alloc_audio_buffs(struct snd_atvr *atvr_snd)
+{
+	int ret;
+
+	ret = atomic_fifo_init(&atvr_snd->fifo_controller,
+				   MAX_PACKETS_PER_BUFFER);
+	if (ret)
+		return ret;
+
+	/*
+	 * Allocate the maximum buffer now and then just use part of it when
+	 * the substream starts. We don't need DMA because it will just
+	 * get written to by the BTLE code.
+	 */
+	/* We only use this buffer in the kernel and we do not do
+	 * DMA so vmalloc should be OK. */
+	if (atvr_snd->pcm_buffer == NULL)
+		atvr_snd->pcm_buffer = vmalloc(MAX_PCM_BUFFER_SIZE);
+	if (atvr_snd->pcm_buffer == NULL) {
+		pr_err("%s:%d - ERROR PCM buffer allocation failed\n",
+			__func__, __LINE__);
+		return -ENOMEM;
+	}
+
+	/* We only use this buffer in the kernel and we do not do
+	 * DMA so vmalloc should be OK.
+	 */
+	if (atvr_snd->fifo_packet_buffer == NULL)
+		atvr_snd->fifo_packet_buffer = vmalloc(MAX_BUFFER_SIZE);
+	if (atvr_snd->fifo_packet_buffer == NULL) {
+		pr_err("%s:%d - ERROR buffer allocation failed\n",
+			__func__, __LINE__);
+		vfree(atvr_snd->pcm_buffer);
+		atvr_snd->pcm_buffer = NULL;
+		return -ENOMEM;
+	}
+
+	return 0;
+}
 /**
  * This is called by the event filter when it gets an audio packet
  * from the AndroidTV remote.  It writes the packet into a FIFO
@@ -780,6 +819,7 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 	struct shdr_device *shdr_dev = hid_get_drvdata(hdev);
 	struct snd_card *shdr_card;
 	struct snd_atvr *atvr_snd;
+	int ret;
 
 	if (shdr_dev == NULL)
 		return;
@@ -789,6 +829,15 @@ static void audio_dec(struct hid_device *hdev, const uint8_t *raw_input,
 		return;
 
 	atvr_snd = shdr_card->private_data;
+
+	if (atvr_snd && (atvr_snd->pcm_buffer == NULL &&
+			atvr_snd->fifo_packet_buffer == NULL)) {
+		snd_atvr_log("%s: Received audio packet before pcm open \n",
+								__func__);
+		ret = snd_atvr_alloc_audio_buffs(atvr_snd);
+		if (ret)
+			return;
+	}
 
 	if (atvr_snd != NULL && atvr_snd->pcm_stopped == false) {
 		spin_lock(&atvr_snd->s_substream_lock);
@@ -1204,11 +1253,6 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 	if (ret)
 		return ret;
 
-	ret = atomic_fifo_init(&atvr_snd->fifo_controller,
-				   MAX_PACKETS_PER_BUFFER);
-	if (ret)
-		return ret;
-
 	runtime->hw = atvr_snd->pcm_hw;
 	if (substream->pcm->device & 1) {
 		runtime->hw.info &= ~SNDRV_PCM_INFO_INTERLEAVED;
@@ -1220,35 +1264,12 @@ static int snd_atvr_pcm_open(struct snd_pcm_substream *substream)
 
 	snd_atvr_log("%s, built %s %s\n", __func__, __DATE__, __TIME__);
 
-	/*
-	 * Allocate the maximum buffer now and then just use part of it when
-	 * the substream starts. We don't need DMA because it will just
-	 * get written to by the BTLE code.
-	 */
-	/* We only use this buffer in the kernel and we do not do
-	 * DMA so vmalloc should be OK. */
-	if (atvr_snd->pcm_buffer == NULL)
-		atvr_snd->pcm_buffer = vmalloc(MAX_PCM_BUFFER_SIZE);
-	if (atvr_snd->pcm_buffer == NULL) {
-		pr_err("%s:%d - ERROR PCM buffer allocation failed\n",
-			__func__, __LINE__);
-		return -ENOMEM;
+	if (!atvr_snd->pcm_buffer && !atvr_snd->fifo_packet_buffer) {
+		snd_atvr_log("%s: Allocating audio buffers \n", __func__);
+		ret = snd_atvr_alloc_audio_buffs(atvr_snd);
 	}
 
-	/* We only use this buffer in the kernel and we do not do
-	 * DMA so vmalloc should be OK.
-	 */
-	if (atvr_snd->fifo_packet_buffer == NULL)
-		atvr_snd->fifo_packet_buffer = vmalloc(MAX_BUFFER_SIZE);
-	if (atvr_snd->fifo_packet_buffer == NULL) {
-		pr_err("%s:%d - ERROR buffer allocation failed\n",
-			__func__, __LINE__);
-		vfree(atvr_snd->pcm_buffer);
-		atvr_snd->pcm_buffer = NULL;
-		return -ENOMEM;
-	}
-
-	return 0;
+	return ret;
 }
 
 static int snd_atvr_pcm_close(struct snd_pcm_substream *substream)

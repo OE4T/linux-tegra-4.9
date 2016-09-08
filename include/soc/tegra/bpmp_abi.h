@@ -150,6 +150,7 @@ struct mrq_response {
 #define MRQ_ABI_RATCHET		29
 #define MRQ_EMC_DVFS_LATENCY	31
 #define MRQ_TRACE_ITER		64
+#define MRQ_RINGBUF_CONSOLE	65
 
 /** @} */
 
@@ -158,7 +159,7 @@ struct mrq_response {
  * @brief Maximum MRQ code to be sent by CPU software to
  * BPMP. Subject to change in future
  */
-#define MAX_CPU_MRQ_ID		64
+#define MAX_CPU_MRQ_ID		65
 
 /**
  * @addtogroup MRQ_Payloads Message Payloads
@@ -178,6 +179,7 @@ struct mrq_response {
  *   @defgroup Vhint CPU Voltage hint
  *   @defgroup MRQ_Deprecated Deprecated MRQ messages
  *   @defgroup EMC
+ *   @defgroup RingbufConsole
  * @}
  */
 
@@ -640,7 +642,7 @@ struct mrq_debugfs_response {
  * * Initiators: Any
  * * Targets: BPMP
  * * Request Payload: @ref mrq_reset_request
- * * Response Payload: N/A
+ * * Response Payload: @ref mrq_reset_response
  */
 
 /**
@@ -650,6 +652,7 @@ enum mrq_reset_commands {
 	CMD_RESET_ASSERT = 1,
 	CMD_RESET_DEASSERT = 2,
 	CMD_RESET_MODULE = 3,
+	CMD_RESET_GET_MAX_ID = 4,
 	CMD_RESET_MAX, /* not part of ABI and subject to change */
 };
 
@@ -665,6 +668,38 @@ struct mrq_reset_request {
 	uint32_t cmd;
 	/** @brief id of the reset to affected */
 	uint32_t reset_id;
+} __ABI_PACKED;
+
+/**
+ * @ingroup Reset
+ * @brief Response for MRQ_RESET sub-command CMD_RESET_GET_MAX_ID. When
+ * this sub-command is not supported, firmware will return -BPMP_EBADCMD
+ * in mrq_response::err.
+ */
+struct cmd_reset_get_max_id_response {
+	/** @brief max reset id */
+	uint32_t max_id;
+} __ABI_PACKED;
+
+/**
+ * @ingroup Reset
+ * @brief Response with MRQ_RESET
+ *
+ * Each sub-command supported by @ref mrq_reset_request may return
+ * sub-command-specific data. Some do and some do not as indicated
+ * in the following table
+ *
+ * | sub-command          | payload          |
+ * |----------------------|------------------|
+ * | CMD_RESET_ASSERT     | -                |
+ * | CMD_RESET_DEASSERT   | -                |
+ * | CMD_RESET_MODULE     | -                |
+ * | CMD_RESET_GET_MAX_ID | reset_get_max_id |
+ */
+struct mrq_reset_response {
+	union {
+		struct cmd_reset_get_max_id_response reset_get_max_id;
+	} __UNION_ANON;
 } __ABI_PACKED;
 
 /**
@@ -1544,6 +1579,184 @@ struct mrq_trace_iter_request {
 	uint32_t cmd;
 } __ABI_PACKED;
 
+/** @} */
+
+/**
+ * @ingroup MRQ_Codes
+ * @def MRQ_RINGBUF_CONSOLE
+ * @brief A ring buffer debug console for BPMP
+ * @addtogroup RingbufConsole
+ *
+ * The ring buffer debug console aims to be a substitute for the UART debug
+ * console. The debug console is implemented with two ring buffers in the
+ * BPMP-FW, the RX (receive) and TX (transmit) buffers. Characters can be read
+ * and written to the buffers by the host via the MRQ interface.
+ *
+ * @{
+ */
+
+/**
+ * @brief Maximum number of bytes transferred in a single write command to the
+ * BPMP
+ *
+ * This is determined by the number of free bytes in the message struct,
+ * rounded down to a multiple of four.
+ */
+#define MRQ_RINGBUF_CONSOLE_MAX_WRITE_LEN 112
+
+/**
+ * @brief Maximum number of bytes transferred in a single read command to the
+ * BPMP
+ *
+ * This is determined by the number of free bytes in the message struct,
+ * rounded down to a multiple of four.
+ */
+#define MRQ_RINGBUF_CONSOLE_MAX_READ_LEN 116
+
+enum mrq_ringbuf_console_host_to_bpmp_cmd {
+	/**
+	 * @brief Check whether the BPMP driver supports the specified request
+	 * type
+	 *
+	 * mrq_response::err is 0 if the specified request is supported and
+	 * -#BPMP_ENODEV otherwise
+	 */
+	CMD_RINGBUF_CONSOLE_QUERY_ABI = 0,
+	/**
+	 * @brief Perform a read operation on the BPMP TX buffer
+	 *
+	 * mrq_response::err is 0
+	 */
+	CMD_RINGBUF_CONSOLE_READ = 1,
+	/**
+	 * @brief Perform a write operation on the BPMP RX buffer
+	 *
+	 * mrq_response::err is 0 if the operation was successful and
+	 * -#BPMP_ENODEV otherwise
+	 */
+	CMD_RINGBUF_CONSOLE_WRITE = 2,
+	/**
+	 * @brief Get the length of the buffer and the physical addresses of
+	 * the buffer data and the head and tail counters
+	 *
+	 * mrq_response::err is 0 if the operation was successful and
+	 * -#BPMP_ENODEV otherwise
+	 */
+	CMD_RINGBUF_CONSOLE_GET_FIFO = 3,
+};
+
+/**
+ * @ingroup RingbufConsole
+ * @brief Host->BPMP request data for request type
+ * #CMD_RINGBUF_CONSOLE_QUERY_ABI
+ */
+struct cmd_ringbuf_console_query_abi_req {
+	/** @brief Command identifier to be queried */
+	uint32_t cmd;
+} __ABI_PACKED;
+
+/** @private */
+struct cmd_ringbuf_console_query_abi_resp {
+	EMPTY
+} __ABI_PACKED;
+
+/**
+ * @ingroup RingbufConsole
+ * @brief Host->BPMP request data for request type #CMD_RINGBUF_CONSOLE_READ
+ */
+struct cmd_ringbuf_console_read_req {
+	/**
+	 * @brief Number of bytes requested to be read from the BPMP TX buffer
+	 */
+	uint8_t len;
+} __ABI_PACKED;
+
+/**
+ * @ingroup RingbufConsole
+ * @brief BPMP->Host response data for request type #CMD_RINGBUF_CONSOLE_READ
+ */
+struct cmd_ringbuf_console_read_resp {
+	/** @brief The actual data read from the BPMP TX buffer */
+	uint8_t data[MRQ_RINGBUF_CONSOLE_MAX_READ_LEN];
+	/** @brief Number of bytes in cmd_ringbuf_console_read_resp::data */
+	uint8_t len;
+} __ABI_PACKED;
+
+/**
+ * @ingroup RingbufConsole
+ * @brief Host->BPMP request data for request type #CMD_RINGBUF_CONSOLE_WRITE
+ */
+struct cmd_ringbuf_console_write_req {
+	/** @brief The actual data to be written to the BPMP RX buffer */
+	uint8_t data[MRQ_RINGBUF_CONSOLE_MAX_WRITE_LEN];
+	/** @brief Number of bytes in cmd_ringbuf_console_write_req::data */
+	uint8_t len;
+} __ABI_PACKED;
+
+/**
+ * @ingroup RingbufConsole
+ * @brief BPMP->Host response data for request type #CMD_RINGBUF_CONSOLE_WRITE
+ */
+struct cmd_ringbuf_console_write_resp {
+	/** @brief Number of bytes of available space in the BPMP RX buffer */
+	uint32_t space_avail;
+	/** @brief Number of bytes that were written to the BPMP RX buffer */
+	uint8_t len;
+} __ABI_PACKED;
+
+/** @private */
+struct cmd_ringbuf_console_get_fifo_req {
+	EMPTY
+} __ABI_PACKED;
+
+/**
+ * @ingroup RingbufConsole
+ * @brief BPMP->Host reply data for request type #CMD_RINGBUF_CONSOLE_GET_FIFO
+ */
+struct cmd_ringbuf_console_get_fifo_resp {
+	/** @brief Physical address of the BPMP TX buffer */
+	uint64_t bpmp_tx_buf_addr;
+	/** @brief Physical address of the BPMP TX buffer head counter */
+	uint64_t bpmp_tx_head_addr;
+	/** @brief Physical address of the BPMP TX buffer tail counter */
+	uint64_t bpmp_tx_tail_addr;
+	/** @brief Length of the BPMP TX buffer */
+	uint32_t bpmp_tx_buf_len;
+} __ABI_PACKED;
+
+/**
+ * @ingroup RingbufConsole
+ * @brief Host->BPMP request data.
+ *
+ * Reply type is union #mrq_ringbuf_console_bpmp_to_host_response .
+ */
+struct mrq_ringbuf_console_host_to_bpmp_request {
+	/**
+	 * @brief type of request. Values listed in enum
+	 * #mrq_ringbuf_console_host_to_bpmp_cmd.
+	 */
+	uint32_t type;
+	/** @brief  request type specific parameters. */
+	union {
+		struct cmd_ringbuf_console_query_abi_req query_abi;
+		struct cmd_ringbuf_console_read_req read;
+		struct cmd_ringbuf_console_write_req write;
+		struct cmd_ringbuf_console_get_fifo_req get_fifo;
+	} __UNION_ANON;
+} __ABI_PACKED;
+
+/**
+ * @ingroup RingbufConsole
+ * @brief Host->BPMP reply data
+ *
+ * In response to struct #mrq_ringbuf_console_host_to_bpmp_request.
+ */
+union mrq_ringbuf_console_bpmp_to_host_response {
+	struct cmd_ringbuf_console_query_abi_resp query_abi;
+	struct cmd_ringbuf_console_read_resp read;
+	struct cmd_ringbuf_console_write_resp write;
+	struct cmd_ringbuf_console_get_fifo_resp get_fifo;
+} __ABI_PACKED;
 /** @} */
 
 /*

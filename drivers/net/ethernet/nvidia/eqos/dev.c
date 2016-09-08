@@ -3239,27 +3239,14 @@ static INT eqos_pad_calibrate(struct eqos_prv_data *pdata)
 
 	PAD_AUTO_CAL_CFG_WR(hwreg);
 
-	/* 4. Wait on AUTO_CAL_ACTIVE until it is 1. 10us timeout */
-	i = 10;
-	while (i--) {
-		usleep_range(1, 3);
-		PAD_AUTO_CAL_STAT_RD(hwreg);
+	/* 4. Wait on 1 to 3 us before start checking for calibration done.
+	 *    This delay is consumed in delay inside while loop.
+	 */
 
-		/* calibration started when CAL_STAT_ACTIVE is set */
-		if (hwreg & PAD_AUTO_CAL_STAT_ACTIVE_MASK)
-			break;
-	}
-	if (i < 0) {
-		ret = -1;
-		dev_err(&pdev->dev,
-			"eqos pad calibration took too long to start\n");
-		goto calibration_failed;
-	}
-
-	/* 5. Wait on AUTO_CAL_ACTIVE until it is 0. 200us timeout */
-	i = 10;
+	/* 5. Wait on AUTO_CAL_ACTIVE until it is 0. 10ms is the timeout */
+	i = 1000;
 	while (i--) {
-		usleep_range(20, 30);
+		usleep_range(10, 12);
 		PAD_AUTO_CAL_STAT_RD(hwreg);
 
 		/* calibration done when CAL_STAT_ACTIVE is zero */

@@ -443,7 +443,7 @@ int __init nvmap_init(struct platform_device *pdev)
 
 	err = of_reserved_mem_device_init(&pdev->dev);
 	if (err)
-		pr_err("reserved_mem_device_init fails, try legacy init\n");
+		pr_debug("reserved_mem_device_init fails, try legacy init\n");
 
 	/* try legacy init */
 	if (!nvmap_carveouts[1].init_done) {

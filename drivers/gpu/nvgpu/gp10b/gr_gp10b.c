@@ -1924,10 +1924,13 @@ static u32 gp10b_mask_hww_warp_esr(u32 hww_warp_esr)
 
 static u32 get_ecc_override_val(struct gk20a *g)
 {
-	if (tegra_fuse_readl(FUSE_OPT_ECC_EN))
+	u32 val;
+
+	tegra_fuse_readl(FUSE_OPT_ECC_EN, &val);
+	if (val)
 		return gk20a_readl(g, gr_fecs_feature_override_ecc_r());
-	else
-		return 0;
+
+	return 0;
 }
 
 static bool gr_gp10b_suspend_context(struct channel_gk20a *ch,

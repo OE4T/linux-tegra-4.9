@@ -190,6 +190,7 @@ int gp10b_init_hal(struct gk20a *g)
 	struct gpu_ops *gops = &g->ops;
 	struct nvgpu_gpu_characteristics *c = &g->gpu_characteristics;
 	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	u32 val;
 
 	*gops = gp10b_ops;
 
@@ -198,8 +199,8 @@ int gp10b_init_hal(struct gk20a *g)
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
 	} else {
-		if (tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0) &
-				PRIV_SECURITY_ENABLED) {
+		tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0, &val);
+		if (val & PRIV_SECURITY_ENABLED) {
 			gops->privsecurity = 1;
 			gops->securegpccs =1;
 		} else {
@@ -214,8 +215,8 @@ int gp10b_init_hal(struct gk20a *g)
 		gops->privsecurity = 0;
 		gops->securegpccs = 0;
 	} else {
-		if (tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0) &
-				PRIV_SECURITY_ENABLED) {
+		tegra_fuse_readl(FUSE_OPT_PRIV_SEC_EN_0, &val);
+		if (val & PRIV_SECURITY_ENABLED) {
 			gk20a_dbg_info("priv security is not supported but enabled");
 			gops->privsecurity = 1;
 			gops->securegpccs =1;

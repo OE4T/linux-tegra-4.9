@@ -365,9 +365,11 @@ static int send_ecc_overide_en_dis_cmd(struct gk20a *g, u32 bitmask)
 	struct pmu_cmd cmd;
 	u32 seq;
 	int status;
+	u32 val;
 	gk20a_dbg_fn("");
 
-	if (!tegra_fuse_readl(FUSE_OPT_ECC_EN)) {
+	tegra_fuse_readl(FUSE_OPT_ECC_EN, &val);
+	if (!val) {
 		gk20a_err(dev_from_gk20a(g), "Board not ECC capable");
 		return -1;
 	}
@@ -436,12 +438,15 @@ static bool gp10b_is_priv_load(u32 falcon_id)
 /*Dump Security related fuses*/
 static void pmu_dump_security_fuses_gp10b(struct gk20a *g)
 {
+	u32 val;
+
 	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
 	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
+	tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0, &val);
 	gk20a_err(dev_from_gk20a(g), "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
-			tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0));
+			val);
 }
 
 void gp10b_init_pmu_ops(struct gpu_ops *gops)

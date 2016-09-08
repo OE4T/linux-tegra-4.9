@@ -57,8 +57,10 @@ struct acr_desc;
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
 #include "perf/perf.h"
+#include "pmgr/pmgr.h"
 #endif
 #include "gm206/bios_gm206.h"
+
 
 /* PTIMER_REF_FREQ_HZ corresponds to a period of 32 nanoseconds.
     32 ns is the resolution of ptimer. */
@@ -784,6 +786,7 @@ struct gk20a {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct clk_pmupstate clk_pmu;
 	struct perf_pmupstate perf_pmu;
+	struct pmgr_pmupstate pmgr_pmu;
 #endif
 
 #ifdef CONFIG_DEBUG_FS

@@ -26,6 +26,7 @@
 #include "pmuif/gpmuifboardobj.h"
 #include "pmuif/gpmuifclk.h"
 #include "pmuif/gpmuifperf.h"
+#include "pmuif/gpmuifpmgr.h"
 
 /* defined by pmu hw spec */
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
@@ -179,6 +180,7 @@ struct pmu_ucode_desc_v1 {
 #define PMU_UNIT_RC		(0x1F)
 #define PMU_UNIT_FECS_MEM_OVERRIDE      (0x1E)
 #define PMU_UNIT_CLK             (0x0D)
+#define PMU_UNIT_PMGR            (0x18)
 
 #define PMU_UNIT_END		(0x23)
 
@@ -358,6 +360,7 @@ struct pmu_cmd {
 		struct nv_pmu_boardobj_cmd boardobj;
 		struct nv_pmu_perf_cmd perf;
 		struct nv_pmu_clk_cmd clk;
+		struct nv_pmu_pmgr_cmd pmgr;
 	} cmd;
 };
 
@@ -373,6 +376,7 @@ struct pmu_msg {
 		struct nv_pmu_boardobj_msg boardobj;
 		struct nv_pmu_perf_msg perf;
 		struct nv_pmu_clk_msg clk;
+		struct nv_pmu_pmgr_msg pmgr;
 	} msg;
 };
 

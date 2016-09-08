@@ -254,6 +254,19 @@ struct boardobjgrp {
 #define BOARDOBJGRP_FOR_EACH(_pgrp, _ptype, _pobj, _index)                     \
 	BOARDOBJGRP_ITERATOR(_pgrp, _ptype, _pobj, _index, NULL)
 
+#define BOARDOBJGRP_FOR_EACH_INDEX_IN_MASK(mask_width, index, mask)        \
+{                                                           \
+	u##mask_width lcl_msk = (u##mask_width)(mask);         \
+	for (index = 0; lcl_msk != 0; index++, lcl_msk >>= 1) {     \
+		if (((u##mask_width)((u64)1) & lcl_msk) == 0) {     \
+			continue;                                       \
+		}
+
+#define BOARDOBJGRP_FOR_EACH_INDEX_IN_MASK_END                          \
+	}                                                       \
+}
+
+
 /*!
 * Invalid UNIT_ID.  Used to indicate that the implementing class has not set
 * @ref BOARDOBJGRP::unitId and, thus, certain BOARDOBJGRP PMU interfaces are

@@ -254,6 +254,58 @@ static u32 boardobjgrp_pmustatusinstget_stub(struct gk20a *g,
 	return -EINVAL;
 }
 
+u32 boardobjgrp_pmudatainit_legacy(struct gk20a *g,
+	struct boardobjgrp 	*pboardobjgrp,
+	struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)
+{
+	u32 status = 0;
+	struct boardobj *pboardobj = NULL;
+	struct nv_pmu_boardobj *ppmudata = NULL;
+	u8 index;
+
+	gk20a_dbg_info("");
+
+	if (pboardobjgrp == NULL)
+		return -EINVAL;
+	if (pboardobjgrppmu == NULL)
+		return -EINVAL;
+
+	boardobjgrpe32hdrset((struct nv_pmu_boardobjgrp *)pboardobjgrppmu,
+							pboardobjgrp->objmask);
+
+	BOARDOBJGRP_FOR_EACH_INDEX_IN_MASK(32, index, pboardobjgrp->objmask) {
+		/* Obtain pointer to the current instance of the Object from the Group */
+		pboardobj = pboardobjgrp->objgetbyidx(pboardobjgrp, index);
+		if (NULL == pboardobj) {
+			gk20a_err(dev_from_gk20a(g),
+				"could not get object instance");
+			status = -EINVAL;
+			goto boardobjgrppmudatainit_legacy_done;
+		}
+
+		status = pboardobjgrp->pmudatainstget(g,
+				(struct nv_pmu_boardobjgrp *)pboardobjgrppmu,
+				&ppmudata, index);
+		if (status) {
+			gk20a_err(dev_from_gk20a(g),
+				"could not get object instance");
+			goto boardobjgrppmudatainit_legacy_done;
+		}
+
+		/* Initialize the PMU Data */
+		status = pboardobj->pmudatainit(g, pboardobj, ppmudata);
+		if (status) {
+			gk20a_err(dev_from_gk20a(g),
+				"could not parse pmu for device %d", index);
+			goto boardobjgrppmudatainit_legacy_done;
+		}
+	}
+	BOARDOBJGRP_FOR_EACH_INDEX_IN_MASK_END
+
+boardobjgrppmudatainit_legacy_done:
+	gk20a_dbg_info(" Done");
+	return status;
+}
 
 u32 boardobjgrp_pmudatainit_super(struct gk20a *g, struct boardobjgrp
 	*pboardobjgrp, struct nv_pmu_boardobjgrp_super *pboardobjgrppmu)

@@ -1353,7 +1353,7 @@ void tegra_hdmi_infoframe_pkt_write(struct tegra_hdmi *hdmi,
 	if (sw_checksum) {
 		u8 checksum = pkt_type + pkt_vs + pkt_len;
 
-		for (val = 1; val <= pkt_len; val++)
+		for (val = 1; val < reg_payload_len; val++)
 			checksum += ((u8 *)reg_payload)[val];
 
 		/* The first byte of the payload must always be the checksum

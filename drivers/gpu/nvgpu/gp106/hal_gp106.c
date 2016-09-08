@@ -46,6 +46,7 @@
 #include "nvgpu_gpuid_t18x.h"
 #include "hw_proj_gp106.h"
 #include "gk20a/dbg_gpu_gk20a.h"
+#include "gk20a/css_gr_gk20a.h"
 
 static struct gpu_ops gp106_ops = {
 	.clock_gating = {
@@ -207,6 +208,9 @@ int gp106_init_hal(struct gk20a *g)
 	gp10b_init_regops(gops);
 	gp10b_init_cde_ops(gops);
 	gk20a_init_tsg_ops(gops);
+#if defined(CONFIG_GK20A_CYCLE_STATS)
+	gk20a_init_css_ops(gops);
+#endif
 	gm206_init_bios(gops);
 	gops->name = "gp10x";
 	gops->get_litter_value = gp106_get_litter_value;

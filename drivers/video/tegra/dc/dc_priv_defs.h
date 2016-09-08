@@ -234,8 +234,9 @@ struct tegra_dc {
 #ifdef CONFIG_TEGRA_NVDISPLAY
 	bool					common_channel_reserved;
 	bool					common_channel_pending;
-	bool					imp_dirty;
+	bool					common_channel_intr_enabled;
 #endif
+	bool					imp_dirty;
 
 #if defined(CONFIG_TEGRA_DC_CMU)
 	struct tegra_dc_cmu		cmu;

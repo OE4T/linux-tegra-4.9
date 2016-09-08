@@ -564,6 +564,23 @@ static int dsc_rc_ranges_8bpp_8bpc[16][3] = {
 	{13, 15, -12},
 	{0, 0, 0},
 };
+
+#ifndef CONFIG_TEGRA_NVDISPLAY
+/* stub out IMP calls */
+void tegra_dc_reserve_common_channel(struct tegra_dc *dc) {}
+void tegra_dc_release_common_channel(struct tegra_dc *dc) {}
+void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update) {}
+bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
+{
+	return false;
+}
+int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
+			struct tegra_dc_ext_flip_user_data *flip_user_data)
+{
+	return -ENOSYS;
+}
+#endif
+
 void tegra_dc_clk_enable(struct tegra_dc *dc)
 {
 	tegra_disp_clk_prepare_enable(dc->clk);
@@ -3801,13 +3818,6 @@ static void tegra_dc_vblank(struct work_struct *work)
 		clear_bit(V_BLANK_FLIP, &dc->vblank_ref_count);
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	/*
-	 * COMMON channel state is promoted on the very next loadv boundary for
-	 * whichever HEAD set COMMON_ACT_REQ. Clear the COMMON channel pending
-	 * flag if this condition has been met.
-	 */
-	tegra_nvdisp_handle_common_channel_promotion(dc);
-
 	if (dc->out->sd_settings) {
 		if (dc->out->sd_settings->enable) {
 			if ((dc->out->sd_settings->update_sd) ||
@@ -3941,6 +3951,7 @@ static void tegra_dc_frame_end(struct work_struct *work)
 		_tegra_dc_config_frame_end_intr(dc, false);
 		dc->hdr_cache_dirty = false;
 	}
+
 	return;
 }
 
@@ -4154,6 +4165,10 @@ static void tegra_dc_one_shot_irq(struct tegra_dc *dc, unsigned long status,
 		/* Sync up windows. */
 		tegra_dc_trigger_windows(dc);
 
+		/* Check COMMON_ACT_REQ. */
+		if (tegra_dc_handle_common_channel_promotion(dc))
+			clear_bit(V_BLANK_IMP, &dc->vblank_ref_count);
+
 		/* Schedule any additional bottom-half vblank actvities. */
 		queue_work(system_freezable_wq, &dc->vblank_work);
 	}
@@ -4220,6 +4235,10 @@ static void tegra_dc_continuous_irq(struct tegra_dc *dc, unsigned long status,
 			complete(&dc->crc_complete);
 
 		tegra_dc_trigger_windows(dc);
+
+		/* Check COMMON_ACT_REQ. */
+		if (tegra_dc_handle_common_channel_promotion(dc))
+			_tegra_dc_config_frame_end_intr(dc, false);
 
 		queue_work(system_freezable_wq, &dc->frame_end_work);
 	}

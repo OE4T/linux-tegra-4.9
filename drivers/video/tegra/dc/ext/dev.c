@@ -122,9 +122,7 @@ struct tegra_dc_ext_flip_data {
 	u8 flags;
 	struct tegra_dc_hdr hdr_data;
 	bool hdr_cache_dirty;
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	bool imp_dirty;
-#endif
 };
 
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
@@ -867,12 +865,11 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 					data->flags &
 					TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE);
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 		if (data->imp_dirty) {
-			tegra_nvdisp_adjust_imp(dc, true);
+			tegra_dc_adjust_imp(dc, true);
 			dc->imp_dirty = true;
 		}
-#endif
+
 		tegra_dc_update_windows(wins, nr_win,
 			data->dirty_rect_valid ? data->dirty_rect : NULL,
 			wait_for_vblank);
@@ -886,12 +883,10 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		if (!tegra_dc_has_multiple_dc())
 			tegra_dc_call_flip_callback();
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 		if (data->imp_dirty) {
-			tegra_nvdisp_adjust_imp(dc, false);
-			tegra_nvdisp_release_common_channel(dc);
+			tegra_dc_adjust_imp(dc, false);
+			tegra_dc_release_common_channel(dc);
 		}
-#endif
 	}
 
 	tegra_dc_scrncapt_disp_pause_unlock(dc);
@@ -1330,15 +1325,13 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 #endif
 	data->flags = flip_flags;
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 	/*
 	 * If this flip needs to update the current IMP settings, reserve
 	 * exclusive access to the COMMON channel. This call can potentially
 	 * block.
 	 */
 	if (data->imp_dirty)
-		tegra_nvdisp_reserve_common_channel(ext->dc);
-#endif
+		tegra_dc_reserve_common_channel(ext->dc);
 
 	queue_work(ext->win[work_index].flip_wq, &data->work);
 
@@ -2275,8 +2268,8 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		int win_num;
 		int nr_user_data;
 		struct tegra_dc_ext_flip_4 args;
-		struct tegra_dc_ext_flip_windowattr_v2 *win;
-		struct tegra_dc_ext_flip_user_data *flip_user_data;
+		struct tegra_dc_ext_flip_windowattr_v2 *win = NULL;
+		struct tegra_dc_ext_flip_user_data *flip_user_data = NULL;
 
 		/* Keeping window attribute size as version1 for old
 		 *  legacy applications
@@ -2293,43 +2286,41 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 
 		if (dev_cpy_from_usr(win, (void *)args.win,
 					usr_win_size, win_num)) {
-			kfree(win);
-			return -EFAULT;
+			ret = -EFAULT;
+			goto free_and_ret;
 		}
 
 		nr_user_data = args.nr_elements;
 		flip_user_data = kzalloc(sizeof(*flip_user_data)
 					* nr_user_data, GFP_KERNEL);
 		if (!flip_user_data) {
-			kfree(win);
-			return -ENOMEM;
+			ret = -ENOMEM;
+			goto free_and_ret;
 		}
 
 		if (nr_user_data > 0) {
 			if (copy_from_user(flip_user_data,
 				(void __user *) (uintptr_t)args.data,
 				sizeof(*flip_user_data) * nr_user_data)) {
-				kfree(win);
-				kfree(flip_user_data);
-				return -EFAULT;
+				ret = -EFAULT;
+				goto free_and_ret;
 			}
 
-#ifdef CONFIG_TEGRA_NVDISPLAY
 			if (flip_user_data[0].data_type ==
 				TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA)
-				ret = tegra_nvdisp_handle_imp_propose(
+				ret = tegra_dc_handle_imp_propose(
 						user->ext->dc, flip_user_data);
-#endif
+				if (ret)
+					goto free_and_ret;
 		}
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
 		ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
 #endif
 
+free_and_ret:
 		kfree(flip_user_data);
-
 		kfree(win);
-
 		return ret;
 	}
 #else

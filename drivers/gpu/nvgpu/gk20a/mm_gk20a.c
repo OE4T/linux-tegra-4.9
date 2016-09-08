@@ -1320,7 +1320,7 @@ static int gk20a_zalloc_gmmu_page_table(struct vm_gk20a *vm,
 	err = alloc_gmmu_pages(vm, order, entry);
 	gk20a_dbg(gpu_dbg_pte, "entry = 0x%p, addr=%08llx, size %d",
 		  entry,
-		  entry->mem.sgt ?
+		  (entry->mem.sgt && entry->mem.aperture == APERTURE_SYSMEM) ?
 		    g->ops.mm.get_iova_addr(g, entry->mem.sgt->sgl, 0)
 		    : 0,
 		  order);

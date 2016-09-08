@@ -256,12 +256,15 @@ void gm20b_write_dmatrfbase(struct gk20a *g, u32 addr)
 /*Dump Security related fuses*/
 static void pmu_dump_security_fuses_gm20b(struct gk20a *g)
 {
+	u32 val;
+
 	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_SEC_DEBUG_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_sec_debug_en_r()));
 	gk20a_err(dev_from_gk20a(g), "FUSE_OPT_PRIV_SEC_EN_0 : 0x%x",
 			gk20a_readl(g, fuse_opt_priv_sec_en_r()));
+	tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0, &val);
 	gk20a_err(dev_from_gk20a(g), "FUSE_GCPLEX_CONFIG_FUSE_0 : 0x%x",
-			tegra_fuse_readl(FUSE_GCPLEX_CONFIG_FUSE_0));
+			val);
 }
 
 void gm20b_init_pmu_ops(struct gpu_ops *gops)

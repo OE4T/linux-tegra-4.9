@@ -488,23 +488,6 @@ int nvhost_init_t194_support(struct nvhost_master *host,
 
 	op->soc_name = "tegra19x";
 
-	/* create a symlink for host1x if it is not under platform bus or
-	 * it has been created with different name */
-
-	if ((host->dev->dev.parent != &platform_bus) ||
-	    !strcmp(dev_name(&host->dev->dev), "host1x")) {
-		err = sysfs_create_link_nowarn(&platform_bus.kobj,
-					&host->dev->dev.kobj,
-					"host1x");
-		if (err) {
-			err = sysfs_create_link(&platform_bus.kobj,
-						&host->dev->dev.kobj,
-						dev_name(&host->dev->dev));
-			if (err)
-				dev_warn(&host->dev->dev, "could not create sysfs links\n");
-		}
-	}
-
 	/* don't worry about cleaning up on failure... "remove" does it. */
 	err = nvhost_init_t194_channel_support(host, op);
 	if (err)

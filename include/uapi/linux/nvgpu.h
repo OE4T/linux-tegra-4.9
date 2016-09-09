@@ -1231,7 +1231,7 @@ struct nvgpu_preemption_mode_args {
 
 #define NVGPU_IOCTL_CHANNEL_LAST	\
 	_IOC_NR(NVGPU_IOCTL_CHANNEL_SET_PREEMPTION_MODE)
-#define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_submit_gpfifo_args)
+#define NVGPU_IOCTL_CHANNEL_MAX_ARG_SIZE sizeof(struct nvgpu_alloc_gpfifo_ex_args)
 
 /*
  * /dev/nvhost-as-gpu device

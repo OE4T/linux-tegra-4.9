@@ -17,6 +17,10 @@
 #include "clk/clk.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
+#include "include/bios.h"
+#include "pstate/pstate.h"
+
+static int pstate_sw_setup(struct gk20a *g);
 
 /*sw setup for pstate components*/
 int gk20a_init_pstate_support(struct gk20a *g)
@@ -50,6 +54,10 @@ int gk20a_init_pstate_support(struct gk20a *g)
 		return err;
 
 	err = clk_prog_sw_setup(g);
+	if (err)
+		return err;
+
+	err = pstate_sw_setup(g);
 	if (err)
 		return err;
 
@@ -112,3 +120,199 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	return err;
 }
 
+int pstate_construct_super(struct gk20a *g, struct boardobj **ppboardobj,
+				u16 size, void *args)
+{
+	struct pstate *ptmppstate = (struct pstate *)args;
+	struct pstate *pstate;
+	int err;
+
+	err = boardobj_construct_super(g, ppboardobj, size, args);
+	if (err)
+		return err;
+
+	pstate = (struct pstate *)*ppboardobj;
+
+	pstate->num = ptmppstate->num;
+	pstate->clklist = ptmppstate->clklist;
+
+	return 0;
+}
+
+int pstate_construct_3x(struct gk20a *g, struct boardobj **ppboardobj,
+				u16 size, void *args)
+{
+	struct boardobj  *ptmpobj = (struct boardobj *)args;
+
+	ptmpobj->type_mask |= BIT(CTRL_PERF_PSTATE_TYPE_3X);
+	return pstate_construct_super(g, ppboardobj, size, args);
+}
+
+struct pstate *pstate_construct(struct gk20a *g, void *args)
+{
+	struct pstate *pstate = NULL;
+	struct pstate *tmp = (struct pstate *)args;
+
+	if ((tmp->super.type != CTRL_PERF_PSTATE_TYPE_3X) ||
+	    (pstate_construct_3x(g, (struct boardobj **)&pstate,
+			    sizeof(struct pstate), args)))
+		gk20a_err(dev_from_gk20a(g),
+			"error constructing pstate num=%u", tmp->num);
+
+	return pstate;
+}
+
+int pstate_insert(struct gk20a *g, struct pstate *pstate, int index)
+{
+	struct pstates *pstates = &(g->perf_pmu.pstatesobjs);
+	int err;
+
+	err = boardobjgrp_objinsert(&pstates->super.super,
+			(struct boardobj *)pstate, index);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			  "error adding pstate boardobj %d", index);
+		return err;
+	}
+
+	pstates->num_levels++;
+
+	return err;
+}
+
+static int parse_pstate_entry_5x(struct gk20a *g,
+		struct vbios_pstate_header_5x *hdr,
+		struct vbios_pstate_entry_5x *entry,
+		struct pstate *pstate)
+{
+	u8 *p = (u8 *)entry;
+	u32 clkidx;
+
+	p += hdr->base_entry_size;
+
+	memset(pstate, 0, sizeof(struct pstate));
+	pstate->super.type = CTRL_PERF_PSTATE_TYPE_3X;
+	pstate->num = 0x0F - entry->pstate_level;
+	pstate->clklist.clksetinfolistsize = hdr->clock_entry_count;
+
+	gk20a_dbg_info("pstate P%u", pstate->num);
+
+	for (clkidx = 0; clkidx < hdr->clock_entry_count; clkidx++) {
+		struct clk_set_info *pclksetinfo;
+		struct vbios_pstate_entry_clock_5x *clk_entry;
+		struct clk_domain *clk_domain;
+
+		clk_domain = (struct clk_domain *)BOARDOBJGRP_OBJ_GET_BY_IDX(
+			    &g->clk_pmu.clk_domainobjs.super.super, clkidx);
+
+		pclksetinfo = &pstate->clklist.clksetinfo[clkidx];
+		clk_entry = (struct vbios_pstate_entry_clock_5x *)p;
+
+		pclksetinfo->clkwhich = clk_domain->domain;
+		pclksetinfo->nominal_mhz =
+			BIOS_GET_FIELD(clk_entry->param0,
+				VBIOS_PSTATE_5X_CLOCK_PROG_PARAM0_NOM_FREQ_MHZ);
+		pclksetinfo->min_mhz =
+			BIOS_GET_FIELD(clk_entry->param1,
+				VBIOS_PSTATE_5X_CLOCK_PROG_PARAM1_MIN_FREQ_MHZ);
+		pclksetinfo->max_mhz =
+			BIOS_GET_FIELD(clk_entry->param1,
+				VBIOS_PSTATE_5X_CLOCK_PROG_PARAM1_MAX_FREQ_MHZ);
+
+		gk20a_dbg_info(
+			"clk_domain=%u nominal_mhz=%u min_mhz=%u max_mhz=%u",
+			pclksetinfo->clkwhich, pclksetinfo->nominal_mhz,
+			pclksetinfo->min_mhz, pclksetinfo->max_mhz);
+
+		p += hdr->clock_entry_size;
+	}
+
+	return 0;
+}
+
+static int parse_pstate_table_5x(struct gk20a *g,
+		struct vbios_pstate_header_5x *hdr)
+{
+	struct pstate _pstate, *pstate = &_pstate;
+	struct vbios_pstate_entry_5x *entry;
+	u32 entry_size;
+	u8 i;
+	u8 *p = (u8 *)hdr;
+	int err = 0;
+
+	if ((hdr->header_size != VBIOS_PSTATE_HEADER_5X_SIZE_10) ||
+		(hdr->base_entry_count == 0) ||
+		((hdr->base_entry_size != VBIOS_PSTATE_BASE_ENTRY_5X_SIZE_2) &&
+		 (hdr->base_entry_size != VBIOS_PSTATE_BASE_ENTRY_5X_SIZE_3)) ||
+		(hdr->clock_entry_size != VBIOS_PSTATE_CLOCK_ENTRY_5X_SIZE_6) ||
+		(hdr->clock_entry_count > CLK_SET_INFO_MAX_SIZE))
+		return -EINVAL;
+
+	p += hdr->header_size;
+
+	entry_size = hdr->base_entry_size +
+			hdr->clock_entry_count * hdr->clock_entry_size;
+
+	for (i = 0; i < hdr->base_entry_count; i++, p += entry_size) {
+		entry = (struct vbios_pstate_entry_5x *)p;
+
+		if (entry->pstate_level == VBIOS_PERFLEVEL_SKIP_ENTRY)
+			continue;
+
+		err = parse_pstate_entry_5x(g, hdr, entry, pstate);
+		if (err)
+			goto done;
+
+		pstate = pstate_construct(g, pstate);
+		if (!pstate)
+			goto done;
+
+		err = pstate_insert(g, pstate, i);
+		if (err)
+			goto done;
+	}
+
+done:
+	return err;
+}
+
+static int pstate_sw_setup(struct gk20a *g)
+{
+	struct vbios_pstate_header_5x *hdr = NULL;
+	int err = 0;
+
+	gk20a_dbg_fn("");
+
+	err = boardobjgrpconstruct_e32(&g->perf_pmu.pstatesobjs.super);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			  "error creating boardobjgrp for pstates, err=%d",
+			  err);
+		goto done;
+	}
+
+	if (g->ops.bios.get_perf_table_ptrs) {
+		hdr = (struct vbios_pstate_header_5x *)
+				g->ops.bios.get_perf_table_ptrs(g,
+				g->bios.perf_token, PERFORMANCE_TABLE);
+	}
+
+	if (!hdr) {
+		gk20a_err(dev_from_gk20a(g),
+				"performance table not found");
+		err = -EINVAL;
+		goto done;
+	}
+
+	if (hdr->version != VBIOS_PSTATE_TABLE_VERSION_5X) {
+		gk20a_err(dev_from_gk20a(g),
+				"unknown/unsupported clocks table version=0x%02x",
+				hdr->version);
+		err = -EINVAL;
+		goto done;
+	}
+
+	err = parse_pstate_table_5x(g, hdr);
+done:
+	return err;
+}

@@ -5474,6 +5474,8 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 				dc->out_ops->shutdown_interface(dc);
 	}
 
+	tegra_dc_reserve_common_channel(dc);
+
 	blank_windows = !tegra_dc_ext_disable(dc->ext);
 
 	if (blank_windows)
@@ -5502,6 +5504,8 @@ static void tegra_dc_disable_irq_ops(struct tegra_dc *dc, bool from_irq)
 		if (!dc->suspended)
 			_tegra_dc_disable(dc);
 	}
+
+	tegra_dc_release_common_channel(dc);
 
 #ifdef CONFIG_SWITCH
 	if (dc->switchdev_registered)
@@ -6466,6 +6470,8 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 	trace_display_suspend(dc);
 	dev_info(&ndev->dev, "suspend\n");
 
+	tegra_dc_reserve_common_channel(dc);
+
 	tegra_dc_ext_disable(dc->ext);
 
 	tegra_dc_cursor_suspend(dc);
@@ -6485,6 +6491,8 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state)
 
 		dc->suspended = true;
 	}
+
+	tegra_dc_release_common_channel(dc);
 
 	if (dc->out && dc->out->postsuspend) {
 		dc->out->postsuspend();

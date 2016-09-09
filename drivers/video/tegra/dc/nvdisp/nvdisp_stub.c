@@ -24,6 +24,7 @@
 #include <linux/tegra-soc.h>
 #include <linux/of_gpio.h>
 #include <linux/backlight.h>
+#include <linux/iommu.h>
 
 #include <linux/platform/tegra/latency_allowance.h>
 
@@ -137,6 +138,13 @@ void tegra_get_fb2_resource(struct resource *fb2_res)
 	fb2_res->start = 0;
 	fb2_res->end = 0;
 }
+
+static int disp_fb_linear_set(void)
+{
+	tegra_fb_linear_set(NULL);
+	return 0;
+}
+arch_initcall(disp_fb_linear_set);
 
 int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)
 {

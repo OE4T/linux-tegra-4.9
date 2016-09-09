@@ -217,5 +217,10 @@ void vgpu_init_css_ops(struct gpu_ops *gops)
 	gops->css.disable_snapshot = vgpu_css_release_snapshot_buffer;
 	gops->css.check_data_available = vgpu_css_flush_snapshots;
 	gops->css.detach_snapshot = vgpu_css_detach;
+
+	/* Following entries are not used when virtual, NULL them */
+	gops->css.set_handled_snapshots = NULL;
+	gops->css.allocate_perfmon_ids = NULL;
+	gops->css.release_perfmon_ids = NULL;
 }
 #endif /* CONFIG_GK20A_CYCLE_STATS */

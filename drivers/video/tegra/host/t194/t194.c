@@ -180,7 +180,7 @@ struct nvhost_device_data t19_host1xb_info = {
 
 #if defined(CONFIG_TEGRA_GRHOST_NVENC)
 struct nvhost_device_data t19_msenc_info = {
-	.version		= NVHOST_ENCODE_FLCN_VER(6, 1),
+	.version		= NVHOST_ENCODE_FLCN_VER(7, 0),
 	.devfs_name		= "msenc",
 	.class			= NV_VIDEO_ENCODE_NVENC_CLASS_ID,
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVENC},
@@ -235,7 +235,7 @@ struct nvhost_device_data t19_nvdec_info = {
 
 #if defined(CONFIG_TEGRA_GRHOST_NVJPG)
 struct nvhost_device_data t19_nvjpg_info = {
-	.version		= NVHOST_ENCODE_FLCN_VER(1, 1),
+	.version		= NVHOST_ENCODE_FLCN_VER(1, 2),
 	.devfs_name		= "nvjpg",
 	.modulemutexes		= {NV_HOST1X_MLOCK_ID_NVJPG},
 	.class			= NV_NVJPG_CLASS_ID,

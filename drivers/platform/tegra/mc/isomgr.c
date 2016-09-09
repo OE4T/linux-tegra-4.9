@@ -328,51 +328,6 @@ static struct isoclient_info tegra18x_isoclients[] = {
 
 static void isomgr_scatter(int client);
 
-static struct isoclient_info *get_iso_client_info(int *length)
-{
-	enum tegra_chipid cid;
-	struct isoclient_info *cinfo;
-	int len;
-
-	cid = tegra_get_chipid();
-	switch (cid) {
-	case TEGRA_CHIPID_TEGRA11:
-		cinfo = tegra11x_isoclients;
-		len = ARRAY_SIZE(tegra11x_isoclients);
-		iso_bw_percentage = 50;
-		break;
-	case TEGRA_CHIPID_TEGRA14:
-		cinfo = tegra14x_isoclients;
-		len = ARRAY_SIZE(tegra14x_isoclients);
-		iso_bw_percentage = 50;
-		break;
-	case TEGRA_CHIPID_TEGRA12:
-	case TEGRA_CHIPID_TEGRA13:
-		cinfo = tegra12x_isoclients;
-		len = ARRAY_SIZE(tegra12x_isoclients);
-		iso_bw_percentage = 50;
-		break;
-	case TEGRA_CHIPID_TEGRA21:
-		cinfo = tegra21x_isoclients;
-		iso_bw_percentage = 45; /* Hack: Should be determined based on
-					   DRAM type. */
-		len = ARRAY_SIZE(tegra21x_isoclients);
-		break;
-	case TEGRA_CHIPID_TEGRA18:
-		cinfo = tegra18x_isoclients;
-		len = ARRAY_SIZE(tegra18x_isoclients);
-		break;
-	default:
-		cinfo = tegra_null_isoclients;
-		len = 0;
-		break;
-	}
-
-	if (length)
-		*length = len;
-
-	return cinfo;
-}
 
 #define ISOMGR_MAGIC  0x150A1C
 static struct isomgr_client {
@@ -390,6 +345,9 @@ static struct isomgr_client {
 	bool realize;		/* bw realization in progress */
 	s32 sleep_bw;		/* sleeping for realize */
 	s32 margin_bw;		/* BW set aside for this client	(KB/sec) */
+	u8 limit_bw_percentage; /* Insufficient HW buffers cause BW to be
+				 * limited to this percentage of DRAM BW
+				 */
 	void *priv;		/* client driver's private data */
 	struct completion cmpl;	/* so we can sleep waiting for delta BW */
 
@@ -437,6 +395,67 @@ static struct {
 	.avail_bw = CONFIG_TEGRA_ISOMGR_POOL_KB_PER_SEC,
 };
 
+static struct isoclient_info *get_iso_client_info(int *length)
+{
+	enum tegra_chipid cid;
+	struct isoclient_info *cinfo;
+	int i, len;
+
+	cid = tegra_get_chipid();
+	switch (cid) {
+	case TEGRA_CHIPID_TEGRA11:
+		cinfo = tegra11x_isoclients;
+		len = ARRAY_SIZE(tegra11x_isoclients);
+		iso_bw_percentage = 50;
+		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
+			isomgr_clients[i].limit_bw_percentage = 100;
+		break;
+	case TEGRA_CHIPID_TEGRA14:
+		cinfo = tegra14x_isoclients;
+		len = ARRAY_SIZE(tegra14x_isoclients);
+		iso_bw_percentage = 50;
+		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
+			isomgr_clients[i].limit_bw_percentage = 100;
+		break;
+	case TEGRA_CHIPID_TEGRA12:
+	case TEGRA_CHIPID_TEGRA13:
+		cinfo = tegra12x_isoclients;
+		len = ARRAY_SIZE(tegra12x_isoclients);
+		iso_bw_percentage = 50;
+		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
+			isomgr_clients[i].limit_bw_percentage = 100;
+		break;
+	case TEGRA_CHIPID_TEGRA21:
+		cinfo = tegra21x_isoclients;
+		iso_bw_percentage = 45; /* Hack: Should be determined based on
+					 * DRAM type
+					 */
+		len = ARRAY_SIZE(tegra21x_isoclients);
+		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++)
+			isomgr_clients[i].limit_bw_percentage = 100;
+		break;
+	case TEGRA_CHIPID_TEGRA18:
+		cinfo = tegra18x_isoclients;
+		len = ARRAY_SIZE(tegra18x_isoclients);
+		for (i = 0; i < TEGRA_ISO_CLIENT_COUNT; i++) {
+			if ((i == TEGRA_ISO_CLIENT_VI_0) ||
+					(i == TEGRA_ISO_CLIENT_VI_1))
+				isomgr_clients[i].limit_bw_percentage = 10;
+			else
+				isomgr_clients[i].limit_bw_percentage = 100;
+		}
+		break;
+	default:
+		cinfo = tegra_null_isoclients;
+		len = 0;
+		break;
+	}
+
+	if (length)
+		*length = len;
+
+	return cinfo;
+}
 /* get minimum MC frequency for client that can support this BW and LT */
 static inline u32 mc_min_freq(u32 ubw, u32 ult) /* in KB/sec and usec */
 {
@@ -484,6 +503,7 @@ static inline void isomgr_unlock(void)
 static void update_mc_clock(void)
 {
 	int i;
+	u64 floor_freq;
 
 	BUG_ON(mutex_trylock(&isomgr.lock));
 	/* determine worst case freq to satisfy LT */
@@ -516,8 +536,24 @@ static void update_mc_clock(void)
 #ifdef CONFIG_COMMON_CLK
 			if (!isomgr_clients[i].bwmgr_handle)
 				continue;
-
-			if (!tegra_bwmgr_set_emc(isomgr_clients[i].bwmgr_handle,
+			/* Each client's request is limited to
+			 * limit_bw_percentage% of current DRAM BW. A floor
+			 * request is made by each client to hold DRAM freq
+			 * high enough such that
+			 * DRAM_freq > client's req_bw/limit_bw_percentage
+			 */
+			if (isomgr_clients[i].limit_bw_percentage != 100) {
+				floor_freq = (u64)isomgr_clients[i].real_mf
+					* 1000 * 100;
+				floor_freq = floor_freq /
+				(u64)isomgr_clients[i].limit_bw_percentage;
+				tegra_bwmgr_set_emc(
+					isomgr_clients[i].bwmgr_handle,
+					floor_freq,
+					TEGRA_BWMGR_SET_EMC_FLOOR);
+			}
+			if (!tegra_bwmgr_set_emc(
+					isomgr_clients[i].bwmgr_handle,
 					isomgr_clients[i].real_mf * 1000,
 					TEGRA_BWMGR_SET_EMC_SHARED_BW_ISO))
 				isomgr_clients[i].real_mf_rq =
@@ -532,7 +568,8 @@ static void update_mc_clock(void)
 
 			if (isomgr_clients[i].real_mf_rq == 0)
 				clk_enable(isomgr_clients[i].emc_clk);
-			isomgr_clients[i].real_mf_rq = isomgr_clients[i].real_mf;
+			isomgr_clients[i].real_mf_rq =
+				isomgr_clients[i].real_mf;
 			if (isomgr_clients[i].real_mf_rq == 0)
 				clk_disable(isomgr_clients[i].emc_clk);
 #endif
@@ -775,7 +812,8 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 			 u32 ubw, u32 ult)
 {
 	s32 bw = ubw;
-	u32 mf, dvfs_latency = 0;
+	u64 bw_check;
+	u32 mf, max_emc_bw, dvfs_latency = 0;
 	struct isomgr_client *cp = (struct isomgr_client *) handle;
 	int client = cp - &isomgr_clients[0];
 
@@ -797,7 +835,7 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 		goto out;
 
 	if (bw <= cp->margin_bw)
-		goto skip_bw_check;
+		goto bw_limit_check;
 
 	if (unlikely(!cp->renegotiate && bw > cp->dedi_bw))
 		goto out;
@@ -806,7 +844,22 @@ static u32 __tegra_isomgr_reserve(tegra_isomgr_handle handle,
 	    bw > isomgr.avail_bw + cp->real_bw - isomgr.sleep_bw)
 		goto out;
 
-skip_bw_check:
+bw_limit_check:
+	/* During reserve, check if BW request is within limit_bw_percentage%
+	 * of max emc bw. Using max emc bw to find if the request is possible
+	 * when we raise the freq to max possible value. If not, the reserve
+	 * call will fail
+	 */
+#ifdef CONFIG_COMMON_CLK
+	max_emc_bw = bwmgr_freq_to_bw(tegra_bwmgr_get_max_emc_rate() / 1000);
+#else
+	max_emc_bw = tegra_emc_freq_req_to_bw(
+		clk_round_rate(clk_get_parent(isomgr.emc_clk), ULONG_MAX)
+		/ 1000);
+#endif
+	bw_check = ((u64)max_emc_bw * (u64)(cp->limit_bw_percentage) / 100);
+	if (bw > bw_check)
+		goto out;
 	/* Look up MC's min freq that could satisfy requested BW and LT */
 	mf = mc_min_freq(ubw, ult);
 	/* Look up MC's dvfs latency at min freq */
@@ -1314,7 +1367,6 @@ int __init isomgr_init(void)
 
 			atomic_set(&isomgr_clients[c].kref.refcount, 0);
 			init_completion(&isomgr_clients[c].cmpl);
-
 #ifdef CONFIG_COMMON_CLK
 			isomgr_clients[c].bwmgr_handle = tegra_bwmgr_register(
 					isoclient_info[i].bwmgr_id);

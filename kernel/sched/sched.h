@@ -1,4 +1,3 @@
-
 #include <linux/sched.h>
 #include <linux/sched/sysctl.h>
 #include <linux/sched/rt.h>
@@ -406,6 +405,10 @@ struct cfs_rq {
 	unsigned long tg_load_avg_contrib;
 #endif
 	atomic_long_t removed_load_avg, removed_util_avg, removed_util_fast_avg;
+#ifdef CONFIG_TASK_WEIGHT
+	atomic_long_t removed_scaling_avg, removed_scaling_fast_avg;
+#endif
+
 #ifndef CONFIG_64BIT
 	u64 load_last_update_time_copy;
 #endif

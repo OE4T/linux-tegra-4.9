@@ -1339,6 +1339,16 @@ struct sched_avg {
 	u64 last_update_time, load_sum;
 	u32 util_sum, util_fast_sum, period_contrib;
 	unsigned long load_avg, util_avg, util_fast_avg;
+#ifdef CONFIG_TASK_WEIGHT
+	u32 scaling_sum, scaling_fast_sum;
+	unsigned long scaling_avg, scaling_fast_avg;
+	/*
+	 * The weight applied to frequency scaling when this task
+	 * is part of actively requesting PELT frequencies.
+	 * Fixed point with 10 bit fraction.
+	 */
+	unsigned int weight;
+#endif
 };
 
 #ifdef CONFIG_SCHEDSTATS

@@ -203,7 +203,8 @@ struct nvgpu_gpu_characteristics {
 	__u16 pci_subsystem_vendor_id, pci_subsystem_device_id;
 	__u16 pci_class;
 	__u8  pci_revision;
-	__u8  reserved2[5];
+	__u8  vbios_oem_version;
+	__u32 vbios_version;
 
 	/* Notes:
 	   - This struct can be safely appended with new fields. However, always

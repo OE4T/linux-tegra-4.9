@@ -63,11 +63,23 @@ struct bit {
 	u8 header_checksum;
 } __packed;
 
+#define TOKEN_ID_BIOSDATA 0x42
 #define TOKEN_ID_NVINIT_PTRS 0x49
 #define TOKEN_ID_FALCON_DATA 0x70
 #define TOKEN_ID_PERF_PTRS 0x50
 #define TOKEN_ID_CLOCK_PTRS 0x43
 #define TOKEN_ID_VIRT_PTRS 0x56
+
+struct biosdata {
+	u32 version;
+	u8 oem_version;
+	u8 checksum;
+	u16 int15callbackspost;
+	u16 int16callbackssystem;
+	u16 boardid;
+	u16 framecount;
+	u8 biosmoddate[8];
+} __packed;
 
 struct nvinit_ptrs {
 	u16 initscript_table_ptr;
@@ -250,6 +262,19 @@ static int gm206_bios_parse_rom(struct gk20a *g)
 	}
 
 	return 0;
+}
+
+static void gm206_bios_parse_biosdata(struct gk20a *g, int offset)
+{
+	struct biosdata biosdata;
+
+	memcpy(&biosdata, &g->bios.data[offset], sizeof(biosdata));
+	gk20a_dbg_fn("bios version %x, oem version %x",
+			biosdata.version,
+			biosdata.oem_version);
+
+	g->gpu_characteristics.vbios_version = biosdata.version;
+	g->gpu_characteristics.vbios_oem_version = biosdata.oem_version;
 }
 
 static void gm206_bios_parse_nvinit_ptrs(struct gk20a *g, int offset)
@@ -506,6 +531,9 @@ static void gm206_bios_parse_bit(struct gk20a *g, int offset)
 				bit_token.data_size, bit_token.data_version);
 
 		switch (bit_token.token_id) {
+		case TOKEN_ID_BIOSDATA:
+			gm206_bios_parse_biosdata(g, bit_token.data_ptr);
+			break;
 		case TOKEN_ID_NVINIT_PTRS:
 			gm206_bios_parse_nvinit_ptrs(g, bit_token.data_ptr);
 			break;

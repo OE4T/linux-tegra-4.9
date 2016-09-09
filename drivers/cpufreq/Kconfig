@@ -261,6 +261,16 @@ config CPU_FREQ_GOV_SCHEDUTIL
 
 	  If in doubt, say N.
 
+config TASK_WEIGHT
+	bool "task weight controls for schedutil"
+	depends on CPU_FREQ_GOV_SCHEDUTIL
+	default n
+	help
+	  Allows task weight to be set through /proc/task_weight or
+	  /proc/<pid>/weight to modulate frequency selection.
+
+	  If in doubt, say N.
+
 comment "CPU frequency scaling drivers"
 
 config CPUFREQ_DT

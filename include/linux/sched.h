@@ -3609,6 +3609,10 @@ static inline void set_task_cpu(struct task_struct *p, unsigned int cpu)
 
 #endif /* CONFIG_SMP */
 
+#ifdef CONFIG_TASK_WEIGHT
+extern void task_decayed_load(struct task_struct *p, struct sched_avg *avg);
+#endif
+
 extern long sched_setaffinity(pid_t pid, const struct cpumask *new_mask);
 extern long sched_getaffinity(pid_t pid, struct cpumask *mask);
 

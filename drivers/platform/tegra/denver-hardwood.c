@@ -30,6 +30,8 @@
 #include <linux/spinlock.h>
 #include <linux/kthread.h>
 #include <linux/cpu.h>
+#include <linux/of_irq.h>
+#include <linux/platform_device.h>
 
 #include <asm/cacheflush.h>
 #include <asm/cpu.h>
@@ -53,10 +55,9 @@ struct hardwood_buf {
 
 struct hardwood_device {
 	/* device info */
-	int cpu;
+	int cpu, logical_cpu, irq;
 	char name[32];
 	struct miscdevice dev;
-	struct irqaction irq;
 
 	/* sleeping support */
 	int signaled;
@@ -80,7 +81,9 @@ static int minor_map[N_CPU] = { -1 };
 static int TRACER_IRQS[] = { 48, 54 };
 
 /* Single IRQ for all CPUs for V102 onward */
-static int osdump_irq = 54;
+/* From device tree */
+static int osdump_irq;
+static int osdump_virtual_irq;
 
 static u64 osdump_version;
 static bool one_irq_per_cpu;
@@ -137,6 +140,18 @@ static irqreturn_t hardwood_handler(int irq, void *dev_id)
 	return IRQ_HANDLED;
 }
 
+static int hardwood_set_affinity(void) {
+	int i;
+	for(i = 0; i < N_CPU; i++) {
+		if(hardwood_devs[i].irq) {
+			if(irq_force_affinity(hardwood_devs[i].irq,
+				cpumask_of(hardwood_devs[i].logical_cpu)))
+				return -ENOENT;
+		}
+	}
+	return 0;
+}
+
 static int hardwood_open(struct inode *inode, struct file *file)
 {
 	int cpu;
@@ -154,6 +169,9 @@ static int hardwood_open(struct inode *inode, struct file *file)
 			break;
 		}
 	if (!found)
+		return -ENOENT;
+
+	if (hardwood_set_affinity())
 		return -ENOENT;
 
 	/* Lazy init */
@@ -716,11 +734,10 @@ static ssize_t version_show(struct device *dev,
 static DEVICE_ATTR(version, S_IRUGO, version_show, NULL);
 static DEVICE_ATTR(bufsize, S_IRUGO | S_IWUSR, bufsize_show, bufsize_store);
 
-static __init void init_one_cpu(int logical_cpu)
+static void init_one_cpu(int logical_cpu)
 {
 	u32 cmd;
 	struct device *dev;
-	struct irqaction *irq;
 	struct hardwood_device *hdev;
 	int cpu;
 
@@ -731,6 +748,7 @@ static __init void init_one_cpu(int logical_cpu)
 
 	sprintf(hdev->name, "hardwood-%d", cpu);
 	hdev->cpu = cpu;
+	hdev->logical_cpu = logical_cpu;
 
 	init_waitqueue_head(&hdev->wait_q);
 
@@ -761,14 +779,9 @@ static __init void init_one_cpu(int logical_cpu)
 	}
 
 	if (cpu == 0 || osdump_version < OSDUMP_VER_OSDUMP_IRQS) {
-		irq = &hdev->irq;
-		irq->name = hdev->name;
-		irq->flags = 0;
-		irq->handler = hardwood_handler;
-		irq->dev_id = (void *)hdev;
-		irq->irq = TRACER_IRQS[cpu];
-		BUG_ON(setup_irq(irq->irq, irq));
-		WARN_ON(irq_force_affinity(irq->irq, cpumask_of(logical_cpu)));
+		hdev->irq = TRACER_IRQS[cpu];
+		WARN_ON(request_irq(osdump_virtual_irq, hardwood_handler,
+			IRQF_SHARED,hdev->name,(void *)hdev));
 	}
 
 	hdev->buf_status = 0;
@@ -777,7 +790,7 @@ static __init void init_one_cpu(int logical_cpu)
 	spin_lock_init(&hdev->buf_status_lock);
 }
 
-static __init void init_osdump_version(void)
+static void init_osdump_version(void)
 {
 	spin_lock(&hw_lock);
 	hw_run_cmd(HW_CMD(0, 0, HARDWOOD_GET_OSDUMP_VER));
@@ -785,7 +798,7 @@ static __init void init_osdump_version(void)
 	spin_unlock(&hw_lock);
 }
 
-static __init int hardwood_init(void)
+static int hardwood_probe(struct platform_device *pdev)
 {
 	int cpu;
 	struct device *dev;
@@ -798,6 +811,20 @@ static __init int hardwood_init(void)
 	if (hardwood_supported) {
 		init_osdump_version();
 		pr_info("Denver: hardwood version %lld.\n", osdump_version);
+
+		if (osdump_version >= OSDUMP_VER_OSDUMP_IRQS) {
+			int ret;
+			struct of_phandle_args oirq;
+
+			ret = of_irq_parse_one(pdev->dev.of_node, 0, &oirq);
+			if (ret) {
+				dev_err(&pdev->dev, "Could not find IRQ\n");
+				return -EINVAL;
+			}
+
+			osdump_irq = oirq.args[1] + 32;
+			osdump_virtual_irq = platform_get_irq(pdev, 0);
+		}
 
 		for_each_online_cpu(cpu) {
 			/* Only init on Denver CPUs */
@@ -818,4 +845,26 @@ static __init int hardwood_init(void)
 	return 0;
 }
 
-late_initcall(hardwood_init);
+static int hardwood_remove(struct platform_device *pdev)
+{
+	return 0;
+}
+
+static const struct of_device_id hardwood_of_match[] = {
+	{ .compatible = "nvidia,denver-hardwood", },
+	{},
+};
+MODULE_DEVICE_TABLE(of, hardwood_of_match);
+
+static struct platform_driver hardwood_driver = {
+	.probe		= hardwood_probe,
+	.remove		= hardwood_remove,
+	.driver		= {
+			.owner	= THIS_MODULE,
+			.name	= "denver-hardwood",
+			.of_match_table = of_match_ptr(hardwood_of_match),
+	},
+};
+
+
+module_platform_driver(hardwood_driver);

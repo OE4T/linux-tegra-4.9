@@ -3749,6 +3749,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 	u64 ctag = (u64)ctag_offset * (u64)ctag_granularity;
 	u64 iova = 0;
 	u64 space_to_skip = buffer_offset;
+	u64 map_size = gpu_end - gpu_va;
 	u32 page_size  = vm->gmmu_page_sizes[pgsz_idx];
 	int err;
 	struct scatterlist *sgl = NULL;
@@ -3787,6 +3788,7 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 				} else {
 					iova = chunk->base + space_to_skip;
 					length = chunk->length - space_to_skip;
+					length = min(length, map_size);
 					space_to_skip = 0;
 
 					err = update_gmmu_level_locked(vm,
@@ -3799,10 +3801,16 @@ static int update_gmmu_ptes_locked(struct vm_gk20a *vm,
 						cacheable, unmapped_pte,
 						rw_flag, sparse, 0, priv,
 						aperture);
+					if (err)
+						break;
 
 					/* need to set explicit zero here */
 					space_to_skip = 0;
 					gpu_va += length;
+					map_size -= length;
+
+					if (!map_size)
+						break;
 				}
 			}
 		} else {

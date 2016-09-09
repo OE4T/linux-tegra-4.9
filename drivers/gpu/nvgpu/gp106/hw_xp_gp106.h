@@ -47,103 +47,91 @@
  *         comparison with unshifted values appropriate for use in field <y>
  *         of register <x>.
  */
-#ifndef _hw_xve_gp106_h_
-#define _hw_xve_gp106_h_
+#ifndef _hw_xp_gp106_h_
+#define _hw_xp_gp106_h_
 
-static inline u32 xve_rom_ctrl_r(void)
+static inline u32 xp_dl_mgr_r(u32 i)
 {
-	return 0x00000050;
+	return 0x0008b8c0 + i*4;
 }
-static inline u32 xve_rom_ctrl_rom_shadow_f(u32 v)
+static inline u32 xp_dl_mgr_safe_timing_f(u32 v)
 {
-	return (v & 0x1) << 0;
+	return (v & 0x1) << 2;
 }
-static inline u32 xve_rom_ctrl_rom_shadow_disabled_f(void)
+static inline u32 xp_pl_link_config_r(u32 i)
 {
-	return 0x0;
+	return 0x0008c040 + i*4;
 }
-static inline u32 xve_rom_ctrl_rom_shadow_enabled_f(void)
+static inline u32 xp_pl_link_config_ltssm_status_f(u32 v)
 {
-	return 0x1;
+	return (v & 0x1) << 4;
 }
-static inline u32 xve_link_control_status_r(void)
+static inline u32 xp_pl_link_config_ltssm_status_idle_v(void)
 {
-	return 0x00000088;
+	return 0x00000000;
 }
-static inline u32 xve_link_control_status_link_speed_m(void)
+static inline u32 xp_pl_link_config_ltssm_directive_f(u32 v)
 {
-	return 0xf << 16;
+	return (v & 0xf) << 0;
 }
-static inline u32 xve_link_control_status_link_speed_v(u32 r)
+static inline u32 xp_pl_link_config_ltssm_directive_m(void)
 {
-	return (r >> 16) & 0xf;
+	return 0xf << 0;
 }
-static inline u32 xve_link_control_status_link_speed_link_speed_2p5_v(void)
+static inline u32 xp_pl_link_config_ltssm_directive_normal_operations_v(void)
 {
-	return 0x00000001;
+	return 0x00000000;
 }
-static inline u32 xve_link_control_status_link_speed_link_speed_5p0_v(void)
-{
-	return 0x00000002;
-}
-static inline u32 xve_link_control_status_link_speed_link_speed_8p0_v(void)
-{
-	return 0x00000003;
-}
-static inline u32 xve_link_control_status_link_width_m(void)
-{
-	return 0x3f << 20;
-}
-static inline u32 xve_link_control_status_link_width_v(u32 r)
-{
-	return (r >> 20) & 0x3f;
-}
-static inline u32 xve_link_control_status_link_width_x1_v(void)
+static inline u32 xp_pl_link_config_ltssm_directive_change_speed_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 xve_link_control_status_link_width_x2_v(void)
+static inline u32 xp_pl_link_config_max_link_rate_f(u32 v)
+{
+	return (v & 0x3) << 18;
+}
+static inline u32 xp_pl_link_config_max_link_rate_m(void)
+{
+	return 0x3 << 18;
+}
+static inline u32 xp_pl_link_config_max_link_rate_2500_mtps_v(void)
 {
 	return 0x00000002;
 }
-static inline u32 xve_link_control_status_link_width_x4_v(void)
+static inline u32 xp_pl_link_config_max_link_rate_5000_mtps_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 xp_pl_link_config_max_link_rate_8000_mtps_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 xp_pl_link_config_target_tx_width_f(u32 v)
+{
+	return (v & 0x7) << 20;
+}
+static inline u32 xp_pl_link_config_target_tx_width_m(void)
+{
+	return 0x7 << 20;
+}
+static inline u32 xp_pl_link_config_target_tx_width_x1_v(void)
+{
+	return 0x00000007;
+}
+static inline u32 xp_pl_link_config_target_tx_width_x2_v(void)
+{
+	return 0x00000006;
+}
+static inline u32 xp_pl_link_config_target_tx_width_x4_v(void)
+{
+	return 0x00000005;
+}
+static inline u32 xp_pl_link_config_target_tx_width_x8_v(void)
 {
 	return 0x00000004;
 }
-static inline u32 xve_link_control_status_link_width_x8_v(void)
+static inline u32 xp_pl_link_config_target_tx_width_x16_v(void)
 {
-	return 0x00000008;
-}
-static inline u32 xve_link_control_status_link_width_x16_v(void)
-{
-	return 0x00000010;
-}
-static inline u32 xve_priv_xv_r(void)
-{
-	return 0x00000150;
-}
-static inline u32 xve_priv_xv_cya_l0s_enable_f(u32 v)
-{
-	return (v & 0x1) << 7;
-}
-static inline u32 xve_priv_xv_cya_l0s_enable_m(void)
-{
-	return 0x1 << 7;
-}
-static inline u32 xve_priv_xv_cya_l0s_enable_v(u32 r)
-{
-	return (r >> 7) & 0x1;
-}
-static inline u32 xve_priv_xv_cya_l1_enable_f(u32 v)
-{
-	return (v & 0x1) << 8;
-}
-static inline u32 xve_priv_xv_cya_l1_enable_m(void)
-{
-	return 0x1 << 8;
-}
-static inline u32 xve_priv_xv_cya_l1_enable_v(u32 r)
-{
-	return (r >> 8) & 0x1;
+	return 0x00000000;
 }
 #endif

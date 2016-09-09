@@ -11,3 +11,9 @@ config PINCTRL_TEGRA186_PADCTL
 	select GENERIC_PHY
 	select PINCONF
 	select PINMUX
+
+config PINCTRL_TEGRA186_DPAUX
+	bool "NVIDIA Tegra186 DP AUX Pinctrl Driver"
+        depends on ARCH_TEGRA_18x_SOC
+        select PINCONF
+        select PINMUX

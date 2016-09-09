@@ -54,7 +54,7 @@ static const struct gating_desc gp10b_slcg_fb[] = {
 
 /* slcg fifo */
 static const struct gating_desc gp10b_slcg_fifo[] = {
-	{.addr = 0x000026ac, .prod = 0x00000f00, .disable = 0x0001fffe},
+	{.addr = 0x000026ac, .prod = 0x00000f40, .disable = 0x0001fffe},
 };
 
 /* slcg gr */

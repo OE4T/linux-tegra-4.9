@@ -130,12 +130,17 @@ static void remove_completed_waiters(struct list_head *head, u32 sync,
 			}
 		}
 
-		/* CANCELLED->HANDLED or PENDING->REMOVED */
+		/* CANCELLED->HANDLED or PENDING->REMOVED
+		 * Change state to CLEANUP, which will be deferred until
+		 * action handlers are run; add the waiter to the head of the
+		 * queue, so cleanup will precede any real work.
+		 */
 		if ((atomic_inc_return(&waiter->state) == WLS_HANDLED)
 								|| removed) {
 			atomic_set(&waiter->state, WLS_CLEANUP);
-		}
-		list_move_tail(&waiter->list, dest);
+			list_move(&waiter->list, dest);
+		} else
+			list_move_tail(&waiter->list, dest);
 	}
 }
 

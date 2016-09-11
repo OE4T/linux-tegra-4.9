@@ -1,6 +1,6 @@
 /*
  * Copyright (C) 2010 Google, Inc.
- * Copyright (c) 2013, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * Author:
  *	Colin Cross <ccross@android.com>
@@ -26,6 +26,7 @@ struct tegra_fuse;
 
 struct tegra_fuse_info {
 	u32 (*read)(struct tegra_fuse *fuse, unsigned int offset);
+	int (*write)(struct tegra_fuse *fuse, u32 value, unsigned int offset);
 	unsigned int size;
 	unsigned int spare;
 };
@@ -46,6 +47,7 @@ struct tegra_fuse {
 
 	u32 (*read_early)(struct tegra_fuse *fuse, unsigned int offset);
 	u32 (*read)(struct tegra_fuse *fuse, unsigned int offset);
+	int (*write)(struct tegra_fuse *fuse, u32 value, unsigned int offset);
 	const struct tegra_fuse_soc *soc;
 
 	/* APBDMA on Tegra20 */

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -92,10 +92,29 @@ static void __init tegra30_fuse_add_randomness(void)
 	add_device_randomness(randomness, sizeof(randomness));
 }
 
+static int tegra30_fuse_write(struct tegra_fuse *fuse, u32 value,
+	unsigned int offset)
+{
+	int err;
+
+	err = clk_prepare_enable(fuse->clk);
+	if (err < 0) {
+		dev_err(fuse->dev, "failed to enable FUSE clock: %d\n", err);
+		return -EIO;
+	}
+
+	writel(value, fuse->base + FUSE_BEGIN + offset);
+
+	clk_disable_unprepare(fuse->clk);
+
+	return 0;
+}
+
 static void __init tegra30_fuse_init(struct tegra_fuse *fuse)
 {
 	fuse->read_early = tegra30_fuse_read_early;
 	fuse->read = tegra30_fuse_read;
+	fuse->write = tegra30_fuse_write;
 
 	tegra_init_revision();
 	fuse->soc->speedo_init(&tegra_sku_info);
@@ -148,6 +167,7 @@ const struct tegra_fuse_soc tegra124_fuse_soc = {
 #if defined(CONFIG_ARCH_TEGRA_210_SOC)
 static const struct tegra_fuse_info tegra210_fuse_info = {
 	.read = tegra30_fuse_read,
+	.write = tegra30_fuse_write,
 	.size = 0x300,
 	.spare = 0x280,
 };

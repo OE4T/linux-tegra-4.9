@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2013-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2013-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -192,6 +192,15 @@ int tegra_fuse_readl(unsigned long offset, u32 *value)
 	return 0;
 }
 EXPORT_SYMBOL(tegra_fuse_readl);
+
+void tegra_fuse_writel(u32 value, unsigned long offset)
+{
+	if (!fuse->write)
+		return;
+
+	fuse->write(fuse, value, offset);
+}
+EXPORT_SYMBOL(tegra_fuse_writel);
 
 static void tegra_enable_fuse_clk(void __iomem *base)
 {

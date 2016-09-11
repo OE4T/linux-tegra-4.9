@@ -188,7 +188,7 @@ struct nvmap_handle {
 	struct list_head lru;	/* list head to track the lru */
 	struct mutex lock;
 	struct list_head dmabuf_priv;
-	unsigned int ivm_id;
+	u64 ivm_id;
 	int peer;		/* Peer VM number */
 };
 
@@ -408,7 +408,7 @@ struct nvmap_handle_ref *nvmap_duplicate_handle(struct nvmap_client *client,
 					struct nvmap_handle *h, bool skip_val);
 
 struct nvmap_handle_ref *nvmap_try_duplicate_by_ivmid(
-			struct nvmap_client *client, unsigned int ivm_id,
+			struct nvmap_client *client, u64 ivm_id,
 			struct nvmap_heap_block **block);
 
 struct nvmap_handle_ref *nvmap_create_handle_from_fd(

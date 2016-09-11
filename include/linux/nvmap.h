@@ -132,11 +132,24 @@ enum {
 
 struct nvmap_create_handle {
 	union {
-		__u32 id;	/* FromId */
-		__u32 size;	/* CreateHandle */
-		__s32 fd;	/* DmaBufFd or FromFd */
+		struct {
+			union {
+				__u32 size;	/* CreateHandle */
+				__s32 fd;	/* DmaBufFd or FromFd */
+			};
+			__u32 handle;		/* returns nvmap handle */
+		};
+		struct {
+			/* one is input parameter, and other is output parameter
+			 * since its a union please note that input parameter
+			 * will be overwritten once ioctl returns
+			 */
+			union {
+				__u64 ivm_id;	 /* CreateHandle from ivm*/
+				__s32 ivm_handle;/* Get ivm_id from handle */
+			};
+		};
 	};
-	__u32 handle;		/* returns nvmap handle */
 };
 
 struct nvmap_create_handle_from_va {

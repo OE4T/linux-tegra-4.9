@@ -154,7 +154,7 @@ ref_alloc_fail:
 }
 
 struct nvmap_handle_ref *nvmap_try_duplicate_by_ivmid(
-		struct nvmap_client *client, unsigned int ivm_id,
+		struct nvmap_client *client, u64 ivm_id,
 		struct nvmap_heap_block **block)
 {
 	struct nvmap_handle *h = NULL;

@@ -442,7 +442,7 @@ int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg)
 	if (copy_from_user(&op, arg, sizeof(op)))
 		return -EFAULT;
 
-	h = nvmap_handle_get_from_fd(op.handle);
+	h = nvmap_handle_get_from_fd(op.ivm_handle);
 	if (!h)
 		return -EINVAL;
 
@@ -451,7 +451,7 @@ int nvmap_ioctl_get_ivcid(struct file *filp, void __user *arg)
 		return -EFAULT;
 	}
 
-	op.id = h->ivm_id;
+	op.ivm_id = h->ivm_id;
 
 	nvmap_handle_put(h);
 
@@ -502,17 +502,17 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	if (!client)
 		return -ENODEV;
 
-	ref = nvmap_try_duplicate_by_ivmid(client, op.id, &block);
+	ref = nvmap_try_duplicate_by_ivmid(client, op.ivm_id, &block);
 	if (!ref) {
 		/*
 		 * See nvmap_heap_alloc() for encoding details.
 		 */
-		offs = (((unsigned long)op.id &
-			~(NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
+		offs = ((op.ivm_id &
+		       ~((u64)NVMAP_IVM_IVMID_MASK << NVMAP_IVM_IVMID_SHIFT)) >>
 			NVMAP_IVM_LENGTH_WIDTH) << ffs(NVMAP_IVM_ALIGNMENT);
-		size = (op.id &
-			((1 << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
-		peer = (op.id >> NVMAP_IVM_IVMID_SHIFT);
+		size = (op.ivm_id &
+			((1ULL << NVMAP_IVM_LENGTH_WIDTH) - 1)) << PAGE_SHIFT;
+		peer = (op.ivm_id >> NVMAP_IVM_IVMID_SHIFT);
 
 		ref = nvmap_create_handle(client, PAGE_ALIGN(size));
 		if (IS_ERR(ref)) {
@@ -532,7 +532,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 
 		ref->handle->heap_type = NVMAP_HEAP_CARVEOUT_IVM;
 		ref->handle->heap_pgalloc = false;
-		ref->handle->ivm_id = op.id;
+		ref->handle->ivm_id = op.ivm_id;
 		ref->handle->carveout = block;
 		block->handle = ref->handle;
 		mb();
@@ -542,7 +542,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 	}
 
 	fd = nvmap_get_dmabuf_fd(client, ref->handle);
-	op.handle = fd;
+	op.ivm_handle = fd;
 	return nvmap_install_fd(client, ref->handle, fd,
 				arg, &op, sizeof(op), 1);
 }

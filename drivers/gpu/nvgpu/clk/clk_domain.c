@@ -435,6 +435,19 @@ static u32 clkdomainvfsearch_stub(
 	return -EINVAL;
 }
 
+static u32 clkdomaingetfpoints_stub(
+	struct gk20a *g,
+	struct clk_pmupstate *pclk,
+	struct clk_domain *pdomain,
+	u32 *pfpointscount,
+	u16 *pfreqpointsinmhz,
+	u8 rail
+)
+{
+	gk20a_dbg_info("");
+	return -EINVAL;
+}
+
 
 static u32 clk_domain_construct_super(struct gk20a *g,
 				      struct boardobj **ppboardobj,
@@ -460,6 +473,9 @@ static u32 clk_domain_construct_super(struct gk20a *g,
 
 	pdomain->clkdomainclkvfsearch =
 			clkdomainvfsearch_stub;
+
+	pdomain->clkdomainclkgetfpoints =
+			clkdomaingetfpoints_stub;
 
 	pdomain->api_domain = ptmpdomain->api_domain;
 	pdomain->domain = ptmpdomain->domain;
@@ -626,6 +642,70 @@ done:
 	return status;
 }
 
+static u32 clkdomaingetfpoints
+(
+	struct gk20a *g,
+	struct clk_pmupstate *pclk,
+	struct clk_domain *pdomain,
+	u32 *pfpointscount,
+	u16 *pfreqpointsinmhz,
+	u8 rail
+)
+{
+	u32 status = 0;
+	struct clk_domain_3x_master *p3xmaster  =
+		(struct clk_domain_3x_master *)pdomain;
+	struct clk_prog *pprog = NULL;
+	struct clk_prog_1x_master *pprog1xmaster = NULL;
+	u32 fpointscount = 0;
+	u32 remainingcount;
+	u32 totalcount;
+	u16 *freqpointsdata;
+	u8 i;
+
+	gk20a_dbg_info("");
+
+	if (pfpointscount == NULL)
+		return -EINVAL;
+
+	if ((pfreqpointsinmhz == NULL) && (*pfpointscount != 0))
+		return -EINVAL;
+
+	if (pdomain->super.implements(g, &pdomain->super,
+			CTRL_CLK_CLK_DOMAIN_TYPE_3X_SLAVE))
+		return -EINVAL;
+
+	freqpointsdata = pfreqpointsinmhz;
+	totalcount = 0;
+	fpointscount = *pfpointscount;
+	remainingcount = fpointscount;
+	/* Iterate over the set of CLK_PROGs pointed at by this domain.*/
+	for (i = p3xmaster->super.clk_prog_idx_first;
+	     i <= p3xmaster->super.clk_prog_idx_last;
+	     i++) {
+		pprog = CLK_CLK_PROG_GET(pclk, i);
+		pprog1xmaster = (struct clk_prog_1x_master *)pprog;
+		status = pprog1xmaster->getfpoints(g, pclk, pprog1xmaster,
+				&fpointscount, &freqpointsdata, rail);
+		if (status) {
+			*pfpointscount = 0;
+			goto done;
+		}
+		totalcount += fpointscount;
+		if (*pfpointscount) {
+			remainingcount -= fpointscount;
+			fpointscount = remainingcount;
+		} else
+			fpointscount = 0;
+
+	}
+
+	*pfpointscount = totalcount;
+done:
+	gk20a_dbg_info("done status %x", status);
+	return status;
+}
+
 static u32 _clk_domain_pmudatainit_3x_prog(struct gk20a *g,
 					   struct boardobj *board_obj_ptr,
 					   struct nv_pmu_boardobj *ppmudata)
@@ -688,6 +768,9 @@ static u32 clk_domain_construct_3x_prog(struct gk20a *g,
 
 	pdomain->super.super.clkdomainclkvfsearch =
 				clkdomainvfsearch;
+
+	pdomain->super.super.clkdomainclkgetfpoints =
+				clkdomaingetfpoints;
 
 	pdomain->clk_prog_idx_first = ptmpdomain->clk_prog_idx_first;
 	pdomain->clk_prog_idx_last = ptmpdomain->clk_prog_idx_last;

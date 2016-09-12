@@ -32,6 +32,12 @@ typedef u32 vf_lookup(struct gk20a *g, struct clk_pmupstate *pclk,
 			u8 *slave_clk_domain_idx, u16 *pclkmhz,
 			u32 *pvoltuv, u8 rail);
 
+typedef u32 get_fpoints(struct gk20a *g, struct clk_pmupstate *pclk,
+			struct clk_prog_1x_master *p1xmaster,
+			u32 *pfpointscount,
+			u16 **ppfreqpointsinmhz, u8 rail);
+
+
 struct clk_progs {
 	struct boardobjgrp_e255 super;
 	u8 slave_entry_count;
@@ -58,6 +64,7 @@ struct clk_prog_1x_master {
 	union ctrl_clk_clk_prog_1x_master_source_data source_data;
 	vf_flatten *vfflatten;
 	vf_lookup *vflookup;
+	get_fpoints *getfpoints;
 };
 
 struct clk_prog_1x_master_ratio {

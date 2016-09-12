@@ -30,6 +30,7 @@ static u32 devinit_get_clk_prog_table(struct gk20a *g,
 	struct clk_progs *pprogobjs);
 static vf_flatten vfflatten_prog_1x_master;
 static vf_lookup vflookup_prog_1x_master;
+static get_fpoints getfpoints_prog_1x_master;
 
 static u32 _clk_progs_pmudatainit(struct gk20a *g,
 				  struct boardobjgrp *pboardobjgrp,
@@ -607,6 +608,9 @@ static u32 clk_prog_construct_1x_master(struct gk20a *g,
 	pclkprog->vflookup =
 			vflookup_prog_1x_master;
 
+	pclkprog->getfpoints =
+			getfpoints_prog_1x_master;
+
 	pclkprog->p_vf_entries = (struct ctrl_clk_clk_prog_1x_master_vf_entry *)
 		kzalloc(vfsize, GFP_KERNEL);
 
@@ -982,5 +986,62 @@ static u32 vflookup_prog_1x_master
 	*pvoltuv = voltuv;
 	if ((clkmhz == 0) || (voltuv == 0))
 		return -EINVAL;
+	return 0;
+}
+
+static u32 getfpoints_prog_1x_master
+(
+	struct gk20a *g,
+	struct clk_pmupstate *pclk,
+	struct clk_prog_1x_master *p1xmaster,
+	u32 *pfpointscount,
+	u16 **ppfreqpointsinmhz,
+	u8 rail
+)
+{
+
+	struct ctrl_clk_clk_prog_1x_master_vf_entry
+		*pvfentry;
+	struct clk_vf_point *pvfpoint;
+	struct clk_progs *pclkprogobjs;
+	u8 j;
+	u32 fpointscount = 0;
+
+	if (pfpointscount == NULL)
+		return -EINVAL;
+
+	pclkprogobjs = &(pclk->clk_progobjs);
+
+	if (pclkprogobjs->vf_entry_count >
+		CTRL_CLK_CLK_PROG_1X_MASTER_VF_ENTRY_MAX_ENTRIES)
+		return -EINVAL;
+
+	if (rail >= pclkprogobjs->vf_entry_count)
+		return -EINVAL;
+
+	pvfentry =  p1xmaster->p_vf_entries;
+
+	pvfentry = (struct ctrl_clk_clk_prog_1x_master_vf_entry *)(
+			(u8 *)pvfentry +
+			(sizeof(struct ctrl_clk_clk_prog_1x_master_vf_entry) *
+			(rail+1)));
+
+	fpointscount = pvfentry->vf_point_idx_last -
+		pvfentry->vf_point_idx_first + 1;
+
+	/* if pointer for freq data is NULL simply return count */
+	if (*ppfreqpointsinmhz == NULL)
+		goto done;
+
+	if (fpointscount > *pfpointscount)
+		return -ENOMEM;
+	for (j = pvfentry->vf_point_idx_first;
+		j <= pvfentry->vf_point_idx_last; j++) {
+		pvfpoint = CLK_CLK_VF_POINT_GET(pclk, j);
+		**ppfreqpointsinmhz = clkvfpointfreqmhzget(g, pvfpoint);
+		(*ppfreqpointsinmhz)++;
+	}
+done:
+	*pfpointscount = fpointscount;
 	return 0;
 }

@@ -33,6 +33,11 @@ typedef u32 clkproglink(struct gk20a *g, struct clk_pmupstate *pclk,
 typedef u32 clkvfsearch(struct gk20a *g, struct clk_pmupstate *pclk,
 			struct clk_domain *pdomain, u16 *clkmhz,
 			u32 *voltuv, u8 rail);
+
+typedef u32 clkgetfpoints(struct gk20a *g, struct clk_pmupstate *pclk,
+			struct clk_domain *pdomain, u32 *pfpointscount,
+			  u16 *pfreqpointsinmhz, u8 rail);
+
 struct clk_domains {
 	struct boardobjgrp_e32 super;
 	u8 n_num_entries;
@@ -61,6 +66,7 @@ struct clk_domain {
 	u8 usage;
 	clkproglink *clkdomainclkproglink;
 	clkvfsearch *clkdomainclkvfsearch;
+	clkgetfpoints *clkdomainclkgetfpoints;
 };
 
 struct clk_domain_3x {

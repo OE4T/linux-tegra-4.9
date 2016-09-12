@@ -92,5 +92,11 @@ u32 clk_domain_get_f_or_v
 	u16 *pclkmhz,
 	u32 *pvoltuv
 );
+u32 clk_domain_get_f_points(
+	struct gk20a *g,
+	u32 clkapidomain,
+	u32 *fpointscount,
+	u16 *freqpointsinmhz
+);
 
 #endif

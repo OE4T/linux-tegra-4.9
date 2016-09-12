@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -65,7 +65,6 @@ static int eqos_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 	struct eqos_prv_data *pdata =
 	    container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	unsigned long flags;
 	u64 adj;
 	u32 diff, addend;
 	int neg_adj = 0;
@@ -87,11 +86,11 @@ static int eqos_adjust_freq(struct ptp_clock_info *ptp, s32 ppb)
 	diff = div_u64(adj, 1000000000ULL);
 	addend = neg_adj ? (addend - diff) : (addend + diff);
 
-	spin_lock_irqsave(&pdata->ptp_lock, flags);
+	spin_lock(&pdata->ptp_lock);
 
 	hw_if->config_addend(addend);
 
-	spin_unlock_irqrestore(&pdata->ptp_lock, flags);
+	spin_unlock(&pdata->ptp_lock);
 
 	DBGPR_PTP("<--eqos_adjust_freq\n");
 
@@ -117,7 +116,6 @@ static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 	struct eqos_prv_data *pdata =
 	    container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	unsigned long flags;
 	u32 sec, nsec;
 	u32 quotient, reminder;
 	int neg_adj = 0;
@@ -133,11 +131,11 @@ static int eqos_adjust_time(struct ptp_clock_info *ptp, s64 delta)
 	sec = quotient;
 	nsec = reminder;
 
-	spin_lock_irqsave(&pdata->ptp_lock, flags);
+	spin_lock(&pdata->ptp_lock);
 
 	hw_if->adjust_systime(sec, nsec, neg_adj, pdata->one_nsec_accuracy);
 
-	spin_unlock_irqrestore(&pdata->ptp_lock, flags);
+	spin_unlock(&pdata->ptp_lock);
 
 	DBGPR_PTP("<--eqos_adjust_time\n");
 
@@ -165,15 +163,14 @@ static int eqos_get_time(struct ptp_clock_info *ptp, struct timespec *ts)
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	u64 ns;
 	u32 reminder;
-	unsigned long flags;
 
 	DBGPR_PTP("-->eqos_get_time\n");
 
-	spin_lock_irqsave(&pdata->ptp_lock, flags);
+	spin_lock(&pdata->ptp_lock);
 
 	ns = hw_if->get_systime();
 
-	spin_unlock_irqrestore(&pdata->ptp_lock, flags);
+	spin_unlock(&pdata->ptp_lock);
 
 	ts->tv_sec = div_u64_rem(ns, 1000000000ULL, &reminder);
 	ts->tv_nsec = reminder;
@@ -203,16 +200,15 @@ static int eqos_set_time(struct ptp_clock_info *ptp, const struct timespec *ts)
 	struct eqos_prv_data *pdata =
 	    container_of(ptp, struct eqos_prv_data, ptp_clock_ops);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
-	unsigned long flags;
 
 	DBGPR_PTP("-->eqos_set_time: ts->tv_sec = %ld, ts->tv_nsec = %ld\n",
 		ts->tv_sec, ts->tv_nsec);
 
-	spin_lock_irqsave(&pdata->ptp_lock, flags);
+	spin_lock(&pdata->ptp_lock);
 
 	hw_if->init_systime(ts->tv_sec, ts->tv_nsec);
 
-	spin_unlock_irqrestore(&pdata->ptp_lock, flags);
+	spin_unlock(&pdata->ptp_lock);
 
 	DBGPR_PTP("<--eqos_set_time\n");
 

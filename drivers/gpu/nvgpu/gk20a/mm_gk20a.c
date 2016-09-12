@@ -1375,6 +1375,7 @@ static int gk20a_zalloc_gmmu_page_table(struct vm_gk20a *vm,
 	if (err)
 		return err;
 	entry->pgsz = pgsz_idx;
+	entry->mem.skip_wmb = true;
 
 	return err;
 }

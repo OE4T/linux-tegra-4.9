@@ -371,7 +371,7 @@ struct device_node *tegra_primary_panel_get_dt_node(
 		np_panel = of_get_child_by_name(np_primary, "panel-nvidia-sim");
 	}
 
-	if (!np_panel)
+	if (!np_panel && *dc_or_node_names[0])
 		pr_err("Could not find panel for primary node\n");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
@@ -437,7 +437,7 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 		np_panel = of_get_child_by_name(np_secondary, "panel-nvidia-sim");
 	}
 
-	if (!np_panel)
+	if (!np_panel && *dc_or_node_names[1])
 		pr_err("Could not find panel for secondary node\n");
 
 	return of_device_is_available(np_panel) ? np_panel : NULL;
@@ -478,7 +478,7 @@ struct device_node *tegra_tertiary_panel_get_dt_node(
 		np_panel = of_get_child_by_name(np_tertiary, "hdmi-display");
 	}
 
-	if (!np_panel)
+	if (!np_panel && *dc_or_node_names[2])
 		pr_err("Could not find panel for tertiary node\n");
 
 	return (of_device_is_available(np_panel) ? np_panel : NULL);

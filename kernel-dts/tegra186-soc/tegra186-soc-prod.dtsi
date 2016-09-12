@@ -101,7 +101,7 @@
 			};
 			prod-reset {
 				prod = <
-					0x0000100 0x1FFF000E 0x5090028	// SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
+					0x0000100 0x1FFF002E 0x5090028	// SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
 									//				23:16=TAP_VAL	0x9
 									//				05:05=SDR50_TUNING_OVERRIDE	0x1
 									//				03:03=PADPIPE_CLKEN_OVERRIDE	0x1
@@ -120,9 +120,7 @@
 			};
 			autocal-en {
 				prod = <
-					0x00001E4 0x30070000 0x30000000	// SDMMC_AUTO_CAL_CONFIG_0	29:29=AUTO_CAL_ENABLE	0x1
-									//				28:28=AUTO_CAL_SLW_OVERRIDE	0x1
-									//				18:16=AUTO_CAL_STEP	0x0
+					0x00001E4 0x20000000 0x20000000	// SDMMC_AUTO_CAL_CONFIG_0	29:29=AUTO_CAL_ENABLE	0x1
 				>;
 			};
 			autocal-pu-pd-offset-hs533-1v8 {
@@ -170,7 +168,7 @@
 			};
 			prod-reset {
 				prod = <
-					0x0000100 0x1FFF000E 0x5090028	// SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
+					0x0000100 0x1FFF002E 0x5090028	// SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
 									//				23:16=TAP_VAL	0x9
 									//				05:05=SDR50_TUNING_OVERRIDE	0x1
 									//				03:03=PADPIPE_CLKEN_OVERRIDE	0x1
@@ -189,9 +187,7 @@
 			};
 			autocal-en {
 				prod = <
-					0x00001E4 0x30070000 0x30000000	// SDMMC_AUTO_CAL_CONFIG_0	29:29=AUTO_CAL_ENABLE	0x1
-									//				28:28=AUTO_CAL_SLW_OVERRIDE	0x1
-									//				18:16=AUTO_CAL_STEP	0x0
+					0x00001E4 0x20000000 0x20000000	// SDMMC_AUTO_CAL_CONFIG_0	29:29=AUTO_CAL_ENABLE	0x1
 				>;
 			};
 			autocal-pu-pd-offset-default-3v3 {
@@ -236,7 +232,7 @@
 			};
 			prod-reset {
 				prod = <
-					0x0000100 0x1FFF000E 0x5090028	// SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
+					0x0000100 0x1FFF002E 0x5090028	// SDMMC_VENDOR_CLOCK_CNTRL_0	28:24=TRIM_VAL	0x5
 									//				23:16=TAP_VAL	0x9
 									//				05:05=SDR50_TUNING_OVERRIDE	0x1
 									//				03:03=PADPIPE_CLKEN_OVERRIDE	0x1
@@ -255,9 +251,7 @@
 			};
 			autocal-en {
 				prod = <
-					0x00001E4 0x30070000 0x30000000	// SDMMC_AUTO_CAL_CONFIG_0	29:29=AUTO_CAL_ENABLE	0x1
-									//				28:28=AUTO_CAL_SLW_OVERRIDE	0x1
-									//				18:16=AUTO_CAL_STEP	0x0
+					0x00001E4 0x20000000 0x20000000	// SDMMC_AUTO_CAL_CONFIG_0	29:29=AUTO_CAL_ENABLE	0x1
 				>;
 			};
 			autocal-pu-pd-offset-default-3v3 {

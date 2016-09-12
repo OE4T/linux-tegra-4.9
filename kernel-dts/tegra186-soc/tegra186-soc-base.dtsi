@@ -2468,6 +2468,11 @@
 		mboxes = <&aon 2>;
 	};
 
+	hardwood {
+		compatible = "nvidia,denver-hardwood";
+		interrupts = <0 24 0x4>;
+	};
+
 	aondbg {
 		compatible = "nvidia,tegra186-aondbg";
 		mboxes = <&aon 1>;

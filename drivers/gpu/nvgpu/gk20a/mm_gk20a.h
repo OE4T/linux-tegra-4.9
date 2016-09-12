@@ -74,6 +74,7 @@ struct mem_desc {
 	bool user_mem; /* vidmem only */
 	struct gk20a_allocator *allocator; /* vidmem only */
 	struct list_head clear_list_entry; /* vidmem only */
+	bool skip_wmb;
 };
 
 struct mem_desc_sub {

@@ -234,12 +234,6 @@ static inline void pramin_access_batch_wr_n(struct gk20a *g, u32 start,
 		r += sizeof(u32);
 	}
 
-	/*
-	 * Barrier moved here from gk20a_writel in the loop. The writes don't
-	 * have to be ordered.
-	 */
-	wmb();
-
 	*arg = src_u32;
 }
 
@@ -252,12 +246,6 @@ static inline void pramin_access_batch_set(struct gk20a *g, u32 start,
 		writel_relaxed(repeat, g->regs + r);
 		r += sizeof(u32);
 	}
-
-	/*
-	 * Barrier moved here from gk20a_writel in the loop. The writes don't
-	 * have to be ordered.
-	 */
-	wmb();
 }
 
 u32 gk20a_mem_rd32(struct gk20a *g, struct mem_desc *mem, u32 w)
@@ -336,6 +324,8 @@ void gk20a_mem_wr32(struct gk20a *g, struct mem_desc *mem, u32 w, u32 data)
 
 		pramin_access_batched(g, mem, w * sizeof(u32), sizeof(u32),
 				pramin_access_batch_wr_n, &p);
+		if (!mem->skip_wmb)
+			wmb();
 	} else {
 		WARN_ON("Accessing unallocated mem_desc");
 	}
@@ -368,6 +358,8 @@ void gk20a_mem_wr_n(struct gk20a *g, struct mem_desc *mem, u32 offset,
 
 		pramin_access_batched(g, mem, offset, size,
 				pramin_access_batch_wr_n, &src_u32);
+		if (!mem->skip_wmb)
+			wmb();
 	} else {
 		WARN_ON("Accessing unallocated mem_desc");
 	}
@@ -398,6 +390,8 @@ void gk20a_memset(struct gk20a *g, struct mem_desc *mem, u32 offset,
 
 		pramin_access_batched(g, mem, offset, size,
 				pramin_access_batch_set, &p);
+		if (!mem->skip_wmb)
+			wmb();
 	} else {
 		WARN_ON("Accessing unallocated mem_desc");
 	}

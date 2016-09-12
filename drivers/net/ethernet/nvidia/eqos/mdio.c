@@ -30,7 +30,7 @@
  * =========================================================================
  */
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -332,7 +332,6 @@ static void eqos_adjust_link(struct net_device *dev)
 	struct eqos_prv_data *pdata = netdev_priv(dev);
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	struct phy_device *phydev = pdata->phydev;
-	unsigned long flags;
 	int new_state = 0, speed_changed = 0, tx_tristate_disable = 0;
 
 	if (phydev == NULL)
@@ -341,7 +340,7 @@ static void eqos_adjust_link(struct net_device *dev)
 	DBGPR_MDIO("-->eqos_adjust_link. address %d link %d\n", phydev->addr,
 		   phydev->link);
 
-	spin_lock_irqsave(&pdata->lock, flags);
+	spin_lock(&pdata->lock);
 
 	if (phydev->link) {
 		/* Now we make sure that we can be in full duplex mode.
@@ -424,7 +423,7 @@ static void eqos_adjust_link(struct net_device *dev)
 	pdata->eee_enabled = eqos_eee_init(pdata);
 #endif
 
-	spin_unlock_irqrestore(&pdata->lock, flags);
+	spin_unlock(&pdata->lock);
 	if (speed_changed) {
 		hw_if->set_tx_clk_speed(pdata, phydev->speed);
 		/* recalibrate if speed 10 to 100 or 1000mbps */

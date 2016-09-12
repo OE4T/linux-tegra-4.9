@@ -242,7 +242,7 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 
 	if (small_valid) {
 		pde_v[2] |= gmmu_new_dual_pde_address_small_sys_f(pte_addr_small);
-		pde_v[2] |= gk20a_aperture_mask(g, &pte->mem,
+		pde_v[2] |= gk20a_aperture_mask(g, &entry->mem,
 			gmmu_new_dual_pde_aperture_small_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_small_video_memory_f());
 		pde_v[2] |= gmmu_new_dual_pde_vol_small_true_f();
@@ -252,7 +252,7 @@ static int update_gmmu_pde0_locked(struct vm_gk20a *vm,
 	if (big_valid) {
 		pde_v[0] |= gmmu_new_dual_pde_address_big_sys_f(pte_addr_big);
 		pde_v[0] |= gmmu_new_dual_pde_vol_big_true_f();
-		pde_v[0] |= gk20a_aperture_mask(g, &pte->mem,
+		pde_v[0] |= gk20a_aperture_mask(g, &entry->mem,
 			gmmu_new_dual_pde_aperture_big_sys_mem_ncoh_f(),
 			gmmu_new_dual_pde_aperture_big_video_memory_f());
 		pde_v[1] |= pte_addr_big >> 28;

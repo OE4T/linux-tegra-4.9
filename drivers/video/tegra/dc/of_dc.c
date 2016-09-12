@@ -2812,7 +2812,7 @@ struct tegra_dc_platform_data
 
 	vrr_np = of_get_child_by_name(np_target_disp, "vrr-settings");
 	if (!vrr_np || (pdata->default_out->n_modes < 2)) {
-		pr_info("%s: could not find vrr-settings node\n", __func__);
+		pr_debug("%s: could not find vrr-settings node\n", __func__);
 	} else if (pdata->default_out->type != TEGRA_DC_OUT_DSI) {
 		dev_err(&ndev->dev,
 			"vrr-settings specified for a non-DSI head, disregarded\n");
@@ -2871,12 +2871,12 @@ struct tegra_dc_platform_data
 #endif
 		}
 	} else
-		pr_info("%s: nvidia,hdmi-vrr-caps not present\n", __func__);
+		pr_debug("%s: nvidia,hdmi-vrr-caps not present\n", __func__);
 
 	sd_np = of_get_child_by_name(np_target_disp,
 		"smartdimmer");
 	if (!sd_np) {
-		pr_info("%s: could not find SD settings node\n",
+		pr_debug("%s: could not find SD settings node\n",
 			__func__);
 	} else {
 		pdata->default_out->sd_settings =
@@ -2899,7 +2899,7 @@ struct tegra_dc_platform_data
 		"nvdisp-cmu");
 #endif
 	if (!cmu_np) {
-		pr_info("%s: could not find cmu node\n",
+		pr_debug("%s: could not find cmu node\n",
 			__func__);
 	} else {
 		pdata->cmu = devm_kzalloc(&ndev->dev,
@@ -2914,7 +2914,7 @@ struct tegra_dc_platform_data
 		"cmu_adobe_rgb");
 
 	if (!cmu_adbRGB_np) {
-		pr_info("%s: could not find cmu node for adobeRGB\n",
+		pr_debug("%s: could not find cmu node for adobeRGB\n",
 			__func__);
 	} else {
 		pdata->cmu_adbRGB = devm_kzalloc(&ndev->dev,

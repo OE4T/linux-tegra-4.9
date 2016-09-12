@@ -398,6 +398,8 @@ static int nvhost_module_update_rate(struct platform_device *dev, int index)
 			nvhost_emc_bw_to_freq_req(bw_constraint);
 		bw_freq_khz = min(ULONG_MAX / 1000, bw_freq_khz);
 		rate = max(floor_rate, bw_freq_khz * 1000);
+		if (pdata->num_ppc)
+			rate = max(rate, pixelrate / pdata->num_ppc);
 	}
 
 	/* take devfreq rate into account */

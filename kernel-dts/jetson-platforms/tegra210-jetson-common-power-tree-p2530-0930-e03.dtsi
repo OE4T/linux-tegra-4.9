@@ -301,8 +301,8 @@
 	};
 
 	sdhci@700b0200 {
-		vddio_sdmmc-supply = <&max77620_sd3>;
-		vddio_sd_slot-supply = <&vdd_3v3>;
+		vqmmc-supply = <&max77620_sd3>;
+		vmmc-supply = <&vdd_3v3>;
 	};
 
 	sdhci@700b0000 {

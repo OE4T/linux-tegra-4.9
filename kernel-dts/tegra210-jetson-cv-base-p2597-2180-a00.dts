@@ -95,10 +95,6 @@
 		built-in;
 		power-off-rail;
 		status = "okay";
-		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>;
-		clock-names = "sdmmc";
-		resets = <&tegra_car 15>;
-		reset-names = "sdmmc";
 		bus-width = <8>;
 		non-removable;
 	};

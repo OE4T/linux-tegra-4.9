@@ -529,6 +529,14 @@ static void *pmu_allocation_get_fb_addr_v3(
 	return (void *)&pmu_a_ptr->alloc.fb;
 }
 
+u32 pmu_allocation_get_fb_size_v3(
+				struct pmu_gk20a *pmu, void *pmu_alloc_ptr)
+{
+	struct pmu_allocation_v3 *pmu_a_ptr =
+			(struct pmu_allocation_v3 *)pmu_alloc_ptr;
+	return sizeof(pmu_a_ptr->alloc.fb);
+}
+
 static u32 *pmu_allocation_get_dmem_offset_addr_v2(struct pmu_gk20a *pmu,
 	void *pmu_alloc_ptr)
 {
@@ -1526,6 +1534,8 @@ int gk20a_init_pmu(struct pmu_gk20a *pmu)
 			pmu_allocation_set_dmem_offset_v3;
 		g->ops.pmu_ver.pmu_allocation_get_fb_addr =
 				pmu_allocation_get_fb_addr_v3;
+		g->ops.pmu_ver.pmu_allocation_get_fb_size =
+				pmu_allocation_get_fb_size_v3;
 		if(pmu->desc->app_version != APP_VERSION_NV_GPU &&
 			pmu->desc->app_version != APP_VERSION_NV_GPU_1) {
 			g->ops.pmu_ver.get_pmu_init_msg_pmu_queue_params =
@@ -3792,7 +3802,8 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	if (seq->out_mem != NULL) {
 		memset(pv->pmu_allocation_get_fb_addr(pmu,
 			pv->get_pmu_seq_out_a_ptr(seq)), 0x0,
-			pv->get_pmu_allocation_struct_size(pmu));
+			pv->pmu_allocation_get_fb_size(pmu,
+				pv->get_pmu_seq_out_a_ptr(seq)));
 
 		gk20a_pmu_surface_free(g, seq->out_mem);
 		if (seq->out_mem != seq->in_mem)
@@ -3804,10 +3815,12 @@ static int pmu_response_handle(struct pmu_gk20a *pmu,
 	if (seq->in_mem != NULL) {
 		memset(pv->pmu_allocation_get_fb_addr(pmu,
 			pv->get_pmu_seq_in_a_ptr(seq)), 0x0,
-			pv->get_pmu_allocation_struct_size(pmu));
+			pv->pmu_allocation_get_fb_size(pmu,
+				pv->get_pmu_seq_in_a_ptr(seq)));
 
 		gk20a_pmu_surface_free(g, seq->in_mem);
 		kfree(seq->in_mem);
+		seq->in_mem = NULL;
 	}
 
 	if (seq->callback)

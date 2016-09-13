@@ -424,6 +424,8 @@ struct gpu_ops {
 				void *pmu_alloc_ptr, u32 offset);
 		void * (*pmu_allocation_get_fb_addr)(
 				struct pmu_gk20a *pmu, void *pmu_alloc_ptr);
+		u32 (*pmu_allocation_get_fb_size)(
+				struct pmu_gk20a *pmu, void *pmu_alloc_ptr);
 		void (*get_pmu_init_msg_pmu_queue_params)(
 				struct pmu_queue *queue, u32 id,
 				void *pmu_init_msg);

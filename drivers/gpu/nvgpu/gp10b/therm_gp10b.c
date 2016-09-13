@@ -78,28 +78,53 @@ static int gp10b_init_therm_setup_hw(struct gk20a *g)
 	return 0;
 }
 
-static int gp10b_update_therm_gate_ctrl(struct gk20a *g)
+static int gp10b_elcg_init_idle_filters(struct gk20a *g)
 {
-	u32 gate_ctrl;
+	u32 gate_ctrl, idle_filter;
 	u32 engine_id;
 	u32 active_engine_id = 0;
 	struct fifo_gk20a *f = &g->fifo;
 
+	gk20a_dbg_fn("");
+
 	for (engine_id = 0; engine_id < f->num_engines; engine_id++) {
 		active_engine_id = f->active_engines_list[engine_id];
 		gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(active_engine_id));
+
+		if (tegra_platform_is_linsim()) {
+			gate_ctrl = set_field(gate_ctrl,
+				therm_gate_ctrl_eng_delay_after_m(),
+				therm_gate_ctrl_eng_delay_after_f(4));
+		}
+
+		/* 2 * (1 << 9) = 1024 clks */
+		gate_ctrl = set_field(gate_ctrl,
+			therm_gate_ctrl_eng_idle_filt_exp_m(),
+			therm_gate_ctrl_eng_idle_filt_exp_f(9));
+		gate_ctrl = set_field(gate_ctrl,
+			therm_gate_ctrl_eng_idle_filt_mant_m(),
+			therm_gate_ctrl_eng_idle_filt_mant_f(2));
 		gate_ctrl = set_field(gate_ctrl,
 			therm_gate_ctrl_eng_delay_before_m(),
 			therm_gate_ctrl_eng_delay_before_f(4));
 		gk20a_writel(g, therm_gate_ctrl_r(active_engine_id), gate_ctrl);
 	}
 
+	/* default fecs_idle_filter to 0 */
+	idle_filter = gk20a_readl(g, therm_fecs_idle_filter_r());
+	idle_filter &= ~therm_fecs_idle_filter_value_m();
+	gk20a_writel(g, therm_fecs_idle_filter_r(), idle_filter);
+	/* default hubmmu_idle_filter to 0 */
+	idle_filter = gk20a_readl(g, therm_hubmmu_idle_filter_r());
+	idle_filter &= ~therm_hubmmu_idle_filter_value_m();
+	gk20a_writel(g, therm_hubmmu_idle_filter_r(), idle_filter);
+
+	gk20a_dbg_fn("done");
 	return 0;
 }
 
 void gp10b_init_therm_ops(struct gpu_ops *gops)
 {
 	gops->therm.init_therm_setup_hw = gp10b_init_therm_setup_hw;
-	gops->therm.update_therm_gate_ctrl = gp10b_update_therm_gate_ctrl;
-
+	gops->therm.elcg_init_idle_filters = gp10b_elcg_init_idle_filters;
 }

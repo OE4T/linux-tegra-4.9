@@ -45,7 +45,7 @@
  * @brief: Driver functions.
  */
 #include "yheader.h"
-
+#include <linux/brcmphy.h>
 void eqos_enable_eee_mode(struct eqos_prv_data *pdata)
 {
 	struct tx_ring *ptx_ring = NULL;
@@ -363,6 +363,7 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 {
 	struct hw_if_struct *hw_if = &(pdata->hw_if);
 	bool ret = false;
+	int twt_timer = EQOS_DEFAULT_LPI_TWT_TIMER;
 
 	DBGPR_EEE("-->eqos_eee_init\n");
 
@@ -380,9 +381,15 @@ bool eqos_eee_init(struct eqos_prv_data *pdata)
 			pdata->eee_ctrl_timer.expires =
 				EQOS_LPI_TIMER(EQOS_DEFAULT_LPI_TIMER);
 			add_timer(&pdata->eee_ctrl_timer);
-
-			hw_if->set_eee_timer(EQOS_DEFAULT_LPI_LS_TIMER,
-				EQOS_DEFAULT_LPI_TWT_TIMER);
+			if (((pdata->phydev->phy_id & ~0xF) == PHY_ID_BCM89610) ||
+				((pdata->phydev->phy_id & ~0xF) == PHY_ID_BCM50610)) {
+				/* For BRCM PHY set TWT timer to 21usec */
+				twt_timer = 0x15;
+			} else {
+				DBGPR_EEE("Please program corresponding TWT timer value\
+						for non BRCM PHY accordingly \n");
+			}
+			hw_if->set_eee_timer(EQOS_DEFAULT_LPI_LS_TIMER, twt_timer);
 			if (pdata->use_lpi_tx_automate)
 				hw_if->set_lpi_tx_automate();
 		} else {

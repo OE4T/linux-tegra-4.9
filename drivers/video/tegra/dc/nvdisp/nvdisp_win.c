@@ -235,8 +235,8 @@ static int tegra_nvdisp_scaling(struct tegra_dc_win *win)
 	min_width = (dfixed_trunc(win->w) < win->out_w) ?
 		dfixed_trunc(win->w) : win->out_w;
 
-	win_capc = nvdisp_win_read(win, win_precomp_wgrp_capc_r());
-	win_cape = nvdisp_win_read(win, win_precomp_wgrp_cape_r());
+	win_capc = win->precomp_capc;
+	win_cape = win->precomp_cape;
 
 	if (min_width < win_precomp_wgrp_capc_max_pixels_5tap444_v(win_capc)) {
 		nvdisp_win_write(win, win_scaler_input_h_taps_5_f() |
@@ -939,6 +939,15 @@ int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx)
 
 	/* attach window idx */
 	nvdisp_win_write(win, dc->ctrl_num, win_set_control_r());
+
+	/* cache the values of the CAPC and CAPE registers */
+	if (!win->precomp_caps_read) {
+		win->precomp_capc = nvdisp_win_read(win,
+						win_precomp_wgrp_capc_r());
+		win->precomp_cape = nvdisp_win_read(win,
+						win_precomp_wgrp_cape_r());
+		win->precomp_caps_read = true;
+	}
 
 	/* configure some IHUB related settings  */
 	if (enable_blx4)

@@ -2165,8 +2165,8 @@ void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 		 * in_w[i] has 20 bits integer (MSB) and 12 bits
 		 * fractional (LSB)
 		 */
-		win_capc = nvdisp_win_read(win, win_precomp_wgrp_capc_r());
-		win_cape = nvdisp_win_read(win, win_precomp_wgrp_cape_r());
+		win_capc = win->precomp_capc;
+		win_cape = win->precomp_cape;
 		min_width = ((info->in_w[i] >> 12) < info->out_w[i]) ?
 				info->in_w[i] >> 12 : info->out_w[i];
 

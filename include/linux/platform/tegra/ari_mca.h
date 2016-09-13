@@ -61,6 +61,8 @@ enum {
 	MCA_ARI_CMD_RD_PREBOOT_SERR = 0x08,
 };
 
+#define MCA_ARI_SERR_IDX_OFF	6
+
 enum {
 	MCA_ARI_IDX_ASERR0 = 0x00,
 	MCA_ARI_IDX_ASERR1 = 0x01,

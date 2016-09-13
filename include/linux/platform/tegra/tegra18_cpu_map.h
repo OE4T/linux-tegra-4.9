@@ -20,3 +20,9 @@ static inline int tegra18_is_cpu_arm(u8 cpu)
 {
 	return tegra18_logical_to_cluster(cpu) == 1;
 }
+
+static inline int tegra18_logical_to_physical_cpu(u8 cpu)
+{
+	return (tegra18_logical_to_cluster(cpu) << 2) +
+		tegra18_logical_to_cpu(cpu);
+}

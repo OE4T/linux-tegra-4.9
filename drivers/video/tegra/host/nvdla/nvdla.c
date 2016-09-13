@@ -53,33 +53,93 @@
 
 #define ALIGNED_DMA(x) ((x >> 8) & 0xffffffff)
 
+#define CMD_TIMEOUT	5 * USEC_PER_SEC
+
 static DEFINE_DMA_ATTRS(attrs);
 
 int nvhost_nvdla_flcn_isr(struct platform_device *pdev)
 {
-	struct flcn *m = get_flcn(pdev);
+	uint32_t message;
 	uint32_t mailbox0;
+	struct flcn *m = get_flcn(pdev);
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
 
 	/* dump falcon data if debug enabled */
 	mailbox0 = host1x_readl(pdev, flcn_mailbox0_r());
 	nvdla_dbg_reg(pdev, "mailbox0=[0x%x]", mailbox0);
 
-	if (mailbox0 == DLA_DEBUG_PRINT)
+	message = mailbox0 & DLA_RESPONSE_MSG_MASK;
+
+	if (message == DLA_DEBUG_PRINT)
 		dev_info(&pdev->dev, "falcon: %s",
 			 (char *)m->debug_dump_va);
+
+	if ((message == DLA_CMD_COMPLETE ||
+				message == DLA_CMD_ERROR) &&
+				nvdla_dev->waiting) {
+		nvdla_dev->cmd_status =
+				(mailbox0 >> DLA_RESPONSE_ERROR_SHIFT) &
+						DLA_RESPONSE_ERROR_MASK;
+		nvdla_dev->waiting = 0;
+		complete(&nvdla_dev->cmd_completion);
+	}
 
 	return 0;
 }
 
 /* Helper API's */
-void nvdla_send_cmd(struct platform_device *pdev,
-		   uint32_t method_id, uint32_t method_data)
+int nvdla_send_cmd(struct platform_device *pdev,
+		   uint32_t method_id, uint32_t method_data, bool wait)
 {
+	unsigned long timeout;
+	int ret = 0;
+	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
+	struct nvdla_device *nvdla_dev = pdata->private_data;
+
+	mutex_lock(&nvdla_dev->cmd_lock);
+
+	/*
+	 * enable notification for command completion or error if
+	 * wait if required
+	 */
+	if (wait)
+		method_id |= (1 << DLA_INT_ON_COMPLETE_SHIFT) |
+					(1 << DLA_INT_ON_ERROR_SHIFT);
+
+	nvdla_dev->waiting = 1;
+
 	nvdla_dbg_reg(pdev, "method_id=[0x%x]", method_id);
 	host1x_writel(pdev, NV_DLA_THI_METHOD_ID, method_id);
 
 	nvdla_dbg_reg(pdev, "method_data=[0x%x]", method_data);
 	host1x_writel(pdev, NV_DLA_THI_METHOD_DATA, method_data);
+
+	if (!wait) {
+		nvdla_dev->waiting = 0;
+		mutex_unlock(&nvdla_dev->cmd_lock);
+		return 0;
+	}
+
+	timeout = usecs_to_jiffies(CMD_TIMEOUT);
+	if (!wait_for_completion_timeout(&nvdla_dev->cmd_completion, timeout)) {
+		nvdla_dev->waiting = 0;
+		mutex_unlock(&nvdla_dev->cmd_lock);
+		return -ETIMEDOUT;
+	}
+
+	if (nvdla_dev->cmd_status != DLA_ERR_NONE) {
+		nvdla_dbg_err(pdev, "Command %u failed\n", method_id);
+		ret = -EINVAL;
+	}
+
+	/* Reset command status after use for next command */
+	nvdla_dev->cmd_status = DLA_ERR_NONE;
+	nvdla_dev->waiting = 0;
+
+	mutex_unlock(&nvdla_dev->cmd_lock);
+
+	return ret;
 }
 
 static int nvdla_alloc_dump_region(struct platform_device *pdev)
@@ -122,7 +182,7 @@ static int nvdla_alloc_dump_region(struct platform_device *pdev)
 
 	/* pass dump region to falcon */
 	nvdla_send_cmd(pdev, DLA_CMD_SET_REGIONS,
-			       ALIGNED_DMA(region_pa));
+			       ALIGNED_DMA(region_pa), false);
 
 	/* wait for falcon to idle */
 	err = flcn_wait_idle(pdev, &timeout);
@@ -256,6 +316,8 @@ static int nvdla_probe(struct platform_device *pdev)
 	nvdla_dev->pdev = pdev;
 	pdata->pdev = pdev;
 	mutex_init(&pdata->lock);
+	mutex_init(&nvdla_dev->cmd_lock);
+	init_completion(&nvdla_dev->cmd_completion);
 	pdata->private_data = nvdla_dev;
 	platform_set_drvdata(pdev, pdata);
 

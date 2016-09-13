@@ -508,9 +508,6 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 			(1 << DLA_INT_ON_ERROR_SHIFT);
 	method_data = ((task->task_desc_pa >> 8) & 0xffffffff);
 
-	/* submit task to engine */
-	nvdla_send_cmd(pdev, method_id, method_data);
-
 	/* register notifier with fence */
 	err = nvhost_intr_register_notifier(pdev, queue->syncpt_id,
 		task->fence, nvdla_queue_update, queue);
@@ -520,6 +517,11 @@ static int nvdla_queue_submit(struct nvhost_queue *queue, void *in_task)
 	/* Pass fence as through 0th postfences */
 	task->postfences[0].id = queue->syncpt_id;
 	task->postfences[0].fence = task->fence;
+
+	/* submit task to engine */
+	err = nvdla_send_cmd(pdev, method_id, method_data, true);
+	if (err)
+		nvdla_task_syncpt_reset(task->sp, queue->syncpt_id, task->fence);
 
 fail_to_register:
 	mutex_unlock(&queue->list_lock);

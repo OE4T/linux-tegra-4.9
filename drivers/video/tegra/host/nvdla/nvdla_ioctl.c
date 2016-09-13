@@ -118,8 +118,6 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 	DEFINE_DMA_ATTRS(ping_attrs);
 	dma_addr_t ping_pa;
 	u32 *ping_va;
-
-	u32 timeout = FLCN_IDLE_TIMEOUT_DEFAULT * 5;
 	int err = 0;
 
 	/* make sure that device is powered on */
@@ -145,14 +143,11 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 
 	nvdla_dbg_info(pdev, "ping challenge [%d]", *ping_va);
 
-	/* run ping cmd */
-	nvdla_send_cmd(pdev, DLA_CMD_PING, ALIGNED_DMA(ping_pa));
-
-	/* wait for falcon to idle */
-	err = flcn_wait_idle(pdev, &timeout);
-	if (err != 0) {
-		nvdla_dbg_err(pdev, "failed for wait for idle in timeout");
-		goto fail_to_idle;
+	/* send ping cmd */
+	err = nvdla_send_cmd(pdev, DLA_CMD_PING, ALIGNED_DMA(ping_pa), true);
+	if (err) {
+		nvdla_dbg_err(pdev, "failed to send ping command");
+		goto fail_cmd;
 	}
 
 	/* out value should have (in_challenge * 4) */
@@ -165,7 +160,7 @@ static int nvdla_ctrl_ping(struct platform_device *pdev,
 		err = -EINVAL;
 	}
 
-fail_to_idle:
+fail_cmd:
 	if (ping_va)
 		dma_free_attrs(&pdev->dev, DEBUG_BUFFER_SIZE,
 			       ping_va, ping_pa, &attrs);

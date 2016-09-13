@@ -21,6 +21,8 @@
 #ifndef __NVHOST_NVDLA_H__
 #define __NVHOST_NVDLA_H__
 
+#include <linux/completion.h>
+#include <linux/mutex.h>
 #include <linux/nvhost_nvdla_ioctl.h>
 #include "nvhost_buffer.h"
 
@@ -55,6 +57,10 @@
 struct nvdla_device {
 	struct platform_device *pdev;
 	struct nvhost_queue_pool *pool;
+	struct completion cmd_completion;
+	struct mutex cmd_lock;
+	int cmd_status;
+	int waiting;
 	u32 dbg_mask;
 	u32 en_trace;
 };
@@ -155,14 +161,16 @@ int nvhost_nvdla_flcn_isr(struct platform_device *pdev);
  * @pdev		Pointer for platform device
  * @method_id		method id with command and other info
  * @method_data		method data for command
+ * @wait		If set to true then this function waits for command
+ *			complete notification from firmware
  *
- * Return		void
+ * Return		0 on success otherwise negative
  *
  * This function used to send method to falcon embedding different supporting
  * command. This uses THI registers to send method id and method data
  */
-void nvdla_send_cmd(struct platform_device *pdev,
-			uint32_t method_id, uint32_t method_data);
+int nvdla_send_cmd(struct platform_device *pdev,
+			uint32_t method_id, uint32_t method_data, bool wait);
 
 /**
  * nvdla_task_put()	decrease task reference count

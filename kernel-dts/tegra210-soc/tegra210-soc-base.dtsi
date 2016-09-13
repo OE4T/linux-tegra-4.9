@@ -1492,6 +1492,10 @@
 		aux-device-name = "sdhci-tegra.3";
 		iommus = <&smmu TEGRA_SWGROUP_SDMMC4A>;
 		nvidia,runtime-pm-type = <1>;
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>;
+		clock-names = "sdmmc";
+		resets = <&tegra_car 15>;
+		reset-names = "sdmmc";
 		status = "disabled";
 	};
 
@@ -1505,6 +1509,10 @@
 		pad-controllers = <&tegra_pmc TEGRA210_PAD_SDMMC3>;
 		pad-names = "sdmmc";
 		nvidia,runtime-pm-type = <0>;
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>;
+		clock-names = "sdmmc";
+		resets = <&tegra_car 67>;
+		reset-names = "sdmmc";
 		status = "disabled";
 	};
 
@@ -1514,6 +1522,10 @@
 		interrupts = < 0 15 0x04 >;
 		aux-device-name = "sdhci-tegra.1";
 		nvidia,runtime-pm-type = <1>;
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC2>;
+		clock-names = "sdmmc";
+		resets = <&tegra_car 9>;
+		reset-names = "sdmmc";
 		status = "disabled";
 	};
 
@@ -1527,6 +1539,10 @@
 		pad-controllers = <&tegra_pmc TEGRA210_PAD_SDMMC1>;
 		pad-names = "sdmmc";
 		nvidia,runtime-pm-type = <1>;
+		clocks = <&tegra_car TEGRA210_CLK_SDMMC1>;
+		clock-names = "sdmmc";
+		resets = <&tegra_car 14>;
+		reset-names = "sdmmc";
 		status = "disabled";
 	};
 

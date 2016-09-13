@@ -462,7 +462,7 @@ static inline u32 ram_rl_entry_chan_inst_target_f(u32 v)
 {
 	return (v & 0x3) << 4;
 }
-static inline u32 ram_rl_entry_chan_inst_target_target_sys_mem_ncoh_v(void)
+static inline u32 ram_rl_entry_chan_inst_target_sys_mem_ncoh_v(void)
 {
 	return 0x00000003;
 }
@@ -470,19 +470,19 @@ static inline u32 ram_rl_entry_chan_userd_target_f(u32 v)
 {
 	return (v & 0x3) << 6;
 }
-static inline u32 ram_rl_entry_chan_userd_target_target_vid_mem_v(void)
+static inline u32 ram_rl_entry_chan_userd_target_vid_mem_v(void)
 {
 	return 0x00000000;
 }
-static inline u32 ram_rl_entry_chan_userd_target_target_vid_mem_nvlink_coh_v(void)
+static inline u32 ram_rl_entry_chan_userd_target_vid_mem_nvlink_coh_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 ram_rl_entry_chan_userd_target_target_sys_mem_coh_v(void)
+static inline u32 ram_rl_entry_chan_userd_target_sys_mem_coh_v(void)
 {
 	return 0x00000002;
 }
-static inline u32 ram_rl_entry_chan_userd_target_target_sys_mem_ncoh_v(void)
+static inline u32 ram_rl_entry_chan_userd_target_sys_mem_ncoh_v(void)
 {
 	return 0x00000003;
 }
@@ -493,18 +493,6 @@ static inline u32 ram_rl_entry_chan_userd_ptr_lo_f(u32 v)
 static inline u32 ram_rl_entry_chan_userd_ptr_hi_f(u32 v)
 {
 	return (v & 0xffffffff) << 0;
-}
-static inline u32 ram_rl_entry_chan_userd_ptr_hi_entry_chan_inst_ptr_align_shift_v(void)
-{
-	return 0x0000000c;
-}
-static inline u32 ram_rl_entry_chan_userd_ptr_hi_entry_chan_userd_ptr_align_shift_v(void)
-{
-	return 0x00000008;
-}
-static inline u32 ram_rl_entry_chan_userd_ptr_hi_entry_chan_userd_align_shift_v(void)
-{
-	return 0x00000008;
 }
 static inline u32 ram_rl_entry_chid_f(u32 v)
 {
@@ -526,7 +514,7 @@ static inline u32 ram_rl_entry_tsg_timeslice_scale_f(u32 v)
 {
 	return (v & 0xf) << 16;
 }
-static inline u32 ram_rl_entry_tsg_timeslice_scale_entry_tsg_timeslice_scale_3_v(void)
+static inline u32 ram_rl_entry_tsg_timeslice_scale_3_v(void)
 {
 	return 0x00000003;
 }
@@ -534,11 +522,11 @@ static inline u32 ram_rl_entry_tsg_timeslice_timeout_f(u32 v)
 {
 	return (v & 0xff) << 24;
 }
-static inline u32 ram_rl_entry_tsg_timeslice_timeout_entry_tsg_timeslice_timeout_128_v(void)
+static inline u32 ram_rl_entry_tsg_timeslice_timeout_128_v(void)
 {
 	return 0x00000080;
 }
-static inline u32 ram_rl_entry_tsg_timeslice_timeout_entry_tsg_timeslice_timeout_disable_v(void)
+static inline u32 ram_rl_entry_tsg_timeslice_timeout_disable_v(void)
 {
 	return 0x00000000;
 }
@@ -546,20 +534,32 @@ static inline u32 ram_rl_entry_tsg_length_f(u32 v)
 {
 	return (v & 0xff) << 0;
 }
-static inline u32 ram_rl_entry_tsg_length_entry_tsg_length_init_v(void)
+static inline u32 ram_rl_entry_tsg_length_init_v(void)
 {
 	return 0x00000000;
 }
-static inline u32 ram_rl_entry_tsg_length_entry_tsg_length_min_v(void)
+static inline u32 ram_rl_entry_tsg_length_min_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 ram_rl_entry_tsg_length_entry_tsg_length_max_v(void)
+static inline u32 ram_rl_entry_tsg_length_max_v(void)
 {
 	return 0x00000080;
 }
 static inline u32 ram_rl_entry_tsg_tsgid_f(u32 v)
 {
 	return (v & 0xfff) << 0;
+}
+static inline u32 ram_rl_entry_chan_inst_ptr_align_shift_v(void)
+{
+	return 0x0000000c;
+}
+static inline u32 ram_rl_entry_chan_userd_ptr_align_shift_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 ram_rl_entry_chan_userd_align_shift_v(void)
+{
+	return 0x00000008;
 }
 #endif

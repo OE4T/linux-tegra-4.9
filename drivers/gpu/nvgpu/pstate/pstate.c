@@ -234,7 +234,7 @@ static int parse_pstate_entry_5x(struct gk20a *g,
 	memset(pstate, 0, sizeof(struct pstate));
 	pstate->super.type = CTRL_PERF_PSTATE_TYPE_3X;
 	pstate->num = 0x0F - entry->pstate_level;
-	pstate->clklist.clksetinfolistsize = hdr->clock_entry_count;
+	pstate->clklist.num_info = hdr->clock_entry_count;
 
 	gk20a_dbg_info("pstate P%u", pstate->num);
 
@@ -356,4 +356,42 @@ static int pstate_sw_setup(struct gk20a *g)
 	err = parse_pstate_table_5x(g, hdr);
 done:
 	return err;
+}
+
+static struct pstate *pstate_find(struct gk20a *g, u32 num)
+{
+	struct pstates *pstates = &(g->perf_pmu.pstatesobjs);
+	struct pstate *pstate;
+	u8 i;
+
+	gk20a_dbg_info("pstates = %p", pstates);
+
+	BOARDOBJGRP_FOR_EACH(&pstates->super.super,
+			struct pstate *, pstate, i) {
+		gk20a_dbg_info("pstate=%p num=%u (looking for num=%u)",
+				pstate, pstate->num, num);
+		if (pstate->num == num)
+			return pstate;
+	}
+	return NULL;
+}
+
+struct clk_set_info *pstate_get_clk_set_info(struct gk20a *g,
+		u32 pstate_num, enum nv_pmu_clk_clkwhich clkwhich)
+{
+	struct pstate *pstate = pstate_find(g, pstate_num);
+	struct clk_set_info *info;
+	u32 clkidx;
+
+	gk20a_dbg_info("pstate = %p", pstate);
+
+	if (!pstate)
+		return NULL;
+
+	for (clkidx = 0; clkidx < pstate->clklist.num_info; clkidx++) {
+		info = &pstate->clklist.clksetinfo[clkidx];
+		if (info->clkwhich == clkwhich)
+			return info;
+	}
+	return NULL;
 }

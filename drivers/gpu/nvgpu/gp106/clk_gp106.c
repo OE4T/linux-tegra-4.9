@@ -27,6 +27,7 @@
 #include "gk20a/gk20a.h"
 #include "hw_trim_gp106.h"
 #include "clk_gp106.h"
+#include "clk/clk_arb.h"
 
 #define gk20a_dbg_clk(fmt, arg...) \
 	gk20a_dbg(gpu_dbg_clk, fmt, ##arg)

@@ -20,6 +20,10 @@
 
 #define CTRL_PERF_PSTATE_TYPE_3X	0x3
 
+#define CTRL_PERF_PSTATE_P0		0
+#define CTRL_PERF_PSTATE_P5		5
+#define CTRL_PERF_PSTATE_P8		8
+
 #define CLK_SET_INFO_MAX_SIZE		(32)
 
 struct clk_set_info {
@@ -30,7 +34,7 @@ struct clk_set_info {
 };
 
 struct clk_set_info_list {
-	u32 clksetinfolistsize;
+	u32 num_info;
 	struct clk_set_info clksetinfo[CLK_SET_INFO_MAX_SIZE];
 };
 
@@ -47,5 +51,8 @@ struct pstates {
 
 int gk20a_init_pstate_support(struct gk20a *g);
 int gk20a_init_pstate_pmu_support(struct gk20a *g);
+
+struct clk_set_info *pstate_get_clk_set_info(struct gk20a *g, u32 pstate_num,
+		enum nv_pmu_clk_clkwhich clkwhich);
 
 #endif /* __PSTATE_H__ */

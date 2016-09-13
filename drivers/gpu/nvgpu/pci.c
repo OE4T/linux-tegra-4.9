@@ -73,14 +73,16 @@ static struct pci_device_id nvgpu_pci_table[] = {
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
 		.driver_data = NVGPU_PCI_ENABLE_BLCG |
-			       NVGPU_PCI_ENABLE_SLCG,
+			       NVGPU_PCI_ENABLE_SLCG |
+			       NVGPU_PCI_ENABLE_ELCG,
 	},
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c37),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
 		.driver_data = NVGPU_PCI_ENABLE_BLCG |
-			       NVGPU_PCI_ENABLE_SLCG,
+			       NVGPU_PCI_ENABLE_SLCG |
+			       NVGPU_PCI_ENABLE_ELCG,
 	},
 	{}
 };

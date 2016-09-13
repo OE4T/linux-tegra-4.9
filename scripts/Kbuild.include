@@ -420,8 +420,8 @@ _KERNEL_LAST = $(lastword $(subst /, ,$(realpath $(srctree))))
 tegra-base-kernel-path = $(call _TEGRA_REL_PATH)/$(call _KERNEL_LAST)
 tegra-path = $(if  $(wildcard $(srctree)/../$(1)),$(call _TEGRA_REL_PATH)/$(1)/$(2),$(call tegra-base-kernel-path)/$(2))
 
-ifneq ($(NV_SOURCE),)
-tegra-dtstree = $(NV_SOURCE)/hardware/nvidia
+ifneq ($(NV_BUILD_KERNEL_DTS_ROOT),)
+tegra-dtstree = $(NV_BUILD_KERNEL_DTS_ROOT)
 else
 tegra-dtstree = $(srctree)/../../hardware/nvidia
 endif

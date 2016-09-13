@@ -275,14 +275,19 @@ struct device_node *duplicate_single_node(struct device_node *np,
 						    GFP_KERNEL);
 		else
 			new_pp = __of_copy_property(pp, NULL, 0, GFP_KERNEL);
-		if (!new_pp)
+		if (!new_pp) {
+			kfree(dup->full_name);
+			kfree(dup);
 			return NULL;
+		}
 
 		ret = of_add_property(dup, new_pp);
 		if (ret < 0) {
 			pr_err("Prop %s can not be added on node %s\n",
 			       new_pp->name, dup->full_name);
 			free_property(new_pp);
+			kfree(dup->full_name);
+			kfree(dup);
 			return NULL;
 		}
 	}
@@ -307,8 +312,10 @@ struct device_node *get_copy_of_node(struct device_node *np,
 
 	for_each_child_of_node(np, child) {
 		child_dup = get_copy_of_node(child, NULL, dup->full_name, NULL);
-		if (!child_dup)
+		if (!child_dup) {
+			kfree(dup);
 			return NULL;
+		}
 		child_dup->parent = dup;
 		child_dup->sibling = NULL;
 		if (!prev_child)

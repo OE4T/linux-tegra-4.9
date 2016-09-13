@@ -510,6 +510,171 @@ struct nvgpu_gpu_alloc_vidmem_args {
 	};
 };
 
+#define NVGPU_GPU_CLK_DOMAIN_MCLK                                (0x00000010)
+#define NVGPU_GPU_CLK_DOMAIN_GPC2CLK                             (0x00010000)
+
+struct nvgpu_gpu_clk_range {
+
+	/* Flags (not currently used) */
+	__u32 flags;
+
+	/* NVGPU_GPU_CLK_DOMAIN_* */
+	__u32 clk_domain;
+	__u32 min_mhz;
+	__u32 max_mhz;
+};
+
+struct nvgpu_gpu_clk_range_args {
+
+	/* Flags (not currently used) */
+	__u32 flags;
+
+	/* in/out: max number of entries in clk_range_entries buffer. If zero,
+	   NVGPU_GPU_IOCTL_CLK_GET_RANGE will return 0 and max_entries will be
+	   set to the max number of clock domains. If there are more entries
+	   than max_entries, then ioctl will return -EINVAL.
+	*/
+	__u16 max_entries;
+
+	/* out: number of nvgpu_gpu_clk_range entries contained in
+		clk_range_entries */
+	__u16 num_entries;
+
+	/* in: Pointer to clock range entries in the caller's address space.
+	   size must be >= max_entries * sizeof(struct nvgpu_gpu_clk_range)
+	 */
+	__u64 clk_range_entries;
+};
+
+struct nvgpu_gpu_clk_vf_point {
+
+	/* Flags (not currently used) */
+	__u32 flags;
+	__u32 freq_mhz;
+};
+
+struct nvgpu_gpu_clk_vf_points_args {
+
+	/* in: Flags (not currently used) */
+	__u32 flags;
+
+	/* in: NVGPU_GPU_CLK_DOMAIN_* */
+	__u32 clk_domain;
+
+	/* in/out: max number of nvgpu_gpu_clk_vf_point entries in
+	   clk_vf_point_entries.  If max_entries is zero,
+	   NVGPU_GPU_IOCTL_CLK_GET_VF_POINTS will return 0 and max_entries will
+	   be set to the max number of VF entries for this clock domain. If
+	   there are more entries than max_entires, then ioctl will return
+	   -EINVAL.
+	*/
+	__u16 max_entries;
+
+	/* out: Number of nvgpu_gpu_clk_vf_point entries returned in
+	   clk_vf_point_entries. Number of entries might vary depending on
+	   thermal conditions.
+	*/
+	__u16 num_entries;
+
+	__u32 reserved;
+
+	/* in: Pointer to clock VF point entries in the caller's address space.
+	   size must be >= max_entries * sizeof(struct nvgpu_gpu_clk_vf_point).
+	 */
+	__u64 clk_vf_point_entries;
+};
+
+struct nvgpu_gpu_clk_info {
+
+	/* Flags (not currently used) */
+	__u32 flags;
+
+	/* NVGPU_GPU_CLK_DOMAIN_* */
+	__u32 clk_domain;
+
+	/* target clock frequency for the domain in MHz. Should be
+	   specified with a non-zero value in NVGPU_GPU_IOCTL_CLK_SET_INFO.
+	*/
+	__u32 target_mhz;
+
+	/* actual clock frequency for the domain in MHz.  This value
+	   may deviate from the desired target frequency due to PLL constraints.
+	   Not used in NVGPU_GPU_IOCTL_CLK_SET_INFO.
+	 */
+	__u32 actual_mhz;
+};
+
+struct nvgpu_gpu_clk_get_info_args {
+
+	/* in: Flags (not currently used). */
+	__u32 flags;
+
+	__u16 pad0;
+
+	/* in/out: Number of clock info entries contained in clk_info_entries.
+	   If zero, NVGPU_GPU_IOCTL_CLK_GET_INFO will return 0 and
+	   max_entries will be set to number of clock domains. Also,
+	   last_req_nr will be updated, which allows checking if a given
+	   request has completed. If there are more entries than max_entries,
+	   then ioctl will return -EINVAL.
+	 */
+	__u16 num_entries;
+
+	/* in: Pointer to nvgpu_gpu_clk_info entries in the caller's address
+	   space. Buffer size must be at least:
+		num_entries * sizeof(struct nvgpu_gpu_clk_info)
+	   For each entry, the clk_domain to be queried should be set. Note
+	   that clk_info_entries passed to an NVGPU_GPU_IOCTL_CLK_SET_INFO,
+	   can be re-used on completion for a NVGPU_GPU_IOCTL_CLK_GET_INFO.
+	   This allows checking actual_mhz.
+	 */
+	__u64 clk_info_entries;
+
+	__u32 pad1;
+
+	/* out: sequence number of last processed request. sequence numbers
+	   are per-user.
+	*/
+	__u32 last_req_nr;
+};
+
+struct nvgpu_gpu_clk_set_info_args {
+
+	/* in: Flags (not currently used). */
+	__u32 flags;
+
+	__u16 pad0;
+
+	/* Number of clock info entries contained in clk_info_entries.
+	   Must be > 0.
+	 */
+	__u16 num_entries;
+
+	/* Pointer to clock info entries in the caller's address space. Buffer
+	   size must be at least
+		num_entries * sizeof(struct nvgpu_gpu_clk_info)
+	 */
+	__u64 clk_info_entries;
+
+	/* out: File descriptor for completions and event notifications.
+	   If application does not close this fd after completion, then the
+	   same fd will be returned for subsequent request (recommended).
+	 */
+	int fd;
+
+	/* out: sequence number for this request. In order to determine that
+	   a request has completed, an application should check this sequence
+	   number against last_req_nr from NVGPU_GPU_IOCTL_CLK_GET_INFO, using
+	   nvgpu_clk_req_complete(req_nr, last_req_nr);
+	*/
+	__u32 req_nr;
+};
+
+static inline int nvgpu_clk_req_complete(__u32 req_nr, __u32 last_req_nr)
+{
+	return ((long)(last_req_nr - req_nr) >= 0);
+}
+
 struct nvgpu_gpu_get_memory_state_args {
 	/*
 	 * Current free space for this device; may change even when any
@@ -596,6 +761,14 @@ struct nvgpu_gpu_get_fbp_l2_masks_args {
 #define NVGPU_GPU_IOCTL_ALLOC_VIDMEM \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 27, \
 			struct nvgpu_gpu_alloc_vidmem_args)
+#define NVGPU_GPU_IOCTL_CLK_GET_RANGE \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 28, struct nvgpu_gpu_clk_range_args)
+#define NVGPU_GPU_IOCTL_CLK_GET_VF_POINTS \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 29, struct nvgpu_gpu_clk_vf_points_args)
+#define NVGPU_GPU_IOCTL_CLK_GET_INFO \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 30, struct nvgpu_gpu_clk_get_info_args)
+#define NVGPU_GPU_IOCTL_CLK_SET_INFO \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 31, struct nvgpu_gpu_clk_set_info_args)
 #define NVGPU_GPU_IOCTL_GET_MEMORY_STATE \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 33, \
 			struct nvgpu_gpu_get_memory_state_args)

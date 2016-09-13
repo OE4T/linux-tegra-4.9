@@ -56,6 +56,7 @@ struct acr_desc;
 #include "gm206/bios_gm206.h"
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "clk/clk.h"
+#include "clk/clk_arb.h"
 #include "perf/perf.h"
 #include "pmgr/pmgr.h"
 #include "therm/thrm.h"
@@ -632,6 +633,13 @@ struct gpu_ops {
 		int (*suspend_clk_support)(struct gk20a *g);
 		u32 (*get_crystal_clk_hz)(struct gk20a *g);
 	} clk;
+	struct {
+		u32 (*get_arbiter_clk_domains)(struct gk20a *g);
+		int (*get_arbiter_clk_range)(struct gk20a *g, u32 api_domain,
+				u16 *min_mhz, u16 *max_mhz);
+		int (*get_arbiter_clk_default)(struct gk20a *g, u32 api_domain,
+				u16 *default_mhz);
+	} clk_arb;
 	bool privsecurity;
 	bool securegpccs;
 	bool pmupstate;
@@ -955,6 +963,8 @@ struct gk20a {
 
 	struct nvgpu_bios bios;
 	struct debugfs_blob_wrapper bios_blob;
+
+	struct nvgpu_clk_arb *clk_arb;
 
 	struct gk20a_ce_app ce_app;
 

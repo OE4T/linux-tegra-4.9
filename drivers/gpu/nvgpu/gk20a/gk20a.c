@@ -974,6 +974,12 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 	}
 #endif
 
+	err = nvgpu_clk_arb_init_arbiter(g);
+	if (err) {
+		gk20a_err(dev, "failed to init clk arb");
+		goto done;
+	}
+
 	if (g->ops.pmu.is_pmu_supported(g)) {
 		err = gk20a_init_pmu_support(g);
 		if (err) {
@@ -1643,6 +1649,8 @@ static int __exit gk20a_remove(struct platform_device *pdev)
 
 	if (platform->has_ce)
 		gk20a_ce_destroy(g);
+
+	nvgpu_clk_arb_cleanup_arbiter(g);
 
 	gk20a_user_deinit(dev, &nvgpu_class);
 

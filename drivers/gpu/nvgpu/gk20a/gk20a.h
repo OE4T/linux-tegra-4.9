@@ -576,7 +576,7 @@ struct gpu_ops {
 	} mm;
 	struct {
 		int (*init_therm_setup_hw)(struct gk20a *g);
-		int (*update_therm_gate_ctrl)(struct gk20a *g);
+		int (*elcg_init_idle_filters)(struct gk20a *g);
 		void (*therm_debugfs_init)(struct gk20a *g);
 	} therm;
 	struct {

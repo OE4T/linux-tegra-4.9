@@ -17,7 +17,10 @@
 #define THERM_GK20A_H
 
 struct gpu_ops;
+struct gk20a;
+
 void gk20a_init_therm_ops(struct gpu_ops *gops);
+int gk20a_elcg_init_idle_filters(struct gk20a *g);
 
 int gk20a_init_therm_support(struct gk20a *g);
 #endif /* THERM_GK20A_H */

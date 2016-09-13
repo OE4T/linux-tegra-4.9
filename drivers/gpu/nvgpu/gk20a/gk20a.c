@@ -941,6 +941,9 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+	if (g->ops.therm.elcg_init_idle_filters)
+		g->ops.therm.elcg_init_idle_filters(g);
+
 	g->ops.mc.intr_enable(g);
 
 	err = gk20a_enable_gr_hw(g);

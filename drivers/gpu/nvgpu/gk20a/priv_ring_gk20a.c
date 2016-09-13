@@ -42,9 +42,6 @@ void gk20a_reset_priv_ring(struct gk20a *g)
 
 	gk20a_readl(g, pri_ringstation_sys_decode_config_r());
 
-	if (g->ops.therm.update_therm_gate_ctrl)
-		g->ops.therm.update_therm_gate_ctrl(g);
-
 }
 
 void gk20a_priv_ring_isr(struct gk20a *g)

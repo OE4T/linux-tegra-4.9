@@ -4232,8 +4232,7 @@ void gr_gk20a_init_blcg_mode(struct gk20a *g, u32 mode, u32 engine)
 
 void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 {
-	u32 gate_ctrl, idle_filter;
-	struct gk20a_platform *platform = dev_get_drvdata(g->dev);
+	u32 gate_ctrl;
 
 	gate_ctrl = gk20a_readl(g, therm_gate_ctrl_r(engine));
 
@@ -4262,29 +4261,7 @@ void gr_gk20a_init_elcg_mode(struct gk20a *g, u32 mode, u32 engine)
 			"invalid elcg mode %d", mode);
 	}
 
-	if (platform->is_fmodel) {
-		gate_ctrl = set_field(gate_ctrl,
-			therm_gate_ctrl_eng_delay_after_m(),
-			therm_gate_ctrl_eng_delay_after_f(4));
-	}
-
-	/* 2 * (1 << 9) = 1024 clks */
-	gate_ctrl = set_field(gate_ctrl,
-		therm_gate_ctrl_eng_idle_filt_exp_m(),
-		therm_gate_ctrl_eng_idle_filt_exp_f(9));
-	gate_ctrl = set_field(gate_ctrl,
-		therm_gate_ctrl_eng_idle_filt_mant_m(),
-		therm_gate_ctrl_eng_idle_filt_mant_f(2));
 	gk20a_writel(g, therm_gate_ctrl_r(engine), gate_ctrl);
-
-	/* default fecs_idle_filter to 0 */
-	idle_filter = gk20a_readl(g, therm_fecs_idle_filter_r());
-	idle_filter &= ~therm_fecs_idle_filter_value_m();
-	gk20a_writel(g, therm_fecs_idle_filter_r(), idle_filter);
-	/* default hubmmu_idle_filter to 0 */
-	idle_filter = gk20a_readl(g, therm_hubmmu_idle_filter_r());
-	idle_filter &= ~therm_hubmmu_idle_filter_value_m();
-	gk20a_writel(g, therm_hubmmu_idle_filter_r(), idle_filter);
 }
 
 void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config)

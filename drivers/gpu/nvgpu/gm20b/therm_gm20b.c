@@ -69,5 +69,5 @@ static int gm20b_init_therm_setup_hw(struct gk20a *g)
 void gm20b_init_therm_ops(struct gpu_ops *gops)
 {
 	gops->therm.init_therm_setup_hw = gm20b_init_therm_setup_hw;
-
+	gops->therm.elcg_init_idle_filters = gk20a_elcg_init_idle_filters;
 }

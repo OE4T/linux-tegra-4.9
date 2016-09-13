@@ -41,24 +41,6 @@
 #define NVHOST_VI_RESET_CHANNEL \
 	_IOW(NVHOST_VI_IOCTL_MAGIC, 15, struct tegra_vi4_syncpts_req)
 
-struct vi_notify_channel {
-	struct vi_notify_dev *vnd;
-	atomic_t ign_mask;
-
-	wait_queue_head_t readq;
-	struct mutex read_lock;
-	struct rcu_head rcu;
-
-	atomic_t overruns;
-	atomic_t errors;
-	atomic_t report;
-	DECLARE_KFIFO(fifo, struct vi_notify_msg, 128);
-	struct vi_capture_status status;
-
-	vi_notify_status_callback notify_cb;
-	vi_notify_error_callback error_cb;
-};
-
 struct vi_notify_dev {
 	struct vi_notify_driver *driver;
 	struct device *device;

@@ -70,12 +70,29 @@ void vi_notify_unregister(struct vi_notify_driver *, struct device *);
 typedef void (*vi_notify_status_callback)(const struct vi_capture_status *);
 typedef void (*vi_notify_error_callback)(void);
 
-struct vi_notify_channel;
 struct tegra_vi4_syncpts_req {
 	u32 syncpt_ids[3];
 	u8 stream;
 	u8 vc;
 	u16 pad;
+};
+
+struct vi_notify_channel {
+	struct vi_notify_dev *vnd;
+	atomic_t ign_mask;
+
+	wait_queue_head_t readq;
+	struct mutex read_lock;
+	struct rcu_head rcu;
+
+	atomic_t overruns;
+	atomic_t errors;
+	atomic_t report;
+	DECLARE_KFIFO(fifo, struct vi_notify_msg, 128);
+	struct vi_capture_status status;
+
+	vi_notify_status_callback notify_cb;
+	vi_notify_error_callback error_cb;
 };
 
 /* internal vi_notify_channel API for kernel vi-mode driver */

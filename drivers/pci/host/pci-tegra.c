@@ -716,7 +716,7 @@ static int tegra_pcie_read_conf(struct pci_bus *bus, unsigned int devfn,
 
 	dn_dev = bus->self;
 
-	if (!dn_dev || !pcie)
+	if (!dn_dev || !pcie || (bus->number > 1))
 		goto skip_ep_check;
 
 	rp = PCI_SLOT(dn_dev->devfn);
@@ -754,7 +754,7 @@ static int tegra_pcie_write_conf(struct pci_bus *bus, unsigned int devfn,
 	struct pci_dev *dn_dev;
 
 	dn_dev = bus->self;
-	if (!dn_dev || !pcie)
+	if (!dn_dev || !pcie || (bus->number > 1))
 		goto skip_ep_check;
 	rp = PCI_SLOT(dn_dev->devfn);
 

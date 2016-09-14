@@ -502,12 +502,18 @@ static inline void *convert_to_instance1(volatile void __iomem *virt_addr)
 	       smmu_handle->base1 + (virt_addr - smmu_handle->base) : NULL;
 }
 
+static inline void writel_single(u32 val, volatile void __iomem *virt_addr)
+{
+	writel(val, virt_addr);
+}
+
+#define INST1 convert_to_instance1
 #define WRITEL_FN(fn, call, type) \
 static inline void fn(type val, volatile void __iomem *virt_addr) \
 { \
 	volatile void __iomem *virt_addr2; \
 	call(val, virt_addr); \
-	virt_addr2 = convert_to_instance1(virt_addr); \
+	virt_addr2 = INST1(virt_addr); \
 	if (virt_addr2) \
 		call(val, virt_addr2); \
 }
@@ -848,11 +854,13 @@ static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
 {
 	int count = 0;
 	void __iomem *gr0_base = ARM_SMMU_GR0(smmu);
+	bool sec_inst = true;
 
 	if (tegra_platform_is_sim() || arm_smmu_gr0_tlbiallnsnh)
 		writel_relaxed(0, gr0_base + ARM_SMMU_GR0_TLBIALLNSNH);
 
 	writel_relaxed(0, gr0_base + ARM_SMMU_GR0_sTLBGSYNC);
+repeat:
 	while (readl_relaxed(gr0_base + ARM_SMMU_GR0_sTLBGSTATUS)
 	       & sTLBGSTATUS_GSACTIVE) {
 		cpu_relax();
@@ -862,6 +870,13 @@ static void arm_smmu_tlb_sync(struct arm_smmu_device *smmu)
 			return;
 		}
 		udelay(1);
+	}
+
+	if (sec_inst) {
+		sec_inst = false;
+		gr0_base = INST1(gr0_base);
+		if (gr0_base)
+			goto repeat;
 	}
 }
 
@@ -945,7 +960,8 @@ static void arm_smmu_tlb_inv_range(struct arm_smmu_domain *smmu_domain,
 			iova_orig, size);
 }
 
-static irqreturn_t __arm_smmu_context_fault(int irq, void *dev)
+static irqreturn_t __arm_smmu_context_fault(int irq, void *dev,
+				void __iomem *cb_base, void __iomem *gr1_base)
 {
 	int flags, ret, sid;
 	u32 fsr, far, fsynr, fsynra, resume;
@@ -954,9 +970,8 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev)
 	struct arm_smmu_domain *smmu_domain = to_smmu_domain(domain);
 	struct arm_smmu_cfg *cfg = &smmu_domain->cfg;
 	struct arm_smmu_device *smmu = smmu_domain->smmu;
-	void __iomem *cb_base;
 
-	cb_base = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, cfg->cbndx);
+	cb_base = cb_base + ARM_SMMU_CB(smmu, cfg->cbndx);
 	fsr = readl_relaxed(cb_base + ARM_SMMU_CB_FSR);
 
 	if (!(fsr & FSR_FAULT))
@@ -968,8 +983,7 @@ static irqreturn_t __arm_smmu_context_fault(int irq, void *dev)
 				    fsr);
 
 	fsynr = readl_relaxed(cb_base + ARM_SMMU_CB_FSYNR0);
-	fsynra = readl_relaxed(ARM_SMMU_GR1(smmu) +
-			       ARM_SMMU_GR1_FRSYNRA(cfg->cbndx));
+	fsynra = readl_relaxed(gr1_base + ARM_SMMU_GR1_FRSYNRA(cfg->cbndx));
 	flags = fsynr & FSYNR0_WNR ? IOMMU_FAULT_WRITE : IOMMU_FAULT_READ;
 
 	far = readl_relaxed(cb_base + ARM_SMMU_CB_FAR_LO);
@@ -1011,12 +1025,17 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 	struct arm_smmu_device *smmu = dev;
 
 	for (i = 0; i < smmu->num_context_banks; i++) {
-		void __iomem *cb_base;
+		void __iomem *cb_base, *gr1;
 		struct iommu_domain *domain;
-		u32 fsr;
+		u32 fsr, fsr_offset;
+		bool sec_inst = true;
 
-		cb_base = ARM_SMMU_CB_BASE(smmu) + ARM_SMMU_CB(smmu, i);
-		fsr = readl_relaxed(cb_base + ARM_SMMU_CB_FSR);
+		cb_base = ARM_SMMU_CB_BASE(smmu);
+		fsr_offset = ARM_SMMU_CB(smmu, i) + ARM_SMMU_CB_FSR;
+		gr1 = ARM_SMMU_GR1(smmu);
+
+repeat:
+		fsr = readl_relaxed(cb_base + fsr_offset);
 		if (fsr & FSR_FAULT) {
 			domain = iommu_domains[i];
 			if (!domain) {
@@ -1024,43 +1043,77 @@ static irqreturn_t arm_smmu_context_fault(int irq, void *dev)
 				       __func__, i);
 				continue;
 			}
-			__arm_smmu_context_fault(irq, domain);
+			__arm_smmu_context_fault(irq, domain, cb_base, gr1);
 			return IRQ_HANDLED;
+		}
+
+		if (sec_inst && smmu->base1) {
+			sec_inst = false;
+			cb_base = INST1(cb_base);
+			gr1 = INST1(gr1);
+			goto repeat;
 		}
 	}
 	return IRQ_NONE;
 }
 
-static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
+static void arm_smmu_global_fault_printinfo(struct arm_smmu_device *smmu,
+				void __iomem *gr0_base, char *str)
 {
 	u32 gfsr, gfsynr0, gfsynr1, gfsynr2;
-	struct arm_smmu_device *smmu = dev;
-	void __iomem *gr0_base = ARM_SMMU_GR0_NS(smmu);
 
 	gfsr = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSR);
 	gfsynr0 = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSYNR0);
 	gfsynr1 = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSYNR1);
 	gfsynr2 = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSYNR2);
 
-	if (!gfsr) {
-		int ret;
-
-		ret = arm_smmu_context_fault(irq, dev);
-		if (ret == IRQ_HANDLED)
-			return ret;
-	}
-
 	dev_err_ratelimited(smmu->dev,
-		"Unexpected {global,context} fault, this could be serious\n");
+		"%s: Unexpected {global,context} fault, this could be serious\n", str);
 	dev_err_ratelimited(smmu->dev,
 		"\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
 		gfsr, gfsynr0, gfsynr1, gfsynr2);
 
-	trace_printk("Unexpected {global,context} fault, this could be serious\n");
+	trace_printk("%s: Unexpected {global,context} fault, this could be serious\n", str);
 	trace_printk("\tGFSR 0x%08x, GFSYNR0 0x%08x, GFSYNR1 0x%08x, GFSYNR2 0x%08x\n",
 		gfsr, gfsynr0, gfsynr1, gfsynr2);
 
 	writel(gfsr, gr0_base + ARM_SMMU_GR0_sGFSR);
+}
+
+static irqreturn_t arm_smmu_global_fault(int irq, void *dev)
+{
+	u32 gfsr;
+	struct arm_smmu_device *smmu = dev;
+	void __iomem *cb_base = ARM_SMMU_CB_BASE(smmu);
+	void __iomem *gr0_base = ARM_SMMU_GR0_NS(smmu);
+	bool sec_inst = true;
+
+repeat:
+	gfsr = readl_relaxed(gr0_base + ARM_SMMU_GR0_sGFSR);
+
+	if (!gfsr) {
+		int ret;
+
+		ret = __arm_smmu_context_fault(irq, dev, gr0_base, cb_base);
+		if (ret == IRQ_HANDLED)
+			return ret;
+	}
+
+	if (sec_inst && smmu->base1) {
+		sec_inst = false;
+		gr0_base = INST1(gr0_base);
+		cb_base = INST1(cb_base);
+		goto repeat;
+	}
+
+	gr0_base = ARM_SMMU_GR0_NS(smmu);
+	arm_smmu_global_fault_printinfo(smmu, gr0_base, "SMMU0");
+
+	if (smmu->base1) {
+		gr0_base = INST1(gr0_base);
+		arm_smmu_global_fault_printinfo(smmu, gr0_base, "SMMU1");
+	}
+
 	return IRQ_HANDLED;
 }
 
@@ -2482,7 +2535,14 @@ static void arm_smmu_device_reset(struct arm_smmu_device *smmu)
 
 	/* clear global FSR */
 	reg = readl_relaxed(ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sGFSR);
-	writel(reg, ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sGFSR);
+	writel_single(reg, ARM_SMMU_GR0_NS(smmu) + ARM_SMMU_GR0_sGFSR);
+
+	if (smmu->base1) {
+		reg = readl_relaxed(INST1(ARM_SMMU_GR0_NS(smmu)) +
+					ARM_SMMU_GR0_sGFSR);
+		writel_single(reg, INST1(ARM_SMMU_GR0_NS(smmu)) +
+					ARM_SMMU_GR0_sGFSR);
+	}
 
 	/* Mark all SMRn as invalid and all S2CRn as bypass */
 	for (i = 0; i < smmu->num_mapping_groups; ++i) {
@@ -3114,7 +3174,13 @@ static int arm_smmu_device_dt_probe(struct platform_device *pdev)
 	smmu->base = devm_ioremap_resource(dev, res);
 	if (IS_ERR(smmu->base))
 		return PTR_ERR(smmu->base);
+
 	smmu->size = resource_size(res);
+
+	res = platform_get_resource(pdev, IORESOURCE_MEM, 1);
+	smmu->base1 = devm_ioremap_resource(dev, res);
+	if (IS_ERR(smmu->base1))
+		smmu->base1 = NULL;
 
 	if (of_property_read_u32(dev->of_node, "#global-interrupts",
 				 &smmu->num_global_irqs)) {

@@ -95,6 +95,48 @@ void *dma_buf_get_drvdata(struct dma_buf *dmabuf, struct device *device)
 }
 EXPORT_SYMBOL(dma_buf_get_drvdata);
 
+/*
+ * once this flag is set, no device
+ * should be able to disable its lazy unmapping feature.
+ * Using this flag avoids unnecessary complex ref counting
+ * and locking that could make the lazy unmapping feature
+ * complex.
+ */
+static bool dmabuf_stop_disabling_lazy_unmapping;
+
+void devm_dma_buf_release(struct device *dev, void *res)
+{
+	/* noop */
+}
+
+/**
+ * dma_buf_disable_lazy_unmapping - Set device specific data to disable
+ * lazy unmapping for that specific device. Once disabled, lazy unmapping
+ * cannot be enabled again.
+ *
+ * @device	[in]	Device for which the lazy unmapping need to be
+ *			disabled.
+ */
+int dma_buf_disable_lazy_unmapping(struct device *device)
+{
+	void *data;
+
+	if (!IS_ENABLED(CONFIG_DMABUF_DEFERRED_UNMAPPING))
+		return 0;
+
+	if (dmabuf_stop_disabling_lazy_unmapping)
+		return -EINVAL;
+
+	data = devres_alloc(devm_dma_buf_release,
+			sizeof(bool), GFP_KERNEL);
+	if (unlikely(!data))
+		return -ENOMEM;
+
+	devres_add(device, data);
+	return 0;
+}
+EXPORT_SYMBOL(dma_buf_disable_lazy_unmapping);
+
 static bool dmabuf_can_defer_unmap(struct dma_buf *dmabuf,
 		struct device *device)
 {
@@ -104,7 +146,8 @@ static bool dmabuf_can_defer_unmap(struct dma_buf *dmabuf,
 	if (!(dmabuf->flags & DMABUF_CAN_DEFER_UNMAP))
 		return false;
 
-	return true;
+	return (devres_find(device, devm_dma_buf_release,
+				NULL, NULL) == NULL);
 }
 
 static int dma_buf_release(struct inode *inode, struct file *file)
@@ -413,6 +456,8 @@ struct dma_buf *dma_buf_export(const struct dma_buf_export_info *exp_info)
 	struct file *file;
 	size_t alloc_size = sizeof(struct dma_buf);
 	int ret;
+
+	dmabuf_stop_disabling_lazy_unmapping = true;
 
 	if (!exp_info->resv)
 		alloc_size += sizeof(struct reservation_object);

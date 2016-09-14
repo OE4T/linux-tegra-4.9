@@ -33,6 +33,8 @@
 #include "tegra194-soc-pwm.dtsi"
 #include "tegra194-soc-i2c.dtsi"
 
+#include "tegra194-camera.dtsi"
+
 / {
 	compatible = "nvidia,tegra186";
 	interrupt-parent = <&intc>;
@@ -131,6 +133,7 @@
 			      <&{/host1x/nvdec@15480000}	TEGRA_SID_NVDEC>,
 			      <&{/host1x/nvenc@154c0000}	TEGRA_SID_NVENC>,
 			      <&{/host1x/nvjpg@15380000}	TEGRA_SID_NVJPG>,
+			      <&{/rtcpu@bc00000}		TEGRA_SID_RCE>,
 			      <&{/host1x/nvdla0@15880000}	TEGRA_SID_NVDLA0>,
 			      <&{/host1x/nvdla1@158c0000}	TEGRA_SID_NVDLA1>,
 			      <&{/host1x/nvdisplay@15200000}	TEGRA_SID_NVDISPLAY>,
@@ -171,6 +174,11 @@
 					    TEGRA_SID(NVDEC1)>;
 				sid-list-len = <12>;
 			};
+			rce_domain {
+				address-space = <&camera_as>;
+				sid-list = <TEGRA_SID(RCE)>;
+				sid-list-len = <1>;
+			};
 		};
 
 		address-space-prop {
@@ -197,6 +205,13 @@
 			};
 			ape_as: ape {
 				iova-start = <0x0 0x40000000>;
+				iova-size = <0x0 0x20000000>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			camera_as: camera {
+				iova-start = <0x0 0xA0000000>;
 				iova-size = <0x0 0x20000000>;
 				alignment = <0xFFFFF>;
 				num-pf-page = <0>;
@@ -244,6 +259,18 @@
 				"shared0", "shared1", "shared2", "shared3",
 				"shared4", "shared5", "shared6", "shared7";
 		status = "okay";
+	};
+
+	hsp_rce: tegra-hsp@b950000 {
+		compatible = "nvidia,tegra186-hsp";
+		reg = <0x0 0x0b950000 0x0 0x00090000>;
+		interrupts =	<0 182 0x4>,
+				<0 183 0x4>,
+				<0 184 0x4>,
+				<0 185 0x4>;
+		nvidia,mbox-ie = "ok";
+		interrupt-names = "shared1", "shared2", "shared3", "shared4";
+		status = "disabled";
 	};
 
 	efuse@3820000 {

@@ -19,6 +19,7 @@
 #include <linux/bitops.h>
 #include <linux/clk.h>
 #include <linux/delay.h>
+#include <linux/iommu.h>
 #include <linux/kernel.h>
 #include <linux/module.h>
 #include <linux/mutex.h>
@@ -815,8 +816,14 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	platform_set_drvdata(pdev, rtcpu);
 
 	ret = of_property_read_u32(dev->of_node, NV(stream-id), &stream_id);
-	if (ret)
-		stream_id = TEGRA_SID_RCE;
+	if (ret) {
+		stream_id = iommu_get_hwid(dev->archdata.iommu, dev, 0);
+		if ((int)stream_id < 0) {
+			stream_id = TEGRA_SID_RCE;
+			dev_info(dev, "%s defaults to stream-id %u\n",
+				rtcpu->name, stream_id);
+		}
+	}
 
 	ret = tegra_cam_rtcpu_get_resources(dev);
 	if (ret)

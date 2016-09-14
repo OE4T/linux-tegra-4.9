@@ -57,7 +57,8 @@ struct gk20a_channel_sync {
 	int (*incr)(struct gk20a_channel_sync *s,
 		    struct priv_cmd_entry *entry,
 		    struct gk20a_fence *fence,
-		    bool need_sync_fence);
+		    bool need_sync_fence,
+		    bool register_irq);
 
 	/* Increment syncpoint/semaphore, preceded by a wfi.
 	 * Returns
@@ -80,7 +81,8 @@ struct gk20a_channel_sync {
 			 struct priv_cmd_entry *entry,
 			 struct gk20a_fence *fence,
 			 bool wfi,
-			 bool need_sync_fence);
+			 bool need_sync_fence,
+			 bool register_irq);
 
 	/* Reset the channel syncpoint/semaphore. */
 	void (*set_min_eq_max)(struct gk20a_channel_sync *s);
@@ -99,5 +101,6 @@ struct gk20a_channel_sync {
 
 void gk20a_channel_sync_destroy(struct gk20a_channel_sync *sync);
 struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c);
+bool gk20a_channel_sync_needs_sync_framework(struct channel_gk20a *c);
 
 #endif

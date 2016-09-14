@@ -131,7 +131,7 @@ struct channel_gk20a {
 	bool bound;
 	bool first_init;
 	bool vpr;
-	bool no_block;
+	bool deterministic;
 	bool cde;
 	pid_t pid;
 	pid_t tgid;

@@ -76,7 +76,8 @@ static void gk20a_free_error_notifiers(struct channel_gk20a *ch);
 
 static u32 gk20a_get_channel_watchdog_timeout(struct channel_gk20a *ch);
 
-static void gk20a_channel_clean_up_jobs(struct work_struct *work);
+static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
+					bool clean_all);
 static void gk20a_channel_cancel_job_clean_up(struct channel_gk20a *c,
 				bool wait_for_completion);
 
@@ -1029,6 +1030,7 @@ unbind:
 	g->ops.fifo.free_inst(g, ch);
 
 	ch->vpr = false;
+	ch->deterministic = false;
 	ch->vm = NULL;
 
 	WARN_ON(ch->sync);
@@ -1703,8 +1705,11 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	gpfifo_size = args->num_entries;
 
-	if (args->flags & NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED)
+	if (args->flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_VPR_ENABLED)
 		c->vpr = true;
+
+	if (args->flags & NVGPU_ALLOC_GPFIFO_EX_FLAGS_DETERMINISTIC)
+		c->deterministic = true;
 
 	/* an address space needs to have been bound at this point. */
 	if (!gk20a_channel_as_bound(c)) {
@@ -2173,10 +2178,17 @@ err_put_vm:
 	return err;
 }
 
-static void gk20a_channel_clean_up_jobs(struct work_struct *work)
+static void gk20a_channel_clean_up_runcb_fn(struct work_struct *work)
 {
 	struct channel_gk20a *c = container_of(to_delayed_work(work),
 			struct channel_gk20a, clean_up.wq);
+
+	gk20a_channel_clean_up_jobs(c, true);
+}
+
+static void gk20a_channel_clean_up_jobs(struct channel_gk20a *c,
+					bool clean_all)
+{
 	struct vm_gk20a *vm;
 	struct channel_gk20a_job *job;
 	struct gk20a_platform *platform;
@@ -2273,6 +2285,9 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 		channel_gk20a_free_job(c, job);
 		job_finished = 1;
 		gk20a_idle(g->dev);
+
+		if (!clean_all)
+			break;
 	}
 
 	if (job_finished && c->update_fn)
@@ -2419,6 +2434,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 				      struct gk20a_fence **pre_fence,
 				      struct gk20a_fence **post_fence,
 				      bool force_need_sync_fence,
+				      bool register_irq,
 				      u32 flags)
 {
 	struct gk20a *g = c->g;
@@ -2515,10 +2531,12 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 
 	if (flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET)
 		err = c->sync->incr_user(c->sync, wait_fence_fd, job->incr_cmd,
-				 job->post_fence, need_wfi, need_sync_fence);
+				 job->post_fence, need_wfi, need_sync_fence,
+				 register_irq);
 	else
 		err = c->sync->incr(c->sync, job->incr_cmd,
-				    job->post_fence, need_sync_fence);
+				    job->post_fence, need_sync_fence,
+				    register_irq);
 	if (!err) {
 		*incr_cmd = job->incr_cmd;
 		*post_fence = job->post_fence;
@@ -2568,6 +2586,7 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			NVGPU_SUBMIT_GPFIFO_FLAGS_SKIP_BUFFER_REFCOUNTING);
 	int err = 0;
 	bool need_job_tracking;
+	bool need_deferred_cleanup = false;
 	struct nvgpu_gpfifo __user *user_gpfifo = args ?
 		(struct nvgpu_gpfifo __user *)(uintptr_t)args->gpfifo : NULL;
 	struct gk20a_platform *platform = gk20a_get_platform(d);
@@ -2626,13 +2645,48 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 			!skip_buffer_refcounting;
 
 	if (need_job_tracking) {
+		bool need_sync_framework = false;
+
 		/*
-		 * If the submit is to have deterministic latency and
+		 * If the channel is to have deterministic latency and
 		 * job tracking is required, the channel must have
 		 * pre-allocated resources. Otherwise, we fail the submit here
 		 */
-		if ((flags & NVGPU_SUBMIT_GPFIFO_FLAGS_DETERMINISTIC) &&
-				!channel_gk20a_is_prealloc_enabled(c))
+		if (c->deterministic && !channel_gk20a_is_prealloc_enabled(c))
+			return -EINVAL;
+
+		need_sync_framework = force_need_sync_fence ||
+			gk20a_channel_sync_needs_sync_framework(c) ||
+			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_SYNC_FENCE &&
+			(flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_WAIT ||
+			 flags & NVGPU_SUBMIT_GPFIFO_FLAGS_FENCE_GET));
+
+		/*
+		 * Deferred clean-up is necessary for any of the following
+		 * conditions:
+		 * - channel's deterministic flag is not set
+		 * - dependency on sync framework, which could make the
+		 *   behavior of the clean-up operation non-deterministic
+		 *   (should not be performed in the submit path)
+		 * - channel wdt
+		 * - GPU rail-gating
+		 * - buffer refcounting
+		 *
+		 * If none of the conditions are met, then deferred clean-up
+		 * is not required, and we clean-up one job-tracking
+		 * resource in the submit path.
+		 */
+		need_deferred_cleanup = !c->deterministic ||
+					need_sync_framework ||
+					c->wdt_enabled ||
+					platform->can_railgate ||
+					!skip_buffer_refcounting;
+
+		/*
+		 * For deterministic channels, we don't allow deferred clean_up
+		 * processing to occur. In cases we hit this, we fail the submit
+		 */
+		if (c->deterministic && need_deferred_cleanup)
 			return -EINVAL;
 
 		/* gk20a_channel_update releases this ref. */
@@ -2640,6 +2694,11 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		if (err) {
 			gk20a_err(d, "failed to host gk20a to submit gpfifo");
 			return err;
+		}
+
+		if (!need_deferred_cleanup) {
+			/* clean up a single job */
+			gk20a_channel_clean_up_jobs(c, false);
 		}
 	}
 
@@ -2678,7 +2737,9 @@ int gk20a_submit_channel_gpfifo(struct channel_gk20a *c,
 		err = gk20a_submit_prepare_syncs(c, fence, job,
 						 &wait_cmd, &incr_cmd,
 						 &pre_fence, &post_fence,
-						 force_need_sync_fence, flags);
+						 force_need_sync_fence,
+						 need_deferred_cleanup,
+						 flags);
 		if (err)
 			goto clean_up_job;
 	}
@@ -2727,7 +2788,7 @@ clean_up:
 	gk20a_dbg_fn("fail");
 	gk20a_fence_put(pre_fence);
 	gk20a_fence_put(post_fence);
-	if (need_job_tracking)
+	if (need_deferred_cleanup)
 		gk20a_idle(g->dev);
 	return err;
 }
@@ -2749,7 +2810,7 @@ int gk20a_init_channel_support(struct gk20a *g, u32 chid)
 	raw_spin_lock_init(&c->timeout.lock);
 	mutex_init(&c->sync_lock);
 	INIT_DELAYED_WORK(&c->timeout.wq, gk20a_channel_timeout_handler);
-	INIT_DELAYED_WORK(&c->clean_up.wq, gk20a_channel_clean_up_jobs);
+	INIT_DELAYED_WORK(&c->clean_up.wq, gk20a_channel_clean_up_runcb_fn);
 	mutex_init(&c->clean_up.lock);
 	INIT_LIST_HEAD(&c->joblist.dynamic.jobs);
 #if defined(CONFIG_GK20A_CYCLE_STATS)
@@ -3416,10 +3477,10 @@ long gk20a_channel_ioctl(struct file *filp,
 
 		if (!is_power_of_2(alloc_gpfifo_ex_args->num_entries)) {
 			err = -EINVAL;
+			gk20a_idle(dev);
 			break;
 		}
-		err = gk20a_alloc_channel_gpfifo(ch,
-				(struct nvgpu_alloc_gpfifo_ex_args *)buf);
+		err = gk20a_alloc_channel_gpfifo(ch, alloc_gpfifo_ex_args);
 		gk20a_idle(dev);
 		break;
 	}

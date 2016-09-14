@@ -272,8 +272,24 @@ static int gk20a_syncpt_fence_wait(struct gk20a_fence *f, long timeout)
 
 static bool gk20a_syncpt_fence_is_expired(struct gk20a_fence *f)
 {
-	return nvhost_syncpt_is_expired_ext(f->host1x_pdev, f->syncpt_id,
-					    f->syncpt_value);
+
+	/*
+	 * In cases we don't register a notifier, we can't expect the
+	 * syncpt value to be updated. For this case, we force a read
+	 * of the value from HW, and then check for expiration.
+	 */
+	if (!nvhost_syncpt_is_expired_ext(f->host1x_pdev, f->syncpt_id,
+				f->syncpt_value)) {
+		u32 val;
+
+		if (!nvhost_syncpt_read_ext_check(f->host1x_pdev,
+				f->syncpt_id, &val)) {
+			return nvhost_syncpt_is_expired_ext(f->host1x_pdev,
+					f->syncpt_id, f->syncpt_value);
+		}
+	}
+
+	return true;
 }
 
 static const struct gk20a_fence_ops gk20a_syncpt_fence_ops = {

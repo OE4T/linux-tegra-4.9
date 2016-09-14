@@ -285,13 +285,14 @@ static int gk20a_channel_syncpt_incr_wfi(struct gk20a_channel_sync *s,
 static int gk20a_channel_syncpt_incr(struct gk20a_channel_sync *s,
 			      struct priv_cmd_entry *entry,
 			      struct gk20a_fence *fence,
-			      bool need_sync_fence)
+			      bool need_sync_fence,
+			      bool register_irq)
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
 	return __gk20a_channel_syncpt_incr(s,
 			false /* no wfi */,
-			true /* register irq */,
+			register_irq /* register irq */,
 			entry, fence, need_sync_fence);
 }
 
@@ -300,13 +301,14 @@ static int gk20a_channel_syncpt_incr_user(struct gk20a_channel_sync *s,
 				   struct priv_cmd_entry *entry,
 				   struct gk20a_fence *fence,
 				   bool wfi,
-				   bool need_sync_fence)
+				   bool need_sync_fence,
+				   bool register_irq)
 {
 	/* Need to do 'wfi + host incr' since we return the fence
 	 * to user space. */
 	return __gk20a_channel_syncpt_incr(s,
 			wfi,
-			true /* register irq */,
+			register_irq /* register irq */,
 			entry, fence, need_sync_fence);
 }
 
@@ -756,7 +758,8 @@ static int gk20a_channel_semaphore_incr(
 		struct gk20a_channel_sync *s,
 		struct priv_cmd_entry *entry,
 		struct gk20a_fence *fence,
-		bool need_sync_fence)
+		bool need_sync_fence,
+		bool register_irq)
 {
 	/* Don't put wfi cmd to this one since we're not returning
 	 * a fence to user space. */
@@ -772,7 +775,8 @@ static int gk20a_channel_semaphore_incr_user(
 		struct priv_cmd_entry *entry,
 		struct gk20a_fence *fence,
 		bool wfi,
-		bool need_sync_fence)
+		bool need_sync_fence,
+		bool register_irq)
 {
 #ifdef CONFIG_SYNC
 	struct sync_fence *dependency = NULL;
@@ -888,4 +892,13 @@ struct gk20a_channel_sync *gk20a_channel_sync_create(struct channel_gk20a *c)
 		return gk20a_channel_syncpt_create(c);
 #endif
 	return gk20a_channel_semaphore_create(c);
+}
+
+bool gk20a_channel_sync_needs_sync_framework(struct channel_gk20a *c)
+{
+#ifdef CONFIG_TEGRA_GK20A
+	if (gk20a_platform_has_syncpoints(c->g->dev))
+		return false;
+#endif
+	return true;
 }

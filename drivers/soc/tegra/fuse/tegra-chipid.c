@@ -114,3 +114,11 @@ void tegra_set_tegraid_from_hw(void)
 	tegra_id.patch   = (emu_id & TEGRAID_PATCH_MASK) >> TEGRAID_PATCH_SHIFT;
 	tegra_id.revision = tegra_sku_info.revision;
 }
+
+enum tegra_chipid tegra_get_chipid(void)
+{
+	if (tegra_id.chipid == TEGRA_CHIPID_UNKNOWN)
+		tegra_set_tegraid_from_hw();
+
+	return tegra_id.chipid;
+}

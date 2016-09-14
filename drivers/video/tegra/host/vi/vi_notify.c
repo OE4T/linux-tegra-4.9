@@ -86,14 +86,16 @@ static unsigned vi_notify_occupancy(struct vi_notify_channel *chan)
 	return ret;
 }
 
-void vi_notify_channel_set_notify_func(struct vi_notify_channel *chan,
+void vi_notify_channel_set_notify_funcs(struct vi_notify_channel *chan,
 			vi_notify_status_callback notify,
-			vi_notify_error_callback error)
+			vi_notify_error_callback error,
+			void *client_data)
 {
 	chan->notify_cb = notify;
 	chan->error_cb = error;
+	chan->client_data = client_data;
 }
-EXPORT_SYMBOL(vi_notify_channel_set_notify_func);
+EXPORT_SYMBOL(vi_notify_channel_set_notify_funcs);
 
 /* Interrupt handlers */
 void vi_notify_dev_error(struct vi_notify_dev *vnd)
@@ -108,7 +110,7 @@ void vi_notify_dev_error(struct vi_notify_dev *vnd)
 		if (chan != NULL) {
 			atomic_set(&chan->errors, 1);
 			if (chan->error_cb)
-				chan->error_cb();
+				chan->error_cb(chan->client_data);
 			else
 				wake_up(&chan->readq);
 		}
@@ -129,7 +131,7 @@ void vi_notify_dev_report(struct vi_notify_dev *vnd, u8 channel,
 		chan->status = *status;
 		atomic_set(&chan->report, 1);
 		if (chan->notify_cb)
-			chan->notify_cb(status);
+			chan->notify_cb(chan, status, chan->client_data);
 		else
 			wake_up(&chan->readq);
 	}

@@ -67,8 +67,10 @@ void vi_notify_dev_recv(struct vi_notify_dev *, const struct vi_notify_msg *);
 int vi_notify_register(struct vi_notify_driver *, struct device *, u8);
 void vi_notify_unregister(struct vi_notify_driver *, struct device *);
 
-typedef void (*vi_notify_status_callback)(const struct vi_capture_status *);
-typedef void (*vi_notify_error_callback)(void);
+struct vi_notify_channel;
+typedef void (*vi_notify_status_callback)(struct vi_notify_channel *,
+				const struct vi_capture_status *, void *);
+typedef void (*vi_notify_error_callback)(void *);
 
 struct tegra_vi4_syncpts_req {
 	u32 syncpt_ids[3];
@@ -93,6 +95,8 @@ struct vi_notify_channel {
 
 	vi_notify_status_callback notify_cb;
 	vi_notify_error_callback error_cb;
+
+	void *client_data;
 };
 
 /* internal vi_notify_channel API for kernel vi-mode driver */
@@ -108,8 +112,9 @@ int vi_notify_channel_reset(unsigned channel,
 			struct tegra_vi4_syncpts_req *);
 struct vi_notify_channel *vi_notify_channel_open(unsigned channel);
 int vi_notify_channel_close(unsigned, struct vi_notify_channel *);
-void vi_notify_channel_set_notify_func(struct vi_notify_channel *,
+void vi_notify_channel_set_notify_funcs(struct vi_notify_channel *,
 			vi_notify_status_callback,
-			vi_notify_error_callback);
+			vi_notify_error_callback,
+			void *);
 
 #endif

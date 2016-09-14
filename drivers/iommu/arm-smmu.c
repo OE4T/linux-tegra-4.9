@@ -419,6 +419,7 @@ struct arm_smmu_device {
 	struct device			*dev;
 
 	void __iomem			*base;
+	void __iomem			*base1;
 	unsigned long			size;
 	unsigned long			pgshift;
 
@@ -494,6 +495,33 @@ static bool arm_smmu_skip_mapping; /* For debug */
 static bool arm_smmu_gr0_tlbiallnsnh; /* Insert TLBIALLNSNH at all */
 static bool arm_smmu_tlb_inv_by_addr = 1; /* debugfs: tlb inv context by default */
 static bool arm_smmu_tlb_inv_at_map;	/* debugfs: tlb inv at map additionally */
+
+static inline void *convert_to_instance1(volatile void __iomem *virt_addr)
+{
+	return smmu_handle->base1 ?
+	       smmu_handle->base1 + (virt_addr - smmu_handle->base) : NULL;
+}
+
+#define WRITEL_FN(fn, call, type) \
+static inline void fn(type val, volatile void __iomem *virt_addr) \
+{ \
+	volatile void __iomem *virt_addr2; \
+	call(val, virt_addr); \
+	virt_addr2 = convert_to_instance1(virt_addr); \
+	if (virt_addr2) \
+		call(val, virt_addr2); \
+}
+
+WRITEL_FN(writel_relaxed_all, writel_relaxed, u32);
+WRITEL_FN(writeq_relaxed_all, writeq_relaxed, u64);
+WRITEL_FN(writel_all, writel, u32);
+
+#undef writel_relaxed
+#undef writeq_relaxed
+#undef writel
+#define writel_relaxed writel_relaxed_all
+#define writeq_relaxed writeq_relaxed_all
+#define writel writel_all
 
 #ifdef CONFIG_ARM_SMMU_WAR
 /*

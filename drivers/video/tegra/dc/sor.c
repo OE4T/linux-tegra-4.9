@@ -1764,7 +1764,11 @@ static struct tegra_dc_mode min_mode = {
 	.h_sync_width = 1,
 	.v_sync_width = 1,
 	.h_back_porch = 20,
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	.v_back_porch = 2,
+#else
 	.v_back_porch = 0,
+#endif
 	.h_active = 16,
 	.v_active = 16,
 	.h_front_porch = 1,

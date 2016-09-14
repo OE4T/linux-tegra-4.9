@@ -1454,7 +1454,8 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 	clk_set_parent(dc->clk, parent_clk);
 
 	/* Set rate on DC same as pclk */
-	clk_set_rate(dc->clk, dc->mode.pclk);
+	if (!dc->initialized)
+		clk_set_rate(dc->clk, dc->mode.pclk);
 
 	if (dc->out_ops->setup_clk)
 		pclk = dc->out_ops->setup_clk(dc, dc->clk);

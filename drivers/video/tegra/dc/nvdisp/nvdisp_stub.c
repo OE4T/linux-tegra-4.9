@@ -291,44 +291,6 @@ static int disp_fb_linear_set(void)
 }
 arch_initcall(disp_fb_linear_set);
 
-int __init tegra_release_bootloader_fb(void)
-{
-	if (tegra_bootloader_fb_size) {
-		if (memblock_free(tegra_bootloader_fb_start,
-						tegra_bootloader_fb_size))
-			pr_err("Failed to free bootloader fb.\n");
-		else
-			free_bootmem_late(tegra_bootloader_fb_start,
-						tegra_bootloader_fb_size);
-	}
-	if (tegra_bootloader_fb2_size) {
-		if (memblock_free(tegra_bootloader_fb2_start,
-						tegra_bootloader_fb2_size))
-			pr_err("Failed to free bootloader fb2.\n");
-		else
-			free_bootmem_late(tegra_bootloader_fb2_start,
-						tegra_bootloader_fb2_size);
-	}
-	if (tegra_bootloader_fb3_size) {
-		if (memblock_free(tegra_bootloader_fb3_start,
-						tegra_bootloader_fb3_size))
-			pr_err("Failed to free bootloader fb3.\n");
-		else
-			free_bootmem_late(tegra_bootloader_fb3_start,
-						tegra_bootloader_fb3_size);
-	}
-	if (tegra_bootloader_lut_size) {
-		if (memblock_free(tegra_bootloader_lut_start,
-						tegra_bootloader_lut_size))
-			pr_err("Failed to free bootloader lut.\n");
-		else
-			free_bootmem_late(tegra_bootloader_lut_start,
-						tegra_bootloader_lut_size);
-	}
-	return 0;
-}
-late_initcall(tegra_release_bootloader_fb);
-
 int tegra_dvfs_set_rate(struct clk *c, unsigned long rate)
 {
 	return 0;
@@ -483,7 +445,6 @@ extern struct tegra_panel_ops panel_sim_ops;
 /* returns true if bl initialized the display */
 bool tegra_is_bl_display_initialized(int instance)
 {
-	return false;
 	/* display initialized implies non-zero
 	 * fb size is passed from bl to kernel
 	 */

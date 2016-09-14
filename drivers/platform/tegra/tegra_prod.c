@@ -414,6 +414,64 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 }
 EXPORT_SYMBOL(tegra_prod_set_by_name);
 
+/**
+ * tegra_prod_set_by_name_partially - Set the prod setting from list partially
+ *				      under given prod name. The matching is done
+ *				      qith index, offset and mask.
+ * @base:		base address of the register.
+ * @name:		the name of tegra prod need to set.
+ * @tegra_prod:	the list of tegra prods.
+ * @index:		Index of base address.
+ * @offset:		Offset of the register.
+ * @mask:		Mask field on given register.
+ *
+ * Find the tegra prod in the list according to the name. Then set
+ * that tegra prod which has matching of index, offset and mask.
+ *
+ * Returns 0 on success.
+ */
+int tegra_prod_set_by_name_partially(void __iomem **base, const char *name,
+				     struct tegra_prod *tegra_prod, u32 index,
+				     u32 offset, u32 mask)
+{
+	struct tegra_prod_config *t_prod;
+	int ret;
+	int i;
+	bool found = false;
+
+	if (!tegra_prod)
+		return -EINVAL;
+
+	for (i = 0; i < tegra_prod->num; i++) {
+		t_prod = &tegra_prod->prod_config[i];
+		if (!t_prod)
+			return -EINVAL;
+
+		if (!strcmp(t_prod->name, name)) {
+			found = true;
+			break;
+		}
+	}
+
+	if (!found)
+		return -ENODEV;
+
+	for (i = 0; i < t_prod->count; i++) {
+		struct prod_tuple *ptuple = &t_prod->prod_tuple[i];;
+
+		if ((ptuple->index != index) || (ptuple->addr != offset) ||
+		    (ptuple->mask != mask))
+			continue;
+
+		ret = tegra_prod_set_tuple(base, ptuple, tegra_prod->mask_ones);
+		if (ret < 0)
+			return ret;
+	}
+
+	return 0;
+}
+EXPORT_SYMBOL(tegra_prod_set_by_name_partially);
+
 bool tegra_prod_by_name_supported(struct tegra_prod *tegra_prod,
 				  const char *name)
 {

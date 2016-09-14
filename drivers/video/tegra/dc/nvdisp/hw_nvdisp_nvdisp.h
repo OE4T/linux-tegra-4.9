@@ -750,6 +750,10 @@ static inline u32 nvdisp_rg_ext_r(void)
 {
 	return 0x00000412;
 }
+static inline u32 nvdisp_rg_elv_0_r(void)
+{
+	return 0x00000413;
+}
 static inline u32 nvdisp_color_ctl_r(void)
 {
 	return 0x00000430;

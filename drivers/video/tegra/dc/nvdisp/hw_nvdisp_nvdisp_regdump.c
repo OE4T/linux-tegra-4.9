@@ -63,6 +63,7 @@ DUMP_REG(nvdisp_front_porch_r());
 DUMP_REG(nvdisp_rg_ext_back_porch_r());
 DUMP_REG(nvdisp_rg_ext_front_porch_r());
 DUMP_REG(nvdisp_rg_ext_r());
+DUMP_REG(nvdisp_rg_elv_0_r());
 DUMP_REG(nvdisp_color_ctl_r());
 DUMP_REG(nvdisp_output_lut_ctl_r());
 DUMP_REG(nvdisp_output_lut_base_r());

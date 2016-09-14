@@ -2370,16 +2370,18 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	dc->mode.pclk = tegra_hdmi_get_pclk(&dc->mode);
 
 	/* Set rate on PARENT */
-	if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
-			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
-		parent_clk_rate = 6 * dc->mode.pclk;
-		clk_set_rate(parent_clk, parent_clk_rate);
-	} else {
-		clk_set_rate(parent_clk, dc->mode.pclk);
-	}
+	if (!dc->initialized) {
+		if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
+				(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
+			parent_clk_rate = 6 * dc->mode.pclk;
+			clk_set_rate(parent_clk, parent_clk_rate);
+		} else {
+			clk_set_rate(parent_clk, dc->mode.pclk);
+		}
 
-	if (clk == dc->clk)
-		clk_set_rate(clk, dc->mode.pclk);
+		if (clk == dc->clk)
+			clk_set_rate(clk, dc->mode.pclk);
+	}
 
 	/* Enable safe sor clock */
 	tegra_sor_safe_clk_enable(sor);
@@ -2387,14 +2389,16 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	clk_set_parent(sor->sor_clk, parent_clk);
 
 	/* Set Rate to SOR_CLK*/
-	if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
-			(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
-		rate = dc->mode.pclk;
-		rate = rate >> 1;
-		rate = rate * 3;
-		clk_set_rate(sor->sor_clk, rate);
-	} else {
-		clk_set_rate(sor->sor_clk, dc->mode.pclk);
+	if (!dc->initialized) {
+		if ((IS_RGB(yuv_flag) && (yuv_flag == FB_VMODE_Y36)) ||
+				(yuv_flag == (FB_VMODE_Y444 | FB_VMODE_Y36))) {
+			rate = dc->mode.pclk;
+			rate = rate >> 1;
+			rate = rate * 3;
+			clk_set_rate(sor->sor_clk, rate);
+		} else {
+			clk_set_rate(sor->sor_clk, dc->mode.pclk);
+		}
 	}
 
 	/* Enable SOR_CLK*/
@@ -2402,7 +2406,8 @@ static long tegra_dc_hdmi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 		tegra_sor_clk_enable(sor);
 
 	/* Select the sor_out parent as SAFE_CLK*/
-	clk_set_parent(sor->src_switch_clk, sor->safe_clk);
+	if (!dc->initialized)
+		clk_set_parent(sor->src_switch_clk, sor->safe_clk);
 	/* Enable sor_out Clock */
 	tegra_disp_clk_prepare_enable(sor->src_switch_clk);
 	/* Enable brick Clock */

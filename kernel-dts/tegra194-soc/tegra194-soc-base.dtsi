@@ -70,6 +70,12 @@
 		status = "okay";
 	};
 
+	bpmp_resets: bpmp_reset@0 {
+		compatible = "nvidia,bpmp-resets";
+		reg = <0x0>;
+		#reset-cells = <1>;
+	};
+
 	rtc@c2a0000 {
 		compatible = "nvidia,tegra18-rtc";
 		reg = <0x0 0x0c2a0000 0x0 0x00010000>;

@@ -74,6 +74,18 @@ struct nvdla_ctrl_submit_args {
 };
 
 /**
+ * struct nvdla_ctrl_mem_handle structure for memory handles
+ *
+ * @handle		handle to buffer allocated in userspace
+ * @offset		offset in buffer
+ *
+ */
+struct nvdla_ctrl_mem_handle {
+	__u32 handle;
+	__u32 offset;
+};
+
+/**
  * struct nvdla_ctrl_ioctl_submit_task structure for single task information
  *
  * @num_prefences		number of pre-fences in task
@@ -88,7 +100,8 @@ struct nvdla_ctrl_submit_args {
  * @output_task_status		pointer to output task status struct table
  * @num_operations		number of operations for a task
  * @num_addresses		total number of addressed passed in structure
- * @surface_desc		pointer to surface descriptor
+ * @operation_desc		pointer to operation descriptor list
+ * @surface_desc		pointer to surface descriptor list
  * @address_list		pointer to address list
  *
  */
@@ -108,10 +121,9 @@ struct nvdla_ctrl_ioctl_submit_task {
 
 	__u32 num_operations;
 	__u32 num_addresses;
-	__u64 operation_desc;
-
-	__u64 surface_desc;
-	__u64 address_list;
+	struct nvdla_ctrl_mem_handle operation_desc;
+	struct nvdla_ctrl_mem_handle surface_desc;
+	struct nvdla_ctrl_mem_handle address_list;
 };
 
 /**

@@ -33,7 +33,6 @@
 #define NV_DLA_THI_METHOD_DATA	0x00000044      /* RW-4R */
 
 #define MAX_NUM_ACTION_LIST	1
-#define MAX_HANDLE_PER_OP_DESC	1
 
 /* TODO: Below should come from firmware interface */
 #define ACTION_OPCODE_TERMINATE		0x00
@@ -113,7 +112,8 @@ struct nvdla_task {
 	dma_addr_t task_desc_pa;
 	size_t buf_size;
 	int timeout;
-	u32 *op_handle;
+	u32 *memory_handles;
+	u32 num_handles;
 };
 
 extern const struct file_operations tegra_nvdla_ctrl_ops;

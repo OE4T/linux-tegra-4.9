@@ -121,7 +121,7 @@ static void task_free(struct kref *ref)
 	}
 
 	/* free operation descriptor handle */
-	kfree(task->op_handle);
+	kfree(task->memory_handles);
 
 	/* finally free task */
 	kfree(task);
@@ -151,7 +151,7 @@ static void nvdla_task_free_locked(struct nvdla_task *task)
 
 	/* unpin submit ref */
 	nvhost_buffer_submit_unpin(task->buffers,
-		task->op_handle, MAX_HANDLE_PER_OP_DESC);
+		task->memory_handles, task->num_handles);
 
 	/* update takslist */
 	list_del(&task->list);
@@ -235,11 +235,11 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 	size_t preactionlist_size;
 	uint16_t postactionl_of;
 	uint16_t preactionl_of;
-	dma_addr_t op_dma_addr;
+	dma_addr_t *dma_addr;
 	dma_addr_t buffer_pa;
 	size_t task_size;
 	size_t buf_size;
-	size_t op_size;
+	size_t *dma_size;
 	u32 *buffer_va;
 	void *mem;
 	int err;
@@ -429,35 +429,54 @@ struct nvdla_task *nvdla_task_alloc(struct nvhost_queue *queue,
 
 	if (num_operations) {
 		task->buffers = buffers;
-		task->op_handle = kcalloc(MAX_HANDLE_PER_OP_DESC, sizeof(u32),
+
+		task->num_handles = 2;
+		task->memory_handles = kcalloc(task->num_handles, sizeof(u32),
 				GFP_KERNEL);
-		if (!task->op_handle) {
+		if (!task->memory_handles) {
 			err = -ENOMEM;
-			goto fail_to_alloc_opdesc;
+			goto fail_to_alloc_handles;
 		}
 
-		if (copy_from_user(task->op_handle,
-				(void __user *)user_task.operation_desc,
-				(MAX_HANDLE_PER_OP_DESC * sizeof(u32)))) {
-			err = -EFAULT;
-			goto fail_to_cpy_buffer;
+		dma_addr = kcalloc(task->num_handles, sizeof(dma_addr_t),
+				GFP_KERNEL);
+		if (!dma_addr) {
+			err = -ENOMEM;
+			goto fail_to_alloc_dma_addr;
 		}
 
-		err = nvhost_buffer_submit_pin(buffers, task->op_handle,
-			MAX_HANDLE_PER_OP_DESC, &op_dma_addr, &op_size);
+		dma_size = kcalloc(task->num_handles, sizeof(u32),
+				GFP_KERNEL);
+		if (!dma_size) {
+			err = -ENOMEM;
+			goto fail_to_alloc_dma_size;
+		}
+
+		task->memory_handles[0] = user_task.operation_desc.handle;
+		task->memory_handles[1] = user_task.surface_desc.handle;
+		err = nvhost_buffer_submit_pin(buffers, task->memory_handles,
+					task->num_handles, dma_addr, dma_size);
 		if (!err) {
-			task_desc->operation_desc = op_dma_addr;
+			task_desc->operation_desc = dma_addr[0] +
+					user_task.operation_desc.offset;
+			task_desc->surface_desc = dma_addr[1] +
+					user_task.surface_desc.offset;
 			task_desc->num_operations = num_operations;
 		}
+
+		kfree(dma_addr);
+		kfree(dma_size);
 	}
 
 	nvdla_dbg_info(pdev, "task[%p] initialized", task);
 
 	return task;
 
-fail_to_cpy_buffer:
-	kfree(task->op_handle);
-fail_to_alloc_opdesc:
+fail_to_alloc_dma_size:
+	kfree(dma_addr);
+fail_to_alloc_dma_addr:
+	kfree(task->memory_handles);
+fail_to_alloc_handles:
 fail_to_dma_alloc:
 	kfree(task);
 fail_to_alloc_task:

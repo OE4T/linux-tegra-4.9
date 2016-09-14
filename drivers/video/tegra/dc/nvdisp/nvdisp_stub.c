@@ -45,6 +45,8 @@ phys_addr_t tegra_bootloader_fb2_start;
 phys_addr_t tegra_bootloader_fb2_size;
 phys_addr_t tegra_bootloader_fb3_start;
 phys_addr_t tegra_bootloader_fb3_size;
+phys_addr_t tegra_bootloader_lut_start;
+phys_addr_t tegra_bootloader_lut_size;
 
 EXPORT_SYMBOL(sd_brightness);
 
@@ -221,6 +223,35 @@ static int __init tegra_bootloader_fb3_arg(char *options)
 }
 early_param("tegra_fbmem3", tegra_bootloader_fb3_arg);
 
+static int __init tegra_bootloader_lut_arg(char *options)
+{
+	char *p = options;
+
+	tegra_bootloader_lut_size = memparse(p, &p);
+	if (*p == '@')
+		tegra_bootloader_lut_start = memparse(p+1, &p);
+
+	pr_info("Found lut_mem: %08llx@%08llx\n",
+		(u64)tegra_bootloader_lut_size,
+		(u64)tegra_bootloader_lut_start);
+
+	if (tegra_bootloader_lut_size) {
+		tegra_bootloader_lut_size =
+				PAGE_ALIGN(tegra_bootloader_lut_size);
+		if (memblock_reserve(tegra_bootloader_lut_start,
+				tegra_bootloader_lut_size)) {
+			pr_err("Failed to reserve bootloader lut_mem %08llx@%08llx\n",
+				(u64)tegra_bootloader_lut_size,
+				(u64)tegra_bootloader_lut_start);
+			tegra_bootloader_lut_start = 0;
+			tegra_bootloader_lut_size = 0;
+		}
+	}
+
+	return 0;
+}
+early_param("lut_mem", tegra_bootloader_lut_arg);
+
 void tegra_get_fb_resource(struct resource *fb_res, int instance)
 {
 	if (!tegra_is_bl_display_initialized(instance)) {
@@ -285,6 +316,14 @@ int __init tegra_release_bootloader_fb(void)
 		else
 			free_bootmem_late(tegra_bootloader_fb3_start,
 						tegra_bootloader_fb3_size);
+	}
+	if (tegra_bootloader_lut_size) {
+		if (memblock_free(tegra_bootloader_lut_start,
+						tegra_bootloader_lut_size))
+			pr_err("Failed to free bootloader lut.\n");
+		else
+			free_bootmem_late(tegra_bootloader_lut_start,
+						tegra_bootloader_lut_size);
 	}
 	return 0;
 }

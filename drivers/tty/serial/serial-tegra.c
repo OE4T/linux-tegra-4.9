@@ -1713,6 +1713,11 @@ static int tegra_uart_probe(struct platform_device *pdev)
 		return PTR_ERR(tup->rst);
 	}
 
+	/* Reset the UART controller to clear all previous status.*/
+	reset_control_assert(tup->rst);
+	udelay(10);
+	reset_control_deassert(tup->rst);
+
 	parent_clk = devm_clk_get(&pdev->dev, "parent");
 	if (IS_ERR(parent_clk))
 		dev_err(&pdev->dev, "Unable to get parent_clk err: %ld\n",

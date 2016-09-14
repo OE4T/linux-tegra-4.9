@@ -29,6 +29,7 @@
 #include "panels/panel-s-edp-uhdtv-15-6.dtsi"
 #include "tegra186-quill-pwm-fan.dtsi"
 #include "tegra186-quill-thermal-fan-est.dtsi"
+#include "tegra186-host1x-camera.dtsi"
 
 / {
         compatible = "nvidia,tegra186";

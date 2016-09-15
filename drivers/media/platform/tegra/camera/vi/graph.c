@@ -414,7 +414,7 @@ static int tegra_vi_graph_parse_one(struct tegra_mc_vi *vi,
 	do {
 		/* Parse all the remote entities and put them into the list */
 		next = of_graph_get_next_endpoint(node, ep);
-		if (next == NULL)
+		if (next == NULL || !of_device_is_available(next))
 			break;
 		ep = next;
 

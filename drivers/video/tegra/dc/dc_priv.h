@@ -20,6 +20,7 @@
 #ifndef __DRIVERS_VIDEO_TEGRA_DC_DC_PRIV_H
 #define __DRIVERS_VIDEO_TEGRA_DC_DC_PRIV_H
 
+#include <linux/interrupt.h>
 #include "dc_priv_defs.h"
 #ifndef CREATE_TRACE_POINTS
 # include <trace/events/display.h>
@@ -779,5 +780,7 @@ int tegra_nvdisp_set_ocsc(struct tegra_dc *dc, struct tegra_dc_mode *mode);
 #endif
 
 bool fb_console_mapped(void);
+
+irqreturn_t tegra_dc_irq(int irq, void *ptr);
 
 #endif

@@ -220,7 +220,7 @@ static int nvdla_ctrl_submit(struct nvdla_private *priv, void *arg)
 		nvdla_dbg_info(pdev, "submit [%d]th task", i + 1);
 
 		/* allocate per task and update fields */
-		task = nvdla_task_alloc(queue, buffers, local_tasks[i]);
+		task = nvdla_task_alloc(queue, buffers, &local_tasks[i]);
 		if (IS_ERR(task)) {
 			err = PTR_ERR(task);
 			goto fail_to_task_alloc;

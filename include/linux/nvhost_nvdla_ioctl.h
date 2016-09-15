@@ -120,9 +120,16 @@ struct nvdla_ctrl_ioctl_submit_task {
 	__u64 output_task_status;
 
 	__u32 num_operations;
-	__u32 num_addresses;
+	__u32 num_luts;
 	struct nvdla_ctrl_mem_handle operation_desc;
 	struct nvdla_ctrl_mem_handle surface_desc;
+	struct nvdla_ctrl_mem_handle lut_data;
+
+	__u8 dynamic_roi;
+	struct nvdla_ctrl_mem_handle roi_desc_array;
+	struct nvdla_ctrl_mem_handle surface;
+
+	__u32 num_addresses;
 	struct nvdla_ctrl_mem_handle address_list;
 };
 

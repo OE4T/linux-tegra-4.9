@@ -118,13 +118,15 @@ struct dla_task_descriptor {
 	uint64_t operation_desc;
 	uint64_t surface_desc;
 	uint64_t address_list;
-	uint16_t num_operations;
 	uint8_t queue_id;
 	uint16_t status;
 	uint64_t lut_data;
-	uint64_t roi_desc;
+	uint64_t roi_desc_array;
 	uint64_t surface;
-	uint8_t num_rois;
+	uint8_t dynamic_roi;
+	uint8_t num_luts;
+	uint16_t num_operations;
+	uint16_t num_addresses;
 } __attribute__ ((packed, aligned(4)));
 
 struct dla_action_list {

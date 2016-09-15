@@ -1701,9 +1701,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 	u32 gpfifo_size;
 	int err = 0;
 
-	/* Kernel can insert one extra gpfifo entry before user submitted gpfifos
-	   and another one after, for internal usage. Triple the requested size. */
-	gpfifo_size = roundup_pow_of_two(args->num_entries * 3);
+	gpfifo_size = args->num_entries;
 
 	if (args->flags & NVGPU_ALLOC_GPFIFO_FLAGS_VPR_ENABLED)
 		c->vpr = true;
@@ -3404,6 +3402,10 @@ long gk20a_channel_ioctl(struct file *filp,
 		gk20a_idle(dev);
 		break;
 	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO_EX:
+	{
+		struct nvgpu_alloc_gpfifo_ex_args *alloc_gpfifo_ex_args =
+			(struct nvgpu_alloc_gpfifo_ex_args *)buf;
+
 		err = gk20a_busy(dev);
 		if (err) {
 			dev_err(dev,
@@ -3411,10 +3413,16 @@ long gk20a_channel_ioctl(struct file *filp,
 				__func__, cmd);
 			break;
 		}
+
+		if (!is_power_of_2(alloc_gpfifo_ex_args->num_entries)) {
+			err = -EINVAL;
+			break;
+		}
 		err = gk20a_alloc_channel_gpfifo(ch,
 				(struct nvgpu_alloc_gpfifo_ex_args *)buf);
 		gk20a_idle(dev);
 		break;
+	}
 	case NVGPU_IOCTL_CHANNEL_ALLOC_GPFIFO:
 	{
 		struct nvgpu_alloc_gpfifo_ex_args alloc_gpfifo_ex_args;
@@ -3432,8 +3440,13 @@ long gk20a_channel_ioctl(struct file *filp,
 		/* prepare new args structure */
 		memset(&alloc_gpfifo_ex_args, 0,
 				sizeof(struct nvgpu_alloc_gpfifo_ex_args));
-		alloc_gpfifo_ex_args.num_entries =
-				alloc_gpfifo_args->num_entries;
+		/*
+		 * Kernel can insert one extra gpfifo entry before user
+		 * submitted gpfifos and another one after, for internal usage.
+		 * Triple the requested size.
+		 */
+		alloc_gpfifo_ex_args.num_entries = roundup_pow_of_two(
+				alloc_gpfifo_args->num_entries * 3);
 		alloc_gpfifo_ex_args.flags = alloc_gpfifo_args->flags;
 
 		err = gk20a_alloc_channel_gpfifo(ch, &alloc_gpfifo_ex_args);

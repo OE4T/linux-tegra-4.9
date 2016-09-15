@@ -14,6 +14,7 @@
 #include <linux/kernel.h>
 
 #include <linux/platform/tegra/tegra_emc.h>
+#include <linux/platform/tegra/mc.h>
 
 /*
  * Currently just some stubs to get things building.

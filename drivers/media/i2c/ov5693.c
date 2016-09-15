@@ -274,7 +274,7 @@ static void ov5693_gpio_set(struct ov5693 *priv,
 	if (priv->pdata && priv->pdata->use_cam_gpio)
 		cam_gpio_ctrl(priv->i2c_client, gpio, val, 1);
 	else
-		gpio_set_value(gpio, val);
+		gpio_set_value_cansleep(gpio, val);
 }
 
 static int ov5693_power_on(struct camera_common_data *s_data)
@@ -312,7 +312,7 @@ static int ov5693_power_on(struct camera_common_data *s_data)
 		ov5693_gpio_set(priv, pw->pwdn_gpio, 1);
 	usleep_range(1, 2);
 	if (pw->reset_gpio)
-		gpio_set_value(pw->reset_gpio, 1);
+		gpio_set_value_cansleep(pw->reset_gpio, 1);
 	usleep_range(1000, 1110);
 
 	pw->state = SWITCH_ON;
@@ -352,7 +352,7 @@ static int ov5693_power_off(struct camera_common_data *s_data)
 		ov5693_gpio_set(priv, pw->pwdn_gpio, 0);
 	usleep_range(1, 2);
 	if (pw->reset_gpio)
-		gpio_set_value(pw->reset_gpio, 0);
+		gpio_set_value_cansleep(pw->reset_gpio, 0);
 	usleep_range(1, 2);
 
 	if (pw->iovdd)
@@ -1208,6 +1208,7 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 	const struct of_device_id *match;
 	int gpio;
 	int err;
+	struct camera_common_pdata *ret = NULL;
 
 	if (!node)
 		return NULL;
@@ -1231,6 +1232,10 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 
 	gpio = of_get_named_gpio(node, "pwdn-gpios", 0);
 	if (gpio < 0) {
+		if (gpio == -EPROBE_DEFER) {
+			ret = ERR_PTR(-EPROBE_DEFER);
+			goto error;
+		}
 		dev_err(&client->dev, "pwdn gpios not in DT\n");
 		goto error;
 	}
@@ -1238,7 +1243,11 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 
 	gpio = of_get_named_gpio(node, "reset-gpios", 0);
 	if (gpio < 0) {
-		/* reset-gpio is not absoluctly needed */
+		/* reset-gpio is not absolutely needed */
+		if (gpio == -EPROBE_DEFER) {
+			ret = ERR_PTR(-EPROBE_DEFER);
+			goto error;
+		}
 		dev_dbg(&client->dev, "reset gpios not in DT\n");
 		gpio = 0;
 	}
@@ -1267,7 +1276,7 @@ static struct camera_common_pdata *ov5693_parse_dt(struct i2c_client *client)
 
 error:
 	devm_kfree(&client->dev, board_priv_pdata);
-	return NULL;
+	return ret;
 }
 
 static int ov5693_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
@@ -1320,6 +1329,8 @@ static int ov5693_probe(struct i2c_client *client,
 	}
 
 	priv->pdata = ov5693_parse_dt(client);
+	if (PTR_ERR(priv->pdata) == -EPROBE_DEFER)
+		return -EPROBE_DEFER;
 	if (!priv->pdata) {
 		dev_err(&client->dev, "unable to get platform data\n");
 		return -EFAULT;

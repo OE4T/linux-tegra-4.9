@@ -1241,7 +1241,7 @@ static int __init get_lut_from_bpmp(void)
 				__func__, cl, ret);
 			tegra_bpmp_free_coherent(size, vhtbl->lut,
 					vhtbl->phys);
-			vhtbl->lut = 0;
+			vhtbl->lut = NULL;
 			vhtbl->phys = 0;
 		} else
 			ok = true;

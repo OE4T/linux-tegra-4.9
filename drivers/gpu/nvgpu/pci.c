@@ -69,6 +69,13 @@ static struct gk20a_platform nvgpu_pci_device = {
 
 static struct pci_device_id nvgpu_pci_table[] = {
 	{
+		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c35),
+		.class = PCI_BASE_CLASS_DISPLAY << 16,
+		.class_mask = 0xff << 16,
+		.driver_data = NVGPU_PCI_ENABLE_BLCG |
+			       NVGPU_PCI_ENABLE_SLCG,
+	},
+	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c36),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,

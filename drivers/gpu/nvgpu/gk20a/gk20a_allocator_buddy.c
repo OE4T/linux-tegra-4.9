@@ -1077,9 +1077,10 @@ static u64 gk20a_buddy_alloc_base(struct gk20a_allocator *a)
 static int gk20a_buddy_alloc_inited(struct gk20a_allocator *a)
 {
 	struct gk20a_buddy_allocator *ba = a->priv;
+	int inited = ba->initialized;
 
 	rmb();
-	return ba->initialized;
+	return inited;
 }
 
 static u64 gk20a_buddy_alloc_end(struct gk20a_allocator *a)

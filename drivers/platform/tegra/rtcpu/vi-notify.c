@@ -77,12 +77,18 @@ struct tegra_ivc_vi_notify {
 };
 
 static void tegra_ivc_vi_notify_process(struct tegra_ivc_channel *chan,
-					const struct vi_notify_msg_ex *msg)
+					const struct vi_notify_msg_ex *msg,
+					size_t len)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
 	struct vi_notify_dev *vnd = ivn->vi_notify;
 	u32 mask;
 	u8 ch;
+
+	if (sizeof(*msg) > len) {
+		dev_warn(&chan->dev, "Invalid extended message.\n");
+		return;
+	}
 
 	switch (msg->type) {
 	case VI_NOTIFY_MSG_ACK:
@@ -111,20 +117,12 @@ static void tegra_ivc_vi_notify_recv(struct tegra_ivc_channel *chan,
 					const void *data, size_t len)
 {
 	struct tegra_ivc_vi_notify *ivn = tegra_ivc_channel_get_drvdata(chan);
-	const struct vi_notify_msg *entries = data;
+	const struct vi_notify_msg *msg = data;
 
-	/* Receive VI Notify events */
-	while (len >= sizeof(*entries)) {
-		if (!entries->tag)
-			break;
-		if (VI_NOTIFY_TAG_VALID(entries->tag))
-			vi_notify_dev_recv(ivn->vi_notify, entries);
-		else
-			tegra_ivc_vi_notify_process(chan, data);
-
-		entries++;
-		len -= sizeof(*entries);
-	}
+	if (len >= sizeof(*msg) && VI_NOTIFY_TAG_VALID(msg->tag))
+		vi_notify_dev_recv(ivn->vi_notify, msg);
+	else
+		tegra_ivc_vi_notify_process(chan, data, len);
 }
 
 static void tegra_ivc_channel_vi_notify_process(struct tegra_ivc_channel *chan)

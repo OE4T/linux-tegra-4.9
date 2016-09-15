@@ -819,12 +819,6 @@ int tegra_nvdisp_update_windows(struct tegra_dc *dc,
 		dc->imp_dirty = false;
 	}
 
-	if (tegra_cpu_is_asim())
-		tegra_dc_writel(dc,
-			(nvdisp_cmd_int_status_frame_end_f(1) |
-			nvdisp_cmd_int_status_v_blank_f(1)),
-			nvdisp_cmd_int_status_r());
-
 	if (wait_for_vblank) {
 		/* Use the interrupt handler.  ISR will clear the dirty flags
 		   when the flip is completed */

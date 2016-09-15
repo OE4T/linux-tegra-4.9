@@ -1566,4 +1566,5 @@ void gm20b_init_gr(struct gpu_ops *gops)
 	gops->gr.is_ltcn_ltss_addr = gr_gm20b_is_ltcn_ltss_addr;
 	gops->gr.split_lts_broadcast_addr = gr_gm20b_split_lts_broadcast_addr;
 	gops->gr.split_ltc_broadcast_addr = gr_gm20b_split_ltc_broadcast_addr;
+	gops->gr.program_zcull_mapping = gr_gk20a_program_zcull_mapping;
 }

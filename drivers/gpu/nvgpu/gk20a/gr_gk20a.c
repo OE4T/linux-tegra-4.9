@@ -4301,6 +4301,107 @@ void gr_gk20a_init_cg_mode(struct gk20a *g, u32 cgmode, u32 mode_config)
 	}
 }
 
+void gr_gk20a_program_zcull_mapping(struct gk20a *g, u32 zcull_num_entries,
+						u32 *zcull_map_tiles)
+{
+	u32 val;
+
+	gk20a_dbg_fn("");
+
+	if (zcull_num_entries >= 8) {
+		gk20a_dbg_fn("map0");
+		val =
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_0_f(
+						zcull_map_tiles[0]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_1_f(
+						zcull_map_tiles[1]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_2_f(
+						zcull_map_tiles[2]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_3_f(
+						zcull_map_tiles[3]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_4_f(
+						zcull_map_tiles[4]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_5_f(
+						zcull_map_tiles[5]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_6_f(
+						zcull_map_tiles[6]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_7_f(
+						zcull_map_tiles[7]);
+
+		gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map0_r(), val);
+	}
+
+	if (zcull_num_entries >= 16) {
+		gk20a_dbg_fn("map1");
+		val =
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_8_f(
+						zcull_map_tiles[8]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_9_f(
+						zcull_map_tiles[9]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_10_f(
+						zcull_map_tiles[10]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_11_f(
+						zcull_map_tiles[11]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_12_f(
+						zcull_map_tiles[12]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_13_f(
+						zcull_map_tiles[13]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_14_f(
+						zcull_map_tiles[14]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_15_f(
+						zcull_map_tiles[15]);
+
+		gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map1_r(), val);
+	}
+
+	if (zcull_num_entries >= 24) {
+		gk20a_dbg_fn("map2");
+		val =
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_16_f(
+						zcull_map_tiles[16]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_17_f(
+						zcull_map_tiles[17]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_18_f(
+						zcull_map_tiles[18]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_19_f(
+						zcull_map_tiles[19]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_20_f(
+						zcull_map_tiles[20]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_21_f(
+						zcull_map_tiles[21]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_22_f(
+						zcull_map_tiles[22]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_23_f(
+						zcull_map_tiles[23]);
+
+		gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map2_r(), val);
+	}
+
+	if (zcull_num_entries >= 32) {
+		gk20a_dbg_fn("map3");
+		val =
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_24_f(
+						zcull_map_tiles[24]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_25_f(
+						zcull_map_tiles[25]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_26_f(
+						zcull_map_tiles[26]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_27_f(
+						zcull_map_tiles[27]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_28_f(
+						zcull_map_tiles[28]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_29_f(
+						zcull_map_tiles[29]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_30_f(
+						zcull_map_tiles[30]) |
+		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_31_f(
+						zcull_map_tiles[31]);
+
+		gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map3_r(), val);
+	}
+
+}
+
 static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 {
 	u32 gpc_index, gpc_tpc_count, gpc_zcull_count;
@@ -4310,25 +4411,31 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 	u32 offset;
 	bool floorsweep = false;
 	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
-	int num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
-	int num_tpc_per_gpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_TPC_PER_GPC);
+	u32 num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+	u32 num_tpc_per_gpc = nvgpu_get_litter_value(g,
+						GPU_LIT_NUM_TPC_PER_GPC);
+	u32 zcull_alloc_num = num_gpcs * num_tpc_per_gpc;
 
 	if (!gr->map_tiles)
 		return -1;
 
-	zcull_map_tiles = kzalloc(num_gpcs *
-			num_tpc_per_gpc * sizeof(u32), GFP_KERNEL);
+	if (zcull_alloc_num % 8 != 0) {
+		/* Total 8 fields per map reg i.e. tile_0 to tile_7*/
+		zcull_alloc_num += (zcull_alloc_num % 8);
+	}
+	zcull_map_tiles = kzalloc(zcull_alloc_num *
+				 sizeof(u32), GFP_KERNEL);
 	if (!zcull_map_tiles) {
 		gk20a_err(dev_from_gk20a(g),
-			"failed to allocate zcull temp buffers");
+			"failed to allocate zcull map titles");
 		return -ENOMEM;
 	}
-	zcull_bank_counters = kzalloc(num_gpcs *
-			num_tpc_per_gpc * sizeof(u32), GFP_KERNEL);
+	zcull_bank_counters = kzalloc(zcull_alloc_num *
+				 sizeof(u32), GFP_KERNEL);
 
 	if (!zcull_bank_counters) {
 		gk20a_err(dev_from_gk20a(g),
-			"failed to allocate zcull temp buffers");
+			"failed to allocate zcull bank counters");
 		kfree(zcull_map_tiles);
 		return -ENOMEM;
 	}
@@ -4339,45 +4446,9 @@ static int gr_gk20a_zcull_init_hw(struct gk20a *g, struct gr_gk20a *gr)
 		zcull_bank_counters[gr->map_tiles[map_counter]]++;
 	}
 
-	gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map0_r(),
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_0_f(zcull_map_tiles[0]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_1_f(zcull_map_tiles[1]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_2_f(zcull_map_tiles[2]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_3_f(zcull_map_tiles[3]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_4_f(zcull_map_tiles[4]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_5_f(zcull_map_tiles[5]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_6_f(zcull_map_tiles[6]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map0_tile_7_f(zcull_map_tiles[7]));
-
-	gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map1_r(),
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_8_f(zcull_map_tiles[8]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_9_f(zcull_map_tiles[9]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_10_f(zcull_map_tiles[10]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_11_f(zcull_map_tiles[11]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_12_f(zcull_map_tiles[12]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_13_f(zcull_map_tiles[13]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_14_f(zcull_map_tiles[14]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map1_tile_15_f(zcull_map_tiles[15]));
-
-	gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map2_r(),
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_16_f(zcull_map_tiles[16]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_17_f(zcull_map_tiles[17]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_18_f(zcull_map_tiles[18]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_19_f(zcull_map_tiles[19]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_20_f(zcull_map_tiles[20]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_21_f(zcull_map_tiles[21]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_22_f(zcull_map_tiles[22]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map2_tile_23_f(zcull_map_tiles[23]));
-
-	gk20a_writel(g, gr_gpcs_zcull_sm_in_gpc_number_map3_r(),
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_24_f(zcull_map_tiles[24]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_25_f(zcull_map_tiles[25]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_26_f(zcull_map_tiles[26]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_27_f(zcull_map_tiles[27]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_28_f(zcull_map_tiles[28]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_29_f(zcull_map_tiles[29]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_30_f(zcull_map_tiles[30]) |
-		gr_gpcs_zcull_sm_in_gpc_number_map3_tile_31_f(zcull_map_tiles[31]));
+	if (g->ops.gr.program_zcull_mapping)
+		g->ops.gr.program_zcull_mapping(g, zcull_alloc_num,
+					 zcull_map_tiles);
 
 	kfree(zcull_map_tiles);
 	kfree(zcull_bank_counters);
@@ -9059,4 +9130,5 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.split_ltc_broadcast_addr =
 					gr_gk20a_split_ltc_broadcast_addr_stub;
 	gops->gr.setup_rop_mapping = gr_gk20a_setup_rop_mapping;
+	gops->gr.program_zcull_mapping = gr_gk20a_program_zcull_mapping;
 }

@@ -305,6 +305,8 @@ struct gpu_ops {
 		void (*program_active_tpc_counts)(struct gk20a *g, u32 gpc);
 		int  (*setup_rop_mapping)(struct gk20a *g, struct gr_gk20a *gr);
 		int (*init_sw_veid_bundle)(struct gk20a *g);
+		void (*program_zcull_mapping)(struct gk20a *g,
+				u32 zcull_alloc_num, u32 *zcull_map_tiles);
 	} gr;
 	const char *name;
 	struct {

@@ -470,6 +470,8 @@ int gr_gk20a_bind_ctxsw_zcull(struct gk20a *g, struct gr_gk20a *gr,
 			struct channel_gk20a *c, u64 zcull_va, u32 mode);
 int gr_gk20a_get_zcull_info(struct gk20a *g, struct gr_gk20a *gr,
 			struct gr_zcull_info *zcull_params);
+void gr_gk20a_program_zcull_mapping(struct gk20a *g, u32 zcull_num_entries,
+					u32 *zcull_map_tiles);
 /* zbc */
 int gr_gk20a_add_zbc(struct gk20a *g, struct gr_gk20a *gr,
 			struct zbc_entry *zbc_val);

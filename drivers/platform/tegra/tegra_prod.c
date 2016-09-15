@@ -271,25 +271,27 @@ static int tegra_prod_parse_dt(struct device *dev,
  * tegra_prod_set_tuple - Only set a tuple.
  * @base:		base address of the register.
  * @prod_tuple:		the tuple to set.
+ * @mask_one:		Mask style.
+ * @new_mask:		Mask override value, 0 means use from tupple.
  *
  * Returns 0 on success.
  */
 static int tegra_prod_set_tuple(void __iomem **base,
 				struct prod_tuple *prod_tuple,
-				bool mask_ones)
+				bool mask_ones,
+				u32 new_mask)
 {
 	u32 reg;
+	u32 mask = (new_mask) ? new_mask : prod_tuple->mask;
 
 	if (!prod_tuple)
 		return -EINVAL;
 
 	reg = readl(base[prod_tuple->index] + prod_tuple->addr);
 	if (mask_ones)
-		reg = ((reg & ~prod_tuple->mask) |
-			(prod_tuple->val & prod_tuple->mask));
+		reg = ((reg & ~mask) | (prod_tuple->val & mask));
 	else
-		reg = ((reg & prod_tuple->mask) |
-			(prod_tuple->val & ~prod_tuple->mask));
+		reg = ((reg & mask) | (prod_tuple->val & ~mask));
 
 	writel(reg, base[prod_tuple->index] + prod_tuple->addr);
 
@@ -316,7 +318,7 @@ static int tegra_prod_set(void __iomem **base,
 
 	for (i = 0; i < tegra_prod->count; i++) {
 		ret = tegra_prod_set_tuple(base, &tegra_prod->prod_tuple[i],
-					   mask_ones);
+					   mask_ones, 0);
 		if (ret)
 			return ret;
 	}
@@ -403,8 +405,6 @@ int tegra_prod_set_by_name(void __iomem **base, const char *name,
 
 	for (i = 0; i < tegra_prod->num; i++) {
 		t_prod = &tegra_prod->prod_config[i];
-		if (!t_prod)
-			return -EINVAL;
 		if (!strcmp(t_prod->name, name))
 			return tegra_prod_set(base, t_prod,
 					      tegra_prod->mask_ones);
@@ -444,9 +444,6 @@ int tegra_prod_set_by_name_partially(void __iomem **base, const char *name,
 
 	for (i = 0; i < tegra_prod->num; i++) {
 		t_prod = &tegra_prod->prod_config[i];
-		if (!t_prod)
-			return -EINVAL;
-
 		if (!strcmp(t_prod->name, name)) {
 			found = true;
 			break;
@@ -460,10 +457,11 @@ int tegra_prod_set_by_name_partially(void __iomem **base, const char *name,
 		struct prod_tuple *ptuple = &t_prod->prod_tuple[i];;
 
 		if ((ptuple->index != index) || (ptuple->addr != offset) ||
-		    (ptuple->mask != mask))
+		    ((ptuple->mask & mask) != mask))
 			continue;
 
-		ret = tegra_prod_set_tuple(base, ptuple, tegra_prod->mask_ones);
+		ret = tegra_prod_set_tuple(base, ptuple,
+					   tegra_prod->mask_ones, mask);
 		if (ret < 0)
 			return ret;
 	}

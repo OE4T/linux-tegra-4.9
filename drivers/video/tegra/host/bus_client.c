@@ -725,8 +725,8 @@ static int nvhost_ioctl_channel_submit(struct nvhost_channel_userctx *ctx,
 
 	int err;
 
-	if (args->num_syncpt_incrs >
-		     nvhost_syncpt_nb_pts(&nvhost_get_host(ctx->pdev)->syncpt))
+	if ((args->num_syncpt_incrs < 1) || (args->num_syncpt_incrs >
+		     nvhost_syncpt_nb_pts(&nvhost_get_host(ctx->pdev)->syncpt)))
 		return -EINVAL;
 
 	job = nvhost_job_alloc(ctx->ch,

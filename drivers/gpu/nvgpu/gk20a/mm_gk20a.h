@@ -183,6 +183,7 @@ struct gk20a_comptags {
 struct gk20a_mm_entry {
 	/* backing for */
 	struct mem_desc mem;
+	u32 woffset; /* if >0, mem is a shadow copy, owned by another entry */
 	int pgsz;
 	struct gk20a_mm_entry *entries;
 	int num_entries;
@@ -630,6 +631,10 @@ u32 __gk20a_aperture_mask(struct gk20a *g, enum gk20a_aperture aperture,
 		u32 sysmem_mask, u32 vidmem_mask);
 u32 gk20a_aperture_mask(struct gk20a *g, struct mem_desc *mem,
 		u32 sysmem_mask, u32 vidmem_mask);
+
+void gk20a_pde_wr32(struct gk20a *g, struct gk20a_mm_entry *entry,
+		size_t w, size_t data);
+u64 gk20a_pde_addr(struct gk20a *g, struct gk20a_mm_entry *entry);
 
 u64 gk20a_locked_gmmu_map(struct vm_gk20a *vm,
 			u64 map_offset,

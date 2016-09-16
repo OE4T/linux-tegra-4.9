@@ -3209,6 +3209,20 @@ static void tegra_dc_dp_sor_sleep(struct tegra_dc *dc)
 		tegra_dc_sor_sleep(dp->sor);
 }
 
+static u32 tegra_dc_dp_sor_crc_check(struct tegra_dc *dc)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+	return tegra_dc_sor_get_crc(dp->sor, NULL);
+}
+
+static void tegra_dc_dp_sor_crc_toggle(struct tegra_dc *dc,
+	u32 val)
+{
+	struct tegra_dc_dp_data *dp = tegra_dc_get_outdata(dc);
+
+	tegra_dc_sor_toggle_crc(dp->sor, val);
+}
 
 static struct tegra_hpd_ops hpd_ops = {
 	.edid_read = tegra_dp_hpd_op_edid_read,
@@ -3234,4 +3248,6 @@ struct tegra_dc_out_ops tegra_dc_dp_ops = {
 	.resume = tegra_dc_dp_resume,
 	.hotplug_init = tegra_dc_dp_hotplug_init,
 	.shutdown_interface = tegra_dc_dp_sor_sleep,
+	.get_crc = tegra_dc_dp_sor_crc_check,
+	.toggle_crc = tegra_dc_dp_sor_crc_toggle,
 };

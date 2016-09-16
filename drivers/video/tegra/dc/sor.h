@@ -146,6 +146,8 @@ void tegra_dc_sor_attach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_detach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_pre_detach(struct tegra_dc_sor_data *sor);
 void tegra_dc_sor_sleep(struct tegra_dc_sor_data *sor);
+u32 tegra_dc_sor_get_crc(struct tegra_dc_sor_data *sor, int *timeout);
+void tegra_dc_sor_toggle_crc(struct tegra_dc_sor_data *sor, u32 val);
 void tegra_dc_sor_enable_lvds(struct tegra_dc_sor_data *sor,
 	bool balanced, bool conforming);
 void tegra_dc_sor_disable(struct tegra_dc_sor_data *sor, bool is_lvds);

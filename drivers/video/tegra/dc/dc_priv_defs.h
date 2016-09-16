@@ -138,6 +138,8 @@ struct tegra_dc_out_ops {
 	int (*set_hdr)(struct tegra_dc *dc);
 	/* shutdown the serial interface */
 	void (*shutdown_interface)(struct tegra_dc *dc);
+	u32 (*get_crc)(struct tegra_dc *dc);
+	void (*toggle_crc)(struct tegra_dc *dc, u32 val);
 };
 
 struct tegra_dc_shift_clk_div {

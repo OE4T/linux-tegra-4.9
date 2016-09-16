@@ -2896,6 +2896,21 @@ static void tegra_dc_hdmi_sor_sleep(struct tegra_dc *dc)
 		tegra_dc_sor_sleep(hdmi->sor);
 }
 
+static u32 tegra_dc_hdmi_sor_crc_check(struct tegra_dc *dc)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	return tegra_dc_sor_get_crc(hdmi->sor, NULL);
+}
+
+static void tegra_dc_hdmi_sor_crc_toggle(struct tegra_dc *dc,
+	u32 val)
+{
+	struct tegra_hdmi *hdmi = tegra_dc_get_outdata(dc);
+
+	tegra_dc_sor_toggle_crc(hdmi->sor, val);
+}
+
 struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.init = tegra_dc_hdmi_init,
 	.hotplug_init = tegra_dc_hdmi_hpd_init,
@@ -2917,4 +2932,6 @@ struct tegra_dc_out_ops tegra_dc_hdmi2_0_ops = {
 	.set_hdr = tegra_dc_hdmi_set_hdr,
 	.postpoweron = tegra_dc_hdmi_postpoweron,
 	.shutdown_interface = tegra_dc_hdmi_sor_sleep,
+	.get_crc = tegra_dc_hdmi_sor_crc_check,
+	.toggle_crc = tegra_dc_hdmi_sor_crc_toggle,
 };

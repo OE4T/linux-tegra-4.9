@@ -256,6 +256,57 @@ static ssize_t crc_checksum_latched_store(struct device *dev,
 static DEVICE_ATTR(crc_checksum_latched, S_IRUGO|S_IWUSR,
 		crc_checksum_latched_show, crc_checksum_latched_store);
 
+static ssize_t out_crc_show(struct device *device,
+	struct device_attribute *attr, char *buf)
+{
+	struct platform_device *ndev = to_platform_device(device);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+
+	u32 crc = 0;
+
+	if (!dc->enabled) {
+		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
+		return -EFAULT;
+	}
+
+	if (dc->out_ops && dc->out_ops->get_crc)
+		crc = dc->out_ops->get_crc(dc);
+
+	return snprintf(buf, PAGE_SIZE, "%u\n", crc);
+}
+
+static ssize_t out_crc_store(struct device *dev,
+	struct device_attribute *attr, const char *buf, size_t count)
+{
+	struct platform_device *ndev = to_platform_device(dev);
+	struct tegra_dc *dc = platform_get_drvdata(ndev);
+	unsigned long val = 0;
+
+	if (!dc->enabled) {
+		dev_err(&dc->ndev->dev, "%s: DC not enabled.\n", __func__);
+		return -EFAULT;
+	}
+
+	if (kstrtoul(buf, 10, &val) < 0)
+		return -EINVAL;
+
+	if (val > 1) {
+		dev_err(&dc->ndev->dev, "Invalid input.\n");
+		return count;
+	}
+
+	if (dc->out_ops && dc->out_ops->toggle_crc)
+			dc->out_ops->toggle_crc(dc, val);
+
+	if (val == 1)
+		dev_dbg(&dc->ndev->dev, "crc is enabled.\n");
+	else if (val == 0)
+		dev_dbg(&dc->ndev->dev, "crc is disabled.\n");
+
+	return count;
+}
+static DEVICE_ATTR(out_crc, S_IRUGO | S_IWUSR, out_crc_show, out_crc_store);
+
 static ssize_t scanline_show(struct device *device,
 	struct device_attribute *attr, char *buf)
 {
@@ -786,6 +837,10 @@ void tegra_dc_remove_sysfs(struct device *dev)
 	device_remove_file(dev, &dev_attr_enable);
 	device_remove_file(dev, &dev_attr_stats_enable);
 	device_remove_file(dev, &dev_attr_crc_checksum_latched);
+	if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+		(dc->out->type == TEGRA_DC_OUT_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_FAKE_DP))
+		device_remove_file(dev, &dev_attr_out_crc);
 	device_remove_file(dev, &dev_attr_win_mask);
 
 #ifdef CONFIG_TEGRA_DC_WIN_H
@@ -840,6 +895,10 @@ void tegra_dc_create_sysfs(struct device *dev)
 	error |= device_create_file(dev, &dev_attr_enable);
 	error |= device_create_file(dev, &dev_attr_stats_enable);
 	error |= device_create_file(dev, &dev_attr_crc_checksum_latched);
+	if ((dc->out->type == TEGRA_DC_OUT_HDMI) ||
+		(dc->out->type == TEGRA_DC_OUT_DP) ||
+		(dc->out->type == TEGRA_DC_OUT_FAKE_DP))
+		error |= device_create_file(dev, &dev_attr_out_crc);
 	error |= device_create_file(dev, &dev_attr_win_mask);
 
 #ifdef CONFIG_TEGRA_DC_WIN_H

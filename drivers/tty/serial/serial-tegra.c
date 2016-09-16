@@ -1701,7 +1701,7 @@ static int tegra_uart_probe(struct platform_device *pdev)
 	if (IS_ERR(u->membase))
 		return PTR_ERR(u->membase);
 
-	tup->uart_clk = devm_clk_get(&pdev->dev, NULL);
+	tup->uart_clk = devm_clk_get(&pdev->dev, "serial");
 	if (IS_ERR(tup->uart_clk)) {
 		dev_err(&pdev->dev, "Couldn't get the clock\n");
 		return PTR_ERR(tup->uart_clk);

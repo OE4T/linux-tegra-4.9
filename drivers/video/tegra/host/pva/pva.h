@@ -22,9 +22,10 @@
 #define __NVHOST_PVA_H__
 
 #include <linux/dma-attrs.h>
+#include <linux/mutex.h>
 
 #include "nvhost_queue.h"
-#include "pva-ucode-header.h"
+#include "pva_regs.h"
 
 extern const struct file_operations tegra_pva_ctrl_ops;
 
@@ -49,7 +50,6 @@ struct pva_fw {
 	struct pva_ucode_hdr *hdr;
 
 	size_t size;
-	bool booted;
 
 	dma_addr_t phys;
 	void *mapped;
@@ -59,11 +59,14 @@ struct pva_fw {
 /**
  * struct pva - Driver private data, shared with all applications
  *
- * @pdev:		Pointer to the PVA device
- * @pool:		Pointer to Queue table available for the PVA
- * @fw_info:		firmware information struct
- * @lock:		Spinlock for pva struct
- * @irq:		IRQ number obtained on registering the module
+ * @pdev:			Pointer to the PVA device
+ * @pool:			Pointer to Queue table available for the PVA
+ * @fw_info:			firmware information struct
+ * @irq:			IRQ number obtained on registering the module
+ * @mailbox_mutex:		Mutex to avoid concurrent mailbox accesses
+ * @mailbox_waitq:		Mailbox waitqueue for response waiters
+ * @mailbox_status_regs:	Response is stored into this structure temporarily
+ * @mailbox_status:		Status of the mailbox interface
  *
  */
 struct pva {
@@ -71,8 +74,12 @@ struct pva {
 	struct nvhost_queue_pool *pool;
 	struct pva_fw fw_info;
 
-	spinlock_t lock;
 	int irq;
+
+	wait_queue_head_t mailbox_waitqueue;
+	struct pva_mailbox_status_regs mailbox_status_regs;
+	enum pva_mailbox_status mailbox_status;
+	struct mutex mailbox_mutex;
 };
 
 /**

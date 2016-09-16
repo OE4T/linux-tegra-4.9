@@ -17,43 +17,58 @@
  */
 
 #include <linux/irq.h>
+#include <linux/slab.h>
+#include <linux/wait.h>
 
 #include "bus_client.h"
+#include "pva_regs.h"
 #include "dev.h"
 #include "pva.h"
-#include "pva_regs.h"
 
-static irqreturn_t pva_mbox_isr(int irq, void *dev_id)
+static irqreturn_t pva_isr(int irq, void *dev_id)
 {
-	unsigned long flags;
 	struct pva *pva = dev_id;
-	struct pva_mbox_status mb_status;
 	struct platform_device *pdev = pva->pdev;
 	u32 status7 = host1x_readl(pdev, hsp_sm7_r());
 	u32 status6 = host1x_readl(pdev, hsp_sm6_r());
 	u32 status5 = host1x_readl(pdev, hsp_sm5_r());
 
-	spin_lock_irqsave(&pva->lock, flags);
+	if (status5 & PVA_AISR_INT_PENDING) {
+		nvhost_dbg_info("PVA AISR (%x)", status7);
 
-	memset(&mb_status, 0, sizeof(struct pva_mbox_status));
+		/* For now, just log the errors */
 
-	if (status5)
+		if (status5 & PVA_AISR_TASK_ERROR)
+			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_TASK_ERROR");
+		if (status5 & PVA_AISR_THRESHOLD_EXCEEDED)
+			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_THRESHOLD_EXCEEDED");
+		if (status5 & PVA_AISR_LOGGING_OVERFLOW)
+			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_LOGGING_OVERFLOW");
+		if (status5 & PVA_AISR_PRINTF_OVERFLOW)
+			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_PRINTF_OVERFLOW");
+		if (status5 & PVA_AISR_CRASH_LOG)
+			nvhost_warn(&pdev->dev, "PVA AISR: PVA_AISR_CRASH_LOG");
+
 		host1x_writel(pdev, hsp_sm5_r(), 0x0);
-
-	if (status6)
-		host1x_writel(pdev, hsp_sm6_r(), 0x0);
-
-	if (status7) {
-
-		if (status7 & PVA_INT_PENDING)
-			pva->fw_info.booted = true;
-
-		/* Interrupt bits are cleared in pva_read_mbox_status() */
-		pva_read_mbox_status(pdev, status7, &mb_status);
-		pva_process_mbox_status(pdev, &mb_status);
 	}
 
-	spin_unlock_irqrestore(&pva->lock, flags);
+	if (status6 & PVA_INT_PENDING) {
+		nvhost_warn(&pdev->dev, "Unhandled SWUART ISR (%x)", status6);
+		host1x_writel(pdev, hsp_sm6_r(), 0x0);
+	}
+
+	if (status7 & PVA_INT_PENDING) {
+		nvhost_dbg_info("PVA ISR (%x)", status7);
+
+		pva_mailbox_isr(pva);
+
+		/* Leave PVA_READY bit untouched in purpose as
+		 * per ISS recommendation
+		 */
+		status7 = status7 & PVA_READY;
+		host1x_writel(pdev, hsp_sm7_r(), status7);
+	}
+
 	return IRQ_HANDLED;
 }
 
@@ -66,20 +81,20 @@ int pva_register_isr(struct platform_device *dev)
 	pva->irq = platform_get_irq(dev, 0);
 	if (pva->irq <= 0) {
 		dev_err(&dev->dev, "no irq\n");
-		return -ENOENT;
+		err = -ENOENT;
+		goto isr_err;
 	}
 
-	spin_lock_init(&pva->lock);
-
-	err = request_threaded_irq(pva->irq, NULL, pva_mbox_isr, IRQF_ONESHOT,
-			  "pva-isr", pva);
+	err = request_threaded_irq(pva->irq, NULL, pva_isr,
+				   IRQF_ONESHOT, "pva-isr", pva);
 	if (err) {
 		pr_err("%s: request_irq(%d) failed(%d)\n", __func__,
 		pva->irq, err);
-		return err;
+		goto isr_err;
 	}
 
 	disable_irq(pva->irq);
 
-	return 0;
+isr_err:
+	return err;
 }

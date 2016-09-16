@@ -19,16 +19,12 @@
 #include <linux/export.h>
 #include <linux/module.h>
 #include <linux/delay.h>
+#include <linux/wait.h>
 #include <linux/platform_device.h>
-#include "dev.h"
-#include "nvhost_acm.h"
-#include "pva_regs.h"
 
-/* Change this define as more cmd get supported */
-#define SUPPORTED_CMD 1
-static struct pva_status_lookup *commands[SUPPORTED_CMD] = {
-	[CMD_NOOP]			= &pva_noop_cmnd
-};
+#include "nvhost_acm.h"
+#include "dev.h"
+#include "pva.h"
 
 static u32 pva_get_mb_reg(u32 i)
 {
@@ -42,39 +38,26 @@ static u32 pva_get_mb_reg(u32 i)
 	return mb_reg[i];
 }
 
-/* Function to notify unsupported commands */
-static int mbox_cmd_nosupport(struct platform_device *pdev,
-			const struct pva_mbox_status *const mb_status)
+static int pva_mailbox_send_cmd(struct pva *pva, struct pva_cmd *cmd,
+				u32 nregs)
 {
-	nvhost_err(&pdev->dev, "mbox cmd 0x%x missing code support\n",
-			PVA_GET_COMMAND(mb_status->cmd));
-	return -EINVAL;
-}
-
-
-int pva_send_mbox_cmd(struct platform_device *pdev,
-				struct pva_cmd *cmd, u32 nregs)
-{
-	u32	reg, status;
-	s32	i;
-	int	err = 0;
+	struct platform_device *pdev = pva->pdev;
+	u32 reg, status;
+	int i;
 
 	if (nregs > VALID_MB_INPUT_REGS) {
 		pr_err("%s nregs %d more than expected\n", __func__, nregs);
 		return -EINVAL;
 	}
 
-	/*
-	 * Make sure the state is what we expect it to be.
-	 */
+	/* Make sure the state is what we expect it to be. */
 	status = host1x_readl(pdev, hsp_sm7_r());
 
 	WARN_ON((status & PVA_INT_PENDING));
 	WARN_ON((status & PVA_READY) == 0);
 	WARN_ON((status & PVA_BUSY));
 
-	/*
-	 * Write all of the other command mailbox
+	/* Write all of the other command mailbox
 	 * registers before writing mailbox 0.
 	 */
 	for (i = (nregs - 1); i >= 0; i--) {
@@ -82,97 +65,107 @@ int pva_send_mbox_cmd(struct platform_device *pdev,
 		host1x_writel(pdev, reg, cmd->mbox[i]);
 	}
 
-	return err;
+	return 0;
 }
 
-void pva_mbox_poll_status(struct platform_device *pdev)
+void pva_mailbox_isr(struct pva *pva)
 {
-	u32 status = host1x_readl(pdev, hsp_sm7_r());
+	struct platform_device *pdev = pva->pdev;
+	u32 int_status = host1x_readl(pdev, hsp_sm7_r());
 
-	/* check for the int_pending bit to set */
-	while ((status & PVA_BUSY) || (!(status & PVA_INT_PENDING))) {
-		usleep_range(10, 20);
-		status = host1x_readl(pdev, hsp_sm7_r());
+	if (pva->mailbox_status != PVA_MBOX_STATUS_WFI) {
+		nvhost_warn(&pdev->dev, "Unexpected PVA ISR (%x)", int_status);
+		return;
 	}
-	WARN_ON((status & PVA_READY) == 0);
-	/* check whether PVA_BUSY is cleared */
-	WARN_ON((status & PVA_BUSY));
 
-}
-
-int pva_read_mbox_status(struct platform_device *pdev,
-			int int_status,
-			struct pva_mbox_status *mb_status)
-{
-	u32 clear_status = PVA_INT_PENDING;
-
-	WARN_ON((int_status & PVA_INT_PENDING) == 0);
-
-	/* save the current command and subcommand for later processing */
-	mb_status->cmd = host1x_readl(pdev, hsp_sm0_r());
+	/* Save the current command and subcommand for later processing */
+	pva->mailbox_status_regs.cmd = host1x_readl(pdev, hsp_sm0_r());
 
 	/* Get all the valid status register data */
 	if (int_status & PVA_VALID_STATUS3) {
-		mb_status->status[PVA_CCQ_STATUS3_INDEX] =
-				 host1x_readl(pdev, cfg_ccq_status3_r());
-		clear_status |= PVA_VALID_STATUS3;
-		mb_status->error = PVA_GET_ERROR_CODE(
-				mb_status->status[PVA_CCQ_STATUS3_INDEX]);
+		pva->mailbox_status_regs.status[PVA_CCQ_STATUS3_INDEX] =
+			host1x_readl(pdev, cfg_ccq_status3_r());
+
+		if (int_status & PVA_CMD_ERROR)
+			pva->mailbox_status_regs.error =
+			PVA_GET_ERROR_CODE(
+			pva->mailbox_status_regs.status[PVA_CCQ_STATUS3_INDEX]
+			);
 	}
 
-	if (int_status & PVA_VALID_STATUS4) {
-		mb_status->status[PVA_CCQ_STATUS4_INDEX] =
-				 host1x_readl(pdev, cfg_ccq_status4_r());
-		clear_status |= PVA_VALID_STATUS4;
-	}
+	if (int_status & PVA_VALID_STATUS4)
+		pva->mailbox_status_regs.status[PVA_CCQ_STATUS4_INDEX] =
+			host1x_readl(pdev, cfg_ccq_status4_r());
 
-	if (int_status & PVA_VALID_STATUS5) {
-		mb_status->status[PVA_CCQ_STATUS5_INDEX] =
-				 host1x_readl(pdev, cfg_ccq_status5_r());
-		clear_status |= PVA_VALID_STATUS5;
-	}
+	if (int_status & PVA_VALID_STATUS5)
+		pva->mailbox_status_regs.status[PVA_CCQ_STATUS5_INDEX] =
+			host1x_readl(pdev, cfg_ccq_status5_r());
 
-	if (int_status & PVA_VALID_STATUS6) {
-		mb_status->status[PVA_CCQ_STATUS6_INDEX] =
-				 host1x_readl(pdev, cfg_ccq_status6_r());
-		clear_status |= PVA_VALID_STATUS6;
-	}
+	if (int_status & PVA_VALID_STATUS6)
+		pva->mailbox_status_regs.status[PVA_CCQ_STATUS6_INDEX] =
+			host1x_readl(pdev, cfg_ccq_status6_r());
 
-	if (int_status & PVA_VALID_STATUS7) {
-		mb_status->status[PVA_CCQ_STATUS7_INDEX] =
-				 host1x_readl(pdev, cfg_ccq_status7_r());
-		clear_status |= PVA_VALID_STATUS7;
-	}
+	if (int_status & PVA_VALID_STATUS7)
+		pva->mailbox_status_regs.status[PVA_CCQ_STATUS7_INDEX] =
+			host1x_readl(pdev, cfg_ccq_status7_r());
 
-	if (int_status & PVA_CMD_COMPLETE)
-		clear_status |= PVA_CMD_COMPLETE;
-
-	if (int_status & PVA_CMD_ERROR)
-		clear_status |= PVA_CMD_ERROR;
-
-	/* Acknowledge the interrupt */
-	host1x_writel(pdev, hsp_sm7_r(), (int_status & ~clear_status));
-
-	return int_status;
+	pva->mailbox_status = PVA_MBOX_STATUS_DONE;
+	wake_up_interruptible(&pva->mailbox_waitqueue);
 }
 
-int
-pva_process_mbox_status(struct platform_device *pdev,
-		const struct pva_mbox_status *const mb_status)
+int pva_mailbox_send_cmd_sync(struct pva *pva,
+			struct pva_cmd *cmd, u32 nregs,
+			struct pva_mailbox_status_regs *mailbox_status_regs)
 {
-	const struct pva_status_lookup *lookup;
-	u32 cmd = PVA_GET_COMMAND(mb_status->cmd);
-	int err = -EINVAL;
+	int timeout;
+	int err = 0;
 
-	if (cmd < SUPPORTED_CMD) {
-		lookup = commands[cmd];
-		if (lookup &&
-			(lookup->process_mbox != NULL)) {
-			err = lookup->process_mbox(mb_status);
-		}
-	} else {
-		err = mbox_cmd_nosupport(pdev, mb_status);
+	if (mailbox_status_regs == NULL) {
+		err = -EINVAL;
+		goto err_invalid_parameter;
 	}
+
+	mutex_lock(&pva->mailbox_mutex);
+
+	/* Ensure that mailbox state is sane */
+	if (WARN_ON(pva->mailbox_status != PVA_MBOX_STATUS_INVALID)) {
+		err = -EIO;
+		goto err_check_status;
+	}
+
+	/* Mark that we are waiting for an interrupt */
+	pva->mailbox_status = PVA_MBOX_STATUS_WFI;
+	memset(&pva->mailbox_status_regs, 0, sizeof(pva->mailbox_status_regs));
+
+	/* Submit command to PVA */
+	err = pva_mailbox_send_cmd(pva, cmd, nregs);
+	if (err < 0)
+		goto err_send_command;
+
+	/* Wait for the event being triggered in ISR */
+	timeout = wait_event_interruptible_timeout(pva->mailbox_waitqueue,
+		pva->mailbox_status == PVA_MBOX_STATUS_DONE,
+		msecs_to_jiffies(10000));
+	if (timeout <= 0) {
+		err = -EBUSY;
+		goto err_wait_response;
+	}
+
+	/* Return interrupt status back to caller */
+	memcpy(mailbox_status_regs, &pva->mailbox_status_regs,
+				sizeof(struct pva_mailbox_status_regs));
+
+	pva->mailbox_status = PVA_MBOX_STATUS_INVALID;
+	mutex_unlock(&pva->mailbox_mutex);
 
 	return err;
+
+err_wait_response:
+err_send_command:
+	pva->mailbox_status = PVA_MBOX_STATUS_INVALID;
+err_check_status:
+	mutex_unlock(&pva->mailbox_mutex);
+err_invalid_parameter:
+	return err;
 }
+EXPORT_SYMBOL(pva_mailbox_send_cmd_sync);

@@ -73,11 +73,12 @@ static u32 pva_get_evp_reg(u32 index)
 #define R5_USER_SEGREG_OFFSET 0x40000000
 static int pva_init_fw(struct platform_device *pdev)
 {
-	int err = 0, w;
 	struct nvhost_device_data *pdata = platform_get_drvdata(pdev);
 	struct pva *pva = pdata->private_data;
 	struct pva_fw *fw_info = &pva->fw_info;
 	u32 *ucode_ptr = fw_info->mapped;
+	int err = 0, w;
+	int timeout;
 
 	nvhost_dbg_fn("");
 
@@ -134,19 +135,25 @@ static int pva_init_fw(struct platform_device *pdev)
 	/* TODO: Add stream ID */
 
 	/* Indicate the OS is waiting for PVA ready Interrupt */
+	pva->mailbox_status = PVA_MBOX_STATUS_WFI;
 	host1x_writel(pdev, hsp_ss0_set_r(), PVA_BOOT_INT);
 
 	/* Take R5 out of reset */
 	host1x_writel(pdev, proc_cpuhalt_r(),
 		proc_cpuhalt_ncpuhalt_f(proc_cpuhalt_ncpuhalt_done_v()));
 
-	nvhost_dbg_fn("WAITING.... for PVA to be READY");
+	nvhost_dbg_fn("Waiting for PVA to be READY");
 
-	/* wait till the PVA firmware boot completes */
-	while (fw_info->booted == false)
-		usleep_range(10, 100);
+	/* Wait PVA to report itself as ready */
+	timeout = wait_event_interruptible_timeout(pva->mailbox_waitqueue,
+		pva->mailbox_status == PVA_MBOX_STATUS_DONE,
+		msecs_to_jiffies(10000));
+	if (timeout <= 0)
+		err = -ETIMEDOUT;
 
-	nvhost_dbg_fn("PVA is READY");
+	pva->mailbox_status = PVA_MBOX_STATUS_INVALID;
+
+	nvhost_dbg_fn("PVA boot returned: %d", err);
 
 	return err;
 }
@@ -307,6 +314,8 @@ static int pva_probe(struct platform_device *pdev)
 	mutex_init(&pdata->lock);
 	pdata->private_data = pva;
 	platform_set_drvdata(pdev, pdata);
+	init_waitqueue_head(&pva->mailbox_waitqueue);
+	mutex_init(&pva->mailbox_mutex);
 
 	/* Map MMIO range to kernel space */
 	err = nvhost_client_device_get_resources(pdev);

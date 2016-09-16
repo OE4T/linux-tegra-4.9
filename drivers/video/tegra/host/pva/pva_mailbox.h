@@ -17,7 +17,11 @@
  */
 
 #ifndef __PVA_MAILBOX_H__
-#define __PVA_MAINBOX_H__
+#define __PVA_MAILBOX_H__
+
+#include <linux/platform_device.h>
+
+#include "pva-interface.h"
 
 /* Total CCQ status registers */
 #define PVA_CCQ_STATUS_REGS	9
@@ -36,89 +40,62 @@
 /* Number of valid MBOX registers used for sending commands */
 #define VALID_MB_INPUT_REGS 4
 
-extern struct pva_status_lookup pva_noop_cmnd;
-extern struct pva_status_lookup pva_cmnd_nosupport;
+struct pva;
 
 /**
- * struct pva_mbox_status - Handle the MBOX status based on ISR
+ * enum pva_mailbox_status - PVA mailbox status indication
+ *
+ * These enumerations reflect the state of PVA interrupt handler
+ */
+enum pva_mailbox_status {
+	PVA_MBOX_STATUS_INVALID	= 0,
+	PVA_MBOX_STATUS_WFI	= 1,
+	PVA_MBOX_STATUS_DONE	= 2,
+};
+
+/**
+ * struct pva_mailbox_status_regs - Handle the MBOX status based on ISR
  *
  * @cmd:		Holds the current MBOX command
  * @error:		Holds the any error shown through ISR
  * @status:		Holds the status of all CCQ registers
  *
  */
-struct pva_mbox_status {
-	uint32_t	cmd;
-	uint32_t	error;
-	uint32_t	status[PVA_CCQ_STATUS_REGS];
+struct pva_mailbox_status_regs {
+	uint32_t status[PVA_CCQ_STATUS_REGS];
+	uint32_t error;
+	uint32_t cmd;
 };
 
 /**
- * struct pva_status_lookup - Process the MBOX status
+ * pva_mailbox_send_cmd_sync() - Send a command and wait for response
  *
- * @process_mbox_status:	Callback function to process the CCQ status
- *
- */
-struct pva_status_lookup {
-	int	(*process_mbox)(const struct pva_mbox_status *const mb_status);
-};
-
-/**
- * pva_send_mbox_cmd() - Functions to send MBOX commands
- *
- * @pdev:	Pointer to PVA device
- * @pva_cmd:	Pointer to the pva command struct
- * @nregs:	Number of valid mailbox registers for the command
+ * @pva:		Pointer to PVA structure
+ * @pva_cmd:		Pointer to the pva command struct
+ * @nregs:		Number of valid mailbox registers for the command
+ * @mb_status_regs:	Pointer to pva_mailbox_status_regs struct
  *
  * Return:	0 on Success or negative error code
  *
  * This function called by OS to pass the mailbox commands to
- * the PVA uCode.
+ * the PVA uCode. The function returns the output status from PVA
+ * firmware once the task is completed.
+ *
+ * The caller is responsible to ensure that PVA has been powered
+ * up through nvhost_module_busy() API prior calling this function.
  */
-int pva_send_mbox_cmd(struct platform_device *pdev,
-				struct pva_cmd *cmd, u32 nregs);
+int pva_mailbox_send_cmd_sync(struct pva *pva,
+			struct pva_cmd *cmd, u32 nregs,
+			struct pva_mailbox_status_regs *mb_status_regs);
 
 /**
- * pva_mbox_poll_status() - Functions to poll the mailbox status
+ * pva_mailbox_isr() - Handle interrupt for PVA ISR
  *
- * @pdev:	Pointer to PVA device
- *
- * Return:	0 on Success or negative error code
- *
- * This function can be used by kernel driver to poll the mbox status
- * register to check whether the commands is being processed or not.
- */
-void pva_mbox_poll_status(struct platform_device *pdev);
-
-/**
- * pva_read_mbox_status() - Functions to read the mailbox status registers
- *
- * @pdev:	Pointer to PVA device
- * @int_status:	Interrupt status value read from ISR
- * @mb_status:	Pointer to pva_mbox_status struct
- *
- * Return:	0 on Success or negative error code
+ * @pva:	Pointer to PVA structure
  *
  * This function is used to read the CCQ status registers based on
- * the status set in mbox7 by the PVA uCode.
+ * the status set in mailbox7 by the PVA uCode.
  */
-int pva_read_mbox_status(struct platform_device *pdev,
-			int int_status,
-			struct pva_mbox_status *mb_status);
-
-/**
- * pva_process_mbox_status() - Functions to Process the status registers
- *
- * @pdev:	Pointer to PVA device
- * @mb_status:	Pointer to pva_mbox_status struct
- *
- * Return:	0 on Success or negative error code
- *
- * This function is used to intepret the CCQ status register value based on
- * command being passed to the PVA uCode.
- */
-int
-pva_process_mbox_status(struct platform_device *pdev,
-			const struct pva_mbox_status *const mb_status);
+void pva_mailbox_isr(struct pva *pva);
 
 #endif /*__PVA_MAINBOX_H__*/

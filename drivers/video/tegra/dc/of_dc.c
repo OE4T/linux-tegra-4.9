@@ -85,7 +85,7 @@ static struct regulator *of_edp_sec_mode;
 static struct regulator *of_dp_pad;
 static struct regulator *of_dp_hdmi_5v0;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)  || defined(CONFIG_ARCH_TEGRA_210_SOC)
 /* The dc_or_node_name should be saved as per
  * dc id based on probe.
  * /host1x/sor, /host1x/sor1 and
@@ -287,7 +287,7 @@ static bool is_dc_default_out_flag(u32 flag)
 		return false;
 }
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 static struct device_node *dc_get_or_node_name(struct device *dev)
 {
 	struct device_node *np = NULL;
@@ -323,7 +323,7 @@ static int parse_disp_default_out(struct platform_device *ndev,
 	u8 *addr;
 	int err = 0;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	np_hdmi = of_find_node_by_path(dc_or_node_names[ndev->id]);
 	np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
 #else
@@ -2162,7 +2162,7 @@ static int dc_dp_out_hotplug_init(struct device *dev)
 	int gpio;
 	struct device_node *np_dp = NULL;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	np_dp = dc_get_or_node_name(dev);
 #else
 	np_dp =	of_find_node_by_path(SOR1_NODE);
@@ -2229,7 +2229,7 @@ static int dc_hdmi_out_enable(struct device *dev)
 	int err = 0;
 	struct device_node *np_hdmi = NULL;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	np_hdmi = dc_get_or_node_name(dev);
 #else
 	np_hdmi = of_find_node_by_path(HDMI_NODE);
@@ -2313,7 +2313,7 @@ static int dc_hdmi_hotplug_init(struct device *dev)
 	int err = 0;
 	struct device_node *np_hdmi = NULL;
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	np_hdmi = dc_get_or_node_name(dev);
 #else
 	np_hdmi = of_find_node_by_path(HDMI_NODE);
@@ -2328,7 +2328,7 @@ static int dc_hdmi_hotplug_init(struct device *dev)
 		of_hdmi_vddio = regulator_get(dev, "vdd_hdmi_5v0");
 		if (IS_ERR_OR_NULL(of_hdmi_vddio)) {
 			err = PTR_ERR(of_hdmi_vddio);
-			pr_err("hdmi: couldn't get regulator vdd_hdmi_5v0\n");
+			pr_err("hdmi: couldn't get regulator vdd_hdmi_5v0: %d\n", err);
 			of_hdmi_vddio = NULL;
 			goto dc_hdmi_hotplug_init_fail;
 
@@ -2474,7 +2474,7 @@ struct tegra_dc_platform_data
 	const __be32 *p;
 	int err;
 	u32 temp;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)  || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	const char *dc_or_node;
 #endif
 #if defined(CONFIG_TRUSTED_LITTLE_KERNEL) || defined(CONFIG_OTE_TRUSTY)
@@ -2507,7 +2507,7 @@ struct tegra_dc_platform_data
 		goto fail_parse;
 	}
 
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 	/* Check the OR node connected to each Display
 	 * Controller. To enable this feature nvidia,dc_or_node
 	 * has to set a valid OR name in the DT file.
@@ -2588,7 +2588,7 @@ struct tegra_dc_platform_data
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_DP ||
 		pdata->default_out->type == TEGRA_DC_OUT_NVSR_DP ||
 		   pdata->default_out->type == TEGRA_DC_OUT_FAKE_DP) {
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 		np_sor = of_find_node_by_path(dc_or_node_names[ndev->id]);
 #else
 		np_sor = (ndev->id) ? of_find_node_by_path(SOR1_NODE) :
@@ -2633,7 +2633,7 @@ struct tegra_dc_platform_data
 		}
 	} else if (pdata->default_out->type == TEGRA_DC_OUT_HDMI) {
 		bool hotplug_report = false;
-#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC) || defined(CONFIG_ARCH_TEGRA_210_SOC)
 		np_hdmi = of_find_node_by_path(dc_or_node_names[ndev->id]);
 #else
 		np_hdmi = of_find_node_by_path(HDMI_NODE);

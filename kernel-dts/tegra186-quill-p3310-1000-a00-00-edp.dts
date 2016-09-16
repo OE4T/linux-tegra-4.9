@@ -38,6 +38,7 @@
 			enable-active-high;
 			gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* GPIO_DIS0 for eDP */
 			regulator-boot-on;
+			regulator-always-on;
 		};
 	};
 
@@ -61,7 +62,6 @@
 			panel-s-edp-uhdtv-15-6 {
 				status = "okay";
 				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
 				nvidia,en-vmm-vpp-with-i2c-config;
 				nvidia,is_ext_dp_panel = <0>;
 

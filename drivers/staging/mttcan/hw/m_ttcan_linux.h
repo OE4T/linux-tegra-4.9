@@ -42,7 +42,6 @@
 
 #include <asm/io.h>
 
-#define MTTCAN_TX_INTR          (0x7 << 9)
 #define MTTCAN_RX_FIFO_INTR     (0xFF)
 #define MTTCAN_RX_HP_INTR       (0x1 << 8)
 #define MTTCAN_TX_EV_FIFO_INTR  (0xF << 12)

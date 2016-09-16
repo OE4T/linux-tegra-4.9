@@ -582,6 +582,10 @@ static void mttcan_tx_cancelled(struct net_device *dev)
 	priv->tx_obj_cancelled = msg_no;
 
 	msg_no = ffs(cancelled_msg);
+
+	if (msg_no && netif_queue_stopped(dev))
+		netif_wake_queue(dev);
+
 	while (msg_no) {
 		buff_bit = (1 << (msg_no - 1));
 		if (priv->tx_object & buff_bit) {
@@ -771,28 +775,37 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 		}
 
 
-		/* Handle TX complete */
-		if (ir & MTTCAN_TX_INTR) {
-			/* Transmission cancellation finished */
+		/* Handle Transmission cancellation finished
+		* TCF interrupt is set when transmission cancelled is request
+		* by TXBCR register but in case wherer DAR (one-shot) is set
+		* the Tx buffers which transmission is not complete due to some
+		* reason are not retransmitted and for those buffers
+		* corresponding bit in TXBCF is set. Handle them to release
+		* Tx queue lockup in software.
+		*/
+		if ((ir & MTT_IR_TCF_MASK) || (priv->can.ctrlmode &
+			CAN_CTRLMODE_ONE_SHOT)) {
 			if (ir & MTT_IR_TCF_MASK) {
-				mttcan_tx_cancelled(dev);
 				ack = MTT_IR_TCF_MASK;
 				ttcan_ir_write(priv->ttcan, ack);
 			}
-			if (ir & MTT_IR_TC_MASK) {
-				mttcan_tx_complete(dev);
-				ack = MTT_IR_TC_MASK;
-				ttcan_ir_write(priv->ttcan, ack);
-			}
-
-			if (ir & MTT_IR_TFE_MASK) {
-				/*
-				 * netdev_info(dev, "Tx Fifo Empty %x\n", ir);
-				 */
-				ack = MTT_IR_TFE_MASK;
-				ttcan_ir_write(priv->ttcan, ack);
-			}
+			mttcan_tx_cancelled(dev);
 		}
+
+		if (ir & MTT_IR_TC_MASK) {
+			ack = MTT_IR_TC_MASK;
+			ttcan_ir_write(priv->ttcan, ack);
+			mttcan_tx_complete(dev);
+		}
+
+		if (ir & MTT_IR_TFE_MASK) {
+			/*
+			 * netdev_info(dev, "Tx Fifo Empty %x\n", ir);
+			 */
+			ack = MTT_IR_TFE_MASK;
+			ttcan_ir_write(priv->ttcan, ack);
+		}
+
 		/* Handle Tx Event */
 		if (ir & MTTCAN_TX_EV_FIFO_INTR) {
 			/* New Tx Event */

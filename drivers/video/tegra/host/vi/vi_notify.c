@@ -446,7 +446,7 @@ struct vi_notify_channel *vi_notify_channel_open(unsigned channel)
 	}
 	mutex_unlock(&vnd_lock);
 
-	chan = kmalloc(sizeof(*chan), GFP_KERNEL);
+	chan = kzalloc(sizeof(*chan), GFP_KERNEL);
 	if (unlikely(chan == NULL)) {
 		module_put(vnd->driver->owner);
 		return ERR_PTR(-ENOMEM);

@@ -48,9 +48,7 @@
 	((MC_EMEM_ARB_TIMING_W2R - MC_EMEM_ARB_CFG) / 4 + 1)
 #define MC_TIMING_REG_NUM2					\
 	((MC_EMEM_ARB_MISC1 - MC_EMEM_ARB_DA_TURNS) / 4 + 1)
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-#define MC_TIMING_REG_NUM3	T12X_MC_LATENCY_ALLOWANCE_NUM_REGS
-#elif defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 #define MC_TIMING_REG_NUM3	T18X_MC_LATENCY_ALLOWANCE_NUM_REGS
 #elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #define MC_TIMING_REG_NUM3	T21X_MC_LATENCY_ALLOWANCE_NUM_REGS
@@ -118,8 +116,7 @@ int mc_get_carveout_info(struct mc_carveout_info *inf, int *nr,
 }
 EXPORT_SYMBOL(mc_get_carveout_info);
 
-#if defined(CONFIG_PM_SLEEP) && (defined(CONFIG_ARCH_TEGRA_12x_SOC) || \
-	defined(CONFIG_ARCH_TEGRA_21x_SOC))
+#if defined(CONFIG_PM_SLEEP) && (defined(CONFIG_ARCH_TEGRA_21x_SOC))
 static u32 mc_boot_timing[MC_TIMING_REG_NUM1 + MC_TIMING_REG_NUM2
 			  + MC_TIMING_REG_NUM3 + 4];
 
@@ -138,9 +135,7 @@ static void tegra_mc_timing_save(void)
 	*ctx++ = mc_readl(MC_EMEM_ARB_OVERRIDE);
 	*ctx++ = mc_readl(MC_RESERVED_RSV);
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	tegra12_mc_latency_allowance_save(&ctx);
-#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (tegra_get_chip_id() == TEGRA210)
 		tegra21_mc_latency_allowance_save(&ctx);
 #else
@@ -170,9 +165,7 @@ void tegra_mc_timing_restore(void)
 	__mc_raw_writel(MC_BROADCAST_CHANNEL, *ctx++,
 			MC_RESERVED_RSV);
 
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	tegra12_mc_latency_allowance_restore(&ctx);
-#elif defined(CONFIG_ARCH_TEGRA_21x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	tegra21_mc_latency_allowance_restore(&ctx);
 #else
 	for (off = MC_LATENCY_ALLOWANCE_BASE; off <= MC_LATENCY_ALLOWANCE_VI_2;

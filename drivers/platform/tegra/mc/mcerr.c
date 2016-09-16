@@ -147,7 +147,6 @@ static const struct mc_error mc_errors[] = {
 	/*
 	 * Generalized carveouts.
 	 */
-#ifndef CONFIG_ARCH_TEGRA_12x_SOC
 	MC_ERR(MC_INT_DECERR_GENERALIZED_CARVEOUT,
 	       "GSC access violation", 0,
 	       MC_ERR_GENERALIZED_CARVEOUT_STATUS,
@@ -156,7 +155,6 @@ static const struct mc_error mc_errors[] = {
 	       "EMEM GSC access violation", 0,
 	       MC_ERR_GENERALIZED_CARVEOUT_STATUS,
 	       MC_ERR_GENERALIZED_CARVEOUT_ADR),
-#endif
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	MC_ERR(MC_INT_WCAM_ERR, "WCAM error", E_TWO_STATUS,

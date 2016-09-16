@@ -67,12 +67,6 @@ static void init_chip_specific(void)
 	cid = tegra_get_chip_id();
 
 	switch (cid) {
-#if defined(CONFIG_ARCH_TEGRA_12x_SOC)
-	case TEGRA124:
-	case TEGRA132:
-		tegra_la_get_t12x_specific(&cs);
-		break;
-#endif
 #if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 	case TEGRA186:
 		tegra_la_get_t18x_specific(&cs);

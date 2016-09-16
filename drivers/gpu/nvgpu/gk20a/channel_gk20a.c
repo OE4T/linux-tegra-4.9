@@ -1903,6 +1903,7 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 	platform = gk20a_get_platform(g->dev);
 
 	gk20a_channel_cancel_job_clean_up(c, false);
+	gk20a_channel_timeout_stop(c);
 
 	while (1) {
 		bool completed;

@@ -1336,6 +1336,7 @@ static int do_test(const char *alg, u32 type, u32 mask, int m)
 		ret += tcrypt_test("ecb(aes)");
 		ret += tcrypt_test("cbc(aes)");
 		ret += tcrypt_test("ctr(aes)");
+		ret += tcrypt_test("ofb(aes)");
 		break;
 
 	case 11:

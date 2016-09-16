@@ -32,6 +32,11 @@ typedef u32 vf_lookup(struct gk20a *g, struct clk_pmupstate *pclk,
 			u8 *slave_clk_domain_idx, u16 *pclkmhz,
 			u32 *pvoltuv, u8 rail);
 
+typedef int get_slaveclk(struct gk20a *g, struct clk_pmupstate *pclk,
+			struct clk_prog_1x_master *p1xmaster,
+			u8 slave_clk_domain_idx, u16 *pclkmhz,
+			u16 masterclkmhz);
+
 typedef u32 get_fpoints(struct gk20a *g, struct clk_pmupstate *pclk,
 			struct clk_prog_1x_master *p1xmaster,
 			u32 *pfpointscount,
@@ -65,6 +70,7 @@ struct clk_prog_1x_master {
 	vf_flatten *vfflatten;
 	vf_lookup *vflookup;
 	get_fpoints *getfpoints;
+	get_slaveclk *getslaveclk;
 };
 
 struct clk_prog_1x_master_ratio {

@@ -35,6 +35,7 @@ struct clk_pmupstate {
 	struct clk_progs clk_progobjs;
 	struct clk_vf_points clk_vf_pointobjs;
 	struct clk_mclk_state clk_mclk;
+	struct mutex changeclkmutex;
 };
 
 struct clockentry {
@@ -42,6 +43,25 @@ struct clockentry {
 		u8 clk_which;
 		u8 perf_index;
 		u32 api_clk_domain;
+};
+
+struct change_fll_clk {
+		u32 api_clk_domain;
+		u16 clkmhz;
+		u32 voltuv;
+};
+
+struct set_fll_clk {
+		u32 voltuv;
+		u16 gpc2clkmhz;
+		u32 current_regime_id_gpc;
+		u32 target_regime_id_gpc;
+		u16 sys2clkmhz;
+		u32 current_regime_id_sys;
+		u32 target_regime_id_sys;
+		u16 xbar2clkmhz;
+		u32 current_regime_id_xbar;
+		u32 target_regime_id_xbar;
 };
 
 #define NV_PERF_HEADER_4X_CLOCKS_DOMAINS_MAX_NUMCLKS         9
@@ -82,7 +102,6 @@ struct vbios_clocks_table_1x_hal_clock_entry {
 #define PERF_CLK_PCIEGENCLK     12
 #define PERF_CLK_NUM            13
 
-u32 clk_pmu_vf_inject(struct gk20a *g);
 u32 clk_pmu_vin_load(struct gk20a *g);
 u32 clk_domain_print_vf_table(struct gk20a *g, u32 clkapidomain);
 u32 clk_domain_get_f_or_v
@@ -98,5 +117,6 @@ u32 clk_domain_get_f_points(
 	u32 *fpointscount,
 	u16 *freqpointsinmhz
 );
-
+int clk_set_boot_fll_clk(struct gk20a *g);
+int clk_program_fll_clks(struct gk20a *g, struct change_fll_clk *fllclk);
 #endif

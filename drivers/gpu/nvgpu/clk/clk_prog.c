@@ -31,6 +31,7 @@ static u32 devinit_get_clk_prog_table(struct gk20a *g,
 static vf_flatten vfflatten_prog_1x_master;
 static vf_lookup vflookup_prog_1x_master;
 static get_fpoints getfpoints_prog_1x_master;
+static get_slaveclk getslaveclk_prog_1x_master;
 
 static u32 _clk_progs_pmudatainit(struct gk20a *g,
 				  struct boardobjgrp *pboardobjgrp,
@@ -611,6 +612,9 @@ static u32 clk_prog_construct_1x_master(struct gk20a *g,
 	pclkprog->getfpoints =
 			getfpoints_prog_1x_master;
 
+	pclkprog->getslaveclk =
+			getslaveclk_prog_1x_master;
+
 	pclkprog->p_vf_entries = (struct ctrl_clk_clk_prog_1x_master_vf_entry *)
 		kzalloc(vfsize, GFP_KERNEL);
 
@@ -851,7 +855,7 @@ static u32 vflookup_prog_1x_master
 	u8 rail
 )
 {
-	u8 j;
+	int j;
 	struct ctrl_clk_clk_prog_1x_master_vf_entry
 		*pvfentry;
 	struct clk_vf_point *pvfpoint;
@@ -860,7 +864,7 @@ static u32 vflookup_prog_1x_master
 	u16 clkmhz;
 	u32 voltuv;
 	u8 slaveentrycount;
-	u8 i;
+	int i;
 	struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry *pslaveents;
 
 	if ((*pclkmhz != 0) && (*pvoltuv != 0))
@@ -1043,5 +1047,52 @@ static u32 getfpoints_prog_1x_master
 	}
 done:
 	*pfpointscount = fpointscount;
+	return 0;
+}
+
+static int getslaveclk_prog_1x_master(struct gk20a *g,
+				struct clk_pmupstate *pclk,
+				struct clk_prog_1x_master *p1xmaster,
+				u8 slave_clk_domain,
+				u16 *pclkmhz,
+				u16 masterclkmhz
+)
+{
+	struct clk_progs *pclkprogobjs;
+	struct clk_prog_1x_master_ratio *p1xmasterratio;
+	u8 slaveentrycount;
+	u8 i;
+	struct ctrl_clk_clk_prog_1x_master_ratio_slave_entry *pslaveents;
+
+	if (pclkmhz == NULL)
+		return -EINVAL;
+
+	if (masterclkmhz == 0)
+		return -EINVAL;
+
+	*pclkmhz = 0;
+	pclkprogobjs = &(pclk->clk_progobjs);
+
+	slaveentrycount = pclkprogobjs->slave_entry_count;
+
+	if (p1xmaster->super.super.super.implements(g,
+		&p1xmaster->super.super.super,
+		CTRL_CLK_CLK_PROG_TYPE_1X_MASTER_RATIO)) {
+		p1xmasterratio =
+		(struct clk_prog_1x_master_ratio *)p1xmaster;
+		pslaveents = p1xmasterratio->p_slave_entries;
+		for (i = 0; i < slaveentrycount;  i++) {
+			if (pslaveents->clk_dom_idx ==
+				slave_clk_domain)
+				break;
+			pslaveents++;
+		}
+		if (i == slaveentrycount)
+			return -EINVAL;
+		*pclkmhz = (masterclkmhz * pslaveents->ratio)/100;
+	} else {
+		/* only support ratio for now */
+		return -EINVAL;
+	}
 	return 0;
 }

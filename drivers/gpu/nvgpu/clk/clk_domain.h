@@ -30,9 +30,13 @@ u32 clk_domain_pmu_setup(struct gk20a *g);
 typedef u32 clkproglink(struct gk20a *g, struct clk_pmupstate *pclk,
 			struct clk_domain *pdomain);
 
-typedef u32 clkvfsearch(struct gk20a *g, struct clk_pmupstate *pclk,
+typedef int clkvfsearch(struct gk20a *g, struct clk_pmupstate *pclk,
 			struct clk_domain *pdomain, u16 *clkmhz,
 			u32 *voltuv, u8 rail);
+
+typedef int clkgetslaveclk(struct gk20a *g, struct clk_pmupstate *pclk,
+			struct clk_domain *pdomain, u16 *clkmhz,
+			u16 masterclkmhz);
 
 typedef u32 clkgetfpoints(struct gk20a *g, struct clk_pmupstate *pclk,
 			struct clk_domain *pdomain, u32 *pfpointscount,
@@ -100,6 +104,7 @@ struct clk_domain_3x_master {
 struct clk_domain_3x_slave {
 	struct clk_domain_3x_prog super;
 	u8 master_idx;
+	clkgetslaveclk *clkdomainclkgetslaveclk;
 };
 
 u32 clk_domain_clk_prog_link(struct gk20a *g, struct clk_pmupstate *pclk);

@@ -422,14 +422,14 @@ static u32 clkdomainclkproglink_not_supported(struct gk20a *g,
 	return -EINVAL;
 }
 
-static u32 clkdomainvfsearch_stub(
+static int clkdomainvfsearch_stub(
 	struct gk20a *g,
 	struct clk_pmupstate *pclk,
 	struct clk_domain *pdomain,
 	u16 *clkmhz,
 	u32 *voltuv,
-	u8 rail
-)
+	u8 rail)
+
 {
 	gk20a_dbg_info("");
 	return -EINVAL;
@@ -441,8 +441,7 @@ static u32 clkdomaingetfpoints_stub(
 	struct clk_domain *pdomain,
 	u32 *pfpointscount,
 	u16 *pfreqpointsinmhz,
-	u8 rail
-)
+	u8 rail)
 {
 	gk20a_dbg_info("");
 	return -EINVAL;
@@ -556,17 +555,47 @@ static u32 clkdomainclkproglink_3x_prog(struct gk20a *g,
 	return status;
 }
 
-static u32 clkdomainvfsearch
-(
-	struct gk20a *g,
-	struct clk_pmupstate *pclk,
-	struct clk_domain *pdomain,
-	u16 *pclkmhz,
-	u32 *pvoltuv,
-	u8 rail
-)
+static int clkdomaingetslaveclk(struct gk20a *g,
+				struct clk_pmupstate *pclk,
+				struct clk_domain *pdomain,
+				u16 *pclkmhz,
+				u16 masterclkmhz)
 {
-	u32 status = 0;
+	int status = 0;
+	struct clk_prog *pprog = NULL;
+	struct clk_prog_1x_master *pprog1xmaster = NULL;
+	u8 slaveidx;
+	struct clk_domain_3x_master *p3xmaster;
+
+	gk20a_dbg_info("");
+
+	if (pclkmhz == NULL)
+		return -EINVAL;
+
+	if (masterclkmhz == 0)
+		return -EINVAL;
+
+	slaveidx = BOARDOBJ_GET_IDX(pdomain);
+	p3xmaster = (struct clk_domain_3x_master *)
+			CLK_CLK_DOMAIN_GET(pclk,
+			((struct clk_domain_3x_slave *)
+				pdomain)->master_idx);
+	pprog = CLK_CLK_PROG_GET(pclk, p3xmaster->super.clk_prog_idx_first);
+	pprog1xmaster = (struct clk_prog_1x_master *)pprog;
+
+	status = pprog1xmaster->getslaveclk(g, pclk, pprog1xmaster,
+			slaveidx, pclkmhz, masterclkmhz);
+	return status;
+}
+
+static int clkdomainvfsearch(struct gk20a *g,
+				struct clk_pmupstate *pclk,
+				struct clk_domain *pdomain,
+				u16 *pclkmhz,
+				u32 *pvoltuv,
+				u8 rail)
+{
+	int status = 0;
 	struct clk_domain_3x_master *p3xmaster  =
 		(struct clk_domain_3x_master *)pdomain;
 	struct clk_prog *pprog = NULL;
@@ -580,6 +609,10 @@ static u32 clkdomainvfsearch
 	u32 bestvoltuv;
 
 	gk20a_dbg_info("");
+
+	if ((pclkmhz == NULL) || (pvoltuv == NULL))
+		return -EINVAL;
+
 	if ((*pclkmhz != 0) && (*pvoltuv != 0))
 		return -EINVAL;
 
@@ -595,7 +628,6 @@ static u32 clkdomainvfsearch
 				((struct clk_domain_3x_slave *)
 					pdomain)->master_idx);
 	}
-
 	/* Iterate over the set of CLK_PROGs pointed at by this domain.*/
 	for (i = p3xmaster->super.clk_prog_idx_first;
 	     i <= p3xmaster->super.clk_prog_idx_last;
@@ -625,7 +657,7 @@ static u32 clkdomainvfsearch
 			}
 		}
 	}
-	/* clk and volt sent as zero to pring vf table */
+	/* clk and volt sent as zero to print vf table */
 	if ((*pclkmhz == 0) && (*pvoltuv == 0)) {
 		status = 0;
 		goto done;
@@ -835,6 +867,9 @@ static u32 clk_domain_construct_3x_slave(struct gk20a *g,
 			_clk_domain_pmudatainit_3x_slave;
 
 	pdomain->master_idx = ptmpdomain->master_idx;
+
+	pdomain->clkdomainclkgetslaveclk =
+				clkdomaingetslaveclk;
 
 	return status;
 }

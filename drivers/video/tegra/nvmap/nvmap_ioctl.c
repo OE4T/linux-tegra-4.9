@@ -157,24 +157,6 @@ int nvmap_ioctl_vpr_floor_size(struct file *filp, void __user *arg)
 	return err;
 }
 
-static int nvmap_create_fd(struct nvmap_client *client, struct nvmap_handle *h)
-{
-	int fd;
-
-	fd = __nvmap_dmabuf_fd(client, h->dmabuf, O_CLOEXEC);
-	BUG_ON(fd == 0);
-	if (IS_ERR_VALUE(fd)) {
-		pr_err("fd creation error %d\n", fd);
-		return fd;
-	}
-	/* __nvmap_dmabuf_fd() associates fd with dma_buf->file *.
-	 * fd close drops one ref count on dmabuf->file *.
-	 * to balance ref count, ref count dma_buf.
-	 */
-	get_dma_buf(h->dmabuf);
-	return fd;
-}
-
 int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 {
 	struct nvmap_create_handle op;
@@ -202,7 +184,7 @@ int nvmap_ioctl_create(struct file *filp, unsigned int cmd, void __user *arg)
 	if (IS_ERR(ref))
 		return PTR_ERR(ref);
 
-	fd = nvmap_create_fd(client, ref->handle);
+	fd = nvmap_get_dmabuf_fd(client, ref->handle);
 	if (IS_ERR_VALUE(fd))
 		err = fd;
 
@@ -241,7 +223,7 @@ int nvmap_ioctl_create_from_va(struct file *filp, void __user *arg)
 	if (err)
 		goto alloc_fail;
 
-	fd = nvmap_create_fd(client, ref->handle);
+	fd = nvmap_get_dmabuf_fd(client, ref->handle);
 	op.handle = fd;
 
 	if (IS_ERR_VALUE(fd)) {
@@ -546,7 +528,7 @@ int nvmap_ioctl_create_from_ivc(struct file *filp, void __user *arg)
 			NVMAP_TP_ARGS_CHR(client, ref->handle, ref));
 	}
 
-	fd = nvmap_create_fd(client, ref->handle);
+	fd = nvmap_get_dmabuf_fd(client, ref->handle);
 	if (IS_ERR_VALUE(fd))
 		err = fd;
 

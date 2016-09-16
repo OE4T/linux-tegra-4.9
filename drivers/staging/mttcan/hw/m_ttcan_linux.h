@@ -39,6 +39,12 @@
 #include <linux/of_device.h>
 #include <linux/pinctrl/consumer.h>
 #include <linux/pm_runtime.h>
+#include <linux/net_tstamp.h>
+#include <linux/spinlock.h>
+#include <linux/clocksource.h>
+#ifdef CONFIG_CLK_SRC_TEGRA18_US_TIMER
+#include <linux/tegra-us-timer.h>
+#endif
 
 #include <asm/io.h>
 
@@ -72,6 +78,12 @@ struct mttcan_priv {
 	struct clk *hclk, *cclk;
 	struct can_gpio gpio_can_en;
 	struct can_gpio gpio_can_stb;
+	struct timer_list timer;
+	struct cyclecounter cc;
+	struct timecounter tc;
+	struct hwtstamp_config hwtstamp_config;
+	spinlock_t tc_lock;
+	spinlock_t tslock;
 	void __iomem *regs;
 	void __iomem *mres;
 	void *std_shadow;
@@ -94,6 +106,7 @@ struct mttcan_priv {
 	u32 tx_conf[MTT_MAX_TX_CONF]; /*<txb, txq, txq_mode, txb_dsize>*/
 	u32 rx_conf[MTT_MAX_RX_CONF]; /*<rxb_dsize, rxq0_dsize, rxq1_dsize>*/
 	bool poll;
+	bool hwts_rx_en;
 };
 
 int mttcan_create_sys_files(struct device *dev);

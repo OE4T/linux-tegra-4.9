@@ -78,7 +78,7 @@ int ttcan_read_rx_msg_ram(struct ttcan_controller *ttcan, u32 read_addrs,
 
 			if (msg_data & RX_BUF_BRS)
 				ttcanfd->flags |= CAN_BRS_FLAG;
-
+			ttcanfd->tstamp = msg_data & RX_BUF_RXTS_MASK;
 			break;
 		default:
 			byte_index = (i - 2) * CAN_WORD_IN_BYTES;

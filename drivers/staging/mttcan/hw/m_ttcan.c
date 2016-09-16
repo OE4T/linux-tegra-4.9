@@ -978,3 +978,10 @@ int ttcan_controller_init(struct ttcan_controller *ttcan, u32 irq_flag,
 	spin_lock_init(&ttcan->lock);
 	return 0;
 }
+
+cycle_t ttcan_read_ts_cntr(const struct cyclecounter *ccnt)
+{
+	struct mttcan_priv *priv = container_of(ccnt, struct mttcan_priv, cc);
+
+	return ttcan_read32(priv->ttcan, ADR_MTTCAN_TSCV);
+}

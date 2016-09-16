@@ -23,6 +23,7 @@
 #include <linux/platform_device.h>
 
 #define MTTCAN_POLL_TIME 50
+#define MTTCAN_HWTS_ROLLOVER 250
 
 static __init int mttcan_hw_init(struct mttcan_priv *priv)
 {
@@ -32,7 +33,7 @@ static __init int mttcan_hw_init(struct mttcan_priv *priv)
 	ttcan_set_ok(ttcan);
 
 	if (!priv->poll) {
-		ie = 0x3BBFF7FF;
+		ie = 0x3BBEF7FF;
 		ttie = 0x50C03;
 	}
 	err = ttcan_controller_init(ttcan, ie, ttie);
@@ -273,6 +274,17 @@ static int mttcan_do_receive(struct net_device *dev,
 	return 1;
 }
 
+static void mttcan_rx_hwtstamp(struct mttcan_priv *priv,
+			       struct sk_buff *skb, struct ttcanfd_frame msg)
+{
+	u64 ns;
+	struct skb_shared_hwtstamps *hwtstamps = skb_hwtstamps(skb);
+
+	ns = timecounter_cyc2time(&priv->tc, msg.tstamp);
+	memset(hwtstamps, 0, sizeof(struct skb_shared_hwtstamps));
+	hwtstamps->hwtstamp = ns_to_ktime(ns);
+}
+
 static int mttcan_read_rcv_list(struct net_device *dev,
 				struct list_head *rcv,
 				enum ttcan_rx_type rx_type,
@@ -339,6 +351,8 @@ static int mttcan_read_rcv_list(struct net_device *dev,
 			stats->rx_bytes += frame->can_dlc;
 		}
 
+		if ((priv->hwts_rx_en) && !(rx->msg.flags & CAN_FD_FLAG))
+			mttcan_rx_hwtstamp(priv, skb, rx->msg);
 		kfree(rx);
 		netif_receive_skb(skb);
 		stats->rx_packets++;
@@ -478,13 +492,6 @@ static int mttcan_handle_bus_err(struct net_device *dev,
 	return 1;
 }
 
-static u64 mttcan_ts_value(struct ttcan_controller *ttcan, unsigned short ts)
-{
-	return ((u64)ts * ttcan->ts_prescalar * 1000000 /
-			ttcan->bt_config.nominal.bitrate) +
-			ttcan->ts_counter;
-}
-
 static void mttcan_tx_event(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
@@ -519,10 +526,12 @@ static void mttcan_tx_event(struct net_device *dev)
 			MTT_TXEVT_ELE_F0_XTD_SHIFT;
 		id = (txevt.f0 & MTT_TXEVT_ELE_F0_ID_MASK) >>
 			MTT_TXEVT_ELE_F0_ID_SHIFT;
+
 		pr_debug("%s:TS %llu:(index %u) ID %x(%s %s %s) Evt_Type %02d\n",
-			__func__, mttcan_ts_value(priv->ttcan, txevt.f1 &
-			MTT_TXEVT_ELE_F1_TXTS_MASK), (txevt.f1 &
-			MTT_TXEVT_ELE_F1_MM_MASK) >> MTT_TXEVT_ELE_F1_MM_SHIFT,
+			__func__, timecounter_cyc2time(&priv->tc,
+			ttcan_read_ts_cntr(&priv->cc)),
+			(txevt.f1 & MTT_TXEVT_ELE_F1_MM_MASK) >>
+			MTT_TXEVT_ELE_F1_MM_SHIFT,
 			xtd ? id : id >> 18, xtd ? "XTD" : "STD",
 			txevt.f1 & MTT_TXEVT_ELE_F1_FDF_MASK ? "FD" : "NON-FD",
 			txevt.f1 & MTT_TXEVT_ELE_F1_BRS_MASK ? "BRS" : "NOBRS",
@@ -601,6 +610,15 @@ static void mttcan_tx_cancelled(struct net_device *dev)
 		priv->tx_echo++;
 		msg_no = ffs(cancelled_msg);
 	}
+}
+
+static inline u64 mttcan_init_timebase(void)
+{
+#ifdef CONFIG_CLK_SRC_TEGRA18_US_TIMER
+	return ((u64)tegra_us_timer_read()) * NSEC_PER_USEC;
+#else
+	return ktime_to_ns(ktime_get_real());
+#endif
 }
 
 static int mttcan_poll_ir(struct napi_struct *napi, int quota)
@@ -766,10 +784,6 @@ static int mttcan_poll_ir(struct napi_struct *napi, int quota)
 		}
 		/* Handle Timer wrap around */
 		if (ir & MTT_IR_TSW_MASK) {
-			/* milliseconds */
-			priv->ttcan->ts_counter += priv->ttcan->ts_prescalar *
-				65536 * 1000000 /
-				priv->ttcan->bt_config.nominal.bitrate;
 			ack = MTT_IR_TSW_MASK;
 			ttcan_ir_write(priv->ttcan, ack);
 		}
@@ -962,6 +976,19 @@ static void mttcan_controller_config(struct net_device *dev)
 	mttcan_do_set_bittiming(dev);
 }
 
+/* Adjust the timer by resetting the timecounter structure periodically */
+void mttcan_timer_cb(unsigned long data)
+{
+	unsigned long flags;
+	struct mttcan_priv *priv = (struct mttcan_priv *)data;
+
+	spin_lock_irqsave(&priv->tc_lock, flags);
+	timecounter_read(&priv->tc);
+	spin_unlock_irqrestore(&priv->tc_lock, flags);
+	mod_timer(&priv->timer,
+			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
+}
+
 static void mttcan_start(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
@@ -1009,6 +1036,7 @@ static void mttcan_start(struct net_device *dev)
 	if (priv->poll)
 		schedule_delayed_work(&priv->can_work,
 			msecs_to_jiffies(MTTCAN_POLL_TIME));
+	setup_timer(&priv->timer, mttcan_timer_cb, (unsigned long)priv);
 }
 
 static void mttcan_stop(struct mttcan_priv *priv)
@@ -1018,6 +1046,7 @@ static void mttcan_stop(struct mttcan_priv *priv)
 	priv->can.state = CAN_STATE_STOPPED;
 
 	ttcan_set_config_change_enable(priv->ttcan);
+	del_timer_sync(&priv->timer);
 }
 
 static int mttcan_set_mode(struct net_device *dev, enum can_mode mode)
@@ -1253,11 +1282,102 @@ static int mttcan_change_mtu(struct net_device *dev, int new_mtu)
 	return 0;
 }
 
+static int mttcan_handle_hwtstamp_set(struct mttcan_priv *priv,
+				      struct ifreq *ifr)
+{
+	struct hwtstamp_config config;
+
+	if (copy_from_user(&config, ifr->ifr_data,
+			   sizeof(struct hwtstamp_config)))
+		return -EFAULT;
+
+	/* reserved for future extensions */
+	if (config.flags)
+		return -EINVAL;
+	switch (config.tx_type) {
+	case HWTSTAMP_TX_OFF:
+		break;
+	default:
+		return -ERANGE;
+	}
+
+	switch (config.rx_filter) {
+		/* time stamp no incoming packet at all */
+	case HWTSTAMP_FILTER_NONE:
+		config.rx_filter = HWTSTAMP_FILTER_NONE;
+		break;
+		/* time stamp any incoming packet */
+	case HWTSTAMP_FILTER_ALL:
+		if (priv->can.ctrlmode & CAN_CTRLMODE_FD) {
+			netdev_err(priv->dev,
+				"HW Timestamp not supported in FD mode\n");
+			return -ERANGE;
+		}
+		config.rx_filter = HWTSTAMP_FILTER_ALL;
+		break;
+	default:
+		return -ERANGE;
+	}
+
+	priv->hwts_rx_en =
+		((config.rx_filter == HWTSTAMP_FILTER_NONE) ? 0 : 1);
+	priv->hwtstamp_config = config;
+
+	/* Setup hardware time stamping cyclecounter */
+	if (priv->hwts_rx_en) {
+		priv->cc.read = ttcan_read_ts_cntr;
+		priv->cc.mask = CLOCKSOURCE_MASK(16);
+		priv->cc.mult = ((u64)NSEC_PER_SEC *
+				priv->ttcan->ts_prescalar) /
+				priv->ttcan->bt_config.nominal.bitrate;
+		priv->cc.shift = 0;
+
+		/* reset the ns time counter */
+		ttcan_write32(priv->ttcan, ADR_MTTCAN_TSCV, 0);
+		timecounter_init(&priv->tc, &priv->cc,
+				mttcan_init_timebase());
+		mod_timer(&priv->timer,
+			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
+	}
+
+	return (copy_to_user(ifr->ifr_data, &config,
+			sizeof(struct hwtstamp_config))) ? -EFAULT : 0;
+}
+
+static int mttcan_handle_hwtstamp_get(struct mttcan_priv *priv,
+		struct ifreq *ifr)
+{
+	return copy_to_user(ifr->ifr_data, &priv->hwtstamp_config,
+			sizeof(struct hwtstamp_config)) ? -EFAULT : 0;
+}
+
+static int mttcan_ioctl(struct net_device *dev, struct ifreq *ifr, int cmd)
+{
+	struct mttcan_priv *priv = netdev_priv(dev);
+	int ret = 0;
+
+	spin_lock(&priv->tslock);
+	switch (cmd) {
+	case SIOCSHWTSTAMP:
+		ret = mttcan_handle_hwtstamp_set(priv, ifr);
+		break;
+	case SIOCGHWTSTAMP:
+		ret = mttcan_handle_hwtstamp_get(priv, ifr);
+		break;
+	default:
+		ret = -EOPNOTSUPP;
+	}
+	spin_unlock(&priv->tslock);
+
+	return ret;
+}
+
 static const struct net_device_ops mttcan_netdev_ops = {
 	.ndo_open = mttcan_open,
 	.ndo_stop = mttcan_close,
 	.ndo_start_xmit = mttcan_start_xmit,
 	.ndo_change_mtu = mttcan_change_mtu,
+	.ndo_do_ioctl = mttcan_ioctl,
 };
 
 static int register_mttcan_dev(struct net_device *dev)
@@ -1298,6 +1418,7 @@ static void mttcan_unprepare_clock(struct mttcan_priv *priv)
 void unregister_mttcan_dev(struct net_device *dev)
 {
 	struct mttcan_priv *priv = netdev_priv(dev);
+
 	unregister_candev(dev);
 	mttcan_pm_runtime_disable(priv);
 }
@@ -1605,6 +1726,10 @@ static int mttcan_resume(struct platform_device *pdev)
 	ret = mttcan_power_up(priv);
 	if (ret)
 		return ret;
+
+	if (priv->hwts_rx_en)
+		mod_timer(&priv->timer,
+			jiffies + (msecs_to_jiffies(MTTCAN_HWTS_ROLLOVER)));
 
 	ret = mttcan_hw_reinit(priv);
 	if (ret)

@@ -193,6 +193,8 @@ struct ttcanfd_frame {
 	u8 resv0;
 	u8 resv1;
 	u8 data[MAX_RX_ENTRIES] __aligned(8);
+	/* Any new structure entries should be placed below the comment */
+	u32 tstamp;
 };
 
 struct ttcan_element_size {
@@ -284,7 +286,6 @@ struct ttcan_controller {
 	void __iomem *mram_vbase;
 	size_t mram_base;
 	u8 tx_buf_dlc[32];
-	u64 ts_counter;
 	u32 id;
 	u32 proto_state;
 	u32 intr_enable_reg;
@@ -533,4 +534,5 @@ int add_msg_controller_list(struct ttcan_controller *ttcan,
 int add_event_controller_list(struct ttcan_controller *ttcan,
 				struct mttcan_tx_evt_element *txevt,
 				struct list_head *evt_q);
+cycle_t ttcan_read_ts_cntr(const struct cyclecounter *ccnt);
 #endif

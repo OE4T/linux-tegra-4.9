@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2015, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2015-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -843,6 +843,8 @@ struct mttcan_trig_mem_element {
 #define RX_BUF_BRS	 BIT(20)
 #define RX_BUF_DLC_SHIFT 16
 #define RX_BUF_DLC_MASK  (((1<<4)-1) << RX_BUF_DLC_SHIFT)
+#define RX_BUF_RXTS_SHIFT 0
+#define RX_BUF_RXTS_MASK  (((1<<16)-1) << RX_BUF_RXTS_SHIFT)
 
 /* Tx Buffer */
 #define TX_BUF_ESI	BIT(31)

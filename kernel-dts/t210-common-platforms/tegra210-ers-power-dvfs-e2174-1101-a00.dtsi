@@ -235,7 +235,7 @@
 	};
 };
 
-#include "tegra210-power-dvfs.dtsi"
+#include <tegra210-soc/tegra210-power-dvfs.dtsi>
 
 / {
 	dvfs_rails {

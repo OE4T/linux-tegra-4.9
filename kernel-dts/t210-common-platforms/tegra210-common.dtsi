@@ -16,14 +16,14 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  */
 
-#include "tegra210-soc-shield.dtsi"
+#include <tegra210-soc/tegra210-soc-shield.dtsi>
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/padctrl/tegra210-pads.h>
-#include "tegra210-platforms/tegra210-prods.dtsi"
-#include "tegra210-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi"
-#include "tegra210-platforms/tegra210-modem-common.dtsi"
-#include "tegra210-trusty.dtsi"
+#include <tegra210-soc/tegra210-prods.dtsi>
+#include <t210-common-platforms/tegra210-ers-touch-e1937-1000-a00.dtsi>
+#include <tegra210-soc/tegra210-modem-common.dtsi>
+#include <tegra210-soc/tegra210-trusty.dtsi>
 
 / {
 	nvidia,dtbbuildtime = __DATE__, __TIME__;

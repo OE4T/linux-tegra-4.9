@@ -15,7 +15,7 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <tegra210-platforms/tegra210-camera-e3323-a00.dtsi>
+#include "jetson-platforms/tegra210-camera-e3323-a00.dtsi"
 
 #define CAM0_RST_L	TEGRA_GPIO(S, 4)
 #define CAM0_PWDN		TEGRA_GPIO(S, 7)

@@ -16,14 +16,14 @@
 #include <dt-bindings/interrupt-controller/arm-gic.h>
 #include <dt-bindings/clock/tegra210-car.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
-#include "tegra210-platforms/tegra210-thermal.dtsi"
+#include "tegra210-thermal.dtsi"
 #include <dt-bindings/gpio/tegra-gpio.h>
 #include <dt-bindings/padctrl/tegra210-pads.h>
 #include <dt-bindings/ata/ahci-tegra.h>
 #include <dt-bindings/clk/tegra210-clk.h>
 #include <dt-bindings/soc/nvidia,tegra210-powergate.h>
 #include <dt-bindings/interrupt-controller/tegra-t21x-agic.h>
-#include "tegra210-platforms/tegra210-soc-power-domain.dtsi"
+#include "tegra210-soc-power-domain.dtsi"
 #include <dt-bindings/usb/tegra_xhci.h>
 #include <dt-bindings/pinctrl/pinctrl-tegra21x-padctl-uphy.h>
 

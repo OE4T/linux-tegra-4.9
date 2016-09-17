@@ -14,7 +14,7 @@
  */
 
 #include "tegra210-soc-base.dtsi"
-#include "tegra210-platforms/tegra210-bthrot-cdev.dtsi"
+#include "tegra210-bthrot-cdev.dtsi"
 
 / {
 	aliases {

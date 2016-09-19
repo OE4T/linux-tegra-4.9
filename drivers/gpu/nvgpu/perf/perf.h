@@ -17,6 +17,7 @@
 #include "vfe_var.h"
 #include "pstate/pstate.h"
 #include "gk20a/gk20a.h"
+#include "volt/volt.h"
 
 #define CTRL_PERF_VFE_VAR_TYPE_INVALID                               0x00
 #define CTRL_PERF_VFE_VAR_TYPE_DERIVED                               0x01
@@ -55,6 +56,7 @@ struct perf_pmupstate {
 	struct vfe_vars vfe_varobjs;
 	struct vfe_equs vfe_equobjs;
 	struct pstates pstatesobjs;
+	struct obj_volt volt;
 };
 
 u32 perf_pmu_vfe_load(struct gk20a *g);

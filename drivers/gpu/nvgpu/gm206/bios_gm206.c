@@ -68,6 +68,22 @@ struct bit {
 #define TOKEN_ID_PERF_PTRS 0x50
 #define TOKEN_ID_CLOCK_PTRS 0x43
 #define TOKEN_ID_VIRT_PTRS 0x56
+#define TOKEN_ID_MEMORY_PTRS 0x4D
+
+
+union memory_ptrs {
+	struct {
+		u8 rsvd0[2];
+		u8 mem_strap_data_count;
+		u16 mem_strap_xlat_tbl_ptr;
+		u8 rsvd1[8];
+	} v1 __packed;
+	struct {
+		u8 mem_strap_data_count;
+		u16 mem_strap_xlat_tbl_ptr;
+		u8 rsvd[14];
+	} v2 __packed;
+};
 
 struct biosdata {
 	u32 version;
@@ -290,6 +306,22 @@ static void gm206_bios_parse_nvinit_ptrs(struct gk20a *g, int offset)
 	g->bios.devinit_tables_size = nvinit_ptrs.devinit_tables_size;
 	g->bios.bootscripts = &g->bios.data[nvinit_ptrs.bootscripts_ptr];
 	g->bios.bootscripts_size = nvinit_ptrs.bootscripts_size;
+	g->bios.condition_table_ptr = nvinit_ptrs.condition_table_ptr;
+}
+
+static void gm206_bios_parse_memory_ptrs(struct gk20a *g, int offset, u8 version)
+{
+	union memory_ptrs memory_ptrs;
+
+	if ((version < 1) || (version > 2))
+		return;
+
+	memcpy(&memory_ptrs, &g->bios.data[offset], sizeof(memory_ptrs));
+
+	g->bios.mem_strap_data_count = (version > 1) ? memory_ptrs.v2.mem_strap_data_count :
+		memory_ptrs.v1.mem_strap_data_count;
+	g->bios.mem_strap_xlat_tbl_ptr = (version > 1) ? memory_ptrs.v2.mem_strap_xlat_tbl_ptr :
+		memory_ptrs.v1.mem_strap_xlat_tbl_ptr;
 }
 
 static void gm206_bios_parse_devinit_appinfo(struct gk20a *g, int dmem_offset)
@@ -553,6 +585,9 @@ static void gm206_bios_parse_bit(struct gk20a *g, int offset)
 			g->bios.virt_token =
 				(struct bit_token *)&g->bios.data[offset];
 			break;
+		case TOKEN_ID_MEMORY_PTRS:
+			gm206_bios_parse_memory_ptrs(g, bit_token.data_ptr,
+				bit_token.data_version);
 		default:
 			break;
 		}
@@ -560,6 +595,47 @@ static void gm206_bios_parse_bit(struct gk20a *g, int offset)
 		offset += bit.token_size;
 	}
 	gk20a_dbg_fn("done");
+}
+
+static u32 __gm206_bios_readbyte(struct gk20a *g, u32 offset)
+{
+	return (u32) g->bios.data[offset];
+}
+
+u8 gm206_bios_read_u8(struct gk20a *g, u32 offset)
+{
+	return (u8) __gm206_bios_readbyte(g, offset);
+}
+
+s8 gm206_bios_read_s8(struct gk20a *g, u32 offset)
+{
+	u32 val;
+	val = __gm206_bios_readbyte(g, offset);
+	val = val & 0x80 ? (val | ~0xff) : val;
+
+	return (s8) val;
+}
+
+u16 gm206_bios_read_u16(struct gk20a *g, u32 offset)
+{
+	u16 val;
+
+	val = __gm206_bios_readbyte(g, offset) |
+		(__gm206_bios_readbyte(g, offset+1) << 8);
+
+	return val;
+}
+
+u32 gm206_bios_read_u32(struct gk20a *g, u32 offset)
+{
+	u32 val;
+
+	val = __gm206_bios_readbyte(g, offset) |
+		(__gm206_bios_readbyte(g, offset+1) << 8) |
+		(__gm206_bios_readbyte(g, offset+2) << 16) |
+		(__gm206_bios_readbyte(g, offset+3) << 24);
+
+	return val;
 }
 
 static void upload_code(struct gk20a *g, u32 dst,

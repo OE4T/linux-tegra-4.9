@@ -684,6 +684,7 @@ struct gpu_ops {
 		int (*init)(struct gk20a *g);
 		void *(*get_perf_table_ptrs)(struct gk20a *g,
 				struct bit_token *ptoken, u8 table_id);
+		int (*execute_script)(struct gk20a *g, u32 offset);
 	} bios;
 #if defined(CONFIG_GK20A_CYCLE_STATS)
 	struct {
@@ -737,6 +738,11 @@ struct nvgpu_bios {
 	u32 devinit_tables_size;
 	u8 *bootscripts;
 	u32 bootscripts_size;
+
+	u8 mem_strap_data_count;
+	u16 mem_strap_xlat_tbl_ptr;
+
+	u32 condition_table_ptr;
 
 	u32 devinit_tables_phys_base;
 	u32 devinit_script_phys_base;

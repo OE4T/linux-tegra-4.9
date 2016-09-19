@@ -55,4 +55,9 @@ struct bit_token {
 struct gpu_ops;
 
 void gm206_init_bios(struct gpu_ops *gops);
+u8 gm206_bios_read_u8(struct gk20a *g, u32 offset);
+s8 gm206_bios_read_s8(struct gk20a *g, u32 offset);
+u16 gm206_bios_read_u16(struct gk20a *g, u32 offset);
+u32 gm206_bios_read_u32(struct gk20a *g, u32 offset);
+
 #endif

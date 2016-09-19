@@ -1709,7 +1709,7 @@ static int eqos_start_xmit(struct sk_buff *skb, struct net_device *dev)
 
 	if (test_bit(HW_CHANGING, &pdata->hw_state_flgs)) {
 		dev_kfree_skb_any(skb);
-		pr_err("%s : hw stopped\n", dev->name);
+		pr_info("%s : hw stopped\n", dev->name);
 		goto tx_netdev_return;
 	}
 

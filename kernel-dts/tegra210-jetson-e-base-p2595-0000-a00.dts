@@ -30,14 +30,14 @@
 #include <panels/panel-s-wqxga-10-1.dtsi>
 #include <panels/panel-a-wuxga-8-0.dtsi>
 #include <t210-common-platforms/tegra210-ers-hdmi-e2190-1100-a00.dtsi>
-#include <t210-common-platforms/tegra210-loki-e-sensor-p2530-0032-e00.dtsi>
+#include <t210-common-platforms/tegra210-platform-common-sensor.dtsi>
 #include <tegra210-soc/tegra210-sdhci.dtsi>
 #include <t210-common-platforms/tegra210-p2530-common.dtsi>
 #include "jetson-platforms/tegra210-thermal-fan-est-p2530-0930.dtsi"
 #include "jetson-platforms/tegra210-keys-p2530-0930.dtsi"
 #include "jetson-platforms/tegra210-jetson-e-powermon-p2595-0000-a00.dtsi"
 #include <dt-bindings/iio/meter/ina3221x.h>
-#include <t210-common-platforms/tegra210-foster-e-extcon-p2530-0930-e01.dtsi>
+#include <t210-common-platforms/tegra210-otg-gpio-detection-extcon.dtsi>
 #include "jetson-platforms/tegra210-jetson-e-emc-p2530-e01.dtsi"
 #include "tegra210-soc/tegra210-edp.dtsi"
 #include <t210-common-platforms/tegra210-sysedp.dtsi>

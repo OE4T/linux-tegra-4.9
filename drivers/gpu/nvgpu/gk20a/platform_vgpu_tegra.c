@@ -49,6 +49,7 @@ static int gk20a_tegra_probe(struct device *dev)
 
 struct gk20a_platform vgpu_tegra_platform = {
 	.has_syncpoints = true,
+	.aggressive_sync_destroy_thresh = 64,
 
 	/* power management configuration */
 	.can_railgate		= false,

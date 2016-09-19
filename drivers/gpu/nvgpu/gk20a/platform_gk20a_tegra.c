@@ -847,6 +847,7 @@ static int gk20a_clk_get_freqs(struct device *dev,
 
 struct gk20a_platform gk20a_tegra_platform = {
 	.has_syncpoints = true,
+	.aggressive_sync_destroy_thresh = 64,
 
 	/* power management configuration */
 	.railgate_delay		= 500,
@@ -909,6 +910,7 @@ struct gk20a_platform gk20a_tegra_platform = {
 
 struct gk20a_platform gm20b_tegra_platform = {
 	.has_syncpoints = true,
+	.aggressive_sync_destroy_thresh = 64,
 
 	/* power management configuration */
 	.railgate_delay		= 500,

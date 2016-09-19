@@ -43,8 +43,6 @@
 
 #define NVMAP_HANDLE_PARAM_SIZE 1
 
-#define NVGPU_BEGIN_AGGRESSIVE_SYNC_DESTROY_LIMIT	64	/* channels */
-
 #define NVGPU_CHANNEL_MIN_TIMESLICE_US 1000
 #define NVGPU_CHANNEL_MAX_TIMESLICE_US 50000
 
@@ -91,7 +89,9 @@ static struct channel_gk20a *allocate_channel(struct fifo_gk20a *f)
 	}
 	mutex_unlock(&f->free_chs_mutex);
 
-	if (f->used_channels > NVGPU_BEGIN_AGGRESSIVE_SYNC_DESTROY_LIMIT)
+	if (platform->aggressive_sync_destroy_thresh &&
+			(f->used_channels >
+			 platform->aggressive_sync_destroy_thresh))
 		platform->aggressive_sync_destroy = true;
 
 	return ch;
@@ -110,7 +110,9 @@ static void free_channel(struct fifo_gk20a *f,
 	f->used_channels--;
 	mutex_unlock(&f->free_chs_mutex);
 
-	if (f->used_channels < NVGPU_BEGIN_AGGRESSIVE_SYNC_DESTROY_LIMIT)
+	if (platform->aggressive_sync_destroy_thresh &&
+			(f->used_channels <
+			 platform->aggressive_sync_destroy_thresh))
 		platform->aggressive_sync_destroy = false;
 }
 
@@ -1424,6 +1426,7 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 {
 	struct gk20a *g = c->g;
 	struct device *d = dev_from_gk20a(g);
+	struct gk20a_platform *platform = gk20a_get_platform(d);
 	struct vm_gk20a *ch_vm;
 	u32 gpfifo_size;
 	int err = 0;
@@ -1487,26 +1490,46 @@ int gk20a_alloc_channel_gpfifo(struct channel_gk20a *c,
 
 	channel_gk20a_setup_userd(c);
 
+	if (!platform->aggressive_sync_destroy_thresh) {
+		mutex_lock(&c->sync_lock);
+		c->sync = gk20a_channel_sync_create(c);
+		if (!c->sync) {
+			err = -ENOMEM;
+			mutex_unlock(&c->sync_lock);
+			goto clean_up_unmap;
+		}
+		mutex_unlock(&c->sync_lock);
+
+		if (g->ops.fifo.resetup_ramfc) {
+			err = g->ops.fifo.resetup_ramfc(c);
+			if (err)
+				goto clean_up_sync;
+		}
+	}
+
 	err = g->ops.fifo.setup_ramfc(c, c->gpfifo.mem.gpu_va,
 					c->gpfifo.entry_num, args->flags);
 	if (err)
-		goto clean_up_unmap;
+		goto clean_up_sync;
 
 	/* TBD: setup engine contexts */
 
 	err = channel_gk20a_alloc_priv_cmdbuf(c);
 	if (err)
-		goto clean_up_unmap;
+		goto clean_up_sync;
 
 	err = channel_gk20a_update_runlist(c, true);
 	if (err)
-		goto clean_up_unmap;
+		goto clean_up_sync;
 
 	g->ops.fifo.bind_channel(c);
 
 	gk20a_dbg_fn("done");
 	return 0;
 
+clean_up_sync:
+	gk20a_channel_sync_destroy(c->sync);
+	c->sync = NULL;
 clean_up_unmap:
 	nvgpu_free(c->gpfifo.pipe);
 	gk20a_gmmu_unmap_free(ch_vm, &c->gpfifo.mem);
@@ -1911,18 +1934,21 @@ static void gk20a_channel_clean_up_jobs(struct work_struct *work)
 
 		gk20a_channel_timeout_stop(c);
 
-		mutex_lock(&c->sync_lock);
+		WARN_ON(!c->sync);
+
 		if (c->sync) {
 			c->sync->signal_timeline(c->sync);
-			if (atomic_dec_and_test(&c->sync->refcount) &&
-					platform->aggressive_sync_destroy) {
-				gk20a_channel_sync_destroy(c->sync);
-				c->sync = NULL;
+
+			if (platform->aggressive_sync_destroy_thresh) {
+				mutex_lock(&c->sync_lock);
+				if (atomic_dec_and_test(&c->sync->refcount) &&
+						platform->aggressive_sync_destroy) {
+					gk20a_channel_sync_destroy(c->sync);
+					c->sync = NULL;
+				}
+				mutex_unlock(&c->sync_lock);
 			}
-		} else {
-			WARN_ON(1);
 		}
-		mutex_unlock(&c->sync_lock);
 
 		if (job->num_mapped_buffers)
 			gk20a_vm_put_buffers(vm, job->mapped_buffers,
@@ -2099,6 +2125,7 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 				      u32 flags)
 {
 	struct gk20a *g = c->g;
+	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
 	bool need_sync_fence = false;
 	bool new_sync_created = false;
 	int wait_fence_fd = -1;
@@ -2112,18 +2139,20 @@ static int gk20a_submit_prepare_syncs(struct channel_gk20a *c,
 	if (force_need_sync_fence)
 		need_sync_fence = true;
 
-	mutex_lock(&c->sync_lock);
-	if (!c->sync) {
-		c->sync = gk20a_channel_sync_create(c);
+	if (platform->aggressive_sync_destroy_thresh) {
+		mutex_lock(&c->sync_lock);
 		if (!c->sync) {
-			err = -ENOMEM;
-			mutex_unlock(&c->sync_lock);
-			goto fail;
+			c->sync = gk20a_channel_sync_create(c);
+			if (!c->sync) {
+				err = -ENOMEM;
+				mutex_unlock(&c->sync_lock);
+				goto fail;
+			}
+			new_sync_created = true;
 		}
-		new_sync_created = true;
+		atomic_inc(&c->sync->refcount);
+		mutex_unlock(&c->sync_lock);
 	}
-	atomic_inc(&c->sync->refcount);
-	mutex_unlock(&c->sync_lock);
 
 	if (g->ops.fifo.resetup_ramfc && new_sync_created) {
 		err = g->ops.fifo.resetup_ramfc(c);

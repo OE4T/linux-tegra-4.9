@@ -1010,7 +1010,7 @@ int tegra_dc_edid_blob(struct tegra_dc *dc, struct i2c_msg *msgs, int num)
 
 struct tegra_dc_edid *tegra_dc_get_edid(struct tegra_dc *dc)
 {
-	if (!dc->edid)
+	if (!dc || !dc->edid)
 		return ERR_PTR(-ENODEV);
 
 	return tegra_edid_get_data(dc->edid);

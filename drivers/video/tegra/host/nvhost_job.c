@@ -199,9 +199,12 @@ void nvhost_job_set_notifier(struct nvhost_job *job, u32 error)
 		(u32)nsec;
 	error_notifier->time_stamp.nanoseconds[1] =
 		(u32)(nsec >> 32);
+
+	if (error_notifier->info32 != error)
+		dev_err(&job->ch->dev->dev, "error notifier set to %d\n", error);
+
 	error_notifier->info32 = error;
 	error_notifier->status = 0xffff;
-	dev_err(&job->ch->dev->dev, "error notifier set to %d\n", error);
 
 	dma_buf_vunmap(job->error_notifier_ref, va);
 }

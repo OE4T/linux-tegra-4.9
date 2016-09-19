@@ -26,6 +26,9 @@
 /* The Camera RTCPU on Host1x address space. */
 #define TEGRA_SID_RCE_1X	0x2b	/* 43 */
 
+/* The APE DMA Clients. */
+#define TEGRA_SID_APE_3		0x2c	/* 44 */
+
 /* Host1x virtualization clients. */
 #define TEGRA_SID_HOST1X_CTX0	0x38	/* 56 */
 #define TEGRA_SID_HOST1X_CTX1	0x39	/* 57 */

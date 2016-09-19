@@ -616,7 +616,7 @@ static struct tegra_pcie_bus *tegra_pcie_bus_alloc(struct tegra_pcie *pcie,
 			L_PTE_MT_DEV_SHARED | L_PTE_SHARED;
 #else
 	pgprot_t prot = __pgprot(PTE_VALID | PTE_PROT_NONE | PTE_AF |
-				PTE_DIRTY | PTE_UXN | PTE_SHARED | PTE_TYPE_PAGE);
+		PTE_DIRTY | PTE_UXN | PTE_SHARED | PTE_TYPE_PAGE | PTE_WRITE);
 #endif
 
 	PR_FUNC_LINE;

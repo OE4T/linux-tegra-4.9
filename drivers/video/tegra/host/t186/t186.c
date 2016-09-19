@@ -451,7 +451,7 @@ struct nvhost_device_data t18_vic_info = {
 struct nvhost_device_data t18_nvcsi_info = {
 	.num_channels		= 1,
 	.clocks			= {
-		{"nvcsi", 102000000},
+		{"nvcsi", 204000000},
 		{"nvcsilp", 204000000},
 	},
 	.devfs_name		= "nvcsi",

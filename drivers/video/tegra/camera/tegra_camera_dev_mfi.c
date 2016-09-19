@@ -168,7 +168,7 @@ int tegra_camera_dev_mfi_clear(struct camera_mfi_dev *cmfidev)
 	list_for_each_entry(itr, &cmfidev_list, list) {
 		if (!strcmp(itr->name, cmfidev->name)) {
 			if (itr->num_used > 0)
-				pr_err("%s [%s] force clear Q pending writes\n",
+				pr_info("%s [%s] force clear Q pending writes\n",
 						__func__, itr->name);
 			itr->num_used = 0;
 			err = 0;

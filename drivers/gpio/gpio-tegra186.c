@@ -123,6 +123,11 @@ static int tegra186_gpio_map[MAX_GPIO_CONTROLLERS][MAX_GPIO_PORTS] = {
 	{31, 18, 20, 30, 21, 22, 26, 25},/* AON gpio cntrlr */
 };
 
+static u32 tegra186_gpio_port_pin_count[MAX_PORTS] = {
+	7, 7, 7, 6, 8, 6, 6, 7, 8, 8, 1, 8, 6, 7, 4, 7,
+	6, 6, 5, 4, 6, 8, 8, 8, 7, 4, 8, 2, 4, 0, 3, 5,
+};
+
 static u32 address_map[32][2];
 static u32 tegra_gpio_bank_count;
 static struct tegra_gpio_controller
@@ -197,6 +202,9 @@ static inline bool is_gpio_accessible(u32 offset)
 	bool found = false;
 
 	if (controller == -1)
+		return false;
+
+	if (pin >= tegra186_gpio_port_pin_count[port])
 		return false;
 
 	for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {

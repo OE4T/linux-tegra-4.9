@@ -20,6 +20,7 @@
 #include <linux/moduleparam.h>
 #include <linux/export.h>
 #include <linux/delay.h>
+#include <linux/tegra-fuse.h>
 #if defined(CONFIG_ARCH_TEGRA_210_SOC)
 #include <soc/tegra/fuse.h>
 #endif
@@ -620,6 +621,7 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 	unsigned int yoff;
 	unsigned int width;
 	unsigned int height;
+	enum tegra_revision rev;
 
 	if (dirty_rect) {
 		xoff = dirty_rect[0];
@@ -745,13 +747,14 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 				DC_WINBUF_CDE_SURFACE_OFFSET_0);
 			tegra_dc_writel(dc, win->cde.ctb_entry,
 				DC_WINBUF_CDE_CTB_ENTRY_0);
+			rev = tegra_chip_get_revision();
 #if defined(CONFIG_ARCH_TEGRA_210_SOC)
 			if (tegra_get_chip_id() == TEGRA210
 #else
 			if (tegra_get_chipid() == TEGRA_CHIPID_TEGRA21
 #endif
-				&& ((tegra_revision == TEGRA_REVISION_A01) ||
-					(tegra_revision == TEGRA_REVISION_A01q)))
+				&& ((rev == TEGRA_REVISION_A01) ||
+					(rev == TEGRA_REVISION_A01q)))
 				tegra_dc_writel(dc, 0, DC_WINBUF_CDE_CG_SW_OVR);
 		} else {
 			tegra_dc_writel(dc, 0, DC_WINBUF_CDE_CONTROL);

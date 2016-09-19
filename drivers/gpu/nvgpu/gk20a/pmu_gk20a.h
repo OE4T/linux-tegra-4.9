@@ -27,6 +27,7 @@
 #include "pmuif/gpmuifclk.h"
 #include "pmuif/gpmuifperf.h"
 #include "pmuif/gpmuifpmgr.h"
+#include "pmuif/gpmuifvolt.h"
 
 /* defined by pmu hw spec */
 #define GK20A_PMU_VA_SIZE		(512 * 1024 * 1024)
@@ -181,6 +182,7 @@ struct pmu_ucode_desc_v1 {
 #define PMU_UNIT_FECS_MEM_OVERRIDE      (0x1E)
 #define PMU_UNIT_CLK             (0x0D)
 #define PMU_UNIT_PMGR            (0x18)
+#define PMU_UNIT_VOLT            (0x0E)
 
 #define PMU_UNIT_END		(0x23)
 
@@ -359,6 +361,7 @@ struct pmu_cmd {
 		struct pmu_lrf_tex_ltc_dram_cmd lrf_tex_ltc_dram;
 		struct nv_pmu_boardobj_cmd boardobj;
 		struct nv_pmu_perf_cmd perf;
+		struct nv_pmu_volt_cmd volt;
 		struct nv_pmu_clk_cmd clk;
 		struct nv_pmu_pmgr_cmd pmgr;
 	} cmd;
@@ -375,6 +378,7 @@ struct pmu_msg {
 		struct pmu_lrf_tex_ltc_dram_msg lrf_tex_ltc_dram;
 		struct nv_pmu_boardobj_msg boardobj;
 		struct nv_pmu_perf_msg perf;
+		struct nv_pmu_volt_msg volt;
 		struct nv_pmu_clk_msg clk;
 		struct nv_pmu_pmgr_msg pmgr;
 	} msg;
@@ -812,5 +816,4 @@ int gk20a_pmu_vidmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
 int gk20a_pmu_sysmem_surface_alloc(struct gk20a *g, struct mem_desc *mem,
 		u32 size);
 
-void print_vbios_table(u8 *msg, u8 *buff, int size);
 #endif /*__PMU_GK20A_H__*/

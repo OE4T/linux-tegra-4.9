@@ -1054,30 +1054,48 @@ static int nct1008_get_trend(struct thermal_zone_device *thz,
 	return 0;
 }
 
-static int nct1008_get_trend_as_sensor(int sensor,
-				struct nct1008_data *data,
-					long *trend)
+static int nct1008_get_trend_as_sensor(int sensor, void *data, int trip,
+		enum thermal_trend *trend)
 {
-	struct thermal_zone_device *thz = data->sensors[sensor].thz;
+	int ret, temp, trip_temp, last_temp;
+	struct nct1008_data *nct_data = (struct nct1008_data *)data;
+	struct thermal_zone_device *thz = nct_data->sensors[sensor].thz;
 
-	return thz->temperature - thz->last_temperature;
+	ret = thz->ops->get_trip_temp(thz, trip, &trip_temp);
+	if (ret)
+		return ret;
+
+	mutex_lock(&thz->lock);
+	temp = thz->temperature;
+	last_temp = thz->last_temperature;
+	mutex_unlock(&thz->lock);
+
+	if (temp > trip_temp) {
+		if (temp >= last_temp)
+			*trend = THERMAL_TREND_RAISING;
+		else
+			*trend = THERMAL_TREND_STABLE;
+	} else if (temp < trip_temp) {
+		*trend = THERMAL_TREND_DROPPING;
+	} else {
+		*trend = THERMAL_TREND_STABLE;
+	}
+
+	return 0;
 }
 
 /* Helper function to get trend for the local sensor. */
-static inline int nct1008_loc_get_trend_as_sensor(void *data,
-						long *trend)
+static inline int nct1008_loc_get_trend_as_sensor(void *data, int trip,
+		enum thermal_trend *trend)
 {
-	return nct1008_get_trend_as_sensor(LOC,
-		(struct nct1008_data *) data, trend);
+	return nct1008_get_trend_as_sensor(LOC, data, trip, trend);
 }
 
-static inline int nct1008_ext_get_trend_as_sensor(void *data,
-						long *trend)
+static inline int nct1008_ext_get_trend_as_sensor(void *data, int trip,
+		enum thermal_trend *trend)
 {
-	return nct1008_get_trend_as_sensor
-		(EXT, (struct nct1008_data *) data, trend);
+	return nct1008_get_trend_as_sensor(EXT, data, trip, trend);
 }
-
 
 /* Helper function to get temperature of the local sensor. */
 static int nct1008_loc_get_temp(struct thermal_zone_device *thz, int *temp)

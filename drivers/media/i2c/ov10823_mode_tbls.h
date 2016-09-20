@@ -1610,9 +1610,13 @@ static ov10823_reg *fsync_table[] = {
 	[OV10823_MODE_Slave] = fsync_slave,
 };
 
+static const int ov10823_30fps[] = {
+	30,
+};
+
 static const struct camera_common_frmfmt ov10823_frmfmt[] = {
-	{{4336, 2440}, 0, OV10823_MODE_4336X2440},
-	{{3000, 2440}, 0, OV10823_MODE_3000X2440},
-	{{2168, 1220}, 0, OV10823_MODE_2168X1220},
+	{{4336, 2440}, ov10823_30fps, 1, 0, OV10823_MODE_4336X2440},
+	{{3000, 2440}, ov10823_30fps, 1, 0, OV10823_MODE_3000X2440},
+	{{2168, 1220}, ov10823_30fps, 1, 0, OV10823_MODE_2168X1220},
 };
 #endif  /* __OV10823_I2C_TABLES__ */

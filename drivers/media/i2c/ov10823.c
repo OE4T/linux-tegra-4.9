@@ -453,9 +453,21 @@ exit:
 	return err;
 }
 
+static int ov10823_g_input_status(struct v4l2_subdev *sd, u32 *status)
+{
+	struct i2c_client *client = v4l2_get_subdevdata(sd);
+	struct camera_common_data *s_data = to_camera_common_data(client);
+	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
+	struct camera_common_power_rail *pw = &priv->power;
+
+	*status = pw->state == SWITCH_ON;
+	return 0;
+}
+
 static struct v4l2_subdev_video_ops ov10823_subdev_video_ops = {
 	.s_stream	= ov10823_s_stream,
 	.g_mbus_config	= camera_common_g_mbus_config,
+	.g_input_status = ov10823_g_input_status,
 };
 
 static struct v4l2_subdev_core_ops ov10823_subdev_core_ops = {
@@ -487,6 +499,8 @@ static struct v4l2_subdev_pad_ops ov10823_subdev_pad_ops = {
 	.set_fmt = ov10823_set_fmt,
 	.get_fmt = ov10823_get_fmt,
 	.enum_mbus_code = camera_common_enum_mbus_code,
+	.enum_frame_size	= camera_common_enum_framesizes,
+	.enum_frame_interval	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_ops ov10823_subdev_ops = {
@@ -986,7 +1000,7 @@ static int ov10823_probe(struct i2c_client *client,
 	common_data->ops		= &ov10823_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;
 	common_data->i2c_client		= client;
-	common_data->frmfmt		= &ov10823_frmfmt[0];
+	common_data->frmfmt		= ov10823_frmfmt;
 	common_data->colorfmt		= camera_common_find_datafmt(
 					  OV10823_DEFAULT_DATAFMT);
 	common_data->power		= &priv->power;

@@ -28,6 +28,7 @@
 #include "gm206/pmu_gm206.h"
 #include "sec2_gp106.h"
 #include "nvgpu_gpuid_t18x.h"
+#include "nvgpu_common.h"
 
 /*Defines*/
 #define gp106_dbg_pmu(fmt, arg...) \
@@ -138,7 +139,8 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	int err;
 
 	gp106_dbg_pmu("requesting PMU ucode in gp106\n");
-	pmu_fw = gk20a_request_firmware(g, GM20B_PMU_UCODE_IMAGE);
+	pmu_fw = nvgpu_request_firmware(g, GM20B_PMU_UCODE_IMAGE,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_fw) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode!!");
 		return -ENOENT;
@@ -147,13 +149,15 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 	gp106_dbg_pmu("Loaded PMU ucode in for blob preparation");
 
 	gp106_dbg_pmu("requesting PMU ucode desc in GM20B\n");
-	pmu_desc = gk20a_request_firmware(g, GM20B_PMU_UCODE_DESC);
+	pmu_desc = nvgpu_request_firmware(g, GM20B_PMU_UCODE_DESC,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_desc) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode desc!!");
 		err = -ENOENT;
 		goto release_img_fw;
 	}
-	pmu_sig = gk20a_request_firmware(g, GM20B_PMU_UCODE_SIG);
+	pmu_sig = nvgpu_request_firmware(g, GM20B_PMU_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (!pmu_sig) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu sig!!");
 		err = -ENOENT;
@@ -206,10 +210,14 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 
 	switch (ver) {
 		case NVGPU_GPUID_GP104:
-			fecs_sig = gk20a_request_firmware(g, GP104_FECS_UCODE_SIG);
+			fecs_sig = nvgpu_request_firmware(g,
+					GP104_FECS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
 		case NVGPU_GPUID_GP106:
-			fecs_sig = gk20a_request_firmware(g, GP106_FECS_UCODE_SIG);
+			fecs_sig = nvgpu_request_firmware(g,
+					GP106_FECS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
 		default:
 			gk20a_err(g->dev, "no support for GPUID %x", ver);
@@ -288,10 +296,14 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img_v1 *p_img)
 
 	switch (ver) {
 		case NVGPU_GPUID_GP104:
-			gpccs_sig = gk20a_request_firmware(g, GP104_GPCCS_UCODE_SIG);
+			gpccs_sig = nvgpu_request_firmware(g,
+					GP104_GPCCS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
 		case NVGPU_GPUID_GP106:
-			gpccs_sig = gk20a_request_firmware(g, GP106_GPCCS_UCODE_SIG);
+			gpccs_sig = nvgpu_request_firmware(g,
+					GP106_GPCCS_UCODE_SIG,
+					NVGPU_REQUEST_FIRMWARE_NO_SOC);
 			break;
 		default:
 			gk20a_err(g->dev, "no support for GPUID %x", ver);
@@ -1041,7 +1053,9 @@ static int gp106_bootstrap_hs_flcn(struct gk20a *g)
 
 	if (!acr_fw) {
 		/*First time init case*/
-		acr_fw = gk20a_request_firmware(g, GM20B_HSBIN_PMU_UCODE_IMAGE);
+		acr_fw = nvgpu_request_firmware(g,
+				GM20B_HSBIN_PMU_UCODE_IMAGE,
+				NVGPU_REQUEST_FIRMWARE_NO_SOC);
 		if (!acr_fw) {
 			gk20a_err(dev_from_gk20a(g), "pmu ucode get fail");
 			return -ENOENT;

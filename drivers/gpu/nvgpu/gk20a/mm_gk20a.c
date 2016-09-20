@@ -2276,6 +2276,26 @@ err_kfree:
 #endif
 }
 
+int gk20a_vidmem_get_space(struct gk20a *g, u64 *space)
+{
+#if defined(CONFIG_GK20A_VIDMEM)
+	struct gk20a_allocator *allocator = &g->mm.vidmem.allocator;
+
+	gk20a_dbg_fn("");
+
+	if (!gk20a_alloc_initialized(allocator))
+		return -ENOSYS;
+
+	mutex_lock(&g->mm.vidmem.clear_list_mutex);
+	*space = gk20a_alloc_space(allocator) +
+		atomic64_read(&g->mm.vidmem.bytes_pending);
+	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
+	return 0;
+#else
+	return -ENOSYS;
+#endif
+}
+
 static u64 gk20a_mm_get_align(struct gk20a *g, struct scatterlist *sgl,
 			      enum gk20a_aperture aperture)
 {

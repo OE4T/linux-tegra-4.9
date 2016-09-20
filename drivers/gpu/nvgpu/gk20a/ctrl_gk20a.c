@@ -747,6 +747,24 @@ static int nvgpu_gpu_alloc_vidmem(struct gk20a *g,
 	return 0;
 }
 
+static int nvgpu_gpu_get_memory_state(struct gk20a *g,
+			struct nvgpu_gpu_get_memory_state_args *args)
+{
+	int err;
+
+	gk20a_dbg_fn("");
+
+	if (args->reserved[0] || args->reserved[1] ||
+	    args->reserved[2] || args->reserved[3])
+		return -EINVAL;
+
+	err = gk20a_vidmem_get_space(g, &args->total_free_bytes);
+
+	gk20a_dbg_fn("done, err=%d, bytes=%lld", err, args->total_free_bytes);
+
+	return err;
+}
+
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
 {
 	struct device *dev = filp->private_data;
@@ -997,6 +1015,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_ALLOC_VIDMEM:
 		err = nvgpu_gpu_alloc_vidmem(g,
 			(struct nvgpu_gpu_alloc_vidmem_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_GET_MEMORY_STATE:
+		err = nvgpu_gpu_get_memory_state(g,
+			(struct nvgpu_gpu_get_memory_state_args *)buf);
 		break;
 
 	default:

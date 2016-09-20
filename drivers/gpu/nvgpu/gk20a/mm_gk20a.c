@@ -4077,8 +4077,10 @@ static void gk20a_vm_remove_support_nofree(struct vm_gk20a *vm)
 	 * update_gmmu_lock.
 	 */
 	if (!gk20a_platform_has_syncpoints(gk20a_from_vm(vm)->dev)) {
-		gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
-		gk20a_semaphore_pool_put(vm->sema_pool);
+		if (vm->sema_pool) {
+			gk20a_semaphore_pool_unmap(vm->sema_pool, vm);
+			gk20a_semaphore_pool_put(vm->sema_pool);
+		}
 	}
 
 	mutex_lock(&vm->update_gmmu_lock);

@@ -25,6 +25,8 @@
 #include "dt-bindings/soc/tegra186-powergate.h"
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
+#include <dt-bindings/memory/tegra-swgroup.h>
+#include <dt-bindings/memory/tegra186-swgroup.h>
 
 / {
 	compatible = "nvidia,tegra186";
@@ -96,7 +98,51 @@
 
 		status = "disabled";
 
+		mmu-masters = <&host1x				TEGRA_SID_HC
+								TEGRA_SID_HC_VM0
+								TEGRA_SID_HC_VM1
+								TEGRA_SID_HC_VM2
+								TEGRA_SID_HC_VM3
+								TEGRA_SID_HC_VM4
+								TEGRA_SID_HC_VM5
+								TEGRA_SID_HC_VM6
+								TEGRA_SID_HC_VM7>,
+			      <&{/host1x/vic@15340000}		TEGRA_SID_VIC>,
+			      <&{/host1x/nvdec@15480000}	TEGRA_SID_NVDEC>,
+			      <&{/host1x/nvenc@154c0000}	TEGRA_SID_NVENC>,
+			      <&{/host1x/nvjpg@15380000}	TEGRA_SID_NVJPG>;
+
+		domains {
+			host1x_domain {
+				address-space = <&host1x_as>;
+				sid-list = <TEGRA_SID(HC)>;
+				sid-list-len = <1>;
+			};
+			host1x_client_domain {
+				address-space = <&host1x_client_as>;
+				sid-list = <TEGRA_SID(VIC)
+					    TEGRA_SID(NVDEC)
+					    TEGRA_SID(NVENC)
+					    TEGRA_SID(NVJPG)>;
+				sid-list-len = <4>;
+			};
+		};
+
 		address-space-prop {
+			host1x_as: host1x {
+				iova-start = <0x0 0x1000>;
+				iova-size = <0x0 0xFFFFEFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
+			host1x_client_as: host1x_client {
+				iova-start = <0x0 0x1000>;
+				iova-size = <0x0 0xFFFFEFFF>;
+				alignment = <0xFFFFF>;
+				num-pf-page = <0>;
+				gap-page = <1>;
+			};
 			common_as: common {
 				iova-start = <0x0 0x80000000>;
 				iova-size = <0x0 0x7FF00000>;

@@ -102,6 +102,8 @@ struct tegra_uart_chip_data {
 	bool	support_clk_src_div;
 	bool	fifo_mode_enable_status;
 	bool	dma_8bytes_burst_only;
+	int	error_tolerance_low_range;
+	int	error_tolerance_high_range;
 };
 
 struct tegra_baud_tolerance {
@@ -155,6 +157,9 @@ struct tegra_uart_port {
 	bool                                    is_hw_flow_enabled;
 	struct timer_list			error_timer;
 	int					error_timer_timeout_jiffies;
+	int					required_rate;
+	int					configured_rate;
+	struct dentry				*debugfs;
 };
 
 static void tegra_uart_start_next_tx(struct tegra_uart_port *tup);
@@ -376,6 +381,22 @@ static long tegra_get_tolerance_rate(struct tegra_uart_port *tup,
 	return rate;
 }
 
+static void tegra_check_rate_in_range(struct tegra_uart_port *tup)
+{
+	int diff;
+	u32 error;
+
+	diff = ((tup->configured_rate - tup->required_rate) * 10000)
+			/ tup->required_rate;
+	error = diff < 0 ? -diff : diff;
+	if (diff < (tup->cdata->error_tolerance_low_range * 100) ||
+			diff > (tup->cdata->error_tolerance_high_range * 100))
+		dev_err(tup->uport.dev,
+			"configured rate out of supported range by %c%d.%d %%",
+			(diff < 0) ? '-':'+',
+			(error/100), (error - (error/100) * 100));
+}
+
 static int tegra_set_baudrate(struct tegra_uart_port *tup, unsigned int baud)
 {
 	unsigned long rate;
@@ -388,6 +409,8 @@ static int tegra_set_baudrate(struct tegra_uart_port *tup, unsigned int baud)
 
 	if (tup->cdata->support_clk_src_div) {
 		rate = baud * 16;
+		tup->required_rate = rate;
+
 		if (tup->n_adjustable_baud_rates)
 			rate = tegra_get_tolerance_rate(tup, baud, rate);
 
@@ -397,6 +420,8 @@ static int tegra_set_baudrate(struct tegra_uart_port *tup, unsigned int baud)
 				"clk_set_rate() failed for rate %lu\n", rate);
 			return ret;
 		}
+		tup->configured_rate = clk_get_rate(tup->uart_clk);
+		tegra_check_rate_in_range(tup);
 		divisor = 1;
 	} else {
 		rate = clk_get_rate(tup->uart_clk);
@@ -1605,12 +1630,40 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 	return 0;
 }
 
+#ifdef CONFIG_DEBUG_FS
+static void tegra_uart_debugfs_init(struct tegra_uart_port *tup)
+{
+	tup->debugfs = debugfs_create_dir(dev_name(tup->uport.dev), NULL);
+	if (IS_ERR_OR_NULL(tup->debugfs))
+		goto clean;
+
+	debugfs_create_u32("required_rate", 0644, tup->debugfs,
+			&tup->required_rate);
+	debugfs_create_u32("config_rate", 0644, tup->debugfs,
+			&tup->configured_rate);
+	return;
+clean:
+	dev_warn(tup->uport.dev, "Failed to create debugfs!\n");
+	debugfs_remove_recursive(tup->debugfs);
+}
+
+static void tegra_uart_debugfs_deinit(struct tegra_uart_port *tup)
+{
+	debugfs_remove_recursive(tup->debugfs);
+}
+#else
+static void tegra_uart_debugfs_init(struct tegra_uart_port *tup) {}
+static void tegra_uart_debugfs_deinit(struct tegra_uart_port *tup) {}
+#endif
+
 static struct tegra_uart_chip_data tegra20_uart_chip_data = {
 	.tx_fifo_full_status		= false,
 	.allow_txfifo_reset_fifo_mode	= true,
 	.support_clk_src_div		= false,
 	.fifo_mode_enable_status	= false,
 	.dma_8bytes_burst_only		= false,
+	.error_tolerance_low_range	= 0,
+	.error_tolerance_high_range	= 4,
 };
 
 static struct tegra_uart_chip_data tegra30_uart_chip_data = {
@@ -1619,6 +1672,8 @@ static struct tegra_uart_chip_data tegra30_uart_chip_data = {
 	.support_clk_src_div		= true,
 	.fifo_mode_enable_status	= false,
 	.dma_8bytes_burst_only		= false,
+	.error_tolerance_low_range	= 0,
+	.error_tolerance_high_range	= 4,
 };
 
 static struct tegra_uart_chip_data tegra114_uart_chip_data = {
@@ -1627,6 +1682,8 @@ static struct tegra_uart_chip_data tegra114_uart_chip_data = {
 	.support_clk_src_div            = true,
 	.fifo_mode_enable_status	= false,
 	.dma_8bytes_burst_only		= false,
+	.error_tolerance_low_range	= 0,
+	.error_tolerance_high_range	= 4,
 };
 
 static struct tegra_uart_chip_data tegra186_uart_chip_data = {
@@ -1635,6 +1692,8 @@ static struct tegra_uart_chip_data tegra186_uart_chip_data = {
 	.support_clk_src_div		= true,
 	.fifo_mode_enable_status	= true,
 	.dma_8bytes_burst_only		= true,
+	.error_tolerance_low_range	= 0,
+	.error_tolerance_high_range	= 4,
 };
 
 static const struct of_device_id tegra_uart_of_match[] = {
@@ -1752,6 +1811,7 @@ static int tegra_uart_probe(struct platform_device *pdev)
 	setup_timer(&tup->error_timer, tegra_uart_rx_error_handle_timer,
 			(unsigned long)tup);
 	tup->error_timer_timeout_jiffies = msecs_to_jiffies(500);
+	tegra_uart_debugfs_init(tup);
 
 	return ret;
 }
@@ -1761,6 +1821,7 @@ static int tegra_uart_remove(struct platform_device *pdev)
 	struct tegra_uart_port *tup = platform_get_drvdata(pdev);
 	struct uart_port *u = &tup->uport;
 
+	tegra_uart_debugfs_deinit(tup);
 	uart_remove_one_port(&tegra_uart_driver, u);
 	return 0;
 }

@@ -57,6 +57,13 @@ static u64 gk20a_page_alloc_end(struct gk20a_allocator *a)
 	return gk20a_alloc_end(&va->source_allocator);
 }
 
+static u64 gk20a_page_alloc_space(struct gk20a_allocator *a)
+{
+	struct gk20a_page_allocator *va = a->priv;
+
+	return gk20a_alloc_space(&va->source_allocator);
+}
+
 static int gk20a_page_reserve_co(struct gk20a_allocator *a,
 				 struct gk20a_alloc_carveout *co)
 {
@@ -492,6 +499,7 @@ static const struct gk20a_allocator_ops page_ops = {
 	.length		= gk20a_page_alloc_length,
 	.end		= gk20a_page_alloc_end,
 	.inited		= gk20a_page_alloc_inited,
+	.space		= gk20a_page_alloc_space,
 
 	.fini		= gk20a_page_allocator_destroy,
 

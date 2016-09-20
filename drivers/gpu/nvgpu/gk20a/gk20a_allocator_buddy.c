@@ -1090,6 +1090,19 @@ static u64 gk20a_buddy_alloc_end(struct gk20a_allocator *a)
 	return ba->end;
 }
 
+static u64 gk20a_buddy_alloc_space(struct gk20a_allocator *a)
+{
+	struct gk20a_buddy_allocator *ba = a->priv;
+	u64 space;
+
+	alloc_lock(a);
+	space = ba->end - ba->start -
+		(ba->bytes_alloced_real - ba->bytes_freed);
+	alloc_unlock(a);
+
+	return space;
+}
+
 /*
  * Print the buddy allocator top level stats. If you pass @s as NULL then the
  * stats are printed to the kernel log. This lets this code be used for
@@ -1180,6 +1193,7 @@ static const struct gk20a_allocator_ops buddy_ops = {
 	.length		= gk20a_buddy_alloc_length,
 	.end		= gk20a_buddy_alloc_end,
 	.inited		= gk20a_buddy_alloc_inited,
+	.space		= gk20a_buddy_alloc_space,
 
 	.fini		= gk20a_buddy_allocator_destroy,
 

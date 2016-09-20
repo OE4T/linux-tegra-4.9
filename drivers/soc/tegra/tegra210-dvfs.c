@@ -701,7 +701,7 @@ static int set_cpu_lp_dvfs_data(unsigned long max_freq, struct cpu_dvfs *d,
 	return 0;
 }
 
-int __init of_tegra_dvfs_init(const struct of_device_id *matches)
+int of_tegra_dvfs_init(const struct of_device_id *matches)
 {
 	int ret;
 	struct device_node *np;
@@ -726,9 +726,9 @@ int __init of_tegra_dvfs_init(const struct of_device_id *matches)
  * and overwrite DVFS table, respectively.
  */
 
-static __initdata struct dvfs *qspi_dvfs = &qspi_sdr_dvfs_table[0];
+static struct dvfs *qspi_dvfs = &qspi_sdr_dvfs_table[0];
 
-static int __init of_update_qspi_dvfs(struct device_node *dn)
+static int of_update_qspi_dvfs(struct device_node *dn)
 {
 	if (of_device_is_available(dn)) {
 		if (of_get_property(dn, "nvidia,x4-is-ddr", NULL))
@@ -737,12 +737,12 @@ static int __init of_update_qspi_dvfs(struct device_node *dn)
 	return 0;
 }
 
-static __initdata struct of_device_id tegra210_dvfs_qspi_of_match[] = {
+static struct of_device_id tegra210_dvfs_qspi_of_match[] = {
 	{ .compatible = "nvidia,tegra210-qspi", .data = of_update_qspi_dvfs, },
 	{ },
 };
 
-static void __init init_qspi_dvfs(int soc_speedo_id, int core_process_id,
+static void init_qspi_dvfs(int soc_speedo_id, int core_process_id,
 				  int core_nominal_mv_index)
 {
 	of_tegra_dvfs_init(tegra210_dvfs_qspi_of_match);
@@ -796,7 +796,7 @@ static int get_core_nominal_mv_index(int speedo_id)
 	return i - 1;
 }
 
-static int __init init_cpu_dvfs_table(int *cpu_max_freq_index)
+static int init_cpu_dvfs_table(int *cpu_max_freq_index)
 {
 	int i, ret;
 	int cpu_speedo_id = tegra_sku_info.cpu_speedo_id;
@@ -818,7 +818,7 @@ static int __init init_cpu_dvfs_table(int *cpu_max_freq_index)
 	return ret;
 }
 
-static int __init init_cpu_lp_dvfs_table(int *cpu_lp_max_freq_index)
+static int init_cpu_lp_dvfs_table(int *cpu_lp_max_freq_index)
 {
 	int i, ret;
 	int cpu_lp_speedo_id = tegra_sku_info.cpu_speedo_id;
@@ -858,7 +858,7 @@ static void adjust_emc_dvfs_table(struct dvfs *d)
 	}
 }
 
-int __init tegra210_init_dvfs(void)
+int tegra210_init_dvfs(void)
 {
 	int soc_speedo_id = tegra_sku_info.soc_speedo_id;
 	int core_process_id = tegra_sku_info.soc_process_id;

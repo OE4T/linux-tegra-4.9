@@ -61,6 +61,7 @@ struct gk20a_allocator_ops {
 	u64  (*length)(struct gk20a_allocator *allocator);
 	u64  (*end)(struct gk20a_allocator *allocator);
 	int  (*inited)(struct gk20a_allocator *allocator);
+	u64  (*space)(struct gk20a_allocator *allocator);
 
 	/* Destructor. */
 	void (*fini)(struct gk20a_allocator *allocator);
@@ -223,6 +224,7 @@ u64  gk20a_alloc_base(struct gk20a_allocator *a);
 u64  gk20a_alloc_length(struct gk20a_allocator *a);
 u64  gk20a_alloc_end(struct gk20a_allocator *a);
 u64  gk20a_alloc_initialized(struct gk20a_allocator *a);
+u64  gk20a_alloc_space(struct gk20a_allocator *a);
 
 void gk20a_alloc_destroy(struct gk20a_allocator *allocator);
 

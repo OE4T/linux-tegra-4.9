@@ -59,6 +59,14 @@ u64 gk20a_alloc_end(struct gk20a_allocator *a)
 	return 0;
 }
 
+u64 gk20a_alloc_space(struct gk20a_allocator *a)
+{
+	if (a->ops->space)
+		return a->ops->space(a);
+
+	return 0;
+}
+
 u64 gk20a_alloc(struct gk20a_allocator *a, u64 len)
 {
 	return a->ops->alloc(a, len);

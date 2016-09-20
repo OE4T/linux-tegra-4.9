@@ -24,6 +24,7 @@
 #include "gk20a.h"
 #include "gr_ctx_gk20a.h"
 #include "hw_gr_gk20a.h"
+#include "nvgpu_common.h"
 
 static int gr_gk20a_alloc_load_netlist_u32(u32 *src, u32 len,
 			struct u32_list_gk20a *u32_list)
@@ -135,7 +136,7 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 			continue;
 		}
 
-		netlist_fw = gk20a_request_firmware(g, name);
+		netlist_fw = nvgpu_request_firmware(g, name, 0);
 		if (!netlist_fw) {
 			gk20a_warn(d, "failed to load netlist %s", name);
 			continue;

@@ -30,6 +30,7 @@
 #include "hw_mc_gk20a.h"
 #include "hw_pwr_gk20a.h"
 #include "hw_top_gk20a.h"
+#include "nvgpu_common.h"
 
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 #include "nvgpu_gpuid_t18x.h"
@@ -2883,6 +2884,8 @@ void gk20a_remove_pmu_support(struct pmu_gk20a *pmu)
 
 	if (gk20a_alloc_initialized(&pmu->dmem))
 		gk20a_alloc_destroy(&pmu->dmem);
+
+	release_firmware(pmu->fw);
 }
 
 static int gk20a_init_pmu_reset_enable_hw(struct gk20a *g)
@@ -2904,18 +2907,18 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	struct mm_gk20a *mm = &g->mm;
 	struct vm_gk20a *vm = &mm->pmu.vm;
 
-	if (g->pmu_fw)
+	if (pmu->fw)
 		return gk20a_init_pmu(pmu);
 
-	g->pmu_fw = gk20a_request_firmware(g, GK20A_PMU_UCODE_IMAGE);
-	if (!g->pmu_fw) {
+	pmu->fw = nvgpu_request_firmware(g, GK20A_PMU_UCODE_IMAGE, 0);
+	if (!pmu->fw) {
 		gk20a_err(d, "failed to load pmu ucode!!");
 		return err;
 	}
 
 	gk20a_dbg_fn("firmware loaded");
 
-	pmu->desc = (struct pmu_ucode_desc *)g->pmu_fw->data;
+	pmu->desc = (struct pmu_ucode_desc *)pmu->fw->data;
 	pmu->ucode_image = (u32 *)((u8 *)pmu->desc +
 			pmu->desc->descriptor_size);
 
@@ -2930,7 +2933,8 @@ static int gk20a_prepare_ucode(struct gk20a *g)
 	return gk20a_init_pmu(pmu);
 
  err_release_fw:
-	release_firmware(g->pmu_fw);
+	release_firmware(pmu->fw);
+	pmu->fw = NULL;
 
 	return err;
 }

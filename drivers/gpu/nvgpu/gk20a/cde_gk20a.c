@@ -32,6 +32,7 @@
 #include "gr_gk20a.h"
 #include "debug_gk20a.h"
 #include "semaphore_gk20a.h"
+#include "nvgpu_common.h"
 
 #include "hw_ccsr_gk20a.h"
 #include "hw_pbdma_gk20a.h"
@@ -1179,7 +1180,7 @@ static int gk20a_cde_load(struct gk20a_cde_ctx *cde_ctx)
 	int err = 0;
 	u64 vaddr;
 
-	img = gk20a_request_firmware(g, "gpu2cde.bin");
+	img = nvgpu_request_firmware(g, "gpu2cde.bin", 0);
 	if (!img) {
 		dev_err(cde_ctx->dev, "cde: could not fetch the firmware");
 		return -ENOSYS;

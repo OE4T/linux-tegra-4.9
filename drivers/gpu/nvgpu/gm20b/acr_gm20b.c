@@ -18,7 +18,7 @@
 #include <linux/debugfs.h>
 #include <linux/dma-mapping.h>
 #include <linux/io.h>
-#include "../../../../arch/arm/mach-tegra/iomap.h"
+#include "nvgpu_common.h"
 
 #include <linux/platform/tegra/mc.h>
 
@@ -118,7 +118,7 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	struct lsf_ucode_desc *lsf_desc;
 	int err;
 	gm20b_dbg_pmu("requesting PMU ucode in GM20B\n");
-	pmu_fw = gk20a_request_firmware(g, GM20B_PMU_UCODE_IMAGE);
+	pmu_fw = nvgpu_request_firmware(g, GM20B_PMU_UCODE_IMAGE, 0);
 	if (!pmu_fw) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode!!");
 		return -ENOENT;
@@ -127,13 +127,13 @@ static int pmu_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	gm20b_dbg_pmu("Loaded PMU ucode in for blob preparation");
 
 	gm20b_dbg_pmu("requesting PMU ucode desc in GM20B\n");
-	pmu_desc = gk20a_request_firmware(g, GM20B_PMU_UCODE_DESC);
+	pmu_desc = nvgpu_request_firmware(g, GM20B_PMU_UCODE_DESC, 0);
 	if (!pmu_desc) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu ucode desc!!");
 		err = -ENOENT;
 		goto release_img_fw;
 	}
-	pmu_sig = gk20a_request_firmware(g, GM20B_PMU_UCODE_SIG);
+	pmu_sig = nvgpu_request_firmware(g, GM20B_PMU_UCODE_SIG, 0);
 	if (!pmu_sig) {
 		gk20a_err(dev_from_gk20a(g), "failed to load pmu sig!!");
 		err = -ENOENT;
@@ -181,7 +181,7 @@ static int fecs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	const struct firmware *fecs_sig;
 	int err;
 
-	fecs_sig = gk20a_request_firmware(g, GM20B_FECS_UCODE_SIG);
+	fecs_sig = nvgpu_request_firmware(g, GM20B_FECS_UCODE_SIG, 0);
 	if (!fecs_sig) {
 		gk20a_err(dev_from_gk20a(g), "failed to load fecs sig");
 		return -ENOENT;
@@ -251,7 +251,7 @@ static int gpccs_ucode_details(struct gk20a *g, struct flcn_ucode_img *p_img)
 	if (g->ops.securegpccs == false)
 		return -ENOENT;
 
-	gpccs_sig = gk20a_request_firmware(g, T18x_GPCCS_UCODE_SIG);
+	gpccs_sig = nvgpu_request_firmware(g, T18x_GPCCS_UCODE_SIG, 0);
 	if (!gpccs_sig) {
 		gk20a_err(dev_from_gk20a(g), "failed to load gpccs sig");
 		return -ENOENT;
@@ -1071,7 +1071,7 @@ static int gm20b_bootstrap_hs_flcn(struct gk20a *g)
 
 	if (!acr_fw) {
 		/*First time init case*/
-		acr_fw = gk20a_request_firmware(g, GM20B_HSBIN_PMU_UCODE_IMAGE);
+		acr_fw = nvgpu_request_firmware(g, GM20B_HSBIN_PMU_UCODE_IMAGE, 0);
 		if (!acr_fw) {
 			gk20a_err(dev_from_gk20a(g), "pmu ucode get fail");
 			return -ENOENT;
@@ -1382,8 +1382,8 @@ int pmu_exec_gen_bl(struct gk20a *g, void *desc, u8 b_wait_for_halt)
 	gm20b_dbg_pmu("");
 
 	if (!hsbl_fw) {
-		hsbl_fw = gk20a_request_firmware(g,
-			GM20B_HSBIN_PMU_BL_UCODE_IMAGE);
+		hsbl_fw = nvgpu_request_firmware(g,
+			GM20B_HSBIN_PMU_BL_UCODE_IMAGE, 0);
 		if (!hsbl_fw) {
 			gk20a_err(dev_from_gk20a(g), "pmu ucode load fail");
 			return -ENOENT;

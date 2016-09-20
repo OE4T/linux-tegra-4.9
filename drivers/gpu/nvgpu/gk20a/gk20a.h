@@ -762,11 +762,6 @@ struct gk20a {
 #ifdef CONFIG_DEBUG_FS
 	struct railgate_stats pstats;
 #endif
-	/* Save pmu fw here so that it lives cross suspend/resume.
-	   pmu suspend destroys all pmu sw/hw states. Loading pmu
-	   fw in resume crashes when the resume is from sys_exit. */
-	const struct firmware *pmu_fw;
-
 	u32 gr_idle_timeout_default;
 #if LINUX_VERSION_CODE < KERNEL_VERSION(4,4,0)
 	u32 timeouts_enabled;
@@ -1177,9 +1172,6 @@ int gk20a_do_idle(void);
 int gk20a_do_unidle(void);
 int __gk20a_do_idle(struct device *dev, bool force_reset);
 int __gk20a_do_unidle(struct device *dev);
-
-const struct firmware *
-gk20a_request_firmware(struct gk20a *g, const char *fw_name);
 
 #define NVGPU_GPU_ARCHITECTURE_SHIFT 4
 

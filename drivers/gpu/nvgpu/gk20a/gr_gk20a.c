@@ -34,6 +34,7 @@
 #include "gk20a.h"
 #include "kind_gk20a.h"
 #include "gr_ctx_gk20a.h"
+#include "nvgpu_common.h"
 
 #include "hw_ccsr_gk20a.h"
 #include "hw_ctxsw_prog_gk20a.h"
@@ -2124,7 +2125,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	u32 ucode_size;
 	int err = 0;
 
-	fecs_fw = gk20a_request_firmware(g, GK20A_FECS_UCODE_IMAGE);
+	fecs_fw = nvgpu_request_firmware(g, GK20A_FECS_UCODE_IMAGE, 0);
 	if (!fecs_fw) {
 		gk20a_err(d, "failed to load fecs ucode!!");
 		return -ENOENT;
@@ -2134,7 +2135,7 @@ int gr_gk20a_init_ctxsw_ucode(struct gk20a *g)
 	fecs_boot_image = (void *)(fecs_fw->data +
 				sizeof(struct gk20a_ctxsw_bootloader_desc));
 
-	gpccs_fw = gk20a_request_firmware(g, GK20A_GPCCS_UCODE_IMAGE);
+	gpccs_fw = nvgpu_request_firmware(g, GK20A_GPCCS_UCODE_IMAGE, 0);
 	if (!gpccs_fw) {
 		release_firmware(fecs_fw);
 		gk20a_err(d, "failed to load gpccs ucode!!");

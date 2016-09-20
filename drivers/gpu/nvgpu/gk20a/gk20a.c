@@ -22,7 +22,6 @@
 #include <linux/string.h>
 #include <linux/cdev.h>
 #include <linux/delay.h>
-#include <linux/firmware.h>
 #include <linux/interrupt.h>
 #include <linux/irq.h>
 #include <linux/export.h>
@@ -705,8 +704,6 @@ void gk20a_remove_support(struct device *dev)
 
 	if (g->sim.remove_support)
 		g->sim.remove_support(&g->sim);
-
-	release_firmware(g->pmu_fw);
 
 	/* free mappings to registers, etc */
 
@@ -2045,60 +2042,6 @@ int gk20a_init_gpu_characteristics(struct gk20a *g)
 	gpu->pci_revision = g->pci_revision;
 
 	return 0;
-}
-
-static const struct firmware *
-do_request_firmware(struct device *dev, const char *prefix, const char *fw_name)
-{
-	const struct firmware *fw;
-	char *fw_path = NULL;
-	int path_len, err;
-
-	if (prefix) {
-		path_len = strlen(prefix) + strlen(fw_name);
-		path_len += 2; /* for the path separator and zero terminator*/
-
-		fw_path = kzalloc(sizeof(*fw_path) * path_len, GFP_KERNEL);
-		if (!fw_path)
-			return NULL;
-
-		sprintf(fw_path, "%s/%s", prefix, fw_name);
-		fw_name = fw_path;
-	}
-
-	err = request_firmware(&fw, fw_name, dev);
-	kfree(fw_path);
-	if (err)
-		return NULL;
-	return fw;
-}
-
-/* This is a simple wrapper around request_firmware that takes 'fw_name' and
- * applies an IP specific relative path prefix to it. The caller is
- * responsible for calling release_firmware later. */
-const struct firmware *
-gk20a_request_firmware(struct gk20a *g, const char *fw_name)
-{
-	struct device *dev = g->dev;
-	const struct firmware *fw;
-
-	/* current->fs is NULL when calling from SYS_EXIT.
-	   Add a check here to prevent crash in request_firmware */
-	if (!current->fs || !fw_name)
-		return NULL;
-
-	BUG_ON(!g->ops.name);
-	fw = do_request_firmware(dev, g->ops.name, fw_name);
-
-#ifdef CONFIG_TEGRA_GK20A
-	/* TO BE REMOVED - Support loading from legacy SOC specific path. */
-	if (!fw) {
-		struct gk20a_platform *platform = gk20a_get_platform(dev);
-		fw = do_request_firmware(dev, platform->soc_name, fw_name);
-	}
-#endif
-
-	return fw;
 }
 
 int gk20a_read_ptimer(struct gk20a *g, u64 *value)

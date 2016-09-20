@@ -25,6 +25,7 @@
 #include "hw_pwr_gm206.h"
 #include "acr.h"
 #include "acr_gm206.h"
+#include "nvgpu_common.h"
 
 /*Defines*/
 #define gm206_dbg_pmu(fmt, arg...) \
@@ -226,7 +227,9 @@ static int gm206_bootstrap_hs_flcn(struct gk20a *g)
 
 	if (!acr_fw) {
 		/*First time init case*/
-		acr_fw = gk20a_request_firmware(g, GM20B_HSBIN_PMU_UCODE_IMAGE);
+		acr_fw = nvgpu_request_firmware(g,
+				GM20B_HSBIN_PMU_UCODE_IMAGE,
+				NVGPU_REQUEST_FIRMWARE_NO_SOC);
 		if (!acr_fw) {
 			gk20a_err(dev_from_gk20a(g), "pmu ucode get fail");
 			return -ENOENT;

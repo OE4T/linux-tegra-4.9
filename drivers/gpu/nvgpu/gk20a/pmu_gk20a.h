@@ -738,6 +738,8 @@ struct pmu_gk20a {
 	u32 falcon_id;
 	u32 aelpg_param[5];
 	u32 override_done;
+
+	const struct firmware *fw;
 };
 
 int gk20a_init_pmu_support(struct gk20a *g);

@@ -24,6 +24,7 @@
 #include "hw_xve_gm206.h"
 #include "hw_top_gm206.h"
 #include "bios_gm206.h"
+#include "nvgpu_common.h"
 
 #define BIT_HEADER_ID 0xb8ff
 #define BIT_HEADER_SIGNATURE 0x00544942
@@ -739,7 +740,9 @@ static int gm206_bios_init(struct gk20a *g)
 
 	snprintf(rom_name, sizeof(rom_name), BIOS_OVERLAY_NAME, pdev->device);
 	gk20a_dbg_info("checking for VBIOS overlay %s", rom_name);
-	bios_fw = gk20a_request_firmware(g, rom_name);
+	bios_fw = nvgpu_request_firmware(g, rom_name,
+			NVGPU_REQUEST_FIRMWARE_NO_WARN |
+			NVGPU_REQUEST_FIRMWARE_NO_SOC);
 	if (bios_fw) {
 		gk20a_dbg_info("using VBIOS overlay");
 		g->bios.size = bios_fw->size - ROM_FILE_PAYLOAD_OFFSET;

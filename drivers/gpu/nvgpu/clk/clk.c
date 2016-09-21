@@ -17,7 +17,11 @@
 #include "pmuif/gpmuifvolt.h"
 #include "ctrl/ctrlclk.h"
 #include "ctrl/ctrlvolt.h"
+#include "volt/volt.h"
 #include "gk20a/pmu_gk20a.h"
+
+#define BOOT_GPC2CLK_MHZ  2581
+#define BOOT_MCLK_MHZ     3003
 
 struct clkrpc_pmucmdhandler_params {
 	struct nv_pmu_clk_rpc *prpccall;
@@ -382,15 +386,38 @@ int clk_set_boot_fll_clk(struct gk20a *g)
 {
 	int status;
 	struct change_fll_clk bootfllclk;
+	u16 gpc2clk_clkmhz = BOOT_GPC2CLK_MHZ;
+	u32 gpc2clk_voltuv = 0;
+	u16 mclk_clkmhz = BOOT_MCLK_MHZ;
+	u32 mclk_voltuv = 0;
+	u32 voltuv = 0;
 
 	mutex_init(&g->clk_pmu.changeclkmutex);
 
+	clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPC2CLK, &gpc2clk_clkmhz,
+			&gpc2clk_voltuv);
+	clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_MCLK, &mclk_clkmhz,
+			&mclk_voltuv);
+
+	voltuv = ((gpc2clk_voltuv) > (mclk_voltuv)) ? (gpc2clk_voltuv)
+			: (mclk_voltuv);
+
+	status = volt_set_voltage(g, voltuv, voltuv);
+	if (status)
+		gk20a_err(dev_from_gk20a(g), "attempt to set boot voltage failed %d",
+			voltuv);
+
 	bootfllclk.api_clk_domain = CTRL_CLK_DOMAIN_GPC2CLK;
-	bootfllclk.clkmhz = 2581;
-	bootfllclk.voltuv = 825000;
+	bootfllclk.clkmhz = gpc2clk_clkmhz;
+	bootfllclk.voltuv = voltuv;
 	status = clk_program_fllclks(g, &bootfllclk);
 	if (status)
-		gk20a_err(dev_from_gk20a(g), "attemp to set boot clk failed");
+		gk20a_err(dev_from_gk20a(g), "attempt to set boot gpc2clk failed");
+
+	status = g->clk_pmu.clk_mclk.change(g, DEFAULT_BOOT_MCLK_SPEED);
+	if (status)
+		gk20a_err(dev_from_gk20a(g), "attempt to set boot mclk failed");
+
 	return status;
 }
 

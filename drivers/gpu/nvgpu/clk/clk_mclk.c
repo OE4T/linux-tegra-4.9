@@ -23,10 +23,6 @@
 
 #define VREG_COUNT 24
 
-#define DEFAULT_BOOT_MCLK_SPEED gk20a_mclk_high_speed
-#define MCLK_LOW_SPEED_LIMIT 405
-#define MCLK_MID_SPEED_LIMIT 810
-
 struct memory_link_training_pattern {
 	u32 regaddr;
 	u32 writeval;
@@ -2220,7 +2216,7 @@ int clk_mclkseq_init_mclk_gddr5(struct gk20a *g)
 
 	mclk->init = true;
 
-	return mclk->change(g, DEFAULT_BOOT_MCLK_SPEED);
+	return 0;
 }
 
 int clk_mclkseq_change_mclk_gddr5(struct gk20a *g, enum gk20a_mclk_speed speed)

@@ -29,6 +29,18 @@ int gk20a_init_pstate_support(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
+	err = volt_rail_sw_setup(g);
+	if (err)
+		return err;
+
+	err = volt_dev_sw_setup(g);
+	if (err)
+		return err;
+
+	err = volt_policy_sw_setup(g);
+	if (err)
+		return err;
+
 	err = clk_vin_sw_setup(g);
 	if (err)
 		return err;
@@ -71,6 +83,26 @@ int gk20a_init_pstate_pmu_support(struct gk20a *g)
 	u32 err;
 
 	gk20a_dbg_fn("");
+
+	err = volt_rail_pmu_setup(g);
+	if (err)
+		return err;
+
+	err = volt_dev_pmu_setup(g);
+	if (err)
+		return err;
+
+	err = volt_policy_pmu_setup(g);
+	if (err)
+		return err;
+
+	err = volt_pmu_send_load_cmd_to_pmu(g);
+	if (err) {
+		gk20a_err(dev_from_gk20a(g),
+			"Failed to send VOLT LOAD CMD to PMU: status = 0x%08x.",
+			err);
+		return err;
+	}
 
 	err = vfe_var_pmu_setup(g);
 	if (err)

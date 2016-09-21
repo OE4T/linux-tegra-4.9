@@ -1,3 +1,10 @@
+/*
+ * Copyright (C) 2016-2017, NVIDIA Corporation.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ */
 #ifndef _USB_VIDEO_H_
 #define _USB_VIDEO_H_
 
@@ -494,10 +501,13 @@ struct uvc_streaming {
 		__u32 max_payload_size;
 	} bulk;
 
-	struct urb *urb[UVC_URBS];
-	char *urb_buffer[UVC_URBS];
-	dma_addr_t urb_dma[UVC_URBS];
+	struct urb **urb;
+	char **urb_buffer;
+	dma_addr_t *urb_dma;
 	unsigned int urb_size;
+
+	unsigned int urb_num;
+	unsigned int urb_max_packets;
 
 	__u32 sequence;
 	__u8 last_fid;

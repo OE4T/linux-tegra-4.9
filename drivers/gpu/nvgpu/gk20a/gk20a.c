@@ -988,6 +988,14 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		goto done;
 	}
 
+	if (g->ops.pmu.mclk_init) {
+		err = g->ops.pmu.mclk_init(g);
+		if (err) {
+			gk20a_err(dev, "failed to set mclk");
+			/* Indicate error dont goto done */
+		}
+	}
+
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	if (g->ops.pmupstate) {
 		err = gk20a_init_pstate_pmu_support(g);
@@ -997,14 +1005,6 @@ int gk20a_pm_finalize_poweron(struct device *dev)
 		}
 	}
 #endif
-
-	if (g->ops.pmu.mclk_init) {
-		err = g->ops.pmu.mclk_init(g);
-		if (err) {
-			gk20a_err(dev, "failed to set mclk");
-			/* Indicate error dont goto done */
-		}
-	}
 
 	err = gk20a_init_therm_support(g);
 	if (err) {

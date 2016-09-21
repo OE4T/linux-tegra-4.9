@@ -322,7 +322,7 @@
 			reset-names = "dpaux";
 		}; //dpaux@155c0000
 
-		pvaa {
+		pva0 {
 			compatible = "nvidia,tegra194-pva";
 			reg = <0x0 0x16000000 0x0 0x800000>;
 			interrupts = <0 234 0x04>;
@@ -335,7 +335,7 @@
 			#stream-id-cells = <1>;
 		};
 
-		pvab {
+		pva1 {
 			compatible = "nvidia,tegra194-pva";
 			reg = <0x0 0x16800000 0x0 0x800000>;
 			interrupts = <0 235 0x04>;

@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/list.h>
 #include <linux/of.h>
+#include <linux/version.h>
 
 #include <iommu_context_dev.h>
 
@@ -83,11 +84,14 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 	DEFINE_DMA_ATTRS(attrs);
 	const struct dma_map_ops *ops = get_dma_ops(&pdev->dev);
 	int num_pages = DIV_ROUND_UP(mapping->size, PAGE_SIZE);
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	dma_addr_t base_iova = mapping->paddr;
+#endif
 	int i, err;
 
 	dma_set_attr(DMA_ATTR_SKIP_IOVA_GAP, &attrs);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 	/* allocate the area first */
 	base_iova = ops->iova_alloc_at(&pdev->dev, &mapping->paddr,
 				       num_pages * PAGE_SIZE, &attrs);
@@ -96,6 +100,7 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 		dev_warn(&pdev->dev, "failed to allocate space\n");
 		return err;
 	}
+#endif
 
 	/* map each page of the buffer to this ctx dev */
 	for (i = 0; i < num_pages; i++) {
@@ -110,9 +115,14 @@ static int __iommu_context_dev_map_static(struct platform_device *pdev,
 		page = virt_addr_valid(va) ? virt_to_page(va) :
 			vmalloc_to_page(va);
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 4, 0)
 		iova = ops->map_page_at(&pdev->dev, page, iova,
 			     (unsigned long)va & ~PAGE_MASK, PAGE_SIZE,
 			     DMA_BIDIRECTIONAL, NULL);
+#else
+		iova = ops->map_at(&pdev->dev, iova, page_to_phys(page),
+					PAGE_SIZE, DMA_BIDIRECTIONAL, &attrs);
+#endif
 		err = dma_mapping_error(&pdev->dev, iova);
 		if (err) {
 			dev_warn(&pdev->dev, "failed to map page\n");

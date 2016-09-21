@@ -321,10 +321,7 @@
 
 	cpufreq@e070000 {
 		status = "okay";
-		nvidia,enable-autocc3 = <0 1>, /* M_CLUSTER */
-					<1 1>; /* B_CLUSTER */
-		nvidia,autocc3-freq = <0 0>, /* M_CLUSTER */
-					<1 0>; /* B_CLUSTER */
+		nvidia,enable-autocc3;
 	};
 
 	efuse@3820000 {

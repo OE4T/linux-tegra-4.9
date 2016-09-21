@@ -362,5 +362,22 @@
 				};
 			};
 		};
+
+		fragment-p3310-c00-camera {
+			ids = ">=3310-1000-800";
+			override@1 {
+				target = <&{/i2c@c240000/ov23850_c@36}>;
+				_overlay_ {
+					pwdn-gpios = <&tegra_gpio TEGRA_GPIO(N, 2) GPIO_ACTIVE_HIGH>;
+				};
+			};
+			override@2 {
+				target = <&{/gpio@2200000/camera-control}>;
+				_overlay_ {
+					gpio-output-low = <TEGRA_GPIO(R, 5) TEGRA_GPIO(R, 0)
+							TEGRA_GPIO(R, 1) TEGRA_GPIO(N, 2)>;
+				};
+			};
+		};
 	};
 };

@@ -198,5 +198,15 @@
 				};
 			};
 		};
+
+		fragment-p3310-c00-comm {
+			ids = ">=3310-1000-800";
+			override@0 {
+				target = <&{/bluedroid_pm}>;
+				_overlay_ {
+					bluedroid_pm,reset-gpio = <&tegra_gpio TEGRA_GPIO(H, 5) 0>;
+				};
+			};
+		};
 	};
 };

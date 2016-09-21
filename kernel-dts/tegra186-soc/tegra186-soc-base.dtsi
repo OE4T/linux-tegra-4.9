@@ -535,7 +535,7 @@
 		status = "disabled";
 	};
 
-	tachometer@39c0000 {
+	tegra_tachometer: tachometer@39c0000 {
 		compatible = "nvidia,tegra186-tachometer";
 		reg = <0x0 0x039c0000 0x0 0x10>;
 		#stream-id-cells = <1>;

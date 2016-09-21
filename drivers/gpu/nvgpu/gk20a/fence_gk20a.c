@@ -129,9 +129,9 @@ int gk20a_alloc_fence_pool(struct channel_gk20a *c, int count)
 	if (!fence_pool)
 		return -ENOMEM;
 
-	err = gk20a_lockless_allocator_init(&c->fence_allocator,
-			      "fence_pool", (size_t)fence_pool, size,
-			      sizeof(struct gk20a_fence), 0);
+	err = gk20a_lockless_allocator_init(c->g, &c->fence_allocator,
+				"fence_pool", (size_t)fence_pool, size,
+				sizeof(struct gk20a_fence), 0);
 	if (err)
 		goto fail;
 

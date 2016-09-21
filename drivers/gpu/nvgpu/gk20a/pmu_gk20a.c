@@ -3651,7 +3651,7 @@ static int pmu_process_init_msg(struct pmu_gk20a *pmu,
 			   pv->get_pmu_init_msg_pmu_sw_mg_size(init)) &
 			~(PMU_DMEM_ALLOC_ALIGNMENT - 1);
 		u32 size = end - start;
-		gk20a_bitmap_allocator_init(&pmu->dmem, "gk20a_pmu_dmem",
+		gk20a_bitmap_allocator_init(g, &pmu->dmem, "gk20a_pmu_dmem",
 					   start, size,
 					   PMU_DMEM_ALLOC_ALIGNMENT, 0);
 	}

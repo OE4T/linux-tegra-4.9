@@ -371,6 +371,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 			 gmmu_page_sizes[gmmu_page_size_small] >> 10);
 
 		err = __gk20a_buddy_allocator_init(
+					g,
 					&vm->vma[gmmu_page_size_small],
 					vm, name,
 					small_vma_start,
@@ -386,6 +387,7 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 		snprintf(name, sizeof(name), "gk20a_as_%d-%dKB", as_share->id,
 			gmmu_page_sizes[gmmu_page_size_big] >> 10);
 		err = __gk20a_buddy_allocator_init(
+					g,
 					&vm->vma[gmmu_page_size_big],
 					vm, name,
 					large_vma_start,
@@ -402,7 +404,9 @@ static int vgpu_vm_alloc_share(struct gk20a_as_share *as_share,
 	/*
 	 * kernel reserved VMA is at the end of the aperture
 	 */
-	err = __gk20a_buddy_allocator_init(&vm->vma[gmmu_page_size_kernel],
+	err = __gk20a_buddy_allocator_init(
+				     g,
+				     &vm->vma[gmmu_page_size_kernel],
 				     vm, name,
 				     kernel_vma_start,
 				     kernel_vma_limit - kernel_vma_start,

@@ -26,6 +26,7 @@
 struct gk20a_allocator;
 struct gk20a_alloc_carveout;
 struct vm_gk20a;
+struct gk20a;
 
 /*
  * Operations for an allocator to implement.
@@ -173,25 +174,25 @@ static inline void alloc_unlock(struct gk20a_allocator *a)
 /*
  * Buddy allocator specific initializers.
  */
-int  __gk20a_buddy_allocator_init(struct gk20a_allocator *a,
+int  __gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *a,
 				  struct vm_gk20a *vm, const char *name,
 				  u64 base, u64 size, u64 blk_size,
 				  u64 max_order, u64 flags);
-int  gk20a_buddy_allocator_init(struct gk20a_allocator *allocator,
+int  gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *a,
 				const char *name, u64 base, u64 size,
 				u64 blk_size, u64 flags);
 
 /*
  * Bitmap initializers.
  */
-int gk20a_bitmap_allocator_init(struct gk20a_allocator *__a,
+int gk20a_bitmap_allocator_init(struct gk20a *g, struct gk20a_allocator *a,
 				const char *name, u64 base, u64 length,
 				u64 blk_size, u64 flags);
 
 /*
  * Page allocator initializers.
  */
-int gk20a_page_allocator_init(struct gk20a_allocator *__a,
+int gk20a_page_allocator_init(struct gk20a *g, struct gk20a_allocator *a,
 			      const char *name, u64 base, u64 length,
 			      u64 blk_size, u64 flags);
 
@@ -200,7 +201,7 @@ int gk20a_page_allocator_init(struct gk20a_allocator *__a,
  * Note: This allocator can only allocate fixed-size structures of a
  * pre-defined size.
  */
-int gk20a_lockless_allocator_init(struct gk20a_allocator *__a,
+int gk20a_lockless_allocator_init(struct gk20a *g, struct gk20a_allocator *a,
 				  const char *name, u64 base, u64 length,
 				  u64 struct_size, u64 flags);
 
@@ -234,8 +235,9 @@ void gk20a_alloc_print_stats(struct gk20a_allocator *a,
 /*
  * Common functionality for the internals of the allocators.
  */
-void gk20a_init_alloc_debug(struct gk20a_allocator *a);
+void gk20a_init_alloc_debug(struct gk20a *g, struct gk20a_allocator *a);
 void gk20a_fini_alloc_debug(struct gk20a_allocator *a);
+
 int  __gk20a_alloc_common_init(struct gk20a_allocator *a,
 			       const char *name, void *priv, bool dbg,
 			       const struct gk20a_allocator_ops *ops);

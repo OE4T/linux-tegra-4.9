@@ -926,12 +926,12 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	 * initialization requires vidmem but we want to use the CE to zero
 	 * out vidmem before allocating it...
 	 */
-	err = gk20a_page_allocator_init(&g->mm.vidmem.bootstrap_allocator,
+	err = gk20a_page_allocator_init(g, &g->mm.vidmem.bootstrap_allocator,
 					"vidmem-bootstrap",
 					bootstrap_base, bootstrap_size,
 					SZ_4K, 0);
 
-	err = gk20a_page_allocator_init(&g->mm.vidmem.allocator,
+	err = gk20a_page_allocator_init(g, &g->mm.vidmem.allocator,
 					"vidmem",
 					base, size - base,
 					default_page_size,
@@ -4336,7 +4336,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		snprintf(alloc_name, sizeof(alloc_name),
 			 "gk20a_%s-fixed", name);
 
-		err = __gk20a_buddy_allocator_init(&vm->fixed,
+		err = __gk20a_buddy_allocator_init(g, &vm->fixed,
 						   vm, alloc_name,
 						   small_vma_start,
 						   g->separate_fixed_allocs,
@@ -4354,6 +4354,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB", name,
 			 vm->gmmu_page_sizes[gmmu_page_size_small] >> 10);
 		err = __gk20a_buddy_allocator_init(
+			g,
 			&vm->vma[gmmu_page_size_small],
 			vm, alloc_name,
 			small_vma_start,
@@ -4369,6 +4370,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 		snprintf(alloc_name, sizeof(alloc_name), "gk20a_%s-%dKB",
 			 name, vm->gmmu_page_sizes[gmmu_page_size_big] >> 10);
 		err = __gk20a_buddy_allocator_init(
+			g,
 			&vm->vma[gmmu_page_size_big],
 			vm, alloc_name,
 			large_vma_start,
@@ -4385,7 +4387,7 @@ int gk20a_init_vm(struct mm_gk20a *mm,
 	/*
 	 * kernel reserved VMA is at the end of the aperture
 	 */
-	err = __gk20a_buddy_allocator_init(&vm->vma[gmmu_page_size_kernel],
+	err = __gk20a_buddy_allocator_init(g, &vm->vma[gmmu_page_size_kernel],
 					   vm, alloc_name,
 					   kernel_vma_start,
 					   kernel_vma_limit - kernel_vma_start,

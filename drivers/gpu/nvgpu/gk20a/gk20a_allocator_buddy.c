@@ -1218,7 +1218,7 @@ static const struct gk20a_allocator_ops buddy_ops = {
  *             will try and pick a reasonable max order.
  * @flags: Extra flags necessary. See GPU_BALLOC_*.
  */
-int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
+int __gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 				 struct vm_gk20a *vm, const char *name,
 				 u64 base, u64 size, u64 blk_size,
 				 u64 max_order, u64 flags)
@@ -1303,7 +1303,7 @@ int __gk20a_buddy_allocator_init(struct gk20a_allocator *__a,
 	wmb();
 	a->initialized = 1;
 
-	gk20a_init_alloc_debug(__a);
+	gk20a_init_alloc_debug(g, __a);
 	alloc_dbg(__a, "New allocator: type      buddy\n");
 	alloc_dbg(__a, "               base      0x%llx\n", a->base);
 	alloc_dbg(__a, "               size      0x%llx\n", a->length);
@@ -1318,9 +1318,10 @@ fail:
 	return err;
 }
 
-int gk20a_buddy_allocator_init(struct gk20a_allocator *a, const char *name,
-			       u64 base, u64 size, u64 blk_size, u64 flags)
+int gk20a_buddy_allocator_init(struct gk20a *g, struct gk20a_allocator *a,
+			       const char *name, u64 base, u64 size,
+			       u64 blk_size, u64 flags)
 {
-	return __gk20a_buddy_allocator_init(a, NULL, name,
+	return __gk20a_buddy_allocator_init(g, a, NULL, name,
 					    base, size, blk_size, 0, 0);
 }

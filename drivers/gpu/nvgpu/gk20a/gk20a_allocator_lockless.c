@@ -102,6 +102,8 @@ static void gk20a_lockless_alloc_destroy(struct gk20a_allocator *a)
 {
 	struct gk20a_lockless_allocator *pa = a->priv;
 
+	gk20a_fini_alloc_debug(a);
+
 	vfree(pa->next);
 	kfree(pa);
 }
@@ -137,7 +139,7 @@ static const struct gk20a_allocator_ops pool_ops = {
 	.print_stats	= gk20a_lockless_print_stats,
 };
 
-int gk20a_lockless_allocator_init(struct gk20a_allocator *__a,
+int gk20a_lockless_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 			      const char *name, u64 base, u64 length,
 			      u64 blk_size, u64 flags)
 {
@@ -189,7 +191,7 @@ int gk20a_lockless_allocator_init(struct gk20a_allocator *__a,
 	wmb();
 	a->inited = true;
 
-	gk20a_init_alloc_debug(__a);
+	gk20a_init_alloc_debug(g, __a);
 	alloc_dbg(__a, "New allocator: type          lockless\n");
 	alloc_dbg(__a, "               base          0x%llx\n", a->base);
 	alloc_dbg(__a, "               nodes         %d\n", a->nr_nodes);

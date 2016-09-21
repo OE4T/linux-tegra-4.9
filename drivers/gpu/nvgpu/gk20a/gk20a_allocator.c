@@ -19,13 +19,12 @@
 #include <linux/kernel.h>
 #include <linux/slab.h>
 
+#include "gk20a.h"
 #include "mm_gk20a.h"
 #include "platform_gk20a.h"
 #include "gk20a_allocator.h"
 
 u32 gk20a_alloc_tracing_on;
-
-static struct dentry *gk20a_alloc_debugfs_root;
 
 u64 gk20a_alloc_length(struct gk20a_allocator *a)
 {
@@ -152,6 +151,7 @@ void gk20a_alloc_print_stats(struct gk20a_allocator *__a,
 	__a->ops->print_stats(__a, s, lock);
 }
 
+#ifdef CONFIG_DEBUG_FS
 static int __alloc_show(struct seq_file *s, void *unused)
 {
 	struct gk20a_allocator *a = s->private;
@@ -172,35 +172,40 @@ static const struct file_operations __alloc_fops = {
 	.llseek = seq_lseek,
 	.release = single_release,
 };
+#endif
 
-void gk20a_init_alloc_debug(struct gk20a_allocator *a)
+void gk20a_init_alloc_debug(struct gk20a *g, struct gk20a_allocator *a)
 {
-	if (!gk20a_alloc_debugfs_root)
+#ifdef CONFIG_DEBUG_FS
+	if (!g->debugfs_allocators)
 		return;
 
 	a->debugfs_entry = debugfs_create_file(a->name, S_IRUGO,
-					       gk20a_alloc_debugfs_root,
+					       g->debugfs_allocators,
 					       a, &__alloc_fops);
+#endif
 }
 
 void gk20a_fini_alloc_debug(struct gk20a_allocator *a)
 {
-	if (!gk20a_alloc_debugfs_root)
-		return;
-
+#ifdef CONFIG_DEBUG_FS
 	if (!IS_ERR_OR_NULL(a->debugfs_entry))
 		debugfs_remove(a->debugfs_entry);
+#endif
 }
 
 void gk20a_alloc_debugfs_init(struct device *dev)
 {
+#ifdef CONFIG_DEBUG_FS
 	struct gk20a_platform *platform = dev_get_drvdata(dev);
 	struct dentry *gpu_root = platform->debugfs;
+	struct gk20a *g = get_gk20a(dev);
 
-	gk20a_alloc_debugfs_root = debugfs_create_dir("allocators", gpu_root);
-	if (IS_ERR_OR_NULL(gk20a_alloc_debugfs_root))
+	g->debugfs_allocators = debugfs_create_dir("allocators", gpu_root);
+	if (IS_ERR_OR_NULL(g->debugfs_allocators))
 		return;
 
-	debugfs_create_u32("tracing", 0664, gk20a_alloc_debugfs_root,
+	debugfs_create_u32("tracing", 0664, g->debugfs_allocators,
 			   &gk20a_alloc_tracing_on);
+#endif
 }

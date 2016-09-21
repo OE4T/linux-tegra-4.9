@@ -371,7 +371,7 @@ static const struct gk20a_allocator_ops bitmap_ops = {
 };
 
 
-int gk20a_bitmap_allocator_init(struct gk20a_allocator *__a,
+int gk20a_bitmap_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
 				const char *name, u64 base, u64 length,
 				u64 blk_size, u64 flags)
 {
@@ -426,7 +426,7 @@ int gk20a_bitmap_allocator_init(struct gk20a_allocator *__a,
 	wmb();
 	a->inited = true;
 
-	gk20a_init_alloc_debug(__a);
+	gk20a_init_alloc_debug(g, __a);
 	alloc_dbg(__a, "New allocator: type      bitmap\n");
 	alloc_dbg(__a, "               base      0x%llx\n", a->base);
 	alloc_dbg(__a, "               bit_offs  0x%llx\n", a->bit_offs);

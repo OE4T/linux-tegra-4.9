@@ -834,6 +834,7 @@ struct gk20a {
 	struct dentry *debugfs_timeslice_medium_priority_us;
 	struct dentry *debugfs_timeslice_high_priority_us;
 	struct dentry *debugfs_runlist_interleave;
+	struct dentry *debugfs_allocators;
 	struct dentry *debugfs_xve;
 #endif
 	struct gk20a_ctxsw_ucode_info ctxsw_ucode_info;

@@ -866,9 +866,9 @@ static int gk20a_page_alloc_init_slabs(struct gk20a_page_allocator *a)
 	return 0;
 }
 
-int gk20a_page_allocator_init(struct gk20a_allocator *__a,
-				const char *name, u64 base, u64 length,
-				u64 blk_size, u64 flags)
+int gk20a_page_allocator_init(struct gk20a *g, struct gk20a_allocator *__a,
+			      const char *name, u64 base, u64 length,
+			      u64 blk_size, u64 flags)
 {
 	struct gk20a_page_allocator *a;
 	char buddy_name[sizeof(__a->name)];
@@ -914,12 +914,12 @@ int gk20a_page_allocator_init(struct gk20a_allocator *__a,
 
 	snprintf(buddy_name, sizeof(buddy_name), "%s-src", name);
 
-	err = gk20a_buddy_allocator_init(&a->source_allocator, buddy_name, base,
-					 length, blk_size, 0);
+	err = gk20a_buddy_allocator_init(g, &a->source_allocator, buddy_name,
+					 base, length, blk_size, 0);
 	if (err)
 		goto fail;
 
-	gk20a_init_alloc_debug(__a);
+	gk20a_init_alloc_debug(g, __a);
 	palloc_dbg(a, "New allocator: type      page\n");
 	palloc_dbg(a, "               base      0x%llx\n", a->base);
 	palloc_dbg(a, "               size      0x%llx\n", a->length);

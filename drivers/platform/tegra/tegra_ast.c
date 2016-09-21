@@ -297,7 +297,8 @@ struct tegra_ast_region *tegra_ast_region_map(struct tegra_ast *ast,
 				u32 r = readl(base +
 						TEGRA_APS_AST_STREAMID_CTL +
 						(4 * vmidx));
-				if (r & 0x0000ff00)
+				/* find empty register to use */
+				if (!(r & 0x0000ff01))
 					break;
 			}
 		}

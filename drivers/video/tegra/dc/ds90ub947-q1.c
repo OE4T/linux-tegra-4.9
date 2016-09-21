@@ -165,15 +165,17 @@ static void ds90ub947_panel_remove_debugfs(struct ds90ub947_data *data)
 
 static void ds90ub947_panel_create_debugfs(struct ds90ub947_data *data)
 {
-	struct dentry *ret;
+	struct dentry *pEntry;
 
 	data->debugdir = debugfs_create_dir(DEV_NAME, NULL);
+	pr_debug("%s: data->debugdir = %p\n", __func__, data->debugdir);
 	if (!data->debugdir)
 		goto err;
 
-	ret = debugfs_create_file("init_regs", S_IRUGO, data->debugdir, data,
-		&init_regs_fops);
-	if (ret)
+	pEntry = debugfs_create_file("init_regs", S_IRUGO | S_IWUSR,
+		data->debugdir, data, &init_regs_fops);
+	pr_debug("%s: debugfs_create_file returned %p\n", __func__, pEntry);
+	if (NULL == pEntry)
 		goto err;
 
 	return;

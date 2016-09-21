@@ -104,15 +104,15 @@
 			status = "okay";
 			vpp_lcd: outp {
 				regulator-name = "outp";
-				regulator-min-microvol = <4000000>;
-				regulator-max-microvol = <6000000>;
+				regulator-min-microvolt = <4000000>;
+				regulator-max-microvolt = <6000000>;
 				enable-active-high;
 			};
 
 			vmm_lcd: outn {
 				regulator-name = "outn";
-				regulator-min-microvol = <4000000>;
-				regulator-max-microvol = <6000000>;
+				regulator-min-microvolt = <4000000>;
+				regulator-max-microvolt = <6000000>;
 				enable-active-high;
 				ti,disable-active-discharge;
 			};
@@ -218,8 +218,8 @@
 			compatible = "regulator-fixed-sync";
 			reg = <9>;
 			regulator-name = "en-mdm-pwr-3v7";
-			regulator-min-microvol = <3700000>;
-			regulator-max-microvol = <3700000>;
+			regulator-min-microvolt = <3700000>;
+			regulator-max-microvolt = <3700000>;
 			gpio = <&gpio_i2c_0_74 7 1>;
 			enable-active-high;
 		};
@@ -238,8 +238,8 @@
 			compatible = "regulator-fixed-sync";
 			reg = <11>;
 			regulator-name = "en-vdd-cam-hv-2v8";
-			regulator-min-microvol = <2800000>;
-			regulator-max-microvol = <2800000>;
+			regulator-min-microvolt = <2800000>;
+			regulator-max-microvolt = <2800000>;
 			gpio = <&gpio_i2c_0_74 13 1>;
 			enable-active-high;
 		};
@@ -248,8 +248,8 @@
 			compatible = "regulator-fixed-sync";
 			reg = <12>;
 			regulator-name = "en-vdd-cam-1v2";
-			regulator-min-microvol = <1200000>;
-			regulator-max-microvol = <1200000>;
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
 			gpio = <&gpio_i2c_0_77 10 0>;
 			enable-active-high;
 		};
@@ -287,8 +287,8 @@
 			compatible = "regulator-fixed-sync";
 			reg = <16>;
 			regulator-name = "en-vdd-vcm-2v8";
-			regulator-min-microvol = <2800000>;
-			regulator-max-microvol = <2800000>;
+			regulator-min-microvolt = <2800000>;
+			regulator-max-microvolt = <2800000>;
 			enable-active-high;
 		};
 
@@ -313,8 +313,8 @@
 			compatible = "regulator-fixed-sync";
 			reg = <118>;
 			regulator-name = "en-vdd-sys";
-			regulator-min-microvol = <1200000>;
-			regulator-max-microvol = <1200000>;
+			regulator-min-microvolt = <1200000>;
+			regulator-max-microvolt = <1200000>;
 			gpio = <&gpio_i2c_0_77 3 1>;
 		};
 	};

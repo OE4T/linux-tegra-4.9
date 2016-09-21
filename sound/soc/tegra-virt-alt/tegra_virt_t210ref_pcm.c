@@ -75,6 +75,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 1 */
@@ -86,6 +88,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 2 */
@@ -97,6 +101,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 3 */
@@ -108,6 +114,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 4 */
@@ -119,6 +127,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 5 */
@@ -130,6 +140,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 6 */
@@ -141,6 +153,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 7 */
@@ -152,6 +166,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 8 */
@@ -163,6 +179,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 9 */
@@ -174,6 +192,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 10 */
@@ -185,6 +205,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 11 */
@@ -196,6 +218,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.codec_dai_name = CODEC_DAI_NAME,
 		.platform_name = PLATFORM_NAME,
 		.params = &default_params,
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 12 */
@@ -206,6 +230,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF1",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 13 */
@@ -216,6 +241,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF2",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 14 */
@@ -226,6 +252,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF3",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 15 */
@@ -236,6 +263,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF4",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 16 */
@@ -246,6 +274,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF5",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 17 */
@@ -256,6 +285,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF6",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 18 */
@@ -266,6 +296,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF7",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 19 */
@@ -276,6 +307,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF8",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 20 */
@@ -286,6 +318,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF9",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 21 */
@@ -296,6 +329,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF10",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 22 */
@@ -306,6 +340,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF11",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 23 */
@@ -316,6 +351,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF12",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 24 */
@@ -326,6 +362,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF13",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 25 */
@@ -336,6 +373,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF14",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 26 */
@@ -346,6 +384,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF15",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 27 */
@@ -356,6 +395,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF16",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 28 */
@@ -366,6 +406,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF17",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 29 */
@@ -376,6 +417,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF18",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 30 */
@@ -386,6 +428,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF19",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 31 */
@@ -396,6 +439,7 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP-ADMAIF20",
 		.codec_dai_name = CODEC_DAI_NAME,
 		.params = &adsp_default_params,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 32 */
@@ -406,6 +450,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP PCM1",
 		.codec_dai_name = "ADSP-FE1",
 		.platform_name = "adsp_audio",
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 	{
 		/* 33 */
@@ -416,6 +462,8 @@ static struct snd_soc_dai_link tegra_virt_t210ref_pcm_links[] = {
 		.cpu_dai_name = "ADSP PCM2",
 		.codec_dai_name = "ADSP-FE2",
 		.platform_name = "adsp_audio",
+		.ignore_pmdown_time = 1,
+		.ignore_suspend = 1,
 	},
 };
 

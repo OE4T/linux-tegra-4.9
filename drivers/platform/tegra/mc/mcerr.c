@@ -494,7 +494,7 @@ int tegra_mcerr_init(struct dentry *mc_parent, struct platform_device *pdev)
 
 	mc_int_mask = be32_to_cpup(prop);
 	mc_writel(mc_int_mask, MC_INTMASK);
-	pr_info("Set intmask: 0x%x\n", mc_readl(MC_INTMASK));
+	pr_debug("Set intmask: 0x%x\n", mc_readl(MC_INTMASK));
 
 	irq = irq_of_parse_and_map(pdev->dev.of_node, 0);
 	if (irq < 0) {

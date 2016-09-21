@@ -461,7 +461,7 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 #ifdef QSPI_BRINGUP_BUILD
 	if (!tqspi->qspi_force_unpacked_mode && (bits_per_word == 8
 		|| bits_per_word == 16
-		|| bits_per_word == 32)) {
+		|| bits_per_word == 32) && (t->len > 3)) {
 		tqspi->is_packed = 1;
 		tqspi->words_per_32bit = 32/bits_per_word;
 	} else {
@@ -469,7 +469,7 @@ static unsigned tegra_qspi_calculate_curr_xfer_param(
 		tqspi->words_per_32bit = 1;
 	}
 #else
-	if (bits_per_word == 8 || bits_per_word == 16) {
+	if (bits_per_word == 8 || bits_per_word == 16 && (t->len > 3)) {
 		tqspi->is_packed = 1;
 		tqspi->words_per_32bit = 32/bits_per_word;
 	} else {

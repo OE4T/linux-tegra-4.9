@@ -340,13 +340,13 @@ struct nvhost_device_data t19_vic_info = {
 #endif
 
 #if defined(CONFIG_TEGRA_GRHOST_PVA)
-struct nvhost_device_data t19_pvab_info = {
+struct nvhost_device_data t19_pva1_info = {
 	.num_channels		= 1,
 	.clocks			= {
 		{"pva"},
 	},
 	.ctrl_ops		= &tegra_pva_ctrl_ops,
-	.devfs_name		= "pvab",
+	.devfs_name		= "pva1",
 	.class			= NV_PVA1_CLASS_ID,
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= pva_finalize_poweron,
@@ -359,13 +359,13 @@ struct nvhost_device_data t19_pvab_info = {
 	.get_reloc_phys_addr	= nvhost_t194_get_reloc_phys_addr,
 };
 
-struct nvhost_device_data t19_pvaa_info = {
+struct nvhost_device_data t19_pva0_info = {
 	.num_channels		= 1,
 	.clocks			= {
 		{"pva"},
 	},
 	.ctrl_ops		= &tegra_pva_ctrl_ops,
-	.devfs_name		= "pvaa",
+	.devfs_name		= "pva0",
 	.class			= NV_PVA0_CLASS_ID,
 	.autosuspend_delay      = 500,
 	.finalize_poweron	= pva_finalize_poweron,

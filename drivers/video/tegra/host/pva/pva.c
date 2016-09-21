@@ -43,13 +43,13 @@
 /* Map PVA-A and PVA-B to respective configuration items in nvhost */
 static struct of_device_id tegra_pva_of_match[] = {
 	{
-		.name = "pvaa",
+		.name = "pva0",
 		.compatible = "nvidia,tegra194-pva",
-		.data = (struct nvhost_device_data *)&t19_pvaa_info },
+		.data = (struct nvhost_device_data *)&t19_pva0_info },
 	{
-		.name = "pvab",
+		.name = "pva1",
 		.compatible = "nvidia,tegra194-pva",
-		.data = (struct nvhost_device_data *)&t19_pvab_info },
+		.data = (struct nvhost_device_data *)&t19_pva1_info },
 	{ },
 };
 
@@ -392,7 +392,7 @@ static struct platform_driver pva_driver = {
 static struct of_device_id tegra_pva_domain_match[] = {
 	{
 		.compatible = "nvidia,tegra194-cv-pd",
-		.data = (struct nvhost_device_data *)&t19_pvaa_info
+		.data = (struct nvhost_device_data *)&t19_pva0_info
 	},
 };
 

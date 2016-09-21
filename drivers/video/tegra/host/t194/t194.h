@@ -42,8 +42,8 @@ extern struct nvhost_device_data t19_tsec_info;
 extern struct nvhost_device_data t19_tsecb_info;
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_PVA)
-extern struct nvhost_device_data t19_pvaa_info;
-extern struct nvhost_device_data t19_pvab_info;
+extern struct nvhost_device_data t19_pva0_info;
+extern struct nvhost_device_data t19_pva1_info;
 #endif
 #if defined(CONFIG_TEGRA_GRHOST_NVDLA)
 extern struct nvhost_device_data t19_nvdla0_info;

@@ -29,6 +29,10 @@
 /* The APE DMA Clients. */
 #define TEGRA_SID_APE_3		0x2c	/* 44 */
 
+/* The Camera RTCPU running on APE */
+#define TEGRA_SID_APE_CAM	0x2d	/* 45 */
+#define TEGRA_SID_APE_CAM_1X	0x2e	/* 46 */
+
 /* Host1x virtualization clients. */
 #define TEGRA_SID_HOST1X_CTX0	0x38	/* 56 */
 #define TEGRA_SID_HOST1X_CTX1	0x39	/* 57 */

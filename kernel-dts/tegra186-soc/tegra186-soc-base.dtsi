@@ -173,7 +173,7 @@
 
 			      /* Non-host devices. */
 			      <&{/adsp@2993000}		TEGRA_SID_APE>,
-			      <&{/rtcpu@2993000}	TEGRA_SID_RCE>,
+			      <&{/rtcpu@2993000}	TEGRA_SID_APE_CAM>,
 			      <&{/ether_qos@2490000}	TEGRA_SID_EQOS>,
 			      <&{/sdhci@3460000}	TEGRA_SID_SDMMC4A>,
 			      <&{/sdhci@3420000}	TEGRA_SID_SDMMC2A>,
@@ -366,6 +366,11 @@
 			rce_domain {
 				address-space = <&common_as>;
 				sid-list = <TEGRA_SID_RCE>;
+				sid-list-len = <1>;
+			};
+			ape_cam_domain {
+				address-space = <&common_as>;
+				sid-list = <TEGRA_SID_APE_CAM>;
 				sid-list-len = <1>;
 			};
 		};

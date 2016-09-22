@@ -100,7 +100,7 @@
 
 			C7: c7 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x10007>;
+				arm,psci-suspend-param = <0x40000007>;
 				wakeup-latency-us = <130>;
 				min-residency-us = <1000>;
 				idle-state-name = "c7-cpu-powergated";
@@ -109,7 +109,7 @@
 
 			CC6: cc6 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x1010010>;
+				arm,psci-suspend-param = <0x40000010>;
 				wakeup-latency-us = <230>;
 				min-residency-us = <10000>;
 				idle-state-name = "cc6-cluster-powergated";
@@ -118,7 +118,7 @@
 
 			CC7: cc7 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x1010011>;
+				arm,psci-suspend-param = <0x40000011>;
 				wakeup-latency-us = <500>;
 				min-residency-us = <1000>;
 				idle-state-name = "cc7-cluster-railgated";
@@ -127,7 +127,7 @@
 
 			SC2: sc2 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x10007>;
+				arm,psci-suspend-param = <0x40000007>;
 				wakeup-latency-us = <600>;
 				min-residency-us = <1500>;
 				idle-state-name = "sc2-dram-sr-mc-cg";
@@ -136,7 +136,7 @@
 
 			SC3: sc3 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x10007>;
+				arm,psci-suspend-param = <0x40000007>;
 				wakeup-latency-us = <700>;
 				min-residency-us = <1600>;
 				idle-state-name = "sc3-dram-sr-mc-cg-mempll-disabled";
@@ -145,7 +145,7 @@
 
 			SC4: sc4 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x10007>;
+				arm,psci-suspend-param = <0x40000007>;
 				wakeup-latency-us = <3000>;
 				min-residency-us = <5000>;
 				idle-state-name = "sc4-dram-sr-mc-cg-mempll-pllp-disabled";
@@ -154,7 +154,7 @@
 
 			SC7: sc7 {
 				compatible = "nvidia,idle-state";
-				arm,psci-suspend-param = <0x201001B>;
+				arm,psci-suspend-param = <0x4000001B>;
 				wakeup-latency-us = <5000>;
 				min-residency-us = <10000>;
 				idle-state-name = "sc7-vdd-soc-off";
@@ -164,7 +164,7 @@
 	};
 
 	psci {
-		compatible = "arm,psci-0.2";
+		compatible = "arm,psci-1.0";
 		status = "disabled";
 		method = "smc";
 	};

@@ -25,29 +25,16 @@
 
 		irq {
 			compatible = "android,trusty-irq-v1";
+			interrupt-templates = <&IPI 0>,
+					      <&intc 1 GIC_PPI 0>,
+					      <&intc 1 GIC_SPI 0>;
+			interrupt-ranges = <0  15 0>,
+					   <16  31 1>,
+					   <32 223 2>;
 		};
 
 		fiq {
 			compatible = "android,trusty-fiq-v1";
-			ranges;
-			#address-cells = <2>;
-			#size-cells = <2>;
-
-			fiq-debugger {
-				compatible = "android,trusty-fiq-v1-tegra-uart";
-				reg = <0x0 0x70006000 0x0 0x40>;
-				interrupts = <0 36 0x04
-					      0 16 0x04>;
-				interrupt-names = "fiq", "signal";
-			};
-
-			watchdog {
-				compatible = "nvidia,tegra-wdt";
-				reg = <0x0 0x60005100 0x0 0x20
-				       0x0 0x60005070 0x0 0x08>;
-				interrupts = <0 123 0x04>;
-				interrupt-names = "fiq";
-			};
 		};
 
 		virtio {
@@ -57,5 +44,11 @@
 		log {
 			compatible = "android,trusty-log-v1";
 		};
+	};
+
+	IPI: smp-custom-ipi {
+		compatible = "android,CustomIPI";
+		#interrupt-cells = <1>;
+		interrupt-controller;
 	};
 };

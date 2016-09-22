@@ -925,8 +925,11 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 					bootstrap_base, bootstrap_size,
 					SZ_4K, 0);
 
-	err = gk20a_page_allocator_init(&g->mm.vidmem.allocator, "vidmem",
-				base, size - base, default_page_size, 0);
+	err = gk20a_page_allocator_init(&g->mm.vidmem.allocator,
+					"vidmem",
+					base, size - base,
+					default_page_size,
+					GPU_ALLOC_4K_VIDMEM_PAGES);
 	if (err) {
 		gk20a_err(d, "Failed to register vidmem for size %zu: %d",
 				size, err);

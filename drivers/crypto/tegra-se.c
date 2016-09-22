@@ -783,7 +783,7 @@ static int tegra_map_sg(struct device *dev, struct scatterlist *sg,
 			se_ll->addr = sg_dma_address(sg);
 			se_ll->data_len = min(sg->length, total_loop);
 			total_loop -= min(sg->length, total_loop);
-				sg = scatterwalk_sg_next(sg);
+				sg = sg_next(sg);
 			se_ll++;
 		}
 	return nents;
@@ -794,7 +794,7 @@ static void tegra_unmap_sg(struct device *dev, struct scatterlist *sg,
 {
 	while (sg) {
 		dma_unmap_sg(dev, sg, 1, dir);
-			sg = scatterwalk_sg_next(sg);
+			sg = sg_next(sg);
 	}
 }
 
@@ -809,7 +809,7 @@ static int tegra_se_count_sgs(struct scatterlist *sl, u32 nbytes, int *chained)
 		nbytes -= min(sl->length, nbytes);
 		if (!sg_is_last(sg) && (sg + 1)->length == 0)
 			*chained = 1;
-		sg = scatterwalk_sg_next(sg);
+		sg = sg_next(sg);
 	}
 
 	return sg_nents;
@@ -1791,7 +1791,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 
 			total -= src_sg->length;
 			if (total > 0) {
-					src_sg = scatterwalk_sg_next(src_sg);
+					src_sg = sg_next(src_sg);
 				src_ll++;
 			}
 			WARN_ON(((total != 0) && (!src_sg)));
@@ -1810,7 +1810,7 @@ static int tegra_se_aes_cmac_final(struct ahash_request *req)
 		src_sg = req->src;
 		while (mapped_sg_count--) {
 			dma_unmap_sg(se_dev->dev, src_sg, 1, DMA_TO_DEVICE);
-				src_sg = scatterwalk_sg_next(src_sg);
+				src_sg = sg_next(src_sg);
 		}
 		use_orig_iv = false;
 	}
@@ -2297,7 +2297,7 @@ static int tegra_se_rsa_digest(struct ahash_request *req)
 
 		total -= src_sg->length;
 		if (total > 0) {
-				src_sg = scatterwalk_sg_next(src_sg);
+				src_sg = sg_next(src_sg);
 			src_ll++;
 		}
 		WARN_ON(((total != 0) && (!src_sg)));
@@ -2360,6 +2360,22 @@ static void tegra_se_rsa_cra_exit(struct crypto_tfm *tfm)
 	tegra_se_rsa_free_key_slot(ctx->slot);
 	ctx->slot = NULL;
 }
+
+static struct rng_alg rng_algs[] = { {
+	.generate	= tegra_se_rng_drbg_get_random,
+	.seed		= tegra_se_rng_drbg_reset,
+	.seedsize	= TEGRA_SE_RNG_SEED_SIZE,
+	.base 		= {
+		.cra_name = "rng_drbg",
+		.cra_driver_name = "rng_drbg-aes-tegra",
+		.cra_priority = 100,
+		.cra_flags = CRYPTO_ALG_TYPE_RNG,
+		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
+		.cra_module = THIS_MODULE,
+		.cra_init = tegra_se_rng_drbg_init,
+		.cra_exit = tegra_se_rng_drbg_exit,
+	}
+}};
 
 static struct crypto_alg aes_algs[] = {
 	{
@@ -2463,26 +2479,8 @@ static struct crypto_alg aes_algs[] = {
 				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
 			}
 		}
-	},
-#endif
-	{
-		.cra_name = "rng_drbg",
-		.cra_driver_name = "rng_drbg-aes-tegra",
-		.cra_priority = 100,
-		.cra_flags = CRYPTO_ALG_TYPE_RNG,
-		.cra_ctxsize = sizeof(struct tegra_se_rng_context),
-		.cra_type = &crypto_rng_type,
-		.cra_module = THIS_MODULE,
-		.cra_init = tegra_se_rng_drbg_init,
-		.cra_exit = tegra_se_rng_drbg_exit,
-		.cra_u = {
-			.rng = {
-				.rng_make_random = tegra_se_rng_drbg_get_random,
-				.rng_reset = tegra_se_rng_drbg_reset,
-				.seedsize = TEGRA_SE_RNG_SEED_SIZE,
-			}
-		}
 	}
+#endif
 };
 
 static struct ahash_alg hash_algs[] = {
@@ -2902,7 +2900,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 		goto free_res;
 	}
 
-	err = request_irq(se_dev->irq, tegra_se_irq, IRQF_DISABLED,
+	err = request_irq(se_dev->irq, tegra_se_irq, 0,
 			DRIVER_NAME, se_dev);
 	if (err) {
 		dev_err(se_dev->dev, "request_irq failed - irq[%d] err[%d]\n",
@@ -2917,6 +2915,16 @@ static int tegra_se_probe(struct platform_device *pdev)
 	if (err) {
 		dev_err(se_dev->dev, "can not allocate ll dma buffer\n");
 		goto clean;
+	}
+
+	if (is_algo_supported(se_dev, rng_algs[0].base.cra_name)) {
+		INIT_LIST_HEAD(&rng_algs[0].base.cra_list);
+		err = crypto_register_rng(&rng_algs[0]);
+		if (err) {
+			dev_err(se_dev->dev,
+			"crypto_register_rng failed\n");
+			goto clean;
+		}
 	}
 
 	for (i = 0; i < ARRAY_SIZE(aes_algs); i++) {
@@ -3047,6 +3055,7 @@ static int tegra_se_remove(struct platform_device *pdev)
 	if (se_work_q)
 		destroy_workqueue(se_work_q);
 	free_irq(se_dev->irq, &pdev->dev);
+	crypto_unregister_rng(&rng_algs[0]);
 	for (i = 0; i < ARRAY_SIZE(aes_algs); i++)
 		crypto_unregister_alg(&aes_algs[i]);
 	for (i = 0; i < ARRAY_SIZE(hash_algs); i++)

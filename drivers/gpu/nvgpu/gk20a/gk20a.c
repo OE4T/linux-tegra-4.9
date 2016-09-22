@@ -696,6 +696,9 @@ void gk20a_remove_support(struct device *dev)
 	if (g->gr.remove_support)
 		g->gr.remove_support(&g->gr);
 
+	if (g->mm.remove_ce_support)
+		g->mm.remove_ce_support(&g->mm);
+
 	if (g->fifo.remove_support)
 		g->fifo.remove_support(&g->fifo);
 

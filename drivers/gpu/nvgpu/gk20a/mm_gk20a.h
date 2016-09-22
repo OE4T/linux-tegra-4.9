@@ -376,6 +376,11 @@ struct mm_gk20a {
 #ifdef CONFIG_ARCH_TEGRA_18x_SOC
 	struct mem_desc bar2_desc;
 #endif
+	/*
+	 * Separate function to cleanup the CE since it requires a channel to
+	 * be closed which must happen before fifo cleanup.
+	 */
+	void (*remove_ce_support)(struct mm_gk20a *mm);
 	void (*remove_support)(struct mm_gk20a *mm);
 	bool sw_ready;
 	int physical_bits;

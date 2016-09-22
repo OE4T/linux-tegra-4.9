@@ -784,10 +784,24 @@ static void gk20a_vidmem_destroy(struct gk20a *g)
 #endif
 }
 
-static void gk20a_remove_mm_support(struct mm_gk20a *mm)
+static void gk20a_remove_mm_ce_support(struct mm_gk20a *mm)
 {
 	struct gk20a *g = gk20a_from_mm(mm);
 	struct gk20a_platform *platform = gk20a_get_platform(g->dev);
+
+	if (mm->vidmem.ce_ctx_id != ~0)
+		gk20a_ce_delete_context(g->dev, mm->vidmem.ce_ctx_id);
+
+	mm->vidmem.ce_ctx_id = ~0;
+
+	if (platform->has_ce)
+		gk20a_vm_remove_support_nofree(&mm->ce.vm);
+
+}
+
+static void gk20a_remove_mm_support(struct mm_gk20a *mm)
+{
+	struct gk20a *g = gk20a_from_mm(mm);
 
 	if (g->ops.mm.remove_bar2_vm)
 		g->ops.mm.remove_bar2_vm(g);
@@ -798,14 +812,6 @@ static void gk20a_remove_mm_support(struct mm_gk20a *mm)
 	gk20a_remove_vm(&mm->pmu.vm, &mm->pmu.inst_block);
 	gk20a_free_inst_block(gk20a_from_mm(mm), &mm->hwpm.inst_block);
 	gk20a_vm_remove_support_nofree(&mm->cde.vm);
-
-	if (mm->vidmem.ce_ctx_id != ~0)
-		gk20a_ce_delete_context(g->dev, mm->vidmem.ce_ctx_id);
-
-	mm->vidmem.ce_ctx_id = ~0;
-
-	if (platform->has_ce)
-		gk20a_vm_remove_support_nofree(&mm->ce.vm);
 
 	gk20a_vidmem_destroy(g);
 }
@@ -1034,6 +1040,7 @@ int gk20a_init_mm_setup_sw(struct gk20a *g)
 	/* set vm_alloc_share op here as gk20a_as_alloc_share needs it */
 	g->ops.mm.vm_alloc_share = gk20a_vm_alloc_share;
 	mm->remove_support = gk20a_remove_mm_support;
+	mm->remove_ce_support = gk20a_remove_mm_ce_support;
 
 	mm->sw_ready = true;
 

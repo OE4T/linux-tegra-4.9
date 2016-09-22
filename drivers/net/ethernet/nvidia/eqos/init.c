@@ -1021,6 +1021,11 @@ int eqos_probe(struct platform_device *pdev)
 		pr_err("%s: MDIO is not present\n\n", DEV_NAME);
 	}
 
+	if (pdata->phydev->drv->low_power_mode) {
+		pdata->phydev->drv->low_power_mode(pdata->phydev, true);
+		phy_stop_interrupts(pdata->phydev);
+	}
+
 	/* enabling and registration of irq with magic wakeup */
 	if (1 == pdata->hw_feat.mgk_sel) {
 		device_set_wakeup_capable(&pdev->dev, 1);

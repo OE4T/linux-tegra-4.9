@@ -5811,8 +5811,12 @@ void eqos_stop_dev(struct eqos_prv_data *pdata)
 	/* disable MAC TX */
 	hw_if->stop_mac_tx();
 
-	/* stop the PHY */
-	if (pdata->phydev) {
+	if (pdata->phydev->drv->low_power_mode) {
+		pdata->phydev->drv->low_power_mode(pdata->phydev, true);
+		if (!pdata->suspended)
+			phy_stop_interrupts(pdata->phydev);
+	} else if (pdata->phydev) {
+		/* stop the PHY */
 		phy_stop(pdata->phydev);
 		gpio_set_value(pdata->phy_reset_gpio, 0);
 	}
@@ -5839,7 +5843,16 @@ void eqos_start_dev(struct eqos_prv_data *pdata)
 
 	DBGPR("-->%s()\n", __func__);
 
-	if (!gpio_get_value(pdata->phy_reset_gpio))
+	if (pdata->phydev->drv->low_power_mode) {
+		/* reset the PHY Broadcom PHY needs minimum of 2us delay */
+		pr_debug("%s(): exit from iddq-lp mode\n", __func__);
+		gpio_set_value(pdata->phy_reset_gpio, 0);
+		usleep_range(10, 11);
+		gpio_set_value(pdata->phy_reset_gpio, 1);
+		pdata->phydev->drv->low_power_mode(pdata->phydev, false);
+		if (pdata->suspended == 0 && netif_running(pdata->dev))
+			phy_start_interrupts(pdata->phydev);
+	} else if (!gpio_get_value(pdata->phy_reset_gpio))
 	{
 		/* deassert phy reset */
 		gpio_set_value(pdata->phy_reset_gpio, 1);

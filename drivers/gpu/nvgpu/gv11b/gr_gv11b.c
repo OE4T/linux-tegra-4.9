@@ -67,105 +67,16 @@ static int gr_gv11b_handle_sm_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	int ret = 0;
 	u32 offset = proj_gpc_stride_v() * gpc +
 			proj_tpc_in_gpc_stride_v() * tpc;
-	u32 lrf_ecc_status, shm_ecc_status;
+	u32 lrf_ecc_status;
 
 	gr_gk20a_handle_sm_exception(g, gpc, tpc, post_event, fault_ch, hww_global_esr);
 
 	/* Check for LRF ECC errors. */
 	lrf_ecc_status = gk20a_readl(g,
 		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset);
-	if ((lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp0_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp1_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp2_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_single_err_detected_qrfdp3_pending_f())) {
 
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
-			"Single bit error detected in SM LRF!");
-
-		g->gr.t18x.ecc_stats.sm_lrf_single_err_count.counters[tpc] +=
-			gk20a_readl(g,
-				gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r() + offset);
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_sm_lrf_ecc_single_err_count_r() + offset,
-			0);
-	}
-	if ((lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp0_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp1_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp2_pending_f()) ||
-		(lrf_ecc_status &
-		gr_pri_gpc0_tpc0_sm_lrf_ecc_status_double_err_detected_qrfdp3_pending_f())) {
-
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
-			"Double bit error detected in SM LRF!");
-
-		g->gr.t18x.ecc_stats.sm_lrf_double_err_count.counters[tpc] +=
-			gk20a_readl(g,
-				gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset);
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_sm_lrf_ecc_double_err_count_r() + offset, 0);
-	}
 	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_lrf_ecc_status_r() + offset,
 			lrf_ecc_status);
-
-	/* Check for SHM ECC errors. */
-	shm_ecc_status = gk20a_readl(g,
-			gr_pri_gpc0_tpc0_sm_shm_ecc_status_r() + offset);
-	if ((shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_corrected_shm0_pending_f()) ||
-		(shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_corrected_shm1_pending_f()) ||
-		(shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm0_pending_f()) ||
-		(shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_single_err_detected_shm1_pending_f())) {
-		u32 ecc_stats_reg_val;
-
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
-			"Single bit error detected in SM SHM!");
-
-		ecc_stats_reg_val =
-			gk20a_readl(g,
-				gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset);
-		g->gr.t18x.ecc_stats.sm_shm_sec_count.counters[tpc] +=
-			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_v(ecc_stats_reg_val);
-		g->gr.t18x.ecc_stats.sm_shm_sed_count.counters[tpc] +=
-			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~(gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_corrected_m() |
-					gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_single_detected_m());
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset,
-			ecc_stats_reg_val);
-	}
-	if ((shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm0_pending_f()) ||
-		(shm_ecc_status &
-		gr_pri_gpc0_tpc0_sm_shm_ecc_status_double_err_detected_shm1_pending_f())) {
-		u32 ecc_stats_reg_val;
-
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
-			"Double bit error detected in SM SHM!");
-
-		ecc_stats_reg_val =
-			gk20a_readl(g,
-				gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset);
-		g->gr.t18x.ecc_stats.sm_shm_ded_count.counters[tpc] +=
-			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~(gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_double_detected_m());
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_sm_shm_ecc_err_count_r() + offset,
-			ecc_stats_reg_val);
-	}
-	gk20a_writel(g, gr_pri_gpc0_tpc0_sm_shm_ecc_status_r() + offset,
-			shm_ecc_status);
-
-
 	return ret;
 }
 
@@ -176,126 +87,12 @@ static int gr_gv11b_handle_tex_exception(struct gk20a *g, u32 gpc, u32 tpc,
 	u32 offset = proj_gpc_stride_v() * gpc +
 		     proj_tpc_in_gpc_stride_v() * tpc;
 	u32 esr;
-	u32 ecc_stats_reg_val;
 
 	gk20a_dbg(gpu_dbg_fn | gpu_dbg_gpu_dbg, "");
 
 	esr = gk20a_readl(g,
 			 gr_gpc0_tpc0_tex_m_hww_esr_r() + offset);
 	gk20a_dbg(gpu_dbg_intr | gpu_dbg_gpu_dbg, "0x%08x", esr);
-
-	if (esr & gr_gpc0_tpc0_tex_m_hww_esr_ecc_sec_pending_f()) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
-			"Single bit error detected in TEX!");
-
-		/* Pipe 0 counters */
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_routing_r() + offset,
-			gr_pri_gpc0_tpc0_tex_m_routing_sel_pipe0_f());
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->gr.t18x.ecc_stats.tex_total_sec_pipe0_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset,
-			ecc_stats_reg_val);
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->gr.t18x.ecc_stats.tex_unique_sec_pipe0_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset,
-			ecc_stats_reg_val);
-
-
-		/* Pipe 1 counters */
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_routing_r() + offset,
-			gr_pri_gpc0_tpc0_tex_m_routing_sel_pipe1_f());
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->gr.t18x.ecc_stats.tex_total_sec_pipe1_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_sec_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset,
-			ecc_stats_reg_val);
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->gr.t18x.ecc_stats.tex_unique_sec_pipe1_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_sec_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset,
-			ecc_stats_reg_val);
-
-
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_routing_r() + offset,
-			gr_pri_gpc0_tpc0_tex_m_routing_sel_default_f());
-	}
-	if (esr & gr_gpc0_tpc0_tex_m_hww_esr_ecc_ded_pending_f()) {
-		gk20a_dbg(gpu_dbg_fn | gpu_dbg_intr,
-			"Double bit error detected in TEX!");
-
-		/* Pipe 0 counters */
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_routing_r() + offset,
-			gr_pri_gpc0_tpc0_tex_m_routing_sel_pipe0_f());
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->gr.t18x.ecc_stats.tex_total_ded_pipe0_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset,
-			ecc_stats_reg_val);
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->gr.t18x.ecc_stats.tex_unique_ded_pipe0_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset,
-			ecc_stats_reg_val);
-
-
-		/* Pipe 1 counters */
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_routing_r() + offset,
-			gr_pri_gpc0_tpc0_tex_m_routing_sel_pipe1_f());
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset);
-		g->gr.t18x.ecc_stats.tex_total_ded_pipe1_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_ded_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_total_r() + offset,
-			ecc_stats_reg_val);
-
-		ecc_stats_reg_val = gk20a_readl(g,
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset);
-		g->gr.t18x.ecc_stats.tex_unique_ded_pipe1_count.counters[tpc] +=
-				gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_v(ecc_stats_reg_val);
-		ecc_stats_reg_val &= ~gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_ded_m();
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_ecc_cnt_unique_r() + offset,
-			ecc_stats_reg_val);
-
-
-		gk20a_writel(g,
-			gr_pri_gpc0_tpc0_tex_m_routing_r() + offset,
-			gr_pri_gpc0_tpc0_tex_m_routing_sel_default_f());
-	}
 
 	gk20a_writel(g,
 		     gr_gpc0_tpc0_tex_m_hww_esr_r() + offset,

@@ -574,4 +574,20 @@ static inline u32 pbdma_runlist_timeslice_enable_true_f(void)
 {
 	return 0x10000000;
 }
+static inline u32 pbdma_set_channel_info_r(u32 i)
+{
+	return 0x000400fc + i*8192;
+}
+static inline u32 pbdma_set_channel_info_scg_type_graphics_compute0_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_set_channel_info_scg_type_compute1_f(void)
+{
+	return 0x1;
+}
+static inline u32 pbdma_set_channel_info_veid_f(u32 v)
+{
+	return (v & 0x3f) << 8;
+}
 #endif

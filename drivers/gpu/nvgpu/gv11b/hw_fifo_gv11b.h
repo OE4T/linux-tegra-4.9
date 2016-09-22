@@ -190,22 +190,6 @@ static inline u32 fifo_intr_0_lb_error_reset_f(void)
 {
 	return 0x1000000;
 }
-static inline u32 fifo_intr_0_replayable_fault_error_pending_f(void)
-{
-	return 0x2000000;
-}
-static inline u32 fifo_intr_0_dropped_mmu_fault_pending_f(void)
-{
-	return 0x8000000;
-}
-static inline u32 fifo_intr_0_dropped_mmu_fault_reset_f(void)
-{
-	return 0x8000000;
-}
-static inline u32 fifo_intr_0_mmu_fault_pending_f(void)
-{
-	return 0x10000000;
-}
 static inline u32 fifo_intr_0_pbdma_intr_pending_f(void)
 {
 	return 0x20000000;
@@ -229,14 +213,6 @@ static inline u32 fifo_intr_en_0_sched_error_f(u32 v)
 static inline u32 fifo_intr_en_0_sched_error_m(void)
 {
 	return 0x1 << 8;
-}
-static inline u32 fifo_intr_en_0_mmu_fault_f(u32 v)
-{
-	return (v & 0x1) << 28;
-}
-static inline u32 fifo_intr_en_0_mmu_fault_m(void)
-{
-	return 0x1 << 28;
 }
 static inline u32 fifo_intr_en_1_r(void)
 {
@@ -262,61 +238,13 @@ static inline u32 fifo_intr_chsw_error_r(void)
 {
 	return 0x0000256c;
 }
-static inline u32 fifo_intr_mmu_fault_id_r(void)
-{
-	return 0x0000259c;
-}
-static inline u32 fifo_intr_mmu_fault_eng_id_graphics_v(void)
-{
-	return 0x00000040;
-}
-static inline u32 fifo_intr_mmu_fault_eng_id_graphics_f(void)
-{
-	return 0x0;
-}
-static inline u32 fifo_intr_mmu_fault_inst_r(u32 i)
-{
-	return 0x00002800 + i*16;
-}
-static inline u32 fifo_intr_mmu_fault_inst_ptr_v(u32 r)
-{
-	return (r >> 0) & 0xfffffff;
-}
-static inline u32 fifo_intr_mmu_fault_inst_ptr_align_shift_v(void)
-{
-	return 0x0000000c;
-}
-static inline u32 fifo_intr_mmu_fault_lo_r(u32 i)
-{
-	return 0x00002804 + i*16;
-}
-static inline u32 fifo_intr_mmu_fault_hi_r(u32 i)
-{
-	return 0x00002808 + i*16;
-}
-static inline u32 fifo_intr_mmu_fault_info_r(u32 i)
-{
-	return 0x0000280c + i*16;
-}
-static inline u32 fifo_intr_mmu_fault_info_type_v(u32 r)
-{
-	return (r >> 0) & 0x1f;
-}
-static inline u32 fifo_intr_mmu_fault_info_client_type_v(u32 r)
-{
-	return (r >> 20) & 0x1;
-}
-static inline u32 fifo_intr_mmu_fault_info_client_type_gpc_v(void)
+static inline u32 fifo_gpc_v(void)
 {
 	return 0x00000000;
 }
-static inline u32 fifo_intr_mmu_fault_info_client_type_hub_v(void)
+static inline u32 fifo_hub_v(void)
 {
 	return 0x00000001;
-}
-static inline u32 fifo_intr_mmu_fault_info_client_v(u32 r)
-{
-	return (r >> 8) & 0x7f;
 }
 static inline u32 fifo_intr_pbdma_id_r(void)
 {
@@ -393,18 +321,6 @@ static inline u32 fifo_preempt_chid_f(u32 v)
 static inline u32 fifo_preempt_id_f(u32 v)
 {
 	return (v & 0xfff) << 0;
-}
-static inline u32 fifo_trigger_mmu_fault_r(u32 i)
-{
-	return 0x00002a30 + i*4;
-}
-static inline u32 fifo_trigger_mmu_fault_id_f(u32 v)
-{
-	return (v & 0x1f) << 0;
-}
-static inline u32 fifo_trigger_mmu_fault_enable_f(u32 v)
-{
-	return (v & 0x1) << 8;
 }
 static inline u32 fifo_engine_status_r(u32 i)
 {

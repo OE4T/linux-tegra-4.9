@@ -86,37 +86,9 @@ static inline u32 ram_in_page_dir_base_vol_true_f(void)
 {
 	return 0x4;
 }
-static inline u32 ram_in_page_dir_base_fault_replay_tex_f(u32 v)
+static inline u32 ram_in_page_dir_base_vol_false_f(void)
 {
-	return (v & 0x1) << 4;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_tex_m(void)
-{
-	return 0x1 << 4;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_tex_w(void)
-{
-	return 128;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_tex_true_f(void)
-{
-	return 0x10;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_gcc_f(u32 v)
-{
-	return (v & 0x1) << 5;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_gcc_m(void)
-{
-	return 0x1 << 5;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_gcc_w(void)
-{
-	return 128;
-}
-static inline u32 ram_in_page_dir_base_fault_replay_gcc_true_f(void)
-{
-	return 0x20;
+	return 0x0;
 }
 static inline u32 ram_in_big_page_size_f(u32 v)
 {
@@ -154,22 +126,6 @@ static inline u32 ram_in_page_dir_base_hi_w(void)
 {
 	return 129;
 }
-static inline u32 ram_in_adr_limit_lo_f(u32 v)
-{
-	return (v & 0xfffff) << 12;
-}
-static inline u32 ram_in_adr_limit_lo_w(void)
-{
-	return 130;
-}
-static inline u32 ram_in_adr_limit_hi_f(u32 v)
-{
-	return (v & 0xffffffff) << 0;
-}
-static inline u32 ram_in_adr_limit_hi_w(void)
-{
-	return 131;
-}
 static inline u32 ram_in_engine_cs_w(void)
 {
 	return 132;
@@ -190,53 +146,273 @@ static inline u32 ram_in_engine_cs_fg_f(void)
 {
 	return 0x8;
 }
-static inline u32 ram_in_gr_cs_w(void)
+static inline u32 ram_in_engine_wfi_mode_w(void)
 {
 	return 132;
 }
-static inline u32 ram_in_gr_cs_wfi_f(void)
-{
-	return 0x0;
-}
-static inline u32 ram_in_gr_wfi_target_w(void)
-{
-	return 132;
-}
-static inline u32 ram_in_gr_wfi_mode_w(void)
-{
-	return 132;
-}
-static inline u32 ram_in_gr_wfi_mode_physical_v(void)
+static inline u32 ram_in_engine_wfi_mode_physical_v(void)
 {
 	return 0x00000000;
 }
-static inline u32 ram_in_gr_wfi_mode_physical_f(void)
+static inline u32 ram_in_engine_wfi_mode_physical_f(void)
 {
 	return 0x0;
 }
-static inline u32 ram_in_gr_wfi_mode_virtual_v(void)
+static inline u32 ram_in_engine_wfi_mode_virtual_v(void)
 {
 	return 0x00000001;
 }
-static inline u32 ram_in_gr_wfi_mode_virtual_f(void)
+static inline u32 ram_in_engine_wfi_mode_virtual_f(void)
 {
 	return 0x4;
 }
-static inline u32 ram_in_gr_wfi_ptr_lo_f(u32 v)
-{
-	return (v & 0xfffff) << 12;
-}
-static inline u32 ram_in_gr_wfi_ptr_lo_w(void)
+static inline u32 ram_in_engine_wfi_target_w(void)
 {
 	return 132;
 }
-static inline u32 ram_in_gr_wfi_ptr_hi_f(u32 v)
+static inline u32 ram_in_engine_wfi_target_sys_mem_coh_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 ram_in_engine_wfi_target_sys_mem_coh_f(void)
+{
+	return 0x2;
+}
+static inline u32 ram_in_engine_wfi_target_sys_mem_nocoh_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 ram_in_engine_wfi_target_sys_mem_nocoh_f(void)
+{
+	return 0x3;
+}
+static inline u32 ram_in_engine_wfi_target_local_mem_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ram_in_engine_wfi_target_local_mem_f(void)
+{
+	return 0x0;
+}
+static inline u32 ram_in_engine_wfi_ptr_lo_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
+static inline u32 ram_in_engine_wfi_ptr_lo_w(void)
+{
+	return 132;
+}
+static inline u32 ram_in_engine_wfi_ptr_hi_f(u32 v)
 {
 	return (v & 0xff) << 0;
 }
-static inline u32 ram_in_gr_wfi_ptr_hi_w(void)
+static inline u32 ram_in_engine_wfi_ptr_hi_w(void)
 {
 	return 133;
+}
+static inline u32 ram_in_engine_wfi_veid_f(u32 v)
+{
+	return (v & 0x3f) << 0;
+}
+static inline u32 ram_in_engine_wfi_veid_w(void)
+{
+	return 134;
+}
+static inline u32 ram_in_eng_method_buffer_addr_lo_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ram_in_eng_method_buffer_addr_lo_w(void)
+{
+	return 136;
+}
+static inline u32 ram_in_eng_method_buffer_addr_hi_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ram_in_eng_method_buffer_addr_hi_w(void)
+{
+	return 137;
+}
+static inline u32 ram_in_sc_page_dir_base_target_f(u32 v, u32 i)
+{
+	return (v & 0x3) << (0 + i*0);
+}
+static inline u32 ram_in_sc_page_dir_base_target__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_page_dir_base_target_vid_mem_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ram_in_sc_page_dir_base_target_invalid_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ram_in_sc_page_dir_base_target_sys_mem_coh_v(void)
+{
+	return 0x00000002;
+}
+static inline u32 ram_in_sc_page_dir_base_target_sys_mem_ncoh_v(void)
+{
+	return 0x00000003;
+}
+static inline u32 ram_in_sc_page_dir_base_vol_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (2 + i*0);
+}
+static inline u32 ram_in_sc_page_dir_base_vol__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_page_dir_base_vol_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ram_in_sc_page_dir_base_vol_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (4 + i*0);
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_tex__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (5 + i*0);
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_enabled_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_disabled_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ram_in_sc_use_ver2_pt_format_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (10 + i*0);
+}
+static inline u32 ram_in_sc_use_ver2_pt_format__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_use_ver2_pt_format_false_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ram_in_sc_use_ver2_pt_format_true_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ram_in_sc_big_page_size_f(u32 v, u32 i)
+{
+	return (v & 0x1) << (11 + i*0);
+}
+static inline u32 ram_in_sc_big_page_size__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_big_page_size_64kb_v(void)
+{
+	return 0x00000001;
+}
+static inline u32 ram_in_sc_page_dir_base_lo_f(u32 v, u32 i)
+{
+	return (v & 0xfffff) << (12 + i*0);
+}
+static inline u32 ram_in_sc_page_dir_base_lo__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_page_dir_base_hi_f(u32 v, u32 i)
+{
+	return (v & 0xffffffff) << (0 + i*0);
+}
+static inline u32 ram_in_sc_page_dir_base_hi__size_1_v(void)
+{
+	return 0x00000040;
+}
+static inline u32 ram_in_sc_page_dir_base_target_0_f(u32 v)
+{
+	return (v & 0x3) << 0;
+}
+static inline u32 ram_in_sc_page_dir_base_target_0_w(void)
+{
+	return 168;
+}
+static inline u32 ram_in_sc_page_dir_base_vol_0_f(u32 v)
+{
+	return (v & 0x1) << 2;
+}
+static inline u32 ram_in_sc_page_dir_base_vol_0_w(void)
+{
+	return 168;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_0_f(u32 v)
+{
+	return (v & 0x1) << 4;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_tex_0_w(void)
+{
+	return 168;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_0_f(u32 v)
+{
+	return (v & 0x1) << 5;
+}
+static inline u32 ram_in_sc_page_dir_base_fault_replay_gcc_0_w(void)
+{
+	return 168;
+}
+static inline u32 ram_in_sc_use_ver2_pt_format_0_f(u32 v)
+{
+	return (v & 0x1) << 10;
+}
+static inline u32 ram_in_sc_use_ver2_pt_format_0_w(void)
+{
+	return 168;
+}
+static inline u32 ram_in_sc_big_page_size_0_f(u32 v)
+{
+	return (v & 0x1) << 11;
+}
+static inline u32 ram_in_sc_big_page_size_0_w(void)
+{
+	return 168;
+}
+static inline u32 ram_in_sc_page_dir_base_lo_0_f(u32 v)
+{
+	return (v & 0xfffff) << 12;
+}
+static inline u32 ram_in_sc_page_dir_base_lo_0_w(void)
+{
+	return 168;
+}
+static inline u32 ram_in_sc_page_dir_base_hi_0_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ram_in_sc_page_dir_base_hi_0_w(void)
+{
+	return 169;
 }
 static inline u32 ram_in_base_shift_v(void)
 {
@@ -377,6 +553,10 @@ static inline u32 ram_fc_chid_id_w(void)
 static inline u32 ram_fc_runlist_timeslice_w(void)
 {
 	return 62;
+}
+static inline u32 ram_fc_set_channel_info_w(void)
+{
+	return 63;
 }
 static inline u32 ram_userd_base_shift_v(void)
 {
@@ -550,10 +730,6 @@ static inline u32 ram_rl_entry_tsg_tsgid_f(u32 v)
 {
 	return (v & 0xfff) << 0;
 }
-static inline u32 ram_rl_entry_chan_inst_ptr_align_shift_v(void)
-{
-	return 0x0000000c;
-}
 static inline u32 ram_rl_entry_chan_userd_ptr_align_shift_v(void)
 {
 	return 0x00000008;
@@ -561,5 +737,9 @@ static inline u32 ram_rl_entry_chan_userd_ptr_align_shift_v(void)
 static inline u32 ram_rl_entry_chan_userd_align_shift_v(void)
 {
 	return 0x00000008;
+}
+static inline u32 ram_rl_entry_chan_inst_ptr_align_shift_v(void)
+{
+	return 0x0000000c;
 }
 #endif

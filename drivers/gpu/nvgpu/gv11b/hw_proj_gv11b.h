@@ -114,17 +114,21 @@ static inline u32 proj_host_num_pbdma_v(void)
 {
 	return 0x00000003;
 }
+static inline u32 proj_litter_num_subctx_v(void)
+{
+	return 0x00000040;
+}
 static inline u32 proj_scal_litter_num_tpc_per_gpc_v(void)
 {
 	return 0x00000004;
 }
 static inline u32 proj_scal_litter_num_fbps_v(void)
 {
-	return 0x00000002;
+	return 0x00000001;
 }
 static inline u32 proj_scal_litter_num_fbpas_v(void)
 {
-	return 0x00000004;
+	return 0x00000002;
 }
 static inline u32 proj_scal_litter_num_gpcs_v(void)
 {

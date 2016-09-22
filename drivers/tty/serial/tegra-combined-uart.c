@@ -63,14 +63,6 @@ static void tegra_combined_uart_start_tx(struct uart_port *port)
 	tegra_combined_uart_console_write(NULL, (char *)tail, count);
 }
 
-static int __init tegra_combined_uart_console_init(void)
-{
-	register_console(&tegra_combined_uart_console);
-
-	return 0;
-}
-console_initcall(tegra_combined_uart_console_init);
-
 /*
  * This function splits the string to be printed (const char *s) into multiple
  * packets. Each packet contains a max of 3 characters. Packets are sent to the
@@ -198,12 +190,16 @@ static struct of_device_id tegra_combined_uart_of_match[] = {
 
 MODULE_DEVICE_TABLE(of, tegra_combined_uart_of_match);
 
+static unsigned int tegra_combined_uart_tx_empty(struct uart_port *port)
+{
+	return TIOCSER_TEMT;
+}
+
 static struct uart_ops tegra_combined_uart_ops = {
 	.pm		= (void (*)(struct uart_port *,
 					unsigned int,
 					unsigned int)) &uart_null_func,
-	.tx_empty	=
-		(unsigned int (*)(struct uart_port *)) &uart_null_func,
+	.tx_empty	= tegra_combined_uart_tx_empty,
 	.get_mctrl	=
 		(unsigned int (*)(struct uart_port *)) &uart_null_func,
 	.set_mctrl	= (void (*)(struct uart_port *,
@@ -224,6 +220,7 @@ static struct uart_ops tegra_combined_uart_ops = {
 	.config_port	= (void (*)(struct uart_port *, int)) &uart_null_func,
 	.verify_port	= (int (*)(struct uart_port *,
 				struct serial_struct *)) &uart_null_func,
+
 #ifdef CONFIG_CONSOLE_POLL
 	.poll_get_char = uart_null_func,
 	.poll_put_char = (void (*)(struct uart_port *,
@@ -280,6 +277,8 @@ static int __init tegra_combined_uart_init(void)
 		pr_err("%s: Platform driver register failed!\n", __func__);
 		return ret;
 	}
+
+	register_console(&tegra_combined_uart_console);
 
 	return 0;
 }

@@ -1074,12 +1074,8 @@
 		compatible = "nvidia,trusted-little-kernel";
 		logger = "enabled";
 		storage = "enabled";
-	};
 
-	tlk {
-		compatible = "nvidia,trusted-little-kernel";
-		logger = "enabled";
-		storage = "enabled";
+		status = "disabled";
 	};
 
 	intc: interrupt-controller@3881000 {

@@ -3341,7 +3341,17 @@ void gk20a_channel_semaphore_wakeup(struct gk20a *g, bool post_events)
 					    NVGPU_IOCTL_CHANNEL_EVENT_ID_BLOCKING_SYNC);
 				}
 			}
-			gk20a_channel_update(c, 0);
+			/*
+			 * Only non-deterministic channels get the
+			 * channel_update callback. We don't allow
+			 * semaphore-backed syncs for these channels anyways,
+			 * since they have a dependency on the sync framework.
+			 * If deterministic channels are receiving a semaphore
+			 * wakeup, it must be for a user-space managed
+			 * semaphore.
+			 */
+			if (!c->deterministic)
+				gk20a_channel_update(c, 0);
 			gk20a_channel_put(c);
 		}
 	}

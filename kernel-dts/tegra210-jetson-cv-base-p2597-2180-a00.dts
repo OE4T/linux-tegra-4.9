@@ -425,12 +425,12 @@
 		nvidia,port-otg;
 		nvidia,charging-supported;
 		#extcon-cells = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	otg@7d000000 {
 		#extcon-cells = <1>;
-		status = "okay";
+		status = "disabled";
 	};
 
 	mailbox@70098000 {
@@ -447,11 +447,19 @@
 				nvidia,function = "xusb";
 				nvidia,port-cap =
 					<TEGRA_PADCTL_PORT_OTG_CAP>;
-				status = "disabled";
+			};
+			usb3-for-dev-mode {
+				nvidia,lanes = "uphy-lane-0";
+				nvidia,function = "usb3";
+				nvidia,usb3-port = <2>;
+				nvidia,usb2-map = <0>;
+				nvidia,port-cap =
+					<TEGRA_PADCTL_PORT_OTG_CAP>;
 			};
 			usb2-micro-AB-snps {
 				nvidia,lanes = "otg-0";
 				nvidia,function = "snps";
+				status = "disabled";
 			};
 			usb2-std-A-port0 {
 				 nvidia,lanes = "otg-2";
@@ -508,14 +516,18 @@
 		phys =	<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(2)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(1)>,
 			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(1)>,
-			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>;
-		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0";
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>;
+		phy-names = "utmi-2", "usb3-1", "utmi-1", "usb3-0", "utmi-0";
 	};
 
 	xudc@700d0000 {
 		nvidia,portmap = <0x0108>;
 		#extcon-cells = <1>;
-		status = "disabled";
+		status = "okay";
+		phys =  <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_UTMI_P(0)>,
+			<&tegra_padctl_uphy TEGRA_PADCTL_UPHY_USB3_P(2)>;
+		phy-names = "usb2", "usb3";
 	};
 
 	xotg {

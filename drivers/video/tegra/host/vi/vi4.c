@@ -429,6 +429,7 @@ static struct platform_driver tegra_vi4_driver = {
 #ifdef CONFIG_PM
 		.pm = &nvhost_module_pm_ops,
 #endif
+		.suppress_bind_attrs = true,
 	},
 };
 

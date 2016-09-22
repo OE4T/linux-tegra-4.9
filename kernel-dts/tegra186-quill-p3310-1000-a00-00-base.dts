@@ -77,22 +77,34 @@
 	pinctrl@3520000 {
 		status = "okay";
 		pinctrl-0 = <&tegra_xusb_padctl_pinmux_default>;
-		pinctrl-names = "default";
+		pinctrl-1 = <&vbus_en0_sfio_tristate_state>;
+		pinctrl-2 = <&vbus_en1_sfio_tristate_state>;
+		pinctrl-3 = <&vbus_en0_sfio_passthrough_state>;
+		pinctrl-4 = <&vbus_en1_sfio_passthrough_state>;
+		pinctrl-5 = <&vbus_en0_default_state>;
+		pinctrl-6 = <&vbus_en1_default_state>;
+		pinctrl-names = "default",
+			"vbus_en0_sfio_tristate", "vbus_en1_sfio_tristate",
+			"vbus_en0_sfio_passthrough", "vbus_en1_sfio_passthrough",
+			"vbus_en0_default", "vbus_en1_default";
 		tegra_xusb_padctl_pinmux_default: pinmux {
 			/* Quill does not support usb3-micro AB */
 			usb2-micro-AB {
 				nvidia,lanes = "otg-0";
 				nvidia,function = "xusb";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_OTG_CAP>;
+				nvidia,oc-pin = <0>;
 			};
 			usb2-std-A-port2 {
 				nvidia,lanes = "otg-1";
 				nvidia,function = "xusb";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				nvidia,oc-pin = <1>;
 			};
 			usb3-std-A-port2 {
 				nvidia,lanes = "usb3-1";
 				nvidia,port-cap = <TEGRA_PADCTL_PORT_HOST_ONLY>;
+				nvidia,oc-pin = <1>;
 			};
 
 			e3325-usb3-std-A-HS {

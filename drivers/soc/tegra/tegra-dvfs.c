@@ -387,11 +387,13 @@ static int dvfs_rail_connect_to_regulator(struct device *dev,
 		rail->reg = reg;
 	}
 
-	v = regulator_enable(rail->reg);
-	if (v < 0) {
-		pr_err("tegra_dvfs: failed on enabling regulator %s\n, err %d",
-			rail->reg_id, v);
-		return v;
+	if (!rail->leave_disabled_at_boot) {
+		v = regulator_enable(rail->reg);
+		if (v < 0) {
+			pr_err("tegra_dvfs: failed on enabling regulator %s\n, err %d",
+				rail->reg_id, v);
+			return v;
+		}
 	}
 
 	v = regulator_get_voltage(rail->reg);

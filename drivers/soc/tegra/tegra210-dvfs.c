@@ -91,6 +91,7 @@ static struct dvfs_rail tegra210_dvfs_rail_vdd_gpu = {
 	.stats = {
 		.bin_uv = 6250, /* 6.25mV */
 	},
+	.leave_disabled_at_boot = true,
 };
 
 static struct dvfs_rail *tegra210_dvfs_rails[] = {

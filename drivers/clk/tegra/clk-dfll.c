@@ -2155,8 +2155,8 @@ static int dfll_clk_set_rate(struct clk_hw *hw, unsigned long rate,
 
 static const struct clk_ops dfll_clk_ops = {
 	.is_enabled	= dfll_clk_is_enabled,
-	.enable		= dfll_clk_enable,
-	.disable	= dfll_clk_disable,
+	.prepare	= dfll_clk_enable,
+	.unprepare	= dfll_clk_disable,
 	.recalc_rate	= dfll_clk_recalc_rate,
 	.determine_rate	= dfll_clk_determine_rate,
 	.set_rate	= dfll_clk_set_rate,

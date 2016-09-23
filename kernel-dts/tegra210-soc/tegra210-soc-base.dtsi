@@ -235,6 +235,7 @@
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC2A)
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC3A)
 			   &common_as TEGRA_SWGROUP_CELLS(SDMMC4A)
+			   &common_as TEGRA_SWGROUP_CELLS(AVPC)
 			   &common_as 0xFFFFFFFF 0xFFFFFFFF>;
 
 		address-space-prop {
@@ -276,6 +277,14 @@
 		compatible = "nvidia,tegra210-bpmp";
 		carveout-start = <0x80005000>;
 		carveout-size = <0x10000>;
+		resets = <&tegra_car 1>;
+		reset-names = "cop";
+		clocks = <&tegra_car TEGRA210_CLK_ID_SBUS_AVP_USER>,
+		         <&tegra_car TEGRA210_CLK_ID_EMC_AVP_USER>;
+		clock-names = "sbus", "emc";
+		reg = <0x0 0x70016000 0x0 0x2000
+		       0x0 0x60001000 0x0 0x1000>;
+		iommus = <&smmu TEGRA_SWGROUP_AVPC>;
 		status = "disabled";
 	};
 

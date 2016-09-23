@@ -14,7 +14,7 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
-#include <tegra186-modules/tegra186-camera-e3322-a00.dtsi>
+#include <t18x-common-modules/tegra186-camera-e3322-a00.dtsi>
 #include "dt-bindings/clock/tegra186-clock.h"
 
 #define CAM0_RST_L     TEGRA_GPIO(R, 5)
@@ -24,13 +24,11 @@
 / {
 	gpio@2200000 {
 		camera-control {
+			gpio-input = <>;
+			gpio-output-low = <>;
 			gpio-output-high = <
 				CAM0_RST_L>;
 		};
-	};
-
-	aliases {
-		gpio288 = &tca6408_21;	/* 288 = 272 + TCA9539_GPIO_NUM */
 	};
 
 	i2c@3180000 {
@@ -62,7 +60,7 @@
 			};
 		};
 
-		tca9548@77 {
+		tca9548_77: tca9548@77 {
 			compatible = "nxp,pca9548";
 			reg = <0x77>;
 			#address-cells = <1>;
@@ -121,7 +119,7 @@
 					mclk = "extperiph1";
 					reset-gpios = <&tca6408_21 0 GPIO_ACTIVE_HIGH>;
 					vana-supply = <&en_vdd_cam_hv_2v8>;
-					vdig-supply = <&en_vdd_cam_1v2>;
+					vdig-supply = <&en_vdd_sys>;
 					dovdd-supply = <&en_vdd_cam>;
 				};
 			};
@@ -132,7 +130,7 @@
 					mclk = "extperiph1";
 					reset-gpios = <&tca6408_21 1 GPIO_ACTIVE_HIGH>;
 					vana-supply = <&en_vdd_cam_hv_2v8>;
-					vdig-supply = <&en_vdd_cam_1v2>;
+					vdig-supply = <&en_vdd_sys>;
 					dovdd-supply = <&en_vdd_cam>;
 				};
 			};
@@ -143,7 +141,7 @@
 					mclk = "extperiph1";
 					reset-gpios = <&tca6408_21 2 GPIO_ACTIVE_HIGH>;
 					vana-supply = <&en_vdd_cam_hv_2v8>;
-					vdig-supply = <&en_vdd_cam_1v2>;
+					vdig-supply = <&en_vdd_sys>;
 					dovdd-supply = <&en_vdd_cam>;
 				};
 			};
@@ -154,7 +152,7 @@
 					mclk = "extperiph2";
 					reset-gpios = <&tca6408_21 3 GPIO_ACTIVE_HIGH>;
 					vana-supply = <&en_vdd_cam_hv_2v8>;
-					vdig-supply = <&en_vdd_cam_1v2>;
+					vdig-supply = <&en_vdd_sys>;
 					dovdd-supply = <&en_vdd_cam>;
 				};
 			};
@@ -165,7 +163,7 @@
 					mclk = "extperiph2";
 					reset-gpios = <&tca6408_21 4 GPIO_ACTIVE_HIGH>;
 					vana-supply = <&en_vdd_cam_hv_2v8>;
-					vdig-supply = <&en_vdd_cam_1v2>;
+					vdig-supply = <&en_vdd_sys>;
 					dovdd-supply = <&en_vdd_cam>;
 				};
 			};
@@ -176,7 +174,7 @@
 					mclk = "extperiph2";
 					reset-gpios = <&tca6408_21 5 GPIO_ACTIVE_HIGH>;
 					vana-supply = <&en_vdd_cam_hv_2v8>;
-					vdig-supply = <&en_vdd_cam_1v2>;
+					vdig-supply = <&en_vdd_sys>;
 					dovdd-supply = <&en_vdd_cam>;
 				};
 			};

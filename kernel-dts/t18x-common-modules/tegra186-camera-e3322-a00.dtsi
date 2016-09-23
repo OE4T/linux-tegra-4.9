@@ -15,9 +15,6 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
-#include <dt-bindings/media/camera.h>
-#include <dt-bindings/platform/t210/t210.h>
-
 /* camera control gpio definitions */
 / {
 	host1x {
@@ -28,123 +25,180 @@
 				#size-cells = <0>;
 				port@0 {
 					reg = <0>;
-					vi_in0: endpoint {
-						remote-endpoint = <&csi_out0>;
+					e3322_vi_in0: endpoint {
+						csi-port = <0>;
+						bus-width = <2>;
+						remote-endpoint = <&e3322_csi_out0>;
 					};
 				};
 				port@1 {
 					reg = <1>;
-					vi_in1: endpoint {
-						remote-endpoint = <&csi_out1>;
+					e3322_vi_in1: endpoint {
+						csi-port = <1>;
+						bus-width = <2>;
+						remote-endpoint = <&e3322_csi_out1>;
 					};
 				};
 				port@2 {
 					reg = <2>;
-					vi_in2: endpoint {
-						remote-endpoint = <&csi_out2>;
+					e3322_vi_in2: endpoint {
+						csi-port = <2>;
+						bus-width = <2>;
+						remote-endpoint = <&e3322_csi_out2>;
 					};
 				};
 				port@3 {
 					reg = <3>;
-					vi_in3: endpoint {
-						remote-endpoint = <&csi_out3>;
+					e3322_vi_in3: endpoint {
+						csi-port = <3>;
+						bus-width = <2>;
+						remote-endpoint = <&e3322_csi_out3>;
 					};
 				};
 				port@4 {
 					reg = <4>;
-					vi_in4: endpoint {
-						remote-endpoint = <&csi_out4>;
+					e3322_vi_in4: endpoint {
+						csi-port = <4>;
+						bus-width = <2>;
+						remote-endpoint = <&e3322_csi_out4>;
 					};
 				};
 				port@5 {
 					reg = <5>;
-					vi_in5: endpoint {
-						remote-endpoint = <&csi_out5>;
+					e3322_vi_in5: endpoint {
+						csi-port = <5>;
+						bus-width = <2>;
+						remote-endpoint = <&e3322_csi_out5>;
 					};
 				};
 			};
 		};
 
 		nvcsi@150c0000 {
-			ports {
-				#address-cells = <1>;
-				#size-cells = <0>;
-				port@0 {
-					reg = <0>;
-					csi_in0: endpoint@0 {
-						bus-width = <2>;
-						remote-endpoint = <&imx219_out0>;
+			num-channels = <6>;
+			channel@0 {
+				reg = <0>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3322_csi_in0: endpoint@0 {
+							csi-port = <0>;
+							bus-width = <2>;
+							remote-endpoint = <&e3322_imx219_out0>;
+						};
+					};
+					port@1 {
+						reg = <1>;
+						e3322_csi_out0: endpoint@1 {
+							remote-endpoint = <&e3322_vi_in0>;
+						};
 					};
 				};
-				port@1 {
-					reg = <1>;
-					csi_out0: endpoint@1 {
-						remote-endpoint = <&vi_in0>;
+			};
+			channel@1 {
+				reg = <1>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3322_csi_in1: endpoint@2 {
+							csi-port = <1>;
+							bus-width = <2>;
+							remote-endpoint = <&e3322_imx219_out1>;
+						};
+					};
+					port@1 {
+						reg = <1>;
+						e3322_csi_out1: endpoint@3 {
+							remote-endpoint = <&e3322_vi_in1>;
+						};
 					};
 				};
-				port@2 {
-					reg = <2>;
-					csi_in1: endpoint@2 {
-						bus-width = <2>;
-						remote-endpoint = <&imx219_out1>;
+			};
+			channel@2 {
+				reg = <2>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3322_csi_in2: endpoint@4 {
+							csi-port = <2>;
+							bus-width = <2>;
+							remote-endpoint = <&e3322_imx219_out2>;
+						};
+					};
+					port@1 {
+						reg = <1>;
+						e3322_csi_out2: endpoint@5 {
+							remote-endpoint = <&e3322_vi_in2>;
+						};
 					};
 				};
-				port@3 {
-					reg = <3>;
-					csi_out1: endpoint@3 {
-						remote-endpoint = <&vi_in1>;
+			};
+			channel@3 {
+				reg = <3>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3322_csi_in3: endpoint@6 {
+							csi-port = <3>;
+							bus-width = <2>;
+							remote-endpoint = <&e3322_imx219_out3>;
+						};
+					};
+					port@1 {
+						reg = <1>;
+						e3322_csi_out3: endpoint@7 {
+							remote-endpoint = <&e3322_vi_in3>;
+						};
 					};
 				};
-				port@4 {
-					reg = <4>;
-					csi_in2: endpoint@4 {
-						bus-width = <2>;
-						remote-endpoint = <&imx219_out2>;
+			};
+			channel@4 {
+				reg = <4>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3322_csi_in4: endpoint@8 {
+							csi-port = <4>;
+							bus-width = <2>;
+							remote-endpoint = <&e3322_imx219_out4>;
+						};
+					};
+					port@1 {
+						reg = <1>;
+						e3322_csi_out4: endpoint@9 {
+							remote-endpoint = <&e3322_vi_in4>;
+						};
 					};
 				};
-				port@5 {
-					reg = <5>;
-					csi_out2: endpoint@5 {
-						remote-endpoint = <&vi_in2>;
+			};
+			channel@5 {
+				reg = <5>;
+				ports {
+					#address-cells = <1>;
+					#size-cells = <0>;
+					port@0 {
+						reg = <0>;
+						e3322_csi_in5: endpoint@10 {
+							csi-port = <5>;
+							bus-width = <2>;
+							remote-endpoint = <&e3322_imx219_out5>;
+						};
 					};
-				};
-				port@6 {
-					reg = <6>;
-					csi_in3: endpoint@6 {
-						bus-width = <2>;
-						remote-endpoint = <&imx219_out3>;
-					};
-				};
-				port@7 {
-					reg = <7>;
-					csi_out3: endpoint@7 {
-						remote-endpoint = <&vi_in3>;
-					};
-				};
-				port@8 {
-					reg = <8>;
-					csi_in4: endpoint@8 {
-						bus-width = <2>;
-						remote-endpoint = <&imx219_out4>;
-					};
-				};
-				port@9 {
-					reg = <9>;
-					csi_out4: endpoint@9 {
-						remote-endpoint = <&vi_in4>;
-					};
-				};
-				port@10 {
-					reg = <10>;
-					csi_in5: endpoint@10 {
-						bus-width = <2>;
-						remote-endpoint = <&imx219_out5>;
-					};
-				};
-				port@11 {
-					reg = <11>;
-					csi_out5: endpoint@11 {
-						remote-endpoint = <&vi_in5>;
+					port@1 {
+						reg = <1>;
+						e3322_csi_out5: endpoint@11 {
+							remote-endpoint = <&e3322_vi_in5>;
+						};
 					};
 				};
 			};
@@ -155,6 +209,7 @@
 		tca9548@77 {
 			i2c@0 {
 				imx219_a@10 {
+					devnode = "video0";
 					compatible = "nvidia,imx219";
 					reg = <0x10>;
 
@@ -166,7 +221,6 @@
 					avdd-reg = "vana";
 					dvdd-reg = "vdig";
 					iovdd-reg = "dovdd";
-					devnode = "video0";
 
 					mode0 { // IMX219_MODE_3280X2464
 						mclk_khz = "24000";
@@ -198,17 +252,19 @@
 
 						port@0 {
 							reg = <0>;
-							imx219_out0: endpoint {
+							e3322_imx219_out0: endpoint {
 								csi-port = <0>;
 								bus-width = <2>;
-								remote-endpoint = <&csi_in0>;
+								remote-endpoint = <&e3322_csi_in0>;
 							};
 						};
 					};
 				};
 			};
+
 			i2c@1 {
 				imx219_b@10 {
+					devnode = "video1";
 					compatible = "nvidia,imx219";
 					reg = <0x10>;
 
@@ -219,7 +275,6 @@
 					avdd-reg = "vana";
 					dvdd-reg = "vdig";
 					iovdd-reg = "dovdd";
-					devnode = "video1";
 
 					mode0 { // IMX219_MODE_3280X2464
 						mclk_khz = "24000";
@@ -252,17 +307,19 @@
 
 						port@0 {
 							reg = <0>;
-							imx219_out1: endpoint {
+							e3322_imx219_out1: endpoint {
 								csi-port = <1>;
 								bus-width = <2>;
-								remote-endpoint = <&csi_in1>;
+								remote-endpoint = <&e3322_csi_in1>;
 							};
 						};
 					};
 				};
 			};
+
 			i2c@2 {
 				imx219_c@10 {
+					devnode = "video2";
 					compatible = "nvidia,imx219";
 					reg = <0x10>;
 
@@ -273,7 +330,6 @@
 					avdd-reg = "vana";
 					dvdd-reg = "vdig";
 					iovdd-reg = "dovdd";
-					devnode = "video2";
 
 					mode0 { // IMX219_MODE_3280X2464
 						mclk_khz = "24000";
@@ -306,17 +362,19 @@
 
 						port@0 {
 							reg = <0>;
-							imx219_out2: endpoint {
+							e3322_imx219_out2: endpoint {
 								csi-port = <2>;
 								bus-width = <2>;
-								remote-endpoint = <&csi_in2>;
+								remote-endpoint = <&e3322_csi_in2>;
 							};
 						};
 					};
 				};
 			};
+
 			i2c@3 {
 				imx219_d@10 {
+					devnode = "video3";
 					compatible = "nvidia,imx219";
 					reg = <0x10>;
 
@@ -327,7 +385,6 @@
 					avdd-reg = "vana";
 					dvdd-reg = "vdig";
 					iovdd-reg = "dovdd";
-					devnode = "video3";
 
 					mode0 { // IMX219_MODE_3280X2464
 						mclk_khz = "24000";
@@ -360,17 +417,19 @@
 
 						port@0 {
 							reg = <0>;
-							imx219_out3: endpoint {
+							e3322_imx219_out3: endpoint {
 								csi-port = <3>;
 								bus-width = <2>;
-								remote-endpoint = <&csi_in3>;
+								remote-endpoint = <&e3322_csi_in3>;
 							};
 						};
 					};
 				};
 			};
+
 			i2c@4 {
 				imx219_e@10 {
+					devnode = "video4";
 					compatible = "nvidia,imx219";
 					reg = <0x10>;
 
@@ -381,7 +440,6 @@
 					avdd-reg = "vana";
 					dvdd-reg = "vdig";
 					iovdd-reg = "dovdd";
-					devnode = "video4";
 
 					mode0 { // IMX219_MODE_3280X2464
 						mclk_khz = "24000";
@@ -414,17 +472,19 @@
 
 						port@0 {
 							reg = <0>;
-							imx219_out4: endpoint {
+							e3322_imx219_out4: endpoint {
 								csi-port = <4>;
 								bus-width = <2>;
-								remote-endpoint = <&csi_in4>;
+								remote-endpoint = <&e3322_csi_in4>;
 							};
 						};
 					};
 				};
 			};
+
 			i2c@5 {
 				imx219_f@10 {
+					devnode = "video5";
 					compatible = "nvidia,imx219";
 					reg = <0x10>;
 
@@ -435,7 +495,6 @@
 					avdd-reg = "vana";
 					dvdd-reg = "vdig";
 					iovdd-reg = "dovdd";
-					devnode = "video5";
 
 					mode0 { // IMX219_MODE_3280X2464
 						mclk_khz = "24000";
@@ -468,10 +527,10 @@
 
 						port@0 {
 							reg = <0>;
-							imx219_out5: endpoint {
+							e3322_imx219_out5: endpoint {
 								csi-port = <5>;
 								bus-width = <2>;
-								remote-endpoint = <&csi_in5>;
+								remote-endpoint = <&e3322_csi_in5>;
 							};
 						};
 					};
@@ -537,7 +596,11 @@
 				orientation = "1";
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
+					devname = "imx219 30-0036";
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@0/imx219_a@10";
+				};
+				drivernode1 {
+					pcl_id = "v4l2_focuser_stub";
 				};
 			};
 			module1 {
@@ -546,7 +609,11 @@
 				orientation = "1";
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
+					devname = "imx219 31-0036";
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@1/imx219_b@10";
+				};
+				drivernode1 {
+					pcl_id = "v4l2_focuser_stub";
 				};
 			};
 			module2 {
@@ -555,7 +622,11 @@
 				orientation = "1";
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
+					devname = "imx219 32-0036";
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@2/imx219_c@10";
+				};
+				drivernode1 {
+					pcl_id = "v4l2_focuser_stub";
 				};
 			};
 			module3 {
@@ -564,7 +635,11 @@
 				orientation = "1";
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
+					devname = "imx219 33-0036";
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@3/imx219_d@10";
+				};
+				drivernode1 {
+					pcl_id = "v4l2_focuser_stub";
 				};
 			};
 			module4 {
@@ -573,7 +648,11 @@
 				orientation = "1";
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
+					devname = "imx219 34-0036";
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@4/imx219_e@10";
+				};
+				drivernode1 {
+					pcl_id = "v4l2_focuser_stub";
 				};
 			};
 			module5 {
@@ -582,7 +661,11 @@
 				orientation = "1";
 				drivernode0 {
 					pcl_id = "v4l2_sensor";
+					devname = "imx219 35-0036";
 					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@5/imx219_f@10";
+				};
+				drivernode1 {
+					pcl_id = "v4l2_focuser_stub";
 				};
 			};
 		};

@@ -11,6 +11,12 @@
  * more details.
  *
  */
+
+#define CAM0_RST_L	TEGRA_GPIO(R, 5)
+#define CAM0_PWDN	TEGRA_GPIO(R, 0)
+#define CAM1_RST_L	TEGRA_GPIO(R, 1)
+#define CAM1_PWDN	TEGRA_GPIO(L, 6)
+
 / {
 	/* camera plugin-manager */
 	plugin-manager {
@@ -122,6 +128,18 @@
 					vi_bw_margin_pct = <25>;
 					isp_peak_byte_per_pixel = <5>;
 					isp_bw_margin_pct = <25>;
+				};
+			};
+			/* GPIO */
+			override@14 {
+				target = <&{/gpio@2200000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
+					gpio-output-low = <
+						CAM0_RST_L
+						CAM0_PWDN
+						>;
+					gpio-output-high = <>;
 				};
 			};
 		};
@@ -361,6 +379,20 @@
 					max_pixel_rate = <750000>;
 					isp_peak_byte_per_pixel = <5>;
 					isp_bw_margin_pct = <25>;
+				};
+			};
+			/* GPIO */
+			override@31 {
+				target = <&{/gpio@2200000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
+					gpio-output-low = <
+						CAM0_RST_L
+						CAM0_PWDN
+						CAM1_RST_L
+						CAM1_PWDN
+						>;
+					gpio-output-high = <>;
 				};
 			};
 		};
@@ -923,6 +955,591 @@
 				_overlay_ {
 					status = "okay";
 					remote-endpoint = <&e3333_vi_in5>;
+				};
+			};
+			/* GPIO */
+			override@71 {
+				target = <&{/gpio@2200000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
+					gpio-output-low = <
+						CAM0_RST_L
+						CAM0_PWDN
+						CAM1_RST_L
+						CAM1_PWDN
+						>;
+					gpio-output-high = <>;
+				};
+			};
+			/* TCA6408 default */
+			override@72 {
+				target = <&tca6408_21_default>;
+				_overlay_ {
+					gpio-input = <>;
+					gpio-output-low = <0 1 2 3 4 5 6 7>;
+					gpio-output-high = <>;
+				};
+			};
+		};
+
+		/* E3322 camera board */
+		fragment-e3322@0 {
+			ids = "3322-*";
+			/* VI number of channels */
+			override@0 {
+				target = <&vi_base>;
+				_overlay_ {
+					num-channels=<6>;
+				};
+			};
+			/* CSI number of channels */
+			override@1 {
+				target = <&csi_base>;
+				_overlay_ {
+					num-channels=<6>;
+				};
+			};
+			/* tegra-camera-platform settings */
+			override@2 {
+				target = <&tcp>;
+				_overlay_ {
+					num_csi_lanes = <12>;
+					max_lane_speed = <1500000>;
+					min_bits_per_pixel = <10>;
+					vi_peak_byte_per_pixel = <2>;
+					vi_bw_margin_pct = <25>;
+					isp_peak_byte_per_pixel = <5>;
+					isp_bw_margin_pct = <25>;
+				};
+			};
+			/* TCA6408 */
+			override@3 {
+				target = <&tca6408_21>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			/* TCA9548 */
+			override@4 {
+				target = <&tca9548_77>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			/* Camera 0: Module */
+			override@5 {
+				target = <&e3322_cam0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@6 {
+				target = <&cam_module0>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3322_bottomleft_P5V27C";
+					position = "bottomleft";
+					orientation = "1";
+				};
+			};
+			override@7 {
+				target = <&cam_module0_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx219 30-0036";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@0/imx219_a@10";
+				};
+			};
+			override@8 {
+				target = <&cam_module0_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_focuser_stub";
+				};
+			};
+			/* Camera 0: VI */
+			override@9 {
+				target = <&vi_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@10 {
+				target = <&e3322_vi_in0>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <0>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_csi_out0>;
+				};
+			};
+			/* Camera 0: CSI */
+			override@11 {
+				target = <&csi_chan0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@12 {
+				target = <&csi_chan0_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@13 {
+				target = <&e3322_csi_in0>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <0>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_imx219_out0>;
+				};
+			};
+			override@14 {
+				target = <&csi_chan0_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@15 {
+				target = <&e3322_csi_out0>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3322_vi_in0>;
+				};
+			};
+			/* Camera 1: Module */
+			override@16 {
+				target = <&e3322_cam1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@17 {
+				target = <&cam_module1>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3322_centerleft_P5V27C";
+					position = "centerleft";
+					orientation = "1";
+				};
+			};
+			override@18 {
+				target = <&cam_module1_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx219 31-0036";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@1/imx219_b@10";
+				};
+			};
+			override@19 {
+				target = <&cam_module1_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_focuser_stub";
+				};
+			};
+			/* Camera 1: VI */
+			override@20 {
+				target = <&vi_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@21 {
+				target = <&e3322_vi_in1>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <1>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_csi_out1>;
+				};
+			};
+			/* Camera 1: CSI */
+			override@22 {
+				target = <&csi_chan1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@23 {
+				target = <&csi_chan1_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@24 {
+				target = <&e3322_csi_in1>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <1>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_imx219_out1>;
+				};
+			};
+			override@25 {
+				target = <&csi_chan1_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@26 {
+				target = <&e3322_csi_out1>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3322_vi_in1>;
+				};
+			};
+			/* Camera 2: Module */
+			override@27 {
+				target = <&e3322_cam2>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@28 {
+				target = <&cam_module2>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3322_centerright_P5V27C";
+					position = "centerright";
+					orientation = "1";
+				};
+			};
+			override@29 {
+				target = <&cam_module2_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx219 32-0036";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@2/imx219_c@10";
+				};
+			};
+			override@30 {
+				target = <&cam_module2_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_focuser_stub";
+				};
+			};
+			/* Camera 2: VI */
+			override@31 {
+				target = <&vi_port2>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@32 {
+				target = <&e3322_vi_in2>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <2>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_csi_out2>;
+				};
+			};
+			/* Camera 2: CSI */
+			override@33 {
+				target = <&csi_chan2>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@34 {
+				target = <&csi_chan2_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@35 {
+				target = <&e3322_csi_in2>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <2>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_imx219_out2>;
+				};
+			};
+			override@36 {
+				target = <&csi_chan2_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@37 {
+				target = <&e3322_csi_out2>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3322_vi_in2>;
+				};
+			};
+			/* Camera 3: Module */
+			override@38 {
+				target = <&e3322_cam3>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@39 {
+				target = <&cam_module3>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3322_topleft_P5V27C";
+					position = "topleft";
+					orientation = "1";
+				};
+			};
+			override@40 {
+				target = <&cam_module3_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx219 33-0036";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@3/imx219_d@10";
+				};
+			};
+			override@41 {
+				target = <&cam_module3_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_focuser_stub";
+				};
+			};
+			/* Camera 3: VI */
+			override@42 {
+				target = <&vi_port3>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@43 {
+				target = <&e3322_vi_in3>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <3>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_csi_out3>;
+				};
+			};
+			/* Camera 3: CSI */
+			override@44 {
+				target = <&csi_chan3>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@45 {
+				target = <&csi_chan3_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@46 {
+				target = <&e3322_csi_in3>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <3>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_imx219_out3>;
+				};
+			};
+			override@47 {
+				target = <&csi_chan3_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@48 {
+				target = <&e3322_csi_out3>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3322_vi_in3>;
+				};
+			};
+			/* Camera 4: Module */
+			override@49 {
+				target = <&e3322_cam4>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@50 {
+				target = <&cam_module4>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3322_bottomright_P5V27C";
+					position = "bottomright";
+					orientation = "1";
+				};
+			};
+			override@51 {
+				target = <&cam_module4_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx219 34-0036";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@4/imx219_e@10";
+				};
+			};
+			override@52 {
+				target = <&cam_module4_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_focuser_stub";
+				};
+			};
+			/* Camera 4: VI */
+			override@53 {
+				target = <&vi_port4>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@54 {
+				target = <&e3322_vi_in4>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <4>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_csi_out4>;
+				};
+			};
+			/* Camera 4: CSI */
+			override@55 {
+				target = <&csi_chan4>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@56 {
+				target = <&csi_chan4_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@57 {
+				target = <&e3322_csi_in4>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <4>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_imx219_out4>;
+				};
+			};
+			override@58 {
+				target = <&csi_chan4_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@59 {
+				target = <&e3322_csi_out4>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3322_vi_in4>;
+				};
+			};
+			/* Camera 5: Module */
+			override@60 {
+				target = <&e3322_cam5>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@61 {
+				target = <&cam_module5>;
+				_overlay_ {
+					status = "okay";
+					badge = "e3322_topright_P5V27C";
+					position = "topright";
+					orientation = "1";
+				};
+			};
+			override@62 {
+				target = <&cam_module5_drivernode0>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_sensor";
+					devname = "imx219 35-0036";
+					proc-device-tree = "/proc/device-tree/i2c@3180000/tca9548@77/i2c@5/imx219_f@10";
+				};
+			};
+			override@63 {
+				target = <&cam_module5_drivernode1>;
+				_overlay_ {
+					status = "okay";
+					pcl_id = "v4l2_focuser_stub";
+				};
+			};
+			/* Camera 5: VI */
+			override@64 {
+				target = <&vi_port5>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@65 {
+				target = <&e3322_vi_in5>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <5>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_csi_out5>;
+				};
+			};
+			/* Camera 5: CSI */
+			override@66 {
+				target = <&csi_chan5>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@67 {
+				target = <&csi_chan5_port0>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@68 {
+				target = <&e3322_csi_in5>;
+				_overlay_ {
+					status = "okay";
+					csi-port = <5>;
+					bus-width = <2>;
+					remote-endpoint = <&e3322_imx219_out5>;
+				};
+			};
+			override@69 {
+				target = <&csi_chan5_port1>;
+				_overlay_ {
+					status = "okay";
+				};
+			};
+			override@70 {
+				target = <&e3322_csi_out5>;
+				_overlay_ {
+					status = "okay";
+					remote-endpoint = <&e3322_vi_in5>;
+				};
+			};
+			/* GPIO */
+			override@71 {
+				target = <&{/gpio@2200000/camera-control}>;
+				_overlay_ {
+					gpio-input = <>;
+					gpio-output-low = < CAM0_PWDN >;
+					gpio-output-high= < CAM0_RST_L >;
+				};
+			};
+			/* TCA6408 default */
+			override@72 {
+				target = <&tca6408_21_default>;
+				_overlay_ {
+					gpio-input = <6 7>;
+					gpio-output-low = <0 1 2 3 4 5>;
+					gpio-output-high= <>;
 				};
 			};
 		};

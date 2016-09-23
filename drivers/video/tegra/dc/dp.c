@@ -861,7 +861,7 @@ static int lane_count_show(struct seq_file *s, void *unused)
 
 	seq_puts(s, "\n");
 	seq_printf(s,
-		"\tDP Lane_Count: \t%d\n",
+		"DP Lane_Count: \t%d\n",
 		cfg->lane_count);
 	return 0;
 }
@@ -889,16 +889,16 @@ static ssize_t lane_count_set(struct file *file, const char __user *buf,
 	if (dp->dc->enabled)
 		tegra_dc_disable(dp->dc);
 
-	dev_info(&dp->dc->ndev->dev, "Setting the lanecount from %d to %ld\n",
+	dev_info(&dp->dc->ndev->dev, "Setting max lanecount from %d to %ld\n",
 			cfg->lane_count, lane_count);
 
-	cfg->lane_count = lane_count;
+	cfg->max_lane_count = lane_count;
 
 	/* check if needed or not for validity purpose */
 	ret = tegra_dc_dp_calc_config(dp, dp->mode, cfg);
 	if (!ret)
 		dev_info(&dp->dc->ndev->dev,
-			"Unable to set lane_count properly\n");
+			"Unable to set max lane_count properly\n");
 
 	/* disable the dc and output controllers */
 	if (!dp->dc->enabled)
@@ -927,7 +927,7 @@ static int link_speed_show(struct seq_file *s, void *unused)
 
 	seq_puts(s, "\n");
 	seq_printf(s,
-		"\tDP Link Speed: \t%d\n",
+		"DP Link Speed: \t%d\n",
 		cfg->link_bw);
 	return 0;
 }
@@ -955,16 +955,16 @@ static ssize_t link_speed_set(struct file *file, const char __user *buf,
 	if (dp->dc->enabled)
 		tegra_dc_disable(dp->dc);
 
-	dev_info(&dp->dc->ndev->dev, "Setting the linkspeed from %d to %ld\n",
+	dev_info(&dp->dc->ndev->dev, "Setting max linkspeed from %d to %ld\n",
 			cfg->link_bw, link_speed);
 
-	cfg->link_bw = link_speed;
+	cfg->max_link_bw = link_speed;
 
 	/* check if needed or not for validity purpose */
 	ret = tegra_dc_dp_calc_config(dp, dp->mode, cfg);
 	if (!ret)
 		dev_info(&dp->dc->ndev->dev,
-			"Unable to set linkspeed properly\n");
+			"Unable to set max linkspeed properly\n");
 
 	/* disable the dc and output controllers */
 	if (!dp->dc->enabled)
@@ -1367,13 +1367,13 @@ static void tegra_dc_dp_dump_link_cfg(struct tegra_dc_dp_data *dp,
 
 	dev_info(&dp->dc->ndev->dev, "DP config: cfg_name               "
 		"cfg_value\n");
-	dev_info(&dp->dc->ndev->dev, "           Lane Count             %d\n",
+	dev_info(&dp->dc->ndev->dev, "           Max Lane Count         %d\n",
 		cfg->max_lane_count);
 	dev_info(&dp->dc->ndev->dev, "           SupportEnhancedFraming %s\n",
 		cfg->support_enhanced_framing ? "Y" : "N");
 	dev_info(&dp->dc->ndev->dev, "           SupportAltScrmbRstFffe %s\n",
 		cfg->alt_scramber_reset_cap ? "Y" : "N");
-	dev_info(&dp->dc->ndev->dev, "           Bandwidth              %d\n",
+	dev_info(&dp->dc->ndev->dev, "           Max Bandwidth          %d\n",
 		cfg->max_link_bw);
 	dev_info(&dp->dc->ndev->dev, "           bpp                    %d\n",
 		cfg->bits_per_pixel);
@@ -3091,7 +3091,10 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 			&max_link_bw))
 		return false;
 
-	if (NULL != dc->out->dp_out) {
+	if (dc->out->type == TEGRA_DC_OUT_FAKE_DP)
+		max_link_bw = dp->link_cfg.max_link_bw;
+
+	if (dc->out->dp_out != NULL) {
 		u32 bits_per_pixel;
 		u32 max_link_bw_rate = 2700;
 		unsigned long total_max_link_bw;
@@ -3119,15 +3122,24 @@ static bool tegra_dp_mode_filter(const struct tegra_dc *dc,
 				* 1000 * 1000 * 8 / 10 * dc->out->dp_out->lanes;
 		mode_bw = (unsigned long)mode->xres * (unsigned long)mode->yres
 				* mode->refresh * bits_per_pixel;
-		if (total_max_link_bw < mode_bw)
+
+		if (total_max_link_bw < mode_bw) {
+			dev_info(&dc->ndev->dev, "mode bw=%lu > link bw=%lu\n",
+				mode_bw, total_max_link_bw);
 			return false;
+		}
 	}
 
 	if (!mode->pixclock)
 		return false;
 
+#ifdef CONFIG_TEGRA_NVDISPLAY
+	if (mode->xres > 8192)
+		return false;
+#else
 	if (mode->xres > 4096)
 		return false;
+#endif
 
 	if (mode->pixclock && tegra_dc_get_out_max_pixclock(dc) &&
 		mode->pixclock < tegra_dc_get_out_max_pixclock(dc))

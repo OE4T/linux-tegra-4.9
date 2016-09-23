@@ -52,7 +52,7 @@
 #define IMX219_DEFAULT_MODE	IMX219_MODE_3280x2464
 #define IMX219_DEFAULT_WIDTH	3280
 #define IMX219_DEFAULT_HEIGHT	2464
-#define IMX219_DEFAULT_DATAFMT	V4L2_MBUS_FMT_SRGGB10_1X10
+#define IMX219_DEFAULT_DATAFMT	MEDIA_BUS_FMT_SRGGB10_1X10
 #define IMX219_DEFAULT_CLK_FREQ	12000000
 
 struct imx219 {
@@ -376,15 +376,15 @@ static int imx219_g_input_status(struct v4l2_subdev *sd, u32 *status)
 }
 
 static int imx219_get_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_fh *fh,
+		struct v4l2_subdev_pad_config *cfg,
 		struct v4l2_subdev_format *format)
 {
 	return camera_common_g_fmt(sd, &format->format);
 }
 
 static int imx219_set_fmt(struct v4l2_subdev *sd,
-		struct v4l2_subdev_fh *fh,
-	struct v4l2_subdev_format *format)
+		struct v4l2_subdev_pad_config *cfg,
+		struct v4l2_subdev_format *format)
 {
 	int ret;
 
@@ -398,14 +398,8 @@ static int imx219_set_fmt(struct v4l2_subdev *sd,
 
 static struct v4l2_subdev_video_ops imx219_subdev_video_ops = {
 	.s_stream	= imx219_s_stream,
-	.s_mbus_fmt	= camera_common_s_fmt,
-	.g_mbus_fmt	= camera_common_g_fmt,
-	.try_mbus_fmt	= camera_common_try_fmt,
-	.enum_mbus_fmt	= camera_common_enum_fmt,
 	.g_mbus_config	= camera_common_g_mbus_config,
 	.g_input_status	= imx219_g_input_status,
-	.enum_framesizes	= camera_common_enum_framesizes,
-	.enum_frameintervals	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_core_ops imx219_subdev_core_ops = {
@@ -416,6 +410,8 @@ static struct v4l2_subdev_pad_ops imx219_subdev_pad_ops = {
 	.enum_mbus_code = camera_common_enum_mbus_code,
 	.set_fmt = imx219_set_fmt,
 	.get_fmt = imx219_get_fmt,
+	.enum_frame_size	= camera_common_enum_framesizes,
+	.enum_frame_interval	= camera_common_enum_frameintervals,
 };
 
 static struct v4l2_subdev_ops imx219_subdev_ops = {
@@ -447,7 +443,6 @@ static int imx219_set_gain(struct imx219 *priv, s32 val)
 	struct reg_8 reg;
 	int err;
 	u8 gain;
-	int i = 0;
 
 	/* translate value */
 	gain = 256 - (256 * (1 << IMX219_GAIN_SHIFT) / val);
@@ -609,9 +604,9 @@ static int imx219_ctrls_init(struct imx219 *priv)
 
 		if (ctrl_config_list[i].type == V4L2_CTRL_TYPE_STRING &&
 			ctrl_config_list[i].flags & V4L2_CTRL_FLAG_READ_ONLY) {
-			ctrl->string = devm_kzalloc(&client->dev,
+			ctrl->p_new.p_char = devm_kzalloc(&client->dev,
 				ctrl_config_list[i].max + 1, GFP_KERNEL);
-			if (!ctrl->string) {
+			if (!ctrl->p_new.p_char) {
 				dev_err(&client->dev,
 					"Failed to allocate otp data\n");
 				return -ENOMEM;
@@ -651,6 +646,7 @@ static struct camera_common_pdata *imx219_parse_dt(struct i2c_client *client)
 	struct camera_common_pdata *board_priv_pdata;
 	const struct of_device_id *match;
 	int gpio, err;
+	struct camera_common_pdata *ret = NULL;
 
 	match = of_match_device(imx219_of_match, &client->dev);
 	if (!match) {
@@ -673,6 +669,10 @@ static struct camera_common_pdata *imx219_parse_dt(struct i2c_client *client)
 
 	gpio = of_get_named_gpio(np, "reset-gpios", 0);
 	if (gpio < 0) {
+		if (gpio == -EPROBE_DEFER) {
+			ret = ERR_PTR(-EPROBE_DEFER);
+			goto error;
+		}
 		dev_err(&client->dev, "reset gpios not in DT\n");
 		goto error;
 	}
@@ -701,7 +701,7 @@ static struct camera_common_pdata *imx219_parse_dt(struct i2c_client *client)
 
 error:
 	devm_kfree(&client->dev, board_priv_pdata);
-	return NULL;
+	return ret;
 }
 
 static int imx219_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
@@ -726,8 +726,8 @@ static int imx219_probe(struct i2c_client *client,
 	struct camera_common_data *common_data;
 	struct device_node *node = client->dev.of_node;
 	struct imx219 *priv;
-	char node_name[10];
 	int err;
+	char debugfs_name[32];
 
 	if (!IS_ENABLED(CONFIG_OF) || !node)
 		return -EINVAL;
@@ -756,6 +756,10 @@ static int imx219_probe(struct i2c_client *client,
 	}
 
 	priv->pdata = imx219_parse_dt(client);
+	if (PTR_ERR(priv->pdata) == -EPROBE_DEFER) {
+		devm_kfree(&client->dev, priv);
+		return -EPROBE_DEFER;
+	}
 	if (!priv->pdata) {
 		dev_err(&client->dev, "unable to get platform data\n");
 		return -EFAULT;
@@ -788,7 +792,9 @@ static int imx219_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	camera_common_create_debugfs(common_data, "imx219");
+	snprintf(debugfs_name, sizeof(debugfs_name), "%s.%s",
+		dev_driver_string(&client->dev), dev_name(&client->dev));
+	camera_common_create_debugfs(common_data, debugfs_name);
 
 	v4l2_i2c_subdev_init(&common_data->subdev, client, &imx219_subdev_ops);
 

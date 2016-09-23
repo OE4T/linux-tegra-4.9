@@ -1,5 +1,6 @@
 /*
  * Copyright (C) 2015 Google, Inc.
+ * Copyright (c) 2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -29,6 +30,7 @@
 #include <linux/virtio_ids.h>
 #include <linux/virtio_config.h>
 
+#include <linux/trusty/trusty.h>
 #include <linux/trusty/trusty_ipc.h>
 
 #define MAX_DEVICES			4
@@ -493,6 +495,9 @@ struct tipc_chan *tipc_create_channel(struct device *dev,
 	struct tipc_chan *chan;
 	struct tipc_virtio_dev *vds;
 
+	if (!is_trusty_dev_enabled())
+		return ERR_PTR(-ENODEV);
+
 	mutex_lock(&tipc_devices_lock);
 	if (dev) {
 		vd = container_of(dev, struct virtio_device, dev);
@@ -515,12 +520,18 @@ EXPORT_SYMBOL(tipc_create_channel);
 
 struct tipc_msg_buf *tipc_chan_get_rxbuf(struct tipc_chan *chan)
 {
+	if (!is_trusty_dev_enabled())
+		return ERR_PTR(-ENODEV);
+
 	return vds_alloc_msg_buf(chan->vds);
 }
 EXPORT_SYMBOL(tipc_chan_get_rxbuf);
 
 void tipc_chan_put_rxbuf(struct tipc_chan *chan, struct tipc_msg_buf *mb)
 {
+	if (!is_trusty_dev_enabled())
+		return;
+
 	vds_free_msg_buf(chan->vds, mb);
 }
 EXPORT_SYMBOL(tipc_chan_put_rxbuf);
@@ -528,12 +539,18 @@ EXPORT_SYMBOL(tipc_chan_put_rxbuf);
 struct tipc_msg_buf *tipc_chan_get_txbuf_timeout(struct tipc_chan *chan,
 						 long timeout)
 {
+	if (!is_trusty_dev_enabled())
+		return ERR_PTR(-ENODEV);
+
 	return vds_get_txbuf(chan->vds, timeout);
 }
 EXPORT_SYMBOL(tipc_chan_get_txbuf_timeout);
 
 void tipc_chan_put_txbuf(struct tipc_chan *chan, struct tipc_msg_buf *mb)
 {
+	if (!is_trusty_dev_enabled())
+		return;
+
 	vds_put_txbuf(chan->vds, mb);
 }
 EXPORT_SYMBOL(tipc_chan_put_txbuf);
@@ -541,6 +558,9 @@ EXPORT_SYMBOL(tipc_chan_put_txbuf);
 int tipc_chan_queue_msg(struct tipc_chan *chan, struct tipc_msg_buf *mb)
 {
 	int err;
+
+	if (!is_trusty_dev_enabled())
+		return -ENODEV;
 
 	mutex_lock(&chan->lock);
 	switch (chan->state) {
@@ -577,6 +597,9 @@ int tipc_chan_connect(struct tipc_chan *chan, const char *name)
 	struct tipc_ctrl_msg *msg;
 	struct tipc_conn_req_body *body;
 	struct tipc_msg_buf *txbuf;
+
+	if (!is_trusty_dev_enabled())
+		return -ENODEV;
 
 	txbuf = vds_get_txbuf(chan->vds, TXBUF_TIMEOUT);
 	if (IS_ERR(txbuf))
@@ -647,6 +670,9 @@ int tipc_chan_shutdown(struct tipc_chan *chan)
 	struct tipc_disc_req_body *body;
 	struct tipc_msg_buf *txbuf = NULL;
 
+	if (!is_trusty_dev_enabled())
+		return -ENODEV;
+
 	/* get tx buffer */
 	txbuf = vds_get_txbuf(chan->vds, TXBUF_TIMEOUT);
 	if (IS_ERR(txbuf))
@@ -686,6 +712,9 @@ EXPORT_SYMBOL(tipc_chan_shutdown);
 
 void tipc_chan_destroy(struct tipc_chan *chan)
 {
+	if (!is_trusty_dev_enabled())
+		return;
+
 	mutex_lock(&chan->lock);
 	if (chan->vds) {
 		vds_del_channel(chan->vds, chan);

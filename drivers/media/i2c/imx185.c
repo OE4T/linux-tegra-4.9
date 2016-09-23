@@ -569,7 +569,8 @@ static int imx185_set_gain(struct imx185 *priv, s64 val)
 
 	imx185_get_gain_reg(reg_list, gain);
 
-	err = imx185_write_table(priv, reg_list);
+	err = imx185_write_reg(priv->s_data, reg_list[0].addr,
+		 reg_list[0].val);
 	if (err)
 		goto fail;
 
@@ -588,6 +589,7 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 	s64 frame_length;
 	struct camera_common_mode_info *mode = priv->pdata->mode_info;
 	struct camera_common_data *s_data = priv->s_data;
+	int i = 0;
 
 	/* hack clk as 74250000 until the clk issue fixed*/
 	mode[s_data->mode].pixel_clock = 74250000;
@@ -605,10 +607,13 @@ static int imx185_set_frame_rate(struct imx185 *priv, s64 val)
 		priv->frame_length);
 
 	imx185_get_frame_length_regs(reg_list, priv->frame_length);
-	err = imx185_write_table(priv, reg_list);
-	if (err)
-		goto fail;
 
+	for (i = 0; i < 3; i++) {
+		err = imx185_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
 	return 0;
 
 fail:
@@ -670,6 +675,7 @@ static int imx185_set_coarse_time_shs1(struct imx185 *priv, u32 val)
 	u32 coarse_shs1;
 	struct v4l2_control control;
 	int hdr_en;
+	int i = 0;
 
 	coarse_shs1 = val;
 
@@ -705,9 +711,12 @@ static int imx185_set_coarse_time_shs1(struct imx185 *priv, u32 val)
 	imx185_get_coarse_time_regs_shs1(reg_list,
 			priv->frame_length - coarse_shs1 - 1);
 
-	err = imx185_write_table(priv, reg_list);
-	if (err)
-		goto fail;
+	for (i = 0; i < 3; i++) {
+		err = imx185_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
 
 	return 0;
 
@@ -722,6 +731,7 @@ static int imx185_set_coarse_time_hdr_shs2(struct imx185 *priv, u32 val)
 	imx185_reg reg_list[3];
 	int err;
 	u32 coarse_shs2;
+	int i = 0;
 
 	coarse_shs2 = val;
 	if (coarse_shs2 < IMX185_MIN_EXPOSURE_COARSE_1080P_HDR_SHS2)
@@ -742,9 +752,12 @@ static int imx185_set_coarse_time_hdr_shs2(struct imx185 *priv, u32 val)
 	imx185_get_coarse_time_regs_shs2(reg_list,
 			priv->frame_length - coarse_shs2 - 1);
 
-	err = imx185_write_table(priv, reg_list);
-	if (err)
-		goto fail;
+	for (i = 0; i < 3; i++) {
+		err = imx185_write_reg(priv->s_data, reg_list[i].addr,
+			 reg_list[i].val);
+		if (err)
+			goto fail;
+	}
 
 	return 0;
 

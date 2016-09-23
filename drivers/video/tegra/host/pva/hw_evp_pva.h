@@ -47,23 +47,39 @@
  *         comparison with unshifted values appropriate for use in field <y>
  *         of register <x>.
  */
-#ifndef _hw_proc_pva_h_
-#define _hw_proc_pva_h_
+#ifndef _hw_evp_pva_h_
+#define _hw_evp_pva_h_
 
-static inline u32 proc_cpuhalt_r(void)
+static inline u32 evp_reset_addr_r(void)
 {
-	return 0x30000;
+	return 0x20;
 }
-static inline u32 proc_cpuhalt_ncpuhalt_f(u32 v)
+static inline u32 evp_undef_addr_r(void)
 {
-	return (v & 0x1) << 0;
+	return 0x24;
 }
-static inline u32 proc_cpuhalt_ncpuhalt_halted_v(void)
+static inline u32 evp_swi_addr_r(void)
 {
-	return 0x00000000;
+	return 0x28;
 }
-static inline u32 proc_cpuhalt_ncpuhalt_done_v(void)
+static inline u32 evp_prefetch_abort_addr_r(void)
 {
-	return 0x00000001;
+	return 0x2c;
+}
+static inline u32 evp_data_abort_addr_r(void)
+{
+	return 0x30;
+}
+static inline u32 evp_rsvd_addr_r(void)
+{
+	return 0x34;
+}
+static inline u32 evp_irq_addr_r(void)
+{
+	return 0x38;
+}
+static inline u32 evp_fiq_addr_r(void)
+{
+	return 0x3c;
 }
 #endif

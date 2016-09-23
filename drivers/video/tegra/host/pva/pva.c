@@ -53,6 +53,23 @@ static struct of_device_id tegra_pva_of_match[] = {
 	{ },
 };
 
+#define EVP_REG_NUM 8
+static u32 pva_get_evp_reg(u32 index)
+{
+	u32 evp_reg[EVP_REG_NUM] = {
+		evp_reset_addr_r(),
+		evp_undef_addr_r(),
+		evp_swi_addr_r(),
+		evp_prefetch_abort_addr_r(),
+		evp_data_abort_addr_r(),
+		evp_rsvd_addr_r(),
+		evp_irq_addr_r(),
+		evp_fiq_addr_r()
+	};
+
+	return evp_reg[index];
+}
+
 #define R5_USER_SEGREG_OFFSET 0x40000000
 static int pva_init_fw(struct platform_device *pdev)
 {
@@ -82,12 +99,15 @@ static int pva_init_fw(struct platform_device *pdev)
 
 		case PVA_UCODE_SEG_EVP:
 		{
-			/* TODO: After verification evp data will be copied
-			 *	directly to the evp memory address.
-			 * Disabling EVP register programming till the VDK
-			 * get fixed to avoid the system hang on evp access
-			 * from ccplex
+			/* First 32 bytes of the EVP payload are zeros.
+			 * so skip first 32 bytes
 			 */
+			u32 i;
+			u32 *evpmem =  (u32 *)((void *)ucode_ptr
+						+ useg->offset + 32);
+			for (i = 0; i < EVP_REG_NUM; i++)
+				host1x_writel(pdev,
+					pva_get_evp_reg(i), evpmem[i]);
 		}
 		break;
 		case PVA_UCODE_SEG_R5:
@@ -115,6 +135,10 @@ static int pva_init_fw(struct platform_device *pdev)
 
 	/* Indicate the OS is waiting for PVA ready Interrupt */
 	host1x_writel(pdev, hsp_ss0_set_r(), PVA_BOOT_INT);
+
+	/* Take R5 out of reset */
+	host1x_writel(pdev, proc_cpuhalt_r(),
+		proc_cpuhalt_ncpuhalt_f(proc_cpuhalt_ncpuhalt_done_v()));
 
 	nvhost_dbg_fn("WAITING.... for PVA to be READY");
 

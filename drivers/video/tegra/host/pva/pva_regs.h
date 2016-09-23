@@ -24,6 +24,7 @@
 #include "hw_proc_pva.h"
 #include "hw_hsp_pva.h"
 #include "hw_sec_pva.h"
+#include "hw_evp_pva.h"
 #include "pva-interface.h"
 #include "pva_mailbox.h"
 #include "pva-ucode-header.h"

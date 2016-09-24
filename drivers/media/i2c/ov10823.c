@@ -58,7 +58,7 @@
 #define DEFAULT_ADDR	0x10
 #define MASTER_ADDR	0x20
 
-static bool assigned;
+static bool assigned = false;
 
 struct ov10823 {
 	struct mutex			ov10823_camera_lock;
@@ -78,7 +78,7 @@ struct ov10823 {
 	struct media_pad		pad;
 
 	s32				group_hold_prev;
-	bool			group_hold_en;
+	bool				group_hold_en;
 	struct regmap			*regmap;
 	struct camera_common_data	*s_data;
 	struct camera_common_pdata	*pdata;
@@ -944,6 +944,7 @@ static void ov10823_i2c_addr_assign(struct ov10823 *priv)
 
 	assigned = true;
 }
+
 static int ov10823_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
 {
 	struct i2c_client *client = v4l2_get_subdevdata(sd);
@@ -968,6 +969,7 @@ static int ov10823_probe(struct i2c_client *client,
 	struct camera_common_data *common_data;
 	struct ov10823 *priv;
 	char dev_name[10];
+	bool fixed_addr;
 	int err;
 
 	pr_info("[OV10823]: probing v4l2 sensor.\n");
@@ -1023,7 +1025,8 @@ static int ov10823_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	if (!assigned) {
+	fixed_addr = of_property_read_bool(np, "fixed-addr");
+	if (!fixed_addr && !assigned) {
 		of_property_read_u32(np, "cam0-i2c-addr", &priv->cam0_addr);
 		of_property_read_u32(np, "cam1-i2c-addr", &priv->cam1_addr);
 		of_property_read_u32(np, "cam2-i2c-addr", &priv->cam2_addr);
@@ -1077,7 +1080,7 @@ static int ov10823_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	dev_dbg(&client->dev, "Detected OV10823 sensor\n");
+	dev_info(&client->dev, "Detected OV10823 sensor\n");
 
 	return 0;
 }

@@ -12,17 +12,17 @@
  * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
  * more details.
  */
-
 #include <linux/delay.h>
 #include <linux/types.h>
-
 #include "gk20a/gk20a.h"
+#include "gk20a/fifo_gk20a.h"
 #include "gp10b/fifo_gp10b.h"
 #include "hw_pbdma_gv11b.h"
 #include "fifo_gv11b.h"
 #include "hw_fifo_gv11b.h"
 #include "hw_ram_gv11b.h"
 #include "hw_ccsr_gv11b.h"
+#include "hw_usermode_gv11b.h"
 
 static void gv11b_get_tsg_runlist_entry(struct tsg_gk20a *tsg, u32 *runlist)
 {
@@ -82,10 +82,53 @@ static void gv11b_get_ch_runlist_entry(struct channel_gk20a *c, u32 *runlist)
 			runlist[0], runlist[1], runlist[2], runlist[3]);
 }
 
+static void gv11b_ring_channel_doorbell(struct channel_gk20a *c)
+{
+	gk20a_dbg_info("channel ring door bell %d\n", c->hw_chid);
+
+	gk20a_writel(c->g, usermode_notify_channel_pending_r(),
+		usermode_notify_channel_pending_id_f(c->hw_chid));
+}
+
+static u32 gv11b_userd_gp_get(struct gk20a *g, struct channel_gk20a *c)
+{
+	struct mem_desc *userd_mem = &g->fifo.userd;
+	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
+
+	return gk20a_mem_rd32(g, userd_mem,
+			offset + ram_userd_gp_get_w());
+
+}
+
+static void gv11b_userd_gp_put(struct gk20a *g, struct channel_gk20a *c)
+{
+	struct mem_desc *userd_mem = &g->fifo.userd;
+	u32 offset = c->hw_chid * (g->fifo.userd_entry_size / sizeof(u32));
+
+	gk20a_mem_wr32(g, userd_mem, offset + ram_userd_gp_put_w(),
+							c->gpfifo.put);
+	/* commit everything to cpu */
+	smp_mb();
+
+	gv11b_ring_channel_doorbell(c);
+
+}
+
+
+static u32 gv11b_fifo_get_num_fifos(struct gk20a *g)
+{
+	return ccsr_channel__size_1_v();
+}
+
 void gv11b_init_fifo(struct gpu_ops *gops)
 {
 	gp10b_init_fifo(gops);
+	/* for gv11b no need to do any thing special for fifo hw setup */
+	gops->fifo.init_fifo_setup_hw = NULL;
 	gops->fifo.runlist_entry_size = ram_rl_entry_size_v;
 	gops->fifo.get_tsg_runlist_entry = gv11b_get_tsg_runlist_entry;
 	gops->fifo.get_ch_runlist_entry = gv11b_get_ch_runlist_entry;
+	gops->fifo.get_num_fifos = gv11b_fifo_get_num_fifos;
+	gops->fifo.userd_gp_get = gv11b_userd_gp_get;
+	gops->fifo.userd_gp_put = gv11b_userd_gp_put;
 }

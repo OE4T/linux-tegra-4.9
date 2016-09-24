@@ -18,8 +18,16 @@
 #include "gk20a/gk20a.h"
 #include "gp10b/mm_gp10b.h"
 #include "mm_gv11b.h"
+#include "hw_fb_gv11b.h"
+
+bool gv11b_mm_is_bar1_supported(struct gk20a *g)
+{
+	return false;
+}
 
 void gv11b_init_mm(struct gpu_ops *gops)
 {
 	gp10b_init_mm(gops);
+	gops->mm.bar1_bind = NULL;
+	gops->mm.is_bar1_supported = gv11b_mm_is_bar1_supported;
 }

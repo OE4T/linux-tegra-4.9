@@ -1847,7 +1847,8 @@
 
 		tegra_dmic3: dmic@2904200 {
 			compatible = "nvidia,tegra210-dmic";
-			reg = <0x2904200 0x100>;
+			reg = <0x2904200 0x100>,
+			      <0xc303000 0x1f0>;
 			nvidia,ahub-dmic-id = <2>;
 			clocks = <&tegra_car TEGRA186_CLK_DMIC3>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,
@@ -1992,7 +1993,8 @@
 
 		tegra_dspk2: dspk@2905100 {
 			compatible = "nvidia,tegra186-dspk";
-			reg = <0x2905100 0x100>;
+			reg = <0x2905100 0x100>,
+			      <0x2431000 0x1F0>;
 			nvidia,ahub-dspk-id = <1>;
 			clocks = <&tegra_car TEGRA186_CLK_DSPK2>,
 				<&tegra_car TEGRA186_CLK_PLL_A_OUT0>,

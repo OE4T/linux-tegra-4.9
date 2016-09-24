@@ -179,6 +179,26 @@
 		se@15840000 {
 			status = "okay";
 		};
+
+		sor {
+			status = "okay";
+		};
+
+		sor1 {
+			status = "okay";
+		};
+	};
+
+	ahub {
+		status = "okay";
+
+		dmic@2904200 {
+			status = "okay";
+		};
+
+		dspk@2905100 {
+			status = "okay";
+		};
 	};
 
 	hsp_top {

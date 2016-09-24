@@ -319,10 +319,14 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 		tegra_dc_irq(dc->irq, (void *)dc);
 		mutex_lock(&dc->lock);
 	}
-
+	/*
+	 * Putting the task state as TASK_UINTERRUPTIBLE makes
+	 * task wait till windows status promoted or timeout occurred
+	 * and wont be interrupted by signal or any other reason.
+	 */
 	ret = ___wait_event(dc->wq,
 		___wait_cond_timeout(tegra_dc_windows_are_clean(windows, n)),
-		TASK_INTERRUPTIBLE, 0, HZ,
+		TASK_UNINTERRUPTIBLE, 0, HZ,
 		mutex_unlock(&dc->lock);
 		__ret = schedule_timeout(__ret);
 		mutex_lock(&dc->lock));

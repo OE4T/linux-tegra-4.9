@@ -67,7 +67,7 @@
 #include <asm/io.h>
 
 #include <mach/io_dpd.h>
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 #include <linux/phy/phy.h>
 #endif
 #include <linux/pci-tegra.h>
@@ -377,6 +377,8 @@
 
 #define LINK_RETRAIN_TIMEOUT HZ
 
+#define PCIE_LANES_X4_X1		0x14
+
 #define DEBUG 0
 #if DEBUG || defined(CONFIG_PCI_DEBUG)
 #define PR_FUNC_LINE	pr_info("PCIE: %s(%d)\n", __func__, __LINE__)
@@ -471,7 +473,7 @@ struct tegra_pcie {
 
 	struct regulator	**pcie_regulators;
 
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	struct phy *u_phy;
 #endif
 	struct tegra_pci_platform_data *plat_data;
@@ -1464,7 +1466,7 @@ static int tegra_pcie_enable_pads(struct tegra_pcie *pcie, bool enable)
 	if (!tegra_platform_is_silicon())
 		return err;
 
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (enable)
 		err = phy_power_on(pcie->u_phy);
 	else
@@ -2229,11 +2231,11 @@ static bool get_rdet_status(struct tegra_pcie *pcie, u32 index)
 	bool flag = 0;
 
 	for (i = 0; i < ARRAY_SIZE(rp_to_lane_map[index]); i++)
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
-		flag |= tegra_phy_get_lane_rdet(pcie->u_phy,
-					rp_to_lane_map[index][i]);
-#elif defined(CONFIG_ARCH_TEGRA_18x_SOC)
+#if defined(CONFIG_ARCH_TEGRA_18x_SOC)
 		flag |= tegra_pcie_get_lane_rdet(pcie,
+					rp_to_lane_map[index][i]);
+#else
+		flag |= tegra_phy_get_lane_rdet(pcie->u_phy,
 					rp_to_lane_map[index][i]);
 #endif
 	return flag;
@@ -4660,7 +4662,7 @@ static int tegra_pcie_probe(struct platform_device *pdev)
 	pcie->dev = &pdev->dev;
 	pcie_domain.tegra_pcie = pcie;
 
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	pcie->u_phy = devm_phy_get(pcie->dev, "pcie-phy");
 	if (IS_ERR(pcie->u_phy)) {
 		ret = PTR_ERR(pcie->u_phy);
@@ -4778,7 +4780,7 @@ static int tegra_pcie_remove(struct platform_device *pdev)
 		tegra_pcie_disable_msi(pcie);
 	tegra_pcie_detach(pcie);
 	tegra_pcie_power_off(pcie);
-#if defined(CONFIG_TEGRA_PCI_USES_UPHY)
+#if defined(CONFIG_ARCH_TEGRA_21x_SOC)
 	if (tegra_platform_is_silicon())
 		phy_exit(pcie->u_phy);
 #endif

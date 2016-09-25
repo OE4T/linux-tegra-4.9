@@ -163,11 +163,13 @@
 
 	backlight {
 		compatible = "pwm-backlight";
-		status = "okay";
+		status = "disabled";
 		panel-a-wuxga-8-0-bl {
+			status = "disabled";
 			pwms = <&tegra_pwm 0 40161>;
 		};
 		panel-s-edp-uhdtv-15-6-bl {
+			status = "disabled";
 			pwms = <&tegra_pwm 0 1000000>;
 		};
 	};
@@ -206,7 +208,7 @@
 	host1x {
 		/* tegradc.0 */
 		dc@54200000 {
-			status = "okay";
+			status = "disabled";
 			nvidia,dc-flags = <TEGRA_DC_FLAG_ENABLED>;
 			nvidia,emc-clk-rate = <300000000>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
@@ -221,13 +223,14 @@
 			nvidia,cmu-enable = <1>;
 			nvidia,fb-bpp = <32>; /* bits per pixel */
 			nvidia,fb-flags = <TEGRA_FB_FLIP_ON_PROBE>;
+			nvidia,dc-or-node = "/host1x/sor1";
 		};
 
 		dsi {
 			nvidia,dsi-controller-vs = <DSI_VS_1>;
-			status = "okay";
+			status = "disabled";
 			panel-a-wuxga-8-0 {
-				status = "okay";
+				status = "disabled";
 				nvidia,dsi-dpd-pads = <DSIC_DPD_EN DSID_DPD_EN>;
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
@@ -238,11 +241,22 @@
 		};
 
 		sor {
+			status = "disabled";
 			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(CC, 6) 0>; /* PCC6 */
+			prod-settings {
+				status = "disabled";
+			};
 			panel-s-edp-uhdtv-15-6 {
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
+				smartdimmer {
+					status = "disabled";
+				};
 			};
+		};
+
+		dpaux1 {
+			status = "okay";
 		};
 
 		i2c@546c0000 {

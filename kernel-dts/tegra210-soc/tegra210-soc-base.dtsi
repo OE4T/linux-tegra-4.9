@@ -1343,9 +1343,21 @@
 			     <0 99 0x04>; /* MSI interrupt */
 		interrupt-names = "intr", "msi";
 
+		clocks = <&tegra_car 72>,
+			<&tegra_car 70>;
+		clock-names = "afi", "pcie";
+
+		resets = <&tegra_car 72>,
+			<&tegra_car 70>,
+			<&tegra_car 74>;
+		reset-names = "afi", "pcie", "pciex";
+
 		#interrupt-cells = <1>;
 		interrupt-map-mask = <0 0 0 0>;
 		interrupt-map = <0 0 0 0 &intc 0 98 0x04>;
+
+		phys = <&tegra_padctl_uphy TEGRA_PADCTL_UPHY_PCIE_P(0)>;
+		phy-names = "pcie-phy";
 
 		bus-range = <0x00 0xff>;
 		#address-cells = <3>;

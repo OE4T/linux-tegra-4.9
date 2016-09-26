@@ -225,6 +225,8 @@ struct gk20a_platform {
 	/* if vidmem aperture actually points to vidmem*/
 	bool vidmem_is_vidmem;
 
+	/* minimum supported VBIOS version */
+	u32 vbios_min_version;
 };
 
 static inline struct gk20a_platform *gk20a_get_platform(

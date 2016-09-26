@@ -39,7 +39,8 @@ static bool nvgpu_pci_tegra_is_railgated(struct device *pdev)
 	return false;
 }
 
-static struct gk20a_platform nvgpu_pci_device = {
+static struct gk20a_platform nvgpu_pci_device[] = {
+	{ /* DEVICE=0x1c35 */
 	/* ptimer src frequency in hz */
 	.ptimer_src_freq	= 31250000,
 
@@ -50,6 +51,9 @@ static struct gk20a_platform nvgpu_pci_device = {
 	.railgate_delay		= 500,
 	.can_railgate		= false,
 	.can_elpg = false,
+	.enable_elcg = true,
+	.enable_slcg = true,
+	.enable_blcg = true,
 
 	/* power management callbacks */
 	.is_railgated = nvgpu_pci_tegra_is_railgated,
@@ -61,35 +65,82 @@ static struct gk20a_platform nvgpu_pci_device = {
 	.has_ce = true,
 
 	.vidmem_is_vidmem = true,
-};
+	.vbios_min_version = 0x86062d00,
+	},
+	{ /* DEVICE=0x1c36 */
+	/* ptimer src frequency in hz */
+	.ptimer_src_freq	= 31250000,
 
-#define NVGPU_PCI_ENABLE_BLCG	BIT(0)
-#define NVGPU_PCI_ENABLE_SLCG	BIT(1)
-#define NVGPU_PCI_ENABLE_ELCG	BIT(2)
+	.probe = nvgpu_pci_tegra_probe,
+	.remove = nvgpu_pci_tegra_remove,
+
+	/* power management configuration */
+	.railgate_delay		= 500,
+	.can_railgate		= false,
+	.can_elpg = false,
+	.enable_elcg = true,
+	.enable_slcg = true,
+	.enable_blcg = true,
+
+	/* power management callbacks */
+	.is_railgated = nvgpu_pci_tegra_is_railgated,
+
+	.default_big_page_size	= SZ_64K,
+
+	.ch_wdt_timeout_ms = 7000,
+
+	.has_ce = true,
+
+	.vidmem_is_vidmem = true,
+	.vbios_min_version = 0x86062d00,
+	},
+	{ /* DEVICE=0x1c37 */
+	/* ptimer src frequency in hz */
+	.ptimer_src_freq	= 31250000,
+
+	.probe = nvgpu_pci_tegra_probe,
+	.remove = nvgpu_pci_tegra_remove,
+
+	/* power management configuration */
+	.railgate_delay		= 500,
+	.can_railgate		= false,
+	.can_elpg = false,
+	.enable_elcg = true,
+	.enable_slcg = true,
+	.enable_blcg = true,
+
+	/* power management callbacks */
+	.is_railgated = nvgpu_pci_tegra_is_railgated,
+
+	.default_big_page_size	= SZ_64K,
+
+	.ch_wdt_timeout_ms = 7000,
+
+	.has_ce = true,
+
+	.vidmem_is_vidmem = true,
+	.vbios_min_version = 0x86063000,
+	}
+};
 
 static struct pci_device_id nvgpu_pci_table[] = {
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c35),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
-		.driver_data = NVGPU_PCI_ENABLE_BLCG |
-			       NVGPU_PCI_ENABLE_SLCG,
+		.driver_data = 0,
 	},
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c36),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
-		.driver_data = NVGPU_PCI_ENABLE_BLCG |
-			       NVGPU_PCI_ENABLE_SLCG |
-			       NVGPU_PCI_ENABLE_ELCG,
+		.driver_data = 1,
 	},
 	{
 		PCI_DEVICE(PCI_VENDOR_ID_NVIDIA, 0x1c37),
 		.class = PCI_BASE_CLASS_DISPLAY << 16,
 		.class_mask = 0xff << 16,
-		.driver_data = NVGPU_PCI_ENABLE_BLCG |
-			       NVGPU_PCI_ENABLE_SLCG |
-			       NVGPU_PCI_ENABLE_ELCG,
+		.driver_data = 2,
 	},
 	{}
 };
@@ -202,11 +253,18 @@ static int nvgpu_pci_pm_init(struct device *dev)
 static int nvgpu_pci_probe(struct pci_dev *pdev,
 			   const struct pci_device_id *pent)
 {
-	struct gk20a_platform *platform = &nvgpu_pci_device;
+	struct gk20a_platform *platform = NULL;
 	struct gk20a *g;
 	int err;
 	char *nodefmt;
 
+	/* make sure driver_data is a sane index */
+	if (pent->driver_data >= sizeof(nvgpu_pci_device) /
+				 sizeof(nvgpu_pci_device[0])) {
+		return -EINVAL;
+	}
+
+	platform = &nvgpu_pci_device[pent->driver_data];
 	pci_set_drvdata(pdev, platform);
 
 	g = kzalloc(sizeof(struct gk20a), GFP_KERNEL);
@@ -217,13 +275,6 @@ static int nvgpu_pci_probe(struct pci_dev *pdev,
 
 	platform->g = g;
 	g->dev = &pdev->dev;
-
-	if (pent->driver_data & NVGPU_PCI_ENABLE_BLCG)
-		platform->enable_blcg = true;
-	if (pent->driver_data & NVGPU_PCI_ENABLE_SLCG)
-		platform->enable_slcg = true;
-	if (pent->driver_data & NVGPU_PCI_ENABLE_ELCG)
-		platform->enable_elcg = true;
 
 	err = pci_enable_device(pdev);
 	if (err)

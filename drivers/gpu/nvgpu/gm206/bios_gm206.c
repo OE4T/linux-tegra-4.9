@@ -894,6 +894,14 @@ static int gm206_bios_init(struct gk20a *g)
 		gk20a_err(g->dev, "no valid VBIOS found");
 		return -EINVAL;
 	}
+
+	if (g->gpu_characteristics.vbios_version <
+	    platform->vbios_min_version) {
+		gk20a_err(g->dev, "unsupported VBIOS version %08x",
+				g->gpu_characteristics.vbios_version);
+		return -EINVAL;
+	}
+
 	g->bios_blob.data = g->bios.data;
 	g->bios_blob.size = g->bios.size;
 

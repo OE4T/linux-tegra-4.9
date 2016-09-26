@@ -396,12 +396,13 @@
 	};
 
 	timer@60005000 {
-		compatible = "nvidia,tegra210-timer";
+		compatible = "nvidia,tegra210-timer", "nvidia,tegra30-timer";
 		reg = <0x0 0x60005000 0x0 0x400>;
-		interrupts = <0 176 4>,
-			     <0 177 4>,
-			     <0 178 4>,
-			     <0 179 4>;
+		interrupts = <GIC_SPI 176 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 177 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 178 IRQ_TYPE_LEVEL_HIGH>,
+			     <GIC_SPI 179 IRQ_TYPE_LEVEL_HIGH>;
+		clocks = <&tegra_car TEGRA210_CLK_TIMER>;
 		status = "disabled";
 	};
 

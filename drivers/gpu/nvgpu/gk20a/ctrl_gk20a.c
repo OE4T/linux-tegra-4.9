@@ -917,37 +917,51 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 
 	u32 clk_domains = 0;
 	u32 num_domains;
+	u32 i;
 	int bit;
 	u16 min_mhz, max_mhz;
 	int err;
 
 	gk20a_dbg_fn("");
 
-	if (!session || args->flags)
+	if (!session)
 		return -EINVAL;
 
-	args->num_entries = 0;
+	if (!args->flags) {
+		clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
+		num_domains = hweight_long(clk_domains);
 
-	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
-	num_domains = hweight_long(clk_domains);
+		if (!args->num_entries) {
+			args->num_entries = num_domains;
+			return 0;
+		}
 
-	if (!args->max_entries) {
-		args->max_entries = num_domains;
-		return 0;
+		if (args->num_entries < num_domains)
+			return -EINVAL;
+
+		args->num_entries = 0;
+
+	} else {
+		if (args->flags != NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS)
+			return -EINVAL;
+
+		num_domains = args->num_entries;
 	}
-
-	if (args->max_entries < num_domains)
-		return -EINVAL;
 
 	entry = (struct nvgpu_gpu_clk_range __user *)
 			(uintptr_t)args->clk_range_entries;
 
-	memset(&clk_range, 0, sizeof(clk_range));
+	for (i = 0; i < num_domains; i++, entry++) {
 
-	while (clk_domains) {
-		bit = ffs(clk_domains) - 1;
-
-		clk_range.clk_domain = BIT(bit);
+		if (args->flags == NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS) {
+			if (copy_from_user(&clk_range, (void __user *)entry,
+					sizeof(clk_range)))
+				return -EFAULT;
+		} else {
+			bit = ffs(clk_domains) - 1;
+			clk_range.clk_domain = BIT(bit);
+			clk_domains &= ~BIT(bit);
+		}
 
 		err = nvgpu_clk_arb_get_arbiter_clk_range(g,
 				clk_range.clk_domain, &min_mhz, &max_mhz);
@@ -956,13 +970,11 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 
 		clk_range.min_mhz = min_mhz;
 		clk_range.max_mhz = max_mhz;
+		clk_range.flags = 0;
 
 		err = copy_to_user(entry, &clk_range, sizeof(clk_range));
 		if (err)
 			return -EFAULT;
-
-		entry++;
-		clk_domains &= ~BIT(bit);
 	}
 
 	args->num_entries = num_domains;
@@ -1043,34 +1055,52 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	u32 num_domains;
 	u16 actual_mhz;
 	u16 target_mhz;
-	int err;
 	u32 i;
+	int err;
+	int bit;
 
 	gk20a_dbg_fn("");
 
-	if (!session || args->flags)
-		return -EINVAL;
-
-	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
-	if (!clk_domains)
+	if (!session)
 		return -EINVAL;
 
 	args->last_req_nr = nvgpu_clk_arb_get_arbiter_req_nr(g);
 
-	num_domains = hweight_long(clk_domains);
-	if (!args->num_entries) {
-		args->num_entries = num_domains;
-		return 0;
+	if (!args->flags) {
+		clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
+		num_domains = hweight_long(clk_domains);
+
+		if (!args->num_entries) {
+			args->num_entries = num_domains;
+			return 0;
+		}
+
+		if (args->num_entries < num_domains)
+			return -EINVAL;
+
+		args->num_entries = 0;
+
+	} else {
+		if (args->flags != NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS)
+			return -EINVAL;
+
+		num_domains = args->num_entries;
 	}
 
 	entry = (struct nvgpu_gpu_clk_info __user *)
 			(uintptr_t)args->clk_info_entries;
 
-	for (i = 0; i < args->num_entries; i++, entry++) {
+	for (i = 0; i < num_domains; i++, entry++) {
 
-		if (copy_from_user(&clk_info, (void __user *)entry,
-				sizeof(clk_info)))
-			return -EFAULT;
+		if (args->flags == NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS) {
+			if (copy_from_user(&clk_info, (void __user *)entry,
+					sizeof(clk_info)))
+				return -EFAULT;
+		} else {
+			bit = ffs(clk_domains) - 1;
+			clk_info.clk_domain = BIT(bit);
+			clk_domains &= ~BIT(bit);
+		}
 
 		err = nvgpu_clk_arb_get_arbiter_actual_mhz(g,
 				clk_info.clk_domain, &actual_mhz);
@@ -1084,12 +1114,15 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 
 		clk_info.actual_mhz = actual_mhz;
 		clk_info.target_mhz = target_mhz;
+		clk_info.flags = 0;
 
 		err = copy_to_user((void __user *)entry, &clk_info,
 				sizeof(clk_info));
 		if (err)
 			return -EFAULT;
 	}
+
+	args->num_entries = num_domains;
 
 	return 0;
 }

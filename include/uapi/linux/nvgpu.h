@@ -524,20 +524,24 @@ struct nvgpu_gpu_clk_range {
 	__u32 max_mhz;
 };
 
+/* Request on specific clock domains */
+#define NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS		(1UL << 0)
+
 struct nvgpu_gpu_clk_range_args {
 
-	/* Flags (not currently used) */
+	/* Flags. If NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS the request will
+	   apply only to domains specified in clock entries. In this case
+	   caller must set clock domain in each entry. Otherwise, the
+	   ioctl will return all clock domains.
+	*/
 	__u32 flags;
 
-	/* in/out: max number of entries in clk_range_entries buffer. If zero,
-	   NVGPU_GPU_IOCTL_CLK_GET_RANGE will return 0 and max_entries will be
-	   set to the max number of clock domains. If there are more entries
-	   than max_entries, then ioctl will return -EINVAL.
-	*/
-	__u16 max_entries;
+	__u16 pad0;
 
-	/* out: number of nvgpu_gpu_clk_range entries contained in
-		clk_range_entries */
+	/* in/out: Number of entries in clk_range_entries buffer. If zero,
+	   NVGPU_GPU_IOCTL_CLK_GET_RANGE will return 0 and
+	   num_entries will be set to number of clock domains.
+	 */
 	__u16 num_entries;
 
 	/* in: Pointer to clock range entries in the caller's address space.
@@ -606,14 +610,18 @@ struct nvgpu_gpu_clk_info {
 
 struct nvgpu_gpu_clk_get_info_args {
 
-	/* in: Flags (not currently used). */
+	/* Flags. If NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS the request will
+	   apply only to domains specified in clock entries. In this case
+	   caller must set clock domain in each entry. Otherwise, the
+	   ioctl will return all clock domains.
+	*/
 	__u32 flags;
 
 	__u16 pad0;
 
 	/* in/out: Number of clock info entries contained in clk_info_entries.
 	   If zero, NVGPU_GPU_IOCTL_CLK_GET_INFO will return 0 and
-	   max_entries will be set to number of clock domains. Also,
+	   num_entries will be set to number of clock domains. Also,
 	   last_req_nr will be updated, which allows checking if a given
 	   request has completed. If there are more entries than max_entries,
 	   then ioctl will return -EINVAL.
@@ -623,8 +631,9 @@ struct nvgpu_gpu_clk_get_info_args {
 	/* in: Pointer to nvgpu_gpu_clk_info entries in the caller's address
 	   space. Buffer size must be at least:
 		num_entries * sizeof(struct nvgpu_gpu_clk_info)
-	   For each entry, the clk_domain to be queried should be set. Note
-	   that clk_info_entries passed to an NVGPU_GPU_IOCTL_CLK_SET_INFO,
+	   If NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS is set, caller should set
+	   clk_domain to be queried in  each entry. With this flag,
+	   clk_info_entries passed to an NVGPU_GPU_IOCTL_CLK_SET_INFO,
 	   can be re-used on completion for a NVGPU_GPU_IOCTL_CLK_GET_INFO.
 	   This allows checking actual_mhz.
 	 */

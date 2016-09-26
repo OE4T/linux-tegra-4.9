@@ -323,6 +323,13 @@ enum tegra_virual_se_aes_iv_type {
 #define TEGRA_VIRTUAL_SE_RSA1536_DIGEST_SIZE   192
 #define TEGRA_VIRTUAL_SE_RSA2048_DIGEST_SIZE   256
 
+#define TEGRA_VIRTUAL_SE_AES_CMAC_STATE_SIZE	16
+#define TEGRA_VIRTUAL_SE_SHA1_STATE_SIZE	20
+#define TEGRA_VIRTUAL_SE_SHA224_STATE_SIZE	32
+#define TEGRA_VIRTUAL_SE_SHA256_STATE_SIZE	32
+#define TEGRA_VIRTUAL_SE_SHA384_STATE_SIZE	64
+#define TEGRA_VIRTUAL_SE_SHA512_STATE_SIZE	64
+
 #define TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE 0x1000000
 
 #define AES_KEYTBL_TYPE_KEY 1
@@ -2211,6 +2218,7 @@ static struct ahash_alg cmac_alg = {
 	.digest = tegra_hv_vse_cmac_digest,
 	.setkey = tegra_hv_vse_cmac_setkey,
 	.halg.digestsize = TEGRA_VIRUTAL_SE_AES_CMAC_DIGEST_SIZE,
+	.halg.statesize = TEGRA_VIRTUAL_SE_AES_CMAC_STATE_SIZE,
 	.halg.base = {
 		.cra_name = "cmac(aes)",
 		.cra_driver_name = "tegra-hv-vse-cmac(aes)",
@@ -2252,6 +2260,7 @@ static struct ahash_alg sha_algs[] = {
 		.finup =  tegra_hv_vse_sha_finup,
 		.digest =  tegra_hv_vse_sha_digest,
 		.halg.digestsize = SHA1_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_SHA1_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha1",
 			.cra_driver_name = "tegra-hv-vse-sha1",
@@ -2272,6 +2281,7 @@ static struct ahash_alg sha_algs[] = {
 		.finup =  tegra_hv_vse_sha_finup,
 		.digest =  tegra_hv_vse_sha_digest,
 		.halg.digestsize = SHA224_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_SHA224_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha224",
 			.cra_driver_name = "tegra-hv-vse-sha224",
@@ -2292,6 +2302,7 @@ static struct ahash_alg sha_algs[] = {
 		.finup =  tegra_hv_vse_sha_finup,
 		.digest =  tegra_hv_vse_sha_digest,
 		.halg.digestsize = SHA256_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_SHA256_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha256",
 			.cra_driver_name = "tegra-hv-vse-sha256",
@@ -2312,6 +2323,7 @@ static struct ahash_alg sha_algs[] = {
 		.finup =  tegra_hv_vse_sha_finup,
 		.digest =  tegra_hv_vse_sha_digest,
 		.halg.digestsize = SHA384_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_SHA384_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha384",
 			.cra_driver_name = "tegra-hv-vse-sha384",
@@ -2332,6 +2344,7 @@ static struct ahash_alg sha_algs[] = {
 		.finup =  tegra_hv_vse_sha_finup,
 		.digest =  tegra_hv_vse_sha_digest,
 		.halg.digestsize = SHA512_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_SHA512_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "sha512",
 			.cra_driver_name = "tegra-hv-vse-sha512",

@@ -595,7 +595,7 @@ static void __mc_override_sid(int sid, int oid, enum mc_overrides ord)
 		 * Otherwise, no effect on MC_SID_STREAMID_SECURITY_CONFIG_*.
 		 */
 		if ((ord == OVERRIDE) ||
-		    (tegra_platform_is_linsim() && ord == SIM_OVERRIDE))
+		    (tegra_platform_is_sim() && ord == SIM_OVERRIDE))
 			val = SCEW_STREAMID_OVERRIDE | SCEW_NS;
 		else
 			val = SCEW_NS;

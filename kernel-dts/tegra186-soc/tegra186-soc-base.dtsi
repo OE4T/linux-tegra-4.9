@@ -953,6 +953,7 @@
 			clock-names = "clk32k_in", "dpaux", "plldp";
 			resets = <&tegra_car TEGRA186_RESET_DPAUX>;
 			reset-names = "dpaux";
+			power-domains = <&disa_pd>;
 			status = "disabled";
 		};
 
@@ -966,6 +967,7 @@
 			clock-names = "clk32k_in", "dpaux1", "plldp";
 			resets = <&tegra_car TEGRA186_RESET_DPAUX1>;
 			reset-names = "dpaux1";
+			power-domains = <&disa_pd>;
 			status = "disabled";
 		};
 
@@ -2572,5 +2574,15 @@
 
 	tegra-serr {
 		compatible = "nvidia,tegra186";
+	};
+
+	dpaux0 {
+		compatible = "nvidia,tegra186-dpaux-pinctrl";
+		status = "disabled";
+	};
+
+	dpaux1 {
+		compatible = "nvidia,tegra186-dpaux1-pinctrl";
+		status = "disabled";
 	};
 };

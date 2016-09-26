@@ -302,6 +302,7 @@ struct gpu_ops {
 				u32 graphics_preempt_mode,
 				u32 compute_preempt_mode);
 		int (*fuse_override)(struct gk20a *g);
+		void (*init_sm_id_table)(struct gk20a *g);
 		int (*load_smid_config)(struct gk20a *g);
 		void (*program_sm_id_numbering)(struct gk20a *g,
 						u32 gpc, u32 tpc, u32 smid);

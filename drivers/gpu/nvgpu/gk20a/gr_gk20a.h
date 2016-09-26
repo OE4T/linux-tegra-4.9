@@ -174,8 +174,10 @@ struct zbc_query_params {
 };
 
 struct sm_info {
-	u8 gpc_index;
-	u8 tpc_index;
+	u32 gpc_index;
+	u32 tpc_index;
+	u32 sm_index;
+	u32 global_tpc_index;
 };
 
 #if defined(CONFIG_GK20A_CYCLE_STATS)
@@ -661,6 +663,8 @@ void gk20a_gr_enable_gpc_exceptions(struct gk20a *g);
 
 int gr_gk20a_commit_global_timeslice(struct gk20a *g,
 					struct channel_gk20a *c, bool patch);
+
+void gr_gk20a_init_sm_id_table(struct gk20a *g);
 
 static inline const char *gr_gk20a_graphics_preempt_mode_name(u32 graphics_preempt_mode)
 {

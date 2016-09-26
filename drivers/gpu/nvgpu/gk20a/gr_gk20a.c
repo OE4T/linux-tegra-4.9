@@ -1293,7 +1293,7 @@ static void gr_gk20a_program_active_tpc_counts(struct gk20a *g, u32 gpc_index)
 		gr_gpc0_gpm_sd_active_tpcs_num_f(gr->gpc_tpc_count[gpc_index]));
 }
 
-static void gr_gk20a_init_sm_id_table(struct gk20a *g)
+void gr_gk20a_init_sm_id_table(struct gk20a *g)
 {
 	u32 gpc, tpc;
 	u32 sm_id = 0;
@@ -1304,6 +1304,9 @@ static void gr_gk20a_init_sm_id_table(struct gk20a *g)
 			if (tpc < g->gr.gpc_tpc_count[gpc]) {
 				g->gr.sm_to_cluster[sm_id].tpc_index = tpc;
 				g->gr.sm_to_cluster[sm_id].gpc_index = gpc;
+				g->gr.sm_to_cluster[sm_id].sm_index = 0;
+				g->gr.sm_to_cluster[sm_id].global_tpc_index =
+									sm_id;
 				sm_id++;
 			}
 		}
@@ -1339,9 +1342,10 @@ int gr_gk20a_init_fs_state(struct gk20a *g)
 
 	gk20a_dbg_fn("");
 
-	gr_gk20a_init_sm_id_table(g);
+	if (g->ops.gr.init_sm_id_table)
+		g->ops.gr.init_sm_id_table(g);
 
-	for (sm_id = 0; sm_id < gr->tpc_count; sm_id++) {
+	for (sm_id = 0; sm_id < g->gr.no_of_sm; sm_id++) {
 		tpc_index = g->gr.sm_to_cluster[sm_id].tpc_index;
 		gpc_index = g->gr.sm_to_cluster[sm_id].gpc_index;
 
@@ -9112,6 +9116,7 @@ void gk20a_init_gr_ops(struct gpu_ops *gops)
 	gops->gr.get_preemption_mode_flags = gr_gk20a_get_preemption_mode_flags;
 	gops->gr.program_active_tpc_counts = gr_gk20a_program_active_tpc_counts;
 	gops->gr.program_sm_id_numbering = gr_gk20a_program_sm_id_numbering;
+	gops->gr.init_sm_id_table = gr_gk20a_init_sm_id_table;
 	gops->gr.is_ltcs_ltss_addr = gr_gk20a_is_ltcs_ltss_addr_stub;
 	gops->gr.is_ltcn_ltss_addr = gr_gk20a_is_ltcn_ltss_addr_stub;
 	gops->gr.split_lts_broadcast_addr =

@@ -1674,7 +1674,95 @@ static void gr_gv11b_detect_sm_arch(struct gk20a *g)
 		gr_gpc0_tpc0_sm_arch_sm_version_v(v);
 	g->gpu_characteristics.sm_arch_warp_count =
 		gr_gpc0_tpc0_sm_arch_warp_count_v(v);
+}
 
+static void gr_gv11b_init_sm_id_table(struct gk20a *g)
+{
+	u32 gpc, tpc;
+	u32 sm_id = 0;
+
+	/* TODO populate smids based on power efficiency */
+	for (tpc = 0; tpc < g->gr.max_tpc_per_gpc_count; tpc++) {
+		for (gpc = 0; gpc < g->gr.gpc_count; gpc++) {
+
+			if (tpc < g->gr.gpc_tpc_count[gpc]) {
+				g->gr.sm_to_cluster[sm_id].tpc_index = tpc;
+				g->gr.sm_to_cluster[sm_id].gpc_index = gpc;
+				g->gr.sm_to_cluster[sm_id].sm_index = sm_id % 2;
+				g->gr.sm_to_cluster[sm_id].global_tpc_index =
+									sm_id;
+				sm_id++;
+			}
+		}
+	}
+	g->gr.no_of_sm = sm_id;
+}
+
+static void gr_gv11b_program_sm_id_numbering(struct gk20a *g,
+					u32 gpc, u32 tpc, u32 smid)
+{
+	u32 gpc_stride = nvgpu_get_litter_value(g, GPU_LIT_GPC_STRIDE);
+	u32 tpc_in_gpc_stride = nvgpu_get_litter_value(g,
+					GPU_LIT_TPC_IN_GPC_STRIDE);
+	u32 gpc_offset = gpc_stride * gpc;
+	u32 tpc_offset = tpc_in_gpc_stride * tpc;
+	u32 global_tpc_index = g->gr.sm_to_cluster[smid].global_tpc_index;
+
+	gk20a_writel(g, gr_gpc0_tpc0_sm_cfg_r() + gpc_offset + tpc_offset,
+		gr_gpc0_tpc0_sm_cfg_tpc_id_f(global_tpc_index));
+	gk20a_writel(g, gr_gpc0_gpm_pd_sm_id_r(tpc) + gpc_offset,
+			gr_gpc0_gpm_pd_sm_id_id_f(global_tpc_index));
+	gk20a_writel(g, gr_gpc0_tpc0_pe_cfg_smid_r() + gpc_offset + tpc_offset,
+			gr_gpc0_tpc0_pe_cfg_smid_value_f(global_tpc_index));
+}
+
+static int gr_gv11b_load_smid_config(struct gk20a *g)
+{
+	u32 *tpc_sm_id;
+	u32 i, j;
+	u32 tpc_index, gpc_index, tpc_id;
+	u32 sms_per_tpc = nvgpu_get_litter_value(g, GPU_LIT_NUM_SM_PER_TPC);
+	int num_gpcs = nvgpu_get_litter_value(g, GPU_LIT_NUM_GPCS);
+
+	tpc_sm_id = kcalloc(gr_cwd_sm_id__size_1_v(), sizeof(u32), GFP_KERNEL);
+	if (!tpc_sm_id)
+		return -ENOMEM;
+
+	/* Each NV_PGRAPH_PRI_CWD_GPC_TPC_ID can store 4 TPCs.*/
+	for (i = 0; i <= ((g->gr.tpc_count-1) / 4); i++) {
+		u32 reg = 0;
+		u32 bit_stride = gr_cwd_gpc_tpc_id_gpc0_s() +
+				 gr_cwd_gpc_tpc_id_tpc0_s();
+
+		for (j = 0; j < 4; j++) {
+			u32 sm_id;
+			u32 bits;
+
+			tpc_id = (i << 2) + j;
+			sm_id = tpc_id * sms_per_tpc;
+
+			if (sm_id >= g->gr.no_of_sm)
+				break;
+
+			gpc_index = g->gr.sm_to_cluster[sm_id].gpc_index;
+			tpc_index = g->gr.sm_to_cluster[sm_id].tpc_index;
+
+			bits = gr_cwd_gpc_tpc_id_gpc0_f(gpc_index) |
+				gr_cwd_gpc_tpc_id_tpc0_f(tpc_index);
+			reg |= bits << (j * bit_stride);
+
+			tpc_sm_id[gpc_index + (num_gpcs * ((tpc_index & 4)
+				 >> 2))] |= tpc_id << tpc_index * bit_stride;
+		}
+		gk20a_writel(g, gr_cwd_gpc_tpc_id_r(i), reg);
+	}
+
+	for (i = 0; i < gr_cwd_sm_id__size_1_v(); i++)
+		gk20a_writel(g, gr_cwd_sm_id_r(i), tpc_sm_id[i]);
+
+	kfree(tpc_sm_id);
+
+	return 0;
 }
 
 static int gr_gv11b_commit_global_timeslice(struct gk20a *g,
@@ -1773,4 +1861,8 @@ void gv11b_init_gr(struct gpu_ops *gops)
 	gops->gr.init_sw_veid_bundle = gr_gv11b_init_sw_veid_bundle;
 	gops->gr.program_zcull_mapping = gr_gv11b_program_zcull_mapping;
 	gops->gr.commit_global_timeslice = gr_gv11b_commit_global_timeslice;
+	gops->gr.init_sm_id_table = gr_gv11b_init_sm_id_table;
+	gops->gr.load_smid_config = gr_gv11b_load_smid_config;
+	gops->gr.program_sm_id_numbering =
+			gr_gv11b_program_sm_id_numbering;
 }

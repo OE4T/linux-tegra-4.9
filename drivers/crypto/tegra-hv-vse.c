@@ -330,6 +330,11 @@ enum tegra_virual_se_aes_iv_type {
 #define TEGRA_VIRTUAL_SE_SHA384_STATE_SIZE	64
 #define TEGRA_VIRTUAL_SE_SHA512_STATE_SIZE	64
 
+#define TEGRA_VIRTUAL_SE_RSA512_STATE_SIZE	32
+#define TEGRA_VIRTUAL_SE_RSA1024_STATE_SIZE	32
+#define TEGRA_VIRTUAL_SE_RSA1536_STATE_SIZE	32
+#define TEGRA_VIRTUAL_SE_RSA2048_STATE_SIZE	32
+
 #define TEGRA_VIRTUAL_SE_MAX_BUFFER_SIZE 0x1000000
 
 #define AES_KEYTBL_TYPE_KEY 1
@@ -2370,6 +2375,7 @@ static struct ahash_alg rsa_algs[] = {
 		.digest = tegra_hv_vse_rsa_digest,
 		.setkey = tegra_hv_vse_rsa_setkey,
 		.halg.digestsize = TEGRA_VIRTUAL_SE_RSA512_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_RSA512_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa512",
 			.cra_driver_name = "tegra-hv-vse-rsa512",
@@ -2391,6 +2397,7 @@ static struct ahash_alg rsa_algs[] = {
 		.digest = tegra_hv_vse_rsa_digest,
 		.setkey = tegra_hv_vse_rsa_setkey,
 		.halg.digestsize = TEGRA_VIRTUAL_SE_RSA1024_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_RSA1024_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa1024",
 			.cra_driver_name = "tegra-hv-vse-rsa1024",
@@ -2412,6 +2419,7 @@ static struct ahash_alg rsa_algs[] = {
 		.digest = tegra_hv_vse_rsa_digest,
 		.setkey = tegra_hv_vse_rsa_setkey,
 		.halg.digestsize = TEGRA_VIRTUAL_SE_RSA1536_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_RSA1536_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa1536",
 			.cra_driver_name = "tegra-hv-vse-rsa1536",
@@ -2433,6 +2441,7 @@ static struct ahash_alg rsa_algs[] = {
 		.digest = tegra_hv_vse_rsa_digest,
 		.setkey = tegra_hv_vse_rsa_setkey,
 		.halg.digestsize = TEGRA_VIRTUAL_SE_RSA2048_DIGEST_SIZE,
+		.halg.statesize = TEGRA_VIRTUAL_SE_RSA2048_STATE_SIZE,
 		.halg.base = {
 			.cra_name = "rsa2048",
 			.cra_driver_name = "tegra-hv-vse-rsa2048",

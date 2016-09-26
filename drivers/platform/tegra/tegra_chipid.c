@@ -70,10 +70,11 @@ void tegra_get_tegraid_from_hw(void)
 	}
 	pr_info("tegra-id: opt_subrevision=%x.\n", opt_subrevision);
 
-	tegra_set_tegraid((cid >> 8) & 0xff,
-					  (cid >> 4) & 0xf,
-					  (cid >> 16) & 0xf,
-					  0,
-					  0,
-					  priv);
+	tegra_set_tegraid(tegra_hidrev_get_chipid(cid),
+			tegra_hidrev_get_majorrev(cid),
+			tegra_hidrev_get_minorrev(cid),
+			tegra_hidrev_get_pre_si_plat(cid),
+			0,
+			0,
+			priv);
 }

@@ -401,8 +401,10 @@ static struct tegra_dma_sg_req *tegra_dma_sg_req_alloc(
 {
 	struct tegra_dma_sg_req *sg_req = NULL;
 	sg_req = devm_kzalloc(tdc2dev(tdc), sizeof(struct tegra_dma_sg_req), GFP_ATOMIC);
-	if (!sg_req)
+	if (!sg_req) {
 		dev_err(tdc2dev(tdc), "sg_req alloc failed\n");
+		return NULL;
+	}
 	if (prealloc)
 		tegra_dma_sg_req_put(tdc, sg_req, true);
 	return sg_req;

@@ -695,6 +695,25 @@ unsigned long tegra_dvfs_get_maxrate(struct clk *c)
 	return freqs[num_freqs - 1];
 }
 
+unsigned long tegra_dvfs_round_rate(struct clk *c, unsigned long rate)
+{
+	int i, err, num_freqs;
+	unsigned long *freqs;
+
+	if (!core_dvfs_started)
+		return rate;
+
+	err = tegra_dvfs_get_freqs(c, &freqs, &num_freqs);
+	if (err < 0)
+		return rate;
+
+	for (i = 0; i < num_freqs; i++)
+		if (freqs[i] >= rate)
+			return freqs[i];
+
+	return freqs[i - 1];
+}
+
 static int tegra_dvfs_clk_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {

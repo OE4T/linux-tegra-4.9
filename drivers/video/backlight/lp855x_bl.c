@@ -3,6 +3,8 @@
  *
  *			Copyright (C) 2011 Texas Instruments
  *
+ * Copyright (c) 2016, NVIDIA CORPORATION, All rights reserved.
+ *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License version 2 as
  * published by the Free Software Foundation.
@@ -26,7 +28,7 @@
 #define LP855X_DEVICE_CTRL		0x01
 #define LP855X_EEPROM_START		0xA0
 #define LP855X_EEPROM_END		0xA7
-#define LP8556_EPROM_START		0xA0
+#define LP8556_EPROM_START		0x10
 #define LP8556_EPROM_END		0xAF
 
 /* LP8555/7 Registers */

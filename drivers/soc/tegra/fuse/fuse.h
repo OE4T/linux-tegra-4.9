@@ -48,6 +48,9 @@ struct tegra_fuse {
 	u32 (*read_early)(struct tegra_fuse *fuse, unsigned int offset);
 	u32 (*read)(struct tegra_fuse *fuse, unsigned int offset);
 	int (*write)(struct tegra_fuse *fuse, u32 value, unsigned int offset);
+	u32 (*control_read)(struct tegra_fuse *fuse, unsigned int offset);
+	int (*control_write)(struct tegra_fuse *fuse, u32 value,
+			unsigned int offset);
 	const struct tegra_fuse_soc *soc;
 
 	/* APBDMA on Tegra20 */
@@ -66,6 +69,8 @@ void tegra_init_apbmisc(void);
 
 bool __init tegra_fuse_read_spare(unsigned int spare);
 u32 __init tegra_fuse_read_early(unsigned int offset);
+int tegra_fuse_control_read(unsigned long offset, u32 *value);
+void tegra_fuse_control_write(u32 value, unsigned long offset);
 
 #ifdef CONFIG_ARCH_TEGRA_2x_SOC
 void tegra20_init_speedo_data(struct tegra_sku_info *sku_info);

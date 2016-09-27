@@ -439,6 +439,37 @@ void tegra_channel_queued_buf_done(struct tegra_channel *chan,
 	spin_unlock(lock);
 }
 
+#define __tegra_channel_device_call_subdevs_all_p(v4l2_dev, sd, cond, o,\
+		f, args...)						\
+({									\
+	long __err = 0;							\
+	long e = 0;							\
+									\
+	list_for_each_entry((sd), &(v4l2_dev)->subdevs, list) {		\
+		if ((cond) && (sd)->ops->o && (sd)->ops->o->f)		\
+			e = (sd)->ops->o->f((sd), ##args);		\
+		if (!__err && e && e != -ENOIOCTLCMD)			\
+			__err = e;					\
+		e = 0;							\
+	}								\
+	__err;								\
+})
+
+/*
+ * Call the specified callback for all subdevs matching grp_id (if 0, then
+ * match them all), errors are ignored until the end, and the first error
+ * encountered is returned. If the callback returns an error other than 0 or
+ * -ENOIOCTLCMD, then return with that error code. Note that you cannot
+ * add or delete a subdev while walking the subdevs list.
+ */
+#define tegra_channel_device_call_all(v4l2_dev, grpid, o, f, args...)	\
+({									\
+	struct v4l2_subdev *__sd;					\
+	__tegra_channel_device_call_subdevs_all_p(v4l2_dev, __sd,	\
+			!(grpid) || __sd->grp_id == (grpid), o, f,	\
+			##args);					\
+})
+
 /*
  * -----------------------------------------------------------------------------
  * subdevice set/unset operations
@@ -446,31 +477,34 @@ void tegra_channel_queued_buf_done(struct tegra_channel *chan,
  */
 int tegra_channel_set_stream(struct tegra_channel *chan, bool on)
 {
+	int err = 0;
+
 	if (atomic_read(&chan->is_streaming) == on)
 		return 0;
 
-	v4l2_device_call_until_err(chan->video.v4l2_dev,
+	err = tegra_channel_device_call_all(chan->video.v4l2_dev,
 			chan->grp_id, video, s_stream, on);
 
 	atomic_set(&chan->is_streaming, on);
 
-	return 0;
+	return err;
 }
 
 int tegra_channel_set_power(struct tegra_channel *chan, bool on)
 {
 	int num_sd;
+	int ret = 0;
 
 	for (num_sd = 0; num_sd < chan->num_subdevs; num_sd++) {
 		struct v4l2_subdev *sd = chan->subdev[num_sd];
-		int ret = 0;
+		int err = 0;
 
-		ret = v4l2_subdev_call(sd, core, s_power, on);
-		if (ret < 0 && ret != -ENOIOCTLCMD)
-			return ret;
+		err = v4l2_subdev_call(sd, core, s_power, on);
+		if (!ret && err < 0 && err != -ENOIOCTLCMD)
+			ret = err;
 	}
 
-	return 0;
+	return ret;
 }
 
 int update_clk(struct tegra_mc_vi *vi)
@@ -1276,6 +1310,7 @@ static int tegra_channel_init(struct tegra_mc_vi *vi, unsigned int index)
 	mutex_init(&chan->stop_kthread_lock);
 	init_completion(&chan->capture_comp);
 	atomic_set(&chan->is_streaming, DISABLE);
+	spin_lock_init(&chan->capture_state_lock);
 
 	/* Init video format */
 	chan->fmtinfo = tegra_core_get_format_by_code(TEGRA_VF_DEF);

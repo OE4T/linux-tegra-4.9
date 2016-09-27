@@ -39,6 +39,12 @@ void tegra_channel_init_ring_buffer(struct tegra_channel *chan);
 void free_ring_buffers(struct tegra_channel *chan, int frames);
 int tegra_channel_set_power(struct tegra_channel *chan, bool on);
 static void tegra_channel_stop_kthreads(struct tegra_channel *chan);
+static int tegra_channel_stop_increments(struct tegra_channel *chan);
+static void tegra_channel_notify_status_callback(
+				struct vi_notify_channel *,
+				const struct vi_capture_status *,
+				void *);
+static void tegra_channel_notify_error_callback(void *);
 
 u32 csimux_config_stream[] = {
 	CSIMUX_CONFIG_STREAM_0,
@@ -165,6 +171,49 @@ static bool tegra_channel_surface_setup(struct tegra_channel *chan,
 	return true;
 }
 
+static void tegra_channel_handle_error(struct tegra_channel *chan)
+{
+	struct v4l2_subdev *sd_on_csi = chan->subdev_on_csi;
+	static const struct v4l2_event source_ev_fmt = {
+		.type = V4L2_EVENT_SOURCE_CHANGE,
+		.u.src_change.changes = V4L2_EVENT_SRC_ERROR,
+	};
+
+	tegra_channel_stop_increments(chan);
+	vb2_queue_error(&chan->queue);
+
+	/* Application gets notified after CSI Tx's are reset */
+	if (sd_on_csi->devnode)
+		v4l2_subdev_notify_event(sd_on_csi, &source_ev_fmt);
+}
+
+
+static void tegra_channel_notify_status_callback(
+				struct vi_notify_channel *vnc,
+				const struct vi_capture_status *status,
+				void *client_data)
+{
+	struct tegra_channel *chan = (struct tegra_channel *)client_data;
+
+	spin_lock(&chan->capture_state_lock);
+	if (chan->capture_state == CAPTURE_GOOD)
+		chan->capture_state = CAPTURE_ERROR;
+	else {
+		spin_unlock(&chan->capture_state_lock);
+		return;
+	}
+	spin_unlock(&chan->capture_state_lock);
+
+	dev_err(chan->vi->dev, "Status: %2u channel:%02X frame:%04X\n",
+		status->status, chan->vnc_id, status->frame);
+	dev_err(chan->vi->dev, "         timestamp sof %llu eof %llu data 0x%08x\n",
+		status->sof_ts, status->eof_ts, status->data);
+	dev_err(chan->vi->dev, "         capture_id %u stream %2u vchan %2u\n",
+		status->capture_id, status->st, status->vc);
+
+	tegra_channel_handle_error(chan);
+}
+
 static bool tegra_channel_notify_setup(struct tegra_channel *chan)
 {
 	int i;
@@ -181,6 +230,11 @@ static bool tegra_channel_notify_setup(struct tegra_channel *chan)
 		dev_err(chan->vi->dev, "No VI channel available!\n");
 		return false;
 	}
+
+	vi_notify_channel_set_notify_funcs(chan->vnc,
+			&tegra_channel_notify_status_callback,
+			&tegra_channel_notify_error_callback,
+			(void *)chan);
 
 	/* get PXL_SOF syncpt id */
 	chan->syncpt[0] =
@@ -277,6 +331,7 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 	struct vb2_v4l2_buffer *vb = &buf->buf;
 	struct timespec ts;
 	int state = VB2_BUF_STATE_DONE;
+	unsigned long flags;
 	int err = false;
 
 	tegra_channel_surface_setup(chan, buf);
@@ -293,11 +348,31 @@ static int tegra_channel_capture_frame(struct tegra_channel *chan,
 
 	vi4_check_status(chan);
 
-	chan->capture_state = CAPTURE_GOOD;
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
+	if (chan->capture_state != CAPTURE_ERROR)
+		chan->capture_state = CAPTURE_GOOD;
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+
 	getnstimeofday(&ts);
 	tegra_channel_ring_buffer(chan, vb, &ts, state);
 
 	return 0;
+}
+
+static int tegra_channel_stop_increments(struct tegra_channel *chan)
+{
+	struct tegra_vi4_syncpts_req req = {
+		.syncpt_ids = {
+		0xffffffff,
+		0xffffffff,
+		0xffffffff,
+	},
+				.stream = chan->port[0],
+				.vc = 0,
+	};
+
+	/* No need to check errors. There's nothing we could do. */
+	return vi_notify_channel_reset(chan->vnc_id, chan->vnc, &req);
 }
 
 static void tegra_channel_capture_done(struct tegra_channel *chan)
@@ -306,35 +381,40 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 	struct tegra_channel_buffer *buf;
 	int state = VB2_BUF_STATE_DONE;
 	u32 thresh;
+	unsigned long flags;
 	int err;
-	struct tegra_vi4_syncpts_req req = {
-		.syncpt_ids = {
-			0xffffffff,
-			0xffffffff,
-			0xffffffff,
-		},
-		.stream = chan->port[0],
-		.vc = 0,
-	};
+
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
+	if (chan->capture_state == CAPTURE_IDLE) {
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+		return;
+	} else if (chan->capture_state == CAPTURE_GOOD) {
+		/* Mark capture state to IDLE as capture is finished */
+		chan->capture_state = CAPTURE_IDLE;
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
+
+		/* Get current ATOMP_FE syncpt min value */
+		if (!nvhost_syncpt_read_ext_check(chan->vi->ndev,
+				chan->syncpt[1], &thresh)) {
+			/* Wait for ATOMP_FE syncpt
+			 *
+			 * This is to make sure we don't exit the capture thread
+			 * before the last frame is done writing to memory
+			 */
+			err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
+					chan->syncpt[1], thresh + 1,
+					250, NULL, &ts);
+			if (err < 0)
+				dev_err(chan->vi->dev, "ATOMP_FE syncpt timeout!\n");
+		}
+	} else
+		spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 
 	/* Get current ATOMP_FE syncpt min value */
-	if (!nvhost_syncpt_read_ext_check(chan->vi->ndev,
-			chan->syncpt[1], &thresh)) {
-		/* Wait for ATOMP_FE syncpt
-		 *
-		 * This is to make sure we don't exit the capture thread
-		 * before the last frame is done writting to memory
-		 */
-		err = nvhost_syncpt_wait_timeout_ext(chan->vi->ndev,
-				chan->syncpt[1], thresh + 1,
-				250, NULL, &ts);
-		if (err < 0)
-			dev_err(chan->vi->dev, "ATOMP_FE syncpt timeout!\n");
-	}
-
 	/* close vi-notifier */
-	vi_notify_channel_reset(chan->vnc_id, chan->vnc, &req);
+	tegra_channel_stop_increments(chan);
 	vi_notify_channel_close(chan->vnc_id, chan->vnc);
+	chan->vnc_id = -1;
 
 	/* free syncpts */
 	nvhost_syncpt_put_ref_ext(chan->vi->ndev, chan->syncpt[0]);
@@ -345,8 +425,6 @@ static void tegra_channel_capture_done(struct tegra_channel *chan)
 	if (!buf)
 		return;
 
-	/* Mark capture state to IDLE as capture is finished */
-	chan->capture_state = CAPTURE_IDLE;
 	tegra_channel_ring_buffer(chan, &buf->buf, &ts, state);
 }
 
@@ -428,6 +506,7 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	struct media_pipeline *pipe = chan->video.entity.pipe;
 	int ret = 0, i;
 	unsigned long request_pixelrate;
+	unsigned long flags;
 
 	vi4_init(chan);
 	if (!chan->vi->pg_mode) {
@@ -449,7 +528,9 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	}
 
 	tegra_mipi_bias_pad_enable();
+	spin_lock_irqsave(&chan->capture_state_lock, flags);
 	chan->capture_state = CAPTURE_IDLE;
+	spin_unlock_irqrestore(&chan->capture_state_lock, flags);
 	for (i = 0; i < chan->valid_ports; i++) {
 		/* ensure sync point state is clean */
 		nvhost_syncpt_set_min_eq_max_ext(chan->vi->ndev,
@@ -507,10 +588,13 @@ int vi4_channel_stop_streaming(struct vb2_queue *vq)
 	struct tegra_channel *chan = vb2_get_drv_priv(vq);
 	bool is_streaming = atomic_read(&chan->is_streaming);
 
+	if (chan->vnc_id == -1)
+		return 0;
+
 	if (!chan->bypass) {
 		tegra_channel_stop_kthreads(chan);
 		/* wait for last frame memory write ack */
-		if (is_streaming && chan->capture_state == CAPTURE_GOOD)
+		if (is_streaming)
 			tegra_channel_capture_done(chan);
 		/* free all the ring buffers */
 		free_ring_buffers(chan, chan->num_buffers);
@@ -603,3 +687,21 @@ void vi4_power_off(struct tegra_channel *chan)
 	tegra_vi4_power_off(vi);
 	nvhost_module_remove_client(vi->ndev, &chan->video);
 }
+
+static void tegra_channel_notify_error_callback(void *client_data)
+{
+	struct tegra_channel *chan = (struct tegra_channel *)client_data;
+
+	spin_lock(&chan->capture_state_lock);
+	if (chan->capture_state == CAPTURE_GOOD)
+		chan->capture_state = CAPTURE_ERROR;
+	else {
+		spin_unlock(&chan->capture_state_lock);
+		return;
+	}
+	spin_unlock(&chan->capture_state_lock);
+
+	vi4_power_off(chan);
+	tegra_channel_handle_error(chan);
+}
+

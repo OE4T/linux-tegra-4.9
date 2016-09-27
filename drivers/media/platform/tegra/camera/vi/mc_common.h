@@ -170,6 +170,7 @@ struct tegra_channel {
 	bool bypass;
 	bool bfirst_fstart;
 	enum channel_capture_state capture_state;
+	spinlock_t capture_state_lock;
 	atomic_t is_streaming;
 	int requested_kbyteps;
 	unsigned long requested_hz;

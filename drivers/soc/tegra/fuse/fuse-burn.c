@@ -1,0 +1,449 @@
+/*
+ * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ *
+ * This program is free software; you can redistribute it and/or modify it
+ * under the terms and conditions of the GNU General Public License,
+ * version 2, as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope it will be useful, but WITHOUT
+ * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ * FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for
+ * more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program.  If not, see <http://www.gnu.org/licenses/>.
+ *
+ */
+
+#include <linux/clk.h>
+#include <linux/device.h>
+#include <linux/kobject.h>
+#include <linux/module.h>
+#include <linux/platform_device.h>
+#include <linux/of.h>
+#include <linux/of_address.h>
+#include <linux/of_device.h>
+#include <soc/tegra/fuse.h>
+#include <linux/io.h>
+#include <linux/kernel.h>
+#include <linux/tegra-pmc.h>
+#include <linux/delay.h>
+#include <linux/wakelock.h>
+#include "fuse.h"
+
+#define TEGRA_FUSE_CTRL				0x0
+#define TEGRA_FUSE_CTRL_CMD_READ		0x1
+#define TEGRA_FUSE_CTRL_CMD_WRITE		0x2
+#define TEGRA_FUSE_CTRL_CMD_SENSE		0x3
+#define TEGRA_FUSE_CTRL_CMD_MASK		0x3
+#define TEGRA_FUSE_CTRL_STATE_IDLE		0x4
+#define TEGRA_FUSE_CTRL_STATE_MASK		0x1f
+#define TEGRA_FUSE_CTRL_STATE_SHIFT		16
+#define TEGRA_FUSE_CTRL_PD			BIT(26)
+#define TEGRA_FUSE_CTRL_SENSE_DONE		BIT(30)
+#define TEGRA_FUSE_ADDR				0x4
+#define TEGRA_FUSE_RDATA			0x8
+#define TEGRA_FUSE_WDATA			0xc
+#define TEGRA_FUSE_TIME_PGM2			0x1c
+#define TEGRA_FUSE_PRIV2INTFC_START		0x20
+#define TEGRA_FUSE_PRIV2INTFC_SDATA		0x1
+#define TEGRA_FUSE_PRIV2INTFC_SKIP_RECORDS	0x2
+#define TEGRA_FUSE_DISABLE_REG_PROG		0x2c
+#define TEGRA_FUSE_WRITE_ACCESS_SW		0x30
+
+#define TEGRA_FUSE_ENABLE_PRGM_OFFSET		0
+#define TEGRA_FUSE_ENABLE_PRGM_REDUND_OFFSET	1
+#define TEGRA_FUSE_BURN_MAX_FUSES		15
+
+struct fuse_burn_data {
+	char *name;
+	u32 start_offset;
+	u32 start_bit;
+	u32 size_bits;
+	u32 reg_offset;
+	bool is_redundant;
+	struct device_attribute attr;
+};
+
+struct tegra_fuse_hw_feature {
+	bool power_down_mode;
+	bool mirroring_support;
+	int pgm_time;
+	struct fuse_burn_data burn_data[TEGRA_FUSE_BURN_MAX_FUSES];
+};
+
+struct tegra_fuse_burn_dev {
+	struct device *dev;
+	struct tegra_fuse_hw_feature *hw;
+	struct wake_lock wake_lock;
+	struct clk *pgm_clk;
+	u32 pgm_width;
+};
+
+static void fuse_state_wait_for_idle(void)
+{
+	u32 reg;
+	u32 idle;
+
+	do {
+		tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+		idle = reg & (TEGRA_FUSE_CTRL_STATE_MASK
+				<< TEGRA_FUSE_CTRL_STATE_SHIFT);
+		udelay(1);
+	} while (idle != (TEGRA_FUSE_CTRL_STATE_IDLE
+				<< TEGRA_FUSE_CTRL_STATE_SHIFT));
+}
+
+static void fuse_cmd_write(u32 value, u32 addr)
+{
+	u32 reg;
+
+	fuse_state_wait_for_idle();
+	tegra_fuse_control_write(addr, TEGRA_FUSE_ADDR);
+	tegra_fuse_control_write(value, TEGRA_FUSE_WDATA);
+
+	tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+	reg &= ~TEGRA_FUSE_CTRL_CMD_MASK;
+	reg |= TEGRA_FUSE_CTRL_CMD_WRITE;
+	tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
+	fuse_state_wait_for_idle();
+}
+
+static u32 fuse_cmd_read(u32 addr)
+{
+	u32 reg;
+
+	fuse_state_wait_for_idle();
+	tegra_fuse_control_write(addr, TEGRA_FUSE_ADDR);
+	tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+	reg &= ~TEGRA_FUSE_CTRL_CMD_MASK;
+	reg |= TEGRA_FUSE_CTRL_CMD_READ;
+	tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
+	fuse_state_wait_for_idle();
+	tegra_fuse_control_read(TEGRA_FUSE_RDATA, &reg);
+
+	return reg;
+}
+
+static void fuse_cmd_sense(void)
+{
+	u32 reg;
+
+	fuse_state_wait_for_idle();
+	tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+	reg &= ~TEGRA_FUSE_CTRL_CMD_MASK;
+	reg |= TEGRA_FUSE_CTRL_CMD_SENSE;
+	tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
+	fuse_state_wait_for_idle();
+}
+
+static int tegra_fuse_form_burn_data(struct fuse_burn_data *data,
+		u32 *input_data, u32 *burn_data, u32 *burn_mask)
+{
+	int nbits = data->size_bits;
+	int start_bit = data->start_bit;
+	int i, offset, loops;
+	int src_bit = 0;
+	u32 val;
+
+	for (offset = 0, loops = 0; nbits > 0; offset++, nbits -= loops) {
+		val = *input_data;
+		loops = min(nbits, 32 - start_bit);
+		for (i = 0; i < loops; i++) {
+			burn_mask[offset] |= BIT(start_bit + i);
+			if (val & BIT(src_bit))
+				burn_data[offset] |= BIT(start_bit + i);
+			else
+				burn_data[offset] &= ~BIT(start_bit + i);
+			src_bit++;
+			if (src_bit == 32) {
+				input_data++;
+				val = *input_data;
+				src_bit = 0;
+			}
+		}
+		start_bit = 0;
+	}
+
+	return offset;
+}
+
+static int tegra_fuse_pre_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
+{
+	u32 off_0_val, off_1_val, reg;
+
+	/* Check if fuse burn is disabled */
+	reg = tegra_fuse_control_read(TEGRA_FUSE_DISABLE_REG_PROG, &reg);
+	if (reg) {
+		dev_err(fuse_dev->dev, "Fuse register programming disabled\n");
+		return -EIO;
+	}
+
+	/* Enable fuse register write access */
+	tegra_fuse_control_write(0, TEGRA_FUSE_WRITE_ACCESS_SW);
+
+	/* Disable power down mode */
+	if (fuse_dev->hw->power_down_mode) {
+		tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+		if (TEGRA_FUSE_CTRL_PD & reg) {
+			reg &= ~TEGRA_FUSE_CTRL_PD;
+			tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
+		}
+	}
+
+	if (fuse_dev->pgm_width)
+		tegra_fuse_control_write(fuse_dev->pgm_width,
+				      TEGRA_FUSE_TIME_PGM2);
+
+	tegra_pmc_fuse_control_ps18_latch_set();
+	fuse_cmd_sense();
+
+	/* Enable fuse program */
+	off_0_val = fuse_cmd_read(TEGRA_FUSE_ENABLE_PRGM_OFFSET);
+	off_1_val = fuse_cmd_read(TEGRA_FUSE_ENABLE_PRGM_REDUND_OFFSET);
+	off_0_val = 0x1 & ~off_0_val;
+	off_1_val = 0x1 & ~off_1_val;
+	fuse_cmd_write(off_0_val, TEGRA_FUSE_ENABLE_PRGM_OFFSET);
+	fuse_cmd_write(off_1_val, TEGRA_FUSE_ENABLE_PRGM_REDUND_OFFSET);
+	fuse_cmd_sense();
+
+	return 0;
+}
+
+static void tegra_fuse_post_burn_process(struct tegra_fuse_burn_dev *fuse_dev)
+{
+	u32 reg;
+	u32 sense_done;
+
+	/* burned fuse values can take effect without reset by below steps*/
+	fuse_cmd_sense();
+	reg = TEGRA_FUSE_PRIV2INTFC_SDATA | TEGRA_FUSE_PRIV2INTFC_SKIP_RECORDS;
+	tegra_fuse_control_write(reg, TEGRA_FUSE_PRIV2INTFC_START);
+	fuse_state_wait_for_idle();
+	do {
+		udelay(1);
+		tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+		sense_done = reg & TEGRA_FUSE_CTRL_SENSE_DONE;
+	} while (!sense_done);
+
+	if (fuse_dev->hw->power_down_mode) {
+		tegra_fuse_control_read(TEGRA_FUSE_CTRL, &reg);
+		reg |= TEGRA_FUSE_CTRL_PD;
+		tegra_fuse_control_write(reg, TEGRA_FUSE_CTRL);
+	}
+	tegra_pmc_fuse_control_ps18_latch_clear();
+
+	/* Disable fuse register write access */
+	tegra_fuse_control_write(1, TEGRA_FUSE_WRITE_ACCESS_SW);
+}
+
+static int tegra_fuse_burn_fuse(struct tegra_fuse_burn_dev *fuse_dev,
+	struct fuse_burn_data *fuse_data, u32 *input_data)
+{
+	u32 reg, burn_data[9] = {0}, burn_mask[9] = {0};
+	int fuse_addr = fuse_data->start_offset;
+	int is_redundant = fuse_data->is_redundant;
+	int i;
+	int num_words;
+	int ret;
+
+	ret = tegra_fuse_pre_burn_process(fuse_dev);
+	if (ret)
+		return ret;
+
+	/* Form burn data */
+	num_words = tegra_fuse_form_burn_data(fuse_data, input_data,
+					      burn_data, burn_mask);
+
+	/* Burn the fuse */
+	for (i = 0; i < num_words; i++) {
+		reg = fuse_cmd_read(fuse_addr);
+		burn_data[i] = (burn_data[i] & ~reg) & burn_mask[i];
+		if (burn_data[i]) {
+			fuse_cmd_write(burn_data[i], fuse_addr);
+			if (is_redundant)
+				fuse_cmd_write(burn_data[i], fuse_addr + 1);
+		}
+		if (is_redundant)
+			fuse_addr += 2;
+		else
+			fuse_addr += 1;
+	}
+
+	tegra_fuse_post_burn_process(fuse_dev);
+
+	return 0;
+}
+
+static ssize_t tegra_fuse_show(struct device *dev,
+	struct device_attribute *attr,
+	char *buf)
+{
+	struct fuse_burn_data *data;
+	char str[9];
+	u32 reg[9] = {0};
+	int num_words;
+	int i, off;
+
+	data = container_of(attr, struct fuse_burn_data, attr);
+	num_words = DIV_ROUND_UP(data->size_bits, 32);
+
+	for (i = 0, off = 0; i < num_words; i++, off += 4)
+		tegra_fuse_readl(data->reg_offset + off, &reg[i]);
+	strcpy(buf, "0x");
+	while (num_words--) {
+		sprintf(str, "%08x", reg[num_words]);
+		strcat(buf, str);
+	}
+	strcat(buf, "\n");
+
+	return strlen(buf);
+}
+
+static ssize_t tegra_fuse_store(struct device *dev,
+	struct device_attribute *attr,
+	const char *buf, size_t count)
+{
+	struct platform_device *pdev = container_of(dev,
+			struct platform_device, dev);
+	struct tegra_fuse_burn_dev *fuse_dev = platform_get_drvdata(pdev);
+	struct fuse_burn_data *fuse_data;
+	int len = count;
+	int num_nibbles;
+	u32 input_data[9] = {0};
+	char str[9] = {0};
+	int copy_cnt, copy_idx;
+	int burn_idx = 0;
+	int ret;
+
+	fuse_data = container_of(attr, struct fuse_burn_data, attr);
+	num_nibbles = DIV_ROUND_UP(fuse_data->size_bits, 4);
+
+	if (*buf == 'x') {
+		len--;
+		buf++;
+	}
+	if (*buf == '0' && (*(buf + 1) == 'x' || *(buf + 1) == 'X')) {
+		len -= 2;
+		buf += 2;
+	}
+	len--;
+	if (len > num_nibbles) {
+		dev_err(dev, "input data too long, max is %d characters\n",
+			num_nibbles);
+		return -EINVAL;
+	}
+
+	for (burn_idx = 0; len; burn_idx++) {
+		copy_idx = len > 8 ? (len - 8) : 0;
+		copy_cnt = len > 8 ? 8 : len;
+		memset(str, 0, sizeof(str));
+		strncpy(str, buf + copy_idx, copy_cnt);
+		ret = kstrtouint(str, 16, &input_data[burn_idx]);
+		if (ret)
+			return ret;
+		len -= copy_cnt;
+	}
+
+	wake_lock(&fuse_dev->wake_lock);
+	ret = tegra_fuse_burn_fuse(fuse_dev, fuse_data, input_data);
+	wake_unlock(&fuse_dev->wake_lock);
+	if (ret)
+		return ret;
+
+	return count;
+}
+
+#define FUSE_BURN_DATA(fname, m_off, sbit, size, c_off, is_red)	\
+	{							\
+		.name = #fname,					\
+		.start_offset = m_off,				\
+		.start_bit = sbit,				\
+		.size_bits = size,				\
+		.reg_offset = c_off,				\
+		.is_redundant = is_red,				\
+		.attr.show = tegra_fuse_show,			\
+		.attr.store = tegra_fuse_store,			\
+		.attr.attr.name = #fname,			\
+		.attr.attr.mode = 0660,				\
+	}
+
+static struct tegra_fuse_hw_feature tegra210_fuse_chip_data = {
+	.power_down_mode = true,
+	.mirroring_support = false,
+	.pgm_time = 5,
+	.burn_data = {
+		FUSE_BURN_DATA(odm_reserved, 0x2e, 17, 256, 0xc8, true),
+		FUSE_BURN_DATA(odm_lock, 0, 6, 4, 0x8, true),
+		FUSE_BURN_DATA(device_key, 0x2a, 20, 32, 0xb4, true),
+		FUSE_BURN_DATA(arm_jtag_disable, 0x0, 12, 1, 0xb8, true),
+		FUSE_BURN_DATA(odm_production_mode, 0x0, 11, 1, 0xa0, true),
+		FUSE_BURN_DATA(sec_boot_dev_cfg, 0x2c, 20, 16, 0xbc, true),
+		FUSE_BURN_DATA(sec_boot_dev_sel, 0x2e, 4, 3, 0xc0, true),
+		FUSE_BURN_DATA(secure_boot_key, 0x22, 20, 128, 0xa4, true),
+		FUSE_BURN_DATA(public_key, 0xc, 6, 256, 0x64, true),
+		FUSE_BURN_DATA(pkc_disable, 0x52, 7, 1, 0x168, true),
+		FUSE_BURN_DATA(debug_authentication, 0x5a, 19, 5, 0x1e4, true),
+		{},
+	},
+};
+
+static const struct of_device_id tegra_fuse_burn_match[] = {
+	{
+		.compatible = "nvidia,tegra210-efuse-burn",
+		.data = &tegra210_fuse_chip_data,
+	}, {},
+};
+
+static int tegra_fuse_burn_probe(struct platform_device *pdev)
+{
+	struct tegra_fuse_burn_dev *fuse_dev;
+	int i, ret;
+
+	fuse_dev = devm_kzalloc(&pdev->dev, sizeof(*fuse_dev), GFP_KERNEL);
+	if (!fuse_dev)
+		return -ENOMEM;
+
+	fuse_dev->hw = (struct tegra_fuse_hw_feature *)of_device_get_match_data(
+			&pdev->dev);
+	if (!fuse_dev->hw) {
+		dev_err(&pdev->dev, "No hw data provided\n");
+		return -EINVAL;
+	}
+
+	fuse_dev->pgm_clk = devm_clk_get(&pdev->dev, "clk_m");
+	if (IS_ERR(fuse_dev->pgm_clk)) {
+		dev_err(&pdev->dev, "failed to get clk_m err\n");
+		return PTR_ERR(fuse_dev->pgm_clk);
+	}
+	fuse_dev->pgm_width = DIV_ROUND_UP(
+			clk_get_rate(fuse_dev->pgm_clk) *
+			fuse_dev->hw->pgm_time,
+			1000 * 1000);
+
+	fuse_dev->dev = &pdev->dev;
+	platform_set_drvdata(pdev, fuse_dev);
+	for (i = 0; i < ARRAY_SIZE(fuse_dev->hw->burn_data) &&
+			fuse_dev->hw->burn_data[i].name != NULL; i++) {
+		ret = sysfs_create_file(&pdev->dev.kobj,
+					&fuse_dev->hw->burn_data[i].attr.attr);
+		if (ret) {
+			dev_err(&pdev->dev, "sysfs create failed %d\n", ret);
+			return ret;
+		}
+	}
+
+	wake_lock_init(&fuse_dev->wake_lock, WAKE_LOCK_SUSPEND,
+		       "fuse_wake_lock");
+	dev_info(&pdev->dev, "Fuse burn driver initialized\n");
+	return 0;
+}
+
+static struct platform_driver tegra_fuse_burn_driver = {
+	.driver = {
+		.name = "tegra-fuse-burn",
+		.of_match_table = tegra_fuse_burn_match,
+	},
+	.probe = tegra_fuse_burn_probe,
+};
+module_platform_driver(tegra_fuse_burn_driver);

@@ -370,7 +370,6 @@ static int __init create_denver_cregs(void)
 
 struct nvmstat {
 	u64 stat0;
-	u64 pg;
 	u64 tot;
 	u64 stat1;
 	u64 bg;
@@ -386,8 +385,6 @@ static void _get_stats(void *_stat)
 
 	/* read nvmstat0 */
 	asm volatile("mrs %0, s3_0_c15_c0_0" : "=r" (stat->stat0) : );
-	stat->pg = (u32)(stat->stat0);
-	nvmstat_agg.pg += stat->pg;
 	stat->tot = (u32)(stat->stat0 >> 32);
 	nvmstat_agg.tot += stat->tot;
 
@@ -424,7 +421,6 @@ static void print_stats(struct seq_file *s, struct nvmstat *stat)
 {
 
 	seq_printf(s, "nvmstat0 = %llu\n",  stat->stat0);
-	seq_printf(s, "nvmstat0_pg = %llu\n",  stat->pg);
 	seq_printf(s, "nvmstat0_tot = %llu\n", stat->tot);
 	seq_printf(s, "nvmstat1 = %llu\n",  stat->stat1);
 	seq_printf(s, "nvmstat1_bg = %llu\n",  stat->bg);

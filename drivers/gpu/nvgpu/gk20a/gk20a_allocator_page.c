@@ -378,7 +378,7 @@ static struct gk20a_page_alloc *__gk20a_alloc_slab(
 fail:
 	kfree(alloc);
 	kfree(chunk);
-	return ERR_PTR(-ENOMEM);
+	return NULL;
 }
 
 static void __gk20a_free_slab(struct gk20a_page_allocator *a,

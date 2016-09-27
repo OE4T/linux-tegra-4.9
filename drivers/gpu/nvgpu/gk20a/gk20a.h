@@ -624,6 +624,7 @@ struct gpu_ops {
 		void (*disable_slowboot)(struct gk20a *g);
 		int (*init_clk_support)(struct gk20a *g);
 		int (*suspend_clk_support)(struct gk20a *g);
+		u32 (*get_crystal_clk_hz)(struct gk20a *g);
 	} clk;
 	bool privsecurity;
 	bool securegpccs;

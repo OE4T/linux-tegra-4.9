@@ -1014,6 +1014,8 @@ static int ov10823_probe(struct i2c_client *client,
 	common_data->def_width		= OV10823_DEFAULT_WIDTH;
 	common_data->def_height		= OV10823_DEFAULT_HEIGHT;
 	common_data->def_clk_freq	= OV10823_DEFAULT_CLK_FREQ;
+	common_data->fmt_width		= common_data->def_width;
+	common_data->fmt_height		= common_data->def_height;
 
 	priv->i2c_client		= client;
 	priv->s_data			= common_data;

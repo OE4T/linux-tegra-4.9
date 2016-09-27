@@ -2258,8 +2258,13 @@ static void tegra_dsi_set_control_reg_hs(struct tegra_dc_dsi_data *dsi,
 		 */
 		dsc_control = DSI_DSC_CONTROL_VALID_COMPRESS_RATE(
 			(dsi->dc->out->dsc_bpp << 4));
-		dsc_control |= DSI_DSC_CONROL_VALID_NUM_COMPRESS_PKTS_PER_ROW(
-			(dsi->dc->out->num_of_slices - 1));
+		if (dsi->dc->out->dual_dsc_en)
+			dsc_control |=
+			DSI_DSC_CONROL_VALID_NUM_COMPRESS_PKTS_PER_ROW(0);
+		else
+			dsc_control |=
+			DSI_DSC_CONROL_VALID_NUM_COMPRESS_PKTS_PER_ROW(
+					(dsi->dc->out->num_of_slices - 1));
 		dsc_control |= DSI_DSC_CONTROL_COMPRESS_MODE_EN;
 	}
 	tegra_dsi_writel(dsi, max_threshold, DSI_MAX_THRESHOLD);

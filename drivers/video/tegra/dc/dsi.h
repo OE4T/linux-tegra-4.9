@@ -82,6 +82,7 @@ struct tegra_dc_dsi_data {
 	struct clk *dsi_clk[MAX_DSI_INSTANCE];
 	struct clk *dsi_fixed_clk;
 	struct clk *dsi_lp_clk[MAX_DSI_INSTANCE];
+	struct clk *dsc_clk;
 	struct reset_control *dsi_reset[MAX_DSI_INSTANCE];
 	bool clk_ref;
 

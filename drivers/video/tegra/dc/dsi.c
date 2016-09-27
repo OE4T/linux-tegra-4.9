@@ -452,6 +452,15 @@ void tegra_dsi_clk_enable(struct tegra_dc_dsi_data *dsi)
 	if (i)
 		pr_err("%s: fail to power up mipi\n", __func__);
 #endif
+
+	if (dsi->dc->out->dsc_en && dsi->dsc_clk) {
+		err = tegra_disp_clk_prepare_enable(dsi->dsc_clk);
+		if (err) {
+			dev_err(&dsi->dc->ndev->dev,
+			"dsc clk enable failed. err %d\n", err);
+		}
+		udelay(800);
+	}
 }
 
 void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
@@ -466,6 +475,12 @@ void tegra_dsi_clk_disable(struct tegra_dc_dsi_data *dsi)
 	if (i)
 		pr_err("%s: fail to power down mipi\n", __func__);
 #endif
+
+	if (dsi->dc->out->dsc_en && dsi->dsc_clk) {
+		tegra_disp_clk_disable_unprepare(dsi->dsc_clk);
+		udelay(800);
+	}
+
 }
 
 static inline void tegra_dsi_lp_clk_enable(struct tegra_dc_dsi_data *dsi)
@@ -492,6 +507,11 @@ static void tegra_dsi_setup_clk(struct tegra_dc *dc,
 	int i = 0;
 
 	for (i = 0; i < dsi->max_instances; i++) {
+		tegra_dc_setup_clk(dc, dsi->dsi_clk[i]);
+		mdelay(3);
+	}
+
+	if (dc->out->dsc_en && dsi->dsc_clk) {
 		tegra_dc_setup_clk(dc, dsi->dsi_clk[i]);
 		mdelay(3);
 	}
@@ -2091,6 +2111,19 @@ static void tegra_dsi_set_dsi_clk(struct tegra_dc *dc,
 	dsi->current_bit_clk_ps =  DIV_ROUND_CLOSEST((1000 * 1000 * 1000),
 					(dsi->current_dsi_clk_khz * 2));
 #endif
+}
+
+static void tegra_dsi_set_dsc_clk(struct tegra_dc *dc,
+			struct tegra_dc_dsi_data *dsi)
+{
+	unsigned long val;
+
+	if (dc->out->dual_dsc_en)
+		val = 0;
+	else
+		val = ULONG_MAX;
+
+	clk_set_rate(dsi->dsc_clk, val);
 }
 
 static void tegra_dsi_hs_clk_out_enable(struct tegra_dc_dsi_data *dsi)
@@ -4622,6 +4655,17 @@ static int _tegra_dc_dsi_init(struct tegra_dc *dc)
 			padctrl_power_disable(dsi->dsi_io_padctrl[3]);
 	}
 
+	/*
+	 * Get nvdisp_dsc clk if required
+	 */
+	dsi->dsc_clk = dc->out->dsc_en ?
+			clk_get(&dc->ndev->dev, "nvdisp_dsc") : NULL;
+	if (IS_ERR(dsi->dsc_clk)) {
+		dev_err(&dc->ndev->dev, "dsi: can't get dsc clock\n");
+		err = -EBUSY;
+		goto err_dc_clk_put;
+	}
+
 	of_node_put(np_dsi);
 	return 0;
 
@@ -5288,6 +5332,9 @@ static long tegra_dc_dsi_setup_clk(struct tegra_dc *dc, struct clk *clk)
 	struct clk *parent_clk = NULL;
 	struct clk *base_clk = NULL;
 	int err;
+
+	if (dc->out->dsc_en && dsi->dsc_clk)
+		tegra_dsi_set_dsc_clk(dc, dsi);
 
 	/* divide by 1000 to avoid overflow */
 	dc->mode.pclk /= 1000;

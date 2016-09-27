@@ -17,6 +17,7 @@ GCOV_PROFILE_panel-s-edp-wqxgap-15-6.o := n
 GCOV_PROFILE_panel-s-wqxga-10-1.o := n
 GCOV_PROFILE_panel-s-wuxga-7-0.o := n
 GCOV_PROFILE_panel-s-wuxga-8-0.o := n
+GCOV_PROFILE_panel-s-4kuhd-5-46.o := n
 
 ccflags-y += -Iarch/arm/mach-tegra
 
@@ -40,6 +41,7 @@ obj-y += panel-j-720p-5.o
 obj-y += panel-s-edp-uhdtv-15-6.o
 obj-y += panel-o-720p-6-0.o
 obj-y += panel-n-wqxga-6-0.o
+obj-y += panel-s-4kuhd-5-46.o
 
 obj-${CONFIG_MACH_T132REF} += panel-a-1080p-11-6.o
 obj-${CONFIG_MACH_T132REF} += panel-s-edp-wqxgap-15-6.o

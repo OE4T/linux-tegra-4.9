@@ -4582,7 +4582,13 @@ void tegra_dc_dsc_init(struct tegra_dc *dc)
 	hblank = mode->h_sync_width + mode->h_front_porch + mode->h_back_porch;
 	output_delay = ((delay_in_slice / slice_width) *
 		(mode->h_active + hblank)) + (delay_in_slice % slice_width);
-	wrap_output_delay = output_delay + 20;
+	if (dc->out->dual_dsc_en) {
+		wrap_output_delay = output_delay * 2 + mode->h_active / 2 + 28;
+		if (wrap_output_delay % 2)
+			wrap_output_delay += 1;
+	} else {
+		wrap_output_delay = output_delay + 20;
+	}
 	val = DSC_VALID_OUTPUT_DELAY(output_delay);
 	val |= DSC_VALID_WRAP_OUTPUT_DELAY(wrap_output_delay);
 	tegra_dc_writel(dc, val, DC_COM_DSC_DELAY);

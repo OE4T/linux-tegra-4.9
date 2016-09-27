@@ -4697,21 +4697,28 @@ void tegra_dc_dsc_init(struct tegra_dc *dc)
 
 void tegra_dc_en_dis_dsc(struct tegra_dc *dc, bool enable)
 {
-	u32 val;
+	u32 val, set_bits = 0x0;
 	bool is_enabled = false, set_reg = false;
 
 	if ((dc->out->type != TEGRA_DC_OUT_DSI) || !dc->out->dsc_en)
 		return;
 
 	val = tegra_dc_readl(dc, DC_COM_DSC_TOP_CTL);
-	if (val & DSC_ENABLE)
-		is_enabled = true;
 
+	if (dc->out->dual_dsc_en) {
+		set_bits = DSC_ENABLE | DSC_DUAL_ENABLE;
+		if ((val & DSC_ENABLE) && (val & DSC_DUAL_ENABLE))
+			is_enabled = true;
+	} else {
+		set_bits = DSC_ENABLE;
+		if (val & DSC_ENABLE)
+			is_enabled = true;
+	}
 	if (enable && !is_enabled) {
-		val |= DSC_ENABLE;
+		val |= set_bits;
 		set_reg = true;
 	} else if (!enable && is_enabled) {
-		val &= ~DSC_ENABLE;
+		val &= ~set_bits;
 		set_reg = true;
 	}
 

@@ -240,6 +240,7 @@
 
 #define DC_COM_DSC_TOP_CTL			0x33e
 #define DSC_VALID_TIMEOUT_COUNT(x)	(((x) & 0xffff) << 4)
+#define DSC_DUAL_ENABLE			(1U << 4)
 #define DSC_AUTO_RESET			(1U << 3)
 #define  DSC_SLCG_OVERRIDE		(1U << 2)
 #define DSC_ENABLE			(1U << 1)

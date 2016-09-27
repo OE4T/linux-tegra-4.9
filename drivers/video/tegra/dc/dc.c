@@ -4693,7 +4693,12 @@ void tegra_dc_dsc_init(struct tegra_dc *dc)
 
 	val = tegra_dc_readl(dc, DC_COM_DSC_UNIT_SET);
 	val &= ~DSC_LINEBUF_DEPTH_8_BIT;
-	val |= DSC_VALID_SLICE_NUM_MINUS1_IN_LINE(dc->out->num_of_slices - 1);
+	/* If dual dsc is enabled then the number slices are distributed
+	 * between each link i.e 2 links with 4 lanes each.
+	 */
+	val |= DSC_VALID_SLICE_NUM_MINUS1_IN_LINE((dc->out->dual_dsc_en ?
+			dc->out->num_of_slices / 2 : dc->out->num_of_slices)
+			- 1);
 	val |= DSC_CHECK_FLATNESS2;
 	val |= DSC_FLATNESS_FIX_EN;
 	tegra_dc_writel(dc, val, DC_COM_DSC_UNIT_SET);

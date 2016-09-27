@@ -36,6 +36,7 @@
 #include <linux/tegra-ivc-bus.h>
 #include <linux/tegra-rtcpu-trace.h>
 #include <linux/wait.h>
+#include <linux/tegra_pm_domains.h>
 
 #include <linux/tegra-rtcpu-monitor.h>
 
@@ -332,10 +333,18 @@ int tegra_camrtc_start(struct device *dev)
 		return ret;
 	}
 
-	tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
+	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
+	if (ret) {
+		dev_err(dev, "failed to assert the resets while starting camrtc: %d",
+			ret);
+		return ret;
+	}
+
+	if (cam_rtcpu->ivc == NULL)
+		/* probe is not yet complete */
+		return 0;
 
 	tegra_camrtc_boot(dev);
-
 	ret = tegra_camrtc_ivc_setup_ready(dev);
 	if (ret) {
 		dev_err(dev, "failed to setup ivc: %d\n", ret);
@@ -414,13 +423,9 @@ int tegra_camrtc_set_halt(struct device *dev, bool halt)
 
 		writel(reg_val, cam_rtcpu->rtcpu_sce.sce_pm_base +
 		       TEGRA_SCEPM_R5_CTRL_0);
-
-		return 0;
-	} else {
-		dev_emerg(dev, "don't know how to halt/unhalt APE");
-
-		return -ENOSYS;
 	}
+
+	return 0;
 }
 EXPORT_SYMBOL(tegra_camrtc_set_halt);
 
@@ -439,13 +444,9 @@ int tegra_camrtc_get_halt(struct device *dev, bool *halt)
 		*halt = (reg_val & TEGRA_SCE_FWLOADDONE) == 0;
 
 		dev_info(dev, "sce is %s", *halt ? "halted" : "unhalted");
-
-		return 0;
-	} else {
-		dev_emerg(dev, "don't know how to halt/unhalt APE");
-
-		return -ENOSYS;
 	}
+
+	return 0;
 }
 EXPORT_SYMBOL(tegra_camrtc_get_halt);
 
@@ -698,10 +699,8 @@ static int tegra_cam_rtcpu_runtime_suspend(struct device *dev)
 	const struct tegra_cam_rtcpu_pdata *pdata = rtcpu->rtcpu_pdata;
 	int i;
 
-	if (pdata->clock_rates == NULL) {
-		dev_warn(dev, "runtime PM not implemented\n");
-		return -ENOSYS;
-	}
+	if (pdata->clock_rates == NULL)
+		return 0;
 
 	for (i = 0; i < pdata->num_clocks; i++)
 		clk_set_rate(rtcpu->clocks[i], pdata->clock_rates[i][0]);
@@ -729,6 +728,9 @@ static int tegra_cam_rtcpu_remove(struct platform_device *pdev)
 	struct tegra_cam_rtcpu *cam_rtcpu = platform_get_drvdata(pdev);
 
 	pm_runtime_disable(&pdev->dev);
+	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_APE)
+		tegra_pd_remove_device(&pdev->dev);
+
 	tegra_ivc_bus_destroy(cam_rtcpu->ivc);
 	tegra_ast_destroy(cam_rtcpu->ast);
 	tegra_hsp_sm_pair_free(cam_rtcpu->sm_pair);
@@ -759,6 +761,12 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	cam_rtcpu->rtcpu_pdata = match->data;
 
+	ret = tegra_cam_rtcpu_get_clks_resets(dev);
+	if (ret) {
+		dev_err(dev, "failed to get clocks/resets: %d\n", ret);
+		return ret;
+	}
+
 	if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_SCE) {
 		/* EVP addresses are needed to set up the reset vector */
 		/* EVP should be mapped if the (APE) FW is reloaded by kernel */
@@ -778,6 +786,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 			dev_err(dev, "failed to map SCE CFG space.\n");
 			return -EINVAL;
 		}
+	} else {
+		/* APE power device add */
+		tegra_pd_add_device(dev);
 	}
 
 	ret = of_property_read_u32(dev->of_node, NV(stream-id),
@@ -785,11 +796,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	if (ret)
 		stream_id = TEGRA_SID_RCE;
 
-	ret = tegra_cam_rtcpu_get_clks_resets(dev);
-	if (ret) {
-		dev_err(dev, "failed to get clocks/resets: %d\n", ret);
-		return ret;
-	}
+	/* enable power */
+	pm_runtime_enable(dev);
 
 	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
 	if (ret) {
@@ -798,6 +806,9 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	}
 
 	tegra_cam_rtcpu_apply_resets(dev, reset_control_deassert);
+
+	/* set resume state */
+	pm_runtime_get_sync(dev);
 
 	mutex_init(&cam_rtcpu->cmd.mutex);
 	init_waitqueue_head(&cam_rtcpu->cmd.response_waitq);
@@ -811,7 +822,7 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		ret = PTR_ERR(cam_rtcpu->sm_pair);
 		if (ret != -EPROBE_DEFER)
 			dev_err(dev, "failed to obtain mbox pair: %d\n", ret);
-		return ret;
+		goto fail;
 	}
 
 	cam_rtcpu->ast = tegra_ast_create(dev);
@@ -845,15 +856,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	cam_rtcpu->monitor = tegra_camrtc_mon_create(dev);
 
-	/*
-	 * For now, only SCE supports runtime PM
-	 * until APE HSP interrupt issue is fixed.
-	 */
-	if (cam_rtcpu->rtcpu_pdata->id != TEGRA_CAM_RTCPU_APE) {
-		/* default state is suspended */
-		tegra_cam_rtcpu_runtime_suspend(dev);
-		pm_runtime_enable(dev);
-	}
+	/* set idle to slow down clock while idle mode */
+	pm_runtime_idle(dev);
 
 	cam_rtcpu->state = RTCPU_UP;
 
@@ -862,17 +866,13 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 	return 0;
 
 fail:
+	pm_runtime_put_sync(dev);
 	tegra_cam_rtcpu_remove(pdev);
 	return ret;
 }
 
 static int tegra_cam_rtcpu_resume(struct device *dev)
 {
-	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
-
-        if (cam_rtcpu->rtcpu_pdata->id == TEGRA_CAM_RTCPU_APE)
-		return 0; /* do nothing */
-
 	return tegra_camrtc_start(dev);
 }
 
@@ -895,6 +895,7 @@ static const struct dev_pm_ops tegra_cam_rtcpu_pm_ops = {
 	.resume = tegra_cam_rtcpu_resume,
 	.runtime_suspend = tegra_cam_rtcpu_runtime_suspend,
 	.runtime_resume = tegra_cam_rtcpu_runtime_resume,
+	.runtime_idle = tegra_cam_rtcpu_runtime_suspend,
 };
 
 static struct platform_driver tegra_cam_rtcpu_driver = {

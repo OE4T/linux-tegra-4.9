@@ -1696,10 +1696,22 @@ static void tegra_dsi_setup_cmd_mode_pkt_length(struct tegra_dc *dc,
 	}
 
 	if (dc->out->dsc_en) {
-		hbp_pkt_len = ((hsa_pkt_len + hbp_pkt_len + hfp_pkt_len) -
-			((num_of_slices * DSI_CMD_MODE_COMP_PKT_OVERHEAD) +
-			DSI_BLNK_PKT_OVERHEAD));
-		act_bytes = ((act_bytes - 1) / num_of_slices) + 1;
+		u32 hblank_total;
+		u32 num_of_comp_pkts;
+		/* no_of_slices is halved if dsi is in ganged mode.
+		 * num_of_comp_pkts is the number of compressed packets sent
+		 * per row.
+		 */
+		hblank_total = hsa_pkt_len + hbp_pkt_len + hfp_pkt_len;
+		hblank_total = DIV_ROUND_UP(hblank_total,
+					dsi->info.ganged_type ? 2 : 1);
+		num_of_comp_pkts = dc->out->dual_dsc_en ?
+					num_of_slices / 2 : num_of_slices;
+		hbp_pkt_len = hblank_total - ((num_of_comp_pkts *
+						DSI_CMD_MODE_COMP_PKT_OVERHEAD)
+						+ DSI_BLNK_PKT_OVERHEAD);
+		act_bytes = ((act_bytes - 1) / (dc->out->dual_dsc_en ?
+					num_of_slices / 2 : num_of_slices)) + 1;
 	} else {
 		hbp_pkt_len = 0;
 	}
@@ -1742,7 +1754,7 @@ static void tegra_dsi_set_pkt_seq(struct tegra_dc *dc,
 	u32 rgb_info;
 	u32 pkt_seq_3_5_rgb_lo;
 	u32 pkt_seq_3_5_rgb_hi;
-	u32	val;
+	u32 val;
 	u32 reg;
 	u8  i;
 

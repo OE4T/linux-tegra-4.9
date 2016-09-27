@@ -490,6 +490,15 @@ struct device_node *tegra_primary_panel_get_dt_node(
 				tegra_panel_register_ops(dc_out,
 					&dsi_s_wuxga_8_0_ops);
 
+			/* SHARP 2160x3840 panel is being used */
+			if (!of_device_is_available(np_panel)) {
+				np_panel = of_get_child_by_name(np_primary,
+						"panel-s-4kuhd-5-46");
+				if (of_device_is_available(np_panel) && dc_out)
+					tegra_panel_register_ops(dc_out,
+							&dsi_s_4kuhd_5_46_ops);
+			}
+
 			/* P2393 DSI2DP Bridge */
 			if (!of_device_is_available(np_panel))
 				np_panel = of_get_child_by_name(np_primary,
@@ -587,6 +596,14 @@ struct device_node *tegra_secondary_panel_get_dt_node(
 				if (of_device_is_available(np_panel) && dc_out)
 					tegra_panel_register_ops(dc_out,
 						&dsi_s_wuxga_8_0_ops);
+			}
+			/* SHARP 2160x3840 panel is being used */
+			if (!of_device_is_available(np_panel)) {
+				np_panel = of_get_child_by_name(np_secondary,
+						"panel-s-4kuhd-5-46");
+				if (of_device_is_available(np_panel) && dc_out)
+					tegra_panel_register_ops(dc_out,
+							&dsi_s_4kuhd_5_46_ops);
 			}
 			/* P2393 DSI2DP Bridge */
 			if (!of_device_is_available(np_panel))

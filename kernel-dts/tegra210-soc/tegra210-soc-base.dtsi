@@ -1569,6 +1569,13 @@
 		status = "disabled";
 	};
 
+	efuse-burn {
+		compatible = "nvidia,tegra210-efuse-burn";
+		clocks = <&tegra_car TEGRA210_CLK_CLK_M>;
+		clock-names = "clk_m";
+		status = "disabled";
+	};
+
 	kfuse@7000fc00 {
 		compatible = "nvidia,tegra210-kfuse";
 		reg = <0x0 0x7000fc00 0x0 0x400>;

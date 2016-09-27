@@ -459,6 +459,10 @@
 		status = "okay";
 	};
 
+	efuse-burn {
+		status = "okay";
+	};
+
 	udc@7d000000 {
 		status = "disabled";
 	};

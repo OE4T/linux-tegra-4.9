@@ -2104,6 +2104,7 @@ struct v4l2_event_frame_sync {
 };
 
 #define V4L2_EVENT_SRC_CH_RESOLUTION		(1 << 0)
+#define V4L2_EVENT_SRC_ERROR		(1 << 1)
 
 struct v4l2_event_src_change {
 	__u32 changes;

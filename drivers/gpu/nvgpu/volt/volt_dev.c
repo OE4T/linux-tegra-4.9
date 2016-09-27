@@ -26,7 +26,6 @@
 #include "include/bios.h"
 #include "volt.h"
 
-#define RAW_PERIOD	160
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_INVALID	0
 #define VOLT_DEV_PWM_VOLTAGE_STEPS_DEFAULT	1
 
@@ -257,16 +256,23 @@ static u32 volt_get_voltage_device_table_1x_psv(struct gk20a *g,
 
 	if (ptmp_dev->super.operation_type ==
 			CTRL_VOLT_DEVICE_OPERATION_TYPE_DEFAULT) {
-		ptmp_dev->source = NV_PMU_PMGR_PWM_SOURCE_THERM_VID_PWM_1;
+		if (volt_domain == CTRL_VOLT_DOMAIN_LOGIC)
+			ptmp_dev->source =
+				NV_PMU_PMGR_PWM_SOURCE_THERM_VID_PWM_0;
+		if (volt_domain == CTRL_VOLT_DOMAIN_SRAM)
+			ptmp_dev->source =
+				NV_PMU_PMGR_PWM_SOURCE_THERM_VID_PWM_1;
+		ptmp_dev->raw_period =
+			g->ops.clk.get_crystal_clk_hz(g) / frequency_hz;
 	} else if (ptmp_dev->super.operation_type ==
 		CTRL_VOLT_DEVICE_OPERATION_TYPE_LPWR_STEADY_STATE) {
 		ptmp_dev->source = NV_PMU_PMGR_PWM_SOURCE_RSVD_0;
+		ptmp_dev->raw_period = 0;
 	} else if (ptmp_dev->super.operation_type ==
 		CTRL_VOLT_DEVICE_OPERATION_TYPE_LPWR_SLEEP_STATE) {
 		ptmp_dev->source = NV_PMU_PMGR_PWM_SOURCE_RSVD_1;
+		ptmp_dev->raw_period = 0;
 	}
-
-	ptmp_dev->raw_period = RAW_PERIOD;
 
 	/* Initialize data for parent class. */
 	ptmp_dev->super.super.type = CTRL_VOLT_DEVICE_TYPE_PWM;

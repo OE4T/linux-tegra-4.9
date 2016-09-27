@@ -36,7 +36,12 @@ static int clk_gp106_debugfs_init(struct gk20a *g);
 #endif
 
 #define NUM_NAMEMAPS	4
+#define XTAL4X_KHZ 108000
 
+static u32 gp106_crystal_clk_hz(struct gk20a *g)
+{
+	return (XTAL4X_KHZ * 1000);
+}
 static int gp106_init_clk_support(struct gk20a *g) {
 	struct clk_gk20a *clk = &g->clk;
 	u32 err = 0;
@@ -221,6 +226,7 @@ err_out:
 
 void gp106_init_clk_ops(struct gpu_ops *gops) {
 	gops->clk.init_clk_support = gp106_init_clk_support;
+	gops->clk.get_crystal_clk_hz = gp106_crystal_clk_hz;
 }
 
 

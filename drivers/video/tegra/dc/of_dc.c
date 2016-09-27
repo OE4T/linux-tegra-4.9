@@ -1756,6 +1756,10 @@ static struct device_node *parse_dsi_settings(struct platform_device *ndev,
 		pdata->default_out->dsc_en = true;
 
 	if (of_property_read_bool(np_dsi_panel,
+			"nvidia,enable-dual-dsc"))
+		pdata->default_out->dual_dsc_en = true;
+
+	if (of_property_read_bool(np_dsi_panel,
 			"nvidia,enable-block-pred"))
 		pdata->default_out->en_block_pred = true;
 

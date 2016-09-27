@@ -82,7 +82,6 @@ u32 clk_pmu_vin_load(struct gk20a *g)
 
 	handler.prpccall = &rpccall;
 	handler.success = 0;
-
 	status = gk20a_pmu_cmd_post(g, &cmd, NULL, &payload,
 			PMU_COMMAND_QUEUE_LPQ,
 			clkrpc_pmucmdhandler, (void *)&handler,
@@ -388,24 +387,42 @@ int clk_set_boot_fll_clk(struct gk20a *g)
 	struct change_fll_clk bootfllclk;
 	u16 gpc2clk_clkmhz = BOOT_GPC2CLK_MHZ;
 	u32 gpc2clk_voltuv = 0;
+	u32 gpc2clk_voltuv_sram = 0;
 	u16 mclk_clkmhz = BOOT_MCLK_MHZ;
 	u32 mclk_voltuv = 0;
+	u32 mclk_voltuv_sram = 0;
 	u32 voltuv = 0;
+	u32 voltuv_sram = 0;
 
 	mutex_init(&g->clk_pmu.changeclkmutex);
-
-	clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPC2CLK, &gpc2clk_clkmhz,
-			&gpc2clk_voltuv);
-	clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_MCLK, &mclk_clkmhz,
-			&mclk_voltuv);
+	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPC2CLK,
+		&gpc2clk_clkmhz, &gpc2clk_voltuv, CTRL_VOLT_DOMAIN_LOGIC);
+	if (status)
+		return status;
+	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_GPC2CLK,
+		&gpc2clk_clkmhz, &gpc2clk_voltuv_sram, CTRL_VOLT_DOMAIN_SRAM);
+	if (status)
+		return status;
+	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_MCLK,
+		&mclk_clkmhz, &mclk_voltuv, CTRL_VOLT_DOMAIN_LOGIC);
+	if (status)
+		return status;
+	status = clk_domain_get_f_or_v(g, CTRL_CLK_DOMAIN_MCLK,
+		&mclk_clkmhz, &mclk_voltuv_sram, CTRL_VOLT_DOMAIN_SRAM);
+	if (status)
+		return status;
 
 	voltuv = ((gpc2clk_voltuv) > (mclk_voltuv)) ? (gpc2clk_voltuv)
 			: (mclk_voltuv);
 
-	status = volt_set_voltage(g, voltuv, voltuv);
+	voltuv_sram = ((gpc2clk_voltuv_sram) > (mclk_voltuv_sram)) ?
+		(gpc2clk_voltuv_sram) : (mclk_voltuv_sram);
+
+	status = volt_set_voltage(g, voltuv, voltuv_sram);
 	if (status)
-		gk20a_err(dev_from_gk20a(g), "attempt to set boot voltage failed %d",
-			voltuv);
+		gk20a_err(dev_from_gk20a(g),
+			"attempt to set boot voltage failed %d %d",
+			voltuv, voltuv_sram);
 
 	bootfllclk.api_clk_domain = CTRL_CLK_DOMAIN_GPC2CLK;
 	bootfllclk.clkmhz = gpc2clk_clkmhz;
@@ -413,7 +430,6 @@ int clk_set_boot_fll_clk(struct gk20a *g)
 	status = clk_program_fllclks(g, &bootfllclk);
 	if (status)
 		gk20a_err(dev_from_gk20a(g), "attempt to set boot gpc2clk failed");
-
 	status = g->clk_pmu.clk_mclk.change(g, DEFAULT_BOOT_MCLK_SPEED);
 	if (status)
 		gk20a_err(dev_from_gk20a(g), "attempt to set boot mclk failed");
@@ -436,7 +452,9 @@ u32 clk_domain_print_vf_table(struct gk20a *g, u32 clkapidomain)
 			status = pdomain->clkdomainclkvfsearch(g, pclk,
 				pdomain, &clkmhz, &volt,
 				CLK_PROG_VFE_ENTRY_LOGIC);
-			return status;
+			status = pdomain->clkdomainclkvfsearch(g, pclk,
+				pdomain, &clkmhz, &volt,
+				CLK_PROG_VFE_ENTRY_SRAM);
 		}
 	}
 	return status;
@@ -446,23 +464,31 @@ u32 clk_domain_get_f_or_v(
 	struct gk20a *g,
 	u32 clkapidomain,
 	u16 *pclkmhz,
-	u32 *pvoltuv
+	u32 *pvoltuv,
+	u8 railidx
 )
 {
 	u32 status = -EINVAL;
 	struct clk_domain *pdomain;
 	u8 i;
 	struct clk_pmupstate *pclk = &g->clk_pmu;
+	u8 rail;
 
 	if ((pclkmhz == NULL) || (pvoltuv == NULL))
+		return -EINVAL;
+
+	if (railidx == CTRL_VOLT_DOMAIN_LOGIC)
+		rail = CLK_PROG_VFE_ENTRY_LOGIC;
+	else if (railidx == CTRL_VOLT_DOMAIN_SRAM)
+		rail = CLK_PROG_VFE_ENTRY_SRAM;
+	else
 		return -EINVAL;
 
 	BOARDOBJGRP_FOR_EACH(&(pclk->clk_domainobjs.super.super),
 			struct clk_domain *, pdomain, i) {
 		if (pdomain->api_domain == clkapidomain) {
 			status = pdomain->clkdomainclkvfsearch(g, pclk,
-				pdomain, pclkmhz, pvoltuv,
-				CLK_PROG_VFE_ENTRY_LOGIC);
+				pdomain, pclkmhz, pvoltuv, rail);
 			return status;
 		}
 	}

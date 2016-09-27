@@ -886,7 +886,7 @@ static u32 vflookup_prog_1x_master
 	pvfentry = (struct ctrl_clk_clk_prog_1x_master_vf_entry *)(
 			(u8 *)pvfentry +
 			(sizeof(struct ctrl_clk_clk_prog_1x_master_vf_entry) *
-			(rail+1)));
+			rail));
 
 	clkmhz = *pclkmhz;
 	voltuv = *pvoltuv;

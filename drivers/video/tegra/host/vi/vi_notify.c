@@ -430,6 +430,15 @@ struct vi_notify_channel *vi_notify_channel_open(unsigned channel)
 	}
 	mutex_unlock(&vnd_lock);
 
+	if (vnd->driver->has_notifier_backend) {
+		if (!vnd->driver->has_notifier_backend(vnd->device)) {
+			/* TODO: poll/wait and recheck before returning error */
+			dev_err(vnd->device,
+				"vi_notifier_backend is not up and running\n");
+			return ERR_PTR(-ENODEV);
+		}
+	}
+
 	chan = kzalloc(sizeof(*chan), GFP_KERNEL);
 	if (unlikely(chan == NULL)) {
 		module_put(vnd->driver->owner);

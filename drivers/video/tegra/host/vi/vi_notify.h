@@ -57,6 +57,7 @@ struct vi_notify_driver {
 	int (*enable_reports)(struct device *dev, u8 ch,
 			u8 st, u8 vc, const u32 ids[3]);
 	void (*reset_channel)(struct device *, u8);
+	bool (*has_notifier_backend)(struct device *);
 };
 
 void vi_notify_dev_error(struct vi_notify_dev *);

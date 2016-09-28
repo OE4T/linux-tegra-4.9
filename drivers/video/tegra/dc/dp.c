@@ -190,6 +190,14 @@ static inline void tegra_dp_pending_hpd(struct tegra_dc_dp_data *dp)
 	tegra_hpd_set_pending_evt(&dp->hpd_data);
 }
 
+static inline void tegra_dp_hpd_suspend(struct tegra_dc_dp_data *dp)
+{
+	if (!is_hotplug_supported(dp))
+		return;
+
+	tegra_hpd_suspend(&dp->hpd_data);
+}
+
 static inline unsigned long
 tegra_dc_dpaux_poll_register(struct tegra_dc_dp_data *dp,
 				u32 reg, u32 mask, u32 exp_val,
@@ -3002,6 +3010,8 @@ static void tegra_dc_dp_suspend(struct tegra_dc *dc)
 	if (dp->sor->safe_clk)
 		tegra_sor_safe_clk_disable(dp->sor);
 	tegra_dpaux_clk_disable(dp);
+
+	tegra_dp_hpd_suspend(dp);
 
 	tegra_dc_powergate_locked(dc);
 }

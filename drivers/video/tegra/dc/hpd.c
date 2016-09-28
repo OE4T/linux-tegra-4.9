@@ -353,7 +353,12 @@ static void handle_hpd_evt(struct tegra_hpd_data *data, int cur_hpd)
 	int tgt_state;
 	int timeout = 0;
 
-	if ((STATE_DONE_ENABLED == data->state) && !cur_hpd) {
+	if (data->req_suspend) {
+		pr_info("hpd: request suspend\n");
+		tgt_state = STATE_DONE_DISABLED;
+		timeout = -1;
+		data->req_suspend = false;
+	} else if ((STATE_DONE_ENABLED == data->state) && !cur_hpd) {
 		/*
 		 * Did HPD drop while we were in DONE_ENABLED ? If so, hold
 		 * steady and wait to see if it comes back.
@@ -527,6 +532,22 @@ void tegra_hpd_set_pending_evt(struct tegra_hpd_data *data)
 	sched_hpd_work(data, 0);
 
 	rt_mutex_unlock(&data->lock);
+}
+
+/*
+ * Pushes the state machine to disable state. Typical usecase is
+ * when device is being suspended. We do not send any notification.
+ * Lest device might wake due to notifications. This function needs to work
+ * with system wide power management. Hence, we do not explicitly disable
+ * display subsystem as well. Power management is expected to do that.
+ */
+void tegra_hpd_suspend(struct tegra_hpd_data *data)
+{
+	rt_mutex_lock(&data->lock);
+	data->req_suspend = true;
+	rt_mutex_unlock(&data->lock);
+
+	tegra_hpd_set_pending_evt(data);
 }
 
 void tegra_hpd_init(struct tegra_hpd_data *data,

@@ -64,6 +64,7 @@ struct tegra_hpd_data {
 	struct delayed_work dwork;
 	int shutdown;
 	int state;
+	bool req_suspend; /* not sticky */
 	int pending_hpd_evt;
 	void *drv_data;
 	struct tegra_hpd_ops *ops;
@@ -173,5 +174,6 @@ void tegra_hpd_init(struct tegra_hpd_data *data, struct tegra_dc *dc,
 void tegra_hpd_shutdown(struct tegra_hpd_data *data);
 void tegra_hpd_set_pending_evt(struct tegra_hpd_data *data);
 int tegra_hpd_get_state(struct tegra_hpd_data *data);
+void tegra_hpd_suspend(struct tegra_hpd_data *data);
 
 #endif

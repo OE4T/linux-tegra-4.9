@@ -69,7 +69,7 @@
 			alignment = <0 0x100000>;	/* carveout start is aligned to 1MB here*/
 			alloc-ranges = <0 0 0x1 0>;	/* phys memory reserved is between 0x0 and 4GB-1 address range. */
 			no-map;
-			status = "okay";
+			status = "disabled";
 		};
 	};
 
@@ -169,7 +169,7 @@
 			pwms = <&tegra_pwm 0 40161>;
 		};
 		panel-s-edp-uhdtv-15-6-bl {
-			status = "disabled";
+			status = "okay";
 			pwms = <&tegra_pwm 0 1000000>;
 		};
 	};
@@ -242,16 +242,17 @@
 		};
 
 		sor {
-			status = "disabled";
+			status = "okay";
 			nvidia,hpd-gpio = <&gpio TEGRA_GPIO(CC, 6) 0>; /* PCC6 */
 			prod-settings {
-				status = "disabled";
+				status = "okay";
 			};
 			panel-s-edp-uhdtv-15-6 {
+				status = "okay";
 				nvidia,panel-bl-pwm-gpio = <&gpio TEGRA_GPIO(V, 0) 0>; /* PV0 */
 				nvidia,panel-rst-gpio = <&gpio TEGRA_GPIO(V, 2) 0>; /* PV2 */
 				smartdimmer {
-					status = "disabled";
+					status = "okay";
 				};
 			};
 		};

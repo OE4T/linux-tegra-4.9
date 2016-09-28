@@ -10,3 +10,4 @@ obj-y += vi-notify.o
 obj-y += hsp-mbox.o
 obj-y += tegra-rtcpu-trace.o
 obj-y += camchar.o
+obj-y += rtcpu-monitor.o

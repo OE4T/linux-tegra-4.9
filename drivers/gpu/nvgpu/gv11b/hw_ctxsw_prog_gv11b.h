@@ -58,6 +58,42 @@ static inline u32 ctxsw_prog_main_image_num_gpcs_o(void)
 {
 	return 0x00000008;
 }
+static inline u32 ctxsw_prog_main_image_ctl_o(void)
+{
+	return 0x0000000c;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_f(u32 v)
+{
+	return (v & 0x3f) << 0;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_undefined_v(void)
+{
+	return 0x00000000;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_opengl_v(void)
+{
+	return 0x00000008;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_dx9_v(void)
+{
+	return 0x00000010;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_dx10_v(void)
+{
+	return 0x00000011;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_dx11_v(void)
+{
+	return 0x00000012;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_compute_v(void)
+{
+	return 0x00000020;
+}
+static inline u32 ctxsw_prog_main_image_ctl_type_per_veid_header_v(void)
+{
+	return 0x00000021;
+}
 static inline u32 ctxsw_prog_main_image_patch_count_o(void)
 {
 	return 0x00000010;
@@ -141,6 +177,62 @@ static inline u32 ctxsw_prog_main_image_num_cilp_save_ops_o(void)
 static inline u32 ctxsw_prog_main_image_num_restore_ops_o(void)
 {
 	return 0x000000f8;
+}
+static inline u32 ctxsw_prog_main_image_zcull_ptr_hi_o(void)
+{
+	return 0x00000060;
+}
+static inline u32 ctxsw_prog_main_image_zcull_ptr_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_hi_o(void)
+{
+	return 0x00000064;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_o(void)
+{
+	return 0x00000068;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_veid0_hi_o(void)
+{
+	return 0x00000070;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_veid0_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_veid0_o(void)
+{
+	return 0x00000074;
+}
+static inline u32 ctxsw_prog_main_image_full_preemption_ptr_veid0_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_context_buffer_ptr_hi_o(void)
+{
+	return 0x00000078;
+}
+static inline u32 ctxsw_prog_main_image_context_buffer_ptr_hi_v_f(u32 v)
+{
+	return (v & 0x1ffff) << 0;
+}
+static inline u32 ctxsw_prog_main_image_context_buffer_ptr_o(void)
+{
+	return 0x0000007c;
+}
+static inline u32 ctxsw_prog_main_image_context_buffer_ptr_v_f(u32 v)
+{
+	return (v & 0xffffffff) << 0;
 }
 static inline u32 ctxsw_prog_main_image_magic_value_o(void)
 {
@@ -269,10 +361,6 @@ static inline u32 ctxsw_prog_main_image_graphics_preemption_options_control_f(u3
 static inline u32 ctxsw_prog_main_image_graphics_preemption_options_control_gfxp_f(void)
 {
 	return 0x1;
-}
-static inline u32 ctxsw_prog_main_image_full_preemption_ptr_o(void)
-{
-	return 0x00000068;
 }
 static inline u32 ctxsw_prog_main_image_compute_preemption_options_o(void)
 {

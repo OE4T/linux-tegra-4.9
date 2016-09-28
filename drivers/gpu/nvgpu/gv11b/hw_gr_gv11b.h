@@ -3230,6 +3230,10 @@ static inline u32 gr_ppcs_wwdx_map_table_cfg_coeff_r(u32 i)
 {
 	return 0x0041bfb0 + i*4;
 }
+static inline u32 gr_ppcs_wwdx_map_table_cfg_coeff__size_1_v(void)
+{
+	return 0x00000005;
+}
 static inline u32 gr_ppcs_wwdx_map_table_cfg_coeff_0_mod_value_f(u32 v)
 {
 	return (v & 0xff) << 0;

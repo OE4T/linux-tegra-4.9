@@ -130,22 +130,6 @@ static inline u32 pbdma_put_hi_r(u32 i)
 {
 	return 0x00040060 + i*8192;
 }
-static inline u32 pbdma_formats_r(u32 i)
-{
-	return 0x0004009c + i*8192;
-}
-static inline u32 pbdma_formats_gp_fermi0_f(void)
-{
-	return 0x0;
-}
-static inline u32 pbdma_formats_pb_fermi1_f(void)
-{
-	return 0x100;
-}
-static inline u32 pbdma_formats_mp_fermi0_f(void)
-{
-	return 0x0;
-}
 static inline u32 pbdma_pb_header_r(u32 i)
 {
 	return 0x00040084 + i*8192;
@@ -241,14 +225,6 @@ static inline u32 pbdma_method3_r(u32 i)
 static inline u32 pbdma_data0_r(u32 i)
 {
 	return 0x000400c4 + i*8192;
-}
-static inline u32 pbdma_target_r(u32 i)
-{
-	return 0x000400ac + i*8192;
-}
-static inline u32 pbdma_target_engine_sw_f(void)
-{
-	return 0x1f;
 }
 static inline u32 pbdma_acquire_r(u32 i)
 {
@@ -573,6 +549,62 @@ static inline u32 pbdma_runlist_timeslice_timescale_3_f(void)
 static inline u32 pbdma_runlist_timeslice_enable_true_f(void)
 {
 	return 0x10000000;
+}
+static inline u32 pbdma_target_r(u32 i)
+{
+	return 0x000400ac + i*8192;
+}
+static inline u32 pbdma_target_engine_sw_f(void)
+{
+	return 0x1f;
+}
+static inline u32 pbdma_target_eng_ctx_valid_true_f(void)
+{
+	return 0x10000;
+}
+static inline u32 pbdma_target_eng_ctx_valid_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_target_ce_ctx_valid_true_f(void)
+{
+	return 0x20000;
+}
+static inline u32 pbdma_target_ce_ctx_valid_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_target_host_tsg_event_reason_pbdma_idle_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_target_host_tsg_event_reason_semaphore_acquire_failure_f(void)
+{
+	return 0x1000000;
+}
+static inline u32 pbdma_target_host_tsg_event_reason_tsg_yield_f(void)
+{
+	return 0x2000000;
+}
+static inline u32 pbdma_target_host_tsg_event_reason_host_subchannel_switch_f(void)
+{
+	return 0x3000000;
+}
+static inline u32 pbdma_target_should_send_tsg_event_true_f(void)
+{
+	return 0x20000000;
+}
+static inline u32 pbdma_target_should_send_tsg_event_false_f(void)
+{
+	return 0x0;
+}
+static inline u32 pbdma_target_needs_host_tsg_event_true_f(void)
+{
+	return 0x80000000;
+}
+static inline u32 pbdma_target_needs_host_tsg_event_false_f(void)
+{
+	return 0x0;
 }
 static inline u32 pbdma_set_channel_info_r(u32 i)
 {

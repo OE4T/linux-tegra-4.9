@@ -151,6 +151,21 @@ static void camrtc_debug_notify(struct tegra_ivc_channel *ch)
 	wake_up_all(&crd->waitq);
 }
 
+static int camrtc_show_forced_reset_restore(struct seq_file *file, void *data)
+{
+	struct tegra_ivc_channel *ch = file->private;
+	struct device *rce_dev = camrtc_get_device(ch);
+
+	tegra_camrtc_restore(rce_dev);
+
+	seq_puts(file, "0\n");
+
+	return 0;
+}
+
+DEFINE_SEQ_FOPS(camrtc_dbgfs_fops_forced_reset_restore,
+			camrtc_show_forced_reset_restore);
+
 static int camrtc_ivc_dbg_xact(
 	struct tegra_ivc_channel *ch,
 	struct camrtc_dbg_request *req,
@@ -596,6 +611,9 @@ static int camrtc_debug_populate(struct tegra_ivc_channel *ch)
 		goto error;
 	if (!debugfs_create_u32("timeout", S_IRUGO | S_IWUSR, dir,
 			&crd->parameters.completion_timeout))
+		goto error;
+	if (!debugfs_create_file("forced-reset-restore", S_IRUGO, dir, ch,
+			&camrtc_dbgfs_fops_forced_reset_restore))
 		goto error;
 
 	dir = debugfs_create_dir("mods", crd->root);

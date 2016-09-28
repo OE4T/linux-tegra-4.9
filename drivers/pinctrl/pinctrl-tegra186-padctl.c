@@ -33,7 +33,7 @@
 #include <dt-bindings/pinctrl/pinctrl-tegra-padctl.h>
 #include <linux/version.h>
 
-#define VERBOSE_DEBUG
+#undef VERBOSE_DEBUG
 #ifdef TRACE
 #undef TRACE
 #endif

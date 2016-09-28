@@ -42,6 +42,7 @@
 			maxim,avoid-rtc-bulk-register-write;
 
 			maxim,system-pmic-power-off;
+			maxim,avoid-power-off-commands;
 
 			maxim,hot-die-threshold-temp = <110000>;
 			#thermal-sensor-cells = <0>;

@@ -13,8 +13,30 @@
  */
 
 / {
-        cpufreq {
+	cpufreq {
 		compatible = "nvidia,tegra210-cpufreq";
+		cpu-scaling-data {
+			freq-table = <
+				204000
+				306000
+				408000
+				510000
+				612000
+				714000
+				816000
+				918000
+				1020000
+				1122000
+				1224000
+				1326000
+				1428000
+				1530000
+				1606500
+				1632000
+			>;
+			preserve-across-suspend;
+		};
+
 		emc-scaling-data {
 			emc-cpu-limit-table = <
 				/* CPU    EMC */

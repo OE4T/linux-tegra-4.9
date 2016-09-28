@@ -31,6 +31,9 @@
 
 #include "ov10823_mode_tbls.h"
 
+#define OV10823_SC_CHIP_ID_HIGH_ADDR	0x300A
+#define OV10823_SC_CHIP_ID_LOW_ADDR	0x300B
+
 #define OV10823_MAX_COARSE_DIFF	8
 
 #define OV10823_GAIN_SHIFT		8
@@ -387,6 +390,44 @@ static int ov10823_power_get(struct ov10823 *priv)
 
 	pw->state = SWITCH_OFF;
 	return err;
+}
+
+static int ov10823_verify_chip_id(struct ov10823 *priv)
+{
+	struct i2c_client *client = priv->i2c_client;
+	struct camera_common_data *s_data = priv->s_data;
+	u8 chip_id_hi, chip_id_lo;
+	u16 chip_id;
+	int err;
+
+	err = camera_common_s_power(priv->subdev, true);
+	if (err)
+		return -ENODEV;
+
+	err = ov10823_read_reg(s_data, OV10823_SC_CHIP_ID_HIGH_ADDR,
+			       &chip_id_hi);
+	if (err) {
+		dev_err(&client->dev, "Failed to read chip ID\n");
+		return err;
+	}
+	err = ov10823_read_reg(s_data, OV10823_SC_CHIP_ID_LOW_ADDR,
+			       &chip_id_lo);
+	if (err) {
+		dev_err(&client->dev, "Failed to read chip ID\n");
+		return err;
+	}
+
+	chip_id = (chip_id_hi << 8) | chip_id_lo;
+	if (chip_id != 0xA820) {
+		dev_err(&client->dev, "Read unknown chip ID 0x%04x\n", chip_id);
+		return -EINVAL;
+	}
+
+	err = camera_common_s_power(priv->subdev, false);
+	if (err)
+		return -ENODEV;
+
+	return 0;
 }
 
 static int ov10823_set_gain(struct ov10823 *priv, s32 val);
@@ -1064,6 +1105,10 @@ static int ov10823_probe(struct i2c_client *client,
 			     &ov10823_subdev_ops);
 
 	err = ov10823_ctrls_init(priv);
+	if (err)
+		return err;
+
+	err = ov10823_verify_chip_id(priv);
 	if (err)
 		return err;
 

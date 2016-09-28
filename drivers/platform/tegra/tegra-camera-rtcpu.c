@@ -37,6 +37,8 @@
 #include <linux/tegra-rtcpu-trace.h>
 #include <linux/wait.h>
 
+#include <linux/tegra-rtcpu-monitor.h>
+
 #include <dt-bindings/memory/tegra-swgroup.h>
 #include <dt-bindings/memory/tegra186-swgroup.h>
 
@@ -136,6 +138,11 @@ static const struct of_device_id tegra_cam_rtcpu_of_match[] = {
 };
 MODULE_DEVICE_TABLE(of, tegra_cam_rtcpu_of_match);
 
+enum rtcpu_state {
+	RTCPU_UP,
+	RTCPU_DOWN,
+};
+
 struct tegra_cam_rtcpu {
 	struct tegra_ivc_bus *ivc;
 	struct tegra_ast *ast;
@@ -161,6 +168,8 @@ struct tegra_cam_rtcpu {
 	struct clk **clocks;
 	struct reset_control **resets;
 	const struct tegra_cam_rtcpu_pdata *rtcpu_pdata;
+	struct tegra_camrtc_mon *monitor;
+	enum rtcpu_state state;
 };
 
 static int tegra_cam_rtcpu_get_clks_resets(struct device *dev)
@@ -304,9 +313,18 @@ static int tegra_cam_rtcpu_cmd_remote_suspend(struct device *dev)
 	return 0;
 }
 
+int tegra_camrtc_restore(struct device *dev)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+
+	return tegra_camrtc_mon_restore_rtcpu(cam_rtcpu->monitor);
+}
+EXPORT_SYMBOL(tegra_camrtc_restore);
+
 int tegra_camrtc_start(struct device *dev)
 {
 	int ret;
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 
 	ret = tegra_cam_rtcpu_apply_clks(dev, clk_prepare_enable);
 	if (ret) {
@@ -318,13 +336,30 @@ int tegra_camrtc_start(struct device *dev)
 
 	tegra_camrtc_boot(dev);
 
-	return tegra_camrtc_ivc_setup_ready(dev);
+	ret = tegra_camrtc_ivc_setup_ready(dev);
+	if (ret) {
+		dev_err(dev, "failed to setup ivc: %d\n", ret);
+		return ret;
+	}
+
+	cam_rtcpu->state = RTCPU_UP;
+
+	return 0;
 }
 EXPORT_SYMBOL(tegra_camrtc_start);
+
+bool tegra_camrtc_is_rtcpu_alive(struct device *dev)
+{
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
+
+	return (cam_rtcpu->state == RTCPU_UP);
+}
+EXPORT_SYMBOL(tegra_camrtc_is_rtcpu_alive);
 
 int tegra_camrtc_stop(struct device *dev)
 {
 	int ret;
+	struct tegra_cam_rtcpu *cam_rtcpu = dev_get_drvdata(dev);
 
 	ret = tegra_cam_rtcpu_cmd_remote_suspend(dev);
 	if (ret) {
@@ -346,6 +381,8 @@ int tegra_camrtc_stop(struct device *dev)
 		dev_err(dev, "failed to turn off clocks: %d\n", ret);
 		return ret;
 	}
+
+	cam_rtcpu->state = RTCPU_DOWN;
 
 	return 0;
 }
@@ -806,6 +843,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 
 	tegra_camrtc_log_fw_version(dev);
 
+	cam_rtcpu->monitor = tegra_camrtc_mon_create(dev);
+
 	/*
 	 * For now, only SCE supports runtime PM
 	 * until APE HSP interrupt issue is fixed.
@@ -815,6 +854,8 @@ static int tegra_cam_rtcpu_probe(struct platform_device *pdev)
 		tegra_cam_rtcpu_runtime_suspend(dev);
 		pm_runtime_enable(dev);
 	}
+
+	cam_rtcpu->state = RTCPU_UP;
 
 	dev_dbg(dev, "probe successful\n");
 

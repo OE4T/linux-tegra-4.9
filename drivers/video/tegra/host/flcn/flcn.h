@@ -90,6 +90,9 @@ struct flcn {
 
 	dma_addr_t debug_dump_pa;
 	u32 *debug_dump_va;
+
+	dma_addr_t trace_dump_pa;
+	u32 *trace_dump_va;
 };
 
 static inline struct flcn *get_flcn(struct platform_device *dev)

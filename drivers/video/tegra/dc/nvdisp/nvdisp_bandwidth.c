@@ -154,6 +154,9 @@ void tegra_nvdisp_program_bandwidth(struct tegra_dc *dc,
 	u32 latency = 0;
 	bool update_realized_bw = false;
 
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))
+		return;
+
 	if (before_win_update && proposed_bw > realized_bw) { /* Case A */
 		new_bw_to_realize = ihub_bw_info.reserved_bw_kbps;
 		update_realized_bw = true;
@@ -253,11 +256,15 @@ int tegra_nvdisp_negotiate_reserved_bw(struct tegra_dc *dc,
 	 * This function is only responsible for reserving bw, NOT realizing it.
 	 */
 
-	u32 max_pending_bw = tegra_nvdisp_get_max_pending_bw(dc);
+	u32 max_pending_bw = 0;
+
+	if (IS_ERR_OR_NULL(ihub_bw_info.isomgr_handle))
+		return -EINVAL;
 
 	if (proposed_bw > ihub_bw_info.available_bw) /* Case A */
 		return -E2BIG;
 
+	max_pending_bw = tegra_nvdisp_get_max_pending_bw(dc);
 	if (proposed_bw > max_pending_bw) { /* Case B */
 		if (!tegra_isomgr_reserve(ihub_bw_info.isomgr_handle,
 						proposed_bw,
@@ -276,6 +283,9 @@ static void tegra_nvdisp_bandwidth_renegotiate(void *p, u32 avail_bw)
 	struct nvdisp_isoclient_bw_info *bw_info = p;
 
 	if (WARN_ONCE(!bw_info, "bw_info is NULL!"))
+		return;
+
+	if (IS_ERR_OR_NULL(bw_info->isomgr_handle))
 		return;
 
 	mutex_lock(&tegra_nvdisp_lock);

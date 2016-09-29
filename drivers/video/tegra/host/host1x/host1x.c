@@ -555,6 +555,7 @@ static int power_on_host(struct platform_device *dev)
 		host_device_op().load_gating_regs(dev, pdata->engine_can_cg);
 
 	nvhost_syncpt_reset(&host->syncpt);
+	nvhost_syncpt_initialize_unused(&host->syncpt);
 	return 0;
 }
 

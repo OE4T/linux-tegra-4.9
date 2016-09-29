@@ -61,6 +61,21 @@ void nvhost_syncpt_reset(struct nvhost_syncpt *sp)
 	wmb();
 }
 
+/**
+ * Initializes syncpts to unused state
+ */
+void nvhost_syncpt_initialize_unused(struct nvhost_syncpt *sp)
+{
+	u32 i;
+
+	for (i = nvhost_syncpt_pts_base(sp);
+			i < nvhost_syncpt_pts_limit(sp); i++) {
+		if (syncpt_op().mark_unused)
+			syncpt_op().mark_unused(sp, i);
+	}
+	wmb();
+}
+
 void nvhost_syncpt_patch_check(struct nvhost_syncpt *sp)
 {
 	int graphics_host_sp = nvhost_syncpt_graphics_host_sp(sp);

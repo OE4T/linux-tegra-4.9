@@ -147,6 +147,7 @@ void nvhost_syncpt_save(struct nvhost_syncpt *sp);
 const char *nvhost_syncpt_get_last_client(struct platform_device *pdev, int id);
 
 void nvhost_syncpt_reset(struct nvhost_syncpt *sp);
+void nvhost_syncpt_initialize_unused(struct nvhost_syncpt *sp);
 void nvhost_syncpt_reset_client(struct platform_device *pdev);
 
 const char *nvhost_syncpt_get_name_from_id(struct nvhost_syncpt *sp, int id);

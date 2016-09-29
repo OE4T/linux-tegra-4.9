@@ -2074,6 +2074,7 @@ enum tegra_mux_dt {
 	TEGRA_MUX_DISPLAYA,
 	TEGRA_MUX_DISPLAYB,
 	TEGRA_MUX_DCC,
+	TEGRA_MUX_DCB,
 	TEGRA_MUX_SPI1,
 	TEGRA_MUX_UARTB,
 	TEGRA_MUX_UARTE,
@@ -2438,7 +2439,6 @@ static const char * const rsvd2_groups[] = {
 	"power_on_pff0",
 	"pwr_i2c_scl_ps0",
 	"pwr_i2c_sda_ps1",
-	"gpio_dis0_pu0",
 	"gpio_dis2_pu2",
 	"gpio_dis4_pu4",
 	"uart2_tx_px0",
@@ -2633,12 +2633,9 @@ static const char * const rsvd3_groups[] = {
 	"power_on_pff0",
 	"pwr_i2c_scl_ps0",
 	"pwr_i2c_sda_ps1",
-	"gpio_dis0_pu0",
 	"gpio_dis1_pu1",
 	"gpio_dis2_pu2",
-	"gpio_dis3_pu3",
 	"gpio_dis4_pu4",
-	"gpio_dis5_pu5",
 	"gpio_wan8_ph3",
 	"gpio_wan7_ph2",
 	"gpio_wan6_ph1",
@@ -3077,6 +3074,13 @@ static const char * const displayb_groups[] = {
 };
 
 static const char * const dcc_groups[] = {
+	"gpio_dis0_pu0",
+	"gpio_dis3_pu3",
+	"gpio_dis5_pu5",
+};
+
+static const char * const dcb_groups[] = {
+	"gpio_dis0_pu0",
 	"gpio_dis5_pu5",
 };
 
@@ -3223,6 +3227,7 @@ static struct tegra_function tegra186_functions[] = {
 	FUNCTION(displaya),
 	FUNCTION(displayb),
 	FUNCTION(dcc),
+	FUNCTION(dcb),
 	FUNCTION(spi1),
 	FUNCTION(uartb),
 	FUNCTION(uarte),
@@ -3486,12 +3491,12 @@ static const struct tegra_pingroup tegra186_groups[] = {
 	PINGROUP(power_on_pff0,        RSVD0,        RSVD1,        RSVD2,        RSVD3,        0x1058,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(pwr_i2c_scl_ps0,        I2C5,        RSVD1,        RSVD2,        RSVD3,        0x1060,        1,        Y,	5,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(pwr_i2c_sda_ps1,        I2C5,        RSVD1,        RSVD2,        RSVD3,        0x1068,        1,        Y,	5,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
-	PINGROUP(gpio_dis0_pu0,        RSVD0,        GP,        RSVD2,        RSVD3,        0x1080,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
+	PINGROUP(gpio_dis0_pu0,        RSVD0,        GP,        DCB,        DCC,        0x1080,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_dis1_pu1,        RSVD0,        RSVD1,        DISPLAYA,        RSVD3,        0x1088,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_dis2_pu2,        RSVD0,        GP,        DCA,        RSVD3,        0x1090,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
-	PINGROUP(gpio_dis3_pu3,        RSVD0,        RSVD1,        DISPLAYB,        RSVD3,        0x1098,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
+	PINGROUP(gpio_dis3_pu3,        RSVD0,        RSVD1,        DISPLAYB,        DCC,        0x1098,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_dis4_pu4,        RSVD0,        SOC,        DCA,        RSVD3,        0x10a0,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
-	PINGROUP(gpio_dis5_pu5,        RSVD0,        GP,        DCC,        RSVD3,        0x10a8,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
+	PINGROUP(gpio_dis5_pu5,        RSVD0,        GP,        DCC,        DCB,        0x10a8,        1,        Y,	-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_wan8_ph3,        RSVD0,        RSVD1,        SPI1,        RSVD3,          0xd000,        0,        Y,		-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_wan7_ph2,        RSVD0,        RSVD1,        SPI1,        RSVD3,          0xd008,        0,        Y,		-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),
 	PINGROUP(gpio_wan6_ph1,        RSVD0,        RSVD1,        SPI1,        RSVD3,         0xd010,        0,        Y,		-1,    6,    8,    -1,    10,    11,    12,    N,    -1,    -1,    N),

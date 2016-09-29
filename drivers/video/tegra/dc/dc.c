@@ -1681,7 +1681,8 @@ static int dbg_vrr_enable_show(struct seq_file *m, void *unused)
 {
 	struct tegra_vrr *vrr = m->private;
 
-	if (!vrr) return -EINVAL;
+	if (!vrr)
+		return -EINVAL;
 
 	seq_printf(m, "vrr enable state: %d\n", vrr->enable);
 
@@ -2166,6 +2167,113 @@ static const struct file_operations cmu_lut2_fops = {
 	.release	= single_release,
 };
 
+#if defined(CONFIG_TEGRA_CSC_V2)
+
+#define CSC_V2_FILEOPS(name)						\
+static int dbg_csc_v2_##name##_show(struct seq_file *m, void *unused)	\
+{									\
+	struct tegra_dc_win *win = m->private;				\
+									\
+	if (!win)							\
+		return -EINVAL;						\
+	seq_printf(m, "%u\n", win->csc.name);				\
+	return 0;							\
+}									\
+									\
+static int dbg_csc_v2_##name##_open(struct inode *inode,		\
+	struct file *file)						\
+{									\
+	return single_open(file, dbg_csc_v2_##name##_show,		\
+			inode->i_private);				\
+}									\
+									\
+static ssize_t dbg_csc_v2_##name##_write(struct file *file,		\
+		const char __user *addr, size_t len, loff_t *pos)	\
+{									\
+	struct tegra_dc_win *win;					\
+	struct seq_file *m = file->private_data;			\
+	u32 user_csc;							\
+									\
+	win = m ? m->private : NULL;					\
+	if (kstrtou32_from_user(addr, len, 10, &user_csc) < 0)		\
+		return -EINVAL;						\
+									\
+	win->csc.name = user_csc;					\
+	win->csc_dirty = 1;						\
+	return len;							\
+}									\
+									\
+static const struct file_operations dbg_csc_v2_##name##_fops = {	\
+	.open		= dbg_csc_v2_##name##_open,			\
+	.read		= seq_read,					\
+	.llseek		= seq_lseek,					\
+	.release	= single_release,				\
+	.write		= dbg_csc_v2_##name##_write,			\
+}
+
+CSC_V2_FILEOPS(r2r);
+CSC_V2_FILEOPS(g2r);
+CSC_V2_FILEOPS(b2r);
+CSC_V2_FILEOPS(const2r);
+CSC_V2_FILEOPS(r2g);
+CSC_V2_FILEOPS(g2g);
+CSC_V2_FILEOPS(b2g);
+CSC_V2_FILEOPS(const2g);
+CSC_V2_FILEOPS(r2b);
+CSC_V2_FILEOPS(g2b);
+CSC_V2_FILEOPS(b2b);
+CSC_V2_FILEOPS(const2b);
+#undef CSC_V2_FILEOPS
+
+static int dbg_csc_v2_force_user_csc_show(struct seq_file *m, void *unused)
+{
+	struct tegra_dc_win *win = m ? m->private : NULL;
+
+	if (win == NULL)
+		return -EINVAL;
+
+	seq_put_decimal_ll(m, '\0', win->force_user_csc);
+	seq_putc(m, '\n');
+
+	return 0;
+}
+
+static int dbg_csc_v2_force_user_csc_open(struct inode *inode,
+		struct file *file)
+{
+	return single_open(file, dbg_csc_v2_force_user_csc_show,
+			inode->i_private);
+}
+
+static ssize_t dbg_csc_v2_force_user_csc_write(struct file *file,
+		const char __user *addr, size_t len, loff_t *pos)
+{
+	int ret = 0;
+	int force_user_csc = 0;
+	struct tegra_dc_win *win;
+	struct seq_file *m = file->private_data;
+
+	win = m ? m->private : NULL;
+
+	ret = kstrtoint_from_user(addr, len, 10,
+			&force_user_csc);
+	if (ret < 0)
+		return ret;
+	win->force_user_csc = (force_user_csc == 0)?0:1;
+
+	return len;
+}
+
+static const struct file_operations csc_v2_force_user_csc_fops = {
+	.open		= dbg_csc_v2_force_user_csc_open,
+	.read		= seq_read,
+	.llseek		= seq_lseek,
+	.release	= single_release,
+	.write		= dbg_csc_v2_force_user_csc_write,
+};
+
+#endif
+
 static int dbg_measure_refresh_show(struct seq_file *m, void *unused)
 {
 	struct tegra_dc *dc = m->private;
@@ -2339,11 +2447,23 @@ static const struct file_operations dbg_ihub_mempool_size_ops = {
 
 #endif
 
+#if defined(CONFIG_TEGRA_CSC_V2)
+/*Create file for all elements of nvdc_Csc_v2 per window*/
+#define CREATE_CSC_V2_SYSFS(name)                                       \
+do {                                                                    \
+	retval = debugfs_create_file(#name, S_IRUGO, wincscdir, win,    \
+		&dbg_csc_v2_##name##_fops);                             \
+	if (!retval)                                                    \
+		goto remove_out;                                        \
+}                                                                       \
+while (0)
+#endif
+
 static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 {
 	struct dentry *retval, *vrrdir;
 #ifdef CONFIG_TEGRA_NVDISPLAY
-	struct dentry *ihubdir, *windir;
+	struct dentry *ihubdir, *windir, *wincscdir;
 	char   winname[50];
 	u32 i;
 #endif
@@ -2483,6 +2603,33 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 				&dbg_color_expand_enable_fops);
 			if (!retval)
 				goto remove_out;
+
+#if defined(CONFIG_TEGRA_CSC_V2)
+			wincscdir = debugfs_create_dir("csc", windir);
+			if (!wincscdir)
+				goto remove_out;
+
+			CREATE_CSC_V2_SYSFS(r2r);
+			CREATE_CSC_V2_SYSFS(g2r);
+			CREATE_CSC_V2_SYSFS(b2r);
+			CREATE_CSC_V2_SYSFS(const2r);
+			CREATE_CSC_V2_SYSFS(r2g);
+			CREATE_CSC_V2_SYSFS(g2g);
+			CREATE_CSC_V2_SYSFS(b2g);
+			CREATE_CSC_V2_SYSFS(const2g);
+			CREATE_CSC_V2_SYSFS(r2b);
+			CREATE_CSC_V2_SYSFS(g2b);
+			CREATE_CSC_V2_SYSFS(b2b);
+			CREATE_CSC_V2_SYSFS(const2b);
+
+			/*Create file to use user-defined CSC values as override
+			 over user-space CSC*/
+			retval = debugfs_create_file("force_user_csc",
+				S_IRUGO, wincscdir, win,
+				&csc_v2_force_user_csc_fops);
+			if (!retval)
+				goto remove_out;
+#endif
 		}
 	}
 #endif
@@ -2493,6 +2640,8 @@ remove_out:
 	dev_err(&dc->ndev->dev, "could not create debugfs\n");
 	tegra_dc_remove_debugfs(dc);
 }
+
+#undef CREATE_CSC_V2_SYSFS
 
 #else /* !CONFIG_DEBUGFS */
 static inline void tegra_dc_create_debugfs(struct tegra_dc *dc) { };
@@ -2522,7 +2671,8 @@ static void tegra_dc_setup_vrr(struct tegra_dc *dc)
 	struct tegra_dc_mode *m;
 	struct tegra_vrr *vrr  = dc->out->vrr;
 
-	if (!vrr) return;
+	if (!vrr)
+		return;
 
 	m = &dc->out->modes[dc->out->n_modes-1];
 	vrr->v_front_porch = m->v_front_porch;
@@ -5973,6 +6123,10 @@ static int tegra_dc_probe(struct platform_device *ndev)
 		tmp_win->dc = dc;
 #if defined(CONFIG_TEGRA_CSC)
 		tegra_dc_init_csc_defaults(&win->csc);
+#endif
+
+#if defined(CONFIG_TEGRA_CSC_V2)
+		win->force_user_csc = false;
 #endif
 		tegra_dc_init_lut_defaults(&win->lut);
 		}

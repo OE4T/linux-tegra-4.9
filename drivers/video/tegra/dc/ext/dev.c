@@ -762,7 +762,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		}
 
 #ifdef CONFIG_TEGRA_CSC
-		if ((data->win[i].attr.flags & TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC)
+		if ((data->win[i].attr.flags &
+				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC)
 				&& !dc->yuv_bypass) {
 			win->csc.yof = data->win[i].attr.csc.yof;
 			win->csc.kyrgb = data->win[i].attr.csc.kyrgb;
@@ -779,7 +780,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 #ifdef CONFIG_TEGRA_CSC_V2
 		if ((data->win[i].attr.flags &
 				TEGRA_DC_EXT_FLIP_FLAG_UPDATE_CSC_V2)
-				&& !ext->dc->yuv_bypass) {
+				&& !ext->dc->yuv_bypass
+				&& !win->force_user_csc) {
 			win->csc.r2r = data->win[i].attr.csc2.r2r;
 			win->csc.g2r = data->win[i].attr.csc2.g2r;
 			win->csc.b2r = data->win[i].attr.csc2.b2r;
@@ -1429,21 +1431,22 @@ static int tegra_dc_ext_set_csc(struct tegra_dc_ext_user *user,
 		return -EACCES;
 	}
 
-	csc->csc_enable = new_csc->csc_enable;
-	csc->r2r = new_csc->r2r;
-	csc->g2r = new_csc->g2r;
-	csc->b2r = new_csc->b2r;
-	csc->const2r = new_csc->const2r;
-	csc->r2g = new_csc->r2g;
-	csc->g2g = new_csc->g2g;
-	csc->b2g = new_csc->b2g;
-	csc->const2g = new_csc->const2g;
-	csc->r2b = new_csc->r2b;
-	csc->g2b = new_csc->g2b;
-	csc->b2b = new_csc->b2b;
-	csc->const2b = new_csc->const2b;
-	tegra_nvdisp_update_csc(dc, index);
-
+	if (!win->force_user_csc) {
+		csc->csc_enable = new_csc->csc_enable;
+		csc->r2r = new_csc->r2r;
+		csc->g2r = new_csc->g2r;
+		csc->b2r = new_csc->b2r;
+		csc->const2r = new_csc->const2r;
+		csc->r2g = new_csc->r2g;
+		csc->g2g = new_csc->g2g;
+		csc->b2g = new_csc->b2g;
+		csc->const2g = new_csc->const2g;
+		csc->r2b = new_csc->r2b;
+		csc->g2b = new_csc->g2b;
+		csc->b2b = new_csc->b2b;
+		csc->const2b = new_csc->const2b;
+		tegra_nvdisp_update_csc(dc, index);
+	}
 	mutex_unlock(&ext_win->lock);
 
 	return 0;

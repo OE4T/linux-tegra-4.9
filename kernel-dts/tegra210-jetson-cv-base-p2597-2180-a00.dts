@@ -157,7 +157,6 @@
 
 	sata@70020000 {
 		compatible = "nvidia,tegra210-ahci-sata";
-		nvidia,enable-sata-port;
 		status = "okay";
 	};
 

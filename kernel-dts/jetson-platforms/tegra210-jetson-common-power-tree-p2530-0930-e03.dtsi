@@ -310,14 +310,6 @@
 		vmmc-supply = <&en_vdd_sd>;
 	};
 
-	sata@70020000 {
-		hvdd_sata-supply = <&max77620_sd3>;
-		hvdd_pex_pll_e-supply = <&max77620_sd3>;
-		l0_hvddio_sata-supply = <&max77620_sd3>;
-		l0_dvddio_sata-supply = <&max77620_ldo8>;
-		dvdd_sata_pll-supply = <&max77620_ldo8>;
-	};
-
 	bluedroid_pm {
 		avdd-supply = <&battery_reg>;
 		dvdd-supply = <&max77620_sd3>;

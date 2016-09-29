@@ -2345,7 +2345,7 @@ static int fbcon_blank(struct vc_data *vc, int blank, int mode_switch)
 	}
 
  	if (!fbcon_is_inactive(vc, info)) {
-		if (ops->blank_state != blank) {
+		if (ops->blank_state != blank || mode_switch) {
 			ops->blank_state = blank;
 			fbcon_cursor(vc, blank ? CM_ERASE : CM_DRAW);
 			ops->cursor_flash = (!blank);

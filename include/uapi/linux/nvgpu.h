@@ -520,8 +520,8 @@ struct nvgpu_gpu_clk_range {
 
 	/* NVGPU_GPU_CLK_DOMAIN_* */
 	__u32 clk_domain;
-	__u32 min_mhz;
-	__u32 max_mhz;
+	__u64 min_hz;
+	__u64 max_hz;
 };
 
 /* Request on specific clock domains */
@@ -551,10 +551,7 @@ struct nvgpu_gpu_clk_range_args {
 };
 
 struct nvgpu_gpu_clk_vf_point {
-
-	/* Flags (not currently used) */
-	__u32 flags;
-	__u32 freq_mhz;
+	__u64 freq_hz;
 };
 
 struct nvgpu_gpu_clk_vf_points_args {
@@ -569,7 +566,7 @@ struct nvgpu_gpu_clk_vf_points_args {
 	   clk_vf_point_entries.  If max_entries is zero,
 	   NVGPU_GPU_IOCTL_CLK_GET_VF_POINTS will return 0 and max_entries will
 	   be set to the max number of VF entries for this clock domain. If
-	   there are more entries than max_entires, then ioctl will return
+	   there are more entries than max_entries, then ioctl will return
 	   -EINVAL.
 	*/
 	__u16 max_entries;
@@ -588,24 +585,31 @@ struct nvgpu_gpu_clk_vf_points_args {
 	__u64 clk_vf_point_entries;
 };
 
+/* Target clock requested by application*/
+#define NVGPU_GPU_CLK_TYPE_TARGET	1
+/* Actual clock frequency for the domain.
+   May deviate from desired target frequency due to PLL constraints. */
+#define NVGPU_GPU_CLK_TYPE_ACTUAL	2
+/* Effective clock, measured from hardware */
+#define NVGPU_GPU_CLK_TYPE_EFFECTIVE	3
+
 struct nvgpu_gpu_clk_info {
 
 	/* Flags (not currently used) */
-	__u32 flags;
+	__u16 flags;
 
-	/* NVGPU_GPU_CLK_DOMAIN_* */
+	/* in: When NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS set, indicates
+	   the type of clock info to be returned for this entry. It is
+	   allowed to have several entries with different clock types in
+	   the same request (for instance query both target and actual
+	   clocks for a given clock domain). This field is ignored for a
+	   SET operation. */
+	__u16 clk_type;
+
+	/* NVGPU_GPU_CLK_DOMAIN_xxx */
 	__u32 clk_domain;
 
-	/* target clock frequency for the domain in MHz. Should be
-	   specified with a non-zero value in NVGPU_GPU_IOCTL_CLK_SET_INFO.
-	*/
-	__u32 target_mhz;
-
-	/* actual clock frequency for the domain in MHz.  This value
-	   may deviate from the desired target frequency due to PLL constraints.
-	   Not used in NVGPU_GPU_IOCTL_CLK_SET_INFO.
-	 */
-	__u32 actual_mhz;
+	__u64 freq_hz;
 };
 
 struct nvgpu_gpu_clk_get_info_args {
@@ -617,7 +621,11 @@ struct nvgpu_gpu_clk_get_info_args {
 	*/
 	__u32 flags;
 
-	__u16 pad0;
+	/* in: indicates which type of clock info to be returned (see
+	   NVGPU_GPU_CLK_TYPE_xxx). If NVGPU_GPU_CLK_FLAG_SPECIFIC_DOMAINS
+	   is defined, clk_type is specified in each clock info entry instead.
+	 */
+	__u16 clk_type;
 
 	/* in/out: Number of clock info entries contained in clk_info_entries.
 	   If zero, NVGPU_GPU_IOCTL_CLK_GET_INFO will return 0 and
@@ -639,12 +647,6 @@ struct nvgpu_gpu_clk_get_info_args {
 	 */
 	__u64 clk_info_entries;
 
-	__u32 pad1;
-
-	/* out: sequence number of last processed request. sequence numbers
-	   are per-user.
-	*/
-	__u32 last_req_nr;
 };
 
 struct nvgpu_gpu_clk_set_info_args {
@@ -665,24 +667,21 @@ struct nvgpu_gpu_clk_set_info_args {
 	 */
 	__u64 clk_info_entries;
 
-	/* out: File descriptor for completions and event notifications.
-	   If application does not close this fd after completion, then the
-	   same fd will be returned for subsequent request (recommended).
+	/* out: File descriptor for request completion. Application can poll
+	   this file descriptor to determine when the request has completed.
+	   The fd must be closed afterwards.
 	 */
-	int fd;
-
-	/* out: sequence number for this request. In order to determine that
-	   a request has completed, an application should check this sequence
-	   number against last_req_nr from NVGPU_GPU_IOCTL_CLK_GET_INFO, using
-	   nvgpu_clk_req_complete(req_nr, last_req_nr);
-	*/
-	__u32 req_nr;
+	int completion_fd;
 };
 
-static inline int nvgpu_clk_req_complete(__u32 req_nr, __u32 last_req_nr)
-{
-	return ((long)(last_req_nr - req_nr) >= 0);
-}
+struct nvgpu_gpu_clk_get_event_fd_args {
+
+	/* in: Flags (not currently used). */
+	__u32 flags;
+
+	/* out: File descriptor for events, i.e. any clock update. */
+	int event_fd;
+};
 
 struct nvgpu_gpu_get_memory_state_args {
 	/*
@@ -778,6 +777,8 @@ struct nvgpu_gpu_get_fbp_l2_masks_args {
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 30, struct nvgpu_gpu_clk_get_info_args)
 #define NVGPU_GPU_IOCTL_CLK_SET_INFO \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 31, struct nvgpu_gpu_clk_set_info_args)
+#define NVGPU_GPU_IOCTL_CLK_GET_EVENT_FD \
+	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 32, struct nvgpu_gpu_clk_get_event_fd_args)
 #define NVGPU_GPU_IOCTL_GET_MEMORY_STATE \
 	_IOWR(NVGPU_GPU_IOCTL_MAGIC, 33, \
 			struct nvgpu_gpu_get_memory_state_args)

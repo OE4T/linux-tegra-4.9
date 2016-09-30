@@ -636,9 +636,9 @@ struct gpu_ops {
 	struct {
 		u32 (*get_arbiter_clk_domains)(struct gk20a *g);
 		int (*get_arbiter_clk_range)(struct gk20a *g, u32 api_domain,
-				u16 *min_mhz, u16 *max_mhz);
+				u64 *min_hz, u64 *max_hz);
 		int (*get_arbiter_clk_default)(struct gk20a *g, u32 api_domain,
-				u16 *default_mhz);
+				u64 *default_hz);
 	} clk_arb;
 	bool privsecurity;
 	bool securegpccs;

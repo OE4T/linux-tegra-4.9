@@ -76,7 +76,7 @@ int gk20a_ctrl_dev_release(struct inode *inode, struct file *filp)
 	gk20a_dbg_fn("");
 
 	if (clk_session)
-		nvgpu_clk_arb_cleanup_session(g, clk_session);
+		nvgpu_clk_arb_release_session(g, clk_session);
 	kfree(priv);
 
 	return 0;
@@ -834,6 +834,8 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 	u32 i;
 	u32 max_points = 0;
 	u32 num_points = 0;
+	u64 min_hz;
+	u64 max_hz;
 	u16 min_mhz;
 	u16 max_mhz;
 
@@ -862,7 +864,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 		return -EINVAL;
 
 	err = nvgpu_clk_arb_get_arbiter_clk_range(g, args->clk_domain,
-			&min_mhz, &max_mhz);
+			&min_hz, &max_hz);
 	if (err)
 		return err;
 
@@ -879,6 +881,8 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 			(uintptr_t)args->clk_vf_point_entries;
 
 	last_mhz = 0;
+	min_mhz = (u16)(min_hz / (u64)MHZ);
+	max_mhz = (u16)(max_hz / (u64)MHZ);
 	num_points = 0;
 	for (i = 0; (i < max_points) && !err; i++) {
 
@@ -891,7 +895,7 @@ static int nvgpu_gpu_clk_get_vf_points(struct gk20a *g,
 			continue;
 
 		last_mhz = fpoints[i];
-		clk_point.freq_mhz = fpoints[i];
+		clk_point.freq_hz = (u64)fpoints[i] * (u64)MHZ;
 
 		err = copy_to_user((void __user *)entry, &clk_point,
 				sizeof(clk_point));
@@ -919,7 +923,6 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 	u32 num_domains;
 	u32 i;
 	int bit;
-	u16 min_mhz, max_mhz;
 	int err;
 
 	gk20a_dbg_fn("");
@@ -963,14 +966,12 @@ static int nvgpu_gpu_clk_get_range(struct gk20a *g,
 			clk_domains &= ~BIT(bit);
 		}
 
+		clk_range.flags = 0;
 		err = nvgpu_clk_arb_get_arbiter_clk_range(g,
-				clk_range.clk_domain, &min_mhz, &max_mhz);
+				clk_range.clk_domain,
+				&clk_range.min_hz, &clk_range.max_hz);
 		if (err)
 			return err;
-
-		clk_range.min_mhz = min_mhz;
-		clk_range.max_mhz = max_mhz;
-		clk_range.flags = 0;
 
 		err = copy_to_user(entry, &clk_range, sizeof(clk_range));
 		if (err)
@@ -992,7 +993,6 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	struct nvgpu_clk_session *session = priv->clk_session;
 	u32 clk_domains = 0;
 	u32 i;
-	int fd;
 
 	gk20a_dbg_fn("");
 
@@ -1002,10 +1002,6 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 	clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
 	if (!clk_domains)
 		return -EINVAL;
-
-	fd = nvgpu_clk_arb_install_session_fd(g, session);
-	if (fd < 0)
-		return fd;
 
 	entry = (struct nvgpu_gpu_clk_info __user *)
 			(uintptr_t)args->clk_info_entries;
@@ -1031,16 +1027,12 @@ static int nvgpu_gpu_clk_set_info(struct gk20a *g,
 				sizeof(clk_info)))
 			return -EFAULT;
 
-		nvgpu_clk_arb_set_session_target_mhz(session,
-				clk_info.clk_domain, clk_info.target_mhz);
+		nvgpu_clk_arb_set_session_target_hz(session,
+				clk_info.clk_domain, clk_info.freq_hz);
 	}
 
-	nvgpu_clk_arb_apply_session_constraints(g, session);
-
-	args->req_nr = nvgpu_clk_arb_get_session_req_nr(g, session);
-	args->fd = fd;
-
-	return 0;
+	return nvgpu_clk_arb_apply_session_constraints(g, session,
+			&args->completion_fd);
 }
 
 
@@ -1053,8 +1045,6 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	struct nvgpu_clk_session *session = priv->clk_session;
 	u32 clk_domains = 0;
 	u32 num_domains;
-	u16 actual_mhz;
-	u16 target_mhz;
 	u32 i;
 	int err;
 	int bit;
@@ -1063,8 +1053,6 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 
 	if (!session)
 		return -EINVAL;
-
-	args->last_req_nr = nvgpu_clk_arb_get_arbiter_req_nr(g);
 
 	if (!args->flags) {
 		clk_domains = nvgpu_clk_arb_get_arbiter_clk_domains(g);
@@ -1100,20 +1088,29 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 			bit = ffs(clk_domains) - 1;
 			clk_info.clk_domain = BIT(bit);
 			clk_domains &= ~BIT(bit);
+			clk_info.clk_type = args->clk_type;
 		}
 
-		err = nvgpu_clk_arb_get_arbiter_actual_mhz(g,
-				clk_info.clk_domain, &actual_mhz);
+		switch (clk_info.clk_type) {
+		case NVGPU_GPU_CLK_TYPE_TARGET:
+			err = nvgpu_clk_arb_get_session_target_hz(session,
+					clk_info.clk_domain, &clk_info.freq_hz);
+			break;
+		case NVGPU_GPU_CLK_TYPE_ACTUAL:
+			err = nvgpu_clk_arb_get_arbiter_actual_hz(g,
+					clk_info.clk_domain, &clk_info.freq_hz);
+			break;
+		case NVGPU_GPU_CLK_TYPE_EFFECTIVE:
+			err = nvgpu_clk_arb_get_arbiter_effective_hz(g,
+					clk_info.clk_domain, &clk_info.freq_hz);
+			break;
+		default:
+			err = -EINVAL;
+			break;
+		}
 		if (err)
 			return err;
 
-		err = nvgpu_clk_arb_get_session_target_mhz(session,
-				clk_info.clk_domain, &target_mhz);
-		if (err)
-			return err;
-
-		clk_info.actual_mhz = actual_mhz;
-		clk_info.target_mhz = target_mhz;
 		clk_info.flags = 0;
 
 		err = copy_to_user((void __user *)entry, &clk_info,
@@ -1125,6 +1122,20 @@ static int nvgpu_gpu_clk_get_info(struct gk20a *g,
 	args->num_entries = num_domains;
 
 	return 0;
+}
+
+static int nvgpu_gpu_clk_get_event_fd(struct gk20a *g,
+	struct gk20a_ctrl_priv *priv,
+	struct nvgpu_gpu_clk_get_event_fd_args *args)
+{
+	struct nvgpu_clk_session *session = priv->clk_session;
+
+	gk20a_dbg_fn("");
+
+	if (!session || args->flags)
+		return -EINVAL;
+
+	return nvgpu_clk_arb_install_event_fd(g, session, &args->event_fd);
 }
 
 long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg)
@@ -1407,6 +1418,11 @@ long gk20a_ctrl_dev_ioctl(struct file *filp, unsigned int cmd, unsigned long arg
 	case NVGPU_GPU_IOCTL_CLK_GET_INFO:
 		err = nvgpu_gpu_clk_get_info(g, priv,
 			(struct nvgpu_gpu_clk_get_info_args *)buf);
+		break;
+
+	case NVGPU_GPU_IOCTL_CLK_GET_EVENT_FD:
+		err = nvgpu_gpu_clk_get_event_fd(g, priv,
+			(struct nvgpu_gpu_clk_get_event_fd_args *)buf);
 		break;
 
 	default:

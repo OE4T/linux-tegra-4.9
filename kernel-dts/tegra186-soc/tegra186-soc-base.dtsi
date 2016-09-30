@@ -1326,7 +1326,7 @@
                 status = "disabled";
         };
 
-        tegra_gpio: gpio@2200000 {
+        tegra_gpio_aon: tegra_gpio: gpio@2200000 {
                 compatible = "nvidia,tegra186-gpio";
                 reg = <0x0 0x2200000 0x0 0x15700
                         0x0 0xc2f0000 0x0 0x2000>;

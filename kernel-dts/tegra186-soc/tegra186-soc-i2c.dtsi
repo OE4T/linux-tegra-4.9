@@ -16,6 +16,8 @@
  *
  */
 
+#include <dt-bindings/gpio/tegra186-gpio.h>
+
 / {
 	aliases {
 		i2c0 = &gen1_i2c;
@@ -36,8 +38,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3160000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C1 0x04>;
-		scl-gpio = <&tegra_gpio 21 0>;
-		sda-gpio = <&tegra_gpio 22 0>;
+		scl-gpio = <&tegra_gpio TEGRA_GPIO(C, 5) 0>;
+		sda-gpio = <&tegra_gpio TEGRA_GPIO(C, 6) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C1
@@ -74,8 +76,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x3180000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C3 0x04>;
-		scl-gpio = <&tegra_gpio 114 0>;
-		sda-gpio = <&tegra_gpio 115 0>;
+		scl-gpio = <&tegra_gpio TEGRA_GPIO(O, 2) 0>;
+		sda-gpio = <&tegra_gpio TEGRA_GPIO(O, 3) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C3
@@ -138,8 +140,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31c0000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C7 0x04>;
-		scl-gpio = <&tegra_gpio 88 0>;
-		sda-gpio = <&tegra_gpio 89 0>;
+		scl-gpio = <&tegra_gpio TEGRA_GPIO(L, 0) 0>;
+		sda-gpio = <&tegra_gpio TEGRA_GPIO(L, 1) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C7
@@ -158,8 +160,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0xc250000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C8 0x04>;
-		scl-gpio = <&tegra_gpio 176 0>;
-		sda-gpio = <&tegra_gpio 177 0>;
+		scl-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(W, 0) 0>;
+		sda-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(W, 1) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C8
@@ -178,8 +180,8 @@
 		compatible = "nvidia,tegra186-i2c";
 		reg = <0x0 0x31e0000 0x0 0x100>;
 		interrupts = <0 TEGRA186_IRQ_I2C9 0x04>;
-		scl-gpio = <&tegra_gpio 90 0>;
-		sda-gpio = <&tegra_gpio 91 0>;
+		scl-gpio = <&tegra_gpio TEGRA_GPIO(L, 2) 0>;
+		sda-gpio = <&tegra_gpio TEGRA_GPIO(L, 3) 0>;
 		status = "disabled";
 		clock-frequency = <400000>;
 		clocks = <&tegra_car TEGRA186_CLK_I2C9

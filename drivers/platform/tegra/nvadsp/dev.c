@@ -398,6 +398,7 @@ static struct nvadsp_chipdata tegra210_adsp_chipdata = {
 		.hwmbox2_reg = 0x60,
 		.hwmbox3_reg = 0x64,
 	},
+	.adsp_state_hwmbox = -1,
 	.reset_init = nvadsp_reset_t21x_init,
 	.os_init = nvadsp_os_t21x_init,
 #ifdef CONFIG_PM
@@ -420,6 +421,7 @@ static struct nvadsp_chipdata tegrat18x_adsp_chipdata = {
 		.hwmbox6_reg = 0X30000,
 		.hwmbox7_reg = 0X38000,
 	},
+	.adsp_state_hwmbox = 0x30000,
 	.reset_init = nvadsp_reset_t18x_init,
 	.os_init = nvadsp_os_t18x_init,
 #ifdef CONFIG_PM

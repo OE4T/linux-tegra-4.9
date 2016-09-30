@@ -47,6 +47,7 @@
 #include "dram_app_mem_manager.h"
 #include "adsp_console_dbfs.h"
 #include "hwmailbox.h"
+#include "log_state.h"
 
 #define NVADSP_ELF "adsp.elf"
 #define NVADSP_FIRMWARE NVADSP_ELF
@@ -1155,6 +1156,126 @@ static void print_agic_irq_states(void)
 	}
 }
 
+static void get_adsp_state(void)
+{
+	uint32_t val;
+	struct nvadsp_drv_data *drv_data;
+	struct device *dev;
+	char *msg;
+
+	if (!priv.pdev) {
+		pr_err("ADSP Driver is not initialized\n");
+		return;
+	}
+
+	drv_data = platform_get_drvdata(priv.pdev);
+	dev = &priv.pdev->dev;
+
+	if (drv_data->chip_data->adsp_state_hwmbox == -1) {
+		dev_info(dev, "%s: No state hwmbox available\n", __func__);
+		return;
+	}
+
+	val = hwmbox_readl(drv_data->chip_data->adsp_state_hwmbox);
+	dev_info(dev, "%s: adsp state hwmbox value: 0x%X\n", __func__, val);
+
+	switch (val) {
+
+	case ADSP_LOADER_MAIN_ENTRY:
+		msg = "loader_main: entry to loader_main";
+		break;
+	case ADSP_LOADER_MAIN_CACHE_DISABLE_COMPLETE:
+		msg = "loader_main: Cache has been disabled";
+		break;
+	case ADSP_LOADER_MAIN_CONFIGURE_MMU_COMPLETE:
+		msg = "loader_main: MMU configuration is complete";
+		break;
+	case ADSP_LOADER_MAIN_CACHE_ENABLE_COMPLETE:
+		msg = "loader_main: Cache has been enabled";
+		break;
+	case ADSP_LOADER_MAIN_FPU_ENABLE_COMPLETE:
+		msg = "loader_main: FPU has been enabled";
+		break;
+	case ADSP_LOADER_MAIN_DECOMPRESSION_COMPLETE:
+		msg = "loader_main: ADSP FW decompression is complete";
+		break;
+	case ADSP_LOADER_MAIN_EXIT:
+		msg = "loader_main: exiting loader_main function";
+		break;
+
+	case ADSP_START_ENTRY_AT_RESET:
+		msg = "start: ADSP is at reset";
+		break;
+	case ADSP_START_CPU_EARLY_INIT:
+		msg = "start: ADSP to do cpu_early_init";
+		break;
+	case ADSP_START_FIRST_BOOT:
+		msg = "start: ADSP is booting for first time,"
+				"initializing DATA and clearing BSS";
+		break;
+	case ADSP_START_LK_MAIN_ENTRY:
+		msg = "start: ADSP about to enter lk_main";
+		break;
+
+	case ADSP_LK_MAIN_ENTRY:
+		msg = "lk_main: entry to lk_main";
+		break;
+	case ADSP_LK_MAIN_EARLY_THREAD_INIT_COMPLETE:
+		msg = "lk_main: early_thread_init has been completed";
+		break;
+	case ADSP_LK_MAIN_EARLY_ARCH_INIT_COMPLETE:
+		msg = "lk_main: early_arch_init has been completed";
+		break;
+	case ADSP_LK_MAIN_EARLY_PLATFORM_INIT_COMPLETE:
+		msg = "lk_main: early_platform_init has been completed";
+		break;
+	case ADSP_LK_MAIN_EARLY_TARGET_INIT_COMPLETE:
+		msg = "lk_main: early_target_init has been completed";
+		break;
+	case ADSP_LK_MAIN_CONSTRUCTOR_INIT_COMPLETE:
+		msg = "lk_main: constructors has been called";
+		break;
+	case ADSP_LK_MAIN_HEAP_INIT_COMPLETE:
+		msg = "lk_main: heap has been initialized";
+		break;
+	case ADSP_LK_MAIN_KERNEL_INIT_COMPLETE:
+		msg = "lk_main: ADSP kernel has been initialized";
+		break;
+	case ADSP_LK_MAIN_CPU_RESUME_ENTRY:
+		msg = "lk_main: ADSP is about to resume from suspend";
+		break;
+
+	case ADSP_BOOTSTRAP2_ARCH_INIT_COMPLETE:
+		msg = "bootstrap2: ADSP arch_init is complete";
+		break;
+	case ADSP_BOOTSTRAP2_PLATFORM_INIT_COMPLETE:
+		msg = "bootstrap2: platform has been initialized";
+		break;
+	case ADSP_BOOTSTRAP2_TARGET_INIT_COMPLETE:
+		msg = "bootstrap2: target has been initialized";
+		break;
+	case ADSP_BOOTSTRAP2_APP_MODULE_INIT_COMPLETE:
+		msg = "bootstrap2: APP modules initialized";
+		break;
+	case ADSP_BOOTSTRAP2_APP_INIT_COMPLETE:
+		msg = "bootstrap2: APP init is complete";
+		break;
+	case ADSP_BOOTSTRAP2_STATIC_APP_INIT_COMPLETE:
+		msg = "bootstrap2: Static apps has been initialized";
+		break;
+	case ADSP_BOOTSTRAP2_OS_LOAD_COMPLETE:
+		msg = "bootstrap2: ADSP OS successfully loaded";
+		break;
+
+	default:
+		msg = "Unrecognized ADSP state!!";
+		break;
+	}
+
+	dev_info(dev, "%s: %s\n", __func__, msg);
+}
+
+
 void dump_adsp_sys(void)
 {
 	if (!priv.pdev) {
@@ -1164,6 +1285,7 @@ void dump_adsp_sys(void)
 
 	dump_adsp_logs();
 	dump_mailbox_regs();
+	get_adsp_state();
 	print_agic_irq_states();
 }
 EXPORT_SYMBOL(dump_adsp_sys);

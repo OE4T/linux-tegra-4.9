@@ -33,6 +33,7 @@
 #include <linux/platform/tegra/emc_bwmgr.h>
 #include <linux/platform/tegra/tegra18_cpu_map.h>
 #include <linux/tegra-mce.h>
+#include <linux/tegra-cpu.h>
 #include <linux/pm_qos.h>
 
 #define MAX_NDIV		512 /* No of NDIV */
@@ -151,51 +152,21 @@ static uint32_t notrace get_coreclk_count(uint8_t cpu)
 	return ret;
 }
 
-static uint32_t notrace get_refclk_count(uint8_t cpu)
-{
-	int cur_cl = tegra18_logical_to_cluster(cpu);
-	void __iomem *reg_base;
-	uint32_t phy_cpu, ret;
-
-	phy_cpu = logical_to_phys_map(cpu);
-
-	reg_base = refclk_base(tfreq_data.pcluster[cur_cl].edvd_pub, phy_cpu);
-	pstore_rtrace_set_bypass(1);
-	ret = tcpufreq_readl(reg_base, phy_cpu) & REF_CLOCK_MASK;
-	pstore_rtrace_set_bypass(0);
-	return ret;
-}
-
 struct tegra_cpu_ctr {
 	uint32_t cpu;
 	uint32_t coreclk_cnt, last_coreclk_cnt;
 	uint32_t refclk_cnt, last_refclk_cnt;
 };
 
-static inline void busyloop_udelay(unsigned long usecs)
+static void tegra_read_counters(void *arg)
 {
-	unsigned long v = (usecs * 0x10C7ul * loops_per_jiffy * HZ) >> 32;
-	cycles_t start = get_cycles();
-
-	while ((get_cycles() - start) < v)
-		continue;
-}
-
-static void notrace tegra_cpu_spin(void *arg)
-{
+	struct cpuinfo_arm64 *cpuinfo;
 	struct tegra_cpu_ctr *c = arg;
-	uint32_t preempted;
+	u32 mpidr, midr;
 
-retry:
-	/**
-	 * This block of code is expected to execute without getting
-	 * preempted. The existence of EL2 & EL3 modes makes it
-	 * impossible to guarantee this.
-	 * Use ldx/stx pair to detect the preemption and retry
-	 * in case the code block is preempted.
-	 */
-
-	ldx32(&preempted);
+	mpidr = cpu_logical_map(c->cpu);
+	cpuinfo = &per_cpu(cpu_data, c->cpu);
+	midr = cpuinfo->reg_midr;
 
 	/*
 	 * ref_clk_counter(28 bit counter) runs from constant clk,
@@ -213,14 +184,17 @@ retry:
 	 * counter(28 bit) with modulo of 2^28 avoids single overflow.
 	*/
 
-	c->last_coreclk_cnt = get_coreclk_count(c->cpu);
-	c->last_refclk_cnt = get_refclk_count(c->cpu);
-	busyloop_udelay(tfreq_data.freq_compute_delay);
-	c->coreclk_cnt = get_coreclk_count(c->cpu);
-	c->refclk_cnt = get_refclk_count(c->cpu);
+	if (tegra_get_clk_counter(mpidr, midr, &c->last_coreclk_cnt,
+		&c->last_refclk_cnt))
+		pr_err("Error in reading cpu clk counters before delay %u: usec\n",
+			tfreq_data.freq_compute_delay);
 
-	if (stx32(&preempted, 1))
-		goto retry;
+	udelay(tfreq_data.freq_compute_delay);
+
+	if (tegra_get_clk_counter(mpidr, midr, &c->coreclk_cnt,
+		&c->refclk_cnt))
+		pr_err("Error in reading cpu clk counters after delay %u: usec\n",
+			tfreq_data.freq_compute_delay);
 }
 
 /**
@@ -244,7 +218,7 @@ retry:
  * @cpu - logical cpu whose freq to be updated
  * Returns freq in KHz on success, 0 if cpu is offline
  */
-static unsigned int notrace tegra_get_speed(uint32_t cpu)
+static unsigned int tegra_get_speed(uint32_t cpu)
 {
 	uint32_t delta_ccnt = 0;
 	uint32_t delta_refcnt = 0;
@@ -252,7 +226,7 @@ static unsigned int notrace tegra_get_speed(uint32_t cpu)
 	struct tegra_cpu_ctr c;
 
 	c.cpu = cpu;
-	if (!smp_call_function_single(cpu, tegra_cpu_spin, &c, 1)) {
+	if (!smp_call_function_single(cpu, tegra_read_counters, &c, 1)) {
 		delta_ccnt = c.coreclk_cnt - c.last_coreclk_cnt;
 		if (!delta_ccnt)
 			goto err_out;

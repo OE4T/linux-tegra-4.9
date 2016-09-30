@@ -33,6 +33,7 @@
 
 #define OV10823_SC_CHIP_ID_HIGH_ADDR	0x300A
 #define OV10823_SC_CHIP_ID_LOW_ADDR	0x300B
+#define OV10823_SC_SCCB_ID_ADDR		0x300C
 
 #define OV10823_MAX_COARSE_DIFF	8
 
@@ -57,22 +58,14 @@
 #define OV10823_DEFAULT_DATAFMT		MEDIA_BUS_FMT_SRGGB10_1X10
 #define OV10823_DEFAULT_CLK_FREQ	26000000
 
-#define REGW_SID	0x300c
-#define DEFAULT_ADDR	0x10
-#define MASTER_ADDR	0x20
-
-static bool assigned = false;
+#define OV10823_DEFAULT_I2C_ADDRESS_20	(0x20 >> 1)
+#define OV10823_DEFAULT_I2C_ADDRESS_6C	(0x6C >> 1)
 
 struct ov10823 {
-	struct mutex			ov10823_camera_lock;
 	struct camera_common_power_rail	power;
 	int				num_ctrls;
-	u32				cam0_addr;
-	u32				cam1_addr;
-	u32				cam2_addr;
-	int				cam0_sid_gpio;
-	int				cam1_sid_gpio;
-	int				cam2_sid_gpio;
+	bool				master;
+	int				cam_sid_gpio;
 	int				mcu_boot_gpio;
 	int				mcu_reset_gpio;
 	struct v4l2_ctrl_handler	ctrl_handler;
@@ -93,43 +86,6 @@ static const struct regmap_config sensor_regmap_config = {
 	.val_bits = 8,
 	.cache_type = REGCACHE_RBTREE,
 };
-
-static int ov10823_change_i2c_addr(struct ov10823 *priv, u8 new_i2c_addr)
-{
-	int ret = -ENODEV;
-	struct i2c_msg msg;
-	unsigned char data[3];
-
-	int retry = 0;
-
-	dev_dbg(&priv->i2c_client->dev, "%s changing addr from %x to %x",
-		__func__, DEFAULT_ADDR, new_i2c_addr);
-
-	data[0] = (REGW_SID >> 8) & 0xff;
-	data[1] = REGW_SID & 0xff;
-	data[2] = ((new_i2c_addr) << 1) & 0xff;
-
-	msg.addr = DEFAULT_ADDR;
-	msg.flags = 0;
-	msg.len = 3;
-	msg.buf = data;
-
-	do {
-		ret = i2c_transfer(priv->i2c_client->adapter, &msg, 1);
-
-		if (ret == 1)
-			return 0;
-
-		retry++;
-
-		dev_dbg(&priv->i2c_client->dev, "%s i2c transfer failed %d\n",
-			__func__, retry);
-
-		usleep_range(3000, 3100);
-	} while (retry <= 3);
-
-	return ret;
-}
 
 u16 ov10823_to_gain(u32 rep, int shift)
 {
@@ -441,7 +397,6 @@ static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 	struct ov10823 *priv = (struct ov10823 *)s_data->priv;
 	struct v4l2_control control;
 	int err;
-	int master = 0;
 
 	if (!enable) {
 		dev_dbg(&client->dev, "%s: stream off\n", __func__);
@@ -449,14 +404,12 @@ static int ov10823_s_stream(struct v4l2_subdev *sd, int enable)
 			mode_table[OV10823_MODE_STOP_STREAM]);
 		}
 
-	if (client->addr != MASTER_ADDR)
-		master = 1;
-
 	dev_dbg(&client->dev, "%s: write mode table %d\n",
 		__func__, s_data->mode);
 	err = ov10823_write_table(priv, mode_table[s_data->mode]);
-	dev_dbg(&client->dev, "%s: write fsync table %d\n", __func__, master);
-	err = ov10823_write_table(priv, fsync_table[master]);
+	dev_dbg(&client->dev, "%s: write fsync table %d\n", __func__,
+		priv->master);
+	err = ov10823_write_table(priv, fsync_table[priv->master]);
 	if (err)
 		goto exit;
 
@@ -631,16 +584,13 @@ static int ov10823_set_frame_length(struct ov10823 *priv, s32 val)
 	ov10823_reg reg_list[5];
 	int err;
 	u16 frame_length;
-	bool master = false;
-
-	master = &priv->i2c_client->dev == MASTER_ADDR;
 
 	frame_length = (u16)val;
 
 	dev_dbg(&priv->i2c_client->dev,
 		 "%s: frame_length: %d\n", __func__, frame_length);
 
-	ov10823_get_frame_length_regs(reg_list, frame_length, master);
+	ov10823_get_frame_length_regs(reg_list, frame_length, priv->master);
 	ov10823_set_group_hold(priv);
 	err = ov10823_write_table(priv, reg_list);
 	if (err)
@@ -882,20 +832,6 @@ static int ov10823_ctrls_init(struct ov10823 *priv)
 		goto error;
 	}
 
-	err = ov10823_otp_setup(priv);
-	if (err) {
-		dev_err(&client->dev,
-			"Error %d reading otp data\n", err);
-		goto error;
-	}
-
-	err = ov10823_fuse_id_setup(priv);
-	if (err) {
-		dev_err(&client->dev,
-			"Error %d reading fuse id data\n", err);
-		goto error;
-	}
-
 	return 0;
 
 error:
@@ -905,28 +841,18 @@ error:
 
 MODULE_DEVICE_TABLE(of, ov10823_of_match);
 
-static struct camera_common_pdata *ov10823_parse_dt(struct i2c_client *client)
+static int ov10823_parse_dt(struct i2c_client *client, struct ov10823 *priv)
 {
 	struct device_node *np = client->dev.of_node;
-	struct camera_common_pdata *board_priv_pdata;
-	const struct of_device_id *match;
 	int gpio;
 	int err;
 
-	match = of_match_device(ov10823_of_match, &client->dev);
-	if (!match) {
-		dev_err(&client->dev, "Failed to find matching dt id\n");
-		return NULL;
-	}
+	priv->master = of_property_read_bool(np, "master");
 
-	board_priv_pdata = devm_kzalloc(&client->dev,
-			   sizeof(*board_priv_pdata), GFP_KERNEL);
-
-	err = of_property_read_string(np, "mclk",
-				      &board_priv_pdata->mclk_name);
+	err = of_property_read_string(np, "mclk", &priv->pdata->mclk_name);
 	if (err) {
 		dev_err(&client->dev, "mclk not in DT\n");
-		goto error;
+		return -EINVAL;
 	}
 
 	gpio = of_get_named_gpio(np, "pwdn-gpios", 0);
@@ -934,60 +860,128 @@ static struct camera_common_pdata *ov10823_parse_dt(struct i2c_client *client)
 		dev_dbg(&client->dev, "pwdn gpios not in DT\n");
 		gpio = 0;
 	}
-	board_priv_pdata->pwdn_gpio = (unsigned int)gpio;
+	priv->pdata->pwdn_gpio = (unsigned int)gpio;
 
 	gpio = of_get_named_gpio(np, "reset-gpios", 0);
 	if (gpio < 0) {
 		dev_dbg(&client->dev, "reset gpios not in DT\n");
 		gpio = 0;
 	}
-	board_priv_pdata->reset_gpio = (unsigned int)gpio;
+	priv->pdata->reset_gpio = (unsigned int)gpio;
 
-	return board_priv_pdata;
+	priv->mcu_boot_gpio =
+		of_get_named_gpio(np, "mcu-boot-gpios", 0);
+	priv->mcu_reset_gpio =
+		of_get_named_gpio(np, "mcu-reset-gpios", 0);
 
-error:
-	devm_kfree(&client->dev, board_priv_pdata);
-	return NULL;
+	priv->cam_sid_gpio = of_get_named_gpio(np, "cam-sid-gpios", 0);
+
+	return 0;
 }
 
-static void ov10823_i2c_addr_assign(struct ov10823 *priv)
+static int ov10823_i2c_addr_assign(struct ov10823 *priv, u8 i2c_addr)
 {
-	int err = 0;
+	struct i2c_msg msg;
+	unsigned char data[3];
+	int err;
 
-	gpio_set_value(priv->mcu_boot_gpio, 0);
-	gpio_set_value(priv->mcu_reset_gpio, 0);
-	msleep_range(1);
-	gpio_set_value(priv->mcu_reset_gpio, 1);
+	/*
+	 * I wish i2c_check_addr_validity() was available.  Oh well.
+	 * 7-bit address, reject the general call address
+	 */
+	if ((i2c_addr == 0x00) || (i2c_addr > 0x7f))
+		return -EINVAL;
 
-	gpio_set_value(priv->cam0_sid_gpio, 0);
-	gpio_set_value(priv->cam1_sid_gpio, 1);
-	gpio_set_value(priv->cam2_sid_gpio, 1);
+	/*
+	 * It seems that the way SID works for the OV10823 I2C slave address is
+	 * that:
+	 *
+	 * SID 0 = 0x20
+	 * SID 1 = 0x6c
+	 *
+	 * Address 0x20 is programmable via register 0x300c, and
+	 * address 0x6c is programmable via register 0x3661.
+	 *
+	 * So, the scheme to assign addresses to an (almost) arbitrary
+	 * number of sensors is to consider 0x20 to be the "off" address.
+	 * Start each sensor with SID as 0 so that they appear to be off.
+	 *
+	 * Then, to assign an address to one sensor:
+	 *
+	 * 0. Set corresponding SID to 1 (now only that sensor responds
+	 *    to 0x6c).
+	 * 1. Use 0x6C to program address 0x20 to the new address.
+	 * 2. Set corresponding SID back to 0 (so it no longer responds
+	 *    to 0x6c, but instead responds to the new address).
+	 */
 
-
-	msleep_range(300);
-	err = ov10823_change_i2c_addr(priv, priv->cam0_addr);
-	if (err < 0) {
-		dev_dbg(&priv->i2c_client->dev,
-			"[ov10823] can't change i2c address cam #0\n");
+	if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_20) {
+		dev_info(&priv->i2c_client->dev,
+			 "Using default I2C address 0x%02x\n", i2c_addr);
+		if (gpio_is_valid(priv->cam_sid_gpio)) {
+			gpio_set_value(priv->cam_sid_gpio, 0);
+			msleep_range(1);
+		}
+		return 0;
+	} else if (i2c_addr == OV10823_DEFAULT_I2C_ADDRESS_6C) {
+		dev_info(&priv->i2c_client->dev,
+			 "Using default I2C address 0x%02x\n", i2c_addr);
+		if (gpio_is_valid(priv->cam_sid_gpio)) {
+			gpio_set_value(priv->cam_sid_gpio, 1);
+			msleep_range(1);
+		}
+		return 0;
 	}
 
-	gpio_set_value(priv->cam1_sid_gpio, 0);
-	msleep_range(1);
-	err = ov10823_change_i2c_addr(priv, priv->cam1_addr);
-	if (err < 0) {
-		dev_dbg(&priv->i2c_client->dev,
-			"[ov10823] can't change i2c address cam #1\n");
+	/*
+	 * From this point on, we are trying to program the programmable
+	 * slave address.  We necessarily need to have a cam-sid-gpio for this.
+	 */
+	if (!gpio_is_valid(priv->cam_sid_gpio)) {
+		dev_err(&priv->i2c_client->dev,
+			"Missing cam-sid-gpio, cannot program I2C address\n");
+		return -EINVAL;
 	}
 
-	gpio_set_value(priv->cam2_sid_gpio, 0);
+	gpio_set_value(priv->cam_sid_gpio, 1);
 	msleep_range(1);
-	err = ov10823_change_i2c_addr(priv, priv->cam2_addr);
-	if (err < 0) {
-		dev_dbg(&priv->i2c_client->dev,
-			"[ov10823] can't change i2c address cam #2\n");
-	}
 
-	assigned = true;
+	dev_info(&priv->i2c_client->dev, "Changing I2C address to 0x%02x\n",
+		 i2c_addr);
+
+	/*
+	 * Have to make the I2C message manually because we are using a
+	 * different I2C slave address for this transaction, rather than
+	 * the one in the device tree for this device.
+	 */
+	data[0] = (OV10823_SC_SCCB_ID_ADDR >> 8) & 0xff;
+	data[1] = OV10823_SC_SCCB_ID_ADDR & 0xff;
+	data[2] = ((i2c_addr) << 1) & 0xff;
+	/*
+	 * Use the programmable default I2C slave address so that if we have
+	 * multiple sensors of this same kind, when we change one sensor's
+	 * address, the next sensor address change message won't go to that
+	 * same sensor.
+	 */
+	msg.addr = OV10823_DEFAULT_I2C_ADDRESS_6C;
+	msg.flags = 0;
+	msg.len = 3;
+	msg.buf = data;
+
+	err = camera_common_s_power(priv->subdev, true);
+	if (err)
+		goto done;
+
+	if (i2c_transfer(priv->i2c_client->adapter, &msg, 1) != 1)
+		err = -EIO;
+
+	camera_common_s_power(priv->subdev, false);
+
+done:
+	gpio_set_value(priv->cam_sid_gpio, 0);
+	msleep_range(1);
+
+	return err;
 }
 
 static int ov10823_open(struct v4l2_subdev *sd, struct v4l2_subdev_fh *fh)
@@ -1010,11 +1004,9 @@ static const struct media_entity_operations ov10823_media_ops = {
 static int ov10823_probe(struct i2c_client *client,
 			const struct i2c_device_id *id)
 {
-	struct device_node *np = client->dev.of_node;
 	struct camera_common_data *common_data;
 	struct ov10823 *priv;
 	char dev_name[10];
-	bool fixed_addr;
 	int err;
 
 	pr_info("[OV10823]: probing v4l2 sensor.\n");
@@ -1038,11 +1030,18 @@ static int ov10823_probe(struct i2c_client *client,
 		return -ENODEV;
 	}
 
-	priv->pdata = ov10823_parse_dt(client);
+	priv->pdata = devm_kzalloc(&client->dev,
+				   sizeof(struct camera_common_pdata),
+				   GFP_KERNEL);
 	if (!priv->pdata) {
-		dev_err(&client->dev, "unable to get platform data\n");
-		return -EFAULT;
+		dev_err(&client->dev,
+			"unable to allocate camera_common_pdata\n");
+		return -ENOMEM;
 	}
+
+	err = ov10823_parse_dt(client, priv);
+	if (err)
+		return err;
 
 	common_data->ops		= &ov10823_common_ops;
 	common_data->ctrl_handler	= &priv->ctrl_handler;
@@ -1072,24 +1071,17 @@ static int ov10823_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
-	fixed_addr = of_property_read_bool(np, "fixed-addr");
-	if (!fixed_addr && !assigned) {
-		of_property_read_u32(np, "cam0-i2c-addr", &priv->cam0_addr);
-		of_property_read_u32(np, "cam1-i2c-addr", &priv->cam1_addr);
-		of_property_read_u32(np, "cam2-i2c-addr", &priv->cam2_addr);
-
-		priv->cam0_sid_gpio =
-			of_get_named_gpio(np, "cam0-sid-gpios", 0);
-		priv->cam1_sid_gpio =
-			of_get_named_gpio(np, "cam1-sid-gpios", 0);
-		priv->cam2_sid_gpio =
-			of_get_named_gpio(np, "cam2-sid-gpios", 0);
-		priv->mcu_boot_gpio =
-			of_get_named_gpio(np, "mcu-boot-gpios", 0);
-		priv->mcu_reset_gpio =
-			of_get_named_gpio(np, "mcu-reset-gpios", 0);
-
-		ov10823_i2c_addr_assign(priv);
+	/*
+	 * If our device tree node is given MCU GPIOs, then we are expected to
+	 * reset the MCU.
+	 */
+	if (gpio_is_valid(priv->mcu_boot_gpio) &&
+	    gpio_is_valid(priv->mcu_reset_gpio)) {
+		dev_info(&client->dev, "Resetting MCU\n");
+		gpio_set_value(priv->mcu_boot_gpio, 0);
+		gpio_set_value(priv->mcu_reset_gpio, 0);
+		msleep_range(1);
+		gpio_set_value(priv->mcu_reset_gpio, 1);
 	}
 
 	err = camera_common_parse_ports(client, common_data);
@@ -1108,9 +1100,27 @@ static int ov10823_probe(struct i2c_client *client,
 	if (err)
 		return err;
 
+	err = ov10823_i2c_addr_assign(priv, client->addr);
+	if (err)
+		return err;
+
 	err = ov10823_verify_chip_id(priv);
 	if (err)
 		return err;
+
+	err = ov10823_otp_setup(priv);
+	if (err) {
+		dev_err(&client->dev,
+			"Error %d reading otp data\n", err);
+		return err;
+	}
+
+	err = ov10823_fuse_id_setup(priv);
+	if (err) {
+		dev_err(&client->dev,
+			"Error %d reading fuse id data\n", err);
+		return err;
+	}
 
 	priv->subdev->internal_ops = &ov10823_subdev_internal_ops;
 	priv->subdev->flags |= V4L2_SUBDEV_FL_HAS_DEVNODE |

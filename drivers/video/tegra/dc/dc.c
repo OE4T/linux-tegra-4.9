@@ -566,6 +566,10 @@ static int dsc_rc_ranges_8bpp_8bpc[16][3] = {
 void tegra_dc_reserve_common_channel(struct tegra_dc *dc) {}
 void tegra_dc_release_common_channel(struct tegra_dc *dc) {}
 void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update) {}
+int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
+{
+	return -ENOSYS;
+}
 bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
 {
 	return false;

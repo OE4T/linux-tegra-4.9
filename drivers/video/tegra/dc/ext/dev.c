@@ -123,6 +123,7 @@ struct tegra_dc_ext_flip_data {
 	struct tegra_dc_hdr hdr_data;
 	bool hdr_cache_dirty;
 	bool imp_dirty;
+	u64 imp_session_id;
 };
 
 static int tegra_dc_ext_set_vblank(struct tegra_dc_ext *ext, bool enable);
@@ -868,8 +869,8 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 					TEGRA_DC_EXT_FLIP_HEAD_FLAG_VRR_MODE);
 
 		if (data->imp_dirty) {
-			tegra_dc_adjust_imp(dc, true);
 			dc->imp_dirty = true;
+			tegra_dc_adjust_imp(dc, true);
 		}
 
 		tegra_dc_update_windows(wins, nr_win,
@@ -885,11 +886,12 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 		if (!tegra_dc_has_multiple_dc())
 			tegra_dc_call_flip_callback();
 
-		if (data->imp_dirty) {
+		if (data->imp_dirty)
 			tegra_dc_adjust_imp(dc, false);
-			tegra_dc_release_common_channel(dc);
-		}
 	}
+
+	if (data->imp_dirty)
+		tegra_dc_release_common_channel(dc);
 
 	tegra_dc_scrncapt_disp_pause_unlock(dc);
 
@@ -1201,7 +1203,9 @@ static void tegra_dc_ext_read_user_data(struct tegra_dc_ext_flip_data *data,
 			}
 			break;
 #ifdef CONFIG_TEGRA_NVDISPLAY
-		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA:
+		case TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG:
+			data->imp_session_id =
+					flip_user_data[i].imp_tag.session_id;
 			data->imp_dirty = true;
 			break;
 #endif
@@ -1256,6 +1260,24 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 	if (ret)
 		goto fail_pin;
 
+	tegra_dc_ext_read_user_data(data, flip_user_data, nr_user_data);
+
+	/*
+	 * If this flip needs to update the current IMP settings, reserve
+	 * exclusive access to the COMMON channel. This call can potentially
+	 * block.
+	 */
+	if (data->imp_dirty) {
+		tegra_dc_reserve_common_channel(ext->dc);
+		ret = tegra_dc_validate_imp_queue(ext->dc,
+							data->imp_session_id);
+		if (ret) {
+			dev_err(&ext->dc->ndev->dev,
+				"Couldn't find corresponding PROPOSE\n");
+			goto fail_pin;
+		}
+	}
+
 	ret = lock_windows_for_flip(user, win, win_num);
 	if (ret)
 		goto fail_pin;
@@ -1264,8 +1286,6 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		ret = -ENXIO;
 		goto unlock;
 	}
-
-	tegra_dc_ext_read_user_data(data, flip_user_data, nr_user_data);
 
 	BUG_ON(win_num > DC_N_WINDOWS);
 	for (i = 0; i < win_num; i++) {
@@ -1330,14 +1350,6 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 #endif
 	data->flags = flip_flags;
 
-	/*
-	 * If this flip needs to update the current IMP settings, reserve
-	 * exclusive access to the COMMON channel. This call can potentially
-	 * block.
-	 */
-	if (data->imp_dirty)
-		tegra_dc_reserve_common_channel(ext->dc);
-
 	queue_work(ext->win[work_index].flip_wq, &data->work);
 
 	unlock_windows_for_flip(user, win, win_num);
@@ -1363,6 +1375,11 @@ fail_pin:
 			kfree(data->win[i].handle[j]);
 		}
 	}
+
+	/* Release the COMMON channel in case of failure. */
+	if (data->imp_dirty)
+		tegra_dc_release_common_channel(ext->dc);
+
 	kfree(data);
 
 	return ret;
@@ -2276,6 +2293,7 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 		struct tegra_dc_ext_flip_4 args;
 		struct tegra_dc_ext_flip_windowattr_v2 *win = NULL;
 		struct tegra_dc_ext_flip_user_data *flip_user_data = NULL;
+		bool imp_proposed = false;
 
 		/* Keeping window attribute size as version1 for old
 		 *  legacy applications
@@ -2313,16 +2331,18 @@ static long tegra_dc_ioctl(struct file *filp, unsigned int cmd,
 			}
 
 			if (flip_user_data[0].data_type ==
-				TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA)
+				TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA) {
 				ret = tegra_dc_handle_imp_propose(
 						user->ext->dc, flip_user_data);
 				if (ret)
 					goto free_and_ret;
+
+				imp_proposed = true;
+			}
 		}
 
-#ifndef CONFIG_TEGRA_NVDISPLAY
-		ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
-#endif
+		if (!imp_proposed)
+			ret = tegra_dc_ext_negotiate_bw(user, win, win_num);
 
 free_and_ret:
 		kfree(flip_user_data);

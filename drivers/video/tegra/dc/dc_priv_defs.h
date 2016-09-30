@@ -35,6 +35,7 @@
 #include <mach/dc.h>
 
 #include <mach/tegra_dc_ext.h>
+#include <video/tegra_dc_ext.h>
 #include <linux/platform/tegra/isomgr.h>
 
 #include "dc_reg.h"
@@ -170,6 +171,24 @@ enum tegra_dc_cursor_color_format {
 	TEGRA_DC_CURSOR_COLORFMT_A8R8G8B8,
 };
 
+struct tegra_dc_tg_req {
+	int	dc_idx;
+	u32	num_wins;
+	u32	win_ids[DC_N_WINDOWS];
+	u32	tgs[DC_N_WINDOWS];
+};
+
+struct tegra_dc_imp_settings {
+	struct tegra_dc_ext_imp_settings	ext_settings;
+
+	struct tegra_dc_tg_req 			tg_reqs[DC_N_WINDOWS];
+	bool					update_mempool[TEGRA_MAX_DC];
+	bool					program_mempool_before_update;
+	struct list_head			imp_node;
+	u64					session_id;
+	u32					owner;
+};
+
 struct tegra_dc {
 	struct platform_device		*ndev;
 	struct tegra_dc_platform_data	*pdata;
@@ -239,6 +258,7 @@ struct tegra_dc {
 	bool					common_channel_intr_enabled;
 #endif
 	bool					imp_dirty;
+	u64					imp_session_id_cntr;
 
 #if defined(CONFIG_TEGRA_DC_CMU)
 	struct tegra_dc_cmu		cmu;

@@ -110,25 +110,6 @@ struct tegra_gpio {
 
 static struct tegra_gpio *tegra_gpio;
 
-/*
- * Below table is mapping for contoller and ports contained
- * in each port of the give gpio controller
- */
-static int tegra186_gpio_map[MAX_GPIO_CONTROLLERS][MAX_GPIO_PORTS] = {
-	{13, 14, 16, 19, 8, 17, -1, -1}, /* gpio cntrlr 0 */
-	{7, 11, 23, 24, -1, -1, -1, -1}, /* gpio cntrlr 1 */
-	{0, 4, 5, 27, -1, -1, -1, -1,}, /* gpio cntrlr 2 */
-	{1, 2, 3, -1, -1, -1, -1, -1,}, /* gpio cntrlr 3 */
-	{15, 6, -1, -1, -1, -1, -1, -1},/* gpio cntrlr 4 */
-	{9, 10, 28, 12, -1, -1, -1, -1},/* gpio cntrlr 5 */
-	{31, 18, 20, 30, 21, 22, 26, 25},/* AON gpio cntrlr */
-};
-
-static u32 tegra186_gpio_port_pin_count[MAX_PORTS] = {
-	7, 7, 7, 6, 8, 6, 6, 7, 8, 8, 1, 8, 6, 7, 4, 7,
-	6, 6, 5, 4, 6, 8, 8, 8, 7, 4, 8, 2, 4, 0, 3, 5,
-};
-
 static int tegra186_gpio_wakes[] = {
 	TEGRA_GPIO(A, 6),		/* wake0 */
 	TEGRA_GPIO(A, 2),		/* wake1 */
@@ -228,46 +209,58 @@ static int tegra186_gpio_wakes[] = {
 	-EINVAL,		/* wake95 */
 };
 
-/**
- * address_map: Address mapping table to get index and offset of registers
- *		with respect to base register provided from DT node.
- * Here the first index denotes the port like A, B, C etc.
- * The Second index has two values first is for the register index and second
- * is for the offset from base.
- */
-static u32 address_map[32][2] = {
-	{ 0, 0x12000 },
-	{ 0, 0x13000 },
-	{ 0, 0x13200 },
-	{ 0, 0X13400 },
-	{ 0, 0x12200 },
-	{ 0, 0x12400 },
-	{ 0, 0x14200 },
-	{ 0, 0x11000 },
-	{ 0, 0x10800 },
-	{ 0, 0x15000 },
-	{ 0, 0x15200 },
-	{ 0, 0x11200 },
-	{ 0, 0x15600 },
-	{ 0, 0x10000 },
-	{ 0, 0x10200 },
-	{ 0, 0x14000 },
-	{ 0, 0x10400 },
-	{ 0, 0x10A00 },
-	{ 1, 0x1200 },
-	{ 0, 0x10600 },
-	{ 1, 0x1400 },
-	{ 1, 0x1800 },
-	{ 1, 0x1A00 },
-	{ 0, 0x11400 },
-	{ 0, 0x11600 },
-	{ 1, 0x1E00 },
-	{ 1, 0x1C00 },
-	{ 0, 0x12600 },
-	{ 0, 0x15400 },
-	{ (-1), (-1) },
-	{ 1, 0x1600 },
-	{ 1, 0x1000 },
+struct tegra_gpio_port_chip_info {
+	int cont_id;
+	int cont_index;
+	int valid_pins;
+	int reg_index;
+	int scr_offset;
+	u32 reg_offset;
+};
+
+#define TEGRA_GPIO_PORT_INFO(port, cid, cind, npins, rind, sbase, rbase) \
+[TEGRA_GPIO_BANK_ID_##port] = {					\
+		.cont_id = cid,					\
+		.cont_index = cind,				\
+		.valid_pins = npins,				\
+		.reg_index = rind,				\
+		.scr_offset = sbase,				\
+		.reg_offset = rbase,				\
+}
+
+static struct tegra_gpio_port_chip_info tegra_gpio_cinfo[] = {
+	TEGRA_GPIO_PORT_INFO(A, 2, 0, 7, 0, 0x0, 0x12000),
+	TEGRA_GPIO_PORT_INFO(B, 3, 0, 7, 0, 0x0, 0x13000),
+	TEGRA_GPIO_PORT_INFO(C, 3, 1, 7, 0, 0x0, 0x13200),
+	TEGRA_GPIO_PORT_INFO(D, 3, 2, 6, 0, 0x0, 0x13400),
+	TEGRA_GPIO_PORT_INFO(E, 2, 1, 8, 0, 0x0, 0x12200),
+	TEGRA_GPIO_PORT_INFO(F, 2, 2, 6, 0, 0x0, 0x12400),
+	TEGRA_GPIO_PORT_INFO(G, 4, 1, 6, 0, 0x0, 0x14200),
+	TEGRA_GPIO_PORT_INFO(H, 1, 0, 7, 0, 0x0, 0x11000),
+	TEGRA_GPIO_PORT_INFO(I, 0, 4, 8, 0, 0x0, 0x10800),
+	TEGRA_GPIO_PORT_INFO(J, 5, 0, 8, 0, 0x0, 0x15000),
+	TEGRA_GPIO_PORT_INFO(K, 5, 1, 1, 0, 0x0, 0x15200),
+	TEGRA_GPIO_PORT_INFO(L, 1, 1, 8, 0, 0x0, 0x11200),
+	TEGRA_GPIO_PORT_INFO(M, 5, 3, 6, 0, 0x0, 0x15600),
+	TEGRA_GPIO_PORT_INFO(N, 0, 0, 7, 0, 0x0, 0x10000),
+	TEGRA_GPIO_PORT_INFO(O, 0, 1, 4, 0, 0x0, 0x10200),
+	TEGRA_GPIO_PORT_INFO(P, 4, 0, 7, 0, 0x0, 0x14000),
+	TEGRA_GPIO_PORT_INFO(Q, 0, 2, 6, 0, 0x0, 0x10400),
+	TEGRA_GPIO_PORT_INFO(R, 0, 5, 6, 0, 0x0, 0x10A00),
+	TEGRA_GPIO_PORT_INFO(S, 6, 1, 5, 1, 0x0, 0x1200),
+	TEGRA_GPIO_PORT_INFO(T, 0, 3, 4, 0, 0x0, 0x10600),
+	TEGRA_GPIO_PORT_INFO(U, 6, 2, 6, 1, 0x0, 0x1400),
+	TEGRA_GPIO_PORT_INFO(V, 6, 4, 8, 1, 0x0, 0x1800),
+	TEGRA_GPIO_PORT_INFO(W, 6, 5, 8, 1, 0x0, 0x1A00),
+	TEGRA_GPIO_PORT_INFO(X, 1, 2, 8, 0, 0x0, 0x11400),
+	TEGRA_GPIO_PORT_INFO(Y, 1, 3, 7, 0, 0x0, 0x11600),
+	TEGRA_GPIO_PORT_INFO(Z, 6, 7, 4, 1, 0x0, 0x1E00),
+	TEGRA_GPIO_PORT_INFO(AA, 6, 6, 8, 1, 0x0, 0x1C00),
+	TEGRA_GPIO_PORT_INFO(BB, 2, 3, 2, 0, 0x0, 0x12600),
+	TEGRA_GPIO_PORT_INFO(CC, 5, 2, 4, 0, 0x0, 0x15400),
+	TEGRA_GPIO_PORT_INFO(DD, -1, -1, 0, -1, -1, -1),
+	TEGRA_GPIO_PORT_INFO(EE, 6, 3, 3, 1, 0x0, 0x1600),
+	TEGRA_GPIO_PORT_INFO(FF, 6, 0, 5, 1, 0x0, 0x1000),
 };
 
 static u32 tegra_gpio_bank_count;
@@ -275,20 +268,6 @@ static struct tegra_gpio_controller
 		tegra_gpio_controllers[MAX_GPIO_CONTROLLERS];
 
 static struct irq_domain *irq_domain;
-
-static inline u32 controller_index(u32 gpio)
-{
-	int i, j;
-	u32 gp = GPIO_PORT(gpio);
-
-	for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {
-		for (j = 0; j < MAX_GPIO_PORTS; j++) {
-			if (tegra186_gpio_map[i][j] == gp)
-				return i;
-		}
-	}
-	return -1;
-}
 
 static int tegra186_gpio_to_wake(int gpio)
 {
@@ -308,20 +287,22 @@ static inline u32 tegra_gpio_readl(u32 gpio, u32 reg_offset)
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
-	u32 addr;
+	u32 addr = tegra_gpio_cinfo[port].reg_offset;
+	int rindex = tegra_gpio_cinfo[port].reg_index;
 
-	addr = address_map[port][1] + (GPIO_REG_DIFF * pin) + reg_offset;
-	return __raw_readl((tegra_gpio->regs[address_map[port][0]]) + addr);
+	addr += (GPIO_REG_DIFF * pin) + reg_offset;
+	return __raw_readl(tegra_gpio->regs[rindex] + addr);
 }
 
 static inline void tegra_gpio_writel(u32 val, u32 gpio, u32 reg_offset)
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
-	u32 addr;
+	u32 addr = tegra_gpio_cinfo[port].reg_offset;
+	int rindex = tegra_gpio_cinfo[port].reg_index;
 
-	addr = address_map[port][1] + (GPIO_REG_DIFF * pin) + reg_offset;
-	__raw_writel(val, (tegra_gpio->regs[address_map[port][0]]) + addr);
+	addr += (GPIO_REG_DIFF * pin) + reg_offset;
+	__raw_writel(val, tegra_gpio->regs[rindex] + addr);
 }
 
 static inline void tegra_gpio_update(u32 gpio, u32 reg_offset,
@@ -329,13 +310,14 @@ static inline void tegra_gpio_update(u32 gpio, u32 reg_offset,
 {
 	int port = GPIO_PORT(gpio);
 	int pin = GPIO_PIN(gpio);
-	u32 addr;
+	u32 addr = tegra_gpio_cinfo[port].reg_offset;
+	int rindex = tegra_gpio_cinfo[port].reg_index;
 	u32 rval;
 
-	addr = address_map[port][1] + (GPIO_REG_DIFF * pin) + reg_offset;
-	rval = __raw_readl((tegra_gpio->regs[address_map[port][0]]) + addr);
+	addr += (GPIO_REG_DIFF * pin) + reg_offset;
+	rval = __raw_readl(tegra_gpio->regs[rindex] + addr);
 	rval = (rval & ~mask) | (val & mask);
-	__raw_writel(rval, (tegra_gpio->regs[address_map[port][0]]) + addr);
+	__raw_writel(rval, tegra_gpio->regs[rindex] + addr);
 }
 
 int tegra_gpio_get_bank_int_nr(int gpio)
@@ -349,40 +331,28 @@ EXPORT_SYMBOL(tegra_gpio_get_bank_int_nr);
  */
 static inline bool is_gpio_accessible(u32 offset)
 {
-	u32 controller = controller_index(offset);
 	int port = GPIO_PORT(offset);
 	int pin = GPIO_PIN(offset);
 	u32 val;
-	u32 i, j;
-	bool found = false;
+	int cont_id, cont_index;
+	int rindex;
 
-	if (controller == -1)
+	if (pin >= tegra_gpio_cinfo[port].valid_pins)
 		return false;
 
-	if (pin >= tegra186_gpio_port_pin_count[port])
+	cont_id = tegra_gpio_cinfo[port].cont_id;
+	if (cont_id  < 0)
 		return false;
 
-	for (i = 0; i < MAX_GPIO_CONTROLLERS; i++) {
-		for (j = 0; j < MAX_GPIO_PORTS; j++) {
-			if (tegra186_gpio_map[i][j] == port) {
-				found = true;
-				break;
-			}
-		}
-		if (found)
-			break;
-	}
+	cont_index = tegra_gpio_cinfo[port].cont_index;
+	rindex = tegra_gpio_cinfo[port].reg_index;
+	/*AON offset is same as base*/
+	if (rindex)
+		cont_id = 0;
 
-	if (!found)
-		return false;
-
-	i = (controller == (MAX_GPIO_CONTROLLERS - 1)) ? 1 : 0;
-	if (i == 1)
-		controller = 0; /*AON offset is same as base*/
-
-	val = __raw_readl(tegra_gpio->regs[i] +
-		(controller * GPIO_CONTROLLERS_DIFF) +
-		(j * GPIO_SCR_BASE_DIFF) + (pin * GPIO_SCR_DIFF) +
+	val = __raw_readl(tegra_gpio->regs[rindex] +
+		(cont_id * GPIO_CONTROLLERS_DIFF) +
+		(cont_index * GPIO_SCR_BASE_DIFF) + (pin * GPIO_SCR_DIFF) +
 			GPIO_SCR_REG);
 
 	if ((val & GPIO_FULL_ACCESS) == GPIO_FULL_ACCESS)
@@ -630,24 +600,34 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 {
 	struct irq_chip *chip = irq_desc_get_chip(desc);
 	struct tegra_gpio_controller *tg_cont = irq_desc_get_handler_data(desc);
-	int map_index = tg_cont->controller;
 	int pin;
+	int port;
 	u32 i;
 	unsigned long val;
 	u32 gpio;
-	u32 temp;
-	u32 reg;
+	u32 addr;
+	int rindex;
+	int port_map[MAX_GPIO_PORTS];
+
+	for (i =0; i < MAX_GPIO_PORTS; ++i)
+		port_map[i] = -1;
+
+	for (i = 0; i < ARRAY_SIZE(tegra_gpio_cinfo); ++i) {
+		if (tegra_gpio_cinfo[i].cont_id == tg_cont->controller)
+			port_map[tegra_gpio_cinfo[i].cont_index] = i;
+	}
 
 	chained_irq_enter(chip, desc);
 	for (i = 0; i < MAX_GPIO_PORTS; i++) {
-		if (tegra186_gpio_map[map_index][i] == -1)
+		port = port_map[i];
+		if (port == -1)
 			continue;
 
-		temp = address_map[tegra186_gpio_map[map_index][i]][1];
-		reg = tegra186_gpio_map[map_index][i];
-		val = __raw_readl(tegra_gpio->regs[address_map[reg][0]] +
-				temp + GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
-		gpio = tegra186_gpio_map[map_index][i] * 8;
+		rindex = tegra_gpio_cinfo[port].reg_index;
+		addr = tegra_gpio_cinfo[port].reg_offset;
+		val = __raw_readl(tegra_gpio->regs[rindex] +
+				addr + GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
+		gpio = port * 8;
 		for_each_set_bit(pin, &val, 8)
 			generic_handle_irq(gpio_to_irq(gpio + pin));
 	}
@@ -762,12 +742,13 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 	for (gpio = 0; gpio < tegra_gpio_chip.ngpio; gpio++) {
 		int irq = irq_create_mapping(irq_domain, gpio);
+		int cont_id = tegra_gpio_cinfo[GPIO_PORT(gpio)].cont_id;
 
 		if (is_gpio_accessible(gpio))
 			/* mask interrupts for this GPIO */
 			tegra_gpio_update(gpio, GPIO_ENB_CONFIG_REG, GPIO_INT_FUNC_BIT, 0);
 
-		tg_cont = &tegra_gpio_controllers[controller_index(gpio)];
+		tg_cont = &tegra_gpio_controllers[cont_id];
 
 		irq_set_chip_data(irq, tg_cont);
 		irq_set_chip_and_handler(irq, &tegra_gpio_irq_chip,

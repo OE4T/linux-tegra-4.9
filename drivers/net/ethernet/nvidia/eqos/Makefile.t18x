@@ -17,6 +17,11 @@ ccflags-y += -DHWA_FPGA_ONLY
 ## default build settings.
 ccflags-y += -DCONFIG_PTPSUPPORT_OBJ
 
+## enable this only for MODS verification
+ifeq ($(CONFIG_DISABLE_EQOS_CTRL_TRISTATE),y)
+ccflags-y  += -DDISABLE_TRISTATE
+endif
+
 obj-$(CONFIG_EQOS)  += eqos.o
 
 eqos-y += dev.o

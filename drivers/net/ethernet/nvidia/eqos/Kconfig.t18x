@@ -29,11 +29,22 @@ config DISABLE_VLAN_FWD_TO_REAL_IF
 	default n
 
 	---help---
-		This disables support to forward VLAN tagged packets to the
-		Real interface. If enabled, VLAN tagged packets are only forwarded
-		to the Virtual interface.
+	  This disables support to forward VLAN tagged packets to the
+	  Real interface. If enabled, VLAN tagged packets are only forwarded
+	  to the Virtual interface.
 
-		If unsure, say n.
+	  If unsure, say n.
+
+config DISABLE_EQOS_CTRL_TRISTATE
+	bool "tristate tx signal when cable removed "
+	depends on EQOS
+	default n
+
+	---help---
+	  This disables the logic to make sure that tx signal is tristated
+	  when cable is not attached.
+
+	  If unsure, say n.
 
 config DEBUGFS_OBJ
 	bool "Enable DEBUGFS_OBJ"

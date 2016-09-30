@@ -48,4 +48,7 @@
 #define TEGRA_GPIO(bank, offset) \
 	((TEGRA_GPIO_BANK_ID_##bank * 8) + offset)
 
+#define TEGRA_GPIO_AON(bank, offset) \
+	((TEGRA_GPIO_BANK_ID_##bank * 8) + offset)
+
 #endif

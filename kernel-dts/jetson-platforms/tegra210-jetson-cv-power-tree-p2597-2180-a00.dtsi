@@ -194,7 +194,7 @@
 
 		vdd_hdmi: regulator@7 {
 			gpio = <&tca9539_74 12 1>;
-			vin-supply = <&vdd_3v3>;
+			/delete-property/ vin-supply;
 		};
 
 		vdd_fan: regulator@13 {

@@ -31,7 +31,7 @@
 			vif-supply = <&en_vdd_cam>;
 			vdig-supply = <&en_vdd_cam_1v2>;
 			reset-gpios = <&tegra_gpio CAM0_RST_L GPIO_ACTIVE_HIGH>;
-			interrupt-parent = <&tegra_gpio>;
+			interrupt-parent = <&tegra_gpio_aon>;
 			interrupts = <TEGRA_GPIO(AA, 2) GPIO_ACTIVE_HIGH>;
 
 			refclk_hz = <40000000>; /* 40 - 50 MHz */

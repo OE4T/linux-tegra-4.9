@@ -15,7 +15,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
-#include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/gpio/tegra186-gpio.h>
 
 / {
 	/* Need to enable wifi_en pin during boot for PCIe enumeration */
@@ -24,7 +24,7 @@
 
 		wlan_default: wlan-default {
 			gpio-input = <
-				TEGRA_GPIO(FF, 3)
+				TEGRA_GPIO_AON(FF, 3)
 				>;
 			gpio-output-high = <
 				TEGRA_GPIO(N, 0)
@@ -36,7 +36,7 @@
 		compatible = "nvidia,tegra-bluedroid_pm";
 		id = <0>;
 		bluedroid_pm,reset-gpio = <&tegra_gpio TEGRA_GPIO(L, 7) 0>;
-		bluedroid_pm,host-wake-gpio = <&tegra_gpio TEGRA_GPIO(FF, 4) 0>;
+		bluedroid_pm,host-wake-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(FF, 4) 0>;
 		bluedroid_pm,ext-wake-gpio = <&tegra_gpio TEGRA_GPIO(Y, 4) 0>;
 		interrupt-parent = <&tegra_gpio>;
 		interrupts = <TEGRA_GPIO(FF, 4) 0x01>;
@@ -44,8 +44,8 @@
 
 	bcm4359: bcmdhd_pcie_wlan {
 		compatible = "android,bcmdhd_pcie_wlan";
-		interrupt-parent = <&tegra_gpio>;
-		interrupts = <TEGRA_GPIO(FF, 3) 0x14>;
+		interrupt-parent = <&tegra_gpio_aon>;
+		interrupts = <TEGRA_GPIO_AON(FF, 3) 0x14>;
 		wlan-pwr-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
 		fw_path = "/system/vendor/firmware/fw_bcmdhd.bin";
 		nv_path = "/system/etc/nvram_4359_b1.txt";
@@ -54,8 +54,8 @@
 
 	bcm4354: bcmdhd_wlan {
 		compatible = "android,bcmdhd_wlan";
-		interrupt-parent = <&tegra_gpio>;
-		interrupts = <TEGRA_GPIO(FF, 3) 0x14>;
+		interrupt-parent = <&tegra_gpio_aon>;
+		interrupts = <TEGRA_GPIO_AON(FF, 3) 0x14>;
 		wlan-pwr-gpio = <&tegra_gpio TEGRA_GPIO(N, 0) 0>;
 		fw_path = "/system/vendor/firmware/fw_bcmdhd_4354.bin";
 		nv_path = "/system/etc/nvram_quill_4354.txt";

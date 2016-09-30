@@ -18,7 +18,7 @@
  * 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
  *
  */
-#include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/gpio/tegra186-gpio.h>
 
 / {
         ether_qos@2490000 {

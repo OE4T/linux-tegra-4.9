@@ -14,7 +14,7 @@
  */
 
 #include <dt-bindings/types.h>
-#include <dt-bindings/gpio/tegra-gpio.h>
+#include <dt-bindings/gpio/tegra186-gpio.h>
 /dts-v1/;
 
 /memreserve/ 0x80000000 0x00010000;
@@ -287,8 +287,8 @@
 			panel-s-wuxga-8-0 {
 				status = "okay";
 				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
-				nvidia,panel-bl-en-gpio = <&tegra_gpio TEGRA_GPIO(U, 3) 1>; /* PU3 */
+				nvidia,panel-bl-pwm-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 0) 1>; /* PU0 */
+				nvidia,panel-bl-en-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 3) 1>; /* PU3 */
 				nvidia,panel-en-gpio = <&gpio_i2c_0_77 4 1>; /* tca9539 0x77 Pin 4 */
 				nvidia,en-vmm-vpp-with-i2c-config;
 				nvidia,default_color_space = <0>;
@@ -524,7 +524,7 @@
 			panel-s-wqxga-10-1 {
 				status = "disabled";
 				nvidia,panel-rst-gpio = <&tegra_gpio TEGRA_GPIO(P, 3) 1>; /* PP3 */
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 0) 1>; /* PU0 */
+				nvidia,panel-bl-pwm-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 0) 1>; /* PU0 */
 				disp-default-out {
 					nvidia,out-parent-clk = "pll_d";
 					nvidia,out-rotation = <180>;
@@ -549,7 +549,7 @@
 			nvidia,audio-switch-name = "dp_audio";
 			nvidia,hpd-gpio = <&tegra_gpio TEGRA_GPIO(P, 0) GPIO_ACTIVE_LOW>;
 			panel-s-edp-uhdtv-15-6 {
-				nvidia,panel-bl-pwm-gpio = <&tegra_gpio TEGRA_GPIO(U, 5) 0>;
+				nvidia,panel-bl-pwm-gpio = <&tegra_gpio_aon TEGRA_GPIO_AON(U, 5) 0>;
 			};
 
 			dp-display {

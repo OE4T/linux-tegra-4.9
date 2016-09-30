@@ -159,7 +159,7 @@
                 e2614_icm20628: icm20628@68 {
                         compatible = "invensense,mpu6xxx";
                         reg = <0x68>;
-                        interrupt-parent = <&tegra_gpio>;
+                        interrupt-parent = <&tegra_gpio_aon>;
                         interrupts = <TEGRA_GPIO(AA, 2) 0x01>;
                         accelerometer_matrix	= [01 00 00 00 01 00 00 00 01];
                         gyroscope_matrix	= [01 00 00 00 01 00 00 00 01];

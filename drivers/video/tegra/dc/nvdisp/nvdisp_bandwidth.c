@@ -88,12 +88,7 @@ static u32 tegra_nvdisp_get_max_pending_bw(struct tegra_dc *dc)
 	u32 max_pending_bw = 0;
 
 	list_for_each_entry(settings, &nvdisp_imp_settings_queue, imp_node) {
-		/*
-		 * dc->ctrl_num should always be a valid idx since we copy
-		 * results to all heads, whether they're active or inactive.
-		 */
-		u32 pending_bw =
-		settings->imp_results[dc->ctrl_num].required_total_bw_kbps;
+		u32 pending_bw = settings->ext_settings.required_total_bw_kbps;
 		if (pending_bw > max_pending_bw)
 			max_pending_bw = pending_bw;
 	}

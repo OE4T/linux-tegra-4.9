@@ -863,6 +863,9 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 		goto INIT_CLK_ERR;
 	}
 
+	/* Initialize the session id counter to 0 */
+	dc->imp_session_id_cntr = 0;
+
 	/* Init sycpt ids */
 	dc->valid_windows = 0x3f; /* Assign all windows to this head */
 	for (i = 0; i < DC_N_WINDOWS; ++i, ++syncpt_name[5]) {
@@ -2182,68 +2185,6 @@ void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 }
 EXPORT_SYMBOL(tegra_nvdisp_get_imp_user_info);
 
-static void tegra_nvdisp_parse_imp_head_results(
-			struct tegra_dc_imp_head_results *res,
-			struct tegra_dc_ext_imp_head_results *ext_res)
-{
-	size_t num_wins;
-
-	res->num_windows = ext_res->num_windows;
-	res->cursor_active = ext_res->cursor_active;
-	res->total_latency = ext_res->total_latency;
-	res->hubclk = ext_res->hubclk;
-	res->required_total_bw_kbps = ext_res->required_total_bw_kbps;
-
-	if (res->cursor_active) {
-		res->metering_slots_value_cursor =
-			ext_res->metering_slots_value_cursor;
-		res->pipe_meter_value_cursor =
-			ext_res->pipe_meter_value_cursor;
-		res->pool_config_entries_cursor =
-			ext_res->pool_config_entries_cursor;
-		res->cursor_slots_value = ext_res->cursor_slots_value;
-	}
-
-	num_wins = res->num_windows;
-	if (!num_wins)
-		return;
-
-	res->window_slots_value = ext_res->window_slots_value;
-	memcpy(res->win_ids, ext_res->win_ids,
-		sizeof(*res->win_ids) * num_wins);
-	memcpy(res->thread_group_win, ext_res->thread_group_win,
-		sizeof(*res->thread_group_win) * num_wins);
-	memcpy(res->metering_slots_value_win, ext_res->metering_slots_value_win,
-		sizeof(*res->metering_slots_value_win) * num_wins);
-	memcpy(res->thresh_lwm_dvfs_win, ext_res->thresh_lwm_dvfs_win,
-		sizeof(*res->thresh_lwm_dvfs_win) * num_wins);
-	memcpy(res->pipe_meter_value_win, ext_res->pipe_meter_value_win,
-		sizeof(*res->pipe_meter_value_win) * num_wins);
-	memcpy(res->pool_config_entries_win, ext_res->pool_config_entries_win,
-		sizeof(*res->pool_config_entries_win) * num_wins);
-}
-
-static int tegra_nvdisp_parse_imp_results(
-			struct tegra_dc_ext_flip_user_data *flip_user_data,
-			struct tegra_dc_imp_settings *imp_settings)
-{
-	void __user *ext_res_ptr =
-		(void __user *)flip_user_data->imp_ptr.results;
-	struct tegra_dc_ext_imp_head_results ext_res[TEGRA_MAX_DC];
-	int i;
-
-	if (copy_from_user(ext_res, ext_res_ptr, sizeof(ext_res))) {
-		pr_err("Failed to copy IMP results from user\n");
-		return -EFAULT;
-	}
-
-	for (i = 0; i < TEGRA_MAX_DC; i++)
-		tegra_nvdisp_parse_imp_head_results(
-			&imp_settings->imp_results[i], &ext_res[i]);
-
-	return 0;
-}
-
 static struct tegra_dc_imp_settings *tegra_nvdisp_get_pending_imp_settings(void)
 {
 	return list_first_entry_or_null(&nvdisp_imp_settings_queue,
@@ -2339,7 +2280,7 @@ static void tegra_nvdisp_notify_common_channel_promoted(struct tegra_dc *dc)
 }
 
 static void tegra_nvdisp_program_dc_mempool(struct tegra_dc *dc,
-	struct tegra_dc_imp_head_results *res)
+	struct tegra_dc_ext_imp_head_results *res)
 {
 	u32 entries;
 	int i;
@@ -2378,10 +2319,13 @@ static void tegra_nvdisp_program_all_needed_mempool(struct tegra_dc *dc,
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
+		struct tegra_dc_ext_imp_head_results *head_results =
+			imp_settings->ext_settings.imp_results;
+
 		if (other_dc &&
 			imp_settings->update_mempool[other_dc->ctrl_num])
 			tegra_nvdisp_program_dc_mempool(other_dc,
-				&imp_settings->imp_results[other_dc->ctrl_num]);
+					&head_results[other_dc->ctrl_num]);
 	}
 }
 
@@ -2426,8 +2370,8 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 	int i, j;
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		struct tegra_dc_imp_head_results *old_result = NULL;
-		struct tegra_dc_imp_head_results *new_result = NULL;
+		struct tegra_dc_ext_imp_head_results *old_result = NULL;
+		struct tegra_dc_ext_imp_head_results *new_result = NULL;
 		struct tegra_dc *other_dc;
 		u32 old_val = 0, new_val = 0;
 		u32 ctrl_num;
@@ -2438,7 +2382,8 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 
 		ctrl_num = other_dc->ctrl_num;
 		if (last_imp_settings) {
-			old_result = &last_imp_settings->imp_results[ctrl_num];
+			old_result =
+			&last_imp_settings->ext_settings.imp_results[ctrl_num];
 			old_val = old_result->pool_config_entries_cursor;
 		} else if (other_dc->cursor.enabled) {
 			/*
@@ -2450,7 +2395,7 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 					tegra_dc_readl(other_dc,
 					nvdisp_ihub_cursor_pool_config_r()));
 		}
-		new_result = &imp_settings->imp_results[ctrl_num];
+		new_result = &imp_settings->ext_settings.imp_results[ctrl_num];
 		new_val = new_result->pool_config_entries_cursor;
 
 		if (new_val != old_val) {
@@ -2507,7 +2452,7 @@ static void tegra_nvdisp_fill_tg_lookup_tables(int *dep_left,
 				struct tegra_dc_imp_settings *imp_settings,
 				struct tegra_dc_imp_settings *last_imp_settings)
 {
-	struct tegra_dc_imp_head_results *res = NULL;
+	struct tegra_dc_ext_imp_head_results *res = NULL;
 	struct tegra_dc_win *win = NULL;
 	struct tegra_dc *other_dc = NULL;
 	int win_id;
@@ -2519,9 +2464,9 @@ static void tegra_nvdisp_fill_tg_lookup_tables(int *dep_left,
 			continue;
 
 		if (last_imp_settings)
-			res = &last_imp_settings->imp_results[i];
+			res = &last_imp_settings->ext_settings.imp_results[i];
 		else
-			res = &imp_settings->imp_results[i];
+			res = &imp_settings->ext_settings.imp_results[i];
 
 		for (j = 0; j < res->num_windows; j++) {
 			u32 cur_tg;
@@ -2560,7 +2505,7 @@ static void tegra_nvdisp_fill_tg_lookup_tables(int *dep_left,
 		if (!other_dc || !other_dc->enabled)
 			continue;
 
-		res = &imp_settings->imp_results[i];
+		res = &imp_settings->ext_settings.imp_results[i];
 		for (j = 0; j < res->num_windows; j++) {
 			u32 new_tg;
 
@@ -2849,7 +2794,7 @@ static void tegra_nvdisp_program_thread_groups(struct tegra_dc *dc,
 void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 {
 	struct tegra_dc_imp_settings *imp_settings = NULL;
-	struct tegra_dc_imp_head_results *imp_results = NULL;
+	struct tegra_dc_ext_imp_settings *ext_settings = NULL;
 	bool program_mempool = false;
 
 	mutex_lock(&tegra_nvdisp_lock);
@@ -2863,11 +2808,11 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 				imp_settings->program_mempool_before_update);
 
 	/* Make sure bw and LA/PTSA are set correctly. */
-	imp_results = &imp_settings->imp_results[dc->ctrl_num];
+	ext_settings = &imp_settings->ext_settings;
 	tegra_nvdisp_program_bandwidth(dc,
-				(u32)imp_results->required_total_bw_kbps,
-				(u32)imp_results->total_latency,
-				(u32)imp_results->hubclk,
+				(u32)ext_settings->required_total_bw_kbps,
+				(u32)ext_settings->total_latency,
+				(u32)ext_settings->hubclk,
 				before_win_update);
 
 	mutex_unlock(&tegra_nvdisp_lock);
@@ -2953,6 +2898,41 @@ void tegra_dc_release_common_channel(struct tegra_dc *dc)
 }
 EXPORT_SYMBOL(tegra_dc_release_common_channel);
 
+int tegra_dc_validate_imp_queue(struct tegra_dc *dc, u64 session_id)
+{
+	struct tegra_dc_imp_settings *cur = NULL, *next = NULL;
+	int ret = -EINVAL;
+
+	mutex_lock(&tegra_nvdisp_lock);
+
+	/*
+	 * Since IMP flips are issued in the same respective order as their
+	 * corresponding PROPOSEs, and only one IMP flip can be in-flight at any
+	 * moment in time, any entries that are in front of the one we're
+	 * looking for must be stale. These entries can be safely removed.
+	 *
+	 * If none of the entries in the queue match the one we're looking for,
+	 * return an error.
+	 */
+	list_for_each_entry_safe(cur,
+				next,
+				&nvdisp_imp_settings_queue,
+				imp_node) {
+		if (cur->owner != dc->ctrl_num ||
+			cur->session_id != session_id) {
+			list_del(&cur->imp_node);
+			kfree(cur);
+		} else {
+			ret = 0;
+			break;
+		}
+	}
+
+	mutex_unlock(&tegra_nvdisp_lock);
+	return ret;
+}
+EXPORT_SYMBOL(tegra_dc_validate_imp_queue);
+
 bool tegra_dc_handle_common_channel_promotion(struct tegra_dc *dc)
 {
 	/*
@@ -2980,9 +2960,11 @@ EXPORT_SYMBOL(tegra_dc_handle_common_channel_promotion);
 int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data)
 {
-	struct tegra_dc_imp_settings *imp_settings = NULL;
 	struct tegra_dc_imp_settings *last_imp_settings = NULL;
-	struct tegra_dc_imp_head_results *imp_results = NULL;
+	struct tegra_dc_imp_settings *imp_settings = NULL;
+	struct tegra_dc_ext_imp_settings *ext_settings = NULL;
+	void __user *ext_session_id_ptr = NULL;
+	void __user *ext_imp_ptr = NULL;
 	int ret = 0;
 
 	imp_settings = kzalloc(sizeof(*imp_settings), GFP_KERNEL);
@@ -2993,9 +2975,15 @@ int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 	}
 	INIT_LIST_HEAD(&imp_settings->imp_node);
 
-	ret = tegra_nvdisp_parse_imp_results(flip_user_data, imp_settings);
-	if (ret)
+	ext_imp_ptr = (void __user *)flip_user_data->imp_ptr.settings;
+	if (copy_from_user(&imp_settings->ext_settings, ext_imp_ptr,
+					sizeof(imp_settings->ext_settings))) {
+		dev_err(&dc->ndev->dev,
+			"Failed to copy IMP results from user\n");
+		ret = -EFAULT;
+
 		goto free_and_ret;
+	}
 
 	mutex_lock(&tegra_nvdisp_lock);
 
@@ -3019,15 +3007,28 @@ int tegra_dc_handle_imp_propose(struct tegra_dc *dc,
 		goto free_and_ret;
 	}
 
-	imp_results = &imp_settings->imp_results[dc->ctrl_num];
+	ext_settings = &imp_settings->ext_settings;
 	ret = tegra_nvdisp_negotiate_reserved_bw(dc,
-				(u32)imp_results->required_total_bw_kbps,
-				(u32)imp_results->total_latency);
+			(u32)ext_settings->required_total_bw_kbps,
+			(u32)ext_settings->total_latency);
 	if (ret) {
 		mutex_unlock(&tegra_nvdisp_lock);
 		goto free_and_ret;
 	}
 
+	/* Copy the session id back to the user. */
+	ext_session_id_ptr = (void __user *)ext_settings->session_id_ptr;
+	if (copy_to_user(ext_session_id_ptr, &dc->imp_session_id_cntr,
+					sizeof(dc->imp_session_id_cntr))) {
+		pr_err("Failed to copy session id back to user\n");
+
+		mutex_unlock(&tegra_nvdisp_lock);
+		goto free_and_ret;
+	}
+
+	imp_settings->owner = dc->ctrl_num;
+	imp_settings->session_id = dc->imp_session_id_cntr;
+	dc->imp_session_id_cntr++;
 	list_add_tail(&imp_settings->imp_node, &nvdisp_imp_settings_queue);
 
 	mutex_unlock(&tegra_nvdisp_lock);
@@ -3040,7 +3041,7 @@ free_and_ret:
 EXPORT_SYMBOL(tegra_dc_handle_imp_propose);
 
 static void tegra_nvdisp_program_imp_head_results(struct tegra_dc *dc,
-			struct tegra_dc_imp_head_results *imp_head_results,
+			struct tegra_dc_ext_imp_head_results *imp_head_results,
 			int owner_head)
 {
 	struct tegra_dc_win *win = NULL;
@@ -3147,15 +3148,18 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 
 	for (i = 0; i < TEGRA_MAX_DC; i++) {
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
+		struct tegra_dc_ext_imp_head_results *head_results =
+					imp_settings->ext_settings.imp_results;
+
 		if (other_dc && other_dc->enabled)
 			tegra_nvdisp_program_imp_head_results(other_dc,
-				&imp_settings->imp_results[other_dc->ctrl_num],
+				&head_results[other_dc->ctrl_num],
 				dc->ctrl_num);
 	}
 
 	/* program common win and cursor fetch meter slots */
-	val = (imp_settings->imp_results[dc->ctrl_num].window_slots_value) |
-	(imp_settings->imp_results[dc->ctrl_num].cursor_slots_value << 8);
+	val = (imp_settings->ext_settings.window_slots_value) |
+		(imp_settings->ext_settings.cursor_slots_value << 8);
 	tegra_dc_writel(dc, val, nvdisp_ihub_common_fetch_meter_r());
 }
 #undef NO_THREAD_GROUP

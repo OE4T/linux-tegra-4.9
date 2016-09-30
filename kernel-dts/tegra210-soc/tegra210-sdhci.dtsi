@@ -43,6 +43,7 @@
 		mmc-ddr-1_8v;
 		mmc-hs200-1_8v;
 		mmc-hs400-1_8v;
+		nvidia,enable-strobe-mode;
 		pll_source = "pll_p", "pll_c4_out0";
 		clocks = <&tegra_car TEGRA210_CLK_SDMMC4>,
 		       <&tegra_car TEGRA210_CLK_PLL_P>,

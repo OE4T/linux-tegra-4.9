@@ -42,7 +42,7 @@
 			{"plldp", UINT_MAX},	\
 			{} },			\
 	.devfs_name	= "pinctrl-dpaux",	\
-	.can_powergate	= false,		\
+	.can_powergate	= true,		\
 	.autosuspend_delay = 500,		\
 	.serialize	= 1,			\
 	.push_work_done = 1,			\

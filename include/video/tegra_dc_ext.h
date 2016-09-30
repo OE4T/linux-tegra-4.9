@@ -330,7 +330,8 @@ struct tegra_dc_ext_flip_3 {
 enum tegra_dc_ext_flip_data_type {
 	TEGRA_DC_EXT_FLIP_USER_DATA_NONE, /* dummy value - do not use */
 	TEGRA_DC_EXT_FLIP_USER_DATA_HDR_DATA,
-	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA,
+	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_DATA, /* only valid during PROPOSE */
+	TEGRA_DC_EXT_FLIP_USER_DATA_IMP_TAG, /* only valid during FLIP */
 };
 
 /*
@@ -344,10 +345,12 @@ struct tegra_dc_ext_hdr {
 	__u8 static_metadata[24];
 };
 
-/* The value at index i of each window-specific array corresponds to the
+/*
+ * The value at index i of each window-specific array corresponds to the
  * i-th window that's assigned to this head. For the actual id of the i-th
  * window, look in win_ids[i].
  */
+#define TEGRA_DC_EXT_N_HEADS	3
 #define TEGRA_DC_EXT_N_WINDOWS	6
 /*
  * IMP info that's exported to userspace.
@@ -372,24 +375,40 @@ struct tegra_dc_ext_imp_head_results {
 	__u32	metering_slots_value_cursor;
 	__u32	pipe_meter_value_cursor;
 	__u32	pool_config_entries_cursor;
-	__u64	total_latency;
-	__u64	hubclk;
-	__u32	window_slots_value;
-	__u32	cursor_slots_value;
-	__u64	required_total_bw_kbps;
+};
+
+struct tegra_dc_ext_imp_settings {
+	struct tegra_dc_ext_imp_head_results imp_results[TEGRA_DC_EXT_N_HEADS];
+	__u64 total_latency;
+	__u64 hubclk;
+	__u32 window_slots_value;
+	__u32 cursor_slots_value;
+	__u64 required_total_bw_kbps;
+	__u64 __user session_id_ptr; /* out - ptr to unsigned 64-bit val */
 };
 #undef TEGRA_DC_EXT_N_WINDOWS
+#undef TEGRA_DC_EXT_N_HEADS
 
 /*
- * Variable results is a pointer to a struct tegra_dc_ext_imp_head_results
- * array. reserved is padding so that the total struct size is 26 bytes.
+ * Variable settings is a pointer to tegra_dc_ext_imp_settings.
+ * reserved is padding so that the total struct size is 26 bytes.
  */
 struct tegra_dc_ext_imp_ptr {
-	__u64 __user results;
+	__u64 __user settings;
 	__u16 reserved[9]; /* unused - must be 0 */
 };
 
-/* size of the this sturct is 32 bytes */
+/*
+ * Variable session_id is a unique per-head id that designates which IMP
+ * settings actually correspond to this flip.
+ * reserved is padding so that the total struct size is 26 bytes.
+ */
+struct tegra_dc_ext_imp_flip_tag {
+	__u64 session_id;
+	__u16 reserved[9]; /* unused - must be 0 */
+};
+
+/* size of the this struct is 32 bytes */
 struct tegra_dc_ext_flip_user_data {
 	__u8 data_type;
 	__u8 reserved0;
@@ -400,6 +419,7 @@ struct tegra_dc_ext_flip_user_data {
 		__u16 data16[13];
 		struct tegra_dc_ext_hdr hdr_info;
 		struct tegra_dc_ext_imp_ptr imp_ptr;
+		struct tegra_dc_ext_imp_flip_tag imp_tag;
 	};
 };
 
@@ -901,7 +921,7 @@ struct tegra_dc_ext_scrncapt_dup_fbuf  {
 	_IOR('D', 0x1A, struct tegra_dc_ext_cmu_v2)
 
 #define TEGRA_DC_EXT_SET_PROPOSED_BW_3 \
-	_IOR('D', 0x1B, struct tegra_dc_ext_flip_4)
+	_IOWR('D', 0x1B, struct tegra_dc_ext_flip_4)
 
 #define TEGRA_DC_EXT_GET_CMU_ADBRGB\
 	_IOR('D', 0x1C, struct tegra_dc_ext_cmu)

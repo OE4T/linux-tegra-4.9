@@ -22,15 +22,16 @@ struct nvgpu_clk_session;
 int nvgpu_clk_arb_init_arbiter(struct gk20a *g);
 
 int nvgpu_clk_arb_get_arbiter_clk_range(struct gk20a *g, u32 api_domain,
-		u16 *min_mhz, u16 *max_mhz);
+		u64 *min_hz, u64 *max_hz);
 
-int nvgpu_clk_arb_get_arbiter_actual_mhz(struct gk20a *g,
-		u32 api_domain, u16 *actual_mhz);
+int nvgpu_clk_arb_get_arbiter_actual_hz(struct gk20a *g,
+		u32 api_domain, u64 *actual_hz);
+
+int nvgpu_clk_arb_get_arbiter_effective_hz(struct gk20a *g,
+		u32 api_domain, u64 *actual_hz);
 
 int nvgpu_clk_arb_get_arbiter_clk_f_points(struct gk20a *g,
 	u32 api_domain, u32 *max_points, u16 *fpoints);
-
-u32 nvgpu_clk_arb_get_arbiter_req_nr(struct gk20a *g);
 
 u32 nvgpu_clk_arb_get_arbiter_clk_domains(struct gk20a *g);
 
@@ -42,20 +43,20 @@ int nvgpu_clk_arb_install_session_fd(struct gk20a *g,
 int nvgpu_clk_arb_init_session(struct gk20a *g,
 		struct nvgpu_clk_session **_session);
 
-void nvgpu_clk_arb_cleanup_session(struct gk20a *g,
+void nvgpu_clk_arb_release_session(struct gk20a *g,
 		struct nvgpu_clk_session *session);
 
-void nvgpu_clk_arb_apply_session_constraints(struct gk20a *g,
-		struct nvgpu_clk_session *session);
+int nvgpu_clk_arb_apply_session_constraints(struct gk20a *g,
+	struct nvgpu_clk_session *session, int *completion_fd);
 
-int nvgpu_clk_arb_set_session_target_mhz(struct nvgpu_clk_session *session,
-		u32 api_domain, u16 target_mhz);
+int nvgpu_clk_arb_set_session_target_hz(struct nvgpu_clk_session *session,
+		u32 api_domain, u64 target_hz);
 
-int nvgpu_clk_arb_get_session_target_mhz(struct nvgpu_clk_session *session,
-		u32 api_domain, u16 *target_mhz);
+int nvgpu_clk_arb_get_session_target_hz(struct nvgpu_clk_session *session,
+		u32 api_domain, u64 *target_hz);
 
-u32 nvgpu_clk_arb_get_session_req_nr(struct gk20a *g,
-		struct nvgpu_clk_session *session);
+int nvgpu_clk_arb_install_event_fd(struct gk20a *g,
+	struct nvgpu_clk_session *session, int *event_fd);
 
 
 

@@ -28,6 +28,7 @@ static u32 shutdown_state;
 #define SMC_SET_SHUTDOWN_MODE 0x1
 #define SYSTEM_SHUTDOWN_STATE_FULL_POWER_OFF 0
 #define SYSTEM_SHUTDOWN_STATE_SC8 8
+#define SMC_GET_CLK_COUNT 0x2
 #define NR_SMC_REGS	6
 #define SMC_ENUM_MAX	0xFF
 
@@ -79,6 +80,34 @@ static int tegra_set_shutdown_mode(u32 shutdown_state)
 	return send_smc(SMC_SET_SHUTDOWN_MODE, &regs);
 }
 EXPORT_SYMBOL(tegra_set_shutdown_mode);
+
+/**
+ * read core clk and ref clk counters under EL3
+ *
+ * @mpidr: MPIDR of target core
+ * @midr: MIDR of target core
+ * @coreclk: core clk counter
+ * @refclk : ref clk counter
+ *
+ * Returns 0 if success.
+ */
+int tegra_get_clk_counter(u32 mpidr, u32 midr, u32 *coreclk,
+	u32 *refclk)
+{
+	struct pm_regs regs;
+	int ret;
+
+	regs.args[0] = mpidr;
+	regs.args[1] = midr;
+
+	ret = send_smc(SMC_GET_CLK_COUNT, &regs);
+
+	*coreclk = (u32)regs.args[1];
+	*refclk = (u32)regs.args[2];
+
+	return ret;
+}
+EXPORT_SYMBOL(tegra_get_clk_counter);
 
 static void tegra186_power_off_prepare(void)
 {

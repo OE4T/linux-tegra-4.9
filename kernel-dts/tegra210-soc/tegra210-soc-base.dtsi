@@ -876,6 +876,8 @@
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_DPAUX>;
 			clock-names = "dpaux";
+			resets = <&tegra_car TEGRA210_CLK_DPAUX>;
+			reset-names = "dpaux";
 		};
 
 		dpaux1 {
@@ -885,6 +887,8 @@
 			status = "disabled";
 			clocks = <&tegra_car TEGRA210_CLK_DPAUX1>;
 			clock-names = "dpaux1";
+			resets = <&tegra_car TEGRA210_CLK_DPAUX1>;
+			reset-names = "dpaux1";
 		};
 		i2c7: i2c@546c0000 {
 			#address-cells = <1>;

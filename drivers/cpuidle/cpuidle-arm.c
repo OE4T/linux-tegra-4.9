@@ -21,6 +21,11 @@
 
 #include <asm/cpuidle.h>
 
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
+#include <soc/tegra/fuse.h>
+#include <soc/tegra/pm.h>
+#endif
+
 #include "dt_idle_states.h"
 
 /*
@@ -45,12 +50,37 @@ static int arm_enter_idle_state(struct cpuidle_device *dev,
 
 	ret = cpu_pm_enter();
 	if (!ret) {
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
+		if (tegra_get_chip_id() == TEGRA210) {
+			void *idle_idx = (void *)(long)idx;
+			int not_tolerance;
+
+			not_tolerance = tegra210_cpu_pm_enter(idle_idx);
+			if (not_tolerance)
+				/*
+				 * If tegra210_cpu_pm_enter() returns fail,
+				 * that means BPMP-L isn't tolerated with
+				 * the state. So fall back to C7 state
+				 * (idx = 1).
+				 */
+				idx = 1;
+		}
+#endif
+
 		/*
 		 * Pass idle state index to cpu_suspend which in turn will
 		 * call the CPU ops suspend protocol with idle index as a
 		 * parameter.
 		 */
 		ret = arm_cpuidle_suspend(idx);
+
+#ifdef CONFIG_ARCH_TEGRA_210_SOC
+		if (tegra_get_chip_id() == TEGRA210) {
+			void *idle_idx = (void *)(long)idx;
+
+			tegra210_cpu_pm_exit(idle_idx);
+		}
+#endif
 
 		cpu_pm_exit();
 	}

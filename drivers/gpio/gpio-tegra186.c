@@ -228,7 +228,48 @@ static int tegra186_gpio_wakes[] = {
 	-EINVAL,		/* wake95 */
 };
 
-static u32 address_map[32][2];
+/**
+ * address_map: Address mapping table to get index and offset of registers
+ *		with respect to base register provided from DT node.
+ * Here the first index denotes the port like A, B, C etc.
+ * The Second index has two values first is for the register index and second
+ * is for the offset from base.
+ */
+static u32 address_map[32][2] = {
+	{ 0, 0x12000 },
+	{ 0, 0x13000 },
+	{ 0, 0x13200 },
+	{ 0, 0X13400 },
+	{ 0, 0x12200 },
+	{ 0, 0x12400 },
+	{ 0, 0x14200 },
+	{ 0, 0x11000 },
+	{ 0, 0x10800 },
+	{ 0, 0x15000 },
+	{ 0, 0x15200 },
+	{ 0, 0x11200 },
+	{ 0, 0x15600 },
+	{ 0, 0x10000 },
+	{ 0, 0x10200 },
+	{ 0, 0x14000 },
+	{ 0, 0x10400 },
+	{ 0, 0x10A00 },
+	{ 1, 0x1200 },
+	{ 0, 0x10600 },
+	{ 1, 0x1400 },
+	{ 1, 0x1800 },
+	{ 1, 0x1A00 },
+	{ 0, 0x11400 },
+	{ 0, 0x11600 },
+	{ 1, 0x1E00 },
+	{ 1, 0x1C00 },
+	{ 0, 0x12600 },
+	{ 0, 0x15400 },
+	{ (-1), (-1) },
+	{ 1, 0x1600 },
+	{ 1, 0x1000 },
+};
+
 static u32 tegra_gpio_bank_count;
 static struct tegra_gpio_controller
 		tegra_gpio_controllers[MAX_GPIO_CONTROLLERS];
@@ -631,27 +672,6 @@ static struct of_device_id tegra_gpio_of_match[] = {
 	{ },
 };
 
-static void read_gpio_mapping_data(struct platform_device *pdev)
-{
-	struct device_node *np = pdev->dev.of_node;
-	u32 pval;
-	int nstates;
-	int i;
-
-	if (!np)
-		return;
-	nstates = of_property_count_u32_elems(np, "nvidia,gpio_mapping");
-	nstates = nstates / 2;
-	for (i = 0; i < nstates; i++) {
-		of_property_read_u32_index(np, "nvidia,gpio_mapping",
-					i * 2, &pval);
-		address_map[i][0] = pval;
-		of_property_read_u32_index(np, "nvidia,gpio_mapping",
-					i * 2 + 1, &pval);
-		address_map[i][1] = pval;
-	}
-}
-
 static int tegra_gpio_probe(struct platform_device *pdev)
 {
 	struct resource *res;
@@ -660,8 +680,6 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	u32 i;
 	int gpio;
 	int ret;
-
-	read_gpio_mapping_data(pdev);
 
 	for (tegra_gpio_bank_count = 0;; tegra_gpio_bank_count++) {
 		res = platform_get_resource(pdev, IORESOURCE_IRQ,

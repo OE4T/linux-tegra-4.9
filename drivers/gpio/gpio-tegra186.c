@@ -218,49 +218,59 @@ struct tegra_gpio_port_chip_info {
 	u32 reg_offset;
 };
 
-#define TEGRA_GPIO_PORT_INFO(port, cid, cind, npins, rind, sbase, rbase) \
+#define TEGRA_GPIO_PORT_INFO(port, cid, cind, npins)		\
 [TEGRA_GPIO_BANK_ID_##port] = {					\
 		.cont_id = cid,					\
 		.cont_index = cind,				\
 		.valid_pins = npins,				\
-		.reg_index = rind,				\
-		.scr_offset = sbase,				\
-		.reg_offset = rbase,				\
+		.reg_index = 0,					\
+		.scr_offset = cid * 0x1000 + cind * 0x40,	\
+		.reg_offset = 0x10000 + cid * 0x1000 + cind * 0x200, \
+}
+
+#define TEGRA_AON_GPIO_PORT_INFO(port, cid, cind, npins)	\
+[TEGRA_GPIO_BANK_ID_##port] = {					\
+		.cont_id = cid,					\
+		.cont_index = cind,				\
+		.valid_pins = npins,				\
+		.reg_index = 1,					\
+		.scr_offset = cind * 0x40,			\
+		.reg_offset = 0x1000 + cind * 0x200,		\
 }
 
 static struct tegra_gpio_port_chip_info tegra_gpio_cinfo[] = {
-	TEGRA_GPIO_PORT_INFO(A, 2, 0, 7, 0, 0x0, 0x12000),
-	TEGRA_GPIO_PORT_INFO(B, 3, 0, 7, 0, 0x0, 0x13000),
-	TEGRA_GPIO_PORT_INFO(C, 3, 1, 7, 0, 0x0, 0x13200),
-	TEGRA_GPIO_PORT_INFO(D, 3, 2, 6, 0, 0x0, 0x13400),
-	TEGRA_GPIO_PORT_INFO(E, 2, 1, 8, 0, 0x0, 0x12200),
-	TEGRA_GPIO_PORT_INFO(F, 2, 2, 6, 0, 0x0, 0x12400),
-	TEGRA_GPIO_PORT_INFO(G, 4, 1, 6, 0, 0x0, 0x14200),
-	TEGRA_GPIO_PORT_INFO(H, 1, 0, 7, 0, 0x0, 0x11000),
-	TEGRA_GPIO_PORT_INFO(I, 0, 4, 8, 0, 0x0, 0x10800),
-	TEGRA_GPIO_PORT_INFO(J, 5, 0, 8, 0, 0x0, 0x15000),
-	TEGRA_GPIO_PORT_INFO(K, 5, 1, 1, 0, 0x0, 0x15200),
-	TEGRA_GPIO_PORT_INFO(L, 1, 1, 8, 0, 0x0, 0x11200),
-	TEGRA_GPIO_PORT_INFO(M, 5, 3, 6, 0, 0x0, 0x15600),
-	TEGRA_GPIO_PORT_INFO(N, 0, 0, 7, 0, 0x0, 0x10000),
-	TEGRA_GPIO_PORT_INFO(O, 0, 1, 4, 0, 0x0, 0x10200),
-	TEGRA_GPIO_PORT_INFO(P, 4, 0, 7, 0, 0x0, 0x14000),
-	TEGRA_GPIO_PORT_INFO(Q, 0, 2, 6, 0, 0x0, 0x10400),
-	TEGRA_GPIO_PORT_INFO(R, 0, 5, 6, 0, 0x0, 0x10A00),
-	TEGRA_GPIO_PORT_INFO(S, 6, 1, 5, 1, 0x0, 0x1200),
-	TEGRA_GPIO_PORT_INFO(T, 0, 3, 4, 0, 0x0, 0x10600),
-	TEGRA_GPIO_PORT_INFO(U, 6, 2, 6, 1, 0x0, 0x1400),
-	TEGRA_GPIO_PORT_INFO(V, 6, 4, 8, 1, 0x0, 0x1800),
-	TEGRA_GPIO_PORT_INFO(W, 6, 5, 8, 1, 0x0, 0x1A00),
-	TEGRA_GPIO_PORT_INFO(X, 1, 2, 8, 0, 0x0, 0x11400),
-	TEGRA_GPIO_PORT_INFO(Y, 1, 3, 7, 0, 0x0, 0x11600),
-	TEGRA_GPIO_PORT_INFO(Z, 6, 7, 4, 1, 0x0, 0x1E00),
-	TEGRA_GPIO_PORT_INFO(AA, 6, 6, 8, 1, 0x0, 0x1C00),
-	TEGRA_GPIO_PORT_INFO(BB, 2, 3, 2, 0, 0x0, 0x12600),
-	TEGRA_GPIO_PORT_INFO(CC, 5, 2, 4, 0, 0x0, 0x15400),
-	TEGRA_GPIO_PORT_INFO(DD, -1, -1, 0, -1, -1, -1),
-	TEGRA_GPIO_PORT_INFO(EE, 6, 3, 3, 1, 0x0, 0x1600),
-	TEGRA_GPIO_PORT_INFO(FF, 6, 0, 5, 1, 0x0, 0x1000),
+	TEGRA_GPIO_PORT_INFO(A, 2, 0, 7),
+	TEGRA_GPIO_PORT_INFO(B, 3, 0, 7),
+	TEGRA_GPIO_PORT_INFO(C, 3, 1, 7),
+	TEGRA_GPIO_PORT_INFO(D, 3, 2, 6),
+	TEGRA_GPIO_PORT_INFO(E, 2, 1, 8),
+	TEGRA_GPIO_PORT_INFO(F, 2, 2, 6),
+	TEGRA_GPIO_PORT_INFO(G, 4, 1, 6),
+	TEGRA_GPIO_PORT_INFO(H, 1, 0, 7),
+	TEGRA_GPIO_PORT_INFO(I, 0, 4, 8),
+	TEGRA_GPIO_PORT_INFO(J, 5, 0, 8),
+	TEGRA_GPIO_PORT_INFO(K, 5, 1, 1),
+	TEGRA_GPIO_PORT_INFO(L, 1, 1, 8),
+	TEGRA_GPIO_PORT_INFO(M, 5, 3, 6),
+	TEGRA_GPIO_PORT_INFO(N, 0, 0, 7),
+	TEGRA_GPIO_PORT_INFO(O, 0, 1, 4),
+	TEGRA_GPIO_PORT_INFO(P, 4, 0, 7),
+	TEGRA_GPIO_PORT_INFO(Q, 0, 2, 6),
+	TEGRA_GPIO_PORT_INFO(R, 0, 5, 6),
+	TEGRA_AON_GPIO_PORT_INFO(S, 6, 1, 5),
+	TEGRA_GPIO_PORT_INFO(T, 0, 3, 4),
+	TEGRA_AON_GPIO_PORT_INFO(U, 6, 2, 6),
+	TEGRA_AON_GPIO_PORT_INFO(V, 6, 4, 8),
+	TEGRA_AON_GPIO_PORT_INFO(W, 6, 5, 8),
+	TEGRA_GPIO_PORT_INFO(X, 1, 2, 8),
+	TEGRA_GPIO_PORT_INFO(Y, 1, 3, 7),
+	TEGRA_AON_GPIO_PORT_INFO(Z, 6, 7, 4),
+	TEGRA_AON_GPIO_PORT_INFO(AA, 6, 6, 8),
+	TEGRA_GPIO_PORT_INFO(BB, 2, 3, 2),
+	TEGRA_GPIO_PORT_INFO(CC, 5, 2, 4),
+	TEGRA_GPIO_PORT_INFO(DD, -1, -1, 0),
+	TEGRA_AON_GPIO_PORT_INFO(EE, 6, 3, 3),
+	TEGRA_AON_GPIO_PORT_INFO(FF, 6, 0, 5),
 };
 
 static u32 tegra_gpio_bank_count;
@@ -334,7 +344,8 @@ static inline bool is_gpio_accessible(u32 offset)
 	int port = GPIO_PORT(offset);
 	int pin = GPIO_PIN(offset);
 	u32 val;
-	int cont_id, cont_index;
+	int cont_id;
+	u32 scr_offset = tegra_gpio_cinfo[port].scr_offset;
 	int rindex;
 
 	if (pin >= tegra_gpio_cinfo[port].valid_pins)
@@ -344,16 +355,10 @@ static inline bool is_gpio_accessible(u32 offset)
 	if (cont_id  < 0)
 		return false;
 
-	cont_index = tegra_gpio_cinfo[port].cont_index;
 	rindex = tegra_gpio_cinfo[port].reg_index;
-	/*AON offset is same as base*/
-	if (rindex)
-		cont_id = 0;
 
-	val = __raw_readl(tegra_gpio->regs[rindex] +
-		(cont_id * GPIO_CONTROLLERS_DIFF) +
-		(cont_index * GPIO_SCR_BASE_DIFF) + (pin * GPIO_SCR_DIFF) +
-			GPIO_SCR_REG);
+	val = __raw_readl(tegra_gpio->regs[rindex] + scr_offset +
+			  (pin * GPIO_SCR_DIFF) + GPIO_SCR_REG);
 
 	if ((val & GPIO_FULL_ACCESS) == GPIO_FULL_ACCESS)
 		return true;

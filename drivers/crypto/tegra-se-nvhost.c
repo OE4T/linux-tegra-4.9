@@ -2603,6 +2603,9 @@ static int tegra_se_rsa_digest(struct ahash_request *req)
 			(req->nbytes > TEGRA_SE_RSA2048_DIGEST_SIZE))
 		return -EINVAL;
 
+	if (req->nbytes != rsa_ctx->mod_len)
+		return -EINVAL;
+
 	num_sgs = tegra_se_count_sgs(req->src, req->nbytes, &chained);
 	if (num_sgs > SE_MAX_SRC_SG_COUNT) {
 		dev_err(se_dev->dev, "num of SG buffers are more\n");

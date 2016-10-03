@@ -509,34 +509,38 @@ static int ov23850_s_stream(struct v4l2_subdev *sd, int enable)
 	if (err)
 		goto exit;
 
-	/* write list of override regs for the asking frame length, */
-	/* coarse integration time, and gain.                       */
-	control.id = V4L2_CID_GAIN;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= ov23850_set_gain(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev, "%s: error gain override\n", __func__);
+	if (s_data->override_enable) {
+		/* write list of override regs for the asking frame length, */
+		/* coarse integration time, and gain.                       */
+		control.id = V4L2_CID_GAIN;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= ov23850_set_gain(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev, "%s: error gain override\n",
+				__func__);
 
-	control.id = V4L2_CID_FRAME_LENGTH;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= ov23850_set_frame_length(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev,
-			"%s: error frame length override\n", __func__);
+		control.id = V4L2_CID_FRAME_LENGTH;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= ov23850_set_frame_length(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: error frame length override\n", __func__);
 
-	control.id = V4L2_CID_COARSE_TIME;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= ov23850_set_coarse_time(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev,
-			"%s: error coarse time override\n", __func__);
+		control.id = V4L2_CID_COARSE_TIME;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= ov23850_set_coarse_time(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: error coarse time override\n", __func__);
 
-	control.id = V4L2_CID_COARSE_TIME_SHORT;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= ov23850_set_coarse_time_short(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev,
-			"%s: error coarse time short override\n", __func__);
+		control.id = V4L2_CID_COARSE_TIME_SHORT;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= ov23850_set_coarse_time_short(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: error coarse time short override\n",
+				__func__);
+	}
 
 	err = ov23850_write_table(priv, mode_table[OV23850_MODE_START_STREAM]);
 	if (err)

@@ -448,37 +448,41 @@ static int imx214_s_stream(struct v4l2_subdev *sd, int enable)
 	if (err)
 		goto exit;
 
-	/* write list of override regs for the asking frame length, */
-	/* coarse integration time, and gain. Failures to write
-	 * overrides are non-fatal */
-	control.id = V4L2_CID_GAIN;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= imx214_set_gain(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev, "%s: warning gain override failed\n",
-			__func__);
+	if (s_data->override_enable) {
+		/* write list of override regs for the asking frame length, */
+		/*
+		 * coarse integration time, and gain. Failures to write
+		 * overrides are non-fatal
+		 */
+		control.id = V4L2_CID_GAIN;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= imx214_set_gain(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev, "%s: warning gain override failed\n",
+				__func__);
 
-	control.id = V4L2_CID_FRAME_LENGTH;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= imx214_set_frame_length(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev,
-			"%s: warning frame length override failed\n", __func__);
+		control.id = V4L2_CID_FRAME_LENGTH;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= imx214_set_frame_length(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: frame length override failed\n", __func__);
 
-	control.id = V4L2_CID_COARSE_TIME;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= imx214_set_coarse_time(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev,
-			"%s: warning coarse time override failed\n", __func__);
+		control.id = V4L2_CID_COARSE_TIME;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= imx214_set_coarse_time(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: coarse time override failed\n", __func__);
 
-	control.id = V4L2_CID_COARSE_TIME_SHORT;
-	err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
-	err |= imx214_set_coarse_time_short(priv, control.value);
-	if (err)
-		dev_dbg(&client->dev,
-			"%s: warning coarse time short override failed\n",
-			__func__);
+		control.id = V4L2_CID_COARSE_TIME_SHORT;
+		err = v4l2_g_ctrl(&priv->ctrl_handler, &control);
+		err |= imx214_set_coarse_time_short(priv, control.value);
+		if (err)
+			dev_dbg(&client->dev,
+				"%s: warning coarse time short override failed\n",
+				__func__);
+	}
 
 	err = imx214_write_table(priv, mode_table[IMX214_MODE_START_STREAM]);
 	if (err)

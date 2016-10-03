@@ -414,37 +414,42 @@ static int imx185_s_stream(struct v4l2_subdev *sd, int enable)
 	if (err)
 		goto exit;
 
-	/* write list of override regs for the asking gain, */
-	/* frame rate and exposure time    */
-	memset(&ctrls, 0, sizeof(ctrls));
-	ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(V4L2_CID_GAIN);
-	ctrls.count = 3;
-	ctrls.controls = control;
 
-	control[0].id = V4L2_CID_GAIN;
-	control[1].id = V4L2_CID_FRAME_RATE;
-	control[2].id = V4L2_CID_EXPOSURE;
+	if (s_data->override_enable) {
+		/* write list of override regs for the asking gain, */
+		/* frame rate and exposure time    */
+		memset(&ctrls, 0, sizeof(ctrls));
+		ctrls.ctrl_class = V4L2_CTRL_ID2CLASS(V4L2_CID_GAIN);
+		ctrls.count = 3;
+		ctrls.controls = control;
 
-	err = v4l2_g_ext_ctrls(&priv->ctrl_handler, &ctrls);
-	if (err == 0) {
+		control[0].id = V4L2_CID_GAIN;
+		control[1].id = V4L2_CID_FRAME_RATE;
+		control[2].id = V4L2_CID_EXPOSURE;
 
-		err |= imx185_set_gain(priv, control[0].value64);
-		if (err)
-			dev_err(&client->dev,
-				"%s: error gain override\n", __func__);
+		err = v4l2_g_ext_ctrls(&priv->ctrl_handler, &ctrls);
+		if (err == 0) {
+			err |= imx185_set_gain(priv, control[0].value64);
+			if (err)
+				dev_err(&client->dev,
+					"%s: error gain override\n", __func__);
 
-		err |= imx185_set_frame_rate(priv, control[1].value64);
-		if (err)
-			dev_err(&client->dev,
-				"%s: error frame length override\n", __func__);
+			err |= imx185_set_frame_rate(priv, control[1].value64);
+			if (err)
+				dev_err(&client->dev,
+					"%s: error frame length override\n",
+					__func__);
 
-		err |= imx185_set_exposure(priv, control[2].value64);
-		if (err)
-			dev_err(&client->dev,
-				"%s: error exposure override\n", __func__);
+			err |= imx185_set_exposure(priv, control[2].value64);
+			if (err)
+				dev_err(&client->dev,
+					"%s: error exposure override\n",
+					__func__);
 
-	} else {
-		dev_err(&client->dev, "%s: faile to get overrides\n", __func__);
+		} else {
+			dev_err(&client->dev, "%s: faile to get overrides\n",
+				__func__);
+		}
 	}
 
 	if (test_mode)

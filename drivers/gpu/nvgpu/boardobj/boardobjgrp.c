@@ -234,7 +234,7 @@ u32 boardobjgrp_pmuhdrdatainit_super(struct gk20a *g, struct boardobjgrp
 	return 0;
 }
 
-u32 boardobjgrp_pmudatainstget_stub(struct gk20a *g,
+static u32 boardobjgrp_pmudatainstget_stub(struct gk20a *g,
 	struct nv_pmu_boardobjgrp *boardobjgrppmu,
 	struct nv_pmu_boardobj **ppboardobjpmudata, u8 idx)
 {
@@ -243,7 +243,8 @@ u32 boardobjgrp_pmudatainstget_stub(struct gk20a *g,
 }
 
 
-u32 boardobjgrp_pmustatusinstget_stub(struct gk20a *g, void *pboardobjgrppmu,
+static u32 boardobjgrp_pmustatusinstget_stub(struct gk20a *g,
+	void *pboardobjgrppmu,
 	struct nv_pmu_boardobj_query **ppBoardobjpmustatus, u8 idx)
 {
 	gk20a_dbg_info("");
@@ -627,8 +628,8 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 				  struct boardobjgrp *pboardobjgrp,
 				  struct boardobjgrp_pmu_cmd *pcmd)
 {
-	struct boardobjgrp_pmucmdhandler_params handlerparams = { 0 };
-	struct pmu_payload payload = { {0} };
+	struct boardobjgrp_pmucmdhandler_params handlerparams;
+	struct pmu_payload payload;
 	struct nv_pmu_boardobj_cmd_grp *pgrpcmd;
 	struct pmu_cmd cmd;
 	u32 seqdesc;
@@ -636,6 +637,8 @@ static u32 boardobjgrp_pmucmdsend(struct gk20a *g,
 
 	gk20a_dbg_info("");
 
+	memset(&payload, 0, sizeof(payload));
+	memset(&handlerparams, 0, sizeof(handlerparams));
 	memset(&cmd, 0, sizeof(struct pmu_cmd));
 	cmd.hdr.unit_id	= pboardobjgrp->pmu.unitid;
 	cmd.hdr.size = sizeof(struct nv_pmu_boardobj_cmd_grp) +

@@ -3005,7 +3005,7 @@ static int tegra_se_probe(struct platform_device *pdev)
 
 	if (se_dev->chipdata->drbg_src_entropy_clk_enable) {
 		/* Initialize the entropy clock */
-		se_dev->enclk = clk_get_sys("entropy", NULL);
+		se_dev->enclk = clk_get(se_dev->dev, "entropy");
 		if (IS_ERR(se_dev->enclk)) {
 			err = PTR_ERR(se_dev->enclk);
 			dev_err(se_dev->dev,

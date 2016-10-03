@@ -527,6 +527,7 @@ int tegra_vi_graph_init(struct tegra_mc_vi *vi)
 	return 0;
 
 done:
+	tegra_clean_unlinked_channels(vi);
 	if (ret < 0)
 		tegra_vi_graph_cleanup(vi);
 

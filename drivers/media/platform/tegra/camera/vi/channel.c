@@ -1494,8 +1494,17 @@ int tegra_clean_unlinked_channels(struct tegra_mc_vi *vi)
 
 	for (i = 0; i < vi->num_channels; i++) {
 		struct tegra_channel *chan = &vi->chans[i];
+		struct v4l2_subdev *sd = chan->subdev_on_csi;
+		bool is_csi = false;
 
-		if (chan->num_subdevs)
+		/*
+		 * If subdevice on csi is csi itself,
+		 * then sensor subdevice is not connected
+		 */
+		if (sd)
+			is_csi = strstr(sd->name, "nvcsi") != NULL;
+
+		if (chan->num_subdevs && !is_csi)
 			continue;
 
 		ret = tegra_channel_cleanup(chan);

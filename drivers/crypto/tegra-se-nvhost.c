@@ -2579,7 +2579,7 @@ static int tegra_se_rsa_digest(struct ahash_request *req)
 	int total, err = 0;
 	int chained;
 
-	se_dev = tegra_se_get_dev("aes-supported");
+	se_dev = tegra_se_get_dev("rsa-supported");
 	if (!se_dev)
 		return -ENODEV;
 

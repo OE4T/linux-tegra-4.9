@@ -251,6 +251,11 @@ M:	R Raj Kumar <rrajk@nvidia.com>
 S:	Supported
 F:	drivers/tachometer/*
 
+SHIELD
+M:	Vinayak Pane <vpane@nvidia.com>
+S:	Supported
+F:	drivers/misc/tegra_cpc.c
+
 SYSTEM
 M:	Laxman Dewangan <ldewangan@nvidia.com>
 L:	sw-mobile-system@exchange.nvidia.com

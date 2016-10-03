@@ -31,6 +31,13 @@ config SENSORS_NCT1008
 	 Say yes here if you wish to include the ON Semiconductor
 	 NCT1008 Temperature sensor.
 
+config TEGRA_CPC
+	bool "Tegra content protection controller"
+	depends on I2C
+	help
+	  This driver allows authenticated IO access to storage blocks on
+	  CPC controller via i2c.
+
 config THERM_EST
 	bool "Thermal estimator driver"
 	default n

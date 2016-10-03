@@ -334,7 +334,7 @@ int tegra_camrtc_stop(struct device *dev)
 
 	tegra_camrtc_set_halt(dev, true);
 
-	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_assert);
+	ret = tegra_cam_rtcpu_apply_resets(dev, reset_control_reset);
 	if (ret) {
 		dev_err(dev, "failed to assert the resets: %d", ret);
 		return ret;

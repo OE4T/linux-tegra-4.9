@@ -48,9 +48,7 @@
 #define V4L2_CID_EEPROM_DATA		(V4L2_CID_TEGRA_CAMERA_BASE+5)
 #define V4L2_CID_OTP_DATA		(V4L2_CID_TEGRA_CAMERA_BASE+6)
 #define V4L2_CID_FUSE_ID		(V4L2_CID_TEGRA_CAMERA_BASE+7)
-
 #define V4L2_CID_TEGRA_CAMERA_LAST	(V4L2_CID_TEGRA_CAMERA_BASE+8)
-#define V4L2_CID_VI_BYPASS_MODE		(V4L2_CID_TEGRA_CAMERA_BASE+9)
 #define V4L2_CID_SENSOR_MODE_ID		(V4L2_CID_TEGRA_CAMERA_BASE+10)
 
 /* undefine default CID for GAIN/EXPOSURE and use NV's version */
@@ -59,6 +57,9 @@
 #define V4L2_CID_GAIN				(V4L2_CID_TEGRA_CAMERA_BASE+11)
 #define V4L2_CID_EXPOSURE			(V4L2_CID_TEGRA_CAMERA_BASE+12)
 #define V4L2_CID_FRAME_RATE			(V4L2_CID_TEGRA_CAMERA_BASE+13)
+
+#define V4L2_CID_VI_BYPASS_MODE		(V4L2_CID_TEGRA_CAMERA_BASE+100)
+#define V4L2_CID_OVERRIDE_ENABLE	(V4L2_CID_TEGRA_CAMERA_BASE+101)
 
 #define MAX_BUFFER_SIZE			32
 #define MAX_CID_CONTROLS		16
@@ -204,6 +205,7 @@ struct camera_common_data {
 	int	fmt_width, fmt_height;
 	int	sensor_mode_id;
 	bool	use_sensor_mode_id;
+	bool	override_enable;
 };
 
 struct camera_common_focuser_data;

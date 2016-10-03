@@ -555,6 +555,7 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 	int ret = 0, i;
 	unsigned long request_pixelrate;
 	unsigned long flags;
+	struct v4l2_ctrl *override_ctrl;
 
 	vi4_init(chan);
 	if (!chan->vi->pg_mode) {
@@ -589,6 +590,18 @@ int vi4_channel_start_streaming(struct vb2_queue *vq, u32 count)
 
 	chan->sequence = 0;
 	tegra_channel_init_ring_buffer(chan);
+
+	/* disable override for vi mode */
+	override_ctrl = v4l2_ctrl_find(
+		&chan->ctrl_handler, V4L2_CID_OVERRIDE_ENABLE);
+	if (override_ctrl) {
+		ret = v4l2_ctrl_s_ctrl(override_ctrl, false);
+		if (ret < 0)
+			dev_err(&chan->video.dev,
+				"failed to disable override control\n");
+	} else
+		dev_err(&chan->video.dev,
+			"No override control\n");
 
 	/* Update clock and bandwidth based on the format */
 	mutex_lock(&chan->vi->bw_update_lock);

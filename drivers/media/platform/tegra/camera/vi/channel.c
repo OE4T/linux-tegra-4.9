@@ -780,6 +780,24 @@ static int tegra_channel_s_ctrl(struct v4l2_ctrl *ctrl)
 		} else
 			chan->bypass = false;
 		break;
+	case V4L2_CID_OVERRIDE_ENABLE:
+		{
+			struct v4l2_subdev *sd = chan->subdev_on_csi;
+			struct i2c_client *client = v4l2_get_subdevdata(sd);
+			struct camera_common_data *s_data =
+				to_camera_common_data(client);
+
+			if (switch_ctrl_qmenu[ctrl->val] == SWITCH_ON) {
+				s_data->override_enable = true;
+				dev_dbg(&chan->video.dev,
+					"enable override control\n");
+			} else {
+				s_data->override_enable = false;
+				dev_dbg(&chan->video.dev,
+					"disable override control\n");
+			}
+		}
+		break;
 	default:
 		dev_err(&chan->video.dev, "%s:Not valid ctrl\n", __func__);
 		return -EINVAL;
@@ -792,26 +810,36 @@ static const struct v4l2_ctrl_ops channel_ctrl_ops = {
 	.s_ctrl	= tegra_channel_s_ctrl,
 };
 
-/**
- * By default channel will be in VI mode
- * User space can set it to 0 for working in bypass mode
- */
-static const struct v4l2_ctrl_config bypass_mode_ctrl = {
-	.ops = &channel_ctrl_ops,
-	.id = V4L2_CID_VI_BYPASS_MODE,
-	.name = "Bypass Mode",
-	.type = V4L2_CTRL_TYPE_INTEGER_MENU,
-	.def = 0,
-	.min = 0,
-	.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
-	.menu_skip_mask = 0,
-	.qmenu_int = switch_ctrl_qmenu,
+static const struct v4l2_ctrl_config custom_ctrl_list[] = {
+	{
+		.ops = &channel_ctrl_ops,
+		.id = V4L2_CID_VI_BYPASS_MODE,
+		.name = "Bypass Mode",
+		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
+		.def = 0,
+		.min = 0,
+		.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
+		.menu_skip_mask = 0,
+		.qmenu_int = switch_ctrl_qmenu,
+	},
+	{
+		.ops = &channel_ctrl_ops,
+		.id = V4L2_CID_OVERRIDE_ENABLE,
+		.name = "Override Enable",
+		.type = V4L2_CTRL_TYPE_INTEGER_MENU,
+		.def = 0,
+		.min = 0,
+		.max = ARRAY_SIZE(switch_ctrl_qmenu) - 1,
+		.menu_skip_mask = 0,
+		.qmenu_int = switch_ctrl_qmenu,
+	},
 };
 
 static int tegra_channel_setup_controls(struct tegra_channel *chan)
 {
 	int num_sd = 0;
 	struct v4l2_subdev *sd = NULL;
+	int i;
 
 	/* Initialize the subdev and controls here at first open */
 	sd = chan->subdev[num_sd];
@@ -825,12 +853,20 @@ static int tegra_channel_setup_controls(struct tegra_channel *chan)
 				"Failed to add sub-device controls\n");
 	}
 
-	/* Add the bypass mode ctrl */
-	v4l2_ctrl_new_custom(&chan->ctrl_handler, &bypass_mode_ctrl, NULL);
-	if (chan->ctrl_handler.error) {
-		dev_err(chan->vi->dev,
-			"Failed to add bypass control\n");
-		return chan->ctrl_handler.error;
+	/* Add new custom controls */
+	for (i = 0; i < ARRAY_SIZE(custom_ctrl_list); i++) {
+		/* don't create override control for pg mode */
+		if (!(chan->vi->pg_mode &&
+			  custom_ctrl_list[i].id == V4L2_CID_OVERRIDE_ENABLE)) {
+			v4l2_ctrl_new_custom(&chan->ctrl_handler,
+				&custom_ctrl_list[i], NULL);
+			if (chan->ctrl_handler.error) {
+				dev_err(chan->vi->dev,
+					"Failed to add %s ctrl\n",
+					custom_ctrl_list[i].name);
+				return chan->ctrl_handler.error;
+			}
+		}
 	}
 
 	if (chan->vi->pg_mode) {

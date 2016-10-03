@@ -191,7 +191,10 @@ sched_clock_register(u64 (*read)(void), int bits, unsigned long rate)
 	rd = cd.read_data[0];
 
 	/* Update epoch for new counter and update 'epoch_ns' from old counter*/
-	new_epoch = read();
+	if (IS_ENABLED(CONFIG_SCHED_POR_TIME))
+		new_epoch = 0;
+	else
+		new_epoch = read();
 	cyc = cd.actual_read_sched_clock();
 	ns = rd.epoch_ns + cyc_to_ns((cyc - rd.epoch_cyc) & rd.sched_clock_mask, rd.mult, rd.shift);
 	cd.actual_read_sched_clock = read;

@@ -424,7 +424,7 @@ struct mm_gk20a {
 		struct mutex clear_list_mutex;
 
 		struct work_struct clear_mem_worker;
-		atomic_t clears_pending;
+		atomic64_t bytes_pending;
 	} vidmem;
 };
 

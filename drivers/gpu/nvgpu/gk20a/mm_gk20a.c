@@ -950,7 +950,7 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	mutex_init(&mm->vidmem.first_clear_mutex);
 
 	INIT_WORK(&mm->vidmem.clear_mem_worker, gk20a_vidmem_clear_mem_worker);
-	atomic_set(&mm->vidmem.clears_pending, 0);
+	atomic64_set(&mm->vidmem.bytes_pending, 0);
 	INIT_LIST_HEAD(&mm->vidmem.clear_list_head);
 	mutex_init(&mm->vidmem.clear_list_mutex);
 
@@ -3093,7 +3093,7 @@ int gk20a_gmmu_alloc_attr_vid_at(struct gk20a *g, enum dma_attr attr,
 	WARN_ON(attr != 0 && attr != DMA_ATTR_NO_KERNEL_MAPPING);
 
 	mutex_lock(&g->mm.vidmem.clear_list_mutex);
-	before_pending = atomic_read(&g->mm.vidmem.clears_pending);
+	before_pending = atomic64_read(&g->mm.vidmem.bytes_pending);
 	addr = __gk20a_gmmu_alloc(vidmem_alloc, at, size);
 	mutex_unlock(&g->mm.vidmem.clear_list_mutex);
 	if (!addr) {
@@ -3156,7 +3156,7 @@ static void gk20a_gmmu_free_attr_vid(struct gk20a *g, enum dma_attr attr,
 		was_empty = list_empty(&g->mm.vidmem.clear_list_head);
 		list_add_tail(&mem->clear_list_entry,
 			      &g->mm.vidmem.clear_list_head);
-		atomic_inc(&g->mm.vidmem.clears_pending);
+		atomic64_add(mem->size, &g->mm.vidmem.bytes_pending);
 		mutex_unlock(&g->mm.vidmem.clear_list_mutex);
 
 		if (was_empty) {
@@ -3245,7 +3245,8 @@ static void gk20a_vidmem_clear_mem_worker(struct work_struct *work)
 			   (u64)get_vidmem_page_alloc(mem->sgt->sgl));
 		gk20a_free_sgtable(&mem->sgt);
 
-		WARN_ON(atomic_dec_return(&mm->vidmem.clears_pending) < 0);
+		WARN_ON(atomic64_sub_return(mem->size,
+					&g->mm.vidmem.bytes_pending) < 0);
 		mem->size = 0;
 		mem->aperture = APERTURE_INVALID;
 

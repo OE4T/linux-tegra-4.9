@@ -467,6 +467,10 @@ static struct dvfs qspi_ddr_dvfs_table[] = {
 	CORE_DVFS("qspi",		-1, -1, 1, KHZ,	  81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600,   81600),
 };
 
+static struct dvfs sor1_dp_dvfs_table[] = {
+	CORE_DVFS("sor1",		-1, -1, 1, KHZ,	 162000,  162000,  270000,  270000,  270000,  540000,  540000,  540000,  540000,  540000,  540000,  540000,  540000,  540000,  540000),
+};
+
 int tegra_dvfs_disable_core_set(const char *arg, const struct kernel_param *kp)
 {
 	int ret;
@@ -752,6 +756,27 @@ static void init_qspi_dvfs(int soc_speedo_id, int core_process_id,
 		init_dvfs_one(qspi_dvfs, core_nominal_mv_index);
 }
 
+static void __init init_sor1_dvfs(int soc_speedo_id, int core_process_id,
+				  int core_nominal_mv_index)
+{
+	struct dvfs *sor1_dp_dvfs = &sor1_dp_dvfs_table[0];
+	struct clk *c;
+
+	c = clk_get_sys(sor1_dp_dvfs->clk_name, sor1_dp_dvfs->clk_name);
+	if (IS_ERR(c)) {
+		pr_debug("init_sor1_dvfs: no clock found for %s\n",
+			sor1_dp_dvfs->clk_name);
+		return;
+	}
+
+	if (match_dvfs_one(sor1_dp_dvfs->clk_name, sor1_dp_dvfs->speedo_id,
+		sor1_dp_dvfs->process_id, soc_speedo_id, core_process_id))
+		tegra_dvfs_add_alt_freqs(c, sor1_dp_dvfs);
+
+	return;
+
+}
+
 static int get_core_speedo_mv(void)
 {
 	int speedo_rev = tegra_sku_info.revision;
@@ -927,6 +952,7 @@ int tegra210_init_dvfs(void)
 	}
 
 	init_qspi_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
+	init_sor1_dvfs(soc_speedo_id, core_process_id, core_nominal_mv_index);
 
 	/*
 	 * Initialize matching cpu dvfs entry already found when nominal

@@ -132,13 +132,7 @@ static inline struct page *get_page_list_page(struct nvmap_page_pool *pool)
 
 static inline bool nvmap_bg_should_run(struct nvmap_page_pool *pool)
 {
-	bool ret;
-
-	mutex_lock(&pool->lock);
-	ret = (pool->to_zero > 0);
-	mutex_unlock(&pool->lock);
-
-	return ret;
+	return !list_empty(&pool->zero_list);
 }
 
 static int nvmap_pp_zero_pages(struct page **pages, int nr)

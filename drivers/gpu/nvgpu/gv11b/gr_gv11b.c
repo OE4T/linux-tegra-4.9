@@ -1565,6 +1565,63 @@ int gr_gv11b_setup_rop_mapping(struct gk20a *g, struct gr_gk20a *gr)
 }
 
 
+static void gv11b_write_bundle_veid_state(struct gk20a *g, u32 index)
+{
+	struct av_list_gk20a *sw_veid_bundle_init =
+			&g->gr.ctx_vars.sw_veid_bundle_init;
+	u32 j;
+	u32 num_subctx = nvgpu_get_litter_value(g, GPU_LIT_NUM_SUBCTX);
+	u32 err = 0;
+	unsigned long end_jiffies = jiffies +
+			msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+
+	for (j = 0; j < num_subctx; j++) {
+
+		gk20a_writel(g, gr_pipe_bundle_address_r(),
+			sw_veid_bundle_init->l[index].addr |
+			gr_pipe_bundle_address_veid_f(j));
+
+		err = gr_gk20a_wait_fe_idle(g, end_jiffies,
+				GR_IDLE_CHECK_DEFAULT);
+	}
+}
+
+static int gr_gv11b_init_sw_veid_bundle(struct gk20a *g)
+{
+	struct av_list_gk20a *sw_veid_bundle_init =
+			&g->gr.ctx_vars.sw_veid_bundle_init;
+	u32 i;
+	u32 last_bundle_data = 0;
+	u32 err = 0;
+	unsigned long end_jiffies = jiffies +
+		msecs_to_jiffies(gk20a_get_gr_idle_timeout(g));
+
+	gk20a_dbg_fn("");
+	for (i = 0; i < sw_veid_bundle_init->count; i++) {
+
+		if (i == 0 || last_bundle_data !=
+				sw_veid_bundle_init->l[i].value) {
+			gk20a_writel(g, gr_pipe_bundle_data_r(),
+				sw_veid_bundle_init->l[i].value);
+			last_bundle_data = sw_veid_bundle_init->l[i].value;
+		}
+
+		if (gr_pipe_bundle_address_value_v(
+			sw_veid_bundle_init->l[i].addr) == GR_GO_IDLE_BUNDLE) {
+				gk20a_writel(g, gr_pipe_bundle_address_r(),
+					sw_veid_bundle_init->l[i].addr);
+				err |= gr_gk20a_wait_idle(g, end_jiffies,
+					GR_IDLE_CHECK_DEFAULT);
+		} else
+			gv11b_write_bundle_veid_state(g, i);
+
+		if (err)
+			break;
+	}
+	gk20a_dbg_fn("done");
+	return err;
+}
+
 void gv11b_init_gr(struct gpu_ops *gops)
 {
 	gp10b_init_gr(gops);
@@ -1602,4 +1659,5 @@ void gv11b_init_gr(struct gpu_ops *gops)
 		gr_gv11b_pre_process_sm_exception;
 	gops->gr.handle_fecs_error = gr_gv11b_handle_fecs_error;
 	gops->gr.setup_rop_mapping = gr_gv11b_setup_rop_mapping;
+	gops->gr.init_sw_veid_bundle = gr_gv11b_init_sw_veid_bundle;
 }

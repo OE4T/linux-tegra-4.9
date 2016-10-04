@@ -25,6 +25,9 @@ enum {
 	VOLTA_DMA_COPY_A        = 0xC3B5,
 };
 
+/* use magic number 99 for subctx litter value */
+#define GPU_LIT_NUM_SUBCTX 99
+
 void gv11b_init_gr(struct gpu_ops *ops);
 int gr_gv11b_alloc_buffer(struct vm_gk20a *vm, size_t size,
                         struct mem_desc *mem);

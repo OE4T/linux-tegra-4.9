@@ -362,21 +362,6 @@ static inline bool is_gpio_accessible(struct tegra_gpio_info *tgi, u32 offset)
 	return false;
 }
 
-int tegra_gpio_is_enabled(int gpio, int *is_gpio, int *is_input)
-{
-#if 0
-	u32 val;
-	if (is_gpio_accessible(gpio)) {
-		val = tegra_gpio_readl(gpio, GPIO_ENB_CONFIG_REG);
-		*is_gpio = val & 0x1;
-		*is_input = tegra_gpio_readl(gpio, GPIO_OUT_CTRL_REG);
-	}
-#else
-	return -1;
-#endif
-}
-EXPORT_SYMBOL(tegra_gpio_is_enabled);
-
 static void tegra_gpio_enable(struct tegra_gpio_info *tgi, int gpio)
 {
 	tegra_gpio_update(tgi, gpio, GPIO_ENB_CONFIG_REG, 0x1, 0x1);
@@ -482,6 +467,32 @@ static int tegra_gpio_set_debounce(struct gpio_chip *chip, unsigned offset,
 	/* Update debounce threshold */
 	tegra_gpio_writel(tgi, dbc_ms, offset, GPIO_DBC_THRES_REG);
 	return 0;
+}
+
+static int tegra_gpio_is_enabled(struct gpio_chip *chip, unsigned offset)
+{
+	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
+	u32 val;
+
+	if (!is_gpio_accessible(tgi, offset))
+		return 0;
+
+	val = tegra_gpio_readl(tgi, offset, GPIO_ENB_CONFIG_REG);
+
+	return !!(val & 0x1);
+}
+
+static int tegra_gpio_get_direction(struct gpio_chip *chip, unsigned offset)
+{
+	struct tegra_gpio_info *tgi = gpiochip_get_data(chip);
+	u32 val;
+
+	if (!is_gpio_accessible(tgi, offset))
+		return 0;
+
+	val = tegra_gpio_readl(tgi, offset, GPIO_OUT_CTRL_REG);
+
+	return (val & 0x1);
 }
 
 static int tegra_gpio_to_irq(struct gpio_chip *chip, unsigned offset)
@@ -757,6 +768,8 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	tgi->gc.get			= tegra_gpio_get;
 	tgi->gc.direction_output	= tegra_gpio_direction_output;
 	tgi->gc.set			= tegra_gpio_set;
+	tgi->gc.get_direction		= tegra_gpio_get_direction;
+	tgi->gc.is_enabled			= tegra_gpio_is_enabled;
 	tgi->gc.to_irq			= tegra_gpio_to_irq;
 	tgi->gc.set_debounce		= tegra_gpio_set_debounce;
 	tgi->gc.base			= 0;

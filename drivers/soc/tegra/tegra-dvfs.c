@@ -723,6 +723,35 @@ unsigned long tegra_dvfs_round_rate(struct clk *c, unsigned long rate)
 	return freqs[i - 1];
 }
 
+int tegra_dvfs_use_alt_freqs_on_clk(struct clk *c, bool use_alt_freq)
+{
+	struct dvfs *d;
+	int err = -ENOENT;
+
+	mutex_lock(&dvfs_lock);
+
+	d = tegra_clk_to_dvfs(c);
+	if (!d && d->alt_freqs) {
+		err = 0;
+		if (d->use_alt_freqs != use_alt_freq) {
+			d->use_alt_freqs = use_alt_freq;
+			if (__tegra_dvfs_set_rate(d, d->cur_rate) < 0) {
+				d->use_alt_freqs = !use_alt_freq;
+				pr_err("%s: %s: %s alt dvfs failed\n", __func__,
+					d->clk_name,
+					use_alt_freq ? "set" : "clear");
+				__tegra_dvfs_set_rate(d, d->cur_rate);
+				err = -EINVAL;
+			}
+		}
+	}
+
+	mutex_unlock(&dvfs_lock);
+
+	return err;
+}
+EXPORT_SYMBOL(tegra_dvfs_use_alt_freqs_on_clk);
+
 static int tegra_dvfs_clk_event(struct notifier_block *this,
 		unsigned long event, void *ptr)
 {
@@ -780,6 +809,29 @@ int tegra_setup_dvfs(struct clk *c, struct dvfs *d)
 
 	mutex_lock(&dvfs_lock);
 	list_add_tail(&d->reg_node, &d->dvfs_rail->dvfs);
+	mutex_unlock(&dvfs_lock);
+
+	return 0;
+}
+
+int tegra_dvfs_add_alt_freqs(struct clk *c, struct dvfs *alt_d)
+{
+	struct dvfs *d;
+	int err = 0;
+
+	mutex_lock(&dvfs_lock);
+
+	d = tegra_clk_to_dvfs(c);
+	if (!d) {
+		err = -EINVAL;
+		goto out;
+	}
+
+	cleanup_dvfs_table(alt_d);
+
+	d->alt_freqs = alt_d->freqs;
+
+out:
 	mutex_unlock(&dvfs_lock);
 
 	return 0;
@@ -1439,6 +1491,15 @@ static int dvfs_table_show(struct seq_file *s, void *data)
 				unsigned int f = d->freqs[i]/100000;
 				seq_printf(s, " %4u.%u", f/10, f%10);
 			}
+			if (d->alt_freqs) {
+				seq_puts(s, "\n");
+				seq_printf(s, "%-10s (alt)", d->clk_name);
+				for (i = 0; i < d->num_freqs; i++) {
+					unsigned int f = d->alt_freqs[i]/100000;
+					seq_printf(s, " %4u.%u", f/10, f%10);
+				}
+			}
+
 			seq_puts(s, "\n");
 		}
 	}

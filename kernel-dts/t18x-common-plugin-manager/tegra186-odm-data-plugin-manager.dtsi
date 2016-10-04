@@ -162,6 +162,7 @@
 				target = <&uarta>;
 				_overlay_ {
 					compatible = "nvidia,tegra186-hsuart";
+					early-print-console-channel;
 				};
 			};
 		};

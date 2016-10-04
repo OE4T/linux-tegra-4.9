@@ -161,6 +161,7 @@ struct tegra_uart_port {
 	int					required_rate;
 	int					configured_rate;
 	struct dentry				*debugfs;
+	bool					early_printk_console_instance;
 };
 
 static void tegra_uart_start_next_tx(struct tegra_uart_port *tup);
@@ -1619,6 +1620,9 @@ static int tegra_uart_parse_dt(struct platform_device *pdev,
 	if (tup->enable_rx_buffer_throttle)
 		dev_info(&pdev->dev, "Rx buffer throttling enabled\n");
 
+	tup->early_printk_console_instance = of_property_read_bool(np,
+			"early-print-console-channel");
+
 	n_entries = of_property_count_u32_elems(np, "nvidia,adjust-baud-rates");
 	if (n_entries > 0) {
 		tup->n_adjustable_baud_rates = n_entries/3;
@@ -1788,10 +1792,11 @@ static int tegra_uart_probe(struct platform_device *pdev)
 		return PTR_ERR(tup->rst);
 	}
 
-	/* Reset the UART controller to clear all previous status.*/
-	reset_control_assert(tup->rst);
-	udelay(10);
-	reset_control_deassert(tup->rst);
+	if (!tup->early_printk_console_instance) {
+		reset_control_assert(tup->rst);
+		udelay(10);
+		reset_control_deassert(tup->rst);
+	}
 
 	parent_clk = devm_clk_get(&pdev->dev, "parent");
 	if (IS_ERR(parent_clk))

@@ -32,6 +32,8 @@
 #include <linux/freezer.h>
 #include <linux/highmem.h>
 
+#include <trace/events/nvmap.h>
+
 #include "nvmap_priv.h"
 
 #define NVMAP_TEST_PAGE_POOL_SHRINKER     1
@@ -73,6 +75,9 @@ static void pp_clean_cache(struct nvmap_page_pool *pool)
 	struct page *page;
 	u32 dirty_pages = pool->dirty_pages;
 
+	trace_pp_clean_cache(dirty_pages, cache_maint_inner_threshold,
+			nvmap_cache_maint_by_set_ways);
+
 	if (!dirty_pages)
 		return;
 	if (nvmap_cache_maint_by_set_ways &&
@@ -95,6 +100,8 @@ static inline struct page *get_zero_list_page(struct nvmap_page_pool *pool)
 {
 	struct page *page;
 
+	trace_get_zero_list_page(pool->to_zero);
+
 	if (list_empty(&pool->zero_list))
 		return NULL;
 
@@ -109,6 +116,8 @@ static inline struct page *get_zero_list_page(struct nvmap_page_pool *pool)
 static inline struct page *get_page_list_page(struct nvmap_page_pool *pool)
 {
 	struct page *page;
+
+	trace_get_page_list_page(pool->count);
 
 	if (list_empty(&pool->page_list))
 		return NULL;
@@ -138,6 +147,8 @@ static int nvmap_pp_zero_pages(struct page **pages, int nr)
 
 	for (i = 0; i < nr; i++)
 		clear_highpage(pages[i]);
+
+	trace_nvmap_pp_zero_pages(nr);
 
 	return 0;
 }
@@ -176,6 +187,8 @@ static void nvmap_pp_do_background_zero_pages(struct nvmap_page_pool *pool)
 out:
 	for (; ret < i; ret++)
 		__free_page(pending_zero_pages[ret]);
+
+	trace_nvmap_pp_do_background_zero_pages(ret, i);
 }
 
 /*
@@ -251,6 +264,8 @@ static struct page *nvmap_page_pool_alloc_locked(struct nvmap_page_pool *pool,
 	pp_alloc_add(pool, 1);
 	pp_hit_add(pool, 1);
 
+	trace_nvmap_pp_alloc_locked(force_alloc);
+
 	return page;
 }
 
@@ -289,6 +304,8 @@ int nvmap_page_pool_alloc_lots(struct nvmap_page_pool *pool,
 	pp_alloc_add(pool, ind);
 	pp_hit_add(pool, ind);
 	pp_miss_add(pool, nr - ind);
+
+	trace_nvmap_pp_alloc_lots(ind, nr);
 
 	return ind;
 }
@@ -336,10 +353,11 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 	mutex_lock(&pool->lock);
 	if (zero_memory) {
 		int i;
+		u32 save_to_zero = pool->to_zero;
 
-		nr = min(nr, pool->max - pool->count - pool->to_zero);
+		ret = min(nr, pool->max - pool->count - pool->to_zero);
 
-		for (i = 0; i < nr; i++) {
+		for (i = 0; i < ret; i++) {
 			/* If page has additonal referecnces, Don't add it into
 			 * page pool. get_user_pages() on mmap'ed nvmap handle can
 			 * hold a refcount on the page. These pages can't be
@@ -356,6 +374,9 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 		if (pool->to_zero)
 			wake_up_interruptible(&nvmap_bg_wait);
 		ret = i;
+
+		trace_nvmap_pp_fill_zero_lots(save_to_zero, pool->to_zero,
+				ret, nr);
 	} else {
 		int i;
 		bool add_to_pp = true;
@@ -369,6 +390,8 @@ int nvmap_page_pool_fill_lots(struct nvmap_page_pool *pool,
 				break;
 			}
 		}
+
+		trace_nvmap_pp_fill_lots(add_to_pp);
 
 		if (add_to_pp)
 			ret = __nvmap_page_pool_fill_lots_locked(pool, pages, nr);

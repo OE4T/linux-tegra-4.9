@@ -647,6 +647,172 @@ DEFINE_EVENT(nvmap_dmabuf_make_release, nvmap_dmabuf_release,
 	TP_ARGS(cli, h, dbuf)
 );
 
+TRACE_EVENT(pp_clean_cache,
+	TP_PROTO(u32 dirty_pages,
+		 size_t cache_maint_th,
+		 int cache_maint_by_set_ways
+	),
+
+	TP_ARGS(dirty_pages, cache_maint_th, cache_maint_by_set_ways),
+
+	TP_STRUCT__entry(
+		__field(u32, dirty_pages)
+		__field(size_t, cache_maint_th)
+		__field(int, cache_maint_by_set_ways)
+	),
+
+	TP_fast_assign(
+		__entry->dirty_pages = dirty_pages;
+		__entry->cache_maint_th = cache_maint_th >> PAGE_SHIFT;
+		__entry->cache_maint_by_set_ways = cache_maint_by_set_ways;
+	),
+
+	TP_printk("dirty_pages=%u, cache_maint_th=%zu, cache_maint_by_set_ways=%d",
+		__entry->dirty_pages, __entry->cache_maint_th,
+		__entry->cache_maint_by_set_ways)
+);
+
+DECLARE_EVENT_CLASS(nvmap_get_list_page,
+	TP_PROTO(u32 count),
+
+	TP_ARGS(count),
+
+	TP_STRUCT__entry(
+		__field(u32, count)
+	),
+
+	TP_fast_assign(
+		__entry->count = count;
+	),
+
+	TP_printk("pages left in list=%u", __entry->count)
+);
+
+DEFINE_EVENT(nvmap_get_list_page, get_zero_list_page,
+	TP_PROTO(u32 count),
+	TP_ARGS(count)
+);
+
+DEFINE_EVENT(nvmap_get_list_page, get_page_list_page,
+	TP_PROTO(u32 count),
+	TP_ARGS(count)
+);
+
+TRACE_EVENT(nvmap_pp_zero_pages,
+	TP_PROTO(u32 count),
+
+	TP_ARGS(count),
+
+	TP_STRUCT__entry(
+		__field(u32, count)
+	),
+
+	TP_fast_assign(
+		__entry->count = count;
+	),
+
+	TP_printk("no. of pages zeroed=%u", __entry->count)
+);
+
+TRACE_EVENT(nvmap_pp_do_background_zero_pages,
+	TP_PROTO(u32 inserted, u32 zeroed),
+
+	TP_ARGS(inserted, zeroed),
+
+	TP_STRUCT__entry(
+		__field(u32, inserted)
+		__field(u32, zeroed)
+	),
+
+	TP_fast_assign(
+		__entry->inserted = inserted;
+		__entry->zeroed = zeroed;
+	),
+
+	TP_printk("failed to insert %u no. of zeroed pages to page_list",
+		__entry->zeroed - __entry->inserted)
+);
+
+TRACE_EVENT(nvmap_pp_alloc_locked,
+	TP_PROTO(int force_alloc),
+
+	TP_ARGS(force_alloc),
+
+	TP_STRUCT__entry(
+		__field(int, force_alloc)
+	),
+
+	TP_fast_assign(
+		__entry->force_alloc = force_alloc;
+	),
+
+	TP_printk("allocated one page with force_alloc:%d", __entry->force_alloc)
+);
+
+TRACE_EVENT(nvmap_pp_alloc_lots,
+	TP_PROTO(u32 alloced, u32 requested),
+
+	TP_ARGS(alloced, requested),
+
+	TP_STRUCT__entry(
+		__field(u32, alloced)
+		__field(u32, requested)
+	),
+
+	TP_fast_assign(
+		__entry->alloced = alloced;
+		__entry->requested = requested;
+	),
+
+	TP_printk("requested:%u alloced:%u\n",
+		__entry->requested, __entry->alloced)
+);
+
+TRACE_EVENT(nvmap_pp_fill_zero_lots,
+	TP_PROTO(u32 save_to_zero,
+		 u32 to_zero,
+		 u32 ret,
+		 u32 nr
+	),
+
+	TP_ARGS(save_to_zero, to_zero, ret, nr),
+
+	TP_STRUCT__entry(
+		__field(u32, save_to_zero)
+		__field(u32, to_zero)
+		__field(u32, ret)
+		__field(u32, nr)
+	),
+
+	TP_fast_assign(
+		__entry->save_to_zero = save_to_zero;
+		__entry->to_zero = to_zero;
+		__entry->ret = ret;
+		__entry->nr = nr;
+	),
+
+	TP_printk("inserted %u pages to zero list, freed %u pages, did not process %u pages",
+		__entry->to_zero - __entry->save_to_zero,
+		__entry->ret - (__entry->to_zero - __entry->save_to_zero),
+		__entry->nr - __entry->ret)
+);
+
+TRACE_EVENT(nvmap_pp_fill_lots,
+	TP_PROTO(int add_to_pp),
+
+	TP_ARGS(add_to_pp),
+
+	TP_STRUCT__entry(
+		__field(int, add_to_pp)
+	),
+
+	TP_fast_assign(
+		__entry->add_to_pp = add_to_pp;
+	),
+
+	TP_printk("add to page pool:%d", __entry->add_to_pp)
+);
+
 #endif /* _TRACE_NVMAP_H */
 
 /* This part must be outside protection */

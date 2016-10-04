@@ -124,6 +124,7 @@ int gpiod_set_debounce(struct gpio_desc *desc, unsigned debounce);
 
 int gpiod_is_active_low(const struct gpio_desc *desc);
 int gpiod_cansleep(const struct gpio_desc *desc);
+int gpiod_is_enabled(const struct gpio_desc *desc);
 
 int gpiod_to_irq(const struct gpio_desc *desc);
 
@@ -383,6 +384,13 @@ static inline int gpiod_is_active_low(const struct gpio_desc *desc)
 	return 0;
 }
 static inline int gpiod_cansleep(const struct gpio_desc *desc)
+{
+	/* GPIO can never have been requested */
+	WARN_ON(1);
+	return 0;
+}
+
+static inline int gpiod_is_enabled(const struct gpio_desc *desc)
 {
 	/* GPIO can never have been requested */
 	WARN_ON(1);

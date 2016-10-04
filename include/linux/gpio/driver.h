@@ -157,6 +157,9 @@ struct gpio_chip {
 						unsigned offset,
 						enum single_ended_mode mode);
 
+	int			(*is_enabled)(struct gpio_chip *chip,
+						unsigned offset);
+
 	int			(*to_irq)(struct gpio_chip *chip,
 						unsigned offset);
 

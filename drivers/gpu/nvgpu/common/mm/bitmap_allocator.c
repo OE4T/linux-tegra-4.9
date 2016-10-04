@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -21,9 +21,6 @@
 #include <nvgpu/allocator.h>
 
 #include "bitmap_allocator_priv.h"
-
-static struct kmem_cache *meta_data_cache;	/* slab cache for meta data. */
-static DEFINE_MUTEX(meta_data_cache_lock);
 
 static u64 nvgpu_bitmap_alloc_length(struct nvgpu_allocator *a)
 {
@@ -195,7 +192,7 @@ static int __nvgpu_bitmap_store_alloc(struct nvgpu_bitmap_allocator *a,
 				      u64 addr, u64 len)
 {
 	struct nvgpu_bitmap_alloc *alloc =
-		kmem_cache_alloc(meta_data_cache, GFP_KERNEL);
+		nvgpu_kmem_cache_alloc(a->meta_data_cache);
 
 	if (!alloc)
 		return -ENOMEM;
@@ -312,7 +309,8 @@ static void nvgpu_bitmap_free(struct nvgpu_allocator *__a, u64 addr)
 	a->bytes_freed += alloc->length;
 
 done:
-	kfree(alloc);
+	if (a->meta_data_cache && alloc)
+		nvgpu_kmem_cache_free(a->meta_data_cache, alloc);
 	alloc_unlock(__a);
 }
 
@@ -330,9 +328,10 @@ static void nvgpu_bitmap_alloc_destroy(struct nvgpu_allocator *__a)
 				     alloc_entry);
 
 		rb_erase(node, &a->allocs);
-		kfree(alloc);
+		nvgpu_kmem_cache_free(a->meta_data_cache, alloc);
 	}
 
+	nvgpu_kmem_cache_destroy(a->meta_data_cache);
 	kfree(a->bitmap);
 	kfree(a);
 }
@@ -382,14 +381,6 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	int err;
 	struct nvgpu_bitmap_allocator *a;
 
-	mutex_lock(&meta_data_cache_lock);
-	if (!meta_data_cache)
-		meta_data_cache = KMEM_CACHE(nvgpu_bitmap_alloc, 0);
-	mutex_unlock(&meta_data_cache_lock);
-
-	if (!meta_data_cache)
-		return -ENOMEM;
-
 	if (WARN_ON(blk_size & (blk_size - 1)))
 		return -EINVAL;
 
@@ -414,6 +405,15 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	if (err)
 		goto fail;
 
+	if (!(flags & GPU_ALLOC_NO_ALLOC_PAGE)) {
+		a->meta_data_cache = nvgpu_kmem_cache_create(g,
+					sizeof(struct nvgpu_bitmap_alloc));
+		if (!a->meta_data_cache) {
+			err = -ENOMEM;
+			goto fail;
+		}
+	}
+
 	a->base = base;
 	a->length = length;
 	a->blk_size = blk_size;
@@ -424,8 +424,10 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 
 	a->bitmap = kcalloc(BITS_TO_LONGS(a->num_bits), sizeof(*a->bitmap),
 			    GFP_KERNEL);
-	if (!a->bitmap)
+	if (!a->bitmap) {
+		err = -ENOMEM;
 		goto fail;
+	}
 
 	wmb();
 	a->inited = true;
@@ -441,6 +443,8 @@ int nvgpu_bitmap_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	return 0;
 
 fail:
+	if (a->meta_data_cache)
+		nvgpu_kmem_cache_destroy(a->meta_data_cache);
 	kfree(a);
 	return err;
 }

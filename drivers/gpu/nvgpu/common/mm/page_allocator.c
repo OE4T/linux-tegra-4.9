@@ -27,11 +27,6 @@
 #define palloc_dbg(a, fmt, arg...)			\
 	alloc_dbg(palloc_owner(a), fmt, ##arg)
 
-static struct kmem_cache *page_alloc_cache;
-static struct kmem_cache *page_alloc_chunk_cache;
-static struct kmem_cache *page_alloc_slab_page_cache;
-static DEFINE_MUTEX(meta_data_cache_lock);
-
 /*
  * Handle the book-keeping for these operations.
  */
@@ -147,10 +142,10 @@ static void __nvgpu_free_pages(struct nvgpu_page_allocator *a,
 
 		if (free_buddy_alloc)
 			nvgpu_free(&a->source_allocator, chunk->base);
-		kfree(chunk);
+		nvgpu_kmem_cache_free(a->chunk_cache, chunk);
 	}
 
-	kmem_cache_free(page_alloc_cache, alloc);
+	nvgpu_kmem_cache_free(a->alloc_cache, alloc);
 }
 
 static int __insert_page_alloc(struct nvgpu_page_allocator *a,
@@ -213,7 +208,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 {
 	struct page_alloc_slab_page *slab_page;
 
-	slab_page = kmem_cache_alloc(page_alloc_slab_page_cache, GFP_KERNEL);
+	slab_page = nvgpu_kmem_cache_alloc(a->slab_page_cache);
 	if (!slab_page) {
 		palloc_dbg(a, "OOM: unable to alloc slab_page struct!\n");
 		return ERR_PTR(-ENOMEM);
@@ -223,7 +218,7 @@ static struct page_alloc_slab_page *alloc_slab_page(
 
 	slab_page->page_addr = nvgpu_alloc(&a->source_allocator, a->page_size);
 	if (!slab_page->page_addr) {
-		kfree(slab_page);
+		nvgpu_kmem_cache_free(a->slab_page_cache, slab_page);
 		palloc_dbg(a, "OOM: vidmem is full!\n");
 		return ERR_PTR(-ENOMEM);
 	}
@@ -255,7 +250,7 @@ static void free_slab_page(struct nvgpu_page_allocator *a,
 	nvgpu_free(&a->source_allocator, slab_page->page_addr);
 	a->pages_freed++;
 
-	kmem_cache_free(page_alloc_slab_page_cache, slab_page);
+	nvgpu_kmem_cache_free(a->slab_page_cache, slab_page);
 }
 
 /*
@@ -352,12 +347,12 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 	slab_nr = (int)ilog2(PAGE_ALIGN(len) >> 12);
 	slab = &a->slabs[slab_nr];
 
-	alloc = kmem_cache_alloc(page_alloc_cache, GFP_KERNEL);
+	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
 	if (!alloc) {
 		palloc_dbg(a, "OOM: could not alloc page_alloc struct!\n");
 		goto fail;
 	}
-	chunk = kmem_cache_alloc(page_alloc_chunk_cache, GFP_KERNEL);
+	chunk = nvgpu_kmem_cache_alloc(a->chunk_cache);
 	if (!chunk) {
 		palloc_dbg(a, "OOM: could not alloc alloc_chunk struct!\n");
 		goto fail;
@@ -377,8 +372,10 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_slab(
 	return alloc;
 
 fail:
-	kfree(alloc);
-	kfree(chunk);
+	if (alloc)
+		nvgpu_kmem_cache_free(a->alloc_cache, alloc);
+	if (chunk)
+		nvgpu_kmem_cache_free(a->chunk_cache, chunk);
 	return NULL;
 }
 
@@ -444,7 +441,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 	u64 max_chunk_len = pages << a->page_shift;
 	int i = 0;
 
-	alloc = kmem_cache_alloc(page_alloc_cache, GFP_KERNEL);
+	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
 	if (!alloc)
 		goto fail;
 
@@ -496,7 +493,7 @@ static struct nvgpu_page_alloc *__do_nvgpu_alloc_pages(
 			goto fail_cleanup;
 		}
 
-		c = kmem_cache_alloc(page_alloc_chunk_cache, GFP_KERNEL);
+		c = nvgpu_kmem_cache_alloc(a->chunk_cache);
 		if (!c) {
 			nvgpu_free(&a->source_allocator, chunk_addr);
 			goto fail_cleanup;
@@ -524,9 +521,9 @@ fail_cleanup:
 				     struct page_alloc_chunk, list_entry);
 		list_del(&c->list_entry);
 		nvgpu_free(&a->source_allocator, c->base);
-		kfree(c);
+		nvgpu_kmem_cache_free(a->chunk_cache, c);
 	}
-	kfree(alloc);
+	nvgpu_kmem_cache_free(a->alloc_cache, alloc);
 fail:
 	return ERR_PTR(-ENOMEM);
 }
@@ -653,8 +650,8 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 	struct nvgpu_page_alloc *alloc;
 	struct page_alloc_chunk *c;
 
-	alloc = kmem_cache_alloc(page_alloc_cache, GFP_KERNEL);
-	c = kmem_cache_alloc(page_alloc_chunk_cache, GFP_KERNEL);
+	alloc = nvgpu_kmem_cache_alloc(a->alloc_cache);
+	c = nvgpu_kmem_cache_alloc(a->chunk_cache);
 	if (!alloc || !c)
 		goto fail;
 
@@ -675,8 +672,10 @@ static struct nvgpu_page_alloc *__nvgpu_alloc_pages_fixed(
 	return alloc;
 
 fail:
-	kfree(c);
-	kfree(alloc);
+	if (c)
+		nvgpu_kmem_cache_free(a->chunk_cache, c);
+	if (alloc)
+		nvgpu_kmem_cache_free(a->alloc_cache, alloc);
 	return ERR_PTR(-ENOMEM);
 }
 
@@ -879,19 +878,6 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	char buddy_name[sizeof(__a->name)];
 	int err;
 
-	mutex_lock(&meta_data_cache_lock);
-	if (!page_alloc_cache)
-		page_alloc_cache = KMEM_CACHE(nvgpu_page_alloc, 0);
-	if (!page_alloc_chunk_cache)
-		page_alloc_chunk_cache = KMEM_CACHE(page_alloc_chunk, 0);
-	if (!page_alloc_slab_page_cache)
-		page_alloc_slab_page_cache =
-			KMEM_CACHE(page_alloc_slab_page, 0);
-	mutex_unlock(&meta_data_cache_lock);
-
-	if (!page_alloc_cache || !page_alloc_chunk_cache)
-		return -ENOMEM;
-
 	if (blk_size < SZ_4K)
 		return -EINVAL;
 
@@ -902,6 +888,17 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	err = __nvgpu_alloc_common_init(__a, name, a, false, &page_ops);
 	if (err)
 		goto fail;
+
+	a->alloc_cache = nvgpu_kmem_cache_create(g,
+					sizeof(struct nvgpu_page_alloc));
+	a->chunk_cache = nvgpu_kmem_cache_create(g,
+					sizeof(struct page_alloc_chunk));
+	a->slab_page_cache = nvgpu_kmem_cache_create(g,
+					sizeof(struct page_alloc_slab_page));
+	if (!a->alloc_cache || !a->chunk_cache || !a->slab_page_cache) {
+		err = -ENOMEM;
+		goto fail;
+	}
 
 	a->base = base;
 	a->length = length;
@@ -935,6 +932,12 @@ int nvgpu_page_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	return 0;
 
 fail:
+	if (a->alloc_cache)
+		nvgpu_kmem_cache_destroy(a->alloc_cache);
+	if (a->chunk_cache)
+		nvgpu_kmem_cache_destroy(a->chunk_cache);
+	if (a->slab_page_cache)
+		nvgpu_kmem_cache_destroy(a->slab_page_cache);
 	kfree(a);
 	return err;
 }

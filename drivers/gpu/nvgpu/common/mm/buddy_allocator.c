@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2016-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -23,8 +23,6 @@
 #include "gk20a/platform_gk20a.h"
 
 #include "buddy_allocator_priv.h"
-
-static struct kmem_cache *buddy_cache;	/* slab cache for meta data. */
 
 /* Some other buddy allocator functions. */
 static struct nvgpu_buddy *balloc_free_buddy(struct nvgpu_buddy_allocator *a,
@@ -103,7 +101,7 @@ static struct nvgpu_buddy *balloc_new_buddy(struct nvgpu_buddy_allocator *a,
 {
 	struct nvgpu_buddy *new_buddy;
 
-	new_buddy = kmem_cache_alloc(buddy_cache, GFP_KERNEL);
+	new_buddy = nvgpu_kmem_cache_alloc(a->buddy_cache);
 	if (!new_buddy)
 		return NULL;
 
@@ -232,7 +230,7 @@ cleanup:
 			buddy = list_first_entry(balloc_get_order_list(a, i),
 					struct nvgpu_buddy, buddy_entry);
 			balloc_blist_rem(a, buddy);
-			kmem_cache_free(buddy_cache, buddy);
+			nvgpu_kmem_cache_free(a->buddy_cache, buddy);
 		}
 	}
 
@@ -285,7 +283,7 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 			bud = list_first_entry(balloc_get_order_list(a, i),
 					       struct nvgpu_buddy, buddy_entry);
 			balloc_blist_rem(a, bud);
-			kmem_cache_free(buddy_cache, bud);
+			nvgpu_kmem_cache_free(a->buddy_cache, bud);
 		}
 
 		if (a->buddy_list_len[i] != 0) {
@@ -305,6 +303,7 @@ static void nvgpu_buddy_allocator_destroy(struct nvgpu_allocator *__a)
 		}
 	}
 
+	nvgpu_kmem_cache_destroy(a->buddy_cache);
 	kfree(a);
 
 	alloc_unlock(__a);
@@ -348,8 +347,8 @@ static void balloc_coalesce(struct nvgpu_buddy_allocator *a,
 	balloc_coalesce(a, parent);
 
 	/* Clean up the remains. */
-	kmem_cache_free(buddy_cache, b->buddy);
-	kmem_cache_free(buddy_cache, b);
+	nvgpu_kmem_cache_free(a->buddy_cache, b->buddy);
+	nvgpu_kmem_cache_free(a->buddy_cache, b);
 }
 
 /*
@@ -371,7 +370,7 @@ static int balloc_split_buddy(struct nvgpu_buddy_allocator *a,
 
 	right = balloc_new_buddy(a, b, b->start + half, b->order - 1);
 	if (!right) {
-		kmem_cache_free(buddy_cache, left);
+		nvgpu_kmem_cache_free(a->buddy_cache, left);
 		return -ENOMEM;
 	}
 
@@ -783,7 +782,7 @@ err_and_cleanup:
 
 		__balloc_buddy_list_rem(a, bud);
 		balloc_free_buddy(a, bud->start);
-		kmem_cache_free(buddy_cache, bud);
+		nvgpu_kmem_cache_free(a->buddy_cache, bud);
 	}
 
 	return 0;
@@ -1307,10 +1306,8 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	balloc_allocator_align(a);
 	balloc_compute_max_order(a);
 
-	/* Shared buddy kmem_cache for all allocators. */
-	if (!buddy_cache)
-		buddy_cache = KMEM_CACHE(nvgpu_buddy, 0);
-	if (!buddy_cache) {
+	a->buddy_cache = nvgpu_kmem_cache_create(g, sizeof(struct nvgpu_buddy));
+	if (!a->buddy_cache) {
 		err = -ENOMEM;
 		goto fail;
 	}
@@ -1340,6 +1337,8 @@ int __nvgpu_buddy_allocator_init(struct gk20a *g, struct nvgpu_allocator *__a,
 	return 0;
 
 fail:
+	if (a->buddy_cache)
+		nvgpu_kmem_cache_destroy(a->buddy_cache);
 	kfree(a);
 	return err;
 }

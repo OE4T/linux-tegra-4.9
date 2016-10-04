@@ -29,7 +29,7 @@
 					reg = <0>;
 					tc358840_vi_in0: endpoint {
 						csi-port = <2>;
-						bus-width = <4>;
+						bus-width = <8>;
 						remote-endpoint = <&tc358840_csi_out0>;
 					};
 				};
@@ -49,7 +49,7 @@
 						reg = <0>;
 						tc358840_csi_in0: endpoint@0 {
 							csi-port = <2>;
-							bus-width = <4>;
+							bus-width = <8>;
 							remote-endpoint = <&tc358840_out0>;
 						};
 					};
@@ -83,7 +83,7 @@
 					reg = <0>;
 					tc358840_out0: endpoint {
 						csi-port = <2>;
-						bus-width = <4>;
+						bus-width = <8>;
 						remote-endpoint = <&csi_in0>;
 					};
 				};

@@ -533,16 +533,6 @@
 		#stream-id-cells = <1>;
 		iommus = <&smmu TEGRA_SWGROUP_XUSB_HOST>;
 		status = "disabled";
-		clocks = <&tegra_car TEGRA210_CLK_XUSB_HOST>,
-				<&tegra_car TEGRA210_CLK_XUSB_FALCON_SRC>,
-				<&tegra_car TEGRA210_CLK_XUSB_SS>,
-				<&tegra_car TEGRA210_CLK_XUSB_SS_SRC>,
-				<&tegra_car TEGRA210_CLK_XUSB_HS_SRC>,
-				<&tegra_car TEGRA210_CLK_XUSB_FS_SRC>,
-				<&tegra_car TEGRA210_CLK_PLL_U_480M>,
-				<&tegra_car TEGRA210_CLK_CLK_M>;
-		clock-names = "host", "falcon_src", "ss", "ss_src", "hs_src",
-			"fs_src", "pll_u_480M", "clk_m";
 	};
 
 	tegra_ext_cdp: max16984-cdp {

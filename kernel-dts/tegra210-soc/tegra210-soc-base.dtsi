@@ -1905,11 +1905,6 @@
 				0 49 0x4>;
 		iommus = <&smmu TEGRA_SWGROUP_XUSB_DEV>;
 		status = "disabled";
-		clocks = <&tegra_car TEGRA210_CLK_PLL_U_480M>,
-			<&tegra_car TEGRA210_CLK_XUSB_DEV>,
-			<&tegra_car TEGRA210_CLK_XUSB_SS>,
-			<&tegra_car TEGRA210_CLK_PLL_E>;
-		clock-names = "pll_u_480M", "dev", "ss", "pll_e";
 		charger-detector = <&tegra_usb_cd>;
 	};
 

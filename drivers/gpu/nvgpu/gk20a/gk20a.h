@@ -97,6 +97,7 @@ enum nvgpu_litter_value {
 	GPU_LIT_NUM_PES_PER_GPC,
 	GPU_LIT_NUM_ZCULL_BANKS,
 	GPU_LIT_NUM_TPC_PER_GPC,
+	GPU_LIT_NUM_SM_PER_TPC,
 	GPU_LIT_NUM_FBPS,
 	GPU_LIT_GPC_BASE,
 	GPU_LIT_GPC_STRIDE,
@@ -303,6 +304,7 @@ struct gpu_ops {
 						u32 gpc, u32 tpc, u32 smid);
 		void (*program_active_tpc_counts)(struct gk20a *g, u32 gpc);
 		int  (*setup_rop_mapping)(struct gk20a *g, struct gr_gk20a *gr);
+		int (*init_sw_veid_bundle)(struct gk20a *g);
 	} gr;
 	const char *name;
 	struct {

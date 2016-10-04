@@ -231,6 +231,7 @@ struct gr_gk20a {
 		struct av_list_gk20a  sw_method_init;
 		struct aiv_list_gk20a sw_ctx_load;
 		struct av_list_gk20a  sw_non_ctx_load;
+		struct av_list_gk20a  sw_veid_bundle_init;
 		struct {
 			struct aiv_list_gk20a sys;
 			struct aiv_list_gk20a gpc;
@@ -642,6 +643,9 @@ int gr_gk20a_get_ctx_id(struct gk20a *g,
 		u32 *ctx_id);
 
 u32 gk20a_mask_hww_warp_esr(u32 hww_warp_esr);
+
+int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
+			u32 expect_delay);
 
 bool gr_gk20a_suspend_context(struct channel_gk20a *ch);
 bool gr_gk20a_resume_context(struct channel_gk20a *ch);

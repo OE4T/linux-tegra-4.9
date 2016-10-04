@@ -368,7 +368,7 @@ int gr_gk20a_wait_idle(struct gk20a *g, unsigned long end_jiffies,
 	return -EAGAIN;
 }
 
-static int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
+int gr_gk20a_wait_fe_idle(struct gk20a *g, unsigned long end_jiffies,
 		u32 expect_delay)
 {
 	u32 val;
@@ -1462,6 +1462,8 @@ static u32 gk20a_init_sw_bundle(struct gk20a *g)
 		if (err)
 			break;
 	}
+	if (g->ops.gr.init_sw_veid_bundle)
+		g->ops.gr.init_sw_veid_bundle(g);
 
 	/* disable pipe mode override */
 	gk20a_writel(g, gr_pipe_bundle_config_r(),

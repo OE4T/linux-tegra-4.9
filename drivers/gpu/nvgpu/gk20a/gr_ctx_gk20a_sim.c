@@ -3,7 +3,7 @@
  *
  * GK20A Graphics Context for Simulation
  *
- * Copyright (c) 2011-2014, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -50,7 +50,8 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 			    &g->gr.ctx_vars.sw_method_init.count);
 	gk20a_sim_esc_readl(g, "GRCTX_SW_CTX_LOAD_SIZE", 0,
 			    &g->gr.ctx_vars.sw_ctx_load.count);
-
+	gk20a_sim_esc_readl(g, "GRCTX_SW_VEID_BUNDLE_INIT_SIZE", 0,
+			    &g->gr.ctx_vars.sw_veid_bundle_init.count);
 
 	gk20a_sim_esc_readl(g, "GRCTX_NONCTXSW_REG_SIZE", 0,
 			    &g->gr.ctx_vars.sw_non_ctx_load.count);
@@ -77,6 +78,7 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 	err |= !alloc_av_list_gk20a(&g->gr.ctx_vars.sw_method_init);
 	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.sw_ctx_load);
 	err |= !alloc_av_list_gk20a(&g->gr.ctx_vars.sw_non_ctx_load);
+	err |= !alloc_av_list_gk20a(&g->gr.ctx_vars.sw_veid_bundle_init);
 	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.sys);
 	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.gpc);
 	err |= !alloc_aiv_list_gk20a(&g->gr.ctx_vars.ctxsw_regs.tpc);
@@ -136,6 +138,15 @@ int gr_gk20a_init_ctx_vars_sim(struct gk20a *g, struct gr_gk20a *gr)
 		gk20a_sim_esc_readl(g, "GRCTX_NONCTXSW_REG:REG",
 				    i, &l[i].addr);
 		gk20a_sim_esc_readl(g, "GRCTX_NONCTXSW_REG:VALUE",
+				    i, &l[i].value);
+	}
+
+	for (i = 0; i < g->gr.ctx_vars.sw_veid_bundle_init.count; i++) {
+		struct av_gk20a *l = g->gr.ctx_vars.sw_veid_bundle_init.l;
+
+		gk20a_sim_esc_readl(g, "GRCTX_SW_VEID_BUNDLE_INIT:ADDR",
+				    i, &l[i].addr);
+		gk20a_sim_esc_readl(g, "GRCTX_SW_VEID_BUNDLE_INIT:VALUE",
 				    i, &l[i].value);
 	}
 

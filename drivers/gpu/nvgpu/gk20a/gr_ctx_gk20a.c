@@ -205,6 +205,15 @@ static int gr_gk20a_init_ctx_vars_fw(struct gk20a *g, struct gr_gk20a *gr)
 				if (err)
 					goto clean_up;
 				break;
+			case NETLIST_REGIONID_SWVEIDBUNDLEINIT:
+				gk20a_dbg_info(
+					"NETLIST_REGIONID_SW_VEID_BUNDLE_INIT");
+				err = gr_gk20a_alloc_load_netlist_av(
+					src, size,
+					&g->gr.ctx_vars.sw_veid_bundle_init);
+				if (err)
+					goto clean_up;
+				break;
 			case NETLIST_REGIONID_CTXREG_SYS:
 				gk20a_dbg_info("NETLIST_REGIONID_CTXREG_SYS");
 				err = gr_gk20a_alloc_load_netlist_aiv(
@@ -394,6 +403,7 @@ clean_up:
 		kfree(g->gr.ctx_vars.sw_method_init.l);
 		kfree(g->gr.ctx_vars.sw_ctx_load.l);
 		kfree(g->gr.ctx_vars.sw_non_ctx_load.l);
+		kfree(g->gr.ctx_vars.sw_veid_bundle_init.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.sys.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.gpc.l);
 		kfree(g->gr.ctx_vars.ctxsw_regs.tpc.l);

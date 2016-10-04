@@ -22,15 +22,10 @@
 #include <linux/pm.h>
 
 static struct dentry *debugfs_dir;
-static u32 suspend_state;
 static u32 shutdown_state;
 
 #define SMC_PM_FUNC	0x82FFFE00
 #define SMC_SET_SHUTDOWN_MODE 0x1
-#define SMC_SET_SUSPEND_MODE 0x2
-#define SYSTEM_SUSPEND_STATE_SC2 2
-#define SYSTEM_SUSPEND_STATE_SC4 4
-#define SYSTEM_SUSPEND_STATE_SC7 7
 #define SYSTEM_SHUTDOWN_STATE_FULL_POWER_OFF 0
 #define SYSTEM_SHUTDOWN_STATE_SC8 8
 #define NR_SMC_REGS	6
@@ -72,20 +67,6 @@ static noinline notrace int __send_smc(u8 func, struct pm_regs *regs)
 })
 
 /**
- * Specify state for SYSTEM_SUSPEND
- *
- * @suspend_state:	Specific suspend state to set
- *
- */
-static int tegra_set_suspend_mode(u32 suspend_state)
-{
-	struct pm_regs regs;
-	regs.args[0] = suspend_state;
-	return send_smc(SMC_SET_SUSPEND_MODE, &regs);
-}
-EXPORT_SYMBOL(tegra_set_suspend_mode);
-
-/**
  * Specify state for SYSTEM_SHUTDOWN
  *
  * @shutdown_state:	Specific shutdown state to set
@@ -112,28 +93,6 @@ static int __init tegra186_pm_init(void)
 }
 core_initcall(tegra186_pm_init);
 
-static int suspend_state_get(void *data, u64 *val)
-{
-	*val = suspend_state;
-	return 0;
-}
-
-static int suspend_state_set(void *data, u64 val)
-{
-	int ret;
-	if ((val >= SYSTEM_SUSPEND_STATE_SC2 &&	val <= SYSTEM_SUSPEND_STATE_SC4)
-					|| val == SYSTEM_SUSPEND_STATE_SC7) {
-		suspend_state = val;
-		ret = tegra_set_suspend_mode(suspend_state);
-	}
-	else {
-		printk("Invalid Suspend State\n");
-		ret = -1;
-	}
-
-	return ret;
-}
-
 static int shutdown_state_get(void *data, u64 *val)
 {
 	*val = shutdown_state;
@@ -156,7 +115,6 @@ static int shutdown_state_set(void *data, u64 val)
 	return ret;
 }
 
-DEFINE_SIMPLE_ATTRIBUTE(suspend_state_fops, suspend_state_get, suspend_state_set, "%llu\n");
 DEFINE_SIMPLE_ATTRIBUTE(shutdown_state_fops, shutdown_state_get, shutdown_state_set, "%llu\n");
 
 static int __init tegra18_suspend_debugfs_init(void)
@@ -165,11 +123,6 @@ static int __init tegra18_suspend_debugfs_init(void)
 
 	system_state_debugfs = debugfs_create_dir("system_states", NULL);
 	if (!system_state_debugfs)
-		goto err_out;
-
-	dfs_file = debugfs_create_file("suspend", 0644,
-					system_state_debugfs, NULL, &suspend_state_fops);
-	if (!dfs_file)
 		goto err_out;
 
 	dfs_file = debugfs_create_file("shutdown", 0644,

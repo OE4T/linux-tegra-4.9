@@ -17,6 +17,8 @@
  * along with this program.  If not, see <http://www.gnu.org/licenses/>.
  */
 
+#define pr_fmt(fmt)	"%s():%d: " fmt, __func__, __LINE__
+
 #include <linux/gfp.h>
 #include <linux/acpi.h>
 #include <linux/bootmem.h>
@@ -722,6 +724,17 @@ static dma_addr_t __iommu_map_page(struct device *dev, struct page *page,
 	return dev_addr;
 }
 
+dma_addr_t __iommu_linear_map(struct device *dev, phys_addr_t phys,
+			      size_t size, enum dma_data_direction dir,
+			      struct dma_attrs *attrs)
+{
+	bool coherent = is_device_dma_coherent(dev);
+	int prot = dma_direction_to_prot(dir, coherent);
+
+	return iommu_dma_map_linear(dev, phys, size, prot);
+}
+
+
 static void __iommu_unmap_page(struct device *dev, dma_addr_t dev_addr,
 			       size_t size, enum dma_data_direction dir,
 			       unsigned long attrs)
@@ -799,6 +812,8 @@ static struct dma_map_ops iommu_dma_ops = {
 	.sync_sg_for_device = __iommu_sync_sg_for_device,
 	.dma_supported = iommu_dma_supported,
 	.mapping_error = iommu_dma_mapping_error,
+
+	.linear_map = __iommu_linear_map,
 };
 
 /*

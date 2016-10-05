@@ -22,7 +22,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/tegra_pm_domains.h>
 #include <linux/tegra-pm.h>
-#include <linux/platform/tegra/emc_bwmgr.h>
+#include <linux/platform/tegra/bwmgr_mc.h>
 #include <linux/uaccess.h>
 #include <linux/platform/tegra/isomgr.h>
 #include <linux/debugfs.h>
@@ -30,6 +30,9 @@
 
 #include <mach/dc.h>
 #include <mach/fb.h>
+
+#include <soc/tegra/bpmp_abi.h>
+#include <soc/tegra/tegra_bpmp.h>
 
 #include "nvdisp.h"
 #include "nvdisp_priv.h"
@@ -45,6 +48,9 @@ LIST_HEAD(nvdisp_imp_settings_queue);
 
 static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_reservation_wq);
 static DECLARE_WAIT_QUEUE_HEAD(nvdisp_common_channel_promotion_wq);
+
+/* EMC DVFS table that will be exported to userspace IMP */
+static struct mrq_emc_dvfs_latency_response nvdisp_emc_dvfs_table;
 
 #define NVDISP_INPUT_LUT_SIZE   257
 #define NVDISP_OUTPUT_LUT_SIZE  1025
@@ -887,6 +893,10 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 			tegra_pd_get_powergate_id(nvdisp_disb_pd);
 	nvdisp_pg[NVDISPC_PD_INDEX].powergate_id =
 			tegra_pd_get_powergate_id(nvdisp_disc_pd);
+
+	/* Fill in the EMC DVFS table */
+	tegra_bpmp_send_receive(MRQ_EMC_DVFS_LATENCY, NULL, 0,
+			&nvdisp_emc_dvfs_table, sizeof(nvdisp_emc_dvfs_table));
 
 #ifdef CONFIG_TEGRA_ISOMGR
 	if (!tegra_platform_is_vdk()) {
@@ -2130,26 +2140,51 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 EXPORT_SYMBOL(tegra_nvdisp_update_cmu);
 #endif
 
-void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
+static int tegra_nvdisp_get_v_taps_user_info(
 				struct tegra_dc_ext_imp_user_info *info)
 {
-	int i, j;
-	u32 ihub_capa;
+	u32 num_wins;
+	u32 *win_ids;
+	u32 *in_widths;
+	u32 *out_widths;
+	u32 *v_taps;
+	size_t i, j, win_arr_size;
+	int ret = 0;
 
-	info->current_emcclk = tegra_bwmgr_get_core_emc_rate();
+	num_wins = info->num_windows;
+	win_arr_size = num_wins * sizeof(u32);
 
-	ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
-	/* base entry width is 32 bytes */
-	info->mempool_size = nvdisp_ihub_capa_mempool_entries_v(ihub_capa) *
-			(32 << nvdisp_ihub_capa_mempool_width_v(ihub_capa));
+	win_ids = kzalloc(win_arr_size, GFP_KERNEL);
+	in_widths = kzalloc(win_arr_size, GFP_KERNEL);
+	out_widths = kzalloc(win_arr_size, GFP_KERNEL);
+	v_taps = kzalloc(win_arr_size, GFP_KERNEL);
+
+	if (!win_ids || !in_widths || !out_widths || !v_taps) {
+		ret = -ENOMEM;
+		goto v_taps_free_and_ret;
+	}
+
+	if (copy_from_user(win_ids, info->win_ids, win_arr_size))  {
+		ret = -EFAULT;
+		goto v_taps_free_and_ret;
+	}
+
+	if (copy_from_user(in_widths, info->in_widths, win_arr_size)) {
+		ret = -EFAULT;
+		goto v_taps_free_and_ret;
+	}
+
+	if (copy_from_user(out_widths, info->out_widths, win_arr_size)) {
+		ret = -EFAULT;
+		goto v_taps_free_and_ret;
+	}
 
 	mutex_lock(&tegra_nvdisp_lock);
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
-		int win_capc;
-		int win_cape;
+	for (i = 0; i < num_wins; i++) {
+		int win_capc, win_cape;
 		int min_width;
-		struct tegra_dc *owner_dc;
+		struct tegra_dc *owner_dc = NULL;
 		struct tegra_dc_win *win = NULL;
 
 		for (j = 0; j < TEGRA_MAX_DC; j++) {
@@ -2157,30 +2192,99 @@ void tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
 			if (!owner_dc || !owner_dc->enabled)
 				continue;
 
-			if (test_bit(i, &owner_dc->valid_windows))
-				win = tegra_dc_get_window(owner_dc, i);
+			if (test_bit(win_ids[i], &owner_dc->valid_windows)) {
+				win = tegra_dc_get_window(owner_dc, win_ids[i]);
+				break;
+			}
 		}
 
 		if (!win)
 			continue;
 
 		/*
-		 * in_w[i] has 20 bits integer (MSB) and 12 bits
-		 * fractional (LSB)
+		 * in_widths[i] has 20 bits integer (MSB) and 12 bits fractional
+		 * (LSB)
 		 */
 		win_capc = win->precomp_capc;
 		win_cape = win->precomp_cape;
-		min_width = ((info->in_w[i] >> 12) < info->out_w[i]) ?
-				info->in_w[i] >> 12 : info->out_w[i];
+		min_width = ((in_widths[i] >> 12) < out_widths[i]) ?
+				in_widths[i] >> 12 : out_widths[i];
 
 		if (min_width <
 			win_precomp_wgrp_capc_max_pixels_5tap444_v(win_capc))
-			info->v_taps[i] = 5;
+			v_taps[i] = 5;
 		else /* IMP only accepts 2 or 5 for v taps */
-			info->v_taps[i] = 2;
+			v_taps[i] = 2;
+	}
+
+	if (copy_to_user(info->v_taps, v_taps, win_arr_size)) {
+		mutex_unlock(&tegra_nvdisp_lock);
+		ret = -EFAULT;
+		goto v_taps_free_and_ret;
 	}
 
 	mutex_unlock(&tegra_nvdisp_lock);
+
+v_taps_free_and_ret:
+	kfree(win_ids);
+	kfree(in_widths);
+	kfree(out_widths);
+	kfree(v_taps);
+
+	return ret;
+}
+
+static int tegra_nvdisp_get_emc_dvfs_user_info(
+					struct tegra_dc_ext_imp_user_info *info)
+{
+	struct tegra_dc_ext_imp_emc_dvfs_pair *pairs;
+	u32 num_pairs = 0;
+	size_t i;
+	int ret = 0;
+
+	num_pairs = min(nvdisp_emc_dvfs_table.num_pairs,
+						info->emc_dvfs_pairs_requested);
+	pairs = kzalloc(num_pairs * sizeof(*pairs), GFP_KERNEL);
+	if (!pairs) {
+		ret = -ENOMEM;
+		goto free_and_ret;
+	}
+
+	for (i = 0; i < num_pairs; i++) {
+		/* DRAM to EMC */
+		pairs[i].freq = nvdisp_emc_dvfs_table.pairs[i].freq /
+					bwmgr_get_emc_to_dram_freq_factor();
+		pairs[i].latency = nvdisp_emc_dvfs_table.pairs[i].latency;
+	}
+
+	if (copy_to_user(info->emc_dvfs_pairs, pairs,
+						num_pairs * sizeof(*pairs))) {
+		ret = -EFAULT;
+		goto free_and_ret;
+	}
+
+	info->emc_dvfs_pairs_returned = num_pairs;
+
+free_and_ret:
+	kfree(pairs);
+	return ret;
+}
+
+int tegra_nvdisp_get_imp_user_info(struct tegra_dc *dc,
+				struct tegra_dc_ext_imp_user_info *info)
+{
+	u32 ihub_capa = tegra_dc_readl(dc, nvdisp_ihub_capa_r());
+	int ret = 0;
+
+	/* base entry width is 32 bytes */
+	info->mempool_size = nvdisp_ihub_capa_mempool_entries_v(ihub_capa) *
+			(32 << nvdisp_ihub_capa_mempool_width_v(ihub_capa));
+
+	ret = tegra_nvdisp_get_v_taps_user_info(info);
+	if (ret)
+		return ret;
+
+	return tegra_nvdisp_get_emc_dvfs_user_info(info);
 }
 EXPORT_SYMBOL(tegra_nvdisp_get_imp_user_info);
 

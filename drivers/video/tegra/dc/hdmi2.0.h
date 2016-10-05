@@ -368,7 +368,7 @@ struct tegra_hdmi {
 
 	struct tegra_edid_hdmi_eld eld;
 	bool eld_valid;
-
+	u8 edid_src;
 	struct fb_monspecs mon_spec;
 	bool mon_spec_valid;
 

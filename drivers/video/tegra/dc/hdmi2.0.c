@@ -230,7 +230,7 @@ static int tegra_hdmi_ddc_i2c_xfer(struct tegra_dc *dc,
 	return ret;
 }
 
-static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, int edid_src)
+static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi)
 {
 	struct tegra_dc *dc = hdmi->dc;
 	struct i2c_adapter *i2c_adap;
@@ -240,9 +240,9 @@ static int tegra_hdmi_ddc_init(struct tegra_hdmi *hdmi, int edid_src)
 		.addr = 0x50,
 	};
 
-	if (edid_src == EDID_SRC_PANEL)
+	if (hdmi->edid_src == EDID_SRC_PANEL)
 		hdmi->edid = tegra_edid_create(dc, tegra_hdmi_ddc_i2c_xfer);
-	else if (edid_src == EDID_SRC_DT)
+	else if (hdmi->edid_src == EDID_SRC_DT)
 		hdmi->edid = tegra_edid_create(dc, tegra_dc_edid_blob);
 	if (IS_ERR_OR_NULL(hdmi->edid)) {
 		dev_err(&dc->ndev->dev, "hdmi: can't create edid\n");
@@ -623,7 +623,8 @@ static int tegra_hdmi_controller_disable(struct tegra_hdmi *hdmi)
 	tegra_dc_get(dc);
 	/* disable hdcp */
 #ifdef CONFIG_HDCP
-	tegra_nvhdcp_set_plug(hdmi->nvhdcp, 0);
+	if (hdmi->edid_src == EDID_SRC_PANEL && !hdmi->dc->vedid)
+		tegra_nvhdcp_set_plug(hdmi->nvhdcp, false);
 #endif
 	tegra_dc_sor_detach(sor);
 	tegra_hdmi_config_clk(hdmi, TEGRA_HDMI_SAFE_CLK);
@@ -1067,7 +1068,6 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	struct device_node *np_hdmi = NULL;
 #endif
 	struct device_node *np_panel = NULL;
-	int edid_src = EDID_SRC_PANEL;
 
 	hdmi = devm_kzalloc(&dc->ndev->dev, sizeof(*hdmi), GFP_KERNEL);
 	if (!hdmi) {
@@ -1076,6 +1076,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	}
 
 	hdmi->dc = dc;
+	hdmi->edid_src = EDID_SRC_PANEL;
 	dc_hdmi_array[sor_num] = hdmi;
 
 #if defined(CONFIG_TEGRA_NVDISPLAY) || defined(CONFIG_ARCH_TEGRA_210_SOC)
@@ -1102,7 +1103,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 			if (np_panel && of_device_is_available(np_panel)) {
 				if (of_property_read_bool(np_panel,
 							"nvidia,edid"))
-					edid_src = EDID_SRC_DT;
+					hdmi->edid_src = EDID_SRC_DT;
 				of_node_put(np_panel);
 			}
 		} else {
@@ -1135,7 +1136,7 @@ static int tegra_dc_hdmi_init(struct tegra_dc *dc)
 	tegra_nvhdcp_debugfs_init(hdmi->nvhdcp);
 #endif
 
-	tegra_hdmi_ddc_init(hdmi, edid_src);
+	tegra_hdmi_ddc_init(hdmi);
 
 	tegra_hdmi_scdc_init(hdmi);
 
@@ -2142,7 +2143,8 @@ static int tegra_hdmi_controller_enable(struct tegra_hdmi *hdmi)
 	tegra_dc_sor_attach(sor);
 	/* enable hdcp */
 #ifdef CONFIG_HDCP
-	tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
+	if (hdmi->edid_src == EDID_SRC_PANEL && !hdmi->dc->vedid)
+		tegra_nvhdcp_set_plug(hdmi->nvhdcp, true);
 #endif
 
 	tegra_dpaux_prod_set_for_hdmi(hdmi->dc);

@@ -1090,6 +1090,8 @@
 		power-domains = <&mc_clk_pd>;
 		reg = <0x0 0x70012000 0x0 0x2000 /* SE base */
 			0x0 0x7000e400 0x0 0x400>; /* PMC base */
+		iommus = <&smmu TEGRA_SWGROUP_SE>,
+			 <&smmu TEGRA_SWGROUP_SE1>;
 		interrupts = <0 58 0x04>;
 		clocks = <&tegra_car TEGRA210_CLK_SE_CBUS>,
 			<&tegra_car TEGRA210_CLK_ENTROPY>;

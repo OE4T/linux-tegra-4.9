@@ -355,12 +355,21 @@ struct tegra_dc_ext_hdr {
 /*
  * IMP info that's exported to userspace.
  */
+struct tegra_dc_ext_imp_emc_dvfs_pair {
+	__u32 freq;	/* core EMC frequency (KHz) */
+	__u32 latency;	/* DVFS latency (ns) */
+};
+
 struct tegra_dc_ext_imp_user_info {
-	__u32 in_w[TEGRA_DC_EXT_N_WINDOWS]; /* in */
-	__u32 out_w[TEGRA_DC_EXT_N_WINDOWS]; /* in */
-	__u32 current_emcclk; /* out */
+	__u32 num_windows; /* in */
+	__u32 __user *win_ids; /* in */
+	__u32 __user *in_widths; /* in */
+	__u32 __user *out_widths; /* in */
+	__u32 emc_dvfs_pairs_requested; /* in */
 	__u32 mempool_size; /* out */
-	__u32 v_taps[TEGRA_DC_EXT_N_WINDOWS]; /* out */
+	__u32 __user *v_taps; /* out */
+	__u32 emc_dvfs_pairs_returned; /* out */
+	struct tegra_dc_ext_imp_emc_dvfs_pair __user *emc_dvfs_pairs; /* out */
 };
 
 struct tegra_dc_ext_imp_head_results {

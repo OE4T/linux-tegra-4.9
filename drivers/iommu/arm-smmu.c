@@ -29,7 +29,7 @@
  *	- Context fault reporting
  */
 
-#define pr_fmt(fmt) "arm-smmu: " fmt
+#define pr_fmt(fmt) "t19x-arm-smmu: " fmt
 
 #include <linux/delay.h>
 #include <linux/dma-mapping.h>
@@ -60,7 +60,6 @@
 #include <asm/dma-iommu.h>
 #include <asm/pgtable.h>
 
-#define CREATE_TRACE_POINTS
 #include <trace/events/arm_smmu.h>
 
 #include "of_tegra-smmu.h" /* FIXME: to parse implicitly */
@@ -388,8 +387,8 @@
 #define NUM_SID				64
 
 static int force_stage;
-module_param_named(force_stage, force_stage, int, S_IRUGO | S_IWUSR);
-MODULE_PARM_DESC(force_stage,
+module_param_named(t19x_force_stage, force_stage, int, S_IRUGO | S_IWUSR);
+MODULE_PARM_DESC(t19x_force_stage,
 	"Force SMMU mappings to be installed at a particular stage of translation. A value of '1' or '2' forces the corresponding stage. All other values are ignored (i.e. no stage is forced). Note that selecting a specific stage will disable support for nested translation.");
 
 enum arm_smmu_arch_version {
@@ -3048,7 +3047,7 @@ static const struct of_device_id arm_smmu_of_match[] = {
 	{ .compatible = "arm,smmu-v2", .data = (void *)ARM_SMMU_V2 },
 	{ .compatible = "arm,mmu-400", .data = (void *)ARM_SMMU_V1 },
 	{ .compatible = "arm,mmu-401", .data = (void *)ARM_SMMU_V1 },
-	{ .compatible = "arm,mmu-500", .data = (void *)ARM_SMMU_V2 },
+	{ .compatible = "t19x,arm,mmu-500", .data = (void *)ARM_SMMU_V2 },
 	{ },
 };
 MODULE_DEVICE_TABLE(of, arm_smmu_of_match);
@@ -3236,7 +3235,7 @@ static int arm_smmu_device_remove(struct platform_device *pdev)
 static struct platform_driver arm_smmu_driver = {
 	.driver	= {
 		.owner		= THIS_MODULE,
-		.name		= "arm-smmu",
+		.name		= "t19x-arm-smmu",
 		.of_match_table	= of_match_ptr(arm_smmu_of_match),
 		.suppress_bind_attrs = true,
 	},
@@ -3305,7 +3304,7 @@ static int __init arm_smmu_of_setup(struct device_node *np)
 	of_iommu_set_ops(np, (struct iommu_ops *)&arm_smmu_ops);
 	return 0;
 }
-IOMMU_OF_DECLARE(arm_smmu_of, "arm,mmu-500", arm_smmu_of_setup);
+IOMMU_OF_DECLARE(arm_smmu_of, "t19x,arm,mmu-500", arm_smmu_of_setup);
 
 MODULE_DESCRIPTION("IOMMU API for ARM architected SMMU implementations");
 MODULE_AUTHOR("Will Deacon <will.deacon@arm.com>");

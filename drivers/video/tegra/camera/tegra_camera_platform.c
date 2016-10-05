@@ -349,10 +349,9 @@ int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
 	unsigned long total_khz;
 	unsigned long bw;
 	int ret = 0;
-	
+
 	if (tegra_camera_misc.parent == NULL) {
-		dev_info(info->dev, "tegra_camera_platform not enabled,\
-			cannot update bw\n");
+		pr_info("driver not enabled, cannot update bw\n");
 		return -ENODEV;
 	}
 
@@ -368,7 +367,7 @@ int vi_v4l2_update_isobw(u32 vi_kbyteps, u32 is_ioctl)
 
 	dev_dbg(info->dev, "%s:Set iso bw %lu kbyteps at %lu KHz\n",
 		__func__, bw, total_khz);
-#if !defined(CONFIG_TEGRA_BWMGR)	
+#if !defined(CONFIG_TEGRA_BWMGR)
 	ret = clk_set_rate(info->iso_emc, total_khz * 1000);
 	if (ret)
 		dev_err(info->dev, "%s:Failed to set iso bw\n",

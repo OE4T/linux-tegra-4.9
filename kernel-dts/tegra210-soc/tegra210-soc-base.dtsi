@@ -29,7 +29,7 @@
 
 / {
 	compatible = "nvidia,tegra210";
-	interrupt-parent = <&intc>;
+	interrupt-parent = <&lic>;
 	#address-cells = <2>;
 	#size-cells = <2>;
 
@@ -343,6 +343,7 @@
 
 	intc: interrupt-controller {
 		compatible = "arm,cortex-a15-gic";
+		interrupt-parent = <&intc>;
 		#interrupt-cells = <3>;
 		interrupt-controller;
 		reg = <0x0 0x50041000 0x0 0x1000
@@ -352,6 +353,7 @@
 
 	lic: interrupt-controller@60004000 {
 		compatible = "nvidia,tegra210-ictlr";
+		interrupt-parent = <&intc>;
 		interrupt-controller;
 		#interrupt-cells = <3>;
 		reg = <0x0 0x60004000 0x0 0x40>,
@@ -387,6 +389,7 @@
 
 	timer {
 		compatible = "arm,armv8-timer";
+		interrupt-parent = <&intc>;
 		interrupts = <1 11 0xf01
 			      1 14 0xf01
 			      1 11 0xf01

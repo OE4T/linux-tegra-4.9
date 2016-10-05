@@ -81,7 +81,7 @@
 
 	/* HACK: Populate earlier than other device */
 	smmu: iommu@12000000{
-		compatible = "arm,mmu-500";
+		compatible = "t19x,arm,mmu-500";
 		reg = <0x0 0x12000000 0x0 0x01000000>; /* 16MB */
 		#global-interrupts = <2>;
 		interrupts = <0 170 4>,

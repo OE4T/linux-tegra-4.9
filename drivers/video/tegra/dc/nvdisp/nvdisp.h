@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/nvdisplay/nvdis.h
  *
- * Copyright (c) 2014-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2014-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -36,12 +36,6 @@ struct nvdisp_pd_info {
 	unsigned long windows_inuse;
 	int powergate_id;
 	int ref_cnt;
-};
-
-/* struct to hold the compclk client info*/
-struct nvdisp_compclk_client {
-	bool inuse;
-	struct tegra_dc *dc;
 };
 
 int tegra_nvdisp_assign_win(struct tegra_dc *dc, unsigned idx);

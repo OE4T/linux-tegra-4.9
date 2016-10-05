@@ -81,7 +81,6 @@ static struct of_device_id nvdisp_disc_pd[] = {
 };
 
 static struct nvdisp_pd_info nvdisp_pg[NVDISP_PD_COUNT];
-static struct nvdisp_compclk_client clk_client[TEGRA_MAX_DC];
 static bool compclk_already_on = false, hubclk_already_on = false;
 static int cur_clk_client_index;
 
@@ -701,7 +700,7 @@ static int __maybe_unused
 	int err;
 
 
-	for ( i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 
 		if (!nvdisp_common_rst[i]) {
 			dev_err(&dc->ndev->dev, "No nvdisp resets available\n");
@@ -723,7 +722,7 @@ static int __maybe_unused tegra_nvdisp_common_reset_assert(struct tegra_dc *dc)
 	int err;
 
 
-	for ( i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		if (!nvdisp_common_rst[i]) {
 			dev_err(&dc->ndev->dev, "No Nvdisp resets available\n");
 			return -EINVAL;
@@ -741,7 +740,8 @@ static int __maybe_unused tegra_nvdisp_common_reset_assert(struct tegra_dc *dc)
 static int __maybe_unused tegra_nvdisp_wgrp_reset_assert(struct tegra_dc *dc)
 {
 	int idx, err = 0;
-	for_each_set_bit(idx, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(idx, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		err = reset_control_assert(nvdisp_common_rst[idx+1]);
 		if (err)
 			dev_err(&dc->ndev->dev, "Failed window %d rst\n", idx);
@@ -759,7 +759,8 @@ static int tegra_nvdisp_wgrp_reset_deassert(struct tegra_dc *dc)
 	if (err)
 		dev_err(&dc->ndev->dev, "Failed Misc deassert\n");
 
-	for_each_set_bit(idx, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(idx, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		err = reset_control_deassert(nvdisp_common_rst[idx+1]);
 		if (err)
 			dev_err(&dc->ndev->dev, "Failed window deassert\n");
@@ -788,7 +789,7 @@ static int tegra_nvdisp_reset_prepare(struct tegra_dc *dc)
 		return PTR_ERR(nvdisp_common_rst[0]);
 	}
 
-	for ( i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		snprintf(rst_name, sizeof(rst_name), "wgrp%u", i);
 		nvdisp_common_rst[i+1] =
 			devm_reset_control_get(&dc->ndev->dev, rst_name);
@@ -806,13 +807,15 @@ int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 {
 	int i, index = 0;
 	unsigned long rate = 0;
+	struct tegra_dc *dc_other = NULL;
 
 	/* comp clk will be maximum of head0/1/2 */
 	mutex_lock(&tegra_nvdisp_lock);
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
-		if (clk_client[i].inuse && clk_client[i].dc &&
-			rate <= clk_get_rate(clk_client[i].dc->clk)) {
-			rate = clk_get_rate(clk_client[i].dc->clk);
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
+		dc_other = tegra_dc_get_dc(i);
+		if (dc_other && dc_other->comp_clk_inuse &&
+			rate <= clk_get_rate(dc_other->clk)) {
+			rate = clk_get_rate(dc_other->clk);
 			index = i;
 		}
 	}
@@ -827,14 +830,15 @@ int tegra_nvdisp_set_compclk(struct tegra_dc *dc)
 		mutex_unlock(&tegra_nvdisp_lock);
 		return 0;
 	}
-
+	dc_other = tegra_dc_get_dc(index);
+	BUG_ON(!dc_other);
 	pr_info(" rate get on compclk %ld\n", rate);
 
 	/* save current clock client index */
 	cur_clk_client_index = index;
 
 	/* Set parent for Display clock */
-	clk_set_parent(compclk, clk_client[index].dc->clk);
+	clk_set_parent(compclk, dc_other->clk);
 
 	/* Enable Display comp clock */
 	if (!compclk_already_on) {
@@ -862,17 +866,17 @@ int tegra_nvdisp_test_and_set_compclk(unsigned long rate, struct tegra_dc *dc)
 	*/
 	if (cur_clk_client_index == dc->ctrl_num &&
 		rate < clk_get_rate(compclk)) {
-		inuse_state = clk_client[dc->ctrl_num].inuse;
+		inuse_state = dc->comp_clk_inuse;
 
 		/* set inuse flag to false to make sure current
 		*  dc->clk will not be used as source for compclk
 		*/
-		clk_client[dc->ctrl_num].inuse = false;
+		dc->comp_clk_inuse = false;
 
 		mutex_unlock(&tegra_nvdisp_lock);
 
 		tegra_nvdisp_set_compclk(dc);
-		clk_client[dc->ctrl_num].inuse = inuse_state;
+		dc->comp_clk_inuse = inuse_state;
 		return 0;
 	}
 
@@ -914,7 +918,8 @@ static int _tegra_nvdisp_init_once(struct tegra_dc *dc)
 
 	/* Init sycpt ids */
 	dc->valid_windows = 0x3f; /* Assign all windows to this head */
-	for (i = 0; i < DC_N_WINDOWS; ++i, ++syncpt_name[5]) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows();
+			++i, ++syncpt_name[5]) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
 		win->syncpt.id = nvhost_get_syncpt_client_managed(dc->ndev,
@@ -964,7 +969,7 @@ BW_REG_ERR:
 		tegra_nvdisp_bandwidth_unregister();
 #endif
 INIT_LUT_ERR:
-	for (i = 0; i < DC_N_WINDOWS; ++i) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); ++i) {
 		struct tegra_dc_lut *lut;
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
@@ -1355,7 +1360,8 @@ static int tegra_nvdisp_head_init(struct tegra_dc *dc)
 
 	tegra_dc_writel(dc, 0x00000000, nvdisp_background_color_r());
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
 		BUG_ON(!win);
@@ -1419,9 +1425,10 @@ static int tegra_nvdisp_cursor_init(struct tegra_dc *dc)
 int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 {
 	int idx;
-
+	struct tegra_dc *dc_other = NULL;
 	/* Detach windows from the head */
-	for_each_set_bit(idx, &dc->pdata->win_mask, DC_N_WINDOWS) {
+	for_each_set_bit(idx, &dc->pdata->win_mask,
+			tegra_dc_get_numof_dispwindows()) {
 		if (tegra_nvdisp_detach_win(dc, idx))
 			dev_err(&dc->ndev->dev,
 				"failed to detach window %d\n", idx);
@@ -1433,7 +1440,7 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 
 	/* Set comp clock to different pclk since dc->clk will be disabled */
 	mutex_lock(&tegra_nvdisp_lock);
-	clk_client[dc->ctrl_num].inuse = false;
+	dc->comp_clk_inuse = false;
 	mutex_unlock(&tegra_nvdisp_lock);
 	tegra_nvdisp_set_compclk(dc);
 
@@ -1442,13 +1449,14 @@ int tegra_nvdisp_head_disable(struct tegra_dc *dc)
 
 	/* check if any of head is using hub clock */
 	mutex_lock(&tegra_nvdisp_lock);
-	for (idx = 0; idx < TEGRA_MAX_DC; idx++) {
-		if (clk_client[idx].inuse)
+	for (idx = 0; idx < tegra_dc_get_numof_dispheads(); idx++) {
+		dc_other = tegra_dc_get_dc(idx);
+		if (dc_other && dc_other->comp_clk_inuse)
 			break;
 	}
 
 	/* disable hub clock if none of the heads is using it and clear bw */
-	if (idx == TEGRA_MAX_DC && hubclk_already_on) {
+	if (idx == tegra_dc_get_numof_dispheads() && hubclk_already_on) {
 		tegra_nvdisp_clear_bandwidth(dc);
 		tegra_disp_clk_disable_unprepare(hubclk);
 		hubclk_already_on = false;
@@ -1487,8 +1495,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	/* set clock status to inuse */
 	mutex_lock(&tegra_nvdisp_lock);
-	clk_client[dc->ctrl_num].inuse = true;
-	clk_client[dc->ctrl_num].dc = dc;
+	dc->comp_clk_inuse = true;
 
 	/* turn on hub clock and init bw */
 	if (!hubclk_already_on) {
@@ -1572,7 +1579,7 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 		dc->out_ops->enable(dc);
 
 	/* force a full blending update */
-	for (i = 0; i < DC_N_WINDOWS; i++)
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++)
 		dc->blend.z[i] = -1;
 
 	tegra_dc_ext_enable(dc->ext);
@@ -1597,7 +1604,8 @@ int tegra_nvdisp_head_enable(struct tegra_dc *dc)
 
 	i = -1;
 	/* Assign windows to this head */
-	for_each_set_bit(idx, &dc->pdata->win_mask, DC_N_WINDOWS) {
+	for_each_set_bit(idx, &dc->pdata->win_mask,
+			tegra_dc_get_numof_dispwindows()) {
 		if (tegra_nvdisp_assign_win(dc, idx))
 			dev_err(&dc->ndev->dev,
 				"failed to assign window %d\n", idx);
@@ -2143,7 +2151,8 @@ int tegra_nvdisp_update_cmu(struct tegra_dc *dc, struct tegra_dc_lut *cmu)
 	_tegra_nvdisp_update_cmu(dc, cmu);
 	tegra_nvdisp_set_color_control(dc);
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
 		BUG_ON(!win);
@@ -2248,7 +2257,7 @@ static int tegra_nvdisp_get_v_taps_user_info(
 		struct tegra_dc *owner_dc = NULL;
 		struct tegra_dc_win *win = NULL;
 
-		for (j = 0; j < TEGRA_MAX_DC; j++) {
+		for (j = 0; j < tegra_dc_get_numof_dispheads(); j++) {
 			owner_dc = tegra_dc_get_dc(j);
 			if (!owner_dc || !owner_dc->enabled)
 				continue;
@@ -2476,7 +2485,7 @@ static void tegra_nvdisp_program_other_mempool(struct tegra_dc *dc,
 {
 	int i;
 
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		struct tegra_dc_pool_allocation *head_alloc = NULL;
 		struct tegra_dc *other_dc = NULL;
 		u32 ctrl_num = 0;
@@ -2514,7 +2523,7 @@ static void tegra_nvdisp_generate_mempool_ordering(struct tegra_dc *dc,
 
 	int i, j;
 
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		struct tegra_dc_ext_imp_head_results *head_result = NULL;
 		struct tegra_dc_pool_allocation *head_alloc = NULL;
 		struct tegra_dc *other_dc = NULL;
@@ -2653,7 +2662,7 @@ void tegra_dc_adjust_imp(struct tegra_dc *dc, bool before_win_update)
 				before_win_update);
 
 		/* Re-enable ihub latency events across all heads. */
-		for (i = 0; i < TEGRA_MAX_DC; i++) {
+		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 			struct tegra_dc *other_dc = tegra_dc_get_dc(i);
 
 			if (!other_dc || !other_dc->enabled)
@@ -2682,7 +2691,7 @@ static bool tegra_nvdisp_common_channel_is_free(void)
 {
 	int i;
 
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		struct tegra_dc *dc = tegra_dc_get_dc(i);
 		if (dc && dc->common_channel_reserved)
 			return false;
@@ -2963,7 +2972,7 @@ void tegra_nvdisp_program_imp_results(struct tegra_dc *dc)
 		return;
 
 	head_arr = imp_settings->ext_settings.imp_results;
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		struct tegra_dc_ext_imp_head_results *head_results = NULL;
 		struct tegra_dc *other_dc = tegra_dc_get_dc(i);
 
@@ -3016,7 +3025,7 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	} while (0)
 
 
-	for (i = 0; i < DC_N_WINDOWS; ++i) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); ++i) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 		if (!win || !win->dc)
 			continue;

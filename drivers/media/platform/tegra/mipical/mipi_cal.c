@@ -1022,7 +1022,7 @@ static int tegra_mipi_probe(struct platform_device *pdev)
 	return err;
 }
 
-struct platform_driver tegra_mipi_cal_platform_driver = {
+static struct platform_driver tegra_mipi_cal_platform_driver = {
 	.driver = {
 		.name = DRV_NAME,
 		.owner = THIS_MODULE,

@@ -287,6 +287,20 @@ alloc_iova(struct iova_domain *iovad, unsigned long size,
 	struct iova *new_iova;
 	int ret;
 
+	if (limit_pfn > iovad->dma_32bit_pfn)
+		limit_pfn = iovad->dma_32bit_pfn;
+
+	/* WAR for APE linear map requirement:
+	 * APE binaries are statically linked and are dependent
+	 * on linear map to succeed. APE binaries are placed at
+	 * top of the IOVA space and allocation starts from
+	 * top as well. This causes linear map to fail.
+	 * Till APE binaries are moved to different IOVA,
+	 * This WAR is necessary.
+	 */
+	if (limit_pfn == 0x5ffff)
+		limit_pfn = 0x5e000;
+
 	new_iova = alloc_iova_mem();
 	if (!new_iova)
 		return NULL;

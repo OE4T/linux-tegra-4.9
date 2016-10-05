@@ -75,17 +75,34 @@ BUILD_BUG_ON(ARRAY_SIZE(sce_clock_names) != ARRAY_SIZE(sce_clock_rates));
 }
 
 static const char * const sce_reset_names[] = {
+	/* Group 1 */
+	"tsctnsce",
 	"sce-pm",
-	"sce-nsysporeset",
-	"sce-nreset",
 	"sce-dbgresetn",
 	"sce-presetdbgn",
 	"sce-actmon",
 	"sce-dma",
-	"tsctnsce",
 	"sce-tke",
 	"sce-gte",
 	"sce-cfg",
+	/* Group 2: nSYSPORRESET, nRESET */
+	"sce-nreset",
+	"sce-nsysporeset",
+};
+
+struct sce_resets {
+	struct reset_control *tsctnsce;
+	struct reset_control *sce_pm;
+	struct reset_control *sce_dbgresetn;
+	struct reset_control *sce_presetdbgn;
+	struct reset_control *sce_actmon;
+	struct reset_control *sce_dma;
+	struct reset_control *sce_tke;
+	struct reset_control *sce_gte;
+	struct reset_control *sce_cfg;
+	/* Group 2: nSYSPORRESET, nRESET */
+	struct reset_control *sce_nreset;
+	struct reset_control *sce_nsysporeset;
 };
 
 static const char * const sce_reg_names[] = {
@@ -193,7 +210,10 @@ struct tegra_cam_rtcpu {
 		};
 	};
 	struct clk *clocks[NUM(clock_names)];
-	struct reset_control *resets[NUM(reset_names)];
+	union {
+		struct sce_resets sce_resets;
+		struct reset_control *resets[NUM(reset_names)];
+	};
 	const struct tegra_cam_rtcpu_pdata *pdata;
 	struct tegra_camrtc_mon *monitor;
 	bool power_domain;
@@ -483,6 +503,14 @@ void tegra_camrtc_ready(struct device *dev)
 {
 	struct tegra_cam_rtcpu *rtcpu = dev_get_drvdata(dev);
 
+	if (rtcpu->pm_base) {
+		u32 val = readl(rtcpu->pm_base + TEGRA_PM_R5_CTRL_0);
+
+		/* Skip configuring core if it is already unhalted */
+		if ((val & TEGRA_PM_FWLOADDONE) != 0)
+			return;
+	}
+
 	if (rtcpu->cfg_base) {
 		/* Disable R5R and smartcomp in camera mode */
 		writel(TEGRA_R5R_SC_DISABLE,
@@ -491,6 +519,10 @@ void tegra_camrtc_ready(struct device *dev)
 		/* Enable JTAG/Coresight */
 		writel(TEGRA_FN_MODEIN,
 			rtcpu->cfg_base + TEGRA_APS_FRSC_SC_MODEIN_0);
+
+		/* Reset R5 */
+		if (!IS_ERR_OR_NULL(rtcpu->sce_resets.sce_nsysporeset))
+			reset_control_reset(rtcpu->sce_resets.sce_nsysporeset);
 	}
 }
 EXPORT_SYMBOL(tegra_camrtc_ready);

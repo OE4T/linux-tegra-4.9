@@ -132,6 +132,11 @@
 #define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_FD	(0 << 0)
 #define TEGRA_DC_EXT_FLIP_FLAG_POST_SYNCPT_RAW	(1 << 0)
 
+/* Flags for CEA861.3 defined eotfs in HDR Metadata form sink */
+#define TEGRA_DC_EXT_CEA861_3_EOTF_SDR_LR	(1 << 0)
+#define TEGRA_DC_EXT_CEA861_3_EOTF_HDR_LR	(1 << 1)
+#define TEGRA_DC_EXT_CEA861_3_EOTF_SMPTE_2084	(1 << 2)
+
 struct tegra_timespec {
 	__s32	tv_sec; /* seconds */
 	__s32	tv_nsec; /* nanoseconds */
@@ -517,6 +522,69 @@ struct tegra_dc_ext_flip_4 {
 struct tegra_dc_ext_set_vblank {
 	__u8	enable;
 	__u8	reserved[3]; /* unused - must be 0 */
+};
+
+/* tegra_dc_ext_cap_type : Defines the diffrent types of capability info that
+ * could be provided by the kernel to user space.
+ */
+enum tegra_dc_ext_cap_type {
+	TEGRA_DC_EXT_CAP_TYPE_NONE, /* dummy value - do not use */
+	TEGRA_DC_EXT_CAP_TYPE_HDR_SINK, /* struct tegra_dc_ext_hdr_caps */
+	TEGRA_DC_EXT_CAP_TYPE_MAX,
+};
+
+/*
+ * tegra_dc_ext_hdr_caps : Incorporates target display's hdr capabilities.
+ * nr_elements : Indicates the number of the following data. When set to 0,
+ * the sink didn't provide the hdr static metadata in the edid.
+ * eotf : Indiactes the eotf supported by the sink.
+ * static_metadata_type : indicates which Static Metadata Descriptors are
+ * supported.
+ * desired_content_max_lum : Code Value indicating the Desired Content Max
+ * Luminance Data
+ * desired_content_max_frame_avg_lum : Code Value indicating the Desired
+ * Content Max Frame-average Luminance.
+ * desired_content_min_lum : Code Value indicating the Desired Content Min
+ * Luminance.
+ *
+ * Note:  The last 3 data are optional to declare in the edid. When nr_elements
+ * = 3, they are absent. When nr_elements = 4, desired_content_max_lum is
+ * present; when nr_elements = 5, desired_content_max_lum and
+ * desired_content_max_frame_avg_lum are present; and when it's 6, all 3 of
+ * them are present. When nr_elements > 3, each of the 3 values which are
+ * indicated to be present in the HDR Static Metadata Data Block may be set to
+ * zero. This value indicates that the data for the relevant Desired Max
+ * Content Luminance, Desired Content Max Frameaverage Luminance or Desired
+ * Content Min Luminance is not indicated.
+ */
+struct tegra_dc_ext_hdr_caps {
+	__u8 nr_elements;
+	__u8 eotf;
+	__u8 static_metadata_type;
+	__u8 desired_content_max_lum;
+	__u8 desired_content_max_frame_avg_lum;
+	__u8 desired_content_min_lum;
+};
+
+/*
+ * tegra_dc_ext_caps : Incorporates target display capabilities.
+ * data_type : Indicates the type of capability.
+ * data = pointer to the actual data.
+ */
+struct tegra_dc_ext_caps {
+	__u32 data_type;
+	__u64 __user data;
+};
+
+/*
+ * get display capabilities.
+ * nr_elements : Inidicates the no of elements of "tegra_dc_ext_caps" type the
+ * data pointer in pointing to.
+ * data : pointer to tegra_dc_ext_caps.
+ */
+struct tegra_dc_ext_get_cap_info {
+	__u32	nr_elements;
+	__u64 __user data;
 };
 
 /*
@@ -1035,6 +1103,9 @@ struct tegra_dc_ext_scanline_info {
 
 #define TEGRA_DC_EXT_SCRNCAPT_DUP_FBUF \
 	_IOWR('D', 0x22, struct tegra_dc_ext_scrncapt_dup_fbuf)
+
+#define TEGRA_DC_EXT_GET_CAP_INFO\
+	_IOW('D', 0x23, struct tegra_dc_ext_get_cap_info)
 
 #define TEGRA_DC_EXT_GET_SCANLINE \
 	_IOR('D', 0x24, __u32)

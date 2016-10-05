@@ -20,6 +20,7 @@
 #include <linux/dma-mapping.h>
 #include <linux/nvhost.h>
 #include <linux/errno.h>
+#include <linux/iommu.h>
 #include <linux/io.h>
 
 #include "bus_client_t194.h"
@@ -169,11 +170,8 @@ int nvhost_syncpt_unit_interface_init(struct platform_device *engine_pdev)
 	struct platform_device *host_pdev;
 	dma_addr_t range_start;
 	struct resource *res;
-	size_t range_size;
-
-	/* Only physical accesses are supported */
-	if (engine_pdev->dev.archdata.iommu)
-		return -ENOSYS;
+	unsigned int range_size;
+	int err = 0;
 
 	/* Get aperture and initialize range variables assuming physical
 	 * addressing
@@ -182,7 +180,7 @@ int nvhost_syncpt_unit_interface_init(struct platform_device *engine_pdev)
 	res = platform_get_resource(host_pdev, IORESOURCE_MEM,
 				    HOST1X_MSS_APERTURE);
 	range_start = (dma_addr_t)res->start;
-	range_size = (size_t)res->end - (size_t)res->start + 1;
+	range_size = (unsigned int)res->end - (unsigned int)res->start + 1;
 
 	/* Allocate space for storing the interface configuration */
 	syncpt_unit_interface = devm_kzalloc(&engine_pdev->dev,
@@ -191,8 +189,37 @@ int nvhost_syncpt_unit_interface_init(struct platform_device *engine_pdev)
 	if (syncpt_unit_interface == NULL)
 		return -ENOMEM;
 
+	/* If IOMMU is enabled, map it into the device memory */
+	if (engine_pdev->dev.archdata.iommu) {
+		DEFINE_DMA_ATTRS(attrs);
+		struct scatterlist sg;
+
+		/* The area doesn't really exist so we cannot do CPU sync */
+		dma_set_attr(DMA_ATTR_SKIP_CPU_SYNC, &attrs);
+
+		/* Initialize the scatterlist to cover the whole range */
+		sg_init_table(&sg, 1);
+		sg_set_page(&sg, phys_to_page(res->start), range_size, 0);
+
+		err = dma_map_sg_attrs(&engine_pdev->dev, &sg, 1,
+				       DMA_BIDIRECTIONAL, &attrs);
+
+		/* dma_map_sg_attrs returns 0 on errors */
+		if (err == 0) {
+			err = -ENOMEM;
+			return err;
+		}
+
+		range_start = sg_dma_address(&sg);
+		err = 0;
+	}
+
 	syncpt_unit_interface->start = range_start;
 	pdata->syncpt_unit_interface = syncpt_unit_interface;
 
-	return 0;
+	nvhost_dbg_info("%s: unit interface initialized to range %llu-%llu",
+			dev_name(&engine_pdev->dev),
+			(u64)range_start, (u64)range_start + (u64)range_size);
+
+	return err;
 }

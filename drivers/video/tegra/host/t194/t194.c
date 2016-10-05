@@ -355,6 +355,10 @@ struct nvhost_device_data t19_pva1_info = {
 	.prepare_poweroff	= pva_prepare_poweroff,
 	.firmware_name		= "nvhost_pva10.fw",
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {
+		{0x70000, true, 0},
+		{0x80000, false, 0},
+		{0x80000, false, 8} },
 	.poweron_reset		= true,
 	.serialize		= true,
 	.push_work_done		= true,
@@ -376,6 +380,10 @@ struct nvhost_device_data t19_pva0_info = {
 	.prepare_poweroff	= pva_prepare_poweroff,
 	.firmware_name		= "nvhost_pva10.fw",
 	.resource_policy	= RESOURCE_PER_CHANNEL_INSTANCE,
+	.vm_regs		= {
+		{0x70000, true, 0},
+		{0x80000, false, 0},
+		{0x80000, false, 8} },
 	.poweron_reset		= true,
 	.serialize		= true,
 	.push_work_done		= true,

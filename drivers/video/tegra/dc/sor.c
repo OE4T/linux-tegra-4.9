@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/sor.c
  *
- * Copyright (c) 2011-2016, NVIDIA CORPORATION.  All rights reserved.
+ * Copyright (c) 2011-2017, NVIDIA CORPORATION.  All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -1807,7 +1807,8 @@ tegra_dc_sor_disable_win_short_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
 
 	/* Store and clear window options */
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 			DC_CMD_DISPLAY_WINDOW_HEADER);
 		dc_reg_ctx[i] = tegra_dc_readl(dc, DC_WIN_WIN_OPTIONS);
@@ -1854,7 +1855,8 @@ tegra_dc_sor_restore_win_and_raster(struct tegra_dc *dc, int *dc_reg_ctx)
 
 	selected_windows = tegra_dc_readl(dc, DC_CMD_DISPLAY_WINDOW_HEADER);
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 			DC_CMD_DISPLAY_WINDOW_HEADER);
 		tegra_dc_writel(dc, dc_reg_ctx[i], DC_WIN_WIN_OPTIONS);

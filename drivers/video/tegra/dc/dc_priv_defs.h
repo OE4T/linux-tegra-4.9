@@ -175,8 +175,10 @@ struct tegra_dc_pool_allocation {
 struct tegra_dc_imp_settings {
 	struct tegra_dc_ext_imp_settings	ext_settings;
 
-	struct tegra_dc_pool_allocation		decreasing_pool[TEGRA_MAX_DC];
-	struct tegra_dc_pool_allocation		increasing_pool[TEGRA_MAX_DC];
+	struct tegra_dc_pool_allocation
+			decreasing_pool[TEGRA_DC_EXT_N_HEADS];
+	struct tegra_dc_pool_allocation
+			increasing_pool[TEGRA_DC_EXT_N_HEADS];
 	struct list_head			imp_node;
 	u64					session_id;
 	u32					owner;
@@ -255,6 +257,7 @@ struct tegra_dc {
 	bool					common_channel_reserved;
 	bool					common_channel_pending;
 	bool					common_channel_intr_enabled;
+	bool					comp_clk_inuse;
 #endif
 	bool					imp_dirty;
 	u64					imp_session_id_cntr;

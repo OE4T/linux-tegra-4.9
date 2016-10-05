@@ -6,7 +6,7 @@
  *         Colin Cross <ccross@android.com>
  *         Travis Geiselbrecht <travis@palm.com>
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -988,7 +988,7 @@ int tegra_fb_set_win_index(struct tegra_dc *dc, unsigned long win_mask)
 
 	if (win_mask) {
 		/* Set the first valid bit as fb win index */
-		for (i = 0; i < DC_N_WINDOWS; i++) {
+		for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 			if (test_bit(i, &mask))
 				break;
 		}

@@ -45,11 +45,10 @@ static struct tegra_dc_scrncapt_private  {
 	int                  holder_pid;
 	u32                  magic;
 	u32                  pause_heads;
-	struct rw_semaphore  rwsema_head[TEGRA_MAX_DC];
+	struct rw_semaphore  *rwsema_head;
 	struct timer_list    tmr_resume;
 	unsigned long        tm_resume;
 }  scrncapt;
-
 
 /*
  * Interface with Tegra DC Driver
@@ -238,7 +237,7 @@ static int  scrncapt_get_info_wins(struct tegra_dc *dc, void __user *ptr)
 
 	pwinattr = (struct tegra_dc_ext_flip_windowattr_v2 __user *)info.wins;
 	num_wins = 0;
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		struct tegra_dc_ext_flip_windowattr_v2  winattr;
 
 		if (!(info.flag_wins & dc->valid_windows & (1 << i)))
@@ -417,7 +416,7 @@ int  tegra_dc_scrncapt_get_info(struct tegra_dc_ext_user *user,
 
 	if ((args->ver ^ scrncapt.magic) & ~0xff)
 		return -EFAULT;
-	if (TEGRA_MAX_DC <= (unsigned)args->head)
+	if (tegra_dc_get_numof_dispheads() <= (unsigned)args->head)
 		return -EFAULT;
 
 	/* check disp paused */
@@ -484,8 +483,8 @@ int  tegra_dc_scrncapt_dup_fbuf(struct tegra_dc_ext_user *user,
 
 	if ((args->ver ^ scrncapt.magic) & ~0xff)
 		return -EFAULT;
-	if (TEGRA_MAX_DC <= (unsigned)args->head
-			|| DC_N_WINDOWS <= (unsigned)args->win)
+	if ((tegra_dc_get_numof_dispheads() <= (unsigned)args->head) ||
+		(tegra_dc_get_numof_dispwindows() <= (unsigned)args->win))
 		return -EINVAL;
 
 	if (!access_ok(VERIFY_WRITE, args->buffer, args->buffer_max))
@@ -539,13 +538,14 @@ int  tegra_dc_scrncapt_pause(struct tegra_dc_ext_control_user *ctlusr,
 		struct tegra_dc_ext_control_scrncapt_pause *args)
 {
 	int  err = 0;
-	int  i;
+	int  i, nheads;
 	u32  heads;
 	unsigned long  tm;
 
 	if (TEGRA_DC_EXT_CONTROL_SCRNCAPT_MAGIC != args->magic)
 		return -EFAULT;
 
+	nheads = tegra_dc_get_numof_dispheads();
 	heads = 1 << 31;  /* default to pausing all heads */
 	if ((1 << 31) & heads)
 		heads |= -1;
@@ -557,7 +557,7 @@ int  tegra_dc_scrncapt_pause(struct tegra_dc_ext_control_user *ctlusr,
 	if (scrncapt.pause_heads) {
 		err = -EBUSY;
 	} else {
-		for (i = 0; i < TEGRA_MAX_DC; i++) {
+		for (i = 0; i < nheads; i++) {
 			if ((1 << i) & heads)
 				down_write(&scrncapt.rwsema_head[i]);
 		}
@@ -578,8 +578,8 @@ int  tegra_dc_scrncapt_pause(struct tegra_dc_ext_control_user *ctlusr,
 
 	args->magic = scrncapt.magic;
 	args->tm_resume_msec = tm ? : -1;
-	args->num_heads = TEGRA_MAX_DC;
-	args->num_wins = DC_N_WINDOWS;
+	args->num_heads = nheads;
+	args->num_wins = tegra_dc_get_numof_dispwindows();
 
 	return err;
 }
@@ -596,6 +596,7 @@ int  tegra_dc_scrncapt_resume(struct tegra_dc_ext_control_user *ctlusr,
 		return -EFAULT;
 
 	mutex_lock(&scrncapt.lock);
+
 	if (!scrncapt.pause_heads) {
 		err = -EINVAL;
 	} else {
@@ -606,7 +607,7 @@ int  tegra_dc_scrncapt_resume(struct tegra_dc_ext_control_user *ctlusr,
 		scrncapt.holder_pid = 0x0;
 		if ((1 << 31) & heads)
 			heads |= -1;
-		for (i = 0; i < TEGRA_MAX_DC; i++) {
+		for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 			if ((1 << i) & heads)
 				up_write(&scrncapt.rwsema_head[i]);
 		}
@@ -632,7 +633,7 @@ static void  tegra_dc_scrncapt_timer_cb(unsigned long arg)
 	scrncapt.holder_pid = 0x0;
 	if ((1 << 31) & heads)
 		heads |= -1;
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		if ((1 << i) & heads)
 			up_write(&scrncapt.rwsema_head[i]);
 	}
@@ -642,13 +643,31 @@ static void  tegra_dc_scrncapt_timer_cb(unsigned long arg)
 
 int  tegra_dc_scrncapt_init(void)
 {
-	int  i, heads = tegra_dc_get_max_heads();
+	int  i, nheads, nwins;
 
-	pr_info("scrncapt: init (heads:%d wins:%d planes:%d)\n",
-		heads, DC_N_WINDOWS, TEGRA_DC_NUM_PLANES);
+	nheads = tegra_dc_get_numof_dispheads();
+	nwins = tegra_dc_get_numof_dispwindows();
+
+	if (nheads <= 0 || nwins <= 0) {
+		pr_err("%s: heads:%d windows:%d cannot be negative or zero\n",
+			__func__, nheads, nwins);
+		return -EINVAL;
+	}
+
 	memset(&scrncapt, 0, sizeof(scrncapt));
 	mutex_init(&scrncapt.lock);
-	for (i = 0; i < heads; i++)
+	scrncapt.rwsema_head = kzalloc(nheads *
+		sizeof(struct rw_semaphore), GFP_KERNEL);
+
+	if (IS_ERR_OR_NULL(scrncapt.rwsema_head)) {
+		pr_err("%s: Insufficient memory\n", __func__);
+		return -ENOMEM;
+	}
+
+	pr_info("scrncapt: init (heads:%d wins:%d planes:%d)\n",
+		nheads, nwins, TEGRA_DC_NUM_PLANES);
+
+	for (i = 0; i < nheads; i++)
 		init_rwsem(&scrncapt.rwsema_head[i]);
 	init_timer(&scrncapt.tmr_resume);
 	scrncapt.tmr_resume.function = &tegra_dc_scrncapt_timer_cb;
@@ -662,6 +681,6 @@ int  tegra_dc_scrncapt_init(void)
 int  tegra_dc_scrncapt_exit(void)
 {
 	pr_info("scrncapt: exit\n");
-
+	kfree(scrncapt.rwsema_head);
 	return 0;
 }

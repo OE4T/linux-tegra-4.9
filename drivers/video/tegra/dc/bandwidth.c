@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/bandwidth.c
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * Author: Jon Mayo <jmayo@nvidia.com>
  *
@@ -40,7 +40,6 @@ static int use_dynamic_emc = 1;
 
 module_param_named(use_dynamic_emc, use_dynamic_emc, int, S_IRUGO | S_IWUSR);
 
-static unsigned int tegra_dcs_total_bw[TEGRA_MAX_DC] = {0};
 DEFINE_MUTEX(tegra_dcs_total_bw_lock);
 
 /* windows A, B, C for first and second display */
@@ -73,7 +72,8 @@ static unsigned int num_active_internal_wins(struct tegra_dc *dc)
 	unsigned int num_active_internal_wins = 0;
 	int i = 0;
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *curr_win = tegra_dc_get_window(dc, i);
 		enum tegra_la_id curr_win_la_id =
 				la_id_tab[dc->ctrl_num][curr_win->idx];
@@ -93,7 +93,8 @@ static unsigned int num_active_external_wins(struct tegra_dc *dc)
 	unsigned int num_active_external_wins = 0;
 	int i = 0;
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *curr_win = tegra_dc_get_window(dc, i);
 		enum tegra_la_id curr_win_la_id =
 				la_id_tab[dc->ctrl_num][curr_win->idx];
@@ -379,7 +380,8 @@ static void calc_disp_params(struct tegra_dc *dc,
 	if (is_internal_win(la_id)) {
 		int i = 0;
 
-		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		for_each_set_bit(i, &dc->valid_windows,
+				tegra_dc_get_numof_dispwindows()) {
 			struct tegra_dc_win *curr_win =
 				tegra_dc_get_window(dc, i);
 			enum tegra_la_id curr_win_la_id =
@@ -401,7 +403,8 @@ static void calc_disp_params(struct tegra_dc *dc,
 	} else {
 		int i = 0;
 
-		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		for_each_set_bit(i, &dc->valid_windows,
+				tegra_dc_get_numof_dispwindows()) {
 			struct tegra_dc_win *curr_win =
 				tegra_dc_get_window(dc, i);
 			enum tegra_la_id curr_win_la_id =
@@ -482,9 +485,12 @@ static void calc_disp_params(struct tegra_dc *dc,
 	 * round up bandwidth to next 1MBps */
 	if (curr_dc_head_bw != ULONG_MAX)
 		curr_dc_head_bw = curr_dc_head_bw / 1000 + 1;
-	tegra_dcs_total_bw[dc->ctrl_num] = curr_dc_head_bw;
-	disp_params->total_dc0_bw = tegra_dcs_total_bw[0];
-	disp_params->total_dc1_bw = tegra_dcs_total_bw[1];
+
+	if (dc->ctrl_num)
+		disp_params->total_dc1_bw = curr_dc_head_bw;
+	else
+		disp_params->total_dc0_bw = curr_dc_head_bw;
+
 	mutex_unlock(&tegra_dcs_total_bw_lock);
 }
 
@@ -703,7 +709,7 @@ unsigned long tegra_dc_get_bandwidth(
 {
 	int i;
 
-	BUG_ON(n > DC_N_WINDOWS);
+	BUG_ON(n > tegra_dc_get_numof_dispwindows());
 
 	/* emc rate and latency allowance both need to know per window
 	 * bandwidths */
@@ -821,7 +827,8 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 		dc->bw_kbps = dc->new_bw_kbps;
 	}
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *w = tegra_dc_get_window(dc, i);
 
 		if ((use_new || w->bandwidth != w->new_bandwidth) &&
@@ -835,14 +842,15 @@ void tegra_dc_program_bandwidth(struct tegra_dc *dc, bool use_new)
 int tegra_dc_set_dynamic_emc(struct tegra_dc *dc)
 {
 	unsigned long new_rate;
-	struct tegra_dc_win *windows[DC_N_WINDOWS];
+	int nwins = tegra_dc_get_numof_dispwindows();
+	struct tegra_dc_win *windows[nwins];
 	unsigned i;
 	unsigned len;
 
 	if (!use_dynamic_emc)
 		return 0;
 
-	for (i = 0, len = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0, len = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 		if (win)
 			windows[len++] = win;
@@ -945,7 +953,8 @@ int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 		dc->bw_kbps = bw;
 	}
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *w = tegra_dc_get_window(dc, i);
 		if ((w->bandwidth != w->new_bandwidth) &&
 			w->new_bandwidth != 0) {

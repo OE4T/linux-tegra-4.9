@@ -167,7 +167,8 @@ static int tegra_dc_ext_get_window(struct tegra_dc_ext_user *user,
 	struct tegra_dc_ext_win *win;
 	int ret = 0;
 
-	if ((n >= DC_N_WINDOWS) || !(ext->dc->valid_windows & BIT(n)))
+	if ((n >= tegra_dc_get_numof_dispwindows()) ||
+		!(ext->dc->valid_windows & BIT(n)))
 		return -EINVAL;
 
 	win = &ext->win[n];
@@ -193,7 +194,8 @@ static int tegra_dc_ext_put_window(struct tegra_dc_ext_user *user,
 	struct tegra_dc_ext_win *win;
 	int ret = 0;
 
-	if ((n >= DC_N_WINDOWS) || !(ext->dc->valid_windows & BIT(n)))
+	if ((n >= tegra_dc_get_numof_dispwindows()) ||
+		!(ext->dc->valid_windows & BIT(n)))
 		return -EINVAL;
 
 	win = &ext->win[n];
@@ -229,10 +231,12 @@ static int tegra_dc_ext_set_winmask(struct tegra_dc_ext_user *user,
 
 int tegra_dc_ext_restore(struct tegra_dc_ext *ext)
 {
-	struct tegra_dc_win *wins[DC_N_WINDOWS];
+	int nwins = tegra_dc_get_numof_dispwindows();
+	struct tegra_dc_win *wins[nwins];
 	int i, nr_win = 0;
 
-	for_each_set_bit(i, &ext->dc->valid_windows, DC_N_WINDOWS)
+	for_each_set_bit(i, &ext->dc->valid_windows,
+			tegra_dc_get_numof_dispwindows())
 		if (ext->win[i].enabled) {
 			wins[nr_win] = tegra_dc_get_window(ext->dc, i);
 			wins[nr_win++]->flags |= TEGRA_WIN_FLAG_ENABLED;
@@ -298,14 +302,15 @@ int tegra_dc_ext_disable(struct tegra_dc_ext *ext)
 	 * removed from screen, and advance syncpt.
 	 */
 	if (ext->dc->enabled) {
-		for (i = 0; i < DC_N_WINDOWS; i++) {
+		for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 			if (ext->win[i].user)
 				windows |= BIT(i);
 		}
 
 		tegra_dc_blank_wins(ext->dc, windows);
 		if (!IS_ENABLED(CONFIG_FRAMEBUFFER_CONSOLE)) {
-			for_each_set_bit(i, &windows, DC_N_WINDOWS) {
+			for_each_set_bit(i, &windows,
+					tegra_dc_get_numof_dispwindows()) {
 				tegra_dc_ext_unpin_window(&ext->win[i]);
 			}
 		}
@@ -846,7 +851,7 @@ static void tegra_dc_ext_flip_worker(struct work_struct *work)
 
 	tegra_dc_scrncapt_disp_pause_lock(dc);
 
-	BUG_ON(win_num > DC_N_WINDOWS);
+	BUG_ON(win_num > tegra_dc_get_numof_dispwindows());
 	for (i = 0; i < win_num; i++) {
 		struct tegra_dc_ext_flip_win *flip_win = &data->win[i];
 		int index = flip_win->attr.index;
@@ -1081,7 +1086,7 @@ static int lock_windows_for_flip(struct tegra_dc_ext_user *user,
 	u8 idx_mask = 0;
 	int i;
 
-	BUG_ON(win_num > DC_N_WINDOWS);
+	BUG_ON(win_num > tegra_dc_get_numof_dispwindows());
 	for (i = 0; i < win_num; i++) {
 		int index = win_attr[i].index;
 
@@ -1126,7 +1131,7 @@ static void unlock_windows_for_flip(struct tegra_dc_ext_user *user,
 	u8 idx_mask = 0;
 	int i;
 
-	BUG_ON(win_num > DC_N_WINDOWS);
+	BUG_ON(win_num > tegra_dc_get_numof_dispwindows());
 	for (i = 0; i < win_num; i++) {
 		int index = win[i].index;
 
@@ -1150,7 +1155,7 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 	int i, used_windows = 0;
 	struct tegra_dc *dc = user->ext->dc;
 
-	if (win_num > DC_N_WINDOWS)
+	if (win_num > tegra_dc_get_numof_dispwindows())
 		return -EINVAL;
 
 	for (i = 0; i < win_num; i++) {
@@ -1159,7 +1164,7 @@ static int sanitize_flip_args(struct tegra_dc_ext_user *user,
 		if (index < 0)
 			continue;
 
-		if (index >= DC_N_WINDOWS ||
+		if (index >= tegra_dc_get_numof_dispwindows() ||
 			!test_bit(index, &dc->valid_windows))
 			return -EINVAL;
 
@@ -1409,7 +1414,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		data->dirty_rect_valid = true;
 	}
 
-	BUG_ON(win_num > DC_N_WINDOWS);
+	BUG_ON(win_num > tegra_dc_get_numof_dispwindows());
 
 	ret = tegra_dc_ext_pin_windows(user, win, win_num,
 				     data->win, &has_timestamp,
@@ -1444,7 +1449,7 @@ static int tegra_dc_ext_flip(struct tegra_dc_ext_user *user,
 		goto unlock;
 	}
 
-	BUG_ON(win_num > DC_N_WINDOWS);
+	BUG_ON(win_num > tegra_dc_get_numof_dispwindows());
 	for (i = 0; i < win_num; i++) {
 		u32 syncpt_max;
 		int index = win[i].index;
@@ -3072,7 +3077,7 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 	unsigned int i;
 	unsigned long int windows = 0;
 
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		if (ext->win[i].user == user) {
 			tegra_dc_ext_put_window(user, i);
 			windows |= BIT(i);
@@ -3081,7 +3086,8 @@ static int tegra_dc_release(struct inode *inode, struct file *filp)
 
 	if (ext->dc->enabled) {
 		tegra_dc_blank_wins(ext->dc, windows);
-		for_each_set_bit(i, &windows, DC_N_WINDOWS) {
+		for_each_set_bit(i, &windows,
+				tegra_dc_get_numof_dispwindows()) {
 			tegra_dc_ext_unpin_window(&ext->win[i]);
 			tegra_dc_disable_window(ext->dc, i);
 		}
@@ -3241,11 +3247,11 @@ void tegra_dc_ext_unregister(struct tegra_dc_ext *ext)
 
 int __init tegra_dc_ext_module_init(void)
 {
-	int ret, heads = tegra_dc_get_max_heads();
+	int ret, nheads = tegra_dc_get_numof_dispheads();
 
-	if (heads <= 0) {
+	if (nheads <= 0) {
 		pr_err("%s: max heads:%d cannot be negative or zero\n",
-			__func__, heads);
+			__func__, nheads);
 		return -EINVAL;
 	}
 
@@ -3257,7 +3263,7 @@ int __init tegra_dc_ext_module_init(void)
 
 	/* Reserve one character device per head, plus the control device */
 	ret = alloc_chrdev_region(&tegra_dc_ext_devno,
-				  0, heads + 1,
+				  0, nheads + 1,
 				  "tegra_dc_ext");
 	if (ret)
 		goto cleanup_class;
@@ -3271,7 +3277,7 @@ int __init tegra_dc_ext_module_init(void)
 	return 0;
 
 cleanup_region:
-	unregister_chrdev_region(tegra_dc_ext_devno, heads);
+	unregister_chrdev_region(tegra_dc_ext_devno, nheads);
 
 cleanup_class:
 	class_destroy(tegra_dc_ext_class);
@@ -3282,6 +3288,7 @@ cleanup_class:
 void __exit tegra_dc_ext_module_exit(void)
 {
 	tegra_dc_scrncapt_exit();
-	unregister_chrdev_region(tegra_dc_ext_devno, tegra_dc_get_max_heads());
+	unregister_chrdev_region(tegra_dc_ext_devno,
+			tegra_dc_get_numof_dispheads());
 	class_destroy(tegra_dc_ext_class);
 }

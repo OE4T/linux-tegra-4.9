@@ -20,12 +20,6 @@
 #include <linux/types.h>
 #include <drm/drm_fixed.h>
 
-#if defined(CONFIG_TEGRA_NVDISPLAY)
-#define TEGRA_MAX_DC		3
-#else
-#define TEGRA_MAX_DC		2
-#endif
-
 #if defined(CONFIG_ARCH_TEGRA_14x_SOC)
 #define DC_N_WINDOWS		6
 #elif defined(CONFIG_ARCH_TEGRA_12x_SOC) || defined(CONFIG_ARCH_TEGRA_21x_SOC)
@@ -190,6 +184,8 @@ struct tegra_dc *tegra_dc_get_dc(unsigned idx);
 int tegra_dc_bandwidth_negotiate_bw(struct tegra_dc *dc,
 			struct tegra_dc_win *windows[], int n);
 #endif
+int tegra_dc_get_numof_dispheads(void);
+int tegra_dc_get_numof_dispwindows(void);
 
 /* needed by tegra-throughput */
 int tegra_dc_set_flip_callback(void (*callback)(void));

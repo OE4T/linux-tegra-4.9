@@ -3,7 +3,7 @@
  *
  * Copyright (C) 2010 Google, Inc.
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -175,7 +175,7 @@ static void tegra_dc_blend_sequential(struct tegra_dc *dc,
 	unsigned long mask = dc->valid_windows;
 
 	tegra_dc_io_start(dc);
-	for_each_set_bit(idx, &mask, DC_N_WINDOWS) {
+	for_each_set_bit(idx, &mask, tegra_dc_get_numof_dispwindows()) {
 		if (!tegra_dc_feature_is_gen2_blender(dc, idx))
 			continue;
 
@@ -276,7 +276,7 @@ int tegra_dc_sync_windows(struct tegra_dc_win *windows[], int n)
 	if (dc == NULL)
 		return -EFAULT;
 
-	if (n < 1 || n > DC_N_WINDOWS)
+	if (n < 1 || n > tegra_dc_get_numof_dispwindows())
 		return -EINVAL;
 
 	if (!dc->enabled)
@@ -964,7 +964,8 @@ static int _tegra_dc_program_windows(struct tegra_dc *dc,
 		if (update_blend_seq)
 			tegra_dc_blend_sequential(dc, &dc->blend);
 
-		for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+		for_each_set_bit(i, &dc->valid_windows,
+				tegra_dc_get_numof_dispwindows()) {
 			struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
 			win->dirty = 1;
@@ -1127,7 +1128,8 @@ void tegra_dc_trigger_windows(struct tegra_dc *dc)
 #endif
 
 	val = tegra_dc_readl(dc, DC_CMD_STATE_CONTROL);
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
 		if (tegra_platform_is_linsim()) {

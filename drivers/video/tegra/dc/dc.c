@@ -27,6 +27,7 @@
 #include <linux/pm.h>
 #include <linux/tegra-pm.h>
 #include <linux/pm_runtime.h>
+#include <linux/of_device.h>
 #include <linux/clk.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
@@ -93,6 +94,17 @@ EXPORT_TRACEPOINT_SYMBOL(display_readl);
 
 #define MAX_VRR_V_FRONT_PORCH			0x1000
 
+static struct tegra_dc_hw_data *hw_data;
+static struct tegra_dc_hw_data t21x_hw_data;
+static struct tegra_dc_hw_data t18x_hw_data;
+
+static const struct of_device_id tegra_display_of_match[] = {
+	{.compatible = "nvidia,tegra210-dc", .data = &t21x_hw_data },
+	{.compatible = "nvidia,tegra186-dc", .data = &t18x_hw_data },
+	{ },
+};
+MODULE_DEVICE_TABLE(of, tegra_display_of_match);
+
 #ifndef CONFIG_TEGRA_NVDISPLAY
 static struct of_device_id tegra_disa_pd[] = {
 	{ .compatible = "nvidia,tegra210-disa-pd", },
@@ -134,8 +146,7 @@ static int tegra_dc_suspend(struct platform_device *ndev, pm_message_t state);
 static int tegra_dc_resume(struct platform_device *ndev);
 #endif
 
-static struct tegra_dc *tegra_dcs[TEGRA_MAX_DC];
-
+static struct tegra_dc **tegra_dcs;
 #ifdef CONFIG_TEGRA_NVDISPLAY
 static struct tegra_dc_win	tegra_dc_windows[DC_N_WINDOWS];
 #endif
@@ -864,7 +875,8 @@ void reg_dump(struct tegra_dc *dc, void *data,
 	DUMP_REG(DC_COM_CMU_CSC_KBB);
 #endif
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		print(data, "\n");
 		snprintf(buff, sizeof(buff), "WINDOW %c:\n", winname[i]);
 		print(data, buff);
@@ -1253,7 +1265,8 @@ static ssize_t dbg_dc_out_type_set(struct file *file,
 		return -EINVAL;
 	}
 
-	WARN_ON((sizeof(boot_out_type) / sizeof(int)) != TEGRA_MAX_DC);
+	WARN_ON((sizeof(boot_out_type) / sizeof(int)) !=
+		tegra_dc_get_numof_dispheads());
 
 	if (boot_out_type[dc->ndev->id] == -1)
 		boot_out_type[dc->ndev->id] = dc->pdata->default_out->type;
@@ -1971,7 +1984,7 @@ static ssize_t dbg_window_toggle_write(struct file *file,
 
 	/* limit the request only to valid windows */
 	windows &= dc->valid_windows;
-	for_each_set_bit(i, &windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &windows, tegra_dc_get_numof_dispwindows()) {
 		u32 val;
 		/* select the assembly registers for window i */
 		tegra_dc_writel(dc, WRITE_MUX_ASSEMBLY | READ_MUX_ASSEMBLY,
@@ -2016,7 +2029,8 @@ static int dbg_window_toggle_show(struct seq_file *m, void *unused)
 	tegra_dc_get(dc);
 	/* limit the request only to valid windows */
 	windows = 0;
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		u32 val;
 
 		/* select the active registers for window i */
@@ -2564,7 +2578,7 @@ static void tegra_dc_create_debugfs(struct tegra_dc *dc)
 			NULL);
 		if (!dc->debug_common_dir)
 			goto remove_out;
-		for (i = 0; i < DC_N_WINDOWS; i++) {
+		for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 			struct tegra_dc_win *win = &tegra_dc_windows[i];
 
 			snprintf(winname, sizeof(winname), "tegra_win.%d", i);
@@ -2741,7 +2755,7 @@ static int tegra_dc_set_next(struct tegra_dc *dc)
 
 	mutex_lock(&tegra_dc_lock);
 
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		if (tegra_dcs[i] == NULL) {
 			tegra_dcs[i] = dc;
 			ret = i;
@@ -2759,7 +2773,8 @@ static int tegra_dc_set_idx(struct tegra_dc *dc, int index)
 	int ret = 0;
 
 	mutex_lock(&tegra_dc_lock);
-	if (index >= TEGRA_MAX_DC) {
+
+	if (index >= tegra_dc_get_numof_dispheads()) {
 		ret = -EINVAL;
 		goto out;
 	}
@@ -2797,7 +2812,7 @@ unsigned int tegra_dc_has_multiple_dc(void)
 	struct tegra_dc *dc;
 
 	mutex_lock(&tegra_dc_lock);
-	for (idx = 0; idx < TEGRA_MAX_DC; idx++)
+	for (idx = 0; idx < tegra_dc_get_numof_dispheads(); idx++)
 		cnt += ((dc = tegra_dcs[idx]) != NULL && dc->enabled) ? 1 : 0;
 	mutex_unlock(&tegra_dc_lock);
 
@@ -2812,7 +2827,7 @@ int tegra_dc_get_stride(struct tegra_dc *dc, unsigned win)
 
 	if (!dc->enabled)
 		return 0;
-	BUG_ON(win > DC_N_WINDOWS);
+	WARN_ON(win > tegra_dc_get_numof_dispwindows());
 	mutex_lock(&dc->lock);
 	tegra_dc_get(dc);
 #ifdef CONFIG_TEGRA_NVDISPLAY
@@ -2831,7 +2846,7 @@ EXPORT_SYMBOL(tegra_dc_get_stride);
 
 struct tegra_dc *tegra_dc_get_dc(unsigned idx)
 {
-	if (idx < TEGRA_MAX_DC)
+	if (idx < tegra_dc_get_numof_dispheads())
 		return tegra_dcs[idx];
 	else
 		return NULL;
@@ -2840,7 +2855,8 @@ EXPORT_SYMBOL(tegra_dc_get_dc);
 
 struct tegra_dc_win *tegra_dc_get_window(struct tegra_dc *dc, unsigned win)
 {
-	if (win >= DC_N_WINDOWS || !test_bit(win, &dc->valid_windows))
+	if (win >= tegra_dc_get_numof_dispwindows() ||
+		!test_bit(win, &dc->valid_windows))
 		return NULL;
 
 #ifdef CONFIG_TEGRA_NVDISPLAY
@@ -4830,7 +4846,8 @@ static int tegra_dc_init(struct tegra_dc *dc)
 	dc->is_cmu_set_bl = false;
 #endif
 	tegra_dc_set_color_control(dc);
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 		tegra_dc_writel(dc, WINDOW_A_SELECT << i,
 				DC_CMD_DISPLAY_WINDOW_HEADER);
@@ -4839,7 +4856,9 @@ static int tegra_dc_init(struct tegra_dc *dc)
 		tegra_dc_set_scaling_filter(dc);
 	}
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		struct tegra_dc_win *win = tegra_dc_get_window(dc, i);
 
 		BUG_ON(!win);
@@ -4939,7 +4958,7 @@ static bool _tegra_dc_controller_enable(struct tegra_dc *dc)
 		dc->out_ops->enable(dc);
 
 	/* force a full blending update */
-	for (i = 0; i < DC_N_WINDOWS; i++)
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++)
 		dc->blend.z[i] = -1;
 
 	tegra_dc_ext_enable(dc->ext);
@@ -5136,7 +5155,8 @@ static void _tegra_dc_controller_disable(struct tegra_dc *dc)
 	if (dc->out && dc->out->disable)
 		dc->out->disable(&dc->ndev->dev);
 
-	for_each_set_bit(i, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		tegra_dc_disable_window(dc, i);
 	}
 	trace_display_disable(dc);
@@ -5188,7 +5208,8 @@ bool tegra_dc_stats_get(struct tegra_dc *dc)
 /* blank selected windows by disabling them */
 void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 {
-	struct tegra_dc_win *dcwins[DC_N_WINDOWS];
+	int nwins = tegra_dc_get_numof_dispwindows();
+	struct tegra_dc_win *dcwins[nwins];
 	struct tegra_dc_win blank_win;
 	unsigned i;
 	unsigned long int blank_windows;
@@ -5234,7 +5255,7 @@ void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 	if (!blank_windows)
 		return;
 
-	for_each_set_bit(i, &blank_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &blank_windows, tegra_dc_get_numof_dispwindows()) {
 		dcwins[nr_win] = tegra_dc_get_window(dc, i);
 		if (!dcwins[nr_win])
 			continue;
@@ -5263,7 +5284,7 @@ void tegra_dc_blank_wins(struct tegra_dc *dc, unsigned windows)
 	 * of all windows. In case the statically created 420 10bpc
 	 * is also present in blank_windows, only advance syncpoints.
 	 */
-	for_each_set_bit(i, &blank_windows, DC_N_WINDOWS) {
+	for_each_set_bit(i, &blank_windows, tegra_dc_get_numof_dispwindows()) {
 		if (fb_win_pos == i) {
 			tegra_dc_flush_syncpts_window(dc, i);
 			continue;
@@ -5485,7 +5506,7 @@ int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
 #endif /* CONFIG_TEGRA_NVDISPLAY */
 
 	/* check that dc is not NULL and do range check */
-	if (!dc || (winmask >= (1 << DC_N_WINDOWS)))
+	if (!dc || (winmask >= (1 << tegra_dc_get_numof_dispwindows())))
 		return -EINVAL;
 
 	mutex_lock(&dc->lock);
@@ -5495,14 +5516,14 @@ int tegra_dc_update_winmask(struct tegra_dc *dc, unsigned long winmask)
 	}
 
 	/* check requested=enabled windows NOT owned by other dcs */
-	for_each_set_bit(i, &winmask, DC_N_WINDOWS) {
+	for_each_set_bit(i, &winmask, tegra_dc_get_numof_dispwindows()) {
 		j = dc->ndev->id;
 		win = tegra_dc_get_window(dc, i);
 		/* is window already owned by this dc? */
 		if (win && win->dc && (win->dc == dc))
 			continue;
 		/* is window already owned by other dc? */
-		for (j = 0; j < TEGRA_MAX_DC; j++) {
+		for (j = 0; j < tegra_dc_get_numof_dispheads(); j++) {
 			dc_other = tegra_dc_get_dc(j);
 			if (!dc_other)
 				continue;
@@ -5705,7 +5726,7 @@ static int tegra_dc_probe(struct platform_device *ndev)
 	}
 
 #ifndef CONFIG_TEGRA_NVDISPLAY
-	for (i = 0; i < DC_N_WINDOWS; i++)
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++)
 		dc->windows[i].syncpt.id = NVSYNCPT_INVALID;
 
 	if (TEGRA_DISPLAY_BASE == res->start) {
@@ -5839,8 +5860,8 @@ static int tegra_dc_probe(struct platform_device *ndev)
 #endif
 	tegra_dc_init_lut_defaults(&dc->fb_lut);
 
-	dc->n_windows = DC_N_WINDOWS;
-	for (i = 0; i < DC_N_WINDOWS; i++) {
+	dc->n_windows = tegra_dc_get_numof_dispwindows();
+	for (i = 0; i < tegra_dc_get_numof_dispwindows(); i++) {
 		struct tegra_dc_win *tmp_win = &dc->tmp_wins[i];
 #ifdef CONFIG_TEGRA_NVDISPLAY
 		struct tegra_dc_win *win = &tegra_dc_windows[i];
@@ -6453,7 +6474,7 @@ static struct tegra_dc  *tegra_dc_hwidx2dc(int dcid)
 	struct tegra_dc  *dc;
 	int              i;
 
-	for (i = 0; i < TEGRA_MAX_DC; i++) {
+	for (i = 0; i < tegra_dc_get_numof_dispheads(); i++) {
 		dc = tegra_dc_get_dc(i);
 		if (dc && (dcid == dc->ctrl_num))
 			return dc;
@@ -6462,24 +6483,10 @@ static struct tegra_dc  *tegra_dc_hwidx2dc(int dcid)
 	return NULL;
 }
 
-
-/*
- * get number of Tegra display heads
- * o inputs: none
- * o outputs:
- *  - return: number of Tegra display heads
- */
-int  tegra_dc_get_numof_dispheads(void)
-{
-	return TEGRA_MAX_DC;
-}
-EXPORT_SYMBOL(tegra_dc_get_numof_dispheads);
-
-
 /*
  * get Tegra display head status
  * o inputs:
- *  - dcid: display head HW index (0 to TEGRA_MAX_DC-1)
+ *  - dcid: display head HW index (0 to max_dc_heads-1)
  *  - pSts: pointer to the head status structure to be returned
  * o outputs:
  *  - return: error number
@@ -6505,11 +6512,10 @@ int  tegra_dc_get_disphead_sts(int dcid, struct tegra_dc_head_status *pSts)
 }
 EXPORT_SYMBOL(tegra_dc_get_disphead_sts);
 
-
 /*
  * to register the Tegra display ISR user call-back routine
  * o inputs:
- *  - dcid: display head HW index (0 to TEGRA_MAX_DC-1)
+ *  - dcid: display head HW index (0 to max_dc_heads-1)
  *  - usr_isr_cb: function pointer to the user call-back routine
  *  - usr_isr_pdt: user call-back private data
  * o outputs:
@@ -6551,7 +6557,7 @@ EXPORT_SYMBOL(tegra_dc_register_isr_usr_cb);
 /*
  * to unregister the Tegra display ISR user call-back routine
  * o inputs:
- *  - dcid: display head HW index (0 to TEGRA_MAX_DC-1)
+ *  - dcid: display head HW index (0 to max_dc_heads-1)
  *  - usr_isr_cb: registered user call-back. ignored.
  *  - usr_isr_pdt: registered user call-back private data. ignored.
  * o outputs:
@@ -6583,23 +6589,23 @@ EXPORT_SYMBOL(tegra_dc_unregister_isr_usr_cb);
 
 #endif /* TEGRA_DC_USR_SHARED_IRQ */
 
-static struct tegra_dc_hw_data *hw_data;
-static struct tegra_dc_hw_data t21x_hw_data;
-static struct tegra_dc_hw_data t18x_hw_data;
-
-static const struct of_device_id tegra_display_of_match[] = {
-	{.compatible = "nvidia,tegra210-dc", .data = &t21x_hw_data },
-	{.compatible = "nvidia,tegra186-dc", .data = &t18x_hw_data },
-	{ },
-};
-
-inline int tegra_dc_get_max_heads(void)
+int  tegra_dc_get_numof_dispheads(void)
 {
 	if (!hw_data || !hw_data->valid)
 		return -ENODEV;
 
 	return hw_data->nheads;
 }
+EXPORT_SYMBOL(tegra_dc_get_numof_dispheads);
+
+int  tegra_dc_get_numof_dispwindows(void)
+{
+	if (!hw_data || !hw_data->valid)
+		return DC_N_WINDOWS;
+
+	return hw_data->nwins;
+}
+EXPORT_SYMBOL(tegra_dc_get_numof_dispwindows);
 
 static int tegra_dc_assign_hw_data(void)
 {
@@ -6665,6 +6671,11 @@ static int __init tegra_dc_module_init(void)
 	if (ret)
 		return ret;
 
+	tegra_dcs = kzalloc(
+		(hw_data->nheads) * sizeof(struct tegra_dc *), GFP_KERNEL);
+	if (!tegra_dcs)
+		return -ENOMEM;
+
 	ret = tegra_dc_ext_module_init();
 	if (ret)
 		return ret;
@@ -6674,6 +6685,7 @@ static int __init tegra_dc_module_init(void)
 
 static void __exit tegra_dc_module_exit(void)
 {
+	kfree(tegra_dcs);
 	platform_driver_unregister(&tegra_dc_driver);
 	tegra_dc_ext_module_exit();
 }

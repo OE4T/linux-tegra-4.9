@@ -1,7 +1,7 @@
 /*
  * drivers/video/tegra/dc/lut.c
  *
- * Copyright (c) 2010-2016, NVIDIA CORPORATION, All rights reserved.
+ * Copyright (c) 2010-2017, NVIDIA CORPORATION, All rights reserved.
  *
  * This software is licensed under the terms of the GNU General Public
  * License version 2, as published by the Free Software Foundation, and
@@ -125,7 +125,8 @@ int tegra_dc_update_lut(struct tegra_dc *dc, int win_idx, int fboveride)
 	if (win_idx > -1)
 		return tegra_dc_update_winlut(dc, win_idx, fboveride);
 
-	for_each_set_bit(win_idx, &dc->valid_windows, DC_N_WINDOWS) {
+	for_each_set_bit(win_idx, &dc->valid_windows,
+			tegra_dc_get_numof_dispwindows()) {
 		int err = tegra_dc_update_winlut(dc, win_idx, fboveride);
 		if (err)
 			return err;

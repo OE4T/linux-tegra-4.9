@@ -51,10 +51,11 @@ struct tegra_edid_pvt {
 	u16			min_vrr_fps;
 	u8			hdr_pckt_len;
 	bool			hdr_eotf_smpte2084;
+	u8			hdr_eotf;
 	u8			hdr_static_metadata;
-	u16			hdr_desired_max_luma;
-	u16			hdr_desired_max_frame_avg_luma;
-	u16			hdr_desired_min_luma;
+	u8			hdr_desired_max_luma;
+	u8			hdr_desired_max_frame_avg_luma;
+	u8			hdr_desired_min_luma;
 	u32			quirks;
 	/* Note: dc_edid must remain the last member */
 	struct tegra_dc_edid		dc_edid;
@@ -483,8 +484,10 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 				edid->colorimetry = ptr[2];
 				break;
 			case CEA_DATA_BLOCK_EXT_HDR:
-				edid->hdr_pckt_len = ptr[0] & 0x0f;
-				edid->hdr_eotf_smpte2084 = ptr[2] & 0x04;
+				edid->hdr_pckt_len = ptr[0] & 0x1f;
+				edid->hdr_eotf_smpte2084 = ptr[2] &
+					TEGRA_DC_EXT_CEA861_3_EOTF_SMPTE_2084;
+				edid->hdr_eotf = ptr[2];
 				edid->hdr_static_metadata = ptr[3];
 				if (edid->hdr_pckt_len > 5) {
 					edid->hdr_desired_max_luma = ptr[4];
@@ -495,8 +498,9 @@ static int tegra_edid_parse_ext_block(const u8 *raw, int idx,
 					edid->hdr_desired_max_luma = ptr[4];
 					edid->hdr_desired_max_frame_avg_luma =
 									ptr[5];
-				} else
+				} else if (edid->hdr_pckt_len > 3) {
 					edid->hdr_desired_max_luma = ptr[4];
+				}
 				break;
 			};
 
@@ -561,6 +565,31 @@ u16 tegra_edid_get_ex_hdr_cap(struct tegra_edid *edid)
 	return ret;
 }
 
+int tegra_edid_get_ex_hdr_cap_info(struct tegra_edid *edid,
+			struct tegra_dc_ext_hdr_caps *hdr_cap_info)
+{
+	int ret = 0;
+	if (!edid || !edid->data) {
+		pr_warn("edid invalid\n");
+		return -EFAULT;
+	}
+
+	if (!edid->data->hdr_pckt_len)
+		return ret;
+
+	hdr_cap_info->nr_elements = edid->data->hdr_pckt_len;
+	hdr_cap_info->eotf = edid->data->hdr_eotf;
+	hdr_cap_info->static_metadata_type =
+			edid->data->hdr_static_metadata;
+	hdr_cap_info->desired_content_max_lum =
+			edid->data->hdr_desired_max_luma;
+	hdr_cap_info->desired_content_max_frame_avg_lum =
+			edid->data->hdr_desired_max_frame_avg_luma;
+	hdr_cap_info->desired_content_min_lum =
+			edid->data->hdr_desired_min_luma;
+
+	return ret;
+}
 u16 tegra_edid_get_quant_cap(struct tegra_edid *edid)
 {
 	u16 ret = 0;

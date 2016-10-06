@@ -23,6 +23,7 @@
 #include <linux/i2c.h>
 #include <linux/wait.h>
 #include "dc.h"
+#include <video/tegra_dc_ext.h>
 
 #define TEGRA_DC_Y420_30	1	/* YCbCr 4:2:0 deep color 30bpp */
 #define TEGRA_DC_Y420_36	2	/* YCbCr 4:2:0 deep color 36bpp */
@@ -171,6 +172,8 @@ int tegra_edid_get_monspecs(struct tegra_edid *edid,
 				struct fb_monspecs *specs);
 u16 tegra_edid_get_cd_flag(struct tegra_edid *edid);
 u16 tegra_edid_get_ex_hdr_cap(struct tegra_edid *edid);
+int tegra_edid_get_ex_hdr_cap_info(struct tegra_edid *edid,
+				struct tegra_dc_ext_hdr_caps *hdr_cap_info);
 u16 tegra_edid_get_quant_cap(struct tegra_edid *edid);
 u16 tegra_edid_get_max_clk_rate(struct tegra_edid *edid);
 bool tegra_edid_is_scdc_present(struct tegra_edid *edid);

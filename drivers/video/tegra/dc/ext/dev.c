@@ -42,6 +42,8 @@
 #include "../drivers/staging/android/sync.h"
 #endif
 
+#include "../edid.h"
+
 #define TEGRA_DC_TS_MAX_DELAY_US 1000000
 #define TEGRA_DC_TS_SLACK_US 2000
 
@@ -2232,6 +2234,59 @@ static int dev_cpy_to_usr(void *outptr, u32 usr_win_size,
 	return 0;
 }
 
+static int tegra_dc_get_cap_hdr_info(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_hdr_caps *hdr_cap_info)
+{
+	int ret = 0;
+	struct tegra_dc *dc = user->ext->dc;
+	struct tegra_edid *dc_edid = dc->edid;
+
+	/* Currently only dc->edid has this info. In future,
+	 * we have to provide info for non-edid interfaces
+	 * in the device tree.
+	 */
+	if (dc_edid)
+		ret = tegra_edid_get_ex_hdr_cap_info(dc_edid, hdr_cap_info);
+
+	return ret;
+
+}
+
+static int tegra_dc_get_cap_info(struct tegra_dc_ext_user *user,
+				struct tegra_dc_ext_caps *cap_info,
+				int nr_elements)
+{
+	int i, ret = 0;
+	for (i = 0; i < nr_elements; i++) {
+
+		switch (cap_info[i].data_type) {
+
+		case TEGRA_DC_EXT_CAP_TYPE_HDR_SINK:
+		{
+			struct tegra_dc_ext_hdr_caps *hdr_cap_info;
+
+			hdr_cap_info = kzalloc(sizeof(*hdr_cap_info),
+				GFP_KERNEL);
+
+			ret = tegra_dc_get_cap_hdr_info(user, hdr_cap_info);
+
+			if (copy_to_user((void __user *)(uintptr_t)
+				cap_info[i].data, hdr_cap_info,
+				sizeof(*hdr_cap_info))) {
+				kfree(hdr_cap_info);
+				return -EFAULT;
+			}
+			kfree(hdr_cap_info);
+			break;
+		}
+		default:
+			return -EINVAL;
+		}
+	}
+
+	return ret;
+}
+
 static int tegra_dc_copy_syncpts_from_user(struct tegra_dc *dc,
 			struct tegra_dc_ext_flip_user_data *flip_user_data,
 			int nr_user_data, u32 **syncpt_id, u32 **syncpt_val,
@@ -3124,6 +3179,37 @@ free_and_ret:
 #else
 		return -EACCES;
 #endif
+	}
+	case TEGRA_DC_EXT_GET_CAP_INFO:
+	{
+		int ret = 0;
+		int nr_elements = 0;
+		struct tegra_dc_ext_get_cap_info args;
+		struct tegra_dc_ext_caps *cap_info = NULL;
+
+
+		if (copy_from_user(&args, user_arg, sizeof(args)))
+			return -EFAULT;
+
+		nr_elements = args.nr_elements;
+
+		if (nr_elements > 0) {
+			cap_info = kzalloc(sizeof(*cap_info)
+					* nr_elements, GFP_KERNEL);
+			if (!cap_info)
+				return -ENOMEM;
+			if (copy_from_user(cap_info,
+				(void __user *) (uintptr_t)args.data,
+				sizeof(*cap_info) * nr_elements)) {
+				kfree(cap_info);
+				return -EFAULT;
+			}
+		}
+		ret = tegra_dc_get_cap_info(user, cap_info, nr_elements);
+
+		kfree(cap_info);
+
+		return ret;
 	}
 
 	/* Screen Capture Support

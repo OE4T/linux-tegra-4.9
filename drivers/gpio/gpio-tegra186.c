@@ -209,7 +209,8 @@ struct tegra_gpio_info {
 	struct device *dev;
 
 	int nbanks;
-	void __iomem **regs;
+	void __iomem **gpio_regs;
+	void __iomem **scr_regs;
 	struct irq_domain *irq_domain;
 	int tegra_gpio_bank_count;
 	struct tegra_gpio_controller tg_contrlr[MAX_GPIO_CONTROLLERS];
@@ -225,7 +226,7 @@ struct tegra_gpio_info {
 		.valid_pins = npins,				\
 		.reg_index = 0,					\
 		.scr_offset = cid * 0x1000 + cind * 0x40,	\
-		.reg_offset = 0x10000 + cid * 0x1000 + cind * 0x200, \
+		.reg_offset = cid * 0x1000 + cind * 0x200,	\
 }
 
 #define TEGRA_AON_GPIO_PORT_INFO(port, cid, cind, npins)	\
@@ -235,7 +236,7 @@ struct tegra_gpio_info {
 		.valid_pins = npins,				\
 		.reg_index = 1,					\
 		.scr_offset = cind * 0x40,			\
-		.reg_offset = 0x1000 + cind * 0x200,		\
+		.reg_offset = cind * 0x200,			\
 }
 
 static struct tegra_gpio_port_chip_info tegra_gpio_cinfo[] = {
@@ -296,7 +297,7 @@ static inline u32 tegra_gpio_readl(struct tegra_gpio_info *tgi, u32 gpio,
 	int rindex = tegra_gpio_cinfo[port].reg_index;
 
 	addr += (GPIO_REG_DIFF * pin) + reg_offset;
-	return __raw_readl(tgi->regs[rindex] + addr);
+	return __raw_readl(tgi->gpio_regs[rindex] + addr);
 }
 
 static inline void tegra_gpio_writel(struct tegra_gpio_info *tgi, u32 val,
@@ -308,7 +309,7 @@ static inline void tegra_gpio_writel(struct tegra_gpio_info *tgi, u32 val,
 	int rindex = tegra_gpio_cinfo[port].reg_index;
 
 	addr += (GPIO_REG_DIFF * pin) + reg_offset;
-	__raw_writel(val, tgi->regs[rindex] + addr);
+	__raw_writel(val, tgi->gpio_regs[rindex] + addr);
 }
 
 static inline void tegra_gpio_update(struct tegra_gpio_info *tgi, u32 gpio,
@@ -321,9 +322,9 @@ static inline void tegra_gpio_update(struct tegra_gpio_info *tgi, u32 gpio,
 	u32 rval;
 
 	addr += (GPIO_REG_DIFF * pin) + reg_offset;
-	rval = __raw_readl(tgi->regs[rindex] + addr);
+	rval = __raw_readl(tgi->gpio_regs[rindex] + addr);
 	rval = (rval & ~mask) | (val & mask);
-	__raw_writel(rval, tgi->regs[rindex] + addr);
+	__raw_writel(rval, tgi->gpio_regs[rindex] + addr);
 }
 
 int tegra_gpio_get_bank_int_nr(int gpio)
@@ -353,7 +354,7 @@ static inline bool is_gpio_accessible(struct tegra_gpio_info *tgi, u32 offset)
 
 	rindex = tegra_gpio_cinfo[port].reg_index;
 
-	val = __raw_readl(tgi->regs[rindex] + scr_offset +
+	val = __raw_readl(tgi->scr_regs[rindex] + scr_offset +
 			(pin * GPIO_SCR_DIFF) + GPIO_SCR_REG);
 
 	if ((val & GPIO_FULL_ACCESS) == GPIO_FULL_ACCESS)
@@ -632,7 +633,7 @@ static void tegra_gpio_irq_handler_desc(struct irq_desc *desc)
 
 		rindex = tegra_gpio_cinfo[port].reg_index;
 		addr = tegra_gpio_cinfo[port].reg_offset;
-		val = __raw_readl(tg_cont->tgi->regs[rindex] + addr +
+		val = __raw_readl(tg_cont->tgi->gpio_regs[rindex] + addr +
 				GPIO_INT_STATUS_OFFSET + GPIO_STATUS_G1);
 		gpio = port * 8;
 		for_each_set_bit(pin, &val, 8)
@@ -813,9 +814,14 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	}
 	tgi->nbanks = i;
 
-	tgi->regs = devm_kzalloc(&pdev->dev, tgi->nbanks * sizeof(*tgi->regs),
-					GFP_KERNEL);
-	if (!tgi->regs)
+	tgi->regs = devm_kzalloc(&pdev->dev, tgi->nbanks *
+				 sizeof(*tgi->scr_regs), GFP_KERNEL);
+	if (!tgi->scr_regs)
+		return -ENOMEM;
+
+	tgi->gpio_regs = devm_kzalloc(&pdev->dev, tgi->nbanks *
+				      sizeof(*tgi->gpio_regs), GFP_KERNEL);
+	if (!tgi->gpio_regs)
 		return -ENOMEM;
 
 	for (i = 0; i < tgi->nbanks; i++) {
@@ -833,8 +839,10 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 				ret);
 			return ret;
 		}
-		tgi->regs[i] = base;
+		tgi->scr_regs[i] = base;
 	}
+	tgi->gpio_regs[0] = tgi->scr_regs[0] + 0x10000;
+	tgi->gpio_regs[1] = tgi->scr_regs[1] + 0x1000;
 
 	ret = gpiochip_add_data(&tgi->gc, tgi);
 	if (ret < 0) {

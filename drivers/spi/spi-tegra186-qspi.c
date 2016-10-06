@@ -973,17 +973,13 @@ static void tegra_qspi_set_gr_registers(struct spi_device *spi)
 		/* If available, initialise the config registers
 		 * for QSPI with the values mentioned in prod list.
 		 */
+		tegra_prod_set_by_name(&tqspi->base, "prod", tqspi->prod_list);
 		sprintf(prod_name, "prod_c_cs%d", spi->chip_select);
 		if (tegra_prod_set_by_name(&tqspi->base,
 					prod_name, tqspi->prod_list))
 			dev_info(tqspi->dev, "failed to apply prod for qspi\n");
-		else {
-			if (tegra_prod_set_by_name(&tqspi->base,
-					"prod", tqspi->prod_list))
-				dev_info(tqspi->dev, "failed to apply prod for qspi\n");
-			else
-				return;
-		}
+		else
+			return;
 	}
 	/* If NOT defined in prod list or error in applying prod settings,
 	 * then initialise golden registers with POR values.

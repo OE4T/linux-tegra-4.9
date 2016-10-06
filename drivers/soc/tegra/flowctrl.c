@@ -1,9 +1,7 @@
 /*
- * arch/arm/mach-tegra/flowctrl.c
- *
  * functions and macros to control the flowcontroller
  *
- * Copyright (c) 2010-2012, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -25,9 +23,9 @@
 #include <linux/of.h>
 #include <linux/of_address.h>
 
+#include <soc/tegra/common.h>
+#include <soc/tegra/flowctrl.h>
 #include <soc/tegra/fuse.h>
-
-#include "flowctrl.h"
 
 static u8 flowctrl_offset_halt_cpu[] = {
 	FLOW_CTRL_HALT_CPU0_EVENTS,
@@ -45,7 +43,7 @@ static u8 flowctrl_offset_cpu_csr[] = {
 
 static void __iomem *tegra_flowctrl_base;
 
-static void flowctrl_update(u8 offset, u32 value)
+void flowctrl_update(u8 offset, u32 value)
 {
 	writel(value, tegra_flowctrl_base + offset);
 
@@ -148,12 +146,15 @@ static const struct of_device_id matches[] __initconst = {
 	{ }
 };
 
-void __init tegra_flowctrl_init(void)
+static int __init tegra_flowctrl_init(void)
 {
 	/* hardcoded fallback if device tree node is missing */
 	unsigned long base = 0x60007000;
 	unsigned long size = SZ_4K;
 	struct device_node *np;
+
+	if (!soc_is_tegra())
+		goto out;
 
 	np = of_find_matching_node(NULL, matches);
 	if (np) {
@@ -168,4 +169,7 @@ void __init tegra_flowctrl_init(void)
 	}
 
 	tegra_flowctrl_base = ioremap_nocache(base, size);
+out:
+	return 0;
 }
+arch_initcall(tegra_flowctrl_init);

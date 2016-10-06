@@ -1,9 +1,7 @@
 /*
- * arch/arm/mach-tegra/flowctrl.h
- *
  * functions and macros to control the flowcontroller
  *
- * Copyright (c) 2010-2014, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2010-2016, NVIDIA CORPORATION. All rights reserved.
  *
  * This program is free software; you can redistribute it and/or modify it
  * under the terms and conditions of the GNU General Public License,
@@ -33,19 +31,19 @@
 #define FLOW_CTRL_CSR_ENABLE		(1 << 0)
 #define FLOW_CTRL_HALT_CPU1_EVENTS	0x14
 #define FLOW_CTRL_CPU1_CSR		0x18
-#define FLOW_CTLR_CC4_HVC_CONTROL	0x60
-#define FLOW_CTRL_CC4_HVC_ENABLE	(1 << 0)
-#define FLOW_CTRL_CC4_RETENTION_CONTROL	0x64
-#define FLOW_CTRL_CC4_CORE0_CTRL	0x6c
-#define FLOW_CTRL_WAIT_WFI_BITMAP	0x100
-#define FLOW_CTRL_CC4_HVC_RETRY		0x8c
+
+#define TEGRA20_FLOW_CTRL_CSR_WFE_CPU0         (1 << 4)
+#define TEGRA20_FLOW_CTRL_CSR_WFE_BITMAP       (3 << 4)
+#define TEGRA20_FLOW_CTRL_CSR_WFI_BITMAP       0
+
+#define TEGRA30_FLOW_CTRL_CSR_WFI_CPU0         (1 << 8)
+#define TEGRA30_FLOW_CTRL_CSR_WFE_BITMAP       (0xF << 4)
+#define TEGRA30_FLOW_CTRL_CSR_WFI_BITMAP       (0xF << 8)
 
 #ifndef __ASSEMBLY__
 void flowctrl_update(u8 offset, u32 value);
-u32 flowctrl_readl(u8 offset);
 void flowctrl_write_cpu_csr(unsigned int cpuid, u32 value);
 void flowctrl_write_cpu_halt(unsigned int cpuid, u32 value);
-void flowctrl_write_cc4_ctrl(unsigned int cpuid, u32 value);
 #endif
 
 #endif

@@ -100,7 +100,7 @@ static int tegra186_gpio_wakes[] = {
 	TEGRA_GPIO(B, 3),		/* wake7 */
 	TEGRA_GPIO(B, 5),		/* wake8 */
 	TEGRA_GPIO(C, 0),		/* wake9 */
-	TEGRA_GPIO(S, 2),		/* wake10 */
+	TEGRA_GPIO_AON(S, 2),		/* wake10 */
 	TEGRA_GPIO(H, 2),		/* wake11 */
 	TEGRA_GPIO(J, 5),		/* wake12 */
 	TEGRA_GPIO(J, 6),		/* wake13 */
@@ -115,33 +115,33 @@ static int tegra186_gpio_wakes[] = {
 	TEGRA_GPIO(O, 3),		/* wake22 */
 	TEGRA_GPIO(R, 5),		/* wake23 */
 	-EINVAL,			/* wake24 */
-	TEGRA_GPIO(S, 3),		/* wake25 */
-	TEGRA_GPIO(S, 4),		/* wake26 */
-	TEGRA_GPIO(S, 1),		/* wake27 */
+	TEGRA_GPIO_AON(S, 3),		/* wake25 */
+	TEGRA_GPIO_AON(S, 4),		/* wake26 */
+	TEGRA_GPIO_AON(S, 1),		/* wake27 */
 	TEGRA_GPIO(F, 2),		/* wake28 */
-	TEGRA_GPIO(FF, 0),		/* wake29 */
-	TEGRA_GPIO(FF, 4),		/* wake30 */
+	TEGRA_GPIO_AON(FF, 0),		/* wake29 */
+	TEGRA_GPIO_AON(FF, 4),		/* wake30 */
 	TEGRA_GPIO(C, 6),		/* wake31 */
-	TEGRA_GPIO(W, 2),		/* wake32 */
-	TEGRA_GPIO(W, 5),		/* wake33 */
-	TEGRA_GPIO(W, 1),		/* wake34 */
-	TEGRA_GPIO(V, 0),		/* wake35 */
-	TEGRA_GPIO(V, 1),		/* wake36 */
-	TEGRA_GPIO(V, 2),		/* wake37 */
-	TEGRA_GPIO(V, 3),		/* wake38 */
-	TEGRA_GPIO(V, 4),		/* wake39 */
-	TEGRA_GPIO(V, 5),		/* wake40 */
-	TEGRA_GPIO(EE, 0),		/* wake41 */
-	TEGRA_GPIO(Z, 1),		/* wake42 */
-	TEGRA_GPIO(Z, 3),		/* wake43 */
-	TEGRA_GPIO(AA, 0),		/* wake44 */
-	TEGRA_GPIO(AA, 1),		/* wake45 */
-	TEGRA_GPIO(AA, 2),		/* wake46 */
-	TEGRA_GPIO(AA, 3),		/* wake47 */
-	TEGRA_GPIO(AA, 4),		/* wake48 */
-	TEGRA_GPIO(AA, 5),		/* wake49 */
-	TEGRA_GPIO(AA, 6),		/* wake50 */
-	TEGRA_GPIO(AA, 7),		/* wake51 */
+	TEGRA_GPIO_AON(W, 2),		/* wake32 */
+	TEGRA_GPIO_AON(W, 5),		/* wake33 */
+	TEGRA_GPIO_AON(W, 1),		/* wake34 */
+	TEGRA_GPIO_AON(V, 0),		/* wake35 */
+	TEGRA_GPIO_AON(V, 1),		/* wake36 */
+	TEGRA_GPIO_AON(V, 2),		/* wake37 */
+	TEGRA_GPIO_AON(V, 3),		/* wake38 */
+	TEGRA_GPIO_AON(V, 4),		/* wake39 */
+	TEGRA_GPIO_AON(V, 5),		/* wake40 */
+	TEGRA_GPIO_AON(EE, 0),		/* wake41 */
+	TEGRA_GPIO_AON(Z, 1),		/* wake42 */
+	TEGRA_GPIO_AON(Z, 3),		/* wake43 */
+	TEGRA_GPIO_AON(AA, 0),		/* wake44 */
+	TEGRA_GPIO_AON(AA, 1),		/* wake45 */
+	TEGRA_GPIO_AON(AA, 2),		/* wake46 */
+	TEGRA_GPIO_AON(AA, 3),		/* wake47 */
+	TEGRA_GPIO_AON(AA, 4),		/* wake48 */
+	TEGRA_GPIO_AON(AA, 5),		/* wake49 */
+	TEGRA_GPIO_AON(AA, 6),		/* wake50 */
+	TEGRA_GPIO_AON(AA, 7),		/* wake51 */
 	TEGRA_GPIO(X, 3),		/* wake52 */
 	TEGRA_GPIO(X, 7),		/* wake53 */
 	TEGRA_GPIO(Y, 0),		/* wake54 */
@@ -155,11 +155,11 @@ static int tegra186_gpio_wakes[] = {
 	TEGRA_GPIO(L, 5),		/* wake62 */
 	TEGRA_GPIO(I, 4),		/* wake63 */
 	TEGRA_GPIO(I, 6),		/* wake64 */
-	TEGRA_GPIO(Z, 0),		/* wake65 */
-	TEGRA_GPIO(Z, 2),		/* wake66 */
-	TEGRA_GPIO(FF, 1),		/* wake67 */
-	TEGRA_GPIO(FF, 2),		/* wake68 */
-	TEGRA_GPIO(FF, 3),		/* wake69 */
+	TEGRA_GPIO_AON(Z, 0),		/* wake65 */
+	TEGRA_GPIO_AON(Z, 2),		/* wake66 */
+	TEGRA_GPIO_AON(FF, 1),		/* wake67 */
+	TEGRA_GPIO_AON(FF, 2),		/* wake68 */
+	TEGRA_GPIO_AON(FF, 3),		/* wake69 */
 	TEGRA_GPIO(H, 3),		/* wake70 */
 	TEGRA_GPIO(P, 5),		/* wake71 */
 	-EINVAL,		/* wake72 */
@@ -229,7 +229,7 @@ struct tegra_gpio_info {
 }
 
 #define TEGRA_AON_GPIO_PORT_INFO(port, cid, cind, npins)	\
-[TEGRA_GPIO_BANK_ID_##port] = {					\
+[TEGRA_AON_GPIO_BANK_ID_##port] = {				\
 		.cont_id = cid,					\
 		.cont_index = cind,				\
 		.valid_pins = npins,				\

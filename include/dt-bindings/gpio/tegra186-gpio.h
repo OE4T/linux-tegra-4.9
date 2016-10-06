@@ -12,6 +12,7 @@
 
 #include <dt-bindings/gpio/gpio.h>
 
+/* Nomral Non-AON GPIOs */
 #define TEGRA_GPIO_BANK_ID_A 0
 #define TEGRA_GPIO_BANK_ID_B 1
 #define TEGRA_GPIO_BANK_ID_C 2
@@ -30,25 +31,27 @@
 #define TEGRA_GPIO_BANK_ID_P 15
 #define TEGRA_GPIO_BANK_ID_Q 16
 #define TEGRA_GPIO_BANK_ID_R 17
-#define TEGRA_GPIO_BANK_ID_S 18
 #define TEGRA_GPIO_BANK_ID_T 19
-#define TEGRA_GPIO_BANK_ID_U 20
-#define TEGRA_GPIO_BANK_ID_V 21
-#define TEGRA_GPIO_BANK_ID_W 22
 #define TEGRA_GPIO_BANK_ID_X 23
 #define TEGRA_GPIO_BANK_ID_Y 24
-#define TEGRA_GPIO_BANK_ID_Z 25
-#define TEGRA_GPIO_BANK_ID_AA 26
 #define TEGRA_GPIO_BANK_ID_BB 27
 #define TEGRA_GPIO_BANK_ID_CC 28
 #define TEGRA_GPIO_BANK_ID_DD 29
-#define TEGRA_GPIO_BANK_ID_EE 30
-#define TEGRA_GPIO_BANK_ID_FF 31
+
+/* AON GPIOs */
+#define TEGRA_AON_GPIO_BANK_ID_S 18
+#define TEGRA_AON_GPIO_BANK_ID_U 20
+#define TEGRA_AON_GPIO_BANK_ID_V 21
+#define TEGRA_AON_GPIO_BANK_ID_W 22
+#define TEGRA_AON_GPIO_BANK_ID_Z 25
+#define TEGRA_AON_GPIO_BANK_ID_AA 26
+#define TEGRA_AON_GPIO_BANK_ID_EE 30
+#define TEGRA_AON_GPIO_BANK_ID_FF 31
 
 #define TEGRA_GPIO(bank, offset) \
 	((TEGRA_GPIO_BANK_ID_##bank * 8) + offset)
 
 #define TEGRA_GPIO_AON(bank, offset) \
-	((TEGRA_GPIO_BANK_ID_##bank * 8) + offset)
+	((TEGRA_AON_GPIO_BANK_ID_##bank * 8) + offset)
 
 #endif

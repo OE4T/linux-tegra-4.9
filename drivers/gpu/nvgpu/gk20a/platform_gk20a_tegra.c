@@ -23,6 +23,7 @@
 #include <uapi/linux/nvgpu.h>
 #include <linux/dma-buf.h>
 #include <linux/nvmap.h>
+#include <linux/reset.h>
 #include <linux/tegra_soctherm.h>
 #include <linux/platform/tegra/clock.h>
 #include <linux/platform/tegra/dvfs.h>
@@ -46,6 +47,12 @@
 #define TEGRA_DDR4_BW_PER_FREQ 16
 #define MC_CLIENT_GPU 34
 #define PMC_GPU_RG_CNTRL_0		0x2d4
+
+#ifdef CONFIG_COMMON_CLK
+#define GPU_RAIL_NAME "vdd-gpu"
+#else
+#define GPU_RAIL_NAME "vdd_gpu"
+#endif
 
 extern struct device tegra_vpr_dev;
 
@@ -304,23 +311,6 @@ static void gk20a_tegra_calibrate_emc(struct device *dev,
 
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 /*
- * gk20a_tegra_is_railgated()
- *
- * Check status of gk20a power rail
- */
-
-static bool gk20a_tegra_is_railgated(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	bool ret = false;
-
-	if (!(platform->is_fmodel))
-		ret = !tegra_dvfs_is_rail_up(platform->gpu_rail);
-
-	return ret;
-}
-
-/*
  * gk20a_tegra_railgate()
  *
  * Gate (disable) gk20a power rail
@@ -372,60 +362,6 @@ err_power_off:
 	return ret;
 }
 
-/*
- * gm20b_tegra_railgate()
- *
- * Gate (disable) gm20b power rail
- */
-
-static int gm20b_tegra_railgate(struct device *dev)
-{
-	struct gk20a_platform *platform = dev_get_drvdata(dev);
-	int ret = 0;
-
-	if (platform->is_fmodel ||
-	    !tegra_dvfs_is_rail_up(platform->gpu_rail))
-		return 0;
-
-	tegra_mc_flush(MC_CLIENT_GPU);
-
-	udelay(10);
-
-	/* enable clamp */
-	pmc_write(0x1, PMC_GPU_RG_CNTRL_0);
-	pmc_read(PMC_GPU_RG_CNTRL_0);
-
-	udelay(10);
-
-	platform->reset_assert(dev);
-
-	udelay(10);
-
-	/*
-	 * GPCPLL is already disabled before entering this function; reference
-	 * clocks are enabled until now - disable them just before rail gating
-	 */
-	clk_disable(platform->clk_reset);
-	clk_disable(platform->clk[0]);
-	clk_disable(platform->clk[1]);
-
-	udelay(10);
-
-	tegra_soctherm_gpu_tsens_invalidate(1);
-
-	if (tegra_dvfs_is_rail_up(platform->gpu_rail)) {
-		ret = tegra_dvfs_rail_power_down(platform->gpu_rail);
-		if (ret)
-			goto err_power_off;
-	} else
-		pr_info("No GPU regulator?\n");
-
-	return 0;
-
-err_power_off:
-	gk20a_err(dev, "Could not railgate GPU");
-	return ret;
-}
 
 /*
  * gk20a_tegra_unrailgate()
@@ -498,6 +434,84 @@ err_clk_on:
 	return ret;
 }
 
+#endif
+
+
+#if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_TEGRA_DVFS)
+/*
+ * gk20a_tegra_is_railgated()
+ *
+ * Check status of gk20a power rail
+ */
+
+static bool gk20a_tegra_is_railgated(struct device *dev)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	bool ret = false;
+
+	if (!platform->is_fmodel)
+		ret = !tegra_dvfs_is_rail_up(platform->gpu_rail);
+
+	return ret;
+}
+
+
+/*
+ * gm20b_tegra_railgate()
+ *
+ * Gate (disable) gm20b power rail
+ */
+
+static int gm20b_tegra_railgate(struct device *dev)
+{
+	struct gk20a_platform *platform = dev_get_drvdata(dev);
+	int ret = 0;
+
+	if (platform->is_fmodel ||
+	    !tegra_dvfs_is_rail_up(platform->gpu_rail))
+		return 0;
+
+	tegra_mc_flush(MC_CLIENT_GPU);
+
+	udelay(10);
+
+	/* enable clamp */
+	pmc_write(0x1, PMC_GPU_RG_CNTRL_0);
+	pmc_read(PMC_GPU_RG_CNTRL_0);
+
+	udelay(10);
+
+	platform->reset_assert(dev);
+
+	udelay(10);
+
+	/*
+	 * GPCPLL is already disabled before entering this function; reference
+	 * clocks are enabled until now - disable them just before rail gating
+	 */
+	clk_disable_unprepare(platform->clk_reset);
+	clk_disable_unprepare(platform->clk[0]);
+	clk_disable_unprepare(platform->clk[1]);
+
+	udelay(10);
+
+	tegra_soctherm_gpu_tsens_invalidate(1);
+
+	if (tegra_dvfs_is_rail_up(platform->gpu_rail)) {
+		ret = tegra_dvfs_rail_power_down(platform->gpu_rail);
+		if (ret)
+			goto err_power_off;
+	} else
+		pr_info("No GPU regulator?\n");
+
+	return 0;
+
+err_power_off:
+	gk20a_err(dev, "Could not railgate GPU");
+	return ret;
+}
+
+
 /*
  * gm20b_tegra_unrailgate()
  *
@@ -514,12 +528,14 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 		return 0;
 
 	if (!platform->gpu_rail) {
-		platform->gpu_rail = tegra_dvfs_get_rail_by_name("vdd_gpu");
+		platform->gpu_rail = tegra_dvfs_get_rail_by_name(GPU_RAIL_NAME);
 		if (IS_ERR_OR_NULL(platform->gpu_rail)) {
 			WARN(1, "No GPU regulator?\n");
 			return -EINVAL;
 		}
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 		first = true;
+#endif
 	}
 
 	ret = tegra_dvfs_rail_power_up(platform->gpu_rail);
@@ -528,19 +544,27 @@ static int gm20b_tegra_unrailgate(struct device *dev)
 
 	tegra_soctherm_gpu_tsens_invalidate(0);
 
+	if (!platform->clk_reset) {
+		platform->clk_reset = clk_get(dev, "gpu_gate");
+		if (IS_ERR(platform->clk_reset)) {
+			gk20a_err(dev, "fail to get gpu reset clk\n");
+			goto err_clk_on;
+		}
+	}
+
 	if (!first) {
-		ret = clk_enable(platform->clk_reset);
+		ret = clk_prepare_enable(platform->clk_reset);
 		if (ret) {
 			gk20a_err(dev, "could not turn on gpu_gate");
 			goto err_clk_on;
 		}
 
-		ret = clk_enable(platform->clk[0]);
+		ret = clk_prepare_enable(platform->clk[0]);
 		if (ret) {
 			gk20a_err(dev, "could not turn on gpu pll");
 			goto err_clk_on;
 		}
-		ret = clk_enable(platform->clk[1]);
+		ret = clk_prepare_enable(platform->clk[1]);
 		if (ret) {
 			gk20a_err(dev, "could not turn on pwr clock");
 			goto err_clk_on;
@@ -580,13 +604,23 @@ err_clk_on:
 }
 #endif
 
+
 static struct {
 	char *name;
 	unsigned long default_rate;
 } tegra_gk20a_clocks[] = {
+#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	{"PLLG_ref", UINT_MAX},
 	{"pwr", 204000000},
-	{"emc", UINT_MAX} };
+	{"emc", UINT_MAX},
+#elif defined(CONFIG_COMMON_CLK)
+	{"gpu_ref", UINT_MAX},
+	{"pll_p_out5", 204000000},
+	{"emc", UINT_MAX},
+#endif
+};
+
+
 
 /*
  * gk20a_tegra_get_clocks()
@@ -653,22 +687,31 @@ static int gk20a_tegra_reset_deassert(struct device *dev)
 	return 0;
 }
 
+#if defined(CONFIG_RESET_CONTROLLER) && defined(CONFIG_COMMON_CLK)
 static int gm20b_tegra_reset_assert(struct device *dev)
 {
 	struct gk20a_platform *platform = gk20a_get_platform(dev);
 
-	if (!platform->clk_reset) {
-		platform->clk_reset = clk_get(dev, "gpu_gate");
-		if (IS_ERR(platform->clk_reset)) {
-			gk20a_err(dev, "fail to get gpu reset clk\n");
-			return PTR_ERR(platform->clk_reset);
-		}
+	if (!platform->reset_control) {
+		WARN(1, "Reset control not initialized\n");
+		return -ENOSYS;
 	}
 
-	tegra_periph_reset_assert(platform->clk_reset);
-
-	return 0;
+	return reset_control_assert(platform->reset_control);
 }
+
+static int gm20b_tegra_reset_deassert(struct device *dev)
+{
+	struct gk20a_platform *platform = gk20a_get_platform(dev);
+
+	if (!platform->reset_control) {
+		WARN(1, "Reset control not initialized\n");
+		return -ENOSYS;
+	}
+
+	return reset_control_deassert(platform->reset_control);
+}
+#endif
 
 static void gk20a_tegra_scale_init(struct device *dev)
 {
@@ -777,6 +820,10 @@ static int gk20a_tegra_probe(struct device *dev)
 	platform->g->mm.vidmem_is_vidmem = platform->vidmem_is_vidmem;
 
 	gk20a_tegra_get_clocks(dev);
+
+#if (LINUX_VERSION_CODE >= KERNEL_VERSION(4, 4, 0))
+	pmc = ioremap(TEGRA_PMC_BASE, 4096);
+#endif
 
 	return 0;
 }
@@ -935,7 +982,7 @@ struct gk20a_platform gm20b_tegra_platform = {
 
 	/* power management callbacks */
 	.suspend = gk20a_tegra_suspend,
-#ifdef CONFIG_TEGRA_CLK_FRAMEWORK
+#if defined(CONFIG_TEGRA_CLK_FRAMEWORK) || defined(CONFIG_TEGRA_DVFS)
 	.railgate = gm20b_tegra_railgate,
 	.unrailgate = gm20b_tegra_unrailgate,
 	.is_railgated = gk20a_tegra_is_railgated,
@@ -944,8 +991,13 @@ struct gk20a_platform gm20b_tegra_platform = {
 	.busy = gk20a_tegra_busy,
 	.idle = gk20a_tegra_idle,
 
+#if defined(CONFIG_RESET_CONTROLLER) && defined(CONFIG_COMMON_CLK)
 	.reset_assert = gm20b_tegra_reset_assert,
+	.reset_deassert = gm20b_tegra_reset_deassert,
+#else
+	.reset_assert = gk20a_tegra_reset_assert,
 	.reset_deassert = gk20a_tegra_reset_deassert,
+#endif
 
 #ifdef CONFIG_TEGRA_CLK_FRAMEWORK
 	.clk_get_rate = gk20a_get_clk_rate,

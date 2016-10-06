@@ -947,6 +947,8 @@ static int gk20a_init_vidmem(struct mm_gk20a *mm)
 	mm->vidmem.bootstrap_base = bootstrap_base;
 	mm->vidmem.bootstrap_size = bootstrap_size;
 
+	mutex_init(&mm->vidmem.first_clear_mutex);
+
 	INIT_WORK(&mm->vidmem.clear_mem_worker, gk20a_vidmem_clear_mem_worker);
 	atomic_set(&mm->vidmem.clears_pending, 0);
 	INIT_LIST_HEAD(&mm->vidmem.clear_list_head);
@@ -2190,11 +2192,16 @@ int gk20a_vidmem_buf_alloc(struct gk20a *g, size_t bytes)
 	buf->g = g;
 
 	if (!g->mm.vidmem.cleared) {
-		err = gk20a_vidmem_clear_all(g);
-		if (err) {
-			gk20a_err(g->dev, "failed to clear whole vidmem");
-			goto err_kfree;
+		mutex_lock(&g->mm.vidmem.first_clear_mutex);
+		if (!g->mm.vidmem.cleared) {
+			err = gk20a_vidmem_clear_all(g);
+			if (err) {
+				gk20a_err(g->dev,
+				          "failed to clear whole vidmem");
+				goto err_kfree;
+			}
 		}
+		mutex_unlock(&g->mm.vidmem.first_clear_mutex);
 	}
 
 	buf->mem = kzalloc(sizeof(struct mem_desc), GFP_KERNEL);

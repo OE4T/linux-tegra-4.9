@@ -417,6 +417,7 @@ struct mm_gk20a {
 
 		u32 ce_ctx_id;
 		bool cleared;
+		struct mutex first_clear_mutex;
 
 		struct list_head clear_list_head;
 		struct mutex clear_list_mutex;

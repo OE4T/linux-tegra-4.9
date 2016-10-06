@@ -54,6 +54,10 @@ enum nvaudio_ivc_cmd_t {
 	NVAUDIO_AMIXER_SET_ENABLE,
 	NVAUDIO_AMIXER_GET_TX_ADDER_CONFIG,
 	NVAUDIO_AMIXER_GET_ENABLE,
+	NVAUDIO_SFC_SET_IN_FREQ,
+	NVAUDIO_SFC_GET_IN_FREQ,
+	NVAUDIO_SFC_SET_OUT_FREQ,
+	NVAUDIO_SFC_GET_OUT_FREQ,
 	NVAUDIO_CMD_MAX,
 };
 
@@ -75,6 +79,12 @@ struct nvaudio_ivc_t210_amixer_info {
 	uint32_t	enable;
 };
 
+struct nvaudio_ivc_t210_sfc_info {
+	int32_t		id;
+	uint32_t	in_freq;
+	uint32_t	out_freq;
+};
+
 struct nvaudio_ivc_xbar_link {
 	uint32_t	rx_reg;
 	uint32_t	tx_value;
@@ -94,6 +104,7 @@ struct nvaudio_ivc_msg {
 		struct nvaudio_ivc_dmaif_info		dmaif_info;
 		struct nvaudio_ivc_t124_dam_info	dam_info;
 		struct nvaudio_ivc_t210_amixer_info	amixer_info;
+		struct nvaudio_ivc_t210_sfc_info	sfc_info;
 		struct nvaudio_ivc_xbar_link		xbar_info;
 	} params;
 	bool			ack_required;

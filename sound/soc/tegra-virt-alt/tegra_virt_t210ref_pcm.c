@@ -918,6 +918,140 @@ static int tegra_virt_t210mixer_set_enable(struct snd_kcontrol *kcontrol,
 	return 0;
 }
 
+static int tegra_virt_t210sfc_get_in_freq(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_SFC_GET_IN_FREQ;
+	msg.params.sfc_info.id = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	ucontrol->value.integer.value[0] = msg.params.sfc_info.in_freq;
+
+	if (err < 0) {
+		pr_err("%s: error on ivc_receive\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_virt_t210sfc_set_in_freq(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_SFC_SET_IN_FREQ;
+	msg.params.sfc_info.id = reg;
+	msg.params.sfc_info.in_freq =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_virt_t210sfc_get_out_freq(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_SFC_GET_OUT_FREQ;
+	msg.params.sfc_info.id = reg;
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	err = nvaudio_ivc_receive(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+
+	ucontrol->value.integer.value[0] = msg.params.sfc_info.out_freq;
+
+	if (err < 0) {
+		pr_err("%s: error on ivc_receive\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
+static int tegra_virt_t210sfc_set_out_freq(struct snd_kcontrol *kcontrol,
+	struct snd_ctl_elem_value *ucontrol)
+{
+	struct soc_mixer_control *mc =
+		(struct soc_mixer_control *)kcontrol->private_value;
+	unsigned int reg = mc->reg;
+	struct snd_soc_card *card = snd_kcontrol_chip(kcontrol);
+	struct nvaudio_ivc_ctxt *hivc_client =
+		nvaudio_ivc_alloc_ctxt(card->dev);
+	int err;
+	struct nvaudio_ivc_msg msg;
+
+	memset(&msg, 0, sizeof(struct nvaudio_ivc_msg));
+	msg.cmd = NVAUDIO_SFC_SET_OUT_FREQ;
+	msg.params.sfc_info.id = reg;
+	msg.params.sfc_info.out_freq =
+		ucontrol->value.integer.value[0];
+
+	err = nvaudio_ivc_send_retry(hivc_client,
+			&msg,
+			sizeof(struct nvaudio_ivc_msg));
+	if (err < 0) {
+		pr_err("%s: Timedout on ivc_send_retry\n", __func__);
+		return err;
+	}
+
+	return 0;
+}
+
 static const struct soc_enum tegra_virt_t210ref_source =
 	SOC_ENUM_SINGLE_EXT(NUM_MUX_INPUT, tegra_virt_t210ref_source_text);
 
@@ -954,6 +1088,18 @@ static const struct soc_enum tegra_virt_t210ref_source =
 	0, 1, 0,	\
 	tegra_virt_t210mixer_get_enable,	\
 	tegra_virt_t210mixer_set_enable)
+
+#define SFC_IN_FREQ_CTRL_DECL(ename, id) \
+	SOC_SINGLE_EXT(ename, id,	\
+	0, 192000, 0,	\
+	tegra_virt_t210sfc_get_in_freq,	\
+	tegra_virt_t210sfc_set_in_freq)
+
+#define SFC_OUT_FREQ_CTRL_DECL(ename, id) \
+	SOC_SINGLE_EXT(ename, id,	\
+	0, 192000, 0,	\
+	tegra_virt_t210sfc_get_out_freq,	\
+	tegra_virt_t210sfc_set_out_freq)
 
 static const struct snd_kcontrol_new tegra_virt_t210ref_controls[] = {
 MUX_ENUM_CTRL_DECL("ADMAIF1 Mux", 0x00),
@@ -1106,6 +1252,16 @@ MIXER_ADDER_CTRL_DECL("Adder5 RX9", 0x04, 0x09),
 MIXER_ADDER_CTRL_DECL("Adder5 RX10", 0x04, 0x0a),
 
 MIXER_ENABLE_CTRL_DECL("Mixer Enable", 0x00),
+
+SFC_IN_FREQ_CTRL_DECL("SFC1 in freq", 0x00),
+SFC_IN_FREQ_CTRL_DECL("SFC2 in freq", 0x01),
+SFC_IN_FREQ_CTRL_DECL("SFC3 in freq", 0x02),
+SFC_IN_FREQ_CTRL_DECL("SFC4 in freq", 0x03),
+
+SFC_OUT_FREQ_CTRL_DECL("SFC1 out freq", 0x00),
+SFC_OUT_FREQ_CTRL_DECL("SFC2 out freq", 0x01),
+SFC_OUT_FREQ_CTRL_DECL("SFC3 out freq", 0x02),
+SFC_OUT_FREQ_CTRL_DECL("SFC4 out freq", 0x03),
 };
 
 static const struct of_device_id tegra_virt_t210ref_pcm_of_match[] = {

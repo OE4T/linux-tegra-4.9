@@ -163,9 +163,9 @@
 
 	backlight {
 		compatible = "pwm-backlight";
-		status = "disabled";
+		status = "okay";
 		panel-a-wuxga-8-0-bl {
-			status = "disabled";
+			status = "okay";
 			pwms = <&tegra_pwm 0 40161>;
 		};
 		panel-s-edp-uhdtv-15-6-bl {
@@ -582,7 +582,7 @@
 		nvidia,clock-always-on;
 
 		lp8557-backlight-a-wuxga-8-0@2c {
-			status = "disabled";
+			status = "okay";
 			disable-on-kernel-charging;
 			compatible = "ti,lp8557";
 			reg = <0x2c>;

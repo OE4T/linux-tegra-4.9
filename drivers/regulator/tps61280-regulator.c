@@ -1,7 +1,7 @@
 /*
  * Driver for TI,TP61280 DC/DC Boost Converter
  *
- * Copyright (c) 2014-2015, NVIDIA Corporation. All rights reserved.
+ * Copyright (c) 2014-2016, NVIDIA Corporation. All rights reserved.
  *
  * Author: Venkat Reddy Talla <vreddytalla@nvidia.com>
  * Author: Laxman Dewangan <ldewangan@nvidia.com>
@@ -470,7 +470,7 @@ static struct regulator_ops tps61280_ops = {
 	.set_sleep_voltage_sel	= tps61280_dcdc_set_sleep_voltage_sel,
 };
 
-static int tps61280_thermal_read_temp(void *data, long *temp)
+static int tps61280_thermal_read_temp(void *data, int *temp)
 {
 	struct tps61280_chip *tps = data;
 	u32 val;
@@ -764,7 +764,7 @@ static int tps61280_dvs_init(struct tps61280_chip *tps61280)
 		tps61280->lru_index[tps61280->curr_vout_reg] = 0;
 	}
 
-	init_uv = tps61280->rinit_data->constraints.init_uV;
+	init_uv = tps61280->rinit_data->constraints.min_uV;
 	if ((init_uv >= TPS61280_VOUT_VMIN) &&
 			(init_uv <= TPS61280_VOUT_VMAX)) {
 		vsel = DIV_ROUND_UP((init_uv - TPS61280_VOUT_VMIN),
@@ -785,6 +785,10 @@ static int tps61280_dvs_init(struct tps61280_chip *tps61280)
 	}
 	return 0;
 }
+
+static const struct thermal_zone_of_device_ops tps61280_of_thermal_ops = {
+	.get_temp = tps61280_thermal_read_temp,
+};
 
 static int tps61280_parse_dt_data(struct i2c_client *client,
 				struct tps61280_platform_data *pdata)
@@ -882,8 +886,17 @@ static int tps61280_probe(struct i2c_client *client,
 	i2c_set_clientdata(client, tps61280);
 	mutex_init(&tps61280->mutex);
 
+	tps61280->rdesc.name  = "tps61280-dcdc";
+	tps61280->rdesc.ops   = &tps61280_ops;
+	tps61280->rdesc.type  = REGULATOR_VOLTAGE;
+	tps61280->rdesc.owner = THIS_MODULE;
+	tps61280->rdesc.linear_min_sel = 0;
+	tps61280->rdesc.min_uV = TPS61280_VOUT_VMIN;
+	tps61280->rdesc.uV_step = TPS61280_VOUT_VSTEP;
+	tps61280->rdesc.n_voltages = 0x20;
+
 	tps61280->rinit_data = of_get_regulator_init_data(tps61280->dev,
-					tps61280->dev->of_node);
+					tps61280->dev->of_node, &tps61280->rdesc);
 	if (!tps61280->rinit_data) {
 		dev_err(&client->dev, "No Regulator init data\n");
 		return -EINVAL;
@@ -913,15 +926,6 @@ static int tps61280_probe(struct i2c_client *client,
 		return ret;
 	}
 
-	tps61280->rdesc.name  = "tps61280-dcdc";
-	tps61280->rdesc.ops   = &tps61280_ops;
-	tps61280->rdesc.type  = REGULATOR_VOLTAGE;
-	tps61280->rdesc.owner = THIS_MODULE;
-	tps61280->rdesc.linear_min_sel = 0;
-	tps61280->rdesc.min_uV = TPS61280_VOUT_VMIN;
-	tps61280->rdesc.uV_step = TPS61280_VOUT_VSTEP;
-	tps61280->rdesc.n_voltages = 0x20;
-
 	rconfig.dev = tps61280->dev;
 	rconfig.of_node =  tps61280->dev->of_node;
 	rconfig.driver_data = tps61280;
@@ -950,8 +954,8 @@ static int tps61280_probe(struct i2c_client *client,
 	device_set_wakeup_capable(&client->dev, 1);
 	device_wakeup_enable(&client->dev);
 
-	tps61280->tz_device = thermal_zone_of_sensor_register(tps61280->dev, 0,
-				tps61280, tps61280_thermal_read_temp, NULL);
+	tps61280->tz_device = devm_thermal_zone_of_sensor_register(tps61280->dev, 0,
+				tps61280, &tps61280_of_thermal_ops);
 	if (IS_ERR(tps61280->tz_device)) {
 		ret = PTR_ERR(tps61280->tz_device);
 		dev_err(&client->dev, "TZ device register failed: %d\n", ret);

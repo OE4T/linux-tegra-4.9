@@ -212,7 +212,6 @@ struct tegra_gpio_info {
 	void __iomem **gpio_regs;
 	void __iomem **scr_regs;
 	struct irq_domain *irq_domain;
-	int tegra_gpio_bank_count;
 	struct tegra_gpio_controller tg_contrlr[MAX_GPIO_CONTROLLERS];
 	struct gpio_chip gc;
 	struct irq_chip ic;
@@ -742,25 +741,27 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	struct tegra_gpio_controller *tg_cont;
 	struct tegra_gpio_info *tgi;
 	void __iomem *base;
+	int nregs;
+	int nbanks;
 	u32 i;
 	int gpio;
 	int ret;
+
+	for (nbanks = 0;; nbanks++) {
+		res = platform_get_resource(pdev, IORESOURCE_IRQ, nbanks);
+		if (!res)
+			break;
+	}
+	if (!nbanks) {
+		dev_err(&pdev->dev, "No GPIO Controller found\n");
+		return -ENODEV;
+	}
 
 	tgi = devm_kzalloc(&pdev->dev, sizeof(*tgi), GFP_KERNEL);
 	if (!tgi)
 		return -ENOMEM;
 	tgi->dev = &pdev->dev;
-
-	for (tgi->tegra_gpio_bank_count = 0;; tgi->tegra_gpio_bank_count++) {
-		res = platform_get_resource(pdev, IORESOURCE_IRQ,
-					    tgi->tegra_gpio_bank_count);
-		if (!res)
-			break;
-	}
-	if (!tgi->tegra_gpio_bank_count) {
-		dev_err(&pdev->dev, "No GPIO Controller found\n");
-		return -ENODEV;
-	}
+	tgi->nbanks = nbanks;
 
 	tgi->gc.label			= "tegra-gpio";
 	tgi->gc.request			= tegra_gpio_request;
@@ -789,7 +790,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 
 	platform_set_drvdata(pdev, tgi);
 
-	for (i = 0; i < tgi->tegra_gpio_bank_count; i++) {
+	for (i = 0; i < tgi->nbanks; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_IRQ, i);
 		if (!res) {
 			dev_err(&pdev->dev, "Missing IRQ resource\n");
@@ -807,24 +808,27 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 	if (!tgi->irq_domain)
 		return -ENODEV;
 
-	for (i = 0;; i++) {
-		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
+	for (nregs = 0;; nregs++) {
+		res = platform_get_resource(pdev, IORESOURCE_MEM, nregs);
 		if (!res)
 			break;
 	}
-	tgi->nbanks = i;
+	if (nregs != 2) {
+		dev_err(&pdev->dev, "Non supported number of reg address\n");
+		return -EINVAL;
+	}
 
-	tgi->regs = devm_kzalloc(&pdev->dev, tgi->nbanks *
-				 sizeof(*tgi->scr_regs), GFP_KERNEL);
+	tgi->regs = devm_kzalloc(tgi->dev, nregs * sizeof(*tgi->scr_regs),
+				 GFP_KERNEL);
 	if (!tgi->scr_regs)
 		return -ENOMEM;
 
-	tgi->gpio_regs = devm_kzalloc(&pdev->dev, tgi->nbanks *
-				      sizeof(*tgi->gpio_regs), GFP_KERNEL);
+	tgi->gpio_regs = devm_kzalloc(tgi->dev, nregs * sizeof(*tgi->gpio_regs),
+				      GFP_KERNEL);
 	if (!tgi->gpio_regs)
 		return -ENOMEM;
 
-	for (i = 0; i < tgi->nbanks; i++) {
+	for (i = 0; i < nregs; i++) {
 		res = platform_get_resource(pdev, IORESOURCE_MEM, i);
 		if (!res) {
 			dev_err(&pdev->dev, "Missing MEM resource\n");
@@ -865,7 +869,7 @@ static int tegra_gpio_probe(struct platform_device *pdev)
 		irq_set_chip_and_handler(irq, &tgi->ic, handle_simple_irq);
 	}
 
-	for (i = 0; i < tgi->tegra_gpio_bank_count; i++) {
+	for (i = 0; i < tgi->nbanks; i++) {
 		tg_cont = &tgi->tg_contrlr[i];
 		irq_set_chained_handler_and_data(tg_cont->irq,
 						 tegra_gpio_irq_handler,

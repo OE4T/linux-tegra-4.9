@@ -20,10 +20,12 @@
 #include <dt-bindings/reset/tegra194-reset.h>
 #include "dt-bindings/display/tegra-dc.h"
 #include "dt-bindings/interrupt/tegra186-irq.h"
+#include "dt-bindings/interrupt-controller/arm-gic.h"
 #include "dt-bindings/soc/tegra186-powergate.h"
 #include <dt-bindings/interrupt-controller/irq.h>
 #include <dt-bindings/gpio/tegra186-gpio.h>
 #include <dt-bindings/memory/tegra-swgroup.h>
+#include "tegra194-trusty.dtsi"
 
 / {
 	compatible = "nvidia,tegra186";
